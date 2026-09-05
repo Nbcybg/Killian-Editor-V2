@@ -114,6 +114,4 @@ export function closeVisPlayer() {
 }
 export function visPlayerOpen() { return !!_cur; }
 export function visPlayerAt() { return _cur ? _cur.at() : -1; }
-export function visPlayerGo(d) { if (_cur) _cur.go(d); }
 export function visPlayerTextHidden() { return !!(_cur && _cur.isHidden()); }
-export function visPlayerToggleText() { if (_cur) _cur.toggleText(); }

@@ -287,6 +287,20 @@ t('บทพูดบรรทัดที่สอง = บรรยาย ต�
   // เพื่อให้ "ที่ซ่อนบนจอ" กับ "ที่ตัดตอนส่งออก" ใช้กติกาชุดเดียวกันเสมอ
   t('prefixLen ยังทำงานเหมือนเดิม', prefixLen('@ก') === 1 && prefixLen('@ ก') === 0);
   t('suffixLen จับวงเล็บปิด', suffixLen('((ก))') === 2 && suffixLen('((ก)') === 0);
+
+  // ══ [alpha.134 · X-1] ★★ เลขฉากต้องมาจากพาร์เซอร์ ══
+  //
+  // เดิม `sceneNo` ถูกไล่ลำดับใน `spBlocksFromDoc()` (ทางของหน้าจอ) **ที่เดียว** →
+  // สายส่งออกทุกเส้นที่เริ่มจาก `parseScript()` ได้บล็อกที่ไม่มีเลขฉากเลย
+  // → `opts.sceneNumbers && b.sceneNo` ใน generatePdf เป็นเท็จเสมอ = ติ๊กแล้วไม่มีอะไรเกิดขึ้น
+  const scn = parseScript(['INT. ห้อง - เช้า', '', 'บรรยาย', '',
+                           'EXT. ถนน - เย็น', '', 'บรรยาย', '',
+                           'INT. รถ - คืน'].join(String.fromCharCode(10)));
+  const nos = scn.filter((b) => b.el === 'scene').map((b) => b.sceneNo);
+  t('★★ parseScript ให้เลขฉากไล่ตามลำดับในไฟล์ (เริ่มที่ 1)',
+    JSON.stringify(nos) === JSON.stringify([1, 2, 3]));
+  t('★ บล็อกที่ไม่ใช่หัวฉากไม่มีเลขฉากติดมา',
+    scn.every((b) => b.el === 'scene' || b.sceneNo === undefined));
 }
 
 console.log('alpha.57a fountain OK (' + n + ' checks)');

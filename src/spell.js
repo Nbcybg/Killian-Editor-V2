@@ -58,13 +58,32 @@ const CACHE_MAX = 2000;        // เอกสารบทหนึ่งรา�
 const CACHE_TEXT_MAX = 8000;   // ยาวกว่านี้ไม่แคช (กันกินหน่วยความจำเปล่า ๆ)
 const cache = new Map();
 
+// [alpha.124 ข้อ 30] "ข้ามคำนี้ครั้งนี้" — คำที่ไม่อยากให้ขีดแดงในรอบการทำงานนี้
+// ต่างจาก "เพิ่มลงพจนานุกรม" ตรงที่ **ไม่เขียนลงไฟล์**: ชื่อเฉพาะที่โผล่ครั้งเดียวในฉากนี้
+// ไม่ควรไปอยู่ในคลังคำถาวรของโปรเจกต์ แต่ก็ไม่ควรมีเส้นแดงกวนสายตาระหว่างเขียน
+const ignored = new Set();
+export function ignoreOnce(word) {
+  const w = String(word || '').trim();
+  if (!w) return false;
+  ignored.add(w);
+  ignored.add(w.toLowerCase());
+  invalidateMerged();
+  return true;
+}
+/** ล้างรายการที่ข้ามไว้ (เทส/เปลี่ยนโปรเจกต์) */
+export function clearIgnored() { const n = ignored.size; ignored.clear(); invalidateMerged(); return n; }
+/** จำนวนคำที่ข้ามอยู่ตอนนี้ — ให้เทสยืนยันได้ */
+export function ignoredSize() { return ignored.size; }
+
 function invalidateMerged() { mergedTh = null; mergedEn = null; cache.clear(); }
 function knownTh() {
-  if (!mergedTh) mergedTh = extraTh.size ? new Set([...base.th, ...extraTh]) : base.th;
+  if (!mergedTh) mergedTh = (extraTh.size || ignored.size)
+    ? new Set([...base.th, ...extraTh, ...ignored]) : base.th;
   return mergedTh;
 }
 function knownEn() {
-  if (!mergedEn) mergedEn = extraEn.size ? new Set([...base.en, ...extraEn]) : base.en;
+  if (!mergedEn) mergedEn = (extraEn.size || ignored.size)
+    ? new Set([...base.en, ...extraEn, ...[...ignored].map((w) => w.toLowerCase())]) : base.en;
   return mergedEn;
 }
 
@@ -181,3 +200,61 @@ export function check(text) {
 
 // จำนวนรายการในแคช — ให้เทสยืนยันว่าแคชทำงานจริงและไม่โตเกินเพดาน
 export function cacheSize() { return cache.size; }
+
+// ═══════════ [alpha.124 ข้อ 30] ★ คำแนะนำการแก้คำผิด ═══════════
+//
+// เดิมคลิกขวาคำที่ขีดแดงได้รายการเดียว: "เพิ่มลงพจนานุกรม" — ซึ่งเป็นทางเดียวที่ **ไม่แก้คำให้เลย**
+// (ตัวแก้ไขทุกตัวให้คำที่น่าจะถูกมาเลือกก่อน แล้ว "เพิ่มลงพจนานุกรม" ค่อยอยู่ท้ายสุด)
+//
+// วิธี: สร้าง "คำที่ห่างกัน 1 การแก้" (ลบ/สลับ/แทน/แทรก) แล้วเช็คว่าอยู่ในคลังคำไหม
+// — **ไม่ไล่สแกนคลังทั้งกอง** ซึ่งอาจมีหลายหมื่นคำและช้าเกินจะทำตอนคลิกขวา
+// จำนวนครั้งที่เช็ค ≈ ความยาวคำ × ขนาดตัวอักษร × 4 (หลักพันครั้ง = ต่ำกว่ามิลลิวินาที)
+
+const TH_ALPHA = 'กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮะัาำิีึืุูเแโใไ็่้๊๋์ํฯๆ';
+const EN_ALPHA = 'abcdefghijklmnopqrstuvwxyz';
+
+/** คำที่ห่างจาก `w` หนึ่งการแก้ (เซตอาจใหญ่ แต่สร้างเร็วและถูกกรองด้วยคลังคำทันที) */
+function edits1(w, alpha) {
+  const out = new Set();
+  for (let i = 0; i < w.length; i++) {
+    out.add(w.slice(0, i) + w.slice(i + 1));                                  // ลบ
+    if (i + 1 < w.length) out.add(w.slice(0, i) + w[i + 1] + w[i] + w.slice(i + 2));   // สลับที่
+    for (const c of alpha) {
+      out.add(w.slice(0, i) + c + w.slice(i + 1));                            // แทนที่
+      out.add(w.slice(0, i) + c + w.slice(i));                                // แทรก
+    }
+  }
+  for (const c of alpha) out.add(w + c);                                      // แทรกท้าย
+  out.delete(w);
+  return out;
+}
+
+/**
+ * คำที่น่าจะถูก สำหรับคำที่ขีดแดงอยู่
+ * @param {string} word คำที่สะกดผิด
+ * @param {number} max จำนวนสูงสุดที่คืน
+ * @returns {string[]} เรียงจาก "ใกล้เคียงที่สุด" (ยาวใกล้กันและขึ้นต้นเหมือนกันมาก่อน)
+ */
+export function suggest(word, max = 6) {
+  const w = String(word || '').trim();
+  if (!w || !base.loaded || w.length > 24) return [];
+  const thai = THAI_FULL.test(w);
+  const known = thai ? knownTh() : knownEn();
+  const target = thai ? w : w.toLowerCase();
+  const hits = [];
+  for (const cand of edits1(target, thai ? TH_ALPHA : EN_ALPHA)) {
+    if (cand.length < 2 || !known.has(cand)) continue;
+    // คะแนนต่ำ = ดีกว่า: ต่างความยาวน้อย + ตัวอักษรแรกตรงกัน
+    hits.push([Math.abs(cand.length - target.length) + (cand[0] === target[0] ? 0 : 2), cand]);
+    if (hits.length > 400) break;                    // กันคำสั้นมากที่ match เยอะผิดปกติ
+  }
+  hits.sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]));
+  const out = [];
+  for (const [, cand] of hits) {
+    // คำอังกฤษ: คืนโดยรักษารูปตัวพิมพ์ใหญ่ตัวแรกของคำเดิมไว้ (Bangkok → Bangkok ไม่ใช่ bangkok)
+    const shown = (!thai && /^[A-Z]/.test(w)) ? cand[0].toUpperCase() + cand.slice(1) : cand;
+    if (!out.includes(shown)) out.push(shown);
+    if (out.length >= max) break;
+  }
+  return out;
+}

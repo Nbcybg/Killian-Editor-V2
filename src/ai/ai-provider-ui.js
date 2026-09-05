@@ -262,6 +262,21 @@ export async function showAISettingsDialog() {
   sendRow.append(sendSel);
   box.append(sendRow);
 
+  // ---- [alpha.129 ข้อ 1] งบประวัติแชท ----
+  // เดิมงบตายตัว 6,000 token ฝังในโค้ด → คุยไม่กี่รอบ AI ก็ลืมต้นบทสนทนาแล้วตอบมั่ว
+  // 0 = อัตโนมัติ (60% ของขีดจำกัดโมเดลที่เดาได้จากรอบก่อน · ไม่รู้ = 32,000)
+  const histRow = el('div', 'wiki-row');
+  histRow.append(el('label', null, t('ui.aiProvider.historyTokens')));
+  const histInp = el('input', 'wiki-input ai-hist-tokens');
+  histInp.type = 'number';
+  histInp.min = '0';
+  histInp.step = '1000';
+  histInp.value = String(Number(ai.historyTokens) || 0);
+  histInp.title = t('ui.aiProvider.historyTokensHint');
+  histRow.append(histInp);
+  box.append(histRow);
+  box.append(el('div', 'dim ai-hist-hint', t('ui.aiProvider.historyTokensHint')));
+
   // ---- สรุปการใช้งาน ----
   const usage = ai.usage || [];
   if (usage.length) {
@@ -333,6 +348,7 @@ export async function showAISettingsDialog() {
   ov.onclick = (e) => { if (e.target === ov) close(); };
   okB.onclick = async () => {
     aiMeta().sendKey = sendSel.value;
+    aiMeta().historyTokens = Math.max(0, Math.round(Number(histInp.value) || 0));
     await persist(rows, activeId);
     close();
     setStatus(t('ui.common.saveSettingsAIDone'));
@@ -513,7 +529,10 @@ export function providerDialog(existing) {
     testBtn.onclick = async () => {
       if (busy) return;
       const p = collect();
-      const errs = validateProvider(p).filter((e) => !e.includes('ชื่อผู้ให้บริการ'));
+      // [alpha.128] เดิมกรองด้วยตัวอักษรไทย `e.includes('ชื่อผู้ให้บริการ')` ทั้งที่ข้อความนี้
+      // มาจาก `t('ui.aiProviders.cantRenameProvider')` ซึ่งแปลตามภาษา → หน้าจออังกฤษกรองไม่ติด
+      // แล้วปุ่ม "ทดสอบ" ถูกบล็อกด้วยข้อผิดพลาดที่ตั้งใจจะข้าม · เทียบกับข้อความตัวเดียวกันแทน
+      const errs = validateProvider(p).filter((e) => e !== t('ui.aiProviders.cantRenameProvider'));
       if (errs.length) { say(credMsg, false, errs[0]); return; }
       setBusy(true, credMsg, t('ui.aiProvider.busyTest'));
       const r = await testCredential(p);
@@ -532,7 +551,7 @@ export function providerDialog(existing) {
     };
     saveCredBtn.onclick = async () => {
       const p = collect();
-      const errs = validateProvider(p).filter((e) => !e.includes('ชื่อผู้ให้บริการ'));
+      const errs = validateProvider(p).filter((e) => e !== t('ui.aiProviders.cantRenameProvider'));
       if (errs.length) { say(credMsg, false, errs[0]); return; }
       const keys = await loadKeys();
       keys[p.credential.id] = p.credential.apiKey;

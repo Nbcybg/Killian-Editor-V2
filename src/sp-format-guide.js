@@ -119,6 +119,89 @@ export function refreshSceneNumbers(view) {
   if (view) view.dispatch(view.state.tr.setMeta(snKey, true));
 }
 
+// ───────── [alpha.124 ข้อ 33] ทำเครื่องหมาย "ข้อผิดพลาดของบท" ในเอกสาร ─────────
+//
+// ★ ปัญหาเดิม: ตัวตรวจบททำงานถูกต้องอยู่แล้ว แต่ผลออกทาง **ป้ายบนแถบสถานะ** อย่างเดียว
+//   (⚠️ 7 ▾) ต้องกดกระโดดไปทีละจุดถึงจะรู้ว่าที่ไหน — ต่างจากตัวตรวจคำผิดที่ขีดเส้นแดง
+//   ให้เห็นตรงคำเลย · ผลคือคนส่วนใหญ่ไม่เคยรู้ว่าบทตัวเองมีอะไรผิดตรงไหนบ้าง
+//
+// ที่นี่ทำแบบเดียวกับเส้นแดงของคำผิด: decoration ระดับ **โหนด** ทับบล็อกที่มีปัญหา
+// (ห้ามใส่ class ลง DOM ตรง ๆ — DOMObserver ของ ProseMirror ซ่อนกลับหมด)
+// ตำแหน่งมาจาก `checkScreenplay()` ใน app.js ซึ่งผูก `pos` จริงให้ทุกข้อแล้ว
+const errKey = new PMKey('ksperrmark');
+let _errMarks = [];          // [{pos, severity}]
+let _errOn = true;
+
+/**
+ * [alpha.127] เปิด/ปิดการทำเครื่องหมายในเอกสาร
+ *
+ * ผู้ใช้: *"แถบเหลืองที่แสดงจุด error ในชุดตรวจบทภาพยนตร์ เพิ่มว่าสามารถเปิดปิดได้ให้หน่อย"*
+ *
+ * เหตุผลที่ต้องปิดได้จริง: ตอน "เขียนร่างแรกให้จบก่อน" ทุกบล็อกยังไม่เข้ารูป — เส้นขอบ
+ * เหลือง/แดงเต็มหน้าเลยกลายเป็นเสียงรบกวนแทนที่จะเป็นตัวช่วย · ป้ายสรุป ⚠ บนแถบสถานะ
+ * ยังอยู่เหมือนเดิม จึงยังรู้ว่ามีกี่จุดโดยไม่ต้องมองเส้น
+ *
+ * ค่าเริ่มต้น = เปิด (พฤติกรรมเดิมของ alpha.124)
+ * @returns {boolean} true = ค่าเปลี่ยนจริง (ผู้เรียกค่อยสั่งวาดใหม่)
+ */
+export function setSpErrorMarksOn(on) {
+  const next = !!on;
+  const changed = next !== _errOn;
+  _errOn = next;
+  return changed;
+}
+export function isSpErrorMarks() { return _errOn; }
+/** จุดที่ทำเครื่องหมายอยู่ตอนนี้ (เทส/วินิจฉัยใช้) */
+export function spErrorMarks() { return _errMarks.slice(); }
+
+/**
+ * ตั้งรายการจุดที่ผิด — คืน true เมื่อ "เปลี่ยนจริง" เท่านั้น
+ * (บทเรียนเดียวกับ setPageBreaks: ตัวตรวจวิ่งทุก 300ms การ dispatch ทุกครั้งที่ผลเท่าเดิม
+ *  ทำให้ ProseMirror วาด DOM ใหม่ฟรี ๆ และไปกวนตำแหน่งเลื่อน/เคอร์เซอร์)
+ */
+export function setSpErrorMarks(list) {
+  const next = (list || [])
+    .filter((e) => Number.isFinite(e.pos))
+    .map((e) => ({ pos: e.pos, severity: e.severity === 'error' ? 'error' : 'warn' }));
+  const same = next.length === _errMarks.length
+    && next.every((e, i) => e.pos === _errMarks[i].pos && e.severity === _errMarks[i].severity);
+  _errMarks = next;
+  return !same;
+}
+
+function errDecos(doc) {
+  if (!_errOn || !doc || !_errMarks.length) return DecoSet.empty;
+  // จุดเดียวกันอาจมีหลายข้อ — เอาระดับรุนแรงสุดของตำแหน่งนั้น
+  const worst = new Map();
+  for (const m of _errMarks) {
+    if (worst.get(m.pos) !== 'error') worst.set(m.pos, m.severity);
+  }
+  const out = [];
+  doc.forEach((node, pos) => {
+    const sev = worst.get(pos);
+    if (!sev) return;
+    out.push(Deco.node(pos, pos + node.nodeSize, { class: 'sp-err-' + sev }));
+  });
+  return DecoSet.create(doc, out);
+}
+
+export function spErrorMarkPlugin() {
+  return new PMPlugin({
+    key: errKey,
+    state: {
+      init: (_c, st) => errDecos(st.doc),
+      apply(tr, prev, _o, st) {
+        if (!tr.docChanged && !tr.getMeta(errKey)) return prev.map(tr.mapping, tr.doc);
+        return errDecos(st.doc);
+      },
+    },
+    props: { decorations(state) { return errKey.getState(state); } },
+  });
+}
+export function refreshSpErrorMarks(view) {
+  if (view) view.dispatch(view.state.tr.setMeta(errKey, true));
+}
+
 // ───────── 57. เส้นคั่นหน้าในตัวแก้ไข ─────────
 // ตำแหน่งมาจาก paginate() ที่ app.js เรียกใน scheduleCount (debounce 300ms)
 // เก็บเป็นตัวแปรระดับโมดูลแบบเดียวกับสมอคอมเมนต์ — plugin แค่หยิบไปวาด

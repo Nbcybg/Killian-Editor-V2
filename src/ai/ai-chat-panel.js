@@ -16,7 +16,8 @@ import {
   TRANSCRIPT_VIEWS, DEFAULT_VIEW, viewDef, modeCap, hasConversation,
   modeDef, scopeLabel, isSendKey, newSession, newMessage, addMessage, renameSession,
   archiveSession, clearMessages, sessionFileName, sessionStats, contextLabel, compact, usd,
-  searchSessions, chatMessages, rawJson, shareMarkdown, estimateTokens,
+  searchSessions, buildChatMessages, historyBudget, rawJson, shareMarkdown, estimateTokens,
+  parseChatMarkdown,
 } from './ai-session.js';
 import { providerList, providerById, currentProvider, completeStream, aiMeta } from './ai-provider-ui.js';
 import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, describeCall,
@@ -37,6 +38,20 @@ const S = {
   sending: false,
   root: null,            // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
 };
+
+/**
+ * [alpha.129 ข้อ 2] ★ เซสชัน "ตัวจริง ณ วินาทีนี้"
+ *
+ * ตัวจัดการอีเวนต์ทุกตัวใน `sessionView()`/`composer()` ถูกสร้างตอนวาดหน้า แล้ว **ปิดทับ (closure)
+ * ก้อนเซสชัน `s` ของตอนนั้นไว้** — แต่ `addMessage()` เป็นฟังก์ชันบริสุทธิ์ที่คืน "ก้อนใหม่"
+ * ทุกครั้งที่มีข้อความเพิ่ม (`S.cur = addMessage(...)`) → `s` ที่ปิดทับไว้กลายเป็นของเก่าทันที
+ * ที่คุยไปหนึ่งรอบ ผลคือบั๊กสองตัวที่ผู้ใช้เจอ:
+ *   1. กดส่งข้อความที่สอง = `send(s)` เริ่มจากเซสชันตอนยังไม่มีข้อความ → **โมเดลไม่เคยเห็นแชทเก่าเลย**
+ *   2. สลับมุมมอง (ความคิด/สรุป) หรือเปลี่ยนโหมด/ระดับการเข้าถึง = `saveSession(s)` เขียนทับไฟล์
+ *      ด้วยก้อนเก่าที่ไม่มีข้อความ → **แชทหายทั้งดุ้น** ทั้งบนจอและในไฟล์
+ * ทางแก้: ห้ามอ่าน `s` ที่ปิดทับตรง ๆ ในอีเวนต์ — ให้ผ่าน `live(s)` เสมอ
+ */
+function live(s) { return (s && S.cur && S.cur.id === s.id) ? S.cur : s; }
 
 // ────────────────────────────── ที่เก็บไฟล์ ──────────────────────────────
 async function sessionsDir() {
@@ -72,9 +87,22 @@ export async function loadSessions(force) {
  *
  * เซสชันที่เคยบันทึกแล้วจะไม่ย้อนกลับไปเป็นฉบับร่างอีก — กด "เริ่มใหม่" จนไม่เหลือข้อความก็ยังอยู่
  */
-export async function saveSession(s, { force = false } = {}) {
+export async function saveSession(s, { force = false, allowShrink = false } = {}) {
   if (!s) return false;
   if (s._draft && !force && !hasConversation(s)) return false;   // ยังไม่เริ่มคุย = ยังไม่เขียนไฟล์
+  // [alpha.129 ข้อ 2] กันชนสุดท้าย: ห้ามเขียนทับด้วยก้อนที่ข้อความ "น้อยลง"
+  //
+  // ถึงจะแก้ closure ที่ปิดทับของเก่าไปแล้ว (ดู `live()`) จุดเรียกใหม่ที่เพิ่มทีหลังก็พลาดซ้ำได้อีก
+  // และผลของบั๊กแบบนี้คือ **บทสนทนาหายถาวรจากไฟล์** ซึ่งกู้ไม่ได้ → ตรงนี้จึงยกข้อความล่าสุด
+  // ที่รู้จักมาแทนให้เอง แล้วเขียนต่อตามปกติ (การตั้งค่าที่ผู้เรียกตั้งใจเปลี่ยนยังมีผลครบ)
+  // `allowShrink` = ตั้งใจให้สั้นลงจริง ๆ (ปุ่ม "เริ่มใหม่")
+  const known = S.sessions.find((x) => x.id === s.id);
+  if (!allowShrink && known && known !== s
+      && (known.messages || []).length > (s.messages || []).length) {
+    log('warn', tt('ui.aiChatPanel.staleSaveRebased'), s.id);
+    s = { ...s, messages: known.messages, updated: known.updated || s.updated };
+    if (S.cur && S.cur.id === s.id) S.cur = s;
+  }
   const d = await sessionsDir();
   if (!d) return false;
   delete s._draft;
@@ -103,9 +131,17 @@ async function deleteSessionFile(s) {
  * ดึงเนื้อหาของโปรเจกต์ตาม scope ที่เซสชันตั้งไว้
  * project = ทุกฉากทุกเล่ม · book/chapter = เฉพาะสาขานั้น · scene = ไฟล์ที่เปิดอยู่ · none = ไม่ให้เลย
  */
-export async function collectScope(session, { maxChars = 24000 } = {}) {
-  const scope = session.scope || DEFAULT_SCOPE;
+export async function collectScope(session, { maxChars = 24000, query = '' } = {}) {
+  let scope = session.scope || DEFAULT_SCOPE;
   if (scope === 'none' || !state.root) return '';
+  // [alpha.125 ข้อ B] ★ "เฉพาะส่วนที่เกี่ยวข้อง" — ส่งต่อให้สาย RAG (ดูหมายเหตุใน SCOPES)
+  if (scope === 'relevant') {
+    const rel = await collectRelevant(query, { maxChars, files: session.files || [] });
+    if (rel) return rel;
+    // สร้างดัชนีไม่ได้ (ยังไม่มีโปรเจกต์ · ไฟล์อ่านไม่ได้ · ยังไม่ได้พิมพ์คำถาม)
+    // → **ตกกลับไประดับ "ทั้งโปรเจกต์" แทนการส่งบริบทเปล่า** ซึ่งจะทำให้โมเดลตอบมั่ว
+    scope = 'project';
+  }
   const parts = [];
   const push = async (file, label) => {
     try {
@@ -119,15 +155,21 @@ export async function collectScope(session, { maxChars = 24000 } = {}) {
     if (active && active.file && !active.file.startsWith('::')) await push(active.file, active.title || tt('ui.aiChatPanel.sceneOpen'));
   } else {
     // ระดับที่กว้างกว่าฉาก — เดินโครงโปรเจกต์จริง แล้วกรองตาม "ที่อยู่" ของไฟล์ที่เปิดอยู่
-    const here = (active && active.file) || '';
-    const sep = here.includes('\\') ? '\\' : '/';
-    const upto = (n) => here.split(sep).slice(0, -n).join(sep);
-    const prefix = scope === 'project' ? state.root
+    //
+    // ══ [alpha.132] ★ เทียบเส้นทางต้องทำให้ตัวคั่นเป็นแบบเดียวกันก่อน ══
+    // state.root มาได้ทั้งสองรูปบนวินโดวส์ (กล่องเลือกโฟลเดอร์ให้แบ็กสแลช · ค่าจาก env/ไฟล์ตั้งค่าให้สแลชหน้า)
+    // แต่ kapi.join คืนแบ็กสแลชเสมอ → f.startsWith(prefix) เป็น **false ทุกไฟล์**
+    // เมื่อ root เป็นสแลชหน้า → บริบทที่ส่งให้ AI กลายเป็น **ค่าว่าง** อย่างเงียบ ๆ
+    // (เจอตอนไล่เทส [a125-13] ที่แดงมาตั้งแต่ก่อนรอบนี้ — โมเดลตอบมั่วเพราะไม่มีบริบทเลย)
+    const norm = (x) => String(x || '').replace(/\\/g, '/');
+    const here = norm((active && active.file) || '');
+    const upto = (n) => here.split('/').slice(0, -n).join('/');
+    const prefix = scope === 'project' ? norm(state.root)
                  : scope === 'chapter' ? upto(1)          // โฟลเดอร์บท
                  : upto(3);                               // .../Draft/<ฉบับร่าง>/Chapters/<บท>/x.md → เล่ม
     const files = await allMdFiles(state.root);
     for (const f of files) {
-      if (prefix && !f.startsWith(prefix)) continue;
+      if (prefix && !norm(f).startsWith(prefix)) continue;
       await push(f, f.slice(state.root.length + 1));
       if (parts.join('\n').length > maxChars) break;
     }
@@ -137,6 +179,94 @@ export async function collectScope(session, { maxChars = 24000 } = {}) {
   const text = parts.join('\n\n');
   return text.length > maxChars ? text.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : text;
 }
+// ═══════════ [alpha.125 ข้อ B] ★ ต่อสาย RAG ของสเปกข้อ 79 เข้าแผงแชทจริง ═══════════
+//
+// `src/ai/ai-chat.js` (RAG chat) มีครบมาตั้งแต่ alpha.61 — เก็บเอกสารจากฉาก/Wiki/เส้นเวลา
+// → chunk → ฝังเวกเตอร์ → ค้นด้วย cosine → ประกอบบริบทพร้อม "ที่มา" — และมี unit test คุมอยู่
+// แต่ **ไม่มีไฟล์ไหน import มันเลย**: แผงแชทที่ผู้ใช้ใช้จริงเขียนสายของตัวเองแยก (`collectScope`)
+// ซึ่งเป็นการ "ยัดไฟล์ไปเรื่อย ๆ จนเต็มโควตา" ไม่ใช่การเลือกของที่เกี่ยวข้อง
+//
+// ที่สำคัญ: `AIClient.embed()` **ตกกลับไปใช้ `localEmbed` เองเมื่อไม่มีคีย์/ผู้ให้บริการ**
+// → ระดับนี้จึงทำงานได้แม้ออฟไลน์ ไม่มีค่าใช้จ่าย และไม่ต้องตั้งค่าอะไรเพิ่ม
+//
+// ดัชนีถูกแคชต่อโปรเจกต์ และล้างเมื่อบันทึกไฟล์ (app.js เรียก `invalidateChatRag()`)
+const RAG = { session: null, root: '', building: null, stale: true };
+
+/** เนื้อหาในโปรเจกต์เปลี่ยน → ดัชนี RAG ของแชทล้าสมัย */
+export function invalidateChatRag() { RAG.stale = true; }
+
+/** รวบรวมเอกสารของโปรเจกต์ในรูปที่ `collectDocs()` ของ ai-chat.js ต้องการ */
+async function ragSource() {
+  const scenes = [];
+  const files = await allMdFiles(state.root);
+  const { parseMdFile } = await import('../md.js');
+  for (const f of files) {
+    try {
+      const { meta = {}, body = '' } = parseMdFile(await kapi.readFile(f));
+      if (!String(body).trim()) continue;
+      scenes.push({ id: f, title: meta.title || f.split(/[\\/]/).pop().replace(/\.md$/i, ''),
+                    text: body, chapterId: '', storyDate: meta.storyDate || '' });
+    } catch {}
+  }
+  let entities = [];
+  try {
+    const { listEntities } = await import('../project-scan.js');
+    entities = (await listEntities(state.root)) || [];
+  } catch {}
+  return { scenes, entities };
+}
+
+/** สร้าง/คืนเซสชัน RAG ของโปรเจกต์ปัจจุบัน */
+async function ensureRag() {
+  if (!state.root) return null;
+  if (RAG.session && !RAG.stale && RAG.root === state.root) return RAG.session;
+  if (RAG.building) return RAG.building;
+  const root = state.root;
+  RAG.building = (async () => {
+    try {
+      const [{ ChatSession }, { getAIClient }] = await Promise.all([
+        import('./ai-chat.js'), import('./ai-bridge.js'),
+      ]);
+      const client = await getAIClient();
+      if (!client) return null;
+      const sess = new ChatSession({ client, k: 8 });
+      await sess.build(await ragSource());
+      if (state.root !== root) return null;      // เปลี่ยนโปรเจกต์ระหว่างสร้าง = ทิ้ง
+      RAG.session = sess; RAG.root = root; RAG.stale = false;
+      return sess;
+    } catch (e) {
+      log('warn', tt('ui.aiChatPanel.ragBuildFail'), e);
+      return null;
+    } finally { RAG.building = null; }
+  })();
+  return RAG.building;
+}
+
+/**
+ * บริบทแบบ "เฉพาะที่เกี่ยวข้อง"
+ * @returns {Promise<string>} ข้อความบริบทพร้อมหัวข้อที่มา · '' = ทำไม่ได้ (ผู้เรียกจะตกกลับเอง)
+ */
+export async function collectRelevant(query, { maxChars = 24000, files = [] } = {}) {
+  const q = String(query || '').trim();
+  const sess = q ? await ensureRag() : null;
+  if (!sess || !sess.size) return '';
+  let out = '';
+  try {
+    const { buildContext } = await import('./ai-core.js');
+    const hits = await sess.rag.retrieve(q, 8);
+    out = buildContext(hits, { maxChars });
+  } catch (e) { log('warn', tt('ui.aiChatPanel.ragRetrieveFail'), e); return ''; }
+  // ไฟล์ที่ผู้ใช้แนบเองด้วย 📎 ต้องติดไปเสมอ ไม่ว่าจะเกี่ยวกับคำถามไหม
+  for (const f of files) {
+    try {
+      const { parseMdFile } = await import('../md.js');
+      const raw = await kapi.readFile(f.path);
+      out += '\n\n### 📎 ' + (f.name || f.path) + '\n' + parseMdFile(raw).body;
+    } catch {}
+  }
+  return out.length > maxChars ? out.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : out;
+}
+
 async function allMdFiles(root, depth = 0) {
   if (depth > 6) return [];
   const out = [];
@@ -273,7 +403,7 @@ function sessionView() {
   // [alpha.62 บั๊ก 3] เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เซสชันยังอยู่ที่เดิม)
   const restart = el('button', 'ai-chat-restart', '↻');
   restart.title = tt('ui.aiChatPanel.restartClearDialogueSession');
-  restart.onclick = () => restartSession(s);
+  restart.onclick = () => restartSession(live(s));
   // [alpha.63r4] มุมมอง transcript — ปกติ / ความคิด / ละเอียด / สรุป
   const viewSel = el('select', 'ai-chat-viewsel');
   for (const v of TRANSCRIPT_VIEWS) {
@@ -285,14 +415,17 @@ function sessionView() {
   viewSel.value = s.view || DEFAULT_VIEW;
   viewSel.title = viewDef(s.view).hint;
   viewSel.onchange = async () => {
-    s.view = viewSel.value;
-    viewSel.title = viewDef(s.view).hint;
-    await saveSession(s);
+    // [alpha.129 ข้อ 2] ต้องเขียนลงเซสชันตัวจริง ไม่ใช่ก้อนที่ปิดทับไว้ตอนวาด — ดู `live()`
+    const c = live(s);
+    c.view = viewSel.value;
+    viewSel.title = viewDef(c.view).hint;
+    S.cur = c;
+    await saveSession(c);
     draw();
   };
   const more = el('button', 'ai-chat-more', '⋯');
   more.title = tt('ui.aiChatPanel.itemPickSession');
-  more.onclick = (e) => sessionMenu(e, s);
+  more.onclick = (e) => sessionMenu(e, live(s));
   right.append(badge, viewSel, restart, more);
   head.append(back, title, right);
   wrap.append(head);
@@ -340,7 +473,10 @@ function msgNode(m, view = DEFAULT_VIEW) {
   who.append(copy);
   // โหมดปกติ/ความคิด: ซ่อนบล็อก ```k2 เพราะสรุปเป็นบรรทัดอ่านง่ายให้แล้วด้านล่าง
   const shown = view === 'verbose' ? m.text : (m.role === 'assistant' ? stripToolCalls(m.text) : m.text);
-  const txt = el('div', 'ai-msg-text', shown);
+  // [alpha.129 ข้อ 4] คำตอบโมเดลเป็น Markdown เสมอ — เดิมโชว์ดิบ ๆ ทั้ง `##` ทั้ง `**`
+  // (ข้อความที่ผู้ใช้พิมพ์เองยังโชว์ตามที่พิมพ์ · โหมดละเอียดโชว์ดิบเพราะจงใจดูของจริง)
+  const asMd = m.role === 'assistant' && view !== 'verbose';
+  const txt = asMd ? mdNode(shown) : el('div', 'ai-msg-text', shown);
   n.append(who, txt);
   if (!shown && m.calls && m.calls.length) txt.remove();
 
@@ -370,6 +506,56 @@ function msgNode(m, view = DEFAULT_VIEW) {
     n.append(el('div', 'ai-msg-files dim', '📎 ' + m.files.map((f) => f.name || f.path).join(', ')));
   }
   return n;
+}
+
+/**
+ * [alpha.129 ข้อ 4] วาด Markdown ของคำตอบโมเดลเป็น DOM จริง
+ *
+ * **ห้ามใช้ innerHTML ตรงนี้เด็ดขาด** — เนื้อหามาจากผู้ให้บริการภายนอกที่เชื่อไม่ได้
+ * และหน้าต่างนี้เข้าถึง `kapi` (อ่าน/เขียนไฟล์ทั้งโปรเจกต์) ได้ · สร้าง node เองทุกชิ้น
+ * = แท็กปลอมกลายเป็นตัวอักษรธรรมดาโดยอัตโนมัติ ไม่ต้องพึ่งตัว sanitize ให้ครบทุกช่อง
+ */
+function mdNode(text) {
+  const box = el('div', 'ai-msg-text ai-md');
+  const inl = (parent, parts) => {
+    for (const p of parts || []) {
+      if (p.t === 'text') parent.append(document.createTextNode(p.v));
+      else parent.append(el(p.t === 'code' ? 'code' : p.t === 'b' ? 'strong' : p.t === 's' ? 'del' : 'em',
+                            p.t === 'code' ? 'ai-md-code' : '', p.v));
+    }
+  };
+  for (const b of parseChatMarkdown(text)) {
+    if (b.type === 'hr') { box.append(el('hr', 'ai-md-hr')); continue; }
+    if (b.type === 'code') {
+      const wrap = el('div', 'ai-md-pre');
+      const head = el('div', 'ai-md-pre-head dim', b.lang || 'code');
+      const cp = el('button', 'ai-msg-copy', '⧉');
+      cp.type = 'button';
+      cp.title = tt('ui.aiChatPanel.copyText');
+      cp.onclick = async () => {
+        const ok = await copyText(b.text);
+        cp.textContent = ok ? '✓' : '✕';
+        setTimeout(() => { cp.textContent = '⧉'; }, 1200);
+      };
+      head.append(cp);
+      wrap.append(head, el('pre', 'ai-md-pre-body', b.text));
+      box.append(wrap);
+      continue;
+    }
+    if (b.type === 'ul' || b.type === 'ol') {
+      const list = el(b.type, 'ai-md-list');
+      for (const it of b.items) { const li = el('li'); inl(li, it); list.append(li); }
+      box.append(list);
+      continue;
+    }
+    const tag = b.type === 'h' ? 'h' + Math.min(6, Math.max(1, b.level))
+              : b.type === 'quote' ? 'blockquote' : 'p';
+    const node = el(tag, 'ai-md-' + (b.type === 'h' ? 'h' : b.type));
+    inl(node, b.parts);
+    box.append(node);
+  }
+  if (!box.childNodes.length) box.append(document.createTextNode(String(text || '')));
+  return box;
 }
 
 /** บรรทัดเดียวต่อข้อความ — มุมมอง "สรุป" */
@@ -454,14 +640,17 @@ function composer(s, body) {
 
   const filesRow = el('div', 'ai-chat-files dim');
   const drawFiles = () => {
+    const cf = live(s).files || [];
     filesRow.innerHTML = '';
-    filesRow.style.display = (s.files || []).length ? '' : 'none';
-    for (const f of s.files || []) {
+    filesRow.style.display = cf.length ? '' : 'none';
+    for (const f of cf) {
       const chip = el('span', 'ai-chat-filechip', '📎 ' + (f.name || f.path));
       const x = el('span', 'ai-chat-filex', '×');
       x.onclick = async () => {
-        s.files = s.files.filter((y) => y.path !== f.path);
-        await saveSession(s); drawFiles();
+        const c = live(s);
+        c.files = (c.files || []).filter((y) => y.path !== f.path);
+        S.cur = c;
+        await saveSession(c); drawFiles();
       };
       chip.append(x);
       filesRow.append(chip);
@@ -483,18 +672,23 @@ function composer(s, body) {
   inputRow.append(ta, sendBtn);
   box.append(inputRow);
 
-  modeSel.onchange = async () => { s.mode = modeSel.value; await saveSession(s); };
-  scopeSel.onchange = async () => { s.scope = scopeSel.value; await saveSession(s); };
+  // ทุกตัวเขียนลง `live(s)` — ไม่งั้นการตั้งค่าครั้งเดียวลบบทสนทนาทั้งเซสชันทิ้ง (ดู `live()`)
+  modeSel.onchange = async () => { const c = live(s); c.mode = modeSel.value; S.cur = c; await saveSession(c); };
+  scopeSel.onchange = async () => { const c = live(s); c.scope = scopeSel.value; S.cur = c; await saveSession(c); };
   modelSel.onchange = async () => {
     const [pid, model] = String(modelSel.value).split(' ');
-    s.providerId = pid || ''; s.model = model || '';
-    await saveSession(s);
+    const c = live(s);
+    c.providerId = pid || ''; c.model = model || '';
+    S.cur = c;
+    await saveSession(c);
   };
   fileBtn.onclick = async () => {
     const p = await (kapi.openFileDialog ? kapi.openFileDialog() : null);
     if (!p) { setStatus(tt('ui.aiChatPanel.pickFileNotOk')); return; }
-    s.files = [...(s.files || []), { path: p, name: String(p).replace(/^.*[\\/]/, '') }];
-    await saveSession(s); drawFiles();
+    const c = live(s);
+    c.files = [...(c.files || []), { path: p, name: String(p).replace(/^.*[\\/]/, '') }];
+    S.cur = c;
+    await saveSession(c); drawFiles();
   };
   // dynamic import กัน circular — app.js import จากไฟล์นี้อยู่แล้ว (ai-chat-panel ↔ app)
   scBtn.onclick = async (e) => {
@@ -502,7 +696,7 @@ function composer(s, body) {
     await openResolvedShortcodeMenu(e, ta);
   };
 
-  const doSend = () => send(s, ta, body, sendBtn);
+  const doSend = () => send(live(s), ta, body, sendBtn);
   sendBtn.onclick = doSend;
   ta.onkeydown = (e) => {
     if (!isSendKey(e, aiMeta().sendKey || DEFAULT_SEND_KEY)) return;
@@ -538,7 +732,9 @@ function fillModelSelect(sel, s) {
 let _reqSeq = 0;
 function newReqId() { _reqSeq += 1; return 'chat-' + Date.now().toString(36) + '-' + _reqSeq; }
 
-async function send(s, ta, body, sendBtn) {
+async function send(s0, ta, body, sendBtn) {
+  // ก้อนที่ปิดทับไว้ตอนวาดหน้าเป็นของเก่าทันทีที่คุยไปหนึ่งรอบ — ยึด `S.cur` เสมอ (ดู `live()`)
+  const s = live(s0);
   const text = String(ta.value || '').trim();
   if (!text || S.sending) return;
   const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
@@ -599,19 +795,28 @@ async function send(s, ta, body, sendBtn) {
   const tp = toolsSystemPrompt(cap);
   if (tp) system += '\n\n' + tp;
   try {
-    const ctx = await collectScope(S.cur);
+    const ctx = await collectScope(S.cur, { query: text });
     if (ctx) system += tt('ui.aiChatPanel.dataProjectLevelIn') + scopeLabel(S.cur.scope) + '):\n' + ctx;
   } catch (e) { log('warn', tt('ui.aiChatPanel.aiChatCollectContext'), e); }
 
   // ── วนรอบ: ถาม → โมเดลสั่งคำสั่ง → ทำจริง → ส่งผลกลับ → ถามต่อ ──
   let res = null;
   let touched = false;
+  let lastDropped = 0;
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const rt0 = Date.now();
       // สตรีมสด (transport ไม่รองรับ → ตกไป complete แล้วโผล่ทีเดียว UI ไม่ต้องแยกกรณี)
+      // [alpha.129 ข้อ 1] ประวัติทั้งเซสชันตามงบของโมเดลจริง (เดิมตายตัว 6k → ลืมแชทเก่าตลอด)
+      const hist = buildChatMessages(S.cur, { maxTokens: historyBudget(S.cur, aiMeta()) });
+      if (hist.dropped > 0 && hist.dropped !== lastDropped) {
+        lastDropped = hist.dropped;
+        // ตัดจริงเมื่อไหร่ต้องเห็นบนจอ — ไม่งั้นผู้ใช้เจอแค่ "AI มั่ว" โดยไม่รู้ว่าประวัติถูกตัด
+        body.insertBefore(el('div', 'ai-chat-trim dim',
+          ttf('ui.aiChatPanel.historyTrimmed', hist.dropped)), pend);
+      }
       res = await completeStream(prov, {
-        system, messages: chatMessages(S.cur), model: s.model || undefined, reqId,
+        system, messages: hist.messages, model: s.model || undefined, reqId,
       }, (c) => {
         if (c.thinking) { liveThink += c.thinking; }
         if (c.delta) { liveText = c.text; }
@@ -663,13 +868,25 @@ async function send(s, ta, body, sendBtn) {
         whoLabel.textContent = tt('ui.aiChatPanel.busyThinkNext');
       }
     }
+  } catch (e) {
+    // [alpha.129 ข้อ 3] เดิมไม่มี catch: ข้อผิดพลาดใด ๆ (เขียนไฟล์ไม่ได้ · คำสั่งพัง · วาดพัง)
+    // ทำให้หลุดออกไปทั้งที่ `S.sending` ยังเป็น true → **ปุ่มส่งค้างถาวร ส่งข้อความไม่ได้อีกเลย**
+    // และฟอง "กำลังคิด…" ค้างบนจอ ผู้ใช้เข้าใจว่าโปรแกรมแฮงก์
+    log('warn', tt('ui.aiChatPanel.sendFailed'), e);
+    const emsg = (e && e.message) || String(e);
+    res = res || { ok: false, error: emsg };
+    const errMsg = newMessage('assistant', '', { error: emsg });
+    S.cur = addMessage(S.cur, errMsg);
+    try { await saveSession(S.cur); } catch {}
+    body.append(msgNode(errMsg, view));
   } finally {
     stopTick();
+    if (pend.isConnected) pend.remove();
+    S.sending = false;
+    sendBtn.disabled = false;
   }
-  if (touched) await refreshAfterActions();
+  if (touched) { try { await refreshAfterActions(); } catch (e) { log('warn', 'refreshAfterActions', e); } }
 
-  S.sending = false;
-  sendBtn.disabled = false;
   body.scrollTop = body.scrollHeight;
   // ชื่อเซสชันอาจเพิ่งถูกตั้งจากข้อความแรก → วาดหัวใหม่
   const t = S.host && S.host.querySelector('.ai-chat-title');
@@ -683,7 +900,7 @@ async function send(s, ta, body, sendBtn) {
                    tt('ui.aiChatPanel.use2') + st2.total.toLocaleString(),
                    tt('ui.aiChatPanel.clickViewDetail')].join('\n');
   }
-  if (!res.ok) setStatus('❌ AI: ' + (res.error || ''));
+  if (res && !res.ok) setStatus('❌ AI: ' + (res.error || ''));
 }
 /**
  * ลงมือทำคำสั่งทั้งชุดตามลำดับ
@@ -759,14 +976,14 @@ export async function copyText(text) {
 
 /** [alpha.62 บั๊ก 3] เริ่มใหม่ — ถามก่อนแล้วล้างบทสนทนา (เซสชันยังอยู่ที่เดิม) */
 export async function restartSession(s, { confirm = true } = {}) {
-  const target = s || S.cur;
+  const target = live(s) || S.cur;
   if (!target) return null;
   if (confirm && (target.messages || []).length
       && !(await confirmBox(ttf('ui.aiChatPanel.restartClearDialogueText', (target.messages || []).length, target.title)))) {
     return null;
   }
   S.cur = clearMessages(target);
-  await saveSession(S.cur);
+  await saveSession(S.cur, { allowShrink: true });
   S.view = 'session';
   draw();
   setStatus(tt('ui.aiChatPanel.startDialogueNewDone'));
@@ -774,17 +991,18 @@ export async function restartSession(s, { confirm = true } = {}) {
 }
 
 // ── เมนู ⋯ ──
-function sessionMenu(ev, s) {
+function sessionMenu(ev, s0) {
+  const s = live(s0);
   popupMenu(ev.clientX, ev.clientY, [
-    { label: tt('ui.aiChatPanel.restartClearDialogue'), click: () => restartSession(s) },
+    { label: tt('ui.aiChatPanel.restartClearDialogue'), click: () => restartSession(live(s)) },
     { label: tt('ui.aiChatPanel.copyDialogueAll'), click: async () => {
       setStatus(await copyText(shareMarkdown(s)) ? tt('ui.aiChatPanel.copyDialogueDone') : tt('ui.common.copyNotOk'));
     } },
     '-',
     // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
     { label: (s.autoRun === false ? '☐' : '☑') + tt('ui.aiChatPanel.doCmdNotMust'), click: async () => {
-      s.autoRun = s.autoRun === false;
-      await saveSession(s);
+      const c = live(s); c.autoRun = c.autoRun === false; S.cur = c; s.autoRun = c.autoRun;
+      await saveSession(c);
       setStatus(s.autoRun ? tt('ui.aiChatPanel.aIActNotAsk') : tt('ui.aiChatPanel.aIAskBeforeAll'));
     } },
     { label: (s.confirmDestructive === false ? '☐' : '☑') + tt('ui.aiChatPanel.askBeforeAlwaysDel'), click: async () => {
@@ -794,22 +1012,23 @@ function sessionMenu(ev, s) {
           + tt('ui.aiChatPanel.trashRecoverRestoreNot'), tt('ui.aiChatPanel.closeAsk'));
         if (!okGo) return;
       }
-      s.confirmDestructive = s.confirmDestructive === false;
-      await saveSession(s);
+      const c = live(s); c.confirmDestructive = c.confirmDestructive === false;
+      S.cur = c; s.confirmDestructive = c.confirmDestructive;
+      await saveSession(c);
       setStatus(s.confirmDestructive ? tt('ui.aiChatPanel.askBeforeDelAlways') : tt('ui.aiChatPanel.unlockFullAIDel'));
     } },
     '-',
     { label: tt('ui.aiChatPanel.changeName'), click: async () => {
       const v = await ask(tt('ui.aiChatPanel.nameSession'), { value: s.title });
       if (v === null) return;
-      S.cur = renameSession(s, v);
+      S.cur = renameSession(live(s), v);
       await saveSession(S.cur, { force: true }); draw();
     } },
     { label: tt('ui.aiChatPanel.copyMarkdown'), click: async () => {
       setStatus(await copyText(shareMarkdown(s)) ? tt('ui.aiChatPanel.copyDialogueDone') : tt('ui.common.copyNotOk'));
     } },
     { label: s.archived ? tt('ui.aiChatPanel.exitArrangeKeep') : tt('ui.aiChatPanel.arrangeKeep'), click: async () => {
-      S.cur = archiveSession(s, !s.archived);
+      S.cur = archiveSession(live(s), !live(s).archived);
       await saveSession(S.cur);
       S.view = 'list'; draw();
       setStatus(S.cur.archived ? tt('ui.aiChatPanel.arrangeKeepSessionDone') : tt('ui.aiChatPanel.sessionExitArrangeKeep'));

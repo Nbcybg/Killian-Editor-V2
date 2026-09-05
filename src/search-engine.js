@@ -1,4 +1,10 @@
 // search-engine.js — เครื่องค้นหาเต็มข้อความทั้งโปรเจกต์ (ข้อ 33)
+//
+// ⚠️ [alpha.124 ข้อ 22] **สถานะของแต่ละส่วน**
+//   · `tokenize` / `tokenizeQuery` — ใช้งานจริง (ai-core.js · ai-analyze.js · starter-names.js)
+//   · `SearchIndex` / `parseQuery` / `indexProject` — **ยังไม่มีใครเรียก**: Global Search
+//     ยังสแกนไฟล์ตรง ๆ อยู่ · เก็บไว้เพราะมี unit test คุม (`test/search-engine.test.cjs`)
+//     และเป็นงานที่ค้างไว้ตั้งใจ (ดู "ยังเหลือ" ใน SKILL.md) ไม่ใช่ซากที่ลืมทิ้ง
 // สถาปัตยกรรม: tokenizer (ไทย+อังกฤษ) → inverted index (คำ→ไฟล์→ตำแหน่ง) → คิวรี (คำเดียว/AND/OR/NOT/field) → จัดอันดับ
 //
 // ออกแบบให้เป็น pure logic: รับ "เอกสาร" เป็น input ไม่ผูกกับ kapi/DOM → ทดสอบด้วย node ได้

@@ -7,6 +7,8 @@
 // ส่วนคำนวณบริสุทธิ์ (ทดสอบด้วย node ได้) · ส่วนที่แตะ DOM = renderProsePageView + plugin เส้นคั่นหน้า
 
 import { t, tf } from './i18n.js';
+// [alpha.132r] ตัวกรองค่าสี — ตัวเดียวกับตัวแก้ไข/ไฟล์ .md
+import { normColor } from './text-color.js';
 import { mergeProseFormat, paginateProse, proseMetrics, prosePageLabel,
          proseFontStack, proseHeadingStack, proseLinePx, proseFontPx } from './prose-format.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS } from './sp-format.js';
@@ -64,7 +66,45 @@ const cssIn = (v) => num(v, 0) + 'in';
  * วาดหน้ากระดาษนิยายลง host (DOM) — โครงเดียวกับ renderPageView ของบทภาพยนตร์
  * @returns {{pages:HTMLElement[], scale:number, perRow:number}}
  */
+/**
+ * == [alpha.132r] ** ใส่ข้อความลงบล็อกของช่องตัวอย่าง โดยรู้จัก "สีตัวอักษร" ==
+ *
+ * ผู้ใช้: *"สีก็ยังไม่มีสีเลย ยังเป็นขาวดำอยู่"*
+ *
+ * บล็อกของช่องตัวอย่างมาจาก `mdToProseBlocks()` ซึ่งเก็บ **ข้อความ .md ดิบ** ไว้ทั้งบรรทัด
+ * -> สแปนสี (`<span style="color:#rrggbb">`) เคยถูกยัดลง `textContent` ตรง ๆ
+ *    = ผู้ใช้เห็นโค้ดเป็นตัวหนังสือกลางหน้ากระดาษ และไม่เห็นสีเลยสักจุด
+ *
+ * ที่นี่จึงแยกสแปนออกเป็นโหนดจริง (ไม่ใช้ innerHTML — ค่าสีมาจากไฟล์ที่แก้นอกโปรแกรมได้)
+ * · โหมดขาวดำ = ทิ้งสีแต่เก็บข้อความ ตรงกับที่ไฟล์จริงทำ
+ * @param {boolean} mono true = ขาวดำ
+ */
+function putProseText(node, text, mono) {
+  const s = String(text == null ? '' : text);
+  if (!RE_COLOR_SPAN.test(s)) { node.textContent = s; return; }
+  RE_COLOR_SPAN.lastIndex = 0;
+  let last = 0, m;
+  while ((m = RE_COLOR_SPAN.exec(s))) {
+    if (m.index > last) node.append(document.createTextNode(s.slice(last, m.index)));
+    const hex = normColor(m[1]);
+    if (hex && !mono) {
+      const sp = document.createElement('span');
+      sp.style.color = hex;
+      sp.textContent = m[2];
+      node.append(sp);
+    } else {
+      node.append(document.createTextNode(m[2]));
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < s.length) node.append(document.createTextNode(s.slice(last)));
+}
+const RE_COLOR_SPAN = /<span style="color:([^"<>]{1,32})">([\s\S]*?)<\/span>/g;
+
 export function renderProsePageView(host, pages, fmt, opts = {}) {
+  // [alpha.132r] ขาวดำ = บังคับดำทั้งแผ่น (กฎอยู่ใน style.css คู่กับคลาสนี้)
+  const mono = opts.colorMode ? opts.colorMode !== 'color' : false;
+  host.classList.toggle('pv-mono', mono);
   const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
   const paper = opts.paper || PAPER_SIZES.letter;
   const m = { ...MARGIN_DEFAULTS, ...(opts.margins || {}) };
@@ -130,10 +170,13 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
         d = document.createElement(type);
         d.style.fontSize = ((f.headings[+type[1] - 1] || f.headings[0]).size) + 'em';
         d.style.fontFamily = proseHeadingStack(f);
-        d.textContent = b.text || '';
+        // [alpha.132r] สีหัวข้อที่ผู้ใช้ตั้งไว้ต้องเห็นในตัวอย่างด้วย (โหมดสีเท่านั้น)
+        if (!mono && f.headingColor) d.style.color = f.headingColor;
+        putProseText(d, b.text, mono);
       } else if (type === 'blockquote') {
         d = document.createElement('blockquote');
-        d.textContent = b.text || '';
+        if (!mono && f.quote && f.quote.color) d.style.color = f.quote.color;
+        putProseText(d, b.text, mono);
       } else if (type === 'figure') {
         d = document.createElement('div');
         d.className = 'pv-figure';
@@ -142,7 +185,10 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
         d = document.createElement('p');
         d.style.textIndent = f.firstLineIndent + 'in';
         d.style.marginBottom = f.paraSpacing + 'em';
-        d.textContent = b.text || '';
+        putProseText(d, b.text, mono);
+        // [alpha.132r] ย่อหน้าว่างต้องมี **กล่องบรรทัดจริง** ไม่งั้นสูง 0 แล้วหายไปจากหน้า
+        // (ตรงกับที่ `mdToHtmlBody` ใส่ `<br>` ให้ `<p class="k-blank">` ในไฟล์จริง)
+        if (!d.textContent) { d.classList.add('pv-blank'); d.append(document.createElement('br')); }
       }
       d.classList.add('pv-block');
       if (Number.isFinite(b.pos)) d.dataset.pos = String(b.pos);

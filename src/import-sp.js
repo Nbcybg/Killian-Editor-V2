@@ -4,6 +4,8 @@
 import { t } from './i18n.js';
 import { parseScript, SP_ELEMS, classify, splitCharacter,
          blockIsBlank, guessNamesForBlocks } from './fountain.js';
+import { el } from './core.js';
+import { confirmBox, escClose } from './ui.js';
 import JSZip from 'jszip';
 
 // [62-66] ตารางนำเข้าทั้ง 5 รูปแบบ — name/ext ใช้ใน UI · parse รับ content (string|Uint8Array)
@@ -15,7 +17,17 @@ export const SP_IMPORTERS = {
   fountain: { name: 'Fountain',         ext: '.fountain', filter: 'fountain', parse: parseFountainFromText },
 };
 
-// [62-66] เปิด dialog → เลือกไฟล์ → ตรวจจับรูปแบบ → parse → inject
+// [62-66] เปิด dialog → เลือกไฟล์ → ตรวจจับรูปแบบ → parse → **พรีวิว** → inject
+//
+// [alpha.124 ข้อ 29] รื้อทั้งเส้น — สามอย่างที่ผิดมาตั้งแต่ alpha.60:
+//   1. ใช้ `alert()`/`confirm()` ของระบบ ทั้งที่ทั้งโปรแกรมใช้กล่องของตัวเอง
+//      (หน้าตาคนละเรื่อง · Esc/ปุ่มไม่เหมือนกัน · บน Electron บางจังหวะไม่เด้งเลย)
+//   2. "พรีวิว" มีแต่ตัวเลข — ไม่เคยเห็นเนื้อที่พาร์สได้สักบรรทัด ทั้งที่ตัวพาร์สคือจุดที่พังบ่อยสุด
+//   3. ยืนยันแล้ว **ทับเนื้อหาแท็บปัจจุบันทั้งไฟล์** โดยไม่มีทางเลือกและไม่มีทางถอย
+//      → ตอนนี้เลือกได้ว่า "สร้างฉากใหม่" (ค่าเริ่มต้น ปลอดภัย) หรือ "แทนที่แท็บนี้"
+/**
+ * @param {(md:string, format:string, summary:object, mode:'new'|'replace') => any} injectFn
+ */
 export async function importScreenplayDialog(injectFn) {
   // ใช้ kapi.openScreenplayFile() — เปิด dialog พร้อมฟิลเตอร์ทุกฟอร์แมตบท
   const filePath = await kapi.openScreenplayFile();
@@ -23,29 +35,61 @@ export async function importScreenplayDialog(injectFn) {
 
   const result = await importScreenplay(filePath, null);
   if (!result.ok) {
-    alert(t('ui.importSp.importNotOk') + result.error);
+    await confirmBox(t('ui.importSp.importNotOk') + result.error, t('ui.common.msg3'));
     return null;
   }
 
   const summary = importSummary(result.elements);
-  const lines = [
-    t('ui.importSp.import') + result.importer,
-    t('ui.importSp.file') + filePath.split(/[/\\]/).pop(),
-    '',
-    t('ui.common.scene3') + summary.scenes + t('ui.importSp.character') + summary.characters,
-    t('ui.importSp.dialogue') + summary.dialogueBlocks + t('ui.importSp.caption') + summary.actionBlocks,
-    t('ui.importSp.countWord') + summary.words,
-    '',
-    t('ui.importSp.bodyInNovelScreenplay'),
-  ];
-
-  if (!confirm(lines.join('\n'))) return null;
-
   const markdown = elementsToMarkdown(result.elements);
-  if (injectFn) {
-    injectFn(markdown, result.format, summary);
-  }
-  return { markdown, format: result.format, summary };
+  const mode = await importPreviewDialog({ filePath, result, summary, markdown });
+  if (!mode) return null;
+
+  if (injectFn) await injectFn(markdown, result.format, summary, mode);
+  return { markdown, format: result.format, summary, mode };
+}
+
+/**
+ * กล่องพรีวิวการนำเข้า — เห็นของจริงก่อนตัดสินใจ
+ * @returns {Promise<'new'|'replace'|null>} null = ยกเลิก
+ */
+function importPreviewDialog({ filePath, result, summary, markdown }) {
+  return new Promise((resolve) => {
+    const ov = el('div', 'k-overlay');
+    const box = el('div', 'k-dialog k-wide imp-sp');
+    box.append(el('div', 'k-dlg-title', t('ui.importSp.previewTitle')));
+
+    const meta = el('div', 'imp-sp-meta');
+    meta.append(el('div', null, t('ui.importSp.import') + result.importer));
+    meta.append(el('div', null, t('ui.importSp.file') + filePath.split(/[/\\]/).pop()));
+    meta.append(el('div', null,
+      t('ui.common.scene3') + summary.scenes + t('ui.importSp.character') + summary.characters));
+    meta.append(el('div', null,
+      t('ui.importSp.dialogue') + summary.dialogueBlocks + t('ui.importSp.caption') + summary.actionBlocks));
+    meta.append(el('div', null, t('ui.importSp.countWord') + summary.words));
+    box.append(meta);
+
+    // เนื้อที่พาร์สได้จริง — จุดที่ผู้ใช้ต้องเห็นก่อนกดตกลง (กฎข้อ 11: textContent เท่านั้น)
+    const pre = el('pre', 'imp-sp-pre');
+    pre.textContent = markdown.slice(0, 4000) + (markdown.length > 4000 ? '\n…' : '');
+    box.append(pre);
+
+    if (!summary.scenes && !summary.dialogueBlocks)
+      box.append(el('div', 'k-hint imp-sp-warn', '⚠ ' + t('ui.importSp.previewEmpty')));
+
+    const done = (v) => { ov.remove(); resolve(v); };
+    const btns = el('div', 'k-dlg-btns');
+    const bNew = el('button', 'k-ok', t('ui.importSp.asNewScene'));
+    bNew.onclick = () => done('new');
+    const bRep = el('button', 'k-danger', t('ui.importSp.replaceTab'));
+    bRep.onclick = () => done('replace');
+    const bCancel = el('button', null, t('ui.common.cancel'));
+    bCancel.onclick = () => done(null);
+    btns.append(bCancel, bRep, bNew);
+    box.append(btns);
+    ov.append(box); document.body.append(ov);
+    ov.onclick = (e) => { if (e.target === ov) done(null); };
+    escClose(ov, () => done(null));
+  });
 }
 
 // [62-66] ตรวจจับรูปแบบจากนามสกุลไฟล์

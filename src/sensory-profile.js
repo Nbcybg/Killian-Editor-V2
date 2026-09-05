@@ -22,12 +22,6 @@ export function ensureSensory(entity) {
   return entity;
 }
 
-// กรอกเฉพาะช่องที่มีข้อความ — ใช้ทั้งใน UI และเทส
-export function sensoryFilled(entity) {
-  const p = (entity && entity.sensoryProfile) || {};
-  return SENSORY_FIELDS.filter((f) => (p[f.key] || '').trim()).map((f) => f.key);
-}
-
 // แสดงผลในหน้า wiki entity (wrap = .wiki-wrap) — เรียกซ้ำได้ ไม่สร้างช่องซ้ำ
 export function renderSensoryProfile(wrap, entity, onDirty) {
   if (!wrap || !isSensoryEntity(entity)) return null;

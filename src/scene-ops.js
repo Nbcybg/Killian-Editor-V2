@@ -1,7 +1,7 @@
 // scene-ops.js — จัดการฉากและบท: เพิ่ม/แก้ชื่อ/ลบ/ทำสำเนา/ย้าย/เมนูสถานะ·สี
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, openScene, safeName, saveTab, uniqueSceneFileName, refreshNetwork } from './app.js';
-import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state } from './core.js';
+import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { deleteToTrash } from './recycle.js';
 import { ask, confirmBox, popupMenu } from './ui.js';
@@ -136,6 +136,9 @@ export async function deleteScene(dPath, ch, sc) {
   d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
   await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
+  // [alpha.128] คำสั่งโครงสร้างมาจากเมนูคลิกขวา จึงไม่ผ่าน handleCommand ที่จด `cmd:` ให้
+  // → เดิมไล่ย้อนไม่ได้เลยว่าฉากหายไปตอนไหน · จดที่ตัวการทำงานจริงแทน
+  logAction('scene', ttf('ui.scene.delScene2', sc.title), { dPath, chapter: ch.title, trash: dst });
   await buildTree(); refreshNetwork();
 }
 
@@ -156,6 +159,8 @@ export async function deleteChapter(dPath, ch) {
   const s2 = await kapi.readJson(sf);
   if (s2.chapters) delete s2.chapters[ch.guid];
   await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
+  logAction('chapter', ttf('ui.scene.delChapter2', ch.title),
+            { dPath, scenes: scenesNow.length, trash: dst });
   await buildTree(); refreshNetwork();
 }
 
@@ -175,6 +180,7 @@ export async function addChapter(dPath, preset) {
   d.chapters = [...(d.chapters || []), ch];
   await kapi.writeFile(df, JSON.stringify(d, null, 2));
   await kapi.mkdir(await kapi.join(dPath, 'Chapters', ch.folderName));
+  logAction('chapter', tt('ui.scene.addChapter') + title, { dPath, folder: ch.folderName });
   await buildTree(); setStatus(tt('ui.scene.addChapter') + title); refreshNetwork();
   return ch;
 }
@@ -201,6 +207,7 @@ export async function addScene(dPath, ch, preset, opts = {}) {
   const meta = { title, type: 'scene', format: 'prose', pov: '', tags: [], ...(opts.meta || {}) };
   await kapi.writeFile(file, dumpMdFile(meta, opts.body || ''));
   await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  logAction('scene', tt('ui.scene.addScene') + title, { file });
   await buildTree();
   if (!opts.silent) openScene(file, title);
   refreshNetwork();
@@ -373,14 +380,6 @@ export async function renumberChapters(dPath) {
   await buildTree();
   setStatus(tt('ui.scene.orderChapterSceneNew') + chapters.length + tt('ui.scene.chapter'));
 }
-
-// เพิ่มเมนู "เรียงลำดับหมายเลขใหม่" ใน context menu ของหัวบท
-export function renumberMenuItems(dPath) {
-  return [
-    { label: tt('ui.common.orderNumNew'), click: () => renumberChapters(dPath) },
-  ];
-}
-
 
 // ───────── ไฟล์คู่ของ "เล่าด้วยภาพ" ─────────
 // ทั้งสามตัวห้าม throw — ฉากย้าย/ลบสำเร็จไปแล้ว ไฟล์คู่พลาดต้องไม่ทำให้ทั้งงานล้ม

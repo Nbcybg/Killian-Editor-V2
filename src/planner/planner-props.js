@@ -162,7 +162,10 @@ function _renderNodeProps(container, n, ctx) {
     if (!picked) return;
     q('plp-file').value = picked.path || '';
     const props = { file: picked.path || null };
-    if (picked.title && (!n.title || n.title === 'ใหม่' || n.title === 'ไม่ระบุชื่อ')) props.title = picked.title;
+    // [alpha.128] ชื่อตั้งต้นสองตัวนี้มาจากไฟล์ภาษา (`ui.common.new2` · `ui.common.notSpecifyName`)
+    // ฮาร์ดโค้ดไทยไว้ = หน้าจออังกฤษเทียบไม่ติด แล้วชื่อการ์ดไม่ยอมเปลี่ยนตามฉากที่เพิ่งผูก
+    const autoName = [t('ui.common.new2'), t('ui.common.notSpecifyName')];
+    if (picked.title && (!n.title || autoName.includes(n.title))) props.title = picked.title;
     set(props);
   };
   q('plp-unlink').onclick = () => { q('plp-file').value = ''; set({ file: null }); };

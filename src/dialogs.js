@@ -28,7 +28,7 @@ import { SP_ELEMS, TAB_CYCLE } from './fountain.js';
 import { refreshDashboardIfOpen } from './dashboard.js';
 // refreshDashboardIfOpen — ใช้ต่อเมื่อ dashboard.js export ฟังก์ชันนี้
 const _refreshDash = () => { try { refreshDashboardIfOpen(); } catch {} };
-import { ask, confirmBox } from './ui.js';
+import { ask, confirmBox, escClose } from './ui.js';
 import { parseMdFile } from './md.js';
 import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
@@ -387,6 +387,9 @@ export function settingsDialog(openTab, opts = {}) {
   q('#st-uiscale-lbl').textContent = Math.round(origUiScale * 100) + '%';
   q('#st-uiscale').oninput = () => applyUIScale(parseFloat(q('#st-uiscale').value) || 1);
   q('#st-autosync').checked = isAutoSyncOn() || !!s.autoSync;
+  // [alpha.124 ข้อ 32] สวิตช์คลังคำพ้อง — เดิมมีแต่ในค่าเริ่มต้นกับรายการที่บันทึก
+  // แต่ **ไม่มีช่องให้กดในหน้าตั้งค่าเลย** เปิดใช้ได้ทางเดียวคือไปแก้ไฟล์ settings.json เอง
+  q('#st-thesaurus').checked = s.thesaurus === true;
   // [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติ
   const autoPag = q('#st-autopag');
   const autoPagIntv = q('#st-pagintv');
@@ -700,7 +703,17 @@ export function settingsDialog(openTab, opts = {}) {
   numIn('#st-sn-right', () => W.sceneNumbers.right, (v) => { W.sceneNumbers.right = v; });
   { const i = q('#st-sn-suffix'); i.value = W.sceneNumbers.suffix || '';
     i.oninput = () => { W.sceneNumbers.suffix = i.value; previewPage(); }; }
+  // [alpha.127] ขีดเส้นบอกจุดที่ผิดในเอกสาร (สลับได้จากเมนูป้าย ⚠ ด้วย — ที่เดียวกับตัวเลข)
+  { const c = q('#st-sp-errmark');
+    c.checked = s.spErrorMarks !== false;
+    c.onchange = async () => {
+      s.spErrorMarks = c.checked;
+      const { toggleSpErrorMarks } = await import('./app.js');
+      toggleSpErrorMarks(c.checked);
+    }; }
   chk('#st-ct-auto', () => W.continued.enabled !== false, (v) => { W.continued.enabled = v; });
+  // [alpha.125 ข้อ J] ให้ (CONTINUED) ขึ้นได้แม้หน้านั้นยังไม่มีหัวฉาก (ค่าเริ่มต้น = ปิด)
+  chk('#st-ct-nohead', () => W.continued.noHeading === true, (v) => { W.continued.noHeading = v; });
   chk('#st-pn-show', () => W.pageNumbers.show, (v) => { W.pageNumbers.show = v; syncPgNum(); });
   // [alpha.103 ข้อ 4] สวิตช์ "ใส่เลขบนหน้าแรกด้วย" — ช่องเดียวทั้งโปรแกรม (อยู่คู่กับเลขหน้า)
   // ปิด = หน้าที่ **เลขจริงเป็น 1** ไม่พิมพ์เลข · หน้าปก/รายชื่อไม่นับเลขอยู่แล้วโดยโครงสร้าง
@@ -1292,6 +1305,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.shortcuts = workKeys;
     // Auto-sync (เก็บลง settings ด้วย — ไม่งั้นเปิดโปรแกรมใหม่แล้วกลับไปปิด)
     s.autoSync = q('#st-autosync').checked;
+    s.thesaurus = q('#st-thesaurus').checked;       // [alpha.124 ข้อ 32]
     setAutoSync(s.autoSync);
     // [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติ
     s.spAutoPaginate = q('#st-autopag')?.checked || false;
@@ -1358,6 +1372,8 @@ export function settingsDialog(openTab, opts = {}) {
           'homeThumb','smartLearnMin','heavyDocBlocks','mdAlignStyle','shortcuts','showHomeOnStartup',
           'paperColor','pageGuides',    // [alpha.100 ข้อ 2+4]
           // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
+          // [alpha.132 ข้อ 9] จานสีตัวอักษร (บันทึกไว้ + ใช้ล่าสุด) — ตามผู้ใช้ไปทุกโปรเจกต์
+          'textColors',
           'toolbar','fmtbar','fab'];
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
@@ -1454,6 +1470,7 @@ export async function fileVersionDialog(file, titleText, { onRestored = null } =
   ov.append(box); document.body.append(ov);
   closeB.onclick = () => ov.remove();
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
 
   async function refresh() {
     listCol.innerHTML = '';
@@ -1512,32 +1529,7 @@ export async function showChangelog() {
   ok.onclick = () => ov.remove();
   btns.append(ok); box.append(ttl, body, btns); ov.append(box);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
   document.body.append(ov);
 }
 
-export async function showLog() {
-  log('info', t('ui.dlg.openItemViewLog'));
-  const ov = el('div', 'k-overlay');
-  const box = el('div', 'k-dialog k-wide');
-  const ttl = el('div', 'k-dlg-title', t('panel.logTitle'));
-  const body = el('pre', 'k-changelog k-logview');
-  const load = async () => {
-    let text = '';
-    try { text = (await kapi.logRead(800)) || ''; } catch {}
-    if (!text) text = LOG_BUF.slice(-800).join('\n');
-    body.textContent = text || t('panel.logEmpty');
-    body.scrollTop = body.scrollHeight;
-  };
-  await load();
-  const btns = el('div', 'k-dlg-btns');
-  const refresh = el('button', null, '↻ ' + t('dialogs.refresh')); refresh.onclick = load;
-  const reveal = el('button');
-  reveal.innerHTML = iconHtml('folder', 14) + ' ' + t('dialogs.openFolder'); reveal.onclick = () => kapi.logReveal && kapi.logReveal();
-  const copy = el('button', null, '📋 ' + t('dialogs.copy'));
-  copy.onclick = () => { navigator.clipboard.writeText(body.textContent).then(() => setStatus(t('status.logCopied'))); };
-  const ok = el('button', 'k-ok', t('dialogs.close')); ok.onclick = () => ov.remove();
-  btns.append(refresh, reveal, copy, ok);
-  box.append(ttl, body, btns); ov.append(box);
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  document.body.append(ov);
-}

@@ -158,7 +158,5 @@ export function rewrite(text, options = {}) {
 export function changeTone(text, tone, options = {}) {
   return aiAssistant('', { text }, { ...options, task: 'changeTone', tone, text });
 }
-/** Continue writing from where the author stopped. */
-export function continueText(text, options = {}) {
-  return aiAssistant('', { text }, { ...options, task: 'continue', text });
-}
+// [alpha.126] `continueText()` ถูกถอด — ไม่มีใครเรียกเลย
+// (ปุ่ม "เขียนต่อ" ในแผงผู้ช่วยเรียก `aiAssistant()` พร้อม task:'continue' ตรง ๆ)

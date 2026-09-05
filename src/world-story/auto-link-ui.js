@@ -1,6 +1,6 @@
 // auto-link-ui.js — แท็บ Backlinks ในหน้า Wiki entity (ข้อ 86)
 // แสดงรายการฉากที่กล่าวถึง entity นี้
-import { t } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { el, setStatus, state } from '../core.js';
 import { AutoLink } from '../world-story/auto-link.js';
 import { listScenes, listEntities } from '../project-scan.js';
@@ -99,6 +99,106 @@ export function renderBacklinksTab(host, entityPath, onOpenScene) {
     list.append(row);
   }
   host.append(list);
+}
+
+// ═══════════ [alpha.125 ข้อ G] ★ แผง "ฉากที่กล่าวถึง" แบบยืนได้ด้วยตัวเอง ═══════════
+//
+// ดัชนีเชื่อมโยง Wiki↔ฉาก มีมาตั้งแต่ alpha.60r3 และแม่นแล้ว — แต่ทางเข้าเดียวที่มีคือ
+// **แท็บเล็ก ๆ ท้ายหน้าเอนทิตี้ใน Wiki** ต้องเปิดตัวละครทีละตัวถึงจะเห็นว่าใครโผล่ที่ไหน
+// คำถามที่คนเขียนถามจริงคือ "ตัวไหนหายไปนานแล้วบ้าง" / "ใครไม่โผล่เลยสักฉาก" ซึ่งตอบไม่ได้เลย
+//
+// แผงนี้เอาดัชนีตัวเดียวกันมากางทั้งโปรเจกต์: เอนทิตี้ทุกตัว · จำนวนฉากที่ถูกกล่าวถึง ·
+// เรียงจากน้อยไปมากได้ (ตัวที่ถูกลืมลอยขึ้นบนสุด) · คลิกกระโดดไปฉากนั้นได้ทันที
+
+/** สรุปทั้งโปรเจกต์: เอนทิตี้ทุกตัวพร้อมจำนวนฉากที่กล่าวถึง (เรียงน้อย→มาก) */
+export async function backlinkSummary() {
+  if (!state.root) return [];
+  await ensureAutoLink();
+  const ents = await listEntities(state.root).catch(() => []);
+  const rows = ents.map((e) => {
+    const scenes = getBacklinksFor(e.path) || [];
+    return {
+      path: e.path, name: e.name || '', cat: e.cat || '',
+      scenes, count: scenes.length,
+      hits: scenes.reduce((n, s) => n + (s.count || 1), 0),
+    };
+  });
+  // ตัวที่ไม่โผล่เลยขึ้นก่อน — นั่นคือของที่ผู้ใช้ต้องเห็น ไม่ใช่ตัวเอกที่โผล่ทุกฉาก
+  rows.sort((a, b) => a.count - b.count || String(a.name).localeCompare(String(b.name), 'th'));
+  return rows;
+}
+
+/**
+ * วาดแผง "ฉากที่กล่าวถึง" ทั้งโปรเจกต์
+ * @param {HTMLElement} host
+ * @param {(sceneId:string, title:string) => any} onOpenScene
+ */
+export async function renderBacklinksPanel(host, onOpenScene) {
+  if (!host) return null;
+  host.replaceChildren();
+  if (!state.root) {
+    host.append(el('div', 'k-panel-empty', t('ui.common.cantOpenProject')));
+    return null;
+  }
+  const head = el('div', 'bl-panel-head');
+  head.append(el('span', 'k-dlg-title', t('ui.worldAutoLink.panelTitle')));
+  const reB = el('button', 'k-panel-btn', '↻');
+  reB.title = t('ui.worldAutoLink.rebuild');
+  head.append(reB);
+  host.append(head);
+
+  const filt = el('input', 'k-dlg-input bl-filter');
+  filt.placeholder = t('ui.worldAutoLink.filterPlaceholder');
+  host.append(filt);
+
+  const onlyOrphan = el('input'); onlyOrphan.type = 'checkbox';
+  const lab = el('label', 'bl-only');
+  lab.append(onlyOrphan, document.createTextNode(' ' + t('ui.worldAutoLink.onlyOrphan')));
+  host.append(lab);
+
+  const list = el('div', 'bl-panel-list');
+  const status = el('div', 'dim bl-panel-status');
+  host.append(list, status);
+
+  let rows = [];
+  const draw = () => {
+    list.replaceChildren();
+    const q = filt.value.trim().toLowerCase();
+    const show = rows.filter((r) => (!q || r.name.toLowerCase().includes(q))
+                                 && (!onlyOrphan.checked || r.count === 0));
+    if (!show.length) { list.append(el('div', 'dim', t('ui.worldAutoLink.noRows'))); return; }
+    for (const r of show) {
+      const box = el('div', 'bl-ent' + (r.count ? '' : ' bl-ent-orphan'));
+      const h = el('div', 'bl-ent-head');
+      h.append(el('span', 'bl-ent-name', r.name));            // กฎข้อ 11: ข้อความ ไม่ใช่ HTML
+      h.append(el('span', 'bl-ent-count',
+                  r.count ? tf('ui.worldAutoLink.inNScenes', r.count) : t('ui.worldAutoLink.zero')));
+      box.append(h);
+      for (const s of r.scenes.slice(0, 8)) {
+        const row = el('div', 'bl-row');
+        row.append(el('span', 'bl-count', (s.count || 1) + '× '));
+        const nm = el('span', 'bl-name', s.title || s.sceneId);
+        nm.onclick = () => onOpenScene && onOpenScene(s.sceneId, s.title);
+        row.append(nm);
+        box.append(row);
+      }
+      if (r.scenes.length > 8) box.append(el('div', 'dim bl-more', '…'));
+      list.append(box);
+    }
+    status.textContent = tf('ui.worldAutoLink.summaryN', show.length,
+                            rows.filter((r) => !r.count).length);
+  };
+
+  const load = async () => {
+    list.replaceChildren(el('div', 'dim', t('ui.worldAutoLink.busyLoadIndexLink')));
+    rows = await backlinkSummary();
+    draw();
+  };
+  filt.oninput = draw;
+  onlyOrphan.onchange = draw;
+  reB.onclick = async () => { await rebuildAutoLink(); await load(); };
+  await load();
+  return { list, filt, onlyOrphan, reload: load, rows: () => rows };
 }
 
 // ล้างดัชนีเมื่อเปลี่ยนโปรเจกต์

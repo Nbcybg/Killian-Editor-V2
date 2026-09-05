@@ -59,6 +59,7 @@ import { spellPlugin, mentionPlugin, refreshMentions, focusLinePlugin, commentAn
          keepScroll, HOME_END_KEYS } from './editor.js';
 // [61] แสดงรูปแบบ + [57] เส้นคั่นหน้าในตัวแก้ไข
 import { spFormatGuidePlugin, spPageBreakPlugin, spSceneNumberPlugin, spContinuedPlugin,
+         spErrorMarkPlugin,
          refreshFormatGuide, refreshPageBreaks, refreshSceneNumbers,
          refreshContinueds } from './sp-format-guide.js';
 import { IMG_RE } from './fountain.js';
@@ -101,6 +102,7 @@ export class SPEditor {
                        onElement = null, getChecker = null, resolveSrc = (p) => p,
                        getNames = null, onMention = null, editable = null } = {}) {
     this.onChange = onChange; this.onElement = onElement;
+    this._silent = false;      // true = ทรานแซกชันของระบบ ไม่ใช่การแก้ของผู้ใช้ (ดู applyAlignMap)
     this.getChecker = getChecker; this.resolveSrc = resolveSrc;
     this.getNames = getNames;
     const doc = spDocFromMarkdown(markdown, resolveSrc);
@@ -146,6 +148,7 @@ export class SPEditor {
           spPageBreakPlugin(),        // [57] เส้นคั่นหน้า (ตำแหน่งมาจาก paginate ใน app.js)
           spSceneNumberPlugin(),      // [alpha.57a] เลขฉากสองฝั่งหัวฉาก
           spContinuedPlugin(),        // [alpha.58 · 55–56] (CONTINUED)/CONTINUED:/(MORE)/(cont'd)
+          spErrorMarkPlugin(),        // [alpha.124 ข้อ 33] ขีดจุดที่ตัวตรวจบทแจ้งไว้ ให้เห็นในเอกสาร
         ],
       }),
       handleKeyDown(view, ev) {
@@ -222,7 +225,9 @@ export class SPEditor {
         const st = self.view.state.apply(tr);
         self.view.updateState(st);
         if (tr.docChanged) {
-          if (self.onChange) self.onChange();
+          // [alpha.125 ข้อ I] การ "คืนค่าตอนเปิดไฟล์" ไม่ใช่การแก้ไขของผู้ใช้ —
+          // ต้องไม่ทำให้แท็บกลายเป็นงานค้างทันทีที่เปิด (แล้วโดนถามตอนปิดทั้งที่ไม่ได้แตะอะไร)
+          if (self.onChange && !self._silent) self.onChange();
           // [52] Auto-detect INT./EXT. → switch to scene
           self._autoDetect();
         }
@@ -369,6 +374,54 @@ export class SPEditor {
     v.focus();
   }
   curAlign() { const b = this.curBlock(); return (b && b.node.attrs.align) || 'left'; }
+
+  // ═══ [alpha.125 ข้อ I] ★ การจัดหน้าของบทภาพยนตร์ "อยู่ต่อ" หลังปิด-เปิดไฟล์แล้ว ═══
+  //
+  // เดิมเป็น session-only โดยตั้งใจ — เหตุผลที่บันทึกไว้คือ "กันพัง fountain round-trip"
+  // ซึ่งถูกต้อง **ถ้าจะเขียนลงเนื้อไฟล์**: fountain ไม่มีไวยากรณ์สำหรับ "ชิดขวา" และการ
+  // ยัดรหัสของตัวเองลงไปจะทำให้ไฟล์เปิดในโปรแกรมอื่น (หรือ v1) ผิดทันที
+  //
+  // ทางที่ปลอดภัย: เก็บใน **frontmatter** เป็นแผนที่ดัชนีบล็อก → ทิศ (`align: [3:center]`)
+  // ทางเดียวกับที่นิยายใช้อยู่แล้วเป๊ะ (`collectAlign`/`alignToString` ใน md.js · มีเทสคุม)
+  // เนื้อไฟล์ fountain **ไม่ถูกแตะแม้แต่ตัวเดียว** → round-trip ยังปิดวงเหมือนเดิม
+  //
+  // ดัชนีถูกเขียนใหม่ทุกครั้งที่บันทึก (ตอนนั้นดัชนีกับบล็อกตรงกันเป๊ะเสมอ) — แก้ไฟล์นอก
+  // โปรแกรมจนจำนวนบล็อกเลื่อน อย่างแย่ที่สุดคือทิศไปลงบล็อกข้างเคียง ไม่ใช่ข้อมูลหาย
+
+  /** แผนที่การจัดหน้า: { "3": "center" } — ข้ามบล็อกที่ชิดซ้าย (ค่าเริ่มต้น) */
+  getAlignMap() {
+    const out = {};
+    let i = 0;
+    this.view.state.doc.forEach((node) => {
+      const a = node.attrs && node.attrs.align;
+      if (a && a !== 'left') out[String(i)] = a;
+      i++;
+    });
+    return out;
+  }
+
+  /** คืนการจัดหน้าจากแผนที่ (ใช้ตอนเปิดไฟล์) — คืนจำนวนบล็อกที่ตั้งได้จริง */
+  applyAlignMap(map) {
+    const m = map || {};
+    if (!Object.keys(m).length) return 0;
+    const v = this.view;
+    let tr = v.state.tr, i = 0, n = 0;
+    v.state.doc.forEach((node, pos) => {
+      const a = m[String(i)];
+      i++;
+      if (!a || a === 'left' || node.type !== spSchema.nodes.sp) return;
+      tr = tr.setNodeMarkup(pos, null, { ...node.attrs, align: a });
+      n++;
+    });
+    // `setMeta('addToHistory', false)` — การคืนค่าตอนเปิดไฟล์ต้องไม่กลายเป็น "การแก้ไข"
+    // ที่ผู้ใช้กด Ctrl+Z ย้อนได้ (และต้องไม่ทำให้ไฟล์กลายเป็น "ยังไม่บันทึก" ทันทีที่เปิด)
+    if (n) {
+      this._silent = true;
+      try { v.dispatch(tr.setMeta('addToHistory', false)); }
+      finally { this._silent = false; }
+    }
+    return n;
+  }
 
   cycle(dir) {
     const cur = this.curElement();

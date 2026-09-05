@@ -49,9 +49,6 @@ export function splitTabIds() {
   const r = getSplitManager().root;
   return r ? SL.tabIds(r).filter(Boolean) : [];
 }
-/** tabId ของช่องที่โฟกัสอยู่ */
-export function activeSplitTab() { return getSplitManager().activeTabId(); }
-
 // ───────── ตัวช่วย DOM ─────────
 function panesEl() { return $('#panes'); }
 function rootEl() { return document.getElementById(ROOT_ID); }
@@ -172,15 +169,15 @@ function renderLeaf(node, sm) {
   else {
     const hint = el('div', 'k-split-empty');
     hint.append(el('div', 'k-split-empty-icon', '⌗'));
-    hint.append(el('div', '', tr('split.emptyPane', 'ช่องว่าง — ลากหัวแท็บมาวางที่นี่')));
-    hint.append(el('div', 'dim', tr('split.emptyPaneHint', 'หรือคลิกช่องนี้แล้วเลือกแท็บด้านบน')));
+    hint.append(el('div', '', tr('split.emptyPane')));
+    hint.append(el('div', 'dim', tr('split.emptyPaneHint')));
     body.appendChild(hint);
   }
   pane.appendChild(body);
 
   // ปุ่มปิดช่องนี้ (ทุกช่องมีของตัวเอง — ปิดช่องไหนก็ได้ ไม่ใช่แค่ฝั่งขวา)
-  const cb = el('div', 'cmp-close', tr('split.closePane', '✕ ปิดช่องนี้'));
-  cb.title = tr('split.closePaneHint', 'ปิดช่องนี้ (แท็บยังเปิดอยู่)');
+  const cb = el('div', 'cmp-close', tr('split.closePane'));
+  cb.title = tr('split.closePaneHint');
   cb.onmousedown = (e) => e.stopPropagation();
   cb.onclick = (e) => { e.stopPropagation(); closePane(node.id); };
   pane.appendChild(cb);
@@ -199,7 +196,7 @@ function renderLeafTabs(node, sm) {
     btn.title = id;
     btn.append(el('span', 'k-mtab-title', (t && t.title) || id.split(/[\\/]/).pop()));
     const x = el('span', 'k-mtab-x', '×');
-    x.title = tr('split.removeFromPane', 'เอาออกจากช่องนี้ (แท็บยังเปิดอยู่)');
+    x.title = tr('split.removeFromPane');
     x.onmousedown = (e) => e.stopPropagation();
     x.onclick = (e) => {
       e.stopPropagation();
@@ -222,17 +219,6 @@ function renderLeafTabs(node, sm) {
   return bar;
 }
 
-/** อัปเดตชื่อ/จุดงานค้างบนแถบแท็บย่อย โดยไม่วาดต้นไม้ใหม่ (เรียกจาก markDirty/saveTab) */
-export function refreshSplitTabs() {
-  for (const btn of document.querySelectorAll('.k-split-tabs .k-mtab')) {
-    const t = state.tabs.get(btn.dataset.file);
-    if (!t) continue;
-    btn.classList.toggle('dirty', !!t.dirty);
-    const ttl = btn.querySelector('.k-mtab-title');
-    if (ttl && ttl.textContent !== t.title) ttl.textContent = t.title;
-  }
-}
-
 /** เลือกแท็บให้ช่องหนึ่งโดยไม่ยุ่งกับช่องอื่น (บั๊ก #12) */
 export function selectTabInPane(leafId, tabId) {
   const sm = getSplitManager();
@@ -252,7 +238,7 @@ function splitHandle(node, index, sm) {
   const h = el('div', 'k-split-handle ' + (row ? 'k-sh-col' : 'k-sh-row'));
   h.dataset.splitId = node.id;
   h.dataset.index = String(index);
-  h.title = tr('split.dragResize', 'ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)');
+  h.title = tr('split.dragResize');
   h.addEventListener('dblclick', () => sm.resize(node.id, index, 0.5));
   h.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
@@ -359,8 +345,8 @@ export function createSplit(tabId, dir) {
   // (เดิมกรณีมีแท็บเดียวจะขึ้นว่า "ต้องเปิดอย่างน้อย 2 แท็บ" แล้วไม่เกิดอะไรขึ้น = ดูเหมือน split พัง)
   const other = [...state.tabs.keys()].find((f) => f !== cur && tabOf(f) && !sm.has(f)) || null;
   sm.splitWith(other, side);
-  setStatus(other ? tr('split.statusPrefix', 'แยกหน้าจอ: ') + (d === 'down' ? tt('ui.layoutSplit.topBottom') : tt('ui.layoutSplit.leftRight'))
-                  : tr('split.openedEmpty', 'เปิดช่องว่างแล้ว — ลากหัวแท็บมาวางในช่อง หรือคลิกช่องแล้วเลือกแท็บ'));
+  setStatus(other ? tr('split.statusPrefix') + (d === 'down' ? tt('ui.layoutSplit.topBottom') : tt('ui.layoutSplit.leftRight'))
+                  : tr('split.openedEmpty'));
   return { dir: d, right: other };
 }
 
@@ -372,7 +358,7 @@ export function closeSplit() {
   sm.store.update(keep ? SL.leaf(keep) : null);
   sm.focusId = sm.root ? sm.root.id : null;
   if (keep && keep !== state.active?.file && state.tabs.has(keep)) hooks.activate?.(keep);
-  setStatus(tr('split.closed', 'ยกเลิกแยกหน้าจอแล้ว'));
+  setStatus(tr('split.closed'));
 }
 
 /** ปิดเฉพาะช่องหนึ่ง (แท็บยังเปิดอยู่) */
@@ -393,7 +379,7 @@ export function toggleSplit(tabId, dir) {
       const next = JSON.parse(JSON.stringify(sm.root));
       if (next.type === 'split') next.dir = dir === 'down' ? 'col' : 'row';
       sm.store.update(next);
-      setStatus(tr('split.statusPrefix', 'แยกหน้าจอ: ') + (dir === 'down' ? tt('ui.layoutSplit.topBottom') : tt('ui.layoutSplit.leftRight')));
+      setStatus(tr('split.statusPrefix') + (dir === 'down' ? tt('ui.layoutSplit.topBottom') : tt('ui.layoutSplit.leftRight')));
       return true;
     }
     closeSplit();
@@ -573,14 +559,7 @@ export function resetSplitSystem() {
   if (mgr) { mgr.store.root = null; mgr.focusId = null; try { mgr.store.save(); } catch {} }
 }
 
-// ---- helpers เดิมที่โมดูล/เทสอื่นยังอ้าง ----
-export function getSplitLayout() { return getSplitManager().root; }
-export function getLeaves() {
-  const r = getSplitManager().root;
-  return r ? SL.leafIds(r).map((id) => SL.findLeaf(r, id)) : [];
-}
 export function setLeafTab(leafId, tabId) {
   const sm = getSplitManager();
   if (sm.root) sm.store.update(SL.setLeafTab(sm.root, leafId, tabId));
 }
-export function resetSplit() { resetSplitSystem(); renderSplit(); }

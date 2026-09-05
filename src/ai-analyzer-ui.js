@@ -48,6 +48,20 @@ const scopeKey = (sc = S.scope) => [sc.kind, sc.sectionKey, sc.chapterId, sc.sce
 const resultKey = (id) => id + '||' + scopeKey();
 
 /** ผลของขอบเขตปัจจุบันในรูป { id: result } — ใช้ทั้งบันทึกเซสชัน ส่งออก และนับโทเคน */
+/**
+ * [alpha.124 ข้อ 8] พาสายตาไปที่การ์ดวิเคราะห์ใบหนึ่ง — ใช้ตอนเข้ามาจากเมนูที่เจาะจงเรื่อง
+ * (เมนู เครื่องมือ → "ตรวจหาคำซ้ำ · สถิติการใช้คำ" ต้องลงที่การ์ด 🔁 ไม่ใช่โยนผู้ใช้ไว้กลางแผง)
+ * @returns {boolean} true = เจอการ์ดจริงและเลื่อนไปแล้ว
+ */
+export function focusAnalysis(id) {
+  const card = document.querySelector(`.aia-card[data-card="${id}"]`);
+  if (!card) return false;
+  card.scrollIntoView({ block: 'center' });
+  card.classList.add('aia-card-focus');
+  setTimeout(() => card.classList.remove('aia-card-focus'), 2000);
+  return true;
+}
+
 export function currentResults() {
   const out = {};
   for (const id of ANALYSIS_IDS) {

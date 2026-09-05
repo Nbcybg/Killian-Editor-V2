@@ -156,9 +156,6 @@ export async function renderCodexPanel(host) {
   return true;
 }
 
-export async function openCodex() {
-  const { showPanel } = await import('../panels/panel-ui.js');
-  const { renderFeaturePanel } = await import('../app.js');
-  showPanel('codex');
-  await renderFeaturePanel('codex');
-}
+// [alpha.126] `openCodex()` ถูกลบ — เป็นแค่ตัวห่อ
+// `showPanel(id)` + `renderFeaturePanel(id)` ซึ่ง `togglePanel()` ของระบบแผงทำให้อยู่แล้ว
+// (เมนู มุมมอง → แผง · ปุ่มบนแถบ · คีย์ลัด Ctrl+Alt+ตัวอักษร เดินทางนั้นทั้งหมด)

@@ -8,3 +8,5 @@ tmp/
 .DS_Store
 Thumbs.db
 K2WIN/
+# [alpha.124] ผลข้างเคียงของ build บน Windows (ไม่มี /dev/null) — อย่าให้ git add -A ลากเข้ามา
+dev/

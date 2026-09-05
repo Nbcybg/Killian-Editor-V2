@@ -21,7 +21,6 @@ export const W_FIELDS = [
   { key: 'where', icon: '📍', label: t('ui.starter.wWhere'), hint: t('ui.starter.wWhereHint') },
   { key: 'why',   icon: '🎯', label: t('ui.starter.wWhy'),   hint: t('ui.starter.wWhyHint') },
 ];
-export function wFieldByKey(key) { return W_FIELDS.find((f) => f.key === key) || null; }
 /** ช่อง 4W ที่กรอกแล้ว → [{key,label,value}] (ใช้ทั้งใน UI และตอนสร้าง prompt) */
 export function filledW(s) {
   const w = (s && s.w) || {};
@@ -88,6 +87,5 @@ export function clampStep(i) {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(STEPS.length - 1, Math.floor(n)));
 }
-export function stepAt(i) { return STEPS[clampStep(i)]; }
 export function isLastStep(i) { return clampStep(i) === STEPS.length - 1; }
 export function isFirstStep(i) { return clampStep(i) === 0; }

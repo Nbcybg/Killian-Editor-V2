@@ -19,6 +19,11 @@ export function cssVar(name, fallback) {
 }
 /** สีชุดปัจจุบัน — ตั้งใหม่ทุกครั้งที่ readColors() ทำงาน */
 let THEME = resolveNetColors(null, cssVar);
+// [แก้บั๊ก] `draw()` เขียน `this._bg || BG_FALLBACK` / `this._grid || GRID_FALLBACK` มาตลอด
+// แต่ **ไม่เคยมีใครประกาศสองชื่อนี้** — ตอนนี้ยัง short-circuit รอดอยู่เพราะ resolveNetColors
+// ตกกลับค่า def ให้เสมอ แต่เป็นระเบิดเวลา: วันไหนค่าซ้ายเป็น '' ผังจะพังทั้งใบด้วย ReferenceError
+const BG_FALLBACK = '#1a1a18';
+const GRID_FALLBACK = '#3a3a36';
 const WIKI_CATS = new Set(['characters','locations','items','lore']);
 
 // คีย์เส้นเชื่อม — ต้องอิง nodeKey ไม่ใช่ชื่อล้วน ไม่งั้นชื่อซ้ำข้ามหมวดทำให้เส้นหายไปเงียบ ๆ

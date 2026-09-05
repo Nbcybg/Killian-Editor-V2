@@ -236,12 +236,6 @@ export async function writeScenario(slug, sc) {
   return true;
 }
 
-export function autoSaveScenario(slug, sc) {
-  if (!slug || !sc || !sc.id) return false;
-  queueSave('sc:' + slug + ':' + sc.id, sc, (data) => writeScenario(slug, data));
-  return true;
-}
-
 export async function createScenario(slug, patch = {}) {
   const sc = newScenario({ ...patch, created: Date.now() });
   await writeScenario(slug, sc);

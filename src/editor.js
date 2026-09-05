@@ -8,6 +8,7 @@ import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, setBlockType, wrapIn, lift, chainCommands,
          splitBlockKeepMarks, newlineInCode, exitCode } from 'prosemirror-commands';
 import { wrapInList, splitListItem, liftListItem, sinkListItem } from 'prosemirror-schema-list';
+import { findWrapping, liftTarget, Mapping } from 'prosemirror-transform';
 import { inputRules, wrappingInputRule, textblockTypeInputRule,
          smartQuotes, InputRule } from 'prosemirror-inputrules';
 import { dropCursor } from 'prosemirror-dropcursor';
@@ -16,6 +17,8 @@ import { mdToDoc, docToMd, mdLineCounts, collectAlign } from './md.js';
 import { searchPlugin } from './search.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
+// [alpha.132 ข้อ 9] ตัวกรองค่าสี (โมดูลบริสุทธิ์ — md.js ใช้ตัวเดียวกันนี้)
+import { normColor } from './text-color.js';
 // [alpha.58r บั๊ก 20] เส้นคั่นหน้าของนิยาย — คนละคีย์กับของบทภาพยนตร์
 import { prosePageBreakPlugin } from './prose-view.js';
 // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (`.` `@` `>` `$shot` `#` …) โดยไม่แตะไฟล์
@@ -376,19 +379,29 @@ export function decoSignature(view) {
 }
 
 
+/**
+ * [alpha.130 ข้อ 2] แอตทริบิวต์ของบล็อกข้อความที่ถูกจัดหน้า
+ *
+ * `style` = ตัวจัดหน้าจริง · `data-align` = **ที่จับให้ CSS** — จำเป็นเพราะกฎ "จุดนำต้องเดินทาง
+ * ไปกับข้อความ" ต้องเจาะจงถึง `p:first-child` ของ `<li>` เท่านั้น การจับด้วย `[style*="center"]`
+ * แบบเดิมทั้งหลวม (สตริงชนกันได้) และเจาะจงไม่ได้ว่าใบไหน
+ */
+function alignAttrs(align) {
+  return align ? { style: 'text-align:' + align, 'data-align': align } : {};
+}
+
 export const schema = new Schema({
   nodes: {
     doc: { content: 'block+' },
     paragraph: { group: 'block', content: 'inline*',
                  attrs: { align: { default: null } },
                  parseDOM: [{ tag: 'p', getAttrs: (d) => ({ align: d.style.textAlign || null }) }],
-                 toDOM: (n) => ['p', n.attrs.align ? { style: 'text-align:' + n.attrs.align } : {}, 0] },
+                 toDOM: (n) => ['p', alignAttrs(n.attrs.align), 0] },
     heading: { group: 'block', content: 'inline*', defining: true,
                attrs: { level: { default: 1 }, align: { default: null } },
                parseDOM: [1, 2, 3, 4, 5, 6].map((l) => ({ tag: 'h' + l,
                  getAttrs: (d) => ({ level: l, align: d.style.textAlign || null }) })),
-               toDOM: (n) => ['h' + n.attrs.level,
-                 n.attrs.align ? { style: 'text-align:' + n.attrs.align } : {}, 0] },
+               toDOM: (n) => ['h' + n.attrs.level, alignAttrs(n.attrs.align), 0] },
     blockquote: { group: 'block', content: 'paragraph+', defining: true,
                   parseDOM: [{ tag: 'blockquote' }], toDOM: () => ['blockquote', 0] },
     bullet_list: { group: 'block', content: 'list_item+',
@@ -437,6 +450,19 @@ export const schema = new Schema({
            parseDOM: [{ tag: 'sup' }], toDOM: () => ['sup', 0] },
     sub: { group: 'vertalign', excludes: 'vertalign',
            parseDOM: [{ tag: 'sub' }], toDOM: () => ['sub', 0] },
+    // ══ [alpha.132 ข้อ 9] ★ สีตัวอักษร (ผู้ใช้จริงขอมา) ══
+    // ค่าสีถูกกรองผ่าน `normColor` **ทุกทางเข้า** (พิมพ์เอง · วางจากที่อื่น · อ่านจากไฟล์)
+    // กรองไม่ผ่าน = ไม่มีมาร์ก (`getAttrs` คืน false) ไม่ใช่ยัดสตริงดิบลง style
+    color: { attrs: { color: { default: '' } },
+             parseDOM: [
+               { tag: 'span[data-color]',
+                 getAttrs: (d) => { const c = normColor(d.getAttribute('data-color'));
+                                    return c ? { color: c } : false; } },
+               { style: 'color',
+                 getAttrs: (v) => { const c = normColor(v); return c ? { color: c } : false; } },
+             ],
+             toDOM: (n) => ['span', { 'data-color': n.attrs.color,
+                                      style: 'color:' + n.attrs.color }, 0] },
   },
 });
 
@@ -569,6 +595,47 @@ function keepAlign(cmd) {
   };
 }
 
+/**
+ * [alpha.130 ข้อ 3] align ร่วมของบล็อกข้อความทุกใบในช่วงที่เลือก
+ * @returns {string|null} 'left'|'center'|'right'|'justify' · '' = ปนกัน · null = ไม่มีบล็อกข้อความ
+ */
+export function rangeAlign(state) {
+  const { from, to, empty, $from } = state.selection;
+  if (empty) {
+    const p = $from.parent;
+    return (p.type.name === 'paragraph' || p.type.name === 'heading') ? (p.attrs.align || 'left') : null;
+  }
+  let seen = null, mixed = false;
+  state.doc.nodesBetween(from, to, (node) => {
+    if (mixed || !node.isTextblock || !node.type.spec.attrs || !('align' in node.type.spec.attrs)) return;
+    const a = node.attrs.align || 'left';
+    if (seen === null) seen = a; else if (seen !== a) mixed = true;
+  });
+  return mixed ? '' : seen;
+}
+
+/**
+ * [alpha.132 ข้อ 9] สีตัวอักษรของช่วงที่เลือก — เหมือนกันทั้งช่วง = คืนรหัสสี · ปนกัน/ไม่มี = `''`
+ * (ไอดิออมเดียวกับ `rangeAlign` — อ่านทั้งช่วง ไม่ใช่จุดเดียว)
+ */
+export function rangeColor(state) {
+  const mk = state.schema.marks.color;
+  if (!mk) return '';
+  const { from, to, empty, $from } = state.selection;
+  if (empty) {
+    const m = (state.storedMarks || $from.marks()).find((x) => x.type === mk);
+    return m ? normColor(m.attrs.color) : '';
+  }
+  let seen = null, mixed = false;
+  state.doc.nodesBetween(from, to, (node) => {
+    if (mixed || !node.isText) return;
+    const m = (node.marks || []).find((x) => x.type === mk);
+    const c = m ? normColor(m.attrs.color) : '';
+    if (seen === null) seen = c; else if (seen !== c) mixed = true;
+  });
+  return mixed || seen === null ? '' : seen;
+}
+
 /** ความลึกของบรรพบุรุษชนิด `type` ที่ใกล้เคอร์เซอร์ที่สุด (0 = ไม่ได้อยู่ข้างใน) */
 export function ancestorDepth(state, type) {
   const { $from } = state.selection;
@@ -576,50 +643,405 @@ export function ancestorDepth(state, type) {
   return 0;
 }
 
+// ══════ [alpha.132r4] ★★ สวิตช์บล็อกทุกตัวต้องกดได้เสมอ แม้ช่วงที่เลือก "ปนกัน" ══════
+//
+// ผู้ใช้: *"จำ bug คำพูดที่ยกมาได้เปล่า เหมือนกัน bullet กับตัวเลข toggle ไม่ได้ ถ้า 2 บรรทัด
+//          ไม่เหมือนกัน · แต่ทีนี้มันจะแปลก ๆ คือ เมื่อเราใช้ bullet จะสลับเป็นหมายเลขได้
+//          แต่กดเป็น คำพูดที่ยกมาไม่ได้"*
+//
+// alpha.132 ข้อ 7 แก้ให้ "คำพูดที่ยกมา" แล้ว แต่แก้ **เฉพาะตัวมัน** — รายการยังตัดสินจาก
+// เคอร์เซอร์จุดเดียวเหมือนเดิม และ "รายการ → คำพูดยกมา" ก็ยังตัน เพราะ `wrapIn` ห่อ
+// `<ul>` ให้กลายเป็น `<blockquote>` ไม่ได้ (สคีมารับแค่ `paragraph+`)
+//
+// ═══ กติกาเดียวสำหรับทุกสวิตช์ ═══
+//   1. ดู **ทั้งช่วงที่เลือก** ไม่ใช่จุดเดียว
+//   2. ทุกบรรทัดอยู่ในบล็อกชนิดนั้นแล้ว → ถอดออก
+//   3. นอกนั้น → **ถอดของเก่าที่ปนอยู่ให้หมดก่อน** (รายการ/คำพูดยกมา ชนิดไหนก็ตาม)
+//      แล้วค่อยห่อทั้งช่วงเป็นชนิดใหม่ทีเดียว
+//
+// ═══ ทำไมต้องมีเครื่องมือ `seq()` ═══
+// คำสั่งของ prosemirror-schema-list (`liftListItem`) ทำงานได้ก็ต่อเมื่อ **ช่วงที่เลือกอยู่ใน
+// รายการใบเดียว** — ช่วงที่คร่อมย่อหน้าเปล่ากับรายการจึงคืน false ทันที (วัดแล้วในเครื่อง)
+// ทางที่ได้ผลคือ "เลื่อนช่วงเข้าไปในรายการทีละใบแล้วถอด" ซึ่งต้องรันหลายคำสั่งต่อกัน
+// โดยแต่ละคำสั่งเห็น state ที่ปรับแล้วของคำสั่งก่อนหน้า
+//
+// ★ แต่ถ้า dispatch ทีละคำสั่ง ผู้ใช้จะต้องกด undo หลายครั้งกว่าจะกลับที่เดิม
+//   → `seq()` รันบน state ชั่วคราว เก็บเฉพาะ **step** ไว้ แล้วเล่นซ้ำลงธุรกรรมเดียวตอนจบ
+//     (step ถูกสร้างจากเอกสารลำดับเดียวกันเป๊ะ การเล่นซ้ำจึงให้ผลเหมือนกันทุกประการ)
+
+// ══════ [alpha.132r4] ★ ทางออกจากรายการที่ "ทำเองได้โดยไม่ต้องกดปุ่ม" ══════
+//
+// ผู้ใช้: *"เมื่อ enter 2 ครั้ง (ไม่ใช่ shift enter) บรรทัดถัดมาต้อง toggle ออก
+//          หรือกดลบ 2 ครั้ง เหมือน ms word · ตอนนี้กลายเป็นว่าถ้าต้องการเอาออก
+//          ต้องกดปุ่ม toggle แทน"*
+
+/** เคอร์เซอร์อยู่ใน list_item ไหม (คืนความลึกของ item · 0 = ไม่อยู่) */
+function listItemDepth(state) {
+  const { $from } = state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    if ($from.node(d).type === schema.nodes.list_item) return d;
+  }
+  return 0;
+}
+
+/** Enter บนข้อที่ว่างเปล่า = ยกออกจากรายการ (ไม่ใช่สร้างข้อว่างใบใหม่) */
+function exitEmptyListItem(state, dispatch, view) {
+  const { $from, empty } = state.selection;
+  if (!empty || !listItemDepth(state)) return false;
+  if ($from.parent.content.size > 0) return false;          // ยังมีข้อความ = ปล่อยให้ Enter ปกติทำงาน
+  return liftListItem(schema.nodes.list_item)(state, dispatch, view);
+}
+
+/** Backspace ที่ต้นข้อ = ยกข้อนั้นออกจากรายการ (เหมือน Word — ไม่ใช่ไปรวมกับข้อก่อนหน้า) */
+function exitListItemAtStart(state, dispatch, view) {
+  const { $from, empty } = state.selection;
+  if (!empty || !listItemDepth(state)) return false;
+  if ($from.parentOffset !== 0) return false;               // ไม่ได้อยู่ต้นบรรทัด
+  return liftListItem(schema.nodes.list_item)(state, dispatch, view);
+}
+
 /**
- * สวิตช์รายการ — ในรายการชนิดเดียวกัน = ถอดออกจนพ้นทุกชั้น · ในอีกชนิด = สลับชนิด · นอกรายการ = ห่อ
- * ต้องมี `view` เพื่อถอดหลายชั้น (liftListItem ทำได้ทีละชั้น แต่ละชั้นคิดจาก state ที่ปรับแล้ว)
+ * ══ [alpha.134 ข้อ 3] ★★ วงวนของรายการ — "ออกจากรายการแล้วโดนดูดกลับเข้าไปใหม่" ══
+ *
+ * ผู้ใช้: *"เมื่อเราลบ เพื่อให้ toggle หายไป แล้วเราลบเพื่อกลับไปบรรทัดก่อนหน้า
+ *          ตรงนี้จะติด loop ทันที เพราะมันโดน toggle ต่อ"*
+ *
+ * ลำดับที่เกิดขึ้นจริง (สี่จังหวะ วนไม่รู้จบ):
+ *   1. Enter ท้ายข้อ            → ได้ข้อใหม่ที่ว่างเปล่า
+ *   2. Backspace                → `exitListItemAtStart` ยกออกมาเป็นย่อหน้าธรรมดา ✔ (จุดนำหายไป)
+ *   3. Backspace อีกที          → `joinBackward` ของ baseKeymap **ยุบย่อหน้ากลับเข้าไปในข้อสุดท้าย**
+ *                                 = กลับเข้ารายการอีกรอบ (จุดนำโผล่กลับมา)
+ *   4. Backspace อีกที          → เข้าเงื่อนไขข้อ 2 อีก … วนกลับไปข้อ 2/3 ตลอดกาล
+ *
+ * ที่ถูกคือ: ย่อหน้า **ว่าง** ที่ต่อท้ายรายการ เมื่อกด Backspace = ทิ้งย่อหน้านั้นไป
+ * แล้วเอาเคอร์เซอร์ไปไว้ **ท้าย** ข้อสุดท้าย (พฤติกรรมเดียวกับ MS Word)
+ * ★ ต้องเป็น "ท้าย" เท่านั้น — ถ้าไปโผล่ที่ **ต้นข้อ** จะเข้าเงื่อนไขของ `exitListItemAtStart`
+ *   ในการกดครั้งถัดไป แล้ววงวนเดิมกลับมาทันที (เทส editor-keys ล็อกตำแหน่งนี้ไว้)
+ *
+ * ขอบเขต: แตะเฉพาะย่อหน้า **ว่าง** · ย่อหน้าที่มีข้อความยังตกไปใช้พฤติกรรมมาตรฐานของ
+ * prosemirror (`joinBackward` ยกมันขึ้นเป็นข้อใหม่ของรายการ) เหมือนเดิมทุกประการ
  */
-export function toggleListCmd(listType, itemType, otherType) {
+function dropEmptyParaAfterList(state, dispatch) {
+  const { $from, empty } = state.selection;
+  if (!empty || $from.depth !== 1) return false;            // ต้องเป็นบล็อกระดับบนสุด
+  const para = $from.parent;
+  if (para.type !== schema.nodes.paragraph || para.content.size > 0) return false;
+  const i = $from.index(0);
+  if (i === 0) return false;
+  const prev = state.doc.child(i - 1);
+  if (prev.type !== schema.nodes.bullet_list && prev.type !== schema.nodes.ordered_list) return false;
+  if (dispatch) {
+    const at = $from.before(1);
+    const tr = state.tr.delete(at, at + para.nodeSize);
+    // ท้ายข้อสุดท้ายของรายการ = จุดข้อความที่ใกล้ที่สุด "ก่อน" ตำแหน่งที่เพิ่งลบไป
+    const $end = tr.doc.resolve(Math.max(0, Math.min(at - 1, tr.doc.content.size)));
+    tr.setSelection(TextSelection.near($end, -1));
+    dispatch(tr.scrollIntoView());
+  }
+  return true;
+}
+
+/**
+ * ══ [alpha.134 ข้อ 2] ★ Enter ต้องพา "การจัดหน้า" ไปบรรทัดใหม่ด้วย ══
+ *
+ * ผู้ใช้: *"เมื่อเราใช้จัดหน้า บรรทัดต่อไปต้อง toggle อยู่"*
+ *
+ * ต้นตออยู่ใน `splitBlock` ของ prosemirror เอง: เมื่อเคอร์เซอร์อยู่ **ท้ายบล็อก** มันสร้าง
+ * บล็อกใหม่จาก `defaultType` ซึ่งได้ **attrs ค่าเริ่มต้น** (align = null) — ต่างจากตอนแยก
+ * กลางบล็อกที่คัด attrs เดิมมาให้ · ผู้ใช้จึงเห็น "จัดกึ่งกลางแล้วกด Enter กลับเป็นชิดซ้าย"
+ * (มาร์กตัวอักษรไม่โดน เพราะ `splitBlockKeepMarks` ดูแลอยู่แล้ว — ขาดแค่ attrs ของบล็อก)
+ *
+ * ห่อทั้งสาย Enter ไว้ทีเดียว จึงได้ผลกับทุกทาง (ย่อหน้า · หัวข้อ · ข้อในรายการ)
+ */
+function keepAlignOnEnter(inner) {
   return (state, dispatch, view) => {
-    if (ancestorDepth(state, listType)) {
-      const lift = liftListItem(itemType);
-      if (!dispatch) return lift(state);
-      if (!view) return lift(state, dispatch);
-      let guard = 0;
-      while (ancestorDepth(view.state, listType) && guard++ < 12) {
-        if (!lift(view.state, view.dispatch, view)) break;
+    const align = (state.selection.$from.parent.attrs || {}).align || null;
+    if (!align || !dispatch) return inner(state, dispatch, view);
+    return inner(state, (tr) => {
+      const $f = tr.selection.$from;
+      for (let d = $f.depth; d > 0; d--) {
+        const n = $f.node(d);
+        if (n.type !== schema.nodes.paragraph && n.type !== schema.nodes.heading) continue;
+        if ((n.attrs || {}).align !== align)
+          tr.setNodeMarkup($f.before(d), null, { ...n.attrs, align });
+        break;
       }
-      return true;
-    }
-    const od = otherType ? ancestorDepth(state, otherType) : 0;
-    if (od) {
-      // ══ [alpha.98 ข้อ 5] ★ สลับชนิดต้องแตะ **เฉพาะข้อที่เลือก** ══
-      //
-      // ผู้ใช้: *"bullet เมื่อกดเปลี่ยนเป็นตัวเลข มันเปลี่ยนบรรทัดก่อนหน้าด้วย
-      //          ซึ่งมันต้องเป็นบรรทัดที่ cursor หรือ select อยู่สิ"*
-      //
-      // ของเดิม `setNodeMarkup()` ที่ **โหนดรายการทั้งก้อน** → ทุกข้อในรายการเปลี่ยนตาม
-      // ที่ถูกคือ "ถอดข้อที่เลือกออกมาก่อน แล้วค่อยห่อด้วยชนิดใหม่" — รายการเดิมจะถูกผ่า
-      // ออกเป็นท่อนบน/ท่อนที่เลือก/ท่อนล่างเองตามธรรมชาติ (พฤติกรรมเดียวกับ Word)
-      if (!dispatch) return true;
-      if (!view) return wrapInList(listType)(state, dispatch);
-      const liftOut = liftListItem(itemType);
-      let g2 = 0;
-      while (ancestorDepth(view.state, otherType) && g2++ < 12) {
-        if (!liftOut(view.state, view.dispatch, view)) break;
-      }
-      return wrapInList(listType)(view.state, view.dispatch, view);
-    }
-    return wrapInList(listType)(state, dispatch, view);
+      dispatch(tr);
+    }, view);
   };
 }
 
-/** สวิตช์บล็อกที่ห่อได้ (คำพูดยกมา) — อยู่ข้างในแล้ว = ถอดออก */
+// ── คำสั่งของสองปุ่มที่พฤติกรรมซับซ้อนที่สุด — ประกาศที่เดียว ใช้ทั้งแป้นจริงและตัวช่วยกด ──
+/**
+ * Enter: ขึ้นบรรทัดในบล็อกโค้ด → แยกข้อในรายการ → ออกจากรายการเมื่อข้อว่าง → แยกย่อหน้า
+ * [alpha.134 ข้อ 2] ทั้งสายถูกห่อด้วย keepAlignOnEnter เพื่อพา `align` ไปบรรทัดใหม่ด้วย
+ */
+export const ENTER_CMD = keepAlignOnEnter(chainCommands(
+  newlineInCode, splitListItem(schema.nodes.list_item), exitEmptyListItem, splitBlockKeepMarks));
+/**
+ * Backspace: [alpha.132r4] ต้นข้อ = ถอดออกจากรายการ (เหมือน Word)
+ * [alpha.134 ข้อ 3] ย่อหน้าว่างท้ายรายการ = ลบทิ้ง ไม่ใช่ถูกดูดกลับเข้ารายการ (ต้นตอของวงวน)
+ * แล้วค่อยตกไปพฤติกรรมมาตรฐาน (ลบตัวอักษร/ยุบบล็อก) ตามปกติ
+ */
+export const BACKSPACE_CMD = chainCommands(
+  exitListItemAtStart, dropEmptyParaAfterList, baseKeymap.Backspace);
+
+/** ตัวรันคำสั่งต่อกันบน state ชั่วคราว — เก็บ step ไว้รวมเป็นธุรกรรมเดียวตอนจบ */
+function seq(state) {
+  let st = state;
+  const steps = [];
+  const mapping = new Mapping();
+  return {
+    get state() { return st; },
+    /** ตำแหน่งเดิม → ตำแหน่งปัจจุบัน */
+    map: (pos) => mapping.map(pos),
+    run(cmd) {
+      let ok = false;
+      cmd(st, (tr) => {
+        for (const x of tr.steps) { steps.push(x); mapping.appendMap(x.getMap()); }
+        st = st.apply(tr);
+        ok = true;
+      });
+      return ok;
+    },
+    /** ย้ายช่วงที่เลือก (ไม่สร้าง step — แค่บอกคำสั่งถัดไปว่าให้ทำตรงไหน) */
+    select(a, b) {
+      const d = st.doc;
+      const lo = Math.max(0, Math.min(a, d.content.size));
+      const hi = Math.max(lo, Math.min(b, d.content.size));
+      try {
+        st = st.apply(st.tr.setSelection(
+          TextSelection.between(d.resolve(lo), d.resolve(hi))));
+      } catch { /* ตำแหน่งไม่ถูกต้อง = ปล่อยช่วงเดิมไว้ */ }
+    },
+    steps,
+  };
+}
+
+/**
+ * ปิดงาน: เล่น step ทั้งหมดลงธุรกรรมเดียวของ state จริง
+ *
+ * ★ [alpha.132r4] **คืนช่วงที่เลือกให้ครอบของเดิม** — ระหว่างทางเราย้ายช่วงไปมาเพื่อให้คำสั่ง
+ *   ของ prosemirror ทำงานได้ ถ้าไม่คืน ผู้ใช้จะเลือกสองบรรทัด กดปุ่มแรกแล้วช่วงหด
+ *   พอกดปุ่มที่สองจึงโดนแค่บรรทัดเดียว (เจอจริงตอนกด "รายการ" แล้วต่อด้วย "คำพูดที่ยกมา")
+ */
+function commitSeq(s, state, dispatch, from, to) {
+  if (!s.steps.length) return false;
+  if (!dispatch) return true;
+  const tr = state.tr;
+  for (const x of s.steps) tr.step(x);
+  if (Number.isFinite(from) && Number.isFinite(to)) {
+    try {
+      const d = tr.doc;
+      const a = Math.max(0, Math.min(s.map(from), d.content.size));
+      const b = Math.max(a, Math.min(s.map(to), d.content.size));
+      tr.setSelection(TextSelection.between(d.resolve(a), d.resolve(b)));
+    } catch { /* ตำแหน่งไม่ถูกต้อง = ปล่อยให้ prosemirror แมปเอง */ }
+  }
+  dispatch(tr.scrollIntoView());
+  return true;
+}
+
+/**
+ * ถอดบล็อกห่อทุกใบที่คาบเกี่ยวกับช่วง โดย **เลื่อนช่วงเข้าไปในใบนั้นก่อน**
+ * @param {(n:object)=>boolean} match   ใช่บล็อกที่ต้องถอดไหม
+ * @param {number} inner  จำนวนตำแหน่งจากขอบโหนดถึง "ในข้อความ" (บล็อก=2 · รายการ=3)
+ * @param {Function} liftCmd  คำสั่งถอด (`lift` หรือ `liftListItem(itemType)`)
+ */
+function liftEvery(s, from0, to0, match, inner, liftCmd) {
+  for (let guard = 0; guard < 40; guard++) {
+    const from = s.map(from0), to = s.map(to0);
+    let hit = null;
+    s.state.doc.nodesBetween(from, to, (node, pos) => {
+      if (hit) return false;
+      if (match(node)) { hit = { pos, node }; return false; }
+      return undefined;
+    });
+    if (!hit) return;
+    // ★ หนีบให้อยู่ใน "ช่วงที่ผู้ใช้เลือก" เท่านั้น — ถ้าเลือกทั้งใบจะได้ทั้งใบเอง
+    //   แต่ถ้าเลือกข้อเดียว ต้องถอดข้อเดียว (รายการถูกผ่าเป็นสองท่อนตามธรรมชาติ)
+    s.select(Math.max(hit.pos + inner, from),
+             Math.min(hit.pos + hit.node.nodeSize - inner, to));
+    let moved = false;
+    for (let g2 = 0; g2 < 10; g2++) { if (!s.run(liftCmd)) break; moved = true; }
+    if (!moved) return;                       // ถอดไม่ได้แล้ว — กันวนไม่รู้จบ
+  }
+}
+
+const isList = (n) => /_list$/.test(n.type.name);
+
+/** ถอดทุกอย่างในช่วงให้เหลือ "ย่อหน้าเปล่า ๆ" (ทั้งรายการและคำพูดยกมา) */
+function flattenRange(s, from0, to0, itemType, quoteType) {
+  // ลองท่าปกติก่อน — มันถอด "เฉพาะช่วงที่เลือก" ได้แม่นกว่าเมื่อทุกอย่างอยู่ในรายการใบเดียว
+  const lift0 = liftListItem(itemType);
+  for (let g = 0; g < 10; g++) { if (!s.run(lift0)) break; }
+  liftEvery(s, from0, to0, isList, 3, lift0);
+  if (quoteType) liftEvery(s, from0, to0, (n) => n.type === quoteType, 2, lift);
+}
+
+/**
+ * สภาพของช่วงเทียบกับ "รายการชนิดหนึ่ง" — คืนจำนวนบล็อกข้อความทั้งหมด และที่อยู่ในชนิดนั้น
+ */
+export function listRangeInfo(state, listType) {
+  const { from, to } = state.selection;
+  let total = 0, inside = 0;
+  state.doc.nodesBetween(from, to, (node, pos) => {
+    if (!node.isTextblock) return;
+    total++;
+    const $p = state.doc.resolve(pos);
+    for (let d = $p.depth; d > 0; d--) if ($p.node(d).type === listType) { inside++; break; }
+  });
+  return { total, inside };
+}
+
+/**
+ * สวิตช์รายการ — ทั้งช่วงเป็นชนิดนี้แล้ว = ถอดออก · นอกนั้น = ถอดของเก่าแล้วห่อทั้งช่วง
+ * (ไม่ต้องมี `view` อีกแล้ว — ทุกขั้นตอนรันบน state ชั่วคราวภายในคำสั่งเดียว)
+ */
+export function toggleListCmd(listType, itemType) {
+  return (state, dispatch) => {
+    const info = listRangeInfo(state, listType);
+    const { from, to } = state.selection;
+    const s = seq(state);
+    if (info.total > 0 && info.inside === info.total) {
+      // `liftListItem` เก่งกว่าตรงที่ถอด **เฉพาะช่วงที่เลือก** ได้เอง (ผ่ารายการเป็นสามท่อน)
+      const lift0 = liftListItem(itemType);
+      let moved = false;
+      for (let g = 0; g < 10; g++) { if (!s.run(lift0)) break; moved = true; }
+      // ช่วงคร่อมหลายรายการ → `liftListItem` คืน false ตั้งแต่ต้น ต้องเจาะทีละใบ
+      if (!moved) liftEvery(s, from, to, isList, 3, lift0);
+      return commitSeq(s, state, dispatch, from, to);
+    }
+    // ══ [alpha.98 ข้อ 5] สลับชนิดต้องแตะ **เฉพาะข้อที่เลือก** ══
+    // รายการเดิมถูกผ่าเป็นท่อนบน/ท่อนที่เลือก/ท่อนล่างเองตามธรรมชาติ (พฤติกรรมเดียวกับ Word)
+    flattenRange(s, from, to, itemType, schema.nodes.blockquote);
+    s.select(s.map(from), s.map(to));
+    s.run(wrapInList(listType));
+    return commitSeq(s, state, dispatch, from, to);
+  };
+}
+
+// ══════ [alpha.132 ข้อ 7] ★★ สวิตช์ "คำพูดที่ยกมา" ต้องกดได้เสมอ แม้ช่วงที่เลือกปนกัน ══════
+//
+// ผู้ใช้: *"มี 2 บรรทัด เลือกทั้งสองแล้วกดคำพูดที่ยกมา → เป็นบล็อก · กด toggle → กลับเหมือนเดิม
+//          แต่ถ้าเลือกบรรทัดใดบรรทัดหนึ่งเอาบล็อกออกก่อน แล้วเลือกทั้ง 2 บรรทัด **กด toggle ไม่ได้แล้ว**"*
+//
+// ต้นตอ: ตัวสวิตช์เดิมตัดสินจาก **เคอร์เซอร์ต้นช่วงตัวเดียว** (`ancestorDepth` ดู `$from` เท่านั้น)
+//   · ต้นช่วงอยู่นอกบล็อก → ไปทาง `wrapIn`
+//   · แต่ `wrapIn` ห่อช่วงที่มีทั้งย่อหน้าเปล่าและ `<blockquote>` ไม่ได้เลย
+//     (สคีมาของ blockquote รับได้แค่ `paragraph+` → `findWrapping` คืน null) → คืน false เงียบ ๆ
+//   ผลคือ "กดแล้วไม่มีอะไรเกิดขึ้น" อย่างที่ผู้ใช้เจอ — ไม่ใช่ปุ่มเสีย แต่เป็นทางตันของคำสั่ง
+//
+// กติกาใหม่ (ไอดิออมเดียวกับ B I U และปุ่มจัดหน้าของ alpha.130): **ดูทั้งช่วง ไม่ใช่จุดเดียว**
+//   · ทุกบรรทัดอยู่ในบล็อก  → ถอดออก
+//   · ปนกัน / ไม่มีเลย      → ถอดของเก่าที่ปนอยู่ทิ้งก่อน แล้วห่อทั้งช่วงเป็นบล็อกเดียว
+// (ถอดด้วย `lift` ระดับ step ไม่ใช่ replace — ตำแหน่งในช่วงจึงถูกแมปต่อได้แม่นยำ)
+
+/**
+ * สภาพของช่วงที่เลือกเทียบกับบล็อกห่อชนิดหนึ่ง
+ * @returns {{total:number, inside:number, nodes:Array<{pos:number,node:object}>}}
+ *   `nodes` = โหนดชนิดนั้น **ชั้นนอกสุด** ที่คาบเกี่ยวกับช่วง เรียงตามลำดับในเอกสาร
+ */
+export function wrapRangeInfo(state, nodeType) {
+  const { from, to } = state.selection;
+  let total = 0, inside = 0;
+  state.doc.nodesBetween(from, to, (node, pos) => {
+    if (!node.isTextblock) return;
+    total++;
+    const $p = state.doc.resolve(pos);
+    for (let d = $p.depth; d > 0; d--) if ($p.node(d).type === nodeType) { inside++; break; }
+  });
+  const nodes = [];
+  state.doc.nodesBetween(from, to, (node, pos) => {
+    if (node.type !== nodeType) return;
+    nodes.push({ pos, node });
+    return false;                       // เจอชั้นนอกสุดแล้วไม่ต้องลงไปหาตัวซ้อนข้างใน
+  });
+  return { total, inside, nodes };
+}
+
+/** ถอดบล็อกห่อทุกใบใน `nodes` ออก (แก้จากท้ายไปหน้า ตำแหน่งที่เก็บไว้จึงยังใช้ได้) */
+function liftWrappers(tr, nodes) {
+  let done = false;
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const { pos, node } = nodes[i];
+    const $s = tr.doc.resolve(tr.mapping.map(pos + 1));
+    const $e = tr.doc.resolve(tr.mapping.map(pos + node.nodeSize - 1));
+    const range = $s.blockRange($e);
+    const target = range && liftTarget(range);
+    if (range && target != null) { tr.lift(range, target); done = true; }
+  }
+  return done;
+}
+
+// ══════ [alpha.132r3 ข้อ 3] ★★ จุดนำ/หมายเลขข้อ ต้องปรับรูปแบบได้เหมือนตัวอักษร ══════
+//
+// ผู้ใช้: *"bullet และ ตัวเลข ต้องเป็นตัวอักษรด้วย ดังนั้นต้องปรับรูปแบบ สี และอื่น ๆ ได้
+//          ตอนนี้ปรับไม่ได้"*
+//
+// marker เป็นของ **CSS** ไม่ใช่โหนดในเอกสาร (ไฟล์ .md เก็บแค่ `- ข้อ`) จึงไม่มีทางให้ผู้ใช้
+// เลือกแล้วสั่งรูปแบบตรง ๆ ได้ · กติกาเดียวกับ Word/Google Docs คือ **marker ใช้รูปแบบของ
+// อักษรตัวแรกในข้อ** — ปลั๊กอินนี้อ่านมาร์กของรันแรกแล้วส่งเป็นตัวแปร CSS ลงที่ `<li>`
+//
+// ★ ตั้งบน `<li>` เป็น **ตัวแปร** (ไม่ใช่ `color:` ตรง ๆ) เพราะ `<li>` ครอบข้อความทั้งข้อ —
+//   ถ้าตั้งสีจริงลงไป ข้อความส่วนที่ไม่ได้ทำสีจะเปลี่ยนสีตามอักษรตัวแรกไปด้วยทั้งข้อ
+// ★ ไฟล์ที่ส่งออกใช้กติกาเดียวกันผ่าน `markerVars()` ใน md.js (เทส e2e ตรวจว่าให้ผลตรงกัน)
+function listMarkerPlugin() {
+  const key = new PMKey('k2-list-marker');
+  const build = (doc) => {
+    const out = [];
+    // สคีมาของเราไม่มีรายการซ้อนชั้น (`list_item` รับได้แค่ `paragraph+`) → เดินชั้นบนพอ
+    doc.forEach((node, offset) => {
+      if (!/_list$/.test(node.type.name)) return;
+      node.forEach((item, off) => {
+        const first = item.firstChild && item.firstChild.firstChild;
+        const marks = (first && first.marks) || [];
+        const css = [];
+        const c = marks.find((m) => m.type.name === 'color');
+        if (c && c.attrs.color) css.push('--k-mk-color:' + c.attrs.color);
+        if (marks.some((m) => m.type.name === 'strong')) css.push('--k-mk-weight:700');
+        if (marks.some((m) => m.type.name === 'em')) css.push('--k-mk-style:italic');
+        if (!css.length) return;
+        const pos = offset + 1 + off;
+        out.push(Deco.node(pos, pos + item.nodeSize, { style: css.join(';') }));
+      });
+    });
+    return DecoSet.create(doc, out);
+  };
+  return new PMPlugin({
+    key,
+    state: { init: (_, st) => build(st.doc),
+             apply: (tr, old) => (tr.docChanged ? build(tr.doc) : old) },
+    props: { decorations(st) { return key.getState(st); } },
+  });
+}
+
+/** สวิตช์บล็อกที่ห่อได้ (คำพูดยกมา) — ทั้งช่วงอยู่ข้างในแล้ว = ถอดออก · นอกนั้น = ห่อทั้งช่วง */
 export function toggleWrapCmd(nodeType) {
   return (state, dispatch, view) => {
-    if (ancestorDepth(state, nodeType)) return lift(state, dispatch);
-    return wrapIn(nodeType)(state, dispatch, view);
+    const info = wrapRangeInfo(state, nodeType);
+    // ── ทุกบรรทัดอยู่ในบล็อกแล้ว = ถอดออก ──
+    if (info.total > 0 && info.inside === info.total) {
+      // `lift` ปกติเก่งกว่าตรงที่ถอด **เฉพาะช่วงที่เลือก** ได้ (ผ่าบล็อกเป็นสามท่อน)
+      if (lift(state, dispatch, view)) return true;
+      // เลือกคร่อมหลายบล็อก → `lift` หา target ไม่ได้ ต้องถอดทีละใบเอง
+      if (!info.nodes.length) return false;
+      if (!dispatch) return true;
+      const tr = state.tr;
+      if (!liftWrappers(tr, info.nodes)) return false;
+      dispatch(tr.scrollIntoView());
+      return true;
+    }
+    // ── ปนกัน หรือไม่มีเลย = ห่อทั้งช่วงให้เป็นบล็อกเดียว ──
+    //
+    // [alpha.132r4] ★ ต้อง **ออกจากรายการก่อน** ด้วย — `wrapIn` ห่อ `<ul>` ให้กลายเป็น
+    // `<blockquote>` ไม่ได้ (สคีมารับแค่ `paragraph+`) → เดิมกดจากในรายการแล้วเงียบสนิท
+    const { from, to } = state.selection;
+    const s = seq(state);
+    flattenRange(s, from, to, schema.nodes.list_item, nodeType);
+    s.select(s.map(from), s.map(to));
+    s.run(wrapIn(nodeType));
+    return commitSeq(s, state, dispatch, from, to);
   };
 }
 
@@ -759,10 +1181,13 @@ export class KEditor {
     });
   }
 
-  pressEnter() {
-    chainCommands(splitListItem(schema.nodes.list_item), splitBlockKeepMarks)(
-      this.view.state, this.view.dispatch, this.view);
-  }
+  // ══ [alpha.134] ★ ตัวช่วยกดปุ่ม — ต้องเป็น **คำสั่งตัวเดียวกับที่ผูกไว้กับแป้นจริง** ══
+  //
+  // ของเดิม `pressEnter()` ประกอบสายคำสั่งของตัวเองขึ้นมาใหม่ (ขาด `newlineInCode`
+  // และ `exitEmptyListItem`) → โค้ดที่เรียกตัวนี้ (รวมทั้ง e2e) ทดสอบ "Enter" คนละตัว
+  // กับที่ผู้ใช้กดจริง · ตอนนี้ทั้งสองทางอ้าง ENTER_CMD/BACKSPACE_CMD ก้อนเดียวกัน
+  pressEnter() { ENTER_CMD(this.view.state, this.view.dispatch, this.view); }
+  pressBackspace() { BACKSPACE_CMD(this.view.state, this.view.dispatch, this.view); }
 
   _mkState(doc) {
     return EditorState.create({
@@ -773,13 +1198,19 @@ export class KEditor {
         focusLinePlugin(),
         commentAnchorPlugin(),
         prosePageBreakPlugin(),          // [20] เส้นคั่นหน้าของนิยาย
+        listMarkerPlugin(),              // [alpha.132r3] รูปแบบของจุดนำ/หมายเลขข้อ
         // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (fountain/มาร์กดาวน์) — ไม่แตะไฟล์
         markdownCodePlugin(incrementalDecoState),
         buildRules(schema),
         keymap({
           // ขึ้นบรรทัดใหม่แล้วรูปแบบตัวอักษร (หนา/เอียง/ขีด) ต้องติดไปด้วย — แบบ Word
           // ในบล็อกโค้ด Enter = ขึ้นบรรทัดใน pre (ไม่ใช่แตกบล็อก)
-          Enter: chainCommands(newlineInCode, splitListItem(schema.nodes.list_item), splitBlockKeepMarks),
+          // [alpha.132r4] Enter บน "ข้อว่าง" = **ออกจากรายการ** (พฤติกรรมเดียวกับ MS Word)
+          // `splitListItem` ของ prosemirror ตั้งใจคืน false ตรงนี้แล้วฝากให้คำสั่งถัดไปยกออก
+          // — แต่เดิมคำสั่งถัดไปคือ `splitBlockKeepMarks` ซึ่งสร้าง "ข้อว่างใบใหม่" ไปเรื่อย ๆ
+          // ผู้ใช้จึงเอาจุดนำออกไม่ได้เลยนอกจากไปกดปุ่มสวิตช์บนแถบเครื่องมือ
+          Enter: ENTER_CMD,
+          Backspace: BACKSPACE_CMD,
           // [alpha.61 ข้อ 3] Shift+Enter = ขึ้นบรรทัด "ในย่อหน้าเดิม" (bypass ระบบย่อหน้า)
           //   ในบล็อกโค้ดยังเป็นทางออกจากบล็อกเหมือนเดิม (exitCode มาก่อน)
           'Shift-Enter': chainCommands(exitCode, insertHardBreak),
@@ -853,6 +1284,28 @@ export class KEditor {
       // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — กันเองออกด้วย `excludes` ใน schema แล้ว
       case 'sup': return run(toggleMark(s.marks.sup));
       case 'sub': return run(toggleMark(s.marks.sub));
+      // ══ [alpha.132 ข้อ 9] ★ สีตัวอักษร — `arg` = รหัสสี · ค่าว่าง/ไม่ผ่านตัวกรอง = ล้างสี ══
+      // ไม่ใช้ `toggleMark` เพราะสีเป็นมาร์ก "มีค่า": กดสีใหม่ทับสีเก่าต้องได้สีใหม่
+      // ไม่ใช่สลับเปิด-ปิด (toggleMark จะถอดมาร์กออกเมื่อทั้งช่วงมีมาร์กนั้นอยู่แล้ว)
+      case 'color': {
+        const mk = s.marks.color;
+        const val = normColor(arg);
+        const st = v.state;
+        const { from, to, empty } = st.selection;
+        if (empty) {
+          // ไม่ได้เลือกข้อความ = ตั้งสีให้ "ตัวที่กำลังจะพิมพ์" (เหมือน B I U ตอนเคอร์เซอร์เปล่า)
+          const cur = (st.storedMarks || st.selection.$from.marks())
+            .filter((m) => m.type !== mk);
+          v.dispatch(st.tr.setStoredMarks(val ? [...cur, mk.create({ color: val })] : cur));
+          v.focus();
+          return true;
+        }
+        const tr = st.tr.removeMark(from, to, mk);
+        if (val) tr.addMark(from, to, mk.create({ color: val }));
+        v.dispatch(tr.scrollIntoView());
+        v.focus();
+        return true;
+      }
       case 'undo': return run(undo);
       case 'redo': return run(redo);
       // [alpha.103 ข้อ 2] ห่อด้วย keepAlign — เปลี่ยนชนิดบล็อกแล้ว align ต้องอยู่ที่เดิม
@@ -861,10 +1314,9 @@ export class KEditor {
       // [alpha.97 ข้อ 3+5] สามตัวนี้เป็น "สวิตช์" แล้ว — กดซ้ำ = เอาออก (เหมือน B I U)
       case 'quote': return run(toggleWrapCmd(s.nodes.blockquote));
       case 'lift': return run(lift);
-      case 'ul': return run(toggleListCmd(s.nodes.bullet_list, s.nodes.list_item,
-                                          s.nodes.ordered_list));
-      case 'ol': return run(toggleListCmd(s.nodes.ordered_list, s.nodes.list_item,
-                                          s.nodes.bullet_list));
+      // [alpha.132r4] ไม่ต้องบอก "ชนิดอีกฝั่ง" อีกแล้ว — ตัวสวิตช์ถอดของเก่าทุกชนิดให้เอง
+      case 'ul': return run(toggleListCmd(s.nodes.bullet_list, s.nodes.list_item));
+      case 'ol': return run(toggleListCmd(s.nodes.ordered_list, s.nodes.list_item));
       // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด
       case 'code': return run(setBlockType(s.nodes.code_block));
       case 'hr': {
@@ -872,14 +1324,19 @@ export class KEditor {
         v.focus(); return;
       }
       case 'align': {
-        // จัดหน้าย่อหน้า/หัวข้อทุกบล็อกในช่วงเลือก (arg: 'left'|'center'|'right'|'justify' · null=ชิดซ้ายปกติ)
-        const val = arg === 'left' ? null : arg;
+        // จัดหน้าย่อหน้า/หัวข้อทุกบล็อกในช่วงเลือก (arg: 'left'|'center'|'right'|'justify')
+        // [alpha.130 ข้อ 3] **เป็นสวิตช์แล้ว** — กดปุ่มที่ติดไฟอยู่ซ้ำ = กลับเป็นชิดซ้ายปกติ
+        // (ไอดิออมเดียวกับ B I U / คำพูดยกมา / รายการ ที่ alpha.97 วางไว้)
+        const want = arg === 'left' ? null : arg;
+        const val = (want && rangeAlign(v.state) === arg) ? null : want;
         const { from, to } = v.state.selection;
         let tr = v.state.tr, changed = false;
         v.state.doc.nodesBetween(from, to, (node, pos) => {
-          if (node.type === s.nodes.paragraph || node.type === s.nodes.heading) {
-            tr = tr.setNodeMarkup(pos, null, { ...node.attrs, align: val }); changed = true;
-          }
+          // บล็อกข้อความทุกใบที่ "ถือ align ได้" — รวมย่อหน้าที่อยู่ใน <li>/<blockquote>
+          // (เทียบชนิดตรง ๆ แบบเดิมพลาดง่ายเวลาเพิ่มชนิดใหม่เข้ามาใน schema)
+          if (!node.isTextblock || !node.type.spec.attrs || !('align' in node.type.spec.attrs)) return;
+          if ((node.attrs.align || null) === val) return;
+          tr = tr.setNodeMarkup(pos, null, { ...node.attrs, align: val }); changed = true;
         });
         if (changed) v.dispatch(tr);
         v.focus(); return;
@@ -968,13 +1425,32 @@ export class KEditor {
       : p.type.name === 'code_block' ? 'code'
       : st.selection.$from.node(-1) && st.selection.$from.node(-1).type.name === 'blockquote' ? 'quote'
       : 'p';
-    out.align = (p.type.name === 'paragraph' || p.type.name === 'heading') ? (p.attrs.align || 'left') : null;
+    // ══ [alpha.130 ข้อ 3] ★ สถานะปุ่มจัดหน้าต้องอ่านจาก **ทั้งช่วงที่เลือก** ══
+    //
+    // ผู้ใช้: *"เมื่อเลือกทั้งหมดแล้วใช้การจัดหน้า จะไม่ถูก toggle เลย"*
+    //
+    // ของเดิมอ่านจาก `$from.parent` ตัวเดียว — ซึ่งใช้ได้ตอนเคอร์เซอร์อยู่ในย่อหน้า
+    // แต่ **Ctrl+A ให้ `AllSelection` ที่ `from = 0`** → `$from.parent` คือโหนด `doc`
+    // ไม่ใช่ย่อหน้า → `align = null` → ตกไปเป็น 'left' → กดจัดกึ่งกลางทั้งเอกสารสำเร็จจริง
+    // แต่ปุ่มยังติดไฟที่ "ชิดซ้าย" ตลอด (วัดจริง: align=null ทั้งที่ทุกย่อหน้าเป็น justify)
+    //
+    // ที่ถูกคือดูทุกบล็อกข้อความในช่วง: เหมือนกันหมด = ค่านั้น · ปนกัน = '' (ไม่ติดไฟปุ่มไหนเลย
+    // เหมือน Word/Docs) — และ `cmd('align')` ใช้ค่าเดียวกันนี้ตัดสินว่าจะสลับกลับหรือไม่
+    out.align = rangeAlign(st);
     // [alpha.97 ข้อ 3+5] สถานะของปุ่มโครงสร้าง — ไม่มีตรงนี้ ปุ่มก็ไม่มีทางติดไฟบอกว่า "เปิดอยู่"
     const dUl = ancestorDepth(st, schema.nodes.bullet_list);
     const dOl = ancestorDepth(st, schema.nodes.ordered_list);
     out.list = dUl > dOl ? 'ul' : dOl > dUl ? 'ol' : '';
-    out.quote = !!ancestorDepth(st, schema.nodes.blockquote);
+    // [alpha.132 ข้อ 7] ปุ่มติดไฟเมื่อ **ทั้งช่วง** อยู่ในคำพูดยกมา — ตรงกับสิ่งที่การกดจะทำ
+    // (เลือกปนกันแล้วปุ่มดับ = กดแล้วได้ "ห่อทั้งช่วง" ซึ่งเป็นสิ่งที่เห็นอยู่ว่ายังไม่เป็น)
+    {
+      const qi = wrapRangeInfo(st, schema.nodes.blockquote);
+      out.quote = qi.total > 0 && qi.inside === qi.total;
+    }
     out.image = this.figurePos() >= 0;
+    // [alpha.132 ข้อ 9] ค่าสีของช่วงที่เลือก — เหมือนกันหมด = ค่านั้น · ปนกัน/ไม่มีสี = ''
+    // (ชิปสีบนแถบเครื่องมือใช้ค่านี้บอกว่าตอนนี้ตัวอักษรสีอะไร)
+    out.colorValue = rangeColor(st);
     return out;
   }
 

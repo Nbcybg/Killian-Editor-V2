@@ -4,7 +4,7 @@
 //   meta.customStatusColors  = { 'รอแก้ไข': '#d9575e', … }     (สีทับได้ทั้งสถานะมาตรฐานและที่เพิ่มเอง)
 import { t, tf } from './i18n.js';
 import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR } from './core.js';
-import { ask, confirmBox } from './ui.js';
+import { ask, confirmBox, escClose } from './ui.js';
 
 export function getCustomStatuses() {
   if (!state.meta) return [];
@@ -168,6 +168,7 @@ export async function manageCustomStatuses() {
   ov.append(box);
   document.body.append(ov);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
 }
 
 // ทาสีชิปสถานะที่วาดไว้แล้วใน Explorer/ตารางฉาก โดยไม่ต้อง build ต้นไม้ใหม่ทั้งชุด

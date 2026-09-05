@@ -30,17 +30,18 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  x
 // ═══════════ 1. โครงข้อมูล + เวอร์ชัน ═══════════
 {
   const s = M.newStarter({ name: 'เมืองใต้ทะเล' });
-  check('starter ใหม่มีเวอร์ชัน', s.v === M.STARTER_VERSION && s.v === 1);
+  check('starter ใหม่มีเวอร์ชัน', s.v === M.STARTER_VERSION && s.v === 2);
   check('ค่าเริ่มต้นครบ', Array.isArray(s.tags) && Array.isArray(s.cast)
         && typeof s.w === 'object' && s.step === 0 && s.done === false);
   check('โฟลเดอร์ตามสเปกข้อ 9', M.STARTER_DIR === 'Starters' && M.SCENARIO_DIR === 'Scenarios');
 
   // ไฟล์ที่ไม่มี v (ของก่อนมีเวอร์ชัน) ต้องเปิดได้
   const old = M.migrateStarter({ name: 'เก่า', tags: ['a', 'a', ' b '], junk: 1 });
-  check('migrate ไฟล์ไม่มี v ได้', old.v === 1 && old.name === 'เก่า');
+  check('migrate ไฟล์ไม่มี v ได้', old.v === M.STARTER_VERSION && old.name === 'เก่า');
   check('migrate ตัดแท็กซ้ำ/ช่องว่าง', old.tags.join(',') === 'a,b', JSON.stringify(old.tags));
   check('migrate ทิ้ง field ที่ไม่รู้จัก', old.junk === undefined);
-  check('migrate ของพัง/null ไม่ล้ม', M.migrateStarter(null).v === 1 && M.migrateStarter(7).v === 1);
+  check('migrate ของพัง/null ไม่ล้ม', M.migrateStarter(null).v === M.STARTER_VERSION
+        && M.migrateStarter(7).v === M.STARTER_VERSION);
 }
 
 // ═══════════ 2. ชื่อโฟลเดอร์ (พกพาข้ามเครื่อง) ═══════════
@@ -412,6 +413,171 @@ const H = load('src/starter/starter-html.js', '_st_html.cjs');
   check('[96] แก้ล่าสุดเอาตัวใหม่สุดระหว่างเรื่องกับตอน',
         M.lastUpdated({ updated: 100 }, [{ updated: 500 }, { updated: 300 }]) === 500);
   check('[96] ไม่มีตอนเลยก็ใช้ของตัวเรื่อง', M.lastUpdated({ updated: 7 }, []) === 7);
+}
+
+// ═══════════ 14. [alpha.122] โหมดพื้นฐาน/ขั้นสูง ═══════════
+{
+  check('[122] ไฟล์เก่าไม่มี mode = พื้นฐาน',
+        M.migrateStarter({ name: 'เก่า' }).mode === M.MODE_BASIC);
+  check('[122] ค่าขยะก็ตกเป็นพื้นฐาน', M.normMode('อะไรก็ไม่รู้') === M.MODE_BASIC
+        && M.normMode(undefined) === M.MODE_BASIC);
+  check('[122] ตั้งขั้นสูงได้', M.isAdv(M.newStarter({ mode: 'adv' })) === true);
+  check('[122] มีสองโหมดพอดี มีป้ายครบ',
+        M.MODES.length === 2 && M.MODES.every((m) => m.label && m.icon && m.hint));
+  // กติกา: โหมดคุมการมองเห็น ไม่ใช่การมีอยู่ — ข้อมูลขั้นสูงต้องรอดตอนสลับกลับ
+  const advS = M.migrateStarter({ mode: 'adv', cast: [{ name: 'ก', dialogue: 'ว่าไง', tags: ['x'] }] });
+  const backToBasic = M.migrateStarter({ ...advS, mode: 'basic' });
+  check('[122] สลับกลับพื้นฐานแล้วช่องขั้นสูงไม่หาย',
+        backToBasic.cast[0].dialogue === 'ว่าไง' && backToBasic.cast[0].tags[0] === 'x');
+}
+
+// ═══════════ 15. [alpha.122] ช่องขั้นสูงของตัวละคร ═══════════
+{
+  const c = M.newChar({ name: 'ลิเลียน' });
+  check('[122] ตัวละครใหม่มีช่องขั้นสูงครบ',
+        ['shortcode', 'dialogue', 'tags', 'prompts'].every((k) => k in c));
+  check('[122] ค่าเริ่มต้นว่าง ไม่ใช่ undefined',
+        c.shortcode === '' && c.dialogue === '' && c.tags.length === 0 && c.prompts.length === 0);
+  check('[122] แท็กตัวละครถูกตัดซ้ำเหมือนแท็กเรื่อง',
+        M.newChar({ tags: ['a', 'A', ' b '] }).tags.join(',') === 'a,b');
+  check('[122] prompts ที่เป็น object แบบเก่าเปิดได้',
+        M.newChar({ prompts: { 'Prompt A': 'x' } }).prompts[0].v === 'x');
+  // ไฟล์เก่าเปิดแล้วต้องไม่มี field หาย (migrate ผ่าน newStarter → newChar)
+  const old = M.migrateStarter({ cast: [{ name: 'เก่า' }] });
+  check('[122] ตัวละครในไฟล์เก่าได้ช่องใหม่ครบ', Array.isArray(old.cast[0].prompts));
+}
+
+// ═══════════ 16. [alpha.122] ช่องขั้นสูงของตอน ═══════════
+{
+  const sc = M.newScenario({});
+  check('[122] ตอนใหม่มีช่องขั้นสูง + รูปย่อ',
+        ['thumb', 'desc', 'opener', 'openerImage', 'goal', 'conditions'].every((k) => k in sc));
+  check('[122] เทิร์นมีช่องรูป', 'image' in M.newTurn({}));
+  check('[122] เวอร์ชันตอนขึ้นเป็น 2', M.SCENARIO_VERSION === 2);
+  // สำคัญ: field ที่ไม่อยู่ในโมเดลจะถูกตัดทิ้งตอน migrate — ช่องใหม่ต้องรอด
+  const kept = M.migrateScenario({ opener: 'บทเปิด', goal: 'เป้า', thumb: 'a.png',
+                                   turns: [{ role: 'gm', text: 'x', image: 'b.png' }] });
+  check('[122] ช่องใหม่รอด migrate',
+        kept.opener === 'บทเปิด' && kept.goal === 'เป้า' && kept.thumb === 'a.png');
+  check('[122] รูปของเทิร์นรอด migrate', kept.turns[0].image === 'b.png');
+
+  const cast = [{ id: 'a', name: 'ลิเลียน', shortcode: 'characterA' }];
+  check('[122] บทเปิดคลายโค้ดสั้นก่อนแสดง/ส่งโมเดล',
+        M.openerText({ opener: 'สวัสดี {{characterA}}' }, cast) === 'สวัสดี ลิเลียน');
+  // [123] บทเปิดเก็บเป็น HTML แล้ว (ผู้ใช้ขอ b/i/u) — โมเดลต้องได้ข้อความล้วน จอต้องได้ HTML
+  check('[123] บทเปิดที่เป็น HTML → โมเดลได้ข้อความล้วน',
+        M.openerText({ opener: '<p>สวัสดี <b>{{characterA}}</b></p>' }, cast) === 'สวัสดี ลิเลียน',
+        JSON.stringify(M.openerText({ opener: '<p>สวัสดี <b>{{characterA}}</b></p>' }, cast)));
+  check('[123] บทเปิดที่เป็น HTML → จอได้ HTML ที่คลายโค้ดสั้นแล้ว',
+        M.openerHtml({ opener: '<b>{{characterA}}</b>' }, cast) === '<b>ลิเลียน</b>');
+  check('[123] แท็กเปล่าไม่นับว่ามีบทเปิด',
+        M.hasOpener({ opener: '<p><br></p>' }) === false);
+  check('[123] ตอนมีช่อง Mood & Tone', 'mood' in M.newScenario({}));
+  check('[123] เทิร์นมีช่อง html', 'html' in M.newTurn({}));
+  check('[123] โค้ดสั้นรูปแบบเก่าถูกแปลงตอนอ่านไฟล์',
+        M.migrateScenario({ goal: 'ชวน {[ไก่]} กลับ' }).goal === 'ชวน {{ไก่}} กลับ');
+  check('[123] ตัวละครก็ถูกแปลงด้วย',
+        M.newChar({ dialogue: 'ทัก {[ไก่]}' }).dialogue === 'ทัก {{ไก่}}');
+  check('[122] ไม่มีบทเปิด = รู้ว่าไม่มี',
+        M.hasOpener({}) === false && M.hasOpener({ opener: '  ' }) === false
+        && M.hasOpener({ opener: 'x' }) === true);
+  check('[122] นับช่องขั้นสูงที่กรอกแล้วได้',
+        M.scenarioAdvFilled({ desc: 'a', goal: '', conditions: 'c' }) === 2);
+}
+
+// ═══════════ 17. [alpha.122] เดินทางสองทางกับ Wiki (ช่องใหม่ต้องไม่ตกหล่น) ═══════════
+{
+  const ch = { name: 'ลิเลียน', persona: 'คำบรรยาย', dialogue: '"ว่าไง"',
+               shortcode: 'characterA', tags: ['ตัวเอก'], prompts: [{ k: 'Prompt A', v: 'พูดห้วน' }] };
+  const e = W.entityFromChar(ch, { id: 'e1' });
+  check('[122] entity ใหม่พกโค้ดสั้น/แท็ก/prompt',
+        e.shortcode === 'characterA' && e.tags[0] === 'ตัวเอก' && e.prompts[0].v === 'พูดห้วน');
+  check('[122] ตัวอย่างคำพูดเก็บเป็นหัวข้อของตัวเอง',
+        e.sections.length === 2 && e.sections[1].content === '"ว่าไง"');
+
+  const back = W.charPatchFromEntity(e, '/x.json');
+  check('[122] ดึงกลับได้ครบทุกช่อง',
+        back.shortcode === 'characterA' && back.tags[0] === 'ตัวเอก'
+        && back.prompts[0].k === 'Prompt A' && back.dialogue === '"ว่าไง"');
+  // จุดที่พลาดง่ายที่สุด: ตัวอย่างคำพูดถูกยัดซ้ำเข้าคำบรรยายด้วย = ของซ้ำสองที่ในทุก prompt
+  check('[122] คำบรรยายไม่กลืนตัวอย่างคำพูดมาซ้ำ',
+        back.persona === 'คำบรรยาย', JSON.stringify(back.persona));
+
+  // อัปเดตของเดิม: ห้ามทับสิ่งที่ผู้ใช้เขียนเพิ่มในหน้า Wiki
+  const older = { name: 'ลิเลียน', shortcode: 'ของเดิม', tags: ['จากวิกิ'],
+                  prompts: [{ k: 'Prompt B', v: 'ของวิกิ' }],
+                  sections: [{ title: 'ประวัติ', content: 'เขียนไว้ในวิกิ' }] };
+  const merged = W.applyCharToEntity(older, ch);
+  check('[122] โค้ดสั้นฝั่งวิกิชนะเมื่อตั้งไว้แล้ว', merged.shortcode === 'ของเดิม');
+  check('[122] แท็กรวมกันไม่ทับ',
+        merged.tags.length === 2 && merged.tags.includes('จากวิกิ') && merged.tags.includes('ตัวเอก'),
+        JSON.stringify(merged.tags));
+  check('[122] prompt คนละหัวข้ออยู่ครบทั้งคู่',
+        merged.prompts.length === 2, JSON.stringify(merged.prompts));
+  check('[122] หัวข้อที่ผู้ใช้เขียนในวิกิไม่หาย',
+        merged.sections.some((x) => x.title === 'ประวัติ'));
+  check('[122] คำบรรยายของ starter ขึ้นเป็นหัวข้อแรก',
+        merged.sections[0].content === 'คำบรรยาย', JSON.stringify(merged.sections.map((x) => x.title)));
+  // เนื้อว่างต้องไม่ไปลบของเดิมทิ้ง
+  const noWipe = W.applyCharToEntity(merged, { name: 'ลิเลียน', persona: '', dialogue: '' });
+  check('[122] ช่องว่างไม่ล้างของเดิมในวิกิ',
+        noWipe.sections[0].content === 'คำบรรยาย'
+        && noWipe.sections.some((x) => x.content === '"ว่าไง"'));
+}
+
+// ═══════════ 18. [alpha.122] prompt ที่ส่งเข้าโมเดล ═══════════
+{
+  const s = M.newStarter({
+    name: 'เรื่องทดสอบ',
+    cast: [M.newChar({ id: 'a', name: 'ลิเลียน', shortcode: 'characterA', persona: 'ใบบท',
+                       dialogue: 'ทักทาย {{Kai}} หน่อยสิ', tags: ['ตัวเอก'],
+                       prompts: [{ k: 'Prompt A', v: 'พูดห้วน' }] }),
+           M.newChar({ id: 'b', name: 'Kai' })],
+  });
+  const full = P.castBlock(s, { full: true });
+  check('[122] ใบเต็มมีตัวอย่างคำพูด', full.includes('ทักทาย'), full);
+  check('[122] โค้ดสั้นถูกคลายก่อนถึงโมเดล',
+        full.includes('ทักทาย Kai') && !full.includes('{['), full);
+  check('[122] แท็กและช่อง Prompt ติดไปด้วย',
+        full.includes('ตัวเอก') && full.includes('พูดห้วน'));
+  const brief = P.castBlock(s, { full: false });
+  check('[122] ใบย่อไม่พกตัวอย่างคำพูด (ประหยัดโทเคน)', !brief.includes('ทักทาย'), brief);
+
+  const sc = M.newScenario({ title: 'ตอนหนึ่ง', desc: 'ฉากในเมือง',
+                             goal: 'ชนะใจ {{characterA}}', conditions: 'พูดว่า "รัก"',
+                             mood: 'อบอุ่นแต่มีอะไรค้างคา' });
+  const sys = P.gmSystem(s, sc, {});
+  check('[122] GM ได้คำอธิบาย เป้าหมาย และเงื่อนไขจบ',
+        sys.includes('ฉากในเมือง') && sys.includes('ชนะใจ ลิเลียน') && sys.includes('พูดว่า "รัก"'),
+        sys.slice(0, 200));
+  check('[123] GM ได้ Mood & Tone ด้วย', sys.includes('อบอุ่นแต่มีอะไรค้างคา'));
+  check('[123] ไม่มีวงเล็บปีกกาหลุดเข้า system prompt',
+        !sys.includes('{{') && !sys.includes('{['));
+  // `{{user}}` ต้องกลายเป็นชื่อตัวที่ผู้เล่นสวมบท ไม่ใช่คำว่า user
+  const sysUser = P.gmSystem(s, M.newScenario({ goal: 'ช่วย {{user}} หนี' }), { userChars: ['a'] });
+  check('[123] {{user}} คลายเป็นตัวที่ผู้เล่นสวมบท',
+        sysUser.includes('ช่วย ลิเลียน หนี'), sysUser.slice(0, 200));
+  // `{{character}}` ต้องเห็นทั้ง pool
+  const sysAny = P.gmSystem(s, M.newScenario({ goal: 'แต่งงานกับ {{character}}' }), {});
+  check('[123] {{character}} คลายเป็นรายชื่อทั้งวง',
+        sysAny.includes('ลิเลียน / Kai'), sysAny.slice(0, 200));
+
+  // บทเปิดที่ผู้ใช้เขียนเอง = ห้ามให้โมเดลแต่งใหม่ทับ
+  const withOpener = P.gmOpening(s, M.newScenario({ opener: 'ฝนตกหนัก {{characterA}} ยืนรออยู่' }));
+  check('[122] มีบทเปิดเอง = สั่งให้เล่าต่อ ไม่ใช่เขียนใหม่',
+        withOpener.includes('ฝนตกหนัก ลิเลียน'), withOpener);
+  const noOpener = P.gmOpening(s, M.newScenario({ synopsis: 'เรื่องย่อ' }));
+  check('[122] ไม่มีบทเปิด = ใช้ทางเดิม (ให้โมเดลเปิดฉากเอง)',
+        noOpener.includes('เรื่องย่อ') && !noOpener.includes('ฝนตก'));
+
+  check('[123] PROMPT_VERSION ขึ้นตามที่แก้สำนวน', P.PROMPT_VERSION === 3);
+  const dlg = P.charDialoguePrompt(s, s.cast[0]);
+  check('[122] คำสั่งขอตัวอย่างคำพูดมีบริบทของตัวละคร', dlg.includes('ลิเลียน'));
+  check('[123] คำสั่งเงื่อนไขจบบอกให้ใช้โค้ดสั้นทั้งสามแบบ',
+        P.conditionsPrompt(s, sc).includes('{{ลิเลียน}}')
+        && P.conditionsPrompt(s, sc).includes('{{character}}')
+        && P.conditionsPrompt(s, sc).includes('{{user}}'),
+        P.conditionsPrompt(s, sc).slice(-220));
 }
 
 console.log(`starter (โมดูลบริสุทธิ์): ${pass} ผ่าน, ${fail} ล้มเหลว`);

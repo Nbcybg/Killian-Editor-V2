@@ -776,6 +776,41 @@ check('[57a] paginate รองรับ element ใหม่ (ไม่หล�
         (sp2.head + ' ' + sp2.rest).split(/\s+/).length === 10, sp2.head + ' || ' + sp2.rest);
 }
 
+// ───────── [alpha.125 ข้อ J] (CONTINUED) บนหน้าที่ยังไม่มีหัวฉาก ─────────
+{
+  // หน้าจำลอง: ฉาก 0 = "ยังไม่มีหัวฉาก" · บล็อกแรกของหน้าถัดไปเป็นท่อนหางที่ถูกหั่นมา
+  const mkPages = () => ([
+    { sceneStart: 0, sceneEnd: 0, blocks: [{ el: 'action', text: 'a' }] },
+    { sceneStart: 0, sceneEnd: 0, blocks: [{ el: 'action', text: 'b', contIn: true }] },
+  ]);
+  const off = SF.annotateContinued(mkPages(), SF.mergeSpFormat({}));
+  check('[J] ค่าเริ่มต้น: หน้าที่ไม่มีหัวฉากยังไม่ขึ้น CONTINUED (พฤติกรรมเดิม)',
+     !off[0].continuedBottom && !off[1].continuedTop,
+     JSON.stringify([off[0].continuedBottom, off[1].continuedTop]));
+
+  const on = SF.annotateContinued(mkPages(), SF.mergeSpFormat({ continued: { noHeading: true } }));
+  check('[J] ★ เปิดสวิตช์แล้วขึ้น CONTINUED ได้แม้ไม่มีหัวฉาก',
+     !!on[0].continuedBottom && !!on[1].continuedTop,
+     JSON.stringify([on[0].continuedBottom, on[1].continuedTop]));
+
+  // เงื่อนไขอื่นต้องยังเข้มเท่าเดิม: ไม่มีบล็อกถูกหั่นคร่อมรอยต่อ = ไม่ขึ้น
+  const noSplit = SF.annotateContinued([
+    { sceneStart: 0, sceneEnd: 0, blocks: [{ el: 'action', text: 'a' }] },
+    { sceneStart: 0, sceneEnd: 0, blocks: [{ el: 'action', text: 'b' }] },
+  ], SF.mergeSpFormat({ continued: { noHeading: true } }));
+  check('[J] เปิดสวิตช์แล้วก็ยังต้องมีบล็อกถูกหั่นคร่อมหน้าจริง',
+     !noSplit[0].continuedBottom, JSON.stringify(noSplit[0].continuedBottom));
+
+  // รอยต่อของบทพูด ใช้ (MORE)/(CONT'D) อยู่แล้ว — ห้ามใส่ CONTINUED ซ้ำ
+  const dlg = SF.annotateContinued([
+    { sceneStart: 0, sceneEnd: 0, blocks: [{ el: 'dialogue', text: 'a', more: true }] },
+    { sceneStart: 0, sceneEnd: 0, blocks: [{ el: 'dialogue', text: 'b', contd: true }] },
+  ], SF.mergeSpFormat({ continued: { noHeading: true } }));
+  check('[J] รอยต่อบทพูดยังไม่ซ้อน CONTINUED', !dlg[0].continuedBottom);
+
+  check('[J] ค่าเริ่มต้นของ noHeading เป็น false', SF.CONTINUED_DEFAULTS.noHeading === false);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 try { fs.unlinkSync(tmp); } catch {}
 if (fail) process.exit(1);

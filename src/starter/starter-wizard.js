@@ -7,11 +7,14 @@
 // ผู้ใช้ย้อนกลับไปแก้ขั้นไหนก็ได้ตลอดเวลา (สเปกข้อ 8) จึงไม่มีการ "ล็อกขั้น"
 // ขั้นที่ยังไม่ครบแค่ถูกทำเครื่องหมายไว้ ไม่ได้ห้ามเดินผ่าน
 
-import { el } from '../core.js';
+import { el, setStatus } from '../core.js';
 import { t, tf } from '../i18n.js';
-import { STEPS, clampStep, isFirstStep, isLastStep } from './starter-steps-def.js';
-import { starterProgress, stepFilled, starterReady, missingSteps } from './starter-model.js';
+import { STEPS, clampStep, isFirstStep, isLastStep, stepIndex } from './starter-steps-def.js';
+import {
+  starterProgress, stepFilled, starterReady, missingSteps, MODES, normMode,
+} from './starter-model.js';
 import { STEP_RENDERERS } from './starter-steps.js';
+import { resetCastEditor } from './starter-cast.js';
 
 /**
  * @param {HTMLElement} host
@@ -26,6 +29,9 @@ export function renderWizard(host, ctx) {
   const s = ctx.starter;
   const i = clampStep(s.step);
   const step = STEPS[i];
+  // [alpha.122] ออกจากขั้นตัวละครเมื่อไหร่ ตัวแก้ไขที่ค้างอยู่ต้องปิด
+  // ไม่งั้นกลับเข้ามาอีกทีเจอหน้าแก้ไขของคนเก่าแทนที่จะเป็นรายชื่อ (สถานะระดับโมดูลไม่รู้จักขั้น)
+  if (step.id !== 'cast') resetCastEditor();
   host.innerHTML = '';
   const wrap = el('div', 'st-wizard');
   host.append(wrap);
@@ -36,6 +42,7 @@ export function renderWizard(host, ctx) {
   back.onclick = () => ctx.goList();
   head.append(back);
   head.append(el('div', 'st-wz-title', s.name || t('ui.starter.untitled')));
+  head.append(modeSwitch(ctx));
   const prog = starterProgress(s, STEPS);
   head.append(el('div', 'st-wz-prog', tf('ui.starter.progress', prog.done, prog.total)));
   wrap.append(head);
@@ -95,12 +102,31 @@ export function renderWizard(host, ctx) {
   if (isLastStep(i)) {
     const miss = missingSteps(s, STEPS);
     const fin = el('button', 'k-ok st-finish', t('ui.starter.finish'));
-    if (!starterReady(s, STEPS)) {
-      fin.disabled = true;
+    // [alpha.122] **ห้ามเป็นทางตัน** — ของเดิม `disabled` ไว้เฉย ๆ
+    //
+    // ผู้ใช้: *"กดแก้ไข ถ้าไม่แก้ไข จะกดเสร็จสิ้นไม่ได้"*
+    // ต้นตอ: กด "+ เพิ่มตัวละคร" แล้วไม่พิมพ์ชื่อ → ในรายชื่อ **มีการ์ดโผล่มาแล้ว** แต่
+    // `charReady` ยังเท็จ ขั้นตัวละครจึงนับว่ายังไม่ครบ · ปุ่มเสร็จสิ้นถูกปิดตายโดยที่หน้าจอ
+    // ตรงหน้า (ขั้นปก) ไม่ได้บอกว่าปัญหาอยู่คนละขั้น — กดแล้วไม่มีอะไรเกิดขึ้น เหมือนโปรแกรมค้าง
+    //
+    // ตอนนี้: ปุ่มกดได้เสมอ · ยังไม่ครบ = พาไปที่ขั้นที่ขาดพร้อมบอกว่าขาดอะไร
+    if (miss.length) {
+      fin.classList.add('st-finish-warn');
       fin.title = t('ui.starter.finishBlocked') + miss.map((x) => x.title).join(', ');
-      foot.append(el('div', 'st-miss', fin.title));
+      const note = el('div', 'st-miss', fin.title);
+      const jump = el('button', 'st-linkbtn', t('ui.starter.finishGoFix'));
+      jump.onclick = () => { s.step = Math.max(0, stepIndex(miss[0].id)); ctx.save(); ctx.rerender(); };
+      note.append(jump);
+      foot.append(note);
     }
     fin.onclick = async () => {
+      if (!starterReady(s, STEPS)) {
+        const now = missingSteps(s, STEPS);
+        setStatus(t('ui.starter.finishBlocked') + now.map((x) => x.title).join(', '));
+        s.step = Math.max(0, stepIndex(now[0].id));
+        ctx.save(); ctx.rerender();
+        return;
+      }
       s.done = true;
       await ctx.save({ now: true });
       ctx.goHome();
@@ -120,4 +146,31 @@ export function renderWizard(host, ctx) {
     foot.append(go);
   }
   return true;
+}
+
+/**
+ * ปุ่มสลับโหมด พื้นฐาน ↔ ขั้นสูง (ผู้ใช้ข้อ 1)
+ *
+ * อยู่บน **หัวของ wizard** ไม่ใช่ในตั้งค่า — เพราะเป็นของเฉพาะเรื่อง ไม่ใช่ของทั้งโปรแกรม
+ * และคนที่อยากเห็นช่องขั้นสูงมักรู้ตัวตอนกำลังกรอกอยู่ ไม่ใช่ตอนเปิดโปรแกรม
+ */
+export function modeSwitch(ctx) {
+  const s = ctx.starter;
+  const box = el('div', 'st-mode');
+  box.title = t('ui.starter.modeHint');
+  for (const m of MODES) {
+    const on = normMode(s.mode) === m.id;
+    const b = el('button', 'st-mode-btn' + (on ? ' on' : ''), m.icon + ' ' + m.label);
+    b.dataset.mode = m.id;
+    b.title = m.hint;
+    b.onclick = () => {
+      if (normMode(s.mode) === m.id) return;
+      s.mode = m.id;
+      ctx.save();
+      setStatus(m.icon + ' ' + m.label);
+      ctx.rerender();
+    };
+    box.append(b);
+  }
+  return box;
 }

@@ -277,6 +277,16 @@ export function parseScript(md) {
   const lines = md.split('\n');
   const guessNames = guessNamesFor(md);
   let prevBlank = true, prevType = 'action', prevLine;
+  // ══ [alpha.134 · X-1] ★★ เลขฉากต้องมาจาก **พาร์เซอร์** ไม่ใช่จากทางของหน้าจอเท่านั้น ══
+  //
+  // ผู้ใช้: *"ตัวเลือก PDF ใช้ไม่ได้เลย"* — ช่อง "เลขฉาก" เป็นหนึ่งในนั้น
+  //
+  // ต้นตอ: `b.sceneNo` ถูกไล่ลำดับอยู่ที่ `spBlocksFromDoc()` ใน sp-view.js **ที่เดียว**
+  // ซึ่งเป็นทางของ *ตัวแก้ไขบนจอ* · สายส่งออกทุกเส้นเริ่มจาก `parseScript()` จึงได้บล็อกที่
+  // **ไม่มี sceneNo เลย** → เงื่อนไข `opts.sceneNumbers && b.sceneNo` ใน generatePdf เป็นเท็จเสมอ
+  // = ติ๊ก "เลขฉาก" แล้วไม่มีอะไรเกิดขึ้นทั้งในไฟล์ PDF และในช่องตัวอย่าง
+  // (กติกาเดียวกับ spBlocksFromDoc เป๊ะ: ไล่ตามลำดับหัวฉากที่ปรากฏในไฟล์ เริ่มที่ 1)
+  let scene = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // ส่ง "บรรทัดก่อนหน้าแบบดิบ" ไปด้วย — `((…))` ต้องรู้ว่าตัวละครข้างบนเขียน `@` ไว้จริงไหม
@@ -284,7 +294,9 @@ export function parseScript(md) {
     const nextBlank = i + 1 >= lines.length || lines[i + 1].trim() === '';
     const [el, text] = classify(line, prevBlank, prevType, prevLine, nextBlank, guessNames);
     if (el === 'blank') { out.push({ el: 'blank', text: '' }); prevBlank = true; prevLine = line; continue; }
-    out.push({ el, text });
+    const b = { el, text };
+    if (el === 'scene') b.sceneNo = ++scene;
+    out.push(b);
     prevBlank = false; prevType = el; prevLine = line;
   }
   return out;

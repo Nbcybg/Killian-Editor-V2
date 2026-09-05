@@ -81,15 +81,45 @@ export function resetTaskEngine() {
   engine = null;
 }
 
-// แสดงส่วน Auto-sync ใน settings dialog (สำรอง — settingsDialog มีช่องของตัวเองแล้ว)
-export function renderAutoSyncSection(host) {
-  const div = el('div');
-  const lab = el('label');
-  const cb = el('input'); cb.type = 'checkbox'; cb.id = 'st-autosync';
-  cb.checked = isAutoSyncOn();
-  cb.onchange = () => setAutoSync(cb.checked);
-  lab.append(cb, document.createTextNode(t('ui.autoTaskEvent.openAutoSyncUpdate')));
-  div.append(lab);
-  host.appendChild(div);
-  return div;
+// ═══════════ [alpha.125 ข้อ C] ★ เปลี่ยนชื่อเอนทิตี้แล้วต้องไม่ทิ้งการอ้างถึงไว้เงียบ ๆ ═══════════
+//
+// `renderAutoSyncSection()` ถูกถอดออกแล้ว: มันสร้าง `<input id="st-autosync">` อีกตัว
+// ทั้งที่กล่องตั้งค่ามีช่องนั้นอยู่แล้วจริง ๆ (dialogs.js อ่าน/เขียน `#st-autosync`)
+// → mount เมื่อไหร่ได้ **id ซ้ำ** ทันที แล้ว `querySelector` จะไปเจอตัวผิด (บั๊กแน่นอน)
+// ช่องโหว่ตัวจริงไม่ใช่ "ไม่มีหน้าตา" แต่คือ **ปิด auto-sync ไว้แล้วเปลี่ยนชื่อ = ไม่มีอะไรเกิดขึ้นเลย**
+// ผู้ใช้เปลี่ยน "ทอร่า" → "โทระ" แล้วชื่อเก่าค้างอยู่ในทุกฉากโดยไม่มีอะไรบอก
+//
+// ตอนนี้: เปิด auto-sync = ทำให้เงียบ ๆ เหมือนเดิม · ปิดอยู่ = **ถามครั้งเดียวว่าจะไล่แก้ให้ไหม**
+
+/**
+ * ไล่แก้ชื่อที่ถูกอ้างถึงในทุกไฟล์ข้อความของโปรเจกต์
+ * @returns {Promise<{changed:boolean, files:string[]}>}
+ */
+export async function renameAcrossProject(oldName, newName) {
+  const files = await listTextFiles(state.root);
+  const run = renameEntityTask({
+    readFile: (p) => kapi.readFile(p).catch(() => null),
+    writeFile: (p, c) => kapi.writeFile(p, c),
+  });
+  return run({ oldName, newName, files });
+}
+
+/**
+ * เปลี่ยนชื่อเอนทิตี้แล้วจัดการการอ้างถึงให้ครบ
+ * เปิด auto-sync → เข้าคิวเงียบ ๆ (พฤติกรรมเดิม) · ปิดอยู่ → ถามก่อนแก้
+ * @returns {Promise<'queued'|'renamed'|'skipped'|'none'>} ผลที่เกิดจริง (เทสใช้ยืนยัน)
+ */
+export async function handleEntityRenamed(entityId, oldName, newName) {
+  if (!oldName || !newName || oldName === newName || !state.root) return 'none';
+  if (isAutoSyncOn()) { notifyEntityRenamed(entityId, oldName, newName); return 'queued'; }
+  const { confirmBox } = await import('../ui.js');
+  if (!(await confirmBox(tf('ui.autoTaskEvent.renameAsk', oldName, newName),
+                         t('ui.autoTaskEvent.renameGo')))) {
+    setStatus(t('ui.autoTaskEvent.renameSkipped'));
+    return 'skipped';
+  }
+  const r = await renameAcrossProject(oldName, newName);
+  setStatus(r.changed ? tf('ui.autoTaskEvent.autoSyncUpdateName', r.files.length)
+                      : t('ui.autoTaskEvent.renameNoHit'));
+  return 'renamed';
 }

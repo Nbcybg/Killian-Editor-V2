@@ -96,12 +96,9 @@ export const SP_ELEMENT_CONFIG = {
   raw:           { indent: 1.5, width: 6.0, linesBefore: 10, linesBetween: 10, keepNext: false },
 };
 
-/** element ที่ต้องอยู่ติดบล็อกถัดไป — อ่านจาก fmt ตอนรัน (ผู้ใช้ตั้งทับได้) */
-export function keepNextElements(fmt) {
-  const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-  return SP_ELEMENT_KEYS.filter((k) => f.elements[k] && f.elements[k].keepNext === true);
-}
-
+// [alpha.126] `keepNextElements()` ถูกถอด — ไม่มีใครเรียกเลย
+// กฎ "บล็อกนี้ห้ามหลุดจากบล็อกถัดไป" ใช้ผ่าน `SP_ELEMENT_CONFIG[el].keepNext` ตรง ๆ
+// (กฎข้อ 28: ตารางที่ต้องตรงกับอีกไฟล์ให้ derive ตอนรัน อย่าคัดลอก)
 // ───────── 83. สไตล์ จอ (screen) vs พิมพ์ (print) ─────────
 const ST = (caps, bold, italic, underline) => ({ caps, bold, italic, underline });
 export const SP_ELEMENT_STYLES = {
@@ -216,6 +213,13 @@ function hasContentAfter(list, i) {
 //   indent   = ระยะเยื้องของ (MORE) วัดจากขอบกระดาษ (นิ้ว) — แนวเดียวกับชื่อตัวละคร
 export const CONTINUED_DEFAULTS = {
   enabled: true, scene: true, dialogue: true, number: true, indent: 3.7,
+  // [alpha.125 ข้อ J] `noHeading` — ให้ (CONTINUED) ขึ้นได้แม้หน้านั้น "ยังไม่มีหัวฉาก"
+  //
+  // ค่าเริ่มต้น false = พฤติกรรมเดิมเป๊ะ (ต้องมีหัวฉากถึงจะนับว่าเป็นฉากที่ต่อข้ามหน้า)
+  // ที่ต้องเป็นสวิตช์ ไม่ใช่เปิดทิ้ง: บทที่เขียนค้างไว้แบบยังไม่ใส่หัวฉากเลยสักอัน จะได้
+  // (CONTINUED) โผล่ทุกหน้าทันที ซึ่งผิดสำหรับคนส่วนใหญ่ — แต่คนที่เขียนบทแบบไม่มีหัวฉาก
+  // (สเก็ตช์ · บทพูดล้วน · สคริปต์โฆษณา) ต้องการมันจริง
+  noHeading: false,
 };
 
 // ───────── 92. ข้อความมาตรฐานที่ผู้ใช้แก้ได้ ─────────
@@ -783,8 +787,12 @@ export function annotateContinued(pages, fmt) {
   let run = 1, contScene = 0;
   for (let i = 0; i < pages.length - 1; i++) {
     const p = pages[i], n = pages[i + 1];
-    const spans = on && p.sceneEnd > 0 && n.sceneStart === p.sceneEnd
-                  && splitsAcross(n) && !dialogueBreak(p, n);
+    // [alpha.125 ข้อ J] เปิดสวิตช์ `noHeading` แล้ว หน้าที่ยังไม่มีหัวฉาก (sceneEnd = 0)
+    // ก็นับเป็น "ฉากเดียวกันที่ต่อข้ามหน้า" ได้ — ที่เหลือ (ต้องมีบล็อกถูกหั่นคร่อมรอยต่อจริง
+    // และต้องไม่ใช่รอยต่อของบทพูดซึ่งใช้ (MORE)/(CONT'D) อยู่แล้ว) ยังเข้มเท่าเดิมทุกข้อ
+    const sameScene = n.sceneStart === p.sceneEnd
+                      && (p.sceneEnd > 0 || CT.noHeading === true);
+    const spans = on && sameScene && splitsAcross(n) && !dialogueBreak(p, n);
     if (!spans) { run = 1; contScene = 0; continue; }
     // เปลี่ยนฉากแล้ว = เริ่มนับใหม่ (ไม่งั้นฉากใหม่ที่ข้ามหน้าครั้งแรกได้เลข (2) ทันที)
     if (p.sceneEnd !== contScene) { run = 1; contScene = p.sceneEnd; }

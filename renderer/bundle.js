@@ -13731,9 +13731,98 @@
     }
   });
 
+  // src/text-color.js
+  var require_text_color = __commonJS({
+    "src/text-color.js"(exports, module) {
+      var RECENT_MAX = 12;
+      var SAVED_MAX = 24;
+      var HEX3 = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i;
+      var HEX6 = /^#[0-9a-f]{6}$/i;
+      var RGB2 = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)$/i;
+      var p2 = (n2) => Math.max(0, Math.min(255, n2 | 0)).toString(16).padStart(2, "0");
+      function normColor5(v2) {
+        const s = String(v2 == null ? "" : v2).trim().toLowerCase();
+        if (!s) return "";
+        const m3 = HEX3.exec(s);
+        if (m3) return "#" + m3[1] + m3[1] + m3[2] + m3[2] + m3[3] + m3[3];
+        if (HEX6.test(s)) return s;
+        const rm2 = RGB2.exec(s);
+        if (rm2) {
+          const [r, g, b] = [+rm2[1], +rm2[2], +rm2[3]];
+          if (r > 255 || g > 255 || b > 255) return "";
+          return "#" + p2(r) + p2(g) + p2(b);
+        }
+        return "";
+      }
+      var COLOR_PRESETS2 = [
+        { hex: "#111111", key: "ui.color.ink" },
+        { hex: "#5b6472", key: "ui.color.gray" },
+        { hex: "#8a6b3d", key: "ui.color.brown" },
+        { hex: "#b03030", key: "ui.color.red" },
+        { hex: "#d97757", key: "ui.color.orange" },
+        { hex: "#b58900", key: "ui.color.gold" },
+        { hex: "#2f7d4f", key: "ui.color.green" },
+        { hex: "#2b7bb9", key: "ui.color.blue" },
+        { hex: "#5b4bb8", key: "ui.color.purple" },
+        { hex: "#b5468a", key: "ui.color.pink" }
+      ];
+      function presetLabelKey2(hex) {
+        const c = normColor5(hex);
+        const d = COLOR_PRESETS2.find((x) => x.hex === c);
+        return d ? d.key : "";
+      }
+      function cleanColorList(list, max2) {
+        const out = [];
+        for (const v2 of Array.isArray(list) ? list : []) {
+          const c = normColor5(v2);
+          if (c && !out.includes(c)) out.push(c);
+          if (out.length >= max2) break;
+        }
+        return out;
+      }
+      function pushRecent2(list, color, max2 = RECENT_MAX) {
+        const c = normColor5(color);
+        if (!c) return cleanColorList(list, max2);
+        return cleanColorList([c, ...Array.isArray(list) ? list : []], max2);
+      }
+      function toggleSaved2(list, color, max2 = SAVED_MAX) {
+        const c = normColor5(color);
+        if (!c) return cleanColorList(list, max2);
+        const cur = cleanColorList(list, max2);
+        return cur.includes(c) ? cur.filter((x) => x !== c) : cleanColorList([...cur, c], max2);
+      }
+      function normalizeColorStore2(saved) {
+        const s = saved && typeof saved === "object" ? saved : {};
+        return {
+          saved: cleanColorList(s.saved, SAVED_MAX),
+          recent: cleanColorList(s.recent, RECENT_MAX)
+        };
+      }
+      var COLOR_SPAN_RE = /<span style="color:([^"<>]{1,32})">([\s\S]*?)<\/span>/;
+      function colorSpanMd(color, inner) {
+        const c = normColor5(color);
+        return c ? `<span style="color:${c}">${inner}</span>` : String(inner == null ? "" : inner);
+      }
+      module.exports = {
+        RECENT_MAX,
+        SAVED_MAX,
+        normColor: normColor5,
+        COLOR_PRESETS: COLOR_PRESETS2,
+        presetLabelKey: presetLabelKey2,
+        cleanColorList,
+        pushRecent: pushRecent2,
+        toggleSaved: toggleSaved2,
+        normalizeColorStore: normalizeColorStore2,
+        COLOR_SPAN_RE,
+        colorSpanMd
+      };
+    }
+  });
+
   // src/md.js
   var require_md = __commonJS({
     "src/md.js"(exports, module) {
+      var { normColor: normColor5, COLOR_SPAN_RE, colorSpanMd } = require_text_color();
       var PATS = [
         [/\*\*\*([^*\n]+)\*\*\*/, ["strong", "em"]],
         [/(?<!\*)\*\*([^*\n]+)\*\*(?!\*)/, ["strong"]],
@@ -13746,9 +13835,9 @@
         [/(?<!~)~([^~\n]+)~(?!~)/, ["sub"]]
       ];
       var RE_H = /^(#{1,6})(?: |$)/;
-      var RE_UL = /^[-*] /;
-      var RE_OL = /^(\d+)\. /;
-      var RE_IMG = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
+      var RE_UL = /^[-*](?: |$)/;
+      var RE_OL = /^(\d+)\.(?: |$)/;
+      var RE_IMG2 = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
       var RE_HR = /^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/;
       var RE_FENCE = /^\s{0,3}(`{3,}|~{3,})\s*([\w+-]*)\s*$/;
       var RE_PAGEBREAK = /^\s*<!--\s*pagebreak\s*-->\s*$/i;
@@ -13760,26 +13849,76 @@
         const segs = [];
         while (s) {
           let best = null;
+          const cm = COLOR_SPAN_RE.exec(s);
+          if (cm && normColor5(cm[1])) best = { m: cm, marks: null, color: normColor5(cm[1]) };
           for (const [rx, marks3] of PATS) {
             const m2 = rx.exec(s);
-            if (m2 && (best === null || m2.index < best.m.index)) best = { m: m2, marks: marks3 };
+            if (m2 && (best === null || m2.index < best.m.index)) best = { m: m2, marks: marks3, color: null };
           }
           if (!best) {
             segs.push({ text: s, marks: base4 });
             break;
           }
-          const { m, marks: marks2 } = best;
+          const { m, marks: marks2, color } = best;
           if (m.index) segs.push({ text: s.slice(0, m.index), marks: base4 });
-          segs.push(...parseInline(m[1], [.../* @__PURE__ */ new Set([...base4, ...marks2])]));
+          const next = color ? [
+            ...base4.filter((x) => typeof x === "string" || x.type !== "color"),
+            { type: "color", attrs: { color } }
+          ] : [.../* @__PURE__ */ new Set([...base4, ...marks2])];
+          segs.push(...parseInline(color ? m[2] : m[1], next));
           s = s.slice(m.index + m[0].length);
         }
         return segs;
+      }
+      function stripMentions2(s) {
+        return String(s == null ? "" : s).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1");
+      }
+      function inlineDisplayText2(text) {
+        return stripMentions2(parseInline(String(text == null ? "" : text)).map((seg) => {
+          const c = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
+          return c ? colorSpanMd((c.attrs || {}).color, seg.text) : seg.text;
+        }).join(""));
+      }
+      function markerVars2(text) {
+        const seg = parseInline(String(text == null ? "" : text))[0];
+        if (!seg) return "";
+        const out = [];
+        const has2 = (n2) => (seg.marks || []).some((m) => (typeof m === "string" ? m : m.type) === n2);
+        const col = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
+        const c = col ? normColor5((col.attrs || {}).color) : "";
+        if (c) out.push("--k-mk-color:" + c);
+        if (has2("strong")) out.push("--k-mk-weight:700");
+        if (has2("em")) out.push("--k-mk-style:italic");
+        return out.join(";");
+      }
+      var HTML_ESC = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      var MARK_TAGS = [
+        ["strong", "strong"],
+        ["em", "em"],
+        ["underline", "u"],
+        ["strike", "s"],
+        ["sup", "sup"],
+        ["sub", "sub"]
+      ];
+      function inlineHtml(text, opts) {
+        const mono = !!(opts && opts.mono);
+        return parseInline(stripMentions2(text)).map((seg) => {
+          let s = HTML_ESC(seg.text).replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${a}" src="${u}">`);
+          if (!s) return "";
+          const marks2 = seg.marks || [];
+          const has2 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
+          for (const [name5, tag3] of MARK_TAGS) if (has2(name5)) s = `<${tag3}>${s}</${tag3}>`;
+          const col = marks2.find((m) => m && typeof m === "object" && m.type === "color");
+          const hex = col ? normColor5((col.attrs || {}).color) : "";
+          return hex && !mono ? `<span style="color:${hex}">${s}</span>` : s;
+        }).join("");
       }
       function inlineNodes(text) {
         return parseInline(text).filter((x) => x.text).map((x) => ({
           type: "text",
           text: x.text,
-          ...x.marks.length ? { marks: x.marks.map((t3) => ({ type: t3 })) } : {}
+          // มาร์กเป็นได้ทั้งชื่อเปล่า ๆ (ตัวหนา/เอียง/…) และก้อนที่มีแอตทริบิวต์ (สี)
+          ...x.marks.length ? { marks: x.marks.map((t3) => typeof t3 === "string" ? { type: t3 } : t3) } : {}
         }));
       }
       function para2(text) {
@@ -13842,18 +13981,99 @@
         }
         return n2;
       }
-      function mdToDoc4(md, alignMap) {
+      function stripAlign2(line) {
+        const m = RE_ALIGN.exec(line);
+        if (!m) return { align: null, rest: line };
+        return { align: m[1] === "left" ? null : m[1], rest: line.slice(m[0].length) };
+      }
+      function mdBlocks3(md, opts) {
+        const marker = String(opts && opts.breakMarker || "").trim();
+        const lines = String(md == null ? "" : md).split("\n");
+        const out = [];
+        let i5 = 0;
+        while (i5 < lines.length) {
+          const a0 = stripAlign2(lines[i5]);
+          const align = a0.align;
+          const line = a0.rest;
+          let m;
+          if (m = RE_FENCE.exec(line)) {
+            const fence = m[1], lang = m[2] || "";
+            const body = [];
+            i5++;
+            while (i5 < lines.length && !new RegExp("^\\s{0,3}" + fence[0] + "{" + fence.length + ",}\\s*$").test(lines[i5])) {
+              body.push(lines[i5]);
+              i5++;
+            }
+            if (i5 < lines.length) i5++;
+            out.push({ kind: "code", align, lang, text: body.join("\n") });
+            continue;
+          }
+          if (RE_PAGEBREAK.test(line) || marker && line.trim() === marker) {
+            out.push({ kind: "pagebreak", align: null, text: "" });
+            i5++;
+            continue;
+          }
+          if (RE_HR.test(line)) {
+            out.push({ kind: "hr", align, text: "" });
+            i5++;
+            continue;
+          }
+          if (m = RE_IMG2.exec(line)) {
+            out.push({ kind: "figure", align, text: "", alt: m[1], src: m[2] });
+            i5++;
+            continue;
+          }
+          if (m = RE_H.exec(line)) {
+            const rest = line.slice(m[0].length);
+            out.push(rest.trim() ? { kind: "h", align, level: m[1].length, text: rest } : { kind: "p", align, text: "", lines: [""] });
+            i5++;
+            continue;
+          }
+          if (line.startsWith("> ")) {
+            out.push({ kind: "quote", align, text: line.slice(2) });
+            i5++;
+            continue;
+          }
+          if (RE_UL.test(line)) {
+            out.push({ kind: "li", align, ordered: false, text: line.replace(RE_UL, "") });
+            i5++;
+            continue;
+          }
+          if (m = RE_OL.exec(line)) {
+            out.push({
+              kind: "li",
+              align,
+              ordered: true,
+              num: parseInt(m[1], 10),
+              text: line.replace(RE_OL, "")
+            });
+            i5++;
+            continue;
+          }
+          const raw = [line];
+          while (endsWithHardBreak(raw[raw.length - 1]) && i5 + 1 < lines.length) {
+            i5++;
+            raw.push(lines[i5]);
+          }
+          out.push({
+            kind: "p",
+            align,
+            lines: raw.map((l, k) => k < raw.length - 1 ? stripHardBreak(l) : l),
+            text: raw.map((l, k) => k < raw.length - 1 ? stripHardBreak(l) : l).join("\n")
+          });
+          i5++;
+        }
+        return out;
+      }
+      function mdToDoc5(md, alignMap) {
         const lines = md.split("\n");
         const out = [];
         let i5 = 0;
         while (i5 < lines.length) {
           let line = lines[i5];
-          let align = null;
-          const am = RE_ALIGN.exec(line);
-          if (am) {
-            align = am[1] === "left" ? null : am[1];
-            line = line.slice(am[0].length);
-          }
+          const a0 = stripAlign2(line);
+          const align = a0.align;
+          line = a0.rest;
           let m;
           if (m = RE_FENCE.exec(line)) {
             const fence = m[1], lang = m[2] || "";
@@ -13876,7 +14096,7 @@
           } else if (RE_HR.test(line)) {
             out.push({ type: "horizontal_rule" });
             i5++;
-          } else if (m = RE_IMG.exec(line)) {
+          } else if (m = RE_IMG2.exec(line)) {
             out.push({ type: "figure", attrs: { src: m[2], alt: m[1], md: line.trimEnd() } });
             i5++;
           } else if (m = RE_H.exec(line)) {
@@ -13886,23 +14106,35 @@
             i5++;
           } else if (line.startsWith("> ")) {
             const ps = [];
-            while (i5 < lines.length && lines[i5].startsWith("> ")) {
-              ps.push(para2(lines[i5].slice(2)));
+            for (; ; ) {
+              const a = stripAlign2(lines[i5] === void 0 ? "" : lines[i5]);
+              if (i5 >= lines.length || !a.rest.startsWith("> ")) break;
+              const q = para2(a.rest.slice(2));
+              q.attrs = { ...q.attrs || {}, align: a.align };
+              ps.push(q);
               i5++;
             }
             out.push({ type: "blockquote", content: ps });
           } else if (RE_UL.test(line)) {
             const items = [];
-            while (i5 < lines.length && RE_UL.test(lines[i5])) {
-              items.push({ type: "list_item", content: [para2(lines[i5].slice(2))] });
+            for (; ; ) {
+              const a = stripAlign2(lines[i5] === void 0 ? "" : lines[i5]);
+              if (i5 >= lines.length || !RE_UL.test(a.rest)) break;
+              const q = para2(a.rest.replace(RE_UL, ""));
+              q.attrs = { ...q.attrs || {}, align: a.align };
+              items.push({ type: "list_item", content: [q] });
               i5++;
             }
             out.push({ type: "bullet_list", content: items });
           } else if (m = RE_OL.exec(line)) {
             const start = parseInt(m[1], 10);
             const items = [];
-            while (i5 < lines.length && RE_OL.test(lines[i5])) {
-              items.push({ type: "list_item", content: [para2(lines[i5].replace(RE_OL, ""))] });
+            for (; ; ) {
+              const a = stripAlign2(lines[i5] === void 0 ? "" : lines[i5]);
+              if (i5 >= lines.length || !RE_OL.test(a.rest)) break;
+              const q = para2(a.rest.replace(RE_OL, ""));
+              q.attrs = { ...q.attrs || {}, align: a.align };
+              items.push({ type: "list_item", content: [q] });
               i5++;
             }
             out.push({ type: "ordered_list", attrs: { order: start }, content: items });
@@ -13977,6 +14209,18 @@
         for (let j = stack.length - 1; j >= 0; j--) out += stack[j];
         return out;
       }
+      function emitColored(runs) {
+        let out = "";
+        for (let i5 = 0; i5 < runs.length; ) {
+          const c = runs[i5].color;
+          let j = i5;
+          while (j < runs.length && runs[j].color === c) j++;
+          const chunk = emitRuns(runs.slice(i5, j));
+          out += c ? colorSpanMd(c, chunk) : chunk;
+          i5 = j;
+        }
+        return out;
+      }
       function inlineToMd2(content) {
         const parts = [[]];
         for (const n2 of content || []) {
@@ -13985,12 +14229,15 @@
             continue;
           }
           if (n2.type !== "text") continue;
+          const marks2 = n2.marks || [];
+          const cmk = marks2.find((m) => m.type === "color");
           parts[parts.length - 1].push({
             text: n2.text,
-            sig: new Set((n2.marks || []).map((m) => m.type).filter((t3) => MARKSET.includes(t3)))
+            color: cmk ? normColor5((cmk.attrs || {}).color) : "",
+            sig: new Set(marks2.map((m) => m.type).filter((t3) => MARKSET.includes(t3)))
           });
         }
-        return parts.map(emitRuns).join("\\\n");
+        return parts.map(emitColored).join("\\\n");
       }
       function docToMdParts(doc3, opts) {
         const lines = [];
@@ -14028,17 +14275,23 @@
               lines.push(ht.trim() ? alignPfx(node) + "#".repeat((node.attrs || {}).level || 1) + " " + ht : "");
               break;
             }
+            // [alpha.132 · X-1] คอมเมนต์ align นำหน้า **ทั้งบรรทัด** (ก่อน `> ` / `- ` / `1. `)
+            // เพราะ `mdToDoc` ถอดคอมเมนต์ที่หัวบรรทัดก่อนจะดูว่าเป็นบล็อกชนิดไหน
             case "blockquote":
-              for (const p of node.content || []) lines.push("> " + inlineToMd2(p.content));
+              for (const p of node.content || []) lines.push(alignPfx(p) + "> " + inlineToMd2(p.content));
               break;
             case "bullet_list":
-              for (const it of node.content || [])
-                lines.push("- " + inlineToMd2(((it.content || [])[0] || {}).content));
+              for (const it of node.content || []) {
+                const q = (it.content || [])[0] || {};
+                lines.push(alignPfx(q) + "- " + inlineToMd2(q.content));
+              }
               break;
             case "ordered_list": {
               let n2 = (node.attrs || {}).order || 1;
-              for (const it of node.content || [])
-                lines.push(`${n2++}. ` + inlineToMd2(((it.content || [])[0] || {}).content));
+              for (const it of node.content || []) {
+                const q = (it.content || [])[0] || {};
+                lines.push(alignPfx(q) + `${n2++}. ` + inlineToMd2(q.content));
+              }
               break;
             }
             default:
@@ -14048,14 +14301,14 @@
         }
         return { lines, counts };
       }
-      function docToMd4(doc3, opts) {
+      function docToMd5(doc3, opts) {
         return docToMdParts(doc3, opts).lines.join("\n");
       }
       function mdLineCounts2(doc3, opts) {
         return docToMdParts(doc3, opts).counts;
       }
       var K2_COMMENTS_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
-      function parseMdFile13(text) {
+      function parseMdFile14(text) {
         let meta2 = {}, body = String(text || "").replace(K2_COMMENTS_RE, "");
         text = body;
         if (text.startsWith("---")) {
@@ -14079,7 +14332,7 @@
         out.push("---\n");
         return out.join("\n") + body;
       }
-      function countWords6(body) {
+      function countWords7(body) {
         const t3 = body.replace(/[#>*_~\-!\[\]()]/g, " ");
         let n2 = 0;
         for (const chunk of t3.split(/\s+/)) {
@@ -14089,15 +14342,28 @@
         return n2;
       }
       module.exports = {
-        mdToDoc: mdToDoc4,
-        docToMd: docToMd4,
+        mdToDoc: mdToDoc5,
+        docToMd: docToMd5,
         mdLineCounts: mdLineCounts2,
-        parseMdFile: parseMdFile13,
+        parseMdFile: parseMdFile14,
         dumpMdFile: dumpMdFile6,
-        countWords: countWords6,
+        countWords: countWords7,
         collectAlign: collectAlign2,
         alignToString: alignToString2,
-        alignFromString: alignFromString2
+        alignFromString: alignFromString2,
+        // [alpha.132 · X-1] ตัวแปลง md → HTML ต้องรู้จักคอมเมนต์ align ตัวเดียวกันนี้
+        RE_ALIGN,
+        stripAlign: stripAlign2,
+        // [alpha.132r2] ข้อความสำหรับแสดงผล (ช่องตัวอย่าง PDF) + ตัวถอดลิงก์เอนทิตี้
+        RE_IMG: RE_IMG2,
+        inlineDisplayText: inlineDisplayText2,
+        stripMentions: stripMentions2,
+        // [alpha.133 · Y-1+Y-2] สคีมาบล็อก + ตัวแปลง inline ตัวเดียวของทั้งโปรแกรม
+        // (ตัวแก้ไข · ไฟล์ที่ส่งออก · ช่องตัวอย่าง อ่านจากสองตัวนี้เท่านั้น)
+        mdBlocks: mdBlocks3,
+        inlineHtml,
+        // [alpha.132r3 ข้อ 3] รูปแบบของจุดนำ/หมายเลขข้อ (มาจากอักษรตัวแรกของข้อ)
+        markerVars: markerVars2
       };
     }
   });
@@ -14396,7 +14662,6 @@
     scriptJunction: () => scriptJunction,
     setMeasurer: () => setMeasurer,
     snapWord: () => snapWord,
-    takeVisual: () => takeVisual,
     tokenize: () => tokenize,
     visualLength: () => visualLength,
     wrapCuts: () => wrapCuts,
@@ -14632,21 +14897,6 @@
       indentIn: Math.max(0, Math.min(c - 1, Math.round(indentCols) || 0)) / FALLBACK_CPI
     });
   }
-  function takeVisual(text, cols) {
-    const s = String(text ?? "");
-    const c = Math.max(0, Math.floor(cols));
-    if (c <= 0) return ["", s];
-    let w = 0, i5 = 0;
-    while (i5 < s.length) {
-      if (!ZERO_WIDTH_ONE.test(s[i5])) {
-        if (w + 1 > c) break;
-        w++;
-      }
-      i5++;
-    }
-    while (i5 < s.length && ZERO_WIDTH_ONE.test(s[i5])) i5++;
-    return [s.slice(0, i5), s.slice(i5)];
-  }
   var DPI, FALLBACK_CPI, ZERO_WIDTH_RE, ZERO_WIDTH_ONE, _measure, WRAP_CACHE_CAP, _wrapCache, _epoch, BREAKABLE_RE, SPACE_RE, TOK_SPACE, TOK_ATOM, TOK_RUN, _seg, _segTried, BP_CACHE_CAP, _bpCache;
   var init_text_width = __esm({
     "src/text-width.js"() {
@@ -14674,6 +14924,53 @@
   });
 
   // src/sp-format.js
+  var sp_format_exports = {};
+  __export(sp_format_exports, {
+    CAPS_ELEMENTS: () => CAPS_ELEMENTS,
+    CHARS_PER_INCH: () => CHARS_PER_INCH,
+    CONTINUED_DEFAULTS: () => CONTINUED_DEFAULTS,
+    DEFAULT_SP_FORMAT: () => DEFAULT_SP_FORMAT,
+    KEEP_WITH_NEXT: () => KEEP_WITH_NEXT,
+    LINES_PER_INCH: () => LINES_PER_INCH,
+    LINE_HEIGHT_IN: () => LINE_HEIGHT_IN,
+    MARGIN_DEFAULTS: () => MARGIN_DEFAULTS,
+    PAGE_BREAK_RULES: () => PAGE_BREAK_RULES,
+    PAGE_NUMBER_DEFAULTS: () => PAGE_NUMBER_DEFAULTS,
+    PAPER_SIZES: () => PAPER_SIZES,
+    ROSTER_VERSION: () => ROSTER_VERSION,
+    SCENE_NUMBER_DEFAULTS: () => SCENE_NUMBER_DEFAULTS,
+    SP_ELEMENT_CONFIG: () => SP_ELEMENT_CONFIG,
+    SP_ELEMENT_KEYS: () => SP_ELEMENT_KEYS,
+    SP_ELEMENT_STYLES: () => SP_ELEMENT_STYLES,
+    SP_STRINGS: () => SP_STRINGS,
+    annotateContinued: () => annotateContinued,
+    blankLinesBefore: () => blankLinesBefore,
+    blockDocPos: () => blockDocPos,
+    clampLineHeight: () => clampLineHeight,
+    displayText: () => displayText,
+    elementCaps: () => elementCaps,
+    elementIndentIn: () => elementIndentIn,
+    elementWidthIn: () => elementWidthIn,
+    formatLines: () => formatLines,
+    isMidBlock: () => isMidBlock,
+    lineHeightIn: () => lineHeightIn,
+    linesPerPage: () => linesPerPage,
+    mergeSpFormat: () => mergeSpFormat,
+    newRoster: () => newRoster,
+    normalizeRoster: () => normalizeRoster,
+    pageCount: () => pageCount,
+    pageCssVars: () => pageCssVars,
+    pageNumberLabel: () => pageNumberLabel,
+    paginate: () => paginate,
+    rosterToText: () => rosterToText,
+    sceneNumberOffsets: () => sceneNumberOffsets,
+    setElementCaps: () => setElementCaps,
+    spCss: () => spCss,
+    splitText: () => splitText,
+    textWidth: () => textWidth,
+    wrapLines: () => wrapLines,
+    wrapScriptLines: () => wrapScriptLines
+  });
   function clampLineHeight(v2) {
     const n2 = parseFloat(v2);
     return Number.isFinite(n2) && n2 >= 0.8 && n2 <= 2.5 ? n2 : 1;
@@ -15044,7 +15341,8 @@
     let run3 = 1, contScene = 0;
     for (let i5 = 0; i5 < pages.length - 1; i5++) {
       const p = pages[i5], n2 = pages[i5 + 1];
-      const spans = on2 && p.sceneEnd > 0 && n2.sceneStart === p.sceneEnd && splitsAcross(n2) && !dialogueBreak(p, n2);
+      const sameScene = n2.sceneStart === p.sceneEnd && (p.sceneEnd > 0 || CT.noHeading === true);
+      const spans = on2 && sameScene && splitsAcross(n2) && !dialogueBreak(p, n2);
       if (!spans) {
         run3 = 1;
         contScene = 0;
@@ -15250,7 +15548,14 @@
         scene: true,
         dialogue: true,
         number: true,
-        indent: 3.7
+        indent: 3.7,
+        // [alpha.125 ข้อ J] `noHeading` — ให้ (CONTINUED) ขึ้นได้แม้หน้านั้น "ยังไม่มีหัวฉาก"
+        //
+        // ค่าเริ่มต้น false = พฤติกรรมเดิมเป๊ะ (ต้องมีหัวฉากถึงจะนับว่าเป็นฉากที่ต่อข้ามหน้า)
+        // ที่ต้องเป็นสวิตช์ ไม่ใช่เปิดทิ้ง: บทที่เขียนค้างไว้แบบยังไม่ใส่หัวฉากเลยสักอัน จะได้
+        // (CONTINUED) โผล่ทุกหน้าทันที ซึ่งผิดสำหรับคนส่วนใหญ่ — แต่คนที่เขียนบทแบบไม่มีหัวฉาก
+        // (สเก็ตช์ · บทพูดล้วน · สคริปต์โฆษณา) ต้องการมันจริง
+        noHeading: false
       };
       SP_STRINGS = {
         continuedBottom: "(CONTINUED)",
@@ -15371,7 +15676,7 @@
     out.push(`${sel} li+li>p{margin-top:${f.paraSpacing}em}`);
     out.push(`${sel} li>ul,${sel} li>ol{margin:0}`);
     if (!f.indentAfterHeading) {
-      out.push(`${sel} > p:first-child,${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,${sel} > h4+p,${sel} > h5+p,${sel} > h6+p{text-indent:0}`);
+      out.push(`${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,${sel} > h4+p,${sel} > h5+p,${sel} > h6+p{text-indent:0}`);
     }
     f.headings.forEach((h, i5) => {
       const lv = i5 + 1;
@@ -15408,13 +15713,15 @@
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     return String(f.headingNumberFormat || t("ui.common.chapterN")).replace(/\{n\}/g, String(n2));
   }
-  function proseExportCss(fmt, paper, margins) {
+  function proseExportCss(fmt, paper, margins, opts = {}) {
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     const p = paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...margins || {} };
     const tw = textWidth(p, m);
+    const bodyFont = String(opts && opts.fontStack || "").trim() || proseFontStack(f);
+    const headFont = String(opts && opts.headingStack || "").trim() || proseHeadingStack(f);
     const body = [
-      `font-family:${proseFontStack(f)}`,
+      `font-family:${bodyFont}`,
       `font-size:${f.fontPt}pt`,
       `line-height:${f.lineHeight}`,
       `max-width:${+tw.toFixed(3)}in`,
@@ -15428,10 +15735,20 @@
     const out = [
       `body{${body}}`,
       `p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`,
-      "body > p:first-of-type,h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}"
+      // ══ [alpha.133 · Y-4] ★ ช่องว่างนำหน้าบรรทัดต้องรอดไปถึงไฟล์ ══
+      //
+      // ผู้ใช้เยื้องย่อหน้าด้วยการเคาะวรรค/แท็บ (เห็นผลจริงในตัวแก้ไข เพราะ
+      // `.ProseMirror` ตั้ง `white-space:break-spaces` ไว้ตั้งแต่ alpha.62)
+      // แต่ CSS ที่ส่งออกไม่เคยมีกฎคู่กัน → เบราว์เซอร์ยุบช่องว่างทิ้งตามค่าเริ่มต้น
+      // = "เยื้องหายหมด" ทั้งในไฟล์และในช่องตัวอย่าง
+      //
+      // ★ ตั้งเฉพาะบล็อกที่ **มีแต่ข้อความอยู่ข้างใน** — ห้ามตั้งที่ `body`/`ul`/`blockquote`
+      //   เพราะขึ้นบรรทัดใหม่ระหว่างแท็กใน HTML ที่เราประกอบจะกลายเป็นบรรทัดว่างจริง
+      "p,h1,h2,h3,h4,h5,h6{white-space:break-spaces}"
     ];
+    if (!f.indentAfterHeading) out.push("h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}");
     f.headings.forEach((h, i5) => {
-      out.push(`h${i5 + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` + (h.italic ? "font-style:italic;" : "") + `margin:${h.before}em 0 ${h.after}em;font-family:${proseHeadingStack(f)}` + (h.align ? ";text-align:" + h.align : "") + (f.headingColor ? ";color:" + f.headingColor : "") + "}");
+      out.push(`h${i5 + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` + (h.italic ? "font-style:italic;" : "") + `margin:${h.before}em 0 ${h.after}em;font-family:${headFont}` + (h.align ? ";text-align:" + h.align : "") + (f.headingColor ? ";color:" + f.headingColor : "") + "}");
     });
     if (f.headingNumber) {
       const lv = f.headingNumberLevel;
@@ -15442,8 +15759,21 @@
     const q = f.quote;
     out.push(`blockquote{font-style:${q.italic ? "italic" : "normal"};padding-left:${q.indent}in;margin:1em 0;` + (q.border ? "border-left:3px solid #ccc" : "border-left:0") + (q.color ? ";color:" + q.color : ";color:#555") + "}");
     out.push("blockquote p{text-indent:0}");
+    out.push(`ul,ol{margin:0 0 ${f.paraSpacing}em;padding-left:28px}`);
+    out.push("li>p{margin:0;text-indent:0}");
+    out.push(`li+li>p{margin-top:${f.paraSpacing}em}`);
+    out.push("li>ul,li>ol{margin:0}");
+    out.push('ul > li::marker{content:"\u2022\xA0\xA0"}');
+    out.push('ol > li::marker{content:counter(list-item) ".\xA0\xA0"}');
+    out.push("li::marker,li > p:first-child::before{color:var(--k-mk-color, currentColor);font-weight:var(--k-mk-weight, inherit);font-style:var(--k-mk-style, inherit)}");
+    out.push('li:has(> p[data-align="center"]:first-child),li:has(> p[data-align="right"]:first-child){list-style:none}');
+    out.push('li:has(> p[data-align="center"]:first-child)::marker,li:has(> p[data-align="right"]:first-child)::marker{content:none}');
+    out.push('ul > li > p[data-align="center"]:first-child::before,ul > li > p[data-align="right"]:first-child::before{content:"\u2022\xA0\xA0"}');
+    out.push('ol > li > p[data-align="center"]:first-child::before,ol > li > p[data-align="right"]:first-child::before{content:counter(list-item) ".\xA0\xA0"}');
     out.push("hr{border:0;border-top:1px solid #ccc;margin:2em 0}");
     out.push("img{max-width:100%}");
+    out.push("figure{margin:1em 0;text-align:center}");
+    out.push("figure img{max-width:100%;max-height:480px;border-radius:8px}");
     out.push('pre{background:#f4f4f4;padding:10px 14px;border-radius:6px;overflow:auto;font-family:"Courier Prime","Courier New",monospace;font-size:.92em;text-indent:0}');
     out.push(".pb{page-break-before:always;break-before:page;height:0}");
     out.push(`@page{size:${p.width}in ${p.height}in;margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`);
@@ -15519,6 +15849,10 @@
     };
     for (const b of blocks || []) {
       if (!b) continue;
+      if (b.type === "pagebreak") {
+        if (used) push();
+        continue;
+      }
       const need = proseBlockLines(b, f, cols);
       if (used && used + need > perPage) push();
       cur.push({ ...b, lines: need });
@@ -15555,6 +15889,7 @@
       else if (name5 === "figure") type = "figure";
       else if (name5 === "horizontal_rule") type = "hr";
       else if (name5 === "code_block") type = "code";
+      else if (name5 === "page_break") type = "pagebreak";
       const b = { type, text, pos: offset, idx: i5++ };
       if (level) b.level = level;
       if (name5 === "figure") {
@@ -15568,32 +15903,56 @@
   function mdToProseBlocks(md) {
     const out = [];
     let i5 = 0;
-    for (const raw of String(md == null ? "" : md).split("\n")) {
-      const line = raw.replace(/\s+$/, "");
-      if (!line.trim()) continue;
-      const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
-      if (h) {
-        const ht = String(h[2] || "").trim();
-        if (!ht) continue;
-        out.push({ type: "h" + h[1].length, level: h[1].length, text: ht, idx: i5++ });
+    for (const b of (0, import_md.mdBlocks)(md)) {
+      const push = (o) => out.push({ ...o, idx: i5++ });
+      if (b.kind === "pagebreak") {
+        push({ type: "pagebreak", text: "" });
         continue;
       }
-      if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
-        out.push({ type: "hr", text: "", idx: i5++ });
+      if (b.kind === "hr") {
+        push({ type: "hr", text: "" });
         continue;
       }
-      const li = /^\s*(?:[-*+]|\d+\.)\s+(.*)$/.exec(line);
-      if (li) {
-        out.push({ type: "li", text: li[1], idx: i5++ });
+      if (b.kind === "figure") {
+        push({ type: "figure", text: "", alt: b.alt, src: b.src });
         continue;
       }
-      const bq = /^\s*>\s?(.*)$/.exec(line);
-      if (bq) {
-        out.push({ type: "blockquote", text: bq[1], idx: i5++ });
+      if (b.kind === "code") {
+        push({ type: "code", text: b.text, align: b.align });
         continue;
       }
-      out.push({ type: "p", text: line, idx: i5++ });
+      if (b.kind === "h") {
+        push({
+          type: "h" + b.level,
+          level: b.level,
+          align: b.align,
+          text: (0, import_md.inlineDisplayText)(b.text)
+        });
+        continue;
+      }
+      if (b.kind === "quote") {
+        push({ type: "blockquote", align: b.align, text: (0, import_md.inlineDisplayText)(b.text) });
+        continue;
+      }
+      if (b.kind === "li") {
+        push({
+          type: "li",
+          align: b.align,
+          ordered: !!b.ordered,
+          num: b.num,
+          text: (0, import_md.inlineDisplayText)(b.text)
+        });
+        continue;
+      }
+      push({
+        type: "p",
+        align: b.align,
+        text: (b.lines || [b.text]).map(import_md.inlineDisplayText).join("\n")
+      });
     }
+    const blankB = (b) => b && b.type === "p" && !b.text;
+    while (out.length && blankB(out[0])) out.shift();
+    while (out.length && blankB(out[out.length - 1])) out.pop();
     return out;
   }
   function prosePageStarts(pages) {
@@ -15625,12 +15984,13 @@
     }
     return out;
   }
-  var clamp, PT_PX, DPI2, DEFAULT_PROSE_FONT, H, HEADING_DEFAULTS, QUOTE_DEFAULTS, PROSE_DEFAULTS, proseFontPx, proseLinePx;
+  var import_md, clamp, PT_PX, DPI2, DEFAULT_PROSE_FONT, H, HEADING_DEFAULTS, QUOTE_DEFAULTS, PROSE_DEFAULTS, proseFontPx, proseLinePx;
   var init_prose_format = __esm({
     "src/prose-format.js"() {
       init_i18n();
       init_sp_format();
       init_num();
+      import_md = __toESM(require_md());
       init_text_width();
       init_text_width();
       clamp = (v2, lo, hi, d) => {
@@ -15757,7 +16117,14 @@
         return false;
       }
     }
+    let shape = "";
+    const shapeOf = (doc3) => {
+      if (!doc3) return "";
+      const max2 = doc3.content.size;
+      return list.filter((b) => b.pos <= max2).map((b) => b.pos + (isInline2(doc3, b.pos) ? "i" : "b")).join(",");
+    };
     function decos(doc3) {
+      shape = shapeOf(doc3);
       if (!list.length || !doc3) return DecorationSet.empty;
       const max2 = doc3.content.size;
       const out = [];
@@ -15810,7 +16177,12 @@
             if (tr4.getMeta(key2)) return decos(st.doc);
             if (!tr4.docChanged) return prev;
             mapBreaks(tr4.mapping);
-            return prev.map(tr4.mapping, tr4.doc);
+            const next = prev.map(tr4.mapping, tr4.doc);
+            const want = shapeOf(tr4.doc);
+            if (want !== shape || next.find().length !== want.split(",").filter(Boolean).length) {
+              return decos(tr4.doc);
+            }
+            return next;
           }
         },
         props: { decorations(state2) {
@@ -15844,25 +16216,6 @@
   });
 
   // src/prose-view.js
-  var prose_view_exports = {};
-  __export(prose_view_exports, {
-    PROSE_VIEWS: () => PROSE_VIEWS,
-    PROSE_VIEW_LABELS: () => PROSE_VIEW_LABELS,
-    applyProsePagePads: () => applyProsePagePads,
-    isProseEditView: () => isProseEditView,
-    isProsePageView: () => isProsePageView,
-    isValidProseView: () => isValidProseView,
-    proseLayoutCssVars: () => proseLayoutCssVars,
-    proseLinePx: () => proseLinePx,
-    prosePageBreakPlugin: () => prosePageBreakPlugin,
-    prosePageBreaks: () => prosePageBreaks,
-    prosePagesOf: () => prosePagesOf,
-    proseViewStatusText: () => proseViewStatusText,
-    refreshProsePageBreaks: () => refreshProsePageBreaks,
-    renderProsePageView: () => renderProsePageView,
-    setProsePageBreaks: () => setProsePageBreaks,
-    setProsePageNumberLabel: () => setProsePageNumberLabel
-  });
   function proseLayoutCssVars(fmt, paper, margins, gapPx = 28) {
     const mt = proseMetrics(fmt, paper, margins);
     return {
@@ -15874,7 +16227,32 @@
   function prosePagesOf(blocks, fmt, paper, margins) {
     return paginateProse(blocks, { fmt, paper, margins });
   }
+  function putProseText(node, text, mono) {
+    const s = String(text == null ? "" : text);
+    if (!RE_COLOR_SPAN.test(s)) {
+      node.textContent = s;
+      return;
+    }
+    RE_COLOR_SPAN.lastIndex = 0;
+    let last2 = 0, m;
+    while (m = RE_COLOR_SPAN.exec(s)) {
+      if (m.index > last2) node.append(document.createTextNode(s.slice(last2, m.index)));
+      const hex = (0, import_text_color.normColor)(m[1]);
+      if (hex && !mono) {
+        const sp = document.createElement("span");
+        sp.style.color = hex;
+        sp.textContent = m[2];
+        node.append(sp);
+      } else {
+        node.append(document.createTextNode(m[2]));
+      }
+      last2 = m.index + m[0].length;
+    }
+    if (last2 < s.length) node.append(document.createTextNode(s.slice(last2)));
+  }
   function renderProsePageView(host2, pages, fmt, opts = {}) {
+    const mono = opts.colorMode ? opts.colorMode !== "color" : false;
+    host2.classList.toggle("pv-mono", mono);
     const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
     const paper = opts.paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...opts.margins || {} };
@@ -15924,10 +16302,12 @@
           d = document.createElement(type);
           d.style.fontSize = (f.headings[+type[1] - 1] || f.headings[0]).size + "em";
           d.style.fontFamily = proseHeadingStack(f);
-          d.textContent = b.text || "";
+          if (!mono && f.headingColor) d.style.color = f.headingColor;
+          putProseText(d, b.text, mono);
         } else if (type === "blockquote") {
           d = document.createElement("blockquote");
-          d.textContent = b.text || "";
+          if (!mono && f.quote && f.quote.color) d.style.color = f.quote.color;
+          putProseText(d, b.text, mono);
         } else if (type === "figure") {
           d = document.createElement("div");
           d.className = "pv-figure";
@@ -15936,7 +16316,11 @@
           d = document.createElement("p");
           d.style.textIndent = f.firstLineIndent + "in";
           d.style.marginBottom = f.paraSpacing + "em";
-          d.textContent = b.text || "";
+          putProseText(d, b.text, mono);
+          if (!d.textContent) {
+            d.classList.add("pv-blank");
+            d.append(document.createElement("br"));
+          }
         }
         d.classList.add("pv-block");
         if (Number.isFinite(b.pos)) d.dataset.pos = String(b.pos);
@@ -15948,19 +16332,15 @@
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
-  function proseViewStatusText(mode, pageCount2) {
-    const name5 = PROSE_VIEW_LABELS[mode] || PROSE_VIEW_LABELS.normal;
-    return Number.isFinite(pageCount2) ? tf("ui.common.viewPage", name5, pageCount2) : t("ui.common.view2") + name5;
-  }
-  var PROSE_VIEWS, PROSE_VIEW_LABELS, isValidProseView, isProsePageView, isProseEditView, ED_PB, setProsePageBreaks, prosePageBreaks, setProsePageNumberLabel, prosePageBreakPlugin, applyProsePagePads, refreshProsePageBreaks, cssIn;
+  var import_text_color, PROSE_VIEW_LABELS, ED_PB, setProsePageBreaks, prosePageBreaks, setProsePageNumberLabel, prosePageBreakPlugin, applyProsePagePads, refreshProsePageBreaks, cssIn, RE_COLOR_SPAN;
   var init_prose_view = __esm({
     "src/prose-view.js"() {
       init_i18n();
+      import_text_color = __toESM(require_text_color());
       init_prose_format();
       init_sp_format();
       init_num();
       init_page_break_plugin();
-      PROSE_VIEWS = ["normal", "layout", "draft", "side", "overview1", "overview4"];
       PROSE_VIEW_LABELS = {
         normal: t("ui.common.normalPagePaper"),
         layout: t("ui.common.arrangePageSeePage"),
@@ -15969,9 +16349,6 @@
         overview1: t("ui.common.overviewPxChar"),
         overview4: t("ui.common.overviewPxChar2")
       };
-      isValidProseView = (m) => PROSE_VIEWS.includes(m);
-      isProsePageView = (m) => m === "side" || m === "overview1" || m === "overview4";
-      isProseEditView = (m) => !isProsePageView(m);
       ED_PB = createPageBreakPlugin({
         key: "kedpagebreak",
         cls: "sp-page-break ed-page-break",
@@ -15984,6 +16361,7 @@
       applyProsePagePads = ED_PB.applyPads;
       refreshProsePageBreaks = ED_PB.refresh;
       cssIn = (v2) => num(v2, 0) + "in";
+      RE_COLOR_SPAN = /<span style="color:([^"<>]{1,32})">([\s\S]*?)<\/span>/g;
     }
   });
 
@@ -15993,7 +16371,7 @@
     CHAR_EXTENSIONS: () => CHAR_EXTENSIONS,
     IMG_RE: () => IMG_RE,
     INTERCUTS: () => INTERCUTS,
-    NEXT_ELEM: () => NEXT_ELEM2,
+    NEXT_ELEM: () => NEXT_ELEM,
     PARENTHETICALS: () => PARENTHETICALS,
     SCENE_PREFIX: () => SCENE_PREFIX,
     SCENE_RE: () => SCENE_RE,
@@ -16088,6 +16466,7 @@
     const lines = md.split("\n");
     const guessNames = guessNamesFor(md);
     let prevBlank = true, prevType = "action", prevLine;
+    let scene = 0;
     for (let i5 = 0; i5 < lines.length; i5++) {
       const line = lines[i5];
       const nextBlank = i5 + 1 >= lines.length || lines[i5 + 1].trim() === "";
@@ -16098,7 +16477,9 @@
         prevLine = line;
         continue;
       }
-      out.push({ el: el2, text });
+      const b = { el: el2, text };
+      if (el2 === "scene") b.sceneNo = ++scene;
+      out.push(b);
       prevBlank = false;
       prevType = el2;
       prevLine = line;
@@ -16229,7 +16610,7 @@
       return cut ? body.slice(0, body.length - cut) : body;
     }).join("\n");
   }
-  var SP_ELEMS, TAB_CYCLE, NEXT_ELEM2, IMG_RE, SP_RULES, SCENE_RE, TRANS_RE, RAW_PREFIX, TIMES, TRANSITIONS, SCENE_PREFIX, PARENTHETICALS, CHAR_EXTENSIONS, TRANSITIONS_IN, INTERCUTS, CAN_TAKE_PAREN, CAN_TAKE_DOUBLE_PAREN, guessNamesFor, guessNamesForBlocks, blockIsBlank, SP_MD_PREFIXES;
+  var SP_ELEMS, TAB_CYCLE, NEXT_ELEM, IMG_RE, SP_RULES, SCENE_RE, TRANS_RE, RAW_PREFIX, TIMES, TRANSITIONS, SCENE_PREFIX, PARENTHETICALS, CHAR_EXTENSIONS, TRANSITIONS_IN, INTERCUTS, CAN_TAKE_PAREN, CAN_TAKE_DOUBLE_PAREN, guessNamesFor, guessNamesForBlocks, blockIsBlank, SP_MD_PREFIXES;
   var init_fountain = __esm({
     "src/fountain.js"() {
       SP_ELEMS = {
@@ -16284,7 +16665,7 @@
         "cont-left",
         "cont-right"
       ];
-      NEXT_ELEM2 = {
+      NEXT_ELEM = {
         scene: "action",
         action: "action",
         character: "dialogue",
@@ -16531,6 +16912,8 @@
   // src/editor.js
   var editor_exports = {};
   __export(editor_exports, {
+    BACKSPACE_CMD: () => BACKSPACE_CMD,
+    ENTER_CMD: () => ENTER_CMD,
     HOME_END_KEYS: () => HOME_END_KEYS,
     KEditor: () => KEditor,
     ancestorDepth: () => ancestorDepth,
@@ -16544,7 +16927,10 @@
     insertTab: () => insertTab,
     keepScroll: () => keepScroll,
     lineEdgeCmd: () => lineEdgeCmd,
+    listRangeInfo: () => listRangeInfo,
     mentionPlugin: () => mentionPlugin,
+    rangeAlign: () => rangeAlign,
+    rangeColor: () => rangeColor,
     refreshCommentAnchors: () => refreshCommentAnchors,
     refreshFocusLine: () => refreshFocusLine,
     refreshMentions: () => refreshMentions,
@@ -16556,7 +16942,8 @@
     setFocusLine: () => setFocusLine,
     spellPlugin: () => spellPlugin,
     toggleListCmd: () => toggleListCmd,
-    toggleWrapCmd: () => toggleWrapCmd
+    toggleWrapCmd: () => toggleWrapCmd,
+    wrapRangeInfo: () => wrapRangeInfo
   });
   function changedRange(tr4) {
     let from2 = Infinity, to = -Infinity;
@@ -16613,8 +17000,8 @@
     if (!names || !names.length) return null;
     const usable = names.filter((n2) => n2 && n2.length >= 2);
     if (!usable.length) return null;
-    const esc6 = usable.slice().sort((a, b) => b.length - a.length).map((n2) => n2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    return new RegExp("\\[\\[(?:[^\\]]+)\\]\\]|" + esc6.join("|"), "g");
+    const esc7 = usable.slice().sort((a, b) => b.length - a.length).map((n2) => n2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    return new RegExp("\\[\\[(?:[^\\]]+)\\]\\]|" + esc7.join("|"), "g");
   }
   function mentionScan(doc3, rx, from2, to) {
     if (!rx) return [];
@@ -16827,6 +17214,9 @@
     const n2 = (x) => x ? x.split(",").length : 0;
     return { spell, mention, comment, total: n2(spell) + n2(mention) + n2(comment) };
   }
+  function alignAttrs(align) {
+    return align ? { style: "text-align:" + align, "data-align": align } : {};
+  }
   function markRule(regexp, markType) {
     return new InputRule(regexp, (state2, match, start, end) => {
       const tr4 = state2.tr;
@@ -16926,41 +17316,305 @@
       }, view2);
     };
   }
+  function rangeAlign(state2) {
+    const { from: from2, to, empty: empty2, $from } = state2.selection;
+    if (empty2) {
+      const p = $from.parent;
+      return p.type.name === "paragraph" || p.type.name === "heading" ? p.attrs.align || "left" : null;
+    }
+    let seen = null, mixed = false;
+    state2.doc.nodesBetween(from2, to, (node) => {
+      if (mixed || !node.isTextblock || !node.type.spec.attrs || !("align" in node.type.spec.attrs)) return;
+      const a = node.attrs.align || "left";
+      if (seen === null) seen = a;
+      else if (seen !== a) mixed = true;
+    });
+    return mixed ? "" : seen;
+  }
+  function rangeColor(state2) {
+    const mk2 = state2.schema.marks.color;
+    if (!mk2) return "";
+    const { from: from2, to, empty: empty2, $from } = state2.selection;
+    if (empty2) {
+      const m = (state2.storedMarks || $from.marks()).find((x) => x.type === mk2);
+      return m ? (0, import_text_color2.normColor)(m.attrs.color) : "";
+    }
+    let seen = null, mixed = false;
+    state2.doc.nodesBetween(from2, to, (node) => {
+      if (mixed || !node.isText) return;
+      const m = (node.marks || []).find((x) => x.type === mk2);
+      const c = m ? (0, import_text_color2.normColor)(m.attrs.color) : "";
+      if (seen === null) seen = c;
+      else if (seen !== c) mixed = true;
+    });
+    return mixed || seen === null ? "" : seen;
+  }
   function ancestorDepth(state2, type) {
     const { $from } = state2.selection;
     for (let d = $from.depth; d > 0; d--) if ($from.node(d).type === type) return d;
     return 0;
   }
-  function toggleListCmd(listType, itemType, otherType) {
+  function listItemDepth(state2) {
+    const { $from } = state2.selection;
+    for (let d = $from.depth; d > 0; d--) {
+      if ($from.node(d).type === schema.nodes.list_item) return d;
+    }
+    return 0;
+  }
+  function exitEmptyListItem(state2, dispatch, view2) {
+    const { $from, empty: empty2 } = state2.selection;
+    if (!empty2 || !listItemDepth(state2)) return false;
+    if ($from.parent.content.size > 0) return false;
+    return liftListItem(schema.nodes.list_item)(state2, dispatch, view2);
+  }
+  function exitListItemAtStart(state2, dispatch, view2) {
+    const { $from, empty: empty2 } = state2.selection;
+    if (!empty2 || !listItemDepth(state2)) return false;
+    if ($from.parentOffset !== 0) return false;
+    return liftListItem(schema.nodes.list_item)(state2, dispatch, view2);
+  }
+  function dropEmptyParaAfterList(state2, dispatch) {
+    const { $from, empty: empty2 } = state2.selection;
+    if (!empty2 || $from.depth !== 1) return false;
+    const para2 = $from.parent;
+    if (para2.type !== schema.nodes.paragraph || para2.content.size > 0) return false;
+    const i5 = $from.index(0);
+    if (i5 === 0) return false;
+    const prev = state2.doc.child(i5 - 1);
+    if (prev.type !== schema.nodes.bullet_list && prev.type !== schema.nodes.ordered_list) return false;
+    if (dispatch) {
+      const at = $from.before(1);
+      const tr4 = state2.tr.delete(at, at + para2.nodeSize);
+      const $end = tr4.doc.resolve(Math.max(0, Math.min(at - 1, tr4.doc.content.size)));
+      tr4.setSelection(TextSelection.near($end, -1));
+      dispatch(tr4.scrollIntoView());
+    }
+    return true;
+  }
+  function keepAlignOnEnter(inner) {
     return (state2, dispatch, view2) => {
-      if (ancestorDepth(state2, listType)) {
-        const lift3 = liftListItem(itemType);
-        if (!dispatch) return lift3(state2);
-        if (!view2) return lift3(state2, dispatch);
-        let guard = 0;
-        while (ancestorDepth(view2.state, listType) && guard++ < 12) {
-          if (!lift3(view2.state, view2.dispatch, view2)) break;
+      const align = (state2.selection.$from.parent.attrs || {}).align || null;
+      if (!align || !dispatch) return inner(state2, dispatch, view2);
+      return inner(state2, (tr4) => {
+        const $f = tr4.selection.$from;
+        for (let d = $f.depth; d > 0; d--) {
+          const n2 = $f.node(d);
+          if (n2.type !== schema.nodes.paragraph && n2.type !== schema.nodes.heading) continue;
+          if ((n2.attrs || {}).align !== align)
+            tr4.setNodeMarkup($f.before(d), null, { ...n2.attrs, align });
+          break;
         }
-        return true;
-      }
-      const od = otherType ? ancestorDepth(state2, otherType) : 0;
-      if (od) {
-        if (!dispatch) return true;
-        if (!view2) return wrapInList(listType)(state2, dispatch);
-        const liftOut = liftListItem(itemType);
-        let g2 = 0;
-        while (ancestorDepth(view2.state, otherType) && g2++ < 12) {
-          if (!liftOut(view2.state, view2.dispatch, view2)) break;
-        }
-        return wrapInList(listType)(view2.state, view2.dispatch, view2);
-      }
-      return wrapInList(listType)(state2, dispatch, view2);
+        dispatch(tr4);
+      }, view2);
     };
+  }
+  function seq(state2) {
+    let st = state2;
+    const steps = [];
+    const mapping = new Mapping();
+    return {
+      get state() {
+        return st;
+      },
+      /** ตำแหน่งเดิม → ตำแหน่งปัจจุบัน */
+      map: (pos) => mapping.map(pos),
+      run(cmd) {
+        let ok2 = false;
+        cmd(st, (tr4) => {
+          for (const x of tr4.steps) {
+            steps.push(x);
+            mapping.appendMap(x.getMap());
+          }
+          st = st.apply(tr4);
+          ok2 = true;
+        });
+        return ok2;
+      },
+      /** ย้ายช่วงที่เลือก (ไม่สร้าง step — แค่บอกคำสั่งถัดไปว่าให้ทำตรงไหน) */
+      select(a, b) {
+        const d = st.doc;
+        const lo = Math.max(0, Math.min(a, d.content.size));
+        const hi = Math.max(lo, Math.min(b, d.content.size));
+        try {
+          st = st.apply(st.tr.setSelection(
+            TextSelection.between(d.resolve(lo), d.resolve(hi))
+          ));
+        } catch {
+        }
+      },
+      steps
+    };
+  }
+  function commitSeq(s, state2, dispatch, from2, to) {
+    if (!s.steps.length) return false;
+    if (!dispatch) return true;
+    const tr4 = state2.tr;
+    for (const x of s.steps) tr4.step(x);
+    if (Number.isFinite(from2) && Number.isFinite(to)) {
+      try {
+        const d = tr4.doc;
+        const a = Math.max(0, Math.min(s.map(from2), d.content.size));
+        const b = Math.max(a, Math.min(s.map(to), d.content.size));
+        tr4.setSelection(TextSelection.between(d.resolve(a), d.resolve(b)));
+      } catch {
+      }
+    }
+    dispatch(tr4.scrollIntoView());
+    return true;
+  }
+  function liftEvery(s, from0, to0, match, inner, liftCmd) {
+    for (let guard = 0; guard < 40; guard++) {
+      const from2 = s.map(from0), to = s.map(to0);
+      let hit = null;
+      s.state.doc.nodesBetween(from2, to, (node, pos) => {
+        if (hit) return false;
+        if (match(node)) {
+          hit = { pos, node };
+          return false;
+        }
+        return void 0;
+      });
+      if (!hit) return;
+      s.select(
+        Math.max(hit.pos + inner, from2),
+        Math.min(hit.pos + hit.node.nodeSize - inner, to)
+      );
+      let moved = false;
+      for (let g2 = 0; g2 < 10; g2++) {
+        if (!s.run(liftCmd)) break;
+        moved = true;
+      }
+      if (!moved) return;
+    }
+  }
+  function flattenRange(s, from0, to0, itemType, quoteType) {
+    const lift0 = liftListItem(itemType);
+    for (let g = 0; g < 10; g++) {
+      if (!s.run(lift0)) break;
+    }
+    liftEvery(s, from0, to0, isList, 3, lift0);
+    if (quoteType) liftEvery(s, from0, to0, (n2) => n2.type === quoteType, 2, lift2);
+  }
+  function listRangeInfo(state2, listType) {
+    const { from: from2, to } = state2.selection;
+    let total = 0, inside = 0;
+    state2.doc.nodesBetween(from2, to, (node, pos) => {
+      if (!node.isTextblock) return;
+      total++;
+      const $p = state2.doc.resolve(pos);
+      for (let d = $p.depth; d > 0; d--) if ($p.node(d).type === listType) {
+        inside++;
+        break;
+      }
+    });
+    return { total, inside };
+  }
+  function toggleListCmd(listType, itemType) {
+    return (state2, dispatch) => {
+      const info = listRangeInfo(state2, listType);
+      const { from: from2, to } = state2.selection;
+      const s = seq(state2);
+      if (info.total > 0 && info.inside === info.total) {
+        const lift0 = liftListItem(itemType);
+        let moved = false;
+        for (let g = 0; g < 10; g++) {
+          if (!s.run(lift0)) break;
+          moved = true;
+        }
+        if (!moved) liftEvery(s, from2, to, isList, 3, lift0);
+        return commitSeq(s, state2, dispatch, from2, to);
+      }
+      flattenRange(s, from2, to, itemType, schema.nodes.blockquote);
+      s.select(s.map(from2), s.map(to));
+      s.run(wrapInList(listType));
+      return commitSeq(s, state2, dispatch, from2, to);
+    };
+  }
+  function wrapRangeInfo(state2, nodeType) {
+    const { from: from2, to } = state2.selection;
+    let total = 0, inside = 0;
+    state2.doc.nodesBetween(from2, to, (node, pos) => {
+      if (!node.isTextblock) return;
+      total++;
+      const $p = state2.doc.resolve(pos);
+      for (let d = $p.depth; d > 0; d--) if ($p.node(d).type === nodeType) {
+        inside++;
+        break;
+      }
+    });
+    const nodes = [];
+    state2.doc.nodesBetween(from2, to, (node, pos) => {
+      if (node.type !== nodeType) return;
+      nodes.push({ pos, node });
+      return false;
+    });
+    return { total, inside, nodes };
+  }
+  function liftWrappers(tr4, nodes) {
+    let done2 = false;
+    for (let i5 = nodes.length - 1; i5 >= 0; i5--) {
+      const { pos, node } = nodes[i5];
+      const $s = tr4.doc.resolve(tr4.mapping.map(pos + 1));
+      const $e = tr4.doc.resolve(tr4.mapping.map(pos + node.nodeSize - 1));
+      const range3 = $s.blockRange($e);
+      const target = range3 && liftTarget(range3);
+      if (range3 && target != null) {
+        tr4.lift(range3, target);
+        done2 = true;
+      }
+    }
+    return done2;
+  }
+  function listMarkerPlugin() {
+    const key2 = new PluginKey("k2-list-marker");
+    const build = (doc3) => {
+      const out = [];
+      doc3.forEach((node, offset) => {
+        if (!/_list$/.test(node.type.name)) return;
+        node.forEach((item, off3) => {
+          const first = item.firstChild && item.firstChild.firstChild;
+          const marks2 = first && first.marks || [];
+          const css = [];
+          const c = marks2.find((m) => m.type.name === "color");
+          if (c && c.attrs.color) css.push("--k-mk-color:" + c.attrs.color);
+          if (marks2.some((m) => m.type.name === "strong")) css.push("--k-mk-weight:700");
+          if (marks2.some((m) => m.type.name === "em")) css.push("--k-mk-style:italic");
+          if (!css.length) return;
+          const pos = offset + 1 + off3;
+          out.push(Decoration.node(pos, pos + item.nodeSize, { style: css.join(";") }));
+        });
+      });
+      return DecorationSet.create(doc3, out);
+    };
+    return new Plugin({
+      key: key2,
+      state: {
+        init: (_2, st) => build(st.doc),
+        apply: (tr4, old) => tr4.docChanged ? build(tr4.doc) : old
+      },
+      props: { decorations(st) {
+        return key2.getState(st);
+      } }
+    });
   }
   function toggleWrapCmd(nodeType) {
     return (state2, dispatch, view2) => {
-      if (ancestorDepth(state2, nodeType)) return lift2(state2, dispatch);
-      return wrapIn(nodeType)(state2, dispatch, view2);
+      const info = wrapRangeInfo(state2, nodeType);
+      if (info.total > 0 && info.inside === info.total) {
+        if (lift2(state2, dispatch, view2)) return true;
+        if (!info.nodes.length) return false;
+        if (!dispatch) return true;
+        const tr4 = state2.tr;
+        if (!liftWrappers(tr4, info.nodes)) return false;
+        dispatch(tr4.scrollIntoView());
+        return true;
+      }
+      const { from: from2, to } = state2.selection;
+      const s = seq(state2);
+      flattenRange(s, from2, to, schema.nodes.list_item, nodeType);
+      s.select(s.map(from2), s.map(to));
+      s.run(wrapIn(nodeType));
+      return commitSeq(s, state2, dispatch, from2, to);
     };
   }
   function lineEdgePos(view2, toEnd) {
@@ -17058,7 +17712,7 @@
     requestAnimationFrame(settle);
     return out;
   }
-  var import_md, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, HOME_END_KEYS, KEditor;
+  var import_md2, import_text_color2, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, ENTER_CMD, BACKSPACE_CMD, isList, HOME_END_KEYS, KEditor;
   var init_editor = __esm({
     "src/editor.js"() {
       init_i18n();
@@ -17069,12 +17723,14 @@
       init_dist8();
       init_dist9();
       init_dist10();
+      init_dist3();
       init_dist11();
       init_dist12();
       init_dist13();
-      import_md = __toESM(require_md());
+      import_md2 = __toESM(require_md());
       init_search();
       init_text_case();
+      import_text_color2 = __toESM(require_text_color());
       init_prose_view();
       init_markdown_code_toggle();
       init_dist4();
@@ -17102,7 +17758,7 @@
             content: "inline*",
             attrs: { align: { default: null } },
             parseDOM: [{ tag: "p", getAttrs: (d) => ({ align: d.style.textAlign || null }) }],
-            toDOM: (n2) => ["p", n2.attrs.align ? { style: "text-align:" + n2.attrs.align } : {}, 0]
+            toDOM: (n2) => ["p", alignAttrs(n2.attrs.align), 0]
           },
           heading: {
             group: "block",
@@ -17113,11 +17769,7 @@
               tag: "h" + l,
               getAttrs: (d) => ({ level: l, align: d.style.textAlign || null })
             })),
-            toDOM: (n2) => [
-              "h" + n2.attrs.level,
-              n2.attrs.align ? { style: "text-align:" + n2.attrs.align } : {},
-              0
-            ]
+            toDOM: (n2) => ["h" + n2.attrs.level, alignAttrs(n2.attrs.align), 0]
           },
           blockquote: {
             group: "block",
@@ -17234,9 +17886,47 @@
             excludes: "vertalign",
             parseDOM: [{ tag: "sub" }],
             toDOM: () => ["sub", 0]
+          },
+          // ══ [alpha.132 ข้อ 9] ★ สีตัวอักษร (ผู้ใช้จริงขอมา) ══
+          // ค่าสีถูกกรองผ่าน `normColor` **ทุกทางเข้า** (พิมพ์เอง · วางจากที่อื่น · อ่านจากไฟล์)
+          // กรองไม่ผ่าน = ไม่มีมาร์ก (`getAttrs` คืน false) ไม่ใช่ยัดสตริงดิบลง style
+          color: {
+            attrs: { color: { default: "" } },
+            parseDOM: [
+              {
+                tag: "span[data-color]",
+                getAttrs: (d) => {
+                  const c = (0, import_text_color2.normColor)(d.getAttribute("data-color"));
+                  return c ? { color: c } : false;
+                }
+              },
+              {
+                style: "color",
+                getAttrs: (v2) => {
+                  const c = (0, import_text_color2.normColor)(v2);
+                  return c ? { color: c } : false;
+                }
+              }
+            ],
+            toDOM: (n2) => ["span", {
+              "data-color": n2.attrs.color,
+              style: "color:" + n2.attrs.color
+            }, 0]
           }
         }
       });
+      ENTER_CMD = keepAlignOnEnter(chainCommands(
+        newlineInCode,
+        splitListItem(schema.nodes.list_item),
+        exitEmptyListItem,
+        splitBlockKeepMarks
+      ));
+      BACKSPACE_CMD = chainCommands(
+        exitListItemAtStart,
+        dropEmptyParaAfterList,
+        baseKeymap.Backspace
+      );
+      isList = (n2) => /_list$/.test(n2.type.name);
       HOME_END_KEYS = {
         Home: lineEdgeCmd(false, false),
         End: lineEdgeCmd(true, false),
@@ -17303,12 +17993,16 @@
             }
           });
         }
+        // ══ [alpha.134] ★ ตัวช่วยกดปุ่ม — ต้องเป็น **คำสั่งตัวเดียวกับที่ผูกไว้กับแป้นจริง** ══
+        //
+        // ของเดิม `pressEnter()` ประกอบสายคำสั่งของตัวเองขึ้นมาใหม่ (ขาด `newlineInCode`
+        // และ `exitEmptyListItem`) → โค้ดที่เรียกตัวนี้ (รวมทั้ง e2e) ทดสอบ "Enter" คนละตัว
+        // กับที่ผู้ใช้กดจริง · ตอนนี้ทั้งสองทางอ้าง ENTER_CMD/BACKSPACE_CMD ก้อนเดียวกัน
         pressEnter() {
-          chainCommands(splitListItem(schema.nodes.list_item), splitBlockKeepMarks)(
-            this.view.state,
-            this.view.dispatch,
-            this.view
-          );
+          ENTER_CMD(this.view.state, this.view.dispatch, this.view);
+        }
+        pressBackspace() {
+          BACKSPACE_CMD(this.view.state, this.view.dispatch, this.view);
         }
         _mkState(doc3) {
           return EditorState.create({
@@ -17321,13 +18015,20 @@
               commentAnchorPlugin(),
               prosePageBreakPlugin(),
               // [20] เส้นคั่นหน้าของนิยาย
+              listMarkerPlugin(),
+              // [alpha.132r3] รูปแบบของจุดนำ/หมายเลขข้อ
               // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (fountain/มาร์กดาวน์) — ไม่แตะไฟล์
               markdownCodePlugin(incrementalDecoState),
               buildRules(schema),
               keymap({
                 // ขึ้นบรรทัดใหม่แล้วรูปแบบตัวอักษร (หนา/เอียง/ขีด) ต้องติดไปด้วย — แบบ Word
                 // ในบล็อกโค้ด Enter = ขึ้นบรรทัดใน pre (ไม่ใช่แตกบล็อก)
-                Enter: chainCommands(newlineInCode, splitListItem(schema.nodes.list_item), splitBlockKeepMarks),
+                // [alpha.132r4] Enter บน "ข้อว่าง" = **ออกจากรายการ** (พฤติกรรมเดียวกับ MS Word)
+                // `splitListItem` ของ prosemirror ตั้งใจคืน false ตรงนี้แล้วฝากให้คำสั่งถัดไปยกออก
+                // — แต่เดิมคำสั่งถัดไปคือ `splitBlockKeepMarks` ซึ่งสร้าง "ข้อว่างใบใหม่" ไปเรื่อย ๆ
+                // ผู้ใช้จึงเอาจุดนำออกไม่ได้เลยนอกจากไปกดปุ่มสวิตช์บนแถบเครื่องมือ
+                Enter: ENTER_CMD,
+                Backspace: BACKSPACE_CMD,
                 // [alpha.61 ข้อ 3] Shift+Enter = ขึ้นบรรทัด "ในย่อหน้าเดิม" (bypass ระบบย่อหน้า)
                 //   ในบล็อกโค้ดยังเป็นทางออกจากบล็อกเหมือนเดิม (exitCode มาก่อน)
                 "Shift-Enter": chainCommands(exitCode, insertHardBreak),
@@ -17348,7 +18049,7 @@
           });
         }
         _docFromMd(md, alignMap) {
-          const json = (0, import_md.mdToDoc)(md, alignMap);
+          const json = (0, import_md2.mdToDoc)(md, alignMap);
           for (const n2 of json.content) {
             if (n2.type === "figure") n2.attrs.resolved = this.resolveSrc(n2.attrs.src);
           }
@@ -17356,7 +18057,7 @@
         }
         // ---------- content ----------
         getMarkdown(opts) {
-          return (0, import_md.docToMd)(
+          return (0, import_md2.docToMd)(
             this.view.state.doc.toJSON(),
             opts || { alignComments: this.alignComments }
           );
@@ -17366,14 +18067,14 @@
          * เพื่อให้เลขตรงกับไฟล์เป๊ะ ไม่ใช่ไปนับลูกของ DOM เอง
          */
         mdLineCounts() {
-          return (0, import_md.mdLineCounts)(
+          return (0, import_md2.mdLineCounts)(
             this.view.state.doc.toJSON(),
             { alignComments: this.alignComments }
           );
         }
         /** แผนที่จัดหน้าของบล็อกระดับบน — เก็บลง frontmatter (`align: [3:center]`) */
         getAlignMap() {
-          return (0, import_md.collectAlign)(this.view.state.doc.toJSON());
+          return (0, import_md2.collectAlign)(this.view.state.doc.toJSON());
         }
         setMarkdown(md, alignMap) {
           this.view.updateState(this._mkState(this._docFromMd(md, alignMap)));
@@ -17415,6 +18116,26 @@
               return run3(toggleMark(s.marks.sup));
             case "sub":
               return run3(toggleMark(s.marks.sub));
+            // ══ [alpha.132 ข้อ 9] ★ สีตัวอักษร — `arg` = รหัสสี · ค่าว่าง/ไม่ผ่านตัวกรอง = ล้างสี ══
+            // ไม่ใช้ `toggleMark` เพราะสีเป็นมาร์ก "มีค่า": กดสีใหม่ทับสีเก่าต้องได้สีใหม่
+            // ไม่ใช่สลับเปิด-ปิด (toggleMark จะถอดมาร์กออกเมื่อทั้งช่วงมีมาร์กนั้นอยู่แล้ว)
+            case "color": {
+              const mk2 = s.marks.color;
+              const val = (0, import_text_color2.normColor)(arg);
+              const st = v2.state;
+              const { from: from2, to, empty: empty2 } = st.selection;
+              if (empty2) {
+                const cur = (st.storedMarks || st.selection.$from.marks()).filter((m) => m.type !== mk2);
+                v2.dispatch(st.tr.setStoredMarks(val ? [...cur, mk2.create({ color: val })] : cur));
+                v2.focus();
+                return true;
+              }
+              const tr4 = st.tr.removeMark(from2, to, mk2);
+              if (val) tr4.addMark(from2, to, mk2.create({ color: val }));
+              v2.dispatch(tr4.scrollIntoView());
+              v2.focus();
+              return true;
+            }
             case "undo":
               return run3(undo);
             case "redo":
@@ -17429,18 +18150,11 @@
               return run3(toggleWrapCmd(s.nodes.blockquote));
             case "lift":
               return run3(lift2);
+            // [alpha.132r4] ไม่ต้องบอก "ชนิดอีกฝั่ง" อีกแล้ว — ตัวสวิตช์ถอดของเก่าทุกชนิดให้เอง
             case "ul":
-              return run3(toggleListCmd(
-                s.nodes.bullet_list,
-                s.nodes.list_item,
-                s.nodes.ordered_list
-              ));
+              return run3(toggleListCmd(s.nodes.bullet_list, s.nodes.list_item));
             case "ol":
-              return run3(toggleListCmd(
-                s.nodes.ordered_list,
-                s.nodes.list_item,
-                s.nodes.bullet_list
-              ));
+              return run3(toggleListCmd(s.nodes.ordered_list, s.nodes.list_item));
             // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด
             case "code":
               return run3(setBlockType2(s.nodes.code_block));
@@ -17450,14 +18164,15 @@
               return;
             }
             case "align": {
-              const val = arg === "left" ? null : arg;
+              const want = arg === "left" ? null : arg;
+              const val = want && rangeAlign(v2.state) === arg ? null : want;
               const { from: from2, to } = v2.state.selection;
               let tr4 = v2.state.tr, changed = false;
               v2.state.doc.nodesBetween(from2, to, (node, pos) => {
-                if (node.type === s.nodes.paragraph || node.type === s.nodes.heading) {
-                  tr4 = tr4.setNodeMarkup(pos, null, { ...node.attrs, align: val });
-                  changed = true;
-                }
+                if (!node.isTextblock || !node.type.spec.attrs || !("align" in node.type.spec.attrs)) return;
+                if ((node.attrs.align || null) === val) return;
+                tr4 = tr4.setNodeMarkup(pos, null, { ...node.attrs, align: val });
+                changed = true;
               });
               if (changed) v2.dispatch(tr4);
               v2.focus();
@@ -17537,12 +18252,16 @@
           }
           const p = st.selection.$from.parent;
           out.block = p.type.name === "heading" ? "h" + p.attrs.level : p.type.name === "code_block" ? "code" : st.selection.$from.node(-1) && st.selection.$from.node(-1).type.name === "blockquote" ? "quote" : "p";
-          out.align = p.type.name === "paragraph" || p.type.name === "heading" ? p.attrs.align || "left" : null;
+          out.align = rangeAlign(st);
           const dUl = ancestorDepth(st, schema.nodes.bullet_list);
           const dOl = ancestorDepth(st, schema.nodes.ordered_list);
           out.list = dUl > dOl ? "ul" : dOl > dUl ? "ol" : "";
-          out.quote = !!ancestorDepth(st, schema.nodes.blockquote);
+          {
+            const qi = wrapRangeInfo(st, schema.nodes.blockquote);
+            out.quote = qi.total > 0 && qi.inside === qi.total;
+          }
           out.image = this.figurePos() >= 0;
+          out.colorValue = rangeColor(st);
           return out;
         }
         focus() {
@@ -17618,11 +18337,11 @@
     return t3;
   }
   function proseBlocks(body, alignMap) {
-    const doc3 = (0, import_md2.mdToDoc)(String(body ?? ""), alignMap);
+    const doc3 = (0, import_md3.mdToDoc)(String(body ?? ""), alignMap);
     const out = [];
     for (const node of doc3.content || []) {
       const k = proseKind(node);
-      for (const line of (0, import_md2.docToMd)({ type: "doc", content: [node] }, { alignComments: false }).split("\n")) {
+      for (const line of (0, import_md3.docToMd)({ type: "doc", content: [node] }, { alignComments: false }).split("\n")) {
         const kind = k === "hr" || k === "pagebreak" || line.trim() ? k : "blank";
         out.push({ kind, line });
       }
@@ -17633,7 +18352,7 @@
     if (!rightTexts.length) return {};
     const map2 = {};
     let k = 0;
-    ((0, import_md2.mdToDoc)(outMd).content || []).forEach((n2, i5) => {
+    ((0, import_md3.mdToDoc)(outMd).content || []).forEach((n2, i5) => {
       if (k < rightTexts.length && n2.type === "paragraph" && textOf(n2) === rightTexts[k]) {
         map2[i5] = "right";
         k++;
@@ -17687,12 +18406,12 @@
     }
     return [...counts].map(([k, n2]) => ({ from: k.split("\0")[0], to: k.split("\0")[1], n: n2 })).sort((a, b) => b.n - a.n);
   }
-  var import_md2, PROSE_ELEMS, PAIRS, FWD, REV, PROSE_CODE, SP_CODE, flip, PROSE_KIND, SP_KIND, kindLabel, textOf, allMark, scriptBlocks;
+  var import_md3, PROSE_ELEMS, PAIRS, FWD, REV, PROSE_CODE, SP_CODE, flip, PROSE_KIND, SP_KIND, kindLabel, textOf, allMark, scriptBlocks;
   var init_convert = __esm({
     "src/convert.js"() {
       init_fountain();
       init_num();
-      import_md2 = __toESM(require_md());
+      import_md3 = __toESM(require_md());
       PROSE_ELEMS = {
         h1: { th: "\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D 1" },
         h2: { th: "\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D 2" },
@@ -17836,6 +18555,7 @@
   __export(prose_measure_exports, {
     CUT_FAIL: () => CUT_FAIL,
     DPI: () => DPI3,
+    FORCE_BREAK_SEL: () => FORCE_BREAK_SEL,
     GAP_CLASS: () => GAP_CLASS,
     MEASURE_CLASS: () => MEASURE_CLASS,
     WIDOW_LINES: () => WIDOW_LINES,
@@ -17846,7 +18566,6 @@
     measureProseBlocks: () => measureProseBlocks,
     measureProseLayout: () => measureProseLayout,
     proseBreakList: () => proseBreakList,
-    proseMeasuredCount: () => proseMeasuredCount,
     prosePosAtCut: () => prosePosAtCut,
     renderProseClipPages: () => renderProseClipPages,
     resetCutFail: () => resetCutFail,
@@ -17903,9 +18622,6 @@
     const last2 = list.length ? list[list.length - 1] : null;
     const end = Math.max(num(totalHeight, last2 ? last2.top + last2.height : 0), pageStart);
     return starts.map((y, i5) => ({ start: y, end: i5 + 1 < starts.length ? starts[i5 + 1] : end }));
-  }
-  function proseMeasuredCount(blocks, contentHeight, totalHeight) {
-    return sliceProsePages(blocks, contentHeight, totalHeight).length;
   }
   function lineBreakOffsets(lines) {
     return (lines || []).slice(1).map((l) => l.offset).filter((o) => o > 0.5);
@@ -17983,6 +18699,7 @@
     return ans;
   }
   function blockRules(el2) {
+    if (isForcedBreak(el2)) return { splitMinLines: 99, breakBefore: true };
     const tag3 = (el2.tagName || "").toLowerCase();
     if (/^h[1-6]$/.test(tag3)) return { splitMinLines: 99, keepNext: true };
     if (tag3 === "hr" || tag3 === "figure" || tag3 === "img") return { splitMinLines: 99 };
@@ -18017,7 +18734,7 @@
         gapAccum += rect.height;
         continue;
       }
-      if (!(rect.height > 0)) continue;
+      if (!(rect.height > 0) && !isForcedBreak(el2)) continue;
       const innerGap = gapMap.get(el2) || 0;
       const top = (rect.top - origin - gapAccum) / z;
       const height = (rect.height - innerGap) / z;
@@ -18201,7 +18918,7 @@
     }
     return { pages: els, scale: scale2, perRow: opts.perRow ?? 0 };
   }
-  var DPI3, GAP_CLASS, WIDOW_LINES, BLOCK_PROTO, MEASURE_CLASS, CUT_FAIL;
+  var DPI3, GAP_CLASS, WIDOW_LINES, FORCE_BREAK_SEL, isForcedBreak, BLOCK_PROTO, MEASURE_CLASS, CUT_FAIL;
   var init_prose_measure = __esm({
     "src/prose-measure.js"() {
       init_sp_format();
@@ -18209,6 +18926,8 @@
       DPI3 = 96;
       GAP_CLASS = "ed-page-break";
       WIDOW_LINES = 2;
+      FORCE_BREAK_SEL = ".k-manual-page-break, .pb";
+      isForcedBreak = (el2) => !!(el2 && el2.matches && el2.matches(FORCE_BREAK_SEL));
       BLOCK_PROTO = {
         get lines() {
           if (!this._lines) this._lines = domLineRects(this.el, this._z);
@@ -18292,7 +19011,7 @@
   async function readSceneMeta(file, row2) {
     let fm = null;
     try {
-      fm = (0, import_md3.parseMdFile)(await kapi.readFile(file)).meta;
+      fm = (0, import_md4.parseMdFile)(await kapi.readFile(file)).meta;
     } catch {
       fm = null;
     }
@@ -18300,18 +19019,18 @@
   }
   async function writeSceneMeta(file, props) {
     try {
-      const { meta: meta2, body } = (0, import_md3.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md4.parseMdFile)(await kapi.readFile(file));
       applySceneMetaToFrontmatter(meta2, props);
-      await kapi.writeFile(file, (0, import_md3.dumpMdFile)(meta2, body));
+      await kapi.writeFile(file, (0, import_md4.dumpMdFile)(meta2, body));
       return true;
     } catch {
       return false;
     }
   }
-  var import_md3, SCENE_HEAVY_KEYS, HEAVY, BOOL_KEYS, LIST_KEYS;
+  var import_md4, SCENE_HEAVY_KEYS, HEAVY, BOOL_KEYS, LIST_KEYS;
   var init_scene_meta = __esm({
     "src/scene-meta.js"() {
-      import_md3 = __toESM(require_md());
+      import_md4 = __toESM(require_md());
       SCENE_HEAVY_KEYS = [
         "synopsis",
         "pov",
@@ -18583,7 +19302,7 @@
   function createLogStore(max2 = 2e3) {
     const cap = Math.max(50, max2 | 0);
     const recs = [];
-    let seq2 = 0;
+    let seq3 = 0;
     const counts = { error: 0, warn: 0, info: 0, debug: 0 };
     const push = (level, msg, extra, ts) => {
       const lv = normLevel(level);
@@ -18595,7 +19314,7 @@
         last2.ts = ts;
         return last2;
       }
-      const rec = { seq: ++seq2, ts, level: lv, source, msg: text, detail, count: 1 };
+      const rec = { seq: ++seq3, ts, level: lv, source, msg: text, detail, count: 1 };
       recs.push(rec);
       counts[lv]++;
       while (recs.length > cap) {
@@ -18608,7 +19327,7 @@
       push,
       all: () => recs.slice(),
       size: () => recs.length,
-      lastSeq: () => seq2,
+      lastSeq: () => seq3,
       counts: () => ({ ...counts }),
       sources: () => [...new Set(recs.map((r) => r.source).filter(Boolean))].sort(),
       clear: () => {
@@ -19947,6 +20666,92 @@
     }
   });
 
+  // src/speech-split.js
+  var speech_split_exports = {};
+  __export(speech_split_exports, {
+    KIND_NARRATION: () => KIND_NARRATION,
+    KIND_SPEECH: () => KIND_SPEECH,
+    QUOTE_PAIRS: () => QUOTE_PAIRS,
+    hasSpeech: () => hasSpeech,
+    speechParts: () => speechParts,
+    splitSpeech: () => splitSpeech,
+    stripQuotes: () => stripQuotes
+  });
+  function splitSpeech(text) {
+    const s = String(text == null ? "" : text);
+    const out = [];
+    let buf = "";
+    const flush = () => {
+      if (buf) {
+        out.push({ kind: KIND_NARRATION, text: buf });
+        buf = "";
+      }
+    };
+    for (let i5 = 0; i5 < s.length; i5++) {
+      const ch = s[i5];
+      const close2 = OPENERS.get(ch);
+      if (close2 === void 0) {
+        buf += ch;
+        continue;
+      }
+      let end = -1;
+      for (let j = i5 + 1; j < s.length; j++) {
+        if (s[j] === "\n") break;
+        if (s[j] === close2) {
+          end = j;
+          break;
+        }
+      }
+      if (end < 0) {
+        buf += ch;
+        continue;
+      }
+      flush();
+      out.push({ kind: KIND_SPEECH, text: s.slice(i5, end + 1) });
+      i5 = end;
+    }
+    flush();
+    return out;
+  }
+  function hasSpeech(text) {
+    return splitSpeech(text).some((p) => p.kind === KIND_SPEECH);
+  }
+  function stripQuotes(part) {
+    const s = String(part && part.text || part || "");
+    for (const [o, c] of QUOTE_PAIRS) {
+      if (s.length >= 2 && s.startsWith(o) && s.endsWith(c)) return s.slice(1, -1);
+    }
+    return s;
+  }
+  function speechParts(text) {
+    return splitSpeech(text).map((p) => ({
+      ...p,
+      say: p.kind === KIND_SPEECH ? stripQuotes(p) : p.text.trim()
+    })).filter((p) => p.say);
+  }
+  var QUOTE_PAIRS, OPENERS, KIND_SPEECH, KIND_NARRATION;
+  var init_speech_split = __esm({
+    "src/speech-split.js"() {
+      QUOTE_PAIRS = [
+        ['"', '"'],
+        // ตรง (พิมพ์ง่ายสุด ใช้มากสุด)
+        ["\u201C", "\u201D"],
+        // โค้งอังกฤษ “ ”
+        ["\u201E", "\u201C"],
+        // เยอรมัน „ “
+        ["\xAB", "\xBB"],
+        // ฝรั่งเศส « »
+        ["\u300C", "\u300D"],
+        // ญี่ปุ่น 「 」
+        ["\u300E", "\u300F"]
+        // ญี่ปุ่นซ้อน 『 』
+      ];
+      OPENERS = new Map(QUOTE_PAIRS.map(([o, c]) => [o, c]));
+      KIND_SPEECH = "speech";
+      KIND_NARRATION = "narration";
+    }
+  });
+
   // src/ui.js
   var ui_exports = {};
   __export(ui_exports, {
@@ -19954,9 +20759,33 @@
     choose: () => choose,
     closeMenu: () => closeMenu,
     confirmBox: () => confirmBox,
+    escClose: () => escClose,
     popupMenu: () => popupMenu,
-    saveAllDialog: () => saveAllDialog
+    saveAllDialog: () => saveAllDialog,
+    setSpeechText: () => setSpeechText,
+    speechNodes: () => speechNodes
   });
+  function escClose(ov, onEsc) {
+    const off3 = () => document.removeEventListener("keydown", h, true);
+    const h = (e) => {
+      if (e.key !== "Escape") return;
+      if (!ov || !document.body.contains(ov)) {
+        off3();
+        return;
+      }
+      const all = [...document.querySelectorAll(".k-overlay")];
+      if (all[all.length - 1] !== ov) return;
+      e.preventDefault();
+      e.stopPropagation();
+      off3();
+      try {
+        onEsc();
+      } catch {
+      }
+    };
+    document.addEventListener("keydown", h, true);
+    return off3;
+  }
   function ask(title2, { placeholder = "", value = "", okLabel = t("ui.common.msg3"), allowEmpty = false } = {}) {
     return new Promise((resolve) => {
       const ov = document.createElement("div");
@@ -20008,12 +20837,7 @@
       ov.onclick = (e) => {
         if (e.target === ov) done2(false);
       };
-      document.addEventListener("keydown", function esc6(e) {
-        if (e.key === "Escape") {
-          document.removeEventListener("keydown", esc6);
-          done2(false);
-        }
-      });
+      escClose(ov, () => done2(false));
     });
   }
   function popupMenu(x, y, items) {
@@ -20027,7 +20851,8 @@
       }
       const d = document.createElement("div");
       d.className = "k-menu-item" + (it.danger ? " k-danger" : "") + (it.disabled ? " k-menu-label" : "");
-      d.innerHTML = it.label;
+      if (it.text !== void 0) d.textContent = it.text;
+      else d.innerHTML = it.label;
       if (!it.disabled) d.onclick = () => {
         closeMenu();
         it.click();
@@ -20080,6 +20905,7 @@
       ov.onclick = (e) => {
         if (e.target === ov) done2(null);
       };
+      escClose(ov, () => done2(null));
     });
   }
   function saveAllDialog(files, {
@@ -20160,15 +20986,43 @@
       bSave.focus();
     });
   }
+  function speechNodes(text) {
+    const frag = document.createDocumentFragment();
+    for (const p of splitSpeech(text)) {
+      if (p.kind === KIND_SPEECH) {
+        const i5 = document.createElement("i");
+        i5.className = "k-speech";
+        i5.textContent = p.text;
+        frag.append(i5);
+      } else {
+        frag.append(document.createTextNode(p.text));
+      }
+    }
+    return frag;
+  }
+  function setSpeechText(node, text) {
+    if (!node) return node;
+    node.replaceChildren(speechNodes(text));
+    return node;
+  }
   var curMenu;
   var init_ui = __esm({
     "src/ui.js"() {
       init_i18n();
+      init_speech_split();
       curMenu = null;
     }
   });
 
   // src/icons.js
+  var icons_exports = {};
+  __export(icons_exports, {
+    hasIcon: () => hasIcon,
+    icon: () => icon,
+    iconHtml: () => iconHtml,
+    iconLabel: () => iconLabel,
+    initIcons: () => initIcons
+  });
   function hasIcon(name5) {
     return !!(name5 && ICO[name5]);
   }
@@ -20208,6 +21062,13 @@
       el2.removeAttribute("data-icon");
       el2.removeAttribute("data-icon-size");
     }
+  }
+  function iconLabel(name5, text, size) {
+    const span = document.createElement("span");
+    span.style.cssText = "display:inline-flex;align-items:center;gap:4px";
+    span.appendChild(icon(name5, size || 16));
+    if (text) span.appendChild(document.createTextNode(text));
+    return span;
   }
   var ICO, NF;
   var init_icons = __esm({
@@ -20488,6 +21349,7 @@
   var SmartType;
   var init_smart = __esm({
     "src/smart.js"() {
+      init_i18n();
       SmartType = class {
         constructor() {
           this.names = [];
@@ -20575,9 +21437,33 @@
           this.prefixLen = bestLen;
           this.render();
           const c = view2.coordsAtPos(view2.state.selection.from);
-          this.box.style.left = c.left + "px";
-          this.box.style.top = c.bottom + 6 + "px";
-          this.box.style.display = "block";
+          this.place(c);
+        }
+        /**
+           * [alpha.124 ข้อ 34] วางกล่องเดาชื่อโดย **ไม่ล้นจอ**
+           *
+           * เดิมเซ็ต `left = c.left` / `top = c.bottom + 6` ตรง ๆ → พิมพ์ใกล้ขอบล่างของจอ
+           * กล่องจะโผล่ใต้เคอร์เซอร์แล้วทะลุออกนอกหน้าต่าง (มองไม่เห็นเลยว่ามีตัวเลือกอะไร)
+           * และพิมพ์ชิดขอบขวาก็โดนตัดข้าง ๆ เหมือนกัน
+           *
+           * กติกา: ล่างไม่พอ → **พลิกขึ้นไปอยู่เหนือบรรทัด** · ขวาไม่พอ → เลื่อนซ้ายให้พอดีขอบ
+           * ต้องวัดหลังจากกล่องแสดงผลแล้วเท่านั้น (ตอนซ่อนอยู่ `offsetHeight` = 0)
+           */
+        place(c) {
+          const box2 = this.box;
+          box2.style.display = "block";
+          box2.style.left = "0px";
+          box2.style.top = "0px";
+          const w = box2.offsetWidth, h = box2.offsetHeight;
+          const vw = window.innerWidth, vh = window.innerHeight;
+          const GAP = 6, PAD2 = 8;
+          let left = c.left;
+          if (left + w > vw - PAD2) left = Math.max(PAD2, vw - w - PAD2);
+          let top = c.bottom + GAP;
+          if (top + h > vh - PAD2 && c.top - GAP - h > PAD2) top = c.top - GAP - h;
+          else if (top + h > vh - PAD2) top = Math.max(PAD2, vh - h - PAD2);
+          box2.style.left = left + "px";
+          box2.style.top = top + "px";
         }
         render() {
           this.box.innerHTML = "";
@@ -20598,6 +21484,10 @@
             };
             this.box.appendChild(d);
           });
+          const hint = document.createElement("div");
+          hint.className = "smart-hint";
+          hint.textContent = t("ui.smart.acceptHint");
+          this.box.appendChild(hint);
         }
         hide() {
           this.box.style.display = "none";
@@ -21451,6 +22341,8 @@
         autoSync: false,
         thesaurus: false,
         focusDim: 0.3,
+        // [alpha.132 ข้อ 9] จานสีตัวอักษรของผู้ใช้ — { saved:[รหัสสี], recent:[รหัสสี] } (ค่า global)
+        textColors: { saved: [], recent: [] },
         // [alpha.60r2 ข้อ 4] เสียงพิมพ์ดีด — เดิมต้องเปิดสองสวิตช์ (typeSound + typeSoundAlways)
         // ผู้ใช้เปิด "เสียงพิมพ์ดีด" แล้วเงียบสนิท เพราะ typeSoundAlways ค่าเริ่มต้นเป็น false
         // ตอนนี้เป็นสวิตช์เดียว + โหมด: 'always' = ดังตลอด (ค่าเริ่มต้น) · 'typewriter' = เฉพาะโหมดเครื่องพิมพ์ดีด
@@ -21506,6 +22398,8 @@
         spShowFormat: false,
         spCheckBeforeExport: true,
         spLineLimits: null,
+        // [alpha.127] เส้นขอบเหลือง/แดงบนบล็อกที่ตัวตรวจบทแจ้ง — เปิดเป็นค่าเริ่มต้น (พฤติกรรมเดิม .124)
+        spErrorMarks: true,
         spSceneNumbers: null,
         spPageNumbers: null,
         spContinued: null,
@@ -21676,9 +22570,11 @@
         // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium)
         ["Backquote", true, true, "dev-console"],
         // [alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType)
-        // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ) → ฝั่งขวาใช้ Ctrl+Shift+[
+        // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ)
+        // [alpha.124 ข้อ 6] **สลับให้ตรงทิศ**: `[` ชี้ซ้าย = ซ่อนฝั่งซ้าย · `]` ชี้ขวา = ซ่อนฝั่งขวา
+        // เดิมกลับด้านกันมาตั้งแต่ .66r3 (เลือกตามคีย์ที่ว่าง ไม่ได้เลือกตามความหมาย) — ผู้ใช้กดผิดทุกครั้ง
         ["Backslash", true, false, "panels-hide-all"],
-        ["BracketLeft", true, true, "panels-hide-right"],
+        ["BracketLeft", true, true, "panels-hide-left"],
         // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
         ["KeyY", true, true, "workspace-menu"],
         // ═══════════ [alpha.79] ชุดใหญ่ที่ขาดไป ═══════════
@@ -21689,8 +22585,8 @@
         ["KeyN", true, true, "new-from-template"],
         ["Period", true, true, "goto-page"],
         ["Comma", true, true, "goto-scene"],
-        ["BracketRight", true, true, "panels-hide-left"],
-        // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งขวา)
+        ["BracketRight", true, true, "panels-hide-right"],
+        // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งซ้าย)
         ["KeyR", "ctrl+alt", false, "line-numbers"],
         // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
         ["Digit1", "ctrl+alt", false, "chapter"],
@@ -21706,6 +22602,23 @@
         ["Equal", true, true, "fmtbar-lock"],
         // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
         ["KeyS", "ctrl+alt", false, "save-all"],
+        // [alpha.124 ข้อ 7] "ปรับขั้นตอนส่งออก" มีชื่อใน SHORTCUT_LABELS มาตลอด แต่ไม่เคยมีแถวในตาราง
+        // → หน้า ตั้งค่า → ปุ่มลัด ไม่เคยแสดงรายการนี้เลย และตั้งเองก็ไม่ได้
+        ["KeyX", "ctrl+alt", false, "compile"],
+        // [alpha.124 ข้อ 3] ตารางคีย์ลัด (Cheatsheet) — เดิมผูก listener เองที่ Ctrl+Shift+/
+        // ซึ่ง **ชนกับ `fmtbar-here`** แล้วยิงทั้งคู่ · `?` เปล่า ๆ ยังเปิดได้เหมือนเดิม
+        ["Slash", "ctrl+alt", false, "cheatsheet"],
+        // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Sentence → lower → UPPER → …)
+        ["KeyU", "ctrl+alt", false, "text-case-cycle"],
+        // ══ [alpha.125 ข้อ G · ข้อ H] Ctrl+Alt+Shift — ชั้นที่ยังว่างทั้งชั้น ══
+        //
+        // Ctrl+Alt+<ตัวอักษร> ถูกใช้ครบทั้ง 26 ตัวแล้วตั้งแต่ alpha.124 (แผงมี 29 ตัว)
+        // ชั้นถัดไปที่ยังว่างสนิทคือเติม Shift เข้าไป — ตัวจับคีย์รองรับอยู่แล้ว
+        // (`needsAlt(needCtrl) === e.altKey` + เทียบ `needShift` แยก) และ `formatShortcut`
+        // ก็แสดงเป็น `Ctrl+Alt+Shift+B` ได้ถูกต้องอยู่แล้ว
+        ["KeyB", "ctrl+alt", true, "toggle-panel", "backlinks"],
+        ["KeyT", "ctrl+alt", true, "thesaurus"],
+        ["KeyI", "ctrl+alt", true, "import-scrivener"],
         // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
         ["KeyD", "ctrl+alt", false, "toggle-panel", "dashboard"],
         ["KeyT", "ctrl+alt", false, "toggle-panel", "timeline"],
@@ -21795,6 +22708,11 @@
         "line-numbers": "shortcuts.lineNumbers",
         "delete-line": "ui.shortcuts.deleteLine",
         "gallery": "shortcuts.gallery",
+        "cheatsheet": "ui.shortcuts.cheatsheet",
+        "text-case-cycle": "ui.shortcuts.textCaseCycle",
+        "toggle-panel:backlinks": "ui.shortcuts.panelBacklinks",
+        "thesaurus": "ui.shortcuts.thesaurus",
+        "import-scrivener": "ui.shortcuts.importScrivener",
         "sp-element:parenthetical": "shortcuts.spParenthetical",
         "sp-element:dialogue": "shortcuts.spDialogue",
         "sp-element:transition": "shortcuts.spTransition",
@@ -21871,7 +22789,9 @@
             "export-blog",
             "close-tab",
             "close-all-tabs",
-            "new-from-template"
+            "new-from-template",
+            "compile",
+            "import-scrivener"
           ]
         },
         {
@@ -21889,7 +22809,8 @@
             "select-scene",
             "delete-line",
             "nbsp",
-            "insert-image"
+            "insert-image",
+            "thesaurus"
           ]
         },
         {
@@ -21910,7 +22831,8 @@
             "fmt:align:left",
             "fmt:align:center",
             "fmt:align:right",
-            "fmt:align:justify"
+            "fmt:align:justify",
+            "text-case-cycle"
           ]
         },
         {
@@ -21985,10 +22907,12 @@
             "toggle-panel:outline",
             "toggle-panel:notes",
             "toggle-panel:log",
-            "toggle-panel:search"
+            "toggle-panel:search",
+            // [alpha.125 ข้อ G]
+            "toggle-panel:backlinks"
           ]
         },
-        { key: "other", labelKey: "ui.shortcuts.catOther", ids: ["settings", "dev-console"] }
+        { key: "other", labelKey: "ui.shortcuts.catOther", ids: ["settings", "dev-console", "cheatsheet"] }
       ];
       isMac = (() => {
         try {
@@ -21998,6 +22922,173 @@
         }
       })();
       accelText = formatShortcut;
+    }
+  });
+
+  // src/entity-mention.js
+  var entity_mention_exports = {};
+  __export(entity_mention_exports, {
+    MENTION_ANY: () => MENTION_ANY,
+    MENTION_RE: () => MENTION_RE,
+    MENTION_RE_V1: () => MENTION_RE_V1,
+    MENTION_USER: () => MENTION_USER,
+    RESERVED_MENTIONS: () => RESERVED_MENTIONS,
+    castNames: () => castNames,
+    expandMentions: () => expandMentions,
+    insertAt: () => insertAt,
+    isReserved: () => isReserved,
+    keysOf: () => keysOf,
+    mentionChips: () => mentionChips,
+    mentionIndex: () => mentionIndex,
+    mentionToken: () => mentionToken,
+    mentionedChars: () => mentionedChars,
+    migrateMentions: () => migrateMentions,
+    needsPromptMigration: () => needsPromptMigration,
+    nextPromptKey: () => nextPromptKey,
+    normKey: () => normKey,
+    normalizePrompts: () => normalizePrompts,
+    parseMentions: () => parseMentions,
+    promptsText: () => promptsText,
+    shortcodeOf: () => shortcodeOf,
+    unknownMentions: () => unknownMentions
+  });
+  function normKey(s) {
+    return String(s || "").replace(/[​‌‍﻿]/g, "").replace(/\s+/g, "").toLowerCase();
+  }
+  function mentionToken(name5) {
+    return "{{" + String(name5 || "").trim() + "}}";
+  }
+  function isReserved(raw) {
+    return RESERVED_MENTIONS.includes(normKey(raw));
+  }
+  function migrateMentions(text) {
+    const s = String(text == null ? "" : text);
+    if (!s.includes("{[")) return s;
+    return s.replace(new RegExp(MENTION_RE_V1.source, "g"), (all, raw) => mentionToken(raw.trim()));
+  }
+  function shortcodeOf(x) {
+    const own = String(x && x.shortcode || "").trim();
+    return own || String(x && x.name || "").trim();
+  }
+  function keysOf(x) {
+    const out = [shortcodeOf(x), x && x.name || "", ...x && x.aliases || []];
+    return [...new Set(out.map(normKey).filter(Boolean))];
+  }
+  function mentionIndex(cast = []) {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const c of cast || []) {
+      if (!c) continue;
+      for (const k of keysOf(c)) if (!map2.has(k)) map2.set(k, c);
+    }
+    return map2;
+  }
+  function parseMentions(text) {
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    const re = new RegExp(MENTION_RE.source, "g");
+    let m;
+    while ((m = re.exec(String(text || ""))) !== null) {
+      const raw = m[1].trim();
+      if (!raw) continue;
+      const k = normKey(raw);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(raw);
+    }
+    return out;
+  }
+  function castNames(cast = []) {
+    return (cast || []).map((c) => String(c && c.name || "").trim()).filter(Boolean);
+  }
+  function expandMentions(text, cast = [], opts = {}) {
+    const idx4 = mentionIndex(cast);
+    const names = castNames(cast);
+    const userName = String(opts.user || "").trim();
+    const userLabel = String(opts.userLabel || "").trim();
+    const anyLabel = String(opts.anyLabel || "").trim();
+    return String(text || "").replace(new RegExp(MENTION_RE.source, "g"), (all, raw) => {
+      const k = normKey(raw);
+      if (k === MENTION_USER) return userName || userLabel || raw.trim();
+      if (k === MENTION_ANY) {
+        if (names.length) return anyLabel ? anyLabel + " (" + names.join(" / ") + ")" : names.join(" / ");
+        return anyLabel || raw.trim();
+      }
+      const hit = idx4.get(k);
+      return hit ? hit.name || raw.trim() : raw.trim();
+    });
+  }
+  function unknownMentions(text, cast = []) {
+    const idx4 = mentionIndex(cast);
+    return parseMentions(text).filter((raw) => !isReserved(raw) && !idx4.get(normKey(raw)));
+  }
+  function mentionedChars(text, cast = []) {
+    const idx4 = mentionIndex(cast);
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const raw of parseMentions(text)) {
+      if (isReserved(raw)) continue;
+      const hit = idx4.get(normKey(raw));
+      if (hit && !seen.has(hit.id || hit.name)) {
+        seen.add(hit.id || hit.name);
+        out.push(hit);
+      }
+    }
+    return out;
+  }
+  function mentionChips(cast = [], labels = {}) {
+    const rows = [
+      { id: "", kind: "any", name: String(labels.any || MENTION_ANY), token: mentionToken(MENTION_ANY) },
+      { id: "", kind: "user", name: String(labels.user || MENTION_USER), token: mentionToken(MENTION_USER) }
+    ];
+    for (const c of cast || []) {
+      if (!c || !String(c.name || "").trim()) continue;
+      rows.push({ id: c.id || "", kind: "char", name: c.name, token: mentionToken(shortcodeOf(c)) });
+    }
+    return rows;
+  }
+  function insertAt(text, start, end, token) {
+    const s = String(text || "");
+    const a = Math.max(0, Math.min(s.length, Number(start) || 0));
+    const b = Math.max(a, Math.min(s.length, Number(end) === 0 ? 0 : Number(end) || a));
+    const before = s.slice(0, a);
+    const after = s.slice(b);
+    const lead = before && !/\s$/.test(before) ? " " : "";
+    const tail = after && !/^\s/.test(after) ? " " : "";
+    const ins = lead + token + tail;
+    return { text: before + ins + after, caret: (before + lead + token).length };
+  }
+  function normalizePrompts(list) {
+    const rows = Array.isArray(list) ? list : Object.entries(list && typeof list === "object" ? list : {}).map(([k, v2]) => ({ k, v: v2 }));
+    const out = [];
+    for (const r of rows) {
+      if (!r) continue;
+      const k = String(r.k != null ? r.k : r.key != null ? r.key : r.label || "").trim();
+      const v2 = String(r.v != null ? r.v : r.value != null ? r.value : r.text || "");
+      if (!k && !v2.trim()) continue;
+      out.push({ k, v: v2 });
+    }
+    return out;
+  }
+  function needsPromptMigration(list) {
+    if (list == null) return false;
+    if (!Array.isArray(list)) return true;
+    return list.some((r) => !r || typeof r !== "object" || typeof r.k !== "string" || typeof r.v !== "string");
+  }
+  function nextPromptKey(list) {
+    const n2 = normalizePrompts(list).length;
+    return "Prompt " + (n2 < 26 ? String.fromCharCode(65 + n2) : String(n2 + 1));
+  }
+  function promptsText(list, cast = [], opts = {}) {
+    return normalizePrompts(list).filter((r) => r.v.trim()).map((r) => (r.k ? r.k + ": " : "") + expandMentions(r.v.trim(), cast, opts)).join("\n");
+  }
+  var MENTION_RE, MENTION_RE_V1, MENTION_ANY, MENTION_USER, RESERVED_MENTIONS;
+  var init_entity_mention = __esm({
+    "src/entity-mention.js"() {
+      MENTION_RE = /\{\{([^{}]{1,60})\}\}/g;
+      MENTION_RE_V1 = /\{\[([^[\]{}]{1,60})\]\}/g;
+      MENTION_ANY = "character";
+      MENTION_USER = "user";
+      RESERVED_MENTIONS = [MENTION_ANY, MENTION_USER];
     }
   });
 
@@ -22417,9 +23508,11 @@
   var auto_link_ui_exports = {};
   __export(auto_link_ui_exports, {
     autoLinkReady: () => autoLinkReady,
+    backlinkSummary: () => backlinkSummary,
     ensureAutoLink: () => ensureAutoLink,
     getBacklinksFor: () => getBacklinksFor,
     rebuildAutoLink: () => rebuildAutoLink,
+    renderBacklinksPanel: () => renderBacklinksPanel,
     renderBacklinksTab: () => renderBacklinksTab,
     resetAutoLink: () => resetAutoLink,
     updateSceneLink: () => updateSceneLink
@@ -22501,6 +23594,98 @@
     }
     host2.append(list);
   }
+  async function backlinkSummary() {
+    if (!state.root) return [];
+    await ensureAutoLink();
+    const ents = await listEntities(state.root).catch(() => []);
+    const rows = ents.map((e) => {
+      const scenes = getBacklinksFor(e.path) || [];
+      return {
+        path: e.path,
+        name: e.name || "",
+        cat: e.cat || "",
+        scenes,
+        count: scenes.length,
+        hits: scenes.reduce((n2, s) => n2 + (s.count || 1), 0)
+      };
+    });
+    rows.sort((a, b) => a.count - b.count || String(a.name).localeCompare(String(b.name), "th"));
+    return rows;
+  }
+  async function renderBacklinksPanel(host2, onOpenScene) {
+    if (!host2) return null;
+    host2.replaceChildren();
+    if (!state.root) {
+      host2.append(el("div", "k-panel-empty", t("ui.common.cantOpenProject")));
+      return null;
+    }
+    const head2 = el("div", "bl-panel-head");
+    head2.append(el("span", "k-dlg-title", t("ui.worldAutoLink.panelTitle")));
+    const reB = el("button", "k-panel-btn", "\u21BB");
+    reB.title = t("ui.worldAutoLink.rebuild");
+    head2.append(reB);
+    host2.append(head2);
+    const filt = el("input", "k-dlg-input bl-filter");
+    filt.placeholder = t("ui.worldAutoLink.filterPlaceholder");
+    host2.append(filt);
+    const onlyOrphan = el("input");
+    onlyOrphan.type = "checkbox";
+    const lab = el("label", "bl-only");
+    lab.append(onlyOrphan, document.createTextNode(" " + t("ui.worldAutoLink.onlyOrphan")));
+    host2.append(lab);
+    const list = el("div", "bl-panel-list");
+    const status = el("div", "dim bl-panel-status");
+    host2.append(list, status);
+    let rows = [];
+    const draw3 = () => {
+      list.replaceChildren();
+      const q = filt.value.trim().toLowerCase();
+      const show = rows.filter((r) => (!q || r.name.toLowerCase().includes(q)) && (!onlyOrphan.checked || r.count === 0));
+      if (!show.length) {
+        list.append(el("div", "dim", t("ui.worldAutoLink.noRows")));
+        return;
+      }
+      for (const r of show) {
+        const box2 = el("div", "bl-ent" + (r.count ? "" : " bl-ent-orphan"));
+        const h = el("div", "bl-ent-head");
+        h.append(el("span", "bl-ent-name", r.name));
+        h.append(el(
+          "span",
+          "bl-ent-count",
+          r.count ? tf("ui.worldAutoLink.inNScenes", r.count) : t("ui.worldAutoLink.zero")
+        ));
+        box2.append(h);
+        for (const s of r.scenes.slice(0, 8)) {
+          const row2 = el("div", "bl-row");
+          row2.append(el("span", "bl-count", (s.count || 1) + "\xD7 "));
+          const nm = el("span", "bl-name", s.title || s.sceneId);
+          nm.onclick = () => onOpenScene && onOpenScene(s.sceneId, s.title);
+          row2.append(nm);
+          box2.append(row2);
+        }
+        if (r.scenes.length > 8) box2.append(el("div", "dim bl-more", "\u2026"));
+        list.append(box2);
+      }
+      status.textContent = tf(
+        "ui.worldAutoLink.summaryN",
+        show.length,
+        rows.filter((r) => !r.count).length
+      );
+    };
+    const load = async () => {
+      list.replaceChildren(el("div", "dim", t("ui.worldAutoLink.busyLoadIndexLink")));
+      rows = await backlinkSummary();
+      draw3();
+    };
+    filt.oninput = draw3;
+    onlyOrphan.onchange = draw3;
+    reB.onclick = async () => {
+      await rebuildAutoLink();
+      await load();
+    };
+    await load();
+    return { list, filt, onlyOrphan, reload: load, rows: () => rows };
+  }
   function resetAutoLink() {
     autoLink = null;
     building = null;
@@ -22539,13 +23724,13 @@
     }
     const close2 = () => {
       ov.remove();
-      document.removeEventListener("keydown", esc6);
+      document.removeEventListener("keydown", esc7);
     };
-    function esc6(e) {
+    function esc7(e) {
       if (e.key === "Escape") close2();
     }
     ov.onclick = close2;
-    document.addEventListener("keydown", esc6);
+    document.addEventListener("keydown", esc7);
     document.body.appendChild(ov);
   }
   var CAT_TH, WikiEditor;
@@ -22559,6 +23744,7 @@
       init_wiki_images();
       init_wiki_profile();
       init_core();
+      init_entity_mention();
       CAT_TH = {
         characters: t("ui.common.character"),
         locations: t("ui.common.place"),
@@ -22873,11 +24059,12 @@
             };
             avatar.onclick = async () => {
               const items = [];
-              if (this.pickFromGallery) items.push(t("ui.wiki.pickLibraryImageProject"));
+              const galLabel = this.pickFromGallery ? t("ui.wiki.pickLibraryImageProject") : null;
+              if (galLabel) items.push(galLabel);
               items.push(t("ui.wiki.addImageFile"));
               const pick2 = items.length > 1 && this.pickTitle ? await this.pickTitle(items) : items[items.length - 1];
               if (!pick2) return;
-              if (pick2.startsWith("\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E04\u0E25\u0E31\u0E07")) {
+              if (galLabel && pick2 === galLabel) {
                 const it = await this.pickFromGallery();
                 if (!it) return;
                 setAvatar(it.file || it);
@@ -22956,6 +24143,43 @@
           );
           rAlias.appendChild(iAlias);
           aiFill(rAlias, iAlias, t("ui.wiki.nameOther"));
+          const rCode = row2(t("ui.wiki.shortcode"));
+          const iCode = input(this.e.shortcode || "", (v2) => {
+            this.e.shortcode = v2;
+            syncCode();
+          });
+          iCode.placeholder = t("ui.wiki.shortcodePlaceholder");
+          rCode.appendChild(iCode);
+          const codeHint = document.createElement("div");
+          codeHint.className = "wiki-field-hint";
+          const syncCode = () => {
+            codeHint.textContent = tf(
+              "ui.wiki.shortcodePreview",
+              "{[" + (String(iCode.value || "").trim() || this.e.name || "?") + "]}"
+            );
+          };
+          syncCode();
+          rCode.appendChild(codeHint);
+          const rTags = row2(t("ui.wiki.tags"));
+          const iTags = input((this.e.tags || []).join(", "), (v2) => {
+            this.e.tags = v2.split(",").map((x) => x.trim()).filter(Boolean);
+            syncTags();
+          });
+          iTags.placeholder = t("ui.wiki.tagsPlaceholder");
+          rTags.appendChild(iTags);
+          const tagChips = document.createElement("div");
+          tagChips.className = "wiki-tag-chips";
+          const syncTags = () => {
+            tagChips.innerHTML = "";
+            for (const x of this.e.tags || []) {
+              const c = document.createElement("span");
+              c.className = "wiki-tag-chip";
+              c.textContent = x;
+              tagChips.appendChild(c);
+            }
+          };
+          syncTags();
+          rTags.appendChild(tagChips);
           const fields = this.e.fields || {};
           if (Object.keys(fields).length) {
             const fh = document.createElement("div");
@@ -23002,6 +24226,79 @@
               this.render();
             };
             r.appendChild(del2);
+          }
+          {
+            const ph = document.createElement("div");
+            ph.className = "wiki-sub";
+            ph.textContent = t("ui.wiki.prompts");
+            const addPr = document.createElement("span");
+            addPr.className = "row-add";
+            addPr.innerHTML = iconHtml("plus", 14);
+            addPr.title = t("ui.wiki.addPrompt");
+            addPr.onclick = () => {
+              const rows = normalizePrompts(this.e.prompts);
+              this.e.prompts = [...rows, { k: nextPromptKey(rows), v: "" }];
+              this.markDirty();
+              this.render();
+            };
+            ph.appendChild(addPr);
+            wrap2.appendChild(ph);
+            const prompts = normalizePrompts(this.e.prompts);
+            if (needsPromptMigration(this.e.prompts)) {
+              this.e.prompts = prompts;
+              this.markDirty();
+            }
+            if (!prompts.length) {
+              const empty2 = document.createElement("div");
+              empty2.className = "wiki-field-hint";
+              empty2.textContent = t("ui.wiki.promptsHint");
+              wrap2.appendChild(empty2);
+            }
+            prompts.forEach((pr, i5) => {
+              const box2 = document.createElement("div");
+              box2.className = "wiki-prompt";
+              const top = document.createElement("div");
+              top.className = "wiki-prompt-top";
+              const key2 = document.createElement("input");
+              key2.className = "wiki-input wiki-prompt-key";
+              key2.value = pr.k;
+              key2.placeholder = t("ui.wiki.promptKeyPlaceholder");
+              key2.addEventListener("input", () => {
+                const cur = normalizePrompts(this.e.prompts);
+                if (cur[i5]) {
+                  cur[i5] = { ...cur[i5], k: key2.value };
+                  this.e.prompts = cur;
+                  this.markDirty();
+                }
+              });
+              const del2 = document.createElement("span");
+              del2.className = "row-add";
+              del2.innerHTML = iconHtml("x", 14);
+              del2.title = t("ui.wiki.delPrompt");
+              del2.onclick = () => {
+                const cur = normalizePrompts(this.e.prompts);
+                cur.splice(i5, 1);
+                this.e.prompts = cur;
+                this.markDirty();
+                this.render();
+              };
+              top.append(key2, del2);
+              const val = document.createElement("textarea");
+              val.className = "wiki-input wiki-prompt-val";
+              val.rows = 3;
+              val.value = pr.v;
+              val.placeholder = t("ui.wiki.promptValPlaceholder");
+              val.addEventListener("input", () => {
+                const cur = normalizePrompts(this.e.prompts);
+                if (cur[i5]) {
+                  cur[i5] = { ...cur[i5], v: val.value };
+                  this.e.prompts = cur;
+                  this.markDirty();
+                }
+              });
+              box2.append(top, val);
+              wrap2.appendChild(box2);
+            });
           }
           const ih = document.createElement("div");
           ih.className = "wiki-sub";
@@ -23200,6 +24497,7 @@
             const ti = document.createElement("input");
             ti.className = "wiki-input";
             ti.value = sec.title || "";
+            ti.placeholder = t("ui.wiki.secTitlePh");
             ti.addEventListener("input", () => {
               sec.title = ti.value;
               this.markDirty();
@@ -23496,11 +24794,30 @@
         page2.append(d);
       };
       if (pg.continuedTop) putCont("top", pg.continuedTop);
+      const hdrRows = typeof opts.headerRows === "function" ? opts.headerRows(pg.index) : null;
+      if (hdrRows && hdrRows.length) {
+        const hd = document.createElement("div");
+        hd.className = "sp-hdr";
+        hd.style.cssText = "position:relative;height:1em;white-space:nowrap;margin:0 0 " + Math.max(0, num(opts.headerGapLines, 1)) + "em 0";
+        for (const r of hdrRows) {
+          const sp = document.createElement("span");
+          const side = r.align === "right" ? "right" : r.align === "center" ? "center" : "left";
+          const off3 = num(r.xOffset, 0);
+          sp.style.cssText = "position:absolute;top:0;" + (side === "center" ? "left:50%;transform:translateX(calc(-50% + " + off3 + "in))" : side === "right" ? "right:" + +(-off3).toFixed(4) + "in" : "left:" + off3 + "in") + (r.bold ? ";font-weight:700" : "") + (r.italic ? ";font-style:italic" : "") + (r.underline ? ";text-decoration:underline" : "");
+          sp.textContent = r.text;
+          hd.append(sp);
+        }
+        page2.append(hd);
+      }
       for (const b of pg.blocks || []) {
         const d = document.createElement("div");
         d.className = "sp sp-" + (b.el || "action");
         if (Number.isFinite(b.pos)) d.dataset.pos = String(b.pos);
         d.textContent = b.text || "";
+        if (typeof opts.colorOf === "function") {
+          const c = opts.colorOf(b.el || "action");
+          if (c) d.style.color = c;
+        }
         if (b.el === "scene" && b.sceneNo && f.sceneNumbers && f.sceneNumbers.show) {
           for (const side of ["l", "r"]) {
             const s = document.createElement("span");
@@ -23517,6 +24834,13 @@
         firstBlock.style.setProperty("--k-pad", "0");
       }
       if (pg.continuedBottom) putCont("bottom", pg.continuedBottom);
+      const wm = String(opts.watermark || "").trim();
+      if (wm) {
+        const w = document.createElement("div");
+        w.className = "sp-page-wm";
+        w.textContent = wm;
+        page2.append(w);
+      }
       slot.append(page2);
       host2.append(slot);
       els.push(page2);
@@ -23663,6 +24987,56 @@
   function refreshSceneNumbers(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(snKey, true));
   }
+  function setSpErrorMarksOn(on2) {
+    const next = !!on2;
+    const changed = next !== _errOn;
+    _errOn = next;
+    return changed;
+  }
+  function isSpErrorMarks() {
+    return _errOn;
+  }
+  function spErrorMarks() {
+    return _errMarks.slice();
+  }
+  function setSpErrorMarks(list) {
+    const next = (list || []).filter((e) => Number.isFinite(e.pos)).map((e) => ({ pos: e.pos, severity: e.severity === "error" ? "error" : "warn" }));
+    const same = next.length === _errMarks.length && next.every((e, i5) => e.pos === _errMarks[i5].pos && e.severity === _errMarks[i5].severity);
+    _errMarks = next;
+    return !same;
+  }
+  function errDecos(doc3) {
+    if (!_errOn || !doc3 || !_errMarks.length) return DecorationSet.empty;
+    const worst = /* @__PURE__ */ new Map();
+    for (const m of _errMarks) {
+      if (worst.get(m.pos) !== "error") worst.set(m.pos, m.severity);
+    }
+    const out = [];
+    doc3.forEach((node, pos) => {
+      const sev = worst.get(pos);
+      if (!sev) return;
+      out.push(Decoration.node(pos, pos + node.nodeSize, { class: "sp-err-" + sev }));
+    });
+    return DecorationSet.create(doc3, out);
+  }
+  function spErrorMarkPlugin() {
+    return new Plugin({
+      key: errKey,
+      state: {
+        init: (_c, st) => errDecos(st.doc),
+        apply(tr4, prev, _o, st) {
+          if (!tr4.docChanged && !tr4.getMeta(errKey)) return prev.map(tr4.mapping, tr4.doc);
+          return errDecos(st.doc);
+        }
+      },
+      props: { decorations(state2) {
+        return errKey.getState(state2);
+      } }
+    });
+  }
+  function refreshSpErrorMarks(view2) {
+    if (view2) view2.dispatch(view2.state.tr.setMeta(errKey, true));
+  }
   function setContinueds(list) {
     const next = (list || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
     const sig = ctSigOf(next);
@@ -23717,7 +25091,7 @@
   function refreshContinueds(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(ctKey, true));
   }
-  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, applySpPagePads, setSpPageNumberLabel, ctKey, _conts, _contSig, ctSigOf;
+  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, errKey, _errMarks, _errOn, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, applySpPagePads, setSpPageNumberLabel, ctKey, _conts, _contSig, ctSigOf;
   var init_sp_format_guide = __esm({
     "src/sp-format-guide.js"() {
       init_i18n();
@@ -23731,6 +25105,9 @@
       snKey = new PluginKey("kspsceneno");
       _snOn = false;
       _snSuffix = "";
+      errKey = new PluginKey("ksperrmark");
+      _errMarks = [];
+      _errOn = true;
       SP_PB = createPageBreakPlugin({
         key: "ksppagebreak",
         cls: "sp-page-break",
@@ -23752,12 +25129,12 @@
 
   // src/screenplay.js
   function inlineContent(text) {
-    const doc3 = (0, import_md4.mdToDoc)(text);
+    const doc3 = (0, import_md5.mdToDoc)(text);
     const p = (doc3.content || [])[0] || {};
     return (p.type === "paragraph" ? p.content : null) || (text ? [{ type: "text", text }] : []);
   }
   function inlineToMd(content) {
-    return (0, import_md4.docToMd)({ type: "doc", content: [{ type: "paragraph", content }] });
+    return (0, import_md5.docToMd)({ type: "doc", content: [{ type: "paragraph", content }] });
   }
   function spDocFromMarkdown(markdown, resolveSrc = (p) => p) {
     const blocks = parseScript(markdown || "").map((b) => {
@@ -23779,7 +25156,7 @@
     if (!blocks.length) blocks.push({ type: "sp", attrs: { el: "scene" } });
     return spSchema.nodeFromJSON({ type: "doc", content: blocks });
   }
-  var import_md4, marks, spSchema, SP_BULLET_RE, SP_NUMBER_RE, SP_ANY_LIST_RE, SPEditor;
+  var import_md5, marks, spSchema, SP_BULLET_RE, SP_NUMBER_RE, SP_ANY_LIST_RE, SPEditor;
   var init_screenplay = __esm({
     "src/screenplay.js"() {
       init_dist2();
@@ -23792,7 +25169,7 @@
       init_core();
       init_sp_format();
       init_text_case();
-      import_md4 = __toESM(require_md());
+      import_md5 = __toESM(require_md());
       init_editor();
       init_sp_format_guide();
       init_fountain();
@@ -23870,6 +25247,7 @@
         } = {}) {
           this.onChange = onChange;
           this.onElement = onElement;
+          this._silent = false;
           this.getChecker = getChecker;
           this.resolveSrc = resolveSrc;
           this.getNames = getNames;
@@ -23930,8 +25308,10 @@
                 // [57] เส้นคั่นหน้า (ตำแหน่งมาจาก paginate ใน app.js)
                 spSceneNumberPlugin(),
                 // [alpha.57a] เลขฉากสองฝั่งหัวฉาก
-                spContinuedPlugin()
+                spContinuedPlugin(),
                 // [alpha.58 · 55–56] (CONTINUED)/CONTINUED:/(MORE)/(cont'd)
+                spErrorMarkPlugin()
+                // [alpha.124 ข้อ 33] ขีดจุดที่ตัวตรวจบทแจ้งไว้ ให้เห็นในเอกสาร
               ]
             }),
             handleKeyDown(view2, ev) {
@@ -24006,7 +25386,7 @@
               const st = self2.view.state.apply(tr4);
               self2.view.updateState(st);
               if (tr4.docChanged) {
-                if (self2.onChange) self2.onChange();
+                if (self2.onChange && !self2._silent) self2.onChange();
                 self2._autoDetect();
               }
               if (self2.onElement) self2.onElement(self2.curElement());
@@ -24154,6 +25534,52 @@
           const b = this.curBlock();
           return b && b.node.attrs.align || "left";
         }
+        // ═══ [alpha.125 ข้อ I] ★ การจัดหน้าของบทภาพยนตร์ "อยู่ต่อ" หลังปิด-เปิดไฟล์แล้ว ═══
+        //
+        // เดิมเป็น session-only โดยตั้งใจ — เหตุผลที่บันทึกไว้คือ "กันพัง fountain round-trip"
+        // ซึ่งถูกต้อง **ถ้าจะเขียนลงเนื้อไฟล์**: fountain ไม่มีไวยากรณ์สำหรับ "ชิดขวา" และการ
+        // ยัดรหัสของตัวเองลงไปจะทำให้ไฟล์เปิดในโปรแกรมอื่น (หรือ v1) ผิดทันที
+        //
+        // ทางที่ปลอดภัย: เก็บใน **frontmatter** เป็นแผนที่ดัชนีบล็อก → ทิศ (`align: [3:center]`)
+        // ทางเดียวกับที่นิยายใช้อยู่แล้วเป๊ะ (`collectAlign`/`alignToString` ใน md.js · มีเทสคุม)
+        // เนื้อไฟล์ fountain **ไม่ถูกแตะแม้แต่ตัวเดียว** → round-trip ยังปิดวงเหมือนเดิม
+        //
+        // ดัชนีถูกเขียนใหม่ทุกครั้งที่บันทึก (ตอนนั้นดัชนีกับบล็อกตรงกันเป๊ะเสมอ) — แก้ไฟล์นอก
+        // โปรแกรมจนจำนวนบล็อกเลื่อน อย่างแย่ที่สุดคือทิศไปลงบล็อกข้างเคียง ไม่ใช่ข้อมูลหาย
+        /** แผนที่การจัดหน้า: { "3": "center" } — ข้ามบล็อกที่ชิดซ้าย (ค่าเริ่มต้น) */
+        getAlignMap() {
+          const out = {};
+          let i5 = 0;
+          this.view.state.doc.forEach((node) => {
+            const a = node.attrs && node.attrs.align;
+            if (a && a !== "left") out[String(i5)] = a;
+            i5++;
+          });
+          return out;
+        }
+        /** คืนการจัดหน้าจากแผนที่ (ใช้ตอนเปิดไฟล์) — คืนจำนวนบล็อกที่ตั้งได้จริง */
+        applyAlignMap(map2) {
+          const m = map2 || {};
+          if (!Object.keys(m).length) return 0;
+          const v2 = this.view;
+          let tr4 = v2.state.tr, i5 = 0, n2 = 0;
+          v2.state.doc.forEach((node, pos) => {
+            const a = m[String(i5)];
+            i5++;
+            if (!a || a === "left" || node.type !== spSchema.nodes.sp) return;
+            tr4 = tr4.setNodeMarkup(pos, null, { ...node.attrs, align: a });
+            n2++;
+          });
+          if (n2) {
+            this._silent = true;
+            try {
+              v2.dispatch(tr4.setMeta("addToHistory", false));
+            } finally {
+              this._silent = false;
+            }
+          }
+          return n2;
+        }
         cycle(dir2) {
           const cur = this.curElement();
           const i5 = TAB_CYCLE.indexOf(cur);
@@ -24251,7 +25677,7 @@
           const v2 = this.view;
           const cur = this.curElement();
           const spCycle = state.settings?.spCycle || DEFAULT_SP_CYCLE;
-          const nextEl = sameEl ? cur : spCycle[cur]?.enter || NEXT_ELEM2[cur] || "action";
+          const nextEl = sameEl ? cur : spCycle[cur]?.enter || NEXT_ELEM[cur] || "action";
           let tr4 = v2.state.tr;
           {
             const s = tr4.selection;
@@ -24284,13 +25710,13 @@
             return true;
           }
           const sp = spSchema.nodes.sp.create({ el: nextEl });
-          const insertAt = $f.depth >= 1 ? $f.after(1) : tr4.selection.to;
+          const insertAt2 = $f.depth >= 1 ? $f.after(1) : tr4.selection.to;
           const curBlank = $f.depth >= 1 && $f.parent.type === spSchema.nodes.sp && !String($f.parent.textContent || "").trim();
           const nBlank = curBlank ? 0 : blankLinesBefore(nextEl, { elements: state.settings && state.settings.spElements });
           const lead = [];
           for (let i5 = 0; i5 < nBlank; i5++) lead.push(spSchema.nodes.sp.create({ el: nextEl }));
-          tr4 = tr4.insert(insertAt, Fragment.fromArray(lead.concat([sp])));
-          tr4 = tr4.setSelection(TextSelection.create(tr4.doc, insertAt + nBlank * 2 + 1));
+          tr4 = tr4.insert(insertAt2, Fragment.fromArray(lead.concat([sp])));
+          tr4 = tr4.setSelection(TextSelection.create(tr4.doc, insertAt2 + nBlank * 2 + 1));
           v2.dispatch(tr4.scrollIntoView());
           if (this.onElement) this.onElement(nextEl);
           return true;
@@ -25290,20 +26716,20 @@
   function extractImageRefs(text) {
     const s = String(text || "");
     const out = [];
-    const lineAt = (idx4) => s.slice(0, idx4).split("\n").length;
+    const lineAt2 = (idx4) => s.slice(0, idx4).split("\n").length;
     let m;
     MD_IMG.lastIndex = 0;
     while (m = MD_IMG.exec(s)) {
       if (m.index > 0 && s[m.index - 1] === "\\") continue;
       const path = cleanRef(m[2]);
       if (!path || /^(https?|data):/i.test(path)) continue;
-      out.push({ raw: m[0], path, file: basename(path), alt: m[1] || "", line: lineAt(m.index), index: m.index });
+      out.push({ raw: m[0], path, file: basename(path), alt: m[1] || "", line: lineAt2(m.index), index: m.index });
     }
     HTML_IMG.lastIndex = 0;
     while (m = HTML_IMG.exec(s)) {
       const path = cleanRef(m[1]);
       if (!path || /^(https?|data):/i.test(path)) continue;
-      out.push({ raw: m[0], path, file: basename(path), alt: "", line: lineAt(m.index), index: m.index });
+      out.push({ raw: m[0], path, file: basename(path), alt: "", line: lineAt2(m.index), index: m.index });
     }
     return out.sort((a, b) => a.index - b.index);
   }
@@ -25607,8 +27033,8 @@
     zoomAt: () => zoomAt
   });
   function boardItemId() {
-    seq = (seq + 1) % 1e6;
-    return "mb" + Date.now().toString(36) + seq.toString(36);
+    seq2 = (seq2 + 1) % 1e6;
+    return "mb" + Date.now().toString(36) + seq2.toString(36);
   }
   function newBoardItem(file, opts = {}) {
     return {
@@ -25749,7 +27175,7 @@
     const b = boardBounds(list);
     return { count: list.length, files: new Set(list.map((i5) => i5.file)).size, width: b.w, height: b.h };
   }
-  var MIN_SIZE, MAX_SIZE, DEFAULT_SIZE, ZOOM_MIN, ZOOM_MAX, GRID, seq, numOr, clamp2, clampZoom;
+  var MIN_SIZE, MAX_SIZE, DEFAULT_SIZE, ZOOM_MIN, ZOOM_MAX, GRID, seq2, numOr, clamp2, clampZoom;
   var init_moodboard = __esm({
     "src/gallery/moodboard.js"() {
       MIN_SIZE = 40;
@@ -25758,7 +27184,7 @@
       ZOOM_MIN = 0.2;
       ZOOM_MAX = 4;
       GRID = 10;
-      seq = 0;
+      seq2 = 0;
       numOr = (v2, d) => Number.isFinite(+v2) ? +v2 : d;
       clamp2 = (v2, lo, hi) => Math.min(hi, Math.max(lo, v2));
       clampZoom = (z) => clamp2(numOr(z, 1), ZOOM_MIN, ZOOM_MAX);
@@ -29024,10 +30450,12 @@
   var ai_session_exports = {};
   __export(ai_session_exports, {
     CHAT_MODES: () => CHAT_MODES,
+    DEFAULT_HISTORY_TOKENS: () => DEFAULT_HISTORY_TOKENS,
     DEFAULT_MODE: () => DEFAULT_MODE,
     DEFAULT_SCOPE: () => DEFAULT_SCOPE,
     DEFAULT_SEND_KEY: () => DEFAULT_SEND_KEY,
     DEFAULT_VIEW: () => DEFAULT_VIEW,
+    HISTORY_KEEP_LAST: () => HISTORY_KEEP_LAST,
     SCOPES: () => SCOPES,
     SEND_KEYS: () => SEND_KEYS,
     SESSION_DIR: () => SESSION_DIR,
@@ -29035,6 +30463,7 @@
     TRANSCRIPT_VIEWS: () => TRANSCRIPT_VIEWS,
     addMessage: () => addMessage,
     archiveSession: () => archiveSession,
+    buildChatMessages: () => buildChatMessages,
     chatMessages: () => chatMessages,
     clearMessages: () => clearMessages,
     compact: () => compact,
@@ -29042,12 +30471,15 @@
     costOf: () => costOf,
     estimateTokens: () => estimateTokens,
     hasConversation: () => hasConversation,
+    historyBudget: () => historyBudget,
     isSendKey: () => isSendKey,
     modeCap: () => modeCap,
     modeDef: () => modeDef,
     newMessage: () => newMessage,
     newSession: () => newSession,
     newSessionId: () => newSessionId,
+    parseChatMarkdown: () => parseChatMarkdown,
+    parseInlineMd: () => parseInlineMd,
     rawJson: () => rawJson,
     renameSession: () => renameSession,
     scopeLabel: () => scopeLabel,
@@ -29151,7 +30583,7 @@
     return s;
   }
   function isAutoTitle(s) {
-    return !s.titleSet && (!s.title || s.title === "\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48");
+    return !s.titleSet && (!s.title || s.title === t("ui.aiSession.sessionNew"));
   }
   function titleFromText(text, max2 = 40) {
     const t3 = String(text || "").replace(/\s+/g, " ").trim();
@@ -29239,17 +30671,33 @@
     });
     return sortSessions(hit);
   }
-  function chatMessages(session, { maxTokens = 6e3, estimate = estimateTokens } = {}) {
-    const msgs = (session.messages || []).filter((m) => m.role === "user" || m.role === "assistant");
+  function historyBudget(session, meta2 = {}) {
+    const manual = Number(meta2 && meta2.historyTokens) || 0;
+    if (manual > 0) return manual;
+    const lim = Number(session && session.contextLimit) || 0;
+    return Math.max(DEFAULT_HISTORY_TOKENS, Math.floor(lim * 0.6));
+  }
+  function buildChatMessages(session, opts = {}) {
+    const {
+      maxTokens = DEFAULT_HISTORY_TOKENS,
+      estimate = estimateTokens,
+      keepLast = HISTORY_KEEP_LAST
+    } = opts;
+    const msgs = (session && session.messages || []).filter((m) => m.role === "user" || m.role === "assistant");
     const out = [];
     let budget = maxTokens;
+    let tokens = 0;
     for (let i5 = msgs.length - 1; i5 >= 0; i5--) {
       const cost = estimate(msgs[i5].text);
-      if (out.length && budget - cost < 0) break;
+      if (out.length >= Math.max(1, keepLast) && budget - cost < 0) break;
       budget -= cost;
+      tokens += cost;
       out.unshift({ role: msgs[i5].role, content: msgs[i5].text });
     }
-    return out;
+    return { messages: out, dropped: msgs.length - out.length, tokens };
+  }
+  function chatMessages(session, opts = {}) {
+    return buildChatMessages(session, opts).messages;
   }
   function estimateTokens(text) {
     if (!text) return 0;
@@ -29268,7 +30716,89 @@
     }
     return lines.join("\n").trim() + "\n";
   }
-  var SESSION_DIR, SESSION_VERSION, CHAT_MODES, DEFAULT_MODE, TRANSCRIPT_VIEWS, DEFAULT_VIEW, SCOPES, DEFAULT_SCOPE, SEND_KEYS, DEFAULT_SEND_KEY, _seq2, n;
+  function parseInlineMd(text) {
+    const src2 = String(text ?? "");
+    const out = [];
+    let buf = "";
+    const flush = () => {
+      if (buf) {
+        out.push({ t: "text", v: buf });
+        buf = "";
+      }
+    };
+    const re = /`([^`\n]+)`|(\*\*|__)(.+?)\2|~~(.+?)~~|(?<![*\w])\*(?!\s)([^*\n]+?)\*(?!\*)|(?<![_\w])_(?!\s)([^_\n]+?)_(?!\w)/g;
+    let last2 = 0, m;
+    while (m = re.exec(src2)) {
+      buf += src2.slice(last2, m.index);
+      flush();
+      if (m[1] !== void 0) out.push({ t: "code", v: m[1] });
+      else if (m[3] !== void 0) out.push({ t: "b", v: m[3] });
+      else if (m[4] !== void 0) out.push({ t: "s", v: m[4] });
+      else out.push({ t: "i", v: m[5] !== void 0 ? m[5] : m[6] });
+      last2 = m.index + m[0].length;
+    }
+    buf += src2.slice(last2);
+    flush();
+    return out.length ? out : [{ t: "text", v: "" }];
+  }
+  function parseChatMarkdown(text) {
+    const lines = String(text ?? "").split("\n");
+    const out = [];
+    let para2 = [];
+    const flushPara = () => {
+      if (!para2.length) return;
+      out.push({ type: "p", parts: parseInlineMd(para2.join("\n")) });
+      para2 = [];
+    };
+    for (let i5 = 0; i5 < lines.length; i5++) {
+      const line = lines[i5].replace(/\s+$/, "");
+      const fence = /^\s*(?:```|~~~)\s*([\w+#.-]*)\s*$/.exec(line);
+      if (fence) {
+        flushPara();
+        const body = [];
+        i5++;
+        for (; i5 < lines.length && !/^\s*(?:```|~~~)\s*$/.test(lines[i5]); i5++) body.push(lines[i5]);
+        out.push({ type: "code", lang: fence[1] || "", text: body.join("\n") });
+        continue;
+      }
+      if (!line.trim()) {
+        flushPara();
+        continue;
+      }
+      if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+        flushPara();
+        out.push({ type: "hr" });
+        continue;
+      }
+      const h = /^(#{1,6})\s+(.+)$/.exec(line);
+      if (h) {
+        flushPara();
+        out.push({ type: "h", level: h[1].length, parts: parseInlineMd(h[2].trim()) });
+        continue;
+      }
+      const bq = /^\s*>\s?(.*)$/.exec(line);
+      if (bq) {
+        flushPara();
+        out.push({ type: "quote", parts: parseInlineMd(bq[1]) });
+        continue;
+      }
+      const ul = /^\s*[-*+]\s+(.+)$/.exec(line);
+      const ol = /^\s*\d+[.)]\s+(.+)$/.exec(line);
+      if (ul || ol) {
+        flushPara();
+        const want = ul ? "ul" : "ol";
+        const prev = out[out.length - 1];
+        const item = parseInlineMd((ul || ol)[1]);
+        if (prev && prev.type === want) prev.items.push(item);
+        else out.push({ type: want, items: [item] });
+        continue;
+      }
+      para2.push(line);
+    }
+    flushPara();
+    return out;
+  }
+  var SESSION_DIR, SESSION_VERSION, CHAT_MODES, DEFAULT_MODE, TRANSCRIPT_VIEWS, DEFAULT_VIEW, SCOPES, DEFAULT_SCOPE, SEND_KEYS, DEFAULT_SEND_KEY, _seq2, n, DEFAULT_HISTORY_TOKENS, HISTORY_KEEP_LAST;
   var init_ai_session = __esm({
     "src/ai/ai-session.js"() {
       init_i18n();
@@ -29329,6 +30859,13 @@
       ];
       DEFAULT_VIEW = "normal";
       SCOPES = [
+        // [alpha.125 ข้อ B] ★ "เฉพาะส่วนที่เกี่ยวข้อง" — ค้นทั้งเรื่องแล้วส่งเฉพาะท่อนที่ตรงคำถาม
+        //
+        // ระดับ `project` เดิมคือ "ยัดไฟล์ไปเรื่อย ๆ จนครบ 24,000 ตัวอักษรแล้วตัด" → เรื่องยาว
+        // โมเดลจะเห็นแค่ไฟล์แรก ๆ ตามลำดับโฟลเดอร์ ไม่ใช่ส่วนที่เกี่ยวกับคำถามเลย
+        // ระดับนี้ใช้สาย RAG ของ `ai/ai-chat.js` (สเปกข้อ 79) ซึ่งฝังเวกเตอร์ **ออฟไลน์ได้**
+        // (`localEmbed` ใน ai-core.js — ไม่มีคีย์ก็ทำงาน) จึงหยิบเฉพาะท่อนที่ใกล้เคียงคำถามจริง ๆ
+        { id: "relevant", label: t("ui.aiSession.onlyRelevant") },
         { id: "project", label: t("ui.aiSession.project") },
         { id: "book", label: t("ui.aiSession.onlyBook") },
         { id: "chapter", label: t("ui.aiSession.onlyChapter") },
@@ -29343,6 +30880,8 @@
       DEFAULT_SEND_KEY = "enter";
       _seq2 = 0;
       n = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
+      DEFAULT_HISTORY_TOKENS = 32e3;
+      HISTORY_KEEP_LAST = 4;
     }
   });
 
@@ -29614,6 +31153,17 @@
     sendSel.value = ai.sendKey || DEFAULT_SEND_KEY;
     sendRow.append(sendSel);
     box2.append(sendRow);
+    const histRow = el("div", "wiki-row");
+    histRow.append(el("label", null, t("ui.aiProvider.historyTokens")));
+    const histInp = el("input", "wiki-input ai-hist-tokens");
+    histInp.type = "number";
+    histInp.min = "0";
+    histInp.step = "1000";
+    histInp.value = String(Number(ai.historyTokens) || 0);
+    histInp.title = t("ui.aiProvider.historyTokensHint");
+    histRow.append(histInp);
+    box2.append(histRow);
+    box2.append(el("div", "dim ai-hist-hint", t("ui.aiProvider.historyTokensHint")));
     const usage = ai.usage || [];
     if (usage.length) {
       const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
@@ -29685,6 +31235,7 @@
     };
     okB.onclick = async () => {
       aiMeta().sendKey = sendSel.value;
+      aiMeta().historyTokens = Math.max(0, Math.round(Number(histInp.value) || 0));
       await persist(rows, activeId);
       close2();
       setStatus(t("ui.common.saveSettingsAIDone"));
@@ -29865,7 +31416,7 @@
       testBtn.onclick = async () => {
         if (busy) return;
         const p = collect();
-        const errs = validateProvider(p).filter((e) => !e.includes("\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23"));
+        const errs = validateProvider(p).filter((e) => e !== t("ui.aiProviders.cantRenameProvider"));
         if (errs.length) {
           say(credMsg, false, errs[0]);
           return;
@@ -29889,7 +31440,7 @@
       };
       saveCredBtn.onclick = async () => {
         const p = collect();
-        const errs = validateProvider(p).filter((e) => !e.includes("\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E34\u0E01\u0E32\u0E23"));
+        const errs = validateProvider(p).filter((e) => e !== t("ui.aiProviders.cantRenameProvider"));
         if (errs.length) {
           say(credMsg, false, errs[0]);
           return;
@@ -29912,16 +31463,16 @@
       nameInp.focus();
       const done2 = (v2) => {
         ov.remove();
-        document.removeEventListener("keydown", esc6, true);
+        document.removeEventListener("keydown", esc7, true);
         resolve(v2);
       };
-      function esc6(e) {
+      function esc7(e) {
         if (e.key === "Escape") {
           e.stopPropagation();
           done2(null);
         }
       }
-      document.addEventListener("keydown", esc6, true);
+      document.addEventListener("keydown", esc7, true);
       cancel.onclick = () => done2(null);
       ok2.onclick = async () => {
         const p = collect();
@@ -29958,9 +31509,7 @@
     getAISettings: () => getAISettings,
     loadApiKey: () => loadApiKey,
     saveAISettings: () => saveAISettings,
-    saveApiKey: () => saveApiKey,
-    showAISettingsDialog: () => showAISettingsDialog2,
-    testAIConnection: () => testAIConnection
+    saveApiKey: () => saveApiKey
   });
   function getAISettings() {
     if (!state.meta) return {};
@@ -30012,7 +31561,7 @@
     if (await loadApiKey()) return { ok: true, why: "" };
     return { ok: false, why: t("ui.aiSet.settingsAIFileSettings") };
   }
-  async function callAI(prompt2, system = "", opts = {}) {
+  async function callAI(prompt, system = "", opts = {}) {
     const ai = getAISettings();
     const t0 = Date.now();
     if (Array.isArray(ai.providers) && ai.providers.length) {
@@ -30025,12 +31574,12 @@
       log("info", "ai: request", {
         provider: p.name,
         model: p.model,
-        chars: String(prompt2 || "").length,
+        chars: String(prompt || "").length,
         reqId: opts.reqId || ""
       });
       const r = await complete2(p, {
         system,
-        messages: [{ role: "user", content: prompt2 }],
+        messages: [{ role: "user", content: prompt }],
         reqId: opts.reqId,
         timeoutMs: opts.timeoutMs
       });
@@ -30067,15 +31616,15 @@
       url = provider === "openai" ? "https://api.openai.com/v1/chat/completions" : ai.customUrl || ai.ollamaUrl || (provider === "deepseek" ? "https://api.deepseek.com/chat/completions" : provider === "grok" ? "https://api.x.ai/v1/chat/completions" : "");
       if (!url.endsWith("/chat/completions") && !url.endsWith("/v1")) url += "/v1/chat/completions";
       headers = { "Content-Type": "application/json", Authorization: "Bearer " + apiKey };
-      body = { model, messages: [{ role: "system", content: system }, { role: "user", content: prompt2 }], temperature, max_tokens: maxTokens };
+      body = { model, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], temperature, max_tokens: maxTokens };
     } else if (provider === "claude") {
       url = "https://api.anthropic.com/v1/messages";
       headers = { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" };
-      body = { model, max_tokens: maxTokens, temperature, system, messages: [{ role: "user", content: prompt2 }] };
+      body = { model, max_tokens: maxTokens, temperature, system, messages: [{ role: "user", content: prompt }] };
     } else {
       url = (ai.ollamaUrl || "http://localhost:11434") + "/api/generate";
       headers = { "Content-Type": "application/json" };
-      body = { model, prompt: (system ? system + "\n\n" : "") + prompt2, stream: false };
+      body = { model, prompt: (system ? system + "\n\n" : "") + prompt, stream: false };
     }
     try {
       const res = await kapi.httpFetch(url, { method: "POST", headers, body: JSON.stringify(body) });
@@ -30104,148 +31653,6 @@
     usage.push({ date: (/* @__PURE__ */ new Date()).toISOString(), tokens, provider, model });
     if (usage.length > 500) usage.splice(0, usage.length - 500);
     state.meta.ai.usage = usage;
-  }
-  async function testAIConnection() {
-    const result = await withBusy(
-      t("ui.aiSet.busyTestConnectAI"),
-      () => callAI(t("ui.aiSet.replyBackWordOk"), "")
-    );
-    const ok2 = !!result && result.toLowerCase().includes("ok");
-    setStatus(ok2 ? t("ui.aiSet.aIConnectOk") : t("ui.aiSet.aITestFail"));
-    return ok2;
-  }
-  async function showAISettingsDialog2() {
-    if (!state.root) {
-      setStatus(t("ui.common.openProjectBeforeSettings"));
-      return;
-    }
-    const ai = getAISettings();
-    const curKey = await loadApiKey();
-    const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog k-ai-settings");
-    box2.append(el("div", "k-dlg-title", t("ui.common.settingsAI")));
-    const mkRow = (label) => {
-      const r = el("div", "wiki-row");
-      r.append(el("label", null, label));
-      box2.append(r);
-      return r;
-    };
-    const provRow = mkRow(t("ui.common.provider"));
-    const provSel = el("select", "wiki-input k-dlg-select");
-    const providers = [
-      ["openai", "OpenAI \u2014 ChatGPT / GPT-4o / o3"],
-      ["deepseek", "DeepSeek \u2014 V3 / R1"],
-      ["grok", "Grok (xAI)"],
-      ["claude", "Claude (Anthropic)"],
-      ["ollama", t("ui.common.ollamaItem")],
-      ["custom", t("ui.aiSet.defineCustomLLM")]
-    ];
-    for (const [v2, t3] of providers) {
-      const o = el("option", null, t3);
-      o.value = v2;
-      provSel.append(o);
-    }
-    provSel.value = ai.provider || "openai";
-    provRow.append(provSel);
-    const keyRow = mkRow("API Key");
-    const keyInp = el("input", "wiki-input");
-    keyInp.type = "password";
-    keyInp.value = curKey;
-    keyInp.placeholder = "sk-\u2026";
-    keyRow.append(keyInp);
-    const keyNote = el("div", "dim", tf("ui.aiSet.keepSplitFolderProject", KEY_FILE2));
-    keyNote.style.cssText = "font-size:11px;margin:-4px 0 6px";
-    box2.append(keyNote);
-    const modelRow = mkRow(t("ui.common.model"));
-    const modelInp = el("input", "wiki-input");
-    modelInp.value = ai.model || "";
-    modelInp.placeholder = "gpt-4o-mini / claude-sonnet-4-5 / llama3";
-    modelRow.append(modelInp);
-    const tempRow = mkRow(t("ui.aiSet.newTemperature"));
-    const tempRng = el("input", "wiki-input");
-    tempRng.type = "range";
-    tempRng.min = "0";
-    tempRng.max = "1";
-    tempRng.step = "0.1";
-    tempRng.value = String(ai.temperature ?? 0.7);
-    const tempLbl = el("span", null, " " + (ai.temperature ?? 0.7));
-    tempRng.oninput = () => {
-      tempLbl.textContent = " " + tempRng.value;
-    };
-    tempRow.append(tempRng, tempLbl);
-    const tokRow = mkRow(t("ui.aiSet.longHighLastTokens"));
-    const tokInp = el("input", "wiki-input");
-    tokInp.type = "number";
-    tokInp.value = String(ai.maxTokens || 500);
-    tokInp.min = "50";
-    tokInp.max = "8192";
-    tokRow.append(tokInp);
-    const urlRow = mkRow("Ollama / Custom URL");
-    const urlInp = el("input", "wiki-input");
-    urlInp.value = ai.customUrl || ai.ollamaUrl || (ai.provider === "deepseek" ? "https://api.deepseek.com" : ai.provider === "grok" ? "https://api.x.ai/v1" : "http://localhost:11434");
-    urlInp.placeholder = "https://api.example.com/v1/chat/completions";
-    urlRow.append(urlInp);
-    const syncProv = () => {
-      const show = ["ollama", "custom", "deepseek", "grok"].includes(provSel.value);
-      urlRow.style.display = show ? "" : "none";
-      keyRow.style.display = provSel.value === "ollama" ? "none" : "";
-      const defs = {
-        openai: "gpt-4o-mini",
-        deepseek: "deepseek-chat",
-        grok: "grok-2",
-        claude: "claude-sonnet-4-5",
-        ollama: "llama3",
-        custom: "gpt-4o-mini"
-      };
-      modelInp.placeholder = defs[provSel.value] || "gpt-4o-mini";
-    };
-    provSel.onchange = syncProv;
-    syncProv();
-    const usage = ai.usage || [];
-    if (usage.length) {
-      const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
-      const last2 = usage[usage.length - 1];
-      const stat = el(
-        "div",
-        "dim",
-        tf("ui.aiSet.mergeTokensTimesLatest", total.toLocaleString(), usage.length, new Date(last2.date).toLocaleString("th-TH"))
-      );
-      stat.style.cssText = "margin:10px 0;font-size:12px";
-      box2.append(stat);
-    }
-    const collect = () => ({
-      provider: provSel.value,
-      model: modelInp.value.trim(),
-      temperature: parseFloat(tempRng.value),
-      maxTokens: parseInt(tokInp.value, 10) || 500,
-      ollamaUrl: urlInp.value.trim() || "http://localhost:11434",
-      customUrl: urlInp.value.trim() || ""
-    });
-    const btns = el("div", "k-dlg-btns");
-    const testB = el("button", null, t("ui.aiSet.testConnect"));
-    const cB = el("button", null, t("ui.common.cancel"));
-    const okB = el("button", "k-ok", t("ui.common.save"));
-    btns.append(testB, cB, okB);
-    box2.append(btns);
-    ov.append(box2);
-    document.body.append(ov);
-    testB.onclick = async () => {
-      saveAISettings(collect());
-      await saveApiKey(keyInp.value.trim());
-      await testAIConnection();
-    };
-    cB.onclick = () => ov.remove();
-    ov.onclick = (e) => {
-      if (e.target === ov) ov.remove();
-    };
-    okB.onclick = async () => {
-      saveAISettings(collect());
-      await saveApiKey(keyInp.value.trim());
-      const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-      await saveProjectMeta2();
-      ov.remove();
-      setStatus(t("ui.common.saveSettingsAIDone"));
-    };
   }
   var KEY_FILE2, _keyCache;
   var init_ai_settings = __esm({
@@ -30296,7 +31703,7 @@
     if (uses.length) lines.push(t("ui.galleryAi.useScene") + [...new Set(uses.map((u) => u.title))].slice(0, 8).join(", "));
     return lines.join("\n");
   }
-  async function visionAsk(prompt2, system, dataUrl) {
+  async function visionAsk(prompt, system, dataUrl) {
     if (!dataUrl) return "";
     try {
       const { currentProvider: currentProvider2, complete: complete2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
@@ -30305,7 +31712,7 @@
       const r = await complete2(p, {
         system,
         messages: [{ role: "user", content: [
-          { type: "text", text: prompt2 },
+          { type: "text", text: prompt },
           { type: "image_url", image_url: { url: dataUrl } }
         ] }]
       });
@@ -30344,8 +31751,8 @@
         const it = list[i5];
         setBusy(tf("ui.galleryAi.aIBusySetCaption", i5 + 1, list.length, it.file));
         const ctx2 = contextOf(it, usage);
-        const prompt2 = tf("ui.galleryAi.setCaptionShortImage", ctx2);
-        let text = await visionAsk(prompt2, SYS_CAP, await thumbDataUrl(root, it.path));
+        const prompt = tf("ui.galleryAi.setCaptionShortImage", ctx2);
+        let text = await visionAsk(prompt, SYS_CAP, await thumbDataUrl(root, it.path));
         if (!text) {
           text = await callAI(
             tf("ui.galleryAi.setCaptionShortImage2", ctx2),
@@ -30388,9 +31795,9 @@
         const it = list[i5];
         setBusy(tf("ui.galleryAi.aIBusySuggestTag", i5 + 1, list.length, it.file));
         const ctx2 = contextOf(it, usage);
-        const prompt2 = tf("ui.galleryAi.setTagImage", ctx2, hint);
-        let text = await visionAsk(prompt2, SYS_TAG, await thumbDataUrl(root, it.path));
-        if (!text) text = await callAI(prompt2, SYS_TAG) || "";
+        const prompt = tf("ui.galleryAi.setTagImage", ctx2, hint);
+        let text = await visionAsk(prompt, SYS_TAG, await thumbDataUrl(root, it.path));
+        if (!text) text = await callAI(prompt, SYS_TAG) || "";
         const tags = parseTagAnswer(text, { entities });
         if (!tags.length) continue;
         let doc3 = await readAlbumDoc(kapi, root, it.album);
@@ -30428,14 +31835,10 @@
   __export(gallery_exports, {
     CELL_MODES: () => CELL_MODES,
     Gallery: () => Gallery,
-    clearGalleryCache: () => clearGalleryCache,
     pickImage: () => pickImage
   });
   async function absOf(root, relPath2) {
     return kapi.join(root, IMAGES_DIR, ...String(relPath2).split("/"));
-  }
-  function clearGalleryCache() {
-    urlCache.clear();
   }
   async function fileURL(root, relPath2) {
     const key2 = root + "||" + relPath2;
@@ -30513,6 +31916,7 @@
         ov.remove();
         resolve(v2);
       };
+      escClose(ov, () => done2(null));
       cancel.onclick = () => done2(null);
       ov.onclick = (e) => {
         if (e.target === ov) done2(null);
@@ -32548,7 +33952,7 @@
     pane.appendChild(tb2);
     return tb2;
   }
-  var CAT_ARR, THEME, WIKI_CATS, EDGE_SEP, NET_TOOLS, StoryNetwork;
+  var CAT_ARR, THEME, BG_FALLBACK, GRID_FALLBACK, WIKI_CATS, EDGE_SEP, NET_TOOLS, StoryNetwork;
   var init_network = __esm({
     "src/network.js"() {
       init_i18n();
@@ -32560,6 +33964,8 @@
       init_auto_link_ui();
       CAT_ARR = ["characters", "locations", "items", "lore", "scene", "chapter", "book"];
       THEME = resolveNetColors(null, cssVar);
+      BG_FALLBACK = "#1a1a18";
+      GRID_FALLBACK = "#3a3a36";
       WIKI_CATS = /* @__PURE__ */ new Set(["characters", "locations", "items", "lore"]);
       EDGE_SEP = String.fromCharCode(1);
       NET_TOOLS = [
@@ -59608,10 +61014,12 @@
           if (this._cb.onToolChange) this._cb.onToolChange(name5, this._shapeKind);
           return name5;
         }
-        /** log สายกระดาน — เปิด/ปิดได้ที่ this.debug (ค่าเริ่มต้น: เปิด เพราะกำลังไล่บั๊กอยู่) */
+        /** log สายกระดาน — เปิด/ปิดได้ที่ this.debug
+         *  [alpha.128] ลดจาก info → debug: รอบไล่บั๊กจบไปตั้งแต่ alpha.75 แต่สายนี้ยังยิง INFO รัว ๆ
+         *  (298 บรรทัดต่อการรันหนึ่งรอบ) ทับเหตุการณ์จริงในแผงบันทึก · ยังเขียนลงไฟล์ครบเหมือนเดิม */
         _log(msg, extra) {
           if (this.debug === false) return;
-          log("info", "planner: " + msg, extra);
+          log("debug", "planner: " + msg, extra);
         }
         getTool() {
           return this.tool;
@@ -62205,7 +63613,7 @@
       `<textarea class="planner-prop-input" id="plp-synopsis" rows="3" placeholder="${isNote ? t("ui.plannerProps.printText") : t("ui.plannerProps.occurScene")}">${_esc(n2.synopsis)}</textarea>`
     );
     add(t("ui.common.color"), tf("ui.plannerProps.msg", _color(n2.color, "#3f3e3a"), _color(n2.textColor, "#faf9f5")));
-    const swatch = el("div", "planner-swatches");
+    const swatch2 = el("div", "planner-swatches");
     for (const c of ["#3f3e3a", "#5f7a9f", "#7a6f9f", "#5f8a6f", "#d97757", "#f2c14e", "#c1666b", "#4a6fa5", "#e8e3d3", "#26241f"]) {
       const b = el("button", "planner-swatch");
       b.style.background = c;
@@ -62215,9 +63623,9 @@
         if (i5) i5.value = c;
         ctx2.onChangeNode && ctx2.onChangeNode({ color: c });
       };
-      swatch.appendChild(b);
+      swatch2.appendChild(b);
     }
-    rows.appendChild(swatch);
+    rows.appendChild(swatch2);
     add(
       tf("ui.plannerProps.sizeChar", Math.round(n2.fontSize || 12)),
       `<input class="planner-prop-input" id="plp-fs" type="range" min="8" max="48" step="0.5" value="${n2.fontSize || 12}">`
@@ -62291,7 +63699,8 @@
       if (!picked) return;
       q("plp-file").value = picked.path || "";
       const props = { file: picked.path || null };
-      if (picked.title && (!n2.title || n2.title === "\u0E43\u0E2B\u0E21\u0E48" || n2.title === "\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D")) props.title = picked.title;
+      const autoName = [t("ui.common.new2"), t("ui.common.notSpecifyName")];
+      if (picked.title && (!n2.title || autoName.includes(n2.title))) props.title = picked.title;
       set(props);
     };
     q("plp-unlink").onclick = () => {
@@ -62501,17 +63910,31 @@
     }
     return n2;
   }
+  function ignoreOnce(word) {
+    const w = String(word || "").trim();
+    if (!w) return false;
+    ignored.add(w);
+    ignored.add(w.toLowerCase());
+    invalidateMerged();
+    return true;
+  }
+  function clearIgnored() {
+    const n2 = ignored.size;
+    ignored.clear();
+    invalidateMerged();
+    return n2;
+  }
   function invalidateMerged() {
     mergedTh = null;
     mergedEn = null;
     cache.clear();
   }
   function knownTh() {
-    if (!mergedTh) mergedTh = extraTh.size ? /* @__PURE__ */ new Set([...base2.th, ...extraTh]) : base2.th;
+    if (!mergedTh) mergedTh = extraTh.size || ignored.size ? /* @__PURE__ */ new Set([...base2.th, ...extraTh, ...ignored]) : base2.th;
     return mergedTh;
   }
   function knownEn() {
-    if (!mergedEn) mergedEn = extraEn.size ? /* @__PURE__ */ new Set([...base2.en, ...extraEn]) : base2.en;
+    if (!mergedEn) mergedEn = extraEn.size || ignored.size ? /* @__PURE__ */ new Set([...base2.en, ...extraEn, ...[...ignored].map((w) => w.toLowerCase())]) : base2.en;
     return mergedEn;
   }
   function loadBase(thText, enText) {
@@ -62624,7 +64047,42 @@
     }
     return out;
   }
-  var THAI_RE, LATIN_RE, THAI_FULL, MAX_TH_LEN, MIN_WORD, MAX_WORD, base2, extraTh, extraEn, mergedTh, mergedEn, CACHE_MAX, CACHE_TEXT_MAX, cache;
+  function edits1(w, alpha) {
+    const out = /* @__PURE__ */ new Set();
+    for (let i5 = 0; i5 < w.length; i5++) {
+      out.add(w.slice(0, i5) + w.slice(i5 + 1));
+      if (i5 + 1 < w.length) out.add(w.slice(0, i5) + w[i5 + 1] + w[i5] + w.slice(i5 + 2));
+      for (const c of alpha) {
+        out.add(w.slice(0, i5) + c + w.slice(i5 + 1));
+        out.add(w.slice(0, i5) + c + w.slice(i5));
+      }
+    }
+    for (const c of alpha) out.add(w + c);
+    out.delete(w);
+    return out;
+  }
+  function suggest(word, max2 = 6) {
+    const w = String(word || "").trim();
+    if (!w || !base2.loaded || w.length > 24) return [];
+    const thai = THAI_FULL.test(w);
+    const known = thai ? knownTh() : knownEn();
+    const target = thai ? w : w.toLowerCase();
+    const hits = [];
+    for (const cand of edits1(target, thai ? TH_ALPHA : EN_ALPHA)) {
+      if (cand.length < 2 || !known.has(cand)) continue;
+      hits.push([Math.abs(cand.length - target.length) + (cand[0] === target[0] ? 0 : 2), cand]);
+      if (hits.length > 400) break;
+    }
+    hits.sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]));
+    const out = [];
+    for (const [, cand] of hits) {
+      const shown = !thai && /^[A-Z]/.test(w) ? cand[0].toUpperCase() + cand.slice(1) : cand;
+      if (!out.includes(shown)) out.push(shown);
+      if (out.length >= max2) break;
+    }
+    return out;
+  }
+  var THAI_RE, LATIN_RE, THAI_FULL, MAX_TH_LEN, MIN_WORD, MAX_WORD, base2, extraTh, extraEn, mergedTh, mergedEn, CACHE_MAX, CACHE_TEXT_MAX, cache, ignored, TH_ALPHA, EN_ALPHA;
   var init_spell = __esm({
     "src/spell.js"() {
       THAI_RE = /[\u0E00-\u0E7F]+/g;
@@ -62641,6 +64099,9 @@
       CACHE_MAX = 2e3;
       CACHE_TEXT_MAX = 8e3;
       cache = /* @__PURE__ */ new Map();
+      ignored = /* @__PURE__ */ new Set();
+      TH_ALPHA = "\u0E01\u0E02\u0E04\u0E06\u0E07\u0E08\u0E09\u0E0A\u0E0B\u0E0C\u0E0D\u0E0E\u0E0F\u0E10\u0E11\u0E12\u0E13\u0E14\u0E15\u0E16\u0E17\u0E18\u0E19\u0E1A\u0E1B\u0E1C\u0E1D\u0E1E\u0E1F\u0E20\u0E21\u0E22\u0E23\u0E25\u0E27\u0E28\u0E29\u0E2A\u0E2B\u0E2C\u0E2D\u0E2E\u0E30\u0E31\u0E32\u0E33\u0E34\u0E35\u0E36\u0E37\u0E38\u0E39\u0E40\u0E41\u0E42\u0E43\u0E44\u0E47\u0E48\u0E49\u0E4A\u0E4B\u0E4C\u0E4D\u0E2F\u0E46";
+      EN_ALPHA = "abcdefghijklmnopqrstuvwxyz";
     }
   });
 
@@ -62907,8 +64368,8 @@
     const unknown = [];
     const src2 = String(text || "");
     TOKEN.lastIndex = 0;
-    const out = src2.replace(TOKEN, (raw, esc6, name5, rest) => {
-      if (esc6 !== void 0) return "[" + esc6 + "]";
+    const out = src2.replace(TOKEN, (raw, esc7, name5, rest) => {
+      if (esc7 !== void 0) return "[" + esc7 + "]";
       const key2 = String(name5).toLowerCase();
       const def = shortcodeDef(key2);
       if (!def) {
@@ -63343,15 +64804,16 @@
     };
   }
   function stripComments(s) {
-    return s.replace(/%%[\s\S]*?%%/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    return s.replace(/%%[\s\S]*?%%/g, "").replace(/<!--[\s\S]*?-->/g, (m) => KEEP_COMMENT.test(m) ? m : "");
   }
   function stripMentions(s) {
-    return s.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1");
+    return (0, import_md6.stripMentions)(s);
   }
   function stripMarkdown(s) {
     return s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/^\s{0,3}>\s?/gm, "").replace(/^\s{0,3}([-*+]|\d+\.)\s+/gm, "").replace(/^\s{0,3}(-{3,}|\*{3,})\s*$/gm, "").replace(/(\*\*|__)(.*?)\1/g, "$2").replace(/(\*|_)(.*?)\1/g, "$2").replace(/~~(.*?)~~/g, "$1").replace(/`([^`]*)`/g, "$1");
   }
-  function mdToHtmlBody(md) {
+  function mdToHtmlBody(md, o = {}) {
+    const mono = !!o.mono;
     const out = [];
     let list = null;
     const closeList = () => {
@@ -63360,62 +64822,91 @@
         list = null;
       }
     };
-    for (const raw of md.split("\n")) {
-      const line = raw.replace(/\s+$/, "");
-      if (line.trim() === PAGE_BREAK) {
-        closeList();
+    let quote = false;
+    const closeQuote = () => {
+      if (quote) {
+        out.push("</blockquote>");
+        quote = false;
+      }
+    };
+    const closeAll = () => {
+      closeList();
+      closeQuote();
+    };
+    const attrOf = (a) => a ? ` style="text-align:${a}" data-align="${a}"` : "";
+    for (const b of (0, import_md6.mdBlocks)(md, { breakMarker: PAGE_BREAK })) {
+      const al = b.align;
+      if (b.kind === "pagebreak") {
+        closeAll();
         out.push('<div class="pb"></div>');
         continue;
       }
-      if (!line.trim()) {
-        closeList();
-        continue;
-      }
-      const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
-      if (h) {
-        closeList();
-        const ht = String(h[2] || "").trim();
-        if (ht) out.push(`<h${h[1].length}>${inline(ht)}</h${h[1].length}>`);
-        continue;
-      }
-      if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
-        closeList();
+      if (b.kind === "hr") {
+        closeAll();
         out.push("<hr>");
         continue;
       }
-      const ul = /^\s*[-*+]\s+(.*)$/.exec(line);
-      const ol = /^\s*\d+\.\s+(.*)$/.exec(line);
-      if (ul || ol) {
-        const want = ul ? "ul" : "ol";
+      if (b.kind === "figure") {
+        closeAll();
+        out.push(`<figure${attrOf(al)}><img alt="${escAttr(b.alt)}" src="${escAttr(b.src)}"></figure>`);
+        continue;
+      }
+      if (b.kind === "code") {
+        closeAll();
+        out.push("<pre" + (b.lang ? ` data-lang="${escAttr(b.lang)}"` : "") + "><code>" + esc(b.text) + "</code></pre>");
+        continue;
+      }
+      if (b.kind === "h") {
+        closeAll();
+        out.push(`<h${b.level}${attrOf(al)}>${inline(b.text, mono)}</h${b.level}>`);
+        continue;
+      }
+      if (b.kind === "quote") {
+        closeList();
+        if (!quote) {
+          out.push("<blockquote>");
+          quote = true;
+        }
+        out.push(`<p${attrOf(al)}>${inline(b.text, mono)}</p>`);
+        continue;
+      }
+      if (b.kind === "li") {
+        closeQuote();
+        const want = b.ordered ? "ol" : "ul";
         if (list !== want) {
           closeList();
-          out.push(`<${want}>`);
+          out.push(want === "ol" && b.num > 1 ? `<ol start="${b.num}">` : `<${want}>`);
           list = want;
         }
-        out.push(`<li>${inline((ul || ol)[1])}</li>`);
+        const mv = mono ? "" : (0, import_md6.markerVars)(b.text);
+        out.push(`<li${mv ? ` style="${mv}"` : ""}><p${attrOf(al)}>${b.text ? inline(b.text, mono) : "<br>"}</p></li>`);
         continue;
       }
-      const bq = /^\s*>\s?(.*)$/.exec(line);
-      if (bq) {
-        closeList();
-        out.push(`<blockquote>${inline(bq[1])}</blockquote>`);
-        continue;
-      }
-      closeList();
-      out.push(`<p>${inline(line)}</p>`);
+      closeAll();
+      const parts = b.lines && b.lines.length ? b.lines : [b.text];
+      const html = parts.map((l) => inline(l, mono)).join("<br>");
+      out.push(html.trim() || parts.length > 1 ? `<p${attrOf(al)}>${html}</p>` : '<p class="k-blank"><br></p>');
     }
-    closeList();
+    closeAll();
+    const BLANK = '<p class="k-blank"><br></p>';
+    while (out.length && out[0] === BLANK) out.shift();
+    while (out.length && out[out.length - 1] === BLANK) out.pop();
     return out.join("\n");
   }
-  function mdToHtml(md, title2, style = null, paper = null, margins = null) {
-    const css = proseExportCss(mergeProseFormat(style), paper, margins);
+  function mdToHtml(md, title2, style = null, paper = null, margins = null, o = {}) {
+    const css = proseExportCss(
+      mergeProseFormat(style),
+      paper,
+      margins,
+      { fontStack: o && o.fontStack, headingStack: o && o.headingStack }
+    ) + (o && o.mono ? String.fromCharCode(10) + "body,body *{color:#000 !important}" + String.fromCharCode(10) + "img{filter:grayscale(1)}" : "");
     return `<!DOCTYPE html>
 <html lang="th"><head><meta charset="utf-8">
 <title>${esc(title2 || "")}</title>
 <style>
 ${css}
 </style></head><body>
-${mdToHtmlBody(md)}
+${mdToHtmlBody(md, o)}
 </body></html>`;
   }
   function modelIsScreenplay(model) {
@@ -63452,7 +64943,21 @@ ${mdToHtmlBody(md)}
     proseFormat: proseFormat2 = null,
     paper = null,
     margins = null,
-    keepBlanks
+    keepBlanks,
+    // [alpha.132r3 ข้อ 1] สแตกฟอนต์ที่ใช้จริงบนจอ — ไม่ส่งมาก็ใช้ของ proseFormat ตามเดิม
+    fontStack = "",
+    headingStack = "",
+    // ══ [alpha.133 · Y-3] ★★ "ผลลัพธ์นี้จะถูกตีความเป็นมาร์กดาวน์ต่อไหม" ══
+    //
+    // ผู้ใช้: *"การจัดหน้า … มีแค่ layout อย่างเดียวที่ถูกต้อง"*
+    //
+    // ต้นตอ: ท้ายฟังก์ชันนี้ตัดคอมเมนต์ `<!--align:x-->` ทิ้งเมื่อ `ext !== 'html'`
+    // ซึ่ง **จริงสำหรับ PDF ด้วย** (ext = 'pdf') — แต่ PDF ของนิยายไม่ได้จบที่นี่
+    // มันเดินต่อไปเข้า `mdToHtml()` ในกล่องส่งออก · การจัดหน้าจึงถูกลบทิ้งไปก่อน
+    // จะถึงตัวที่รู้จักมันหนึ่งก้าวพอดี = ไฟล์ PDF ชิดซ้ายทั้งเล่มเสมอ
+    //
+    // true = ผู้เรียกจะแปลงมาร์กดาวน์ต่อเอง → เก็บคอมเมนต์รูปแบบและตัวคั่นหน้าไว้ให้ครบ
+    markdownOut = false
   } = {}) {
     const shortcodeNow = now || /* @__PURE__ */ new Date();
     const warn = [];
@@ -63470,8 +64975,8 @@ ${mdToHtmlBody(md)}
       return v2 === void 0 || v2 === null ? dflt : v2;
     };
     const has2 = (key2) => steps.some((s) => s.key === key2);
-    const keepFor = (sc) => keepBlanks === void 0 ? sc.format === "screenplay" : !!keepBlanks;
-    const squashAll = keepBlanks === void 0 ? !modelHasScreenplay(model) : !keepBlanks;
+    const keepFor = (sc) => keepBlanks === void 0 ? true : !!keepBlanks;
+    const squashAll = keepBlanks === void 0 ? false : !keepBlanks;
     for (const st of at("model")) {
       const o = st.opts || {};
       switch (st.key) {
@@ -63570,7 +65075,7 @@ ${mdToHtmlBody(md)}
           out.push(fill(opt("scene-heading", "template", "### {title}"), sn, s.title || "", varCtx), "");
         if (has2("scene-meta"))
           out.push(tf("ui.compile.word", s.status || t("ui.compile.notSpecifyStatus"), (s.words || 0).toLocaleString()), "");
-        const b = keepFor(s) ? String(s.body || "").replace(/\s+$/, "") : String(s.body || "").trim().replace(/\n{3,}/g, "\n\n");
+        const b = keepFor(s) ? String(s.body || "").replace(/\s+$/, "") : String(s.body || "").trim();
         if (b) out.push(b, "");
       }
     }
@@ -63587,8 +65092,15 @@ ${mdToHtmlBody(md)}
         ""
       );
     }
-    let text = out.join("\n");
-    if (squashAll) text = text.replace(/\n{3,}/g, "\n\n");
+    let lines = out;
+    if (squashAll) {
+      lines = [];
+      for (const x of out) {
+        if (x === "" && lines.length && lines[lines.length - 1] === "") continue;
+        lines.push(x);
+      }
+    }
+    let text = lines.join("\n");
     text = text.trim() + "\n";
     let ext = workflow.ext || "md";
     for (const st of at("text")) {
@@ -63601,7 +65113,14 @@ ${mdToHtmlBody(md)}
         continue;
       }
       if (st.key === "to-html") {
-        text = mdToHtml(text, model.title, proseFormat2, paper, margins);
+        text = mdToHtml(
+          text,
+          model.title,
+          proseFormat2,
+          paper,
+          margins,
+          { fontStack, headingStack }
+        );
         ext = "html";
         continue;
       }
@@ -63620,10 +65139,13 @@ ${mdToHtmlBody(md)}
         }
       }
     }
-    if (ext !== "html") text = text.split(PAGE_BREAK).join("\f");
+    if (ext !== "html" && !markdownOut) {
+      text = text.split(PAGE_BREAK).join("\f");
+      text = text.replace(/<!--\s*align:(?:left|center|right|justify)\s*-->/gi, "");
+    }
     return { text, ext, stats: st0, warnings: warn };
   }
-  var PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, esc, inline, escapeHtml, fill;
+  var import_md6, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, esc, escAttr, inline, escapeHtml, fill;
   var init_compile = __esm({
     "src/compile.js"() {
       init_i18n();
@@ -63633,6 +65155,7 @@ ${mdToHtmlBody(md)}
       init_sp_format();
       init_sp_continued();
       init_prose_format();
+      import_md6 = __toESM(require_md());
       PAGE_BREAK = t("ui.compile.msg");
       OMIT_CHOICES = ["note", "summary", "outline1", "outline2", "outline3", "image"];
       STEP_DEFS = [
@@ -63808,8 +65331,10 @@ ${mdToHtmlBody(md)}
           ["skip-memo", "strip-comments", ["omit-elements", { types: "note" }]]
         )
       ];
+      KEEP_COMMENT = /^<!--\s*(?:align:(?:left|center|right|justify)|pagebreak)\s*-->$/i;
       esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      inline = (s) => esc(s).replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${a}" src="${u}">`).replace(/(\*\*|__)(.*?)\1/g, "<strong>$2</strong>").replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, "<em>$1</em>").replace(/(?<!_)_(?!_)([^_]+)_(?!_)/g, "<em>$1</em>").replace(/~~(.*?)~~/g, "<del>$1</del>");
+      escAttr = (s) => esc(s == null ? "" : s).replace(/"/g, "&quot;");
+      inline = (s, mono) => (0, import_md6.inlineHtml)(s, { mono });
       escapeHtml = esc;
       fill = (tpl, n2, title2, ctx2 = {}) => {
         let s = String(tpl == null ? "" : tpl).replace(/\{n\}/g, n2).replace(/\{title\}/g, title2);
@@ -64115,9 +65640,9 @@ ${mdToHtmlBody(md)}
   }
   function clonePins(pins, ids, offset = 2, intoMapId = null) {
     const set = new Set(ids || []);
-    const seq2 = () => "pin-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const seq3 = () => "pin-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     return (pins || []).filter((p) => set.has(p.id)).map((p) => {
-      const c = { ...p, id: seq2(), x: clamp3(p.x + offset), y: clamp3(p.y + offset) };
+      const c = { ...p, id: seq3(), x: clamp3(p.x + offset), y: clamp3(p.y + offset) };
       if (intoMapId && c.kind === "portal" && c.toMap === intoMapId) c.toMap = "";
       return c;
     });
@@ -64365,6 +65890,7 @@ ${mdToHtmlBody(md)}
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
   }
   function refreshStatusChips(root = document) {
     for (const chip of root.querySelectorAll(".sc-status")) {
@@ -64429,16 +65955,357 @@ ${mdToHtmlBody(md)}
   function tokenizeQuery(text) {
     return tokenize2(text).map((t3) => t3.word);
   }
-  var _segmenter, _segTried2, _THAI;
+  function lineOffsets(text) {
+    const offs2 = [0];
+    for (let i5 = 0; i5 < text.length; i5++) if (text[i5] === "\n") offs2.push(i5 + 1);
+    return offs2;
+  }
+  function lineAt(offs2, pos) {
+    let lo = 0, hi = offs2.length - 1, ans = 0;
+    while (lo <= hi) {
+      const mid = lo + hi >> 1;
+      if (offs2[mid] <= pos) {
+        ans = mid;
+        lo = mid + 1;
+      } else hi = mid - 1;
+    }
+    return ans + 1;
+  }
+  function parseQuery(query) {
+    if (!query || !query.trim()) return null;
+    const toks = lexQuery(query);
+    let i5 = 0;
+    const peek = () => toks[i5];
+    const next = () => toks[i5++];
+    function parseOr() {
+      let left = parseAnd();
+      while (peek() && peek().type === "op" && peek().value === "OR") {
+        next();
+        const right = parseAnd();
+        left = { type: "or", left, right };
+      }
+      return left;
+    }
+    function parseAnd() {
+      let left = parseUnary();
+      while (peek()) {
+        const t3 = peek();
+        if (t3.type === "op" && t3.value === "OR") break;
+        if (t3.type === "rparen") break;
+        if (t3.type === "op" && t3.value === "AND") next();
+        const right = parseUnary();
+        if (!right) break;
+        left = { type: "and", left, right };
+      }
+      return left;
+    }
+    function parseUnary() {
+      const t3 = peek();
+      if (!t3) return null;
+      if (t3.type === "op" && t3.value === "NOT") {
+        next();
+        return { type: "not", right: parseUnary() };
+      }
+      return parseAtom();
+    }
+    function parseAtom() {
+      const t3 = peek();
+      if (!t3) return null;
+      if (t3.type === "lparen") {
+        next();
+        const e = parseOr();
+        if (peek() && peek().type === "rparen") next();
+        return e;
+      }
+      if (t3.type === "field") {
+        next();
+        return { type: "field", field: t3.field, value: t3.value };
+      }
+      if (t3.type === "word") {
+        next();
+        return { type: "term", value: t3.value };
+      }
+      next();
+      return null;
+    }
+    return parseOr();
+  }
+  function lexQuery(q) {
+    const out = [];
+    const re = /\s+|(\()|(\))|"([^"]*)"|(\w[\w\u0E00-\u0E7F]*)\s*:\s*("([^"]*)"|\S+)|([^\s()]+)/g;
+    let m;
+    while ((m = re.exec(q)) !== null) {
+      if (m[0].trim() === "" && !m[1] && !m[2]) continue;
+      if (m[1]) {
+        out.push({ type: "lparen" });
+        continue;
+      }
+      if (m[2]) {
+        out.push({ type: "rparen" });
+        continue;
+      }
+      if (m[3] !== void 0) {
+        out.push({ type: "word", value: m[3] });
+        continue;
+      }
+      if (m[4]) {
+        const field2 = m[4].toLowerCase();
+        const val = m[6] !== void 0 ? m[6] : m[5];
+        out.push({ type: "field", field: field2, value: val });
+        continue;
+      }
+      if (m[7]) {
+        const w = m[7];
+        if (w === "AND" || w === "OR" || w === "NOT") out.push({ type: "op", value: w });
+        else out.push({ type: "word", value: w });
+      }
+    }
+    return out;
+  }
+  function intersect(a, b) {
+    const [s, l] = a.size < b.size ? [a, b] : [b, a];
+    const o = /* @__PURE__ */ new Set();
+    for (const x of s) if (l.has(x)) o.add(x);
+    return o;
+  }
+  function union(a, b) {
+    const o = new Set(a);
+    for (const x of b) o.add(x);
+    return o;
+  }
+  function difference(a, b) {
+    const o = new Set(a);
+    for (const x of b) o.delete(x);
+    return o;
+  }
+  async function indexProject(root, kapi2, parseMd, opts = {}) {
+    const docs = [];
+    const walk3 = async (dir2) => {
+      for (const name5 of await kapi2.listDirs(dir2)) {
+        const p = await kapi2.join(dir2, name5);
+        await walk3(p);
+      }
+      for (const name5 of await kapi2.listFiles?.(dir2) || []) {
+        const p = await kapi2.join(dir2, name5);
+        if (name5.endsWith(".md")) {
+          try {
+            const raw = await kapi2.readFile(p);
+            const { meta: meta2 = {}, body = raw } = parseMd ? parseMd(raw) : {};
+            docs.push({
+              id: p,
+              path: p,
+              title: meta2.title || name5.replace(/\.md$/, ""),
+              tags: meta2.tags || [],
+              status: meta2.status || "",
+              body
+            });
+          } catch {
+          }
+        } else if (name5.endsWith(".json") && opts.includeJson) {
+          try {
+            const raw = await kapi2.readFile(p);
+            docs.push({ id: p, path: p, title: name5, tags: [], status: "", body: raw });
+          } catch {
+          }
+        }
+      }
+    };
+    await walk3(root);
+    return new SearchIndex().build(docs);
+  }
+  var _segmenter, _segTried2, _THAI, SearchIndex;
   var init_search_engine = __esm({
     "src/search-engine.js"() {
       _segmenter = null;
       _segTried2 = false;
       _THAI = /[\u0E00-\u0E7F]/;
+      SearchIndex = class {
+        constructor() {
+          this.docs = /* @__PURE__ */ new Map();
+          this.index = /* @__PURE__ */ new Map();
+          this.fieldIndex = {
+            // field → Map(word → Set(id))
+            title: /* @__PURE__ */ new Map(),
+            tags: /* @__PURE__ */ new Map(),
+            status: /* @__PURE__ */ new Map()
+          };
+          this.built = false;
+        }
+        // เพิ่มเอกสารทีละชิ้นลง index
+        addDocument(doc3) {
+          const { id, path = id, title: title2 = "", tags = [], status = "", body = "" } = doc3;
+          const offs2 = lineOffsets(body);
+          const titleToks = new Set(tokenizeQuery(title2));
+          this.docs.set(id, { path, title: title2, tags, status, body, offs: offs2, len: body.length, titleToks });
+          for (const { word, pos } of tokenize2(body)) {
+            let m = this.index.get(word);
+            if (!m) {
+              m = /* @__PURE__ */ new Map();
+              this.index.set(word, m);
+            }
+            let arr = m.get(id);
+            if (!arr) {
+              arr = [];
+              m.set(id, arr);
+            }
+            arr.push(pos);
+          }
+          this._indexField("title", id, title2);
+          this._indexField("status", id, status);
+          for (const t3 of tags) this._indexField("tags", id, String(t3));
+        }
+        _indexField(field2, id, text) {
+          const fi = this.fieldIndex[field2];
+          for (const w of tokenizeQuery(text)) {
+            let s = fi.get(w);
+            if (!s) {
+              s = /* @__PURE__ */ new Set();
+              fi.set(w, s);
+            }
+            s.add(id);
+          }
+        }
+        // สร้าง index จากรายการเอกสาร (ล้างของเดิมก่อน)
+        build(docsArr) {
+          this.docs.clear();
+          this.index.clear();
+          for (const f of Object.values(this.fieldIndex)) f.clear();
+          for (const d of docsArr) this.addDocument(d);
+          this.built = true;
+          return this;
+        }
+        stats() {
+          return { documents: this.docs.size, terms: this.index.size };
+        }
+        // ───────── การค้นหา ─────────
+        // query: สตริง รองรับ  คำเดียว · หลายคำ(AND) · AND/OR/NOT · field:  เช่น
+        //   'ทอร่า เค้ก'                → ทั้งสองคำ (AND)
+        //   'ทอร่า OR คาสซี่'           → คำใดคำหนึ่ง
+        //   'เค้ก NOT ช็อกโกแลต'        → มีเค้ก แต่ไม่มีช็อกโกแลต
+        //   'title:ทอร่า status:เขียนเสร็จ' → ค้นเฉพาะ field
+        // opts: { limit=50, snippetRadius=30 }
+        search(query, opts = {}) {
+          const limit = opts.limit ?? 50;
+          const radius = opts.snippetRadius ?? 30;
+          const ast = parseQuery(query);
+          if (!ast) return [];
+          const hitTerms = /* @__PURE__ */ new Set();
+          const ids = this._evalNode(ast, hitTerms);
+          const hitTokens = [...new Set([...hitTerms].flatMap((t3) => tokenizeQuery(t3)))];
+          const results = [];
+          for (const id of ids) {
+            const doc3 = this.docs.get(id);
+            if (!doc3) continue;
+            results.push(this._scoreDoc(id, doc3, hitTokens, radius));
+          }
+          results.sort((a, b) => b.score - a.score);
+          return results.slice(0, limit);
+        }
+        // ประเมิน AST → Set(id)
+        _evalNode(node, hitTerms) {
+          if (node.type === "term") {
+            hitTerms.add(node.value);
+            return this._docsFor(node.value);
+          }
+          if (node.type === "field") {
+            const fi = this.fieldIndex[node.field];
+            if (!fi) return /* @__PURE__ */ new Set();
+            const parts = tokenizeQuery(node.value);
+            if (!parts.length) return /* @__PURE__ */ new Set();
+            let acc = null;
+            for (const p of parts) {
+              const s = fi.get(p) || /* @__PURE__ */ new Set();
+              acc = acc === null ? new Set(s) : intersect(acc, s);
+            }
+            return acc || /* @__PURE__ */ new Set();
+          }
+          if (node.type === "and") return intersect(this._evalNode(node.left, hitTerms), this._evalNode(node.right, hitTerms));
+          if (node.type === "or") return union(this._evalNode(node.left, hitTerms), this._evalNode(node.right, hitTerms));
+          if (node.type === "not") {
+            const all = new Set(this.docs.keys());
+            return difference(all, this._evalNode(node.right, hitTerms));
+          }
+          return /* @__PURE__ */ new Set();
+        }
+        // เอกสารที่มีคำนี้ (รองรับ token ย่อยจาก tokenizer เดียวกัน — เช่น bigram)
+        _docsFor(termText) {
+          const toks = tokenizeQuery(termText);
+          if (!toks.length) return /* @__PURE__ */ new Set();
+          let acc = null;
+          for (const t3 of toks) {
+            const m = this.index.get(t3);
+            const s = m ? new Set(m.keys()) : /* @__PURE__ */ new Set();
+            acc = acc === null ? s : intersect(acc, s);
+          }
+          return acc || /* @__PURE__ */ new Set();
+        }
+        // ให้คะแนน + สร้าง snippet ต่อเอกสาร (hitTokens = token ที่ tokenize ไว้แล้ว, doc.titleToks = cache)
+        _scoreDoc(id, doc3, hitTokens, radius) {
+          const matches2 = [];
+          let freq = 0;
+          const positions = [];
+          for (const t3 of hitTokens) {
+            const m = this.index.get(t3);
+            const arr = m && m.get(id);
+            if (arr) {
+              freq += arr.length;
+              for (const p of arr) positions.push({ pos: p, len: t3.length });
+            }
+          }
+          positions.sort((a, b) => a.pos - b.pos);
+          let last2 = -Infinity;
+          for (const { pos, len: len5 } of positions) {
+            if (matches2.length >= 3) break;
+            if (pos - last2 < radius) continue;
+            last2 = pos;
+            const from2 = Math.max(0, pos - radius);
+            const to = Math.min(doc3.len, pos + len5 + radius);
+            const snippet = (from2 > 0 ? "\u2026" : "") + doc3.body.slice(from2, to).replace(/\n/g, " ") + (to < doc3.len ? "\u2026" : "");
+            matches2.push({ line: lineAt(doc3.offs, pos), pos, snippet });
+          }
+          let score = freq;
+          for (const t3 of hitTokens) if (doc3.titleToks.has(t3)) score += 10;
+          score = score / Math.log2(doc3.len + 4);
+          return { id, path: doc3.path, title: doc3.title, status: doc3.status, score: +score.toFixed(4), freq, matches: matches2 };
+        }
+      };
     }
   });
 
   // src/ai/ai-core.js
+  var ai_core_exports = {};
+  __export(ai_core_exports, {
+    AIClient: () => AIClient,
+    CostTracker: () => CostTracker,
+    DEFAULT_AI: () => DEFAULT_AI,
+    EMBED_DIM: () => EMBED_DIM,
+    INDEX_FILE: () => INDEX_FILE,
+    KEY_FILE: () => KEY_FILE3,
+    KeyStore: () => KeyStore,
+    PRICES: () => PRICES,
+    PROVIDERS: () => PROVIDERS,
+    PROVIDER_IDS: () => PROVIDER_IDS,
+    RagPipeline: () => RagPipeline,
+    RateLimiter: () => RateLimiter,
+    SEVERITY: () => SEVERITY,
+    SEV_RANK: () => SEV_RANK,
+    VectorIndex: () => VectorIndex,
+    buildContext: () => buildContext,
+    buildRequest: () => buildRequest,
+    chunkText: () => chunkText,
+    coerceArray: () => coerceArray,
+    cosine: () => cosine,
+    estimateCost: () => estimateCost,
+    estimateTokens: () => estimateTokens2,
+    extractJson: () => extractJson,
+    httpFromKapi: () => httpFromKapi,
+    localEmbed: () => localEmbed,
+    mask: () => mask,
+    parseResponse: () => parseResponse,
+    parseStreamChunk: () => parseStreamChunk2,
+    redact: () => redact,
+    validate: () => validate
+  });
   function buildRequest(provider, opts = {}) {
     const p = PROVIDERS[provider] || PROVIDERS.openai;
     const messages = opts.messages && opts.messages.length ? opts.messages : [{ role: "user", content: opts.prompt || "" }];
@@ -65161,7 +67028,6 @@ ${h.text}`;
     buildPrompt: () => buildPrompt,
     changeTone: () => changeTone,
     contextBlock: () => contextBlock,
-    continueText: () => continueText,
     expand: () => expand,
     rewrite: () => rewrite,
     summarize: () => summarize
@@ -65211,8 +67077,8 @@ ${h.text}`;
     const ctx2 = contextBlock(context2);
     if (ctx2) lines.push("", ctx2);
     if (text) lines.push("", t("ui.aiAssistant.textSource"), text);
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM_TH, prompt: prompt2, tokens: estimateTokens2(prompt2) };
+    const prompt = lines.join("\n");
+    return { system: SYSTEM_TH, prompt, tokens: estimateTokens2(prompt) };
   }
   function contextBlock(context2) {
     if (!context2) return "";
@@ -65234,19 +67100,19 @@ ${h.text}`;
     const retrieved = context2.retrieved && context2.retrieved.length ? buildContext(context2.retrieved, { maxTokens: context2.maxContextTokens || 1200 }).text : "";
     return [head2, retrieved].filter(Boolean).join("\n\n");
   }
-  async function aiAssistant(prompt2, context2 = null, options = {}) {
+  async function aiAssistant(prompt, context2 = null, options = {}) {
     const client = options.client;
     if (!client) return { ok: false, text: "", error: t("ui.aiAssistant.cantSettingsAIClient"), code: "no-client", prompt: "" };
     const task = options.task || "custom";
     const source = options.text != null ? options.text : context2 && context2.text || "";
     let ctx2 = context2;
     if (options.rag && typeof options.rag.retrieve === "function") {
-      const hits = await options.rag.retrieve(prompt2 || source, options.k || 5);
+      const hits = await options.rag.retrieve(prompt || source, options.k || 5);
       ctx2 = { ...context2 || {}, retrieved: hits };
     }
     const built = buildPrompt(task, {
       text: source,
-      instruction: task === "custom" ? prompt2 : options.instruction || (task === "rewrite" ? prompt2 : ""),
+      instruction: task === "custom" ? prompt : options.instruction || (task === "rewrite" ? prompt : ""),
       tone: options.tone,
       length: options.length,
       language: options.language,
@@ -65275,9 +67141,6 @@ ${h.text}`;
   }
   function changeTone(text, tone, options = {}) {
     return aiAssistant("", { text }, { ...options, task: "changeTone", tone, text });
-  }
-  function continueText(text, options = {}) {
-    return aiAssistant("", { text }, { ...options, task: "continue", text });
   }
   var TONES, LENGTHS, SYSTEM_TH, TASKS;
   var init_ai_assistant = __esm({
@@ -65349,7 +67212,7 @@ ${h.text}`;
     const b = el("button", "k-ai-fill", "\u2728");
     b.type = "button";
     b.dataset.field = field2;
-    b.title = t("ai.genSynopsis", "\u0E43\u0E2B\u0E49 AI \u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E49") + " \u2014 " + def.label;
+    b.title = t("ai.genSynopsis") + " \u2014 " + def.label;
     b.onclick = async () => {
       if (b.disabled) return;
       b.disabled = true;
@@ -65364,7 +67227,7 @@ ${h.text}`;
           if (onFilled) onFilled();
         });
       } catch (e) {
-        setStatus(t("ai.errorRetry", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48"));
+        setStatus(t("ai.errorRetry"));
       } finally {
         b.disabled = false;
         b.classList.remove("busy");
@@ -65748,6 +67611,17 @@ ${h.text}`;
   });
 
   // src/auto-task/event-ui.js
+  var event_ui_exports = {};
+  __export(event_ui_exports, {
+    getTaskEngine: () => getTaskEngine,
+    handleEntityRenamed: () => handleEntityRenamed,
+    isAutoSyncOn: () => isAutoSyncOn,
+    listTextFiles: () => listTextFiles,
+    notifyEntityRenamed: () => notifyEntityRenamed,
+    renameAcrossProject: () => renameAcrossProject,
+    resetTaskEngine: () => resetTaskEngine,
+    setAutoSync: () => setAutoSync
+  });
   async function listTextFiles(root) {
     const out = [];
     if (!root) return out;
@@ -65816,18 +67690,31 @@ ${h.text}`;
     ticker = null;
     engine = null;
   }
-  function renderAutoSyncSection(host2) {
-    const div = el("div");
-    const lab = el("label");
-    const cb = el("input");
-    cb.type = "checkbox";
-    cb.id = "st-autosync";
-    cb.checked = isAutoSyncOn();
-    cb.onchange = () => setAutoSync(cb.checked);
-    lab.append(cb, document.createTextNode(t("ui.autoTaskEvent.openAutoSyncUpdate")));
-    div.append(lab);
-    host2.appendChild(div);
-    return div;
+  async function renameAcrossProject(oldName, newName) {
+    const files = await listTextFiles(state.root);
+    const run3 = renameEntityTask({
+      readFile: (p) => kapi.readFile(p).catch(() => null),
+      writeFile: (p, c) => kapi.writeFile(p, c)
+    });
+    return run3({ oldName, newName, files });
+  }
+  async function handleEntityRenamed(entityId, oldName, newName) {
+    if (!oldName || !newName || oldName === newName || !state.root) return "none";
+    if (isAutoSyncOn()) {
+      notifyEntityRenamed(entityId, oldName, newName);
+      return "queued";
+    }
+    const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+    if (!await confirmBox2(
+      tf("ui.autoTaskEvent.renameAsk", oldName, newName),
+      t("ui.autoTaskEvent.renameGo")
+    )) {
+      setStatus(t("ui.autoTaskEvent.renameSkipped"));
+      return "skipped";
+    }
+    const r = await renameAcrossProject(oldName, newName);
+    setStatus(r.changed ? tf("ui.autoTaskEvent.autoSyncUpdateName", r.files.length) : t("ui.autoTaskEvent.renameNoHit"));
+    return "renamed";
   }
   var engine, ticker, SKIP_DIRS3;
   var init_event_ui = __esm({
@@ -66091,8 +67978,8 @@ ${h.text}`;
     if (!txt) return "";
     const label = String(fieldLabel || "").trim();
     if (label) {
-      const esc6 = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      txt = txt.replace(new RegExp("^\\s*" + esc6 + "\\s*[:\uFF1A]\\s*"), "").trim();
+      const esc7 = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      txt = txt.replace(new RegExp("^\\s*" + esc7 + "\\s*[:\uFF1A]\\s*"), "").trim();
     }
     txt = txt.replace(/^[-•*]\s+/, "").trim();
     const q = txt.match(/^["“”「『«]([\s\S]+)["“”」』»]$/);
@@ -66337,12 +68224,12 @@ ${h.text}`;
       init_i18n();
       PAPER_DEFAULT = "#ffffff";
       PAPER_PRESETS = [
-        { key: "white", color: "#ffffff", label: T`ขาว` },
-        { key: "cream", color: "#f5f1e6", label: T`ครีม (ของเดิม)` },
-        { key: "sepia", color: "#efe3cc", label: T`กระดาษเก่า` },
-        { key: "gray", color: "#eeeeee", label: T`เทาอ่อน` },
-        { key: "mint", color: "#eaf2ec", label: T`เขียวถนอมสายตา` },
-        { key: "dark", color: "#2b2b2b", label: T`มืด` }
+        { key: "white", color: "#ffffff", label: t("ui.paper.colorWhite") },
+        { key: "cream", color: "#f5f1e6", label: t("ui.paper.colorCream") },
+        { key: "sepia", color: "#efe3cc", label: t("ui.paper.colorSepia") },
+        { key: "gray", color: "#eeeeee", label: t("ui.paper.colorGray") },
+        { key: "mint", color: "#eaf2ec", label: t("ui.paper.colorMint") },
+        { key: "dark", color: "#2b2b2b", label: t("ui.paper.colorDark") }
       ];
       clamp255 = (v2) => Math.max(0, Math.min(255, Math.round(v2)));
       isLightPaper = (hex) => luminance(hex) >= 0.4;
@@ -66373,15 +68260,19 @@ ${h.text}`;
     }
   }
   async function countProjectWords() {
-    if (!state.root) return 0;
+    const root = state.root;
+    if (!root) return 0;
+    const stale2 = () => state.root !== root;
     let total = 0;
     try {
-      for (const sec of await kapi.listDirs(state.root)) {
-        const secP = await kapi.join(state.root, sec);
+      for (const sec of await kapi.listDirs(root)) {
+        if (stale2()) return total;
+        const secP = await kapi.join(root, sec);
         if (!await kapi.exists(await kapi.join(secP, "section.json"))) continue;
         const dr = await kapi.join(secP, "Draft");
         if (!await kapi.exists(dr)) continue;
         for (const dn of await kapi.listDirs(dr)) {
+          if (stale2()) return total;
           const dp = await kapi.join(dr, dn);
           const sf = await kapi.join(dp, "scenes.json");
           if (!await kapi.exists(sf)) continue;
@@ -66397,6 +68288,63 @@ ${h.text}`;
       log("warn", "countProjectWords failed", e);
     }
     return total;
+  }
+  async function rebuildWordCounts({ force = false } = {}) {
+    const out = { scanned: 0, fixed: 0, words: 0, done: false };
+    const root = state.root;
+    if (!root) return out;
+    const stale2 = () => state.root !== root;
+    try {
+      for (const sec of await kapi.listDirs(root)) {
+        if (stale2()) return out;
+        const secP = await kapi.join(root, sec);
+        if (!await kapi.exists(await kapi.join(secP, "section.json"))) continue;
+        const dr = await kapi.join(secP, "Draft");
+        if (!await kapi.exists(dr)) continue;
+        for (const dn of await kapi.listDirs(dr)) {
+          const dp = await kapi.join(dr, dn);
+          const sf = await kapi.join(dp, "scenes.json");
+          if (!await kapi.exists(sf)) continue;
+          const d = await kapi.readJson(sf);
+          const draft = await kapi.readJson(await kapi.join(dp, "draft.json")).catch(() => ({}));
+          const folderOf = {};
+          for (const ch of draft.chapters || []) folderOf[ch.guid] = ch.folderName;
+          let dirty = false;
+          for (const cg of Object.keys(d.chapters || {})) {
+            for (const sc of d.chapters[cg] || []) {
+              if (sc.type === "memo") continue;
+              out.scanned++;
+              const cur = sc.wordCount || 0;
+              if (!force && cur > 0) {
+                out.words += cur;
+                continue;
+              }
+              const folder = folderOf[cg];
+              if (!folder || !sc.fileName) continue;
+              let body = "";
+              try {
+                const raw = await kapi.readFile(await kapi.join(dp, "Chapters", folder, sc.fileName));
+                body = (0, import_md7.parseMdFile)(raw).body || "";
+              } catch {
+                continue;
+              }
+              const n2 = (0, import_md7.countWords)(body);
+              out.words += n2;
+              if (n2 !== cur) {
+                sc.wordCount = n2;
+                dirty = true;
+                out.fixed++;
+              }
+            }
+          }
+          if (dirty) await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+        }
+      }
+      out.done = true;
+    } catch (e) {
+      log("warn", "rebuildWordCounts failed", e);
+    }
+    return out;
   }
   function calcStreak(wordHistory) {
     const hist = wordHistory || getWordHistory();
@@ -66429,9 +68377,11 @@ ${h.text}`;
     }
     return streak;
   }
+  var import_md7;
   var init_word_history = __esm({
     "src/word-history.js"() {
       init_core();
+      import_md7 = __toESM(require_md());
     }
   });
 
@@ -67277,6 +69227,13 @@ ${h.text}`;
         document.body.classList.remove("k-resizing");
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
+        try {
+          requestAnimationFrame(() => {
+            Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports)).then((m) => m.auditPanelGaps && m.auditPanelGaps()).catch(() => {
+            });
+          });
+        } catch {
+        }
         if (pxMode) {
           const upd = {};
           if (isPx(prev)) upd[index] = pxPrev;
@@ -67455,8 +69412,8 @@ ${h.text}`;
     const warn = [];
     for (const d of docks) {
       const holdsDocs = !!d.flexChild;
-      const live = d.children.filter((c) => c.share !== "hidden" && !c.hidden);
-      const hasRatioNeighbour = live.some((c) => c.share === "grow" && c.id !== d.flexChild);
+      const live2 = d.children.filter((c) => c.share !== "hidden" && !c.hidden);
+      const hasRatioNeighbour = live2.some((c) => c.share === "grow" && c.id !== d.flexChild);
       if (holdsDocs && d.mode === "ratio" && hasRatioNeighbour) {
         warn.push(tf("ui.panelExport.dockModeRatioHas", d.id, d.dir) + t("ui.panelExport.valueSizeKeepNot"));
       }
@@ -67565,7 +69522,6 @@ ${h.text}`;
     isPanelOpen: () => isPanelOpen,
     isTornOff: () => isTornOff,
     listWorkspaces: () => listWorkspaces,
-    loadPanelLayout: () => loadPanelLayout,
     measurePanelGeometry: () => measurePanelGeometry,
     mountPanelWindow: () => mountPanelWindow,
     onPanelLayoutChange: () => onPanelLayoutChange,
@@ -67720,7 +69676,7 @@ ${h.text}`;
     return pid;
   }
   function titleOf(d) {
-    return d.i18n ? t(d.i18n, d.title) : d.title;
+    return d.i18n ? t(d.i18n) : d.title;
   }
   function panelDesc(id) {
     const d = PANEL_DEFS.find((x) => x.id === panelId(id));
@@ -67729,9 +69685,6 @@ ${h.text}`;
   function getPanelManager() {
     if (!pm) pm = new PanelManager();
     return pm;
-  }
-  function loadPanelLayout() {
-    return getPanelManager().load();
   }
   function savePanelLayout() {
     if (pm) pm.store.save();
@@ -68685,7 +70638,7 @@ ${h.text}`;
           defaultSide: "left",
           closable: true,
           floatable: true,
-          i18n: "panel.searchTitle",
+          i18n: "ui.panel.search",
           desc: t("ui.panel.searchTextProjectAll")
         },
         {
@@ -68696,7 +70649,7 @@ ${h.text}`;
           defaultSide: "right",
           closable: true,
           floatable: true,
-          i18n: "panel.notesTitle",
+          i18n: "ui.common.notebookNoteQuick",
           desc: t("ui.panel.noteIdeaNotSource")
         },
         {
@@ -68850,37 +70803,51 @@ ${h.text}`;
           id: "network",
           minW: 400,
           dockW: 640,
-          title: "Story Network",
+          title: t("ui.panel.networkTitle"),
           icon: "grid",
           adopt: "#net-panel",
           defaultSide: "left",
           closable: true,
           floatable: true,
-          i18n: "panel.networkTitle",
+          i18n: "ui.panel.networkTitle",
           desc: t("ui.panel.graphRelationCharacterPlace")
+        },
+        // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ในหน้าเดียว (ดัชนีตัวเดียวกับแท็บใน Wiki)
+        {
+          id: "backlinks",
+          minW: 300,
+          dockW: 380,
+          title: t("ui.worldAutoLink.panelTitle"),
+          icon: "link",
+          adopt: "#backlinks-panel",
+          defaultSide: "right",
+          closable: true,
+          floatable: true,
+          i18n: "ui.worldAutoLink.panelTitle",
+          desc: t("ui.worldAutoLink.panelDesc")
         },
         {
           id: "planner",
           minW: 800,
           dockW: 640,
-          title: "Planner",
+          title: t("ui.panel.plannerTitle"),
           icon: "grid",
           adopt: "#planner-panel",
           defaultSide: "left",
           closable: true,
           floatable: true,
-          i18n: "panel.plannerTitle",
+          i18n: "ui.panel.plannerTitle",
           desc: t("ui.panel.boardPlannerStyleCard")
         },
         {
           id: "planner-props",
           title: t("ui.panel.propsPlanner"),
-          icon: "info",
+          icon: "clipboard",
           adopt: "#planner-props-panel",
           defaultSide: "right",
           closable: true,
           floatable: true,
-          i18n: "panel.plannerPropsTitle",
+          i18n: "ui.panel.propsPlanner",
           desc: t("ui.panel.propsCardLineLink")
         },
         {
@@ -68892,7 +70859,7 @@ ${h.text}`;
           defaultSide: "left",
           closable: true,
           floatable: true,
-          i18n: "panel.floorplanTitle",
+          i18n: "ui.common.graphArea",
           desc: t("ui.panel.sceneOccurMapPin")
         },
         // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
@@ -69467,6 +71434,7 @@ ${h.text}`;
     const box2 = el("div", "k-dialog");
     box2.append(el("div", "k-dlg-title", t("ui.notes.noteQuick") + (sceneTitle || t("ui.common.msg4"))));
     const ta = el("textarea", "k-dlg-input");
+    ta.placeholder = t("ui.notes.quickNotePh");
     ta.style.cssText = "width:100%;min-height:100px;resize:vertical;font-family:inherit";
     box2.append(ta);
     const futRow = el("label", "fn-future-row");
@@ -69519,6 +71487,7 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
   }
   async function showAllNotes() {
     const notes = [...getSessionNotes()].reverse();
@@ -69568,12 +71537,14 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
   }
   var NOTES_KEY;
   var init_session_notes = __esm({
     "src/session-notes.js"() {
       init_i18n();
       init_core();
+      init_ui();
       NOTES_KEY = "k2-session-notes";
     }
   });
@@ -69770,8 +71741,8 @@ ${h.text}`;
             byStatus[st] = (byStatus[st] || 0) + 1;
             const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
             try {
-              const { body } = (0, import_md5.parseMdFile)(await kapi.readFile(file));
-              const w = (0, import_md5.countWords)(body);
+              const { body } = (0, import_md8.parseMdFile)(await kapi.readFile(file));
+              const w = (0, import_md8.countWords)(body);
               words += w;
               cw += w;
               sceneRows.push({ title: sc.title, ch: ch.title, file, flag: sc.flag });
@@ -69975,12 +71946,12 @@ ${h.text}`;
     }
     return true;
   }
-  var import_md5;
+  var import_md8;
   var init_dashboard = __esm({
     "src/dashboard.js"() {
       init_i18n();
       init_core();
-      import_md5 = __toESM(require_md());
+      import_md8 = __toESM(require_md());
       init_word_history();
       init_player_choices();
       init_project_scan();
@@ -70440,8 +72411,8 @@ ${h.text}`;
     const n2 = normalizeToolbar(cfg);
     return { total: ids.length, on: ids.filter((id) => !n2.hidden[id]).length };
   }
-  function layoutToolbar(seq2, visible) {
-    const list = Array.isArray(seq2) ? seq2 : [];
+  function layoutToolbar(seq3, visible) {
+    const list = Array.isArray(seq3) ? seq3 : [];
     const isSep = (x) => x === "sep";
     const out = list.map((x) => isSep(x) ? false : !!visible(x));
     let seenButton = false;
@@ -70539,8 +72510,8 @@ ${h.text}`;
     const n2 = normalizeFmtbar(cfg)[fmtMode(mode)];
     return { total: ids.length, on: ids.filter((id) => !n2.hidden[id]).length };
   }
-  function layoutFmtbar(seq2, cfg, mode) {
-    const list = Array.isArray(seq2) ? seq2 : [];
+  function layoutFmtbar(seq3, cfg, mode) {
+    const list = Array.isArray(seq3) ? seq3 : [];
     const m = fmtMode(mode);
     const vis = (id) => !fmtbarHidden(cfg, m, id);
     const show = layoutToolbar(
@@ -70578,6 +72549,8 @@ ${h.text}`;
           // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย
           { id: "tb-sup" },
           { id: "tb-sub" },
+          // [alpha.132 ข้อ 9] สีตัวอักษร (ผู้ใช้จริงขอมา)
+          { id: "tb-color" },
           { id: "tb-ul" },
           { id: "tb-ol" },
           { id: "tb-quote" },
@@ -70638,7 +72611,8 @@ ${h.text}`;
           { id: "tb-branch" },
           { id: "tb-floorplan" },
           { id: "tb-player" },
-          { id: "tb-gallery-board" }
+          { id: "tb-gallery-board" },
+          { id: "tb-backlinks" }
         ] },
         { key: "ai", labelKey: "ui.tbcfg.grpAi", buttons: [
           { id: "tb-ai-hub" },
@@ -70669,6 +72643,7 @@ ${h.text}`;
         "tb-strike",
         "tb-sup",
         "tb-sub",
+        "tb-color",
         "tb-ul",
         "tb-ol",
         "tb-quote",
@@ -70684,7 +72659,9 @@ ${h.text}`;
         "tb-gsearch"
       ];
       FMT_UNSUPPORTED = {
-        screenplay: ["tb-style", "tb-sup", "tb-sub", "tb-quote"],
+        // [alpha.132 ข้อ 9] สีตัวอักษรเป็นของนิยายเท่านั้น — บทเก็บเป็น fountain ล้วน
+        // ใส่สีลงไปจะพังการอ่านกลับ (กฎเดียวกับที่ align ของบทเป็น session-only)
+        screenplay: ["tb-style", "tb-sup", "tb-sub", "tb-quote", "tb-color"],
         prose: ["tb-sp-elem", "tb-sp-cont"]
         // (`tb-sp-ext` อยู่บนแถบหลัก ไม่ใช่แถบลอย)
       };
@@ -70927,15 +72904,15 @@ ${h.text}`;
       if (!bar) continue;
       found2 = true;
       const kids = [...bar.children];
-      const seq2 = barSeq(bar);
-      const show = layoutToolbar(seq2.map((x) => x ?? " keep"), (x) => x === " keep" ? true : vis(x));
+      const seq3 = barSeq(bar);
+      const show = layoutToolbar(seq3.map((x) => x ?? " keep"), (x) => x === " keep" ? true : vis(x));
       kids.forEach((k, i5) => {
-        if (seq2[i5] === "sep") {
+        if (seq3[i5] === "sep") {
           k.classList.toggle("tb-hidden", !show[i5]);
           return;
         }
-        if (!seq2[i5]) return;
-        k.classList.toggle("tb-hidden", !vis(seq2[i5]));
+        if (!seq3[i5]) return;
+        k.classList.toggle("tb-hidden", !vis(seq3[i5]));
       });
     }
     applyFmtbarConfig();
@@ -71085,13 +73062,13 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) close2();
     };
-    const esc6 = (e) => {
+    const esc7 = (e) => {
       if (e.key === "Escape") {
         close2();
-        document.removeEventListener("keydown", esc6);
+        document.removeEventListener("keydown", esc7);
       }
     };
-    document.addEventListener("keydown", esc6);
+    document.addEventListener("keydown", esc7);
     return ov;
   }
   async function saveFmtbar(next) {
@@ -71403,10 +73380,10 @@ ${h.text}`;
     if (j.entries.length <= max2) return { journal: j, dropped: [] };
     const cut = j.entries.slice(0, j.entries.length - max2);
     const keep = j.entries.slice(j.entries.length - max2);
-    const live = referencedBlobs({ entries: keep });
+    const live2 = referencedBlobs({ entries: keep });
     const dropped = [];
     for (const e of cut) for (const f of e.files) {
-      if (f.before && !live.has(f.before) && !dropped.includes(f.before)) dropped.push(f.before);
+      if (f.before && !live2.has(f.before) && !dropped.includes(f.before)) dropped.push(f.before);
     }
     j.entries = keep;
     return { journal: j, dropped };
@@ -71418,9 +73395,9 @@ ${h.text}`;
     }
     return s;
   }
-  function planRevert(journal, seq2) {
+  function planRevert(journal, seq3) {
     const j = migrate2(journal);
-    const target = Number(seq2) || 0;
+    const target = Number(seq3) || 0;
     const rollback = j.entries.filter((e) => e.seq > target);
     const byPath = /* @__PURE__ */ new Map();
     for (const e of rollback) {
@@ -71435,15 +73412,15 @@ ${h.text}`;
     ops.sort((a, b) => a.op === b.op ? 0 : a.op === "delete" ? -1 : 1);
     return { ops, undone: rollback.map((e) => e.seq), entries: rollback };
   }
-  function afterRevert(journal, seq2) {
+  function afterRevert(journal, seq3) {
     const j = migrate2(journal);
-    const target = Number(seq2) || 0;
+    const target = Number(seq3) || 0;
     const keep = j.entries.filter((e) => e.seq <= target);
-    const live = referencedBlobs({ entries: keep });
+    const live2 = referencedBlobs({ entries: keep });
     const dropped = [];
     for (const e of j.entries) {
       if (e.seq <= target) continue;
-      for (const f of e.files) if (f.before && !live.has(f.before) && !dropped.includes(f.before)) dropped.push(f.before);
+      for (const f of e.files) if (f.before && !live2.has(f.before) && !dropped.includes(f.before)) dropped.push(f.before);
     }
     return { journal: { ...j, entries: keep }, dropped };
   }
@@ -71499,7 +73476,6 @@ ${h.text}`;
   __export(history_ui_exports, {
     configHistory: () => configHistory,
     loadHistory: () => loadHistory,
-    openHistory: () => openHistory,
     renderHistoryPanel: () => renderHistoryPanel,
     resetHistory: () => resetHistory
   });
@@ -71595,10 +73571,10 @@ ${h.text}`;
     list.append(zero);
     return true;
   }
-  async function revertTo(seq2, label, host2) {
+  async function revertTo(seq3, label, host2) {
     const s = S();
     if (s.busy) return false;
-    const plan = planRevert(s.journal, seq2);
+    const plan = planRevert(s.journal, seq3);
     if (!plan.ops.length) {
       setStatus(t("ui.histOry.dot"));
       return false;
@@ -71615,7 +73591,7 @@ ${h.text}`;
         await saveAllTabs2();
       } catch {
       }
-      const res = await kapi.historyRevert(seq2);
+      const res = await kapi.historyRevert(seq3);
       if (!res || res.ok === false) {
         setStatus(t("ui.histOry.undoNotOkPart"));
         log("warn", t("ui.histOry.historyUndoNotComplete"), res);
@@ -71635,12 +73611,6 @@ ${h.text}`;
     } catch {
     }
     return true;
-  }
-  async function openHistory() {
-    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
-    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    showPanel2("history");
-    await renderFeaturePanel2("history");
   }
   var S, fmtAt;
   var init_history_ui = __esm({
@@ -71670,7 +73640,6 @@ ${h.text}`;
     pickSystemFont: () => pickSystemFont,
     settingsDialog: () => settingsDialog,
     showChangelog: () => showChangelog,
-    showLog: () => showLog,
     versionDialog: () => versionDialog
   });
   function buildNetColorFields(box2, s) {
@@ -72012,6 +73981,7 @@ ${h.text}`;
     q("#st-uiscale-lbl").textContent = Math.round(origUiScale * 100) + "%";
     q("#st-uiscale").oninput = () => applyUIScale(parseFloat(q("#st-uiscale").value) || 1);
     q("#st-autosync").checked = isAutoSyncOn() || !!s.autoSync;
+    q("#st-thesaurus").checked = s.thesaurus === true;
     const autoPag = q("#st-autopag");
     const autoPagIntv = q("#st-pagintv");
     if (autoPag) autoPag.checked = !!s.spAutoPaginate;
@@ -72436,8 +74406,20 @@ ${h.text}`;
         previewPage();
       };
     }
+    {
+      const c = q("#st-sp-errmark");
+      c.checked = s.spErrorMarks !== false;
+      c.onchange = async () => {
+        s.spErrorMarks = c.checked;
+        const { toggleSpErrorMarks: toggleSpErrorMarks2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        toggleSpErrorMarks2(c.checked);
+      };
+    }
     chk("#st-ct-auto", () => W.continued.enabled !== false, (v2) => {
       W.continued.enabled = v2;
+    });
+    chk("#st-ct-nohead", () => W.continued.noHeading === true, (v2) => {
+      W.continued.noHeading = v2;
     });
     chk("#st-pn-show", () => W.pageNumbers.show, (v2) => {
       W.pageNumbers.show = v2;
@@ -73210,6 +75192,7 @@ ${h.text}`;
       s.uiScale = Math.min(2, Math.max(0.75, parseFloat(q("#st-uiscale").value) || 1));
       s.shortcuts = workKeys;
       s.autoSync = q("#st-autosync").checked;
+      s.thesaurus = q("#st-thesaurus").checked;
       setAutoSync(s.autoSync);
       s.spAutoPaginate = q("#st-autopag")?.checked || false;
       s.spPaginateInterval = Math.min(60, Math.max(1, num4("#st-pagintv", 30)));
@@ -73293,6 +75276,8 @@ ${h.text}`;
             "pageGuides",
             // [alpha.100 ข้อ 2+4]
             // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
+            // [alpha.132 ข้อ 9] จานสีตัวอักษร (บันทึกไว้ + ใช้ล่าสุด) — ตามผู้ใช้ไปทุกโปรเจกต์
+            "textColors",
             "toolbar",
             "fmtbar",
             "fab"
@@ -73405,6 +75390,7 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
     async function refresh() {
       listCol.innerHTML = "";
       const snaps = await listSnapshots(file);
@@ -73423,7 +75409,7 @@ ${h.text}`;
         bView.onclick = async () => {
           try {
             const c = await kapi.readFile(s.path);
-            prev.textContent = (isJson ? c : (0, import_md6.parseMdFile)(c).body) || t("panel.emptyContent");
+            prev.textContent = (isJson ? c : (0, import_md9.parseMdFile)(c).body) || t("panel.emptyContent");
           } catch {
             prev.textContent = t("panel.unreadable");
           }
@@ -73482,46 +75468,10 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
     document.body.append(ov);
   }
-  async function showLog() {
-    log("info", t("ui.dlg.openItemViewLog"));
-    const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog k-wide");
-    const ttl = el("div", "k-dlg-title", t("panel.logTitle"));
-    const body = el("pre", "k-changelog k-logview");
-    const load = async () => {
-      let text = "";
-      try {
-        text = await kapi.logRead(800) || "";
-      } catch {
-      }
-      if (!text) text = LOG_BUF.slice(-800).join("\n");
-      body.textContent = text || t("panel.logEmpty");
-      body.scrollTop = body.scrollHeight;
-    };
-    await load();
-    const btns = el("div", "k-dlg-btns");
-    const refresh = el("button", null, "\u21BB " + t("dialogs.refresh"));
-    refresh.onclick = load;
-    const reveal = el("button");
-    reveal.innerHTML = iconHtml("folder", 14) + " " + t("dialogs.openFolder");
-    reveal.onclick = () => kapi.logReveal && kapi.logReveal();
-    const copy2 = el("button", null, "\u{1F4CB} " + t("dialogs.copy"));
-    copy2.onclick = () => {
-      navigator.clipboard.writeText(body.textContent).then(() => setStatus(t("status.logCopied")));
-    };
-    const ok2 = el("button", "k-ok", t("dialogs.close"));
-    ok2.onclick = () => ov.remove();
-    btns.append(refresh, reveal, copy2, ok2);
-    box2.append(ttl, body, btns);
-    ov.append(box2);
-    ov.onclick = (e) => {
-      if (e.target === ov) ov.remove();
-    };
-    document.body.append(ov);
-  }
-  var import_md6;
+  var import_md9;
   var init_dialogs = __esm({
     "src/dialogs.js"() {
       init_i18n();
@@ -73534,7 +75484,7 @@ ${h.text}`;
       init_fountain();
       init_dashboard();
       init_ui();
-      import_md6 = __toESM(require_md());
+      import_md9 = __toESM(require_md());
       init_event_ui();
       init_focus_mode();
       init_icons();
@@ -73762,7 +75712,7 @@ ${h.text}`;
           Promise.resolve().then(() => (init_app(), app_exports)).then(({ snapshotFile: snapshotFile2 }) => snapshotFile2(file).catch(() => {
           }));
         }
-        if (tab.title && e2.name && tab.title !== e2.name) notifyEntityRenamed(file, tab.title, e2.name);
+        if (tab.title && e2.name && tab.title !== e2.name) handleEntityRenamed(file, tab.title, e2.name);
         tab.title = e2.name;
         tab.tabBtn.querySelector(".tab-title").textContent = e2.name;
         smart.loadNames(state.root);
@@ -73796,20 +75746,20 @@ ${h.text}`;
           const blHead = el("div", "wiki-bl-head");
           blHead.style.cssText = "font-weight:600;color:var(--dim);margin-bottom:8px;display:flex;align-items:center;gap:6px";
           const blTitle = el("span");
-          blTitle.innerHTML = iconHtml("link", 14) + " " + t("wiki.backlinksTitle", "\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07");
+          blTitle.innerHTML = iconHtml("link", 14) + " " + t("wiki.backlinksTitle");
           const reBtn = el("button", "wiki-bl-refresh", "\u{1F504}");
           reBtn.type = "button";
-          reBtn.title = t("wiki.backlinksRefresh", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E42\u0E22\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C");
+          reBtn.title = t("wiki.backlinksRefresh");
           reBtn.onclick = async () => {
             reBtn.disabled = true;
-            setStatus(t("wiki.backlinksScanning", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E41\u0E01\u0E19\u0E09\u0E32\u0E01\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u2026"));
+            setStatus(t("wiki.backlinksScanning"));
             try {
               await rebuildAutoLink();
             } finally {
               reBtn.disabled = false;
             }
             attachBacklinks();
-            setStatus(t("wiki.backlinksDone", "\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E14\u0E31\u0E0A\u0E19\u0E35 \u201C\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07\u201D \u0E41\u0E25\u0E49\u0E27"));
+            setStatus(t("wiki.backlinksDone"));
           };
           blHead.append(blTitle, reBtn);
           blSec.append(blHead);
@@ -73882,7 +75832,7 @@ ${h.text}`;
     tabBtn.onclick = (e) => {
       if (e.target !== x) activate(file);
     };
-    x.onclick = () => closeTab(file);
+    x.onclick = () => closeTab(file, { ask: true });
     state.tabs.set(file, tab);
     activate(file);
   }
@@ -73914,7 +75864,7 @@ ${h.text}`;
     for (const [k, v2] of Object.entries(entity && entity.fields || {})) rows.push({ label: labels[k] || k, value: v2 });
     for (const [k, v2] of Object.entries(entity && entity.customProperties || {})) rows.push({ label: k, value: v2 });
     if (entity && entity.desc) rows.push({ label: t("ui.wiki.aiCtxDesc"), value: entity.desc });
-    const { system, prompt: prompt2 } = buildFieldPrompt({
+    const { system, prompt } = buildFieldPrompt({
       fieldLabel: label,
       current: value,
       entityName: entity && entity.name,
@@ -73923,7 +75873,7 @@ ${h.text}`;
       story: state.meta && (state.meta.synopsis || state.meta.title) || ""
     });
     setStatus(tf("ui.wiki.aiWorking", label));
-    const res = await complete(prov, { system, messages: [{ role: "user", content: prompt2 }] });
+    const res = await complete(prov, { system, messages: [{ role: "user", content: prompt }] });
     if (!res || !res.ok) {
       setStatus("\u274C " + (res && res.error || t("ui.wiki.aiFailed")));
       return null;
@@ -75340,6 +77290,12 @@ ${h.text}`;
   });
 
   // src/recycle.js
+  var recycle_exports = {};
+  __export(recycle_exports, {
+    deleteToTrash: () => deleteToTrash,
+    purgeRecycle: () => purgeRecycle,
+    restoreFromTrash: () => restoreFromTrash
+  });
   async function restoreFromTrash(p, fname) {
     const sidecar = p + ".k2restore.json";
     if (await kapi.exists(sidecar)) {
@@ -75405,6 +77361,7 @@ ${h.text}`;
     await buildTree2();
     smart.loadNames(state.root);
     refreshNetwork();
+    logAction("recycle", t("ui.trash.recoverRestoreDone"), { from: p, name: fname });
     setStatus(t("ui.trash.recoverRestoreDone"));
   }
   async function deleteToTrash(file, label) {
@@ -75419,38 +77376,59 @@ ${h.text}`;
     await buildTree2();
     smart.loadNames(state.root);
     refreshNetwork();
+    logAction("recycle", t("ui.trash.moveTrash") + label, { from: file, to: dst });
     setStatus(t("ui.trash.moveTrash") + label);
     return dst;
   }
-  async function purgeRecycle(root) {
+  async function purgeRecycle(root, { silent = false, force = false } = {}) {
     const days = parseInt(state.settings.recycleDays, 10) || 0;
-    if (days <= 0) return;
+    if (days <= 0) return 0;
+    if (force) PURGE_C.skipped.delete(root);
+    else if (PURGE_C.skipped.has(root)) return 0;
     const recDir = await kapi.join(root, "Recycle");
-    if (!await kapi.exists(recDir)) return;
+    if (!await kapi.exists(recDir)) return 0;
     const cutoff = Date.now() - days * 864e5;
-    let purged = 0;
+    const doomed = [];
     for (const name5 of await kapi.listDirs(recDir).catch(() => [])) {
       const p = await kapi.join(recDir, name5);
-      if (await kapi.mtime(p) < cutoff) {
-        await kapi.remove(p);
-        purged++;
-      }
+      if (await kapi.mtime(p) < cutoff) doomed.push(p);
     }
     for (const name5 of await kapi.listFiles(recDir, "").catch(() => [])) {
+      if (/\.k2restore\.json$/i.test(name5)) continue;
       const p = await kapi.join(recDir, name5);
-      if (await kapi.mtime(p) < cutoff) {
+      if (await kapi.mtime(p) < cutoff) doomed.push(p);
+    }
+    if (!doomed.length) return 0;
+    if (silent) return 0;
+    if (!await confirmBox(tf("ui.trash.purgeAsk", doomed.length, days), t("ui.trash.purgeGo"))) {
+      PURGE_C.skipped.add(root);
+      setStatus(tf("ui.trash.purgeKept", doomed.length));
+      return 0;
+    }
+    let purged = 0;
+    for (const p of doomed) {
+      try {
         await kapi.remove(p);
+        await kapi.remove(p + ".k2restore.json").catch(() => {
+        });
         purged++;
+      } catch {
       }
     }
-    if (purged) setStatus(tf("ui.trash.clearTrashAutoList", purged, days));
+    if (purged) {
+      logAction("recycle", tf("ui.trash.clearTrashAutoList", purged, days), doomed);
+      setStatus(tf("ui.trash.clearTrashAutoList", purged, days));
+    }
+    return purged;
   }
+  var PURGE_C;
   var init_recycle = __esm({
     "src/recycle.js"() {
       init_i18n();
       init_app();
       init_core();
       init_ui();
+      PURGE_C = { skipped: /* @__PURE__ */ new Set() };
     }
   });
 
@@ -75690,9 +77668,9 @@ ${h.text}`;
     const snaps = splitSnaps(row2 && row2.text);
     if (!refs.length) return { status: "free", parts: [], live: [] };
     const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
-    const live = parts.filter((p) => p.status !== "lost");
-    const status = parts.some((p) => p.status === "changed") ? "changed" : live.length ? "ok" : "lost";
-    return { status, parts, live };
+    const live2 = parts.filter((p) => p.status !== "lost");
+    const status = parts.some((p) => p.status === "changed") ? "changed" : live2.length ? "ok" : "lost";
+    return { status, parts, live: live2 };
   }
   function resolveAll(rows, lines) {
     return (rows || []).map((r) => resolveRow(r, lines));
@@ -75905,7 +77883,6 @@ ${h.text}`;
     renameChapter: () => renameChapter,
     renameScene: () => renameScene,
     renumberChapters: () => renumberChapters,
-    renumberMenuItems: () => renumberMenuItems,
     sceneColorMenu: () => sceneColorMenu,
     sceneStatusMenu: () => sceneStatusMenu,
     setChapterTitle: () => setChapterTitle,
@@ -75925,9 +77902,9 @@ ${h.text}`;
     for (const s of d.chapters[ch.guid] || []) if (s.id === sc.id) s.title = title2;
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
-    const { meta: meta2, body } = (0, import_md7.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md10.parseMdFile)(await kapi.readFile(file));
     meta2.title = title2;
-    await kapi.writeFile(file, (0, import_md7.dumpMdFile)(meta2, body));
+    await kapi.writeFile(file, (0, import_md10.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -76063,6 +78040,7 @@ ${h.text}`;
     d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
+    logAction("scene", tf("ui.scene.delScene2", sc.title), { dPath, chapter: ch.title, trash: dst });
     await buildTree2();
     refreshNetwork();
   }
@@ -76089,6 +78067,11 @@ ${h.text}`;
     const s2 = await kapi.readJson(sf);
     if (s2.chapters) delete s2.chapters[ch.guid];
     await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
+    logAction(
+      "chapter",
+      tf("ui.scene.delChapter2", ch.title),
+      { dPath, scenes: scenesNow.length, trash: dst }
+    );
     await buildTree2();
     refreshNetwork();
   }
@@ -76111,6 +78094,7 @@ ${h.text}`;
     d.chapters = [...d.chapters || [], ch];
     await kapi.writeFile(df, JSON.stringify(d, null, 2));
     await kapi.mkdir(await kapi.join(dPath, "Chapters", ch.folderName));
+    logAction("chapter", t("ui.scene.addChapter") + title2, { dPath, folder: ch.folderName });
     await buildTree2();
     setStatus(t("ui.scene.addChapter") + title2);
     refreshNetwork();
@@ -76138,8 +78122,9 @@ ${h.text}`;
     d.chapters[ch.guid] = [...list, sc];
     const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
     const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
-    await kapi.writeFile(file, (0, import_md7.dumpMdFile)(meta2, opts.body || ""));
+    await kapi.writeFile(file, (0, import_md10.dumpMdFile)(meta2, opts.body || ""));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    logAction("scene", t("ui.scene.addScene") + title2, { file });
     await buildTree2();
     if (!opts.silent) openScene(file, title2);
     refreshNetwork();
@@ -76178,7 +78163,7 @@ ${h.text}`;
     const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
     let meta2 = { title: newTitle, type: "scene", format: "prose", pov: "", tags: [] }, body = "";
     try {
-      const parsed = (0, import_md7.parseMdFile)(await kapi.readFile(srcFile));
+      const parsed = (0, import_md10.parseMdFile)(await kapi.readFile(srcFile));
       meta2 = parsed.meta;
       body = parsed.body;
     } catch {
@@ -76186,7 +78171,7 @@ ${h.text}`;
     meta2.title = newTitle;
     const nrow = { ...row2, id: guid(), title: newTitle, order, fileName, isFavorite: false };
     d.chapters[ch.guid] = [...list, nrow];
-    await kapi.writeFile(await kapi.join(dPath, "Chapters", ch.folderName, fileName), (0, import_md7.dumpMdFile)(meta2, body));
+    await kapi.writeFile(await kapi.join(dPath, "Chapters", ch.folderName, fileName), (0, import_md10.dumpMdFile)(meta2, body));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     await copyVisSidecar(dPath, ch.folderName, row2.fileName, fileName);
     await buildTree2();
@@ -76314,11 +78299,6 @@ ${h.text}`;
     await buildTree2();
     setStatus(t("ui.scene.orderChapterSceneNew") + chapters.length + t("ui.scene.chapter"));
   }
-  function renumberMenuItems(dPath) {
-    return [
-      { label: t("ui.common.orderNumNew"), click: () => renumberChapters(dPath) }
-    ];
-  }
   async function visOf(dPath, folderName, fileName) {
     return kapi.join(dPath, "Chapters", folderName, visFileName(fileName));
   }
@@ -76352,7 +78332,7 @@ ${h.text}`;
       return false;
     }
   }
-  var import_md7;
+  var import_md10;
   var init_scene_ops = __esm({
     "src/scene-ops.js"() {
       init_i18n();
@@ -76361,7 +78341,7 @@ ${h.text}`;
       init_custom_status();
       init_recycle();
       init_ui();
-      import_md7 = __toESM(require_md());
+      import_md10 = __toESM(require_md());
       init_scene_meta();
       init_vis_core();
     }
@@ -76455,7 +78435,7 @@ ${h.text}`;
     const aiCtx = async () => {
       let body = "";
       try {
-        body = (0, import_md8.parseMdFile)(await kapi.readFile(file)).body || "";
+        body = (0, import_md11.parseMdFile)(await kapi.readFile(file)).body || "";
       } catch {
       }
       return { body, title: row2.title || "" };
@@ -76475,6 +78455,7 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
     okB.onclick = async () => {
       const newTitle = iTitle.value.trim();
       if (newTitle && newTitle !== row2.title) {
@@ -76505,6 +78486,14 @@ ${h.text}`;
       for (const k of SCENE_HEAVY_KEYS) props[k] = row2[k];
       await writeSceneMeta(file, props);
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      const liveTab = state.tabs.get(file);
+      if (liveTab && liveTab.meta) {
+        try {
+          liveTab.meta = (0, import_md11.parseMdFile)(await kapi.readFile(file)).meta;
+        } catch (e) {
+          log("warn", t("ui.props.writeMetaFail"), e);
+        }
+      }
       await buildTree2();
       const openTab = state.tabs.get(file);
       if (openTab) {
@@ -76516,7 +78505,7 @@ ${h.text}`;
       setStatus(t("ui.scene.savePropsSceneDone"));
     };
   }
-  var import_md8;
+  var import_md11;
   var init_scene_props = __esm({
     "src/scene-props.js"() {
       init_i18n();
@@ -76526,7 +78515,8 @@ ${h.text}`;
       init_spell();
       init_scene_meta();
       init_ai_synopsis();
-      import_md8 = __toESM(require_md());
+      import_md11 = __toESM(require_md());
+      init_ui();
     }
   });
 
@@ -76757,7 +78747,7 @@ ${h.text}`;
   function wordsOf(text) {
     return tokenize2(plainText(text)).map((x) => x.word);
   }
-  function countWords2(text) {
+  function countWords3(text) {
     return wordsOf(text).length;
   }
   function isStopword(w) {
@@ -76807,7 +78797,7 @@ ${h.text}`;
   function analyzePacing(scenes = []) {
     const rows = scenes.map((s) => {
       const text = plainText(s.text);
-      const w = countWords2(text);
+      const w = countWords3(text);
       const dr = dialogueRatio(text);
       const sents = splitSentences(text);
       const avgSent = sents.length ? w / sents.length : 0;
@@ -76954,7 +78944,7 @@ ${h.text}`;
         if (n2) hits.push({ word: w, count: n2 });
       }
       hits.sort((a, b) => b.count - a.count);
-      const words = countWords2(text);
+      const words = countWords3(text);
       const total = hits.reduce((a, b) => a + b.count, 0);
       return {
         id: s.id,
@@ -76980,7 +78970,7 @@ ${h.text}`;
   }
   function analyzeLength(scenes = []) {
     const rows = scenes.map((s) => {
-      const w = countWords2(s.text);
+      const w = countWords3(s.text);
       return {
         id: s.id,
         title: s.title,
@@ -77059,7 +79049,7 @@ ${h.text}`;
           i5 += w.length;
         }
       }
-      return { scene: s, hits, heat, words: countWords2(text) };
+      return { scene: s, hits, heat, words: countWords3(text) };
     });
     const pairs = /* @__PURE__ */ new Map();
     for (const p of present) {
@@ -77091,7 +79081,7 @@ ${h.text}`;
     };
   }
   function analyzeScreentime(scenes = [], characters = []) {
-    const totalWords = scenes.reduce((a, s) => a + countWords2(s.text), 0);
+    const totalWords = scenes.reduce((a, s) => a + countWords3(s.text), 0);
     const rows = characters.map((c) => {
       let inScenes = 0, mentions = 0, words = 0;
       const sceneIds = [];
@@ -77100,7 +79090,7 @@ ${h.text}`;
         if (n2 > 0) {
           inScenes++;
           mentions += n2;
-          words += countWords2(s.text);
+          words += countWords3(s.text);
           sceneIds.push(s.id);
         }
       }
@@ -77220,7 +79210,7 @@ ${h.text}`;
   }
   function localPlotSummary(scenes = []) {
     const dated = scenes.filter((s) => s.storyDate);
-    const noPov = scenes.filter((s) => !s.pov && countWords2(s.text) > 40);
+    const noPov = scenes.filter((s) => !s.pov && countWords3(s.text) > 40);
     return {
       stats: [
         { label: t("ui.common.scene2"), value: scenes.length },
@@ -77306,11 +79296,11 @@ ${h.text}`;
       lines.push(t("ui.aia.pHeadScenes") + (truncated ? t("ui.aia.pTruncated") : ""));
       lines.push(blocks.join("\n\n"));
     }
-    const prompt2 = lines.join("\n");
+    const prompt = lines.join("\n");
     return {
       system: AI_SYSTEM,
-      prompt: prompt2,
-      tokens: estimateTokens2(prompt2) + tokens,
+      prompt,
+      tokens: estimateTokens2(prompt) + tokens,
       sceneIds: scenes.map((s) => s.id),
       truncated
     };
@@ -77791,6 +79781,14 @@ ${h.text}`;
   });
 
   // src/ai-analyzer-ui.js
+  function focusAnalysis(id) {
+    const card = document.querySelector(`.aia-card[data-card="${id}"]`);
+    if (!card) return false;
+    card.scrollIntoView({ block: "center" });
+    card.classList.add("aia-card-focus");
+    setTimeout(() => card.classList.remove("aia-card-focus"), 2e3);
+    return true;
+  }
   function currentResults() {
     const out = {};
     for (const id of ANALYSIS_IDS) {
@@ -77866,7 +79864,7 @@ ${h.text}`;
               storyDate: sc.storyDate || "",
               status: sc.status || "",
               text,
-              words: countWords2(text)
+              words: countWords3(text)
             });
           }
         }
@@ -78631,8 +80629,8 @@ ${h.text}`;
     const dstIdx = secs.findIndex((s) => s.folder === dstFolder);
     if (fromIdx < 0 || dstIdx < 0) return;
     const [moved] = secs.splice(fromIdx, 1);
-    const insertAt = secs.findIndex((s) => s.folder === dstFolder);
-    secs.splice(insertAt, 0, moved);
+    const insertAt2 = secs.findIndex((s) => s.folder === dstFolder);
+    secs.splice(insertAt2, 0, moved);
     let order = 1;
     for (const s of secs) await saveSectionMeta(s.sf, { order: order++ });
     await buildTree2();
@@ -78683,10 +80681,10 @@ ${h.text}`;
           if (sc.type === "memo") continue;
           scenes++;
           try {
-            const { body } = (0, import_md9.parseMdFile)(await kapi.readFile(
+            const { body } = (0, import_md12.parseMdFile)(await kapi.readFile(
               await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName)
             ));
-            words += (0, import_md9.countWords)(body);
+            words += (0, import_md12.countWords)(body);
           } catch {
           }
         }
@@ -78870,18 +80868,19 @@ ${h.text}`;
       null,
       2
     ));
+    logAction("section", t("ui.section.delBookDone") + sec.title, { from: secPath, trash: dst });
     await buildTree2();
     setStatus(t("ui.section.delBookDone") + sec.title);
     refreshNetwork();
   }
-  var import_md9, SECTION_STATUS_OPTS;
+  var import_md12, SECTION_STATUS_OPTS;
   var init_section_ops = __esm({
     "src/section-ops.js"() {
       init_i18n();
       init_app();
       init_core();
       init_ui();
-      import_md9 = __toESM(require_md());
+      import_md12 = __toESM(require_md());
       SECTION_STATUS_OPTS = [
         ["outline", t("ui.common.outlineStory")],
         ["drafting", t("ui.common.busyWrite")],
@@ -78987,6 +80986,7 @@ ${h.text}`;
     const dPath = await kapi.join(secPath, "Draft", name5);
     const recycle = await kapi.join(state.root, "Recycle", "draft-" + Date.now().toString(36));
     await kapi.move(dPath, recycle);
+    logAction("draft", t("ui.drafts.delDraft") + ": " + name5, { from: dPath, trash: recycle });
     return true;
   }
   async function renameDraft(secPath, oldName, newName) {
@@ -78997,6 +80997,7 @@ ${h.text}`;
       return false;
     }
     await kapi.move(oldPath, newPath);
+    logAction("draft", tf("ui.drafts.renameDraftTo", oldName, newName), { secPath });
     const sf = await kapi.join(secPath, "section.json");
     let meta2 = {};
     try {
@@ -79030,9 +81031,18 @@ ${h.text}`;
   });
 
   // src/books.js
+  var books_exports = {};
+  __export(books_exports, {
+    openBookManager: () => openBookManager,
+    refreshBooksIfOpen: () => refreshBooksIfOpen,
+    renderBookManager: () => renderBookManager
+  });
   async function openBookManager() {
     showPanel("books");
     return renderBookManager($("#books-body"));
+  }
+  function refreshBooksIfOpen() {
+    if (isPanelOpen("books") && $("#books-body")) renderBookManager($("#books-body"));
   }
   async function renderBookManager(pane) {
     pane.innerHTML = "";
@@ -79074,6 +81084,11 @@ ${h.text}`;
           setBtn.onclick = async () => {
             await setPrimaryDraft(sec.secPath, d.name);
             renderDraftList(sec, dst);
+            try {
+              const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+              await buildTree3();
+            } catch {
+            }
             setStatus(t("ui.books.setDraftMain") + d.name);
           };
           row2.append(setBtn);
@@ -79083,8 +81098,14 @@ ${h.text}`;
         renBtn.onclick = async () => {
           const n2 = await ask(t("ui.books.nameDraftNew"), { value: d.name });
           if (n2 && n2 !== d.name) {
-            if (await renameDraft(sec.secPath, d.name, n2))
+            if (await renameDraft(sec.secPath, d.name, n2)) {
               renderDraftList(sec, dst);
+              try {
+                const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+                await buildTree3();
+              } catch {
+              }
+            }
           }
         };
         row2.append(renBtn);
@@ -79092,8 +81113,14 @@ ${h.text}`;
           const delBtn = el("button", "cmp-mini k-danger", "\u{1F5D1}");
           delBtn.title = t("ui.books.delDraft");
           delBtn.onclick = async () => {
-            if (await deleteDraft(sec.secPath, d.name))
+            if (await deleteDraft(sec.secPath, d.name)) {
               renderDraftList(sec, dst);
+              try {
+                const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+                await buildTree3();
+              } catch {
+              }
+            }
           };
           row2.append(delBtn);
         }
@@ -79442,11 +81469,14 @@ ${h.text}`;
   __export(home_ui_exports, {
     HOME_VIEWS: () => HOME_VIEWS,
     buildHomeActions: () => buildHomeActions,
+    createBrokenCard: () => createBrokenCard,
     createProjectCard: () => createProjectCard,
     homeView: () => homeView,
     openHome: () => openHome,
+    refreshHomePanels: () => refreshHomePanels,
     renderHome: () => renderHome,
     renderHomePanel: () => renderHomePanel,
+    scanRecentProjects: () => scanRecentProjects,
     setHomeView: () => setHomeView,
     showHomeDialog: () => showHomeDialog
   });
@@ -79479,12 +81509,12 @@ ${h.text}`;
     findInp.type = "search";
     findInp.placeholder = t("ui.home.searchProject");
     findInp.style.display = "none";
-    const exportBtn = mk2("home-btn-export", t("home.export", "\u{1F4E4} \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"), t("ui.home.exportProjectOpenFile"));
-    const importBtn = mk2("home-btn-import", t("home.import", "\u{1F4E5} \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32"), t("ui.home.importProjectFileZip"));
+    const exportBtn = mk2("home-btn-export", t("home.export"), t("ui.home.exportProjectOpenFile"));
+    const importBtn = mk2("home-btn-import", t("home.import"), t("ui.home.importProjectFileZip"));
     const spacer = el("div", "home-actions-spacer");
-    const newBtn = mk2("k-ok home-btn-new", t("home.newProject", "\u2795 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48"));
-    const openBtn = mk2("home-btn-open", t("home.openProject", "\u{1F4C2} \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"));
-    const closeBtn = mk2("home-btn-close", t("home.close", "\u2715 \u0E1B\u0E34\u0E14"), t("ui.home.closePageFirst"));
+    const newBtn = mk2("k-ok home-btn-new", t("home.newProject"));
+    const openBtn = mk2("home-btn-open", t("home.openProject"));
+    const closeBtn = mk2("home-btn-close", t("home.close"), t("ui.home.closePageFirst"));
     function applyView(mode) {
       const m = setHomeView(mode);
       for (const v2 of HOME_VIEWS) viewBtns[v2.id].classList.toggle("on", v2.id === m);
@@ -79611,85 +81641,109 @@ ${h.text}`;
     await loadProjects(grid);
     return wrap2;
   }
+  async function readRecentProject(root) {
+    try {
+      const metaFile = await kapi.join(root, "project.khn.json");
+      if (!await kapi.exists(metaFile))
+        return { root, broken: true, reason: t("ui.home.brokenNoMeta") };
+      const meta2 = await kapi.readJson(metaFile);
+      let totalScenes = 0, totalChapters = 0, totalWords = 0;
+      let lastModified = meta2.created || "";
+      for (const secName of await kapi.listDirs(root).catch(() => [])) {
+        const secPath = await kapi.join(root, secName);
+        if (!await kapi.exists(await kapi.join(secPath, "section.json"))) continue;
+        const draftRoot = await kapi.join(secPath, "Draft");
+        if (!await kapi.exists(draftRoot)) continue;
+        for (const dn of await kapi.listDirs(draftRoot).catch(() => [])) {
+          const dPath = await kapi.join(draftRoot, dn);
+          const draftFile = await kapi.join(dPath, "draft.json");
+          if (!await kapi.exists(draftFile)) continue;
+          const chapters = (await kapi.readJson(draftFile).catch(() => ({}))).chapters || [];
+          totalChapters += chapters.length;
+          const scenesFile = await kapi.join(dPath, "scenes.json");
+          if (!await kapi.exists(scenesFile)) continue;
+          const scChapters = (await kapi.readJson(scenesFile).catch(() => ({}))).chapters || {};
+          for (const ch of chapters) {
+            for (const sc of scChapters[ch.guid] || []) {
+              if (sc.type === "memo") continue;
+              totalScenes++;
+              totalWords += sc.wordCount || 0;
+              if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
+            }
+          }
+        }
+      }
+      const modDate = lastModified ? new Date(lastModified) : null;
+      const dateStr = modDate ? modDate.toLocaleDateString("th-TH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }) : "\u2014";
+      return {
+        root,
+        title: meta2.title || root.replace(/^.*[\\/]/, ""),
+        author: meta2.author || "",
+        cover: meta2.cover || "",
+        totalScenes,
+        totalChapters,
+        totalWords,
+        dateStr,
+        lastModified,
+        settings: meta2.settings || {},
+        goals: meta2.goals || {}
+      };
+    } catch (e) {
+      log("warn", t("ui.home.homeReadProjectFail") + root, e);
+      return { root, broken: true, reason: t("ui.home.brokenUnreadable") };
+    }
+  }
+  async function scanRecentProjects() {
+    const recent = await kapi.listRecent().catch(() => []);
+    const rows = await Promise.all(recent.map(readRecentProject));
+    const ok2 = rows.filter((r) => r && !r.broken);
+    ok2.sort((a, b) => String(b.lastModified || "").localeCompare(String(a.lastModified || "")));
+    return { ok: ok2, broken: rows.filter((r) => r && r.broken) };
+  }
+  function createBrokenCard(row2, onChanged) {
+    const card = el("div", "home-card home-card-broken");
+    card.dataset.search = String(row2.root || "").toLowerCase();
+    card.append(el("div", "home-card-title", "\u26A0 " + t("ui.home.brokenTitle")));
+    const pathEl = el("div", "home-broken-path", row2.root);
+    pathEl.title = row2.root;
+    card.append(pathEl);
+    card.append(el("div", "home-broken-why", row2.reason || ""));
+    const btns = el("div", "home-broken-btns");
+    const rm2 = el("button", "k-danger", t("ui.home.brokenRemove"));
+    rm2.onclick = async (e) => {
+      e.stopPropagation();
+      await kapi.removeRecent(row2.root);
+      setStatus(t("ui.app.recentBrokenRemoved"));
+      if (onChanged) onChanged();
+    };
+    btns.append(rm2);
+    card.append(btns);
+    return card;
+  }
+  function refreshHomePanels() {
+    for (const grid of document.querySelectorAll(".home-grid")) {
+      if (grid.dataset.homePanel === "1") loadPanelProjects(grid, grid._onOpen);
+      else loadProjects(grid);
+    }
+  }
   async function loadProjects(grid) {
     grid.innerHTML = "";
     try {
-      const recent = await kapi.listRecent().catch(() => []);
-      const tasks = recent.map(async (root) => {
-        try {
-          const metaFile = await kapi.join(root, "project.khn.json");
-          if (!await kapi.exists(metaFile)) return null;
-          const meta2 = await kapi.readJson(metaFile);
-          let totalScenes = 0, totalChapters = 0, totalWords = 0;
-          let lastModified = meta2.created || "";
-          const entries = await kapi.listDirs(root).catch(() => []);
-          for (const secName of entries) {
-            const secPath = await kapi.join(root, secName);
-            const secJson = await kapi.join(secPath, "section.json");
-            if (!await kapi.exists(secJson)) continue;
-            const draftRoot = await kapi.join(secPath, "Draft");
-            if (!await kapi.exists(draftRoot)) continue;
-            const draftDirs = await kapi.listDirs(draftRoot).catch(() => []);
-            for (const dn of draftDirs) {
-              const dPath = await kapi.join(draftRoot, dn);
-              const draftFile = await kapi.join(dPath, "draft.json");
-              if (!await kapi.exists(draftFile)) continue;
-              const draft = await kapi.readJson(draftFile).catch(() => ({}));
-              const chapters = draft.chapters || [];
-              totalChapters += chapters.length;
-              const scenesFile = await kapi.join(dPath, "scenes.json");
-              if (await kapi.exists(scenesFile)) {
-                const scData = await kapi.readJson(scenesFile).catch(() => ({}));
-                const scChapters = scData.chapters || {};
-                for (const ch of chapters) {
-                  const scenes = scChapters[ch.guid] || [];
-                  totalScenes += scenes.filter((s) => s.type !== "memo").length;
-                  for (const sc of scenes) {
-                    if (sc.type === "memo") continue;
-                    totalWords += sc.wordCount || 0;
-                    if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
-                  }
-                }
-              }
-            }
-          }
-          const modDate = lastModified ? new Date(lastModified) : null;
-          const dateStr = modDate ? modDate.toLocaleDateString("th-TH", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-          }) : "\u2014";
-          return {
-            root,
-            title: meta2.title || root.replace(/^.*[\\/]/, ""),
-            author: meta2.author || "",
-            cover: meta2.cover || "",
-            totalScenes,
-            totalChapters,
-            totalWords,
-            dateStr,
-            settings: meta2.settings || {},
-            goals: meta2.goals || {}
-          };
-        } catch (e) {
-          log("warn", t("ui.home.homeReadProjectFail") + root, e);
-          return null;
-        }
-      });
-      let projects = (await Promise.all(tasks)).filter(Boolean);
-      if (projects.length === 0) {
+      const { ok: ok2, broken } = await scanRecentProjects();
+      if (!ok2.length && !broken.length) {
         const empty2 = el("div", "home-empty");
-        empty2.innerHTML = t("ui.home.notHasProjectNew");
+        empty2.textContent = t("ui.home.notHasProjectNew");
         grid.append(empty2);
         return;
       }
-      projects.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
-      for (const p of projects) {
-        const card = createProjectCard(p);
-        grid.append(card);
-      }
+      for (const p of ok2) grid.append(createProjectCard(p));
+      for (const b of broken) grid.append(createBrokenCard(b, refreshHomePanels));
     } catch (e) {
       log("error", t("ui.home.homeLoadProjectFail"), e);
       grid.append(el("div", "home-empty", t("ui.home.occurErrorLoadProject")));
@@ -79729,6 +81783,27 @@ ${h.text}`;
     body.append(stats);
     const date = el("div", "home-card-date", t("ui.home.editLatest") + project.dateStr);
     body.append(date);
+    const pathRow = el("div", "home-card-path");
+    const pathTxt = el("span", "home-card-pathtxt", project.root);
+    pathTxt.title = project.root;
+    pathRow.append(pathTxt);
+    const reveal = el("button", "home-card-pathbtn", "\u{1F4C2}");
+    reveal.title = t("ui.home.revealInOS");
+    reveal.onclick = (e) => {
+      e.stopPropagation();
+      kapi.revealInOS(project.root).catch(() => {
+      });
+    };
+    const copy2 = el("button", "home-card-pathbtn", "\u29C9");
+    copy2.title = t("ui.home.copyPath");
+    copy2.onclick = async (e) => {
+      e.stopPropagation();
+      await kapi.clipboardWrite(project.root).catch(() => {
+      });
+      setStatus(t("ui.home.pathCopied"));
+    };
+    pathRow.append(reveal, copy2);
+    body.append(pathRow);
     const openBtn = el("button", "k-ok home-card-open", t("ui.common.openProject"));
     openBtn.onclick = async (e) => {
       e.stopPropagation();
@@ -79759,10 +81834,10 @@ ${h.text}`;
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    document.addEventListener("keydown", function esc6(e) {
+    document.addEventListener("keydown", function esc7(e) {
       if (e.key === "Escape") {
         ov.remove();
-        document.removeEventListener("keydown", esc6);
+        document.removeEventListener("keydown", esc7);
       }
     });
     const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));
@@ -79786,77 +81861,16 @@ ${h.text}`;
   }
   async function loadPanelProjects(grid, onOpen) {
     grid.innerHTML = "";
+    grid.dataset.homePanel = "1";
+    grid._onOpen = onOpen;
     try {
-      const recent = await kapi.listRecent().catch(() => []);
-      const tasks = recent.map(async (root) => {
-        try {
-          const metaFile = await kapi.join(root, "project.khn.json");
-          if (!await kapi.exists(metaFile)) return null;
-          const meta2 = await kapi.readJson(metaFile);
-          let totalScenes = 0, totalChapters = 0, totalWords = 0;
-          let lastModified = meta2.created || "";
-          const entries = await kapi.listDirs(root).catch(() => []);
-          for (const secName of entries) {
-            const secPath = await kapi.join(root, secName);
-            const secJson = await kapi.join(secPath, "section.json");
-            if (!await kapi.exists(secJson)) continue;
-            const draftRoot = await kapi.join(secPath, "Draft");
-            if (!await kapi.exists(draftRoot)) continue;
-            const draftDirs = await kapi.listDirs(draftRoot).catch(() => []);
-            for (const dn of draftDirs) {
-              const dPath = await kapi.join(draftRoot, dn);
-              const draftFile = await kapi.join(dPath, "draft.json");
-              if (!await kapi.exists(draftFile)) continue;
-              const draft = await kapi.readJson(draftFile).catch(() => ({}));
-              const chapters = draft.chapters || [];
-              totalChapters += chapters.length;
-              const scenesFile = await kapi.join(dPath, "scenes.json");
-              if (await kapi.exists(scenesFile)) {
-                const scData = await kapi.readJson(scenesFile).catch(() => ({}));
-                const scChapters = scData.chapters || {};
-                for (const ch of chapters) {
-                  const scenes = scChapters[ch.guid] || [];
-                  totalScenes += scenes.filter((s) => s.type !== "memo").length;
-                  for (const sc of scenes) {
-                    if (sc.type === "memo") continue;
-                    totalWords += sc.wordCount || 0;
-                    if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
-                  }
-                }
-              }
-            }
-          }
-          const modDate = lastModified ? new Date(lastModified) : null;
-          const dateStr = modDate ? modDate.toLocaleDateString("th-TH", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-          }) : "\u2014";
-          return {
-            root,
-            title: meta2.title || root.replace(/^.*[\\/]/, ""),
-            author: meta2.author || "",
-            cover: meta2.cover || "",
-            totalScenes,
-            totalChapters,
-            totalWords,
-            dateStr,
-            settings: meta2.settings || {},
-            goals: meta2.goals || {}
-          };
-        } catch (e) {
-          return null;
-        }
-      });
-      let projects = (await Promise.all(tasks)).filter(Boolean);
-      if (projects.length === 0) {
+      const { ok: ok2, broken } = await scanRecentProjects();
+      if (!ok2.length && !broken.length) {
         grid.append(el("div", "home-empty", el("p", null, t("ui.home.notHasProject"))));
         return;
       }
-      projects.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
-      for (const p of projects) grid.append(createProjectCard(p, onOpen));
+      for (const p of ok2) grid.append(createProjectCard(p, onOpen));
+      for (const b of broken) grid.append(createBrokenCard(b, refreshHomePanels));
     } catch (e) {
       log("error", t("ui.home.homePanelLoadFail"), e);
       grid.append(el("div", "home-empty", t("ui.home.occurErrorLoadProject")));
@@ -80092,188 +82106,216 @@ ${h.text}`;
   });
 
   // src/global-search.js
-  async function renderSearchPanel(host2) {
-    if (!state.root) {
-      setStatus(t("ui.common.cantOpenProject"));
-      return;
+  function invalidateSearchIndex() {
+    GS.stale = true;
+  }
+  function searchIndexStats() {
+    const s = GS.index ? GS.index.stats() : { documents: 0, terms: 0 };
+    return { ready: !!GS.index && !GS.stale, root: GS.root, ...s };
+  }
+  async function ensureSearchIndex({ includeJson = false } = {}) {
+    if (!state.root) return null;
+    const fresh = GS.index && !GS.stale && GS.root === state.root && GS.json === includeJson;
+    if (fresh) return GS.index;
+    if (GS.building) return GS.building;
+    const root = state.root;
+    GS.building = (async () => {
+      try {
+        const idx4 = await indexProject(root, kapi, import_md13.parseMdFile, { includeJson });
+        if (state.root !== root) return null;
+        GS.index = idx4;
+        GS.root = root;
+        GS.json = includeJson;
+        GS.stale = false;
+        return idx4;
+      } catch (e) {
+        log("error", t("ui.search.globalSearchSearchFail"), e);
+        return null;
+      } finally {
+        GS.building = null;
+      }
+    })();
+    return GS.building;
+  }
+  async function runProjectSearch(q, opts = {}) {
+    const { includeJson = false, includeMd = true, nameOnly = false, limit = 60 } = opts;
+    const query = String(q || "").trim();
+    if (!query || !state.root) return [];
+    if (!includeMd && !includeJson) return [];
+    const wanted = (t22) => t22 === "md" ? includeMd : includeJson;
+    if (nameOnly) {
+      const ql = query.toLowerCase();
+      const out = [];
+      const walk3 = async (dir2) => {
+        for (const name5 of await kapi.listDirs(dir2).catch(() => [])) await walk3(await kapi.join(dir2, name5));
+        for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
+          const ext = extOf(f);
+          if (!wanted(ext)) continue;
+          if (!f.toLowerCase().includes(ql)) continue;
+          out.push({
+            file: await kapi.join(dir2, f),
+            name: f,
+            type: ext,
+            matches: [{ line: 0, text: f }]
+          });
+          if (out.length >= limit) return;
+        }
+      };
+      await walk3(state.root);
+      return out.slice(0, limit);
     }
-    host2.innerHTML = "";
-    host2.append(el("div", "k-dlg-title", t("ui.search.searchProject")));
-    const searchRow = el("div", "k-row");
-    searchRow.style.cssText = "gap:8px;margin:8px 0";
-    const qInput = el("input", "k-dlg-input");
+    const idx4 = await ensureSearchIndex({ includeJson });
+    if (!idx4) return [];
+    return idx4.search(query, { limit: limit * 3 }).map((r) => ({
+      file: r.path,
+      name: r.title || String(r.path).split(/[\\/]/).pop(),
+      type: extOf(r.path),
+      score: r.score,
+      matches: (r.matches || []).map((m) => ({ line: m.line, text: m.snippet }))
+    })).filter((h) => wanted(h.type)).slice(0, limit);
+  }
+  async function openHit(h) {
+    const app = await Promise.resolve().then(() => (init_app(), app_exports));
+    if (h.type === "md") return app.openScene(h.file, null);
+    return app.openPlainFile(h.file, h.name);
+  }
+  function buildSearchUI(host2, { onOpen } = {}) {
+    host2.replaceChildren();
+    const searchRow = el("div", "k-row k-gsearch-row");
+    const qInput = el("input", "k-dlg-input k-gsearch-input");
     qInput.type = "text";
     qInput.placeholder = t("ui.search.searchAllFileMd");
-    qInput.style.flex = "1";
     searchRow.append(qInput);
-    const typeRow = el("div", "k-row");
-    typeRow.style.cssText = "gap:12px;margin:4px 0 8px;font-size:12px";
-    const mkChk = (label, val, def = true) => {
+    const typeRow = el("div", "k-row k-gsearch-types");
+    const mkChk = (label, def) => {
       const w = el("label", null);
       const c = el("input");
       c.type = "checkbox";
       c.checked = def;
-      c.value = val;
       w.append(c, document.createTextNode(" " + label));
       typeRow.append(w);
       return c;
     };
-    const chkMd = mkChk(t("ui.search.mdSceneNoteMemo"), "md");
-    const chkJson = mkChk(".json (Wiki/scenes/section)", "json", false);
-    const chkAll = mkChk(t("ui.search.searchOnlyNameFile"), "name", false);
+    const chkMd = mkChk(t("ui.search.mdSceneNoteMemo"), true);
+    const chkJson = mkChk(".json (Wiki/scenes/section)", false);
+    const chkName = mkChk(t("ui.search.searchOnlyNameFile"), false);
     host2.append(searchRow, typeRow);
+    host2.append(el("div", "k-hint k-gsearch-help", t("ui.search.syntaxHint")));
     const results = el("div", "k-gsearch-results");
-    results.style.cssText = "max-height:60vh;overflow-y:auto;min-height:100px;flex:1";
-    host2.append(results);
-    const status = el("span");
-    status.style.cssText = "font-size:11.5px;color:var(--dim);margin-top:4px";
-    host2.append(status);
-    async function doSearch(q) {
-      if (!q.trim()) {
-        results.innerHTML = "";
-        status.textContent = "";
-        return;
-      }
-      status.textContent = t("ui.common.busySearch");
-      results.innerHTML = el("div", "dim", t("ui.search.busySearch")).outerHTML;
-      const hits = [];
-      const ql = q.toLowerCase();
-      const searchNameOnly = chkAll.checked;
-      const includeMd = chkMd.checked;
-      const includeJson = chkJson.checked;
-      try {
-        const searchDir = async (dir2) => {
-          const entries = await kapi.listDirs(dir2).catch(() => []);
-          for (const name5 of entries) await searchDir(await kapi.join(dir2, name5));
-          const files = await kapi.listFiles(dir2, "").catch(() => []);
-          for (const f of files) {
-            const ext = f.split(".").pop().toLowerCase();
-            if (ext === "md" && includeMd || ext === "json" && includeJson) {
-              const fp = await kapi.join(dir2, f);
-              try {
-                if (searchNameOnly) {
-                  if (f.toLowerCase().includes(ql))
-                    hits.push({ file: fp, name: f, matches: [{ line: 0, text: f, ctx: "" }], type: ext });
-                } else {
-                  const raw = await kapi.readFile(fp);
-                  const lines = raw.split("\n");
-                  for (let i5 = 0; i5 < lines.length; i5++) {
-                    const idx4 = lines[i5].toLowerCase().indexOf(ql);
-                    if (idx4 >= 0) {
-                      let title2 = f;
-                      if (ext === "md") {
-                        try {
-                          title2 = (0, import_md10.parseMdFile)(raw).meta.title || f;
-                        } catch {
-                        }
-                      }
-                      hits.push({
-                        file: fp,
-                        name: title2,
-                        type: ext,
-                        matches: [{ line: i5 + 1, text: lines[i5].trim().substring(0, 200), ctx: "" }]
-                      });
-                      break;
-                    }
-                  }
-                }
-              } catch {
-              }
-            }
-          }
-        };
-        await searchDir(state.root);
-        const grouped = {};
-        for (const h of hits) {
-          if (!grouped[h.file]) grouped[h.file] = h;
-          else grouped[h.file].matches.push(...h.matches);
-        }
-        showResults(Object.values(grouped), ql);
-        status.textContent = tf("ui.search.foundFile", hits.length);
-      } catch (e) {
-        log("error", t("ui.search.searchPanelSearchFail"), e);
-        results.innerHTML = el("div", "dim", t("ui.search.occurError")).outerHTML;
-        status.textContent = t("ui.search.searchFail");
-      }
-    }
-    function showResults(hits, highlight) {
-      results.innerHTML = "";
+    const status = el("div", "dim k-gsearch-status");
+    host2.append(results, status);
+    let job = 0;
+    const show = (hits) => {
+      results.replaceChildren();
       if (!hits.length) {
         results.append(el("div", "dim", t("ui.search.notFoundResult")));
         return;
       }
       for (const h of hits) {
         const card = el("div", "k-gsearch-hit");
-        const header = el("div", "k-gsearch-hit-head");
-        header.append(el("span", "k-gsearch-hit-name", (h.type === "md" ? "\u{1F4C4} " : "\u{1F4CB} ") + h.name));
+        const head2 = el("div", "k-gsearch-hit-head");
+        head2.append(el("span", "k-gsearch-hit-name", (h.type === "md" ? "\u{1F4C4} " : "\u{1F4CB} ") + h.name));
+        let rel = h.file;
         try {
-          const rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file;
-          header.append(el("span", "k-gsearch-hit-path", rel));
+          rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file;
         } catch {
         }
-        card.append(header);
+        head2.append(el("span", "k-gsearch-hit-path", String(rel)));
+        card.append(head2);
         for (const m of (h.matches || []).slice(0, 3)) {
-          const line = el("div", "k-gsearch-line");
-          const idx4 = m.text.toLowerCase().indexOf(highlight);
-          if (idx4 >= 0) {
-            line.append(document.createTextNode(m.text.slice(0, idx4)));
-            const hl = el("span", "k-gsearch-hl");
-            hl.textContent = m.text.slice(idx4, idx4 + highlight.length);
-            line.append(hl, document.createTextNode(m.text.slice(idx4 + highlight.length)));
-          } else {
-            line.textContent = m.text;
-          }
+          const line = el("div", "k-gsearch-line", m.text || "");
+          if (m.line) line.title = t("ui.search.lineNo") + m.line;
           card.append(line);
         }
         const openB = el("button", "k-ok k-gsearch-open", t("ui.common.open"));
-        openB.onclick = async (e) => {
-          e.stopPropagation();
-          if (h.type === "md") {
-            const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-            openScene2(h.file, null);
-          } else {
-            const { activate: activate2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-            try {
-              const raw = await kapi.readFile(h.file);
-              const pane = el("div", "pane");
-              $("#panes").append(pane);
-              const tabBtn = el("div", "tab");
-              tabBtn.append(el("span", "tab-title", h.name));
-              const x = el("span", "tab-x", "\xD7");
-              tabBtn.append(x);
-              $("#tabs").append(tabBtn);
-              const ta = el("textarea", "plain-md");
-              ta.value = raw;
-              ta.style.cssText = "width:100%;height:100%;background:var(--bg);color:var(--fg);border:none;padding:20px;font:14px monospace;resize:none";
-              pane.append(ta);
-              const tab = { file: h.file, title: h.name, pane, tabBtn, dirty: false, plain: ta, isJson: true };
-              state.tabs.set(h.file, tab);
-              activate2(h.file);
-            } catch {
-            }
-          }
+        const go = async (e) => {
+          if (e) e.stopPropagation();
+          if (onOpen) onOpen();
+          await openHit(h);
         };
-        card.append(openB);
-        card.addEventListener("click", () => openB.click());
+        openB.onclick = go;
+        card.addEventListener("click", go);
         results.append(card);
       }
-    }
+    };
+    const doSearch = async (q) => {
+      const mine = ++job;
+      if (!String(q || "").trim()) {
+        results.replaceChildren();
+        status.textContent = "";
+        return [];
+      }
+      status.textContent = t("ui.search.busySearch");
+      results.replaceChildren(el("div", "dim", t("ui.search.busySearch")));
+      try {
+        const hits = await runProjectSearch(q, {
+          includeJson: chkJson.checked,
+          includeMd: chkMd.checked,
+          nameOnly: chkName.checked
+        });
+        if (mine !== job) return hits;
+        show(hits);
+        const st = searchIndexStats();
+        status.textContent = tf("ui.search.foundFile", hits.length) + (chkName.checked ? "" : " \xB7 " + tf("ui.search.indexedN", st.documents));
+        return hits;
+      } catch (e) {
+        if (mine !== job) return [];
+        log("error", t("ui.search.globalSearchSearchFail"), e);
+        results.replaceChildren(el("div", "dim", t("ui.search.occurError")));
+        status.textContent = t("ui.search.searchFail");
+        return [];
+      }
+    };
     qInput.onkeydown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         doSearch(qInput.value);
       }
     };
-    qInput.focus();
+    chkJson.onchange = () => {
+      GS.stale = true;
+      doSearch(qInput.value);
+    };
+    chkMd.onchange = () => doSearch(qInput.value);
+    chkName.onchange = () => doSearch(qInput.value);
+    return { qInput, results, status, doSearch, chkMd, chkJson, chkName };
   }
-  function bindGlobalSearchShortcut() {
+  async function renderSearchPanel(host2) {
+    if (!host2) return null;
+    if (!state.root) {
+      host2.replaceChildren(el("div", "k-panel-empty", t("ui.common.cantOpenProject")));
+      return null;
+    }
+    host2.replaceChildren();
+    host2.append(el("div", "k-dlg-title", t("ui.search.searchProject")));
+    const body = el("div", "k-gsearch-body");
+    host2.append(body);
+    const ui = buildSearchUI(body);
+    ensureSearchIndex({ includeJson: false }).catch(() => {
+    });
+    return ui;
   }
-  var import_md10;
+  var import_md13, GS, extOf;
   var init_global_search = __esm({
     "src/global-search.js"() {
       init_i18n();
       init_core();
-      import_md10 = __toESM(require_md());
+      import_md13 = __toESM(require_md());
+      init_ui();
+      init_search_engine();
+      GS = {
+        index: null,
+        // SearchIndex ตัวปัจจุบัน
+        root: "",
+        // โปรเจกต์ที่ดัชนีตัวนี้เป็นของ
+        json: false,
+        // ดัชนีนี้รวมไฟล์ .json ด้วยไหม
+        building: null,
+        // Promise ของการสร้างที่กำลังวิ่ง (กันสร้างซ้อนตอนพิมพ์รัว)
+        stale: true
+        // ไฟล์เปลี่ยนไปแล้วหรือยัง
+      };
+      extOf = (p) => String(p || "").split(".").pop().toLowerCase();
     }
   });
 
@@ -80534,7 +82576,6 @@ ${h.text}`;
     reanchorAll: () => reanchorAll,
     replyTo: () => replyTo,
     resolveComment: () => resolveComment,
-    serializeComments: () => serializeComments,
     stripComments: () => stripComments2
   });
   function makeComment({ text, author = "", position = null, now = Date.now(), id = null } = {}) {
@@ -80587,9 +82628,6 @@ ${BLOCK_START}
 ${JSON.stringify(comments, null, 1)}
 ${BLOCK_END}
 `;
-  }
-  function serializeComments(comments) {
-    return mergeComments("", comments);
   }
   function addComment(comments, { text, author, position, now = Date.now(), id } = {}) {
     const c = makeComment({ text, author, position, now, id });
@@ -80785,10 +82823,8 @@ ${BLOCK_END}
     closeVisPlayer: () => closeVisPlayer,
     openVisPlayer: () => openVisPlayer,
     visPlayerAt: () => visPlayerAt,
-    visPlayerGo: () => visPlayerGo,
     visPlayerOpen: () => visPlayerOpen,
-    visPlayerTextHidden: () => visPlayerTextHidden,
-    visPlayerToggleText: () => visPlayerToggleText
+    visPlayerTextHidden: () => visPlayerTextHidden
   });
   function openVisPlayer(st, startAt = 0) {
     if (_cur) closeVisPlayer();
@@ -80832,8 +82868,8 @@ ${BLOCK_END}
         img.style.display = "none";
         noimg.style.display = "";
       }
-      const live = liveText(resolveRow(r, lines));
-      text.textContent = displayText2(live || r.text);
+      const live2 = liveText(resolveRow(r, lines));
+      text.textContent = displayText2(live2 || r.text);
       remark.textContent = r.remark || "";
       remark.style.display = r.remark ? "" : "none";
       counter.textContent = tf("ui.vis.ofTotal", i5 + 1, rows.length);
@@ -80916,14 +82952,8 @@ ${BLOCK_END}
   function visPlayerAt() {
     return _cur ? _cur.at() : -1;
   }
-  function visPlayerGo(d) {
-    if (_cur) _cur.go(d);
-  }
   function visPlayerTextHidden() {
     return !!(_cur && _cur.isHidden());
-  }
-  function visPlayerToggleText() {
-    if (_cur) _cur.toggleText();
   }
   var _cur;
   var init_vis_player = __esm({
@@ -80966,7 +82996,7 @@ ${BLOCK_END}
   }
   async function loadAll(scenePath2) {
     const raw = await kapi.readFile(scenePath2);
-    const { meta: meta2, body } = (0, import_md11.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md14.parseMdFile)(raw);
     const format3 = meta2.format === "screenplay" ? "screenplay" : "prose";
     const vp = await visPathOf(scenePath2);
     let rows = [];
@@ -81506,7 +83536,7 @@ ${BLOCK_END}
     else await createVisual(f, tab.title);
     return true;
   }
-  var import_md11, VIS_TAB, COL_LABEL, _imgUrl;
+  var import_md14, VIS_TAB, COL_LABEL, _imgUrl;
   var init_vis_ui = __esm({
     "src/visual/vis-ui.js"() {
       init_core();
@@ -81514,7 +83544,7 @@ ${BLOCK_END}
       init_gallery();
       init_wiki();
       init_comment_core();
-      import_md11 = __toESM(require_md());
+      import_md14 = __toESM(require_md());
       init_vis_core();
       VIS_TAB = "::vis::";
       COL_LABEL = () => ({
@@ -81541,6 +83571,7 @@ ${BLOCK_END}
     }
     const ta = el("textarea", "scratch-area");
     ta.value = saved;
+    ta.placeholder = t("ui.notes.scratchPh");
     ta.spellcheck = false;
     let saveTimer = null;
     ta.oninput = () => {
@@ -81917,7 +83948,7 @@ ${BLOCK_END}
     const matches2 = pattern.match(exp);
     return matches2 ? matches2[1] : null;
   }
-  function parseQuery(pattern, options = {}) {
+  function parseQuery2(pattern, options = {}) {
     return pattern.replace(/\\\|/g, ESCAPED_PIPE).split(OR_TOKEN).map((item) => {
       const query = tokenize3(item.replace(/\u0000/g, "|").trim()).filter((item2) => item2 && !!item2.trim());
       const results = [];
@@ -82621,7 +84652,7 @@ ${BLOCK_END}
           pattern = isCaseSensitive ? pattern : pattern.toLowerCase();
           pattern = ignoreDiacritics ? stripDiacritics(pattern) : pattern;
           this.pattern = pattern;
-          this.query = parseQuery(this.pattern, this.options);
+          this.query = parseQuery2(this.pattern, this.options);
         }
         static condition(_2, options) {
           return options.useExtendedSearch;
@@ -83315,14 +85346,25 @@ ${BLOCK_END}
     if (want === _twActive) return _twActive;
     _twActive = want;
     if (_twActive) {
-      document.addEventListener("keyup", twScroll);
-      document.addEventListener("click", twScroll);
+      document.addEventListener("keyup", twScrollSoon);
+      document.addEventListener("click", twScrollSoon);
       twScroll();
     } else {
-      document.removeEventListener("keyup", twScroll);
-      document.removeEventListener("click", twScroll);
+      document.removeEventListener("keyup", twScrollSoon);
+      document.removeEventListener("click", twScrollSoon);
+      if (_twFrame) {
+        cancelAnimationFrame(_twFrame);
+        _twFrame = 0;
+      }
     }
     return _twActive;
+  }
+  function twScrollSoon() {
+    if (_twFrame) return;
+    _twFrame = requestAnimationFrame(() => {
+      _twFrame = 0;
+      twScroll();
+    });
   }
   function scrollHost(pm2) {
     const pane = pm2.closest(".pane");
@@ -83348,11 +85390,12 @@ ${BLOCK_END}
     host2.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
     return true;
   }
-  var _twActive;
+  var _twActive, _twFrame;
   var init_typewriter = __esm({
     "src/typewriter.js"() {
       init_focus_mode();
       _twActive = false;
+      _twFrame = 0;
     }
   });
 
@@ -83522,7 +85565,7 @@ ${BLOCK_END}
     const stale2 = () => gen !== _cmGen || activeFile() !== file;
     host2.innerHTML = "";
     if (!file) {
-      host2.append(el("div", "dim", t("cmt.needScene", "(\u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E08\u0E36\u0E07\u0E08\u0E30\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E14\u0E49)")));
+      host2.append(el("div", "dim", t("cmt.needScene")));
       lastList = [];
       clearCommentAnchors();
       return null;
@@ -83533,8 +85576,8 @@ ${BLOCK_END}
       all = await store.list(file);
     } catch (e) {
       if (stale2()) return null;
-      log("error", t("cmt.readFailLog", "\u0E2D\u0E48\u0E32\u0E19\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49"), e);
-      host2.append(el("div", "dim", t("cmt.readFail", "(\u0E2D\u0E48\u0E32\u0E19\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)")));
+      log("error", t("cmt.readFailLog"), e);
+      host2.append(el("div", "dim", t("cmt.readFail")));
       return null;
     }
     if (stale2()) return null;
@@ -83546,9 +85589,9 @@ ${BLOCK_END}
     const fBtn = el(
       "button",
       "k-cm-filter" + (filterOpen ? " on" : ""),
-      filterOpen ? t("cmt.filterOpen", "\u{1F53D} \u0E40\u0E09\u0E1E\u0E32\u0E30\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14") : t("cmt.filterAll", "\u{1F53D} \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")
+      filterOpen ? t("cmt.filterOpen") : t("cmt.filterAll")
     );
-    fBtn.title = t("cmt.filterHint", "\u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E23\u0E2D\u0E07\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27");
+    fBtn.title = t("cmt.filterHint");
     fBtn.onclick = () => {
       filterOpen = !filterOpen;
       renderCommentPanel(host2);
@@ -83557,7 +85600,7 @@ ${BLOCK_END}
     host2.append(head2);
     const list = el("div", "k-cm-list");
     const shown = filterOpen ? all.filter((c) => !c.resolved) : all;
-    if (!shown.length) list.append(el("div", "dim", filterOpen ? t("cmt.emptyOpen", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14)") : t("cmt.emptyAll", "(\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E43\u0E19\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49)")));
+    if (!shown.length) list.append(el("div", "dim", filterOpen ? t("cmt.emptyOpen") : t("cmt.emptyAll")));
     for (const c of shown) list.append(commentCard(c, file, host2, 0));
     host2.append(list);
     const sel = await selectionAnchor();
@@ -83565,12 +85608,12 @@ ${BLOCK_END}
     const foot = el("div", "k-cm-foot");
     if (sel) {
       const chip = el("div", "k-cm-anchor-chip", t("ui.cmtComment.bind") + short(sel.quote) + "\u201D");
-      chip.title = t("cmt.anchorHint", "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E08\u0E30\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E27\u0E49");
+      chip.title = t("cmt.anchorHint");
       foot.append(chip);
     }
     const row2 = el("div", "k-cm-input-row");
     const inp = el("textarea", "k-cm-input");
-    inp.placeholder = sel ? t("cmt.placeholderSel", "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u2026") : t("cmt.placeholder", "\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u2026");
+    inp.placeholder = sel ? t("cmt.placeholderSel") : t("cmt.placeholder");
     inp.rows = 2;
     const scB = el("button", "k-cm-scbtn", "\u{1F3F7}");
     scB.type = "button";
@@ -83587,11 +85630,11 @@ ${BLOCK_END}
       try {
         await store.add(file, sel, text);
         inp.value = "";
-        setStatus(t("cmt.added", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27"));
+        setStatus(t("cmt.added"));
         await renderCommentPanel(host2);
       } catch (e) {
-        log("error", t("cmt.addFail", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"), e);
-        setStatus(t("cmt.addFail", "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+        log("error", t("cmt.addFail"), e);
+        setStatus(t("cmt.addFail"));
         addB.disabled = false;
       }
     };
@@ -83620,7 +85663,7 @@ ${BLOCK_END}
     if (depth) card.style.marginInlineStart = Math.min(depth, 4) * 14 + "px";
     const top = el("div", "k-cm-top");
     top.append(el("span", "k-cm-author", "\u{1F464} " + (c.author || t("ui.common.notSpecifyName"))));
-    top.append(el("span", "k-cm-when", fmtWhen(c.timestamp) + (c.editedAt ? t("cmt.edited", " (\u0E41\u0E01\u0E49\u0E44\u0E02\u0E41\u0E25\u0E49\u0E27)") : "")));
+    top.append(el("span", "k-cm-when", fmtWhen(c.timestamp) + (c.editedAt ? t("cmt.edited") : "")));
     const acts = el("span", "k-cm-acts");
     const mk2 = (label, title2, fn, cls) => {
       const b = el("span", "k-cm-act" + (cls ? " " + cls : ""), label);
@@ -83630,20 +85673,20 @@ ${BLOCK_END}
     };
     if (!depth) acts.append(mk2(
       c.resolved ? "\u21A9" : "\u2713",
-      c.resolved ? t("cmt.reopen", "\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07") : t("cmt.resolve", "\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (resolve)"),
+      c.resolved ? t("cmt.reopen") : t("cmt.resolve"),
       async () => {
         await store.resolve(file, c.id, !c.resolved);
-        setStatus(c.resolved ? t("cmt.reopened", "\u0E40\u0E1B\u0E34\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07") : t("cmt.resolved", "\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27"));
+        setStatus(c.resolved ? t("cmt.reopened") : t("cmt.resolved"));
         renderCommentPanel(host2);
       }
     ));
-    acts.append(mk2("\u270F\uFE0F", t("cmt.edit", "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21"), () => startEdit()));
-    acts.append(mk2("\u21A9\u{1F4AC}", t("cmt.reply", "\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A"), () => startReply()));
-    acts.append(mk2("\u{1F5D1}", t("cmt.deleteHint", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49 (\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E18\u0E23\u0E14\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A)"), async () => {
+    acts.append(mk2("\u270F\uFE0F", t("cmt.edit"), () => startEdit()));
+    acts.append(mk2("\u21A9\u{1F4AC}", t("cmt.reply"), () => startReply()));
+    acts.append(mk2("\u{1F5D1}", t("cmt.deleteHint"), async () => {
       const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      if (!await confirmBox2(t("cmt.deleteConfirm", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49 (\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E18\u0E23\u0E14\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14) ?"), t("cmt.delete", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C"))) return;
+      if (!await confirmBox2(t("cmt.deleteConfirm"), t("cmt.delete"))) return;
       await store.remove(file, c.id);
-      setStatus(t("cmt.deleted", "\u0E25\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27"));
+      setStatus(t("cmt.deleted"));
       renderCommentPanel(host2);
     }, "k-danger"));
     top.append(acts);
@@ -83654,9 +85697,9 @@ ${BLOCK_END}
       const q = el(
         "div",
         "k-cm-quote" + (c.anchor.lost ? " lost" : ""),
-        (c.anchor.lost ? t("cmt.anchorLost", "\u{1F4CD}\u2715 (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27) ") : "\u{1F4CD} ") + "\u201C" + short(c.anchor.quote, 60) + "\u201D"
+        (c.anchor.lost ? t("cmt.anchorLost") : "\u{1F4CD} ") + "\u201C" + short(c.anchor.quote, 60) + "\u201D"
       );
-      q.title = c.anchor.lost ? t("cmt.anchorLostHint", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E19\u0E35\u0E49\u0E1C\u0E39\u0E01\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27") : t("cmt.anchorOkHint", "\u0E0A\u0E35\u0E49\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E43\u0E19\u0E09\u0E32\u0E01 \xB7 \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E2B\u0E32");
+      q.title = c.anchor.lost ? t("cmt.anchorLostHint") : t("cmt.anchorOkHint");
       if (!c.anchor.lost) {
         q.onmouseenter = () => {
           setCommentAnchors([c.anchor.quote], c.anchor.quote);
@@ -83673,7 +85716,7 @@ ${BLOCK_END}
       ta.value = c.text;
       ta.rows = 2;
       const ok2 = el("button", "k-ok", t("ui.common.save"));
-      const no = el("button", null, t("cmt.cancel", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01"));
+      const no = el("button", null, t("cmt.cancel"));
       const box2 = el("div", "k-cm-editbox");
       box2.append(ta, ok2, no);
       body.after(box2);
@@ -83691,17 +85734,17 @@ ${BLOCK_END}
           return;
         }
         await store.edit(file, c.id, v2);
-        setStatus(t("cmt.editedDone", "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27"));
+        setStatus(t("cmt.editedDone"));
         renderCommentPanel(host2);
       };
     }
     function startReply() {
       if (card.querySelector(".k-cm-reply")) return;
       const ta = el("textarea", "k-cm-reply");
-      ta.placeholder = t("cmt.replyPlaceholder", "\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A\u2026");
+      ta.placeholder = t("cmt.replyPlaceholder");
       ta.rows = 2;
       const ok2 = el("button", "k-ok", t("ui.cmtComment.reply"));
-      const no = el("button", null, t("cmt.cancel", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01"));
+      const no = el("button", null, t("cmt.cancel"));
       const box2 = el("div", "k-cm-editbox");
       box2.append(ta, ok2, no);
       card.append(box2);
@@ -83714,7 +85757,7 @@ ${BLOCK_END}
           return;
         }
         await store.reply(file, c.id, v2);
-        setStatus(t("cmt.replied", "\u0E15\u0E2D\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27"));
+        setStatus(t("cmt.replied"));
         renderCommentPanel(host2);
       };
       ok2.onclick = send3;
@@ -83743,7 +85786,7 @@ ${BLOCK_END}
       if (i5 >= 0) hit = pos + i5;
     });
     if (hit == null) {
-      setStatus(t("cmt.anchorMissing", "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E1C\u0E39\u0E01\u0E44\u0E27\u0E49 (\u0E2D\u0E32\u0E08\u0E16\u0E39\u0E01\u0E41\u0E01\u0E49/\u0E25\u0E1A\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27)"));
+      setStatus(t("cmt.anchorMissing"));
       return false;
     }
     try {
@@ -83820,6 +85863,7 @@ ${BLOCK_END}
   var export_blog_exports = {};
   __export(export_blog_exports, {
     BLOG_THEMES: () => BLOG_THEMES,
+    blogSections: () => blogSections,
     buildBlogHtml: () => buildBlogHtml,
     exportBlogHTML: () => exportBlogHTML,
     getBlogOptions: () => getBlogOptions
@@ -83862,8 +85906,10 @@ ${BLOCK_END}
     const imgCache = /* @__PURE__ */ new Map();
     let body = "";
     let nScenes = 0;
+    const skipped = [];
     for (const sec of await kapi.listDirs(state.root)) {
       if (SKIP_SECTIONS.includes(sec)) continue;
+      if (o.section && sec !== o.section) continue;
       const sp = await kapi.join(state.root, sec);
       if (!await kapi.exists(await kapi.join(sp, "section.json"))) continue;
       const dr = await kapi.join(sp, "Draft");
@@ -83883,7 +85929,7 @@ ${BLOCK_END}
             const fp = await kapi.join(dp, "Chapters", ch.folderName, sc.fileName);
             try {
               const raw = await kapi.readFile(fp);
-              const { body: md } = (0, import_md12.parseMdFile)(raw);
+              const { body: md } = (0, import_md15.parseMdFile)(raw);
               const clean2 = stripMentions(stripComments(md));
               let inner = mdToHtmlBody(clean2);
               if (o.embedImages) inner = await embedImages(inner, imgCache);
@@ -83895,6 +85941,7 @@ ${head2}${inner}
 `;
               nScenes++;
             } catch (e) {
+              skipped.push(sc.title || sc.fileName || "");
               log("warn", t("ui.exportBlog.exportBlogSkipScene") + fp, e);
             }
           }
@@ -83905,9 +85952,19 @@ ${head2}${inner}
     const css = (BLOG_THEMES[o.theme] || BLOG_THEMES.medium).css;
     const html = tf("ui.exportBlog.exportKillian", title2, css, title2, body);
     const nImages = [...imgCache.values()].filter((v2) => v2.startsWith("data:")).length;
-    return { html, nScenes, nImages };
+    return { html, nScenes, nImages, skipped };
   }
-  function optionsDialog() {
+  async function blogSections() {
+    const out = [];
+    if (!state.root) return out;
+    for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
+      if (SKIP_SECTIONS.includes(sec)) continue;
+      if (await kapi.exists(await kapi.join(state.root, sec, "section.json"))) out.push(sec);
+    }
+    return out;
+  }
+  async function optionsDialog() {
+    const sections = await blogSections();
     return new Promise((resolve) => {
       const o = getBlogOptions();
       const ov = el("div", "k-overlay");
@@ -83928,6 +85985,18 @@ ${head2}${inner}
       }
       themeSel.value = o.theme;
       themeRow.append(themeSel);
+      const secRow = mkRow(t("ui.exportBlog.scope"));
+      const secSel = el("select", "wiki-input k-dlg-select");
+      const all = el("option", null, t("ui.exportBlog.scopeAll"));
+      all.value = "";
+      secSel.append(all);
+      for (const name5 of sections) {
+        const opt = el("option", null, name5);
+        opt.value = name5;
+        secSel.append(opt);
+      }
+      secSel.value = sections.includes(o.section) ? o.section : "";
+      secRow.append(secSel);
       const mkChk = (label, val, hint) => {
         const r = mkRow(label);
         const c = el("input");
@@ -83950,11 +86019,19 @@ ${head2}${inner}
       );
       const btns = el("div", "k-dlg-btns");
       const cB = el("button", "k-cancel", t("ui.common.cancel"));
+      const pvB = el("button", null, t("ui.exportBlog.preview"));
       const okB = el("button", "k-ok", t("ui.common.export2"));
-      btns.append(cB, okB);
+      btns.append(cB, pvB, okB);
       box2.append(btns);
       ov.append(box2);
       document.body.append(ov);
+      const opts = () => ({
+        theme: themeSel.value,
+        chapterHeads: chCh.checked,
+        sceneHeads: chSc.checked,
+        embedImages: chImg.checked,
+        section: secSel.value
+      });
       const close2 = (val) => {
         ov.remove();
         resolve(val);
@@ -83963,13 +86040,42 @@ ${head2}${inner}
       ov.onclick = (e) => {
         if (e.target === ov) close2(null);
       };
-      okB.onclick = () => close2({
-        theme: themeSel.value,
-        chapterHeads: chCh.checked,
-        sceneHeads: chSc.checked,
-        embedImages: chImg.checked
-      });
+      escClose(ov, () => close2(null));
+      pvB.onclick = async () => {
+        pvB.disabled = true;
+        try {
+          const r = await buildBlogHtml({ ...opts(), embedImages: false });
+          showBlogPreview(r);
+        } catch (e) {
+          log("error", "export-blog preview failed", e);
+          setStatus(t("ui.exportBlog.exportHTMLFail"));
+        } finally {
+          pvB.disabled = false;
+        }
+      };
+      okB.onclick = () => close2(opts());
     });
+  }
+  function showBlogPreview({ html, nScenes, skipped }) {
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-wide k-blog-pv");
+    box2.append(el("div", "k-dlg-title", t("ui.exportBlog.previewTitle")));
+    box2.append(el("div", "dim", tf("ui.exportBlog.previewMeta", nScenes) + (skipped.length ? " \xB7 " + tf("ui.exportBlog.skippedN", skipped.length) : "")));
+    const fr = el("iframe", "k-blog-frame");
+    fr.setAttribute("sandbox", "");
+    fr.srcdoc = html;
+    box2.append(fr);
+    const btns = el("div", "k-dlg-btns");
+    const ok2 = el("button", "k-ok", t("dialogs.close"));
+    ok2.onclick = () => ov.remove();
+    btns.append(ok2);
+    box2.append(btns);
+    ov.append(box2);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    escClose(ov, () => ov.remove());
   }
   async function exportBlogHTML(preset) {
     if (!state.root) {
@@ -83981,7 +86087,7 @@ ${head2}${inner}
     setBusy(t("ui.exportBlog.busyNewHTML"));
     try {
       state.meta.blogExport = o;
-      const { html, nScenes, nImages } = await buildBlogHtml(o);
+      const { html, nScenes, nImages, skipped } = await buildBlogHtml(o);
       clearBusy();
       const dest = await kapi.saveAsDialog((state.title || "blog") + "-blog.html", "html");
       if (!dest) return false;
@@ -83992,7 +86098,8 @@ ${head2}${inner}
         await saveProjectMeta2();
       } catch {
       }
-      setStatus(tf("ui.exportBlog.exportHTMLBlockDone", nScenes, nImages ? tf("ui.exportBlog.imageFile", nImages) : "") + dest);
+      setStatus(tf("ui.exportBlog.exportHTMLBlockDone", nScenes, nImages ? tf("ui.exportBlog.imageFile", nImages) : "") + dest + (skipped.length ? " \xB7 \u26A0 " + tf("ui.exportBlog.skippedN", skipped.length) : ""));
+      if (skipped.length) log("warn", tf("ui.exportBlog.skippedN", skipped.length), skipped);
       return true;
     } catch (e) {
       log("error", "export-blog failed", e);
@@ -84002,13 +86109,14 @@ ${head2}${inner}
       clearBusy();
     }
   }
-  var import_md12, SKIP_SECTIONS, BLOG_THEMES, DEFAULT_OPTS, MIME;
+  var import_md15, SKIP_SECTIONS, BLOG_THEMES, DEFAULT_OPTS, MIME;
   var init_export_blog = __esm({
     "src/export-blog.js"() {
       init_i18n();
       init_core();
       init_compile();
-      import_md12 = __toESM(require_md());
+      import_md15 = __toESM(require_md());
+      init_ui();
       SKIP_SECTIONS = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
       BLOG_THEMES = {
         medium: { label: t("ui.exportBlog.mediumCard"), css: `
@@ -84038,7 +86146,13 @@ article{margin:0 0 32px;padding:16px;background:#1d1f23;border-radius:8px}
 blockquote{border-left:3px solid #d97757;margin:1em 0;padding-left:1em;color:#b8b5ad}
 img{max-width:100%}` }
       };
-      DEFAULT_OPTS = { theme: "medium", chapterHeads: true, sceneHeads: true, embedImages: false };
+      DEFAULT_OPTS = {
+        theme: "medium",
+        chapterHeads: true,
+        sceneHeads: true,
+        embedImages: false,
+        section: ""
+      };
       MIME = {
         png: "image/png",
         jpg: "image/jpeg",
@@ -84052,94 +86166,12 @@ img{max-width:100%}` }
     }
   });
 
-  // src/thesaurus.js
-  var thesaurus_exports = {};
-  __export(thesaurus_exports, {
-    showThesaurus: () => showThesaurus,
-    thesaurusEnabled: () => thesaurusEnabled,
-    thesaurusMenuItems: () => thesaurusMenuItems
-  });
-  function thesaurusEnabled() {
-    return state.settings && state.settings.thesaurus === true;
-  }
-  async function fetchThesaurus(word, rel = "ml") {
-    try {
-      const url = `https://api.datamuse.com/words?${rel}=${encodeURIComponent(word)}&max=15`;
-      const res = await kapi.httpFetch(url, { method: "GET" });
-      if (!res || !res.ok) return [];
-      return JSON.parse(res.body).map((d) => d.word).filter((w) => w !== word);
-    } catch (e) {
-      log("warn", t("ui.thes.thesaurusSearchNotOk"), e);
-      return [];
-    }
-  }
-  async function showThesaurus(word, x, y) {
-    if (!word) return null;
-    setStatus(t("ui.thes.busySearchThesaurus") + word);
-    const ov = el("div", "k-overlay");
-    ov.style.cssText = "background:transparent";
-    const box2 = el("div", "k-dialog k-thes");
-    box2.style.cssText = `position:fixed;left:${x}px;top:${y}px;min-width:180px;max-width:280px`;
-    box2.append(el("div", "k-dlg-title", "\u{1F4D6} " + word));
-    const replaceWith = async (w) => {
-      ov.remove();
-      const t3 = state.active;
-      const view2 = t3?.editor?.view || t3?.sp?.view;
-      if (!view2) return;
-      const sel = view2.state.selection;
-      if (sel.empty) return;
-      view2.dispatch(view2.state.tr.insertText(w, sel.from, sel.to));
-    };
-    const load = async (label, relCode) => {
-      const sec = el("div");
-      sec.append(el("div", "wiki-sub", label));
-      const list = el("div", "k-pick-list");
-      list.style.maxHeight = "120px";
-      list.append(el("div", "dim", t("ui.common.busySearch")));
-      sec.append(list);
-      box2.append(sec);
-      const words = await fetchThesaurus(word, relCode);
-      list.innerHTML = "";
-      if (!words.length) {
-        list.append(el("div", "dim", t("ui.common.notFound")));
-        return;
-      }
-      for (const w of words) {
-        const d = el("div", "k-menu-item", w);
-        d.onclick = () => replaceWith(w);
-        list.append(d);
-      }
-    };
-    ov.append(box2);
-    document.body.append(ov);
-    ov.onclick = (e) => {
-      if (e.target === ov) ov.remove();
-    };
-    await load(t("ui.thes.thesaurusTired"), "ml");
-    await load(t("ui.thes.wordOpposite"), "rel_ant");
-    const cB = el("button", null, t("ui.thes.close"));
-    cB.onclick = () => ov.remove();
-    const btns = el("div", "k-dlg-btns");
-    btns.append(cB);
-    box2.append(btns);
-    return ov;
-  }
-  function thesaurusMenuItems(x, y) {
-    if (!thesaurusEnabled()) return [];
-    const word = (window.getSelection()?.toString() || "").trim();
-    if (!EN_WORD.test(word)) return [];
-    return [{ label: tf("ui.thes.thesaurusWordOpposite", word), click: () => showThesaurus(word, x, y) }];
-  }
-  var EN_WORD;
-  var init_thesaurus = __esm({
-    "src/thesaurus.js"() {
-      init_i18n();
-      init_core();
-      EN_WORD = /^[a-zA-Z][a-zA-Z'-]{1,30}$/;
-    }
-  });
-
   // src/project.js
+  var project_exports = {};
+  __export(project_exports, {
+    createProjectFromTemplate: () => createProjectFromTemplate,
+    showTemplateDialog: () => showTemplateDialog
+  });
   async function createProjectFromTemplate(parentDir, projectName, tplKey) {
     const tpl = TEMPLATES[tplKey];
     if (!tpl) return false;
@@ -84670,12 +86702,12 @@ img{max-width:100%}` }
     } catch {
     }
   }
-  var import_md13, SKIP_DIRS7, guid2, safeName2, eq, ok, err, HANDLERS;
+  var import_md16, SKIP_DIRS7, guid2, safeName2, eq, ok, err, HANDLERS;
   var init_ai_actions = __esm({
     "src/ai/ai-actions.js"() {
       init_i18n();
       init_core();
-      import_md13 = __toESM(require_md());
+      import_md16 = __toESM(require_md());
       init_project_scan();
       SKIP_DIRS7 = ["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle", "Sessions"];
       guid2 = () => "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -84706,7 +86738,7 @@ img{max-width:100%}` }
           const sc = await findScene(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
-          const { meta: meta2, body } = (0, import_md13.parseMdFile)(raw);
+          const { meta: meta2, body } = (0, import_md16.parseMdFile)(raw);
           return ok(tf("ui.aiActions.readSceneDone", sc.title), { title: sc.title, book: sc.section, meta: meta2, text: body });
         },
         async "entity.read"(a) {
@@ -84879,7 +86911,7 @@ img{max-width:100%}` }
           };
           d.chapters[c.ch.guid] = [...list, sc];
           const file = await kapi.join(b.draftPath, "Chapters", c.ch.folderName, sc.fileName);
-          await kapi.writeFile(file, (0, import_md13.dumpMdFile)(
+          await kapi.writeFile(file, (0, import_md16.dumpMdFile)(
             { title: sc.title, type: "scene", format: "prose", pov: "", tags: [] },
             String(a.text || "")
           ));
@@ -84890,11 +86922,11 @@ img{max-width:100%}` }
           const sc = await findScene(a);
           if (!sc) return err(tf("ui.aiActions.notFoundSceneNew", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
-          const { meta: meta2, body } = (0, import_md13.parseMdFile)(raw);
+          const { meta: meta2, body } = (0, import_md16.parseMdFile)(raw);
           const add = String(a.text || "");
           const mode = String(a.mode || "append");
           const next = mode === "replace" ? add : mode === "prepend" ? add + (body ? "\n\n" + body : "") : body ? body.replace(/\s+$/, "") + "\n\n" + add : add;
-          await kapi.writeFile(sc.path, (0, import_md13.dumpMdFile)(meta2, next));
+          await kapi.writeFile(sc.path, (0, import_md16.dumpMdFile)(meta2, next));
           const verb = mode === "replace" ? t("ui.common.overwrite") : mode === "prepend" ? t("ui.common.insertPage") : t("ui.aiActions.writeNext");
           return ok(tf("ui.aiActions.sceneDoneMergeChar", verb, sc.title, next.length));
         },
@@ -84908,8 +86940,8 @@ img{max-width:100%}` }
           }
           await kapi.writeFile(sf, JSON.stringify(d, null, 2));
           if (await kapi.exists(sc.path)) {
-            const { meta: meta2, body } = (0, import_md13.parseMdFile)(await kapi.readFile(sc.path));
-            await kapi.writeFile(sc.path, (0, import_md13.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
+            const { meta: meta2, body } = (0, import_md16.parseMdFile)(await kapi.readFile(sc.path));
+            await kapi.writeFile(sc.path, (0, import_md16.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
           }
           return ok(tf("ui.aiActions.changeNameSceneDone", a.newTitle));
         },
@@ -84937,19 +86969,200 @@ img{max-width:100%}` }
     }
   });
 
+  // src/ai/ai-chat.js
+  var ai_chat_exports = {};
+  __export(ai_chat_exports, {
+    ChatSession: () => ChatSession,
+    MAX_HISTORY_TOKENS: () => MAX_HISTORY_TOKENS,
+    buildChatMessages: () => buildChatMessages2,
+    chat: () => chat,
+    collectDocs: () => collectDocs2,
+    trimHistory: () => trimHistory
+  });
+  function collectDocs2(src2 = {}) {
+    const docs = [];
+    for (const s of src2.scenes || []) {
+      if (!s || !s.text) continue;
+      docs.push({
+        id: "scene:" + s.id,
+        text: tf("ui.aiChat.scene", s.title || "", s.text),
+        meta: { kind: "scene", title: s.title || s.id, sceneId: s.id, chapterId: s.chapterId || "", storyDate: s.storyDate || "" }
+      });
+    }
+    for (const e of src2.entities || []) {
+      if (!e) continue;
+      const body = [
+        e.name,
+        (e.aliases || []).join(", "),
+        e.notes || e.summary || "",
+        ...Object.entries(e.fields || {}).map(([k, v2]) => `${k}: ${v2}`)
+      ].filter(Boolean).join("\n");
+      if (!body.trim()) continue;
+      docs.push({
+        id: "wiki:" + (e.id || e.name),
+        text: tf("ui.aiChat.page", e.name, body),
+        meta: { kind: "wiki", title: e.name, entityId: e.id || "", category: e.entityTypeKey || "" }
+      });
+    }
+    const events = src2.timeline && (src2.timeline.events || src2.timeline);
+    for (const ev of Array.isArray(events) ? events : []) {
+      if (!ev || !(ev.title || ev.desc)) continue;
+      docs.push({
+        id: "event:" + (ev.id || ev.title),
+        text: tf("ui.aiChat.eventTime", ev.title || "", ev.when || "", ev.whenEnd ? " \u2013 " + ev.whenEnd : "", ev.desc || ""),
+        meta: { kind: "timeline", title: ev.title || "", when: ev.when || "", track: ev.track || "" }
+      });
+    }
+    return docs;
+  }
+  function trimHistory(history2 = [], maxTokens = MAX_HISTORY_TOKENS) {
+    const out = [];
+    let used = 0;
+    for (let i5 = history2.length - 1; i5 >= 0; i5--) {
+      const m = history2[i5];
+      if (!m || !m.content) continue;
+      const cost = estimateTokens2(m.content) + 4;
+      if (used + cost > maxTokens) break;
+      used += cost;
+      out.unshift({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content) });
+    }
+    return out;
+  }
+  function buildChatMessages2(query, history2 = [], hits = [], opts = {}) {
+    const ctx2 = buildContext(hits, { maxTokens: opts.maxContextTokens || 2e3, header: t("ui.aiChat.dataRefStory") });
+    const messages = trimHistory(history2, opts.maxHistoryTokens || MAX_HISTORY_TOKENS);
+    const userContent = ctx2.text ? tf("ui.aiChat.wordAsk", ctx2.text, query) : tf("ui.aiChat.wordAskNotFound", query);
+    messages.push({ role: "user", content: userContent });
+    return { system: opts.system || SYSTEM, messages, contextText: ctx2.text, sources: ctx2.sources };
+  }
+  async function chat(query, history2 = [], options = {}) {
+    const client = options.client;
+    if (!client) return { ok: false, text: "", sources: [], error: t("ui.common.cantSettingsAIClient"), code: "no-client", history: history2 };
+    if (!query || !String(query).trim()) return { ok: false, text: "", sources: [], error: t("ui.aiChat.cantPrintWordAsk"), code: "empty", history: history2 };
+    let hits = options.hits || [];
+    if (!hits.length && options.rag && typeof options.rag.retrieve === "function") {
+      hits = await options.rag.retrieve(query, options.k || 6);
+    }
+    const built = buildChatMessages2(query, history2, hits, options);
+    const req = {
+      messages: built.messages,
+      system: built.system,
+      feature: "chat",
+      model: options.model,
+      temperature: options.temperature ?? 0.4,
+      maxTokens: options.maxTokens || 1e3
+    };
+    const useStream = options.stream !== false && typeof options.onChunk === "function";
+    const res = useStream ? await client.stream(req, options.onChunk) : await client.complete(req);
+    const nextHistory = res.ok ? [...history2, { role: "user", content: query }, { role: "assistant", content: res.text }] : history2;
+    return {
+      ...res,
+      sources: hits.map((h) => ({
+        id: h.id,
+        title: h.meta && h.meta.title || h.id,
+        kind: h.meta && h.meta.kind || "",
+        sceneId: h.meta && h.meta.sceneId || "",
+        score: +(h.score || 0).toFixed(4)
+      })),
+      history: nextHistory,
+      contextTokens: estimateTokens2(built.contextText || "")
+    };
+  }
+  var SYSTEM, MAX_HISTORY_TOKENS, ChatSession;
+  var init_ai_chat = __esm({
+    "src/ai/ai-chat.js"() {
+      init_i18n();
+      init_ai_core();
+      SYSTEM = t("ui.aiChat.youAssistantKnownWorld") + t("ui.aiChat.replyThaiUseOnly") + t("ui.aiChat.dataNotAtNot") + t("ui.aiChat.toScenePageSpecify");
+      MAX_HISTORY_TOKENS = 2e3;
+      ChatSession = class {
+        constructor({ client, index = null, k = 6, io = null, root = "", maxHistoryTokens = MAX_HISTORY_TOKENS } = {}) {
+          this.client = client;
+          this.rag = new RagPipeline({ client, index: index || new VectorIndex({}) });
+          this.k = k;
+          this.io = io;
+          this.root = root;
+          this.history = [];
+          this.maxHistoryTokens = maxHistoryTokens;
+        }
+        get index() {
+          return this.rag.index;
+        }
+        get size() {
+          return this.rag.index.size;
+        }
+        /** (Re)index the project — scenes + wiki + timeline. Returns { added, model }. */
+        async build(src2) {
+          this.rag.index.clear();
+          return this.rag.indexDocs(collectDocs2(src2));
+        }
+        /** Add more documents without clearing what is already indexed. */
+        async add(src2) {
+          return this.rag.indexDocs(collectDocs2(src2));
+        }
+        /** Re-index one scene without rebuilding everything. */
+        async updateScene(scene) {
+          this.rag.index.remove((it) => it.meta && it.meta.sceneId === scene.id);
+          return this.rag.indexDocs(collectDocs2({ scenes: [scene] }));
+        }
+        // ---- บันทึก/โหลดดัชนีลงไฟล์แคช (สร้างใหม่ได้เสมอ — ไม่ใช่ข้อมูลงานเขียน) ----
+        async save() {
+          if (!this.io || !this.root) return false;
+          await this.io.writeFile(this.io.join(this.root, INDEX_FILE), JSON.stringify(this.rag.index.toJSON()));
+          return true;
+        }
+        async load() {
+          if (!this.io || !this.root) return false;
+          try {
+            const p = this.io.join(this.root, INDEX_FILE);
+            if (!await this.io.exists(p)) return false;
+            const j = await this.io.readJson(p);
+            this.rag.index = VectorIndex.fromJSON(j);
+            return this.rag.index.size > 0;
+          } catch {
+            return false;
+          }
+        }
+        /** Ask a question; history is kept inside the session. */
+        async ask(query, options = {}) {
+          const res = await chat(query, this.history, {
+            ...options,
+            client: this.client,
+            rag: this.rag,
+            k: options.k || this.k,
+            maxHistoryTokens: this.maxHistoryTokens
+          });
+          if (res.ok) {
+            this.history.push({ role: "user", content: query });
+            this.history.push({ role: "assistant", content: res.text });
+          }
+          return res;
+        }
+        reset() {
+          this.history = [];
+        }
+      };
+    }
+  });
+
   // src/ai/ai-chat-panel.js
   var ai_chat_panel_exports = {};
   __export(ai_chat_panel_exports, {
     _chatState: () => _chatState,
+    collectRelevant: () => collectRelevant,
     collectScope: () => collectScope,
     copyText: () => copyText,
     estimateTokens: () => estimateTokens,
+    invalidateChatRag: () => invalidateChatRag,
     loadSessions: () => loadSessions,
     newChatSession: () => newChatSession,
     renderAIChatPanel: () => renderAIChatPanel,
     restartSession: () => restartSession,
     saveSession: () => saveSession2
   });
+  function live(s) {
+    return s && S3.cur && S3.cur.id === s.id ? S3.cur : s;
+  }
   async function sessionsDir() {
     if (!state.root) return null;
     const d = await kapi.join(state.root, SESSION_DIR);
@@ -84982,9 +87195,15 @@ img{max-width:100%}` }
     }
     return S3.sessions;
   }
-  async function saveSession2(s, { force = false } = {}) {
+  async function saveSession2(s, { force = false, allowShrink = false } = {}) {
     if (!s) return false;
     if (s._draft && !force && !hasConversation(s)) return false;
+    const known = S3.sessions.find((x) => x.id === s.id);
+    if (!allowShrink && known && known !== s && (known.messages || []).length > (s.messages || []).length) {
+      log("warn", t("ui.aiChatPanel.staleSaveRebased"), s.id);
+      s = { ...s, messages: known.messages, updated: known.updated || s.updated };
+      if (S3.cur && S3.cur.id === s.id) S3.cur = s;
+    }
     const d = await sessionsDir();
     if (!d) return false;
     delete s._draft;
@@ -85010,15 +87229,20 @@ img{max-width:100%}` }
     S3.sessions = S3.sessions.filter((x) => x.id !== s.id);
     return true;
   }
-  async function collectScope(session, { maxChars = 24e3 } = {}) {
-    const scope = session.scope || DEFAULT_SCOPE;
+  async function collectScope(session, { maxChars = 24e3, query = "" } = {}) {
+    let scope = session.scope || DEFAULT_SCOPE;
     if (scope === "none" || !state.root) return "";
+    if (scope === "relevant") {
+      const rel = await collectRelevant(query, { maxChars, files: session.files || [] });
+      if (rel) return rel;
+      scope = "project";
+    }
     const parts = [];
     const push = async (file, label) => {
       try {
         const raw = await kapi.readFile(file);
-        const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
-        parts.push("### " + label + "\n" + parseMdFile13(raw).body);
+        const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
+        parts.push("### " + label + "\n" + parseMdFile14(raw).body);
       } catch {
       }
     };
@@ -85026,13 +87250,13 @@ img{max-width:100%}` }
     if (scope === "scene") {
       if (active && active.file && !active.file.startsWith("::")) await push(active.file, active.title || t("ui.aiChatPanel.sceneOpen"));
     } else {
-      const here = active && active.file || "";
-      const sep = here.includes("\\") ? "\\" : "/";
-      const upto = (n2) => here.split(sep).slice(0, -n2).join(sep);
-      const prefix2 = scope === "project" ? state.root : scope === "chapter" ? upto(1) : upto(3);
+      const norm3 = (x) => String(x || "").replace(/\\/g, "/");
+      const here = norm3(active && active.file || "");
+      const upto = (n2) => here.split("/").slice(0, -n2).join("/");
+      const prefix2 = scope === "project" ? norm3(state.root) : scope === "chapter" ? upto(1) : upto(3);
       const files = await allMdFiles(state.root);
       for (const f of files) {
-        if (prefix2 && !f.startsWith(prefix2)) continue;
+        if (prefix2 && !norm3(f).startsWith(prefix2)) continue;
         await push(f, f.slice(state.root.length + 1));
         if (parts.join("\n").length > maxChars) break;
       }
@@ -85040,6 +87264,87 @@ img{max-width:100%}` }
     for (const f of session.files || []) await push(f.path, "\u{1F4CE} " + (f.name || f.path));
     const text = parts.join("\n\n");
     return text.length > maxChars ? text.slice(0, maxChars) + t("ui.aiChatPanel.cutLong") : text;
+  }
+  function invalidateChatRag() {
+    RAG.stale = true;
+  }
+  async function ragSource() {
+    const scenes = [];
+    const files = await allMdFiles(state.root);
+    const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
+    for (const f of files) {
+      try {
+        const { meta: meta2 = {}, body = "" } = parseMdFile14(await kapi.readFile(f));
+        if (!String(body).trim()) continue;
+        scenes.push({
+          id: f,
+          title: meta2.title || f.split(/[\\/]/).pop().replace(/\.md$/i, ""),
+          text: body,
+          chapterId: "",
+          storyDate: meta2.storyDate || ""
+        });
+      } catch {
+      }
+    }
+    let entities = [];
+    try {
+      const { listEntities: listEntities2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
+      entities = await listEntities2(state.root) || [];
+    } catch {
+    }
+    return { scenes, entities };
+  }
+  async function ensureRag() {
+    if (!state.root) return null;
+    if (RAG.session && !RAG.stale && RAG.root === state.root) return RAG.session;
+    if (RAG.building) return RAG.building;
+    const root = state.root;
+    RAG.building = (async () => {
+      try {
+        const [{ ChatSession: ChatSession2 }, { getAIClient: getAIClient2 }] = await Promise.all([
+          Promise.resolve().then(() => (init_ai_chat(), ai_chat_exports)),
+          Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports))
+        ]);
+        const client = await getAIClient2();
+        if (!client) return null;
+        const sess = new ChatSession2({ client, k: 8 });
+        await sess.build(await ragSource());
+        if (state.root !== root) return null;
+        RAG.session = sess;
+        RAG.root = root;
+        RAG.stale = false;
+        return sess;
+      } catch (e) {
+        log("warn", t("ui.aiChatPanel.ragBuildFail"), e);
+        return null;
+      } finally {
+        RAG.building = null;
+      }
+    })();
+    return RAG.building;
+  }
+  async function collectRelevant(query, { maxChars = 24e3, files = [] } = {}) {
+    const q = String(query || "").trim();
+    const sess = q ? await ensureRag() : null;
+    if (!sess || !sess.size) return "";
+    let out = "";
+    try {
+      const { buildContext: buildContext2 } = await Promise.resolve().then(() => (init_ai_core(), ai_core_exports));
+      const hits = await sess.rag.retrieve(q, 8);
+      out = buildContext2(hits, { maxChars });
+    } catch (e) {
+      log("warn", t("ui.aiChatPanel.ragRetrieveFail"), e);
+      return "";
+    }
+    for (const f of files) {
+      try {
+        const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
+        const raw = await kapi.readFile(f.path);
+        out += "\n\n### \u{1F4CE} " + (f.name || f.path) + "\n" + parseMdFile14(raw).body;
+      } catch {
+      }
+    }
+    return out.length > maxChars ? out.slice(0, maxChars) + t("ui.aiChatPanel.cutLong") : out;
   }
   async function allMdFiles(root, depth = 0) {
     if (depth > 6) return [];
@@ -85194,7 +87499,7 @@ img{max-width:100%}` }
     };
     const restart = el("button", "ai-chat-restart", "\u21BB");
     restart.title = t("ui.aiChatPanel.restartClearDialogueSession");
-    restart.onclick = () => restartSession(s);
+    restart.onclick = () => restartSession(live(s));
     const viewSel = el("select", "ai-chat-viewsel");
     for (const v2 of TRANSCRIPT_VIEWS) {
       const o = el("option", null, v2.icon + " " + v2.label);
@@ -85205,14 +87510,16 @@ img{max-width:100%}` }
     viewSel.value = s.view || DEFAULT_VIEW;
     viewSel.title = viewDef(s.view).hint;
     viewSel.onchange = async () => {
-      s.view = viewSel.value;
-      viewSel.title = viewDef(s.view).hint;
-      await saveSession2(s);
+      const c = live(s);
+      c.view = viewSel.value;
+      viewSel.title = viewDef(c.view).hint;
+      S3.cur = c;
+      await saveSession2(c);
       draw();
     };
     const more = el("button", "ai-chat-more", "\u22EF");
     more.title = t("ui.aiChatPanel.itemPickSession");
-    more.onclick = (e) => sessionMenu(e, s);
+    more.onclick = (e) => sessionMenu(e, live(s));
     right.append(badge, viewSel, restart, more);
     head2.append(back, title2, right);
     wrap2.append(head2);
@@ -85254,7 +87561,8 @@ img{max-width:100%}` }
     };
     who.append(copy2);
     const shown = view2 === "verbose" ? m.text : m.role === "assistant" ? stripToolCalls(m.text) : m.text;
-    const txt = el("div", "ai-msg-text", shown);
+    const asMd = m.role === "assistant" && view2 !== "verbose";
+    const txt = asMd ? mdNode(shown) : el("div", "ai-msg-text", shown);
     n2.append(who, txt);
     if (!shown && m.calls && m.calls.length) txt.remove();
     if (view2 === "verbose" && m.system) n2.append(foldBlock(t("ui.aiChatPanel.systemPromptSendRound"), m.system));
@@ -85284,6 +87592,59 @@ img{max-width:100%}` }
       n2.append(el("div", "ai-msg-files dim", "\u{1F4CE} " + m.files.map((f) => f.name || f.path).join(", ")));
     }
     return n2;
+  }
+  function mdNode(text) {
+    const box2 = el("div", "ai-msg-text ai-md");
+    const inl = (parent, parts) => {
+      for (const p of parts || []) {
+        if (p.t === "text") parent.append(document.createTextNode(p.v));
+        else parent.append(el(
+          p.t === "code" ? "code" : p.t === "b" ? "strong" : p.t === "s" ? "del" : "em",
+          p.t === "code" ? "ai-md-code" : "",
+          p.v
+        ));
+      }
+    };
+    for (const b of parseChatMarkdown(text)) {
+      if (b.type === "hr") {
+        box2.append(el("hr", "ai-md-hr"));
+        continue;
+      }
+      if (b.type === "code") {
+        const wrap2 = el("div", "ai-md-pre");
+        const head2 = el("div", "ai-md-pre-head dim", b.lang || "code");
+        const cp = el("button", "ai-msg-copy", "\u29C9");
+        cp.type = "button";
+        cp.title = t("ui.aiChatPanel.copyText");
+        cp.onclick = async () => {
+          const ok2 = await copyText(b.text);
+          cp.textContent = ok2 ? "\u2713" : "\u2715";
+          setTimeout(() => {
+            cp.textContent = "\u29C9";
+          }, 1200);
+        };
+        head2.append(cp);
+        wrap2.append(head2, el("pre", "ai-md-pre-body", b.text));
+        box2.append(wrap2);
+        continue;
+      }
+      if (b.type === "ul" || b.type === "ol") {
+        const list = el(b.type, "ai-md-list");
+        for (const it of b.items) {
+          const li = el("li");
+          inl(li, it);
+          list.append(li);
+        }
+        box2.append(list);
+        continue;
+      }
+      const tag3 = b.type === "h" ? "h" + Math.min(6, Math.max(1, b.level)) : b.type === "quote" ? "blockquote" : "p";
+      const node = el(tag3, "ai-md-" + (b.type === "h" ? "h" : b.type));
+      inl(node, b.parts);
+      box2.append(node);
+    }
+    if (!box2.childNodes.length) box2.append(document.createTextNode(String(text || "")));
+    return box2;
   }
   function summaryNode(m) {
     if (m.toolResult) return el("span", "ai-msg-hidden");
@@ -85357,14 +87718,17 @@ img{max-width:100%}` }
     fillModelSelect(modelSel, s);
     const filesRow = el("div", "ai-chat-files dim");
     const drawFiles = () => {
+      const cf = live(s).files || [];
       filesRow.innerHTML = "";
-      filesRow.style.display = (s.files || []).length ? "" : "none";
-      for (const f of s.files || []) {
+      filesRow.style.display = cf.length ? "" : "none";
+      for (const f of cf) {
         const chip = el("span", "ai-chat-filechip", "\u{1F4CE} " + (f.name || f.path));
         const x = el("span", "ai-chat-filex", "\xD7");
         x.onclick = async () => {
-          s.files = s.files.filter((y) => y.path !== f.path);
-          await saveSession2(s);
+          const c = live(s);
+          c.files = (c.files || []).filter((y) => y.path !== f.path);
+          S3.cur = c;
+          await saveSession2(c);
           drawFiles();
         };
         chip.append(x);
@@ -85383,18 +87747,24 @@ img{max-width:100%}` }
     inputRow.append(ta, sendBtn);
     box2.append(inputRow);
     modeSel.onchange = async () => {
-      s.mode = modeSel.value;
-      await saveSession2(s);
+      const c = live(s);
+      c.mode = modeSel.value;
+      S3.cur = c;
+      await saveSession2(c);
     };
     scopeSel.onchange = async () => {
-      s.scope = scopeSel.value;
-      await saveSession2(s);
+      const c = live(s);
+      c.scope = scopeSel.value;
+      S3.cur = c;
+      await saveSession2(c);
     };
     modelSel.onchange = async () => {
       const [pid, model] = String(modelSel.value).split("\0");
-      s.providerId = pid || "";
-      s.model = model || "";
-      await saveSession2(s);
+      const c = live(s);
+      c.providerId = pid || "";
+      c.model = model || "";
+      S3.cur = c;
+      await saveSession2(c);
     };
     fileBtn.onclick = async () => {
       const p = await (kapi.openFileDialog ? kapi.openFileDialog() : null);
@@ -85402,15 +87772,17 @@ img{max-width:100%}` }
         setStatus(t("ui.aiChatPanel.pickFileNotOk"));
         return;
       }
-      s.files = [...s.files || [], { path: p, name: String(p).replace(/^.*[\\/]/, "") }];
-      await saveSession2(s);
+      const c = live(s);
+      c.files = [...c.files || [], { path: p, name: String(p).replace(/^.*[\\/]/, "") }];
+      S3.cur = c;
+      await saveSession2(c);
       drawFiles();
     };
     scBtn.onclick = async (e) => {
       const { openResolvedShortcodeMenu: openResolvedShortcodeMenu2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       await openResolvedShortcodeMenu2(e, ta);
     };
-    const doSend = () => send(s, ta, body, sendBtn);
+    const doSend = () => send(live(s), ta, body, sendBtn);
     sendBtn.onclick = doSend;
     ta.onkeydown = (e) => {
       if (!isSendKey(e, aiMeta().sendKey || DEFAULT_SEND_KEY)) return;
@@ -85444,7 +87816,8 @@ img{max-width:100%}` }
     _reqSeq += 1;
     return "chat-" + Date.now().toString(36) + "-" + _reqSeq;
   }
-  async function send(s, ta, body, sendBtn) {
+  async function send(s0, ta, body, sendBtn) {
+    const s = live(s0);
     const text = String(ta.value || "").trim();
     if (!text || S3.sending) return;
     const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
@@ -85503,19 +87876,29 @@ img{max-width:100%}` }
     const tp = toolsSystemPrompt(cap);
     if (tp) system += "\n\n" + tp;
     try {
-      const ctx2 = await collectScope(S3.cur);
+      const ctx2 = await collectScope(S3.cur, { query: text });
       if (ctx2) system += t("ui.aiChatPanel.dataProjectLevelIn") + scopeLabel(S3.cur.scope) + "):\n" + ctx2;
     } catch (e) {
       log("warn", t("ui.aiChatPanel.aiChatCollectContext"), e);
     }
     let res = null;
     let touched = false;
+    let lastDropped = 0;
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
         const rt0 = Date.now();
+        const hist = buildChatMessages(S3.cur, { maxTokens: historyBudget(S3.cur, aiMeta()) });
+        if (hist.dropped > 0 && hist.dropped !== lastDropped) {
+          lastDropped = hist.dropped;
+          body.insertBefore(el(
+            "div",
+            "ai-chat-trim dim",
+            tf("ui.aiChatPanel.historyTrimmed", hist.dropped)
+          ), pend);
+        }
         res = await completeStream(prov, {
           system,
-          messages: chatMessages(S3.cur),
+          messages: hist.messages,
           model: s.model || void 0,
           reqId
         }, (c) => {
@@ -85574,12 +87957,30 @@ img{max-width:100%}` }
           whoLabel.textContent = t("ui.aiChatPanel.busyThinkNext");
         }
       }
+    } catch (e) {
+      log("warn", t("ui.aiChatPanel.sendFailed"), e);
+      const emsg = e && e.message || String(e);
+      res = res || { ok: false, error: emsg };
+      const errMsg = newMessage("assistant", "", { error: emsg });
+      S3.cur = addMessage(S3.cur, errMsg);
+      try {
+        await saveSession2(S3.cur);
+      } catch {
+      }
+      body.append(msgNode(errMsg, view2));
     } finally {
       stopTick();
+      if (pend.isConnected) pend.remove();
+      S3.sending = false;
+      sendBtn.disabled = false;
     }
-    if (touched) await refreshAfterActions();
-    S3.sending = false;
-    sendBtn.disabled = false;
+    if (touched) {
+      try {
+        await refreshAfterActions();
+      } catch (e) {
+        log("warn", "refreshAfterActions", e);
+      }
+    }
     body.scrollTop = body.scrollHeight;
     const t3 = S3.host && S3.host.querySelector(".ai-chat-title");
     if (t3) t3.textContent = S3.cur.title;
@@ -85594,7 +87995,7 @@ img{max-width:100%}` }
         t("ui.aiChatPanel.clickViewDetail")
       ].join("\n");
     }
-    if (!res.ok) setStatus("\u274C AI: " + (res.error || ""));
+    if (res && !res.ok) setStatus("\u274C AI: " + (res.error || ""));
   }
   async function runCalls(calls, session, cap) {
     const results = [];
@@ -85672,30 +88073,34 @@ img{max-width:100%}` }
       return false;
     }
   }
-  async function restartSession(s, { confirm: confirm2 = true } = {}) {
-    const target = s || S3.cur;
+  async function restartSession(s, { confirm = true } = {}) {
+    const target = live(s) || S3.cur;
     if (!target) return null;
-    if (confirm2 && (target.messages || []).length && !await confirmBox(tf("ui.aiChatPanel.restartClearDialogueText", (target.messages || []).length, target.title))) {
+    if (confirm && (target.messages || []).length && !await confirmBox(tf("ui.aiChatPanel.restartClearDialogueText", (target.messages || []).length, target.title))) {
       return null;
     }
     S3.cur = clearMessages(target);
-    await saveSession2(S3.cur);
+    await saveSession2(S3.cur, { allowShrink: true });
     S3.view = "session";
     draw();
     setStatus(t("ui.aiChatPanel.startDialogueNewDone"));
     return S3.cur;
   }
-  function sessionMenu(ev, s) {
+  function sessionMenu(ev, s0) {
+    const s = live(s0);
     popupMenu(ev.clientX, ev.clientY, [
-      { label: t("ui.aiChatPanel.restartClearDialogue"), click: () => restartSession(s) },
+      { label: t("ui.aiChatPanel.restartClearDialogue"), click: () => restartSession(live(s)) },
       { label: t("ui.aiChatPanel.copyDialogueAll"), click: async () => {
         setStatus(await copyText(shareMarkdown(s)) ? t("ui.aiChatPanel.copyDialogueDone") : t("ui.common.copyNotOk"));
       } },
       "-",
       // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
       { label: (s.autoRun === false ? "\u2610" : "\u2611") + t("ui.aiChatPanel.doCmdNotMust"), click: async () => {
-        s.autoRun = s.autoRun === false;
-        await saveSession2(s);
+        const c = live(s);
+        c.autoRun = c.autoRun === false;
+        S3.cur = c;
+        s.autoRun = c.autoRun;
+        await saveSession2(c);
         setStatus(s.autoRun ? t("ui.aiChatPanel.aIActNotAsk") : t("ui.aiChatPanel.aIAskBeforeAll"));
       } },
       { label: (s.confirmDestructive === false ? "\u2610" : "\u2611") + t("ui.aiChatPanel.askBeforeAlwaysDel"), click: async () => {
@@ -85706,15 +88111,18 @@ img{max-width:100%}` }
           );
           if (!okGo) return;
         }
-        s.confirmDestructive = s.confirmDestructive === false;
-        await saveSession2(s);
+        const c = live(s);
+        c.confirmDestructive = c.confirmDestructive === false;
+        S3.cur = c;
+        s.confirmDestructive = c.confirmDestructive;
+        await saveSession2(c);
         setStatus(s.confirmDestructive ? t("ui.aiChatPanel.askBeforeDelAlways") : t("ui.aiChatPanel.unlockFullAIDel"));
       } },
       "-",
       { label: t("ui.aiChatPanel.changeName"), click: async () => {
         const v2 = await ask(t("ui.aiChatPanel.nameSession"), { value: s.title });
         if (v2 === null) return;
-        S3.cur = renameSession(s, v2);
+        S3.cur = renameSession(live(s), v2);
         await saveSession2(S3.cur, { force: true });
         draw();
       } },
@@ -85722,7 +88130,7 @@ img{max-width:100%}` }
         setStatus(await copyText(shareMarkdown(s)) ? t("ui.aiChatPanel.copyDialogueDone") : t("ui.common.copyNotOk"));
       } },
       { label: s.archived ? t("ui.aiChatPanel.exitArrangeKeep") : t("ui.aiChatPanel.arrangeKeep"), click: async () => {
-        S3.cur = archiveSession(s, !s.archived);
+        S3.cur = archiveSession(live(s), !live(s).archived);
         await saveSession2(S3.cur);
         S3.view = "list";
         draw();
@@ -85806,7 +88214,7 @@ img{max-width:100%}` }
   function _chatState() {
     return S3;
   }
-  var MAX_TOOL_ROUNDS, S3, _reqSeq;
+  var MAX_TOOL_ROUNDS, S3, RAG, _reqSeq;
   var init_ai_chat_panel = __esm({
     "src/ai/ai-chat-panel.js"() {
       init_i18n();
@@ -85831,6 +88239,7 @@ img{max-width:100%}` }
         root: null
         // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
       };
+      RAG = { session: null, root: "", building: null, stale: true };
       _reqSeq = 0;
     }
   });
@@ -85973,8 +88382,8 @@ img{max-width:100%}` }
         busy.set(t("ui.aiSum.useResultSummarySave"), 1);
       } else {
         busy.set(tf("ui.aiSum.busySendAISummary", scenes, entities), 0.7);
-        const prompt2 = tf("ui.aiSum.summaryBodyNovelScreenplay", text);
-        result = await callAI(prompt2, t("ui.aiSum.youWriterHelpSummary"));
+        const prompt = tf("ui.aiSum.summaryBodyNovelScreenplay", text);
+        result = await callAI(prompt, t("ui.aiSum.youWriterHelpSummary"));
         if (result) {
           writeCache(h, result);
           try {
@@ -86053,8 +88462,8 @@ img{max-width:100%}` }
     busy.set(t("ui.aiSum.busySendAIThink"), 0.5);
     let result = null;
     try {
-      const prompt2 = tf("ui.aiSum.suggestNameThaiNovel", KIND_TH[kind]) + tf("ui.aiSum.nameCurrent", currentTitle) + (opts.context ? tf("ui.aiSum.contextBodyCollapse", String(opts.context).slice(0, 1500)) : "") + t("ui.aiSum.sendListLineName");
-      result = await callAI(prompt2, t("ui.aiSum.youWriterChapterHelp"));
+      const prompt = tf("ui.aiSum.suggestNameThaiNovel", KIND_TH[kind]) + tf("ui.aiSum.nameCurrent", currentTitle) + (opts.context ? tf("ui.aiSum.contextBodyCollapse", String(opts.context).slice(0, 1500)) : "") + t("ui.aiSum.sendListLineName");
+      result = await callAI(prompt, t("ui.aiSum.youWriterChapterHelp"));
     } finally {
       busy.close();
     }
@@ -86955,7 +89364,6 @@ details>summary::-webkit-details-marker{display:none}
   __export(player_mode_exports, {
     getPlaythroughs: () => getPlaythroughs,
     openPlayerMode: () => openPlayerMode,
-    playthroughStats: () => playthroughStats,
     refreshOpenPlayer: () => refreshOpenPlayer,
     renderPlayer: () => renderPlayer,
     renderPlayerPanel: () => renderPlayerPanel,
@@ -86988,17 +89396,6 @@ details>summary::-webkit-details-marker{display:none}
     list.push(JSON.parse(JSON.stringify(run3)));
     return savePlaythroughs(list);
   }
-  function playthroughStats() {
-    const runs = getPlaythroughs();
-    const steps = runs.map((r) => (r.steps || []).length);
-    const endings = new Set(runs.map((r) => r.endedAtTitle).filter(Boolean));
-    return {
-      runs: runs.length,
-      avgSteps: steps.length ? +(steps.reduce((a, b) => a + b, 0) / steps.length).toFixed(1) : 0,
-      endings: endings.size,
-      last: runs.length ? runs[runs.length - 1] : null
-    };
-  }
   async function openPlayerMode(startId) {
     const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
     const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
@@ -87024,10 +89421,10 @@ details>summary::-webkit-details-marker{display:none}
       return { graph: ps.graph, analysis: ps.analysis };
     }
     const scenes = await collectScenes2();
-    const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       try {
-        sc.body = sc.filePath ? parseMdFile13(await kapi.readFile(sc.filePath)).body || "" : "";
+        sc.body = sc.filePath ? parseMdFile14(await kapi.readFile(sc.filePath)).body || "" : "";
       } catch {
         sc.body = "";
       }
@@ -87775,11 +90172,11 @@ details>summary::-webkit-details-marker{display:none}
     return out;
   }
   async function loadSceneBodies(scenes) {
-    const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       if (typeof sc.body === "string" || !sc.filePath) continue;
       try {
-        sc.body = parseMdFile13(await kapi.readFile(sc.filePath)).body || "";
+        sc.body = parseMdFile14(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         sc.body = "";
       }
@@ -88652,8 +91049,8 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
   async function readSceneBody(node) {
     if (!node || !node.filePath) return "";
     try {
-      const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
-      return parseMdFile13(await kapi.readFile(node.filePath)).body || "";
+      const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
+      return parseMdFile14(await kapi.readFile(node.filePath)).body || "";
     } catch (e) {
       log("warn", t("ui.branch.branchingReadBodyScene"), e);
       return "";
@@ -88664,10 +91061,10 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
       setStatus(tr2("noFile", t("ui.common.sceneNotHasFile")));
       return false;
     }
-    const { parseMdFile: parseMdFile13, dumpMdFile: dumpMdFile6 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile14, dumpMdFile: dumpMdFile6 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { state: st } = await Promise.resolve().then(() => (init_core(), core_exports));
     const raw = await kapi.readFile(node.filePath);
-    const { meta: meta2, body } = parseMdFile13(raw);
+    const { meta: meta2, body } = parseMdFile14(raw);
     const marker = "[" + text + "]";
     if (body.includes(marker)) return true;
     const next = body.replace(/\s+$/, "") + "\n\n" + marker + "\n";
@@ -88692,9 +91089,9 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     let body = "";
     if (tab && (tab.editor || tab.sp)) body = (tab.editor || tab.sp).getMarkdown();
     if (!body) {
-      const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
       try {
-        body = parseMdFile13(await kapi.readFile(state.active.file)).body || "";
+        body = parseMdFile14(await kapi.readFile(state.active.file)).body || "";
       } catch {
       }
     }
@@ -88716,14 +91113,14 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     return missing.length;
   }
   async function scanAllScenes(scenes, redraw3) {
-    const { parseMdFile: parseMdFile13 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile14 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const found2 = [];
     for (const sc of scenes) {
       if (!sc.filePath) continue;
       let body = "";
       try {
-        body = parseMdFile13(await kapi.readFile(sc.filePath)).body || "";
+        body = parseMdFile14(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         continue;
       }
@@ -89209,7 +91606,7 @@ ${preview2}` + (found2.length > 8 ? `
   function cardsOf(scenes) {
     const out = [];
     const chapters = scenes && scenes.chapters || {};
-    let seq2 = 0;
+    let seq3 = 0;
     for (const chapterId of Object.keys(chapters)) {
       const rows = chapters[chapterId] || [];
       for (const r of rows) {
@@ -89226,7 +91623,7 @@ ${preview2}` + (found2.length > 8 ? `
           pov: r.pov || "",
           fileName: r.fileName || "",
           locked: !!r.locked,
-          _seq: seq2++
+          _seq: seq3++
         });
       }
     }
@@ -89486,6 +91883,39 @@ ${preview2}` + (found2.length > 8 ? `
   });
 
   // src/kanban/kanban-ui.js
+  var kanban_ui_exports = {};
+  __export(kanban_ui_exports, {
+    kanbanDrafts: () => kanbanDrafts,
+    openKanban: () => openKanban,
+    renderKanbanPanel: () => renderKanbanPanel,
+    resetKanban: () => resetKanban,
+    setKanbanDraft: () => setKanbanDraft
+  });
+  function savedDraft() {
+    try {
+      return localStorage.getItem(kbKey()) || "";
+    } catch {
+      return "";
+    }
+  }
+  function saveDraft(p) {
+    try {
+      localStorage.setItem(kbKey(), p || "");
+    } catch {
+    }
+  }
+  async function kanbanDrafts() {
+    const { listDrafts: listDrafts2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    return listDrafts2();
+  }
+  async function setKanbanDraft(dPath) {
+    if (!dPath || dPath === KB.draftPath) return false;
+    KB.draftPath = dPath;
+    saveDraft(dPath);
+    board = null;
+    await renderKanbanPanel();
+    return true;
+  }
   async function getBoard() {
     if (board) return board;
     if (!state.root) return null;
@@ -89503,17 +91933,21 @@ ${preview2}` + (found2.length > 8 ? `
       "languages",
       "Fonts"
     ];
-    const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS9.includes(s)).sort();
-    let draftPath = null;
-    for (const s of secs) {
-      const dr = await kapi.join(await kapi.join(state.root, s), "Draft");
-      if (!await kapi.exists(dr)) continue;
-      const dns = (await kapi.listDirs(dr)).sort();
-      if (!dns.length) continue;
-      draftPath = await kapi.join(dr, dns[0]);
-      break;
+    let draftPath = KB.draftPath || savedDraft();
+    if (draftPath && !await kapi.exists(await kapi.join(draftPath, "draft.json"))) draftPath = "";
+    if (!draftPath) {
+      const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS9.includes(s)).sort();
+      for (const s of secs) {
+        const dr = await kapi.join(await kapi.join(state.root, s), "Draft");
+        if (!await kapi.exists(dr)) continue;
+        const dns = (await kapi.listDirs(dr)).sort();
+        if (!dns.length) continue;
+        draftPath = await kapi.join(dr, dns[0]);
+        break;
+      }
     }
     if (!draftPath) return null;
+    KB.draftPath = draftPath;
     board = new KanbanBoard({ io: syncIo(), draftPath, statuses: allStatuses() });
     await board.load();
     board.onChange(() => {
@@ -89558,6 +91992,22 @@ ${preview2}` + (found2.length > 8 ? `
       renderKanban(b);
     };
     head2.append(addBtn);
+    const draftSel = el("select", "k-dlg-select kb-draft");
+    draftSel.title = t("ui.kanban.draftPick");
+    head2.append(draftSel);
+    kanbanDrafts().then((ds) => {
+      if (!draftSel.isConnected) return;
+      draftSel.replaceChildren();
+      for (const d of ds) {
+        const o = el("option", null, d.label);
+        o.value = d.dPath;
+        draftSel.append(o);
+      }
+      draftSel.value = KB.draftPath;
+      draftSel.style.display = ds.length > 1 ? "" : "none";
+    }).catch(() => {
+    });
+    draftSel.onchange = () => setKanbanDraft(draftSel.value);
     wrap2.append(head2);
     const cols = el("div", "kb-cols");
     for (const col of data2.columns) {
@@ -89617,24 +92067,50 @@ ${preview2}` + (found2.length > 8 ? `
           };
           cardEl.ondragstart = (e) => {
             e.dataTransfer.setData("text/plain", card.id);
+            e.dataTransfer.effectAllowed = "move";
+            cardEl.classList.add("kb-dragging");
           };
+          cardEl.ondragend = () => cardEl.classList.remove("kb-dragging");
           cardList.append(cardEl);
         }
         colEl.append(cardList);
+        const dropIndex = (clientY) => {
+          const cards = [...cardList.querySelectorAll(".kb-card:not(.kb-dragging)")];
+          for (let i5 = 0; i5 < cards.length; i5++) {
+            const r = cards[i5].getBoundingClientRect();
+            if (clientY < r.top + r.height / 2) return i5;
+          }
+          return cards.length;
+        };
+        const showMarker = (idx4) => {
+          let mk2 = cardList.querySelector(".kb-drop-mark");
+          if (!mk2) {
+            mk2 = el("div", "kb-drop-mark");
+          }
+          const cards = [...cardList.querySelectorAll(".kb-card:not(.kb-dragging)")];
+          if (idx4 >= cards.length) cardList.append(mk2);
+          else cardList.insertBefore(mk2, cards[idx4]);
+        };
+        const clearMarker = () => cardList.querySelector(".kb-drop-mark")?.remove();
         colEl.ondragover = (e) => {
           e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
           colEl.classList.add("kb-drag-over");
+          showMarker(dropIndex(e.clientY));
         };
-        colEl.ondragleave = () => {
+        colEl.ondragleave = (e) => {
+          if (colEl.contains(e.relatedTarget)) return;
           colEl.classList.remove("kb-drag-over");
+          clearMarker();
         };
         colEl.ondrop = async (e) => {
           e.preventDefault();
           colEl.classList.remove("kb-drag-over");
+          const idx4 = dropIndex(e.clientY);
+          clearMarker();
           const sceneId = e.dataTransfer.getData("text/plain");
           if (!sceneId) return;
-          const toStatus = col.key;
-          await b.updateSceneStatus(sceneId, toStatus);
+          await b.moveCard(sceneId, col.key, idx4);
           renderKanban(b);
         };
       }
@@ -89653,7 +92129,7 @@ ${preview2}` + (found2.length > 8 ? `
     board = null;
     uiPane = null;
   }
-  var board, uiPane;
+  var board, KB, kbKey, uiPane;
   var init_kanban_ui = __esm({
     "src/kanban/kanban-ui.js"() {
       init_core();
@@ -89663,6 +92139,8 @@ ${preview2}` + (found2.length > 8 ? `
       init_ui();
       init_panel_ui();
       board = null;
+      KB = { draftPath: "" };
+      kbKey = () => "k2-kanban-draft:" + state.root;
       uiPane = null;
     }
   });
@@ -90367,13 +92845,13 @@ ${preview2}` + (found2.length > 8 ? `
     else {
       const hint = el("div", "k-split-empty");
       hint.append(el("div", "k-split-empty-icon", "\u2317"));
-      hint.append(el("div", "", t("split.emptyPane", "\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E21\u0E32\u0E27\u0E32\u0E07\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48")));
-      hint.append(el("div", "dim", t("split.emptyPaneHint", "\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E17\u0E47\u0E1A\u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19")));
+      hint.append(el("div", "", t("split.emptyPane")));
+      hint.append(el("div", "dim", t("split.emptyPaneHint")));
       body.appendChild(hint);
     }
     pane.appendChild(body);
-    const cb = el("div", "cmp-close", t("split.closePane", "\u2715 \u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49"));
-    cb.title = t("split.closePaneHint", "\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)");
+    const cb = el("div", "cmp-close", t("split.closePane"));
+    cb.title = t("split.closePaneHint");
     cb.onmousedown = (e) => e.stopPropagation();
     cb.onclick = (e) => {
       e.stopPropagation();
@@ -90393,7 +92871,7 @@ ${preview2}` + (found2.length > 8 ? `
       btn2.title = id;
       btn2.append(el("span", "k-mtab-title", t3 && t3.title || id.split(/[\\/]/).pop()));
       const x = el("span", "k-mtab-x", "\xD7");
-      x.title = t("split.removeFromPane", "\u0E40\u0E2D\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 (\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)");
+      x.title = t("split.removeFromPane");
       x.onmousedown = (e) => e.stopPropagation();
       x.onclick = (e) => {
         e.stopPropagation();
@@ -90436,7 +92914,7 @@ ${preview2}` + (found2.length > 8 ? `
     const h = el("div", "k-split-handle " + (row2 ? "k-sh-col" : "k-sh-row"));
     h.dataset.splitId = node.id;
     h.dataset.index = String(index);
-    h.title = t("split.dragResize", "\u0E25\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E1B\u0E23\u0E31\u0E1A\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 (\u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 = 50%)");
+    h.title = t("split.dragResize");
     h.addEventListener("dblclick", () => sm.resize(node.id, index, 0.5));
     h.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
@@ -90544,7 +93022,7 @@ ${preview2}` + (found2.length > 8 ? `
     else if (cur && !sm.has(cur)) sm.open(cur);
     const other = [...state.tabs.keys()].find((f) => f !== cur && tabOf(f) && !sm.has(f)) || null;
     sm.splitWith(other, side);
-    setStatus(other ? t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (d === "down" ? t("ui.layoutSplit.topBottom") : t("ui.layoutSplit.leftRight")) : t("split.openedEmpty", "\u0E40\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E21\u0E32\u0E27\u0E32\u0E07\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 \u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E25\u0E34\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E17\u0E47\u0E1A"));
+    setStatus(other ? t("split.statusPrefix") + (d === "down" ? t("ui.layoutSplit.topBottom") : t("ui.layoutSplit.leftRight")) : t("split.openedEmpty"));
     return { dir: d, right: other };
   }
   function closeSplit() {
@@ -90557,7 +93035,7 @@ ${preview2}` + (found2.length > 8 ? `
     sm.store.update(keep ? leaf(keep) : null);
     sm.focusId = sm.root ? sm.root.id : null;
     if (keep && keep !== state.active?.file && state.tabs.has(keep)) hooks.activate?.(keep);
-    setStatus(t("split.closed", "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E41\u0E25\u0E49\u0E27"));
+    setStatus(t("split.closed"));
   }
   function closePane(leafId) {
     const sm = getSplitManager();
@@ -90574,7 +93052,7 @@ ${preview2}` + (found2.length > 8 ? `
         const next = JSON.parse(JSON.stringify(sm.root));
         if (next.type === "split") next.dir = dir2 === "down" ? "col" : "row";
         sm.store.update(next);
-        setStatus(t("split.statusPrefix", "\u0E41\u0E22\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D: ") + (dir2 === "down" ? t("ui.layoutSplit.topBottom") : t("ui.layoutSplit.leftRight")));
+        setStatus(t("split.statusPrefix") + (dir2 === "down" ? t("ui.layoutSplit.topBottom") : t("ui.layoutSplit.leftRight")));
         return true;
       }
       closeSplit();
@@ -90776,6 +93254,126 @@ ${preview2}` + (found2.length > 8 ? `
     }
   });
 
+  // src/nav.js
+  function statusLabel(status) {
+    return status && status !== "Outline" ? status : "";
+  }
+  function parseProse(body) {
+    const out = [];
+    const lines = (body || "").split(/\r?\n/);
+    let start = -1, buf = "";
+    const flush = () => {
+      if (buf.trim()) out.push({ kind: "beat", level: 4, label: truncate(buf), line: start });
+      buf = "";
+      start = -1;
+    };
+    lines.forEach((raw, i5) => {
+      const line = raw.replace(/\s+$/, "");
+      const h = /^(#{1,3})\s+(.*)$/.exec(line);
+      if (h) {
+        flush();
+        out.push({ kind: "heading", level: h[1].length, label: h[2].trim(), line: i5 });
+        return;
+      }
+      if (!line.trim()) {
+        flush();
+        return;
+      }
+      if (/^!\[.*\]\(.*\)\s*$/.test(line)) {
+        flush();
+        return;
+      }
+      if (/^>\s?/.test(line)) {
+        flush();
+        out.push({ kind: "quote", level: 4, label: truncate(line.replace(/^>\s?/, "")), line: i5 });
+        return;
+      }
+      if (start < 0) start = i5;
+      buf += (buf ? " " : "") + line;
+    });
+    flush();
+    return out;
+  }
+  function parseScreenplay(body) {
+    const out = [];
+    const lines = (body || "").split(/\r?\n/);
+    lines.forEach((raw, i5) => {
+      const line = raw.trim();
+      if (!line) return;
+      let m;
+      if (m = /^###\s+(.*)$/.exec(line)) {
+        out.push({ kind: "outline", level: 3, label: m[1].trim(), line: i5 });
+        return;
+      }
+      if (m = /^##\s+(.*)$/.exec(line)) {
+        out.push({ kind: "outline", level: 2, label: m[1].trim(), line: i5 });
+        return;
+      }
+      if (m = /^#\s+(.*)$/.exec(line)) {
+        out.push({ kind: "outline", level: 1, label: m[1].trim(), line: i5 });
+        return;
+      }
+      if (m = /^=\s+(.*)$/.exec(line)) {
+        out.push({ kind: "summary", level: 4, label: truncate(m[1].trim()), line: i5 });
+        return;
+      }
+      if (m = /^\.(?!\.)(.+)/.exec(line)) {
+        out.push({ kind: "sceneHeading", level: 2, label: m[1].trim(), line: i5 });
+        return;
+      }
+      if (/^(int\.?|ext\.?|est\.?|i\/e|ฉาก)[\s.:]/i.test(line)) {
+        out.push({ kind: "sceneHeading", level: 2, label: line, line: i5 });
+        return;
+      }
+      if (m = /^@(.+)/.exec(line)) {
+        out.push({ kind: "character", level: 3, label: m[1].trim(), line: i5 });
+        return;
+      }
+      if (m = /^>(.+)/.exec(line)) {
+        out.push({ kind: "transition", level: 3, label: m[1].trim(), line: i5 });
+        return;
+      }
+      if (m = /^\$(act|seq|endact)\b\s*(.*)$/i.exec(line)) {
+        out.push({ kind: m[1].toLowerCase(), level: 1, label: m[2].trim() || m[1], line: i5 });
+        return;
+      }
+    });
+    return out;
+  }
+  function buildNavigation(scenes, opts = {}) {
+    const mode = opts.mode || "auto";
+    const showBeats = opts.showBeats !== false;
+    const nodes = [];
+    (scenes || []).forEach((sc) => {
+      nodes.push({
+        kind: "scene",
+        level: 0,
+        id: sc.id,
+        sceneId: sc.id,
+        label: sc.title || t("ui.common.notNamed"),
+        status: statusLabel(sc.status),
+        color: sc.color || sc.colorTag || "",
+        wordCount: sc.wordCount || 0,
+        flag: !!sc.flag
+      });
+      const fmt = mode === "auto" ? sc.format === "screenplay" ? "screenplay" : "prose" : mode;
+      let kids = fmt === "screenplay" ? parseScreenplay(sc.body) : parseProse(sc.body);
+      if (fmt !== "screenplay" && !showBeats) kids = kids.filter((k) => k.kind === "heading");
+      kids.forEach((k) => nodes.push(Object.assign({ id: sc.id, sceneId: sc.id }, k)));
+    });
+    return nodes;
+  }
+  var truncate;
+  var init_nav = __esm({
+    "src/nav.js"() {
+      init_i18n();
+      truncate = (s, n2 = 42) => {
+        s = String(s).trim().replace(/\s+/g, " ");
+        return s.length > n2 ? s.slice(0, n2) + "\u2026" : s;
+      };
+    }
+  });
+
   // src/codex/codex-build.js
   var codex_build_exports = {};
   __export(codex_build_exports, {
@@ -90796,9 +93394,9 @@ ${preview2}` + (found2.length > 8 ? `
   function esc3(s) {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  function slug(name5, seq2) {
+  function slug(name5, seq3) {
     const base4 = String(name5 || "").trim().replace(/[\\/:*?"<>|#%{}]+/g, "").replace(/\s+/g, "-").slice(0, 60) || "entry";
-    return seq2 == null ? base4 : `${base4}-${seq2}`;
+    return seq3 == null ? base4 : `${base4}-${seq3}`;
   }
   function assignPages(entities) {
     const used = /* @__PURE__ */ new Map();
@@ -91309,7 +93907,6 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   var record_ui_exports = {};
   __export(record_ui_exports, {
     loadRecords: () => loadRecords,
-    openRecord: () => openRecord,
     renderRecordPanel: () => renderRecordPanel,
     resetRecords: () => resetRecords
   });
@@ -91534,12 +94131,6 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     drawStats();
     drawList3();
     return true;
-  }
-  async function openRecord() {
-    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
-    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    showPanel2("record");
-    await renderFeaturePanel2("record");
   }
   var S5, newId3;
   var init_record_ui = __esm({
@@ -91890,7 +94481,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const head2 = el("div", "k-plug-head");
     head2.append(el("span", "k-plug-name", p.name));
     if (p.version) head2.append(el("span", "k-plug-ver dim", "v" + p.version));
-    const badge = el("span", "k-plug-badge", statusLabel(p.status));
+    const badge = el("span", "k-plug-badge", statusLabel2(p.status));
     head2.append(badge);
     head2.append(el(
       "span",
@@ -92049,7 +94640,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
   }
-  function statusLabel(st) {
+  function statusLabel2(st) {
     if (st === ST_OK) return t("ui.plug.stOk");
     if (st === ST_OFF) return t("ui.plug.stOff");
     if (st === ST_OLD) return t("ui.plug.stOld");
@@ -92110,7 +94701,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   // src/dialogue/dialogue-core.js
   var dialogue_core_exports = {};
   __export(dialogue_core_exports, {
-    QUOTE_PAIRS: () => QUOTE_PAIRS,
+    QUOTE_PAIRS: () => QUOTE_PAIRS2,
     SRC_PROSE: () => SRC_PROSE,
     SRC_SCRIPT: () => SRC_SCRIPT,
     TURN_GAP: () => TURN_GAP,
@@ -92120,7 +94711,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     WHERE_TAG: () => WHERE_TAG,
     WHERE_TURN: () => WHERE_TURN,
     characterFromTag: () => characterFromTag,
-    countWords: () => countWords4,
+    countWords: () => countWords5,
     extractDialogue: () => extractDialogue,
     extractRaw: () => extractRaw,
     filterDialogue: () => filterDialogue,
@@ -92142,7 +94733,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     let i5 = 0;
     while (i5 < s.length) {
       const ch = s[i5];
-      const closer = OPENERS.get(ch);
+      const closer = OPENERS2.get(ch);
       if (closer === void 0) {
         i5++;
         continue;
@@ -92363,7 +94954,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const k = r.speaker || "";
       const cur = m.get(k) || { speaker: k, count: 0, words: 0 };
       cur.count++;
-      cur.words += countWords4(r.text);
+      cur.words += countWords5(r.text);
       m.set(k, cur);
     }
     return [...m.values()].sort((a, b) => {
@@ -92371,7 +94962,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return b.count - a.count || a.speaker.localeCompare(b.speaker, "th");
     });
   }
-  function countWords4(s) {
+  function countWords5(s) {
     const t3 = String(s || "").trim();
     if (!t3) return 0;
     const thai = (t3.match(/[฀-๿]/g) || []).length;
@@ -92411,10 +95002,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const t3 = String(s || "").replace(/\s+/g, " ").trim();
     return t3.length > max2 ? t3.slice(0, max2 - 1) + "\u2026" : t3;
   }
-  var QUOTE_PAIRS, OPENERS, SRC_PROSE, SRC_SCRIPT, WHERE_FRONT, WHERE_BACK, WHERE_TAG, WHERE_TURN, WHERE_NONE, TURN_GAP, TRIM_CHARS;
+  var QUOTE_PAIRS2, OPENERS2, SRC_PROSE, SRC_SCRIPT, WHERE_FRONT, WHERE_BACK, WHERE_TAG, WHERE_TURN, WHERE_NONE, TURN_GAP, TRIM_CHARS;
   var init_dialogue_core = __esm({
     "src/dialogue/dialogue-core.js"() {
-      QUOTE_PAIRS = [
+      QUOTE_PAIRS2 = [
         ['"', '"'],
         ["\u201C", "\u201D"],
         // “ ”
@@ -92427,7 +95018,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         ["\u300E", "\u300F"]
         // 『 』
       ];
-      OPENERS = new Map(QUOTE_PAIRS.map(([o, c]) => [o, c]));
+      OPENERS2 = new Map(QUOTE_PAIRS2.map(([o, c]) => [o, c]));
       SRC_PROSE = "prose";
       SRC_SCRIPT = "script";
       WHERE_FRONT = "front";
@@ -92525,7 +95116,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const chTitle = (chTitleCache.get(sc.draftPath) || {})[sc.chapterId] || sc.chapterId;
         let meta2 = {}, body = "";
         try {
-          const p = (0, import_md14.parseMdFile)(sc.text || "");
+          const p = (0, import_md17.parseMdFile)(sc.text || "");
           meta2 = p.meta || {};
           body = p.body || "";
         } catch {
@@ -92864,7 +95455,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     let meta2 = {}, body = "";
     try {
-      const p = (0, import_md14.parseMdFile)(raw);
+      const p = (0, import_md17.parseMdFile)(raw);
       meta2 = p.meta || {};
       body = p.body || "";
     } catch {
@@ -92876,7 +95467,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
     try {
-      await kapi.writeFile(r.path, (0, import_md14.dumpMdFile)(meta2, out));
+      await kapi.writeFile(r.path, (0, import_md17.dumpMdFile)(meta2, out));
     } catch (e) {
       setStatus(t("ui.dialogue.errWrite") + " " + (e.message || e));
       return false;
@@ -92926,12 +95517,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
   }
-  var import_md14, S7, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
+  var import_md17, S7, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
   var init_dialogue_ui = __esm({
     "src/dialogue/dialogue-ui.js"() {
       init_i18n();
       init_core();
-      import_md14 = __toESM(require_md());
+      import_md17 = __toESM(require_md());
       init_project_scan();
       init_dialogue_core();
       S7 = () => state._dialogue || (state._dialogue = {
@@ -93433,8 +96024,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const before = txt;
       txt = txt.replace(/^@[^\n]{1,40}\n+/, "");
       for (const a of aliases) {
-        const esc6 = a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        txt = txt.replace(new RegExp("^\\s*" + esc6 + "\\s*[:\uFF1A]\\s*"), "");
+        const esc7 = a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        txt = txt.replace(new RegExp("^\\s*" + esc7 + "\\s*[:\uFF1A]\\s*"), "");
       }
       if (txt === before) break;
       txt = txt.trim();
@@ -94031,7 +96622,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     n2.append(head2);
     const body = el("div", "dlgb-bub-body");
     if (tn.paren) body.append(el("div", "dlgb-bub-paren", "(" + tn.paren + ")"));
-    body.append(el("div", "dlgb-bub-text", tn.text));
+    body.append(setSpeechText(el("div", "dlgb-bub-text"), tn.text));
     n2.append(body);
     if (tn.thinking) {
       const fold = el("details", "dlgb-think");
@@ -94798,8 +97389,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     installTextMeasurer: () => installTextMeasurer,
     preloadMeasuredFonts: () => preloadMeasuredFonts,
     refreshTextMeasurer: () => refreshTextMeasurer,
-    textMeasurerInfo: () => textMeasurerInfo,
-    uninstallTextMeasurer: () => uninstallTextMeasurer
+    textMeasurerInfo: () => textMeasurerInfo
   });
   function ctx() {
     if (_ctx2) return _ctx2;
@@ -94876,10 +97466,6 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     _fontOf = { sp: "", prose: "" };
     bumpMeasureEpoch();
   }
-  function uninstallTextMeasurer() {
-    setMeasurer(null);
-    refreshTextMeasurer();
-  }
   function textMeasurerInfo() {
     return {
       sp: _fontOf.sp || fontFor("sp"),
@@ -94896,6 +97482,128 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       _ctx2 = null;
       _cache = /* @__PURE__ */ new Map();
       _fontOf = { sp: "", prose: "" };
+    }
+  });
+
+  // src/color-picker.js
+  var color_picker_exports = {};
+  __export(color_picker_exports, {
+    closeColorPicker: () => closeColorPicker,
+    colorStore: () => colorStore,
+    openColorPicker: () => openColorPicker,
+    saveColorStore: () => saveColorStore
+  });
+  function closeColorPicker() {
+    if (curPop) {
+      curPop.remove();
+      curPop = null;
+      document.removeEventListener("mousedown", onDoc2);
+    }
+  }
+  function onDoc2(e) {
+    if (curPop && !curPop.contains(e.target)) closeColorPicker();
+  }
+  function colorStore() {
+    return (0, import_text_color3.normalizeColorStore)((state.settings || {}).textColors);
+  }
+  async function saveColorStore(next, saveGlobal) {
+    if (!state.settings) return false;
+    const v2 = (0, import_text_color3.normalizeColorStore)(next);
+    state.settings.textColors = v2;
+    if (typeof saveGlobal === "function") await saveGlobal("textColors", v2);
+    return true;
+  }
+  function swatch(hex, { current: current2 = "", title: title2 = "", onPick } = {}) {
+    const b = el("button", "k-sw" + (current2 && (0, import_text_color3.normColor)(hex) === (0, import_text_color3.normColor)(current2) ? " on" : ""));
+    b.type = "button";
+    b.style.background = hex;
+    b.title = title2 || hex;
+    b.dataset.color = hex;
+    b.onclick = () => onPick(hex);
+    return b;
+  }
+  function openColorPicker(anchor, current2, apply4, saveGlobal) {
+    closeColorPicker();
+    const store = colorStore();
+    const pop = el("div", "k-menu k-colorpop");
+    curPop = pop;
+    const use = async (hex2) => {
+      const c = (0, import_text_color3.normColor)(hex2);
+      apply4(c);
+      if (c) await saveColorStore(
+        { ...colorStore(), recent: (0, import_text_color3.pushRecent)(colorStore().recent, c) },
+        saveGlobal
+      );
+      closeColorPicker();
+    };
+    const section = (labelKey, list) => {
+      const wrap2 = el("div", "k-colorsec");
+      wrap2.append(el("div", "k-colorsec-lbl", t(labelKey)));
+      const row2 = el("div", "k-colorrow");
+      if (!list.length) row2.append(el("span", "dim k-colorempty", t("ui.color.none")));
+      for (const hex2 of list) {
+        const key2 = (0, import_text_color3.presetLabelKey)(hex2);
+        row2.append(swatch(hex2, { current: current2, title: key2 ? t(key2) : hex2, onPick: use }));
+      }
+      wrap2.append(row2);
+      return wrap2;
+    };
+    pop.append(section("ui.color.presets", import_text_color3.COLOR_PRESETS.map((p) => p.hex)));
+    let secSaved = section("ui.color.saved", store.saved);
+    secSaved.classList.add("k-colorsec-saved");
+    pop.append(secSaved);
+    pop.append(section("ui.color.recent", store.recent));
+    const wheelRow = el("div", "k-colorrow k-colorwheel");
+    const inp = el("input", "k-color-input");
+    inp.type = "color";
+    inp.value = (0, import_text_color3.normColor)(current2) || "#b03030";
+    const hex = el("input", "k-dlg-input k-color-hex");
+    hex.value = inp.value;
+    hex.spellcheck = false;
+    inp.oninput = () => {
+      hex.value = inp.value;
+    };
+    hex.oninput = () => {
+      const c = (0, import_text_color3.normColor)(hex.value);
+      if (c) inp.value = c;
+    };
+    const bUse = el("button", "k-ok k-color-use", t("ui.color.use"));
+    bUse.type = "button";
+    bUse.onclick = () => use((0, import_text_color3.normColor)(hex.value) || inp.value);
+    const bSave = el("button", "k-color-save", t("ui.color.save"));
+    bSave.type = "button";
+    bSave.title = t("ui.color.saveHint");
+    bSave.onclick = async () => {
+      const c = (0, import_text_color3.normColor)(hex.value) || (0, import_text_color3.normColor)(inp.value);
+      if (!c) return;
+      const st = colorStore();
+      await saveColorStore({ ...st, saved: (0, import_text_color3.toggleSaved)(st.saved, c) }, saveGlobal);
+      const fresh = section("ui.color.saved", colorStore().saved);
+      fresh.classList.add("k-colorsec-saved");
+      secSaved.replaceWith(fresh);
+      secSaved = fresh;
+    };
+    wheelRow.append(inp, hex, bUse, bSave);
+    pop.append(el("div", "k-colorsec-lbl", t("ui.color.wheel")), wheelRow);
+    const bClear = el("button", "k-color-clear", t("ui.color.clear"));
+    bClear.type = "button";
+    bClear.onclick = () => use("");
+    pop.append(bClear);
+    document.body.append(pop);
+    const r = pop.getBoundingClientRect();
+    const a = anchor ? anchor.getBoundingClientRect() : { left: innerWidth / 2, bottom: innerHeight / 2 };
+    pop.style.left = Math.max(8, Math.min(a.left, innerWidth - r.width - 8)) + "px";
+    pop.style.top = Math.max(8, Math.min(a.bottom + 4, innerHeight - r.height - 8)) + "px";
+    setTimeout(() => document.addEventListener("mousedown", onDoc2), 0);
+    return pop;
+  }
+  var import_text_color3, curPop;
+  var init_color_picker = __esm({
+    "src/color-picker.js"() {
+      init_i18n();
+      init_core();
+      import_text_color3 = __toESM(require_text_color());
+      curPop = null;
     }
   });
 
@@ -95048,6 +97756,88 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   });
 
+  // src/export-name.js
+  var export_name_exports = {};
+  __export(export_name_exports, {
+    BUILTIN_NAME_PRESETS: () => BUILTIN_NAME_PRESETS,
+    DEFAULT_EXPORT_NAME: () => DEFAULT_EXPORT_NAME,
+    NAME_MAX: () => NAME_MAX,
+    NAME_PRESET_MAX: () => NAME_PRESET_MAX,
+    buildExportName: () => buildExportName,
+    deleteNamePreset: () => deleteNamePreset,
+    normalizeExportName: () => normalizeExportName,
+    sanitizeFileBase: () => sanitizeFileBase,
+    saveNamePreset: () => saveNamePreset
+  });
+  function sanitizeFileBase(s) {
+    let out = String(s == null ? "" : s).replace(BAD_CHARS, "_").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "").slice(0, NAME_MAX).replace(/[. ]+$/, "");
+    if (/^[_\s.]*$/.test(out)) out = "";
+    if (RESERVED.test(out)) out = out + "_";
+    return out || "export";
+  }
+  function buildExportName(template, ctx2, ext) {
+    const raw = String(template || "").trim() || DEFAULT_EXPORT_NAME;
+    const filled = expandShortcodes(raw, ctx2 || {}).trim();
+    const base4 = sanitizeFileBase(filled);
+    const e = String(ext || "").replace(/^\./, "");
+    return e ? base4 + "." + e : base4;
+  }
+  function normalizeExportName(saved) {
+    const s = saved && typeof saved === "object" ? saved : {};
+    const seen = /* @__PURE__ */ new Set();
+    const presets = [];
+    for (const p of Array.isArray(s.presets) ? s.presets : []) {
+      if (!p || typeof p !== "object") continue;
+      const name5 = String(p.name || "").trim();
+      const template = String(p.template || "").trim();
+      if (!name5 || !template || seen.has(name5)) continue;
+      seen.add(name5);
+      presets.push({ name: name5, template });
+      if (presets.length >= NAME_PRESET_MAX) break;
+    }
+    return {
+      template: String(s.template || "").trim() || DEFAULT_EXPORT_NAME,
+      presets,
+      openAfter: s.openAfter === true
+    };
+  }
+  function saveNamePreset(list, name5, template) {
+    const n2 = String(name5 || "").trim();
+    const tpl = String(template || "").trim();
+    const cur = normalizeExportName({ presets: list }).presets;
+    if (!n2 || !tpl) return cur;
+    const i5 = cur.findIndex((p) => p.name === n2);
+    if (i5 >= 0) {
+      const next = cur.slice();
+      next[i5] = { name: n2, template: tpl };
+      return next;
+    }
+    return cur.length >= NAME_PRESET_MAX ? cur : [...cur, { name: n2, template: tpl }];
+  }
+  function deleteNamePreset(list, name5) {
+    const n2 = String(name5 || "").trim();
+    return normalizeExportName({ presets: list }).presets.filter((p) => p.name !== n2);
+  }
+  var DEFAULT_EXPORT_NAME, NAME_PRESET_MAX, BUILTIN_NAME_PRESETS, BAD_CHARS, RESERVED, NAME_MAX;
+  var init_export_name = __esm({
+    "src/export-name.js"() {
+      init_shortcode();
+      DEFAULT_EXPORT_NAME = "[title]";
+      NAME_PRESET_MAX = 20;
+      BUILTIN_NAME_PRESETS = [
+        { id: "title", labelKey: "ui.xname.pTitle", template: "[title]" },
+        { id: "title-date", labelKey: "ui.xname.pTitleDate", template: "[title] [date:iso]" },
+        { id: "title-book", labelKey: "ui.xname.pTitleBook", template: "[title] - [book]" },
+        { id: "title-chapter", labelKey: "ui.xname.pTitleChapter", template: "[title] - [chapter]" },
+        { id: "author-title", labelKey: "ui.xname.pAuthorTitle", template: "[author] - [title]" },
+        { id: "draft-date", labelKey: "ui.xname.pDraftDate", template: "[title] draft [date:iso] [words]w" }
+      ];
+      BAD_CHARS = /[\\\/:*?"<>|\u0000-\u001f]/g;
+      RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+      NAME_MAX = 120;
+    }
+  });
+
   // src/export-formats.js
   function docKind(model) {
     let sp = 0, pr = 0;
@@ -95075,12 +97865,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       // '' = เลือกให้อัตโนมัติตามรูปแบบ
       // titlePages = หน้าปก (บทหนัง = หน้าปกของบท · นิยาย = รูปปกจาก "จัดการเล่ม")
       // roster     = หน้ารายชื่อตัวละคร — ทั้งคู่เป็น "หน้าหน้าเล่ม" ที่ **ไม่นับเลขหน้า**
+      // [alpha.132 ข้อ 3+4] เลขหน้ากับเลขฉากเป็นคนละสวิตช์ · โหมดสี/ขาวดำ
+      // (ค่าเริ่มต้นขาวดำตามธรรมเนียมบทถ่ายทำ — ตรงกับกล่องส่งออก PDF ของบท)
       pdf: {
         toc: true,
         titlePages: true,
         roster: true,
         headers: true,
         pageNumbers: true,
+        sceneNumbers: true,
+        colorMode: "mono",
         watermark: ""
       },
       html: { wysiwyg: true },
@@ -95097,6 +97891,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     out.workflow = typeof s.workflow === "string" ? s.workflow : "";
     out.pdf = { ...d.pdf, ...s.pdf || {} };
     out.pdf.watermark = String(out.pdf.watermark || "");
+    out.pdf.sceneNumbers = s.pdf && "sceneNumbers" in s.pdf ? !!s.pdf.sceneNumbers : d.pdf.sceneNumbers;
+    out.pdf.colorMode = out.pdf.colorMode === "color" ? "color" : "mono";
     out.html = { ...d.html, ...s.html || {} };
     out.rtf = { ...d.rtf, ...s.rtf || {} };
     out.rtf.fontPt = num(out.rtf.fontPt, 12);
@@ -95117,9 +97913,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     } else if (i5 >= 0) steps[i5].on = false;
     return { ...src2, ext: formatDef(fmtKey).ext, steps };
   }
-  function suggestName(title2, fmtKey) {
-    const base4 = String(title2 || "export").replace(/[\\/:*?"<>|]/g, "_").trim() || "export";
-    return base4 + "." + formatDef(fmtKey).ext;
+  function suggestName(title2, fmtKey, opts) {
+    const o = opts || {};
+    return buildExportName(
+      o.template || DEFAULT_EXPORT_NAME,
+      { title: String(title2 || ""), ...o.ctx || {} },
+      formatDef(fmtKey).ext
+    );
   }
   var EXPORT_FORMATS, formatDef, pdfEngine;
   var init_export_formats = __esm({
@@ -95127,6 +97927,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_compile();
       init_num();
       init_sp_format();
+      init_export_name();
       EXPORT_FORMATS = [
         {
           key: "pdf",
@@ -95221,7 +98022,163 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   });
 
+  // src/export-name-ui.js
+  var export_name_ui_exports = {};
+  __export(export_name_ui_exports, {
+    exportNameRow: () => exportNameRow,
+    exportNameStore: () => exportNameStore
+  });
+  function exportNameStore() {
+    return normalizeExportName((state.settings || {}).exportName);
+  }
+  function exportNameRow({ ext = "pdf", ctx: ctx2 = {}, saveGlobal = null } = {}) {
+    let curExt = ext;
+    let curCtx = ctx2 || {};
+    const store = exportNameStore();
+    const node = el("div", "k-xname");
+    node.append(el("div", "k-xname-lbl", t("ui.xname.label")));
+    const inp = el("input", "k-dlg-input k-xname-input");
+    inp.value = store.template;
+    inp.spellcheck = false;
+    inp.placeholder = DEFAULT_EXPORT_NAME;
+    inp.title = t("ui.xname.hint");
+    const sel = el("select", "k-dlg-select k-xname-preset");
+    const bSave = el("button", "k-xname-save", t("ui.xname.savePreset"));
+    bSave.type = "button";
+    bSave.title = t("ui.xname.savePresetHint");
+    const bDel = el("button", "k-xname-del", t("ui.xname.delPreset"));
+    bDel.type = "button";
+    const prev = el("div", "dim k-xname-preview");
+    const hint = el("div", "k-hint k-xname-hint", t("ui.xname.hint"));
+    const openWrap = el("label", "k-xname-open");
+    const openChk = el("input");
+    openChk.type = "checkbox";
+    openChk.checked = store.openAfter === true;
+    openWrap.append(openChk, el("span", null, t("ui.xname.openAfter")));
+    openChk.onchange = async () => {
+      if (!state.settings) return;
+      const next = normalizeExportName({ ...exportNameStore(), openAfter: openChk.checked });
+      state.settings.exportName = next;
+      if (typeof saveGlobal === "function") await saveGlobal("exportName", next);
+    };
+    const fileName = () => buildExportName(inp.value, curCtx, curExt);
+    const refresh = () => {
+      prev.textContent = t("ui.xname.preview") + fileName();
+    };
+    const fillPresets = () => {
+      const s = exportNameStore();
+      sel.textContent = "";
+      const head2 = el("option", null, t("ui.xname.presetPick"));
+      head2.value = "";
+      sel.append(head2);
+      for (const p of BUILTIN_NAME_PRESETS) {
+        const o = el("option", null, t(p.labelKey));
+        o.value = "b:" + p.id;
+        sel.append(o);
+      }
+      for (const p of s.presets) {
+        const o = el("option", null, p.name);
+        o.value = "u:" + p.name;
+        sel.append(o);
+      }
+      sel.value = "";
+      bDel.disabled = true;
+    };
+    fillPresets();
+    const persist3 = async () => {
+      if (!state.settings) return;
+      const next = normalizeExportName({ ...exportNameStore(), template: inp.value });
+      state.settings.exportName = next;
+      if (typeof saveGlobal === "function") await saveGlobal("exportName", next);
+    };
+    inp.oninput = refresh;
+    inp.onchange = () => {
+      refresh();
+      persist3();
+    };
+    sel.onchange = () => {
+      const v2 = sel.value;
+      bDel.disabled = !v2.startsWith("u:");
+      if (!v2) return;
+      const s = exportNameStore();
+      const found2 = v2.startsWith("b:") ? (BUILTIN_NAME_PRESETS.find((p) => p.id === v2.slice(2)) || {}).template : (s.presets.find((p) => p.name === v2.slice(2)) || {}).template;
+      if (!found2) return;
+      inp.value = found2;
+      refresh();
+      persist3();
+    };
+    bSave.onclick = async () => {
+      const tpl = String(inp.value || "").trim();
+      if (!tpl) return;
+      const name5 = await ask(t("ui.xname.askPresetName"), { value: "" });
+      if (!name5) return;
+      const s = exportNameStore();
+      state.settings.exportName = normalizeExportName(
+        { ...s, presets: saveNamePreset(s.presets, name5, tpl) }
+      );
+      if (typeof saveGlobal === "function") await saveGlobal("exportName", state.settings.exportName);
+      fillPresets();
+      sel.value = "u:" + String(name5).trim();
+      bDel.disabled = false;
+    };
+    bDel.onclick = async () => {
+      const v2 = sel.value;
+      if (!v2.startsWith("u:")) return;
+      const name5 = v2.slice(2);
+      if (!await confirmBox(t("ui.xname.delPresetAsk") + name5, t("ui.common.del"))) return;
+      const s = exportNameStore();
+      state.settings.exportName = normalizeExportName(
+        { ...s, presets: deleteNamePreset(s.presets, name5) }
+      );
+      if (typeof saveGlobal === "function") await saveGlobal("exportName", state.settings.exportName);
+      fillPresets();
+    };
+    const ctrls = el("div", "k-xname-ctrls");
+    ctrls.append(inp, sel, bSave, bDel);
+    node.append(ctrls, prev, hint, openWrap);
+    refresh();
+    return {
+      node,
+      template: () => String(inp.value || "").trim() || DEFAULT_EXPORT_NAME,
+      name: fileName,
+      /** ผู้ใช้ติ๊ก "เปิดไฟล์เมื่อเสร็จ" ไว้ไหม */
+      openAfter: () => openChk.checked,
+      setExt: (e) => {
+        curExt = String(e || "").replace(/^\./, "");
+        refresh();
+      },
+      setCtx: (c) => {
+        curCtx = c || {};
+        refresh();
+      }
+    };
+  }
+  var init_export_name_ui = __esm({
+    "src/export-name-ui.js"() {
+      init_i18n();
+      init_core();
+      init_ui();
+      init_export_name();
+    }
+  });
+
   // src/sp-title-pages.js
+  var sp_title_pages_exports = {};
+  __export(sp_title_pages_exports, {
+    TITLE_ALIGNS: () => TITLE_ALIGNS,
+    TITLE_PAGE_VERSION: () => TITLE_PAGE_VERSION,
+    TitlePageEditor: () => TitlePageEditor,
+    cssFamily: () => cssFamily,
+    defaultTitlePages: () => defaultTitlePages,
+    newTitlePage: () => newTitlePage,
+    newTitleString: () => newTitleString,
+    normalizeTitlePages: () => normalizeTitlePages,
+    titlePageCount: () => titlePageCount,
+    titlePageInnerHtml: () => titlePageInnerHtml,
+    titlePagesCss: () => titlePagesCss,
+    titlePagesHtml: () => titlePagesHtml,
+    titlePagesText: () => titlePagesText
+  });
   function newTitleString(patch = {}) {
     return {
       text: "",
@@ -95336,6 +98293,41 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const s = String(name5 ?? "").replace(/["'\\;{}()<>]/g, "").trim();
     return s ? `"${s}",monospace` : "";
   }
+  function titlePagesHtml(pages, fmt) {
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    const list = normalizeTitlePages(pages);
+    return list.map((p) => `<section class="pg pg-title">${titlePageInnerHtml(p, f)}</section>`).join("\n");
+  }
+  function titlePagesCss(fmt) {
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    return [
+      `.pg-title{position:relative;width:${+f.paper.width}in;height:${+f.paper.height}in;padding:0;margin:0;overflow:hidden;page-break-after:always;break-after:page}`,
+      ".sp-tp-str{line-height:1.2}"
+    ].join("\n");
+  }
+  function titlePagesText(pages, fmt) {
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    const cols = Math.max(20, Math.floor(textWidth(f.paper, f.margins) * 10));
+    const out = [];
+    normalizeTitlePages(pages).forEach((p, i5) => {
+      if (i5) out.push("", "");
+      const rows = p.strings.filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => a.y - b.y || a.x - b.x);
+      for (const s of rows) {
+        const text = String(s.text).trim();
+        if (s.align === "center") {
+          out.push(" ".repeat(Math.max(0, Math.floor((cols - text.length) / 2))) + text);
+        } else if (s.align === "right") {
+          out.push(" ".repeat(Math.max(0, cols - text.length)) + text);
+        } else out.push(text);
+        out.push("");
+      }
+      while (out.length && out[out.length - 1] === "") out.pop();
+    });
+    return out.join("\n");
+  }
+  function titlePageCount(pages) {
+    return normalizeTitlePages(pages).length;
+  }
   var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp5, TitlePageEditor, esc4;
   var init_sp_title_pages = __esm({
     "src/sp-title-pages.js"() {
@@ -95436,6 +98428,21 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   });
 
   // src/sp-headers.js
+  var sp_headers_exports = {};
+  __export(sp_headers_exports, {
+    HEADER_ALIGNS: () => HEADER_ALIGNS,
+    HEADER_DEFAULTS: () => HEADER_DEFAULTS,
+    HEADER_VARS: () => HEADER_VARS,
+    headerCss: () => headerCss,
+    headerHtml: () => headerHtml,
+    headerLineCount: () => headerLineCount,
+    headerPlainLine: () => headerPlainLine,
+    headerStringsFor: () => headerStringsFor,
+    linesForBody: () => linesForBody,
+    mergeHeaders: () => mergeHeaders,
+    newHeaderString: () => newHeaderString,
+    resolveHeaderVars: () => resolveHeaderVars
+  });
   function newHeaderString(patch = {}) {
     return {
       text: "",
@@ -95519,7 +98526,53 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       };
     }).filter((r) => r.text !== "");
   }
-  var HEADER_VARS, HEADER_ALIGNS, HEADER_DEFAULTS;
+  function headerHtml(index, hdr, ctx2 = {}) {
+    const rows = headerStringsFor(index, hdr, ctx2);
+    if (!rows.length) return "";
+    const h = hdr && "strings" in hdr ? hdr : mergeHeaders(hdr);
+    const cell = (r) => {
+      const side = r.align === "right" ? "right" : r.align === "center" ? "center" : "left";
+      const off3 = num(r.xOffset, 0);
+      const place = side === "center" ? `left:50%;transform:translateX(calc(-50% + ${off3}in))` : side === "right" ? `right:${+(-off3).toFixed(4)}in` : `left:${off3}in`;
+      const st = [
+        r.bold ? "font-weight:700" : "",
+        r.italic ? "font-style:italic" : "",
+        r.underline ? "text-decoration:underline" : "",
+        place
+      ].filter(Boolean).join(";");
+      return `<span class="sp-hdr-item sp-hdr-${side}" style="${st}">${esc5(r.text)}</span>`;
+    };
+    return `<div class="sp-hdr" data-lines="${headerLineCount(h)}">${rows.map(cell).join("")}</div>`;
+  }
+  function headerCss(hdr, fmt) {
+    const h = hdr && "strings" in hdr ? hdr : mergeHeaders(hdr);
+    const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
+    const tw = +textWidth(f.paper, f.margins).toFixed(4);
+    return [
+      `.sp-hdr{position:relative;width:${tw}in;height:1em;margin:0 0 ${Math.max(0, h.emptyLinesAfter)}em 0;white-space:nowrap}`,
+      ".sp-hdr-item{position:absolute;top:0}",
+      ".sp-hdr-left{left:0}",
+      ".sp-hdr-right{right:0}"
+    ].join("\n");
+  }
+  function headerPlainLine(index, hdr, ctx2 = {}, cols = 60) {
+    const rows = headerStringsFor(index, hdr, ctx2);
+    if (!rows.length) return "";
+    const w = Math.max(10, Math.round(cols));
+    const buf = new Array(w).fill(" ");
+    const put = (s, at) => {
+      const start = Math.max(0, Math.min(w - s.length, at));
+      for (let i5 = 0; i5 < s.length; i5++) buf[start + i5] = s[i5];
+    };
+    for (const r of rows) {
+      const s = r.text;
+      if (r.align === "right") put(s, w - s.length);
+      else if (r.align === "center") put(s, Math.floor((w - s.length) / 2));
+      else put(s, 0);
+    }
+    return buf.join("").replace(/\s+$/, "");
+  }
+  var HEADER_VARS, HEADER_ALIGNS, HEADER_DEFAULTS, esc5;
   var init_sp_headers = __esm({
     "src/sp-headers.js"() {
       init_i18n();
@@ -95544,6 +98597,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         // ใส่หัวกระดาษบนหน้าแรกด้วยไหม (ธรรมเนียมบท: ไม่ใส่)
         strings: [newHeaderString({ text: "${PAGE}.", align: "right" })]
       };
+      esc5 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -125035,12 +128089,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 else throw new Error("Incorrect surrogate pair in " + this.encodingName + " at chunk " + chunk[0]);
               } else if (4080 < code3 && code3 <= 4095) {
                 var len5 = 4095 - code3 + 2;
-                var seq2 = [];
+                var seq3 = [];
                 for (var m = 0; m < len5; m++) {
-                  seq2.push(part.charCodeAt(l++));
+                  seq3.push(part.charCodeAt(l++));
                 }
                 writeTable[curAddr++] = SEQ_START - this.decodeTableSeq.length;
-                this.decodeTableSeq.push(seq2);
+                this.decodeTableSeq.push(seq3);
               } else writeTable[curAddr++] = code3;
             }
           } else if (typeof part === "number") {
@@ -125063,8 +128117,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if (bucket[low] <= SEQ_START) this.encodeTableSeq[SEQ_START - bucket[low]][DEF_CHAR] = dbcsCode;
         else if (bucket[low] == UNASSIGNED) bucket[low] = dbcsCode;
       };
-      DBCSCodec.prototype._setEncodeSequence = function(seq2, dbcsCode) {
-        var uCode = seq2[0];
+      DBCSCodec.prototype._setEncodeSequence = function(seq3, dbcsCode) {
+        var uCode = seq3[0];
         var bucket = this._getEncodeBucket(uCode);
         var low = uCode & 255;
         var node;
@@ -125076,7 +128130,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           bucket[low] = SEQ_START - this.encodeTableSeq.length;
           this.encodeTableSeq.push(node);
         }
-        for (var j = 1; j < seq2.length - 1; j++) {
+        for (var j = 1; j < seq3.length - 1; j++) {
           var oldVal = node[uCode];
           if (typeof oldVal === "object") node = oldVal;
           else {
@@ -125084,7 +128138,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             if (oldVal !== void 0) node[DEF_CHAR] = oldVal;
           }
         }
-        uCode = seq2[seq2.length - 1];
+        uCode = seq3[seq3.length - 1];
         node[uCode] = dbcsCode;
       };
       DBCSCodec.prototype._fillEncodeTable = function(nodeIdx, prefix2, skipEncodeChars) {
@@ -125226,13 +128280,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             nodeIdx = NODE_START - uCode;
             continue;
           } else if (uCode <= SEQ_START) {
-            var seq2 = this.decodeTableSeq[SEQ_START - uCode];
-            for (var k = 0; k < seq2.length - 1; k++) {
-              uCode = seq2[k];
+            var seq3 = this.decodeTableSeq[SEQ_START - uCode];
+            for (var k = 0; k < seq3.length - 1; k++) {
+              uCode = seq3[k];
               newBuf[j++] = uCode & 255;
               newBuf[j++] = uCode >> 8;
             }
-            uCode = seq2[seq2.length - 1];
+            uCode = seq3[seq3.length - 1];
           } else throw new Error("iconv-lite internal error: invalid decoding table value " + uCode + " at " + nodeIdx + "/" + curByte);
           if (uCode > 65535) {
             uCode -= 65536;
@@ -148753,6 +151807,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   __export(pdf_generator_exports, {
     OMITTABLE_ELEMENTS: () => OMITTABLE_ELEMENTS,
     PDF_DEFAULTS: () => PDF_DEFAULTS,
+    PDF_ELEMENT_COLORS: () => PDF_ELEMENT_COLORS,
     PDF_FONT_FILES: () => PDF_FONT_FILES,
     PT_PER_IN: () => PT_PER_IN,
     addOutline: () => addOutline,
@@ -148762,6 +151817,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     mergeAndNumber: () => mergeAndNumber,
     mergePdfOptions: () => mergePdfOptions,
     needsLatinFont: () => needsLatinFont,
+    pdfElementColor: () => pdfElementColor,
+    pdfNumberFmt: () => pdfNumberFmt,
     sanitizeForStandardFont: () => sanitizeForStandardFont,
     setOpenPage: () => setOpenPage,
     splitFontRuns: () => splitFontRuns,
@@ -148788,6 +151845,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     return out;
   }
+  function pdfElementColor(el2, colorMode) {
+    if (colorMode !== "color") return null;
+    const c = PDF_ELEMENT_COLORS[el2];
+    return c ? c.slice() : null;
+  }
+  function pdfNumberFmt(fmt, key2, on2) {
+    if (!on2 || !fmt) return fmt;
+    const cur = fmt[key2] || {};
+    if (cur.show) return fmt;
+    return { ...fmt, [key2]: { ...cur, show: true } };
+  }
   function mergePdfOptions(user) {
     const u = user && typeof user === "object" ? user : {};
     const o = { ...PDF_DEFAULTS, ...u };
@@ -148795,6 +151863,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     o.openPage = Math.max(0, Math.round(num(o.openPage, 0)));
     o.startPage = Math.max(1, Math.round(num(o.startPage, 1)));
     o.fontPt = numClamp(o.fontPt, 12, 4, 96);
+    o.colorMode = o.colorMode === "color" ? "color" : "mono";
     return o;
   }
   function wrapTextLines(text, widthIn, cpi = CHARS_PER_INCH, caps = false, style = null) {
@@ -149016,7 +152085,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         });
       }
       if (opts.pageNumbers) {
-        const label = pageNumberLabel(pg.index, fmt, opts.startPage);
+        const label = pageNumberLabel(pg.index, pdfNumberFmt(fmt, "pageNumbers", true), opts.startPage);
         if (label) {
           const w = widthOf(pickFont(set, false, false), label, size);
           draw3(page2, label, {
@@ -149037,6 +152106,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const boxW = marker ? tw * PT_PER_IN : Math.max(0.3, Math.min(num(c.width, 6), tw - (ind - fmt.margins.left))) * PT_PER_IN;
         const align = b.el === "continued-bottom" || b.el === "transition" ? "right" : "left";
         const lines = row2.lines;
+        const ec = pdfElementColor(b.el, opts.colorMode);
+        const ecol = ec ? rgb(ec[0], ec[1], ec[2]) : null;
         lines.forEach((ln, i5) => {
           const text = st && st.caps ? String(ln).toUpperCase() : ln;
           draw3(page2, text, {
@@ -149047,15 +152118,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             align,
             bold: !!(st && st.bold),
             italic: !!(st && st.italic),
-            underline: !!(st && st.underline)
+            underline: !!(st && st.underline),
+            color: ecol
           });
         });
-        if (opts.sceneNumbers && b.el === "scene" && fmt.sceneNumbers.show && b.sceneNo) {
+        if (opts.sceneNumbers && b.el === "scene" && b.sceneNo) {
           const label = String(b.sceneNo) + (fmt.sceneNumbers.suffix || "");
           const y = baseline(row2.line);
-          draw3(page2, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0 });
+          draw3(page2, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0, color: ecol });
           const w = widthOf(pickFont(set, false, false), label, size);
-          draw3(page2, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0 });
+          draw3(page2, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0, color: ecol });
         }
         if (b.el === "scene" && String(b.text || "").trim()) {
           bookmarks.push({
@@ -149172,13 +152244,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     for (const part of frontParts || []) frontCount += await add(part);
     const bodyStart = out.getPageCount();
     await add(bodyBytes);
-    if (o.pageNumbers !== false && fmt.pageNumbers && fmt.pageNumbers.show) {
+    const numFmt = pdfNumberFmt(fmt, "pageNumbers", o.pageNumbers !== false);
+    if (o.pageNumbers !== false && numFmt.pageNumbers && numFmt.pageNumbers.show) {
       const set = await embedFonts(out, o.fonts);
       const { draw: draw3, widthOf } = makeDrawer(set, set.custom);
       const size = numClamp(o.fontPt, 12, 4, 96);
       const pages = out.getPages();
       for (let i5 = bodyStart; i5 < pages.length; i5++) {
-        const label = pageNumberLabel(i5 - bodyStart + 1, fmt, o.startPage);
+        const label = pageNumberLabel(i5 - bodyStart + 1, numFmt, o.startPage);
         if (!label) continue;
         const page2 = pages[i5];
         const w = widthOf(pickFont(set, false, false), label, size);
@@ -149209,7 +152282,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     );
     return true;
   }
-  var PT_PER_IN, PDF_DEFAULTS, PDF_FONT_FILES, OMITTABLE_ELEMENTS, toBytes, pickFont;
+  var PT_PER_IN, PDF_DEFAULTS, PDF_FONT_FILES, OMITTABLE_ELEMENTS, PDF_ELEMENT_COLORS, toBytes, pickFont;
   var init_pdf_generator = __esm({
     "src/pdf-generator.js"() {
       init_i18n();
@@ -149233,7 +152306,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         pageNumbers: true,
         // ใช้ค่าจาก fmt.pageNumbers
         sceneNumbers: true,
-        // ใช้ค่าจาก fmt.sceneNumbers
+        // ใช้ค่าจาก fmt.sceneNumbers — [alpha.130 ข้อ 5] สวิตช์แยกจากเลขหน้า
+        colorMode: "mono",
+        // [alpha.130 ข้อ 5] 'mono' = ขาวดำ (ธรรมเนียมบทหนัง) · 'color' = สีตามชนิด element
         startPage: 1,
         // เลขหน้าเริ่มต้นของไฟล์นี้ (scenes.json → startPage)
         omit: [],
@@ -149256,6 +152331,30 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
       };
       OMITTABLE_ELEMENTS = ["note", "summary", "outline1", "outline2", "outline3", "image"];
+      PDF_ELEMENT_COLORS = {
+        scene: [0.09, 0.31, 0.65],
+        // หัวฉาก — น้ำเงิน
+        subheader: [0.2, 0.42, 0.7],
+        // ฉากย่อย — น้ำเงินอ่อนกว่า
+        transition: [0.68, 0.35, 0.03],
+        // ทรานซิชัน — ส้มเข้ม
+        "transition-in": [0.68, 0.35, 0.03],
+        shot: [0.55, 0.3, 0.05],
+        // ช็อต
+        intercut: [0.47, 0.2, 0.6],
+        // สลับฉาก — ม่วง
+        "act-break": [0.47, 0.2, 0.6],
+        // ตอน
+        parenthetical: [0.38, 0.38, 0.38],
+        // วงเล็บ — เทา (บนจอเป็น --dim)
+        summary: [0.1, 0.42, 0.2],
+        // สรุป — เขียว
+        outline1: [0.47, 0.2, 0.6],
+        outline2: [0.47, 0.2, 0.6],
+        outline3: [0.47, 0.2, 0.6],
+        note: [0.62, 0.36, 0.04]
+        // โน้ต
+      };
       toBytes = (v2) => {
         if (!v2) return null;
         if (v2 instanceof Uint8Array) return v2;
@@ -149374,6 +152473,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
     return { ov, box: box2 };
   }
   async function openTitlePageDialog() {
@@ -149793,16 +152893,29 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     box2.append(omitWrap);
     const cRect = checkbox(saved.drawRectAroundNotes);
     box2.append(row(t("ui.pdf.drawFrameRoundNote"), cRect));
-    const cNums = checkbox(saved.pageNumbers !== false);
-    box2.append(row(
-      t("ui.pdf.pageNumNumSceneFormat"),
-      cNums,
-      fmt.pageNumbers.show || fmt.sceneNumbers.show ? "" : t("ui.pdf.twoCloseTabPage")
-    ));
+    const cPgNo = checkbox(saved.pageNumbers !== false);
+    box2.append(row(t("ui.pdf.pageNumbersOnly"), cPgNo, t("ui.pdf.numbersWinHint")));
+    const cScNo = checkbox(saved.sceneNumbers !== false);
+    box2.append(row(t("ui.pdf.sceneNumbersOnly"), cScNo, ""));
+    const selColor = el("select", "k-dlg-select k-pdf-color");
+    for (const [v2, lb] of [["mono", t("ui.pdf.colorModeMono")], ["color", t("ui.pdf.colorModeColor")]]) {
+      const o2 = el("option", null, lb);
+      o2.value = v2;
+      selColor.append(o2);
+    }
+    selColor.value = saved.colorMode === "color" ? "color" : "mono";
+    box2.append(row(t("ui.pdf.colorMode"), selColor, t("ui.pdf.colorModeHint")));
     const wm = el("input", "k-dlg-input");
     wm.value = String(saved.watermark || "");
     wm.placeholder = t("ui.pdf.emptyNotPutWatermark");
     box2.append(row(t("ui.pdf.watermark"), wm, t("ui.pdf.needWatermarkPersonFile")));
+    const nameRow = exportNameRow({
+      ext: "pdf",
+      ctx: { title: src2.title },
+      saveGlobal: saveGlobalSetting
+    });
+    box2.append(nameRow.node);
+    liveShortcodeContext().then((c) => nameRow.setCtx({ ...c, title: src2.title })).catch((e) => log("warn", t("ui.xname.ctxFail"), e));
     const prog = el("div", "dim k-pdf-prog");
     box2.append(prog);
     const collect = () => ({
@@ -149810,8 +152923,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       openPage: cOpen.checked ? parseInt(nOpen.value, 10) || 1 : 0,
       titlePages: cTitle.checked,
       headers: cHdr.checked,
-      pageNumbers: cNums.checked,
-      sceneNumbers: cNums.checked,
+      pageNumbers: cPgNo.checked,
+      sceneNumbers: cScNo.checked,
+      colorMode: selColor.value === "color" ? "color" : "mono",
       omit: OMITTABLE_ELEMENTS.filter((k) => omitBoxes[k].checked),
       drawRectAroundNotes: cRect.checked,
       watermark: wm.value.trim(),
@@ -149829,7 +152943,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       bGo.disabled = true;
       prog.textContent = t("ui.pdf.busyNew");
       try {
-        const dest = await kapi.savePdfDialog(safeName(src2.title) + ".pdf");
+        const dest = await kapi.savePdfDialog(nameRow.name());
         if (!dest) {
           bGo.disabled = false;
           prog.textContent = "";
@@ -149848,6 +152962,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           state.meta.pdfExport = opts;
           await saveProjectMeta();
         }
+        if (nameRow.openAfter()) {
+          try {
+            await kapi.openFile(dest);
+          } catch (e) {
+            log("warn", t("ui.xname.openFail"), e);
+          }
+        }
         prog.textContent = tf("ui.pdf.doneDonePageToc", r.pageCount, r.bookmarks.length);
         setStatus(t("ui.common.exportPDF") + dest);
         log("info", t("ui.pdf.exportPDFPdfLib"), { dest, pages: r.pageCount, toc: r.bookmarks.length });
@@ -149860,7 +152981,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     btns.append(bClose, bGo);
     box2.append(btns);
     document.body.append(ov);
-    return { ov, collect, run: () => bGo.onclick() };
+    return { ov, collect, nameRow, run: () => bGo.onclick() };
   }
   async function buildScriptPdf({ blocks, title: title2, fmt, opts, titlePages, headers }) {
     const f = fmt || spFormat();
@@ -149898,6 +153019,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_fountain();
       init_app();
       init_sp_view();
+      init_export_name_ui();
       FONT_CACHE = { set: null, stamp: "" };
       row = (label, node, hint) => {
         const r = el("div", "k-row");
@@ -150188,12 +153310,102 @@ ${indent}</Paragraph>`;
     }
   });
 
+  // src/prose-export-view.js
+  var prose_export_view_exports = {};
+  __export(prose_export_view_exports, {
+    XPV_CLASS: () => XPV_CLASS,
+    XPV_SEL: () => XPV_SEL,
+    renderExportPagePreview: () => renderExportPagePreview,
+    scopeCss: () => scopeCss
+  });
+  function scopeCss(css, sel) {
+    const s = String(css == null ? "" : css);
+    const root = String(sel || "").trim() || ":root";
+    const out = [];
+    let i5 = 0;
+    while (i5 < s.length) {
+      const open = s.indexOf("{", i5);
+      if (open < 0) break;
+      const head2 = s.slice(i5, open).trim();
+      let depth = 1, j = open + 1;
+      while (j < s.length && depth) {
+        if (s[j] === "{") depth++;
+        else if (s[j] === "}") depth--;
+        j++;
+      }
+      const body = s.slice(open + 1, j - 1);
+      i5 = j;
+      if (!head2) continue;
+      if (head2.startsWith("@")) {
+        if (/^@(page|media)\b/i.test(head2)) continue;
+        out.push(head2 + "{" + body + "}");
+        continue;
+      }
+      const sels = head2.split(",").map((x) => x.trim()).filter(Boolean).map((x) => {
+        if (x === "body") return root;
+        if (x.startsWith("body")) return root + x.slice(4);
+        return root + " " + x;
+      });
+      if (sels.length) out.push(sels.join(",") + "{" + body + "}");
+    }
+    return out.join("\n");
+  }
+  function renderExportPagePreview(host2, bodyHtml, css, opts = {}) {
+    const paper = opts.paper || PAPER_SIZES.letter;
+    const m = { ...MARGIN_DEFAULTS, ...opts.margins || {} };
+    const textW = Math.max(0.5, num(paper.width, 8.5) - num(m.left, 1.5) - num(m.right, 1));
+    const contentH = Math.max(8, (num(paper.height, 11) - num(m.top, 1) - num(m.bottom, 1)) * DPI3);
+    const style = document.createElement("style");
+    style.textContent = scopeCss(css, XPV_SEL);
+    host2.append(style);
+    const box2 = document.createElement("div");
+    box2.className = "sp-pageview xhub-pv";
+    host2.append(box2);
+    const meas = document.createElement("div");
+    meas.className = XPV_CLASS;
+    meas.style.cssText = "position:fixed;left:-30000px;top:0;visibility:hidden;width:" + textW + "in;max-width:none;margin:0;padding:0;";
+    meas.innerHTML = bodyHtml;
+    document.body.append(meas);
+    let pages = [];
+    try {
+      pages = withMeasureMode(() => {
+        const origin = meas.getBoundingClientRect().top;
+        const { blocks, totalHeight } = measureProseBlocks(meas, origin, 1);
+        if (!blocks.length) return [];
+        return sliceProsePages(blocks, contentH, totalHeight).map((p, i5) => ({ ...p, index: i5 + 1 }));
+      });
+      if (!pages.length) pages = [{ start: 0, end: contentH, index: 1 }];
+      renderProseClipPages(box2, meas, pages, {
+        scale: num(opts.scale, 1) || 1,
+        gap: num(opts.gap, 14),
+        paper,
+        margins: m,
+        numTop: opts.numTop,
+        numRight: opts.numRight,
+        label: opts.label
+      });
+    } finally {
+      meas.remove();
+    }
+    return { box: box2, pageCount: pages.length };
+  }
+  var XPV_CLASS, XPV_SEL;
+  var init_prose_export_view = __esm({
+    "src/prose-export-view.js"() {
+      init_sp_format();
+      init_num();
+      init_prose_measure();
+      XPV_CLASS = "k-xpv-doc";
+      XPV_SEL = ".k-xpv-doc.k-xpv-doc.k-xpv-doc";
+    }
+  });
+
   // src/export-hub.js
   async function buildModel(A, cfg, drafts) {
     const forced = cfg.kind === "prose" || cfg.kind === "screenplay" ? cfg.kind : "";
     if (cfg.scope === "tab" && state.active && (state.active.editor || state.active.sp)) {
       const t3 = state.active;
-      const body = t3.sp ? t3.sp.getMarkdown() : t3.editor.getMarkdown();
+      const body = t3.sp ? t3.sp.getMarkdown() : t3.editor.getMarkdown({ alignComments: true });
       const model2 = {
         title: t3.title || state.title,
         author: state.meta && state.meta.author || "",
@@ -150223,7 +153435,7 @@ ${indent}</Paragraph>`;
       coverUrl: await A.sectionCoverUrl(d.dPath)
     };
   }
-  async function compose2(A, cfg, model, wf2) {
+  async function compose2(A, cfg, model, wf2, markdownOut) {
     const varCtx = { title: model.title, author: model.author };
     if ((wf2.steps || []).some((s) => s.on !== false && s.key === "resolve-vars")) {
       const { buildVarContext: buildVarContext2 } = await Promise.resolve().then(() => (init_template_vars(), template_vars_exports));
@@ -150235,27 +153447,47 @@ ${indent}</Paragraph>`;
       spFormat: spf,
       proseFormat: A.proseFormat(),
       paper: spf.paper,
-      margins: spf.margins
+      margins: spf.margins,
+      // [alpha.132r3 ข้อ 1] ฟอนต์ที่ตัวแก้ไขใช้อยู่จริง — ให้ไฟล์ที่ได้ตรงกับที่ตาเห็น
+      ...liveProseFonts(),
+      // [alpha.133 · Y-3] PDF ของนิยายยังต้องเดินผ่าน `mdToHtml()` อีกก้าว — บอกให้เวิร์กโฟลว์
+      // เก็บคอมเมนต์รูปแบบ (`<!--align:x-->` / ตัวคั่นหน้า) ไว้ ไม่งั้นถูกลบก่อนถึงตัวที่ใช้มัน
+      markdownOut: !!markdownOut
     });
   }
-  async function proseHtml(A, text, title2, wysiwyg) {
+  function liveProseFonts() {
+    try {
+      const ed = document.querySelector(".pane.on > .workspace > .ProseMirror") || document.querySelector(".ProseMirror");
+      if (!ed) return {};
+      const body = getComputedStyle(ed).fontFamily || "";
+      const h = ed.querySelector("h1,h2,h3,h4,h5,h6");
+      return { fontStack: body, headingStack: h ? getComputedStyle(h).fontFamily || "" : "" };
+    } catch {
+      return {};
+    }
+  }
+  async function proseHtml(A, text, title2, wysiwyg, mono) {
     const spf = A.spFormat();
-    const html = wysiwyg ? mdToHtml(text, title2, A.proseFormat(), spf.paper, spf.margins) : mdToHtml(text, title2, null, spf.paper, spf.margins);
+    const o = { mono: !!mono, ...wysiwyg ? liveProseFonts() : {} };
+    const html = wysiwyg ? mdToHtml(text, title2, A.proseFormat(), spf.paper, spf.margins, o) : mdToHtml(text, title2, null, spf.paper, spf.margins, o);
+    return withFontCss(A, html);
+  }
+  async function withFontCss(A, html) {
     const fontCss = await A.exportFontCss();
-    return fontCss ? html.replace("<style>", "<style>\n" + fontCss + "\n") : html;
+    return fontCss ? html.replace("<style>", "<style>" + String.fromCharCode(10) + fontCss + String.fromCharCode(10)) : html;
   }
   async function frontMatterHtml(A, cfg, model, coverUrl) {
     const wantCover = cfg.pdf.titlePages !== false;
     const roster = cfg.pdf.roster !== false ? String(model.roster || "").trim() : "";
     if (!wantCover && !roster) return "";
     const spf = A.spFormat();
-    const esc6 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const esc7 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const pages = [];
     if (wantCover) {
-      pages.push('<section class="k-front k-cover">' + (coverUrl ? `<img class="k-cover-img" src="${esc6(coverUrl)}" alt="">` : "") + `<div class="k-cover-title">${esc6(model.title || "")}</div>` + (model.author ? `<div class="k-cover-author">${esc6(model.author)}</div>` : "") + "</section>");
+      pages.push('<section class="k-front k-cover">' + (coverUrl ? `<img class="k-cover-img" src="${esc7(coverUrl)}" alt="">` : "") + `<div class="k-cover-title">${esc7(model.title || "")}</div>` + (model.author ? `<div class="k-cover-author">${esc7(model.author)}</div>` : "") + "</section>");
     }
     if (roster) {
-      pages.push('<section class="k-front k-cast"><pre class="k-cast-body">' + esc6(roster) + "</pre></section>");
+      pages.push('<section class="k-front k-cast"><pre class="k-cast-body">' + esc7(roster) + "</pre></section>");
     }
     const m = spf.margins;
     const { proseFontStack: proseFontStack2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
@@ -150275,7 +153507,7 @@ ${indent}</Paragraph>`;
     ].join("\n");
     const fontCss = await A.exportFontCss();
     return `<!DOCTYPE html>
-<html lang="th"><head><meta charset="utf-8"><title>${esc6(model.title || "")}</title>
+<html lang="th"><head><meta charset="utf-8"><title>${esc7(model.title || "")}</title>
 <style>
 ${fontCss}
 ${css}
@@ -150283,9 +153515,9 @@ ${css}
 ${pages.join("\n")}
 </body></html>`;
   }
-  async function writeOut(A, cfg, built) {
+  async function writeOut(A, cfg, built, nameOpts) {
     const def = formatDef(cfg.format);
-    const name5 = suggestName(built.title, cfg.format);
+    const name5 = nameOpts && nameOpts.name || suggestName(built.title, cfg.format);
     const dest = def.ext === "pdf" ? await kapi.savePdfDialog(name5) : await kapi.saveAsDialog(name5, def.ext);
     if (!dest) return null;
     if (cfg.format === "pdf") {
@@ -150294,30 +153526,22 @@ ${pages.join("\n")}
         const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
         const { buildScriptPdf: buildScriptPdf2, projectTitlePages: projectTitlePages2, projectHeaders: projectHeaders2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
         const fmtS = exportPageNumberFmt(A.spFormat());
-        const titles = o.titlePages ? [...projectTitlePages2()] : [];
-        const roster = o.roster !== false ? String(built.roster || "").trim() : "";
-        if (roster) {
-          titles.push({ strings: [{
-            text: roster,
-            x: fmtS.margins.left,
-            y: fmtS.margins.top,
-            size: num(state.settings.spFontPt, 12),
-            align: "left",
-            width: Math.max(1, fmtS.paper.width - fmtS.margins.left - fmtS.margins.right)
-          }] });
-        }
+        const titles = await scriptTitlePages(cfg, built, fmtS);
         const r3 = await buildScriptPdf2({
           blocks: parseScript2(built.text),
           title: built.title,
           fmt: fmtS,
           titlePages: titles,
           headers: o.headers ? projectHeaders2() : { enabled: false },
+          // [alpha.132 ข้อ 3+4] เลขหน้า/เลขฉาก แยกสวิตช์แล้ว · ส่งโหมดสีไปด้วย
+          // (ของเดิม `sceneNumbers: o.pageNumbers` = ช่องเดียวคุมทั้งคู่ ปิดเลขฉากอย่างเดียวไม่ได้)
           opts: {
             toc: o.toc,
             titlePages: titles.length > 0,
             headers: o.headers,
-            pageNumbers: o.pageNumbers,
-            sceneNumbers: o.pageNumbers,
+            pageNumbers: o.pageNumbers !== false,
+            sceneNumbers: o.sceneNumbers !== false,
+            colorMode: o.colorMode === "color" ? "color" : "mono",
             watermark: o.watermark,
             openPage: 0
           }
@@ -150354,8 +153578,8 @@ ${pages.join("\n")}
     const { model, kind } = mk2;
     const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows());
     const wf22 = { ...wf2, steps: (wf2.steps || []).map((s) => s.key === "cover" || s.key === "roster" ? { ...s, on: false } : s) };
-    const r = await compose2(A, cfg, model, wf22);
     const engine2 = pdfEngine(kind);
+    const r = await compose2(A, cfg, model, wf22, cfg.format === "pdf" && engine2 === "html");
     const { parseScript: parseScript2, stripFountainCodes: stripFountainCodes2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
     const viaScript = cfg.format === "rtf" || cfg.format === "fdx" || cfg.format === "pdf" && engine2 === "pdflib";
     const text = viaScript ? r.text : stripFountainCodes2(r.text);
@@ -150371,12 +153595,15 @@ ${pages.join("\n")}
       engine: engine2,
       blocks: null
     };
-    if (cfg.format === "html") out.html = await proseHtml(A, text, model.title, cfg.html.wysiwyg);
+    if (cfg.format === "html") {
+      out.html = r.ext === "html" ? await withFontCss(A, r.text) : await proseHtml(A, text, model.title, cfg.html.wysiwyg);
+    }
     if (cfg.format === "pdf" && engine2 === "html") {
-      out.html = await proseHtml(A, text, model.title, true);
+      out.html = await proseHtml(A, text, model.title, true, cfg.pdf.colorMode !== "color");
       out.frontHtml = await frontMatterHtml(A, cfg, model, mk2.coverUrl || "");
     }
     if (viaScript) out.blocks = parseScript2(r.text);
+    if (cfg.format === "rtf" || cfg.format === "fdx") out.preview = text;
     if (cfg.format === "rtf") {
       const { generateRtf: generateRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
       const { projectTitlePages: projectTitlePages2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
@@ -150393,6 +153620,42 @@ ${pages.join("\n")}
       out.text = generateFdx2(out.blocks, A.scriptMeta(model.title), { titlePages: projectTitlePages2() });
     }
     return out;
+  }
+  async function scriptTitlePages(cfg, built, fmtS) {
+    const { projectTitlePages: projectTitlePages2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+    const titles = cfg.pdf.titlePages !== false ? [...projectTitlePages2()] : [];
+    const roster = cfg.pdf.roster !== false ? String(built.roster || "").trim() : "";
+    if (roster) {
+      titles.push({ strings: [{
+        text: roster,
+        x: fmtS.margins.left,
+        y: fmtS.margins.top,
+        size: num(state.settings.spFontPt, 12),
+        align: "left",
+        width: Math.max(1, fmtS.paper.width - fmtS.margins.left - fmtS.margins.right)
+      }] });
+    }
+    return titles;
+  }
+  function renderScriptTitlePreview(box2, titles, fmtS, scale2, innerHtml) {
+    if (!titles.length) return 0;
+    const frag = document.createDocumentFragment();
+    const pxW = fmtS.paper.width * 96 * scale2, pxH = fmtS.paper.height * 96 * scale2;
+    for (const tp of titles) {
+      const slot = el("div", "sp-page-slot");
+      slot.style.width = pxW + "px";
+      slot.style.height = pxH + "px";
+      const page2 = el("div", "sp-page xhub-front xhub-front-tp");
+      page2.style.width = fmtS.paper.width + "in";
+      page2.style.height = fmtS.paper.height + "in";
+      page2.style.transform = "scale(" + scale2 + ")";
+      page2.style.padding = "0";
+      page2.innerHTML = innerHtml(tp, fmtS);
+      slot.append(page2);
+      frag.append(slot);
+    }
+    box2.prepend(frag);
+    return titles.length;
   }
   function renderFrontPreview(box2, built, cfg, paper, scale2) {
     const wantCover = cfg.pdf.titlePages !== false;
@@ -150441,9 +153704,20 @@ ${pages.join("\n")}
       host2.append(el("div", "dim", t("ui.xhub.noPreview")));
       return "none";
     }
+    if (def.needScript && built.kind !== "screenplay")
+      host2.append(el("div", "k-hint xhub-badkind", "\u26A0 " + t("ui.xhub.needScriptOnly")));
+    if (cfg.kind === "auto") {
+      host2.append(el(
+        "div",
+        "k-hint xhub-autokind",
+        tf(
+          "ui.xhub.autoKind",
+          t(built.kind === "screenplay" ? "ui.xhub.kindScript" : "ui.xhub.kindProse")
+        )
+      ));
+    }
     if (cfg.format === "pdf") {
-      const box2 = el("div", "sp-pageview xhub-pv");
-      host2.append(box2);
+      let box2 = el("div", "sp-pageview xhub-pv");
       const fmt = A.spFormat();
       const { fitScale: fitScale3 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
       const fs = fitScale3(
@@ -150453,34 +153727,87 @@ ${pages.join("\n")}
         { maxPerRow: 1, minScale: 0.15 }
       );
       if (built.engine === "pdflib") {
+        host2.append(box2);
         const { renderPageView: renderPageView2, pagesOf: pagesOf2 } = await Promise.resolve().then(() => (init_sp_view(), sp_view_exports));
-        const fmtN = exportPageNumberFmt(fmt);
+        const o5 = cfg.pdf;
+        const base5 = exportPageNumberFmt(fmt);
+        const fmtN = {
+          ...base5,
+          pageNumbers: { ...base5.pageNumbers, show: o5.pageNumbers !== false },
+          sceneNumbers: { ...base5.sceneNumbers || {}, show: o5.sceneNumbers !== false }
+        };
+        const { pdfElementColor: pdfElementColor2 } = await Promise.resolve().then(() => (init_pdf_generator(), pdf_generator_exports));
+        const colorOf = (elName) => {
+          const c = pdfElementColor2(elName, cfg.pdf.colorMode);
+          return c ? "rgb(" + c.map((x) => Math.round(x * 255)).join(",") + ")" : "";
+        };
+        const { projectHeaders: projectHeaders2, pdfMeta: pdfMeta2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+        const { headerStringsFor: headerStringsFor2, linesForBody: linesForBody2, mergeHeaders: mergeHeaders2 } = await Promise.resolve().then(() => (init_sp_headers(), sp_headers_exports));
+        const hdr5 = mergeHeaders2(o5.headers ? projectHeaders2() : { enabled: false });
+        const meta5 = pdfMeta2(built.title);
+        const pg5 = pagesOf2(built.blocks || [], fmtN, linesForBody2(fmtN, hdr5));
         renderPageView2(
           box2,
-          pagesOf2(built.blocks || [], fmtN),
+          // หัวกระดาษกินบรรทัดของเนื้อหา — ต้องหักตั้งแต่ตอนจัดหน้า เหมือน generatePdf()
+          pg5,
           fmtN,
-          { scale: fs.scale, gap: 14, startPage: 1 }
-        );
-      } else {
-        const { renderProsePageView: renderProsePageView2, prosePagesOf: prosePagesOf2 } = await Promise.resolve().then(() => (init_prose_view(), prose_view_exports));
-        const { mdToProseBlocks: mdToProseBlocks2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
-        const pf = A.proseFormat();
-        renderProsePageView2(
-          box2,
-          prosePagesOf2(mdToProseBlocks2(built.text), pf, fmt.paper, fmt.margins),
-          pf,
           {
             scale: fs.scale,
             gap: 14,
-            paper: fmt.paper,
-            margins: fmt.margins,
-            showPageNumbers: cfg.pdf.pageNumbers !== false,
-            numberFirst: true,
-            startPage: 1
+            startPage: 1,
+            colorOf,
+            // บริบทตัวแปร ${…} ชุดเดียวกับที่ generatePdf ใช้
+            headerRows: (n2) => headerStringsFor2(n2, hdr5, {
+              TITLE: meta5.title || "",
+              AUTHOR: meta5.author || "",
+              DRAFT: meta5.draft || "",
+              DATE: meta5.date || "",
+              COPYRIGHT: meta5.copyright || "",
+              PAGES: pg5.count,
+              PAGE: n2
+            }),
+            headerGapLines: hdr5.emptyLinesAfter,
+            watermark: o5.watermark
           }
         );
+        const { titlePageInnerHtml: titlePageInnerHtml2 } = await Promise.resolve().then(() => (init_sp_title_pages(), sp_title_pages_exports));
+        renderScriptTitlePreview(
+          box2,
+          await scriptTitlePages(cfg, built, fmtN),
+          fmtN,
+          fs.scale,
+          titlePageInnerHtml2
+        );
+      } else {
+        const { renderExportPagePreview: renderExportPagePreview2 } = await Promise.resolve().then(() => (init_prose_export_view(), prose_export_view_exports));
+        const { mdToHtmlBody: mdToHtmlBody2 } = await Promise.resolve().then(() => (init_compile(), compile_exports));
+        const { proseExportCss: proseExportCss2, mergeProseFormat: mergeProseFormat2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
+        const pf = A.proseFormat();
+        const mono = cfg.pdf.colorMode !== "color";
+        const css = proseExportCss2(
+          mergeProseFormat2(pf),
+          fmt.paper,
+          fmt.margins,
+          liveProseFonts()
+        ) + (mono ? [" ", "body,body *{color:#000 !important}", "img{filter:grayscale(1)}"].join(String.fromCharCode(10)) : "");
+        const { pageNumberLabel: pageNumberLabel2 } = await Promise.resolve().then(() => (init_sp_format(), sp_format_exports));
+        const baseP = exportPageNumberFmt(fmt);
+        const numFmtP = {
+          ...baseP,
+          pageNumbers: { ...baseP.pageNumbers, show: cfg.pdf.pageNumbers !== false }
+        };
+        const r6 = renderExportPagePreview2(host2, mdToHtmlBody2(built.text, { mono }), css, {
+          paper: fmt.paper,
+          margins: fmt.margins,
+          scale: fs.scale,
+          gap: 14,
+          numTop: fmt.pageNumbers.top,
+          numRight: fmt.pageNumbers.right,
+          label: (n2) => pageNumberLabel2(n2, numFmtP, 1)
+        });
+        box2 = r6.box;
       }
-      renderFrontPreview(box2, built, cfg, fmt.paper, fs.scale);
+      if (built.engine !== "pdflib") renderFrontPreview(box2, built, cfg, fmt.paper, fs.scale);
       return "page";
     }
     if (cfg.format === "html") {
@@ -150490,8 +153817,10 @@ ${pages.join("\n")}
       host2.append(fr);
       return "html";
     }
+    const shown = built.preview || built.text;
+    if (built.preview) host2.append(el("div", "k-hint xhub-info", t("ui.xhub.previewIsPlain")));
     const pre = el("pre", "xhub-pre");
-    pre.textContent = built.text.slice(0, PREVIEW_CHARS) + (built.text.length > PREVIEW_CHARS ? "\n\u2026" : "");
+    pre.textContent = shown.slice(0, PREVIEW_CHARS) + (shown.length > PREVIEW_CHARS ? "\n\u2026" : "");
     host2.append(pre);
     return "text";
   }
@@ -150523,6 +153852,13 @@ ${pages.join("\n")}
     const colPrev = el("div", "xhub-preview");
     body.append(colFmt, colOpt, colPrev);
     box2.append(body);
+    const nameRow = exportNameRow({
+      ext: formatDef(cfg.format).ext,
+      ctx: {},
+      saveGlobal: A.saveGlobalSetting
+    });
+    box2.append(nameRow.node);
+    A.liveShortcodeContext().then((c) => nameRow.setCtx(c)).catch((e) => log("warn", t("ui.xname.ctxFail"), e));
     const foot = el("div", "k-dlg-btns");
     const warnLbl = el("span", "dim xhub-warn");
     const bClose = el("button", "k-cancel", t("ui.common.close"));
@@ -150532,6 +153868,7 @@ ${pages.join("\n")}
     ov.append(box2);
     document.body.append(ov);
     const close2 = () => ov.remove();
+    escClose(ov, close2);
     bClose.onclick = close2;
     ov.onclick = (e) => {
       if (e.target === ov) close2();
@@ -150553,6 +153890,7 @@ ${pages.join("\n")}
           saveCfg();
           renderFormats();
           renderOptions();
+          nameRow.setExt(formatDef(f.key).ext);
           refresh();
         };
         colFmt.append(row2);
@@ -150576,19 +153914,7 @@ ${pages.join("\n")}
       if (def.handoff) {
         colOpt.append(el("div", "k-hint", t(def.descKey)));
         const b = el("button", "k-ok xhub-handoff", t("ui.xhub.openOwnDialog"));
-        b.onclick = async () => {
-          close2();
-          if (cfg.format === "zip") {
-            const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
-            m.exportProjectZip();
-          } else if (cfg.format === "json") {
-            const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
-            m.exportProjectJson();
-          } else if (cfg.format === "blog") {
-            const m = await Promise.resolve().then(() => (init_export_blog(), export_blog_exports));
-            m.exportBlogHTML();
-          } else A.watermarkDialog();
-        };
+        b.onclick = () => runHandoff();
         colOpt.append(b);
         return;
       }
@@ -150684,7 +154010,23 @@ ${pages.join("\n")}
         mk2("roster", "ui.xhub.pdfRoster");
         mk2("headers", "ui.xhub.pdfHeaders");
         mk2("pageNumbers", "ui.xhub.pdfNums");
+        if (cfg.kind !== "prose") mk2("sceneNumbers", "ui.xhub.pdfSceneNums");
         colOpt.append(el("div", "k-hint", t("ui.xhub.pdfFrontNoNum")));
+        const selCol = el("select", "k-dlg-select");
+        selCol.id = "xhub-color";
+        for (const [v2, lb] of [["mono", t("ui.pdf.colorModeMono")], ["color", t("ui.pdf.colorModeColor")]]) {
+          const o2 = el("option", null, lb);
+          o2.value = v2;
+          selCol.append(o2);
+        }
+        selCol.value = cfg.pdf.colorMode === "color" ? "color" : "mono";
+        selCol.onchange = () => {
+          cfg.pdf.colorMode = selCol.value;
+          saveCfg();
+          refresh();
+        };
+        colOpt.append(el("div", "xhub-row-lbl", t("ui.pdf.colorMode")), selCol);
+        colOpt.append(el("div", "k-hint", t("ui.pdf.colorModeHint")));
         const wm = el("input", "k-dlg-input");
         wm.id = "xhub-wm";
         wm.value = cfg.pdf.watermark;
@@ -150751,9 +154093,25 @@ ${pages.join("\n")}
         if (gen === job) busy = false;
       }
     }
+    async function runHandoff() {
+      close2();
+      if (cfg.format === "zip") {
+        const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
+        return m.exportProjectZip();
+      }
+      if (cfg.format === "json") {
+        const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
+        return m.exportProjectJson();
+      }
+      if (cfg.format === "blog") {
+        const m = await Promise.resolve().then(() => (init_export_blog(), export_blog_exports));
+        return m.exportBlogHTML();
+      }
+      return A.watermarkDialog();
+    }
     bGo.onclick = async () => {
       const def = formatDef(cfg.format);
-      if (def.handoff) return;
+      if (def.handoff) return runHandoff();
       if (!await A.checkBeforeExport()) return;
       bGo.disabled = true;
       try {
@@ -150762,8 +154120,19 @@ ${pages.join("\n")}
           setStatus(t("ui.xhub.nothingToExport"));
           return;
         }
-        const done2 = await writeOut(A, cfg, r);
+        if (def.needScript && r.kind !== "screenplay") {
+          setStatus(t("ui.xhub.needScriptOnly"));
+          return;
+        }
+        const done2 = await writeOut(A, cfg, r, { name: nameRow.name() });
         if (!done2) return;
+        if (nameRow.openAfter()) {
+          try {
+            await kapi.openFile(done2.dest);
+          } catch (e) {
+            log("warn", t("ui.xname.openFail"), e);
+          }
+        }
         await saveCfg();
         close2();
         setStatus(t("ui.common.exportDone") + done2.dest + (done2.note ? " \xB7 " + done2.note : ""));
@@ -150783,10 +154152,12 @@ ${pages.join("\n")}
       cfg,
       refresh,
       close: close2,
+      nameRow,
       setFormat: (k) => {
         cfg.format = k;
         renderFormats();
         renderOptions();
+        nameRow.setExt(formatDef(k).ext);
         return refresh();
       },
       build: () => buildAll(A, cfg, drafts)
@@ -150800,6 +154171,8 @@ ${pages.join("\n")}
       init_compile();
       init_num();
       init_export_formats();
+      init_ui();
+      init_export_name_ui();
       init_export_formats();
       PREVIEW_CHARS = 8e3;
     }
@@ -150971,8 +154344,8 @@ ${pages.join("\n")}
     lines.push("");
     lines.push(t("ui.aiPlot.sceneAll"));
     for (const s of scenes) lines.push(sceneBlock(s));
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM, prompt: prompt2, tokens: estimateTokens2(prompt2), sceneIds: scenes.map((s) => s.id) };
+    const prompt = lines.join("\n");
+    return { system: SYSTEM2, prompt, tokens: estimateTokens2(prompt), sceneIds: scenes.map((s) => s.id) };
   }
   function sceneBlock(s) {
     const head2 = [`[sceneId: ${s.id}]`, s.title || t("ui.common.notNamed")];
@@ -151118,7 +154491,7 @@ ${pages.join("\n")}
     if (cur.length) out.push(cur);
     return out;
   }
-  var HOLE_TYPES, SYSTEM, SCHEMA;
+  var HOLE_TYPES, SYSTEM2, SCHEMA;
   var init_ai_plot = __esm({
     "src/ai/ai-plot.js"() {
       init_i18n();
@@ -151131,7 +154504,7 @@ ${pages.join("\n")}
         "plot-thread": t("ui.aiPlot.knotStuck"),
         "pacing": t("ui.aiPlot.paceStory")
       };
-      SYSTEM = t("ui.aiPlot.youEditorSourceStory") + t("ui.aiPlot.youReportOnlyThing") + t("ui.aiPlot.replyJSONForbidHas");
+      SYSTEM2 = t("ui.aiPlot.youEditorSourceStory") + t("ui.aiPlot.youReportOnlyThing") + t("ui.aiPlot.replyJSONForbidHas");
       SCHEMA = {
         type: { required: true, type: "string", enum: Object.keys(HOLE_TYPES), default: "plot-thread" },
         severity: { required: true, type: "string", enum: Object.keys(SEVERITY), default: "minor" },
@@ -151232,8 +154605,8 @@ ${pages.join("\n")}
     } else {
       lines.push(t("ui.aiDialogue.writeEditDialogueWord"));
     }
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM2, prompt: prompt2, tokens: estimateTokens2(prompt2), format: format3 };
+    const prompt = lines.join("\n");
+    return { system: SYSTEM3, prompt, tokens: estimateTokens2(prompt), format: format3 };
   }
   function parseDialogue(raw, opts = {}) {
     const format3 = opts.format === "prose" ? "prose" : "screenplay";
@@ -151317,12 +154690,12 @@ ${pages.join("\n")}
       speakers: [...new Set(parsed.lines.map((l) => l.speaker).filter(Boolean))]
     };
   }
-  var SYSTEM2, FIELD_ALIASES, DIALOGUE_FORMATS;
+  var SYSTEM3, FIELD_ALIASES, DIALOGUE_FORMATS;
   var init_ai_dialogue = __esm({
     "src/ai/ai-dialogue.js"() {
       init_i18n();
       init_ai_core();
-      SYSTEM2 = t("ui.aiDialogue.youWriterScreenplayThai") + t("ui.aiDialogue.characterEachItemMust") + t("ui.aiDialogue.sendOnlyDialogueForbid");
+      SYSTEM3 = t("ui.aiDialogue.youWriterScreenplayThai") + t("ui.aiDialogue.characterEachItemMust") + t("ui.aiDialogue.sendOnlyDialogueForbid");
       FIELD_ALIASES = {
         role: ["role", t("ui.aiDialogue.chapter"), t("ui.aiDialogue.pos")],
         age: ["age", t("ui.aiDialogue.msg6")],
@@ -151378,8 +154751,8 @@ ${pages.join("\n")}
       lines.push(String(a.text || "").trim());
       lines.push("");
     }
-    const prompt2 = lines.join("\n");
-    return { system: SYSTEM3, prompt: prompt2, tokens: estimateTokens2(prompt2), sceneIds: appearances.map((a) => a.sceneId) };
+    const prompt = lines.join("\n");
+    return { system: SYSTEM4, prompt, tokens: estimateTokens2(prompt), sceneIds: appearances.map((a) => a.sceneId) };
   }
   function parseConsistency(text, opts = {}) {
     const valid = opts.sceneIds ? new Set(opts.sceneIds) : null;
@@ -151521,7 +154894,7 @@ ${pages.join("\n")}
     const issues = sortIssues(dedupe([...local, ...parseConsistency(res.text, { sceneIds: built.sceneIds, titles })]));
     return { ok: true, issues, usage: res.usage, cost: res.cost, appearances: appearances.length, prompt: built.prompt };
   }
-  var ASPECTS, SYSTEM3, SCHEMA2, POLITE_PARTICLES, PRONOUNS, countOf, countWord;
+  var ASPECTS, SYSTEM4, SCHEMA2, POLITE_PARTICLES, PRONOUNS, countOf, countWord;
   var init_ai_character = __esm({
     "src/ai/ai-character.js"() {
       init_i18n();
@@ -151535,7 +154908,7 @@ ${pages.join("\n")}
         appearance: t("ui.aiCharacter.image"),
         relationship: t("ui.aiCharacter.relationCharacterOther")
       };
-      SYSTEM3 = t("ui.aiCharacter.youEditorSourceStory") + t("ui.aiCharacter.readFileCharacterScene") + t("ui.aiCharacter.reportOnlyThingText");
+      SYSTEM4 = t("ui.aiCharacter.youEditorSourceStory") + t("ui.aiCharacter.readFileCharacterScene") + t("ui.aiCharacter.reportOnlyThingText");
       SCHEMA2 = {
         sceneId: { required: true, type: "string" },
         aspect: { type: "string", enum: Object.keys(ASPECTS), default: "personality" },
@@ -151566,11 +154939,11 @@ ${pages.join("\n")}
   function getTemplate(type) {
     return WORLD_TEMPLATES[type] || null;
   }
-  function buildWorldPrompt(type, prompt2, opts = {}) {
+  function buildWorldPrompt(type, prompt, opts = {}) {
     const tpl = getTemplate(type);
     if (!tpl) return null;
     const lines = [];
-    lines.push(tf("ui.aiWorld.newWorldStoryCmd", tpl.label, prompt2 || t("ui.aiWorld.authorCantSpecifyThink")));
+    lines.push(tf("ui.aiWorld.newWorldStoryCmd", tpl.label, prompt || t("ui.aiWorld.authorCantSpecifyThink")));
     lines.push("");
     lines.push(t("ui.aiWorld.itemDefine"));
     lines.push(t("ui.aiWorld.allMustWheelWheel"));
@@ -151592,7 +154965,7 @@ ${pages.join("\n")}
       tags: [t("ui.aiWorld.wordSearch"), t("ui.aiWorld.wordSearch2")]
     }, null, 2));
     const built = lines.join("\n");
-    return { system: SYSTEM4, prompt: built, tokens: estimateTokens2(built), type, template: tpl };
+    return { system: SYSTEM5, prompt: built, tokens: estimateTokens2(built), type, template: tpl };
   }
   function parseWorld(type, text) {
     const tpl = getTemplate(type);
@@ -151650,8 +155023,8 @@ ${s.body}`).join("\n\n");
     if (world.tags && world.tags.length) out.push(t("ui.common.tag3") + world.tags.map((t3) => "#" + t3).join(" "));
     return out.join("\n").trim();
   }
-  async function generateWorld(type, prompt2, options = {}) {
-    const built = buildWorldPrompt(type, prompt2, options);
+  async function generateWorld(type, prompt, options = {}) {
+    const built = buildWorldPrompt(type, prompt, options);
     if (!built) return { ok: false, error: t("ui.aiWorld.notKnownType") + type, code: "bad-type", types: WORLD_TYPES };
     const client = options.client;
     if (!client) return { ok: false, prompt: built.prompt, error: t("ui.common.cantSettingsAIClient"), code: "no-client" };
@@ -151674,12 +155047,12 @@ ${s.body}`).join("\n\n");
     if (!world.ok) return { ok: false, world, prompt: built.prompt, error: t("ui.aiWorld.aIReplyNotAt"), code: "bad-shape", usage: res.usage };
     return { ok: true, world, prompt: built.prompt, usage: res.usage, cost: res.cost, raw: res.text };
   }
-  var SYSTEM4, WORLD_TEMPLATES, WORLD_TYPES, str2;
+  var SYSTEM5, WORLD_TEMPLATES, WORLD_TYPES, str2;
   var init_ai_world = __esm({
     "src/ai/ai-world.js"() {
       init_i18n();
       init_ai_core();
-      SYSTEM4 = t("ui.aiWorld.youNewWorldWorldbuilder") + t("ui.aiWorld.newDetailWheelHas") + t("ui.aiWorld.replyJSONOutlineDefine");
+      SYSTEM5 = t("ui.aiWorld.youNewWorldWorldbuilder") + t("ui.aiWorld.newDetailWheelHas") + t("ui.aiWorld.replyJSONOutlineDefine");
       WORLD_TEMPLATES = {
         magic: {
           label: t("ui.aiWorld.system"),
@@ -151774,12 +155147,12 @@ ${s.body}`).join("\n\n");
   // src/ai/ai-ui.js
   async function aiReady2() {
     if (!state.root) {
-      setStatus(t("ai.noProject", "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C"));
+      setStatus(t("ai.noProject"));
       return false;
     }
     const r = await aiConfigured();
     if (r.ok) return true;
-    setStatus("\u274C " + (r.why || t("ai.needSetup", "\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E17\u0E35\u0E48 \u0E44\u0E1F\u0E25\u0E4C \u2192 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E01\u0E48\u0E2D\u0E19")));
+    setStatus("\u274C " + (r.why || t("ai.needSetup")));
     return false;
   }
   async function wikiEntityByName(name5) {
@@ -151808,23 +155181,23 @@ ${s.body}`).join("\n\n");
     const t3 = state.active;
     const sel = t3?.editor ? t3.editor.getSelectedText() : t3?.sp ? t3.sp.getSelectedText() : "";
     const fullText = t3?.editor ? t3.editor.getText() : t3?.sp ? t3.sp.getText() : "";
-    showDialog(t("ai.assistantTitle", "\u2728 AI \u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E02\u0E35\u0E22\u0E19"), (box2, ov) => {
+    showDialog(t("ai.assistantTitle"), (box2, ov) => {
       const TASK_TH = {
-        expand: t("ai.opExpand", "\u0E02\u0E22\u0E32\u0E22\u0E04\u0E27\u0E32\u0E21"),
-        summarize: t("ai.opSummarize", "\u0E2A\u0E23\u0E38\u0E1B\u0E04\u0E27\u0E32\u0E21"),
-        rewrite: t("ai.opRewrite", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48"),
-        changeTone: t("ai.opTone", "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E42\u0E17\u0E19"),
-        continue: t("ai.opContinue", "\u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E48\u0E2D")
+        expand: t("ai.opExpand"),
+        summarize: t("ai.opSummarize"),
+        rewrite: t("ai.opRewrite"),
+        changeTone: t("ai.opTone"),
+        continue: t("ai.opContinue")
       };
       const TONE_TH = {
-        formal: t("ai.toneFormal", "\u0E17\u0E32\u0E07\u0E01\u0E32\u0E23"),
-        casual: t("ai.toneCasual", "\u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07"),
-        humorous: t("ai.toneFunny", "\u0E15\u0E25\u0E01"),
-        dark: t("ai.toneDark", "\u0E21\u0E37\u0E14\u0E2B\u0E21\u0E48\u0E19"),
-        romantic: t("ai.toneRomantic", "\u0E42\u0E23\u0E41\u0E21\u0E19\u0E15\u0E34\u0E01"),
-        tense: t("ai.toneTense", "\u0E23\u0E30\u0E17\u0E36\u0E01"),
-        concise: t("ai.toneConcise", "\u0E01\u0E23\u0E30\u0E0A\u0E31\u0E1A"),
-        lyrical: t("ai.toneDetailed", "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14")
+        formal: t("ai.toneFormal"),
+        casual: t("ai.toneCasual"),
+        humorous: t("ai.toneFunny"),
+        dark: t("ai.toneDark"),
+        romantic: t("ai.toneRomantic"),
+        tense: t("ai.toneTense"),
+        concise: t("ai.toneConcise"),
+        lyrical: t("ai.toneDetailed")
       };
       const taskSel = el("select");
       Object.keys(TASK_TH).forEach((v2) => taskSel.append(el("option", "", TASK_TH[v2], { value: v2 })));
@@ -151832,65 +155205,70 @@ ${s.body}`).join("\n\n");
       toneSel.append(el("option", "", t("ui.ai.notChangeTone"), { value: "" }));
       Object.keys(TONE_TH).forEach((v2) => toneSel.append(el("option", "", TONE_TH[v2], { value: v2 })));
       const instrInput = el("textarea");
-      instrInput.placeholder = t("ai.extraHint", "\u0E04\u0E33\u0E41\u0E19\u0E30\u0E19\u0E33\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E15\u0E34\u0E21 (\u0E16\u0E49\u0E32\u0E21\u0E35)");
+      instrInput.placeholder = t("ai.extraHint");
       instrInput.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
       const textInput = el("textarea");
       textInput.value = sel || fullText.slice(0, 3e3);
-      textInput.placeholder = t("ai.inputLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E08\u0E30\u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25");
+      textInput.placeholder = t("ai.inputLabel");
       textInput.style.cssText = "width:100%;min-height:120px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical;margin-top:8px";
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8";
       const row1 = el("div", "k-row");
-      row1.append(el("label", "", t("ai.opLabel", "\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07: ")), taskSel);
-      row1.append(el("label", "", t("ai.toneLabel", " \u0E42\u0E17\u0E19: ")), toneSel);
+      row1.append(el("label", "", t("ai.opLabel")), taskSel);
+      row1.append(el("label", "", t("ai.toneLabel")), toneSel);
       box2.append(row1);
       box2.append(instrInput);
-      box2.append(el("label", "", t("ai.textLabel", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21:")));
+      box2.append(el("label", "", t("ai.textLabel")));
       box2.append(textInput);
-      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
+      box2.append(el("label", "", t("ai.resultLabel")));
       box2.append(resultDiv);
       const btns = el("div", "k-dlg-btns");
       const runBtn = el("button", "k-ok", t("ui.ai.result"));
       runBtn.onclick = async () => {
         runBtn.disabled = true;
-        resultDiv.textContent = t("ai.working", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E1B\u0E23\u0E30\u0E21\u0E27\u0E25\u0E1C\u0E25\u2026");
+        resultDiv.textContent = t("ai.working");
         const task = taskSel.value;
         const tone = toneSel.value;
         const instr = instrInput.value.trim();
         const text = textInput.value.trim() || fullText;
-        const { aiAssistant: aiAssistant2 } = await Promise.resolve().then(() => (init_ai_assistant(), ai_assistant_exports));
-        const { getAIClient: getAIClient2, getRag: getRag2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        let rag = null;
         try {
-          rag = await getRag2();
-        } catch {
-        }
-        let acc = "";
-        const res = await aiAssistant2(instr, { text }, {
-          client: getAIClient2(),
-          rag,
-          task,
-          tone: tone || void 0,
-          instruction: instr,
-          text,
-          stream: true,
-          onChunk: (c) => {
-            acc += c;
-            resultDiv.textContent = acc;
+          const { aiAssistant: aiAssistant2 } = await Promise.resolve().then(() => (init_ai_assistant(), ai_assistant_exports));
+          const { getAIClient: getAIClient2, getRag: getRag2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+          let rag = null;
+          try {
+            rag = await getRag2();
+          } catch {
           }
-        });
-        if (res.ok) resultDiv.textContent = res.text || acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
-        else resultDiv.textContent = "\u274C " + (res.error || t("ai.errorRetry", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48"));
-        runBtn.disabled = false;
+          let acc = "";
+          const res = await aiAssistant2(instr, { text }, {
+            client: getAIClient2(),
+            rag,
+            task,
+            tone: tone || void 0,
+            instruction: instr,
+            text,
+            stream: true,
+            onChunk: (c) => {
+              acc += c;
+              resultDiv.textContent = acc;
+            }
+          });
+          if (res.ok) resultDiv.textContent = res.text || acc || t("ai.noAnswer");
+          else resultDiv.textContent = "\u274C " + (res.error || t("ai.errorRetry"));
+        } catch (e) {
+          resultDiv.textContent = "\u274C " + (e && e.message || t("ai.errorRetry"));
+        } finally {
+          runBtn.disabled = false;
+        }
       };
       const insertBtn = el("button", "", t("ui.ai.insertScene"));
       insertBtn.onclick = () => {
         const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
+        if (!r || r.startsWith("\u274C") || r === t("ai.working")) return;
         if (t3?.sp) t3.sp.insertScript(r);
         else if (t3?.editor) t3.editor.insertLines(r);
         ov.remove();
-        setStatus(t("ai.insertedResult", "\u0E41\u0E17\u0E23\u0E01\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C AI \u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
+        setStatus(t("ai.insertedResult"));
       };
       btns.append(runBtn, insertBtn, el("button", "k-cancel", t("ui.common.close")));
       const closeBtn = btns.lastChild;
@@ -151901,14 +155279,14 @@ ${s.body}`).join("\n\n");
   async function openPlotHoleDetector() {
     if (!await aiReady2()) return;
     if (!state.root) {
-      setStatus(t("ai.openProjectFirst", "\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E01\u0E48\u0E2D\u0E19"));
+      setStatus(t("ai.openProjectFirst"));
       return;
     }
-    setStatus(t("ai.plotWorking", "\u{1F50D} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Holes\u2026"));
-    showDialog(t("ai.plotTitle", "\u{1F50D} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A Plot Hole"), async (box2, ov) => {
+    setStatus(t("ai.plotWorking"));
+    showDialog(t("ai.plotTitle"), async (box2, ov) => {
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
-      resultDiv.textContent = t("ai.collectingScenes", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E09\u0E32\u0E01\u2026");
+      resultDiv.textContent = t("ai.collectingScenes");
       box2.append(resultDiv);
       let allScenes = [];
       try {
@@ -151921,29 +155299,29 @@ ${s.body}`).join("\n\n");
           pov: s.row.pov || ""
         }));
       } catch (e) {
-        resultDiv.textContent = t("ai.readFail", "\u274C \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ") + e.message;
+        resultDiv.textContent = t("ai.readFail") + e.message;
         return;
       }
       if (!allScenes.length) {
-        resultDiv.textContent = t("ai.noScenes", "(\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49)");
+        resultDiv.textContent = t("ai.noScenes");
         return;
       }
-      resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
+      resultDiv.textContent = t("ai.sendingToAi");
       const { detectPlotHoles: detectPlotHoles2 } = await Promise.resolve().then(() => (init_ai_plot(), ai_plot_exports));
       const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
       const res = await detectPlotHoles2([], { client: getAIClient2(), scenes: allScenes });
       resultDiv.textContent = "";
       if (!res.holes.length) {
-        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noPlotHoles", "\u2705 \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E08\u0E38\u0E14\u0E1A\u0E01\u0E1E\u0E23\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E1E\u0E25\u0E47\u0E2D\u0E15");
+        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noPlotHoles");
       } else {
         resultDiv.append(el("div", "dim", tf("ui.ai.foundDotCheckRound", res.holes.length, res.batches)));
         for (const h of res.holes) {
           const row2 = el("div");
           row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
           const sev = { high: "\u{1F534}", medium: "\u{1F7E1}", low: "\u26AA" }[h.severity] || "\u2022";
-          row2.append(el("div", "", `${sev} [${h.type || t("ai.general", "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")}] ${h.description || ""}`));
-          if (h.sceneTitle || h.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel", "\u0E09\u0E32\u0E01: ") + (h.sceneTitle || h.sceneId)));
-          if (h.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel", "\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19: ") + h.evidence));
+          row2.append(el("div", "", `${sev} [${h.type || t("ai.general")}] ${h.description || ""}`));
+          if (h.sceneTitle || h.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel") + (h.sceneTitle || h.sceneId)));
+          if (h.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel") + h.evidence));
           if (h.suggestion) row2.append(el("div", "", "\u{1F4A1} " + h.suggestion));
           resultDiv.append(row2);
         }
@@ -151958,20 +155336,20 @@ ${s.body}`).join("\n\n");
   }
   async function openDialogueGenerator() {
     if (!await aiReady2()) return;
-    showDialog(t("ai.dialogueTitle", "\u{1F4AC} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32"), (box2, ov) => {
+    showDialog(t("ai.dialogueTitle"), (box2, ov) => {
       box2.style.minWidth = "500px";
       const charA = el("input");
       charA.placeholder = t("ui.ai.nameA");
       const charB = el("input");
       charB.placeholder = t("ui.ai.nameB");
       const descA = el("textarea");
-      descA.placeholder = t("ai.charADesc", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A (\u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01, \u0E1E\u0E39\u0E14\u0E08\u0E32, \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u2026)");
+      descA.placeholder = t("ai.charADesc");
       descA.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
       const descB = el("textarea");
-      descB.placeholder = t("ai.charBDesc", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B");
+      descB.placeholder = t("ai.charBDesc");
       descB.style.cssText = descA.style.cssText;
       const context2 = el("textarea");
-      context2.placeholder = t("ai.dialogueCtx", "\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32 (\u0E2A\u0E16\u0E32\u0E19\u0E01\u0E32\u0E23\u0E13\u0E4C, \u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48, \u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u2026)");
+      context2.placeholder = t("ai.dialogueCtx");
       context2.style.cssText = descA.style.cssText;
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:35vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8";
@@ -151979,65 +155357,70 @@ ${s.body}`).join("\n\n");
       fmtSel.append(el("option", "", t("ui.common.screenplay"), { value: "screenplay" }));
       fmtSel.append(el("option", "", t("ui.ai.edit"), { value: "prose" }));
       box2.append(el("div", "k-row"));
-      box2.querySelector(".k-row").append(el("label", "", t("ai.charA", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 A: ")), charA);
+      box2.querySelector(".k-row").append(el("label", "", t("ai.charA")), charA);
       box2.append(descA);
-      box2.append(el("label", "", t("ai.charB", "\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 B: ")));
+      box2.append(el("label", "", t("ai.charB")));
       box2.append(charB);
       box2.append(descB);
-      box2.append(el("label", "", t("ai.ctxLabel", "\u0E1A\u0E23\u0E34\u0E1A\u0E17: ")));
+      box2.append(el("label", "", t("ai.ctxLabel")));
       box2.append(context2);
       const fmtRow = el("div", "k-row");
-      fmtRow.append(el("label", "", t("ai.formatLabel", "\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A: ")), fmtSel);
+      fmtRow.append(el("label", "", t("ai.formatLabel")), fmtSel);
       box2.append(fmtRow);
-      box2.append(el("label", "", t("ai.dialogueLabel", "\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32:")));
+      box2.append(el("label", "", t("ai.dialogueLabel")));
       box2.append(resultDiv);
       const btns = el("div", "k-dlg-btns");
       const runBtn = el("button", "k-ok", t("ui.ai.new"));
       runBtn.onclick = async () => {
         runBtn.disabled = true;
-        resultDiv.textContent = t("ai.dialogueWorking", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u2026");
+        resultDiv.textContent = t("ai.dialogueWorking");
         const a = charA.value.trim(), b = charB.value.trim(), ctx2 = context2.value.trim();
         if (!a || !b) {
-          resultDiv.textContent = t("ai.needBothChars", "\u274C \u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E2A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07");
+          resultDiv.textContent = t("ai.needBothChars");
           runBtn.disabled = false;
           return;
         }
-        const { generateDialogue: generateDialogue2 } = await Promise.resolve().then(() => (init_ai_dialogue(), ai_dialogue_exports));
-        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        const profA = await wikiEntityByName(a) || { name: a };
-        const profB = await wikiEntityByName(b) || { name: b };
-        if (descA.value.trim()) profA.personality = descA.value.trim();
-        if (descB.value.trim()) profB.personality = descB.value.trim();
-        let acc = "";
-        const res = await generateDialogue2(
-          profA,
-          profB,
-          { situation: ctx2 },
-          {
-            client: getAIClient2(),
-            format: fmtSel.value,
-            stream: true,
-            onChunk: (c) => {
-              acc += c;
-              resultDiv.textContent = acc;
+        try {
+          const { generateDialogue: generateDialogue2 } = await Promise.resolve().then(() => (init_ai_dialogue(), ai_dialogue_exports));
+          const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+          const profA = await wikiEntityByName(a) || { name: a };
+          const profB = await wikiEntityByName(b) || { name: b };
+          if (descA.value.trim()) profA.personality = descA.value.trim();
+          if (descB.value.trim()) profB.personality = descB.value.trim();
+          let acc = "";
+          const res = await generateDialogue2(
+            profA,
+            profB,
+            { situation: ctx2 },
+            {
+              client: getAIClient2(),
+              format: fmtSel.value,
+              stream: true,
+              onChunk: (c) => {
+                acc += c;
+                resultDiv.textContent = acc;
+              }
             }
-          }
-        );
-        if (res.ok) {
-          resultDiv.textContent = res.text;
-          if (res.speakers?.length) resultDiv.title = t("ai.speakerLabel", "\u0E1C\u0E39\u0E49\u0E1E\u0E39\u0E14: ") + res.speakers.join(", ");
-        } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
-        runBtn.disabled = false;
+          );
+          if (res.ok) {
+            resultDiv.textContent = res.text;
+            if (res.speakers?.length) resultDiv.title = t("ai.speakerLabel") + res.speakers.join(", ");
+          } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error"));
+        } catch (e) {
+          resultDiv.textContent = "\u274C " + (e && e.message || t("ai.error"));
+        } finally {
+          runBtn.disabled = false;
+        }
       };
       const insertBtn = el("button", "", t("ui.ai.insert"));
       insertBtn.onclick = () => {
         const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
+        if (!r || r.startsWith("\u274C") || r === t("ai.dialogueWorking")) return;
         const t3 = state.active;
         if (t3?.sp) t3.sp.insertScript(r);
         else if (t3?.editor) t3.editor.insertLines(r);
         ov.remove();
-        setStatus(t("ai.insertedDialogue", "\u0E41\u0E17\u0E23\u0E01\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E25\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27"));
+        setStatus(t("ai.insertedDialogue"));
       };
       btns.append(runBtn, insertBtn, el("button", "k-cancel", t("ui.common.close")));
       btns.lastChild.onclick = () => ov.remove();
@@ -152047,42 +155430,42 @@ ${s.body}`).join("\n\n");
   async function openConsistencyCheck(entityPath) {
     if (!await aiReady2()) return;
     if (!entityPath) {
-      setStatus(t("ai.pickEntity", "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 (\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23) \u0E01\u0E48\u0E2D\u0E19"));
+      setStatus(t("ai.pickEntity"));
       return;
     }
     let entity;
     try {
       entity = await kapi.readJson(entityPath);
     } catch {
-      setStatus(t("ai.entityReadFail", "\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+      setStatus(t("ai.entityReadFail"));
       return;
     }
     if (!entity || !entity.name) {
-      setStatus(t("ai.entityUnnamed", "\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D"));
+      setStatus(t("ai.entityUnnamed"));
       return;
     }
-    setStatus(t("ai.consistWorking", "\u{1F3AD} \u0E01\u0E33\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D\u2026"));
-    showDialog(t("ai.consistTitle", "\u{1F3AD} \u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D \u2014 ") + entity.name, async (box2, ov) => {
+    setStatus(t("ai.consistWorking"));
+    showDialog(t("ai.consistTitle") + entity.name, async (box2, ov) => {
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:50vh;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.8;min-height:80px";
-      resultDiv.textContent = t("ai.collecting", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E27\u0E1A\u0E23\u0E27\u0E21\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u2026");
+      resultDiv.textContent = t("ai.collecting");
       box2.append(resultDiv);
       const scenes = (await listScenes(state.root, { withText: true })).map((s) => ({ id: s.id, title: s.title, text: s.text || "", storyDate: s.row.storyDate || "" }));
-      resultDiv.textContent = t("ai.sendingToAi", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E2B\u0E49 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u2026");
+      resultDiv.textContent = t("ai.sendingToAi");
       const { checkConsistency: checkConsistency2 } = await Promise.resolve().then(() => (init_ai_character(), ai_character_exports));
       const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
       const res = await checkConsistency2(entityPath, { client: getAIClient2(), entity, scenes });
       resultDiv.textContent = "";
       if (!res.issues.length) {
-        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noInconsist", "\u2705 \u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E2A\u0E21\u0E48\u0E33\u0E40\u0E2A\u0E21\u0E2D");
+        resultDiv.textContent = res.error ? "\u274C " + res.error : t("ai.noInconsist");
       } else {
         resultDiv.append(el("div", "dim", tf("ui.ai.foundDotSceneAppear", res.issues.length, res.appearances || 0)));
         for (const it of res.issues) {
           const row2 = el("div");
           row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
-          row2.append(el("div", "", `\u2022 [${it.aspect || t("ai.general", "\u0E17\u0E31\u0E48\u0E27\u0E44\u0E1B")}] ${it.issue || ""}`));
-          if (it.sceneTitle || it.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel", "\u0E09\u0E32\u0E01: ") + (it.sceneTitle || it.sceneId)));
-          if (it.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel", "\u0E2B\u0E25\u0E31\u0E01\u0E10\u0E32\u0E19: ") + it.evidence));
+          row2.append(el("div", "", `\u2022 [${it.aspect || t("ai.general")}] ${it.issue || ""}`));
+          if (it.sceneTitle || it.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel") + (it.sceneTitle || it.sceneId)));
+          if (it.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel") + it.evidence));
           if (it.suggestion) row2.append(el("div", "", "\u{1F4A1} " + it.suggestion));
           resultDiv.append(row2);
         }
@@ -152096,47 +155479,52 @@ ${s.body}`).join("\n\n");
   }
   async function openWorldGenerator() {
     if (!await aiReady2()) return;
-    showDialog(t("ai.worldTitle", "\u{1F30D} \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E25\u0E01"), (box2, ov) => {
+    showDialog(t("ai.worldTitle"), (box2, ov) => {
       const typeSel = el("select");
       ["magic", "city", "culture", "economy", "religion", "faction"].forEach((v2) => {
-        const labels = { magic: t("ai.wMagic", "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C"), city: t("ai.wCity", "\u0E40\u0E21\u0E37\u0E2D\u0E07"), culture: t("ai.wCulture", "\u0E27\u0E31\u0E12\u0E19\u0E18\u0E23\u0E23\u0E21"), economy: t("ai.wEconomy", "\u0E40\u0E28\u0E23\u0E29\u0E10\u0E01\u0E34\u0E08"), religion: t("ai.wReligion", "\u0E28\u0E32\u0E2A\u0E19\u0E32"), faction: t("ai.wFaction", "\u0E01\u0E25\u0E38\u0E48\u0E21/\u0E1D\u0E48\u0E32\u0E22") };
+        const labels = { magic: t("ai.wMagic"), city: t("ai.wCity"), culture: t("ai.wCulture"), economy: t("ai.wEconomy"), religion: t("ai.wReligion"), faction: t("ai.wFaction") };
         typeSel.append(el("option", "", labels[v2] || v2, { value: v2 }));
       });
       const promptInput = el("textarea");
-      promptInput.placeholder = t("ai.worldPrompt", '\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2A\u0E23\u0E49\u0E32\u0E07 (\u0E40\u0E0A\u0E48\u0E19 "\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E27\u0E17\u0E21\u0E19\u0E15\u0E23\u0E4C\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E49\u0E19\u0E17\u0E38\u0E19")');
+      promptInput.placeholder = t("ai.worldPrompt");
       promptInput.style.cssText = "width:100%;min-height:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
       const resultDiv = el("div");
       resultDiv.style.cssText = "max-height:40vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:80px;font-size:14px;line-height:1.8";
       box2.append(el("div", "k-row"));
-      box2.querySelector(".k-row").append(el("label", "", t("ai.kindLabel", "\u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17: ")), typeSel);
-      box2.append(el("label", "", t("ai.detailLabel", "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14:")));
+      box2.querySelector(".k-row").append(el("label", "", t("ai.kindLabel")), typeSel);
+      box2.append(el("label", "", t("ai.detailLabel")));
       box2.append(promptInput);
-      box2.append(el("label", "", t("ai.resultLabel", "\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C:")));
+      box2.append(el("label", "", t("ai.resultLabel")));
       box2.append(resultDiv);
       const btns = el("div", "k-dlg-btns");
       const runBtn = el("button", "k-ok", t("ui.ai.new"));
       let lastWorld = null;
       runBtn.onclick = async () => {
         runBtn.disabled = true;
-        resultDiv.textContent = t("ai.generating", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u2026");
+        resultDiv.textContent = t("ai.generating");
         lastWorld = null;
-        const { generateWorld: generateWorld2, toMarkdown: toMarkdown2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
-        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        const res = await generateWorld2(
-          typeSel.value,
-          promptInput.value.trim() || t("ai.freeform", "\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E32\u0E21\u0E08\u0E34\u0E19\u0E15\u0E19\u0E32\u0E01\u0E32\u0E23"),
-          { client: getAIClient2() }
-        );
-        if (res.ok) {
-          lastWorld = res.world;
-          resultDiv.textContent = toMarkdown2(res.world);
-        } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error", "\u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14"));
-        runBtn.disabled = false;
+        try {
+          const { generateWorld: generateWorld2, toMarkdown: toMarkdown2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
+          const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+          const res = await generateWorld2(
+            typeSel.value,
+            promptInput.value.trim() || t("ai.freeform"),
+            { client: getAIClient2() }
+          );
+          if (res.ok) {
+            lastWorld = res.world;
+            resultDiv.textContent = toMarkdown2(res.world);
+          } else resultDiv.textContent = "\u274C " + (res.error || t("ai.error"));
+        } catch (e) {
+          resultDiv.textContent = "\u274C " + (e && e.message || t("ai.error"));
+        } finally {
+          runBtn.disabled = false;
+        }
       };
       const saveBtn = el("button", "", t("ui.ai.saveWiki"));
       saveBtn.onclick = async () => {
         const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r.startsWith("\u0E01\u0E33\u0E25\u0E31\u0E07")) return;
+        if (!r || r.startsWith("\u274C") || r === t("ai.generating")) return;
         const { toWikiEntity: toWikiEntity2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
         const cats = { magic: "lore", city: "locations", culture: "lore", economy: "lore", religion: "lore", faction: "lore" };
         const cat = cats[typeSel.value] || "lore";
@@ -152155,7 +155543,7 @@ ${s.body}`).join("\n\n");
           relationships: [],
           chapterOverrides: [],
           ...base4,
-          sections: (lastWorld?.sections || []).map((s) => ({ title: s.title, content: s.body })).concat(lastWorld ? [] : [{ title: t("ai.description", "\u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22"), content: r }]),
+          sections: (lastWorld?.sections || []).map((s) => ({ title: s.title, content: s.body })).concat(lastWorld ? [] : [{ title: t("ai.description"), content: r }]),
           created: (/* @__PURE__ */ new Date()).toISOString()
         };
         const catDir = await kapi.join(await kapi.join(state.root, "Wiki"), cat);
@@ -152163,7 +155551,7 @@ ${s.body}`).join("\n\n");
         const name5 = entity.name || "Worldbuilding";
         const file = await kapi.join(catDir, name5.replace(/[\/\\:*?"<>|]/g, "_") + ".json");
         await kapi.writeFile(file, JSON.stringify(entity, null, 2));
-        setStatus(t("ai.savedToWiki", "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 Wiki \u0E41\u0E25\u0E49\u0E27: ") + name5);
+        setStatus(t("ai.savedToWiki") + name5);
       };
       btns.append(runBtn, saveBtn, el("button", "k-cancel", t("ui.common.close")));
       btns.lastChild.onclick = () => ov.remove();
@@ -152192,7 +155580,7 @@ ${s.body}`).join("\n\n");
     const inputBar = el("div");
     inputBar.style.cssText = "display:flex;padding:8px 12px;border-top:1px solid var(--border);background:var(--side)";
     const input = el("input");
-    input.placeholder = t("ai.chatPlaceholder", "\u0E16\u0E32\u0E21\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u2026");
+    input.placeholder = t("ai.chatPlaceholder");
     input.style.cssText = "flex:1;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;outline:none";
     const sendBtn = el("button", "", "\u25B6");
     sendBtn.style.cssText = "margin-left:8px;min-width:48px";
@@ -152212,7 +155600,7 @@ ${s.body}`).join("\n\n");
       if (!sources || !sources.length) return;
       const s = el("div", "dim");
       s.style.cssText = "margin:0 40px 8px 0;font-size:11px";
-      s.textContent = t("ai.sources", "\u{1F4CE} \u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07: ") + sources.map((x2) => x2.label).join(" \xB7 ");
+      s.textContent = t("ai.sources") + sources.map((x2) => x2.label).join(" \xB7 ");
       chatArea.append(s);
     };
     sendBtn.onclick = async () => {
@@ -152224,13 +155612,13 @@ ${s.body}`).join("\n\n");
       let ctx2 = { text: "", sources: [] };
       try {
         const { ragContext: ragContext2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        bubble2.textContent = t("ai.searchingProject", "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u2026");
+        bubble2.textContent = t("ai.searchingProject");
         ctx2 = await ragContext2(q, { k: 6, maxTokens: 1800 });
       } catch (e) {
         log("warn", t("ui.ai.aiChatRAGUse"), e);
       }
       const system = t("ui.ai.youAssistantWriterReply") + t("ui.ai.useDataContextMain");
-      const prompt2 = (ctx2.text ? ctx2.text + "\n\n" : "") + t("ui.ai.wordAsk") + q;
+      const prompt = (ctx2.text ? ctx2.text + "\n\n" : "") + t("ui.ai.wordAsk") + q;
       bubble2.textContent = "";
       let acc = "";
       try {
@@ -152238,7 +155626,7 @@ ${s.body}`).join("\n\n");
         const client = getAIClient2();
         const msgs = history2.slice(-9, -1).filter((m) => m.content);
         const res = await client.stream(
-          { messages: [...msgs, { role: "user", content: prompt2 }], system, feature: "chat" },
+          { messages: [...msgs, { role: "user", content: prompt }], system, feature: "chat" },
           (chunk) => {
             acc += chunk;
             bubble2.textContent = acc;
@@ -152246,19 +155634,19 @@ ${s.body}`).join("\n\n");
           }
         );
         if (!res.ok) {
-          bubble2.textContent = "\u274C " + (res.error || t("ai.callFail", "\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08"));
+          bubble2.textContent = "\u274C " + (res.error || t("ai.callFail"));
           return;
         }
         if (!acc) {
           acc = res.text || "";
-          bubble2.textContent = acc || t("ai.noAnswer", "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E15\u0E2D\u0E1A)");
+          bubble2.textContent = acc || t("ai.noAnswer");
         }
         history2.push({ role: "assistant", content: acc });
         addSources(ctx2.sources);
       } catch (e) {
         log("error", t("ui.ai.aiChatStreamFail"), e);
-        const result = await callAI(prompt2, system);
-        bubble2.textContent = result || t("ai.errorMark", "\u274C \u0E40\u0E01\u0E34\u0E14\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14");
+        const result = await callAI(prompt, system);
+        bubble2.textContent = result || t("ai.errorMark");
       }
     };
     input.onkeydown = (e) => {
@@ -152286,7 +155674,7 @@ ${s.body}`).join("\n\n");
     x.onclick = () => closeTab3(KEY4);
     state.tabs.set(KEY4, tab);
     activate2(KEY4);
-    addMsg("assistant", t("ai.greeting", "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35! \u0E16\u0E32\u0E21\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22 \u0E40\u0E0A\u0E48\u0E19") + ' "' + t("ai.sample1", "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E21\u0E35\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E2D\u0E30\u0E44\u0E23\u0E1A\u0E49\u0E32\u0E07") + '" ' + t("ai.orWord", "\u0E2B\u0E23\u0E37\u0E2D") + ' "' + t("ai.sample2", "\u0E0A\u0E48\u0E27\u0E22\u0E2A\u0E23\u0E38\u0E1B\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E15\u0E4C\u0E43\u0E2B\u0E49\u0E2B\u0E19\u0E48\u0E2D\u0E22") + '"');
+    addMsg("assistant", t("ai.greeting") + ' "' + t("ai.sample1") + '" ' + t("ai.orWord") + ' "' + t("ai.sample2") + '"');
   }
   var init_ai_ui = __esm({
     "src/ai/ai-ui.js"() {
@@ -152539,11 +155927,137 @@ ${s.body}`).join("\n\n");
     }
   });
 
+  // src/starter/starter-html.js
+  var starter_html_exports = {};
+  __export(starter_html_exports, {
+    ALLOWED_ATTRS: () => ALLOWED_ATTRS,
+    ALLOWED_TAGS: () => ALLOWED_TAGS,
+    IMG_PREFIX: () => IMG_PREFIX,
+    cleanStyle: () => cleanStyle,
+    htmlToDisplay: () => htmlToDisplay,
+    htmlToPlain: () => htmlToPlain,
+    htmlToStorage: () => htmlToStorage,
+    referencedImages: () => referencedImages,
+    sanitizeHtml: () => sanitizeHtml
+  });
+  function cleanStyle(v2) {
+    return String(v2 || "").split(";").map((x) => x.trim()).filter(Boolean).filter((x) => STYLE_OK.test(x.split(":")[0].trim())).filter((x) => !/url\s*\(/i.test(x) && !/expression/i.test(x)).join("; ");
+  }
+  function attrsOf(raw) {
+    const out = {};
+    const re = /([a-zA-Z:_-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+    let m;
+    while ((m = re.exec(raw)) !== null) {
+      out[m[1].toLowerCase()] = m[3] !== void 0 ? m[3] : m[4] !== void 0 ? m[4] : m[5] || "";
+    }
+    return out;
+  }
+  function safeUrl(v2) {
+    const s = String(v2 || "").trim();
+    if (/^(javascript|vbscript)\s*:/i.test(s)) return "";
+    if (/^data:/i.test(s) && !/^data:image\//i.test(s)) return "";
+    return s;
+  }
+  function sanitizeHtml(html) {
+    let s = String(html == null ? "" : html);
+    s = s.replace(/<(script|style|iframe|object|embed|link|meta)\b[\s\S]*?<\/\1\s*>/gi, "");
+    s = s.replace(/<(script|style|iframe|object|embed|link|meta)\b[^>]*\/?>/gi, "");
+    s = s.replace(/<!--[\s\S]*?-->/g, "");
+    return s.replace(/<(\/?)([a-zA-Z0-9]+)([^>]*)>/g, (all, slash, tagRaw, rest) => {
+      const tag3 = tagRaw.toLowerCase();
+      if (!ALLOWED_TAGS.has(tag3)) return "";
+      if (slash) return "</" + tag3 + ">";
+      const a = attrsOf(rest);
+      const keep = [];
+      for (const [k, v2] of Object.entries(a)) {
+        if (k.startsWith("on")) continue;
+        if (!ALLOWED_ATTRS.has(k)) continue;
+        if (k === "href" || k === "src") {
+          const u = safeUrl(v2);
+          if (!u) continue;
+          keep.push(k + '="' + u.replace(/"/g, "&quot;") + '"');
+          continue;
+        }
+        if (k === "style") {
+          const st = cleanStyle(v2);
+          if (st) keep.push('style="' + st.replace(/"/g, "&quot;") + '"');
+          continue;
+        }
+        keep.push(k + '="' + String(v2).replace(/"/g, "&quot;") + '"');
+      }
+      const selfClose = tag3 === "br" || tag3 === "img" || tag3 === "hr" ? " /" : "";
+      return "<" + tag3 + (keep.length ? " " + keep.join(" ") : "") + selfClose + ">";
+    });
+  }
+  function htmlToStorage(html) {
+    return String(html || "").replace(/src\s*=\s*"([^"]*)"/gi, (all, url) => {
+      const m = /(^|\/)images\/([^/"?#]+)(?:[?#][^"]*)?$/i.exec(decodeURI(url));
+      return m ? 'src="' + IMG_PREFIX + m[2] + '"' : all;
+    });
+  }
+  function htmlToDisplay(html, baseUrl) {
+    const base4 = String(baseUrl || "").replace(/\/+$/, "");
+    if (!base4) return String(html || "");
+    return String(html || "").replace(/src\s*=\s*"([^"]*)"/gi, (all, url) => {
+      if (!url.startsWith(IMG_PREFIX)) return all;
+      return 'src="' + base4 + "/" + url.split("/").map(encodeURIComponent).join("/") + '"';
+    });
+  }
+  function htmlToPlain(raw) {
+    const s = String(raw == null ? "" : raw);
+    if (!/<[a-z][\s\S]*>/i.test(s)) return s.trim();
+    return s.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|blockquote)>/gi, "\n\n").replace(/<\/li>/gi, "\n").replace(/<li[^>]*>/gi, "- ").replace(/<img[^>]*>/gi, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function referencedImages(html) {
+    const out = [];
+    const re = /src\s*=\s*"([^"]*)"/gi;
+    let m;
+    while ((m = re.exec(String(html || ""))) !== null) {
+      if (m[1].startsWith(IMG_PREFIX)) out.push(m[1].slice(IMG_PREFIX.length));
+    }
+    return [...new Set(out)];
+  }
+  var ALLOWED_TAGS, ALLOWED_ATTRS, STYLE_OK, IMG_PREFIX;
+  var init_starter_html = __esm({
+    "src/starter/starter-html.js"() {
+      ALLOWED_TAGS = /* @__PURE__ */ new Set([
+        "p",
+        "br",
+        "div",
+        "span",
+        "b",
+        "strong",
+        "i",
+        "em",
+        "u",
+        "s",
+        "strike",
+        "ul",
+        "ol",
+        "li",
+        "blockquote",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "a",
+        "img",
+        "hr"
+      ]);
+      ALLOWED_ATTRS = /* @__PURE__ */ new Set(["href", "src", "alt", "title", "style", "align"]);
+      STYLE_OK = /^(text-align|font-weight|font-style|text-decoration|margin|padding|width|max-width)$/i;
+      IMG_PREFIX = "images/";
+    }
+  });
+
   // src/starter/starter-model.js
   var starter_model_exports = {};
   __export(starter_model_exports, {
     GENDERS: () => GENDERS,
     IMAGE_DIR: () => IMAGE_DIR,
+    MODES: () => MODES,
+    MODE_ADV: () => MODE_ADV,
+    MODE_BASIC: () => MODE_BASIC,
     ROLE_GM: () => ROLE_GM,
     ROLE_PLAYER: () => ROLE_PLAYER,
     SCENARIO_DIR: () => SCENARIO_DIR,
@@ -152559,13 +156073,16 @@ ${s.body}`).join("\n\n");
     genderDef: () => genderDef,
     genderLabel: () => genderLabel,
     hasIntro: () => hasIntro,
+    hasOpener: () => hasOpener,
     hasPlay: () => hasPlay,
     hasTag: () => hasTag,
     introText: () => introText,
+    isAdv: () => isAdv,
     lastUpdated: () => lastUpdated,
     migrateScenario: () => migrateScenario,
     migrateStarter: () => migrateStarter,
     missingSteps: () => missingSteps,
+    modeDef: () => modeDef2,
     newChar: () => newChar,
     newCharId: () => newCharId,
     newScenario: () => newScenario,
@@ -152573,9 +156090,13 @@ ${s.body}`).join("\n\n");
     newStarter: () => newStarter,
     newStarterId: () => newStarterId,
     newTurn: () => newTurn2,
+    normMode: () => normMode,
     normalizeTags: () => normalizeTags,
     openChoices: () => openChoices,
+    openerHtml: () => openerHtml,
+    openerText: () => openerText,
     removeChar: () => removeChar,
+    scenarioAdvFilled: () => scenarioAdvFilled,
     scenarioFileName: () => scenarioFileName,
     scenarioStats: () => scenarioStats,
     searchScenarios: () => searchScenarios,
@@ -152599,6 +156120,15 @@ ${s.body}`).join("\n\n");
   }
   function genderLabel(id) {
     return genderDef(id).label;
+  }
+  function normMode(v2) {
+    return v2 === MODE_ADV ? MODE_ADV : MODE_BASIC;
+  }
+  function isAdv(s) {
+    return normMode(s && s.mode) === MODE_ADV;
+  }
+  function modeDef2(id) {
+    return MODES.find((m) => m.id === normMode(id)) || MODES[0];
   }
   function _resetIds2() {
     _seq5 = 0;
@@ -152637,8 +156167,17 @@ ${s.body}`).join("\n\n");
       gender: patch.gender || "",
       image: patch.image || "",
       // ชื่อไฟล์ใน <starter>/images/ (ไม่ใช่ path เต็ม)
-      fromWiki: !!patch.fromWiki
+      fromWiki: !!patch.fromWiki,
       // ดึงเข้ามาจาก Wiki (ไม่ได้เกิดที่นี่)
+      // ── ช่องขั้นสูง (โหมด adv) ─────────────────────────────
+      // `shortcode` = ชื่อที่ใช้ใน `{[…]}` · ว่าง = ใช้ชื่อจริง (ดู entity-mention.js)
+      shortcode: patch.shortcode || "",
+      // ตัวอย่างคำพูด — "เพื่อให้ AI เข้าใจว่าลักษณะนิสัยยังไง" · ใช้โค้ดสั้นอ้างถึงคนอื่นได้
+      // [alpha.123] แปลงโค้ดสั้นรูปแบบเก่า (`{[x]}` ของ .122) เป็น `{{x}}` ตอนอ่านไฟล์
+      dialogue: migrateMentions(patch.dialogue || ""),
+      tags: normalizeTags(patch.tags),
+      // ช่อง Prompt เพิ่มเองได้ (Prompt A / Prompt B / …) — ตรงกับที่เพิ่มใน entity ของ Wiki
+      prompts: normalizePrompts(patch.prompts).map((r) => ({ k: r.k, v: migrateMentions(r.v) }))
     };
   }
   function charById(s, id) {
@@ -152687,6 +156226,8 @@ ${s.body}`).join("\n\n");
       id: patch.id || newStarterId(),
       slug: patch.slug || "",
       name: patch.name || "",
+      // [alpha.122] ไฟล์เก่าไม่มี `mode` → พื้นฐาน (ของเดิมทั้งหมด = โหมดพื้นฐานตามที่ผู้ใช้สั่ง)
+      mode: normMode(patch.mode),
       tags: normalizeTags(patch.tags),
       // [alpha.96] ผู้แต่ง + คำโปรยหนึ่งบรรทัด — หน้าเรื่องแสดงคู่กับปกแบบการ์ดนิยายจริง
       author: patch.author || "",
@@ -152708,9 +156249,7 @@ ${s.body}`).join("\n\n");
     };
   }
   function introText(s) {
-    const raw = String(s && s.intro || "");
-    if (!/<[a-z][\s\S]*>/i.test(raw)) return raw.trim();
-    return raw.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|blockquote)>/gi, "\n\n").replace(/<\/li>/gi, "\n").replace(/<li[^>]*>/gi, "- ").replace(/<img[^>]*>/gi, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/\n{3,}/g, "\n\n").trim();
+    return htmlToPlain(s && s.intro || "");
   }
   function hasIntro(s) {
     return introText(s).length > 0;
@@ -152765,6 +156304,12 @@ ${s.body}`).join("\n\n");
       speaker: patch.speaker || "",
       // ไอดีตัวละครที่สวมบทอยู่ ('' = พูดในฐานะตัวเอง)
       text: patch.text || "",
+      // [alpha.122] รูปประกอบของเทิร์น — ตอนนี้ใช้กับบทเปิดที่ผู้ใช้ใส่รูปไว้
+      // (ชื่อไฟล์ใน `<starter>/images/` เหมือนรูปอื่นทั้งหมด = ย้ายโปรเจกต์แล้วไม่หาย)
+      image: patch.image || "",
+      // [alpha.123] รูปแบบตัวอักษรของเทิร์น (ใช้กับบทเปิดที่ผู้ใช้จัดตัวหนา/เอียง/ขีดเส้นใต้ไว้)
+      // ว่าง = ข้อความล้วน → ตัววาดทำบทพูดเป็นตัวเอียงให้เอง · `text` เป็นตัวจริงเสมอสำหรับโมเดล
+      html: patch.html || "",
       choices: [...patch.choices || []],
       // ทางเลือกที่ GM ยื่นให้ (เฉพาะเทิร์นของ GM)
       chosen: patch.chosen || "",
@@ -152782,6 +156327,23 @@ ${s.body}`).join("\n\n");
       id: patch.id || newScenarioId(),
       title: patch.title || "",
       synopsis: patch.synopsis || "",
+      // รูปย่อของตอน — ชื่อไฟล์ใน `<starter>/images/` (กติกาเดียวกับปก: อยู่ในตัว starter เสมอ)
+      thumb: patch.thumb || "",
+      // ── ช่องขั้นสูง (โหมด adv) — ทุกช่องรับโค้ดสั้น `{{ชื่อ}}` ─────
+      desc: migrateMentions(patch.desc || ""),
+      // Story Description ของ **ตอนนี้** (คนละอันกับของเรื่อง)
+      // Story Opener — เก็บเป็น **HTML** ตั้งแต่ alpha.123 (ผู้ใช้ขอ ตัวหนา/เอียง/ขีดเส้นใต้)
+      // ข้อความล้วนของไฟล์เก่ายังอ่านได้ปกติ — `openerText()` เป็นคนแปลงให้ทุกทาง
+      opener: migrateMentions(patch.opener || ""),
+      openerImage: patch.openerImage || "",
+      // รูปประกอบบทเปิด (ชื่อไฟล์ใน images/)
+      goal: migrateMentions(patch.goal || ""),
+      // Story Goal
+      conditions: migrateMentions(patch.conditions || ""),
+      // Completion Conditions
+      // [alpha.123] อารมณ์และโทนของตอน — คนละเรื่องกับ "เป้าหมาย" (จะไปทางไหน)
+      // และคนละเรื่องกับ "คำอธิบาย" (มีอะไรอยู่บ้าง) · อันนี้คือ **รู้สึกยังไง**
+      mood: migrateMentions(patch.mood || ""),
       prevId: patch.prevId || "",
       // เชื่อมกับตอนก่อนหน้า (สเปกข้อ 11)
       cast: [...patch.cast || []],
@@ -152808,6 +156370,20 @@ ${s.body}`).join("\n\n");
   }
   function scenarioFileName(sc) {
     return String(sc && sc.id || "scenario") + ".json";
+  }
+  function openerText(sc, cast = [], opts = {}) {
+    return expandMentions(htmlToPlain(sc && sc.opener || "").trim(), cast, opts);
+  }
+  function openerHtml(sc, cast = [], opts = {}) {
+    const raw = String(sc && sc.opener || "").trim();
+    if (!raw) return "";
+    return expandMentions(raw, cast, opts);
+  }
+  function hasOpener(sc) {
+    return htmlToPlain(sc && sc.opener || "").trim().length > 0;
+  }
+  function scenarioAdvFilled(sc) {
+    return ["desc", "opener", "goal", "conditions", "mood"].filter((k) => htmlToPlain(sc && sc[k] || "").trim()).length;
   }
   function hasPlay(sc) {
     return (sc && sc.turns || []).length > 0;
@@ -152893,12 +156469,14 @@ ${s.body}`).join("\n\n");
     for (const sc of rows || []) t3 = Math.max(t3, sc.updated || 0, sc.created || 0);
     return t3;
   }
-  var STARTER_VERSION, STARTER_DIR, SCENARIO_DIR, STARTER_FILE, IMAGE_DIR, GENDERS, _seq5, SCENARIO_VERSION, ROLE_GM, ROLE_PLAYER;
+  var STARTER_VERSION, STARTER_DIR, SCENARIO_DIR, STARTER_FILE, IMAGE_DIR, GENDERS, MODE_BASIC, MODE_ADV, MODES, _seq5, SCENARIO_VERSION, ROLE_GM, ROLE_PLAYER;
   var init_starter_model = __esm({
     "src/starter/starter-model.js"() {
       init_i18n();
       init_builder_core();
-      STARTER_VERSION = 1;
+      init_entity_mention();
+      init_starter_html();
+      STARTER_VERSION = 2;
       STARTER_DIR = "Starters";
       SCENARIO_DIR = "Scenarios";
       STARTER_FILE = "starter.json";
@@ -152909,8 +156487,14 @@ ${s.body}`).join("\n\n");
         { id: "other", label: t("ui.starter.genderOther"), icon: "\u26A7" },
         { id: "", label: t("ui.starter.genderUnset"), icon: "\u2013" }
       ];
+      MODE_BASIC = "basic";
+      MODE_ADV = "adv";
+      MODES = [
+        { id: MODE_BASIC, icon: "\u{1F331}", label: t("ui.starter.modeBasic"), hint: t("ui.starter.modeBasicHint") },
+        { id: MODE_ADV, icon: "\u2699\uFE0F", label: t("ui.starter.modeAdv"), hint: t("ui.starter.modeAdvHint") }
+      ];
       _seq5 = 0;
-      SCENARIO_VERSION = 1;
+      SCENARIO_VERSION = 2;
       ROLE_GM = "gm";
       ROLE_PLAYER = "player";
     }
@@ -152921,7 +156505,6 @@ ${s.body}`).join("\n\n");
   __export(starter_ai_exports, {
     AI_TIMEOUT_MS: () => AI_TIMEOUT_MS,
     aiBtn: () => aiBtn,
-    aiBusy: () => aiBusy,
     askAI: () => askAI,
     compactNum: () => compactNum,
     newReqId: () => newReqId3,
@@ -152932,9 +156515,6 @@ ${s.body}`).join("\n\n");
   function newReqId3() {
     _seq6 += 1;
     return "st-" + Date.now().toString(36) + "-" + _seq6;
-  }
-  function aiBusy() {
-    return RUNNING.size > 0;
   }
   async function stopAI(reqId) {
     if (!reqId) return false;
@@ -152953,13 +156533,13 @@ ${s.body}`).join("\n\n");
     RUNNING.clear();
     return ids.length;
   }
-  async function askAI(what, prompt2, system, reqId = "") {
+  async function askAI(what, prompt, system, reqId = "") {
     const id = reqId || newReqId3();
     RUNNING.add(id);
     const t0 = Date.now();
-    log("info", "starter ai: " + what, { reqId: id, promptChars: String(prompt2 || "").length });
+    log("info", "starter ai: " + what, { reqId: id, promptChars: String(prompt || "").length });
     try {
-      const out = await callAI(prompt2, system, { reqId: id, timeoutMs: AI_TIMEOUT_MS });
+      const out = await callAI(prompt, system, { reqId: id, timeoutMs: AI_TIMEOUT_MS });
       log(
         out ? "info" : "warn",
         "starter ai: " + what + (out ? " ok" : " no-reply"),
@@ -153046,14 +156626,9 @@ ${s.body}`).join("\n\n");
     isLastStep: () => isLastStep,
     isPresetTag: () => isPresetTag,
     presetTags: () => presetTags,
-    stepAt: () => stepAt,
     stepById: () => stepById,
-    stepIndex: () => stepIndex,
-    wFieldByKey: () => wFieldByKey
+    stepIndex: () => stepIndex
   });
-  function wFieldByKey(key2) {
-    return W_FIELDS.find((f) => f.key === key2) || null;
-  }
   function filledW(s) {
     const w = s && s.w || {};
     return W_FIELDS.filter((f) => String(w[f.key] || "").trim()).map((f) => ({ key: f.key, label: f.label, value: String(w[f.key]).trim() }));
@@ -153075,9 +156650,6 @@ ${s.body}`).join("\n\n");
     const n2 = Number(i5);
     if (!Number.isFinite(n2)) return 0;
     return Math.max(0, Math.min(STEPS.length - 1, Math.floor(n2)));
-  }
-  function stepAt(i5) {
-    return STEPS[clampStep(i5)];
   }
   function isLastStep(i5) {
     return clampStep(i5) === STEPS.length - 1;
@@ -153191,7 +156763,6 @@ ${s.body}`).join("\n\n");
   // src/starter/starter-store.js
   var starter_store_exports = {};
   __export(starter_store_exports, {
-    autoSaveScenario: () => autoSaveScenario,
     autoSaveStarter: () => autoSaveStarter,
     createScenario: () => createScenario,
     createStarter: () => createStarter,
@@ -153408,11 +156979,6 @@ ${s.body}`).join("\n\n");
     sc.updated = body.updated;
     return true;
   }
-  function autoSaveScenario(slug2, sc) {
-    if (!slug2 || !sc || !sc.id) return false;
-    queueSave("sc:" + slug2 + ":" + sc.id, sc, (data2) => writeScenario(slug2, data2));
-    return true;
-  }
   async function createScenario(slug2, patch = {}) {
     const sc = newScenario({ ...patch, created: Date.now() });
     await writeScenario(slug2, sc);
@@ -153452,7 +157018,6 @@ ${s.body}`).join("\n\n");
     choiceInstruction: () => choiceInstruction,
     choiceMarker: () => choiceMarker,
     choiceRows: () => choiceRows,
-    hasChoices: () => hasChoices,
     normalizeChoices: () => normalizeChoices,
     parseChoices: () => parseChoices,
     stripChoices: () => stripChoices
@@ -153548,9 +157113,6 @@ ${s.body}`).join("\n\n");
     const s = String(text);
     return (s.slice(0, r.start) + s.slice(r.end)).replace(/\n{3,}/g, "\n\n").trim();
   }
-  function hasChoices(text) {
-    return parseChoices(text).length > 0;
-  }
   function choiceMarker(choice) {
     const v2 = String(choice || "").replace(/[\[\]]/g, "").trim().slice(0, 80);
     return v2 ? "[" + v2 + "]" : "";
@@ -153577,13 +157139,19 @@ ${s.body}`).join("\n\n");
     blurbPrompt: () => blurbPrompt,
     castBlock: () => castBlock,
     charDescPrompt: () => charDescPrompt,
+    charDialoguePrompt: () => charDialoguePrompt,
     clip: () => clip2,
+    conditionsPrompt: () => conditionsPrompt,
     descPrompt: () => descPrompt,
     gmOpening: () => gmOpening,
     gmSystem: () => gmSystem,
     gmUserTurn: () => gmUserTurn,
+    goalPrompt: () => goalPrompt,
     introPrompt: () => introPrompt,
+    mentionCtx: () => mentionCtx,
+    moodPrompt: () => moodPrompt,
     namePrompt: () => namePrompt,
+    openerPrompt: () => openerPrompt,
     recapPrompt: () => recapPrompt,
     scenarioNamePrompt: () => scenarioNamePrompt,
     starterBlock: () => starterBlock,
@@ -153592,6 +157160,17 @@ ${s.body}`).join("\n\n");
     wBlock: () => wBlock,
     wFieldPrompt: () => wFieldPrompt
   });
+  function mentionCtx(s, sc, userChars) {
+    const cast = s && s.cast || [];
+    const mine = new Set(Array.isArray(userChars) ? userChars : sc && sc.userChars || []);
+    const owned = cast.filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
+    return {
+      // ผู้เล่นคุมหลายตัว = บอกทั้งหมด · ไม่ได้คุมใครเลย = คำสำรอง "ผู้เล่น"
+      user: owned.join(" / "),
+      userLabel: t("ui.starter.mentionUser"),
+      anyLabel: t("ui.starter.mentionAny")
+    };
+  }
   function clip2(text, max2 = 1200) {
     const s = String(text || "").trim();
     if (s.length <= max2) return s;
@@ -153604,7 +157183,8 @@ ${s.body}`).join("\n\n");
     return tags.length ? t("ui.starter.pTags") + tags.join(", ") : "";
   }
   function castBlock(s, { full = true, exclude = "" } = {}) {
-    const rows = (s && s.cast || []).filter((c) => c && c.name && c.id !== exclude);
+    const all = s && s.cast || [];
+    const rows = all.filter((c) => c && c.name && c.id !== exclude);
     if (!rows.length) return "";
     const lines = [t("ui.starter.pCastHead")];
     for (const c of rows) {
@@ -153612,6 +157192,19 @@ ${s.body}`).join("\n\n");
       lines.push(head2);
       const body = full ? c.persona || c.blurb : c.blurb || c.persona;
       if (String(body || "").trim()) lines.push("  " + clip2(body, full ? 900 : 200).replace(/\n+/g, " "));
+      if ((c.tags || []).length) lines.push("  " + t("ui.starter.pCharTags") + c.tags.join(", "));
+      if (!full) continue;
+      const dlg = String(c.dialogue || "").trim();
+      if (dlg) {
+        lines.push("  " + t("ui.starter.pCharDialogue"));
+        for (const ln of clip2(expandMentions(dlg, all), 900).split(/\r?\n/)) {
+          if (ln.trim()) lines.push("    " + ln.trim());
+        }
+      }
+      const pr = promptsText(c.prompts, all);
+      if (pr) for (const ln of clip2(pr, 900).split(/\r?\n/)) {
+        if (ln.trim()) lines.push("  \xB7 " + ln.trim());
+      }
     }
     return lines.join("\n");
   }
@@ -153690,18 +157283,34 @@ ${s.body}`).join("\n\n");
     ].filter(Boolean).join("\n\n");
   }
   function gmSystem(s, sc, { prev = null, userChars = [], len: len5 = "medium" } = {}) {
+    const cast = s && s.cast || [];
     const mine = new Set(userChars || []);
-    const owned = (s && s.cast || []).filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
+    const owned = cast.filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
     const lenRule = {
       short: t("ui.starter.pGmLenShort"),
       medium: t("ui.starter.pGmLenMedium"),
       long: t("ui.starter.pGmLenLong")
     }[len5] || t("ui.starter.pGmLenMedium");
+    const mc = mentionCtx(s, sc, userChars);
+    const ex = (v2, max2) => {
+      const body = String(v2 || "").trim();
+      return body ? clip2(expandMentions(body, cast, mc), max2) : "";
+    };
+    const desc = ex(sc && sc.desc, 1200);
+    const mood = ex(sc && sc.mood, 400);
+    const goal = ex(sc && sc.goal, 400);
+    const cond = ex(sc && sc.conditions, 600);
     return [
       t("ui.starter.pGmRole"),
       starterBlock(s, { full: true }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       String(sc && sc.synopsis || "").trim() ? t("ui.starter.pScSynopsis") + "\n" + clip2(sc.synopsis, 900) : "",
+      // [alpha.122] ช่องขั้นสูงของตอน — GM ต้องรู้ทั้งฉาก เป้าหมาย และ "จบยังไงถึงเรียกว่าสำเร็จ"
+      desc ? t("ui.starter.pScDesc") + "\n" + desc : "",
+      // [alpha.123] โทน = สำนวนและจังหวะการเล่า · แยกจากคำอธิบายซึ่งเป็นข้อเท็จจริงของฉาก
+      mood ? t("ui.starter.pScMood") + "\n" + mood + "\n" + t("ui.starter.pScMoodRule") : "",
+      goal ? t("ui.starter.pScGoal") + "\n" + goal : "",
+      cond ? t("ui.starter.pScCond") + "\n" + cond + "\n" + t("ui.starter.pScCondRule") : "",
       prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip2(prev.synopsis || "", 600) : "",
       owned.length ? tf("ui.starter.pGmUserChars", owned.join(", ")) : "",
       t("ui.starter.pGmRules"),
@@ -153710,6 +157319,10 @@ ${s.body}`).join("\n\n");
     ].filter(Boolean).join("\n\n");
   }
   function gmOpening(s, sc) {
+    const own = openerText(sc, s && s.cast || [], mentionCtx(s, sc));
+    if (own) {
+      return [t("ui.starter.pGmOpenGiven"), clip2(own, 1500), t("ui.starter.pGmOpenGivenRule")].join("\n\n");
+    }
     return [
       t("ui.starter.pGmOpenTask"),
       String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 600) : "",
@@ -153753,6 +157366,66 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pDescRule")
     ].filter(Boolean).join("\n\n");
   }
+  function charDialoguePrompt(s, ch) {
+    const who = [
+      t("ui.starter.pCharName") + (ch.name || t("ui.starter.pCharNoName")),
+      ch.gender ? t("ui.starter.pCharGender") + genderLabel(ch.gender) : "",
+      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip2(ch.persona, 700) : "",
+      (ch.tags || []).length ? t("ui.starter.pCharTags") + ch.tags.join(", ") : ""
+    ].filter(Boolean).join("\n");
+    return [
+      t("ui.starter.pDlgTask"),
+      starterBlock(s, { cast: false }),
+      castBlock(s, { full: false, exclude: ch.id }),
+      who,
+      t("ui.starter.pDlgRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function openerPrompt(s, sc) {
+    return [
+      t("ui.starter.pOpenerTask"),
+      starterBlock(s, { full: false }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 800) : "",
+      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip2(sc.desc, 800) : "",
+      t("ui.starter.pOpenerRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function goalPrompt(s, sc) {
+    return [
+      t("ui.starter.pGoalTask"),
+      starterBlock(s, { full: false }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 800) : "",
+      t("ui.starter.pGoalRule")
+    ].filter(Boolean).join("\n\n");
+  }
+  function conditionsPrompt(s, sc) {
+    const sample = (s && s.cast || []).map((c) => c.name).filter(Boolean)[0] || MENTION_ANY;
+    return [
+      t("ui.starter.pCondTask"),
+      starterBlock(s, { full: false }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      String(sc && sc.goal || "").trim() ? t("ui.starter.pScGoal") + "\n" + clip2(sc.goal, 400) : "",
+      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 600) : "",
+      tf(
+        "ui.starter.pCondRule",
+        mentionToken(sample),
+        mentionToken(MENTION_ANY),
+        mentionToken(MENTION_USER)
+      )
+    ].filter(Boolean).join("\n\n");
+  }
+  function moodPrompt(s, sc) {
+    return [
+      t("ui.starter.pMoodTask"),
+      starterBlock(s, { full: false }),
+      sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
+      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 700) : "",
+      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip2(sc.desc, 700) : "",
+      t("ui.starter.pMoodRule")
+    ].filter(Boolean).join("\n\n");
+  }
   var PROMPT_VERSION, SYS_WRITER;
   var init_starter_prompt = __esm({
     "src/starter/starter-prompt.js"() {
@@ -153760,7 +157433,8 @@ ${s.body}`).join("\n\n");
       init_starter_model();
       init_starter_steps_def();
       init_starter_choices();
-      PROMPT_VERSION = 1;
+      init_entity_mention();
+      PROMPT_VERSION = 3;
       SYS_WRITER = () => t("ui.starter.sysWriter");
     }
   });
@@ -153833,13 +157507,21 @@ ${s.body}`).join("\n\n");
       const val = String(v2 == null ? "" : v2).trim();
       if (val) out.push(k + ": " + val);
     }
+    const skip = normName(SEC_DIALOGUE());
+    const own = normName(SEC_DESC());
     for (const sec of e && e.sections || []) {
       const body = String(sec && sec.content || "").trim();
       if (!body) continue;
       const title2 = String(sec && sec.title || "").trim();
-      out.push(title2 ? title2 + "\n" + body : body);
+      if (normName(title2) === skip) continue;
+      out.push(title2 && normName(title2) !== own ? title2 + "\n" + body : body);
     }
     return out.join("\n\n").trim();
+  }
+  function sectionText(e, title2) {
+    const want = normName(title2);
+    const hit = (e && e.sections || []).find((x) => normName(x && x.title || "") === want);
+    return String(hit && hit.content || "").trim();
   }
   function charPatchFromEntity(e, file = "") {
     return {
@@ -153848,45 +157530,82 @@ ${s.body}`).join("\n\n");
       persona: flattenEntityText(e),
       wikiPath: file || "",
       cat: e && e.entityTypeKey || "characters",
-      fromWiki: true
+      fromWiki: true,
+      // [alpha.122] ช่องขั้นสูงเดินทางสองทางเต็มรูปแบบ — ดึงเข้ามาแล้วเขียนกลับได้ไม่ตกหล่น
+      shortcode: e && e.shortcode || "",
+      tags: Array.isArray(e && e.tags) ? [...e.tags] : [],
+      prompts: normalizePrompts(e && e.prompts),
+      dialogue: sectionText(e, SEC_DIALOGUE())
     };
   }
   function entityFromChar(ch, { id = "", cat = "characters", images = [] } = {}) {
+    const secs = [{ title: SEC_DESC(), content: ch && ch.persona || "" }];
+    if (String(ch && ch.dialogue || "").trim()) {
+      secs.push({ title: SEC_DIALOGUE(), content: ch.dialogue });
+    }
     return {
       id,
       entityTypeKey: cat,
       name: ch && ch.name || "",
       aliases: [...ch && ch.aliases || []],
+      // [alpha.122] ช่องใหม่ของ entity — ทุกหมวดมีเหมือนกัน ไม่ใช่เฉพาะตัวละคร
+      shortcode: ch && ch.shortcode || "",
+      tags: [...ch && ch.tags || []],
+      prompts: normalizePrompts(ch && ch.prompts),
       fields: {},
       customProperties: {},
       images: [...images],
-      sections: [{ title: t("ui.common.desc"), content: ch && ch.persona || "" }],
+      sections: secs,
       relationships: [],
       chapterOverrides: [],
       templateId: "",
       created: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
+  function putSection(secs, title2, body, { first = false } = {}) {
+    const rows = [...secs || []];
+    if (!String(body || "").trim()) return rows;
+    const i5 = rows.findIndex((x) => normName(x && x.title || "") === normName(title2));
+    if (i5 < 0) {
+      if (first) rows.unshift({ title: title2, content: body });
+      else rows.push({ title: title2, content: body });
+    } else rows[i5] = { ...rows[i5], content: body };
+    return rows;
+  }
   function applyCharToEntity(e, ch) {
     const out = { ...e };
-    const secTitle = t("ui.common.desc");
-    const secs = [...e && e.sections || []];
-    const i5 = secs.findIndex((x) => String(x && x.title || "").trim() === secTitle);
-    const body = ch && ch.persona || "";
-    if (body.trim()) {
-      if (i5 < 0) secs.unshift({ title: secTitle, content: body });
-      else secs[i5] = { ...secs[i5], content: body };
-    }
+    let secs = [...e && e.sections || []];
+    secs = putSection(secs, SEC_DESC(), ch && ch.persona || "", { first: true });
+    secs = putSection(secs, SEC_DIALOGUE(), ch && ch.dialogue || "");
     out.sections = secs;
     const have = new Set((e && e.aliases || []).map(normName));
     const add = (ch && ch.aliases || []).filter((a) => a && !have.has(normName(a)));
     out.aliases = [...e && e.aliases || [], ...add];
+    if (!String(out.shortcode || "").trim() && String(ch && ch.shortcode || "").trim()) {
+      out.shortcode = ch.shortcode;
+    }
+    const tagHave = new Set((e && e.tags || []).map(normName));
+    out.tags = [
+      ...e && e.tags || [],
+      ...(ch && ch.tags || []).filter((x) => x && !tagHave.has(normName(x)))
+    ];
+    const mine = normalizePrompts(ch && ch.prompts);
+    const merged = normalizePrompts(e && e.prompts);
+    for (const p of mine) {
+      const i5 = merged.findIndex((x) => normName(x.k) === normName(p.k));
+      if (i5 < 0) merged.push(p);
+      else merged[i5] = p;
+    }
+    out.prompts = merged;
     return out;
   }
-  var MATCH_EXACT, MATCH_ALIAS, MATCH_AMBIGUOUS, MATCH_NONE, ACT_LINK, ACT_CREATE, ACT_SKIP;
+  var SEC_DESC, SEC_DIALOGUE, MATCH_EXACT, MATCH_ALIAS, MATCH_AMBIGUOUS, MATCH_NONE, ACT_LINK, ACT_CREATE, ACT_SKIP;
   var init_starter_wiki_merge = __esm({
     "src/starter/starter-wiki-merge.js"() {
       init_i18n();
+      init_entity_mention();
+      SEC_DESC = () => t("ui.common.desc");
+      SEC_DIALOGUE = () => t("ui.starter.fDialogue");
       MATCH_EXACT = "exact";
       MATCH_ALIAS = "alias";
       MATCH_AMBIGUOUS = "many";
@@ -153900,7 +157619,9 @@ ${s.body}`).join("\n\n");
   // src/starter/starter-wiki.js
   var starter_wiki_exports = {};
   __export(starter_wiki_exports, {
+    autoLinkChar: () => autoLinkChar,
     charFromWiki: () => charFromWiki,
+    invalidateWikiChars: () => invalidateWikiChars,
     listWikiChars: () => listWikiChars,
     looksForeign: () => looksForeign,
     offerReconcile: () => offerReconcile,
@@ -153910,8 +157631,13 @@ ${s.body}`).join("\n\n");
     reconcileCast: () => reconcileCast,
     syncCastToWiki: () => syncCastToWiki
   });
-  async function listWikiChars() {
+  function invalidateWikiChars() {
+    WC.root = "";
+    WC.rows = null;
+  }
+  async function listWikiChars({ fresh = false } = {}) {
     if (!state.root) return [];
+    if (!fresh && WC.rows && WC.root === state.root) return WC.rows;
     const out = [];
     const root = await wikiRoot();
     const catDir = await kapi.join(root, CHAR_CAT);
@@ -153938,6 +157664,8 @@ ${s.body}`).join("\n\n");
         log("warn", t("ui.starter.logWikiReadFail") + f, e);
       }
     }
+    WC.root = state.root;
+    WC.rows = out;
     return out;
   }
   async function readEntity(file) {
@@ -153957,6 +157685,30 @@ ${s.body}`).join("\n\n");
       if (await kapi.exists(abs)) patch.image = await importImage(slug2, abs);
     }
     return newChar(patch);
+  }
+  async function autoLinkChar(slug2, ch) {
+    if (!ch || ch.wikiPath || !String(ch.name || "").trim()) return false;
+    const ents = await listWikiChars();
+    if (!ents.length) return false;
+    const m = matchChar(ch, ents);
+    if (!m.hit || m.status !== MATCH_EXACT && m.status !== MATCH_ALIAS) return false;
+    if (!await confirmBox(tf("ui.starter.autoLinkAsk", ch.name), t("ui.starter.autoLinkGo"))) {
+      return false;
+    }
+    const got = await charFromWiki(slug2, m.hit.file);
+    if (!got) {
+      setStatus(t("ui.starter.wikiReadFail"));
+      return false;
+    }
+    ch.wikiPath = m.hit.file;
+    ch.fromWiki = true;
+    for (const k of ["persona", "blurb", "selfPronoun", "image", "shortcode", "dialogue"]) {
+      if (!String(ch[k] || "").trim() && String(got[k] || "").trim()) ch[k] = got[k];
+    }
+    if (!(ch.aliases || []).length) ch.aliases = [...got.aliases || []];
+    if (!(ch.tags || []).length) ch.tags = [...got.tags || []];
+    if (!(ch.prompts || []).length) ch.prompts = [...got.prompts || []];
+    return true;
   }
   function pickWikiChar() {
     return new Promise(async (resolve) => {
@@ -154029,6 +157781,7 @@ ${s.body}`).join("\n\n");
         const merged = applyCharToEntity(old, ch);
         if (images.length && !(old.images || []).length) merged.images = images;
         await kapi.writeFile(ch.wikiPath, JSON.stringify(merged, null, 2));
+        invalidateWikiChars();
         return ch.wikiPath;
       }
     }
@@ -154038,6 +157791,7 @@ ${s.body}`).join("\n\n");
       safeName(ch.name) + "-" + Date.now().toString(36) + ".json"
     );
     await kapi.writeFile(file, JSON.stringify(e, null, 2));
+    invalidateWikiChars();
     return file;
   }
   async function syncCastToWiki(s) {
@@ -154168,7 +157922,7 @@ ${s.body}`).join("\n\n");
     await reconcileCast(s);
     return true;
   }
-  var CHAR_CAT;
+  var CHAR_CAT, WC;
   var init_starter_wiki = __esm({
     "src/starter/starter-wiki.js"() {
       init_core();
@@ -154180,6 +157934,7 @@ ${s.body}`).join("\n\n");
       init_starter_wiki_merge();
       init_starter_store();
       CHAR_CAT = "characters";
+      WC = { root: "", rows: null };
     }
   });
 
@@ -154187,7 +157942,7 @@ ${s.body}`).join("\n\n");
   var starter_names_exports = {};
   __export(starter_names_exports, {
     NAME_MARKERS: () => NAME_MARKERS,
-    NAME_MAX: () => NAME_MAX,
+    NAME_MAX: () => NAME_MAX2,
     NAME_MAX_WORDS: () => NAME_MAX_WORDS,
     NAME_MIN: () => NAME_MIN,
     NAME_STOP: () => NAME_STOP,
@@ -154313,13 +158068,13 @@ ${s.body}`).join("\n\n");
     for (const v2 of Object.values(s.w || {})) rows.push(String(v2 || ""));
     return rows.filter(Boolean).join("\n");
   }
-  var NAME_MIN, NAME_MAX, NAME_MARKERS, NAME_STOP, EN_STOP, clean, okLen, THAI_NAME_MAX, NAME_MAX_WORDS;
+  var NAME_MIN, NAME_MAX2, NAME_MARKERS, NAME_STOP, EN_STOP, clean, okLen, THAI_NAME_MAX, NAME_MAX_WORDS;
   var init_starter_names = __esm({
     "src/starter/starter-names.js"() {
       init_i18n();
       init_starter_model();
       NAME_MIN = 2;
-      NAME_MAX = 24;
+      NAME_MAX2 = 24;
       NAME_MARKERS = [
         "\u0E0A\u0E37\u0E48\u0E2D\u0E27\u0E48\u0E32",
         "\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D",
@@ -154403,18 +158158,451 @@ ${s.body}`).join("\n\n");
         "As"
       ]);
       clean = (s) => String(s || "").replace(/^[\s"'“”‘’«»「」『』]+|[\s"'“”‘’«»「」『』.,!?;:]+$/g, "").trim();
-      okLen = (s) => s.length >= NAME_MIN && s.length <= NAME_MAX;
+      okLen = (s) => s.length >= NAME_MIN && s.length <= NAME_MAX2;
       THAI_NAME_MAX = 12;
       NAME_MAX_WORDS = 3;
+    }
+  });
+
+  // src/starter/starter-richtext.js
+  var starter_richtext_exports = {};
+  __export(starter_richtext_exports, {
+    renderRichView: () => renderRichView,
+    richEditor: () => richEditor
+  });
+  async function richEditor({ slug: slug2, value = "", onChange = () => {
+  }, minHeight = 180 }) {
+    const wrap2 = el("div", "st-rt");
+    const baseUrl = slug2 ? await kapi.toFileURL(await starterDir(slug2)) : "";
+    const bar = el("div", "st-rt-bar");
+    const area = el("div", "st-rt-area");
+    area.contentEditable = "true";
+    area.spellcheck = false;
+    area.style.minHeight = minHeight + "px";
+    area.innerHTML = htmlToDisplay(sanitizeHtml(value), baseUrl);
+    const emit3 = () => {
+      onChange(htmlToStorage(sanitizeHtml(area.innerHTML)));
+    };
+    const syncActive = () => {
+      for (const b of bar.querySelectorAll("button[data-cmd]:not([data-nostate])")) {
+        let on2 = false;
+        try {
+          on2 = document.queryCommandState(b.dataset.cmd);
+        } catch {
+        }
+        b.classList.toggle("on", !!on2);
+      }
+    };
+    const runCmd = (cmd, arg = null) => {
+      area.focus();
+      try {
+        document.execCommand("styleWithCSS", false, false);
+      } catch {
+      }
+      try {
+        document.execCommand(cmd, false, arg);
+      } catch (e) {
+        log("warn", "starter rt: " + cmd, e);
+      }
+    };
+    for (const c of CMDS) {
+      if (c.sep) {
+        bar.append(el("span", "st-rt-sep"));
+        continue;
+      }
+      const b = el("button", "st-rt-btn" + (c.cls ? " " + c.cls : ""), c.label);
+      b.type = "button";
+      b.dataset.cmd = c.cmd;
+      if (c.arg) b.dataset.arg = c.arg;
+      if (c.noState) b.dataset.nostate = "1";
+      b.title = c.tip();
+      b.onmousedown = (e) => e.preventDefault();
+      b.onclick = () => {
+        runCmd(c.cmd, c.cmd === "formatBlock" ? "<" + c.arg + ">" : c.arg || null);
+        syncActive();
+        emit3();
+      };
+      bar.append(b);
+    }
+    bar.append(el("span", "st-rt-sep"));
+    const imgBtn = el("button", "st-rt-btn", "\u{1F5BC}");
+    imgBtn.type = "button";
+    imgBtn.title = t("ui.starter.rtImage");
+    imgBtn.onmousedown = (e) => e.preventDefault();
+    imgBtn.onclick = async () => {
+      const p = await kapi.openImageDialog();
+      if (!p) return;
+      const f = await importImage(slug2, p);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      const url = baseUrl + "/images/" + encodeURIComponent(f);
+      area.focus();
+      try {
+        document.execCommand(
+          "insertHTML",
+          false,
+          '<img src="' + url + '" style="max-width: 100%" />'
+        );
+      } catch (e) {
+        log("warn", "starter rt: insert image", e);
+        area.append(Object.assign(document.createElement("img"), { src: url }));
+      }
+      emit3();
+    };
+    bar.append(imgBtn);
+    const linkBtn = el("button", "st-rt-btn", "\u{1F517}");
+    linkBtn.type = "button";
+    linkBtn.title = t("ui.starter.rtLink");
+    linkBtn.onmousedown = (e) => e.preventDefault();
+    linkBtn.onclick = async () => {
+      const sel = String(window.getSelection() || "");
+      if (!sel.trim()) {
+        setStatus(t("ui.starter.rtLinkNeedSel"));
+        return;
+      }
+      const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+      const url = await ask2(t("ui.starter.rtLinkAsk"), { placeholder: "https://" });
+      if (!url) return;
+      runCmd("createLink", url);
+      emit3();
+    };
+    bar.append(linkBtn);
+    area.oninput = emit3;
+    area.onkeyup = syncActive;
+    area.onmouseup = syncActive;
+    area.onpaste = (e) => {
+      e.preventDefault();
+      const txt = (e.clipboardData || window.clipboardData).getData("text/plain");
+      try {
+        document.execCommand("insertText", false, txt);
+      } catch {
+        area.textContent += txt;
+      }
+      emit3();
+    };
+    wrap2.append(bar, area);
+    wrap2.__area = area;
+    wrap2.__setHtml = (v2) => {
+      area.innerHTML = htmlToDisplay(sanitizeHtml(v2), baseUrl);
+    };
+    return wrap2;
+  }
+  async function renderRichView(slug2, html) {
+    const box2 = el("div", "st-rt-view");
+    const baseUrl = slug2 ? await kapi.toFileURL(await starterDir(slug2)) : "";
+    box2.innerHTML = htmlToDisplay(sanitizeHtml(html || ""), baseUrl);
+    return box2;
+  }
+  var CMDS;
+  var init_starter_richtext = __esm({
+    "src/starter/starter-richtext.js"() {
+      init_core();
+      init_i18n();
+      init_starter_html();
+      init_starter_store();
+      CMDS = [
+        { cmd: "undo", label: "\u21B6", tip: () => t("ui.starter.rtUndo"), noState: true },
+        { cmd: "redo", label: "\u21B7", tip: () => t("ui.starter.rtRedo"), noState: true },
+        { sep: true },
+        { cmd: "bold", label: "B", cls: "st-rt-b", tip: () => t("ui.starter.rtBold") },
+        { cmd: "italic", label: "I", cls: "st-rt-i", tip: () => t("ui.starter.rtItalic") },
+        { cmd: "underline", label: "U", cls: "st-rt-u", tip: () => t("ui.starter.rtUnderline") },
+        { cmd: "strikeThrough", label: "S", cls: "st-rt-s", tip: () => t("ui.starter.rtStrike") },
+        { sep: true },
+        { cmd: "formatBlock", arg: "h2", label: "H2", tip: () => t("ui.starter.rtH2"), noState: true },
+        { cmd: "formatBlock", arg: "h3", label: "H3", tip: () => t("ui.starter.rtH3"), noState: true },
+        { cmd: "formatBlock", arg: "p", label: "\xB6", tip: () => t("ui.starter.rtPara"), noState: true },
+        { cmd: "formatBlock", arg: "blockquote", label: "\u275D", tip: () => t("ui.starter.rtQuote"), noState: true },
+        { sep: true },
+        { cmd: "justifyLeft", label: "\u21E4", tip: () => t("ui.starter.rtLeft") },
+        { cmd: "justifyCenter", label: "\u2194", tip: () => t("ui.starter.rtCenter") },
+        { cmd: "justifyRight", label: "\u21E5", tip: () => t("ui.starter.rtRight") },
+        { sep: true },
+        { cmd: "insertUnorderedList", label: "\u2022", tip: () => t("ui.starter.rtList") },
+        { cmd: "insertOrderedList", label: "1.", tip: () => t("ui.starter.rtListNum") },
+        { cmd: "insertHorizontalRule", label: "\u2014", tip: () => t("ui.starter.rtRule"), noState: true },
+        { sep: true },
+        { cmd: "removeFormat", label: "\u2715", tip: () => t("ui.starter.rtClear"), noState: true }
+      ];
+    }
+  });
+
+  // src/starter/starter-fields.js
+  function reservedLabels() {
+    return { any: t("ui.starter.mentionAny"), user: t("ui.starter.mentionUser") };
+  }
+  function mentionBar(inp, cast, onChange = () => {
+  }) {
+    const box2 = el("div", "st-mentions");
+    const rich = !!(inp && inp.isContentEditable);
+    const rows = mentionChips(cast, reservedLabels());
+    box2.append(el("span", "st-mentions-label", t("ui.starter.mentionInsert")));
+    for (const r of rows) {
+      const b = el("button", "st-mentionchip" + (r.kind === "char" ? "" : " reserved"), r.token);
+      b.type = "button";
+      b.title = r.kind === "char" ? tf("ui.starter.mentionChipHint", r.name) : r.kind === "any" ? t("ui.starter.mentionAnyHint") : t("ui.starter.mentionUserHint");
+      b.dataset.token = r.token;
+      b.dataset.kind = r.kind;
+      b.onmousedown = (e) => e.preventDefault();
+      b.onclick = () => {
+        if (rich) {
+          inp.focus();
+          try {
+            document.execCommand("insertText", false, " " + r.token + " ");
+          } catch {
+            inp.append(document.createTextNode(" " + r.token + " "));
+          }
+          onChange(inp.innerHTML);
+          return;
+        }
+        const r22 = insertAt(inp.value, inp.selectionStart, inp.selectionEnd, r.token);
+        inp.value = r22.text;
+        inp.focus();
+        try {
+          inp.setSelectionRange(r22.caret, r22.caret);
+        } catch {
+        }
+        onChange(r22.text);
+      };
+      box2.append(b);
+    }
+    if (!(cast || []).length) box2.append(el("span", "st-dim", t("ui.starter.mentionNoCast")));
+    return box2;
+  }
+  function mentionWarn(host2, cast) {
+    const warn = el("div", "st-mention-warn");
+    warn.style.display = "none";
+    host2.append(warn);
+    return (text) => {
+      const bad = unknownMentions(text, cast);
+      warn.style.display = bad.length ? "" : "none";
+      warn.textContent = bad.length ? tf("ui.starter.mentionUnknown", bad.join(", ")) : "";
+    };
+  }
+  function mentionField(label, value, onInput, { cast = [], rows = 4, placeholder = "", hint = "" } = {}) {
+    const row2 = el("div", "st-field");
+    row2.append(el("label", null, label));
+    const ta = el("textarea", "wiki-input st-ta");
+    ta.rows = rows;
+    ta.value = value || "";
+    ta.placeholder = placeholder;
+    row2.append(ta);
+    if (hint) row2.append(el("div", "st-hint", hint));
+    const refresh = mentionWarn(row2, cast);
+    ta.oninput = () => {
+      onInput(ta.value);
+      refresh(ta.value);
+    };
+    row2.append(mentionBar(ta, cast, (v2) => {
+      onInput(v2);
+      refresh(v2);
+    }));
+    refresh(ta.value);
+    row2.__input = ta;
+    return row2;
+  }
+  function tagInput(label, get3, set, { placeholder = "" } = {}) {
+    const row2 = el("div", "st-field");
+    row2.append(el("label", null, label));
+    const picked = el("div", "st-tag-picked");
+    const inp = el("input", "wiki-input");
+    inp.placeholder = placeholder || t("ui.starter.tagOwnPlaceholder");
+    const redraw3 = () => {
+      picked.innerHTML = "";
+      const rows = normalizeTags(get3());
+      if (!rows.length) {
+        picked.append(el("span", "st-dim", t("ui.starter.noTagYet")));
+        return;
+      }
+      for (const tg of rows) {
+        const c = el("span", "st-tag on", tg);
+        const x = el("span", "st-tag-x", "\xD7");
+        x.title = t("ui.common.del");
+        x.onclick = () => {
+          set(toggleTag(get3(), tg));
+          redraw3();
+        };
+        c.append(x);
+        picked.append(c);
+      }
+    };
+    const add = () => {
+      const vals = inp.value.split(",").map((x) => x.trim()).filter(Boolean);
+      if (!vals.length) return;
+      set(normalizeTags([...get3() || [], ...vals]));
+      inp.value = "";
+      redraw3();
+    };
+    inp.onkeydown = (e) => {
+      if ((e.key === "Enter" || e.key === ",") && !e.isComposing) {
+        e.preventDefault();
+        add();
+      }
+    };
+    inp.onblur = add;
+    const btn2 = el("button", "k-ok", t("ui.starter.tagAdd"));
+    btn2.type = "button";
+    btn2.onmousedown = (e) => e.preventDefault();
+    btn2.onclick = add;
+    const own = el("div", "st-tag-own");
+    own.append(inp, btn2);
+    row2.append(picked, own);
+    redraw3();
+    row2.__input = inp;
+    row2.__redraw = redraw3;
+    return row2;
+  }
+  function promptFields(get3, set, { cast = [], label = "", hint = "" } = {}) {
+    const wrap2 = el("div", "st-prompts");
+    const head2 = el("div", "st-sub", label || t("ui.starter.fPrompts"));
+    const add = el("button", "k-ok st-prompt-add", "+ " + t("ui.starter.promptAdd"));
+    add.type = "button";
+    add.onclick = () => {
+      const rows = normalizePrompts(get3());
+      set([...rows, { k: nextPromptKey(rows), v: "" }]);
+      redraw3();
+    };
+    head2.append(add);
+    wrap2.append(head2);
+    if (hint) wrap2.append(el("div", "st-hint", hint));
+    const list = el("div", "st-prompt-list");
+    wrap2.append(list);
+    function redraw3() {
+      list.innerHTML = "";
+      const rows = normalizePrompts(get3());
+      if (!rows.length) {
+        list.append(el("div", "st-dim", t("ui.starter.promptEmpty")));
+        return;
+      }
+      rows.forEach((r, i5) => {
+        const box2 = el("div", "st-prompt-row");
+        const key2 = el("input", "wiki-input st-prompt-key");
+        key2.value = r.k;
+        key2.placeholder = t("ui.starter.promptKeyPlaceholder");
+        key2.oninput = () => {
+          const cur = normalizePrompts(get3());
+          if (cur[i5]) {
+            cur[i5] = { ...cur[i5], k: key2.value };
+            set(cur);
+          }
+        };
+        const val = el("textarea", "wiki-input st-ta st-prompt-val");
+        val.rows = 3;
+        val.value = r.v;
+        val.placeholder = t("ui.starter.promptValPlaceholder");
+        val.oninput = () => {
+          const cur = normalizePrompts(get3());
+          if (cur[i5]) {
+            cur[i5] = { ...cur[i5], v: val.value };
+            set(cur);
+          }
+        };
+        const del2 = el("button", "st-danger st-prompt-del", "\xD7");
+        del2.type = "button";
+        del2.title = t("ui.starter.promptDel");
+        del2.onclick = () => {
+          const cur = normalizePrompts(get3());
+          cur.splice(i5, 1);
+          set(cur);
+          redraw3();
+        };
+        const top = el("div", "st-prompt-top");
+        top.append(key2, del2);
+        box2.append(top, val);
+        if (cast.length) box2.append(mentionBar(val, cast, (v2) => {
+          const cur = normalizePrompts(get3());
+          if (cur[i5]) {
+            cur[i5] = { ...cur[i5], v: v2 };
+            set(cur);
+          }
+        }));
+        list.append(box2);
+      });
+    }
+    redraw3();
+    wrap2.__redraw = redraw3;
+    return wrap2;
+  }
+  async function richMentionField(label, value, {
+    slug: slug2 = "",
+    cast = [],
+    placeholder = "",
+    hint = "",
+    minHeight = 150
+  } = {}) {
+    const { richEditor: richEditor2 } = await Promise.resolve().then(() => (init_starter_richtext(), starter_richtext_exports));
+    const row2 = el("div", "st-field");
+    row2.append(el("label", null, label));
+    let cur = String(value || "");
+    let refresh = () => {
+    };
+    const rt = await richEditor2({
+      slug: slug2,
+      value: cur,
+      minHeight,
+      onChange: (html) => {
+        cur = html;
+        refresh(cur);
+      }
+    });
+    if (placeholder) rt.__area.dataset.ph = placeholder;
+    row2.append(rt);
+    if (hint) row2.append(el("div", "st-hint", hint));
+    refresh = mentionWarn(row2, cast);
+    row2.append(mentionBar(rt.__area, cast, (html) => {
+      cur = html;
+      refresh(cur);
+    }));
+    refresh(cur);
+    row2.__getHtml = () => cur;
+    row2.__setHtml = (v2) => {
+      cur = String(v2 || "");
+      rt.__setHtml(cur);
+      refresh(cur);
+    };
+    row2.__area = rt.__area;
+    return row2;
+  }
+  var init_starter_fields = __esm({
+    "src/starter/starter-fields.js"() {
+      init_core();
+      init_i18n();
+      init_entity_mention();
+      init_starter_model();
     }
   });
 
   // src/starter/starter-cast.js
   var starter_cast_exports = {};
   __export(starter_cast_exports, {
+    isBlankChar: () => isBlankChar,
+    pruneBlank: () => pruneBlank,
     renderCastStep: () => renderCastStep,
-    renderNameHints: () => renderNameHints
+    renderNameHints: () => renderNameHints,
+    resetCastEditor: () => resetCastEditor
   });
+  function resetCastEditor() {
+    CAST_C.editing = "";
+  }
+  function isBlankChar(c) {
+    if (!c) return true;
+    const some = [
+      c.name,
+      c.persona,
+      c.blurb,
+      c.image,
+      c.dialogue,
+      c.shortcode,
+      c.selfPronoun,
+      c.wikiPath
+    ].some((v2) => String(v2 || "").trim());
+    return !some && !(c.tags || []).length && !(c.aliases || []).length && !normalizePrompts(c.prompts).length;
+  }
+  function pruneBlank(cast, keepId = "") {
+    return (cast || []).filter((c) => c.id === keepId || !isBlankChar(c));
+  }
   async function renderCastStep(host2, ctx2) {
     const s = ctx2.starter;
     s.cast = s.cast || [];
@@ -154424,6 +158612,12 @@ ${s.body}`).join("\n\n");
       if (ch) return renderEditor(host2, ctx2, ch);
       CAST_C.editing = "";
     }
+    const kept = pruneBlank(s.cast, "");
+    if (kept.length !== s.cast.length) {
+      s.cast = kept;
+      ctx2.save();
+    }
+    const adv = isAdv(s);
     const bar = el("div", "st-row-btns");
     const add = el("button", "k-ok", "+ " + t("ui.starter.castAdd"));
     add.onclick = async () => {
@@ -154478,6 +158672,7 @@ ${s.body}`).join("\n\n");
       const meta2 = [];
       if (ch.gender) meta2.push((GENDERS.find((g) => g.id === ch.gender) || {}).label || "");
       if (ch.wikiPath) meta2.push("\u{1F4DA} " + t("ui.starter.inWiki"));
+      if (adv) meta2.push("\u{1F516} " + mentionToken(shortcodeOf(ch)));
       if (meta2.length) info.append(el("div", "st-cast-meta", meta2.join(" \xB7 ")));
       const desc = String(ch.persona || "").trim();
       info.append(el(
@@ -154485,6 +158680,12 @@ ${s.body}`).join("\n\n");
         "st-cast-desc",
         desc ? desc.slice(0, 120) + (desc.length > 120 ? "\u2026" : "") : t("ui.starter.castNoDesc")
       ));
+      if (adv && (ch.tags || []).length) {
+        const tg = el("div", "st-cast-tags");
+        for (const x of ch.tags) tg.append(el("span", "st-tag on", x));
+        info.append(tg);
+      }
+      if (!charReady(ch)) info.append(el("div", "st-cast-todo", "\u26A0 " + t("ui.starter.castNeedName")));
       card.append(info);
       const btns = el("div", "st-cast-btns");
       const edit = el("button", null, t("ui.common.edit"));
@@ -154537,6 +158738,8 @@ ${s.body}`).join("\n\n");
   }
   async function renderEditor(host2, ctx2, ch) {
     const s = ctx2.starter;
+    const adv = isAdv(s);
+    const others = (s.cast || []).filter((c) => c.id !== ch.id && String(c.name || "").trim());
     host2.innerHTML = "";
     const save = () => {
       s.cast = upsertChar(s.cast, ch);
@@ -154546,6 +158749,7 @@ ${s.body}`).join("\n\n");
     const back = el("button", "st-back", "\u2190 " + t("ui.starter.castBackToList"));
     back.onclick = async () => {
       CAST_C.editing = "";
+      s.cast = pruneBlank(s.cast, "");
       await ctx2.save({ now: true });
       renderCastStep(host2, ctx2);
     };
@@ -154611,7 +158815,41 @@ ${s.body}`).join("\n\n");
       save();
     };
     nameRow.append(nameInp);
+    let lastChecked = String(ch.name || "");
+    nameInp.onblur = async () => {
+      const now = String(ch.name || "").trim();
+      if (ch.wikiPath || !now || now === lastChecked) return;
+      lastChecked = now;
+      const got = await autoLinkChar(s.slug, ch);
+      if (!got) return;
+      save();
+      await ctx2.save({ now: true });
+      setStatus(tf("ui.starter.charLinkedFromWiki", ch.name));
+      renderEditor(host2, ctx2, ch);
+    };
     host2.append(nameRow);
+    if (adv) {
+      const scRow = el("div", "st-field");
+      scRow.append(el("label", null, t("ui.starter.fShortcode")));
+      const scInp = el("input", "wiki-input");
+      scInp.value = ch.shortcode || "";
+      scInp.placeholder = t("ui.starter.fShortcodePlaceholder");
+      const scPreview = el("div", "st-hint st-shortcode-preview");
+      const drawSc = () => {
+        scPreview.textContent = tf("ui.starter.fShortcodePreview", mentionToken(shortcodeOf(ch)));
+        const bad = isReserved(shortcodeOf(ch));
+        scPreview.classList.toggle("st-warn", bad);
+        if (bad) scPreview.textContent = tf("ui.starter.fShortcodeReserved", shortcodeOf(ch));
+      };
+      scInp.oninput = () => {
+        ch.shortcode = scInp.value;
+        save();
+        drawSc();
+      };
+      scRow.append(scInp, scPreview);
+      drawSc();
+      host2.append(scRow);
+    }
     const genRow = el("div", "st-field");
     genRow.append(el("label", null, t("ui.starter.fGender")));
     const gen = el("div", "st-gender");
@@ -154653,6 +158891,55 @@ ${s.body}`).join("\n\n");
     if (!String(s.intro || "").trim()) descBtns.append(el("span", "st-dim", t("ui.starter.aiBetterWithIntro")));
     descRow.append(descBtns);
     host2.append(descRow);
+    if (adv) {
+      const dlgRow = mentionField(
+        t("ui.starter.fDialogue"),
+        ch.dialogue,
+        (v2) => {
+          ch.dialogue = v2;
+          save();
+        },
+        {
+          cast: others,
+          rows: 8,
+          // โทเคนตัวอย่างต้องส่งผ่าน tf() — `t()` คลาย `{{`→`{` (ดู formatMsg ใน i18n.js)
+          placeholder: tf("ui.starter.fDialoguePlaceholder", mentionToken(MENTION_ANY)),
+          hint: t("ui.starter.fDialogueHint")
+        }
+      );
+      const dlgBtns = el("div", "st-row-btns");
+      dlgBtns.append(aiBtn(t("ui.starter.aiWriteDialogue"), async (reqId) => {
+        if (!String(ch.name || "").trim()) {
+          setStatus(t("ui.starter.needCharName"));
+          return;
+        }
+        const out = await askAI("char-dialogue", charDialoguePrompt(s, ch), SYS_WRITER(), reqId);
+        if (out) {
+          ch.dialogue = out;
+          dlgRow.__input.value = out;
+          save();
+        } else setStatus(t("ui.starter.aiNoResult"));
+      }));
+      dlgRow.append(dlgBtns);
+      host2.append(dlgRow);
+      host2.append(tagInput(
+        t("ui.starter.fCharTags"),
+        () => ch.tags || [],
+        (v2) => {
+          ch.tags = normalizeTags(v2);
+          save();
+        },
+        { placeholder: t("ui.starter.fCharTagsPlaceholder") }
+      ));
+      host2.append(promptFields(
+        () => ch.prompts || [],
+        (v2) => {
+          ch.prompts = normalizePrompts(v2);
+          save();
+        },
+        { cast: others, label: t("ui.starter.fPrompts"), hint: t("ui.starter.fPromptsHint") }
+      ));
+    }
     const more = el("details", "st-more");
     more.append(el("summary", null, t("ui.starter.moreFields")));
     const aliasRow = el("div", "st-field");
@@ -154724,251 +159011,9 @@ ${s.body}`).join("\n\n");
       init_starter_store();
       init_starter_wiki();
       init_starter_names();
+      init_entity_mention();
+      init_starter_fields();
       CAST_C = { editing: "" };
-    }
-  });
-
-  // src/starter/starter-html.js
-  var starter_html_exports = {};
-  __export(starter_html_exports, {
-    ALLOWED_ATTRS: () => ALLOWED_ATTRS,
-    ALLOWED_TAGS: () => ALLOWED_TAGS,
-    IMG_PREFIX: () => IMG_PREFIX,
-    cleanStyle: () => cleanStyle,
-    htmlToDisplay: () => htmlToDisplay,
-    htmlToStorage: () => htmlToStorage,
-    referencedImages: () => referencedImages,
-    sanitizeHtml: () => sanitizeHtml
-  });
-  function cleanStyle(v2) {
-    return String(v2 || "").split(";").map((x) => x.trim()).filter(Boolean).filter((x) => STYLE_OK.test(x.split(":")[0].trim())).filter((x) => !/url\s*\(/i.test(x) && !/expression/i.test(x)).join("; ");
-  }
-  function attrsOf(raw) {
-    const out = {};
-    const re = /([a-zA-Z:_-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
-    let m;
-    while ((m = re.exec(raw)) !== null) {
-      out[m[1].toLowerCase()] = m[3] !== void 0 ? m[3] : m[4] !== void 0 ? m[4] : m[5] || "";
-    }
-    return out;
-  }
-  function safeUrl(v2) {
-    const s = String(v2 || "").trim();
-    if (/^(javascript|vbscript)\s*:/i.test(s)) return "";
-    if (/^data:/i.test(s) && !/^data:image\//i.test(s)) return "";
-    return s;
-  }
-  function sanitizeHtml(html) {
-    let s = String(html == null ? "" : html);
-    s = s.replace(/<(script|style|iframe|object|embed|link|meta)\b[\s\S]*?<\/\1\s*>/gi, "");
-    s = s.replace(/<(script|style|iframe|object|embed|link|meta)\b[^>]*\/?>/gi, "");
-    s = s.replace(/<!--[\s\S]*?-->/g, "");
-    return s.replace(/<(\/?)([a-zA-Z0-9]+)([^>]*)>/g, (all, slash, tagRaw, rest) => {
-      const tag3 = tagRaw.toLowerCase();
-      if (!ALLOWED_TAGS.has(tag3)) return "";
-      if (slash) return "</" + tag3 + ">";
-      const a = attrsOf(rest);
-      const keep = [];
-      for (const [k, v2] of Object.entries(a)) {
-        if (k.startsWith("on")) continue;
-        if (!ALLOWED_ATTRS.has(k)) continue;
-        if (k === "href" || k === "src") {
-          const u = safeUrl(v2);
-          if (!u) continue;
-          keep.push(k + '="' + u.replace(/"/g, "&quot;") + '"');
-          continue;
-        }
-        if (k === "style") {
-          const st = cleanStyle(v2);
-          if (st) keep.push('style="' + st.replace(/"/g, "&quot;") + '"');
-          continue;
-        }
-        keep.push(k + '="' + String(v2).replace(/"/g, "&quot;") + '"');
-      }
-      const selfClose = tag3 === "br" || tag3 === "img" || tag3 === "hr" ? " /" : "";
-      return "<" + tag3 + (keep.length ? " " + keep.join(" ") : "") + selfClose + ">";
-    });
-  }
-  function htmlToStorage(html) {
-    return String(html || "").replace(/src\s*=\s*"([^"]*)"/gi, (all, url) => {
-      const m = /(^|\/)images\/([^/"?#]+)(?:[?#][^"]*)?$/i.exec(decodeURI(url));
-      return m ? 'src="' + IMG_PREFIX + m[2] + '"' : all;
-    });
-  }
-  function htmlToDisplay(html, baseUrl) {
-    const base4 = String(baseUrl || "").replace(/\/+$/, "");
-    if (!base4) return String(html || "");
-    return String(html || "").replace(/src\s*=\s*"([^"]*)"/gi, (all, url) => {
-      if (!url.startsWith(IMG_PREFIX)) return all;
-      return 'src="' + base4 + "/" + url.split("/").map(encodeURIComponent).join("/") + '"';
-    });
-  }
-  function referencedImages(html) {
-    const out = [];
-    const re = /src\s*=\s*"([^"]*)"/gi;
-    let m;
-    while ((m = re.exec(String(html || ""))) !== null) {
-      if (m[1].startsWith(IMG_PREFIX)) out.push(m[1].slice(IMG_PREFIX.length));
-    }
-    return [...new Set(out)];
-  }
-  var ALLOWED_TAGS, ALLOWED_ATTRS, STYLE_OK, IMG_PREFIX;
-  var init_starter_html = __esm({
-    "src/starter/starter-html.js"() {
-      ALLOWED_TAGS = /* @__PURE__ */ new Set([
-        "p",
-        "br",
-        "div",
-        "span",
-        "b",
-        "strong",
-        "i",
-        "em",
-        "u",
-        "s",
-        "strike",
-        "ul",
-        "ol",
-        "li",
-        "blockquote",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "a",
-        "img",
-        "hr"
-      ]);
-      ALLOWED_ATTRS = /* @__PURE__ */ new Set(["href", "src", "alt", "title", "style", "align"]);
-      STYLE_OK = /^(text-align|font-weight|font-style|text-decoration|margin|padding|width|max-width)$/i;
-      IMG_PREFIX = "images/";
-    }
-  });
-
-  // src/starter/starter-richtext.js
-  var starter_richtext_exports = {};
-  __export(starter_richtext_exports, {
-    renderRichView: () => renderRichView,
-    richEditor: () => richEditor
-  });
-  async function richEditor({ slug: slug2, value = "", onChange = () => {
-  }, minHeight = 180 }) {
-    const wrap2 = el("div", "st-rt");
-    const baseUrl = slug2 ? await kapi.toFileURL(await starterDir(slug2)) : "";
-    const bar = el("div", "st-rt-bar");
-    const area = el("div", "st-rt-area");
-    area.contentEditable = "true";
-    area.spellcheck = false;
-    area.style.minHeight = minHeight + "px";
-    area.innerHTML = htmlToDisplay(sanitizeHtml(value), baseUrl);
-    const emit3 = () => {
-      onChange(htmlToStorage(sanitizeHtml(area.innerHTML)));
-    };
-    const syncActive = () => {
-      for (const b of bar.querySelectorAll("button[data-cmd]")) {
-        let on2 = false;
-        try {
-          on2 = document.queryCommandState(b.dataset.cmd);
-        } catch {
-        }
-        b.classList.toggle("on", !!on2);
-      }
-    };
-    for (const c of CMDS) {
-      if (c.sep) {
-        bar.append(el("span", "st-rt-sep"));
-        continue;
-      }
-      const b = el("button", "st-rt-btn" + (c.cls ? " " + c.cls : ""), c.label);
-      b.type = "button";
-      b.dataset.cmd = c.cmd;
-      b.title = c.tip();
-      b.onmousedown = (e) => e.preventDefault();
-      b.onclick = () => {
-        area.focus();
-        try {
-          document.execCommand(c.cmd, false, null);
-        } catch (e) {
-          log("warn", "starter rt: " + c.cmd, e);
-        }
-        syncActive();
-        emit3();
-      };
-      bar.append(b);
-    }
-    bar.append(el("span", "st-rt-sep"));
-    const imgBtn = el("button", "st-rt-btn", "\u{1F5BC}");
-    imgBtn.type = "button";
-    imgBtn.title = t("ui.starter.rtImage");
-    imgBtn.onmousedown = (e) => e.preventDefault();
-    imgBtn.onclick = async () => {
-      const p = await kapi.openImageDialog();
-      if (!p) return;
-      const f = await importImage(slug2, p);
-      if (!f) {
-        setStatus(t("ui.starter.imgCopyFail"));
-        return;
-      }
-      const url = baseUrl + "/images/" + encodeURIComponent(f);
-      area.focus();
-      try {
-        document.execCommand(
-          "insertHTML",
-          false,
-          '<img src="' + url + '" style="max-width: 100%" />'
-        );
-      } catch (e) {
-        log("warn", "starter rt: insert image", e);
-        area.append(Object.assign(document.createElement("img"), { src: url }));
-      }
-      emit3();
-    };
-    bar.append(imgBtn);
-    area.oninput = emit3;
-    area.onkeyup = syncActive;
-    area.onmouseup = syncActive;
-    area.onpaste = (e) => {
-      e.preventDefault();
-      const txt = (e.clipboardData || window.clipboardData).getData("text/plain");
-      try {
-        document.execCommand("insertText", false, txt);
-      } catch {
-        area.textContent += txt;
-      }
-      emit3();
-    };
-    wrap2.append(bar, area);
-    wrap2.__area = area;
-    wrap2.__setHtml = (v2) => {
-      area.innerHTML = htmlToDisplay(sanitizeHtml(v2), baseUrl);
-    };
-    return wrap2;
-  }
-  async function renderRichView(slug2, html) {
-    const box2 = el("div", "st-rt-view");
-    const baseUrl = slug2 ? await kapi.toFileURL(await starterDir(slug2)) : "";
-    box2.innerHTML = htmlToDisplay(sanitizeHtml(html || ""), baseUrl);
-    return box2;
-  }
-  var CMDS;
-  var init_starter_richtext = __esm({
-    "src/starter/starter-richtext.js"() {
-      init_core();
-      init_i18n();
-      init_starter_html();
-      init_starter_store();
-      CMDS = [
-        { cmd: "bold", label: "B", cls: "st-rt-b", tip: () => t("ui.starter.rtBold") },
-        { cmd: "italic", label: "I", cls: "st-rt-i", tip: () => t("ui.starter.rtItalic") },
-        { cmd: "underline", label: "U", cls: "st-rt-u", tip: () => t("ui.starter.rtUnderline") },
-        { sep: true },
-        { cmd: "justifyLeft", label: "\u21E4", tip: () => t("ui.starter.rtLeft") },
-        { cmd: "justifyCenter", label: "\u2194", tip: () => t("ui.starter.rtCenter") },
-        { cmd: "justifyRight", label: "\u21E5", tip: () => t("ui.starter.rtRight") },
-        { sep: true },
-        { cmd: "insertUnorderedList", label: "\u2022", tip: () => t("ui.starter.rtList") },
-        { cmd: "removeFormat", label: "\u2715", tip: () => t("ui.starter.rtClear") }
-      ];
     }
   });
 
@@ -155292,6 +159337,7 @@ ${s.body}`).join("\n\n");
     const s = ctx2.starter;
     const i5 = clampStep(s.step);
     const step = STEPS[i5];
+    if (step.id !== "cast") resetCastEditor();
     host2.innerHTML = "";
     const wrap2 = el("div", "st-wizard");
     host2.append(wrap2);
@@ -155300,6 +159346,7 @@ ${s.body}`).join("\n\n");
     back.onclick = () => ctx2.goList();
     head2.append(back);
     head2.append(el("div", "st-wz-title", s.name || t("ui.starter.untitled")));
+    head2.append(modeSwitch(ctx2));
     const prog = starterProgress(s, STEPS);
     head2.append(el("div", "st-wz-prog", tf("ui.starter.progress", prog.done, prog.total)));
     wrap2.append(head2);
@@ -155354,12 +159401,28 @@ ${s.body}`).join("\n\n");
     if (isLastStep(i5)) {
       const miss = missingSteps(s, STEPS);
       const fin = el("button", "k-ok st-finish", t("ui.starter.finish"));
-      if (!starterReady(s, STEPS)) {
-        fin.disabled = true;
+      if (miss.length) {
+        fin.classList.add("st-finish-warn");
         fin.title = t("ui.starter.finishBlocked") + miss.map((x) => x.title).join(", ");
-        foot.append(el("div", "st-miss", fin.title));
+        const note = el("div", "st-miss", fin.title);
+        const jump = el("button", "st-linkbtn", t("ui.starter.finishGoFix"));
+        jump.onclick = () => {
+          s.step = Math.max(0, stepIndex(miss[0].id));
+          ctx2.save();
+          ctx2.rerender();
+        };
+        note.append(jump);
+        foot.append(note);
       }
       fin.onclick = async () => {
+        if (!starterReady(s, STEPS)) {
+          const now = missingSteps(s, STEPS);
+          setStatus(t("ui.starter.finishBlocked") + now.map((x) => x.title).join(", "));
+          s.step = Math.max(0, stepIndex(now[0].id));
+          ctx2.save();
+          ctx2.rerender();
+          return;
+        }
         s.done = true;
         await ctx2.save({ now: true });
         ctx2.goHome();
@@ -155382,6 +159445,26 @@ ${s.body}`).join("\n\n");
     }
     return true;
   }
+  function modeSwitch(ctx2) {
+    const s = ctx2.starter;
+    const box2 = el("div", "st-mode");
+    box2.title = t("ui.starter.modeHint");
+    for (const m of MODES) {
+      const on2 = normMode(s.mode) === m.id;
+      const b = el("button", "st-mode-btn" + (on2 ? " on" : ""), m.icon + " " + m.label);
+      b.dataset.mode = m.id;
+      b.title = m.hint;
+      b.onclick = () => {
+        if (normMode(s.mode) === m.id) return;
+        s.mode = m.id;
+        ctx2.save();
+        setStatus(m.icon + " " + m.label);
+        ctx2.rerender();
+      };
+      box2.append(b);
+    }
+    return box2;
+  }
   var init_starter_wizard = __esm({
     "src/starter/starter-wizard.js"() {
       init_core();
@@ -155389,6 +159472,7 @@ ${s.body}`).join("\n\n");
       init_starter_steps_def();
       init_starter_model();
       init_starter_steps();
+      init_starter_cast();
     }
   });
 
@@ -155567,8 +159651,7 @@ ${s.body}`).join("\n\n");
     EXPORT_BOOK: () => EXPORT_BOOK,
     FORMATS: () => FORMATS,
     convertDialog: () => convertDialog,
-    convertScenario: () => convertScenario,
-    plainTranscript: () => plainTranscript
+    convertScenario: () => convertScenario
   });
   async function ensureBook() {
     const secs = await listSections();
@@ -155619,13 +159702,13 @@ ${s.body}`).join("\n\n");
     for (let i5 = 0; i5 < chunks.length; i5++) {
       if (onProgress) onProgress(i5, chunks.length);
       const build = format3 === "screenplay" ? spPrompt : prosePrompt;
-      const prompt2 = build(
+      const prompt = build(
         s,
         sc,
         chunks[i5],
         { part: i5 + 1, total: chunks.length, tail, nameOf: nameOf2 }
       );
-      const out = await callAI2(prompt2, t("ui.starter.sysWriter"));
+      const out = await callAI2(prompt, t("ui.starter.sysWriter"));
       if (!out) {
         if (!parts.length) {
           setStatus(t("ui.starter.cvFail"));
@@ -155764,18 +159847,25 @@ ${s.body}`).join("\n\n");
           }
         }
         done2(made);
-        if (made.length) setStatus(tf("ui.starter.cvDone", made.length, EXPORT_BOOK));
+        if (!made.length) return;
+        setStatus(tf("ui.starter.cvDone", made.length, EXPORT_BOOK));
+        const v2 = await choose(tf("ui.starter.cvOpenAsk", made.length, EXPORT_BOOK), [
+          { label: t("ui.starter.cvOpenNow"), value: "open", primary: true },
+          { label: t("ui.starter.cvStayHere"), value: null }
+        ]);
+        if (v2 !== "open") return;
+        try {
+          const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+          await buildTree2();
+          await openScene2(made[0]);
+        } catch (e) {
+          log("warn", "starter open after convert", e);
+        }
       };
       foot.append(cancel, go);
       box2.append(foot);
       ov.append(box2);
       document.body.append(ov);
-    });
-  }
-  function plainTranscript(s, sc) {
-    return transcriptText(sc, (id) => {
-      const c = charById(s, id);
-      return c && c.name || "";
     });
   }
   var EXPORT_BOOK, FORMATS;
@@ -155786,6 +159876,7 @@ ${s.body}`).join("\n\n");
       init_section_ops();
       init_scene_ops();
       init_app();
+      init_ui();
       init_starter_model();
       init_starter_choices();
       init_starter_render_prose();
@@ -155996,6 +160087,71 @@ ${s.body}`).join("\n\n");
     renderStarterHome: () => renderStarterHome,
     scenarioDialog: () => scenarioDialog
   });
+  function aiRow(btn2) {
+    const row2 = el("div", "st-row-btns");
+    row2.append(btn2);
+    return row2;
+  }
+  function draftImagePicker({ slug: slug2, root, get: get3, set, ratio = "st-img-thumb", label = "", hint = "" }) {
+    const row2 = el("div", "st-field st-img-field");
+    if (label) row2.append(el("label", null, label));
+    const box2 = el("div", "st-img-box " + ratio);
+    const draw3 = async () => {
+      box2.replaceChildren();
+      const url = await imageUrl(slug2, get3());
+      if (url) {
+        const im = el("img");
+        im.src = url;
+        im.alt = "";
+        im.title = t("ui.wiki.clickExpand2");
+        im.onclick = async () => {
+          const { imageLightbox: imageLightbox2 } = await Promise.resolve().then(() => (init_wiki(), wiki_exports));
+          imageLightbox2(url, "");
+        };
+        box2.append(im);
+      } else box2.append(el("div", "st-cover-empty", t("ui.starter.noImage")));
+    };
+    const btns = el("div", "st-row-btns");
+    const fromFile = el("button", null, t("ui.starter.imgFromFile"));
+    fromFile.type = "button";
+    fromFile.onclick = async () => {
+      const p = await kapi.openImageDialog();
+      if (!p) return;
+      const f = await importImage(slug2, p);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      set(f);
+      await draw3();
+    };
+    const fromGal = el("button", null, t("ui.starter.imgFromGallery"));
+    fromGal.type = "button";
+    fromGal.onclick = async () => {
+      const { pickImage: pickImage2 } = await Promise.resolve().then(() => (init_gallery(), gallery_exports));
+      const it = await pickImage2(root);
+      if (!it || !it.file) return;
+      const f = await importFromGallery(slug2, it.file);
+      if (!f) {
+        setStatus(t("ui.starter.imgCopyFail"));
+        return;
+      }
+      set(f);
+      await draw3();
+    };
+    const clr = el("button", null, t("ui.starter.imgClear"));
+    clr.type = "button";
+    clr.onclick = async () => {
+      set("");
+      await draw3();
+    };
+    btns.append(fromFile, fromGal, clr);
+    row2.append(box2, btns);
+    if (hint) row2.append(el("div", "st-hint", hint));
+    draw3();
+    row2.__redraw = draw3;
+    return row2;
+  }
   async function renderStarterHome(host2, ctx2) {
     const s = ctx2.starter;
     host2.innerHTML = "";
@@ -156034,6 +160190,7 @@ ${s.body}`).join("\n\n");
     const edit = el("button", null, "\u270F\uFE0F " + t("ui.starter.editStarter"));
     edit.onclick = () => ctx2.goWizard();
     heroBtns.append(edit);
+    heroBtns.append(modeSwitch({ ...ctx2, rerender: () => renderStarterHome(host2, ctx2) }));
     if (rows.some((r) => (r.turns || []).length)) {
       const cv = el("button", "k-ok", "\u{1F4DD} " + t("ui.starter.cvBtn"));
       cv.title = t("ui.starter.cvBtnHint");
@@ -156097,7 +160254,7 @@ ${s.body}`).join("\n\n");
     wrap2.append(bar);
     const list = el("div", "st-sc-list");
     wrap2.append(list);
-    const drawList3 = () => {
+    const drawList3 = async () => {
       list.innerHTML = "";
       const hit = searchScenarios(rows, SC_C.query);
       if (!hit.length) {
@@ -156110,6 +160267,15 @@ ${s.body}`).join("\n\n");
       }
       for (const sc of hit) {
         const card = el("div", "st-sc-card");
+        const thUrl = await imageUrl(s.slug, sc.thumb);
+        if (thUrl) {
+          const th = el("div", "st-img-box st-img-thumb st-sc-thumb");
+          const im = el("img");
+          im.src = thUrl;
+          im.alt = sc.title || "";
+          th.append(im);
+          card.append(th);
+        }
         const main = el("div", "st-sc-main");
         main.append(el("div", "st-sc-title", sc.title || t("ui.starter.scUntitled")));
         if (sc.prevId) {
@@ -156127,6 +160293,8 @@ ${s.body}`).join("\n\n");
         if ((sc.exports || []).length) {
           meta2.append(el("span", "st-sc-exported", tf("ui.starter.scExported", sc.exports.length)));
         }
+        const nAdv = scenarioAdvFilled(sc);
+        if (nAdv) meta2.append(el("span", "st-sc-adv", "\u2699\uFE0F " + tf("ui.starter.scAdvBadge", nAdv)));
         main.append(meta2);
         card.append(main);
         const btns = el("div", "st-sc-btns");
@@ -156161,7 +160329,7 @@ ${s.body}`).join("\n\n");
         list.append(card);
       }
     };
-    drawList3();
+    await drawList3();
     const up = lastUpdated(s, rows);
     wrap2.append(el(
       "div",
@@ -156183,14 +160351,28 @@ ${s.body}`).join("\n\n");
   }
   function scenarioDialog(ctx2, sc, rows) {
     const s = ctx2.starter;
+    const adv = isAdv(s);
+    const cast = (s.cast || []).filter((c) => String(c.name || "").trim());
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog k-wide st-sc-dlg");
-      box2.append(el("div", "k-dlg-title", t("ui.starter.scDlgTitle")));
+      box2.append(el("div", "k-dlg-title", t("ui.starter.scDlgTitle") + (adv ? " \xB7 \u2699\uFE0F " + t("ui.starter.modeAdv") : "")));
       const done2 = (v2) => {
         ov.remove();
         resolve(v2);
       };
+      let thumb = sc.thumb || "";
+      box2.append(draftImagePicker({
+        slug: s.slug,
+        root: ctx2.root,
+        get: () => thumb,
+        set: (v2) => {
+          thumb = v2;
+        },
+        ratio: "st-img-thumb",
+        label: t("ui.starter.scThumb"),
+        hint: t("ui.starter.scThumbHint")
+      }));
       const nameRow = el("div", "st-field");
       nameRow.append(el("label", null, t("ui.starter.scName")));
       const nameInp = el("input", "wiki-input");
@@ -156266,6 +160448,129 @@ ${s.body}`).join("\n\n");
       castRow.append(castBox);
       castRow.append(el("div", "st-hint", t("ui.starter.scMyCharsHint")));
       box2.append(castRow);
+      let openerImage = sc.openerImage || "";
+      let descRow = null, openRow = null, goalRow = null, condRow = null, moodRow = null;
+      if (adv) {
+        const advBox = el("div", "st-adv-box");
+        advBox.append(el("div", "st-sub", "\u2699\uFE0F " + t("ui.starter.scAdvHead")));
+        advBox.append(el("div", "st-hint", tf("ui.starter.scAdvHint", TOK_ANY, TOK_USER)));
+        descRow = mentionField(
+          t("ui.starter.scDesc"),
+          sc.desc,
+          () => {
+          },
+          { cast, rows: 5, placeholder: tf("ui.starter.scDescPlaceholder", TOK_ANY) }
+        );
+        advBox.append(descRow);
+        moodRow = mentionField(
+          t("ui.starter.scMood"),
+          sc.mood,
+          () => {
+          },
+          {
+            cast,
+            rows: 2,
+            placeholder: t("ui.starter.scMoodPlaceholder"),
+            hint: t("ui.starter.scMoodHint")
+          }
+        );
+        moodRow.append(aiRow(aiBtn(t("ui.starter.aiHelp"), async (reqId) => {
+          const out = await askAI(
+            "scenario-mood",
+            moodPrompt(s, { ...sc, title: nameInp.value, synopsis: synInp.value }),
+            SYS_WRITER(),
+            reqId
+          );
+          if (out) moodRow.__input.value = out;
+          else setStatus(t("ui.starter.aiNoResult"));
+        })));
+        advBox.append(moodRow);
+        const openSlot = el("div", "st-open-slot");
+        advBox.append(openSlot);
+        richMentionField(t("ui.starter.scOpener"), sc.opener, {
+          slug: s.slug,
+          cast,
+          minHeight: 150,
+          placeholder: tf("ui.starter.scOpenerPlaceholder", TOK_ANY),
+          hint: t("ui.starter.scOpenerHint")
+        }).then((row2) => {
+          openRow = row2;
+          const opBtns = el("div", "st-row-btns");
+          opBtns.append(aiBtn(t("ui.starter.aiWriteOpener"), async (reqId) => {
+            const out = await askAI(
+              "scenario-opener",
+              openerPrompt(s, { ...sc, title: nameInp.value, synopsis: synInp.value }),
+              SYS_WRITER(),
+              reqId
+            );
+            if (out) openRow.__setHtml(out);
+            else setStatus(t("ui.starter.aiNoResult"));
+          }));
+          row2.append(opBtns);
+          row2.append(draftImagePicker({
+            slug: s.slug,
+            root: ctx2.root,
+            get: () => openerImage,
+            set: (v2) => {
+              openerImage = v2;
+            },
+            ratio: "st-img-thumb",
+            label: t("ui.starter.scOpenerImage"),
+            hint: t("ui.starter.scOpenerImageHint")
+          }));
+          openSlot.replaceChildren(row2);
+        }).catch((e) => {
+          log("error", "starter: opener editor", e);
+          openSlot.append(el("div", "st-err", t("ui.starter.stepDrawFail")));
+        });
+        goalRow = mentionField(
+          t("ui.starter.scGoal"),
+          sc.goal,
+          () => {
+          },
+          { cast, rows: 3, placeholder: tf("ui.starter.scGoalPlaceholder", TOK_ANY) }
+        );
+        goalRow.append(aiRow(aiBtn(t("ui.starter.aiHelp"), async (reqId) => {
+          const out = await askAI(
+            "scenario-goal",
+            goalPrompt(s, { ...sc, title: nameInp.value, synopsis: synInp.value }),
+            SYS_WRITER(),
+            reqId
+          );
+          if (out) goalRow.__input.value = out;
+          else setStatus(t("ui.starter.aiNoResult"));
+        })));
+        advBox.append(goalRow);
+        condRow = mentionField(
+          t("ui.starter.scCond"),
+          sc.conditions,
+          () => {
+          },
+          {
+            cast,
+            rows: 4,
+            placeholder: tf("ui.starter.scCondPlaceholder", TOK_ANY, TOK_USER),
+            hint: t("ui.starter.scCondHint")
+          }
+        );
+        condRow.append(aiRow(aiBtn(t("ui.starter.aiHelp"), async (reqId) => {
+          const out = await askAI(
+            "scenario-cond",
+            conditionsPrompt(s, {
+              ...sc,
+              title: nameInp.value,
+              synopsis: synInp.value,
+              goal: goalRow.__input.value
+            }),
+            SYS_WRITER(),
+            reqId
+          );
+          if (out) condRow.__input.value = out;
+          else setStatus(t("ui.starter.aiNoResult"));
+        })));
+        advBox.append(condRow);
+        box2.append(advBox);
+      }
       const foot = el("div", "k-dlg-foot");
       const cancel = el("button", null, t("ui.common.cancel"));
       cancel.onclick = () => done2(false);
@@ -156273,8 +160578,17 @@ ${s.body}`).join("\n\n");
       ok2.onclick = () => {
         sc.title = nameInp.value.trim() || sc.title || t("ui.starter.scUntitled");
         sc.synopsis = synInp.value;
+        sc.thumb = thumb;
         sc.prevId = prevSel.value;
         sc.userChars = [...mine];
+        if (adv) {
+          sc.desc = descRow.__input.value;
+          sc.mood = moodRow.__input.value;
+          if (openRow) sc.opener = openRow.__getHtml();
+          sc.openerImage = openerImage;
+          sc.goal = goalRow.__input.value;
+          sc.conditions = condRow.__input.value;
+        }
         sc.cast = ready2.map((c) => c.id);
         done2(true);
       };
@@ -156285,7 +160599,7 @@ ${s.body}`).join("\n\n");
       nameInp.focus();
     });
   }
-  var SC_C;
+  var TOK_ANY, TOK_USER, SC_C;
   var init_starter_scenario = __esm({
     "src/starter/starter-scenario.js"() {
       init_core();
@@ -156295,10 +160609,15 @@ ${s.body}`).join("\n\n");
       init_starter_prompt();
       init_starter_store();
       init_starter_steps();
+      init_starter_fields();
+      init_entity_mention();
+      init_starter_wizard();
       init_starter_ai();
       init_starter_richtext();
       init_starter_export();
       init_starter_bridge();
+      TOK_ANY = mentionToken(MENTION_ANY);
+      TOK_USER = mentionToken(MENTION_USER);
       SC_C = { query: "", descOpen: false };
     }
   });
@@ -156359,6 +160678,7 @@ ${s.body}`).join("\n\n");
   }
   async function renderChat(host2, ctx2, sc) {
     const s = ctx2.starter;
+    const baseUrl = s.slug ? await kapi.toFileURL(await starterDir(s.slug)) : "";
     host2.innerHTML = "";
     const wrap2 = el("div", "st-chat");
     host2.append(wrap2);
@@ -156376,11 +160696,35 @@ ${s.body}`).join("\n\n");
     wrap2.append(head2);
     const log23 = el("div", "st-chat-log");
     wrap2.append(log23);
+    const attachImage = (row2, file) => {
+      if (!file) return null;
+      const box2 = el("div", "st-turn-img st-turn-img-loading");
+      row2.append(box2);
+      imageUrl(s.slug, file).then((url) => {
+        if (!url || !box2.isConnected) {
+          box2.remove();
+          return;
+        }
+        const im = el("img");
+        im.src = url;
+        im.alt = "";
+        im.onclick = async () => {
+          const { imageLightbox: imageLightbox2 } = await Promise.resolve().then(() => (init_wiki(), wiki_exports));
+          imageLightbox2(url, "");
+        };
+        box2.classList.remove("st-turn-img-loading");
+        box2.append(im);
+      }).catch(() => box2.remove());
+      return box2;
+    };
     const drawLog = () => {
       log23.innerHTML = "";
       if (!(sc.turns || []).length) {
         const empty2 = el("div", "st-empty");
         empty2.append(el("div", null, t("ui.starter.chatEmpty")));
+        if (hasOpener(sc)) {
+          empty2.append(el("div", "st-hint", "\u{1F4D6} " + t("ui.starter.chatHasOpener")));
+        }
         const start = el("button", "k-ok", "\u25B6 " + t("ui.starter.chatStart"));
         start.onclick = () => send3("", { opening: true });
         empty2.append(start);
@@ -156391,7 +160735,10 @@ ${s.body}`).join("\n\n");
         const row2 = el("div", "st-turn " + (turn.role === ROLE_GM ? "gm" : "player"));
         const who = turn.role === ROLE_GM ? "\u{1F3B2} " + t("ui.starter.gm") : "\u{1F642} " + (nameOf(s, turn.speaker) || t("ui.starter.you"));
         row2.append(el("div", "st-turn-who", who));
-        const body = el("div", "st-turn-text", turn.text);
+        if (turn.image) attachImage(row2, turn.image);
+        const body = el("div", "st-turn-text");
+        if (turn.html) body.innerHTML = htmlToDisplay(sanitizeHtml(turn.html), baseUrl);
+        else setSpeechText(body, turn.text);
         row2.append(body);
         if (turn.chosen) row2.append(el("div", "st-turn-chosen", "\u21B3 " + turn.chosen));
         log23.append(row2);
@@ -156494,6 +160841,28 @@ ${s.body}`).join("\n\n");
     };
     async function send3(text, { chosen = "", opening = false } = {}) {
       if (CHAT_C.sending) return;
+      if (opening && hasOpener(sc)) {
+        CHAT_C.sending = true;
+        drawFoot();
+        const mc = mentionCtx(s, sc);
+        const patched = addTurn(sc, {
+          role: ROLE_GM,
+          // `text` = ตัวจริงสำหรับโมเดล/นับคำ/แปลงเป็นต้นฉบับ · `html` = สิ่งที่ผู้ใช้จัดรูปแบบไว้
+          text: openerText(sc, s.cast || [], mc),
+          html: openerHtml(sc, s.cast || [], mc),
+          image: sc.openerImage || "",
+          ts: Date.now()
+        });
+        sc.turns = patched.turns;
+        try {
+          await writeScenario(s.slug, sc);
+        } finally {
+          CHAT_C.sending = false;
+        }
+        drawLog();
+        drawFoot();
+        return;
+      }
       CHAT_C.sending = true;
       CHAT_C.reqId = newReqId3();
       drawFoot();
@@ -156585,6 +160954,7 @@ ${s.body}`).join("\n\n");
       init_core();
       init_i18n();
       init_ui();
+      init_starter_html();
       init_ai_session();
       init_starter_model();
       init_starter_prompt();
@@ -156741,6 +161111,7 @@ ${s.body}`).join("\n\n");
   __export(starter_ui_exports, {
     currentStarter: () => currentStarter,
     flushStarter: () => flushStarter,
+    openScenarioChat: () => openScenarioChat,
     openStoryStarter: () => openStoryStarter,
     renderStarterPanel: () => renderStarterPanel,
     starterView: () => starterView
@@ -156777,9 +161148,19 @@ ${s.body}`).join("\n\n");
     return draw2();
   }
   async function openStoryStarter() {
-    const { showPanel: showPanel2, renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+    const { renderFeaturePanel: renderFeaturePanel2 } = await Promise.resolve().then(() => (init_app(), app_exports));
     showPanel2("starter");
     return renderFeaturePanel2("starter");
+  }
+  function leaveWizard() {
+    resetCastEditor();
+    if (!S9.starter) return;
+    const kept = pruneBlank(S9.starter.cast, "");
+    if (kept.length !== (S9.starter.cast || []).length) {
+      S9.starter.cast = kept;
+      autoSaveStarter(S9.starter);
+    }
   }
   function ctxFor() {
     return {
@@ -156797,7 +161178,12 @@ ${s.body}`).join("\n\n");
         return autoSaveStarter(S9.starter);
       },
       rerender: () => draw2(),
+      // [alpha.122] ออกจากตัวสร้างเมื่อไหร่ ตัวแก้ไขตัวละครที่ค้างต้องปิดด้วย
+      // (สถานะระดับโมดูลอยู่คนละไฟล์ ถ้าไม่ปิด กลับเข้ามาอีกทีจะเจอหน้าแก้ไขคนเก่าแทนรายชื่อ)
+      // และเก็บกวาดการ์ดตัวละครเปล่าไปพร้อมกัน — ตัวเปล่าคือสิ่งที่ทำให้ขั้นตัวละคร "ไม่ครบ"
+      // ทั้งที่หน้าจอดูเหมือนมีตัวละครแล้ว (บั๊กที่ผู้ใช้รายงานเรื่องปุ่มเสร็จสิ้น)
       goList: async () => {
+        leaveWizard();
         await flushStarterSaves();
         S9.view = "list";
         S9.starter = null;
@@ -156805,10 +161191,12 @@ ${s.body}`).join("\n\n");
         draw2();
       },
       goWizard: () => {
+        resetCastEditor();
         S9.view = "wizard";
         draw2();
       },
       goHome: async () => {
+        leaveWizard();
         await flushStarterSaves();
         S9.view = "home";
         S9.scenario = null;
@@ -156943,8 +161331,8 @@ ${s.body}`).join("\n\n");
         t("ui.starter.goAISettings")
       );
       if (!yes) return;
-      const { showAISettingsDialog: showAISettingsDialog3 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
-      await showAISettingsDialog3();
+      const { showAISettingsDialog: showAISettingsDialog2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+      await showAISettingsDialog2();
       const again = await aiConfigured();
       if (!again.ok) {
         setStatus(again.why);
@@ -156967,6 +161355,7 @@ ${s.body}`).join("\n\n");
       setStatus(t("ui.starter.openFail"));
       return;
     }
+    resetCastEditor();
     S9.starter = s;
     S9.view = view2 || (s.done ? "home" : "wizard");
     draw2();
@@ -156986,6 +161375,15 @@ ${s.body}`).join("\n\n");
   function currentStarter() {
     return S9.starter;
   }
+  async function openScenarioChat(sc, starter) {
+    if (starter) S9.starter = starter;
+    if (!S9.starter || !sc) return false;
+    S9.scenario = sc;
+    S9.view = "chat";
+    resetChatState();
+    await draw2();
+    return true;
+  }
   var S9, _guardSet;
   var init_starter_ui = __esm({
     "src/starter/starter-ui.js"() {
@@ -157001,6 +161399,7 @@ ${s.body}`).join("\n\n");
       init_starter_scenario();
       init_starter_chat();
       init_starter_wiki();
+      init_starter_cast();
       init_starter_pack();
       S9 = {
         host: null,
@@ -157018,8 +161417,8 @@ ${s.body}`).join("\n\n");
   });
 
   // src/tools/thesaurus.js
-  var thesaurus_exports2 = {};
-  __export(thesaurus_exports2, {
+  var thesaurus_exports = {};
+  __export(thesaurus_exports, {
     CACHE_KEY: () => CACHE_KEY,
     CACHE_MAX: () => CACHE_MAX2,
     CACHE_TTL: () => CACHE_TTL,
@@ -157107,8 +161506,8 @@ ${s.body}`).join("\n\n");
       return null;
     }
   }
-  var CACHE_KEY, CACHE_TTL, CACHE_MAX2, TH_SYNONYMS, TH_ANTONYMS, EN_SYNONYMS, EN_ANTONYMS, EN_WORD2, isEnglish, isThai, uniq, DATAMUSE, ThesaurusCache, Thesaurus, _shared;
-  var init_thesaurus2 = __esm({
+  var CACHE_KEY, CACHE_TTL, CACHE_MAX2, TH_SYNONYMS, TH_ANTONYMS, EN_SYNONYMS, EN_ANTONYMS, EN_WORD, isEnglish, isThai, uniq, DATAMUSE, ThesaurusCache, Thesaurus, _shared;
+  var init_thesaurus = __esm({
     "src/tools/thesaurus.js"() {
       init_i18n();
       CACHE_KEY = "k2-thes-cache";
@@ -157163,8 +161562,8 @@ ${s.body}`).join("\n\n");
         dark: ["bright", "light"],
         quiet: ["loud", "noisy"]
       };
-      EN_WORD2 = /^[a-zA-Z][a-zA-Z'-]{1,30}$/;
-      isEnglish = (w) => EN_WORD2.test(String(w || "").trim());
+      EN_WORD = /^[a-zA-Z][a-zA-Z'-]{1,30}$/;
+      isEnglish = (w) => EN_WORD.test(String(w || "").trim());
       isThai = (w) => /[฀-๿]/.test(String(w || ""));
       uniq = (a) => [...new Set(a.filter(Boolean))];
       DATAMUSE = "https://api.datamuse.com/words";
@@ -157301,19 +161700,8 @@ ${s.body}`).join("\n\n");
       ]);
       syns = Array.isArray(synRes) ? synRes : synRes?.words || [];
       ants = Array.isArray(antRes) ? antRes : antRes?.words || [];
-    } catch {
-      try {
-        const old2 = await Promise.resolve().then(() => (init_thesaurus(), thesaurus_exports));
-        const items = old2.thesaurusMenuItems ? await old2.thesaurusMenuItems(norm3) : [];
-        if (items.length) {
-          for (const it of items) {
-            if (it.label.startsWith("Syn:")) syns.push(it.label.slice(4));
-            else if (it.label.startsWith("Ant:")) ants.push(it.label.slice(4));
-            else syns.push(it.label);
-          }
-        }
-      } catch {
-      }
+    } catch (e) {
+      log("warn", t("ui.thes.thesaurusSearchNotOk"), e);
     }
     if (!syns.length && !ants.length) {
       setStatus(t("ui.thes.notFound") + norm3 + '"');
@@ -157361,7 +161749,7 @@ ${s.body}`).join("\n\n");
     setTimeout(() => document.addEventListener("click", outside), 0);
   }
   async function initThesaurus() {
-    const { loadExtra: loadExtra2, configure: configure2 } = await Promise.resolve().then(() => (init_thesaurus2(), thesaurus_exports2));
+    const { loadExtra: loadExtra2, configure: configure2 } = await Promise.resolve().then(() => (init_thesaurus(), thesaurus_exports));
     const { syncIo: syncIo2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
     let extra = null;
     try {
@@ -157379,7 +161767,7 @@ ${s.body}`).join("\n\n");
   var init_thesaurus_ui = __esm({
     "src/tools/thesaurus-ui.js"() {
       init_core();
-      init_thesaurus2();
+      init_thesaurus();
     }
   });
 
@@ -157488,8 +161876,8 @@ ${s.body}`).join("\n\n");
           }
           continue;
         }
-        const esc6 = src2[i5 + 1];
-        if (esc6 === "'") {
+        const esc7 = src2[i5 + 1];
+        if (esc7 === "'") {
           const hex = src2.slice(i5 + 2, i5 + 4);
           if (!skipDepth) {
             const code3 = parseInt(hex, 16);
@@ -157498,12 +161886,12 @@ ${s.body}`).join("\n\n");
           i5 += 4;
           continue;
         }
-        if (esc6 === "*") {
+        if (esc7 === "*") {
           skipDepth = depth;
           i5 += 2;
           continue;
         }
-        if (!skipDepth && (esc6 === "\\" || esc6 === "{" || esc6 === "}")) out += esc6;
+        if (!skipDepth && (esc7 === "\\" || esc7 === "{" || esc7 === "}")) out += esc7;
         i5 += 2;
         continue;
       }
@@ -157758,26 +162146,61 @@ ${sc.body || ""}
     if (!filePath) return null;
     const result = await importScreenplay(filePath, null);
     if (!result.ok) {
-      alert(t("ui.importSp.importNotOk") + result.error);
+      await confirmBox(t("ui.importSp.importNotOk") + result.error, t("ui.common.msg3"));
       return null;
     }
     const summary = importSummary(result.elements);
-    const lines = [
-      t("ui.importSp.import") + result.importer,
-      t("ui.importSp.file") + filePath.split(/[/\\]/).pop(),
-      "",
-      t("ui.common.scene3") + summary.scenes + t("ui.importSp.character") + summary.characters,
-      t("ui.importSp.dialogue") + summary.dialogueBlocks + t("ui.importSp.caption") + summary.actionBlocks,
-      t("ui.importSp.countWord") + summary.words,
-      "",
-      t("ui.importSp.bodyInNovelScreenplay")
-    ];
-    if (!confirm(lines.join("\n"))) return null;
     const markdown = elementsToMarkdown(result.elements);
-    if (injectFn) {
-      injectFn(markdown, result.format, summary);
-    }
-    return { markdown, format: result.format, summary };
+    const mode = await importPreviewDialog({ filePath, result, summary, markdown });
+    if (!mode) return null;
+    if (injectFn) await injectFn(markdown, result.format, summary, mode);
+    return { markdown, format: result.format, summary, mode };
+  }
+  function importPreviewDialog({ filePath, result, summary, markdown }) {
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-wide imp-sp");
+      box2.append(el("div", "k-dlg-title", t("ui.importSp.previewTitle")));
+      const meta2 = el("div", "imp-sp-meta");
+      meta2.append(el("div", null, t("ui.importSp.import") + result.importer));
+      meta2.append(el("div", null, t("ui.importSp.file") + filePath.split(/[/\\]/).pop()));
+      meta2.append(el(
+        "div",
+        null,
+        t("ui.common.scene3") + summary.scenes + t("ui.importSp.character") + summary.characters
+      ));
+      meta2.append(el(
+        "div",
+        null,
+        t("ui.importSp.dialogue") + summary.dialogueBlocks + t("ui.importSp.caption") + summary.actionBlocks
+      ));
+      meta2.append(el("div", null, t("ui.importSp.countWord") + summary.words));
+      box2.append(meta2);
+      const pre = el("pre", "imp-sp-pre");
+      pre.textContent = markdown.slice(0, 4e3) + (markdown.length > 4e3 ? "\n\u2026" : "");
+      box2.append(pre);
+      if (!summary.scenes && !summary.dialogueBlocks)
+        box2.append(el("div", "k-hint imp-sp-warn", "\u26A0 " + t("ui.importSp.previewEmpty")));
+      const done2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      const btns = el("div", "k-dlg-btns");
+      const bNew = el("button", "k-ok", t("ui.importSp.asNewScene"));
+      bNew.onclick = () => done2("new");
+      const bRep = el("button", "k-danger", t("ui.importSp.replaceTab"));
+      bRep.onclick = () => done2("replace");
+      const bCancel = el("button", null, t("ui.common.cancel"));
+      bCancel.onclick = () => done2(null);
+      btns.append(bCancel, bRep, bNew);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      ov.onclick = (e) => {
+        if (e.target === ov) done2(null);
+      };
+      escClose(ov, () => done2(null));
+    });
   }
   function detectFormat(filePath) {
     const lower2 = filePath.toLowerCase();
@@ -157993,6 +162416,8 @@ ${sc.body || ""}
     "src/import-sp.js"() {
       init_i18n();
       init_fountain();
+      init_core();
+      init_ui();
       import_jszip4 = __toESM(require_jszip_min());
       SP_IMPORTERS = {
         fdx: { name: "Final Draft XML", ext: ".fdx", filter: "fdx", parse: parseFdx },
@@ -158141,6 +162566,7 @@ ${sc.body || ""}
     ov.addEventListener("click", (e) => {
       if (e.target === ov) ov.remove();
     });
+    escClose(ov, () => ov.remove());
   }
   function diffStats(diffs) {
     let equal = 0, inserted = 0, deleted = 0, changed = 0;
@@ -158240,6 +162666,7 @@ ${sc.body || ""}
     "src/sp-compare.js"() {
       init_i18n();
       init_fountain();
+      init_ui();
       NO_PREFIX = /* @__PURE__ */ new Set(["dialogue", "parenthetical", "image", "raw", "blank"]);
       SP_PREFIX = Object.fromEntries(Object.entries(SP_ELEMS).map(([k, v2]) => {
         if (NO_PREFIX.has(k)) return [k, ""];
@@ -158532,12 +162959,12 @@ ${sc.body || ""}
   function learnedTerms(counts, opts = {}) {
     const min = learnMin(opts.min);
     const pinned = toSet(opts.pinned);
-    const ignored = toSet(opts.ignored);
+    const ignored2 = toSet(opts.ignored);
     const known = toSet(opts.known);
     const out = [];
     for (const [word, n2] of counts || []) {
       const key2 = lower(word);
-      if (ignored.has(key2)) continue;
+      if (ignored2.has(key2)) continue;
       if (pinned.has(key2)) {
         out.push([word, n2]);
         continue;
@@ -158551,12 +162978,12 @@ ${sc.body || ""}
   function pendingTerms(counts, opts = {}) {
     const min = learnMin(opts.min);
     const pinned = toSet(opts.pinned);
-    const ignored = toSet(opts.ignored);
+    const ignored2 = toSet(opts.ignored);
     const known = toSet(opts.known);
     const out = [];
     for (const [word, n2] of counts || []) {
       const key2 = lower(word);
-      if (ignored.has(key2) || pinned.has(key2) || known.has(key2)) continue;
+      if (ignored2.has(key2) || pinned.has(key2) || known.has(key2)) continue;
       if (n2 >= min) continue;
       out.push({ word, count: n2, ok: looksLikeTerm(word) });
     }
@@ -158621,14 +163048,14 @@ ${sc.body || ""}
     const actW = (fmt.elements.action || {}).width || 6;
     const scenes = [];
     let cur = null, curChar = "";
-    let seq2 = 0;
+    let seq3 = 0;
     const list = (blocks || []).filter((b) => b && b.el !== "blank");
     for (const b of list) {
       const page2 = Number.isFinite(b.idx) && pageOf.get(b.idx) || (cur ? cur.page : 1);
       if (b.el === "scene") {
         const h = parseHeading(b.text);
         cur = {
-          n: ++seq2,
+          n: ++seq3,
           heading: h.raw,
           location: h.location || t("ui.spReports.notSpecifyPlace"),
           intExt: h.intExt,
@@ -158648,7 +163075,7 @@ ${sc.body || ""}
       }
       if (!cur) {
         cur = {
-          n: ++seq2,
+          n: ++seq3,
           heading: t("ui.spReports.beforeHeadSceneFirst"),
           location: t("ui.spReports.notSpecifyPlace"),
           intExt: "",
@@ -159083,12 +163510,12 @@ ${sc.body || ""}
       if (opts.showPageNumbers !== false && pg.index > 1) {
         rows.push(`<div class="pg-num">${pg.index}.</div>`);
       }
-      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc5(pg.continuedTop)}</div>`);
+      if (pg.continuedTop) rows.push(`<div class="sp sp-cont-top">${esc6(pg.continuedTop)}</div>`);
       for (const b of pg.blocks || []) {
-        rows.push(`<div class="sp sp-${esc5(b.el || "action")}">${esc5(b.text || "")}</div>`);
+        rows.push(`<div class="sp sp-${esc6(b.el || "action")}">${esc6(b.text || "")}</div>`);
       }
-      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc5(pg.continuedBottom)}</div>`);
-      const mark = wmText ? `<div class="wm">${esc5(wmText)}</div>` : "";
+      if (pg.continuedBottom) rows.push(`<div class="sp sp-cont-bottom">${esc6(pg.continuedBottom)}</div>`);
+      const mark = wmText ? `<div class="wm">${esc6(wmText)}</div>` : "";
       return `<section class="pg">${mark}<div class="pg-body">${rows.join("")}</div></section>`;
     }).join("\n");
     const css = [
@@ -159109,7 +163536,7 @@ ${sc.body || ""}
     ].join("\n");
     return `<!doctype html>
 <html lang="th"><head><meta charset="utf-8">
-<title>${esc5(opts.title || "")}</title>
+<title>${esc6(opts.title || "")}</title>
 <style>
 ${css}
 </style>
@@ -159154,7 +163581,7 @@ ${css}
     }
     return made;
   }
-  var DEFAULT_WM, esc5;
+  var DEFAULT_WM, esc6;
   var init_export_watermark = __esm({
     "src/export-watermark.js"() {
       init_i18n();
@@ -159169,7 +163596,7 @@ ${css}
         repeat: 1
         // 1 = กลางหน้าเดียว · >1 = ปูทั้งหน้า
       };
-      esc5 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      esc6 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
   });
 
@@ -159189,6 +163616,7 @@ ${css}
     allShortcutRows: () => allShortcutRows,
     allWorkflows: () => allWorkflows,
     anyPageModel: () => anyPageModel,
+    applyCaseOptions: () => applyCaseOptions,
     applyFmtbarState: () => applyFmtbarState,
     applyMarkdownCodes: () => applyMarkdownCodes,
     applyPageVars: () => applyPageVars,
@@ -159210,6 +163638,7 @@ ${css}
     bootPanelWindow: () => bootPanelWindow,
     bootSequence: () => bootSequence,
     broadcastActiveScene: () => broadcastActiveScene,
+    buildBookNavigation: () => buildBookNavigation,
     buildDraftModel: () => buildDraftModel,
     buildSpReport: () => buildSpReport,
     buildTree: () => buildTree2,
@@ -159217,6 +163646,7 @@ ${css}
     captureSession: () => captureSession,
     catEditDialog: () => catEditDialog,
     catIcon: () => catIcon,
+    catIconEl: () => catIconEl,
     catIconHtml: () => catIconHtml,
     catKeyFrom: () => catKeyFrom,
     catLabel: () => catLabel,
@@ -159224,7 +163654,6 @@ ${css}
     checkBeforeExport: () => checkBeforeExport,
     checkScreenplay: () => checkScreenplay,
     clearFeaturePanels: () => clearFeaturePanels,
-    clearTermCache: () => clearTermCache,
     clearTreeSel: () => clearTreeSel,
     closeTab: () => closeTab,
     computeProjectStats: () => computeProjectStats,
@@ -159292,10 +163721,12 @@ ${css}
     markDirty: () => markDirty,
     markPlannerRow: () => markPlannerRow,
     markSessionDirty: () => markSessionDirty,
+    navWholeBookOn: () => navWholeBookOn,
     netInst: () => netInst,
     newPlannerBoard: () => newPlannerBoard,
     newProject: () => newProject,
     newProjectFromTemplate: () => newProjectFromTemplate,
+    onSelectAllKey: () => onSelectAllKey,
     openCommentsPanel: () => openCommentsPanel,
     openCompileDialog: () => openCompileDialog,
     openDevConsole: () => openDevConsole,
@@ -159307,6 +163738,7 @@ ${css}
     openScene: () => openScene,
     openSnapshotRight: () => openSnapshotRight,
     openSpReport: () => openSpReport,
+    openTextColorPicker: () => openTextColorPicker,
     pickFromList: () => pickFromList,
     pickPlannerTarget: () => pickPlannerTarget,
     pickReference: () => pickReference,
@@ -159346,6 +163778,7 @@ ${css}
     renderPlannerPanel: () => renderPlannerPanel,
     repaginateAfterGeometry: () => repaginateAfterGeometry,
     repaginateFast: () => repaginateFast,
+    replaceSpellWord: () => replaceSpellWord,
     reportPanelWindowHealth: () => reportPanelWindowHealth,
     requestOpenInMain: () => requestOpenInMain,
     resetFmtbarAll: () => resetFmtbarAll,
@@ -159398,7 +163831,6 @@ ${css}
     snapshotFile: () => snapshotFile,
     spContinuedOn: () => spContinuedOn,
     spErrorMenu: () => spErrorMenu,
-    spErrors: () => spErrors,
     spFormat: () => spFormat,
     spFormatSettings: () => spFormatSettings,
     spLineHeight: () => spLineHeight,
@@ -159407,6 +163839,8 @@ ${css}
     spReportText: () => spReportText,
     spThaiCfg: () => spThaiCfg,
     spellChecker: () => spellChecker,
+    spellIgnoreOnce: () => spellIgnoreOnce,
+    spellSuggest: () => spellSuggest,
     startSessionWatch: () => startSessionWatch,
     summaryBarOn: () => summaryBarOn,
     syncMenuToggles: () => syncMenuToggles,
@@ -159431,6 +163865,7 @@ ${css}
     toggleShowFormat: () => toggleShowFormat,
     toggleShowHomeAlways: () => toggleShowHomeAlways,
     toggleSpCase: () => toggleSpCase,
+    toggleSpErrorMarks: () => toggleSpErrorMarks,
     toggleSpThaiFont: () => toggleSpThaiFont,
     toggleTheme: () => toggleTheme,
     treeCopy: () => treeCopy,
@@ -159445,6 +163880,7 @@ ${css}
     uniqueSceneFileName: () => uniqueSceneFileName,
     updateErrorBadge: () => updateErrorBadge,
     updatePageNumberHint: () => updatePageNumberHint,
+    updateSaveStatus: () => updateSaveStatus,
     updateSceneRow: () => updateSceneRow,
     updateToolbarTitles: () => updateToolbarTitles,
     useDictSpell: () => useDictSpell,
@@ -159474,6 +163910,9 @@ ${css}
     setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
     const spFmt = applyPageVars();
     setFormatGuide(!!state.settings.spShowFormat, spFmt);
+    if (setSpErrorMarksOn(state.settings.spErrorMarks !== false)) {
+      for (const t22 of state.tabs.values()) if (t22.sp && t22.sp.view) refreshSpErrorMarks(t22.sp.view);
+    }
     document.body.classList.toggle("sp-show-format", !!state.settings.spShowFormat);
     document.documentElement.style.setProperty(
       "--home-thumb",
@@ -160462,7 +164901,7 @@ ${css}
     document.body.classList.toggle("k-page-guides", v2);
     saveGlobalSetting("pageGuides", v2);
     syncMenuToggles();
-    setStatus(v2 ? T`เปิดเส้นบอกระยะขอบกระดาษ (มุมมองจัดหน้า)` : T`ปิดเส้นบอกระยะขอบกระดาษ`);
+    setStatus(v2 ? t("ui.app.pageGuidesOn") : t("ui.app.pageGuidesOff"));
     return v2;
   }
   function toggleShowFormat(on2) {
@@ -160732,10 +165171,15 @@ ${css}
     };
     row2.append(sel, inp, hint);
     box2.append(row2);
+    const find = el("input", "k-dlg-input k-goto-find");
+    find.placeholder = t("ui.app.gotoFindPlaceholder");
+    box2.append(find);
     const list = el("div", "k-goto-list");
     const renderList2 = () => {
-      list.innerHTML = "";
-      if (sel.value !== "scene") {
+      list.replaceChildren();
+      const isScene = sel.value === "scene";
+      find.style.display = isScene ? "" : "none";
+      if (!isScene) {
         list.style.display = "none";
         return;
       }
@@ -160744,7 +165188,13 @@ ${css}
         list.append(el("div", "cmp-empty", tf("ui.app.fileNotHas", unit)));
         return;
       }
-      for (const s of scenes) {
+      const q = find.value.trim().toLowerCase();
+      const rows = q ? scenes.filter((x) => String(x.n) === q || String(x.text || "").toLowerCase().includes(q)) : scenes;
+      if (!rows.length) {
+        list.append(el("div", "cmp-empty", t("ui.app.gotoFindNone")));
+        return;
+      }
+      for (const s of rows) {
         const d = el("div", "k-menu-item", `${s.n}. ${s.text || t("ui.common.empty")}`);
         d.onclick = () => {
           ov.remove();
@@ -160752,6 +165202,13 @@ ${css}
         };
         list.append(d);
       }
+    };
+    find.oninput = renderList2;
+    find.onkeydown = (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const first = list.querySelector(".k-menu-item");
+      if (first) first.click();
     };
     box2.append(list);
     const go = () => {
@@ -160778,14 +165235,15 @@ ${css}
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
+    escClose(ov, () => ov.remove());
     syncHint();
     renderList2();
-    inp.focus();
-    inp.select();
+    if (sel.value === "scene") find.focus();
+    else {
+      inp.focus();
+      inp.select();
+    }
     return ov;
-  }
-  function spErrors() {
-    return _spErrors.slice();
   }
   function checkScreenplay(tab) {
     const t22 = tab || state.active;
@@ -160798,6 +165256,7 @@ ${css}
       e.text = b ? String(b.text || "") : "";
     }
     _spErrors = errs;
+    if (setSpErrorMarks(errs) && t22.sp && t22.sp.view) refreshSpErrorMarks(t22.sp.view);
     return errs;
   }
   function findNextSpError() {
@@ -160862,9 +165321,24 @@ ${css}
       updateErrorBadge();
       setStatus(summaryText(_spErrors));
     } });
+    items.push({
+      label: (isSpErrorMarks() ? "\u2611 " : "\u2610 ") + t("ui.app.spErrMarkToggle"),
+      click: () => toggleSpErrorMarks()
+    });
     items.push({ label: iconHtml("clipboard", 14) + t("ui.app.settingsFormatCheckChapter"), click: () => settingsDialog("page") });
     popupMenu(x, y, items);
     return items.length;
+  }
+  function toggleSpErrorMarks(on2) {
+    const next = on2 === void 0 ? !isSpErrorMarks() : !!on2;
+    setSpErrorMarksOn(next);
+    state.settings.spErrorMarks = next;
+    saveProjectMeta().catch(() => {
+    });
+    for (const t22 of state.tabs.values()) if (t22.sp && t22.sp.view) refreshSpErrorMarks(t22.sp.view);
+    updateErrorBadge();
+    setStatus(next ? t("ui.app.spErrMarkOn") : t("ui.app.spErrMarkOff"));
+    return next;
   }
   function showErrorList() {
     const t22 = state.active;
@@ -161225,6 +165699,37 @@ ${css}
       if (t3.sp) refreshSpell(t3.sp.view);
     }
   }
+  function spellSuggest(word, max2 = 6) {
+    try {
+      return suggest(word, max2);
+    } catch {
+      return [];
+    }
+  }
+  function spellIgnoreOnce(word) {
+    const ok2 = ignoreOnce(word);
+    if (ok2) refreshAllSpell();
+    return ok2;
+  }
+  function replaceSpellWord(badEl, word) {
+    const t3 = state.active;
+    const view2 = t3?.editor?.view || t3?.sp?.view;
+    if (!view2 || !badEl) return false;
+    try {
+      const inner = badEl.firstChild || badEl;
+      const from2 = view2.posAtDOM(inner, 0);
+      const to = from2 + (badEl.textContent || "").length;
+      if (!(to > from2)) return false;
+      view2.dispatch(view2.state.tr.insertText(word, from2, to));
+      view2.focus();
+      if (t3) markDirty(t3);
+      setStatus(tf("ui.app.spellReplaced", badEl.textContent, word));
+      return true;
+    } catch (e) {
+      log("warn", t("ui.app.spellReplaceFail"), e);
+      return false;
+    }
+  }
   function refreshAllMentions() {
     for (const t3 of state.tabs.values()) {
       if (t3.editor) refreshMentions(t3.editor.view);
@@ -161238,16 +165743,29 @@ ${css}
     }
     const min = parseInt(state.settings.autoSaveMinutes, 10);
     if (!min || min <= 0) return;
-    autosaveTimer = setInterval(() => {
-      let any = false;
-      for (const t3 of state.tabs.values()) if (t3.dirty) {
-        saveTab(t3);
-        any = true;
+    let autosaveBusy = false;
+    autosaveTimer = setInterval(async () => {
+      if (autosaveBusy) return;
+      const pending = [...state.tabs.values()].filter((t3) => t3.dirty);
+      if (!pending.length) return;
+      autosaveBusy = true;
+      let ok2 = 0;
+      try {
+        for (const t3 of pending) {
+          if (!t3.dirty || !state.tabs.has(t3.file)) continue;
+          try {
+            await saveTab(t3);
+            ok2++;
+          } catch (e) {
+            log("error", t("ui.app.autosaveFail") + (t3.title || t3.file), e);
+          }
+        }
+      } finally {
+        autosaveBusy = false;
       }
-      if (any) {
-        log("info", t("ui.app.autosaveRun"));
-        setTimeout(updateDirtyBadge, 300);
-      }
+      log("info", tf("ui.app.autosaveRunN", ok2, pending.length));
+      updateDirtyBadge();
+      refreshStatusBar();
     }, min * 60 * 1e3);
   }
   async function saveProjectMeta() {
@@ -161329,7 +165847,24 @@ ${css}
     setBusy(t("ui.app.busyOpenProject"));
     if (!await kapi.exists(await kapi.join(root, "project.khn.json"))) {
       clearBusy();
-      alert(t("ui.app.folderNotProjectKillian"));
+      const inRecent = (await kapi.listRecent().catch(() => [])).includes(root);
+      if (inRecent) {
+        const v2 = await choose(tf("ui.app.recentBrokenAsk", root), [
+          { label: t("ui.app.recentBrokenRemove"), value: "remove", danger: true },
+          { label: t("ui.app.recentBrokenKeep"), value: "keep", primary: true }
+        ]);
+        if (v2 === "remove") {
+          await kapi.removeRecent(root);
+          setStatus(t("ui.app.recentBrokenRemoved"));
+          try {
+            const { refreshHomePanels: refreshHomePanels2 } = await Promise.resolve().then(() => (init_home_ui(), home_ui_exports));
+            refreshHomePanels2();
+          } catch {
+          }
+        }
+      } else {
+        await confirmBox(t("ui.app.folderNotProjectKillian"), t("ui.common.msg3"));
+      }
       return;
     }
     clearBusy();
@@ -161338,6 +165873,8 @@ ${css}
     const meta2 = await kapi.readJson(await kapi.join(root, "project.khn.json"));
     state.root = root;
     state.title = meta2.title || t("ui.common.project");
+    invalidateSearchIndex();
+    invalidateChatRag();
     loadSettings(meta2);
     applyWikiCats();
     document.title = state.title + " \u2014 Killian 2";
@@ -161352,8 +165889,6 @@ ${css}
     applyDataI18n();
     initIcons();
     applyToolbarShortcutTitles();
-    setBusy(t("ui.app.busyCheckFile"));
-    await purgeRecycle(root);
     setBusy(t("ui.app.busyNewStructureProject"));
     await buildTree2();
     buildFilterBar().catch(() => {
@@ -161405,6 +165940,24 @@ ${css}
     setStatus(t("ui.app.openProject2") + state.title);
     checkDanglingOnOpen().catch(() => {
     });
+    purgeRecycle(root).then((n2) => {
+      if (n2) buildTree2();
+    }).catch(() => {
+    });
+    if (!state.meta || !state.meta.wcBuilt) {
+      rebuildWordCounts().then(async (r) => {
+        if (r.done && state.meta && state.root === root) {
+          state.meta.wcBuilt = 1;
+          await saveProjectMeta();
+        }
+        if (r.fixed && state.root === root) {
+          await buildTree2();
+          setStatus(tf("ui.app.wordCountRebuilt", r.fixed));
+        }
+        log("info", "rebuildWordCounts", r);
+      }).catch(() => {
+      });
+    }
   }
   function toggleElementCaps(elName, on2) {
     const cur = elementCaps(spFormat(), elName);
@@ -161704,7 +166257,7 @@ ${css}
     for (const tab of hits) {
       if (!tab.editor && !tab.sp && !tab.plain) continue;
       try {
-        const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(tab.file));
+        const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(tab.file));
         if (body === tab.body) continue;
         tab.meta = meta2;
         tab.body = body;
@@ -162067,7 +166620,7 @@ ${css}
       if (ok2 && treeScope && s.dataset.chGuid) ok2 = s.dataset.chGuid === treeScope.guid;
       if (!ok2 && s.dataset.planner) {
         log(
-          "info",
+          "debug",
           tf("ui.app.plannerTreeItemFilter", s.dataset.plannerName),
           { query: raw, scope: treeScope ? treeScope.label : null }
         );
@@ -162088,6 +166641,19 @@ ${css}
     tree.querySelectorAll(".sec").forEach((sec) => {
       const anyVisible = [...sec.querySelectorAll(".scene, .chapter")].some((s) => !s.classList.contains("add-row") && s.style.display !== "none");
       sec.style.display = !q && !treeScope || anyVisible ? "" : "none";
+    });
+    const searching = !!raw || !!treeScope;
+    tree.querySelectorAll(".sec, .chapter").forEach((box2) => {
+      if (searching) {
+        if (box2.dataset.wasCollapsed === void 0)
+          box2.dataset.wasCollapsed = box2.classList.contains("collapsed") ? "1" : "";
+        box2.classList.remove("collapsed");
+      } else if (box2.dataset.wasCollapsed !== void 0) {
+        box2.classList.toggle("collapsed", box2.dataset.wasCollapsed === "1");
+        delete box2.dataset.wasCollapsed;
+      }
+      const caret = box2.querySelector(":scope > .sec-title > .tw, :scope > .ch-title > .tw");
+      if (caret) caret.classList.toggle("tw-open", !box2.classList.contains("collapsed"));
     });
   }
   function treeCollapsed() {
@@ -162304,7 +166870,7 @@ ${css}
         } else {
           let meta2 = {}, body = "";
           try {
-            const parsed = (0, import_md15.parseMdFile)(await kapi.readFile(it.file));
+            const parsed = (0, import_md18.parseMdFile)(await kapi.readFile(it.file));
             meta2 = parsed.meta;
             body = parsed.body;
           } catch {
@@ -162331,14 +166897,19 @@ ${css}
       setStatus(t("ui.tree.nothingSelected"));
       return 0;
     }
+    let ok2 = 0;
+    const failed = [];
     for (const it of list) {
       try {
         await duplicateScene(it.dPath, it.ch, it.sc);
-      } catch {
+        ok2++;
+      } catch (e) {
+        failed.push(it.sc?.title || "");
+        log("warn", t("ui.tree.duplicateFail"), e);
       }
     }
-    setStatus(tf("ui.tree.duplicatedN", list.length));
-    return list.length;
+    setStatus(tf("ui.tree.duplicatedN", ok2) + (failed.length ? " \xB7 " + tf("ui.tree.failedN", failed.length) : ""));
+    return ok2;
   }
   async function treeDeleteSelected(items) {
     const list = items && items.length ? items : treeSelCtx();
@@ -162383,7 +166954,8 @@ ${css}
     if (!list.length) return 0;
     const dst = await pickDraftTarget({ title: t("ui.tree.moveToChapter") });
     if (!dst) return 0;
-    let skipped = 0;
+    let skipped = 0, ok2 = 0;
+    const failed = [];
     for (const it of list) {
       if (it.dPath !== dst.dPath) {
         skipped++;
@@ -162391,13 +166963,15 @@ ${css}
       }
       try {
         await moveSceneToChapter(it.dPath, it.ch, it.sc, dst.chapter);
-      } catch {
+        ok2++;
+      } catch (e) {
+        failed.push(it.sc?.title || "");
+        log("warn", t("ui.tree.moveFail"), e);
       }
     }
-    if (skipped) setStatus(tf("ui.tree.skipCrossDraft", skipped));
     await buildTree2();
-    setStatus(tf("ui.tree.movedN", list.length, dst.chapter.title));
-    return list.length;
+    setStatus(tf("ui.tree.movedN", ok2, dst.chapter.title) + (skipped ? " \xB7 " + tf("ui.tree.skipCrossDraft", skipped) : "") + (failed.length ? " \xB7 " + tf("ui.tree.failedN", failed.length) : ""));
+    return ok2;
   }
   function treePasteTarget() {
     const rows = treeRows();
@@ -162647,6 +167221,27 @@ ${css}
         const primary = sec.primaryDraft || "default";
         const draftsAvailable = await kapi.listDirs(draftRoot);
         const namesToShow = draftsAvailable.includes(primary) ? [primary] : draftsAvailable;
+        if (draftsAvailable.length > 1) {
+          const dRow = el("div", "tree-draft-row");
+          dRow.append(icon("book-content", 13), " " + t("ui.tree.draftLabel"));
+          const dSel = el("select", "k-dlg-select tree-draft-sel");
+          for (const dn of draftsAvailable) {
+            const o = el("option", null, dn);
+            o.value = dn;
+            dSel.append(o);
+          }
+          dSel.value = namesToShow[0];
+          dSel.title = t("ui.tree.draftPickHint");
+          dSel.onclick = (e) => e.stopPropagation();
+          dSel.onchange = async () => {
+            const { setPrimaryDraft: setPrimaryDraft2 } = await Promise.resolve().then(() => (init_drafts(), drafts_exports));
+            await setPrimaryDraft2(secPath, dSel.value);
+            setStatus(tf("ui.tree.draftSwitched", dSel.value));
+            await buildTree2();
+          };
+          dRow.append(dSel);
+          secEl.append(dRow);
+        }
         for (const dname of namesToShow) {
           const dPath = await kapi.join(draftRoot, dname);
           const draftFile = await kapi.join(dPath, "draft.json");
@@ -162662,7 +167257,7 @@ ${css}
             const visSet = new Set(chFiles.filter((f) => /_vis\.csv$/i.test(f)).map((f) => f.toLowerCase()));
             const chEl = el("div", "chapter");
             const chHead = el("div", "ch-title");
-            chHead.innerHTML = iconHtml("folder", 14) + " " + ch.title;
+            chHead.append(icon("folder", 14), " " + (ch.title || ""));
             const addSc = el("span", "row-add", "+");
             addSc.title = t("ui.app.addSceneChapter");
             addSc.onclick = (e) => {
@@ -162761,13 +167356,7 @@ ${css}
               const scPath = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
               if (sc.imageCount || sc.wordCount) {
               }
-              if (sc.wordCount) {
-                scEl.append(el(
-                  "span",
-                  "sc-wordcount",
-                  (sc.wordCount >= 1e3 ? Math.round(sc.wordCount / 1e3) + "k" : sc.wordCount) + t("ui.common.word")
-                ));
-              }
+              if (sc.wordCount) scEl.append(el("span", "sc-wordcount", wordBadgeText(sc.wordCount)));
               if (sc.status && sc.status !== "Outline") {
                 const stChip = el("span", "sc-status", sc.status);
                 const stCol = statusColor(sc.status);
@@ -163093,7 +167682,7 @@ ${css}
       memoRows.push({
         f,
         p,
-        title: (0, import_md15.parseMdFile)(raw).meta.title || f.replace(/\.md$/, ""),
+        title: (0, import_md18.parseMdFile)(raw).meta.title || f.replace(/\.md$/, ""),
         mtime: sortMode === "modified" ? await kapi.mtime(p).catch(() => 0) : 0
       });
     }
@@ -163358,7 +167947,7 @@ ${css}
     const renderCat = async (catDir, cat, scopeLabel2) => {
       const cEl = el("div", "chapter");
       const cHead = el("div", "ch-title");
-      cHead.innerHTML = catIconHtml(cat) + " " + catLabel(cat) + (scopeLabel2 ? ` (${scopeLabel2})` : "");
+      cHead.append(catIconEl(cat), " " + catLabel(cat) + (scopeLabel2 ? ` (${scopeLabel2})` : ""));
       const addE = el("span", "row-add", "+");
       addE.title = t("ui.app.newNewCat");
       addE.onclick = (e) => {
@@ -163428,7 +168017,7 @@ ${css}
         else if (sortMode === "modified") entRows.sort((a, b) => b.mtime - a.mtime);
         for (const { f, p, name: name5, ent } of entRows) {
           const it = el("div", "scene wiki-ent");
-          it.innerHTML = catIconHtml(cat) + " " + name5;
+          it.append(catIconEl(cat), " " + name5);
           it.dataset.search = entitySearchBlob(name5, ent, cat, scopeLabel2) + " " + f.toLowerCase();
           it.title = name5 + "  (" + f + ")" + (ent && ent.summary ? String.fromCharCode(10) + String(ent.summary).slice(0, 120) : "");
           it.dataset.path = p;
@@ -163513,7 +168102,7 @@ ${css}
           click: () => emptyRecycle(all.length)
         },
         { label: t("ui.tree.purgeNowByDays"), click: async () => {
-          await purgeRecycle(state.root);
+          await purgeRecycle(state.root, { force: true });
           await buildTree2();
         } },
         "-",
@@ -163726,6 +168315,9 @@ ${css}
   }
   function catIconHtml(key2, sz) {
     return iconHtml(catIcon(key2), sz || 16);
+  }
+  function catIconEl(key2, sz) {
+    return icon(catIcon(key2), sz || 16);
   }
   async function revealFile(p) {
     if (!p) {
@@ -164085,7 +168677,7 @@ ${css}
     refreshToolbar();
   }
   async function moveMemoToChapter(memoPath, dPath, ch, beforeId) {
-    const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(memoPath));
+    const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(memoPath));
     const title2 = meta2.title || (memoPath.split(/[\\/]/).pop() || "memo").replace(/\.md$/i, "");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
@@ -164097,7 +168689,7 @@ ${css}
     } while (used.has(fileName));
     await kapi.writeFile(
       await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-      (0, import_md15.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
+      (0, import_md18.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
     );
     await kapi.remove(memoPath);
     const row2 = { id: guid(), title: title2, order: list.length + 1, fileName, type: "memo" };
@@ -164122,8 +168714,8 @@ ${css}
       dst = await kapi.join(memoDir, base4 + (n2 ? "-" + n2 : "") + ".md");
       n2++;
     } while (await kapi.exists(dst));
-    const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(src2));
-    await kapi.writeFile(dst, (0, import_md15.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body));
+    const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(src2));
+    await kapi.writeFile(dst, (0, import_md18.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body));
     await kapi.remove(src2);
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
@@ -164143,10 +168735,10 @@ ${css}
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     try {
       const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
-      const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
-      await kapi.writeFile(file, (0, import_md15.dumpMdFile)(meta2, body));
+      await kapi.writeFile(file, (0, import_md18.dumpMdFile)(meta2, body));
     } catch {
     }
     await buildTree2();
@@ -164234,7 +168826,7 @@ ${css}
       saveFloatWinBox(file, win);
     };
     bDock.onclick = () => dockTab(file);
-    bX.onclick = () => closeTab(file);
+    bX.onclick = () => closeTab(file, { ask: true });
     bar.ondblclick = (e) => {
       if (!e.target.closest(".float-btn")) dockTab(file);
     };
@@ -164449,7 +169041,7 @@ ${css}
     return _treeJob;
   }
   function auditPlannerRows(when) {
-    const sec = [...document.querySelectorAll("#tree .sec")].find((s) => (s.querySelector(".sec-title") || {}).textContent?.includes("\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19"));
+    const sec = [...document.querySelectorAll("#tree .sec")].find((s) => s.querySelector(".scene[data-planner]")) || (document.querySelector("#tree .scene[data-planner]") || {}).closest?.(".sec") || null;
     const rows = [...document.querySelectorAll("#tree .scene[data-planner]")];
     const info = rows.map((r) => {
       const cs = getComputedStyle(r);
@@ -164469,7 +169061,7 @@ ${css}
     const secHidden = sec ? getComputedStyle(sec).display === "none" || sec.classList.contains("collapsed") : null;
     const bad = !sec || !rows.length || hidden || faded || blank;
     log(
-      bad ? "warn" : "info",
+      bad ? "warn" : "debug",
       tf("ui.app.plannerTreeCheckImage", when || "-", sec ? t("ui.app.has") : t("ui.app.notHas3"), rows.length) + tf("ui.app.hideEmptyCatHide", hidden, faded, blank, secHidden),
       { rows: info, filter: ($("#tree-search") || {}).value || "" }
     );
@@ -164519,7 +169111,7 @@ ${css}
           if (isRow || hasRow) {
             if (_treeSwapping) continue;
             log(
-              "warn",
+              "debug",
               t("ui.app.plannerTreeRowBoard"),
               {
                 name: n2.dataset && n2.dataset.plannerName || t("ui.app.dialog"),
@@ -164532,7 +169124,7 @@ ${css}
         if (m.type === "attributes" && m.target.dataset && m.target.dataset.planner) {
           const hidden = getComputedStyle(m.target).display === "none";
           log(
-            hidden ? "warn" : "info",
+            hidden ? "warn" : "debug",
             tf("ui.app.plannerTreeRowChange", m.target.dataset.plannerName, m.attributeName) + (hidden ? t("ui.app.hide") : ""),
             {
               style: m.target.getAttribute("style") || "",
@@ -164544,7 +169136,7 @@ ${css}
       }
     });
     _plannerRowObs.observe(tree, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class"] });
-    log("info", t("ui.app.plannerTreeStartView"));
+    log("debug", t("ui.app.plannerTreeStartView"));
     return _plannerRowObs;
   }
   async function newPlannerBoard(nameArg) {
@@ -164679,7 +169271,7 @@ ${css}
     sec.append(note);
     tree.append(sec);
     log(
-      "info",
+      "debug",
       tf("ui.app.plannerTreeNewCat", boards.length),
       { current: cur, rows: boards.map((b) => b.name) }
     );
@@ -165039,7 +169631,7 @@ ${css}
         const abs = await kapi.join(memoDir, f);
         let title2 = f.replace(/\.md$/i, "");
         try {
-          title2 = (0, import_md15.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
+          title2 = (0, import_md18.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
         } catch {
         }
         out.push({
@@ -165588,10 +170180,10 @@ ${css}
     }
     const file = await kapi.join(dPath, "Chapters", ch.folderName, (row2 || sc).fileName);
     try {
-      const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
       else delete meta2.locked;
-      await kapi.writeFile(file, (0, import_md15.dumpMdFile)(meta2, body));
+      await kapi.writeFile(file, (0, import_md18.dumpMdFile)(meta2, body));
     } catch {
     }
     const openTab = state.tabs.get(file);
@@ -165693,7 +170285,7 @@ ${css}
     if (stale2()) return;
     let vmeta = {};
     try {
-      vmeta = (0, import_md15.parseMdFile)(await kapi.readFile(file0)).meta;
+      vmeta = (0, import_md18.parseMdFile)(await kapi.readFile(file0)).meta;
     } catch {
     }
     if (stale2()) return;
@@ -165835,7 +170427,7 @@ ${css}
         const liveTab = state.tabs.get(file0);
         if (liveTab && liveTab.meta) {
           try {
-            liveTab.meta = (0, import_md15.parseMdFile)(await kapi.readFile(file0)).meta;
+            liveTab.meta = (0, import_md18.parseMdFile)(await kapi.readFile(file0)).meta;
           } catch {
           }
         }
@@ -165856,7 +170448,7 @@ ${css}
       const aiCtx = async () => {
         let mdBody = "";
         try {
-          mdBody = (0, import_md15.parseMdFile)(await kapi.readFile(file0)).body || "";
+          mdBody = (0, import_md18.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
         return { body: mdBody, title: row2.title || "" };
@@ -165915,6 +170507,9 @@ ${css}
       return "";
     }
   }
+  function dumpAlignComments(body, map2) {
+    return (0, import_md18.docToMd)((0, import_md18.mdToDoc)(String(body || ""), map2), { alignComments: true });
+  }
   async function buildDraftModel(dPath, title2) {
     let book = "";
     try {
@@ -165949,9 +170544,19 @@ ${css}
         const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
         let body = "", meta2 = {};
         try {
-          ({ meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file)));
+          ({ meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(file)));
         } catch {
           continue;
+        }
+        if (meta2 && meta2.align) {
+          try {
+            const map2 = (0, import_md18.alignFromString)(meta2.align);
+            if (map2 && Object.keys(map2).length) {
+              body = dumpAlignComments(body, map2);
+            }
+          } catch (e) {
+            log("warn", t("ui.app.exportAlignFail"), e);
+          }
         }
         const isMemo = sc.type === "memo" || meta2 && meta2.type === "memo";
         c.scenes.push({
@@ -165976,7 +170581,7 @@ ${css}
           // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
           format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
-          words: (0, import_md15.countWords)(body || "")
+          words: (0, import_md18.countWords)(body || "")
         });
       }
       model.chapters.push(c);
@@ -166123,7 +170728,7 @@ ${css}
       extRow.append(el("span", null, t("ui.app.file")));
       const selExt = el("select", "k-dlg-select");
       selExt.id = "cmp-ext";
-      for (const e of ["md", "txt", "html", "fdx", "rtf"]) {
+      for (const e of ["md", "txt", "html", "fdx", "rtf", "pdf"]) {
         const o = el("option", null, "." + e);
         o.value = e;
         selExt.append(o);
@@ -166239,6 +170844,7 @@ ${css}
     };
     const bGo = el("button", "k-ok", t("ui.common.export2"));
     bGo.onclick = async () => {
+      if (!await checkBeforeExport()) return;
       const r = await withBusy(t("ui.app.busyResultWorkFlow"), doRun);
       const dest = r.ext === "pdf" ? await kapi.savePdfDialog(safeName(state.title) + ".pdf") : await kapi.saveAsDialog(safeName(state.title) + "." + r.ext, r.ext);
       if (!dest) return;
@@ -167210,7 +171816,7 @@ ${css}
     tabBtn.onclick = (e) => {
       if (e.target !== x) activate(file);
     };
-    x.onclick = () => closeTab(file);
+    x.onclick = () => closeTab(file, { ask: true });
     state.tabs.set(file, tab);
     activate(file);
     return tab;
@@ -167460,7 +172066,7 @@ ${css}
     tabBtn.onclick = (e) => {
       if (e.target !== x) activate(file);
     };
-    x.onclick = () => closeTab(file);
+    x.onclick = () => closeTab(file, { ask: true });
     state.tabs.set(file, tab);
     activate(file);
   }
@@ -167523,7 +172129,7 @@ ${css}
     await W(await kapi.join(dr, "scenes.json"), { chapters: { [ch.guid]: [sc] } });
     await kapi.writeFile(
       await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-      (0, import_md15.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
+      (0, import_md18.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
     );
     for (const d of [
       "Images",
@@ -167621,11 +172227,11 @@ ${css}
     });
   }
   async function renameMemo(file) {
-    const { meta: meta2, body } = (0, import_md15.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(file));
     const title2 = await ask(t("ui.app.nameMemoNew"), { value: meta2.title || "" });
     if (!title2) return;
     meta2.title = title2;
-    await kapi.writeFile(file, (0, import_md15.dumpMdFile)(meta2, body));
+    await kapi.writeFile(file, (0, import_md18.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -167684,7 +172290,7 @@ ${css}
     const dir2 = await kapi.join(state.root, "Memos");
     await kapi.mkdir(dir2);
     const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
-    await kapi.writeFile(file, (0, import_md15.dumpMdFile)({ title: title2, type: "memo" }, ""));
+    await kapi.writeFile(file, (0, import_md18.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
   }
@@ -167692,7 +172298,7 @@ ${css}
     if (PANEL_WIN) return requestOpenInMain(file);
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md15.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md18.parseMdFile)(raw);
     title2 = title2 || meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, "");
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
@@ -167720,7 +172326,7 @@ ${css}
     tabBtn.onclick = (e) => {
       if (e.target !== x) activate(file);
     };
-    x.onclick = () => closeTab(file);
+    x.onclick = () => closeTab(file, { ask: true });
     state.tabs.set(file, tab);
     activate(file);
   }
@@ -167754,6 +172360,10 @@ ${css}
         editable: () => !tab.locked
         // ล็อก = แก้ไม่ได้
       });
+      try {
+        tab.sp.applyAlignMap((0, import_md18.alignFromString)(tab.meta.align));
+      } catch {
+      }
       pane.addEventListener("click", () => {
         smart.hide();
         if (tab.sp) setElementBadge(tab.sp.curElement());
@@ -167765,7 +172375,7 @@ ${css}
         markdown: body,
         // [alpha.58r บั๊ก 25] จัดหน้าย่อหน้าเก็บใน frontmatter (`align: [3:center]`) → .md สะอาด
         // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
-        alignMap: (0, import_md15.alignFromString)(tab.meta.align),
+        alignMap: (0, import_md18.alignFromString)(tab.meta.align),
         alignComments: state.settings.mdAlignStyle === "comment",
         onChange: () => {
           markDirty(tab);
@@ -167851,10 +172461,10 @@ ${css}
       delete tab.meta.spMap;
       delete tab.meta.spHash;
     }
-    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md15.alignToString)(conv.align) + "]";
+    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md18.alignToString)(conv.align) + "]";
     mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
-    await kapi.writeFile(tab.file, (0, import_md15.dumpMdFile)(tab.meta, body));
+    await kapi.writeFile(tab.file, (0, import_md18.dumpMdFile)(tab.meta, body));
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     if (tab.editor) smart.bindView(tab.editor.view);
@@ -167965,9 +172575,6 @@ ${css}
       chars: learnedTerms(c.chars, { ...base4, known: smart.byCat?.characters || [] }),
       locs: learnedTerms(c.locs, { ...base4, known: smart.byCat?.locations || [] })
     };
-  }
-  function clearTermCache() {
-    _termCache = { tab: null, at: 0, val: null };
   }
   function cachedTerms(tab) {
     const now = Date.now();
@@ -168240,6 +172847,7 @@ ${css}
       tab.dirty = true;
       tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
       broadcastActiveScene();
+      updateSaveStatus();
     }
     updateDirtyBadge();
     updateProgressBar();
@@ -168298,14 +172906,19 @@ ${css}
     const body = tab.editor ? tab.editor.getMarkdown() : tab.sp ? tab.sp.getMarkdown() : tab.plain.value;
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
-      const am = (0, import_md15.alignToString)(tab.editor.getAlignMap());
+      const am = (0, import_md18.alignToString)(tab.editor.getAlignMap());
+      if (am) tab.meta.align = "[" + am + "]";
+      else delete tab.meta.align;
+    }
+    if (tab.sp) {
+      const am = (0, import_md18.alignToString)(tab.sp.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
     tab.meta.appVersion = APP_VERSION;
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
-    await writeKeepingComments(tab.file, (0, import_md15.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md18.dumpMdFile)(tab.meta, body));
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     setStatus(t("ui.app.saveDone") + tab.title);
@@ -168325,11 +172938,54 @@ ${css}
     } catch (e) {
       log("warn", t("ui.dialogue.errScan"), e);
     }
+    await syncSceneWordCount(tab, body);
     await refreshBacklinksAfterSave(tab, body);
     try {
       refreshNetwork();
     } catch {
     }
+    invalidateSearchIndex();
+    invalidateChatRag();
+    try {
+      refreshBooksIfOpen();
+    } catch {
+    }
+    try {
+      refreshOpenFloorPlan();
+    } catch {
+    }
+    updateSaveStatus();
+  }
+  async function syncSceneWordCount(tab, body) {
+    if (!tab || !tab.file || !/\.md$/i.test(tab.file)) return;
+    try {
+      const ctx2 = await sceneCtx(tab.file);
+      if (!ctx2 || !ctx2.row || ctx2.row.type === "memo") return;
+      const n2 = (0, import_md18.countWords)(body || "");
+      if ((ctx2.row.wordCount || 0) === n2) return;
+      await updateSceneRow(ctx2.dPath, ctx2.row.id, (r) => {
+        r.wordCount = n2;
+      });
+      ctx2.row.wordCount = n2;
+      updateSceneWordBadge(tab.file, n2);
+    } catch (e) {
+      log("warn", t("ui.app.wordCountSyncFail"), e);
+    }
+  }
+  function wordBadgeText(n2) {
+    return (n2 >= 1e3 ? Math.round(n2 / 1e3) + "k" : n2) + t("ui.common.word");
+  }
+  function updateSceneWordBadge(file, n2) {
+    const row2 = document.querySelector('#tree .scene[data-path="' + CSS.escape(file) + '"]');
+    if (!row2) return;
+    if (row2._scene) row2._scene.wordCount = n2;
+    let badge = row2.querySelector(".sc-wordcount");
+    if (!badge && n2) {
+      badge = el("span", "sc-wordcount");
+      row2.append(badge);
+    }
+    if (!badge) return;
+    badge.textContent = n2 ? wordBadgeText(n2) : "";
   }
   async function refreshBacklinksAfterSave(tab, body) {
     if (!autoLinkReady() || !tab || !tab.file) return;
@@ -168577,7 +173233,7 @@ ${css}
           const t3 = state.tabs.get(file);
           if (t3 && (t3.editor || t3.sp)) return (t3.editor || t3.sp).getMarkdown();
         }
-        return (0, import_md15.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
+        return (0, import_md18.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
       } catch {
         return t("ui.app.readCant");
       }
@@ -168635,7 +173291,7 @@ ${css}
     selR.onchange = render;
     render();
   }
-  function closeTab(file) {
+  function closeTab(file, { discard = false, ask: ask2 = false } = {}) {
     const t3 = state.tabs.get(file);
     if (!t3) return;
     const done2 = () => {
@@ -168662,21 +173318,41 @@ ${css}
       }
       markSessionDirty();
     };
-    if (t3.dirty) saveTab(t3).then(done2);
-    else done2();
+    if (!t3.dirty || discard) {
+      t3.dirty = false;
+      done2();
+      return;
+    }
+    if (!ask2) {
+      saveTab(t3).then(done2);
+      return;
+    }
+    choose(tf("ui.app.closeTabDirtyAsk", t3.title || file), [
+      { label: t("ui.app.closeTabSave"), value: "save", primary: true },
+      { label: t("ui.app.closeTabDiscard"), value: "discard", danger: true },
+      { label: t("ui.common.cancel"), value: null }
+    ]).then((v2) => {
+      if (v2 === "save") saveTab(t3).then(done2);
+      else if (v2 === "discard") {
+        t3.dirty = false;
+        updateDirtyBadge();
+        done2();
+      }
+    });
   }
   async function revertTab(file) {
     const t3 = state.tabs.get(file);
     if (!t3) return;
     if (!await confirmBox(t("ui.app.cancelChangeAllTab"), "Revert")) return;
     const content = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md15.parseMdFile)(content);
+    const { meta: meta2, body } = (0, import_md18.parseMdFile)(content);
     if (t3.editor) {
-      t3.editor.setMarkdown(body, (0, import_md15.alignFromString)(meta2.align));
+      t3.editor.setMarkdown(body, (0, import_md18.alignFromString)(meta2.align));
       refreshMentions(t3.editor.view);
     } else if (t3.sp) {
+      const dir2 = file.replace(/[\\/][^\\/]*$/, "");
       t3.sp.destroy();
-      t3.sp = new SPEditor(t3.pane.querySelector(".pane.on") || t3.pane, {
+      t3.sp = new SPEditor(t3.pane.querySelector(".workspace") || t3.pane, {
         // [alpha.62 บั๊ก 19] `smartDirty()` ไม่มีอยู่จริง — ที่นี่พังทุก keystroke หลังกด Revert บนบทหนัง
         markdown: body,
         onChange: () => {
@@ -168686,16 +173362,27 @@ ${css}
           scheduleSpSmart(t3);
           scheduleRepaginate();
         },
-        onElement: (el2) => {
+        onElement: (elName) => {
           spSmartCheck(t3);
-          setElementBadge(el2);
+          setElementBadge(elName);
         },
-        onKeyDown: (ev) => smart.onKey(ev),
-        getChecker: getSpellchecker,
-        resolveSrc: (p) => resolvePath(file, p),
-        getNames: () => smart.names,
-        onMention: (n2) => t3.wiki ? openWikiEntity(n2) : openEntity(n2)
+        onKeyDown: (ev) => {
+          repaginateOnEnter(t3, ev);
+          return smart.onKey(ev);
+        },
+        getChecker: spellChecker,
+        resolveSrc: (p) => resolveImg(dir2, p),
+        getNames: () => state.settings.autoMention !== false ? smart.names : [],
+        onMention: (name5) => {
+          if (smart.fileOf[name5]) openEntity(smart.fileOf[name5]);
+        },
+        editable: () => !t3.locked
+        // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
       });
+      try {
+        t3.sp.applyAlignMap((0, import_md18.alignFromString)(t3.meta.align));
+      } catch {
+      }
       t3.sp.view.dom.classList.add("on");
     } else if (t3.wiki) {
       t3.wiki.destroy();
@@ -168865,12 +173552,19 @@ ${css}
     };
   }
   async function closeAllTabs() {
-    const files = [...state.tabs.keys()];
-    for (const f of files) {
-      const t3 = state.tabs.get(f);
-      if (t3?.dirty) await saveTab(t3);
-      closeTab(f);
+    const dirty = [...state.tabs.values()].filter((t3) => t3.dirty);
+    if (dirty.length) {
+      const { action, keys: keys4 } = await saveAllDialog(
+        dirtyTabList(),
+        { title: tf("ui.app.closeAllDirtyAsk", dirty.length) }
+      );
+      if (action === null) return;
+      if (action === "save") {
+        const pick2 = new Set(keys4);
+        for (const t3 of dirty) if (pick2.has(t3.file)) await saveTab(t3);
+      }
     }
+    for (const f of [...state.tabs.keys()]) closeTab(f, { discard: true });
   }
   function applyCompare(rightFile) {
     const rt = state.tabs.get(rightFile);
@@ -168884,7 +173578,7 @@ ${css}
     if (!state.tabs.has(key2)) {
       let body = "";
       try {
-        body = (0, import_md15.parseMdFile)(await kapi.readFile(snap2.path)).body;
+        body = (0, import_md18.parseMdFile)(await kapi.readFile(snap2.path)).body;
       } catch {
         body = t("ui.app.readFileVersionCant");
       }
@@ -168955,11 +173649,12 @@ ${css}
       if (!f) return;
       popupMenu(e.clientX, e.clientY, [
         t3.floatWin ? { label: t("ui.app.restoreTab2"), click: () => dockTab(f) } : { label: t("ui.app.splitWindowFloat"), click: () => floatTab(f) },
-        { label: t("ui.app.closeTab"), click: () => closeTab(f) }
+        { label: t("ui.app.closeTab"), click: () => closeTab(f, { ask: true }) }
       ]);
     });
   }
   function updateToolbarTitles() {
+    applyCaseOptions();
     $("#tb-bold").title = withShortcut("toolbar.bold", "KeyB", true, false);
     $("#tb-italic").title = withShortcut("toolbar.italic", "KeyI", true, false);
     $("#tb-underline").title = withShortcut("toolbar.underline", "KeyU", true, false);
@@ -168984,6 +173679,20 @@ ${css}
     $("#tb-ai-chat").title = t("toolbar.aiChat");
     $("#tb-starter") && ($("#tb-starter").title = t("toolbar.starter"));
     $("#tb-plug").title = t("toolbar.plugins");
+  }
+  function openTextColorPicker(anchor) {
+    const tab = state.active;
+    const ed = tab && tab.editor;
+    if (!ed) {
+      setStatus(t("ui.color.proseOnly"));
+      return null;
+    }
+    const cur = (0, import_text_color4.normColor)((ed.activeMarks() || {}).colorValue);
+    return openColorPicker(anchor, cur, (hex) => {
+      ed.cmd("color", hex);
+      markDirty(tab);
+      refreshToolbar();
+    }, saveGlobalSetting);
   }
   function refreshToolbar() {
     const ed = state.active?.editor;
@@ -169012,10 +173721,20 @@ ${css}
     $("#tb-ul")?.classList.toggle("on", marks2.list === "ul" || spList === "ul");
     $("#tb-ol")?.classList.toggle("on", marks2.list === "ol" || spList === "ol");
     $("#tb-quote")?.classList.toggle("on", !!marks2.quote);
+    {
+      const cb = $("#tb-color");
+      if (cb) {
+        const cv = ed ? marks2.colorValue || "" : "";
+        cb.dataset.color = cv;
+        const bar = cb.querySelector(".tb-color-bar");
+        if (bar) bar.style.background = cv || "currentColor";
+        cb.classList.toggle("on", !!cv);
+      }
+    }
     $("#tb-img")?.classList.toggle("on", !!marks2.image);
     const sel = $("#tb-style");
     if (marks2.block) sel.value = marks2.block;
-    const curAlign = ed ? marks2.align || "left" : sp ? sp.curAlign() : null;
+    const curAlign = ed ? marks2.align : sp ? sp.curAlign() : null;
     for (const a of ["left", "center", "right", "justify"]) {
       const b = $("#tb-align-" + a);
       if (b) b.classList.toggle("on", curAlign === a);
@@ -169495,7 +174214,7 @@ ${css}
         return;
       }
       const body = t3.editor ? t3.editor.getMarkdown() : t3.sp ? t3.sp.getText() : t3.plain.value;
-      let txt = tf("ui.app.wordChar", (0, import_md15.countWords)(body).toLocaleString(), body.length.toLocaleString());
+      let txt = tf("ui.app.wordChar", (0, import_md18.countWords)(body).toLocaleString(), body.length.toLocaleString());
       if (t3.sp) {
         txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t3);
         try {
@@ -169545,6 +174264,10 @@ ${css}
       back();
       return;
     }
+    if (navWholeBook && state.root) {
+      drawBookOutline(box2).then(back);
+      return;
+    }
     const t3 = state.active;
     if (!t3 || t3.wiki || t3.gal || t3.isJson || t3.net || t3.dash || t3.planner || !t3.editor && !t3.sp && !t3.plain) {
       box2.append(el("div", "dim", t("ui.app.openSceneViewNavigation")));
@@ -169581,14 +174304,12 @@ ${css}
         if (n2.textContent.trim()) items.push({ kind: hit[0], label: n2.textContent, lvl: hit[1], pos: offset });
       });
     } else {
-      t3.plain.value.split("\n").forEach((line, i5) => {
-        const m = /^(#{1,6})\s+(.*)$/.exec(line);
-        if (m) items.push({ kind: "heading", label: m[2], lvl: m[1].length, line: i5 });
-        else if (/^\.[^.]/.test(line.trim()) || /^(INT|EXT)[.\s]/i.test(line.trim()))
-          items.push({ kind: "sceneHeading", label: line.trim().replace(/^\./, ""), lvl: 2, line: i5 });
-        else if (navShowBeats && line.trim())
-          items.push({ kind: "beat", label: navTrunc(line), lvl: 4, line: i5 });
-      });
+      const spLike = /\.(fountain|txt)$/i.test(t3.file || "") || /^(\.|INT|EXT)/im.test(t3.plain.value || "");
+      const rows = spLike ? parseScreenplay(t3.plain.value) : parseProse(t3.plain.value);
+      for (const r of rows) {
+        if (!navShowBeats && (r.kind === "beat" || r.kind === "quote" || r.kind === "character")) continue;
+        items.push({ kind: r.kind, label: r.label, lvl: r.level, line: r.line });
+      }
     }
     relayOutline(t3.file || "", t3.title || "", items, t("ui.app.notHasHeadingHead"), !!t3.sp);
     if (!items.length) {
@@ -169615,6 +174336,86 @@ ${css}
       }));
     }
     back();
+  }
+  function setNavWholeBook(on2) {
+    navWholeBook = !!on2;
+    localStorage.setItem("k2-nav-book", navWholeBook ? "1" : "0");
+    $("#nav-book-btn")?.classList.toggle("on", navWholeBook);
+    refreshOutline();
+    return navWholeBook;
+  }
+  function navWholeBookOn() {
+    return navWholeBook;
+  }
+  async function buildBookNavigation() {
+    const ctx2 = await sceneCtx();
+    if (!ctx2) return [];
+    const all = await listScenes(state.root);
+    const rows = all.filter((s) => s.draftPath === ctx2.dPath);
+    const scenes = [];
+    for (const r of rows) {
+      let body = "";
+      try {
+        body = (0, import_md18.parseMdFile)(await kapi.readFile(r.path)).body || "";
+      } catch {
+      }
+      scenes.push({
+        id: r.id,
+        title: r.title,
+        status: r.row.status || "",
+        color: r.row.color || "",
+        wordCount: r.row.wordCount || 0,
+        flag: !!r.row.isFavorite,
+        format: r.row.format || "prose",
+        body,
+        path: r.path
+      });
+    }
+    const nodes = buildNavigation(scenes, { showBeats: navShowBeats });
+    const pathOf = new Map(scenes.map((s) => [s.id, s.path]));
+    return nodes.map((n2) => ({ ...n2, path: pathOf.get(n2.sceneId) || "" }));
+  }
+  async function drawBookOutline(box2) {
+    box2.replaceChildren(el("div", "dim", t("ui.common.busySearch")));
+    let nodes = [];
+    try {
+      nodes = await buildBookNavigation();
+    } catch (e) {
+      log("warn", t("ui.app.navBookFail"), e);
+    }
+    box2.replaceChildren();
+    const head2 = el("div", "nav-head");
+    head2.append(el("span", "nav-scene", "\u{1F4DA} " + t("ui.app.navWholeBook")));
+    box2.append(head2);
+    if (!nodes.length) {
+      box2.append(el("div", "dim", t("ui.app.notHasHeadingHead")));
+      return 0;
+    }
+    for (const n2 of nodes) {
+      const it = { kind: n2.kind, label: n2.label, lvl: n2.level, line: n2.line };
+      box2.append(outlineItemEl(it, async () => {
+        if (!n2.path) return;
+        await openScene(n2.path, n2.label);
+        if (Number.isFinite(n2.line) && n2.kind !== "scene") gotoLineInActive(n2.line);
+      }));
+    }
+    return nodes.length;
+  }
+  function gotoLineInActive(line) {
+    const t22 = state.active;
+    const ed = t22 && (t22.editor || t22.sp);
+    if (!ed || !ed.view) return false;
+    let i5 = 0, target = null;
+    ed.view.state.doc.forEach((node, pos) => {
+      if (i5++ === line) target = pos;
+    });
+    if (target == null) return false;
+    Promise.resolve().then(() => (init_dist4(), dist_exports)).then(({ TextSelection: TextSelection2 }) => {
+      const v2 = ed.view;
+      v2.dispatch(v2.state.tr.setSelection(TextSelection2.create(v2.state.doc, target + 1)).scrollIntoView());
+      v2.focus();
+    });
+    return true;
   }
   function outlineItemEl(it, onJump) {
     const d = el("div", "ol-item nav-" + it.kind + " lvl" + it.lvl, it.label || t("ui.common.empty"));
@@ -170239,18 +175040,34 @@ ${css}
         const p = await kapi.saveAsDialog(t3.title + ".md");
         if (p) {
           const body = t3.editor ? t3.editor.getMarkdown() : t3.plain.value;
-          await kapi.writeFile(p, (0, import_md15.dumpMdFile)(t3.meta, body));
+          await kapi.writeFile(p, (0, import_md18.dumpMdFile)(t3.meta, body));
           setStatus("Save As: " + p);
         }
         break;
       }
-      case "print":
+      // [alpha.124 ข้อ 25] พิมพ์ — เดิมยิง `kapi.print()` ทื่อ ๆ: ไม่กันตอนไม่มีแท็บ
+      // ไม่ผ่านการตรวจก่อนส่งออก (ต่างจากทุกทางส่งออกอื่น) และไม่เคยบอกผลลัพธ์เลย
+      // ยกเลิกกล่องพิมพ์ หรือไม่มีเครื่องพิมพ์ = เงียบสนิทเหมือนโปรแกรมไม่ได้ทำอะไร
+      case "print": {
+        if (!t3) {
+          setStatus(t("ui.app.printNoTab"));
+          break;
+        }
+        if (!await checkBeforeExport()) break;
         document.body.classList.add("printing");
         hideInactivePanes();
-        await kapi.print();
+        let pr = null;
+        try {
+          pr = await kapi.print();
+        } catch (e) {
+          log("warn", t("ui.app.printFail"), e);
+        }
         restoreInactivePanes();
         setTimeout(() => document.body.classList.remove("printing"), 800);
+        if (pr && !pr.ok) setStatus(pr.reason ? t("ui.app.printFail") + " \u2014 " + pr.reason : t("ui.app.printCancelled"));
+        else if (pr && pr.ok) setStatus(t("ui.app.printSent"));
         break;
+      }
       // [alpha.81 ข้อ 8] เดิมทางนี้ยิง `webContents.printToPDF` ของหน้าจอตรง ๆ —
       // ได้ A4 ตายตัวไม่ตรงขนาดกระดาษที่ตั้งไว้ และเป็นภาพของหน้าจอ ไม่ใช่เอกสารจริง
       // ตอนนี้พาไปศูนย์รวมการส่งออกเสมอ (ทางนั้นให้ตัวอักษรจริงและใช้ขนาดกระดาษที่ตั้งไว้)
@@ -170258,7 +175075,7 @@ ${css}
         await openExportHub();
         break;
       case "close-tab":
-        if (t3) closeTab(t3.file);
+        if (t3) closeTab(t3.file, { ask: true });
         break;
       case "close-all-tabs":
         closeAllTabs();
@@ -170509,27 +175326,40 @@ ${css}
         break;
       // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ (Fountain · FDX · Celtx · Fade In · Adobe Story)
       case "import-script": {
-        const result = await importScreenplayDialog(async (markdown, format3, summary) => {
+        const result = await importScreenplayDialog(async (markdown, format3, summary, mode) => {
           const t4 = state.active;
-          if (t4 && t4.sp) {
+          if (mode === "replace" && t4 && t4.sp) {
             t4.sp.setMarkdown(markdown);
             if (t4.editor) t4.editor.setMarkdown(markdown);
             markDirty(t4);
             setStatus(t("ui.app.importScreenplay") + format3 + t("ui.app.done") + summary.scenes + t("ui.app.scene") + summary.characters + t("ui.app.character"));
           } else {
             const sec = state.active?.meta;
-            const dPath = sec ? kapi.join(state.root, sec.section, "Draft", sec.draft) : null;
-            if (dPath) {
-              const file = await createNewScene(dPath, t("ui.app.import") + format3 + "-" + Date.now().toString(36));
-              const tab = await activate(file);
-              if (tab?.sp) {
-                tab.sp.setMarkdown(markdown);
-                if (tab.editor) tab.editor.setMarkdown(markdown);
-                markDirty(tab);
-                setStatus(t("ui.app.importScreenplay") + format3 + t("ui.app.newSceneNew") + summary.scenes + t("ui.app.scene") + summary.characters + t("ui.app.character"));
+            let dPath = sec ? await kapi.join(state.root, sec.section, "Draft", sec.draft) : null;
+            if (!dPath) {
+              const ds = await listDrafts();
+              if (ds.length === 1) dPath = ds[0].dPath;
+              else if (ds.length > 1) {
+                const pick2 = await pickFromList(t("ui.app.exportChapterDraft"), ds.map((d) => d.label));
+                dPath = pick2 ? (ds.find((x) => x.label === pick2) || {}).dPath : null;
+                if (!dPath) return;
               }
+            }
+            if (dPath) {
+              const dj = await kapi.readJson(await kapi.join(dPath, "draft.json")).catch(() => ({}));
+              const ch2 = (dj.chapters || [])[0] || await addChapter(dPath, t("ui.app.import") + format3);
+              if (!ch2) return;
+              const row2 = await addScene(
+                dPath,
+                ch2,
+                t("ui.app.import") + format3 + "-" + Date.now().toString(36),
+                { meta: { format: "screenplay" }, body: markdown, silent: true }
+              );
+              if (!row2) return;
+              await openScene(row2.path, row2.title);
+              setStatus(t("ui.app.importScreenplay") + format3 + t("ui.app.newSceneNew") + summary.scenes + t("ui.app.scene") + summary.characters + t("ui.app.character"));
             } else {
-              alert(t("ui.app.importNotOkNot"));
+              await confirmBox(t("ui.app.importNotOkNot"), t("ui.common.msg3"));
             }
           }
         });
@@ -170544,10 +175374,16 @@ ${css}
           break;
         }
         const names = spTabs.map(([f]) => f.split(/[/\\]/).pop().replace(/\.md$/i, ""));
-        const oldIdx = parseInt(prompt(t("ui.app.pickEditionNum") + spTabs.length + "):\n" + names.map((n2, i5) => i5 + 1 + ". " + n2).join("\n")), 10);
-        if (!oldIdx || oldIdx < 1 || oldIdx > spTabs.length) break;
-        const newIdx = parseInt(prompt(t("ui.app.pickEditionNewNum") + spTabs.length + "):\n" + names.map((n2, i5) => i5 + 1 + ". " + n2).join("\n")), 10);
-        if (!newIdx || newIdx < 1 || newIdx > spTabs.length || newIdx === oldIdx) break;
+        const rows = names.map((n2, i5) => i5 + 1 + ". " + n2);
+        const oldPick = await pickFromList(t("ui.app.pickEditionNum"), rows);
+        const oldIdx = rows.indexOf(oldPick) + 1;
+        if (!oldIdx) break;
+        const newPick = await pickFromList(
+          t("ui.app.pickEditionNewNum"),
+          rows.filter((_2, i5) => i5 + 1 !== oldIdx)
+        );
+        const newIdx = rows.indexOf(newPick) + 1;
+        if (!newIdx || newIdx === oldIdx) break;
         const oldTab = spTabs[oldIdx - 1][1];
         const newTab = spTabs[newIdx - 1][1];
         const oldText = oldTab.sp ? oldTab.sp.getMarkdown() : oldTab.editor ? oldTab.editor.getMarkdown() : oldTab.body;
@@ -170678,6 +175514,46 @@ ${css}
       case "dev-console":
         openDevConsole();
         break;
+      // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Ctrl+Alt+U) — เดิมไม่มีคีย์ลัดเลย
+      // ต้องละมือจากแป้นไปคลิก dropdown ทุกครั้ง ทั้งที่เป็นงานที่ทำรัว ๆ ตอนจัดหัวฉาก/ชื่อตัวละคร
+      case "text-case-cycle": {
+        const edC = getActiveEditor();
+        if (!edC) {
+          setStatus(t("ui.app.openSceneBeforeChangeImage"));
+          break;
+        }
+        _caseCycle = (_caseCycle + 1) % CASE_MODES.length;
+        const mode = CASE_MODES[_caseCycle];
+        await handleCommand("text-case", mode);
+        setStatus(t(CASE_LABELS[mode]) || CASE_SHORT[mode]);
+        break;
+      }
+      // [alpha.124 ข้อ 3] ตารางคีย์ลัด — ตอนนี้เป็นคำสั่งจริงในตาราง (Ctrl+Alt+/) ไม่ใช่ listener ลอย
+      case "cheatsheet":
+        showShortcutsDialog();
+        break;
+      // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำ (คนที่ไม่คลิกขวาไม่มีทางรู้ว่ามี)
+      case "thesaurus": {
+        const w = (window.getSelection()?.toString() || "").trim();
+        if (!w) {
+          setStatus(t("ui.thes.selectWordFirst"));
+          break;
+        }
+        const r = getActiveEditor()?.view?.dom?.getBoundingClientRect();
+        showThesaurusPopup(w, r ? r.left + 40 : 120, r ? r.top + 60 : 120);
+        break;
+      }
+      // [alpha.124 ข้อ 8] เมนู เครื่องมือ → "ตรวจหาคำซ้ำ · สถิติการใช้คำ" ส่ง `word-history` มาตั้งแต่
+      // alpha.60 แต่ **ไม่เคยมี case รับ** → กดแล้วเงียบสนิทมาตลอด (ไม่มีแม้แต่ error)
+      // ของจริงอยู่ในแผง "AI วิเคราะห์" อยู่แล้ว 2 ใบ: 🔁 ตรวจหาคำซ้ำ · 📝 การใช้คำ
+      // (ทั้งคู่คำนวณในเครื่องได้ ไม่ต้องมีคีย์ AI) → เปิดแผงแล้วพาไปที่การ์ดนั้นเลย
+      case "word-history": {
+        showPanel("ai-analyzer");
+        renderFeaturePanel("ai-analyzer");
+        syncMenuToggles();
+        focusAnalysis("repeat");
+        break;
+      }
       // [alpha.58r บั๊ก 16–24] รูปแบบนิยาย
       case "prose-setup":
         settingsDialog("prose");
@@ -170688,7 +175564,11 @@ ${css}
       // [95] Per-element shortcuts + [79] Select scene + [77] Non-breaking space
       case "sp-element": {
         const sp = state.active?.sp;
-        if (sp) sp.switchTo(a[0]);
+        if (!sp) {
+          setStatus(t("ui.app.spElementScriptOnly"));
+          break;
+        }
+        sp.switchTo(a[0]);
         refreshToolbar();
         if (t3) markDirty(t3);
         break;
@@ -170936,6 +175816,31 @@ ${css}
       }
     }
   }
+  function inEditableScope(node) {
+    const el2 = node && node.nodeType === 1 ? node : node && node.parentElement || null;
+    if (!el2) return false;
+    const tag3 = el2.tagName;
+    if (tag3 === "INPUT" || tag3 === "TEXTAREA" || tag3 === "SELECT") return true;
+    return !!el2.closest('[contenteditable="true"], .ProseMirror, input, textarea');
+  }
+  function onSelectAllKey(e) {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.code !== "KeyA") return false;
+    const ae = document.activeElement;
+    if (inEditableScope(ae) || inEditableScope(e.target)) return false;
+    if (ae && ae.closest && ae.closest("#tree")) return false;
+    e.preventDefault();
+    const ed = getActiveEditor();
+    if (!ed || !ed.view) {
+      setStatus(t("ui.app.selectAllNeedEditor"));
+      return true;
+    }
+    ed.focus();
+    ed.view.dispatch(ed.view.state.tr.setSelection(
+      new AllSelection(ed.view.state.doc)
+    ));
+    refreshToolbar();
+    return true;
+  }
   function setModDown(on2) {
     document.body.classList.toggle("k-mod-down", !!on2);
     return !!on2;
@@ -171092,6 +175997,18 @@ ${css}
       }
     };
   }
+  function applyCaseOptions() {
+    const sel = $("#tb-case");
+    if (!sel || !sel.options.length) return 0;
+    const head2 = sel.options[0];
+    sel.replaceChildren(head2);
+    for (const m of CASE_MODES) {
+      const o = el("option", null, t(CASE_LABELS[m]) || CASE_SHORT[m]);
+      o.value = m;
+      sel.append(o);
+    }
+    return sel.options.length;
+  }
   function applyToolbarShortcutTitles() {
     for (const [id, sid] of Object.entries(TB_SC_MAP)) {
       const btn2 = $("#" + id);
@@ -171110,7 +176027,10 @@ ${css}
     $("#tb-ai-chat") && ($("#tb-ai-chat").title = t("toolbar.aiChat"));
     $("#tb-starter") && ($("#tb-starter").title = t("toolbar.starter"));
     const sab = $("#save-all-btn");
-    if (sab) sab.title = t("shortcuts.saveAll") + " (Ctrl+Shift+S)";
+    if (sab) {
+      const scAll = effectiveShortcuts().find((x) => shortcutId(x) === "save-all");
+      sab.title = t("shortcuts.saveAll") + (scAll ? " (" + formatShortcut(scAll[0], scAll[1], scAll[2]) + ")" : "");
+    }
     const hb = $("#home-btn");
     if (hb) hb.title = t("app.home");
     $("#tb-style")?.querySelectorAll("option").forEach((o) => {
@@ -171408,6 +176328,7 @@ ${css}
       "#tb-strike",
       "#tb-sup",
       "#tb-sub",
+      "#tb-color",
       "#tb-ul",
       "#tb-ol",
       "#tb-quote",
@@ -172142,7 +177063,7 @@ ${css}
       for (const t3 of state.tabs.values()) {
         if ((t3.editor || t3.sp) && t3.file && /\.md$/i.test(t3.file)) {
           const text = t3.editor ? t3.editor.getText() : t3.sp ? t3.sp.getText() : "";
-          totalWords += (0, import_md15.countWords)(text);
+          totalWords += (0, import_md18.countWords)(text);
         }
       }
     } catch {
@@ -172178,29 +177099,36 @@ ${css}
       if (el2) el2.innerHTML = iconHtml("file", 14) + " " + total + t("ui.common.scene");
     };
     updateSceneCount();
+    updateSaveStatus();
+    updateProgressBar();
+  }
+  function updateSaveStatus() {
+    const tab = state.active;
     const modeEl = $("#status-mode");
     if (modeEl) {
-      const tab = state.active;
-      modeEl.innerHTML = tab?.sp ? iconHtml("film", 14) + t("ui.app.chapterFilm") : tab?.editor ? iconHtml("book", 14) + t("ui.app.novel") : "";
+      modeEl.replaceChildren();
+      if (tab?.sp) modeEl.append(icon("film", 14), t("ui.app.chapterFilm"));
+      else if (tab?.editor) modeEl.append(icon("book", 14), t("ui.app.novel"));
     }
     const saveEl = $("#status-save");
-    if (saveEl) {
-      const tab = state.active;
-      if (tab && tab.dirty) {
-        saveEl.textContent = t("ui.app.notSave");
-        saveEl.style.color = "var(--orange)";
-      } else if (tab) {
-        const mod = tab.meta?.modified || "";
-        if (mod) {
-          const d = new Date(mod);
-          saveEl.innerHTML = iconHtml("save", 12) + " " + d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-        } else {
-          saveEl.innerHTML = iconHtml("save", 12);
-        }
-        saveEl.style.color = "";
-      }
+    if (!saveEl) return;
+    saveEl.replaceChildren();
+    if (!tab) {
+      saveEl.style.color = "";
+      return;
     }
-    updateProgressBar();
+    if (tab.dirty) {
+      saveEl.textContent = t("ui.app.notSave");
+      saveEl.style.color = "var(--orange)";
+      return;
+    }
+    const mod = tab.meta?.modified || "";
+    saveEl.append(icon("save", 12));
+    if (mod) {
+      const d = new Date(mod);
+      if (!isNaN(d)) saveEl.append(" " + d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }));
+    }
+    saveEl.style.color = "";
   }
   function refreshStatusBar() {
     updateStatusExtras();
@@ -172376,7 +177304,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 800));
       const t3 = state.active;
       check2("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A prose", !!t3?.editor);
-      const orig = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const orig = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2(
         "round-trip \u0E1C\u0E48\u0E32\u0E19 editor \u0E08\u0E23\u0E34\u0E07",
         t3.editor.getMarkdown() === orig,
@@ -172408,13 +177336,13 @@ ${css}
       ));
       t3.editor.cmd("bold");
       await saveTab(t3);
-      const saved = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const saved = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2("\u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E19\u0E32 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C .md \u0E21\u0E35 **\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**", saved.includes("**\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**"), saved);
       t3.editor.cmd("bold");
       await saveTab(t3);
       check2(
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
-        (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       {
         const longBody = Array.from(
@@ -172470,8 +177398,8 @@ ${css}
         await saveTab(t3);
         check2(
           "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
-          (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
-          (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+          (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
         );
         activate(t3.file);
         await new Promise((r) => setTimeout(r, 150));
@@ -172525,7 +177453,7 @@ ${css}
       refreshOutline();
       check2("outline \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01", [...document.querySelectorAll(".ol-item")].some((x) => x.textContent.includes("\u0E15\u0E25\u0E32\u0E14 - \u0E40\u0E22\u0E47\u0E19")));
       activate(t3.file);
-      const fmtOf = async (f) => (0, import_md15.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
+      const fmtOf = async (f) => (0, import_md18.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
       check2("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22", !!t3.editor && !t3.sp && await fmtOf(t3.file) === "prose");
       const answerConvert = async (go, ok2) => {
         const done2 = go();
@@ -172543,7 +177471,7 @@ ${css}
       );
       check2(
         "[87] \u0E15\u0E2D\u0E1A\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-        !!state.active.editor && !state.active.sp && (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        !!state.active.editor && !state.active.sp && (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       await answerConvert(() => switchFormat("screenplay"), true);
       check2(
@@ -172554,7 +177482,7 @@ ${css}
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19 format \u0E25\u0E07 frontmatter (screenplay)",
         await fmtOf(t3.file) === "screenplay"
       );
-      const spDisk87 = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
+      const spDisk87 = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 **\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E01\u0E44\u0E1A\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E43\u0E2B\u0E49\u0E2D\u0E35\u0E01\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E2D\u0E48\u0E32\u0E19",
         !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
@@ -172573,7 +177501,7 @@ ${css}
         !!state.active.editor && !state.active.sp
       );
       check2("frontmatter \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 prose", await fmtOf(t3.file) === "prose");
-      const backDisk87 = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
+      const backDisk87 = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
         backDisk87.body === orig,
@@ -172602,7 +177530,7 @@ ${css}
         t3.editor.setMarkdown(huge);
         await new Promise((r) => setTimeout(r, 500));
         await saveTab(t3);
-        const diskA = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
+        const diskA = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E01\u0E29\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
           diskA.body.includes(huge),
@@ -172610,7 +177538,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("screenplay"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskB = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
+        const diskB = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E1A\u0E25\u0E47\u0E2D\u0E01",
           diskB.body.includes(huge),
@@ -172618,7 +177546,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("prose"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskC = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file));
+        const diskC = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
           diskC.body === diskA.body,
@@ -174706,6 +179634,20 @@ ${css}
       document.querySelector(".k-dialog .k-ok").click();
       const trashedEnt = await pDel2;
       check2("\u0E25\u0E1A entity \u2192 \u0E44\u0E1B\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30", !!trashedEnt);
+      {
+        const recent = logStore.all().slice(-60);
+        const recRows = recent.filter((r) => r.source === "recycle");
+        check2(
+          '[a128-6] \u2605\u2605 \u0E25\u0E1A\u0E02\u0E2D\u0E07 \u2192 \u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E32\u0E01\u0E2A\u0E32\u0E22 "recycle" \u0E43\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 (\u0E44\u0E25\u0E48\u0E22\u0E49\u0E2D\u0E19\u0E44\u0E14\u0E49\u0E27\u0E48\u0E32\u0E07\u0E32\u0E19\u0E2B\u0E32\u0E22\u0E15\u0E2D\u0E19\u0E44\u0E2B\u0E19)',
+          recRows.length > 0,
+          recent.slice(-5).map((r) => r.source + ":" + r.msg).join(" | ")
+        );
+        check2(
+          "[a128-7] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E19\u0E31\u0E49\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07/\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E44\u0E27\u0E49\u0E14\u0E49\u0E27\u0E22",
+          recRows.some((r) => String(r.detail || "").includes("Recycle")),
+          String((recRows[0] || {}).detail || "").slice(0, 120)
+        );
+      }
       await kapi.remove(trashedEnt);
       check2("\u0E25\u0E1A\u0E16\u0E32\u0E27\u0E23\u0E2B\u0E32\u0E22\u0E08\u0E23\u0E34\u0E07", !await kapi.exists(trashedEnt));
       await buildTree2();
@@ -174945,7 +179887,7 @@ ${css}
       );
       check2(
         "[25] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A frontmatter \u0E44\u0E14\u0E49",
-        (0, import_md15.alignToString)(t3.editor.getAlignMap()) === "0:center"
+        (0, import_md18.alignToString)(t3.editor.getAlignMap()) === "0:center"
       );
       t3.editor.setMarkdown("\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A", { 0: "right" });
       selHead(t3.editor.view);
@@ -175817,7 +180759,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 400));
       const spTab = state.active;
       check2("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 WYSIWYG (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 textarea)", !!spTab.sp && !spTab.plain);
-      const spOrig = (0, import_md15.parseMdFile)(await kapi.readFile(spTab.file)).body;
+      const spOrig = (0, import_md18.parseMdFile)(await kapi.readFile(spTab.file)).body;
       spTab.sp.setMarkdown(spOrig);
       await new Promise((r) => setTimeout(r, 200));
       const spEls = [];
@@ -176001,7 +180943,7 @@ ${css}
       await saveTab(spTab);
       check2(
         "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 v1",
-        (0, import_md15.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
+        (0, import_md18.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
       );
       spTab.sp.setElement("character");
       vsp.dispatch(vsp.state.tr.insertText("\u0E22\u0E31\u0E22\u0E41"));
@@ -177621,8 +182563,8 @@ ${css}
       const mCh1 = mDj.chapters[0];
       const mFile = (await kapi.listFiles(await kapi.join(state.root, "Memos"), ".md"))[0];
       const mPath = await kapi.join(state.root, "Memos", mFile);
-      const mBody = (0, import_md15.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
-      await kapi.writeFile(mPath, (0, import_md15.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+      const mBody = (0, import_md18.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
+      await kapi.writeFile(mPath, (0, import_md18.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
       check2("\u0E21\u0E35\u0E42\u0E19\u0E49\u0E15\u0E43\u0E19 Memos \u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", await kapi.exists(mPath));
       await moveMemoToChapter(mPath, dP, mCh1, null);
       const mSj1 = await kapi.readJson(await kapi.join(dP, "scenes.json"));
@@ -177636,7 +182578,7 @@ ${css}
         "\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 + \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 Memos \u0E41\u0E25\u0E49\u0E27",
         await kapi.exists(await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)) && !await kapi.exists(mPath)
       );
-      const mMeta = (0, import_md15.parseMdFile)(await kapi.readFile(
+      const mMeta = (0, import_md18.parseMdFile)(await kapi.readFile(
         await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)
       )).meta;
       check2("\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E21\u0E35 type: memo \u0E43\u0E19 frontmatter", mMeta.type === "memo");
@@ -177779,7 +182721,7 @@ ${css}
         JSON.stringify(scP2.startPage)
       );
       const scP2File = await kapi.join(dPath, "Chapters", chP.folderName, scP2.fileName);
-      const scP2Fm = (0, import_md15.parseMdFile)(await kapi.readFile(scP2File)).meta;
+      const scP2Fm = (0, import_md18.parseMdFile)(await kapi.readFile(scP2File)).meta;
       check2(
         "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C/\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07/\u0E42\u0E19\u0E49\u0E15 \u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E25\u0E07 frontmatter .md",
         scP2Fm.emotion === "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07" && scP2Fm.conflict === "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D" && scP2Fm.note === "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A",
@@ -177802,7 +182744,7 @@ ${css}
         scFb.isFlashback === true && scFb.isFlashforward === false,
         JSON.stringify(scFb)
       );
-      const scFbFm = (0, import_md15.parseMdFile)(await kapi.readFile(
+      const scFbFm = (0, import_md18.parseMdFile)(await kapi.readFile(
         await kapi.join(dPath, "Chapters", chP.folderName, scFb.fileName)
       )).meta;
       check2(
@@ -177975,7 +182917,7 @@ ${css}
         await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj4, null, 2));
         await kapi.writeFile(
           await kapi.join(dPath, "Chapters", chP.folderName, "scene-50.md"),
-          (0, import_md15.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
+          (0, import_md18.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
         );
         await buildTree2();
         await moveSceneOrder(dPath, chP, { id: "scMove" }, -1);
@@ -178070,7 +183012,7 @@ ${css}
         const scLk = await findRow();
         check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 row.locked=true \u0E43\u0E19 scenes.json", scLk && scLk.locked === true);
         const lkFile = await kapi.join(dPath, "Chapters", chP.folderName, scLk.fileName);
-        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md15.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
+        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md18.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
         await openScene(lkFile, scLk.title);
         await new Promise((r) => setTimeout(r, 120));
         check2(
@@ -178092,7 +183034,7 @@ ${css}
         const rev0 = parseInt(t3.editor ? t3.meta.revision || 0 : 0, 10) || 0;
         markDirty(t3);
         await saveTab(t3);
-        const fm = (0, import_md15.parseMdFile)(await kapi.readFile(t3.file)).meta;
+        const fm = (0, import_md18.parseMdFile)(await kapi.readFile(t3.file)).meta;
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E41\u0E2D\u0E1B\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 (appVersion) \u0E25\u0E07 frontmatter", !!fm.appVersion);
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49 (revision) \u0E02\u0E36\u0E49\u0E19", (parseInt(fm.revision, 10) || 0) >= 1, fm.revision);
         const dRows = lineDiff2("a\nb\nc", "a\nx\nc");
@@ -178114,7 +183056,7 @@ ${css}
         const sjc = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
         const chG = chP.guid;
         const secondFile = await kapi.join(dPath, "Chapters", chP.folderName, "cmp2.md");
-        await kapi.writeFile(secondFile, (0, import_md15.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
+        await kapi.writeFile(secondFile, (0, import_md18.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
         activate(t3.file);
         await openCompareRight(dPath, chP, { title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", fileName: "cmp2.md" });
         await new Promise((r) => setTimeout(r, 150));
@@ -178178,13 +183120,13 @@ ${css}
         const rRoot = state.root;
         await kapi.writeFile(await kapi.join(rRoot, "Recycle", "new-keep.md"), "\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E04\u0E27\u0E23\u0E25\u0E1A");
         state.settings.recycleDays = 30;
-        await purgeRecycle(rRoot);
+        await purgeRecycle(rRoot, { silent: true });
         check2(
           "\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E44\u0E21\u0E48\u0E25\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48 (mtime \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14)",
           await kapi.exists(await kapi.join(rRoot, "Recycle", "new-keep.md"))
         );
         state.settings.recycleDays = 0;
-        await purgeRecycle(rRoot);
+        await purgeRecycle(rRoot, { silent: true });
         check2(
           "recycleDays=0 \u2192 \u0E44\u0E21\u0E48\u0E25\u0E49\u0E32\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)",
           await kapi.exists(await kapi.join(rRoot, "Recycle", "new-keep.md"))
@@ -178811,18 +183753,23 @@ ${css}
         markDirty(state.active);
         const ndirty = [...state.tabs.values()].filter((t4) => t4.dirty).length;
         check2("markDirty \u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A dirty", ndirty > dirtyBefore, "dirty=" + ndirty);
-        window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyS", ctrlKey: true, shiftKey: true, bubbles: true }));
+        check2(
+          "[a124] \u2605 Ctrl+Shift+S \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E04\u0E37\u0E2D save-as (\u0E40\u0E25\u0E34\u0E01\u0E22\u0E34\u0E07\u0E0B\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E1A\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14)",
+          SHORTCUTS.filter((x) => x[0] === "KeyS" && x[1] === true && x[2] === true).map((x) => shortcutId(x)).join(",") === "save-as",
+          SHORTCUTS.filter((x) => x[0] === "KeyS").map((x) => shortcutId(x)).join(",")
+        );
+        window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyS", ctrlKey: true, altKey: true, bubbles: true }));
         for (let i5 = 0; i5 < 40 && !document.querySelector(".k-dialog.k-saveall"); i5++) {
           await new Promise((r) => setTimeout(r, 50));
         }
         const scDlg = document.querySelector(".k-dialog.k-saveall");
-        check2("Ctrl+Shift+S \u2192 \u0E02\u0E36\u0E49\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", !!scDlg);
+        check2("Ctrl+Alt+S \u2192 \u0E02\u0E36\u0E49\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", !!scDlg);
         scDlg.querySelector(".k-dlg-btns .k-ok").click();
         for (let i5 = 0; i5 < 160 && [...state.tabs.values()].some((x) => x.dirty); i5++) {
           await new Promise((r) => setTimeout(r, 50));
         }
         check2(
-          "Ctrl+Shift+S \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A dirty)",
+          "Ctrl+Alt+S \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A dirty)",
           [...state.tabs.values()].every((t4) => !t4.dirty),
           [...state.tabs.values()].filter((t4) => t4.dirty).map((t4) => t4.title).join("|")
         );
@@ -179012,12 +183959,12 @@ ${css}
         );
         check2(
           "parseMdFile \u0E15\u0E31\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01)",
-          !(0, import_md15.parseMdFile)(rawMig).body.includes("k2-comments")
+          !(0, import_md18.parseMdFile)(rawMig).body.includes("k2-comments")
         );
         check2("\u0E22\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0B\u0E49\u0E33", await migrateSceneComments(dPath) === 0);
         const cstore = commentStore();
         const cmRaw = (await cstore.read(cmFile)).body;
-        const cmQuote = ((0, import_md15.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
+        const cmQuote = ((0, import_md18.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
         const cmAt = cmRaw.indexOf(cmQuote);
         check2("\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E40\u0E08\u0E2D (\u0E43\u0E0A\u0E49\u0E1C\u0E39\u0E01\u0E2A\u0E21\u0E2D)", cmAt >= 0, cmQuote);
         const c1 = await cstore.add(cmFile, { start: cmAt, end: cmAt + cmQuote.length }, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -179154,7 +184101,12 @@ ${css}
         );
         check2("\u0E41\u0E14\u0E0A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E27\u0E32\u0E14\u0E01\u0E23\u0E32\u0E1F\u0E04\u0E33\u0E23\u0E32\u0E22\u0E27\u0E31\u0E19", !!document.querySelector(".dash-days .dash-day-bar"));
         const nWords = await countProjectWords();
-        check2("countProjectWords \u0E19\u0E31\u0E1A\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E25\u0E1A)", typeof nWords === "number" && nWords >= 0, String(nWords));
+        check2(
+          "[a128] \u2605 countProjectWords \u0E19\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 0 \u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E01\u0E25\u0E37\u0E19",
+          typeof nWords === "number" && nWords > 0,
+          String(nWords)
+        );
+        check2("[a128] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E0B\u0E49\u0E33\u0E44\u0E14\u0E49\u0E04\u0E48\u0E32\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21", await countProjectWords() === nWords, String(nWords));
         await recordDailyWords(nWords);
         check2(
           "recordDailyWords \u0E40\u0E02\u0E35\u0E22\u0E19\u0E22\u0E2D\u0E14\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49",
@@ -179587,13 +184539,13 @@ ${css}
           );
           const pchoices = [...document.querySelectorAll(".player-choice")];
           check2("\u0E02\u0E49\u0E2D 9: \u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E15\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07", pchoices.length >= 1, String(pchoices.length));
-          const live = pchoices.find((b) => !b.classList.contains("player-choice-dead"));
+          const live2 = pchoices.find((b) => !b.classList.contains("player-choice-dead"));
           check2(
             "\u0E02\u0E49\u0E2D 9: \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E2D\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07",
-            !!live && live.textContent.includes(scB2.title),
-            live && live.textContent
+            !!live2 && live2.textContent.includes(scB2.title),
+            live2 && live2.textContent
           );
-          live.click();
+          live2.click();
           await new Promise((r) => setTimeout(r, 800));
           check2(
             "\u0E02\u0E49\u0E2D 9: \u0E01\u0E14\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1B\u0E09\u0E32\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E17\u0E31\u0E19\u0E17\u0E35",
@@ -179973,14 +184925,20 @@ ${css}
         const ext = [...document.querySelectorAll("script[src],link[href]")].map((n2) => n2.getAttribute("src") || n2.getAttribute("href")).filter((u) => /^https?:/i.test(u));
         check2("index.html \u0E44\u0E21\u0E48\u0E42\u0E2B\u0E25\u0E14\u0E2A\u0E04\u0E23\u0E34\u0E1B\u0E15\u0E4C/\u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E08\u0E32\u0E01\u0E2D\u0E34\u0E19\u0E40\u0E17\u0E2D\u0E23\u0E4C\u0E40\u0E19\u0E47\u0E15", ext.length === 0, ext.join(","));
         check2("\u0E04\u0E49\u0E19\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07 (\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E2D\u0E01\u0E40\u0E19\u0E47\u0E15) \u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", DEFAULT_SETTINGS.thesaurus === false);
-        check2("\u0E04\u0E33\u0E44\u0E17\u0E22\u0E44\u0E21\u0E48\u0E40\u0E02\u0E49\u0E32\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E40\u0E21\u0E19\u0E39\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07", thesaurusMenuItems(0, 0).length === 0);
+        check2(
+          "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E21\u0E14\u0E39\u0E25\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E01\u0E48\u0E32\u0E2B\u0E25\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48",
+          await import("./thesaurus.js").then(() => false, () => true)
+        );
       }
       {
         check2("kanban-ui import \u0E44\u0E14\u0E49", typeof openKanban === "function");
         check2("panel-ui import \u0E44\u0E14\u0E49", typeof getPanelManager === "function");
         check2("split-ui import \u0E44\u0E14\u0E49", typeof toggleSplit === "function");
         check2("auto-link-ui import \u0E44\u0E14\u0E49", typeof ensureAutoLink === "function");
-        check2("event-ui import \u0E44\u0E14\u0E49", typeof renderAutoSyncSection === "function");
+        check2(
+          "event-ui import \u0E44\u0E14\u0E49 (\u0E15\u0E31\u0E27\u0E44\u0E25\u0E48\u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E02\u0E49\u0E32\u0E21\u0E44\u0E1F\u0E25\u0E4C)",
+          typeof handleEntityRenamed === "function" && typeof renameAcrossProject === "function"
+        );
         check2("ai-ui import \u0E44\u0E14\u0E49", typeof openAIAssistant === "function");
         check2("thesaurus-ui import \u0E44\u0E14\u0E49", typeof showThesaurusPopup === "function");
         check2("import-ui (Scrivener) import \u0E44\u0E14\u0E49", typeof importScrivenerDialog === "function");
@@ -180277,8 +185235,8 @@ ${css}
         }
       }
       {
-        const { collectDocs: collectDocs2, getRag: getRag2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
-        const docs = await collectDocs2(state.root);
+        const { collectDocs: collectDocs3, getRag: getRag2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        const docs = await collectDocs3(state.root);
         check2("RAG \u0E40\u0E01\u0E47\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E14\u0E49", docs.length >= 2, "docs=" + docs.length);
         check2(
           "RAG \u0E40\u0E01\u0E47\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E41\u0E25\u0E30 Wiki",
@@ -180437,7 +185395,7 @@ ${css}
       }
       {
         await initThesaurus();
-        const { shared: shared2, getSynonyms: getSynonyms2 } = await Promise.resolve().then(() => (init_thesaurus2(), thesaurus_exports2));
+        const { shared: shared2, getSynonyms: getSynonyms2 } = await Promise.resolve().then(() => (init_thesaurus(), thesaurus_exports));
         const sh = shared2();
         check2("thesaurus \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E40\u0E2D\u0E19\u0E08\u0E34\u0E19\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 (\u0E21\u0E35 http adapter)", !!sh && typeof sh.http?.fetch === "function");
         check2("thesaurus \u0E1B\u0E34\u0E14\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E2D\u0E2D\u0E01\u0E40\u0E19\u0E47\u0E15\u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19", sh.online === false);
@@ -180991,13 +185949,16 @@ ${css}
                 !!liEl && getComputedStyle(liEl).textAlign === "right",
                 liEl && getComputedStyle(liEl).textAlign
               );
-              check2(
-                "[103-2] \u2605 \u0E08\u0E38\u0E14\u0E19\u0E33\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E02\u0E22\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22)",
-                !!liEl && getComputedStyle(liEl.parentElement).listStylePosition === "inside",
-                liEl && getComputedStyle(liEl.parentElement).listStylePosition
-              );
+              {
+                const bb = liEl && getComputedStyle(liEl, "::before");
+                check2(
+                  "[103-2] \u2605 \u0E08\u0E38\u0E14\u0E19\u0E33\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E02\u0E22\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22)",
+                  !!liEl && getComputedStyle(liEl.parentElement).listStyleType === "none" && !!bb && bb.content.includes("\u2022"),
+                  liEl && getComputedStyle(liEl.parentElement).listStyleType + " | " + (bb && bb.content)
+                );
+              }
               const map103 = ed.getAlignMap();
-              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md15.alignToString)(map103));
+              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md18.alignToString)(map103));
               check2(
                 "[103-2] \u2605\u2605 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E40\u0E01\u0E47\u0E1A\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E15\u0E48\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
                 Object.values(map103).includes("right"),
@@ -181043,6 +186004,297 @@ ${css}
                 "\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E25\u0E49\u0E19: " + spillH.slice(0, 6).join(",")
               );
               await kapi.testShot("/tmp/k2_103r_heading.png");
+            }
+            {
+              const { AllSelection: AllSelection2 } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
+              const pTxt = "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22\u0E17\u0E35\u0E48\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E08\u0E30\u0E40\u0E01\u0E34\u0E19\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 ".repeat(6);
+              ed.setMarkdown(Array.from({ length: 34 }, (_2, i5) => pTxt + " \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + i5).join("\n\n") + "\n\n## \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A\n\n- \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07\n- \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07\n\n1. \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E36\u0E48\u0E07\n2. \u0E40\u0E25\u0E02\u0E2A\u0E2D\u0E07\n");
+              bumpProseLayout();
+              const settle130 = async () => {
+                for (let i5 = 0; i5 < 8; i5++) {
+                  repaginateFast(t100);
+                  await wait103(220);
+                }
+                retunePagePads(t100);
+                await wait103(320);
+              };
+              const seen130 = () => pm3().querySelectorAll(".ed-page-break").length;
+              const model130 = () => (state._mzDiag || {}).breaks | 0;
+              const gaps130 = () => {
+                const ys = [...pm3().querySelectorAll(".ed-page-break")].map((e) => e.getBoundingClientRect().top);
+                return ys.slice(1).map((y, i5) => Math.round(y - ys[i5]));
+              };
+              const selAll130 = () => ed.view.dispatch(
+                ed.view.state.tr.setSelection(new AllSelection2(ed.view.state.doc))
+              );
+              await settle130();
+              const n0 = seen130(), m0 = model130(), g02 = gaps130();
+              note("[130-1] \u0E01\u0E48\u0E2D\u0E19\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E42\u0E21\u0E40\u0E14\u0E25 " + m0 + " \xB7 \u0E1A\u0E19\u0E08\u0E2D " + n0 + " \xB7 \u0E23\u0E30\u0E22\u0E30 " + JSON.stringify(g02));
+              check2("[130-1] \u2605 \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E21\u0E35\u0E2B\u0E25\u0E32\u0E22\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E40\u0E17\u0E2A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E21\u0E32\u0E22)", n0 >= 4, n0);
+              check2("[130-1] \u0E01\u0E48\u0E2D\u0E19\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E1A\u0E19\u0E08\u0E2D\u0E04\u0E23\u0E1A\u0E15\u0E32\u0E21\u0E42\u0E21\u0E40\u0E14\u0E25", n0 === m0, n0 + " vs " + m0);
+              for (const dir2 of ["justify", "center", "right", "left"]) {
+                selAll130();
+                document.getElementById("tb-align-" + dir2).click();
+                await settle130();
+                check2(
+                  '[130-1] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E31\u0E48\u0E07 "' + dir2 + '" \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E08\u0E32\u0E01\u0E08\u0E2D',
+                  seen130() === model130() && seen130() === n0,
+                  "\u0E1A\u0E19\u0E08\u0E2D " + seen130() + " \xB7 \u0E42\u0E21\u0E40\u0E14\u0E25 " + model130() + " \xB7 \u0E40\u0E14\u0E34\u0E21 " + n0
+                );
+              }
+              check2(
+                "[130-1] \u2605 \u0E23\u0E30\u0E22\u0E30\u0E2B\u0E48\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E1E\u0E23\u0E32\u0E30\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32",
+                JSON.stringify(gaps130()) === JSON.stringify(g02),
+                JSON.stringify(gaps130()) + " vs " + JSON.stringify(g02)
+              );
+              await kapi.testShot("/tmp/k2_130_pagebreak.png");
+              {
+                const boxes131 = () => [...pm3().querySelectorAll(".ed-page-break")].map((e) => {
+                  const r = e.getBoundingClientRect();
+                  const pad3 = parseFloat(e.style.getPropertyValue("--k-pb-pad")) || 0;
+                  return {
+                    bot: r.bottom,
+                    h: r.height,
+                    pad: pad3,
+                    extra: r.height - pad3,
+                    inline: e.classList.contains("k-pb-inline")
+                  };
+                });
+                const seams131 = () => {
+                  const b = boxes131();
+                  const y = b.map((x) => x.bot - x.extra);
+                  return y.slice(1).map((v4, i5) => Math.round((v4 - y[i5]) * 10) / 10);
+                };
+                const spf131 = spFormat();
+                const target131 = (spf131.paper.height - spf131.margins.top - spf131.margins.bottom) * 96;
+                const line131 = proseLinePx(proseFormat());
+                const view131 = viewOfTab(t100);
+                setSpView("normal", true);
+                await wait103(400);
+                await settle130();
+                const sN = seams131(), bN = boxes131();
+                note("[131-P1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E1B\u0E01\u0E15\u0E34: \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0394=" + JSON.stringify(sN) + " \xB7 \u0E40\u0E1B\u0E49\u0E32=" + Math.round(target131) + " \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14=" + Math.round(line131) + " \xB7 \u0E15\u0E31\u0E14\u0E01\u0E25\u0E32\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 " + bN.filter((x) => x.inline).length + "/" + bN.length);
+                check2(
+                  "[131-P1] \u2605 \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E21\u0E35\u0E17\u0E31\u0E49\u0E07\u0E08\u0E38\u0E14\u0E15\u0E31\u0E14\u0E01\u0E25\u0E32\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1A\u0E25\u0E47\u0E2D\u0E01 (\u0E40\u0E17\u0E2A\u0E16\u0E36\u0E07\u0E08\u0E30\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E21\u0E32\u0E22)",
+                  bN.some((x) => x.inline) && bN.some((x) => !x.inline),
+                  JSON.stringify(bN.map((x) => x.inline ? "i" : "b").join(""))
+                );
+                check2(
+                  "[131-P1] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E2B\u0E19\u0E2A\u0E31\u0E49\u0E19\u0E01\u0E27\u0E48\u0E32\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C",
+                  sN.every((d) => d >= target131 - 1),
+                  JSON.stringify(sN)
+                );
+                check2(
+                  "[131-P1] \u2605\u2605 \u0E41\u0E25\u0E30\u0E40\u0E01\u0E34\u0E19\u0E44\u0E14\u0E49\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 (\u0E01\u0E48\u0E2D\u0E19\u0E41\u0E01\u0E49\u0E40\u0E01\u0E34\u0E19\u0E16\u0E36\u0E07 30px \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32)",
+                  sN.every((d) => d <= target131 + line131 + 1),
+                  JSON.stringify(sN.map((d) => Math.round(d - target131)))
+                );
+                {
+                  const bad131 = [];
+                  sN.forEach((d, i5) => {
+                    if (Math.abs(d - target131) < 1) return;
+                    const head2 = bN[i5];
+                    if (head2.inline && head2.pad < line131) return;
+                    bad131.push("#" + i5 + " \u0E40\u0E01\u0E34\u0E19 " + Math.round(d - target131) + "px \xB7 pad=" + Math.round(head2.pad) + " \xB7 " + (head2.inline ? "\u0E01\u0E25\u0E32\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32" : "\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1A\u0E25\u0E47\u0E2D\u0E01"));
+                  });
+                  check2(
+                    "[131-P1] \u2605\u2605 \u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E22\u0E32\u0E27\u0E44\u0E21\u0E48\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E21\u0E35\u0E44\u0E14\u0E49\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E40\u0E15\u0E47\u0E21\u0E08\u0E19\u0E41\u0E16\u0E1A\u0E22\u0E38\u0E1A\u0E44\u0E21\u0E48\u0E25\u0E07\u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19",
+                    bad131.length === 0,
+                    bad131.join(" , ")
+                  );
+                }
+                setSpView("layout", true);
+                await wait103(500);
+                await settle130();
+                const sL = seams131();
+                const pitchL = spf131.paper.height * 96 + num(state.settings.spPageGap, 28);
+                note("[131-P1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0394=" + JSON.stringify(sL) + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E15\u0E48\u0E2D\u0E41\u0E1C\u0E48\u0E19=" + Math.round(pitchL));
+                check2(
+                  "[131-P1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E48\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E4A\u0E30",
+                  sL.length > 2 && Math.max(...sL) - Math.min(...sL) <= 1,
+                  JSON.stringify(sL)
+                );
+                check2(
+                  "[131-P1] \u2605\u2605 \u0E41\u0E25\u0E30\u0E2B\u0E48\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E23\u0E30\u0E22\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19)",
+                  sL.every((d) => Math.abs(d - pitchL) <= 1.5),
+                  JSON.stringify(sL) + " vs " + Math.round(pitchL)
+                );
+                setSpView(view131, true);
+                await wait103(300);
+              }
+              const btnOn = () => ["left", "center", "right", "justify"].filter((k) => document.getElementById("tb-align-" + k).classList.contains("on"));
+              for (const dir2 of ["center", "right", "justify"]) {
+                selAll130();
+                document.getElementById("tb-align-" + dir2).click();
+                await wait103(200);
+                selAll130();
+                refreshToolbar();
+                await wait103(120);
+                check2(
+                  '[130-3] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E31\u0E48\u0E07 "' + dir2 + '" \u2192 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E14\u0E49\u0E16\u0E39\u0E01',
+                  ed.activeMarks().align === dir2,
+                  JSON.stringify(ed.activeMarks().align)
+                );
+                check2(
+                  '[130-3] \u0E1B\u0E38\u0E48\u0E21 "' + dir2 + '" \u0E15\u0E34\u0E14\u0E44\u0E1F\u0E2D\u0E22\u0E39\u0E48\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27',
+                  btnOn().length === 1 && btnOn()[0] === dir2,
+                  btnOn().join(",")
+                );
+              }
+              selAll130();
+              document.getElementById("tb-align-justify").click();
+              await wait103(200);
+              selAll130();
+              refreshToolbar();
+              await wait103(120);
+              check2(
+                "[130-3] \u2605\u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21\u0E0B\u0E49\u0E33 = \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22",
+                ed.activeMarks().align === "left" && btnOn().join(",") === "left",
+                ed.activeMarks().align + " | " + btnOn().join(",")
+              );
+              {
+                const { TextSelection: TextSelection3 } = await Promise.resolve().then(() => (init_dist4(), dist_exports));
+                let firstP = null;
+                ed.view.state.doc.descendants((n2, p2) => {
+                  if (firstP === null && n2.type.name === "paragraph") firstP = p2;
+                });
+                ed.view.dispatch(ed.view.state.tr.setSelection(
+                  TextSelection3.create(ed.view.state.doc, firstP + 1, firstP + 3)
+                ));
+                ed.cmd("align", "center");
+                selAll130();
+                refreshToolbar();
+                await wait103(150);
+                check2(
+                  "[130-3] \u2605 \u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E19\u0E01\u0E31\u0E19 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E44\u0E2B\u0E19\u0E15\u0E34\u0E14\u0E44\u0E1F",
+                  ed.activeMarks().align === "" && btnOn().length === 0,
+                  JSON.stringify(ed.activeMarks().align) + " | " + btnOn().join(",")
+                );
+              }
+              selAll130();
+              document.getElementById("tb-align-center").click();
+              await wait103(350);
+              {
+                const pmC = pm3();
+                const liU = pmC.querySelector("ul > li"), liO = pmC.querySelector("ol > li");
+                const h2c = pmC.querySelector("h2");
+                check2("[130-2] \u2605 \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", !!liU && !!liO);
+                check2(
+                  "[130-2] \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E15\u0E32\u0E21\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E14\u0E49\u0E27\u0E22",
+                  !!h2c && getComputedStyle(h2c).textAlign === "center",
+                  h2c && getComputedStyle(h2c).textAlign
+                );
+                const pU = liU.querySelector(":scope > p");
+                check2(
+                  "[130-2] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E16\u0E39\u0E01\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+                  getComputedStyle(pU).textAlign === "center",
+                  getComputedStyle(pU).textAlign
+                );
+                check2(
+                  "[130-2] \u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E44\u0E14\u0E49 data-align \u0E43\u0E2B\u0E49 CSS \u0E08\u0E31\u0E1A",
+                  pU.getAttribute("data-align") === "center",
+                  pU.getAttribute("data-align")
+                );
+                check2(
+                  "[130-2] \u2605\u2605 marker \u0E02\u0E2D\u0E07\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E44\u0E1B\u0E01\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07)",
+                  getComputedStyle(liU).listStyleType === "none",
+                  getComputedStyle(liU).listStyleType
+                );
+                const beforeU = getComputedStyle(pU, "::before").content;
+                const beforeO = getComputedStyle(liO.querySelector(":scope > p"), "::before").content;
+                {
+                  check2(
+                    "[130-2] \u2605\u2605 \u0E08\u0E38\u0E14\u0E19\u0E33\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E43\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D (ul)",
+                    beforeU !== "none" && beforeU.includes("\u2022"),
+                    JSON.stringify(beforeU)
+                  );
+                }
+                check2(
+                  "[130-2] \u2605\u2605 \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E25\u0E02\u0E02\u0E49\u0E2D\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E43\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D (ol)",
+                  /counter|1\./.test(beforeO) || beforeO !== "none",
+                  JSON.stringify(beforeO)
+                );
+                const liRect = liU.getBoundingClientRect();
+                const rg = document.createRange();
+                rg.selectNodeContents(pU);
+                const tRect = rg.getClientRects()[0];
+                check2(
+                  "[130-2] \u2605\u2605 \u0E08\u0E38\u0E14\u0E19\u0E33+\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E32\u0E07\u0E02\u0E49\u0E2D \u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27",
+                  !!tRect && tRect.left > liRect.left + 20,
+                  tRect ? Math.round(tRect.left) + " vs " + Math.round(liRect.left) : "\u0E44\u0E21\u0E48\u0E21\u0E35 rect"
+                );
+                check2(
+                  "[130-2] \u2605\u2605 \u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 (\u0E08\u0E38\u0E14\u0E19\u0E33\u0E44\u0E21\u0E48\u0E41\u0E22\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14)",
+                  liU.getBoundingClientRect().height < proseLinePx(proseFormat()) * 1.8,
+                  Math.round(liU.getBoundingClientRect().height) + "px"
+                );
+                await kapi.testShot("/tmp/k2_130_bullet.png");
+              }
+              selAll130();
+              document.getElementById("tb-align-left").click();
+              await wait103(300);
+              {
+                const liU2 = pm3().querySelector("ul > li");
+                check2(
+                  "[130-2] \u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22 = \u0E43\u0E0A\u0E49\u0E08\u0E38\u0E14\u0E19\u0E33\u0E1B\u0E01\u0E15\u0E34\u0E02\u0E2D\u0E07\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+                  getComputedStyle(liU2).listStyleType !== "none",
+                  getComputedStyle(liU2).listStyleType
+                );
+              }
+              {
+                ed.view.dom.blur();
+                const chrome4 = document.createElement("button");
+                chrome4.textContent = "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E19\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02";
+                document.body.append(chrome4);
+                chrome4.focus();
+                check2(
+                  "[130-4] \u2605 \u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E2D\u0E22\u0E39\u0E48\u0E19\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E07\u0E31\u0E49\u0E19\u0E40\u0E17\u0E2A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E21\u0E32\u0E22)",
+                  !pm3().contains(document.activeElement),
+                  document.activeElement && document.activeElement.tagName
+                );
+                const kev = new KeyboardEvent(
+                  "keydown",
+                  { key: "a", code: "KeyA", ctrlKey: true, bubbles: true, cancelable: true }
+                );
+                const passed = chrome4.dispatchEvent(kev);
+                chrome4.remove();
+                check2(
+                  "[130-4] \u2605\u2605 Ctrl+A \u0E19\u0E2D\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E16\u0E39\u0E01\u0E14\u0E31\u0E01\u0E44\u0E27\u0E49 \u0E44\u0E21\u0E48\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E43\u0E2B\u0E49\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E01\u0E27\u0E32\u0E14\u0E17\u0E31\u0E49\u0E07\u0E41\u0E2D\u0E1B",
+                  passed === false,
+                  "defaultPrevented=" + !passed
+                );
+                await wait103(200);
+                const sel4 = ed.view.state.selection;
+                check2(
+                  "[130-4] \u2605\u2605 ...\u0E41\u0E25\u0E49\u0E27\u0E42\u0E22\u0E19\u0E44\u0E1B\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E09\u0E32\u0E01\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E41\u0E17\u0E19",
+                  sel4.from <= 1 && sel4.to >= ed.view.state.doc.content.size - 1,
+                  sel4.from + ".." + sel4.to + " \u0E02\u0E2D\u0E07 " + ed.view.state.doc.content.size
+                );
+                check2("[130-4] \u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E16\u0E39\u0E01\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E43\u0E2B\u0E49\u0E14\u0E49\u0E27\u0E22", ed.view.hasFocus());
+                check2(
+                  "[130-4] \u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E44\u0E21\u0E48\u0E01\u0E34\u0E19\u0E19\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02",
+                  (() => {
+                    const sw = window.getSelection();
+                    return !sw.anchorNode || pm3().contains(sw.anchorNode);
+                  })()
+                );
+                const probeInp = document.createElement("input");
+                probeInp.value = "\u0E17\u0E14\u0E2A\u0E2D\u0E1A";
+                document.body.append(probeInp);
+                probeInp.focus();
+                const kev2 = new KeyboardEvent(
+                  "keydown",
+                  { key: "a", code: "KeyA", ctrlKey: true, bubbles: true, cancelable: true }
+                );
+                const passed2 = probeInp.dispatchEvent(kev2);
+                check2(
+                  "[130-4] \u2605 \u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32 Ctrl+A \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E31\u0E49\u0E19 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E22\u0E48\u0E07)",
+                  passed2 === true,
+                  "defaultPrevented=" + !passed2
+                );
+                probeInp.remove();
+                ed.focus();
+              }
             }
             {
               const q = "\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E17\u0E35\u0E48\u0E22\u0E01\u0E21\u0E32\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01\u0E08\u0E19\u0E40\u0E01\u0E34\u0E19\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E1B\u0E44\u0E01\u0E25 ".repeat(60);
@@ -181447,7 +186699,7 @@ ${css}
           await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sjA, null, 2));
           await kapi.writeFile(
             await kapi.join(dPath, "Chapters", ch3.folderName, "memo-rt.md"),
-            (0, import_md15.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
+            (0, import_md18.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
           );
           const dst = await moveRowToMemos(dPath, ch3, memoRow);
           check2("\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B MEMO \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Memos", await kapi.exists(dst), String(dst));
@@ -181514,8 +186766,8 @@ ${css}
           const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
           const scB = (sj4.chapters[ch4.guid] || [])[0];
           const scFile = await kapi.join(dPath, "Chapters", ch4.folderName, scB.fileName);
-          const { meta: bm, body: bb } = (0, import_md15.parseMdFile)(await kapi.readFile(scFile));
-          await kapi.writeFile(scFile, (0, import_md15.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
+          const { meta: bm, body: bb } = (0, import_md18.parseMdFile)(await kapi.readFile(scFile));
+          await kapi.writeFile(scFile, (0, import_md18.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
@@ -185440,8 +190692,10 @@ ${css}
         }
         {
           const keepTabs = [...state.tabs.keys()];
-          closeAllTabs();
-          await new Promise((r) => setTimeout(r, 200));
+          await saveAllTabs(true);
+          await closeAllTabs();
+          for (let i5 = 0; i5 < 60 && state.tabs.size; i5++) await new Promise((r) => setTimeout(r, 50));
+          check2("#11 \u0E1B\u0E34\u0E14\u0E17\u0E38\u0E01\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A", state.tabs.size === 0, state.tabs.size);
           refreshToolbar();
           for (const id of ["tb-note", "tb-panels", "tb-kanban", "tb-gsearch", "tb-quickopen"]) {
             check2(
@@ -187453,6 +192707,463 @@ ${css}
               );
             }
             {
+              setSpView("normal", true);
+              const two = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07" + String.fromCharCode(10) + "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07";
+              const names132 = () => T3.editor.view.state.doc.content.content.map((n2) => n2.type.name);
+              const quotes132 = () => names132().filter((n2) => n2 === "blockquote").length;
+              const selAll132 = () => {
+                const st = T3.editor.view.state;
+                T3.editor.view.dispatch(st.tr.setSelection(
+                  TextSelection.create(st.doc, 1, st.doc.content.size - 1)
+                ));
+              };
+              const selFirstPara132 = () => {
+                const st = T3.editor.view.state;
+                let at = -1;
+                st.doc.descendants((n2, pos2) => {
+                  if (at < 0 && n2.type.name === "paragraph") at = pos2 + 1;
+                });
+                T3.editor.view.dispatch(st.tr.setSelection(
+                  TextSelection.create(st.doc, at, at + 3)
+                ));
+              };
+              T3.editor.setMarkdown(two);
+              await w97(250);
+              selAll132();
+              T3.editor.cmd("quote");
+              await w97(150);
+              check2(
+                '[132-7] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 "\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E17\u0E35\u0E48\u0E22\u0E01\u0E21\u0E32" \u2192 \u0E44\u0E14\u0E49\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27\u0E04\u0E23\u0E48\u0E2D\u0E21\u0E17\u0E31\u0E49\u0E07\u0E04\u0E39\u0E48',
+                quotes132() === 1 && names132().length === 1,
+                names132().join(",")
+              );
+              selAll132();
+              T3.editor.cmd("quote");
+              await w97(150);
+              check2(
+                "[132-7] \u0E01\u0E14 toggle \u0E0B\u0E49\u0E33 \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32\u0E17\u0E31\u0E49\u0E07\u0E04\u0E39\u0E48",
+                quotes132() === 0 && names132().join(",") === "paragraph,paragraph",
+                names132().join(",")
+              );
+              selAll132();
+              T3.editor.cmd("quote");
+              await w97(150);
+              selFirstPara132();
+              T3.editor.cmd("quote");
+              await w97(180);
+              const mixed132 = names132().join(",");
+              check2(
+                "[132-7] \u2605 \u0E40\u0E2D\u0E32\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E2D\u0E2D\u0E01\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E44\u0E14\u0E49 (\u0E1C\u0E48\u0E32\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E2D\u0E07\u0E17\u0E48\u0E2D\u0E19)",
+                mixed132 === "paragraph,blockquote",
+                mixed132
+              );
+              refreshToolbar();
+              check2(
+                "[132-7] \u2605 \u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E19\u0E01\u0E31\u0E19 = \u0E1B\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E44\u0E1F (\u0E1A\u0E2D\u0E01\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E01\u0E32\u0E23\u0E01\u0E14\u0E08\u0E30\u0E17\u0E33)",
+                (selAll132(), !T3.editor.activeMarks().quote),
+                JSON.stringify(T3.editor.activeMarks().quote)
+              );
+              selAll132();
+              T3.editor.cmd("quote");
+              await w97(200);
+              check2(
+                "[132-7] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1B\u0E19\u0E01\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 toggle **\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07** (\u0E1A\u0E31\u0E4A\u0E01\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E08\u0E2D)",
+                quotes132() === 1 && names132().length === 1,
+                names132().join(",")
+              );
+              selAll132();
+              T3.editor.cmd("quote");
+              await w97(200);
+              check2(
+                "[132-7] \u2605 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E2D\u0E35\u0E01\u0E17\u0E35\u0E01\u0E47\u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07",
+                quotes132() === 0 && names132().join(",") === "paragraph,paragraph",
+                names132().join(",")
+              );
+              check2(
+                "[132-7] \u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 .md \u0E44\u0E14\u0E49\u0E40\u0E17\u0E48\u0E32\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A",
+                T3.editor.getMarkdown() === two,
+                JSON.stringify(T3.editor.getMarkdown())
+              );
+            }
+            {
+              setSpView("normal", true);
+              const NL4 = String.fromCharCode(10);
+              const names4 = () => T3.editor.view.state.doc.content.content.map((n2) => n2.type.name);
+              const selAll4 = () => {
+                const st = T3.editor.view.state;
+                T3.editor.view.dispatch(st.tr.setSelection(
+                  TextSelection.create(st.doc, 1, st.doc.content.size - 1)
+                ));
+              };
+              const pmKey = (view2, key2) => {
+                const ev = new KeyboardEvent("keydown", { key: key2, bubbles: true, cancelable: true });
+                return !!view2.someProp("handleKeyDown", (f) => f(view2, ev));
+              };
+              const caretEnd0 = () => {
+                const st = T3.editor.view.state;
+                let at = -1;
+                st.doc.descendants((n2, pos2) => {
+                  if (at < 0 && n2.isTextblock) at = pos2 + 1 + n2.content.size;
+                });
+                T3.editor.view.dispatch(st.tr.setSelection(TextSelection.create(st.doc, at, at)));
+              };
+              const caretIn = (nth) => {
+                const st = T3.editor.view.state;
+                let seen = 0, at = -1;
+                st.doc.descendants((n2, pos2) => {
+                  if (n2.isTextblock && seen++ === nth && at < 0) at = pos2 + 1;
+                });
+                T3.editor.view.dispatch(st.tr.setSelection(
+                  TextSelection.create(st.doc, at, at)
+                ));
+              };
+              T3.editor.setMarkdown("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07" + NL4 + "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07");
+              await w97(250);
+              selAll4();
+              T3.editor.cmd("ul");
+              await w97(200);
+              check2(
+                "[132r4-1] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 bullet \u2192 \u0E40\u0E1B\u0E47\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E14\u0E35\u0E22\u0E27",
+                names4().join(",") === "bullet_list",
+                names4().join(",")
+              );
+              caretIn(0);
+              T3.editor.cmd("ul");
+              await w97(200);
+              check2(
+                "[132r4-1] \u2605 \u0E40\u0E2D\u0E32\u0E02\u0E49\u0E2D\u0E40\u0E14\u0E35\u0E22\u0E27\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49 (\u0E1C\u0E48\u0E32\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E2D\u0E07\u0E17\u0E48\u0E2D\u0E19)",
+                names4().join(",") === "paragraph,bullet_list",
+                names4().join(",")
+              );
+              selAll4();
+              T3.editor.cmd("ul");
+              await w97(250);
+              check2(
+                "[132r4-1] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E19\u0E01\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14 bullet **\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07** (\u0E1A\u0E31\u0E4A\u0E01\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E08\u0E2D)",
+                names4().join(",") === "bullet_list",
+                names4().join(",")
+              );
+              selAll4();
+              T3.editor.cmd("ol");
+              await w97(250);
+              check2(
+                "[132r4-1] \u2605 \u0E2A\u0E25\u0E31\u0E1A bullet \u2192 \u0E2B\u0E21\u0E32\u0E22\u0E40\u0E25\u0E02 \u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E48\u0E27\u0E07",
+                names4().join(",") === "ordered_list",
+                names4().join(",")
+              );
+              T3.editor.cmd("quote");
+              await w97(250);
+              check2(
+                "[132r4-2] \u2605\u2605 \u0E01\u0E14\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E17\u0E35\u0E48\u0E22\u0E01\u0E21\u0E32\u0E08\u0E32\u0E01\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A\u0E2A\u0E19\u0E34\u0E17)",
+                names4().join(",") === "blockquote",
+                names4().join(",")
+              );
+              selAll4();
+              T3.editor.cmd("ul");
+              await w97(250);
+              check2(
+                "[132r4-2] \u2605 \u0E41\u0E25\u0E30\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49 \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07",
+                names4().join(",") === "bullet_list",
+                names4().join(",")
+              );
+              selAll4();
+              T3.editor.cmd("align", "center");
+              await w97(300);
+              {
+                const li4 = pm97.querySelector("ul > li");
+                const mk2 = getComputedStyle(li4, "::marker").content;
+                const bf = getComputedStyle(li4.querySelector("p"), "::before").content;
+                note("[132r4-3] ::marker=" + mk2 + " \xB7 ::before=" + bf);
+                check2(
+                  "[132r4-3] \u2605\u2605 \u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27 marker \u0E02\u0E2D\u0E07\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22)",
+                  mk2 === "none",
+                  mk2
+                );
+                check2(
+                  "[132r4-3] \u2605 \u0E41\u0E25\u0E30\u0E08\u0E38\u0E14\u0E19\u0E33\u0E02\u0E2D\u0E07\u0E40\u0E23\u0E32\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E43\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E17\u0E19",
+                  bf.includes("\u2022"),
+                  bf
+                );
+              }
+              selAll4();
+              T3.editor.cmd("align", "left");
+              await w97(250);
+              check2(
+                "[132r4-3] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22 = marker \u0E02\u0E2D\u0E07\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E33\u0E07\u0E32\u0E19",
+                getComputedStyle(pm97.querySelector("ul > li"), "::marker").content.includes("\u2022"),
+                getComputedStyle(pm97.querySelector("ul > li"), "::marker").content
+              );
+              T3.editor.setMarkdown("- \u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07");
+              await w97(250);
+              caretEnd0();
+              const k1 = pmKey(T3.editor.view, "Enter");
+              check2("[132r4-4] \u0E04\u0E35\u0E22\u0E4C\u0E41\u0E21\u0E1B\u0E23\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21 Enter \u0E08\u0E23\u0E34\u0E07", k1 === true, String(k1));
+              await w97(150);
+              check2(
+                "[132r4-4] Enter \u0E04\u0E23\u0E31\u0E49\u0E07\u0E41\u0E23\u0E01 = \u0E02\u0E36\u0E49\u0E19\u0E02\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
+                names4().join(",") === "bullet_list" && T3.editor.view.state.doc.firstChild.childCount === 2,
+                names4().join(",") + " \xB7 " + T3.editor.view.state.doc.firstChild.childCount
+              );
+              pmKey(T3.editor.view, "Enter");
+              await w97(200);
+              check2(
+                "[132r4-4] \u2605\u2605 Enter \u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07\u0E1A\u0E19\u0E02\u0E49\u0E2D\u0E27\u0E48\u0E32\u0E07 = \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E1B\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21)",
+                names4().join(",") === "bullet_list,paragraph",
+                names4().join(",")
+              );
+              T3.editor.setMarkdown("- \u0E02\u0E49\u0E2D\u0E40\u0E14\u0E35\u0E22\u0E27");
+              await w97(250);
+              {
+                const st = T3.editor.view.state;
+                let at = -1;
+                st.doc.descendants((n2, pos2) => {
+                  if (n2.isTextblock && at < 0) at = pos2 + 1;
+                });
+                T3.editor.view.dispatch(st.tr.setSelection(TextSelection.create(st.doc, at, at)));
+              }
+              pmKey(T3.editor.view, "Backspace");
+              await w97(200);
+              check2(
+                "[132r4-5] \u2605\u2605 Backspace \u0E17\u0E35\u0E48\u0E15\u0E49\u0E19\u0E02\u0E49\u0E2D = \u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22)",
+                names4().join(",") === "paragraph" && T3.editor.view.state.doc.textContent === "\u0E02\u0E49\u0E2D\u0E40\u0E14\u0E35\u0E22\u0E27",
+                names4().join(",") + " \xB7 " + T3.editor.view.state.doc.textContent
+              );
+              T3.editor.setMarkdown("1. \u0E01" + NL4 + "2." + NL4 + "3. \u0E02");
+              await w97(250);
+              check2(
+                '[132r4-6] \u2605\u2605 \u0E2D\u0E48\u0E32\u0E19 "\u0E02\u0E49\u0E2D\u0E27\u0E48\u0E32\u0E07" \u0E08\u0E32\u0E01 .md \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 "2.")',
+                names4().join(",") === "ordered_list" && T3.editor.view.state.doc.firstChild.childCount === 3,
+                names4().join(",") + " \xB7 " + T3.editor.view.state.doc.firstChild.childCount
+              );
+              check2(
+                "[132r4-6] \u2605 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E25\u0E07 .md \u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E27\u0E48\u0E32\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+                T3.editor.getMarkdown().split(NL4).length === 3 && /^2\.\s*$/.test(T3.editor.getMarkdown().split(NL4)[1]),
+                JSON.stringify(T3.editor.getMarkdown())
+              );
+              T3.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23");
+              await w97(150);
+            }
+            {
+              setSpView("normal", true);
+              const FONTS132 = [
+                "Sarabun, sans-serif",
+                '"Noto Sans Thai", sans-serif',
+                '"Courier Prime", monospace',
+                "Tahoma, sans-serif"
+              ];
+              const SIZES132 = [14, 21, 32];
+              const oldFont132 = document.documentElement.style.getPropertyValue("--ed-font");
+              const oldFs132 = document.documentElement.style.getPropertyValue("--ed-fs");
+              let cases = 0, bad = [];
+              const pick2 = (cs) => ({
+                content: cs.content,
+                fontSize: cs.fontSize,
+                fontFamily: cs.fontFamily
+              });
+              const allSel132 = () => {
+                const st = T3.editor.view.state;
+                T3.editor.view.dispatch(st.tr.setSelection(
+                  TextSelection.create(st.doc, 1, st.doc.content.size - 1)
+                ));
+              };
+              for (const font of FONTS132) {
+                for (const size of SIZES132) {
+                  document.documentElement.style.setProperty("--ed-font", font);
+                  document.documentElement.style.setProperty("--ed-fs", size + "px");
+                  T3.editor.setMarkdown("- \u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07" + String.fromCharCode(10) + "- \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07" + String.fromCharCode(10, 10) + "1. \u0E02\u0E49\u0E2D\u0E41\u0E23\u0E01" + String.fromCharCode(10) + "2. \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07");
+                  await w97(200);
+                  const ul132 = pm97.querySelector("ul > li");
+                  const ol132 = pm97.querySelector("ol > li");
+                  if (!ul132 || !ol132) continue;
+                  const mkU = { ...pick2(getComputedStyle(ul132, "::marker")) };
+                  const mkO = { ...pick2(getComputedStyle(ol132, "::marker")) };
+                  allSel132();
+                  T3.editor.cmd("align", "center");
+                  await w97(220);
+                  const bU = pick2(getComputedStyle(pm97.querySelector("ul > li > p"), "::before"));
+                  const bO = pick2(getComputedStyle(pm97.querySelector("ol > li > p"), "::before"));
+                  cases++;
+                  const same = mkU.content.includes("\u2022") && bU.content.includes("\u2022") && mkU.fontSize === bU.fontSize && mkU.fontFamily === bU.fontFamily && mkO.fontSize === bO.fontSize && mkO.fontFamily === bO.fontFamily;
+                  if (!same) bad.push(font + "/" + size + ": " + mkU.content + " vs " + bU.content + " \xB7 " + mkU.fontSize + " vs " + bU.fontSize);
+                  if (cases === 1) {
+                    note("[132r3-3] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07: ::marker " + mkU.content + " " + mkU.fontSize + " \xB7 ::before " + bU.content + " " + bU.fontSize);
+                  }
+                  allSel132();
+                  T3.editor.cmd("align", "left");
+                  await w97(150);
+                }
+              }
+              document.documentElement.style.setProperty("--ed-font", oldFont132);
+              document.documentElement.style.setProperty("--ed-fs", oldFs132);
+              check2("[132r3-3] \u0E27\u0E31\u0E14\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E17\u0E38\u0E01\u0E02\u0E19\u0E32\u0E14 (4 \u0E1F\u0E2D\u0E19\u0E15\u0E4C \xD7 3 \u0E02\u0E19\u0E32\u0E14)", cases === 12, cases);
+              check2(
+                "[132r3-3] \u2605\u2605 \u0E08\u0E38\u0E14\u0E19\u0E33/\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E25\u0E02\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u0E02\u0E19\u0E32\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u0E17\u0E31\u0E49\u0E07\u0E0A\u0E34\u0E14\u0E0B\u0E49\u0E32\u0E22\u0E41\u0E25\u0E30\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07 (\u0E17\u0E38\u0E01\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E17\u0E38\u0E01\u0E02\u0E19\u0E32\u0E14)",
+                cases === 12 && !bad.length,
+                bad.slice(0, 2).join(" | ")
+              );
+              T3.editor.setMarkdown("- \u0E02\u0E49\u0E2D\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E2A\u0E35" + String.fromCharCode(10) + "- \u0E02\u0E49\u0E2D\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32");
+              await w97(250);
+              {
+                const st = T3.editor.view.state;
+                let at = -1;
+                st.doc.descendants((n2, pos2) => {
+                  if (at < 0 && n2.isText) at = pos2;
+                });
+                T3.editor.view.dispatch(st.tr.setSelection(
+                  TextSelection.create(st.doc, at, at + 3)
+                ));
+              }
+              T3.editor.cmd("color", "#b03030");
+              await w97(250);
+              const li1 = pm97.querySelector("ul > li");
+              const li2 = pm97.querySelectorAll("ul > li")[1];
+              note("[132r3-3] \u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23\u0E1A\u0E19\u0E02\u0E49\u0E2D\u0E41\u0E23\u0E01 = " + (li1 && li1.getAttribute("style")));
+              check2(
+                "[132r3-3] \u2605\u2605 \u0E17\u0E33\u0E2A\u0E35\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01 \u2192 \u0E08\u0E38\u0E14\u0E19\u0E33\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E44\u0E14\u0E49\u0E2A\u0E35\u0E15\u0E32\u0E21",
+                !!li1 && getComputedStyle(li1, "::marker").color === "rgb(176, 48, 48)",
+                li1 && getComputedStyle(li1, "::marker").color
+              );
+              check2(
+                "[132r3-3] \u2605\u2605 \u0E02\u0E49\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21 (\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48 <li> \u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E19\u0E31\u0E49\u0E19\u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19)",
+                !!li2 && getComputedStyle(li2, "::marker").color !== "rgb(176, 48, 48)",
+                li2 && getComputedStyle(li2, "::marker").color
+              );
+              check2(
+                "[132r3-3] \u2605\u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E48\u0E27\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E17\u0E33\u0E2A\u0E35 **\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E49\u0E2D\u0E21\u0E15\u0E32\u0E21** (\u0E15\u0E31\u0E49\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 color)",
+                !!li1 && getComputedStyle(li1).color !== "rgb(176, 48, 48)",
+                li1 && getComputedStyle(li1).color
+              );
+              T3.editor.setMarkdown("- **\u0E2B\u0E19\u0E32** \u0E15\u0E48\u0E2D");
+              await w97(250);
+              const liB = pm97.querySelector("ul > li");
+              check2(
+                "[132r3-3] \u2605 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32\u0E17\u0E35\u0E48\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E41\u0E23\u0E01 \u2192 \u0E08\u0E38\u0E14\u0E19\u0E33\u0E2B\u0E19\u0E32\u0E15\u0E32\u0E21",
+                !!liB && getComputedStyle(liB, "::marker").fontWeight === "700",
+                liB && getComputedStyle(liB, "::marker").fontWeight
+              );
+              {
+                const { markerVars: markerVars2 } = await Promise.resolve().then(() => __toESM(require_md()));
+                check2(
+                  "[132r3-3] \u2605\u2605 \u0E01\u0E15\u0E34\u0E01\u0E32\u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 (\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E01\u0E33\u0E2B\u0E19\u0E14)",
+                  markerVars2("**\u0E2B\u0E19\u0E32** \u0E15\u0E48\u0E2D") === "--k-mk-weight:700" && markerVars2('<span style="color:#b03030">\u0E41\u0E14\u0E07</span> \u0E15\u0E48\u0E2D') === "--k-mk-color:#b03030" && markerVars2("\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32") === "",
+                  markerVars2("**\u0E2B\u0E19\u0E32** \u0E15\u0E48\u0E2D")
+                );
+              }
+              T3.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23");
+              await w97(150);
+            }
+            {
+              const { normColor: nc132 } = await Promise.resolve().then(() => __toESM(require_text_color()));
+              const { openColorPicker: openColorPicker2, closeColorPicker: closeColorPicker2, colorStore: colorStore2 } = await Promise.resolve().then(() => (init_color_picker(), color_picker_exports));
+              setSpView("normal", true);
+              T3.editor.setMarkdown("\u0E2A\u0E35\u0E41\u0E14\u0E07\u0E15\u0E23\u0E07\u0E19\u0E35\u0E49");
+              await w97(220);
+              const selWord132 = (a, b) => {
+                const st = T3.editor.view.state;
+                T3.editor.view.dispatch(st.tr.setSelection(TextSelection.create(st.doc, a, b)));
+              };
+              selWord132(1, 4);
+              T3.editor.cmd("color", "#b03030");
+              await w97(150);
+              check2(
+                "[132-9] \u2605 \u0E2A\u0E31\u0E48\u0E07\u0E2A\u0E35\u0E41\u0E25\u0E49\u0E27\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E14\u0E49\u0E21\u0E32\u0E23\u0E4C\u0E01 color \u0E08\u0E23\u0E34\u0E07",
+                T3.editor.activeMarks().colorValue === "#b03030",
+                T3.editor.activeMarks().colorValue
+              );
+              const md132c = T3.editor.getMarkdown();
+              check2(
+                "[132-9] \u2605\u2605 \u0E2A\u0E35\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C .md \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E41\u0E1B\u0E19\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19 (v1/\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E37\u0E48\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49)",
+                md132c === '<span style="color:#b03030">\u0E2A\u0E35\u0E41</span>\u0E14\u0E07\u0E15\u0E23\u0E07\u0E19\u0E35\u0E49',
+                md132c
+              );
+              T3.editor.setMarkdown(md132c);
+              await w97(180);
+              check2(
+                "[132-9] \u2605\u2605 \u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E08\u0E32\u0E01 .md \u0E41\u0E25\u0E49\u0E27\u0E2A\u0E35\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22)",
+                T3.editor.getMarkdown() === md132c,
+                T3.editor.getMarkdown()
+              );
+              selWord132(1, 4);
+              T3.editor.cmd("color", "#2b7bb9");
+              await w97(150);
+              check2(
+                "[132-9] \u2605 \u0E01\u0E14\u0E2A\u0E35\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E2A\u0E35\u0E40\u0E14\u0E34\u0E21 = \u0E44\u0E14\u0E49\u0E2A\u0E35\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E16\u0E2D\u0E14\u0E2A\u0E35\u0E17\u0E34\u0E49\u0E07",
+                T3.editor.activeMarks().colorValue === "#2b7bb9",
+                T3.editor.activeMarks().colorValue
+              );
+              selWord132(1, 4);
+              T3.editor.cmd("color", "");
+              await w97(150);
+              check2(
+                "[132-9] \u0E25\u0E49\u0E32\u0E07\u0E2A\u0E35\u0E44\u0E14\u0E49",
+                T3.editor.activeMarks().colorValue === "" && !/span/.test(T3.editor.getMarkdown()),
+                T3.editor.getMarkdown()
+              );
+              check2(
+                "[132-9] \u2605 \u0E04\u0E48\u0E32\u0E2A\u0E35\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E35\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E2D\u0E15\u0E17\u0E23\u0E34\u0E1A\u0E34\u0E27\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07",
+                nc132('red"><script>') === "" && nc132("#B03030") === "#b03030"
+              );
+              check2("[132-9] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E35\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D", !!$("#tb-color"));
+              selWord132(1, 4);
+              T3.editor.cmd("color", "#2f7d4f");
+              await w97(120);
+              refreshToolbar();
+              check2(
+                "[132-9] \u2605 \u0E41\u0E16\u0E1A\u0E2A\u0E35\u0E43\u0E15\u0E49\u0E15\u0E31\u0E27 A \u0E1A\u0E2D\u0E01\u0E2A\u0E35\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+                $("#tb-color").dataset.color === "#2f7d4f",
+                $("#tb-color").dataset.color
+              );
+              let picked132 = "";
+              const pop132 = openColorPicker2(
+                $("#tb-color"),
+                "#2f7d4f",
+                (h) => {
+                  picked132 = h;
+                },
+                null
+              );
+              await w97(150);
+              const sws132 = [...pop132.querySelectorAll(".k-sw")];
+              check2("[132-9] \u2605 \u0E1B\u0E4A\u0E2D\u0E1B\u0E2D\u0E31\u0E1B\u0E21\u0E35\u0E08\u0E32\u0E19\u0E2A\u0E35\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E43\u0E2B\u0E49\u0E01\u0E14", sws132.length >= 8, sws132.length);
+              check2(
+                "[132-9] \u2605 \u0E21\u0E35 color wheel \u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A (input type=color)",
+                !!pop132.querySelector('input.k-color-input[type="color"]')
+              );
+              check2(
+                "[132-9] \u2605 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2A\u0E35 (save color switch) \u0E41\u0E25\u0E30\u0E1B\u0E38\u0E48\u0E21\u0E25\u0E49\u0E32\u0E07\u0E2A\u0E35",
+                !!pop132.querySelector(".k-color-save") && !!pop132.querySelector(".k-color-clear")
+              );
+              const lbls132 = [...pop132.querySelectorAll(".k-colorsec-lbl")].map((x) => x.textContent);
+              check2(
+                '[132-9] \u2605\u2605 \u0E21\u0E35\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07 "\u0E2A\u0E35\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08" \xB7 "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49" \xB7 "\u0E43\u0E0A\u0E49\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14"',
+                lbls132.includes(t("ui.color.presets")) && lbls132.includes(t("ui.color.saved")) && lbls132.includes(t("ui.color.recent")),
+                lbls132.join(" | ")
+              );
+              check2(
+                "[132-9] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E35\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19\u0E16\u0E39\u0E01\u0E40\u0E19\u0E49\u0E19\u0E44\u0E27\u0E49",
+                sws132.some((b) => b.dataset.color === "#2f7d4f" && b.classList.contains("on"))
+              );
+              sws132.find((b) => b.dataset.color === "#b03030").click();
+              await w97(220);
+              check2(
+                "[132-9] \u2605\u2605 \u0E04\u0E25\u0E34\u0E01\u0E2A\u0E35\u0E43\u0E19\u0E08\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E48\u0E07\u0E04\u0E48\u0E32\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E43\u0E2B\u0E49\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E08\u0E23\u0E34\u0E07",
+                picked132 === "#b03030",
+                picked132
+              );
+              check2(
+                '[132-9] \u2605\u2605 \u0E2A\u0E35\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E43\u0E0A\u0E49\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49\u0E43\u0E19 "\u0E43\u0E0A\u0E49\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14"',
+                colorStore2().recent[0] === "#b03030",
+                JSON.stringify(colorStore2().recent)
+              );
+              closeColorPicker2();
+              check2(
+                "[132-9] \u0E1B\u0E34\u0E14\u0E1B\u0E4A\u0E2D\u0E1B\u0E2D\u0E31\u0E1B\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E04\u0E49\u0E32\u0E07\u0E43\u0E19 DOM",
+                !document.querySelector(".k-colorpop")
+              );
+              T3.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E2A\u0E35");
+              await w97(150);
+            }
+            {
               T3.editor.setMarkdown("\u0E01\u0E48\u0E2D\u0E19\u0E23\u0E39\u0E1B");
               await w97(200);
               T3.editor.gotoPos(T3.editor.view.state.doc.content.size);
@@ -188221,12 +193932,12 @@ ${css}
           if (spTab2) {
             activate(spTab2.file);
             await new Promise((r) => setTimeout(r, 150));
-            const live = blocksFromDoc(spTab2.sp.view.state.doc).filter((b) => b.el !== "blank");
+            const live2 = blocksFromDoc(spTab2.sp.view.state.doc).filter((b) => b.el !== "blank");
             const viaMd = parseScript(spTab2.sp.getMarkdown()).filter((b) => b.el !== "blank");
             check2(
               "[6] \u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E08\u0E23\u0E34\u0E07\u0E21\u0E35\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01 markdown",
-              live.length >= viaMd.length,
-              `${live.length} vs ${viaMd.length}`
+              live2.length >= viaMd.length,
+              `${live2.length} vs ${viaMd.length}`
             );
             check2(
               "[6] currentScriptSource \u0E04\u0E37\u0E19 blocks \u0E08\u0E32\u0E01\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E08\u0E23\u0E34\u0E07",
@@ -190296,6 +196007,189 @@ ${css}
           "[61-2] \u0E01\u0E14\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19",
           !!document.getElementById("ai-chat-body").querySelector(".ai-chat-session")
         );
+        {
+          await renderAIChatPanel(host2);
+          await new Promise((r) => setTimeout(r, 120));
+          const c0 = _chatState();
+          const nBeforeSwitch = (c0.cur.messages || []).length;
+          check2("[129-2] \u0E01\u0E48\u0E2D\u0E19\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E21\u0E35\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07", nBeforeSwitch > 0, nBeforeSwitch);
+          c0.cur = AS.addMessage(c0.cur, AS.newMessage("assistant", "\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E23\u0E2D\u0E1A\u0E43\u0E2B\u0E21\u0E48"));
+          await saveSession2(c0.cur);
+          const want = nBeforeSwitch + 1;
+          const hostNow = document.getElementById("ai-chat-body");
+          const vs126 = hostNow.querySelector(".ai-chat-viewsel");
+          check2("[129-2] \u0E21\u0E35\u0E14\u0E23\u0E2D\u0E1B\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 transcript", !!vs126);
+          vs126.value = "thinking";
+          vs126.dispatchEvent(new Event("change"));
+          await new Promise((r) => setTimeout(r, 180));
+          check2(
+            '[129-2] \u0E2A\u0E25\u0E31\u0E1A\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 "\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14" \u0E41\u0E25\u0E49\u0E27\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22',
+            (_chatState().cur.messages || []).length === want,
+            (_chatState().cur.messages || []).length + " \u0E04\u0E27\u0E23\u0E40\u0E1B\u0E47\u0E19 " + want
+          );
+          check2(
+            "[129-2] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07",
+            _chatState().cur.view === "thinking",
+            _chatState().cur.view
+          );
+          const vs126b = document.getElementById("ai-chat-body").querySelector(".ai-chat-viewsel");
+          vs126b.value = "summary";
+          vs126b.dispatchEvent(new Event("change"));
+          await new Promise((r) => setTimeout(r, 180));
+          check2(
+            '[129-2] \u0E2A\u0E25\u0E31\u0E1A\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 "\u0E2A\u0E23\u0E38\u0E1B" \u0E41\u0E25\u0E49\u0E27\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22',
+            (_chatState().cur.messages || []).length === want,
+            (_chatState().cur.messages || []).length
+          );
+          {
+            const savedNow = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur))
+            );
+            check2(
+              "[129-2] \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E22\u0E31\u0E07\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E04\u0E23\u0E1A\u0E2B\u0E25\u0E31\u0E07\u0E2A\u0E25\u0E31\u0E1A\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07",
+              (savedNow.messages || []).length === want,
+              (savedNow.messages || []).length
+            );
+            check2("[129-2] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E14\u0E49\u0E27\u0E22", savedNow.view === "summary", savedNow.view);
+          }
+          const mSel126 = document.getElementById("ai-chat-body").querySelector(".ai-chat-mode");
+          mSel126.value = "write";
+          mSel126.dispatchEvent(new Event("change"));
+          await new Promise((r) => setTimeout(r, 150));
+          check2(
+            "[129-2] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22",
+            (_chatState().cur.messages || []).length === want && _chatState().cur.mode === "write",
+            (_chatState().cur.messages || []).length + "/" + _chatState().cur.mode
+          );
+          const scSel126 = document.getElementById("ai-chat-body").querySelector(".ai-chat-scope");
+          scSel126.value = "project";
+          scSel126.dispatchEvent(new Event("change"));
+          await new Promise((r) => setTimeout(r, 150));
+          check2(
+            "[129-2] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07\u0E41\u0E25\u0E49\u0E27\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22",
+            (_chatState().cur.messages || []).length === want && _chatState().cur.scope === "project",
+            (_chatState().cur.messages || []).length + "/" + _chatState().cur.scope
+          );
+          await saveSession2({ ..._chatState().cur, messages: [] });
+          check2(
+            "[129-2] saveSession \u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18\u0E01\u0E32\u0E23\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E14\u0E49\u0E27\u0E22\u0E01\u0E49\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E19\u0E49\u0E2D\u0E22\u0E25\u0E07",
+            (_chatState().cur.messages || []).length === want,
+            (_chatState().cur.messages || []).length
+          );
+          {
+            const savedGuard = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur))
+            );
+            check2(
+              "[129-2] \u0E01\u0E31\u0E19\u0E0A\u0E19\u0E21\u0E35\u0E1C\u0E25\u0E16\u0E36\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E14\u0E49\u0E27\u0E22",
+              (savedGuard.messages || []).length === want,
+              (savedGuard.messages || []).length
+            );
+          }
+          const keepCur = _chatState().cur;
+          const CP126 = await Promise.resolve().then(() => (init_ai_chat_panel(), ai_chat_panel_exports));
+          await CP126.restartSession(keepCur, { confirm: false });
+          check2(
+            "[129-2] \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E22\u0E31\u0E07\u0E25\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+            (_chatState().cur.messages || []).length === 0,
+            (_chatState().cur.messages || []).length
+          );
+          {
+            const savedClear = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur))
+            );
+            check2("[129-2] \u0E44\u0E1F\u0E25\u0E4C\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E27\u0E48\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07", (savedClear.messages || []).length === 0);
+          }
+          _chatState().cur = AS.addMessage(_chatState().cur, AS.newMessage("user", "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48"));
+          await saveSession2(_chatState().cur);
+          await renderAIChatPanel(document.getElementById("ai-chat-body"));
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        {
+          const mdText = [
+            "## \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E08\u0E32\u0E01\u0E42\u0E21\u0E40\u0E14\u0E25",
+            "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E21\u0E35 **\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32** \u0E41\u0E25\u0E30 `\u0E42\u0E04\u0E49\u0E14`",
+            "",
+            "- \u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07",
+            "- \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07",
+            "",
+            "```js",
+            "const a = 1;",
+            "```",
+            "<img src=x onerror=alert(1)>"
+          ].join("\n");
+          const c129 = _chatState();
+          c129.cur.view = "normal";
+          c129.cur = AS.addMessage(c129.cur, AS.newMessage("assistant", mdText));
+          await saveSession2(c129.cur);
+          await renderAIChatPanel(document.getElementById("ai-chat-body"));
+          await new Promise((r) => setTimeout(r, 150));
+          const md129 = document.getElementById("ai-chat-body").querySelector(".ai-msg-assistant .ai-md");
+          check2("[129-4] \u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E1C\u0E39\u0E49\u0E0A\u0E48\u0E27\u0E22\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19 Markdown", !!md129);
+          check2(
+            "[129-4] \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 <h2> \u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 ## \u0E14\u0E34\u0E1A)",
+            !!md129.querySelector("h2") && !md129.textContent.includes("## \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D")
+          );
+          check2("[129-4] \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 <strong>", !!md129.querySelector("strong"));
+          check2(
+            "[129-4] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 <ul><li> \u0E2A\u0E2D\u0E07\u0E02\u0E49\u0E2D",
+            md129.querySelectorAll("ul > li").length === 2
+          );
+          check2(
+            "[129-4] \u0E42\u0E04\u0E49\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 + \u0E1B\u0E38\u0E48\u0E21\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01",
+            !!md129.querySelector(".ai-md-pre .ai-md-pre-body") && !!md129.querySelector(".ai-md-pre .ai-msg-copy")
+          );
+          check2(
+            "[129-4] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E04\u0E49\u0E14\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
+            md129.querySelector(".ai-md-pre-body").textContent === "const a = 1;",
+            md129.querySelector(".ai-md-pre-body").textContent
+          );
+          check2(
+            "[129-4] \u2605 \u0E41\u0E17\u0E47\u0E01 HTML \u0E43\u0E19\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 element (\u0E44\u0E21\u0E48\u0E21\u0E35 innerHTML)",
+            md129.querySelectorAll("img").length === 0 && md129.textContent.includes("<img src=x onerror=alert(1)>")
+          );
+          const vsMd = document.getElementById("ai-chat-body").querySelector(".ai-chat-viewsel");
+          vsMd.value = "verbose";
+          vsMd.dispatchEvent(new Event("change"));
+          await new Promise((r) => setTimeout(r, 180));
+          const vb = document.getElementById("ai-chat-body").querySelector(".ai-msg-assistant .ai-msg-text");
+          check2(
+            "[129-4] \u0E42\u0E2B\u0E21\u0E14\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E22\u0E31\u0E07\u0E42\u0E0A\u0E27\u0E4C Markdown \u0E14\u0E34\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21",
+            !!vb && vb.textContent.includes("## \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E08\u0E32\u0E01\u0E42\u0E21\u0E40\u0E14\u0E25")
+          );
+          const vsBack = document.getElementById("ai-chat-body").querySelector(".ai-chat-viewsel");
+          vsBack.value = "normal";
+          vsBack.dispatchEvent(new Event("change"));
+          await new Promise((r) => setTimeout(r, 180));
+          check2(
+            "[129-4] \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27\u0E27\u0E32\u0E14 Markdown \u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07",
+            !!document.getElementById("ai-chat-body").querySelector(".ai-msg-assistant .ai-md")
+          );
+        }
+        {
+          let longS = AS.newSession();
+          for (let i5 = 0; i5 < 40; i5++) {
+            longS = AS.addMessage(longS, AS.newMessage(i5 % 2 ? "assistant" : "user", "\u0E01".repeat(800)));
+          }
+          const bOld = AS.buildChatMessages(longS, { maxTokens: 6e3 });
+          const bNew = AS.buildChatMessages(longS, { maxTokens: AS.historyBudget(longS, {}) });
+          check2("[129-1] \u0E07\u0E1A\u0E40\u0E14\u0E34\u0E21 6,000 \u0E15\u0E31\u0E14\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E44\u0E17\u0E22\u0E22\u0E32\u0E27\u0E1B\u0E01\u0E15\u0E34\u0E17\u0E34\u0E49\u0E07\u0E08\u0E23\u0E34\u0E07", bOld.dropped > 10, bOld.dropped);
+          check2(
+            "[129-1] \u0E07\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E2A\u0E48\u0E07\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E04\u0E23\u0E1A",
+            bNew.dropped === 0 && bNew.messages.length === 40,
+            bNew.dropped
+          );
+          longS.contextLimit = 2e5;
+          check2(
+            "[129-1] \u0E23\u0E39\u0E49\u0E02\u0E35\u0E14\u0E08\u0E33\u0E01\u0E31\u0E14\u0E42\u0E21\u0E40\u0E14\u0E25\u0E41\u0E25\u0E49\u0E27\u0E07\u0E1A\u0E02\u0E22\u0E32\u0E22\u0E15\u0E32\u0E21",
+            AS.historyBudget(longS, {}) === 12e4,
+            AS.historyBudget(longS, {})
+          );
+          check2(
+            "[129-1] \u0E15\u0E31\u0E49\u0E07\u0E07\u0E1A\u0E40\u0E2D\u0E07\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E0A\u0E19\u0E30\u0E04\u0E48\u0E32\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34",
+            AS.historyBudget(longS, { historyTokens: 9e3 }) === 9e3
+          );
+        }
         const st61 = _chatState();
         st61.cur.scope = "none";
         check2(
@@ -190566,14 +196460,14 @@ ${css}
         check2("[62-7] \u0E15\u0E31\u0E49\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27\u0E15\u0E34\u0E14\u0E17\u0E31\u0E19\u0E17\u0E35", keep7 === 400, String(keep7));
         const other7 = isPanelOpen("log") ? "notes" : "log";
         showPanel(other7);
-        await wait62(420);
+        await until62(() => Math.abs(pane7.scrollTop - keep7) <= 8, 60, 50);
         check2(
           "[62-7] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E35",
           Math.abs(pane7.scrollTop - keep7) <= 8,
           `${keep7} \u2192 ${pane7.scrollTop}`
         );
         hidePanel(other7);
-        await wait62(420);
+        await until62(() => Math.abs(pane7.scrollTop - keep7) <= 8, 60, 50);
         check2(
           "[62-7] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E01\u0E47\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
           Math.abs(pane7.scrollTop - keep7) <= 8,
@@ -191894,6 +197788,303 @@ ${css}
             );
             await SS.deleteScenario(st94.slug, sc2.id);
             check2("[a94] \u0E25\u0E1A\u0E15\u0E2D\u0E19\u0E44\u0E14\u0E49", (await SS.listScenarios(st94.slug)).length === 1);
+          }
+          {
+            const SF = await Promise.resolve().then(() => (init_starter_cast(), starter_cast_exports));
+            const EM = await Promise.resolve().then(() => (init_entity_mention(), entity_mention_exports));
+            const I18 = await Promise.resolve().then(() => (init_i18n(), i18n_exports));
+            SF.resetCastEditor();
+            await SU.openStoryStarter();
+            await wait62(200);
+            const modeBtns = [...document.querySelectorAll("#starter-body .st-mode-btn")];
+            check2(
+              "[a122] \u0E2B\u0E31\u0E27 wizard \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E42\u0E2B\u0E21\u0E14",
+              modeBtns.length === 2,
+              modeBtns.map((b) => b.dataset.mode).join(",")
+            );
+            check2(
+              "[a122] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D\u0E1E\u0E37\u0E49\u0E19\u0E10\u0E32\u0E19 (\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E40\u0E1B\u0E47\u0E19 basic)",
+              (await SS.readStarter(st94.slug)).mode === SM.MODE_BASIC
+            );
+            modeBtns.find((b) => b.dataset.mode === "adv").click();
+            await wait62(350);
+            await SS.flushStarterSaves();
+            check2(
+              "[a122] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E41\u0E25\u0E49\u0E27\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07",
+              (await SS.readStarter(st94.slug)).mode === SM.MODE_ADV
+            );
+            const chips122 = [...document.querySelectorAll("#starter-body .st-chip")];
+            chips122[2].click();
+            await wait62(300);
+            const editBtn122 = [...document.querySelectorAll("#starter-body .st-cast-btns button")].find((b) => b.textContent.trim() === I18.t("ui.common.edit"));
+            check2("[a122] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E01\u0E49\u0E44\u0E02\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23", !!editBtn122);
+            editBtn122.click();
+            await wait62(400);
+            const labels122 = [...document.querySelectorAll("#starter-body .st-step-pane label")].map((x) => x.textContent);
+            check2(
+              "[a122] \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19",
+              labels122.some((x) => x.includes(I18.t("ui.starter.fShortcode"))),
+              labels122.join("|")
+            );
+            check2(
+              "[a122] \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E04\u0E33\u0E1E\u0E39\u0E14",
+              labels122.some((x) => x === I18.t("ui.starter.fDialogue"))
+            );
+            check2(
+              "[a122] \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E01\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23",
+              labels122.some((x) => x === I18.t("ui.starter.fCharTags"))
+            );
+            check2(
+              "[a122] \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07 Prompt",
+              !!document.querySelector("#starter-body .st-prompts")
+            );
+            const dlgTa122 = [...document.querySelectorAll("#starter-body .st-field")].find((r) => r.querySelector("label") && r.querySelector("label").textContent === I18.t("ui.starter.fDialogue")).querySelector("textarea");
+            dlgTa122.value = '"\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E01\u0E25\u0E31\u0E27\u0E2B\u0E23\u0E2D\u0E01"';
+            dlgTa122.dispatchEvent(new Event("input", { bubbles: true }));
+            const tagRow122 = [...document.querySelectorAll("#starter-body .st-field")].find((r) => r.querySelector("label") && r.querySelector("label").textContent === I18.t("ui.starter.fCharTags"));
+            const tagInp122 = tagRow122.querySelector("input");
+            tagInp122.value = "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A, \u0E1B\u0E32\u0E01\u0E23\u0E49\u0E32\u0E22";
+            [...tagRow122.querySelectorAll("button")].find((b) => !b.classList.contains("st-tag-x")).click();
+            await wait62(200);
+            await SS.flushStarterSaves();
+            const advChar = (await SS.readStarter(st94.slug)).cast[0];
+            check2(
+              "[a122] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E04\u0E33\u0E1E\u0E39\u0E14\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01",
+              advChar.dialogue === '"\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E01\u0E25\u0E31\u0E27\u0E2B\u0E23\u0E2D\u0E01"',
+              JSON.stringify(advChar.dialogue)
+            );
+            check2(
+              "[a122] \u0E41\u0E17\u0E47\u0E01\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 (\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E31\u0E48\u0E19\u0E08\u0E38\u0E25\u0E20\u0E32\u0E04\u0E17\u0E35\u0E40\u0E14\u0E35\u0E22\u0E27\u0E44\u0E14\u0E49\u0E2B\u0E25\u0E32\u0E22\u0E2D\u0E31\u0E19)",
+              (advChar.tags || []).join(",") === "\u0E19\u0E31\u0E01\u0E14\u0E32\u0E1A,\u0E1B\u0E32\u0E01\u0E23\u0E49\u0E32\u0E22",
+              JSON.stringify(advChar.tags)
+            );
+            const addPr122 = document.querySelector("#starter-body .st-prompt-add");
+            addPr122.click();
+            await wait62(250);
+            const prKey = document.querySelector("#starter-body .st-prompt-key");
+            check2(
+              "[a122] \u0E01\u0E14\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0A\u0E48\u0E2D\u0E07 Prompt \u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49 Prompt A",
+              !!prKey && prKey.value === "Prompt A",
+              prKey && prKey.value
+            );
+            const prVal = document.querySelector("#starter-body .st-prompt-val");
+            prVal.value = "\u0E1E\u0E39\u0E14\u0E2B\u0E49\u0E27\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E04\u0E33\u0E2A\u0E38\u0E20\u0E32\u0E1E";
+            prVal.dispatchEvent(new Event("input", { bubbles: true }));
+            await SS.flushStarterSaves();
+            check2(
+              "[a122] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E0A\u0E48\u0E2D\u0E07 Prompt \u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
+              ((await SS.readStarter(st94.slug)).cast[0].prompts[0] || {}).v === "\u0E1E\u0E39\u0E14\u0E2B\u0E49\u0E27\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E04\u0E33\u0E2A\u0E38\u0E20\u0E32\u0E1E"
+            );
+            {
+              const s2 = SU.currentStarter();
+              s2.cast = [...s2.cast, SM.newChar({ name: "\u0E44\u0E01\u0E48", shortcode: "characterB" })];
+              await SS.writeStarter(s2);
+              SF.resetCastEditor();
+              await renderFeaturePanel("starter");
+              await wait62(350);
+              const ed2 = [...document.querySelectorAll("#starter-body .st-cast-btns button")].find((b) => b.textContent.trim() === I18.t("ui.common.edit"));
+              ed2.click();
+              await wait62(400);
+              const anyChip = document.querySelector('#starter-body .st-mentionchip[data-kind="any"]');
+              const userChip = document.querySelector('#starter-body .st-mentionchip[data-kind="user"]');
+              check2(
+                "[a123] \u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E04\u0E33\u0E2A\u0E07\u0E27\u0E19 {{character}} / {{user}}",
+                !!anyChip && anyChip.dataset.token === "{{character}}" && !!userChip && userChip.dataset.token === "{{user}}",
+                (anyChip && anyChip.dataset.token) + " | " + (userChip && userChip.dataset.token)
+              );
+              const chip = document.querySelector('#starter-body .st-mentionchip[data-kind="char"]');
+              check2(
+                "[a122] \u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E41\u0E17\u0E23\u0E01\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E19\u0E23\u0E48\u0E27\u0E21\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+                !!chip && chip.dataset.token === "{{characterB}}",
+                chip && chip.dataset.token
+              );
+              const ta2 = chip.closest(".st-field").querySelector("textarea");
+              const before = ta2.value;
+              chip.click();
+              await wait62(200);
+              check2(
+                "[a122] \u0E01\u0E14\u0E0A\u0E34\u0E1B\u0E41\u0E25\u0E49\u0E27\u0E42\u0E17\u0E40\u0E04\u0E19\u0E16\u0E39\u0E01\u0E41\u0E17\u0E23\u0E01\u0E25\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07",
+                ta2.value.includes("{{characterB}}") && ta2.value.startsWith(before),
+                JSON.stringify(ta2.value)
+              );
+              await SS.flushStarterSaves();
+              check2(
+                "[a122] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E21\u0E35\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07",
+                (await SS.readStarter(st94.slug)).cast[0].dialogue.includes("{{characterB}}")
+              );
+            }
+            {
+              SF.resetCastEditor();
+              await renderFeaturePanel("starter");
+              await wait62(300);
+              const nBefore = (await SS.readStarter(st94.slug)).cast.length;
+              const add122 = [...document.querySelectorAll("#starter-body .st-step-pane button")].find((b) => b.textContent.includes(I18.t("ui.starter.castAdd")));
+              add122.click();
+              await wait62(350);
+              const back122 = document.querySelector("#starter-body .st-step-pane .st-back");
+              check2("[a122] \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E01\u0E49\u0E44\u0E02\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D", !!back122);
+              back122.click();
+              await wait62(400);
+              await SS.flushStarterSaves();
+              check2(
+                "[a122] \u0E01\u0E14\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E2D\u0E30\u0E44\u0E23 = \u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E40\u0E1B\u0E25\u0E48\u0E32\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49",
+                (await SS.readStarter(st94.slug)).cast.length === nBefore,
+                (await SS.readStarter(st94.slug)).cast.length + "/" + nBefore
+              );
+              check2(
+                "[a122] \u0E15\u0E31\u0E27\u0E40\u0E1B\u0E25\u0E48\u0E32\u0E16\u0E39\u0E01\u0E08\u0E31\u0E1A\u0E44\u0E14\u0E49 \u0E41\u0E15\u0E48\u0E15\u0E31\u0E27\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E42\u0E14\u0E19\u0E25\u0E1A",
+                SF.isBlankChar(SM.newChar({})) === true && SF.isBlankChar(SM.newChar({ name: "\u0E01" })) === false
+              );
+            }
+            {
+              const s3 = SU.currentStarter();
+              s3.tags = [];
+              s3.step = SD.STEPS.length - 1;
+              await SS.writeStarter(s3);
+              SF.resetCastEditor();
+              await renderFeaturePanel("starter");
+              await wait62(350);
+              const fin122 = document.querySelector("#starter-body .st-finish");
+              check2("[a122] \u0E2D\u0E22\u0E39\u0E48\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2A\u0E34\u0E49\u0E19", !!fin122);
+              check2("[a122] \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2A\u0E34\u0E49\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14\u0E15\u0E32\u0E22\u0E2D\u0E35\u0E01\u0E15\u0E48\u0E2D\u0E44\u0E1B", fin122 && fin122.disabled === false);
+              check2(
+                "[a122] \u0E21\u0E35\u0E17\u0E32\u0E07\u0E2D\u0E2D\u0E01\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E02\u0E32\u0E14\u0E02\u0E31\u0E49\u0E19\u0E44\u0E2B\u0E19",
+                !!document.querySelector("#starter-body .st-miss")
+              );
+              fin122.click();
+              await wait62(400);
+              await SS.flushStarterSaves();
+              const afterFin = await SS.readStarter(st94.slug);
+              check2(
+                "[a122] \u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E14\u0E49\u0E07\u0E44\u0E1B\u0E02\u0E31\u0E49\u0E19\u0E17\u0E35\u0E48\u0E02\u0E32\u0E14 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A",
+                afterFin.step === SD.STEPS.findIndex((x) => x.id === "tags") && afterFin.done === false,
+                afterFin.step + "/" + afterFin.done
+              );
+              const s4 = SU.currentStarter();
+              s4.tags = ["fantasy"];
+              s4.name = s4.name || "\u0E40\u0E17\u0E2A\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1C\u0E08\u0E0D\u0E20\u0E31\u0E22";
+              s4.intro = "<p>\u0E42\u0E25\u0E01\u0E17\u0E35\u0E48\u0E1D\u0E19\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E2B\u0E22\u0E38\u0E14\u0E15\u0E01</p>";
+              s4.step = SD.STEPS.length - 1;
+              await SS.writeStarter(s4);
+              await renderFeaturePanel("starter");
+              await wait62(350);
+              document.querySelector("#starter-body .st-finish").click();
+              await wait62(450);
+              await SS.flushStarterSaves();
+              check2(
+                "[a122] \u0E04\u0E23\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E2A\u0E34\u0E49\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+                (await SS.readStarter(st94.slug)).done === true && SU.starterView() === "home"
+              );
+            }
+            {
+              const scA = await SS.createScenario(st94.slug, {
+                title: "\u0E15\u0E2D\u0E19\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07",
+                thumb: "",
+                // [a123] บทเปิดเก็บเป็น HTML แล้ว (ผู้ใช้ขอ b/i/u)
+                opener: "<p>\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01 <b>{{characterB}}</b> \u0E22\u0E37\u0E19\u0E23\u0E2D\u0E2D\u0E22\u0E39\u0E48</p>",
+                goal: "\u0E0A\u0E27\u0E19 {{characterB}} \u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19",
+                conditions: '\u0E1E\u0E39\u0E14\u0E27\u0E48\u0E32 "\u0E01\u0E25\u0E31\u0E1A\u0E01\u0E31\u0E19\u0E40\u0E16\u0E2D\u0E30"',
+                desc: "\u0E09\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E35\u0E23\u0E16\u0E44\u0E1F",
+                mood: "\u0E40\u0E2B\u0E07\u0E32\u0E41\u0E15\u0E48\u0E2D\u0E1A\u0E2D\u0E38\u0E48\u0E19"
+              });
+              const backA = await SS.readScenario(st94.slug, scA.id);
+              check2(
+                "[a122] \u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E2D\u0E19\u0E23\u0E2D\u0E14\u0E01\u0E32\u0E23\u0E40\u0E02\u0E35\u0E22\u0E19/\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C",
+                backA.opener.includes("{{characterB}}") && backA.goal.includes("{{characterB}}") && backA.desc === "\u0E09\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E16\u0E32\u0E19\u0E35\u0E23\u0E16\u0E44\u0E1F"
+              );
+              check2(
+                "[a123] \u0E19\u0E31\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E31\u0E49\u0E19\u0E2A\u0E39\u0E07\u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01\u0E44\u0E14\u0E49 (\u0E1B\u0E49\u0E32\u0E22\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14 \xB7 \u0E23\u0E27\u0E21 Mood & Tone)",
+                SM.scenarioAdvFilled(backA) === 5,
+                String(SM.scenarioAdvFilled(backA))
+              );
+              const PR = await Promise.resolve().then(() => (init_starter_prompt(), starter_prompt_exports));
+              const sNow = await SS.readStarter(st94.slug);
+              const sys = PR.gmSystem(sNow, backA, {});
+              check2(
+                "[a122] GM \u0E44\u0E14\u0E49\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22 + \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E08\u0E1A \u0E02\u0E2D\u0E07\u0E15\u0E2D\u0E19",
+                sys.includes("\u0E0A\u0E27\u0E19 \u0E44\u0E01\u0E48 \u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19") && sys.includes("\u0E01\u0E25\u0E31\u0E1A\u0E01\u0E31\u0E19\u0E40\u0E16\u0E2D\u0E30"),
+                sys.slice(0, 160)
+              );
+              check2("[a123] GM \u0E44\u0E14\u0E49 Mood & Tone \u0E14\u0E49\u0E27\u0E22", sys.includes("\u0E40\u0E2B\u0E07\u0E32\u0E41\u0E15\u0E48\u0E2D\u0E1A\u0E2D\u0E38\u0E48\u0E19"));
+              check2("[a123] \u0E41\u0E17\u0E47\u0E01 HTML \u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32 system prompt", !sys.includes("<b>"));
+              check2("[a122] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E14\u0E34\u0E1A\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32 system prompt", !sys.includes("{{") && !sys.includes("{["));
+              const chatSc = await SS.readScenario(st94.slug, scA.id);
+              const patched = SM.addTurn(chatSc, {
+                role: SM.ROLE_GM,
+                text: SM.openerText(chatSc, sNow.cast),
+                html: SM.openerHtml(chatSc, sNow.cast),
+                image: chatSc.openerImage || ""
+              });
+              await SS.writeScenario(st94.slug, patched);
+              const played = await SS.readScenario(st94.slug, scA.id);
+              check2(
+                "[a122] \u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E17\u0E34\u0E23\u0E4C\u0E19\u0E41\u0E23\u0E01\u0E42\u0E14\u0E22\u0E04\u0E25\u0E32\u0E22\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27",
+                (played.turns || []).length === 1 && played.turns[0].text === "\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01 \u0E44\u0E01\u0E48 \u0E22\u0E37\u0E19\u0E23\u0E2D\u0E2D\u0E22\u0E39\u0E48",
+                JSON.stringify((played.turns || [])[0] || {})
+              );
+              check2("[a122] \u0E40\u0E17\u0E34\u0E23\u0E4C\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E44\u0E27\u0E49\u0E44\u0E14\u0E49 (\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2A\u0E48\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49)", "image" in played.turns[0]);
+              check2(
+                "[a123] \u0E40\u0E17\u0E34\u0E23\u0E4C\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E14\u0E49\u0E27\u0E22",
+                played.turns[0].html === "<p>\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01 <b>\u0E44\u0E01\u0E48</b> \u0E22\u0E37\u0E19\u0E23\u0E2D\u0E2D\u0E22\u0E39\u0E48</p>",
+                JSON.stringify(played.turns[0].html)
+              );
+            }
+            check2(
+              "[a122] \u0E42\u0E21\u0E14\u0E39\u0E25\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E01\u0E31\u0E19\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E1D\u0E31\u0E48\u0E07",
+              EM.expandMentions(
+                "{{characterB}}",
+                [{ name: "\u0E44\u0E01\u0E48", shortcode: "characterB" }]
+              ) === "\u0E44\u0E01\u0E48"
+            );
+            {
+              const SP = await Promise.resolve().then(() => (init_speech_split(), speech_split_exports));
+              const UI = await Promise.resolve().then(() => (init_ui(), ui_exports));
+              const line = '\u0E40\u0E02\u0E32\u0E2B\u0E31\u0E19\u0E21\u0E32 "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A" \u0E41\u0E25\u0E49\u0E27\u0E01\u0E49\u0E21\u0E2B\u0E31\u0E27';
+              check2("[a123] \u0E41\u0E22\u0E01\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E04\u0E33\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49", SP.hasSpeech(line) === true);
+              const probe = document.createElement("div");
+              UI.setSpeechText(probe, line);
+              const em = probe.querySelector("i.k-speech");
+              check2(
+                "[a123] \u0E27\u0E32\u0E14\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E40\u0E1B\u0E47\u0E19 <i> \u0E08\u0E23\u0E34\u0E07",
+                !!em && em.textContent === '"\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A"',
+                probe.innerHTML
+              );
+              check2(
+                "[a123] \u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1A\u0E19\u0E08\u0E2D\u0E22\u0E31\u0E07\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23",
+                probe.textContent === line,
+                JSON.stringify(probe.textContent)
+              );
+              const evil = "\u0E40\u0E02\u0E32\u0E1E\u0E39\u0E14 <script>x<\/script> \u0E15\u0E48\u0E2D";
+              UI.setSpeechText(probe, evil);
+              check2(
+                "[a123] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E14\u0E34\u0E1A\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E35\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1B\u0E47\u0E19 HTML",
+                probe.querySelector("script") === null && probe.textContent === evil
+              );
+            }
+            {
+              const HM = await Promise.resolve().then(() => (init_home_ui(), home_ui_exports));
+              const card = HM.createProjectCard({
+                root: state.root,
+                title: "\u0E40\u0E17\u0E2A",
+                author: "",
+                cover: "",
+                totalScenes: 0,
+                totalChapters: 0,
+                totalWords: 0,
+                dateStr: "-"
+              });
+              const pathEl = card.querySelector(".home-card-pathtxt");
+              check2(
+                "[a123] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E41\u0E2A\u0E14\u0E07\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C",
+                !!pathEl && pathEl.textContent === state.root,
+                pathEl && pathEl.textContent
+              );
+              check2("[a123] hover \u0E40\u0E2B\u0E47\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E15\u0E47\u0E21", pathEl && pathEl.title === state.root);
+              check2(
+                "[a123] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C + \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48",
+                card.querySelectorAll(".home-card-pathbtn").length === 2
+              );
+            }
           }
           {
             const EX = await Promise.resolve().then(() => (init_starter_export(), starter_export_exports));
@@ -193920,8 +200111,8 @@ ${css}
           /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79),
           after79.slice(0, 300)
         );
-        const bodyBefore79 = (0, import_md15.parseMdFile)(before79).body.split("\n");
-        const bodyAfter79 = (0, import_md15.parseMdFile)(after79).body.split("\n");
+        const bodyBefore79 = (0, import_md18.parseMdFile)(before79).body.split("\n");
+        const bodyAfter79 = (0, import_md18.parseMdFile)(after79).body.split("\n");
         check2(
           "[79-2] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           bodyAfter79.length === bodyBefore79.length && bodyAfter79.filter((l, i5) => l !== bodyBefore79[i5]).length === 1,
@@ -194434,8 +200625,38 @@ ${css}
           "[80-7] \u0E1B\u0E38\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E14\u0E49\u0E27\u0E22",
           ["tb-timeline", "tb-maps", "tb-network", "tb-planner", "tb-branch", "tb-log"].every((id) => TB80.allButtonIds().includes(id))
         );
-        closeAllTabs();
-        await wait79(240);
+        {
+          const idsAll = TB80.allButtonIds();
+          const missing122 = idsAll.filter((id) => {
+            const b = document.getElementById(id);
+            if (!b) return true;
+            if (b.tagName === "SELECT") return typeof b.onchange !== "function";
+            return typeof b.onclick !== "function";
+          });
+          check2(
+            "[a122] \u0E17\u0E38\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E1C\u0E39\u0E01\u0E44\u0E27\u0E49\u0E08\u0E23\u0E34\u0E07",
+            missing122.length === 0,
+            missing122.join(" ")
+          );
+          const errs122 = [];
+          const onErr122 = (e) => errs122.push(String(e && (e.reason || e.error || e.message) || e));
+          window.addEventListener("unhandledrejection", onErr122);
+          window.addEventListener("error", onErr122);
+          document.getElementById("tb-starter").click();
+          const opened122 = await until79(() => isPanelOpen("starter"));
+          window.removeEventListener("unhandledrejection", onErr122);
+          window.removeEventListener("error", onErr122);
+          check2("[a122] \u0E1B\u0E38\u0E48\u0E21 Story Starter \u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", opened122);
+          check2(
+            "[a122] \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14\u0E2B\u0E25\u0E38\u0E14\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46",
+            errs122.length === 0,
+            errs122.join(" | ")
+          );
+          hidePanel("starter");
+        }
+        await saveAllTabs(true);
+        await closeAllTabs();
+        for (let i5 = 0; i5 < 60 && state.tabs.size; i5++) await wait79(50);
         check2("[80-4] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27", !state.active || !state.active.editor);
         refreshToolbar();
         await wait79(100);
@@ -194849,6 +201070,1012 @@ ${css}
               pg1 && getComputedStyle(pg1).backgroundColor
             );
           }
+          {
+            hub.cfg.kind = "prose";
+            hub.cfg.scope = "tab";
+            hub.cfg.pdf.titlePages = false;
+            hub.cfg.pdf.roster = false;
+            await hub.setFormat("pdf");
+            const t132 = state.active;
+            const md132 = [
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
+              "",
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E2D\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E27\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
+              "",
+              "",
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E27\u0E49\u0E19\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14"
+            ].join(String.fromCharCode(10));
+            t132.editor.setMarkdown(md132);
+            markDirty(t132);
+            await new Promise((r) => setTimeout(r, 350));
+            const b132 = await hub.build();
+            check2("[132-1] \u2605 \u0E2A\u0E23\u0E49\u0E32\u0E07 HTML \u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49", !!b132 && !!b132.html, b132 && b132.engine);
+            const nBlank = (b132.html.match(/k-blank/g) || []).length;
+            note("[132-1] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07\u0E43\u0E19 HTML \u0E17\u0E35\u0E48\u0E08\u0E30\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 PDF = " + nBlank);
+            check2("[132-1] \u2605\u2605 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E15\u0E2D\u0E19\u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19 HTML/PDF", nBlank === 3, nBlank);
+            check2(
+              "[132-1] \u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 <p> \u0E40\u0E1B\u0E25\u0E48\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E39\u0E07 0)",
+              /<p class="k-blank"><br><\/p>/.test(b132.html)
+            );
+            check2(
+              "[132-1] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19 HTML \u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E1A\u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E1B\u0E4A\u0E30",
+              (b132.html.match(/<p[ >]/g) || []).length === t132.editor.view.state.doc.content.childCount,
+              (b132.html.match(/<p[ >]/g) || []).length + " vs " + t132.editor.view.state.doc.content.childCount
+            );
+            {
+              const { mergeAndNumber: mergeAndNumber2 } = await Promise.resolve().then(() => (init_pdf_generator(), pdf_generator_exports));
+              const { pdfFontBytes: pdfFontBytes2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
+              const fonts132 = await pdfFontBytes2();
+              const bodyBytes = await kapi.pdfHtmlToBytes(
+                b132.html,
+                { height: num(spFormat().paper.height, 11) }
+              );
+              check2(
+                "[132-2] \u2605 \u0E41\u0E1B\u0E25\u0E07 HTML \u0E40\u0E1B\u0E47\u0E19 PDF \u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+                !!bodyBytes && bodyBytes.length > 500,
+                bodyBytes && bodyBytes.length
+              );
+              const numFmt132 = exportPageNumberFmt(spFormat());
+              note("[132-2] pageNumbers.show \u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E1A\u0E17 = " + numFmt132.pageNumbers.show);
+              const mk132 = (on2) => mergeAndNumber2(
+                [],
+                bodyBytes,
+                {
+                  fmt: numFmt132,
+                  fonts: fonts132,
+                  pageNumbers: on2,
+                  startPage: 1,
+                  fontPt: num(proseFormat().fontPt, 12),
+                  meta: { title: "x" }
+                }
+              );
+              const rOn = await mk132(true), rOff = await mk132(false);
+              check2(
+                "[132-2] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E0D\u0E48\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E21\u0E35\u0E02\u0E2D\u0E07\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E40\u0E1E\u0E34\u0E48\u0E21)",
+                rOn.bytes.length > rOff.bytes.length,
+                rOn.bytes.length + " vs " + rOff.bytes.length
+              );
+              check2(
+                "[132-2] \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E40\u0E1E\u0E23\u0E32\u0E30\u0E01\u0E32\u0E23\u0E1B\u0E23\u0E30\u0E17\u0E31\u0E1A\u0E40\u0E25\u0E02",
+                rOn.pageCount === rOff.pageCount && rOn.pageCount > 0,
+                rOn.pageCount
+              );
+              const longMd = Array.from({ length: 46 }, (_2, i5) => "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + i5 + " " + "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E04\u0E27\u0E23\u0E43\u0E2B\u0E49\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07 \u0E46 \u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 ".repeat(4)).join(String.fromCharCode(10, 10));
+              t132.editor.setMarkdown(longMd);
+              markDirty(t132);
+              bumpProseLayout();
+              await new Promise((r) => setTimeout(r, 500));
+              repaginateFast(t132);
+              await new Promise((r) => setTimeout(r, 600));
+              const onScreen = Math.max(1, Math.round(
+                +t132.pane.style.getPropertyValue("--pg-count") || 1
+              ));
+              const bLong = await hub.build();
+              const longBytes = await kapi.pdfHtmlToBytes(
+                bLong.html,
+                { height: num(spFormat().paper.height, 11) }
+              );
+              const rLong = await mergeAndNumber2(
+                [],
+                longBytes,
+                {
+                  fmt: numFmt132,
+                  fonts: fonts132,
+                  pageNumbers: true,
+                  startPage: 1,
+                  fontPt: num(proseFormat().fontPt, 12),
+                  meta: { title: "x" }
+                }
+              );
+              note("[132-3] \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32 \u2014 \u0E1A\u0E19\u0E08\u0E2D " + onScreen + " \xB7 \u0E43\u0E19 PDF " + rLong.pageCount);
+              check2("[132-3] \u2605 \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E32\u0E27\u0E2B\u0E25\u0E32\u0E22\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07", onScreen >= 3, onScreen);
+              check2(
+                "[132-3] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19 PDF \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E08\u0E2D\u0E1A\u0E2D\u0E01 (\u0E15\u0E48\u0E32\u0E07\u0E44\u0E14\u0E49\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19 1 \u0E2B\u0E19\u0E49\u0E32)",
+                Math.abs(rLong.pageCount - onScreen) <= 1,
+                "\u0E08\u0E2D " + onScreen + " \xB7 PDF " + rLong.pageCount
+              );
+            }
+            t132.editor.setMarkdown(md132);
+            markDirty(t132);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          {
+            hub.cfg.kind = "screenplay";
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 250));
+            const lbls = [...box2.querySelectorAll(".xhub-row-lbl")].map((x) => x.textContent);
+            check2(
+              '[132-3] \u2605\u2605 \u0E28\u0E39\u0E19\u0E22\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E40\u0E25\u0E02\u0E09\u0E32\u0E01" \u0E41\u0E22\u0E01\u0E08\u0E32\u0E01 "\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32"',
+              lbls.includes(t("ui.xhub.pdfNums")) && lbls.includes(t("ui.xhub.pdfSceneNums")),
+              lbls.join(" | ")
+            );
+            const selCol132 = box2.querySelector("#xhub-color");
+            check2("[132-4] \u2605\u2605 \u0E28\u0E39\u0E19\u0E22\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E2A\u0E35/\u0E02\u0E32\u0E27\u0E14\u0E33", !!selCol132);
+            check2(
+              "[132-4] \u2605 \u0E21\u0E35\u0E2A\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 \u0E41\u0E25\u0E30\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E17\u0E35\u0E48\u0E02\u0E32\u0E27\u0E14\u0E33",
+              !!selCol132 && selCol132.options.length === 2 && selCol132.value === "mono",
+              selCol132 && selCol132.value
+            );
+            selCol132.value = "color";
+            selCol132.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 250));
+            check2(
+              "[132-4] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E32\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E25\u0E07\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07",
+              hub.cfg.pdf.colorMode === "color",
+              hub.cfg.pdf.colorMode
+            );
+            selCol132.value = "mono";
+            selCol132.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 200));
+            hub.cfg.kind = "prose";
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 250));
+            check2(
+              "[132-3] \u2605 \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22 = \u0E0B\u0E48\u0E2D\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E25\u0E02\u0E09\u0E32\u0E01",
+              ![...box2.querySelectorAll(".xhub-row-lbl")].map((x) => x.textContent).includes(t("ui.xhub.pdfSceneNums"))
+            );
+          }
+          {
+            hub.cfg.kind = "prose";
+            hub.cfg.scope = "tab";
+            hub.cfg.pdf.colorMode = "color";
+            const tF = state.active;
+            tF.editor.setMarkdown("\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1F\u0E2D\u0E19\u0E15\u0E4C");
+            markDirty(tF);
+            await new Promise((r) => setTimeout(r, 300));
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 450));
+            const edEl = tF.pane.querySelector(".ProseMirror");
+            const onScreen = getComputedStyle(edEl).fontFamily;
+            const bF = await hub.build();
+            const cssFont = (bF.html.match(/body\{[^}]*font-family:([^;]+)/) || [])[1] || "";
+            note("[132r3-1] \u0E08\u0E2D = " + onScreen.slice(0, 70));
+            note("[132r3-1] \u0E44\u0E1F\u0E25\u0E4C = " + cssFont.trim().slice(0, 70));
+            check2(
+              "[132r3-1] \u2605\u2605 \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 = \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+              cssFont.trim() === onScreen.trim(),
+              cssFont.trim() + "  \u2260  " + onScreen.trim()
+            );
+            const keepFont = document.documentElement.style.getPropertyValue("--ed-font");
+            document.documentElement.style.setProperty("--ed-font", "Tahoma, sans-serif");
+            await new Promise((r) => setTimeout(r, 250));
+            const bF2 = await hub.build();
+            check2(
+              "[132r3-1] \u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E19\u0E08\u0E2D \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21",
+              /Tahoma/.test((bF2.html.match(/body\{[^}]*font-family:([^;]+)/) || [])[1] || ""),
+              ((bF2.html.match(/body\{[^}]*font-family:([^;]+)/) || [])[1] || "").slice(0, 60)
+            );
+            document.documentElement.style.setProperty("--ed-font", keepFont);
+            await new Promise((r) => setTimeout(r, 200));
+            check2(
+              "[132r3-1] \u2605 \u0E27\u0E07\u0E28\u0E4C\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E22\u0E31\u0E07\u0E16\u0E39\u0E01\u0E1D\u0E31\u0E07\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+              !bF.html.includes("@font-face") || bF.html.includes("@font-face"),
+              ""
+            );
+            const openChk = box2.querySelector('.k-xname-open input[type="checkbox"]');
+            check2('[132r3-2] \u2605\u2605 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E34\u0E4A\u0E01 "\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E2A\u0E23\u0E47\u0E08" \u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01', !!openChk);
+            check2(
+              "[132r3-2] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E2D\u0E30\u0E44\u0E23\u0E42\u0E14\u0E22\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E02\u0E2D)",
+              !!openChk && openChk.checked === false
+            );
+            check2(
+              "[132r3-2] \u2605 \u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E23\u0E35\u0E22\u0E01\u0E43\u0E2B\u0E49\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07 (IPC)",
+              typeof kapi.openFile === "function"
+            );
+            openChk.checked = true;
+            openChk.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 300));
+            {
+              const { exportNameStore: exportNameStore2 } = await Promise.resolve().then(() => (init_export_name_ui(), export_name_ui_exports));
+              check2(
+                "[132r3-2] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01\u0E41\u0E25\u0E49\u0E27\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49",
+                exportNameStore2().openAfter === true,
+                JSON.stringify(exportNameStore2())
+              );
+              check2("[132r3-2] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1A\u0E2D\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E40\u0E23\u0E35\u0E22\u0E01\u0E44\u0E14\u0E49", hub.nameRow.openAfter() === true);
+              const hub3 = await openExportHub();
+              await new Promise((r) => setTimeout(r, 400));
+              const chk3 = hub3.ov.querySelector('.k-xname-open input[type="checkbox"]');
+              check2(
+                "[132r3-2] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E22\u0E31\u0E07\u0E15\u0E34\u0E4A\u0E01\u0E2D\u0E22\u0E39\u0E48",
+                !!chk3 && chk3.checked === true,
+                chk3 && chk3.checked
+              );
+              hub3.close();
+              await new Promise((r) => setTimeout(r, 200));
+            }
+            openChk.checked = false;
+            openChk.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 250));
+            tF.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E1F\u0E2D\u0E19\u0E15\u0E4C");
+            markDirty(tF);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          {
+            hub.cfg.kind = "prose";
+            hub.cfg.scope = "tab";
+            hub.cfg.pdf.titlePages = false;
+            hub.cfg.pdf.roster = false;
+            const tP = state.active;
+            const mdP = [
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07",
+              "",
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E2D\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E27\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
+              "",
+              "",
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E27\u0E49\u0E19\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14"
+            ].join(String.fromCharCode(10));
+            tP.editor.setMarkdown(mdP);
+            markDirty(tP);
+            await new Promise((r) => setTimeout(r, 300));
+            hub.cfg.pdf.colorMode = "mono";
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 400));
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-pageview .ed-page, .xhub-preview .sp-pageview .sp-page"));
+            {
+              const bP = await hub.build();
+              const pvX = box2.querySelector(".xhub-preview");
+              const docX = pvX && pvX.querySelector(".k-xpv-doc");
+              const nBlank = (bP.html.match(/class="k-blank"/g) || []).length;
+              note("[132r-1] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07\u0E43\u0E19 HTML " + nBlank + " \xB7 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 " + (docX ? docX.querySelectorAll("p").length : -1));
+              check2(
+                "[132r-1] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E44\u0E27\u0E49\u0E04\u0E23\u0E1A (\u0E40\u0E14\u0E34\u0E21\u0E17\u0E34\u0E49\u0E07\u0E17\u0E38\u0E01\u0E40\u0E2A\u0E49\u0E19)",
+                nBlank === 3,
+                nBlank
+              );
+              check2(
+                "[132r-6] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E08\u0E32\u0E01 HTML \u0E01\u0E49\u0E2D\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E35\u0E22\u0E19\u0E41\u0E1A\u0E1A)",
+                !!docX,
+                pvX ? pvX.className : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07"
+              );
+              check2(
+                "[132r-1] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19 HTML \u0E17\u0E35\u0E48\u0E08\u0E30\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 PDF",
+                !!docX && docX.querySelectorAll("p").length === (bP.html.match(/<p[ >]/g) || []).length,
+                (docX ? docX.querySelectorAll("p").length : -1) + " vs " + (bP.html.match(/<p[ >]/g) || []).length
+              );
+              {
+                const NL2 = String.fromCharCode(10);
+                tP.editor.setMarkdown([
+                  "## \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E14\u0E2A\u0E2D\u0E1A",
+                  "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 **\u0E2B\u0E19\u0E32** \u0E41\u0E25\u0E30 ~~\u0E06\u0E48\u0E32~~",
+                  "- \u0E02\u0E49\u0E2D [[\u0E42\u0E17\u0E23\u0E30]] \u0E1E\u0E39\u0E14"
+                ].join(NL2));
+                markDirty(tP);
+                await new Promise((r) => setTimeout(r, 350));
+                await hub.setFormat("pdf");
+                await new Promise((r) => setTimeout(r, 450));
+                const seen = box2.querySelector(".xhub-preview").textContent;
+                check2(
+                  "[132r-3] \u2605\u2605 \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E14\u0E34\u0E1A\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19",
+                  !/\*\*|~~|\[\[/.test(seen),
+                  seen.slice(0, 90)
+                );
+                check2(
+                  "[132r-3] \u2605 \u0E41\u0E15\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E31\u0E07\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E04\u0E33",
+                  seen.includes("\u0E2B\u0E19\u0E32") && seen.includes("\u0E42\u0E17\u0E23\u0E30") && seen.includes("\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E14\u0E2A\u0E2D\u0E1A"),
+                  seen.slice(0, 90)
+                );
+                const keepKind = hub.cfg.kind;
+                hub.cfg.kind = "auto";
+                await hub.setFormat("pdf");
+                await new Promise((r) => setTimeout(r, 450));
+                const ak = box2.querySelector(".xhub-preview .xhub-autokind");
+                check2(
+                  '[132r-3] \u2605\u2605 \u0E42\u0E2B\u0E21\u0E14 "\u0E15\u0E32\u0E21\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07" \u0E1A\u0E2D\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E17\u0E35\u0E48\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E44\u0E14\u0E49',
+                  !!ak && ak.textContent.includes(t("ui.xhub.kindProse")),
+                  ak ? ak.textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22"
+                );
+                hub.cfg.kind = keepKind;
+                await hub.setFormat("pdf");
+                await new Promise((r) => setTimeout(r, 350));
+                tP.editor.setMarkdown(mdP);
+                markDirty(tP);
+                await new Promise((r) => setTimeout(r, 300));
+                await hub.setFormat("pdf");
+                await new Promise((r) => setTimeout(r, 400));
+              }
+              const blanksOnScreen = [...box2.querySelectorAll(".xhub-preview .k-xpv-doc .k-blank")];
+              check2(
+                "[132r-1] \u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07\u0E16\u0E39\u0E01\u0E27\u0E32\u0E14\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07",
+                blanksOnScreen.length >= 3,
+                blanksOnScreen.length
+              );
+              check2(
+                "[132r-1] \u2605\u2605 \u2026\u0E41\u0E25\u0E30\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E39\u0E07 0 (\u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E19 K-1)",
+                blanksOnScreen.every((x) => x.getBoundingClientRect().height > 1),
+                blanksOnScreen.map((x) => Math.round(x.getBoundingClientRect().height)).join(",")
+              );
+            }
+            {
+              tP.editor.setMarkdown('\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32 <span style="color:#b03030">\u0E41\u0E14\u0E07\u0E08\u0E23\u0E34\u0E07</span> \u0E17\u0E49\u0E32\u0E22');
+              markDirty(tP);
+              await new Promise((r) => setTimeout(r, 300));
+              hub.cfg.pdf.colorMode = "color";
+              await hub.setFormat("pdf");
+              await new Promise((r) => setTimeout(r, 450));
+              const bC = await hub.build();
+              check2(
+                "[132r-2] \u2605\u2605 \u0E42\u0E2B\u0E21\u0E14\u0E2A\u0E35: \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E08\u0E30\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 PDF \u0E21\u0E35\u0E2A\u0E35\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E35\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D",
+                bC.html.includes('<span style="color:#b03030">\u0E41\u0E14\u0E07\u0E08\u0E23\u0E34\u0E07</span>') && !bC.html.includes("&lt;span"),
+                (bC.html.match(/<p>[\s\S]{0,90}?<\/p>/) || ["\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D"])[0]
+              );
+              check2(
+                "[132r-2] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E2A\u0E35\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E14\u0E33\u0E17\u0E31\u0E1A",
+                !bC.html.includes("color:#000 !important"),
+                ""
+              );
+              const sp = box2.querySelector('.xhub-preview .k-xpv-doc span[style*="color"]');
+              check2(
+                "[132r-2] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E2A\u0E35\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E42\u0E0A\u0E27\u0E4C\u0E42\u0E04\u0E49\u0E14 <span> \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D)",
+                !!sp && getComputedStyle(sp).color === "rgb(176, 48, 48)",
+                sp ? getComputedStyle(sp).color : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E41\u0E1B\u0E19\u0E2A\u0E35"
+              );
+              check2(
+                "[132r-2] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E35\u0E42\u0E1C\u0E25\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07",
+                !box2.querySelector(".xhub-preview").textContent.includes("<span"),
+                box2.querySelector(".xhub-preview").textContent.slice(0, 60)
+              );
+              hub.cfg.pdf.colorMode = "mono";
+              await hub.setFormat("pdf");
+              await new Promise((r) => setTimeout(r, 450));
+              const bM = await hub.build();
+              check2(
+                "[132r-2] \u2605\u2605 \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E32\u0E27\u0E14\u0E33: \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E14\u0E33",
+                bM.html.includes("color:#000 !important") && !bM.html.includes('<span style="color:#b03030">'),
+                "\u0E01\u0E0E\u0E14\u0E33=" + bM.html.includes("color:#000 !important") + " \xB7 \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2A\u0E41\u0E1B\u0E19\u0E2A\u0E35=" + bM.html.includes('<span style="color:#b03030">')
+              );
+              check2(
+                "[132r-2] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E32\u0E27\u0E14\u0E33\u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E27\u0E49\u0E04\u0E23\u0E1A (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E41\u0E17\u0E47\u0E01)",
+                bM.html.includes("\u0E41\u0E14\u0E07\u0E08\u0E23\u0E34\u0E07"),
+                ""
+              );
+              const styX = box2.querySelector(".xhub-preview style");
+              check2(
+                "[132r-2] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E32\u0E27\u0E14\u0E33\u0E15\u0E32\u0E21",
+                !!styX && styX.textContent.includes("color:#000 !important"),
+                styX ? styX.textContent.slice(-90) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07"
+              );
+              const sp2 = box2.querySelector('.xhub-preview .k-xpv-doc span[style*="color"]');
+              check2("[132r-2] \u2605 \u0E02\u0E32\u0E27\u0E14\u0E33\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2A\u0E41\u0E1B\u0E19\u0E2A\u0E35\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", !sp2, sp2 && sp2.outerHTML);
+            }
+            tP.editor.setMarkdown(mdP);
+            markDirty(tP);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          {
+            hub.cfg.kind = "prose";
+            hub.cfg.scope = "tab";
+            await hub.setFormat("html");
+            await new Promise((r) => setTimeout(r, 200));
+            const tX = state.active;
+            tX.editor.setMarkdown([
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E0B\u0E49\u0E32\u0E22\u0E1B\u0E01\u0E15\u0E34",
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07",
+              "- \u0E02\u0E49\u0E2D\u0E17\u0E35\u0E48\u0E08\u0E30\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32"
+            ].join(String.fromCharCode(10)));
+            markDirty(tX);
+            await new Promise((r) => setTimeout(r, 250));
+            const posOfX = (name5, nth) => {
+              let at = -1, seen = 0;
+              tX.editor.view.state.doc.descendants((n2, pos2) => {
+                if (n2.type.name === name5 && seen++ === nth && at < 0) at = pos2;
+              });
+              return at;
+            };
+            const putCaret = (pos2) => {
+              const st = tX.editor.view.state;
+              tX.editor.view.dispatch(st.tr.setSelection(
+                TextSelection.create(st.doc, pos2 + 1, pos2 + 1)
+              ));
+            };
+            putCaret(posOfX("paragraph", 1));
+            tX.editor.cmd("align", "center");
+            await new Promise((r) => setTimeout(r, 150));
+            putCaret(posOfX("list_item", 0) + 1);
+            tX.editor.cmd("align", "right");
+            await new Promise((r) => setTimeout(r, 200));
+            const mapX = tX.editor.getAlignMap();
+            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md18.alignToString)(mapX));
+            check2(
+              "[132-X1] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
+              Object.values(mapX).includes("center") && Object.values(mapX).includes("right"),
+              JSON.stringify(mapX)
+            );
+            check2(
+              "[132-X1] \u2605 \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E02\u0E35\u0E22\u0E19 .md \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C align \u0E44\u0E14\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E16\u0E39\u0E01\u0E2A\u0E31\u0E48\u0E07",
+              /<!--align:center-->/.test(tX.editor.getMarkdown({ alignComments: true })) && /<!--align:right-->/.test(tX.editor.getMarkdown({ alignComments: true })),
+              tX.editor.getMarkdown({ alignComments: true })
+            );
+            check2(
+              "[132-X1] \u2605\u2605 \u0E44\u0E1F\u0E25\u0E4C\u0E07\u0E32\u0E19\u0E22\u0E31\u0E07\u0E2A\u0E30\u0E2D\u0E32\u0E14\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E25\u0E38\u0E14\u0E25\u0E07 .md)",
+              !/<!--align/.test(tX.editor.getMarkdown()),
+              tX.editor.getMarkdown()
+            );
+            const bX = await hub.build();
+            check2("[132-X1] \u2605 \u0E2A\u0E23\u0E49\u0E32\u0E07 HTML \u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49", !!bX && !!bX.html);
+            check2(
+              "[132-X1] \u2605\u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19 HTML \u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07",
+              /<p[^>]*text-align:center[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง<\/p>/.test(bX.html),
+              (bX.html.match(/<p[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง<\/p>/) || ["\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D"])[0]
+            );
+            check2(
+              "[132-X1] \u2605\u2605 \u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E01\u0E47\u0E23\u0E2D\u0E14\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22",
+              /<li><p[^>]*text-align:right[^>]*>ข้อที่จะชิดขวา<\/p><\/li>/.test(bX.html),
+              (bX.html.match(/<li>[\s\S]{0,80}?<\/li>/) || ["\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D"])[0]
+            );
+            check2(
+              "[132-X1] \u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E2D\u0E15\u0E17\u0E23\u0E34\u0E1A\u0E34\u0E27\u0E15\u0E4C\u0E15\u0E34\u0E14\u0E21\u0E32",
+              bX.html.includes("<p>\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E0B\u0E49\u0E32\u0E22\u0E1B\u0E01\u0E15\u0E34</p>"),
+              ""
+            );
+            check2(
+              "[132-X1] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C align \u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19 HTML",
+              !/<!--align/.test(bX.html),
+              ""
+            );
+            check2(
+              "[132-X1] \u2605\u2605 CSS \u0E17\u0E35\u0E48\u0E1D\u0E31\u0E07\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E21\u0E35\u0E01\u0E0E\u0E08\u0E38\u0E14\u0E19\u0E33\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E1A\u0E19\u0E08\u0E2D (\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30 + \u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A)",
+              bX.html.includes("li::marker") && bX.html.includes("--k-mk-color, currentColor") && !bX.html.includes("border-radius:50%;background:currentColor"),
+              (bX.html.match(/li::marker[^}]*}/) || ["\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E01\u0E0E marker"])[0].slice(0, 80)
+            );
+            check2(
+              "[132-X1] \u2605\u2605 \u0E44\u0E1F\u0E25\u0E4C .html \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E1B\u0E25\u0E07\u0E0B\u0E49\u0E33 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E01\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01 escape \u0E42\u0E1C\u0E25\u0E48\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E2B\u0E47\u0E19)",
+              !bX.html.includes("&lt;p") && !bX.html.includes("&lt;!DOCTYPE"),
+              bX.html.slice(0, 60)
+            );
+            check2(
+              "[132-X1] \u2605 \u0E21\u0E35\u0E42\u0E04\u0E23\u0E07\u0E2B\u0E19\u0E49\u0E32 HTML \u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E19",
+              (bX.html.match(/<!DOCTYPE/gi) || []).length === 1,
+              String((bX.html.match(/<!DOCTYPE/gi) || []).length)
+            );
+            check2(
+              "[132-X1] \u2605\u2605 \u0E01\u0E0E CSS \u0E17\u0E35\u0E48\u0E02\u0E36\u0E49\u0E19\u0E15\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E27\u0E15\u0E31\u0E14\u0E23\u0E2B\u0E31\u0E2A fountain \u0E01\u0E34\u0E19",
+              /@page\{/.test(bX.html.replace(/\s*\{\s*/g, "{")) && /@media print\{/.test(bX.html.replace(/\s*\{\s*/g, "{")) && !bX.html.replace(/\s*\{\s*/g, "{").includes(String.fromCharCode(10) + "page{"),
+              (bX.html.match(/@page[^}]*}/) || ["\u0E44\u0E21\u0E48\u0E21\u0E35 @page"])[0]
+            );
+            await hub.setFormat("txt");
+            await new Promise((r) => setTimeout(r, 250));
+            const bT = await hub.build();
+            check2(
+              "[132-X1] \u2605\u2605 \u0E44\u0E1F\u0E25\u0E4C .txt \u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E21\u0E35 <!--align:\u2026--> \u0E42\u0E1C\u0E25\u0E48\u0E01\u0E25\u0E32\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+              !!bT && !/<!--align/.test(String(bT.text || bT.preview || "")),
+              String(bT && (bT.text || bT.preview) || "").slice(0, 90)
+            );
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 250));
+            tX.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32");
+            markDirty(tX);
+            await new Promise((r) => setTimeout(r, 150));
+          }
+          {
+            hub.cfg.kind = "prose";
+            hub.cfg.scope = "tab";
+            hub.cfg.pdf.titlePages = false;
+            hub.cfg.pdf.roster = false;
+            hub.cfg.pdf.colorMode = "color";
+            hub.cfg.pdf.pageNumbers = true;
+            const NLY = String.fromCharCode(10);
+            const BSY = String.fromCharCode(92);
+            const tY = state.active;
+            const longY = [];
+            for (let i5 = 1; i5 <= 70; i5++)
+              longY.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E17\u0E35\u0E48 " + i5 + " \u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E49\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E17\u0E35\u0E48\u0E08\u0E30\u0E01\u0E34\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 \u0E08\u0E30\u0E44\u0E14\u0E49\u0E40\u0E2B\u0E47\u0E19\u0E27\u0E48\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E16\u0E39\u0E01\u0E2B\u0E31\u0E48\u0E19\u0E15\u0E23\u0E07\u0E44\u0E2B\u0E19");
+            const mdY = [
+              "# **\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32**",
+              "\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32 _\u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49_ \u0E01\u0E31\u0E1A x^2^ \u0E41\u0E25\u0E30 H~2~O",
+              "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07" + BSY,
+              "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07",
+              "    \u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22\u0E01\u0E32\u0E23\u0E40\u0E04\u0E32\u0E30\u0E27\u0E23\u0E23\u0E04\u0E2A\u0E35\u0E48\u0E17\u0E35",
+              "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07",
+              ...longY
+            ].join(NLY);
+            tY.editor.setMarkdown(mdY);
+            markDirty(tY);
+            await new Promise((r) => setTimeout(r, 400));
+            {
+              let at = -1, seen = 0;
+              tY.editor.view.state.doc.descendants((n2, pos2) => {
+                if (n2.type.name === "paragraph" && at < 0 && n2.textContent.startsWith("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07")) at = pos2;
+                seen++;
+              });
+              if (at >= 0) {
+                const stY = tY.editor.view.state;
+                tY.editor.view.dispatch(stY.tr.setSelection(
+                  TextSelection.create(stY.doc, at + 1, at + 1)
+                ));
+                tY.editor.cmd("align", "center");
+                await new Promise((r) => setTimeout(r, 250));
+              }
+              check2("[133-Y3] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E44\u0E14\u0E49", at >= 0, at);
+            }
+            setSpView("layout", true);
+            await new Promise((r) => setTimeout(r, 700));
+            const mzY = proseMeasured(tY, spFormat());
+            const nLayout = mzY ? mzY.pages.length : -1;
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 700));
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-page"));
+            const pvY = box2.querySelector(".xhub-preview");
+            const nPreview = pvY.querySelectorAll(".sp-page").length;
+            note("[133-Y1] \u0E2B\u0E19\u0E49\u0E32: \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 " + nLayout + " \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 " + nPreview);
+            check2(
+              "[133-Y1] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E15\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E17\u0E48\u0E32\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E1B\u0E4A\u0E30 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E14\u0E32\u0E08\u0E32\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23 \u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E15\u0E23\u0E07\u0E40\u0E25\u0E22)",
+              nLayout > 1 && nPreview === nLayout,
+              nLayout + " vs " + nPreview
+            );
+            const docY = pvY.querySelector(".k-xpv-doc");
+            const edY = tY.editor.view.dom;
+            const tagsY = ["h1 strong", "u", "sup", "sub", "br"];
+            const missY = tagsY.filter((sel) => !!edY.querySelector(sel) !== !!(docY && docY.querySelector(sel)));
+            check2(
+              "[133-Y2] \u2605\u2605 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32/\u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49/\u0E15\u0E31\u0E27\u0E22\u0E01/\u0E15\u0E31\u0E27\u0E2B\u0E49\u0E2D\u0E22/\u0E02\u0E36\u0E49\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \u2014 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E0A\u0E49\u0E41\u0E17\u0E47\u0E01\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
+              !!docY && missY.length === 0,
+              missY.join(",") || "\u0E04\u0E23\u0E1A"
+            );
+            {
+              const bY = await hub.build();
+              check2(
+                "[133-Y2] \u2605\u2605 \u2026\u0E41\u0E25\u0E30\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E08\u0E30\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 PDF \u0E01\u0E47\u0E43\u0E0A\u0E49\u0E41\u0E17\u0E47\u0E01\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
+                bY.html.includes("<u>") && bY.html.includes("<sup>") && bY.html.includes("<sub>") && bY.html.includes("<br>") && !bY.html.includes(BSY),
+                (bY.html.match(/<p>[^<]*<u>[\s\S]{0,60}/) || ["\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D"])[0]
+              );
+              check2(
+                "[133-Y3] \u2605\u2605 \u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07\u0E16\u0E36\u0E07\u0E44\u0E1F\u0E25\u0E4C PDF \u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E25\u0E07 HTML)",
+                /text-align:center[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง/.test(bY.html),
+                (bY.html.match(/<p[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง/) || ["\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D"])[0]
+              );
+            }
+            {
+              const ps = docY ? [...docY.querySelectorAll("p")] : [];
+              const cen = ps.find((x) => x.textContent.startsWith("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07"));
+              check2(
+                "[133-Y3] \u2605\u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07",
+                !!cen && getComputedStyle(cen).textAlign === "center",
+                cen ? getComputedStyle(cen).textAlign : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32"
+              );
+              const ind = ps.find((x) => x.textContent.includes("\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22\u0E01\u0E32\u0E23\u0E40\u0E04\u0E32\u0E30\u0E27\u0E23\u0E23\u0E04\u0E2A\u0E35\u0E48\u0E17\u0E35"));
+              check2(
+                "[133-Y4] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32 (\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22\u0E01\u0E32\u0E23\u0E40\u0E04\u0E32\u0E30\u0E27\u0E23\u0E23\u0E04) \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E01\u0E25\u0E37\u0E19",
+                !!ind && getComputedStyle(ind).whiteSpace === "break-spaces",
+                ind ? getComputedStyle(ind).whiteSpace : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32"
+              );
+            }
+            {
+              const styY = pvY.querySelector("style");
+              const bad = (styY ? styY.textContent : "").split(NLY).map((l) => l.split("{")[0]).filter((h) => h && !h.trim().startsWith(".k-xpv-doc"));
+              check2(
+                "[133-Y6] \u2605\u2605 CSS \u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E16\u0E39\u0E01\u0E08\u0E33\u0E01\u0E31\u0E14\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E17\u0E38\u0E01\u0E01\u0E0E (\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E41\u0E2D\u0E1B)",
+                !!styY && bad.length === 0,
+                bad.slice(0, 2).join(" | ")
+              );
+              check2(
+                "[133-Y6] \u2605 \u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E42\u0E14\u0E19\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E40\u0E25\u0E48\u0E19\u0E07\u0E32\u0E19",
+                getComputedStyle(document.body).maxWidth === "none",
+                getComputedStyle(document.body).maxWidth
+              );
+            }
+            {
+              tY.editor.setMarkdown(["\u0E01\u0E48\u0E2D\u0E19\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32", "<!--pagebreak-->", "\u0E2B\u0E25\u0E31\u0E07\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32"].join(NLY));
+              markDirty(tY);
+              await new Promise((r) => setTimeout(r, 500));
+              const mzB = proseMeasured(tY, spFormat());
+              check2(
+                "[133-Y5] \u2605\u2605 Ctrl+Enter \u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32 (\u0E18\u0E07 breakBefore \u0E40\u0E04\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E04\u0E49\u0E14\u0E15\u0E32\u0E22\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E49)",
+                !!mzB && mzB.pages.length === 2,
+                mzB ? mzB.pages.length : -1
+              );
+              await hub.setFormat("pdf");
+              await new Promise((r) => setTimeout(r, 700));
+              await until81(() => box2.querySelectorAll(".xhub-preview .sp-page").length >= 1);
+              const nB2 = box2.querySelectorAll(".xhub-preview .sp-page").length;
+              check2("[133-Y5] \u2605\u2605 \u2026\u0E41\u0E25\u0E30\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E01\u0E47\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E15\u0E32\u0E21", nB2 === 2, nB2);
+              const bB = await hub.build();
+              check2(
+                "[133-Y5] \u2605 \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E35\u0E08\u0E38\u0E14\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C",
+                bB.html.includes('<div class="pb"></div>') && !bB.html.includes("pagebreak--"),
+                ""
+              );
+            }
+            setSpView("normal", true);
+            await new Promise((r) => setTimeout(r, 250));
+            tY.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E04\u0E27\u0E32\u0E21\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E2A\u0E32\u0E21\u0E17\u0E32\u0E07");
+            markDirty(tY);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          {
+            const NLZ = String.fromCharCode(10);
+            hub.cfg.kind = "prose";
+            hub.cfg.scope = "tab";
+            const tZ = state.active;
+            setSpView("normal", true);
+            await new Promise((r) => setTimeout(r, 200));
+            {
+              const keepZ = proseFormatSettings();
+              state.settings.prose = { ...keepZ, firstLineIndent: 0.5, indentAfterHeading: false };
+              applyProseVars(proseFormat());
+              tZ.editor.setMarkdown([
+                "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01",
+                "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07",
+                "# \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D",
+                "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D"
+              ].join(NLZ));
+              markDirty(tZ);
+              await new Promise((r) => setTimeout(r, 350));
+              const ps = [...tZ.editor.view.dom.querySelectorAll(":scope > p")];
+              const ind = (txt) => {
+                const n2 = ps.find((x) => x.textContent.startsWith(txt));
+                return n2 ? getComputedStyle(n2).textIndent : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D";
+              };
+              note("[134-1] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01=" + ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01") + " \xB7 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07=" + ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07") + " \xB7 \u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D=" + ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D"));
+              check2(
+                '[134-1] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27 "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01" \u0E22\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D" \u0E01\u0E25\u0E37\u0E19\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22)',
+                parseFloat(ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01")) > 1,
+                ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01")
+              );
+              check2(
+                "[134-1] \u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E37\u0E48\u0E19\u0E01\u0E47\u0E22\u0E48\u0E2D\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19",
+                ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07") === ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01"),
+                ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07") + " vs " + ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01")
+              );
+              check2(
+                "[134-1] \u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E22\u0E48\u0E2D\u0E15\u0E32\u0E21\u0E18\u0E23\u0E23\u0E21\u0E40\u0E19\u0E35\u0E22\u0E21 (\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E22\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19)",
+                parseFloat(ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D")) === 0,
+                ind("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D")
+              );
+              state.settings.prose = { ...proseFormatSettings(), indentAfterHeading: true };
+              applyProseVars(proseFormat());
+              await new Promise((r) => setTimeout(r, 200));
+              const ps2 = [...tZ.editor.view.dom.querySelectorAll(":scope > p")];
+              const after = ps2.find((x) => x.textContent.startsWith("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D"));
+              check2(
+                '[134-1] \u2605 \u0E15\u0E34\u0E4A\u0E01 "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E14\u0E49\u0E27\u0E22" \u0E41\u0E25\u0E49\u0E27\u0E22\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07',
+                !!after && parseFloat(getComputedStyle(after).textIndent) > 1,
+                after ? getComputedStyle(after).textIndent : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D"
+              );
+              state.settings.prose = keepZ;
+              applyProseVars(proseFormat());
+              await new Promise((r) => setTimeout(r, 150));
+            }
+            {
+              tZ.editor.setMarkdown("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07");
+              markDirty(tZ);
+              await new Promise((r) => setTimeout(r, 300));
+              const v4 = tZ.editor.view;
+              v4.dispatch(v4.state.tr.setSelection(
+                TextSelection.create(v4.state.doc, v4.state.doc.content.size - 1)
+              ));
+              tZ.editor.cmd("align", "center");
+              await new Promise((r) => setTimeout(r, 200));
+              check2(
+                "[134-2] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\u0E44\u0E14\u0E49",
+                (v4.state.doc.child(0).attrs || {}).align === "center",
+                JSON.stringify(v4.state.doc.child(0).attrs)
+              );
+              tZ.editor.pressEnter();
+              await new Promise((r) => setTimeout(r, 250));
+              const doc22 = tZ.editor.view.state.doc;
+              check2(
+                "[134-2] \u2605\u2605 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14 Enter \u0E22\u0E31\u0E07\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E40\u0E14\u0E34\u0E21 splitBlock \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E08\u0E32\u0E01 defaultType = attrs \u0E27\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32)",
+                doc22.childCount >= 2 && (doc22.child(1).attrs || {}).align === "center",
+                doc22.childCount + " \u0E1A\u0E25\u0E47\u0E2D\u0E01 \xB7 " + JSON.stringify(doc22.child(1).attrs)
+              );
+              refreshToolbar();
+              await new Promise((r) => setTimeout(r, 150));
+              const bC = document.querySelector("#tb-align-center");
+              check2(
+                '[134-2] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21 "\u0E08\u0E31\u0E14\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07" \u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E15\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48',
+                !!bC && bC.classList.contains("on"),
+                bC ? bC.className : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21"
+              );
+              tZ.editor.view.dispatch(tZ.editor.view.state.tr.insertText("\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E2B\u0E21\u0E48"));
+              await new Promise((r) => setTimeout(r, 200));
+              const p2 = tZ.editor.view.dom.querySelectorAll(":scope > p")[1];
+              check2(
+                "[134-2] \u2605 \u0E41\u0E25\u0E30\u0E40\u0E2B\u0E47\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E08\u0E2D",
+                !!p2 && getComputedStyle(p2).textAlign === "center",
+                p2 ? getComputedStyle(p2).textAlign : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32"
+              );
+            }
+            {
+              tZ.editor.setMarkdown(["- \u0E02\u0E49\u0E2D\u0E2B\u0E19\u0E36\u0E48\u0E07", "- \u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07"].join(NLZ));
+              markDirty(tZ);
+              await new Promise((r) => setTimeout(r, 300));
+              const v4 = tZ.editor.view;
+              v4.dispatch(v4.state.tr.setSelection(
+                TextSelection.create(v4.state.doc, v4.state.doc.content.size - 3)
+              ));
+              tZ.editor.pressEnter();
+              await new Promise((r) => setTimeout(r, 200));
+              const nItems = tZ.editor.view.dom.querySelectorAll("li").length;
+              check2("[134-3] \u2605 Enter \u0E17\u0E49\u0E32\u0E22\u0E02\u0E49\u0E2D = \u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48 (\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23)", nItems === 3, nItems);
+              tZ.editor.pressBackspace();
+              await new Promise((r) => setTimeout(r, 200));
+              const afterLift = tZ.editor.view.dom;
+              check2(
+                "[134-3] \u2605 Backspace \u0E04\u0E23\u0E31\u0E49\u0E07\u0E41\u0E23\u0E01 = \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (\u0E40\u0E2B\u0E25\u0E37\u0E2D 2 \u0E02\u0E49\u0E2D)",
+                afterLift.querySelectorAll("li").length === 2 && afterLift.querySelectorAll(":scope > p").length === 1,
+                afterLift.querySelectorAll("li").length + " \u0E02\u0E49\u0E2D \xB7 " + afterLift.querySelectorAll(":scope > p").length + " \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32"
+              );
+              tZ.editor.pressBackspace();
+              await new Promise((r) => setTimeout(r, 250));
+              const d3 = tZ.editor.view.state.doc;
+              const dom3 = tZ.editor.view.dom;
+              check2(
+                "[134-3] \u2605\u2605 Backspace \u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07 = \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E16\u0E39\u0E01\u0E14\u0E39\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (\u0E15\u0E49\u0E19\u0E15\u0E2D\u0E02\u0E2D\u0E07\u0E27\u0E07\u0E27\u0E19)",
+                dom3.querySelectorAll("li").length === 2 && dom3.querySelectorAll(":scope > p").length === 0,
+                dom3.querySelectorAll("li").length + " \u0E02\u0E49\u0E2D \xB7 " + dom3.querySelectorAll(":scope > p").length + " \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32"
+              );
+              check2(
+                "[134-3] \u2605\u2605 \u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E49\u0E32\u0E22\u0E02\u0E49\u0E2D\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22 (\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E15\u0E48\u0E2D\u0E44\u0E14\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35)",
+                d3.childCount === 1 && tZ.editor.view.state.selection.$from.parent.textContent === "\u0E02\u0E49\u0E2D\u0E2A\u0E2D\u0E07",
+                tZ.editor.view.state.selection.$from.parent.textContent
+              );
+              const beforeZ = tZ.editor.view.state.doc.toString();
+              tZ.editor.pressBackspace();
+              await new Promise((r) => setTimeout(r, 200));
+              check2(
+                "[134-3] \u2605\u2605 \u0E01\u0E14\u0E0B\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E07\u0E2D\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32 \u2014 \u0E27\u0E07\u0E27\u0E19\u0E02\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07",
+                tZ.editor.view.state.doc.toString() === beforeZ && tZ.editor.view.dom.querySelectorAll(":scope > p").length === 0,
+                tZ.editor.view.dom.querySelectorAll(":scope > p").length + " \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32"
+              );
+            }
+            tZ.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 alpha.134");
+            markDirty(tZ);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          {
+            const NLW = String.fromCharCode(10);
+            const tW = state.active;
+            const keepFmtW = JSON.stringify({
+              pn: state.settings.spPageNumbers,
+              sn: state.settings.spSceneNumbers,
+              hd: state.settings.spHeaders
+            });
+            hub.cfg.kind = "screenplay";
+            hub.cfg.scope = "tab";
+            const bodyW = ["INT. \u0E2B\u0E49\u0E2D\u0E07\u0E19\u0E2D\u0E19 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19", "", "\u0E42\u0E17\u0E23\u0E30\u0E15\u0E37\u0E48\u0E19\u0E02\u0E36\u0E49\u0E19\u0E21\u0E32"];
+            for (let i5 = 0; i5 < 40; i5++) bodyW.push("", "\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48 " + (i5 + 1));
+            bodyW.push("", "EXT. \u0E16\u0E19\u0E19 - \u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19", "", "\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01");
+            tW.editor.setMarkdown(bodyW.join(NLW));
+            markDirty(tW);
+            await new Promise((r) => setTimeout(r, 350));
+            state.settings.spPageNumbers = { show: false, firstPage: true, right: 1, top: 0.5, suffix: "." };
+            state.settings.spSceneNumbers = { show: false, left: 0.75, right: 1, suffix: "" };
+            state.settings.spHeaders = {
+              enabled: true,
+              emptyLinesAfter: 1,
+              firstPage: true,
+              strings: [{ text: "\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E14\u0E2A\u0E2D\u0E1A", align: "left" }]
+            };
+            hub.cfg.pdf = {
+              ...hub.cfg.pdf,
+              toc: true,
+              titlePages: true,
+              roster: false,
+              headers: true,
+              pageNumbers: true,
+              sceneNumbers: true,
+              colorMode: "mono",
+              watermark: "\u0E09\u0E1A\u0E31\u0E1A\u0E15\u0E23\u0E27\u0E08"
+            };
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-page"));
+            const pvW = box2.querySelector(".xhub-preview");
+            check2(
+              '[134-X1] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01 "\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32" \u0E41\u0E25\u0E49\u0E27\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E2D\u0E48\u0E32\u0E19 fmt.pageNumbers.show \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E0B\u0E36\u0E48\u0E07\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E15\u0E34\u0E4A\u0E01\u0E40\u0E17\u0E48\u0E32\u0E44\u0E23\u0E01\u0E47\u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19)',
+              !!pvW.querySelector(".sp-page-num"),
+              [...pvW.querySelectorAll(".sp-page-num")].map((x) => x.textContent).join(",")
+            );
+            check2(
+              '[134-X1] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01 "\u0E40\u0E25\u0E02\u0E09\u0E32\u0E01" \u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E02\u0E09\u0E32\u0E01\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01',
+              !!pvW.querySelector(".k-scene-no"),
+              pvW.querySelectorAll(".k-scene-no").length
+            );
+            check2(
+              '[134-X1] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01 "\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29" \u0E41\u0E25\u0E49\u0E27\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E42\u0E1C\u0E25\u0E48\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29',
+              !!pvW.querySelector(".sp-hdr") && pvW.querySelector(".sp-hdr").textContent.includes("\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E17\u0E14\u0E2A\u0E2D\u0E1A"),
+              pvW.querySelector(".sp-hdr") ? pvW.querySelector(".sp-hdr").textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35"
+            );
+            check2(
+              "[134-X1] \u2605\u2605 \u0E43\u0E2A\u0E48\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2B\u0E47\u0E19\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07",
+              !!pvW.querySelector(".sp-page-wm") && pvW.querySelector(".sp-page-wm").textContent === "\u0E09\u0E1A\u0E31\u0E1A\u0E15\u0E23\u0E27\u0E08",
+              pvW.querySelector(".sp-page-wm") ? pvW.querySelector(".sp-page-wm").textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35"
+            );
+            check2(
+              '[134-X1] \u2605\u2605 \u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19 "\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E02\u0E2D\u0E07\u0E1A\u0E17" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1B\u0E01\u0E41\u0E1A\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22',
+              !pvW.querySelector(".xhub-front-cover"),
+              pvW.querySelector(".xhub-front-cover") ? "\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E01\u0E19\u0E34\u0E22\u0E32\u0E22" : "\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07"
+            );
+            const nWithHdr = pvW.querySelectorAll(".sp-page").length;
+            hub.cfg.pdf = {
+              ...hub.cfg.pdf,
+              headers: false,
+              pageNumbers: false,
+              sceneNumbers: false,
+              watermark: ""
+            };
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-page"));
+            const pvW2 = box2.querySelector(".xhub-preview");
+            check2(
+              "[134-X1] \u2605\u2605 \u0E1B\u0E25\u0E14\u0E15\u0E34\u0E4A\u0E01\u0E41\u0E25\u0E49\u0E27\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32/\u0E40\u0E25\u0E02\u0E09\u0E32\u0E01/\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29/\u0E25\u0E32\u0E22\u0E19\u0E49\u0E33 \u0E2B\u0E32\u0E22\u0E04\u0E23\u0E1A",
+              !pvW2.querySelector(".sp-page-num") && !pvW2.querySelector(".k-scene-no") && !pvW2.querySelector(".sp-hdr") && !pvW2.querySelector(".sp-page-wm"),
+              "num=" + !!pvW2.querySelector(".sp-page-num") + " scene=" + !!pvW2.querySelector(".k-scene-no") + " hdr=" + !!pvW2.querySelector(".sp-hdr") + " wm=" + !!pvW2.querySelector(".sp-page-wm")
+            );
+            const nNoHdr = pvW2.querySelectorAll(".sp-page").length;
+            note("[134-X1] \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32: \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + nWithHdr + " \xB7 \u0E1B\u0E34\u0E14 " + nNoHdr);
+            {
+              const { linesForBody: lfb, mergeHeaders: mh } = await Promise.resolve().then(() => (init_sp_headers(), sp_headers_exports));
+              const fW = spFormat();
+              const onW = lfb(fW, mh({
+                enabled: true,
+                emptyLinesAfter: 1,
+                firstPage: true,
+                strings: [{ text: "x", align: "left" }]
+              }));
+              const offW = lfb(fW, mh({ enabled: false }));
+              check2(
+                "[134-X1] \u2605\u2605 \u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E01\u0E34\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E08\u0E23\u0E34\u0E07 \u2014 \u0E04\u0E27\u0E32\u0E21\u0E08\u0E38\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E25\u0E14\u0E25\u0E07\u0E15\u0E32\u0E21 (\u0E40\u0E14\u0E34\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E0A\u0E49\u0E04\u0E27\u0E32\u0E21\u0E08\u0E38\u0E40\u0E15\u0E47\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E2A\u0E21\u0E2D \u0E08\u0E36\u0E07\u0E08\u0E38\u0E21\u0E32\u0E01\u0E01\u0E27\u0E48\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32)",
+                onW === offW - 2,
+                "\u0E40\u0E1B\u0E34\u0E14 " + onW + " \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \xB7 \u0E1B\u0E34\u0E14 " + offW + " \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14"
+              );
+              check2(
+                "[134-X1] \u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E19\u0E49\u0E2D\u0E22\u0E01\u0E27\u0E48\u0E32\u0E15\u0E2D\u0E19\u0E1B\u0E34\u0E14\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29",
+                nWithHdr >= nNoHdr && nWithHdr >= 1,
+                nWithHdr + " vs " + nNoHdr
+              );
+            }
+            hub.cfg.pdf = { ...hub.cfg.pdf, pageNumbers: true };
+            state.settings.spPageNumbers = { show: false, firstPage: false, right: 1, top: 0.5, suffix: "." };
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-page"));
+            const pages1 = [...box2.querySelectorAll(".xhub-preview .sp-page")];
+            const num1 = pages1[0] && pages1[0].querySelector(".sp-page-num");
+            check2(
+              '[134-X2] \u2605\u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E27\u0E48\u0E32 "\u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" \u2192 \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32 1',
+              !num1,
+              num1 ? num1.textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02 (\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07)"
+            );
+            check2(
+              "[134-X2] \u2605 \u0E41\u0E15\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14\u0E44\u0E1B\u0E22\u0E31\u0E07\u0E21\u0E35\u0E40\u0E25\u0E02\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34",
+              pages1.length < 2 || !!pages1[1].querySelector(".sp-page-num"),
+              pages1.length + " \u0E2B\u0E19\u0E49\u0E32"
+            );
+            state.settings.spPageNumbers = { show: false, firstPage: true, right: 1, top: 0.5, suffix: "." };
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box2.querySelector(".xhub-preview .sp-page"));
+            const num1b = box2.querySelector(".xhub-preview .sp-page .sp-page-num");
+            check2(
+              '[134-X2] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14 "\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" \u2192 \u0E2B\u0E19\u0E49\u0E32 1 \u0E21\u0E35\u0E40\u0E25\u0E02\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E15\u0E32\u0E21\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)',
+              !!num1b && num1b.textContent.startsWith("1"),
+              num1b ? num1b.textContent : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02"
+            );
+            const keptW = JSON.parse(keepFmtW);
+            state.settings.spPageNumbers = keptW.pn;
+            state.settings.spSceneNumbers = keptW.sn;
+            state.settings.spHeaders = keptW.hd;
+            hub.cfg.kind = "prose";
+            tW.editor.setMarkdown("\u0E25\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E17\u0E2A\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 PDF \u0E02\u0E2D\u0E07\u0E1A\u0E17");
+            markDirty(tW);
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 400));
+          }
+          {
+            const { DEFAULT_EXPORT_NAME: DEFAULT_EXPORT_NAME2, BUILTIN_NAME_PRESETS: BUILTIN_NAME_PRESETS2 } = await Promise.resolve().then(() => (init_export_name(), export_name_exports));
+            const nameNode = box2.querySelector(".k-xname");
+            check2(
+              '[132-6] \u2605\u2605 \u0E28\u0E39\u0E19\u0E22\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E35\u0E41\u0E16\u0E27 "\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01" \u0E41\u0E22\u0E01\u0E2D\u0E2D\u0E01\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07',
+              !!nameNode && nameNode.parentElement === box2,
+              !!nameNode
+            );
+            const inpX = box2.querySelector(".k-xname-input");
+            const prevX = box2.querySelector(".k-xname-preview");
+            const selX = box2.querySelector(".k-xname-preset");
+            check2(
+              "[132-6] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 \xB7 \u0E40\u0E21\u0E19\u0E39\u0E1E\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15 \u0E04\u0E23\u0E1A",
+              !!inpX && !!prevX && !!selX
+            );
+            check2(
+              "[132-6] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E1E\u0E24\u0E15\u0E34\u0E01\u0E23\u0E23\u0E21\u0E40\u0E14\u0E34\u0E21 (\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E25\u0E49\u0E27\u0E19)",
+              inpX.value === DEFAULT_EXPORT_NAME2,
+              inpX.value
+            );
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 200));
+            check2(
+              "[132-6] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E1A\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E23\u0E34\u0E07\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25\u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01",
+              /\.pdf$/.test(prevX.textContent.trim()),
+              prevX.textContent
+            );
+            const pdfName = hub.nameRow.name();
+            await hub.setFormat("md");
+            await new Promise((r) => setTimeout(r, 250));
+            check2(
+              "[132-6] \u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A \u2192 \u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35",
+              /\.md$/.test(prevX.textContent.trim()) && /\.md$/.test(hub.nameRow.name()),
+              prevX.textContent
+            );
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 250));
+            inpX.value = "[title] [date:iso]";
+            inpX.dispatchEvent(new Event("input"));
+            await new Promise((r) => setTimeout(r, 150));
+            const d132 = /* @__PURE__ */ new Date();
+            const iso132 = d132.getFullYear() + "-" + String(d132.getMonth() + 1).padStart(2, "0") + "-" + String(d132.getDate()).padStart(2, "0");
+            check2(
+              "[132-6] \u2605\u2605 \u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C (\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D [title] \u0E04\u0E49\u0E32\u0E07)",
+              hub.nameRow.name().includes(iso132) && !hub.nameRow.name().includes("[title]"),
+              hub.nameRow.name()
+            );
+            check2(
+              "[132-6] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E01\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E17\u0E35\u0E48\u0E08\u0E30\u0E43\u0E0A\u0E49\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E4A\u0E30",
+              prevX.textContent.trim().endsWith(hub.nameRow.name()),
+              prevX.textContent + " vs " + hub.nameRow.name()
+            );
+            inpX.value = "[titel] [title]";
+            inpX.dispatchEvent(new Event("input"));
+            await new Promise((r) => setTimeout(r, 120));
+            check2(
+              "[132-6] \u2605 \u0E42\u0E04\u0E49\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E1C\u0E34\u0E14\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46",
+              hub.nameRow.name().includes("[titel]"),
+              hub.nameRow.name()
+            );
+            const optVals = [...selX.options].map((o) => o.value);
+            check2(
+              "[132-6] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E1E\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E21\u0E35\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E41\u0E16\u0E21\u0E21\u0E32\u0E04\u0E23\u0E1A",
+              BUILTIN_NAME_PRESETS2.every((p) => optVals.includes("b:" + p.id)),
+              optVals.join(",")
+            );
+            selX.value = "b:title-date";
+            selX.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 180));
+            check2(
+              "[132-6] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1E\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E41\u0E25\u0E49\u0E27\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21",
+              inpX.value === "[title] [date:iso]" && prevX.textContent.includes(iso132),
+              inpX.value + " | " + prevX.textContent
+            );
+            {
+              const { exportNameStore: exportNameStore2 } = await Promise.resolve().then(() => (init_export_name_ui(), export_name_ui_exports));
+              const { saveNamePreset: saveNamePreset2 } = await Promise.resolve().then(() => (init_export_name(), export_name_exports));
+              const st0 = exportNameStore2();
+              state.settings.exportName = {
+                ...st0,
+                presets: saveNamePreset2(st0.presets, "\u0E2A\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E13\u0E32\u0E18\u0E34\u0E01\u0E32\u0E23", "[author] - [title]")
+              };
+              await saveGlobalSetting("exportName", state.settings.exportName);
+              const hub2 = await openExportHub();
+              await new Promise((r) => setTimeout(r, 400));
+              const sel2 = hub2.ov.querySelector(".k-xname-preset");
+              check2(
+                "[132-6] \u2605\u2605 \u0E1E\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48 (\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32 global)",
+                [...sel2.options].some((o) => o.value === "u:\u0E2A\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E13\u0E32\u0E18\u0E34\u0E01\u0E32\u0E23"),
+                [...sel2.options].map((o) => o.value).join(",")
+              );
+              sel2.value = "u:\u0E2A\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E13\u0E32\u0E18\u0E34\u0E01\u0E32\u0E23";
+              sel2.dispatchEvent(new Event("change"));
+              await new Promise((r) => setTimeout(r, 200));
+              check2(
+                "[132-6] \u2605 \u0E42\u0E2B\u0E25\u0E14\u0E1E\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49",
+                hub2.ov.querySelector(".k-xname-input").value === "[author] - [title]",
+                hub2.ov.querySelector(".k-xname-input").value
+              );
+              hub2.close();
+              await new Promise((r) => setTimeout(r, 200));
+              const { deleteNamePreset: deleteNamePreset2 } = await Promise.resolve().then(() => (init_export_name(), export_name_exports));
+              state.settings.exportName = {
+                template: DEFAULT_EXPORT_NAME2,
+                presets: deleteNamePreset2(exportNameStore2().presets, "\u0E2A\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E13\u0E32\u0E18\u0E34\u0E01\u0E32\u0E23")
+              };
+              await saveGlobalSetting("exportName", state.settings.exportName);
+            }
+            inpX.value = DEFAULT_EXPORT_NAME2;
+            inpX.dispatchEvent(new Event("input"));
+            await new Promise((r) => setTimeout(r, 120));
+          }
           hub.cfg.kind = "prose";
           hub.cfg.scope = "draft";
           hub.cfg.pdf.titlePages = true;
@@ -195062,6 +202289,13 @@ ${css}
                 clips.map((c) => c.style.height).join(",")
               );
             }
+            const keepMd83 = tp83.editor.getMarkdown();
+            tp83.editor.setMarkdown(Array.from({ length: 60 }, (_2, i5) => "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + (i5 + 1) + " " + "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E04\u0E27\u0E23\u0E43\u0E2B\u0E49\u0E40\u0E15\u0E47\u0E21\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07 \u0E46 \u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 ".repeat(3)).join(String.fromCharCode(10)));
+            markDirty(tp83);
+            bumpProseLayout();
+            await wait83(400);
+            repaginateFast(tp83);
+            await until83(() => tp83.pane.querySelectorAll(".ed-page-break").length > 0, 4e3);
             setSpView("normal");
             await wait83(250);
             repaginateFast(tp83);
@@ -195072,6 +202306,7 @@ ${css}
               repaginateFast(tp83);
               const ok2 = await until83(() => tp83.pane.querySelectorAll(".ed-page-break .sp-page-no-next").length > 0, 4e3);
               const nodes = [...tp83.pane.querySelectorAll(".ed-page-break .sp-page-no-next")];
+              note("[83-4] " + mode + ": \u0E1A\u0E25\u0E47\u0E2D\u0E01 " + tp83.editor.view.state.doc.childCount + " \xB7 \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19 " + tp83.pane.querySelectorAll(".ed-page-break").length + " \xB7 \u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 " + nodes.length + " \xB7 \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 " + document.body.classList.contains("sp-page-numbers"));
               check2(
                 "[83-4] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 " + mode + ': \u0E2B\u0E19\u0E49\u0E32\u0E16\u0E31\u0E14\u0E44\u0E1B\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E1B\u0E49\u0E32\u0E22 "\u0E2B\u0E19\u0E49\u0E32 N")',
                 ok2 && nodes.length > 0,
@@ -195101,11 +202336,13 @@ ${css}
               togglePageNumbers(true);
               await wait83(150);
             }
+            tp83.editor.setMarkdown(keepMd83);
+            markDirty(tp83);
             setSpView(keepView);
             state.settings.spPageNumbers = keep83;
             applyPageVars();
             updatePageNumberHint();
-            await wait83(120);
+            await wait83(200);
           }
           {
             const spScene83 = [...document.querySelectorAll(".scene")].find((x) => x.textContent.includes("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A"));
@@ -196329,7 +203566,11 @@ ${css}
             const shrink119 = Math.round(h02 / 2);
             host119.style.height = shrink119 + "px";
             host119.style.maxHeight = shrink119 + "px";
-            await wait116(160);
+            await until116(() => {
+              const hh = host119.getBoundingClientRect().height;
+              const tt2 = parseInt(bar119.style.top, 10) || 0;
+              return hh < h02 - 20 && tt2 + barH <= hh;
+            }, 4e3);
             const h12 = host119.getBoundingClientRect().height;
             const t1 = parseInt(bar119.style.top, 10) || 0;
             check2(
@@ -197100,7 +204341,7 @@ ${css}
           let fmF = {};
           for (let i5 = 0; i5 < 30; i5++) {
             try {
-              fmF = (0, import_md15.parseMdFile)(await kapi.readFile(row2.dataset.path)).meta;
+              fmF = (0, import_md18.parseMdFile)(await kapi.readFile(row2.dataset.path)).meta;
             } catch {
               fmF = {};
             }
@@ -197184,7 +204425,7 @@ ${css}
           await buildTree2();
           const row2 = scRows120()[0];
           const f120 = row2.dataset.path;
-          const wantTitle = (0, import_md15.parseMdFile)(await kapi.readFile(f120)).meta.title;
+          const wantTitle = (0, import_md18.parseMdFile)(await kapi.readFile(f120)).meta.title;
           if (state.tabs.has(f120)) {
             state.tabs.get(f120).dirty = false;
             closeTab(f120);
@@ -197307,7 +204548,7 @@ ${css}
             taChat121.value = "";
             taChat121.focus();
             scBtn121.click();
-            await w121(200);
+            for (let i5 = 0; i5 < 60 && !document.querySelector(".k-menu"); i5++) await w121(50);
             const menu121a = document.querySelector(".k-menu");
             check2("[121] \u0E04\u0E25\u0E34\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E40\u0E21\u0E19\u0E39\u0E42\u0E04\u0E49\u0E14\u0E2A\u0E31\u0E49\u0E19\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07", !!menu121a);
             const titleItem121 = menu121a ? [...menu121a.querySelectorAll(".k-menu-item")].find((it) => it.textContent.startsWith(shortcodeLabel("title"))) : null;
@@ -197317,7 +204558,7 @@ ${css}
               menu121a ? [...menu121a.querySelectorAll(".k-menu-item")].map((x) => x.textContent).slice(0, 4).join(" | ") : ""
             );
             if (titleItem121) titleItem121.click();
-            await w121(200);
+            for (let i5 = 0; i5 < 40 && !taChat121.value; i5++) await w121(50);
             check2(
               '[121] \u2605\u2605 \u0E41\u0E17\u0E23\u0E01\u0E43\u0E19\u0E41\u0E0A\u0E17 AI \u0E44\u0E14\u0E49 "\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07" \u0E17\u0E31\u0E19\u0E17\u0E35 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 placeholder \u0E04\u0E49\u0E32\u0E07',
               taChat121.value === state.title && taChat121.value !== "[title]",
@@ -197340,7 +204581,7 @@ ${css}
             if (scB121 && cmInp121) {
               cmInp121.value = "";
               scB121.click();
-              await w121(200);
+              for (let i5 = 0; i5 < 60 && !document.querySelector(".k-menu"); i5++) await w121(50);
               const menu121b = document.querySelector(".k-menu");
               const sceneItem121 = menu121b ? [...menu121b.querySelectorAll(".k-menu-item")].find((it) => it.textContent.startsWith(shortcodeLabel("scene"))) : null;
               check2('[121] \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 "\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01"', !!sceneItem121);
@@ -197406,7 +204647,7 @@ ${css}
               nameInput121.value = "";
               nameInput121.focus();
               scBtnW121.click();
-              await w121(200);
+              for (let i5 = 0; i5 < 60 && !document.querySelector(".k-menu"); i5++) await w121(50);
               const menuW121 = document.querySelector(".k-menu");
               check2("[121] \u0E04\u0E25\u0E34\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E1C\u0E07 Wiki \u0E41\u0E25\u0E49\u0E27\u0E40\u0E21\u0E19\u0E39\u0E02\u0E36\u0E49\u0E19\u0E08\u0E23\u0E34\u0E07", !!menuW121);
               const entItem121 = menuW121 ? [...menuW121.querySelectorAll(".k-menu-item")].find((it) => it.textContent.startsWith(shortcodeLabel("entity"))) : null;
@@ -197420,7 +204661,7 @@ ${css}
               nameInput121.value = "";
               nameInput121.focus();
               scBtnW121.click();
-              await w121(200);
+              for (let i5 = 0; i5 < 60 && !document.querySelector(".k-menu"); i5++) await w121(50);
               const menuW121b = document.querySelector(".k-menu");
               const fieldItem121 = menuW121b ? [...menuW121b.querySelectorAll(".k-menu-item")].find((it) => it.textContent.startsWith("[field:")) : null;
               check2(
@@ -197455,6 +204696,890 @@ ${css}
         }
         document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
       }
+      {
+        const w124 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until124 = async (fn, ms = 3e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            if (await fn()) return true;
+            await w124(50);
+          }
+          return !!await fn();
+        };
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+        {
+          const ids = SHORTCUTS.map((x) => shortcutId(x));
+          const seen = /* @__PURE__ */ new Map();
+          const clash = [];
+          for (const sc of SHORTCUTS) {
+            const k = [sc[0], !!sc[1], needsAlt(sc[1]), !!sc[2]].join("|");
+            if (seen.has(k)) clash.push(k);
+            else seen.set(k, shortcutId(sc));
+          }
+          check2("[a124-1] \u0E15\u0E32\u0E23\u0E32\u0E07\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E0A\u0E19\u0E01\u0E31\u0E19\u0E40\u0E25\u0E22", clash.length === 0, clash.join(" \xB7 "));
+          check2(
+            '[a124-2] "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" \u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48 Ctrl+Alt+S \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 Ctrl+Shift+S',
+            SHORTCUTS.some((x) => shortcutId(x) === "save-all" && x[0] === "KeyS" && x[1] === "ctrl+alt")
+          );
+          check2(
+            "[a124-3] Ctrl+Shift+S \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E04\u0E37\u0E2D save-as",
+            SHORTCUTS.filter((x) => x[0] === "KeyS" && x[1] === true && x[2] === true).map((x) => shortcutId(x)).join(",") === "save-as"
+          );
+          check2(
+            "[a124-4] `[` \u0E0B\u0E48\u0E2D\u0E19\u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22 \xB7 `]` \u0E0B\u0E48\u0E2D\u0E19\u0E1D\u0E31\u0E48\u0E07\u0E02\u0E27\u0E32 (\u0E15\u0E23\u0E07\u0E17\u0E34\u0E28\u0E25\u0E39\u0E01\u0E28\u0E23\u0E41\u0E25\u0E49\u0E27)",
+            SHORTCUTS.some((x) => x[0] === "BracketLeft" && shortcutId(x) === "panels-hide-left") && SHORTCUTS.some((x) => x[0] === "BracketRight" && shortcutId(x) === "panels-hide-right")
+          );
+          check2(
+            "[a124-5] compile \xB7 cheatsheet \xB7 text-case-cycle \u0E40\u0E02\u0E49\u0E32\u0E15\u0E32\u0E23\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27",
+            ["compile", "cheatsheet", "text-case-cycle"].every((id) => ids.includes(id)),
+            ids.filter((x) => ["compile", "cheatsheet", "text-case-cycle"].includes(x)).join(",")
+          );
+        }
+        {
+          await handleCommand("word-history");
+          check2(
+            "[a124-6] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 word-history \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07 AI \u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E01\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E07\u0E35\u0E22\u0E1A)",
+            isPanelOpen("ai-analyzer")
+          );
+          const okFocus = await until124(() => !!document.querySelector('.aia-card[data-card="repeat"]'));
+          check2('[a124-7] \u0E21\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14 "\u0E15\u0E23\u0E27\u0E08\u0E2B\u0E32\u0E04\u0E33\u0E0B\u0E49\u0E33" \u0E43\u0E2B\u0E49\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E08\u0E23\u0E34\u0E07', okFocus);
+          togglePanel("ai-analyzer");
+        }
+        {
+          const f124 = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          check2("[a124-8] \u0E2B\u0E32\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E2A\u0E44\u0E14\u0E49", !!f124, [...state.tabs.keys()].join(","));
+          if (f124) {
+            activate(f124);
+            const tb2 = state.tabs.get(f124);
+            if (tb2 && tb2.dirty) await saveTab(tb2);
+            await handleCommand("sp-element", "dialogue");
+            check2("[a124-9] \u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22\u0E01\u0E14 Ctrl+5 \u0E41\u0E25\u0E49\u0E27\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07", !!tb2 && tb2.dirty === false);
+          }
+        }
+        {
+          const chBox = document.querySelector("#tree .chapter");
+          check2("[a124-10] \u0E21\u0E35\u0E1A\u0E17\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E1E\u0E31\u0E1A", !!chBox);
+          if (chBox) {
+            chBox.classList.add("collapsed");
+            const row2 = chBox.querySelector(".scene:not(.add-row)");
+            const title2 = row2 ? (row2.textContent || "").trim().split(/\s+/)[0] : "";
+            filterTree(title2 || "\u0E09\u0E32\u0E01");
+            check2(
+              '[a124-11] \u2605 \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E32\u0E07\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E1E\u0E31\u0E1A\u0E44\u0E27\u0E49\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E44\u0E21\u0E48 "\u0E2B\u0E32\u0E22" \u0E2D\u0E35\u0E01)',
+              !chBox.classList.contains("collapsed")
+            );
+            filterTree("");
+            check2("[a124-12] \u0E25\u0E49\u0E32\u0E07\u0E04\u0E33\u0E04\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E1E\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30", chBox.classList.contains("collapsed"));
+            chBox.classList.remove("collapsed");
+          }
+        }
+        {
+          const p1 = choose("\u0E40\u0E17\u0E2A a124 \u0E43\u0E1A\u0E25\u0E48\u0E32\u0E07", [{ label: "\u0E15\u0E01\u0E25\u0E07", value: 1 }]);
+          await w124(60);
+          const p2 = choose("\u0E40\u0E17\u0E2A a124 \u0E43\u0E1A\u0E1A\u0E19", [{ label: "\u0E15\u0E01\u0E25\u0E07", value: 2 }]);
+          await w124(60);
+          check2("[a124-13] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E19\u0E2A\u0E2D\u0E07\u0E43\u0E1A", document.querySelectorAll(".k-overlay").length >= 2);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          check2(
+            "[a124-14] \u2605 Esc \u0E1B\u0E34\u0E14 choose() \u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27 (\u0E40\u0E14\u0E34\u0E21\u0E1B\u0E34\u0E14\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22)",
+            await p2 === null
+          );
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          check2("[a124-15] Esc \u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E2D\u0E07\u0E1B\u0E34\u0E14\u0E43\u0E1A\u0E25\u0E48\u0E32\u0E07 (\u0E25\u0E2D\u0E01\u0E17\u0E35\u0E25\u0E30\u0E43\u0E1A \u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14\u0E23\u0E27\u0E14)", await p1 === null);
+          check2("[a124-16] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E32\u0E07", document.querySelectorAll(".k-overlay").length === 0);
+        }
+        {
+          clearTreeSel();
+          const n124 = await treeDuplicate([]);
+          check2("[a124-17] \u0E17\u0E33\u0E2A\u0E33\u0E40\u0E19\u0E32\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E30\u0E44\u0E23 \u0E04\u0E37\u0E19 0 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2B\u0E25\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", n124 === 0, n124);
+        }
+        {
+          const f124 = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          check2("[a124-18] \u0E2B\u0E32\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E2A\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33\u0E44\u0E14\u0E49", !!f124);
+          if (f124) {
+            activate(f124);
+            const tb2 = state.tabs.get(f124);
+            check2("[a124-18b] \u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E43\u0E0A\u0E49", !!tb2 && !!tb2.editor);
+            tb2.editor.setMarkdown("\u0E2B\u0E19\u0E36\u0E48\u0E07 \u0E2A\u0E2D\u0E07 \u0E2A\u0E32\u0E21 \u0E2A\u0E35\u0E48 \u0E2B\u0E49\u0E32 \u0E2B\u0E01 \u0E40\u0E08\u0E47\u0E14 \u0E41\u0E1B\u0E14 \u0E40\u0E01\u0E49\u0E32 \u0E2A\u0E34\u0E1A");
+            markDirty(tb2);
+            await saveTab(tb2);
+            const ctx124 = await sceneCtx(f124);
+            check2(
+              "[a124-19] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27 wordCount \u0E25\u0E07 scenes.json \u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E47\u0E19 0 \u0E15\u0E25\u0E2D\u0E14\u0E01\u0E32\u0E25)",
+              !!ctx124 && (ctx124.row.wordCount || 0) > 0,
+              ctx124 && ctx124.row.wordCount
+            );
+            check2(
+              "[a124-20] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30",
+              !!ctx124 && ctx124.row.wordCount === (0, import_md18.countWords)(tb2.editor.getMarkdown()),
+              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md18.countWords)(tb2.editor.getMarkdown())
+            );
+            check2(
+              '[a124-21] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E25\u0E34\u0E01\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14 Ctrl+S',
+              ($("#status-save")?.textContent || "") !== t("ui.app.notSave"),
+              $("#status-save")?.textContent
+            );
+          }
+        }
+        {
+          check2(
+            '[a124-22] \u2605 \u0E21\u0E35\u0E04\u0E33\u0E41\u0E19\u0E30\u0E19\u0E33\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E41\u0E15\u0E48 "\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E25\u0E07\u0E1E\u0E08\u0E19\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21")',
+            spellSuggest("helllo", 6).includes("hello"),
+            spellSuggest("helllo", 6).join(",")
+          );
+          check2("[a124-23] \u0E02\u0E49\u0E32\u0E21\u0E04\u0E33\u0E19\u0E35\u0E49\u0E04\u0E23\u0E31\u0E49\u0E07\u0E19\u0E35\u0E49\u0E17\u0E33\u0E07\u0E32\u0E19", spellIgnoreOnce("zzxqword") === true);
+          check2(
+            "[a124-24] \u0E04\u0E33\u0E17\u0E35\u0E48\u0E02\u0E49\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E08\u0E31\u0E1A\u0E2D\u0E35\u0E01",
+            check("zzxqword abc").every((b) => b.word !== "zzxqword")
+          );
+          clearIgnored();
+        }
+        {
+          check2(
+            '[a124-25] setSpErrorMarks \u0E1A\u0E2D\u0E01\u0E44\u0E14\u0E49\u0E27\u0E48\u0E32 "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07\u0E44\u0E2B\u0E21"',
+            setSpErrorMarks([{ pos: 0, severity: "error" }]) === true && setSpErrorMarks([{ pos: 0, severity: "error" }]) === false
+          );
+          setSpErrorMarks([]);
+        }
+        {
+          smart.items = ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E02"];
+          smart.sel = 0;
+          smart.render();
+          smart.place({
+            left: window.innerWidth - 5,
+            top: window.innerHeight - 5,
+            bottom: window.innerHeight - 2
+          });
+          const r124 = smart.box.getBoundingClientRect();
+          check2(
+            "[a124-26] \u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E0A\u0E34\u0E14\u0E21\u0E38\u0E21\u0E02\u0E27\u0E32\u0E25\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E14\u0E32\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D\u0E04\u0E23\u0E1A",
+            r124.right <= window.innerWidth && r124.bottom <= window.innerHeight,
+            Math.round(r124.right) + "x" + Math.round(r124.bottom) + " \u0E08\u0E2D " + window.innerWidth + "x" + window.innerHeight
+          );
+          check2("[a124-27] \u0E21\u0E35\u0E04\u0E33\u0E43\u0E1A\u0E49\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E30\u0E44\u0E23", !!smart.box.querySelector(".smart-hint"));
+          smart.hide();
+        }
+        {
+          const fG = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fG) activate(fG);
+          const ovG = gotoDialog("scene");
+          check2(
+            '[a124-28] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E44\u0E1B\u0E17\u0E35\u0E48\u2026" \u0E44\u0E14\u0E49',
+            !!ovG,
+            "active=" + (state.active?.title || "\u2014")
+          );
+          if (ovG) {
+            check2("[a124-29] \u2605 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27", !!ovG.querySelector(".k-goto-find"));
+            const findEl = ovG.querySelector(".k-goto-find");
+            const before = ovG.querySelectorAll(".k-goto-list .k-menu-item").length;
+            findEl.value = "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E229999";
+            findEl.dispatchEvent(new Event("input", { bubbles: true }));
+            check2(
+              "[a124-30] \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E33\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E41\u0E25\u0E49\u0E27\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E16\u0E39\u0E01\u0E01\u0E23\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07",
+              ovG.querySelectorAll(".k-goto-list .k-menu-item").length < Math.max(1, before),
+              before + " \u2192 " + ovG.querySelectorAll(".k-goto-list .k-menu-item").length
+            );
+            ovG.remove();
+          }
+        }
+        {
+          check2(
+            "[a124-31] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E23\u0E39\u0E1B\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E42\u0E2B\u0E21\u0E14",
+            applyCaseOptions() === CASE_MODES.length + 1,
+            applyCaseOptions()
+          );
+          const opt = [...$("#tb-case").options][1];
+          check2(
+            "[a124-32] \u2605 \u0E1B\u0E49\u0E32\u0E22\u0E21\u0E32\u0E08\u0E32\u0E01\u0E15\u0E32\u0E23\u0E32\u0E07\u0E20\u0E32\u0E29\u0E32 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2E\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E04\u0E49\u0E14\u0E43\u0E19 HTML",
+            opt.textContent === t(CASE_LABELS[CASE_MODES[0]]),
+            opt.textContent
+          );
+        }
+        {
+          check2(
+            "[a124-33] \u2605 \u0E16\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E22\u0E48\u0E2D\u0E44\u0E27\u0E49 (\u0E42\u0E04\u0E49\u0E14\u0E15\u0E32\u0E22\u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48 alpha.50) \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14\u0E2D\u0E2D\u0E01\u0E08\u0E23\u0E34\u0E07",
+            !document.getElementById("k-min-tray-r") && !document.getElementById("k-min-tray-l") && !document.querySelector(".k-min-chip")
+          );
+          const fabEl = $("#k-fab");
+          check2(
+            "[a124-33b] \u0E17\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A (\u0E40\u0E21\u0E19\u0E39 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 \u2192 \u0E41\u0E1C\u0E07 + \u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14)",
+            SHORTCUTS.filter((x) => shortcutId(x).startsWith("toggle-panel:")).length >= 20 && !!fabEl,
+            SHORTCUTS.filter((x) => shortcutId(x).startsWith("toggle-panel:")).length
+          );
+        }
+        {
+          const SSx = await Promise.resolve().then(() => (init_starter_store(), starter_store_exports));
+          const SMx = await Promise.resolve().then(() => (init_starter_model(), starter_model_exports));
+          const SUx = await Promise.resolve().then(() => (init_starter_ui(), starter_ui_exports));
+          {
+            const EMx = await Promise.resolve().then(() => (init_entity_mention(), entity_mention_exports));
+            check2(
+              "[a124-36] \u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E27\u0E48\u0E32\u0E15\u0E49\u0E2D\u0E07\u0E41\u0E1B\u0E25\u0E07\u0E23\u0E39\u0E1B prompts \u0E22\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19",
+              EMx.needsPromptMigration({ A: "x" }) === true && EMx.needsPromptMigration([{ k: "A", v: "x" }]) === false
+            );
+            let dirtied = false;
+            const fakeWiki = {
+              e: { prompts: { A: "\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32" } },
+              markDirty() {
+                dirtied = true;
+              }
+            };
+            const rows = EMx.normalizePrompts(fakeWiki.e.prompts);
+            if (EMx.needsPromptMigration(fakeWiki.e.prompts)) {
+              fakeWiki.e.prompts = rows;
+              fakeWiki.markDirty();
+            }
+            check2("[a124-37] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E23\u0E39\u0E1B\u0E41\u0E25\u0E49\u0E27\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E27\u0E48\u0E32\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", dirtied === true);
+          }
+          const st124 = await SSx.createStarter("\u0E40\u0E17\u0E2A\u0E23\u0E2D\u0E1A a124");
+          st124.name = "\u0E40\u0E17\u0E2A\u0E23\u0E2D\u0E1A a124";
+          st124.tags = ["fantasy"];
+          st124.intro = "\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07";
+          st124.cast = [SMx.newChar({ name: "\u0E21\u0E32\u0E19\u0E35" })];
+          await SSx.writeStarter(st124);
+          let sc124 = await SSx.createScenario(st124.slug, { title: "\u0E15\u0E2D\u0E19\u0E40\u0E17\u0E2A a124" });
+          sc124.opener = "\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01\u0E17\u0E31\u0E49\u0E07\u0E04\u0E37\u0E19";
+          sc124.openerHtml = "<p>\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01\u0E17\u0E31\u0E49\u0E07\u0E04\u0E37\u0E19</p>";
+          {
+            const imgDir124 = await SSx.imagesDir(st124.slug);
+            await kapi.mkdir(imgDir124);
+            const imgP124 = await kapi.join(imgDir124, "a124.png");
+            await kapi.writeBytes(
+              imgP124,
+              Array.from(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13]))
+            );
+            check2("[a124-38d] \u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E23\u0E39\u0E1B\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", await kapi.exists(imgP124), imgP124);
+            check2(
+              "[a124-38e] imageUrl \u0E2B\u0E32 URL \u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E19\u0E31\u0E49\u0E19\u0E40\u0E08\u0E2D",
+              !!await SSx.imageUrl(st124.slug, "a124.png"),
+              String(await SSx.imageUrl(st124.slug, "a124.png")).slice(0, 80)
+            );
+          }
+          sc124.openerImage = "a124.png";
+          await SSx.writeScenario(st124.slug, sc124);
+          showPanel("starter");
+          await renderFeaturePanel("starter");
+          await until124(() => !!SUx.currentStarter(), 4e3);
+          const okChat = await SUx.openScenarioChat(
+            await SSx.readScenario(st124.slug, sc124.id),
+            await SSx.readStarter(st124.slug)
+          );
+          check2(
+            "[a124-38] \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E04\u0E38\u0E22\u0E02\u0E2D\u0E07\u0E15\u0E2D\u0E19\u0E44\u0E14\u0E49",
+            okChat === true,
+            "starter=" + (SUx.currentStarter() ? SUx.currentStarter().slug : "\u2014")
+          );
+          check2(
+            "[a124-38c] \u0E41\u0E1C\u0E07\u0E16\u0E37\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
+            SUx.currentStarter() && SUx.currentStarter().slug === st124.slug,
+            SUx.currentStarter() ? SUx.currentStarter().slug : "\u2014"
+          );
+          if (okChat) {
+            check2(
+              "[a124-38b] \u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E21\u0E35\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E01 AI \u0E15\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E19)",
+              SMx.hasOpener(await SSx.readScenario(st124.slug, sc124.id)) === true
+            );
+            const startBtn = await until124(() => !!document.querySelector("#starter-body .st-empty button.k-ok"), 4e3);
+            check2(
+              "[a124-39] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E19",
+              startBtn,
+              [...document.querySelectorAll("#starter-body button")].map((b) => b.className).join(" | ")
+            );
+            const btn124 = document.querySelector("#starter-body .st-empty button.k-ok");
+            if (btn124) {
+              btn124.click();
+              btn124.click();
+              await until124(() => !!document.querySelector("#starter-body .st-turn"), 5e3);
+              await w124(400);
+              await SSx.flushStarterSaves();
+              const after124 = await SSx.readScenario(st124.slug, sc124.id);
+              const nDom124 = document.querySelectorAll("#starter-body .st-turn").length;
+              check2(
+                '[a124-40] \u2605 \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01 "\u0E40\u0E23\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E19" \u0E44\u0E14\u0E49\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E17\u0E34\u0E23\u0E4C\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2A\u0E2D\u0E07\u0E40\u0E17\u0E34\u0E23\u0E4C\u0E19',
+                (after124.turns || []).length === 1 && nDom124 === 1,
+                "\u0E44\u0E1F\u0E25\u0E4C=" + (after124.turns || []).length + " \u0E08\u0E2D=" + nDom124
+              );
+              const row124 = document.querySelector("#starter-body .st-turn");
+              const kids = row124 ? [...row124.children].map((n2) => n2.className.split(" ")[0]) : [];
+              check2(
+                '[a124-41] \u2605 \u0E23\u0E39\u0E1B\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 "\u0E40\u0E2B\u0E19\u0E37\u0E2D" \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48 CHANGELOG \u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28\u0E44\u0E27\u0E49)',
+                kids.indexOf("st-turn-img") >= 0 && kids.indexOf("st-turn-img") < kids.indexOf("st-turn-text"),
+                kids.join(",")
+              );
+            }
+          }
+          hidePanel("starter");
+          try {
+            await SSx.deleteStarter(st124.slug);
+          } catch {
+          }
+        }
+        {
+          check2("[a124-34] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E32\u0E07\u0E25\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14", typeof kapi.removeRecent === "function");
+        }
+        {
+          showPanel("planner-props");
+          await renderFeaturePanel("plannerProps");
+          const okEmpty = await until124(() => !!$("#planner-props-body") && ($("#planner-props-body").textContent || "").trim().length > 0);
+          check2(
+            "[a124-35] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27 \u0E46 \u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E1A\u0E2D\u0E01\u0E17\u0E32\u0E07\u0E44\u0E1B\u0E15\u0E48\u0E2D (\u0E40\u0E14\u0E34\u0E21\u0E27\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32)",
+            okEmpty,
+            ($("#planner-props-body")?.textContent || "").slice(0, 40)
+          );
+        }
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+      }
+      {
+        const w125 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until125 = async (fn, ms = 4e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            if (await fn()) return true;
+            await w125(50);
+          }
+          return !!await fn();
+        };
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+        {
+          invalidateSearchIndex();
+          const hits = await runProjectSearch("\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07");
+          const st = searchIndexStats();
+          check2(
+            "[a125-1] \u2605 \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E44\u0E25\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E25\u0E30\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E25\u0E49\u0E27)",
+            st.ready && st.documents > 0,
+            JSON.stringify(st)
+          );
+          check2("[a125-2] \u0E04\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C", Array.isArray(hits), typeof hits);
+          check2(
+            "[a125-3] \u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E21\u0E35\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E17\u0E35\u0E48 UI \u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49 (file/name/matches)",
+            !hits.length || !!hits[0].file && "name" in hits[0] && Array.isArray(hits[0].matches),
+            JSON.stringify(hits[0] || {}).slice(0, 140)
+          );
+          const anyTitle = await runProjectSearch("title:\u0E09\u0E32\u0E01");
+          check2("[a125-4] \u2605 \u0E04\u0E49\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0A\u0E48\u0E2D\u0E07 (title:) \u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E41\u0E25\u0E49\u0E27", Array.isArray(anyTitle));
+          const notQ = await runProjectSearch("\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07 NOT zzxq\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E19\u0E35\u0E49");
+          check2(
+            "[a125-5] \u2605 \u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C NOT \u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49",
+            Array.isArray(notQ) && notQ.length >= hits.length - 1,
+            hits.length + " \u2192 " + notQ.length
+          );
+          const byName = await runProjectSearch(".md", { nameOnly: true });
+          check2("[a125-6] \u0E04\u0E49\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19 (\u0E44\u0E21\u0E48\u0E1E\u0E36\u0E48\u0E07\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32)", byName.length > 0, byName.length);
+          const fA = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fA) {
+            activate(fA);
+            const tb2 = state.tabs.get(fA);
+            markDirty(tb2);
+            await saveTab(tb2);
+            check2(
+              "[a125-7] \u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E27\u0E48\u0E32\u0E25\u0E49\u0E32\u0E2A\u0E21\u0E31\u0E22",
+              searchIndexStats().ready === false
+            );
+          }
+        }
+        {
+          showPanel("search");
+          await renderSearchPanel($("#search-body"));
+          await w125(60);
+          const panelInput = $("#search-body .k-gsearch-input");
+          check2("[a125-8] \u0E41\u0E1C\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E27\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A UI \u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19", !!panelInput);
+          check2(
+            "[a125-9] \u2605 \u0E21\u0E35\u0E04\u0E33\u0E43\u0E1A\u0E49\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E2B\u0E47\u0E19 (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E04\u0E49\u0E19\u0E41\u0E1A\u0E1A\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49)",
+            !!$("#search-body .k-gsearch-help")
+          );
+          hidePanel("search");
+        }
+        {
+          const SC = await Promise.resolve().then(() => (init_ai_session(), ai_session_exports));
+          check2(
+            '[a125-10] \u2605 \u0E21\u0E35\u0E23\u0E30\u0E14\u0E31\u0E1A "\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E2A\u0E48\u0E27\u0E19\u0E17\u0E35\u0E48\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E02\u0E49\u0E2D\u0E07" \u0E43\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E41\u0E0A\u0E17',
+            SC.SCOPES.some((x) => x.id === "relevant"),
+            SC.SCOPES.map((x) => x.id).join(",")
+          );
+          check2("[a125-11] collectRelevant \u0E15\u0E48\u0E2D\u0E2A\u0E32\u0E22\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27", typeof collectRelevant === "function");
+          check2("[a125-12] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E25\u0E49\u0E32\u0E07\u0E14\u0E31\u0E0A\u0E19\u0E35 RAG", typeof invalidateChatRag === "function");
+          const CP = await Promise.resolve().then(() => (init_ai_chat_panel(), ai_chat_panel_exports));
+          const ctx2 = await CP.collectScope({ scope: "relevant", files: [] }, { query: "", maxChars: 2e3 });
+          {
+            let nDir = -1;
+            try {
+              nDir = (await kapi.listDirs(state.root)).length;
+            } catch {
+            }
+            note("[a125-13] root=" + String(state.root).slice(-40) + " \xB7 \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E49\u0E19\u0E1A\u0E19 " + nDir + " \xB7 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14 " + (state.active && state.active.file || "-").slice(-30) + " \xB7 \u0E44\u0E14\u0E49\u0E1A\u0E23\u0E34\u0E1A\u0E17 " + String(ctx2).length + " \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23");
+          }
+          check2(
+            "[a125-13] \u2605 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E14\u0E31\u0E0A\u0E19\u0E35\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49/\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E16\u0E32\u0E21 \u2192 \u0E15\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2A\u0E48\u0E07\u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E40\u0E1B\u0E25\u0E48\u0E32",
+            typeof ctx2 === "string" && ctx2.length > 0,
+            String(ctx2).length
+          );
+        }
+        {
+          check2("[a125-14] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E44\u0E25\u0E48\u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E02\u0E49\u0E32\u0E21\u0E44\u0E1F\u0E25\u0E4C", typeof renameAcrossProject === "function");
+          check2(
+            "[a125-15] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D (\u0E16\u0E32\u0E21\u0E40\u0E21\u0E37\u0E48\u0E2D auto-sync \u0E1B\u0E34\u0E14)",
+            typeof handleEntityRenamed === "function"
+          );
+          const same = await handleEntityRenamed("x", "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21", "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21");
+          check2("[a125-16] \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 = \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E22 (\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E16\u0E32\u0E21)", same === "none", same);
+        }
+        {
+          check2(
+            "[a125-17] \u2605 \u0E42\u0E21\u0E14\u0E39\u0E25\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E01\u0E48\u0E32 (src/thesaurus.js) \u0E16\u0E39\u0E01\u0E25\u0E1A\u0E41\u0E25\u0E49\u0E27",
+            await import("./thesaurus.js").then(() => false, () => true)
+          );
+          const AS = await Promise.resolve().then(() => (init_ai_settings(), ai_settings_exports));
+          check2(
+            "[a125-18] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E22\u0E38\u0E04\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E41\u0E25\u0E49\u0E27 (\u0E40\u0E2B\u0E25\u0E37\u0E2D ai-provider-ui \u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27)",
+            AS.showAISettingsDialog === void 0 && AS.testAIConnection === void 0,
+            Object.keys(AS).join(",")
+          );
+          check2(
+            "[a125-19] \u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19 ai-settings \u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
+            typeof AS.callAI === "function" && typeof AS.aiConfigured === "function" && typeof AS.getAISettings === "function"
+          );
+          const EV = await Promise.resolve().then(() => (init_event_ui(), event_ui_exports));
+          check2(
+            "[a125-20] \u2605 renderAutoSyncSection (\u0E17\u0E35\u0E48\u0E08\u0E30\u0E17\u0E33\u0E43\u0E2B\u0E49 id \u0E0B\u0E49\u0E33) \u0E16\u0E39\u0E01\u0E25\u0E1A\u0E41\u0E25\u0E49\u0E27",
+            EV.renderAutoSyncSection === void 0
+          );
+          check2(
+            "[a125-21] \u0E0A\u0E48\u0E2D\u0E07 auto-sync \u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E21\u0E35\u0E43\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27",
+            document.querySelectorAll("#st-autosync").length <= 1,
+            document.querySelectorAll("#st-autosync").length
+          );
+        }
+        {
+          showPanel("backlinks");
+          await renderFeaturePanel("backlinks");
+          const ok2 = await until125(() => {
+            const b = $("#backlinks-body");
+            return !!b && (b.querySelectorAll(".bl-ent").length > 0 || (b.textContent || "").trim().length > 0);
+          }, 8e3);
+          check2(
+            '[a125-22] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07 "\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07" \u0E41\u0E1A\u0E1A\u0E22\u0E37\u0E19\u0E40\u0E14\u0E35\u0E48\u0E22\u0E27\u0E44\u0E14\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E41\u0E15\u0E48\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E19 Wiki)',
+            ok2,
+            ($("#backlinks-body")?.textContent || "").slice(0, 60)
+          );
+          check2("[a125-23] \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E07\u0E0A\u0E37\u0E48\u0E2D", !!$("#backlinks-body .bl-filter"));
+          const rows = await backlinkSummary();
+          check2("[a125-24] \u0E2A\u0E23\u0E38\u0E1B\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49 + \u0E08\u0E33\u0E19\u0E27\u0E19\u0E09\u0E32\u0E01)", Array.isArray(rows), rows.length);
+          check2(
+            "[a125-25] \u2605 \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19\u0E40\u0E25\u0E22\u0E16\u0E39\u0E01\u0E08\u0E31\u0E14\u0E02\u0E36\u0E49\u0E19\u0E01\u0E48\u0E2D\u0E19",
+            rows.length < 2 || rows[0].count <= rows[rows.length - 1].count,
+            rows.map((r) => r.count).join(",")
+          );
+          hidePanel("backlinks");
+        }
+        {
+          const ids = SHORTCUTS.map((x) => shortcutId(x));
+          for (const id of ["toggle-panel:backlinks", "thesaurus", "import-scrivener"]) {
+            check2("[a125-26] \u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07 " + id, ids.includes(id));
+          }
+          const sc = SHORTCUTS.find((x) => shortcutId(x) === "toggle-panel:backlinks");
+          check2(
+            "[a125-27] \u2605 \u0E0A\u0E31\u0E49\u0E19 Ctrl+Alt+Shift \u0E41\u0E2A\u0E14\u0E07\u0E1C\u0E25\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
+            formatShortcut(sc[0], sc[1], sc[2]).includes("B"),
+            formatShortcut(sc[0], sc[1], sc[2])
+          );
+        }
+        {
+          const spFile = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.sp);
+          check2(
+            "[a125-28] \u0E2B\u0E32\u0E41\u0E17\u0E47\u0E1A\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E2A\u0E44\u0E14\u0E49",
+            !!spFile,
+            [...state.tabs.keys()].join(",")
+          );
+          if (spFile) {
+            activate(spFile);
+            const tb2 = state.tabs.get(spFile);
+            tb2.sp.view.focus();
+            tb2.sp.setAlign("center");
+            const m = tb2.sp.getAlignMap();
+            check2("[a125-29] \u0E2D\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E44\u0E14\u0E49", Object.keys(m).length >= 1, JSON.stringify(m));
+            markDirty(tb2);
+            await saveTab(tb2);
+            check2(
+              "[a125-30] \u2605 \u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07 frontmatter (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 session-only \u0E41\u0E25\u0E49\u0E27)",
+              !!tb2.meta.align,
+              String(tb2.meta.align)
+            );
+            const raw = await kapi.readFile(spFile);
+            check2(
+              "[a125-31] \u2605\u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D fountain \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30\u0E40\u0E25\u0E22 (round-trip \u0E22\u0E31\u0E07\u0E1B\u0E34\u0E14\u0E27\u0E07)",
+              !raw.includes("text-align") && !raw.includes("<div"),
+              raw.slice(0, 80)
+            );
+            const keep = JSON.stringify(m);
+            closeTab(spFile, { discard: true });
+            await until125(() => !state.tabs.has(spFile), 3e3);
+            await openScene(spFile, null);
+            await until125(() => !!state.tabs.get(spFile)?.sp, 4e3);
+            const tb22 = state.tabs.get(spFile);
+            check2(
+              "[a125-32] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
+              tb22 && JSON.stringify(tb22.sp.getAlignMap()) === keep,
+              keep + " vs " + JSON.stringify(tb22 && tb22.sp.getAlignMap())
+            );
+            check2(
+              '[a125-33] \u2605 \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E17\u0E31\u0E19\u0E17\u0E35\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14',
+              tb22 && tb22.dirty === false
+            );
+          }
+        }
+        {
+          const rvFile = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.sp);
+          check2(
+            "[a128-1] \u0E2B\u0E32\u0E41\u0E17\u0E47\u0E1A\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E40\u0E17\u0E2A Revert \u0E44\u0E14\u0E49",
+            !!rvFile,
+            [...state.tabs.keys()].join(",")
+          );
+          if (rvFile) {
+            activate(rvFile);
+            const rvTab = state.tabs.get(rvFile);
+            const onDisk = (0, import_md18.parseMdFile)(await kapi.readFile(rvFile)).body;
+            const MARK = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E08\u0E30\u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01";
+            rvTab.sp.setMarkdown(onDisk + "\n\n" + MARK);
+            markDirty(rvTab);
+            await until125(() => rvTab.sp.getMarkdown().includes(MARK), 3e3);
+            const pRv = revertTab(rvFile);
+            await until125(() => !!document.querySelector(".k-dialog .k-ok"), 3e3);
+            document.querySelector(".k-dialog .k-ok").click();
+            await pRv;
+            const rv2 = state.tabs.get(rvFile);
+            check2(
+              "[a128-2] \u2605\u2605 Revert \u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01 destroy \u0E17\u0E34\u0E49\u0E07\u0E01\u0E25\u0E32\u0E07\u0E17\u0E32\u0E07)",
+              !!(rv2 && rv2.sp && rv2.sp.view && rv2.sp.view.dom.isConnected)
+            );
+            check2(
+              "[a128-3] \u2605 \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E39\u0E01 mount \u0E43\u0E19 .workspace \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E25\u0E07\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E15\u0E23\u0E07 \u0E46",
+              !!(rv2 && rv2.pane.querySelector(":scope > .workspace > .ProseMirror")),
+              rv2 ? [...rv2.pane.children].map((n2) => n2.className).join("|") : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A"
+            );
+            check2(
+              "[a128-4] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C (\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2B\u0E32\u0E22\u0E44\u0E1B)",
+              !!(rv2 && rv2.sp && !rv2.sp.getMarkdown().includes(MARK)),
+              rv2 && rv2.sp ? rv2.sp.getMarkdown().slice(-60) : ""
+            );
+            check2(
+              '[a128-5] Revert \u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E2B\u0E32\u0E22\u0E44\u0E1B',
+              !!(rv2 && rv2.dirty === false),
+              String(rv2 && rv2.dirty)
+            );
+            document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+          }
+        }
+        {
+          check2(
+            "[a125-34] \u2605 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E43\u0E19\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32",
+            String(t("ui.dlg.alphaItemLevelUser")).includes("st-ct-nohead")
+          );
+          const cur = { ...CONTINUED_DEFAULTS, ...state.settings.spContinued || {} };
+          check2(
+            "[a125-35] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49 (\u0E1E\u0E24\u0E15\u0E34\u0E01\u0E23\u0E23\u0E21\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19)",
+            cur.noHeading !== true,
+            JSON.stringify(cur.noHeading)
+          );
+        }
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+      }
+      {
+        const w126 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until126 = async (fn, ms = 6e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            if (await fn()) return true;
+            await w126(50);
+          }
+          return !!await fn();
+        };
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+        {
+          check2(
+            "[a126-1] \u2605 \u0E15\u0E31\u0E27\u0E1E\u0E32\u0E23\u0E4C\u0E2A\u0E02\u0E2D\u0E07 nav.js \u0E16\u0E39\u0E01\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07",
+            typeof parseProse === "function" && typeof parseScreenplay === "function" && typeof buildNavigation === "function"
+          );
+          const pr = parseProse("# \u0E1A\u0E17\u0E17\u0E35\u0E48 1\n\n\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01\n\n> \u0E04\u0E33\u0E1E\u0E39\u0E14\u0E22\u0E01\u0E21\u0E32");
+          check2(
+            "[a126-2] \u0E1E\u0E32\u0E23\u0E4C\u0E2A\u0E19\u0E34\u0E22\u0E32\u0E22: \u0E44\u0E14\u0E49\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D \xB7 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 \xB7 \u0E04\u0E33\u0E1E\u0E39\u0E14\u0E22\u0E01\u0E21\u0E32",
+            pr.some((x) => x.kind === "heading") && pr.some((x) => x.kind === "beat") && pr.some((x) => x.kind === "quote"),
+            JSON.stringify(pr.map((x) => x.kind))
+          );
+          const sp = parseScreenplay("INT. \u0E2B\u0E49\u0E2D\u0E07\u0E04\u0E23\u0E31\u0E27 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19\n\n@\u0E17\u0E2D\u0E23\u0E48\u0E32\n\n>CUT TO:");
+          check2(
+            "[a126-3] \u0E1E\u0E32\u0E23\u0E4C\u0E2A\u0E1A\u0E17: \u0E44\u0E14\u0E49\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01 \xB7 \u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23 \xB7 \u0E17\u0E23\u0E32\u0E19\u0E0B\u0E34\u0E0A\u0E31\u0E19",
+            sp.some((x) => x.kind === "sceneHeading") && sp.some((x) => x.kind === "character") && sp.some((x) => x.kind === "transition"),
+            JSON.stringify(sp.map((x) => x.kind))
+          );
+          const fN = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fN) activate(fN);
+          showPanel("outline");
+          check2("[a126-4] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E25\u0E31\u0E1A\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07", !!$("#nav-book-btn"));
+          const rows = await buildBookNavigation();
+          check2(
+            "[a126-5] \u2605\u2605 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E04\u0E23\u0E07\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E1E\u0E36\u0E48\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)",
+            Array.isArray(rows) && rows.length > 0,
+            rows.length
+          );
+          check2(
+            "[a126-6] \u0E17\u0E38\u0E01\u0E41\u0E16\u0E27\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19 (\u0E04\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E16\u0E39\u0E01\u0E43\u0E1A)",
+            rows.every((r) => !!r.sceneId),
+            JSON.stringify(rows.slice(0, 2))
+          );
+          check2(
+            '[a126-7] \u0E21\u0E35\u0E41\u0E16\u0E27\u0E0A\u0E19\u0E34\u0E14 "\u0E09\u0E32\u0E01" \u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E02\u0E2D\u0E07\u0E41\u0E15\u0E48\u0E25\u0E30\u0E01\u0E49\u0E2D\u0E19',
+            rows.some((r) => r.kind === "scene"),
+            rows.map((r) => r.kind).slice(0, 6).join(",")
+          );
+          setNavWholeBook(true);
+          const drew = await until126(() => ($("#outline")?.textContent || "").includes(t("ui.app.navWholeBook")), 6e3);
+          check2(
+            "[a126-8] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E40\u0E25\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E27\u0E32\u0E14\u0E08\u0E23\u0E34\u0E07",
+            drew,
+            ($("#outline")?.textContent || "").slice(0, 50)
+          );
+          check2("[a126-9] \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49", navWholeBookOn() === true);
+          setNavWholeBook(false);
+          check2("[a126-10] \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49", navWholeBookOn() === false);
+        }
+        {
+          const [IC, PJ, SF126, DLG, KB2, RC] = await Promise.all([
+            Promise.resolve().then(() => (init_icons(), icons_exports)),
+            Promise.resolve().then(() => (init_project(), project_exports)),
+            Promise.resolve().then(() => (init_sp_format(), sp_format_exports)),
+            Promise.resolve().then(() => (init_dialogs(), dialogs_exports)),
+            Promise.resolve().then(() => (init_kanban_ui(), kanban_ui_exports)),
+            Promise.resolve().then(() => (init_recycle(), recycle_exports))
+          ]);
+          check2(
+            "[a126-11] \u2605 icons: iconSvg/nfCss/hasNf \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14",
+            IC.iconSvg === void 0 && IC.nfCss === void 0 && IC.hasNf === void 0
+          );
+          check2(
+            "[a126-12] icons: \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
+            typeof IC.icon === "function" && typeof IC.iconHtml === "function"
+          );
+          check2("[a126-13] \u2605 project.getTemplates \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14", PJ.getTemplates === void 0);
+          check2("[a126-14] \u2605 sp-format.keepNextElements \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14", SF126.keepNextElements === void 0);
+          check2(
+            "[a126-15] sp-format: \u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            typeof SF126.paginate === "function" && typeof SF126.mergeSpFormat === "function"
+          );
+          check2("[a126-16] \u2605 dialogs.showLog \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14 (\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E17\u0E19\u0E41\u0E25\u0E49\u0E27)", DLG.showLog === void 0);
+          check2("[a126-17] \u0E41\u0E15\u0E48\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", PANEL_DEFS.some((d) => d.id === "log"));
+          check2("[a126-18] \u2605 kanban.closeKanban \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14", KB2.closeKanban === void 0);
+          check2("[a126-19] \u2605 recycle.resetPurgeMemory \u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14", RC.resetPurgeMemory === void 0);
+          check2("[a126-20] recycle: \u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48", typeof RC.purgeRecycle === "function");
+        }
+        {
+          const BK = await Promise.resolve().then(() => (init_books(), books_exports));
+          const FP = await Promise.resolve().then(() => (init_floorplan_ui(), floorplan_ui_exports));
+          check2(
+            "[a126-21] \u2605 refreshBooksIfOpen \u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E15\u0E48\u0E2D\u0E2A\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27",
+            typeof BK.refreshBooksIfOpen === "function"
+          );
+          check2(
+            "[a126-22] \u2605 refreshOpenFloorPlan \u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E15\u0E48\u0E2D\u0E2A\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27",
+            typeof FP.refreshOpenFloorPlan === "function"
+          );
+          let ok126 = true;
+          try {
+            BK.refreshBooksIfOpen();
+            FP.refreshOpenFloorPlan();
+          } catch {
+            ok126 = false;
+          }
+          check2("[a126-23] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E15\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14 = \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E1E\u0E31\u0E07", ok126);
+          showPanel("books");
+          await renderFeaturePanel("books");
+          await until126(() => !!$("#books-body .home-card, #books-body .books-grid"), 5e3);
+          const fB = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fB) {
+            activate(fB);
+            const tb2 = state.tabs.get(fB);
+            markDirty(tb2);
+            await saveTab(tb2);
+            check2(
+              '[a126-24] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E09\u0E32\u0E01\u0E02\u0E13\u0E30\u0E40\u0E1B\u0E34\u0E14 "\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E25\u0E48\u0E21" \u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49 \u2192 \u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32',
+              ($("#books-body")?.textContent || "").trim().length > 0
+            );
+          }
+          hidePanel("books");
+        }
+        {
+          check2("[a126-25] \u0E15\u0E31\u0E27\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E40\u0E23\u0E35\u0E22\u0E01\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E20\u0E32\u0E22\u0E19\u0E2D\u0E01", typeof auditPanelGaps === "function");
+          check2(
+            "[a126-26] \u2605 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07",
+            auditPanelGaps().length === 0,
+            JSON.stringify(auditPanelGaps())
+          );
+          const dockEl = document.querySelector("#app-root .k-dock[data-dock-id]");
+          check2("[a126-27] \u0E2B\u0E32 dock \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E14\u0E49", !!dockEl);
+          if (dockEl) {
+            const kid = [...dockEl.children].find((e) => !e.classList.contains("k-resize-handle") && getComputedStyle(e).display !== "none");
+            if (kid) {
+              const keep = kid.style.flex;
+              kid.style.flex = "0 0 20px";
+              const gaps = auditPanelGaps({ force: true });
+              check2("[a126-28] \u2605 \u0E15\u0E23\u0E27\u0E08\u0E40\u0E08\u0E2D\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E02\u0E36\u0E49\u0E19", gaps.length >= 0, JSON.stringify(gaps));
+              await w126(60);
+              check2(
+                "[a126-29] \u2605\u2605 \u0E15\u0E23\u0E27\u0E08\u0E41\u0E25\u0E49\u0E27\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E49\u0E40\u0E2D\u0E07 (\u0E40\u0E23\u0E35\u0E22\u0E01\u0E0B\u0E49\u0E33\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E41\u0E25\u0E49\u0E27)",
+                auditPanelGaps().length === 0,
+                JSON.stringify(auditPanelGaps())
+              );
+              kid.style.flex = keep;
+              renderPanels(true);
+            }
+          }
+        }
+        {
+          const spF = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.sp);
+          check2("[a127-12] \u0E2B\u0E32\u0E41\u0E17\u0E47\u0E1A\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E14\u0E49", !!spF);
+          if (spF) {
+            activate(spF);
+            const tb2 = state.tabs.get(spF);
+            tb2.sp.setMarkdown("INT. \u0E2B\u0E49\u0E2D\u0E07\u0E04\u0E23\u0E31\u0E27 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19\n\n@\u0E17\u0E2D\u0E23\u0E48\u0E32\n\n(\u0E40\u0E2A\u0E35\u0E22\u0E07\u0E40\u0E1A\u0E32)\n");
+            checkScreenplay(tb2);
+            await w126(150);
+            check2("[a127-13] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 = \u0E40\u0E1B\u0E34\u0E14 (\u0E1E\u0E24\u0E15\u0E34\u0E01\u0E23\u0E23\u0E21\u0E40\u0E14\u0E34\u0E21\u0E02\u0E2D\u0E07 alpha.124)", isSpErrorMarks() === true);
+            const marked = () => tb2.sp.view.dom.querySelectorAll(".sp-err-error, .sp-err-warn").length;
+            const before = marked();
+            const nErr = spErrorMarks().length;
+            check2(
+              "[a127-14] \u2605\u2605 \u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E40\u0E08\u0E2D\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E1C\u0E34\u0E14 \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 = \u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E08\u0E38\u0E14",
+              nErr > 0 && before === nErr,
+              "\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E41\u0E08\u0E49\u0E07 " + nErr + " \xB7 \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E35\u0E48\u0E02\u0E35\u0E14 " + before
+            );
+            toggleSpErrorMarks(false);
+            await w126(120);
+            check2("[a127-15] \u2605\u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2A\u0E49\u0E19\u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E08\u0E23\u0E34\u0E07", marked() === 0, marked());
+            check2("[a127-16] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E16\u0E39\u0E01\u0E08\u0E33\u0E25\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32", state.settings.spErrorMarks === false);
+            check2(
+              "[a127-17] \u2605 \u0E1B\u0E34\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E41\u0E25\u0E49\u0E27 **\u0E1B\u0E49\u0E32\u0E22\u0E2A\u0E23\u0E38\u0E1B\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48** (\u0E22\u0E31\u0E07\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E21\u0E35\u0E01\u0E35\u0E48\u0E08\u0E38\u0E14)",
+              !!$("#sp-errors"),
+              $("#sp-errors") ? $("#sp-errors").textContent : "\u2014"
+            );
+            toggleSpErrorMarks(true);
+            await w126(120);
+            check2("[a127-18] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E40\u0E2A\u0E49\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21", marked() === before, marked() + " vs " + before);
+            check2("[a127-19] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E16\u0E39\u0E01\u0E08\u0E33", state.settings.spErrorMarks === true);
+            const n127 = spErrorMenu(50, 50);
+            const menuTxt = [...document.querySelectorAll(".k-menu .k-menu-item")].map((x) => x.textContent).join(" | ");
+            check2(
+              "[a127-20] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E02\u0E2D\u0E07\u0E1B\u0E49\u0E32\u0E22\u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E19\u0E35\u0E49\u0E43\u0E2B\u0E49\u0E01\u0E14\u0E40\u0E2D\u0E07",
+              menuTxt.includes(t("ui.app.spErrMarkToggle")),
+              menuTxt.slice(0, 120)
+            );
+            document.querySelectorAll(".k-menu").forEach((n2) => n2.remove());
+            check2("[a127-21] \u0E40\u0E21\u0E19\u0E39\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", n127 > 0, n127);
+          }
+        }
+        {
+          const HU = await Promise.resolve().then(() => (init_home_ui(), home_ui_exports));
+          const ov127 = await HU.showHomeDialog();
+          await until126(() => document.querySelectorAll(".k-home-dlg .home-card").length > 0, 8e3);
+          await w126(300);
+          try {
+            await kapi.testShot("/tmp/k2_home_dlg.png");
+          } catch {
+          }
+          const card127 = document.querySelector(".k-home-dlg .home-card");
+          if (card127) {
+            const tEl = card127.querySelector(".home-card-title");
+            const bEl = card127.querySelector(".home-card-open");
+            const cr = card127.getBoundingClientRect();
+            const tr127 = tEl ? tEl.getBoundingClientRect() : null;
+            const br = bEl ? bEl.getBoundingClientRect() : null;
+            check2(
+              "[a127-1] \u2605\u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E08\u0E19\u0E2B\u0E32\u0E22)",
+              !!tr127 && tr127.height > 8,
+              tr127 && Math.round(tr127.height)
+            );
+            check2(
+              "[a127-2] \u2605\u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E4C\u0E14 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E2B\u0E32\u0E22)",
+              !!tr127 && tr127.bottom <= cr.bottom + 0.5 && tr127.top >= cr.top - 0.5,
+              tr127 && Math.round(tr127.top) + "-" + Math.round(tr127.bottom) + " vs " + Math.round(cr.top) + "-" + Math.round(cr.bottom)
+            );
+            check2(
+              "[a127-3] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E4C\u0E14 (\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E44\u0E1B)",
+              !!br && br.bottom <= cr.bottom + 0.5,
+              br && Math.round(br.bottom) + " vs " + Math.round(cr.bottom)
+            );
+            check2(
+              "[a127-4] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E15\u0E32\u0E23\u0E32\u0E07",
+              cr.right <= document.querySelector(".k-home-dlg").getBoundingClientRect().right + 1
+            );
+          }
+          const acts = document.querySelector(".k-home-dlg .home-actions");
+          if (acts) {
+            const ar = acts.getBoundingClientRect();
+            const kids = [...acts.children].filter((n2) => getComputedStyle(n2).display !== "none");
+            const over = kids.filter((n2) => n2.getBoundingClientRect().right > ar.right + 1);
+            check2(
+              "[a127-5] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E01\u0E23\u0E2D\u0E1A",
+              over.length === 0,
+              over.map((n2) => n2.className + ":" + Math.round(n2.getBoundingClientRect().right)).join(" | ") + " | \u0E02\u0E2D\u0E1A " + Math.round(ar.right)
+            );
+          }
+          const bad127 = document.querySelector(".k-home-dlg .home-card-broken");
+          if (bad127) {
+            const br2 = bad127.getBoundingClientRect();
+            const rm2 = bad127.querySelector(".home-broken-btns button");
+            check2(
+              '[a127-6] \u2605 \u0E01\u0E32\u0E23\u0E4C\u0E14 "\u0E2B\u0E32\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D" \u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E1B\u0E01\u0E15\u0E34 (\u0E41\u0E16\u0E27\u0E40\u0E23\u0E35\u0E22\u0E07\u0E01\u0E31\u0E19)',
+              Math.abs(br2.height - (card127 ? card127.getBoundingClientRect().height : br2.height)) < 2,
+              Math.round(br2.height) + " vs " + (card127 ? Math.round(card127.getBoundingClientRect().height) : "\u2014")
+            );
+            check2(
+              "[a127-7] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E1A\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E4C\u0E14",
+              !!rm2 && rm2.getBoundingClientRect().bottom <= br2.bottom + 0.5,
+              rm2 && Math.round(rm2.getBoundingClientRect().bottom) + " vs " + Math.round(br2.bottom)
+            );
+          }
+          const listBtn = [...document.querySelectorAll(".k-home-dlg .home-view-mode")].find((b) => b.dataset.view === "list");
+          if (listBtn) {
+            listBtn.click();
+            await w126(250);
+            try {
+              await kapi.testShot("/tmp/k2_home_list.png");
+            } catch {
+            }
+            const rows = [...document.querySelectorAll(".k-home-dlg .home-grid.list .home-card")];
+            check2("[a127-8] \u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49", rows.length > 0, rows.length);
+            if (rows.length > 1) {
+              const hs = rows.map((r) => Math.round(r.getBoundingClientRect().height));
+              check2(
+                "[a127-9] \u2605\u2605 \u0E17\u0E38\u0E01\u0E41\u0E16\u0E27\u0E2A\u0E39\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19 (\u0E40\u0E23\u0E35\u0E22\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E1A)",
+                new Set(hs).size === 1,
+                hs.join(",")
+              );
+              const lefts = rows.map((r) => {
+                const tt2 = r.querySelector(".home-card-title");
+                return tt2 ? Math.round(tt2.getBoundingClientRect().left) : -1;
+              });
+              check2(
+                "[a127-10] \u2605\u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E38\u0E01\u0E41\u0E16\u0E27\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E23\u0E07\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
+                new Set(lefts).size === 1,
+                lefts.join(",")
+              );
+              const over2 = rows.filter((r) => {
+                const rr = r.getBoundingClientRect();
+                return [...r.querySelectorAll("*")].some((n2) => n2.getBoundingClientRect().right > rr.right + 1);
+              });
+              check2("[a127-11] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E41\u0E16\u0E27", over2.length === 0, over2.length);
+            }
+            const cardBtn = [...document.querySelectorAll(".k-home-dlg .home-view-mode")].find((b) => b.dataset.view === "card");
+            if (cardBtn) {
+              cardBtn.click();
+              await w126(150);
+            }
+          }
+          if (ov127) ov127.remove();
+          await w126(120);
+        }
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -197471,12 +205596,12 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md15, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _geoJob, _spViewJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md18, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _geoJob, _spViewJob, _gapJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
       init_editor();
-      import_md15 = __toESM(require_md());
+      import_md18 = __toESM(require_md());
       init_convert();
       init_prose_format();
       init_prose_view();
@@ -197515,6 +205640,7 @@ ${css}
       init_scene_props();
       init_ai_synopsis();
       init_ai_analyzer_ui();
+      init_ai_analyzer_ui();
       init_markdown_code_toggle();
       init_i18n_csv();
       init_maps_ui();
@@ -197541,7 +205667,6 @@ ${css}
       init_export_zip();
       init_comment_ui();
       init_export_blog();
-      init_thesaurus();
       init_project();
       init_ai_settings();
       init_ai_provider_ui();
@@ -197567,6 +205692,7 @@ ${css}
       init_split_ui();
       init_auto_link_ui();
       init_project_scan();
+      init_nav();
       init_codex_ui();
       init_history_ui();
       init_record_ui();
@@ -197578,6 +205704,8 @@ ${css}
       init_builder_ui();
       init_text_measure();
       init_toolbar_config();
+      init_color_picker();
+      import_text_color4 = __toESM(require_text_color());
       init_toolbar_ui();
       init_fmtbar_pos();
       init_shortcode();
@@ -197632,7 +205760,15 @@ ${css}
         clearTimeout(_spViewJob);
         _spViewJob = setTimeout(refreshSpView, 150);
         keepFloatingUiInView();
+        clearTimeout(_gapJob);
+        _gapJob = setTimeout(() => {
+          try {
+            auditPanelGaps();
+          } catch {
+          }
+        }, 200);
       });
+      _gapJob = null;
       _spErrors = [];
       SP_REPORTS = {
         location: { title: t("ui.app.reportPlace2"), file: t("ui.app.reportPlace") },
@@ -197729,8 +205865,10 @@ ${css}
         ["tb-log", "log"],
         ["tb-dlgb", "dlgb"],
         // [alpha.82] ห้องซ้อมบท
-        ["tb-ai-hub", "ai-hub"]
+        ["tb-ai-hub", "ai-hub"],
         // [alpha.116 ข้อ 3] AI Hub
+        ["tb-backlinks", "backlinks"]
+        // [alpha.125 ข้อ G] ฉากที่กล่าวถึง
       ];
       ALWAYS_ON_TB = /* @__PURE__ */ new Set([
         "tb-close",
@@ -197780,7 +205918,9 @@ ${css}
         "tb-gallery-board",
         "tb-comments",
         "tb-notes-panel",
-        "tb-log"
+        "tb-log",
+        "tb-backlinks"
+        // [alpha.125 ข้อ G] อ่านทั้งโปรเจกต์ ไม่ผูกกับฉากที่เปิด
       ]);
       _smartJob = null;
       countJob = null;
@@ -197797,6 +205937,7 @@ ${css}
         s = String(s).trim().replace(/\s+/g, " ");
         return s.length > n2 ? s.slice(0, n2) + "\u2026" : s;
       };
+      navWholeBook = localStorage.getItem("k2-nav-book") === "1";
       LOG_STICK_PX = 24;
       logView = { levels: /* @__PURE__ */ new Set(["error", "warn", "info"]), source: "", q: "", open: /* @__PURE__ */ new Set() };
       _logSeq = -1;
@@ -197861,8 +206002,27 @@ ${css}
         notes: () => renderNotesPanel($("#notes-body")),
         // [alpha.62 บั๊ก 16] 3 ฟีเจอร์ที่ยังเป็นแท็บเอกสาร → เป็นแผงเต็มตัวเหมือนตัวอื่น
         network: () => renderNetworkPanel(),
+        // [alpha.125 ข้อ G] "ฉากที่กล่าวถึง" ทั้งโปรเจกต์ — คลิกแถวแล้วกระโดดไปฉากนั้นจริง
+        backlinks: () => renderBacklinksPanel($("#backlinks-body"), async (sceneId) => {
+          const hit = await findScenePath(state.root, sceneId);
+          if (hit && hit.path) openScene(hit.path, hit.title);
+          else setStatus(t("ui.worldAutoLink.sceneGone"));
+        }),
         planner: () => renderPlannerPanel(),
+        // [alpha.124 ข้อ 44] เดิมเป็น noop → เปิดแผงนี้จากถาด/เมนู/เลย์เอาต์ที่กู้มา (โดยที่ยังไม่ได้
+        // เปิดกระดานวางแผน) ได้ **กล่องเปล่าสนิท** ไม่มีแม้แต่ข้อความบอกว่ามันคืออะไร
+        // ตอนนี้: ถ้ากระดานเปิดอยู่ ปล่อยให้กระดานวาดเหมือนเดิม · ถ้ายัง วาดสภาพว่างที่บอกทางไปต่อ
         plannerProps: () => {
+          const box2 = $("#planner-props-body");
+          if (!box2) return true;
+          if (isPanelOpen("planner")) return true;
+          box2.replaceChildren();
+          const empty2 = el("div", "k-panel-empty");
+          empty2.append(el("div", null, t("ui.plannerProps.needBoard")));
+          const b = el("button", "k-ok", t("ui.plannerProps.openBoard"));
+          b.onclick = () => handleCommand("toggle-panel", "planner");
+          empty2.append(b);
+          box2.append(empty2);
           return true;
         },
         floorplan: () => renderFloorPlanPanel(),
@@ -197896,7 +206056,9 @@ ${css}
         "find-prev"
       ]);
       kapi.onMenu(handleCommand);
+      _caseCycle = -1;
       window.addEventListener("keydown", onShortcut, true);
+      window.addEventListener("keydown", onSelectAllKey, true);
       _syncMod = (e) => setModDown(e.ctrlKey || e.metaKey);
       window.addEventListener("keydown", _syncMod, true);
       window.addEventListener("keyup", _syncMod, true);
@@ -197921,7 +206083,8 @@ ${css}
         if ((e.code === "Digit0" || e.code === "Numpad0") && e.shiftKey) {
           e.preventDefault();
           resetPageScale();
-        } else if (e.code === "Equal" || e.code === "NumpadAdd") {
+        } else if (e.shiftKey) return;
+        else if (e.code === "Equal" || e.code === "NumpadAdd") {
           e.preventDefault();
           bumpPageScale(1);
         } else if (e.code === "Minus" || e.code === "NumpadSubtract") {
@@ -197995,6 +206158,8 @@ ${css}
         tb("#tb-ul", "ul");
         tb("#tb-ol", "ol");
         tb("#tb-quote", "quote");
+        $("#tb-color").onclick = (e) => openTextColorPicker(e.currentTarget);
+        window.addEventListener("blur", closeColorPicker);
         tb("#tb-align-left", "align", "left");
         tb("#tb-align-center", "align", "center");
         tb("#tb-align-right", "align", "right");
@@ -198021,6 +206186,7 @@ ${css}
           if (state.active) markDirty(state.active);
         };
         const caseSel = $("#tb-case");
+        applyCaseOptions();
         if (caseSel) caseSel.onchange = (e) => {
           const mode = e.target.value;
           e.target.value = "";
@@ -198108,7 +206274,6 @@ ${css}
         if (bInd) bInd.onclick = () => toggleProseIndent();
         $("#tb-read").onclick = () => toggleReading();
         $("#tb-gsearch").onclick = () => handleCommand("global-search");
-        bindGlobalSearchShortcut();
         $("#tb-note").onclick = async () => {
           const c = await sceneCtx();
           quickNote(c?.row?.id, c?.row?.title);
@@ -198177,7 +206342,7 @@ ${css}
         $("#tb-split").onclick = () => handleCommand("split-view");
         $("#tb-close").onclick = () => {
           const t3 = state.active;
-          if (t3) closeTab(t3.file);
+          if (t3) closeTab(t3.file, { ask: true });
         };
         $("#tb-close-all").onclick = () => closeAllTabs();
         $("#tb-focus").onclick = () => handleCommand("focus-mode");
@@ -198186,22 +206351,17 @@ ${css}
         $("#tb-visual").onclick = () => openVisualForActive();
         $("#tb-quickopen").onclick = () => handleCommand("quick-open");
         document.addEventListener("keydown", (e) => {
-          if (e.code === "Slash" && e.ctrlKey && e.shiftKey || e.key === "?" && !e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            showShortcutsDialog();
-          }
+          if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey) return;
+          const ae = document.activeElement;
+          if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT" || ae.isContentEditable)) return;
+          e.preventDefault();
+          showShortcutsDialog();
         });
         startAutoBackup();
         $("#save-all-btn").onclick = () => saveAllTabs();
         $("#home-btn").onclick = () => {
           Promise.resolve().then(() => (init_home_ui(), home_ui_exports)).then((m) => m.showHomeDialog());
         };
-        window.addEventListener("keydown", (e) => {
-          if (e.code === "KeyS" && e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
-            e.preventDefault();
-            saveAllTabs();
-          }
-        });
         updateToolbarTitles();
         wireFab();
         setupHoverTips();
@@ -198293,6 +206453,15 @@ ${css}
           e.stopPropagation();
           setNavBeats(!navShowBeats);
         };
+        const bookBtn = el("span", "k-panel-btn", "\u{1F4DA}");
+        bookBtn.id = "nav-book-btn";
+        bookBtn.title = t("ui.app.navWholeBookHint");
+        bookBtn.classList.toggle("on", navWholeBook);
+        addPanelButton("outline", bookBtn);
+        bookBtn.onclick = (e) => {
+          e.stopPropagation();
+          setNavWholeBook(!navWholeBook);
+        };
         const logRefresh = el("span", "k-panel-btn", "\u21BB");
         logRefresh.title = t("ui.common.refresh");
         addPanelButton("log", logRefresh);
@@ -198319,27 +206488,38 @@ ${css}
         document.addEventListener("contextmenu", (e) => {
           if (!state.root) return;
           const bad = e.target.closest && e.target.closest(".k-spell-bad");
-          const thes = thesaurusMenuItems(e.clientX, e.clientY);
-          if (!bad && !thes.length) return;
+          const inDoc = !!(e.target.closest && e.target.closest(".ProseMirror"));
+          const sel = window.getSelection();
+          const selWord = (sel?.toString() || "").trim();
+          const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
+          if (!bad && !hasThes) return;
           e.preventDefault();
           e.stopPropagation();
           const items = [];
           if (bad) {
-            const word2 = bad.textContent.trim();
-            items.push({ label: tf("ui.app.add", word2), click: async () => {
-              await kapi.spellAddWord(state.root, word2);
+            const word = bad.textContent.trim();
+            const sugg = spellSuggest(word, 6);
+            if (sugg.length) {
+              items.push({ text: t("ui.app.spellSuggestHead"), disabled: true });
+              for (const w of sugg) items.push({ text: w, click: () => replaceSpellWord(bad, w) });
+              items.push("-");
+            } else {
+              items.push({ text: t("ui.app.spellNoSuggest"), disabled: true });
+            }
+            items.push({ text: tf("ui.app.add", word), click: async () => {
+              await kapi.spellAddWord(state.root, word);
               await loadSpellDict(state.root);
-              setStatus(t("ui.app.addDone") + word2);
+              setStatus(t("ui.app.addDone") + word);
+            } });
+            items.push({ text: tf("ui.app.spellIgnoreOnce", word), click: () => {
+              spellIgnoreOnce(word);
+              setStatus(tf("ui.app.spellIgnoredOnce", word));
             } });
           }
-          if (bad && thes.length) items.push("-");
-          items.push(...thes);
-          const sel = window.getSelection();
-          const word = sel?.toString()?.trim();
-          if (word && word.length >= 2) {
-            items.push("-");
-            items.push({ label: tf("ui.app.thesaurusWordOpposite", word), click: () => {
-              showThesaurusPopup(word, e.clientX, e.clientY);
+          if (hasThes) {
+            if (items.length) items.push("-");
+            items.push({ text: tf("ui.app.thesaurusWordOpposite", selWord), click: () => {
+              showThesaurusPopup(selWord, e.clientX, e.clientY);
             } });
           }
           popupMenu(e.clientX, e.clientY, items);

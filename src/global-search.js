@@ -1,359 +1,267 @@
-// global-search.js — ค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F) ค้นทุกไฟล์ .md และ .json
+// global-search.js — ค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F)
+//
+// ═══ [alpha.125 ข้อ A] ★ เลิกสแกนไฟล์เอง — ใช้ `search-engine.js` ที่มีอยู่แล้ว ═══
+//
+// เดิมไฟล์นี้มี **ตัวค้นหาสองชุดที่เขียนแยกกันคนละก๊อป** (กล่องเต็มจอ + แผงค้นหา)
+// ทั้งคู่ไล่ `listDirs` → `readFile` → `indexOf(คำ)` ทีละบรรทัดทุกครั้งที่กดค้น
+// ผลคือ: ค้นทีนึงอ่านทั้งโปรเจกต์ใหม่ทั้งกอง · ค้นได้แค่ "สตริงตรงตัว" ·
+// แก้บั๊กต้องแก้สองที่ · และ `search-engine.js` (inverted index + ตัดคำไทย + AND/OR/NOT +
+// `title:` `tags:` `status:` · มี unit test 23 ข้อ) นอนเป็น orphan อยู่เฉย ๆ ตั้งแต่ alpha.39
+//
+// ตอนนี้: **ตัวค้นหาตัวเดียว** (`runProjectSearch`) ที่ต่อกับเอนจินจริง + **UI ตัวเดียว**
+// (`buildSearchUI`) ที่กล่องเต็มจอกับแผงใช้ร่วมกัน · ดัชนีสร้างครั้งเดียวแล้วใช้ซ้ำ
+// จนกว่าไฟล์จะเปลี่ยน (`invalidateSearchIndex()` — app.js เรียกให้ตอนบันทึก/สร้างต้นไม้ใหม่)
 import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { parseMdFile } from './md.js';
+import { escClose } from './ui.js';
+import { indexProject } from './search-engine.js';
 
-// ฟังก์ชันหลัก — เปิด dialog ค้นหา
+// ───────────────────────── ดัชนี (แคชระดับโมดูล) ─────────────────────────
+// ES module: ค่าที่ reassign ต้องอยู่ใน object — กฎเหล็กข้อ 2 ของ AGENTS.md
+const GS = {
+  index: null,        // SearchIndex ตัวปัจจุบัน
+  root: '',           // โปรเจกต์ที่ดัชนีตัวนี้เป็นของ
+  json: false,        // ดัชนีนี้รวมไฟล์ .json ด้วยไหม
+  building: null,     // Promise ของการสร้างที่กำลังวิ่ง (กันสร้างซ้อนตอนพิมพ์รัว)
+  stale: true,        // ไฟล์เปลี่ยนไปแล้วหรือยัง
+};
+
+/** ไฟล์ในโปรเจกต์เปลี่ยน → ดัชนีเก่าใช้ไม่ได้แล้ว (บันทึกฉาก · สร้างต้นไม้ใหม่ · เปลี่ยนโปรเจกต์) */
+export function invalidateSearchIndex() { GS.stale = true; }
+
+/** สถานะดัชนีสำหรับ UI/เทส — `{ ready, documents, terms, root }` */
+export function searchIndexStats() {
+  const s = GS.index ? GS.index.stats() : { documents: 0, terms: 0 };
+  return { ready: !!GS.index && !GS.stale, root: GS.root, ...s };
+}
+
+/**
+ * สร้าง/คืนดัชนีของโปรเจกต์ปัจจุบัน
+ * สร้างใหม่เมื่อ: ยังไม่เคยมี · เปลี่ยนโปรเจกต์ · ขอบเขตไฟล์เปลี่ยน (.json) · ไฟล์ถูกแก้
+ */
+export async function ensureSearchIndex({ includeJson = false } = {}) {
+  if (!state.root) return null;
+  const fresh = GS.index && !GS.stale && GS.root === state.root && GS.json === includeJson;
+  if (fresh) return GS.index;
+  if (GS.building) return GS.building;          // มีคนสั่งสร้างอยู่แล้ว — รอตัวเดียวกัน
+  const root = state.root;
+  GS.building = (async () => {
+    try {
+      const idx = await indexProject(root, kapi, parseMdFile, { includeJson });
+      // สร้างเสร็จตอนผู้ใช้เปลี่ยนโปรเจกต์ไปแล้ว = ทิ้ง ไม่เอามาใช้กับของใหม่
+      if (state.root !== root) return null;
+      GS.index = idx; GS.root = root; GS.json = includeJson; GS.stale = false;
+      return idx;
+    } catch (e) {
+      log('error', t('ui.search.globalSearchSearchFail'), e);
+      return null;
+    } finally { GS.building = null; }
+  })();
+  return GS.building;
+}
+
+// ───────────────────────── ตัวค้นหา (ตัวเดียวของทั้งโปรแกรม) ─────────────────────────
+
+/** ชนิดไฟล์จากนามสกุล — ใช้เลือกไอคอนและวิธีเปิด */
+const extOf = (p) => String(p || '').split('.').pop().toLowerCase();
+
+/**
+ * ค้นทั้งโปรเจกต์
+ * @param {string} q คำค้น — รองรับ `AND` `OR` `NOT` และ `title:` `tags:` `status:`
+ * @param {{includeJson?:boolean, nameOnly?:boolean, limit?:number}} opts
+ * @returns {Promise<Array<{file,name,type,matches:Array<{line:number,text:string}>}>>}
+ */
+export async function runProjectSearch(q, opts = {}) {
+  const { includeJson = false, includeMd = true, nameOnly = false, limit = 60 } = opts;
+  const query = String(q || '').trim();
+  if (!query || !state.root) return [];
+  if (!includeMd && !includeJson) return [];        // ไม่เลือกชนิดไหนเลย = ไม่มีอะไรให้ค้น
+  const wanted = (t2) => (t2 === 'md' ? includeMd : includeJson);
+
+  // ── ค้นเฉพาะชื่อไฟล์: ไม่ต้องพึ่งดัชนีเนื้อหา (และต้องได้ผลแม้ดัชนียังสร้างไม่เสร็จ) ──
+  if (nameOnly) {
+    const ql = query.toLowerCase();
+    const out = [];
+    const walk = async (dir) => {
+      for (const name of await kapi.listDirs(dir).catch(() => [])) await walk(await kapi.join(dir, name));
+      for (const f of await kapi.listFiles(dir, '').catch(() => [])) {
+        const ext = extOf(f);
+        if (!wanted(ext)) continue;
+        if (!f.toLowerCase().includes(ql)) continue;
+        out.push({ file: await kapi.join(dir, f), name: f, type: ext,
+                   matches: [{ line: 0, text: f }] });
+        if (out.length >= limit) return;
+      }
+    };
+    await walk(state.root);
+    return out.slice(0, limit);
+  }
+
+  const idx = await ensureSearchIndex({ includeJson });
+  if (!idx) return [];
+  // ขอผลเผื่อไว้ก่อนกรองชนิดไฟล์ ไม่งั้นเลือกเฉพาะ .json แล้วได้ผลบางลงเพราะโดน limit ตัดไปก่อน
+  return idx.search(query, { limit: limit * 3 })
+    .map((r) => ({
+      file: r.path,
+      name: r.title || String(r.path).split(/[\\/]/).pop(),
+      type: extOf(r.path),
+      score: r.score,
+      matches: (r.matches || []).map((m) => ({ line: m.line, text: m.snippet })),
+    }))
+    .filter((h) => wanted(h.type))
+    .slice(0, limit);
+}
+
+// ───────────────────────── UI (กล่องเต็มจอ + แผง ใช้ตัวเดียวกัน) ─────────────────────────
+
+/** เปิดผลลัพธ์หนึ่งรายการ — .md = เปิดเป็นฉาก · ที่เหลือ = แท็บข้อความล้วนที่บันทึกได้จริง */
+async function openHit(h) {
+  const app = await import('./app.js');
+  if (h.type === 'md') return app.openScene(h.file, null);
+  // [alpha.125] เดิมประกอบแท็บ JSON เองตรงนี้ **สองก๊อป** และก๊อปหนึ่งเรียก `require()`
+  // ซึ่งไม่มีใน renderer (พังเงียบ) · ใช้ `openPlainFile()` ตัวจริงของ app.js แทน
+  return app.openPlainFile(h.file, h.name);
+}
+
+/**
+ * ประกอบหน้าจอค้นหาลง `host` — คืนตัวช่วยไว้ให้ผู้เรียก/เทสสั่งงาน
+ * @param {HTMLElement} host
+ * @param {{onOpen?: () => void}} opts onOpen = ทำอะไรก่อนเปิดไฟล์ (กล่องใช้ปิดตัวเอง)
+ */
+export function buildSearchUI(host, { onOpen } = {}) {
+  host.replaceChildren();
+
+  const searchRow = el('div', 'k-row k-gsearch-row');
+  const qInput = el('input', 'k-dlg-input k-gsearch-input');
+  qInput.type = 'text';
+  qInput.placeholder = t('ui.search.searchAllFileMd');
+  searchRow.append(qInput);
+
+  const typeRow = el('div', 'k-row k-gsearch-types');
+  const mkChk = (label, def) => {
+    const w = el('label', null);
+    const c = el('input'); c.type = 'checkbox'; c.checked = def;
+    w.append(c, document.createTextNode(' ' + label));
+    typeRow.append(w);
+    return c;
+  };
+  // [alpha.125] คงตัวเลือกชนิดไฟล์ครบสามช่องเหมือนเดิม — "ค้นเฉพาะ .json" เป็นงานจริง
+  // (ไล่ดูโครง scenes.json / เอนทิตี้ Wiki) ที่ทำไม่ได้เลยถ้าไม่มีช่องปิด .md
+  const chkMd = mkChk(t('ui.search.mdSceneNoteMemo'), true);
+  const chkJson = mkChk('.json (Wiki/scenes/section)', false);
+  const chkName = mkChk(t('ui.search.searchOnlyNameFile'), false);
+  host.append(searchRow, typeRow);
+
+  // [alpha.125 ข้อ A] คำใบ้ไวยากรณ์ — ความสามารถพวกนี้มีมาตลอดในเอนจิน แต่ไม่เคยมีใครรู้
+  host.append(el('div', 'k-hint k-gsearch-help', t('ui.search.syntaxHint')));
+
+  const results = el('div', 'k-gsearch-results');
+  const status = el('div', 'dim k-gsearch-status');
+  host.append(results, status);
+
+  let job = 0;
+  const show = (hits) => {
+    results.replaceChildren();
+    if (!hits.length) { results.append(el('div', 'dim', t('ui.search.notFoundResult'))); return; }
+    for (const h of hits) {
+      const card = el('div', 'k-gsearch-hit');
+      const head = el('div', 'k-gsearch-hit-head');
+      // กฎข้อ 11: ชื่อไฟล์/ชื่อฉากเป็นข้อความของผู้ใช้ → el(tag, cls, text) เท่านั้น
+      head.append(el('span', 'k-gsearch-hit-name', (h.type === 'md' ? '📄 ' : '📋 ') + h.name));
+      let rel = h.file;
+      try { rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file; } catch {}
+      head.append(el('span', 'k-gsearch-hit-path', String(rel)));
+      card.append(head);
+      for (const m of (h.matches || []).slice(0, 3)) {
+        const line = el('div', 'k-gsearch-line', m.text || '');
+        if (m.line) line.title = t('ui.search.lineNo') + m.line;
+        card.append(line);
+      }
+      const openB = el('button', 'k-ok k-gsearch-open', t('ui.common.open'));
+      const go = async (e) => {
+        if (e) e.stopPropagation();
+        if (onOpen) onOpen();
+        await openHit(h);
+      };
+      openB.onclick = go;
+      card.addEventListener('click', go);
+      results.append(card);
+    }
+  };
+
+  const doSearch = async (q) => {
+    const mine = ++job;
+    if (!String(q || '').trim()) { results.replaceChildren(); status.textContent = ''; return []; }
+    status.textContent = t('ui.search.busySearch');
+    results.replaceChildren(el('div', 'dim', t('ui.search.busySearch')));
+    try {
+      const hits = await runProjectSearch(q, {
+        includeJson: chkJson.checked, includeMd: chkMd.checked, nameOnly: chkName.checked,
+      });
+      if (mine !== job) return hits;          // มีรอบใหม่แซงแล้ว — ทิ้งผลรอบนี้
+      show(hits);
+      const st = searchIndexStats();
+      status.textContent = tf('ui.search.foundFile', hits.length)
+        + (chkName.checked ? '' : ' · ' + tf('ui.search.indexedN', st.documents));
+      return hits;
+    } catch (e) {
+      if (mine !== job) return [];
+      log('error', t('ui.search.globalSearchSearchFail'), e);
+      results.replaceChildren(el('div', 'dim', t('ui.search.occurError')));
+      status.textContent = t('ui.search.searchFail');
+      return [];
+    }
+  };
+
+  qInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); doSearch(qInput.value); } };
+  chkJson.onchange = () => { GS.stale = true; doSearch(qInput.value); };
+  chkMd.onchange = () => doSearch(qInput.value);
+  chkName.onchange = () => doSearch(qInput.value);
+
+  return { qInput, results, status, doSearch, chkMd, chkJson, chkName };
+}
+
+/** กล่องค้นหาเต็มจอ (Ctrl+Shift+F) */
 export async function openGlobalSearch() {
-  if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return; }
-
+  if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return null; }
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide k-gsearch');
   box.append(el('div', 'k-dlg-title', t('ui.search.searchProject')));
+  const body = el('div', 'k-gsearch-body');
+  box.append(body);
 
-  // แถบค้นหา
-  const searchRow = el('div', 'k-row');
-  searchRow.style.cssText = 'gap:8px;margin:8px 0';
-  const qInput = el('input', 'k-dlg-input');
-  qInput.type = 'text'; qInput.placeholder = t('ui.search.searchAllFileMd');
-  qInput.style.flex = '1';
-  searchRow.append(qInput);
-
-  // ตัวเลือกประเภทไฟล์
-  const typeRow = el('div', 'k-row');
-  typeRow.style.cssText = 'gap:12px;margin:4px 0 8px;font-size:12px';
-  const mkChk = (label, val, def = true) => {
-    const w = el('label', null);
-    const c = el('input'); c.type = 'checkbox'; c.checked = def; c.value = val;
-    w.append(c, document.createTextNode(' ' + label));
-    typeRow.append(w); return c;
-  };
-  const chkMd = mkChk(t('ui.search.mdSceneNoteMemo'), 'md');
-  const chkJson = mkChk('.json (Wiki/scenes/section)', 'json', false);
-  const chkAll = mkChk(t('ui.search.searchOnlyNameFile'), 'name', false);
-  searchRow.append(typeRow);
-
-  box.append(searchRow, typeRow);
-
-  // แสดงผลลัพธ์
-  const results = el('div', 'k-gsearch-results');
-  results.style.cssText = 'max-height:60vh;overflow-y:auto;min-height:200px';
-  box.append(results);
-
-  // แถบล่าง
   const btns = el('div', 'k-dlg-btns');
-  const status = el('span', 'k-gsearch-status');
-  status.style.cssText = 'flex:1;font-size:11.5px;color:var(--dim);text-align:left';
   const closeB = el('button', 'k-ok', t('ui.common.close'));
-  btns.append(status, closeB);
+  btns.append(closeB);
   box.append(btns);
   ov.append(box);
   document.body.append(ov);
 
-  closeB.onclick = () => ov.remove();
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const close = () => ov.remove();
+  closeB.onclick = close;
+  ov.onclick = (e) => { if (e.target === ov) close(); };
+  escClose(ov, close);
 
-  // ฟังก์ชันค้นหา
-  async function doGlobalSearch(q) {
-    if (!q.trim()) { results.innerHTML = ''; status.textContent = ''; return; }
-    status.textContent = t('ui.common.busySearch');
-    results.innerHTML = el('div', 'dim', t('ui.search.busySearch')).outerHTML;
-
-    const hits = [];
-    const ql = q.toLowerCase();
-    const searchNameOnly = chkAll.checked;
-    const includeMd = chkMd.checked;
-    const includeJson = chkJson.checked;
-
-    try {
-      const searchDir = async (dir) => {
-        const entries = await kapi.listDirs(dir).catch(() => []);
-        for (const name of entries) {
-          const full = await kapi.join(dir, name);
-          await searchDir(full);
-        }
-        const files = await kapi.listFiles(dir, '').catch(() => []);
-        for (const f of files) {
-          const ext = f.split('.').pop().toLowerCase();
-          if ((ext === 'md' && includeMd) || (ext === 'json' && includeJson)) {
-            const fp = await kapi.join(dir, f);
-            try {
-              if (searchNameOnly) {
-                if (f.toLowerCase().includes(ql)) {
-                  hits.push({ file: fp, name: f, matches: [{ line: 0, text: f, ctx: '' }], type: ext });
-                }
-              } else {
-                const raw = await kapi.readFile(fp);
-                const lines = raw.split('\n');
-                for (let i = 0; i < lines.length; i++) {
-                  const lower = lines[i].toLowerCase();
-                  const idx = lower.indexOf(ql);
-                  if (idx >= 0) {
-                    // หา context (2 บรรทัดก่อน-หลัง)
-                    const ctxStart = Math.max(0, i - 1);
-                    const ctxEnd = Math.min(lines.length, i + 2);
-                    const ctx = lines.slice(ctxStart, ctxEnd).join('\n').substring(0, 300);
-                    // ดึงชื่อจาก frontmatter หรือชื่อไฟล์
-                    let title = f;
-                    if (ext === 'md') {
-                      try { title = parseMdFile(raw).meta.title || f; } catch {}
-                    }
-                    hits.push({
-                      file: fp, name: title, type: ext,
-                      matches: [{ line: i + 1, text: lines[i].trim().substring(0, 200), ctx }]
-                    });
-                    break; // 1 hit ต่อไฟล์
-                  }
-                }
-              }
-            } catch {}
-          }
-        }
-      };
-      await searchDir(state.root);
-
-      // จัดกลุ่มตามไฟล์ (กรณีชื่ออาจมีหลาย match)
-      const grouped = {};
-      for (const h of hits) {
-        if (!grouped[h.file]) grouped[h.file] = h;
-        else grouped[h.file].matches.push(...h.matches);
-      }
-
-      renderResults(Object.values(grouped), ql);
-      status.textContent = tf('ui.search.foundFile', hits.length);
-    } catch (e) {
-      log('error', t('ui.search.globalSearchSearchFail'), e);
-      results.innerHTML = el('div', 'dim', t('ui.search.occurError')).outerHTML;
-      status.textContent = t('ui.search.searchFail');
-    }
-  }
-
-  // แสดงผลลัพธ์
-  function renderResults(hits, highlight) {
-    results.innerHTML = '';
-    if (!hits.length) {
-      results.append(el('div', 'dim', t('ui.search.notFoundResult')));
-      return;
-    }
-
-    for (const h of hits) {
-      const card = el('div', 'k-gsearch-hit');
-      const header = el('div', 'k-gsearch-hit-head');
-      const icon = h.type === 'md' ? '📄' : '📋';
-      header.append(el('span', 'k-gsearch-hit-name', icon + ' ' + h.name));
-      header.append(el('span', 'k-gsearch-hit-type', '.' + h.type));
-
-      // แสดง path สัมพันธ์
-      try {
-        const rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file;
-        header.append(el('span', 'k-gsearch-hit-path', rel));
-      } catch {}
-
-      card.append(header);
-
-      for (const m of (h.matches || []).slice(0, 3)) {
-        const line = el('div', 'k-gsearch-line');
-        // ไฮไลต์คำที่เจอ
-        const idx = m.text.toLowerCase().indexOf(highlight);
-        if (idx >= 0) {
-          line.append(document.createTextNode(m.text.slice(0, idx)));
-          const hl = el('span', 'k-gsearch-hl');
-          hl.textContent = m.text.slice(idx, idx + highlight.length);
-          line.append(hl);
-          line.append(document.createTextNode(m.text.slice(idx + highlight.length)));
-        } else {
-          line.textContent = m.text;
-        }
-        card.append(line);
-      }
-
-      // ปุ่มเปิดไฟล์
-      const openB = el('button', 'k-ok k-gsearch-open', t('ui.common.open'));
-      openB.onclick = async (e) => {
-        e.stopPropagation();
-        ov.remove();
-        if (h.type === 'md') {
-          const { openScene } = await import('./app.js');
-          openScene(h.file, null);
-        } else {
-          // เปิดเป็น JSON editor
-          const { activate } = await import('./app.js');
-          try {
-            const raw = await kapi.readFile(h.file);
-            const pane = el('div', 'pane');
-            $('#panes').append(pane);
-            const tabBtn = el('div', 'tab');
-            tabBtn.append(el('span', 'tab-title', h.name));
-            const x = el('span', 'tab-x', '×'); tabBtn.append(x);
-            $('#tabs').append(tabBtn);
-            const ta = el('textarea', 'plain-md');
-            ta.value = raw; ta.style.cssText = 'width:100%;height:100%;background:var(--bg);color:var(--fg);border:none;padding:20px;font:14px monospace;resize:none';
-            pane.append(ta);
-            const tab = { file: h.file, title: h.name, pane, tabBtn, dirty: false, plain: ta, isJson: true };
-            tabBtn.onclick = (ev) => { if (ev.target !== x) { const { activate } = require('./app.js') || {}; } };
-            x.onclick = () => { /* closeTab via import */ };
-            state.tabs.set(h.file, tab);
-            activate(h.file);
-          } catch {}
-        }
-      };
-      card.append(openB);
-
-      // คลิกที่ card = เปิด
-      card.addEventListener('click', () => openB.click());
-      results.append(card);
-    }
-  }
-
-  qInput.onkeydown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); doGlobalSearch(qInput.value); }
-    if (e.key === 'Escape') ov.remove();
-  };
-  qInput.focus();
+  const ui = buildSearchUI(body, { onOpen: close });
+  ui.qInput.focus();
+  // อุ่นดัชนีไว้เลยระหว่างผู้ใช้กำลังพิมพ์ — กดค้นครั้งแรกจะได้ไม่ต้องรอ
+  ensureSearchIndex({ includeJson: false }).catch(() => {});
+  return ov;
 }
 
+/** แผงค้นหา (มุมมอง → แผง → ค้นหา) — เนื้อเดียวกับกล่อง ต่างแค่ที่อยู่ */
 export async function renderSearchPanel(host) {
-  if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return; }
-  host.innerHTML = '';
-
+  if (!host) return null;
+  if (!state.root) {
+    host.replaceChildren(el('div', 'k-panel-empty', t('ui.common.cantOpenProject')));
+    return null;
+  }
+  host.replaceChildren();
   host.append(el('div', 'k-dlg-title', t('ui.search.searchProject')));
-
-  const searchRow = el('div', 'k-row');
-  searchRow.style.cssText = 'gap:8px;margin:8px 0';
-  const qInput = el('input', 'k-dlg-input');
-  qInput.type = 'text'; qInput.placeholder = t('ui.search.searchAllFileMd');
-  qInput.style.flex = '1';
-  searchRow.append(qInput);
-
-  const typeRow = el('div', 'k-row');
-  typeRow.style.cssText = 'gap:12px;margin:4px 0 8px;font-size:12px';
-  const mkChk = (label, val, def = true) => {
-    const w = el('label', null);
-    const c = el('input'); c.type = 'checkbox'; c.checked = def; c.value = val;
-    w.append(c, document.createTextNode(' ' + label));
-    typeRow.append(w); return c;
-  };
-  const chkMd = mkChk(t('ui.search.mdSceneNoteMemo'), 'md');
-  const chkJson = mkChk('.json (Wiki/scenes/section)', 'json', false);
-  const chkAll = mkChk(t('ui.search.searchOnlyNameFile'), 'name', false);
-  host.append(searchRow, typeRow);
-
-  const results = el('div', 'k-gsearch-results');
-  results.style.cssText = 'max-height:60vh;overflow-y:auto;min-height:100px;flex:1';
-  host.append(results);
-
-  const status = el('span');
-  status.style.cssText = 'font-size:11.5px;color:var(--dim);margin-top:4px';
-  host.append(status);
-
-  async function doSearch(q) {
-    if (!q.trim()) { results.innerHTML = ''; status.textContent = ''; return; }
-    status.textContent = t('ui.common.busySearch');
-    results.innerHTML = el('div', 'dim', t('ui.search.busySearch')).outerHTML;
-    const hits = [];
-    const ql = q.toLowerCase();
-    const searchNameOnly = chkAll.checked;
-    const includeMd = chkMd.checked;
-    const includeJson = chkJson.checked;
-    try {
-      const searchDir = async (dir) => {
-        const entries = await kapi.listDirs(dir).catch(() => []);
-        for (const name of entries) await searchDir(await kapi.join(dir, name));
-        const files = await kapi.listFiles(dir, '').catch(() => []);
-        for (const f of files) {
-          const ext = f.split('.').pop().toLowerCase();
-          if ((ext === 'md' && includeMd) || (ext === 'json' && includeJson)) {
-            const fp = await kapi.join(dir, f);
-            try {
-              if (searchNameOnly) {
-                if (f.toLowerCase().includes(ql))
-                  hits.push({ file: fp, name: f, matches: [{ line: 0, text: f, ctx: '' }], type: ext });
-              } else {
-                const raw = await kapi.readFile(fp);
-                const lines = raw.split('\n');
-                for (let i = 0; i < lines.length; i++) {
-                  const idx = lines[i].toLowerCase().indexOf(ql);
-                  if (idx >= 0) {
-                    let title = f;
-                    if (ext === 'md') { try { title = parseMdFile(raw).meta.title || f; } catch {} }
-                    hits.push({ file: fp, name: title, type: ext,
-                      matches: [{ line: i + 1, text: lines[i].trim().substring(0, 200), ctx: '' }] });
-                    break;
-                  }
-                }
-              }
-            } catch {}
-          }
-        }
-      };
-      await searchDir(state.root);
-      const grouped = {};
-      for (const h of hits) { if (!grouped[h.file]) grouped[h.file] = h; else grouped[h.file].matches.push(...h.matches); }
-      showResults(Object.values(grouped), ql);
-      status.textContent = tf('ui.search.foundFile', hits.length);
-    } catch (e) {
-      log('error', t('ui.search.searchPanelSearchFail'), e);
-      results.innerHTML = el('div', 'dim', t('ui.search.occurError')).outerHTML;
-      status.textContent = t('ui.search.searchFail');
-    }
-  }
-
-  function showResults(hits, highlight) {
-    results.innerHTML = '';
-    if (!hits.length) { results.append(el('div', 'dim', t('ui.search.notFoundResult'))); return; }
-    for (const h of hits) {
-      const card = el('div', 'k-gsearch-hit');
-      const header = el('div', 'k-gsearch-hit-head');
-      header.append(el('span', 'k-gsearch-hit-name', (h.type === 'md' ? '📄 ' : '📋 ') + h.name));
-      try {
-        const rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file;
-        header.append(el('span', 'k-gsearch-hit-path', rel));
-      } catch {}
-      card.append(header);
-      for (const m of (h.matches || []).slice(0, 3)) {
-        const line = el('div', 'k-gsearch-line');
-        const idx = m.text.toLowerCase().indexOf(highlight);
-        if (idx >= 0) {
-          line.append(document.createTextNode(m.text.slice(0, idx)));
-          const hl = el('span', 'k-gsearch-hl'); hl.textContent = m.text.slice(idx, idx + highlight.length);
-          line.append(hl, document.createTextNode(m.text.slice(idx + highlight.length)));
-        } else { line.textContent = m.text; }
-        card.append(line);
-      }
-      const openB = el('button', 'k-ok k-gsearch-open', t('ui.common.open'));
-      openB.onclick = async (e) => {
-        e.stopPropagation();
-        if (h.type === 'md') { const { openScene } = await import('./app.js'); openScene(h.file, null); }
-        else {
-          const { activate } = await import('./app.js');
-          try {
-            const raw = await kapi.readFile(h.file);
-            const pane = el('div', 'pane'); $('#panes').append(pane);
-            const tabBtn = el('div', 'tab'); tabBtn.append(el('span', 'tab-title', h.name));
-            const x = el('span', 'tab-x', '×'); tabBtn.append(x);
-            $('#tabs').append(tabBtn);
-            const ta = el('textarea', 'plain-md');
-            ta.value = raw; ta.style.cssText = 'width:100%;height:100%;background:var(--bg);color:var(--fg);border:none;padding:20px;font:14px monospace;resize:none';
-            pane.append(ta);
-            const tab = { file: h.file, title: h.name, pane, tabBtn, dirty: false, plain: ta, isJson: true };
-            state.tabs.set(h.file, tab);
-            activate(h.file);
-          } catch {}
-        }
-      };
-      card.append(openB);
-      card.addEventListener('click', () => openB.click());
-      results.append(card);
-    }
-  }
-
-  qInput.onkeydown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); doSearch(qInput.value); }
-  };
-  qInput.focus();
+  const body = el('div', 'k-gsearch-body');
+  host.append(body);
+  const ui = buildSearchUI(body);
+  ensureSearchIndex({ includeJson: false }).catch(() => {});
+  return ui;
 }
-
-// เปิดจากคีย์ลัด
-// คีย์ลัดผูกผ่านตาราง SHORTCUTS ใน app.js (channel 'global-search') แล้ว
-// เดิมผูก listener ของตัวเองที่ Ctrl+Shift+F ซึ่งชนกับ 'focus-mode' ในตาราง → กดทีเดียวยิง 2 คำสั่ง
-export function bindGlobalSearchShortcut() { /* ไม่ใช้แล้ว — คงชื่อไว้กันโค้ดเก่าเรียก */ }

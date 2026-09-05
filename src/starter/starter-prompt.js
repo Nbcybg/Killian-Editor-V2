@@ -10,11 +10,33 @@
 // ไม่แตะ DOM/fs/network → unit test ได้ตรง ๆ
 
 import { t, tf } from '../i18n.js';
-import { genderLabel, introText } from './starter-model.js';
+import { genderLabel, introText, openerText } from './starter-model.js';
 import { filledW } from './starter-steps-def.js';
 import { choiceInstruction } from './starter-choices.js';
+import { expandMentions, promptsText, mentionToken, MENTION_ANY, MENTION_USER }
+  from '../entity-mention.js';
 
-export const PROMPT_VERSION = 1;
+// 1 → 2 = [alpha.122] ใบตัวละครมีตัวอย่างคำพูด/แท็ก/ช่อง Prompt · GM ได้เป้าหมาย+เงื่อนไขจบ
+// 2 → 3 = [alpha.123] โทเคน `{{…}}` + คำสงวน user/character · GM ได้ Mood & Tone
+export const PROMPT_VERSION = 3;
+
+/**
+ * บริบทของการคลายโค้ดสั้น — คำสงวนต้องมีคำแปลกำกับ (โมดูล entity-mention บริสุทธิ์ ไม่รู้จัก i18n)
+ * @param {object} s   starter
+ * @param {object} sc  scenario (ใช้หาว่า `{{user}}` คือใคร)
+ */
+export function mentionCtx(s, sc, userChars) {
+  const cast = (s && s.cast) || [];
+  // ผู้เรียกบางที่รู้ว่าผู้เล่นสวมบทใครดีกว่าตัว `sc` เอง (gmSystem รับมาทาง opts) — ให้ตัวนั้นชนะ
+  const mine = new Set(Array.isArray(userChars) ? userChars : ((sc && sc.userChars) || []));
+  const owned = cast.filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
+  return {
+    // ผู้เล่นคุมหลายตัว = บอกทั้งหมด · ไม่ได้คุมใครเลย = คำสำรอง "ผู้เล่น"
+    user: owned.join(' / '),
+    userLabel: t('ui.starter.mentionUser'),
+    anyLabel: t('ui.starter.mentionAny'),
+  };
+}
 
 /** ตัดข้อความยาวให้พอดีบริบท โดยไม่ตัดกลางคำ */
 export function clip(text, max = 1200) {
@@ -38,7 +60,8 @@ export function tagLine(s) {
  * @param {object} opts  full=true ใส่คำบรรยายเต็ม · false ใส่แค่บรรทัดเดียว (ประหยัด token)
  */
 export function castBlock(s, { full = true, exclude = '' } = {}) {
-  const rows = ((s && s.cast) || []).filter((c) => c && c.name && c.id !== exclude);
+  const all = (s && s.cast) || [];
+  const rows = all.filter((c) => c && c.name && c.id !== exclude);
   if (!rows.length) return '';
   const lines = [t('ui.starter.pCastHead')];
   for (const c of rows) {
@@ -48,6 +71,20 @@ export function castBlock(s, { full = true, exclude = '' } = {}) {
     lines.push(head);
     const body = full ? (c.persona || c.blurb) : (c.blurb || c.persona);
     if (String(body || '').trim()) lines.push('  ' + clip(body, full ? 900 : 200).replace(/\n+/g, ' '));
+    // ── [alpha.122] ของจากโหมดขั้นสูง ──
+    // ส่งเฉพาะตอน full — ใบย่อมีไว้ประหยัดโทเคน ยัดตัวอย่างคำพูดเข้าไปก็ไม่ย่อแล้ว
+    if ((c.tags || []).length) lines.push('  ' + t('ui.starter.pCharTags') + c.tags.join(', '));
+    if (!full) continue;
+    const dlg = String(c.dialogue || '').trim();
+    if (dlg) {
+      lines.push('  ' + t('ui.starter.pCharDialogue'));
+      // โค้ดสั้นต้องคลายเป็นชื่อจริงก่อนถึงโมเดล — โมเดลไม่รู้จัก `{{…}}`
+      for (const ln of clip(expandMentions(dlg, all), 900).split(/\r?\n/)) {
+        if (ln.trim()) lines.push('    ' + ln.trim());
+      }
+    }
+    const pr = promptsText(c.prompts, all);
+    if (pr) for (const ln of clip(pr, 900).split(/\r?\n/)) { if (ln.trim()) lines.push('  · ' + ln.trim()); }
   }
   return lines.join('\n');
 }
@@ -165,16 +202,32 @@ export function scenarioNamePrompt(s, sc) {
  *   - len       ความยาวต่อรอบ ('short'|'medium'|'long')
  */
 export function gmSystem(s, sc, { prev = null, userChars = [], len = 'medium' } = {}) {
+  const cast = (s && s.cast) || [];
   const mine = new Set(userChars || []);
-  const owned = ((s && s.cast) || []).filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
+  const owned = cast.filter((c) => mine.has(c.id)).map((c) => c.name).filter(Boolean);
   const lenRule = { short: t('ui.starter.pGmLenShort'),
                     medium: t('ui.starter.pGmLenMedium'),
                     long: t('ui.starter.pGmLenLong') }[len] || t('ui.starter.pGmLenMedium');
+  const mc = mentionCtx(s, sc, userChars);
+  const ex = (v, max) => {
+    const body = String(v || '').trim();
+    return body ? clip(expandMentions(body, cast, mc), max) : '';
+  };
+  const desc = ex(sc && sc.desc, 1200);
+  const mood = ex(sc && sc.mood, 400);
+  const goal = ex(sc && sc.goal, 400);
+  const cond = ex(sc && sc.conditions, 600);
   return [
     t('ui.starter.pGmRole'),
     starterBlock(s, { full: true }),
     (sc && sc.title) ? t('ui.starter.pScTitle') + sc.title : '',
     String((sc && sc.synopsis) || '').trim() ? t('ui.starter.pScSynopsis') + '\n' + clip(sc.synopsis, 900) : '',
+    // [alpha.122] ช่องขั้นสูงของตอน — GM ต้องรู้ทั้งฉาก เป้าหมาย และ "จบยังไงถึงเรียกว่าสำเร็จ"
+    desc ? t('ui.starter.pScDesc') + '\n' + desc : '',
+    // [alpha.123] โทน = สำนวนและจังหวะการเล่า · แยกจากคำอธิบายซึ่งเป็นข้อเท็จจริงของฉาก
+    mood ? t('ui.starter.pScMood') + '\n' + mood + '\n' + t('ui.starter.pScMoodRule') : '',
+    goal ? t('ui.starter.pScGoal') + '\n' + goal : '',
+    cond ? t('ui.starter.pScCond') + '\n' + cond + '\n' + t('ui.starter.pScCondRule') : '',
     prev ? t('ui.starter.pScPrev') + (prev.title || '') + '\n' + clip(prev.synopsis || '', 600) : '',
     owned.length ? tf('ui.starter.pGmUserChars', owned.join(', ')) : '',
     t('ui.starter.pGmRules'),
@@ -183,8 +236,18 @@ export function gmSystem(s, sc, { prev = null, userChars = [], len = 'medium' } 
   ].filter(Boolean).join('\n\n');
 }
 
-/** ข้อความเปิดฉาก — ใช้ตอนบทสนทนายังว่าง */
+/**
+ * ข้อความเปิดฉาก — ใช้ตอนบทสนทนายังว่าง
+ *
+ * [alpha.122] ผู้ใช้เขียน **บทเปิดเอง** ได้แล้ว (Story Opener) · ถ้ามี ให้ต่อจากอันนั้น
+ * ไม่ใช่แต่งใหม่ทับ — คนเขียนเองเสียเวลากับบทเปิดมากที่สุดเสมอ
+ */
 export function gmOpening(s, sc) {
+  const own = openerText(sc, (s && s.cast) || [], mentionCtx(s, sc));
+  if (own) {
+    return [t('ui.starter.pGmOpenGiven'), clip(own, 1500), t('ui.starter.pGmOpenGivenRule')]
+      .join('\n\n');
+  }
   return [
     t('ui.starter.pGmOpenTask'),
     String((sc && sc.synopsis) || '').trim() ? clip(sc.synopsis, 600) : '',
@@ -249,5 +312,80 @@ export function descPrompt(s) {
     wBlock(s),
     castBlock(s, { full: false }),
     t('ui.starter.pDescRule'),
+  ].filter(Boolean).join('\n\n');
+}
+
+// ───────────────────────── [alpha.122] โหมดขั้นสูง ─────────────────────────
+
+/**
+ * ตัวอย่างคำพูดของตัวละคร (ผู้ใช้ข้อ 2.1)
+ * ขอเป็น **บทพูดล้วน ๆ ไม่มีคำบรรยาย** — จุดประสงค์คือให้โมเดลจับสำเนียง ไม่ใช่จับเนื้อเรื่อง
+ */
+export function charDialoguePrompt(s, ch) {
+  const who = [
+    t('ui.starter.pCharName') + (ch.name || t('ui.starter.pCharNoName')),
+    ch.gender ? t('ui.starter.pCharGender') + genderLabel(ch.gender) : '',
+    String(ch.persona || '').trim() ? t('ui.starter.pCharSoFar') + clip(ch.persona, 700) : '',
+    (ch.tags || []).length ? t('ui.starter.pCharTags') + ch.tags.join(', ') : '',
+  ].filter(Boolean).join('\n');
+  return [
+    t('ui.starter.pDlgTask'),
+    starterBlock(s, { cast: false }),
+    castBlock(s, { full: false, exclude: ch.id }),
+    who,
+    t('ui.starter.pDlgRule'),
+  ].filter(Boolean).join('\n\n');
+}
+
+/** บทเปิดเรื่องของตอน (Story Opener) */
+export function openerPrompt(s, sc) {
+  return [
+    t('ui.starter.pOpenerTask'),
+    starterBlock(s, { full: false }),
+    (sc && sc.title) ? t('ui.starter.pScTitle') + sc.title : '',
+    String((sc && sc.synopsis) || '').trim() ? clip(sc.synopsis, 800) : '',
+    String((sc && sc.desc) || '').trim() ? t('ui.starter.pScDesc') + '\n' + clip(sc.desc, 800) : '',
+    t('ui.starter.pOpenerRule'),
+  ].filter(Boolean).join('\n\n');
+}
+
+/** เป้าหมายของตอน (Story Goal) */
+export function goalPrompt(s, sc) {
+  return [
+    t('ui.starter.pGoalTask'),
+    starterBlock(s, { full: false }),
+    (sc && sc.title) ? t('ui.starter.pScTitle') + sc.title : '',
+    String((sc && sc.synopsis) || '').trim() ? clip(sc.synopsis, 800) : '',
+    t('ui.starter.pGoalRule'),
+  ].filter(Boolean).join('\n\n');
+}
+
+/**
+ * เงื่อนไขจบภารกิจ (Completion Conditions)
+ * บอกโมเดลให้ **คงโค้ดสั้นไว้** — คำตอบจะถูกเก็บลงไฟล์ต่อ ถ้าคลายเป็นชื่อจริง
+ * เปลี่ยนชื่อตัวละครทีหลังแล้วเงื่อนไขจะค้างอยู่กับชื่อเก่า
+ */
+export function conditionsPrompt(s, sc) {
+  const sample = ((s && s.cast) || []).map((c) => c.name).filter(Boolean)[0] || MENTION_ANY;
+  return [
+    t('ui.starter.pCondTask'),
+    starterBlock(s, { full: false }),
+    (sc && sc.title) ? t('ui.starter.pScTitle') + sc.title : '',
+    String((sc && sc.goal) || '').trim() ? t('ui.starter.pScGoal') + '\n' + clip(sc.goal, 400) : '',
+    String((sc && sc.synopsis) || '').trim() ? clip(sc.synopsis, 600) : '',
+    tf('ui.starter.pCondRule', mentionToken(sample),
+       mentionToken(MENTION_ANY), mentionToken(MENTION_USER)),
+  ].filter(Boolean).join('\n\n');
+}
+
+/** อารมณ์และโทนของตอน (Mood & Tone) */
+export function moodPrompt(s, sc) {
+  return [
+    t('ui.starter.pMoodTask'),
+    starterBlock(s, { full: false }),
+    (sc && sc.title) ? t('ui.starter.pScTitle') + sc.title : '',
+    String((sc && sc.synopsis) || '').trim() ? clip(sc.synopsis, 700) : '',
+    String((sc && sc.desc) || '').trim() ? t('ui.starter.pScDesc') + '\n' + clip(sc.desc, 700) : '',
+    t('ui.starter.pMoodRule'),
   ].filter(Boolean).join('\n\n');
 }

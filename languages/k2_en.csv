@@ -2610,6 +2610,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     </div>
     <div class=""k-set-page"" data-p=""auto"">
       <div class=""k-row""><label>{33} {34}<span class=""k-hint"">{35}</span></label><input type=""checkbox"" id=""st-autosync""></div>
+      <div class=""k-row""><label>คลังคำพ้อง/คำตรงข้าม<span class=""k-hint"">เปิดแล้วจะ **ส่งคำที่เลือกออกอินเทอร์เน็ต** เพื่อค้นคำพ้อง · ปิดอยู่ = ใช้คลังไทยในตัวอย่างเดียว</span></label><input type=""checkbox"" id=""st-thesaurus""></div>
       <div class=""k-set-sub k-full"">// [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติสำหรับบทภาพยนตร์</div>
       <div class=""k-row""><label>คำนวณจำนวนหน้าใหม่หลังหยุดพิมพ์<span class=""k-hint"">ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น</span></label><input type=""checkbox"" id=""st-autopag""></div>
       <div class=""k-row""><label>รอหลังหยุดพิมพ์ (วินาที)<span class=""k-hint"">1–60 วินาที ก่อนคำนวณหน้าใหม่ · ยิ่งสั้นยิ่งใช้ CPU มาก</span></label><input type=""number"" id=""st-pagintv"" min=""1"" max=""60"" step=""1"" class=""k-narrow""></div>
@@ -2655,6 +2656,8 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-row""><label>เลือกสีเอง<span class=""k-hint"">สีขอบแผ่น เส้นประ และสีหมึก คำนวณตามให้อัตโนมัติ</span></label><input type=""color"" id=""st-paper-color-hex"" class=""k-narrow""></div>
       <div class=""k-row""><label>เส้นบอกระยะขอบกระดาษ<span class=""k-hint"">เส้นประรอบพื้นที่พิมพ์ในมุมมองจัดหน้า — ครบทั้งสี่ด้านทุกแผ่น</span></label><input type=""checkbox"" id=""st-page-guides""></div>
       <div class=""k-hint k-full"" id=""st-page-info"" style=""margin-top:8px""></div>
+      <div class=""k-set-sub k-full"">การตรวจทานบนจอ</div>
+      <div class=""k-row""><label>ขีดเส้นบอกจุดที่ผิดในบท<span class=""k-hint"">เส้นหยักใต้บรรทัดที่ตัวตรวจรูปแบบทักไว้ · สลับได้จากป้าย ⚠ บนแถบสถานะเหมือนกัน (ไม่มีผลกับไฟล์และการส่งออก)</span></label><input type=""checkbox"" id=""st-sp-errmark""></div>
       <div class=""k-set-sub k-full"">เลขฉาก (Scene Number)</div>
       <div class=""k-row""><label>แสดงเลขฉากข้างหัวฉาก<span class=""k-hint"">เลขจะอยู่ทั้งซ้ายและขวาของบรรทัดหัวฉาก</span></label><input type=""checkbox"" id=""st-sn-show""></div>
       <div class=""k-row""><label>ท้ายเลข<span class=""k-hint"">เช่น ว่าง หรือ "".""</span></label><input type=""text"" id=""st-sn-suffix"" class=""k-narrow""></div>
@@ -2668,6 +2671,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-row""><label>ท้ายเลข</label><input type=""text"" id=""st-pn-suffix"" class=""k-narrow""></div>
       <div class=""k-set-sub k-full"">ต่อเนื่อง (CONTINUED)</div>
       <div class=""k-row""><label>ใส่ CONTINUED อัตโนมัติ<span class=""k-hint"">ใส่ให้เองเมื่อบล็อกถูกหั่นคร่อมหน้า · ปิดแล้วใช้บล็อก &quot;ต่อเนื่อง (ซ้าย/ขวา)&quot; พิมพ์เองได้</span></label><input type=""checkbox"" id=""st-ct-auto""></div>
+      <div class=""k-row""><label>ใส่ได้แม้หน้านั้นไม่มีหัวฉาก<span class=""k-hint"">ปิดอยู่ = ใส่ (CONTINUED) เฉพาะหน้าที่มีหัวฉากอยู่ก่อน (ธรรมเนียมบทถ่ายทำ)</span></label><input type=""checkbox"" id=""st-ct-nohead""></div>
       <div class=""k-set-sub"">[84] กฎการตัดหน้า (widow / orphan)</div>
       <div class=""k-set-grid2"">
         <div class=""k-row""><label>บรรยาย: เหลือท้ายหน้าอย่างน้อย</label><input type=""number"" id=""st-pb-ab"" class=""k-narrow"" min=""0"" max=""20""></div>
@@ -6065,3 +6069,276 @@ ui.aiChatPanel.insertShortcode,Insert shortcode (resolved immediately)
 ui.cmtComment.insertShortcode,Insert shortcode (resolved immediately)
 ui.wiki.insertShortcode,Shortcode
 ui.wiki.insertShortcodeHint,Insert a shortcode (own fields · relationships · other Wiki data · project stats) into the focused field
+ui.aiChatPanel.staleSaveRebased,Stale save detected - rebased onto the latest messages
+ui.aiChatPanel.ragBuildFail,Could not build the AI search index
+ui.aiChatPanel.ragRetrieveFail,Could not retrieve relevant content for the AI
+ui.aiChatPanel.historyTrimmed,- {0} older messages trimmed to fit the model budget -
+ui.aiChatPanel.sendFailed,Could not send the message to the AI
+ui.aiProvider.historyTokens,Chat history budget (tokens)
+ui.aiProvider.historyTokensHint,"0 = automatic (60% of the model limit; 32,000 when unknown)"
+ui.aiSession.onlyRelevant,Only relevant parts
+ui.app.pageGuidesOn,Page guides on
+ui.app.pageGuidesOff,Page guides off
+ui.app.gotoFindPlaceholder,"Type a scene, chapter or page number…"
+ui.app.gotoFindNone,No matches
+ui.app.spErrMarkToggle,Show error marks in the script
+ui.app.spErrMarkOn,Script error marks on
+ui.app.spErrMarkOff,Script error marks off
+ui.app.spellReplaced,"Replaced ""{0}"" with ""{1}"""
+ui.app.spellReplaceFail,Could not replace the word
+ui.app.autosaveFail,Auto-save failed: 
+ui.app.autosaveRunN,Auto-saved {0} of {1} files
+ui.app.recentBrokenAsk,Cannot open this project - the folder no longer exists: {0}
+ui.app.recentBrokenRemove,Remove from recents
+ui.app.recentBrokenKeep,Keep it
+ui.app.recentBrokenRemoved,Removed the missing project from recents
+ui.app.wordCountRebuilt,Recounted words in {0} scenes
+ui.tree.duplicateFail,Could not duplicate
+ui.tree.failedN,{0} failed
+ui.tree.moveFail,Could not move
+ui.tree.draftLabel,Draft
+ui.tree.draftPickHint,Choose which draft the project tree shows
+ui.tree.draftSwitched,"Switched to draft ""{0}"""
+ui.app.wordCountSyncFail,Could not sync the word count with the file
+ui.app.closeTabDirtyAsk,"""{0}"" has unsaved changes. What now?"
+ui.app.closeTabSave,Save and close
+ui.app.closeTabDiscard,Close without saving
+ui.app.closeAllDirtyAsk,{0} tabs have unsaved changes
+ui.app.navBookFail,Could not read the whole-book outline
+ui.app.navWholeBook,Whole book
+ui.app.navWholeBookHint,Switch between this scene outline and the whole book
+ui.app.printNoTab,No document open to print
+ui.app.printFail,Printing failed
+ui.app.printCancelled,Printing cancelled
+ui.app.printSent,Sent to the printer
+ui.app.spElementScriptOnly,Element types only apply to screenplays
+ui.app.selectAllNeedEditor,Put the cursor in the editor first
+ui.app.spellSuggestHead,Suggestions
+ui.app.spellNoSuggest,No suggestions
+ui.app.spellIgnoreOnce,"Ignore ""{0}"" once"
+ui.app.spellIgnoredOnce,"Ignored ""{0}"" once"
+ui.thes.selectWordFirst,Select a word first
+ui.worldAutoLink.sceneGone,That scene no longer exists
+ui.plannerProps.needBoard,No planner board is open
+ui.plannerProps.openBoard,Open the planner
+ui.autoTaskEvent.renameAsk,"Rename ""{0}"" to ""{1}"" everywhere it is referenced?"
+ui.autoTaskEvent.renameGo,Rename everywhere
+ui.autoTaskEvent.renameSkipped,Renamed the event only
+ui.autoTaskEvent.renameNoHit,Nothing referenced the old name
+ui.color.presets,Presets
+ui.color.saved,Saved
+ui.color.recent,Recently used
+ui.color.wheel,Pick a colour
+ui.color.use,Use
+ui.color.save,Save colour
+ui.color.saveHint,Add or remove this colour from your saved set
+ui.color.clear,Clear colour
+ui.color.none,None yet
+ui.color.proseOnly,Text colour works in novel mode only
+ui.color.ink,Ink black
+ui.color.gray,Grey
+ui.color.brown,Brown
+ui.color.red,Red
+ui.color.orange,Orange
+ui.color.gold,Gold
+ui.color.green,Green
+ui.color.blue,Blue
+ui.color.purple,Purple
+ui.color.pink,Pink
+ui.drafts.renameDraftTo,"Renamed draft ""{0}"" to ""{1}"""
+ui.exportBlog.scope,Scope
+ui.exportBlog.scopeAll,Whole project
+ui.exportBlog.preview,Preview
+ui.exportBlog.previewTitle,Blog export preview
+ui.exportBlog.previewMeta,{0} scenes will be exported
+ui.exportBlog.skippedN,{0} skipped
+ui.xhub.needScriptOnly,This format only works with screenplays
+ui.xhub.previewIsPlain,The preview is plain text; the real file keeps its formatting
+ui.pdf.colorMode,Colour mode
+ui.pdf.colorModeMono,Black and white
+ui.pdf.colorModeColor,Colour
+ui.pdf.colorModeHint,Black and white follows shooting-script convention; colour is for reading copies
+ui.pdf.pageNumbersOnly,Print page numbers
+ui.pdf.numbersWinHint,This box wins over the script format setting
+ui.pdf.sceneNumbersOnly,Print scene numbers
+ui.search.syntaxHint,Supports AND · OR · NOT and field: (e.g. title:forest NOT rain)
+ui.search.lineNo,Line 
+ui.search.indexedN,{0} files indexed
+ui.home.brokenNoMeta,No project file (project.khn.json)
+ui.home.brokenUnreadable,Could not read the project folder
+ui.home.brokenTitle,Cannot open
+ui.home.brokenRemove,Remove from list
+ui.home.revealInOS,Show this folder in the file manager
+ui.home.copyPath,Copy the folder path
+ui.home.pathCopied,Path copied
+ui.importSp.previewTitle,Import preview
+ui.importSp.previewEmpty,No script content was found in this file
+ui.importSp.asNewScene,Create as a new scene
+ui.importSp.replaceTab,Replace the open tab
+ui.kanban.draftPick,Choose which draft the board shows
+ui.panel.networkTitle,Story network
+ui.panel.plannerTitle,Planner
+ui.worldAutoLink.panelTitle,Mentions
+ui.worldAutoLink.panelDesc,Every scene that mentions each entity
+ui.paper.colorWhite,White
+ui.paper.colorCream,Cream
+ui.paper.colorSepia,Sepia
+ui.paper.colorGray,Light grey
+ui.paper.colorMint,Mint
+ui.paper.colorDark,Dark
+ui.trash.purgeAsk,Permanently delete {0} items that have been in the bin over {1} days?
+ui.trash.purgeGo,Delete permanently
+ui.trash.purgeKept,Kept {0} items in the bin
+ui.scene.delScene2,Deleted scene {0}
+ui.scene.delChapter2,Deleted chapter {0}
+ui.scene.addScene,Added scene 
+ui.notes.scratchPh,Jot anything here - it stays out of the manuscript
+ui.notes.quickNotePh,Notes for this writing session…
+ui.starter.castNeedName,This character still needs a name
+ui.starter.charLinkedFromWiki,"Linked ""{0}"" to the wiki"
+ui.starter.fShortcode,Shortcode
+ui.starter.fShortcodePlaceholder,Leave empty to use the character name
+ui.starter.fShortcodePreview,Type {0} in dialogue to refer to this character
+ui.starter.fShortcodeReserved,{0} is already taken - pick another
+ui.starter.fDialogue,Sample dialogue
+ui.starter.fDialoguePlaceholder,Write how they really talk - use {0} for whoever they speak to
+ui.starter.fDialogueHint,"The more distinctive the voice, the better the AI matches it"
+ui.starter.aiWriteDialogue,Let the AI draft dialogue
+ui.starter.fCharTags,Character tags
+ui.starter.fCharTagsPlaceholder,"Comma separated, e.g. lead, detective"
+ui.starter.fPrompts,Character prompts
+ui.starter.fPromptsHint,Rules the AI should follow whenever it writes this character
+ui.starter.chatHasOpener,This scene already has an opener
+ui.starter.cvOpenAsk,"Created {0} scenes in ""{1}"". Open it now?"
+ui.starter.cvOpenNow,Open now
+ui.starter.cvStayHere,Stay here
+ui.starter.mentionAny,Anyone
+ui.starter.mentionUser,The player
+ui.starter.mentionInsert,Insert
+ui.starter.mentionChipHint,Insert a reference to {0}
+ui.starter.mentionAnyHint,Stands for any character in the scene
+ui.starter.mentionUserHint,Stands for the player or reader
+ui.starter.mentionNoCast,No characters to reference yet
+ui.starter.mentionUnknown,References unknown names: {0}
+ui.starter.mentionHint,Use {0} for any character and {1} for the player
+ui.starter.promptAdd,Add a prompt
+ui.starter.promptEmpty,No prompts yet
+ui.starter.promptKeyPlaceholder,"Topic, e.g. tone of voice"
+ui.starter.promptValPlaceholder,What the AI should do or avoid
+ui.starter.promptDel,Delete this prompt
+ui.starter.modeBasic,Basic
+ui.starter.modeBasicHint,A few fields and you are writing
+ui.starter.modeAdv,Advanced
+ui.starter.modeAdvHint,"Full scene controls: description, mood, goal and conditions"
+ui.starter.modeHint,Switch modes any time - nothing you typed is lost
+ui.starter.finishGoFix,Go and fix it
+ui.starter.autoLinkAsk,"Also create a wiki page for ""{0}""?"
+ui.starter.autoLinkGo,Create it
+ui.starter.pCharTags,Tags: 
+ui.starter.pCharDialogue,How they speak:
+ui.starter.pScDesc,Scene description:
+ui.starter.pScMood,Scene mood and tone:
+ui.starter.pScMoodRule,Let this tone live in the atmosphere and pacing - never state it outright.
+ui.starter.pScGoal,Goal of this scene:
+ui.starter.pScCond,Conditions to follow:
+ui.starter.pScCondRule,"Follow every condition; if two clash, the earlier one wins."
+ui.starter.pGmOpenGiven,The opener the author already wrote:
+ui.starter.pGmOpenGivenRule,Keep this opener as-is; continue from it rather than rewriting.
+ui.starter.pDlgTask,Task: write two or three lines of sample dialogue for this character.
+ui.starter.pDlgRule,Dialogue only - no narration and no speaker labels.
+ui.starter.pOpenerTask,Task: write the opening of this scene.
+ui.starter.pOpenerRule,"One paragraph at most, ending on a beat that pulls the reader on."
+ui.starter.pGoalTask,Task: write the goal of this scene.
+ui.starter.pGoalRule,One sentence saying where this scene must take the story.
+ui.starter.pCondTask,Task: list the conditions for this scene.
+ui.starter.pCondRule,One short item per line. Refer to characters like {0}; use {1} for anyone and {2} for the player.
+ui.starter.pMoodTask,Task: describe the mood and tone of this scene.
+ui.starter.pMoodRule,"A few words or short phrases, two lines at most."
+ui.starter.rtUndo,Undo
+ui.starter.rtRedo,Redo
+ui.starter.rtStrike,Strikethrough
+ui.starter.rtH2,Heading 2
+ui.starter.rtH3,Heading 3
+ui.starter.rtPara,Normal paragraph
+ui.starter.rtQuote,Block quote
+ui.starter.rtListNum,Numbered list
+ui.starter.rtRule,Horizontal rule
+ui.starter.rtLink,Insert a link
+ui.starter.rtLinkNeedSel,Select the text to link first
+ui.starter.rtLinkAsk,Link to where?
+ui.starter.scAdvBadge,{0} advanced fields set
+ui.starter.scThumb,Scene thumbnail
+ui.starter.scThumbHint,Used as the scene cover in lists
+ui.starter.scAdvHead,Advanced settings
+ui.starter.scAdvHint,These fields go straight to the AI - use {0} for anyone and {1} for the player
+ui.starter.scDesc,Scene description
+ui.starter.scDescPlaceholder,"Where, when, and who is there (you can reference with {0})"
+ui.starter.scMood,Mood and tone
+ui.starter.scMoodPlaceholder,"e.g. tense, hushed, something is off"
+ui.starter.scMoodHint,The AI weaves this into the atmosphere instead of stating it
+ui.starter.scOpener,Scene opener
+ui.starter.scOpenerPlaceholder,The first thing the reader sees (you can reference with {0})
+ui.starter.scOpenerHint,Leave it empty and the AI will draft one
+ui.starter.aiWriteOpener,Let the AI draft the opener
+ui.starter.scOpenerImage,Opener image
+ui.starter.scOpenerImageHint,Shown alongside the opener during play
+ui.starter.scGoal,Scene goal
+ui.starter.scGoalPlaceholder,Where this scene must take the story (you can reference with {0})
+ui.starter.scCond,Scene conditions
+ui.starter.scCondPlaceholder,"One per line, e.g. {0} must not use real names · {1} decides whether to believe it"
+ui.starter.scCondHint,The AI follows every item; the earlier one wins when they clash
+ui.wiki.shortcode,Shortcode
+ui.wiki.shortcodePlaceholder,Leave empty to use the entity name
+ui.wiki.shortcodePreview,Type {0} anywhere to reference this entity
+ui.wiki.tags,Tags
+ui.wiki.tagsPlaceholder,Comma separated
+ui.wiki.prompts,AI prompts
+ui.wiki.addPrompt,Add a prompt
+ui.wiki.promptsHint,Rules the AI should follow whenever it writes about this entity
+ui.wiki.promptKeyPlaceholder,"Topic, e.g. tone of voice"
+ui.wiki.promptValPlaceholder,What the AI should do or avoid
+ui.wiki.delPrompt,Delete this prompt
+ui.wiki.secTitlePh,Section title
+ui.worldAutoLink.rebuild,Rebuild the index
+ui.worldAutoLink.filterPlaceholder,Filter by name…
+ui.worldAutoLink.onlyOrphan,Only ones never mentioned
+ui.worldAutoLink.noRows,Nothing matches
+ui.worldAutoLink.inNScenes,in {0} scenes
+ui.worldAutoLink.zero,never mentioned
+ui.worldAutoLink.summaryN,{0} entries · {1} never mentioned
+ui.menu.importScrivenerScrivI,Import from Scrivener (.scriv)… ({0}+{1}+{2}+I)
+ui.menu.textCaseCycleU,Cycle letter case ({0}+{1}+U)
+ui.menu.thesaurusT,Thesaurus… ({0}+{1}+{2}+T)
+ui.menu.backlinksPanelB,🔗 Mentions ({0}+{1}+{2}+B)
+ui.html.winMin,Minimise
+ui.html.winMax,Maximise
+ui.html.winClose,Close
+ui.html.tbColor,Text colour
+ui.html.tbOutlinePanel,Outline
+ui.html.tbNetwork,Story network
+ui.html.findClose,Close the find bar
+ui.shortcuts.cheatsheet,Keyboard shortcut cheat sheet
+ui.shortcuts.textCaseCycle,Cycle letter case
+ui.shortcuts.panelBacklinks,Mentions panel
+ui.shortcuts.thesaurus,Thesaurus
+ui.shortcuts.importScrivener,Import from Scrivener
+ui.xname.label,Export file name
+ui.xname.hint,Shortcodes work here: [title] [author] [book] [chapter] [date:iso] [words] · a typo shows up in the preview instead of vanishing
+ui.xname.preview,Will be saved as: 
+ui.xname.presetPick,— Pick a preset —
+ui.xname.savePreset,Save as preset
+ui.xname.savePresetHint,Keep this template for reuse (same name overwrites)
+ui.xname.delPreset,Delete preset
+ui.xname.delPresetAsk,Delete this file-name preset: 
+ui.xname.askPresetName,What should this preset be called?
+ui.xname.ctxFail,Could not read the shortcode context for the file name
+ui.xname.pTitle,Title
+ui.xname.pTitleDate,Title + date
+ui.xname.pTitleBook,Title + book
+ui.xname.pTitleChapter,Title + chapter
+ui.xname.pAuthorTitle,Author + title
+ui.xname.pDraftDate,Draft + date + word count
+ui.app.exportAlignFail,Could not carry the scene alignment into the export
+ui.xhub.autoKind,Detected from the source files: {0}
+ui.xname.openAfter,Open the file when the export finishes
+ui.xname.openFail,Could not open the exported file

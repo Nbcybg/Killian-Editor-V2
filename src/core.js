@@ -247,6 +247,8 @@ export const GLOBAL_DEFAULTS = {
   // [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า — ครบสี่ด้านทุกแผ่น · เริ่มต้นปิด
   pageGuides: false,
   autoSync: false, thesaurus: false, focusDim: 0.3,
+  // [alpha.132 ข้อ 9] จานสีตัวอักษรของผู้ใช้ — { saved:[รหัสสี], recent:[รหัสสี] } (ค่า global)
+  textColors: { saved: [], recent: [] },
   // [alpha.60r2 ข้อ 4] เสียงพิมพ์ดีด — เดิมต้องเปิดสองสวิตช์ (typeSound + typeSoundAlways)
   // ผู้ใช้เปิด "เสียงพิมพ์ดีด" แล้วเงียบสนิท เพราะ typeSoundAlways ค่าเริ่มต้นเป็น false
   // ตอนนี้เป็นสวิตช์เดียว + โหมด: 'always' = ดังตลอด (ค่าเริ่มต้น) · 'typewriter' = เฉพาะโหมดเครื่องพิมพ์ดีด
@@ -286,6 +288,8 @@ export const PROJECT_DEFAULTS = {
   spForceCase: true,
   spAutoCapitalize: true, spAutoCorrectI: true,
   spShowFormat: false, spCheckBeforeExport: true, spLineLimits: null,
+  // [alpha.127] เส้นขอบเหลือง/แดงบนบล็อกที่ตัวตรวจบทแจ้ง — เปิดเป็นค่าเริ่มต้น (พฤติกรรมเดิม .124)
+  spErrorMarks: true,
   spSceneNumbers: null, spPageNumbers: null,
   spContinued: null, spLineHeight: 1, spPageGap: 28,
   // รูปแบบนิยาย (prose)
@@ -387,6 +391,9 @@ export const SCALE_MIN = 0.5, SCALE_MAX = 2.5;
 export const UI_SCALE_MIN = 0.75, UI_SCALE_MAX = 2.0;
 
 // ---- ค่าคงที่ที่หลายโมดูลใช้ร่วม (pure — ไม่มี dependency) ----
+/* i18n-skip: ค่าที่เขียนลง scenes.json แล้วอ่านกลับด้วยค่าเดิม — แปลตอนวาดด้วย dataLabel()
+   [alpha.132] ย้ายจากช่วงเลขบรรทัดใน i18n-classify.cjs มาเป็นเครื่องหมายในซอร์ส (กฎ alpha.116
+   ข้อ 6) — ของเดิมพังทันทีที่มีใครแทรกบรรทัดเหนือขึ้นไป ซึ่งเกิดขึ้นจริงในรอบนี้ */
 export const SCENE_STATUSES = ['โครงร่าง', 'กำลังเขียน', 'เขียนเสร็จ', 'ตรวจแล้ว', 'เก็บถาวร'];
 export const SCENE_COLORS = [
   ['แดง', '#d9575e'], ['ส้ม', '#d97757'], ['เหลือง', '#d9b757'],
@@ -397,6 +404,7 @@ export const STATUS_COLORS = {
   'โครงร่าง': '#8a8f98', 'กำลังเขียน': '#d97757', 'เขียนเสร็จ': '#5f9fd9',
   'ตรวจแล้ว': '#6fae6f', 'เก็บถาวร': '#a97fd0',
 };
+/* /i18n-skip */
 export const DEFAULT_STATUS_COLOR = '#8a8f98';
 /**
  * ป้ายสำหรับ "ค่าที่เก็บในไฟล์งาน" (สถานะฉาก · ชื่อสี) — [alpha.76 · ปรับคีย์ .77]
@@ -666,9 +674,11 @@ export const SHORTCUTS = [
   // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium)
   ['Backquote', true, true, 'dev-console'],
   // [alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType)
-  // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ) → ฝั่งขวาใช้ Ctrl+Shift+[
+  // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ)
+  // [alpha.124 ข้อ 6] **สลับให้ตรงทิศ**: `[` ชี้ซ้าย = ซ่อนฝั่งซ้าย · `]` ชี้ขวา = ซ่อนฝั่งขวา
+  // เดิมกลับด้านกันมาตั้งแต่ .66r3 (เลือกตามคีย์ที่ว่าง ไม่ได้เลือกตามความหมาย) — ผู้ใช้กดผิดทุกครั้ง
   ['Backslash', true, false, 'panels-hide-all'],
-  ['BracketLeft', true, true, 'panels-hide-right'],
+  ['BracketLeft', true, true, 'panels-hide-left'],
   // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
   ['KeyY', true, true, 'workspace-menu'],
 
@@ -680,7 +690,7 @@ export const SHORTCUTS = [
   ['KeyN', true, true, 'new-from-template'],
   ['Period', true, true, 'goto-page'],
   ['Comma', true, true, 'goto-scene'],
-  ['BracketRight', true, true, 'panels-hide-left'],   // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งขวา)
+  ['BracketRight', true, true, 'panels-hide-right'],  // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งซ้าย)
   ['KeyR', 'ctrl+alt', false, 'line-numbers'],
   // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
   ['Digit1', 'ctrl+alt', false, 'chapter'],
@@ -696,6 +706,23 @@ export const SHORTCUTS = [
   ['Equal', true, true, 'fmtbar-lock'],
   // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
   ['KeyS', 'ctrl+alt', false, 'save-all'],
+  // [alpha.124 ข้อ 7] "ปรับขั้นตอนส่งออก" มีชื่อใน SHORTCUT_LABELS มาตลอด แต่ไม่เคยมีแถวในตาราง
+  // → หน้า ตั้งค่า → ปุ่มลัด ไม่เคยแสดงรายการนี้เลย และตั้งเองก็ไม่ได้
+  ['KeyX', 'ctrl+alt', false, 'compile'],
+  // [alpha.124 ข้อ 3] ตารางคีย์ลัด (Cheatsheet) — เดิมผูก listener เองที่ Ctrl+Shift+/
+  // ซึ่ง **ชนกับ `fmtbar-here`** แล้วยิงทั้งคู่ · `?` เปล่า ๆ ยังเปิดได้เหมือนเดิม
+  ['Slash', 'ctrl+alt', false, 'cheatsheet'],
+  // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Sentence → lower → UPPER → …)
+  ['KeyU', 'ctrl+alt', false, 'text-case-cycle'],
+  // ══ [alpha.125 ข้อ G · ข้อ H] Ctrl+Alt+Shift — ชั้นที่ยังว่างทั้งชั้น ══
+  //
+  // Ctrl+Alt+<ตัวอักษร> ถูกใช้ครบทั้ง 26 ตัวแล้วตั้งแต่ alpha.124 (แผงมี 29 ตัว)
+  // ชั้นถัดไปที่ยังว่างสนิทคือเติม Shift เข้าไป — ตัวจับคีย์รองรับอยู่แล้ว
+  // (`needsAlt(needCtrl) === e.altKey` + เทียบ `needShift` แยก) และ `formatShortcut`
+  // ก็แสดงเป็น `Ctrl+Alt+Shift+B` ได้ถูกต้องอยู่แล้ว
+  ['KeyB', 'ctrl+alt', true, 'toggle-panel', 'backlinks'],
+  ['KeyT', 'ctrl+alt', true, 'thesaurus'],
+  ['KeyI', 'ctrl+alt', true, 'import-scrivener'],
   // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
   ['KeyD', 'ctrl+alt', false, 'toggle-panel', 'dashboard'],
   ['KeyT', 'ctrl+alt', false, 'toggle-panel', 'timeline'],
@@ -768,6 +795,11 @@ export const SHORTCUT_LABELS = {
   'line-numbers': 'shortcuts.lineNumbers',
   'delete-line': 'ui.shortcuts.deleteLine',
   'gallery': 'shortcuts.gallery',
+  'cheatsheet': 'ui.shortcuts.cheatsheet',
+  'text-case-cycle': 'ui.shortcuts.textCaseCycle',
+  'toggle-panel:backlinks': 'ui.shortcuts.panelBacklinks',
+  'thesaurus': 'ui.shortcuts.thesaurus',
+  'import-scrivener': 'ui.shortcuts.importScrivener',
   'sp-element:parenthetical': 'shortcuts.spParenthetical', 'sp-element:dialogue': 'shortcuts.spDialogue',
   'sp-element:transition': 'shortcuts.spTransition', 'sp-element:shot': 'shortcuts.spShot',
   'sp-element:act-break': 'shortcuts.spActBreak', 'sp-element:note': 'shortcuts.spNote',
@@ -825,14 +857,17 @@ export const SHORTCUT_LABELS = {
 export const SHORTCUT_CATS = [
   { key: 'file', labelKey: 'ui.shortcuts.catFile',
     ids: ['save', 'save-as', 'save-all', 'new-project', 'open-project', 'print', 'export-hub',
-          'export-blog', 'close-tab', 'close-all-tabs', 'new-from-template'] },
+          'export-blog', 'close-tab', 'close-all-tabs', 'new-from-template', 'compile',
+          'import-scrivener'] },
   { key: 'edit', labelKey: 'ui.shortcuts.catEdit',
     ids: ['editor-undo', 'editor-redo', 'find', 'global-search', 'quick-open', 'goto',
-          'goto-page', 'goto-scene', 'select-scene', 'delete-line', 'nbsp', 'insert-image'] },
+          'goto-page', 'goto-scene', 'select-scene', 'delete-line', 'nbsp', 'insert-image',
+          'thesaurus'] },
   { key: 'format', labelKey: 'ui.shortcuts.catFormat',
     ids: ['fmt:bold', 'fmt:italic', 'fmt:underline', 'fmt:strike', 'fmt:heading:1', 'fmt:heading:2',
           'fmt:heading:3', 'fmt:paragraph', 'fmt:ul', 'fmt:ol', 'fmt:clear',
-          'fmt:align:left', 'fmt:align:center', 'fmt:align:right', 'fmt:align:justify'] },
+          'fmt:align:left', 'fmt:align:center', 'fmt:align:right', 'fmt:align:justify',
+          'text-case-cycle'] },
   { key: 'script', labelKey: 'ui.shortcuts.catScript',
     ids: ['toggle-format', 'sp-element:parenthetical', 'sp-element:dialogue', 'sp-element:transition',
           'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
@@ -852,8 +887,10 @@ export const SHORTCUT_CATS = [
           // [alpha.116 ข้อ 7] เก้าตัวที่เคยตกหล่น
           'toggle-panel:ai-hub', 'toggle-panel:ai-chat', 'toggle-panel:dlgb',
           'toggle-panel:starter', 'toggle-panel:tree', 'toggle-panel:outline',
-          'toggle-panel:notes', 'toggle-panel:log', 'toggle-panel:search'] },
-  { key: 'other', labelKey: 'ui.shortcuts.catOther', ids: ['settings', 'dev-console'] },
+          'toggle-panel:notes', 'toggle-panel:log', 'toggle-panel:search',
+          // [alpha.125 ข้อ G]
+          'toggle-panel:backlinks'] },
+  { key: 'other', labelKey: 'ui.shortcuts.catOther', ids: ['settings', 'dev-console', 'cheatsheet'] },
 ];
 
 /** หมวดของคีย์ลัดหนึ่งรายการ — ไม่รู้จัก = 'other' */

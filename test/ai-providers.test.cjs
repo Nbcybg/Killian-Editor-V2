@@ -307,8 +307,101 @@ const check = (name, cond, extra) => {
   check('[ประวัติ] ตัดประวัติเก่าทิ้งเมื่อเกินงบ', trimmed.length < 50 && trimmed.length > 0, trimmed.length);
   check('[ประวัติ] เก็บข้อความล่าสุดไว้เสมอ',
         trimmed[trimmed.length - 1].content === big.messages[big.messages.length - 1].text);
-  check('[ประวัติ] อย่างน้อย 1 ข้อความเสมอ แม้งบไม่พอ',
-        S.chatMessages(big, { maxTokens: 1 }).length === 1);
+  check('[ประวัติ] เก็บท้ายสุดไว้เสมอแม้งบไม่พอ (HISTORY_KEEP_LAST)',
+        S.chatMessages(big, { maxTokens: 1 }).length === S.HISTORY_KEEP_LAST,
+        S.chatMessages(big, { maxTokens: 1 }).length);
+  check('[ประวัติ] keepLast:1 = อย่างน้อย 1 ข้อความ',
+        S.chatMessages(big, { maxTokens: 1, keepLast: 1 }).length === 1);
+
+  // [alpha.126 ข้อ 1] งบเดิมตายตัว 6,000 token → คุยไม่กี่รอบ AI ก็ลืมต้นบทสนทนาแล้วตอบมั่ว
+  check('[งบประวัติ] ไม่รู้ขีดจำกัด + ไม่ตั้งเอง = ค่าเริ่มต้น',
+        S.historyBudget(S.newSession(), {}) === S.DEFAULT_HISTORY_TOKENS);
+  check('[งบประวัติ] ค่าเริ่มต้นต้องใหญ่กว่า 6,000 ของเดิมมาก',
+        S.DEFAULT_HISTORY_TOKENS >= 32000, S.DEFAULT_HISTORY_TOKENS);
+  check('[งบประวัติ] ผู้ใช้ตั้งเองชนะทุกอย่าง',
+        S.historyBudget(S.newSession({ contextLimit: 200000 }), { historyTokens: 9000 }) === 9000);
+  check('[งบประวัติ] รู้ขีดจำกัดของโมเดล = ใช้ 60% ของขีดจำกัด',
+        S.historyBudget(S.newSession({ contextLimit: 200000 }), {}) === 120000,
+        S.historyBudget(S.newSession({ contextLimit: 200000 }), {}));
+  // contextLimit เป็นแค่ "ขั้นต่ำที่รู้ว่ารับไหว" (เดาจากยอดที่ใช้จริง แล้วขยับขึ้นอย่างเดียว)
+  // → ห้ามเอามาหดงบต่ำกว่าค่าเริ่มต้น ไม่งั้นคุยรอบแรกสั้น ๆ = เดาเป็น 8,192 → งบ 4,915 (แย่กว่าเดิม)
+  check('[งบประวัติ] ขีดจำกัดที่เดาได้ต่ำ ต้องไม่หดงบลงต่ำกว่าค่าเริ่มต้น',
+        S.historyBudget(S.newSession({ contextLimit: 8192 }), {}) === S.DEFAULT_HISTORY_TOKENS,
+        S.historyBudget(S.newSession({ contextLimit: 8192 }), {}));
+  check('[งบประวัติ] historyTokens ที่เป็นขยะ = ตกกลับไปอัตโนมัติ',
+        S.historyBudget(S.newSession(), { historyTokens: 'abc' }) === S.DEFAULT_HISTORY_TOKENS &&
+        S.historyBudget(S.newSession(), { historyTokens: -5 }) === S.DEFAULT_HISTORY_TOKENS);
+
+  // ต้องบอกได้ว่าตัดไปกี่ข้อความ — UI เอาไปขึ้นป้ายให้ผู้ใช้เห็น
+  const bm = S.buildChatMessages(big, { maxTokens: 500 });
+  check('[ประวัติ] buildChatMessages บอกจำนวนที่ตัดทิ้ง',
+        bm.dropped === 50 - bm.messages.length && bm.dropped > 0, bm.dropped);
+  check('[ประวัติ] งบใหญ่พอ = ไม่ตัดเลย (dropped = 0)',
+        S.buildChatMessages(big, { maxTokens: 1e9 }).dropped === 0);
+  check('[ประวัติ] งบใหญ่พอ = ส่งครบทุกข้อความ',
+        S.buildChatMessages(big, { maxTokens: 1e9 }).messages.length === 50);
+  // งบ 6,000 แบบเดิมกับบทสนทนาไทยยาวปกติ (40 ข้อความ × 800 ตัวอักษร ≈ 10,700 token)
+  // ตัดทิ้งไปกว่าครึ่ง โดยผู้ใช้ไม่รู้ตัว — นี่คืออาการ "มันไม่อ่านแชทเลย มั่วตลอด"
+  let real = S.newSession();
+  for (let i = 0; i < 40; i++) real = S.addMessage(real, S.newMessage(i % 2 ? 'assistant' : 'user', 'ก'.repeat(800)));
+  const oldBudget = S.buildChatMessages(real, { maxTokens: 6000 });
+  const newBudget = S.buildChatMessages(real, { maxTokens: S.DEFAULT_HISTORY_TOKENS });
+  check('[ประวัติ] งบเดิม 6,000 ตัดบทสนทนาไทยยาวปกติทิ้งเกือบครึ่ง',
+        oldBudget.dropped > 10 && oldBudget.messages.length < 40, oldBudget.dropped);
+  check('[ประวัติ] งบใหม่ส่งบทสนทนาชุดเดียวกันครบทั้งหมด',
+        newBudget.dropped === 0 && newBudget.messages.length === 40, newBudget.dropped);
+  // ผลคำสั่งที่ป้อนกลับ (role user) ต้องติดไปด้วย ไม่งั้นโมเดลสั่งคำสั่งเดิมซ้ำ
+  let withTool = S.newSession();
+  withTool = S.addMessage(withTool, S.newMessage('user', 'ลบฉากที่ 3'));
+  withTool = S.addMessage(withTool, S.newMessage('assistant', 'สั่งแล้ว'));
+  withTool = S.addMessage(withTool, S.newMessage('user', 'ผลคำสั่ง: สำเร็จ', { toolResult: true }));
+  check('[ประวัติ] ผลคำสั่งที่ป้อนกลับติดไปกับประวัติด้วย',
+        S.buildChatMessages(withTool).messages.length === 3);
+
+  // [alpha.129 ข้อ 4] พาร์ส Markdown ของคำตอบโมเดล (ฝั่ง UI เอาไปสร้าง DOM node เอง)
+  {
+    const md = S.parseChatMarkdown([
+      '## หัวข้อ',
+      'ย่อหน้า **หนา** และ *เอียง* และ `โค้ด`',
+      '',
+      '- ข้อหนึ่ง',
+      '- ข้อสอง',
+      '',
+      '1. หนึ่ง',
+      '2. สอง',
+      '',
+      '> คำพูดยกมา',
+      '',
+      '```js',
+      'const a = 1;',
+      'if (a < 2) {}',
+      '```',
+      '---',
+    ].join('\n'));
+    const types = md.map((b) => b.type).join(',');
+    check('[md] ได้บล็อกครบทุกชนิดตามลำดับ',
+          types === 'h,p,ul,ol,quote,code,hr', types);
+    check('[md] หัวข้อรู้ระดับ', md[0].level === 2);
+    check('[md] รายการรวมบรรทัดติดกันเป็นก้อนเดียว',
+          md[2].items.length === 2 && md[3].items.length === 2);
+    const code = md.find((b) => b.type === 'code');
+    check('[md] โค้ดบล็อกเก็บภาษาและเนื้อครบทุกบรรทัด',
+          code.lang === 'js' && code.text === 'const a = 1;\nif (a < 2) {}', JSON.stringify(code));
+    const inl = md[1].parts.map((x) => x.t).join(',');
+    check('[md] ในย่อหน้าแยกตัวหนา/เอียง/โค้ดออกจากตัวอักษรธรรมดา',
+          inl.includes('b') && inl.includes('i') && inl.includes('code'), inl);
+    // ทุกชิ้นเป็นข้อความล้วน → ฝั่ง UI สร้าง textNode ได้ = แท็กปลอมกลายเป็นตัวอักษร ไม่ใช่ HTML
+    const evil = S.parseChatMarkdown('![x](y" onerror="alert(1)) และ <img src=z onerror=alert(1)>');
+    const flat = evil.flatMap((b) => b.parts || []).map((x) => x.v).join('');
+    check('[md] แท็ก HTML ในคำตอบโมเดลอยู่ในรูปข้อความล้วน (ไม่มีทางกลายเป็น element)',
+          flat.includes('<img') && evil.every((b) => (b.parts || []).every((x) => typeof x.v === 'string')));
+    check('[md] รั้วโค้ดที่ไม่ปิด ไม่ทำให้เนื้อหาหาย',
+          S.parseChatMarkdown('```\nบรรทัดเดียว')[0].text === 'บรรทัดเดียว');
+    check('[md] ข้อความว่างคืนอาร์เรย์ว่าง ไม่พัง', S.parseChatMarkdown('').length === 0);
+    check('[md] ดอกจันคูณเลขไม่กลายเป็นตัวเอียง',
+          S.parseInlineMd('2 * 3 * 4').every((x) => x.t === 'text'),
+          JSON.stringify(S.parseInlineMd('2 * 3 * 4')));
+  }
 
   // ไฟล์ + ส่งออก
   check('[ไฟล์] ชื่อไฟล์เซสชันเป็น <id>.json', S.sessionFileName({ id: 'abc' }) === 'abc.json');

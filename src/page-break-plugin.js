@@ -96,7 +96,37 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
     try { return !!doc.resolve(pos).parent.isTextblock; } catch { return false; }
   }
 
+  /**
+   * ══ [alpha.130 ข้อ 1] ★★ "ลายเซ็นรูปทรง" ของชุด decoration ที่วาดไว้จริง ══
+   *
+   * ผู้ใช้: *"Ctrl+A แล้วสั่งจัดหน้า ทำให้การตัดหน้าเละเลย"*
+   *
+   * ต้นตอ: ระบบนี้เดินสองขาแยกกัน — `list` (รายการเส้นคั่นของตัวจัดหน้า) กับ
+   * `DecorationSet` (ของจริงที่วาดลง DOM) · ตอน `docChanged` แต่ละขาถูก map ด้วยคนละกลไก
+   * (`mapBreaks(tr.mapping)` กับ `prev.map(tr.mapping, doc)`) แล้ว **เชื่อว่าผลจะตรงกันเสมอ**
+   *
+   * `cmd('align')` กับช่วงที่เลือกทั้งเอกสารยิง `setNodeMarkup` ทีละย่อหน้าใน transaction เดียว
+   * = ReplaceAroundStep หลายสิบขั้นซ้อนกัน · widget ที่อยู่ **ตรงรอยต่อระหว่างบล็อกพอดี**
+   * (เส้นคั่นระดับบล็อก) ถูก `DecorationSet.map` ตัดทิ้งไป แต่ `list` ยังครบ
+   * → รอบจัดหน้าถัดมา `setBreaks()` เห็นลายเซ็นเดิม คืน `false` → **ไม่มีใครสั่งวาดใหม่เลย**
+   * เส้นคั่นที่หายจึงหายถาวร (วัดจริง: โมเดลบอก 10 เส้น · บนจอเหลือ 7 · สั่งชิดซ้ายกลับก็ไม่คืน)
+   * ผลบนจอ = สองหน้ากลายเป็นหน้าเดียว เนื้อไหลทะลุขอบกระดาษ = "เละ" ตรงตามที่ผู้ใช้เห็น
+   *
+   * ตาข่าย: จำ "รูปทรง" ที่ใช้วาดไว้ (ตำแหน่ง + เป็น inline หรือบล็อก) แล้วเทียบทุกรอบที่เอกสาร
+   * เปลี่ยน — ไม่ตรงเมื่อไหร่ = วาดใหม่จาก `list` ซึ่งเป็นแหล่งความจริง
+   * ได้ของแถมอีกข้อ: เส้นคั่นที่ **พลิกจาก inline เป็นบล็อก** (ย่อหน้าถูกผ่า/รวม) ก็ถูกวาดใหม่
+   * ตามรูปทรงจริง จากเดิมที่ใช้ DOM ผิดชนิดค้างไปจนกว่าจะมีอะไรมากระตุกให้วาดใหม่
+   */
+  let shape = '';
+  const shapeOf = (doc) => {
+    if (!doc) return '';
+    const max = doc.content.size;
+    return list.filter((b) => b.pos <= max)
+               .map((b) => b.pos + (isInline(doc, b.pos) ? 'i' : 'b')).join(',');
+  };
+
   function decos(doc) {
+    shape = shapeOf(doc);
     if (!list.length || !doc) return DecoSet.empty;
     const max = doc.content.size;
     const out = [];
@@ -162,7 +192,14 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
           if (!tr.docChanged) return prev;                // ไม่มีอะไรขยับ → ใช้ของเดิมทั้งชุด
           mapBreaks(tr.mapping);
           // ส่งชุดเดิมผ่าน mapping — Decoration ตัวเดิมถูกใช้ซ้ำ ProseMirror จึงไม่แตะ DOM เลย
-          return prev.map(tr.mapping, tr.doc);
+          const next = prev.map(tr.mapping, tr.doc);
+          // ★ [alpha.130 ข้อ 1] แต่ต้องพิสูจน์ก่อนว่ามันยัง "ตรงกับรายการจริง" อยู่
+          // (ดูคอมเมนต์ยาวที่ `shapeOf` — ไม่ตรงเมื่อไหร่ = เส้นคั่นหายถาวร)
+          const want = shapeOf(tr.doc);
+          if (want !== shape || next.find().length !== want.split(',').filter(Boolean).length) {
+            return decos(tr.doc);
+          }
+          return next;
         },
       },
       props: { decorations(state) { return key.getState(state); } },

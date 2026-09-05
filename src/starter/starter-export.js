@@ -14,6 +14,7 @@ import { t, tf } from '../i18n.js';
 import { listSections, addSection } from '../section-ops.js';
 import { addChapter, addScene } from '../scene-ops.js';
 import { buildTree } from '../app.js';
+import { choose } from '../ui.js';
 import { openChoices, transcriptText, charById } from './starter-model.js';
 import { choiceRows } from './starter-choices.js';
 import {
@@ -234,7 +235,21 @@ export function convertDialog(s, rows, only = null, opts = {}) {
         }
       }
       done(made);
-      if (made.length) setStatus(tf('ui.starter.cvDone', made.length, EXPORT_BOOK));
+      if (!made.length) return;
+      setStatus(tf('ui.starter.cvDone', made.length, EXPORT_BOOK));
+      // [alpha.124 ข้อ 31] ★ แปลงเสร็จแล้วต้องมีทางไปต่อ
+      // เดิมกล่องปิดแล้วจบ เหลือแต่ข้อความบนแถบสถานะที่หายไปในไม่กี่วินาที →
+      // ผู้ใช้ต้องไปงมหาเล่ม "Story Starter" ในต้นไม้เอง ทั้งที่เพิ่งสร้างไฟล์ให้เมื่อกี้
+      const v = await choose(tf('ui.starter.cvOpenAsk', made.length, EXPORT_BOOK), [
+        { label: t('ui.starter.cvOpenNow'), value: 'open', primary: true },
+        { label: t('ui.starter.cvStayHere'), value: null },
+      ]);
+      if (v !== 'open') return;
+      try {
+        const { openScene } = await import('../app.js');
+        await buildTree();                    // ฉากที่เพิ่งสร้างต้องโผล่ในต้นไม้ก่อนเปิด
+        await openScene(made[0]);
+      } catch (e) { log('warn', 'starter open after convert', e); }
     };
     foot.append(cancel, go);
     box.append(foot);
@@ -243,7 +258,3 @@ export function convertDialog(s, rows, only = null, opts = {}) {
   });
 }
 
-/** บทสนทนาเป็นข้อความล้วน — ไว้ให้ผู้ใช้ก๊อปออกไปเองโดยไม่ต้องพึ่ง AI */
-export function plainTranscript(s, sc) {
-  return transcriptText(sc, (id) => { const c = charById(s, id); return (c && c.name) || ''; });
-}

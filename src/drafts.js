@@ -1,6 +1,6 @@
 // drafts.js — CRUD ฉบับร่าง: สร้าง/ลบ/เปลี่ยนชื่อ/ตั้ง primary
 import { t, tf } from './i18n.js';
-import { setStatus, state } from './core.js';
+import { setStatus, state, logAction } from './core.js';
 import { confirmBox, ask } from './ui.js';
 
 /**
@@ -83,6 +83,7 @@ export async function deleteDraft(secPath, name) {
   const dPath = await kapi.join(secPath, 'Draft', name);
   const recycle = await kapi.join(state.root, 'Recycle', 'draft-' + Date.now().toString(36));
   await kapi.move(dPath, recycle);
+  logAction('draft', t('ui.drafts.delDraft') + ': ' + name, { from: dPath, trash: recycle });
   return true;
 }
 
@@ -92,6 +93,7 @@ export async function renameDraft(secPath, oldName, newName) {
   const newPath = await kapi.join(secPath, 'Draft', newName);
   if (await kapi.exists(newPath)) { setStatus(t('ui.drafts.hasDraftNameDone')); return false; }
   await kapi.move(oldPath, newPath);
+  logAction('draft', tf('ui.drafts.renameDraftTo', oldName, newName), { secPath });
   const sf = await kapi.join(secPath, 'section.json');
   let meta = {}; try { meta = await kapi.readJson(sf); } catch {}
   if ((meta.primaryDraft || 'default') === oldName) {

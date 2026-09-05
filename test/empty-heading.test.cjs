@@ -53,8 +53,12 @@ check('[83-1] `#hashtag` ไม่ใช่หัวข้อ — ยังเ�
 const blk = PF.mdToProseBlocks('ก่อน\n### \nหลัง');
 check('[83-1] mdToProseBlocks: ไม่มีบล็อกที่มีข้อความ "###"',
   !blk.some((b) => String(b.text).trim() === '###'), JSON.stringify(blk.map((b) => b.type + ':' + b.text)));
-check('[83-1] mdToProseBlocks: เหลือแค่ย่อหน้าจริงสองก้อน',
-  blk.length === 2 && blk.every((b) => b.type === 'p'));
+// [alpha.132r] หัวข้อว่างยังเป็น "บรรทัดว่าง" เหมือนเดิม — แต่บรรทัดว่าง **เป็นบล็อกแล้ว**
+// (ย่อหน้าว่างต้องกินที่จริงในตัวอย่าง ไม่งั้นตัวอย่างตัดหน้าคนละที่กับไฟล์ PDF จริง)
+check('[83-1] mdToProseBlocks: ได้ย่อหน้าจริงสองก้อน + ย่อหน้าว่างตรงกลาง',
+  blk.length === 3 && blk.every((b) => b.type === 'p')
+    && blk[0].text === 'ก่อน' && blk[1].text === '' && blk[2].text === 'หลัง',
+  JSON.stringify(blk.map((b) => b.type + ':' + b.text)));
 check('[83-1] mdToProseBlocks: หัวข้อที่มีข้อความยังเป็นหัวข้อ',
   PF.mdToProseBlocks('### บทที่ 1')[0].type === 'h3');
 

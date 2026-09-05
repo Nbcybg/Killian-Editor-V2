@@ -8,7 +8,7 @@ import { confirmBox, ask } from './ui.js';
 import { iconHtml } from './icons.js';
 import { CAT_TH, WikiEditor } from './wiki.js';
 import { ensureAutoLink, renderBacklinksTab, rebuildAutoLink } from './world-story/auto-link-ui.js';
-import { notifyEntityRenamed } from './auto-task/event-ui.js';
+import { handleEntityRenamed } from './auto-task/event-ui.js';
 import { findScenePath } from './project-scan.js';
 import { choicesByCharacter, renderChoicePanel } from './player-choices.js';
 import { ensureSensory, renderSensoryProfile } from './sensory-profile.js';
@@ -174,8 +174,10 @@ export async function openEntity(file) {
       if (state.settings?.autoBackup !== false) {
         import('./app.js').then(({ snapshotFile }) => snapshotFile(file).catch(() => {}));
       }
-      // ชื่อเปลี่ยน → แจ้ง auto-task ให้ไล่แก้ทุกไฟล์ (ทำงานเมื่อเปิด auto-sync)
-      if (tab.title && e2.name && tab.title !== e2.name) notifyEntityRenamed(file, tab.title, e2.name);
+      // [alpha.125 ข้อ C] ชื่อเปลี่ยน → ไล่แก้การอ้างถึงทุกไฟล์
+      // เปิด auto-sync = ทำให้เงียบ ๆ · ปิดอยู่ = ถามก่อน (เดิม "ปิดอยู่" คือไม่ทำอะไรเลย
+      // แล้วชื่อเก่าค้างในทุกฉากโดยไม่มีอะไรบอก)
+      if (tab.title && e2.name && tab.title !== e2.name) handleEntityRenamed(file, tab.title, e2.name);
       tab.title = e2.name;
       tab.tabBtn.querySelector('.tab-title').textContent = e2.name;
       smart.loadNames(state.root); buildTree();
@@ -211,16 +213,16 @@ export async function openEntity(file) {
       const blHead = el('div', 'wiki-bl-head');
       blHead.style.cssText = 'font-weight:600;color:var(--dim);margin-bottom:8px;display:flex;align-items:center;gap:6px';
       const blTitle = el('span');
-      blTitle.innerHTML = iconHtml('link', 14) + ' ' + tr('wiki.backlinksTitle', 'ฉากที่กล่าวถึง');
+      blTitle.innerHTML = iconHtml('link', 14) + ' ' + tr('wiki.backlinksTitle');
       const reBtn = el('button', 'wiki-bl-refresh', '🔄');
       reBtn.type = 'button';
-      reBtn.title = tr('wiki.backlinksRefresh', 'สร้างดัชนีเชื่อมโยงใหม่ทั้งโปรเจกต์');
+      reBtn.title = tr('wiki.backlinksRefresh');
       reBtn.onclick = async () => {
         reBtn.disabled = true;
-        setStatus(tr('wiki.backlinksScanning', 'กำลังสแกนฉากทั้งโปรเจกต์…'));
+        setStatus(tr('wiki.backlinksScanning'));
         try { await rebuildAutoLink(); } finally { reBtn.disabled = false; }
         attachBacklinks();
-        setStatus(tr('wiki.backlinksDone', 'อัปเดตดัชนี “ฉากที่กล่าวถึง” แล้ว'));
+        setStatus(tr('wiki.backlinksDone'));
       };
       blHead.append(blTitle, reBtn);
       blSec.append(blHead);
@@ -289,7 +291,7 @@ export async function openEntity(file) {
   // [alpha.60r3 ข้อ 1] app.js เรียกตัวนี้หลังบันทึกฉาก → รายการ "ฉากที่กล่าวถึง" สดเสมอ
   tab.refreshBacklinks = attachBacklinks;
   tabBtn.onclick = (e) => { if (e.target !== x) activate(file); };
-  x.onclick = () => closeTab(file);
+  x.onclick = () => closeTab(file, { ask: true });   // [alpha.124 ข้อ 17] ผู้ใช้สั่งปิดเอง
   state.tabs.set(file, tab);
   activate(file);
 }

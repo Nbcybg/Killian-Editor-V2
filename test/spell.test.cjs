@@ -12,7 +12,8 @@ const out = esbuild.buildSync({
 const mod = {};
 // eslint-disable-next-line no-new-func
 new Function('module', 'exports', 'require', out.outputFiles[0].text)(mod, (mod.exports = {}), require);
-const { loadBase, setExtra, check, ready, cacheSize } = mod.exports;
+const { loadBase, setExtra, check, ready, cacheSize,
+        suggest, ignoreOnce, clearIgnored, ignoredSize } = mod.exports;
 
 let pass = 0, fail = 0;
 function ck(name, cond, extra) {
@@ -91,6 +92,42 @@ ck('คำยาวเกินเกณฑ์ไม่บังคำปกต�
   for (let i = 0; i < 20; i++) check('ฬฒฏฑฆ'.repeat(200) + i);   // 1,000 ตัว ตัดคำไม่ลงเลย
   const dt = Date.now() - t0;
   ck('กำแพงอักษรไทย 1,000 ตัว × 20 รอบ เร็วกว่า 400ms', dt < 400, dt + 'ms');
+}
+
+// ---------- [alpha.124 ข้อ 30] คำแนะนำการแก้คำผิด ----------
+{
+  ck('มีฟังก์ชัน suggest', typeof suggest === 'function');
+  const s1 = suggest('helllo', 6);
+  ck('อังกฤษ: helllo → เสนอ hello', s1.includes('hello'), JSON.stringify(s1));
+  const s2 = suggest('wrogn', 6);
+  ck('อังกฤษ: สลับตัวอักษร (wrogn) → เสนอ wrong', s2.includes('wrong'), JSON.stringify(s2));
+  ck('คำที่สะกดถูกอยู่แล้วก็ยังเสนอคำใกล้เคียงได้ ไม่พัง', Array.isArray(suggest('hello')));
+  ck('ไม่เสนอคำเดิมของตัวเอง', !suggest('helllo', 8).includes('helllo'));
+  ck('เคารพจำนวนสูงสุดที่ขอ', suggest('helllo', 2).length <= 2);
+  ck('คำว่างคืนอาร์เรย์ว่าง', suggest('').length === 0);
+  ck('คำยาวเกินเหตุไม่ไปไล่คำนวณ', suggest('a'.repeat(40)).length === 0);
+  ck('รักษาตัวพิมพ์ใหญ่ตัวแรกของคำเดิม',
+     suggest('Helllo', 6).every((w) => /^[A-Z]/.test(w)), JSON.stringify(suggest('Helllo', 6)));
+  // ไทย: ใช้คำที่แน่ใจว่ามีในคลัง แล้วทำให้ผิดหนึ่งตัว
+  const thBad = 'สวัสด';                      // ขาด "ี" จาก "สวัสดี"
+  const s3 = suggest(thBad, 8);
+  ck('ไทย: เสนอคำจากคลังจริง (ทุกตัวที่เสนอต้องสะกดผ่าน)',
+     s3.length === 0 || s3.every((w) => check(w).length === 0), JSON.stringify(s3));
+}
+
+// ---------- [alpha.124 ข้อ 30] ข้ามคำนี้ครั้งนี้ ----------
+{
+  clearIgnored();
+  const bad = 'wrongwordz';
+  ck('ก่อนข้าม: ยังถูกจับว่าผิด', check(bad + ' x').some((b) => b.word === bad));
+  ck('ignoreOnce คืน true', ignoreOnce(bad) === true);
+  ck('หลังข้าม: ไม่ถูกจับแล้ว', !check(bad + ' x').some((b) => b.word === bad));
+  ck('นับจำนวนคำที่ข้ามได้', ignoredSize() >= 1, ignoredSize());
+  ck('ตัวพิมพ์ต่างกันก็ข้ามด้วย', !check(bad.toUpperCase() + ' x').some((b) => b.word.toLowerCase() === bad));
+  ck('คำว่างข้ามไม่ได้', ignoreOnce('   ') === false);
+  clearIgnored();
+  ck('ล้างรายการที่ข้ามแล้วกลับมาถูกจับอีก', check(bad + ' x').some((b) => b.word === bad));
+  ck('ล้างแล้วนับเป็นศูนย์', ignoredSize() === 0);
 }
 
 console.log('\n' + (fail ? 'FAIL ' + fail + ' / ' : '') + 'PASS ' + pass);

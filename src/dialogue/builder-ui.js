@@ -9,7 +9,7 @@
 
 import { t, tf } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
-import { ask, confirmBox, popupMenu } from '../ui.js';
+import { ask, confirmBox, popupMenu, setSpeechText } from '../ui.js';
 import { listEntities } from '../project-scan.js';
 import { currentProvider, providerById, providerList, complete, completeStream } from '../ai/ai-provider-ui.js';
 import { aiConfigured } from '../ai-settings.js';
@@ -385,7 +385,8 @@ function bubble(s, tn) {
 
   const body = el('div', 'dlgb-bub-body');
   if (tn.paren) body.append(el('div', 'dlgb-bub-paren', '(' + tn.paren + ')'));
-  body.append(el('div', 'dlgb-bub-text', tn.text));
+  // [alpha.123] บทพูดในเครื่องหมายคำพูด = ตัวเอียง (ตัวเดียวกับที่ระบบเสียงจะใช้ต่อ)
+  body.append(setSpeechText(el('div', 'dlgb-bub-text'), tn.text));
   n.append(body);
 
   // ความคิดของโมเดล — กางดูได้ (โหมด 🧠 กางไว้ให้เลย)

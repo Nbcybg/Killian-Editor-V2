@@ -8,7 +8,7 @@
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { el, state, setStatus, log, textWidth } from './core.js';
 import { num } from './num.js';
-import { confirmBox } from './ui.js';
+import { confirmBox, escClose } from './ui.js';
 import { TitlePageEditor, normalizeTitlePages, defaultTitlePages,
          titlePageInnerHtml } from './sp-title-pages.js';
 import { HEADER_DEFAULTS, HEADER_VARS, mergeHeaders, newHeaderString,
@@ -16,8 +16,11 @@ import { HEADER_DEFAULTS, HEADER_VARS, mergeHeaders, newHeaderString,
 import { generatePdf, PDF_FONT_FILES, OMITTABLE_ELEMENTS, mergePdfOptions } from './pdf-generator.js';
 import { SP_ELEMS } from './fountain.js';
 import { spFormat, scriptMeta, safeName, saveProjectMeta, checkBeforeExport,
-         currentScriptSource, currentStartPage } from './app.js';
+         currentScriptSource, currentStartPage, saveGlobalSetting,
+         liveShortcodeContext } from './app.js';
 import { pagesOf, pageStartPositions } from './sp-view.js';
+// [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — ตัวเดียวกับที่ศูนย์ส่งออกใช้
+import { exportNameRow } from './export-name-ui.js';
 
 // ───────── ที่เก็บข้อมูล ─────────
 /** หน้าปกของโปรเจกต์นี้ (ยังไม่เคยตั้ง = อาร์เรย์ว่าง) */
@@ -135,6 +138,7 @@ function overlay(cls) {
   const box = el('div', 'k-dialog ' + (cls || ''));
   ov.append(box);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
   return { ov, box };
 }
 
@@ -472,12 +476,34 @@ export async function pdfExportDialog() {
   const cRect = checkbox(saved.drawRectAroundNotes);
   box.append(row(tt('ui.pdf.drawFrameRoundNote'), cRect));
 
-  const cNums = checkbox(saved.pageNumbers !== false);
-  box.append(row(tt('ui.pdf.pageNumNumSceneFormat'), cNums,
-    fmt.pageNumbers.show || fmt.sceneNumbers.show ? '' : tt('ui.pdf.twoCloseTabPage')));
+  // ══ [alpha.130 ข้อ 5] ★ เลขหน้ากับเลขฉากเป็นคนละเรื่อง — ต้องมีสวิตช์คนละตัว ══
+  // ผู้ใช้: *"ต้องแยกระหว่างเลขฉาก และเลขหน้า"*
+  // ของเดิมมีช่องเดียวแล้วจ่ายค่าเดียวกันให้ทั้งคู่ (`pageNumbers: c, sceneNumbers: c`)
+  // → อยากได้เลขหน้าอย่างเดียวก็ได้เลขฉากติดมาด้วยเสมอ ปิดไม่ได้เลย
+  // [alpha.132 ข้อ 2] ช่องนี้ **ชนะ** ค่าใน "ตั้งค่ารูปแบบบท" แล้ว — ติ๊กแล้วได้เลยไม่มีประตูบานสอง
+  // (ค่าในรูปแบบบทยังคุม *ตำแหน่ง/จุดท้ายเลข/ข้ามหน้า 1* เหมือนเดิม)
+  const cPgNo = checkbox(saved.pageNumbers !== false);
+  box.append(row(tt('ui.pdf.pageNumbersOnly'), cPgNo, tt('ui.pdf.numbersWinHint')));
+  const cScNo = checkbox(saved.sceneNumbers !== false);
+  box.append(row(tt('ui.pdf.sceneNumbersOnly'), cScNo, ''));
+
+  // ══ [alpha.130 ข้อ 5] ★ ขาวดำ / สี ══
+  const selColor = el('select', 'k-dlg-select k-pdf-color');
+  for (const [v2, lb] of [['mono', tt('ui.pdf.colorModeMono')], ['color', tt('ui.pdf.colorModeColor')]]) {
+    const o2 = el('option', null, lb); o2.value = v2; selColor.append(o2);
+  }
+  selColor.value = saved.colorMode === 'color' ? 'color' : 'mono';
+  box.append(row(tt('ui.pdf.colorMode'), selColor, tt('ui.pdf.colorModeHint')));
   const wm = el('input', 'k-dlg-input'); wm.value = String(saved.watermark || '');
   wm.placeholder = tt('ui.pdf.emptyNotPutWatermark');
   box.append(row(tt('ui.pdf.watermark'), wm, tt('ui.pdf.needWatermarkPersonFile')));
+
+  // ══ [alpha.132 ข้อ 6] ★ แถว "ชื่อไฟล์ส่งออก" (แถวแยก · ใช้โค้ดสั้นได้ · มีตัวอย่าง · เก็บพรีเซ็ต) ══
+  const nameRow = exportNameRow({ ext: 'pdf', ctx: { title: src.title },
+                                  saveGlobal: saveGlobalSetting });
+  box.append(nameRow.node);
+  liveShortcodeContext().then((c) => nameRow.setCtx({ ...c, title: src.title }))
+    .catch((e) => log('warn', tt('ui.xname.ctxFail'), e));
 
   const prog = el('div', 'dim k-pdf-prog');
   box.append(prog);
@@ -486,7 +512,8 @@ export async function pdfExportDialog() {
     toc: cToc.checked,
     openPage: cOpen.checked ? (parseInt(nOpen.value, 10) || 1) : 0,
     titlePages: cTitle.checked, headers: cHdr.checked,
-    pageNumbers: cNums.checked, sceneNumbers: cNums.checked,
+    pageNumbers: cPgNo.checked, sceneNumbers: cScNo.checked,
+    colorMode: selColor.value === 'color' ? 'color' : 'mono',
     omit: OMITTABLE_ELEMENTS.filter((k) => omitBoxes[k].checked),
     drawRectAroundNotes: cRect.checked,
     watermark: wm.value.trim(),
@@ -504,12 +531,18 @@ export async function pdfExportDialog() {
     bGo.disabled = true;
     prog.textContent = tt('ui.pdf.busyNew');
     try {
-      const dest = await kapi.savePdfDialog(safeName(src.title) + '.pdf');
+      // [alpha.132 ข้อ 6] ชื่อที่เสนอ = ตัวเดียวกับที่ช่องตัวอย่างบอกไว้เป๊ะ
+      const dest = await kapi.savePdfDialog(nameRow.name());
       if (!dest) { bGo.disabled = false; prog.textContent = ''; return; }
       const r = await buildScriptPdf({ blocks: src.blocks, title: src.title, fmt, opts,
                                        titlePages: titles, headers: hdr });
       await kapi.writeBytes(dest, Array.from(r.bytes));
       if (state.meta) { state.meta.pdfExport = opts; await saveProjectMeta(); }
+      // [alpha.132r3 ข้อ 2] เปิดไฟล์ที่เพิ่งได้ (ถ้าผู้ใช้ติ๊กไว้ในแถวชื่อไฟล์)
+      if (nameRow.openAfter()) {
+        try { await kapi.openFile(dest); }
+        catch (e) { log('warn', tt('ui.xname.openFail'), e); }
+      }
       prog.textContent = ttf('ui.pdf.doneDonePageToc', r.pageCount, r.bookmarks.length);
       setStatus(tt('ui.common.exportPDF') + dest);
       log('info', tt('ui.pdf.exportPDFPdfLib'), { dest, pages: r.pageCount, toc: r.bookmarks.length });
@@ -522,7 +555,7 @@ export async function pdfExportDialog() {
   btns.append(bClose, bGo);
   box.append(btns);
   document.body.append(ov);
-  return { ov, collect, run: () => bGo.onclick() };
+  return { ov, collect, nameRow, run: () => bGo.onclick() };
 }
 
 /**

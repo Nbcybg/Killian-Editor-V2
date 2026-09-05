@@ -20,8 +20,10 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **3,436 checks · ALL OK** (alpha.93) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **4,560 ข้อ · 68 ไฟล์** · ~20 วินาที)
+ปัจจุบัน **4,200+ checks · ALL OK** (alpha.126) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **5,500+ ข้อ · 85 ไฟล์** · ~22 วินาที)
+**ตัวเลขสองบรรทัดนี้ล้าสมัยง่ายมาก** — รอบไหนแตะเทส ให้รันจริงแล้วอัปเดตด้วย
+(alpha.125 เจอว่ามันค้างอยู่ที่ตัวเลขของ alpha.93 นานหลายสิบรุ่น จน agent รุ่นถัดมาเข้าใจผิด)
 **[alpha.92] `test:unit` รันผ่าน `tools/run-unit.cjs`** — หาไฟล์ `test/*.test.{cjs,mjs,js}` เอง
 และ **รันให้ครบทุกไฟล์เสมอ** แล้วค่อยสรุปว่าไฟล์ไหนแดง (เดิมเป็นสาย `&&` — แดงตัวเดียว
 ตัวที่เหลือไม่ได้รันเลย · เกิดจริงมาแล้วสองครั้ง: i18n-csv ที่ .76 และ export-hub ที่ .88–.91)
@@ -71,6 +73,57 @@ editor.js · screenplay.js · md.js (⚠️ CommonJS) · smart.js · spell.js ·
   `workflowForFormat(wf, fmt)` (บังคับ `to-html` ให้ตรงปลายทาง **โดยไม่แก้ของที่ผู้ใช้บันทึกไว้**) ·
   `normalizeHub`/`suggestName` · **unit test 51 ข้อ** (`node test/export-hub.test.cjs`)
   · UI อยู่ที่ `export-hub.js` (`openExportHub()` — เมนู ไฟล์ → ส่งออก… · Ctrl+Shift+E)
+- **export-name.js** (alpha.132, บริสุทธิ์ · import ได้แค่ shortcode.js) — **ชื่อไฟล์ส่งออกที่ตั้งเองได้**:
+  `buildExportName(template, ctx, ext)` (ขยายโค้ดสั้น → กรองอักขระ → ต่อ นามสกุล) ·
+  `sanitizeFileBase` (กฎเข้มของ Windows ชุดเดียวทุกระบบ + ชื่อที่ระบบสงวน + ตัดจุด/ช่องว่างท้าย) ·
+  `BUILTIN_NAME_PRESETS` · `normalizeExportName`/`saveNamePreset`/`deleteNamePreset`
+  · **unit test 26 ข้อ** (`node test/export-name.test.cjs`) · เก็บที่ `settings.exportName` (**global**)
+  · UI ร่วมของทั้งสองกล่องส่งออกอยู่ที่ `export-name-ui.js` (`exportNameRow()`) — **เขียนที่เดียว**
+- **[alpha.132 · X-1] การจัดหน้าเดินทางไปกับไฟล์ที่ส่งออกแล้ว** — `<!--align:x-->` เป็น
+  **คอมเมนต์ที่เป็นรูปแบบ** ไม่ใช่บันทึกของนักเขียน · `stripComments()` ใน compile.js จึงเว้น
+  `align`/`pagebreak` ไว้เสมอ (`KEEP_COMMENT`) · `mdToHtmlBody()` อ่านแล้วใส่ `style`+`data-align`
+  · `docToMd/mdToDoc` พา align ของ **ข้อในรายการ/ย่อหน้าในคำพูดยกมา** ไปได้แล้ว
+  · **ห้ามเขียน regex ของคอมเมนต์นี้ซ้ำที่อื่น** — ใช้ `stripAlign` ที่ md.js ส่งออกมา
+  · unit test: `node test/align-export.test.cjs` (19 ข้อ)
+- **[alpha.132r] ★ มีตัวแปลง md → หน้ากระดาษ **สองตัว** ที่ต้องแก้คู่กันเสมอ**
+  · `mdToHtmlBody()` (compile.js) = ทางของ **ไฟล์จริง** (HTML → PDF ของนิยาย)
+  · `mdToProseBlocks()` (prose-format.js) = ทางของ **ช่องตัวอย่าง** ในศูนย์ส่งออก
+  แก้กฎการแปลงที่ตัวเดียว = ตัวอย่างกับไฟล์จริงจะไม่ตรงกันทันที (เจอมาแล้วกับบรรทัดว่าง)
+  · ย่อหน้าว่างต้องเป็น `{type:'p', text:''}` เหมือน `proseBlocksFromDoc` **ห้ามคิดชนิดใหม่**
+- **[alpha.132r4] ★★ สวิตช์บล็อกทุกตัวใช้กติกาเดียว** (`toggleListCmd` · `toggleWrapCmd`):
+  ดู **ทั้งช่วง** → เป็นชนิดนั้นหมดแล้ว = ถอดออก · นอกนั้น = **ถอดของเก่าทุกชนิดก่อน** แล้วห่อใหม่
+  · `liftListItem` ของ prosemirror ใช้ได้เฉพาะช่วงที่อยู่ใน **รายการใบเดียว** — ช่วงที่ปนกัน
+    คืน false ทันที → ใช้ `seq()` เลื่อนช่วงเข้าไปทีละใบ เก็บ step แล้วรวมเป็น **ธุรกรรมเดียว**
+    (ไม่งั้นผู้ใช้ต้องกด undo หลายครั้ง) · และต้อง **คืนช่วงที่เลือก** ด้วย ไม่งั้นกดปุ่มที่สองแล้วโดนไม่ครบ
+- **[alpha.132r4] `content` ของ `::marker` ชนะ `list-style-type`** — ปิด marker ตอนจัดกึ่งกลาง
+  ต้องสั่ง `::marker{content:none}` ด้วย ไม่ใช่แค่ `list-style:none` (ไม่งั้นได้จุดนำสองอัน)
+- **[alpha.132r4] "ข้อที่ว่างเปล่า" ก็เป็นข้อ** — `docToMd` เขียน `2. ` (มีวรรคท้าย) แล้วทุกตัวอ่าน
+  `rtrim` ทิ้งก่อน เหลือ `2.` · **ตัวอ่านทั้งสาม** (`md.js` · `mdToHtmlBody` · `mdToProseBlocks`)
+  ต้องรับกรณีไม่มีวรรคตาม ไม่งั้นบรรทัดว่างในรายการหายทั้งไฟล์และช่องตัวอย่าง
+- **[alpha.132r3] ★ ฟอนต์ของไฟล์ที่ส่งออกต้องมาจาก "ที่จอใช้อยู่จริง"** — ห้ามคำนวณใหม่จาก
+  การตั้งค่า · `export-hub.liveProseFonts()` อ่าน `getComputedStyle` ของตัวแก้ไขแล้วส่งเข้า
+  `proseExportCss(fmt, paper, margins, {fontStack, headingStack})`
+  (บั๊กเดิม: จอใช้ `settings.fontFamily`+ฟอนต์ตามภาษา · ไฟล์ใช้ `proseFormat.fontFamily` ที่ว่างอยู่)
+- **[alpha.132r3] จุดนำ/หมายเลขข้อเป็น "ตัวอักษร"** — บังคับ `content` ของ `::marker` ให้เป็น
+  กลีฟตัวเดียวกับที่ `::before` วาดตอนจัดกึ่งกลาง/ชิดขวา → ขนาดเท่ากันโดยโครงสร้าง
+  · รูปแบบมาจาก **อักษรตัวแรกของข้อ** ส่งเป็น **ตัวแปร CSS** (`--k-mk-color/-weight/-style`)
+    บน `<li>` — **ห้ามตั้ง `color:` ตรง ๆ** ไม่งั้นข้อความทั้งข้อถูกย้อมตามอักษรตัวแรก
+  · ตัวแก้ไข = `listMarkerPlugin` (editor.js) · ไฟล์ที่ส่งออก = `markerVars()` (md.js)
+    **สองกลไก กติกาเดียว** — e2e `[132r3-3]` ตรวจว่าให้ผลตรงกัน
+- **[alpha.132r2] `mdToProseBlocks()` ต้องคืน "ข้อความอย่างที่ผู้อ่านจะเห็น"** — ไม่ใช่ซอร์ส .md
+  · ถอดเครื่องหมายด้วย `inlineDisplayText()` ของ **md.js** (ใช้ `parseInline()` ตัวจริง)
+  **ห้ามเขียน regex ถอดมาร์กดาวน์ชุดที่สอง** · สแปนสีต้องรอด (ตัววาดเปลี่ยนเป็นสีจริงต่อ)
+  · บรรทัดรูปล้วน = บล็อก `figure` เหมือน `proseBlocksFromDoc`
+- **[alpha.132r] โหมดสี/ขาวดำมีสองสาย** — บทภาพยนตร์ผ่าน `PDF_ELEMENT_COLORS` ของ pdf-lib ·
+  **นิยายผ่าน CSS** (`mdToHtml(..., {mono})` → `body,body *{color:#000 !important}`)
+  · ช่องตัวอย่างต้องได้โหมดเดียวกัน (`renderProsePageView opts.colorMode` / `renderPageView opts.colorOf`)
+- **text-color.js** (alpha.132, บริสุทธิ์ · **CommonJS** เหมือน md.js) — **สีตัวอักษร**:
+  `normColor` (ตัวกรองค่าสีทุกทางเข้า — ไม่ผ่าน = ไม่มีสี ไม่ใช่ยัดสตริงดิบลง `style`) ·
+  `COLOR_PRESETS`/`presetLabelKey` · `pushRecent`/`toggleSaved`/`normalizeColorStore` ·
+  `COLOR_SPAN_RE`/`colorSpanMd` (ทางเดินของสีในไฟล์ `.md` = `<span style="color:#rrggbb">`)
+  · **unit test 28 ข้อ** (`node test/text-color.test.cjs`) · เก็บที่ `settings.textColors` (**global**)
+  · UI = `color-picker.js` (`openColorPicker()`) · มาร์ก `color` อยู่ใน schema ของ `editor.js`
+  · **เป็น CommonJS เพราะ `md.js` ต้อง `require` ตัวนี้ได้** (md.js เป็น CJS — กฎข้อ 3)
 - **sp-format.js** (alpha.56, บริสุทธิ์) — รูปแบบบทภาพยนตร์ระดับใช้งานจริง (ข้อ 81–85, 92, 97):
   `PAPER_SIZES`/`MARGIN_DEFAULTS`/`linesPerPage`/`textWidth` · `SP_ELEMENT_CONFIG` (เยื้อง/กว้าง/เว้นบรรทัด
   ต่อ element · หน่วยนิ้ว วัดจากขอบกระดาษ) · `SP_ELEMENT_STYLES` (screen vs print) · `PAGE_BREAK_RULES` ·
@@ -147,7 +200,7 @@ editor.js · screenplay.js · md.js (⚠️ CommonJS) · smart.js · spell.js ·
 **กฎของโมดูล AI**: ไม่ยิงเน็ตเอง (รับ `client`/`http` เข้ามา) · ไม่ throw (คืน `{ok:false,error,code}` ภาษาไทย) ·
 `buildXPrompt`/`parseX` เป็น pure เสมอ · คีย์อยู่ `ai-key.json` เท่านั้น · ฟีเจอร์ตรวจสอบมีชั้นออฟไลน์ก่อน
 
-ทุกตัวไม่แตะ DOM/fs (ต่อไฟล์ผ่าน `io` adapter = `kapi`) · `npm run test:unit` = **4,560 ข้อ · 68 ไฟล์**
+ทุกตัวไม่แตะ DOM/fs (ต่อไฟล์ผ่าน `io` adapter = `kapi`) · `npm run test:unit` = **5,500+ ข้อ · 85 ไฟล์**
 UI ที่ต้องทำต่อ: `panels/panel-ui.js` · `layout/split-ui.js` · `kanban/kanban-ui.js` · แผง "ฉากที่กล่าวถึง" ในหน้า Wiki ·
 แผง AI (ผู้ช่วยเขียน/ตรวจปม/บทสนทนา/สร้างโลก/แชท) · หน้านำเข้า Scrivener · แถบคอมเมนต์ข้างฉาก
 แล้วค่อยต่อ entry point ตามกฎข้อ 7 (เมนู main.js + `case` ใน `handleCommand`)
@@ -172,7 +225,19 @@ UI ที่ต้องทำต่อ: `panels/panel-ui.js` · `layout/split-u
 setStatus('บันทึกแล้ว')        ✗   →   setStatus(t('ui.app.saveDone'))     ✓
 `บทที่ ${n}`                   ✗   →   tf('ui.scene.chapterNum', n)        ✓
 t('ui.x.y', 'ค่าสำรองไทย')     ✗   →   t('ui.x.y')                         ✓
+T`ข้อความไทย`                  ✗   →   t('ui.x.y')                         ✓
 ```
+
+> **[alpha.128] ตาข่ายเพิ่งถูกปิดรูรั่ว** — `tools/i18n-classify.cjs` เคยนับ `t(key, 'ค่าสำรองไทย')`
+> เป็น `'already'` = ผ่าน (ขัดกับกฎบรรทัดบน) ปล่อยไทยค้างในซอร์ส **143 จุด** โดยเทสไม่ฟ้อง
+> ตอนนี้ `T_FALLBACK` เหลือเฉพาะ `tKey`/`tm`/`tf` ที่ใช้ค่าสำรอง/ค่าแทรกจริง
+> · และ ``T`…` `` (msgid = ตัวข้อความไทย) **ต้องมีแถวในไฟล์ภาษาด้วย** ไม่งั้นแปลไม่ได้ตลอดกาล
+> — ที่ `paper-color.js` เคยเป็นแบบนั้นทั้ง 6 สีโดยไม่มีใครรู้
+
+> **⚠️ อย่าเทียบเงื่อนไขกับ "ข้อความที่แปลแล้ว"** — `pick.startsWith('เลือกจากคลัง')` ·
+> `e.includes('ชื่อผู้ให้บริการ')` · `title === 'ใหม่'` ใช้ได้เฉพาะหน้าจอภาษาไทย
+> พอสลับเป็นอังกฤษ **ฟีเจอร์ตายเงียบ ไม่มี error** (alpha.128 เจอ 5 จุด)
+> ให้เทียบกับ `t('ui.…')` ตัวเดียวกัน หรือหาจากโครง DOM/คีย์ข้อมูลแทน
 
 **เพิ่มข้อความใหม่ทำยังไง**
 1. เขียน `t('ui.<module>.<name>')` ในโค้ด (`tf` ถ้ามีค่าแทรก — CSV เก็บเป็น `{0}`,`{1}`)
@@ -336,8 +401,10 @@ t('ui.x.y', 'ค่าสำรองไทย')     ✗   →   t('ui.x.y')    
     `SP_PREFIX` ของ `sp-compare` สร้างจาก `SP_ELEMS` · `KEEP_NEXT` ของ `export-rtf` อ่าน
     `SP_ELEMENT_CONFIG[el].keepNext` · เปลี่ยนต้นทางที่เดียวแล้วปลายทางตามทันที
 29. **สตริง UI ของโมดูลใหม่ต้องเข้า `languages/*.json`** ในรูป `t('ns.key', 'ไทย')`
-    (ไม่มีคีย์ = ได้ไทยเหมือนเดิม ไม่พัง) · `languages/` กับ `renderer/languages/` เป็นไฟล์ hardlink
-    เดียวกัน — แก้ที่เดียวได้ทั้งคู่ แต่ต้องเช็คว่ายังเป็น JSON ที่อ่านได้
+    (ไม่มีคีย์ = ได้ไทยเหมือนเดิม ไม่พัง) · **[แก้ข้อมูลผิด alpha.128]** `languages/` กับ
+    `renderer/languages/` **ไม่ได้เป็น hardlink กันแล้ว** (สำเนาที่แตกจาก zip จะเป็นคนละไฟล์) —
+    แหล่งจริงคือ `languages/` แล้ว `node build.js` **ก๊อปทับ** `renderer/languages/` ให้ทุกครั้ง
+    → แก้ที่ `languages/` เท่านั้น · แก้ที่ `renderer/languages/` จะถูกทับหายในการ build ครั้งถัดไป
 
 ---
 
@@ -363,6 +430,17 @@ t('ui.x.y', 'ค่าสำรองไทย')     ✗   →   t('ui.x.y')    
 36. **เทสที่วัดตำแหน่งเลื่อน/โฟกัส/คีย์ลัด ให้ผลต่างกันตาม OS** — `scroll-behavior:smooth` ทำให้
     `scrollTop=` เป็นอนิเมชัน · ตัวแก้ไขที่มีโฟกัสจริงดึงจอกลับหาเคอร์เซอร์ (เจอบน macOS ไม่เจอบน xvfb) ·
     `formatShortcut` คืน `⌘⇧` บน mac · **วนรอเงื่อนไขจริงพร้อมเพดาน อย่ารอเวลาตายตัว**
+
+---
+
+### ⚠️ กฎถาวร (alpha.128) — ปุ่ม/ช่องกรอก/การลบ ต้องบอกและต้องจด
+
+| เรื่อง | กติกา | ตาข่าย |
+|---|---|---|
+| **tooltip** | ปุ่มที่เป็น **ไอคอนล้วน** (ไม่มีข้อความให้อ่าน) ต้องมี `title` เสมอ · ทุก `title=` ใน `index.html` ต้องมี `data-i18n-title` คู่กัน (ไม่งั้นแปลไม่ได้ และไม่มีใครรู้จนกว่าจะสลับภาษา) | `test/ui-audit.test.cjs` |
+| **input hint** | ช่องที่ **เริ่มว่างและไม่มีป้ายกำกับข้าง ๆ** ต้องมี `placeholder` · ช่องที่มีป้าย/มีค่าเดิมอยู่แล้วไม่ต้อง (placeholder โผล่เฉพาะตอนว่าง) · ห้ามฮาร์ดโค้ดไทยใน `placeholder` | `test/ui-audit.test.cjs` |
+| **บันทึก** | อะไรที่ **ลบ/ย้าย/เขียนทับไฟล์ของผู้ใช้** ต้อง `logAction(source, what, {from, to})` **ที่ตัวฟังก์ชันเอง** — คำสั่งจากเมนูคลิกขวาไม่ผ่าน `handleCommand` จึงไม่ได้ `cmd:` ฟรีเหมือนคำสั่งจากเมนู/คีย์ลัด | `test/ui-audit.test.cjs` |
+| **ระดับ log** | ข้อความวินิจฉัยระหว่างไล่บั๊ก = `debug` เสมอ · `info` ไว้ให้เหตุการณ์ที่ผู้ใช้ก่อจริง (alpha.128: ตัววินิจฉัยสองตัวกิน 45% ของไฟล์บันทึกจนของจริงจม) | `test/ui-audit.test.cjs` |
 
 ---
 
@@ -397,6 +475,16 @@ selftest อยู่ใน `runTest()` ท้าย app.js — รูปแบ�
 - `tools/i18n-rekey.cjs` (alpha.77) — แปลง `T\`…\`` → `t('ui.…')` (ใช้ครั้งเดียว เก็บไว้อ้างอิง)
 - `tools/i18n-shadow.cjs` (alpha.77) — หาจุดที่ตัวแปรชื่อ `t` บังฟังก์ชันแปลภาษา
 - `tools/th-seg.cjs` + `tools/th-en-lexicon.cjs` — ตัดคำไทย + พจนานุกรมสำหรับ **ตั้งชื่อคีย์**
+- **`tools/dead-exports.cjs` (alpha.126) — กวาด `export` ที่ไม่มีใครใช้ + โมดูลกำพร้า**
+  ```bash
+  node tools/dead-exports.cjs             # สรุปสามชั้น + โมดูลกำพร้า
+  node tools/dead-exports.cjs --removable # เฉพาะที่ลบได้จริง
+  node tools/dead-exports.cjs --modules   # โมดูลที่ไม่มีใครใน src/ import
+  ```
+  ⚠️ **อ่านผลให้ครบสามชั้นก่อนลบ**: "เทสเท่านั้น" = โมดูลบริสุทธิ์เปิดผิวให้เทสวัด —
+  **ถูกต้องตาม convention ห้ามลบ** · "ใช้ในไฟล์ตัวเอง" = ถอดคำว่า `export` ได้ แต่โค้ดต้องอยู่
+  · และก่อนลบทุกครั้ง **ถามก่อนว่ามันคือโค้ดตาย หรือ "สายที่ลืมต่อ"** — alpha.126 เจอสองตัว
+  (`refreshBooksIfOpen` · `refreshOpenFloorPlan`) ที่ดูเหมือนตายแต่จริง ๆ คือบั๊กแผงค้างข้อมูลเก่า
 - `tools/i18n-add.cjs` (alpha.79) — **เพิ่มคีย์ใหม่ลงไฟล์ภาษาทุกไฟล์พร้อมกัน**
   ```bash
   node tools/i18n-add.cjs keys.json    # {"ui.x.y": {"th":"…","en":"…"}}
@@ -420,37 +508,31 @@ selftest อยู่ใน `runTest()` ท้าย app.js — รูปแบ�
 
 ---
 
-## 🔌 เอนจินใหม่ (alpha.39) — logic เสร็จ, รอต่อ UI + wire เข้า app.js
+## 🔌 เอนจินของ alpha.39 — **ต่อ UI ครบทั้งสามตัวแล้ว** (อัปเดต alpha.125)
 
-3 ไฟล์นี้เป็น **pure logic บริสุทธิ์** (ไม่แตะ DOM/kapi) ยังเป็น orphan (ยังไม่ถูก import จาก app.js)
-มี unit test ครบแล้ว (`node test/{search-engine,panel,split}.test.cjs`) — **opencode ต่อ UI + wire + เพิ่ม selftest ใน app.js**
+หัวข้อนี้เคยเขียนว่า "logic เสร็จ รอต่อ UI" มาตั้งแต่ alpha.39 และ **ค้างอยู่อย่างนั้นข้ามหลายสิบรุ่น**
+ทั้งที่สองในสามต่อไปนานแล้ว — agent รุ่นถัดมาจึงเข้าใจผิดว่ายังไม่มีใครทำ (เกิดขึ้นจริงใน alpha.125)
+สถานะจริงตอนนี้:
+
+| เอนจิน | สถานะ | ทางเข้าของผู้ใช้ |
+|---|---|---|
+| `panels/panel-layout.js` + `panel-store.js` | ✅ ใช้งานเต็มตัวตั้งแต่ **alpha.46** | ระบบแผงทั้งหมด (`panel-ui.js`) |
+| `layout/split-layout.js` | ✅ ต่อแล้ว (`split-ui.js`) | แยกจอ `Ctrl+Shift+\` |
+| `search-engine.js` | ✅ ต่อแล้วใน **alpha.125** | ค้นหาทั้งโปรเจกต์ `Ctrl+Shift+F` + แผงค้นหา |
 
 ### search-engine.js (ข้อ 33 — full-text search)
-```js
-import { SearchIndex, indexProject } from './search-engine.js';
-const idx = await indexProject(state.root, kapi, parseMdFile);   // สร้าง index ครั้งเดียว (cache ใน state)
-const results = idx.search('ทอร่า เค้ก');                          // AND · OR · NOT · title:/tags:/status:
-// results: [{ id, path, title, status, score, freq, matches:[{line, pos, snippet}] }]
-```
-UI ที่ต้องทำ: ช่องค้นหา global (Ctrl+Shift+F?) → เรียก idx.search → แสดง results (path+snippet+line) → คลิกเปิดไฟล์+กระโดดบรรทัด · rebuild index เมื่อ saveTab/เพิ่ม-ลบไฟล์
+`global-search.js` เป็นผู้ใช้เพียงรายเดียว และเป็นเจ้าของ **แคชดัชนีระดับโมดูล**:
 
-### panels/panel-layout.js + panel-store.js (ข้อ 8 — docking)
 ```js
-import * as PL from './panels/panel-layout.js';
-import { PanelStore } from './panels/panel-store.js';
-const store = new PanelStore();                     // ใช้ localStorage อัตโนมัติ
-store.load();
-const zone = PL.snapZone(mouseX, mouseY, paneRect); // 'left'|'right'|'top'|'bottom'|'center'|null
-store.update(PL.dockPanel(store.root, targetId, zone, PL.panel('outline','เค้าโครง')));
+import { ensureSearchIndex, runProjectSearch, invalidateSearchIndex } from './global-search.js';
+const hits = await runProjectSearch('ทอร่า เค้ก', { includeJson: false });
+// hits: [{ file, name, type, score, matches:[{line, text}] }]
 ```
-UI ที่ต้องทำ (panel-ui.js): วาด tree จาก store.root, drag panel + แสดง drop-zone hint, ต่อ resize handle → PL.resizeDock, tab bar → PL.moveTab/splitTab
+**กฎ**: อะไรที่แก้เนื้อไฟล์ต้องเรียก `invalidateSearchIndex()` (ตอนนี้ `saveTab` + `loadProject` เรียกให้แล้ว)
+· ห้ามเขียนตัวสแกนไฟล์ของตัวเองขึ้นมาใหม่ — ก่อน alpha.125 มีสองก๊อปในไฟล์เดียวกันจนแก้บั๊กพลาดตลอด
 
-### layout/split-layout.js (ข้อ 40 — split view)
-```js
-import * as SL from './layout/split-layout.js';
-import { SplitStore } from './layout/split-layout.js';   // store อยู่ในไฟล์เดียวกัน
-const store = new SplitStore(); store.load();
-store.update(SL.splitPane(store.root, targetLeafId, 'right', tabId));  // ลากแท็บไปขอบ
-store.update(SL.resizeSplit(store.root, splitId, i, ratio));           // มี snap 50% ในตัว
-```
-UI ที่ต้องทำ (split-ui.js): วาด pane recursive จาก store.root (leaf.tabId → เนื้อหาแท็บ), drag handle ระหว่าง pane, drop-zone ที่ขอบ pane → splitPane · เชื่อม Panel System ผ่าน tabId ร่วมกัน
+### RAG chat (`ai/ai-chat.js`, สเปกข้อ 79)
+✅ ต่อแล้วใน alpha.125 — เป็น **ระดับการเข้าถึง "เฉพาะส่วนที่เกี่ยวข้อง"** ในแผงแชท AI
+(`collectRelevant()` ใน `ai/ai-chat-panel.js`) · ทำงานออฟไลน์ได้เพราะ `AIClient.embed()`
+ตกกลับไปใช้ `localEmbed()` เองเมื่อไม่มีคีย์ · ดัชนีล้างด้วย `invalidateChatRag()`
+

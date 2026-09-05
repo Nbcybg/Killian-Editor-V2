@@ -51,7 +51,7 @@ function markedFor(src) {
 // ช่วงบรรทัดที่เป็นค่าคงที่ซึ่งถูกเขียนลงไฟล์งาน (อ่านกลับด้วยค่าเดิม)
 // **ของใหม่ให้ใช้เครื่องหมายในซอร์สแทน** — ตารางนี้เหลือไว้ให้ของเดิมที่ยังไม่ได้ย้าย
 const SKIP_RANGES = {
-  'src/core.js': [[372, 396]],                      // SCENE_STATUSES / SCENE_COLORS / STATUS_COLORS
+  // [alpha.132] core.js ย้ายไปใช้เครื่องหมาย /* i18n-skip */ ในซอร์สแล้ว (ช่วงเลขบรรทัดเลื่อนทุกครั้งที่แทรกโค้ด)
   'src/planner/planner-data.js': [[14, 24]],        // PLANNER_STATUSES (เก็บใน Planners/*.json)
   'src/kanban/kanban-core.js': [[8, 20]],           // คอลัมน์ = สถานะฉากตัวเดียวกับ scenes.json
   'src/branch-plans.js': [[20, 28]],                // PLAN_STATUSES (เก็บใน Branches/*.json)
@@ -84,7 +84,11 @@ const CMP_AFTER = /^\s*(===|!==|==|!=)/;
 const DATA_CALL = /\.(includes|indexOf|lastIndexOf|startsWith|endsWith|split|match|matchAll|search|test|exec|localeCompare|replace|replaceAll|hasOwnProperty)\s*\([^()]*$/;
 const REGEX_CALL = /(new\s+RegExp|RegExp)\s*\([^()]*$/;
 const CONSOLE_CALL = /console\.\w+\s*\([^()]*$/;
-const T_FALLBACK = /\b(t|tr|tKey|tm|tf)\s*\(\s*(['"])[^'"]*\2\s*,\s*$/;
+// [alpha.128] เดิมรวม `t` / `tr` ไว้ด้วย → `t('ui.x.y', 'ค่าสำรองไทย')` ถูกนับเป็น 'already'
+// ทั้งที่ **กฎถาวร alpha.77 ห้ามมีค่าสำรอง** (`t()` รับคีย์ตัวเดียว อาร์กิวเมนต์ที่สองถูกทิ้ง
+// เฉย ๆ อยู่แล้ว) — ช่องโหว่นี้ปล่อยให้ไทยฮาร์ดโค้ด 143 จุดนั่งอยู่ในซอร์สโดยเทสไม่ฟ้อง
+// เหลือเฉพาะตัวที่ **ใช้ค่าสำรอง/ค่าแทรกจริง**: tKey(key, fallback) · tm(msgid, ...) · tf(key, ...vals)
+const T_FALLBACK = /\b(tKey|tm|tf)\s*\(\s*(['"])[^'"]*\2\s*,\s*$/;
 const OBJ_KEY_BEFORE = /[{,]\s*$/;
 const PROP_BEFORE = /[A-Za-z0-9_$)\]]\s*\[\s*$/, PROP_AFTER = /^\s*\]/;
 const KEYWORD_BEFORE = /(^|[^A-Za-z0-9_$.])(return|typeof|instanceof|case|else|do|new|delete|void|in|of|await|yield|throw)\s*$/;

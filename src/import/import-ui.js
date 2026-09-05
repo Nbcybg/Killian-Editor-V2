@@ -53,5 +53,3 @@ export async function importScrivenerDialog(onOpenProject) {
   return res;
 }
 
-// ดูตัวอย่างอย่างเดียว (ใช้ใน selftest — ไม่เปิด dialog)
-export function scrivenerIo() { return makeIo(); }

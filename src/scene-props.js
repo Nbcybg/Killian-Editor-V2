@@ -1,7 +1,7 @@
 // scene-props.js — แผงคุณสมบัติฉาก (สถานะ/สี/ปักหมุด/ล็อก/futureNote)
 import { t } from './i18n.js';
 import { buildTree, guid, updatePageNumberHint, refreshSpView } from './app.js';
-import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state } from './core.js';
+import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, log } from './core.js';
 import { allStatuses } from './custom-status.js';
 import * as spell from './spell.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติฉากอยู่ใน frontmatter ของ .md เป็นหลัก — scenes.json เป็นดัชนี/แคช
@@ -10,6 +10,7 @@ import { readSceneMeta, writeSceneMeta, SCENE_HEAVY_KEYS } from './scene-meta.js
 // [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนเรื่องย่อ/POV/อารมณ์/ความขัดแย้ง จากเนื้อฉาก
 import { attachAiFieldButton } from './ai-synopsis.js';
 import { parseMdFile } from './md.js';
+import { escClose } from './ui.js';
 
 export async function sceneProps(dPath, ch, sc) {
   const sf = await kapi.join(dPath, 'scenes.json');
@@ -103,6 +104,7 @@ export async function sceneProps(dPath, ch, sc) {
   btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
   cB.onclick = () => ov.remove();
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
   okB.onclick = async () => {
     // ชื่อฉากเขียนผ่าน setSceneTitle เท่านั้น (มันแก้ทั้ง scenes.json · frontmatter · ชื่อบนแท็บ)
     const newTitle = iTitle.value.trim();
@@ -127,6 +129,15 @@ export async function sceneProps(dPath, ch, sc) {
     for (const k of SCENE_HEAVY_KEYS) props[k] = row[k];
     await writeSceneMeta(file, props);
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    // ⚠ [alpha.124 ข้อ 38] เขียน frontmatter "ลับหลัง" แท็บที่เปิดไฟล์เดียวกันค้างอยู่ = ระเบิดเวลา
+    // แท็บถือ `meta` ชุดเก่าไว้ พอบันทึกครั้งถัดไป (หรือ autosave) มันจะเขียนทับคุณสมบัติที่เพิ่งตั้ง
+    // ทั้งหมด — แผงคุณสมบัติแก้เรื่องนี้ไปแล้วตั้งแต่ alpha.120 ข้อ 6 แต่ **กล่องนี้ยังไม่ได้แก้**
+    // (ทางเดียวกันเป๊ะ ต่างแค่ไฟล์) → ซิงก์ให้แท็บรู้ค่าใหม่ทันทีเหมือนกัน
+    const liveTab = state.tabs.get(file);
+    if (liveTab && liveTab.meta) {
+      try { liveTab.meta = parseMdFile(await kapi.readFile(file)).meta; }
+      catch (e) { log('warn', t('ui.props.writeMetaFail'), e); }
+    }
     await buildTree();                 // สี/สถานะที่เพิ่งตั้งเห็นผลใน tree ทันที
     // เลขหน้าเริ่มต้นเปลี่ยน → แท็บที่เปิดไฟล์นี้อยู่ต้องวาดเลขหน้าใหม่ทันที
     const openTab = state.tabs.get(file);

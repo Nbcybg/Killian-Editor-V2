@@ -34,7 +34,8 @@ export const PDF_DEFAULTS = {
   headers: true,               // [91] หัวกระดาษซ้ำทุกหน้า
   titlePages: true,            // [90] แนบหน้าปกไว้หน้าแรก
   pageNumbers: true,           // ใช้ค่าจาก fmt.pageNumbers
-  sceneNumbers: true,          // ใช้ค่าจาก fmt.sceneNumbers
+  sceneNumbers: true,          // ใช้ค่าจาก fmt.sceneNumbers — [alpha.130 ข้อ 5] สวิตช์แยกจากเลขหน้า
+  colorMode: 'mono',           // [alpha.130 ข้อ 5] 'mono' = ขาวดำ (ธรรมเนียมบทหนัง) · 'color' = สีตามชนิด element
   startPage: 1,                // เลขหน้าเริ่มต้นของไฟล์นี้ (scenes.json → startPage)
   omit: [],                    // [88] element ที่ไม่ต้องพิมพ์ เช่น ['note','summary']
   drawRectAroundNotes: false,  // [88] วาดกรอบรอบโน้ตที่ยังพิมพ์อยู่
@@ -95,6 +96,65 @@ export function splitFontRuns(text, hasLatin = true) {
 /** element ที่ปิดไว้เป็นค่าเริ่มต้นของ "ตัดออกตอนพิมพ์" (ข้อ 88) */
 export const OMITTABLE_ELEMENTS = ['note', 'summary', 'outline1', 'outline2', 'outline3', 'image'];
 
+/**
+ * ══ [alpha.130 ข้อ 5] ★ จานสีสำหรับโหมด "สี" ══
+ *
+ * ผู้ใช้: *"ส่งออก PDF ต้องมีสีและขาวดำด้วย ตอนนี้มีแต่ขาวดำ"*
+ *
+ * ค่าเริ่มต้นยังเป็น **ขาวดำ** เพราะบทภาพยนตร์ที่ส่งกองถ่ายต้องขาวดำตามธรรมเนียม —
+ * โหมดสีมีไว้สำหรับฉบับอ่านเอง/ส่งทีมเขียน ที่อยากเห็นโครงเรื่องแยกชั้นได้เร็ว ๆ
+ *
+ * สีชุดนี้เป็น "รุ่นสำหรับกระดาษขาว" ของสีบนจอ (`--link`/`--orange`/`--green`/`--accent-hi`)
+ * ไม่ใช่ค่าเดียวกันตรง ๆ — สีบนธีมมืดสว่างเกินไปเมื่อพิมพ์ลงกระดาษขาว จึงเข้มลงให้อ่านออก
+ * ชนิดที่ไม่อยู่ในตารางนี้ = ดำสนิทเหมือนเดิม (บรรยาย · บทพูด · ตัวละคร)
+ */
+export const PDF_ELEMENT_COLORS = {
+  scene:          [0.09, 0.31, 0.65],   // หัวฉาก — น้ำเงิน
+  subheader:      [0.20, 0.42, 0.70],   // ฉากย่อย — น้ำเงินอ่อนกว่า
+  transition:     [0.68, 0.35, 0.03],   // ทรานซิชัน — ส้มเข้ม
+  'transition-in': [0.68, 0.35, 0.03],
+  shot:           [0.55, 0.30, 0.05],   // ช็อต
+  intercut:       [0.47, 0.20, 0.60],   // สลับฉาก — ม่วง
+  'act-break':    [0.47, 0.20, 0.60],   // ตอน
+  parenthetical:  [0.38, 0.38, 0.38],   // วงเล็บ — เทา (บนจอเป็น --dim)
+  summary:        [0.10, 0.42, 0.20],   // สรุป — เขียว
+  outline1:       [0.47, 0.20, 0.60],
+  outline2:       [0.47, 0.20, 0.60],
+  outline3:       [0.47, 0.20, 0.60],
+  note:           [0.62, 0.36, 0.04],   // โน้ต
+};
+/** สีของ element หนึ่งชนิดในโหมดที่เลือก · null = ใช้สีเริ่มต้น (ดำ) */
+export function pdfElementColor(el, colorMode) {
+  if (colorMode !== 'color') return null;
+  const c = PDF_ELEMENT_COLORS[el];
+  return c ? c.slice() : null;
+}
+
+/**
+ * ══ [alpha.132 ข้อ 2] ★★ สวิตช์ในกล่องส่งออกต้องชนะค่าใน "รูปแบบบท" ══
+ *
+ * ผู้ใช้: *"ไม่มีเลขหน้าทั้ง ๆ ที่กดเลือก"*
+ *
+ * ต้นตอ: `pageNumberLabel()` คืน '' เมื่อ `fmt.pageNumbers.show` เป็น false — ซึ่งเป็น
+ * **ค่าเริ่มต้นของโปรแกรม** (`PAGE_NUMBER_DEFAULTS.show = false` · `SCENE_NUMBER_DEFAULTS.show = false`)
+ * คนเขียนนิยายไม่มีทางไปเปิดสวิตช์ใน "ตั้งค่ารูปแบบบทภาพยนตร์" อยู่แล้ว → ติ๊กช่องเลขหน้า
+ * ในกล่องส่งออกกี่ครั้งก็ไม่มีอะไรเกิดขึ้น เพราะโดนประตูบานที่สองปิดไว้เงียบ ๆ
+ *
+ * กฎใหม่: ช่องในกล่องส่งออกคือ **เจตนาโดยตรงของผู้ใช้ ณ ตอนนั้น** → เปิดให้เลย
+ * ส่วนค่าใน "รูปแบบบท" ยังใช้กำหนด *ตำแหน่ง/รูปแบบ* (ระยะขอบ · จุดท้ายเลข · ข้ามหน้า 1) เหมือนเดิม
+ * — และ **หน้าจอไม่ถูกแตะ** (ยังอ่าน `fmt` ตัวจริง) จึงไม่มีทางที่จอกับ PDF จะขัดกันเรื่องอื่น
+ *
+ * @param {object} fmt  รูปแบบบท
+ * @param {'pageNumbers'|'sceneNumbers'} key
+ * @param {boolean} on  ค่าจากกล่องส่งออก
+ */
+export function pdfNumberFmt(fmt, key, on) {
+  if (!on || !fmt) return fmt;
+  const cur = fmt[key] || {};
+  if (cur.show) return fmt;
+  return { ...fmt, [key]: { ...cur, show: true } };
+}
+
 export function mergePdfOptions(user) {
   const u = user && typeof user === 'object' ? user : {};
   const o = { ...PDF_DEFAULTS, ...u };
@@ -103,6 +163,8 @@ export function mergePdfOptions(user) {
   o.openPage = Math.max(0, Math.round(num(o.openPage, 0)));
   o.startPage = Math.max(1, Math.round(num(o.startPage, 1)));
   o.fontPt = numClamp(o.fontPt, 12, 4, 96);
+  // [alpha.130 ข้อ 5] รับเฉพาะสองค่าที่รู้จัก — ค่าขยะ/ค่าเก่าที่ไม่มีฟิลด์นี้ = ขาวดำเหมือนเดิม
+  o.colorMode = o.colorMode === 'color' ? 'color' : 'mono';
   return o;
 }
 
@@ -389,7 +451,7 @@ export async function generatePdf(args = {}) {
 
     // เลขหน้าตามรูปแบบบท (ธรรมเนียม: มุมขวาบนของกระดาษ ไม่ใช่ในหัวกระดาษ)
     if (opts.pageNumbers) {
-      const label = pageNumberLabel(pg.index, fmt, opts.startPage);
+      const label = pageNumberLabel(pg.index, pdfNumberFmt(fmt, 'pageNumbers', true), opts.startPage);
       if (label) {
         const w = widthOf(pickFont(set, false, false), label, size);
         draw(page, label, {
@@ -410,21 +472,26 @@ export async function generatePdf(args = {}) {
         : Math.max(0.3, Math.min(num(c.width, 6), tw - (ind - fmt.margins.left))) * PT_PER_IN;
       const align = b.el === 'continued-bottom' || b.el === 'transition' ? 'right' : 'left';
       const lines = row.lines;
+      // [alpha.130 ข้อ 5] โหมดสี — ขาวดำ (ค่าเริ่มต้น) คืน null แล้ว `draw` ใช้สีเริ่มต้นเหมือนเดิม
+      const ec = pdfElementColor(b.el, opts.colorMode);
+      const ecol = ec ? rgb(ec[0], ec[1], ec[2]) : null;
       lines.forEach((ln, i) => {
         const text = st && st.caps ? String(ln).toUpperCase() : ln;
         draw(page, text, {
           x, y: baseline(row.line + i), size, boxWidth: boxW, align,
           bold: !!(st && st.bold), italic: !!(st && st.italic), underline: !!(st && st.underline),
+          color: ecol,
         });
       });
 
       // [alpha.57a] เลขฉากสองฝั่งของหัวฉาก
-      if (opts.sceneNumbers && b.el === 'scene' && fmt.sceneNumbers.show && b.sceneNo) {
+      // [alpha.132 ข้อ 2] ติ๊กช่อง "เลขฉาก" = เอาเลขฉาก — ไม่ต้องไปเปิดสวิตช์ใน "รูปแบบบท" อีกชั้น
+      if (opts.sceneNumbers && b.el === 'scene' && b.sceneNo) {
         const label = String(b.sceneNo) + (fmt.sceneNumbers.suffix || '');
         const y = baseline(row.line);
-        draw(page, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0 });
+        draw(page, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0, color: ecol });
         const w = widthOf(pickFont(set, false, false), label, size);
-        draw(page, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0 });
+        draw(page, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0, color: ecol });
       }
 
       // [87] เก็บหัวฉากไว้ทำ bookmark
@@ -552,14 +619,16 @@ export async function mergeAndNumber(frontParts, bodyBytes, o = {}) {
   const bodyStart = out.getPageCount();
   await add(bodyBytes);
 
-  if (o.pageNumbers !== false && fmt.pageNumbers && fmt.pageNumbers.show) {
+  // [alpha.132 ข้อ 2] ★ ทางของนิยายก็โดนประตูบานที่สองเหมือนกัน — สวิตช์ในกล่องชนะ
+  const numFmt = pdfNumberFmt(fmt, 'pageNumbers', o.pageNumbers !== false);
+  if (o.pageNumbers !== false && numFmt.pageNumbers && numFmt.pageNumbers.show) {
     const set = await embedFonts(out, o.fonts);
     const { draw, widthOf } = makeDrawer(set, set.custom);
     const size = numClamp(o.fontPt, 12, 4, 96);
     const pages = out.getPages();
     for (let i = bodyStart; i < pages.length; i++) {
       // index ของ "หน้าในเนื้อเรื่อง" เริ่มที่ 1 — หน้าปก/รายชื่อไม่ถูกนับเลย
-      const label = pageNumberLabel(i - bodyStart + 1, fmt, o.startPage);
+      const label = pageNumberLabel(i - bodyStart + 1, numFmt, o.startPage);
       if (!label) continue;
       const page = pages[i];
       const w = widthOf(pickFont(set, false, false), label, size);

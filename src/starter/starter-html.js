@@ -117,6 +117,32 @@ export function htmlToDisplay(html, baseUrl) {
   });
 }
 
+/**
+ * HTML → ข้อความล้วน — **ทุก prompt ต้องผ่านตัวนี้**
+ *
+ * โมเดลไม่ควรได้ HTML ดิบ: เปลืองโทเคนและทำให้มันตอบกลับมาเป็นแท็กด้วย
+ * ข้อความล้วนของเดิม (ไฟล์ก่อนมีตัวแก้ไขแบบเห็นผลจริง) ผ่านไปเฉย ๆ ไม่โดนแตะ
+ *
+ * [alpha.123] ย้ายมาจาก `introText` ใน starter-model.js เพราะตอนนี้ **บทเปิดตอน**
+ * ก็เก็บเป็น HTML แล้ว (ผู้ใช้ขอ b/i/u) — ตรรกะเดียวกันต้องอยู่ที่เดียว
+ */
+export function htmlToPlain(raw) {
+  const s = String(raw == null ? '' : raw);
+  if (!/<[a-z][\s\S]*>/i.test(s)) return s.trim();
+  return s
+    .replace(/<br\s*\/?>/gi, '\n')
+    // ย่อหน้าคั่นด้วยบรรทัดว่าง — โมเดลอ่านโครงเรื่องออกง่ายกว่าก้อนติดกัน
+    .replace(/<\/(p|div|h[1-6]|blockquote)>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '- ')
+    .replace(/<img[^>]*>/gi, '')          // รูปไม่มีความหมายในบริบทข้อความ
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /** ชื่อไฟล์รูปทั้งหมดที่ถูกอ้างในคำบรรยาย (ไว้เก็บกวาด/ตรวจว่าไฟล์ยังอยู่) */
 export function referencedImages(html) {
   const out = [];

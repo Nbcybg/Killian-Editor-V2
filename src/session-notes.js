@@ -1,6 +1,7 @@
 // session-notes.js — โน้ตระหว่างเขียน เชื่อมกับฉาก (ข้อ 85)
 import { t, tf } from './i18n.js';
 import { state, setStatus, el } from './core.js';
+import { escClose } from './ui.js';
 
 const NOTES_KEY = 'k2-session-notes';
 
@@ -105,6 +106,7 @@ export async function quickNote(sceneId, sceneTitle) {
   const box = el('div', 'k-dialog');
   box.append(el('div', 'k-dlg-title', t('ui.notes.noteQuick') + (sceneTitle || t('ui.common.msg4'))));
   const ta = el('textarea', 'k-dlg-input');
+  ta.placeholder = t('ui.notes.quickNotePh');
   ta.style.cssText = 'width:100%;min-height:100px;resize:vertical;font-family:inherit';
   box.append(ta);
 
@@ -150,6 +152,7 @@ export async function quickNote(sceneId, sceneTitle) {
   document.body.append(ov);
   ta.focus();
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
 }
 
 // ดูโน้ตทั้งหมด
@@ -191,4 +194,5 @@ export async function showAllNotes() {
   ov.append(box);
   document.body.append(ov);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
 }

@@ -18,7 +18,8 @@ import { normalizeImage } from '../wiki-images.js';
 import { newChar, upsertChar } from './starter-model.js';
 import {
   planMerge, needsAttention, mergeSummary, charPatchFromEntity, entityFromChar,
-  applyCharToEntity, matchLabel, ACT_LINK, ACT_CREATE, ACT_SKIP,
+  applyCharToEntity, matchChar, matchLabel, MATCH_EXACT, MATCH_ALIAS,
+  ACT_LINK, ACT_CREATE, ACT_SKIP,
 } from './starter-wiki-merge.js';
 import { imagesDir, importImage, writeStarter } from './starter-store.js';
 
@@ -27,11 +28,28 @@ const CHAR_CAT = 'characters';
 // ───────────────────────── อ่านฝั่ง Wiki ─────────────────────────
 
 /**
+ * [alpha.124 ข้อ 21] แคชรายชื่อตัวละคร Wiki
+ *
+ * `autoLinkChar()` ถูกเรียก **ทุกครั้งที่ออกจากช่องชื่อตัวละคร** และเดิมมันอ่าน
+ * `Wiki/characters/*.json` ใหม่ทั้งโฟลเดอร์ทุกครั้ง (โปรเจกต์จริงมีเป็นร้อยไฟล์)
+ * → พิมพ์ชื่อแล้วกด Tab ทีไรก็หน่วงยาว และในโปรเจกต์ใหญ่จะรู้สึกเหมือนโปรแกรมค้าง
+ *
+ * แคชผูกกับ `state.root` และถูกล้างทุกครั้งที่ **เราเอง** เขียนอะไรลงหมวดตัวละคร
+ * (ผู้ใช้ไปแก้ไฟล์นอกโปรแกรมระหว่างนั้น = กด "เชื่อมกับ Wiki" เองได้เหมือนเดิม)
+ * ES module: ค่าที่ reassign ต้องอยู่ใน object — กฎเหล็กข้อ 2
+ */
+const WC = { root: '', rows: null };
+/** ล้างแคชรายชื่อตัวละคร Wiki — เรียกทุกครั้งที่เขียนไฟล์ในหมวดนี้ */
+export function invalidateWikiChars() { WC.root = ''; WC.rows = null; }
+
+/**
  * ตัวละครทั้งหมดใน Wiki ของโปรเจกต์นี้ — รูปแบบที่ starter-wiki-merge.js ต้องการ
+ * @param {{fresh?: boolean}} opts fresh = ข้ามแคช (ใช้ตอนกำลังจะเขียนกลับ)
  * @returns {Promise<Array<{file,id,name,aliases,cat}>>}
  */
-export async function listWikiChars() {
+export async function listWikiChars({ fresh = false } = {}) {
   if (!state.root) return [];
+  if (!fresh && WC.rows && WC.root === state.root) return WC.rows;
   const out = [];
   const root = await wikiRoot();
   const catDir = await kapi.join(root, CHAR_CAT);
@@ -47,6 +65,7 @@ export async function listWikiChars() {
                  aliases: Array.isArray(e.aliases) ? e.aliases : [], cat: CHAR_CAT });
     } catch (e) { log('warn', t('ui.starter.logWikiReadFail') + f, e); }
   }
+  WC.root = state.root; WC.rows = out;
   return out;
 }
 
@@ -70,6 +89,41 @@ export async function charFromWiki(slug, file) {
     if (await kapi.exists(abs)) patch.image = await importImage(slug, abs);
   }
   return newChar(patch);
+}
+
+/**
+ * [alpha.122] ชื่อที่พิมพ์ตรงกับตัวละครที่มีใน Wiki อยู่แล้ว → เสนอดึงของเดิมมาใช้
+ *
+ * ผู้ใช้: *"เปิดมางง ทำไมต้องใส่ซ้ำซ้อน ทำไมต้องดึงใน wiki มาแล้วยังต้องกรอก"*
+ * ต้นตอ: การเชื่อมกับ Wiki เป็น **ปุ่มที่ต้องกดเอง** เท่านั้น — พิมพ์ชื่อที่มีใน Wiki เป๊ะ ๆ
+ * ก็ยังได้การ์ดเปล่า แล้วต้องพิมพ์คำบรรยายใหม่ทั้งที่มีอยู่แล้วในโปรเจกต์
+ *
+ * ที่นี่ไม่ทำเงียบ ๆ — **ถามก่อนเสมอ** เพราะชื่อซ้ำกันโดยบังเอิญเกิดขึ้นได้
+ * และเติมเฉพาะช่องที่ยังว่าง ไม่ทับสิ่งที่ผู้ใช้เพิ่งพิมพ์ไป
+ *
+ * @returns {Promise<boolean>} จริงเมื่อผูก+เติมข้อมูลแล้ว (คนเรียกเป็นคนบันทึก/วาดใหม่)
+ */
+export async function autoLinkChar(slug, ch) {
+  if (!ch || ch.wikiPath || !String(ch.name || '').trim()) return false;
+  const ents = await listWikiChars();
+  if (!ents.length) return false;
+  const m = matchChar(ch, ents);
+  if (!m.hit || (m.status !== MATCH_EXACT && m.status !== MATCH_ALIAS)) return false;
+  if (!(await confirmBox(tf('ui.starter.autoLinkAsk', ch.name), t('ui.starter.autoLinkGo')))) {
+    return false;
+  }
+  const got = await charFromWiki(slug, m.hit.file);
+  if (!got) { setStatus(t('ui.starter.wikiReadFail')); return false; }
+  ch.wikiPath = m.hit.file;
+  ch.fromWiki = true;
+  // เติมเฉพาะช่องว่าง — ของที่ผู้ใช้พิมพ์ไว้เองสำคัญกว่าของใน Wiki เสมอ
+  for (const k of ['persona', 'blurb', 'selfPronoun', 'image', 'shortcode', 'dialogue']) {
+    if (!String(ch[k] || '').trim() && String(got[k] || '').trim()) ch[k] = got[k];
+  }
+  if (!((ch.aliases || []).length)) ch.aliases = [...(got.aliases || [])];
+  if (!((ch.tags || []).length)) ch.tags = [...(got.tags || [])];
+  if (!((ch.prompts || []).length)) ch.prompts = [...(got.prompts || [])];
+  return true;
 }
 
 /** กล่องเลือกตัวละครจาก Wiki (มีช่องค้นหา เพราะโปรเจกต์จริงมีเป็นร้อย) */
@@ -150,6 +204,7 @@ export async function pushCharToWiki(slug, ch) {
       const merged = applyCharToEntity(old, ch);
       if (images.length && !(old.images || []).length) merged.images = images;
       await kapi.writeFile(ch.wikiPath, JSON.stringify(merged, null, 2));
+      invalidateWikiChars();                    // [alpha.124 ข้อ 21] เขียนแล้วแคชล้าสมัยทันที
       return ch.wikiPath;
     }
   }
@@ -158,6 +213,7 @@ export async function pushCharToWiki(slug, ch) {
   const file = await kapi.join(catDir,
     safeName(ch.name) + '-' + Date.now().toString(36) + '.json');
   await kapi.writeFile(file, JSON.stringify(e, null, 2));
+  invalidateWikiChars();                        // [alpha.124 ข้อ 21]
   return file;
 }
 

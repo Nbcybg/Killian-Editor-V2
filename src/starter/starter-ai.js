@@ -21,8 +21,6 @@ export function newReqId() { _seq += 1; return 'st-' + Date.now().toString(36) +
 
 /** คำขอที่กำลังวิ่งอยู่ตอนนี้ (ปุ่ม/แผงอื่นถามได้ว่ามีอะไรค้าง) */
 const RUNNING = new Set();
-export function aiBusy() { return RUNNING.size > 0; }
-
 /** สั่งหยุดคำขอตาม id — คืน true เมื่อยกเลิกได้จริง */
 export async function stopAI(reqId) {
   if (!reqId) return false;

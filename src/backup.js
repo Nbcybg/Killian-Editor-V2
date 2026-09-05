@@ -69,6 +69,3 @@ export function startAutoBackup() {
   backupTimer = setInterval(() => { backupIfDue().catch(() => {}); }, 60 * 60 * 1000);
 }
 
-export function stopAutoBackup() {
-  if (backupTimer) { clearInterval(backupTimer); backupTimer = null; }
-}

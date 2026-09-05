@@ -77,10 +77,12 @@ export class PlannerInteraction {
     return name;
   }
 
-  /** log สายกระดาน — เปิด/ปิดได้ที่ this.debug (ค่าเริ่มต้น: เปิด เพราะกำลังไล่บั๊กอยู่) */
+  /** log สายกระดาน — เปิด/ปิดได้ที่ this.debug
+   *  [alpha.128] ลดจาก info → debug: รอบไล่บั๊กจบไปตั้งแต่ alpha.75 แต่สายนี้ยังยิง INFO รัว ๆ
+   *  (298 บรรทัดต่อการรันหนึ่งรอบ) ทับเหตุการณ์จริงในแผงบันทึก · ยังเขียนลงไฟล์ครบเหมือนเดิม */
   _log(msg, extra) {
     if (this.debug === false) return;
-    log('info', 'planner: ' + msg, extra);
+    log('debug', 'planner: ' + msg, extra);
   }
 
   getTool() { return this.tool; }

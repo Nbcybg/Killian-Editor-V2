@@ -12,14 +12,32 @@ export function toggleTypewriter(on) {
   if (want === _twActive) return _twActive;
   _twActive = want;
   if (_twActive) {
-    document.addEventListener('keyup', twScroll);
-    document.addEventListener('click', twScroll);
+    document.addEventListener('keyup', twScrollSoon);
+    document.addEventListener('click', twScrollSoon);
     twScroll();
   } else {
-    document.removeEventListener('keyup', twScroll);
-    document.removeEventListener('click', twScroll);
+    document.removeEventListener('keyup', twScrollSoon);
+    document.removeEventListener('click', twScrollSoon);
+    if (_twFrame) { cancelAnimationFrame(_twFrame); _twFrame = 0; }
   }
   return _twActive;
+}
+
+/**
+ * [alpha.124 ข้อ 37] ★ รวบการเลื่อนให้เหลือเฟรมละครั้ง
+ *
+ * เดิมผูก `twScroll` กับ `keyup` ตรง ๆ → **ทุกตัวอักษรที่พิมพ์** จะ:
+ *   · เรียก `getBoundingClientRect()` สองครั้ง (บังคับให้เบราว์เซอร์คำนวณ layout ใหม่ทั้งหน้า)
+ *   · สั่ง `scrollTo({behavior:'smooth'})` ทับอนิเมชันเดิมที่ยังวิ่งไม่จบ
+ * พิมพ์เร็ว ๆ แล้วจะรู้สึกหนืดและจอสั่น — ยิ่งเอกสารยาวยิ่งชัด
+ *
+ * ตอนนี้: จองคิวไว้ที่เฟรมถัดไป (rAF) ถ้ามีคิวค้างอยู่แล้วก็ไม่จองซ้ำ
+ * → พิมพ์รัว 20 ตัวอักษรใน 1 เฟรม = เลื่อนครั้งเดียว ไม่ใช่ 20 ครั้ง
+ */
+let _twFrame = 0;
+export function twScrollSoon() {
+  if (_twFrame) return;
+  _twFrame = requestAnimationFrame(() => { _twFrame = 0; twScroll(); });
 }
 
 // หา "ตัวที่เลื่อนได้จริง" ของตัวแก้ไข — ปกติคือ .pane

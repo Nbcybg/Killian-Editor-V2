@@ -129,11 +129,6 @@ function sliceProsePagesRaw(blocks, contentHeight, totalHeight) {
   return starts.map((y, i) => ({ start: y, end: i + 1 < starts.length ? starts[i + 1] : end }));
 }
 
-/** จำนวนหน้าอย่างเดียว */
-export function proseMeasuredCount(blocks, contentHeight, totalHeight) {
-  return sliceProsePages(blocks, contentHeight, totalHeight).length;
-}
-
 /**
  * ทิ้งจุดแรกเสมอ — กล่องกลิฟของบรรทัดแรกอยู่ต่ำกว่าขอบบนบล็อกไม่กี่พิกเซล
  * ถ้านับเป็นจุดตัดจะได้ "บรรทัดผี" แล้วเส้นคั่นหน้าไปตัดทะลุกลางตัวอักษร
@@ -251,8 +246,22 @@ export function lineStartCharOffset(node, lineTop) {
   return ans;
 }
 
+/**
+ * ══ [alpha.133 · Y-5] ★ "ขึ้นหน้าใหม่ด้วยมือ" (Ctrl+Enter) — บล็อกที่บังคับตัดหน้า ══
+ *
+ * `sliceProsePages()` รองรับธง `breakBefore` มาตั้งแต่ต้น แต่ **ไม่เคยมีใครตั้งค่าให้เลย**
+ * (ธงนี้เป็นโค้ดตายมาตลอด) → กด Ctrl+Enter แล้วเห็นเส้นในตัวแก้ไข แต่ตัวจัดหน้าไม่รู้จัก
+ * = ทั้งมุมมองจัดหน้า ช่องตัวอย่าง และไฟล์ PDF ตัดหน้าคนละที่กับที่ผู้ใช้สั่ง
+ *
+ * ชื่อคลาสมีสองตัวเพราะเป็นของสองฝั่งที่ต้องให้ผลตรงกัน:
+ *   `.k-manual-page-break` = โหนด page_break ของตัวแก้ไข · `.pb` = ตัวเดียวกันในไฟล์ที่ส่งออก
+ */
+export const FORCE_BREAK_SEL = '.k-manual-page-break, .pb';
+const isForcedBreak = (el) => !!(el && el.matches && el.matches(FORCE_BREAK_SEL));
+
 /** ชนิดของบล็อกจากชื่อแท็ก — ใช้ตัดสินกฎ widow/keepNext */
 function blockRules(el) {
+  if (isForcedBreak(el)) return { splitMinLines: 99, breakBefore: true };
   const tag = (el.tagName || '').toLowerCase();
   if (/^h[1-6]$/.test(tag)) return { splitMinLines: 99, keepNext: true };  // หัวข้อห้ามฉีก + ห้ามค้างท้ายหน้า
   if (tag === 'hr' || tag === 'figure' || tag === 'img') return { splitMinLines: 99 };
@@ -334,7 +343,9 @@ export function measureProseBlocks(pm, origin, zoomFactor) {
     if (!el || el.nodeType !== 1) continue;
     const rect = el.getBoundingClientRect();
     if (el.classList && el.classList.contains(GAP_CLASS)) { gapAccum += rect.height; continue; }
-    if (!(rect.height > 0)) continue;
+    // [alpha.133 · Y-5] เส้นขึ้นหน้าใหม่ด้วยมือสูง 0 — ต้องไม่ถูกข้ามที่ด่านนี้
+    // ไม่งั้นธง breakBefore ไม่มีทางไปถึงตัวหั่นหน้า (ต้นตอที่ทำให้ Ctrl+Enter ไม่มีผลจริง)
+    if (!(rect.height > 0) && !isForcedBreak(el)) continue;
     const innerGap = gapMap.get(el) || 0;
     const top = (rect.top - origin - gapAccum) / z;
     const height = (rect.height - innerGap) / z;

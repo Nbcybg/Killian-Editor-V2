@@ -1913,7 +1913,9 @@ i18n ครบ (`branch` 144 + `player` 34 คีย์ ทั้ง th/en) · u
   **[3] มุมมองตาราง 3 แบบ** ย่อ/เต็มรูป/รายการ (`CELL_MODES` · จำที่ `localStorage: k2-gal-cell`)
     · `bindItemEvents()` = ตัวผูกอีเวนต์ตัวเดียวที่การ์ดกับแถวใช้ร่วมกัน
 
-**ยังเหลือ**: `search-engine.js` ยังเป็น orphan — Global Search (`global-search.js`) ยังสแกนไฟล์ตรง ๆ ไม่ได้ใช้ inverted index (ควรสลับมาใช้เพื่อความเร็ว) · multiple-drafts-per-book UI (โครงรองรับแล้ว), screenplay align persistence, Campaign/D&D mode, **code signing** + `.icns`/`.ico` icon (electron-builder ใช้ได้แล้ว แต่ยังไม่เซ็นและใช้ไอคอนเริ่มต้นของ Electron), native arm64 build. Top เคยบอก paper/indent "อาจต้องปรับปรุง ไว้ก่อน"
+**ยังเหลือ** (อัปเดต alpha.125): Campaign/D&D mode · **code signing** + `.icns`/`.ico` icon (electron-builder ใช้ได้แล้ว แต่ยังไม่เซ็นและใช้ไอคอนเริ่มต้นของ Electron) · native arm64 build · งานแปล EN (กลไกครบ เหลือแต่เนื้อ). Top เคยบอก paper/indent "อาจต้องปรับปรุง ไว้ก่อน"
+**ปิดไปแล้วใน alpha.126**: `src/nav.js` (orphan ตัวสุดท้าย) ต่อเข้าแผง Navigation เป็นมุมมอง "ทั้งเล่ม" · บั๊กช่องว่างขวาหลังลาก resize (ต้นตอ: ผู้ใช้ลากที่จับไม่ผ่าน `renderPanels()` จึงไม่มีใครเรียกตัวปิดรู) · มี `tools/dead-exports.cjs` ไว้กวาดรอบหน้า
+**ปิดไปแล้วใน alpha.125**: `search-engine.js` ต่อเข้า Global Search แล้ว (เลิกสแกนไฟล์เอง · ตัวค้นหาเหลือชุดเดียว) · RAG chat (`ai/ai-chat.js`) ต่อเข้าแผงแชทเป็นระดับ "เฉพาะส่วนที่เกี่ยวข้อง" · multiple-drafts-per-book มี UI ครบทั้งใน "จัดการเล่ม" และตัวสลับในต้นไม้ · screenplay align persist ลง frontmatter (เนื้อ fountain ไม่ถูกแตะ)
 
 **นิสัยผู้ใช้ (Top)**: พูด "เริ่มเลย"/"continue"/"ทำต่อ"/"เอาให้จบ" = ให้ลงมือทำเลย **อย่าถามย้ำ scope** (เคยโดนบ่น "เช็คอะไรละ"). ชอบทำหลายฟีเจอร์รวดเดียวแล้วแก้บั๊กทีเดียว. ส่งสกรีนช็อตบั๊ก = pixel-verify คือเทสจริง. มักจบ session ด้วย "update skill"
 

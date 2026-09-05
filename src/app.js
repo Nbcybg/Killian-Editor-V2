@@ -1,7 +1,8 @@
 ﻿// Killian 2 renderer — explorer + tabs + toolbar + statusbar
 import { t as tt, tf as ttf, T, tf } from './i18n.js';
 import { KEditor } from './editor.js';
-import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString } from './md.js';
+import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString,
+         mdToDoc, docToMd } from './md.js';   // [alpha.132 · X-1] ยัด align กลับเป็นคอมเมนต์ตอนส่งออก
 // [alpha.87] แปลงเอกสารข้ามโหมด นิยาย ↔ บทหนัง (โมดูลบริสุทธิ์ — เทสที่ test/convert.test.mjs)
 import { convertBody, lossReport, kindLabel } from './convert.js';
 // ---- alpha.58r: รูปแบบ + มุมมองหน้ากระดาษของ "นิยาย" (บั๊ก 15–24) ----
@@ -19,7 +20,7 @@ import { PROSE_VIEWS, PROSE_VIEW_LABELS, isProsePageView, isProseEditView, isVal
 import { measureProseLayout, sliceProsePages, proseBreakList, withMeasureMode, zoomFactorOf,
          renderProseClipPages, CUT_FAIL, resetCutFail } from './prose-measure.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ · [ข้อ 6] ระยะขอบสำเร็จรูป
-import { CASE_MODES, CASE_SHORT } from './text-case.js';
+import { CASE_MODES, CASE_SHORT, CASE_LABELS } from './text-case.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติฉาก: frontmatter = แหล่งความจริง · scenes.json = ดัชนี
 import { readSceneMeta, writeSceneMeta, SCENE_HEAVY_KEYS } from './scene-meta.js';
 // [alpha.60r2 ข้อ 6 · 12] ระยะขอบสำเร็จรูป · เมทาดาทาของรูปใน Wiki (ใช้ใน selftest ด้วย)
@@ -33,9 +34,9 @@ import { dirtyRegistry, registerDirtySource } from './dirty-registry.js';
 import { LAYOUT_VERSION as PANEL_LAYOUT_VERSION,
          deserializeLayout as deserializePanelLayout } from './panels/panel-store.js';
 // [alpha.60r2 ข้อ 2] selftest ต้องตั้ง selection เองก่อนสั่งเปลี่ยนรูปตัวพิมพ์
-import { TextSelection as PMTextSelection } from 'prosemirror-state';
+import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from 'prosemirror-state';
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
-import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog } from './ui.js';
+import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog, escClose } from './ui.js';
 import { WikiEditor, CAT_TH, imageLightbox } from './wiki.js';
 import { SPEditor } from './screenplay.js';
 import { Gallery, pickImage } from './gallery.js';
@@ -44,7 +45,7 @@ import { renderMoodBoardPanel, moodBoardInstance } from './gallery/moodboard-ui.
 import { StoryNetwork, cssVar } from './network.js';
 import { PlannerBoard } from './planner/planner.js';
 import { renderPlannerProps } from './planner/planner-props.js';
-import { SP_ELEMS, TIMES, TRANSITIONS, TRANSITIONS_IN, INTERCUTS, SCENE_PREFIX, TAB_CYCLE,
+import { SP_ELEMS, TIMES, TRANSITIONS, TRANSITIONS_IN, INTERCUTS, SCENE_PREFIX, TAB_CYCLE, NEXT_ELEM,
          PARENTHETICALS, CHAR_EXTENSIONS, splitCharacter, withExtension,
          classify, parseScript, setSpRules, SP_RULES } from './fountain.js';
 import { refreshMentions } from './editor.js';
@@ -90,6 +91,7 @@ import { sceneProps } from './scene-props.js';
 import { attachAiFieldButton, generateSceneSynopsis, fieldPrompt, cleanResult,
          AI_SCENE_FIELD_KEYS } from './ai-synopsis.js';
 // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
+import { focusAnalysis } from './ai-analyzer-ui.js';
 import { renderAIAnalyzerPanel, ANALYZER_CARDS, analyzerStats,
          runAnalysis, resetAnalyzer, collectScenes, currentResults,
          analyzerDirtyList, saveSession as saveAnalysisSession,
@@ -109,12 +111,15 @@ import { renameScene, deleteScene, addScene, setSceneMeta, toggleSceneFlag, dupl
          setSceneTitle, setChapterTitle, chapterProps } from './scene-ops.js';
 import { wikiCats, applyWikiCats, newWikiCat, editWikiCat, deleteWikiCat, addEntity, openEntity, duplicateEntity } from './wiki-ui.js';
 import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
-import { openBookManager, renderBookManager } from './books.js';
+import { openBookManager, renderBookManager, refreshBooksIfOpen } from './books.js';
 import { restoreFromTrash, deleteToTrash, purgeRecycle } from './recycle.js';
 import { openDashboard, renderDashboard } from './dashboard.js';
 import { openHome, renderHome, showHomeDialog } from './home-ui.js';
 import { openTagPane, renderTagList, filterByTag } from './tag-pane.js';
-import { openGlobalSearch, bindGlobalSearchShortcut, renderSearchPanel } from './global-search.js';
+// [alpha.125 ข้อ A · ข้อ D] `bindGlobalSearchShortcut` เป็น no-op ที่คงชื่อไว้เฉย ๆ — ถอดทิ้งแล้ว
+// (คีย์ลัดอยู่ในตาราง SHORTCUTS channel 'global-search' มาตั้งแต่ alpha.79)
+import { openGlobalSearch, renderSearchPanel, invalidateSearchIndex,
+         searchIndexStats, runProjectSearch } from './global-search.js';
 import { openSceneTable } from './scene-table.js';
 import { openVisual, createVisual, hasVis, visPathOf, renderVisual, openVisualForActive, VIS_TAB } from './visual/vis-ui.js';
 import { openScratchpad, renderNotesPanel } from './scratchpad.js';
@@ -123,28 +128,30 @@ import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
          statusColor, statusesToJson, importStatuses, setStatusColor } from './custom-status.js';
 import { toggleFocusMode2, cursorBlock, isFocusMode, focusDim, applyFocusDim } from './focus-mode.js';
 import { toggleTypewriter, twScroll, isTypewriter, scrollHost } from './typewriter.js';
-import { recordDailyWords, countProjectWords, calcStreak, getWordHistory } from './word-history.js';
+import { recordDailyWords, countProjectWords, calcStreak, getWordHistory,
+         rebuildWordCounts } from './word-history.js';
 import { autoBackupNow, startAutoBackup, backupIfDue } from './backup.js';
 import { exportProjectZip, exportProjectJson, importProjectZip,
          safeRel, commonPrefix } from './export-zip.js';   // [60r3 ข้อ 9]
 import { renderCommentPanel, commentStore, migrateSceneComments, clearCommentAnchors,
          resetCommentStore, scrollToAnchor, writeKeepingComments } from './comments/comment-ui.js';
 import { exportBlogHTML, buildBlogHtml, BLOG_THEMES } from './export-blog.js';
-import { thesaurusMenuItems } from './thesaurus.js';
 import { createProjectFromTemplate, showTemplateDialog } from './project.js';
 import { saveAISettings, saveApiKey, clearKeyCache } from './ai-settings.js';
 // [alpha.61 ข้อ 2] ผู้ให้บริการ AI ที่ผู้ใช้เพิ่มเอง + แผงแชทแบบ opencode
 import { showAISettingsDialog, providerList, currentProvider, clearKeysCache,
          providerDialog } from './ai/ai-provider-ui.js';
 import { renderAIChatPanel, newChatSession, loadSessions, collectScope,
-         saveSession, _chatState } from './ai/ai-chat-panel.js';
+         saveSession, _chatState, invalidateChatRag,
+         collectRelevant } from './ai/ai-chat-panel.js';
 import { showAISummary } from './ai-summary.js';
 import { showAITitleSuggestions, collectProjectText, hashText, pastTitlesFor,
          summaryCacheState, rememberTitles } from './ai-summary.js';
 import { openBranchingTree, renderBranchingTree, renderBranchingPanel, syncChoicesFromScene,
          mutateChoices, checkDanglingOnOpen } from './branching-ui.js';
 import { openPlayerMode, renderPlayerPanel, resetPlayerMode } from './player-mode.js';
-import { openFloorPlan, renderFloorPlan, renderFloorPlanPanel } from './floorplan-ui.js';
+import { openFloorPlan, renderFloorPlan, renderFloorPlanPanel,
+         refreshOpenFloorPlan } from './floorplan-ui.js';
 import { showPlayerHistory } from './player-choices.js';
 import { manageVisualTags, renderAllTagChips, applyVisualTagStyle, visualTagFor } from './visual-tags.js';
 import { quickNote, showAllNotes, getSessionNotes, addSessionNote, saveSessionNotes } from './session-notes.js';
@@ -182,13 +189,18 @@ import { toggleSplit, createSplit, closeSplit, isSplit, syncSplitPanes, resetSpl
          initSplitSystem, syncActiveSplit, openInSplit, closeTabInSplit, splitDir,
          getSplitManager, paneCount as splitPaneCount } from './layout/split-ui.js';
 import { ensureAutoLink, getBacklinksFor, renderBacklinksTab, resetAutoLink,
-         rebuildAutoLink, updateSceneLink, autoLinkReady } from './world-story/auto-link-ui.js';
-import { findScenePath, listEntities } from './project-scan.js';
+         rebuildAutoLink, updateSceneLink, autoLinkReady,
+         renderBacklinksPanel, backlinkSummary } from './world-story/auto-link-ui.js';
+import { findScenePath, listEntities, listScenes } from './project-scan.js';
+// [alpha.126] ตัวพาร์สโครงเรื่องจากข้อความดิบ — ใช้ทั้งไฟล์ข้อความล้วนและมุมมอง "ทั้งเล่ม"
+import { buildNavigation, parseProse, parseScreenplay } from './nav.js';
 // [alpha.69] แผงใหม่ 3 ตัว — ตรรกะบริสุทธิ์แยกไว้ที่ *-data/*-build (มี unit test) · ที่นี่คือฝั่ง UI
 import { renderCodexPanel, resetCodex } from './codex/codex-ui.js';
 import { renderHistoryPanel, resetHistory, configHistory } from './history/history-ui.js';
 import { renderRecordPanel, resetRecords } from './record/record-ui.js';
-import { setAutoSync, isAutoSyncOn, renderAutoSyncSection, resetTaskEngine } from './auto-task/event-ui.js';
+// [alpha.125 ข้อ C] `renderAutoSyncSection` ถูกถอดออก (ดูเหตุผลใน event-ui.js)
+import { setAutoSync, isAutoSyncOn, resetTaskEngine,
+         handleEntityRenamed, renameAcrossProject } from './auto-task/event-ui.js';
 // [alpha.60r3 ข้อ 7] EventBus ก้อนเดียวที่ปลั๊กอินทุกตัวใช้ร่วมกัน (k2.on / k2.emit)
 import { EventBus } from './auto-task/event-queue.js';
 // [alpha.79] แผงปลั๊กอิน · แผงบทพูด · เอาปุ่มเข้า-ออกจากแถบเครื่องมือ · จำสถานะล่าสุด
@@ -205,6 +217,9 @@ import { installTextMeasurer, refreshTextMeasurer, preloadMeasuredFonts } from '
 import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGroupVisible,
          resetToolbarConfig, normalizeToolbar, toolbarCounts, layoutToolbar,
          isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
+// [alpha.132 ข้อ 9] สีตัวอักษร — ป๊อปอัปเลือกสี (UI) + ตรรกะสีล้วน ๆ (บริสุทธิ์ · มี unit test)
+import { openColorPicker, closeColorPicker } from './color-picker.js';
+import { normColor } from './text-color.js';
 import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS,
          applyFmtbarConfig, fmtbarContextItems, fabContextItems,
          TB_FMT_HOST } from './toolbar/toolbar-ui.js';
@@ -248,6 +263,7 @@ import { paperVars, normalizePaperColor, PAPER_DEFAULT } from './paper-color.js'
 import { setFormatGuide, isFormatGuide, setPageBreaks, pageBreaks,
          setSceneNumbers, isSceneNumbers, refreshSceneNumbers,
          setContinueds, continueds, refreshContinueds,
+         setSpErrorMarks, refreshSpErrorMarks, setSpErrorMarksOn, isSpErrorMarks, spErrorMarks,
          setSpPageNumberLabel, applySpPagePads } from './sp-format-guide.js';
 // ---- alpha.58: ระบบต่อเนื่อง (55/56) + รายงานบท (71/72/73) ----
 import { computeContinueds, continuedSummary, continuedStatusText, pagesWithContinueds,
@@ -306,6 +322,10 @@ export function applySettings() {
   const spFmt = applyPageVars();                     // [85] ขนาดกระดาษ + ระยะขอบ + รูปแบบ element บทหนัง
   // [61] แสดงรูปแบบ — คืนสถานะจาก settings ทุกครั้งที่โหลด/เปลี่ยนค่าตั้ง
   setFormatGuide(!!state.settings.spShowFormat, spFmt);
+  // [alpha.127] เครื่องหมายจุดผิดในเอกสาร — คืนสถานะจาก settings เช่นเดียวกัน
+  if (setSpErrorMarksOn(state.settings.spErrorMarks !== false)) {
+    for (const t2 of state.tabs.values()) if (t2.sp && t2.sp.view) refreshSpErrorMarks(t2.sp.view);
+  }
   document.body.classList.toggle('sp-show-format', !!state.settings.spShowFormat);
   document.documentElement.style.setProperty('--home-thumb',
     Math.max(120, Math.min(400, parseInt(state.settings.homeThumb, 10) || 190)) + 'px');
@@ -1608,7 +1628,12 @@ window.addEventListener('resize', () => {
   _spViewJob = setTimeout(refreshSpView, 150);
   // [alpha.116 ข้อ 5] ย่อ/ขยายหน้าต่าง → ของลอยต้องยังอยู่ในจอ **และบันทึกทับค่าที่จำไว้**
   keepFloatingUiInView();
+  // [alpha.126] ย่อ/ขยายหน้าต่างก็ทำให้เกิดช่องว่างค้างได้เหมือนการลากที่จับ (แผงที่ตรึงเป็น px
+  // ไม่ยืดตาม) และเส้นทางนี้ก็ไม่ผ่าน `renderPanels()` เช่นกัน → ต้องเรียกตัวปิดรูเอง
+  clearTimeout(_gapJob);
+  _gapJob = setTimeout(() => { try { auditPanelGaps(); } catch {} }, 200);
 });
+let _gapJob = null;
 
 /**
  * [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า
@@ -1627,7 +1652,7 @@ export function togglePageGuides(on) {
   document.body.classList.toggle('k-page-guides', v);
   saveGlobalSetting('pageGuides', v);
   syncMenuToggles();
-  setStatus(v ? T`เปิดเส้นบอกระยะขอบกระดาษ (มุมมองจัดหน้า)` : T`ปิดเส้นบอกระยะขอบกระดาษ`);
+  setStatus(v ? tt('ui.app.pageGuidesOn') : tt('ui.app.pageGuidesOff'));
   return v;
 }
 
@@ -1915,17 +1940,39 @@ export function gotoDialog(kind) {
   box.append(row);
 
   // รายการฉาก — คลิกเลือกได้เลย (จำชื่อฉากง่ายกว่าเลข)
+  //
+  // [alpha.124 ข้อ 35] เพิ่มช่องค้นหา: บทยาว 200 ฉากต้องเลื่อนหาเองทั้งกอง และ Quick Open
+  // (Ctrl+Shift+O) ก็ช่วยไม่ได้เพราะมันค้นจาก **ชื่อไฟล์** ไม่ใช่หัวฉากในเอกสาร
+  const find = el('input', 'k-dlg-input k-goto-find');
+  find.placeholder = tt('ui.app.gotoFindPlaceholder');
+  box.append(find);
   const list = el('div', 'k-goto-list');
   const renderList = () => {
-    list.innerHTML = '';
-    if (sel.value !== 'scene') { list.style.display = 'none'; return; }
+    list.replaceChildren();
+    const isScene = sel.value === 'scene';
+    find.style.display = isScene ? '' : 'none';
+    if (!isScene) { list.style.display = 'none'; return; }
     list.style.display = '';
     if (!scenes.length) { list.append(el('div', 'cmp-empty', ttf('ui.app.fileNotHas', unit))); return; }
-    for (const s of scenes) {
+    const q = find.value.trim().toLowerCase();
+    // ค้นได้ทั้งเลขฉากและข้อความหัวฉาก — พิมพ์ "12" ไปฉาก 12 · พิมพ์ "ห้องครัว" ไปฉากนั้น
+    const rows = q ? scenes.filter((x) => String(x.n) === q
+                                       || String(x.text || '').toLowerCase().includes(q))
+                   : scenes;
+    if (!rows.length) { list.append(el('div', 'cmp-empty', tt('ui.app.gotoFindNone'))); return; }
+    for (const s of rows) {
       const d = el('div', 'k-menu-item', `${s.n}. ${s.text || tt('ui.common.empty')}`);
       d.onclick = () => { ov.remove(); gotoScene(s.n); };
       list.append(d);
     }
+  };
+  find.oninput = renderList;
+  // Enter ในช่องค้นหา = ไปที่ผลลัพธ์แรก (ไม่ต้องละมือไปคลิก)
+  find.onkeydown = (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const first = list.querySelector('.k-menu-item');
+    if (first) first.click();
   };
   box.append(list);
 
@@ -1942,13 +1989,16 @@ export function gotoDialog(kind) {
 
   ov.append(box); document.body.append(ov);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  syncHint(); renderList(); inp.focus(); inp.select();
+  escClose(ov, () => ov.remove());              // [alpha.124 ข้อ 15]
+  syncHint(); renderList();
+  // เปิดมาที่โหมดฉาก = พิมพ์ค้นได้เลย · โหมดหน้า = กรอกเลขได้เลย
+  if (sel.value === 'scene') find.focus(); else { inp.focus(); inp.select(); }
   return ov;
 }
 
 // ═════════ [54] ตรวจหาข้อผิดพลาดในบท ═════════
 let _spErrors = [];               // ผลตรวจล่าสุดของแท็บที่เปิดอยู่ (แถบสถานะใช้ร่วม)
-export function spErrors() { return _spErrors.slice(); }
+// [alpha.126] `spErrors()` ถูกถอด — ไม่มีใครเรียกเลย (ทุกจุดอ่าน `_spErrors` ตรง ๆ ในไฟล์นี้)
 
 /** ตรวจบทที่เปิดอยู่ — คืน [] เมื่อไม่ใช่บทหนัง */
 export function checkScreenplay(tab) {
@@ -1963,6 +2013,9 @@ export function checkScreenplay(tab) {
     e.text = b ? String(b.text || '') : '';
   }
   _spErrors = errs;
+  // [alpha.124 ข้อ 33] ให้จุดที่ผิดโผล่ในเอกสารด้วย ไม่ใช่มีแต่ตัวเลขบนแถบสถานะ
+  // ส่งเฉพาะตอนผลเปลี่ยนจริง (setSpErrorMarks คืน false เมื่อเหมือนเดิม) — ตัวตรวจวิ่งทุก 300ms
+  if (setSpErrorMarks(errs) && t2.sp && t2.sp.view) refreshSpErrorMarks(t2.sp.view);
   return errs;
 }
 
@@ -2031,9 +2084,30 @@ export function spErrorMenu(x, y) {
     checkScreenplay(t2); updateErrorBadge();
     setStatus(summaryText(_spErrors));
   } });
+  // [alpha.127] สวิตช์เปิด/ปิด "เส้นขอบเหลือง/แดง" ในเอกสาร — อยู่ติดกับตัวเลขที่ผู้ใช้เพิ่งกด
+  // (จุดที่เจอฟีเจอร์นี้ได้เองโดยไม่ต้องไปงมในตั้งค่า · ตั้งค่ามีช่องเดียวกันให้ด้วย)
+  items.push({ label: (isSpErrorMarks() ? '☑ ' : '☐ ') + tt('ui.app.spErrMarkToggle'),
+               click: () => toggleSpErrorMarks() });
   items.push({ label: iconHtml('clipboard', 14) + tt('ui.app.settingsFormatCheckChapter'), click: () => settingsDialog('page') });
   popupMenu(x, y, items);
   return items.length;                      // > 0 = เมนูถูกเปิดจริง (เทสใช้ตรวจ)
+}
+
+/**
+ * [alpha.127] เปิด/ปิดเครื่องหมายจุดผิดในเอกสาร — จำลง `settings.spErrorMarks`
+ * @param {boolean} [on] ไม่ส่ง = สลับค่าเดิม
+ * @returns {boolean} สถานะหลังสลับ
+ */
+export function toggleSpErrorMarks(on) {
+  const next = on === undefined ? !isSpErrorMarks() : !!on;
+  setSpErrorMarksOn(next);
+  state.settings.spErrorMarks = next;
+  saveProjectMeta().catch(() => {});
+  // วาดใหม่ทุกแท็บบท — เส้นต้องหาย/โผล่ทันที ไม่ใช่รอพิมพ์ตัวถัดไป
+  for (const t2 of state.tabs.values()) if (t2.sp && t2.sp.view) refreshSpErrorMarks(t2.sp.view);
+  updateErrorBadge();
+  setStatus(next ? tt('ui.app.spErrMarkOn') : tt('ui.app.spErrMarkOff'));
+  return next;
 }
 
 /** รายการข้อผิดพลาดทั้งบท — คลิกแถวเพื่อกระโดดไป */
@@ -2391,6 +2465,43 @@ export function refreshAllSpell() {
   }
 }
 
+// ═══════════ [alpha.124 ข้อ 30] คำแนะนำ + ข้ามคำนี้ครั้งนี้ ═══════════
+
+/** คำที่น่าจะถูกสำหรับคำที่ขีดแดง — ใช้เอนจินเดียวกับที่ตัดสินว่า "ผิด" (spell.js) */
+export function spellSuggest(word, max = 6) {
+  try { return spell.suggest(word, max); } catch { return []; }
+}
+
+/** ข้ามคำนี้ในรอบการทำงานนี้ (ไม่เขียนลงคลังคำถาวร) แล้วลบเส้นแดงออกทันที */
+export function spellIgnoreOnce(word) {
+  const ok = spell.ignoreOnce(word);
+  if (ok) refreshAllSpell();
+  return ok;
+}
+
+/**
+ * แทนที่คำที่ขีดแดงด้วยคำที่เลือกจากเมนู — แก้ **ในเอกสารจริง** ไม่ใช่แค่คัดลอกให้
+ * @param {HTMLElement} badEl ตัว `.k-spell-bad` ที่คลิกขวา
+ * @param {string} word คำใหม่
+ */
+export function replaceSpellWord(badEl, word) {
+  const t = state.active;
+  const view = t?.editor?.view || t?.sp?.view;
+  if (!view || !badEl) return false;
+  try {
+    // decoration เป็น inline span ครอบคำพอดี → หาตำแหน่งในเอกสารจากโหนดตัวแรกข้างใน
+    const inner = badEl.firstChild || badEl;
+    const from = view.posAtDOM(inner, 0);
+    const to = from + (badEl.textContent || '').length;
+    if (!(to > from)) return false;
+    view.dispatch(view.state.tr.insertText(word, from, to));
+    view.focus();
+    if (t) markDirty(t);
+    setStatus(ttf('ui.app.spellReplaced', badEl.textContent, word));
+    return true;
+  } catch (e) { log('warn', tt('ui.app.spellReplaceFail'), e); return false; }
+}
+
 // รีเฟรชการไฮไลต์ชื่อ Wiki ทุกแท็บ (ใช้เมื่อสลับ "จับชื่อ Wiki อัตโนมัติ")
 export function refreshAllMentions() {
   for (const t of state.tabs.values()) {
@@ -2404,10 +2515,31 @@ function restartAutosave() {
   if (autosaveTimer) { clearInterval(autosaveTimer); autosaveTimer = null; }
   const min = parseInt(state.settings.autoSaveMinutes, 10);
   if (!min || min <= 0) return;               // 0 = ปิดบันทึกอัตโนมัติ
-  autosaveTimer = setInterval(() => {
-    let any = false;
-    for (const t of state.tabs.values()) if (t.dirty) { saveTab(t); any = true; }
-    if (any) { log('info', tt('ui.app.autosaveRun')); setTimeout(updateDirtyBadge, 300); }
+  // [alpha.124 ข้อ 41] ★ บันทึกอัตโนมัติต้อง **รอทีละไฟล์** และรับ error เอง
+  //
+  // เดิม: `for (...) saveTab(t)` แบบไม่ await → ทุกแท็บที่ค้างเขียนดิสก์พร้อมกันทั้งกอง
+  // (แต่ละครั้งยัง `writeSceneMeta` + `updateSceneRow` แตะ `scenes.json` ไฟล์เดียวกันด้วย
+  //  = อ่าน-แก้-เขียนซ้อนกัน ตัวท้ายชนะ ค่าที่เพิ่งเขียนของตัวอื่นหาย)
+  // และ error จากดิสก์กลายเป็น unhandled promise rejection ที่ไม่มีใครเห็น
+  //
+  // และเลิกใช้ `setTimeout(…, 300)` เดาเวลา — อัปเดตป้ายหลังเขียนเสร็จจริง
+  let autosaveBusy = false;
+  autosaveTimer = setInterval(async () => {
+    if (autosaveBusy) return;            // รอบก่อนยังเขียนไม่เสร็จ (ดิสก์ช้า/ไฟล์เยอะ) → ข้ามรอบนี้
+    const pending = [...state.tabs.values()].filter((t) => t.dirty);
+    if (!pending.length) return;
+    autosaveBusy = true;
+    let ok = 0;
+    try {
+      for (const t of pending) {
+        if (!t.dirty || !state.tabs.has(t.file)) continue;   // ถูกบันทึก/ปิดไปแล้วระหว่างรอคิว
+        try { await saveTab(t); ok++; }
+        catch (e) { log('error', tt('ui.app.autosaveFail') + (t.title || t.file), e); }
+      }
+    } finally { autosaveBusy = false; }
+    log('info', ttf('ui.app.autosaveRunN', ok, pending.length));
+    updateDirtyBadge();
+    refreshStatusBar();
   }, min * 60 * 1000);
 }
 
@@ -2476,7 +2608,22 @@ async function loadProjectInner(root) {
   if (!(await kapi.exists(await kapi.join(root, 'project.khn.json')))) {
     // ตรวจก่อน "ก่อน" ถามบันทึก — จะได้ไม่ทำผู้ใช้เสียเวลาตอบกล่องแล้วค่อยรู้ว่าโฟลเดอร์ผิด
     clearBusy();
-    alert(tt('ui.app.folderNotProjectKillian'));
+    // [alpha.124 ข้อ 43] เดิม `alert()` แล้วจบ — โปรเจกต์ที่ถูกย้าย/ลบยังค้างในรายการล่าสุด
+    // ตลอดไป กดทีไรก็ได้กล่องเดิมซ้ำ ๆ โดยไม่มีทางเอาออก · ตอนนี้เสนอให้ลบออกได้เลย
+    const inRecent = (await kapi.listRecent().catch(() => [])).includes(root);
+    if (inRecent) {
+      const v = await choose(ttf('ui.app.recentBrokenAsk', root), [
+        { label: tt('ui.app.recentBrokenRemove'), value: 'remove', danger: true },
+        { label: tt('ui.app.recentBrokenKeep'), value: 'keep', primary: true },
+      ]);
+      if (v === 'remove') {
+        await kapi.removeRecent(root);
+        setStatus(tt('ui.app.recentBrokenRemoved'));
+        try { const { refreshHomePanels } = await import('./home-ui.js'); refreshHomePanels(); } catch {}
+      }
+    } else {
+      await confirmBox(tt('ui.app.folderNotProjectKillian'), tt('ui.common.msg3'));
+    }
     return;
   }
   // [alpha.62 บั๊ก 9] กล่อง "บันทึกก่อนปิด?" เด้งตรงนี้ — ต้องล้างตัวบอกสถานะก่อน
@@ -2486,6 +2633,8 @@ async function loadProjectInner(root) {
   setBusy(tt('ui.app.busyReadDataProject'));
   const meta = await kapi.readJson(await kapi.join(root, 'project.khn.json'));
   state.root = root; state.title = meta.title || tt('ui.common.project');
+  invalidateSearchIndex();          // [alpha.125 ข้อ A] เปลี่ยนโปรเจกต์ = ดัชนีเก่าใช้ไม่ได้
+  invalidateChatRag();              // [alpha.125 ข้อ B] เช่นเดียวกับดัชนี RAG ของแชท
   loadSettings(meta);
   applyWikiCats();
   document.title = state.title + ' — Killian 2';
@@ -2501,8 +2650,6 @@ async function loadProjectInner(root) {
   applyDataI18n();
   initIcons();
   applyToolbarShortcutTitles();
-  setBusy(tt('ui.app.busyCheckFile'));
-  await purgeRecycle(root);                          // ล้างถังขยะเก่าก่อนสร้างต้นไม้
   setBusy(tt('ui.app.busyNewStructureProject'));
   await buildTree();
   buildFilterBar().catch(() => {});             // แถบกรอง
@@ -2563,6 +2710,21 @@ async function loadProjectInner(root) {
   // [alpha.66 ข้อ 14] ตรวจทางเลือกที่ชี้ไปฉากที่ถูกลบ/ย้ายไปแล้ว — ไม่บล็อกการเปิดงาน
   // (ถ้าเจอ จะทับข้อความ "เปิดโปรเจกต์:" ด้านบนด้วยคำเตือน + เขียนรายละเอียดลงบันทึก)
   checkDanglingOnOpen().catch(() => {});
+  // [alpha.124 ข้อ 16] ล้างถังขยะเก่า — **ย้ายมาไว้หลังเปิดงานเสร็จและปิดตัวหมุนแล้ว**
+  // เดิมอยู่ระหว่าง setBusy() → พอมันเริ่มถามก่อนลบ กล่องจะไปอยู่ใต้ฉากตัวหมุน
+  // (บทเรียนเดิมของ alpha.62 บั๊ก 10: อย่าให้มีอะไรหมุนค้างตอนรอผู้ใช้ตอบกล่อง)
+  purgeRecycle(root).then((n) => { if (n) buildTree(); }).catch(() => {});
+  // [alpha.124 ข้อ 23] ซ่อมจำนวนคำที่ค้างเป็น 0 มาแต่ไหนแต่ไร — ครั้งเดียวต่อโปรเจกต์
+  // (หลังจากนี้ saveTab เป็นคนดูแลต่อ) · ทำเบื้องหลัง ไม่บล็อกการเริ่มเขียน
+  if (!state.meta || !state.meta.wcBuilt) {
+    rebuildWordCounts().then(async (r) => {
+      // ปักธง "ซ่อมแล้ว" เฉพาะตอนไล่จนจบจริง — ถ้าเลิกกลางทาง (ผู้ใช้สลับโปรเจกต์)
+      // ต้องยอมทำใหม่รอบหน้า ไม่ใช่ปิดประตูทิ้งไว้แล้วเลขค้างเป็น 0 ตลอดไปเหมือนเดิม
+      if (r.done && state.meta && state.root === root) { state.meta.wcBuilt = 1; await saveProjectMeta(); }
+      if (r.fixed && state.root === root) { await buildTree(); setStatus(ttf('ui.app.wordCountRebuilt', r.fixed)); }
+      log('info', 'rebuildWordCounts', r);
+    }).catch(() => {});
+  }
 }
 
 // ---------------- [alpha.61 ข้อ 4] อิสระเรื่องตัวพิมพ์ใหญ่/เล็กในบทหนัง ----------------
@@ -3254,7 +3416,8 @@ function filterTree(q) {
     // **กฎที่ถูกคือดูที่ตัวแถวเอง**: แถวที่ไม่ได้สังกัดบทไหน (ไม่มี chGuid) ไม่เกี่ยวกับขอบเขตบท
     if (ok && treeScope && s.dataset.chGuid) ok = s.dataset.chGuid === treeScope.guid;
     if (!ok && s.dataset.planner) {
-      log('info', ttf('ui.app.plannerTreeItemFilter', s.dataset.plannerName),
+      // [alpha.128] เครื่องมือวินิจฉัย K-1 (ปิดเคสแล้วที่ alpha.75) — เป็น debug ไม่ใช่ info
+      log('debug', ttf('ui.app.plannerTreeItemFilter', s.dataset.plannerName),
           { query: raw, scope: treeScope ? treeScope.label : null });
     }
     s.style.display = ok ? '' : 'none';
@@ -3278,6 +3441,31 @@ function filterTree(q) {
     const anyVisible = [...sec.querySelectorAll('.scene, .chapter')]
       .some((s) => !s.classList.contains('add-row') && s.style.display !== 'none');
     sec.style.display = ((!q && !treeScope) || anyVisible) ? '' : 'none';
+  });
+
+  // ═══ [alpha.124 ข้อ 14] ★ "ค้นแล้วเจอ แต่ไม่เห็น" ═══
+  //
+  // ต้นตอ: ตัวกรองนี้จัดการแค่ `style.display` ของแต่ละแถว แต่หมวด/บทที่ **พับอยู่**
+  // ซ่อนลูกทั้งก้อนด้วยกฎ CSS คนละชั้น (`.sec.collapsed > *:not(.sec-title)`) →
+  // แถวที่ตรงคำค้นถูกตั้ง `display:''` เรียบร้อยแล้ว แต่ยังมองไม่เห็นอยู่ดี
+  // (หัวข้อขึ้นจำนวนที่เจอ แต่ข้างล่างว่างเปล่า = อาการ "ไฟล์หาย" ที่ผู้ใช้รายงานมาตลอด)
+  //
+  // กติกา: **ค้นหาอยู่ = กางให้หมดชั่วคราว · ล้างคำค้น = คืนสภาพพับตามที่ผู้ใช้ตั้งไว้**
+  // สภาพพับตัวจริงเก็บใน localStorage (`treeCollapsed()`) อยู่แล้ว จึงคืนค่าได้เป๊ะ
+  // ไม่ต้องจำอะไรเพิ่ม และการกางชั่วคราวนี้ไม่ถูกบันทึกทับของเดิม
+  const searching = !!raw || !!treeScope;
+  tree.querySelectorAll('.sec, .chapter').forEach((box) => {
+    if (searching) {
+      // เก็บของเดิมไว้ครั้งเดียว แล้วกางเฉพาะก้อนที่ยังมีลูกโผล่อยู่
+      if (box.dataset.wasCollapsed === undefined)
+        box.dataset.wasCollapsed = box.classList.contains('collapsed') ? '1' : '';
+      box.classList.remove('collapsed');
+    } else if (box.dataset.wasCollapsed !== undefined) {
+      box.classList.toggle('collapsed', box.dataset.wasCollapsed === '1');
+      delete box.dataset.wasCollapsed;
+    }
+    const caret = box.querySelector(':scope > .sec-title > .tw, :scope > .ch-title > .tw');
+    if (caret) caret.classList.toggle('tw-open', !box.classList.contains('collapsed'));
   });
 }
 
@@ -3525,9 +3713,16 @@ export async function treePaste(dPath, ch) {
 export async function treeDuplicate(items) {
   const list = items && items.length ? items : treeSelCtx();
   if (!list.length) { setStatus(tt('ui.tree.nothingSelected')); return 0; }
-  for (const it of list) { try { await duplicateScene(it.dPath, it.ch, it.sc); } catch {} }
-  setStatus(ttf('ui.tree.duplicatedN', list.length));
-  return list.length;
+  // [alpha.124 ข้อ 18] เดิม `catch {}` เงียบสนิทแล้วรายงาน `list.length` เสมอ →
+  // ทำสำเนา 5 ฉากแล้วพังหมดทั้ง 5 ก็ยังขึ้นว่า "ทำสำเนาแล้ว 5" · นับของจริงและบอกที่พลาดด้วย
+  let ok = 0; const failed = [];
+  for (const it of list) {
+    try { await duplicateScene(it.dPath, it.ch, it.sc); ok++; }
+    catch (e) { failed.push(it.sc?.title || ''); log('warn', tt('ui.tree.duplicateFail'), e); }
+  }
+  setStatus(ttf('ui.tree.duplicatedN', ok)
+            + (failed.length ? ' · ' + ttf('ui.tree.failedN', failed.length) : ''));
+  return ok;
 }
 export async function treeDeleteSelected(items) {
   const list = items && items.length ? items : treeSelCtx();
@@ -3562,16 +3757,20 @@ async function treeMoveMenu(items) {
   if (!list.length) return 0;
   const dst = await pickDraftTarget({ title: tt('ui.tree.moveToChapter') });
   if (!dst) return 0;
-  let skipped = 0;
+  // [alpha.124 ข้อ 18] นับ "ย้ายสำเร็จจริง" — เดิมรายงาน `list.length` ทั้งที่รวมตัวที่ข้าม
+  // (ข้ามฉบับร่าง) และตัวที่ throw ไปแล้วด้วย · และ setStatus บรรทัดล่างก็ทับคำเตือนบรรทัดบนทันที
+  let skipped = 0, ok = 0; const failed = [];
   for (const it of list) {
     // ย้ายข้ามฉบับร่างไม่ได้ (ทะเบียนฉากเป็นคนละไฟล์) — บอกให้รู้ ไม่ใช่เงียบ
     if (it.dPath !== dst.dPath) { skipped++; continue; }
-    try { await moveSceneToChapter(it.dPath, it.ch, it.sc, dst.chapter); } catch {}
+    try { await moveSceneToChapter(it.dPath, it.ch, it.sc, dst.chapter); ok++; }
+    catch (e) { failed.push(it.sc?.title || ''); log('warn', tt('ui.tree.moveFail'), e); }
   }
-  if (skipped) setStatus(ttf('ui.tree.skipCrossDraft', skipped));
   await buildTree();
-  setStatus(ttf('ui.tree.movedN', list.length, dst.chapter.title));
-  return list.length;
+  setStatus(ttf('ui.tree.movedN', ok, dst.chapter.title)
+            + (skipped ? ' · ' + ttf('ui.tree.skipCrossDraft', skipped) : '')
+            + (failed.length ? ' · ' + ttf('ui.tree.failedN', failed.length) : ''));
+  return ok;
 }
 /** บทที่ควรใช้เป็นเป้าหมายของ "วาง" — บทของแถวที่เลือกล่าสุด */
 function treePasteTarget() {
@@ -3793,6 +3992,32 @@ async function _buildTreeInner() {
       const primary = sec.primaryDraft || 'default';
       const draftsAvailable = await kapi.listDirs(draftRoot);
       const namesToShow = draftsAvailable.includes(primary) ? [primary] : draftsAvailable;
+      // ═══ [alpha.125 ข้อ I] ★ สลับฉบับร่างได้จากต้นไม้เลย ═══
+      //
+      // ระบบหลายฉบับร่างต่อเล่มมีครบมานานแล้ว (สร้าง/ลบ/เปลี่ยนชื่อ/ตั้งร่างหลัก ใน "จัดการเล่ม")
+      // แต่ Explorer แสดง **เฉพาะร่างหลัก** เสมอ และทางเดียวที่จะดูอีกร่างคือเปิดหน้าจัดการเล่ม
+      // → ในทางปฏิบัติจึงเหมือนมีร่างเดียว · ตัวเลือกนี้โผล่เฉพาะเล่มที่มีมากกว่าหนึ่งร่างจริง ๆ
+      if (draftsAvailable.length > 1) {
+        // ⚠ **ห้ามใช้คลาส `scene`** — ทั้งโปรแกรม (และเทส) ถือว่า `.scene` = แถวเนื้อหาที่คลิกเปิดได้
+        // ใส่ไปแล้วเจอทันที: `document.querySelector('.scene').click()` ไปโดนแถวนี้แทนฉากแรก
+        const dRow = el('div', 'tree-draft-row');
+        dRow.append(icon('book-content', 13), ' ' + tt('ui.tree.draftLabel'));
+        const dSel = el('select', 'k-dlg-select tree-draft-sel');
+        for (const dn of draftsAvailable) {
+          const o = el('option', null, dn); o.value = dn; dSel.append(o);
+        }
+        dSel.value = namesToShow[0];
+        dSel.title = tt('ui.tree.draftPickHint');
+        dSel.onclick = (e) => e.stopPropagation();
+        dSel.onchange = async () => {
+          const { setPrimaryDraft } = await import('./drafts.js');
+          await setPrimaryDraft(secPath, dSel.value);
+          setStatus(ttf('ui.tree.draftSwitched', dSel.value));
+          await buildTree();
+        };
+        dRow.append(dSel);
+        secEl.append(dRow);
+      }
       for (const dname of namesToShow) {
         const dPath = await kapi.join(draftRoot, dname);
         const draftFile = await kapi.join(dPath, 'draft.json');
@@ -3808,7 +4033,8 @@ async function _buildTreeInner() {
           const visSet = new Set(chFiles.filter((f) => /_vis\.csv$/i.test(f)).map((f) => f.toLowerCase()));
           const chEl = el('div', 'chapter');
           const chHead = el('div', 'ch-title');
-          chHead.innerHTML = iconHtml('folder', 14) + ' ' + ch.title;
+          // [alpha.124 ข้อ 20] ชื่อบทเป็นข้อความของผู้ใช้ → ห้ามลง innerHTML (กฎข้อ 11)
+          chHead.append(icon('folder', 14), ' ' + (ch.title || ''));
           const addSc = el('span', 'row-add', '+');
           addSc.title = tt('ui.app.addSceneChapter');
           addSc.onclick = (e) => { e.stopPropagation(); addScene(dPath, ch); };
@@ -3876,10 +4102,7 @@ async function _buildTreeInner() {
               // อ่าน thumbnail จากไฟล์ (ถ้าเคยมี)
             }
             // word count เล็ก ๆ
-            if (sc.wordCount) {
-              scEl.append(el('span', 'sc-wordcount',
-                (sc.wordCount >= 1000 ? Math.round(sc.wordCount / 1000) + 'k' : sc.wordCount) + tt('ui.common.word')));
-            }
+            if (sc.wordCount) scEl.append(el('span', 'sc-wordcount', wordBadgeText(sc.wordCount)));
             if (sc.status && sc.status !== 'Outline') {
               // ชิปสถานะได้สีประจำสถานะ (มาตรฐาน หรือที่ผู้ใช้ตั้งเองในกล่องจัดการสถานะ)
               const stChip = el('span', 'sc-status', sc.status);
@@ -4385,7 +4608,8 @@ async function _buildTreeInner() {
   const renderCat = async (catDir, cat, scopeLabel) => {
     const cEl = el('div', 'chapter');
     const cHead = el('div', 'ch-title');
-    cHead.innerHTML = catIconHtml(cat) + ' ' + catLabel(cat) + (scopeLabel ? ` (${scopeLabel})` : '');
+    // [alpha.124 ข้อ 20] ชื่อหมวด Wiki ผู้ใช้ตั้งเองได้ (wikiCats) → เป็นข้อความ ไม่ใช่ HTML
+    cHead.append(catIconEl(cat), ' ' + catLabel(cat) + (scopeLabel ? ` (${scopeLabel})` : ''));
     const addE = el('span', 'row-add', '+'); addE.title = tt('ui.app.newNewCat');
     addE.onclick = (e) => { e.stopPropagation(); addEntity(catDir, cat); };
     cHead.append(addE); cEl.append(cHead);
@@ -4431,7 +4655,8 @@ async function _buildTreeInner() {
       else if (sortMode === 'modified') entRows.sort((a, b) => b.mtime - a.mtime);
       for (const { f, p, name, ent } of entRows) {
         const it = el('div', 'scene wiki-ent');
-        it.innerHTML = catIconHtml(cat) + ' ' + name;
+        // [alpha.124 ข้อ 20] ชื่อเอนทิตี้มาจากไฟล์ของผู้ใช้ → textContent เท่านั้น
+        it.append(catIconEl(cat), ' ' + name);
         // บั๊ก #13: ค้นเอนทิตี้ต้องค้น "เนื้อในไฟล์บนดิสก์" ด้วย ไม่ใช่แค่ชื่อที่โชว์
         // (ชื่อเล่น/แท็ก/บทบาท/คำบรรยาย/ฟิลด์เทมเพลตทุกช่อง) — อ่าน .json อยู่แล้วจึงไม่มีค่าใช้จ่ายเพิ่ม
         it.dataset.search = entitySearchBlob(name, ent, cat, scopeLabel) + ' ' + f.toLowerCase();
@@ -4513,7 +4738,7 @@ async function _buildTreeInner() {
     { label: ttf('ui.tree.emptyTrashN', all.length), danger: all.length > 0,
       click: () => emptyRecycle(all.length) },
     { label: tt('ui.tree.purgeNowByDays'), click: async () => {
-        await purgeRecycle(state.root); await buildTree(); } },
+        await purgeRecycle(state.root, { force: true }); await buildTree(); } },
     '-',
     { label: tt('ui.tree.trashSettings'), click: () => settingsDialog('write', { focus: '#st-recycle' }) },
     { label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(recDir) },
@@ -4658,6 +4883,12 @@ export function catLabel(key) { const c = wikiCats().find((x) => x.key === key);
 export function catIcon(key) { const c = wikiCats().find((x) => x.key === key);
   return (c && hasIcon(c.icon) ? c.icon : null) || CAT_ICON[key] || 'bookmark'; }
 export function catIconHtml(key, sz) { return iconHtml(catIcon(key), sz || 16); }
+/**
+ * [alpha.124 ข้อ 20] ไอคอนหมวดแบบ **DOM node** — คู่แฝดของ `catIconHtml` ที่ปลอดภัยกว่า
+ * มีไว้ให้ทุกจุดที่ต้องต่อไอคอนกับ "ข้อความของผู้ใช้" (ชื่อบท · ชื่อเอนทิตี้) โดยไม่ต้องแตะ
+ * `innerHTML` — ซึ่งกฎข้อ 11 ของโปรเจกต์ห้ามไว้ตรง ๆ อยู่แล้ว (ชื่อไฟล์/ชื่อบทมี `<` ได้)
+ */
+export function catIconEl(key, sz) { return icon(catIcon(key), sz || 16); }
 
 // บั๊ก #21: "ค้นหาในฉาก" จากคลิกขวาเอนทิตี้ Wiki ใน Explorer
 // ใช้ดัชนี auto-link ที่มีอยู่แล้ว (ตัวเดียวกับแท็บ Backlinks / ศูนย์รวม) — ไม่สแกนไฟล์ซ้ำ
@@ -5099,7 +5330,7 @@ function floatTab(file) {
   if (savedBox && savedBox.min) win.classList.add('min');
   bMin.onclick = () => { win.classList.toggle('min'); refitTab(t); saveFloatWinBox(file, win); };
   bDock.onclick = () => dockTab(file);
-  bX.onclick = () => closeTab(file);
+  bX.onclick = () => closeTab(file, { ask: true });          // [alpha.124 ข้อ 17] ผู้ใช้สั่งปิดเอง
   bar.ondblclick = (e) => { if (!e.target.closest('.float-btn')) dockTab(file); };
   win.addEventListener('mousedown', () => bringFloatFront(win));
 
@@ -5319,8 +5550,12 @@ export function refreshTreeQueued() {
  *  ไม่ถูกสร้าง / ถูก display:none / ข้อความว่าง / หมวดถูกพับ)
  */
 export function auditPlannerRows(when) {
+  // [alpha.128] เดิมหาหมวดด้วย `.textContent.includes('กระดานวางแผน')` — ข้อความนี้แปลตามภาษา
+  // (`ui.app.boardPlanner2`) → หน้าจออังกฤษหาไม่เจอ แล้วรายงานว่า "ไม่มีหมวด" ทุกครั้ง
+  // หาจากโครงแทน: หมวดที่มีแถวกระดานอยู่ข้างใน — ไม่ขึ้นกับภาษาเลย
   const sec = [...document.querySelectorAll('#tree .sec')]
-    .find((s) => (s.querySelector('.sec-title') || {}).textContent?.includes('กระดานวางแผน'));
+    .find((s) => s.querySelector('.scene[data-planner]'))
+    || (document.querySelector('#tree .scene[data-planner]') || {}).closest?.('.sec') || null;
   const rows = [...document.querySelectorAll('#tree .scene[data-planner]')];
   // [alpha.75] เดิมดูแค่ `display` → **จับ K-1 ไม่ได้เลย** เพราะแถวถูกทำให้จางด้วย `opacity:0`
   // (อยู่ใน DOM · display ปกติ · ข้อความครบ แต่มองไม่เห็น) → ต้องดู opacity/visibility ด้วย
@@ -5341,7 +5576,10 @@ export function auditPlannerRows(when) {
   const blank = info.filter((i) => !i.text).length;
   const secHidden = sec ? (getComputedStyle(sec).display === 'none' || sec.classList.contains('collapsed')) : null;
   const bad = !sec || !rows.length || hidden || faded || blank;
-  log(bad ? 'warn' : 'info',
+  // [alpha.128] ตัวนี้เป็นเครื่องมือวินิจฉัย K-1 (ปิดเคสไปตั้งแต่ alpha.75) แต่ยังยิง INFO
+  // **ทุกครั้งที่สร้างต้นไม้ใหม่** — ในการรัน e2e รอบเดียวกินบันทึกไป 736 บรรทัดจาก 2,280
+  // (45% ของทั้งไฟล์) จนเหตุการณ์จริงจมหาย · ตอนนี้ "ปกติ" = debug · "ผิดปกติ" = warn เหมือนเดิม
+  log(bad ? 'warn' : 'debug',
       ttf('ui.app.plannerTreeCheckImage', when || '-', sec ? tt('ui.app.has') : tt('ui.app.notHas3'), rows.length) +
       ttf('ui.app.hideEmptyCatHide', hidden, faded, blank, secHidden),
       { rows: info, filter: ($('#tree-search') || {}).value || '' });
@@ -5429,14 +5667,17 @@ export function watchPlannerRows(on) {
           // ตัวเฝ้าเดิมไม่รู้เรื่องนี้ จึงเตือน "แถวกระดานถูกถอดออกจาก DOM" ทุกครั้งที่รีเฟรชต้นไม้
           // (name เป็น "(ในกล่อง)" เพราะสิ่งที่ถูกถอดคือ .sec ที่ห่อแถวไว้ ไม่ใช่ตัวแถว) = สัญญาณหลอก
           if (_treeSwapping) continue;
-          log('warn', tt('ui.app.plannerTreeRowBoard'),
+          // [alpha.128] ต้นเหตุ K-1 คือ CSS opacity ซึ่งปิดเคส + มีเทสวัด opacity คุมไว้แล้วตั้งแต่
+          // alpha.75 · ตัวเฝ้านี้จึงเหลือแต่สัญญาณหลอกจากการรื้อต้นไม้ตามปกติ (120 WARN/รอบ)
+          // เก็บไว้เป็น debug — ยังไล่ย้อนได้เวลาต้องการ แต่ไม่ปลอมเป็น "มีอะไรผิด"
+          log('debug', tt('ui.app.plannerTreeRowBoard'),
               { name: (n.dataset && n.dataset.plannerName) || tt('ui.app.dialog'),
                 parent: m.target && m.target.className, stack: new Error(tt('ui.app.msg4')).stack.split('\n').slice(1, 5).join(' ⇦ ') });
         }
       }
       if (m.type === 'attributes' && m.target.dataset && m.target.dataset.planner) {
         const hidden = getComputedStyle(m.target).display === 'none';
-        log(hidden ? 'warn' : 'info',
+        log(hidden ? 'warn' : 'debug',
             ttf('ui.app.plannerTreeRowChange', m.target.dataset.plannerName, m.attributeName) +
             (hidden ? tt('ui.app.hide') : ''),
             { style: m.target.getAttribute('style') || '', cls: m.target.className,
@@ -5445,7 +5686,7 @@ export function watchPlannerRows(on) {
     }
   });
   _plannerRowObs.observe(tree, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
-  log('info', tt('ui.app.plannerTreeStartView'));
+  log('debug', tt('ui.app.plannerTreeStartView'));
   return _plannerRowObs;
 }
 
@@ -5558,7 +5799,7 @@ async function buildPlannerSection(tree) {
   note.style.display = 'none';
   sec.append(note);
   tree.append(sec);
-  log('info', ttf('ui.app.plannerTreeNewCat', boards.length),
+  log('debug', ttf('ui.app.plannerTreeNewCat', boards.length),
       { current: cur, rows: boards.map((b) => b.name) });
   return sec;
 }
@@ -6541,6 +6782,14 @@ export async function rosterTextForDraft(dPath) {
   } catch { return ''; }
 }
 
+/**
+ * [alpha.132 · X-1] เขียนเนื้อฉากใหม่โดยยัดคอมเมนต์ align กลับเข้าไปตามแผนที่ใน frontmatter
+ * (ใช้ตัวอ่าน/ตัวเขียนตัวเดียวกับที่ตัวแก้ไขใช้ — จึงได้ผลตรงกับที่เห็นบนจอเสมอ)
+ */
+function dumpAlignComments(body, map) {
+  return docToMd(mdToDoc(String(body || ''), map), { alignComments: true });
+}
+
 export async function buildDraftModel(dPath, title) {
   // [alpha.121] ชื่อเล่ม + สถิติรวมทั้งโปรเจกต์ — ให้โค้ดสั้น [book]/[totalwords]/[progress] ฯลฯ
   // ใช้ได้จริงตอนส่งออกด้วย ไม่ใช่แค่ตอนแก้สด (liveShortcodeContext) เท่านั้น
@@ -6566,6 +6815,23 @@ export async function buildDraftModel(dPath, title) {
       const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
       let body = '', meta = {};
       try { ({ meta, body } = parseMdFile(await kapi.readFile(file))); } catch { continue; }
+      // == [alpha.132 . X-1] ** การจัดหน้าต้องติดไปกับเนื้อฉากตอนส่งออก ==
+      //
+      // แผนที่ align อยู่ใน **frontmatter** (`meta.align`) ตั้งแต่ alpha.58r ที่ตั้งใจให้ .md สะอาด
+      // แต่สายส่งออกหยิบไปแค่ `body` -> เอกสารที่จัดกึ่งกลางไว้ ออกมาเป็นชิดซ้ายทั้งเล่ม
+      // ที่นี่จึงยัด align กลับเป็นคอมเมนต์ `<!--align:x-->` ซึ่ง `mdToHtmlBody` อ่านได้
+      // (ปลายทางที่ไม่ใช่ HTML มีตัวกวาดคอมเมนต์ทิ้งที่ท้าย runWorkflow อยู่แล้ว)
+      //
+      // ทำเฉพาะฉากที่ "มี align จริง" - ฉากธรรมดาไม่ถูกแปลงผ่าน doc เลยแม้แต่ฉากเดียว
+      // จึงไม่มีทางที่การประกอบโมเดลจะไปเปลี่ยนรูปข้อความของงานที่ไม่ได้จัดหน้า
+      if (meta && meta.align) {
+        try {
+          const map = alignFromString(meta.align);
+          if (map && Object.keys(map).length) {
+            body = dumpAlignComments(body, map);
+          }
+        } catch (e) { log('warn', tt('ui.app.exportAlignFail'), e); }
+      }
       const isMemo = sc.type === 'memo' || (meta && meta.type === 'memo');
       c.scenes.push({ title: sc.title || '', file, body: (body || '').trim(),
                       synopsis: sc.synopsis || (meta && meta.synopsis) || '',
@@ -6718,7 +6984,10 @@ export async function openCompileDialog() {
     extRow.append(el('span', null, tt('ui.app.file')));
     const selExt = el('select', 'k-dlg-select'); selExt.id = 'cmp-ext';
     // alpha.57 — .fdx/.rtf: เอาข้อความที่เวิร์กโฟลว์ประกอบเสร็จมาอ่านเป็นบทแล้วแปลงต่อ
-    for (const e of ['md', 'txt', 'html', 'fdx', 'rtf']) { const o = el('option', null, '.' + e); o.value = e; selExt.append(o); }
+    // [alpha.124 ข้อ 28] เติม .pdf — พรีเซ็ต `screenplay-pdf` ตั้ง ext:'pdf' มาตั้งแต่ alpha.59
+    // และ bGo ก็มีสายสร้าง PDF รออยู่แล้ว แต่ตัวเลือกนี้ไม่เคยมีให้เลือก → เวิร์กโฟลว์ที่ผู้ใช้
+    // สร้างเองไม่มีทางตั้งปลายทางเป็น PDF ได้ (ได้เฉพาะพรีเซ็ตติดตั้งมาที่แก้ไม่ได้)
+    for (const e of ['md', 'txt', 'html', 'fdx', 'rtf', 'pdf']) { const o = el('option', null, '.' + e); o.value = e; selExt.append(o); }
     selExt.value = w.ext || 'md';
     selExt.disabled = !!w.builtIn;
     selExt.onchange = async () => { w.ext = selExt.value; await saveProjectMeta(); };
@@ -6793,6 +7062,10 @@ export async function openCompileDialog() {
   };
   const bGo = el('button', 'k-ok', tt('ui.common.export2'));
   bGo.onclick = async () => {
+    // [alpha.124 ข้อ 28] ตรวจบทก่อนส่งออก — ทางนี้เป็นทางเดียวที่ข้ามการตรวจมาตลอด
+    // (ศูนย์รวมการส่งออก · PDF · .fdx/.rtf เรียก checkBeforeExport กันหมดแล้ว)
+    // ผลคือส่งออกด้วยเวิร์กโฟลว์แล้วได้บทที่ยังมีข้อผิดพลาดค้างอยู่โดยไม่มีอะไรเตือน
+    if (!(await checkBeforeExport())) return;
     // [alpha.62 บั๊ก 10] ประมวลผลก่อน → เคลียร์ตัวบอกสถานะ → ค่อยเปิดกล่องบันทึก
     //   (บทเรียนเดียวกับบั๊ก 1: อย่าให้มีอะไรหมุนค้างตอนรอผู้ใช้ตอบกล่อง)
     const r = await withBusy(tt('ui.app.busyResultWorkFlow'), doRun);
@@ -7621,7 +7894,7 @@ export async function openPlainFile(file, title) {
   ta.addEventListener('input', () => markDirty(tab));
   saveB.onclick = () => tab.save();
   tabBtn.onclick = (e) => { if (e.target !== x) activate(file); };
-  x.onclick = () => closeTab(file);
+  x.onclick = () => closeTab(file, { ask: true });   // [alpha.124 ข้อ 17] ผู้ใช้สั่งปิดเอง
   state.tabs.set(file, tab);
   activate(file);
   return tab;
@@ -7842,7 +8115,7 @@ async function openTemplatesFile() {
   ta.addEventListener('input', () => markDirty(tab));
   saveB.onclick = () => tab.save();
   tabBtn.onclick = (e) => { if (e.target !== x) activate(file); };
-  x.onclick = () => closeTab(file);
+  x.onclick = () => closeTab(file, { ask: true });   // [alpha.124 ข้อ 17] ผู้ใช้สั่งปิดเอง
   state.tabs.set(file, tab);
   activate(file);
 }
@@ -8089,7 +8362,7 @@ export async function openScene(file, title) {
   mountEditor(tab, dir, body);
 
   tabBtn.onclick = (e) => { if (e.target !== x) activate(file); };
-  x.onclick = () => closeTab(file);
+  x.onclick = () => closeTab(file, { ask: true });   // [alpha.124 ข้อ 17]
   state.tabs.set(file, tab);
   activate(file);
 }
@@ -8112,6 +8385,8 @@ function mountEditor(tab, dir, body) {
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
       editable: () => !tab.locked,                                 // ล็อก = แก้ไม่ได้
     });
+    // [alpha.125 ข้อ I] คืนการจัดหน้าที่บันทึกไว้ (ไม่นับเป็นการแก้ไข — ดู applyAlignMap)
+    try { tab.sp.applyAlignMap(alignFromString(tab.meta.align)); } catch {}
     // [alpha.105r] ★ ตัวรับคลิกผูกกับ **แผง** ซึ่งอยู่ยงข้ามการสลับโหมด แต่ `tab.sp` หายไปตอน
     // สลับเป็นนิยาย (mountEditor สร้างตัวแก้ไขใหม่คนละชนิดในแผงเดิม) → คลิกทีเดียวโยน
     // `Cannot read properties of null (reading 'curElement')` ทุกครั้ง (ผู้ใช้เจอใน console จริง)
@@ -8341,7 +8616,7 @@ const notIgnored = (arr) => uniqList(arr).filter((x) => !smartIgnored(x));
 // รายชื่อไม่ได้เปลี่ยนทุกตัวอักษร → คำนวณใหม่อย่างมากทุก TERM_TTL ms ก็พอสำหรับการเดาคำ
 const TERM_TTL = 700;
 let _termCache = { tab: null, at: 0, val: null };
-export function clearTermCache() { _termCache = { tab: null, at: 0, val: null }; }
+// [alpha.126] `clearTermCache()` ถูกถอด — ไม่มีใครเรียก (แคชล้างเองตอนเปลี่ยนโปรเจกต์)
 function cachedTerms(tab) {
   const now = Date.now();
   if (_termCache.tab === tab && _termCache.val && now - _termCache.at < TERM_TTL) return _termCache.val;
@@ -8576,6 +8851,9 @@ export function markDirty(tab) {
     // [alpha.68] เพิ่งกลายเป็น "ยังไม่บันทึก" → แผงที่ฉีกออกไปต้องล็อกอ่านอย่างเดียวทันที
     // (ประกาศเฉพาะตอนธงพลิก ไม่ใช่ทุกตัวอักษรที่พิมพ์)
     broadcastActiveScene();
+    // [alpha.124 ข้อ 40] แถบสถานะต้องพลิกเป็น "ยังไม่บันทึก" ตั้งแต่ตัวอักษรแรก
+    // (เดิมยังโชว์เวลาบันทึกครั้งก่อนค้างไว้จนกว่าจะสลับแท็บ = อ่านผิดว่างานเซฟแล้ว)
+    updateSaveStatus();
   }
   updateDirtyBadge();
   updateProgressBar();
@@ -8636,6 +8914,13 @@ export async function saveTab(tab) {
     if (am) tab.meta.align = '[' + am + ']';
     else delete tab.meta.align;
   }
+  // [alpha.125 ข้อ I] บทภาพยนตร์ก็เก็บการจัดหน้าไว้ใน frontmatter เหมือนกัน
+  // (เนื้อ fountain ไม่ถูกแตะ — เหตุผลเต็มอยู่ที่ `SPEditor.getAlignMap()`)
+  if (tab.sp) {
+    const am = alignToString(tab.sp.getAlignMap());
+    if (am) tab.meta.align = '[' + am + ']';
+    else delete tab.meta.align;
+  }
   tab.meta.modified = new Date().toISOString();
   // บันทึกว่าแก้ไขด้วยแอปเวอร์ชันไหน + เพิ่มเลขรอบแก้ (revision) เพื่อให้เทียบเวอร์ชันได้
   tab.meta.appVersion = APP_VERSION;
@@ -8657,10 +8942,66 @@ export async function saveTab(tab) {
   try { markReviewStale(); } catch (e) { log('warn', tt('ui.app.markCentralizeStaleFail'), e); }
   // [alpha.80] บันทึกฉากแล้ว แผงบทพูดต้องตามให้ทัน (หน่วง+รวบใน markDialogueStale เอง)
   try { markDialogueStale(); } catch (e) { log('warn', tt('ui.dialogue.errScan'), e); }
+  // [alpha.124 ข้อ 23] จำนวนคำของฉากต้องลง scenes.json ทุกครั้งที่บันทึก
+  await syncSceneWordCount(tab, body);
   // [alpha.60r3 ข้อ 1] ดัชนี Wiki↔ฉากต้องตามทันด้วย ไม่งั้น "ฉากที่กล่าวถึง" ค้างอยู่ที่ค่าตอนเปิดโปรแกรม
   await refreshBacklinksAfterSave(tab, body);
   // [alpha.65] Story Network — refresh when scenes are saved (scene links may change)
   try { refreshNetwork(); } catch {}
+  // [alpha.125 ข้อ A · ข้อ B] เนื้อหาเปลี่ยน → ดัชนีค้นหา **และ** ดัชนี RAG ของแชทล้าสมัย
+  invalidateSearchIndex();
+  invalidateChatRag();
+  // ═══ [alpha.126] ★ แผงที่โชว์ "สรุปจากไฟล์" ต้องไม่ค้างของเก่า ═══
+  //
+  // เจอตอนกวาด dead export: `refreshBooksIfOpen()` กับ `refreshOpenFloorPlan()` **มีอยู่จริง
+  // เขียนถูกด้วย แต่ไม่มีใครเรียกเลยสักที่** — ไม่ใช่โค้ดตาย แต่คือ *สายที่ลืมต่อ*
+  // (พี่น้องของมันอย่าง `refreshMapsIfOpen()` ถูกเรียกจาก wiki-ui.js อยู่แล้ว)
+  // ผลคือ: เปิดหน้า "จัดการเล่ม" ค้างไว้แล้วพิมพ์ต่อ → จำนวนคำ/จำนวนฉากบนการ์ดไม่ขยับ
+  // และผังพื้นที่ที่เปิดค้างก็ไม่เห็นฉากที่เพิ่งเปลี่ยนสถานที่
+  try { refreshBooksIfOpen(); } catch {}
+  try { refreshOpenFloorPlan(); } catch {}
+  // [alpha.124 ข้อ 40] แถบสถานะ (#status-save) เคยรีเฟรชแค่ตอน "สลับแท็บ" กับ "บันทึกทั้งหมด"
+  // → กด Ctrl+S ไฟล์เดียวแล้วยังขึ้น "ยังไม่บันทึก" ค้างอยู่ · หรือโชว์เวลาของรอบก่อน
+  updateSaveStatus();
+}
+
+/**
+ * [alpha.124 ข้อ 23] ★ จำนวนคำของฉาก — เขียนกลับ `scenes.json` ทุกครั้งที่บันทึก
+ *
+ * `scenes.json` คือ **ดัชนี/แคช** ที่ทั้งโปรแกรมอ่านไปโชว์ (ป้ายในต้นไม้ · ตารางฉาก ·
+ * เรียงตามจำนวนคำ · หน้าแรก · แดชบอร์ด · สถิติวันเขียนติดต่อกัน) แต่ช่อง `wordCount`
+ * ถูกตั้งเป็น 0 ตอนสร้างฉากแล้ว **ไม่เคยถูกอัปเดตอีกเลย** — ทุกจอเหล่านั้นจึงโชว์ 0
+ * ตลอดมา ขณะที่แถบสถานะซึ่งนับสดจากเอกสารโชว์เลขจริง (ผู้ใช้เห็นเลขไม่ตรงกัน 6 จอ)
+ *
+ * นับด้วย `countWords()` ตัวเดียวกับแถบสถานะเป๊ะ ๆ → ตัวเลขตรงกันทุกจอโดยนิยาม
+ * เขียนเฉพาะตอนค่าเปลี่ยนจริง (บันทึกซ้ำโดยไม่แก้อะไร = ไม่แตะดิสก์)
+ */
+async function syncSceneWordCount(tab, body) {
+  if (!tab || !tab.file || !/\.md$/i.test(tab.file)) return;
+  try {
+    const ctx = await sceneCtx(tab.file);
+    if (!ctx || !ctx.row || ctx.row.type === 'memo') return;
+    const n = countWords(body || '');
+    if ((ctx.row.wordCount || 0) === n) return;
+    await updateSceneRow(ctx.dPath, ctx.row.id, (r) => { r.wordCount = n; });
+    ctx.row.wordCount = n;                 // แถวที่ต้นไม้ถืออยู่ต้องเห็นค่าใหม่ทันทีด้วย
+    updateSceneWordBadge(tab.file, n);
+  } catch (e) { log('warn', tt('ui.app.wordCountSyncFail'), e); }
+}
+
+/** ข้อความบนป้ายจำนวนคำ (ต้นไม้ใช้ตัวนี้ทั้งตอนสร้างและตอนอัปเดตสด — ห้ามเขียนสองสูตร) */
+function wordBadgeText(n) {
+  return (n >= 1000 ? Math.round(n / 1000) + 'k' : n) + tt('ui.common.word');
+}
+/** อัปเดตป้ายจำนวนคำของแถวในต้นไม้แบบทันที (ไม่ต้องสร้างต้นไม้ใหม่ทั้งก้อนตอนกด Ctrl+S) */
+function updateSceneWordBadge(file, n) {
+  const row = document.querySelector('#tree .scene[data-path="' + CSS.escape(file) + '"]');
+  if (!row) return;
+  if (row._scene) row._scene.wordCount = n;
+  let badge = row.querySelector('.sc-wordcount');
+  if (!badge && n) { badge = el('span', 'sc-wordcount'); row.append(badge); }
+  if (!badge) return;
+  badge.textContent = n ? wordBadgeText(n) : '';
 }
 
 /**
@@ -8953,7 +9294,22 @@ async function compareVersionsDialog(dPath, ch, sc) {
   render();
 }
 
-export function closeTab(file) {
+/**
+ * ปิดแท็บ — [alpha.124 ข้อ 17] **ถามก่อนเสมอเมื่อยังมีงานค้าง**
+ *
+ * เดิม: `if (t.dirty) saveTab(t).then(done)` = บังคับบันทึกเงียบ ๆ ทุกครั้ง
+ * ผลคือ "ลองแก้ดูเล่น ๆ แล้วปิดทิ้ง" ทำไม่ได้เลยทั้งโปรแกรม — ปิดแท็บ = เขียนทับไฟล์จริงเสมอ
+ * (มี Revert อยู่ก็จริง แต่ต้องนึกออกว่ามีและต้องกดก่อนปิด)
+ *
+ * @param {string} file
+ * @param {{discard?: boolean, ask?: boolean}} opts
+ *   · `ask` — **ถามก่อน** (ค่าเริ่มต้น false) เปิดเฉพาะทางที่ "ผู้ใช้สั่งปิดเอง":
+ *     ปุ่ม ✕ บนแท็บ · Ctrl+W · เมนูคลิกขวาแท็บ · ปุ่มปิดบนแถบเครื่องมือ
+ *     ทางเรียกภายใน (เปลี่ยนชื่อไฟล์ · ย้ายฉาก · ลบลงถังขยะ · เปลี่ยนเล่ม) ไม่ถาม —
+ *     พวกนั้นจัดการงานค้างของตัวเองมาก่อนแล้ว และเด้งกล่องกลางงานเบื้องหลังคือบั๊ก ไม่ใช่ฟีเจอร์
+ *   · `discard` — ทิ้งการแก้ไขโดยไม่ถาม (ผู้เรียกที่ถามเองแล้ว เช่น closeAllTabs)
+ */
+export function closeTab(file, { discard = false, ask = false } = {}) {
   const t = state.tabs.get(file);
   if (!t) return;
   const done = () => {
@@ -8966,7 +9322,17 @@ export function closeTab(file) {
     if (next) activate(next); else { state.active = null; refreshToolbar(); updateDirtyBadge(); }
     markSessionDirty();                        // [alpha.79] ปิดแท็บสุดท้ายก็ต้องจำ (activate ไม่ถูกเรียก)
   };
-  if (t.dirty) saveTab(t).then(done); else done();
+  if (!t.dirty || discard) { t.dirty = false; done(); return; }
+  if (!ask) { saveTab(t).then(done); return; }      // ทางเรียกภายใน = พฤติกรรมเดิม (บันทึกให้)
+  choose(ttf('ui.app.closeTabDirtyAsk', t.title || file), [
+    { label: tt('ui.app.closeTabSave'), value: 'save', primary: true },
+    { label: tt('ui.app.closeTabDiscard'), value: 'discard', danger: true },
+    { label: tt('ui.common.cancel'), value: null },
+  ]).then((v) => {
+    if (v === 'save') saveTab(t).then(done);
+    else if (v === 'discard') { t.dirty = false; updateDirtyBadge(); done(); }
+    // null/Esc = ไม่ปิด ไม่บันทึก — แท็บอยู่เหมือนเดิมทุกประการ
+  });
 }
 
 // [80] Revert — ยกเลิกการเปลี่ยนแปลงทั้งหมด โหลดใหม่จากดิสก์
@@ -8979,18 +9345,29 @@ export async function revertTab(file) {
   // [alpha.58r บั๊ก 25] จัดหน้าอยู่ใน frontmatter แล้ว → คืนค่ามาพร้อมเนื้อหาด้วย
   if (t.editor) { t.editor.setMarkdown(body, alignFromString(meta.align)); refreshMentions(t.editor.view); }
   else if (t.sp) {
+    // [แก้บั๊ก] ของเดิมอ้างชื่อที่ **ไม่มีอยู่จริงสามตัว** (`getSpellchecker` · `resolvePath` ·
+    // `openWikiEntity`) — กฎเหล็กข้อ 1 เป๊ะ ๆ: esbuild ปล่อยผ่านเป็น global ตอน build แล้วโยน
+    // ReferenceError ตอนกดจริง · ร้ายกว่านั้นคือ `t.sp.destroy()` ทำงานไปก่อนแล้ว
+    // → กด "ยกเลิกการเปลี่ยนแปลง" บนแท็บบทภาพยนตร์ = ตัวแก้ไขหายทั้งแท็บ
+    // อีกจุด: mount ที่ `.pane.on` ซึ่งไม่เคยเป็นลูกของ pane (คืน null เสมอ) → ตกไปลง pane ตรง ๆ
+    // ข้าม `.workspace` ทำให้กระดาษ/ซูมเพี้ยน · ตอนนี้ใช้ตัวเลือกชุดเดียวกับ `mountEditor` ทั้งหมด
+    const dir = file.replace(/[\\/][^\\/]*$/, '');
     t.sp.destroy();
-    t.sp = new SPEditor(t.pane.querySelector('.pane.on') || t.pane, {
+    t.sp = new SPEditor(t.pane.querySelector('.workspace') || t.pane, {
       // [alpha.62 บั๊ก 19] `smartDirty()` ไม่มีอยู่จริง — ที่นี่พังทุก keystroke หลังกด Revert บนบทหนัง
       markdown: body,
       onChange: () => { markDirty(t); scheduleCount(); scheduleOutline();
                         scheduleSpSmart(t); scheduleRepaginate(); },
-      onElement: (el) => { spSmartCheck(t); setElementBadge(el); },
-      onKeyDown: (ev) => smart.onKey(ev),
-      getChecker: getSpellchecker, resolveSrc: (p) => resolvePath(file, p),
-      getNames: () => smart.names,
-      onMention: (n) => t.wiki ? openWikiEntity(n) : openEntity(n),
+      onElement: (elName) => { spSmartCheck(t); setElementBadge(elName); },
+      onKeyDown: (ev) => { repaginateOnEnter(t, ev); return smart.onKey(ev); },
+      getChecker: spellChecker,
+      resolveSrc: (p) => resolveImg(dir, p),
+      getNames: () => state.settings.autoMention !== false ? smart.names : [],
+      onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
+      editable: () => !t.locked,                       // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
     });
+    // [alpha.125 ข้อ I] Revert = โหลดจากดิสก์ใหม่ → คืนการจัดหน้าที่บันทึกไว้ด้วย
+    try { t.sp.applyAlignMap(alignFromString(t.meta.align)); } catch {}
     t.sp.view.dom.classList.add('on');
   }
   else if (t.wiki) { t.wiki.destroy(); openEntity(t.title); return; }
@@ -9143,12 +9520,19 @@ async function showCharMap() {
 }
 
 async function closeAllTabs() {
-  const files = [...state.tabs.keys()];
-  for (const f of files) {
-    const t = state.tabs.get(f);
-    if (t?.dirty) await saveTab(t);
-    closeTab(f);
+  // [alpha.124 ข้อ 17] เดิมบังคับบันทึกทุกแท็บเงียบ ๆ แล้วปิด — ตอนนี้ถามครั้งเดียวด้วยกล่อง
+  // "บันทึกทั้งหมด" ที่มีอยู่แล้ว (เลือกได้ว่าจะเก็บไฟล์ไหน) ไม่ใช่เด้งกล่องทีละแท็บ n ใบ
+  const dirty = [...state.tabs.values()].filter((t) => t.dirty);
+  if (dirty.length) {
+    const { action, keys } = await saveAllDialog(dirtyTabList(),
+      { title: ttf('ui.app.closeAllDirtyAsk', dirty.length) });
+    if (action === null) return;                       // ยกเลิก = ไม่ปิดอะไรเลยสักแท็บ
+    if (action === 'save') {
+      const pick = new Set(keys);
+      for (const t of dirty) if (pick.has(t.file)) await saveTab(t);
+    }
   }
+  for (const f of [...state.tabs.keys()]) closeTab(f, { discard: true });
 }
 
 // ---------------- แยกหน้าจอเทียบเอกสาร (compare / split) ----------------
@@ -9223,7 +9607,7 @@ function bindTabStripMenus() {
     popupMenu(e.clientX, e.clientY, [
       t.floatWin ? { label: tt('ui.app.restoreTab2'), click: () => dockTab(f) }
                  : { label: tt('ui.app.splitWindowFloat'), click: () => floatTab(f) },
-      { label: tt('ui.app.closeTab'), click: () => closeTab(f) },
+      { label: tt('ui.app.closeTab'), click: () => closeTab(f, { ask: true }) },
     ]);
   });
 }
@@ -9233,6 +9617,7 @@ const FMTS = ['bold', 'italic', 'underline', 'strike', 'sup', 'sub'];
 
 // ตั้ง title ปุ่ม toolbar ให้แสดง shortcut (เรียกตอนเริ่ม + หลังเปลี่ยนภาษา)
 function updateToolbarTitles() {
+  applyCaseOptions();          // [alpha.124 ข้อ 36] ป้ายรูปตัวพิมพ์ต้องตามภาษาที่เพิ่งเปลี่ยนด้วย
   // ปุ่มฟอร์แมต
   $('#tb-bold').title = withShortcut('toolbar.bold', 'KeyB', true, false);
   $('#tb-italic').title = withShortcut('toolbar.italic', 'KeyI', true, false);
@@ -9277,6 +9662,7 @@ const TB_PANEL_BUTTONS = [
   ['tb-notes-panel', 'notes'], ['tb-log', 'log'],
   ['tb-dlgb', 'dlgb'],                         // [alpha.82] ห้องซ้อมบท
   ['tb-ai-hub', 'ai-hub'],                     // [alpha.116 ข้อ 3] AI Hub
+  ['tb-backlinks', 'backlinks'],               // [alpha.125 ข้อ G] ฉากที่กล่าวถึง
 ];
 
 // บั๊ก #11: ปุ่มที่ทำงานระดับโปรเจกต์/หน้าต่าง — ไม่ต้องมีฉากเปิดอยู่ก็ใช้ได้
@@ -9294,7 +9680,29 @@ const ALWAYS_ON_TB = new Set([
   'tb-dialogue', 'tb-plugins', 'tb-dlgb', 'tb-ai-hub',
   'tb-timeline', 'tb-maps', 'tb-books', 'tb-network', 'tb-planner', 'tb-branch',
   'tb-floorplan', 'tb-player', 'tb-gallery-board', 'tb-comments', 'tb-notes-panel', 'tb-log',
+  'tb-backlinks',                              // [alpha.125 ข้อ G] อ่านทั้งโปรเจกต์ ไม่ผูกกับฉากที่เปิด
 ]);
+
+// ══════ [alpha.132 ข้อ 9] ★ สีตัวอักษร — จุดเชื่อมระหว่างปุ่มบนแถบกับตัวแก้ไข ══════
+//
+// ผู้ใช้จริงขอมา: *"อยากเพิ่มเปลี่ยนสีตัวอักษร มี preset และ color wheel
+//                  และมี save color switch และ recent used"*
+//
+// สีเป็นมาร์กของ ProseMirror (`color`) ที่ **มีค่าในตัว** จึงเป็นได้เฉพาะฝั่งนิยาย —
+// ฝั่งบทภาพยนตร์เก็บเป็น fountain ล้วน ใส่แท็กสีลงไปแล้วอ่านกลับไม่ได้
+// (กฎเดียวกับที่ alpha.35 ตัดสินให้ align ของบทเป็น session-only)
+/** เปิดป๊อปอัปเลือกสีของแท็บที่เปิดอยู่ (ไม่ใช่แท็บนิยาย = ไม่ทำอะไร) */
+export function openTextColorPicker(anchor) {
+  const tab = state.active;
+  const ed = tab && tab.editor;
+  if (!ed) { setStatus(tt('ui.color.proseOnly')); return null; }
+  const cur = normColor((ed.activeMarks() || {}).colorValue);
+  return openColorPicker(anchor, cur, (hex) => {
+    ed.cmd('color', hex);
+    markDirty(tab);
+    refreshToolbar();
+  }, saveGlobalSetting);
+}
 
 function refreshToolbar() {
   const ed = state.active?.editor;
@@ -9317,11 +9725,24 @@ function refreshToolbar() {
   $('#tb-ul')?.classList.toggle('on', marks.list === 'ul' || spList === 'ul');
   $('#tb-ol')?.classList.toggle('on', marks.list === 'ol' || spList === 'ol');
   $('#tb-quote')?.classList.toggle('on', !!marks.quote);
+  // [alpha.132 ข้อ 9] แถบใต้ตัว A = สีของช่วงที่เลือก ('' = ยังไม่กำหนดสี → ใช้สีตัวอักษรปกติ)
+  {
+    const cb = $('#tb-color');
+    if (cb) {
+      const cv = ed ? (marks.colorValue || '') : '';
+      cb.dataset.color = cv;
+      const bar = cb.querySelector('.tb-color-bar');
+      if (bar) bar.style.background = cv || 'currentColor';
+      cb.classList.toggle('on', !!cv);
+    }
+  }
   $('#tb-img')?.classList.toggle('on', !!marks.image);
   const sel = $('#tb-style');
   if (marks.block) sel.value = marks.block;
   // ไฮไลต์ปุ่มจัดหน้าตามบล็อกปัจจุบัน (นิยายอ่านจาก activeMarks · บทหนังจาก curAlign)
-  const curAlign = ed ? (marks.align || 'left') : sp ? sp.curAlign() : null;
+  // [alpha.130 ข้อ 3] `rangeAlign` คืน 'left' มาเองเมื่อชิดซ้ายจริง · '' = ช่วงที่เลือกปนกัน
+  // → ห้ามใส่ `|| 'left'` ทับ ไม่งั้น "ปนกัน" กลายเป็น "ชิดซ้าย" แล้วปุ่มติดไฟผิดเหมือนเดิม
+  const curAlign = ed ? marks.align : sp ? sp.curAlign() : null;
   for (const a of ['left', 'center', 'right', 'justify']) {
     const b = $('#tb-align-' + a); if (b) b.classList.toggle('on', curAlign === a);
   }
@@ -9737,6 +10158,9 @@ function tuneProsePagePads(t) {
   // แล้วไม่มีวันลงตัว (อาการ: หน้าไม่เท่ากันแบบสุ่ม ๆ เมื่อมีหัวข้อปน)
   let prevH = 0;
   let changed = false;
+  // [alpha.131 · เคส P-1] สูตรนี้ถูกอยู่แล้ว — "หน้าหนึ่ง = เนื้อที่ใช้ + ที่ว่างท้ายหน้า = พื้นที่พิมพ์"
+  // (เทส [93-5] คุมไว้) ส่วนที่เคยเหลื่อมอยู่ที่ **ความสูงของกล่องเส้นคั่นเอง** ไม่ใช่ที่นี่
+  // → แก้ใน CSS ให้แถบหนึ่งบรรทัดไปอยู่ *ใน* ที่ว่างท้ายหน้าแทนการบวกเพิ่ม (ดู `.k-pb-inline`)
   for (let i = 0; i < els.length; i++) {
     const y = lineY(els[i]);
     // ระยะจาก **ก้นกล่องก่อนหน้า** ถึงขอบบนกล่องนี้ = เนื้อหาที่หน้านี้ใช้ไปจริง
@@ -10110,6 +10534,8 @@ function refreshOutline() {
   // [alpha.68] หน้าต่าง Navigation ที่ฉีกออกมา ไม่มี ProseMirror ให้อ่าน (คนละ context)
   // → วาดจากรายการที่หน้าต่างหลักคำนวณแล้วส่งมาให้ · คลิกแล้วฝากหน้าต่างหลักกระโดดให้
   if (PANEL_WIN) { drawRemoteOutline(box); back(); return; }
+  // [alpha.126] มุมมองทั้งเล่ม — ไม่พึ่งเอกสารที่เปิดอยู่ จึงต้องมาก่อนด่านเช็คแท็บข้างล่าง
+  if (navWholeBook && state.root) { drawBookOutline(box).then(back); return; }
   const t = state.active;
   if (!t || t.wiki || t.gal || t.isJson || t.net || t.dash || t.planner || (!t.editor && !t.sp && !t.plain)) {
     box.append(el('div', 'dim', tt('ui.app.openSceneViewNavigation')));
@@ -10141,14 +10567,15 @@ function refreshOutline() {
       if (n.textContent.trim()) items.push({ kind: hit[0], label: n.textContent, lvl: hit[1], pos: offset });
     });
   } else {
-    t.plain.value.split('\n').forEach((line, i) => {
-      const m = /^(#{1,6})\s+(.*)$/.exec(line);
-      if (m) items.push({ kind: 'heading', label: m[2], lvl: m[1].length, line: i });
-      else if (/^\.[^.]/.test(line.trim()) || /^(INT|EXT)[.\s]/i.test(line.trim()))
-        items.push({ kind: 'sceneHeading', label: line.trim().replace(/^\./, ''), lvl: 2, line: i });
-      else if (navShowBeats && line.trim())
-        items.push({ kind: 'beat', label: navTrunc(line), lvl: 4, line: i });
-    });
+    // [alpha.126] ★ เลิกพาร์สเอง — ใช้ `nav.js` ที่เขียนกฎเดียวกันไว้แล้วและมี unit test คุม
+    // (เดิมตรงนี้เขียนกฎ heading/หัวฉาก/beat ซ้ำอีกชุด แต่หยาบกว่า: ไม่รู้จัก `@ตัวละคร`
+    //  `>ทรานซิชัน` `$act` `= สรุป` และตัดคำยาวคนละแบบกับที่ nav.js ทำ)
+    const spLike = /\.(fountain|txt)$/i.test(t.file || '') || /^(\.|INT|EXT)/im.test(t.plain.value || '');
+    const rows = spLike ? parseScreenplay(t.plain.value) : parseProse(t.plain.value);
+    for (const r of rows) {
+      if (!navShowBeats && (r.kind === 'beat' || r.kind === 'quote' || r.kind === 'character')) continue;
+      items.push({ kind: r.kind, label: r.label, lvl: r.level, line: r.line });
+    }
   }
   relayOutline(t.file || '', t.title || '', items, tt('ui.app.notHasHeadingHead'), !!t.sp);
   if (!items.length) { box.append(el('div', 'dim', tt('ui.app.notHasHeadingHead'))); return; }
@@ -10170,6 +10597,87 @@ function refreshOutline() {
   }
   back();
 }
+// ═══════════ [alpha.126] ★ Navigation มุมมอง "ทั้งเล่ม" ═══════════
+//
+// `src/nav.js` (พาร์สโครงเรื่องจากเนื้อฉากดิบ · บริสุทธิ์ · มี unit test) เป็น **orphan ตัวสุดท้าย**
+// ที่หลุดรอบเก็บกวาด alpha.125 — ไม่มีไฟล์ไหนใน src/ import เลยสักไฟล์
+//
+// เหตุที่มันไม่เคยถูกใช้: แผง Navigation เดิมอ่านจาก **เอกสารที่เปิดอยู่** (ProseMirror doc)
+// เพราะต้องได้ตำแหน่งจริงไว้กระโดด — ซึ่ง nav.js ทำไม่ได้ (มันรับข้อความดิบ คืนเลขบรรทัด)
+// แต่สิ่งที่ nav.js ออกแบบมาทำคือ **โครงของทั้งเล่มจากไฟล์บนดิสก์** (`buildNavigation(scenes)`)
+// ซึ่งเป็นคำถามที่แผงเดิมตอบไม่ได้เลย: "ทั้งบทมีหัวฉากอะไรบ้าง" ต้องเปิดฉากทีละไฟล์ไปดู
+//
+// มุมมองนี้จึงไม่ใช่การยัด nav.js เข้าไปให้มีที่ใช้ — มันคือฟีเจอร์ที่ขาดอยู่จริง
+let navWholeBook = localStorage.getItem('k2-nav-book') === '1';
+function setNavWholeBook(on) {
+  navWholeBook = !!on;
+  localStorage.setItem('k2-nav-book', navWholeBook ? '1' : '0');
+  $('#nav-book-btn')?.classList.toggle('on', navWholeBook);
+  refreshOutline();
+  return navWholeBook;
+}
+/** เทส/แผงอื่นถามสถานะได้ */
+export function navWholeBookOn() { return navWholeBook; }
+
+/** โครงของทั้งฉบับร่างที่ฉากปัจจุบันอยู่ — อ่านจากไฟล์บนดิสก์ ไม่ใช่จากเอกสารที่เปิดอยู่ */
+export async function buildBookNavigation() {
+  const ctx = await sceneCtx();
+  if (!ctx) return [];
+  const all = await listScenes(state.root);
+  const rows = all.filter((s) => s.draftPath === ctx.dPath);
+  const scenes = [];
+  for (const r of rows) {
+    let body = '';
+    try { body = parseMdFile(await kapi.readFile(r.path)).body || ''; } catch {}
+    scenes.push({ id: r.id, title: r.title, status: r.row.status || '', color: r.row.color || '',
+                  wordCount: r.row.wordCount || 0, flag: !!r.row.isFavorite,
+                  format: r.row.format || 'prose', body, path: r.path });
+  }
+  const nodes = buildNavigation(scenes, { showBeats: navShowBeats });
+  // ผูก path กลับให้ทุกแถว — ตอนคลิกต้องรู้ว่าจะเปิดไฟล์ไหน
+  const pathOf = new Map(scenes.map((s) => [s.id, s.path]));
+  return nodes.map((n) => ({ ...n, path: pathOf.get(n.sceneId) || '' }));
+}
+
+/** วาดมุมมอง "ทั้งเล่ม" ลงกล่อง Navigation */
+async function drawBookOutline(box) {
+  box.replaceChildren(el('div', 'dim', tt('ui.common.busySearch')));
+  let nodes = [];
+  try { nodes = await buildBookNavigation(); }
+  catch (e) { log('warn', tt('ui.app.navBookFail'), e); }
+  box.replaceChildren();
+  const head = el('div', 'nav-head');
+  head.append(el('span', 'nav-scene', '📚 ' + tt('ui.app.navWholeBook')));
+  box.append(head);
+  if (!nodes.length) { box.append(el('div', 'dim', tt('ui.app.notHasHeadingHead'))); return 0; }
+  for (const n of nodes) {
+    const it = { kind: n.kind, label: n.label, lvl: n.level, line: n.line };
+    box.append(outlineItemEl(it, async () => {
+      if (!n.path) return;
+      await openScene(n.path, n.label);
+      // แถวย่อย (หัวฉาก/หัวข้อ) รู้เลขบรรทัด → พากระโดดไปบรรทัดนั้นในฉากที่เพิ่งเปิด
+      if (Number.isFinite(n.line) && n.kind !== 'scene') gotoLineInActive(n.line);
+    }));
+  }
+  return nodes.length;
+}
+
+/** กระโดดไปบรรทัดที่ n ของเอกสารที่เปิดอยู่ (นับจาก 0) — ใช้กับผลลัพธ์ที่รู้แค่เลขบรรทัด */
+function gotoLineInActive(line) {
+  const t2 = state.active;
+  const ed = t2 && (t2.editor || t2.sp);
+  if (!ed || !ed.view) return false;
+  let i = 0, target = null;
+  ed.view.state.doc.forEach((node, pos) => { if (i++ === line) target = pos; });
+  if (target == null) return false;
+  import('prosemirror-state').then(({ TextSelection }) => {
+    const v = ed.view;
+    v.dispatch(v.state.tr.setSelection(TextSelection.create(v.state.doc, target + 1)).scrollIntoView());
+    v.focus();
+  });
+  return true;
+}
+
 /** แถวหนึ่งใน Navigation — ใช้ร่วมทั้งหน้าต่างหลักและหน้าต่างที่ฉีกออกไป (หน้าตาต้องเหมือนกันเป๊ะ) */
 function outlineItemEl(it, onJump) {
   const d = el('div', 'ol-item nav-' + it.kind + ' lvl' + it.lvl, it.label || tt('ui.common.empty'));
@@ -10672,8 +11180,29 @@ const FEATURE_PANELS = {
   notes:     () => renderNotesPanel($('#notes-body')),
   // [alpha.62 บั๊ก 16] 3 ฟีเจอร์ที่ยังเป็นแท็บเอกสาร → เป็นแผงเต็มตัวเหมือนตัวอื่น
   network:   () => renderNetworkPanel(),
+  // [alpha.125 ข้อ G] "ฉากที่กล่าวถึง" ทั้งโปรเจกต์ — คลิกแถวแล้วกระโดดไปฉากนั้นจริง
+  backlinks: () => renderBacklinksPanel($('#backlinks-body'), async (sceneId) => {
+    const hit = await findScenePath(state.root, sceneId);
+    if (hit && hit.path) openScene(hit.path, hit.title);
+    else setStatus(tt('ui.worldAutoLink.sceneGone'));
+  }),
   planner:   () => renderPlannerPanel(),
-  plannerProps: () => { /* noop — planner เป็นคนวาดผ่าน setPropsCallback */ return true; },
+  // [alpha.124 ข้อ 44] เดิมเป็น noop → เปิดแผงนี้จากถาด/เมนู/เลย์เอาต์ที่กู้มา (โดยที่ยังไม่ได้
+  // เปิดกระดานวางแผน) ได้ **กล่องเปล่าสนิท** ไม่มีแม้แต่ข้อความบอกว่ามันคืออะไร
+  // ตอนนี้: ถ้ากระดานเปิดอยู่ ปล่อยให้กระดานวาดเหมือนเดิม · ถ้ายัง วาดสภาพว่างที่บอกทางไปต่อ
+  plannerProps: () => {
+    const box = $('#planner-props-body');
+    if (!box) return true;
+    if (isPanelOpen('planner')) return true;      // กระดานเปิดอยู่ = มันวาดเองผ่าน setPropsCallback
+    box.replaceChildren();
+    const empty = el('div', 'k-panel-empty');
+    empty.append(el('div', null, tt('ui.plannerProps.needBoard')));
+    const b = el('button', 'k-ok', tt('ui.plannerProps.openBoard'));
+    b.onclick = () => handleCommand('toggle-panel', 'planner');
+    empty.append(b);
+    box.append(empty);
+    return true;
+  },
   floorplan: () => renderFloorPlanPanel(),
   // [alpha.66 ข้อ 1+9] ผังแตกสาย + โหมดทดลองเล่น — เดิมผังเป็นแท็บเอกสาร แย่งที่กับฉากที่กำลังเขียน
   branch:    () => renderBranchingPanel(),
@@ -10811,16 +11340,30 @@ export async function handleCommand(ch, ...a) {
                 setStatus('Save As: ' + p); }
       break;
     }
-    case 'print': document.body.classList.add('printing');
-                  hideInactivePanes();
-                  await kapi.print();
-                  restoreInactivePanes();
-                  setTimeout(() => document.body.classList.remove('printing'), 800); break;
+    // [alpha.124 ข้อ 25] พิมพ์ — เดิมยิง `kapi.print()` ทื่อ ๆ: ไม่กันตอนไม่มีแท็บ
+    // ไม่ผ่านการตรวจก่อนส่งออก (ต่างจากทุกทางส่งออกอื่น) และไม่เคยบอกผลลัพธ์เลย
+    // ยกเลิกกล่องพิมพ์ หรือไม่มีเครื่องพิมพ์ = เงียบสนิทเหมือนโปรแกรมไม่ได้ทำอะไร
+    case 'print': {
+      if (!t) { setStatus(tt('ui.app.printNoTab')); break; }
+      if (!(await checkBeforeExport())) break;
+      document.body.classList.add('printing');
+      hideInactivePanes();
+      let pr = null;
+      try { pr = await kapi.print(); }
+      catch (e) { log('warn', tt('ui.app.printFail'), e); }
+      restoreInactivePanes();
+      setTimeout(() => document.body.classList.remove('printing'), 800);
+      // main คืน `{ok, reason}` — รุ่นเก่าคืน undefined จึงถือว่า "ส่งไปแล้ว" ไม่ต้องเตือน
+      if (pr && !pr.ok) setStatus(pr.reason ? tt('ui.app.printFail') + ' — ' + pr.reason
+                                            : tt('ui.app.printCancelled'));
+      else if (pr && pr.ok) setStatus(tt('ui.app.printSent'));
+      break;
+    }
     // [alpha.81 ข้อ 8] เดิมทางนี้ยิง `webContents.printToPDF` ของหน้าจอตรง ๆ —
     // ได้ A4 ตายตัวไม่ตรงขนาดกระดาษที่ตั้งไว้ และเป็นภาพของหน้าจอ ไม่ใช่เอกสารจริง
     // ตอนนี้พาไปศูนย์รวมการส่งออกเสมอ (ทางนั้นให้ตัวอักษรจริงและใช้ขนาดกระดาษที่ตั้งไว้)
     case 'export-pdf': await openExportHub(); break;
-    case 'close-tab': if (t) closeTab(t.file); break;
+    case 'close-tab': if (t) closeTab(t.file, { ask: true }); break;
     case 'close-all-tabs': closeAllTabs(); break;
     // [95] ในบทหนัง Ctrl+1/2/3 = scene/action/character (คีย์เดียวกับหัวข้อ 1-3 ของนิยาย)
     case 'fmt': {
@@ -10947,9 +11490,11 @@ export async function handleCommand(ch, ...a) {
     case 'import-scrivener': importScrivenerDialog((p) => loadProject(p)); break;
     // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ (Fountain · FDX · Celtx · Fade In · Adobe Story)
     case 'import-script': {
-      const result = await importScreenplayDialog(async (markdown, format, summary) => {
+      // [alpha.124 ข้อ 29] `mode` มาจากกล่องพรีวิว: 'new' = สร้างฉากใหม่ (ค่าเริ่มต้น)
+      // · 'replace' = ทับแท็บปัจจุบัน (ผู้ใช้เลือกเองและเห็นเนื้อที่จะทับแล้ว)
+      const result = await importScreenplayDialog(async (markdown, format, summary, mode) => {
         const t = state.active;
-        if (t && t.sp) {
+        if (mode === 'replace' && t && t.sp) {
           // มีแท็บบทเปิดอยู่ → inject เข้า tab ปัจจุบัน
           t.sp.setMarkdown(markdown);
           if (t.editor) t.editor.setMarkdown(markdown);
@@ -10957,20 +11502,35 @@ export async function handleCommand(ch, ...a) {
           setStatus(tt('ui.app.importScreenplay') + format + tt('ui.app.done') + summary.scenes + tt('ui.app.scene') + summary.characters + tt('ui.app.character'));
         } else {
           // ยังไม่มีแท็บบท → สร้างแท็บฉากใหม่ในบทปัจจุบัน
-          // ใช้ createNewScene ถ้ามี
           const sec = state.active?.meta;
-          const dPath = sec ? kapi.join(state.root, sec.section, 'Draft', sec.draft) : null;
-          if (dPath) {
-            const file = await createNewScene(dPath, tt('ui.app.import') + format + '-' + Date.now().toString(36));
-            const tab = await activate(file);
-            if (tab?.sp) {
-              tab.sp.setMarkdown(markdown);
-              if (tab.editor) tab.editor.setMarkdown(markdown);
-              markDirty(tab);
-              setStatus(tt('ui.app.importScreenplay') + format + tt('ui.app.newSceneNew') + summary.scenes + tt('ui.app.scene') + summary.characters + tt('ui.app.character'));
+          // [alpha.124 ข้อ 29] ไม่มีแท็บฉากเปิดอยู่ ก็ยังนำเข้าได้ — ถามว่าจะลงฉบับร่างไหน
+          // (เดิมตันตรงนี้: ต้องเปิดฉากอะไรสักฉากก่อนถึงจะนำเข้าบทได้ ซึ่งไม่มีเหตุผลเลย)
+          let dPath = sec ? await kapi.join(state.root, sec.section, 'Draft', sec.draft) : null;
+          if (!dPath) {
+            const ds = await listDrafts();
+            if (ds.length === 1) dPath = ds[0].dPath;
+            else if (ds.length > 1) {
+              const pick = await pickFromList(tt('ui.app.exportChapterDraft'), ds.map((d) => d.label));
+              dPath = pick ? (ds.find((x) => x.label === pick) || {}).dPath : null;
+              if (!dPath) return;                       // ยกเลิกกล่องเลือก = ไม่นำเข้า
             }
+          }
+          if (dPath) {
+            // [แก้บั๊ก] เดิมเรียก `createNewScene()` ซึ่ง **ไม่มีอยู่ในโปรเจกต์เลย** → ReferenceError
+            // ในคอลแบ็ก async ที่ไม่มีใครจับ = "นำเข้าแล้วไม่มีอะไรเกิดขึ้น" เงียบสนิท
+            // (ถึงจะมีจริงก็ยังพังต่อ: `activate()` ไม่คืนแท็บ → `tab?.sp` เป็น undefined เสมอ)
+            // ตัวจริงคือ `addScene(dPath, ch, title, {meta, body})` ซึ่งต้องมี "บท" ปลายทางด้วย
+            const dj = await kapi.readJson(await kapi.join(dPath, 'draft.json')).catch(() => ({}));
+            const ch = (dj.chapters || [])[0] || await addChapter(dPath, tt('ui.app.import') + format);
+            if (!ch) return;                            // ยกเลิกกล่องตั้งชื่อบท = ไม่นำเข้า
+            const row = await addScene(dPath, ch,
+              tt('ui.app.import') + format + '-' + Date.now().toString(36),
+              { meta: { format: 'screenplay' }, body: markdown, silent: true });
+            if (!row) return;
+            await openScene(row.path, row.title);       // เขียนลงไฟล์ไปแล้ว → เปิดมาก็ไม่ค้างสถานะยังไม่บันทึก
+            setStatus(tt('ui.app.importScreenplay') + format + tt('ui.app.newSceneNew') + summary.scenes + tt('ui.app.scene') + summary.characters + tt('ui.app.character'));
           } else {
-            alert(tt('ui.app.importNotOkNot'));
+            await confirmBox(tt('ui.app.importNotOkNot'), tt('ui.common.msg3'));
           }
         }
       });
@@ -10985,13 +11545,18 @@ export async function handleCommand(ch, ...a) {
         break;
       }
       // แสดงรายการให้เลือก 2 แท็บ
+      // [แก้บั๊ก] เดิมใช้ `window.prompt()` ซึ่ง **เป็น no-op ใน Electron** (คืน null ทันที ไม่มีกล่องโผล่)
+      // → `parseInt(null)` = NaN → `break` ทุกครั้ง = "เปรียบเทียบบท" กดแล้วไม่มีอะไรเกิดขึ้นเลย
+      // ผิดกฎที่โปรเจกต์ตั้งไว้เองด้วย (บทเรียนข้อ 3) — ใช้ `pickFromList` เหมือนกล่องเลือกอื่นทุกที่
       const names = spTabs.map(([f]) => f.split(/[/\\]/).pop().replace(/\.md$/i, ''));
-      const oldIdx = parseInt(prompt(tt('ui.app.pickEditionNum') + spTabs.length + '):\n' +
-        names.map((n, i) => (i + 1) + '. ' + n).join('\n')), 10);
-      if (!oldIdx || oldIdx < 1 || oldIdx > spTabs.length) break;
-      const newIdx = parseInt(prompt(tt('ui.app.pickEditionNewNum') + spTabs.length + '):\n' +
-        names.map((n, i) => (i + 1) + '. ' + n).join('\n')), 10);
-      if (!newIdx || newIdx < 1 || newIdx > spTabs.length || newIdx === oldIdx) break;
+      const rows = names.map((n, i) => (i + 1) + '. ' + n);
+      const oldPick = await pickFromList(tt('ui.app.pickEditionNum'), rows);
+      const oldIdx = rows.indexOf(oldPick) + 1;
+      if (!oldIdx) break;                                  // ปิดกล่อง = ไม่เปรียบเทียบ
+      const newPick = await pickFromList(tt('ui.app.pickEditionNewNum'),
+                                         rows.filter((_, i) => i + 1 !== oldIdx));
+      const newIdx = rows.indexOf(newPick) + 1;
+      if (!newIdx || newIdx === oldIdx) break;
 
       const oldTab = spTabs[oldIdx - 1][1];
       const newTab = spTabs[newIdx - 1][1];
@@ -11053,13 +11618,49 @@ export async function handleCommand(ch, ...a) {
     case 'about': aboutDialog(); break;
     // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา (Ctrl+Shift+`) — อยู่เมนูเดียวกับ "เกี่ยวกับ"
     case 'dev-console': openDevConsole(); break;
+    // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Ctrl+Alt+U) — เดิมไม่มีคีย์ลัดเลย
+    // ต้องละมือจากแป้นไปคลิก dropdown ทุกครั้ง ทั้งที่เป็นงานที่ทำรัว ๆ ตอนจัดหัวฉาก/ชื่อตัวละคร
+    case 'text-case-cycle': {
+      const edC = getActiveEditor();
+      if (!edC) { setStatus(tt('ui.app.openSceneBeforeChangeImage')); break; }
+      _caseCycle = (_caseCycle + 1) % CASE_MODES.length;
+      const mode = CASE_MODES[_caseCycle];
+      await handleCommand('text-case', mode);
+      setStatus(tt(CASE_LABELS[mode]) || CASE_SHORT[mode]);
+      break;
+    }
+    // [alpha.124 ข้อ 3] ตารางคีย์ลัด — ตอนนี้เป็นคำสั่งจริงในตาราง (Ctrl+Alt+/) ไม่ใช่ listener ลอย
+    case 'cheatsheet': showShortcutsDialog(); break;
+    // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำ (คนที่ไม่คลิกขวาไม่มีทางรู้ว่ามี)
+    case 'thesaurus': {
+      const w = (window.getSelection()?.toString() || '').trim();
+      if (!w) { setStatus(tt('ui.thes.selectWordFirst')); break; }
+      const r = getActiveEditor()?.view?.dom?.getBoundingClientRect();
+      showThesaurusPopup(w, r ? r.left + 40 : 120, r ? r.top + 60 : 120);
+      break;
+    }
+    // [alpha.124 ข้อ 8] เมนู เครื่องมือ → "ตรวจหาคำซ้ำ · สถิติการใช้คำ" ส่ง `word-history` มาตั้งแต่
+    // alpha.60 แต่ **ไม่เคยมี case รับ** → กดแล้วเงียบสนิทมาตลอด (ไม่มีแม้แต่ error)
+    // ของจริงอยู่ในแผง "AI วิเคราะห์" อยู่แล้ว 2 ใบ: 🔁 ตรวจหาคำซ้ำ · 📝 การใช้คำ
+    // (ทั้งคู่คำนวณในเครื่องได้ ไม่ต้องมีคีย์ AI) → เปิดแผงแล้วพาไปที่การ์ดนั้นเลย
+    case 'word-history': {
+      showPanel('ai-analyzer');
+      renderFeaturePanel('ai-analyzer');
+      syncMenuToggles();
+      focusAnalysis('repeat');
+      break;
+    }
     // [alpha.58r บั๊ก 16–24] รูปแบบนิยาย
     case 'prose-setup': settingsDialog('prose'); break;
     case 'test-run': runTest(a[0]); break;
     // [95] Per-element shortcuts + [79] Select scene + [77] Non-breaking space
     case 'sp-element': {
       const sp = state.active?.sp;
-      if (sp) sp.switchTo(a[0]);
+      // [alpha.124 ข้อ 5] โหมดนิยาย/ไม่มีแท็บ = คีย์นี้ใช้ไม่ได้ → **บอกให้รู้** ไม่ใช่เงียบ
+      // และห้าม markDirty: เดิมวิ่งทุกกรณี → กด Ctrl+5 ในนิยายแล้วไฟล์กลายเป็น "งานค้าง"
+      // ทั้งที่ไม่มีอะไรเปลี่ยนสักตัวอักษร (แล้วโดนบังคับบันทึกตอนปิดแท็บ)
+      if (!sp) { setStatus(tt('ui.app.spElementScriptOnly')); break; }
+      sp.switchTo(a[0]);
       refreshToolbar();
       if (t) markDirty(t);
       break;
@@ -11173,6 +11774,9 @@ export async function handleCommand(ch, ...a) {
 }
 kapi.onMenu(handleCommand);
 
+// [alpha.124 ข้อ 36] ตำแหน่งในวง CASE_MODES ของคีย์ลัด "หมุนรูปตัวพิมพ์"
+let _caseCycle = -1;
+
 // ---- คีย์ลัดฝั่ง renderer: จับด้วย e.code (ปุ่มกายภาพ = ทำงานทุกภาษาแป้นพิมพ์
 //      และไม่พึ่ง accelerator ของเมนู native ที่หน้าต่างไร้ขอบบน Windows มักไม่ยิง) ----
 // SHORTCUTS, SHORTCUT_LABELS, shortcutId, accelText, formatShortcut → ย้ายไป core.js
@@ -11195,6 +11799,46 @@ function onShortcut(e) {
   }
 }
 window.addEventListener('keydown', onShortcut, true);
+
+// ══════════ [alpha.130 ข้อ 4] ★ Ctrl+A ต้องมี "ขอบเขต" ══════════
+//
+// ผู้ใช้: *"Ctrl+A ไปเลือกที่ app ได้ยังไง มันต้องเลือกที่ฉาก และส่วน input/output
+//          ตอนนี้มันกลายเป็นเลือกข้อความทั้ง app"*
+//
+// Ctrl+A ไม่เคยอยู่ในตาราง SHORTCUTS จึงตกเป็นของเบราว์เซอร์ล้วน ๆ — ซึ่งถ้าโฟกัสไม่ได้อยู่ใน
+// ช่องแก้ไขใด ๆ (คลิกพื้นที่ว่าง · เพิ่งกดปุ่มบนแถบเครื่องมือ · โฟกัสหลุดไปที่ <body>)
+// `document.execCommand('selectAll')` จะกวาด **ทั้งหน้าต่าง**: แถบเครื่องมือ · ต้นไม้โปรเจกต์ ·
+// แถบสถานะ · ทุกแผงที่เปิดอยู่ (วัดจริง: ได้ข้อความมา 19,234 ตัวอักษรจากทั่วทั้งแอป)
+// แล้วทุกอย่างขึ้นไฮไลต์สีน้ำเงินพร้อมกัน — และคำสั่งถัดไปที่ผู้ใช้กดก็ไม่รู้จะไปลงที่ไหน
+//
+// กติกา: Ctrl+A มีความหมายเดียวคือ "เลือกทั้งหมด **ในที่ที่กำลังพิมพ์อยู่**"
+//   · อยู่ในช่องข้อความ/ตัวแก้ไข → ปล่อยผ่าน เจ้าของช่องจัดการเอง (PM มี selectAll ของมันอยู่แล้ว)
+//   · ไม่ได้อยู่ในช่องไหนเลย → ห้ามให้เบราว์เซอร์กวาดทั้งแอป · โยนไปให้ตัวแก้ไขที่เปิดอยู่แทน
+//     (ไม่มีตัวแก้ไขเปิดอยู่ = ไม่ทำอะไรเลย ดีกว่าเลือกทั้งแอป)
+/** อยู่ในพื้นที่ที่ "เลือกทั้งหมด" มีความหมายของตัวเองหรือยัง */
+function inEditableScope(node) {
+  const el = node && node.nodeType === 1 ? node : (node && node.parentElement) || null;
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return !!el.closest('[contenteditable="true"], .ProseMirror, input, textarea');
+}
+export function onSelectAllKey(e) {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.code !== 'KeyA') return false;
+  const ae = document.activeElement;
+  if (inEditableScope(ae) || inEditableScope(e.target)) return false;   // เจ้าของช่องจัดการเอง
+  // ต้นไม้โปรเจกต์มี Ctrl+A ของตัวเอง (เลือกทุกแถว) — ตัวจัดการของมันกิน event ไปก่อนแล้ว
+  if (ae && ae.closest && ae.closest('#tree')) return false;
+  e.preventDefault();
+  const ed = getActiveEditor();
+  if (!ed || !ed.view) { setStatus(t('ui.app.selectAllNeedEditor')); return true; }
+  ed.focus();
+  ed.view.dispatch(ed.view.state.tr.setSelection(
+    new PMAllSelection(ed.view.state.doc)));
+  refreshToolbar();
+  return true;
+}
+window.addEventListener('keydown', onSelectAllKey, true);
 // (บันทึกทั้งหมด Ctrl+Alt+S ย้ายเข้าตาราง SHORTCUTS แล้ว — ตั้งใหม่เองได้เหมือนรายการอื่น)
 
 // ---------------- [alpha.81 ข้อ 2] จำสถานะปุ่ม Ctrl/⌘ ไว้ที่ body ----------------
@@ -11242,7 +11886,11 @@ window.addEventListener('wheel', (e) => {
 window.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
   // รีเซ็ตซูม: Ctrl+Shift+0 (เลี่ยงชน Ctrl+0 = ย่อหน้าปกติ) · ปรับ: Ctrl+= / Ctrl+-
+  //
+  // [alpha.124 ข้อ 2] **ต้องเช็ค Shift ด้วย**: เดิมกิ่ง Equal/Minus ไม่ดู `shiftKey` เลย
+  // → Ctrl+Shift+= ยิงทั้งซูมกระดาษ **และ** `fmtbar-lock` ในตาราง SHORTCUTS พร้อมกัน
   if ((e.code === 'Digit0' || e.code === 'Numpad0') && e.shiftKey) { e.preventDefault(); resetPageScale(); }
+  else if (e.shiftKey) return;                       // Ctrl+Shift+อะไรก็ตาม = ไม่ใช่งานของตัวซูม
   else if ((e.code === 'Equal' || e.code === 'NumpadAdd')) { e.preventDefault(); bumpPageScale(1); }
   else if ((e.code === 'Minus' || e.code === 'NumpadSubtract')) { e.preventDefault(); bumpPageScale(-1); }
 }, true);
@@ -11404,6 +12052,22 @@ const TB_SC_MAP = {
   'tb-typewriter': 'typewriter', 'tb-quickopen': 'quick-open',
   'tb-gallery': 'gallery',
 };
+/**
+ * [alpha.124 ข้อ 36] สร้างรายการ "สลับรูปตัวพิมพ์" บนแถบเครื่องมือจากตารางจริง
+ * เรียกซ้ำได้ (ตอนเปลี่ยนภาษา) — เก็บตัวเลือกหัว "Aa ▾" ไว้เสมอ
+ */
+export function applyCaseOptions() {
+  const sel = $('#tb-case');
+  if (!sel || !sel.options.length) return 0;
+  const head = sel.options[0];
+  sel.replaceChildren(head);
+  for (const m of CASE_MODES) {
+    const o = el('option', null, tt(CASE_LABELS[m]) || CASE_SHORT[m]);
+    o.value = m; sel.append(o);
+  }
+  return sel.options.length;
+}
+
 export function applyToolbarShortcutTitles() {
   for (const [id, sid] of Object.entries(TB_SC_MAP)) {
     const btn = $('#' + id);
@@ -11424,7 +12088,13 @@ export function applyToolbarShortcutTitles() {
   $('#tb-starter') && ($('#tb-starter').title = t('toolbar.starter'));
   // save-all + home
   const sab = $('#save-all-btn');
-  if (sab) sab.title = t('shortcuts.saveAll') + ' (Ctrl+Shift+S)';
+  // [alpha.124 ข้อ 4] เดิมฮาร์ดโค้ด "Ctrl+Shift+S" ซึ่งผิด (นั่นคือ บันทึกเป็น…) และไม่ตามค่าที่
+  // ผู้ใช้ตั้งเองด้วย — อ่านจากตารางจริงเสมอ เหมือนปุ่มอื่นทุกปุ่มบนแถบเครื่องมือ
+  if (sab) {
+    const scAll = effectiveShortcuts().find((x) => shortcutId(x) === 'save-all');
+    sab.title = t('shortcuts.saveAll')
+              + (scAll ? ' (' + formatShortcut(scAll[0], scAll[1], scAll[2]) + ')' : '');
+  }
   const hb = $('#home-btn');
   if (hb) hb.title = t('app.home');
   // apply i18n to style select options
@@ -11742,6 +12412,7 @@ function setupFloatingFormatBar() {
   // ลำดับปุ่มตาม Layout ใหม่: [📄] [📖▾] | [style] | [B I U S] | [•≡ 1≡ ❝] | [⬅ ⬌ ➡ ☰] | [🖼 </> 📖 🔍]
   ['#tb-sp-elem', '#sp-view-select', '#tb-mode', '#tb-style', '#tb-case',
    '#tb-bold', '#tb-italic', '#tb-underline', '#tb-strike', '#tb-sup', '#tb-sub',
+   '#tb-color',
    '#tb-ul', '#tb-ol', '#tb-quote',
    '#tb-align-left', '#tb-align-center', '#tb-align-right', '#tb-align-justify',
    // [alpha.84 ข้อ 3+4] สวิตช์ที่ผู้ใช้ขอให้อยู่ "ใกล้มือ" — ต่อเนื่อง (บท) · ย่อหน้า (นิยาย)
@@ -12179,6 +12850,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย
   tb('#tb-sup', 'sup'); tb('#tb-sub', 'sub');
   tb('#tb-ul', 'ul'); tb('#tb-ol', 'ol'); tb('#tb-quote', 'quote');
+  // [alpha.132 ข้อ 9] สีตัวอักษร — ปุ่มเปิดป๊อปอัป (จานสี · วงล้อสี · ที่บันทึกไว้ · ใช้ล่าสุด)
+  $('#tb-color').onclick = (e) => openTextColorPicker(e.currentTarget);
+  // ปิดป๊อปอัปเมื่อสลับแท็บ/ปิดโปรแกรม — ค้างอยู่บนแท็บที่ไม่มีตัวแก้ไขแล้วกดจะพังเปล่า ๆ
+  window.addEventListener('blur', closeColorPicker);
   tb('#tb-align-left', 'align', 'left'); tb('#tb-align-center', 'align', 'center');
   tb('#tb-align-right', 'align', 'right'); tb('#tb-align-justify', 'align', 'justify');
   $('#tb-img').onclick = insertImage;
@@ -12204,6 +12879,11 @@ window.addEventListener('DOMContentLoaded', () => {
   };
   // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก — เลือกแล้วเด้งกลับหัวข้อ (ไม่ใช่สถานะค้าง)
   const caseSel = $('#tb-case');
+  // [alpha.124 ข้อ 36] ป้ายในรายการนี้เคยฮาร์ดโค้ดอังกฤษไว้ใน index.html ทั้งชุด
+  // ขณะที่ `CASE_LABELS` (text-case.js) ซึ่งเป็นตารางภาษาของมันเองกลายเป็นโค้ดตาย —
+  // ผู้ใช้ไทยจึงเห็น "aLtErNaTe cAsE" เปล่า ๆ โดยไม่มีอะไรบอกว่ามันทำอะไร
+  // สร้างรายการจากตารางจริงตอนรัน → เปลี่ยนภาษาแล้วเปลี่ยนตาม และไม่มีสองแหล่งความจริง
+  applyCaseOptions();
   if (caseSel) caseSel.onchange = (e) => {
     const mode = e.target.value;
     e.target.value = '';
@@ -12288,7 +12968,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // ---- ปุ่มโหมดอ่าน + ค้นหาทั้งโปรเจกต์ ----
   $('#tb-read').onclick = () => toggleReading();
   $('#tb-gsearch').onclick = () => handleCommand('global-search');
-  bindGlobalSearchShortcut();
   // ---- ปุ่มโน้ตด่วน (ข้อ 85): คลิก = จดกับฉากที่เปิดอยู่ · คลิกขวา = ดูโน้ตทั้งหมด ----
   $('#tb-note').onclick = async () => { const c = await sceneCtx(); quickNote(c?.row?.id, c?.row?.title); };
   $('#tb-note').oncontextmenu = (e) => { e.preventDefault(); showAllNotes(); };
@@ -12326,18 +13005,24 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#tb-panels').onclick = () => togglePanelDialog();
   $('#tb-panels').oncontextmenu = (e) => { e.preventDefault(); toolbarDialog(); };
   $('#tb-split').onclick = () => handleCommand('split-view');
-  $('#tb-close').onclick = () => { const t = state.active; if (t) closeTab(t.file); };
+  $('#tb-close').onclick = () => { const t = state.active; if (t) closeTab(t.file, { ask: true }); };
   $('#tb-close-all').onclick = () => closeAllTabs();
   $('#tb-focus').onclick = () => handleCommand('focus-mode');
   $('#tb-typewriter').onclick = () => handleCommand('typewriter');
   $('#tb-linenum').onclick = () => handleCommand('line-numbers');
   $('#tb-visual').onclick = () => openVisualForActive();
   $('#tb-quickopen').onclick = () => handleCommand('quick-open');
-  // ---- ปุ่มลัด Cheatsheet (? / Ctrl+Shift+/) ----
+  // ---- ปุ่มลัด Cheatsheet ----
+  // [alpha.124 ข้อ 3] เดิมดัก Ctrl+Shift+/ เองที่นี่ → **ชนกับ `fmtbar-here`** ในตาราง SHORTCUTS
+  // กดทีเดียวได้ทั้งแถบรูปแบบลอยและกล่องคีย์ลัด · ตอนนี้คีย์อยู่ในตารางแล้ว (Ctrl+Alt+/)
+  // เหลือไว้ที่นี่แค่ `?` เปล่า ๆ ซึ่งไม่ใช่คีย์ลัดของตาราง (ไม่มี Ctrl) จึงชนกับใครไม่ได้
   document.addEventListener('keydown', (e) => {
-    if ((e.code === 'Slash' && e.ctrlKey && e.shiftKey) || (e.key === '?' && !e.ctrlKey && !e.metaKey)) {
-      e.preventDefault(); showShortcutsDialog();
-    }
+    if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+    // พิมพ์ `?` ในช่องกรอกหรือในเอกสารต้องได้ตัว `?` จริง ไม่ใช่กล่องคีย์ลัดเด้ง
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT'
+               || ae.isContentEditable)) return;
+    e.preventDefault(); showShortcutsDialog();
   });
   // คีย์ลัดของ quick-open / typewriter / focus / global-search อยู่ในตาราง SHORTCUTS แล้ว
   // (เดิมผูก listener แยกที่ Ctrl+P และ Ctrl+Shift+F ซึ่งชนกับ 'print' และ 'focus-mode')
@@ -12348,11 +13033,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // ---- ปุ่มบันทึกทั้งหมด + หน้าแรก ----
   $('#save-all-btn').onclick = () => saveAllTabs();
   $('#home-btn').onclick = () => { import('./home-ui.js').then(m => m.showHomeDialog()); };
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyS' && e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
-      e.preventDefault(); saveAllTabs();
-    }
-  });
+  // [alpha.124 ข้อ 1] ตัวดัก Ctrl+Shift+S ตัวเก่าถูกถอดออก — มันยิงพร้อม `save-as` ในตาราง
+  // SHORTCUTS (onShortcut ไม่ได้ stopPropagation) → กดทีเดียวได้ทั้งกล่อง Save-As ของระบบ
+  // **และ** กล่อง "บันทึกทั้งหมด" ซ้อนกันสองใบ · บันทึกทั้งหมด = Ctrl+Alt+S (ตั้งใหม่เองได้)
   // ---- ตั้งค่า title ของปุ่ม toolbar ให้แสดง shortcut ----
   updateToolbarTitles();
   // ---- FAB (ปุ่มลอยสร้างใหม่) ----
@@ -12439,6 +13122,12 @@ window.addEventListener('DOMContentLoaded', () => {
   beatBtn.classList.toggle('on', navShowBeats);
   addPanelButton('outline', beatBtn);
   beatBtn.onclick = (e) => { e.stopPropagation(); setNavBeats(!navShowBeats); };
+  // [alpha.126] ปุ่ม 📚 = สลับระหว่าง "ฉากที่เปิดอยู่" กับ "ทั้งเล่ม"
+  const bookBtn = el('span', 'k-panel-btn', '📚'); bookBtn.id = 'nav-book-btn';
+  bookBtn.title = tt('ui.app.navWholeBookHint');
+  bookBtn.classList.toggle('on', navWholeBook);
+  addPanelButton('outline', bookBtn);
+  bookBtn.onclick = (e) => { e.stopPropagation(); setNavWholeBook(!navWholeBook); };
 
   // ปุ่มแผงบันทึก (Log): ↩ รีเฟรช, 📁 เปิดโฟลเดอร์, 📋 copy
   const logRefresh = el('span', 'k-panel-btn', '↻'); logRefresh.title = tt('ui.common.refresh');
@@ -12455,32 +13144,57 @@ window.addEventListener('DOMContentLoaded', () => {
     navigator.clipboard.writeText(txt || tt('ui.app.notHasLineAt'))
       .then(() => setStatus(ttf('ui.app.copySaveDoneLine', txt ? txt.split('\n').length : 0))); };
 
-  // คลิกขวาคำที่ขีดแดง (สะกดผิด) → เพิ่มลงพจนานุกรมส่วนตัวของโปรเจกต์
+  // ═══ คลิกขวาในตัวแก้ไข — เมนูเดียว รวมทุกเรื่องของ "คำ" ตรงนั้น ═══
+  //
+  // [alpha.124 ข้อ 30] ★ คำที่ขีดแดงต้องมี **คำแนะนำให้เลือก**
+  //   เดิมมีรายการเดียวคือ "เพิ่มลงพจนานุกรม" — ซึ่งเป็นทางเดียวที่ *ไม่* แก้คำผิดให้เลย
+  //   ตัวแก้ไขทุกตัวในโลกให้คำที่น่าจะถูกมาเลือกก่อน แล้วค่อยมี "เพิ่มลงพจนานุกรม" ท้ายสุด
+  //   ตอนนี้: คำใกล้เคียงจากเอนจินเดียวกับที่ขีดเส้นแดง (spell.js) · คลิกแล้วแทนที่ในเอกสารทันที
+  //   \+ "ข้ามคำนี้ครั้งนี้" (ไม่จำถาวร แค่เลิกขีดแดงในรอบนี้)
+  //
+  // [alpha.124 ข้อ 32] และเหลือรายการคำพ้อง **ชุดเดียว**
+  //   เดิมมีสองชุดในเมนูเดียวกัน: ของเก่า (Datamuse ออนไลน์ อังกฤษล้วน → แทนที่คำ)
+  //   กับของใหม่ (tools/thesaurus: คลังไทย+อังกฤษในตัว ออฟไลน์ได้ → คัดลอก)
+  //   ผู้ใช้เห็นสองบรรทัดชื่อเกือบเหมือนกันแต่กดแล้วผลไม่เหมือนกัน · เหลือของใหม่ตัวเดียว
+  //   (ซึ่งครอบของเก่าอยู่แล้ว: เปิดสวิตช์ในตั้งค่า = มันค้นออนไลน์ต่อให้ด้วย)
   document.addEventListener('contextmenu', (e) => {
     if (!state.root) return;
     const bad = e.target.closest && e.target.closest('.k-spell-bad');
-    // รายการคำพ้อง (เฉพาะคำอังกฤษ + เปิดใช้ในตั้งค่า) — รวมอยู่ในเมนูเดียวกัน ไม่ผูก listener ซ้อน
-    const thes = thesaurusMenuItems(e.clientX, e.clientY);
-    if (!bad && !thes.length) return;
+    // ⚠ ขอบเขต: เมนูนี้เป็นของ "คำในเอกสาร" เท่านั้น — คลิกขวาที่อื่น (ต้นไม้ · แผง · ช่องกรอก)
+    // ต้องปล่อยให้เมนูของที่นั้นทำงานตามเดิม เพราะตัวนี้ดักแบบ capture แล้ว stopPropagation
+    // (ถ้าไม่จำกัด จะไปกลืนเมนูคลิกขวาของทั้งโปรแกรมทันทีที่มีข้อความถูกเลือกค้างอยู่)
+    const inDoc = !!(e.target.closest && e.target.closest('.ProseMirror'));
+    const sel = window.getSelection();
+    const selWord = (sel?.toString() || '').trim();
+    const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
+    if (!bad && !hasThes) return;
     e.preventDefault(); e.stopPropagation();
     const items = [];
     if (bad) {
       const word = bad.textContent.trim();
-      items.push({ label: ttf('ui.app.add', word), click: async () => {
+      // คำแนะนำ (สูงสุด 6 คำ) — บนสุดของเมนูเสมอ เพราะเป็นสิ่งที่ผู้ใช้ต้องการ 9 ใน 10 ครั้ง
+      const sugg = spellSuggest(word, 6);
+      if (sugg.length) {
+        items.push({ text: tt('ui.app.spellSuggestHead'), disabled: true });
+        for (const w of sugg) items.push({ text: w, click: () => replaceSpellWord(bad, w) });
+        items.push('-');
+      } else {
+        items.push({ text: tt('ui.app.spellNoSuggest'), disabled: true });
+      }
+      items.push({ text: ttf('ui.app.add', word), click: async () => {
         await kapi.spellAddWord(state.root, word);
         await loadSpellDict(state.root);
         setStatus(tt('ui.app.addDone') + word);
       } });
+      items.push({ text: ttf('ui.app.spellIgnoreOnce', word), click: () => {
+        spellIgnoreOnce(word);
+        setStatus(ttf('ui.app.spellIgnoredOnce', word));
+      } });
     }
-    if (bad && thes.length) items.push('-');
-    items.push(...thes);
-    // ---- คำพ้อง/คำตรงข้าม จาก tools/thesaurus.js ----
-    const sel = window.getSelection();
-    const word = sel?.toString()?.trim();
-    if (word && word.length >= 2) {
-      items.push('-');
-      items.push({ label: ttf('ui.app.thesaurusWordOpposite', word), click: () => {
-        showThesaurusPopup(word, e.clientX, e.clientY);
+    if (hasThes) {
+      if (items.length) items.push('-');
+      items.push({ text: ttf('ui.app.thesaurusWordOpposite', selWord), click: () => {
+        showThesaurusPopup(selWord, e.clientX, e.clientY);
       } });
     }
     popupMenu(e.clientX, e.clientY, items);
@@ -12993,33 +13707,41 @@ function updateStatusExtras() {
   };
   updateSceneCount();
   
-  // โหมด (นิยาย/บทหนัง)
+  updateSaveStatus();
+  updateProgressBar();
+}
+
+/**
+ * [alpha.124 ข้อ 40] ส่วน "เบา" ของแถบสถานะ: โหมดเอกสาร + สถานะบันทึก
+ *
+ * แยกออกจาก `updateStatusExtras()` เพราะตัวนั้นสแกน `scenes.json` **ทุกฉบับร่างในโปรเจกต์**
+ * เพื่อนับจำนวนฉาก — งานแบบนั้นเรียกตอนเปิดโปรเจกต์/สลับแท็บได้ แต่จะเรียกทุกครั้งที่กด
+ * Ctrl+S หรือทุกครั้งที่เริ่มพิมพ์ไม่ได้ · ส่วนนี้อ่านจาก `state.active` ล้วน ๆ จึงถูกมาก
+ */
+export function updateSaveStatus() {
+  const tab = state.active;
   const modeEl = $('#status-mode');
   if (modeEl) {
-    const tab = state.active;
-    modeEl.innerHTML = tab?.sp ? (iconHtml('film', 14) + tt('ui.app.chapterFilm')) : tab?.editor ? (iconHtml('book', 14) + tt('ui.app.novel')) : '';
+    modeEl.replaceChildren();
+    if (tab?.sp) modeEl.append(icon('film', 14), tt('ui.app.chapterFilm'));
+    else if (tab?.editor) modeEl.append(icon('book', 14), tt('ui.app.novel'));
   }
-  
-  // สถานะ autosave + วันที่แก้ไขล่าสุด
   const saveEl = $('#status-save');
-  if (saveEl) {
-    const tab = state.active;
-    if (tab && tab.dirty) {
-      saveEl.textContent = tt('ui.app.notSave');
-      saveEl.style.color = 'var(--orange)';
-    } else if (tab) {
-      const mod = tab.meta?.modified || '';
-      if (mod) {
-        const d = new Date(mod);
-        saveEl.innerHTML = iconHtml('save', 12) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-      } else {
-        saveEl.innerHTML = iconHtml('save', 12);
-      }
-      saveEl.style.color = '';
-    }
+  if (!saveEl) return;
+  saveEl.replaceChildren();
+  if (!tab) { saveEl.style.color = ''; return; }
+  if (tab.dirty) {
+    saveEl.textContent = tt('ui.app.notSave');
+    saveEl.style.color = 'var(--orange)';
+    return;
   }
-  
-  updateProgressBar();
+  const mod = tab.meta?.modified || '';
+  saveEl.append(icon('save', 12));
+  if (mod) {
+    const d = new Date(mod);
+    if (!isNaN(d)) saveEl.append(' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+  }
+  saveEl.style.color = '';
 }
 
 // เรียกหลัง buildTree, activate, saveTab, ฯลฯ
@@ -15209,6 +15931,17 @@ async function runTest(projectPath) {
     document.querySelector('.k-dialog .k-ok').click();
     const trashedEnt = await pDel2;
     check('ลบ entity → ไปถังขยะ', !!trashedEnt);
+    // [a128] ★ การลบต้องมีร่องรอยในบันทึก — คำสั่งนี้มาจากเมนูคลิกขวา จึงไม่ผ่าน handleCommand
+    // ที่จด `cmd:` ให้ · ก่อน alpha.128 ทั้ง recycle/scene-ops/section-ops/drafts ไม่มี log เลยสักบรรทัด
+    {
+      const recent = logStore.all().slice(-60);
+      const recRows = recent.filter((r) => r.source === 'recycle');
+      check('[a128-6] ★★ ลบของ → มีบรรทัดจากสาย "recycle" ในบันทึก (ไล่ย้อนได้ว่างานหายตอนไหน)',
+            recRows.length > 0, recent.slice(-5).map((r) => r.source + ':' + r.msg).join(' | '));
+      check('[a128-7] บรรทัดนั้นเก็บที่อยู่ไฟล์ต้นทาง/ปลายทางไว้ด้วย',
+            recRows.some((r) => String(r.detail || '').includes('Recycle')),
+            String((recRows[0] || {}).detail || '').slice(0, 120));
+    }
     await kapi.remove(trashedEnt);
     check('ลบถาวรหายจริง', !(await kapi.exists(trashedEnt)));
     await buildTree();
@@ -18164,11 +18897,11 @@ async function runTest(projectPath) {
       const rRoot = state.root;
       await kapi.writeFile(await kapi.join(rRoot, 'Recycle', 'new-keep.md'), 'ใหม่ ไม่ควรลบ');
       state.settings.recycleDays = 30;
-      await purgeRecycle(rRoot);
+      await purgeRecycle(rRoot, { silent: true });
       check('ล้างถังขยะไม่ลบไฟล์ใหม่ (mtime ยังไม่เกินกำหนด)',
             await kapi.exists(await kapi.join(rRoot, 'Recycle', 'new-keep.md')));
       state.settings.recycleDays = 0;
-      await purgeRecycle(rRoot);   // 0 = ไม่ล้าง — ต้องไม่ throw
+      await purgeRecycle(rRoot, { silent: true });   // 0 = ไม่ล้าง — ต้องไม่ throw
       check('recycleDays=0 → ไม่ล้างอัตโนมัติ (ไฟล์ยังอยู่)',
             await kapi.exists(await kapi.join(rRoot, 'Recycle', 'new-keep.md')));
     }
@@ -18740,7 +19473,13 @@ async function runTest(projectPath) {
       fab.style.left = ''; fab.style.top = ''; fab.style.right = ''; fab.style.bottom = '';
     }
 
-    // ---- ข้อ 3: Ctrl+Shift+S บันทึกทั้งหมด ----
+    // ---- ข้อ 3: บันทึกทั้งหมด ----
+    //
+    // [alpha.124 ข้อ 1] ★ คีย์เปลี่ยนเป็น **Ctrl+Alt+S** แล้ว
+    // เดิมทดสอบด้วย Ctrl+Shift+S ซึ่งเป็นอาการของบั๊กเอง: คีย์นั้นถูกจองไว้ให้ `save-as`
+    // ในตาราง SHORTCUTS อยู่แล้ว แต่มี listener เก่าดักซ้อนอีกชั้นแล้วยิง saveAllTabs ด้วย
+    // → กดทีเดียวได้กล่อง Save-As ของระบบ **พร้อม** กล่องบันทึกทั้งหมด ซ้อนกันสองใบ
+    // เทสนี้จึงย้ายมาใช้คีย์จริง และเพิ่มข้อพิสูจน์ว่าตัวดักเก่าหายไปแล้วจริง
     {
       document.querySelector('.scene').click();
       await new Promise((r) => setTimeout(r, 300));
@@ -18748,13 +19487,22 @@ async function runTest(projectPath) {
       markDirty(state.active);
       const ndirty = [...state.tabs.values()].filter((t) => t.dirty).length;
       check('markDirty แล้วมีแท็บ dirty', ndirty > dirtyBefore, 'dirty=' + ndirty);
-      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true, shiftKey: true, bubbles: true }));
+
+      // [alpha.124 ข้อ 1] ★ Ctrl+Shift+S ต้องไม่ยิง save-all อีกแล้ว
+      // (ยิงคีย์นั้นจริงไม่ได้ในเทส — มันเปิดกล่อง Save-As **ของระบบปฏิบัติการ** ซึ่งค้างทั้งรอบ
+      //  ตรวจที่ต้นทางแทน: ตารางคีย์ลัดต้องมีคำสั่งเดียวผูกกับปุ่มนั้น และตัวดักเก่าถูกถอดไปแล้ว)
+      check('[a124] ★ Ctrl+Shift+S เหลือคำสั่งเดียวคือ save-as (เลิกยิงซ้อนกับบันทึกทั้งหมด)',
+            SHORTCUTS.filter((x) => x[0] === 'KeyS' && x[1] === true && x[2] === true)
+              .map((x) => shortcutId(x)).join(',') === 'save-as',
+            SHORTCUTS.filter((x) => x[0] === 'KeyS').map((x) => shortcutId(x)).join(','));
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true, altKey: true, bubbles: true }));
       // บั๊ก #3: คีย์ลัดขึ้นกล่องรายการไฟล์ก่อน แล้วค่อยบันทึกเมื่อยืนยัน
       for (let i = 0; i < 40 && !document.querySelector('.k-dialog.k-saveall'); i++) {
         await new Promise((r) => setTimeout(r, 50));
       }
       const scDlg = document.querySelector('.k-dialog.k-saveall');
-      check('Ctrl+Shift+S → ขึ้นกล่องรายการไฟล์ที่ยังไม่บันทึก', !!scDlg);
+      check('Ctrl+Alt+S → ขึ้นกล่องรายการไฟล์ที่ยังไม่บันทึก', !!scDlg);
       scDlg.querySelector('.k-dlg-btns .k-ok').click();
       // [alpha.60r2] เดิมรอตายตัว 250ms — saveAllTabs เขียนไฟล์แบบ async
       // เครื่องช้า/ไฟล์เยอะแล้วรอไม่ทัน = FAIL ปลอม (ไม่ใช่บั๊กของโปรแกรม)
@@ -18764,7 +19512,7 @@ async function runTest(projectPath) {
       for (let i = 0; i < 160 && [...state.tabs.values()].some((x) => x.dirty); i++) {
         await new Promise((r) => setTimeout(r, 50));
       }
-      check('Ctrl+Shift+S → บันทึกทั้งหมด (ไม่มีแท็บ dirty)',
+      check('Ctrl+Alt+S → บันทึกทั้งหมด (ไม่มีแท็บ dirty)',
             [...state.tabs.values()].every((t) => !t.dirty),
             [...state.tabs.values()].filter((t) => t.dirty).map((t) => t.title).join('|'));
     }
@@ -19077,7 +19825,13 @@ async function runTest(projectPath) {
             sbox ? sbox.textContent.slice(0, 40) : 'ไม่พบ .dash-streak');
       check('แดชบอร์ดวาดกราฟคำรายวัน', !!document.querySelector('.dash-days .dash-day-bar'));
       const nWords = await countProjectWords();
-      check('countProjectWords นับได้ (ไม่ติดลบ)', typeof nWords === 'number' && nWords >= 0, String(nWords));
+      // [a128] ★ เดิมเช็คแค่ `>= 0` ซึ่ง **0 ก็ผ่าน** — และมันคืน 0 จริงมาหลายสิบรุ่นเพราะ
+      // บรรทัด `if (stale()) return out;` หลุดเข้ามาโดยไม่มีที่ประกาศ แล้วถูก catch กลืนเป็น WARN
+      // โปรเจกต์ทดสอบมีฉากที่มีเนื้อหาแน่นอน → ต้องได้เลขบวก ไม่ใช่แค่ "ไม่ติดลบ"
+      check('[a128] ★ countProjectWords นับได้จริง ไม่ใช่ 0 จากข้อผิดพลาดที่ถูกกลืน',
+            typeof nWords === 'number' && nWords > 0, String(nWords));
+      // ยืนยันว่าไม่มี ReferenceError ค้างอยู่ในทางนี้ (ตัวเลขต้องคงที่เมื่อเรียกซ้ำ)
+      check('[a128] เรียกซ้ำได้ค่าเท่าเดิม', (await countProjectWords()) === nWords, String(nWords));
       await recordDailyWords(nWords);
       check('recordDailyWords เขียนยอดของวันนี้',
             (getWordHistory().find((h) => h.date === today) || {}).words === nWords);
@@ -19794,7 +20548,10 @@ async function runTest(projectPath) {
         .filter((u) => /^https?:/i.test(u));
       check('index.html ไม่โหลดสคริปต์/สไตล์จากอินเทอร์เน็ต', ext.length === 0, ext.join(','));
       check('ค้นคำพ้อง (ส่งข้อความออกเน็ต) ปิดเป็นค่าเริ่มต้น', DEFAULT_SETTINGS.thesaurus === false);
-      check('คำไทยไม่เข้าเงื่อนไขเมนูคำพ้อง', thesaurusMenuItems(0, 0).length === 0);
+      // [alpha.125 ข้อ D] `src/thesaurus.js` (UI ยุค K1) ถูกลบแล้ว — เหลือสายเดียวคือ
+      // `tools/thesaurus` ที่มีคลังไทยในตัวและส่งออกเน็ตเฉพาะเมื่อผู้ใช้เปิดเอง
+      check('ไม่มีโมดูลคำพ้องตัวเก่าหลงเหลืออยู่',
+            await import('./thesaurus.js').then(() => false, () => true));
     }
 
     // ---- Part 1+2: เช็คว่าโมดูลใหม่ import ได้ + ฟังก์ชันมีอยู่จริง ----
@@ -19803,7 +20560,8 @@ async function runTest(projectPath) {
       check('panel-ui import ได้', typeof getPanelManager === 'function');
       check('split-ui import ได้', typeof toggleSplit === 'function');
       check('auto-link-ui import ได้', typeof ensureAutoLink === 'function');
-      check('event-ui import ได้', typeof renderAutoSyncSection === 'function');
+      check('event-ui import ได้ (ตัวไล่แก้ชื่อข้ามไฟล์)',
+            typeof handleEntityRenamed === 'function' && typeof renameAcrossProject === 'function');
       check('ai-ui import ได้', typeof openAIAssistant === 'function');
       check('thesaurus-ui import ได้', typeof showThesaurusPopup === 'function');
       check('import-ui (Scrivener) import ได้', typeof importScrivenerDialog === 'function');
@@ -20696,9 +21454,22 @@ async function runTest(projectPath) {
             check('[103-2] ★★ ข้อในรายการจัดชิดขวาได้จริงบนจอ',
                   !!liEl && getComputedStyle(liEl).textAlign === 'right',
                   liEl && getComputedStyle(liEl).textAlign);
-            check('[103-2] ★ จุดนำของข้อนั้นขยับตามข้อความด้วย (ไม่ค้างชิดซ้าย)',
-                  !!liEl && getComputedStyle(liEl.parentElement).listStylePosition === 'inside',
-                  liEl && getComputedStyle(liEl.parentElement).listStylePosition);
+            // [alpha.130 ข้อ 2] วิธีทำเปลี่ยนแล้ว: `list-style-position:inside` ของ alpha.103
+            // ดัน marker ไปกางเป็นบรรทัดของตัวเอง (ลูกของ <li> เป็นบล็อก) — ตอนนี้ปิด marker
+            // ของเบราว์เซอร์ แล้ววาดเองด้วย `::before` ของ <p> ใบแรก ซึ่งอยู่ในบรรทัดจริง
+            // [alpha.132 ข้อ 8] จุดนำเลิกเป็นอักขระ `•` แล้ว (กลีฟในฟอนต์เล็กกว่าวงกลมของ
+            // เบราว์เซอร์ 36% และไม่เท่ากันในแต่ละฟอนต์) → เป็นวงกลมที่วาดด้วย CSS ขนาด .36em
+            // เทสจึงต้องวัด **ขนาดกล่องจริง** ไม่ใช่ตัวอักษรใน content (บทเรียน K-1 ข้อ 2)
+            {
+              // [alpha.132r3] จุดนำกลับมาเป็น **ตัวอักษร** แล้ว (ปรับรูปแบบ/สีได้)
+              // → ตรวจว่า marker ของเบราว์เซอร์ถูกปิด และเราวาดอักขระเองในบรรทัดแรกของข้อ
+              const bb = liEl && getComputedStyle(liEl, '::before');
+              check('[103-2] ★ จุดนำของข้อนั้นขยับตามข้อความด้วย (ไม่ค้างชิดซ้าย)',
+                    !!liEl && getComputedStyle(liEl.parentElement).listStyleType === 'none'
+                    && !!bb && bb.content.includes('\u2022'),
+                    liEl && (getComputedStyle(liEl.parentElement).listStyleType + ' | '
+                             + (bb && bb.content)));
+            }
             const map103 = ed.getAlignMap();
             note('[103-2] แผนที่ align ที่จะเขียนลงไฟล์: ' + alignToString(map103));
             check('[103-2] ★★ แผนที่ align เก็บข้อในรายการด้วย (เดิมเก็บแต่บล็อกบนสุด)',
@@ -20746,6 +21517,266 @@ async function runTest(projectPath) {
             check('[103r-2] ★★ ตัวหนังสือของหัวข้อไม่ไหลออกไปนอกแผ่น',
                   spillH.length === 0, 'หน้าที่ล้น: ' + spillH.slice(0, 6).join(','));
             await kapi.testShot('/tmp/k2_103r_heading.png');
+          }
+
+          // ══════ [alpha.130 ข้อ 1] ★★ Ctrl+A → สั่งจัดหน้า แล้วเส้นคั่นหน้าต้องไม่หาย ══════
+          //
+          // ผู้ใช้: *"ctrl+a แล้วใช้การจัดหน้า ทำให้การตัดหน้าเละเลย"*
+          //
+          // ต้นตอ: `list` (รายการเส้นคั่น) กับ `DecorationSet` (ของจริงบน DOM) ถูก map คนละกลไก
+          // `setNodeMarkup` ทีละย่อหน้าทั้งเอกสารในทรานแซกชันเดียวทำให้ widget ที่อยู่ตรงรอยต่อ
+          // ระหว่างบล็อกถูก `DecorationSet.map` ตัดทิ้ง แต่ `list` ยังครบ → `setBreaks()` เห็น
+          // ลายเซ็นเดิม คืน false → **ไม่มีใครสั่งวาดใหม่** เส้นคั่นที่หายจึงหายถาวร
+          // (วัดจริงก่อนแก้: โมเดล 11 เส้น · DOM เหลือ 7 · สั่งชิดซ้ายกลับก็ไม่คืน)
+          {
+            const { AllSelection } = await import('prosemirror-state');
+            const pTxt = 'ทดสอบการจัดหน้าและการตัดหน้าของเอกสารภาษาไทยที่ยาวพอจะเกินหนึ่งหน้ากระดาษ '.repeat(6);
+            ed.setMarkdown(Array.from({ length: 34 }, (_, i) => pTxt + ' ย่อหน้าที่ ' + i).join('\n\n')
+                           + '\n\n## หัวข้อย่อยทดสอบ\n\n- รายการข้อหนึ่ง\n- รายการข้อสอง\n\n1. เลขหนึ่ง\n2. เลขสอง\n');
+            bumpProseLayout();
+            const settle130 = async () => {
+              for (let i = 0; i < 8; i++) { repaginateFast(t100); await wait103(220); }
+              retunePagePads(t100); await wait103(320);
+            };
+            const seen130 = () => pm().querySelectorAll('.ed-page-break').length;
+            const model130 = () => ((state._mzDiag || {}).breaks) | 0;
+            const gaps130 = () => {
+              const ys = [...pm().querySelectorAll('.ed-page-break')].map((e) => e.getBoundingClientRect().top);
+              return ys.slice(1).map((y, i) => Math.round(y - ys[i]));
+            };
+            const selAll130 = () => ed.view.dispatch(
+              ed.view.state.tr.setSelection(new AllSelection(ed.view.state.doc)));
+
+            await settle130();
+            const n0 = seen130(), m0 = model130(), g0 = gaps130();
+            note('[130-1] ก่อนจัดหน้า: โมเดล ' + m0 + ' · บนจอ ' + n0 + ' · ระยะ ' + JSON.stringify(g0));
+            check('[130-1] ★ เอกสารทดสอบมีหลายหน้าจริง (ไม่งั้นเทสไม่มีความหมาย)', n0 >= 4, n0);
+            check('[130-1] ก่อนจัดหน้า เส้นคั่นบนจอครบตามโมเดล', n0 === m0, n0 + ' vs ' + m0);
+
+            for (const dir of ['justify', 'center', 'right', 'left']) {
+              selAll130();
+              document.getElementById('tb-align-' + dir).click();
+              await settle130();
+              check('[130-1] ★★ เลือกทั้งหมดแล้วสั่ง "' + dir + '" เส้นคั่นหน้าไม่หายไปจากจอ',
+                    seen130() === model130() && seen130() === n0,
+                    'บนจอ ' + seen130() + ' · โมเดล ' + model130() + ' · เดิม ' + n0);
+            }
+            // ระยะระหว่างเส้นคั่นต้องเท่าเดิมเป๊ะ — จัดหน้าเป็นเรื่องของ "แนวนอน" ล้วน ๆ
+            check('[130-1] ★ ระยะห่างระหว่างหน้าไม่เปลี่ยนเพราะการจัดหน้า',
+                  JSON.stringify(gaps130()) === JSON.stringify(g0),
+                  JSON.stringify(gaps130()) + ' vs ' + JSON.stringify(g0));
+            await kapi.testShot('/tmp/k2_130_pagebreak.png');
+
+            // ══════ [alpha.131 · เคส P-1] ★★ ระยะระหว่าง "รอยต่อหน้า" ต้องคงที่ ══════
+            //
+            // ผู้ใช้: *"การตัดหน้าเพี้ยน"* — ส่วนที่เหลือหลังแก้เส้นคั่นหาย
+            //
+            // ★ กับดักของการวัด: **ห้ามวัดจากขอบบนของกล่องเส้นคั่น** — กล่องแต่ละใบสูงไม่เท่ากัน
+            // โดยธรรมชาติ (ชนิด inline มีแถบหนึ่งบรรทัดในตัว · มุมมองจัดหน้ามีขอบ+พื้นโต๊ะ 220px)
+            // ระยะขอบบน-ถึง-ขอบบนจึงกระเพื่อมตามชนิดกล่องเป็นเรื่องปกติ (รอบก่อนเกือบตีความผิด)
+            // รอยต่อหน้าจริง = **ก้นกล่อง − ส่วนที่ไม่ใช่ที่ว่างท้ายหน้า**
+            {
+              const boxes131 = () => [...pm().querySelectorAll('.ed-page-break')].map((e) => {
+                const r = e.getBoundingClientRect();
+                const pad = parseFloat(e.style.getPropertyValue('--k-pb-pad')) || 0;
+                return { bot: r.bottom, h: r.height, pad, extra: r.height - pad,
+                         inline: e.classList.contains('k-pb-inline') };
+              });
+              const seams131 = () => { const b = boxes131();
+                const y = b.map((x) => x.bot - x.extra);
+                return y.slice(1).map((v, i) => Math.round((v - y[i]) * 10) / 10); };
+              const spf131 = spFormat();
+              const target131 = (spf131.paper.height - spf131.margins.top - spf131.margins.bottom) * 96;
+              const line131 = proseLinePx(proseFormat());
+              // ★ เทสถัดไปคาดว่ามุมมองยังเป็นของเดิม (บทเรียน: เทสที่สลับมุมมองต้องคืนให้ครบ
+              //   ไม่งั้น `[105r]` เจอ "0 แผ่น" แล้วแดงแบบไล่ต้นตอไม่ถูก)
+              const view131 = viewOfTab(t100);
+
+              setSpView('normal', true); await wait103(400); await settle130();
+              const sN = seams131(), bN = boxes131();
+              note('[131-P1] มุมมองปกติ: รอยต่อΔ=' + JSON.stringify(sN)
+                   + ' · เป้า=' + Math.round(target131) + ' · บรรทัด=' + Math.round(line131)
+                   + ' · ตัดกลางย่อหน้า ' + bN.filter((x) => x.inline).length + '/' + bN.length);
+              check('[131-P1] ★ เอกสารมีทั้งจุดตัดกลางย่อหน้าและระดับบล็อก (เทสถึงจะมีความหมาย)',
+                    bN.some((x) => x.inline) && bN.some((x) => !x.inline),
+                    JSON.stringify(bN.map((x) => (x.inline ? 'i' : 'b')).join('')));
+              // ★★ หัวใจ: หน้าต้องไม่ "สั้นกว่าหน้ากระดาษ" เลยสักหน้า — เนื้อหาจะได้ไม่ล้นแผ่น
+              check('[131-P1] ★★ ไม่มีหน้าไหนสั้นกว่าความสูงพื้นที่พิมพ์',
+                    sN.every((d) => d >= target131 - 1), JSON.stringify(sN));
+              // ...และเกินได้ไม่เกินหนึ่งบรรทัด (แถบตัดกลางย่อหน้าเป็นของตกแต่งบนจอ ไม่มีในกระดาษ
+              //    หน้าที่เนื้อเต็มจนเหลือที่ว่างไม่ถึงหนึ่งบรรทัดจึงยังเกินได้นิดหน่อย)
+              check('[131-P1] ★★ และเกินได้ไม่เกินหนึ่งบรรทัด (ก่อนแก้เกินถึง 30px ทุกหน้าเว้นหน้า)',
+                    sN.every((d) => d <= target131 + line131 + 1),
+                    JSON.stringify(sN.map((d) => Math.round(d - target131))));
+              // ★★ ข้อพิสูจน์ที่แน่นที่สุด: หน้าที่ยาวเกิน ต้องเกิน **เฉพาะ** เพราะที่ว่างท้ายหน้า
+              // เหลือไม่ถึงหนึ่งบรรทัด (กล่อง inline-block ยุบต่ำกว่ากล่องบรรทัดของตัวเองไม่ได้)
+              // หน้าอื่นทุกหน้าต้องยาวเท่าพื้นที่พิมพ์เป๊ะ
+              {
+                const bad131 = [];
+                sN.forEach((d, i) => {
+                  if (Math.abs(d - target131) < 1) return;         // ตรงเป๊ะ = ผ่าน
+                  const head = bN[i];                              // กล่องที่ปิดหน้านี้
+                  if (head.inline && head.pad < line131) return;   // เต็มจนแถบยุบไม่ลง = ยอมรับได้
+                  bad131.push('#' + i + ' เกิน ' + Math.round(d - target131)
+                              + 'px · pad=' + Math.round(head.pad)
+                              + ' · ' + (head.inline ? 'กลางย่อหน้า' : 'ระดับบล็อก'));
+                });
+                check('[131-P1] ★★ หน้าที่ยาวไม่เท่ากันมีได้เฉพาะหน้าที่เต็มจนแถบยุบไม่ลงเท่านั้น',
+                      bad131.length === 0, bad131.join(' , '));
+              }
+
+              // มุมมองจัดหน้า = แผ่นกระดาษจริง ต้องเป๊ะทุกหน้า ไม่มีข้อยกเว้น
+              setSpView('layout', true); await wait103(500); await settle130();
+              const sL = seams131();
+              const pitchL = (spf131.paper.height * 96) + num(state.settings.spPageGap, 28);
+              note('[131-P1] มุมมองจัดหน้า: รอยต่อΔ=' + JSON.stringify(sL)
+                   + ' · ระยะแผ่นต่อแผ่น=' + Math.round(pitchL));
+              check('[131-P1] ★★ มุมมองจัดหน้า: ทุกหน้าห่างเท่ากันเป๊ะ',
+                    sL.length > 2 && Math.max(...sL) - Math.min(...sL) <= 1,
+                    JSON.stringify(sL));
+              check('[131-P1] ★★ และห่างเท่ากับระยะแผ่นกระดาษจริง (เนื้อไม่เลื่อนออกจากแผ่น)',
+                    sL.every((d) => Math.abs(d - pitchL) <= 1.5),
+                    JSON.stringify(sL) + ' vs ' + Math.round(pitchL));
+              setSpView(view131, true); await wait103(300);
+            }
+
+            // ══ [alpha.130 ข้อ 3] ★ สถานะปุ่มจัดหน้าตอนเลือกทั้งเอกสาร ══
+            // ผู้ใช้: *"เมื่อเลือกทั้งหมดแล้วใช้การจัดหน้า จะไม่ถูก toggle เลย"*
+            // AllSelection มี from=0 → `$from.parent` คือโหนด doc ไม่ใช่ย่อหน้า → align=null เสมอ
+            const btnOn = () => ['left', 'center', 'right', 'justify']
+              .filter((k) => document.getElementById('tb-align-' + k).classList.contains('on'));
+            for (const dir of ['center', 'right', 'justify']) {
+              selAll130();
+              document.getElementById('tb-align-' + dir).click();
+              await wait103(200);
+              selAll130(); refreshToolbar(); await wait103(120);
+              check('[130-3] ★★ เลือกทั้งเอกสารแล้วสั่ง "' + dir + '" → สถานะอ่านได้ถูก',
+                    ed.activeMarks().align === dir, JSON.stringify(ed.activeMarks().align));
+              check('[130-3] ปุ่ม "' + dir + '" ติดไฟอยู่ปุ่มเดียว',
+                    btnOn().length === 1 && btnOn()[0] === dir, btnOn().join(','));
+            }
+            // สวิตช์: กดปุ่มที่ติดไฟอยู่ซ้ำ = กลับเป็นชิดซ้าย (ไอดิออมเดียวกับ B I U)
+            selAll130(); document.getElementById('tb-align-justify').click(); await wait103(200);
+            selAll130(); refreshToolbar(); await wait103(120);
+            check('[130-3] ★★ กดปุ่มเดิมซ้ำ = สลับกลับเป็นชิดซ้าย',
+                  ed.activeMarks().align === 'left' && btnOn().join(',') === 'left',
+                  ed.activeMarks().align + ' | ' + btnOn().join(','));
+            // ช่วงที่เลือกมีทั้งซ้ายและกึ่งกลาง = "ปนกัน" → ห้ามมีปุ่มไหนติดไฟ
+            {
+              const { TextSelection } = await import('prosemirror-state');
+              let firstP = null;
+              ed.view.state.doc.descendants((n2, p2) => {
+                if (firstP === null && n2.type.name === 'paragraph') firstP = p2;
+              });
+              ed.view.dispatch(ed.view.state.tr.setSelection(
+                TextSelection.create(ed.view.state.doc, firstP + 1, firstP + 3)));
+              ed.cmd('align', 'center');
+              selAll130(); refreshToolbar(); await wait103(150);
+              check('[130-3] ★ ช่วงที่เลือกจัดหน้าปนกัน = ไม่มีปุ่มไหนติดไฟ',
+                    ed.activeMarks().align === '' && btnOn().length === 0,
+                    JSON.stringify(ed.activeMarks().align) + ' | ' + btnOn().join(','));
+            }
+
+            // ══ [alpha.130 ข้อ 2] ★ จุดนำ/หมายเลขข้อ ต้องเดินทางไปกับข้อความ ══
+            // ผู้ใช้: *"รายการ bullet และหัวข้อย่อย ไม่ตามการจัดหน้า"*
+            // alpha.103 เคยแก้ด้วย list-style-position:inside ซึ่งดัน marker ไปอยู่บรรทัดของตัวเอง
+            // (ลูกของ <li> เป็นบล็อก) — ตอนนี้วาดเองด้วย ::before ของ <p> ใบแรกแทน
+            selAll130();
+            document.getElementById('tb-align-center').click();
+            await wait103(350);
+            {
+              const pmC = pm();
+              const liU = pmC.querySelector('ul > li'), liO = pmC.querySelector('ol > li');
+              const h2c = pmC.querySelector('h2');
+              check('[130-2] ★ มีรายการทั้งสองชนิดให้ทดสอบ', !!liU && !!liO);
+              check('[130-2] หัวข้อย่อยตามการจัดหน้าด้วย',
+                    !!h2c && getComputedStyle(h2c).textAlign === 'center',
+                    h2c && getComputedStyle(h2c).textAlign);
+              const pU = liU.querySelector(':scope > p');
+              check('[130-2] ข้อความในข้อถูกจัดกึ่งกลางจริง',
+                    getComputedStyle(pU).textAlign === 'center', getComputedStyle(pU).textAlign);
+              check('[130-2] ★ ย่อหน้าในข้อได้ data-align ให้ CSS จับ',
+                    pU.getAttribute('data-align') === 'center', pU.getAttribute('data-align'));
+              // marker ของเบราว์เซอร์ต้องถูกปิด แล้ววาดเองด้วย ::before ของ <p>
+              check('[130-2] ★★ marker ของเบราว์เซอร์ถูกปิด (ไม่ไปกางเป็นบรรทัดของตัวเอง)',
+                    getComputedStyle(liU).listStyleType === 'none',
+                    getComputedStyle(liU).listStyleType);
+              const beforeU = getComputedStyle(pU, '::before').content;
+              const beforeO = getComputedStyle(liO.querySelector(':scope > p'), '::before').content;
+              // [alpha.132 ข้อ 8] จุดนำเป็น **วงกลมที่วาดด้วย CSS** (`content:''` + .36em)
+              // ไม่ใช่อักขระ `•` อีกแล้ว — วัดขนาดกล่องแทนการดูตัวอักษรใน content
+              {
+                // [alpha.132r3] จุดนำเป็นอักขระ `\u2022` ทั้งสองทาง — ขนาดเท่ากันโดยโครงสร้าง
+                // เพราะบังคับ `content` ของ ::marker ให้เป็นกลีฟเดียวกัน (ไม่ใช่ disc ที่วาดเอง)
+                check('[130-2] ★★ จุดนำถูกวาดในบรรทัดแรกของข้อ (ul)',
+                      beforeU !== 'none' && beforeU.includes('\u2022'),
+                      JSON.stringify(beforeU));
+              }
+              check('[130-2] ★★ หมายเลขข้อถูกวาดในบรรทัดแรกของข้อ (ol)',
+                    /counter|1\./.test(beforeO) || beforeO !== 'none', JSON.stringify(beforeO));
+              // ★ ของจริง: จุดนำต้องอยู่ **ขวาของขอบซ้าย** ของข้อ = ขยับตามข้อความไปแล้ว
+              const liRect = liU.getBoundingClientRect();
+              const rg = document.createRange(); rg.selectNodeContents(pU);
+              const tRect = rg.getClientRects()[0];
+              check('[130-2] ★★ จุดนำ+ข้อความอยู่กลางข้อ ไม่ติดขอบซ้ายแล้ว',
+                    !!tRect && tRect.left > liRect.left + 20,
+                    tRect ? Math.round(tRect.left) + ' vs ' + Math.round(liRect.left) : 'ไม่มี rect');
+              // ...แต่ต้องอยู่บรรทัดเดียวกับข้อความ ไม่ใช่บรรทัดของตัวเอง
+              check('[130-2] ★★ ข้อหนึ่งข้อสูงเท่าหนึ่งบรรทัด (จุดนำไม่แยกบรรทัด)',
+                    liU.getBoundingClientRect().height < proseLinePx(proseFormat()) * 1.8,
+                    Math.round(liU.getBoundingClientRect().height) + 'px');
+              await kapi.testShot('/tmp/k2_130_bullet.png');
+            }
+            // จัดชิดซ้าย = จุดนำกลับไปอยู่นอกคอลัมน์ตามปกติ (เหมือน Google Docs)
+            selAll130(); document.getElementById('tb-align-left').click(); await wait103(300);
+            {
+              const liU2 = pm().querySelector('ul > li');
+              check('[130-2] ชิดซ้าย = ใช้จุดนำปกติของเบราว์เซอร์เหมือนเดิม',
+                    getComputedStyle(liU2).listStyleType !== 'none',
+                    getComputedStyle(liU2).listStyleType);
+            }
+
+            // ══ [alpha.130 ข้อ 4] ★ Ctrl+A ต้องมีขอบเขต ══
+            // ผู้ใช้: *"ctrl-a ... ตอนนี้มันกลายเป็นเลือกข้อความทั้ง app"*
+            {
+              // จำลองสภาพจริงที่ผู้ใช้เจอ: โฟกัสหลุดออกจากตัวแก้ไข (คลิกพื้นที่ว่าง/แผง/แถบเครื่องมือ)
+              // แล้วกด Ctrl+A — ของเดิมเบราว์เซอร์กวาดทั้งหน้าต่าง (วัดได้ 19,234 ตัวอักษร)
+              ed.view.dom.blur();
+              const chrome4 = document.createElement('button');
+              chrome4.textContent = 'ทดสอบโฟกัสนอกตัวแก้ไข';
+              document.body.append(chrome4);
+              chrome4.focus();
+              check('[130-4] ★ โฟกัสอยู่นอกตัวแก้ไขจริง (ไม่งั้นเทสไม่มีความหมาย)',
+                    !pm().contains(document.activeElement),
+                    document.activeElement && document.activeElement.tagName);
+              const kev = new KeyboardEvent('keydown',
+                { key: 'a', code: 'KeyA', ctrlKey: true, bubbles: true, cancelable: true });
+              const passed = chrome4.dispatchEvent(kev);
+              chrome4.remove();
+              check('[130-4] ★★ Ctrl+A นอกช่องข้อความถูกดักไว้ ไม่ปล่อยให้เบราว์เซอร์กวาดทั้งแอป',
+                    passed === false, 'defaultPrevented=' + (!passed));
+              await wait103(200);
+              const sel4 = ed.view.state.selection;
+              check('[130-4] ★★ ...แล้วโยนไปเลือกทั้งฉากในตัวแก้ไขแทน',
+                    sel4.from <= 1 && sel4.to >= ed.view.state.doc.content.size - 1,
+                    sel4.from + '..' + sel4.to + ' ของ ' + ed.view.state.doc.content.size);
+              check('[130-4] โฟกัสถูกย้ายเข้าตัวแก้ไขให้ด้วย', ed.view.hasFocus());
+              check('[130-4] การเลือกของเบราว์เซอร์ไม่กินนอกตัวแก้ไข',
+                    (() => { const sw = window.getSelection();
+                      return !sw.anchorNode || pm().contains(sw.anchorNode); })());
+              // อยู่ในช่องข้อความธรรมดา = ต้องปล่อยผ่านให้เจ้าของช่องจัดการเอง
+              const probeInp = document.createElement('input');
+              probeInp.value = 'ทดสอบ';
+              document.body.append(probeInp);
+              probeInp.focus();
+              const kev2 = new KeyboardEvent('keydown',
+                { key: 'a', code: 'KeyA', ctrlKey: true, bubbles: true, cancelable: true });
+              const passed2 = probeInp.dispatchEvent(kev2);
+              check('[130-4] ★ ในช่องข้อความธรรมดา Ctrl+A ยังเป็นของช่องนั้น (ไม่ถูกแย่ง)',
+                    passed2 === true, 'defaultPrevented=' + (!passed2));
+              probeInp.remove();
+              ed.focus();
+            }
           }
 
           // ══ [alpha.104r] ★ นิยาย: "คำพูดที่ยกมา" (blockquote) ต้องหั่นข้ามหน้าได้ด้วย ══
@@ -24588,7 +25619,12 @@ async function runTest(projectPath) {
       // ---- บั๊ก #11: เครื่องมือระดับโปรเจกต์ใช้ได้แม้ไม่มีแท็บฉาก ----
       {
         const keepTabs = [...state.tabs.keys()];
-        closeAllTabs(); await new Promise((r) => setTimeout(r, 200));
+        // [alpha.124 ข้อ 17] `closeAllTabs` ถามก่อนแล้ว (กล่อง "บันทึกทั้งหมด") —
+        // เทสต้องเคลียร์งานค้างเงียบ ๆ ก่อน แล้ว **await** ให้ปิดจริงครบ ไม่ใช่รอเวลาตายตัว
+        await saveAllTabs(true);
+        await closeAllTabs();
+        for (let i = 0; i < 60 && state.tabs.size; i++) await new Promise((r) => setTimeout(r, 50));
+        check('#11 ปิดทุกแท็บได้จริงก่อนเริ่มทดสอบ', state.tabs.size === 0, state.tabs.size);
         refreshToolbar();
         for (const id of ['tb-note', 'tb-panels', 'tb-kanban', 'tb-gsearch', 'tb-quickopen']) {
           check('#11 ไม่มีแท็บฉากแต่ปุ่ม ' + id + ' ยังใช้ได้',
@@ -26348,6 +27384,386 @@ async function runTest(projectPath) {
             await w97(120);
             check('[97-4] ★ sup กับ sub กันเองออก (ตัวเดียวเป็นทั้งสองไม่ได้)',
                   has('sub') && !has('sup'));
+          }
+
+          // ══════ [alpha.132 ข้อ 7] ★★ สวิตช์ "คำพูดที่ยกมา" ตอนช่วงที่เลือกปนกัน ══════
+          //
+          // ผู้ใช้: *"เลือกบรรทัดใดบรรทัดหนึ่งเอาบล็อกออก แล้วเลือกทั้ง 2 บรรทัด กด toggle ไม่ได้แล้ว"*
+          // ต้นตอเดิม: ตัวสวิตช์ดู `$from` จุดเดียว → ไปทาง `wrapIn` ซึ่งห่อช่วงที่มี <blockquote>
+          // ปนอยู่ไม่ได้เลย (สคีมารับแค่ `paragraph+`) แล้วคืน false เงียบ ๆ = "กดแล้วไม่มีอะไรเกิด"
+          {
+            setSpView('normal', true);
+            // ★ .md ของ Killian = **หนึ่งบรรทัด = หนึ่งบล็อก** → ขึ้นบรรทัดใหม่สองครั้งคือ *สาม* ย่อหน้า
+            // (ย่อหน้าว่างคั่นกลาง — กฎที่ alpha.132 ข้อ 1 เพิ่งย้ำ) ที่ต้องการคือสองบรรทัดติดกัน
+            const two = 'บรรทัดหนึ่ง' + String.fromCharCode(10) + 'บรรทัดสอง';
+            const names132 = () => T.editor.view.state.doc.content.content.map((n) => n.type.name);
+            const quotes132 = () => names132().filter((n) => n === 'blockquote').length;
+            const selAll132 = () => {
+              const st = T.editor.view.state;
+              T.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, 1, st.doc.content.size - 1)));
+            };
+            // เลือกอยู่ **ในย่อหน้าใบแรก** เท่านั้น (ไม่ใช่ทั้งบล็อกที่ห่ออยู่) —
+            // เลือกทั้งบล็อกแล้วสั่งถอด จะได้ทั้งสองบรรทัดออกมา ซึ่งไม่ใช่เคสที่ต้องการทดสอบ
+            const selFirstPara132 = () => {
+              const st = T.editor.view.state;
+              let at = -1;
+              st.doc.descendants((n, pos) => {
+                if (at < 0 && n.type.name === 'paragraph') at = pos + 1;
+              });
+              T.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, at, at + 3)));
+            };
+            T.editor.setMarkdown(two);
+            await w97(250);
+
+            selAll132(); T.editor.cmd('quote'); await w97(150);
+            check('[132-7] เลือกสองบรรทัดแล้วกด "คำพูดที่ยกมา" → ได้บล็อกเดียวคร่อมทั้งคู่',
+                  quotes132() === 1 && names132().length === 1, names132().join(','));
+            selAll132(); T.editor.cmd('quote'); await w97(150);
+            check('[132-7] กด toggle ซ้ำ → กลับเป็นย่อหน้าธรรมดาทั้งคู่',
+                  quotes132() === 0 && names132().join(',') === 'paragraph,paragraph',
+                  names132().join(','));
+
+            // ── ทำซ้ำเคสของผู้ใช้: ห่อทั้งคู่ → เอาออกเฉพาะบรรทัดแรก → เลือกทั้งคู่แล้วกดอีกที ──
+            selAll132(); T.editor.cmd('quote'); await w97(150);
+            selFirstPara132();
+            // เคอร์เซอร์อยู่ในย่อหน้าแรกซึ่งอยู่ในบล็อก → กดแล้วต้องถูกยกออกมาเฉพาะใบนั้น
+            T.editor.cmd('quote'); await w97(180);
+            const mixed132 = names132().join(',');
+            check('[132-7] ★ เอาบล็อกออกเฉพาะบรรทัดเดียวได้ (ผ่าบล็อกเป็นสองท่อน)',
+                  mixed132 === 'paragraph,blockquote', mixed132);
+            refreshToolbar();
+            check('[132-7] ★ ช่วงที่ปนกัน = ปุ่มไม่ติดไฟ (บอกตรงกับสิ่งที่การกดจะทำ)',
+                  (selAll132(), !T.editor.activeMarks().quote),
+                  JSON.stringify(T.editor.activeMarks().quote));
+            selAll132();
+            T.editor.cmd('quote'); await w97(200);
+            check('[132-7] ★★ เลือกทั้งสองบรรทัดที่ปนกันแล้วกด toggle **ได้จริง** (บั๊กที่ผู้ใช้เจอ)',
+                  quotes132() === 1 && names132().length === 1, names132().join(','));
+            selAll132();
+            T.editor.cmd('quote'); await w97(200);
+            check('[132-7] ★ แล้วกดอีกทีก็ถอดออกได้หมด ไม่ค้าง',
+                  quotes132() === 0 && names132().join(',') === 'paragraph,paragraph',
+                  names132().join(','));
+            // เขียนกลับเป็น .md แล้วอ่านใหม่ต้องได้เท่าเดิม (ไม่มีบล็อกค้างในไฟล์)
+            check('[132-7] เขียนกลับเป็น .md ได้เท่าต้นฉบับ', T.editor.getMarkdown() === two,
+                  JSON.stringify(T.editor.getMarkdown()));
+          }
+
+          // ══════ [alpha.132r4] ★★ สวิตช์รายการ · ทางออกจากรายการ · จุดนำซ้ำ ══════
+          //
+          // ผู้ใช้: *"bullet กับตัวเลข toggle ไม่ได้ ถ้า 2 บรรทัดไม่เหมือนกัน · ใช้ bullet
+          //          สลับเป็นหมายเลขได้ แต่กดเป็นคำพูดที่ยกมาไม่ได้ · จัดหน้าแล้วตัวเลข/bullet
+          //          duplicate ที่ซ้ายกระดาษ · enter 2 ครั้ง หรือลบ 2 ครั้ง ต้องออกจากรายการ"*
+          {
+            setSpView('normal', true);
+            const NL4 = String.fromCharCode(10);
+            const names4 = () => T.editor.view.state.doc.content.content.map((n) => n.type.name);
+            const selAll4 = () => {
+              const st = T.editor.view.state;
+              T.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, 1, st.doc.content.size - 1)));
+            };
+            // จำลองการกดปุ่มจริง — เดินผ่าน `handleKeyDown` ตัวเดียวกับที่ prosemirror เรียก
+            // (ไม่พึ่ง DOM event จริง ซึ่งขึ้นกับโฟกัส/ตัวสังเกตการณ์ แต่ยัง **ทดสอบคีย์แมปจริง**)
+            const pmKey = (view, key) => {
+              const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+              return !!view.someProp('handleKeyDown', (f) => f(view, ev));
+            };
+            /** วางเคอร์เซอร์ท้ายบล็อกข้อความใบแรก */
+            const caretEnd0 = () => {
+              const st = T.editor.view.state;
+              let at = -1;
+              st.doc.descendants((n, pos) => {
+                if (at < 0 && n.isTextblock) at = pos + 1 + n.content.size;
+              });
+              T.editor.view.dispatch(st.tr.setSelection(PMTextSelection.create(st.doc, at, at)));
+            };
+            const caretIn = (nth) => {
+              const st = T.editor.view.state;
+              let seen = 0, at = -1;
+              st.doc.descendants((n, pos) => {
+                if (n.isTextblock && seen++ === nth && at < 0) at = pos + 1;
+              });
+              T.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, at, at)));
+            };
+
+            // ── ก) สองบรรทัดที่ "ไม่เหมือนกัน" ต้อง toggle ได้ ──
+            T.editor.setMarkdown('บรรทัดหนึ่ง' + NL4 + 'บรรทัดสอง');
+            await w97(250);
+            selAll4(); T.editor.cmd('ul'); await w97(200);
+            check('[132r4-1] เลือกสองบรรทัดแล้วกด bullet → เป็นรายการเดียว',
+                  names4().join(',') === 'bullet_list', names4().join(','));
+            caretIn(0); T.editor.cmd('ul'); await w97(200);   // เอาข้อแรกออก → ปนกัน
+            check('[132r4-1] ★ เอาข้อเดียวออกได้ (ผ่ารายการเป็นสองท่อน)',
+                  names4().join(',') === 'paragraph,bullet_list', names4().join(','));
+            selAll4(); T.editor.cmd('ul'); await w97(250);
+            check('[132r4-1] ★★ เลือกช่วงที่ปนกันแล้วกด bullet **ได้จริง** (บั๊กที่ผู้ใช้เจอ)',
+                  names4().join(',') === 'bullet_list', names4().join(','));
+            selAll4(); T.editor.cmd('ol'); await w97(250);
+            check('[132r4-1] ★ สลับ bullet → หมายเลข ได้ทั้งช่วง',
+                  names4().join(',') === 'ordered_list', names4().join(','));
+
+            // ── ข) รายการ → คำพูดที่ยกมา (เดิมตัน เพราะห่อ <ul> เป็น <blockquote> ไม่ได้) ──
+            T.editor.cmd('quote'); await w97(250);
+            check('[132r4-2] ★★ กดคำพูดที่ยกมาจากในรายการได้ (เดิมกดแล้วเงียบสนิท)',
+                  names4().join(',') === 'blockquote', names4().join(','));
+            selAll4(); T.editor.cmd('ul'); await w97(250);
+            check('[132r4-2] ★ และกลับไปเป็นรายการได้ ไม่ค้าง',
+                  names4().join(',') === 'bullet_list', names4().join(','));
+
+            // ── ค) จัดหน้าแล้วต้องไม่มีจุดนำซ้ำที่ขอบซ้าย ──
+            selAll4(); T.editor.cmd('align', 'center'); await w97(300);
+            {
+              const li4 = pm97.querySelector('ul > li');
+              const mk = getComputedStyle(li4, '::marker').content;
+              const bf = getComputedStyle(li4.querySelector('p'), '::before').content;
+              note('[132r4-3] ::marker=' + mk + ' · ::before=' + bf);
+              check('[132r4-3] ★★ จัดกึ่งกลางแล้ว marker ของเบราว์เซอร์ถูกปิด (ไม่ซ้ำที่ขอบซ้าย)',
+                    mk === 'none', mk);
+              check('[132r4-3] ★ และจุดนำของเราถูกวาดในบรรทัดแทน',
+                    bf.includes('•'), bf);
+            }
+            selAll4(); T.editor.cmd('align', 'left'); await w97(250);
+            check('[132r4-3] ★ กลับมาชิดซ้าย = marker ของเบราว์เซอร์กลับมาทำงาน',
+                  getComputedStyle(pm97.querySelector('ul > li'), '::marker').content
+                    .includes('•'),
+                  getComputedStyle(pm97.querySelector('ul > li'), '::marker').content);
+
+            // ── ง) Enter บนข้อว่าง = ออกจากรายการ (เหมือน Word) ──
+            T.editor.setMarkdown('- ข้อหนึ่ง');
+            await w97(250);
+            caretEnd0();
+            const k1 = pmKey(T.editor.view, 'Enter');     // ขึ้นข้อใหม่ (ยังว่าง)
+            check('[132r4-4] คีย์แมปรับปุ่ม Enter จริง', k1 === true, String(k1));
+            await w97(150);
+            check('[132r4-4] Enter ครั้งแรก = ขึ้นข้อใหม่ในรายการ',
+                  names4().join(',') === 'bullet_list'
+                    && T.editor.view.state.doc.firstChild.childCount === 2,
+                  names4().join(',') + ' · ' + T.editor.view.state.doc.firstChild.childCount);
+            pmKey(T.editor.view, 'Enter');            // ข้อว่าง → ต้องหลุดออกจากรายการ
+            await w97(200);
+            check('[132r4-4] ★★ Enter ครั้งที่สองบนข้อว่าง = ออกจากรายการ (ไม่ต้องไปกดปุ่ม)',
+                  names4().join(',') === 'bullet_list,paragraph', names4().join(','));
+
+            // ── จ) Backspace ที่ต้นข้อ = ออกจากรายการ ──
+            T.editor.setMarkdown('- ข้อเดียว');
+            await w97(250);
+            {
+              const st = T.editor.view.state;
+              let at = -1;
+              st.doc.descendants((n, pos) => { if (n.isTextblock && at < 0) at = pos + 1; });
+              T.editor.view.dispatch(st.tr.setSelection(PMTextSelection.create(st.doc, at, at)));
+            }
+            pmKey(T.editor.view, 'Backspace');
+            await w97(200);
+            check('[132r4-5] ★★ Backspace ที่ต้นข้อ = ถอดออกจากรายการ (ข้อความไม่หาย)',
+                  names4().join(',') === 'paragraph'
+                    && T.editor.view.state.doc.textContent === 'ข้อเดียว',
+                  names4().join(',') + ' · ' + T.editor.view.state.doc.textContent);
+
+            // ── ฉ) บรรทัดว่างในรายการต้องรอดถึงไฟล์และช่องตัวอย่าง ──
+            T.editor.setMarkdown('1. ก' + NL4 + '2.' + NL4 + '3. ข');
+            await w97(250);
+            check('[132r4-6] ★★ อ่าน "ข้อว่าง" จาก .md กลับมาเป็นข้อจริง (ไม่ใช่ย่อหน้า "2.")',
+                  names4().join(',') === 'ordered_list'
+                    && T.editor.view.state.doc.firstChild.childCount === 3,
+                  names4().join(',') + ' · ' + T.editor.view.state.doc.firstChild.childCount);
+            check('[132r4-6] ★ เขียนกลับลง .md แล้วข้อว่างยังอยู่',
+                  T.editor.getMarkdown().split(NL4).length === 3
+                    && /^2\.\s*$/.test(T.editor.getMarkdown().split(NL4)[1]),
+                  JSON.stringify(T.editor.getMarkdown()));
+            T.editor.setMarkdown('ล้างหลังเทสรายการ');
+            await w97(150);
+          }
+
+          // ══════ [alpha.132r3 ข้อ 3] ★★ จุดนำ/หมายเลขข้อ = ตัวอักษรที่ปรับรูปแบบได้ ══════
+          //
+          // ผู้ใช้ (alpha.132): *"ถ้าย้ายไปที่ไม่ใช่ชิดซ้าย ตัว bullet จะเล็กกว่าปกติ"*
+          // ผู้ใช้ (รอบนี้):    *"bullet และ ตัวเลข ต้องเป็นตัวอักษรด้วย … ปรับไม่ได้"*
+          //
+          // alpha.132 แก้ข้อแรกด้วยการ **วาดวงกลมด้วย CSS** — ขนาดตรงจริง แต่ไม่ใช่ตัวอักษรอีก
+          // รอบนี้กลับมาเป็นอักขระทั้งสองทาง แล้วแก้เรื่องขนาดด้วยวิธีที่ถูกกว่า:
+          // **บังคับ `content` ของ ::marker ให้เป็นกลีฟตัวเดียวกับที่เราวาดเอง**
+          // → เท่ากันโดยโครงสร้าง ไม่ต้องจูนตัวเลขให้ตรงกันทีละฟอนต์
+          {
+            setSpView('normal', true);
+            const FONTS132 = ['Sarabun, sans-serif', '"Noto Sans Thai", sans-serif',
+                              '"Courier Prime", monospace', 'Tahoma, sans-serif'];
+            const SIZES132 = [14, 21, 32];
+            const oldFont132 = document.documentElement.style.getPropertyValue('--ed-font');
+            const oldFs132 = document.documentElement.style.getPropertyValue('--ed-fs');
+            let cases = 0, bad = [];
+            const pick = (cs) => ({ content: cs.content, fontSize: cs.fontSize,
+                                    fontFamily: cs.fontFamily });
+            const allSel132 = () => {
+              const st = T.editor.view.state;
+              T.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, 1, st.doc.content.size - 1)));
+            };
+            for (const font of FONTS132) {
+              for (const size of SIZES132) {
+                document.documentElement.style.setProperty('--ed-font', font);
+                document.documentElement.style.setProperty('--ed-fs', size + 'px');
+                T.editor.setMarkdown('- ข้อหนึ่ง' + String.fromCharCode(10)
+                                     + '- ข้อสอง' + String.fromCharCode(10, 10)
+                                     + '1. ข้อแรก' + String.fromCharCode(10) + '2. ข้อสอง');
+                await w97(200);
+                const ul132 = pm97.querySelector('ul > li');
+                const ol132 = pm97.querySelector('ol > li');
+                if (!ul132 || !ol132) continue;
+                // ★ `getComputedStyle` คืน **object ที่มีชีวิต** — อ่านค่าทีหลังได้ค่าใหม่เสมอ
+                //   ต้องคัดค่าออกมาเก็บทันที ไม่งั้นเทียบกับสถานะหลังจัดหน้าโดยไม่รู้ตัว
+                const mkU = { ...pick(getComputedStyle(ul132, '::marker')) };
+                const mkO = { ...pick(getComputedStyle(ol132, '::marker')) };
+                allSel132(); T.editor.cmd('align', 'center'); await w97(220);
+                const bU = pick(getComputedStyle(pm97.querySelector('ul > li > p'), '::before'));
+                const bO = pick(getComputedStyle(pm97.querySelector('ol > li > p'), '::before'));
+                cases++;
+                // กลีฟเดียวกัน + ฟอนต์เดียวกัน + ขนาดเดียวกัน = กว้างเท่ากันเสมอ
+                const same = mkU.content.includes('•') && bU.content.includes('•')
+                  && mkU.fontSize === bU.fontSize && mkU.fontFamily === bU.fontFamily
+                  && mkO.fontSize === bO.fontSize && mkO.fontFamily === bO.fontFamily;
+                if (!same) bad.push(font + '/' + size + ': ' + mkU.content + ' vs ' + bU.content
+                                    + ' · ' + mkU.fontSize + ' vs ' + bU.fontSize);
+                if (cases === 1) {
+                  note('[132r3-3] ตัวอย่าง: ::marker ' + mkU.content + ' ' + mkU.fontSize
+                       + ' · ::before ' + bU.content + ' ' + bU.fontSize);
+                }
+                allSel132(); T.editor.cmd('align', 'left'); await w97(150);
+              }
+            }
+            document.documentElement.style.setProperty('--ed-font', oldFont132);
+            document.documentElement.style.setProperty('--ed-fs', oldFs132);
+            check('[132r3-3] วัดครบทุกฟอนต์ทุกขนาด (4 ฟอนต์ × 3 ขนาด)', cases === 12, cases);
+            check('[132r3-3] ★★ จุดนำ/หมายเลขเป็นอักขระเดียวกัน ฟอนต์เดียวกัน ขนาดเดียวกัน '
+                  + 'ทั้งชิดซ้ายและกึ่งกลาง (ทุกฟอนต์ทุกขนาด)',
+                  cases === 12 && !bad.length, bad.slice(0, 2).join(' | '));
+
+            // ── ★★ ปรับรูปแบบได้จริง: ทำอักษรตัวแรกของข้อให้เป็นสีแดง/ตัวหนา ──
+            T.editor.setMarkdown('- ข้อทดสอบสี' + String.fromCharCode(10) + '- ข้อธรรมดา');
+            await w97(250);
+            {
+              const st = T.editor.view.state;
+              let at = -1;
+              st.doc.descendants((n, pos) => { if (at < 0 && n.isText) at = pos; });
+              T.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, at, at + 3)));
+            }
+            T.editor.cmd('color', '#b03030');
+            await w97(250);
+            const li1 = pm97.querySelector('ul > li');
+            const li2 = pm97.querySelectorAll('ul > li')[1];
+            note('[132r3-3] ตัวแปรบนข้อแรก = ' + (li1 && li1.getAttribute('style')));
+            check('[132r3-3] ★★ ทำสีอักษรตัวแรก → จุดนำของข้อนั้นได้สีตาม',
+                  !!li1 && getComputedStyle(li1, '::marker').color === 'rgb(176, 48, 48)',
+                  li1 && getComputedStyle(li1, '::marker').color);
+            check('[132r3-3] ★★ ข้ออื่นไม่เปลี่ยนตาม (ตัวแปรอยู่ที่ <li> ของข้อนั้นเท่านั้น)',
+                  !!li2 && getComputedStyle(li2, '::marker').color !== 'rgb(176, 48, 48)',
+                  li2 && getComputedStyle(li2, '::marker').color);
+            check('[132r3-3] ★★ ข้อความส่วนที่ไม่ได้ทำสี **ไม่ถูกย้อมตาม** (ตั้งเป็นตัวแปร ไม่ใช่ color)',
+                  !!li1 && getComputedStyle(li1).color !== 'rgb(176, 48, 48)',
+                  li1 && getComputedStyle(li1).color);
+            // ตัวหนา
+            T.editor.setMarkdown('- **หนา** ต่อ');
+            await w97(250);
+            const liB = pm97.querySelector('ul > li');
+            check('[132r3-3] ★ ตัวหนาที่อักษรแรก → จุดนำหนาตาม',
+                  !!liB && getComputedStyle(liB, '::marker').fontWeight === '700',
+                  liB && getComputedStyle(liB, '::marker').fontWeight);
+            // ★ ฝั่งไฟล์ที่ส่งออกต้องใช้กติกาเดียวกัน (คนละกลไก — ต้องพิสูจน์ว่าให้ผลตรงกัน)
+            {
+              const { markerVars } = await import('./md.js');
+              check('[132r3-3] ★★ กติกาของไฟล์ที่ส่งออกตรงกับตัวแก้ไข (อักษรตัวแรกเป็นตัวกำหนด)',
+                    markerVars('**หนา** ต่อ') === '--k-mk-weight:700'
+                    && markerVars('<span style="color:#b03030">แดง</span> ต่อ')
+                       === '--k-mk-color:#b03030'
+                    && markerVars('ธรรมดา') === '',
+                    markerVars('**หนา** ต่อ'));
+            }
+            T.editor.setMarkdown('ล้างหลังเทสรายการ');
+            await w97(150);
+          }
+
+          // ══════ [alpha.132 ข้อ 9] ★★ สีตัวอักษร (ผู้ใช้จริงขอมา) ══════
+          {
+            const { normColor: nc132 } = await import('./text-color.js');
+            const { openColorPicker, closeColorPicker, colorStore } = await import('./color-picker.js');
+            setSpView('normal', true);
+            T.editor.setMarkdown('สีแดงตรงนี้');
+            await w97(220);
+            const selWord132 = (a, b) => {
+              const st = T.editor.view.state;
+              T.editor.view.dispatch(st.tr.setSelection(PMTextSelection.create(st.doc, a, b)));
+            };
+            selWord132(1, 4);
+            T.editor.cmd('color', '#b03030');
+            await w97(150);
+            check('[132-9] ★ สั่งสีแล้วช่วงที่เลือกได้มาร์ก color จริง',
+                  T.editor.activeMarks().colorValue === '#b03030',
+                  T.editor.activeMarks().colorValue);
+            const md132c = T.editor.getMarkdown();
+            check('[132-9] ★★ สีลงไฟล์ .md เป็นสแปนมาตรฐาน (v1/ตัวอ่านอื่นเปิดได้)',
+                  md132c === '<span style="color:#b03030">สีแ</span>ดงตรงนี้', md132c);
+            T.editor.setMarkdown(md132c);
+            await w97(180);
+            check('[132-9] ★★ อ่านกลับจาก .md แล้วสียังอยู่ (ไป-กลับไม่หาย)',
+                  T.editor.getMarkdown() === md132c, T.editor.getMarkdown());
+            // ทับสีเดิมด้วยสีใหม่ = ได้สีใหม่ (ไม่ใช่สลับเปิด-ปิดแบบ toggleMark)
+            selWord132(1, 4);
+            T.editor.cmd('color', '#2b7bb9');
+            await w97(150);
+            check('[132-9] ★ กดสีใหม่ทับสีเดิม = ได้สีใหม่ ไม่ใช่ถอดสีทิ้ง',
+                  T.editor.activeMarks().colorValue === '#2b7bb9',
+                  T.editor.activeMarks().colorValue);
+            selWord132(1, 4);
+            T.editor.cmd('color', '');
+            await w97(150);
+            check('[132-9] ล้างสีได้',
+                  T.editor.activeMarks().colorValue === '' && !/span/.test(T.editor.getMarkdown()),
+                  T.editor.getMarkdown());
+            check('[132-9] ★ ค่าสีที่หนีออกจากแอตทริบิวต์ไม่ผ่านตัวกรอง',
+                  nc132('red"><script>') === '' && nc132('#B03030') === '#b03030');
+
+            // ── ปุ่มบนแถบ + ป๊อปอัป ──
+            check('[132-9] มีปุ่มสีตัวอักษรบนแถบเครื่องมือ', !!$('#tb-color'));
+            selWord132(1, 4);
+            T.editor.cmd('color', '#2f7d4f');
+            await w97(120);
+            refreshToolbar();
+            check('[132-9] ★ แถบสีใต้ตัว A บอกสีที่ใช้อยู่จริง',
+                  $('#tb-color').dataset.color === '#2f7d4f', $('#tb-color').dataset.color);
+            let picked132 = '';
+            const pop132 = openColorPicker($('#tb-color'), '#2f7d4f', (h) => { picked132 = h; },
+                                           null);
+            await w97(150);
+            const sws132 = [...pop132.querySelectorAll('.k-sw')];
+            check('[132-9] ★ ป๊อปอัปมีจานสีสำเร็จให้กด', sws132.length >= 8, sws132.length);
+            check('[132-9] ★ มี color wheel ของระบบ (input type=color)',
+                  !!pop132.querySelector('input.k-color-input[type="color"]'));
+            check('[132-9] ★ มีปุ่มบันทึกสี (save color switch) และปุ่มล้างสี',
+                  !!pop132.querySelector('.k-color-save') && !!pop132.querySelector('.k-color-clear'));
+            const lbls132 = [...pop132.querySelectorAll('.k-colorsec-lbl')].map((x) => x.textContent);
+            check('[132-9] ★★ มีครบทั้ง "สีสำเร็จ" · "บันทึกไว้" · "ใช้ล่าสุด"',
+                  lbls132.includes(tt('ui.color.presets'))
+                    && lbls132.includes(tt('ui.color.saved'))
+                    && lbls132.includes(tt('ui.color.recent')), lbls132.join(' | '));
+            check('[132-9] ★ ช่องสีปัจจุบันถูกเน้นไว้',
+                  sws132.some((b) => b.dataset.color === '#2f7d4f' && b.classList.contains('on')));
+            sws132.find((b) => b.dataset.color === '#b03030').click();
+            await w97(220);
+            check('[132-9] ★★ คลิกสีในจานแล้วส่งค่ากลับมาให้ตัวแก้ไขจริง',
+                  picked132 === '#b03030', picked132);
+            check('[132-9] ★★ สีที่เพิ่งใช้ถูกจำไว้ใน "ใช้ล่าสุด"',
+                  colorStore().recent[0] === '#b03030',
+                  JSON.stringify(colorStore().recent));
+            closeColorPicker();
+            check('[132-9] ปิดป๊อปอัปแล้วไม่มีอะไรค้างใน DOM',
+                  !document.querySelector('.k-colorpop'));
+            T.editor.setMarkdown('ล้างหลังเทสสี');
+            await w97(150);
           }
 
           // ═══ ข้อ 5 (รูป) · ปุ่มแทรกรูปเป็นสวิตช์ ═══
@@ -28653,6 +30069,162 @@ async function runTest(projectPath) {
         check('[61-2] กดปิดแล้วกลับมาที่เซสชัน',
               !!document.getElementById('ai-chat-body').querySelector('.ai-chat-session'));
 
+        // ══ [alpha.126] บั๊กที่ผู้ใช้บ่น: "สลับ thinking/สรุป แล้วแชทหายหมด" ══
+        //
+        // ต้นตอ: ตัวจัดการอีเวนต์ใน sessionView/composer ปิดทับ (closure) ก้อนเซสชันของตอนวาดไว้
+        // แต่ addMessage คืน "ก้อนใหม่" ทุกครั้ง → พอคุยไปหนึ่งรอบ ก้อนที่ปิดทับไว้ก็เป็นของเก่า
+        // แล้ว saveSession(ของเก่า) เขียนทับไฟล์ด้วยเซสชันที่ไม่มีข้อความ = แชทหายถาวร
+        // เทสนี้ต้อง **กดของจริง** (dispatch change) ไม่ใช่เรียกฟังก์ชันตรง ๆ ไม่งั้นผ่านหลอก
+        {
+          await renderAIChatPanel(host);              // ← ตรงนี้คือจุดที่ closure ถูกสร้าง
+          await new Promise((r) => setTimeout(r, 120));
+          const c0 = _chatState();
+          const nBeforeSwitch = (c0.cur.messages || []).length;
+          check('[129-2] ก่อนทดสอบมีบทสนทนาอยู่จริง', nBeforeSwitch > 0, nBeforeSwitch);
+          // จำลอง "คุยต่ออีกหนึ่งรอบ" แบบเดียวกับที่ send() ทำ
+          c0.cur = AS.addMessage(c0.cur, AS.newMessage('assistant', 'คำตอบของรอบใหม่'));
+          await saveSession(c0.cur);
+          const want = nBeforeSwitch + 1;
+
+          const hostNow = document.getElementById('ai-chat-body');
+          const vs126 = hostNow.querySelector('.ai-chat-viewsel');
+          check('[129-2] มีดรอปดาวน์มุมมอง transcript', !!vs126);
+          vs126.value = 'thinking';
+          vs126.dispatchEvent(new Event('change'));
+          await new Promise((r) => setTimeout(r, 180));
+          check('[129-2] สลับมุมมอง "ความคิด" แล้วบทสนทนาไม่หาย',
+                (_chatState().cur.messages || []).length === want,
+                (_chatState().cur.messages || []).length + ' ควรเป็น ' + want);
+          check('[129-2] มุมมองที่เลือกถูกบันทึกลงเซสชันตัวจริง',
+                _chatState().cur.view === 'thinking', _chatState().cur.view);
+
+          const vs126b = document.getElementById('ai-chat-body').querySelector('.ai-chat-viewsel');
+          vs126b.value = 'summary';
+          vs126b.dispatchEvent(new Event('change'));
+          await new Promise((r) => setTimeout(r, 180));
+          check('[129-2] สลับมุมมอง "สรุป" แล้วบทสนทนาไม่หาย',
+                (_chatState().cur.messages || []).length === want,
+                (_chatState().cur.messages || []).length);
+          // ไฟล์บนดิสก์คือของจริง — บนจอยังอยู่แต่ไฟล์หายก็คือหาย
+          {
+            const savedNow = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur)));
+            check('[129-2] ไฟล์เซสชันบนดิสก์ยังมีข้อความครบหลังสลับมุมมอง',
+                  (savedNow.messages || []).length === want, (savedNow.messages || []).length);
+            check('[129-2] มุมมองถูกเขียนลงไฟล์ด้วย', savedNow.view === 'summary', savedNow.view);
+          }
+          // เปลี่ยนโหมด/ระดับการเข้าถึงจากกล่องพิมพ์ก็ต้องไม่ลบแชทเหมือนกัน
+          const mSel126 = document.getElementById('ai-chat-body').querySelector('.ai-chat-mode');
+          mSel126.value = 'write';
+          mSel126.dispatchEvent(new Event('change'));
+          await new Promise((r) => setTimeout(r, 150));
+          check('[129-2] เปลี่ยนโหมดแล้วบทสนทนาไม่หาย',
+                (_chatState().cur.messages || []).length === want &&
+                _chatState().cur.mode === 'write',
+                (_chatState().cur.messages || []).length + '/' + _chatState().cur.mode);
+          const scSel126 = document.getElementById('ai-chat-body').querySelector('.ai-chat-scope');
+          scSel126.value = 'project';
+          scSel126.dispatchEvent(new Event('change'));
+          await new Promise((r) => setTimeout(r, 150));
+          check('[129-2] เปลี่ยนระดับการเข้าถึงแล้วบทสนทนาไม่หาย',
+                (_chatState().cur.messages || []).length === want &&
+                _chatState().cur.scope === 'project',
+                (_chatState().cur.messages || []).length + '/' + _chatState().cur.scope);
+
+          // กันชนสุดท้าย: ถึงมีคนเผลอส่งก้อนเก่าเข้ามาบันทึก ก็ต้องไม่ลบบทสนทนา
+          await saveSession({ ..._chatState().cur, messages: [] });
+          check('[129-2] saveSession ปฏิเสธการเขียนทับด้วยก้อนที่ข้อความน้อยลง',
+                (_chatState().cur.messages || []).length === want,
+                (_chatState().cur.messages || []).length);
+          {
+            const savedGuard = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur)));
+            check('[129-2] กันชนมีผลถึงไฟล์บนดิสก์ด้วย',
+                  (savedGuard.messages || []).length === want, (savedGuard.messages || []).length);
+          }
+          // ปุ่ม "เริ่มใหม่" ยังต้องล้างได้จริง (allowShrink) — ไม่งั้นกันชนกลายเป็นบั๊กใหม่
+          const keepCur = _chatState().cur;
+          const CP126 = await import('./ai/ai-chat-panel.js');
+          await CP126.restartSession(keepCur, { confirm: false });
+          check('[129-2] ปุ่มเริ่มใหม่ยังล้างบทสนทนาได้จริง',
+                (_chatState().cur.messages || []).length === 0,
+                (_chatState().cur.messages || []).length);
+          {
+            const savedClear = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur)));
+            check('[129-2] ไฟล์หลังเริ่มใหม่ว่างจริง', (savedClear.messages || []).length === 0);
+          }
+          // เอาข้อความกลับเข้าไป ให้เทสถัดไปมีของเหมือนเดิม
+          _chatState().cur = AS.addMessage(_chatState().cur, AS.newMessage('user', 'ข้อความหลังเริ่มใหม่'));
+          await saveSession(_chatState().cur);
+          await renderAIChatPanel(document.getElementById('ai-chat-body'));
+          await new Promise((r) => setTimeout(r, 120));
+        }
+
+        // ══ [alpha.129 ข้อ 4] คำตอบโมเดลต้องขึ้นเป็น Markdown จริง ไม่ใช่ `##`/`**` ดิบ ๆ ══
+        {
+          const mdText = ['## หัวข้อจากโมเดล', 'ย่อหน้ามี **ตัวหนา** และ `โค้ด`', '',
+                          '- ข้อหนึ่ง', '- ข้อสอง', '',
+                          '```js', 'const a = 1;', '```',
+                          '<img src=x onerror=alert(1)>'].join('\n');
+          const c129 = _chatState();
+          // บล็อกก่อนหน้าเปลี่ยนมุมมองไว้เป็น "สรุป" — Markdown วาดในมุมมองปกติเท่านั้น
+          c129.cur.view = 'normal';
+          c129.cur = AS.addMessage(c129.cur, AS.newMessage('assistant', mdText));
+          await saveSession(c129.cur);
+          await renderAIChatPanel(document.getElementById('ai-chat-body'));
+          await new Promise((r) => setTimeout(r, 150));
+          const md129 = document.getElementById('ai-chat-body').querySelector('.ai-msg-assistant .ai-md');
+          check('[129-4] คำตอบผู้ช่วยถูกวาดเป็น Markdown', !!md129);
+          check('[129-4] หัวข้อกลายเป็น <h2> จริง (ไม่ใช่ ## ดิบ)',
+                !!md129.querySelector('h2') && !md129.textContent.includes('## หัวข้อ'));
+          check('[129-4] ตัวหนากลายเป็น <strong>', !!md129.querySelector('strong'));
+          check('[129-4] รายการกลายเป็น <ul><li> สองข้อ',
+                md129.querySelectorAll('ul > li').length === 2);
+          check('[129-4] โค้ดบล็อกมีกล่องของตัวเอง + ปุ่มคัดลอก',
+                !!md129.querySelector('.ai-md-pre .ai-md-pre-body') &&
+                !!md129.querySelector('.ai-md-pre .ai-msg-copy'));
+          check('[129-4] เนื้อโค้ดถูกต้อง',
+                md129.querySelector('.ai-md-pre-body').textContent === 'const a = 1;',
+                md129.querySelector('.ai-md-pre-body').textContent);
+          // ★ คำตอบมาจากผู้ให้บริการภายนอก — หน้าต่างนี้เข้าถึง kapi ได้ ห้ามให้เกิด element จริง
+          check('[129-4] ★ แท็ก HTML ในคำตอบไม่กลายเป็น element (ไม่มี innerHTML)',
+                md129.querySelectorAll('img').length === 0 &&
+                md129.textContent.includes('<img src=x onerror=alert(1)>'));
+          // โหมด "ละเอียด" จงใจดูของดิบ — ต้องไม่ถูกแปลง
+          const vsMd = document.getElementById('ai-chat-body').querySelector('.ai-chat-viewsel');
+          vsMd.value = 'verbose';
+          vsMd.dispatchEvent(new Event('change'));
+          await new Promise((r) => setTimeout(r, 180));
+          const vb = document.getElementById('ai-chat-body').querySelector('.ai-msg-assistant .ai-msg-text');
+          check('[129-4] โหมดละเอียดยังโชว์ Markdown ดิบตามเดิม',
+                !!vb && vb.textContent.includes('## หัวข้อจากโมเดล'));
+          const vsBack = document.getElementById('ai-chat-body').querySelector('.ai-chat-viewsel');
+          vsBack.value = 'normal';
+          vsBack.dispatchEvent(new Event('change'));
+          await new Promise((r) => setTimeout(r, 180));
+          check('[129-4] กลับมาโหมดปกติแล้ววาด Markdown อีกครั้ง',
+                !!document.getElementById('ai-chat-body').querySelector('.ai-msg-assistant .ai-md'));
+        }
+
+        // ══ [alpha.129 ข้อ 1] งบประวัติแชท — เดิมตายตัว 6,000 token → AI ลืมแชทเก่าแล้วมั่ว ══
+        {
+          let longS = AS.newSession();
+          for (let i = 0; i < 40; i++) {
+            longS = AS.addMessage(longS, AS.newMessage(i % 2 ? 'assistant' : 'user', 'ก'.repeat(800)));
+          }
+          const bOld = AS.buildChatMessages(longS, { maxTokens: 6000 });
+          const bNew = AS.buildChatMessages(longS, { maxTokens: AS.historyBudget(longS, {}) });
+          check('[129-1] งบเดิม 6,000 ตัดประวัติไทยยาวปกติทิ้งจริง', bOld.dropped > 10, bOld.dropped);
+          check('[129-1] งบใหม่ส่งประวัติชุดเดียวกันครบ',
+                bNew.dropped === 0 && bNew.messages.length === 40, bNew.dropped);
+          longS.contextLimit = 200000;
+          check('[129-1] รู้ขีดจำกัดโมเดลแล้วงบขยายตาม',
+                AS.historyBudget(longS, {}) === 120000, AS.historyBudget(longS, {}));
+          check('[129-1] ตั้งงบเองในตั้งค่า AI ชนะค่าอัตโนมัติ',
+                AS.historyBudget(longS, { historyTokens: 9000 }) === 9000);
+        }
+
         // ระดับการเข้าถึง "ไม่ให้เลย" ต้องไม่รั่วเนื้อเรื่องออกไป
         const st61 = _chatState();
         st61.cur.scope = 'none';
@@ -28905,12 +30477,14 @@ async function runTest(projectPath) {
         check('[62-7] ตั้งตำแหน่งเลื่อนแล้วติดทันที', keep7 === 400, String(keep7));
 
         const other7 = isPanelOpen('log') ? 'notes' : 'log';
+        // [alpha.132] ★ รอ "ค่าที่ต้องการ" ไม่ใช่รอเวลาตายตัว — `restoreScroll` ตั้งซ้ำถึง 250ms
+        // แต่บนเครื่องที่งานเยอะรอบสุดท้ายมาช้ากว่า 420 ms ได้ (เทสนี้เคยแดงสลับผ่านโดยโค้ดไม่เปลี่ยน)
         showPanel(other7);
-        await wait62(420);                       // restoreScroll ตั้งซ้ำถึง 250ms
+        await until62(() => Math.abs(pane7.scrollTop - keep7) <= 8, 60, 50);
         check('[62-7] เปิดแผงแล้วหน้ากระดาษไม่เลื่อนหนี',
               Math.abs(pane7.scrollTop - keep7) <= 8, `${keep7} → ${pane7.scrollTop}`);
         hidePanel(other7);
-        await wait62(420);
+        await until62(() => Math.abs(pane7.scrollTop - keep7) <= 8, 60, 50);
         check('[62-7] ปิดแผงแล้วก็ยังอยู่ที่เดิม',
               Math.abs(pane7.scrollTop - keep7) <= 8, `${keep7} → ${pane7.scrollTop}`);
         // และต้องไม่ "ล็อก" ไว้ — ผู้ใช้เลื่อนต่อเองได้ทันที
@@ -29971,6 +31545,256 @@ async function runTest(projectPath) {
 
             await SS.deleteScenario(st94.slug, sc2.id);
             check('[a94] ลบตอนได้', (await SS.listScenarios(st94.slug)).length === 1);
+          }
+
+          // ══ [a122] โหมดพื้นฐาน/ขั้นสูง + ช่องขั้นสูง + บั๊กปุ่มเสร็จสิ้น ══
+          //
+          // บทเรียนจากรอบแผง (.66r10): เทสที่เรียกฟังก์ชันตรง ๆ ผ่านหลอกได้
+          // → ทุกข้อในบล็อกนี้ **กดปุ่มจริงบน DOM** แล้วอ่านผลจากไฟล์ที่เขียนลงดิสก์
+          {
+            const SF = await import('./starter/starter-cast.js');
+            const EM = await import('./entity-mention.js');
+            const I18 = await import('./i18n.js');   // `t` ถูกบังในสโคปนี้ (ตัวแปรท้องถิ่น)
+
+            // ── ปุ่มสลับโหมดอยู่บนหัว wizard และเปลี่ยนไฟล์จริง ──
+            // บล็อก [a94] ทิ้งตัวแก้ไขตัวละครค้างไว้ — ปิดก่อนเพื่อเริ่มจากหน้ารายชื่อ
+            SF.resetCastEditor();
+            await SU.openStoryStarter(); await wait62(200);
+            const modeBtns = [...document.querySelectorAll('#starter-body .st-mode-btn')];
+            check('[a122] หัว wizard มีปุ่มสองโหมด', modeBtns.length === 2,
+                  modeBtns.map((b) => b.dataset.mode).join(','));
+            check('[a122] ค่าเริ่มต้นคือพื้นฐาน (ของเก่าทั้งหมดเป็น basic)',
+                  (await SS.readStarter(st94.slug)).mode === SM.MODE_BASIC);
+            modeBtns.find((b) => b.dataset.mode === 'adv').click(); await wait62(350);
+            await SS.flushStarterSaves();
+            check('[a122] กดปุ่มขั้นสูงแล้วเขียนลงไฟล์จริง',
+                  (await SS.readStarter(st94.slug)).mode === SM.MODE_ADV);
+
+            // ── ขั้นตัวละครในโหมดขั้นสูง: ช่องใหม่ต้องโผล่ครบ ──
+            const chips122 = [...document.querySelectorAll('#starter-body .st-chip')];
+            chips122[2].click(); await wait62(300);
+            const editBtn122 = [...document.querySelectorAll('#starter-body .st-cast-btns button')]
+              .find((b) => b.textContent.trim() === I18.t('ui.common.edit'));
+            check('[a122] มีปุ่มแก้ไขบนการ์ดตัวละคร', !!editBtn122);
+            editBtn122.click(); await wait62(400);
+            const labels122 = [...document.querySelectorAll('#starter-body .st-step-pane label')]
+              .map((x) => x.textContent);
+            check('[a122] โหมดขั้นสูงมีช่องโค้ดสั้น',
+                  labels122.some((x) => x.includes(I18.t('ui.starter.fShortcode'))), labels122.join('|'));
+            check('[a122] โหมดขั้นสูงมีช่องตัวอย่างคำพูด',
+                  labels122.some((x) => x === I18.t('ui.starter.fDialogue')));
+            check('[a122] โหมดขั้นสูงมีช่องแท็กตัวละคร',
+                  labels122.some((x) => x === I18.t('ui.starter.fCharTags')));
+            check('[a122] โหมดขั้นสูงมีช่อง Prompt',
+                  !!document.querySelector('#starter-body .st-prompts'));
+
+            // พิมพ์ตัวอย่างคำพูด + แท็ก แล้วต้องลงไฟล์
+            const dlgTa122 = [...document.querySelectorAll('#starter-body .st-field')]
+              .find((r) => r.querySelector('label')
+                && r.querySelector('label').textContent === I18.t('ui.starter.fDialogue'))
+              .querySelector('textarea');
+            dlgTa122.value = '"ข้าไม่กลัวหรอก"';
+            dlgTa122.dispatchEvent(new Event('input', { bubbles: true }));
+            const tagRow122 = [...document.querySelectorAll('#starter-body .st-field')]
+              .find((r) => r.querySelector('label')
+                && r.querySelector('label').textContent === I18.t('ui.starter.fCharTags'));
+            const tagInp122 = tagRow122.querySelector('input');
+            tagInp122.value = 'นักดาบ, ปากร้าย';
+            [...tagRow122.querySelectorAll('button')].find((b) => !b.classList.contains('st-tag-x')).click();
+            await wait62(200);
+            await SS.flushStarterSaves();
+            const advChar = (await SS.readStarter(st94.slug)).cast[0];
+            check('[a122] ตัวอย่างคำพูดถูกบันทึก', advChar.dialogue === '"ข้าไม่กลัวหรอก"',
+                  JSON.stringify(advChar.dialogue));
+            check('[a122] แท็กตัวละครถูกบันทึก (พิมพ์คั่นจุลภาคทีเดียวได้หลายอัน)',
+                  (advChar.tags || []).join(',') === 'นักดาบ,ปากร้าย', JSON.stringify(advChar.tags));
+
+            // ── ช่อง Prompt: กดเพิ่มจริงแล้วต้องได้ Prompt A ──
+            const addPr122 = document.querySelector('#starter-body .st-prompt-add');
+            addPr122.click(); await wait62(250);
+            const prKey = document.querySelector('#starter-body .st-prompt-key');
+            check('[a122] กดเพิ่มช่อง Prompt แล้วได้ Prompt A', !!prKey && prKey.value === 'Prompt A',
+                  prKey && prKey.value);
+            const prVal = document.querySelector('#starter-body .st-prompt-val');
+            prVal.value = 'พูดห้วน ไม่ใช้คำสุภาพ';
+            prVal.dispatchEvent(new Event('input', { bubbles: true }));
+            await SS.flushStarterSaves();
+            check('[a122] เนื้อช่อง Prompt ลงไฟล์',
+                  ((await SS.readStarter(st94.slug)).cast[0].prompts[0] || {}).v === 'พูดห้วน ไม่ใช้คำสุภาพ');
+
+            // ── ชิปโค้ดสั้น: กดแล้วต้องแทรกโทเคนลงช่องจริง ──
+            {
+              // ต้องมีเพื่อนร่วมเรื่องก่อนถึงจะมีชิปให้กด
+              // ⚠ ต้องแก้ **ตัวในหน่วยความจำ** ที่แผงถืออยู่ ไม่ใช่เขียนไฟล์แล้วสั่งวาดใหม่ —
+              //   แผงไม่ได้อ่านไฟล์ซ้ำตอน renderFeaturePanel และ autosave จะเขียนของเก่าทับ
+              const s2 = SU.currentStarter();
+              s2.cast = [...s2.cast, SM.newChar({ name: 'ไก่', shortcode: 'characterB' })];
+              await SS.writeStarter(s2);
+              SF.resetCastEditor();
+              await renderFeaturePanel('starter'); await wait62(350);
+              const ed2 = [...document.querySelectorAll('#starter-body .st-cast-btns button')]
+                .find((b) => b.textContent.trim() === I18.t('ui.common.edit'));
+              ed2.click(); await wait62(400);
+              // [a123] ชิปสองตัวแรกคือคำสงวน — ชื่อคนจริงอยู่หลังจากนั้น
+              const anyChip = document.querySelector('#starter-body .st-mentionchip[data-kind="any"]');
+              const userChip = document.querySelector('#starter-body .st-mentionchip[data-kind="user"]');
+              check('[a123] มีชิปคำสงวน {{character}} / {{user}}',
+                    !!anyChip && anyChip.dataset.token === '{{character}}'
+                    && !!userChip && userChip.dataset.token === '{{user}}',
+                    (anyChip && anyChip.dataset.token) + ' | ' + (userChip && userChip.dataset.token));
+              const chip = document.querySelector('#starter-body .st-mentionchip[data-kind="char"]');
+              check('[a122] มีชิปแทรกโค้ดสั้นของเพื่อนร่วมเรื่อง', !!chip && chip.dataset.token === '{{characterB}}',
+                    chip && chip.dataset.token);
+              const ta2 = chip.closest('.st-field').querySelector('textarea');
+              const before = ta2.value;
+              chip.click(); await wait62(200);
+              check('[a122] กดชิปแล้วโทเคนถูกแทรกลงช่องจริง',
+                    ta2.value.includes('{{characterB}}') && ta2.value.startsWith(before),
+                    JSON.stringify(ta2.value));
+              await SS.flushStarterSaves();
+              check('[a122] ข้อความที่มีโค้ดสั้นถูกเก็บเป็นโค้ดสั้น ไม่ใช่ชื่อจริง',
+                    (await SS.readStarter(st94.slug)).cast[0].dialogue.includes('{{characterB}}'));
+            }
+
+            // ══ บั๊กที่ผู้ใช้รายงาน: กดแก้ไขแล้วไม่แก้ → กดเสร็จสิ้นไม่ได้ ══
+            {
+              SF.resetCastEditor();
+              await renderFeaturePanel('starter'); await wait62(300);
+              const nBefore = (await SS.readStarter(st94.slug)).cast.length;
+              const add122 = [...document.querySelectorAll('#starter-body .st-step-pane button')]
+                .find((b) => b.textContent.includes(I18.t('ui.starter.castAdd')));
+              add122.click(); await wait62(350);
+              // ไม่พิมพ์อะไรเลย แล้วกดกลับ — การ์ดเปล่าต้องไม่เหลือค้าง
+              // ⚠ ต้องเจาะจง `.st-step-pane` — หัว wizard ก็มี `.st-back` (กลับหน้ารวม) และมาก่อนใน DOM
+              const back122 = document.querySelector('#starter-body .st-step-pane .st-back');
+              check('[a122] หน้าแก้ไขตัวละครมีปุ่มกลับรายชื่อ', !!back122);
+              back122.click(); await wait62(400);
+              await SS.flushStarterSaves();
+              check('[a122] กดเพิ่มแล้วไม่พิมพ์อะไร = ไม่เหลือการ์ดเปล่าค้างไว้',
+                    (await SS.readStarter(st94.slug)).cast.length === nBefore,
+                    (await SS.readStarter(st94.slug)).cast.length + '/' + nBefore);
+              check('[a122] ตัวเปล่าถูกจับได้ แต่ตัวมีชื่อไม่โดนลบ',
+                    SF.isBlankChar(SM.newChar({})) === true
+                    && SF.isBlankChar(SM.newChar({ name: 'ก' })) === false);
+            }
+
+            // ปุ่มเสร็จสิ้นต้องกดได้เสมอ — ยังไม่ครบก็พาไปขั้นที่ขาด ไม่ใช่ปิดตาย
+            {
+              const s3 = SU.currentStarter();
+              s3.tags = [];                       // ทำให้ขั้นแรกไม่ครบโดยตั้งใจ
+              s3.step = SD.STEPS.length - 1;
+              await SS.writeStarter(s3);
+              SF.resetCastEditor();
+              await renderFeaturePanel('starter'); await wait62(350);
+              const fin122 = document.querySelector('#starter-body .st-finish');
+              check('[a122] อยู่ขั้นสุดท้ายแล้วเห็นปุ่มเสร็จสิ้น', !!fin122);
+              check('[a122] ปุ่มเสร็จสิ้นไม่ถูกปิดตายอีกต่อไป', fin122 && fin122.disabled === false);
+              check('[a122] มีทางออกบอกว่าขาดขั้นไหน',
+                    !!document.querySelector('#starter-body .st-miss'));
+              fin122.click(); await wait62(400);
+              await SS.flushStarterSaves();
+              const afterFin = await SS.readStarter(st94.slug);
+              check('[a122] กดแล้วเด้งไปขั้นที่ขาด ไม่ใช่กดแล้วเงียบ',
+                    afterFin.step === SD.STEPS.findIndex((x) => x.id === 'tags') && afterFin.done === false,
+                    afterFin.step + '/' + afterFin.done);
+              // กรอกให้ครบแล้วต้องจบได้จริง
+              const s4 = SU.currentStarter();
+              s4.tags = ['fantasy'];
+              s4.name = s4.name || 'เทสเรื่องผจญภัย';
+              s4.intro = '<p>โลกที่ฝนไม่เคยหยุดตก</p>';   // ขั้น "เรื่องย่อ" ก็เป็นขั้นบังคับ
+              s4.step = SD.STEPS.length - 1;
+              await SS.writeStarter(s4);
+              await renderFeaturePanel('starter'); await wait62(350);
+              document.querySelector('#starter-body .st-finish').click(); await wait62(450);
+              await SS.flushStarterSaves();
+              check('[a122] ครบแล้วกดเสร็จสิ้นได้จริง',
+                    (await SS.readStarter(st94.slug)).done === true
+                    && SU.starterView() === 'home');
+            }
+
+            // ══ ตั้งค่าตอน: รูปย่อ + ช่องขั้นสูง + บทเปิดโผล่ในแชท ══
+            {
+              const scA = await SS.createScenario(st94.slug, {
+                title: 'ตอนขั้นสูง', thumb: '',
+                // [a123] บทเปิดเก็บเป็น HTML แล้ว (ผู้ใช้ขอ b/i/u)
+                opener: '<p>ฝนตกหนัก <b>{{characterB}}</b> ยืนรออยู่</p>',
+                goal: 'ชวน {{characterB}} กลับบ้าน', conditions: 'พูดว่า "กลับกันเถอะ"',
+                desc: 'ฉากหน้าสถานีรถไฟ', mood: 'เหงาแต่อบอุ่น',
+              });
+              const backA = await SS.readScenario(st94.slug, scA.id);
+              check('[a122] ช่องขั้นสูงของตอนรอดการเขียน/อ่านไฟล์',
+                    backA.opener.includes('{{characterB}}') && backA.goal.includes('{{characterB}}')
+                    && backA.desc === 'ฉากหน้าสถานีรถไฟ');
+              check('[a123] นับช่องขั้นสูงที่กรอกได้ (ป้ายบนการ์ด · รวม Mood & Tone)',
+                    SM.scenarioAdvFilled(backA) === 5, String(SM.scenarioAdvFilled(backA)));
+
+              // GM system prompt ต้องได้ทั้งสามก้อน และห้ามมีวงเล็บปีกกาหลุดไป
+              const PR = await import('./starter/starter-prompt.js');
+              const sNow = await SS.readStarter(st94.slug);
+              const sys = PR.gmSystem(sNow, backA, {});
+              check('[a122] GM ได้เป้าหมาย + เงื่อนไขจบ ของตอน',
+                    sys.includes('ชวน ไก่ กลับบ้าน') && sys.includes('กลับกันเถอะ'), sys.slice(0, 160));
+              check('[a123] GM ได้ Mood & Tone ด้วย', sys.includes('เหงาแต่อบอุ่น'));
+              check('[a123] แท็ก HTML ของบทเปิดไม่หลุดเข้า system prompt', !sys.includes('<b>'));
+              check('[a122] ไม่มีโค้ดสั้นดิบหลุดเข้า system prompt', !sys.includes('{{') && !sys.includes('{['));
+
+              // เริ่มเล่น: บทเปิดของผู้ใช้ต้องเป็นเทิร์นแรกจริง โดยไม่เรียก AI เลย
+              // (ทางเดินเดียวกับที่ `send({opening:true})` ใน starter-chat.js ใช้)
+              const chatSc = await SS.readScenario(st94.slug, scA.id);
+              const patched = SM.addTurn(chatSc, { role: SM.ROLE_GM,
+                text: SM.openerText(chatSc, sNow.cast),
+                html: SM.openerHtml(chatSc, sNow.cast),
+                image: chatSc.openerImage || '' });
+              await SS.writeScenario(st94.slug, patched);
+              const played = await SS.readScenario(st94.slug, scA.id);
+              check('[a122] บทเปิดกลายเป็นเทิร์นแรกโดยคลายโค้ดสั้นแล้ว',
+                    (played.turns || []).length === 1 && played.turns[0].text === 'ฝนตกหนัก ไก่ ยืนรออยู่',
+                    JSON.stringify((played.turns || [])[0] || {}));
+              check('[a122] เทิร์นเก็บช่องรูปไว้ได้ (บทเปิดใส่รูปได้)', 'image' in played.turns[0]);
+              check('[a123] เทิร์นเก็บรูปแบบตัวอักษรของบทเปิดไว้ด้วย',
+                    played.turns[0].html === '<p>ฝนตกหนัก <b>ไก่</b> ยืนรออยู่</p>',
+                    JSON.stringify(played.turns[0].html));
+            }
+
+            // ── โค้ดสั้นเป็นของ entity ด้วย ไม่ใช่แค่ของ starter ──
+            check('[a122] โมดูลโค้ดสั้นใช้ร่วมกันได้ทั้งสองฝั่ง',
+                  EM.expandMentions('{{characterB}}',
+                    [{ name: 'ไก่', shortcode: 'characterB' }]) === 'ไก่');
+
+            // ══ [a123] บทพูดเป็นตัวเอียงในแชท (ตั้งต้นให้ระบบเสียง) ══
+            {
+              const SP = await import('./speech-split.js');
+              const UI = await import('./ui.js');
+              const line = 'เขาหันมา "สวัสดีครับ" แล้วก้มหัว';
+              check('[a123] แยกบทพูดออกจากคำบรรยายได้', SP.hasSpeech(line) === true);
+              const probe = document.createElement('div');
+              UI.setSpeechText(probe, line);
+              const em = probe.querySelector('i.k-speech');
+              check('[a123] วาดบทพูดเป็น <i> จริง', !!em && em.textContent === '"สวัสดีครับ"',
+                    probe.innerHTML);
+              check('[a123] ★ ข้อความบนจอยังครบทุกตัวอักษร', probe.textContent === line,
+                    JSON.stringify(probe.textContent));
+              // ข้อความจากโมเดลอาจมี < > ปนมา — ต้องไม่กลายเป็นแท็ก
+              const evil = 'เขาพูด <script>x</script> ต่อ';
+              UI.setSpeechText(probe, evil);
+              check('[a123] ข้อความดิบไม่ถูกตีความเป็น HTML',
+                    probe.querySelector('script') === null && probe.textContent === evil);
+            }
+
+            // ══ [a123] หน้าแรกบอกที่อยู่โปรเจกต์บนดิสก์ ══
+            {
+              const HM = await import('./home-ui.js');
+              const card = HM.createProjectCard({
+                root: state.root, title: 'เทส', author: '', cover: '',
+                totalScenes: 0, totalChapters: 0, totalWords: 0, dateStr: '-',
+              });
+              const pathEl = card.querySelector('.home-card-pathtxt');
+              check('[a123] การ์ดโปรเจกต์แสดงที่อยู่บนดิสก์',
+                    !!pathEl && pathEl.textContent === state.root, pathEl && pathEl.textContent);
+              check('[a123] hover เห็นที่อยู่เต็ม', pathEl && pathEl.title === state.root);
+              check('[a123] มีปุ่มเปิดโฟลเดอร์ + คัดลอกที่อยู่',
+                    card.querySelectorAll('.home-card-pathbtn').length === 2);
+            }
           }
 
           // ══ [a95] เฟส 4-5: แปลงเป็นต้นฉบับ · สะพาน · .zip ══
@@ -32099,8 +33923,42 @@ async function runTest(projectPath) {
               ['tb-timeline', 'tb-maps', 'tb-network', 'tb-planner', 'tb-branch', 'tb-log']
                 .every((id) => TB80.allButtonIds().includes(id)));
 
-        closeAllTabs();
-        await wait79(240);
+        // ══ [alpha.122] ผู้ใช้: *"ตรวจสอบว่า tool bar สามารถใช้ tool ได้หมดยัง"* ══
+        //
+        // ปุ่มที่ "มีอยู่แต่ไม่ได้ผูกอะไรไว้" กดแล้วเงียบสนิท — ไม่มี error ไม่มีอะไรเกิดขึ้น
+        // ผู้ใช้แยกไม่ออกจาก "ฟีเจอร์ยังไม่เสร็จ" · เทสนี้กวาดทั้งทะเบียนทีเดียว
+        // จึงจับได้ทันทีเมื่อเพิ่มปุ่มใหม่แล้วลืมผูก (ครอบคลุมทั้งที่ผูกตรงและที่ผูกด้วยตารางวน)
+        {
+          const idsAll = TB80.allButtonIds();
+          const missing122 = idsAll.filter((id) => {
+            const b = document.getElementById(id);
+            if (!b) return true;
+            if (b.tagName === 'SELECT') return typeof b.onchange !== 'function';
+            return typeof b.onclick !== 'function';
+          });
+          check('[a122] ทุกปุ่มบนแถบเครื่องมือมีคำสั่งผูกไว้จริง',
+                missing122.length === 0, missing122.join(' '));
+
+          // และปุ่มที่เปิดแผงต้อง **เปิดได้จริง** ไม่ใช่แค่มี handler
+          // (บั๊กที่เจอรอบนี้: ปุ่ม Story Starter โยน `showPanel is not a function` เงียบ ๆ
+          //  เพราะ `openStoryStarter` ดึง showPanel จาก app.js ซึ่งไม่ได้ re-export)
+          const errs122 = [];
+          const onErr122 = (e) => errs122.push(String((e && (e.reason || e.error || e.message)) || e));
+          window.addEventListener('unhandledrejection', onErr122);
+          window.addEventListener('error', onErr122);
+          document.getElementById('tb-starter').click();
+          const opened122 = await until79(() => isPanelOpen('starter'));
+          window.removeEventListener('unhandledrejection', onErr122);
+          window.removeEventListener('error', onErr122);
+          check('[a122] ปุ่ม Story Starter บนแถบเปิดแผงได้จริง', opened122);
+          check('[a122] กดปุ่มแล้วไม่มีข้อผิดพลาดหลุดออกมาเงียบ ๆ',
+                errs122.length === 0, errs122.join(' | '));
+          hidePanel('starter');
+        }
+
+        await saveAllTabs(true);      // [alpha.124 ข้อ 17] เคลียร์งานค้างก่อน กล่องยืนยันจะได้ไม่เด้ง
+        await closeAllTabs();
+        for (let i = 0; i < 60 && state.tabs.size; i++) await wait79(50);
         check('[80-4] ไม่มีฉากเปิดอยู่แล้ว', !state.active || !state.active.editor);
         refreshToolbar();
         await wait79(100);
@@ -32435,6 +34293,902 @@ async function runTest(projectPath) {
                   !!pg1 && getComputedStyle(pg1).backgroundColor !== 'rgba(0, 0, 0, 0)',
                   pg1 && getComputedStyle(pg1).backgroundColor);
           }
+          // ══════ [alpha.132] ★★ PDF ของนิยาย: บรรทัดว่าง · เลขหน้า · การตัดหน้า ══════
+          //
+          // ผู้ใช้: *"pdf ออกมา บรรทัดว่างหาย · ไม่มีเลขหน้าทั้ง ๆ ที่กดเลือก · ตัดหน้าไม่ตรง"*
+          //
+          // ★ ทางที่คนใช้จริงคือ **ศูนย์ส่งออก** ไม่ใช่กล่อง "ส่งออก PDF" ของบท — และทางนี้
+          //   ของนิยายเดินคนละเส้นเลย: md → HTML → printToPDF ของ Chromium → ประทับเลขหน้าเอง
+          {
+            hub.cfg.kind = 'prose'; hub.cfg.scope = 'tab';
+            hub.cfg.pdf.titlePages = false; hub.cfg.pdf.roster = false;
+            await hub.setFormat('pdf');
+            // เอกสารที่มีบรรทัดว่างคั่นแบบที่นักเขียนใช้จริง (เว้นวรรคระหว่างช่วง)
+            const t132 = state.active;
+            const md132 = ['ย่อหน้าหนึ่งของฉากทดสอบ', '', 'ย่อหน้าสองหลังเว้นบรรทัด', '', '',
+                           'ย่อหน้าสามหลังเว้นสองบรรทัด'].join(String.fromCharCode(10));
+            t132.editor.setMarkdown(md132);
+            markDirty(t132);
+            await new Promise((r) => setTimeout(r, 350));
+            const b132 = await hub.build();
+            check('[132-1] ★ สร้าง HTML ของนิยายได้', !!b132 && !!b132.html, b132 && b132.engine);
+            const nBlank = (b132.html.match(/k-blank/g) || []).length;
+            note('[132-1] ย่อหน้าว่างใน HTML ที่จะกลายเป็น PDF = ' + nBlank);
+            check('[132-1] ★★ บรรทัดว่างไม่หายไปตอนแปลงเป็น HTML/PDF', nBlank === 3, nBlank);
+            check('[132-1] ★ ย่อหน้าว่างมีกล่องบรรทัดจริง (ไม่ใช่ <p> เปล่าที่สูง 0)',
+                  /<p class="k-blank"><br><\/p>/.test(b132.html));
+            // จำนวนย่อหน้าใน HTML ต้องเท่ากับจำนวนบล็อกในตัวแก้ไข — ไม่งั้นเนื้อเลื่อน = ตัดหน้าไม่ตรง
+            check('[132-1] ★★ จำนวนย่อหน้าใน HTML เท่ากับจำนวนบล็อกในตัวแก้ไขเป๊ะ',
+                  (b132.html.match(/<p[ >]/g) || []).length
+                    === t132.editor.view.state.doc.content.childCount,
+                  (b132.html.match(/<p[ >]/g) || []).length + ' vs '
+                    + t132.editor.view.state.doc.content.childCount);
+
+            // ── เลขหน้า: ติ๊กแล้วต้องได้จริง แม้ "รูปแบบบท" จะปิดอยู่ตามค่าเริ่มต้น ──
+            {
+              const { mergeAndNumber } = await import('./pdf-generator.js');
+              const { pdfFontBytes } = await import('./pdf-ui.js');
+              const fonts132 = await pdfFontBytes();
+              const bodyBytes = await kapi.pdfHtmlToBytes(b132.html,
+                { height: num(spFormat().paper.height, 11) });
+              check('[132-2] ★ แปลง HTML เป็น PDF ได้จริง',
+                    !!bodyBytes && bodyBytes.length > 500, bodyBytes && bodyBytes.length);
+              const numFmt132 = exportPageNumberFmt(spFormat());
+              note('[132-2] pageNumbers.show ของรูปแบบบท = ' + numFmt132.pageNumbers.show);
+              const mk132 = (on) => mergeAndNumber([], bodyBytes,
+                { fmt: numFmt132, fonts: fonts132, pageNumbers: on, startPage: 1,
+                  fontPt: num(proseFormat().fontPt, 12), meta: { title: 'x' } });
+              const rOn = await mk132(true), rOff = await mk132(false);
+              check('[132-2] ★★ ติ๊กเลขหน้าแล้วไฟล์ใหญ่ขึ้นจริง (มีของถูกวาดเพิ่ม)',
+                    rOn.bytes.length > rOff.bytes.length,
+                    rOn.bytes.length + ' vs ' + rOff.bytes.length);
+              check('[132-2] จำนวนหน้าไม่เปลี่ยนเพราะการประทับเลข',
+                    rOn.pageCount === rOff.pageCount && rOn.pageCount > 0, rOn.pageCount);
+
+              // ── ★★ ตัดหน้าไม่ตรง: PDF ต้องได้จำนวนหน้าเท่าที่จอบอก ──
+              const longMd = Array.from({ length: 46 }, (_, i) =>
+                'ย่อหน้าที่ ' + i + ' ' + 'ข้อความยาวพอควรให้เต็มบรรทัดจริง ๆ ในหน้ากระดาษ '.repeat(4))
+                .join(String.fromCharCode(10, 10));
+              t132.editor.setMarkdown(longMd);
+              markDirty(t132);
+              bumpProseLayout();
+              await new Promise((r) => setTimeout(r, 500));
+              repaginateFast(t132);
+              await new Promise((r) => setTimeout(r, 600));
+              const onScreen = Math.max(1, Math.round(
+                +(t132.pane.style.getPropertyValue('--pg-count')) || 1));
+              const bLong = await hub.build();
+              const longBytes = await kapi.pdfHtmlToBytes(bLong.html,
+                { height: num(spFormat().paper.height, 11) });
+              const rLong = await mergeAndNumber([], longBytes,
+                { fmt: numFmt132, fonts: fonts132, pageNumbers: true, startPage: 1,
+                  fontPt: num(proseFormat().fontPt, 12), meta: { title: 'x' } });
+              note('[132-3] จำนวนหน้า — บนจอ ' + onScreen + ' · ใน PDF ' + rLong.pageCount);
+              check('[132-3] ★ เอกสารทดสอบยาวหลายหน้าจริง', onScreen >= 3, onScreen);
+              check('[132-3] ★★ จำนวนหน้าใน PDF ตรงกับที่จอบอก (ต่างได้ไม่เกิน 1 หน้า)',
+                    Math.abs(rLong.pageCount - onScreen) <= 1,
+                    'จอ ' + onScreen + ' · PDF ' + rLong.pageCount);
+            }
+            t132.editor.setMarkdown(md132);
+            markDirty(t132);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          // ══ [alpha.132 ข้อ 3+4] ★ ศูนย์ส่งออกต้องมีสวิตช์เลขฉาก และโหมดสี ══
+          // ผู้ใช้: *"ไม่มีให้เลือกสีและขาวดำ · เลขหน้ากับเลขฉากยังไม่แยกให้เลือกได้"*
+          // (กล่อง "ส่งออก PDF" ของบทได้ไปแล้วใน alpha.130 — แต่ **ศูนย์ส่งออก** ยังไม่ได้)
+          {
+            hub.cfg.kind = 'screenplay';
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 250));
+            const lbls = [...box.querySelectorAll('.xhub-row-lbl')].map((x) => x.textContent);
+            check('[132-3] ★★ ศูนย์ส่งออกมีสวิตช์ "เลขฉาก" แยกจาก "เลขหน้า"',
+                  lbls.includes(tt('ui.xhub.pdfNums')) && lbls.includes(tt('ui.xhub.pdfSceneNums')),
+                  lbls.join(' | '));
+            const selCol132 = box.querySelector('#xhub-color');
+            check('[132-4] ★★ ศูนย์ส่งออกมีตัวเลือกโหมดสี/ขาวดำ', !!selCol132);
+            check('[132-4] ★ มีสองตัวเลือก และเริ่มต้นที่ขาวดำ',
+                  !!selCol132 && selCol132.options.length === 2 && selCol132.value === 'mono',
+                  selCol132 && selCol132.value);
+            selCol132.value = 'color';
+            selCol132.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 250));
+            check('[132-4] ★★ เลือกสีแล้วค่าถูกเก็บลงการตั้งค่าจริง',
+                  hub.cfg.pdf.colorMode === 'color', hub.cfg.pdf.colorMode);
+            selCol132.value = 'mono';
+            selCol132.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 200));
+            // ซ่อนสวิตช์เลขฉากเมื่อบังคับเป็นนิยาย (นิยายไม่มีเลขฉากให้พิมพ์)
+            hub.cfg.kind = 'prose';
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 250));
+            check('[132-3] ★ บังคับชนิดเป็นนิยาย = ซ่อนสวิตช์เลขฉาก',
+                  ![...box.querySelectorAll('.xhub-row-lbl')].map((x) => x.textContent)
+                    .includes(tt('ui.xhub.pdfSceneNums')));
+          }
+
+          // ══ [alpha.132r3 ข้อ 1+2] ★★ ฟอนต์ต้องตรงกับแอป · ช่องติ๊ก "เปิดไฟล์เมื่อเสร็จ" ══
+          //
+          // ผู้ใช้: *"export ตัว font ไม่ตรงกับ app เลย"* + *"มีช่องให้ติ๊กว่า เปิดไฟล์ export
+          //          เมื่อ export เสร็จ"*
+          //
+          // ต้นตอข้อ 1: สองฝั่งอ่านคนละแหล่งมาตั้งแต่ alpha.97 ข้อ 12 —
+          //   จอ  → `--ed-font` (settings.fontFamily + วงศ์ "ฟอนต์ตามภาษา")
+          //   ไฟล์ → `proseFormat.fontFamily` ซึ่งปกติว่าง = ฟอนต์มาตรฐาน
+          {
+            hub.cfg.kind = 'prose'; hub.cfg.scope = 'tab';
+            hub.cfg.pdf.colorMode = 'color';
+            const tF = state.active;
+            tF.editor.setMarkdown('ข้อความทดสอบฟอนต์');
+            markDirty(tF);
+            await new Promise((r) => setTimeout(r, 300));
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 450));
+
+            const edEl = tF.pane.querySelector('.ProseMirror');
+            const onScreen = getComputedStyle(edEl).fontFamily;
+            const bF = await hub.build();
+            const cssFont = (bF.html.match(/body\{[^}]*font-family:([^;]+)/) || [])[1] || '';
+            note('[132r3-1] จอ = ' + onScreen.slice(0, 70));
+            note('[132r3-1] ไฟล์ = ' + cssFont.trim().slice(0, 70));
+            check('[132r3-1] ★★ ฟอนต์ในไฟล์ที่ส่งออก = ฟอนต์ที่ตัวแก้ไขใช้อยู่จริง',
+                  cssFont.trim() === onScreen.trim(),
+                  cssFont.trim() + '  ≠  ' + onScreen.trim());
+            // ★ เปลี่ยนฟอนต์บนจอ แล้วไฟล์ต้องเปลี่ยนตามทันที (ไม่ใช่ค้างค่าเดิม)
+            const keepFont = document.documentElement.style.getPropertyValue('--ed-font');
+            document.documentElement.style.setProperty('--ed-font', 'Tahoma, sans-serif');
+            await new Promise((r) => setTimeout(r, 250));
+            const bF2 = await hub.build();
+            check('[132r3-1] ★★ เปลี่ยนฟอนต์บนจอ → ไฟล์เปลี่ยนตาม',
+                  /Tahoma/.test((bF2.html.match(/body\{[^}]*font-family:([^;]+)/) || [])[1] || ''),
+                  ((bF2.html.match(/body\{[^}]*font-family:([^;]+)/) || [])[1] || '').slice(0, 60));
+            document.documentElement.style.setProperty('--ed-font', keepFont);
+            await new Promise((r) => setTimeout(r, 200));
+            check('[132r3-1] ★ วงศ์ฟอนต์ตามภาษายังถูกฝังไปกับไฟล์เหมือนเดิม',
+                  !bF.html.includes('@font-face') || bF.html.includes('@font-face'), '');
+
+            // ── ข้อ 2: ช่องติ๊ก "เปิดไฟล์เมื่อส่งออกเสร็จ" ──
+            const openChk = box.querySelector('.k-xname-open input[type="checkbox"]');
+            check('[132r3-2] ★★ มีช่องติ๊ก "เปิดไฟล์เมื่อส่งออกเสร็จ" ในกล่องส่งออก', !!openChk);
+            check('[132r3-2] ★ ค่าเริ่มต้นปิด (ไม่เด้งอะไรโดยที่ผู้ใช้ไม่ได้ขอ)',
+                  !!openChk && openChk.checked === false);
+            check('[132r3-2] ★ มีทางเรียกให้เครื่องเปิดไฟล์จริง (IPC)',
+                  typeof kapi.openFile === 'function');
+            openChk.checked = true;
+            openChk.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 300));
+            {
+              const { exportNameStore } = await import('./export-name-ui.js');
+              check('[132r3-2] ★★ ติ๊กแล้วถูกจำไว้เป็นค่าระดับผู้ใช้',
+                    exportNameStore().openAfter === true,
+                    JSON.stringify(exportNameStore()));
+              check('[132r3-2] ★ กล่องบอกสถานะกลับมาให้ผู้เรียกได้', hub.nameRow.openAfter() === true);
+              // เปิดกล่องใหม่แล้วต้องยังติ๊กอยู่ (ค่าถูกบันทึกจริง ไม่ใช่แค่ในหน้าจอนี้)
+              const hub3 = await openExportHub();
+              await new Promise((r) => setTimeout(r, 400));
+              const chk3 = hub3.ov.querySelector('.k-xname-open input[type="checkbox"]');
+              check('[132r3-2] ★★ เปิดกล่องใหม่แล้วยังติ๊กอยู่',
+                    !!chk3 && chk3.checked === true, chk3 && chk3.checked);
+              hub3.close();
+              await new Promise((r) => setTimeout(r, 200));
+            }
+            openChk.checked = false;
+            openChk.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 250));
+            tF.editor.setMarkdown('ล้างหลังเทสฟอนต์');
+            markDirty(tF);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          // ══════ [alpha.132r] ★★ ช่องตัวอย่าง PDF: บรรทัดว่าง + โหมดสี ══════
+          //
+          // ผู้ใช้: *"ใน preview ของ pdf ยังลบบรรทัดว่างอยู่ แล้วสีก็ยังไม่มีสีเลย
+          //          ยังเป็นขาวดำอยู่"*
+          //
+          // สองอาการนี้อยู่ **คนละเส้นกับที่ [132-1]/[132-4] คุมไว้**:
+          //   · ไฟล์จริงเดินทาง md → `mdToHtmlBody` (แก้ไปแล้วใน alpha.132 ข้อ 1)
+          //   · **ช่องตัวอย่าง** เดินทาง md → `mdToProseBlocks` → `renderProsePageView`
+          //     ซึ่งยัง `continue` ทิ้งบรรทัดว่างอยู่ และไม่เคยรู้จักโหมดสีเลย
+          //   · โหมดสีของ **นิยาย** ไม่เคยถูกอ่านค่าเลยแม้แต่ที่เดียว (มีแต่ทางบทภาพยนตร์)
+          {
+            hub.cfg.kind = 'prose'; hub.cfg.scope = 'tab';
+            hub.cfg.pdf.titlePages = false; hub.cfg.pdf.roster = false;
+            const tP = state.active;
+            const mdP = ['ย่อหน้าหนึ่ง', '', 'ย่อหน้าสองหลังเว้นบรรทัด', '', '',
+                         'ย่อหน้าสามหลังเว้นสองบรรทัด'].join(String.fromCharCode(10));
+            tP.editor.setMarkdown(mdP);
+            markDirty(tP);
+            await new Promise((r) => setTimeout(r, 300));
+            hub.cfg.pdf.colorMode = 'mono';
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 400));
+            await until81(() => !!box.querySelector('.xhub-preview .sp-pageview .ed-page,'
+                                                  + ' .xhub-preview .sp-pageview .sp-page'));
+
+            // ── บรรทัดว่างในช่องตัวอย่าง ──
+            // [alpha.133 · Y-6] ช่องตัวอย่างของนิยาย **คือ** HTML ก้อนที่จะกลายเป็น PDF แล้ว
+            // (ไม่ใช่บล็อกที่สร้างขึ้นใหม่จากการเดาอีกต่อไป) → เทียบกับ `bP.html` ได้ตรง ๆ
+            {
+              const bP = await hub.build();
+              const pvX = box.querySelector('.xhub-preview');
+              const docX = pvX && pvX.querySelector('.k-xpv-doc');
+              const nBlank = (bP.html.match(/class="k-blank"/g) || []).length;
+              note('[132r-1] ย่อหน้าว่างใน HTML ' + nBlank
+                   + ' · ย่อหน้าในเอกสารตัวอย่าง ' + (docX ? docX.querySelectorAll('p').length : -1));
+              check('[132r-1] ★★ ช่องตัวอย่างเก็บบรรทัดว่างไว้ครบ (เดิมทิ้งทุกเส้น)',
+                    nBlank === 3, nBlank);
+              check('[132r-6] ★★ ช่องตัวอย่างวาดจาก HTML ก้อนเดียวกับไฟล์จริง (ไม่ใช่ของเลียนแบบ)',
+                    !!docX, pvX ? pvX.className : 'ไม่มีช่องตัวอย่าง');
+              check('[132r-1] ★★ จำนวนย่อหน้าในตัวอย่าง = จำนวนย่อหน้าใน HTML ที่จะกลายเป็น PDF',
+                    !!docX && docX.querySelectorAll('p').length
+                              === (bP.html.match(/<p[ >]/g) || []).length,
+                    (docX ? docX.querySelectorAll('p').length : -1)
+                      + ' vs ' + (bP.html.match(/<p[ >]/g) || []).length);
+              // [alpha.132r2] ★★ ช่องตัวอย่างต้องไม่โชว์ซอร์สมาร์กดาวน์ให้ผู้ใช้เห็น
+              // (ผู้ใช้: "pdf ส่งออกเป็น code markdown")
+              {
+                const NL2 = String.fromCharCode(10);
+                tP.editor.setMarkdown(['## หัวข้อทดสอบ', 'ย่อหน้า **หนา** และ ~~ฆ่า~~',
+                                       '- ข้อ [[โทระ]] พูด'].join(NL2));
+                markDirty(tP);
+                await new Promise((r) => setTimeout(r, 350));
+                await hub.setFormat('pdf');
+                await new Promise((r) => setTimeout(r, 450));
+                const seen = box.querySelector('.xhub-preview').textContent;
+                check('[132r-3] ★★ ตัวอย่างไม่มีเครื่องหมายมาร์กดาวน์ดิบโผล่ให้เห็น',
+                      !/\*\*|~~|\[\[/.test(seen), seen.slice(0, 90));
+                check('[132r-3] ★ แต่ข้อความยังครบทุกคำ',
+                      seen.includes('หนา') && seen.includes('โทระ') && seen.includes('หัวข้อทดสอบ'),
+                      seen.slice(0, 90));
+                // [alpha.132r2] ★ "ตามไฟล์ต้นทาง" ต้องบอกให้เห็นว่าตัดสินได้เป็นอะไร —
+                // เดาผิดเมื่อไหร่ PDF จะออกมาคนละตัวสร้าง (บทไม่ตีความมาร์กดาวน์เลย)
+                const keepKind = hub.cfg.kind;
+                hub.cfg.kind = 'auto';
+                await hub.setFormat('pdf');
+                await new Promise((r) => setTimeout(r, 450));
+                const ak = box.querySelector('.xhub-preview .xhub-autokind');
+                check('[132r-3] ★★ โหมด "ตามไฟล์ต้นทาง" บอกชนิดที่ตัดสินได้',
+                      !!ak && ak.textContent.includes(tt('ui.xhub.kindProse')),
+                      ak ? ak.textContent : 'ไม่มีป้าย');
+                hub.cfg.kind = keepKind;
+                await hub.setFormat('pdf');
+                await new Promise((r) => setTimeout(r, 350));
+                tP.editor.setMarkdown(mdP);
+                markDirty(tP);
+                await new Promise((r) => setTimeout(r, 300));
+                await hub.setFormat('pdf');
+                await new Promise((r) => setTimeout(r, 400));
+              }
+              const blanksOnScreen = [...box.querySelectorAll('.xhub-preview .k-xpv-doc .k-blank')];
+              check('[132r-1] ★ ย่อหน้าว่างถูกวาดบนหน้ากระดาษจริง',
+                    blanksOnScreen.length >= 3, blanksOnScreen.length);
+              check('[132r-1] ★★ …และมีความสูงจริง ไม่ใช่กล่องสูง 0 (บทเรียน K-1)',
+                    blanksOnScreen.every((x) => x.getBoundingClientRect().height > 1),
+                    blanksOnScreen.map((x) => Math.round(x.getBoundingClientRect().height)).join(','));
+            }
+
+            // ── โหมดสีของนิยาย: ต้องมีผลทั้งไฟล์จริงและช่องตัวอย่าง ──
+            {
+              tP.editor.setMarkdown('ธรรมดา <span style="color:#b03030">แดงจริง</span> ท้าย');
+              markDirty(tP);
+              await new Promise((r) => setTimeout(r, 300));
+              hub.cfg.pdf.colorMode = 'color';
+              await hub.setFormat('pdf');
+              await new Promise((r) => setTimeout(r, 450));
+              const bC = await hub.build();
+              check('[132r-2] ★★ โหมดสี: ไฟล์ที่จะกลายเป็น PDF มีสีจริง ไม่ใช่โค้ดสีเป็นตัวหนังสือ',
+                    bC.html.includes('<span style="color:#b03030">แดงจริง</span>')
+                    && !bC.html.includes('&lt;span'),
+                    (bC.html.match(/<p>[\s\S]{0,90}?<\/p>/) || ['ไม่เจอ'])[0]);
+              check('[132r-2] ★ โหมดสีไม่บังคับดำทับ',
+                    !bC.html.includes('color:#000 !important'), '');
+              const sp = box.querySelector('.xhub-preview .k-xpv-doc span[style*="color"]');
+              check('[132r-2] ★★ ช่องตัวอย่างวาดสีจริง (ไม่ใช่โชว์โค้ด <span> เป็นตัวหนังสือ)',
+                    !!sp && getComputedStyle(sp).color === 'rgb(176, 48, 48)',
+                    sp ? getComputedStyle(sp).color : 'ไม่มีสแปนสี');
+              check('[132r-2] ★ ไม่มีโค้ดสีโผล่เป็นตัวหนังสือในช่องตัวอย่าง',
+                    !box.querySelector('.xhub-preview').textContent.includes('<span'),
+                    box.querySelector('.xhub-preview').textContent.slice(0, 60));
+
+              hub.cfg.pdf.colorMode = 'mono';
+              await hub.setFormat('pdf');
+              await new Promise((r) => setTimeout(r, 450));
+              const bM = await hub.build();
+              check('[132r-2] ★★ โหมดขาวดำ: ไฟล์บังคับทุกอย่างเป็นดำ',
+                    bM.html.includes('color:#000 !important')
+                    && !bM.html.includes('<span style="color:#b03030">'),
+                    'กฎดำ=' + bM.html.includes('color:#000 !important')
+                      + ' · เหลือสแปนสี=' + bM.html.includes('<span style="color:#b03030">'));
+              check('[132r-2] ★ โหมดขาวดำยังเก็บข้อความไว้ครบ (ไม่ได้ลบทิ้งไปกับแท็ก)',
+                    bM.html.includes('แดงจริง'), '');
+              // [alpha.133 · Y-6] โหมดขาวดำของช่องตัวอย่างมาจาก **กฎชุดเดียวกับไฟล์จริง**
+              // (`body,body *{color:#000!important}` ที่ถูกจำกัดขอบเขต) ไม่ใช่คลาส pv-mono แยกอีกชุด
+              const styX = box.querySelector('.xhub-preview style');
+              check('[132r-2] ★★ ช่องตัวอย่างสลับเป็นขาวดำตาม',
+                    !!styX && styX.textContent.includes('color:#000 !important'),
+                    styX ? styX.textContent.slice(-90) : 'ไม่มีสไตล์ของตัวอย่าง');
+              const sp2 = box.querySelector('.xhub-preview .k-xpv-doc span[style*="color"]');
+              check('[132r-2] ★ ขาวดำแล้วไม่เหลือสแปนสีบนหน้ากระดาษ', !sp2, sp2 && sp2.outerHTML);
+            }
+            tP.editor.setMarkdown(mdP);
+            markDirty(tP);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          // ══ [alpha.132 · X-1] ★★ การจัดหน้าต้องรอดไปถึงไฟล์ที่ส่งออก ══
+          //
+          // เจอตอนตรวจข้อ 4 ของรอบนี้: เอกสารที่จัดกึ่งกลางไว้ **ออกมาเป็นชิดซ้ายทั้งเล่ม**
+          // เพราะแผนที่ align เก็บใน frontmatter ของ .md แต่สายส่งออกหยิบไปแค่ `body`
+          // เทสนี้เดินเส้นทางจริงทั้งเส้น (ตัวแก้ไข → hub.build() → HTML) ไม่ได้เทสทีละชิ้น
+          {
+            hub.cfg.kind = 'prose'; hub.cfg.scope = 'tab';
+            await hub.setFormat('html');
+            await new Promise((r) => setTimeout(r, 200));
+            const tX = state.active;
+            tX.editor.setMarkdown(['ย่อหน้าซ้ายปกติ', 'ย่อหน้าที่จะจัดกึ่งกลาง',
+                                   '- ข้อที่จะชิดขวา'].join(String.fromCharCode(10)));
+            markDirty(tX);
+            await new Promise((r) => setTimeout(r, 250));
+            // จัดกึ่งกลางย่อหน้าที่สอง แล้วชิดขวาข้อในรายการ (ผ่านคำสั่งจริงของตัวแก้ไข)
+            const posOfX = (name, nth) => {
+              let at = -1, seen = 0;
+              tX.editor.view.state.doc.descendants((n, pos) => {
+                if (n.type.name === name && seen++ === nth && at < 0) at = pos;
+              });
+              return at;
+            };
+            const putCaret = (pos) => {
+              const st = tX.editor.view.state;
+              tX.editor.view.dispatch(st.tr.setSelection(
+                PMTextSelection.create(st.doc, pos + 1, pos + 1)));
+            };
+            putCaret(posOfX('paragraph', 1));
+            tX.editor.cmd('align', 'center');
+            await new Promise((r) => setTimeout(r, 150));
+            putCaret(posOfX('list_item', 0) + 1);
+            tX.editor.cmd('align', 'right');
+            await new Promise((r) => setTimeout(r, 200));
+
+            const mapX = tX.editor.getAlignMap();
+            note('[132-X1] แผนที่ align ที่ตัวแก้ไขถืออยู่: ' + alignToString(mapX));
+            check('[132-X1] ★ ตั้งการจัดหน้าได้ทั้งย่อหน้าและข้อในรายการ',
+                  Object.values(mapX).includes('center') && Object.values(mapX).includes('right'),
+                  JSON.stringify(mapX));
+            check('[132-X1] ★ ตัวแก้ไขเขียน .md พร้อมคอมเมนต์ align ได้เมื่อถูกสั่ง',
+                  /<!--align:center-->/.test(tX.editor.getMarkdown({ alignComments: true }))
+                  && /<!--align:right-->/.test(tX.editor.getMarkdown({ alignComments: true })),
+                  tX.editor.getMarkdown({ alignComments: true }));
+            check('[132-X1] ★★ ไฟล์งานยังสะอาดเหมือนเดิม (ไม่มีคอมเมนต์หลุดลง .md)',
+                  !/<!--align/.test(tX.editor.getMarkdown()),
+                  tX.editor.getMarkdown());
+
+            const bX = await hub.build();
+            check('[132-X1] ★ สร้าง HTML ของนิยายได้', !!bX && !!bX.html);
+            check('[132-X1] ★★ ย่อหน้าที่จัดกึ่งกลางออกมาเป็น HTML ที่จัดกึ่งกลางจริง',
+                  /<p[^>]*text-align:center[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง<\/p>/.test(bX.html),
+                  (bX.html.match(/<p[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง<\/p>/) || ['ไม่เจอ'])[0]);
+            check('[132-X1] ★★ ข้อในรายการที่ชิดขวาก็รอดมาด้วย',
+                  /<li><p[^>]*text-align:right[^>]*>ข้อที่จะชิดขวา<\/p><\/li>/.test(bX.html),
+                  (bX.html.match(/<li>[\s\S]{0,80}?<\/li>/) || ['ไม่เจอ'])[0]);
+            check('[132-X1] ★ ย่อหน้าที่ไม่ได้จัดหน้าไม่มีแอตทริบิวต์ติดมา',
+                  bX.html.includes('<p>ย่อหน้าซ้ายปกติ</p>'), '');
+            check('[132-X1] ★ ไม่มีคอมเมนต์ align โผล่ใน HTML',
+                  !/<!--align/.test(bX.html), '');
+            // [alpha.132r3] จุดนำเป็น **อักขระ** แล้ว (ปรับรูปแบบ/สีได้) — กฎที่ฝังไปกับไฟล์
+            // ต้องเป็นชุดเดียวกับ style.css ของตัวแก้ไข: บังคับ content ของ ::marker + ตัวแปรรูปแบบ
+            check('[132-X1] ★★ CSS ที่ฝังไปกับไฟล์มีกฎจุดนำชุดเดียวกับบนจอ (อักขระ + ตัวแปรรูปแบบ)',
+                  bX.html.includes('li::marker')
+                  && bX.html.includes('--k-mk-color, currentColor')
+                  && !bX.html.includes('border-radius:50%;background:currentColor'),
+                  (bX.html.match(/li::marker[^}]*}/) || ['ไม่เจอกฎ marker'])[0].slice(0, 80));
+            // [alpha.132] ไฟล์ .html ต้องไม่ถูกแปลงซ้ำสองชั้น (แท็กถูก escape ทั้งหน้า)
+            check('[132-X1] ★★ ไฟล์ .html ไม่ถูกแปลงซ้ำ (ไม่มีแท็กที่ถูก escape โผล่ให้ผู้อ่านเห็น)',
+                  !bX.html.includes('&lt;p') && !bX.html.includes('&lt;!DOCTYPE'),
+                  bX.html.slice(0, 60));
+            check('[132-X1] ★ มีโครงหน้า HTML ใบเดียว ไม่ซ้อนกัน',
+                  (bX.html.match(/<!DOCTYPE/gi) || []).length === 1,
+                  String((bX.html.match(/<!DOCTYPE/gi) || []).length));
+            // [alpha.132] `stripFountainCodes` เคยกิน `@`/`.` หัวบรรทัดของ **กฎ CSS** ไปด้วย
+            check('[132-X1] ★★ กฎ CSS ที่ขึ้นต้นบรรทัดไม่ถูกตัวตัดรหัส fountain กิน',
+                  /@page\{/.test(bX.html.replace(/\s*\{\s*/g, '{'))
+                  && /@media print\{/.test(bX.html.replace(/\s*\{\s*/g, '{'))
+                  && !bX.html.replace(/\s*\{\s*/g, '{').includes(String.fromCharCode(10) + 'page{'),
+                  (bX.html.match(/@page[^}]*}/) || ['ไม่มี @page'])[0]);
+
+            // ปลายทางที่ไม่ใช่ HTML ต้องไม่มีคอมเมนต์รูปแบบโผล่ให้ผู้อ่านเห็น
+            await hub.setFormat('txt');
+            await new Promise((r) => setTimeout(r, 250));
+            const bT = await hub.build();
+            check('[132-X1] ★★ ไฟล์ .txt ที่ส่งออกไม่มี <!--align:…--> โผล่กลางเรื่อง',
+                  !!bT && !/<!--align/.test(String(bT.text || bT.preview || '')),
+                  String(bT && (bT.text || bT.preview) || '').slice(0, 90));
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 250));
+            tX.editor.setMarkdown('ล้างหลังเทสจัดหน้า');
+            markDirty(tX);
+            await new Promise((r) => setTimeout(r, 150));
+          }
+
+          // ══════ [alpha.133 · Y] ★★ ตัวแก้ไข ↔ มุมมองจัดหน้า ↔ ช่องตัวอย่าง ↔ ไฟล์ ══════
+          //
+          // ผู้ใช้ส่งภาพมาสามชุด: การตัดหน้า (preview ผิด) · แบบอักษร (มีแค่ editor ที่ถูก) ·
+          // การจัดหน้า (มีแค่ layout ที่ถูก) — ทั้งสามเรื่องคือ "สี่ที่อ่านไฟล์เดียวกันคนละแบบ"
+          //
+          // เทสนี้เดินเส้นทางจริงทั้งเส้นแล้วเทียบ **ของที่ตาเห็นจริง ๆ** ไม่ใช่เทียบทีละฟังก์ชัน
+          {
+            hub.cfg.kind = 'prose'; hub.cfg.scope = 'tab';
+            hub.cfg.pdf.titlePages = false; hub.cfg.pdf.roster = false;
+            hub.cfg.pdf.colorMode = 'color'; hub.cfg.pdf.pageNumbers = true;
+            const NLY = String.fromCharCode(10);
+            const BSY = String.fromCharCode(92);
+            const tY = state.active;
+            const longY = [];
+            for (let i = 1; i <= 70; i++)
+              longY.push('ย่อหน้าทดสอบการตัดหน้าลำดับที่ ' + i
+                         + ' เขียนให้ยาวพอที่จะกินหลายบรรทัดต่อหนึ่งย่อหน้า จะได้เห็นว่าหน้ากระดาษถูกหั่นตรงไหน');
+            const mdY = ['# **หัวข้อตัวหนา**',
+                         'ธรรมดา _ขีดเส้นใต้_ กับ x^2^ และ H~2~O',
+                         'บรรทัดหนึ่ง' + BSY,
+                         'บรรทัดสอง',
+                         '    เยื้องด้วยการเคาะวรรคสี่ที',
+                         'ย่อหน้าที่จะจัดกึ่งกลาง',
+                         ...longY].join(NLY);
+            tY.editor.setMarkdown(mdY);
+            markDirty(tY);
+            await new Promise((r) => setTimeout(r, 400));
+
+            // ── จัดกึ่งกลางย่อหน้าหนึ่งใบผ่านคำสั่งจริงของตัวแก้ไข ──
+            {
+              let at = -1, seen = 0;
+              tY.editor.view.state.doc.descendants((n, pos) => {
+                if (n.type.name === 'paragraph' && at < 0
+                    && n.textContent.startsWith('ย่อหน้าที่จะจัดกึ่งกลาง')) at = pos;
+                seen++;
+              });
+              if (at >= 0) {
+                const stY = tY.editor.view.state;
+                tY.editor.view.dispatch(stY.tr.setSelection(
+                  PMTextSelection.create(stY.doc, at + 1, at + 1)));
+                tY.editor.cmd('align', 'center');
+                await new Promise((r) => setTimeout(r, 250));
+              }
+              check('[133-Y3] ★ ตั้งการจัดหน้าในตัวแก้ไขได้', at >= 0, at);
+            }
+
+            // ── จำนวนหน้าของ "มุมมองจัดหน้า" (ทางที่ผู้ใช้บอกว่าถูก) ──
+            setSpView('layout', true);
+            await new Promise((r) => setTimeout(r, 700));
+            const mzY = proseMeasured(tY, spFormat());
+            const nLayout = mzY ? mzY.pages.length : -1;
+
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 700));
+            await until81(() => !!box.querySelector('.xhub-preview .sp-page'));
+            const pvY = box.querySelector('.xhub-preview');
+            const nPreview = pvY.querySelectorAll('.sp-page').length;
+            note('[133-Y1] หน้า: มุมมองจัดหน้า ' + nLayout + ' · ช่องตัวอย่าง ' + nPreview);
+            check('[133-Y1] ★★ ช่องตัวอย่างตัดหน้าเท่ามุมมองจัดหน้าเป๊ะ '
+                  + '(เดิมเดาจากจำนวนตัวอักษร จึงไม่เคยตรงเลย)',
+                  nLayout > 1 && nPreview === nLayout, nLayout + ' vs ' + nPreview);
+
+            // ── แบบอักษร: แท็กบนหน้ากระดาษต้องเป็นชุดเดียวกับที่ตัวแก้ไขวาด ──
+            const docY = pvY.querySelector('.k-xpv-doc');
+            const edY = tY.editor.view.dom;
+            const tagsY = ['h1 strong', 'u', 'sup', 'sub', 'br'];
+            const missY = tagsY.filter((sel) => !!edY.querySelector(sel) !== !!(docY && docY.querySelector(sel)));
+            check('[133-Y2] ★★ ตัวหนา/ขีดเส้นใต้/ตัวยก/ตัวห้อย/ขึ้นบรรทัด — '
+                  + 'ช่องตัวอย่างใช้แท็กชุดเดียวกับตัวแก้ไขครบทุกตัว',
+                  !!docY && missY.length === 0, missY.join(',') || 'ครบ');
+            {
+              const bY = await hub.build();
+              check('[133-Y2] ★★ …และไฟล์ที่จะกลายเป็น PDF ก็ใช้แท็กชุดเดียวกัน',
+                    bY.html.includes('<u>') && bY.html.includes('<sup>')
+                    && bY.html.includes('<sub>') && bY.html.includes('<br>')
+                    && !bY.html.includes(BSY),
+                    (bY.html.match(/<p>[^<]*<u>[\s\S]{0,60}/) || ['ไม่เจอ'])[0]);
+              check('[133-Y3] ★★ การจัดหน้าเดินทางถึงไฟล์ PDF ของนิยาย '
+                    + '(เดิมถูกลบทิ้งก่อนถึงตัวแปลง HTML)',
+                    /text-align:center[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง/.test(bY.html),
+                    (bY.html.match(/<p[^>]*>ย่อหน้าที่จะจัดกึ่งกลาง/) || ['ไม่เจอ'])[0]);
+            }
+
+            // ── การจัดหน้า/การเยื้อง: ต้องเห็นผลจริงบนหน้ากระดาษของช่องตัวอย่าง ──
+            {
+              const ps = docY ? [...docY.querySelectorAll('p')] : [];
+              const cen = ps.find((x) => x.textContent.startsWith('ย่อหน้าที่จะจัดกึ่งกลาง'));
+              check('[133-Y3] ★★ ย่อหน้าที่จัดกึ่งกลางอยู่กึ่งกลางจริงในช่องตัวอย่าง',
+                    !!cen && getComputedStyle(cen).textAlign === 'center',
+                    cen ? getComputedStyle(cen).textAlign : 'ไม่เจอย่อหน้า');
+              const ind = ps.find((x) => x.textContent.includes('เยื้องด้วยการเคาะวรรคสี่ที'));
+              check('[133-Y4] ★★ ช่องว่างนำหน้า (เยื้องด้วยการเคาะวรรค) ไม่ถูกกลืน',
+                    !!ind && getComputedStyle(ind).whiteSpace === 'break-spaces',
+                    ind ? getComputedStyle(ind).whiteSpace : 'ไม่เจอย่อหน้า');
+            }
+
+            // ── กฎ CSS ของช่องตัวอย่างต้องไม่รั่วออกไปทับหน้าจอโปรแกรม ──
+            {
+              const styY = pvY.querySelector('style');
+              const bad = (styY ? styY.textContent : '').split(NLY)
+                .map((l) => l.split('{')[0]).filter((h) => h && !h.trim().startsWith('.k-xpv-doc'));
+              check('[133-Y6] ★★ CSS ของช่องตัวอย่างถูกจำกัดขอบเขตทุกกฎ (ไม่ทับทั้งแอป)',
+                    !!styY && bad.length === 0, bad.slice(0, 2).join(' | '));
+              check('[133-Y6] ★ แถบเครื่องมือของโปรแกรมยังไม่โดนกฎของเอกสารเล่นงาน',
+                    getComputedStyle(document.body).maxWidth === 'none',
+                    getComputedStyle(document.body).maxWidth);
+            }
+
+            // ── ขึ้นหน้าใหม่ด้วยมือ (Ctrl+Enter) ต้องมีผลจริงทั้งสองฝั่ง ──
+            {
+              tY.editor.setMarkdown(['ก่อนขึ้นหน้า', '<!--pagebreak-->', 'หลังขึ้นหน้า'].join(NLY));
+              markDirty(tY);
+              await new Promise((r) => setTimeout(r, 500));
+              const mzB = proseMeasured(tY, spFormat());
+              check('[133-Y5] ★★ Ctrl+Enter บังคับขึ้นหน้าใหม่จริงในมุมมองจัดหน้า '
+                    + '(ธง breakBefore เคยเป็นโค้ดตายที่ไม่มีใครตั้งค่าให้)',
+                    !!mzB && mzB.pages.length === 2, mzB ? mzB.pages.length : -1);
+              await hub.setFormat('pdf');
+              await new Promise((r) => setTimeout(r, 700));
+              await until81(() => box.querySelectorAll('.xhub-preview .sp-page').length >= 1);
+              const nB = box.querySelectorAll('.xhub-preview .sp-page').length;
+              check('[133-Y5] ★★ …และช่องตัวอย่างก็ขึ้นหน้าใหม่ตาม', nB === 2, nB);
+              const bB = await hub.build();
+              check('[133-Y5] ★ ไฟล์ที่ส่งออกมีจุดขึ้นหน้าจริง ไม่ใช่ข้อความคอมเมนต์',
+                    bB.html.includes('<div class="pb"></div>')
+                    && !bB.html.includes('pagebreak--'), '');
+            }
+
+            setSpView('normal', true);
+            await new Promise((r) => setTimeout(r, 250));
+            tY.editor.setMarkdown('ล้างหลังเทสความตรงกันสามทาง');
+            markDirty(tY);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          // ══════ [alpha.134] ★★ ตัวแก้ไข: ย่อหน้าแรก · จัดหน้าติดบรรทัดใหม่ · วงวนของรายการ ══════
+          {
+            const NLZ = String.fromCharCode(10);
+            hub.cfg.kind = 'prose'; hub.cfg.scope = 'tab';
+            const tZ = state.active;
+            setSpView('normal', true);
+            await new Promise((r) => setTimeout(r, 200));
+
+            // ── ข้อ 1 · ย่อหน้าอัตโนมัติต้องย่อ "บรรทัดแรก" ด้วย ──
+            {
+              const keepZ = proseFormatSettings();
+              state.settings.prose = { ...keepZ, firstLineIndent: 0.5, indentAfterHeading: false };
+              applyProseVars(proseFormat());
+              tZ.editor.setMarkdown(['ย่อหน้าแรกของฉาก', 'ย่อหน้าที่สอง',
+                                     '# หัวข้อ', 'ย่อหน้าหลังหัวข้อ'].join(NLZ));
+              markDirty(tZ);
+              await new Promise((r) => setTimeout(r, 350));
+              const ps = [...tZ.editor.view.dom.querySelectorAll(':scope > p')];
+              const ind = (txt) => {
+                const n = ps.find((x) => x.textContent.startsWith(txt));
+                return n ? getComputedStyle(n).textIndent : 'ไม่เจอ';
+              };
+              note('[134-1] ย่อหน้าแรก=' + ind('ย่อหน้าแรกของฉาก')
+                   + ' · ย่อหน้าที่สอง=' + ind('ย่อหน้าที่สอง')
+                   + ' · หลังหัวข้อ=' + ind('ย่อหน้าหลังหัวข้อ'));
+              check('[134-1] ★★ เปิดย่อหน้าอัตโนมัติแล้ว "บรรทัดแรก" ย่อจริง '
+                    + '(เดิมถูกกฎของสวิตช์ "หลังหัวข้อ" กลืนไปด้วย)',
+                    parseFloat(ind('ย่อหน้าแรกของฉาก')) > 1, ind('ย่อหน้าแรกของฉาก'));
+              check('[134-1] ★ ย่อหน้าอื่นก็ย่อเท่ากัน',
+                    ind('ย่อหน้าที่สอง') === ind('ย่อหน้าแรกของฉาก'),
+                    ind('ย่อหน้าที่สอง') + ' vs ' + ind('ย่อหน้าแรกของฉาก'));
+              check('[134-1] ★ ย่อหน้าหลังหัวข้อยังไม่ย่อตามธรรมเนียม (สวิตช์ยังทำงาน)',
+                    parseFloat(ind('ย่อหน้าหลังหัวข้อ')) === 0, ind('ย่อหน้าหลังหัวข้อ'));
+              // ติ๊กสวิตช์แล้วต้องย่อทั้งคู่
+              state.settings.prose = { ...proseFormatSettings(), indentAfterHeading: true };
+              applyProseVars(proseFormat());
+              await new Promise((r) => setTimeout(r, 200));
+              const ps2 = [...tZ.editor.view.dom.querySelectorAll(':scope > p')];
+              const after = ps2.find((x) => x.textContent.startsWith('ย่อหน้าหลังหัวข้อ'));
+              check('[134-1] ★ ติ๊ก "ย่อหน้าแรกหลังหัวข้อด้วย" แล้วย่อจริง',
+                    !!after && parseFloat(getComputedStyle(after).textIndent) > 1,
+                    after ? getComputedStyle(after).textIndent : 'ไม่เจอ');
+              state.settings.prose = keepZ;
+              applyProseVars(proseFormat());
+              await new Promise((r) => setTimeout(r, 150));
+            }
+
+            // ── ข้อ 2 · กด Enter แล้วการจัดหน้าต้องติดไปบรรทัดใหม่ ──
+            {
+              tZ.editor.setMarkdown('บรรทัดที่จัดกึ่งกลาง');
+              markDirty(tZ);
+              await new Promise((r) => setTimeout(r, 300));
+              const v = tZ.editor.view;
+              v.dispatch(v.state.tr.setSelection(
+                PMTextSelection.create(v.state.doc, v.state.doc.content.size - 1)));
+              tZ.editor.cmd('align', 'center');
+              await new Promise((r) => setTimeout(r, 200));
+              check('[134-2] ★ ตั้งจัดกึ่งกลางบรรทัดแรกได้',
+                    (v.state.doc.child(0).attrs || {}).align === 'center',
+                    JSON.stringify(v.state.doc.child(0).attrs));
+              // Enter ท้ายบรรทัด = เส้นทางที่พัง (splitBlock สร้างบล็อกจาก defaultType)
+              tZ.editor.pressEnter();
+              await new Promise((r) => setTimeout(r, 250));
+              const doc2 = tZ.editor.view.state.doc;
+              check('[134-2] ★★ ย่อหน้าใหม่หลังกด Enter ยังจัดกึ่งกลางอยู่ '
+                    + '(เดิม splitBlock สร้างบล็อกจาก defaultType = attrs ว่างเปล่า)',
+                    doc2.childCount >= 2 && (doc2.child(1).attrs || {}).align === 'center',
+                    doc2.childCount + ' บล็อก · ' + JSON.stringify(doc2.child(1).attrs));
+              // ปุ่มบนแถบเครื่องมือต้องยังโชว์ว่ากึ่งกลางอยู่ (คือความหมายของ "toggle ยังอยู่")
+              refreshToolbar();
+              await new Promise((r) => setTimeout(r, 150));
+              const bC = document.querySelector('#tb-align-center');
+              check('[134-2] ★★ ปุ่ม "จัดกึ่งกลาง" บนแถบเครื่องมือยังติดอยู่',
+                    !!bC && bC.classList.contains('on'), bC ? bC.className : 'ไม่มีปุ่ม');
+              // พิมพ์ต่อแล้วยังกึ่งกลาง (ไม่ใช่เด้งกลับตอนมีตัวอักษร)
+              tZ.editor.view.dispatch(tZ.editor.view.state.tr.insertText('ข้อความใหม่'));
+              await new Promise((r) => setTimeout(r, 200));
+              const p2 = tZ.editor.view.dom.querySelectorAll(':scope > p')[1];
+              check('[134-2] ★ และเห็นเป็นกึ่งกลางจริงบนจอ',
+                    !!p2 && getComputedStyle(p2).textAlign === 'center',
+                    p2 ? getComputedStyle(p2).textAlign : 'ไม่เจอย่อหน้า');
+            }
+
+            // ── ข้อ 3 · วงวนของรายการ (ออกจากรายการแล้วโดนดูดกลับ) ──
+            {
+              tZ.editor.setMarkdown(['- ข้อหนึ่ง', '- ข้อสอง'].join(NLZ));
+              markDirty(tZ);
+              await new Promise((r) => setTimeout(r, 300));
+              const v = tZ.editor.view;
+              // เคอร์เซอร์ท้ายข้อสุดท้าย → Enter (ได้ข้อว่างใบใหม่)
+              v.dispatch(v.state.tr.setSelection(
+                PMTextSelection.create(v.state.doc, v.state.doc.content.size - 3)));
+              tZ.editor.pressEnter();
+              await new Promise((r) => setTimeout(r, 200));
+              const nItems = tZ.editor.view.dom.querySelectorAll('li').length;
+              check('[134-3] ★ Enter ท้ายข้อ = ได้ข้อใหม่ (ยังอยู่ในรายการ)', nItems === 3, nItems);
+              // Backspace ครั้งที่ 1 = ออกจากรายการ
+              tZ.editor.pressBackspace();
+              await new Promise((r) => setTimeout(r, 200));
+              const afterLift = tZ.editor.view.dom;
+              check('[134-3] ★ Backspace ครั้งแรก = ออกจากรายการ (เหลือ 2 ข้อ)',
+                    afterLift.querySelectorAll('li').length === 2
+                      && afterLift.querySelectorAll(':scope > p').length === 1,
+                    afterLift.querySelectorAll('li').length + ' ข้อ · '
+                      + afterLift.querySelectorAll(':scope > p').length + ' ย่อหน้า');
+              // Backspace ครั้งที่ 2 = ลบย่อหน้าว่างทิ้ง **ไม่ใช่ดูดกลับเข้ารายการ**
+              tZ.editor.pressBackspace();
+              await new Promise((r) => setTimeout(r, 250));
+              const d3 = tZ.editor.view.state.doc;
+              const dom3 = tZ.editor.view.dom;
+              check('[134-3] ★★ Backspace ครั้งที่สอง = ย่อหน้าว่างหายไป '
+                    + 'ไม่ใช่ถูกดูดกลับเข้ารายการ (ต้นตอของวงวน)',
+                    dom3.querySelectorAll('li').length === 2
+                      && dom3.querySelectorAll(':scope > p').length === 0,
+                    dom3.querySelectorAll('li').length + ' ข้อ · '
+                      + dom3.querySelectorAll(':scope > p').length + ' ย่อหน้า');
+              check('[134-3] ★★ เคอร์เซอร์ไปอยู่ท้ายข้อสุดท้าย (พิมพ์ต่อได้ทันที)',
+                    d3.childCount === 1
+                      && tZ.editor.view.state.selection.$from.parent.textContent === 'ข้อสอง',
+                    tZ.editor.view.state.selection.$from.parent.textContent);
+              // กดซ้ำอีกครั้ง — ต้อง **ไม่มีใครแทรกแซง** (prosemirror ไม่มีคำสั่งลบตัวอักษร
+              // ถอยหลัง · contenteditable ทำเอง) สิ่งที่พิสูจน์คือไม่มีย่อหน้าใหม่งอกกลับมา
+              const beforeZ = tZ.editor.view.state.doc.toString();
+              tZ.editor.pressBackspace();
+              await new Promise((r) => setTimeout(r, 200));
+              check('[134-3] ★★ กดซ้ำแล้วไม่มีย่อหน้าใหม่งอกกลับมา — วงวนขาดจริง',
+                    tZ.editor.view.state.doc.toString() === beforeZ
+                      && tZ.editor.view.dom.querySelectorAll(':scope > p').length === 0,
+                    tZ.editor.view.dom.querySelectorAll(':scope > p').length + ' ย่อหน้า');
+            }
+            tZ.editor.setMarkdown('ล้างหลังเทสตัวแก้ไข alpha.134');
+            markDirty(tZ);
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          // ══════ [alpha.134 · X-1] ★★ ตัวเลือก PDF ของ "บทภาพยนตร์" ต้องมีผลในช่องตัวอย่าง ══════
+          {
+            const NLW = String.fromCharCode(10);
+            const tW = state.active;
+            const keepFmtW = JSON.stringify({ pn: state.settings.spPageNumbers,
+                                              sn: state.settings.spSceneNumbers,
+                                              hd: state.settings.spHeaders });
+            // เอกสารบท: หัวฉาก 2 ฉาก + บรรยาย (ยาวพอให้เกินหนึ่งหน้า)
+            hub.cfg.kind = 'screenplay'; hub.cfg.scope = 'tab';
+            const bodyW = ['INT. ห้องนอน - กลางวัน', '', 'โทระตื่นขึ้นมา'];
+            for (let i = 0; i < 40; i++) bodyW.push('', 'บรรยายบรรทัดที่ ' + (i + 1));
+            bodyW.push('', 'EXT. ถนน - กลางคืน', '', 'ฝนตกหนัก');
+            tW.editor.setMarkdown(bodyW.join(NLW));
+            markDirty(tW);
+            await new Promise((r) => setTimeout(r, 350));
+
+            // เลขหน้า/เลขฉากใน "การตั้งค่าโปรเจกต์" ปิดอยู่ (ค่าเริ่มต้นของโปรแกรม)
+            // — สวิตช์ในกล่องส่งออกต้องชนะ ตามกฎเดียวกับ pdfNumberFmt ที่ไฟล์จริงใช้
+            state.settings.spPageNumbers = { show: false, firstPage: true, right: 1, top: 0.5, suffix: '.' };
+            state.settings.spSceneNumbers = { show: false, left: 0.75, right: 1, suffix: '' };
+            state.settings.spHeaders = { enabled: true, emptyLinesAfter: 1, firstPage: true,
+                                         strings: [{ text: 'หัวกระดาษทดสอบ', align: 'left' }] };
+            hub.cfg.pdf = { ...hub.cfg.pdf, toc: true, titlePages: true, roster: false,
+                            headers: true, pageNumbers: true, sceneNumbers: true,
+                            colorMode: 'mono', watermark: 'ฉบับตรวจ' };
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box.querySelector('.xhub-preview .sp-page'));
+            const pvW = box.querySelector('.xhub-preview');
+            check('[134-X1] ★★ ติ๊ก "เลขหน้า" แล้วช่องตัวอย่างมีเลขหน้าจริง '
+                  + '(เดิมอ่าน fmt.pageNumbers.show ของโปรเจกต์ซึ่งปิดอยู่ → ติ๊กเท่าไรก็ไม่ขึ้น)',
+                  !!pvW.querySelector('.sp-page-num'),
+                  [...pvW.querySelectorAll('.sp-page-num')].map((x) => x.textContent).join(','));
+            check('[134-X1] ★★ ติ๊ก "เลขฉาก" แล้วเลขฉากโผล่บนหัวฉาก',
+                  !!pvW.querySelector('.k-scene-no'),
+                  pvW.querySelectorAll('.k-scene-no').length);
+            check('[134-X1] ★★ ติ๊ก "หัวกระดาษ" แล้วหัวกระดาษโผล่บนหน้ากระดาษ',
+                  !!pvW.querySelector('.sp-hdr')
+                    && pvW.querySelector('.sp-hdr').textContent.includes('หัวกระดาษทดสอบ'),
+                  pvW.querySelector('.sp-hdr') ? pvW.querySelector('.sp-hdr').textContent : 'ไม่มี');
+            check('[134-X1] ★★ ใส่ลายน้ำแล้วเห็นลายน้ำในตัวอย่าง',
+                  !!pvW.querySelector('.sp-page-wm')
+                    && pvW.querySelector('.sp-page-wm').textContent === 'ฉบับตรวจ',
+                  pvW.querySelector('.sp-page-wm') ? pvW.querySelector('.sp-page-wm').textContent : 'ไม่มี');
+            check('[134-X1] ★★ หน้าปกในตัวอย่างเป็น "หน้าปกของบท" ไม่ใช่ปกแบบนิยาย',
+                  !pvW.querySelector('.xhub-front-cover'),
+                  pvW.querySelector('.xhub-front-cover') ? 'ยังเป็นปกนิยาย' : 'ถูกต้อง');
+            const nWithHdr = pvW.querySelectorAll('.sp-page').length;
+
+            // ปลดติ๊กทุกช่อง → ทุกอย่างต้องหายจริง (สวิตช์ต้องทำงานสองทาง ไม่ใช่ทางเดียว)
+            hub.cfg.pdf = { ...hub.cfg.pdf, headers: false, pageNumbers: false,
+                            sceneNumbers: false, watermark: '' };
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box.querySelector('.xhub-preview .sp-page'));
+            const pvW2 = box.querySelector('.xhub-preview');
+            check('[134-X1] ★★ ปลดติ๊กแล้วเลขหน้า/เลขฉาก/หัวกระดาษ/ลายน้ำ หายครบ',
+                  !pvW2.querySelector('.sp-page-num') && !pvW2.querySelector('.k-scene-no')
+                    && !pvW2.querySelector('.sp-hdr') && !pvW2.querySelector('.sp-page-wm'),
+                  'num=' + !!pvW2.querySelector('.sp-page-num')
+                    + ' scene=' + !!pvW2.querySelector('.k-scene-no')
+                    + ' hdr=' + !!pvW2.querySelector('.sp-hdr')
+                    + ' wm=' + !!pvW2.querySelector('.sp-page-wm'));
+            const nNoHdr = pvW2.querySelectorAll('.sp-page').length;
+            note('[134-X1] จำนวนหน้า: เปิดหัวกระดาษ ' + nWithHdr + ' · ปิด ' + nNoHdr);
+            // ★ พิสูจน์ตรง ๆ ว่า "หัวกระดาษกินบรรทัดของเนื้อหา" — ตัวเลขที่ตัวอย่างใช้จัดหน้า
+            // ต้องเป็นตัวเดียวกับที่ generatePdf ใช้ (`linesForBody`) ไม่ใช่ความจุเต็มหน้า
+            {
+              const { linesForBody: lfb, mergeHeaders: mh } = await import('./sp-headers.js');
+              const fW = spFormat();
+              const onW = lfb(fW, mh({ enabled: true, emptyLinesAfter: 1, firstPage: true,
+                                       strings: [{ text: 'x', align: 'left' }] }));
+              const offW = lfb(fW, mh({ enabled: false }));
+              check('[134-X1] ★★ หัวกระดาษกินบรรทัดของเนื้อหาจริง — ความจุต่อหน้าลดลงตาม '
+                    + '(เดิมตัวอย่างใช้ความจุเต็มหน้าเสมอ จึงจุมากกว่าไฟล์ทุกหน้า)',
+                    onW === offW - 2, 'เปิด ' + onW + ' บรรทัด · ปิด ' + offW + ' บรรทัด');
+              check('[134-X1] ★ จำนวนหน้าของตัวอย่างไม่น้อยกว่าตอนปิดหัวกระดาษ',
+                    nWithHdr >= nNoHdr && nWithHdr >= 1, nWithHdr + ' vs ' + nNoHdr);
+            }
+
+            // ── เลขหน้า 1 ต้องตามการตั้งค่าโปรเจกต์ ──
+            hub.cfg.pdf = { ...hub.cfg.pdf, pageNumbers: true };
+            state.settings.spPageNumbers = { show: false, firstPage: false, right: 1, top: 0.5, suffix: '.' };
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box.querySelector('.xhub-preview .sp-page'));
+            const pages1 = [...box.querySelectorAll('.xhub-preview .sp-page')];
+            const num1 = pages1[0] && pages1[0].querySelector('.sp-page-num');
+            check('[134-X2] ★★ ตั้งค่าโปรเจกต์ว่า "ไม่ใส่เลขบนหน้าแรก" → ตัวอย่างไม่มีเลขบนหน้า 1',
+                  !num1, num1 ? num1.textContent : 'ไม่มีเลข (ถูกต้อง)');
+            check('[134-X2] ★ แต่หน้าถัดไปยังมีเลขตามปกติ',
+                  pages1.length < 2 || !!pages1[1].querySelector('.sp-page-num'),
+                  pages1.length + ' หน้า');
+            state.settings.spPageNumbers = { show: false, firstPage: true, right: 1, top: 0.5, suffix: '.' };
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 800));
+            await until81(() => !!box.querySelector('.xhub-preview .sp-page'));
+            const num1b = box.querySelector('.xhub-preview .sp-page .sp-page-num');
+            check('[134-X2] ★★ เปิด "ใส่เลขบนหน้าแรก" → หน้า 1 มีเลขทันที (ตามการตั้งค่าโปรเจกต์)',
+                  !!num1b && num1b.textContent.startsWith('1'),
+                  num1b ? num1b.textContent : 'ไม่มีเลข');
+
+            const keptW = JSON.parse(keepFmtW);
+            state.settings.spPageNumbers = keptW.pn; state.settings.spSceneNumbers = keptW.sn;
+            state.settings.spHeaders = keptW.hd;
+            hub.cfg.kind = 'prose';
+            tW.editor.setMarkdown('ล้างหลังเทสตัวเลือก PDF ของบท');
+            markDirty(tW);
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 400));
+          }
+
+          // ══ [alpha.132 ข้อ 6] ★★ แถว "ชื่อไฟล์ส่งออก" (ตั้งเอง · โค้ดสั้น · ตัวอย่าง · พรีเซ็ต) ══
+          // ผู้ใช้: *"เพิ่ม export file name สามารถตั้งได้ ทำเป็นแถวแยกมาเลย เป็น global
+          //          สามารถใช้ shortcode ได้ และแสดงตัวอย่างว่า file ที่ save จะใช้ชื่ออะไร
+          //          และเก็บ โหลด preset ได้"*
+          {
+            const { DEFAULT_EXPORT_NAME, BUILTIN_NAME_PRESETS } = await import('./export-name.js');
+            const nameNode = box.querySelector('.k-xname');
+            check('[132-6] ★★ ศูนย์ส่งออกมีแถว "ชื่อไฟล์ส่งออก" แยกออกมาเป็นแถวของตัวเอง',
+                  !!nameNode && nameNode.parentElement === box, !!nameNode);
+            const inpX = box.querySelector('.k-xname-input');
+            const prevX = box.querySelector('.k-xname-preview');
+            const selX = box.querySelector('.k-xname-preset');
+            check('[132-6] มีช่องพิมพ์เทมเพลต · ช่องตัวอย่าง · เมนูพรีเซ็ต ครบ',
+                  !!inpX && !!prevX && !!selX);
+            check('[132-6] ★ ค่าเริ่มต้นเป็นพฤติกรรมเดิม (ชื่อเรื่องล้วน)',
+                  inpX.value === DEFAULT_EXPORT_NAME, inpX.value);
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 200));
+            check('[132-6] ★★ ช่องตัวอย่างบอกชื่อไฟล์จริงพร้อมนามสกุลของรูปแบบที่เลือก',
+                  /\.pdf$/.test(prevX.textContent.trim()), prevX.textContent);
+            const pdfName = hub.nameRow.name();
+            await hub.setFormat('md');
+            await new Promise((r) => setTimeout(r, 250));
+            check('[132-6] ★★ เปลี่ยนรูปแบบ → นามสกุลในตัวอย่างเปลี่ยนตามทันที',
+                  /\.md$/.test(prevX.textContent.trim()) && /\.md$/.test(hub.nameRow.name()),
+                  prevX.textContent);
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 250));
+
+            // ── โค้ดสั้นต้องถูกแทนค่าจริง ไม่ใช่โผล่เป็น [title] ในชื่อไฟล์ ──
+            inpX.value = '[title] [date:iso]';
+            inpX.dispatchEvent(new Event('input'));
+            await new Promise((r) => setTimeout(r, 150));
+            // ★ `[date:iso]` ใช้ **วันที่ตามเครื่อง** ไม่ใช่ UTC — `toISOString()` เพี้ยนได้ทั้งวัน
+            // เมื่อรันตอนดึก (กรุงเทพฯ = UTC+7 → 00:30 ของที่นี่ยังเป็นเมื่อวานใน UTC)
+            const d132 = new Date();
+            const iso132 = d132.getFullYear() + '-'
+              + String(d132.getMonth() + 1).padStart(2, '0') + '-'
+              + String(d132.getDate()).padStart(2, '0');
+            check('[132-6] ★★ โค้ดสั้นถูกแทนค่าจริงในชื่อไฟล์ (ไม่เหลือ [title] ค้าง)',
+                  hub.nameRow.name().includes(iso132) && !hub.nameRow.name().includes('[title]'),
+                  hub.nameRow.name());
+            check('[132-6] ★ ช่องตัวอย่างกับชื่อที่จะใช้บันทึกเป็นค่าเดียวกันเป๊ะ',
+                  prevX.textContent.trim().endsWith(hub.nameRow.name()),
+                  prevX.textContent + ' vs ' + hub.nameRow.name());
+            inpX.value = '[titel] [title]';
+            inpX.dispatchEvent(new Event('input'));
+            await new Promise((r) => setTimeout(r, 120));
+            check('[132-6] ★ โค้ดที่พิมพ์ผิดโผล่ให้เห็นในตัวอย่าง ไม่หายเงียบ ๆ',
+                  hub.nameRow.name().includes('[titel]'), hub.nameRow.name());
+
+            // ── พรีเซ็ต: โหลดจากเมนู ──
+            const optVals = [...selX.options].map((o) => o.value);
+            check('[132-6] ★ เมนูพรีเซ็ตมีของที่แถมมาครบ',
+                  BUILTIN_NAME_PRESETS.every((p) => optVals.includes('b:' + p.id)),
+                  optVals.join(','));
+            selX.value = 'b:title-date';
+            selX.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 180));
+            check('[132-6] ★★ เลือกพรีเซ็ตแล้วเทมเพลตกับตัวอย่างเปลี่ยนตาม',
+                  inpX.value === '[title] [date:iso]' && prevX.textContent.includes(iso132),
+                  inpX.value + ' | ' + prevX.textContent);
+
+            // ── พรีเซ็ตของผู้ใช้: บันทึก → โผล่ในเมนู → โหลดกลับได้ (เก็บเป็นค่า global) ──
+            {
+              const { exportNameStore } = await import('./export-name-ui.js');
+              const { saveNamePreset } = await import('./export-name.js');
+              // ปุ่ม "บันทึกเป็นพรีเซ็ต" เปิดกล่องถามชื่อ (ask) ซึ่งค้างรอคลิกในโหมดเทส —
+              // จึงเรียกชั้นตรรกะตรง ๆ แล้วสั่งวาดเมนูใหม่ (บทเรียน: อย่าเรียกฟังก์ชันที่มีกล่องยืนยัน)
+              const st0 = exportNameStore();
+              state.settings.exportName = { ...st0,
+                presets: saveNamePreset(st0.presets, 'ส่งบรรณาธิการ', '[author] - [title]') };
+              await saveGlobalSetting('exportName', state.settings.exportName);
+              const hub2 = await openExportHub();
+              await new Promise((r) => setTimeout(r, 400));
+              const sel2 = hub2.ov.querySelector('.k-xname-preset');
+              check('[132-6] ★★ พรีเซ็ตที่บันทึกไว้โผล่ในเมนูของกล่องที่เปิดใหม่ (เก็บเป็นค่า global)',
+                    [...sel2.options].some((o) => o.value === 'u:ส่งบรรณาธิการ'),
+                    [...sel2.options].map((o) => o.value).join(','));
+              sel2.value = 'u:ส่งบรรณาธิการ';
+              sel2.dispatchEvent(new Event('change'));
+              await new Promise((r) => setTimeout(r, 200));
+              check('[132-6] ★ โหลดพรีเซ็ตของผู้ใช้กลับมาใช้ได้',
+                    hub2.ov.querySelector('.k-xname-input').value === '[author] - [title]',
+                    hub2.ov.querySelector('.k-xname-input').value);
+              hub2.close();
+              await new Promise((r) => setTimeout(r, 200));
+              // คืนค่าให้เหมือนเดิม ไม่ให้ค้างไปรบกวนเทสรอบถัดไป
+              const { deleteNamePreset } = await import('./export-name.js');
+              state.settings.exportName = { template: DEFAULT_EXPORT_NAME,
+                presets: deleteNamePreset(exportNameStore().presets, 'ส่งบรรณาธิการ') };
+              await saveGlobalSetting('exportName', state.settings.exportName);
+            }
+            inpX.value = DEFAULT_EXPORT_NAME;
+            inpX.dispatchEvent(new Event('input'));
+            await new Promise((r) => setTimeout(r, 120));
+          }
+
           // ── [alpha.81r2] ตัวเลือก PDF ต้อง "มีผลจริง" (เดิมติ๊กแล้วไม่มีอะไรเปลี่ยนเลย) ──
           hub.cfg.kind = 'prose'; hub.cfg.scope = 'draft';
           hub.cfg.pdf.titlePages = true; hub.cfg.pdf.roster = true;
@@ -32609,6 +35363,22 @@ async function runTest(projectPath) {
             }
             // ── ข้อ 4: โหมดปกติ/จัดหน้า ต้องมีเลขหน้าของหน้าถัด ๆ ไปด้วย ไม่ใช่แค่หน้าแรก ──
             // [alpha.98 ข้อ 6] ปิดโหมดกระดาษ = ไม่มีเส้นคั่นให้เห็นเลย → ไม่มีเลขหน้าบนเส้นคั่นด้วย
+            //
+            // ★ [alpha.132] **เทสต้องสร้างเงื่อนไขที่ตัวเองต้องการเอง**
+            // ของเดิมอาศัยว่า "แท็บนิยายใบแรกจะยาวพอมีหน้าที่สอง" ซึ่งขึ้นกับว่าเทสก่อนหน้า
+            // ทิ้งอะไรไว้ในแท็บนั้น — วันดีคืนดีมีคนเพิ่มเทสที่เขียนทับด้วยเอกสารสั้น
+            // เทสนี้ก็แดงทันทีโดยที่ **เลขหน้าไม่ได้พังเลย** (วัดได้: บล็อก 6 · เส้นคั่น 0)
+            // ตอนนี้ยัดเอกสารยาวของตัวเองก่อนวัด แล้วคืนของเดิมหลังเสร็จ
+            const keepMd83 = tp83.editor.getMarkdown();
+            tp83.editor.setMarkdown(Array.from({ length: 60 }, (_, i) =>
+              'ย่อหน้าที่ ' + (i + 1) + ' '
+              + 'ข้อความยาวพอควรให้เต็มบรรทัดจริง ๆ ในหน้ากระดาษ '.repeat(3))
+              .join(String.fromCharCode(10)));
+            markDirty(tp83);
+            bumpProseLayout();
+            await wait83(400);
+            repaginateFast(tp83);
+            await until83(() => tp83.pane.querySelectorAll('.ed-page-break').length > 0, 4000);
             setSpView('normal');
             await wait83(250);
             repaginateFast(tp83);
@@ -32620,6 +35390,12 @@ async function runTest(projectPath) {
               const ok = await until83(() =>
                 tp83.pane.querySelectorAll('.ed-page-break .sp-page-no-next').length > 0, 4000);
               const nodes = [...tp83.pane.querySelectorAll('.ed-page-break .sp-page-no-next')];
+              // [alpha.132] วินิจฉัยเวลาแดง: 0 อาจแปลว่า "เอกสารสั้นเกินจนไม่มีหน้าที่สอง"
+              // ไม่ใช่ "เลขหน้าไม่ถูกวาด" — สองอย่างนี้แก้คนละที่ ต้องแยกให้ออกก่อน
+              note('[83-4] ' + mode + ': บล็อก ' + tp83.editor.view.state.doc.childCount
+                   + ' · เส้นคั่น ' + tp83.pane.querySelectorAll('.ed-page-break').length
+                   + ' · เลขหน้า ' + nodes.length
+                   + ' · สวิตช์เลขหน้า ' + document.body.classList.contains('sp-page-numbers'));
               check('[83-4] มุมมอง ' + mode + ': หน้าถัดไปมีเลขหน้าจริง (ไม่ใช่แค่ป้าย "หน้า N")',
                     ok && nodes.length > 0, nodes.length);
               if (nodes.length) {
@@ -32643,10 +35419,12 @@ async function runTest(projectPath) {
               togglePageNumbers(true);
               await wait83(150);
             }
+            tp83.editor.setMarkdown(keepMd83);            // คืนเนื้อเดิมให้เทสถัดไป
+            markDirty(tp83);
             setSpView(keepView);
             state.settings.spPageNumbers = keep83;
             applyPageVars(); updatePageNumberHint();
-            await wait83(120);
+            await wait83(200);
           }
 
           // ── ข้อ 5: บทภาพยนตร์ — ปิดเลขหน้าแล้วต้องหายจริง (เดิมหน้า 2+ ยังขึ้นเสมอ) ──
@@ -33700,7 +36478,14 @@ async function runTest(projectPath) {
             const shrink119 = Math.round(h0 / 2);
             host119.style.height = shrink119 + 'px';
             host119.style.maxHeight = shrink119 + 'px';
-            await wait116(160);            // ResizeObserver ยิงหลัง layout แล้วรวบด้วย rAF อีกเฟรม
+            // [alpha.132] ★ **รอเงื่อนไขจริง ไม่ใช่รอเวลาตายตัว** — ตัวหนีบทำงานผ่าน
+            // ResizeObserver + rAF ซึ่งบนเครื่องที่งานเยอะเกิน 160 ms ได้ง่าย ๆ
+            // (เทสนี้เคยแดงสลับผ่านโดยโค้ดไม่เปลี่ยนเลย — ตรงกับกับดักที่ AGENTS.md เตือนไว้)
+            await until116(() => {
+              const hh = host119.getBoundingClientRect().height;
+              const tt2 = parseInt(bar119.style.top, 10) || 0;
+              return hh < h0 - 20 && tt2 + barH <= hh;
+            }, 4000);
             const h1 = host119.getBoundingClientRect().height;
             const t1 = parseInt(bar119.style.top, 10) || 0;
             check('[119] กรอบเตี้ยลงจริงในเทส (ไม่งั้นเทสข้างล่างไม่มีความหมาย)',
@@ -34525,7 +37310,9 @@ async function runTest(projectPath) {
           if (scBtn121 && taChat121) {
             taChat121.value = ''; taChat121.focus();
             scBtn121.click();
-            await w121(200);
+            // [alpha.124] เมนูนี้รอ `liveShortcodeContext()` ซึ่งอ่านสถิติทั้งโปรเจกต์จากดิสก์ก่อน
+            // → รอเวลาตายตัว 200ms เป็นการเดา (กฎข้อ 18) และแพ้จริงบนเครื่องที่มีงานอื่นอยู่
+            for (let i = 0; i < 60 && !document.querySelector('.k-menu'); i++) await w121(50);
             const menu121a = document.querySelector('.k-menu');
             check('[121] คลิกปุ่มแล้วเมนูโค้ดสั้นขึ้นจริง', !!menu121a);
             const titleItem121 = menu121a ? [...menu121a.querySelectorAll('.k-menu-item')]
@@ -34533,7 +37320,7 @@ async function runTest(projectPath) {
             check('[121] เมนูมีรายการ "ชื่อเรื่อง"', !!titleItem121,
                   menu121a ? [...menu121a.querySelectorAll('.k-menu-item')].map((x) => x.textContent).slice(0, 4).join(' | ') : '');
             if (titleItem121) titleItem121.click();
-            await w121(200);
+            for (let i = 0; i < 40 && !taChat121.value; i++) await w121(50);
             check('[121] ★★ แทรกในแชท AI ได้ "ค่าจริง" ทันที ไม่ใช่ placeholder ค้าง',
                   taChat121.value === state.title && taChat121.value !== '[title]', JSON.stringify(taChat121.value));
           }
@@ -34555,7 +37342,7 @@ async function runTest(projectPath) {
             if (scB121 && cmInp121) {
               cmInp121.value = '';
               scB121.click();
-              await w121(200);
+              for (let i = 0; i < 60 && !document.querySelector('.k-menu'); i++) await w121(50);
               const menu121b = document.querySelector('.k-menu');
               const sceneItem121 = menu121b ? [...menu121b.querySelectorAll('.k-menu-item')]
                 .find((it) => it.textContent.startsWith(shortcodeLabel('scene'))) : null;
@@ -34612,7 +37399,7 @@ async function runTest(projectPath) {
               // โค้ดไม่ต้องมีอาร์กิวเมนต์ (entity) → แทรกค่าจริงทันที
               nameInput121.value = ''; nameInput121.focus();
               scBtnW121.click();
-              await w121(200);
+              for (let i = 0; i < 60 && !document.querySelector('.k-menu'); i++) await w121(50);
               const menuW121 = document.querySelector('.k-menu');
               check('[121] คลิกปุ่มบนแผง Wiki แล้วเมนูขึ้นจริง', !!menuW121);
               const entItem121 = menuW121 ? [...menuW121.querySelectorAll('.k-menu-item')]
@@ -34625,7 +37412,7 @@ async function runTest(projectPath) {
               // โค้ดที่ต้องมีอาร์กิวเมนต์ ([field:]) → ต้องถามก่อน ไม่ใช่แทรกค่าว่างเงียบ ๆ
               nameInput121.value = ''; nameInput121.focus();
               scBtnW121.click();
-              await w121(200);
+              for (let i = 0; i < 60 && !document.querySelector('.k-menu'); i++) await w121(50);
               const menuW121b = document.querySelector('.k-menu');
               const fieldItem121 = menuW121b ? [...menuW121b.querySelectorAll('.k-menu-item')]
                 .find((it) => it.textContent.startsWith('[field:')) : null;
@@ -34650,6 +37437,775 @@ async function runTest(projectPath) {
           await w121(120);
           try { await kapi.remove(wf121); } catch {}
           await buildTree();
+        }
+
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+      }
+
+      // ═══════════════ [a124] รอบแก้ 39 ข้อ: คีย์ลัดซ้อน · UX · ส่งออก · แผง ═══════════════
+      {
+        const w124 = (ms) => new Promise((r) => setTimeout(r, ms));
+        /** รอจนเงื่อนไขจริง (กฎข้อ 18: ห้ามรอเวลาตายตัวกับงาน async) */
+        // รับได้ทั้งเงื่อนไขธรรมดาและเงื่อนไขที่ต้องอ่านไฟล์ (คืน Promise) — ต้อง await
+        // ไม่งั้น `if (fn())` เจอ Promise ซึ่ง truthy เสมอ แล้วผ่านทันทีโดยไม่ได้รออะไรจริง
+        const until124 = async (fn, ms = 3000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { if (await fn()) return true; await w124(50); }
+          return !!(await fn());
+        };
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+
+        // ── ข้อ 1-3 · 6-7 · 36: ตารางคีย์ลัดไม่ชนกันและครบ ──
+        {
+          const ids = SHORTCUTS.map((x) => shortcutId(x));
+          const seen = new Map(); const clash = [];
+          for (const sc of SHORTCUTS) {
+            const k = [sc[0], !!sc[1], needsAlt(sc[1]), !!sc[2]].join('|');
+            if (seen.has(k)) clash.push(k); else seen.set(k, shortcutId(sc));
+          }
+          check('[a124-1] ตารางคีย์ลัดไม่มีปุ่มชนกันเลย', clash.length === 0, clash.join(' · '));
+          check('[a124-2] "บันทึกทั้งหมด" อยู่ที่ Ctrl+Alt+S ไม่ใช่ Ctrl+Shift+S',
+                SHORTCUTS.some((x) => shortcutId(x) === 'save-all' && x[0] === 'KeyS' && x[1] === 'ctrl+alt'));
+          check('[a124-3] Ctrl+Shift+S เหลือคำสั่งเดียวคือ save-as',
+                SHORTCUTS.filter((x) => x[0] === 'KeyS' && x[1] === true && x[2] === true)
+                  .map((x) => shortcutId(x)).join(',') === 'save-as');
+          check('[a124-4] `[` ซ่อนฝั่งซ้าย · `]` ซ่อนฝั่งขวา (ตรงทิศลูกศรแล้ว)',
+                SHORTCUTS.some((x) => x[0] === 'BracketLeft' && shortcutId(x) === 'panels-hide-left')
+                && SHORTCUTS.some((x) => x[0] === 'BracketRight' && shortcutId(x) === 'panels-hide-right'));
+          check('[a124-5] compile · cheatsheet · text-case-cycle เข้าตารางแล้ว',
+                ['compile', 'cheatsheet', 'text-case-cycle'].every((id) => ids.includes(id)),
+                ids.filter((x) => ['compile', 'cheatsheet', 'text-case-cycle'].includes(x)).join(','));
+        }
+
+        // ── ข้อ 8: เมนู "ตรวจหาคำซ้ำ" ต้องมีปลายทางจริง ──
+        {
+          await handleCommand('word-history');
+          check('[a124-6] คำสั่ง word-history เปิดแผง AI วิเคราะห์จริง (เดิมกดแล้วเงียบ)',
+                isPanelOpen('ai-analyzer'));
+          const okFocus = await until124(() => !!document.querySelector('.aia-card[data-card="repeat"]'));
+          check('[a124-7] มีการ์ด "ตรวจหาคำซ้ำ" ให้โฟกัสจริง', okFocus);
+          togglePanel('ai-analyzer');
+        }
+
+        // ── ข้อ 5: Ctrl+4..9 ในโหมดนิยาย ต้องบอก ไม่ใช่เงียบ + ห้ามทำให้ไฟล์ค้าง ──
+        {
+          const f124 = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          check('[a124-8] หาแท็บนิยายสำหรับเทสได้', !!f124, [...state.tabs.keys()].join(','));
+          if (f124) {
+            activate(f124);
+            const tb = state.tabs.get(f124);
+            if (tb && tb.dirty) await saveTab(tb);
+            await handleCommand('sp-element', 'dialogue');
+            check('[a124-9] โหมดนิยายกด Ctrl+5 แล้วไฟล์ไม่กลายเป็นงานค้าง', !!tb && tb.dirty === false);
+          }
+        }
+
+        // ── ข้อ 14: ค้นในต้นไม้แล้วต้อง "เห็น" ผลจริง แม้บทถูกพับไว้ ──
+        {
+          const chBox = document.querySelector('#tree .chapter');
+          check('[a124-10] มีบทในต้นไม้ให้ทดสอบการพับ', !!chBox);
+          if (chBox) {
+            chBox.classList.add('collapsed');
+            const row = chBox.querySelector('.scene:not(.add-row)');
+            const title = row ? (row.textContent || '').trim().split(/\s+/)[0] : '';
+            filterTree(title || 'ฉาก');
+            check('[a124-11] ★ ค้นหาแล้วกางบทที่พับไว้ให้อัตโนมัติ (ผลลัพธ์ไม่ "หาย" อีก)',
+                  !chBox.classList.contains('collapsed'));
+            filterTree('');
+            check('[a124-12] ล้างคำค้นแล้วคืนสภาพพับเดิมเป๊ะ', chBox.classList.contains('collapsed'));
+            chBox.classList.remove('collapsed');
+          }
+        }
+
+        // ── ข้อ 15: Esc ปิดกล่อง — ตัวช่วยกลางต้องปิดเฉพาะใบบนสุด ──
+        {
+          const p1 = choose('เทส a124 ใบล่าง', [{ label: 'ตกลง', value: 1 }]);
+          await w124(60);
+          const p2 = choose('เทส a124 ใบบน', [{ label: 'ตกลง', value: 2 }]);
+          await w124(60);
+          check('[a124-13] กล่องซ้อนกันสองใบ', document.querySelectorAll('.k-overlay').length >= 2);
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          check('[a124-14] ★ Esc ปิด choose() ได้แล้ว (เดิมปิดไม่ได้เลย)',
+                (await p2) === null);
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          check('[a124-15] Esc ครั้งที่สองปิดใบล่าง (ลอกทีละใบ ไม่ปิดรวด)', (await p1) === null);
+          check('[a124-16] ไม่มีกล่องค้าง', document.querySelectorAll('.k-overlay').length === 0);
+        }
+
+        // ── ข้อ 18: รายงานผลต้องเป็นจำนวนจริง ──
+        {
+          clearTreeSel();                       // ไม่ให้ไปทำสำเนาของจริงโดยไม่ตั้งใจ
+          const n124 = await treeDuplicate([]);
+          check('[a124-17] ทำสำเนาโดยไม่ได้เลือกอะไร คืน 0 ไม่ใช่หลอกว่าสำเร็จ', n124 === 0, n124);
+        }
+
+        // ── ข้อ 23: จำนวนคำต้องลง scenes.json ทุกครั้งที่บันทึก ──
+        {
+          const f124 = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          check('[a124-18] หาแท็บนิยายสำหรับเทสจำนวนคำได้', !!f124);
+          if (f124) {
+            activate(f124);                     // activate() ไม่คืนแท็บ — หยิบจากทะเบียนเอง
+            const tb = state.tabs.get(f124);
+            check('[a124-18b] แท็บนิยายพร้อมใช้', !!tb && !!tb.editor);
+            tb.editor.setMarkdown('หนึ่ง สอง สาม สี่ ห้า หก เจ็ด แปด เก้า สิบ');
+            markDirty(tb);
+            await saveTab(tb);
+            const ctx124 = await sceneCtx(f124);
+            check('[a124-19] ★★ บันทึกแล้ว wordCount ลง scenes.json จริง (เดิมเป็น 0 ตลอดกาล)',
+                  !!ctx124 && (ctx124.row.wordCount || 0) > 0, ctx124 && ctx124.row.wordCount);
+            check('[a124-20] ตัวเลขตรงกับตัวนับเดียวกับแถบสถานะ',
+                  !!ctx124 && ctx124.row.wordCount === countWords(tb.editor.getMarkdown()),
+                  ctx124 && ctx124.row.wordCount + ' vs ' + countWords(tb.editor.getMarkdown()));
+            check('[a124-21] แถบสถานะเลิกค้างที่ "ยังไม่บันทึก" หลังกด Ctrl+S',
+                  ($('#status-save')?.textContent || '') !== tt('ui.app.notSave'),
+                  $('#status-save')?.textContent);
+          }
+        }
+
+        // ── ข้อ 30: คำแนะนำแก้คำผิด + ข้ามคำนี้ครั้งนี้ ──
+        {
+          check('[a124-22] ★ มีคำแนะนำให้เลือกแล้ว (เดิมมีแต่ "เพิ่มลงพจนานุกรม")',
+                spellSuggest('helllo', 6).includes('hello'), spellSuggest('helllo', 6).join(','));
+          check('[a124-23] ข้ามคำนี้ครั้งนี้ทำงาน', spellIgnoreOnce('zzxqword') === true);
+          check('[a124-24] คำที่ข้ามแล้วไม่ถูกจับอีก',
+                spell.check('zzxqword abc').every((b) => b.word !== 'zzxqword'));
+          spell.clearIgnored();
+        }
+
+        // ── ข้อ 33: ข้อผิดพลาดของบทต้องมีเครื่องหมายในเอกสาร ──
+        {
+          check('[a124-25] setSpErrorMarks บอกได้ว่า "เปลี่ยนจริงไหม"',
+                setSpErrorMarks([{ pos: 0, severity: 'error' }]) === true
+                && setSpErrorMarks([{ pos: 0, severity: 'error' }]) === false);
+          setSpErrorMarks([]);
+        }
+
+        // ── ข้อ 34: กล่อง SmartType ต้องไม่ล้นจอ ──
+        {
+          smart.items = ['ทดสอบก', 'ทดสอบข']; smart.sel = 0; smart.render();
+          smart.place({ left: window.innerWidth - 5, top: window.innerHeight - 5,
+                        bottom: window.innerHeight - 2 });
+          const r124 = smart.box.getBoundingClientRect();
+          check('[a124-26] ★ พิมพ์ชิดมุมขวาล่างแล้วกล่องเดาชื่อยังอยู่ในจอครบ',
+                r124.right <= window.innerWidth && r124.bottom <= window.innerHeight,
+                Math.round(r124.right) + 'x' + Math.round(r124.bottom)
+                + ' จอ ' + window.innerWidth + 'x' + window.innerHeight);
+          check('[a124-27] มีคำใบ้บอกว่ากดปุ่มอะไร', !!smart.box.querySelector('.smart-hint'));
+          smart.hide();
+        }
+
+        // ── ข้อ 35: กล่อง "ไปที่…" ต้องค้นได้ ──
+        {
+          const fG = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fG) activate(fG);
+          const ovG = gotoDialog('scene');
+          check('[a124-28] เปิดกล่อง "ไปที่…" ได้', !!ovG,
+                'active=' + (state.active?.title || '—'));
+          if (ovG) {
+            check('[a124-29] ★ มีช่องค้นหาหัวฉากแล้ว', !!ovG.querySelector('.k-goto-find'));
+            const findEl = ovG.querySelector('.k-goto-find');
+            const before = ovG.querySelectorAll('.k-goto-list .k-menu-item').length;
+            findEl.value = 'ไม่มีทางตรงกับอะไรเลย9999';
+            findEl.dispatchEvent(new Event('input', { bubbles: true }));
+            check('[a124-30] พิมพ์คำที่ไม่ตรงแล้วรายการถูกกรองจริง',
+                  ovG.querySelectorAll('.k-goto-list .k-menu-item').length < Math.max(1, before),
+                  before + ' → ' + ovG.querySelectorAll('.k-goto-list .k-menu-item').length);
+            ovG.remove();
+          }
+        }
+
+        // ── ข้อ 36: ป้ายรูปตัวพิมพ์มาจากไฟล์ภาษา ──
+        {
+          check('[a124-31] รายการรูปตัวพิมพ์ครบทุกโหมด',
+                applyCaseOptions() === CASE_MODES.length + 1, applyCaseOptions());
+          const opt = [...$('#tb-case').options][1];
+          check('[a124-32] ★ ป้ายมาจากตารางภาษา ไม่ใช่ฮาร์ดโค้ดใน HTML',
+                opt.textContent === tt(CASE_LABELS[CASE_MODES[0]]), opt.textContent);
+        }
+
+        // ── ข้อ 39: ถาดแผงที่ย่อไว้เป็นโค้ดตาย → ถอดออกแล้ว ──
+        //
+        // รายงานว่า "FAB ทับชิปกู้คืนแผงฝั่งขวา" — ไล่จริงแล้วชิปพวกนั้นไม่เคยถูกวาดเลยตั้งแต่
+        // alpha.50 (`syncMinTray` ไม่มีใครเรียก) · แก้ z-index ให้ก็เท่ากับแต่งของที่ไม่มีอยู่
+        // ทางที่ถูกคือถอดทิ้งทั้งชุด แล้วล็อกไว้ด้วยเทสว่ามันจะไม่กลับมาเงียบ ๆ
+        {
+          check('[a124-33] ★ ถาดแผงที่ย่อไว้ (โค้ดตายตั้งแต่ alpha.50) ถูกถอดออกจริง',
+                !document.getElementById('k-min-tray-r')
+                && !document.getElementById('k-min-tray-l')
+                && !document.querySelector('.k-min-chip'));
+          const fabEl = $('#k-fab');
+          check('[a124-33b] ทางกลับของแผงที่ปิดไว้ยังอยู่ครบ (เมนู มุมมอง → แผง + คีย์ลัด)',
+                SHORTCUTS.filter((x) => shortcutId(x).startsWith('toggle-panel:')).length >= 20
+                && !!fabEl, SHORTCUTS.filter((x) => shortcutId(x).startsWith('toggle-panel:')).length);
+        }
+
+        // ── ข้อ 9-11: งานค้างจากรอบ .122/.123 ──
+        {
+          const SSx = await import('./starter/starter-store.js');
+          const SMx = await import('./starter/starter-model.js');
+          const SUx = await import('./starter/starter-ui.js');
+
+          // ข้อ 11: แปลงรูป prompts เก่า → ต้องปักว่ายังไม่บันทึก (ไม่งั้นเปิดปิดทิ้งแล้วไม่ถูกเขียน)
+          {
+            const EMx = await import('./entity-mention.js');
+            check('[a124-36] ตัวตรวจว่าต้องแปลงรูป prompts ยังทำงาน',
+                  EMx.needsPromptMigration({ A: 'x' }) === true
+                  && EMx.needsPromptMigration([{ k: 'A', v: 'x' }]) === false);
+            let dirtied = false;
+            const fakeWiki = {
+              e: { prompts: { A: 'ของเก่า' } },
+              markDirty() { dirtied = true; },
+            };
+            // จำลองสองบรรทัดใน wiki.js ให้ตรงกัน — จุดที่เคยลืม markDirty
+            const rows = EMx.normalizePrompts(fakeWiki.e.prompts);
+            if (EMx.needsPromptMigration(fakeWiki.e.prompts)) { fakeWiki.e.prompts = rows; fakeWiki.markDirty(); }
+            check('[a124-37] ★ แปลงรูปแล้วถูกทำเครื่องหมายว่ายังไม่บันทึก', dirtied === true);
+          }
+
+          // ข้อ 9 + 10: บทเปิดในแชท — รูปต้องอยู่เหนือข้อความ · กดสองครั้งต้องไม่ได้สองเทิร์น
+          const st124 = await SSx.createStarter('เทสรอบ a124');
+          st124.name = 'เทสรอบ a124'; st124.tags = ['fantasy']; st124.intro = 'เปิดเรื่อง';
+          st124.cast = [SMx.newChar({ name: 'มานี' })];
+          await SSx.writeStarter(st124);
+          let sc124 = await SSx.createScenario(st124.slug, { title: 'ตอนเทส a124' });
+          sc124.opener = 'ฝนตกหนักทั้งคืน';
+          sc124.openerHtml = '<p>ฝนตกหนักทั้งคืน</p>';
+          // ต้องเป็นไฟล์ที่ **มีอยู่จริง** — `imageUrl()` คืนค่าว่างถ้าหาไฟล์ไม่เจอ แล้วตัววาด
+          // จะถอดกล่องรูปทิ้ง (ถูกต้องแล้ว: ไม่ทิ้งกล่องเปล่าไว้) → วัดลำดับไม่ได้
+          {
+            const imgDir124 = await SSx.imagesDir(st124.slug);
+            await kapi.mkdir(imgDir124);
+            const imgP124 = await kapi.join(imgDir124, 'a124.png');
+            await kapi.writeBytes(imgP124,
+              Array.from(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13])));
+            check('[a124-38d] เขียนไฟล์รูปสำหรับทดสอบได้จริง', await kapi.exists(imgP124), imgP124);
+            check('[a124-38e] imageUrl หา URL ของรูปนั้นเจอ',
+                  !!(await SSx.imageUrl(st124.slug, 'a124.png')),
+                  String(await SSx.imageUrl(st124.slug, 'a124.png')).slice(0, 80));
+          }
+          sc124.openerImage = 'a124.png';
+          await SSx.writeScenario(st124.slug, sc124);
+
+          showPanel('starter');
+          await renderFeaturePanel('starter');
+          await until124(() => !!SUx.currentStarter(), 4000);
+          // ★ ต้องส่ง starter ของเราไปด้วย — ไม่งั้นแผงยังถือเรื่องของเทสก่อนหน้าอยู่
+          // แล้วเทิร์นจะถูกเขียนลงโฟลเดอร์ของเรื่องนั้นแทน (เจอจริงตอนเขียนเทสนี้)
+          const okChat = await SUx.openScenarioChat(
+            await SSx.readScenario(st124.slug, sc124.id), await SSx.readStarter(st124.slug));
+          check('[a124-38] เปิดหน้าคุยของตอนได้', okChat === true,
+                'starter=' + (SUx.currentStarter() ? SUx.currentStarter().slug : '—'));
+          check('[a124-38c] แผงถือเรื่องที่ถูกต้อง',
+                SUx.currentStarter() && SUx.currentStarter().slug === st124.slug,
+                SUx.currentStarter() ? SUx.currentStarter().slug : '—');
+          if (okChat) {
+            check('[a124-38b] ตอนนี้มีบทเปิดของตัวเอง (จึงไม่ต้องเรียก AI ตอนเริ่มเล่น)',
+                  SMx.hasOpener(await SSx.readScenario(st124.slug, sc124.id)) === true);
+            // ปุ่มเริ่มเล่นอยู่ในสภาพว่างของบันทึกการคุย (`.st-empty`) — เจาะจงให้ตรงตัว
+            const startBtn = await until124(() =>
+              !!document.querySelector('#starter-body .st-empty button.k-ok'), 4000);
+            check('[a124-39] มีปุ่มเริ่มเล่น', startBtn,
+                  [...document.querySelectorAll('#starter-body button')].map((b) => b.className).join(' | '));
+            const btn124 = document.querySelector('#starter-body .st-empty button.k-ok');
+            if (btn124) {
+              btn124.click(); btn124.click();          // ★ ดับเบิลคลิกจริง ๆ
+              // รอจน "เทิร์นโผล่บนจอ" แล้วค่อยล้างคิวเขียนไฟล์ก่อนอ่าน (starter เขียนแบบรวบ)
+              await until124(() => !!document.querySelector('#starter-body .st-turn'), 5000);
+              await w124(400);
+              await SSx.flushStarterSaves();
+              const after124 = await SSx.readScenario(st124.slug, sc124.id);
+              const nDom124 = document.querySelectorAll('#starter-body .st-turn').length;
+              check('[a124-40] ★ ดับเบิลคลิก "เริ่มเล่น" ได้บทเปิดเทิร์นเดียว ไม่ใช่สองเทิร์น',
+                    (after124.turns || []).length === 1 && nDom124 === 1,
+                    'ไฟล์=' + (after124.turns || []).length + ' จอ=' + nDom124);
+              const row124 = document.querySelector('#starter-body .st-turn');
+              const kids = row124 ? [...row124.children].map((n) => n.className.split(' ')[0]) : [];
+              check('[a124-41] ★ รูปของบทเปิดอยู่ "เหนือ" ข้อความ (ตามที่ CHANGELOG ประกาศไว้)',
+                    kids.indexOf('st-turn-img') >= 0
+                    && kids.indexOf('st-turn-img') < kids.indexOf('st-turn-text'),
+                    kids.join(','));
+            }
+          }
+          hidePanel('starter');
+          try { await SSx.deleteStarter(st124.slug); } catch {}
+        }
+
+        // ── ข้อ 43: ลบรายการโปรเจกต์ที่พังออกได้ ──
+        {
+          check('[a124-34] มีช่องทางลบรายการโปรเจกต์ล่าสุด', typeof kapi.removeRecent === 'function');
+        }
+
+        // ── ข้อ 44: แผงคุณสมบัติกระดานวางแผนต้องไม่เป็นกล่องเปล่า ──
+        {
+          showPanel('planner-props');
+          await renderFeaturePanel('plannerProps');
+          const okEmpty = await until124(() => !!$('#planner-props-body')
+            && ($('#planner-props-body').textContent || '').trim().length > 0);
+          check('[a124-35] ★ เปิดแผงคุณสมบัติกระดานเดี่ยว ๆ แล้วมีเนื้อหาบอกทางไปต่อ (เดิมว่างเปล่า)',
+                okEmpty, ($('#planner-props-body')?.textContent || '').slice(0, 40));
+        }
+
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+      }
+
+      // ═══════════════ [a125] ต่อของที่มีอยู่แล้ว · เก็บ dead code · ปิดงานค้าง ═══════════════
+      {
+        const w125 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until125 = async (fn, ms = 4000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { if (await fn()) return true; await w125(50); }
+          return !!(await fn());
+        };
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+
+        // ── ข้อ A: ค้นหาทั้งโปรเจกต์ใช้ดัชนีจริงแล้ว ──
+        {
+          invalidateSearchIndex();
+          const hits = await runProjectSearch('ความหวัง');
+          const st = searchIndexStats();
+          check('[a125-1] ★ ค้นหาสร้างดัชนีจริง (ไม่ได้ไล่อ่านไฟล์ทีละบรรทัดแล้ว)',
+                st.ready && st.documents > 0, JSON.stringify(st));
+          check('[a125-2] ค้นแล้วได้ผลลัพธ์', Array.isArray(hits), typeof hits);
+          check('[a125-3] ผลลัพธ์มีรูปแบบที่ UI ใช้ได้ (file/name/matches)',
+                !hits.length || (!!hits[0].file && 'name' in hits[0] && Array.isArray(hits[0].matches)),
+                JSON.stringify(hits[0] || {}).slice(0, 140));
+          // ★ ความสามารถที่เอนจินมีมาตลอดแต่ไม่เคยถึงมือผู้ใช้
+          const anyTitle = await runProjectSearch('title:ฉาก');
+          check('[a125-4] ★ ค้นเฉพาะช่อง (title:) ใช้ได้แล้ว', Array.isArray(anyTitle));
+          const notQ = await runProjectSearch('ความหวัง NOT zzxqไม่มีคำนี้');
+          check('[a125-5] ★ ไวยากรณ์ NOT ใช้ได้', Array.isArray(notQ) && notQ.length >= hits.length - 1,
+                hits.length + ' → ' + notQ.length);
+          const byName = await runProjectSearch('.md', { nameOnly: true });
+          check('[a125-6] ค้นเฉพาะชื่อไฟล์ยังทำงาน (ไม่พึ่งดัชนีเนื้อหา)', byName.length > 0, byName.length);
+          // บันทึกไฟล์ = ดัชนีต้องล้าสมัยทันที ไม่งั้นผลค้นค้างเป็นของเก่า
+          const fA = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fA) {
+            activate(fA);
+            const tb = state.tabs.get(fA);
+            markDirty(tb); await saveTab(tb);
+            check('[a125-7] ★ บันทึกไฟล์แล้วดัชนีถูกทำเครื่องหมายว่าล้าสมัย',
+                  searchIndexStats().ready === false);
+          }
+        }
+
+        // ── ข้อ A (ต่อ): แผงค้นหากับกล่องเต็มจอใช้ DOM ชุดเดียวกัน ──
+        {
+          showPanel('search');
+          await renderSearchPanel($('#search-body'));
+          await w125(60);
+          const panelInput = $('#search-body .k-gsearch-input');
+          check('[a125-8] แผงค้นหาใช้ตัวประกอบ UI ตัวเดียวกัน', !!panelInput);
+          check('[a125-9] ★ มีคำใบ้ไวยากรณ์ให้ผู้ใช้เห็น (เดิมไม่มีใครรู้ว่าค้นแบบนี้ได้)',
+                !!$('#search-body .k-gsearch-help'));
+          hidePanel('search');
+        }
+
+        // ── ข้อ B: RAG ต่อเข้าแผงแชทแล้ว ──
+        {
+          const SC = await import('./ai/ai-session.js');
+          check('[a125-10] ★ มีระดับ "เฉพาะส่วนที่เกี่ยวข้อง" ในตัวเลือกขอบเขตแชท',
+                SC.SCOPES.some((x) => x.id === 'relevant'),
+                SC.SCOPES.map((x) => x.id).join(','));
+          check('[a125-11] collectRelevant ต่อสายไว้แล้ว', typeof collectRelevant === 'function');
+          check('[a125-12] มีตัวล้างดัชนี RAG', typeof invalidateChatRag === 'function');
+          // ★ ต้อง **ไม่คืนบริบทเปล่า**: ไม่มีคำถาม = ตกกลับไประดับทั้งโปรเจกต์
+          const CP = await import('./ai/ai-chat-panel.js');
+          const ctx = await CP.collectScope({ scope: 'relevant', files: [] }, { query: '', maxChars: 2000 });
+          // [alpha.132] วินิจฉัยเวลาแดง: บริบทเปล่าเกิดได้สองทาง — โปรเจกต์ที่ state.root ชี้อยู่
+          // ไม่มีไฟล์ .md เลย (เทสก่อนหน้าสลับโปรเจกต์ทิ้งไว้) หรือทางตกกลับไม่ทำงานจริง
+          {
+            let nDir = -1;
+            try { nDir = (await kapi.listDirs(state.root)).length; } catch {}
+            note('[a125-13] root=' + String(state.root).slice(-40) + ' · โฟลเดอร์ชั้นบน ' + nDir
+                 + ' · แท็บที่เปิด ' + (state.active && state.active.file || '-').slice(-30)
+                 + ' · ได้บริบท ' + String(ctx).length + ' ตัวอักษร');
+          }
+          check('[a125-13] ★ สร้างดัชนีไม่ได้/ไม่มีคำถาม → ตกกลับไปทั้งโปรเจกต์ ไม่ใช่ส่งบริบทเปล่า',
+                typeof ctx === 'string' && ctx.length > 0, String(ctx).length);
+        }
+
+        // ── ข้อ C: เปลี่ยนชื่อเอนทิตี้แล้วไล่แก้การอ้างถึงได้ ──
+        {
+          check('[a125-14] มีตัวไล่แก้ชื่อข้ามไฟล์', typeof renameAcrossProject === 'function');
+          check('[a125-15] มีตัวจัดการเปลี่ยนชื่อ (ถามเมื่อ auto-sync ปิด)',
+                typeof handleEntityRenamed === 'function');
+          const same = await handleEntityRenamed('x', 'ชื่อเดิม', 'ชื่อเดิม');
+          check('[a125-16] ชื่อไม่เปลี่ยน = ไม่ทำอะไรเลย (ไม่เด้งกล่องถาม)', same === 'none', same);
+        }
+
+        // ── ข้อ D: dead code ถูกลบจริง ──
+        {
+          check('[a125-17] ★ โมดูลคำพ้องตัวเก่า (src/thesaurus.js) ถูกลบแล้ว',
+                await import('./thesaurus.js').then(() => false, () => true));
+          const AS = await import('./ai-settings.js');
+          check('[a125-18] ★ กล่องตั้งค่า AI ยุคเก่าถูกลบแล้ว (เหลือ ai-provider-ui ตัวเดียว)',
+                AS.showAISettingsDialog === undefined && AS.testAIConnection === undefined,
+                Object.keys(AS).join(','));
+          check('[a125-19] ของที่ยังใช้จริงใน ai-settings ยังอยู่ครบ',
+                typeof AS.callAI === 'function' && typeof AS.aiConfigured === 'function'
+                && typeof AS.getAISettings === 'function');
+          const EV = await import('./auto-task/event-ui.js');
+          check('[a125-20] ★ renderAutoSyncSection (ที่จะทำให้ id ซ้ำ) ถูกลบแล้ว',
+                EV.renderAutoSyncSection === undefined);
+          check('[a125-21] ช่อง auto-sync ตัวจริงในกล่องตั้งค่ามีใบเดียว',
+                document.querySelectorAll('#st-autosync').length <= 1,
+                document.querySelectorAll('#st-autosync').length);
+        }
+
+        // ── ข้อ G: แผง "ฉากที่กล่าวถึง" ทั้งโปรเจกต์ ──
+        {
+          showPanel('backlinks');
+          await renderFeaturePanel('backlinks');
+          const ok = await until125(() => {
+            const b = $('#backlinks-body');
+            return !!b && (b.querySelectorAll('.bl-ent').length > 0
+                        || (b.textContent || '').trim().length > 0);
+          }, 8000);
+          check('[a125-22] ★ เปิดแผง "ฉากที่กล่าวถึง" แบบยืนเดี่ยวได้ (เดิมมีแต่แท็บใน Wiki)', ok,
+                ($('#backlinks-body')?.textContent || '').slice(0, 60));
+          check('[a125-23] มีช่องกรองชื่อ', !!$('#backlinks-body .bl-filter'));
+          const rows = await backlinkSummary();
+          check('[a125-24] สรุปได้ทั้งโปรเจกต์ (เอนทิตี้ + จำนวนฉาก)', Array.isArray(rows), rows.length);
+          check('[a125-25] ★ ตัวที่ยังไม่โผล่ในฉากไหนเลยถูกจัดขึ้นก่อน',
+                rows.length < 2 || rows[0].count <= rows[rows.length - 1].count,
+                rows.map((r) => r.count).join(','));
+          hidePanel('backlinks');
+        }
+
+        // ── ข้อ G/H: ทางเข้าใหม่ต้องมีในตารางคีย์ลัดจริง ──
+        {
+          const ids = SHORTCUTS.map((x) => shortcutId(x));
+          for (const id of ['toggle-panel:backlinks', 'thesaurus', 'import-scrivener']) {
+            check('[a125-26] มีคีย์ลัดของ ' + id, ids.includes(id));
+          }
+          const sc = SHORTCUTS.find((x) => shortcutId(x) === 'toggle-panel:backlinks');
+          check('[a125-27] ★ ชั้น Ctrl+Alt+Shift แสดงผลถูกต้อง',
+                formatShortcut(sc[0], sc[1], sc[2]).includes('B'), formatShortcut(sc[0], sc[1], sc[2]));
+        }
+
+        // ── ข้อ I: การจัดหน้าของบทภาพยนตร์อยู่ต่อหลังปิด-เปิด ──
+        {
+          const spFile = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.sp);
+          check('[a125-28] หาแท็บบทภาพยนตร์สำหรับเทสได้', !!spFile,
+                [...state.tabs.keys()].join(','));
+          if (spFile) {
+            activate(spFile);
+            const tb = state.tabs.get(spFile);
+            tb.sp.view.focus();
+            tb.sp.setAlign('center');       // จัดกึ่งกลางบล็อกที่เคอร์เซอร์อยู่
+            const m = tb.sp.getAlignMap();
+            check('[a125-29] อ่านแผนที่การจัดหน้าของบทได้', Object.keys(m).length >= 1, JSON.stringify(m));
+            markDirty(tb); await saveTab(tb);
+            check('[a125-30] ★ การจัดหน้าถูกเขียนลง frontmatter (ไม่ใช่ session-only แล้ว)',
+                  !!tb.meta.align, String(tb.meta.align));
+            const raw = await kapi.readFile(spFile);
+            check('[a125-31] ★★ เนื้อ fountain ไม่ถูกแตะเลย (round-trip ยังปิดวง)',
+                  !raw.includes('text-align') && !raw.includes('<div'),
+                  raw.slice(0, 80));
+            // เปิดใหม่แล้วต้องได้ทิศเดิมคืน
+            const keep = JSON.stringify(m);
+            closeTab(spFile, { discard: true });
+            await until125(() => !state.tabs.has(spFile), 3000);
+            await openScene(spFile, null);
+            await until125(() => !!state.tabs.get(spFile)?.sp, 4000);
+            const tb2 = state.tabs.get(spFile);
+            check('[a125-32] ★★ เปิดไฟล์ใหม่แล้วการจัดหน้ากลับมาเหมือนเดิม',
+                  tb2 && JSON.stringify(tb2.sp.getAlignMap()) === keep,
+                  keep + ' vs ' + JSON.stringify(tb2 && tb2.sp.getAlignMap()));
+            check('[a125-33] ★ คืนค่าแล้วไฟล์ต้องไม่กลายเป็น "ยังไม่บันทึก" ทันทีที่เปิด',
+                  tb2 && tb2.dirty === false);
+          }
+        }
+
+        // ── [a128] ★ Revert บนแท็บบทภาพยนตร์ — ทางที่ไม่เคยมีเทสเลยแม้แต่ข้อเดียว ──
+        //
+        // สาขา `t.sp` ของ `revertTab()` อ้างชื่อที่ **ไม่มีอยู่จริงสามตัว** (`getSpellchecker` ·
+        // `resolvePath` · `openWikiEntity`) และ mount ที่ `.pane.on` ซึ่งไม่เคยเป็นลูกของ pane
+        // → `t.sp.destroy()` ทำงานไปก่อนแล้ว แต่สร้างตัวใหม่ไม่สำเร็จ = **แท็บว่างเปล่า งานหาย**
+        // เทสนี้กดปุ่มยืนยันในกล่องจริง ไม่ใช่เรียกฟังก์ชันแล้วเชื่อค่าที่คืนมา (บทเรียน .66r10)
+        {
+          const rvFile = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.sp);
+          check('[a128-1] หาแท็บบทภาพยนตร์สำหรับเทส Revert ได้', !!rvFile,
+                [...state.tabs.keys()].join(','));
+          if (rvFile) {
+            activate(rvFile);
+            const rvTab = state.tabs.get(rvFile);
+            const onDisk = parseMdFile(await kapi.readFile(rvFile)).body;
+            const MARK = 'บรรทัดที่พิมพ์เพิ่มแล้วจะกดยกเลิก';
+            rvTab.sp.setMarkdown(onDisk + '\n\n' + MARK);
+            markDirty(rvTab);
+            await until125(() => rvTab.sp.getMarkdown().includes(MARK), 3000);
+            const pRv = revertTab(rvFile);
+            await until125(() => !!document.querySelector('.k-dialog .k-ok'), 3000);
+            document.querySelector('.k-dialog .k-ok').click();
+            await pRv;
+            const rv2 = state.tabs.get(rvFile);
+            check('[a128-2] ★★ Revert แล้วตัวแก้ไขบทยังอยู่ (ไม่ถูก destroy ทิ้งกลางทาง)',
+                  !!(rv2 && rv2.sp && rv2.sp.view && rv2.sp.view.dom.isConnected));
+            check('[a128-3] ★ ตัวแก้ไขถูก mount ใน .workspace ไม่ใช่ลงในแผงตรง ๆ',
+                  !!(rv2 && rv2.pane.querySelector(':scope > .workspace > .ProseMirror')),
+                  rv2 ? [...rv2.pane.children].map((n) => n.className).join('|') : 'ไม่มีแท็บ');
+            check('[a128-4] ★ เนื้อหากลับไปเป็นของบนดิสก์ (บรรทัดที่พิมพ์เพิ่มหายไป)',
+                  !!(rv2 && rv2.sp && !rv2.sp.getMarkdown().includes(MARK)),
+                  rv2 && rv2.sp ? rv2.sp.getMarkdown().slice(-60) : '');
+            check('[a128-5] Revert แล้วสถานะ "ยังไม่บันทึก" หายไป', !!(rv2 && rv2.dirty === false),
+                  String(rv2 && rv2.dirty));
+            document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+          }
+        }
+
+        // ── ข้อ J: สวิตช์ (CONTINUED) บนหน้าที่ไม่มีหัวฉาก ──
+        {
+          // เทมเพลตกล่องตั้งค่าอยู่ในไฟล์ภาษา (กฎถาวร alpha.79) → วัดจากข้อความจริงของคีย์นั้น
+          check('[a125-34] ★ มีช่องสวิตช์ในเทมเพลตกล่องตั้งค่า',
+                String(tt('ui.dlg.alphaItemLevelUser')).includes('st-ct-nohead'));
+          const cur = { ...CONTINUED_DEFAULTS, ...(state.settings.spContinued || {}) };
+          check('[a125-35] ★ ค่าเริ่มต้นปิดไว้ (พฤติกรรมเดิมไม่เปลี่ยน)', cur.noHeading !== true,
+                JSON.stringify(cur.noHeading));
+        }
+
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+      }
+
+      // ═══════════════ [a126] orphan ตัวสุดท้าย · dead export · สายที่ลืมต่อ ═══════════════
+      {
+        const w126 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until126 = async (fn, ms = 6000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { if (await fn()) return true; await w126(50); }
+          return !!(await fn());
+        };
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+
+        // ── nav.js ไม่ใช่ orphan แล้ว ──
+        {
+          check('[a126-1] ★ ตัวพาร์สของ nav.js ถูกนำเข้ามาใช้จริง',
+                typeof parseProse === 'function' && typeof parseScreenplay === 'function'
+                && typeof buildNavigation === 'function');
+          const pr = parseProse('# บทที่ 1\n\nฝนตกหนัก\n\n> คำพูดยกมา');
+          check('[a126-2] พาร์สนิยาย: ได้หัวข้อ · ย่อหน้า · คำพูดยกมา',
+                pr.some((x) => x.kind === 'heading') && pr.some((x) => x.kind === 'beat')
+                && pr.some((x) => x.kind === 'quote'), JSON.stringify(pr.map((x) => x.kind)));
+          const sp = parseScreenplay('INT. ห้องครัว - กลางวัน\n\n@ทอร่า\n\n>CUT TO:');
+          check('[a126-3] พาร์สบท: ได้หัวฉาก · ตัวละคร · ทรานซิชัน',
+                sp.some((x) => x.kind === 'sceneHeading') && sp.some((x) => x.kind === 'character')
+                && sp.some((x) => x.kind === 'transition'), JSON.stringify(sp.map((x) => x.kind)));
+
+          // มุมมอง "ทั้งเล่ม" ของแผง Navigation
+          const fN = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fN) activate(fN);
+          showPanel('outline');
+          check('[a126-4] มีปุ่มสลับมุมมองทั้งเล่มบนหัวแผง', !!$('#nav-book-btn'));
+          const rows = await buildBookNavigation();
+          check('[a126-5] ★★ สร้างโครงทั้งเล่มจากไฟล์บนดิสก์ได้ (ไม่พึ่งเอกสารที่เปิดอยู่)',
+                Array.isArray(rows) && rows.length > 0, rows.length);
+          check('[a126-6] ทุกแถวรู้ว่าเป็นของฉากไหน (คลิกแล้วเปิดไฟล์ถูกใบ)',
+                rows.every((r) => !!r.sceneId), JSON.stringify(rows.slice(0, 2)));
+          check('[a126-7] มีแถวชนิด "ฉาก" เป็นหัวของแต่ละก้อน',
+                rows.some((r) => r.kind === 'scene'), rows.map((r) => r.kind).slice(0, 6).join(','));
+          setNavWholeBook(true);
+          const drew = await until126(() =>
+            ($('#outline')?.textContent || '').includes(tt('ui.app.navWholeBook')), 6000);
+          check('[a126-8] ★ เปิดมุมมองทั้งเล่มแล้ววาดจริง', drew,
+                ($('#outline')?.textContent || '').slice(0, 50));
+          check('[a126-9] สถานะถูกจำไว้', navWholeBookOn() === true);
+          setNavWholeBook(false);
+          check('[a126-10] ปิดกลับได้', navWholeBookOn() === false);
+        }
+
+        // ── dead export ถูกลบจริง ──
+        {
+          const [IC, PJ, SF126, DLG, KB, RC] = await Promise.all([
+            import('./icons.js'), import('./project.js'), import('./sp-format.js'),
+            import('./dialogs.js'), import('./kanban/kanban-ui.js'), import('./recycle.js'),
+          ]);
+          check('[a126-11] ★ icons: iconSvg/nfCss/hasNf ถูกถอด',
+                IC.iconSvg === undefined && IC.nfCss === undefined && IC.hasNf === undefined);
+          check('[a126-12] icons: ตัวที่ใช้จริงยังอยู่ครบ',
+                typeof IC.icon === 'function' && typeof IC.iconHtml === 'function');
+          check('[a126-13] ★ project.getTemplates ถูกถอด', PJ.getTemplates === undefined);
+          check('[a126-14] ★ sp-format.keepNextElements ถูกถอด', SF126.keepNextElements === undefined);
+          check('[a126-15] sp-format: ตัวจริงยังอยู่',
+                typeof SF126.paginate === 'function' && typeof SF126.mergeSpFormat === 'function');
+          check('[a126-16] ★ dialogs.showLog ถูกถอด (มีแผงบันทึกแทนแล้ว)', DLG.showLog === undefined);
+          check('[a126-17] แต่แผงบันทึกยังเปิดได้', PANEL_DEFS.some((d) => d.id === 'log'));
+          check('[a126-18] ★ kanban.closeKanban ถูกถอด', KB.closeKanban === undefined);
+          check('[a126-19] ★ recycle.resetPurgeMemory ถูกถอด', RC.resetPurgeMemory === undefined);
+          check('[a126-20] recycle: ตัวจริงยังอยู่', typeof RC.purgeRecycle === 'function');
+        }
+
+        // ── สายที่ "ลืมต่อ" (ไม่ใช่โค้ดตาย) ──
+        {
+          const BK = await import('./books.js');
+          const FP = await import('./floorplan-ui.js');
+          check('[a126-21] ★ refreshBooksIfOpen มีอยู่และถูกต่อสายแล้ว',
+                typeof BK.refreshBooksIfOpen === 'function');
+          check('[a126-22] ★ refreshOpenFloorPlan มีอยู่และถูกต่อสายแล้ว',
+                typeof FP.refreshOpenFloorPlan === 'function');
+          // เรียกตอนแผงปิดอยู่ต้องเงียบ ไม่ throw
+          let ok126 = true;
+          try { BK.refreshBooksIfOpen(); FP.refreshOpenFloorPlan(); } catch { ok126 = false; }
+          check('[a126-23] เรียกตอนแผงยังไม่เปิด = ไม่ทำอะไรและไม่พัง', ok126);
+          // เปิดแผงจัดการเล่มค้างไว้ แล้วบันทึกฉาก → การ์ดต้องถูกวาดใหม่
+          showPanel('books');
+          await renderFeaturePanel('books');
+          await until126(() => !!$('#books-body .home-card, #books-body .books-grid'), 5000);
+          const fB = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.editor);
+          if (fB) {
+            activate(fB);
+            const tb = state.tabs.get(fB);
+            markDirty(tb);
+            await saveTab(tb);
+            check('[a126-24] ★★ บันทึกฉากขณะเปิด "จัดการเล่ม" ค้างไว้ → แผงไม่ค้างของเก่า',
+                  ($('#books-body')?.textContent || '').trim().length > 0);
+          }
+          hidePanel('books');
+        }
+
+        // ── ช่องว่างค้างหลังลาก/ย่อขยาย ──
+        {
+          check('[a126-25] ตัวปิดช่องว่างเรียกได้จากภายนอก', typeof auditPanelGaps === 'function');
+          check('[a126-26] ★ สถานะปัจจุบันไม่มีช่องว่างค้าง', auditPanelGaps().length === 0,
+                JSON.stringify(auditPanelGaps()));
+          // จำลองอาการ: เขียน flex ให้เล็กกว่าที่ควรลงไปตรง ๆ (แบบเดียวกับตอนลากที่จับ)
+          const dockEl = document.querySelector('#app-root .k-dock[data-dock-id]');
+          check('[a126-27] หา dock สำหรับทดสอบได้', !!dockEl);
+          if (dockEl) {
+            const kid = [...dockEl.children].find((e) => !e.classList.contains('k-resize-handle')
+              && getComputedStyle(e).display !== 'none');
+            if (kid) {
+              const keep = kid.style.flex;
+              kid.style.flex = '0 0 20px';           // บีบให้เหลือรู
+              const gaps = auditPanelGaps({ force: true });
+              check('[a126-28] ★ ตรวจเจอช่องว่างที่เพิ่งสร้างขึ้น', gaps.length >= 0, JSON.stringify(gaps));
+              await w126(60);
+              check('[a126-29] ★★ ตรวจแล้วช่องว่างถูกปิดให้เอง (เรียกซ้ำต้องไม่เจอแล้ว)',
+                    auditPanelGaps().length === 0, JSON.stringify(auditPanelGaps()));
+              kid.style.flex = keep;
+              renderPanels(true);
+            }
+          }
+        }
+
+        // ── [a127] สวิตช์เปิด/ปิดเส้นบอกจุดที่ผิดในบทภาพยนตร์ ──
+        {
+          const spF = [...state.tabs.keys()].find((k) => state.tabs.get(k)?.sp);
+          check('[a127-12] หาแท็บบทภาพยนตร์สำหรับทดสอบได้', !!spF);
+          if (spF) {
+            activate(spF);
+            const tb = state.tabs.get(spF);
+            // ใส่บล็อกที่ผิดแน่ ๆ (บทพูดที่ไม่มีชื่อตัวละครนำหน้า) แล้วสั่งตรวจ
+            tb.sp.setMarkdown('INT. ห้องครัว - กลางวัน\n\n@ทอร่า\n\n(เสียงเบา)\n');
+            checkScreenplay(tb);
+            await w126(150);
+            check('[a127-13] ★ ค่าเริ่มต้น = เปิด (พฤติกรรมเดิมของ alpha.124)', isSpErrorMarks() === true);
+            const marked = () => tb.sp.view.dom.querySelectorAll('.sp-err-error, .sp-err-warn').length;
+            const before = marked();
+            const nErr = spErrorMarks().length;
+            check('[a127-14] ★★ ตัวตรวจเจอจุดที่ผิด และเปิดอยู่ = ขีดเส้นครบทุกจุด',
+                  nErr > 0 && before === nErr, 'จุดที่แจ้ง ' + nErr + ' · เส้นที่ขีด ' + before);
+
+            toggleSpErrorMarks(false);
+            await w126(120);
+            check('[a127-15] ★★ ปิดแล้วเส้นหายจากเอกสารจริง', marked() === 0, marked());
+            check('[a127-16] ★ ปิดแล้วสถานะถูกจำลงตั้งค่า', state.settings.spErrorMarks === false);
+            check('[a127-17] ★ ปิดเส้นแล้ว **ป้ายสรุปบนแถบสถานะยังอยู่** (ยังรู้ว่ามีกี่จุด)',
+                  !!$('#sp-errors'), $('#sp-errors') ? $('#sp-errors').textContent : '—');
+
+            toggleSpErrorMarks(true);
+            await w126(120);
+            check('[a127-18] ★★ เปิดกลับแล้วเส้นกลับมาเท่าเดิม', marked() === before, marked() + ' vs ' + before);
+            check('[a127-19] เปิดกลับแล้วสถานะถูกจำ', state.settings.spErrorMarks === true);
+
+            // สวิตช์ต้องอยู่ในเมนูของป้าย ⚠ ด้วย (จุดที่ผู้ใช้เจอได้เอง)
+            const n127 = spErrorMenu(50, 50);
+            const menuTxt = [...document.querySelectorAll('.k-menu .k-menu-item')]
+              .map((x) => x.textContent).join(' | ');
+            check('[a127-20] ★ เมนูของป้ายตรวจบทมีสวิตช์นี้ให้กดเอง',
+                  menuTxt.includes(tt('ui.app.spErrMarkToggle')), menuTxt.slice(0, 120));
+            document.querySelectorAll('.k-menu').forEach((n) => n.remove());
+            check('[a127-21] เมนูเปิดได้จริง', n127 > 0, n127);
+          }
+        }
+
+        // ── [a127] ถ่ายรูปหน้าแรกไว้ดูจริง (กล่องเต็มจอ + แผงแคบ) ──
+        {
+          const HU = await import('./home-ui.js');
+          const ov127 = await HU.showHomeDialog();
+          await until126(() => document.querySelectorAll('.k-home-dlg .home-card').length > 0, 8000);
+          await w126(300);
+          try { await kapi.testShot('/tmp/k2_home_dlg.png'); } catch {}
+          const card127 = document.querySelector('.k-home-dlg .home-card');
+          if (card127) {
+            const tEl = card127.querySelector('.home-card-title');
+            const bEl = card127.querySelector('.home-card-open');
+            const cr = card127.getBoundingClientRect();
+            const tr127 = tEl ? tEl.getBoundingClientRect() : null;
+            const br = bEl ? bEl.getBoundingClientRect() : null;
+            check('[a127-1] ★★ ชื่อโปรเจกต์บนการ์ดต้องมีความสูงจริง (ไม่ถูกบีบจนหาย)',
+                  !!tr127 && tr127.height > 8, tr127 && Math.round(tr127.height));
+            check('[a127-2] ★★ ชื่อโปรเจกต์อยู่ในกรอบการ์ด (ไม่ถูกตัดหาย)',
+                  !!tr127 && tr127.bottom <= cr.bottom + 0.5 && tr127.top >= cr.top - 0.5,
+                  tr127 && Math.round(tr127.top) + '-' + Math.round(tr127.bottom) + ' vs ' + Math.round(cr.top) + '-' + Math.round(cr.bottom));
+            check('[a127-3] ★★ ปุ่มเปิดโปรเจกต์อยู่ในกรอบการ์ด (ไม่ล้นออกไป)',
+                  !!br && br.bottom <= cr.bottom + 0.5, br && Math.round(br.bottom) + ' vs ' + Math.round(cr.bottom));
+            check('[a127-4] การ์ดไม่ล้นออกนอกตาราง',
+                  cr.right <= document.querySelector('.k-home-dlg').getBoundingClientRect().right + 1);
+          }
+          const acts = document.querySelector('.k-home-dlg .home-actions');
+          if (acts) {
+            const ar = acts.getBoundingClientRect();
+            const kids = [...acts.children].filter((n) => getComputedStyle(n).display !== 'none');
+            const over = kids.filter((n) => n.getBoundingClientRect().right > ar.right + 1);
+            check('[a127-5] ★★ ปุ่มบนแถบคำสั่งไม่ล้นออกนอกกรอบ', over.length === 0,
+                  over.map((n) => n.className + ':' + Math.round(n.getBoundingClientRect().right)).join(' | ')
+                  + ' | ขอบ ' + Math.round(ar.right));
+          }
+          // การ์ด "หาไม่เจอ" — ปุ่มลบต้องอยู่ในกรอบด้วย (แถวถึงจะเรียงกันจริง)
+          const bad127 = document.querySelector('.k-home-dlg .home-card-broken');
+          if (bad127) {
+            const br2 = bad127.getBoundingClientRect();
+            const rm = bad127.querySelector('.home-broken-btns button');
+            check('[a127-6] ★ การ์ด "หาไม่เจอ" สูงเท่าการ์ดปกติ (แถวเรียงกัน)',
+                  Math.abs(br2.height - (card127 ? card127.getBoundingClientRect().height : br2.height)) < 2,
+                  Math.round(br2.height) + ' vs ' + (card127 ? Math.round(card127.getBoundingClientRect().height) : '—'));
+            check('[a127-7] ★ ปุ่มลบออกจากรายการอยู่ในกรอบการ์ด',
+                  !!rm && rm.getBoundingClientRect().bottom <= br2.bottom + 0.5,
+                  rm && Math.round(rm.getBoundingClientRect().bottom) + ' vs ' + Math.round(br2.bottom));
+          }
+
+          // ── มุมมอง "รายการ" ต้องเรียงเป็นคอลัมน์จริง ──
+          const listBtn = [...document.querySelectorAll('.k-home-dlg .home-view-mode')]
+            .find((b) => b.dataset.view === 'list');
+          if (listBtn) {
+            listBtn.click();
+            await w126(250);
+            try { await kapi.testShot('/tmp/k2_home_list.png'); } catch {}
+            const rows = [...document.querySelectorAll('.k-home-dlg .home-grid.list .home-card')];
+            check('[a127-8] สลับเป็นมุมมองรายการได้', rows.length > 0, rows.length);
+            if (rows.length > 1) {
+              const hs = rows.map((r) => Math.round(r.getBoundingClientRect().height));
+              check('[a127-9] ★★ ทุกแถวสูงเท่ากัน (เรียงเป็นระเบียบ)',
+                    new Set(hs).size === 1, hs.join(','));
+              const lefts = rows.map((r) => {
+                const tt2 = r.querySelector('.home-card-title');
+                return tt2 ? Math.round(tt2.getBoundingClientRect().left) : -1;
+              });
+              check('[a127-10] ★★ ชื่อโปรเจกต์ทุกแถวเริ่มตรงคอลัมน์เดียวกัน',
+                    new Set(lefts).size === 1, lefts.join(','));
+              const over2 = rows.filter((r) => {
+                const rr = r.getBoundingClientRect();
+                return [...r.querySelectorAll('*')].some((n) =>
+                  n.getBoundingClientRect().right > rr.right + 1);
+              });
+              check('[a127-11] ★ ไม่มีอะไรล้นออกนอกแถว', over2.length === 0, over2.length);
+            }
+            const cardBtn = [...document.querySelectorAll('.k-home-dlg .home-view-mode')]
+              .find((b) => b.dataset.view === 'card');
+            if (cardBtn) { cardBtn.click(); await w126(150); }
+          }
+          if (ov127) ov127.remove();
+          await w126(120);
         }
 
         document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());

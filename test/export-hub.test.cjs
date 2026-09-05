@@ -160,5 +160,29 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('ชื่อที่มีแต่ช่องว่างก็ไม่ว่าง', T.suggestName('   ', 'pdf') === 'export.pdf');
 }
 
+// ═══════════ [alpha.132 ข้อ 3+4] ตัวเลือก PDF ในศูนย์ส่งออก ═══════════
+// ผู้ใช้: *"ไม่มีให้เลือกสีและขาวดำ · เลขหน้ากับเลขฉากยังไม่แยกให้เลือกได้"*
+// (กล่องส่งออก PDF ของบทได้ไปแล้วใน alpha.130 — แต่ **ศูนย์ส่งออก** ซึ่งเป็นทางที่คนใช้จริง
+//  ยังส่ง `sceneNumbers: o.pageNumbers` = ช่องเดียวคุมทั้งคู่ และไม่มีโหมดสีเลย)
+{
+  const d = T.defaultHubSettings();
+  check('[132-3] เลขฉากเป็นสวิตช์ของตัวเองในค่าเริ่มต้น', d.pdf.sceneNumbers === true);
+  check('[132-4] ค่าเริ่มต้นเป็นขาวดำ (ธรรมเนียมบทถ่ายทำ)', d.pdf.colorMode === 'mono');
+  const a = T.normalizeHub({ pdf: { pageNumbers: true, sceneNumbers: false } });
+  check('[132-3] ★★ ตั้งเลขหน้า/เลขฉากแยกกันได้จริง',
+        a.pdf.pageNumbers === true && a.pdf.sceneNumbers === false);
+  const b = T.normalizeHub({ pdf: { pageNumbers: false, sceneNumbers: true } });
+  check('[132-3] ★★ ปิดเลขหน้าแต่เปิดเลขฉากได้',
+        b.pdf.pageNumbers === false && b.pdf.sceneNumbers === true);
+  check('[132-4] เลือกโหมดสีได้', T.normalizeHub({ pdf: { colorMode: 'color' } }).pdf.colorMode === 'color');
+  check('[132-4] ค่าขยะตกกลับเป็นขาวดำ',
+        T.normalizeHub({ pdf: { colorMode: 'rainbow' } }).pdf.colorMode === 'mono' &&
+        T.normalizeHub({ pdf: { colorMode: 9 } }).pdf.colorMode === 'mono');
+  // ไฟล์ตั้งค่าที่บันทึกไว้ก่อนมีฟีเจอร์นี้ต้องไม่พัง และต้องได้ค่าเริ่มต้นที่สมเหตุสมผล
+  const old = T.normalizeHub({ pdf: { toc: true, titlePages: true, pageNumbers: true, watermark: '' } });
+  check('[132-3] ★ ตั้งค่าเก่าที่ยังไม่มีฟิลด์นี้ = เลขฉากเปิด · ขาวดำ',
+        old.pdf.sceneNumbers === true && old.pdf.colorMode === 'mono');
+}
+
 console.log(`\nexport-hub: PASS ${pass}  FAIL ${fail}`);
 if (fail) process.exit(1);

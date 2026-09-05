@@ -148,9 +148,6 @@ export function stripChoices(text) {
   return (s.slice(0, r.start) + s.slice(r.end)).replace(/\n{3,}/g, '\n\n').trim();
 }
 
-/** มีทางแยกในข้อความนี้ไหม */
-export function hasChoices(text) { return parseChoices(text).length > 0; }
-
 /**
  * แปลงทางเลือกเป็น **มาร์กเกอร์ของระบบเรื่องแตกสาย** — `[ข้อความ]`
  * นี่คือสัญญาที่ทำให้ฉากที่แปลงจากแชทไหลเข้า branch-graph.js ได้ทันที

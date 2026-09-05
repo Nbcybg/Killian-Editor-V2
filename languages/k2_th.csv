@@ -2610,6 +2610,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     </div>
     <div class=""k-set-page"" data-p=""auto"">
       <div class=""k-row""><label>{33} {34}<span class=""k-hint"">{35}</span></label><input type=""checkbox"" id=""st-autosync""></div>
+      <div class=""k-row""><label>คลังคำพ้อง/คำตรงข้าม<span class=""k-hint"">เปิดแล้วจะ **ส่งคำที่เลือกออกอินเทอร์เน็ต** เพื่อค้นคำพ้อง · ปิดอยู่ = ใช้คลังไทยในตัวอย่างเดียว</span></label><input type=""checkbox"" id=""st-thesaurus""></div>
       <div class=""k-set-sub k-full"">// [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติสำหรับบทภาพยนตร์</div>
       <div class=""k-row""><label>คำนวณจำนวนหน้าใหม่หลังหยุดพิมพ์<span class=""k-hint"">ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น</span></label><input type=""checkbox"" id=""st-autopag""></div>
       <div class=""k-row""><label>รอหลังหยุดพิมพ์ (วินาที)<span class=""k-hint"">1–60 วินาที ก่อนคำนวณหน้าใหม่ · ยิ่งสั้นยิ่งใช้ CPU มาก</span></label><input type=""number"" id=""st-pagintv"" min=""1"" max=""60"" step=""1"" class=""k-narrow""></div>
@@ -2655,6 +2656,8 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-row""><label>เลือกสีเอง<span class=""k-hint"">สีขอบแผ่น เส้นประ และสีหมึก คำนวณตามให้อัตโนมัติ</span></label><input type=""color"" id=""st-paper-color-hex"" class=""k-narrow""></div>
       <div class=""k-row""><label>เส้นบอกระยะขอบกระดาษ<span class=""k-hint"">เส้นประรอบพื้นที่พิมพ์ในมุมมองจัดหน้า — ครบทั้งสี่ด้านทุกแผ่น</span></label><input type=""checkbox"" id=""st-page-guides""></div>
       <div class=""k-hint k-full"" id=""st-page-info"" style=""margin-top:8px""></div>
+      <div class=""k-set-sub k-full"">การตรวจทานบนจอ</div>
+      <div class=""k-row""><label>ขีดเส้นบอกจุดที่ผิดในบท<span class=""k-hint"">เส้นหยักใต้บรรทัดที่ตัวตรวจรูปแบบทักไว้ · สลับได้จากป้าย ⚠ บนแถบสถานะเหมือนกัน (ไม่มีผลกับไฟล์และการส่งออก)</span></label><input type=""checkbox"" id=""st-sp-errmark""></div>
       <div class=""k-set-sub k-full"">เลขฉาก (Scene Number)</div>
       <div class=""k-row""><label>แสดงเลขฉากข้างหัวฉาก<span class=""k-hint"">เลขจะอยู่ทั้งซ้ายและขวาของบรรทัดหัวฉาก</span></label><input type=""checkbox"" id=""st-sn-show""></div>
       <div class=""k-row""><label>ท้ายเลข<span class=""k-hint"">เช่น ว่าง หรือ "".""</span></label><input type=""text"" id=""st-sn-suffix"" class=""k-narrow""></div>
@@ -2668,6 +2671,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-row""><label>ท้ายเลข</label><input type=""text"" id=""st-pn-suffix"" class=""k-narrow""></div>
       <div class=""k-set-sub k-full"">ต่อเนื่อง (CONTINUED)</div>
       <div class=""k-row""><label>ใส่ CONTINUED อัตโนมัติ<span class=""k-hint"">ใส่ให้เองเมื่อบล็อกถูกหั่นคร่อมหน้า · ปิดแล้วใช้บล็อก &quot;ต่อเนื่อง (ซ้าย/ขวา)&quot; พิมพ์เองได้</span></label><input type=""checkbox"" id=""st-ct-auto""></div>
+      <div class=""k-row""><label>ใส่ได้แม้หน้านั้นไม่มีหัวฉาก<span class=""k-hint"">ปิดอยู่ = ใส่ (CONTINUED) เฉพาะหน้าที่มีหัวฉากอยู่ก่อน (ธรรมเนียมบทถ่ายทำ)</span></label><input type=""checkbox"" id=""st-ct-nohead""></div>
       <div class=""k-set-sub"">[84] กฎการตัดหน้า (widow / orphan)</div>
       <div class=""k-set-grid2"">
         <div class=""k-row""><label>บรรยาย: เหลือท้ายหน้าอย่างน้อย</label><input type=""number"" id=""st-pb-ab"" class=""k-narrow"" min=""0"" max=""20""></div>
@@ -6065,3 +6069,276 @@ ui.aiChatPanel.insertShortcode,แทรกโค้ดสั้น (ค่า�
 ui.cmtComment.insertShortcode,แทรกโค้ดสั้น (ค่าจริงทันที)
 ui.wiki.insertShortcode,โค้ดสั้น
 ui.wiki.insertShortcodeHint,แทรกโค้ดสั้น (ค่าฟิลด์ตัวเอง · ความสัมพันธ์ · ข้อมูลจาก Wiki อื่น · สถิติโปรเจกต์) ลงช่องที่โฟกัสอยู่
+ui.aiChatPanel.staleSaveRebased,บันทึกทับด้วยข้อมูลเก่า — ยกข้อความล่าสุดมาแทนให้แล้ว
+ui.aiChatPanel.ragBuildFail,สร้างดัชนีค้นหาสำหรับ AI ไม่สำเร็จ
+ui.aiChatPanel.ragRetrieveFail,ดึงเนื้อหาที่เกี่ยวข้องมาให้ AI ไม่สำเร็จ
+ui.aiChatPanel.historyTrimmed,— ตัดประวัติเก่าออก {0} ข้อความ เพื่อให้อยู่ในงบของโมเดล —
+ui.aiChatPanel.sendFailed,ส่งข้อความหา AI ไม่สำเร็จ
+ui.aiProvider.historyTokens,งบประวัติแชท (token)
+ui.aiProvider.historyTokensHint,"0 = อัตโนมัติ (60% ของขีดจำกัดโมเดล · ไม่รู้ขีดจำกัด = 32,000)"
+ui.aiSession.onlyRelevant,เฉพาะส่วนที่เกี่ยวข้อง
+ui.app.pageGuidesOn,เปิดเส้นบอกขอบกระดาษแล้ว
+ui.app.pageGuidesOff,ปิดเส้นบอกขอบกระดาษแล้ว
+ui.app.gotoFindPlaceholder,พิมพ์ชื่อฉาก บท หรือเลขหน้า…
+ui.app.gotoFindNone,ไม่พบรายการที่ตรง
+ui.app.spErrMarkToggle,แสดงเส้นบอกจุดผิดในบท
+ui.app.spErrMarkOn,เปิดเส้นบอกจุดผิดในบทแล้ว
+ui.app.spErrMarkOff,ปิดเส้นบอกจุดผิดในบทแล้ว
+ui.app.spellReplaced,"แทนคำ ""{0}"" ด้วย ""{1}"" แล้ว"
+ui.app.spellReplaceFail,แทนคำไม่สำเร็จ
+ui.app.autosaveFail,บันทึกอัตโนมัติไม่สำเร็จ: 
+ui.app.autosaveRunN,บันทึกอัตโนมัติสำเร็จ {0} จาก {1} ไฟล์
+ui.app.recentBrokenAsk,เปิดโปรเจกต์ไม่ได้ — ไม่พบโฟลเดอร์นี้แล้ว: {0}
+ui.app.recentBrokenRemove,เอาออกจากรายการล่าสุด
+ui.app.recentBrokenKeep,เก็บไว้ก่อน
+ui.app.recentBrokenRemoved,เอาโปรเจกต์ที่เปิดไม่ได้ออกจากรายการแล้ว
+ui.app.wordCountRebuilt,คำนวณจำนวนคำใหม่แล้ว {0} ฉาก
+ui.tree.duplicateFail,ทำสำเนาไม่สำเร็จ
+ui.tree.failedN,ไม่สำเร็จ {0} รายการ
+ui.tree.moveFail,ย้ายไม่สำเร็จ
+ui.tree.draftLabel,ฉบับร่าง
+ui.tree.draftPickHint,เลือกฉบับร่างที่จะแสดงในต้นไม้โปรเจกต์
+ui.tree.draftSwitched,"สลับไปฉบับร่าง ""{0}"" แล้ว"
+ui.app.wordCountSyncFail,ปรับจำนวนคำให้ตรงกับไฟล์ไม่สำเร็จ
+ui.app.closeTabDirtyAsk,"""{0}"" ยังไม่ได้บันทึก จะทำอย่างไร"
+ui.app.closeTabSave,บันทึกแล้วปิด
+ui.app.closeTabDiscard,ปิดโดยไม่บันทึก
+ui.app.closeAllDirtyAsk,มีแท็บที่ยังไม่ได้บันทึก {0} แท็บ
+ui.app.navBookFail,อ่านสารบัญทั้งเล่มไม่สำเร็จ
+ui.app.navWholeBook,ทั้งเล่ม
+ui.app.navWholeBookHint,สลับระหว่างสารบัญของฉากนี้กับของทั้งเล่ม
+ui.app.printNoTab,ยังไม่ได้เปิดไฟล์ที่จะพิมพ์
+ui.app.printFail,สั่งพิมพ์ไม่สำเร็จ
+ui.app.printCancelled,ยกเลิกการพิมพ์
+ui.app.printSent,ส่งไปเครื่องพิมพ์แล้ว
+ui.app.spElementScriptOnly,เปลี่ยนชนิด element ได้เฉพาะในบทภาพยนตร์
+ui.app.selectAllNeedEditor,ต้องอยู่ในตัวแก้ไขก่อนถึงจะเลือกทั้งหมดได้
+ui.app.spellSuggestHead,คำที่น่าจะถูก
+ui.app.spellNoSuggest,ไม่มีคำที่แนะนำ
+ui.app.spellIgnoreOnce,"ข้าม ""{0}"" ครั้งนี้"
+ui.app.spellIgnoredOnce,"ข้าม ""{0}"" ครั้งนี้แล้ว"
+ui.thes.selectWordFirst,เลือกคำที่อยากหาคำพ้องก่อน
+ui.worldAutoLink.sceneGone,ไม่พบฉากนี้แล้ว
+ui.plannerProps.needBoard,ยังไม่ได้เปิดกระดานวางแผน
+ui.plannerProps.openBoard,เปิดกระดานวางแผน
+ui.autoTaskEvent.renameAsk,"เปลี่ยนชื่อ ""{0}"" เป็น ""{1}"" ในทุกที่ที่อ้างถึงด้วยไหม"
+ui.autoTaskEvent.renameGo,เปลี่ยนให้หมด
+ui.autoTaskEvent.renameSkipped,เปลี่ยนเฉพาะชื่อเหตุการณ์ ไม่แตะที่อื่น
+ui.autoTaskEvent.renameNoHit,ไม่มีที่ไหนอ้างถึงชื่อเดิม
+ui.color.presets,สีสำเร็จ
+ui.color.saved,บันทึกไว้
+ui.color.recent,ใช้ล่าสุด
+ui.color.wheel,เลือกสีเอง
+ui.color.use,ใช้สีนี้
+ui.color.save,บันทึกสี
+ui.color.saveHint,เพิ่ม/เอาสีนี้ออกจากชุดที่บันทึกไว้
+ui.color.clear,ล้างสี (ใช้สีตัวอักษรปกติ)
+ui.color.none,ยังไม่มี
+ui.color.proseOnly,สีตัวอักษรใช้ได้เฉพาะโหมดนิยาย
+ui.color.ink,ดำหมึก
+ui.color.gray,เทา
+ui.color.brown,น้ำตาล
+ui.color.red,แดง
+ui.color.orange,ส้ม
+ui.color.gold,ทอง
+ui.color.green,เขียว
+ui.color.blue,น้ำเงิน
+ui.color.purple,ม่วง
+ui.color.pink,ชมพู
+ui.drafts.renameDraftTo,"เปลี่ยนชื่อฉบับร่าง ""{0}"" เป็น ""{1}"""
+ui.exportBlog.scope,ขอบเขต
+ui.exportBlog.scopeAll,ทั้งโปรเจกต์
+ui.exportBlog.preview,ดูตัวอย่าง
+ui.exportBlog.previewTitle,ตัวอย่างก่อนส่งออกบล็อก
+ui.exportBlog.previewMeta,{0} ฉากที่จะส่งออก
+ui.exportBlog.skippedN,ข้าม {0} ฉาก
+ui.xhub.needScriptOnly,ปลายทางนี้ใช้ได้เฉพาะเอกสารที่เป็นบทภาพยนตร์
+ui.xhub.previewIsPlain,ช่องตัวอย่างแสดงเป็นข้อความล้วน — ไฟล์จริงจะมีรูปแบบครบ
+ui.pdf.colorMode,โหมดสี
+ui.pdf.colorModeMono,ขาวดำ
+ui.pdf.colorModeColor,สี
+ui.pdf.colorModeHint,ขาวดำ = ธรรมเนียมบทที่ส่งกองถ่าย · สี = ฉบับอ่านเอง
+ui.pdf.pageNumbersOnly,ใส่เลขหน้า
+ui.pdf.numbersWinHint,"ช่องนี้ชนะค่าใน ""ตั้งค่ารูปแบบบท"" — ติ๊กแล้วได้เลย"
+ui.pdf.sceneNumbersOnly,ใส่หมายเลขฉาก
+ui.search.syntaxHint,ใช้ AND · OR · NOT และ field: ได้ (เช่น title:ป่า NOT ฝน)
+ui.search.lineNo,บรรทัดที่ 
+ui.search.indexedN,ทำดัชนีไว้ {0} ไฟล์
+ui.home.brokenNoMeta,ไม่พบไฟล์โปรเจกต์ (project.khn.json)
+ui.home.brokenUnreadable,อ่านโฟลเดอร์โปรเจกต์ไม่ได้
+ui.home.brokenTitle,เปิดไม่ได้
+ui.home.brokenRemove,เอาออกจากรายการ
+ui.home.revealInOS,เปิดโฟลเดอร์นี้ในตัวจัดการไฟล์
+ui.home.copyPath,คัดลอกที่อยู่โฟลเดอร์
+ui.home.pathCopied,คัดลอกที่อยู่แล้ว
+ui.importSp.previewTitle,ตัวอย่างบทที่จะนำเข้า
+ui.importSp.previewEmpty,อ่านไฟล์แล้วไม่พบเนื้อบทเลย
+ui.importSp.asNewScene,สร้างเป็นฉากใหม่
+ui.importSp.replaceTab,แทนที่เนื้อในแท็บที่เปิดอยู่
+ui.kanban.draftPick,เลือกฉบับร่างที่จะแสดงบนกระดาน
+ui.panel.networkTitle,ผังความสัมพันธ์
+ui.panel.plannerTitle,กระดานวางแผน
+ui.worldAutoLink.panelTitle,ฉากที่กล่าวถึง
+ui.worldAutoLink.panelDesc,ฉากทั้งหมดที่เอ่ยถึงเอนทิตี้แต่ละตัว
+ui.paper.colorWhite,ขาว
+ui.paper.colorCream,ครีม
+ui.paper.colorSepia,ซีเปีย
+ui.paper.colorGray,เทาอ่อน
+ui.paper.colorMint,เขียวมิ้นต์
+ui.paper.colorDark,เข้ม
+ui.trash.purgeAsk,ลบถาวร {0} รายการที่อยู่ในถังขยะเกิน {1} วันเลยไหม
+ui.trash.purgeGo,ลบถาวร
+ui.trash.purgeKept,เก็บ {0} รายการไว้ในถังขยะเหมือนเดิม
+ui.scene.delScene2,ลบฉาก {0}
+ui.scene.delChapter2,ลบบท {0}
+ui.scene.addScene,เพิ่มฉาก 
+ui.notes.scratchPh,จดอะไรก็ได้ที่นี่ — ไม่เข้าไปในต้นฉบับ
+ui.notes.quickNotePh,บันทึกของรอบเขียนนี้…
+ui.starter.castNeedName,ยังไม่ได้ตั้งชื่อตัวละคร
+ui.starter.charLinkedFromWiki,"เชื่อม ""{0}"" กับ Wiki แล้ว"
+ui.starter.fShortcode,โค้ดสั้น
+ui.starter.fShortcodePlaceholder,เว้นว่าง = ใช้ชื่อตัวละคร
+ui.starter.fShortcodePreview,พิมพ์ {0} ในบทสนทนาเพื่ออ้างถึงตัวละครนี้
+ui.starter.fShortcodeReserved,{0} ถูกใช้ไปแล้ว เลือกคำอื่น
+ui.starter.fDialogue,ตัวอย่างบทพูด
+ui.starter.fDialoguePlaceholder,เขียนอย่างที่ตัวละครพูดจริง ใช้ {0} แทนคู่สนทนาได้
+ui.starter.fDialogueHint,ยิ่งเป็นน้ำเสียงเฉพาะตัว AI ยิ่งจับสำเนียงได้แม่น
+ui.starter.aiWriteDialogue,ให้ AI ร่างบทพูด
+ui.starter.fCharTags,แท็กของตัวละคร
+ui.starter.fCharTagsPlaceholder,"คั่นด้วยจุลภาค เช่น ตัวเอก, นักสืบ"
+ui.starter.fPrompts,คำสั่งเฉพาะตัวละคร
+ui.starter.fPromptsHint,ข้อกำหนดที่อยากให้ AI ยึดเวลาเขียนถึงตัวละครนี้
+ui.starter.chatHasOpener,ฉากนี้มีบทเปิดอยู่แล้ว
+ui.starter.cvOpenAsk,"สร้างเสร็จ {0} ฉากใน ""{1}"" จะเปิดดูเลยไหม"
+ui.starter.cvOpenNow,เปิดเลย
+ui.starter.cvStayHere,อยู่หน้านี้ต่อ
+ui.starter.mentionAny,ใครก็ได้
+ui.starter.mentionUser,ผู้เล่น
+ui.starter.mentionInsert,แทรก
+ui.starter.mentionChipHint,แทรกการอ้างถึง {0}
+ui.starter.mentionAnyHint,แทนตัวละครใดก็ได้ในฉาก
+ui.starter.mentionUserHint,แทนผู้เล่น/ผู้อ่านที่กำลังคุยอยู่
+ui.starter.mentionNoCast,ยังไม่มีตัวละครให้อ้างถึง
+ui.starter.mentionUnknown,อ้างถึงชื่อที่ไม่มีในเรื่อง: {0}
+ui.starter.mentionHint,ใช้ {0} แทนตัวละครใดก็ได้ และ {1} แทนผู้เล่น
+ui.starter.promptAdd,เพิ่มคำสั่ง
+ui.starter.promptEmpty,ยังไม่มีคำสั่ง
+ui.starter.promptKeyPlaceholder,หัวข้อ เช่น น้ำเสียง
+ui.starter.promptValPlaceholder,สิ่งที่อยากให้ AI ทำหรือเลี่ยง
+ui.starter.promptDel,ลบคำสั่งนี้
+ui.starter.modeBasic,พื้นฐาน
+ui.starter.modeBasicHint,กรอกไม่กี่ช่องก็เริ่มเขียนได้
+ui.starter.modeAdv,ขั้นสูง
+ui.starter.modeAdvHint,เปิดช่องกำกับฉากครบชุด (บรรยาย · อารมณ์ · เป้าหมาย · เงื่อนไข)
+ui.starter.modeHint,สลับโหมดได้ตลอด ข้อมูลที่กรอกไว้ไม่หาย
+ui.starter.finishGoFix,ไปแก้ตรงนั้น
+ui.starter.autoLinkAsk,"สร้างหน้า Wiki ให้ ""{0}"" ด้วยไหม"
+ui.starter.autoLinkGo,สร้างให้
+ui.starter.pCharTags,แท็ก: 
+ui.starter.pCharDialogue,ตัวอย่างวิธีพูด:
+ui.starter.pScDesc,คำบรรยายฉาก:
+ui.starter.pScMood,อารมณ์และโทนของฉาก:
+ui.starter.pScMoodRule,ให้โทนนี้ซึมอยู่ในบรรยากาศและจังหวะ อย่าเขียนบอกอารมณ์ตรง ๆ
+ui.starter.pScGoal,เป้าหมายของฉากนี้:
+ui.starter.pScCond,เงื่อนไขที่ต้องทำตาม:
+ui.starter.pScCondRule,ทำตามเงื่อนไขทุกข้อ ถ้าข้อไหนขัดกันให้ยึดข้อที่อยู่บนสุด
+ui.starter.pGmOpenGiven,บทเปิดที่ผู้เขียนกำหนดไว้แล้ว:
+ui.starter.pGmOpenGivenRule,ใช้บทเปิดนี้ตามเดิม อย่าเขียนใหม่ แล้วเขียนต่อจากตรงนี้
+ui.starter.pDlgTask,งาน: เขียนตัวอย่างบทพูดของตัวละครนี้ 2–3 ประโยค
+ui.starter.pDlgRule,เขียนเฉพาะคำพูด ไม่ต้องมีคำบรรยายหรือชื่อผู้พูดนำหน้า
+ui.starter.pOpenerTask,งาน: เขียนบทเปิดของฉากนี้
+ui.starter.pOpenerRule,ยาวไม่เกินหนึ่งย่อหน้า จบด้วยจังหวะที่ชวนให้อ่านต่อ
+ui.starter.pGoalTask,งาน: เขียนเป้าหมายของฉากนี้
+ui.starter.pGoalRule,บอกเป็นประโยคเดียวว่าฉากนี้ต้องพาเรื่องไปถึงจุดไหน
+ui.starter.pCondTask,งาน: เขียนเงื่อนไขของฉากนี้เป็นข้อ ๆ
+ui.starter.pCondRule,เขียนเป็นข้อสั้น ๆ ข้อละบรรทัด อ้างตัวละครด้วยรูปแบบ {0} · ใช้ {1} แทนใครก็ได้ และ {2} แทนผู้เล่น
+ui.starter.pMoodTask,งาน: เขียนอารมณ์และโทนของฉากนี้
+ui.starter.pMoodRule,บอกเป็นคำหรือวลีสั้น ๆ ไม่เกินสองบรรทัด
+ui.starter.rtUndo,ย้อนกลับ
+ui.starter.rtRedo,ทำซ้ำ
+ui.starter.rtStrike,ขีดฆ่า
+ui.starter.rtH2,หัวข้อระดับ 2
+ui.starter.rtH3,หัวข้อระดับ 3
+ui.starter.rtPara,ย่อหน้าปกติ
+ui.starter.rtQuote,คำพูดยกมา
+ui.starter.rtListNum,รายการตัวเลข
+ui.starter.rtRule,เส้นคั่น
+ui.starter.rtLink,ใส่ลิงก์
+ui.starter.rtLinkNeedSel,เลือกข้อความที่จะทำเป็นลิงก์ก่อน
+ui.starter.rtLinkAsk,ลิงก์ไปที่ไหน
+ui.starter.scAdvBadge,ตั้งค่าขั้นสูง {0} ช่อง
+ui.starter.scThumb,ภาพประจำฉาก
+ui.starter.scThumbHint,ใช้เป็นภาพหน้าปกของฉากในรายการ
+ui.starter.scAdvHead,ตั้งค่าขั้นสูง
+ui.starter.scAdvHint,ช่องพวกนี้ส่งตรงถึง AI — ใช้ {0} แทนใครก็ได้ และ {1} แทนผู้เล่น
+ui.starter.scDesc,คำบรรยายฉาก
+ui.starter.scDescPlaceholder,ที่ไหน เวลาไหน ใครอยู่ตรงนั้นบ้าง (อ้างตัวละครด้วย {0} ได้)
+ui.starter.scMood,อารมณ์และโทน
+ui.starter.scMoodPlaceholder,เช่น อึดอัด เงียบงัน มีอะไรไม่ชอบมาพากล
+ui.starter.scMoodHint,AI จะทำให้โทนนี้ซึมอยู่ในบรรยากาศ ไม่ใช่เขียนบอกตรง ๆ
+ui.starter.scOpener,บทเปิดฉาก
+ui.starter.scOpenerPlaceholder,ประโยคแรกที่ผู้อ่านจะเห็น (อ้างตัวละครด้วย {0} ได้)
+ui.starter.scOpenerHint,เว้นว่างไว้ให้ AI ร่างให้ก็ได้
+ui.starter.aiWriteOpener,ให้ AI ร่างบทเปิด
+ui.starter.scOpenerImage,ภาพประกอบบทเปิด
+ui.starter.scOpenerImageHint,แสดงคู่กับบทเปิดตอนเล่น
+ui.starter.scGoal,เป้าหมายของฉาก
+ui.starter.scGoalPlaceholder,ฉากนี้ต้องพาเรื่องไปถึงจุดไหน (อ้างตัวละครด้วย {0} ได้)
+ui.starter.scCond,เงื่อนไขของฉาก
+ui.starter.scCondPlaceholder,ข้อละบรรทัด เช่น {0} ต้องไม่เอ่ยชื่อจริง · {1} เลือกได้เองว่าจะเชื่อหรือไม่
+ui.starter.scCondHint,AI จะยึดทุกข้อ ถ้าขัดกันให้ยึดข้อบนสุด
+ui.wiki.shortcode,โค้ดสั้น
+ui.wiki.shortcodePlaceholder,เว้นว่าง = ใช้ชื่อเอนทิตี้
+ui.wiki.shortcodePreview,พิมพ์ {0} ที่ไหนก็ได้เพื่ออ้างถึงเอนทิตี้นี้
+ui.wiki.tags,แท็ก
+ui.wiki.tagsPlaceholder,คั่นด้วยจุลภาค
+ui.wiki.prompts,คำสั่งสำหรับ AI
+ui.wiki.addPrompt,เพิ่มคำสั่ง
+ui.wiki.promptsHint,ข้อกำหนดที่อยากให้ AI ยึดทุกครั้งที่เขียนถึงเอนทิตี้นี้
+ui.wiki.promptKeyPlaceholder,หัวข้อ เช่น น้ำเสียง
+ui.wiki.promptValPlaceholder,สิ่งที่อยากให้ AI ทำหรือเลี่ยง
+ui.wiki.delPrompt,ลบคำสั่งนี้
+ui.wiki.secTitlePh,ชื่อหัวข้อ
+ui.worldAutoLink.rebuild,สร้างดัชนีใหม่
+ui.worldAutoLink.filterPlaceholder,กรองตามชื่อ…
+ui.worldAutoLink.onlyOrphan,เฉพาะตัวที่ยังไม่ถูกเอ่ยถึง
+ui.worldAutoLink.noRows,ไม่มีรายการที่ตรง
+ui.worldAutoLink.inNScenes,ใน {0} ฉาก
+ui.worldAutoLink.zero,ยังไม่ถูกเอ่ยถึง
+ui.worldAutoLink.summaryN,{0} รายการ · ยังไม่ถูกเอ่ยถึง {1}
+ui.menu.importScrivenerScrivI,นำเข้าจาก Scrivener (.scriv)… ({0}+{1}+{2}+I)
+ui.menu.textCaseCycleU,วนรูปตัวพิมพ์ ({0}+{1}+U)
+ui.menu.thesaurusT,คลังคำพ้อง/คำตรงข้าม… ({0}+{1}+{2}+T)
+ui.menu.backlinksPanelB,🔗 ฉากที่กล่าวถึง ({0}+{1}+{2}+B)
+ui.html.winMin,ย่อหน้าต่าง
+ui.html.winMax,ขยายเต็มจอ
+ui.html.winClose,ปิดโปรแกรม
+ui.html.tbColor,สีตัวอักษร
+ui.html.tbOutlinePanel,สารบัญ
+ui.html.tbNetwork,ผังความสัมพันธ์
+ui.html.findClose,ปิดแถบค้นหา
+ui.shortcuts.cheatsheet,สรุปปุ่มลัดทั้งหมด
+ui.shortcuts.textCaseCycle,วนรูปตัวพิมพ์
+ui.shortcuts.panelBacklinks,แผงฉากที่กล่าวถึง
+ui.shortcuts.thesaurus,คลังคำพ้อง/คำตรงข้าม
+ui.shortcuts.importScrivener,นำเข้าจาก Scrivener
+ui.xname.label,ชื่อไฟล์ส่งออก
+ui.xname.hint,ใช้โค้ดสั้นได้ เช่น [title] [author] [book] [chapter] [date:iso] [words] · โค้ดที่พิมพ์ผิดจะโผล่ในช่องตัวอย่างให้เห็น
+ui.xname.preview,ไฟล์ที่จะบันทึก: 
+ui.xname.presetPick,— เลือกพรีเซ็ต —
+ui.xname.savePreset,บันทึกเป็นพรีเซ็ต
+ui.xname.savePresetHint,เก็บเทมเพลตนี้ไว้ใช้ซ้ำ (ชื่อซ้ำ = เขียนทับตัวเดิม)
+ui.xname.delPreset,ลบพรีเซ็ต
+ui.xname.delPresetAsk,ลบพรีเซ็ตชื่อไฟล์: 
+ui.xname.askPresetName,ตั้งชื่อพรีเซ็ตนี้ว่าอะไร
+ui.xname.ctxFail,อ่านบริบทของโค้ดสั้นสำหรับชื่อไฟล์ไม่สำเร็จ
+ui.xname.pTitle,ชื่อเรื่อง
+ui.xname.pTitleDate,ชื่อเรื่อง + วันที่
+ui.xname.pTitleBook,ชื่อเรื่อง + เล่ม
+ui.xname.pTitleChapter,ชื่อเรื่อง + บท
+ui.xname.pAuthorTitle,ผู้เขียน + ชื่อเรื่อง
+ui.xname.pDraftDate,ฉบับร่าง + วันที่ + จำนวนคำ
+ui.app.exportAlignFail,อ่านการจัดหน้าของฉากมาใส่ไฟล์ที่ส่งออกไม่สำเร็จ
+ui.xhub.autoKind,ตามไฟล์ต้นทาง → ตัดสินได้เป็น: {0}
+ui.xname.openAfter,เปิดไฟล์เมื่อส่งออกเสร็จ
+ui.xname.openFail,เปิดไฟล์ที่ส่งออกไม่สำเร็จ

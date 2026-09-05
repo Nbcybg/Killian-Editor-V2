@@ -138,6 +138,35 @@ check('[19] ส่ง style เข้าไปแล้วเปลี่ยน�
   html2.includes('font-size:20pt') && html2.includes('line-height:2.5') && html2.includes('Georgia, serif'));
 check('[19] เนื้อ HTML ยังถูกต้อง', html.includes('<h1>หัวข้อ</h1>'));
 
+// ═══ [alpha.132 ข้อ 1] ★★ บรรทัดว่างต้องรอดไปถึง HTML/PDF ═══
+// ผู้ใช้: *"PDF ออกมา บรรทัดว่างหาย"*
+// .md ของ Killian เป็นรูปแบบ "หนึ่งบรรทัด = หนึ่งบล็อก" → บรรทัดว่าง = **ย่อหน้าว่างจริง**
+// (mdToDoc/docToMd เก็บไว้ครบมาตลอด) แต่ตัวแปลงเป็น HTML เคย `continue` ทิ้งทั้งหมด
+{
+  const BLANK = '<p class="k-blank"><br></p>';
+  const b1 = C.mdToHtmlBody('ก\n\nข');
+  check('[132-1] ★★ บรรทัดว่างหนึ่งบรรทัด → ย่อหน้าว่างหนึ่งใบ (ไม่หายไป)',
+    b1 === '<p>ก</p>\n' + BLANK + '\n<p>ข</p>', JSON.stringify(b1));
+  const b4 = C.mdToHtmlBody('ก\n\n\n\n\nข');
+  check('[132-1] ★ บรรทัดว่างหลายบรรทัดได้ครบตามจำนวน',
+    (b4.match(/k-blank/g) || []).length === 4, (b4.match(/k-blank/g) || []).length);
+  // จำนวนย่อหน้าใน HTML ต้องเท่ากับจำนวนบล็อกที่ตัวแก้ไขเห็น — ไม่งั้น "ตัดหน้าไม่ตรง" ตามมา
+  const src132 = 'ก\n\nข\n\n\nค';
+  check('[132-1] ★★ จำนวนย่อหน้าใน HTML เท่ากับจำนวนบล็อกในเอกสารจริง',
+    (C.mdToHtmlBody(src132).match(/<p[ >]/g) || []).length === MD.mdToDoc(src132).content.length,
+    (C.mdToHtmlBody(src132).match(/<p[ >]/g) || []).length + ' vs '
+      + MD.mdToDoc(src132).content.length);
+  // ย่อหน้าว่างต้องมีกล่องบรรทัดจริง ไม่งั้นสูง 0 แล้วก็เท่ากับหายอยู่ดี
+  check('[132-1] ★ ย่อหน้าว่างมี <br> ให้เป็นกล่องบรรทัด (ไม่งั้นสูง 0 = หายเหมือนเดิม)',
+    b1.includes('<br>'));
+  // หัว/ท้ายไฟล์ไม่ควรได้ย่อหน้าว่างแถม (ไฟล์ลงท้ายด้วยขึ้นบรรทัดใหม่เป็นเรื่องปกติ)
+  check('[132-1] ★ บรรทัดว่างหัว/ท้ายไฟล์ไม่กลายเป็นหน้าว่างแถม',
+    !C.mdToHtmlBody('\n\nก\n\n').includes('k-blank'),
+    JSON.stringify(C.mdToHtmlBody('\n\nก\n\n')));
+  check('[132-1] รายการยังถูกปิดที่บรรทัดว่างเหมือนเดิม',
+    C.mdToHtmlBody('- ข้อ\n\nต่อ').includes('</ul>'));
+}
+
 // ═══ [25] จัดหน้าไป frontmatter ═══
 const doc = MD.mdToDoc('<!--align:center-->กลางหน้า\nปกติ');
 check('[25] ยังอ่าน <!--align--> แบบเดิมได้', doc.content[0].attrs.align === 'center');

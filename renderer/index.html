@@ -20,9 +20,9 @@
   <span id="tb-title"></span>
   <span id="tb-dirty-dot" style="display:none" title="" data-icon="save"></span>
   <span id="win-btns">
-    <span class="win-btn" id="win-min" data-icon="minus"></span>
-    <span class="win-btn" id="win-max" data-icon="maximize"></span>
-    <span class="win-btn win-close" id="win-close" data-icon="x"></span>
+    <span class="win-btn" id="win-min" title="ย่อหน้าต่าง" data-i18n-title="ui.html.winMin" data-icon="minus"></span>
+    <span class="win-btn" id="win-max" title="ขยาย/คืนขนาดหน้าต่าง" data-i18n-title="ui.html.winMax" data-icon="maximize"></span>
+    <span class="win-btn win-close" id="win-close" title="ปิดโปรแกรม" data-i18n-title="ui.html.winClose" data-icon="x"></span>
   </span>
 </div>
 <div id="topbar">
@@ -81,14 +81,9 @@
   </select>
   <!-- [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก — เลือกแล้วเด้งกลับหัวข้อเสมอ -->
   <select id="tb-case" class="tb" title="สลับรูปตัวพิมพ์ของข้อความที่เลือก" data-i18n-title="ui.html.tbCase">
+    <!-- [alpha.124 ข้อ 36] รายการจริงถูกสร้างตอนรันจาก CASE_MODES + CASE_LABELS (text-case.js)
+         เพื่อให้ป้ายตามภาษาที่เลือก และมีแหล่งความจริงเดียวร่วมกับเมนู "รูปแบบ" -->
     <option value="">Aa ▾</option>
-    <option value="SC">Sentence case</option>
-    <option value="lc">lower case</option>
-    <option value="UC">UPPER CASE</option>
-    <option value="CC">Capitalize Case</option>
-    <option value="aC">aLtErNaTe cAsE</option>
-    <option value="TC">Title Case</option>
-    <option value="iC">iNVERSE cASE</option>
   </select>
   <span class="sep"></span>
   <button id="tb-bold" class="tb" title="ตัวหนา (Ctrl+B)" data-i18n-title="ui.html.tbBold" data-icon="bold"></button>
@@ -98,6 +93,8 @@
   <!-- [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — สวิตช์แบบเดียวกับ B I U -->
   <button id="tb-sup" class="tb" title="ตัวยก" data-i18n-title="ui.html.tbSup" data-icon="superscript"></button>
   <button id="tb-sub" class="tb" title="ตัวห้อย" data-i18n-title="ui.html.tbSub" data-icon="subscript"></button>
+  <!-- [alpha.132 ข้อ 9] สีตัวอักษร — แถบสีใต้ตัว A บอกสีที่ใช้อยู่ (ผู้ใช้จริงขอมา) -->
+  <button id="tb-color" class="tb tb-color" title="สีตัวอักษร" data-i18n-title="ui.html.tbColor"><span class="tb-color-a">A</span><span class="tb-color-bar"></span></button>
   <span class="sep"></span>
   <button id="tb-ul" class="tb" title="รายการหัวข้อย่อย" data-i18n-title="ui.html.tbUl" data-icon="list-ul"></button>
   <button id="tb-ol" class="tb" title="รายการตัวเลข" data-i18n-title="ui.html.tbOl" data-icon="list-ol"></button>
@@ -123,7 +120,7 @@
   <button id="tb-read" class="tb tb-toggle" title="โหมดอ่าน (เต็มจอ)" data-i18n-title="ui.html.tbRead" data-icon="book-open"></button>
   <button id="tb-gsearch" class="tb" title="ค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F)" data-i18n-title="ui.html.tbGsearch" data-icon="search"></button>
   <button id="tb-tree-panel"    class="tb tb-toggle" title="โปรเจกต์ (Explorer)" data-i18n-title="ui.html.tbTreePanel" data-icon="book-content"></button>
-  <button id="tb-outline-panel" class="tb tb-toggle" title="Navigation" data-icon="list-ul"></button>
+  <button id="tb-outline-panel" class="tb tb-toggle" title="นำทาง (โครงเรื่อง)" data-i18n-title="ui.html.tbOutlinePanel" data-icon="list-ul"></button>
   <button id="tb-props-panel"   class="tb tb-toggle" title="คุณสมบัติ" data-i18n-title="ui.html.tbPropsPanel" data-icon="clipboard"></button>
   <button id="tb-search-panel"  class="tb tb-toggle" title="ค้นหา" data-i18n-title="ui.html.tbSearchPanel" data-icon="search"></button>
   <span class="sep"></span>
@@ -161,7 +158,9 @@
   <button id="tb-timeline" class="tb tb-toggle" title="เส้นเวลา (Ctrl+Alt+T)" data-i18n-title="ui.html.tbTimeline" data-icon="history"></button>
   <button id="tb-maps" class="tb tb-toggle" title="แผนที่ (Ctrl+Alt+M)" data-i18n-title="ui.html.tbMaps" data-icon="map"></button>
   <button id="tb-books" class="tb tb-toggle" title="จัดการเล่ม (Ctrl+Alt+K)" data-i18n-title="ui.html.tbBooks" data-icon="book"></button>
-  <button id="tb-network" class="tb tb-toggle" title="Story Network (Ctrl+Alt+N)" data-icon="link"></button>
+  <button id="tb-network" class="tb tb-toggle" title="ผังความสัมพันธ์ (Ctrl+Alt+N)" data-i18n-title="ui.html.tbNetwork" data-icon="link"></button>
+  <!-- [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ ทั้งโปรเจกต์ -->
+  <button id="tb-backlinks" class="tb tb-toggle" title="ฉากที่กล่าวถึง (Ctrl+Alt+Shift+B)" data-i18n-title="ui.worldAutoLink.panelTitle" data-icon="link"></button>
   <button id="tb-planner" class="tb tb-toggle" title="กระดานวางแผน (Ctrl+Alt+P)" data-i18n-title="ui.html.tbPlanner" data-icon="layout"></button>
   <button id="tb-branch" class="tb tb-toggle" title="ผังแตกสาย (Ctrl+Alt+B)" data-i18n-title="ui.html.tbBranch" data-icon="grid"></button>
   <button id="tb-floorplan" class="tb tb-toggle" title="ผังพื้นที่ (Ctrl+Alt+F)" data-i18n-title="ui.html.tbFloorplan" data-icon="map"></button>
@@ -180,7 +179,7 @@
   <input id="find-r" data-i18n-attr="placeholder" data-i18n="toolbar.replaceWith">
   <button id="find-rep1" data-i18n="toolbar.replace">แทนที่</button>
   <button id="find-repall" data-i18n="toolbar.replaceAll">ทั้งหมด</button>
-  <button id="find-close">✕</button>
+  <button id="find-close" title="ปิดแถบค้นหา (Esc)" data-i18n-title="ui.html.findClose">✕</button>
 </div>
 <!-- Panel System (Photoshop-style): ทุกแผงถูกวาดลง #app-root โดย panel-renderer -->
 <div id="app-root"></div>
@@ -220,6 +219,8 @@
     </div>
     <div id="log-panel"><pre id="log-body" class="k-logview"></pre></div>
     <div id="search-panel"><div id="search-body"></div></div>
+    <!-- [alpha.125 ข้อ G] "ฉากที่กล่าวถึง" ทั้งโปรเจกต์ — เดิมมีแต่แท็บเล็ก ๆ ในหน้าเอนทิตี้ Wiki -->
+    <div id="backlinks-panel"><div id="backlinks-body"></div></div>
     <div id="notes-panel"><div id="notes-body"></div></div>
     <div id="home-panel"><div id="home-body"></div></div>
     <div id="comments-panel"><div id="comments-body"></div></div>

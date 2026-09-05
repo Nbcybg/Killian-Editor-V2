@@ -404,11 +404,62 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
 .ProseMirror ul,.ProseMirror ol { padding-left:var(--ed-list-pad, 28px);
   margin:0 0 var(--ed-para, .35em); }
 .ProseMirror li > p { margin:0; text-indent:0; }
-/* [alpha.103 ข้อ 2] ข้อที่จัดกึ่งกลาง/ชิดขวา → **จุดนำต้องขยับตามข้อความ**
-   ค่าเริ่มต้น `list-style-position:outside` ตรึงจุดไว้ที่ขอบซ้ายเสมอ ผู้ใช้จึงเห็นว่า
-   "จัดกึ่งกลางแล้วแต่ bullet ยังชิดซ้าย" = เหมือนสั่งไม่ได้จริง · สลับเป็น inside เฉพาะข้อนั้น */
-.ProseMirror li:has(> p[style*="center"]),
-.ProseMirror li:has(> p[style*="right"]) { list-style-position:inside; }
+/* ══ [alpha.130 ข้อ 2] ★ จุดนำ/หมายเลขข้อ ต้องเดินทางไปกับข้อความเวลาจัดกึ่งกลาง/ชิดขวา ══
+
+   ผู้ใช้: *"รายการ bullet และหัวข้อย่อย ไม่ตามการจัดหน้า — Google Docs เขาตามให้"*
+
+   alpha.103 เคยแก้ด้วย `list-style-position:inside` ซึ่ง **ทำให้เกิดอาการใหม่แทน**:
+   ตามสเปก marker ของ `inside` ถูกวางเป็นชิ้นแรกของ *กล่องบล็อกหลัก* — แต่ลูกของ `<li>`
+   ในสคีมาเราเป็น `<p>` ซึ่งเป็นบล็อก → Chromium จึงกาง marker เป็น **บรรทัดของตัวเองเหนือ `<p>`**
+   ผลคือจุดนำลอยอยู่บรรทัดเดียว แล้วข้อความตกไปบรรทัดถัดไป (ตรงกับภาพที่ผู้ใช้ส่งมา)
+
+   ท่าที่ถูก: ปิด marker ของจริงทิ้ง แล้ววาดเองด้วย `::before` ของ **`<p>` ใบแรก** —
+   มันเป็นกล่อง inline ในบรรทัดแรกของย่อหน้า จึงถูกจัดกึ่งกลาง/ชิดขวา *ไปพร้อมข้อความ* จริง ๆ
+   `counter(list-item)` เป็นตัวนับในตัวของเบราว์เซอร์ จึงเดินตาม `start=` ของ `<ol>` ให้ฟรี
+   (จัดชิดซ้าย/เต็มขอบยังใช้ marker ปกติ — ตรงกับ Google Docs ที่จุดนำอยู่นอกคอลัมน์) */
+/* [alpha.132r4] ★ `list-style:none` **ไม่พอ** เมื่อเราบังคับ `content` ของ ::marker ไว้แล้ว —
+   `content` ชนะ `list-style-type` → marker ยังถูกวาดอยู่ ทั้งที่เราวาด ::before ไว้อีกอัน
+   ผลคือ "จุดนำ/หมายเลขซ้ำที่ซ้ายกระดาษ" ตอนจัดกึ่งกลาง (ผู้ใช้รายงานมาเป็นภาพ)
+   → ต้องสั่ง `content:none` ที่ ::marker ของข้อนั้นด้วย */
+.ProseMirror li:has(> p[data-align="center"]:first-child),
+.ProseMirror li:has(> p[data-align="right"]:first-child) { list-style:none; }
+.ProseMirror li:has(> p[data-align="center"]:first-child)::marker,
+.ProseMirror li:has(> p[data-align="right"]:first-child)::marker { content:none; }
+/* ══ [alpha.132r3 ข้อ 3] ★★ จุดนำ/หมายเลขข้อ = **ตัวอักษร** ที่ปรับรูปแบบได้ ══
+
+   ผู้ใช้: *"bullet และ ตัวเลข ต้องเป็นตัวอักษรด้วย ดังนั้นต้องปรับรูปแบบ สี และอื่น ๆ ได้
+            ตอนนี้ปรับไม่ได้"*
+
+   alpha.132 ข้อ 8 แก้เรื่อง "ขนาดไม่เท่ากัน" ด้วยการ **วาดวงกลมด้วย CSS** ซึ่งแก้ขนาดได้จริง
+   แต่ทำให้จุดนำไม่ใช่ตัวอักษรอีกต่อไป — เปลี่ยนฟอนต์/ตัวหนา/ตัวเอียงไม่ได้เลย
+   รอบนี้กลับมาเป็นตัวอักษรทั้งสองทาง แล้วแก้ปัญหาขนาดด้วยวิธีที่ถูกกว่าเดิม:
+
+     **บังคับ `content` ของ `::marker` ให้เป็นอักขระตัวเดียวกับที่เราวาดเอง**
+
+   เดิมฝั่งชิดซ้ายใช้ `list-style:disc` = รูปวงกลมที่เบราว์เซอร์ *วาด* (0.367em) ส่วนฝั่ง
+   กึ่งกลาง/ชิดขวาใช้กลีฟ `•` (0.233em) → คนละสิ่งกันจึงคนละขนาด · พอทั้งสองฝั่งเป็น
+   **กลีฟตัวเดียวกัน ฟอนต์เดียวกัน ขนาดเดียวกัน** ก็เท่ากันโดยโครงสร้าง ไม่ต้องจูนตัวเลข
+
+   รูปแบบมาจาก **อักษรตัวแรกของข้อ** (กติกาเดียวกับ Word/Google Docs) ส่งมาเป็นตัวแปร CSS
+   บน `<li>`: ตัวแก้ไขตั้งด้วยปลั๊กอิน `listMarkerPlugin` · ไฟล์ที่ส่งออกตั้งด้วย `markerVars()`
+   — ตั้งบน `<li>` เท่านั้น **ไม่แตะสีของข้อความ** (ไม่งั้นทั้งข้อจะเปลี่ยนสีตามอักษรตัวแรก) */
+.ProseMirror ul > li::marker { content: '\2022\00a0\00a0'; }
+.ProseMirror ol > li::marker { content: counter(list-item) '.\00a0\00a0'; }
+.ProseMirror li::marker,
+.ProseMirror li > p:first-child::before {
+  color: var(--k-mk-color, currentColor);
+  font-weight: var(--k-mk-weight, inherit);
+  font-style: var(--k-mk-style, inherit);
+}
+/* จัดกึ่งกลาง/ชิดขวา = ปิด marker ของเบราว์เซอร์ แล้ววาดเองในบรรทัดแรกของข้อ
+   (marker ของจริงอยู่นอกคอลัมน์เสมอ จึงไม่เดินทางไปกับข้อความ — ดู alpha.130 ข้อ 2) */
+.ProseMirror li:has(> p[data-align="center"]:first-child),
+.ProseMirror li:has(> p[data-align="right"]:first-child) { list-style:none; }
+.ProseMirror ul > li > p[data-align="center"]:first-child::before,
+.ProseMirror ul > li > p[data-align="right"]:first-child::before { content:'\2022\00a0\00a0'; }
+.ProseMirror ol > li > p[data-align="center"]:first-child::before,
+.ProseMirror ol > li > p[data-align="right"]:first-child::before {
+  content:counter(list-item) '.\00a0\00a0'; }
 .ProseMirror li + li > p { margin-top:var(--ed-para, .35em); }
 .ProseMirror li > ul,.ProseMirror li > ol { margin:0; }
 .ProseMirror figure { margin:1em 0; text-align:center; }
@@ -1020,6 +1071,50 @@ body.theme-light { --find-hit:#ffe08a; }
 .k-menu-item.k-menu-label:hover { background:transparent; color:inherit; }
 .k-menu-sep { height:1px; background:var(--border); margin:5px 6px; }
 
+/* ══ [alpha.132r] ช่องตัวอย่างโหมด "ขาวดำ" — บังคับดำทั้งแผ่นเหมือนที่ไฟล์จริงทำ ══
+   (กฎนี้ต้องชนะสีหัวข้อ/สีคำพูดยกมา/สีตัวอักษรที่ผู้เขียนตั้งเอง จึงต้องมี !important
+    เหมือนกฎ `body,body *{color:#000}` ที่ฝังไปกับไฟล์ที่ส่งออก) */
+.pv-mono .sp-page, .pv-mono .sp-page * { color:#000 !important; }
+.pv-mono .sp-page img { filter:grayscale(1); }
+/* ย่อหน้าว่างในช่องตัวอย่างต้องมีความสูงจริง (คู่กับ <br> ที่ตัววาดใส่ให้) */
+.pv-blank { min-height:1em; }
+
+/* ══ [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — แถวเต็มความกว้าง ใช้ร่วมกันทุกกล่องส่งออก ══ */
+.k-xname { border-top:1px solid var(--border); margin-top:10px; padding-top:9px; }
+.k-xname-lbl { font-weight:600; margin-bottom:5px; }
+.k-xname-ctrls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.k-xname-input { flex:1 1 220px; min-width:160px; }
+.k-xname-preset { max-width:190px; }
+.k-xname .k-xname-save, .k-xname .k-xname-del { padding:4px 10px; border-radius:7px; cursor:pointer; }
+.k-xname .k-xname-del:disabled { opacity:.45; cursor:default; }
+.k-xname-preview { margin-top:6px; font-family:var(--mono, monospace); word-break:break-all; }
+.k-xname-hint { margin-top:3px; }
+
+/* ══ [alpha.132 ข้อ 9] สีตัวอักษร: ปุ่มบนแถบ + ป๊อปอัปเลือกสี ══
+   ชื่อคลาสทุกตัวมีคำนำหน้าของตัวเอง (`k-color*` / `tb-color*`) ตามบทเรียนข้อ 32 —
+   ห้ามใช้ชื่อกลาง ๆ ที่ widget อื่นอาจตั้งซ้ำแล้วยืมกฎกันข้ามฟีเจอร์ */
+.tb.tb-color { display:inline-flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:1px; line-height:1; }
+.tb-color-a { font-size:.92em; font-weight:700; }
+.tb-color-bar { display:block; width:14px; height:3px; border-radius:2px;
+  background:currentColor; }
+.k-colorpop { min-width:250px; padding:9px 10px 10px; }
+.k-colorsec { margin-bottom:7px; }
+.k-colorsec-lbl { font-size:.82em; opacity:.75; margin:0 0 4px 2px; }
+.k-colorrow { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+.k-colorempty { font-size:.82em; }
+.k-sw { width:20px; height:20px; border-radius:5px; padding:0; cursor:pointer;
+  border:1px solid rgba(255,255,255,.28); }
+.k-sw:hover { transform:scale(1.12); }
+.k-sw.on { outline:2px solid var(--accent-hi); outline-offset:1px; }
+.k-colorwheel { margin-top:2px; }
+.k-color-input { width:34px; height:26px; padding:0; border:1px solid var(--border);
+  border-radius:6px; background:transparent; cursor:pointer; }
+.k-color-hex { width:88px; }
+.k-colorpop .k-color-use, .k-colorpop .k-color-save, .k-colorpop .k-color-clear {
+  padding:4px 10px; border-radius:7px; cursor:pointer; }
+.k-color-clear { margin-top:8px; width:100%; }
+
 /* ---------- Wiki editor ---------- */
 .wiki-wrap { max-width:820px; margin:24px auto 30vh; padding:0 48px; }
 .wiki-head { color:var(--dim); letter-spacing:.6px; font-size:calc(12px * var(--ui-scale, 1)); margin-bottom:10px; }
@@ -1504,20 +1599,11 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 #k-tip.on { opacity:1; visibility:visible; }
 #k-tip.multiline { white-space:pre-line; }   /* tooltip ฉากเป็นหลายบรรทัดคั่นด้วย \n */
 
-/* ---------- ถาดแผงที่ย่อไว้ (ข้อ 4) ---------- */
-/* บั๊ก #17: แยกถาดซ้าย/ขวา — แผงฝั่งขวา (คุณสมบัติ) ที่ปิดไว้ต้องมี chip อยู่ขอบขวา
-   ไม่ใช่กระโดดไปมุมซ้ายล่างทั้งหมดเหมือนตอนมีถาดเดียว */
-/* บั๊ก #18 เพิ่มแผงที่ปิดได้อีก 5 ตัว → ถาดยาวจนบังต้นไม้โปรเจกต์ ต้องจำกัดความสูงแล้วเลื่อนเอา */
-#k-min-tray, #k-min-tray-l, #k-min-tray-r { position:fixed; bottom:34px; z-index:62;
-  display:none; flex-direction:column; gap:6px; max-height:46vh; overflow-y:auto;
-  padding:2px; scrollbar-width:thin; }
-#k-min-tray, #k-min-tray-l { left:14px; align-items:flex-start; }
-#k-min-tray-r { right:14px; align-items:flex-end; }
-#k-min-tray.on, #k-min-tray-l.on, #k-min-tray-r.on { display:flex; }
-.k-min-chip { background:var(--side); border:1px solid var(--accent); color:var(--bright);
-  border-radius:999px; padding:5px 13px; font-size:calc(12px * var(--ui-scale, 1)); cursor:pointer; user-select:none;
-  box-shadow:0 4px 16px rgba(0,0,0,.45); transition:background .12s, transform .12s; }
-.k-min-chip:hover { background:var(--accent); color:#fff; transform:translateY(-1px); }
+/* [alpha.124 ข้อ 39] ถาดแผงที่ย่อไว้ (#k-min-tray-* / .k-min-chip) ถูกถอดออกทั้งชุดแล้ว
+   ตัวสร้างชิป (`syncMinTray` ใน panel-ui.js) ไม่มีใครเรียกตั้งแต่ alpha.50 — ถาดไม่เคยโผล่จริง
+   รายงาน "ปุ่มลอยทับชิปกู้คืนแผง" จึงเป็นบั๊กของโค้ดที่ตายแล้ว ไม่ใช่ของหน้าจอที่ผู้ใช้เห็น
+   ทางกลับของแผงที่ปิดไว้: เมนู มุมมอง → แผง · ปุ่มบนแถบเครื่องมือ · Ctrl+Alt+ตัวอักษร */
+
 /* ซ่อนช่องค้นหาใน explorer */
 #tree-search.k-search-off { display:none; }
 /* ปุ่มรีเฟรช Explorer (ข้อ 11) */
@@ -2009,19 +2095,29 @@ body.paper-mode .k-paper .sp-raw { color:#888; }
 /* บั๊ก #12: หน้าแรกต้องได้ 4 คอลัมน์ และ "ขนาดนิ่ง" — ไม่เปลี่ยนตอนสลับการ์ด ↔ รายการ
    --home-thumb = ความกว้างการ์ด (ตั้งได้ที่ ตั้งค่า → ทั่วไป) · การ์ดสูงคงที่ ไม่ยืดตามเนื้อหา */
 :root { --home-thumb:190px; }
-.home-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:18px;
+/* [alpha.127] คอลัมน์ยืดตามที่ว่างจริง — เดิมบังคับ 4 คอลัมน์เสมอ ทำให้แผงหน้าแรกแบบผนึก
+   (กว้าง ~380px) ได้การ์ดกว้าง 80px จนอ่านอะไรไม่ออก · กล่องเต็มจอยังได้ 4 คอลัมน์เท่าเดิม
+   เพราะความกว้างของกล่องคิดจาก --home-thumb × 4 อยู่แล้ว */
+.home-grid { display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(var(--home-thumb), 1fr)); gap:18px;
   align-content:start; }
-@media (max-width:900px){ .home-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+/* ── [alpha.127] ★ ความสูงของการ์ดต้องพอกับเนื้อในจริง ──
+   ผู้ใช้: *"ในหน้า home ชื่อ project หาย ปุ่มก็ล้น หน้ารายการก็ไม่เรียงกันเป็นระเบียบ"*
+   ต้นตอ: การ์ดสูงคงที่ `--home-thumb * 1.55` มาตั้งแต่บั๊ก #12 แต่หลังจากนั้นเนื้อในถูกเพิ่ม
+   สองแถว (ที่อยู่บนดิสก์ใน alpha.123 + ปุ่มเปิด) → เนื้อล้นกรอบ แล้ว flexbox **บีบลูกทุกตัว
+   ตามสัดส่วน** ชื่อโปรเจกต์ซึ่ง `white-space:nowrap; overflow:hidden` จึงถูกบีบเหลือสูง 0
+   = "ชื่อหาย" ส่วนปุ่มล่างสุดถูก `overflow:hidden` ตัดทิ้ง = "ปุ่มล้น"
+   แก้สองชั้น: (1) เพิ่มความสูงให้พอ (2) ชื่อกับปุ่ม **ห้ามถูกบีบ** — ดูกฎ flex ข้างล่าง */
 .home-card { background:var(--side); border:1px solid var(--border); border-radius:12px;
   overflow:hidden; cursor:pointer; transition:transform .15s, box-shadow .15s;
-  height:calc(var(--home-thumb) * 1.55); display:flex; flex-direction:column; }
+  height:calc(var(--home-thumb) * 1.72); display:flex; flex-direction:column; }
 .home-card:hover { transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,0,0,.35); }
 .home-card-cover { height:calc(var(--home-thumb) * .74); flex:0 0 auto;
   background:var(--bar); display:flex; align-items:center; justify-content:center;
   overflow:hidden; }
 .home-card-img { width:100%; height:100%; object-fit:cover; }
 .home-card-cover-ph { font-size:calc(48px * var(--ui-scale, 1)); opacity:.6; }
-.home-card-body { padding:16px; display:flex; flex-direction:column; gap:10px; }
+.home-card-body { padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
 .home-card-title { font-size:calc(17px * var(--ui-scale, 1)); font-weight:600; color:var(--bright); }
 .home-card-author { font-size:calc(13px * var(--ui-scale, 1)); color:var(--dim); font-weight:400; }
 .home-card-stats { display:flex; gap:16px; flex-wrap:wrap; }
@@ -2032,14 +2128,40 @@ body.paper-mode .k-paper .sp-raw { color:#888; }
 .home-empty-icon { font-size:calc(64px * var(--ui-scale, 1)); margin-bottom:16px; }
 .home-empty h2 { color:var(--fg); margin-bottom:8px; }
 .home-empty p { max-width:400px; margin:0 auto; line-height:1.7; }
-/* list view toggle */
+/* ══ list view — [alpha.127] แถวเป็น "ตาราง" จริง ไม่ใช่แถวลอย ══
+   ผู้ใช้: *"หน้ารายการก็ไม่เรียงกันเป็นระเบียบเลย"*
+   เดิมแต่ละแถวเป็น flex row → ความกว้างของชื่อโปรเจกต์ (ยาวไม่เท่ากัน) ดันสถิติ/วันที่/
+   ที่อยู่/ปุ่ม ให้เริ่มคนละตำแหน่งทุกแถว = อ่านเทียบกันไม่ได้เลย
+   แก้: การ์ดเป็น grid คอลัมน์ตายตัว แล้วให้ `.home-card-body` เป็น `display:contents`
+   เพื่อให้ "ลูกของ body" ขึ้นมาเป็นช่องของตารางโดยตรง (ไม่ต้องรื้อโครง DOM) */
 .home-grid.list { display:grid; grid-template-columns:1fr; gap:8px; }
-.home-grid.list .home-card { display:flex; flex-direction:row; align-items:center;
-  padding:12px 16px; border-radius:8px; height:72px; }
+.home-grid.list .home-card { display:grid; align-items:center; gap:14px;
+  /* ปก · ชื่อ · สถิติ · วันที่ · ที่อยู่ · ปุ่ม — วันที่ไทยเต็มรูป ("21 ก.ค. 2569 14:43")
+     ยาวกว่าที่คิด จึงให้พื้นที่มากกว่าช่องที่อยู่ (ซึ่งตัดหัวได้โดยไม่เสียความหมาย) */
+  grid-template-columns:48px minmax(110px, 1.1fr) minmax(165px, 1.05fr)
+                        minmax(150px, 1.05fr) minmax(80px, .8fr) max-content;
+  padding:10px 14px; border-radius:8px; height:68px; }
+.home-grid.list .home-card-body { display:contents; }
 .home-grid.list .home-card-cover { width:48px; height:48px; border-radius:6px; flex-shrink:0; }
-.home-grid.list .home-card-body { flex:1; flex-direction:row; gap:16px; padding:0; }
 .home-grid.list .home-card-title { font-size:calc(15px * var(--ui-scale, 1)); }
 .home-grid.list .home-card-cover-ph { font-size:calc(24px * var(--ui-scale, 1)); }
+/* ทุกช่องตัดท้ายเมื่อยาวเกิน — แถวสูงคงที่ ห้ามมีอะไรดันให้สูงขึ้น */
+.home-grid.list .home-card-stats, .home-grid.list .home-card-date,
+.home-grid.list .home-card-path { min-width:0; overflow:hidden; white-space:nowrap; margin:0; }
+.home-grid.list .home-card-stats { flex-wrap:nowrap; gap:12px; }
+.home-grid.list .home-card-open { margin-top:0; justify-self:end; }
+/* การ์ด "หาไม่เจอ" ไม่มีช่องปก — ถ้าปล่อยให้ตารางเริ่มที่ชื่อเลย ชื่อจะเลื่อนไปคนละคอลัมน์
+   กับแถวปกติ (เจอจริงตอนวัด: แถวปกติเริ่มที่ 247px แถวนี้ 185px)
+   → ใช้ **ตารางเดียวกันเป๊ะ** แล้วสั่งให้แต่ละชิ้นลงช่องที่ตรงกัน (เว้นช่องปกไว้ว่าง) */
+.home-grid.list .home-card-broken { padding:10px 14px; }
+.home-grid.list .home-card-broken .home-card-title { grid-column:2; }
+.home-grid.list .home-card-broken .home-broken-path { grid-column:3; }
+.home-grid.list .home-card-broken .home-broken-why { grid-column:4 / 6; }
+.home-grid.list .home-card-broken .home-broken-btns { grid-column:6; }
+.home-grid.list .home-card-broken .home-broken-path,
+.home-grid.list .home-card-broken .home-broken-why { min-width:0; overflow:hidden;
+  white-space:nowrap; text-overflow:ellipsis; margin:0; }
+.home-grid.list .home-card-broken .home-broken-btns { margin-top:0; justify-self:end; }
 
 /* ====== กลุ่ม 2: Tag Pane ====== */
 .tag-wrap { max-width:900px; margin:0 auto; padding:24px 32px; overflow-y:auto; height:100%; }
@@ -2292,6 +2414,19 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
   text-overflow:ellipsis; }
 .k-gsearch-hl { background:var(--accent-hi); color:#fff; border-radius:2px; padding:0 1px; }
 .k-gsearch-open { font-size:calc(11px * var(--ui-scale, 1)); padding:4px 10px; margin-top:6px; }
+/* [alpha.125 ข้อ A] กล่องเต็มจอกับแผงใช้ DOM ชุดเดียวกันแล้ว — สไตล์จึงอยู่ที่เดียว
+   (เดิมกำหนดด้วย style.cssText ในโค้ดสองก๊อป ธีม/ซูมจึงตามไม่ทันทั้งคู่) */
+.k-gsearch-body { display:flex; flex-direction:column; gap:6px; min-height:0; flex:1; }
+.k-gsearch-row { gap:8px; margin:8px 0 0; }
+.k-gsearch-input { flex:1; }
+.k-gsearch-types { gap:12px; margin:2px 0; font-size:calc(12px * var(--ui-scale, 1));
+  flex-wrap:wrap; }
+.k-gsearch-help { font-size:calc(11px * var(--ui-scale, 1)); line-height:1.65; color:var(--dim);
+  margin-bottom:2px; }
+.k-gsearch-body .k-gsearch-results { flex:1; max-height:58vh; overflow-y:auto; }
+.k-gsearch-status { font-size:calc(11.5px * var(--ui-scale, 1)); margin-top:4px; }
+/* บรรทัดผลลัพธ์เป็น snippet จากเอนจิน (อาจยาว) — ตัดท้ายแทนการดันกล่องกว้าง */
+.k-gsearch-line { max-width:100%; }
 
 /* ====== กลุ่ม 9: Scene Table ====== */
 .sc-tbl-wrap { display:flex; flex-direction:column; height:100%; padding:16px 20px; }
@@ -3000,6 +3135,8 @@ body.paper-mode .k-paper .sp.sp-page-break-el { border-top-color:#c9a06a; color:
 .aia-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:10px; align-items:start; }
 .aia-card { background:var(--bar); border:1px solid var(--border); border-radius:10px;
   padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+/* [alpha.124 ข้อ 8] เข้าจากเมนูที่เจาะจงเรื่อง = เน้นการ์ดใบนั้นให้เห็นว่า "อันนี้แหละ" */
+.aia-card.aia-card-focus { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-hi); }
 .aia-card-head { font-weight:600; font-size:calc(13.5px * var(--ui-scale, 1)); }
 .aia-card-desc { color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); line-height:1.65; }
 .aia-card-list { margin:0; padding-left:18px; color:var(--dim);
@@ -3419,7 +3556,12 @@ body.paper-mode .roster-page { background:var(--paper); color:var(--paper-ink); 
 .k-float-panel.k-float-snapped { outline:2px solid var(--accent-hi); outline-offset:-2px; }
 /* บั๊ก #12: การ์ดสูงคงที่ → เนื้อในต้องไม่ดันการ์ดยืด */
 .home-card-body { flex:1; min-height:0; overflow:hidden; }
-.home-card-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* [alpha.127] ★ ชื่อโปรเจกต์กับปุ่มเปิด **ห้ามถูกบีบ** — สองอย่างนี้คือเหตุผลที่การ์ดมีอยู่
+   (ตัวที่ยอมหดได้คือ สถิติ · วันที่ · ที่อยู่ ซึ่งอ่านไม่ครบก็ยังพอเดาได้จาก tooltip) */
+.home-card-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  flex:0 0 auto; min-height:1.4em; line-height:1.4; }
+.home-card-open { flex:0 0 auto; margin-top:auto; }
+.home-card-stats, .home-card-date, .home-card-path { flex:0 1 auto; min-height:0; }
 .home-grid.list .home-card-body { overflow:hidden; }
 
 /* 0.56a #4: กล่องตั้งค่ากว้างขึ้นแล้ว → หน้าที่มีแถวเยอะจัดเป็น 2 คอลัมน์ ไม่ให้ดูโล่ง/แน่น
@@ -3445,7 +3587,12 @@ body.paper-mode .roster-page { background:var(--paper); color:var(--paper-ink); 
 /* [alpha.61 ข้อ 1] แถบคำสั่งอยู่ล่างสุดของกล่อง — ไม่ยืด ไม่เลื่อนตามรายการ */
 .k-home-dlg .home-actions { flex:0 0 auto; margin-bottom:0; margin-top:12px; }
 /* มุมมองรายการต้องไม่ทำให้กล่องเปลี่ยนขนาด — สูงเท่ากันทุกแถว เลื่อนในกรอบเดิม */
-.k-home-dlg .home-grid { align-content:start; }
+/* [alpha.127] กล่องเต็มจอ **ล็อก 4 คอลัมน์** ตามบั๊ก #12 (ความกว้างกล่องคิดจากขนาดนี้)
+   ส่วนตารางที่อยู่ในแผง/แท็บใช้ auto-fill ยืดตามที่ว่างจริง — แผงผนึกกว้าง ~380px
+   เคยถูกบังคับเป็น 4 คอลัมน์ ได้การ์ดกว้าง 80px จนอ่านอะไรไม่ออก */
+.k-home-dlg .home-grid { align-content:start;
+  grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.k-home-dlg .home-grid.list { grid-template-columns:1fr; }
 
 /* ====== 0.56a #8: โหมดอ่าน / โหมดโฟกัส = หน้ากระดาษเต็มจอจริง ======
    กฎเดิมไล่ซ่อนแผงทีละใบ แต่ยังเหลือ "กล่องเปล่า" ที่เกิดจาก dock/กลุ่มแท็บที่ยังกินพื้นที่อยู่
@@ -3653,15 +3800,28 @@ body.paper-mode .k-paper .ed-page-break::before { border-top-color:var(--paper-l
    ตัววัดและตัวเทสจึงอ้างจุดเดียวกันได้ ไม่ต้องแยกเคส */
 .ed-page-break.k-pb-inline { display:inline-block; width:100%;
   --k-pb-strip:calc(var(--ed-lh, 1.75) * 1em + 2px);
-  /* [alpha.98 ข้อ 7] ที่ว่างท้ายหน้ารวมอยู่ในความสูงเลย (เหตุผลเดียวกับตัวระดับบล็อก) */
-  height:calc(var(--k-pb-strip) + var(--k-pb-pad, 0px));
+  /* ══ [alpha.131 · เคส P-1] ★★ แถบหนึ่งบรรทัดต้องอยู่ **ใน** ที่ว่างท้ายหน้า ไม่ใช่บวกเพิ่ม ══
+
+     ผู้ใช้: *"การตัดหน้าเพี้ยน"* — ส่วนที่เหลือหลังแก้เส้นคั่นหาย (วัดได้ในมุมมองปกติ:
+     ระยะระหว่างรอยต่อหน้า 894 / 864 / 894 วนซ้ำ · ต่างกัน 30px = หนึ่งบรรทัดพอดี)
+
+     `calc(strip + pad)` เดิมทำให้จุดตัด **กลางย่อหน้า** กินที่เพิ่มจากพื้นที่พิมพ์อีกหนึ่งบรรทัดเสมอ
+     แล้วเส้นประไปอยู่ *เหนือ* แถบ (`::before{bottom:strip}`) → แถบตกไปนั่งอยู่ **หัวหน้าถัดไป**
+     หน้านั้นจึงยาวกว่าหน้าอื่น 30px ทุกครั้ง ทั้งที่ตัวจัดหน้าคิดถูกหมด
+     (ตัวชดเชย `tuneProsePagePads` ก็แก้ไม่ได้ เพราะมันคุม `pad` ซึ่งอยู่คนละฝั่งของเส้นประ)
+
+     `max()` = แถบไป **ซ้อนอยู่ในที่ว่างท้ายหน้า** ซึ่งเป็นที่ว่างอยู่แล้ว → ไม่กินที่เพิ่มเลย
+     แล้วย้ายเส้นประลงก้นกล่องให้ตรงกับจุดตัดระดับบล็อก = รอยต่อหน้าอยู่ที่เดียวกันทั้งสองชนิด
+     (เหลือเฉพาะหน้าที่เนื้อเต็มจนที่ว่างไม่ถึงหนึ่งบรรทัด ซึ่งกล่องยุบต่ำกว่าหนึ่งบรรทัดไม่ได้
+      เพราะมันเป็น inline-block ที่ต้องมีกล่องบรรทัดของตัวเอง — เกินได้ไม่เกินหนึ่งบรรทัด) */
+  height:max(var(--k-pb-strip), var(--k-pb-pad, 0px));
   overflow:visible; vertical-align:top; text-indent:0;
   margin:0; }
-/* แถบหนึ่งบรรทัดอยู่ "ก้นกล่อง" — ที่ว่างท้ายหน้ากางอยู่เหนือมัน */
+/* เส้นประ = ก้นกล่อง เหมือนจุดตัดระดับบล็อก · แถบหนึ่งบรรทัดกางอยู่เหนือมันในที่ว่างท้ายหน้า */
 .ed-page-break.k-pb-inline::before { left:0; right:0; width:auto;
-  bottom:var(--k-pb-strip); top:auto; }
+  bottom:0; top:auto; }
 .ed-page-break.k-pb-inline > .sp-page-break-num { right:0; left:auto;
-  bottom:calc(var(--k-pb-strip) / 2); top:auto; transform:translateY(50%); }
+  bottom:.1em; top:auto; }
 
 /* ── [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของ "หน้าถัดไป" บนเส้นคั่นหน้า ──
    เดิมโหมดปกติ/จัดหน้ามีเลขหน้าเฉพาะหน้าแรก (::before ของ .ProseMirror) — หน้า 2 เป็นต้นไป
@@ -3681,7 +3841,7 @@ body.paper-mode .k-paper .ed-page-break::before { border-top-color:var(--paper-l
   display:block; left:0; right:auto; bottom:.1em; top:auto;
 }
 .pane:not(.sp-view-layout):not(.sp-view-draft) .ed-page-break.k-pb-inline > .sp-page-no-next {
-  bottom:calc(var(--k-pb-strip) / 2); top:auto; transform:translateY(50%);
+  bottom:.1em; top:auto;      /* [alpha.131] เส้นประย้ายลงก้นกล่องแล้ว — เลขหน้าตามไปด้วย */
 }
 /* ปิดเลขหน้าอยู่ = ไม่มีอะไรให้โชว์ (ตัวเลขไม่ถูกสร้างตั้งแต่ต้นทาง แต่กันไว้อีกชั้น) */
 body:not(.sp-page-numbers) .sp-page-no-next { display:none !important; }
@@ -3932,6 +4092,11 @@ body.paper-mode .k-paper .sp-cont-mark { color:var(--paper-dim); }
 body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 .sp-pageview .sp-more { margin-left:2.2in; color:#333; }
 /* [alpha.58r บั๊ก 15+20] มุมมองหน้ากระดาษของ "นิยาย" (renderProsePageView) */
+/* [alpha.134 · X-1] ลายน้ำในช่องตัวอย่าง PDF — ให้เห็นแบบเดียวกับที่ pdf-lib วาดลงไฟล์
+   (กลางหน้า · เอียง -35° · จาง) · pointer-events:none เพราะแผ่นกระดาษคลิกเพื่อกระโดดหน้าได้ */
+.sp-page-wm { position:absolute; left:0; right:0; top:50%; text-align:center;
+  transform:translateY(-50%) rotate(-35deg); font-size:54pt; font-weight:700;
+  color:#000; opacity:.1; pointer-events:none; white-space:nowrap; overflow:hidden; }
 .sp-pageview .ed-page { color:var(--paper-ink); }
 .sp-pageview .ed-page p, .sp-pageview .ed-page li { color:var(--paper-ink); margin-top:0; }
 .sp-pageview .ed-page, .sp-pageview .sp-page { overflow-wrap:break-word; word-break:break-word; }
@@ -4218,6 +4383,36 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 /* ══════════ [alpha.61 ข้อ 2] แผงแชท AI (opencode) ══════════ */
 #ai-chat-panel, .ai-chat { height:100%; display:flex; flex-direction:column; min-height:0; }
 .ai-chat-empty { padding:18px; text-align:center; font-size:calc(12.5px * var(--ui-scale, 1)); }
+/* [alpha.129 ข้อ 1] แจ้งเมื่อประวัติเก่าถูกตัดออกจากคำขอ — ไม่งั้นผู้ใช้เจอแค่ "AI มั่ว" */
+.ai-chat-trim { margin:6px 12px; padding:5px 9px; border-radius:6px; text-align:center;
+  border:1px dashed var(--border); background:var(--bar);
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.ai-hist-hint { margin:-4px 0 8px 0; font-size:calc(11px * var(--ui-scale, 1)); }
+
+/* [alpha.129 ข้อ 4] คำตอบของโมเดลเป็น Markdown — เดิมโชว์ `##`/`**`/โค้ดดิบ ๆ ปนกันหมด */
+.ai-md > :first-child { margin-top:0; }
+.ai-md > :last-child { margin-bottom:0; }
+.ai-md p, .ai-md ul, .ai-md ol, .ai-md blockquote { margin:.45em 0; }
+.ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, .ai-md h5, .ai-md h6 {
+  margin:.7em 0 .3em; line-height:1.3; font-weight:700; }
+.ai-md h1 { font-size:1.25em; } .ai-md h2 { font-size:1.15em; }
+.ai-md h3 { font-size:1.06em; } .ai-md h4, .ai-md h5, .ai-md h6 { font-size:1em; }
+.ai-md ul, .ai-md ol { padding-left:1.35em; }
+.ai-md li { margin:.15em 0; }
+.ai-md blockquote { margin-left:0; padding:.2em .7em; border-left:3px solid var(--border);
+  background:var(--bar); border-radius:0 4px 4px 0; }
+.ai-md-hr { border:0; border-top:1px solid var(--border); margin:.7em 0; }
+.ai-md-code { padding:1px 4px; border-radius:4px; background:var(--bar);
+  border:1px solid var(--border); font-family:ui-monospace, Menlo, Consolas, monospace;
+  font-size:.92em; }
+.ai-md-pre { margin:.5em 0; border:1px solid var(--border); border-radius:6px; overflow:hidden;
+  background:var(--bar); }
+.ai-md-pre-head { display:flex; align-items:center; justify-content:space-between;
+  padding:2px 6px 2px 9px; border-bottom:1px solid var(--border);
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+.ai-md-pre-body { margin:0; padding:8px 10px; overflow-x:auto; white-space:pre;
+  font-family:ui-monospace, Menlo, Consolas, monospace;
+  font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1.55; }
 
 /* A) รายการเซสชัน */
 .ai-chat-list { display:flex; flex-direction:column; height:100%; min-height:0; padding:8px; gap:8px; }
@@ -5461,3 +5656,202 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
   font-size:calc(11.5px * var(--ui-scale, 1)); }
 .st-namehints .st-namechip:hover { border-style:solid; border-color:var(--accent);
   color:var(--bright); }
+
+
+/* ══════════ [alpha.122] Story Starter: โหมดขั้นสูง ══════════
+   ทุกกฎขึ้นต้นด้วย `.st-` หรือ `.wiki-` ตามที่มันอยู่จริง — ไม่มีคลาสลอย (บทเรียน K-1) */
+
+/* ── ปุ่มสลับโหมด พื้นฐาน / ขั้นสูง ── */
+.st-mode { display:inline-flex; gap:0; border:1px solid var(--border); border-radius:999px;
+  overflow:hidden; flex:0 0 auto; }
+.st-mode-btn { background:transparent; border:none; color:var(--dim); cursor:pointer; font:inherit;
+  padding:3px 12px; font-size:calc(11.5px * var(--ui-scale, 1)); white-space:nowrap; }
+.st-mode-btn:hover { background:var(--hover); color:var(--fg); }
+.st-mode-btn.on { background:var(--sel); color:var(--bright); }
+
+/* ── ปุ่มเสร็จสิ้นตอนยังกรอกไม่ครบ: กดได้ แต่ต้องดูออกว่าไม่ปกติ ── */
+.st-finish-warn { background:var(--bar); color:var(--fg); border:1px dashed var(--accent-hi); }
+.st-finish-warn:hover { background:var(--hover); }
+.st-miss .st-linkbtn { margin-left:8px; }
+
+/* ── การ์ดตัวละคร: แท็ก + คำเตือนว่ายังไม่ได้ตั้งชื่อ ── */
+.st-cast-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+.st-cast-tags .st-tag { font-size:calc(10.5px * var(--ui-scale, 1)); padding:1px 8px; }
+.st-cast-todo { color:var(--accent-hi); margin-top:5px;
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+
+/* ── ชิปแทรกโค้ดสั้น `{[ชื่อ]}` ── */
+.st-mentions { display:flex; align-items:center; gap:5px; flex-wrap:wrap; padding:5px 2px 0; }
+.st-mentions-label { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
+.st-mentions .st-mentionchip { background:var(--bar); color:var(--link); cursor:pointer;
+  border:1px dashed var(--border); border-radius:6px; padding:1px 8px; font:inherit;
+  font-family:var(--mono, monospace); font-size:calc(10.5px * var(--ui-scale, 1)); }
+.st-mentions .st-mentionchip:hover { border-style:solid; border-color:var(--accent);
+  color:var(--bright); }
+.st-mention-warn { color:var(--accent-hi); padding:4px 2px 0;
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+.st-shortcode-preview { font-family:var(--mono, monospace); }
+
+/* ── ช่อง Prompt เพิ่มเองได้ ── */
+.st-prompts { margin-top:14px; }
+.st-prompts .st-prompt-add { margin-left:auto; padding:2px 10px;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.st-prompts .st-sub { display:flex; align-items:center; gap:8px; }
+.st-prompt-list { display:flex; flex-direction:column; gap:9px; margin-top:7px; }
+.st-prompt-row { border:1px solid var(--border); border-radius:9px; padding:8px 10px;
+  background:var(--side); }
+.st-prompt-top { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.st-prompt-key { flex:1; min-width:0; }
+.st-prompt-del { flex:0 0 auto; padding:2px 9px; }
+.st-prompt-val { width:100%; }
+
+/* ── กล่องช่องขั้นสูงในกล่องตั้งค่าตอน ── */
+.st-adv-box { margin-top:14px; padding:10px 12px 12px; border-radius:10px;
+  border:1px dashed var(--accent-hi); background:var(--side); }
+.st-adv-box .st-sub { color:var(--bright); }
+
+/* ── รูปย่อของตอน ── */
+.st-img-thumb { aspect-ratio:16 / 9; width:100%; max-width:260px; }
+.st-sc-card .st-sc-thumb { flex:0 0 130px; max-width:130px; margin-right:10px; }
+.st-sc-adv { color:var(--accent-hi); }
+.st-opener-img { font-family:var(--mono, monospace); }
+
+/* ── รูปประกอบในช่องแชท (บทเปิด) ── */
+.st-turn-img { margin:6px 0 8px; }
+.st-turn-img img { max-width:100%; max-height:340px; border-radius:8px; cursor:zoom-in;
+  display:block; }
+
+/* ══════════ [alpha.122] Wiki entity: โค้ดสั้น · แท็ก · ช่อง Prompt ══════════ */
+.wiki-field-hint { color:var(--dim); padding:2px 0 0;
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+.wiki-tag-chips { display:flex; flex-wrap:wrap; gap:5px; padding:4px 0 0; }
+.wiki-tag-chip { background:var(--chip); border-radius:999px; padding:1px 9px;
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+.wiki-prompt { border:1px solid var(--border); border-radius:9px; padding:8px 10px;
+  background:var(--side); margin:7px 0; }
+.wiki-prompt-top { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.wiki-prompt-key { flex:1; min-width:0; }
+.wiki-prompt-val { width:100%; resize:vertical; }
+.st-rt-s { text-decoration:line-through; }
+
+/* ══════════ [alpha.123] คำสงวนของโค้ดสั้น · บทพูดตัวเอียง · ที่อยู่โปรเจกต์ ══════════ */
+
+/* ชิปคำสงวน ({{character}} / {{user}}) ต้องดูต่างจากชื่อคนจริง */
+.st-mentions .st-mentionchip.reserved { color:var(--accent-hi); border-style:dotted; }
+.st-mentions .st-mentionchip.reserved:hover { border-style:solid; }
+.st-hint.st-warn { color:var(--accent-hi); }
+
+/* บทพูดในเครื่องหมายคำพูด — เอียงพอให้แยกออก ไม่ถึงกับแย่งสายตา */
+.st-turn-text .k-speech, .dlgb-bub-text .k-speech { font-style:italic; opacity:.95; }
+
+/* placeholder ของช่องแบบเห็นผลจริง (contenteditable ไม่มี placeholder ในตัว) */
+.st-rt-area[data-ph]:empty::before,
+.st-rt-area[data-ph] > p:only-child:empty::before {
+  content:attr(data-ph); color:var(--dim); opacity:.75; white-space:pre-wrap; pointer-events:none;
+}
+
+/* ช่องเลือกรูปแบบมีพรีวิว (รูปย่อของตอน · รูปประกอบบทเปิด) */
+.st-img-field .st-img-box { margin-bottom:6px; }
+/* ระบุ object-fit ซ้ำแม้จะสืบทอดมาแล้ว — เทส [a96-7] กวาดทุกกฎที่จบด้วย `img` */
+.st-img-field .st-img-box img { object-fit:contain; cursor:zoom-in; }
+.st-open-slot { display:block; }
+
+/* ที่อยู่โปรเจกต์บนการ์ดหน้าแรก — ตัดหัวให้เห็นท้ายทาง (ส่วนที่ต่างกันจริง) */
+.home-card-path { display:flex; align-items:center; gap:4px; margin-top:4px; min-width:0; }
+.home-card-pathtxt { flex:1; min-width:0; color:var(--dim); overflow:hidden; white-space:nowrap;
+  text-overflow:ellipsis; direction:rtl; text-align:left;
+  font-size:calc(10px * var(--ui-scale, 1)); }
+.home-card-pathbtn { flex:0 0 auto; background:none; border:1px solid transparent; cursor:pointer;
+  border-radius:5px; color:var(--dim); padding:1px 5px; font:inherit;
+  font-size:calc(10.5px * var(--ui-scale, 1)); }
+.home-card-pathbtn:hover { color:var(--bright); border-color:var(--border); background:var(--hover); }
+
+
+/* ─── [alpha.124 ข้อ 19] การ์ด "หาโปรเจกต์นี้ไม่เจอ" บนหน้าแรก ───
+   เดิมโปรเจกต์ที่ย้าย/ลบหายไปจากหน้าแรกเงียบ ๆ · ตอนนี้ยังอยู่ แต่หน้าตาต่างชัดเจน
+   (เส้นประ + สีจาง = "ยังไม่ใช่ของใช้ได้" อ่านออกตั้งแต่ยังไม่ทันอ่านตัวหนังสือ) */
+/* [alpha.127] การ์ด "หาไม่เจอ" ต้องสูงเท่าการ์ดปกติ ไม่งั้นแถวในตารางไม่เรียงกัน
+   (เดิมสูงตามเนื้อ → แถวที่มีการ์ดชนิดนี้ปนอยู่ดูรกทันที) */
+.home-card.home-card-broken { border-style:dashed; border-color:var(--border);
+  background:transparent; opacity:.82; cursor:default;
+  padding:14px 16px; justify-content:flex-start; }
+.home-card.home-card-broken .home-broken-btns { margin-top:auto; }
+.home-card.home-card-broken:hover { transform:none; box-shadow:none; }
+.home-card-broken .home-card-title { color:var(--warn, #d9b757); }
+.home-broken-path { margin-top:4px; color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1));
+  word-break:break-all; line-height:1.5; }
+.home-broken-why { margin-top:6px; color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); }
+.home-broken-btns { margin-top:10px; display:flex; gap:8px; }
+.home-broken-btns button { font-size:calc(12px * var(--ui-scale, 1)); padding:4px 10px; }
+
+/* [alpha.124 ข้อ 26] คำเตือนในช่องตัวอย่าง: ปลายทางนี้ใช้ได้เฉพาะบทภาพยนตร์
+   (คนละตัวกับ .xhub-warn ที่เป็นบรรทัดเดียวบนแถบล่างของกล่อง — อันนี้ต้องขึ้นบรรทัดได้) */
+.xhub-badkind { margin-bottom:8px; color:var(--warn, #d9b757); white-space:normal; line-height:1.6; }
+
+/* [alpha.124 ข้อ 29] กล่องพรีวิวการนำเข้าบทภาพยนตร์ */
+.imp-sp-meta { display:grid; gap:2px; color:var(--dim); font-size:calc(12.5px * var(--ui-scale, 1));
+  line-height:1.7; margin-bottom:10px; }
+.imp-sp-pre { max-height:44vh; overflow:auto; white-space:pre-wrap; margin:0;
+  background:var(--bar); border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+  font-size:calc(12px * var(--ui-scale, 1)); line-height:1.7; color:var(--fg); }
+.imp-sp-warn { margin-top:8px; color:var(--warn, #d9b757); line-height:1.6; }
+
+/* [alpha.124 ข้อ 27] พรีวิวหน้าเว็บของ "ส่งออกเป็นบล็อก" */
+.k-blog-pv { display:flex; flex-direction:column; gap:8px; }
+.k-blog-frame { width:100%; height:62vh; border:1px solid var(--border); border-radius:8px;
+  background:#fff; }
+
+/* [alpha.124 ข้อ 35] ช่องค้นหาในกล่อง "ไปที่…" */
+.k-goto-find { width:100%; margin:8px 0 6px; }
+
+/* [alpha.124 ข้อ 34] คำใบ้ปุ่มในกล่องเดาชื่อ SmartType */
+.smart-hint { margin-top:4px; padding:3px 10px 1px; border-top:1px solid var(--border);
+  color:var(--dim); font-size:calc(10.5px * var(--ui-scale, 1)); white-space:nowrap;
+  pointer-events:none; }
+
+/* ─── [alpha.124 ข้อ 33] จุดที่ตัวตรวจบทแจ้ง — เห็นในเอกสาร ไม่ใช่มีแต่ตัวเลขบนแถบสถานะ ───
+   ใช้เส้นขอบซ้ายบางแทนการขีดเส้นใต้ทั้งบล็อก: บทภาพยนตร์วัดระยะเยื้องจากขอบกระดาษ
+   (กฎข้อ 15/31) จึงห้ามกินพื้นที่ในบรรทัด — เส้นวางในระยะขอบด้วย box-shadow ที่ไม่กิน layout */
+.ProseMirror .sp-err-error { box-shadow:inset 3px 0 0 -1px var(--danger, #d9534f); }
+.ProseMirror .sp-err-warn  { box-shadow:inset 3px 0 0 -1px var(--warn, #d9b757); }
+.ProseMirror .sp-err-error, .ProseMirror .sp-err-warn { border-radius:2px; }
+
+/* [alpha.124 ข้อ 42] Kanban: เลือกฉบับร่าง + เส้นบอกตำแหน่งวางการ์ด */
+.kb-draft { margin-left:auto; max-width:240px; }
+.kb-card.kb-dragging { opacity:.4; }
+.kb-drop-mark { height:2px; margin:3px 0; border-radius:2px; background:var(--accent);
+  box-shadow:0 0 0 1px var(--accent-hi); }
+
+/* [alpha.124 ข้อ 44] สภาพว่างของแผงที่ต้องพึ่งแผงอื่น — บอกว่าต้องทำอะไรก่อน ไม่ใช่กล่องเปล่า */
+.k-panel-empty { display:flex; flex-direction:column; align-items:flex-start; gap:10px;
+  padding:16px 14px; color:var(--dim); line-height:1.7;
+  font-size:calc(12.5px * var(--ui-scale, 1)); }
+
+/* [alpha.124 ข้อ 9] ที่จองไว้ให้รูปของเทิร์น (ก่อน URL จะพร้อม) — กันข้อความกระโดดตอนรูปโหลดเสร็จ */
+.st-turn-img.st-turn-img-loading { min-height:14px; }
+
+/* ─── [alpha.125 ข้อ G] แผง "ฉากที่กล่าวถึง" ทั้งโปรเจกต์ ─── */
+#backlinks-panel .bl-panel-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+#backlinks-panel .bl-filter { width:100%; margin-bottom:6px; }
+.bl-only { display:flex; align-items:center; gap:6px; color:var(--dim);
+  font-size:calc(11.5px * var(--ui-scale, 1)); margin-bottom:8px; cursor:pointer; }
+.bl-panel-list { display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1; min-height:0; }
+.bl-ent { border:1px solid var(--border); border-radius:8px; padding:8px 10px; background:var(--bar); }
+/* ตัวที่ยังไม่โผล่ในฉากไหนเลย = สิ่งที่ผู้ใช้ต้องเห็นก่อน — ไม่ใช่แถวจาง ๆ ที่กลืนไปกับพื้น */
+.bl-ent.bl-ent-orphan { border-color:var(--warn, #d9b757); }
+.bl-ent-head { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; }
+.bl-ent-name { font-weight:600; color:var(--bright); flex:1; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.bl-ent-count { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); flex:0 0 auto; }
+.bl-panel-list .bl-row { display:flex; gap:4px; padding:1px 0 1px 8px;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.bl-panel-list .bl-name { color:var(--link, var(--accent-hi)); cursor:pointer;
+  text-decoration:underline; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bl-panel-list .bl-count { color:var(--dim); flex:0 0 auto; }
+.bl-panel-status { margin-top:6px; font-size:calc(11px * var(--ui-scale, 1)); }
+
+/* [alpha.125 ข้อ I] แถวเลือกฉบับร่างในต้นไม้ — โผล่เฉพาะเล่มที่มีมากกว่าหนึ่งร่าง */
+.tree-draft-row { display:flex; align-items:center; gap:6px; color:var(--dim);
+  padding:3px 8px 3px 22px; font-size:calc(11.5px * var(--ui-scale, 1)); }
+.tree-draft-sel { flex:1; min-width:0; padding:2px 6px;
+  font-size:calc(11.5px * var(--ui-scale, 1)); }

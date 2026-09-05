@@ -11,19 +11,23 @@
 // ที่นี่คือแหล่งความจริงเดียว: **เลือกสีกระดาษมาสีเดียว แล้วอีกสี่ตัวคำนวณตามให้ครบ**
 // (ทดสอบด้วย node ได้ — test/paper-color.test.cjs)
 
-import { T } from './i18n.js';
+import { t } from './i18n.js';
 
 /** สีกระดาษเริ่มต้น — ขาว (เดิมเป็นครีม ซึ่งยังเลือกได้จากพรีเซ็ต) */
 export const PAPER_DEFAULT = '#ffffff';
 
-/** พรีเซ็ตสีกระดาษ — `color` เป็น hex 6 หลักเสมอ */
+/** พรีเซ็ตสีกระดาษ — `color` เป็น hex 6 หลักเสมอ
+ *
+ * [alpha.128] เดิมป้ายเป็น ``T`ขาว` `` (msgid = ตัวข้อความไทยเอง) — **ซึ่งไม่มีแถวในไฟล์ภาษาเลย
+ * สักตัวเดียว** จึงตกกลับเป็นไทยตลอดกาล: สลับหน้าจอเป็นอังกฤษแล้วชื่อสีกระดาษยังเป็นไทยอยู่
+ * ตอนนี้เป็นคีย์จริงเหมือนที่อื่นทั้งโปรเจกต์ (กฎถาวร alpha.77) */
 export const PAPER_PRESETS = [
-  { key: 'white', color: '#ffffff', label: T`ขาว` },
-  { key: 'cream', color: '#f5f1e6', label: T`ครีม (ของเดิม)` },
-  { key: 'sepia', color: '#efe3cc', label: T`กระดาษเก่า` },
-  { key: 'gray',  color: '#eeeeee', label: T`เทาอ่อน` },
-  { key: 'mint',  color: '#eaf2ec', label: T`เขียวถนอมสายตา` },
-  { key: 'dark',  color: '#2b2b2b', label: T`มืด` },
+  { key: 'white', color: '#ffffff', label: t('ui.paper.colorWhite') },
+  { key: 'cream', color: '#f5f1e6', label: t('ui.paper.colorCream') },
+  { key: 'sepia', color: '#efe3cc', label: t('ui.paper.colorSepia') },
+  { key: 'gray',  color: '#eeeeee', label: t('ui.paper.colorGray') },
+  { key: 'mint',  color: '#eaf2ec', label: t('ui.paper.colorMint') },
+  { key: 'dark',  color: '#2b2b2b', label: t('ui.paper.colorDark') },
 ];
 
 // ───────── แปลงสี ─────────

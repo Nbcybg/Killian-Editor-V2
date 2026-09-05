@@ -9,6 +9,8 @@ import { PRESETS, mkStep } from './compile.js';
 import { num } from './num.js';
 // [alpha.82] เลขหน้าของเนื้อเรื่องอ่านค่าตั้งต้นชุดเดียวกับหน้าจอ (ไม่บังคับทับอีกแล้ว)
 import { PAGE_NUMBER_DEFAULTS } from './sp-format.js';
+// [alpha.132 ข้อ 6] เทมเพลตชื่อไฟล์ส่งออก (บริสุทธิ์เหมือนกัน — import ได้)
+import { buildExportName, DEFAULT_EXPORT_NAME } from './export-name.js';
 
 // ═══════════════════════ ส่วนบริสุทธิ์ (ไม่แตะ DOM / ไม่แตะ kapi) ═══════════════════════
 
@@ -93,8 +95,10 @@ export function defaultHubSettings() {
     workflow: '',              // '' = เลือกให้อัตโนมัติตามรูปแบบ
     // titlePages = หน้าปก (บทหนัง = หน้าปกของบท · นิยาย = รูปปกจาก "จัดการเล่ม")
     // roster     = หน้ารายชื่อตัวละคร — ทั้งคู่เป็น "หน้าหน้าเล่ม" ที่ **ไม่นับเลขหน้า**
+    // [alpha.132 ข้อ 3+4] เลขหน้ากับเลขฉากเป็นคนละสวิตช์ · โหมดสี/ขาวดำ
+    // (ค่าเริ่มต้นขาวดำตามธรรมเนียมบทถ่ายทำ — ตรงกับกล่องส่งออก PDF ของบท)
     pdf: { toc: true, titlePages: true, roster: true, headers: true,
-           pageNumbers: true, watermark: '' },
+           pageNumbers: true, sceneNumbers: true, colorMode: 'mono', watermark: '' },
     html: { wysiwyg: true },
     rtf: { fontPt: 12 },
   };
@@ -111,6 +115,9 @@ export function normalizeHub(saved) {
   out.workflow = typeof s.workflow === 'string' ? s.workflow : '';
   out.pdf = { ...d.pdf, ...(s.pdf || {}) };
   out.pdf.watermark = String(out.pdf.watermark || '');
+  // ค่าที่บันทึกไว้ก่อนมีฟีเจอร์นี้ไม่มีสองฟิลด์นี้ → ตกกลับเป็นค่าเริ่มต้น (เลขฉากเปิด · ขาวดำ)
+  out.pdf.sceneNumbers = s.pdf && 'sceneNumbers' in s.pdf ? !!s.pdf.sceneNumbers : d.pdf.sceneNumbers;
+  out.pdf.colorMode = out.pdf.colorMode === 'color' ? 'color' : 'mono';
   out.html = { ...d.html, ...(s.html || {}) };
   out.rtf = { ...d.rtf, ...(s.rtf || {}) };
   out.rtf.fontPt = num(out.rtf.fontPt, 12);
@@ -144,8 +151,16 @@ export function workflowForFormat(wf, fmtKey) {
   return { ...src, ext: formatDef(fmtKey).ext, steps };
 }
 
-/** ชื่อไฟล์ที่เสนอให้ (ไม่มีอักขระต้องห้ามของ Windows) */
-export function suggestName(title, fmtKey) {
-  const base = String(title || 'export').replace(/[\\/:*?"<>|]/g, '_').trim() || 'export';
-  return base + '.' + formatDef(fmtKey).ext;
+/**
+ * ชื่อไฟล์ที่เสนอให้ (ไม่มีอักขระต้องห้ามของ Windows)
+ *
+ * [alpha.132 ข้อ 6] เดิมเป็น `<ชื่อเรื่อง>.<นามสกุล>` ตายตัว · ตอนนี้เดินผ่าน **เทมเพลตชื่อไฟล์**
+ * ที่ผู้ใช้ตั้งเองได้และใช้โค้ดสั้นได้ (`export-name.js`) — ไม่ส่ง `opts` มาก็ได้ผลเท่าเดิมเป๊ะ
+ * @param {{template?:string, ctx?:object}} [opts] เทมเพลต + บริบทของโค้ดสั้น
+ */
+export function suggestName(title, fmtKey, opts) {
+  const o = opts || {};
+  return buildExportName(o.template || DEFAULT_EXPORT_NAME,
+                         { title: String(title || ''), ...(o.ctx || {}) },
+                         formatDef(fmtKey).ext);
 }

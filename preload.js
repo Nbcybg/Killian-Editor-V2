@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('kapi', {
   langSet: call('lang:set'),               // บอก main ให้สร้างเมนู OS ใหม่ตามภาษาที่เลือก
   langReload: call('lang:reload'),         // ทิ้งแคชไฟล์ภาษาใน main (ผู้ใช้แก้ CSV นอกโปรแกรม)
   openExternal: call('shell:openExternal'),// เปิดลิงก์ในเบราว์เซอร์ของเครื่อง (เครดิตในกล่อง "เกี่ยวกับ")
+  openFile: call('shell:openFile'),       // [alpha.132r3] เปิดไฟล์ที่เพิ่งส่งออกด้วยโปรแกรมของเครื่อง
   readFile: call('fs:readFile'), writeFile: callW('fs:writeFile'),
   readJson: call('fs:readJson'), exists: call('fs:exists'), listDirs: call('fs:listDirs'),
   listFiles: call('fs:listFiles'), mkdir: call('fs:mkdir'), move: callW('fs:move'), remove: callW('fs:remove'), isDir: call('fs:isDir'), mtime: call('fs:mtime'),
@@ -73,6 +74,7 @@ contextBridge.exposeInMainWorld('kapi', {
   pdfFromHtml: call('pdf:fromHtml'),         // [70] สร้าง PDF จาก HTML (หน้าต่างซ่อน)
   pdfHtmlToBytes: call('pdf:htmlToBytes'),   // [alpha.81r2] เหมือนกันแต่คืนไบต์ (เอาไปต่อ/ประทับเลขหน้า)
   pushRecent: call('recent:push'), listRecent: call('recent:list'),
+  removeRecent: call('recent:remove'),   // [alpha.124 ข้อ 43] ลบรายการที่พังออกจาก "โปรเจกต์ล่าสุด"
   // [alpha.79] เซสชัน "จำทุกอย่างล่าสุด" — เก็บเป็นไฟล์จริง ไม่ใช่ localStorage
   // (localStorage เขียนลงดิสก์แบบหน่วงเวลา → force quit ทีไรก็หายทุกที)
   sessionRead: call('session:read'), sessionWrite: call('session:write'),

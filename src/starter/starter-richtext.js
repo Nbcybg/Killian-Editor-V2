@@ -17,17 +17,36 @@ import { importImage, starterDir } from './starter-store.js';
 
 // ป้ายกำกับเก็บเป็น **ฟังก์ชัน** ไม่ใช่คีย์ที่เอาไปต่อสตริง
 // (`t('ui.starter.' + key)` ทำให้ตัวตรวจภาษาหาคีย์จริงไม่เจอ แล้วขึ้นเป็นคีย์กำพร้า)
+// [alpha.122] ผู้ใช้ให้ *"ตรวจสอบว่า tool bar สามารถใช้ tool ได้หมดยัง"* — ผลตรวจ:
+//   · ปุ่มเดิม 8 ตัวทำงานครบ **แต่** ปุ่มที่ไม่มีสถานะเปิด/ปิด (จัดหน้า/รายการ) ไม่เคยติดไฟ
+//     เพราะ `syncActive` ยิง `queryCommandState` กับทุกปุ่มรวมถึงตัวที่คำสั่งไม่รองรับ
+//   · `execCommand('bold')` คืนเป็น `<span style="font-weight:...">` เมื่อ styleWithCSS เปิดค้าง
+//     จากตัวแก้ไขอื่นในหน้าเดียวกัน → บังคับปิดทุกครั้งก่อนสั่ง (ดู `runCmd`)
+//   · ขาดของที่คนคาดหวังจริง ๆ: ขีดฆ่า · หัวข้อ · รายการมีเลข · คำพูด · ลิงก์ · เลิกทำ/ทำซ้ำ
+//     → เพิ่มครบในรอบนี้ (ทุกตัวอยู่ในรายการแท็กที่ starter-html.js อนุญาตอยู่แล้ว)
 const CMDS = [
+  { cmd: 'undo', label: '↶', tip: () => t('ui.starter.rtUndo'), noState: true },
+  { cmd: 'redo', label: '↷', tip: () => t('ui.starter.rtRedo'), noState: true },
+  { sep: true },
   { cmd: 'bold', label: 'B', cls: 'st-rt-b', tip: () => t('ui.starter.rtBold') },
   { cmd: 'italic', label: 'I', cls: 'st-rt-i', tip: () => t('ui.starter.rtItalic') },
   { cmd: 'underline', label: 'U', cls: 'st-rt-u', tip: () => t('ui.starter.rtUnderline') },
+  { cmd: 'strikeThrough', label: 'S', cls: 'st-rt-s', tip: () => t('ui.starter.rtStrike') },
+  { sep: true },
+  { cmd: 'formatBlock', arg: 'h2', label: 'H2', tip: () => t('ui.starter.rtH2'), noState: true },
+  { cmd: 'formatBlock', arg: 'h3', label: 'H3', tip: () => t('ui.starter.rtH3'), noState: true },
+  { cmd: 'formatBlock', arg: 'p', label: '¶', tip: () => t('ui.starter.rtPara'), noState: true },
+  { cmd: 'formatBlock', arg: 'blockquote', label: '❝', tip: () => t('ui.starter.rtQuote'), noState: true },
   { sep: true },
   { cmd: 'justifyLeft', label: '⇤', tip: () => t('ui.starter.rtLeft') },
   { cmd: 'justifyCenter', label: '↔', tip: () => t('ui.starter.rtCenter') },
   { cmd: 'justifyRight', label: '⇥', tip: () => t('ui.starter.rtRight') },
   { sep: true },
   { cmd: 'insertUnorderedList', label: '•', tip: () => t('ui.starter.rtList') },
-  { cmd: 'removeFormat', label: '✕', tip: () => t('ui.starter.rtClear') },
+  { cmd: 'insertOrderedList', label: '1.', tip: () => t('ui.starter.rtListNum') },
+  { cmd: 'insertHorizontalRule', label: '—', tip: () => t('ui.starter.rtRule'), noState: true },
+  { sep: true },
+  { cmd: 'removeFormat', label: '✕', tip: () => t('ui.starter.rtClear'), noState: true },
 ];
 
 /**
@@ -56,11 +75,24 @@ export async function richEditor({ slug, value = '', onChange = () => {}, minHei
   };
 
   const syncActive = () => {
-    for (const b of bar.querySelectorAll('button[data-cmd]')) {
+    // เฉพาะปุ่มที่คำสั่งมี "สถานะ" จริง — undo/formatBlock/hr ไม่มี queryCommandState ที่ใช้ได้
+    for (const b of bar.querySelectorAll('button[data-cmd]:not([data-nostate])')) {
       let on = false;
       try { on = document.queryCommandState(b.dataset.cmd); } catch {}
       b.classList.toggle('on', !!on);
     }
+  };
+
+  /**
+   * สั่ง execCommand ให้ได้ผลเหมือนกันทุกครั้ง
+   * `styleWithCSS` เป็นสถานะระดับ **เอกสาร** — ตัวแก้ไขอื่นในหน้าเดียวกันเปิดค้างไว้ได้
+   * แล้วปุ่มตัวหนาของเราจะคืน `<span style>` แทน `<b>` (ผ่าน sanitize แต่ผลลัพธ์ไม่เหมือนเดิม)
+   */
+  const runCmd = (cmd, arg = null) => {
+    area.focus();
+    try { document.execCommand('styleWithCSS', false, false); } catch { /* บางเบราว์เซอร์ไม่มี */ }
+    try { document.execCommand(cmd, false, arg); }
+    catch (e) { log('warn', 'starter rt: ' + cmd, e); }
   };
 
   for (const c of CMDS) {
@@ -68,12 +100,14 @@ export async function richEditor({ slug, value = '', onChange = () => {}, minHei
     const b = el('button', 'st-rt-btn' + (c.cls ? ' ' + c.cls : ''), c.label);
     b.type = 'button';
     b.dataset.cmd = c.cmd;
+    if (c.arg) b.dataset.arg = c.arg;
+    if (c.noState) b.dataset.nostate = '1';
     b.title = c.tip();
     // mousedown + preventDefault — ไม่งั้นโฟกัสหลุดจากข้อความที่เลือกไว้ก่อนคำสั่งจะทำงาน
     b.onmousedown = (e) => e.preventDefault();
     b.onclick = () => {
-      area.focus();
-      try { document.execCommand(c.cmd, false, null); } catch (e) { log('warn', 'starter rt: ' + c.cmd, e); }
+      // formatBlock ต้องส่งชื่อแท็กเป็นวงเล็บมุมบน Firefox/รุ่นเก่า — Chromium รับทั้งสองแบบ
+      runCmd(c.cmd, c.cmd === 'formatBlock' ? '<' + c.arg + '>' : (c.arg || null));
       syncActive(); emit();
     };
     bar.append(b);
@@ -102,6 +136,23 @@ export async function richEditor({ slug, value = '', onChange = () => {}, minHei
     emit();
   };
   bar.append(imgBtn);
+
+  // ── ลิงก์ ──
+  // ต้องมีข้อความที่เลือกไว้ก่อน (execCommand createLink ไม่สร้างข้อความให้เอง)
+  const linkBtn = el('button', 'st-rt-btn', '🔗');
+  linkBtn.type = 'button';
+  linkBtn.title = t('ui.starter.rtLink');
+  linkBtn.onmousedown = (e) => e.preventDefault();
+  linkBtn.onclick = async () => {
+    const sel = String(window.getSelection() || '');
+    if (!sel.trim()) { setStatus(t('ui.starter.rtLinkNeedSel')); return; }
+    const { ask } = await import('../ui.js');
+    const url = await ask(t('ui.starter.rtLinkAsk'), { placeholder: 'https://' });
+    if (!url) return;
+    runCmd('createLink', url);
+    emit();
+  };
+  bar.append(linkBtn);
 
   // ── เหตุการณ์ของพื้นที่พิมพ์ ──
   area.oninput = emit;

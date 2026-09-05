@@ -1,5 +1,10 @@
 // SmartType — เดาชื่อจาก Wiki ขณะพิมพ์ (ยกพฤติกรรมจาก v1)
-// พิมพ์ตัวอักษรต้นของชื่อ (≥2 ตัว) → popup รายชื่อ · ↑↓ เลือก · Enter/Tab ยืนยัน · Esc ปิด
+// พิมพ์ตัวอักษรต้นของชื่อ (≥2 ตัว) → popup รายชื่อ · ↑↓ เลือก · **Tab** ยืนยัน · Esc ปิด
+// (Enter ปล่อยให้ตัวแก้ไขขึ้นบรรทัดใหม่ตามปกติ — ดู onKey ท้ายไฟล์)
+//
+// กฎข้อ 26 ของ AGENTS.md: ไฟล์นี้ใช้ `t` เป็นชื่อพารามิเตอร์อยู่แล้ว (บรรทัด startsWith)
+// → นำเข้าฟังก์ชันแปลภาษาในชื่อ `tr` เท่านั้น ห้ามใช้ `t`
+import { t as tr } from './i18n.js';
 
 export class SmartType {
   constructor() {
@@ -81,9 +86,34 @@ export class SmartType {
     this.items = best; this.sel = 0; this.prefixLen = bestLen;
     this.render();
     const c = view.coordsAtPos(view.state.selection.from);
-    this.box.style.left = c.left + 'px';
-    this.box.style.top = c.bottom + 6 + 'px';
-    this.box.style.display = 'block';
+    this.place(c);
+  }
+
+/**
+   * [alpha.124 ข้อ 34] วางกล่องเดาชื่อโดย **ไม่ล้นจอ**
+   *
+   * เดิมเซ็ต `left = c.left` / `top = c.bottom + 6` ตรง ๆ → พิมพ์ใกล้ขอบล่างของจอ
+   * กล่องจะโผล่ใต้เคอร์เซอร์แล้วทะลุออกนอกหน้าต่าง (มองไม่เห็นเลยว่ามีตัวเลือกอะไร)
+   * และพิมพ์ชิดขอบขวาก็โดนตัดข้าง ๆ เหมือนกัน
+   *
+   * กติกา: ล่างไม่พอ → **พลิกขึ้นไปอยู่เหนือบรรทัด** · ขวาไม่พอ → เลื่อนซ้ายให้พอดีขอบ
+   * ต้องวัดหลังจากกล่องแสดงผลแล้วเท่านั้น (ตอนซ่อนอยู่ `offsetHeight` = 0)
+   */
+  place(c) {
+    const box = this.box;
+    box.style.display = 'block';
+    box.style.left = '0px'; box.style.top = '0px';       // รีเซ็ตก่อนวัด ไม่งั้นค่าที่ได้เพี้ยนตามรอบก่อน
+    const w = box.offsetWidth, h = box.offsetHeight;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const GAP = 6, PAD = 8;
+    let left = c.left;
+    if (left + w > vw - PAD) left = Math.max(PAD, vw - w - PAD);
+    let top = c.bottom + GAP;
+    // ล่างไม่พอ และข้างบนมีที่มากกว่า → พลิกขึ้น
+    if (top + h > vh - PAD && c.top - GAP - h > PAD) top = c.top - GAP - h;
+    else if (top + h > vh - PAD) top = Math.max(PAD, vh - h - PAD);
+    box.style.left = left + 'px';
+    box.style.top = top + 'px';
   }
 
   render() {
@@ -101,6 +131,12 @@ export class SmartType {
       };
       this.box.appendChild(d);
     });
+    // [alpha.124 ข้อ 34] คำใบ้ว่ากดอะไร — เดิมต้องเดาเอาเองว่า Tab คือปุ่มรับคำ
+    // (ผู้ใช้ใหม่มักกด Enter แล้วได้ขึ้นบรรทัดใหม่ทับคำที่กำลังจะเติม)
+    const hint = document.createElement('div');
+    hint.className = 'smart-hint';
+    hint.textContent = tr('ui.smart.acceptHint');
+    this.box.appendChild(hint);
   }
 
   hide() { this.box.style.display = 'none'; this.items = []; }

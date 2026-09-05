@@ -155,11 +155,6 @@ const NF = {
   'globe':        '\uf0ac', // nf-fa-globe
 };
 // NerdFonts CSS — inject สร้าง @font-face ถ้าผู้ใช้มีฟอนต์
-export function nfCss() {
-  return `[data-nf]{font-family:'CaskaydiaCove NF','FiraCode Nerd Font','MesloLGS NF','JetBrainsMono NF',monospace;font-size:.95em;line-height:1}`;
-}
-export function hasNf(name) { return !!(name && NF[name]); }
-
 // icon: SVG เป็นหลัก → fallback NerdFont ถ้า SVG ไม่มีข้อมูล
 export function icon(name, size) {
   const sz = size || 18;
@@ -183,12 +178,8 @@ export function icon(name, size) {
   return svg;
 }
 
-export function iconSvg(name, size) {
-  const sz = size || 18;
-  const p = ICO[name] || '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${p}</svg>`;
-}
-
+// [alpha.126] `iconSvg` / `nfCss` / `hasNf` ถูกถอด — ไม่มีใครเรียกเลยสักที่
+// ที่ใช้จริงคือ `icon()` (คืน DOM node) กับ `iconHtml()` (คืนสตริง) เท่านั้น
 export function iconHtml(name, size) {
   const sz = size || 18;
   const p = ICO[name] || '';

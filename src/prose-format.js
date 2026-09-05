@@ -19,6 +19,8 @@
 import { t } from './i18n.js';
 import { PAPER_SIZES, MARGIN_DEFAULTS, textWidth } from './sp-format.js';
 import { num } from './num.js';
+// [alpha.132r2] ข้อความสำหรับแสดงผล/บรรทัดรูป — md.js เป็นเจ้าของไวยากรณ์ .md
+import { inlineDisplayText, RE_IMG, mdBlocks } from './md.js';
 // [alpha.82] ไทยนับสระ/วรรณยุกต์เป็นตัวเต็มไม่ได้ — ใช้ร่วมกับฝั่งบทภาพยนตร์
 import { visualLength, wrapVisual } from './text-width.js';
 export { visualLength, ZERO_WIDTH_RE } from './text-width.js';
@@ -175,10 +177,17 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
   out.push(`${sel} li+li>p{margin-top:${f.paraSpacing}em}`);
   // รายการซ้อนชั้นก็ไม่เพิ่มระยะเกินมา
   out.push(`${sel} li>ul,${sel} li>ol{margin:0}`);
-  // ย่อหน้าแรกของเอกสาร/หลังหัวข้อ ไม่ย่อ (ธรรมเนียมการจัดหน้าหนังสือ)
+  // ══ [alpha.134 ข้อ 1] ★ "ย่อหน้าแรกของเอกสาร" ไม่ใช่ "ย่อหน้าแรกหลังหัวข้อ" ══
+  //
+  // ผู้ใช้: *"เวลาเราใช้ย่อหน้าอัตโนมัติ บรรทัดแรก ต้องย่อหน้า"*
+  //
+  // ต้นตอ: `> p:first-child` ถูกเหมารวมไว้ในกฎเดียวกับ `hN+p` ใต้สวิตช์
+  // **"ย่อหน้าแรกหลังหัวข้อด้วย"** ซึ่งบนหน้าจอตั้งค่าเขียนไว้ชัดว่าเป็นเรื่องของ *หัวข้อ*
+  // → เปิดย่อหน้าอัตโนมัติแล้วบรรทัดแรกของฉากไม่ย่อ และไม่มีสวิตช์ไหนแก้ได้เลย
+  //   (ติ๊กช่องนั้นก็ได้ย่อหน้าหลังหัวข้อพ่วงมาด้วย ซึ่งเป็นคนละเรื่องกับที่ผู้ใช้ขอ)
+  // ตอนนี้ย่อหน้าแรกของเอกสารย่อเสมอเมื่อเปิดย่อหน้าอัตโนมัติ · สวิตช์คุมเฉพาะหลังหัวข้อ
   if (!f.indentAfterHeading) {
-    out.push(`${sel} > p:first-child,` +
-             `${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,` +
+    out.push(`${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,` +
              `${sel} > h4+p,${sel} > h5+p,${sel} > h6+p{text-indent:0}`);
   }
   f.headings.forEach((h, i) => {
@@ -223,13 +232,31 @@ export function headingNumberText(fmt, n) {
  * CSS สำหรับไฟล์ HTML ที่ส่งออก — ใช้ตัวเลขชุดเดียวกับที่เห็นบนจอ
  * (เดิม mdToHtml ฝัง Sarabun 18px/1.85 ตายตัว → เขียนอย่างหนึ่ง ได้อีกอย่าง)
  */
-export function proseExportCss(fmt, paper, margins) {
+/**
+ * == [alpha.132r3 ข้อ 1] ** ฟอนต์ของไฟล์ที่ส่งออก ต้องเป็นตัวเดียวกับบนจอ ==
+ *
+ * ผู้ใช้: *"export ตัว font ไม่ตรงกับ app เลย"*
+ *
+ * ต้นตอ: **สองฝั่งอ่านคนละแหล่ง** มาตั้งแต่ alpha.97 ข้อ 12 ที่ย้ายฟอนต์นิยายบนจอไปใช้
+ * `settings.fontFamily` + "ฟอนต์ตามภาษา" (วงศ์ `K2 Lang`) แล้ว **ลืมฝั่งส่งออกไว้ที่เดิม**
+ *   · บนจอ  → `--ed-font` = `withLangFamily(settings.fontFamily, …)`
+ *   · ส่งออก → `proseFontStack(fmt)` = `proseFormat.fontFamily` ซึ่งปกติว่าง = ฟอนต์มาตรฐาน
+ * ไฟล์ที่ได้จึงเป็นคนละฟอนต์กับที่เขียนอยู่ ทั้งที่ `@font-face` ของ `K2 Lang` ถูกฝังไปด้วยแล้ว
+ * (มีวงศ์ให้ใช้ แต่ไม่มีใครเรียกใช้)
+ *
+ * แก้: ผู้เรียกส่ง **สแตกที่ใช้จริงบนจอ** เข้ามาได้ (`opts.fontStack`/`opts.headingStack`)
+ * — ไม่ส่งมาก็ตกไปใช้ของเดิมเป๊ะ จึงไม่กระทบทางที่ไม่มีหน้าจอ (เทส/สคริปต์)
+ * @param {{fontStack?:string, headingStack?:string}} [opts]
+ */
+export function proseExportCss(fmt, paper, margins, opts = {}) {
   const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
   const p = paper || PAPER_SIZES.letter;
   const m = { ...MARGIN_DEFAULTS, ...(margins || {}) };
   const tw = textWidth(p, m);
+  const bodyFont = String((opts && opts.fontStack) || '').trim() || proseFontStack(f);
+  const headFont = String((opts && opts.headingStack) || '').trim() || proseHeadingStack(f);
   const body = [
-    `font-family:${proseFontStack(f)}`,
+    `font-family:${bodyFont}`,
     `font-size:${f.fontPt}pt`,
     `line-height:${f.lineHeight}`,
     `max-width:${+tw.toFixed(3)}in`,
@@ -240,11 +267,28 @@ export function proseExportCss(fmt, paper, margins) {
   ].join(';');
   const out = [`body{${body}}`,
                `p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`,
-               'body > p:first-of-type,h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}'];
+               // ══ [alpha.133 · Y-4] ★ ช่องว่างนำหน้าบรรทัดต้องรอดไปถึงไฟล์ ══
+               //
+               // ผู้ใช้เยื้องย่อหน้าด้วยการเคาะวรรค/แท็บ (เห็นผลจริงในตัวแก้ไข เพราะ
+               // `.ProseMirror` ตั้ง `white-space:break-spaces` ไว้ตั้งแต่ alpha.62)
+               // แต่ CSS ที่ส่งออกไม่เคยมีกฎคู่กัน → เบราว์เซอร์ยุบช่องว่างทิ้งตามค่าเริ่มต้น
+               // = "เยื้องหายหมด" ทั้งในไฟล์และในช่องตัวอย่าง
+               //
+               // ★ ตั้งเฉพาะบล็อกที่ **มีแต่ข้อความอยู่ข้างใน** — ห้ามตั้งที่ `body`/`ul`/`blockquote`
+               //   เพราะขึ้นบรรทัดใหม่ระหว่างแท็กใน HTML ที่เราประกอบจะกลายเป็นบรรทัดว่างจริง
+               'p,h1,h2,h3,h4,h5,h6{white-space:break-spaces}'];
+  // ══ [alpha.134 ข้อ 1] ★ กฎ "ไม่ย่อหน้าแรก" ต้องเป็นกฎคู่แฝดกับ `proseCss()` ══
+  //
+  // สองอย่างที่ต่างกันมาตลอดและไม่มีใครสังเกต:
+  //   · ฝั่งจอเป็นกฎแบบมีเงื่อนไข (`if (!f.indentAfterHeading)`) แต่ **ฝั่งไฟล์เขียนตายเสมอ**
+  //     → ติ๊ก "ย่อหน้าแรกหลังหัวข้อด้วย" แล้วบนจอย่อ แต่ในไฟล์ไม่ย่อ
+  //   · ฝั่งไฟล์ยังกิน `body > p:first-of-type` (ย่อหน้าแรกของเอกสาร) ซึ่งเป็นคนละเรื่อง
+  //     กับสวิตช์นั้น — ผู้ใช้: *"ใช้ย่อหน้าอัตโนมัติ บรรทัดแรก ต้องย่อหน้า"*
+  if (!f.indentAfterHeading) out.push('h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}');
   f.headings.forEach((h, i) => {
     out.push(`h${i + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` +
              (h.italic ? 'font-style:italic;' : '') +
-             `margin:${h.before}em 0 ${h.after}em;font-family:${proseHeadingStack(f)}` +
+             `margin:${h.before}em 0 ${h.after}em;font-family:${headFont}` +
              (h.align ? ';text-align:' + h.align : '') +
              (f.headingColor ? ';color:' + f.headingColor : '') + '}');
   });
@@ -263,8 +307,40 @@ export function proseExportCss(fmt, paper, margins) {
            (q.border ? 'border-left:3px solid #ccc' : 'border-left:0') +
            (q.color ? ';color:' + q.color : ';color:#555') + '}');
   out.push('blockquote p{text-indent:0}');
+  // == [alpha.132 . X-1 + ข้อ 8] * รายการในไฟล์ที่ส่งออกต้องหน้าตาเหมือนบนจอเป๊ะ ==
+  //
+  // สองกฎนี้เป็นคู่แฝดของกฎใน style.css (ตัวแก้ไข) - ต้องมาด้วยกันเสมอ:
+  //   1. ย่อหน้าในข้อไม่มีระยะย่อหน้า/ระยะท้ายของตัวเอง (ไม่งั้นข้อรายการสูงกว่าย่อหน้าปกติ)
+  //   2. จัดกึ่งกลาง/ชิดขวา = ปิด marker ของเบราว์เซอร์ แล้ววาดจุดนำเองในบรรทัดแรกของข้อ
+  //      **วาดเป็นวงกลม .36em ไม่ใช่อักขระ `•`** (วัดแล้ว: กลีฟเล็กกว่าวงกลมของเบราว์เซอร์ 36%
+  //      และไม่เท่ากันในแต่ละฟอนต์ - ดูบันทึกใน style.css)
+  out.push(`ul,ol{margin:0 0 ${f.paraSpacing}em;padding-left:28px}`);
+  out.push('li>p{margin:0;text-indent:0}');
+  out.push(`li+li>p{margin-top:${f.paraSpacing}em}`);
+  out.push('li>ul,li>ol{margin:0}');
+  // [alpha.132r3 ข้อ 3] จุดนำ/หมายเลขข้อเป็น **ตัวอักษร** ทั้งสองทาง และรับรูปแบบจากตัวแปร
+  // ที่ `<li>` ถือไว้ (มาจากอักษรตัวแรกของข้อ) — กฎชุดเดียวกับ style.css ของตัวแก้ไขเป๊ะ
+  out.push('ul > li::marker{content:"•  "}');
+  out.push('ol > li::marker{content:counter(list-item) ".  "}');
+  out.push('li::marker,li > p:first-child::before{color:var(--k-mk-color, currentColor);' +
+           'font-weight:var(--k-mk-weight, inherit);font-style:var(--k-mk-style, inherit)}');
+  // [alpha.132r4] `content` ที่เราบังคับไว้ชนะ `list-style-type` → ต้องปิดที่ ::marker ด้วย
+  // ไม่งั้นได้จุดนำสองอัน (ของเบราว์เซอร์ที่ขอบซ้าย + ของเราที่กลางบรรทัด)
+  out.push('li:has(> p[data-align="center"]:first-child),' +
+           'li:has(> p[data-align="right"]:first-child){list-style:none}');
+  out.push('li:has(> p[data-align="center"]:first-child)::marker,' +
+           'li:has(> p[data-align="right"]:first-child)::marker{content:none}');
+  out.push('ul > li > p[data-align="center"]:first-child::before,' +
+           'ul > li > p[data-align="right"]:first-child::before' +
+           '{content:"•  "}');
+  out.push('ol > li > p[data-align="center"]:first-child::before,' +
+           'ol > li > p[data-align="right"]:first-child::before' +
+           '{content:counter(list-item) ".  "}');
   out.push('hr{border:0;border-top:1px solid #ccc;margin:2em 0}');
   out.push('img{max-width:100%}');
+  // [alpha.133 · Y-1] รูปทั้งบรรทัด = `<figure>` เหมือนโหนดของตัวแก้ไข (กฎคู่กับ style.css)
+  out.push('figure{margin:1em 0;text-align:center}');
+  out.push('figure img{max-width:100%;max-height:480px;border-radius:8px}');
   out.push('pre{background:#f4f4f4;padding:10px 14px;border-radius:6px;overflow:auto;' +
            'font-family:"Courier Prime","Courier New",monospace;font-size:.92em;text-indent:0}');
   out.push('.pb{page-break-before:always;break-before:page;height:0}');
@@ -356,6 +432,9 @@ export function paginateProse(blocks, opts = {}) {
   const push = () => { pages.push({ index: pages.length + 1, blocks: cur }); cur = []; used = 0; };
   for (const b of blocks || []) {
     if (!b) continue;
+    // [alpha.133 · Y-5] ขึ้นหน้าใหม่ด้วยมือ — ตัวประมาณก็ต้องเคารพเหมือนตัววัดของจริง
+    // (บล็อกนี้ไม่มีเนื้อหาให้วาด มันคือ "คำสั่ง" ไม่ใช่ข้อความ)
+    if (b.type === 'pagebreak') { if (used) push(); continue; }
     const need = proseBlockLines(b, f, cols);
     if (used && used + need > perPage) push();
     // บล็อกเดียวยาวเกินหนึ่งหน้า → ยอมให้ล้น (ไม่ตัดกลางย่อหน้าเหมือนบทพูดในบท)
@@ -400,6 +479,8 @@ export function proseBlocksFromDoc(doc) {
     else if (name === 'figure') type = 'figure';
     else if (name === 'horizontal_rule') type = 'hr';
     else if (name === 'code_block') type = 'code';
+    // [alpha.133 · Y-5] ขึ้นหน้าใหม่ด้วยมือ (Ctrl+Enter) — ชนิดเดียวกับที่ mdToProseBlocks ให้
+    else if (name === 'page_break') type = 'pagebreak';
     const b = { type, text, pos: offset, idx: i++ };
     if (level) b.level = level;
     if (name === 'figure') { b.src = node.attrs.resolved || node.attrs.src; b.alt = node.attrs.alt || ''; }
@@ -418,25 +499,38 @@ export function proseBlocksFromDoc(doc) {
 export function mdToProseBlocks(md) {
   const out = [];
   let i = 0;
-  for (const raw of String(md == null ? '' : md).split('\n')) {
-    const line = raw.replace(/\s+$/, '');
-    if (!line.trim()) continue;                       // บรรทัดว่างไม่ใช่บล็อก (ย่อหน้าคั่นกันเอง)
-    // [alpha.83 ข้อ 1] `\s+` ตัวเดิมบังคับว่าต้องมีวรรค — แต่บรรทัดถูก rtrim ไปแล้วข้างบน
-    // `"### "` (หัวข้อว่างที่ md.js เคยเขียนลงไฟล์) จึงเหลือ `"###"` แล้วตกไปเป็นย่อหน้า
-    // ที่มีข้อความ `###` โผล่กลางเรื่องทั้งใน PDF และตัวอย่างส่งออก
-    const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
-    if (h) {
-      const ht = String(h[2] || '').trim();
-      if (!ht) continue;                              // หัวข้อว่าง = บรรทัดว่าง ไม่ใช่บล็อก
-      out.push({ type: 'h' + h[1].length, level: h[1].length, text: ht, idx: i++ }); continue;
+  // ══ [alpha.133 · Y-1] ★ สคีมาบล็อกมาจาก `mdBlocks()` ที่เดียว (เหมือน mdToHtmlBody) ══
+  // ของเดิมเป็นลูป regex ชุดที่สาม ซึ่งไม่รู้จัก `<!--align:x-->` · `<!--pagebreak-->` ·
+  // รั้วโค้ด · hard break เลย — ช่องตัวอย่างจึงโชว์คอมเมนต์เป็นตัวหนังสือกลางหน้ากระดาษ
+  // และนับบรรทัดผิดตั้งแต่ต้น (การตัดหน้าเลยไม่มีทางตรงกับไฟล์จริง)
+  for (const b of mdBlocks(md)) {
+    const push = (o) => out.push({ ...o, idx: i++ });
+    if (b.kind === 'pagebreak') { push({ type: 'pagebreak', text: '' }); continue; }
+    if (b.kind === 'hr') { push({ type: 'hr', text: '' }); continue; }
+    if (b.kind === 'figure') { push({ type: 'figure', text: '', alt: b.alt, src: b.src }); continue; }
+    if (b.kind === 'code') { push({ type: 'code', text: b.text, align: b.align }); continue; }
+    if (b.kind === 'h') {
+      push({ type: 'h' + b.level, level: b.level, align: b.align,
+             text: inlineDisplayText(b.text) });
+      continue;
     }
-    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out.push({ type: 'hr', text: '', idx: i++ }); continue; }
-    const li = /^\s*(?:[-*+]|\d+\.)\s+(.*)$/.exec(line);
-    if (li) { out.push({ type: 'li', text: li[1], idx: i++ }); continue; }
-    const bq = /^\s*>\s?(.*)$/.exec(line);
-    if (bq) { out.push({ type: 'blockquote', text: bq[1], idx: i++ }); continue; }
-    out.push({ type: 'p', text: line, idx: i++ });
+    if (b.kind === 'quote') {
+      push({ type: 'blockquote', align: b.align, text: inlineDisplayText(b.text) });
+      continue;
+    }
+    if (b.kind === 'li') {
+      push({ type: 'li', align: b.align, ordered: !!b.ordered, num: b.num,
+             text: inlineDisplayText(b.text) });
+      continue;
+    }
+    // ย่อหน้า — hard break ถูกยุบเป็นบรรทัดจริงในข้อความเดียวกัน (เหมือน <br> บนจอ)
+    push({ type: 'p', align: b.align,
+           text: (b.lines || [b.text]).map(inlineDisplayText).join('\n') });
   }
+  // ย่อหน้าว่างที่หัว/ท้ายไม่ใช่ระยะเว้นที่ผู้ใช้ตั้งใจ (เศษจากการประกอบ) — กฎเดียวกับ mdToHtmlBody
+  const blankB = (b) => b && b.type === 'p' && !b.text;
+  while (out.length && blankB(out[0])) out.shift();
+  while (out.length && blankB(out[out.length - 1])) out.pop();
   return out;
 }
 

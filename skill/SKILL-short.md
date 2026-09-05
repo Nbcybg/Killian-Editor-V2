@@ -1,6 +1,6 @@
 ---
 name: killian-2
-description: Build, maintain, extend, and debug Killian 2 (คิเลียน / Killian Editor v2 / K2) — a portable Electron 43 + ProseMirror desktop app for writing novels + screenplays, Thai-first, storing everything as Markdown + JSON (100% file-compatible with the old Python v1). Use whenever the user asks to add a feature, fix a bug, change the UI, adjust the Wiki/screenplay/explorer/spellcheck/panel systems, or ship a new build for this writing app. Triggers on "คิเลียน", "Killian", "Killian 2", "K2", "โปรแกรมเขียน", "บทหนัง/บทภาพยนตร์", "screenplay editor", "ProseMirror", "SmartType", "wiki", "story network", "explorer", "scenes.json", "draft.json", "templates.json", "ตรวจคำผิด", "spell check", "panel docking", "floating bar", "e2e/selftest", "ถังขยะ", "คลังรูป", "เวิร์กโฟลว์ส่งออก/compile", "จัดการเล่ม/book manager", "เส้นเวลา/timeline", "แผนที่/maps", "โหมดหน้ากระดาษ/paper mode", "ซูม/zoom", "จัดหน้า/align", "หมวด wiki", "planner/กระดานวางแผน", "fabric", "connector/เส้นเชื่อม", "กริด/grid", "ภาษา/i18n/localize/แปล", "ไฟล์ภาษา CSV", and any request about this novel/screenplay app — even a pasted stack trace or a bare "แก้บั๊ก".
+description: Build, maintain, extend, and debug Killian 2 (คิเลียน / Killian Editor v2 / K2) — a portable Electron 43 + ProseMirror desktop app for writing novels + screenplays, Thai-first, storing everything as Markdown + JSON (100% file-compatible with the old Python v1). Use whenever the user asks to add a feature, fix a bug, change the UI, adjust the Wiki/screenplay/explorer/spellcheck/panel systems, or ship a new build for this writing app. Triggers on "คิเลียน", "Killian", "Killian 2", "K2", "โปรแกรมเขียน", "บทหนัง/บทภาพยนตร์", "screenplay editor", "ProseMirror", "SmartType", "wiki", "story network", "explorer", "scenes.json", "draft.json", "templates.json", "ตรวจคำผิด", "spell check", "panel docking", "floating bar", "e2e/selftest", "ถังขยะ", "คลังรูป", "เวิร์กโฟลว์ส่งออก/compile", "จัดการเล่ม/book manager", "เส้นเวลา/timeline", "แผนที่/maps", "โหมดหน้ากระดาษ/paper mode", "ซูม/zoom", "จัดหน้า/align", "หมวด wiki", "planner/กระดานวางแผน", "fabric", "connector/เส้นเชื่อม", "กริด/grid", "ภาษา/i18n/localize/แปล", "ไฟล์ภาษา CSV", "ส่งออก/export", "PDF", "ตัวอย่างส่งออก/preview", "WYSIWYG", "ย่อหน้า/indent", "รายการ/bullet/ตัวเลข", "หัวกระดาษ/header", "เลขหน้า/เลขฉาก", "ลายน้ำ/watermark", "หน้าปกบท/title page", and any request about this novel/screenplay app — even a pasted stack trace or a bare "แก้บั๊ก".
 ---
 
 # Killian 2 (คิเลียน อีดิเตอร์ v2)
@@ -59,8 +59,17 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
 - **main.js** — electron main: IPC `H('channel', fn)` (fs/dialog/print/printToPdf/recent/spell/mtime/writeImageData), frameless titlebar (`frame:false`), contextIsolation
 - **preload.js** — บริดจ์ `kapi` (readFile/writeFile/readJson/exists/join/mkdir/move/remove/listFiles/listDirs/mtime/copyInto/writeImageData/spellBase/spellExtra/spellAddWord/spellDownload/spellHasBase/testShot). **ไม่มี writeJson** (ใช้ writeFile + JSON.stringify)
 - **src/** (esbuild → `renderer/bundle.js`):
-  - `md.js` — พาร์เซอร์ .md ↔ doc (พอร์ตตรงจาก v1 → ไฟล์เข้ากันได้ 100%)
+  - **`md.js` — เจ้าของไวยากรณ์ .md ตัวเดียวของทั้งโปรแกรม** (พอร์ตตรงจาก v1 → ไฟล์เข้ากันได้ 100%)
+    · `mdToDoc`/`docToMd` (ตัวแก้ไข) · **`mdBlocks(md, {breakMarker})`** = สคีมาระดับบรรทัด
+      (p/h/li/quote/hr/figure/code/pagebreak + align + ลำดับเริ่มต้นของ ol + hard break)
+    · **`inlineHtml(text, {mono})`** = inline → HTML ด้วยแท็กชุดเดียวกับ `toDOM` ของสคีมาเป๊ะ
+      (`strong` `em` `u` `s` `sup` `sub` `span[style=color]`)
+    · **[alpha.133] ห้ามมีตัวแปลงมาร์กดาวน์ตัวที่สองอีก** — `mdToHtmlBody` (compile.js) กับ
+      `mdToProseBlocks` (prose-format.js) เดินผ่านสองตัวนี้เท่านั้น ประตูกันพลาด = `wysiwyg-parity.test.cjs`
   - `editor.js` — `KEditor` (นิยาย): schema + `mentionPlugin` + `spellPlugin` + export `imageLightbox`
+    · **[alpha.134] `ENTER_CMD` / `BACKSPACE_CMD`** = คำสั่งของสองปุ่มที่ซับซ้อนที่สุด ประกาศที่เดียว
+      แล้ว **ทั้งแป้นจริงและ `pressEnter()`/`pressBackspace()` อ้างก้อนเดียวกัน**
+      (ของเดิม `pressEnter()` ประกอบสายเองขึ้นมาใหม่ → เทสทดสอบ Enter คนละตัวกับที่ผู้ใช้กด)
   - `screenplay.js` — `SPEditor` (บทหนัง): fountain, Enter=element ถัดไป, **Ctrl+↑/↓ สลับ element** (Tab สงวนให้ SmartType), มี spellPlugin
   - `fountain.js` — `SP_ELEMS/TAB_CYCLE/NEXT_ELEM/SCENE_PREFIX/TIMES/TRANSITIONS`
   - `smart.js` — `SmartType` (เดาชื่อขณะพิมพ์ · prefix match ไทยไม่มีช่องว่าง)
@@ -79,6 +88,15 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
   - **`panels/panel-layout.js` + `panel-store.js`** (alpha.39, บริสุทธิ์) — layout tree ของ panel: `snapZone`,`dockPanel`,`addAsTab/moveTab/splitTab`,`resizeDock`,`removePanel`(+collapse) · store: `serializeLayout`/versioning/migrate + `PanelStore`(รับ storage adapter). UI = panel-ui.js (opencode)
   - **`layout/split-layout.js`** (alpha.39, บริสุทธิ์) — recursive split tree: `splitPane`(ลากขอบ→row/col),`resizeSplit`(+snap 50%),`removeLeaf`(+collapse), `leaf.tabId` เชื่อมกับ Panel System · store: `serializeSplit`/`SplitStore`. UI = split-ui.js (opencode)
   - `compile.js` — **เอนจินเวิร์กโฟลว์ส่งออก** (บริสุทธิ์ ไม่แตะ DOM/fs): `STEP_DEFS` 3 stage (model/render/text), `PRESETS`×7, `runWorkflow(model,wf)`, `mdToHtml`, strip helpers — มี unit test แยก
+    · **[alpha.133] `runWorkflow(..., {markdownOut})`** — ปลายทางที่ **ยังต้องแปลงมาร์กดาวน์ต่ออีกก้าว**
+      (PDF ของนิยาย: md → HTML → PDF) ต้องเปิดธงนี้ ไม่งั้นคอมเมนต์ `<!--align:x-->` และตัวคั่นหน้า
+      ถูกลบทิ้งก่อนถึงตัวที่ใช้มันหนึ่งก้าวพอดี (= ไฟล์ PDF ชิดซ้ายทั้งเล่มมาตลอด)
+  - **`prose-measure.js`** — จัดหน้านิยายจาก **การวัดของจริงบนจอ** (`measureProseBlocks` ·
+    `sliceProsePages` · `renderProseClipPages` · `withMeasureMode`) — เอนจินเดียวของทุกมุมมองที่ "ตัดหน้า"
+    · `blockRules()` ตั้ง `breakBefore` ให้ `.k-manual-page-break` (จอ) และ `.pb` (ไฟล์) = Ctrl+Enter บังคับขึ้นหน้าจริง
+  - **`prose-export-view.js`** (alpha.133) — **ช่องตัวอย่างส่งออก = ไฟล์จริง**: เอา HTML ก้อนเดียวกับที่จะ
+    กลายเป็น PDF มาวางในเอกสารจริง (จำกัดขอบเขต CSS ด้วย `scopeCss()` + คลาสห่อ **ซ้ำสามรอบ**
+    เพื่อชนะกฎ `.sp-pageview .ed-page …` ของโปรแกรม) แล้ววัด/หั่น/ครอบด้วยเอนจินตัวเดียวกับมุมมองจัดหน้า
   - `timeline.js` — **เอนจินเส้นเวลา + Gantt** (บริสุทธิ์): `extractNum` (ถอดเลขจากข้อความไทย "ปีที่ 1,024"→1024), `sortEvents`, `mergeTimeline(events,sceneEvents)` (**ต้อง copy ทุก field ที่ UI ใช้ รวม whenEnd**), `groupByTrack`, `findClashes`, `ganttData/ganttBar/ganttTicks`, `newEvent`
   - `maps.js` — **เอนจินแผนที่** (บริสุทธิ์ · unit 102): `newMap/newPin`, `breadcrumb` (world→city→room), `rootMaps`, `pinStats`, `deleteMap`
     · **[.70]** ซูม (`clampZoom/zoomStep/zoomScroll` — ซูมยึดกึ่งกลาง) · โอเวอร์เลย์ (`mapOverlays/gridLines`) ·
@@ -112,17 +130,21 @@ Src zip **ไม่มี node_modules** แต่ **มี `renderer/bundle.js`
 
 ## E2E test workflow (สำคัญ — ทำทุกครั้งก่อนเชื่อว่าแก้สำเร็จ)
 
-Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **3,436 checks** target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split/planner-data) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
+Selftest ใน `app.js` (`check(name, cond, extra)` เขียน PASS/FAIL แล้ว throw ตอน fail). ปัจจุบัน **4,442 checks** target `ALL OK`. เพิ่มฟีเจอร์ = เพิ่ม check เสมอ (ห้ามลด). โมดูลบริสุทธิ์ (compile/timeline/maps/search-engine/panels/split/planner-data) มี unit test แยกรันด้วย node ก่อน แล้วค่อยเทส UI ใน e2e
 
 **Unit test โมดูลบริสุทธิ์ (รันเร็ว ไม่ต้องเปิด electron):**
 ```bash
-npm run test:unit                  # ทั้งชุด 68 ไฟล์ · 4,560 ข้อ · ~20 วินาที (tools/run-unit.cjs)
+npm run test:unit                  # ทั้งชุด 92 ไฟล์ · 5,740 ข้อ · ~27 วินาที (tools/run-unit.cjs)
 node tools/run-unit.cjs spell      # รันเฉพาะไฟล์ที่ชื่อมีคำนี้
 node test/planner-data.test.cjs    # 157 checks — schema v4/grid/snap/z-order/เรขาคณิตเส้น/หลายกระดาน
 node test/search-engine.test.cjs   # 22 checks — tokenize/AND/OR/NOT/field/snippet/score/perf
 node test/panel.test.cjs           # 26 checks — snap/dock/tab/resize/store/migrate
 node test/i18n.test.cjs            # 56 checks — รหัสภาษาจากชื่อไฟล์/CSV ไป-กลับ/ชั้นทับกัน/แคช
 node test/i18n-keys.test.cjs       #  9 checks — **ประตูกันพลาด**: ทุก t() ต้องมีคีย์ในไฟล์ภาษาทุกไฟล์
+node test/wysiwyg-parity.test.cjs  # 48 checks — [.133] **ประตูกันพลาด**: `mdBlocks()` ต้องจัดชนิด
+                                   #   บรรทัดตรงกับ `mdToDoc()` ทุกบรรทัด + ตารางแท็ก inline ทีละตัว
+node test/editor-keys.test.cjs     # 11 checks — [.134] Enter/Backspace ตัวจริง (ENTER_CMD/BACKSPACE_CMD)
+                                   #   บน state ของ prosemirror ตรง ๆ — ไม่ต้องมี DOM
 ```
 เทคนิค: ไฟล์ src เป็น ES module แต่ root ไม่ใช่ `type:module` → test เป็น `.cjs` ที่ `esbuild.buildSync({format:'cjs'})` แปลงชั่วคราวแล้ว `require`. โมดูลบริสุทธิ์ (ไม่ import DOM/kapi) จึงเทสได้ตรง ๆ — เพิ่ม unit test ทุกครั้งที่เพิ่ม logic ในไฟล์เหล่านี้
 
@@ -262,6 +284,56 @@ sleep 118; grep -m1 "^FAIL" "C:/tmp/k2result.txt"; echo "pass=$(grep -c '^PASS' 
     ได้คีย์ซ้ำความหมายเดิม · **ถ้าโคดมอดพลาดกลางทาง ให้กู้ซอร์สจากสำเนาแล้วรันใหม่รอบเดียว**
     อย่ารันซ้ำทับของที่แปลงไปแล้ว (สำเนาไว้ก่อนเสมอ — `cp -r src main.js languages <ที่เก็บชั่วคราว>`)
 
+### บทเรียน WYSIWYG (alpha.133–134 — "จอ ≠ ตัวอย่าง ≠ ไฟล์" ที่ไล่กันมาหลายรุ่น)
+
+**อาการตระกูลนี้กลับมาเรื่อย ๆ ตั้งแต่ .81r → .132r4 เพราะแก้ทีละอาการ ไม่ได้แก้โครง**
+ต้นตอจริงมีแบบเดียว: **มีตัวแปลง/ตัวจัดหน้ามากกว่าหนึ่งตัวสำหรับเรื่องเดียวกัน**
+
+45. **[.133] ไฟล์ .md ก้อนเดียวเคยถูกอ่านด้วยตัวแปลง *สามตัวที่ไม่รู้จักกัน***
+    `mdToDoc()` (จอ · ครบ) · `mdToHtmlBody()` (ไฟล์ · regex ชุดของตัวเอง) ·
+    `mdToProseBlocks()` (ตัวอย่าง · regex ชุดที่สาม + ถอดมาร์กทิ้งหมด)
+    → `_ขีดเส้นใต้_` ออกเป็น *เอียง* ในไฟล์ · `\` ท้ายบรรทัด (Shift+Enter) พิมพ์แบ็กสแลชออกมาจริง ๆ ·
+      `^ตัวยก^`/`~ตัวห้อย~`/รั้วโค้ด/`<!--pagebreak-->`/`3.` ที่เริ่มนับที่ 3 หายหมด
+    · **กฎถาวร: ไวยากรณ์ .md อยู่ที่ `md.js` ที่เดียว** ใครจะอ่าน .md ต้องผ่าน `mdBlocks()`/`inlineHtml()`
+46. **[.133] "ตัวอย่าง" ที่สร้างเนื้อหาขึ้นมาใหม่ = ไม่มีวันตรงกับไฟล์**
+    ช่องตัวอย่างเคยจัดหน้าด้วยการ **เดา** ("จำนวนตัวอักษร ÷ 0.5em") ขณะที่มุมมองจัดหน้าและ PDF
+    ให้ Chromium วาดจริงแล้ววัด — สองอันนั้นตรงกันเสมอ อันที่สามไม่มีทางตรง ไม่ว่าจะปรับเลขกี่รอบ
+    · **กฎ: ตัวอย่างต้องเป็น "ของจริงที่ถูกครอบ" ไม่ใช่ของเลียนแบบ** — วาง artifact ตัวจริงลง DOM
+      แล้ววัด/หั่นด้วยเอนจินตัวเดียวกับที่จอใช้
+47. **[.133] CSS ที่ส่งออกกับ CSS บนจอต้องเป็น "กฎคู่แฝด" เสมอ** — เจอสองจุดที่หลุด:
+    `white-space:break-spaces` (มีแต่บนจอ → เยื้องด้วยการเคาะวรรคหายในไฟล์) และกฎ "ไม่ย่อหน้าแรก"
+    (ฝั่งจอมีเงื่อนไข ฝั่งไฟล์เขียนตายตัว) · เขียนกฎฝั่งไหน **ต้องไปเขียนอีกฝั่งในคอมมิตเดียวกัน**
+48. **[.133] ตัววาดที่ `host.replaceChildren()` เองจะกลืนของที่ผู้เรียกวางไว้ก่อนหน้า**
+    ป้ายเตือน/ป้าย "ตามไฟล์ต้นทาง" หายไปทั้งชุดโดยไม่มีใครเห็น (e2e `[132r-3]` จับได้)
+    · ตัววาดที่ถูกเรียกกลางทางควร **append** ไม่ใช่ล้าง
+49. **[.133] เอา CSS ระดับเอกสาร (`body{} p{} h1{}`) มาแปะบนหน้าจอโปรแกรมต้องจำกัดขอบเขต**
+    และ **ต้องชนะกฎเดิมของแอปด้วย** — `.sp-pageview .ed-page h1` = (0,2,1) · ห่อคลาสเดียวได้ (0,1,1) แพ้
+    → เขียนคลาสห่อ **ซ้ำสามรอบ** (`.k-xpv-doc.k-xpv-doc.k-xpv-doc`) · ห้ามพึ่ง "ลำดับใน DOM"
+      เพราะตอน **วัด** อยู่นอกจอ คนละที่กับตอน **วาด**
+50. **[.134] `splitBlock` ของ prosemirror ทิ้ง attrs ของบล็อกเมื่อเคอร์เซอร์อยู่ท้ายบล็อก**
+    (สร้างจาก `defaultType`) — มาร์กตัวอักษรรอดเพราะ `splitBlockKeepMarks` แต่ **`align` ไม่มีใครดูแล**
+    · กด Enter ท้ายย่อหน้าที่จัดกึ่งกลาง แล้วบรรทัดใหม่เด้งกลับชิดซ้าย
+51. **[.134] วงวนของรายการ: `joinBackward` ดูดย่อหน้าว่างกลับเข้ารายการ**
+    ออกจากรายการด้วย Backspace ✔ → กด Backspace อีกที `joinBackward` ยุบกลับเข้าข้อสุดท้าย →
+    กดอีกทีเข้าเงื่อนไข "ถอดออกจากรายการ" อีกรอบ = วนไม่จบ
+    · **จุดชี้ขาดคือตำแหน่งเคอร์เซอร์หลังลบ** — ต้องเป็น **ท้าย** ข้อสุดท้าย ถ้าไปโผล่ต้นข้อ วงวนกลับมาทันที
+52. **[.134] prosemirror ไม่มีคำสั่ง "ลบตัวอักษรถอยหลัง"** — contenteditable ทำเอง ·
+    `baseKeymap.Backspace` มีแค่กรณีขอบบล็อก · **อย่าเขียนเทสว่า "กด Backspace แล้วตัวอักษรต้องหาย"**
+    เทสที่ถูกคือ "ไม่มีคำสั่งไหนรับงาน" (คืน false)
+53. **[.134] เลขฉากไม่เคยออกมาในไฟล์ PDF เลย** — `b.sceneNo` ถูกไล่ลำดับใน `spBlocksFromDoc()`
+    (ทางของ *หน้าจอ*) ที่เดียว · สายส่งออกทุกเส้นเริ่มจาก `parseScript()` ซึ่งไม่เคยใส่ให้
+    · **กฎ: ข้อมูลที่ทั้งจอและไฟล์ต้องใช้ ต้องเกิดที่ "พาร์เซอร์" ไม่ใช่ที่ตัววาดของฝั่งใดฝั่งหนึ่ง**
+54. **[.134] ช่องตัวอย่างของบทภาพยนตร์ไม่เคยเห็น `cfg.pdf` เลยสักช่อง** — ส่งแค่รูปแบบบทของโปรเจกต์
+    เข้าตัววาดแล้วจบ ขณะที่ไฟล์จริงเดินผ่าน `buildScriptPdf` ซึ่งอ่านทุกสวิตช์
+    · และเมื่อเปิดหัวกระดาษ ไฟล์หักบรรทัดด้วย `linesForBody()` แต่ตัวอย่างไม่หัก = จุมากกว่าไฟล์ทุกหน้า
+55. **[.134] unit test ที่ require prosemirror ตรง ๆ = prosemirror-model สองชุดในโปรเซสเดียว**
+    (`Can not convert <> to a Fragment (looks like multiple versions…)`)
+    → ต้องดึง `EditorState`/`TextSelection` ออกมาจาก **บันเดิลก้อนเดียวกับ editor.js**
+      (`esbuild.buildSync({stdin:{contents:"export * from './src/editor.js'; export {…} from 'prosemirror-state';"}})`)
+56. **เขียนเทสระดับคำสั่งแทน e2e เมื่อทำได้** — `editor-keys.test.cjs` รัน `ENTER_CMD`/`BACKSPACE_CMD`
+    บน state ตรง ๆ ใช้ **1 วินาที** แทน e2e รอบละ ~10 นาที · แต่ต้องเป็น **คำสั่งตัวเดียวกับที่ผูกกับแป้นจริง**
+    ไม่ใช่สายที่ประกอบขึ้นมาใหม่ในเทส (ไม่งั้นเทสผ่านแต่ผู้ใช้ยังเจอบั๊ก)
+
 ### บทเรียนอื่น
 
 29. **`buildTree()` เดิมคืนทันทีถ้ามีงานสร้างค้างอยู่** → `await buildTree()` คืนก่อนต้นไม้มีของใหม่จริง
@@ -363,7 +435,7 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.77** · e2e ALL OK · unit ทั้งชุดผ่าน · push ขึ้น GitHub แล้ว)
+## เวอร์ชัน (ล่าสุด **alpha.134** · e2e 4,442 ข้อ ALL OK ทั้ง dev และตัว packaged · unit 92 ไฟล์ · 5,740 ข้อ)
 
 .13–.22 (v1→v2 พื้นฐาน): snapshot, line numbers, spellcheck ไทย+Chromium, ปุ่มลัดตั้งเอง, mac build, บทหนัง Ctrl+arrow, relationship sync, floating format bar, sidebar resize, SmartType Final Draft, wiki gallery/lightbox, explorer search+tags, panel docking, tree float+snap
 .24 batch 8 (drag-move explorer, panel snap, split compare, version tracking, scene lock, screenplay Final Draft look, screenplay images, wiki links) · .25–.27 **Planner board** (fabric.js) · .28 **floating windows** · .29 memo-in-chapter + scoped search
@@ -421,6 +493,30 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
   ไทยตกค้าง · รูปแบบคีย์)
 - ค่าที่เป็นข้อมูล (สถานะฉาก/ชื่อสี) แปลผ่าน `DATA_KEYS` ใน core.js — เก็บลงไฟล์เป็นไทยเหมือนเดิม
 
+**.78–.132r4 (ไม่ได้จดละเอียดที่นี่ — ดู CHANGELOG.md ในรีโป)**: ตัวจัดหน้านิยายที่ **วัดของจริง**
+(prose-measure.js · .82–.104r) · หน้ากระดาษเป็นแผ่นจริงในมุมมองจัดหน้า (.100) · **ศูนย์รวมการส่งออก**
+กล่องเดียวจบ 10 ปลายทาง (.81) · สีตัวอักษร + ชื่อไฟล์ส่งออกตั้งเอง (.132) · รายการทำงานเหมือน Word (.132r4)
+· i18n รอบเก็บตก · AI hub · โค้ดสั้น `[title]` · แผงชุดใหญ่
+
+**.133 — 🧭 ตัวแก้ไข · มุมมองจัดหน้า · ช่องตัวอย่าง · ไฟล์ที่ส่งออก = ของเดียวกัน**
+ผู้ใช้ส่งภาพเทียบสามชุด (การตัดหน้า · แบบอักษร · การจัดหน้า) แล้วบอกว่าที่ไหนถูกบ้าง —
+**ต้นตอเดียว: ไฟล์ .md ถูกอ่านด้วยตัวแปลงสามตัวที่ไม่รู้จักกัน** (ดูบทเรียนข้อ 45–49)
+- Y-1/Y-2 `mdBlocks()` + `inlineHtml()` ใน md.js เป็นทางเดียวของทุกคน
+- Y-3 `runWorkflow({markdownOut})` — การจัดหน้าเคยถูกลบก่อนถึงตัวแปลง HTML **หนึ่งก้าวพอดี**
+- Y-4 CSS ที่ส่งออกได้ `white-space:break-spaces` คู่กับตัวแก้ไข
+- Y-5 ธง `breakBefore` ที่เป็นโค้ดตายมาตลอด → Ctrl+Enter บังคับขึ้นหน้าได้จริงทั้งสามที่
+- Y-6 **ไฟล์ใหม่ `prose-export-view.js`** — ตัวอย่าง = HTML ก้อนเดียวกับที่จะกลายเป็น PDF
+- เทสใหม่ `wysiwyg-parity.test.cjs` (48) — ประตูกันพลาดว่าสามที่ยังอ่านตรงกัน
+
+**.134 — ✍️ ตัวแก้ไข 3 เรื่อง + 🎬 ตัวเลือก PDF ของบทภาพยนตร์**
+- ข้อ 1 ย่อหน้าอัตโนมัติย่อ "บรรทัดแรก" — `p:first-child` ถูกเหมารวมใต้สวิตช์ "ย่อหน้าแรกหลังหัวข้อ"
+  (และ `proseExportCss` ไม่เคยดูสวิตช์นั้นเลย = จอ ≠ ไฟล์อีกจุด)
+- ข้อ 2 Enter พา `align` ไปบรรทัดใหม่ (ดูบทเรียนข้อ 50)
+- ข้อ 3 วงวนของรายการ (ดูบทเรียนข้อ 51) · เทสใหม่ `editor-keys.test.cjs` (11)
+- X-1 ตัวเลือก PDF ของบทมีผลในช่องตัวอย่างจริงทั้งเปิดและปิด + **เลขฉากไม่เคยออกมาในไฟล์เลย**
+  (บทเรียนข้อ 53) · หน้าปกของบทย้ายไปอยู่ `scriptTitlePages()` ที่ไฟล์จริงและตัวอย่างเรียกตัวเดียวกัน
+- X-2 เลขหน้า 1 ตาม `spPageNumbers.firstPage` ของโปรเจกต์ครบทั้งสี่ทาง (ผ่าน `pageNumberLabel()` ตัวเดียว)
+
 ### ⚠️ กฎถาวรที่ผู้ใช้กำหนด (ห้ามฝ่าฝืน — เขียนไว้ใน AGENTS.md ด้วย)
 
 0. **« ห้ามฮาร์ดโค้ดข้อความไทยเด็ดขาด · มีข้อความใหม่ = ไปเพิ่มใน CSV »** (.77 — ผู้ใช้ย้ำเอง)
@@ -462,6 +558,16 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
    **unit test กวาด `network.js` หาเลข hex ที่หลุด** — มีเมื่อไหร่เทสแดงทันที
 4. **« ห้ามใช้สัญลักษณ์บอกสถานะบนแถว Explorer — ใช้ตัวหนา/สีแทน »** (.74)
    → `markPlannerRow`/`markBranchPlanRow` แตะแค่ `class` **ห้ามเขียนทับ `textContent`** ของแถวเด็ดขาด
+5. **« สิ่งที่ผู้ใช้เห็นบนจอ · ในช่องตัวอย่าง · ในไฟล์ที่ส่งออก ต้องมาจากแหล่งเดียวกัน »** (.133–.134)
+   ผู้ใช้ไล่เรื่องนี้มาตั้งแต่ .81r แล้วมันกลับมาทุกรุ่น เพราะแก้ทีละอาการแทนที่จะแก้โครง · กติกา:
+   · **ไวยากรณ์ .md** → `md.js` ที่เดียว (`mdBlocks`/`inlineHtml`) — ห้ามเขียน regex ชุดที่สอง
+   · **การจัดหน้า** → `prose-measure.js` ที่เดียว (วัดของจริง) — ห้ามมีตัว "เดาจำนวนบรรทัด" คู่ขนาน
+   · **ช่องตัวอย่าง** = artifact ตัวจริงที่ถูกครอบ ไม่ใช่ของที่สร้างขึ้นใหม่ให้ "หน้าตาคล้าย"
+   · **CSS จอ/ไฟล์เป็นกฎคู่แฝด** — เขียนฝั่งหนึ่ง ต้องเขียนอีกฝั่งในคอมมิตเดียวกัน
+   · **ข้อมูลที่ทั้งจอและไฟล์ใช้** (เช่นเลขฉาก) ต้องเกิดที่ **พาร์เซอร์** ไม่ใช่ที่ตัววาดของฝั่งใดฝั่งหนึ่ง
+   · **สวิตช์ในกล่องส่งออก** ต้องถูกส่งไปถึง **ทั้งไฟล์จริงและช่องตัวอย่าง** และต้องทำงาน **สองทาง**
+     (ติ๊กแล้วมี · ปลดติ๊กแล้วหาย) — เทสต้องตรวจทั้งสองทาง ไม่ใช่ทางเดียว
+   · ประตูกันพลาด: `wysiwyg-parity.test.cjs` + `editor-keys.test.cjs` + e2e ชุด `[133-Y]`/`[134-X]`
 
 ### ✅ K-1 ปิดเคสจริงแล้ว (.75) — แถวไม่ได้ "หาย" แต่ถูกทำให้ **โปร่งใส**
 
@@ -488,7 +594,12 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 3. มีเทสกวาดทุกแถวใน Explorer + เทสพิสูจน์กลไก (วาง probe นอกแถบเครื่องมือแล้ววัด opacity)
    — ย้อน CSS กลับเป็นแบบเดิมแล้วรันจริง **ได้ `opacity=0` ตามคาด** (ยืนยันว่าเจอต้นตอ ไม่ใช่เดา)
 
-**ยังเหลือ (ไม่ใช่ Storyteller)**: **UI ของ 3 เอนจินใหม่** (search panel, panel-ui docking, split-ui) + **wire เข้า app.js** (search-engine/panels/split ยังเป็น orphan module ยังไม่ถูก import — opencode/รอบ integration ต่อ UI + เพิ่ม selftest ใน app.js) · multiple-drafts-per-book UI (โครงรองรับแล้ว), screenplay align persistence, Campaign/D&D mode, electron-builder + code signing, .icns/.ico icon, native arm64 build. Top เคยบอก paper/indent "อาจต้องปรับปรุง ไว้ก่อน"
+**ยังเหลือ**: multiple-drafts-per-book UI (โครงรองรับแล้ว) · screenplay align persistence ·
+Campaign/D&D mode · code signing จริง (ตอนนี้ self-sign) · .icns/.ico icon · native arm64 build
+· **[.133] รูปในบรรทัดเดียวกับข้อความ** (`![](x)` กลางย่อหน้า) — ตัวแก้ไขโชว์เป็นข้อความดิบ แต่ไฟล์ที่
+ส่งออกแปลงเป็น `<img>` = ยังไม่ตรงกันหนึ่งจุด (พบตอนแก้ .133 · หายากเพราะ K2 เขียนรูปทั้งบรรทัดเสมอ)
+· **[.134] Backspace ต้นย่อหน้าที่ *มีข้อความ* ต่อท้ายรายการ** — prosemirror ยกมันขึ้นเป็น "ข้อใหม่"
+ส่วน MS Word ต่อท้ายข้อสุดท้าย · ยังไม่แก้เพราะผู้ใช้ไม่ได้ขอ (ถ้าเจอบ่นเมื่อไหร่ = จุดนี้)
 
 **นิสัยผู้ใช้ (Top)**: พูด "เริ่มเลย"/"continue"/"ทำต่อ"/"เอาให้จบ" = ให้ลงมือทำเลย **อย่าถามย้ำ scope** (เคยโดนบ่น "เช็คอะไรละ"). ชอบทำหลายฟีเจอร์รวดเดียวแล้วแก้บั๊กทีเดียว. ส่งสกรีนช็อตบั๊ก = pixel-verify คือเทสจริง. มักจบ session ด้วย "update skill"
 
@@ -501,6 +612,16 @@ build+e2e ALL OK → (ถ้า UI) pixel-check →
 bump version + **CHANGELOG.md** + README → **บนเครื่องจริง: `npm run dist` แล้วรัน e2e กับ `dist/win-unpacked` ซ้ำอีกรอบ**
 → ส่งไฟล์ด้วย SendUserFile · (บนแซนด์บ็อกซ์: rm+rezip + verify จากไฟล์แตกใหม่ → outputs + present)
 งานใหญ่แยก phase + สื่อสารว่าอะไรเหลือ
+
+**เขียน unit test ระดับ "คำสั่ง/ฟังก์ชันจริง" ก่อนวิ่ง e2e เสมอเมื่อทำได้** (บทเรียน .134):
+e2e รอบละ ~10 นาที และตัวเทสเองก็ผิดได้ · รอบนั้นเสีย e2e ไปสามรอบเพราะ **สมมติฐานในเทสผิด**
+ไม่ใช่โค้ดผิด (เขียนว่า "Backspace ต้องลบตัวอักษร" ทั้งที่ prosemirror ไม่มีคำสั่งนั้น)
+· เทสระดับคำสั่งเจอเรื่องนี้ใน 1 วินาที · **แต่ต้องเรียกของจริง** (`ENTER_CMD` ที่ผูกกับแป้น)
+  ไม่ใช่สายที่ประกอบขึ้นมาใหม่ในเทส ไม่งั้นเทสเขียวแต่ผู้ใช้ยังเจอบั๊ก
+
+**e2e แดงครั้งแรก อย่าเพิ่งเชื่อว่าโค้ดผิด** — ไล่ก่อนว่า (ก) เทสคาดหวังพฤติกรรมที่ไลบรารีไม่ได้ให้
+(ข) ตัวเราเองไปทำของเดิมพัง (เช่นตัววาดใหม่ `replaceChildren()` กลืนป้ายที่ผู้เรียกวางไว้)
+(ค) โค้ดผิดจริง · **รอบ .133–.134 เป็น (ก) หนึ่งครั้ง (ข) หนึ่งครั้ง (ค) หนึ่งครั้ง**
 
 **เขียนสรุปยังไงให้ผู้ใช้ชอบ** (ดูจากรอบ alpha.65 ที่ได้ผลดี): บอก**ต้นตอจริง**ของบั๊กเป็นประโยคเดียวก่อน
 แล้วค่อยบอกว่าแก้ยังไง — ผู้ใช้สนใจ "ทำไมมันพัง" มากกว่ารายการสิ่งที่ทำ · ตารางบั๊ก/ต้นตอ/แก้แล้ว อ่านง่ายที่สุด

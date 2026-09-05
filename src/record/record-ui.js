@@ -184,10 +184,6 @@ export async function renderRecordPanel(host) {
   return true;
 }
 
-/** เปิดแผงจากเมนู/ปุ่ม */
-export async function openRecord() {
-  const { showPanel } = await import('../panels/panel-ui.js');
-  const { renderFeaturePanel } = await import('../app.js');
-  showPanel('record');
-  await renderFeaturePanel('record');
-}
+// [alpha.126] `openRecord()` ถูกลบ — เป็นแค่ตัวห่อ
+// `showPanel(id)` + `renderFeaturePanel(id)` ซึ่ง `togglePanel()` ของระบบแผงทำให้อยู่แล้ว
+// (เมนู มุมมอง → แผง · ปุ่มบนแถบ · คีย์ลัด Ctrl+Alt+ตัวอักษร เดินทางนั้นทั้งหมด)

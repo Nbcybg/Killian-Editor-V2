@@ -114,7 +114,7 @@ export async function renderCommentPanel(host) {
   const stale = () => gen !== _cmGen || activeFile() !== file;
   host.innerHTML = '';
   if (!file) {
-    host.append(el('div', 'dim', tr('cmt.needScene', '(เปิดฉากก่อนจึงจะคอมเมนต์ได้)')));
+    host.append(el('div', 'dim', tr('cmt.needScene')));
     lastList = [];
     clearCommentAnchors();
     return null;
@@ -125,7 +125,7 @@ export async function renderCommentPanel(host) {
   try { all = await store.list(file); }
   catch (e) {
     if (stale()) return null;
-    log('error', tr('cmt.readFailLog', 'อ่านคอมเมนต์ไม่ได้'), e); host.append(el('div', 'dim', tr('cmt.readFail', '(อ่านคอมเมนต์ไม่ได้)'))); return null;
+    log('error', tr('cmt.readFailLog'), e); host.append(el('div', 'dim', tr('cmt.readFail'))); return null;
   }
   if (stale()) return null;              // สลับฉากไปแล้วระหว่างอ่านไฟล์ — รอบใหม่กำลังวาดของจริงอยู่
   host.innerHTML = '';                   // ล้างซ้ำ: รอบก่อนหน้าอาจเพิ่งใส่ของค้างไว้
@@ -136,15 +136,15 @@ export async function renderCommentPanel(host) {
   const nOpen = openComments(all).length;
   head.append(el('span', 'k-cm-count', ttf('ui.cmtComment.listNotClose', countComments(all), nOpen)));
   const fBtn = el('button', 'k-cm-filter' + (filterOpen ? ' on' : ''),
-                  filterOpen ? tr('cmt.filterOpen', '🔽 เฉพาะที่ยังไม่ปิด') : tr('cmt.filterAll', '🔽 ทั้งหมด'));
-  fBtn.title = tr('cmt.filterHint', 'สลับกรองคอมเมนต์ที่ปิดเรื่องแล้ว');
+                  filterOpen ? tr('cmt.filterOpen') : tr('cmt.filterAll'));
+  fBtn.title = tr('cmt.filterHint');
   fBtn.onclick = () => { filterOpen = !filterOpen; renderCommentPanel(host); };
   head.append(fBtn);
   host.append(head);
 
   const list = el('div', 'k-cm-list');
   const shown = filterOpen ? all.filter((c) => !c.resolved) : all;
-  if (!shown.length) list.append(el('div', 'dim', filterOpen ? tr('cmt.emptyOpen', '(ไม่มีคอมเมนต์ที่ยังไม่ปิด)') : tr('cmt.emptyAll', '(ยังไม่มีคอมเมนต์ในฉากนี้)')));
+  if (!shown.length) list.append(el('div', 'dim', filterOpen ? tr('cmt.emptyOpen') : tr('cmt.emptyAll')));
   for (const c of shown) list.append(commentCard(c, file, host, 0));
   host.append(list);
 
@@ -154,12 +154,12 @@ export async function renderCommentPanel(host) {
   const foot = el('div', 'k-cm-foot');
   if (sel) {
     const chip = el('div', 'k-cm-anchor-chip', tt('ui.cmtComment.bind') + short(sel.quote) + '”');
-    chip.title = tr('cmt.anchorHint', 'คอมเมนต์ที่เพิ่มจะผูกกับข้อความที่เลือกไว้');
+    chip.title = tr('cmt.anchorHint');
     foot.append(chip);
   }
   const row = el('div', 'k-cm-input-row');
   const inp = el('textarea', 'k-cm-input');
-  inp.placeholder = sel ? tr('cmt.placeholderSel', 'คอมเมนต์เกี่ยวกับข้อความที่เลือก…') : tr('cmt.placeholder', 'พิมพ์คอมเมนต์…');
+  inp.placeholder = sel ? tr('cmt.placeholderSel') : tr('cmt.placeholder');
   inp.rows = 2;
   // [alpha.121] แทรกโค้ดสั้น (วันที่ · ชื่อบท/ฉาก · สถานะ ฯลฯ) เป็นค่าจริงทันที — คอมเมนต์ไม่มี
   // ขั้นตอนคอมไพล์ทีหลังเหมือนเอกสารนิยาย/บทหนัง จึงแทนค่าเลยแทนที่จะแทรก placeholder ค้าง
@@ -178,9 +178,9 @@ export async function renderCommentPanel(host) {
     try {
       await store.add(file, sel, text);
       inp.value = '';
-      setStatus(tr('cmt.added', 'เพิ่มคอมเมนต์แล้ว'));
+      setStatus(tr('cmt.added'));
       await renderCommentPanel(host);
-    } catch (e) { log('error', tr('cmt.addFail', 'เพิ่มคอมเมนต์ไม่สำเร็จ'), e); setStatus(tr('cmt.addFail', 'เพิ่มคอมเมนต์ไม่สำเร็จ')); addB.disabled = false; }
+    } catch (e) { log('error', tr('cmt.addFail'), e); setStatus(tr('cmt.addFail')); addB.disabled = false; }
   };
   addB.onclick = doAdd;
   // Enter = ส่ง · Shift+Enter = ขึ้นบรรทัดใหม่
@@ -205,18 +205,18 @@ function commentCard(c, file, host, depth) {
 
   const top = el('div', 'k-cm-top');
   top.append(el('span', 'k-cm-author', '👤 ' + (c.author || tt('ui.common.notSpecifyName'))));
-  top.append(el('span', 'k-cm-when', fmtWhen(c.timestamp) + (c.editedAt ? tr('cmt.edited', ' (แก้ไขแล้ว)') : '')));
+  top.append(el('span', 'k-cm-when', fmtWhen(c.timestamp) + (c.editedAt ? tr('cmt.edited') : '')));
   const acts = el('span', 'k-cm-acts');
 
   const mk = (label, title, fn, cls) => { const b = el('span', 'k-cm-act' + (cls ? ' ' + cls : ''), label); b.title = title; b.onclick = fn; return b; };
-  if (!depth) acts.append(mk(c.resolved ? '↩' : '✓', c.resolved ? tr('cmt.reopen', 'เปิดเรื่องนี้อีกครั้ง') : tr('cmt.resolve', 'ปิดเรื่องนี้ (resolve)'),
-    async () => { await store.resolve(file, c.id, !c.resolved); setStatus(c.resolved ? tr('cmt.reopened', 'เปิดคอมเมนต์อีกครั้ง') : tr('cmt.resolved', 'ปิดเรื่องคอมเมนต์แล้ว')); renderCommentPanel(host); }));
-  acts.append(mk('✏️', tr('cmt.edit', 'แก้ไขข้อความ'), () => startEdit()));
-  acts.append(mk('↩💬', tr('cmt.reply', 'ตอบกลับ'), () => startReply()));
-  acts.append(mk('🗑', tr('cmt.deleteHint', 'ลบคอมเมนต์นี้ (พร้อมเธรดตอบกลับ)'), async () => {
+  if (!depth) acts.append(mk(c.resolved ? '↩' : '✓', c.resolved ? tr('cmt.reopen') : tr('cmt.resolve'),
+    async () => { await store.resolve(file, c.id, !c.resolved); setStatus(c.resolved ? tr('cmt.reopened') : tr('cmt.resolved')); renderCommentPanel(host); }));
+  acts.append(mk('✏️', tr('cmt.edit'), () => startEdit()));
+  acts.append(mk('↩💬', tr('cmt.reply'), () => startReply()));
+  acts.append(mk('🗑', tr('cmt.deleteHint'), async () => {
     const { confirmBox } = await import('../ui.js');
-    if (!(await confirmBox(tr('cmt.deleteConfirm', 'ลบคอมเมนต์นี้ (พร้อมเธรดตอบกลับทั้งหมด) ?'), tr('cmt.delete', 'ลบคอมเมนต์')))) return;
-    await store.remove(file, c.id); setStatus(tr('cmt.deleted', 'ลบคอมเมนต์แล้ว')); renderCommentPanel(host);
+    if (!(await confirmBox(tr('cmt.deleteConfirm'), tr('cmt.delete')))) return;
+    await store.remove(file, c.id); setStatus(tr('cmt.deleted')); renderCommentPanel(host);
   }, 'k-danger'));
   top.append(acts);
   card.append(top);
@@ -227,8 +227,8 @@ function commentCard(c, file, host, depth) {
 
   if (c.anchor && c.anchor.quote) {
     const q = el('div', 'k-cm-quote' + (c.anchor.lost ? ' lost' : ''),
-                 (c.anchor.lost ? tr('cmt.anchorLost', '📍✕ (ข้อความถูกลบไปแล้ว) ') : '📍 ') + '“' + short(c.anchor.quote, 60) + '”');
-    q.title = c.anchor.lost ? tr('cmt.anchorLostHint', 'ไม่พบข้อความที่คอมเมนต์นี้ผูกไว้แล้ว') : tr('cmt.anchorOkHint', 'ชี้เพื่อไฮไลต์ในฉาก · คลิกเพื่อเลื่อนไปหา');
+                 (c.anchor.lost ? tr('cmt.anchorLost') : '📍 ') + '“' + short(c.anchor.quote, 60) + '”');
+    q.title = c.anchor.lost ? tr('cmt.anchorLostHint') : tr('cmt.anchorOkHint');
     if (!c.anchor.lost) {
       // ชี้ = เน้นอันนี้อันเดียว · เลิกชี้ = กลับไปไฮไลต์ทุกสมอตามข้อมูลจริง (ไม่ใช่ข้อความในหน้าจอที่ถูกตัดสั้น)
       q.onmouseenter = () => { setCommentAnchors([c.anchor.quote], c.anchor.quote); refreshCommentAnchors(editorView()); };
@@ -243,7 +243,7 @@ function commentCard(c, file, host, depth) {
     if (card.querySelector('.k-cm-edit')) return;
     const ta = el('textarea', 'k-cm-edit'); ta.value = c.text; ta.rows = 2;
     const ok = el('button', 'k-ok', tt('ui.common.save'));
-    const no = el('button', null, tr('cmt.cancel', 'ยกเลิก'));
+    const no = el('button', null, tr('cmt.cancel'));
     const box = el('div', 'k-cm-editbox'); box.append(ta, ok, no);
     body.after(box); body.hidden = true; ta.focus();
     const close = () => { box.remove(); body.hidden = false; };
@@ -251,22 +251,22 @@ function commentCard(c, file, host, depth) {
     ok.onclick = async () => {
       const v = ta.value.trim();
       if (!v) { close(); return; }
-      await store.edit(file, c.id, v); setStatus(tr('cmt.editedDone', 'แก้ไขคอมเมนต์แล้ว')); renderCommentPanel(host);
+      await store.edit(file, c.id, v); setStatus(tr('cmt.editedDone')); renderCommentPanel(host);
     };
   }
   // ---- ตอบกลับ ----
   function startReply() {
     if (card.querySelector('.k-cm-reply')) return;
-    const ta = el('textarea', 'k-cm-reply'); ta.placeholder = tr('cmt.replyPlaceholder', 'ตอบกลับ…'); ta.rows = 2;
+    const ta = el('textarea', 'k-cm-reply'); ta.placeholder = tr('cmt.replyPlaceholder'); ta.rows = 2;
     const ok = el('button', 'k-ok', tt('ui.cmtComment.reply'));
-    const no = el('button', null, tr('cmt.cancel', 'ยกเลิก'));
+    const no = el('button', null, tr('cmt.cancel'));
     const box = el('div', 'k-cm-editbox'); box.append(ta, ok, no);
     card.append(box); ta.focus();
     no.onclick = () => box.remove();
     const send = async () => {
       const v = ta.value.trim();
       if (!v) { box.remove(); return; }
-      await store.reply(file, c.id, v); setStatus(tr('cmt.replied', 'ตอบกลับแล้ว')); renderCommentPanel(host);
+      await store.reply(file, c.id, v); setStatus(tr('cmt.replied')); renderCommentPanel(host);
     };
     ok.onclick = send;
     ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
@@ -292,7 +292,7 @@ export function scrollToAnchor(quote) {
     const i = node.text.indexOf(quote);
     if (i >= 0) hit = pos + i;
   });
-  if (hit == null) { setStatus(tr('cmt.anchorMissing', 'ไม่พบข้อความที่คอมเมนต์ผูกไว้ (อาจถูกแก้/ลบไปแล้ว)')); return false; }
+  if (hit == null) { setStatus(tr('cmt.anchorMissing')); return false; }
   try {
     const to = Math.min(hit + quote.length, v.state.doc.content.size);
     v.dispatch(v.state.tr.setSelection(TextSelection.create(v.state.doc, hit, to)).scrollIntoView());

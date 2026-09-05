@@ -8,6 +8,29 @@ import { showPanel, isPanelOpen } from '../panels/panel-ui.js';
 
 let board = null;   // KanbanBoard instance
 
+// [alpha.124 ข้อ 42] ฉบับร่างที่กระดานกำลังแสดง — จำต่อโปรเจกต์
+// (ES module: ค่าที่ reassign ข้ามฟังก์ชันเก็บใน object — กฎเหล็กข้อ 2)
+const KB = { draftPath: '' };
+const kbKey = () => 'k2-kanban-draft:' + state.root;
+function savedDraft() { try { return localStorage.getItem(kbKey()) || ''; } catch { return ''; } }
+function saveDraft(p) { try { localStorage.setItem(kbKey(), p || ''); } catch {} }
+
+/** ฉบับร่างทั้งหมดในโปรเจกต์ — ให้ dropdown บนหัวกระดานใช้ */
+export async function kanbanDrafts() {
+  const { listDrafts } = await import('../app.js');
+  return listDrafts();
+}
+
+/** สลับกระดานไปฉบับร่างอื่น */
+export async function setKanbanDraft(dPath) {
+  if (!dPath || dPath === KB.draftPath) return false;
+  KB.draftPath = dPath;
+  saveDraft(dPath);
+  board = null;                   // สร้างใหม่ทั้งก้อน (ทะเบียนฉากเป็นคนละไฟล์)
+  await renderKanbanPanel();
+  return true;
+}
+
 async function getBoard() {
   if (board) return board;
   if (!state.root) return null;
@@ -18,17 +41,24 @@ async function getBoard() {
   // แก้: ไล่ทุกเล่มจนเจอเล่มแรกที่ "มีฉบับร่างจริง"
   const SKIP_DIRS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', 'Backups',
                      'Plugins', 'Research', 'Sessions', 'languages', 'Fonts'];
-  const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS.includes(s)).sort();
-  let draftPath = null;
-  for (const s of secs) {
-    const dr = await kapi.join(await kapi.join(state.root, s), 'Draft');
-    if (!(await kapi.exists(dr))) continue;
-    const dns = (await kapi.listDirs(dr)).sort();
-    if (!dns.length) continue;
-    draftPath = await kapi.join(dr, dns[0]);
-    break;
+  // [alpha.124 ข้อ 42] เดิม **ฮาร์ดโค้ดเล่มแรก/ฉบับร่างแรกเสมอ** — โปรเจกต์ที่มีหลายเล่ม
+  // จึงดูกระดานของเล่มอื่นไม่ได้เลย (และเล่มที่ "แรก" ก็ขึ้นกับการเรียงชื่อ ไม่ใช่ลำดับจริง)
+  // ตอนนี้: ใช้ฉบับร่างที่ผู้ใช้เลือกไว้ล่าสุด ถ้ายังไม่เคยเลือกค่อยตกกลับไปตัวแรกที่ใช้ได้
+  let draftPath = KB.draftPath || savedDraft();
+  if (draftPath && !(await kapi.exists(await kapi.join(draftPath, 'draft.json')))) draftPath = '';
+  if (!draftPath) {
+    const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS.includes(s)).sort();
+    for (const s of secs) {
+      const dr = await kapi.join(await kapi.join(state.root, s), 'Draft');
+      if (!(await kapi.exists(dr))) continue;
+      const dns = (await kapi.listDirs(dr)).sort();
+      if (!dns.length) continue;
+      draftPath = await kapi.join(dr, dns[0]);
+      break;
+    }
   }
   if (!draftPath) return null;
+  KB.draftPath = draftPath;
   // io ต้องมี join แบบ sync (kapi.join เป็น async) — ดู syncIo ใน project-scan.js
   board = new KanbanBoard({ io: syncIo(), draftPath, statuses: allStatuses() });
   await board.load();
@@ -74,6 +104,18 @@ function renderKanban(b) {
     renderKanban(b);
   };
   head.append(addBtn);
+  // [alpha.124 ข้อ 42] ตัวเลือกฉบับร่าง — เติมรายการแบบ async หลังวาดหัวเสร็จ (ไม่หน่วงกระดาน)
+  const draftSel = el('select', 'k-dlg-select kb-draft');
+  draftSel.title = t('ui.kanban.draftPick');
+  head.append(draftSel);
+  kanbanDrafts().then((ds) => {
+    if (!draftSel.isConnected) return;
+    draftSel.replaceChildren();
+    for (const d of ds) { const o = el('option', null, d.label); o.value = d.dPath; draftSel.append(o); }
+    draftSel.value = KB.draftPath;
+    draftSel.style.display = ds.length > 1 ? '' : 'none';   // เล่มเดียว = ไม่ต้องรกหัวกระดาน
+  }).catch(() => {});
+  draftSel.onchange = () => setKanbanDraft(draftSel.value);
   wrap.append(head);
 
   const cols = el('div', 'kb-cols');
@@ -146,21 +188,62 @@ function renderKanban(b) {
         };
 
         // อ่านบทก่อนวาง (drag)
-        cardEl.ondragstart = (e) => { e.dataTransfer.setData('text/plain', card.id); };
+        cardEl.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', card.id);
+          e.dataTransfer.effectAllowed = 'move';
+          cardEl.classList.add('kb-dragging');
+        };
+        cardEl.ondragend = () => cardEl.classList.remove('kb-dragging');
         cardList.append(cardEl);
       }
       colEl.append(cardList);
 
-      // drop zone บนคอลัมน์
-      colEl.ondragover = (e) => { e.preventDefault(); colEl.classList.add('kb-drag-over'); };
-      colEl.ondragleave = () => { colEl.classList.remove('kb-drag-over'); };
+      // ═══ [alpha.124 ข้อ 42] ลากแล้ว **เลือกตำแหน่งในคอลัมน์ได้** ═══
+      //
+      // เดิม drop เรียก `updateSceneStatus(id, status)` เฉย ๆ → การ์ดไปต่อท้ายเสมอ
+      // จัดลำดับฉากบนกระดานไม่ได้เลย ทั้งที่เอนจินรองรับมาตั้งแต่แรก
+      // (`moveCard(id, status, index)` + `kbOrder` ที่เขียนลง scenes.json ให้ด้วย)
+      // ที่ขาดคือฝั่ง UI ไม่เคยคำนวณ index ส่งไป
+
+      /** ตำแหน่งที่จะแทรก จากตำแหน่งเมาส์แนวตั้ง (เทียบกับกึ่งกลางการ์ดแต่ละใบ) */
+      const dropIndex = (clientY) => {
+        const cards = [...cardList.querySelectorAll('.kb-card:not(.kb-dragging)')];
+        for (let i = 0; i < cards.length; i++) {
+          const r = cards[i].getBoundingClientRect();
+          if (clientY < r.top + r.height / 2) return i;
+        }
+        return cards.length;
+      };
+      /** เส้นบอกตำแหน่งที่จะวาง — ไม่มีเส้นนี้ผู้ใช้เดาไม่ออกว่าจะลงตรงไหน */
+      const showMarker = (idx) => {
+        let mk = cardList.querySelector('.kb-drop-mark');
+        if (!mk) { mk = el('div', 'kb-drop-mark'); }
+        const cards = [...cardList.querySelectorAll('.kb-card:not(.kb-dragging)')];
+        if (idx >= cards.length) cardList.append(mk);
+        else cardList.insertBefore(mk, cards[idx]);
+      };
+      const clearMarker = () => cardList.querySelector('.kb-drop-mark')?.remove();
+
+      colEl.ondragover = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        colEl.classList.add('kb-drag-over');
+        showMarker(dropIndex(e.clientY));
+      };
+      colEl.ondragleave = (e) => {
+        // dragleave ยิงตอนเมาส์ข้ามไปทับ "ลูก" ของคอลัมน์ด้วย → เช็คว่าออกจากคอลัมน์จริงไหม
+        if (colEl.contains(e.relatedTarget)) return;
+        colEl.classList.remove('kb-drag-over');
+        clearMarker();
+      };
       colEl.ondrop = async (e) => {
         e.preventDefault();
         colEl.classList.remove('kb-drag-over');
+        const idx = dropIndex(e.clientY);
+        clearMarker();
         const sceneId = e.dataTransfer.getData('text/plain');
         if (!sceneId) return;
-        const toStatus = col.key;
-        await b.updateSceneStatus(sceneId, toStatus);
+        await b.moveCard(sceneId, col.key, idx);
         renderKanban(b);
       };
     }
@@ -176,10 +259,6 @@ function refreshKanbanUI() {
   if (isPanelOpen('kanban')) uiPane = $('#kanban-body');
   if (!uiPane) return;
   renderKanban(board);
-}
-
-export function closeKanban() {
-  board = null; uiPane = null;
 }
 
 // โหลดซ้ำเมื่อเปลี่ยนโปรเจกต์

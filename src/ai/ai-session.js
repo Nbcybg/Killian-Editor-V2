@@ -47,6 +47,13 @@ export function viewDef(id) { return TRANSCRIPT_VIEWS.find((v) => v.id === id) |
 
 // ระดับการเข้าถึงข้อมูลของโปรเจกต์ที่ยอมให้ AI เห็น
 export const SCOPES = [
+  // [alpha.125 ข้อ B] ★ "เฉพาะส่วนที่เกี่ยวข้อง" — ค้นทั้งเรื่องแล้วส่งเฉพาะท่อนที่ตรงคำถาม
+  //
+  // ระดับ `project` เดิมคือ "ยัดไฟล์ไปเรื่อย ๆ จนครบ 24,000 ตัวอักษรแล้วตัด" → เรื่องยาว
+  // โมเดลจะเห็นแค่ไฟล์แรก ๆ ตามลำดับโฟลเดอร์ ไม่ใช่ส่วนที่เกี่ยวกับคำถามเลย
+  // ระดับนี้ใช้สาย RAG ของ `ai/ai-chat.js` (สเปกข้อ 79) ซึ่งฝังเวกเตอร์ **ออฟไลน์ได้**
+  // (`localEmbed` ใน ai-core.js — ไม่มีคีย์ก็ทำงาน) จึงหยิบเฉพาะท่อนที่ใกล้เคียงคำถามจริง ๆ
+  { id: 'relevant', label: tt('ui.aiSession.onlyRelevant') },
   { id: 'project', label: tt('ui.aiSession.project') },
   { id: 'book',    label: tt('ui.aiSession.onlyBook') },
   { id: 'chapter', label: tt('ui.aiSession.onlyChapter') },
@@ -141,7 +148,7 @@ export function addMessage(session, msg) {
   return s;
 }
 function isAutoTitle(s) {
-  return !s.titleSet && (!s.title || s.title === 'เซสชันใหม่');
+  return !s.titleSet && (!s.title || s.title === t('ui.aiSession.sessionNew'));
 }
 /** ตัดข้อความแรกให้สั้นพอเป็นชื่อ (ไม่ตัดกลางคำอังกฤษ · ไทยตัดตรง ๆ ได้) */
 export function titleFromText(text, max = 40) {
@@ -248,21 +255,65 @@ export function searchSessions(rows, query, { includeArchived = false } = {}) {
   return sortSessions(hit);
 }
 
+// ────────────────────────────────────────────────────────────────
+// ประวัติที่ส่งให้โมเดล
+//
+// [alpha.129 ข้อ 1] ★ "AI ไม่อ่านแชทเลย มั่วตลอด"
+//
+// งบเดิมตายตัวที่ 6,000 token ≈ ภาษาไทยแค่ ~18,000 ตัวอักษร — คุยจริงไม่กี่รอบก็เต็ม
+// แล้วประวัติต้นบทสนทนาถูกตัดทิ้งเงียบ ๆ โดยผู้ใช้ไม่รู้ตัว (โมเดลสมัยนี้รับ 128k–1M)
+// ตอนนี้งบมาจาก `historyBudget()`: ตั้งเองในตั้งค่า > เดาจากขีดจำกัดของโมเดลที่เคยตอบกลับมา
+// > ค่าเริ่มต้น 32,000 — และเมื่อยังต้องตัด ต้อง **บอกผู้ใช้** (ดู `buildChatMessages().dropped`)
+// ────────────────────────────────────────────────────────────────
+
+/** งบ token เริ่มต้นของประวัติ เมื่อยังไม่รู้ขีดจำกัดของโมเดลและผู้ใช้ไม่ได้ตั้งเอง */
+export const DEFAULT_HISTORY_TOKENS = 32000;
+/** เก็บข้อความท้ายสุดไว้เท่านี้เสมอ แม้งบไม่พอ (ไม่งั้นโมเดลตอบโดยไม่เห็นคำถามก่อนหน้า) */
+export const HISTORY_KEEP_LAST = 4;
+
 /**
- * ข้อความที่จะส่งให้โมเดล — ตัดประวัติเก่าทิ้งเมื่อยาวเกินงบ token
- * เก็บ "คู่ล่าสุด" ไว้เสมอ (ตัดจากหัว) เพราะบทสนทนาต่อเนื่องอยู่ท้ายสุด
+ * งบ token สำหรับประวัติของเซสชันนี้
+ * @param {object} session เซสชัน (ใช้ `contextLimit` ที่เดาได้จากรอบก่อน)
+ * @param {object} meta    `state.meta.ai` — `historyTokens` = ผู้ใช้ตั้งเอง (0/ว่าง = อัตโนมัติ)
  */
-export function chatMessages(session, { maxTokens = 6000, estimate = estimateTokens } = {}) {
-  const msgs = (session.messages || []).filter((m) => m.role === 'user' || m.role === 'assistant');
+export function historyBudget(session, meta = {}) {
+  const manual = Number(meta && meta.historyTokens) || 0;
+  if (manual > 0) return manual;
+  // `contextLimit` เป็นแค่ **ขั้นต่ำที่รู้แน่ว่าโมเดลรับไหว** — มันถูกเดาจากยอด token ที่เคยใช้จริง
+  // (`guessLimit`) แล้วขยับขึ้นอย่างเดียว ไม่ใช่ขีดจำกัดจริงของโมเดล
+  // → ใช้ "ขยาย" งบได้ แต่ห้ามใช้ **หด**: คุยรอบแรกสั้น ๆ จะเดาเป็น 8,192 → งบ 4,915
+  //   ซึ่งแย่กว่า 6,000 ของเดิมเสียอีก = บั๊กเดิมกลับมาในคราบใหม่
+  // เหลือที่ให้ system prompt + บริบทโปรเจกต์ + คำตอบ → ใช้ราว 60% ของขีดจำกัดที่รู้
+  const lim = Number(session && session.contextLimit) || 0;
+  return Math.max(DEFAULT_HISTORY_TOKENS, Math.floor(lim * 0.6));
+}
+
+/**
+ * ข้อความที่จะส่งให้โมเดล + จำนวนที่ต้องตัดทิ้ง
+ * เก็บ "ท้ายสุด" ไว้เสมอ (ตัดจากหัว) เพราะบทสนทนาต่อเนื่องอยู่ท้ายสุด
+ * @returns {{messages: Array<{role,content}>, dropped: number, tokens: number}}
+ */
+export function buildChatMessages(session, opts = {}) {
+  const { maxTokens = DEFAULT_HISTORY_TOKENS, estimate = estimateTokens,
+          keepLast = HISTORY_KEEP_LAST } = opts;
+  const msgs = ((session && session.messages) || []).filter((m) => m.role === 'user' || m.role === 'assistant');
   const out = [];
   let budget = maxTokens;
+  let tokens = 0;
   for (let i = msgs.length - 1; i >= 0; i--) {
     const cost = estimate(msgs[i].text);
-    if (out.length && budget - cost < 0) break;
+    // ท้ายสุด `keepLast` ข้อความติดไปเสมอ ต่อให้กินงบเกิน — ขาดแล้วบทสนทนาไม่ต่อเนื่อง
+    if (out.length >= Math.max(1, keepLast) && budget - cost < 0) break;
     budget -= cost;
+    tokens += cost;
     out.unshift({ role: msgs[i].role, content: msgs[i].text });
   }
-  return out;
+  return { messages: out, dropped: msgs.length - out.length, tokens };
+}
+
+/** เหมือน `buildChatMessages` แต่คืนเฉพาะรายการข้อความ (ของเดิม · ยังมีที่เรียกอยู่) */
+export function chatMessages(session, opts = {}) {
+  return buildChatMessages(session, opts).messages;
 }
 /** ประมาณ token (ไทยกินตัวอักษรต่อ token น้อยกว่าอังกฤษ ~3 vs ~4) */
 export function estimateTokens(text) {
@@ -283,4 +334,94 @@ export function shareMarkdown(session) {
     else if (m.role === 'assistant') lines.push(tt('ui.aiSession.assistant') + m.text, '');
   }
   return lines.join('\n').trim() + '\n';
+}
+
+// ────────────────────────────────────────────────────────────────
+// [alpha.129 ข้อ 4] พาร์ส Markdown ของคำตอบโมเดล — "ทำไมไม่เหมือน web ui"
+//
+// แผงแชทเดิมวางคำตอบเป็น `textContent` ล้วน: หัวข้อเป็น `##` ดิบ ๆ · รายการเป็น `-` ·
+// โค้ดปนกับเนื้อความ · **ตัวหนา** โผล่เป็นดอกจัน — โมเดลตอบมาเป็น Markdown เสมอ
+// แต่จอไม่แปลให้ ทุกคำตอบเลยอ่านยากกว่าเว็บของเจ้าเดียวกันมาก
+//
+// ทำไมพาร์สเองแทนที่จะใช้ `mdToHtmlBody` ของ compile.js:
+//   คำตอบของโมเดลคือ **ข้อมูลจากภายนอก** ที่เชื่อไม่ได้ ส่วน `inline()` ของ compile.js
+//   ประกอบ `<img alt="…" src="…">` โดยไม่ escape เครื่องหมายคำพูด → ยัด onerror= เข้ามาได้
+//   ตัวนี้จึงคืน **โครงข้อมูล** ล้วน ๆ ให้ฝั่ง UI สร้าง DOM node เอง (ไม่มี innerHTML เลย)
+//   = ปลอดภัยโดยโครงสร้าง และเทสได้ตรง ๆ บน node
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * แยกข้อความหนึ่งท่อนเป็นชิ้นตัวอักษร (ตัวหนา/เอียง/ขีดฆ่า/โค้ดในบรรทัด)
+ * @returns {Array<{t:'text'|'code'|'b'|'i'|'s', v:string}>}
+ */
+export function parseInlineMd(text) {
+  const src = String(text ?? '');
+  const out = [];
+  let buf = '';
+  const flush = () => { if (buf) { out.push({ t: 'text', v: buf }); buf = ''; } };
+  // `โค้ด` มาก่อนทุกอย่าง — ข้างในห้ามตีความเป็นตัวหนา/เอียง
+  const re = /`([^`\n]+)`|(\*\*|__)(.+?)\2|~~(.+?)~~|(?<![*\w])\*(?!\s)([^*\n]+?)\*(?!\*)|(?<![_\w])_(?!\s)([^_\n]+?)_(?!\w)/g;
+  let last = 0, m;
+  while ((m = re.exec(src))) {
+    buf += src.slice(last, m.index);
+    flush();
+    if (m[1] !== undefined) out.push({ t: 'code', v: m[1] });
+    else if (m[3] !== undefined) out.push({ t: 'b', v: m[3] });
+    else if (m[4] !== undefined) out.push({ t: 's', v: m[4] });
+    else out.push({ t: 'i', v: m[5] !== undefined ? m[5] : m[6] });
+    last = m.index + m[0].length;
+  }
+  buf += src.slice(last);
+  flush();
+  return out.length ? out : [{ t: 'text', v: '' }];
+}
+
+/**
+ * แยกคำตอบเป็นบล็อก — หัวข้อ · ย่อหน้า · รายการ · คำพูดยกมา · โค้ด
+ * @returns {Array<object>} `{type:'h',level,parts}` · `{type:'p'|'quote',parts}`
+ *                          · `{type:'ul'|'ol',items:[parts]}` · `{type:'code',lang,text}`
+ *                          · `{type:'hr'}`
+ */
+export function parseChatMarkdown(text) {
+  const lines = String(text ?? '').split('\n');
+  const out = [];
+  let para = [];
+  const flushPara = () => {
+    if (!para.length) return;
+    out.push({ type: 'p', parts: parseInlineMd(para.join('\n')) });
+    para = [];
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/\s+$/, '');
+    // ── โค้ดบล็อก: กินไปจนเจอรั้วปิด (ไม่เจอ = กินจนจบข้อความ ไม่ทิ้งเนื้อหา) ──
+    const fence = /^\s*(?:```|~~~)\s*([\w+#.-]*)\s*$/.exec(line);
+    if (fence) {
+      flushPara();
+      const body = [];
+      i++;
+      for (; i < lines.length && !/^\s*(?:```|~~~)\s*$/.test(lines[i]); i++) body.push(lines[i]);
+      out.push({ type: 'code', lang: fence[1] || '', text: body.join('\n') });
+      continue;
+    }
+    if (!line.trim()) { flushPara(); continue; }
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { flushPara(); out.push({ type: 'hr' }); continue; }
+    const h = /^(#{1,6})\s+(.+)$/.exec(line);
+    if (h) { flushPara(); out.push({ type: 'h', level: h[1].length, parts: parseInlineMd(h[2].trim()) }); continue; }
+    const bq = /^\s*>\s?(.*)$/.exec(line);
+    if (bq) { flushPara(); out.push({ type: 'quote', parts: parseInlineMd(bq[1]) }); continue; }
+    const ul = /^\s*[-*+]\s+(.+)$/.exec(line);
+    const ol = /^\s*\d+[.)]\s+(.+)$/.exec(line);
+    if (ul || ol) {
+      flushPara();
+      const want = ul ? 'ul' : 'ol';
+      const prev = out[out.length - 1];
+      const item = parseInlineMd((ul || ol)[1]);
+      if (prev && prev.type === want) prev.items.push(item);
+      else out.push({ type: want, items: [item] });
+      continue;
+    }
+    para.push(line);
+  }
+  flushPara();
+  return out;
 }

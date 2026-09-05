@@ -11,6 +11,8 @@ import { migrateImages, imageFile, imageAlt, imageLabel, setImageMeta,
 // [alpha.71 ข้อ 4] หัวการ์ดโปรไฟล์ = ข้อมูลจาก templates.json ล้วน ๆ (ไม่มีชื่อ field เขียนตายในโค้ด)
 import { profileData, statusTone } from './wiki-profile.js';
 import { CAT_ICON } from './core.js';
+// [alpha.122] โค้ดสั้น `{[ชื่อ]}` + ช่อง Prompt — โมดูลบริสุทธิ์ ใช้ร่วมกับ Story Starter
+import { normalizePrompts, nextPromptKey, needsPromptMigration } from './entity-mention.js';
 
 export const CAT_TH = { characters: tt('ui.common.character'), locations: tt('ui.common.place'),
                         items: tt('ui.common.thing'), lore: tt('ui.common.legend') };
@@ -305,12 +307,17 @@ export class WikiEditor {
         this.markDirty(); this.render();
       };
       avatar.onclick = async () => {
+        // [alpha.128] เดิมเทียบด้วย `pick.startsWith('เลือกจากคลัง')` — แต่ตัวเลือกนี้มาจาก
+        // `tt('ui.wiki.pickLibraryImageProject')` ซึ่งแปลตามภาษาหน้าจอ → พอสลับเป็นอังกฤษ
+        // เงื่อนไขไม่มีวันเป็นจริง คลิก "เลือกจากคลัง" แล้วเด้งกล่องเลือกไฟล์ของ OS แทน
+        // เก็บป้ายที่ใช้จริงไว้เทียบตรง ๆ ทำงานได้ทุกภาษา
         const items = [];
-        if (this.pickFromGallery) items.push(tt('ui.wiki.pickLibraryImageProject'));
+        const galLabel = this.pickFromGallery ? tt('ui.wiki.pickLibraryImageProject') : null;
+        if (galLabel) items.push(galLabel);
         items.push(tt('ui.wiki.addImageFile'));
         const pick = items.length > 1 && this.pickTitle ? await this.pickTitle(items) : items[items.length - 1];
         if (!pick) return;
-        if (pick.startsWith('เลือกจากคลัง')) {
+        if (galLabel && pick === galLabel) {
           const it = await this.pickFromGallery();
           if (!it) return;
           setAvatar(it.file || it);
@@ -379,6 +386,44 @@ export class WikiEditor {
     rAlias.appendChild(iAlias);
     aiFill(rAlias, iAlias, tt('ui.wiki.nameOther'));
 
+    // ══ [alpha.122] โค้ดสั้น · แท็ก · ช่อง Prompt — **ทุกหมวด ไม่ใช่แค่ตัวละคร** ══
+    //
+    // ผู้ใช้: *"มี shortcode ที่สามารถให้ mention ได้"* · *"เพิ่ม tags"* ·
+    //         *"เพิ่ม field ใน entities ทั้งหมด คือ Prompt เพื่อให้ ai เข้าใจลักษณะ
+    //          ตัวละคร entities เมือง ได้"*
+    // จึงอยู่นอกบล็อกเทมเพลต: เมือง/สิ่งของ/ตำนาน ก็ถูกอ้างถึงและมีบุคลิกของตัวเองได้เหมือนกัน
+    const rCode = row(tt('ui.wiki.shortcode'));
+    const iCode = input(this.e.shortcode || '', (v) => { this.e.shortcode = v; syncCode(); });
+    iCode.placeholder = tt('ui.wiki.shortcodePlaceholder');
+    rCode.appendChild(iCode);
+    const codeHint = document.createElement('div');
+    codeHint.className = 'wiki-field-hint';
+    const syncCode = () => {
+      codeHint.textContent = ttf('ui.wiki.shortcodePreview',
+        '{[' + (String(iCode.value || '').trim() || this.e.name || '?') + ']}');
+    };
+    syncCode();
+    rCode.appendChild(codeHint);
+
+    const rTags = row(tt('ui.wiki.tags'));
+    const iTags = input((this.e.tags || []).join(', '), (v) => {
+      this.e.tags = v.split(',').map((x) => x.trim()).filter(Boolean);
+      syncTags();
+    });
+    iTags.placeholder = tt('ui.wiki.tagsPlaceholder');
+    rTags.appendChild(iTags);
+    const tagChips = document.createElement('div');
+    tagChips.className = 'wiki-tag-chips';
+    const syncTags = () => {
+      tagChips.innerHTML = '';
+      for (const x of (this.e.tags || [])) {
+        const c = document.createElement('span'); c.className = 'wiki-tag-chip'; c.textContent = x;
+        tagChips.appendChild(c);
+      }
+    };
+    syncTags();
+    rTags.appendChild(tagChips);
+
     // fields จากเทมเพลต (label ไทย) + customProperties (เพิ่ม field เองได้)
     const fields = this.e.fields || {};
     if (Object.keys(fields).length) {
@@ -407,6 +452,66 @@ export class WikiEditor {
       del.innerHTML = iconHtml('x', 14); del.title = tt('ui.wiki.delField');
       del.onclick = () => { delete this.e.customProperties[k]; this.markDirty(); this.render(); };
       r.appendChild(del);
+    }
+
+    // ── ช่อง Prompt (Prompt A / Prompt B / …) ────────────────
+    //
+    // ต่างจาก `customProperties` ตรงเจตนา: อันนั้นคือ **ข้อมูล** ของ entity (ส่วนสูง · อาชีพ)
+    // อันนี้คือ **คำสั่งถึงโมเดล** — เก็บเป็นอาร์เรย์คู่เพราะลำดับมีความหมายและชื่อซ้ำกันได้
+    // ตรรกะรูปแบบข้อมูลอยู่ที่ entity-mention.js (บริสุทธิ์ · มีเทส) ที่นี่แค่วาด
+    {
+      const ph = document.createElement('div'); ph.className = 'wiki-sub';
+      ph.textContent = tt('ui.wiki.prompts');
+      const addPr = document.createElement('span'); addPr.className = 'row-add';
+      addPr.innerHTML = iconHtml('plus', 14); addPr.title = tt('ui.wiki.addPrompt');
+      addPr.onclick = () => {
+        const rows = normalizePrompts(this.e.prompts);
+        this.e.prompts = [...rows, { k: nextPromptKey(rows), v: '' }];
+        this.markDirty(); this.render();
+      };
+      ph.appendChild(addPr); wrap.appendChild(ph);
+      const prompts = normalizePrompts(this.e.prompts);
+      // [alpha.124 ข้อ 11] แปลงรูปเก่า (object) → คู่ลำดับ แล้ว **ต้องปักว่ายังไม่บันทึก** ด้วย
+      // ไม่งั้นเปิดหน้าเอนทิตี้แล้วปิดทิ้งโดยไม่แตะอะไร = ไฟล์บนดิสก์ยังเป็นรูปเก่าอยู่
+      // (กฎข้อ 34: อ่านของเก่าได้เสมอ · **เขียนกลับเป็นรูปใหม่ตอนแตะครั้งแรก**)
+      if (needsPromptMigration(this.e.prompts)) { this.e.prompts = prompts; this.markDirty(); }
+      if (!prompts.length) {
+        const empty = document.createElement('div');
+        empty.className = 'wiki-field-hint';
+        empty.textContent = tt('ui.wiki.promptsHint');
+        wrap.appendChild(empty);
+      }
+      prompts.forEach((pr, i) => {
+        const box = document.createElement('div'); box.className = 'wiki-prompt';
+        const top = document.createElement('div'); top.className = 'wiki-prompt-top';
+        const key = document.createElement('input');
+        key.className = 'wiki-input wiki-prompt-key';
+        key.value = pr.k;
+        key.placeholder = tt('ui.wiki.promptKeyPlaceholder');
+        key.addEventListener('input', () => {
+          const cur = normalizePrompts(this.e.prompts);
+          if (cur[i]) { cur[i] = { ...cur[i], k: key.value }; this.e.prompts = cur; this.markDirty(); }
+        });
+        const del = document.createElement('span'); del.className = 'row-add';
+        del.innerHTML = iconHtml('x', 14); del.title = tt('ui.wiki.delPrompt');
+        del.onclick = () => {
+          const cur = normalizePrompts(this.e.prompts);
+          cur.splice(i, 1);
+          this.e.prompts = cur; this.markDirty(); this.render();
+        };
+        top.append(key, del);
+        const val = document.createElement('textarea');
+        val.className = 'wiki-input wiki-prompt-val';
+        val.rows = 3;
+        val.value = pr.v;
+        val.placeholder = tt('ui.wiki.promptValPlaceholder');
+        val.addEventListener('input', () => {
+          const cur = normalizePrompts(this.e.prompts);
+          if (cur[i]) { cur[i] = { ...cur[i], v: val.value }; this.e.prompts = cur; this.markDirty(); }
+        });
+        box.append(top, val);
+        wrap.appendChild(box);
+      });
     }
 
     // คลังรูปของ entity (images[] — ชื่อไฟล์ในโฟลเดอร์ Images ของโปรเจกต์)
@@ -569,6 +674,7 @@ export class WikiEditor {
       const box = document.createElement('div'); box.className = 'wiki-sec';
       const st = document.createElement('div'); st.className = 'wiki-sec-title';
       const ti = document.createElement('input'); ti.className = 'wiki-input'; ti.value = sec.title || '';
+      ti.placeholder = tt('ui.wiki.secTitlePh');      // หัวข้อใหม่เริ่มว่าง ไม่มีป้ายกำกับข้างช่อง
       ti.addEventListener('input', () => { sec.title = ti.value; this.markDirty(); });
       const del = document.createElement('span'); del.className = 'row-add';       del.innerHTML = iconHtml('x', 14);
       del.title = tt('ui.wiki.delHeading2');

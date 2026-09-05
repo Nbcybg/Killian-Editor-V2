@@ -40,8 +40,7 @@ const TEMPLATES = {
   },
 };
 
-export function getTemplates() { return TEMPLATES; }
-
+// [alpha.126] `getTemplates()` ถูกถอด — ไม่มีใครเรียก · เทมเพลตอ่านผ่าน `state.templates`
 export async function createProjectFromTemplate(parentDir, projectName, tplKey) {
   const tpl = TEMPLATES[tplKey];
   if (!tpl) return false;

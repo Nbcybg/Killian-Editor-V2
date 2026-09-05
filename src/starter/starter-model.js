@@ -15,8 +15,12 @@
 
 import { t } from '../i18n.js';
 import { newCastMember } from '../dialogue/builder-core.js';
+import { normalizePrompts, expandMentions, migrateMentions } from '../entity-mention.js';
+import { htmlToPlain } from './starter-html.js';
 
-export const STARTER_VERSION = 1;
+// v1 → v2 = [alpha.122] โหมดพื้นฐาน/ขั้นสูง + ช่องขั้นสูงของตัวละครและของตอน
+// ไฟล์ v1 เปิดได้ทุกตัว: ช่องใหม่ทุกช่องมีค่าเริ่มต้นว่าง และโหมดตกกลับเป็น "พื้นฐาน"
+export const STARTER_VERSION = 2;
 export const STARTER_DIR = 'Starters';        // <root>/Starters/<slug>/
 export const SCENARIO_DIR = 'Scenarios';      // <root>/Starters/<slug>/Scenarios/*.json
 export const STARTER_FILE = 'starter.json';
@@ -34,6 +38,24 @@ export const GENDERS = [
 ];
 export function genderDef(id) { return GENDERS.find((g) => g.id === id) || GENDERS[3]; }
 export function genderLabel(id) { return genderDef(id).label; }
+
+/**
+ * โหมดของตัวสร้าง — **เก็บเป็นคีย์** ด้วยเหตุผลเดียวกับเพศ
+ *
+ * ผู้ใช้: *"ของเก่า ทั้งหมดให้เป็น mode basic มีปุ่มเลือก basic กับ advance"*
+ * กติกาที่ตั้งไว้: โหมดคุม **การมองเห็น** เท่านั้น ไม่เคยคุม "การมีอยู่" ของข้อมูล
+ *   → สลับกลับเป็นพื้นฐานแล้วช่องขั้นสูงถูกซ่อน แต่ค่าที่กรอกไว้ยังอยู่ครบและยังส่งเข้า prompt
+ *   (ถ้าโหมดไปลบข้อมูล ผู้ใช้กดสลับเล่นครั้งเดียวงานหาย — รับไม่ได้)
+ */
+export const MODE_BASIC = 'basic';
+export const MODE_ADV = 'adv';
+export const MODES = [
+  { id: MODE_BASIC, icon: '🌱', label: t('ui.starter.modeBasic'), hint: t('ui.starter.modeBasicHint') },
+  { id: MODE_ADV,   icon: '⚙️', label: t('ui.starter.modeAdv'),   hint: t('ui.starter.modeAdvHint') },
+];
+export function normMode(v) { return v === MODE_ADV ? MODE_ADV : MODE_BASIC; }
+export function isAdv(s) { return normMode(s && s.mode) === MODE_ADV; }
+export function modeDef(id) { return MODES.find((m) => m.id === normMode(id)) || MODES[0]; }
 
 // ───────────────────────── ไอดี + ชื่อโฟลเดอร์ ─────────────────────────
 
@@ -96,6 +118,15 @@ export function newChar(patch = {}) {
     gender: patch.gender || '',
     image: patch.image || '',            // ชื่อไฟล์ใน <starter>/images/ (ไม่ใช่ path เต็ม)
     fromWiki: !!patch.fromWiki,          // ดึงเข้ามาจาก Wiki (ไม่ได้เกิดที่นี่)
+    // ── ช่องขั้นสูง (โหมด adv) ─────────────────────────────
+    // `shortcode` = ชื่อที่ใช้ใน `{[…]}` · ว่าง = ใช้ชื่อจริง (ดู entity-mention.js)
+    shortcode: patch.shortcode || '',
+    // ตัวอย่างคำพูด — "เพื่อให้ AI เข้าใจว่าลักษณะนิสัยยังไง" · ใช้โค้ดสั้นอ้างถึงคนอื่นได้
+    // [alpha.123] แปลงโค้ดสั้นรูปแบบเก่า (`{[x]}` ของ .122) เป็น `{{x}}` ตอนอ่านไฟล์
+    dialogue: migrateMentions(patch.dialogue || ''),
+    tags: normalizeTags(patch.tags),
+    // ช่อง Prompt เพิ่มเองได้ (Prompt A / Prompt B / …) — ตรงกับที่เพิ่มใน entity ของ Wiki
+    prompts: normalizePrompts(patch.prompts).map((r) => ({ k: r.k, v: migrateMentions(r.v) })),
   };
 }
 
@@ -151,6 +182,8 @@ export function newStarter(patch = {}) {
     id: patch.id || newStarterId(),
     slug: patch.slug || '',
     name: patch.name || '',
+    // [alpha.122] ไฟล์เก่าไม่มี `mode` → พื้นฐาน (ของเดิมทั้งหมด = โหมดพื้นฐานตามที่ผู้ใช้สั่ง)
+    mode: normMode(patch.mode),
     tags: normalizeTags(patch.tags),
     // [alpha.96] ผู้แต่ง + คำโปรยหนึ่งบรรทัด — หน้าเรื่องแสดงคู่กับปกแบบการ์ดนิยายจริง
     author: patch.author || '',
@@ -176,22 +209,7 @@ export function newStarter(patch = {}) {
  * ช่องกรอกเก็บเป็น HTML แต่ **โมเดลไม่ควรได้ HTML ดิบ** — เปลืองโทเคนและทำให้ตอบมาเป็นแท็กด้วย
  * ทุก prompt จึงต้องผ่านตัวนี้ · ไฟล์เก่าที่เก็บเป็นข้อความล้วนอยู่แล้วจะผ่านไปเฉย ๆ
  */
-export function introText(s) {
-  const raw = String((s && s.intro) || '');
-  if (!/<[a-z][\s\S]*>/i.test(raw)) return raw.trim();
-  return raw
-    .replace(/<br\s*\/?>/gi, '\n')
-    // ย่อหน้าคั่นด้วยบรรทัดว่าง — โมเดลอ่านโครงเรื่องออกง่ายกว่าก้อนติดกัน
-    .replace(/<\/(p|div|h[1-6]|blockquote)>/gi, '\n\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<img[^>]*>/gi, '')          // รูปไม่มีความหมายในบริบทข้อความ
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
+export function introText(s) { return htmlToPlain((s && s.intro) || ''); }
 
 /** มีคำบรรยายจริงไหม (แท็กเปล่า ๆ ไม่นับ) */
 export function hasIntro(s) { return introText(s).length > 0; }
@@ -268,7 +286,8 @@ export function starterSummary(s) {
 //   · `prevId` — ต่อจากตอนก่อนหน้าได้ (ส่งต่อแค่บทย่อ ไม่ใช่บทเต็ม)
 //   · เทิร์นของ GM พก `choices[]` มาด้วย และเทิร์นของผู้เล่นจำว่าเลือกข้อไหน
 
-export const SCENARIO_VERSION = 1;
+// v1 → v2 = [alpha.122] รูปย่อ + ช่องขั้นสูงของตอน (คำบรรยาย · บทเปิด · เป้าหมาย · เงื่อนไขจบ)
+export const SCENARIO_VERSION = 2;
 export const ROLE_GM = 'gm';          // ผู้กำกับ/ผู้บรรยาย
 export const ROLE_PLAYER = 'player';  // ผู้เล่น (พิมพ์เอง หรือกดเลือก)
 
@@ -278,6 +297,12 @@ export function newTurn(patch = {}) {
     role: patch.role === ROLE_PLAYER ? ROLE_PLAYER : ROLE_GM,
     speaker: patch.speaker || '',        // ไอดีตัวละครที่สวมบทอยู่ ('' = พูดในฐานะตัวเอง)
     text: patch.text || '',
+    // [alpha.122] รูปประกอบของเทิร์น — ตอนนี้ใช้กับบทเปิดที่ผู้ใช้ใส่รูปไว้
+    // (ชื่อไฟล์ใน `<starter>/images/` เหมือนรูปอื่นทั้งหมด = ย้ายโปรเจกต์แล้วไม่หาย)
+    image: patch.image || '',
+    // [alpha.123] รูปแบบตัวอักษรของเทิร์น (ใช้กับบทเปิดที่ผู้ใช้จัดตัวหนา/เอียง/ขีดเส้นใต้ไว้)
+    // ว่าง = ข้อความล้วน → ตัววาดทำบทพูดเป็นตัวเอียงให้เอง · `text` เป็นตัวจริงเสมอสำหรับโมเดล
+    html: patch.html || '',
     choices: [...(patch.choices || [])], // ทางเลือกที่ GM ยื่นให้ (เฉพาะเทิร์นของ GM)
     chosen: patch.chosen || '',          // ผู้เล่นกดข้อไหน ('' = พิมพ์เอง)
     thinking: patch.thinking || '',
@@ -294,6 +319,19 @@ export function newScenario(patch = {}) {
     id: patch.id || newScenarioId(),
     title: patch.title || '',
     synopsis: patch.synopsis || '',
+    // รูปย่อของตอน — ชื่อไฟล์ใน `<starter>/images/` (กติกาเดียวกับปก: อยู่ในตัว starter เสมอ)
+    thumb: patch.thumb || '',
+    // ── ช่องขั้นสูง (โหมด adv) — ทุกช่องรับโค้ดสั้น `{{ชื่อ}}` ─────
+    desc: migrateMentions(patch.desc || ''),     // Story Description ของ **ตอนนี้** (คนละอันกับของเรื่อง)
+    // Story Opener — เก็บเป็น **HTML** ตั้งแต่ alpha.123 (ผู้ใช้ขอ ตัวหนา/เอียง/ขีดเส้นใต้)
+    // ข้อความล้วนของไฟล์เก่ายังอ่านได้ปกติ — `openerText()` เป็นคนแปลงให้ทุกทาง
+    opener: migrateMentions(patch.opener || ''),
+    openerImage: patch.openerImage || '',        // รูปประกอบบทเปิด (ชื่อไฟล์ใน images/)
+    goal: migrateMentions(patch.goal || ''),     // Story Goal
+    conditions: migrateMentions(patch.conditions || ''),  // Completion Conditions
+    // [alpha.123] อารมณ์และโทนของตอน — คนละเรื่องกับ "เป้าหมาย" (จะไปทางไหน)
+    // และคนละเรื่องกับ "คำอธิบาย" (มีอะไรอยู่บ้าง) · อันนี้คือ **รู้สึกยังไง**
+    mood: migrateMentions(patch.mood || ''),
     prevId: patch.prevId || '',          // เชื่อมกับตอนก่อนหน้า (สเปกข้อ 11)
     cast: [...(patch.cast || [])],       // ไอดีตัวละครที่ร่วมวง
     userChars: [...(patch.userChars || [])],  // ตัวไหนผู้เล่นเป็นคนสวมบท — GM ห้ามพูดแทน
@@ -319,6 +357,34 @@ export function migrateScenario(raw) {
 }
 
 export function scenarioFileName(sc) { return String((sc && sc.id) || 'scenario') + '.json'; }
+
+/**
+ * บทเปิดแบบ **ข้อความล้วน + คลายโค้ดสั้นแล้ว** — สำหรับโมเดลและสำหรับนับคำ
+ * ผู้ใช้เขียน `{{ลิเลียน}}` แต่โมเดลต้องเห็นชื่อจริง และต้องไม่เห็นแท็ก HTML
+ * @param {object} opts  ส่งต่อให้ `expandMentions` (user / userLabel / anyLabel)
+ */
+export function openerText(sc, cast = [], opts = {}) {
+  return expandMentions(htmlToPlain((sc && sc.opener) || '').trim(), cast, opts);
+}
+
+/**
+ * บทเปิดแบบ **HTML พร้อมวาด** — คลายโค้ดสั้นแล้วเหมือนกัน แต่คงตัวหนา/เอียง/ขีดเส้นใต้ไว้
+ * (คนเรียกต้อง `sanitizeHtml` ก่อนยัดลง DOM เสมอ)
+ */
+export function openerHtml(sc, cast = [], opts = {}) {
+  const raw = String((sc && sc.opener) || '').trim();
+  if (!raw) return '';
+  return expandMentions(raw, cast, opts);
+}
+
+/** มีบทเปิดจริงไหม (แท็กเปล่า ๆ ไม่นับ — ตัวแก้ไขทิ้ง `<p><br></p>` ไว้เสมอ) */
+export function hasOpener(sc) { return htmlToPlain((sc && sc.opener) || '').trim().length > 0; }
+
+/** ตอนนี้ตั้งค่าขั้นสูงไว้บ้างไหม (ป้ายบนการ์ด + เทส) */
+export function scenarioAdvFilled(sc) {
+  return ['desc', 'opener', 'goal', 'conditions', 'mood']
+    .filter((k) => htmlToPlain((sc && sc[k]) || '').trim()).length;
+}
 
 /** คุยกันไปแล้วจริง ๆ ไหม (ใช้ตัดสินว่าจะเตือนก่อนลบไหม) */
 export function hasPlay(sc) { return ((sc && sc.turns) || []).length > 0; }

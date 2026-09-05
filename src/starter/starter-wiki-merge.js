@@ -12,6 +12,15 @@
 // (คนอ่านไฟล์จริงคือ starter-wiki.js)
 
 import { t } from '../i18n.js';
+import { normalizePrompts } from '../entity-mention.js';
+
+/**
+ * หัวข้อในหน้า Wiki ที่ starter เป็นเจ้าของ
+ * เก็บเป็น **section** ไม่ใช่ field ลับ ๆ เพราะผู้ใช้ต้องเห็นและแก้ได้จากหน้า Wiki ตรง ๆ
+ * (ถ้าซ่อนไว้ ผู้ใช้จะเจอ "ของที่แก้ในหน้านี้ไม่ตรงกับที่ AI เห็น" ซึ่งดีบั๊กไม่ออก)
+ */
+export const SEC_DESC = () => t('ui.common.desc');
+export const SEC_DIALOGUE = () => t('ui.starter.fDialogue');
 
 /** ชื่อสำหรับเทียบ — ไทยไม่มีช่องว่างระหว่างคำ จึงตัดช่องว่างทิ้งทั้งหมด ไม่ใช่แค่ trim */
 export function normName(s) {
@@ -36,10 +45,6 @@ export const ACT_LINK = 'link';           // ผูกกับ entity เดิ
 export const ACT_CREATE = 'create';       // สร้างใหม่ใน Wiki
 export const ACT_SKIP = 'skip';           // ไม่ยุ่ง (เก็บไว้ใน starter อย่างเดียว)
 
-export function actionLabel(a) {
-  return { link: t('ui.starter.mgLink'), create: t('ui.starter.mgCreate'),
-           skip: t('ui.starter.mgSkip') }[a] || a;
-}
 export function matchLabel(m) {
   return { exact: t('ui.starter.mgExact'), alias: t('ui.starter.mgAlias'),
            many: t('ui.starter.mgMany'), none: t('ui.starter.mgNone') }[m] || m;
@@ -123,13 +128,27 @@ export function flattenEntityText(e) {
     const val = String(v == null ? '' : v).trim();
     if (val) out.push(k + ': ' + val);
   }
+  const skip = normName(SEC_DIALOGUE());
+  const own = normName(SEC_DESC());
   for (const sec of ((e && e.sections) || [])) {
     const body = String((sec && sec.content) || '').trim();
     if (!body) continue;
     const title = String((sec && sec.title) || '').trim();
-    out.push(title ? title + '\n' + body : body);
+    // ตัวอย่างคำพูดมีช่องของตัวเองแล้ว — ยัดซ้ำลงคำบรรยายด้วยคือของซ้ำสองที่
+    if (normName(title) === skip) continue;
+    // [alpha.122] หัวข้อ "คำอธิบาย" คือช่องคำบรรยายเอง — ใส่ชื่อหัวข้อนำหน้าด้วยไม่ได้
+    // ไม่งั้นเขียนกลับ→ดึงเข้า→เขียนกลับ จะได้ "คำอธิบาย\nคำอธิบาย\n…" งอกทุกรอบ
+    out.push(title && normName(title) !== own ? title + '\n' + body : body);
   }
   return out.join('\n\n').trim();
+}
+
+/** เนื้อของ section ที่ชื่อตรงกับที่ระบุ ('' = ไม่มี) */
+export function sectionText(e, title) {
+  const want = normName(title);
+  const hit = ((e && e.sections) || [])
+    .find((x) => normName((x && x.title) || '') === want);
+  return String((hit && hit.content) || '').trim();
 }
 
 /** entity ใน Wiki → ตัวละครของ starter (ยังไม่ผ่าน newChar — คนเรียกเป็นคนห่อ) */
@@ -141,6 +160,11 @@ export function charPatchFromEntity(e, file = '') {
     wikiPath: file || '',
     cat: (e && e.entityTypeKey) || 'characters',
     fromWiki: true,
+    // [alpha.122] ช่องขั้นสูงเดินทางสองทางเต็มรูปแบบ — ดึงเข้ามาแล้วเขียนกลับได้ไม่ตกหล่น
+    shortcode: (e && e.shortcode) || '',
+    tags: Array.isArray(e && e.tags) ? [...e.tags] : [],
+    prompts: normalizePrompts(e && e.prompts),
+    dialogue: sectionText(e, SEC_DIALOGUE()),
   };
 }
 
@@ -155,15 +179,23 @@ export function charPatchFromEntity(e, file = '') {
  * @param {object} opts  id (จาก guid()) · cat · images (แปลง path แล้วโดยคนเรียก)
  */
 export function entityFromChar(ch, { id = '', cat = 'characters', images = [] } = {}) {
+  const secs = [{ title: SEC_DESC(), content: (ch && ch.persona) || '' }];
+  if (String((ch && ch.dialogue) || '').trim()) {
+    secs.push({ title: SEC_DIALOGUE(), content: ch.dialogue });
+  }
   return {
     id,
     entityTypeKey: cat,
     name: (ch && ch.name) || '',
     aliases: [...(((ch && ch.aliases) || []))],
+    // [alpha.122] ช่องใหม่ของ entity — ทุกหมวดมีเหมือนกัน ไม่ใช่เฉพาะตัวละคร
+    shortcode: (ch && ch.shortcode) || '',
+    tags: [...(((ch && ch.tags) || []))],
+    prompts: normalizePrompts(ch && ch.prompts),
     fields: {},
     customProperties: {},
     images: [...images],
-    sections: [{ title: t('ui.common.desc'), content: (ch && ch.persona) || '' }],
+    sections: secs,
     relationships: [],
     chapterOverrides: [],
     templateId: '',
@@ -171,23 +203,46 @@ export function entityFromChar(ch, { id = '', cat = 'characters', images = [] } 
   };
 }
 
+/** เขียนทับ section ชื่อหนึ่งโดยไม่แตะหัวข้ออื่น (เนื้อว่าง = ไม่ทำอะไร ไม่ลบของเดิม) */
+function putSection(secs, title, body, { first = false } = {}) {
+  const rows = [...(secs || [])];
+  if (!String(body || '').trim()) return rows;
+  const i = rows.findIndex((x) => normName((x && x.title) || '') === normName(title));
+  if (i < 0) { if (first) rows.unshift({ title, content: body }); else rows.push({ title, content: body }); }
+  else rows[i] = { ...rows[i], content: body };
+  return rows;
+}
+
 /**
  * อัปเดต entity เดิมด้วยข้อมูลจาก starter — **ไม่ทับของที่ผู้ใช้เขียนเพิ่มใน Wiki**
- * เขียนทับเฉพาะส่วนคำบรรยายที่ starter เป็นเจ้าของ และเติมชื่อรองที่ยังไม่มี
+ * เขียนทับเฉพาะส่วนที่ starter เป็นเจ้าของ และเติมของที่ยังไม่มี
  */
 export function applyCharToEntity(e, ch) {
   const out = { ...e };
-  const secTitle = t('ui.common.desc');
-  const secs = [...((e && e.sections) || [])];
-  const i = secs.findIndex((x) => String((x && x.title) || '').trim() === secTitle);
-  const body = (ch && ch.persona) || '';
-  if (body.trim()) {
-    if (i < 0) secs.unshift({ title: secTitle, content: body });
-    else secs[i] = { ...secs[i], content: body };
-  }
+  let secs = [...((e && e.sections) || [])];
+  secs = putSection(secs, SEC_DESC(), (ch && ch.persona) || '', { first: true });
+  secs = putSection(secs, SEC_DIALOGUE(), (ch && ch.dialogue) || '');
   out.sections = secs;
+
   const have = new Set(((e && e.aliases) || []).map(normName));
   const add = (((ch && ch.aliases) || [])).filter((a) => a && !have.has(normName(a)));
   out.aliases = [...(((e && e.aliases) || [])), ...add];
+
+  // โค้ดสั้น: ฝั่ง Wiki เป็นเจ้าของถ้าตั้งไว้แล้ว — starter เติมได้เฉพาะตอนที่ยังว่าง
+  if (!String(out.shortcode || '').trim() && String((ch && ch.shortcode) || '').trim()) {
+    out.shortcode = ch.shortcode;
+  }
+  // แท็ก: รวมกัน ไม่ทับ (คนละที่อาจติดแท็กคนละมุมของตัวละครเดียวกัน)
+  const tagHave = new Set(((e && e.tags) || []).map(normName));
+  out.tags = [...(((e && e.tags) || [])),
+              ...(((ch && ch.tags) || [])).filter((x) => x && !tagHave.has(normName(x)))];
+  // Prompt: หัวข้อชื่อเดียวกันถือเป็นอันเดียวกัน — ของ starter ทับ ที่เหลือคงไว้
+  const mine = normalizePrompts(ch && ch.prompts);
+  const merged = normalizePrompts(e && e.prompts);
+  for (const p of mine) {
+    const i = merged.findIndex((x) => normName(x.k) === normName(p.k));
+    if (i < 0) merged.push(p); else merged[i] = p;
+  }
+  out.prompts = merged;
   return out;
 }

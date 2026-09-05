@@ -9,7 +9,7 @@
 // เพื่อไม่ให้ import วนกลับไปหา app.js
 
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { ask, confirmBox, popupMenu, choose } from './ui.js';
+import { ask, confirmBox, popupMenu, choose, escClose } from './ui.js';
 import { imageLightbox } from './wiki.js';
 import { iconHtml } from './icons.js';
 import { el, setStatus, withBusy } from './core.js';
@@ -30,8 +30,6 @@ async function absOf(root, relPath) {
 }
 
 const urlCache = new Map();
-export function clearGalleryCache() { urlCache.clear(); }
-
 async function fileURL(root, relPath) {
   const key = root + '||' + relPath;
   if (urlCache.has(key)) return urlCache.get(key);
@@ -1178,6 +1176,7 @@ export function pickImage(root, { album = null } = {}) {
     document.body.append(ov);
 
     const done = (v) => { ov.remove(); resolve(v); };
+    escClose(ov, () => done(null));            // [alpha.124 ข้อ 15]
     cancel.onclick = () => done(null);
     ov.onclick = (e) => { if (e.target === ov) done(null); };
 

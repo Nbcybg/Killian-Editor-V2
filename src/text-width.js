@@ -422,22 +422,3 @@ export function wrapVisual(text, cols, indentCols = 0) {
   });
 }
 
-/**
- * ตัดเอา `cols` คอลัมน์แรก (นับแบบมองเห็น) — คืน `[หัว, ที่เหลือ]`
- * ไม่ตัดกลางอักขระซ้อน: สระ/วรรณยุกต์ที่ตามหลังพยัญชนะตัวสุดท้ายถูกดึงไปกับหัวเสมอ
- */
-export function takeVisual(text, cols) {
-  const s = String(text ?? '');
-  const c = Math.max(0, Math.floor(cols));
-  if (c <= 0) return ['', s];
-  let w = 0, i = 0;
-  while (i < s.length) {
-    if (!ZERO_WIDTH_ONE.test(s[i])) {
-      if (w + 1 > c) break;
-      w++;
-    }
-    i++;
-  }
-  while (i < s.length && ZERO_WIDTH_ONE.test(s[i])) i++;
-  return [s.slice(0, i), s.slice(i)];
-}

@@ -11,8 +11,6 @@ let _cacheRoot = null;
 let _cacheFiles = [];
 
 export function quickOpenCache() { return { root: _cacheRoot, files: _cacheFiles }; }
-export function clearQuickOpenCache() { _cacheRoot = null; _cacheFiles = []; }
-
 async function scanProject(root) {
   const out = [];
   const rootLen = root.length;

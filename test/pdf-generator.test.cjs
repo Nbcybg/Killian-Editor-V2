@@ -108,6 +108,37 @@ check('OMITTABLE_ELEMENTS มีโน้ต/สรุป/โครง',
   ['note', 'summary', 'outline1'].every((k) => G.OMITTABLE_ELEMENTS.includes(k)));
 check('1 นิ้ว = 72 point', G.PT_PER_IN === 72);
 
+// ───────── [alpha.130 ข้อ 5] เลขหน้า/เลขฉาก แยกกัน + โหมดสี ─────────
+check('[130-5] เลขหน้ากับเลขฉากเป็นคนละสวิตช์ ตั้งแยกกันได้',
+  G.mergePdfOptions({ pageNumbers: true, sceneNumbers: false }).sceneNumbers === false &&
+  G.mergePdfOptions({ pageNumbers: true, sceneNumbers: false }).pageNumbers === true);
+check('[130-5] ปิดเลขหน้าแต่เปิดเลขฉากได้',
+  G.mergePdfOptions({ pageNumbers: false, sceneNumbers: true }).pageNumbers === false &&
+  G.mergePdfOptions({ pageNumbers: false, sceneNumbers: true }).sceneNumbers === true);
+// ธรรมเนียมบทถ่ายทำคือขาวดำ — ของเดิมไม่มีฟิลด์นี้เลย ต้องไม่เปลี่ยนพฤติกรรมให้ไฟล์เก่า
+check('[130-5] ค่าเริ่มต้นเป็นขาวดำ', G.PDF_DEFAULTS.colorMode === 'mono' &&
+  G.mergePdfOptions(null).colorMode === 'mono');
+check('[130-5] ตัวเลือกที่บันทึกไว้ก่อนมีฟีเจอร์นี้ = ขาวดำเหมือนเดิม',
+  G.mergePdfOptions({ toc: true }).colorMode === 'mono');
+check('[130-5] เลือกโหมดสีได้', G.mergePdfOptions({ colorMode: 'color' }).colorMode === 'color');
+check('[130-5] ค่าขยะตกกลับเป็นขาวดำ ไม่พัง',
+  G.mergePdfOptions({ colorMode: 'rainbow' }).colorMode === 'mono' &&
+  G.mergePdfOptions({ colorMode: 7 }).colorMode === 'mono');
+check('[130-5] โหมดขาวดำไม่คืนสีให้ element ไหนเลย',
+  ['scene', 'transition', 'note', 'action'].every((k) => G.pdfElementColor(k, 'mono') === null));
+check('[130-5] โหมดสีให้สีกับหัวฉาก/ทรานซิชัน/โน้ต',
+  ['scene', 'transition', 'note'].every((k) => Array.isArray(G.pdfElementColor(k, 'color'))));
+check('[130-5] บรรยาย/บทพูด/ตัวละคร ยังเป็นดำแม้ในโหมดสี (อ่านง่ายเป็นหลัก)',
+  ['action', 'dialogue', 'character'].every((k) => G.pdfElementColor(k, 'color') === null));
+check('[130-5] ทุกสีอยู่ในช่วง 0..1 ของ pdf-lib',
+  Object.values(G.PDF_ELEMENT_COLORS).every((c) => c.length === 3 &&
+    c.every((x) => typeof x === 'number' && x >= 0 && x <= 1)));
+check('[130-5] คืนสำเนา แก้แล้วไม่กระทบจานสีกลาง', (() => {
+  const c = G.pdfElementColor('scene', 'color'); c[0] = 9;
+  return G.pdfElementColor('scene', 'color')[0] !== 9;
+})());
+check('[130-5] element ที่ไม่รู้จักไม่พัง', G.pdfElementColor('zzz', 'color') === null);
+
 // ───────── layoutPageLines มิเรอร์การนับของ paginate ─────────
 const blocksSmall = [
   { el: 'scene', text: 'INT. ห้องนอน - กลางคืน' },
@@ -161,6 +192,70 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
   check('[89] ไม่ตั้ง openPage → ไม่มี /OpenAction', !t1.includes('/OpenAction'));
   check('ฝังฟอนต์ TrueType ลงไฟล์ (/FontFile2)', t1.includes('/FontFile2'));
   check('ใส่ชื่อเรื่องเป็นเมทาดาทาของไฟล์', t1.includes('/Producer') || t1.includes('/Creator'));
+
+  // ── [alpha.130 ข้อ 5] ขาวดำ / สี — ต้องต่างกันจริงในไฟล์ ไม่ใช่แค่ตัวเลือกลอย ๆ ──
+  {
+    const mkOpts = (extra) => ({ toc: false, titlePages: false, headers: false, ...extra });
+    const rMono = await G.generatePdf({ blocks: longBlocks, fmt, meta,
+      fonts: { regular: thaiFont }, opts: mkOpts({ colorMode: 'mono' }) });
+    const rColor = await G.generatePdf({ blocks: longBlocks, fmt, meta,
+      fonts: { regular: thaiFont }, opts: mkOpts({ colorMode: 'color' }) });
+    // `rg` = ตั้งสีเติมแบบ RGB ใน content stream ของ PDF
+    const rgOps = (b) => (streamsText(b).match(/[\d.]+ [\d.]+ [\d.]+ rg/g) || [])
+      .filter((x) => !/^0 0 0 rg$/.test(x.trim()));
+    check('[130-5] ★★ โหมดขาวดำไม่เขียนคำสั่งสีลงไฟล์เลย',
+      rgOps(rMono.bytes).length === 0, rgOps(rMono.bytes).slice(0, 3).join(' | '));
+    check('[130-5] ★★ โหมดสีเขียนคำสั่งสีลงไฟล์จริง',
+      rgOps(rColor.bytes).length > 0, rgOps(rColor.bytes).length);
+    check('[130-5] เนื้อหาที่วาดเท่ากันทั้งสองโหมด (ต่างแค่สี ไม่ใช่ตกหล่น)',
+      drawOps(rMono.bytes) === drawOps(rColor.bytes),
+      drawOps(rMono.bytes) + ' vs ' + drawOps(rColor.bytes));
+    check('[130-5] จำนวนหน้าเท่ากันทั้งสองโหมด', rMono.pageCount === rColor.pageCount);
+  }
+
+  // ── [alpha.130 ข้อ 5] เลขหน้า/เลขฉาก ปิดแยกกันได้จริงในไฟล์ ──
+  {
+    const numFmt = SF.mergeSpFormat({ pageNumbers: { ...fmt.pageNumbers, show: true },
+                                      sceneNumbers: { ...fmt.sceneNumbers, show: true } });
+    const gen = (o) => G.generatePdf({ blocks: longBlocks, fmt: numFmt, meta,
+      fonts: { regular: thaiFont },
+      opts: { toc: false, titlePages: false, headers: false, startPage: 1, ...o } });
+    const both = await gen({ pageNumbers: true, sceneNumbers: true });
+    const pgOnly = await gen({ pageNumbers: true, sceneNumbers: false });
+    const scOnly = await gen({ pageNumbers: false, sceneNumbers: true });
+    const none = await gen({ pageNumbers: false, sceneNumbers: false });
+    const n = (r) => drawOps(r.bytes);
+    check('[130-5] ★★ ปิดเลขฉากอย่างเดียว = วาดน้อยลงจากตอนเปิดทั้งคู่',
+      n(pgOnly) < n(both), n(pgOnly) + ' vs ' + n(both));
+    check('[130-5] ★★ ปิดเลขหน้าอย่างเดียว = วาดน้อยลงจากตอนเปิดทั้งคู่',
+      n(scOnly) < n(both), n(scOnly) + ' vs ' + n(both));
+    check('[130-5] ★★ สองสวิตช์เป็นอิสระต่อกันจริง (ปิดคนละตัวได้ผลคนละแบบ)',
+      n(pgOnly) !== n(scOnly), n(pgOnly) + ' vs ' + n(scOnly));
+    check('[130-5] ปิดทั้งคู่ = น้อยที่สุด',
+      n(none) < n(pgOnly) && n(none) < n(scOnly),
+      [n(none), n(pgOnly), n(scOnly)].join(','));
+  }
+
+  // ── [alpha.132 ข้อ 2] ทางของ "นิยาย": mergeAndNumber ต้องประทับเลขหน้าเมื่อผู้ใช้สั่ง ──
+  // (PDF ของนิยายมาจาก printToPDF ของ Chromium แล้วเอามาประทับเลขหน้าเองทีหลัง —
+  //  ประตูบานที่สอง `fmt.pageNumbers.show` ปิดอยู่ตามค่าเริ่มต้น ผู้ใช้จึงไม่เคยได้เลขหน้าเลย)
+  {
+    const onePage = await G.generatePdf({ blocks: [{ el: 'action', text: 'เนื้อเรื่อง' }],
+      fmt, fonts: { regular: thaiFont },
+      opts: { titlePages: false, toc: false, pageNumbers: false } });
+    const plainFmt2 = SF.mergeSpFormat();
+    const mk = (on) => G.mergeAndNumber([], onePage.bytes,
+      { fmt: plainFmt2, fonts: { regular: thaiFont }, pageNumbers: on, startPage: 1 });
+    const withNo = await mk(true), noNo = await mk(false);
+    check('[132-2] ★★ นิยาย: สั่งเลขหน้าแล้วได้เลขหน้าจริง แม้ "รูปแบบบท" ปิดไว้',
+      drawOps(withNo.bytes) === drawOps(noNo.bytes) + 1,
+      drawOps(withNo.bytes) + ' vs ' + drawOps(noNo.bytes));
+    check('[132-2] ★ นิยาย: สั่งไม่เอาเลขหน้าก็ยังไม่มีจริง',
+      drawOps(noNo.bytes) === drawOps(onePage.bytes),
+      drawOps(noNo.bytes) + ' vs ' + drawOps(onePage.bytes));
+    check('[132-2] จำนวนหน้าไม่เปลี่ยนเพราะการประทับเลข',
+      withNo.pageCount === noNo.pageCount && withNo.pageCount === onePage.pageCount);
+  }
 
   // ── [89] OpenAction ──
   const r2 = await G.generatePdf({
@@ -325,15 +420,50 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
   check('splitFontRuns ข้อความว่าง → []', G.splitFontRuns('').length === 0);
   check('splitFontRuns รวมตัวติดกันที่ใช้ฟอนต์เดียวกันเป็นช่วงเดียว',
     G.splitFontRuns('abcก').length === 1 && G.splitFontRuns('—…©').length === 1);
+  // ปิดเลขหน้าไว้ เพื่อให้เหลือแต่ "รอยวาดของข้อความ" ที่กำลังทดสอบจริง ๆ
+  // ([alpha.132 ข้อ 2] เลขหน้าเปิดตามค่าเริ่มต้นแล้ว — ถ้าไม่ปิด จะมีรอยวาดของเลขหน้าปนมาด้วย)
   const rBold = await G.generatePdf({
     blocks: [{ el: 'scene', text: 'INT. ห้องนอน - เช้า' }], fmt,
-    fonts: { regular: thaiFont }, opts: { titlePages: false } });
+    fonts: { regular: thaiFont }, opts: { titlePages: false, pageNumbers: false } });
   const rPlain = await G.generatePdf({
     blocks: [{ el: 'action', text: 'บรรยายธรรมดาหนึ่งบรรทัด' }], fmt,
-    fonts: { regular: thaiFont }, opts: { titlePages: false } });
+    fonts: { regular: thaiFont }, opts: { titlePages: false, pageNumbers: false } });
   check('บรรยายธรรมดา (ไม่หนา) วาดรอบเดียว', drawOps(rPlain.bytes) === 1, drawOps(rPlain.bytes));
   check('หัวฉาก (ตัวหนา) วาดสองรอบ = ตัวหนาปลอมทำงาน',
     drawOps(rBold.bytes) === 2, drawOps(rBold.bytes));
+
+  // ══ [alpha.132 ข้อ 2] ★★ ติ๊กช่องเลขหน้าแล้วต้องได้เลขหน้าจริง ══
+  // ผู้ใช้: *"ไม่มีเลขหน้าทั้ง ๆ ที่กดเลือก"* — เพราะ `pageNumberLabel()` มีประตูบานที่สอง
+  // (`fmt.pageNumbers.show`) ซึ่ง **ค่าเริ่มต้นของโปรแกรมคือปิด** คนเขียนนิยายไม่มีทางไปเปิด
+  {
+    const plainFmt = SF.mergeSpFormat();       // ค่าเริ่มต้น = pageNumbers.show === false
+    check('[132-2] ★ ค่าเริ่มต้นของ "รูปแบบบท" ปิดเลขหน้าอยู่จริง (เทสถึงจะมีความหมาย)',
+      plainFmt.pageNumbers.show === false);
+    const mk132 = (o) => G.generatePdf({ blocks: [{ el: 'action', text: 'บรรทัดเดียว' }],
+      fmt: plainFmt, fonts: { regular: thaiFont },
+      opts: { titlePages: false, toc: false, ...o } });
+    const on132 = await mk132({ pageNumbers: true });
+    const off132 = await mk132({ pageNumbers: false });
+    check('[132-2] ★★ ติ๊กเลขหน้า = ได้เลขหน้า แม้ "รูปแบบบท" จะปิดไว้',
+      drawOps(on132.bytes) === drawOps(off132.bytes) + 1,
+      drawOps(on132.bytes) + ' vs ' + drawOps(off132.bytes));
+    check('[132-2] ★ ปิดเลขหน้าก็ยังปิดได้จริง', drawOps(off132.bytes) === 1, drawOps(off132.bytes));
+    // เลขฉากก็โดนประตูบานเดียวกัน
+    const sc132 = (on) => G.generatePdf({
+      blocks: [{ el: 'scene', text: 'INT. ห้อง - เช้า', sceneNo: 7 }],
+      fmt: plainFmt, fonts: { regular: thaiFont },
+      opts: { titlePages: false, toc: false, pageNumbers: false, sceneNumbers: on } });
+    const scOn = await sc132(true), scOff = await sc132(false);
+    check('[132-2] ★★ ติ๊กเลขฉาก = ได้เลขฉากสองฝั่ง แม้ "รูปแบบบท" จะปิดไว้',
+      drawOps(scOn.bytes) === drawOps(scOff.bytes) + 2,
+      drawOps(scOn.bytes) + ' vs ' + drawOps(scOff.bytes));
+    check('[132-2] ★ pdfNumberFmt ไม่แก้ของเดิม (คืนก้อนใหม่)', (() => {
+      const f2 = G.pdfNumberFmt(plainFmt, 'pageNumbers', true);
+      return f2.pageNumbers.show === true && plainFmt.pageNumbers.show === false;
+    })());
+    check('[132-2] ★ ไม่ได้เปิดสวิตช์ = ไม่แตะรูปแบบเลย',
+      G.pdfNumberFmt(plainFmt, 'pageNumbers', false) === plainFmt);
+  }
   // สลับฟอนต์จริงในไฟล์: บรรทัดที่มีทั้งไทยและ · ต้องฝังฟอนต์สองตัว
   const rMix = await G.generatePdf({
     blocks: [{ el: 'action', text: 'ทอร่ามองเค้ก · แล้วยิ้ม © 2569' }], fmt,

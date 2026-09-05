@@ -213,12 +213,6 @@ export function toggleHidden(layout, key) {
   out.hidden = out.hidden.includes(key) ? out.hidden.filter((k) => k !== key) : [...out.hidden, key];
   return out;
 }
-export function toggleCollapsed(layout, key) {
-  const out = cloneLayout(layout);
-  out.collapsed = out.collapsed.includes(key) ? out.collapsed.filter((k) => k !== key) : [...out.collapsed, key];
-  return out;
-}
-
 // ───────── บันทึกเลย์เอาต์ (localStorage) ─────────
 function defaultStorage() {
   if (typeof localStorage !== 'undefined') return localStorage;

@@ -53,19 +53,6 @@ async function persistRun(run) {
   return savePlaythroughs(list);
 }
 
-/** สถิติสำหรับแดชบอร์ด/ที่อื่น — กี่รอบ · ก้าวเฉลี่ย · ตอนจบที่เคยไปถึง */
-export function playthroughStats() {
-  const runs = getPlaythroughs();
-  const steps = runs.map((r) => (r.steps || []).length);
-  const endings = new Set(runs.map((r) => r.endedAtTitle).filter(Boolean));
-  return {
-    runs: runs.length,
-    avgSteps: steps.length ? +(steps.reduce((a, b) => a + b, 0) / steps.length).toFixed(1) : 0,
-    endings: endings.size,
-    last: runs.length ? runs[runs.length - 1] : null,
-  };
-}
-
 // ───────── ทางเข้า ─────────
 export async function openPlayerMode(startId) {
   const { showPanel } = await import('./panels/panel-ui.js');

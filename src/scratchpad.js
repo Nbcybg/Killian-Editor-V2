@@ -20,6 +20,9 @@ export async function openScratchpad() {
   try { saved = localStorage.getItem('k2-scratchpad') || ''; } catch {}
   const ta = el('textarea', 'scratch-area');
   ta.value = saved;
+  // [alpha.128] ช่องนี้เริ่มว่างและไม่มีป้ายกำกับใด ๆ อยู่ข้าง ๆ — เปิดแผงมาเจอกล่องเปล่า
+  // ไม่รู้ว่าใส่อะไรได้และหายไหม · บอกทั้งหน้าที่และที่เก็บในบรรทัดเดียว
+  ta.placeholder = t('ui.notes.scratchPh');
   ta.spellcheck = false;
   // auto-save to localStorage every 3s
   let saveTimer = null;
@@ -99,6 +102,9 @@ export function renderNotesPanel(host) {
 
   const ta = el('textarea', 'scratch-area');
   ta.value = saved;
+  // [alpha.128] ช่องนี้เริ่มว่างและไม่มีป้ายกำกับใด ๆ อยู่ข้าง ๆ — เปิดแผงมาเจอกล่องเปล่า
+  // ไม่รู้ว่าใส่อะไรได้และหายไหม · บอกทั้งหน้าที่และที่เก็บในบรรทัดเดียว
+  ta.placeholder = t('ui.notes.scratchPh');
   ta.spellcheck = false;
 
   let saveTimer = null;

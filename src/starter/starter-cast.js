@@ -12,15 +12,42 @@ import { el, setStatus } from '../core.js';
 import { t, tf } from '../i18n.js';
 import { confirmBox } from '../ui.js';
 import { aiBtn, askAI } from './starter-ai.js';
-import { GENDERS, newChar, upsertChar, removeChar, charReady } from './starter-model.js';
-import { charDescPrompt, SYS_WRITER } from './starter-prompt.js';
+import {
+  GENDERS, newChar, upsertChar, removeChar, charReady, normalizeTags, isAdv,
+} from './starter-model.js';
+import { charDescPrompt, charDialoguePrompt, SYS_WRITER } from './starter-prompt.js';
 import { importImage, importFromGallery, imageUrl } from './starter-store.js';
-import { pickWikiChar, charFromWiki, syncCastToWiki, pushCharToWiki } from './starter-wiki.js';
+import { pickWikiChar, charFromWiki, syncCastToWiki, pushCharToWiki, autoLinkChar }
+  from './starter-wiki.js';
 // [alpha.116 ข้อ 10] ชื่อที่โผล่ในเรื่องย่อ = ผู้ต้องสงสัยว่าเป็นตัวละคร (บริสุทธิ์ · เทสแยก)
 import { suggestNames, starterText, sourceLabel } from './starter-names.js';
+import { shortcodeOf, mentionToken, normalizePrompts, isReserved, MENTION_ANY }
+  from '../entity-mention.js';
+import { mentionField, promptFields, tagInput } from './starter-fields.js';
 
 // ES module: ตัวแปรที่ reassign ข้ามไฟล์ไม่ได้ → เก็บใน object (กฎเหล็กข้อ 2 ใน AGENTS.md)
 const CAST_C = { editing: '' };
+
+/** ปิดตัวแก้ไขที่ค้างอยู่ — ตัวเดินขั้นเรียกทุกครั้งที่ออกจากขั้นตัวละคร */
+export function resetCastEditor() { CAST_C.editing = ''; }
+/**
+ * ตัวละคร "เปล่าสนิท" — เกิดจากกด **+ เพิ่มตัวละคร** แล้วไม่พิมพ์อะไรเลย
+ *
+ * ต้องเก็บกวาด ไม่ใช่ปล่อยไว้: การ์ดเปล่าโผล่ในรายชื่อทำให้ผู้ใช้เชื่อว่า "มีตัวละครแล้ว"
+ * ทั้งที่ `charReady` ยังเท็จ → ขั้นนี้ไม่ครบ → ปุ่มเสร็จสิ้นถูกปิด โดยไม่มีอะไรบอกว่าทำไม
+ * (บั๊กที่ผู้ใช้รายงาน · อีกครึ่งของทางแก้อยู่ที่ปุ่มเสร็จสิ้นใน starter-wizard.js)
+ */
+export function isBlankChar(c) {
+  if (!c) return true;
+  const some = [c.name, c.persona, c.blurb, c.image, c.dialogue, c.shortcode,
+                c.selfPronoun, c.wikiPath].some((v) => String(v || '').trim());
+  return !some && !((c.tags || []).length) && !((c.aliases || []).length)
+         && !normalizePrompts(c.prompts).length;
+}
+/** คืน cast ที่ตัดตัวเปล่าออก (ยกเว้นตัวที่กำลังแก้อยู่ — คนกำลังพิมพ์อยู่ ห้ามลบใต้มือ) */
+export function pruneBlank(cast, keepId = '') {
+  return (cast || []).filter((c) => c.id === keepId || !isBlankChar(c));
+}
 
 export async function renderCastStep(host, ctx) {
   const s = ctx.starter;
@@ -32,6 +59,11 @@ export async function renderCastStep(host, ctx) {
     if (ch) return renderEditor(host, ctx, ch);
     CAST_C.editing = '';
   }
+  // กลับมาถึงหน้ารายชื่อแล้ว = ไม่มีใครกำลังพิมพ์อยู่ → เก็บกวาดการ์ดเปล่าได้ปลอดภัย
+  const kept = pruneBlank(s.cast, '');
+  if (kept.length !== s.cast.length) { s.cast = kept; ctx.save(); }
+
+  const adv = isAdv(s);
 
   // ── แถบเครื่องมือ ────────────────────────────────────────
   const bar = el('div', 'st-row-btns');
@@ -96,10 +128,19 @@ export async function renderCastStep(host, ctx) {
     const meta = [];
     if (ch.gender) meta.push((GENDERS.find((g) => g.id === ch.gender) || {}).label || '');
     if (ch.wikiPath) meta.push('📚 ' + t('ui.starter.inWiki'));
+    if (adv) meta.push('🔖 ' + mentionToken(shortcodeOf(ch)));
     if (meta.length) info.append(el('div', 'st-cast-meta', meta.join(' · ')));
     const desc = String(ch.persona || '').trim();
     info.append(el('div', 'st-cast-desc',
       desc ? desc.slice(0, 120) + (desc.length > 120 ? '…' : '') : t('ui.starter.castNoDesc')));
+    // แท็กของตัวละคร (โหมดขั้นสูง) — เห็นได้จากรายชื่อโดยไม่ต้องเปิดเข้าไป
+    if (adv && (ch.tags || []).length) {
+      const tg = el('div', 'st-cast-tags');
+      for (const x of ch.tags) tg.append(el('span', 'st-tag on', x));
+      info.append(tg);
+    }
+    // ตัวที่ยังไม่ได้ตั้งชื่อ = ตัวที่กันปุ่ม "เสร็จสิ้น" อยู่ → ต้องเห็นเหตุผลตรงนี้เลย
+    if (!charReady(ch)) info.append(el('div', 'st-cast-todo', '⚠ ' + t('ui.starter.castNeedName')));
     card.append(info);
 
     const btns = el('div', 'st-cast-btns');
@@ -156,12 +197,20 @@ export function renderNameHints(host, ctx) {
 
 async function renderEditor(host, ctx, ch) {
   const s = ctx.starter;
+  const adv = isAdv(s);
+  // เพื่อนร่วมเรื่อง = รายชื่อที่ชิปโค้ดสั้นใช้ (ตัดตัวเองออก — อ้างถึงตัวเองไม่มีความหมาย)
+  const others = (s.cast || []).filter((c) => c.id !== ch.id && String(c.name || '').trim());
   host.innerHTML = '';
   const save = () => { s.cast = upsertChar(s.cast, ch); ctx.save(); };
 
   const head = el('div', 'st-row-btns');
   const back = el('button', 'st-back', '← ' + t('ui.starter.castBackToList'));
-  back.onclick = async () => { CAST_C.editing = ''; await ctx.save({ now: true }); renderCastStep(host, ctx); };
+  back.onclick = async () => {
+    CAST_C.editing = '';
+    s.cast = pruneBlank(s.cast, '');       // เข้ามาแล้วไม่พิมพ์อะไรเลย = ไม่ต้องเหลือการ์ดเปล่าไว้
+    await ctx.save({ now: true });
+    renderCastStep(host, ctx);
+  };
   head.append(back);
   host.append(head);
 
@@ -208,7 +257,49 @@ async function renderEditor(host, ctx, ch) {
   nameInp.placeholder = t('ui.starter.fCharNamePlaceholder');
   nameInp.oninput = () => { ch.name = nameInp.value; save(); };
   nameRow.append(nameInp);
+
+  // ── ดึงของเดิมจาก Wiki เมื่อชื่อตรงกัน ────────────────────
+  //
+  // ผู้ใช้: *"ทำไมต้องใส่ซ้ำซ้อน ทำไมต้องดึงใน wiki มาแล้วยังต้องกรอก"*
+  // เดิมมีแค่ปุ่ม "ดึงจาก Wiki" ที่ต้องกดเอง — พิมพ์ชื่อที่มีใน Wiki อยู่แล้วก็ยังได้การ์ดเปล่า
+  // ตอนนี้: ตรวจให้ตอนออกจากช่องชื่อ เจอแล้วค่อยถาม (ไม่ทับของที่พิมพ์ไว้เองเงียบ ๆ)
+  // [alpha.124 ข้อ 21] ตรวจเฉพาะตอนชื่อ "เปลี่ยนจริง" — เดิมยิงทุกครั้งที่ออกจากช่อง
+  // (คลิกผ่าน · กด Tab ไล่ช่อง · สลับแท็บ) ทั้งที่ชื่อไม่ได้ขยับสักตัวอักษร →
+  // อ่านทั้งโฟลเดอร์ Wiki ใหม่ฟรี ๆ แล้วบางทีก็เด้งกล่องถามขึ้นมากลางทางด้วย
+  let lastChecked = String(ch.name || '');
+  nameInp.onblur = async () => {
+    const now = String(ch.name || '').trim();
+    if (ch.wikiPath || !now || now === lastChecked) return;
+    lastChecked = now;
+    const got = await autoLinkChar(s.slug, ch);
+    if (!got) return;
+    save();
+    await ctx.save({ now: true });
+    setStatus(tf('ui.starter.charLinkedFromWiki', ch.name));
+    renderEditor(host, ctx, ch);
+  };
   host.append(nameRow);
+
+  // ── โค้ดสั้น (ขั้นสูง) ────────────────────────────────────
+  if (adv) {
+    const scRow = el('div', 'st-field');
+    scRow.append(el('label', null, t('ui.starter.fShortcode')));
+    const scInp = el('input', 'wiki-input');
+    scInp.value = ch.shortcode || '';
+    scInp.placeholder = t('ui.starter.fShortcodePlaceholder');
+    const scPreview = el('div', 'st-hint st-shortcode-preview');
+    const drawSc = () => {
+      scPreview.textContent = tf('ui.starter.fShortcodePreview', mentionToken(shortcodeOf(ch)));
+      // `character` / `user` เป็นคำสงวน — ตั้งชนแล้วโทเคนจะไม่ชี้มาที่ตัวนี้เลย ต้องบอกให้รู้
+      const bad = isReserved(shortcodeOf(ch));
+      scPreview.classList.toggle('st-warn', bad);
+      if (bad) scPreview.textContent = tf('ui.starter.fShortcodeReserved', shortcodeOf(ch));
+    };
+    scInp.oninput = () => { ch.shortcode = scInp.value; save(); drawSc(); };
+    scRow.append(scInp, scPreview);
+    drawSc();
+    host.append(scRow);
+  }
 
   // ── เพศ ──────────────────────────────────────────────────
   const genRow = el('div', 'st-field');
@@ -242,6 +333,39 @@ async function renderEditor(host, ctx, ch) {
   if (!String(s.intro || '').trim()) descBtns.append(el('span', 'st-dim', t('ui.starter.aiBetterWithIntro')));
   descRow.append(descBtns);
   host.append(descRow);
+
+  // ══ ช่องขั้นสูง (ผู้ใช้ข้อ 2.1–2.2) ══════════════════════
+  if (adv) {
+    // ── ตัวอย่างคำพูด ──
+    //
+    // *"เพื่อให้ AI เข้าใจว่าลักษณะนิสัยยังไง"* — คำบรรยายบอกว่าเป็นคนแบบไหน
+    // แต่ **ตัวอย่างคำพูดบอกว่าพูดยังไง** ซึ่งเป็นสิ่งที่โมเดลลอกได้ตรงกว่ามาก
+    const dlgRow = mentionField(t('ui.starter.fDialogue'), ch.dialogue,
+      (v) => { ch.dialogue = v; save(); },
+      { cast: others, rows: 8,
+        // โทเคนตัวอย่างต้องส่งผ่าน tf() — `t()` คลาย `{{`→`{` (ดู formatMsg ใน i18n.js)
+        placeholder: tf('ui.starter.fDialoguePlaceholder', mentionToken(MENTION_ANY)),
+        hint: t('ui.starter.fDialogueHint') });
+    const dlgBtns = el('div', 'st-row-btns');
+    dlgBtns.append(aiBtn(t('ui.starter.aiWriteDialogue'), async (reqId) => {
+      if (!String(ch.name || '').trim()) { setStatus(t('ui.starter.needCharName')); return; }
+      const out = await askAI('char-dialogue', charDialoguePrompt(s, ch), SYS_WRITER(), reqId);
+      if (out) { ch.dialogue = out; dlgRow.__input.value = out; save(); }
+      else setStatus(t('ui.starter.aiNoResult'));
+    }));
+    dlgRow.append(dlgBtns);
+    host.append(dlgRow);
+
+    // ── แท็กของตัวละคร ──
+    host.append(tagInput(t('ui.starter.fCharTags'),
+      () => ch.tags || [], (v) => { ch.tags = normalizeTags(v); save(); },
+      { placeholder: t('ui.starter.fCharTagsPlaceholder') }));
+
+    // ── ช่อง Prompt เพิ่มเองได้ ──
+    host.append(promptFields(
+      () => ch.prompts || [], (v) => { ch.prompts = normalizePrompts(v); save(); },
+      { cast: others, label: t('ui.starter.fPrompts'), hint: t('ui.starter.fPromptsHint') }));
+  }
 
   // ── เพิ่มเติม: ชื่อรอง · สรรพนาม · การ์ดสาธารณะ ──────────
   const more = el('details', 'st-more');

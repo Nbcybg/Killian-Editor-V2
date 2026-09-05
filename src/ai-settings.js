@@ -2,8 +2,10 @@
 // หลักสำคัญ 2 ข้อ:
 //  1) เรียก API ผ่าน main process (kapi.httpFetch) — fetch จาก renderer โดน CORS (origin เป็น file://)
 //  2) API key ไม่เก็บใน project.khn.json (ไฟล์ที่ตั้งใจให้ก๊อป/แชร์) → เก็บแยกที่ <root>/ai-key.json
-import { t, tf } from './i18n.js';
-import { $, el, state, setStatus, log, withBusy } from './core.js';
+// [alpha.125 ข้อ D] import ที่เหลือใช้จริงเท่านั้น — ตัวที่กล่องตั้งค่าเก่าใช้
+// (`$` `el` `withBusy` `escClose` `tf`) ถูกถอดออกพร้อมกล่องนั้น
+import { t } from './i18n.js';
+import { state, setStatus, log } from './core.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keyCache = null;       // { apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -166,124 +168,12 @@ function recordUsage(tokens, provider, model) {
   state.meta.ai.usage = usage;
 }
 
-export async function testAIConnection() {
-  // [alpha.62 บั๊ก 10] เครือข่ายช้าได้เป็นสิบวินาที — ต้องเห็นว่าโปรแกรมยังทำงานอยู่
-  const result = await withBusy(t('ui.aiSet.busyTestConnectAI'),
-                                () => callAI(t('ui.aiSet.replyBackWordOk'), ''));
-  const ok = !!result && result.toLowerCase().includes('ok');
-  setStatus(ok ? t('ui.aiSet.aIConnectOk') : t('ui.aiSet.aITestFail'));
-  return ok;
-}
-
-// ---- กล่องตั้งค่า ----
-export async function showAISettingsDialog() {
-  if (!state.root) { setStatus(t('ui.common.openProjectBeforeSettings')); return; }
-  const ai = getAISettings();
-  const curKey = await loadApiKey();
-  const ov = el('div', 'k-overlay');
-  const box = el('div', 'k-dialog k-ai-settings');
-  box.append(el('div', 'k-dlg-title', t('ui.common.settingsAI')));
-
-  const mkRow = (label) => { const r = el('div', 'wiki-row'); r.append(el('label', null, label)); box.append(r); return r; };
-
-  const provRow = mkRow(t('ui.common.provider'));
-  const provSel = el('select', 'wiki-input k-dlg-select');
-  // [alpha.60r ข้อ 3] เพิ่ม DeepSeek, Grok, และกำหนดเอง
-  const providers = [
-    ['openai', 'OpenAI — ChatGPT / GPT-4o / o3'],
-    ['deepseek', 'DeepSeek — V3 / R1'],
-    ['grok', 'Grok (xAI)'],
-    ['claude', 'Claude (Anthropic)'],
-    ['ollama', t('ui.common.ollamaItem')],
-    ['custom', t('ui.aiSet.defineCustomLLM')],
-  ];
-  for (const [v, t] of providers) {
-    const o = el('option', null, t); o.value = v; provSel.append(o);
-  }
-  provSel.value = ai.provider || 'openai';
-  provRow.append(provSel);
-
-  const keyRow = mkRow('API Key');
-  const keyInp = el('input', 'wiki-input'); keyInp.type = 'password'; keyInp.value = curKey; keyInp.placeholder = 'sk-…';
-  keyRow.append(keyInp);
-  const keyNote = el('div', 'dim', tf('ui.aiSet.keepSplitFolderProject', KEY_FILE));
-  keyNote.style.cssText = 'font-size:11px;margin:-4px 0 6px';
-  box.append(keyNote);
-
-  const modelRow = mkRow(t('ui.common.model'));
-  const modelInp = el('input', 'wiki-input'); modelInp.value = ai.model || ''; modelInp.placeholder = 'gpt-4o-mini / claude-sonnet-4-5 / llama3';
-  modelRow.append(modelInp);
-
-  const tempRow = mkRow(t('ui.aiSet.newTemperature'));
-  const tempRng = el('input', 'wiki-input'); tempRng.type = 'range'; tempRng.min = '0'; tempRng.max = '1'; tempRng.step = '0.1';
-  tempRng.value = String(ai.temperature ?? 0.7);
-  const tempLbl = el('span', null, ' ' + (ai.temperature ?? 0.7));
-  tempRng.oninput = () => { tempLbl.textContent = ' ' + tempRng.value; };
-  tempRow.append(tempRng, tempLbl);
-
-  const tokRow = mkRow(t('ui.aiSet.longHighLastTokens'));
-  const tokInp = el('input', 'wiki-input'); tokInp.type = 'number'; tokInp.value = String(ai.maxTokens || 500);
-  tokInp.min = '50'; tokInp.max = '8192';
-  tokRow.append(tokInp);
-
-  // แถว Ollama URL / Custom URL — แสดง/ซ่อนตามผู้ให้บริการที่เลือก
-  const urlRow = mkRow('Ollama / Custom URL');
-  const urlInp = el('input', 'wiki-input');
-  urlInp.value = ai.customUrl || ai.ollamaUrl || (ai.provider === 'deepseek' ? 'https://api.deepseek.com' :
-                   ai.provider === 'grok' ? 'https://api.x.ai/v1' : 'http://localhost:11434');
-  urlInp.placeholder = 'https://api.example.com/v1/chat/completions';
-  urlRow.append(urlInp);
-  const syncProv = () => {
-    const show = ['ollama', 'custom', 'deepseek', 'grok'].includes(provSel.value);
-    urlRow.style.display = show ? '' : 'none';
-    keyRow.style.display = provSel.value === 'ollama' ? 'none' : '';
-    // [alpha.60r ข้อ 3] อัปเดต placeholder model ตาม provider ที่เลือก
-    const defs = { openai: 'gpt-4o-mini', deepseek: 'deepseek-chat', grok: 'grok-2',
-                   claude: 'claude-sonnet-4-5', ollama: 'llama3', custom: 'gpt-4o-mini' };
-    modelInp.placeholder = defs[provSel.value] || 'gpt-4o-mini';
-  };
-  provSel.onchange = syncProv;
-  syncProv();
-
-  const usage = ai.usage || [];
-  if (usage.length) {
-    const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
-    const last = usage[usage.length - 1];
-    const stat = el('div', 'dim',
-      tf('ui.aiSet.mergeTokensTimesLatest', total.toLocaleString(), usage.length, new Date(last.date).toLocaleString('th-TH')));
-    stat.style.cssText = 'margin:10px 0;font-size:12px';
-    box.append(stat);
-  }
-
-  const collect = () => ({
-    provider: provSel.value, model: modelInp.value.trim(),
-    temperature: parseFloat(tempRng.value), maxTokens: parseInt(tokInp.value, 10) || 500,
-    ollamaUrl: urlInp.value.trim() || 'http://localhost:11434',
-    customUrl: urlInp.value.trim() || '',
-  });
-
-  const btns = el('div', 'k-dlg-btns');
-  const testB = el('button', null, t('ui.aiSet.testConnect'));
-  const cB = el('button', null, t('ui.common.cancel'));
-  const okB = el('button', 'k-ok', t('ui.common.save'));
-  btns.append(testB, cB, okB);
-  box.append(btns);
-  ov.append(box);
-  document.body.append(ov);
-
-  testB.onclick = async () => {
-    saveAISettings(collect());
-    await saveApiKey(keyInp.value.trim());
-    await testAIConnection();
-  };
-  cB.onclick = () => ov.remove();
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  okB.onclick = async () => {
-    saveAISettings(collect());
-    await saveApiKey(keyInp.value.trim());
-    const { saveProjectMeta } = await import('./app.js');
-    await saveProjectMeta();
-    ov.remove();
-    setStatus(t('ui.common.saveSettingsAIDone'));
-  };
-}
+// ═══ [alpha.125 ข้อ D] `testAIConnection()` + `showAISettingsDialog()` ถูกลบแล้ว ═══
+//
+// ทั้งคู่เป็นกล่องตั้งค่า AI ยุคก่อนหลายผู้ให้บริการ — ถูกแทนที่ด้วย `ai/ai-provider-ui.js`
+// ตั้งแต่ alpha.79 (ตัวนั้นจัดการหลาย provider · คีย์แยกไฟล์ · ทดสอบการเชื่อมต่อในตัว)
+// และ **ไม่มีไฟล์ไหนเรียกสองตัวนี้อีกเลย**: ทุกจุดที่เปิดกล่องตั้งค่า AI (app.js · ai-analyzer-ui
+// · starter-ui) import `showAISettingsDialog` จาก `./ai/ai-provider-ui.js` ทั้งหมด
+//
+// ที่ยังใช้จากไฟล์นี้จริง ๆ คือ: `callAI` · `aiConfigured` · `getAISettings` / `saveAISettings`
+// · `loadApiKey` / `saveApiKey` — เก็บไว้ครบ

@@ -1,7 +1,7 @@
 // recycle.js — ถังขยะ: ลบไปถังขยะ / กู้คืน / ล้างถังขยะเก่า (retention)
 import { t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, refreshNetwork } from './app.js';
-import { setStatus, smart, state } from './core.js';
+import { setStatus, smart, state, logAction } from './core.js';
 import { confirmBox } from './ui.js';
 
 export async function restoreFromTrash(p, fname) {
@@ -67,6 +67,7 @@ export async function restoreFromTrash(p, fname) {
   }
   await buildTree(); smart.loadNames(state.root);
   refreshNetwork();
+  logAction('recycle', t('ui.trash.recoverRestoreDone'), { from: p, name: fname });
   setStatus(t('ui.trash.recoverRestoreDone'));
 }
 
@@ -78,24 +79,66 @@ export async function deleteToTrash(file, label) {
   if (state.tabs.has(file)) { state.tabs.get(file).dirty = false; closeTab(file); }
   await buildTree(); smart.loadNames(state.root);
   refreshNetwork();
+  // [alpha.128] การลบเป็นสิ่งที่ต้องไล่ย้อนได้ที่สุด แต่เดิมไม่มีร่องรอยในบันทึกเลยสักบรรทัด
+  // (คำสั่งพวกนี้มาจากเมนูคลิกขวา จึงไม่ผ่าน handleCommand ที่จด `cmd:` ให้)
+  logAction('recycle', t('ui.trash.moveTrash') + label, { from: file, to: dst });
   setStatus(t('ui.trash.moveTrash') + label);
   return dst;
 }
 
-export async function purgeRecycle(root) {
+/**
+ * โปรเจกต์ที่ผู้ใช้ตอบ "เก็บไว้ก่อน" ไปแล้วในรอบนี้ — ไม่ถามซ้ำจนกว่าจะเปิดโปรแกรมใหม่
+ * (ES module: ค่าที่ reassign ข้ามไฟล์ต้องอยู่ใน object — กฎเหล็กข้อ 2 ของ AGENTS.md)
+ */
+const PURGE_C = { skipped: new Set() };
+/**
+ * ล้างถังขยะที่เกินอายุ — [alpha.124 ข้อ 16] **ต้องถามก่อนเสมอ**
+ *
+ * เดิมลบถาวรทันทีตอนเปิดโปรเจกต์ โดยผู้ใช้ไม่มีทางรู้ล่วงหน้าเลยว่ากำลังจะเสียอะไร
+ * (มีแค่ข้อความบนแถบสถานะ *หลัง* ลบเสร็จ ซึ่งหายไปในไม่กี่วินาที) — กลับมาอีกเดือน
+ * แล้วงานที่ลบทิ้งไว้ "เผื่อเปลี่ยนใจ" หายเกลี้ยงแบบไม่มีทางกู้
+ *
+ * ตอนนี้: นับก่อน → ถาม → ลบเฉพาะเมื่อผู้ใช้ยืนยัน · ตอบไม่ = เก็บไว้ ไม่ถามซ้ำในรอบนี้
+ * @param {boolean} silent ข้ามการถาม (เทส/โหมดอัตโนมัติ) — ไม่ลบอะไรเลยถ้าไม่ได้ยืนยัน
+ */
+export async function purgeRecycle(root, { silent = false, force = false } = {}) {
   const days = parseInt(state.settings.recycleDays, 10) || 0;
-  if (days <= 0) return;
+  if (days <= 0) return 0;
+  // สั่งเองจากเมนูคลิกขวาถังขยะ = ต้องถามใหม่เสมอ แม้เพิ่งตอบ "เก็บไว้ก่อน" ไปเมื่อกี้
+  if (force) PURGE_C.skipped.delete(root);
+  else if (PURGE_C.skipped.has(root)) return 0;
   const recDir = await kapi.join(root, 'Recycle');
-  if (!(await kapi.exists(recDir))) return;
+  if (!(await kapi.exists(recDir))) return 0;
   const cutoff = Date.now() - days * 86400000;
-  let purged = 0;
+
+  // ── รอบที่ 1: นับว่าจะลบอะไรบ้าง (ยังไม่แตะไฟล์) ──
+  const doomed = [];
   for (const name of await kapi.listDirs(recDir).catch(() => [])) {
     const p = await kapi.join(recDir, name);
-    if ((await kapi.mtime(p)) < cutoff) { await kapi.remove(p); purged++; }
+    if ((await kapi.mtime(p)) < cutoff) doomed.push(p);
   }
   for (const name of await kapi.listFiles(recDir, '').catch(() => [])) {
+    if (/\.k2restore\.json$/i.test(name)) continue;     // ใบกู้คืนไปพร้อมของจริง ไม่นับซ้ำ
     const p = await kapi.join(recDir, name);
-    if ((await kapi.mtime(p)) < cutoff) { await kapi.remove(p); purged++; }
+    if ((await kapi.mtime(p)) < cutoff) doomed.push(p);
   }
-  if (purged) setStatus(tf('ui.trash.clearTrashAutoList', purged, days));
+  if (!doomed.length) return 0;
+
+  // ── รอบที่ 2: ถาม แล้วค่อยลบ ──
+  if (silent) return 0;
+  if (!(await confirmBox(tf('ui.trash.purgeAsk', doomed.length, days), t('ui.trash.purgeGo')))) {
+    PURGE_C.skipped.add(root);
+    setStatus(tf('ui.trash.purgeKept', doomed.length));
+    return 0;
+  }
+  let purged = 0;
+  for (const p of doomed) {
+    try { await kapi.remove(p); await kapi.remove(p + '.k2restore.json').catch(() => {}); purged++; }
+    catch { /* ไฟล์ถูกลบไปแล้ว/ถูกล็อก — ข้ามไป ไม่ให้ค้างทั้งชุด */ }
+  }
+  if (purged) {
+    logAction('recycle', tf('ui.trash.clearTrashAutoList', purged, days), doomed);
+    setStatus(tf('ui.trash.clearTrashAutoList', purged, days));
+  }
+  return purged;
 }

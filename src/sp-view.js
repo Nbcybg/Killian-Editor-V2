@@ -352,11 +352,48 @@ export function renderPageView(host, pages, fmt, opts = {}) {
       page.append(d);
     };
     if (pg.continuedTop) putCont('top', pg.continuedTop);
+    // ══ [alpha.134 · X-1] ★ หัวกระดาษ = **บล็อกในสายเนื้อหา** ไม่ใช่โอเวอร์เลย์ ══
+    //
+    // ผู้ใช้: *"ตัวเลือก PDF ใช้ไม่ได้เลย"* (ฝั่งบทภาพยนตร์)
+    //
+    // ตัวสร้าง PDF หักบรรทัดให้หัวกระดาษด้วย `linesForBody()` แล้วดันเนื้อหาลงมา —
+    // ช่องตัวอย่างจึงต้องกินที่แบบเดียวกัน ไม่งั้นเนื้อหาบนจอสูงกว่าไฟล์อยู่ 1+N บรรทัด
+    // (ผู้เรียกต้องส่ง `lines: linesForBody(...)` ให้ `pagesOf` ด้วย — สองอย่างนี้มาคู่กันเสมอ)
+    const hdrRows = typeof opts.headerRows === 'function' ? opts.headerRows(pg.index) : null;
+    if (hdrRows && hdrRows.length) {
+      const hd = document.createElement('div');
+      hd.className = 'sp-hdr';
+      hd.style.cssText = 'position:relative;height:1em;white-space:nowrap;'
+        + 'margin:0 0 ' + Math.max(0, num(opts.headerGapLines, 1)) + 'em 0';
+      for (const r of hdrRows) {
+        const sp = document.createElement('span');
+        const side = r.align === 'right' ? 'right' : r.align === 'center' ? 'center' : 'left';
+        const off = num(r.xOffset, 0);
+        // xOffset เป็นบวก = ขยับไปทางขวา → ฝั่งขวาต้อง "ลดระยะจากขอบขวา" (กฎเดียวกับ headerHtml)
+        sp.style.cssText = 'position:absolute;top:0;'
+          + (side === 'center' ? 'left:50%;transform:translateX(calc(-50% + ' + off + 'in))'
+            : side === 'right' ? 'right:' + (+(-off).toFixed(4)) + 'in'
+              : 'left:' + off + 'in')
+          + (r.bold ? ';font-weight:700' : '')
+          + (r.italic ? ';font-style:italic' : '')
+          + (r.underline ? ';text-decoration:underline' : '');
+        sp.textContent = r.text;
+        hd.append(sp);
+      }
+      page.append(hd);
+    }
     for (const b of pg.blocks || []) {
       const d = document.createElement('div');
       d.className = 'sp sp-' + (b.el || 'action');
       if (Number.isFinite(b.pos)) d.dataset.pos = String(b.pos);
       d.textContent = b.text || '';
+      // [alpha.132r] ช่องตัวอย่างต้องบอกได้ว่าเลือก "สี" แล้วไฟล์จะออกมาหน้าตายังไง
+      // -> ผู้เรียกส่ง `colorOf(el)` มาให้ ซึ่งอ่านจาก **จานสีเดียวกับที่ pdf-lib วาดจริง**
+      // (ไม่ import pdf-generator เข้ามาที่นี่ — ไฟล์นี้เป็นตัววาดหน้าจอล้วน ๆ)
+      if (typeof opts.colorOf === 'function') {
+        const c = opts.colorOf(b.el || 'action');
+        if (c) d.style.color = c;
+      }
       // [alpha.57a] เลขฉากสองฝั่ง (ตำแหน่งมาจาก .k-scene-no-l/.k-scene-no-r ใน spCss)
       if (b.el === 'scene' && b.sceneNo && f.sceneNumbers && f.sceneNumbers.show) {
         for (const side of ['l', 'r']) {
@@ -377,6 +414,14 @@ export function renderPageView(host, pages, fmt, opts = {}) {
     // ซึ่งแก้ไว้เฉพาะฝั่งตัวแก้ไข แต่ตกมุมมองหน้าคู่/ภาพรวมไว้)
     if (firstBlock) { firstBlock.style.paddingTop = '0'; firstBlock.style.setProperty('--k-pad', '0'); }
     if (pg.continuedBottom) putCont('bottom', pg.continuedBottom);
+    // [alpha.134 · X-1] ลายน้ำ — ตัวสร้าง PDF วาดกลางหน้าเอียง -35° จาง ๆ · ตัวอย่างต้องเห็นด้วย
+    const wm = String(opts.watermark || '').trim();
+    if (wm) {
+      const w = document.createElement('div');
+      w.className = 'sp-page-wm';
+      w.textContent = wm;
+      page.append(w);
+    }
     slot.append(page);
     host.append(slot);
     els.push(page);

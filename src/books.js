@@ -51,6 +51,9 @@ export async function renderBookManager(pane) {
         setBtn.onclick = async () => {
           await setPrimaryDraft(sec.secPath, d.name);
           renderDraftList(sec, dst);
+          // [alpha.125 ข้อ I] ★ Explorer แสดง **เฉพาะร่างหลัก** — เปลี่ยนร่างหลักแล้วไม่วาดใหม่
+          // = ผู้ใช้สลับร่างสำเร็จแต่ต้นไม้ยังเป็นของเก่า ดูเหมือนกดแล้วไม่มีอะไรเกิดขึ้น
+          try { const { buildTree } = await import('./app.js'); await buildTree(); } catch {}
           setStatus(t('ui.books.setDraftMain') + d.name);
         };
         row.append(setBtn);
@@ -60,8 +63,10 @@ export async function renderBookManager(pane) {
       renBtn.onclick = async () => {
         const n = await ask(t('ui.books.nameDraftNew'), { value: d.name });
         if (n && n !== d.name) {
-          if (await renameDraft(sec.secPath, d.name, n))
+          if (await renameDraft(sec.secPath, d.name, n)) {
             renderDraftList(sec, dst);
+            try { const { buildTree } = await import('./app.js'); await buildTree(); } catch {}
+          }
         }
       };
       row.append(renBtn);
@@ -69,8 +74,10 @@ export async function renderBookManager(pane) {
         const delBtn = el('button', 'cmp-mini k-danger', '🗑');
         delBtn.title = t('ui.books.delDraft');
         delBtn.onclick = async () => {
-          if (await deleteDraft(sec.secPath, d.name))
+          if (await deleteDraft(sec.secPath, d.name)) {
             renderDraftList(sec, dst);
+            try { const { buildTree } = await import('./app.js'); await buildTree(); } catch {}
+          }
         };
         row.append(delBtn);
       }

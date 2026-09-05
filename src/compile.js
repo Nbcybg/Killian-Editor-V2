@@ -21,6 +21,9 @@ import { paginate, mergeSpFormat } from './sp-format.js';
 import { pagesWithContinueds } from './sp-continued.js';
 // [alpha.58r บั๊ก 19] WYSIWYG — HTML ที่ส่งออกต้องใช้ฟอนต์/ช่วงบรรทัด/ย่อหน้า ชุดเดียวกับบนจอ
 import { mergeProseFormat, proseExportCss } from './prose-format.js';
+// [alpha.132 · X-1] คอมเมนต์ `<!--align:x-->` เป็นรูปแบบของ md.js — ห้ามมีสำเนา regex ที่สอง
+import { stripAlign, stripMentions as mdStripMentions, markerVars,
+         mdBlocks, inlineHtml as mdInlineHtml } from './md.js';
 
 export const PAGE_BREAK = t('ui.compile.msg');
 
@@ -212,11 +215,19 @@ export function cloneWorkflow(src, name) {
 
 // ---------------- ตัวช่วยแปลงข้อความ ----------------
 export function stripComments(s) {
-  return s.replace(/%%[\s\S]*?%%/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  // == [alpha.132 . X-1] * คอมเมนต์บางตัวไม่ใช่ "คอมเมนต์ของนักเขียน" แต่เป็น **รูปแบบ** ==
+  // `<!--align:x-->` (การจัดหน้า) กับ `<!--pagebreak-->` (ขึ้นหน้าใหม่ด้วยมือ) เป็นวิธีที่ .md
+  // ของ Killian ใช้เก็บสิ่งที่ไวยากรณ์มาร์กดาวน์ไม่มีให้ - ขั้นตอน "ตัดคอมเมนต์" มีไว้เอา
+  // บันทึกส่วนตัวของนักเขียนออก **ไม่ใช่เอารูปแบบของเอกสารออก** - เดิมกลืนทั้งคู่ไปเงียบ ๆ
+  // (ผลคือส่งออกแล้วทั้งการจัดหน้าและจุดขึ้นหน้าใหม่หายหมด ทั้งที่ผู้ใช้ไม่ได้สั่งอะไรเลย)
+  return s.replace(/%%[\s\S]*?%%/g, '')
+    .replace(/<!--[\s\S]*?-->/g, (m) => (KEEP_COMMENT.test(m) ? m : ''));
 }
-export function stripMentions(s) {
-  return s.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2').replace(/\[\[([^\]]+)\]\]/g, '$1');
-}
+/** คอมเมนต์ที่เป็น **รูปแบบของเอกสาร** ไม่ใช่บันทึกของนักเขียน - ขั้นตอนตัดคอมเมนต์ต้องเว้นไว้ */
+const KEEP_COMMENT = /^<!--\s*(?:align:(?:left|center|right|justify)|pagebreak)\s*-->$/i;
+
+// [alpha.132r2] กฎเดียวกับที่ช่องตัวอย่างใช้ — ย้ายไปอยู่ที่ md.js (เจ้าของไวยากรณ์) แล้ว
+export function stripMentions(s) { return mdStripMentions(s); }
 export function stripMarkdown(s) {
   return s
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')      // รูป → ข้อความแทน
@@ -232,42 +243,107 @@ export function stripMarkdown(s) {
 }
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const inline = (s) => esc(s)
-  .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${a}" src="${u}">`)
-  .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>')
-  .replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>')
-  .replace(/(?<!_)_(?!_)([^_]+)_(?!_)/g, '<em>$1</em>')
-  .replace(/~~(.*?)~~/g, '<del>$1</del>');
+/** escape สำหรับค่าในแอตทริบิวต์ (ต้องกินอัญประกาศคู่ด้วย ไม่งั้นหลุดออกนอกแอตทริบิวต์ได้) */
+const escAttr = (s) => esc(s == null ? '' : s).replace(/"/g, '&quot;');
+// ══ [alpha.133 · Y-2] ★★ ตัวแปลง inline **ตัวเดียวกับตัวแก้ไข** ══
+//
+// ผู้ใช้: *"แบบอักษร … มีแค่ Editor อย่างเดียวที่ถูกต้อง"*
+//
+// ของเดิมที่นี่เป็น regex ชุดที่สอง ซึ่งเดินคนละทางกับ `parseInline()` ของ md.js:
+//   · `_ขีดเส้นใต้_` → `<em>` (บนจอเป็น `<u>`)  · `^ตัวยก^` / `~ตัวห้อย~` → ไม่รู้จักเลย
+//   · `[[เอนทิตี้]]` → โผล่วงเล็บให้ผู้อ่านเห็น   · `\` ท้ายบรรทัด → พิมพ์แบ็กสแลชออกมาจริง ๆ
+// ตอนนี้เรียก `inlineHtml()` ของ md.js (เจ้าของไวยากรณ์) ซึ่งใช้ `parseInline()` ตัวจริง
+// และคายแท็กชุดเดียวกับ `toDOM` ของสคีมา — WYSIWYG จึงมาจากตัวเดียวกันโดยโครงสร้าง
+//
+// [alpha.132r] สีตัวอักษร (`<span style="color:#rrggbb">` ในไฟล์ .md) ก็เดินทางเดียวกันแล้ว —
+// `parseInline()` รู้จักสแปนสีเป็นมาร์กอยู่แล้ว จึงไม่ต้องมีขั้น "escape ก่อนแล้วคืนสภาพทีหลัง"
+// (ท่าเดิมที่ต้องคอยไล่ตามว่า escape ไปแล้วกี่ชั้น) อีกต่อไป
+const inline = (s, mono) => mdInlineHtml(s, { mono });
 
 // แปลง Markdown → ชิ้นส่วน HTML (ไม่มี <html>/<head>) — ใช้ซ้ำได้ทั้ง compile และ export-blog
-export function mdToHtmlBody(md) {
+export function mdToHtmlBody(md, o = {}) {
+  const mono = !!o.mono;
   const out = []; let list = null;
   const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
-  for (const raw of md.split('\n')) {
-    const line = raw.replace(/\s+$/, '');
-    if (line.trim() === PAGE_BREAK) { closeList(); out.push('<div class="pb"></div>'); continue; }
-    if (!line.trim()) { closeList(); continue; }
-    // [alpha.83 ข้อ 1] หัวข้อว่าง (`###` ล้วน) = บรรทัดว่าง — ไม่ใช่ย่อหน้าที่มีข้อความ `###`
-    const h = /^(#{1,6})(?:\s+(.*))?$/.exec(line);
-    if (h) {
-      closeList();
-      const ht = String(h[2] || '').trim();
-      if (ht) out.push(`<h${h[1].length}>${inline(ht)}</h${h[1].length}>`);
+  let quote = false;
+  const closeQuote = () => { if (quote) { out.push('</blockquote>'); quote = false; } };
+  const closeAll = () => { closeList(); closeQuote(); };
+  // == [alpha.132 . X-1] ** การจัดหน้าต้องเดินทางมาถึง HTML/PDF ==
+  //
+  // ผู้ใช้จัดกึ่งกลางไว้ในตัวแก้ไข แต่ไฟล์ที่ส่งออกกลับชิดซ้ายหมด - เพราะแผนที่ align
+  // เก็บอยู่ใน **frontmatter** ของ .md (ตั้งแต่ alpha.58r ที่อยากให้ไฟล์สะอาด) แล้วสาย
+  // ส่งออกหยิบไปแค่ `body` - ตอนนี้ต้นทางยัด align กลับเป็นคอมเมนต์ให้แล้ว ที่นี่จึงต้องอ่าน
+  //
+  // `data-align` ใส่ไว้ด้วยเพื่อให้ CSS ของรายการ (จุดนำเดินทางไปกับข้อความ) จับได้
+  // ด้วยตัวเลือกชุดเดียวกับในตัวแก้ไขเป๊ะ - WYSIWYG ต้องมาจากกฎเดียวกัน ไม่ใช่กฎคู่ขนาน
+  const attrOf = (a) => (a ? ` style="text-align:${a}" data-align="${a}"` : '');
+  // ══ [alpha.133 · Y-1] ★ สคีมาบล็อกมาจาก `mdBlocks()` ของ md.js ที่เดียว ══
+  // (ของเดิมเป็นลูป regex ชุดที่สองที่ไม่รู้จักรั้วโค้ด · hard break · ขึ้นหน้าใหม่ด้วยมือ
+  //  · ลำดับเริ่มต้นของรายการเลข — ทั้งสี่อย่างนี้จึงหายไปจากไฟล์ที่ส่งออกมาตลอด)
+  for (const b of mdBlocks(md, { breakMarker: PAGE_BREAK })) {
+    const al = b.align;
+    if (b.kind === 'pagebreak') { closeAll(); out.push('<div class="pb"></div>'); continue; }
+    if (b.kind === 'hr') { closeAll(); out.push('<hr>'); continue; }
+    if (b.kind === 'figure') {
+      closeAll();
+      // โครงเดียวกับ `toDOM` ของโหนด figure ในตัวแก้ไข (รูปเดี่ยวใน <figure> ไม่มีคำบรรยาย)
+      out.push(`<figure${attrOf(al)}><img alt="${escAttr(b.alt)}" src="${escAttr(b.src)}"></figure>`);
       continue;
     }
-    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { closeList(); out.push('<hr>'); continue; }
-    const ul = /^\s*[-*+]\s+(.*)$/.exec(line);
-    const ol = /^\s*\d+\.\s+(.*)$/.exec(line);
-    if (ul || ol) {
-      const want = ul ? 'ul' : 'ol';
-      if (list !== want) { closeList(); out.push(`<${want}>`); list = want; }
-      out.push(`<li>${inline((ul || ol)[1])}</li>`); continue;
+    if (b.kind === 'code') {
+      // [alpha.133 · Y-1] รั้วโค้ดเคยหลุดออกมาเป็นย่อหน้าที่มีข้อความ ``` ในไฟล์ที่ส่งออก
+      closeAll();
+      out.push('<pre' + (b.lang ? ` data-lang="${escAttr(b.lang)}"` : '') + '><code>'
+               + esc(b.text) + '</code></pre>');
+      continue;
     }
-    const bq = /^\s*>\s?(.*)$/.exec(line);
-    if (bq) { closeList(); out.push(`<blockquote>${inline(bq[1])}</blockquote>`); continue; }
-    closeList(); out.push(`<p>${inline(line)}</p>`);
+    if (b.kind === 'h') {
+      closeAll();
+      out.push(`<h${b.level}${attrOf(al)}>${inline(b.text, mono)}</h${b.level}>`);
+      continue;
+    }
+    if (b.kind === 'quote') {
+      closeList();
+      if (!quote) { out.push('<blockquote>'); quote = true; }
+      out.push(`<p${attrOf(al)}>${inline(b.text, mono)}</p>`);
+      continue;
+    }
+    if (b.kind === 'li') {
+      closeQuote();
+      const want = b.ordered ? 'ol' : 'ul';
+      if (list !== want) {
+        closeList();
+        // [alpha.133 · Y-1] `3.` ต้องเริ่มนับที่ 3 เหมือนในตัวแก้ไข (mdToDoc เก็บ attrs.order)
+        out.push(want === 'ol' && b.num > 1 ? `<ol start="${b.num}">` : `<${want}>`);
+        list = want;
+      }
+      // ย่อหน้าใน <li> ถือ align เอง (ตรงกับสคีมาของตัวแก้ไข ที่ลูกของ li เป็น <p>)
+      // [alpha.132r3 ข้อ 3] `<li>` พก "รูปแบบของจุดนำ" ไปด้วย — มาจากอักษรตัวแรกของข้อ
+      // (โหมดขาวดำไม่ต้องพกสี เพราะ CSS บังคับดำทั้งแผ่นอยู่แล้ว)
+      const mv = mono ? '' : markerVars(b.text);
+      out.push(`<li${mv ? ` style="${mv}"` : ''}><p${attrOf(al)}>`
+               // ข้อที่ว่างเปล่าต้องมีกล่องบรรทัดจริง ไม่งั้นสูง 0 แล้วหายไปจากหน้า
+               + `${b.text ? inline(b.text, mono) : '<br>'}</p></li>`);
+      continue;
+    }
+    // ── ย่อหน้า ──
+    closeAll();
+    // ══ [alpha.132 ข้อ 1] ★★ บรรทัดว่าง = **ย่อหน้าว่างจริง** ไม่ใช่ตัวคั่นย่อหน้า ══
+    //
+    // .md ของ Killian เป็นรูปแบบ **หนึ่งบรรทัด = หนึ่งบล็อก** (ไม่ใช่ Markdown มาตรฐานที่ใช้
+    // บรรทัดว่างเป็นตัวคั่นย่อหน้า) → `<br>` คือกล่องบรรทัดของย่อหน้าว่าง ตรงกับที่
+    // ProseMirror ใส่ให้ในตัวแก้ไข (`ProseMirror-trailingBreak`)
+    const parts = (b.lines && b.lines.length ? b.lines : [b.text]);
+    const html = parts.map((l) => inline(l, mono)).join('<br>');
+    out.push(html.trim() || parts.length > 1
+      ? `<p${attrOf(al)}>${html}</p>` : '<p class="k-blank"><br></p>');
   }
-  closeList();
+  closeAll();
+  // ย่อหน้าว่างที่หัว/ท้ายไม่ใช่ระยะเว้นที่ผู้ใช้ตั้งใจ (ไฟล์ที่ลงท้ายด้วยขึ้นบรรทัดใหม่มีเสมอ)
+  // — ปล่อยไว้จะได้หน้าว่างแถมท้ายเล่ม
+  const BLANK = '<p class="k-blank"><br></p>';
+  while (out.length && out[0] === BLANK) out.shift();
+  while (out.length && out[out.length - 1] === BLANK) out.pop();
   return out.join('\n');
 }
 
@@ -276,15 +352,22 @@ export function mdToHtmlBody(md) {
  * [alpha.58r บั๊ก 19] `style` = รูปแบบนิยายที่ใช้อยู่ (prose-format) — ไม่ส่ง = ค่ามาตรฐานนิยาย
  * เดิมฝัง Sarabun 18px/1.85 ตายตัว → เขียนอย่างหนึ่ง ส่งออกได้อีกอย่าง (ผิดหลัก WYSIWYG)
  */
-export function mdToHtml(md, title, style = null, paper = null, margins = null) {
-  const css = proseExportCss(mergeProseFormat(style), paper, margins);
+export function mdToHtml(md, title, style = null, paper = null, margins = null, o = {}) {
+  const css = proseExportCss(mergeProseFormat(style), paper, margins,
+                             { fontStack: o && o.fontStack, headingStack: o && o.headingStack })
+    // [alpha.132r] โหมดขาวดำ = **บังคับทุกอย่างเป็นดำ** ที่ชั้น CSS (สีหัวข้อ/สีคำพูดยกมา/
+    // สีตัวอักษรที่ผู้เขียนตั้งเอง) + ทำรูปเป็นโทนเทา — ตรงกับความหมายของคำว่า "ขาวดำ"
+    + (o && o.mono
+      ? String.fromCharCode(10) + 'body,body *{color:#000 !important}'
+        + String.fromCharCode(10) + 'img{filter:grayscale(1)}'
+      : '');
   return `<!DOCTYPE html>
 <html lang="th"><head><meta charset="utf-8">
 <title>${esc(title || '')}</title>
 <style>
 ${css}
 </style></head><body>
-${mdToHtmlBody(md)}
+${mdToHtmlBody(md, o)}
 </body></html>`;
 }
 
@@ -338,7 +421,20 @@ function modelStats(model) {
 
 export function runWorkflow(model0, workflow,
     { allowJs = true, varCtx = {}, spFormat = null, now = null,
-      proseFormat = null, paper = null, margins = null, keepBlanks } = {}) {
+      proseFormat = null, paper = null, margins = null, keepBlanks,
+      // [alpha.132r3 ข้อ 1] สแตกฟอนต์ที่ใช้จริงบนจอ — ไม่ส่งมาก็ใช้ของ proseFormat ตามเดิม
+      fontStack = '', headingStack = '',
+      // ══ [alpha.133 · Y-3] ★★ "ผลลัพธ์นี้จะถูกตีความเป็นมาร์กดาวน์ต่อไหม" ══
+      //
+      // ผู้ใช้: *"การจัดหน้า … มีแค่ layout อย่างเดียวที่ถูกต้อง"*
+      //
+      // ต้นตอ: ท้ายฟังก์ชันนี้ตัดคอมเมนต์ `<!--align:x-->` ทิ้งเมื่อ `ext !== 'html'`
+      // ซึ่ง **จริงสำหรับ PDF ด้วย** (ext = 'pdf') — แต่ PDF ของนิยายไม่ได้จบที่นี่
+      // มันเดินต่อไปเข้า `mdToHtml()` ในกล่องส่งออก · การจัดหน้าจึงถูกลบทิ้งไปก่อน
+      // จะถึงตัวที่รู้จักมันหนึ่งก้าวพอดี = ไฟล์ PDF ชิดซ้ายทั้งเล่มเสมอ
+      //
+      // true = ผู้เรียกจะแปลงมาร์กดาวน์ต่อเอง → เก็บคอมเมนต์รูปแบบและตัวคั่นหน้าไว้ให้ครบ
+      markdownOut = false } = {}) {
   // [alpha.116 ข้อ 8] เวลาที่โค้ดสั้น `[date]` ใช้ — ฉีดเข้ามาได้เพื่อให้เทสคาดเดาผลได้
   const shortcodeNow = now || new Date();
   const warn = [];
@@ -365,11 +461,17 @@ export function runWorkflow(model0, workflow,
   // → ยุบ `\n{3,}` เหลือ **28** (ว่าง 9) เพราะมีช่วงว่างติดกัน 3, 4 และ 7 บรรทัด
   // ผลคือ PDF ที่ออกจาก "ศูนย์รวมการส่งออก" ได้ **1 หน้า** ขณะที่ตัวแก้ไขเห็น 2 หน้า
   // (ทางที่ส่งออกจากแท็บบทโดยตรงไม่ผ่านที่นี่ จึงถูกอยู่แล้ว — คนละไปป์ไลน์กัน)
-  // ตัดสิน **รายฉาก** — ฉบับร่างปนนิยายกับบทได้ (`keepBlanks` ที่ผู้เรียกส่งมาชนะเสมอ)
-  const keepFor = (sc) => (keepBlanks === undefined ? sc.format === 'screenplay' : !!keepBlanks);
-  // การยุบทั้งเอกสารตอนท้ายมองไม่ออกว่าช่วงไหนมาจากฉากไหน → **มีฉากบทแม้ฉากเดียวก็ห้ามยุบ**
-  // (เอกสารที่เป็นนิยายล้วนยังได้พฤติกรรมเดิมเป๊ะ — ไม่มี regression ฝั่งนิยาย)
-  const squashAll = keepBlanks === undefined ? !modelHasScreenplay(model) : !keepBlanks;
+  // ══ [alpha.132 ข้อ 1] ★★ บรรทัดว่างเป็น "เนื้อหา" ทั้งสองโหมด — เลิกแยกตามชนิดเอกสาร ══
+  //
+  // alpha.113 เก็บช่องไฟให้ **เฉพาะฝั่งบท** โดยให้เหตุผลว่านิยายเป็นมาร์กดาวน์ปกติที่บรรทัดว่าง
+  // เป็นแค่ตัวคั่นย่อหน้า — **ซึ่งไม่จริงสำหรับ .md ของ Killian** ที่เป็นรูปแบบ
+  // "หนึ่งบรรทัด = หนึ่งบล็อก": `mdToDoc('ก\n\n\n\nข')` ให้ย่อหน้าว่าง 3 ใบ และ `docToMd`
+  // เขียนกลับได้ตรงเป๊ะ · ตัวแก้ไขก็แสดงย่อหน้าว่างพวกนั้นจริง ๆ
+  // → ผู้ใช้: *"pdf ออกมา บรรทัดว่างหาย"* คืออาการของกฎเดิมข้อนี้ตรง ๆ (และเป็นเหตุให้
+  //   เนื้อเลื่อนขึ้นทั้งเรื่องจน "ตัดหน้าไม่ตรง" ตามมาเป็นลูกโซ่)
+  // `keepBlanks` ที่ผู้เรียกส่งมายังชนะเสมอ (ทางเรียกที่อยากได้มาร์กดาวน์แบบเว็บยังสั่งได้)
+  const keepFor = (sc) => (keepBlanks === undefined ? true : !!keepBlanks);
+  const squashAll = keepBlanks === undefined ? false : !keepBlanks;
 
   // ---- 1) ช่วงเนื้อหา ----
   for (const st of at('model')) {
@@ -473,8 +575,15 @@ export function runWorkflow(model0, workflow,
       if (has('scene-meta'))
         out.push(tf('ui.compile.word', s.status || t('ui.compile.notSpecifyStatus'), (s.words || 0).toLocaleString()), '');
       // บท: ตัดแค่ช่องว่างท้าย (กันซ้อนกับ `''` ที่ push ตามหลัง) — ช่องไฟข้างในเป็นเนื้อหา
+      // ══ [alpha.132 ข้อ 1] ★★ ฝั่งนิยายก็เหมือนกัน — เพิ่งรู้ว่ากฎเดิมผิดมาตลอด ══
+      // ผู้ใช้: *"pdf ออกมา บรรทัดว่างหาย"*
+      // alpha.113 แก้เรื่องนี้ให้ฝั่งบทไปแล้ว แต่เว้นฝั่งนิยายไว้ด้วยเหตุผลว่า "นิยาย = มาร์กดาวน์
+      // ปกติ ที่บรรทัดว่างเป็นแค่ตัวคั่นย่อหน้า" — **ซึ่งไม่จริงสำหรับ .md ของ Killian**:
+      // รูปแบบนี้คือ "หนึ่งบรรทัด = หนึ่งบล็อก" · `mdToDoc('ก\n\n\n\nข')` ให้ย่อหน้าว่าง 3 ใบ
+      // และ `docToMd` เขียนกลับได้ตรงเป๊ะ → บรรทัดว่างในนิยายก็เป็น **เนื้อหาจริง** เท่ากับฝั่งบท
+      // เหลือแค่ตัด **ช่องว่างหัว/ท้ายฉาก** ซึ่งเป็นเศษจากการประกอบ ไม่ใช่ช่องไฟที่ผู้เขียนตั้งใจ
       const b = keepFor(s) ? String(s.body || '').replace(/\s+$/, '')
-                           : String(s.body || '').trim().replace(/\n{3,}/g, '\n\n');
+                           : String(s.body || '').trim();
       if (b) out.push(b, '');
     }
   }
@@ -486,8 +595,19 @@ export function runWorkflow(model0, workflow,
   }
   // `.trim()` ของทั้งเอกสารยังทำทั้งสองโหมด — บรรทัดว่างหัว/ท้ายสุดเป็นเศษจากโครงประกอบ
   // (ปก/หัวบท/ตัวคั่น) ไม่ใช่ช่องไฟที่ผู้เขียนตั้งใจ · ที่ห้ามแตะคือช่องว่าง **ข้างใน**
-  let text = out.join('\n');
-  if (squashAll) text = text.replace(/\n{3,}/g, '\n\n');
+  // [alpha.132 ข้อ 1] เดิมยุบ `\n{3,}` ของ **ทั้งเอกสาร** ซึ่งกลืนช่องไฟที่ผู้เขียนตั้งใจไปด้วย
+  // สิ่งที่ต้องยุบจริง ๆ คือ "บรรทัดว่างที่โครงประกอบใส่เอง" = สมาชิกว่าง ๆ ของ `out` ที่ติดกัน
+  // (หัวบท/หัวฉาก/สถิติ ต่างก็ push `''` ตามหลังตัวเอง แล้วมาชนกับ `''` หลังเนื้อฉากก่อนหน้า)
+  // ยุบที่ระดับสมาชิกจึงสะอาดเท่าเดิมตรงรอยต่อ โดย **ไม่แตะเนื้อฉากแม้แต่บรรทัดเดียว**
+  let lines = out;
+  if (squashAll) {
+    lines = [];
+    for (const x of out) {
+      if (x === '' && lines.length && lines[lines.length - 1] === '') continue;
+      lines.push(x);
+    }
+  }
+  let text = lines.join('\n');
   text = text.trim() + '\n';
 
   // ---- 3) ช่วงข้อความสุดท้าย ----
@@ -499,7 +619,10 @@ export function runWorkflow(model0, workflow,
       continue;
     }
     if (st.key === 'to-html') {
-      text = mdToHtml(text, model.title, proseFormat, paper, margins); ext = 'html'; continue;
+      // [alpha.132r3 ข้อ 1] ปลายทาง .html ก็ต้องได้ฟอนต์ชุดเดียวกับบนจอ (ผู้เรียกส่งมาให้)
+      text = mdToHtml(text, model.title, proseFormat, paper, margins,
+                      { fontStack, headingStack });
+      ext = 'html'; continue;
     }
     if (st.key === 'js') {
       if (!allowJs) { warn.push(t('ui.compile.skipStepJavaScriptClose')); continue; }
@@ -512,6 +635,11 @@ export function runWorkflow(model0, workflow,
       } catch (e) { warn.push(t('ui.compile.stepJavaScriptError') + e.message); }
     }
   }
-  if (ext !== 'html') text = text.split(PAGE_BREAK).join('\f');
+  if (ext !== 'html' && !markdownOut) {
+    text = text.split(PAGE_BREAK).join('\f');
+    // [alpha.132 . X-1] `.md`/`.txt`/`.rtf` ที่ส่งออกเป็น "ต้นฉบับแบน" ไม่ใช่ไฟล์โปรเจกต์
+    // -> เอาคอมเมนต์รูปแบบออก ไม่งั้นผู้อ่านเห็น align โผล่กลางเรื่อง
+    text = text.replace(/<!--\s*align:(?:left|center|right|justify)\s*-->/gi, '');
+  }
   return { text, ext, stats: st0, warnings: warn };
 }

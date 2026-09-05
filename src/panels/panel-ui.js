@@ -47,9 +47,9 @@ export const PANEL_DEFS = [
     desc: t('ui.panel.dataCollapseTaskOpen') },
   { id: 'log', dockW: 420,       title: t('ui.common.save'),         icon: 'history',      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle',
     desc: t('ui.panel.saveRunAppUse') },
-  { id: 'search', dockW: 360,    title: t('ui.panel.search'),          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.searchTitle',
+  { id: 'search', dockW: 360,    title: t('ui.panel.search'),          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.search',
     desc: t('ui.panel.searchTextProjectAll') },
-  { id: 'notes',     title: t('ui.common.notebookNoteQuick'),    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.notesTitle',
+  { id: 'notes',     title: t('ui.common.notebookNoteQuick'),    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'ui.common.notebookNoteQuick',
     desc: t('ui.panel.noteIdeaNotSource') },
   { id: 'comments',  title: t('ui.common.comment'),        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
     desc: t('ui.panel.commentSceneOpenReply') },
@@ -82,14 +82,18 @@ export const PANEL_DEFS = [
   { id: 'ai-chat', dockW: 640,   title: t('ui.common.aIAssistantWrite'),       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
     desc: t('ui.panel.liftAIStoryTask') },
   // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
-  { id: 'network', minW: 400, dockW: 640,   title: 'Story Network',   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.networkTitle',
+  { id: 'network', minW: 400, dockW: 640,   title: t('ui.panel.networkTitle'),   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.networkTitle',
     desc: t('ui.panel.graphRelationCharacterPlace') },
-  { id: 'planner', minW: 800, dockW: 640,   title: 'Planner',         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.plannerTitle',
+  // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ในหน้าเดียว (ดัชนีตัวเดียวกับแท็บใน Wiki)
+  { id: 'backlinks', minW: 300, dockW: 380, title: t('ui.worldAutoLink.panelTitle'), icon: 'link',
+    adopt: '#backlinks-panel', defaultSide: 'right', closable: true, floatable: true,
+    i18n: 'ui.worldAutoLink.panelTitle', desc: t('ui.worldAutoLink.panelDesc') },
+  { id: 'planner', minW: 800, dockW: 640,   title: t('ui.panel.plannerTitle'),         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.plannerTitle',
     desc: t('ui.panel.boardPlannerStyleCard') },
-  { id: 'planner-props', title: t('ui.panel.propsPlanner'), icon: 'info', adopt: '#planner-props-panel', defaultSide: 'right',
-    closable: true, floatable: true, i18n: 'panel.plannerPropsTitle',
+  { id: 'planner-props', title: t('ui.panel.propsPlanner'), icon: 'clipboard', adopt: '#planner-props-panel', defaultSide: 'right',
+    closable: true, floatable: true, i18n: 'ui.panel.propsPlanner',
     desc: t('ui.panel.propsCardLineLink') },
-  { id: 'floorplan', dockW: 640, title: t('ui.common.graphArea'),      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.floorplanTitle',
+  { id: 'floorplan', dockW: 640, title: t('ui.common.graphArea'),      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.common.graphArea',
     desc: t('ui.panel.sceneOccurMapPin') },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
   { id: 'branch', minW: 700, dockW: 640,    title: t('ui.common.graphBreakBranch2'),      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
@@ -256,7 +260,11 @@ export function mountPanelWindow(id) {
 }
 
 // ชื่อแผงตามภาษาที่โหลดอยู่ (fallback = ชื่อไทยในตาราง) — เรียกใหม่ทุกครั้งที่ render
-function titleOf(d) { return d.i18n ? t(d.i18n, d.title) : d.title; }
+// [alpha.128] เดิมเขียน `t(d.i18n, d.title)` — **`t()` รับคีย์ตัวเดียว อาร์กิวเมนต์ที่สองถูกทิ้ง**
+// จึงหลอกคนอ่านว่า "ไม่มีคีย์ก็ยังได้ title เดิม" ทั้งที่ความจริงหัวแผงจะโชว์ตัวคีย์โต้ง ๆ
+// (เจอจริง 6 แผงที่ i18n ชี้ไปคีย์ที่ไม่มีอยู่: search · notes · network · planner ·
+//  planner-props · floorplan → หัวแผงขึ้นว่า PANEL.PLANNERPROPSTITLE)
+function titleOf(d) { return d.i18n ? t(d.i18n) : d.title; }
 /**
  * คำอธิบายแผง
  *
@@ -282,7 +290,6 @@ export function getPanelManager() {
   if (!pm) pm = new PanelManager();
   return pm;
 }
-export function loadPanelLayout() { return getPanelManager().load(); }
 export function savePanelLayout() { if (pm) pm.store.save(); }
 
 function host() {
@@ -746,50 +753,13 @@ function rememberSides() {
 }
 function sideOf(d) { return lastSide.get(d.id) || d.defaultSide || 'left'; }
 
-function trayEl(side) {
-  const id = side === 'right' ? 'k-min-tray-r' : 'k-min-tray-l';
-  let tray = document.getElementById(id);
-  if (!tray) { tray = el('div', 'k-min-tray'); tray.id = id; document.body.appendChild(tray); }
-  return tray;
-}
-
-function syncMinTray() {
-  rememberSides();
-  const closed = PANEL_DEFS.filter((d) => d.closable !== false && !pm.isOpen(d.id));
-  const want = new Map(closed.map((d) => [d.id, sideOf(d)]));
-  for (const side of ['left', 'right']) {
-    const tray = trayEl(side);
-    // chip ที่ไม่ควรอยู่ถาดนี้แล้ว (เปิดแผงกลับ หรือย้ายไปอีกฝั่ง) → เอาออก
-    for (const chip of [...tray.children]) if (want.get(chip.dataset.key) !== side) chip.remove();
-    for (const d of closed) {
-      if (want.get(d.id) !== side) continue;
-      const old = tray.querySelector(`[data-key="${d.id}"]`);
-      // [alpha.67] แผงที่ถูกฉีกไปหน้าต่างแยกก็ "ปิด" ในสายตาของ manager เหมือนกัน
-      // แต่ต้องไม่ให้เปิดซ้ำในหน้าต่างนี้ — chip เปลี่ยนเป็นปุ่ม "เรียกกลับจากหน้าต่างแยก" แทน
-      const away = tornOff.has(d.id);
-      if (old) { if (!!old.dataset.away === away) continue; old.remove(); }
-      const chip = el('div', 'k-min-chip' + (away ? ' k-min-chip-away' : ''),
-                      (away ? '🖥 ' : '▣ ') + titleOf(d));
-      chip.dataset.key = d.id;
-      if (away) {
-        chip.dataset.away = '1';
-        chip.title = t('ui.panel.trayRecall');
-        chip.onclick = () => recallPanel(d.id);
-      } else {
-        chip.title = t('ui.panel.trayRestorePre') + titleOf(d) + t('ui.panel.trayRestorePost');
-        // กลับไป "ที่เดิม" ที่จดไว้ — ถ้ายังไม่เคยมีที่อยู่เลยก็ลอยกลางจอ (ไม่ไปเบียดใคร)
-        // [alpha.66r11] แผงที่ที่เดิมเป็น "แผงลอย/กลุ่มลอย" ต้องไม่ถูกยัด `side` — ไม่งั้น showPanel
-        // ตกไปสายผนึกทันที (อาการ: แผงที่เคยลอย พอเรียกกลับจากถาด กลายเป็นผนึกข้างจอ)
-        chip.onclick = () => {
-          const h = homes.get(d.id);
-          showPanel(d.id, (h && !h.float && !h.floatWith) ? { side: sideOf(d) } : { prefer: 'float' });
-        };
-      }
-      tray.appendChild(chip);
-    }
-    tray.classList.toggle('on', !!tray.children.length);
-  }
-}
+// [alpha.124 ข้อ 39] ★ ถาดแผงที่ย่อไว้ (`#k-min-tray-*`) ถูกลบทิ้งแล้ว
+//
+// รายงานบั๊กเข้ามาว่า "ปุ่มลอย (FAB) ทับชิปกู้คืนแผงฝั่งขวา จนกดไม่โดน" — พอไล่ดูจริง ๆ
+// พบว่า **ชิปพวกนั้นไม่เคยถูกวาดเลยตั้งแต่ alpha.50**: `syncMinTray()` ไม่มีใครเรียกอีกแล้ว
+// (ทางกลับที่ผู้ใช้เห็นจริงคือ เมนู มุมมอง → แผง · ปุ่มบนแถบเครื่องมือ · และคีย์ลัด Ctrl+Alt+ตัวอักษร)
+// เก็บโค้ดตายไว้ = คนอ่านโค้ดเชื่อว่าถาดมีอยู่จริงแล้วไปแก้ z-index ให้มันเปล่า ๆ (ซึ่งเกิดขึ้นแล้ว)
+// `rememberSides()` / `sideOf()` ยังอยู่ — คำสั่ง "ซ่อนแผงฝั่งนี้" ใช้อยู่จริง
 
 // ───────── เริ่มระบบ ─────────
 export function initPanelSystem() {

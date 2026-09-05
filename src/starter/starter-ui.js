@@ -24,6 +24,7 @@ import { renderWizard } from './starter-wizard.js';
 import { renderStarterHome } from './starter-scenario.js';
 import { renderChat, resetChatState } from './starter-chat.js';
 import { offerReconcile } from './starter-wiki.js';
+import { resetCastEditor, pruneBlank } from './starter-cast.js';
 import { exportStarterZip, importStarterZip } from './starter-pack.js';
 
 // สถานะของแผง — แผงเดียวในแอป (ES module: ต้องเก็บใน object ไม่ใช่ let ที่ export)
@@ -77,14 +78,37 @@ export async function renderStarterPanel(host) {
   return draw();
 }
 
-/** เปิดแผงจากเมนู/คำสั่ง */
+/**
+ * เปิดแผงจากเมนู/คำสั่ง/ปุ่มบนแถบเครื่องมือ
+ *
+ * [alpha.122] **บั๊กที่เจอตอนตรวจแถบเครื่องมือ**: เดิมดึง `showPanel` มาจาก `app.js`
+ * แต่ `app.js` แค่ **นำเข้า** ตัวนั้นมาใช้เอง ไม่ได้ re-export → ได้ `undefined`
+ * → ปุ่ม ✨ Story Starter บนแถบเครื่องมือและเมนูโยน `showPanel is not a function` ทุกครั้ง
+ * (เห็นเฉพาะใน log ของแอป · หน้าจอเงียบสนิท เหมือนกดแล้วไม่มีอะไรเกิดขึ้น)
+ * แก้โดยดึงจากต้นทางจริง — `renderFeaturePanel` ยัง import จาก app.js ได้ เพราะ export จริง
+ */
 export async function openStoryStarter() {
-  const { showPanel, renderFeaturePanel } = await import('../app.js');
+  const { showPanel } = await import('../panels/panel-ui.js');
+  const { renderFeaturePanel } = await import('../app.js');
   showPanel('starter');
   return renderFeaturePanel('starter');
 }
 
 // ───────────────────────── บริบทที่ทุกหน้าใช้ร่วมกัน ─────────────────────────
+
+/**
+ * ออกจากตัวสร้าง — ปิดตัวแก้ไขที่ค้าง + ทิ้งการ์ดตัวละครเปล่า แล้ว **บันทึกทันที**
+ * ต้องเขียนก่อน `flushStarterSaves()` ไม่งั้นคิวหน่วงรวบจะเขียนของเดิม (ที่ยังมีตัวเปล่า) ทับ
+ */
+function leaveWizard() {
+  resetCastEditor();
+  if (!S.starter) return;
+  const kept = pruneBlank(S.starter.cast, '');
+  if (kept.length !== (S.starter.cast || []).length) {
+    S.starter.cast = kept;
+    autoSaveStarter(S.starter);
+  }
+}
 
 function ctxFor() {
   return {
@@ -97,9 +121,21 @@ function ctxFor() {
       return autoSaveStarter(S.starter);
     },
     rerender: () => draw(),
-    goList: async () => { await flushStarterSaves(); S.view = 'list'; S.starter = null; S.scenario = null; draw(); },
-    goWizard: () => { S.view = 'wizard'; draw(); },
-    goHome: async () => { await flushStarterSaves(); S.view = 'home'; S.scenario = null; resetChatState(); draw(); },
+    // [alpha.122] ออกจากตัวสร้างเมื่อไหร่ ตัวแก้ไขตัวละครที่ค้างต้องปิดด้วย
+    // (สถานะระดับโมดูลอยู่คนละไฟล์ ถ้าไม่ปิด กลับเข้ามาอีกทีจะเจอหน้าแก้ไขคนเก่าแทนรายชื่อ)
+    // และเก็บกวาดการ์ดตัวละครเปล่าไปพร้อมกัน — ตัวเปล่าคือสิ่งที่ทำให้ขั้นตัวละคร "ไม่ครบ"
+    // ทั้งที่หน้าจอดูเหมือนมีตัวละครแล้ว (บั๊กที่ผู้ใช้รายงานเรื่องปุ่มเสร็จสิ้น)
+    goList: async () => {
+      leaveWizard();
+      await flushStarterSaves();
+      S.view = 'list'; S.starter = null; S.scenario = null; draw();
+    },
+    goWizard: () => { resetCastEditor(); S.view = 'wizard'; draw(); },
+    goHome: async () => {
+      leaveWizard();
+      await flushStarterSaves();
+      S.view = 'home'; S.scenario = null; resetChatState(); draw();
+    },
     openChat: (sc) => { S.scenario = sc; S.view = 'chat'; resetChatState(); draw(); },
     touchTitle: () => { /* ชื่อเรื่องบนหัว wizard วาดใหม่ตอน rerender อยู่แล้ว */ },
   };
@@ -240,6 +276,7 @@ async function createFlow() {
 async function openStarter(slug, view) {
   const s = await readStarter(slug);
   if (!s) { setStatus(t('ui.starter.openFail')); return; }
+  resetCastEditor();                    // เปิดเรื่องใหม่ = เริ่มที่รายชื่อเสมอ ไม่ใช่หน้าแก้ไขค้างของเรื่องก่อน
   S.starter = s;
   S.view = view || (s.done ? 'home' : 'wizard');
   draw();
@@ -258,3 +295,16 @@ export async function flushStarter() {
 /** เทส/แผงอื่นถามสถานะได้ */
 export function starterView() { return S.view; }
 export function currentStarter() { return S.starter; }
+
+/**
+ * [alpha.124] เปิดหน้าคุยของตอนหนึ่งจากภายนอก — ทางเดียวกับปุ่ม "เปิด" บนการ์ดตอน
+ * (`ctx.openChat`) แค่เรียกได้จากนอกโมดูล · ใช้ในเทสเพื่อวัดผลบน DOM จริง
+ * @returns {Promise<boolean>} false = ยังไม่ได้เปิด starter ตัวไหนอยู่
+ */
+export async function openScenarioChat(sc, starter) {
+  if (starter) S.starter = starter;          // ระบุเรื่องมาด้วยได้ (เทสเปิดเรื่องของตัวเอง)
+  if (!S.starter || !sc) return false;
+  S.scenario = sc; S.view = 'chat'; resetChatState();
+  await draw();
+  return true;
+}

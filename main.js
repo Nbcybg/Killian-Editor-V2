@@ -77,11 +77,26 @@ function recentFile() { return path.join(app.getPath('userData'), 'recent.json')
 function readRecent() {
   try { return JSON.parse(fs.readFileSync(recentFile(), 'utf-8')); } catch { return []; }
 }
-function pushRecent(p) {
-  const r = [p, ...readRecent().filter((x) => x !== p)].slice(0, 8);
+function writeRecent(r) {
   try { fs.mkdirSync(path.dirname(recentFile()), { recursive: true });
         fs.writeFileSync(recentFile(), JSON.stringify(r)); } catch {}
   buildMenu();
+}
+function pushRecent(p) {
+  writeRecent([p, ...readRecent().filter((x) => x !== p)].slice(0, 8));
+}
+/**
+ * [alpha.124 ข้อ 43] ลบรายการออกจาก "โปรเจกต์ล่าสุด"
+ *
+ * เดิมรายการนี้เพิ่มได้อย่างเดียว: ย้าย/ลบโฟลเดอร์โปรเจกต์ทิ้งแล้ว รายการยังค้างอยู่ตลอดไป
+ * กดทีไรก็ได้คำเตือนเดิมซ้ำ ๆ โดยไม่มีทางเอาออก (ต้องไปลบ recent.json ใน userData เอง)
+ *
+ * **ไม่ prune อัตโนมัติ**: โปรเจกต์ที่อยู่บนไดรฟ์ภายนอก/เน็ตเวิร์กที่ยังไม่ได้เสียบ
+ * จะดู "ไม่มีอยู่จริง" ทั้งที่ยังอยู่ดี — ลบให้เองเมื่อไหร่ก็เสียรายการนั้นถาวร
+ * ที่ถูกคือ **บอกผู้ใช้ว่าหาไม่เจอ แล้วให้เขาเป็นคนสั่งลบ**
+ */
+function removeRecent(p) {
+  writeRecent(readRecent().filter((x) => x !== p));
 }
 
 const send = (ch, ...a) => win && win.webContents.send('menu', ch, ...a);
@@ -89,6 +104,9 @@ const send = (ch, ...a) => win && win.webContents.send('menu', ch, ...a);
 const isMac = process.platform === 'darwin';
 const C = isMac ? '⌘' : 'Ctrl';
 const S = 'Shift';
+// [alpha.124 ข้อ 4] ป้าย "บันทึกทั้งหมด" เคยเขียน Ctrl+Shift+S ทั้งที่คีย์จริงคือ Ctrl+Alt+S
+// (Ctrl+Shift+S = บันทึกเป็น… ในตาราง SHORTCUTS) — ต้องมีตัวย่อ Alt ให้ป้ายใช้ด้วย
+const A = isMac ? '⌥' : 'Alt';
 
 // ---- สถานะของรายการเมนูที่เป็น "สวิตช์" (ข้อ 3) ----
 // เมนู native แสดงเครื่องหมายถูกเองเมื่อ type:'checkbox'/'radio' + checked
@@ -117,8 +135,10 @@ const toggles = {
 const chk = (label, on, fn) => ({ label, type: 'checkbox', checked: !!on, click: fn });
 
 function buildMenu() {
+  // [alpha.124 ข้อ 43] ติดป้าย ⚠ ให้รายการที่หาโฟลเดอร์ไม่เจอแล้ว — เห็นตั้งแต่ในเมนู
+  // ว่าอันไหนพัง ไม่ต้องกดเข้าไปเจอคำเตือนถึงจะรู้ (ยังกดได้ ฝั่ง renderer จะถามว่าลบออกไหม)
   const recents = readRecent().map((p) => ({
-    label: p, click: () => send('open-project-path', p),
+    label: (fs.existsSync(p) ? '' : '⚠ ') + p, click: () => send('open-project-path', p),
   }));
   const tpl = [
     { id: 'File', label: tt('ui.menu.file2'), submenu: [
@@ -130,7 +150,7 @@ function buildMenu() {
           () => send('toggle-open-last')),
       { type: 'separator' },
       { label: ttf('ui.menu.saveS', C), click: () => send('save') },
-      { label: ttf('ui.menu.saveAllS', C, S), click: () => send('save-all') },
+      { label: ttf('ui.menu.saveAllS', C, A), click: () => send('save-all') },
       { label: tt('ui.menu.save'), click: () => send('save-as') },
       { type: 'separator' },
       { label: ttf('ui.menu.printP', C), click: () => send('print') },
@@ -144,7 +164,7 @@ function buildMenu() {
       { label: tt('ui.menu.headPaperAllPage'), click: () => send('page-headers') },
       { type: 'separator' },
       { label: tt('ui.menu.newProjectTemplate'), click: () => send('new-from-template') },
-      { label: tt('ui.menu.importScrivenerScriv'), click: () => send('import-scrivener') },
+      { label: ttf('ui.menu.importScrivenerScrivI', C, A, S), click: () => send('import-scrivener') },
       { label: tt('ui.menu.importScreenplayFountainFDX'), click: () => send('import-script') }, // [alpha.60 ข้อ 62-66]
       { label: tt('ui.menu.project'), click: () => send('backup-now') },
       { type: 'separator' },
@@ -260,14 +280,19 @@ function buildMenu() {
       { label: ttf('ui.menu.pageChapterG', C), click: () => send('goto') },
       { type: 'separator' },
       // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก
+      // [alpha.124 ข้อ 36] ป้ายมาจากไฟล์ภาษา (ตารางเดียวกับ CASE_LABELS ใน text-case.js)
+      // เดิมฮาร์ดโค้ดอังกฤษไว้ทั้งเมนูและแถบเครื่องมือ ทั้งที่ตารางภาษาของมันมีอยู่แล้ว
+      // แต่กลายเป็นโค้ดตาย — ผู้ใช้ไทยเห็นแต่ "aLtErNaTe cAsE" โดยไม่รู้ว่ามันทำอะไร
       { label: tt('ui.menu.imageCaseChangeCase'), submenu: [
-        { label: 'Sentence case', click: () => send('text-case', 'SC') },
-        { label: 'lower case', click: () => send('text-case', 'lc') },
-        { label: 'UPPER CASE', click: () => send('text-case', 'UC') },
-        { label: 'Capitalize Case', click: () => send('text-case', 'CC') },
-        { label: 'aLtErNaTe cAsE', click: () => send('text-case', 'aC') },
-        { label: 'Title Case', click: () => send('text-case', 'TC') },
-        { label: 'iNVERSE cASE', click: () => send('text-case', 'iC') },
+        { label: tt('ui.textCase.sentenceCaseSentenceItem'), click: () => send('text-case', 'SC') },
+        { label: tt('ui.textCase.lowerCaseItemSmall'), click: () => send('text-case', 'lc') },
+        { label: tt('ui.textCase.uPPERCASEItemBig'), click: () => send('text-case', 'UC') },
+        { label: tt('ui.textCase.capitalizeCaseAllWord'), click: () => send('text-case', 'CC') },
+        { label: tt('ui.textCase.aLtErNaTeCAsEToggleItem'), click: () => send('text-case', 'aC') },
+        { label: tt('ui.textCase.titleCaseStyleTitle'), click: () => send('text-case', 'TC') },
+        { label: tt('ui.textCase.iNVERSECASEBackItem'), click: () => send('text-case', 'iC') },
+        { type: 'separator' },
+        { label: ttf('ui.menu.textCaseCycleU', C, A), click: () => send('text-case-cycle') },
       ] },
       { type: 'separator' },
       { label: tt('ui.menu.insertImage'), click: () => send('insert-image') },
@@ -350,6 +375,9 @@ function buildMenu() {
     { id: 'Tools', label: tt('ui.menu.tool'), submenu: [
       { label: tt('ui.menu.compareChapter'), click: () => send('sp-compare') },
       { label: tt('ui.menu.checkFindWordDup'), click: () => send('word-history') },
+      // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำในเอกสาร
+      // (และผู้ใช้ที่ไม่เคยคลิกขวาก็ไม่มีทางรู้ว่ามีฟีเจอร์นี้อยู่เลย)
+      { label: ttf('ui.menu.thesaurusT', C, A, S), click: () => send('thesaurus') },
       // [alpha.60r2 ข้อ 13] frontmatter ของ .md = แหล่งความจริงของคุณสมบัติฉาก
       { label: tt('ui.menu.propsSceneFileMd'),
         click: () => send('sync-scene-meta') },
@@ -407,7 +435,7 @@ function buildMenu() {
         // e2e เทียบรายการนี้กับ PANEL_DEFS ทุกรอบ → ลืมเมื่อไหร่เทสแดงทันที
         ...MENU_PANELS.map((p) => (p.sep
           ? { type: 'separator' }
-          : chk(typeof p.label === 'function' ? p.label(C, S) : p.label,
+          : chk(typeof p.label === 'function' ? p.label(C, S, A) : p.label,
                 toggles.panels[p.id], () => send('toggle-panel', p.id)))),
         { type: 'separator' },
         { label: tt('ui.menu.managePanelShowHide'), click: () => send('panel-system') },
@@ -698,6 +726,8 @@ const MENU_PANELS = [
   { sep: true },
   // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
   { id: 'network', label: '🕸 Story Network' },
+  // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ (เดิมมีแต่แท็บในหน้า Wiki)
+  { id: 'backlinks', label: (C, S, A) => ttf('ui.menu.backlinksPanelB', C, A, S) },
   { id: 'planner', label: '🗺 Planner' },
   { id: 'floorplan', label: tt('ui.common.graphArea') },
   { id: 'branch', label: tt('ui.common.graphBreakBranch2') },
@@ -971,6 +1001,16 @@ H('path:resolve', (...a) => path.resolve(...a));
 H('path:relative', (a, b) => path.relative(a, b).split(path.sep).join('/'));
 H('path:toFileURL', (p) => require('url').pathToFileURL(p).href);
 H('shell:reveal', (p) => { try { shell.showItemInFolder(p); return true; } catch { return false; } });
+// [alpha.132r3] เปิดไฟล์ที่เพิ่งส่งออกด้วยโปรแกรมประจำชนิดไฟล์ของเครื่อง
+// (คนละอย่างกับ `shell:reveal` ที่แค่เปิดโฟลเดอร์ให้เห็นไฟล์)
+// เปิดได้เฉพาะไฟล์ที่ **มีอยู่จริงบนดิสก์** — กันการถูกเรียกด้วยสตริงแปลก ๆ
+H('shell:openFile', async (p) => {
+  try {
+    if (!p || !fs.existsSync(p) || fs.statSync(p).isDirectory()) return false;
+    const err = await shell.openPath(String(p));
+    return !err;
+  } catch { return false; }
+});
 // [alpha.62 บั๊ก 3] คัดลอกลงคลิปบอร์ดผ่าน main process
 // `navigator.clipboard.writeText` ใน renderer ต้องการหน้าต่างที่ "โฟกัสอยู่" — หน้าต่างไร้ขอบ
 // ที่เพิ่งถูกคลิกบนแผงลอย หรือหน้าต่างที่ถูกบัง จะโดนปฏิเสธเงียบ ๆ · ทางนี้ทำงานเสมอ
@@ -1075,7 +1115,18 @@ H('dialog:openDir', async () => {
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] });
   return r.canceled ? null : r.filePaths[0];
 });
-H('win:print', () => win.webContents.print({}, () => {}));
+// [alpha.124 ข้อ 25] เดิมทิ้ง callback ว่างไว้ → renderer ไม่มีทางรู้เลยว่าพิมพ์สำเร็จ
+// ยกเลิก หรือหาเครื่องพิมพ์ไม่เจอ · ตอนนี้คืนผลจริงกลับไปให้บอกผู้ใช้ได้
+H('win:print', () => new Promise((resolve) => {
+  try {
+    win.webContents.print({}, (success, failureReason) => {
+      resolve({ ok: !!success, reason: String(failureReason || '') });
+    });
+  } catch (e) {
+    // ไม่มีเครื่องพิมพ์ในระบบเลย → Electron โยนทันทีตั้งแต่ยังไม่เปิดกล่อง
+    resolve({ ok: false, reason: String((e && e.message) || e) });
+  }
+}));
 H('win:printToPdf', async (outPath) => {
   const data = await win.webContents.printToPDF({ printBackground: false, pageSize: 'A4' });
   fs.writeFileSync(outPath, data); return true;
@@ -1134,6 +1185,7 @@ H('pdf:fromHtml', async (html, outPath, opts = {}) => {
 // จึงคุมได้ว่า "เลขหน้าไม่นับหน้าปกและหน้ารายชื่อ" ตามธรรมเนียมหนังสือจริง
 H('pdf:htmlToBytes', async (html, opts = {}) => Array.from(await htmlToPdfBuffer(html, opts)));
 H('recent:push', (p) => { pushRecent(p); return true; });
+H('recent:remove', (p) => { removeRecent(p); return true; });
 H('recent:list', () => readRecent());
 
 // ───────── [alpha.80] ติดตั้ง/ถอนปลั๊กอิน ─────────

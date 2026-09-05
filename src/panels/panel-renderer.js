@@ -568,6 +568,21 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
       document.body.classList.remove('k-resizing');
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
+      // ═══ [alpha.126] ★ ปิดช่องว่างท้ายการลากเสมอ ═══
+      //
+      // บั๊กค้างจาก alpha.66r5: "ลากปรับขนาดแล้วเหลือช่องว่างฝั่งขวา" — **ทำซ้ำในเทสไม่ได้**
+      // เพราะเทสปรับขนาดผ่าน store (→ `renderPanels()` → ตรวจช่องว่างบน rAF) ส่วนผู้ใช้ **ลากที่จับ**
+      // ซึ่งเขียน `style.flex` ลง DOM ตรง ๆ ระหว่างลาก แล้วค่อย commit ตอนปล่อย
+      // ถ้า commit ได้สถานะที่ JSON เท่าเดิม (ปัดเป็น px ลงตัวเท่าเดิม) `renderPanels()`
+      // จะ **early-return ที่ `sig === lastSig`** → ไม่วาดใหม่ → ตัวตรวจช่องว่างไม่เคยได้ทำงาน
+      // แล้ว inline flex ที่ค้างอยู่ก็ไม่มีใครมาปิดรูให้
+      //
+      // ตรงนี้เรียกตัวปิดรูตรง ๆ หลังปล่อยเมาส์ ไม่ผ่านเส้นทางวาดใหม่ — ได้ผลทั้งสองกรณี
+      try {
+        requestAnimationFrame(() => {
+          import('./panel-ui.js').then((m) => m.auditPanelGaps && m.auditPanelGaps()).catch(() => {});
+        });
+      } catch {}
       if (pxMode) {                                   // commit → re-render ครั้งเดียว
         const upd = {};
         if (isPx(prev)) upd[index] = pxPrev;

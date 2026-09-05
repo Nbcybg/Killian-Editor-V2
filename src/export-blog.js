@@ -5,6 +5,7 @@ import { t, tf } from './i18n.js';
 import { el, state, setStatus, log, setBusy, clearBusy } from './core.js';
 import { mdToHtmlBody, escapeHtml, stripComments, stripMentions } from './compile.js';
 import { parseMdFile } from './md.js';
+import { escClose } from './ui.js';
 
 const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
@@ -37,7 +38,9 @@ blockquote{border-left:3px solid #d97757;margin:1em 0;padding-left:1em;color:#b8
 img{max-width:100%}` },
 };
 
-const DEFAULT_OPTS = { theme: 'medium', chapterHeads: true, sceneHeads: true, embedImages: false };
+// [alpha.124 ข้อ 27] `section: ''` = ทุกเล่ม (พฤติกรรมเดิม) · ตั้งชื่อเล่มได้เพื่อเลือกเฉพาะเล่มนั้น
+const DEFAULT_OPTS = { theme: 'medium', chapterHeads: true, sceneHeads: true,
+                       embedImages: false, section: '' };
 
 export function getBlogOptions() {
   return { ...DEFAULT_OPTS, ...((state.meta && state.meta.blogExport) || {}) };
@@ -79,8 +82,13 @@ export async function buildBlogHtml(opts = {}) {
   const imgCache = new Map();
   let body = '';
   let nScenes = 0;
+  // [alpha.124 ข้อ 27] ฉากที่อ่านไม่ได้ต้อง **นับไว้แล้วบอกผู้ใช้** — เดิมแค่ log('warn')
+  // ซึ่งไม่มีใครเปิดดู → ไฟล์บล็อกขาดฉากไปเงียบ ๆ แล้วเพิ่งมารู้ตอนไปโพสต์แล้ว
+  const skipped = [];
   for (const sec of await kapi.listDirs(state.root)) {
     if (SKIP_SECTIONS.includes(sec)) continue;
+    // [alpha.124 ข้อ 27] เลือกเล่มได้ ('' = ทุกเล่มเหมือนเดิม)
+    if (o.section && sec !== o.section) continue;
     const sp = await kapi.join(state.root, sec);
     if (!(await kapi.exists(await kapi.join(sp, 'section.json')))) continue;
     const dr = await kapi.join(sp, 'Draft');
@@ -106,7 +114,10 @@ export async function buildBlogHtml(opts = {}) {
             const head = o.sceneHeads ? `<h3>${escapeHtml(sc.title || '')}</h3>\n` : '';
             body += `<article>\n${head}${inner}\n</article>\n`;
             nScenes++;
-          } catch (e) { log('warn', t('ui.exportBlog.exportBlogSkipScene') + fp, e); }
+          } catch (e) {
+            skipped.push(sc.title || sc.fileName || '');
+            log('warn', t('ui.exportBlog.exportBlogSkipScene') + fp, e);
+          }
         }
       }
     }
@@ -116,11 +127,23 @@ export async function buildBlogHtml(opts = {}) {
   const css = (BLOG_THEMES[o.theme] || BLOG_THEMES.medium).css;
   const html = tf('ui.exportBlog.exportKillian', title, css, title, body);
   const nImages = [...imgCache.values()].filter((v) => v.startsWith('data:')).length;
-  return { html, nScenes, nImages };
+  return { html, nScenes, nImages, skipped };
+}
+
+/** รายชื่อเล่มที่ส่งออกได้ (มี section.json) — ให้กล่องตัวเลือกเอาไปทำ dropdown */
+export async function blogSections() {
+  const out = [];
+  if (!state.root) return out;
+  for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
+    if (SKIP_SECTIONS.includes(sec)) continue;
+    if (await kapi.exists(await kapi.join(state.root, sec, 'section.json'))) out.push(sec);
+  }
+  return out;
 }
 
 // ---- กล่องตัวเลือก (จำค่าไว้ใน project.khn.json → ครั้งหน้าไม่ต้องตั้งใหม่) ----
-function optionsDialog() {
+async function optionsDialog() {
+  const sections = await blogSections();
   return new Promise((resolve) => {
     const o = getBlogOptions();
     const ov = el('div', 'k-overlay');
@@ -136,6 +159,15 @@ function optionsDialog() {
     themeSel.value = o.theme;
     themeRow.append(themeSel);
 
+    // [alpha.124 ข้อ 27] เลือกเล่ม — เดิมยัดทุกเล่มในโปรเจกต์ลงไฟล์เดียวเสมอ
+    // (คนที่มี 3 เล่มในโปรเจกต์เดียวจึงส่งออกทีละเล่มไม่ได้เลย)
+    const secRow = mkRow(t('ui.exportBlog.scope'));
+    const secSel = el('select', 'wiki-input k-dlg-select');
+    const all = el('option', null, t('ui.exportBlog.scopeAll')); all.value = ''; secSel.append(all);
+    for (const name of sections) { const opt = el('option', null, name); opt.value = name; secSel.append(opt); }
+    secSel.value = sections.includes(o.section) ? o.section : '';
+    secRow.append(secSel);
+
     const mkChk = (label, val, hint) => {
       const r = mkRow(label);
       const c = el('input'); c.type = 'checkbox'; c.checked = val;
@@ -150,18 +182,55 @@ function optionsDialog() {
 
     const btns = el('div', 'k-dlg-btns');
     const cB = el('button', 'k-cancel', t('ui.common.cancel'));
+    // [alpha.124 ข้อ 27] ปุ่มดูตัวอย่าง — บล็อกเป็นทางส่งออกเดียวที่ไม่เคยมีพรีวิวเลย
+    // ทั้งที่ผลลัพธ์เป็นหน้าเว็บที่เอาไปโพสต์ต่อ (ธีมผิด/หัวข้อผิด = ต้องส่งออกใหม่ทั้งไฟล์)
+    const pvB = el('button', null, t('ui.exportBlog.preview'));
     const okB = el('button', 'k-ok', t('ui.common.export2'));
-    btns.append(cB, okB);
+    btns.append(cB, pvB, okB);
     box.append(btns);
     ov.append(box);
     document.body.append(ov);
 
+    const opts = () => ({ theme: themeSel.value, chapterHeads: chCh.checked,
+                          sceneHeads: chSc.checked, embedImages: chImg.checked,
+                          section: secSel.value });
     const close = (val) => { ov.remove(); resolve(val); };
     cB.onclick = () => close(null);
     ov.onclick = (e) => { if (e.target === ov) close(null); };
-    okB.onclick = () => close({ theme: themeSel.value, chapterHeads: chCh.checked,
-                               sceneHeads: chSc.checked, embedImages: chImg.checked });
+    escClose(ov, () => close(null));
+    pvB.onclick = async () => {
+      pvB.disabled = true;
+      try {
+        // พรีวิวไม่ฝังรูป (ช้าเป็นนาทีเมื่อรูปเยอะ) — รูปในพรีวิวใช้ path เดิมซึ่งแสดงได้อยู่แล้ว
+        const r = await buildBlogHtml({ ...opts(), embedImages: false });
+        showBlogPreview(r);
+      } catch (e) {
+        log('error', 'export-blog preview failed', e);
+        setStatus(t('ui.exportBlog.exportHTMLFail'));
+      } finally { pvB.disabled = false; }
+    };
+    okB.onclick = () => close(opts());
   });
+}
+
+/** กล่องพรีวิวหน้าเว็บที่จะได้ — ใช้ iframe sandbox (ห้ามรันสคริปต์ในตัวอย่าง) */
+function showBlogPreview({ html, nScenes, skipped }) {
+  const ov = el('div', 'k-overlay');
+  const box = el('div', 'k-dialog k-wide k-blog-pv');
+  box.append(el('div', 'k-dlg-title', t('ui.exportBlog.previewTitle')));
+  box.append(el('div', 'dim', tf('ui.exportBlog.previewMeta', nScenes)
+    + (skipped.length ? ' · ' + tf('ui.exportBlog.skippedN', skipped.length) : '')));
+  const fr = el('iframe', 'k-blog-frame');
+  fr.setAttribute('sandbox', '');
+  fr.srcdoc = html;
+  box.append(fr);
+  const btns = el('div', 'k-dlg-btns');
+  const ok = el('button', 'k-ok', t('dialogs.close'));
+  ok.onclick = () => ov.remove();
+  btns.append(ok); box.append(btns);
+  ov.append(box); document.body.append(ov);
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());
 }
 
 export async function exportBlogHTML(preset) {
@@ -172,14 +241,16 @@ export async function exportBlogHTML(preset) {
   try {
     // จำตัวเลือกไว้ใช้ครั้งหน้า
     state.meta.blogExport = o;
-    const { html, nScenes, nImages } = await buildBlogHtml(o);
+    const { html, nScenes, nImages, skipped } = await buildBlogHtml(o);
     clearBusy();                                     // เคลียร์ก่อนเปิดกล่องบันทึกเสมอ
     const dest = await kapi.saveAsDialog((state.title || 'blog') + '-blog.html', 'html');
     if (!dest) return false;
     setBusy(t('ui.exportBlog.busyWriteFileHTML'));
     await kapi.writeFile(dest, html);
     try { const { saveProjectMeta } = await import('./app.js'); await saveProjectMeta(); } catch {}
-    setStatus(tf('ui.exportBlog.exportHTMLBlockDone', nScenes, nImages ? tf('ui.exportBlog.imageFile', nImages) : '') + dest);
+    setStatus(tf('ui.exportBlog.exportHTMLBlockDone', nScenes, nImages ? tf('ui.exportBlog.imageFile', nImages) : '') + dest
+              + (skipped.length ? ' · ⚠ ' + tf('ui.exportBlog.skippedN', skipped.length) : ''));
+    if (skipped.length) log('warn', tf('ui.exportBlog.skippedN', skipped.length), skipped);
     return true;
   } catch (e) {
     log('error', 'export-blog failed', e);

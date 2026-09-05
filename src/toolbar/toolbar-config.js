@@ -30,6 +30,8 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-bold' }, { id: 'tb-italic' }, { id: 'tb-underline' }, { id: 'tb-strike' },
     // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย
     { id: 'tb-sup' }, { id: 'tb-sub' },
+    // [alpha.132 ข้อ 9] สีตัวอักษร (ผู้ใช้จริงขอมา)
+    { id: 'tb-color' },
     { id: 'tb-ul' }, { id: 'tb-ol' }, { id: 'tb-quote' },
     // [alpha.84 ข้อ 3+4] สวิตช์ย่อหน้าอัตโนมัติ (นิยาย) · ข้อความต่อเนื่อง (บท)
     // โปรแกรมคุม `style.display` ตามโหมดเอกสารอยู่แล้ว — ตรงนี้คุมแค่ "ผู้ใช้อยากเห็นไหม"
@@ -63,7 +65,7 @@ export const TOOLBAR_GROUPS = [
   { key: 'story', labelKey: 'ui.tbcfg.grpStory', buttons: [
     { id: 'tb-timeline' }, { id: 'tb-maps' }, { id: 'tb-books' }, { id: 'tb-network' },
     { id: 'tb-planner' }, { id: 'tb-branch' }, { id: 'tb-floorplan' }, { id: 'tb-player' },
-    { id: 'tb-gallery-board' },
+    { id: 'tb-gallery-board' }, { id: 'tb-backlinks' },
   ] },
   { key: 'ai', labelKey: 'ui.tbcfg.grpAi', buttons: [
     { id: 'tb-ai-hub' },                         // [alpha.116] AI Hub — ประตูเดียวของทุกความสามารถ AI
@@ -205,6 +207,7 @@ export const FMT_MODES = ['prose', 'screenplay'];
 export const FMTBAR_IDS = [
   'tb-sp-elem', 'sp-view-select', 'tb-mode', 'tb-style', 'tb-case',
   'tb-bold', 'tb-italic', 'tb-underline', 'tb-strike', 'tb-sup', 'tb-sub',
+  'tb-color',
   'tb-ul', 'tb-ol', 'tb-quote',
   'tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify',
   'tb-indent', 'tb-sp-cont',
@@ -225,7 +228,9 @@ export function isFmtbarButton(id) { return FMTBAR_IDS.includes(id); }
  * ทำเป็นคำนำหน้าในข้อความ (`• ` / `1. `) จึงไม่อยู่ในรายการนี้
  */
 export const FMT_UNSUPPORTED = {
-  screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote'],
+  // [alpha.132 ข้อ 9] สีตัวอักษรเป็นของนิยายเท่านั้น — บทเก็บเป็น fountain ล้วน
+  // ใส่สีลงไปจะพังการอ่านกลับ (กฎเดียวกับที่ align ของบทเป็น session-only)
+  screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote', 'tb-color'],
   prose: ['tb-sp-elem', 'tb-sp-cont'],   // (`tb-sp-ext` อยู่บนแถบหลัก ไม่ใช่แถบลอย)
 };
 

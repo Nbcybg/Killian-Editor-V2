@@ -1,7 +1,7 @@
 // section-ops.js — จัดการเล่ม (section): เพิ่ม/แก้ชื่อ/ลบ/เรียง/สถิติ/บันทึก meta
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, safeName, refreshNetwork } from './app.js';
-import { el, setStatus, state } from './core.js';
+import { el, setStatus, state, logAction } from './core.js';
 
 // [alpha.60r3 ข้อ 3] สถานะเล่ม — ต้องตรงกับ SECTION_STATUSES ใน app.js
 // (คัดลอกคู่ key/label มาไว้ที่นี่เพื่อไม่ต้อง import วนกลับไปหา app.js เพิ่มอีกตัว)
@@ -204,6 +204,7 @@ export async function deleteSection(secPath, sec) {
   await kapi.move(secPath, dst);
   await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
     { kind: 'section', root: state.root, folderName: secPath.split(/[\\/]/).pop() }, null, 2));
+  logAction('section', tt('ui.section.delBookDone') + sec.title, { from: secPath, trash: dst });
   await buildTree(); setStatus(tt('ui.section.delBookDone') + sec.title);
   refreshNetwork();
 }

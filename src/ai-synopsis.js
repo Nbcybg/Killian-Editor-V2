@@ -96,7 +96,7 @@ export function attachAiFieldButton(row, input, field, ctx, onFilled) {
   const b = el('button', 'k-ai-fill', '✨');
   b.type = 'button';
   b.dataset.field = field;
-  b.title = tr('ai.genSynopsis', 'ให้ AI เขียนให้') + ' — ' + def.label;
+  b.title = tr('ai.genSynopsis') + ' — ' + def.label;
   b.onclick = async () => {
     if (b.disabled) return;
     b.disabled = true; b.classList.add('busy');
@@ -110,7 +110,7 @@ export function attachAiFieldButton(row, input, field, ctx, onFilled) {
         if (onFilled) onFilled();
       });
     } catch (e) {
-      setStatus(tr('ai.errorRetry', 'เกิดข้อผิดพลาด กรุณาลองใหม่'));
+      setStatus(tr('ai.errorRetry'));
     } finally {
       b.disabled = false; b.classList.remove('busy'); b.textContent = prev;
     }

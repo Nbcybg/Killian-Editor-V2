@@ -2,6 +2,7 @@
 // LCS diff + color-coded HTML output (deleted=แดง, added=เขียว, context=ขาว, change=เหลือง)
 import { t, tf } from './i18n.js';
 import { parseScript, SP_ELEMS } from './fountain.js';
+import { escClose } from './ui.js';
 
 // [74] เปรียบเทียบบท 2 ชุด → diffs แบบมีสี
 export function compareScripts(oldText, newText) {
@@ -98,6 +99,7 @@ export function showComparisonDialog(oldText, newText, labels) {
 
   ov.querySelector('.k-ok').onclick = () => ov.remove();
   ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
 }
 
 // [74] สถิติการเปรียบเทียบ

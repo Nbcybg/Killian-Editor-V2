@@ -56,12 +56,12 @@ export function buildHomeActions(opts = {}) {
   findInp.placeholder = t('ui.home.searchProject');
   findInp.style.display = 'none';
 
-  const exportBtn = mk('home-btn-export', tr('home.export', '📤 ส่งออก'), t('ui.home.exportProjectOpenFile'));
-  const importBtn = mk('home-btn-import', tr('home.import', '📥 นำเข้า'), t('ui.home.importProjectFileZip'));
+  const exportBtn = mk('home-btn-export', tr('home.export'), t('ui.home.exportProjectOpenFile'));
+  const importBtn = mk('home-btn-import', tr('home.import'), t('ui.home.importProjectFileZip'));
   const spacer = el('div', 'home-actions-spacer');
-  const newBtn = mk('k-ok home-btn-new', tr('home.newProject', '➕ สร้างโปรเจกต์ใหม่'));
-  const openBtn = mk('home-btn-open', tr('home.openProject', '📂 เปิดโปรเจกต์'));
-  const closeBtn = mk('home-btn-close', tr('home.close', '✕ ปิด'), t('ui.home.closePageFirst'));
+  const newBtn = mk('k-ok home-btn-new', tr('home.newProject'));
+  const openBtn = mk('home-btn-open', tr('home.openProject'));
+  const closeBtn = mk('home-btn-close', tr('home.close'), t('ui.home.closePageFirst'));
 
   function applyView(mode) {
     const m = setHomeView(mode);
@@ -166,96 +166,114 @@ export async function renderHome(pane) {
 }
 
 // โหลดโปรเจกต์ทั้งหมด: จาก recent.json + scan โฟลเดอร์ที่ผู้ใช้เก็บ
-async function loadProjects(grid) {
-  grid.innerHTML = '';
-  
+// ═══════════ [alpha.124 ข้อ 19 · ข้อ 43] โปรเจกต์ที่ "หาย" ต้องไม่หายเงียบ ═══════════
+//
+// เดิมทั้งสองตัวโหลด (หน้าแรกเต็มจอ + แผงหน้าแรก) ทำเหมือนกันคือ:
+//   `if (!exists(project.khn.json)) return null;`  แล้ว `.filter(Boolean)`
+// → โปรเจกต์ที่ถูกย้าย/เปลี่ยนชื่อ/อยู่บนไดรฟ์ที่ยังไม่ได้เสียบ **หายไปจากหน้าจอเฉย ๆ**
+//   ไม่มีอะไรบอกว่าเคยมี ไม่มีทางรู้ว่าทำไมหาย และไม่มีทางเอาออกจากรายการล่าสุดด้วย
+//
+// ตอนนี้: คืน `{ broken: true, reason }` แทน null แล้ววาดเป็นการ์ด "หาไม่เจอ" ที่บอกที่อยู่เต็ม
+// พร้อมปุ่ม **ลบออกจากรายการ** · ยังไม่ลบให้เองอัตโนมัติ (ไดรฟ์ภายนอกที่ยังไม่เสียบ = ยังอยู่ดี)
+
+/** อ่านโปรเจกต์หนึ่งรายการจากรายการล่าสุด → การ์ดปกติ หรือการ์ด "หาไม่เจอ" */
+async function readRecentProject(root) {
   try {
-    const recent = await kapi.listRecent().catch(() => []);
-    const tasks = recent.map(async (root) => {
-      try {
-        const metaFile = await kapi.join(root, 'project.khn.json');
-        if (!(await kapi.exists(metaFile))) return null;
-        const meta = await kapi.readJson(metaFile);
-        
-        // นับจำนวนฉาก/บท/คำ
-        let totalScenes = 0, totalChapters = 0, totalWords = 0;
-        let lastModified = meta.created || '';
-        
-        // scan ทุกเล่ม
-        const entries = await kapi.listDirs(root).catch(() => []);
-        for (const secName of entries) {
-          const secPath = await kapi.join(root, secName);
-          const secJson = await kapi.join(secPath, 'section.json');
-          if (!(await kapi.exists(secJson))) continue;
-          const draftRoot = await kapi.join(secPath, 'Draft');
-          if (!(await kapi.exists(draftRoot))) continue;
-          const draftDirs = await kapi.listDirs(draftRoot).catch(() => []);
-          for (const dn of draftDirs) {
-            const dPath = await kapi.join(draftRoot, dn);
-            const draftFile = await kapi.join(dPath, 'draft.json');
-            if (!(await kapi.exists(draftFile))) continue;
-            const draft = await kapi.readJson(draftFile).catch(() => ({}));
-            const chapters = draft.chapters || [];
-            totalChapters += chapters.length;
-            const scenesFile = await kapi.join(dPath, 'scenes.json');
-            if (await kapi.exists(scenesFile)) {
-              const scData = await kapi.readJson(scenesFile).catch(() => ({}));
-              const scChapters = scData.chapters || {};
-              for (const ch of chapters) {
-                const scenes = scChapters[ch.guid] || [];
-                totalScenes += scenes.filter((s) => s.type !== 'memo').length;
-                for (const sc of scenes) {
-                  if (sc.type === 'memo') continue;
-                  totalWords += sc.wordCount || 0;
-                  if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
-                }
-              }
-            }
+    const metaFile = await kapi.join(root, 'project.khn.json');
+    if (!(await kapi.exists(metaFile)))
+      return { root, broken: true, reason: t('ui.home.brokenNoMeta') };
+    const meta = await kapi.readJson(metaFile);
+    let totalScenes = 0, totalChapters = 0, totalWords = 0;
+    let lastModified = meta.created || '';
+    for (const secName of await kapi.listDirs(root).catch(() => [])) {
+      const secPath = await kapi.join(root, secName);
+      if (!(await kapi.exists(await kapi.join(secPath, 'section.json')))) continue;
+      const draftRoot = await kapi.join(secPath, 'Draft');
+      if (!(await kapi.exists(draftRoot))) continue;
+      for (const dn of await kapi.listDirs(draftRoot).catch(() => [])) {
+        const dPath = await kapi.join(draftRoot, dn);
+        const draftFile = await kapi.join(dPath, 'draft.json');
+        if (!(await kapi.exists(draftFile))) continue;
+        const chapters = (await kapi.readJson(draftFile).catch(() => ({}))).chapters || [];
+        totalChapters += chapters.length;
+        const scenesFile = await kapi.join(dPath, 'scenes.json');
+        if (!(await kapi.exists(scenesFile))) continue;
+        const scChapters = (await kapi.readJson(scenesFile).catch(() => ({}))).chapters || {};
+        for (const ch of chapters) {
+          for (const sc of (scChapters[ch.guid] || [])) {
+            if (sc.type === 'memo') continue;
+            totalScenes++;
+            totalWords += sc.wordCount || 0;
+            if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
           }
         }
-        
-        // อ่านวันที่แก้ไขล่าสุดจาก meta หรือ mtime
-        const modDate = lastModified ? new Date(lastModified) : null;
-        const dateStr = modDate ? modDate.toLocaleDateString('th-TH', {
-          year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        }) : '—';
-        
-        return {
-          root,
-          title: meta.title || root.replace(/^.*[\\/]/, ''),
-          author: meta.author || '',
-          cover: meta.cover || '',
-          totalScenes,
-          totalChapters,
-          totalWords,
-          dateStr,
-          settings: meta.settings || {},
-          goals: meta.goals || {},
-        };
-      } catch (e) {
-        log('warn', t('ui.home.homeReadProjectFail') + root, e);
-        return null;
       }
-    });
-    
-    let projects = (await Promise.all(tasks)).filter(Boolean);
-    
-    if (projects.length === 0) {
-      // Empty state
+    }
+    const modDate = lastModified ? new Date(lastModified) : null;
+    const dateStr = modDate ? modDate.toLocaleDateString('th-TH', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    return { root, title: meta.title || root.replace(/^.*[\\/]/, ''),
+             author: meta.author || '', cover: meta.cover || '',
+             totalScenes, totalChapters, totalWords, dateStr, lastModified,
+             settings: meta.settings || {}, goals: meta.goals || {} };
+  } catch (e) {
+    log('warn', t('ui.home.homeReadProjectFail') + root, e);
+    return { root, broken: true, reason: t('ui.home.brokenUnreadable') };
+  }
+}
+
+/** รายการล่าสุดทั้งหมด แยกเป็น "เปิดได้" กับ "หาไม่เจอ" (เรียงใหม่สุดก่อน) */
+export async function scanRecentProjects() {
+  const recent = await kapi.listRecent().catch(() => []);
+  const rows = await Promise.all(recent.map(readRecentProject));
+  const ok = rows.filter((r) => r && !r.broken);
+  ok.sort((a, b) => String(b.lastModified || '').localeCompare(String(a.lastModified || '')));
+  return { ok, broken: rows.filter((r) => r && r.broken) };
+}
+
+/** การ์ด "หาโปรเจกต์นี้ไม่เจอ" — บอกที่อยู่เต็ม + ปุ่มลบออกจากรายการ */
+export function createBrokenCard(row, onChanged) {
+  const card = el('div', 'home-card home-card-broken');
+  card.dataset.search = String(row.root || '').toLowerCase();
+  card.append(el('div', 'home-card-title', '⚠ ' + t('ui.home.brokenTitle')));
+  const pathEl = el('div', 'home-broken-path', row.root);
+  pathEl.title = row.root;
+  card.append(pathEl);
+  card.append(el('div', 'home-broken-why', row.reason || ''));
+  const btns = el('div', 'home-broken-btns');
+  const rm = el('button', 'k-danger', t('ui.home.brokenRemove'));
+  rm.onclick = async (e) => {
+    e.stopPropagation();
+    await kapi.removeRecent(row.root);
+    setStatus(t('ui.app.recentBrokenRemoved'));
+    if (onChanged) onChanged();
+  };
+  btns.append(rm);
+  card.append(btns);
+  return card;
+}
+
+/** วาดหน้าแรก/แผงหน้าแรกใหม่ทุกใบที่เปิดค้างอยู่ (ใช้หลังลบรายการที่พัง) */
+export function refreshHomePanels() {
+  for (const grid of document.querySelectorAll('.home-grid')) {
+    if (grid.dataset.homePanel === '1') loadPanelProjects(grid, grid._onOpen);
+    else loadProjects(grid);
+  }
+}
+
+async function loadProjects(grid) {
+  grid.innerHTML = '';
+  try {
+    const { ok, broken } = await scanRecentProjects();
+    if (!ok.length && !broken.length) {
       const empty = el('div', 'home-empty');
-      empty.innerHTML = t('ui.home.notHasProjectNew');
+      empty.textContent = t('ui.home.notHasProjectNew');   // กฎข้อ 11: ข้อความ ไม่ใช่ HTML
       grid.append(empty);
       return;
     }
-    
-    // เรียงตามวันที่แก้ไขล่าสุด (ใหม่สุดก่อน)
-    projects.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
-    
-    for (const p of projects) {
-      const card = createProjectCard(p);
-      grid.append(card);
-    }
+    for (const p of ok) grid.append(createProjectCard(p));
+    // [alpha.124 ข้อ 19] รายการที่เปิดไม่ได้ต่อท้าย — เห็นว่ามีอยู่ และเอาออกได้
+    for (const b of broken) grid.append(createBrokenCard(b, refreshHomePanels));
   } catch (e) {
     log('error', t('ui.home.homeLoadProjectFail'), e);
     grid.append(el('div', 'home-empty', t('ui.home.occurErrorLoadProject')));
@@ -307,6 +325,30 @@ export function createProjectCard(project, onOpen) {
   // วันที่แก้ไขล่าสุด
   const date = el('div', 'home-card-date', t('ui.home.editLatest') + project.dateStr);
   body.append(date);
+
+  // ══ [alpha.123] ที่อยู่ของโปรเจกต์บนดิสก์ ══
+  //
+  // ผู้ใช้: *"ในหน้า home เราอยากให้มีระบุตำแหน่งของ project ใน disk ได้มั้ย"*
+  //
+  // จำเป็นจริงเมื่อมีโปรเจกต์ชื่อคล้ายกันหลายอัน (สำเนาสำรอง · เวอร์ชันทดลอง) — ชื่อบนการ์ด
+  // แยกไม่ออกว่าอันไหนคืออันที่กำลังเขียนอยู่ · ที่อยู่เต็มอยู่ใน `title` (hover เห็นครบ)
+  // ส่วนบนการ์ดตัดหัวด้วย CSS `direction:rtl` ให้เห็น **ท้ายทาง** ซึ่งเป็นส่วนที่ต่างกัน
+  const pathRow = el('div', 'home-card-path');
+  const pathTxt = el('span', 'home-card-pathtxt', project.root);
+  pathTxt.title = project.root;
+  pathRow.append(pathTxt);
+  const reveal = el('button', 'home-card-pathbtn', '📂');
+  reveal.title = t('ui.home.revealInOS');
+  reveal.onclick = (e) => { e.stopPropagation(); kapi.revealInOS(project.root).catch(() => {}); };
+  const copy = el('button', 'home-card-pathbtn', '⧉');
+  copy.title = t('ui.home.copyPath');
+  copy.onclick = async (e) => {
+    e.stopPropagation();
+    await kapi.clipboardWrite(project.root).catch(() => {});
+    setStatus(t('ui.home.pathCopied'));
+  };
+  pathRow.append(reveal, copy);
+  body.append(pathRow);
   
   // ปุ่มเปิด
   const openBtn = el('button', 'k-ok home-card-open', t('ui.common.openProject'));
@@ -375,65 +417,17 @@ export async function renderHomePanel(host) {
 
 async function loadPanelProjects(grid, onOpen) {
   grid.innerHTML = '';
+  grid.dataset.homePanel = '1';
+  grid._onOpen = onOpen;
   try {
-    const recent = await kapi.listRecent().catch(() => []);
-    const tasks = recent.map(async (root) => {
-      try {
-        const metaFile = await kapi.join(root, 'project.khn.json');
-        if (!(await kapi.exists(metaFile))) return null;
-        const meta = await kapi.readJson(metaFile);
-        let totalScenes = 0, totalChapters = 0, totalWords = 0;
-        let lastModified = meta.created || '';
-        const entries = await kapi.listDirs(root).catch(() => []);
-        for (const secName of entries) {
-          const secPath = await kapi.join(root, secName);
-          const secJson = await kapi.join(secPath, 'section.json');
-          if (!(await kapi.exists(secJson))) continue;
-          const draftRoot = await kapi.join(secPath, 'Draft');
-          if (!(await kapi.exists(draftRoot))) continue;
-          const draftDirs = await kapi.listDirs(draftRoot).catch(() => []);
-          for (const dn of draftDirs) {
-            const dPath = await kapi.join(draftRoot, dn);
-            const draftFile = await kapi.join(dPath, 'draft.json');
-            if (!(await kapi.exists(draftFile))) continue;
-            const draft = await kapi.readJson(draftFile).catch(() => ({}));
-            const chapters = draft.chapters || [];
-            totalChapters += chapters.length;
-            const scenesFile = await kapi.join(dPath, 'scenes.json');
-            if (await kapi.exists(scenesFile)) {
-              const scData = await kapi.readJson(scenesFile).catch(() => ({}));
-              const scChapters = scData.chapters || {};
-              for (const ch of chapters) {
-                const scenes = scChapters[ch.guid] || [];
-                totalScenes += scenes.filter((s) => s.type !== 'memo').length;
-                for (const sc of scenes) {
-                  if (sc.type === 'memo') continue;
-                  totalWords += sc.wordCount || 0;
-                  if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
-                }
-              }
-            }
-          }
-        }
-        const modDate = lastModified ? new Date(lastModified) : null;
-        const dateStr = modDate ? modDate.toLocaleDateString('th-TH', {
-          year: 'numeric', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        }) : '—';
-        return { root, title: meta.title || root.replace(/^.*[\\/]/, ''),
-                 author: meta.author || '', cover: meta.cover || '',
-                 totalScenes, totalChapters, totalWords, dateStr,
-                 settings: meta.settings || {}, goals: meta.goals || {} };
-      } catch (e) { return null; }
-    });
-    let projects = (await Promise.all(tasks)).filter(Boolean);
-    if (projects.length === 0) {
+    const { ok, broken } = await scanRecentProjects();
+    if (!ok.length && !broken.length) {
       grid.append(el('div', 'home-empty', el('p', null, t('ui.home.notHasProject'))));
       return;
     }
-    projects.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
     // ใช้การ์ดชุดเดียวกับหน้า Home (.home-card) — มีสไตล์จริงและสลับมุมมองการ์ด/รายการได้
-    for (const p of projects) grid.append(createProjectCard(p, onOpen));
+    for (const p of ok) grid.append(createProjectCard(p, onOpen));
+    for (const b of broken) grid.append(createBrokenCard(b, refreshHomePanels));
   } catch (e) {
     log('error', t('ui.home.homePanelLoadFail'), e);
     grid.append(el('div', 'home-empty', t('ui.home.occurErrorLoadProject')));

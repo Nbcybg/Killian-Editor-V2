@@ -66,8 +66,6 @@ export function mergeComments(md, comments) {
   if (!comments || !comments.length) return body ? body + '\n' : '';
   return `${body}\n\n${BLOCK_START}\n${JSON.stringify(comments, null, 1)}\n${BLOCK_END}\n`;
 }
-export function serializeComments(comments) { return mergeComments('', comments); }
-
 // ───────── ปฏิบัติการกับรายการคอมเมนต์ (pure — คืนรายการใหม่เสมอ) ─────────
 /** Add a comment. `position` = number | {start,end,quote} | null */
 export function addComment(comments, { text, author, position, now = Date.now(), id } = {}) {

@@ -1,6 +1,6 @@
 // thesaurus-ui.js — UI สำหรับ Thesaurus: คลิกขวาคำ → คำพ้อง/คำตรงข้าม (ข้อ 67)
 // แยกจาก src/thesaurus.js เดิม (ซึ่งเป็น UI ของ K1 เก่า — ไฟล์นี้เป็น UI ใหม่สำหรับ tools/thesaurus.js)
-import { el, setStatus, state, t } from '../core.js';
+import { el, setStatus, state, t, log } from '../core.js';
 import { getSynonyms, getAntonyms } from '../tools/thesaurus.js';
 
 // แสดง popup คำพ้อง/คำตรงข้าม
@@ -18,19 +18,12 @@ export async function showThesaurusPopup(word, x, y) {
     ]);
     syns = Array.isArray(synRes) ? synRes : (synRes?.words || []);
     ants = Array.isArray(antRes) ? antRes : (antRes?.words || []);
-  } catch {
-    // fallback ไปใช้ thesaurus.js เดิม
-    try {
-      const old = await import('../thesaurus.js');
-      const items = old.thesaurusMenuItems ? await old.thesaurusMenuItems(norm) : [];
-      if (items.length) {
-        for (const it of items) {
-          if (it.label.startsWith('Syn:')) syns.push(it.label.slice(4));
-          else if (it.label.startsWith('Ant:')) ants.push(it.label.slice(4));
-          else syns.push(it.label);
-        }
-      }
-    } catch {}
+  } catch (e) {
+    // [alpha.125 ข้อ D] เดิมตรงนี้ตกกลับไปเรียก `../thesaurus.js` (UI ยุค K1)
+    // ซึ่ง **เรียกผิดลายเซ็นด้วย**: ตัวจริงคือ `thesaurusMenuItems(x, y)` ที่อ่านคำจาก
+    // selection บนจอ ไม่ใช่ `(word)` → fallback นี้ไม่เคยคืนอะไรที่เกี่ยวกับคำที่ขอเลย
+    // ไฟล์นั้นถูกลบทิ้งแล้ว (เมนูคลิกขวาเหลือชุดเดียวตั้งแต่ alpha.124 ข้อ 32)
+    log('warn', t('ui.thes.thesaurusSearchNotOk'), e);
   }
 
   if (!syns.length && !ants.length) {

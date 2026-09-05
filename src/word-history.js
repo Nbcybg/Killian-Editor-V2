@@ -1,5 +1,6 @@
 // word-history.js + streak.js — สถิติคำรายวัน + การนับวันเขียนติดต่อ
 import { state, log } from './core.js';
+import { parseMdFile, countWords } from './md.js';
 
 // ---- Word History (ข้อ 58) ----
 export function getWordHistory() {
@@ -29,16 +30,27 @@ export async function recordDailyWords(totalWords) {
 }
 
 // คำนวณจำนวนคำรวมจากทุกฉากในโปรเจกต์
+//
+// [แก้บั๊ก] เดิมบรรทัด `if (stale()) return out;` หลุดมาจาก `rebuildWordCounts` ทั้งที่ตัวนี้
+// ไม่เคยประกาศ `stale`/`out` เลย → โยน ReferenceError ตั้งแต่ร่างแรก แล้วถูก `catch` ข้างล่าง
+// กลืนเป็น WARN → **คืน 0 เสมอ** ทุกโปรเจกต์ที่มีฉบับร่าง (เห็นในบันทึกจริงทุกครั้งที่เปิดโปรแกรม:
+// `WARN countProjectWords failed | ReferenceError: stale is not defined`)
+// ผลคือ `recordDailyWords(0)` → ประวัติจำนวนคำรายวัน + วันเขียนติดต่อกัน เป็นศูนย์ตลอด
+// คงเจตนาเดิมของยามไว้ (เลิกทำเมื่อผู้ใช้สลับ/ปิดโปรเจกต์กลางลูป — เหมือน rebuildWordCounts)
 export async function countProjectWords() {
-  if (!state.root) return 0;
+  const root = state.root;
+  if (!root) return 0;
+  const stale = () => state.root !== root;
   let total = 0;
   try {
-    for (const sec of await kapi.listDirs(state.root)) {
-      const secP = await kapi.join(state.root, sec);
+    for (const sec of await kapi.listDirs(root)) {
+      if (stale()) return total;
+      const secP = await kapi.join(root, sec);
       if (!(await kapi.exists(await kapi.join(secP, 'section.json')))) continue;
       const dr = await kapi.join(secP, 'Draft');
       if (!(await kapi.exists(dr))) continue;
       for (const dn of await kapi.listDirs(dr)) {
+        if (stale()) return total;
         const dp = await kapi.join(dr, dn);
         const sf = await kapi.join(dp, 'scenes.json');
         if (!(await kapi.exists(sf))) continue;
@@ -52,6 +64,76 @@ export async function countProjectWords() {
     }
   } catch (e) { log('warn', 'countProjectWords failed', e); }
   return total;
+}
+
+// ═══════════ [alpha.124 ข้อ 23] ★ ซ่อมจำนวนคำใน scenes.json ═══════════
+//
+// ★ ต้นตอที่ทำให้ **6 หน้าจอโชว์เลขไม่ตรงกัน**: `sc.wordCount` ถูกเขียนครั้งเดียวตอน
+//   *สร้างฉาก* ด้วยค่า `0` แล้วไม่มีใครอัปเดตอีกเลยตลอดอายุโปรเจกต์ — `saveTab()`
+//   เขียนแต่ไฟล์ .md ไม่เคยแตะ scenes.json
+//   → ทุกจอที่อ่านจาก scenes.json (ป้ายในต้นไม้ · ตารางฉาก · เรียงตามจำนวนคำ · หน้าแรก ·
+//     แดชบอร์ด · สถิติวันเขียนติดต่อกัน) ได้ 0 ตลอด ขณะที่แถบสถานะซึ่งนับสดจากเอกสารได้เลขจริง
+//
+// ทางแก้มีสองครึ่ง: (ก) `saveTab` เขียนค่าใหม่ทุกครั้งที่บันทึก (อยู่ใน app.js)
+//                  (ข) ตัวนี้ — ไล่เก็บของเก่าที่สะสมค่า 0 ไว้แล้วให้ครบรอบเดียว
+//
+// **นับด้วย `countWords` ตัวเดียวกับแถบสถานะ** (md.js) — ตัวเลขทุกจอจึงตรงกันจริง ไม่ใช่ใกล้เคียง
+
+/**
+ * ไล่คำนวณ `wordCount` ของทุกฉากใหม่จากไฟล์ .md จริง แล้วเขียนกลับ scenes.json
+ * @param {{force?: boolean}} opts force = คำนวณใหม่ทั้งหมด (ปกติทำเฉพาะแถวที่ยังเป็น 0/ไม่มีค่า)
+ * @returns {Promise<{scanned:number, fixed:number, words:number, done:boolean}>}
+ *          `done` = ไล่จนจบจริง (false = เลิกกลางทางเพราะเปลี่ยนโปรเจกต์/อ่านไม่ได้ → อย่าเพิ่งปักธงว่าซ่อมแล้ว)
+ */
+export async function rebuildWordCounts({ force = false } = {}) {
+  const out = { scanned: 0, fixed: 0, words: 0, done: false };
+  // ⚠ ตัวนี้ทำงานเบื้องหลังหลังเปิดโปรเจกต์และกินเวลาหลายวินาทีในโปรเจกต์ใหญ่
+  // ระหว่างนั้นผู้ใช้ปิด/สลับโปรเจกต์ได้ → `state.root` กลายเป็น null กลางลูป แล้ว
+  // `kapi.join(null, …)` โยน (เจอจริงในบันทึกของ e2e: `[null , Recycle]`)
+  // จับภาพรากไว้ตั้งแต่ต้น แล้วเลิกทำทันทีที่รู้ว่าโปรเจกต์เปลี่ยน — ห้ามเขียนทับของโปรเจกต์ใหม่
+  const root = state.root;
+  if (!root) return out;
+  const stale = () => state.root !== root;
+  try {
+    for (const sec of await kapi.listDirs(root)) {
+      if (stale()) return out;
+      const secP = await kapi.join(root, sec);
+      if (!(await kapi.exists(await kapi.join(secP, 'section.json')))) continue;
+      const dr = await kapi.join(secP, 'Draft');
+      if (!(await kapi.exists(dr))) continue;
+      for (const dn of await kapi.listDirs(dr)) {
+        const dp = await kapi.join(dr, dn);
+        const sf = await kapi.join(dp, 'scenes.json');
+        if (!(await kapi.exists(sf))) continue;
+        const d = await kapi.readJson(sf);
+        const draft = await kapi.readJson(await kapi.join(dp, 'draft.json')).catch(() => ({}));
+        const folderOf = {};
+        for (const ch of (draft.chapters || [])) folderOf[ch.guid] = ch.folderName;
+        let dirty = false;
+        for (const cg of Object.keys(d.chapters || {})) {
+          for (const sc of (d.chapters[cg] || [])) {
+            if (sc.type === 'memo') continue;
+            out.scanned++;
+            const cur = sc.wordCount || 0;
+            if (!force && cur > 0) { out.words += cur; continue; }
+            const folder = folderOf[cg];
+            if (!folder || !sc.fileName) continue;
+            let body = '';
+            try {
+              const raw = await kapi.readFile(await kapi.join(dp, 'Chapters', folder, sc.fileName));
+              body = parseMdFile(raw).body || '';
+            } catch { continue; }          // ไฟล์หาย = ข้าม ไม่ใช่เขียนทับด้วย 0
+            const n = countWords(body);
+            out.words += n;
+            if (n !== cur) { sc.wordCount = n; dirty = true; out.fixed++; }
+          }
+        }
+        if (dirty) await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      }
+    }
+    out.done = true;
+  } catch (e) { log('warn', 'rebuildWordCounts failed', e); }
+  return out;
 }
 
 // ---- Writing Streak (ข้อ 59) ----
