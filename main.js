@@ -134,6 +134,28 @@ const toggles = {
 // ตัวช่วยสร้างรายการสวิตช์ — ผู้ใช้เห็นชัดว่ากดแล้วเปิด/ปิด ไม่ใช่คำสั่งครั้งเดียว
 const chk = (label, on, fn) => ({ label, type: 'checkbox', checked: !!on, click: fn });
 
+// ─────────────────────────────────────────────────────────────────────
+// [alpha.136] รายงานของบท (71/72/73) — **แหล่งความจริงเดียว**
+//
+// ทั้งสามอันทำงานได้เฉพาะตอนแท็บที่เปิดอยู่เป็นบทภาพยนตร์ (`spReportInput()` คืน null
+// เมื่อไม่ใช่ แล้ว `openSpReport()` ก็ขึ้นแค่ข้อความที่แถบสถานะ ไม่มีกล่องเด้ง)
+// — เดิมรายการเมนูกดได้ตลอด ผู้ใช้จึงกดตอนเปิดนิยายอยู่แล้วเหมือน "คำสั่งตาย"
+// ตอนนี้ผูก `enabled` กับ `toggles.format` ที่ renderer ส่งมาทุกครั้งที่สลับแท็บ
+//
+// id คงที่ → `menu:itemState` อ่านสถานะจาก **เมนูตัวจริงที่ติดอยู่** ให้ e2e ตรวจได้
+// (เมนู native เป็นจุดบอดของ e2e — ต้องมีช่องส่องเสมอ เหมือน `menu:panelIds`)
+// ─────────────────────────────────────────────────────────────────────
+const SP_REPORT_ITEMS = [
+  { id: 'sp-report-location',  arg: 'location',  key: 'ui.menu.reportPlaceLocationReport' },
+  { id: 'sp-report-character', arg: 'character', key: 'ui.menu.reportCharacterReport' },
+  { id: 'sp-report-chart',     arg: 'chart',     key: 'ui.menu.graphDialogueNextPage' },
+];
+const spReportMenuItems = () => SP_REPORT_ITEMS.map((r) => ({
+  id: r.id, label: tt(r.key),
+  enabled: toggles.format === 'screenplay',
+  click: () => send('sp-report', r.arg),
+}));
+
 function buildMenu() {
   // [alpha.124 ข้อ 43] ติดป้าย ⚠ ให้รายการที่หาโฟลเดอร์ไม่เจอแล้ว — เห็นตั้งแต่ในเมนู
   // ว่าอันไหนพัง ไม่ต้องกดเข้าไปเจอคำเตือนถึงจะรู้ (ยังกดได้ ฝั่ง renderer จะถามว่าลบออกไหม)
@@ -341,10 +363,8 @@ function buildMenu() {
       chk(tt('ui.menu.textContCONTINUEDMORE'), toggles.continueds,
           () => send('sp-continued')),
       { type: 'separator' },
-      // alpha.58 [71][72][73] — รายงาน
-      { label: tt('ui.menu.reportPlaceLocationReport'), click: () => send('sp-report', 'location') },
-      { label: tt('ui.menu.reportCharacterReport'), click: () => send('sp-report', 'character') },
-      { label: tt('ui.menu.graphDialogueNextPage'), click: () => send('sp-report', 'chart') },
+      // alpha.58 [71][72][73] — รายงาน (alpha.136: เทาเมื่อแท็บที่เปิดอยู่ไม่ใช่บท)
+      ...spReportMenuItems(),
       { type: 'separator' },
       // alpha.57a — เลขฉาก/เลขหน้า/ส่วนเสริม/SmartType
       chk(tt('ui.menu.numSceneHeadScene'), toggles.sceneNumbers, () => send('scene-numbers')),
@@ -756,6 +776,21 @@ ipcMain.handle('menu:panelIds', () => ({
   ids: MENU_PANELS.filter((p) => !p.sep).map((p) => p.id),
   skip: Object.keys(MENU_PANELS_SKIP),
 }));
+
+/**
+ * [alpha.136] ส่องสถานะของรายการเมนูตาม id — อ่านจาก **เมนูตัวจริงที่ติดอยู่**
+ * ไม่ใช่จากเทมเพลตหรือค่าที่ตั้งใจไว้ → ถ้า buildMenu() ลืมใส่ enabled เทสจับได้ทันที
+ * @param {string[]} ids  ว่าง/ไม่ส่ง = รายงานของบททั้งสามอัน
+ */
+ipcMain.handle('menu:itemState', (e, ids) => {
+  const menu = Menu.getApplicationMenu();
+  const want = Array.isArray(ids) && ids.length ? ids : SP_REPORT_ITEMS.map((r) => r.id);
+  return want.map((id) => {
+    const it = menu && menu.getMenuItemById(id);
+    return it ? { id, exists: true, enabled: !!it.enabled, visible: !!it.visible, label: it.label }
+              : { id, exists: false, enabled: false, visible: false, label: '' };
+  });
+});
 
 // ---------------- IPC: filesystem (ผ่าน main เท่านั้น — renderer ไม่แตะ fs ตรง) ----------------
 const H = (name, fn) => ipcMain.handle(name, (e, ...a) => fn(...a));

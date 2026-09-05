@@ -190973,6 +190973,51 @@ ${css}
             check2("[71] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E14\u0E49", spReportText("location", locData).includes("\u0E2B\u0E49\u0E2D\u0E07\u0E19\u0E2D\u0E19"));
             check2("[72] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E14\u0E49", spReportText("character", chData).includes("\u0E41\u0E04\u0E2A\u0E0B\u0E35\u0E48"));
             check2("[73] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E01\u0E23\u0E32\u0E1F\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E14\u0E49", spReportText("chart", chartData).includes("\u0E2B\u0E19\u0E49\u0E32"));
+            {
+              const REP_IDS = ["sp-report-location", "sp-report-character", "sp-report-chart"];
+              const fmt = (st) => st.map((s) => s.id + ":" + s.enabled).join(" ");
+              const menuState = async (want) => {
+                let st = await kapi.menuItemState(REP_IDS);
+                for (let i5 = 0; i5 < 40 && !st.every((s) => s.exists && s.enabled === want); i5++) {
+                  await new Promise((r) => setTimeout(r, 50));
+                  st = await kapi.menuItemState(REP_IDS);
+                }
+                return st;
+              };
+              activate(spT58.file);
+              await new Promise((r) => setTimeout(r, 60));
+              syncMenuToggles();
+              const onSp = await menuState(true);
+              check2(
+                "[136] \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E32\u0E21\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E17\u0E35\u0E48\u0E15\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48",
+                onSp.every((s) => s.exists),
+                onSp.map((s) => s.id + ":" + s.exists).join(" ")
+              );
+              check2("[136] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E1A\u0E17\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E01\u0E14\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E32\u0E21\u0E2D\u0E31\u0E19", onSp.every((s) => s.enabled), fmt(onSp));
+              const proseEntry = [...state.tabs.entries()].find(([, t4]) => !t4.sp);
+              check2("[136] \u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E43\u0E2B\u0E49\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E17\u0E14\u0E2A\u0E2D\u0E1A", !!proseEntry);
+              if (proseEntry) {
+                activate(proseEntry[0]);
+                await new Promise((r) => setTimeout(r, 80));
+                check2("[136] \u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27\u0E08\u0E23\u0E34\u0E07", !!state.active && !state.active.sp);
+                syncMenuToggles();
+                const offSp = await menuState(false);
+                check2(
+                  "[136] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E32\u0E21\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E40\u0E17\u0E32",
+                  offSp.every((s) => !s.enabled),
+                  fmt(offSp)
+                );
+                check2(
+                  "[136] \u0E40\u0E17\u0E32\u0E41\u0E25\u0E49\u0E27\u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E40\u0E09\u0E22 \u0E46)",
+                  offSp.every((s) => s.exists && s.visible)
+                );
+                activate(spT58.file);
+                await new Promise((r) => setTimeout(r, 80));
+                syncMenuToggles();
+                const back = await menuState(true);
+                check2("[136] \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E41\u0E17\u0E47\u0E1A\u0E1A\u0E17 \u2192 \u0E01\u0E14\u0E44\u0E14\u0E49\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07", back.every((s) => s.enabled), fmt(back));
+              }
+            }
           }
           {
             const junk = [

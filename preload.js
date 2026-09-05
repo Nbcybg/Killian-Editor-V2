@@ -101,6 +101,9 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.69] รายการแผงที่อยู่ในเมนู มุมมอง → แผง (เมนู native สร้างในฝั่ง main — renderer มองไม่เห็น)
   // มีไว้ให้ e2e เทียบกับ PANEL_DEFS: เพิ่มแผงใหม่แล้วลืมใส่เมนู = เทสแดงทันที
   menuPanelIds: call('menu:panelIds'),
+  // [alpha.136] สถานะ (enabled/visible) ของรายการเมนูตาม id — อ่านจากเมนูตัวจริง
+  // มีไว้ให้ e2e ตรวจว่ารายการที่ใช้ไม่ได้ตอนนี้ถูกทำเป็นสีเทาจริง
+  menuItemState: call('menu:itemState'),
   httpFetch: call('http:fetch'),
   httpAbort: call('http:abort'),        // [alpha.96] ยกเลิกคำขอ AI ที่กำลังวิ่ง
   httpInflight: call('http:inflight'),

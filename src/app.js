@@ -25404,6 +25404,51 @@ async function runTest(projectPath) {
           check('[71] ข้อความรายงานสถานที่คัดลอกได้', spReportText('location', locData).includes('ห้องนอน'));
           check('[72] ข้อความรายงานตัวละครคัดลอกได้', spReportText('character', chData).includes('แคสซี่'));
           check('[73] ข้อความกราฟคัดลอกได้', spReportText('chart', chartData).includes('หน้า'));
+
+          // ---- [136] รายการเมนูรายงานต้องเป็นสีเทาเมื่อแท็บที่เปิดอยู่ไม่ใช่บท ----
+          // ทั้งสามอันคืน null ทันทีเมื่อไม่มีบทเปิดอยู่ (spReportInput) แล้วขึ้นแค่ข้อความที่แถบสถานะ
+          // — เดิมเมนูกดได้ตลอด ผู้ใช้จึงเห็นเป็น "คำสั่งตาย" · เมนู native มองไม่เห็นจาก renderer
+          // จึงส่องผ่าน kapi.menuItemState ซึ่งอ่านจาก **เมนูตัวจริงที่ติดอยู่** ไม่ใช่จากเทมเพลต
+          {
+            const REP_IDS = ['sp-report-location', 'sp-report-character', 'sp-report-chart'];
+            const fmt = (st) => st.map((s) => s.id + ':' + s.enabled).join(' ');
+            const menuState = async (want) => {
+              let st = await kapi.menuItemState(REP_IDS);
+              for (let i = 0; i < 40 && !st.every((s) => s.exists && s.enabled === want); i++) {
+                await new Promise((r) => setTimeout(r, 50));
+                st = await kapi.menuItemState(REP_IDS);
+              }
+              return st;
+            };
+
+            activate(spT58.file);
+            await new Promise((r) => setTimeout(r, 60));
+            syncMenuToggles();
+            const onSp = await menuState(true);
+            check('[136] รายงานทั้งสามมีอยู่จริงในเมนูที่ติดอยู่', onSp.every((s) => s.exists),
+                  onSp.map((s) => s.id + ':' + s.exists).join(' '));
+            check('[136] เปิดแท็บบทอยู่ → กดรายงานได้ทั้งสามอัน', onSp.every((s) => s.enabled), fmt(onSp));
+
+            const proseEntry = [...state.tabs.entries()].find(([, t]) => !t.sp);
+            check('[136] มีแท็บนิยายให้สลับไปทดสอบ', !!proseEntry);
+            if (proseEntry) {
+              activate(proseEntry[0]);
+              await new Promise((r) => setTimeout(r, 80));
+              check('[136] สลับไปแท็บนิยายแล้วจริง', !!state.active && !state.active.sp);
+              syncMenuToggles();
+              const offSp = await menuState(false);
+              check('[136] เปิดแท็บนิยายอยู่ → รายงานทั้งสามเป็นสีเทา',
+                    offSp.every((s) => !s.enabled), fmt(offSp));
+              check('[136] เทาแล้วแต่ยังอยู่ในเมนู (ไม่ใช่หายไปเฉย ๆ)',
+                    offSp.every((s) => s.exists && s.visible));
+              // สวิตช์ต้องทำงานสองทาง (กฎถาวรข้อ 5) — กลับมาบทแล้วต้องกดได้อีก
+              activate(spT58.file);
+              await new Promise((r) => setTimeout(r, 80));
+              syncMenuToggles();
+              const back = await menuState(true);
+              check('[136] กลับมาแท็บบท → กดได้อีกครั้ง', back.every((s) => s.enabled), fmt(back));
+            }
+          }
         }
 
         // ---- บั๊ก 1: SmartType ต้องไม่จำคำที่พิมพ์ครั้งเดียว ----
