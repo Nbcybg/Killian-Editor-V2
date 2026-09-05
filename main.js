@@ -470,6 +470,9 @@ function buildMenu() {
       ...(TEST || process.env.KILLIAN_DEV ? [{ role: 'toggleDevTools' }] : []),
     ] },
     { id: 'Help', label: tt('ui.menu.help2'), submenu: [
+      // [alpha.135] ตรวจหาอัปเดตด้วยตัวเอง — ทางเดียวกับสวิตช์ "ตรวจตอนเปิดโปรแกรม" ในตั้งค่า
+      { label: tt('ui.menu.checkUpdate'), click: () => send('check-update') },
+      { type: 'separator' },
       { label: tt('ui.menu.saveChangeChangelog'), click: () => send('changelog') },
       { label: tt('ui.menu.saveRunAppLog'), click: () => send('show-log') },
       { type: 'separator' },
@@ -1262,6 +1265,150 @@ H('plugins:uninstall', (baseDir, folder) => {
     return { ok: true };
   } catch (e) { return { ok: false, reason: e.message }; }
 });
+
+// ───────── [alpha.135] อัปเดตโปรแกรม — จากรีโปเดียวเท่านั้น ─────────
+//
+// ที่อยู่ของรีโปและกฎการเทียบเวอร์ชันทั้งหมดอยู่ที่ `src/update/update-check.js` ที่เดียว
+// (build.js แปลงเป็น update-check.cjs ให้ที่นี่ require — ห้ามเขียน URL ซ้ำในไฟล์นี้)
+//
+// **ทำไม renderer ส่ง URL มาเองไม่ได้**: ปุ่ม "แทนที่" อยู่ในหน้าจอ ซึ่งเป็นที่ที่โค้ดของ
+// ปลั๊กอิน/สคริปต์ผู้ใช้เข้าถึงได้ → ทุกลิงก์ที่ส่งเข้ามาถูกตรวจซ้ำด้วย `isAllowedAssetUrl()`
+// ก่อนยิงจริงเสมอ ไม่ว่าฝั่งหน้าจอจะตรวจมาแล้วหรือไม่
+const UPD = require('./update-check.cjs');
+const MAX_UPDATE_BYTES = 400 * 1024 * 1024;      // 400MB — ตัวติดตั้งพกพาใหญ่กว่านี้ผิดปกติ
+
+/** ไฟล์โปรแกรมที่ "แทนที่ตัวเองได้" — มีเฉพาะตอนรันจากไฟล์พกพา (electron-builder portable) */
+function portableExeFile() {
+  const p = process.env.PORTABLE_EXECUTABLE_FILE;
+  return (p && fs.existsSync(p)) ? p : '';
+}
+/** โฟลเดอร์พักไฟล์ที่โหลดมา */
+function updateTmpDir() {
+  const d = path.join(app.getPath('temp'), 'k2-update');
+  fs.mkdirSync(d, { recursive: true });
+  return d;
+}
+/** ลบซากไฟล์โปรแกรมเดิมจากการอัปเดตครั้งก่อน (ลบตอนนั้นไม่ได้เพราะยังรันอยู่) */
+function cleanUpdateLeftovers() {
+  const exe = portableExeFile();
+  if (!exe) return 0;
+  let n = 0;
+  try {
+    const dir = path.dirname(exe);
+    for (const f of fs.readdirSync(dir)) {
+      if (!UPD.isLeftover(f)) continue;
+      try { fs.rmSync(path.join(dir, f), { force: true }); n++; } catch {}
+    }
+  } catch {}
+  return n;
+}
+
+/** ที่มาของอัปเดต + สภาพเครื่องนี้ (หน้าตั้งค่าโชว์ให้เห็นกับตา) */
+H('update:source', () => ({
+  owner: UPD.UPDATE_OWNER, repo: UPD.UPDATE_REPO,
+  gitUrl: UPD.UPDATE_GIT_URL, homeUrl: UPD.UPDATE_HOME_URL, releasesUrl: UPD.UPDATE_RELEASES_URL,
+  current: app.getVersion(), platform: process.platform,
+  portableFile: portableExeFile(), canReplace: !!portableExeFile(),
+}));
+
+/** ถามรายชื่อรุ่นจาก GitHub (+ เลขรุ่นบนกิ่งหลักเผื่อยังไม่มี Release) */
+H('update:fetch', async () => {
+  const headers = { 'Accept': 'application/vnd.github+json', 'User-Agent': 'Killian2/' + app.getVersion() };
+  const ac = new AbortController();
+  const timer = setTimeout(() => { try { ac.abort(); } catch {} }, 20000);
+  try {
+    const res = await fetch(UPD.UPDATE_API_URL, { headers, signal: ac.signal });
+    if (!res.ok) return { ok: false, status: res.status, error: 'HTTP ' + res.status };
+    const releases = await res.json();
+    let manifestVersion = '';
+    try {
+      const m = await fetch(UPD.UPDATE_MANIFEST_URL, { headers: { 'User-Agent': headers['User-Agent'] }, signal: ac.signal });
+      if (m.ok) manifestVersion = String((await m.json()).version || '');
+    } catch {}
+    return { ok: true, status: res.status, releases: Array.isArray(releases) ? releases : [], manifestVersion };
+  } catch (e) {
+    return { ok: false, status: 0, error: String((e && e.message) || e) };
+  } finally { clearTimeout(timer); }
+});
+
+/** โหลดไฟล์แนบลงโฟลเดอร์ชั่วคราว — รายงานความคืบหน้าไปที่หน้าจอระหว่างทาง */
+H('update:download', async (url, name) => {
+  if (!UPD.isAllowedAssetUrl(url)) return { ok: false, error: 'blocked' };
+  const dest = path.join(updateTmpDir(), UPD.safeAssetName(name));
+  try {
+    const res = await fetch(String(url), { headers: { 'User-Agent': 'Killian2/' + app.getVersion() } });
+    if (!res.ok) return { ok: false, error: 'HTTP ' + res.status };
+    const total = +res.headers.get('content-length') || 0;
+    if (total > MAX_UPDATE_BYTES) return { ok: false, error: 'too-big' };
+    const ping = (received) => {
+      try { win && !win.isDestroyed() && win.webContents.send('update:progress', { received, total }); } catch {}
+    };
+    let buf = null;
+    // อ่านทีละก้อนเพื่อรายงานความคืบหน้า — สตรีมของ fetch อ่านแบบวนไม่ได้เมื่อไหร่ ก็รับทีเดียว
+    try {
+      const chunks = []; let got = 0, lastPing = 0;
+      for await (const chunk of res.body) {
+        got += chunk.length;
+        if (got > MAX_UPDATE_BYTES) return { ok: false, error: 'too-big' };
+        chunks.push(Buffer.from(chunk));
+        const now = Date.now();
+        if (now - lastPing > 200) { lastPing = now; ping(got); }
+      }
+      buf = Buffer.concat(chunks);
+    } catch {
+      buf = Buffer.from(await res.arrayBuffer());
+    }
+    if (buf.length > MAX_UPDATE_BYTES) return { ok: false, error: 'too-big' };
+    try { win && !win.isDestroyed() && win.webContents.send('update:progress', { received: buf.length, total: buf.length }); } catch {}
+    fs.writeFileSync(dest, buf);
+    return { ok: true, path: dest, size: buf.length, isExe: UPD.looksLikeExe(buf) };
+  } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+});
+
+/**
+ * แทนที่ไฟล์โปรแกรม
+ *
+ * Windows **เปลี่ยนชื่อ** ไฟล์ .exe ที่กำลังรันอยู่ได้ (แต่ลบ/เขียนทับไม่ได้) — จึงย้ายของเดิม
+ * ไปเป็น `<ชื่อ>.k2old` แล้วเอาไฟล์ใหม่มาวางแทนที่ชื่อเดิม · ซากจะถูกลบตอนเปิดโปรแกรมครั้งหน้า
+ * ทำไม่ได้เมื่อไร (ไม่ใช่ไฟล์พกพา / ไม่มีสิทธิ์เขียน) ก็คืน `manual` ให้ผู้ใช้ทำเอง
+ */
+H('update:install', (filePath) => {
+  const src = String(filePath || '');
+  const exe = portableExeFile();
+  try {
+    if (!src || !fs.existsSync(src)) return { ok: false, mode: 'none', error: 'missing' };
+    if (!exe) return { ok: false, mode: 'manual', path: src };
+    if (!UPD.looksLikeExe(fs.readFileSync(src, { encoding: null }).subarray(0, 2)))
+      return { ok: false, mode: 'manual', path: src, error: 'not-exe' };
+    const old = UPD.backupPath(exe);
+    try { fs.rmSync(old, { force: true }); } catch {}
+    fs.renameSync(exe, old);                       // ของเดิมพ้นทางแล้ว (ยังรันอยู่ได้ตามปกติ)
+    try {
+      fs.copyFileSync(src, exe);
+    } catch (e) {
+      try { fs.renameSync(old, exe); } catch {}    // วางไฟล์ใหม่ไม่สำเร็จ → เอาของเดิมกลับที่
+      throw e;
+    }
+    try { fs.rmSync(src, { force: true }); } catch {}
+    return { ok: true, mode: 'replaced', path: exe, backup: old };
+  } catch (e) {
+    return { ok: false, mode: 'manual', path: src, error: String((e && e.message) || e) };
+  }
+});
+
+/** เปิดโปรแกรมใหม่หลังแทนที่เสร็จ (ฝั่งหน้าจอถามเรื่องงานค้างมาก่อนแล้ว) */
+H('update:restart', () => {
+  const exe = portableExeFile();
+  forceQuit = true;
+  closeAllTearOffs();
+  try { app.relaunch(exe ? { execPath: exe } : {}); } catch { try { app.relaunch(); } catch {} }
+  try { win && !win.isDestroyed() && win.destroy(); } catch {}
+  app.quit();
+  return true;
+});
+
+/** ลบซากไฟล์เก่า — หน้าจอเรียกตอนบูต (คืนจำนวนไฟล์ที่ลบได้) */
+H('update:cleanup', () => cleanUpdateLeftovers());
 
 // ───────── [alpha.79] เซสชัน: "จำทุกอย่างล่าสุด" ─────────
 //

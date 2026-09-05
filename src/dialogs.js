@@ -32,6 +32,8 @@ import { ask, confirmBox, escClose } from './ui.js';
 import { parseMdFile } from './md.js';
 import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
+// [alpha.135] ส่วน "อัปเดตโปรแกรม" ในแท็บ อัตโนมัติ — สร้างด้วยโค้ด (ปุ่ม/ค่าจริง ไม่ใช่ HTML ตายตัว)
+import { buildUpdateFields } from './update/update-ui.js';
 import { iconHtml } from './icons.js';
 // [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
 import { NET_COLOR_GROUPS, NET_COLOR_DEFS, netColorDefsOf, normalizeNetColors,
@@ -402,6 +404,9 @@ export function settingsDialog(openTab, opts = {}) {
   // เดิมเขียน HTML มือ 11 ช่อง แล้วอ่านกลับด้วยชื่อ id ที่พิมพ์เอง → ตกหล่นทุกครั้งที่เพิ่มสีใหม่
   buildNetColorFields(box, s);
   // ── end Story Network colors
+  // [alpha.135] อัปเดตโปรแกรม (แท็บ อัตโนมัติ) — ส่วนนี้สร้างเองทั้งก้อนใน update-ui.js
+  // และ **คืนช่องติ๊กกลับมา** แทนที่จะให้ที่นี่ไปหาด้วย id (ทั้งส่วนจึงอยู่ในไฟล์เดียว)
+  const updChk = buildUpdateFields(box, s);
   // พรีวิวขนาดฟอนต์ทันที (ยกเลิก = คืนค่าเดิม)
   // [alpha.81r ข้อ 1] ช่องนี้กับ "ขนาด (pt)" ในแท็บ 📖 รูปแบบนิยาย = **ตัวเลขเดียวกัน**
   // (เดิมเป็นคนละที่เก็บ ตั้งช่องหนึ่งแล้วอีกช่องไม่ขยับ → จอกับไฟล์ที่ส่งออกไม่ตรงกัน)
@@ -1352,6 +1357,8 @@ export function settingsDialog(openTab, opts = {}) {
     g.dailyWords = num('#st-daily', 500);
     g.projectWords = num('#st-proj', 50000);
     // ── [alpha.73 ข้อ 2+3] อ่านค่าคืนจากช่องที่สร้างเอง (ครบทุกคีย์เสมอ) ──
+    // [alpha.135] สวิตช์ตรวจอัปเดตตอนเปิดโปรแกรม (ช่องสร้างด้วยโค้ด — ไม่มีก็ไม่แตะค่าเดิม)
+    if (updChk) s.updateCheck = updChk.checked;
     s.netColors = readNetColorFields(box);
     s.netControls = { orbitButton: q('#st-net-orbit')?.value || 'middle',
                       panButton: q('#st-net-pan')?.value || 'left' };
@@ -1374,6 +1381,11 @@ export function settingsDialog(openTab, opts = {}) {
           // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
           // [alpha.132 ข้อ 9] จานสีตัวอักษร (บันทึกไว้ + ใช้ล่าสุด) — ตามผู้ใช้ไปทุกโปรเจกต์
           'textColors',
+          // [alpha.135] ค่าอัปเดต — ต้องอยู่ในรายการนี้ ไม่งั้น "รุ่นที่ข้ามไว้"/"ตรวจล่าสุด"
+          // หายทุกครั้งที่กดบันทึกตั้งค่า (ไฟล์นี้ถูก **เขียนทับทั้งก้อน** ไม่ได้ merge)
+          'updateCheck','updateSkip','updateLast','updateLastVersion',
+          // ด้วยเหตุผลเดียวกัน: สวิตช์ "เปิดโปรเจกต์ล่าสุดทันที" (เมนู ไฟล์) เคยหายทุกครั้งที่บันทึกตั้งค่า
+          'openLastProject',
           'toolbar','fmtbar','fab'];
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }

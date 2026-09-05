@@ -30,7 +30,12 @@ syncChangelog();
 // [alpha.69] ตรรกะสมุดประวัติ (history-data.js) ถูกใช้ **สองฝั่ง**: renderer วาดแผง · main ลงมือกับดิสก์
 // main.js เป็น CommonJS และ import ES module ตรง ๆ ไม่ได้ → แปลงเป็น .cjs ไว้ให้ require
 // (ห้ามคัดลอกตรรกะไปไว้สองที่ — ตัวที่มี unit test ต้องเป็นตัวเดียวกับที่ทำงานจริง)
-const CJS_MODULES = [['src/history/history-data.js', 'history-data.cjs']];
+// [alpha.135] ตรรกะอัปเดต (update-check.js) ก็ใช้สองฝั่งเหมือนกัน: renderer วาดกล่องถาม ·
+// main ยิงเน็ต/แทนที่ไฟล์ · และ **ที่อยู่ของรีโปต้นทางต้องเป็นค่าเดียวกันทั้งสองฝั่ง**
+const CJS_MODULES = [
+  ['src/history/history-data.js', 'history-data.cjs'],
+  ['src/update/update-check.js', 'update-check.cjs'],
+];
 
 const esbuild = require('esbuild');
 Promise.all([

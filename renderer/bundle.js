@@ -66,15 +66,15 @@
   function parseCsv(text) {
     const s = String(text || "").replace(/^﻿/, "");
     const rows = [];
-    let row2 = [], cell = "", inQ = false, i5 = 0;
+    let row3 = [], cell = "", inQ = false, i5 = 0;
     const endCell = () => {
-      row2.push(cell);
+      row3.push(cell);
       cell = "";
     };
     const endRow = () => {
       endCell();
-      rows.push(row2);
-      row2 = [];
+      rows.push(row3);
+      row3 = [];
     };
     while (i5 < s.length) {
       const c = s[i5];
@@ -115,7 +115,7 @@
       cell += c;
       i5++;
     }
-    if (cell !== "" || row2.length) endRow();
+    if (cell !== "" || row3.length) endRow();
     return rows;
   }
   var init_i18n_csv = __esm({
@@ -15166,7 +15166,7 @@
   function paginate(blocks, opts = {}) {
     const fmt = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
     const perPage = Math.max(4, opts.lines || formatLines(fmt));
-    const R = fmt.rules, S10 = fmt.strings;
+    const R2 = fmt.rules, S10 = fmt.strings;
     const cfg = (el2) => fmt.elements[el2] || fmt.elements.action;
     const CT = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
     const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
@@ -15218,7 +15218,7 @@
       const body = wrapLines(b.text, wEl, CHARS_PER_INCH, caps, stEl);
       const need = before + body;
       const free = perPage - used;
-      const keepN = Math.max(0, Math.round(num(R.keepSceneWithNext, 0)));
+      const keepN = Math.max(0, Math.round(num(R2.keepSceneWithNext, 0)));
       if (need <= free && keepN > 0 && cur.length && KEEP_WITH_NEXT.has(b.el) && free - need < keepN && hasContentAfter(list, i5)) {
         pushPage();
         i5--;
@@ -15230,8 +15230,8 @@
         continue;
       }
       const isDlg = b.el === "dialogue";
-      const minBot = isDlg ? R.minDialogueLinesAtBottom : R.minActionLinesAtBottom;
-      const minTop = isDlg ? R.minDialogueLinesAtTop : R.minActionLinesAtTop;
+      const minBot = isDlg ? R2.minDialogueLinesAtBottom : R2.minActionLinesAtBottom;
+      const minTop = isDlg ? R2.minDialogueLinesAtTop : R2.minActionLinesAtTop;
       const dlgSplit = isDlg && wantDlgMarkers && !!lastChar;
       const moreLines = dlgSplit ? 1 : 0;
       const canBottom = Math.min(free - before - moreLines, body - Math.max(1, minTop));
@@ -18970,8 +18970,8 @@
     }
     return out;
   }
-  function mergeSceneMeta(row2, fm) {
-    const fromRow = coerceSceneMeta(row2 || {});
+  function mergeSceneMeta(row3, fm) {
+    const fromRow = coerceSceneMeta(row3 || {});
     const fromFm = coerceSceneMeta(fm || {});
     const out = { ...fromRow };
     for (const k of Object.keys(fromFm)) {
@@ -19008,14 +19008,14 @@
     }
     return m;
   }
-  async function readSceneMeta(file, row2) {
+  async function readSceneMeta(file, row3) {
     let fm = null;
     try {
       fm = (0, import_md4.parseMdFile)(await kapi.readFile(file)).meta;
     } catch {
       fm = null;
     }
-    return mergeSceneMeta(row2, fm);
+    return mergeSceneMeta(row3, fm);
   }
   async function writeSceneMeta(file, props) {
     try {
@@ -19722,16 +19722,16 @@
     if (!loc || loc.parent.type !== "dock") return root;
     if (flexChildIndex(loc.parent, docsId) < 0) return root;
     if (flexChildIndex(loc.parent, docsId) === loc.index) return root;
-    const row2 = loc.parent.dir === "row";
+    const row3 = loc.parent.dir === "row";
     const node = loc.node;
     id = node.id;
-    if (nodePxDeep(node, row2) > 0) return root;
+    if (nodePxDeep(node, row3) > 0) return root;
     const w = Number(def.w) > 0 ? Math.round(def.w) : DEFAULT_DOCK_W;
     const hh = Number(def.h) > 0 ? Math.round(def.h) : DEFAULT_DOCK_H;
     const next = clone(root);
     walk(next, (n2) => {
       if (n2.id !== id) return;
-      if (row2) n2.pxW = w;
+      if (row3) n2.pxW = w;
       else n2.pxH = hh;
     });
     return next;
@@ -19755,18 +19755,18 @@
     });
     return hit;
   }
-  function nodePx(node, row2) {
-    const v2 = node && (row2 ? node.pxW : node.pxH);
+  function nodePx(node, row3) {
+    const v2 = node && (row3 ? node.pxW : node.pxH);
     return Number.isFinite(v2) && v2 > 0 ? v2 : 0;
   }
-  function nodePxDeep(node, row2) {
-    const own = nodePx(node, row2);
+  function nodePxDeep(node, row3) {
+    const own = nodePx(node, row3);
     if (own > 0 || !node) return own;
     const kids = (node.children || []).filter((c) => !nodeHidden(c));
     if (!kids.length) return 0;
-    const vals = kids.map((c) => nodePxDeep(c, row2));
+    const vals = kids.map((c) => nodePxDeep(c, row3));
     if (vals.every((v2) => v2 <= 0)) return 0;
-    const sameAxis = node.type === "dock" && node.dir === "row" === !!row2;
+    const sameAxis = node.type === "dock" && node.dir === "row" === !!row3;
     return sameAxis ? vals.reduce((a, v2) => a + v2, 0) : Math.max(...vals);
   }
   function dockChildOf(root, id) {
@@ -19780,7 +19780,7 @@
     });
     return hit;
   }
-  function setDockPx(root, dockId, updates, row2) {
+  function setDockPx(root, dockId, updates, row3) {
     const next = clone(root);
     walk(next, (n2) => {
       if (n2.type !== "dock" || n2.id !== dockId) return;
@@ -19788,7 +19788,7 @@
         const kid = n2.children[+k];
         const v2 = Math.round(Number(updates[k]));
         if (!kid || !(v2 >= MIN_PANEL_PX)) continue;
-        if (row2) kid.pxW = v2;
+        if (row3) kid.pxW = v2;
         else kid.pxH = v2;
       }
     });
@@ -19808,7 +19808,7 @@
     const sum2 = soft.reduce((a, i5) => a + sizeOf(i5), 0);
     const ratioOf = (i5) => sum2 > 0 ? sizeOf(i5) / sum2 : 1 / soft.length;
     for (const i5 of shown) out[i5] = { kind: "rigid" };
-    const row2 = node.dir === "row";
+    const row3 = node.dir === "row";
     const fi = flexChildIndex(node, docsId);
     const pxMode = fi >= 0 && soft.includes(fi);
     if (!pxMode) {
@@ -19816,7 +19816,7 @@
       return out;
     }
     const pxKids = soft.filter((i5) => i5 !== fi);
-    const anyPinned = pxKids.some((i5) => nodePxDeep(kids[i5], row2) > 0);
+    const anyPinned = pxKids.some((i5) => nodePxDeep(kids[i5], row3) > 0);
     if (!anyPinned) {
       for (const i5 of soft) out[i5] = { kind: "grow", grow: ratioOf(i5) };
       return out;
@@ -19826,7 +19826,7 @@
         out[i5] = { kind: "flex" };
         continue;
       }
-      const px2 = nodePxDeep(kids[i5], row2);
+      const px2 = nodePxDeep(kids[i5], row3);
       out[i5] = px2 > 0 ? { kind: "px", px: px2 } : { kind: "grow", grow: ratioOf(i5) };
     }
     return out;
@@ -20581,9 +20581,9 @@
           return !!(this.root && isCollapsed(this.root, id));
         }
         /** [alpha.66r4] ตั้งความกว้าง/สูงเป็น px ให้ลูกของ dock (โหมดลูกผสม) */
-        resizePx(dockId, updates, row2) {
+        resizePx(dockId, updates, row3) {
           if (!this.root || !updates || !Object.keys(updates).length) return false;
-          this.store.update(setDockPx(this.root, dockId, updates, row2));
+          this.store.update(setDockPx(this.root, dockId, updates, row3));
           return true;
         }
         /** @param {number} [nextIndex] ดัชนีของลูกอีกฝั่ง (ตัววาดส่งมาเมื่อมีแผงที่ซ่อนคั่นอยู่) */
@@ -20926,8 +20926,8 @@
       list.className = "k-saveall-list";
       const boxes = [];
       for (const f of files) {
-        const row2 = document.createElement("label");
-        row2.className = "k-saveall-row";
+        const row3 = document.createElement("label");
+        row3.className = "k-saveall-row";
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = true;
@@ -20942,8 +20942,8 @@
         pt.textContent = f.file || "";
         pt.title = f.file || "";
         txt.append(nm, pt);
-        row2.append(cb, txt);
-        list.append(row2);
+        row3.append(cb, txt);
+        list.append(row3);
         boxes.push(cb);
       }
       const btns = document.createElement("div");
@@ -21580,39 +21580,39 @@
   function cssFamilyName(name5) {
     return String(name5 || "").replace(/["'();{}\\]/g, "").trim();
   }
-  function isUsable(row2) {
-    if (!row2 || row2.enabled === false) return false;
-    const src2 = row2.builtin || row2.file || cssFamilyName(row2.family);
+  function isUsable(row3) {
+    if (!row3 || row3.enabled === false) return false;
+    const src2 = row3.builtin || row3.file || cssFamilyName(row3.family);
     if (!src2) return false;
-    return !row2.range || !!normalizeRange(row2.range);
+    return !row3.range || !!normalizeRange(row3.range);
   }
-  function rowTarget(row2) {
-    const v2 = String(row2 && row2.target || "all");
+  function rowTarget(row3) {
+    const v2 = String(row3 && row3.target || "all");
     return FONT_TARGETS.includes(v2) ? v2 : "all";
   }
-  function rowAppliesTo(row2, target) {
-    const t22 = rowTarget(row2);
+  function rowAppliesTo(row3, target) {
+    const t22 = rowTarget(row3);
     return t22 === "all" || t22 === target;
   }
-  function familyList(row2) {
-    return String(row2 && row2.family || "").split(",").map((x) => cssFamilyName(x)).filter(Boolean);
+  function familyList(row3) {
+    return String(row3 && row3.family || "").split(",").map((x) => cssFamilyName(x)).filter(Boolean);
   }
   function buildLangFontCss(rows, resolveUrl, opts = {}) {
     const famName = opts.family || LANG_FAMILY;
     const target = opts.target || "";
     const out = [];
-    for (const row2 of rows || []) {
-      if (!isUsable(row2)) continue;
-      if (target && !rowAppliesTo(row2, target)) continue;
-      const range3 = normalizeRange(row2.range);
+    for (const row3 of rows || []) {
+      if (!isUsable(row3)) continue;
+      if (target && !rowAppliesTo(row3, target)) continue;
+      const range3 = normalizeRange(row3.range);
       const srcs = [];
-      const url = (row2.builtin || row2.file) && resolveUrl ? resolveUrl(row2) : "";
+      const url = (row3.builtin || row3.file) && resolveUrl ? resolveUrl(row3) : "";
       if (url) srcs.push('url("' + String(url).replace(/"/g, "%22") + '")');
-      for (const f of familyList(row2)) srcs.push('local("' + f + '")');
+      for (const f of familyList(row3)) srcs.push('local("' + f + '")');
       if (!srcs.length) continue;
-      const size = clampPct(row2.size, 50, 150, 100);
-      const asc = clampPct(row2.ascent, 0, 200, 0);
-      const desc = clampPct(row2.descent, 0, 200, 0);
+      const size = clampPct(row3.size, 50, 150, 100);
+      const asc = clampPct(row3.ascent, 0, 200, 0);
+      const desc = clampPct(row3.descent, 0, 200, 0);
       out.push('@font-face{font-family:"' + famName + '";font-display:swap;src:' + srcs.join(",") + ";" + (range3 ? "unicode-range:" + range3 + ";" : "") + (size !== 100 ? "size-adjust:" + size + "%;" : "") + (asc > 0 ? "ascent-override:" + asc + "%;" : "") + (desc > 0 ? "descent-override:" + desc + "%;" : "") + "}");
     }
     return out.join("\n");
@@ -22364,7 +22364,15 @@
         openLastProject: false,
         showHomeOnStartup: false,
         // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …) ในตัวแก้ไขนิยาย — เปิดไว้เป็นค่าเริ่มต้น
-        showMarkdownCodes: true
+        showMarkdownCodes: true,
+        // [alpha.135] อัปเดตโปรแกรม (ระดับผู้ใช้ — ไม่ผูกกับผลงานชิ้นไหน)
+        //   updateCheck   = ตรวจให้อัตโนมัติ "ก่อนเข้าโปรแกรม" (ปิดได้ในตั้งค่า → อัตโนมัติ)
+        //   updateSkip    = รุ่นที่ผู้ใช้กด "ข้ามรุ่นนี้" ไว้ — จะไม่ถามซ้ำจนกว่าจะมีรุ่นใหม่กว่านั้น
+        //   updateLast    = เวลาที่ตรวจสำเร็จครั้งล่าสุด (ms) · updateLastVersion = รุ่นที่เจอครั้งนั้น
+        updateCheck: true,
+        updateSkip: "",
+        updateLast: 0,
+        updateLastVersion: ""
       };
       PROJECT_DEFAULTS = {
         // หน้ากระดาษ
@@ -23420,7 +23428,7 @@
           for (const sc of sdata.chapters[chId] || []) {
             if (sc.type === "memo") continue;
             const p = await scenePath(dp, chId, sc, folders);
-            const row2 = {
+            const row3 = {
               id: sc.id,
               title: sc.title || sc.fileName || "",
               chapterId: chId,
@@ -23432,12 +23440,12 @@
             };
             if (withText) {
               try {
-                row2.text = await kapi.exists(p) ? await kapi.readFile(p) : "";
+                row3.text = await kapi.exists(p) ? await kapi.readFile(p) : "";
               } catch {
-                row2.text = "";
+                row3.text = "";
               }
             }
-            out.push(row2);
+            out.push(row3);
           }
         }
       }
@@ -23579,8 +23587,8 @@
     }
     const list = el("div", "bl-list");
     for (const link of links) {
-      const row2 = el("div", "bl-row");
-      row2.append(el("span", "bl-count", (link.count || 1) + "\xD7 "));
+      const row3 = el("div", "bl-row");
+      row3.append(el("span", "bl-count", (link.count || 1) + "\xD7 "));
       const name5 = el("span", "bl-name", link.title || link.sceneId);
       name5.style.cursor = "pointer";
       name5.style.color = "var(--link)";
@@ -23588,9 +23596,9 @@
       name5.onclick = async () => {
         if (onOpenScene) onOpenScene(link.sceneId, link.title);
       };
-      row2.append(name5);
-      if (link.via) row2.append(el("span", "bl-via", " (" + link.via + ")"));
-      list.append(row2);
+      row3.append(name5);
+      if (link.via) row3.append(el("span", "bl-via", " (" + link.via + ")"));
+      list.append(row3);
     }
     host2.append(list);
   }
@@ -23656,12 +23664,12 @@
         ));
         box2.append(h);
         for (const s of r.scenes.slice(0, 8)) {
-          const row2 = el("div", "bl-row");
-          row2.append(el("span", "bl-count", (s.count || 1) + "\xD7 "));
+          const row3 = el("div", "bl-row");
+          row3.append(el("span", "bl-count", (s.count || 1) + "\xD7 "));
           const nm = el("span", "bl-name", s.title || s.sceneId);
           nm.onclick = () => onOpenScene && onOpenScene(s.sceneId, s.title);
-          row2.append(nm);
-          box2.append(row2);
+          row3.append(nm);
+          box2.append(row3);
         }
         if (r.scenes.length > 8) box2.append(el("div", "dim bl-more", "\u2026"));
         list.append(box2);
@@ -23868,7 +23876,7 @@
             }
           };
           p.appendChild(wrap2);
-          const row2 = (label) => {
+          const row3 = (label) => {
             const r = document.createElement("div");
             r.className = "wiki-row";
             const l = document.createElement("label");
@@ -23912,7 +23920,7 @@
             return b;
           };
           const linkedField = (labelText, val, cb) => {
-            const r = row2(labelText);
+            const r = row3(labelText);
             const i5 = input(val, (v2) => {
               cb(v2);
               syncLink();
@@ -24128,13 +24136,13 @@
             prof.appendChild(info);
             wrap2.appendChild(prof);
           }
-          const rName = row2(t("ui.common.name"));
+          const rName = row3(t("ui.common.name"));
           const iName = input(this.e.name || "", (v2) => {
             this.e.name = v2;
           });
           rName.appendChild(iName);
           aiFill(rName, iName, t("ui.common.name"));
-          const rAlias = row2(t("ui.wiki.nameOther"));
+          const rAlias = row3(t("ui.wiki.nameOther"));
           const iAlias = input(
             (this.e.aliases || []).join(", "),
             (v2) => {
@@ -24143,7 +24151,7 @@
           );
           rAlias.appendChild(iAlias);
           aiFill(rAlias, iAlias, t("ui.wiki.nameOther"));
-          const rCode = row2(t("ui.wiki.shortcode"));
+          const rCode = row3(t("ui.wiki.shortcode"));
           const iCode = input(this.e.shortcode || "", (v2) => {
             this.e.shortcode = v2;
             syncCode();
@@ -24160,7 +24168,7 @@
           };
           syncCode();
           rCode.appendChild(codeHint);
-          const rTags = row2(t("ui.wiki.tags"));
+          const rTags = row3(t("ui.wiki.tags"));
           const iTags = input((this.e.tags || []).join(", "), (v2) => {
             this.e.tags = v2.split(",").map((x) => x.trim()).filter(Boolean);
             syncTags();
@@ -26153,10 +26161,10 @@
   function flatIndexFrom(entries) {
     return {
       images: entries.map((e) => {
-        const row2 = { file: e.path, caption: e.caption || "" };
-        if (e.album && e.album !== ROOT_ALBUM) row2.album = e.album;
-        if (e.tags && e.tags.length) row2.tags = [...e.tags];
-        return row2;
+        const row3 = { file: e.path, caption: e.caption || "" };
+        if (e.album && e.album !== ROOT_ALBUM) row3.album = e.album;
+        if (e.tags && e.tags.length) row3.tags = [...e.tags];
+        return row3;
       })
     };
   }
@@ -27333,9 +27341,9 @@
               return 63 & (e3 || 0);
             })(h.dosPermissions)), a = k.getUTCHours(), a <<= 6, a |= k.getUTCMinutes(), a <<= 5, a |= k.getUTCSeconds() / 2, o = k.getUTCFullYear() - 1980, o <<= 4, o |= k.getUTCMonth() + 1, o <<= 5, o |= k.getUTCDate(), _2 && (v2 = A(1, 1) + A(B(f), 4) + c, b += "up" + A(v2.length, 2) + v2), g && (y = A(1, 1) + A(B(p), 4) + m, b += "uc" + A(y.length, 2) + y);
             var E = "";
-            return E += "\n\0", E += A(S10, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R.LOCAL_FILE_HEADER + E + f + b, dirRecord: R.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
+            return E += "\n\0", E += A(S10, 2), E += u.magic, E += A(a, 2), E += A(o, 2), E += A(x.crc32, 4), E += A(x.compressedSize, 4), E += A(x.uncompressedSize, 4), E += A(f.length, 2), E += A(b.length, 2), { fileRecord: R2.LOCAL_FILE_HEADER + E + f + b, dirRecord: R2.CENTRAL_FILE_HEADER + A(C, 2) + E + A(p.length, 2) + "\0\0\0\0" + A(z, 4) + A(n3, 4) + f + b + p };
           }
-          var I = e("../utils"), i5 = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R = e("../signature");
+          var I = e("../utils"), i5 = e("../stream/GenericWorker"), O = e("../utf8"), B = e("../crc32"), R2 = e("../signature");
           function s(e2, t4, r3, n3) {
             i5.call(this, "ZipFileWorker"), this.bytesWritten = 0, this.zipComment = t4, this.zipPlatform = r3, this.encodeFileName = n3, this.streamFiles = e2, this.accumulate = false, this.contentBuffer = [], this.dirRecords = [], this.currentSourceOffset = 0, this.entriesCount = 0, this.currentFile = null, this._sources = [];
           }
@@ -27353,7 +27361,7 @@
             this.accumulate = false;
             var t4 = this.streamFiles && !e2.file.dir, r3 = n2(e2, t4, true, this.currentSourceOffset, this.zipPlatform, this.encodeFileName);
             if (this.dirRecords.push(r3.dirRecord), t4) this.push({ data: (function(e3) {
-              return R.DATA_DESCRIPTOR + A(e3.crc32, 4) + A(e3.compressedSize, 4) + A(e3.uncompressedSize, 4);
+              return R2.DATA_DESCRIPTOR + A(e3.crc32, 4) + A(e3.compressedSize, 4) + A(e3.uncompressedSize, 4);
             })(e2), meta: { percent: 100 } });
             else for (this.push({ data: r3.fileRecord, meta: { percent: 0 } }); this.contentBuffer.length; ) this.push(this.contentBuffer.shift());
             this.currentFile = null;
@@ -27361,7 +27369,7 @@
             for (var e2 = this.bytesWritten, t4 = 0; t4 < this.dirRecords.length; t4++) this.push({ data: this.dirRecords[t4], meta: { percent: 100 } });
             var r3 = this.bytesWritten - e2, n3 = (function(e3, t5, r4, n4, i6) {
               var s2 = I.transformTo("string", i6(n4));
-              return R.CENTRAL_DIRECTORY_END + "\0\0\0\0" + A(e3, 2) + A(e3, 2) + A(t5, 4) + A(r4, 4) + A(s2.length, 2) + s2;
+              return R2.CENTRAL_DIRECTORY_END + "\0\0\0\0" + A(e3, 2) + A(e3, 2) + A(t5, 4) + A(r4, 4) + A(s2.length, 2) + s2;
             })(this.dirRecords.length, r3, e2, this.zipComment, this.encodeFileName);
             this.push({ data: n3, meta: { percent: 100 } });
           }, s.prototype.prepareNextSource = function() {
@@ -28600,7 +28608,7 @@
         }, {}], 46: [function(e, t3, r) {
           "use strict";
           var h, c = e("../utils/common"), u = e("./trees"), d = e("./adler32"), p = e("./crc32"), n2 = e("./messages"), l = 0, f = 4, m = 0, _2 = -2, g = -1, b = 4, i5 = 2, v2 = 8, y = 9, s = 286, a = 30, o = 19, w = 2 * s + 1, k = 15, x = 3, S10 = 258, z = S10 + x + 1, C = 42, E = 113, A = 1, I = 2, O = 3, B = 4;
-          function R(e2, t4) {
+          function R2(e2, t4) {
             return e2.msg = n2[t4], t4;
           }
           function T3(e2) {
@@ -28688,7 +28696,7 @@
           }
           function G(e2) {
             var t4;
-            return e2 && e2.state ? (e2.total_in = e2.total_out = 0, e2.data_type = i5, (t4 = e2.state).pending = 0, t4.pending_out = 0, t4.wrap < 0 && (t4.wrap = -t4.wrap), t4.status = t4.wrap ? C : E, e2.adler = 2 === t4.wrap ? 0 : 1, t4.last_flush = l, u._tr_init(t4), m) : R(e2, _2);
+            return e2 && e2.state ? (e2.total_in = e2.total_out = 0, e2.data_type = i5, (t4 = e2.state).pending = 0, t4.pending_out = 0, t4.wrap < 0 && (t4.wrap = -t4.wrap), t4.status = t4.wrap ? C : E, e2.adler = 2 === t4.wrap ? 0 : 1, t4.last_flush = l, u._tr_init(t4), m) : R2(e2, _2);
           }
           function K(e2) {
             var t4 = G(e2);
@@ -28699,7 +28707,7 @@
           function Y(e2, t4, r3, n3, i6, s2) {
             if (!e2) return _2;
             var a2 = 1;
-            if (t4 === g && (t4 = 6), n3 < 0 ? (a2 = 0, n3 = -n3) : 15 < n3 && (a2 = 2, n3 -= 16), i6 < 1 || y < i6 || r3 !== v2 || n3 < 8 || 15 < n3 || t4 < 0 || 9 < t4 || s2 < 0 || b < s2) return R(e2, _2);
+            if (t4 === g && (t4 = 6), n3 < 0 ? (a2 = 0, n3 = -n3) : 15 < n3 && (a2 = 2, n3 -= 16), i6 < 1 || y < i6 || r3 !== v2 || n3 < 8 || 15 < n3 || t4 < 0 || 9 < t4 || s2 < 0 || b < s2) return R2(e2, _2);
             8 === n3 && (n3 = 9);
             var o2 = new H2();
             return (e2.state = o2).strm = e2, o2.wrap = a2, o2.gzhead = null, o2.w_bits = n3, o2.w_size = 1 << o2.w_bits, o2.w_mask = o2.w_size - 1, o2.hash_bits = i6 + 7, o2.hash_size = 1 << o2.hash_bits, o2.hash_mask = o2.hash_size - 1, o2.hash_shift = ~~((o2.hash_bits + x - 1) / x), o2.window = new c.Buf8(2 * o2.w_size), o2.head = new c.Buf16(o2.hash_size), o2.prev = new c.Buf16(o2.w_size), o2.lit_bufsize = 1 << i6 + 6, o2.pending_buf_size = 4 * o2.lit_bufsize, o2.pending_buf = new c.Buf8(o2.pending_buf_size), o2.d_buf = 1 * o2.lit_bufsize, o2.l_buf = 3 * o2.lit_bufsize, o2.level = t4, o2.strategy = s2, o2.method = r3, K(e2);
@@ -28723,8 +28731,8 @@
             return e2 && e2.state ? 2 !== e2.state.wrap ? _2 : (e2.state.gzhead = t4, m) : _2;
           }, r.deflate = function(e2, t4) {
             var r3, n3, i6, s2;
-            if (!e2 || !e2.state || 5 < t4 || t4 < 0) return e2 ? R(e2, _2) : _2;
-            if (n3 = e2.state, !e2.output || !e2.input && 0 !== e2.avail_in || 666 === n3.status && t4 !== f) return R(e2, 0 === e2.avail_out ? -5 : _2);
+            if (!e2 || !e2.state || 5 < t4 || t4 < 0) return e2 ? R2(e2, _2) : _2;
+            if (n3 = e2.state, !e2.output || !e2.input && 0 !== e2.avail_in || 666 === n3.status && t4 !== f) return R2(e2, 0 === e2.avail_out ? -5 : _2);
             if (n3.strm = e2, r3 = n3.last_flush, n3.last_flush = t4, n3.status === C) if (2 === n3.wrap) e2.adler = 0, U(n3, 31), U(n3, 139), U(n3, 8), n3.gzhead ? (U(n3, (n3.gzhead.text ? 1 : 0) + (n3.gzhead.hcrc ? 2 : 0) + (n3.gzhead.extra ? 4 : 0) + (n3.gzhead.name ? 8 : 0) + (n3.gzhead.comment ? 16 : 0)), U(n3, 255 & n3.gzhead.time), U(n3, n3.gzhead.time >> 8 & 255), U(n3, n3.gzhead.time >> 16 & 255), U(n3, n3.gzhead.time >> 24 & 255), U(n3, 9 === n3.level ? 2 : 2 <= n3.strategy || n3.level < 2 ? 4 : 0), U(n3, 255 & n3.gzhead.os), n3.gzhead.extra && n3.gzhead.extra.length && (U(n3, 255 & n3.gzhead.extra.length), U(n3, n3.gzhead.extra.length >> 8 & 255)), n3.gzhead.hcrc && (e2.adler = p(e2.adler, n3.pending_buf, n3.pending, 0)), n3.gzindex = 0, n3.status = 69) : (U(n3, 0), U(n3, 0), U(n3, 0), U(n3, 0), U(n3, 0), U(n3, 9 === n3.level ? 2 : 2 <= n3.strategy || n3.level < 2 ? 4 : 0), U(n3, 3), n3.status = E);
             else {
               var a2 = v2 + (n3.w_bits - 8 << 4) << 8;
@@ -28758,8 +28766,8 @@
             } else n3.status = 103;
             if (103 === n3.status && (n3.gzhead.hcrc ? (n3.pending + 2 > n3.pending_buf_size && F(e2), n3.pending + 2 <= n3.pending_buf_size && (U(n3, 255 & e2.adler), U(n3, e2.adler >> 8 & 255), e2.adler = 0, n3.status = E)) : n3.status = E), 0 !== n3.pending) {
               if (F(e2), 0 === e2.avail_out) return n3.last_flush = -1, m;
-            } else if (0 === e2.avail_in && T3(t4) <= T3(r3) && t4 !== f) return R(e2, -5);
-            if (666 === n3.status && 0 !== e2.avail_in) return R(e2, -5);
+            } else if (0 === e2.avail_in && T3(t4) <= T3(r3) && t4 !== f) return R2(e2, -5);
+            if (666 === n3.status && 0 !== e2.avail_in) return R2(e2, -5);
             if (0 !== e2.avail_in || 0 !== n3.lookahead || t4 !== l && 666 !== n3.status) {
               var o2 = 2 === n3.strategy ? (function(e3, t5) {
                 for (var r4; ; ) {
@@ -28792,7 +28800,7 @@
             return t4 !== f ? m : n3.wrap <= 0 ? 1 : (2 === n3.wrap ? (U(n3, 255 & e2.adler), U(n3, e2.adler >> 8 & 255), U(n3, e2.adler >> 16 & 255), U(n3, e2.adler >> 24 & 255), U(n3, 255 & e2.total_in), U(n3, e2.total_in >> 8 & 255), U(n3, e2.total_in >> 16 & 255), U(n3, e2.total_in >> 24 & 255)) : (P(n3, e2.adler >>> 16), P(n3, 65535 & e2.adler)), F(e2), 0 < n3.wrap && (n3.wrap = -n3.wrap), 0 !== n3.pending ? m : 1);
           }, r.deflateEnd = function(e2) {
             var t4;
-            return e2 && e2.state ? (t4 = e2.state.status) !== C && 69 !== t4 && 73 !== t4 && 91 !== t4 && 103 !== t4 && t4 !== E && 666 !== t4 ? R(e2, _2) : (e2.state = null, t4 === E ? R(e2, -3) : m) : _2;
+            return e2 && e2.state ? (t4 = e2.state.status) !== C && 69 !== t4 && 73 !== t4 && 91 !== t4 && 103 !== t4 && t4 !== E && 666 !== t4 ? R2(e2, _2) : (e2.state = null, t4 === E ? R2(e2, -3) : m) : _2;
           }, r.deflateSetDictionary = function(e2, t4) {
             var r3, n3, i6, s2, a2, o2, h2, u2, l2 = t4.length;
             if (!e2 || !e2.state) return _2;
@@ -28882,7 +28890,7 @@
           };
         }, {}], 49: [function(e, t3, r) {
           "use strict";
-          var I = e("../utils/common"), O = e("./adler32"), B = e("./crc32"), R = e("./inffast"), T3 = e("./inftrees"), D = 1, F = 2, N = 0, U = -2, P = 1, n2 = 852, i5 = 592;
+          var I = e("../utils/common"), O = e("./adler32"), B = e("./crc32"), R2 = e("./inffast"), T3 = e("./inftrees"), D = 1, F = 2, N = 0, U = -2, P = 1, n2 = 852, i5 = 592;
           function L2(e2) {
             return (e2 >>> 24 & 255) + (e2 >>> 8 & 65280) + ((65280 & e2) << 8) + ((255 & e2) << 24);
           }
@@ -29159,7 +29167,7 @@
                 r3.mode = 21;
               case 21:
                 if (6 <= o2 && 258 <= h2) {
-                  e2.next_out = a2, e2.avail_out = h2, e2.next_in = s2, e2.avail_in = o2, r3.hold = u2, r3.bits = l2, R(e2, c2), a2 = e2.next_out, i6 = e2.output, h2 = e2.avail_out, s2 = e2.next_in, n3 = e2.input, o2 = e2.avail_in, u2 = r3.hold, l2 = r3.bits, 12 === r3.mode && (r3.back = -1);
+                  e2.next_out = a2, e2.avail_out = h2, e2.next_in = s2, e2.avail_in = o2, r3.hold = u2, r3.bits = l2, R2(e2, c2), a2 = e2.next_out, i6 = e2.output, h2 = e2.avail_out, s2 = e2.next_in, n3 = e2.input, o2 = e2.avail_in, u2 = r3.hold, l2 = r3.bits, 12 === r3.mode && (r3.back = -1);
                   break;
                 }
                 for (r3.back = 0; g = (C = r3.lencode[u2 & (1 << r3.lenbits) - 1]) >>> 16 & 255, b = 65535 & C, !((_2 = C >>> 24) <= l2); ) {
@@ -29295,7 +29303,7 @@
           "use strict";
           var D = e("../utils/common"), F = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0], N = [16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 72, 78], U = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0], P = [16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 64, 64];
           t3.exports = function(e2, t4, r3, n2, i5, s, a, o) {
-            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S10 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R = null, T3 = 0;
+            var h, u, l, f, c, d, p, m, _2, g = o.bits, b = 0, v2 = 0, y = 0, w = 0, k = 0, x = 0, S10 = 0, z = 0, C = 0, E = 0, A = null, I = 0, O = new D.Buf16(16), B = new D.Buf16(16), R2 = null, T3 = 0;
             for (b = 0; b <= 15; b++) O[b] = 0;
             for (v2 = 0; v2 < n2; v2++) O[t4[r3 + v2]]++;
             for (k = g, w = 15; 1 <= w && 0 === O[w]; w--) ;
@@ -29305,9 +29313,9 @@
             if (0 < z && (0 === e2 || 1 !== w)) return -1;
             for (B[1] = 0, b = 1; b < 15; b++) B[b + 1] = B[b] + O[b];
             for (v2 = 0; v2 < n2; v2++) 0 !== t4[r3 + v2] && (a[B[t4[r3 + v2]]++] = v2);
-            if (d = 0 === e2 ? (A = R = a, 19) : 1 === e2 ? (A = F, I -= 257, R = N, T3 -= 257, 256) : (A = U, R = P, -1), b = y, c = s, S10 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
+            if (d = 0 === e2 ? (A = R2 = a, 19) : 1 === e2 ? (A = F, I -= 257, R2 = N, T3 -= 257, 256) : (A = U, R2 = P, -1), b = y, c = s, S10 = v2 = E = 0, l = -1, f = (C = 1 << (x = k)) - 1, 1 === e2 && 852 < C || 2 === e2 && 592 < C) return 1;
             for (; ; ) {
-              for (p = b - S10, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S10, y = u = 1 << x; i5[c + (E >> S10) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
+              for (p = b - S10, _2 = a[v2] < d ? (m = 0, a[v2]) : a[v2] > d ? (m = R2[T3 + a[v2]], A[I + a[v2]]) : (m = 96, 0), h = 1 << b - S10, y = u = 1 << x; i5[c + (E >> S10) + (u -= h)] = p << 24 | m << 16 | _2 | 0, 0 !== u; ) ;
               for (h = 1 << b - 1; E & h; ) h >>= 1;
               if (0 !== h ? (E &= h - 1, E += h) : E = 0, v2++, 0 == --O[b]) {
                 if (b === w) break;
@@ -29340,7 +29348,7 @@
           n2(A);
           var I = new Array(a);
           n2(I);
-          var O, B, R, T3 = new Array(f);
+          var O, B, R2, T3 = new Array(f);
           function D(e2, t4, r3, n3, i6) {
             this.static_tree = e2, this.extra_bits = t4, this.extra_base = r3, this.elems = n3, this.max_length = i6, this.has_stree = e2 && e2.length;
           }
@@ -29444,8 +29452,8 @@
               for (; e3 <= 279; ) z[2 * e3 + 1] = 7, e3++, s2[7]++;
               for (; e3 <= 287; ) z[2 * e3 + 1] = 8, e3++, s2[8]++;
               for (Z(z, l + 1, s2), e3 = 0; e3 < f; e3++) C[2 * e3 + 1] = 5, C[2 * e3] = j(e3, 5);
-              O = new D(z, w, u + 1, l, g), B = new D(C, k, 0, f, g), R = new D(new Array(0), x, 0, c, p);
-            })(), q = true), e2.l_desc = new F(e2.dyn_ltree, O), e2.d_desc = new F(e2.dyn_dtree, B), e2.bl_desc = new F(e2.bl_tree, R), e2.bi_buf = 0, e2.bi_valid = 0, W(e2);
+              O = new D(z, w, u + 1, l, g), B = new D(C, k, 0, f, g), R2 = new D(new Array(0), x, 0, c, p);
+            })(), q = true), e2.l_desc = new F(e2.dyn_ltree, O), e2.d_desc = new F(e2.dyn_dtree, B), e2.bl_desc = new F(e2.bl_tree, R2), e2.bi_buf = 0, e2.bi_valid = 0, W(e2);
           }, r._tr_stored_block = J2, r._tr_flush_block = function(e2, t4, r3, n3) {
             var i6, s2, a2 = 0;
             0 < e2.level ? (2 === e2.strm.data_type && (e2.strm.data_type = (function(e3) {
@@ -31930,7 +31938,7 @@
       };
       const drawSide = () => {
         side.innerHTML = "";
-        const row2 = (id, name5, depth) => {
+        const row3 = (id, name5, depth) => {
           const r = el("div", "gal2-album" + (cur === id ? " on" : ""));
           r.style.paddingLeft = 8 + depth * 14 + "px";
           r.innerHTML = iconHtml(id === ALL_ALBUM2 ? "image" : id === ROOT_ALBUM2 ? "archive" : "folder", 13);
@@ -31943,10 +31951,10 @@
           };
           side.append(r);
         };
-        row2(ALL_ALBUM2, t("ui.gallery.imageAll"), 0);
+        row3(ALL_ALBUM2, t("ui.gallery.imageAll"), 0);
         const walk3 = (nodes, depth) => {
           for (const n2 of nodes) {
-            row2(n2.id, n2.id === ROOT_ALBUM2 ? ROOT_ALBUM_NAME2 : n2.name, depth);
+            row3(n2.id, n2.id === ROOT_ALBUM2 ? ROOT_ALBUM_NAME2 : n2.name, depth);
             walk3(n2.children || [], depth + 1);
           }
         };
@@ -32244,14 +32252,14 @@
           for (const c of node.children || []) this.appendAlbumNode(host2, c, depth + 1, counts);
         }
         albumRow(a, depth, count) {
-          const row2 = el("div", "gal2-album" + (this.state.album === a.id ? " on" : ""));
-          row2.style.paddingLeft = 8 + depth * 14 + "px";
-          row2.dataset.album = a.id;
+          const row3 = el("div", "gal2-album" + (this.state.album === a.id ? " on" : ""));
+          row3.style.paddingLeft = 8 + depth * 14 + "px";
+          row3.dataset.album = a.id;
           const ic = a.id === ALL_ALBUM2 ? "image" : a.id === ROOT_ALBUM2 ? "archive" : "folder";
-          row2.innerHTML = iconHtml(ic, 14);
-          row2.append(el("span", "gal2-album-name", a.id === ROOT_ALBUM2 ? ROOT_ALBUM_NAME2 : a.name));
-          row2.append(el("span", "gal2-album-n", String(count)));
-          row2.onclick = () => {
+          row3.innerHTML = iconHtml(ic, 14);
+          row3.append(el("span", "gal2-album-name", a.id === ROOT_ALBUM2 ? ROOT_ALBUM_NAME2 : a.name));
+          row3.append(el("span", "gal2-album-n", String(count)));
+          row3.onclick = () => {
             if (this.state.album === a.id) return;
             this.state.album = a.id;
             this.state.sel.clear();
@@ -32259,19 +32267,19 @@
             this.render();
           };
           if (a.id !== ALL_ALBUM2) {
-            row2.oncontextmenu = (e) => {
+            row3.oncontextmenu = (e) => {
               e.preventDefault();
               this.albumMenu(e, a);
             };
-            row2.addEventListener("dragover", (e) => {
+            row3.addEventListener("dragover", (e) => {
               if (![...e.dataTransfer.types].includes("text/k2-gal-image")) return;
               stopEv2(e);
               e.dataTransfer.dropEffect = "move";
-              row2.classList.add("drop");
+              row3.classList.add("drop");
             });
-            row2.addEventListener("dragleave", () => row2.classList.remove("drop"));
-            row2.addEventListener("drop", async (e) => {
-              row2.classList.remove("drop");
+            row3.addEventListener("dragleave", () => row3.classList.remove("drop"));
+            row3.addEventListener("drop", async (e) => {
+              row3.classList.remove("drop");
               const raw = e.dataTransfer.getData("text/k2-gal-image");
               if (!raw) return;
               stopEv2(e);
@@ -32283,7 +32291,7 @@
               await this.moveImages(paths, a.id);
             });
           }
-          return row2;
+          return row3;
         }
         // ---- แถบเครื่องมือของตาราง ----
         buildBar() {
@@ -32404,7 +32412,7 @@
         }
         /** มุมมองรายการ — เห็นชื่อ/คำบรรยาย/แท็ก/ขนาด/การใช้งาน ครบในแถวเดียว */
         buildRow(it) {
-          const row2 = el("div", "gal2-row" + (this.state.sel.has(it.path) ? " sel" : ""));
+          const row3 = el("div", "gal2-row" + (this.state.sel.has(it.path) ? " sel" : ""));
           const th = el("div", "gal2-row-thumb");
           const im = el("img");
           im.alt = it.caption || it.file;
@@ -32465,8 +32473,8 @@
             };
           }
           side.append(use);
-          row2.append(th, main, side);
-          return this.bindItemEvents(row2, it);
+          row3.append(th, main, side);
+          return this.bindItemEvents(row3, it);
         }
         buildCell(it) {
           if (this.state.cell === "list") return this.buildRow(it);
@@ -33033,17 +33041,17 @@
             const list = el("div", "gal2-dups");
             if (!dups.length) list.append(el("div", "dim", t("ui.gallery.notFoundImageDup")));
             for (const d of dups.slice(0, 60)) {
-              const row2 = el("div", "gal2-dup-row");
+              const row3 = el("div", "gal2-dup-row");
               for (const side of [d.a, d.b]) {
                 const c = el("div", "gal2-dup-cell");
                 const im = el("img");
                 im.src = await fileURL(this.root, side.path);
                 c.append(im, el("div", "gal-cap-ro", tf("ui.gallery.useTimes", side.path, side.uses || 0)));
                 list.append(c);
-                row2.append(c);
+                row3.append(c);
               }
-              row2.append(el("div", "gal2-dup-score", Math.round(d.score * 100) + "%"));
-              list.append(row2);
+              row3.append(el("div", "gal2-dup-score", Math.round(d.score * 100) + "%"));
+              list.append(row3);
             }
             box2.append(list);
             const btns = el("div", "k-dlg-btns");
@@ -34821,14 +34829,14 @@
          * โหนดที่ถูกดันถือว่า "ผู้ใช้จัดเอง" (ปักหมุด) จะได้ไม่ถูก forceLayout ดึงกลับ
          */
         _repel(node, hx, hy) {
-          const R = 220 * (this._nodeScale || 1);
+          const R2 = 220 * (this._nodeScale || 1);
           const use3D = !!this._mode3D;
           let moved = 0;
           for (const n2 of this.nodes) {
             if (n2 === node) continue;
             let dx = n2.x - node.x, dy = n2.y - node.y, dz = use3D ? (n2.z || 0) - (node.z || 0) : 0;
             let d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (d >= R) continue;
+            if (d >= R2) continue;
             if (d < 1) {
               const a = Math.random() * Math.PI * 2;
               dx = Math.cos(a);
@@ -34836,7 +34844,7 @@
               dz = 0;
               d = 1;
             }
-            const k = R / d;
+            const k = R2 / d;
             n2.x = node.x + dx * k;
             n2.y = node.y + dy * k;
             if (use3D) n2.z = (node.z || 0) + dz * k;
@@ -43263,7 +43271,7 @@
              * @return {String}
              */
             createSVGFontFacesMarkup: function() {
-              var markup = "", fontList = {}, obj, fontFamily, style, row2, rowIndex, _char, charIndex, i5, len5, fontPaths = fabric4.fontPaths, objects = [];
+              var markup = "", fontList = {}, obj, fontFamily, style, row3, rowIndex, _char, charIndex, i5, len5, fontPaths = fabric4.fontPaths, objects = [];
               this._objects.forEach(function add(object) {
                 objects.push(object);
                 if (object._objects) {
@@ -43282,9 +43290,9 @@
                 }
                 style = obj.styles;
                 for (rowIndex in style) {
-                  row2 = style[rowIndex];
-                  for (charIndex in row2) {
-                    _char = row2[charIndex];
+                  row3 = style[rowIndex];
+                  for (charIndex in row3) {
+                    _char = row3[charIndex];
                     fontFamily = _char.fontFamily;
                     if (!fontList[fontFamily] && fontPaths[fontFamily]) {
                       fontList[fontFamily] = true;
@@ -59914,10 +59922,10 @@
   }
   function _starPoints(W, H2) {
     const pts = [];
-    const cx2 = W / 2, cy2 = H2 / 2, R = Math.min(W, H2) / 2, r = R * 0.42;
+    const cx2 = W / 2, cy2 = H2 / 2, R2 = Math.min(W, H2) / 2, r = R2 * 0.42;
     for (let i5 = 0; i5 < 10; i5++) {
       const rad = Math.PI / 5 * i5 - Math.PI / 2;
-      const rr = i5 % 2 ? r : R;
+      const rr = i5 % 2 ? r : R2;
       pts.push({ x: cx2 + Math.cos(rad) * rr * (W / Math.min(W, H2)), y: cy2 + Math.sin(rad) * rr * (H2 / Math.min(W, H2)) });
     }
     return pts;
@@ -62267,17 +62275,17 @@
       const t3 = el("div", "k-dlg-title", t("ui.planner.openBoardPlanner"));
       const list = el("div", "planner-board-list");
       for (const b of boards) {
-        const row2 = el("div", "planner-board-row" + (b.path === currentPath ? " current" : ""));
-        row2.append(
+        const row3 = el("div", "planner-board-row" + (b.path === currentPath ? " current" : ""));
+        row3.append(
           el("span", "planner-board-ic", b.path === currentPath ? "\u25CF" : "\u{1F4CB}"),
           el("span", "planner-board-nm", b.name)
         );
-        row2.onclick = () => {
+        row3.onclick = () => {
           ov.remove();
           resolve(b.path);
         };
-        row2.ondblclick = row2.onclick;
-        list.appendChild(row2);
+        row3.ondblclick = row3.onclick;
+        list.appendChild(row3);
       }
       const btns = el("div", "k-dlg-btns");
       const cancel = el("button", "k-cancel", t("ui.common.cancel"));
@@ -63589,10 +63597,10 @@
     const rows = el("div", "planner-props-body");
     wrap2.appendChild(rows);
     const add = (label, html) => {
-      const row2 = el("div", "planner-props-section");
-      row2.innerHTML = (label ? `<label>${label}</label>` : "") + html;
-      rows.appendChild(row2);
-      return row2;
+      const row3 = el("div", "planner-props-section");
+      row3.innerHTML = (label ? `<label>${label}</label>` : "") + html;
+      rows.appendChild(row3);
+      return row3;
     };
     add(isText ? t("ui.common.text") : t("ui.common.name"), `<input class="planner-prop-input" id="plp-title" value="${_esc(n2.title)}">`);
     add(t("ui.common.type"), `<select class="planner-prop-input" id="plp-type">
@@ -63659,14 +63667,14 @@
       wrap2.appendChild(_head(t("ui.plannerProps.lineNext") + conns.length + ")"));
       const list = el("div", "planner-conn-list");
       for (const c of conns) {
-        const row2 = el("div", "planner-conn-row");
+        const row3 = el("div", "planner-conn-row");
         const name5 = el("span", "planner-conn-name", `${c.dir === "out" ? "\u2192" : "\u2190"} ${c.otherTitle}${c.label ? " \xB7 " + c.label : ""}`);
         name5.onclick = () => ctx2.onSelectEdgeId && ctx2.onSelectEdgeId(c.id);
         const del2 = el("button", "planner-conn-del", "\u2715");
         del2.title = t("ui.plannerProps.delLine");
         del2.onclick = () => ctx2.onDeleteEdge && ctx2.onDeleteEdge(c.id);
-        row2.append(name5, del2);
-        list.appendChild(row2);
+        row3.append(name5, del2);
+        list.appendChild(row3);
       }
       wrap2.appendChild(list);
     }
@@ -63718,10 +63726,10 @@
     const rows = el("div", "planner-props-body");
     wrap2.appendChild(rows);
     const add = (label, html) => {
-      const row2 = el("div", "planner-props-section");
-      row2.innerHTML = (label ? `<label>${label}</label>` : "") + html;
-      rows.appendChild(row2);
-      return row2;
+      const row3 = el("div", "planner-props-section");
+      row3.innerHTML = (label ? `<label>${label}</label>` : "") + html;
+      rows.appendChild(row3);
+      return row3;
     };
     if (ctx2.endpoints) {
       add(
@@ -65476,9 +65484,9 @@ ${mdToHtmlBody(md, o)}
     const span = max2 - min || 1;
     return { rows, min, max: max2, span, undated: items.filter((it) => (typeof it.sort !== "number" || Number.isNaN(it.sort)) && extractNum(it.when) === null) };
   }
-  function ganttBar(row2, min, span) {
-    const left = (row2._start - min) / span * 100;
-    const width = Math.max(1.2, (row2._end - row2._start) / span * 100);
+  function ganttBar(row3, min, span) {
+    const left = (row3._start - min) / span * 100;
+    const width = Math.max(1.2, (row3._end - row3._start) / span * 100);
     return { left, width };
   }
   function ganttTicks(min, max2, count = 6) {
@@ -65823,10 +65831,10 @@ ${mdToHtmlBody(md, o)}
     box2.append(el("div", "k-dlg-title", t("ui.status.manageStatusScene")));
     const list = el("div", "k-pick-list");
     const mkRow = (s, builtIn) => {
-      const row2 = el("div", "k-menu-item k-status-row");
+      const row3 = el("div", "k-menu-item k-status-row");
       const dot = el("span", "k-status-dot");
       dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${statusColor(s)}`;
-      row2.append(dot, el("span", null, s + (builtIn ? t("ui.status.default") : "")));
+      row3.append(dot, el("span", null, s + (builtIn ? t("ui.status.default") : "")));
       const pick2 = el("input", "k-status-color");
       pick2.type = "color";
       pick2.value = statusColor(s);
@@ -65837,7 +65845,7 @@ ${mdToHtmlBody(md, o)}
         await setStatusColor(s, pick2.value);
         refreshStatusChips();
       };
-      row2.append(pick2);
+      row3.append(pick2);
       if (!builtIn) {
         const del2 = el("span", "k-status-del", "\u2715");
         del2.style.cssText = "float:right;cursor:pointer;margin-left:10px";
@@ -65850,9 +65858,9 @@ ${mdToHtmlBody(md, o)}
             refreshStatusChips();
           }
         };
-        row2.append(del2);
+        row3.append(del2);
       }
-      return row2;
+      return row3;
     };
     const render = () => {
       list.innerHTML = "";
@@ -66498,12 +66506,12 @@ ${h.text}`;
   }
   function validate(rows, schema2) {
     const out = [];
-    for (const row2 of coerceArray(rows)) {
-      if (!row2 || typeof row2 !== "object") continue;
+    for (const row3 of coerceArray(rows)) {
+      if (!row3 || typeof row3 !== "object") continue;
       const clean2 = {};
       let ok2 = true;
       for (const [field2, rule] of Object.entries(schema2)) {
-        let v2 = row2[field2];
+        let v2 = row3[field2];
         if (v2 === void 0 || v2 === null || v2 === "") v2 = rule.default;
         if (rule.enum && !rule.enum.includes(v2)) v2 = rule.default !== void 0 ? rule.default : rule.enum[0];
         if (rule.type === "number") v2 = Number(v2);
@@ -66663,7 +66671,7 @@ ${h.text}`;
         }
         record({ provider, model, usage, feature: feature3 }) {
           const cost = estimateCost(provider, model, usage);
-          const row2 = {
+          const row3 = {
             date: new Date(this.now()).toISOString(),
             tokens: usage.total || usage.input + usage.output,
             in: usage.input,
@@ -66676,11 +66684,11 @@ ${h.text}`;
           if (this.meta) {
             this.meta.ai = this.meta.ai || {};
             const list = this.meta.ai.usage || [];
-            list.push(row2);
+            list.push(row3);
             if (list.length > this.max) list.splice(0, list.length - this.max);
             this.meta.ai.usage = list;
           }
-          return row2;
+          return row3;
         }
         rows() {
           return this.meta && this.meta.ai && this.meta.ai.usage || [];
@@ -67206,9 +67214,9 @@ ${h.text}`;
   function generateSceneSynopsis(body, title2, onResult) {
     return generateSceneField("synopsis", body, title2, onResult);
   }
-  function attachAiFieldButton(row2, input, field2, ctx2, onFilled) {
+  function attachAiFieldButton(row3, input, field2, ctx2, onFilled) {
     const def = AI_SCENE_FIELDS[field2];
-    if (!row2 || !input || !def) return null;
+    if (!row3 || !input || !def) return null;
     const b = el("button", "k-ai-fill", "\u2728");
     b.type = "button";
     b.dataset.field = field2;
@@ -67234,7 +67242,7 @@ ${h.text}`;
         b.textContent = prev;
       }
     };
-    row2.append(b);
+    row3.append(b);
     return b;
   }
   async function generateSceneField(field2, body, title2, onResult) {
@@ -67587,7 +67595,7 @@ ${h.text}`;
         }
         // ---- taskLog[] ใน project.khn.json ----
         _log(task, status, detail) {
-          const row2 = {
+          const row3 = {
             ts: task.endedAt || this.now(),
             type: task.type,
             status,
@@ -67596,12 +67604,12 @@ ${h.text}`;
           };
           if (this.meta) {
             if (!Array.isArray(this.meta.taskLog)) this.meta.taskLog = [];
-            this.meta.taskLog.push(row2);
+            this.meta.taskLog.push(row3);
             if (this.meta.taskLog.length > this.logMax) this.meta.taskLog.splice(0, this.meta.taskLog.length - this.logMax);
           }
-          if (this.onLog) this.onLog(row2);
-          this.bus.emit("task:logged", row2);
-          return row2;
+          if (this.onLog) this.onLog(row3);
+          this.bus.emit("task:logged", row3);
+          return row3;
         }
         taskLog() {
           return this.meta && this.meta.taskLog || [];
@@ -67804,20 +67812,20 @@ ${h.text}`;
     }
     const list = el("div", "pc-list");
     for (const c of [...rows].reverse().slice(0, limit)) {
-      const row2 = el("div", "pc-row");
-      row2.append(el("div", "pc-choice", "\u{1F3AF} " + (c.choice || "")));
+      const row3 = el("div", "pc-row");
+      row3.append(el("div", "pc-choice", "\u{1F3AF} " + (c.choice || "")));
       let when = "";
       try {
         when = new Date(c.timestamp).toLocaleString("th-TH");
       } catch {
         when = c.timestamp || "";
       }
-      row2.append(el("div", "pc-meta", `\u{1F4C4} ${c.sceneTitle || "\u2014"} \xB7 ${when}`));
+      row3.append(el("div", "pc-meta", `\u{1F4C4} ${c.sceneTitle || "\u2014"} \xB7 ${when}`));
       if (onOpenScene && c.sceneId) {
-        row2.classList.add("pc-clickable");
-        row2.onclick = () => onOpenScene(c.sceneId, c.sceneTitle);
+        row3.classList.add("pc-clickable");
+        row3.onclick = () => onOpenScene(c.sceneId, c.sceneTitle);
       }
-      list.append(row2);
+      list.append(row3);
     }
     host2.append(list);
     if (rows.length > limit) host2.append(el("div", "dim pc-more", tf("ui.player.list", rows.length - limit)));
@@ -67834,8 +67842,8 @@ ${h.text}`;
       list.append(el("div", "dim", t("ui.player.notHasDecision")));
     } else {
       [...history2].reverse().slice(0, 100).forEach((c) => {
-        const row2 = el("div", "k-menu-item");
-        row2.style.cssText = "flex-direction:column;align-items:stretch;gap:2px";
+        const row3 = el("div", "k-menu-item");
+        row3.style.cssText = "flex-direction:column;align-items:stretch;gap:2px";
         const top = el("div", null, "\u{1F3AF} " + (c.choice || ""));
         top.style.cssText = "font-size:13px;color:var(--bright)";
         const sub = el(
@@ -67844,8 +67852,8 @@ ${h.text}`;
           `\u{1F4C4} ${c.sceneTitle || "\u2014"} \xB7 ${new Date(c.timestamp).toLocaleString("th-TH")}`
         );
         sub.style.cssText = "font-size:11px;color:var(--dim)";
-        row2.append(top, sub);
-        list.append(row2);
+        row3.append(top, sub);
+        list.append(row3);
       });
     }
     box2.append(list);
@@ -69163,8 +69171,8 @@ ${h.text}`;
     return pop;
   }
   function createResizeHandle(dockId, index, dir2, pm2, nextIndex) {
-    const row2 = dir2 === "row";
-    const h = el("div", "k-resize-handle " + (row2 ? "k-rh-col" : "k-rh-row"));
+    const row3 = dir2 === "row";
+    const h = el("div", "k-resize-handle " + (row3 ? "k-rh-col" : "k-rh-row"));
     h.dataset.dockId = dockId;
     h.dataset.index = String(index);
     h.title = t("ui.panelRenderer.dragAdjustRatioClick");
@@ -69178,11 +69186,11 @@ ${h.text}`;
         return;
       }
       const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
-      const half = (row2 ? pr.width + nr.width : pr.height + nr.height) / 2;
+      const half = (row3 ? pr.width + nr.width : pr.height + nr.height) / 2;
       const up2 = {};
       if (isPx(prev)) up2[index] = half;
       if (isPx(next)) up2[nextIndex ?? index + 1] = half;
-      pm2.resizePx(dockId, up2, row2);
+      pm2.resizePx(dockId, up2, row3);
     });
     h.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
@@ -69190,11 +69198,11 @@ ${h.text}`;
       const prev = h.previousElementSibling, next = h.nextElementSibling;
       if (!prev || !next) return;
       const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
-      const total = row2 ? pr.width + nr.width : pr.height + nr.height;
+      const total = row3 ? pr.width + nr.width : pr.height + nr.height;
       if (total <= 0) return;
-      const start = row2 ? e.clientX : e.clientY;
-      const base4 = row2 ? pr.width : pr.height;
-      const baseNext = row2 ? nr.width : nr.height;
+      const start = row3 ? e.clientX : e.clientY;
+      const base4 = row3 ? pr.width : pr.height;
+      const baseNext = row3 ? nr.width : nr.height;
       const pxMode = isPx(prev) || isPx(next);
       const growSum = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
       let ratio = base4 / total;
@@ -69202,10 +69210,10 @@ ${h.text}`;
       document.body.classList.add("k-resizing");
       const flexEl = h.parentElement && h.parentElement.querySelector(":scope > .k-flex-child");
       const flexR = flexEl ? flexEl.getBoundingClientRect() : null;
-      const flexSize = flexR ? row2 ? flexR.width : flexR.height : 0;
+      const flexSize = flexR ? row3 ? flexR.width : flexR.height : 0;
       const slack = Math.max(0, flexSize - MIN_CANVAS_PX);
       const move = (ev) => {
-        const d = (row2 ? ev.clientX : ev.clientY) - start;
+        const d = (row3 ? ev.clientX : ev.clientY) - start;
         if (pxMode) {
           const lim = MIN_PANEL_PX;
           let dd = d;
@@ -69243,19 +69251,19 @@ ${h.text}`;
             const kids = (nodeById(pm2.root, dockId) || {}).children || [];
             for (let i5 = 0; i5 < kids.length; i5++) {
               const kid = kids[i5];
-              if (!kid || upd[i5] !== void 0 || nodePx(kid, row2) > 0) continue;
+              if (!kid || upd[i5] !== void 0 || nodePx(kid, row3) > 0) continue;
               const kel = dockEl.querySelector(
                 `:scope > [data-panel-id="${kid.id}"], :scope > [data-dock-id="${kid.id}"], :scope > [data-tabs-id="${kid.id}"]`
               );
               if (!kel) continue;
               if (kel.classList.contains("k-flex-child") || kel.classList.contains("k-collapsed") || kel.classList.contains("k-panel-fixed") || kel.classList.contains("icon-strip")) continue;
               const r = kel.getBoundingClientRect();
-              const v2 = Math.round(row2 ? r.width : r.height);
+              const v2 = Math.round(row3 ? r.width : r.height);
               if (v2 >= MIN_PANEL_PX) upd[i5] = v2;
             }
           } catch {
           }
-          pm2.resizePx(dockId, upd, row2);
+          pm2.resizePx(dockId, upd, row3);
           return;
         }
         pm2.resize(dockId, index, ratio, nextIndex);
@@ -69329,7 +69337,7 @@ ${h.text}`;
     return { w: nodePx(node, true), h: nodePx(node, false) };
   }
   function dockReport(node, isFixedPanel = () => false, measured = {}, docsId = "docs") {
-    const row2 = node.dir === "row";
+    const row3 = node.dir === "row";
     const shares = dockShares(node, isFixedPanel, docsId);
     const kids = node.children || [];
     const flexIdx = flexChildIndex(node, docsId);
@@ -69376,13 +69384,13 @@ ${h.text}`;
     if (!root) return out;
     walk(root, (n2) => {
       if (!n2 || n2.type !== "dock") return;
-      const row2 = n2.dir === "row";
+      const row3 = n2.dir === "row";
       const flexIdx = flexChildIndex(n2);
       (n2.children || []).forEach((k, i5) => {
         if (i5 === flexIdx || nodeHidden(k)) return;
         if (k.type === "panel" && isFixedPanel(k.id)) return;
-        if (nodePxDeep(k, row2) > 0) return;
-        out.push({ dock: n2.id, dir: n2.dir, id: k.id, type: k.type, ownPx: nodePx(k, row2) });
+        if (nodePxDeep(k, row3) > 0) return;
+        out.push({ dock: n2.id, dir: n2.dir, id: k.id, type: k.type, ownPx: nodePx(k, row3) });
       });
     });
     return out;
@@ -69392,17 +69400,17 @@ ${h.text}`;
     if (!root) return out;
     walk(root, (n2) => {
       if (!n2 || n2.type !== "dock") return;
-      const row2 = n2.dir === "row";
+      const row3 = n2.dir === "row";
       (n2.children || []).forEach((k) => {
         if (k.type === "panel" || nodeHidden(k)) return;
-        if (nodePx(k, row2) > 0) return;
-        const deep = nodePxDeep(k, row2);
+        if (nodePx(k, row3) > 0) return;
+        const deep = nodePxDeep(k, row3);
         if (deep > 0) out.push({
           dock: n2.id,
           id: k.id,
           type: k.type,
           derivedPx: deep,
-          from: panelIds(k).filter((id) => nodePx(findPanel(k, id), row2) > 0)
+          from: panelIds(k).filter((id) => nodePx(findPanel(k, id), row3) > 0)
         });
       });
     });
@@ -69963,14 +69971,14 @@ ${h.text}`;
     if (!h) return [];
     const found2 = [];
     for (const dockEl of h.querySelectorAll(".k-dock[data-dock-id]")) {
-      const row2 = dockEl.dataset.dir === "row";
+      const row3 = dockEl.dataset.dir === "row";
       const kids = [...dockEl.children];
       if (!kids.length) continue;
-      const total = row2 ? dockEl.clientWidth : dockEl.clientHeight;
+      const total = row3 ? dockEl.clientWidth : dockEl.clientHeight;
       if (!total) continue;
       const used = kids.reduce((a, e) => {
         const r = e.getBoundingClientRect();
-        return a + (row2 ? r.width : r.height);
+        return a + (row3 ? r.width : r.height);
       }, 0);
       const gap = total - used;
       if (gap <= GAP_TOL) continue;
@@ -69989,7 +69997,7 @@ ${h.text}`;
           id: e.dataset.panelId || e.dataset.dockId || e.dataset.tabsId || e.className,
           cls: e.className,
           flex: e.style.flex || `${e.style.flexGrow}/${e.style.flexShrink}/${e.style.flexBasis}`,
-          size: Math.round(row2 ? e.getBoundingClientRect().width : e.getBoundingClientRect().height)
+          size: Math.round(row3 ? e.getBoundingClientRect().width : e.getBoundingClientRect().height)
         }));
         log("warn", tf("ui.panel.panelFoundFieldEmpty", Math.round(gap), dockEl.dataset.dockId, dockEl.dataset.dir), detail);
       }
@@ -70183,10 +70191,10 @@ ${h.text}`;
     const node = document.querySelector(`#${HOST_ID} .k-panel[data-panel-id="${pid}"]`);
     const dockEl = node && node.closest(".k-dock");
     if (!node || !dockEl) return 0;
-    const row2 = dockEl.dataset.dir === "row";
+    const row3 = dockEl.dataset.dir === "row";
     const r = node.getBoundingClientRect(), dr = dockEl.getBoundingClientRect();
-    const total = row2 ? dr.width : dr.height;
-    const mine = row2 ? r.width : r.height;
+    const total = row3 ? dr.width : dr.height;
+    const mine = row3 ? r.width : r.height;
     if (!(total > 0) || !(mine > 0)) return 0;
     return Math.max(0.05, Math.min(0.95, mine / total));
   }
@@ -70502,12 +70510,12 @@ ${h.text}`;
           box2.append(el("hr"));
           continue;
         }
-        const row2 = el("div", "k-menu-item", it.label);
-        row2.onclick = () => {
+        const row3 = el("div", "k-menu-item", it.label);
+        row3.onclick = () => {
           it.click();
           ov.remove();
         };
-        box2.append(row2);
+        box2.append(row3);
       }
       const closeBtn = el("button", "k-cancel", t("ui.common.close"));
       closeBtn.onclick = () => ov.remove();
@@ -71394,7 +71402,7 @@ ${h.text}`;
     }
     const list = el("div", "fn-list");
     for (const n2 of [...pending].reverse()) {
-      const row2 = el("div", "fn-row");
+      const row3 = el("div", "fn-row");
       const chk = el("input", "fn-chk");
       chk.type = "checkbox";
       chk.title = t("ui.notes.doDone");
@@ -71423,8 +71431,8 @@ ${h.text}`;
         await removeSessionNote(n2.id);
         if (onChanged) onChanged();
       };
-      row2.append(chk, body, del2);
-      list.append(row2);
+      row3.append(chk, body, del2);
+      list.append(row3);
     }
     host2.append(list);
     return host2;
@@ -71500,8 +71508,8 @@ ${h.text}`;
       list.append(el("div", "dim", t("ui.notes.notHasNotePress")));
     } else {
       for (const n2 of notes) {
-        const row2 = el("div", "k-menu-item");
-        row2.style.cssText = "flex-direction:column;align-items:stretch;gap:2px";
+        const row3 = el("div", "k-menu-item");
+        row3.style.cssText = "flex-direction:column;align-items:stretch;gap:2px";
         const body = el("div", null, (n2.future ? n2.done ? "\u2705 " : "\u{1F4CC} " : "") + n2.text.slice(0, 120));
         body.style.fontSize = "12px";
         const sub = el(
@@ -71514,8 +71522,8 @@ ${h.text}`;
           ].filter(Boolean).join(" \xB7 ")
         );
         sub.style.color = "var(--dim)";
-        row2.append(body, sub);
-        list.append(row2);
+        row3.append(body, sub);
+        list.append(row3);
       }
     }
     box2.append(list);
@@ -71617,24 +71625,24 @@ ${h.text}`;
         blList.append(el("div", "dim", t("ui.central.notHasBacklinksPrint")));
       } else {
         for (const { ent, links } of ranked.slice(0, 15)) {
-          const row2 = el("div", "cent-link-row");
-          row2.append(el("strong", null, ent.name), el("span", null, tf("ui.central.scene", links.length)));
+          const row3 = el("div", "cent-link-row");
+          row3.append(el("strong", null, ent.name), el("span", null, tf("ui.central.scene", links.length)));
           links.slice(0, 3).forEach((l, i5) => {
-            if (i5) row2.append(el("span", null, ", "));
+            if (i5) row3.append(el("span", null, ", "));
             const a = el("span", "cent-scene-link", l.title || l.sceneId);
             a.title = tf("ui.central.mentionTimesClickOpenScene", l.count || 1);
             a.onclick = () => openSceneById(l.sceneId, l.title);
-            row2.append(a);
+            row3.append(a);
           });
-          if (links.length > 3) row2.append(el("span", "dim", ` \u2026 +${links.length - 3}`));
-          blList.append(row2);
+          if (links.length > 3) row3.append(el("span", "dim", ` \u2026 +${links.length - 3}`));
+          blList.append(row3);
         }
         const orphans = entities.filter((e) => !autoLink2.getRelatedScenes(e.path || e.id).length);
         if (orphans.length) {
-          const row2 = el("div", "cent-link-row cent-orphan");
-          row2.append(el("strong", null, t("ui.central.notMention")));
-          row2.append(el("span", null, ` (${orphans.length}): ` + orphans.slice(0, 6).map((e) => e.name).join(", ") + (orphans.length > 6 ? " \u2026" : "")));
-          blList.append(row2);
+          const row3 = el("div", "cent-link-row cent-orphan");
+          row3.append(el("strong", null, t("ui.central.notMention")));
+          row3.append(el("span", null, ` (${orphans.length}): ` + orphans.slice(0, 6).map((e) => e.name).join(", ") + (orphans.length > 6 ? " \u2026" : "")));
+          blList.append(row3);
         }
       }
     }
@@ -72046,6 +72054,545 @@ ${h.text}`;
       BLOCK_SEL = "p, h1, h2, h3, h4, h5, h6, li, blockquote, .sp-block";
       _fmActive = false;
       _fmStyle = null;
+    }
+  });
+
+  // src/update/update-check.js
+  var update_check_exports = {};
+  __export(update_check_exports, {
+    OLD_SUFFIX: () => OLD_SUFFIX,
+    UPDATE_API_URL: () => UPDATE_API_URL,
+    UPDATE_ASSET_PREFIX: () => UPDATE_ASSET_PREFIX,
+    UPDATE_GIT_URL: () => UPDATE_GIT_URL,
+    UPDATE_HOME_URL: () => UPDATE_HOME_URL,
+    UPDATE_MANIFEST_URL: () => UPDATE_MANIFEST_URL,
+    UPDATE_OWNER: () => UPDATE_OWNER,
+    UPDATE_RELEASES_URL: () => UPDATE_RELEASES_URL,
+    UPDATE_REPO: () => UPDATE_REPO,
+    backupPath: () => backupPath,
+    cmpVersion: () => cmpVersion,
+    decideUpdate: () => decideUpdate,
+    isAllowedAssetUrl: () => isAllowedAssetUrl,
+    isLeftover: () => isLeftover,
+    isNewer: () => isNewer,
+    looksLikeExe: () => looksLikeExe,
+    normalizeTag: () => normalizeTag2,
+    parseVersion: () => parseVersion,
+    pickAsset: () => pickAsset,
+    pickRelease: () => pickRelease,
+    platformKey: () => platformKey,
+    progressText: () => progressText,
+    releaseVersion: () => releaseVersion,
+    safeAssetName: () => safeAssetName,
+    shouldNotify: () => shouldNotify
+  });
+  function normalizeTag2(tag3) {
+    return String(tag3 == null ? "" : tag3).trim().replace(/^[vV](?=\d)/, "");
+  }
+  function parseVersion(v2) {
+    const s = normalizeTag2(v2);
+    const m = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(s);
+    if (!m) return null;
+    const nums = [+m[1], +(m[2] || 0), +(m[3] || 0)];
+    const pre = m[4] ? m[4].split(".").map((p) => /^\d+$/.test(p) ? +p : p) : [];
+    return { nums, pre };
+  }
+  function cmpVersion(a, b) {
+    const A = parseVersion(a), B = parseVersion(b);
+    if (!A || !B) return 0;
+    for (let i5 = 0; i5 < 3; i5++) {
+      if (A.nums[i5] !== B.nums[i5]) return A.nums[i5] > B.nums[i5] ? 1 : -1;
+    }
+    if (!A.pre.length && !B.pre.length) return 0;
+    if (!A.pre.length) return 1;
+    if (!B.pre.length) return -1;
+    const n2 = Math.max(A.pre.length, B.pre.length);
+    for (let i5 = 0; i5 < n2; i5++) {
+      const x = A.pre[i5], y = B.pre[i5];
+      if (x === void 0) return -1;
+      if (y === void 0) return 1;
+      if (x === y) continue;
+      const nx = typeof x === "number", ny = typeof y === "number";
+      if (nx && ny) return x > y ? 1 : -1;
+      if (nx !== ny) return nx ? -1 : 1;
+      return String(x) > String(y) ? 1 : -1;
+    }
+    return 0;
+  }
+  function isNewer(a, b) {
+    return cmpVersion(a, b) > 0;
+  }
+  function releaseVersion(rel) {
+    if (!rel) return "";
+    const tag3 = normalizeTag2(rel.tag_name || rel.tag || "");
+    if (parseVersion(tag3)) return tag3;
+    const nm = normalizeTag2(rel.name || "");
+    return parseVersion(nm) ? nm : tag3;
+  }
+  function pickRelease(releases, { allowPrerelease = true } = {}) {
+    let best = null;
+    for (const rel of releases || []) {
+      if (!rel || rel.draft) continue;
+      if (rel.prerelease && !allowPrerelease) continue;
+      if (!parseVersion(releaseVersion(rel))) continue;
+      if (!best || isNewer(releaseVersion(rel), releaseVersion(best))) best = rel;
+    }
+    return best;
+  }
+  function platformKey(p) {
+    const s = String(p || "").toLowerCase();
+    if (s === "win32" || s === "win" || s === "windows") return "win";
+    if (s === "darwin" || s === "mac" || s === "macos") return "mac";
+    return "linux";
+  }
+  function pickAsset(assets, plat) {
+    const list = (assets || []).filter((a) => a && a.name && isAllowedAssetUrl(a.browser_download_url));
+    for (const re of ASSET_RULES[platformKey(plat)] || []) {
+      const hit = list.find((a) => re.test(String(a.name)));
+      if (hit) return hit;
+    }
+    return null;
+  }
+  function isAllowedAssetUrl(url) {
+    const s = String(url == null ? "" : url).trim();
+    if (!s.startsWith(UPDATE_ASSET_PREFIX)) return false;
+    if (s.length <= UPDATE_ASSET_PREFIX.length) return false;
+    return !/[\s"'<>\\]/.test(s);
+  }
+  function decideUpdate({
+    current: current2,
+    releases,
+    manifestVersion = "",
+    skip = "",
+    platform: platform2 = "win32",
+    allowPrerelease = true
+  } = {}) {
+    const rel = pickRelease(releases, { allowPrerelease });
+    const version2 = rel ? releaseVersion(rel) : "";
+    const base4 = {
+      current: normalizeTag2(current2),
+      version: version2,
+      release: rel || null,
+      asset: null,
+      assetUrl: "",
+      assetName: "",
+      assetSize: 0,
+      url: rel && rel.html_url ? rel.html_url : UPDATE_RELEASES_URL,
+      notes: rel && rel.body ? String(rel.body) : ""
+    };
+    if (rel && isNewer(version2, current2)) {
+      if (skip && cmpVersion(skip, version2) === 0) return { ...base4, status: "skipped" };
+      const asset = pickAsset(rel.assets, platform2);
+      if (asset) {
+        return {
+          ...base4,
+          status: "update",
+          asset,
+          assetUrl: asset.browser_download_url,
+          assetName: asset.name,
+          assetSize: asset.size || 0
+        };
+      }
+      return { ...base4, status: "noAsset" };
+    }
+    if (manifestVersion && isNewer(manifestVersion, current2)) {
+      return {
+        ...base4,
+        status: "repoOnly",
+        version: normalizeTag2(manifestVersion),
+        url: UPDATE_HOME_URL,
+        notes: ""
+      };
+    }
+    if (!rel) return { ...base4, status: "none", url: UPDATE_RELEASES_URL };
+    return { ...base4, status: "latest" };
+  }
+  function shouldNotify(info) {
+    return !!info && (info.status === "update" || info.status === "noAsset");
+  }
+  function backupPath(exePath) {
+    return String(exePath || "") + OLD_SUFFIX;
+  }
+  function isLeftover(name5) {
+    return String(name5 || "").endsWith(OLD_SUFFIX);
+  }
+  function safeAssetName(name5, fallback = "killian2-update.bin") {
+    const base4 = String(name5 || "").split(/[\\/]/).pop().trim();
+    if (!base4 || base4 === "." || base4 === "..") return fallback;
+    const clean2 = base4.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
+    return clean2 || fallback;
+  }
+  function looksLikeExe(bytes) {
+    if (!bytes || bytes.length < 2) return false;
+    return bytes[0] === 77 && bytes[1] === 90;
+  }
+  function progressText(received, total) {
+    const mb = (n2) => (Number(n2) / 1048576).toFixed(1);
+    if (!total) return mb(received) + " MB";
+    return mb(received) + " / " + mb(total) + " MB";
+  }
+  var UPDATE_OWNER, UPDATE_REPO, R, UPDATE_GIT_URL, UPDATE_HOME_URL, UPDATE_RELEASES_URL, UPDATE_API_URL, UPDATE_MANIFEST_URL, UPDATE_ASSET_PREFIX, ASSET_RULES, OLD_SUFFIX;
+  var init_update_check = __esm({
+    "src/update/update-check.js"() {
+      UPDATE_OWNER = "Nbcybg";
+      UPDATE_REPO = "Killian-Editor-V2";
+      R = `${UPDATE_OWNER}/${UPDATE_REPO}`;
+      UPDATE_GIT_URL = `https://github.com/${R}.git`;
+      UPDATE_HOME_URL = `https://github.com/${R}`;
+      UPDATE_RELEASES_URL = `https://github.com/${R}/releases`;
+      UPDATE_API_URL = `https://api.github.com/repos/${R}/releases?per_page=30`;
+      UPDATE_MANIFEST_URL = `https://raw.githubusercontent.com/${R}/HEAD/package.json`;
+      UPDATE_ASSET_PREFIX = `https://github.com/${R}/releases/download/`;
+      ASSET_RULES = {
+        win: [/portable.*\.exe$/i, /\.exe$/i, /win.*\.zip$/i],
+        mac: [/\.dmg$/i, /mac.*\.zip$/i, /darwin.*\.zip$/i],
+        linux: [/\.appimage$/i, /linux.*\.zip$/i, /\.tar\.gz$/i]
+      };
+      OLD_SUFFIX = ".k2old";
+    }
+  });
+
+  // src/update/update-ui.js
+  var update_ui_exports = {};
+  __export(update_ui_exports, {
+    buildUpdateFields: () => buildUpdateFields,
+    checkForUpdates: () => checkForUpdates,
+    startupUpdateCheck: () => startupUpdateCheck,
+    updateDialog: () => updateDialog,
+    updateSettingsSnapshot: () => updateSettingsSnapshot
+  });
+  async function readCfg() {
+    let g = {};
+    try {
+      g = await kapi.readGlobalSettings() || {};
+    } catch {
+    }
+    return {
+      updateCheck: g.updateCheck !== false,
+      updateSkip: String(g.updateSkip || ""),
+      updateLast: +g.updateLast || 0,
+      updateLastVersion: String(g.updateLastVersion || "")
+    };
+  }
+  async function saveCfg(patch) {
+    const { saveGlobalSetting: saveGlobalSetting2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    for (const [k, v2] of Object.entries(patch)) await saveGlobalSetting2(k, v2);
+  }
+  async function checkForUpdates({ silent = false } = {}) {
+    let src2 = null;
+    try {
+      src2 = await kapi.updateSource();
+    } catch (e) {
+      log("warn", t("ui.upd.failSource"), e);
+    }
+    if (!src2) {
+      if (!silent) setStatus(t("ui.upd.failSource"));
+      return null;
+    }
+    if (!silent) setStatus(t("ui.upd.checking"));
+    const cfg = await readCfg();
+    let res = null;
+    try {
+      res = await kapi.updateFetch();
+    } catch (e) {
+      res = { ok: false, error: String(e && e.message || e) };
+    }
+    if (!res || !res.ok) {
+      const msg = tf("ui.upd.failNet", res && res.error || "?");
+      log("warn", msg);
+      if (!silent) {
+        setStatus(msg);
+        await messageDialog(t("ui.upd.title"), msg, src2);
+      }
+      return null;
+    }
+    const info = decideUpdate({
+      current: src2.current,
+      releases: res.releases,
+      manifestVersion: res.manifestVersion,
+      skip: cfg.updateSkip,
+      platform: src2.platform
+    });
+    await saveCfg({ updateLast: Date.now(), updateLastVersion: info.version || "" });
+    if (silent && !shouldNotify(info)) return info;
+    await updateDialog(info, src2);
+    return info;
+  }
+  async function startupUpdateCheck() {
+    try {
+      kapi.updateCleanup && kapi.updateCleanup();
+    } catch {
+    }
+    const cfg = await readCfg();
+    if (!cfg.updateCheck) return null;
+    try {
+      return await checkForUpdates({ silent: true });
+    } catch (e) {
+      log("warn", t("ui.upd.failCheck"), e);
+      return null;
+    }
+  }
+  function messageDialog(title2, msg, src2) {
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-upd-dlg");
+      box2.append(el("div", "k-dlg-title", title2));
+      box2.append(el("div", null, msg));
+      if (src2) box2.append(sourceLine(src2));
+      const btns = el("div", "k-dlg-btns");
+      const ok2 = el("button", "k-ok", t("ui.common.close"));
+      const done2 = () => {
+        ov.remove();
+        resolve();
+      };
+      ok2.onclick = done2;
+      btns.append(ok2);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      ov.addEventListener("mousedown", (e) => {
+        if (e.target === ov) done2();
+      });
+      escClose(ov, done2);
+      ok2.focus();
+    });
+  }
+  function sourceLine(src2) {
+    const row3 = el("div", "k-upd-src");
+    row3.append(el("span", "k-upd-src-label", t("ui.upd.sourceLabel")));
+    const link = el("span", "k-credit-link k-upd-src-url", src2 && src2.gitUrl || UPDATE_GIT_URL);
+    link.onclick = () => {
+      try {
+        kapi.openExternal(link.textContent);
+      } catch {
+      }
+    };
+    row3.append(link);
+    return row3;
+  }
+  function updateDialog(info, src2) {
+    return new Promise((resolve) => {
+      const st = info && info.status;
+      if (st === "latest") {
+        resolve(messageDialog(t("ui.upd.title"), t("ui.upd.upToDate"), src2));
+        return;
+      }
+      if (st === "none") {
+        resolve(messageDialog(t("ui.upd.title"), t("ui.upd.noRelease"), src2));
+        return;
+      }
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-upd-dlg");
+      box2.append(el(
+        "div",
+        "k-dlg-title",
+        st === "skipped" ? t("ui.upd.skippedTitle") : t("ui.upd.foundTitle")
+      ));
+      box2.append(row2(t("ui.upd.current"), info.current));
+      box2.append(row2(t("ui.upd.latest"), info.version || "\u2014"));
+      if (info.assetName) box2.append(row2(t("ui.upd.file"), info.assetName));
+      if (st === "noAsset") box2.append(el("div", "k-hint", t("ui.upd.noAsset")));
+      if (st === "repoOnly") box2.append(el("div", "k-hint", tf("ui.upd.repoNewer", info.version)));
+      if (st === "skipped") box2.append(el("div", "k-hint", tf("ui.upd.skippedHint", info.version)));
+      if (st === "update" && !src2.canReplace) box2.append(el("div", "k-hint", t("ui.upd.manual")));
+      box2.append(sourceLine(src2));
+      if (info.notes) {
+        box2.append(el("div", "k-upd-notes-head", t("ui.upd.notes")));
+        const pre = el("pre", "k-upd-notes");
+        pre.textContent = info.notes.length > 4e3 ? info.notes.slice(0, 4e3) + "\u2026" : info.notes;
+        box2.append(pre);
+      }
+      const prog = el("div", "k-upd-prog");
+      prog.hidden = true;
+      const bar = el("div", "k-upd-bar");
+      const fill3 = el("div", "k-upd-fill");
+      bar.append(fill3);
+      const ptxt = el("div", "k-hint k-upd-ptxt");
+      prog.append(bar, ptxt);
+      box2.append(prog);
+      const btns = el("div", "k-dlg-btns");
+      const close2 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      if (st === "update" || st === "skipped") {
+        const go = el("button", "k-ok", src2.canReplace ? t("ui.upd.replace") : t("ui.upd.download"));
+        go.onclick = () => runInstall(info, src2, { box: box2, btns, prog, fill: fill3, ptxt, close: close2 });
+        btns.append(go);
+      }
+      if (st === "noAsset" || st === "repoOnly" || !info.assetUrl) {
+        const open = el("button", "k-ok", t("ui.upd.openPage"));
+        open.onclick = () => {
+          try {
+            kapi.openExternal(info.url);
+          } catch {
+          }
+          close2("open");
+        };
+        btns.append(open);
+      }
+      if (st !== "skipped" && info.version) {
+        const skip = el("button", "cmp-mini", t("ui.upd.skip"));
+        skip.onclick = async () => {
+          await saveCfg({ updateSkip: info.version });
+          setStatus(tf("ui.upd.skipped", info.version));
+          close2("skip");
+        };
+        btns.append(skip);
+      }
+      const later = el("button", "k-cancel", t("ui.upd.later"));
+      later.onclick = () => close2("later");
+      btns.append(later);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      ov.addEventListener("mousedown", (e) => {
+        if (e.target === ov) close2("later");
+      });
+      escClose(ov, () => close2("later"));
+      (btns.querySelector(".k-ok") || later).focus();
+    });
+  }
+  async function runInstall(info, src2, ui) {
+    const { btns, prog, fill: fill3, ptxt, close: close2 } = ui;
+    for (const b of btns.querySelectorAll("button")) b.disabled = true;
+    prog.hidden = false;
+    ptxt.textContent = t("ui.upd.downloading");
+    let off3 = null;
+    try {
+      off3 = kapi.onUpdateProgress(({ received, total }) => {
+        ptxt.textContent = progressText(received, total);
+        fill3.style.width = total ? Math.min(100, Math.round(received / total * 100)) + "%" : "100%";
+      });
+    } catch {
+    }
+    let dl = null;
+    try {
+      dl = await kapi.updateDownload(info.assetUrl, info.assetName);
+    } catch (e) {
+      dl = { ok: false, error: String(e && e.message || e) };
+    }
+    try {
+      off3 && off3();
+    } catch {
+    }
+    if (!dl || !dl.ok) {
+      const msg = dl && dl.error === "blocked" ? t("ui.upd.badUrl") : tf("ui.upd.failDl", dl && dl.error || "?");
+      log("error", msg);
+      ptxt.textContent = msg;
+      for (const b of btns.querySelectorAll("button")) b.disabled = false;
+      return;
+    }
+    ptxt.textContent = t("ui.upd.installing");
+    let ins = null;
+    try {
+      ins = await kapi.updateInstall(dl.path);
+    } catch (e) {
+      ins = { ok: false, mode: "manual", path: dl.path, error: String(e && e.message || e) };
+    }
+    if (ins && ins.ok && ins.mode === "replaced") {
+      ptxt.textContent = t("ui.upd.installOk");
+      log("info", t("ui.upd.installOk") + " " + info.version);
+      const go = el("button", "k-ok", t("ui.upd.restartNow"));
+      go.onclick = async () => {
+        close2("restart");
+        const { confirmQuit: confirmQuit2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        await confirmQuit2({ quit: () => kapi.updateRestart() });
+      };
+      const later2 = el("button", "k-cancel", t("ui.upd.later"));
+      later2.onclick = () => close2("installed");
+      btns.replaceChildren(go, later2);
+      go.focus();
+      return;
+    }
+    const why = ins && ins.error && ins.error !== "not-exe" ? tf("ui.upd.failInstall", ins.error) : t("ui.upd.manual");
+    ptxt.textContent = why + " \u2014 " + (ins && ins.path || dl.path);
+    const rev = el("button", "k-ok", t("ui.upd.reveal"));
+    rev.onclick = () => {
+      try {
+        kapi.revealInOS(ins && ins.path || dl.path);
+      } catch {
+      }
+    };
+    const later = el("button", "k-cancel", t("ui.common.close"));
+    later.onclick = () => close2("manual");
+    btns.replaceChildren(rev, later);
+    rev.focus();
+  }
+  function buildUpdateFields(box2, s) {
+    const host2 = box2.querySelector("#st-update-host");
+    if (!host2) return null;
+    host2.replaceChildren();
+    const chkRow = el("div", "k-row");
+    const lab = el("label", null, t("ui.upd.autoLabel"));
+    lab.append(el("span", "k-hint", t("ui.upd.autoHint")));
+    const chk = el("input");
+    chk.type = "checkbox";
+    chk.id = "st-update";
+    chk.checked = s.updateCheck !== false;
+    chkRow.append(lab, chk);
+    host2.append(chkRow);
+    const info = el("div", "k-upd-set");
+    info.append(row2(t("ui.upd.current"), kapi.appVersion || "\u2014"));
+    info.append(row2(
+      t("ui.upd.lastCheck"),
+      s.updateLast ? (/* @__PURE__ */ new Date(+s.updateLast)).toLocaleString() : t("ui.upd.never")
+    ));
+    const src2 = el("div", "k-upd-src");
+    src2.append(el("span", "k-upd-src-label", t("ui.upd.sourceLabel")));
+    const link = el("span", "k-credit-link k-upd-src-url", UPDATE_GIT_URL);
+    link.title = t("ui.upd.sourceHint");
+    link.onclick = () => {
+      try {
+        kapi.openExternal(UPDATE_GIT_URL);
+      } catch {
+      }
+    };
+    src2.append(link);
+    info.append(src2);
+    host2.append(info);
+    const btns = el("div", "k-upd-setbtns");
+    const now = el("button", "k-key-btn", t("ui.upd.checkNow"));
+    now.id = "st-update-now";
+    now.onclick = async () => {
+      now.disabled = true;
+      try {
+        await checkForUpdates({ silent: false });
+      } finally {
+        now.disabled = false;
+      }
+    };
+    btns.append(now);
+    const skipped = String(s.updateSkip || "");
+    const clear = el("button", "k-reset-btn", tf("ui.upd.skipClear", skipped || "\u2014"));
+    clear.id = "st-update-unskip";
+    clear.disabled = !skipped;
+    clear.onclick = async () => {
+      s.updateSkip = "";
+      await saveCfg({ updateSkip: "" });
+      clear.disabled = true;
+      clear.textContent = tf("ui.upd.skipClear", "\u2014");
+      setStatus(t("ui.upd.skipCleared"));
+    };
+    btns.append(clear);
+    host2.append(btns);
+    return chk;
+  }
+  function updateSettingsSnapshot() {
+    const s = state.settings || {};
+    return { on: s.updateCheck !== false, skip: String(s.updateSkip || ""), last: +s.updateLast || 0 };
+  }
+  var row2;
+  var init_update_ui = __esm({
+    "src/update/update-ui.js"() {
+      init_core();
+      init_ui();
+      init_update_check();
+      row2 = (label, value) => {
+        const r = el("div", "k-upd-row");
+        r.append(el("span", "k-upd-k", label), el("span", "k-upd-v", value));
+        return r;
+      };
     }
   });
 
@@ -72978,8 +73525,8 @@ ${h.text}`;
       head2.append(onAll, offAll);
       sec.append(head2);
       for (const b of g.buttons) {
-        const row2 = el("div", "k-tbcfg-row");
-        row2.dataset.btn = b.id;
+        const row3 = el("div", "k-tbcfg-row");
+        row3.dataset.btn = b.id;
         const ic = el("span", "k-tbcfg-icon");
         const src2 = btn(b.id);
         if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
@@ -72991,10 +73538,10 @@ ${h.text}`;
         sw.type = "checkbox";
         sw.checked = isButtonVisible(cfgNow(), b.id);
         sw.onchange = () => save(setButtonVisible(cfgNow(), b.id, sw.checked));
-        row2.append(ic, name5);
-        if (miss) row2.append(miss);
-        row2.append(sw);
-        sec.append(row2);
+        row3.append(ic, name5);
+        if (miss) row3.append(miss);
+        row3.append(sw);
+        sec.append(row3);
       }
       list.append(sec);
     }
@@ -73132,21 +73679,21 @@ ${h.text}`;
         sec.append(head2);
         for (const b of g.buttons) {
           const ok2 = fmtSupported(mode, b.id);
-          const row2 = el("div", "k-tbcfg-row" + (ok2 ? "" : " k-tbcfg-na"));
-          row2.dataset.btn = b.id;
+          const row3 = el("div", "k-tbcfg-row" + (ok2 ? "" : " k-tbcfg-na"));
+          row3.dataset.btn = b.id;
           const ic = el("span", "k-tbcfg-icon");
           const src2 = btn(b.id);
           if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
           else ic.textContent = "\u25CF";
-          row2.append(ic, el("span", "k-tbcfg-name", labelOf2(b.id)));
-          if (!ok2) row2.append(el("span", "k-tbcfg-miss dim", t("ui.fmtcfg.naTag")));
+          row3.append(ic, el("span", "k-tbcfg-name", labelOf2(b.id)));
+          if (!ok2) row3.append(el("span", "k-tbcfg-miss dim", t("ui.fmtcfg.naTag")));
           const sw = el("input", "k-tbcfg-sw");
           sw.type = "checkbox";
           sw.checked = !fmtbarHidden(cfgNow(), mode, b.id);
           sw.disabled = !ok2;
           sw.onchange = () => save(setFmtbarVisible(cfgNow(), mode, b.id, sw.checked));
-          row2.append(sw);
-          sec.append(row2);
+          row3.append(sw);
+          sec.append(row3);
         }
         list.append(sec);
       }
@@ -73240,9 +73787,9 @@ ${h.text}`;
       if (!cfg.actions.length) chosen.append(el("div", "k-hint dim", t("ui.fab.empty")));
       cfg.actions.forEach((id, i5) => {
         const a = fabAction(id);
-        const row2 = el("div", "k-fabcfg-pick");
-        row2.append(el("span", "k-fabcfg-num", String(i5 + 1)));
-        row2.append(el("span", "k-tbcfg-name", t(a.labelKey)));
+        const row3 = el("div", "k-fabcfg-pick");
+        row3.append(el("span", "k-fabcfg-num", String(i5 + 1)));
+        row3.append(el("span", "k-tbcfg-name", t(a.labelKey)));
         const up = el("button", "k-tbcfg-mini", "\u2191");
         up.disabled = i5 === 0;
         up.onclick = () => save(moveFabAction(cfgNow(), id, -1));
@@ -73251,8 +73798,8 @@ ${h.text}`;
         dn.onclick = () => save(moveFabAction(cfgNow(), id, 1));
         const rm2 = el("button", "k-tbcfg-mini", "\u2715");
         rm2.onclick = () => save(toggleFabAction(cfgNow(), id, false));
-        row2.append(up, dn, rm2);
-        chosen.append(row2);
+        row3.append(up, dn, rm2);
+        chosen.append(row3);
       });
       list.replaceChildren();
       const full = !canAddFab(cfg);
@@ -73265,16 +73812,16 @@ ${h.text}`;
         sec.append(head2);
         for (const a of acts) {
           const on2 = cfg.actions.includes(a.id);
-          const row2 = el("div", "k-tbcfg-row" + (!on2 && full ? " k-tbcfg-na" : ""));
-          row2.dataset.fab = a.id;
-          row2.append(el("span", "k-tbcfg-name", t(a.labelKey)));
+          const row3 = el("div", "k-tbcfg-row" + (!on2 && full ? " k-tbcfg-na" : ""));
+          row3.dataset.fab = a.id;
+          row3.append(el("span", "k-tbcfg-name", t(a.labelKey)));
           const sw = el("input", "k-tbcfg-sw");
           sw.type = "checkbox";
           sw.checked = on2;
           sw.disabled = !on2 && full;
           sw.onchange = () => save(toggleFabAction(cfgNow(), a.id, sw.checked));
-          row2.append(sw);
-          sec.append(row2);
+          row3.append(sw);
+          sec.append(row3);
         }
         list.append(sec);
       }
@@ -73990,6 +74537,7 @@ ${h.text}`;
     q("#st-sppt").value = s.spFontPt ?? 12;
     q("#st-homethumb").value = s.homeThumb ?? 190;
     buildNetColorFields(box2, s);
+    const updChk = buildUpdateFields(box2, s);
     const origEdPt = s.edFontPt ?? 12, origSpPt = s.spFontPt ?? 12;
     const previewPt = () => {
       const pt = parseFloat(q("#st-edpt").value) || 12;
@@ -74484,8 +75032,8 @@ ${h.text}`;
     function renderSpFmt() {
       fmtBody.innerHTML = "";
       for (const k of SP_ELEMENT_KEYS) {
-        const row2 = el("tr");
-        row2.append(el("td", "", SP_ELEMS[k] && SP_ELEMS[k].th || k));
+        const row3 = el("tr");
+        row3.append(el("td", "", SP_ELEMS[k] && SP_ELEMS[k].th || k));
         const numCell = (field2, step, min, max2) => {
           const td = el("td");
           const i5 = el("input");
@@ -74504,7 +75052,7 @@ ${h.text}`;
           td.append(i5);
           return td;
         };
-        row2.append(
+        row3.append(
           numCell("indent", 0.1, 0, 12),
           numCell("width", 0.1, 0.3, 12),
           numCell("linesBefore", 5, 0, 100),
@@ -74521,10 +75069,10 @@ ${h.text}`;
               previewPage();
             };
             td.append(c);
-            row2.append(td);
+            row3.append(td);
           }
         }
-        fmtBody.append(row2);
+        fmtBody.append(row3);
       }
     }
     renderSpFmt();
@@ -74578,10 +75126,10 @@ ${h.text}`;
       const host2 = q("#st-spkeys");
       host2.innerHTML = "";
       for (const dir2 of ["enter", "tab", "shiftTab"]) {
-        const row2 = el("div", "k-key-row");
-        row2.append(el("span", "k-key-label", KEY_LABELS[dir2]));
+        const row3 = el("div", "k-key-row");
+        row3.append(el("span", "k-key-label", KEY_LABELS[dir2]));
         const accel = el("span", "k-key-accel", spKeyLabel(W.keys[dir2]));
-        row2.append(accel);
+        row3.append(accel);
         const edit = el("button", "k-key-btn", t("ui.dlg.change"));
         const reset = el("button", "k-key-btn", "\u21BA");
         reset.title = t("ui.dlg.restoreDefault");
@@ -74609,8 +75157,8 @@ ${h.text}`;
           renderSpKeys();
           syncCycleHeads();
         };
-        row2.append(edit, reset);
-        host2.append(row2);
+        row3.append(edit, reset);
+        host2.append(row3);
       }
     }
     function syncCycleHeads() {
@@ -74631,9 +75179,9 @@ ${h.text}`;
     function renderSpCycle() {
       tbody.innerHTML = "";
       for (const k of cycleKeys) {
-        const row2 = el("tr");
+        const row3 = el("tr");
         const label = SP_ELEMS[k] && SP_ELEMS[k].th || k;
-        row2.append(el("td", "", label));
+        row3.append(el("td", "", label));
         for (const dir2 of ["enter", "tab", "shiftTab"]) {
           const sel = el("select");
           for (const opt of cycleOpts) {
@@ -74648,9 +75196,9 @@ ${h.text}`;
           };
           const td = el("td");
           td.append(sel);
-          row2.append(td);
+          row3.append(td);
         }
-        tbody.append(row2);
+        tbody.append(row3);
       }
     }
     renderSpCycle();
@@ -74693,14 +75241,14 @@ ${h.text}`;
     function renderFonts() {
       fontsHost.innerHTML = "";
       if (!W.langFonts.length) fontsHost.append(el("div", "cmp-empty", t("ui.dlg.notHasRowPress")));
-      W.langFonts.forEach((row2, i5) => {
+      W.langFonts.forEach((row3, i5) => {
         const r = el("div", "k-font-row");
         const on2 = el("input");
         on2.type = "checkbox";
-        on2.checked = row2.enabled !== false;
+        on2.checked = row3.enabled !== false;
         on2.title = t("ui.dlg.useRow");
         on2.onchange = () => {
-          row2.enabled = on2.checked;
+          row3.enabled = on2.checked;
           previewFonts();
         };
         r.append(on2);
@@ -74713,10 +75261,10 @@ ${h.text}`;
         const custom = el("option", null, t("ui.dlg.defineRange"));
         custom.value = "__custom";
         scriptSel.append(custom);
-        const known = SCRIPT_PRESETS.find((p) => p.range === row2.range);
+        const known = SCRIPT_PRESETS.find((p) => p.range === row3.range);
         scriptSel.value = known ? known.range : "__custom";
         const rangeIn = el("input", "k-font-range");
-        rangeIn.value = row2.range;
+        rangeIn.value = row3.range;
         rangeIn.placeholder = "U+0E00-0E7F";
         rangeIn.style.display = known ? "none" : "";
         scriptSel.onchange = () => {
@@ -74726,12 +75274,12 @@ ${h.text}`;
             return;
           }
           rangeIn.style.display = "none";
-          row2.range = scriptSel.value;
-          row2.label = (SCRIPT_PRESETS.find((p) => p.range === scriptSel.value) || {}).label || "";
+          row3.range = scriptSel.value;
+          row3.label = (SCRIPT_PRESETS.find((p) => p.range === scriptSel.value) || {}).label || "";
           previewFonts();
         };
         rangeIn.oninput = () => {
-          row2.range = rangeIn.value;
+          row3.range = rangeIn.value;
           rangeIn.classList.toggle("bad", !!rangeIn.value && !normalizeRange(rangeIn.value));
           previewFonts();
         };
@@ -74746,21 +75294,21 @@ ${h.text}`;
         for (const b of BUILTIN_FONT_FILES) addOpt("b:" + b.file, b.label);
         for (const f of SYSTEM_THAI_FONTS) addOpt("f:" + f.family, f.label);
         for (const f of projectFonts) addOpt("p:" + f, f + t("ui.dlg.project"));
-        fontSel.value = row2.builtin ? "b:" + row2.builtin : row2.file ? "p:" + row2.file : "";
+        fontSel.value = row3.builtin ? "b:" + row3.builtin : row3.file ? "p:" + row3.file : "";
         const famIn = el("input", "k-font-family");
-        famIn.value = row2.family;
+        famIn.value = row3.family;
         famIn.placeholder = t("ui.dlg.egTHSarabunNew");
         famIn.style.display = fontSel.value ? "none" : "";
         fontSel.onchange = () => {
           const v2 = fontSel.value;
-          row2.builtin = v2.startsWith("b:") ? v2.slice(2) : "";
-          row2.file = v2.startsWith("p:") ? v2.slice(2) : "";
+          row3.builtin = v2.startsWith("b:") ? v2.slice(2) : "";
+          row3.file = v2.startsWith("p:") ? v2.slice(2) : "";
           famIn.style.display = v2 ? "none" : "";
           previewFonts();
         };
         famIn.oninput = () => {
-          row2.family = famIn.value;
-          row2.system = false;
+          row3.family = famIn.value;
+          row3.system = false;
           previewFonts();
         };
         const sysBtn = el("button", "k-key-btn k-font-sys", t("ui.dlg.fontFromMachine"));
@@ -74768,10 +75316,10 @@ ${h.text}`;
         sysBtn.onclick = async () => {
           const picked = await pickSystemFont(famIn.value);
           if (picked == null) return;
-          row2.family = picked;
-          row2.system = true;
-          row2.builtin = "";
-          row2.file = "";
+          row3.family = picked;
+          row3.system = true;
+          row3.builtin = "";
+          row3.file = "";
           fontSel.value = "";
           famIn.style.display = "";
           famIn.value = picked;
@@ -74789,10 +75337,10 @@ ${h.text}`;
           o.value = v2;
           tgt.append(o);
         }
-        tgt.value = rowTarget(row2);
+        tgt.value = rowTarget(row3);
         tgt.title = t("ui.dlg.fontTargetHint");
         tgt.onchange = () => {
-          row2.target = tgt.value;
+          row3.target = tgt.value;
           previewFonts();
         };
         r.append(tgt);
@@ -74801,10 +75349,10 @@ ${h.text}`;
         sz.min = "50";
         sz.max = "150";
         sz.step = "1";
-        sz.value = String(row2.size ?? 100);
+        sz.value = String(row3.size ?? 100);
         sz.title = t("ui.dlg.fontSizeAdjustHint");
         sz.oninput = () => {
-          row2.size = parseFloat(sz.value) || 100;
+          row3.size = parseFloat(sz.value) || 100;
           previewFonts();
         };
         r.append(sz, el("span", "k-hint", "%"));
@@ -74979,14 +75527,14 @@ ${h.text}`;
         return { id, def, cur, key: key2 };
       });
       for (const r of rows) {
-        const row2 = el("div", "k-key-row");
-        row2.append(el("span", "k-key-label", t(SHORTCUT_LABELS[r.id], r.id)));
+        const row3 = el("div", "k-key-row");
+        row3.append(el("span", "k-key-label", t(SHORTCUT_LABELS[r.id], r.id)));
         const accel = el(
           "span",
           "k-key-accel" + (seen[r.key] > 1 ? " dup" : ""),
           accelText(r.cur.code, r.cur.ctrl, r.cur.shift)
         );
-        row2.append(accel);
+        row3.append(accel);
         const edit = el("button", "k-key-btn", t("dialogs.edit"));
         const reset = el("button", "k-key-btn", "\u21BA");
         reset.title = t("dialogs.reset");
@@ -75013,8 +75561,8 @@ ${h.text}`;
           delete workKeys[r.id];
           renderShortcuts();
         };
-        row2.append(edit, reset);
-        host2.append(row2);
+        row3.append(edit, reset);
+        host2.append(row3);
       }
     }
     renderShortcuts();
@@ -75228,6 +75776,7 @@ ${h.text}`;
       for (const [sel, key2] of SETUP_FIELDS) m[key2] = q(sel).value.trim();
       g.dailyWords = num4("#st-daily", 500);
       g.projectWords = num4("#st-proj", 5e4);
+      if (updChk) s.updateCheck = updChk.checked;
       s.netColors = readNetColorFields(box2);
       s.netControls = {
         orbitButton: q("#st-net-orbit")?.value || "middle",
@@ -75278,6 +75827,14 @@ ${h.text}`;
             // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
             // [alpha.132 ข้อ 9] จานสีตัวอักษร (บันทึกไว้ + ใช้ล่าสุด) — ตามผู้ใช้ไปทุกโปรเจกต์
             "textColors",
+            // [alpha.135] ค่าอัปเดต — ต้องอยู่ในรายการนี้ ไม่งั้น "รุ่นที่ข้ามไว้"/"ตรวจล่าสุด"
+            // หายทุกครั้งที่กดบันทึกตั้งค่า (ไฟล์นี้ถูก **เขียนทับทั้งก้อน** ไม่ได้ merge)
+            "updateCheck",
+            "updateSkip",
+            "updateLast",
+            "updateLastVersion",
+            // ด้วยเหตุผลเดียวกัน: สวิตช์ "เปิดโปรเจกต์ล่าสุดทันที" (เมนู ไฟล์) เคยหายทุกครั้งที่บันทึกตั้งค่า
+            "openLastProject",
             "toolbar",
             "fmtbar",
             "fab"
@@ -75487,6 +76044,7 @@ ${h.text}`;
       import_md9 = __toESM(require_md());
       init_event_ui();
       init_focus_mode();
+      init_update_ui();
       init_icons();
       init_network_theme();
       init_net_presets();
@@ -75793,15 +76351,15 @@ ${h.text}`;
         const head2 = el("div", "wiki-bl-head");
         head2.innerHTML = iconHtml("image", 14) + t("ui.wiki.imageLibraryTag") + ent.name + ` (${hits.length})`;
         sec.append(head2);
-        const row2 = el("div", "wiki-tagged-row");
+        const row3 = el("div", "wiki-tagged-row");
         for (const it of hits) {
           const im = el("img", "wiki-tagged-img");
           im.src = await kapi.toFileURL(await kapi.join(state.root, "Images", ...it.path.split("/")));
           im.title = (it.caption || it.file) + t("ui.wiki.clickExpand");
           im.onclick = () => imageLightbox2(im.src, it.caption || it.file);
-          row2.append(im);
+          row3.append(im);
         }
-        sec.append(row2);
+        sec.append(row3);
       } catch (e) {
       }
     }
@@ -76157,8 +76715,8 @@ ${h.text}`;
       const vals = ctx2 && Array.isArray(ctx2.row[key2]) ? ctx2.row[key2] : [];
       if (!vals.length) panel2.append(el("div", "dim", "\u2014"));
       vals.forEach((v2, i5) => {
-        const row2 = el("div", "floor-item");
-        row2.append(el("span", "floor-item-text", v2));
+        const row3 = el("div", "floor-item");
+        row3.append(el("span", "floor-item-text", v2));
         if (ctx2) {
           const del2 = el("span", "floor-item-del", "\u2715");
           del2.title = t("ui.floorplan.delList");
@@ -76169,9 +76727,9 @@ ${h.text}`;
             });
             redraw3();
           };
-          row2.append(del2);
+          row3.append(del2);
         }
-        panel2.append(row2);
+        panel2.append(row3);
       });
       if (ctx2) {
         const add = el("button", "floor-add", t("ui.common.add"));
@@ -76315,28 +76873,28 @@ ${h.text}`;
     scrollFocusIntoView();
     return true;
   }
-  async function sceneMapLocation(row2) {
-    if (!row2 || !row2.mapId) return null;
+  async function sceneMapLocation(row3) {
+    if (!row3 || !row3.mapId) return null;
     let data2;
     try {
       data2 = await loadMaps();
     } catch {
       return null;
     }
-    const map2 = findMap(data2.maps, row2.mapId);
-    if (!map2) return { missing: true, mapId: row2.mapId, text: t("ui.maps.mapBindDelDone") };
-    const pin = row2.pinId ? (map2.pins || []).find((p) => p.id === row2.pinId) : null;
-    const x = pin ? pin.x : row2.pinX, y = pin ? pin.y : row2.pinY;
+    const map2 = findMap(data2.maps, row3.mapId);
+    if (!map2) return { missing: true, mapId: row3.mapId, text: t("ui.maps.mapBindDelDone") };
+    const pin = row3.pinId ? (map2.pins || []).find((p) => p.id === row3.pinId) : null;
+    const x = pin ? pin.x : row3.pinX, y = pin ? pin.y : row3.pinY;
     return {
       map: map2,
       pin,
       x,
       y,
-      text: (map2.name || t("ui.common.notNamed")) + (pin ? " \xB7 " + (pin.label || t("ui.common.pin")) : row2.pinX != null ? t("ui.maps.pin") : "")
+      text: (map2.name || t("ui.common.notNamed")) + (pin ? " \xB7 " + (pin.label || t("ui.common.pin")) : row3.pinX != null ? t("ui.maps.pin") : "")
     };
   }
-  async function buildShowOnMapRow(row2) {
-    const loc = await sceneMapLocation(row2);
+  async function buildShowOnMapRow(row3) {
+    const loc = await sceneMapLocation(row3);
     const r = el("div", "wiki-row props-maprow");
     r.append(el("label", null, t("ui.maps.sceneWhere")));
     const box2 = el("div", "props-maprow-body");
@@ -76424,7 +76982,7 @@ ${h.text}`;
     const shown = groups.filter((g) => view.catFilter === null || g.cat === view.catFilter);
     for (const g of shown) {
       if (groups.length > 1) bar.append(el("div", "map-bar-cat", g.cat || t("ui.common.notSpecifyCat")));
-      const row2 = el("div", "map-bar-row");
+      const row3 = el("div", "map-bar-row");
       for (const m of g.maps) {
         const chip = el("div", "map-chip" + (m.id === S10.currentId ? " on" : ""), m.name);
         const st2 = pinStats(m);
@@ -76436,9 +76994,9 @@ ${h.text}`;
           view.focusPin = null;
           renderMaps(pane);
         };
-        row2.append(chip);
+        row3.append(chip);
       }
-      bar.append(row2);
+      bar.append(row3);
     }
     wrap2.append(bar);
     let cur = findMap(maps, S10.currentId);
@@ -76996,13 +77554,13 @@ ${h.text}`;
     rhead.append(addR);
     rsec.append(rhead);
     for (const r of mapRoutes(cur)) {
-      const row2 = el("div", "map-route-row" + (r.id === view.routeEdit ? " on" : ""));
+      const row3 = el("div", "map-route-row" + (r.id === view.routeEdit ? " on" : ""));
       const sw = el("span", "map-route-sw");
       sw.style.background = r.color || ROUTE_COLORS[0];
-      row2.append(sw);
+      row3.append(sw);
       const pts = routePoints(cur, r);
-      row2.append(el("span", "map-route-name", r.name));
-      row2.append(el("span", "map-route-meta", tf("ui.maps.dotGap", pts.length, routeLength(pts))));
+      row3.append(el("span", "map-route-name", r.name));
+      row3.append(el("span", "map-route-meta", tf("ui.maps.dotGap", pts.length, routeLength(pts))));
       const bEdit = el("button", "cmp-mini", r.id === view.routeEdit ? t("ui.maps.done") : t("ui.maps.nextDot"));
       bEdit.onclick = () => {
         view.routeEdit = view.routeEdit === r.id ? null : r.id;
@@ -77041,8 +77599,8 @@ ${h.text}`;
         await save();
         redraw3();
       };
-      row2.append(bEdit, bColor, bDash, bRen, bDel);
-      rsec.append(row2);
+      row3.append(bEdit, bColor, bDash, bRen, bDel);
+      rsec.append(row3);
     }
     if (!mapRoutes(cur).length) {
       rsec.append(el(
@@ -77612,12 +78170,12 @@ ${h.text}`;
       text: joinSnaps(ls.map((l) => l.text))
     });
   }
-  function bindRow(row2, lines, idxs) {
+  function bindRow(row3, lines, idxs) {
     const byI = new Map((lines || []).map((l) => [l.i, l]));
     const picked = [...new Set(idxs || [])].filter((i5) => byI.has(i5)).sort((a, b) => a - b);
-    row2.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
-    row2.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
-    return row2;
+    row3.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
+    row3.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
+    return row3;
   }
   function renumber(rows) {
     (rows || []).forEach((r, i5) => {
@@ -77633,9 +78191,9 @@ ${h.text}`;
     renumber(rows);
     return j;
   }
-  function insertRow(rows, idx4, row2) {
+  function insertRow(rows, idx4, row3) {
     const at = Math.max(0, Math.min(rows.length, idx4 < 0 ? rows.length : idx4));
-    rows.splice(at, 0, row2);
+    rows.splice(at, 0, row3);
     renumber(rows);
     return at;
   }
@@ -77662,10 +78220,10 @@ ${h.text}`;
       return { status: "changed", idx: best, text: ls[best].text, snap: snap2, score: bs };
     return { status: "lost", idx: -1, text: "", snap: snap2 };
   }
-  function resolveRow(row2, lines) {
+  function resolveRow(row3, lines) {
     const ls = lines || [];
-    const refs = parseRefs(row2 && row2.ref);
-    const snaps = splitSnaps(row2 && row2.text);
+    const refs = parseRefs(row3 && row3.ref);
+    const snaps = splitSnaps(row3 && row3.text);
     if (!refs.length) return { status: "free", parts: [], live: [] };
     const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
     const live2 = parts.filter((p) => p.status !== "lost");
@@ -77681,10 +78239,10 @@ ${h.text}`;
   function liveLineNos(res) {
     return (res && res.live ? res.live : []).map((p) => p.idx + 1);
   }
-  function syncRow(row2, res) {
-    if (!res || !res.parts || !res.parts.length) return row2;
-    const refs = parseRefs(row2.ref);
-    const snaps = splitSnaps(row2.text);
+  function syncRow(row3, res) {
+    if (!res || !res.parts || !res.parts.length) return row3;
+    const refs = parseRefs(row3.ref);
+    const snaps = splitSnaps(row3.text);
     const nextRefs = [], nextSnaps = [];
     res.parts.forEach((p, i5) => {
       if (p.status === "lost") {
@@ -77695,12 +78253,12 @@ ${h.text}`;
         nextSnaps.push(p.text);
       }
     });
-    row2.ref = nextRefs.filter(Boolean).join(REF_SEP);
-    row2.text = joinSnaps(nextSnaps);
-    return row2;
+    row3.ref = nextRefs.filter(Boolean).join(REF_SEP);
+    row3.text = joinSnaps(nextSnaps);
+    return row3;
   }
-  function boundIdxs(row2, lines) {
-    return resolveRow(row2, lines).live.map((p) => p.idx);
+  function boundIdxs(row3, lines) {
+    return resolveRow(row3, lines).live.map((p) => p.idx);
   }
   function lineUsage(rows, lines) {
     const m = /* @__PURE__ */ new Map();
@@ -77777,7 +78335,7 @@ ${h.text}`;
   function parseCsv2(text) {
     const s = String(text || "").replace(/^﻿/, "");
     const rows = [];
-    let row2 = [], cell = "", q = false;
+    let row3 = [], cell = "", q = false;
     for (let i5 = 0; i5 < s.length; i5++) {
       const ch = s[i5];
       if (q) {
@@ -77794,23 +78352,23 @@ ${h.text}`;
         continue;
       }
       if (ch === ",") {
-        row2.push(cell);
+        row3.push(cell);
         cell = "";
         continue;
       }
       if (ch === "\r") continue;
       if (ch === "\n") {
-        row2.push(cell);
-        rows.push(row2);
-        row2 = [];
+        row3.push(cell);
+        rows.push(row3);
+        row3 = [];
         cell = "";
         continue;
       }
       cell += ch;
     }
-    if (cell !== "" || row2.length) {
-      row2.push(cell);
-      rows.push(row2);
+    if (cell !== "" || row3.length) {
+      row3.push(cell);
+      rows.push(row3);
     }
     return rows.filter((r) => r.length && !(r.length === 1 && r[0] === ""));
   }
@@ -78133,15 +78691,15 @@ ${h.text}`;
   async function setSceneMeta(dPath, ch, sc, patch) {
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (!row2) return;
-    Object.assign(row2, patch);
+    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!row3) return;
+    Object.assign(row3, patch);
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     const heavy = {};
     for (const k of SCENE_HEAVY_KEYS) if (k in (patch || {})) heavy[k] = patch[k];
     if (Object.keys(heavy).length) {
       try {
-        await writeSceneMeta(await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName), heavy);
+        await writeSceneMeta(await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName), heavy);
       } catch {
       }
     }
@@ -78155,12 +78713,12 @@ ${h.text}`;
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
     const list = d.chapters[ch.guid] || [];
-    const row2 = list.find((x) => x.id === sc.id);
-    if (!row2) return;
+    const row3 = list.find((x) => x.id === sc.id);
+    if (!row3) return;
     const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
     const fileName = "scene-" + String(order).padStart(2, "0") + ".md";
-    const newTitle = row2.title + t("ui.common.msg");
-    const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+    const newTitle = row3.title + t("ui.common.msg");
+    const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
     let meta2 = { title: newTitle, type: "scene", format: "prose", pov: "", tags: [] }, body = "";
     try {
       const parsed = (0, import_md10.parseMdFile)(await kapi.readFile(srcFile));
@@ -78169,11 +78727,11 @@ ${h.text}`;
     } catch {
     }
     meta2.title = newTitle;
-    const nrow = { ...row2, id: guid(), title: newTitle, order, fileName, isFavorite: false };
+    const nrow = { ...row3, id: guid(), title: newTitle, order, fileName, isFavorite: false };
     d.chapters[ch.guid] = [...list, nrow];
     await kapi.writeFile(await kapi.join(dPath, "Chapters", ch.folderName, fileName), (0, import_md10.dumpMdFile)(meta2, body));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    await copyVisSidecar(dPath, ch.folderName, row2.fileName, fileName);
+    await copyVisSidecar(dPath, ch.folderName, row3.fileName, fileName);
     await buildTree2();
     openScene(await kapi.join(dPath, "Chapters", ch.folderName, fileName), newTitle);
   }
@@ -78196,9 +78754,9 @@ ${h.text}`;
     const d = await kapi.readJson(sf);
     d.chapters = d.chapters || {};
     const from2 = d.chapters[ch.guid] || [];
-    const row2 = from2.find((x) => x.id === sc.id);
-    if (!row2) return;
-    const oldPath = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+    const row3 = from2.find((x) => x.id === sc.id);
+    if (!row3) return;
+    const oldPath = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
     const openTab = state.tabs.get(oldPath);
     if (openTab) {
       if (openTab.dirty) await saveTab(openTab);
@@ -78209,15 +78767,15 @@ ${h.text}`;
     const order = Math.max(0, ...dst.map((s) => s.order || 0)) + 1;
     const newFile = await uniqueSceneFileName(dPath, dstCh.folderName, order);
     await kapi.move(oldPath, await kapi.join(dPath, "Chapters", dstCh.folderName, newFile));
-    await moveVisSidecar(dPath, ch.folderName, row2.fileName, dstCh.folderName, newFile);
+    await moveVisSidecar(dPath, ch.folderName, row3.fileName, dstCh.folderName, newFile);
     d.chapters[ch.guid] = from2.filter((x) => x.id !== sc.id);
-    row2.order = order;
-    row2.fileName = newFile;
-    row2.chapterGuid = dstCh.guid;
-    d.chapters[dstCh.guid] = [...dst, row2];
+    row3.order = order;
+    row3.fileName = newFile;
+    row3.chapterGuid = dstCh.guid;
+    d.chapters[dstCh.guid] = [...dst, row3];
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     await buildTree2();
-    setStatus(t("ui.scene.move") + row2.title + t("ui.scene.chapter2") + dstCh.title + t("ui.common.done2"));
+    setStatus(t("ui.scene.move") + row3.title + t("ui.scene.chapter2") + dstCh.title + t("ui.common.done2"));
   }
   async function moveChapterBefore(dPath, srcGuid, dstGuid) {
     if (srcGuid === dstGuid) return;
@@ -78351,13 +78909,13 @@ ${h.text}`;
   async function sceneProps(dPath, ch, sc) {
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (!row2) return;
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
-    const M2 = await readSceneMeta(file, row2);
+    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!row3) return;
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
+    const M2 = await readSceneMeta(file, row3);
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog");
-    box2.append(el("div", "k-dlg-title", t("ui.scene.propsScene") + row2.title));
+    box2.append(el("div", "k-dlg-title", t("ui.scene.propsScene") + row3.title));
     const rowOf = /* @__PURE__ */ new Map();
     const mk2 = (label, val, tag3 = "input") => {
       const r = el("div", "wiki-row");
@@ -78393,11 +78951,11 @@ ${h.text}`;
       box2.append(r);
       return c;
     };
-    const iTitle = mk2(t("ui.props.sceneName"), row2.title);
+    const iTitle = mk2(t("ui.props.sceneName"), row3.title);
     const iSyn = mk2(t("ui.common.synopsis"), M2.synopsis, "textarea");
     const iStoryDate = mk2(t("ui.common.timeStoryLineTime"), M2.storyDate);
     iStoryDate.placeholder = t("ui.scene.egDate");
-    const iStartPage = mk2(t("ui.scene.pageNumStartScreenplay"), row2.startPage || "");
+    const iStartPage = mk2(t("ui.scene.pageNumStartScreenplay"), row3.startPage || "");
     iStartPage.type = "number";
     iStartPage.min = "1";
     iStartPage.placeholder = t("ui.scene.useOpenPageNumSettings");
@@ -78407,14 +78965,14 @@ ${h.text}`;
     const iStatus = mkSelect2(
       t("ui.common.status"),
       [["Outline", t("ui.common.notSet")], ...allStatuses().map((s) => [s, dataLabel(s)])],
-      allStatuses().includes(row2.status) ? row2.status : "Outline"
+      allStatuses().includes(row3.status) ? row3.status : "Outline"
     );
     const iColor = mkSelect2(
       t("ui.common.color"),
       [["", t("ui.common.notHas")], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + dataLabel(n2)])],
-      row2.color || ""
+      row3.color || ""
     );
-    const iFlag = mkCheck(t("ui.common.pinPin"), row2.flag);
+    const iFlag = mkCheck(t("ui.common.pinPin"), row3.flag);
     const iTags = mk2(t("ui.common.tag2"), (M2.tags || []).join(", "));
     const iNote = mk2(t("ui.common.note"), M2.note, "textarea");
     const iFuture = mk2(t("ui.scene.futureNoteWriter"), M2.futureNote || "", "textarea");
@@ -78422,7 +78980,7 @@ ${h.text}`;
     {
       const slot = el("div", "props-mapslot");
       box2.append(slot);
-      Promise.resolve().then(() => (init_maps_ui(), maps_ui_exports)).then(({ buildShowOnMapRow: buildShowOnMapRow2 }) => buildShowOnMapRow2(row2)).then((r) => slot.replaceWith(r)).catch(() => slot.remove());
+      Promise.resolve().then(() => (init_maps_ui(), maps_ui_exports)).then(({ buildShowOnMapRow: buildShowOnMapRow2 }) => buildShowOnMapRow2(row3)).then((r) => slot.replaceWith(r)).catch(() => slot.remove());
     }
     const iFb = mkCheck(t("ui.common.flashback"), M2.isFlashback);
     const iFf = mkCheck(t("ui.common.pageFlashforward"), M2.isFlashforward);
@@ -78438,7 +78996,7 @@ ${h.text}`;
         body = (0, import_md11.parseMdFile)(await kapi.readFile(file)).body || "";
       } catch {
       }
-      return { body, title: row2.title || "" };
+      return { body, title: row3.title || "" };
     };
     attachAiFieldButton(rowOf.get(iSyn), iSyn, "synopsis", aiCtx);
     attachAiFieldButton(rowOf.get(iPov), iPov, "pov", aiCtx);
@@ -78458,32 +79016,32 @@ ${h.text}`;
     escClose(ov, () => ov.remove());
     okB.onclick = async () => {
       const newTitle = iTitle.value.trim();
-      if (newTitle && newTitle !== row2.title) {
+      if (newTitle && newTitle !== row3.title) {
         const { setSceneTitle: setSceneTitle2 } = await Promise.resolve().then(() => (init_scene_ops(), scene_ops_exports));
-        await setSceneTitle2(dPath, ch, row2, newTitle);
-        row2.title = newTitle;
+        await setSceneTitle2(dPath, ch, row3, newTitle);
+        row3.title = newTitle;
       }
-      row2.synopsis = iSyn.value;
-      row2.pov = iPov.value;
-      row2.status = iStatus.value;
-      row2.storyDate = iStoryDate.value.trim();
+      row3.synopsis = iSyn.value;
+      row3.pov = iPov.value;
+      row3.status = iStatus.value;
+      row3.storyDate = iStoryDate.value.trim();
       {
         const sp = parseInt(iStartPage.value, 10);
-        if (Number.isFinite(sp) && sp > 0) row2.startPage = sp;
-        else delete row2.startPage;
+        if (Number.isFinite(sp) && sp > 0) row3.startPage = sp;
+        else delete row3.startPage;
       }
-      row2.emotion = iEmotion.value;
-      row2.conflict = iConflict.value;
-      row2.color = iColor.value;
-      row2.flag = iFlag.checked;
-      row2.note = iNote.value;
-      row2.futureNote = iFuture.value;
+      row3.emotion = iEmotion.value;
+      row3.conflict = iConflict.value;
+      row3.color = iColor.value;
+      row3.flag = iFlag.checked;
+      row3.note = iNote.value;
+      row3.futureNote = iFuture.value;
       if (iFb.checked && iFf.checked) iFf.checked = false;
-      row2.isFlashback = iFb.checked;
-      row2.isFlashforward = iFf.checked;
-      row2.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
+      row3.isFlashback = iFb.checked;
+      row3.isFlashforward = iFf.checked;
+      row3.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
       const props = {};
-      for (const k of SCENE_HEAVY_KEYS) props[k] = row2[k];
+      for (const k of SCENE_HEAVY_KEYS) props[k] = row3[k];
       await writeSceneMeta(file, props);
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
       const liveTab = state.tabs.get(file);
@@ -78497,7 +79055,7 @@ ${h.text}`;
       await buildTree2();
       const openTab = state.tabs.get(file);
       if (openTab) {
-        openTab.startPage = row2.startPage || 1;
+        openTab.startPage = row3.startPage || 1;
         updatePageNumberHint();
         refreshSpView();
       }
@@ -79056,13 +79614,13 @@ ${h.text}`;
       for (let i5 = 0; i5 < p.hits.length; i5++) for (let j = i5 + 1; j < p.hits.length; j++) {
         const [a, b] = [p.hits[i5].c.name, p.hits[j].c.name].sort((x, y) => x.localeCompare(y));
         const k = a + "|" + b;
-        const row2 = pairs.get(k) || { a, b, scenes: 0, mentions: 0, heat: 0, words: 0, sceneIds: [] };
-        row2.scenes++;
-        row2.mentions += p.hits[i5].n + p.hits[j].n;
-        row2.heat += p.heat;
-        row2.words += p.words;
-        row2.sceneIds.push(p.scene.id);
-        pairs.set(k, row2);
+        const row3 = pairs.get(k) || { a, b, scenes: 0, mentions: 0, heat: 0, words: 0, sceneIds: [] };
+        row3.scenes++;
+        row3.mentions += p.hits[i5].n + p.hits[j].n;
+        row3.heat += p.heat;
+        row3.words += p.words;
+        row3.sceneIds.push(p.scene.id);
+        pairs.set(k, row3);
       }
     }
     const rows = [...pairs.values()].map((r) => ({
@@ -79945,10 +80503,10 @@ ${h.text}`;
     const wrap2 = el("div", "aia-bars");
     const max2 = Math.max(1, ...items.map((i5) => Number(i5.value) || 0));
     for (const it of items.slice(0, opts.limit || 40)) {
-      const row2 = el("div", "aia-bar-row");
+      const row3 = el("div", "aia-bar-row");
       if (it.sceneId) {
-        row2.classList.add("is-link");
-        row2.onclick = () => jumpToScene(it.sceneId);
+        row3.classList.add("is-link");
+        row3.onclick = () => jumpToScene(it.sceneId);
       }
       const head2 = el("div", "aia-bar-head");
       head2.append(el("span", "aia-bar-label", it.label));
@@ -79957,9 +80515,9 @@ ${h.text}`;
       const fill3 = el("div", "aia-bar-fill" + (it.tone ? " tone-" + it.tone : ""));
       fill3.style.width = Math.round(100 * (Number(it.value) || 0) / max2) + "%";
       track.append(fill3);
-      row2.append(head2, track);
-      if (it.sub) row2.append(el("div", "aia-bar-sub", it.sub));
-      wrap2.append(row2);
+      row3.append(head2, track);
+      if (it.sub) row3.append(el("div", "aia-bar-sub", it.sub));
+      wrap2.append(row3);
     }
     return wrap2;
   }
@@ -80256,10 +80814,10 @@ ${h.text}`;
     setStatus("\u{1F4BE} " + tf("ui.aia.sessionSaved", sess.name));
     return { file, session: sess };
   }
-  async function openSession(row2) {
-    if (!row2 || !row2.session) return false;
+  async function openSession(row3) {
+    if (!row3 || !row3.session) return false;
     await ensureLoaded();
-    const s = row2.session;
+    const s = row3.session;
     S2.scope = { kind: "project", sectionKey: "", chapterId: "", sceneId: "", ...s.scope || {} };
     S2.useAI = s.useAI !== false;
     S2.base = null;
@@ -80268,21 +80826,21 @@ ${h.text}`;
       S2.results.set(key2, res);
       S2.saved.add(key2);
     }
-    S2.session = { id: s.id, name: s.name, file: row2.file };
+    S2.session = { id: s.id, name: s.name, file: row3.file };
     setStatus("\u{1F4C2} " + tf("ui.aia.sessionOpened", s.name || s.id));
     return true;
   }
-  async function deleteSession(row2) {
-    if (!row2 || !row2.file) return false;
-    if (!await confirmBox(tf("ui.aia.confirmDelSession", row2.name || row2.fileName))) return false;
+  async function deleteSession(row3) {
+    if (!row3 || !row3.file) return false;
+    if (!await confirmBox(tf("ui.aia.confirmDelSession", row3.name || row3.fileName))) return false;
     try {
-      await kapi.remove(row2.file);
+      await kapi.remove(row3.file);
     } catch (e) {
       log("error", t("ui.aia.errSessionDel"), e);
       return false;
     }
-    if (S2.session.file === row2.file) S2.session = { id: "", name: "", file: "" };
-    setStatus("\u{1F5D1} " + tf("ui.aia.sessionDeleted", row2.name || row2.fileName));
+    if (S2.session.file === row3.file) S2.session = { id: "", name: "", file: "" };
+    setStatus("\u{1F5D1} " + tf("ui.aia.sessionDeleted", row3.name || row3.fileName));
     return true;
   }
   async function sessionDialog(host2) {
@@ -80483,13 +81041,13 @@ ${h.text}`;
         ), title: t("ui.aia.estTip") });
       }
       if (chips.length) card.append(chipList(chips));
-      const row2 = el("div", "aia-card-btns");
+      const row3 = el("div", "aia-card-btns");
       const btn2 = el("button", "aia-run", t("ui.aia.run"));
       btn2.type = "button";
       btn2.onclick = () => runAnalysis(c.id);
-      row2.append(btn2);
-      row2.append(miniBtn("\u2913", t("ui.aia.exportCsvOne"), () => exportResultCsv(c.id)));
-      card.append(row2);
+      row3.append(btn2);
+      row3.append(miniBtn("\u2913", t("ui.aia.exportCsvOne"), () => exportResultCsv(c.id)));
+      card.append(row3);
       const slot = el("div", "aia-result");
       const prev = S2.results.get(resultKey(c.id));
       if (prev) paintResult(slot, prev);
@@ -81072,13 +81630,13 @@ ${h.text}`;
       );
       list.append(hdr);
       for (const d of drafts) {
-        const row2 = el("div", "book-draft-row" + (d.primary ? " draft-primary" : ""));
+        const row3 = el("div", "book-draft-row" + (d.primary ? " draft-primary" : ""));
         const label = el(
           "span",
           "book-draft-name",
           (d.primary ? "\u2605 " : "   ") + d.name
         );
-        row2.append(label);
+        row3.append(label);
         if (!d.primary) {
           const setBtn = el("button", "cmp-mini", t("ui.books.setMain"));
           setBtn.onclick = async () => {
@@ -81091,7 +81649,7 @@ ${h.text}`;
             }
             setStatus(t("ui.books.setDraftMain") + d.name);
           };
-          row2.append(setBtn);
+          row3.append(setBtn);
         }
         const renBtn = el("button", "cmp-mini", "\u270E");
         renBtn.title = t("ui.books.changeNameDraft");
@@ -81108,7 +81666,7 @@ ${h.text}`;
             }
           }
         };
-        row2.append(renBtn);
+        row3.append(renBtn);
         if (!d.primary) {
           const delBtn = el("button", "cmp-mini k-danger", "\u{1F5D1}");
           delBtn.title = t("ui.books.delDraft");
@@ -81122,9 +81680,9 @@ ${h.text}`;
               }
             }
           };
-          row2.append(delBtn);
+          row3.append(delBtn);
         }
-        list.append(row2);
+        list.append(row3);
       }
       const addD = el("button", "cmp-mini", t("ui.books.newDraftNew2"));
       addD.onclick = async () => {
@@ -81706,19 +82264,19 @@ ${h.text}`;
     ok2.sort((a, b) => String(b.lastModified || "").localeCompare(String(a.lastModified || "")));
     return { ok: ok2, broken: rows.filter((r) => r && r.broken) };
   }
-  function createBrokenCard(row2, onChanged) {
+  function createBrokenCard(row3, onChanged) {
     const card = el("div", "home-card home-card-broken");
-    card.dataset.search = String(row2.root || "").toLowerCase();
+    card.dataset.search = String(row3.root || "").toLowerCase();
     card.append(el("div", "home-card-title", "\u26A0 " + t("ui.home.brokenTitle")));
-    const pathEl = el("div", "home-broken-path", row2.root);
-    pathEl.title = row2.root;
+    const pathEl = el("div", "home-broken-path", row3.root);
+    pathEl.title = row3.root;
     card.append(pathEl);
-    card.append(el("div", "home-broken-why", row2.reason || ""));
+    card.append(el("div", "home-broken-why", row3.reason || ""));
     const btns = el("div", "home-broken-btns");
     const rm2 = el("button", "k-danger", t("ui.home.brokenRemove"));
     rm2.onclick = async (e) => {
       e.stopPropagation();
-      await kapi.removeRecent(row2.root);
+      await kapi.removeRecent(row3.root);
       setStatus(t("ui.app.recentBrokenRemoved"));
       if (onChanged) onChanged();
     };
@@ -82046,15 +82604,15 @@ ${h.text}`;
     const renderNode2 = (obj, depth = 0) => {
       const entries = Object.entries(obj).sort((a, b) => b[1].count - a[1].count);
       for (const [key2, node] of entries) {
-        const row2 = el("div", "tag-item");
-        row2.style.paddingLeft = 16 + depth * 20 + "px";
+        const row3 = el("div", "tag-item");
+        row3.style.paddingLeft = 16 + depth * 20 + "px";
         const name5 = el("span", "tag-name", key2);
-        row2.append(name5);
+        row3.append(name5);
         const badge = el("span", "tag-count", String(node.count));
-        row2.append(badge);
-        row2.onclick = () => filterByTag(key2);
-        row2.title = t("ui.tags.clickFilterExplorerShow") + key2;
-        container.append(row2);
+        row3.append(badge);
+        row3.onclick = () => filterByTag(key2);
+        row3.title = t("ui.tags.clickFilterExplorerShow") + key2;
+        container.append(row3);
         if (Object.keys(node.children).length) {
           renderNode2(node.children, depth + 1);
         }
@@ -82499,9 +83057,9 @@ ${h.text}`;
     table9.append(thead);
     const tbody = el("tbody");
     for (const sc of filtered) {
-      const row2 = el("tr", "sc-tbl-row");
-      row2.style.cursor = "pointer";
-      row2.onclick = async () => {
+      const row3 = el("tr", "sc-tbl-row");
+      row3.style.cursor = "pointer";
+      row3.onclick = async () => {
         if (!sc.filePath) return;
         const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
         openScene2(sc.filePath, sc.title || "");
@@ -82510,32 +83068,32 @@ ${h.text}`;
       const icon2 = sc.type === "memo" ? "\u{1F4DD} " : sc.locked ? "\u{1F512} " : sc.flag ? "\u2B50 " : "\u{1F4C4} ";
       tdTitle.textContent = icon2 + (sc.title || "");
       if (sc.synopsis) tdTitle.title = sc.synopsis;
-      row2.append(tdTitle);
+      row3.append(tdTitle);
       const tdStatus = el("td");
       tdStatus.textContent = sc.status || "\u2014";
       if (sc.status) tdStatus.style.color = statusColor(sc.status);
-      row2.append(tdStatus);
+      row3.append(tdStatus);
       const tdWords = el("td");
       tdWords.textContent = sc.wordCount ? sc.wordCount.toLocaleString() : "0";
       tdWords.style.textAlign = "right";
-      row2.append(tdWords);
+      row3.append(tdWords);
       const tdSec = el("td");
       tdSec.textContent = sc.sectionName || "";
-      row2.append(tdSec);
+      row3.append(tdSec);
       const tdCh = el("td");
       tdCh.textContent = sc.chapterName || "";
-      row2.append(tdCh);
+      row3.append(tdCh);
       const tdTags = el("td");
       tdTags.style.fontSize = "11px";
       const vNames = new Set(getVisualTags().map((v2) => v2.name));
       const plain = (sc.tags || []).filter((t3) => !vNames.has(t3));
       if ((sc.tags || []).some((t3) => vNames.has(t3))) tdTags.append(renderVisualTagChips(sc.tags));
       if (plain.length) tdTags.append(el("span", null, plain.join(", ")));
-      row2.append(tdTags);
+      row3.append(tdTags);
       const tdPov = el("td");
       tdPov.textContent = sc.pov || "";
-      row2.append(tdPov);
-      tbody.append(row2);
+      row3.append(tdPov);
+      tbody.append(row3);
     }
     table9.append(tbody);
     const info = el("div", "sc-tbl-info", tf("ui.scene.scene", filtered.length, scenes.length));
@@ -82724,9 +83282,9 @@ ${BLOCK_END}
     const out = {};
     const chapters = scenesJson && scenesJson.chapters || {};
     for (const cg of Object.keys(chapters)) {
-      for (const row2 of chapters[cg] || []) {
-        if (!row2 || !Array.isArray(row2.comments) || !row2.comments.length) continue;
-        out[row2.id] = row2.comments.map((c) => ({
+      for (const row3 of chapters[cg] || []) {
+        if (!row3 || !Array.isArray(row3.comments) || !row3.comments.length) continue;
+        out[row3.id] = row3.comments.map((c) => ({
           id: c.id || newId2(Date.now()),
           author: c.author || opts.author || "",
           text: c.text || "",
@@ -83322,36 +83880,36 @@ ${BLOCK_END}
     return card;
   }
   async function fieldFor(st, i5, res, key2, names) {
-    const row2 = st.rows[i5];
-    if (key2 === "no") return el("span", "vis-no-num", String(row2.no));
+    const row3 = st.rows[i5];
+    if (key2 === "no") return el("span", "vis-no-num", String(row3.no));
     if (key2 === "scene") return el("span", "vis-scene", st.sceneTitle);
     if (key2 === "image") {
       const box2 = el("div", "vis-img");
-      if (row2.image) {
+      if (row3.image) {
         const im = el("img", "vis-thumb");
-        im.src = await imgUrl(row2.image);
-        im.title = row2.image;
-        im.onclick = async () => imageLightbox(await imgUrl(row2.image), row2.image);
+        im.src = await imgUrl(row3.image);
+        im.title = row3.image;
+        im.onclick = async () => imageLightbox(await imgUrl(row3.image), row3.image);
         box2.append(im);
       } else {
         box2.append(el("div", "vis-noimg", t("ui.vis.noImage")));
       }
       const tools = el("div", "vis-img-tools");
-      const pick2 = el("button", "vis-mini vis-pick", row2.image ? "\u21C4" : "\uFF0B");
+      const pick2 = el("button", "vis-mini vis-pick", row3.image ? "\u21C4" : "\uFF0B");
       pick2.title = t("ui.vis.pickImage");
       pick2.onclick = async () => {
         const got = await pickImage(state.root);
         if (!got) return;
-        row2.image = got.file;
+        row3.image = got.file;
         await saveRows(st);
         await redraw(st);
       };
       tools.append(pick2);
-      if (row2.image) {
+      if (row3.image) {
         const clr = el("button", "vis-mini", "\u2715");
         clr.title = t("ui.vis.clearImage");
         clr.onclick = async () => {
-          row2.image = "";
+          row3.image = "";
           await saveRows(st);
           await redraw(st);
         };
@@ -83376,7 +83934,7 @@ ${BLOCK_END}
             const b = el("button", "vis-mini vis-sync", "\u27F3");
             b.title = t("ui.vis.statusChanged");
             b.onclick = async () => {
-              syncRow(row2, res);
+              syncRow(row3, res);
               await saveRows(st);
               await renderVisual(st.key);
             };
@@ -83415,12 +83973,12 @@ ${BLOCK_END}
     }
     if (key2 === "remark") {
       const inp = el("textarea", "vis-remark");
-      inp.value = row2.remark;
+      inp.value = row3.remark;
       inp.placeholder = t("ui.vis.remarkPh");
       inp.rows = 3;
       let timer2 = null;
       inp.oninput = () => {
-        row2.remark = inp.value;
+        row3.remark = inp.value;
         clearTimeout(timer2);
         timer2 = setTimeout(() => saveRows(st, true), 400);
       };
@@ -83432,7 +83990,7 @@ ${BLOCK_END}
     }
     if (key2 === "comment") {
       const box2 = el("div", "vis-cmts");
-      const cs = commentsForText(liveText(res) || row2.text, st.comments);
+      const cs = commentsForText(liveText(res) || row3.text, st.comments);
       if (!cs.length) box2.append(el("span", "dim vis-nocmt", "\u2014"));
       for (const c of cs) {
         const chip = el("div", "vis-cmt" + (c.resolved ? " done" : ""));
@@ -85271,13 +85829,13 @@ ${BLOCK_END}
       list.innerHTML = "";
       selectedIdx = 0;
       results.forEach((f) => {
-        const row2 = el("div", "k-qo-row");
+        const row3 = el("div", "k-qo-row");
         const icon2 = f.ext === "md" ? "\u{1F4C4}" : f.ext === "json" ? "\u{1F4CB}" : "\u{1F4CE}";
-        row2.append(el("span", "k-qo-icon", icon2));
-        row2.append(el("span", "k-qo-name", f.name));
-        row2.append(el("span", "k-qo-rel", f.rel));
-        row2.onclick = () => openFile(f);
-        list.append(row2);
+        row3.append(el("span", "k-qo-icon", icon2));
+        row3.append(el("span", "k-qo-name", f.name));
+        row3.append(el("span", "k-qo-rel", f.rel));
+        row3.onclick = () => openFile(f);
+        list.append(row3);
       });
       count.textContent = tf("ui.quickOpen.file", results.length, allFiles.length);
       highlight(selectedIdx);
@@ -85611,7 +86169,7 @@ ${BLOCK_END}
       chip.title = t("cmt.anchorHint");
       foot.append(chip);
     }
-    const row2 = el("div", "k-cm-input-row");
+    const row3 = el("div", "k-cm-input-row");
     const inp = el("textarea", "k-cm-input");
     inp.placeholder = sel ? t("cmt.placeholderSel") : t("cmt.placeholder");
     inp.rows = 2;
@@ -85645,8 +86203,8 @@ ${BLOCK_END}
         doAdd();
       }
     };
-    row2.append(inp, scB, addB);
-    foot.append(row2);
+    row3.append(inp, scB, addB);
+    foot.append(row3);
     host2.append(foot);
     lastList = all;
     syncAnchors(all, "");
@@ -85818,10 +86376,10 @@ ${BLOCK_END}
     const store = commentStore();
     let n2 = 0;
     for (const chId of Object.keys(d.chapters || {})) {
-      for (const row2 of d.chapters[chId] || []) {
-        const olds = bySceneId[row2.id];
+      for (const row3 of d.chapters[chId] || []) {
+        const olds = bySceneId[row3.id];
         if (!olds || !olds.length) continue;
-        const p = await scenePath2(dPath, chId, row2, folders);
+        const p = await scenePath2(dPath, chId, row3, folders);
         if (!await kapi.exists(p)) continue;
         const { body, comments } = await store.read(p);
         const have = new Set(comments.map((c) => c.id));
@@ -85830,7 +86388,7 @@ ${BLOCK_END}
           await store.write(p, body, [...comments, ...add]);
           n2 += add.length;
         }
-        delete row2.comments;
+        delete row3.comments;
       }
     }
     if (n2) await kapi.writeFile(sf, JSON.stringify(d, null, 2));
@@ -87439,9 +87997,9 @@ img{max-width:100%}` }
     return wrap2;
   }
   function sessionRow(s) {
-    const row2 = el("div", "ai-chat-row");
-    if (s.archived) row2.classList.add("archived");
-    row2.dataset.session = s.id;
+    const row3 = el("div", "ai-chat-row");
+    if (s.archived) row3.classList.add("archived");
+    row3.dataset.session = s.id;
     const main = el("div", "ai-chat-row-main");
     main.append(el("div", "ai-chat-row-title", s.title || t("ui.aiChatPanel.session")));
     const last2 = [...s.messages || []].reverse().find((m) => m.text);
@@ -87454,13 +88012,13 @@ img{max-width:100%}` }
     const st = sessionStats(s);
     meta2.append(el("span", "ai-chat-row-date", fmtDate(s.updated)));
     meta2.append(el("span", "ai-chat-row-tok", compact(st.total) + " tok"));
-    row2.append(main, meta2);
-    row2.onclick = () => {
+    row3.append(main, meta2);
+    row3.onclick = () => {
       S3.cur = s;
       S3.view = "session";
       draw();
     };
-    return row2;
+    return row3;
   }
   function fmtDate(iso) {
     try {
@@ -87671,11 +88229,11 @@ img{max-width:100%}` }
     box2.append(el("div", "ai-calls-head dim", t("ui.aiChatPanel.cmdAct") + calls.length + ")"));
     calls.forEach((c, i5) => {
       const r = (results || [])[i5];
-      const row2 = el("div", "ai-call" + (r ? r.ok ? " ok" : " bad" : ""));
-      row2.append(el("span", "ai-call-icon", r ? r.ok ? "\u2713" : "\u2715" : "\xB7"));
-      row2.append(el("span", "ai-call-desc", describeCall(c)));
-      if (r && (r.message || r.error)) row2.append(el("span", "ai-call-msg dim", r.error || r.message));
-      box2.append(row2);
+      const row3 = el("div", "ai-call" + (r ? r.ok ? " ok" : " bad" : ""));
+      row3.append(el("span", "ai-call-icon", r ? r.ok ? "\u2713" : "\u2715" : "\xB7"));
+      row3.append(el("span", "ai-call-desc", describeCall(c)));
+      if (r && (r.message || r.error)) row3.append(el("span", "ai-call-msg dim", r.error || r.message));
+      box2.append(row3);
       if (view2 === "verbose") {
         box2.append(foldBlock(t("ui.aiChatPanel.jSONModelCmd"), JSON.stringify({ tool: c.tool, args: c.args }, null, 2)));
         if (r && r.data !== void 0 && r.data !== null) {
@@ -88480,12 +89038,12 @@ img{max-width:100%}` }
     box2.append(el("div", "k-dlg-title", tf("ui.aiSum.suggestName2", KIND_TH[kind], currentTitle)));
     const list = el("div", "k-pick-list");
     for (const tt of titles) {
-      const row2 = el("div", "k-menu-item", "\u{1F4D6} " + tt);
-      row2.onclick = () => {
+      const row3 = el("div", "k-menu-item", "\u{1F4D6} " + tt);
+      row3.onclick = () => {
         ov.remove();
         callback(tt);
       };
-      list.append(row2);
+      list.append(row3);
     }
     box2.append(list);
     const past = pastTitlesFor(currentTitle).filter((p) => !titles.includes(p));
@@ -88496,12 +89054,12 @@ img{max-width:100%}` }
       const pl = el("div", "k-pick-list k-ai-past");
       pl.style.cssText = "max-height:120px;overflow-y:auto";
       for (const tt of past.slice(-10).reverse()) {
-        const row2 = el("div", "k-menu-item dim", "\xB7 " + tt);
-        row2.onclick = () => {
+        const row3 = el("div", "k-menu-item dim", "\xB7 " + tt);
+        row3.onclick = () => {
           ov.remove();
           callback(tt);
         };
-        pl.append(row2);
+        pl.append(row3);
       }
       box2.append(pl);
     }
@@ -88975,18 +89533,18 @@ img{max-width:100%}` }
     const placed = [];
     for (const id of inOrder) {
       const d = depths.get(id);
-      const row2 = rows.get(d) || 0;
-      rows.set(d, row2 + 1);
+      const row3 = rows.get(d) || 0;
+      rows.set(d, row3 + 1);
       const n2 = graph.byId.get(id);
       const manual = positions[id];
       const pinned = !!(manual && Number.isFinite(manual.x) && Number.isFinite(manual.y));
       placed.push({
         ...n2,
         depth: d,
-        row: row2,
+        row: row3,
         pinned,
         x: pinned ? manual.x : PAD + d * (NODE_W + GAP_X),
-        y: pinned ? manual.y : PAD + row2 * (NODE_H + GAP_Y)
+        y: pinned ? manual.y : PAD + row3 * (NODE_H + GAP_Y)
       });
     }
     if (opts.refine !== false) refineLayout(placed, graph.edges, opts);
@@ -89098,9 +89656,9 @@ img{max-width:100%}` }
       if (!s) continue;
       (s.choices || []).forEach((c, idx4) => {
         const next = c && c.nextSceneId || "";
-        const row2 = { sceneId: s.id, sceneTitle: s.title || "", idx: idx4, text: c && c.text || "", nextSceneId: next };
-        if (!next) out.push({ ...row2, reason: "empty" });
-        else if (!ids.has(next)) out.push({ ...row2, reason: "missing" });
+        const row3 = { sceneId: s.id, sceneTitle: s.title || "", idx: idx4, text: c && c.text || "", nextSceneId: next };
+        if (!next) out.push({ ...row3, reason: "empty" });
+        else if (!ids.has(next)) out.push({ ...row3, reason: "missing" });
       });
     }
     return out;
@@ -89665,22 +90223,22 @@ details>summary::-webkit-details-marker{display:none}
       list.append(el("div", "dim", tr("noRuns", t("ui.player.notHasRoundPlay"))));
     }
     for (const r of runs) {
-      const row2 = el("div", "k-menu-item player-run-row");
+      const row3 = el("div", "k-menu-item player-run-row");
       let when = r.startedAt;
       try {
         when = new Date(r.startedAt).toLocaleString();
       } catch {
       }
       const path = (r.steps || []).map((s) => s.sceneTitle).join(" \u2192 ");
-      row2.append(el(
+      row3.append(el(
         "div",
         "player-run-head",
         `${r.endedAt ? "\u{1F3C1}" : "\u25B6"} ${(r.steps || []).length} ${tr("scenesUnit", t("ui.common.scene2"))} \xB7 ${when}`
       ));
       const p = el("div", "player-run-path", path);
       p.title = path;
-      row2.append(p);
-      row2.onclick = () => {
+      row3.append(p);
+      row3.onclick = () => {
         const ps = pstate();
         ps.run = JSON.parse(JSON.stringify(r));
         ps.run.id = "run-" + Date.now().toString(36);
@@ -89688,7 +90246,7 @@ details>summary::-webkit-details-marker{display:none}
         if (host2) renderPlayer(host2);
         else refreshOpenPlayer();
       };
-      list.append(row2);
+      list.append(row3);
     }
     box2.append(list);
     const btns = el("div", "k-dlg-btns");
@@ -90062,16 +90620,16 @@ details>summary::-webkit-details-marker{display:none}
     const ov = E("div", "k-overlay");
     const box2 = E("div", "k-dialog k-dialog-wide");
     box2.append(E("div", "k-dlg-title", t("ui.branch.comparePlan") + planState.name));
-    const row2 = E("div", "wiki-row");
-    row2.append(E("label", null, t("ui.branch.compare")));
+    const row3 = E("div", "wiki-row");
+    row3.append(E("label", null, t("ui.branch.compare")));
     const sel = E("select", "wiki-input k-dlg-select");
     for (const x of list) {
       const o = E("option", null, x.name);
       o.value = x.path;
       sel.append(o);
     }
-    row2.append(sel);
-    box2.append(row2);
+    row3.append(sel);
+    box2.append(row3);
     const body = E("div", "branch-cmp");
     box2.append(body);
     const draw3 = async () => {
@@ -90656,14 +91214,14 @@ details>summary::-webkit-details-marker{display:none}
         const choices = el("div", "branch-choices");
         n2.choices.forEach((c, idx4) => {
           const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
-          const row2 = el(
+          const row3 = el(
             "div",
             "branch-choice" + (target ? "" : " branch-choice-open"),
             "\u27A4 " + (c.text || tr2("sumChoices", t("ui.common.choice")))
           );
-          if (c.color) row2.style.color = c.color;
-          row2.title = tr2("goTo", t("ui.branch.msg2")) + (target ? target.title : tr2("openEndParen", t("ui.common.notSpecifyTo")));
-          if (target) row2.onclick = async () => {
+          if (c.color) row3.style.color = c.color;
+          row3.title = tr2("goTo", t("ui.branch.msg2")) + (target ? target.title : tr2("openEndParen", t("ui.common.notSpecifyTo")));
+          if (target) row3.onclick = async () => {
             const { recordChoice: recordChoice2 } = await Promise.resolve().then(() => (init_player_choices(), player_choices_exports));
             await recordChoice2(n2.id, n2.title, c.text);
             openSceneFromGraph(target, false);
@@ -90675,8 +91233,8 @@ details>summary::-webkit-details-marker{display:none}
             await removeChoice(n2, idx4);
             redraw3();
           };
-          row2.append(del2);
-          choices.append(row2);
+          row3.append(del2);
+          choices.append(row3);
         });
         card.append(choices);
         card.onclick = (e) => {
@@ -90849,10 +91407,10 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
     list.style.maxHeight = "46vh";
     for (const e of rows) {
       const src2 = graph.byId.get(e.from);
-      const row2 = el("div", "k-menu-item branch-broken-row");
-      row2.append(el("span", "branch-broken-sc", src2 && src2.title || e.from));
-      row2.append(el("span", "branch-broken-ch", "[" + (e.text || "\u2014") + "]"));
-      row2.append(el("span", "dim", "\u2192 " + e.to));
+      const row3 = el("div", "k-menu-item branch-broken-row");
+      row3.append(el("span", "branch-broken-sc", src2 && src2.title || e.from));
+      row3.append(el("span", "branch-broken-ch", "[" + (e.text || "\u2014") + "]"));
+      row3.append(el("span", "dim", "\u2192 " + e.to));
       const fix2 = el("button", "branch-doc-add", tr2("fixIt", t("ui.branch.edit")));
       fix2.onclick = () => {
         bs.sel = e.from;
@@ -90869,8 +91427,8 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
           redraw3();
         }
       };
-      row2.append(fix2, del2);
-      list.append(row2);
+      row3.append(fix2, del2);
+      list.append(row3);
     }
     box2.append(list);
     const btns = el("div", "k-dlg-btns");
@@ -91189,18 +91747,18 @@ ${preview2}` + (found2.length > 8 ? `
     return adder;
   }
   function colorRow(current2, onPick) {
-    const row2 = el("div", "branch-colors");
+    const row3 = el("div", "branch-colors");
     const mk2 = (value, label, cls) => {
       const dot = el("span", "branch-color" + (cls ? " " + cls : "") + (current2 === value ? " on" : ""));
       if (value) dot.style.background = value;
       dot.title = label;
       dot.onclick = () => onPick(value);
-      row2.append(dot);
+      row3.append(dot);
       return dot;
     };
     mk2("", tr2("colorNone", t("ui.branch.notDefineColor")), "branch-color-none").textContent = "\u2205";
     for (const [name5, hex] of SCENE_COLORS) mk2(hex, name5);
-    return row2;
+    return row3;
   }
   function showAllPathsDialog(graph, startId) {
     const info = enumeratePathsInfo(graph, startId, PATH_MAX);
@@ -91234,16 +91792,16 @@ ${preview2}` + (found2.length > 8 ? `
       const rows = q ? lines.filter((l) => l.text.toLowerCase().includes(q)) : lines;
       count.textContent = `${rows.length} / ${lines.length} ${tr2("paths", t("ui.common.route"))}`;
       for (const l of rows.slice(0, 300)) {
-        const row2 = el("div", "k-menu-item branch-path-row");
-        row2.append(el("span", "branch-path-len", l.ids.length + " " + tr2("steps", t("ui.common.scene2"))));
-        row2.append(el("span", "branch-path-txt", l.text));
-        row2.title = l.text;
-        row2.onclick = async () => {
+        const row3 = el("div", "k-menu-item branch-path-row");
+        row3.append(el("span", "branch-path-len", l.ids.length + " " + tr2("steps", t("ui.common.scene2"))));
+        row3.append(el("span", "branch-path-txt", l.text));
+        row3.title = l.text;
+        row3.onclick = async () => {
           ov.remove();
           const { openPlayerMode: openPlayerMode2 } = await Promise.resolve().then(() => (init_player_mode(), player_mode_exports));
           await openPlayerMode2(l.ids[0]);
         };
-        list.append(row2);
+        list.append(row3);
       }
       if (rows.length > 300) list.append(el("div", "dim", `\u2026 +${rows.length - 300}`));
     };
@@ -91353,16 +91911,16 @@ ${preview2}` + (found2.length > 8 ? `
       if (missing.length) {
         docBody.append(el("div", "branch-doc-lbl", `${tr2("docMissing", t("ui.branch.foundTextNotChoice"))} (${missing.length})`));
         for (const txt of missing) {
-          const row2 = el("div", "branch-doc-row");
-          row2.append(el("span", "branch-doc-mark", "[" + txt + "]"));
+          const row3 = el("div", "branch-doc-row");
+          row3.append(el("span", "branch-doc-mark", "[" + txt + "]"));
           const b = el("button", "branch-doc-add", "\uFF0B " + tr2("docLink", t("ui.branch.bindChoice")));
           b.onclick = async () => {
             await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
             setStatus(`${tr2("docLinked1", t("ui.branch.bindChoiceDone"))}: ${txt}`);
             redraw3();
           };
-          row2.append(b);
-          docBody.append(row2);
+          row3.append(b);
+          docBody.append(row3);
         }
         const all = el("button", "k-tpl-add", `\uFF0B ${tr2("docLinkAll", t("ui.branch.bindAll"))} (${missing.length})`);
         all.onclick = async () => {
@@ -91375,8 +91933,8 @@ ${preview2}` + (found2.length > 8 ? `
       if (orphan.length) {
         docBody.append(el("div", "branch-doc-lbl", `${tr2("docOrphan", t("ui.branch.choiceNotHasText"))} (${orphan.length})`));
         for (const txt of orphan) {
-          const row2 = el("div", "branch-doc-row branch-doc-orphan");
-          row2.append(el("span", "branch-doc-mark", txt));
+          const row3 = el("div", "branch-doc-row branch-doc-orphan");
+          row3.append(el("span", "branch-doc-mark", txt));
           const b = el("button", "branch-doc-add", "\u21A9 " + tr2("docInsert", t("ui.branch.insertScene")));
           b.onclick = async () => {
             if (await insertMarkerIntoScene(node, txt)) {
@@ -91384,8 +91942,8 @@ ${preview2}` + (found2.length > 8 ? `
               redraw3();
             }
           };
-          row2.append(b);
-          docBody.append(row2);
+          row3.append(b);
+          docBody.append(row3);
         }
       }
       if (!missing.length && !orphan.length && !linked.length)
@@ -91397,13 +91955,13 @@ ${preview2}` + (found2.length > 8 ? `
       body.append(el("div", "branch-drag-hint", tr2("dragHint", t("ui.branch.dragBarPasteTop"))));
     }
     node.choices.forEach((c, idx4) => {
-      const row2 = el("div", "branch-edit-row");
+      const row3 = el("div", "branch-edit-row");
       const grip = el("span", "branch-grip", "\u283F");
       grip.draggable = true;
       grip.title = tr2("dragChoice", t("ui.branch.dragPasteTopScene"));
       grip.addEventListener("dragstart", (ev) => {
         dragChoice = { node, idx: idx4, choice: { ...c } };
-        row2.classList.add("dragging");
+        row3.classList.add("dragging");
         try {
           ev.dataTransfer.setData("text/plain", c.text || "");
           ev.dataTransfer.effectAllowed = "move";
@@ -91411,7 +91969,7 @@ ${preview2}` + (found2.length > 8 ? `
         }
       });
       grip.addEventListener("dragend", () => {
-        row2.classList.remove("dragging");
+        row3.classList.remove("dragging");
         dragChoice = null;
       });
       const tIn = el("input", "k-field-input branch-edit-text");
@@ -91453,7 +92011,7 @@ ${preview2}` + (found2.length > 8 ? `
       colB.title = tr2("lineColor", t("ui.branch.colorLineChoice"));
       if (c.color) colB.style.borderColor = c.color;
       colB.onclick = () => {
-        const open = row2.parentNode.querySelector(".branch-colors-pop");
+        const open = row3.parentNode.querySelector(".branch-colors-pop");
         if (open) open.remove();
         const pop = colorRow(c.color, async (col) => {
           await mutateChoices(node, (list) => {
@@ -91464,7 +92022,7 @@ ${preview2}` + (found2.length > 8 ? `
           redraw3();
         });
         pop.classList.add("branch-colors-pop");
-        row2.after(pop);
+        row3.after(pop);
       };
       const goB = el("button", "branch-edit-go", "\u279C");
       goB.title = tr2("walkChoice", t("ui.branch.choiceSaveHistoryDecide"));
@@ -91486,8 +92044,8 @@ ${preview2}` + (found2.length > 8 ? `
         await removeChoice(node, idx4);
         redraw3();
       };
-      row2.append(grip, tIn, tSel, colB, goB, delB);
-      body.append(row2);
+      row3.append(grip, tIn, tSel, colB, goB, delB);
+      body.append(row3);
     });
     const addB = el("button", "k-tpl-add", "+ " + tr2("addToThis", t("ui.branch.addChoiceScene")));
     addB.title = tr2("addToThisHint", t("ui.branch.newChoiceNewReady"));
@@ -92910,8 +93468,8 @@ ${preview2}` + (found2.length > 8 ? `
     return true;
   }
   function splitHandle(node, index, sm) {
-    const row2 = node.dir !== "col";
-    const h = el("div", "k-split-handle " + (row2 ? "k-sh-col" : "k-sh-row"));
+    const row3 = node.dir !== "col";
+    const h = el("div", "k-split-handle " + (row3 ? "k-sh-col" : "k-sh-row"));
     h.dataset.splitId = node.id;
     h.dataset.index = String(index);
     h.title = t("split.dragResize");
@@ -92923,16 +93481,16 @@ ${preview2}` + (found2.length > 8 ? `
       const prev = h.previousElementSibling, next = h.nextElementSibling;
       if (!prev || !next) return;
       const pr = prev.getBoundingClientRect(), nr = next.getBoundingClientRect();
-      const total = row2 ? pr.width + nr.width : pr.height + nr.height;
+      const total = row3 ? pr.width + nr.width : pr.height + nr.height;
       if (total <= 0) return;
-      const start = row2 ? e.clientX : e.clientY;
-      const base4 = row2 ? pr.width : pr.height;
+      const start = row3 ? e.clientX : e.clientY;
+      const base4 = row3 ? pr.width : pr.height;
       const sum2 = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
       let ratio = base4 / total;
       h.classList.add("k-dragging");
       document.body.classList.add("k-resizing");
       const move = (ev) => {
-        const d = (row2 ? ev.clientX : ev.clientY) - start;
+        const d = (row3 ? ev.clientX : ev.clientY) - start;
         ratio = Math.max(0.05, Math.min(0.95, (base4 + d) / total));
         prev.style.flexGrow = String(sum2 * ratio);
         next.style.flexGrow = String(sum2 * (1 - ratio));
@@ -94019,9 +94577,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       drawStats();
       drawList3();
     };
-    const row2 = el("div", "k-rec-form-row");
-    row2.append(dayIn, mood2, words, mins, tags, add);
-    form.append(ta, row2);
+    const row22 = el("div", "k-rec-form-row");
+    row22.append(dayIn, mood2, words, mins, tags, add);
+    form.append(ta, row22);
     h.append(form);
     const stats = el("div", "k-rec-stats");
     h.append(stats);
@@ -94166,7 +94724,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const push = (p, failedFlag, error2) => {
       if (!p || !p.name) return;
       const prev = byName.get(p.name);
-      const row2 = {
+      const row3 = {
         ...p,
         failed: !!failedFlag,
         error: error2 || p.error || "",
@@ -94174,12 +94732,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         shadowed: false
       };
       if (!prev) {
-        byName.set(p.name, row2);
+        byName.set(p.name, row3);
         return;
       }
-      if (row2.origin === ORIGIN_PROJECT || prev.origin !== ORIGIN_PROJECT) {
-        row2.shadowed = true;
-        byName.set(p.name, row2);
+      if (row3.origin === ORIGIN_PROJECT || prev.origin !== ORIGIN_PROJECT) {
+        row3.shadowed = true;
+        byName.set(p.name, row3);
       } else prev.shadowed = true;
     };
     for (const p of loaded || []) push(p, false, "");
@@ -94651,10 +95209,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     box2.append(el("div", "k-plug-api-head", t("ui.plug.apiHead")));
     box2.append(el("div", "k-plug-api-hint dim", t("ui.plug.apiIntro")));
     for (const d of PLUGIN_API_DOC) {
-      const row2 = el("div", "k-plug-api-row");
-      row2.append(el("code", "k-plug-api-sig", d.sig));
-      row2.append(el("span", "k-plug-api-desc dim", t(d.key)));
-      box2.append(row2);
+      const row3 = el("div", "k-plug-api-row");
+      row3.append(el("code", "k-plug-api-sig", d.sig));
+      row3.append(el("span", "k-plug-api-desc dim", t(d.key)));
+      box2.append(row3);
     }
     return box2;
   }
@@ -94912,23 +95470,23 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function guessedCount(rows) {
     return (rows || []).filter((r) => r && r.guessed).length;
   }
-  function replaceDialogue(text, row2, next) {
-    if (!row2 || typeof row2.line !== "number") return null;
+  function replaceDialogue(text, row3, next) {
+    if (!row3 || typeof row3.line !== "number") return null;
     const lines = String(text == null ? "" : text).split("\n");
-    if (row2.line < 0 || row2.line >= lines.length) return null;
-    const line = lines[row2.line];
+    if (row3.line < 0 || row3.line >= lines.length) return null;
+    const line = lines[row3.line];
     const val = String(next == null ? "" : next).replace(/[\r\n]+/g, " ");
-    if (row2.source === SRC_SCRIPT && (!row2.pair || !row2.pair[0])) {
-      if (line !== row2.text) return null;
-      lines[row2.line] = val;
+    if (row3.source === SRC_SCRIPT && (!row3.pair || !row3.pair[0])) {
+      if (line !== row3.text) return null;
+      lines[row3.line] = val;
       return lines.join("\n");
     }
-    const [open, close2] = row2.pair || ['"', '"'];
-    if (line[row2.open] !== open) return null;
-    const endIdx = row2.closed ? row2.close : line.length;
-    const cur = line.slice(row2.open + 1, endIdx);
-    if (cur !== row2.text) return null;
-    lines[row2.line] = line.slice(0, row2.open + 1) + val + (row2.closed ? line.slice(row2.close) : close2);
+    const [open, close2] = row3.pair || ['"', '"'];
+    if (line[row3.open] !== open) return null;
+    const endIdx = row3.closed ? row3.close : line.length;
+    const cur = line.slice(row3.open + 1, endIdx);
+    if (cur !== row3.text) return null;
+    lines[row3.line] = line.slice(0, row3.open + 1) + val + (row3.closed ? line.slice(row3.close) : close2);
     return lines.join("\n");
   }
   function filterDialogue(rows, f = {}) {
@@ -95736,10 +96294,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (i5 >= 0) session.rels.splice(i5, 1);
       return null;
     }
-    const row2 = newRel(from2, to, { how, callThem });
-    if (i5 >= 0) session.rels[i5] = row2;
-    else session.rels.push(row2);
-    return row2;
+    const row3 = newRel(from2, to, { how, callThem });
+    if (i5 >= 0) session.rels[i5] = row3;
+    else session.rels.push(row3);
+    return row3;
   }
   function addCast(holder, member) {
     if (!holder) return null;
@@ -96293,8 +96851,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       setStatus(t("ui.dlgb.errSaveSession"));
       return false;
     }
-    const row2 = S8.sessions.find((r) => r.file === name5);
-    if (row2) row2.data = s;
+    const row3 = S8.sessions.find((r) => r.file === name5);
+    if (row3) row3.data = s;
     else S8.sessions.push({ file: name5, data: s });
     if (s === S8.cur) S8.savedAt = s.updated;
     return true;
@@ -96362,7 +96920,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       for (const s of list) {
         const file = (S8.sessions.find((r) => r.data === s) || {}).file || "";
-        const row2 = el("div", "dlgb-row" + (s.archived ? " archived" : ""));
+        const row3 = el("div", "dlgb-row" + (s.archived ? " archived" : ""));
         const main = el("div", "dlgb-row-main");
         main.append(el("div", "dlgb-row-title", s.title || t("ui.dlgb.untitledRow")));
         const cast = (s.cast || []).map((c) => c.name).filter(Boolean).join(" \xB7 ");
@@ -96371,13 +96929,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const meta2 = el("div", "dlgb-row-meta");
         meta2.append(el("span", "", tf("ui.dlgb.nTurns", st.spoken)));
         if (st.inserted) meta2.append(el("span", "", tf("ui.dlgb.nInserted", st.inserted)));
-        row2.append(main, meta2);
-        row2.onclick = () => openSession2(s, file);
-        row2.oncontextmenu = (e) => {
+        row3.append(main, meta2);
+        row3.onclick = () => openSession2(s, file);
+        row3.oncontextmenu = (e) => {
           e.preventDefault();
           sessionMenu2(e, s, file);
         };
-        rows.append(row2);
+        rows.append(row3);
       }
     }
     drawRows();
@@ -96715,7 +97273,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     };
     pick2.append(spk, el("span", "dlgb-pick-mid", t("ui.dlgb.speaksTo")), lis);
     box2.append(pick2);
-    const row2 = el("div", "dlgb-sendrow");
+    const row3 = el("div", "dlgb-sendrow");
     const inp = el("textarea", "dlgb-input");
     inp.placeholder = t("ui.dlgb.inputPh");
     inp.rows = 2;
@@ -96752,8 +97310,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const bDir = el("button", "dlgb-dir", "\u{1F3AC}");
     bDir.title = t("ui.dlgb.directorTip");
     bDir.onclick = () => directorNote();
-    row2.append(inp, bSend, bCont, bMono, bDir);
-    box2.append(row2);
+    row3.append(inp, bSend, bCont, bMono, bDir);
+    box2.append(row3);
     return box2;
   }
   function newReqId2() {
@@ -97066,7 +97624,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       list.replaceChildren();
       if (!S8.presets.length) list.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
       for (const p of S8.presets) {
-        const row2 = el("div", "dlgb-preset-row");
+        const row3 = el("div", "dlgb-preset-row");
         const main = el("div", "dlgb-preset-main");
         main.append(el("div", "dlgb-row-title", p.name));
         main.append(el(
@@ -97086,8 +97644,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           await savePresets();
           draw3();
         };
-        row2.append(main, bEdit, bDel);
-        list.append(row2);
+        row3.append(main, bEdit, bDel);
+        list.append(row3);
       }
     }
     draw3();
@@ -97539,13 +98097,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const section = (labelKey, list) => {
       const wrap2 = el("div", "k-colorsec");
       wrap2.append(el("div", "k-colorsec-lbl", t(labelKey)));
-      const row2 = el("div", "k-colorrow");
-      if (!list.length) row2.append(el("span", "dim k-colorempty", t("ui.color.none")));
+      const row3 = el("div", "k-colorrow");
+      if (!list.length) row3.append(el("span", "dim k-colorempty", t("ui.color.none")));
       for (const hex2 of list) {
         const key2 = (0, import_text_color3.presetLabelKey)(hex2);
-        row2.append(swatch(hex2, { current: current2, title: key2 ? t(key2) : hex2, onPick: use }));
+        row3.append(swatch(hex2, { current: current2, title: key2 ? t(key2) : hex2, onPick: use }));
       }
-      wrap2.append(row2);
+      wrap2.append(row3);
       return wrap2;
     };
     pop.append(section("ui.color.presets", import_text_color3.COLOR_PRESETS.map((p) => p.hex)));
@@ -108027,10 +108585,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         var H2 = {};
         H2.H = {};
         H2.H.N = function(N, W) {
-          var R = Uint8Array, i5 = 0, m = 0, J2 = 0, h = 0, Q = 0, X2 = 0, u = 0, w = 0, d = 0, v2, C;
-          if (N[0] == 3 && N[1] == 0) return W ? W : new R(0);
+          var R2 = Uint8Array, i5 = 0, m = 0, J2 = 0, h = 0, Q = 0, X2 = 0, u = 0, w = 0, d = 0, v2, C;
+          if (N[0] == 3 && N[1] == 0) return W ? W : new R2(0);
           var V2 = H2.H, n2 = V2.b, A = V2.e, l = V2.R, M2 = V2.n, I = V2.A, e = V2.Z, b = V2.m, Z = W == null;
-          if (Z) W = new R(N.length >>> 2 << 3);
+          if (Z) W = new R2(N.length >>> 2 << 3);
           while (i5 == 0) {
             i5 = n2(N, d, 1);
             m = n2(N, d + 1, 2);
@@ -108039,7 +108597,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
               if ((d & 7) != 0) d += 8 - (d & 7);
               var D = (d >>> 3) + 4, q = N[D - 4] | N[D - 3] << 8;
               if (Z) W = H2.H.W(W, w + q);
-              W.set(new R(N.buffer, N.byteOffset + D, q), w);
+              W.set(new R2(N.buffer, N.byteOffset + D, q), w);
               d = D + q << 3;
               w += q;
               continue;
@@ -108113,15 +108671,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return W.length == w ? W : W.slice(0, w);
         };
         H2.H.W = function(N, W) {
-          var R = N.length;
-          if (W <= R) return N;
-          var V2 = new Uint8Array(R << 1);
+          var R2 = N.length;
+          if (W <= R2) return N;
+          var V2 = new Uint8Array(R2 << 1);
           V2.set(N, 0);
           return V2;
         };
-        H2.H.R = function(N, W, R, V2, n2, A) {
+        H2.H.R = function(N, W, R2, V2, n2, A) {
           var l = H2.H.e, M2 = H2.H.Z, I = 0;
-          while (I < R) {
+          while (I < R2) {
             var e = N[M2(V2, n2) & W];
             n2 += e & 15;
             var b = e >>> 4;
@@ -108150,9 +108708,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           return n2;
         };
-        H2.H.V = function(N, W, R, V2) {
+        H2.H.V = function(N, W, R2, V2) {
           var n2 = 0, A = 0, l = V2.length >>> 1;
-          while (A < R) {
+          while (A < R2) {
             var M2 = N[A + W];
             V2[A << 1] = 0;
             V2[(A << 1) + 1] = M2;
@@ -108167,10 +108725,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           return n2;
         };
         H2.H.n = function(N, W) {
-          var R = H2.H.m, V2 = N.length, n2, A, l, M2, I, e = R.j;
+          var R2 = H2.H.m, V2 = N.length, n2, A, l, M2, I, e = R2.j;
           for (var M2 = 0; M2 <= W; M2++) e[M2] = 0;
           for (M2 = 1; M2 < V2; M2 += 2) e[N[M2]]++;
-          var b = R.K;
+          var b = R2.K;
           n2 = 0;
           e[0] = 0;
           for (A = 1; A <= W; A++) {
@@ -108185,42 +108743,42 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
             }
           }
         };
-        H2.H.A = function(N, W, R) {
+        H2.H.A = function(N, W, R2) {
           var V2 = N.length, n2 = H2.H.m, A = n2.r;
           for (var l = 0; l < V2; l += 2) if (N[l + 1] != 0) {
             var M2 = l >> 1, I = N[l + 1], e = M2 << 4 | I, b = W - I, Z = N[l] << b, m = Z + (1 << b);
             while (Z != m) {
               var J2 = A[Z] >>> 15 - W;
-              R[J2] = e;
+              R2[J2] = e;
               Z++;
             }
           }
         };
         H2.H.l = function(N, W) {
-          var R = H2.H.m.r, V2 = 15 - W;
+          var R2 = H2.H.m.r, V2 = 15 - W;
           for (var n2 = 0; n2 < N.length; n2 += 2) {
             var A = N[n2] << W - N[n2 + 1];
-            N[n2] = R[A] >>> V2;
+            N[n2] = R2[A] >>> V2;
           }
         };
-        H2.H.M = function(N, W, R) {
-          R = R << (W & 7);
+        H2.H.M = function(N, W, R2) {
+          R2 = R2 << (W & 7);
           var V2 = W >>> 3;
-          N[V2] |= R;
-          N[V2 + 1] |= R >>> 8;
+          N[V2] |= R2;
+          N[V2 + 1] |= R2 >>> 8;
         };
-        H2.H.I = function(N, W, R) {
-          R = R << (W & 7);
+        H2.H.I = function(N, W, R2) {
+          R2 = R2 << (W & 7);
           var V2 = W >>> 3;
-          N[V2] |= R;
-          N[V2 + 1] |= R >>> 8;
-          N[V2 + 2] |= R >>> 16;
+          N[V2] |= R2;
+          N[V2 + 1] |= R2 >>> 8;
+          N[V2 + 2] |= R2 >>> 16;
         };
-        H2.H.e = function(N, W, R) {
-          return (N[W >>> 3] | N[(W >>> 3) + 1] << 8) >>> (W & 7) & (1 << R) - 1;
+        H2.H.e = function(N, W, R2) {
+          return (N[W >>> 3] | N[(W >>> 3) + 1] << 8) >>> (W & 7) & (1 << R2) - 1;
         };
-        H2.H.b = function(N, W, R) {
-          return (N[W >>> 3] | N[(W >>> 3) + 1] << 8 | N[(W >>> 3) + 2] << 16) >>> (W & 7) & (1 << R) - 1;
+        H2.H.b = function(N, W, R2) {
+          return (N[W >>> 3] | N[(W >>> 3) + 1] << 8 | N[(W >>> 3) + 2] << 16) >>> (W & 7) & (1 << R2) - 1;
         };
         H2.H.Z = function(N, W) {
           return (N[W >>> 3] | N[(W >>> 3) + 1] << 8 | N[(W >>> 3) + 2] << 16) >>> (W & 7);
@@ -108234,20 +108792,20 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         })();
         (function() {
           var N = H2.H.m, W = 1 << 15;
-          for (var R = 0; R < W; R++) {
-            var V2 = R;
+          for (var R2 = 0; R2 < W; R2++) {
+            var V2 = R2;
             V2 = (V2 & 2863311530) >>> 1 | (V2 & 1431655765) << 1;
             V2 = (V2 & 3435973836) >>> 2 | (V2 & 858993459) << 2;
             V2 = (V2 & 4042322160) >>> 4 | (V2 & 252645135) << 4;
             V2 = (V2 & 4278255360) >>> 8 | (V2 & 16711935) << 8;
-            N.r[R] = (V2 >>> 16 | V2 << 16) >>> 17;
+            N.r[R2] = (V2 >>> 16 | V2 << 16) >>> 17;
           }
           function n2(A, l, M2) {
             while (l-- != 0) A.push(0, M2);
           }
-          for (var R = 0; R < 32; R++) {
-            N.q[R] = N.S[R] << 3 | N.T[R];
-            N.c[R] = N.p[R] << 4 | N.z[R];
+          for (var R2 = 0; R2 < 32; R2++) {
+            N.q[R2] = N.S[R2] << 3 | N.T[R2];
+            N.c[R2] = N.p[R2] << 4 | N.z[R2];
           }
           n2(N._, 144, 8);
           n2(N._, 255 - 143, 9);
@@ -108292,35 +108850,35 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           var bpll = Math.ceil(sw * bpp / 8);
           UPNG.decode._filterZero(data2, out, di, sw, sh);
-          var y = 0, row2 = starting_row[pass];
-          while (row2 < h) {
+          var y = 0, row3 = starting_row[pass];
+          while (row3 < h) {
             var col = starting_col[pass];
             var cdi = di + y * bpll << 3;
             while (col < w) {
               if (bpp == 1) {
                 var val = data2[cdi >> 3];
                 val = val >> 7 - (cdi & 7) & 1;
-                img[row2 * bpl + (col >> 3)] |= val << 7 - ((col & 7) << 0);
+                img[row3 * bpl + (col >> 3)] |= val << 7 - ((col & 7) << 0);
               }
               if (bpp == 2) {
                 var val = data2[cdi >> 3];
                 val = val >> 6 - (cdi & 7) & 3;
-                img[row2 * bpl + (col >> 2)] |= val << 6 - ((col & 3) << 1);
+                img[row3 * bpl + (col >> 2)] |= val << 6 - ((col & 3) << 1);
               }
               if (bpp == 4) {
                 var val = data2[cdi >> 3];
                 val = val >> 4 - (cdi & 7) & 15;
-                img[row2 * bpl + (col >> 1)] |= val << 4 - ((col & 1) << 2);
+                img[row3 * bpl + (col >> 1)] |= val << 4 - ((col & 1) << 2);
               }
               if (bpp >= 8) {
-                var ii = row2 * bpl + col * cbpp;
+                var ii = row3 * bpl + col * cbpp;
                 for (var j = 0; j < cbpp; j++) img[ii + j] = data2[(cdi >> 3) + j];
               }
               cdi += bpp;
               col += ci;
             }
             y++;
-            row2 += ri;
+            row3 += ri;
           }
           if (sw * sh != 0) di += sh * (1 + bpll);
           pass = pass + 1;
@@ -109017,7 +109575,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return nimg[i5] * e[0] + nimg[i5 + 1] * e[1] + nimg[i5 + 2] * e[2] + nimg[i5 + 3] * e[3];
       };
       UPNG.quantize.stats = function(nimg, i0, i1) {
-        var R = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        var R2 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         var m = [0, 0, 0, 0];
         var N = i1 - i0 >> 2;
         for (var i5 = i0; i5 < i1; i5 += 4) {
@@ -109026,45 +109584,45 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           m[1] += g;
           m[2] += b;
           m[3] += a;
-          R[0] += r * r;
-          R[1] += r * g;
-          R[2] += r * b;
-          R[3] += r * a;
-          R[5] += g * g;
-          R[6] += g * b;
-          R[7] += g * a;
-          R[10] += b * b;
-          R[11] += b * a;
-          R[15] += a * a;
+          R2[0] += r * r;
+          R2[1] += r * g;
+          R2[2] += r * b;
+          R2[3] += r * a;
+          R2[5] += g * g;
+          R2[6] += g * b;
+          R2[7] += g * a;
+          R2[10] += b * b;
+          R2[11] += b * a;
+          R2[15] += a * a;
         }
-        R[4] = R[1];
-        R[8] = R[2];
-        R[9] = R[6];
-        R[12] = R[3];
-        R[13] = R[7];
-        R[14] = R[11];
-        return { R, m, N };
+        R2[4] = R2[1];
+        R2[8] = R2[2];
+        R2[9] = R2[6];
+        R2[12] = R2[3];
+        R2[13] = R2[7];
+        R2[14] = R2[11];
+        return { R: R2, m, N };
       };
       UPNG.quantize.estats = function(stats) {
-        var R = stats.R, m = stats.m, N = stats.N;
+        var R2 = stats.R, m = stats.m, N = stats.N;
         var m0 = m[0], m1 = m[1], m2 = m[2], m3 = m[3], iN = N == 0 ? 0 : 1 / N;
         var Rj = [
-          R[0] - m0 * m0 * iN,
-          R[1] - m0 * m1 * iN,
-          R[2] - m0 * m2 * iN,
-          R[3] - m0 * m3 * iN,
-          R[4] - m1 * m0 * iN,
-          R[5] - m1 * m1 * iN,
-          R[6] - m1 * m2 * iN,
-          R[7] - m1 * m3 * iN,
-          R[8] - m2 * m0 * iN,
-          R[9] - m2 * m1 * iN,
-          R[10] - m2 * m2 * iN,
-          R[11] - m2 * m3 * iN,
-          R[12] - m3 * m0 * iN,
-          R[13] - m3 * m1 * iN,
-          R[14] - m3 * m2 * iN,
-          R[15] - m3 * m3 * iN
+          R2[0] - m0 * m0 * iN,
+          R2[1] - m0 * m1 * iN,
+          R2[2] - m0 * m2 * iN,
+          R2[3] - m0 * m3 * iN,
+          R2[4] - m1 * m0 * iN,
+          R2[5] - m1 * m1 * iN,
+          R2[6] - m1 * m2 * iN,
+          R2[7] - m1 * m3 * iN,
+          R2[8] - m2 * m0 * iN,
+          R2[9] - m2 * m1 * iN,
+          R2[10] - m2 * m2 * iN,
+          R2[11] - m2 * m3 * iN,
+          R2[12] - m3 * m0 * iN,
+          R2[13] - m3 * m1 * iN,
+          R2[14] - m3 * m2 * iN,
+          R2[15] - m3 * m3 * iN
         ];
         var A = Rj, M2 = UPNG.M4;
         var b = [0.5, 0.5, 0.5, 0.5], mi = 0, tmi = 0;
@@ -111366,9 +111924,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           if (!AP)
             return void 0;
           var N = AP.lookup(PDFName_default.of("N"), PDFDict_default, PDFStream_default);
-          var R = AP.lookupMaybe(PDFName_default.of("R"), PDFDict_default, PDFStream_default);
+          var R2 = AP.lookupMaybe(PDFName_default.of("R"), PDFDict_default, PDFStream_default);
           var D = AP.lookupMaybe(PDFName_default.of("D"), PDFDict_default, PDFStream_default);
-          return { normal: N, rollover: R, down: D };
+          return { normal: N, rollover: R2, down: D };
         };
         PDFAnnotation2.prototype.getFlags = function() {
           var _a, _b;
@@ -111419,9 +111977,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           this.dict = dict;
         }
         AppearanceCharacteristics2.prototype.R = function() {
-          var R = this.dict.lookup(PDFName_default.of("R"));
-          if (R instanceof PDFNumber_default)
-            return R;
+          var R2 = this.dict.lookup(PDFName_default.of("R"));
+          if (R2 instanceof PDFNumber_default)
+            return R2;
           return void 0;
         };
         AppearanceCharacteristics2.prototype.BC = function() {
@@ -111493,8 +112051,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           };
         };
         AppearanceCharacteristics2.prototype.setRotation = function(rotation) {
-          var R = this.dict.context.obj(rotation);
-          this.dict.set(PDFName_default.of("R"), R);
+          var R2 = this.dict.context.obj(rotation);
+          this.dict.set(PDFName_default.of("R"), R2);
         };
         AppearanceCharacteristics2.prototype.setBorderColor = function(color) {
           var BC = this.dict.context.obj(color);
@@ -144323,8 +144881,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
                 }
               }
             }
-            var row2 = this.stateTable.stateArray.getItem(currentState);
-            var entryIndex = row2[classCode];
+            var row3 = this.stateTable.stateArray.getItem(currentState);
+            var entryIndex = row3[classCode];
             var entry = this.stateTable.entryTable.getItem(entryIndex);
             if (classCode !== END_OF_TEXT_CLASS && classCode !== DELETED_GLYPH_CLASS) {
               processEntry(glyph2, entry, index);
@@ -144349,9 +144907,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           }
           visited.add(state2);
           var _this$stateTable = this.stateTable, nClasses = _this$stateTable.nClasses, stateArray = _this$stateTable.stateArray, entryTable = _this$stateTable.entryTable;
-          var row2 = stateArray.getItem(state2);
+          var row3 = stateArray.getItem(state2);
           for (var classCode = 4; classCode < nClasses; classCode++) {
-            var entryIndex = row2[classCode];
+            var entryIndex = row3[classCode];
             var entry = entryTable.getItem(entryIndex);
             for (var _iterator2 = _createForOfIteratorHelperLoose$9(this.lookupTable.glyphsForValue(classCode)), _step2; !(_step2 = _iterator2()).done; ) {
               var glyph2 = _step2.value;
@@ -152096,8 +152654,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           });
         }
       }
-      for (const row2 of rows) {
-        const b = row2.block;
+      for (const row3 of rows) {
+        const b = row3.block;
         const c = fmt.elements[b.el] || fmt.elements.action;
         const st = (fmt.styles[b.el] || fmt.styles.action).print;
         const marker = b.el === "more" || b.el === "continued-top" || b.el === "continued-bottom";
@@ -152105,14 +152663,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const x = marker ? markerX(b, fmt) * PT_PER_IN : ind * PT_PER_IN;
         const boxW = marker ? tw * PT_PER_IN : Math.max(0.3, Math.min(num(c.width, 6), tw - (ind - fmt.margins.left))) * PT_PER_IN;
         const align = b.el === "continued-bottom" || b.el === "transition" ? "right" : "left";
-        const lines = row2.lines;
+        const lines = row3.lines;
         const ec = pdfElementColor(b.el, opts.colorMode);
         const ecol = ec ? rgb(ec[0], ec[1], ec[2]) : null;
         lines.forEach((ln, i5) => {
           const text = st && st.caps ? String(ln).toUpperCase() : ln;
           draw3(page2, text, {
             x,
-            y: baseline(row2.line + i5),
+            y: baseline(row3.line + i5),
             size,
             boxWidth: boxW,
             align,
@@ -152124,7 +152682,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         });
         if (opts.sceneNumbers && b.el === "scene" && b.sceneNo) {
           const label = String(b.sceneNo) + (fmt.sceneNumbers.suffix || "");
-          const y = baseline(row2.line);
+          const y = baseline(row3.line);
           draw3(page2, label, { x: (fmt.sceneNumbers.left || 0.75) * PT_PER_IN, y, size, boxWidth: 0, color: ecol });
           const w = widthOf(pickFont(set, false, false), label, size);
           draw3(page2, label, { x: pw - (fmt.sceneNumbers.right || 1) * PT_PER_IN - w, y, size, boxWidth: 0, color: ecol });
@@ -152133,14 +152691,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           bookmarks.push({
             title: String(b.text).trim(),
             pageIndex: titles.length + pi,
-            y: baseline(row2.line) + size
+            y: baseline(row3.line) + size
           });
         }
         if (opts.drawRectAroundNotes && b.el === "note") {
           noteRects.push({
             page: page2,
             x: x - 3,
-            y: baseline(row2.line + lines.length - 1) - size * 0.3,
+            y: baseline(row3.line + lines.length - 1) - size * 0.3,
             w: boxW + 6,
             h: lines.length * lineH + size * 0.3
           });
@@ -153834,7 +154392,7 @@ ${pages.join("\n")}
     const cfg = normalizeHub((state.meta || {}).exportHub);
     if (!drafts.some((d) => d.dPath === cfg.draft)) cfg.draft = drafts.length ? drafts[0].dPath : "";
     if (!drafts.length) cfg.scope = "tab";
-    const saveCfg = async () => {
+    const saveCfg2 = async () => {
       if (!state.meta) return;
       state.meta.exportHub = cfg;
       try {
@@ -153876,24 +154434,24 @@ ${pages.join("\n")}
     function renderFormats() {
       colFmt.replaceChildren();
       for (const f of EXPORT_FORMATS) {
-        const row2 = el("div", "xhub-fmt" + (f.key === cfg.format ? " on" : ""));
-        row2.dataset.fmt = f.key;
-        row2.append(el("span", "xhub-fmt-ic", f.icon));
+        const row3 = el("div", "xhub-fmt" + (f.key === cfg.format ? " on" : ""));
+        row3.dataset.fmt = f.key;
+        row3.append(el("span", "xhub-fmt-ic", f.icon));
         const txt = el("div", "xhub-fmt-txt");
         txt.append(
           el("div", "xhub-fmt-name", t(f.labelKey)),
           el("div", "xhub-fmt-desc dim", t(f.descKey))
         );
-        row2.append(txt);
-        row2.onclick = () => {
+        row3.append(txt);
+        row3.onclick = () => {
           cfg.format = f.key;
-          saveCfg();
+          saveCfg2();
           renderFormats();
           renderOptions();
           nameRow.setExt(formatDef(f.key).ext);
           refresh();
         };
-        colFmt.append(row2);
+        colFmt.append(row3);
       }
     }
     const chk = (on2) => {
@@ -153929,7 +154487,7 @@ ${pages.join("\n")}
       selScope.value = cfg.scope;
       selScope.onchange = () => {
         cfg.scope = selScope.value;
-        saveCfg();
+        saveCfg2();
         renderOptions();
         refresh();
       };
@@ -153945,7 +154503,7 @@ ${pages.join("\n")}
         selD.value = cfg.draft;
         selD.onchange = () => {
           cfg.draft = selD.value;
-          saveCfg();
+          saveCfg2();
           refresh();
         };
         colOpt.append(selD);
@@ -153966,7 +154524,7 @@ ${pages.join("\n")}
       selKind.value = cfg.kind;
       selKind.onchange = () => {
         cfg.kind = selKind.value;
-        saveCfg();
+        saveCfg2();
         refresh();
       };
       colOpt.append(selKind);
@@ -153984,7 +154542,7 @@ ${pages.join("\n")}
       selWf.value = cfg.workflow;
       selWf.onchange = () => {
         cfg.workflow = selWf.value;
-        saveCfg();
+        saveCfg2();
         refresh();
       };
       colOpt.append(selWf);
@@ -154000,7 +154558,7 @@ ${pages.join("\n")}
           const c = chk(cfg.pdf[k]);
           c.onchange = () => {
             cfg.pdf[k] = c.checked;
-            saveCfg();
+            saveCfg2();
             refresh();
           };
           colOpt.append(optRow(t(labelKey), c));
@@ -154022,7 +154580,7 @@ ${pages.join("\n")}
         selCol.value = cfg.pdf.colorMode === "color" ? "color" : "mono";
         selCol.onchange = () => {
           cfg.pdf.colorMode = selCol.value;
-          saveCfg();
+          saveCfg2();
           refresh();
         };
         colOpt.append(el("div", "xhub-row-lbl", t("ui.pdf.colorMode")), selCol);
@@ -154033,7 +154591,7 @@ ${pages.join("\n")}
         wm.placeholder = t("ui.xhub.pdfWmHint");
         wm.onchange = () => {
           cfg.pdf.watermark = wm.value.trim();
-          saveCfg();
+          saveCfg2();
           refresh();
         };
         colOpt.append(el("div", "xhub-row-lbl", t("ui.xhub.pdfWm")), wm);
@@ -154044,7 +154602,7 @@ ${pages.join("\n")}
         const c = chk(cfg.html.wysiwyg);
         c.onchange = () => {
           cfg.html.wysiwyg = c.checked;
-          saveCfg();
+          saveCfg2();
           refresh();
         };
         colOpt.append(optRow(t("ui.xhub.htmlWysiwyg"), c));
@@ -154058,7 +154616,7 @@ ${pages.join("\n")}
         inp.value = String(num(cfg.rtf.fontPt, 12));
         inp.onchange = () => {
           cfg.rtf.fontPt = num(inp.value, 12);
-          saveCfg();
+          saveCfg2();
           refresh();
         };
         colOpt.append(el("div", "xhub-row-lbl", t("ui.xhub.rtfFontPt")), inp);
@@ -154133,7 +154691,7 @@ ${pages.join("\n")}
             log("warn", t("ui.xname.openFail"), e);
           }
         }
-        await saveCfg();
+        await saveCfg2();
         close2();
         setStatus(t("ui.common.exportDone") + done2.dest + (done2.note ? " \xB7 " + done2.note : ""));
         log("info", t("ui.xhub.title"), { format: cfg.format, dest: done2.dest, kind: r.kind });
@@ -155316,14 +155874,14 @@ ${s.body}`).join("\n\n");
       } else {
         resultDiv.append(el("div", "dim", tf("ui.ai.foundDotCheckRound", res.holes.length, res.batches)));
         for (const h of res.holes) {
-          const row2 = el("div");
-          row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
+          const row3 = el("div");
+          row3.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
           const sev = { high: "\u{1F534}", medium: "\u{1F7E1}", low: "\u26AA" }[h.severity] || "\u2022";
-          row2.append(el("div", "", `${sev} [${h.type || t("ai.general")}] ${h.description || ""}`));
-          if (h.sceneTitle || h.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel") + (h.sceneTitle || h.sceneId)));
-          if (h.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel") + h.evidence));
-          if (h.suggestion) row2.append(el("div", "", "\u{1F4A1} " + h.suggestion));
-          resultDiv.append(row2);
+          row3.append(el("div", "", `${sev} [${h.type || t("ai.general")}] ${h.description || ""}`));
+          if (h.sceneTitle || h.sceneId) row3.append(el("div", "dim", t("ai.sceneLabel") + (h.sceneTitle || h.sceneId)));
+          if (h.evidence) row3.append(el("div", "dim", t("ai.evidenceLabel") + h.evidence));
+          if (h.suggestion) row3.append(el("div", "", "\u{1F4A1} " + h.suggestion));
+          resultDiv.append(row3);
         }
         if (res.failedBatches) resultDiv.append(el("div", "dim", tf("ui.ai.hasRoundCallAI", res.failedBatches)));
       }
@@ -155461,13 +156019,13 @@ ${s.body}`).join("\n\n");
       } else {
         resultDiv.append(el("div", "dim", tf("ui.ai.foundDotSceneAppear", res.issues.length, res.appearances || 0)));
         for (const it of res.issues) {
-          const row2 = el("div");
-          row2.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
-          row2.append(el("div", "", `\u2022 [${it.aspect || t("ai.general")}] ${it.issue || ""}`));
-          if (it.sceneTitle || it.sceneId) row2.append(el("div", "dim", t("ai.sceneLabel") + (it.sceneTitle || it.sceneId)));
-          if (it.evidence) row2.append(el("div", "dim", t("ai.evidenceLabel") + it.evidence));
-          if (it.suggestion) row2.append(el("div", "", "\u{1F4A1} " + it.suggestion));
-          resultDiv.append(row2);
+          const row3 = el("div");
+          row3.style.cssText = "margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)";
+          row3.append(el("div", "", `\u2022 [${it.aspect || t("ai.general")}] ${it.issue || ""}`));
+          if (it.sceneTitle || it.sceneId) row3.append(el("div", "dim", t("ai.sceneLabel") + (it.sceneTitle || it.sceneId)));
+          if (it.evidence) row3.append(el("div", "dim", t("ai.evidenceLabel") + it.evidence));
+          if (it.suggestion) row3.append(el("div", "", "\u{1F4A1} " + it.suggestion));
+          resultDiv.append(row3);
         }
       }
       const btns = el("div", "k-dlg-btns");
@@ -158382,30 +158940,30 @@ ${s.body}`).join("\n\n");
     };
   }
   function mentionField(label, value, onInput, { cast = [], rows = 4, placeholder = "", hint = "" } = {}) {
-    const row2 = el("div", "st-field");
-    row2.append(el("label", null, label));
+    const row3 = el("div", "st-field");
+    row3.append(el("label", null, label));
     const ta = el("textarea", "wiki-input st-ta");
     ta.rows = rows;
     ta.value = value || "";
     ta.placeholder = placeholder;
-    row2.append(ta);
-    if (hint) row2.append(el("div", "st-hint", hint));
-    const refresh = mentionWarn(row2, cast);
+    row3.append(ta);
+    if (hint) row3.append(el("div", "st-hint", hint));
+    const refresh = mentionWarn(row3, cast);
     ta.oninput = () => {
       onInput(ta.value);
       refresh(ta.value);
     };
-    row2.append(mentionBar(ta, cast, (v2) => {
+    row3.append(mentionBar(ta, cast, (v2) => {
       onInput(v2);
       refresh(v2);
     }));
     refresh(ta.value);
-    row2.__input = ta;
-    return row2;
+    row3.__input = ta;
+    return row3;
   }
   function tagInput(label, get3, set, { placeholder = "" } = {}) {
-    const row2 = el("div", "st-field");
-    row2.append(el("label", null, label));
+    const row3 = el("div", "st-field");
+    row3.append(el("label", null, label));
     const picked = el("div", "st-tag-picked");
     const inp = el("input", "wiki-input");
     inp.placeholder = placeholder || t("ui.starter.tagOwnPlaceholder");
@@ -158448,11 +159006,11 @@ ${s.body}`).join("\n\n");
     btn2.onclick = add;
     const own = el("div", "st-tag-own");
     own.append(inp, btn2);
-    row2.append(picked, own);
+    row3.append(picked, own);
     redraw3();
-    row2.__input = inp;
-    row2.__redraw = redraw3;
-    return row2;
+    row3.__input = inp;
+    row3.__redraw = redraw3;
+    return row3;
   }
   function promptFields(get3, set, { cast = [], label = "", hint = "" } = {}) {
     const wrap2 = el("div", "st-prompts");
@@ -158533,8 +159091,8 @@ ${s.body}`).join("\n\n");
     minHeight = 150
   } = {}) {
     const { richEditor: richEditor2 } = await Promise.resolve().then(() => (init_starter_richtext(), starter_richtext_exports));
-    const row2 = el("div", "st-field");
-    row2.append(el("label", null, label));
+    const row3 = el("div", "st-field");
+    row3.append(el("label", null, label));
     let cur = String(value || "");
     let refresh = () => {
     };
@@ -158548,22 +159106,22 @@ ${s.body}`).join("\n\n");
       }
     });
     if (placeholder) rt.__area.dataset.ph = placeholder;
-    row2.append(rt);
-    if (hint) row2.append(el("div", "st-hint", hint));
-    refresh = mentionWarn(row2, cast);
-    row2.append(mentionBar(rt.__area, cast, (html) => {
+    row3.append(rt);
+    if (hint) row3.append(el("div", "st-hint", hint));
+    refresh = mentionWarn(row3, cast);
+    row3.append(mentionBar(rt.__area, cast, (html) => {
       cur = html;
       refresh(cur);
     }));
     refresh(cur);
-    row2.__getHtml = () => cur;
-    row2.__setHtml = (v2) => {
+    row3.__getHtml = () => cur;
+    row3.__setHtml = (v2) => {
       cur = String(v2 || "");
       rt.__setHtml(cur);
       refresh(cur);
     };
-    row2.__area = rt.__area;
-    return row2;
+    row3.__area = rt.__area;
+    return row3;
   }
   var init_starter_fields = __esm({
     "src/starter/starter-fields.js"() {
@@ -159019,16 +159577,16 @@ ${s.body}`).join("\n\n");
 
   // src/starter/starter-steps.js
   function field(labelText, value, onInput, { multiline = false, placeholder = "", rows = 5 } = {}) {
-    const row2 = el("div", "st-field");
-    row2.append(el("label", null, labelText));
+    const row3 = el("div", "st-field");
+    row3.append(el("label", null, labelText));
     const inp = multiline ? el("textarea", "wiki-input st-ta") : el("input", "wiki-input");
     if (multiline) inp.rows = rows;
     inp.value = value || "";
     inp.placeholder = placeholder;
     inp.oninput = () => onInput(inp.value);
-    row2.append(inp);
-    row2.__input = inp;
-    return row2;
+    row3.append(inp);
+    row3.__input = inp;
+    return row3;
   }
   function pickLine(host2, text, onPick) {
     const lines = String(text || "").split(/\r?\n/).map((x) => x.replace(/^\s*(?:[-*•]|\d{1,2}[.)])\s*/, "").trim()).filter((x) => x && x.length < 120);
@@ -159051,8 +159609,8 @@ ${s.body}`).join("\n\n");
   }
   async function imagePicker(ctx2, key2, { ratio = "st-img-cover", label = "" } = {}) {
     const s = ctx2.starter;
-    const row2 = el("div", "st-field");
-    if (label) row2.append(el("label", null, label));
+    const row3 = el("div", "st-field");
+    if (label) row3.append(el("label", null, label));
     const box2 = el("div", "st-img-box " + ratio);
     const draw3 = async () => {
       box2.innerHTML = "";
@@ -159098,9 +159656,9 @@ ${s.body}`).join("\n\n");
       await draw3();
     };
     btns.append(fromFile, fromGal, clr);
-    row2.append(box2, btns);
+    row3.append(box2, btns);
     await draw3();
-    return row2;
+    return row3;
   }
   function renderTags(host2, ctx2) {
     const s = ctx2.starter;
@@ -159271,7 +159829,7 @@ ${s.body}`).join("\n\n");
     s.w = s.w || {};
     host2.append(el("div", "st-hint", t("ui.starter.wAllOptional")));
     for (const f of W_FIELDS) {
-      const row2 = field(
+      const row3 = field(
         f.icon + " " + f.label,
         s.w[f.key] || "",
         (v2) => {
@@ -159288,11 +159846,11 @@ ${s.body}`).join("\n\n");
           return;
         }
         s.w[f.key] = out;
-        row2.__input.value = out;
+        row3.__input.value = out;
         ctx2.save();
       }));
-      row2.append(btns);
-      host2.append(row2);
+      row3.append(btns);
+      host2.append(row3);
     }
   }
   async function renderCover(host2, ctx2) {
@@ -159678,9 +160236,9 @@ ${s.body}`).join("\n\n");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
     const list = (d.chapters || {})[chGuid] || [];
-    const row2 = list.find((x) => x.id === sceneId);
-    if (!row2) return false;
-    row2.choices = rows;
+    const row3 = list.find((x) => x.id === sceneId);
+    if (!row3) return false;
+    row3.choices = rows;
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     return true;
   }
@@ -159739,7 +160297,7 @@ ${s.body}`).join("\n\n");
       return null;
     }
     const title2 = sc.title || t("ui.starter.scUntitled");
-    const row2 = await addScene(dPath, ch, title2, {
+    const row3 = await addScene(dPath, ch, title2, {
       silent: true,
       body,
       meta: {
@@ -159750,15 +160308,15 @@ ${s.body}`).join("\n\n");
         synopsis: (sc.synopsis || "").replace(/\s+/g, " ").slice(0, 200)
       }
     });
-    if (!row2) {
+    if (!row3) {
       setStatus(t("ui.starter.cvNoScene"));
       return null;
     }
-    await setSceneChoices(dPath, ch.guid, row2.id, choiceRows(open));
-    sc.exports = [...sc.exports || [], { at: Date.now(), format: format3, path: row2.path }];
+    await setSceneChoices(dPath, ch.guid, row3.id, choiceRows(open));
+    sc.exports = [...sc.exports || [], { at: Date.now(), format: format3, path: row3.path }];
     await writeScenario(s.slug, sc);
     await buildTree2();
-    return { path: row2.path, chunks: parts.length };
+    return { path: row3.path, chunks: parts.length };
   }
   function convertDialog(s, rows, only = null, opts = {}) {
     return new Promise((resolve) => {
@@ -160033,7 +160591,7 @@ ${s.body}`).join("\n\n");
         resolve(v2);
       };
       const opts = { timeline: hasWhen, maps: hasWhere, scenarios: nSc > 0 };
-      const row2 = (key2, label, enabled) => {
+      const row3 = (key2, label, enabled) => {
         const line = el("label", "st-br-row");
         const cb = el("input");
         cb.type = "checkbox";
@@ -160046,9 +160604,9 @@ ${s.body}`).join("\n\n");
         if (!enabled) line.append(el("span", "st-dim", " \u2014 " + t("ui.starter.brNothing")));
         box2.append(line);
       };
-      row2("timeline", tf("ui.starter.brWhen", BRIDGE_MAP), hasWhen);
-      row2("scenarios", tf("ui.starter.brScenarios", nSc), nSc > 0);
-      row2("maps", tf("ui.starter.brWhere", BRIDGE_MAP), hasWhere);
+      row3("timeline", tf("ui.starter.brWhen", BRIDGE_MAP), hasWhen);
+      row3("scenarios", tf("ui.starter.brScenarios", nSc), nSc > 0);
+      row3("maps", tf("ui.starter.brWhere", BRIDGE_MAP), hasWhere);
       const foot = el("div", "k-dlg-foot");
       const cancel = el("button", null, t("ui.common.cancel"));
       cancel.onclick = () => done2(null);
@@ -160088,13 +160646,13 @@ ${s.body}`).join("\n\n");
     scenarioDialog: () => scenarioDialog
   });
   function aiRow(btn2) {
-    const row2 = el("div", "st-row-btns");
-    row2.append(btn2);
-    return row2;
+    const row3 = el("div", "st-row-btns");
+    row3.append(btn2);
+    return row3;
   }
   function draftImagePicker({ slug: slug2, root, get: get3, set, ratio = "st-img-thumb", label = "", hint = "" }) {
-    const row2 = el("div", "st-field st-img-field");
-    if (label) row2.append(el("label", null, label));
+    const row3 = el("div", "st-field st-img-field");
+    if (label) row3.append(el("label", null, label));
     const box2 = el("div", "st-img-box " + ratio);
     const draw3 = async () => {
       box2.replaceChildren();
@@ -160146,11 +160704,11 @@ ${s.body}`).join("\n\n");
       await draw3();
     };
     btns.append(fromFile, fromGal, clr);
-    row2.append(box2, btns);
-    if (hint) row2.append(el("div", "st-hint", hint));
+    row3.append(box2, btns);
+    if (hint) row3.append(el("div", "st-hint", hint));
     draw3();
-    row2.__redraw = draw3;
-    return row2;
+    row3.__redraw = draw3;
+    return row3;
   }
   async function renderStarterHome(host2, ctx2) {
     const s = ctx2.starter;
@@ -160493,8 +161051,8 @@ ${s.body}`).join("\n\n");
           minHeight: 150,
           placeholder: tf("ui.starter.scOpenerPlaceholder", TOK_ANY),
           hint: t("ui.starter.scOpenerHint")
-        }).then((row2) => {
-          openRow = row2;
+        }).then((row3) => {
+          openRow = row3;
           const opBtns = el("div", "st-row-btns");
           opBtns.append(aiBtn(t("ui.starter.aiWriteOpener"), async (reqId) => {
             const out = await askAI(
@@ -160506,8 +161064,8 @@ ${s.body}`).join("\n\n");
             if (out) openRow.__setHtml(out);
             else setStatus(t("ui.starter.aiNoResult"));
           }));
-          row2.append(opBtns);
-          row2.append(draftImagePicker({
+          row3.append(opBtns);
+          row3.append(draftImagePicker({
             slug: s.slug,
             root: ctx2.root,
             get: () => openerImage,
@@ -160518,7 +161076,7 @@ ${s.body}`).join("\n\n");
             label: t("ui.starter.scOpenerImage"),
             hint: t("ui.starter.scOpenerImageHint")
           }));
-          openSlot.replaceChildren(row2);
+          openSlot.replaceChildren(row3);
         }).catch((e) => {
           log("error", "starter: opener editor", e);
           openSlot.append(el("div", "st-err", t("ui.starter.stepDrawFail")));
@@ -160696,10 +161254,10 @@ ${s.body}`).join("\n\n");
     wrap2.append(head2);
     const log23 = el("div", "st-chat-log");
     wrap2.append(log23);
-    const attachImage = (row2, file) => {
+    const attachImage = (row3, file) => {
       if (!file) return null;
       const box2 = el("div", "st-turn-img st-turn-img-loading");
-      row2.append(box2);
+      row3.append(box2);
       imageUrl(s.slug, file).then((url) => {
         if (!url || !box2.isConnected) {
           box2.remove();
@@ -160732,16 +161290,16 @@ ${s.body}`).join("\n\n");
         return;
       }
       for (const turn of sc.turns) {
-        const row2 = el("div", "st-turn " + (turn.role === ROLE_GM ? "gm" : "player"));
+        const row3 = el("div", "st-turn " + (turn.role === ROLE_GM ? "gm" : "player"));
         const who = turn.role === ROLE_GM ? "\u{1F3B2} " + t("ui.starter.gm") : "\u{1F642} " + (nameOf(s, turn.speaker) || t("ui.starter.you"));
-        row2.append(el("div", "st-turn-who", who));
-        if (turn.image) attachImage(row2, turn.image);
+        row3.append(el("div", "st-turn-who", who));
+        if (turn.image) attachImage(row3, turn.image);
         const body = el("div", "st-turn-text");
         if (turn.html) body.innerHTML = htmlToDisplay(sanitizeHtml(turn.html), baseUrl);
         else setSpeechText(body, turn.text);
-        row2.append(body);
-        if (turn.chosen) row2.append(el("div", "st-turn-chosen", "\u21B3 " + turn.chosen));
-        log23.append(row2);
+        row3.append(body);
+        if (turn.chosen) row3.append(el("div", "st-turn-chosen", "\u21B3 " + turn.chosen));
+        log23.append(row3);
       }
       log23.scrollTop = log23.scrollHeight;
     };
@@ -160797,7 +161355,7 @@ ${s.body}`).join("\n\n");
       } else if (mine.length === 1) {
         CHAT_C.speaker = mine[0].id;
       }
-      const row2 = el("div", "st-chat-input");
+      const row3 = el("div", "st-chat-input");
       const ta = el("textarea", "wiki-input st-chat-ta");
       ta.rows = 2;
       ta.value = CHAT_C.draft;
@@ -160819,8 +161377,8 @@ ${s.body}`).join("\n\n");
         send3(v2, {});
       };
       go.onclick = doSend;
-      row2.append(ta, go);
-      foot.append(row2);
+      row3.append(ta, go);
+      foot.append(row3);
       if ((sc.turns || []).length) {
         const tools = el("div", "st-row-btns");
         const recap = el("button", null, "\u{1F4DD} " + t("ui.starter.makeRecap"));
@@ -161585,13 +162143,13 @@ ${s.body}`).join("\n\n");
           }
         }
         get(word, kind) {
-          const row2 = this.map[`${kind}:${word}`];
-          if (!row2) return null;
-          if (this.now() - row2.t > this.ttl) {
+          const row3 = this.map[`${kind}:${word}`];
+          if (!row3) return null;
+          if (this.now() - row3.t > this.ttl) {
             delete this.map[`${kind}:${word}`];
             return null;
           }
-          return row2.w;
+          return row3.w;
         }
         set(word, kind, words) {
           this.map[`${kind}:${word}`] = { w: words, t: this.now() };
@@ -162826,7 +163384,7 @@ ${sc.body || ""}
       }));
       const cast = el("div", "roster-cast");
       r.characters.forEach((c, i5) => {
-        const row2 = el("div", "roster-row");
+        const row3 = el("div", "roster-row");
         const name5 = ce("roster-name", c.name, (v2) => {
           c.name = v2.replace(/:$/, "");
         });
@@ -162840,8 +163398,8 @@ ${sc.body || ""}
           dirty();
           paint();
         };
-        row2.append(name5, el("span", "roster-colon", ":"), detail, del2);
-        cast.append(row2);
+        row3.append(name5, el("span", "roster-colon", ":"), detail, del2);
+        cast.append(row3);
       });
       if (!r.characters.length) cast.append(el("div", "roster-empty", t("ui.roster.notHasListPress")));
       page2.append(cast);
@@ -163216,8 +163774,8 @@ ${sc.body || ""}
         c.sceneSet.add(sceneNo);
         c.scenes.push({ scene: sceneNo, page: page2, lines: n2 });
       } else {
-        const row2 = c.scenes.find((x) => x.scene === sceneNo);
-        if (row2) row2.lines += n2;
+        const row3 = c.scenes.find((x) => x.scene === sceneNo);
+        if (row3) row3.lines += n2;
       }
     }
     const out = [...chars3.values()].map((c) => ({
@@ -163657,6 +164215,7 @@ ${css}
     clearTreeSel: () => clearTreeSel,
     closeTab: () => closeTab,
     computeProjectStats: () => computeProjectStats,
+    confirmQuit: () => confirmQuit,
     currentScriptSource: () => currentScriptSource,
     currentSpView: () => currentSpView,
     currentStartPage: () => currentStartPage,
@@ -163968,17 +164527,17 @@ ${css}
     return Number.isFinite(n2) ? Math.max(-6, Math.min(16, n2)) : 0;
   }
   function applyZoomVars(uiOff) {
-    const R = document.documentElement.style;
+    const R2 = document.documentElement.style;
     const off3 = uiOff === void 0 ? uiFontOffset() : parseInt(uiOff, 10) || 0;
-    R.setProperty("--ui-fs", 14 + off3 + "px");
+    R2.setProperty("--ui-fs", 14 + off3 + "px");
     const edBase = ptToPx(proseFormat().fontPt);
     const spBase = ptToPx(state.settings.spFontPt ?? 12);
     const edfs = Math.max(9, Math.min(96, +edBase.toFixed(2)));
     const spfs = Math.max(9, Math.min(96, +spBase.toFixed(2)));
-    R.setProperty("--ed-fs", edfs + "px");
-    R.setProperty("--sp-fs", spfs + "px");
+    R2.setProperty("--ed-fs", edfs + "px");
+    R2.setProperty("--sp-fs", spfs + "px");
     refreshTextMeasurer();
-    R.setProperty("--page-scale", pageScale.toFixed(3));
+    R2.setProperty("--page-scale", pageScale.toFixed(3));
     bumpProseLayout();
     repaginateAfterGeometry();
     syncWorkspaceWidths();
@@ -164064,17 +164623,17 @@ ${css}
     const pane = t3.pane;
     const pm2 = pane && pane.querySelector(":scope > .workspace > .ProseMirror");
     const z = pm2 ? zoomFactorOf(pm2) || 1 : 1;
-    const R = getComputedStyle(document.documentElement);
+    const R2 = getComputedStyle(document.documentElement);
     out.env = {
       \u0E42\u0E2B\u0E21\u0E14: t3.sp ? "\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C" : "\u0E19\u0E34\u0E22\u0E32\u0E22",
       \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07: currentSpView(),
       \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29: fmt.paper.width + "\xD7" + fmt.paper.height + " \u0E19\u0E34\u0E49\u0E27",
       \u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A: [fmt.margins.top, fmt.margins.right, fmt.margins.bottom, fmt.margins.left].join("/"),
       \u0E0B\u0E39\u0E21: Math.round(z * 100) + "%",
-      \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E17: R.getPropertyValue("--sp-font").trim().slice(0, 60),
-      \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22: R.getPropertyValue("--ed-font").trim().slice(0, 60),
-      \u0E02\u0E19\u0E32\u0E14\u0E1A\u0E17: R.getPropertyValue("--sp-fs").trim(),
-      \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1A\u0E17: R.getPropertyValue("--sp-line-h").trim(),
+      \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E17: R2.getPropertyValue("--sp-font").trim().slice(0, 60),
+      \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E19\u0E34\u0E22\u0E32\u0E22: R2.getPropertyValue("--ed-font").trim().slice(0, 60),
+      \u0E02\u0E19\u0E32\u0E14\u0E1A\u0E17: R2.getPropertyValue("--sp-fs").trim(),
+      \u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1A\u0E17: R2.getPropertyValue("--sp-line-h").trim(),
       \u0E0A\u0E48\u0E27\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07: spLineHeight(),
       \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32: formatLines(fmt)
     };
@@ -164090,7 +164649,7 @@ ${css}
         out.problems.push("\u0E42\u0E21\u0E40\u0E14\u0E25: \u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E01\u0E34\u0E19\u0E42\u0E04\u0E27\u0E15\u0E32 \u2192 " + over.join(", "));
       }
       if (pm2) {
-        const lh = parseFloat(R.getPropertyValue("--sp-line-h")) || 16;
+        const lh = parseFloat(R2.getPropertyValue("--sp-line-h")) || 16;
         const els = [...pm2.children].filter((e) => e.nodeType === 1 && e.classList.contains("sp"));
         const bad = [];
         let prevBlank = false;
@@ -164338,18 +164897,18 @@ ${css}
   }
   function applyPaperVars() {
     const hex = normalizePaperColor(state.settings.paperColor || PAPER_DEFAULT, PAPER_DEFAULT);
-    const R = document.documentElement.style;
+    const R2 = document.documentElement.style;
     const vars = paperVars(hex);
-    for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
+    for (const k of Object.keys(vars)) R2.setProperty(k, vars[k]);
     document.body.classList.toggle("k-page-guides", !!state.settings.pageGuides);
     return hex;
   }
   function applyPageVars() {
     const fmt = spFormat();
     applyPaperVars();
-    const R = document.documentElement.style;
+    const R2 = document.documentElement.style;
     const vars = pageCssVars(fmt);
-    for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
+    for (const k of Object.keys(vars)) R2.setProperty(k, vars[k]);
     let st = document.getElementById("k-sp-format");
     if (!st) {
       st = document.createElement("style");
@@ -164368,14 +164927,14 @@ ${css}
       for (const tb2 of state.tabs.values()) if (tb2.editor) refreshProsePageBreaks(tb2.editor.view);
     }
     const lv = layoutCssVars(fmt, state.settings.spPageGap);
-    for (const k of Object.keys(lv)) R.setProperty(k, lv[k]);
+    for (const k of Object.keys(lv)) R2.setProperty(k, lv[k]);
     bumpProseLayout();
     repaginateAfterGeometry();
-    R.setProperty("--sp-lh", String(spLineHeight()));
+    R2.setProperty("--sp-lh", String(spLineHeight()));
     setFormatGuide(isFormatGuide(), fmt);
     for (const tb2 of state.tabs.values()) if (tb2.sp) tb2.sp.refreshGuides();
     const pv = proseLayoutCssVars(proseFormat(), fmt.paper, fmt.margins, state.settings.spPageGap);
-    for (const k of Object.keys(pv)) R.setProperty(k, pv[k]);
+    for (const k of Object.keys(pv)) R2.setProperty(k, pv[k]);
     try {
       renderPaperSheets(state.active);
     } catch {
@@ -164394,9 +164953,9 @@ ${css}
   }
   function applyProseVars(fmt) {
     const f = fmt || proseFormat();
-    const R = document.documentElement.style;
+    const R2 = document.documentElement.style;
     const vars = proseCssVars(f);
-    for (const k of Object.keys(vars)) R.setProperty(k, vars[k]);
+    for (const k of Object.keys(vars)) R2.setProperty(k, vars[k]);
     let st = document.getElementById("k-prose-format");
     if (!st) {
       st = document.createElement("style");
@@ -164412,9 +164971,9 @@ ${css}
     const v2 = parseFloat(state.settings.spLineHeight);
     return Number.isFinite(v2) && v2 >= 0.8 && v2 <= 2.5 ? v2 : 1;
   }
-  function langFontUrl(row2) {
-    if (row2.builtin) return "assets/fonts/" + row2.builtin;
-    if (row2.file) return _langFontUrls.get(row2.file) || "";
+  function langFontUrl(row3) {
+    if (row3.builtin) return "assets/fonts/" + row3.builtin;
+    if (row3.file) return _langFontUrls.get(row3.file) || "";
     return "";
   }
   async function preloadLangFontUrls() {
@@ -164449,7 +165008,7 @@ ${css}
         const p = await kapi.join(dir2, "assets", "fonts", r.builtin);
         if (await kapi.exists(p)) abs.set(r.builtin, await kapi.toFileURL(p));
       }
-      const url2 = (row2) => row2.builtin ? abs.get(row2.builtin) || "" : langFontUrl(row2);
+      const url2 = (row3) => row3.builtin ? abs.get(row3.builtin) || "" : langFontUrl(row3);
       return buildLangFontCss(
         state.settings.langFonts,
         url2,
@@ -165145,7 +165704,7 @@ ${css}
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-goto-dlg");
     box2.append(el("div", "k-dlg-title", t("ui.app.msg9")));
-    const row2 = el("div", "k-goto-row");
+    const row3 = el("div", "k-goto-row");
     const sel = el("select", "k-dlg-select");
     sel.id = "goto-kind";
     for (const [v2, label] of [["page", t("ui.common.page")], ["scene", unit]]) {
@@ -165169,8 +165728,8 @@ ${css}
       syncHint();
       renderList2();
     };
-    row2.append(sel, inp, hint);
-    box2.append(row2);
+    row3.append(sel, inp, hint);
+    box2.append(row3);
     const find = el("input", "k-dlg-input k-goto-find");
     find.placeholder = t("ui.app.gotoFindPlaceholder");
     box2.append(find);
@@ -165355,16 +165914,16 @@ ${css}
     const list = el("div", "k-err-list");
     if (!errs.length) list.append(el("div", "cmp-empty", t("ui.app.notFoundError")));
     for (const e of errs.slice().sort((a, b) => a.block - b.block)) {
-      const row2 = el("div", "k-err-row " + e.severity);
-      row2.append(el("span", "k-err-dot", e.severity === "error" ? "\u26D4" : "\u26A0\uFE0F"));
-      row2.append(el("span", "k-err-msg", e.msg));
+      const row3 = el("div", "k-err-row " + e.severity);
+      row3.append(el("span", "k-err-dot", e.severity === "error" ? "\u26D4" : "\u26A0\uFE0F"));
+      row3.append(el("span", "k-err-msg", e.msg));
       const snip = String(e.text || "").trim().slice(0, 40);
-      if (snip) row2.append(el("span", "dim k-err-snip", "\u201C" + snip + "\u201D"));
-      row2.onclick = () => {
+      if (snip) row3.append(el("span", "dim k-err-snip", "\u201C" + snip + "\u201D"));
+      row3.onclick = () => {
         ov.remove();
         if (Number.isFinite(e.pos)) t22.sp.gotoPos(e.pos);
       };
-      list.append(row2);
+      list.append(row3);
     }
     box2.append(list);
     const btns = el("div", "k-dlg-btns");
@@ -165471,16 +166030,16 @@ ${css}
         h.append(el("span", "dim", tf("ui.app.scenePage", L2.intExt.join("/") || "\u2014", L2.sceneCount, L2.pages)));
         g.append(h);
         for (const s of L2.scenes) {
-          const row2 = el("div", "k-report-row");
-          row2.append(el("span", "k-report-no", t("ui.app.scene3") + s.n));
-          row2.append(el("span", "k-report-pg", t("ui.common.page2") + s.page));
-          row2.append(el("span", "k-report-txt", s.heading));
-          if (s.characters.length) row2.append(el("span", "dim k-report-chars", s.characters.join(", ")));
+          const row3 = el("div", "k-report-row");
+          row3.append(el("span", "k-report-no", t("ui.app.scene3") + s.n));
+          row3.append(el("span", "k-report-pg", t("ui.common.page2") + s.page));
+          row3.append(el("span", "k-report-txt", s.heading));
+          if (s.characters.length) row3.append(el("span", "dim k-report-chars", s.characters.join(", ")));
           if (Number.isFinite(s.pos)) {
-            row2.classList.add("can-go");
-            row2.onclick = () => goto(s.pos);
+            row3.classList.add("can-go");
+            row3.onclick = () => goto(s.pos);
           }
-          g.append(row2);
+          g.append(row3);
         }
         body.append(g);
       }
@@ -165529,12 +166088,12 @@ ${css}
       }
       body.append(legend);
       for (const p of data2.pages) {
-        const row2 = el("div", "k-report-row sp-chart-row");
-        row2.append(el("span", "k-report-pg", t("ui.common.page2") + p.page));
-        row2.append(chartBar(p));
+        const row3 = el("div", "k-report-row sp-chart-row");
+        row3.append(el("span", "k-report-pg", t("ui.common.page2") + p.page));
+        row3.append(chartBar(p));
         const top = p.charDensity.slice(0, 3).map((d) => `${d.name} ${d.lines}`).join(" \xB7 ");
-        row2.append(el("span", "dim k-report-chars", top));
-        body.append(row2);
+        row3.append(el("span", "dim k-report-chars", top));
+        body.append(row3);
       }
     }
     box2.append(body);
@@ -166034,6 +166593,11 @@ ${css}
     const g = await bootGlobalSettings();
     state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
     syncMenuToggles();
+    try {
+      await startupUpdateCheck();
+    } catch (e) {
+      log("warn", t("ui.upd.failCheck"), e);
+    }
     let recent = [];
     try {
       recent = await kapi.listRecent() || [];
@@ -167147,8 +167711,8 @@ ${css}
     const tree = $("#tree");
     if (!tree) return 0;
     let n2 = 0;
-    for (const row2 of tree.querySelectorAll(".scene[data-tabrow]")) {
-      applyRowOpenState(row2, row2.dataset.path);
+    for (const row3 of tree.querySelectorAll(".scene[data-tabrow]")) {
+      applyRowOpenState(row3, row3.dataset.path);
       n2++;
     }
     paintTreeSel();
@@ -167667,8 +168231,8 @@ ${css}
       const ch = await chapterByGuid(d.draftDir, d.chGuid);
       if (!ch) return;
       const sj = await kapi.readJson(await kapi.join(d.draftDir, "scenes.json"));
-      const row2 = (sj.chapters[d.chGuid] || []).find((x) => x.id === d.id);
-      if (row2) await moveRowToMemos(d.draftDir, ch, row2);
+      const row3 = (sj.chapters[d.chGuid] || []).find((x) => x.id === d.id);
+      if (row3) await moveRowToMemos(d.draftDir, ch, row3);
     });
     const memoFiles = await kapi.listFiles(memoDir, ".md");
     const memoRows = [];
@@ -168692,9 +169256,9 @@ ${css}
       (0, import_md18.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
     );
     await kapi.remove(memoPath);
-    const row2 = { id: guid(), title: title2, order: list.length + 1, fileName, type: "memo" };
+    const row3 = { id: guid(), title: title2, order: list.length + 1, fileName, type: "memo" };
     const di = beforeId ? list.findIndex((x) => x.id === beforeId) : list.length;
-    list.splice(di < 0 ? list.length : di, 0, row2);
+    list.splice(di < 0 ? list.length : di, 0, row3);
     list.forEach((x, i5) => {
       x.order = i5 + 1;
     });
@@ -168728,13 +169292,13 @@ ${css}
   async function setRowMemo(dPath, ch, sc, on2) {
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (!row2) return false;
-    if (on2) row2.type = "memo";
-    else delete row2.type;
+    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!row3) return false;
+    if (on2) row3.type = "memo";
+    else delete row3.type;
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     try {
-      const file = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+      const file = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
       const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
@@ -168742,7 +169306,7 @@ ${css}
     } catch {
     }
     await buildTree2();
-    setStatus(on2 ? tf("ui.app.noteDoneNotMerge", row2.title) : tf("ui.app.backSceneNormalDone", row2.title));
+    setStatus(on2 ? tf("ui.app.noteDoneNotMerge", row3.title) : tf("ui.app.backSceneNormalDone", row3.title));
     return true;
   }
   async function chapterByGuid(dPath, guidWanted) {
@@ -168865,16 +169429,16 @@ ${css}
   }
   function revealInExplorer(file) {
     if (!file) return false;
-    const row2 = document.querySelector(`.scene[data-path="${CSS.escape(file)}"]`);
-    if (!row2) {
+    const row3 = document.querySelector(`.scene[data-path="${CSS.escape(file)}"]`);
+    if (!row3) {
       setStatus(t("ui.app.notFoundFileExplorer"));
       return false;
     }
-    const sec = row2.closest(".sec");
+    const sec = row3.closest(".sec");
     if (sec && sec.classList.contains("collapsed")) sec.classList.remove("collapsed");
-    row2.scrollIntoView({ block: "center", behavior: "smooth" });
-    row2.classList.add("reveal-flash");
-    setTimeout(() => row2.classList.remove("reveal-flash"), 1600);
+    row3.scrollIntoView({ block: "center", behavior: "smooth" });
+    row3.classList.add("reveal-flash");
+    setTimeout(() => row3.classList.remove("reveal-flash"), 1600);
     setStatus(t("ui.app.showPosExplorerDone"));
     return true;
   }
@@ -168983,13 +169547,13 @@ ${css}
         for (const it of items) {
           if (ql && !it.label.toLowerCase().includes(ql)) continue;
           if (++n2 > 300) break;
-          const row2 = el("div", "planner-board-row");
-          row2.append(el("span", "planner-board-nm", it.label));
-          row2.onclick = () => {
+          const row3 = el("div", "planner-board-row");
+          row3.append(el("span", "planner-board-nm", it.label));
+          row3.onclick = () => {
             ov.remove();
             resolve(it);
           };
-          list.appendChild(row2);
+          list.appendChild(row3);
         }
         if (!n2) list.appendChild(el("div", "planner-props-empty", t("ui.app.notFoundDocAt")));
       };
@@ -169070,17 +169634,17 @@ ${css}
   function markPlannerRow(path, dirty) {
     const tree = $("#tree");
     if (!tree) return false;
-    const row2 = path ? tree.querySelector(`.scene[data-planner="${CSS.escape(path)}"]`) : null;
+    const row3 = path ? tree.querySelector(`.scene[data-planner="${CSS.escape(path)}"]`) : null;
     for (const prev of tree.querySelectorAll(".scene[data-planner].k-row-open")) {
-      if (prev === row2) continue;
+      if (prev === row3) continue;
       prev.classList.remove("k-row-open", "k-row-unsaved");
     }
-    if (!row2) {
+    if (!row3) {
       log("warn", t("ui.app.plannerTreeFindRow"), { path, rows: tree.querySelectorAll(".scene[data-planner]").length });
       return false;
     }
-    row2.classList.add("k-row-open");
-    row2.classList.toggle("k-row-unsaved", !!dirty);
+    row3.classList.add("k-row-open");
+    row3.classList.toggle("k-row-unsaved", !!dirty);
     return true;
   }
   function healPlannerRow(path, dirty) {
@@ -169506,10 +170070,10 @@ ${css}
     Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports)).then(({ currentBranchPlan: currentBranchPlan2, isBranchPlanDirty: isBranchPlanDirty2 }) => {
       const cur = currentBranchPlan2();
       if (!cur || !cur.path) return;
-      const row2 = document.querySelector(`#tree .branch-plan-row[data-branch-plan="${CSS.escape(cur.path)}"]`);
-      if (!row2) return;
-      row2.classList.add("k-row-open");
-      row2.classList.toggle("k-row-unsaved", isBranchPlanDirty2());
+      const row3 = document.querySelector(`#tree .branch-plan-row[data-branch-plan="${CSS.escape(cur.path)}"]`);
+      if (!row3) return;
+      row3.classList.add("k-row-open");
+      row3.classList.toggle("k-row-unsaved", isBranchPlanDirty2());
     }).catch(() => {
     });
   }
@@ -170173,12 +170737,12 @@ ${css}
   async function setSceneLock(dPath, ch, sc, locked) {
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (row2) {
-      row2.locked = locked;
+    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (row3) {
+      row3.locked = locked;
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     }
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, (row2 || sc).fileName);
+    const file = await kapi.join(dPath, "Chapters", ch.folderName, (row3 || sc).fileName);
     try {
       const { meta: meta2, body } = (0, import_md18.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
@@ -170232,8 +170796,8 @@ ${css}
     if (stale2()) return;
     const d = await kapi.readJson(sf);
     if (stale2()) return;
-    const row2 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (!row2) {
+    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!row3) {
       body.replaceChildren(el("div", "dim", t("ui.app.notFoundScene")));
       return;
     }
@@ -170241,16 +170805,16 @@ ${css}
     const nameRow = el("div", "props-name");
     nameRow.append(document.createTextNode("\u{1F4C4} "));
     const nameIn = el("input", "props-name-input");
-    nameIn.value = row2.title || "";
+    nameIn.value = row3.title || "";
     nameIn.title = t("ui.props.renameHint");
     const commitName = async () => {
       const v2 = nameIn.value.trim();
-      if (!v2 || v2 === row2.title) {
-        nameIn.value = row2.title || "";
+      if (!v2 || v2 === row3.title) {
+        nameIn.value = row3.title || "";
         return;
       }
-      await setSceneTitle(dPath, ch, row2, v2);
-      row2.title = v2;
+      await setSceneTitle(dPath, ch, row3, v2);
+      row3.title = v2;
     };
     nameIn.addEventListener("blur", () => commitName().catch(() => {
     }));
@@ -170260,7 +170824,7 @@ ${css}
         nameIn.blur();
       }
       if (ev.key === "Escape") {
-        nameIn.value = row2.title || "";
+        nameIn.value = row3.title || "";
         nameIn.blur();
       }
     });
@@ -170269,11 +170833,11 @@ ${css}
     const lockRow = el("div", "props-lock");
     const lockChk = el("input", null);
     lockChk.type = "checkbox";
-    lockChk.checked = !!row2.locked;
+    lockChk.checked = !!row3.locked;
     const lockLbl = el("label", null);
     lockLbl.append(
       lockChk,
-      document.createTextNode(row2.locked ? t("ui.app.lockEditCant") : t("ui.app.lockScene"))
+      document.createTextNode(row3.locked ? t("ui.app.lockEditCant") : t("ui.app.lockScene"))
     );
     lockChk.onchange = async () => {
       await setSceneLock(dPath, ch, sc, lockChk.checked);
@@ -170281,7 +170845,7 @@ ${css}
     };
     lockRow.append(lockLbl);
     body.append(lockRow);
-    const file0 = await kapi.join(dPath, "Chapters", ch.folderName, row2.fileName);
+    const file0 = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
     if (stale2()) return;
     let vmeta = {};
     try {
@@ -170338,30 +170902,30 @@ ${css}
       body.append(r);
       return c;
     };
-    const iSyn = mk2(t("ui.common.synopsis"), row2.synopsis, "textarea");
-    const iStoryDate = mk2(t("ui.common.timeStoryLineTime"), row2.storyDate);
+    const iSyn = mk2(t("ui.common.synopsis"), row3.synopsis, "textarea");
+    const iStoryDate = mk2(t("ui.common.timeStoryLineTime"), row3.storyDate);
     iStoryDate.placeholder = t("ui.app.date");
-    const iStartPage = mk2(t("ui.app.pageNumStartChapter"), row2.startPage || "");
+    const iStartPage = mk2(t("ui.app.pageNumStartChapter"), row3.startPage || "");
     iStartPage.type = "number";
     iStartPage.min = "1";
     iStartPage.placeholder = "1";
-    const iPov = mk2(t("ui.common.viewPOV"), row2.pov);
-    const iEmotion = mk2(t("ui.common.mood"), row2.emotion);
-    const iConflict = mk2(t("ui.common.conflict"), row2.conflict);
+    const iPov = mk2(t("ui.common.viewPOV"), row3.pov);
+    const iEmotion = mk2(t("ui.common.mood"), row3.emotion);
+    const iConflict = mk2(t("ui.common.conflict"), row3.conflict);
     const statuses = allStatuses();
     const iStatus = mkSel(
       t("ui.common.status"),
       [["Outline", t("ui.common.notSet")], ...statuses.map((s) => [s, s])],
-      statuses.includes(row2.status) ? row2.status : "Outline"
+      statuses.includes(row3.status) ? row3.status : "Outline"
     );
-    const iColor = mkSel(t("ui.common.color"), [["", t("ui.common.notHas")], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + dataLabel(n2)])], row2.color || "");
-    const iFlag = mkChk(t("ui.common.pinPin"), row2.flag);
-    const iTags = mk2(t("ui.common.tag2"), (row2.tags || []).join(", "));
-    const iNote = mk2(t("ui.common.note"), row2.note, "textarea");
-    const iFuture = mk2(t("ui.scene.futureNoteWriter"), row2.futureNote || "", "textarea");
+    const iColor = mkSel(t("ui.common.color"), [["", t("ui.common.notHas")], ...SCENE_COLORS.map(([n2, hex]) => [hex, "\u25CF " + dataLabel(n2)])], row3.color || "");
+    const iFlag = mkChk(t("ui.common.pinPin"), row3.flag);
+    const iTags = mk2(t("ui.common.tag2"), (row3.tags || []).join(", "));
+    const iNote = mk2(t("ui.common.note"), row3.note, "textarea");
+    const iFuture = mk2(t("ui.scene.futureNoteWriter"), row3.futureNote || "", "textarea");
     iFuture.placeholder = t("ui.scene.noteWriterShowOnly");
-    const iFb = mkChk(t("ui.common.flashback"), row2.isFlashback);
-    const iFf = mkChk(t("ui.common.pageFlashforward"), row2.isFlashforward);
+    const iFb = mkChk(t("ui.common.flashback"), row3.isFlashback);
+    const iFf = mkChk(t("ui.common.pageFlashforward"), row3.isFlashforward);
     iFb.addEventListener("change", () => {
       if (iFb.checked) iFf.checked = false;
     });
@@ -170369,7 +170933,7 @@ ${css}
       if (iFf.checked) iFb.checked = false;
     });
     try {
-      const mapRow = await buildShowOnMapRow(row2);
+      const mapRow = await buildShowOnMapRow(row3);
       if (stale2()) return;
       body.append(mapRow);
     } catch (e) {
@@ -170378,39 +170942,39 @@ ${css}
     const statusLine = el("div", "props-autosave", t("ui.app.saveAuto"));
     body.append(statusLine);
     const collect = () => {
-      row2.synopsis = iSyn.value;
-      row2.pov = iPov.value;
-      row2.status = iStatus.value;
-      row2.storyDate = iStoryDate.value.trim();
-      row2.emotion = iEmotion.value;
-      row2.conflict = iConflict.value;
-      row2.color = iColor.value;
-      row2.flag = iFlag.checked;
-      row2.note = iNote.value;
-      row2.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
-      row2.futureNote = iFuture.value;
+      row3.synopsis = iSyn.value;
+      row3.pov = iPov.value;
+      row3.status = iStatus.value;
+      row3.storyDate = iStoryDate.value.trim();
+      row3.emotion = iEmotion.value;
+      row3.conflict = iConflict.value;
+      row3.color = iColor.value;
+      row3.flag = iFlag.checked;
+      row3.note = iNote.value;
+      row3.tags = iTags.value.split(",").map((x) => x.trim()).filter(Boolean);
+      row3.futureNote = iFuture.value;
       if (iFb.checked && iFf.checked) iFf.checked = false;
-      row2.isFlashback = iFb.checked;
-      row2.isFlashforward = iFf.checked;
+      row3.isFlashback = iFb.checked;
+      row3.isFlashforward = iFf.checked;
       const sp = parseInt(iStartPage.value, 10);
-      if (Number.isFinite(sp) && sp > 0) row2.startPage = sp;
-      else delete row2.startPage;
+      if (Number.isFinite(sp) && sp > 0) row3.startPage = sp;
+      else delete row3.startPage;
     };
     const snapshot = () => JSON.stringify([
-      row2.synopsis,
-      row2.pov,
-      row2.status,
-      row2.storyDate,
-      row2.emotion,
-      row2.conflict,
-      row2.color,
-      row2.flag,
-      row2.note,
-      row2.tags,
-      row2.startPage,
-      row2.futureNote,
-      row2.isFlashback,
-      row2.isFlashforward
+      row3.synopsis,
+      row3.pov,
+      row3.status,
+      row3.storyDate,
+      row3.emotion,
+      row3.conflict,
+      row3.color,
+      row3.flag,
+      row3.note,
+      row3.tags,
+      row3.startPage,
+      row3.futureNote,
+      row3.isFlashback,
+      row3.isFlashforward
     ]);
     let lastSaved = (collect(), snapshot());
     const commit = async (rebuildTree) => {
@@ -170422,7 +170986,7 @@ ${css}
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
       try {
         const props = {};
-        for (const k of SCENE_HEAVY_KEYS) props[k] = row2[k];
+        for (const k of SCENE_HEAVY_KEYS) props[k] = row3[k];
         if (!await writeSceneMeta(file0, props)) log("warn", t("ui.props.writeMetaFail"), { file: file0 });
         const liveTab = state.tabs.get(file0);
         if (liveTab && liveTab.meta) {
@@ -170451,7 +171015,7 @@ ${css}
           mdBody = (0, import_md18.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
-        return { body: mdBody, title: row2.title || "" };
+        return { body: mdBody, title: row3.title || "" };
       };
       for (const [inp, key2] of [
         [iSyn, "synopsis"],
@@ -170666,7 +171230,7 @@ ${css}
     const renderLeft = () => {
       left.innerHTML = "";
       left.append(el("div", "cmp-sub", t("ui.app.reset")));
-      const row2 = (w) => {
+      const row3 = (w) => {
         const d = el("div", "cmp-wf" + (w.id === curId ? " on" : ""), w.name);
         d.dataset.wf = w.id;
         d.onclick = () => {
@@ -170676,11 +171240,11 @@ ${css}
         };
         left.append(d);
       };
-      PRESETS.forEach(row2);
+      PRESETS.forEach(row3);
       left.append(el("div", "cmp-sub", t("ui.app.mine")));
       const mine = userWorkflows();
       if (!mine.length) left.append(el("div", "cmp-empty", t("ui.app.notHasPressDup")));
-      mine.forEach(row2);
+      mine.forEach(row3);
       const bAdd = el("button", "cmp-mini", t("ui.app.new"));
       bAdd.onclick = async () => {
         const n2 = await ask(t("ui.app.nameWorkFlowNew"), { value: t("ui.app.workFlowMine") });
@@ -171852,13 +172416,13 @@ ${css}
     const draft = await kapi.readJson(await kapi.join(dir2, "draft.json"));
     let n2 = 0;
     for (const ch of draft.chapters || []) {
-      for (const row2 of (d.chapters || {})[ch.guid] || []) {
-        const file = await kapi.join(dir2, "Chapters", ch.folderName, row2.fileName);
-        const m = await readSceneMeta(file, row2);
+      for (const row3 of (d.chapters || {})[ch.guid] || []) {
+        const file = await kapi.join(dir2, "Chapters", ch.folderName, row3.fileName);
+        const m = await readSceneMeta(file, row3);
         for (const k of SCENE_HEAVY_KEYS) {
-          const before = JSON.stringify(row2[k] ?? null), after = JSON.stringify(m[k] ?? null);
+          const before = JSON.stringify(row3[k] ?? null), after = JSON.stringify(m[k] ?? null);
           if (before !== after) {
-            row2[k] = m[k];
+            row3[k] = m[k];
             n2++;
           }
         }
@@ -172008,9 +172572,9 @@ ${css}
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
     for (const cg of Object.keys(d.chapters || {})) {
-      const row2 = (d.chapters[cg] || []).find((x) => x.id === sceneId);
-      if (row2) {
-        mutate(row2);
+      const row3 = (d.chapters[cg] || []).find((x) => x.id === sceneId);
+      if (row3) {
+        mutate(row3);
         await kapi.writeFile(sf, JSON.stringify(d, null, 2));
         return true;
       }
@@ -172147,7 +172711,8 @@ ${css}
     await loadProject(root);
     setStatus(t("ui.app.newProjectNewDone") + name5);
   }
-  async function confirmQuit() {
+  async function confirmQuit(opts = {}) {
+    const doQuit = opts.quit || (() => kapi.quitNow());
     await saveUiSession(true);
     await saveOpenTabs();
     await flushStarter();
@@ -172158,7 +172723,7 @@ ${css}
       items.map((x) => x.title)
     );
     if (!items.length) {
-      kapi.quitNow();
+      doQuit();
       return "save";
     }
     const { action, keys: keys4 } = await saveAllDialog(items, {
@@ -172177,10 +172742,10 @@ ${css}
         return null;
       }
       logAction("quit", tf("ui.app.saveCompleteListDone", res.saved));
-      kapi.quitNow();
+      doQuit();
     } else if (action === "discard") {
       logAction("quit", t("ui.app.closeNotSave"));
-      kapi.quitNow();
+      doQuit();
     } else setStatus(t("ui.app.cancelCloseApp"));
     return action;
   }
@@ -172658,17 +173223,17 @@ ${css}
         body.append(el("div", "k-set-sub", title2));
         if (!list.length) body.append(el("div", "cmp-empty", t("ui.app.notHas")));
         for (const w of list) {
-          const row2 = el("div", "k-smart-row");
-          row2.append(el("span", "k-smart-word", w));
-          row2.append(el("span", "dim", " \xD7 " + (counts[key2].get(w) || 0)));
+          const row3 = el("div", "k-smart-row");
+          row3.append(el("span", "k-smart-word", w));
+          row3.append(el("span", "dim", " \xD7 " + (counts[key2].get(w) || 0)));
           const x = el("button", "k-danger-btn", "\u2715");
           x.title = t("ui.app.notMustRememberWord");
           x.onclick = () => {
             smartIgnoreAdd(w);
             render();
           };
-          row2.append(x);
-          body.append(row2);
+          row3.append(x);
+          body.append(row3);
         }
         const wait = pendingTerms(counts[key2], opt);
         if (wait.length) {
@@ -172678,9 +173243,9 @@ ${css}
             tf("ui.app.notRememberFoundNot", smartLearnMin())
           ));
           for (const p of wait) {
-            const row2 = el("div", "k-smart-row k-smart-wait");
-            row2.append(el("span", "k-smart-word dim", p.word));
-            row2.append(el("span", "dim", " \xD7 " + p.count + (p.ok ? "" : t("ui.app.pageNotName"))));
+            const row3 = el("div", "k-smart-row k-smart-wait");
+            row3.append(el("span", "k-smart-word dim", p.word));
+            row3.append(el("span", "dim", " \xD7 " + p.count + (p.ok ? "" : t("ui.app.pageNotName"))));
             const add = el("button", null, t("ui.app.remember2"));
             add.title = t("ui.app.rememberWordFoundTimes");
             add.onclick = () => {
@@ -172693,8 +173258,8 @@ ${css}
               smartIgnoreAdd(p.word);
               render();
             };
-            row2.append(add, x);
-            body.append(row2);
+            row3.append(add, x);
+            body.append(row3);
           }
         }
       }
@@ -172702,30 +173267,30 @@ ${css}
       if (pin.length) {
         body.append(el("div", "k-set-sub", tf("ui.app.wordCmdRemember", pin.length)));
         for (const w of pin) {
-          const row2 = el("div", "k-smart-row");
-          row2.append(el("span", "k-smart-word", w));
+          const row3 = el("div", "k-smart-row");
+          row3.append(el("span", "k-smart-word", w));
           const b = el("button", null, t("ui.app.remember"));
           b.onclick = () => {
             smartPinRemove(w);
             render();
           };
-          row2.append(b);
-          body.append(row2);
+          row3.append(b);
+          body.append(row3);
         }
       }
       const ign = smartIgnoreList();
       body.append(el("div", "k-set-sub", tf("ui.app.wordCmdNotRemember", ign.length)));
       if (!ign.length) body.append(el("div", "cmp-empty", t("ui.app.notHas2")));
       for (const w of ign) {
-        const row2 = el("div", "k-smart-row");
-        row2.append(el("span", "k-smart-word dim", w));
+        const row3 = el("div", "k-smart-row");
+        row3.append(el("span", "k-smart-word dim", w));
         const b = el("button", null, t("ui.app.rememberTimes"));
         b.onclick = () => {
           smartIgnoreRemove(w);
           render();
         };
-        row2.append(b);
-        body.append(row2);
+        row3.append(b);
+        body.append(row3);
       }
     };
     minSel.onchange = () => {
@@ -172976,13 +173541,13 @@ ${css}
     return (n2 >= 1e3 ? Math.round(n2 / 1e3) + "k" : n2) + t("ui.common.word");
   }
   function updateSceneWordBadge(file, n2) {
-    const row2 = document.querySelector('#tree .scene[data-path="' + CSS.escape(file) + '"]');
-    if (!row2) return;
-    if (row2._scene) row2._scene.wordCount = n2;
-    let badge = row2.querySelector(".sc-wordcount");
+    const row3 = document.querySelector('#tree .scene[data-path="' + CSS.escape(file) + '"]');
+    if (!row3) return;
+    if (row3._scene) row3._scene.wordCount = n2;
+    let badge = row3.querySelector(".sc-wordcount");
     if (!badge && n2) {
       badge = el("span", "sc-wordcount");
-      row2.append(badge);
+      row3.append(badge);
     }
     if (!badge) return;
     badge.textContent = n2 ? wordBadgeText(n2) : "";
@@ -173530,9 +174095,9 @@ ${css}
     ov.append(box2);
     document.body.append(ov);
     const grid = box2.querySelector(".k-charmap");
-    for (const row2 of LATIN1) {
+    for (const row3 of LATIN1) {
       const r = el("div", "k-cm-row");
-      for (const ch of row2) {
+      for (const ch of row3) {
         const btn2 = el("button", "k-cm-btn", ch);
         btn2.title = "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
         btn2.onclick = () => {
@@ -174553,27 +175118,27 @@ ${css}
     return [...logView.levels].sort().join(",") + "|" + logView.source + "|" + logView.q;
   }
   function logRow(r) {
-    const row2 = el("div", "k-log-row k-log-" + r.level);
-    row2.dataset.seq = String(r.seq);
-    row2.append(el("span", "k-log-time", shortTime(r.ts)));
-    row2.append(el("span", "k-log-lv", LEVEL_META[r.level].icon));
-    if (r.source) row2.append(el("span", "k-log-src", r.source));
-    row2.append(el("span", "k-log-msg", r.msg));
-    if (r.count > 1) row2.append(el("span", "k-log-count", "\xD7" + r.count));
+    const row3 = el("div", "k-log-row k-log-" + r.level);
+    row3.dataset.seq = String(r.seq);
+    row3.append(el("span", "k-log-time", shortTime(r.ts)));
+    row3.append(el("span", "k-log-lv", LEVEL_META[r.level].icon));
+    if (r.source) row3.append(el("span", "k-log-src", r.source));
+    row3.append(el("span", "k-log-msg", r.msg));
+    if (r.count > 1) row3.append(el("span", "k-log-count", "\xD7" + r.count));
     if (r.detail) {
-      row2.classList.add("k-log-has-detail");
-      row2.title = t("ui.app.clickViewDetail");
+      row3.classList.add("k-log-has-detail");
+      row3.title = t("ui.app.clickViewDetail");
       const det = el("pre", "k-log-detail", r.detail);
       if (!logView.open.has(r.seq)) det.style.display = "none";
-      row2.append(det);
-      row2.onclick = () => {
+      row3.append(det);
+      row3.onclick = () => {
         const on2 = det.style.display === "none";
         det.style.display = on2 ? "" : "none";
         if (on2) logView.open.add(r.seq);
         else logView.open.delete(r.seq);
       };
     }
-    return row2;
+    return row3;
   }
   function buildLogBar(host2, body) {
     const bar = el("div", "k-log-bar");
@@ -174859,7 +175424,7 @@ ${css}
     for (const g of CREDITS) {
       cr.append(el("div", "k-credit-group", g.group));
       for (const it of g.items) {
-        const row2 = el("div", "k-credit-row");
+        const row3 = el("div", "k-credit-row");
         const nm = el("span", "k-credit-name", it.name);
         if (it.url) {
           nm.classList.add("k-credit-link");
@@ -174871,10 +175436,10 @@ ${css}
             }
           };
         }
-        row2.append(nm);
-        if (it.lic) row2.append(el("span", "k-credit-lic", it.lic));
-        row2.append(el("div", "k-credit-what", it.what));
-        cr.append(row2);
+        row3.append(nm);
+        if (it.lic) row3.append(el("span", "k-credit-lic", it.lic));
+        row3.append(el("div", "k-credit-what", it.what));
+        cr.append(row3);
       }
     }
     box2.append(cr);
@@ -175349,14 +175914,14 @@ ${css}
               const dj = await kapi.readJson(await kapi.join(dPath, "draft.json")).catch(() => ({}));
               const ch2 = (dj.chapters || [])[0] || await addChapter(dPath, t("ui.app.import") + format3);
               if (!ch2) return;
-              const row2 = await addScene(
+              const row3 = await addScene(
                 dPath,
                 ch2,
                 t("ui.app.import") + format3 + "-" + Date.now().toString(36),
                 { meta: { format: "screenplay" }, body: markdown, silent: true }
               );
-              if (!row2) return;
-              await openScene(row2.path, row2.title);
+              if (!row3) return;
+              await openScene(row3.path, row3.title);
               setStatus(t("ui.app.importScreenplay") + format3 + t("ui.app.newSceneNew") + summary.scenes + t("ui.app.scene") + summary.characters + t("ui.app.character"));
             } else {
               await confirmBox(t("ui.app.importNotOkNot"), t("ui.common.msg3"));
@@ -175509,6 +176074,10 @@ ${css}
         break;
       case "about":
         aboutDialog();
+        break;
+      // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
+      case "check-update":
+        await checkForUpdates({ silent: false });
         break;
       // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา (Ctrl+Shift+`) — อยู่เมนูเดียวกับ "เกี่ยวกับ"
       case "dev-console":
@@ -177236,10 +177805,10 @@ ${css}
       const sec = el("div", "k-keys-sec");
       sec.append(el("div", "k-keys-cat", t(c.labelKey)));
       for (const r of list) {
-        const row2 = el("div", "k-keys-row");
-        row2.append(el("span", "k-keys-name", r.label));
-        row2.append(el("span", "k-keys-key", r.accel));
-        sec.append(row2);
+        const row3 = el("div", "k-keys-row");
+        row3.append(el("span", "k-keys-name", r.label));
+        row3.append(el("span", "k-keys-key", r.accel));
+        sec.append(row3);
       }
       grid.append(sec);
     }
@@ -186647,9 +187216,9 @@ ${css}
             !!ch2,
             JSON.stringify((dj2.chapters || []).map((c) => [c.title, ((sj22.chapters || {})[c.guid] || []).length]))
           );
-          const row2 = (sj22.chapters[ch2.guid] || []).find((s) => s.type !== "memo");
+          const row22 = (sj22.chapters[ch2.guid] || []).find((s) => s.type !== "memo");
           showPanel("props-panel");
-          openPropsPanel(dPath, ch2, row2);
+          openPropsPanel(dPath, ch2, row22);
           renderPropsPanel();
           await new Promise((r) => setTimeout(r, 500));
           const bodyEl = $("#props-body");
@@ -186672,7 +187241,7 @@ ${css}
           inps2[2].dispatchEvent(new Event("input", { bubbles: true }));
           await new Promise((r) => setTimeout(r, 900));
           const sj32 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
-          const row3 = (sj32.chapters[ch2.guid] || []).find((x) => x.id === row2.id);
+          const row3 = (sj32.chapters[ch2.guid] || []).find((x) => x.id === row22.id);
           check2(
             "\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34 \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 scenes.json \u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34",
             row3.pov === "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34",
@@ -190376,8 +190945,8 @@ ${css}
                 dlg.querySelectorAll(".k-report-tab.on").length === 1
               );
               if (kind === "location") {
-                const row2 = dlg.querySelector(".k-report-row.can-go");
-                check2("[71] \u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E04\u0E25\u0E34\u0E01\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E44\u0E1B\u0E44\u0E14\u0E49", !!row2);
+                const row3 = dlg.querySelector(".k-report-row.can-go");
+                check2("[71] \u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E04\u0E25\u0E34\u0E01\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E44\u0E1B\u0E44\u0E14\u0E49", !!row3);
               }
               if (kind === "character") {
                 check2("[72] \u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07", !!dlg.querySelector(".k-report-table"));
@@ -196571,12 +197140,12 @@ ${css}
       {
         const gapOf = (dockEl) => {
           if (!dockEl) return NaN;
-          const row2 = dockEl.dataset.dir === "row";
+          const row3 = dockEl.dataset.dir === "row";
           const used = [...dockEl.children].reduce((a, e) => {
             const r = e.getBoundingClientRect();
-            return a + (row2 ? r.width : r.height);
+            return a + (row3 ? r.width : r.height);
           }, 0);
-          return (row2 ? dockEl.clientWidth : dockEl.clientHeight) - used;
+          return (row3 ? dockEl.clientWidth : dockEl.clientHeight) - used;
         };
         showPanel("props", { targetId: "docs", side: "right", forceMove: true });
         await until62(() => !!document.querySelector('#app-root .k-panel[data-panel-id="props"]'));
@@ -199726,10 +200295,10 @@ ${css}
             String(document.querySelectorAll("#gal-body .gal2-row").length)
           );
           check2("[63-8b] \u0E41\u0E16\u0E27\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14 (\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E27\u0E1C\u0E39\u0E01\u0E2D\u0E35\u0E40\u0E27\u0E19\u0E15\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19)", await (async () => {
-            const row2 = $("#gal-body .gal2-row");
-            row2.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+            const row3 = $("#gal-body .gal2-row");
+            row3.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
             const ok2 = await until62(() => gv.state.sel.size === 1);
-            row2.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+            row3.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
             return ok2;
           })());
           check2(
@@ -200615,6 +201184,205 @@ ${css}
         );
         dlg80.querySelector(".k-cancel").click();
         await wait79(140);
+      }
+      {
+        const UC135 = await Promise.resolve().then(() => (init_update_check(), update_check_exports));
+        const UU135 = await Promise.resolve().then(() => (init_update_ui(), update_ui_exports));
+        check2(
+          "[135-U0] \u2605\u2605 \u0E17\u0E35\u0E48\u0E21\u0E32\u0E02\u0E2D\u0E07\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E04\u0E37\u0E2D\u0E23\u0E35\u0E42\u0E1B\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19",
+          UC135.UPDATE_GIT_URL === "https://github.com/Nbcybg/Killian-Editor-V2.git",
+          UC135.UPDATE_GIT_URL
+        );
+        check2(
+          "[135-U0] \u2605\u2605 \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E19\u0E1A\u0E08\u0E32\u0E01\u0E23\u0E35\u0E42\u0E1B\u0E2D\u0E37\u0E48\u0E19\u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18\u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48\u0E0A\u0E31\u0E49\u0E19\u0E15\u0E23\u0E23\u0E01\u0E30",
+          UC135.isAllowedAssetUrl("https://github.com/evil/repo/releases/download/v1/x.exe") === false && UC135.isAllowedAssetUrl(UC135.UPDATE_ASSET_PREFIX + "v1/K2.exe") === true
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        settingsDialog("auto");
+        await wait79(260);
+        const dlgU = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        const chkU = dlgU.querySelector("#st-update");
+        check2('[135-U1] \u2605\u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 \u2192 \u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E15\u0E23\u0E27\u0E08\u0E2B\u0E32\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21"', !!chkU);
+        check2(
+          '[135-U1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32 "\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34" \u0E08\u0E23\u0E34\u0E07',
+          !!chkU && !!chkU.closest('.k-set-page[data-p="auto"]')
+        );
+        check2(
+          "[135-U1] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E2D\u0E48\u0E32\u0E19\u0E04\u0E48\u0E32\u0E1B\u0E31\u0E08\u0E08\u0E38\u0E1A\u0E31\u0E19\u0E21\u0E32\u0E42\u0E0A\u0E27\u0E4C\u0E16\u0E39\u0E01",
+          !!chkU && chkU.checked === (state.settings.updateCheck !== false),
+          String(chkU && chkU.checked)
+        );
+        check2(
+          '[135-U1] \u2605 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 "\u0E15\u0E23\u0E27\u0E08\u0E2B\u0E32\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49" \u0E01\u0E14\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35',
+          !!dlgU.querySelector("#st-update-now")
+        );
+        check2(
+          "[135-U1] \u2605\u2605 \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1A\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E21\u0E32\u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19\u0E01\u0E31\u0E1A\u0E15\u0E32",
+          (dlgU.querySelector("#st-update-host .k-upd-src-url") || {}).textContent === UC135.UPDATE_GIT_URL
+        );
+        check2(
+          "[135-U1] \u0E1A\u0E2D\u0E01\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48 + \u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E15\u0E23\u0E27\u0E08\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14",
+          (dlgU.querySelector("#st-update-host") || {}).textContent.includes(APP_VERSION)
+        );
+        check2(
+          '[135-U1] \u2605 \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E25\u0E34\u0E01\u0E02\u0E49\u0E32\u0E21\u0E23\u0E38\u0E48\u0E19" \u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E02\u0E49\u0E32\u0E21\u0E23\u0E38\u0E48\u0E19\u0E44\u0E2B\u0E19',
+          !!dlgU.querySelector("#st-update-unskip")
+        );
+        const navq = dlgU.querySelector("#st-nav-q");
+        if (navq) {
+          navq.value = "\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15";
+          navq.dispatchEvent(new Event("input"));
+          await wait79(90);
+          const shown = [...dlgU.querySelectorAll(".k-set-tab")].filter((x) => !x.classList.contains("k-set-tab-off"));
+          check2(
+            '[135-U1] \u2605\u2605 \u0E04\u0E49\u0E19\u0E04\u0E33\u0E27\u0E48\u0E32 "\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15" \u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27\u0E40\u0E08\u0E2D\u0E41\u0E17\u0E47\u0E1A\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34',
+            shown.some((x) => x.dataset.p === "auto"),
+            shown.map((x) => x.dataset.p).join(",")
+          );
+          navq.value = "";
+          navq.dispatchEvent(new Event("input"));
+          await wait79(60);
+        }
+        chkU.checked = false;
+        dlgU.querySelector(".k-dlg-btns .k-ok").click();
+        await wait79(700);
+        check2(
+          "[135-U1] \u2605\u2605 \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E04\u0E48\u0E32\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49",
+          state.settings.updateCheck === false,
+          String(state.settings.updateCheck)
+        );
+        const gOff = await kapi.readGlobalSettings();
+        check2(
+          "[135-U1] \u2605\u2605 \u0E04\u0E48\u0E32\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E43\u0E0A\u0E49\u0E23\u0E48\u0E27\u0E21\u0E17\u0E38\u0E01\u0E1C\u0E25\u0E07\u0E32\u0E19)",
+          gOff && gOff.updateCheck === false,
+          JSON.stringify(gOff && gOff.updateCheck)
+        );
+        const silent = await UU135.startupUpdateCheck();
+        check2(
+          "[135-U2] \u2605\u2605 \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E01\u0E32\u0E23\u0E15\u0E23\u0E27\u0E08\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E44\u0E21\u0E48\u0E17\u0E33\u0E07\u0E32\u0E19 (\u0E44\u0E21\u0E48\u0E22\u0E34\u0E07\u0E40\u0E19\u0E47\u0E15)",
+          silent === null,
+          JSON.stringify(silent)
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        settingsDialog("auto");
+        await wait79(260);
+        const dlgU2 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        check2(
+          "[135-U1] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E08\u0E33\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49",
+          dlgU2.querySelector("#st-update").checked === false
+        );
+        dlgU2.querySelector("#st-update").checked = true;
+        dlgU2.querySelector(".k-dlg-btns .k-ok").click();
+        await wait79(700);
+        check2(
+          "[135-U1] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49",
+          state.settings.updateCheck === true,
+          String(state.settings.updateCheck)
+        );
+        const relU = {
+          tag_name: "v9.9.9",
+          name: "v9.9.9",
+          body: "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E38\u0E48\u0E19 <script>window.__k2updXss = 1;<\/script>",
+          html_url: UC135.UPDATE_HOME_URL + "/releases/tag/v9.9.9",
+          assets: [{
+            name: "Killian2-9.9.9-portable.exe",
+            size: 1048576,
+            browser_download_url: UC135.UPDATE_ASSET_PREFIX + "v9.9.9/Killian2-9.9.9-portable.exe"
+          }]
+        };
+        const infoU = UC135.decideUpdate({ current: APP_VERSION, releases: [relU], platform: "win32" });
+        check2(
+          "[135-U2] \u2605\u2605 \u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E27\u0E48\u0E32 + \u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E35\u0E49 = \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48",
+          infoU.status === "update" && infoU.assetName.endsWith(".exe"),
+          infoU.status
+        );
+        check2(
+          "[135-U2] \u2605\u2605 \u0E15\u0E49\u0E2D\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E21\u0E35\u0E23\u0E38\u0E48\u0E19\u0E43\u0E2B\u0E21\u0E48 (\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E44\u0E21\u0E48\u0E40\u0E07\u0E35\u0E22\u0E1A)",
+          UC135.shouldNotify(infoU) === true
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        const srcU = {
+          current: APP_VERSION,
+          platform: "win32",
+          canReplace: true,
+          gitUrl: UC135.UPDATE_GIT_URL
+        };
+        UU135.updateDialog(infoU, srcU);
+        await wait79(200);
+        const boxU = [...document.querySelectorAll(".k-dialog.k-upd-dlg")].pop();
+        check2("[135-U2] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15\u0E42\u0E1C\u0E25\u0E48\u0E08\u0E23\u0E34\u0E07", !!boxU);
+        const txtU = boxU ? boxU.textContent : "";
+        check2(
+          "[135-U2] \u2605\u2605 \u0E1A\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30\u0E23\u0E38\u0E48\u0E19\u0E43\u0E2B\u0E21\u0E48",
+          txtU.includes(APP_VERSION) && txtU.includes("9.9.9")
+        );
+        check2("[135-U2] \u2605\u2605 \u0E1A\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E21\u0E32\u0E27\u0E48\u0E32\u0E42\u0E2B\u0E25\u0E14\u0E08\u0E32\u0E01\u0E23\u0E35\u0E42\u0E1B\u0E44\u0E2B\u0E19", txtU.includes(UC135.UPDATE_GIT_URL));
+        const btnU = [...boxU.querySelectorAll(".k-dlg-btns button")].map((b) => b.textContent);
+        check2(
+          '[135-U2] \u2605\u2605 \u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48" \u0E2B\u0E23\u0E37\u0E2D "\u0E02\u0E49\u0E32\u0E21\u0E23\u0E38\u0E48\u0E19\u0E19\u0E35\u0E49" \u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E31\u0E48\u0E07',
+          btnU.includes(t("ui.upd.replace")) && btnU.includes(t("ui.upd.skip")),
+          btnU.join(" | ")
+        );
+        check2(
+          '[135-U2] \u2605 \u0E21\u0E35\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E44\u0E27\u0E49\u0E17\u0E35\u0E2B\u0E25\u0E31\u0E07" \u0E14\u0E49\u0E27\u0E22 (\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E07\u0E04\u0E31\u0E1A\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08\u0E40\u0E14\u0E35\u0E4B\u0E22\u0E27\u0E19\u0E35\u0E49)',
+          btnU.includes(t("ui.upd.later")),
+          btnU.join(" | ")
+        );
+        check2(
+          '[135-U2] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E38\u0E48\u0E19\u0E08\u0E32\u0E01 GitHub \u0E16\u0E39\u0E01\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19 "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 HTML',
+          !!boxU.querySelector(".k-upd-notes") && boxU.querySelector(".k-upd-notes").textContent.includes("<script>") && !boxU.querySelector(".k-upd-notes script") && !globalThis.__k2updXss
+        );
+        [...boxU.querySelectorAll(".k-dlg-btns button")].find((b) => b.textContent === t("ui.upd.skip")).click();
+        await wait79(400);
+        const gSkip = await kapi.readGlobalSettings();
+        check2(
+          '[135-U2] \u2605\u2605 \u0E01\u0E14 "\u0E02\u0E49\u0E32\u0E21\u0E23\u0E38\u0E48\u0E19\u0E19\u0E35\u0E49" \u0E41\u0E25\u0E49\u0E27\u0E23\u0E38\u0E48\u0E19\u0E19\u0E31\u0E49\u0E19\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49',
+          gSkip && gSkip.updateSkip === "9.9.9",
+          JSON.stringify(gSkip && gSkip.updateSkip)
+        );
+        check2(
+          "[135-U2] \u2605\u2605 \u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E02\u0E49\u0E32\u0E21\u0E44\u0E27\u0E49\u0E08\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E16\u0E32\u0E21\u0E0B\u0E49\u0E33",
+          UC135.decideUpdate({
+            current: APP_VERSION,
+            releases: [relU],
+            platform: "win32",
+            skip: "9.9.9"
+          }).status === "skipped"
+        );
+        check2(
+          "[135-U2] \u2605\u2605 \u0E41\u0E15\u0E48\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E27\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19\u0E22\u0E31\u0E07\u0E16\u0E32\u0E21\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34",
+          UC135.decideUpdate({
+            current: APP_VERSION,
+            platform: "win32",
+            skip: "9.9.9",
+            releases: [{ ...relU, tag_name: "v9.9.10", name: "v9.9.10" }]
+          }).status === "update"
+        );
+        const { saveGlobalSetting: saveG135 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        await saveG135("updateSkip", "");
+        check2(
+          "[135-U2] \u2605 \u0E40\u0E25\u0E34\u0E01\u0E02\u0E49\u0E32\u0E21\u0E23\u0E38\u0E48\u0E19\u0E44\u0E14\u0E49 (\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E40\u0E23\u0E35\u0E22\u0E01\u0E17\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19)",
+          !(await kapi.readGlobalSettings() || {}).updateSkip
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        const infoLatest = UC135.decideUpdate({ current: "9.9.9", releases: [relU] });
+        check2(
+          "[135-U3] \u2605 \u0E23\u0E38\u0E48\u0E19\u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E17\u0E48\u0E32\u0E23\u0E38\u0E48\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E15\u0E49\u0E2D\u0E07\u0E17\u0E33",
+          infoLatest.status === "latest" && UC135.shouldNotify(infoLatest) === false
+        );
+        UU135.updateDialog(infoLatest, srcU);
+        await wait79(180);
+        const boxL = [...document.querySelectorAll(".k-dialog.k-upd-dlg")].pop();
+        check2(
+          "[135-U3] \u2605\u2605 \u0E15\u0E23\u0E27\u0E08\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E38\u0E48\u0E19\u0E43\u0E2B\u0E21\u0E48 \u0E15\u0E49\u0E2D\u0E07\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E38\u0E48\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27",
+          !!boxL && boxL.textContent.includes(t("ui.upd.upToDate"))
+        );
+        check2(
+          "[135-U3] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2B\u0E49\u0E01\u0E14\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15",
+          !![...boxL.querySelectorAll("button")].every((b) => b.textContent !== t("ui.upd.replace"))
+        );
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        await wait79(80);
       }
       {
         const TB80 = await Promise.resolve().then(() => (init_toolbar_config(), toolbar_config_exports));
@@ -204025,9 +204793,9 @@ ${css}
           filterTree("");
         }
         {
-          const row2 = scRows120()[0];
-          const file120 = row2.dataset.path;
-          await openScene(file120, row2._ctx.sc.title);
+          const row3 = scRows120()[0];
+          const file120 = row3.dataset.path;
+          await openScene(file120, row3._ctx.sc.title);
           await w120(200);
           const liveRow = () => document.querySelector(
             '#tree .scene[data-path="' + CSS.escape(file120) + '"]'
@@ -204302,8 +205070,8 @@ ${css}
         }
         {
           await buildTree2();
-          const row2 = scRows120().find((r) => r._ctx.sc.type !== "memo") || scRows120()[0];
-          openPropsPanel(row2._ctx.dPath, row2._ctx.ch, row2._ctx.sc);
+          const row3 = scRows120().find((r) => r._ctx.sc.type !== "memo") || scRows120()[0];
+          openPropsPanel(row3._ctx.dPath, row3._ctx.ch, row3._ctx.sc);
           await w120(700);
           const pb2 = $("#props-body");
           check2("[120-6] \u2605 \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01", !!pb2.querySelector(".props-name-input"));
@@ -204331,8 +205099,8 @@ ${css}
           cks[1].checked = true;
           cks[1].dispatchEvent(new Event("change", { bubbles: true }));
           await w120(700);
-          const sjF = await kapi.readJson(await kapi.join(row2._ctx.dPath, "scenes.json"));
-          const rowF = (sjF.chapters[row2._ctx.ch.guid] || []).find((x) => x.id === row2._ctx.sc.id);
+          const sjF = await kapi.readJson(await kapi.join(row3._ctx.dPath, "scenes.json"));
+          const rowF = (sjF.chapters[row3._ctx.ch.guid] || []).find((x) => x.id === row3._ctx.sc.id);
           check2(
             "[120-6] \u2605\u2605 \u0E15\u0E34\u0E4A\u0E01\u0E22\u0E49\u0E2D\u0E19\u0E2D\u0E14\u0E35\u0E15\u0E43\u0E19\u0E41\u0E1C\u0E07 \u2192 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07 scenes.json \u0E08\u0E23\u0E34\u0E07",
             !!rowF && rowF.isFlashback === true,
@@ -204341,7 +205109,7 @@ ${css}
           let fmF = {};
           for (let i5 = 0; i5 < 30; i5++) {
             try {
-              fmF = (0, import_md18.parseMdFile)(await kapi.readFile(row2.dataset.path)).meta;
+              fmF = (0, import_md18.parseMdFile)(await kapi.readFile(row3.dataset.path)).meta;
             } catch {
               fmF = {};
             }
@@ -204351,7 +205119,7 @@ ${css}
           check2(
             "[120-6] \u2605 \u0E41\u0E25\u0E30\u0E25\u0E07 frontmatter \u0E02\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C .md \u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E41\u0E1C\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19\u0E41\u0E04\u0E48 5 \u0E1F\u0E34\u0E25\u0E14\u0E4C)",
             String(fmF.isFlashback) === "true",
-            "\u0E44\u0E1F\u0E25\u0E4C=" + row2.dataset.path + " \xB7 frontmatter=" + JSON.stringify(fmF)
+            "\u0E44\u0E1F\u0E25\u0E4C=" + row3.dataset.path + " \xB7 frontmatter=" + JSON.stringify(fmF)
           );
           const ni = pb2.querySelector(".props-name-input");
           ni.value = "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120";
@@ -204359,8 +205127,8 @@ ${css}
           await w120(700);
           let rowN = null;
           for (let i5 = 0; i5 < 30; i5++) {
-            const sjN = await kapi.readJson(await kapi.join(row2._ctx.dPath, "scenes.json"));
-            rowN = (sjN.chapters[row2._ctx.ch.guid] || []).find((x) => x.id === row2._ctx.sc.id);
+            const sjN = await kapi.readJson(await kapi.join(row3._ctx.dPath, "scenes.json"));
+            rowN = (sjN.chapters[row3._ctx.ch.guid] || []).find((x) => x.id === row3._ctx.sc.id);
             if (rowN && rowN.title === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120") break;
             await w120(100);
           }
@@ -204423,8 +205191,8 @@ ${css}
         }
         {
           await buildTree2();
-          const row2 = scRows120()[0];
-          const f120 = row2.dataset.path;
+          const row3 = scRows120()[0];
+          const f120 = row3.dataset.path;
           const wantTitle = (0, import_md18.parseMdFile)(await kapi.readFile(f120)).meta.title;
           if (state.tabs.has(f120)) {
             state.tabs.get(f120).dirty = false;
@@ -204761,8 +205529,8 @@ ${css}
           check2("[a124-10] \u0E21\u0E35\u0E1A\u0E17\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E01\u0E32\u0E23\u0E1E\u0E31\u0E1A", !!chBox);
           if (chBox) {
             chBox.classList.add("collapsed");
-            const row2 = chBox.querySelector(".scene:not(.add-row)");
-            const title2 = row2 ? (row2.textContent || "").trim().split(/\s+/)[0] : "";
+            const row3 = chBox.querySelector(".scene:not(.add-row)");
+            const title2 = row3 ? (row3.textContent || "").trim().split(/\s+/)[0] : "";
             filterTree(title2 || "\u0E09\u0E32\u0E01");
             check2(
               '[a124-11] \u2605 \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E32\u0E07\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E1E\u0E31\u0E1A\u0E44\u0E27\u0E49\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E44\u0E21\u0E48 "\u0E2B\u0E32\u0E22" \u0E2D\u0E35\u0E01)',
@@ -205649,6 +206417,7 @@ ${css}
       init_scene_ops();
       init_wiki_ui();
       init_dialogs();
+      init_update_ui();
       init_books();
       init_recycle();
       init_dashboard();

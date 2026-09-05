@@ -2547,7 +2547,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     <div class=""k-set-tab"" data-p=""toolbar"" data-find=""แถบเครื่องมือ ปุ่ม เอาปุ่มออก toolbar"">แถบเครื่องมือ</div>
     <div class=""k-set-tab"" data-p=""fmtbar"" data-find=""แถบรูปแบบ ลอย ปุ่ม B I U ถอดปุ่ม นิยาย หนัง format bar"">แถบรูปแบบลอย</div>
     <div class=""k-set-tab"" data-p=""fab"" data-find=""ปุ่มลอย fab คำสั่งลัด มุมจอ วงกลม"">ปุ่มลอย (FAB)</div>
-    <div class=""k-set-tab"" data-p=""auto"" data-find=""อัตโนมัติ ซิงค์ จำนวนหน้า"">{3}</div>
+    <div class=""k-set-tab"" data-p=""auto"" data-find=""อัตโนมัติ ซิงค์ จำนวนหน้า อัปเดต update เวอร์ชัน รุ่นใหม่ github"">{3}</div>
     <div class=""k-set-tab"" data-p=""lang"" data-find=""ภาษา language แปล csv"">{4}</div>
     <div class=""k-set-tab"" data-p=""keys"" data-find=""ปุ่มลัด คีย์ลัด shortcut"">{5}</div>
     <div class=""k-set-navgrp""><span class=""k-set-navgrp-ic"">📁</span> เฉพาะผลงานนี้ <span class=""k-set-navgrp-sub"">เก็บใน project.khn.json</span></div>
@@ -2614,6 +2614,8 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-set-sub k-full"">// [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติสำหรับบทภาพยนตร์</div>
       <div class=""k-row""><label>คำนวณจำนวนหน้าใหม่หลังหยุดพิมพ์<span class=""k-hint"">ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น</span></label><input type=""checkbox"" id=""st-autopag""></div>
       <div class=""k-row""><label>รอหลังหยุดพิมพ์ (วินาที)<span class=""k-hint"">1–60 วินาที ก่อนคำนวณหน้าใหม่ · ยิ่งสั้นยิ่งใช้ CPU มาก</span></label><input type=""number"" id=""st-pagintv"" min=""1"" max=""60"" step=""1"" class=""k-narrow""></div>
+      <div class=""k-set-sub k-full"">อัปเดตโปรแกรม</div>
+      <div id=""st-update-host""></div>
     </div>
     <div class=""k-set-page k-set-2col"" data-p=""setup"">
       <div class=""k-hint"" style=""margin-bottom:10px"">[98] ข้อมูลบนหน้าปกบท/ต้นฉบับ — ใช้ตอนพิมพ์และส่งออก</div>
@@ -3645,6 +3647,7 @@ ui.menu.checkChapterListError,ตรวจทั้งบท (รายการ
 ui.menu.checkFindErrorU,ตรวจหาข้อผิดพลาดถัดไป ({0}+{1}+U)
 ui.menu.checkFindWordDup,ตรวจหาคำซ้ำ · สถิติการใช้คำ (Word History)…
 ui.menu.checkPlotHole,ตรวจสอบ Plot Hole…
+ui.menu.checkUpdate,ตรวจหาอัปเดต…
 ui.menu.clearFormatSpace,ล้างรูปแบบ ({0}+Space)
 ui.menu.closeAllTabW,ปิดทุกแท็บ ({0}+{1}+W)
 ui.menu.closeTabW,ปิดแท็บ ({0}+W)
@@ -5676,6 +5679,46 @@ ui.ui.cancel2,"<div class=""k-dlg-title""></div>
 ui.ui.hasFileCantSave,มี {0} ไฟล์ที่ยังไม่ได้บันทึก
 ui.ui.notSave,ไม่บันทึก
 ui.ui.savePick,บันทึกที่เลือก ({0})
+ui.upd.autoHint,ปิดแล้วจะไม่ติดต่ออินเทอร์เน็ตตอนเปิดโปรแกรม · ตรวจเองได้ที่ปุ่มข้างล่าง หรือเมนู ช่วยเหลือ
+ui.upd.autoLabel,ตรวจหาอัปเดตตอนเปิดโปรแกรม
+ui.upd.badUrl,ลิงก์ดาวน์โหลดไม่ได้มาจากรีโปที่กำหนด — ยกเลิกแล้ว
+ui.upd.checkNow,ตรวจหาอัปเดตตอนนี้
+ui.upd.checking,กำลังตรวจหาอัปเดต…
+ui.upd.current,รุ่นที่ใช้อยู่
+ui.upd.download,ดาวน์โหลดรุ่นใหม่
+ui.upd.downloading,กำลังดาวน์โหลด…
+ui.upd.failCheck,ตรวจหาอัปเดตไม่สำเร็จ
+ui.upd.failDl,ดาวน์โหลดไม่สำเร็จ: {0}
+ui.upd.failInstall,แทนที่ไฟล์ไม่สำเร็จ: {0}
+ui.upd.failNet,ติดต่อ GitHub ไม่ได้: {0}
+ui.upd.failSource,อ่านที่มาของอัปเดตไม่ได้
+ui.upd.file,ไฟล์
+ui.upd.foundTitle,มีรุ่นใหม่ให้อัปเดต
+ui.upd.installOk,แทนที่เรียบร้อย — เปิดโปรแกรมใหม่เพื่อใช้รุ่นใหม่
+ui.upd.installing,กำลังแทนที่ไฟล์โปรแกรม…
+ui.upd.lastCheck,ตรวจล่าสุด
+ui.upd.later,ไว้ทีหลัง
+ui.upd.latest,รุ่นล่าสุด
+ui.upd.manual,ตัวโปรแกรมที่รันอยู่ไม่ใช่ไฟล์พกพา จึงแทนที่ตัวเองไม่ได้ — โหลดไฟล์ไว้ให้แล้ว เปลี่ยนเองได้เลย
+ui.upd.never,ยังไม่เคยตรวจ
+ui.upd.noAsset,รุ่นใหม่ยังไม่มีไฟล์สำหรับระบบนี้ — เปิดหน้ารุ่นแล้วโหลดเองได้
+ui.upd.noRelease,รีโปยังไม่ได้เผยแพร่รุ่นไหนเลย
+ui.upd.notes,สิ่งที่เปลี่ยนในรุ่นนี้
+ui.upd.openPage,เปิดหน้ารุ่นใหม่
+ui.upd.replace,แทนที่ด้วยรุ่นใหม่
+ui.upd.repoNewer,รีโปไปถึงรุ่น {0} แล้ว แต่ยังไม่มีไฟล์ให้ดาวน์โหลด
+ui.upd.restartNow,เปิดโปรแกรมใหม่ตอนนี้
+ui.upd.reveal,เปิดโฟลเดอร์ไฟล์ที่โหลด
+ui.upd.skip,ข้ามรุ่นนี้
+ui.upd.skipClear,เลิกข้ามรุ่น {0}
+ui.upd.skipCleared,เลิกข้ามรุ่นที่เคยข้ามแล้ว
+ui.upd.skipped,ข้ามรุ่น {0} แล้ว — ตรวจเองได้ที่เมนู ช่วยเหลือ
+ui.upd.skippedHint,เคยกดข้ามรุ่น {0} ไว้ · กดปุ่มด้านล่างเพื่ออัปเดตเลยก็ได้
+ui.upd.skippedTitle,รุ่นนี้ถูกข้ามไว้
+ui.upd.sourceHint,รับอัปเดตจากรีโปนี้ที่เดียวเท่านั้น
+ui.upd.sourceLabel,แหล่งอัปเดต
+ui.upd.title,อัปเดตโปรแกรม
+ui.upd.upToDate,ใช้รุ่นล่าสุดอยู่แล้ว
 ui.vis.addFree,➕ แถวว่าง
 ui.vis.addRow,➕ เพิ่มจากบรรทัดในฉาก
 ui.vis.addSelected,เพิ่มที่เลือก

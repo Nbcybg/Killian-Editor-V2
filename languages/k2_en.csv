@@ -2547,7 +2547,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     <div class=""k-set-tab"" data-p=""toolbar"" data-find=""แถบเครื่องมือ ปุ่ม เอาปุ่มออก toolbar"">แถบเครื่องมือ</div>
     <div class=""k-set-tab"" data-p=""fmtbar"" data-find=""แถบรูปแบบ ลอย ปุ่ม B I U ถอดปุ่ม นิยาย หนัง format bar"">Format bar</div>
     <div class=""k-set-tab"" data-p=""fab"" data-find=""ปุ่มลอย fab คำสั่งลัด มุมจอ วงกลม"">Floating button (FAB)</div>
-    <div class=""k-set-tab"" data-p=""auto"" data-find=""อัตโนมัติ ซิงค์ จำนวนหน้า"">{3}</div>
+    <div class=""k-set-tab"" data-p=""auto"" data-find=""automation sync pagination update version release github"">{3}</div>
     <div class=""k-set-tab"" data-p=""lang"" data-find=""ภาษา language แปล csv"">{4}</div>
     <div class=""k-set-tab"" data-p=""keys"" data-find=""ปุ่มลัด คีย์ลัด shortcut"">{5}</div>
     <div class=""k-set-navgrp""><span class=""k-set-navgrp-ic"">📁</span> เฉพาะผลงานนี้ <span class=""k-set-navgrp-sub"">เก็บใน project.khn.json</span></div>
@@ -2614,6 +2614,8 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
       <div class=""k-set-sub k-full"">// [alpha.60 ข้อ 96] ปรับหน้าใหม่อัตโนมัติสำหรับบทภาพยนตร์</div>
       <div class=""k-row""><label>คำนวณจำนวนหน้าใหม่หลังหยุดพิมพ์<span class=""k-hint"">ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น</span></label><input type=""checkbox"" id=""st-autopag""></div>
       <div class=""k-row""><label>รอหลังหยุดพิมพ์ (วินาที)<span class=""k-hint"">1–60 วินาที ก่อนคำนวณหน้าใหม่ · ยิ่งสั้นยิ่งใช้ CPU มาก</span></label><input type=""number"" id=""st-pagintv"" min=""1"" max=""60"" step=""1"" class=""k-narrow""></div>
+      <div class=""k-set-sub k-full"">Program updates</div>
+      <div id=""st-update-host""></div>
     </div>
     <div class=""k-set-page k-set-2col"" data-p=""setup"">
       <div class=""k-hint"" style=""margin-bottom:10px"">[98] ข้อมูลบนหน้าปกบท/ต้นฉบับ — ใช้ตอนพิมพ์และส่งออก</div>
@@ -3645,6 +3647,7 @@ ui.menu.checkChapterListError,ตรวจทั้งบท (รายการ
 ui.menu.checkFindErrorU,ตรวจหาข้อผิดพลาดถัดไป ({0}+{1}+U)
 ui.menu.checkFindWordDup,ตรวจหาคำซ้ำ · สถิติการใช้คำ (Word History)…
 ui.menu.checkPlotHole,ตรวจสอบ Plot Hole…
+ui.menu.checkUpdate,Check for updates…
 ui.menu.clearFormatSpace,ล้างรูปแบบ ({0}+Space)
 ui.menu.closeAllTabW,ปิดทุกแท็บ ({0}+{1}+W)
 ui.menu.closeTabW,ปิดแท็บ ({0}+W)
@@ -5676,6 +5679,46 @@ ui.ui.cancel2,"<div class=""k-dlg-title""></div>
 ui.ui.hasFileCantSave,มี {0} ไฟล์ที่ยังไม่ได้บันทึก
 ui.ui.notSave,ไม่บันทึก
 ui.ui.savePick,บันทึกที่เลือก ({0})
+ui.upd.autoHint,"Off = no internet access at startup · You can still check with the button below, or from the Help menu"
+ui.upd.autoLabel,Check for updates on startup
+ui.upd.badUrl,The download link is not from the configured repository — cancelled
+ui.upd.checkNow,Check now
+ui.upd.checking,Checking for updates…
+ui.upd.current,Current version
+ui.upd.download,Download the new version
+ui.upd.downloading,Downloading…
+ui.upd.failCheck,Update check failed
+ui.upd.failDl,Download failed: {0}
+ui.upd.failInstall,Replacing the file failed: {0}
+ui.upd.failNet,Cannot reach GitHub: {0}
+ui.upd.failSource,Cannot read the update source
+ui.upd.file,File
+ui.upd.foundTitle,A new version is available
+ui.upd.installOk,Replaced — restart to use the new version
+ui.upd.installing,Replacing the program file…
+ui.upd.lastCheck,Last checked
+ui.upd.later,Later
+ui.upd.latest,Latest version
+ui.upd.manual,"This build is not the portable file, so it cannot replace itself — the download is ready, swap it yourself"
+ui.upd.never,Never checked
+ui.upd.noAsset,The new version has no file for this system — open the release page and download it yourself
+ui.upd.noRelease,The repository has no published release yet
+ui.upd.notes,What changed in this version
+ui.upd.openPage,Open the release page
+ui.upd.replace,Replace with the new version
+ui.upd.repoNewer,"The repository is already at {0}, but no downloadable file was published"
+ui.upd.restartNow,Restart now
+ui.upd.reveal,Show the downloaded file
+ui.upd.skip,Skip this version
+ui.upd.skipClear,Stop skipping {0}
+ui.upd.skipCleared,No version is skipped any more
+ui.upd.skipped,Skipped {0} — you can check again from the Help menu
+ui.upd.skippedHint,You skipped {0} earlier · you can still update with the button below
+ui.upd.skippedTitle,This version was skipped
+ui.upd.sourceHint,Updates come from this repository only
+ui.upd.sourceLabel,Update source
+ui.upd.title,Program update
+ui.upd.upToDate,You already have the latest version
 ui.vis.addFree,➕ Blank row
 ui.vis.addRow,➕ Add from scene lines
 ui.vis.addSelected,Add selected

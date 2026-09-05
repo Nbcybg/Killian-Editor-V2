@@ -111,6 +111,8 @@ import { renameScene, deleteScene, addScene, setSceneMeta, toggleSceneFlag, dupl
          setSceneTitle, setChapterTitle, chapterProps } from './scene-ops.js';
 import { wikiCats, applyWikiCats, newWikiCat, editWikiCat, deleteWikiCat, addEntity, openEntity, duplicateEntity } from './wiki-ui.js';
 import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
+// [alpha.135] ระบบอัปเดต — ทางเข้าทั้งสามทาง (ตั้งค่า · ตอนเปิดโปรแกรม · เมนูช่วยเหลือ) เรียกตัวเดียวกัน
+import { checkForUpdates, startupUpdateCheck } from './update/update-ui.js';
 import { openBookManager, renderBookManager, refreshBooksIfOpen } from './books.js';
 import { restoreFromTrash, deleteToTrash, purgeRecycle } from './recycle.js';
 import { openDashboard, renderDashboard } from './dashboard.js';
@@ -2818,6 +2820,10 @@ export async function bootSequence() {
   // ค่ายังไม่มีโปรเจกต์ → ยัดลง state.settings ไว้ก่อน เพื่อให้เมนู/สวิตช์อ่านค่าถูกตั้งแต่วินาทีแรก
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
   syncMenuToggles();
+  // [alpha.135] **ตรวจอัปเดตก่อนเข้าโปรแกรม** — ก่อนเปิดโปรเจกต์/หน้าแรก ตามที่ผู้ใช้สั่ง
+  // ยังไม่มีอะไรค้างในหน่วยความจำตอนนี้ กด "แทนที่แล้วเปิดใหม่" จึงไม่มีงานหาย
+  // เงียบสนิทเมื่อไม่มีรุ่นใหม่ · ปิดสวิตช์ไว้ = ไม่ติดต่อเน็ตเลย · พังก็ต้องไม่ขวางการเปิดโปรแกรม
+  try { await startupUpdateCheck(); } catch (e) { log('warn', tt('ui.upd.failCheck'), e); }
   let recent = [];
   try { recent = (await kapi.listRecent()) || []; } catch {}
   const openedLast = !!(g.openLastProject && recent[0]);
@@ -8181,7 +8187,15 @@ async function createProjectAt(parent, name) {
  * ตอนนี้ใช้กล่องเดียวกับ "บันทึกทั้งหมด" (มีรายชื่อไฟล์ + เช็คบ็อกซ์)
  * @returns {Promise<'save'|'discard'|null>} สิ่งที่ผู้ใช้เลือก (คืนค่าเพื่อให้ selftest ตรวจได้)
  */
-async function confirmQuit() {
+/**
+ * ปิดโปรแกรม — ผ่านรายการงานค้างชุดเดียว (กฎถาวรข้อ 1)
+ *
+ * [alpha.135] รับ `quit` เข้ามาแทนได้ เพราะ "เปิดโปรแกรมใหม่หลังอัปเดต" ก็คือการปิดโปรแกรม
+ * เหมือนกันทุกประการ — ต้องเห็นรายการงานค้างชุดเดียวกัน ห้ามมีทางลัดที่ข้ามกล่องนี้
+ * @param {{quit?: () => any}} [opts]
+ */
+export async function confirmQuit(opts = {}) {
+  const doQuit = opts.quit || (() => kapi.quitNow());
   // [alpha.79] **บันทึกเซสชันก่อนทุกอย่าง** — เดิมทางนี้ไม่เคยจดอะไรเลย
   // (`saveOpenTabs()` อยู่ใน closeProjectIfAny ซึ่งเป็นทางของ "เปลี่ยนโปรเจกต์" เท่านั้น)
   // ต้องมาก่อนกล่องถาม เพราะถ้าผู้ใช้กด "ออกโดยไม่บันทึก" เราก็ยังอยากจำได้ว่าเปิดอะไรไว้
@@ -8192,7 +8206,7 @@ async function confirmQuit() {
   const items = allDirtyList();
   logAction('quit', ttf('ui.app.closeAppPendingList', items.length),
             items.map((x) => x.title));
-  if (!items.length) { kapi.quitNow(); return 'save'; }
+  if (!items.length) { doQuit(); return 'save'; }
   const { action, keys } = await saveAllDialog(items, {
     title: ttf('ui.app.closeAppHasList', items.length),
     saveLabel: tt('ui.app.saveDoneOut'),
@@ -8209,8 +8223,8 @@ async function confirmQuit() {
       return null;
     }
     logAction('quit', ttf('ui.app.saveCompleteListDone', res.saved));
-    kapi.quitNow();
-  } else if (action === 'discard') { logAction('quit', tt('ui.app.closeNotSave')); kapi.quitNow(); }
+    doQuit();
+  } else if (action === 'discard') { logAction('quit', tt('ui.app.closeNotSave')); doQuit(); }
   else setStatus(tt('ui.app.cancelCloseApp'));
   return action;
 }
@@ -11616,6 +11630,8 @@ export async function handleCommand(ch, ...a) {
     case 'toggle-format': switchFormat(); break;
     case 'set-format': switchFormat(a[0]); break;
     case 'about': aboutDialog(); break;
+    // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
+    case 'check-update': await checkForUpdates({ silent: false }); break;
     // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา (Ctrl+Shift+`) — อยู่เมนูเดียวกับ "เกี่ยวกับ"
     case 'dev-console': openDevConsole(); break;
     // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Ctrl+Alt+U) — เดิมไม่มีคีย์ลัดเลย
@@ -33909,6 +33925,151 @@ async function runTest(projectPath) {
               before80 + ' -> ' + after80);
         dlg80.querySelector('.k-cancel').click();
         await wait79(140);
+      }
+
+      // ───────── [alpha.135] ระบบอัปเดต — ตั้งค่า · กล่องถาม · ที่มาที่ล็อกไว้ ─────────
+      //
+      // ผู้ใช้สั่งสี่ข้อ: (1) สวิตช์ในตั้งค่า (2) ตรวจก่อนเข้าโปรแกรม แล้วถามว่า "แทนที่หรือข้าม"
+      // (3) เมนูช่วยเหลือมีตรวจหาอัปเดต (4) **มาจาก Nbcybg/Killian-Editor-V2 ที่เดียว**
+      // เทสนี้ไม่แตะเน็ตเลย — ป้อนผลลัพธ์ปลอมเข้ากล่องแล้วดูว่าปุ่ม/ค่าที่บันทึกถูกไหม
+      {
+        const UC135 = await import('./update/update-check.js');
+        const UU135 = await import('./update/update-ui.js');
+        check('[135-U0] ★★ ที่มาของอัปเดตคือรีโปที่ผู้ใช้กำหนดเท่านั้น',
+              UC135.UPDATE_GIT_URL === 'https://github.com/Nbcybg/Killian-Editor-V2.git',
+              UC135.UPDATE_GIT_URL);
+        check('[135-U0] ★★ ลิงก์ไฟล์แนบจากรีโปอื่นถูกปฏิเสธตั้งแต่ชั้นตรรกะ',
+              UC135.isAllowedAssetUrl('https://github.com/evil/repo/releases/download/v1/x.exe') === false
+              && UC135.isAllowedAssetUrl(UC135.UPDATE_ASSET_PREFIX + 'v1/K2.exe') === true);
+
+        // ── (1) สวิตช์ในหน้าตั้งค่า ──
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        settingsDialog('auto');
+        await wait79(260);
+        const dlgU = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        const chkU = dlgU.querySelector('#st-update');
+        check('[135-U1] ★★ ตั้งค่า → อัตโนมัติ มีสวิตช์ "ตรวจหาอัปเดตตอนเปิดโปรแกรม"', !!chkU);
+        check('[135-U1] สวิตช์อยู่ในหน้า "อัตโนมัติ" จริง',
+              !!chkU && !!chkU.closest('.k-set-page[data-p="auto"]'));
+        check('[135-U1] สวิตช์อ่านค่าปัจจุบันมาโชว์ถูก',
+              !!chkU && chkU.checked === (state.settings.updateCheck !== false),
+              String(chkU && chkU.checked));
+        check('[135-U1] ★ มีปุ่ม "ตรวจหาอัปเดตตอนนี้" กดเองได้ทันที',
+              !!dlgU.querySelector('#st-update-now'));
+        check('[135-U1] ★★ หน้าตั้งค่าบอกที่มาให้เห็นกับตา',
+              (dlgU.querySelector('#st-update-host .k-upd-src-url') || {}).textContent
+                === UC135.UPDATE_GIT_URL);
+        check('[135-U1] บอกรุ่นที่ใช้อยู่ + เวลาที่ตรวจล่าสุด',
+              (dlgU.querySelector('#st-update-host') || {}).textContent.includes(APP_VERSION));
+        check('[135-U1] ★ ปุ่ม "เลิกข้ามรุ่น" ปิดอยู่เมื่อยังไม่เคยข้ามรุ่นไหน',
+              !!dlgU.querySelector('#st-update-unskip'));
+        // ค้นในตั้งค่าด้วยคำว่า "อัปเดต" ต้องเจอแท็บนี้ (ผู้ใช้หาไม่เจอ = เท่ากับไม่มี)
+        const navq = dlgU.querySelector('#st-nav-q');
+        if (navq) {
+          navq.value = 'อัปเดต'; navq.dispatchEvent(new Event('input'));
+          await wait79(90);
+          const shown = [...dlgU.querySelectorAll('.k-set-tab')]
+            .filter((x) => !x.classList.contains('k-set-tab-off'));
+          check('[135-U1] ★★ ค้นคำว่า "อัปเดต" ในตั้งค่าแล้วเจอแท็บอัตโนมัติ',
+                shown.some((x) => x.dataset.p === 'auto'), shown.map((x) => x.dataset.p).join(','));
+          navq.value = ''; navq.dispatchEvent(new Event('input'));
+          await wait79(60);
+        }
+        // ปิด/เปิดสวิตช์แล้วกดบันทึก → ค่าต้องอยู่จริง (ไม่ใช่แค่ติ๊กเล่น)
+        chkU.checked = false;
+        dlgU.querySelector('.k-dlg-btns .k-ok').click();
+        await wait79(700);
+        check('[135-U1] ★★ ปิดสวิตช์แล้วบันทึก → ค่าถูกจำไว้',
+              state.settings.updateCheck === false, String(state.settings.updateCheck));
+        const gOff = await kapi.readGlobalSettings();
+        check('[135-U1] ★★ ค่าลงไฟล์ระดับผู้ใช้จริง (ใช้ร่วมทุกผลงาน)',
+              gOff && gOff.updateCheck === false, JSON.stringify(gOff && gOff.updateCheck));
+
+        // ── (2) ปิดสวิตช์ = ตอนเปิดโปรแกรมต้องไม่ติดต่อเน็ตเลย ──
+        const silent = await UU135.startupUpdateCheck();
+        check('[135-U2] ★★ ปิดสวิตช์แล้วการตรวจตอนเปิดโปรแกรมไม่ทำงาน (ไม่ยิงเน็ต)',
+              silent === null, JSON.stringify(silent));
+
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        settingsDialog('auto');
+        await wait79(260);
+        const dlgU2 = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        check('[135-U1] ★ เปิดกล่องใหม่แล้วสวิตช์จำสถานะที่ปิดไว้',
+              dlgU2.querySelector('#st-update').checked === false);
+        dlgU2.querySelector('#st-update').checked = true;
+        dlgU2.querySelector('.k-dlg-btns .k-ok').click();
+        await wait79(700);
+        check('[135-U1] ★ เปิดสวิตช์กลับได้',
+              state.settings.updateCheck === true, String(state.settings.updateCheck));
+
+        // ── (2) กล่อง "มีรุ่นใหม่ — แทนที่ หรือ ข้ามไป" ──
+        const relU = {
+          tag_name: 'v9.9.9', name: 'v9.9.9',
+          body: 'ทดสอบบันทึกรุ่น <script>window.__k2updXss = 1;</script>',
+          html_url: UC135.UPDATE_HOME_URL + '/releases/tag/v9.9.9',
+          assets: [{ name: 'Killian2-9.9.9-portable.exe', size: 1048576,
+                     browser_download_url: UC135.UPDATE_ASSET_PREFIX + 'v9.9.9/Killian2-9.9.9-portable.exe' }],
+        };
+        const infoU = UC135.decideUpdate({ current: APP_VERSION, releases: [relU], platform: 'win32' });
+        check('[135-U2] ★★ รุ่นที่ใหม่กว่า + มีไฟล์ของระบบนี้ = พร้อมแทนที่',
+              infoU.status === 'update' && infoU.assetName.endsWith('.exe'), infoU.status);
+        check('[135-U2] ★★ ต้องเตือนผู้ใช้เมื่อมีรุ่นใหม่ (ตอนเปิดโปรแกรมไม่เงียบ)',
+              UC135.shouldNotify(infoU) === true);
+
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        const srcU = { current: APP_VERSION, platform: 'win32', canReplace: true,
+                       gitUrl: UC135.UPDATE_GIT_URL };
+        UU135.updateDialog(infoU, srcU);
+        await wait79(200);
+        const boxU = [...document.querySelectorAll('.k-dialog.k-upd-dlg')].pop();
+        check('[135-U2] ★★ กล่องอัปเดตโผล่จริง', !!boxU);
+        const txtU = boxU ? boxU.textContent : '';
+        check('[135-U2] ★★ บอกทั้งรุ่นที่ใช้อยู่และรุ่นใหม่',
+              txtU.includes(APP_VERSION) && txtU.includes('9.9.9'));
+        check('[135-U2] ★★ บอกที่มาว่าโหลดจากรีโปไหน', txtU.includes(UC135.UPDATE_GIT_URL));
+        const btnU = [...boxU.querySelectorAll('.k-dlg-btns button')].map((b) => b.textContent);
+        check('[135-U2] ★★ ให้เลือก "แทนที่" หรือ "ข้ามรุ่นนี้" ตามที่ผู้ใช้สั่ง',
+              btnU.includes(tt('ui.upd.replace')) && btnU.includes(tt('ui.upd.skip')),
+              btnU.join(' | '));
+        check('[135-U2] ★ มีทางเลือก "ไว้ทีหลัง" ด้วย (ไม่บังคับตัดสินใจเดี๋ยวนี้)',
+              btnU.includes(tt('ui.upd.later')), btnU.join(' | '));
+        check('[135-U2] ★★ บันทึกรุ่นจาก GitHub ถูกแสดงเป็น "ข้อความ" ไม่ใช่ HTML',
+              !!boxU.querySelector('.k-upd-notes')
+              && boxU.querySelector('.k-upd-notes').textContent.includes('<script>')
+              && !boxU.querySelector('.k-upd-notes script') && !globalThis.__k2updXss);
+
+        // กด "ข้ามรุ่นนี้" → ครั้งต่อไปต้องไม่ถามซ้ำ
+        [...boxU.querySelectorAll('.k-dlg-btns button')]
+          .find((b) => b.textContent === tt('ui.upd.skip')).click();
+        await wait79(400);
+        const gSkip = await kapi.readGlobalSettings();
+        check('[135-U2] ★★ กด "ข้ามรุ่นนี้" แล้วรุ่นนั้นถูกจำไว้',
+              gSkip && gSkip.updateSkip === '9.9.9', JSON.stringify(gSkip && gSkip.updateSkip));
+        check('[135-U2] ★★ รุ่นที่ข้ามไว้จะไม่ถูกถามซ้ำ',
+              UC135.decideUpdate({ current: APP_VERSION, releases: [relU], platform: 'win32',
+                                   skip: '9.9.9' }).status === 'skipped');
+        check('[135-U2] ★★ แต่รุ่นที่ใหม่กว่านั้นยังถามตามปกติ',
+              UC135.decideUpdate({ current: APP_VERSION, platform: 'win32', skip: '9.9.9',
+                releases: [{ ...relU, tag_name: 'v9.9.10', name: 'v9.9.10' }] }).status === 'update');
+        const { saveGlobalSetting: saveG135 } = await import('./app.js');
+        await saveG135('updateSkip', '');                      // คืนสภาพให้ผู้ใช้จริง
+        check('[135-U2] ★ เลิกข้ามรุ่นได้ (ปุ่มในตั้งค่าเรียกทางเดียวกัน)',
+              !((await kapi.readGlobalSettings()) || {}).updateSkip);
+
+        // ── กล่องเดียวกันต้องบอกด้วยเมื่อ "ไม่มีอะไรใหม่" (ทางเมนูช่วยเหลือ) ──
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        const infoLatest = UC135.decideUpdate({ current: '9.9.9', releases: [relU] });
+        check('[135-U3] ★ รุ่นในเครื่องใหม่เท่ารุ่นล่าสุด = ไม่มีอะไรต้องทำ',
+              infoLatest.status === 'latest' && UC135.shouldNotify(infoLatest) === false);
+        UU135.updateDialog(infoLatest, srcU);
+        await wait79(180);
+        const boxL = [...document.querySelectorAll('.k-dialog.k-upd-dlg')].pop();
+        check('[135-U3] ★★ ตรวจเองแล้วไม่มีรุ่นใหม่ ต้องบอกว่าเป็นรุ่นล่าสุดแล้ว',
+              !!boxL && boxL.textContent.includes(tt('ui.upd.upToDate')));
+        check('[135-U3] ★ ไม่มีปุ่มแทนที่ให้กดเมื่อไม่มีอะไรให้อัปเดต',
+              !![...boxL.querySelectorAll('button')].every((b) => b.textContent !== tt('ui.upd.replace')));
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        await wait79(80);
       }
 
       // ───────── [80-4] + [80-7] ปุ่มแผงบนแถบ ─────────

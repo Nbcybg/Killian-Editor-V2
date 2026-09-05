@@ -68,6 +68,18 @@ contextBridge.exposeInMainWorld('kapi', {
   pluginFetchZip: call('plugins:fetchZip'),
   pluginExtract: call('plugins:extract'),
   pluginUninstall: call('plugins:uninstall'),
+  // [alpha.135] อัปเดตโปรแกรม — ที่มาถูกล็อกไว้ที่รีโปเดียวในฝั่ง main (renderer ส่ง URL เองไม่ได้)
+  updateSource: call('update:source'),      // ที่มา + เครื่องนี้แทนที่ตัวเองได้ไหม
+  updateFetch: call('update:fetch'),        // รายชื่อรุ่นจาก GitHub
+  updateDownload: call('update:download'),  // โหลดไฟล์แนบ (ตรวจลิงก์ซ้ำในฝั่ง main)
+  updateInstall: call('update:install'),    // แทนที่ไฟล์โปรแกรม
+  updateRestart: call('update:restart'),    // เปิดโปรแกรมใหม่ด้วยไฟล์ที่แทนที่แล้ว
+  updateCleanup: call('update:cleanup'),    // ลบซากไฟล์เก่าจากการอัปเดตครั้งก่อน
+  onUpdateProgress: (cb) => {
+    const h = (e, p) => { try { cb(p || {}); } catch {} };
+    ipcRenderer.on('update:progress', h);
+    return () => ipcRenderer.removeListener('update:progress', h);
+  },
   readGlobalSettings: call('settings:readGlobal'),    // [alpha.60 ข้อ 94] อ่าน global settings จาก userData
   writeGlobalSettings: call('settings:writeGlobal'),  // [alpha.60 ข้อ 94] เขียน global settings ไป userData
   print: call('win:print'), printToPdf: call('win:printToPdf'),

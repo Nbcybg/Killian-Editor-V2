@@ -265,6 +265,11 @@ export const GLOBAL_DEFAULTS = {
   showHomeOnStartup: false,
   // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …) ในตัวแก้ไขนิยาย — เปิดไว้เป็นค่าเริ่มต้น
   showMarkdownCodes: true,
+  // [alpha.135] อัปเดตโปรแกรม (ระดับผู้ใช้ — ไม่ผูกกับผลงานชิ้นไหน)
+  //   updateCheck   = ตรวจให้อัตโนมัติ "ก่อนเข้าโปรแกรม" (ปิดได้ในตั้งค่า → อัตโนมัติ)
+  //   updateSkip    = รุ่นที่ผู้ใช้กด "ข้ามรุ่นนี้" ไว้ — จะไม่ถามซ้ำจนกว่าจะมีรุ่นใหม่กว่านั้น
+  //   updateLast    = เวลาที่ตรวจสำเร็จครั้งล่าสุด (ms) · updateLastVersion = รุ่นที่เจอครั้งนั้น
+  updateCheck: true, updateSkip: '', updateLast: 0, updateLastVersion: '',
 };
 export const PROJECT_DEFAULTS = {
   // หน้ากระดาษ
