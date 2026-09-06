@@ -7,6 +7,9 @@ import { $, el, setStatus, state } from './core.js';
 import { pickImage } from './gallery.js';
 import { popupMenu, ask } from './ui.js';
 import { listDraftsForSection, createDraft, deleteDraft, renameDraft, setPrimaryDraft } from './drafts.js';
+// [alpha.141] อ่านทั้งเล่ม + จัดการบท — ผู้ใช้ขอให้มีทางเข้าจากหน้าจัดการเล่มด้วย
+import { openBookReader, bumpBookFlow } from './read-ui.js';
+import { openChapterManager, coverHintLine } from './chapters-ui.js';
 
 // บั๊ก #18: จัดการเล่มเป็นแผง ไม่ใช่แท็บเอกสาร
 export async function openBookManager() {
@@ -25,7 +28,13 @@ export async function renderBookManager(pane) {
   const addBtn = el('button', 'k-ok', t('ui.books.addBook'));
   addBtn.onclick = async () => { await addSection(); renderBookManager(pane); };
   head.append(addBtn);
+  const readAllBtn = el('button', 'cmp-mini', t('ui.readbook.buttonAll'));
+  readAllBtn.onclick = () => openBookReader('');           // '' = ทั้งโปรเจกต์
+  head.append(readAllBtn);
   wrap.append(head);
+
+  // [alpha.142 ข้อ 3] ขนาด/อัตราส่วนรูปปกที่แนะนำ — ตามกระดาษที่ตั้งไว้จริง
+  wrap.append(el('div', 'k-hint chapters-hint', coverHintLine()));
 
   const sections = await listSections();
   const grid = el('div', 'books-grid'); wrap.append(grid);
@@ -165,6 +174,22 @@ export async function renderBookManager(pane) {
     stRow.append(pill);
     bd.append(stRow);
 
+    // ★ [alpha.142 ข้อ 1] ใช้หน้าปกเล่ม / ใช้ภาพเต็มหน้า — ติ๊กได้จากหน้านี้เลย
+    // (เดิมต้องเปิดกล่องคุณสมบัติเล่มถึงจะเจอ ทั้งที่รูปปกเลือกกันที่นี่)
+    const covRow = el('div', 'book-cover-flags');
+    const mkFlag = (labelKey, cur, save) => {
+      const lb = el('label', 'chapter-cover-on');
+      const c = el('input', null); c.type = 'checkbox'; c.checked = cur;
+      c.onchange = async () => { s.meta = await saveSectionMeta(s.sf, save(c.checked)); bumpBookFlow(); };
+      lb.append(c, document.createTextNode(' ' + t(labelKey)));
+      covRow.append(lb); return c;
+    };
+    mkFlag('ui.section.useCover', s.meta.coverOn === undefined ? true : !!s.meta.coverOn,
+           (v) => ({ coverOn: v }));
+    mkFlag('ui.section.useCoverFull', s.meta.coverFull === undefined ? true : !!s.meta.coverFull,
+           (v) => ({ coverFull: v }));
+    bd.append(covRow);
+
     // คำโปรย
     const blurb = el('textarea', 'book-blurb'); blurb.placeholder = t('ui.books.wordSynopsisBook');
     blurb.value = s.meta.blurb || '';
@@ -185,11 +210,16 @@ export async function renderBookManager(pane) {
     const acts = el('div', 'book-acts');
     const openB = el('button', 'cmp-mini', t('ui.books.open'));
     openB.onclick = () => openFirstSceneOf(s.secPath);
+    // [alpha.141] อ่านทั้งเล่ม (หน้าปก → หน้าสุดท้าย) + จัดการบทของเล่มนี้
+    const readB = el('button', 'cmp-mini book-read', t('ui.readbook.button'));
+    readB.onclick = () => openBookReader(s.secPath);
+    const chB = el('button', 'cmp-mini book-chapters', t('ui.chapters.title'));
+    chB.onclick = () => openChapterManager(s.secPath);
     const expB = el('button', 'cmp-mini', t('ui.books.export'));
     expB.onclick = () => openCompileDialog();
     const delB = el('button', 'cmp-mini k-danger', t('ui.common.del2'));
     delB.onclick = async () => { await deleteSection(s.secPath, s.meta); renderBookManager(pane); };
-    acts.append(openB, expB, delB);
+    acts.append(openB, readB, chB, expB, delB);
     bd.append(acts);
 
     // ---- ลากสลับลำดับเล่ม ----

@@ -2,11 +2,12 @@
 import { tf } from './i18n.js';
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
-         applyProseVars, proseFormat, applyPaperVars, renderPaperSheets } from './app.js';
+         applyProseVars, proseFormat, applyPaperVars, renderPaperSheets,
+         applyTheme, currentTheme } from './app.js';   // [alpha.137] ธีมสีในตั้งค่า
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
 import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, scanLanguages, languageCatalog,
-         DEFAULT_SETTINGS, DEFAULT_GOALS,
+         DEFAULT_SETTINGS, DEFAULT_GOALS, THEMES, THEME_LABEL_KEYS,
          fallbackLangName, langFileName, csvToTable, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
          PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_KEYS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES,
@@ -35,6 +36,8 @@ import { applyFocusDim } from './focus-mode.js';
 // [alpha.135] ส่วน "อัปเดตโปรแกรม" ในแท็บ อัตโนมัติ — สร้างด้วยโค้ด (ปุ่ม/ค่าจริง ไม่ใช่ HTML ตายตัว)
 import { buildUpdateFields } from './update/update-ui.js';
 import { iconHtml } from './icons.js';
+// [alpha.140] หัวข้อ "แผงนำทาง" ในตั้งค่าโปรเจกต์ — กติกาแบ่งหน้า/คำอธิบายสัญลักษณ์อยู่ที่นี่ที่เดียว
+import { clampPerPage, NAV_FLAG_DEFS } from './nav-model.js';
 // [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
 import { NET_COLOR_GROUPS, NET_COLOR_DEFS, netColorDefsOf, normalizeNetColors,
          MOUSE_BUTTONS, resolveNetControls, controlsHint } from './network-theme.js';
@@ -274,12 +277,79 @@ export function settingsDialog(openTab, opts = {}) {
     spPageGap: parseInt(s.spPageGap, 10) || 28,
   };
 
+  // [alpha.137] ธีมสีของโปรแกรม — พรีวิวสดตอนเลือก จึงต้องจำของเดิมไว้คืนตอนกดยกเลิก
+  const origTheme = currentTheme();
+  const previewTheme = (id) => { state.settings.theme = id; applyTheme(); };
+
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-settings');
   box.innerHTML = tf('ui.dlg.alphaItemLevelUser', t('settings.title'), t('settings.general'), t('settings.writing'), t('settings.automation'), t('settings.language'), t('settings.shortcuts'), t('settings.projectName'), t('settings.author'), t('settings.autoSaveMinutes'), t('settings.autoSaveHint'), t('settings.autoBackup'), t('settings.maxBackups'), t('settings.maxBackupsHint'), t('settings.dailyGoal'), t('settings.projectGoal'), t('settings.fontFamily'), t('settings.fontFamilyHint'), t('settings.spFontFamily'), t('settings.spFontFamilyHint'), t('settings.lineNumbers'), t('settings.lineNumbersHint'), t('settings.spellCheck'), t('settings.spellCheckHint'), t('settings.spellCheckDict'), t('settings.spellCheckDictHint'), t('settings.autoMention'), t('settings.autoMentionHint'), t('settings.recycleDays'), t('settings.recycleDaysHint'), t('settings.focusDim'), t('settings.focusDimHint'), t('ui.settings.uiScale'), t('ui.settings.uiScaleHint'), iconHtml('cloud-lightning', 14), t('settings.autoSync'), t('settings.autoSyncHint'), t('settings.languageSelect'), t('ui.dlg.langReadNameFile'), t('ui.dlg.exportFileCSV'), t('ui.dlg.openFolderLang'), t('ui.dlg.loadFileLangNew2'), t('settings.shortcutsHint'), t('dialogs.cancel'), t('dialogs.save'));
   ov.appendChild(box); document.body.appendChild(ov);
 
   const q = (id) => box.querySelector(id);
+  // ══ [alpha.140] หัวข้อ "แผงนำทาง" — สร้างจาก JS ไม่ใช่จากเทมเพลตก้อนใหญ่ ══
+  // เหตุผล: เทมเพลตของกล่องนี้เป็นสตริงเดียวยาว 26KB ในไฟล์ภาษา — เพิ่มช่องทีไรต้องไปแก้ CSV
+  // ทั้งแถว ซึ่งพังง่ายและ diff อ่านไม่ออก · หัวข้อใหม่ตั้งแต่นี้ไปประกอบเป็น DOM ตรง ๆ
+  {
+    const navList = box.querySelector('.k-set-nav');
+    const navMain = box.querySelector('.k-set-main');
+    const anchorTab = navList && navList.querySelector('.k-set-tab[data-p="netcol"]');
+    if (navList && navMain) {
+      const tabEl = el('div', 'k-set-tab');
+      tabEl.dataset.p = 'nav';
+      tabEl.dataset.find = t('ui.nav.setFind');
+      tabEl.textContent = t('ui.nav.setTitle');
+      if (anchorTab) navList.insertBefore(tabEl, anchorTab); else navList.append(tabEl);
+
+      const page = el('div', 'k-set-page');
+      page.dataset.p = 'nav';
+      page.append(el('div', 'k-hint', t('ui.nav.setHint')));
+      // แถวตั้งค่าใช้คลาสชุดเดียวกับเทมเพลต (`k-row` + `<label>` ที่มี `.k-hint` ข้างใน)
+      // ไม่งั้นหน้าใหม่หน้าตาคนละเรื่องกับอีกสิบกว่าหน้าในกล่องเดียวกัน
+      const setRow = (labelKey, field, hintKey) => {
+        const row = el('div', 'k-row');
+        const lb = el('label', '', t(labelKey));
+        if (hintKey) lb.append(el('span', 'k-hint', t(hintKey)));
+        row.append(lb, field);
+        page.append(row);
+        return row;
+      };
+      const selMode = el('select'); selMode.id = 'st-navmode';
+      for (const [v, k] of [['scroll', 'ui.nav.setModeScroll'], ['page', 'ui.nav.setModePage']]) {
+        const o = el('option'); o.value = v; o.textContent = t(k); selMode.append(o);
+      }
+      selMode.value = s.navMode === 'page' ? 'page' : 'scroll';
+      setRow('ui.nav.setMode', selMode);
+
+      const inpPer = el('input'); inpPer.id = 'st-navper'; inpPer.type = 'number';
+      inpPer.min = '5'; inpPer.max = '500'; inpPer.step = '5';
+      inpPer.value = String(clampPerPage(s.navPerPage));
+      setRow('ui.nav.setPerPage', inpPer, 'ui.nav.setPerPageHint');
+
+      // คำอธิบายสัญลักษณ์ — ผู้ใช้ถามว่า "ต้องมีอะไรบ้าง" คำตอบอยู่ที่นี่ทั้งชุด
+      const lg = el('div', 'k-set-sub k-full'); lg.textContent = t('ui.nav.legendTitle');
+      page.append(lg);
+      const lgBox = el('div', 'nav-legend');
+      lgBox.append(el('div', 'nav-legend-row', '𝐁  ' + t('ui.nav.legendBold')));
+      for (const f of NAV_FLAG_DEFS) lgBox.append(el('div', 'nav-legend-row', f.mark + '  ' + t(f.key)));
+      lgBox.append(el('div', 'nav-legend-row', '▌  ' + t('ui.nav.legendRow')));
+      page.append(lgBox);
+      navMain.append(page);
+    }
+  }
+  // ── [alpha.137] ธีมสี (แท็บ "ทั่วไป") ──
+  // ช่องอยู่ในเทมเพลตเหมือนช่องอื่นทุกช่อง · **รายชื่อธีมมาจาก `THEMES` ที่เดียว**
+  // (เพิ่มธีมใหม่ = แก้ core.js + style.css + คีย์ป้ายใน CSV เท่านั้น ไม่ต้องแตะกล่องนี้)
+  {
+    const sel = q('#st-theme');
+    if (sel) {
+      for (const id of THEMES) {
+        const o = el('option'); o.value = id; o.textContent = t(THEME_LABEL_KEYS[id]); sel.appendChild(o);
+      }
+      sel.value = origTheme;
+      sel.onchange = () => previewTheme(sel.value);   // เห็นผลทันที ไม่ต้องรอกดบันทึก
+    }
+  }
   /**
    * พรีวิวฟอนต์บทหนังสด ๆ (บั๊ก #2)
    *
@@ -1234,6 +1304,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.spellCheck = origSpell; s.autoMention = origMention;
     s.spellCheckDict = origSpellDict;
     applySpellcheck(); refreshAllMentions(); refreshAllSpell();
+    previewTheme(origTheme);                     // [alpha.137] คืนธีมที่พรีวิวไว้
     close();
   };
   const num = (id, d) => { const n = parseInt(q(id).value, 10); return Number.isFinite(n) ? Math.max(0, n) : d; };
@@ -1295,6 +1366,9 @@ export function settingsDialog(openTab, opts = {}) {
     // [alpha.69] ประวัติการทำงาน — หนีบช่วงด้วยตัวเดียวกับที่ main ใช้ (ไม่คัดลอกกฎมาไว้สองที่)
     if (q('#st-histlimit')) s.historyLimit = Math.max(4, Math.min(500, num('#st-histlimit', 32)));
     if (q('#st-histoff')) s.historyOff = q('#st-histoff').checked;
+    // [alpha.140] แผงนำทาง — โหมดเลื่อน/แบ่งหน้า + จำนวนแถวต่อหน้า
+    if (q('#st-navmode')) s.navMode = q('#st-navmode').value === 'page' ? 'page' : 'scroll';
+    if (q('#st-navper')) s.navPerPage = clampPerPage(q('#st-navper').value);
     s.uiFontSize = Math.max(-6, Math.min(16, parseInt(q('#st-font').value, 10) || 0));
     s.fontFamily = q('#st-fontfamily')?.value || '';
     s.spFontFamily = q('#st-spfontfamily')?.value || '';
@@ -1307,6 +1381,8 @@ export function settingsDialog(openTab, opts = {}) {
     s.focusDim = Math.min(0.8, Math.max(0.05, parseFloat(q('#st-fmdim').value) || 0.3));
     applyFocusDim();
     s.uiScale = Math.min(2, Math.max(0.75, parseFloat(q('#st-uiscale').value) || 1));
+    // [alpha.137] ธีมสี — พรีวิวไว้แล้ว ตรงนี้แค่ยืนยันค่าลง settings ที่จะถูกบันทึก
+    if (q('#st-theme') && THEMES.includes(q('#st-theme').value)) s.theme = q('#st-theme').value;
     s.shortcuts = workKeys;
     // Auto-sync (เก็บลง settings ด้วย — ไม่งั้นเปิดโปรแกรมใหม่แล้วกลับไปปิด)
     s.autoSync = q('#st-autosync').checked;
@@ -1386,6 +1462,8 @@ export function settingsDialog(openTab, opts = {}) {
           'updateCheck','updateSkip','updateLast','updateLastVersion',
           // ด้วยเหตุผลเดียวกัน: สวิตช์ "เปิดโปรเจกต์ล่าสุดทันที" (เมนู ไฟล์) เคยหายทุกครั้งที่บันทึกตั้งค่า
           'openLastProject',
+          // [alpha.137] ธีมสี — ตามผู้ใช้ไปทุกโปรเจกต์ (เดิมเก็บเฉพาะใน project.khn.json)
+          'theme',
           'toolbar','fmtbar','fab'];
         const globals = {};
         for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
@@ -1397,7 +1475,6 @@ export function settingsDialog(openTab, opts = {}) {
       try { const { refreshNetwork } = await import('./app.js'); refreshNetwork(); } catch {}
       state.title = m.title;
       document.title = m.title + ' — Killian 2';
-      $('#projname').textContent = m.title;
       $('#tb-title').textContent = m.title + ' — Killian 2';
       // แดชบอร์ดเป็นแผงแล้ว (refreshDashboardIfOpen เมื่อมี export)
     } catch (e) { log('error', t('ui.dlg.saveSettingsFail'), e); }

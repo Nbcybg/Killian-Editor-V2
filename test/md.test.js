@@ -147,3 +147,42 @@ console.log("alpha.97 superscript / subscript OK");
   if (alignFromString('3:center')['3'] !== 'center') throw new Error('คีย์เก่าอ่านไม่ได้');
 }
 console.log('alpha.103 align map (list / quote) OK');
+
+// ══ [alpha.142 ข้อ 6] ตัวเลือกของรูป — เต็มหน้า / ความกว้าง % / ขอบมน ══
+// เก็บในชื่อกำกับของมาร์กดาวน์ จึงต้องไป-กลับได้เป๊ะ และต้องไม่ทำลายรูปแบบเดิม
+{
+  const M = require('../src/md.js');
+  const rt = (line) => docToMd(mdToDoc(line));
+  const cases142 = [
+    '![](Images/a.png "fit=page")',
+    '![ปก](Images/a.png "w=60%")',
+    '![](Images/a.png "w=42.5% r=0")',
+    '![alt](Images/a.png "fit=page r=16")',
+    '![](Images/มี วรรค.png "w=50%")',
+  ];
+  for (const c of cases142) {
+    const out = rt(c);
+    if (out !== c) throw new Error('รูป+ตัวเลือกไป-กลับไม่ตรง: ' + c + ' -> ' + out);
+  }
+  // รูปธรรมดา และรูปที่มี "ชื่อกำกับ" ของมาร์กดาวน์ปกติ ต้องไม่ถูกแตะ
+  for (const c of ['![](Images/a.png)', '![ภาพ](Images/a.png "คำบรรยายของฉัน")']) {
+    const out = rt(c);
+    if (out !== c) throw new Error('รูปเดิมถูกแก้: ' + c + ' -> ' + out);
+  }
+  // ไฟล์ที่ชื่อมีวรรคยังใช้ได้ (ตัดเฉพาะท้ายที่อยู่ในเครื่องหมายคำพูด)
+  const tg = M.splitImgTarget('Images/มี วรรค.png "w=50%"');
+  if (tg.src !== 'Images/มี วรรค.png' || tg.title !== 'w=50%') throw new Error('แยก src/title ผิด: ' + JSON.stringify(tg));
+  if (M.splitImgTarget('Images/a b.png').src !== 'Images/a b.png') throw new Error('ไฟล์ที่มีวรรคเสียหาย');
+  // ค่านอกช่วงต้องถูกทิ้ง ไม่ใช่เขียนลงไฟล์
+  const bad = M.parseImgOpts('w=500% r=-3 fit=อะไรก็ไม่รู้');
+  if (bad.w !== '' || bad.radius !== '' || bad.fit !== '') throw new Error('ค่าเพี้ยนหลุดเข้ามา: ' + JSON.stringify(bad));
+  // คลาส/สไตล์ = แหล่งเดียวของทั้งจอและไฟล์
+  if (M.figureClass({ fit: 'page' }) !== 'k-img-page') throw new Error('คลาสเต็มหน้าผิด');
+  if (M.figureClass({ w: '60' }) !== 'k-img-w') throw new Error('คลาสความกว้างผิด');
+  if (M.figureClass({}) !== '') throw new Error('รูปธรรมดาต้องไม่มีคลาสพิเศษ');
+  if (!/width:60%/.test(M.figureImgStyle({ w: '60' }))) throw new Error('สไตล์ความกว้างผิด');
+  if (/width/.test(M.figureImgStyle({ fit: 'page', w: '60' }))) throw new Error('เต็มหน้าต้องไม่ใส่ width เอง (ปล่อยให้ CSS คุม)');
+  if (M.figureImgStyle({ radius: '0' }) !== 'border-radius:0px') throw new Error('ขอบมน 0 ต้องเขียนออกมาจริง');
+  if (M.figureImgStyle({}) !== '') throw new Error('ไม่ตั้งอะไร = ไม่มีสไตล์ (ใช้ค่าเริ่มต้นของ CSS)');
+}
+console.log('alpha.142 image options OK');

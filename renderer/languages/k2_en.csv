@@ -1483,6 +1483,7 @@ ui.app.out, เพื่อออก
 ui.app.outNotSave,ออกโดยไม่บันทึก
 ui.app.page, · {0} หน้า
 ui.app.pageChapterNotOk,นับหน้าบทไม่สำเร็จ
+ui.app.pageOf,Page {0} / {1}
 ui.app.pageNotName, · หน้าตาไม่เหมือนชื่อ
 ui.app.pageNovelNotOk,นับหน้านิยายไม่สำเร็จ
 ui.app.pageNumClose,เลขหน้า: ปิด
@@ -2053,6 +2054,29 @@ ui.central.sceneWordCharacter,📄 {0} ฉาก · 📝 {1} คำ · 👤 {2} 
 ui.central.stats,📊 สถิติ
 ui.central.thingMustUpdate,📋 สิ่งที่ต้องอัปเดต
 ui.central.updateAutoAllTimes,อัปเดตอัตโนมัติทุกครั้งที่บันทึกไฟล์
+ui.chapters.addChapter,+ Add chapter
+ui.chapters.coverClear,Remove cover image
+ui.chapters.coverHint,Tick Use chapter cover and the cover counts as a real page both when reading the whole book and when numbering pages
+ui.chapters.coverOffDone,Chapter cover off
+ui.chapters.coverOnDone,Chapter cover on — counts as one page
+ui.chapters.coverPick,Pick cover image
+ui.chapters.coverSetDone,Chapter cover set
+ui.chapters.coverTextPh,Text on the chapter cover (instead of or alongside the image)
+ui.chapters.empty,This book has no chapters yet
+ui.chapters.fullOffDone,Chapter cover is back to illustration plus title
+ui.chapters.fullOnDone,Chapter cover now uses a full-page image
+ui.chapters.noBook,No books in this project yet
+ui.chapters.noDraft,This book has no draft yet
+ui.chapters.open,Open
+ui.chapters.props,Properties
+ui.chapters.renameDone,Chapter renamed
+ui.chapters.renumber,Renumber chapters
+ui.chapters.sceneWord,{0} scenes · {1} words
+ui.chapters.sizeHint,"Recommended cover image {0} × {1} px ({2} dpi) · ratio {3} : 1 — the full paper sheet of the selected book size ({4} × {5} in), because a cover with Use full-page image bleeds to the paper edge (anything past the ratio is cropped)"
+ui.chapters.title,Chapter Manager
+ui.chapters.useCover,Use chapter cover
+ui.chapters.useFull,Use full-page image
+ui.chapters.useFullHint,The image fills the whole printable area with no title on top — turn off for an illustration plus the chapter title
 ui.characters,characters
 ui.cmt.added,Comment added
 ui.cmt.addFail,Could not add the comment
@@ -2576,6 +2600,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     <div class=""k-set-page k-set-2col on"" data-p=""gen"">
       <div class=""k-row""><label>{6}</label><input type=""text"" id=""st-title""></div>
       <div class=""k-row""><label>{7}</label><input type=""text"" id=""st-author""></div>
+      <div class=""k-row""><label>Color theme<span class=""k-hint"">Colors of the app shell (bars · panels · dialogs) — never touches the page or exported files</span></label><select id=""st-theme"" class=""k-dlg-select"" style=""width:100%""></select></div>
       <div class=""k-row""><label>{8}<span class=""k-hint"">{9}</span></label><input type=""number"" id=""st-auto"" min=""0"" max=""120""></div>
       <div class=""k-row""><label>{10}</label><input type=""checkbox"" id=""st-backup""></div>
       <div class=""k-row""><label>{11}<span class=""k-hint"">{12}</span></label><input type=""number"" id=""st-maxbak"" min=""1"" max=""200""></div>
@@ -3487,6 +3512,20 @@ ui.home.pageFirst,🏠 หน้าแรก
 ui.home.search,🔍 ค้นหา
 ui.home.searchProject,ค้นหาโปรเจกต์…
 ui.home.searchProjectNameAuthor,ค้นหาโปรเจกต์จากชื่อ / ผู้เขียน / ที่อยู่ไฟล์
+ui.html.tbChapters,Chapter manager (Ctrl+Alt+Shift+K)
+ui.imgmenu.askWidth,Image width as a percentage of the page width (1-100)
+ui.imgmenu.badWidth,Width must be a number between 1 and 100
+ui.imgmenu.fitPage,Full page (image fills the whole page)
+ui.imgmenu.head,Image
+ui.imgmenu.normal,Normal size
+ui.imgmenu.radius0,Corners: square
+ui.imgmenu.radius16,Corners: 16 px
+ui.imgmenu.radius24,Corners: 24 px
+ui.imgmenu.radius4,Corners: 4 px
+ui.imgmenu.radius8,Corners: 8 px (default)
+ui.imgmenu.remove,Remove this image
+ui.imgmenu.widthCustom,Width… (custom)
+ui.imgmenu.widthPct,Width {0}%
 ui.imp.chapters,Chapters: 
 ui.imp.failed,Import failed: 
 ui.imp.filesToCreate,Files to create: 
@@ -3727,6 +3766,39 @@ ui.menu.importScreenplayFountainFDX,นำเข้าบทภาพยนต�
 ui.menu.importScrivenerScriv,นำเข้าจาก Scrivener (.scriv)…
 ui.menu.insertImage,แทรกรูป…
 ui.menu.aiHubPanel,AI Hub
+ui.panel.chaptersDesc,"Chapter covers, order and stats for every chapter in a book"
+ui.readbook.allBooks,Whole project (all books)
+ui.readbook.busy,Paginating the whole book…
+ui.readbook.button,📖 Read whole book
+ui.readbook.buttonAll,📖 Read whole project
+ui.readbook.close,Close reading mode (Esc)
+ui.readbook.coverReadFail,Cannot read the cover image
+ui.readbook.empty,Nothing to read yet
+ui.readbook.first,First page (Home)
+ui.readbook.fit,Fit to screen (reset zoom)
+ui.readbook.jump,Go to page — type a page number and press Enter
+ui.readbook.label,Reading mode
+ui.readbook.last,Last page (End)
+ui.readbook.measureFail,Failed to paginate the whole book
+ui.readbook.next,"Next page (Right arrow, PageDown or Space)"
+ui.readbook.opened,Whole-book reading mode — press Esc to exit
+ui.readbook.pageOf,Page {0} / {1}
+ui.readbook.pageTip,Current page / total pages in the book
+ui.readbook.pickTip,Pick the book to read — or the whole project to read every book in order
+ui.readbook.prev,Previous page (Left arrow or PageUp)
+ui.readbook.spread,Toggle one / two pages
+ui.readbook.spreadTo1,Switch to one page (currently showing two)
+ui.readbook.spreadTo2,Switch to two pages (currently showing one)
+ui.readbook.stageTip,Left/Right arrows change page · Ctrl+wheel zooms · Esc exits
+ui.readbook.title,Read whole book
+ui.readbook.titleOf,Read whole book — {0}
+ui.readbook.titleTip,Whole-book reading mode — Home/End = first/last page · Esc = exit
+ui.readbook.zoomIn,Zoom in (Ctrl + wheel up)
+ui.readbook.zoomOut,Zoom out (Ctrl + wheel down)
+ui.scene.pageFlowContinue,Continue page numbers
+ui.scene.pageFlowHint,Page numbers continue from the previous scenes and chapters in the same book (chapter covers that are on count as pages)
+ui.section.useCover,Use book cover
+ui.section.useCoverFull,Use full-page image
 ui.shortcode.dvar,"Same variables as {{…}}, e.g. [var:age]"
 ui.shortcode.dwiki,"A value from the Wiki, e.g. [wiki:Tora.age]"
 ui.shortcode.ddate,Date (accepts fmt=iso · year · time)
@@ -5111,6 +5183,14 @@ ui.spFormat.define,กำหนดเอง
 ui.spFormat.legalInch,Legal (8.5 × 14 นิ้ว)
 ui.spFormat.letterInch,Letter (8.5 × 11 นิ้ว)
 ui.spFormat.next,ต่อ
+ui.spFormat.paperA5,A5 (14.8 × 21 cm)
+ui.spFormat.paperBunko,Bunkobon / A6 (4.1 × 5.8 in)
+ui.spFormat.paperDigest,Digest (5.5 × 8.5 in)
+ui.spFormat.paperMass,Mass Market (4.25 × 6.87 in)
+ui.spFormat.paperNovella,Compact / Novella (5 × 8 in)
+ui.spFormat.paperPocket,Pocket Book (14.5 × 21 cm)
+ui.spFormat.paperTankobon,Tankōbon (5 × 7.5 in)
+ui.spFormat.paperTrade,US Trade (6 × 9 in)
 ui.spFormatGuide.cutLineSoftWrap,ตัดบรรทัดเอง (soft wrap)
 ui.spFormatGuide.endLineBlockNew,จบบรรทัดด้วยการขึ้นบล็อกใหม่ (hard)
 ui.spHeaders.countPage,จำนวนหน้า
@@ -6385,3 +6465,47 @@ ui.app.exportAlignFail,Could not carry the scene alignment into the export
 ui.xhub.autoKind,Detected from the source files: {0}
 ui.xname.openAfter,Open the file when the export finishes
 ui.xname.openFail,Could not open the exported file
+ui.settings.themeDark,Dark
+ui.settings.themeLight,Light
+ui.settings.themeK2,K2 (house palette)
+ui.html.saveProjBtn,Save project
+ui.html.searchProjBtn,Search whole project
+ui.menu.theme,Color theme
+ui.settings.themeK2Light,K2 Light
+ui.nav.grpHead,Headings
+ui.nav.grpScene,Scenes
+ui.nav.grpDialog,Characters
+ui.nav.grpTrans,Transitions
+ui.nav.grpNote,Notes
+ui.nav.grpBeat,Paragraphs
+ui.nav.flagChoice,Branch point (this scene has choices)
+ui.nav.flagStar,Starred
+ui.nav.flagColor,Colour tagged
+ui.nav.flagTodo,Has a TODO / ??? marker
+ui.nav.flagEmpty,Nothing written yet
+ui.nav.flagLocked,Scene is locked
+ui.nav.flagComment,Has an open comment
+ui.nav.flagBreak,Forced page break
+ui.nav.pageAbbr,p.
+ui.nav.searchPh,Search the outline…
+ui.nav.legendTitle,What the marks mean
+ui.nav.legendBold,Bold = a branching choice point
+ui.nav.legendRow,Left colour bar = a tag you set (right-click a row)
+ui.nav.onlyStar,Starred only
+ui.nav.clearFilter,Clear all filters
+ui.nav.colLoc,LINE / PAGE
+ui.nav.colText,TEXT
+ui.nav.star,Star this point
+ui.nav.unstar,Remove star
+ui.nav.clearColor,Clear colour
+ui.nav.noMatch,Nothing matches the filter
+ui.nav.pageOf,Page {0}/{1}
+ui.nav.rowCount,{0} rows
+ui.nav.setTitle,Navigation panel
+ui.nav.setFind,navigation outline paging filter marks legend
+ui.nav.setHint,Choose whether the navigation panel is one long scrolling list or is split into pages.
+ui.nav.setMode,Layout
+ui.nav.setModeScroll,One long list (scroll bar)
+ui.nav.setModePage,Split into pages
+ui.nav.setPerPage,Rows per page
+ui.nav.setPerPageHint,"Only used in ""Split into pages"" mode — 5 to 500 rows."

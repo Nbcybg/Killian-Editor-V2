@@ -13,7 +13,8 @@ import { inputRules, wrappingInputRule, textblockTypeInputRule,
          smartQuotes, InputRule } from 'prosemirror-inputrules';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { gapCursor } from 'prosemirror-gapcursor';
-import { mdToDoc, docToMd, mdLineCounts, collectAlign } from './md.js';
+import { mdToDoc, docToMd, mdLineCounts, collectAlign,
+         figureClass, figureImgStyle, imgLine } from './md.js';
 import { searchPlugin } from './search.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
@@ -411,15 +412,27 @@ export const schema = new Schema({
                     toDOM: (n) => ['ol', n.attrs.order === 1 ? {} : { start: n.attrs.order }, 0] },
     list_item: { content: 'paragraph+', defining: true,
                  parseDOM: [{ tag: 'li' }], toDOM: () => ['li', 0] },
-    figure: { group: 'block', atom: true, draggable: true, selectable: true,
-              attrs: { src: {}, alt: { default: '' }, md: { default: '' }, resolved: { default: '' } },
+    // [alpha.142 ข้อ 6] รูปปรับได้แล้ว: เต็มหน้า (fit) · ความกว้างเป็น % (w) · ขอบมน (radius)
+    // ค่าทั้งสามเดินทางไปกับไฟล์ผ่านชื่อกำกับของมาร์กดาวน์ (`![](x "fit=page w=60% r=8")`)
+    // [alpha.143r ข้อ 2] ★ `draggable: false` **โดยตั้งใจ** — ผู้ใช้: *"drag mouse เพื่อ select
+    // ข้อความ มันเลือกไม่ได้ ในกรณีมีหน้าที่รูปเต็มหน้า"* · โหนดที่ draggable ทำให้เบราว์เซอร์
+    // เริ่ม "ลากวัตถุ" ทันทีที่กดค้างแล้วขยับบนตัวมัน — รูปเต็มหน้ากินพื้นที่ทั้งแผ่น เลยกลืน
+    // การลากเลือกข้อความไปทั้งหน้า · ย้ายรูปใช้ตัด-วาง (Ctrl+X / Ctrl+V) ได้เหมือนเดิม
+    figure: { group: 'block', atom: true, draggable: false, selectable: true,
+              attrs: { src: {}, alt: { default: '' }, md: { default: '' }, resolved: { default: '' },
+                       fit: { default: '' }, w: { default: '' }, radius: { default: '' } },
               parseDOM: [{ tag: 'figure[data-md]', getAttrs: (d) => ({
                 src: d.getAttribute('data-src') || '', alt: d.getAttribute('data-alt') || '',
-                md: d.getAttribute('data-md') || '', resolved: '' }) }],
+                md: d.getAttribute('data-md') || '', resolved: '',
+                fit: d.getAttribute('data-fit') || '', w: d.getAttribute('data-w') || '',
+                radius: d.getAttribute('data-r') || '' }) }],
               toDOM: (n) => ['figure', { 'data-md': n.attrs.md, 'data-src': n.attrs.src,
-                                         'data-alt': n.attrs.alt, title: n.attrs.alt || '' },
+                                         'data-alt': n.attrs.alt, 'data-fit': n.attrs.fit,
+                                         'data-w': n.attrs.w, 'data-r': n.attrs.radius,
+                                         class: figureClass(n.attrs), title: n.attrs.alt || '' },
                              ['img', { src: n.attrs.resolved || n.attrs.src,
                                        alt: n.attrs.alt, title: n.attrs.alt || '',
+                                       style: figureImgStyle(n.attrs),
                                        draggable: 'false' }]] },
     // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด (เดิม schema ไม่มี → พิมพ์ ``` หรือ --- แล้วหายไปเฉย ๆ)
     horizontal_rule: { group: 'block', atom: true, selectable: true,
@@ -1376,6 +1389,53 @@ export class KEditor {
       return $f.pos - $f.nodeBefore.nodeSize;
     }
     return -1;
+  }
+
+  /**
+   * [alpha.142 ข้อ 6] ตำแหน่งของรูปจาก element ที่ผู้ใช้คลิกขวา
+   * (`posAtDOM` ของโหนด atom คืนตำแหน่ง "ข้างใน" บ้าง "ข้างหน้า" บ้าง แล้วแต่จุดที่ชน — ลองทั้งสอง)
+   * @returns {number} -1 = หาไม่เจอ
+   */
+  figurePosOfDom(dom) {
+    if (!dom) return -1;
+    let pos = -1;
+    try { pos = this.view.posAtDOM(dom, 0); } catch { return -1; }
+    const doc = this.view.state.doc;
+    for (const c of [pos, pos - 1, pos + 1]) {
+      if (c < 0 || c > doc.content.size) continue;
+      const n = doc.nodeAt(c);
+      if (n && n.type === schema.nodes.figure) return c;
+    }
+    return -1;
+  }
+
+  /** ตัวเลือกปัจจุบันของรูปหนึ่งใบ (null = ไม่ใช่รูป) */
+  figureOpts(pos) {
+    const at = pos >= 0 ? pos : this.figurePos();
+    if (at < 0) return null;
+    const n = this.view.state.doc.nodeAt(at);
+    if (!n || n.type !== schema.nodes.figure) return null;
+    return { fit: n.attrs.fit || '', w: n.attrs.w || '', radius: n.attrs.radius ?? '' };
+  }
+
+  /**
+   * ตั้งตัวเลือกของรูป (เต็มหน้า / ความกว้าง % / ขอบมน)
+   * ★ ต้องประกอบ `md` ใหม่ทุกครั้ง — ไม่งั้น `docToMd` เขียนบรรทัดเดิมกลับลงไฟล์
+   *   แล้วค่าที่เพิ่งตั้งหายทันทีที่ปิดแท็บ (ค่าที่เห็นบนจอกับในไฟล์ต้องเป็นก้อนเดียวกัน)
+   * @returns {boolean} false = ตรงนั้นไม่ใช่รูป
+   */
+  setFigureOpts(pos, patch) {
+    const at = pos >= 0 ? pos : this.figurePos();
+    if (at < 0) return false;
+    const v = this.view;
+    const node = v.state.doc.nodeAt(at);
+    if (!node || node.type !== schema.nodes.figure) return false;
+    const attrs = { ...node.attrs, ...(patch || {}) };
+    attrs.md = imgLine(attrs.alt, attrs.src,
+                       { fit: attrs.fit, w: attrs.w, radius: attrs.radius });
+    v.dispatch(v.state.tr.setNodeMarkup(at, undefined, attrs));
+    v.focus();
+    return true;
   }
 
   /** เอารูปที่เคอร์เซอร์แตะอยู่ออก — คืน false เมื่อไม่มีรูปตรงนั้น (ผู้เรียกไปเปิดตัวเลือกรูปแทน) */

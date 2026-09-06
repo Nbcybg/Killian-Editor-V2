@@ -62,6 +62,16 @@ export async function sceneProps(dPath, ch, sc) {
   const iStartPage = mk(t('ui.scene.pageNumStartScreenplay'), row.startPage || '');
   iStartPage.type = 'number'; iStartPage.min = '1';
   iStartPage.placeholder = t('ui.scene.useOpenPageNumSettings');
+  // ══ [alpha.141] ★ "ไล่เลขหน้าต่อเนื่อง" — เลขหน้าไล่ต่อจากฉาก/บทก่อนหน้าในเล่มเดียวกัน ══
+  // ลำดับของฉากและบทมีอยู่แล้วใน draft.json/scenes.json · หน้าปกบทที่ติ๊กไว้ก็ถูกนับเป็นหน้าด้วย
+  // (คิดที่ book-flow.js ที่เดียว แล้วโหมดอ่านทั้งเล่มกับหน้ากระดาษใช้คำตอบเดียวกัน)
+  // ★ คลาส `wiki-flowchk` ไม่ใช่ `wiki-check` — เทสอ้างช่องติ๊กตามลำดับ (บทเรียนข้อ 12)
+  const flowRow = el('div', 'wiki-row');
+  flowRow.append(el('label', null, t('ui.scene.pageFlowContinue')));
+  const iFlow = el('input', 'wiki-flowchk');
+  iFlow.type = 'checkbox'; iFlow.checked = row.pageFlow === 'continue';
+  iFlow.title = t('ui.scene.pageFlowHint');
+  flowRow.append(iFlow); box.append(flowRow);
   const iPov = mk(t('ui.common.viewPOV'), M.pov);
   const iEmotion = mk(t('ui.common.mood'), M.emotion);
   const iConflict = mk(t('ui.common.conflict'), M.conflict);
@@ -117,6 +127,7 @@ export async function sceneProps(dPath, ch, sc) {
     // เก็บเฉพาะเมื่อผู้ใช้กรอกจริง (ค่าว่าง = เริ่มที่ 1) — กัน field ว่างรกทุกแถว
     { const sp = parseInt(iStartPage.value, 10);
       if (Number.isFinite(sp) && sp > 0) row.startPage = sp; else delete row.startPage; }
+    if (iFlow.checked) row.pageFlow = 'continue'; else delete row.pageFlow;
     row.emotion = iEmotion.value; row.conflict = iConflict.value;
     row.color = iColor.value; row.flag = iFlag.checked; row.note = iNote.value;
     row.futureNote = iFuture.value;
@@ -141,7 +152,11 @@ export async function sceneProps(dPath, ch, sc) {
     await buildTree();                 // สี/สถานะที่เพิ่งตั้งเห็นผลใน tree ทันที
     // เลขหน้าเริ่มต้นเปลี่ยน → แท็บที่เปิดไฟล์นี้อยู่ต้องวาดเลขหน้าใหม่ทันที
     const openTab = state.tabs.get(file);
-    if (openTab) { openTab.startPage = row.startPage || 1; updatePageNumberHint(); refreshSpView(); }
+    if (openTab) {
+      openTab.startPage = row.startPage || 1;
+      openTab.pageFlow = row.pageFlow === 'continue' ? 'continue' : '';
+      updatePageNumberHint(); refreshSpView();
+    }
     ov.remove(); setStatus(t('ui.scene.savePropsSceneDone'));
   };
 }

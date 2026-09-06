@@ -60,6 +60,10 @@ export const PANEL_DEFS = [
     desc: t('ui.panel.boardSceneStatusDrag') },
   { id: 'books', minW: 400, dockW: 640,     title: t('ui.common.manageBook'),       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
     desc: t('ui.panel.manageBookDraftCover') },
+  // [alpha.141] จัดการบท — ปกบท (รูป/ข้อความ) · ติ๊กใช้ปก · ลำดับบท · สถิติ
+  { id: 'chapters', minW: 400, dockW: 640, title: t('ui.chapters.title'), icon: 'book-content',
+    adopt: '#chapters-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'ui.chapters.title',
+    desc: t('ui.panel.chaptersDesc') },
   { id: 'timeline', minW: 620, dockW: 640,  title: t('ui.common.lineTime'),         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
     desc: t('ui.panel.orderEventTimeStory') },
   { id: 'maps', dockW: 640,      title: t('ui.common.map'),           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',

@@ -341,6 +341,36 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
   // [alpha.133 · Y-1] รูปทั้งบรรทัด = `<figure>` เหมือนโหนดของตัวแก้ไข (กฎคู่กับ style.css)
   out.push('figure{margin:1em 0;text-align:center}');
   out.push('figure img{max-width:100%;max-height:480px;border-radius:8px}');
+  // ══ [alpha.142 ข้อ 6] ★ รูปที่ปรับขนาด/เต็มหน้า — **กฎคู่แฝด** ของ `.ProseMirror figure.*`
+  // ใน style.css (กฎถาวรข้อ 5: เขียนฝั่งหนึ่งต้องเขียนอีกฝั่งในคอมมิตเดียวกัน)
+  // ฝั่งไฟล์รู้ขนาดกระดาษจริงอยู่แล้ว จึงใส่อัตราส่วนเป็นตัวเลขตรง ๆ ไม่ต้องพึ่งตัวแปร CSS
+  {
+    const bh = Math.max(0.5, (+p.height || 11) - (+m.top || 0) - (+m.bottom || 0));
+    const pw = +p.width || 8.5, ph = +p.height || 11;
+    // ── รูปเต็มหน้า: กล่องสูงเท่าพื้นที่พิมพ์หนึ่งหน้าเป๊ะ (ตัวจัดหน้าให้แผ่นเต็มใบ) ──
+    // การ "ชนขอบกระดาษ" เป็นเรื่องของสื่อที่มีหน้ากระดาษเท่านั้น จึงแยกกันสามทางโดยตั้งใจ:
+    //   · ไฟล์ .html ที่เปิดในเบราว์เซอร์ = ไม่มีหน้ากระดาษ → รูปเต็มกล่องพื้นที่พิมพ์พอ
+    //   · ตอนพิมพ์/PDF → `@media print` ข้างล่าง (หน้าไร้ระยะขอบ)
+    //   · ช่องตัวอย่าง/มุมมองจัดหน้า → ตัววาดทาภาพที่ **พื้นของแผ่น** เอง (fullPageImages)
+    //     จึงชนขอบจริงโดยไม่ต้องพึ่ง CSS ชุดนี้เลย (scopeCss ทิ้ง @page/@media ให้อยู่แล้ว)
+    out.push(`figure.k-img-page{margin:0;position:relative;width:100%;`
+             + `aspect-ratio:${+tw.toFixed(4)} / ${+bh.toFixed(4)}}`);
+    out.push('figure.k-img-page img{position:absolute;inset:0;width:100%;height:100%;'
+             + 'object-fit:cover;max-width:none;max-height:none}');
+    // ── ตอนพิมพ์จริง: แผ่นของรูปเต็มหน้าเป็น **หน้าไร้ระยะขอบ** (named page ของ CSS) ──
+    // ไม่ต้องอาศัยการล้นออกนอกกล่องหน้า ซึ่งเป็นพฤติกรรมที่เชื่อไม่ได้ตอนพิมพ์
+    out.push('@page k-bleed{size:' + pw + 'in ' + ph + 'in;margin:0}');
+    out.push('@media print{'
+             + 'figure.k-img-page{page:k-bleed;break-before:page;break-after:page;'
+             + 'position:static;aspect-ratio:auto;width:' + pw + 'in;height:' + ph + 'in}'
+             + 'figure.k-img-page img{position:static;width:' + pw + 'in;height:' + ph + 'in;'
+             + 'object-fit:cover;border-radius:0}'
+             + '}');
+    // [alpha.143 ข้อ 1] เพดานความสูงของรูปที่ตั้งความกว้างเอง = หนึ่งหน้า (คู่กับ style.css)
+    // ★ หักระยะขอบของ figure (1em + 1em) ออกจากเพดานด้วย — บล็อกที่สูง "เกินหนึ่งหน้านิดเดียว"
+    //   ตัดตามบรรทัดไม่ได้ ตัวจัดหน้าเลยตัดดิบ แล้วรูปถูกผ่ากลางคาบสองแผ่น
+    out.push(`figure.k-img-w img{max-height:calc(${+bh.toFixed(4)}in - 2.2em)}`);
+  }
   out.push('pre{background:#f4f4f4;padding:10px 14px;border-radius:6px;overflow:auto;' +
            'font-family:"Courier Prime","Courier New",monospace;font-size:.92em;text-indent:0}');
   out.push('.pb{page-break-before:always;break-before:page;height:0}');

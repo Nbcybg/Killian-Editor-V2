@@ -1483,6 +1483,7 @@ ui.app.out, เพื่อออก
 ui.app.outNotSave,ออกโดยไม่บันทึก
 ui.app.page, · {0} หน้า
 ui.app.pageChapterNotOk,นับหน้าบทไม่สำเร็จ
+ui.app.pageOf,หน้า {0} / {1}
 ui.app.pageNotName, · หน้าตาไม่เหมือนชื่อ
 ui.app.pageNovelNotOk,นับหน้านิยายไม่สำเร็จ
 ui.app.pageNumClose,เลขหน้า: ปิด
@@ -2053,6 +2054,29 @@ ui.central.sceneWordCharacter,📄 {0} ฉาก · 📝 {1} คำ · 👤 {2} 
 ui.central.stats,📊 สถิติ
 ui.central.thingMustUpdate,📋 สิ่งที่ต้องอัปเดต
 ui.central.updateAutoAllTimes,อัปเดตอัตโนมัติทุกครั้งที่บันทึกไฟล์
+ui.chapters.addChapter,+ เพิ่มบท
+ui.chapters.coverClear,เอารูปปกออก
+ui.chapters.coverHint,ติ๊กช่อง ใช้หน้าปกบท แล้วหน้าปกจะถูกนับเป็นหน้าจริงทั้งตอนอ่านทั้งเล่มและตอนไล่เลขหน้า
+ui.chapters.coverOffDone,ปิดหน้าปกบทแล้ว
+ui.chapters.coverOnDone,เปิดหน้าปกบทแล้ว — จะถูกนับเป็นหนึ่งหน้า
+ui.chapters.coverPick,เลือกรูปปก
+ui.chapters.coverSetDone,ตั้งหน้าปกบทแล้ว
+ui.chapters.coverTextPh,ข้อความบนหน้าปกบท (ใช้แทนรูปหรือใช้คู่กันก็ได้)
+ui.chapters.empty,เล่มนี้ยังไม่มีบท
+ui.chapters.fullOffDone,ปกบทกลับเป็นรูปประกอบ + ชื่อบท
+ui.chapters.fullOnDone,ปกบทใช้ภาพเต็มหน้าแล้ว
+ui.chapters.noBook,ยังไม่มีเล่มในโปรเจกต์
+ui.chapters.noDraft,เล่มนี้ยังไม่มีฉบับร่าง
+ui.chapters.open,เปิด
+ui.chapters.props,คุณสมบัติ
+ui.chapters.renameDone,เปลี่ยนชื่อบทแล้ว
+ui.chapters.renumber,จัดลำดับบทใหม่
+ui.chapters.sceneWord,{0} ฉาก · {1} คำ
+ui.chapters.sizeHint,ขนาดรูปปกที่แนะนำ {0} × {1} px ({2} dpi) · อัตราส่วน {3} : 1 — เท่าแผ่นกระดาษเต็มใบของขนาดเล่มที่เลือก ({4} × {5} นิ้ว) เพราะปกที่ติ๊ก ใช้ภาพเต็มหน้า จะชนขอบกระดาษ (ส่วนที่สัดส่วนไม่พอดีถูกเฉือน)
+ui.chapters.title,จัดการบท
+ui.chapters.useCover,ใช้หน้าปกบท
+ui.chapters.useFull,ใช้ภาพเต็มหน้า
+ui.chapters.useFullHint,รูปกินพื้นที่พิมพ์ทั้งผืน ไม่มีชื่อบททับ — ปิดเพื่อให้เป็นรูปประกอบ + ชื่อบท
 ui.characters,ตน
 ui.cmt.added,เพิ่มคอมเมนต์แล้ว
 ui.cmt.addFail,เพิ่มคอมเมนต์ไม่สำเร็จ
@@ -2576,6 +2600,7 @@ ui.dlg.alphaItemLevelUser,"<div class=""k-dlg-title"">{0}</div>
     <div class=""k-set-page k-set-2col on"" data-p=""gen"">
       <div class=""k-row""><label>{6}</label><input type=""text"" id=""st-title""></div>
       <div class=""k-row""><label>{7}</label><input type=""text"" id=""st-author""></div>
+      <div class=""k-row""><label>ธีมสี<span class=""k-hint"">[alpha.137] สีของเปลือกโปรแกรม (แถบ · แผง · กล่อง) — ไม่แตะหน้ากระดาษและไฟล์ที่ส่งออก · รายชื่อธีมสร้างจาก THEMES ตอนเปิดกล่อง</span></label><select id=""st-theme"" class=""k-dlg-select"" style=""width:100%""></select></div>
       <div class=""k-row""><label>{8}<span class=""k-hint"">{9}</span></label><input type=""number"" id=""st-auto"" min=""0"" max=""120""></div>
       <div class=""k-row""><label>{10}</label><input type=""checkbox"" id=""st-backup""></div>
       <div class=""k-row""><label>{11}<span class=""k-hint"">{12}</span></label><input type=""number"" id=""st-maxbak"" min=""1"" max=""200""></div>
@@ -3487,6 +3512,20 @@ ui.home.pageFirst,🏠 หน้าแรก
 ui.home.search,🔍 ค้นหา
 ui.home.searchProject,ค้นหาโปรเจกต์…
 ui.home.searchProjectNameAuthor,ค้นหาโปรเจกต์จากชื่อ / ผู้เขียน / ที่อยู่ไฟล์
+ui.html.tbChapters,จัดการบท (Ctrl+Alt+Shift+K)
+ui.imgmenu.askWidth,ความกว้างของรูป เป็นเปอร์เซ็นต์ของความกว้างหน้ากระดาษ (1–100)
+ui.imgmenu.badWidth,ความกว้างต้องเป็นตัวเลข 1–100
+ui.imgmenu.fitPage,เต็มหน้า (รูปกินทั้งหน้ากระดาษ)
+ui.imgmenu.head,รูปภาพ
+ui.imgmenu.normal,ขนาดปกติ
+ui.imgmenu.radius0,ขอบมน: ไม่มน
+ui.imgmenu.radius16,ขอบมน: 16 px
+ui.imgmenu.radius24,ขอบมน: 24 px
+ui.imgmenu.radius4,ขอบมน: 4 px
+ui.imgmenu.radius8,ขอบมน: 8 px (ค่าเริ่มต้น)
+ui.imgmenu.remove,ลบรูปนี้
+ui.imgmenu.widthCustom,ความกว้าง… (กำหนดเอง)
+ui.imgmenu.widthPct,ความกว้าง {0}%
 ui.imp.chapters,บท: 
 ui.imp.failed,นำเข้าไม่สำเร็จ: 
 ui.imp.filesToCreate,ไฟล์ที่จะสร้าง: 
@@ -3727,6 +3766,39 @@ ui.menu.importScreenplayFountainFDX,นำเข้าบทภาพยนต�
 ui.menu.importScrivenerScriv,นำเข้าจาก Scrivener (.scriv)…
 ui.menu.insertImage,แทรกรูป…
 ui.menu.aiHubPanel,AI Hub
+ui.panel.chaptersDesc,ปกบท ลำดับบท และสถิติของทุกบทในเล่ม
+ui.readbook.allBooks,ทั้งโปรเจกต์ (ทุกเล่ม)
+ui.readbook.busy,กำลังจัดหน้าทั้งเล่ม…
+ui.readbook.button,📖 อ่านทั้งเล่ม
+ui.readbook.buttonAll,📖 อ่านทั้งโปรเจกต์
+ui.readbook.close,ปิดโหมดอ่าน (Esc)
+ui.readbook.coverReadFail,อ่านรูปปกไม่ได้
+ui.readbook.empty,ยังไม่มีเนื้อหาให้อ่าน
+ui.readbook.first,หน้าแรก (Home)
+ui.readbook.fit,พอดีจอ (ล้างระดับซูมกลับเป็นค่าเริ่มต้น)
+ui.readbook.jump,ไปที่หน้า — พิมพ์เลขหน้าแล้วกด Enter
+ui.readbook.label,โหมดอ่าน
+ui.readbook.last,หน้าสุดท้าย (End)
+ui.readbook.measureFail,จัดหน้าทั้งเล่มไม่สำเร็จ
+ui.readbook.next,หน้าถัดไป (→ หรือ PageDown หรือ Space)
+ui.readbook.opened,โหมดอ่านทั้งเล่ม — กด Esc เพื่อออก
+ui.readbook.pageOf,หน้า {0} / {1}
+ui.readbook.pageTip,หน้าที่กำลังอ่าน / จำนวนหน้าทั้งเล่ม
+ui.readbook.pickTip,เลือกเล่มที่จะอ่าน — หรือเลือกทั้งโปรเจกต์เพื่ออ่านทุกเล่มต่อกัน
+ui.readbook.prev,หน้าก่อนหน้า (← หรือ PageUp)
+ui.readbook.spread,สลับ หน้าเดียว / สองหน้า
+ui.readbook.spreadTo1,เปลี่ยนเป็นหน้าเดียว (ตอนนี้แสดงสองหน้า)
+ui.readbook.spreadTo2,เปลี่ยนเป็นสองหน้า (ตอนนี้แสดงหน้าเดียว)
+ui.readbook.stageTip,← → เปลี่ยนหน้า · Ctrl+ล้อ = ซูม · Esc = ออก
+ui.readbook.title,อ่านทั้งเล่ม
+ui.readbook.titleOf,อ่านทั้งเล่ม — {0}
+ui.readbook.titleTip,โหมดอ่านทั้งเล่ม — Home/End = หน้าแรก/หน้าสุดท้าย · Esc = ออก
+ui.readbook.zoomIn,ขยาย (Ctrl+ล้อขึ้น)
+ui.readbook.zoomOut,ย่อ (Ctrl+ล้อลง)
+ui.scene.pageFlowContinue,ไล่เลขหน้าต่อเนื่อง
+ui.scene.pageFlowHint,เลขหน้าไล่ต่อจากฉากและบทก่อนหน้าในเล่มเดียวกัน (หน้าปกบทที่เปิดไว้ถูกนับเป็นหน้าด้วย)
+ui.section.useCover,ใช้หน้าปกเล่ม
+ui.section.useCoverFull,ใช้ภาพเต็มหน้า
 ui.shortcode.dvar,ตัวแปรเดียวกับ {{...}} เช่น [var:อายุ]
 ui.shortcode.dwiki,ค่าจาก Wiki เช่น [wiki:โทระ.อายุ]
 ui.shortcode.ddate,วันที่ (ใส่ fmt=iso · year · time ได้)
@@ -5111,6 +5183,14 @@ ui.spFormat.define,กำหนดเอง
 ui.spFormat.legalInch,Legal (8.5 × 14 นิ้ว)
 ui.spFormat.letterInch,Letter (8.5 × 11 นิ้ว)
 ui.spFormat.next,ต่อ
+ui.spFormat.paperA5,A5 (14.8 × 21 ซม.)
+ui.spFormat.paperBunko,Bunkobon / A6 (4.1 × 5.8 นิ้ว)
+ui.spFormat.paperDigest,Digest (5.5 × 8.5 นิ้ว)
+ui.spFormat.paperMass,Mass Market (4.25 × 6.87 นิ้ว)
+ui.spFormat.paperNovella,Compact / Novella (5 × 8 นิ้ว)
+ui.spFormat.paperPocket,Pocket Book (14.5 × 21 ซม.)
+ui.spFormat.paperTankobon,Tankōbon (5 × 7.5 นิ้ว)
+ui.spFormat.paperTrade,US Trade (6 × 9 นิ้ว)
 ui.spFormatGuide.cutLineSoftWrap,ตัดบรรทัดเอง (soft wrap)
 ui.spFormatGuide.endLineBlockNew,จบบรรทัดด้วยการขึ้นบล็อกใหม่ (hard)
 ui.spHeaders.countPage,จำนวนหน้า
@@ -6385,3 +6465,47 @@ ui.app.exportAlignFail,อ่านการจัดหน้าของฉา
 ui.xhub.autoKind,ตามไฟล์ต้นทาง → ตัดสินได้เป็น: {0}
 ui.xname.openAfter,เปิดไฟล์เมื่อส่งออกเสร็จ
 ui.xname.openFail,เปิดไฟล์ที่ส่งออกไม่สำเร็จ
+ui.settings.themeDark,มืด
+ui.settings.themeLight,สว่าง
+ui.settings.themeK2,K2 (จานสีประจำโปรแกรม)
+ui.html.saveProjBtn,บันทึกโปรเจกต์
+ui.html.searchProjBtn,ค้นหาทั้งโปรเจกต์
+ui.menu.theme,ธีมสี
+ui.settings.themeK2Light,K2 สว่าง
+ui.nav.grpHead,หัวข้อ
+ui.nav.grpScene,ฉาก
+ui.nav.grpDialog,ตัวละคร
+ui.nav.grpTrans,ทรานซิชัน
+ui.nav.grpNote,โน้ต
+ui.nav.grpBeat,ย่อหน้า
+ui.nav.flagChoice,เป็นทางเลือก (ฉากนี้มีทางแยก)
+ui.nav.flagStar,ติดดาวไว้
+ui.nav.flagColor,มีแถบสี
+ui.nav.flagTodo,มีงานค้าง (TODO / ???)
+ui.nav.flagEmpty,ยังไม่มีเนื้อหา
+ui.nav.flagLocked,ฉากถูกล็อก
+ui.nav.flagComment,มีคอมเมนต์ที่ยังไม่ปิด
+ui.nav.flagBreak,บังคับขึ้นหน้าใหม่
+ui.nav.pageAbbr,น.
+ui.nav.searchPh,ค้นหาในโครงเรื่อง…
+ui.nav.legendTitle,คำอธิบายสัญลักษณ์
+ui.nav.legendBold,ตัวหนา = จุดแตกทางเลือก
+ui.nav.legendRow,แถบสีซ้าย = สีที่ตั้งเอง (คลิกขวาที่แถว)
+ui.nav.onlyStar,เฉพาะที่ติดดาว
+ui.nav.clearFilter,ล้างตัวกรองทั้งหมด
+ui.nav.colLoc,บรรทัด / หน้า
+ui.nav.colText,ข้อความ
+ui.nav.star,ติดดาว
+ui.nav.unstar,เอาดาวออก
+ui.nav.clearColor,ล้างสี
+ui.nav.noMatch,ไม่มีแถวที่ตรงกับตัวกรอง
+ui.nav.pageOf,หน้า {0}/{1}
+ui.nav.rowCount,{0} แถว
+ui.nav.setTitle,แผงนำทาง
+ui.nav.setFind,นำทาง navigation โครงเรื่อง แบ่งหน้า ตัวกรอง สัญลักษณ์
+ui.nav.setHint,เลือกว่าแผงนำทางจะเป็นรายการเดียวเลื่อนยาว หรือแบ่งเป็นหน้า ๆ
+ui.nav.setMode,การแสดงผล
+ui.nav.setModeScroll,เลื่อนยาว (แถบเลื่อน)
+ui.nav.setModePage,แบ่งหน้า
+ui.nav.setPerPage,จำนวนแถวต่อหน้า
+ui.nav.setPerPageHint,"ใช้เฉพาะโหมด ""แบ่งหน้า"" — ใส่ได้ 5–500 แถว"

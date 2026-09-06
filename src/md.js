@@ -27,6 +27,80 @@ const RE_H = /^(#{1,6})(?: |$)/;
 const RE_UL = /^[-*](?: |$)/;
 const RE_OL = /^(\d+)\.(?: |$)/;
 const RE_IMG = /^!\[([^\]\n]*)\]\(([^)\n]+)\)\s*$/;
+// ══ [alpha.142 ข้อ 6] ★ ตัวเลือกของรูป — เก็บใน "ชื่อกำกับ" ของมาร์กดาวน์มาตรฐาน ══
+//
+// ผู้ใช้: *"ใน editor รูปจะปรับขนาดไม่ได้ … light novel มักจะใส่รูป หน้าแรก หรือแทรกลงไป
+//          ดังนั้นเราต้อง click ขวาที่รูป สามารถปรับได้คือ fill รูปเลยเต็มหน้า ปรับ size ตามปกติ
+//          ปรับเป็น % ปรับขอบมนได้ ของเดิมเป็นขอบมนเลย"*
+//
+// เก็บเป็น `![alt](src "fit=page w=60% r=8")` — ช่องนี้คือ **title ของมาร์กดาวน์มาตรฐาน**
+// จึงไม่ทำให้ไฟล์เสียความเข้ากันได้: v1 และเครื่องมืออื่นอ่านเป็นรูปพร้อมชื่อกำกับตามปกติ
+// (ทางเลือกที่ไม่เอา: คอมเมนต์ HTML แยกบรรทัด — ผูกกับรูปไม่ได้เมื่อมีรูปหลายใบติดกัน)
+const RE_IMG_TITLE = /^([\s\S]*?)\s+"([^"]*)"$/;
+/**
+ * แยก `src "ชื่อกำกับ"` ออกจากกัน — ไฟล์ที่ชื่อมีวรรคยังใช้ได้ (ตัดเฉพาะท้ายที่อยู่ในเครื่องหมายคำพูด)
+ * @returns {{src:string, title:string}}
+ */
+function splitImgTarget(raw) {
+  const t = String(raw == null ? '' : raw).trim();
+  const m = RE_IMG_TITLE.exec(t);
+  return m ? { src: m[1].trim(), title: m[2] } : { src: t, title: '' };
+}
+/**
+ * ชื่อกำกับ → ตัวเลือกของรูป
+ * @returns {{fit:string, w:string, radius:string}} ค่าว่าง = ใช้ค่าเริ่มต้นของโปรแกรม
+ */
+function parseImgOpts(title) {
+  const out = { fit: '', w: '', radius: '' };
+  for (const tok of String(title || '').trim().split(/\s+/)) {
+    const m = /^(fit|w|r)=(.+)$/i.exec(tok);
+    if (!m) continue;
+    const k = m[1].toLowerCase();
+    const v = m[2];
+    if (k === 'fit') { if (v === 'page') out.fit = 'page'; }
+    else if (k === 'w') { const n = parseFloat(v); if (Number.isFinite(n) && n > 0 && n <= 100) out.w = String(+n.toFixed(2)); }
+    else { const n = parseFloat(v); if (Number.isFinite(n) && n >= 0 && n <= 200) out.radius = String(Math.round(n)); }
+  }
+  return out;
+}
+/** ตัวเลือกของรูป → ชื่อกำกับ ('' = ไม่มีตัวเลือก จึงไม่ต้องเขียนอะไรลงไฟล์) */
+function imgOptsToTitle(o) {
+  const a = o || {};
+  const parts = [];
+  if (a.fit === 'page') parts.push('fit=page');
+  if (a.w !== '' && a.w != null) parts.push('w=' + a.w + '%');
+  if (a.radius !== '' && a.radius != null) parts.push('r=' + a.radius);
+  return parts.join(' ');
+}
+/**
+ * ★ คลาส/สไตล์ของรูป — **กฎคู่แฝดของจอกับไฟล์อยู่ที่นี่ที่เดียว** (กฎถาวรข้อ 5)
+ * ตัวแก้ไข (`toDOM` ของโหนด figure) กับไฟล์ที่ส่งออก (`mdToHtmlBody`) เรียกสองตัวนี้ตัวเดียวกัน
+ * → รูปที่ปรับขนาด/ขอบมนแล้ว หน้าตาตรงกันทั้งบนจอ · มุมมองจัดหน้า · ช่องตัวอย่าง · PDF
+ */
+function figureClass(o) {
+  const a = o || {};
+  const c = [];
+  if (a.fit === 'page') c.push('k-img-page');
+  if (a.w) c.push('k-img-w');
+  return c.join(' ');
+}
+function figureImgStyle(o) {
+  const a = o || {};
+  const st = [];
+  // เต็มหน้า = ปล่อยให้ CSS คุมทั้งหมด (ต้องรู้อัตราส่วนพื้นที่พิมพ์ ซึ่งเป็นค่าของ "หน้ากระดาษ")
+  // [alpha.143 ข้อ 1] ★ **ห้ามใส่ `max-height:none` ตรงนี้** — สไตล์อินไลน์ชนะทุกกฎ CSS
+  // แล้วเพดาน "ไม่สูงเกินหนึ่งหน้า" (`figure.k-img-w img`) จะไม่มีผลเลยสักที่
+  // (รูปสูงเกินหน้า = บล็อกที่ตัดตามบรรทัดไม่ได้ → ตัดดิบ → เส้นคั่นหาย → หน้าเหลื่อมทั้งฉาก)
+  if (a.fit !== 'page' && a.w) st.push('width:' + a.w + '%', 'height:auto');
+  if (a.radius !== '' && a.radius != null) st.push('border-radius:' + a.radius + 'px');
+  return st.join(';');
+}
+
+/** บรรทัดมาร์กดาวน์ของรูปหนึ่งใบ — ทางเดียวที่เขียนไวยากรณ์นี้ลงไฟล์ */
+function imgLine(alt, src, opts) {
+  const title = imgOptsToTitle(opts);
+  return '![' + (alt || '') + '](' + (src || '') + (title ? ' "' + title + '"' : '') + ')';
+}
 // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด (schema เดิมไม่มี node สองตัวนี้เลย)
 const RE_HR = /^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/;
 const RE_FENCE = /^\s{0,3}(`{3,}|~{3,})\s*([\w+-]*)\s*$/;
@@ -87,6 +161,21 @@ function stripMentions(s) {
 }
 
 /** ข้อความสำหรับแสดงผล — ไม่มีเครื่องหมายมาร์กดาวน์ แต่ **คงสแปนสีไว้** */
+/**
+ * [alpha.140] ข้อความล้วนของบรรทัดหนึ่ง — **ถอดเครื่องหมายมาร์กดาวน์ออกหมด**
+ *
+ * ใช้กับที่ที่ต้องได้ตัวอักษรเปล่า ๆ อย่างเดียว: รายการในแผงนำทาง (ซึ่งต้องเทียบกับ
+ * `node.textContent` ที่ ProseMirror คืนมา — ถ้าฝั่งหนึ่งมี `**` อีกฝั่งไม่มี ก็จับคู่ไม่ติด
+ * แล้วการกระโดดจากมุมมองทั้งเล่มก็ไปไม่ถูกที่)
+ *
+ * ต่างจาก `inlineDisplayText()` ตรงที่ตัวนั้นยังเก็บโค้ดสีไว้ (ช่องตัวอย่างต้องใช้)
+ */
+function inlinePlainText(text) {
+  return stripMentions(parseInline(String(text == null ? '' : text))
+    .map((seg) => seg.text).join(''))
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');      // รูปในบรรทัด → เหลือแค่คำบรรยาย
+}
+
 function inlineDisplayText(text) {
   return stripMentions(parseInline(String(text == null ? '' : text))
     .map((seg) => {
@@ -314,7 +403,10 @@ function mdBlocks(md, opts) {
     }
     if (RE_HR.test(line)) { out.push({ kind: 'hr', align, text: '' }); i++; continue; }
     if ((m = RE_IMG.exec(line))) {
-      out.push({ kind: 'figure', align, text: '', alt: m[1], src: m[2] }); i++; continue;
+      const tg = splitImgTarget(m[2]);
+      out.push({ kind: 'figure', align, text: '', alt: m[1], src: tg.src,
+                 imgOpts: parseImgOpts(tg.title) });
+      i++; continue;
     }
     if ((m = RE_H.exec(line))) {
       const rest = line.slice(m[0].length);
@@ -377,7 +469,10 @@ function mdToDoc(md, alignMap) {
       out.push({ type: 'horizontal_rule' });
       i++;
     } else if ((m = RE_IMG.exec(line))) {
-      out.push({ type: 'figure', attrs: { src: m[2], alt: m[1], md: line.trimEnd() } });
+      const tg = splitImgTarget(m[2]);
+      const o = parseImgOpts(tg.title);
+      out.push({ type: 'figure', attrs: { src: tg.src, alt: m[1], md: line.trimEnd(),
+                                          fit: o.fit, w: o.w, radius: o.radius } });
       i++;
     } else if ((m = RE_H.exec(line))) {
       const rest = line.slice(m[0].length);
@@ -580,7 +675,11 @@ function docToMdParts(doc, opts) {
       }
       case 'figure': {
         const a = node.attrs || {};
-        lines.push(a.md || `![${a.alt || ''}](${a.src || ''})`);
+        // [alpha.142 ข้อ 6] มีตัวเลือกของรูป = **ต้องประกอบบรรทัดใหม่** ห้ามคืน `a.md` ดิบ ๆ
+        // (ไม่งั้นปรับขนาด/ขอบมนแล้วไฟล์ไม่เปลี่ยน — ค่าที่ตั้งหายทันทีที่ปิดแท็บ)
+        const o = { fit: a.fit || '', w: a.w || '', radius: a.radius === '' ? '' : a.radius };
+        const title = imgOptsToTitle(o);
+        lines.push(title || !a.md ? imgLine(a.alt, a.src, o) : a.md);
         break;
       }
       case 'heading': {
@@ -672,7 +771,10 @@ module.exports = { mdToDoc, docToMd, mdLineCounts, parseMdFile, dumpMdFile, coun
                    // [alpha.132 · X-1] ตัวแปลง md → HTML ต้องรู้จักคอมเมนต์ align ตัวเดียวกันนี้
                    RE_ALIGN, stripAlign,
                    // [alpha.132r2] ข้อความสำหรับแสดงผล (ช่องตัวอย่าง PDF) + ตัวถอดลิงก์เอนทิตี้
-                   RE_IMG, inlineDisplayText, stripMentions,
+                   RE_IMG, inlineDisplayText, inlinePlainText, stripMentions,
+                   // [alpha.142 ข้อ 6] ตัวเลือกของรูป (เต็มหน้า/ความกว้าง %/ขอบมน) — ไวยากรณ์อยู่ที่นี่ที่เดียว
+                   splitImgTarget, parseImgOpts, imgOptsToTitle, imgLine,
+                   figureClass, figureImgStyle,
                    // [alpha.133 · Y-1+Y-2] สคีมาบล็อก + ตัวแปลง inline ตัวเดียวของทั้งโปรแกรม
                    // (ตัวแก้ไข · ไฟล์ที่ส่งออก · ช่องตัวอย่าง อ่านจากสองตัวนี้เท่านั้น)
                    mdBlocks, inlineHtml,

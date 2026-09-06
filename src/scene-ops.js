@@ -5,7 +5,7 @@ import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, logActio
 import { allStatuses } from './custom-status.js';
 import { deleteToTrash } from './recycle.js';
 import { ask, confirmBox, popupMenu } from './ui.js';
-import { dumpMdFile, parseMdFile } from './md.js';
+import { countWords, dumpMdFile, parseMdFile } from './md.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติหนักของฉากอยู่ใน frontmatter — เขียนผ่านที่นี่ที่เดียว
 import { SCENE_HEAVY_KEYS, writeSceneMeta } from './scene-meta.js';
 // ตาราง "เล่าด้วยภาพ" เป็นไฟล์คู่ข้างฉาก (<ชื่อฉาก>_vis.csv) — ทุกที่ที่ย้าย/ลบ/ทำสำเนาฉาก
@@ -123,6 +123,50 @@ export async function chapterProps(dPath, ch) {
       close(true);
     };
   });
+}
+
+/**
+ * [alpha.141] แถวบททั้งหมดของฉบับร่าง เรียงตาม `order` — "จัดการบท" กับโหมดอ่านใช้ตัวเดียวกัน
+ * (อย่าเรียงตามชื่อ — บทเรียนข้อ 14: ชื่อไทยเรียงแล้วได้ลำดับที่ผู้ใช้ไม่ได้ตั้ง)
+ */
+export async function listChapters(dPath) {
+  try {
+    const d = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+    return (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  } catch { return []; }
+}
+
+/**
+ * [alpha.141] เขียนคุณสมบัติของบทลง draft.json — ทางเดียวของทุกที่ที่แก้ค่าบท
+ * @returns {Promise<object|null>} แถวบทหลังแก้ (null = ไม่เจอบท)
+ */
+export async function saveChapterMeta(dPath, guid, patch) {
+  const df = await kapi.join(dPath, 'draft.json');
+  let d;
+  try { d = await kapi.readJson(df); } catch { return null; }
+  const cur = (d.chapters || []).find((c) => c.guid === guid);
+  if (!cur) return null;
+  Object.assign(cur, patch);
+  await kapi.writeFile(df, JSON.stringify(d, null, 2));
+  return cur;
+}
+
+/** [alpha.141] จำนวนฉาก/คำของบทหนึ่ง (สำหรับการ์ดใน "จัดการบท") */
+export async function chapterStats(dPath, ch) {
+  let scenes = 0, words = 0;
+  try {
+    const all = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters || {};
+    for (const sc of all[ch.guid] || []) {
+      if (sc.type === 'memo') continue;
+      scenes++;
+      try {
+        const { body } = parseMdFile(await kapi.readFile(
+          await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName)));
+        words += countWords(body);
+      } catch {}
+    }
+  } catch {}
+  return { scenes, words };
 }
 
 export async function deleteScene(dPath, ch, sc) {

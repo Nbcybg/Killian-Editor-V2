@@ -6,12 +6,16 @@
 // ค่าว่าง = 'Outline' (ยังไม่ตั้ง) — statusLabel() แปลงให้เป็น '' เพื่อไม่โชว์
 
 import { t } from './i18n.js';
+// [alpha.140] ไวยากรณ์ .md อยู่ที่ md.js ที่เดียว (กฎถาวรข้อ 5) — ที่นี่ขอแค่ "ข้อความล้วน"
+import { inlinePlainText } from './md.js';
 export function statusLabel(status) {
   return (status && status !== 'Outline') ? status : '';
 }
 
+// ป้ายในแผงนำทางต้องเป็น **ตัวอักษรล้วน** เหมือนที่ตัวแก้ไขแสดง (`node.textContent`)
+// ไม่งั้นรายการโชว์ `**โทระ**` ให้ผู้ใช้เห็น และการจับคู่ตอนกระโดดจากมุมมองทั้งเล่มก็พลาด
 const truncate = (s, n = 42) => {
-  s = String(s).trim().replace(/\s+/g, ' ');
+  s = inlinePlainText(String(s)).trim().replace(/\s+/g, ' ');
   return s.length > n ? s.slice(0, n) + '…' : s;
 };
 
@@ -27,7 +31,7 @@ export function parseProse(body) {
   lines.forEach((raw, i) => {
     const line = raw.replace(/\s+$/, '');
     const h = /^(#{1,3})\s+(.*)$/.exec(line);
-    if (h) { flush(); out.push({ kind: 'heading', level: h[1].length, label: h[2].trim(), line: i }); return; }
+    if (h) { flush(); out.push({ kind: 'heading', level: h[1].length, label: truncate(h[2], 200), line: i }); return; }
     if (!line.trim()) { flush(); return; }
     if (/^!\[.*\]\(.*\)\s*$/.test(line)) { flush(); return; }   // บรรทัดรูป ไม่นับเป็น beat
     if (/^>\s?/.test(line)) { flush(); out.push({ kind: 'quote', level: 4, label: truncate(line.replace(/^>\s?/, '')), line: i }); return; }

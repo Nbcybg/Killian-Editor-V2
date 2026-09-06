@@ -25,6 +25,12 @@ const wanted = new Set(['st-mg-top', 'st-mg-bottom', 'st-mg-left', 'st-mg-right'
 for (const m of src.matchAll(/['"]#(st-[\w-]+)['"]/g)) {
   if (!m[1].endsWith('-')) wanted.add(m[1]);     // ตัดชื่อที่เป็นแค่คำนำหน้าของ id ที่ต่อเอง
 }
+// [alpha.140] หัวข้อใหม่ประกอบเป็น DOM ใน dialogs.js เอง ไม่ได้อยู่ในเทมเพลตก้อนใหญ่
+// (เทมเพลตเป็นสตริงเดียวยาว 26KB ในไฟล์ภาษา — เพิ่มช่องทีไรต้องแก้ทั้งแถว diff อ่านไม่ออก)
+// ช่องพวกนี้จึง "มีอยู่จริง" โดยไม่ต้องอยู่ใน CSV — ตัดออกจากรายการที่ต้องเจอในเทมเพลต
+const builtInJs = new Set([...src.matchAll(/\.id\s*=\s*['"](st-[\w-]+)['"]/g)].map((m) => m[1]));
+check('มีช่องที่โค้ดสร้างเองอย่างน้อย 1 ช่อง', builtInJs.size >= 1, builtInJs.size);
+for (const id of builtInJs) wanted.delete(id);
 check('dialogs.js อ้าง #st-* อย่างน้อย 60 ตัว', wanted.size >= 60, wanted.size);
 
 for (const f of files) {

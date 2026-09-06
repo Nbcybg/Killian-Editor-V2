@@ -164,6 +164,38 @@ export async function sectionProps(secPath, sec) {
   };
   clrBtn.onclick = () => { cover = ''; coverName.textContent = tt('ui.section.notHasCover'); };
 
+  // ══ [alpha.141] ★ "ใช้หน้าปกเล่ม" + "อ่านทั้งเล่ม" ══
+  // ผู้ใช้: *"ให้เพิ่ม อ่านทั้งเล่ม ลงไปใน properties ของเล่มใน explorer และในจัดการเล่มด้วย"*
+  // หน้าปกเล่มเปิดเป็นค่าเริ่มต้น (โหมดอ่านต้องเริ่มที่หน้าปกเสมอ) — ปิดได้ถ้าไม่อยากให้นับเป็นหน้า
+  const onRow = el('div', 'wiki-row');
+  onRow.append(el('label', null, tt('ui.section.useCover')));
+  const iCoverOn = el('input', 'wiki-flowchk');
+  iCoverOn.type = 'checkbox';
+  iCoverOn.checked = d.coverOn === undefined ? true : !!d.coverOn;
+  onRow.append(iCoverOn); box.append(onRow);
+
+  // ★ [alpha.142 ข้อ 1] "ใช้ภาพเต็มหน้า" + hint ขนาดรูปที่แนะนำตามกระดาษที่เลือกอยู่
+  const fullRow = el('div', 'wiki-row');
+  fullRow.append(el('label', null, tt('ui.section.useCoverFull')));
+  const iCoverFull = el('input', 'wiki-flowchk');
+  iCoverFull.type = 'checkbox';
+  iCoverFull.checked = d.coverFull === undefined ? true : !!d.coverFull;
+  fullRow.append(iCoverFull); box.append(fullRow);
+  {
+    const { coverHintLine } = await import('./chapters-ui.js');
+    box.append(el('div', 'k-hint k-sec-covhint', coverHintLine()));
+  }
+
+  const readRow = el('div', 'wiki-row k-sec-readrow');
+  readRow.append(el('label', null, tt('ui.readbook.label')));
+  const readBtn = el('button', 'k-sec-read', tt('ui.readbook.button'));
+  readBtn.type = 'button';
+  readBtn.onclick = async () => {
+    const { openBookReader } = await import('./read-ui.js');
+    openBookReader(secPath);
+  };
+  readRow.append(readBtn); box.append(readRow);
+
   return new Promise((resolve) => {
     const btns = el('div', 'k-dlg-btns');
     const cB = el('button', null, tt('ui.common.cancel'));
@@ -180,9 +212,14 @@ export async function sectionProps(secPath, sec) {
       const blurb = iBlurb.value.trim();
       if (blurb) d.blurb = blurb; else delete d.blurb;
       if (cover) d.cover = cover; else delete d.cover;
+      // ค่าเริ่มต้น (เปิด) ไม่ต้องเขียนลงไฟล์ — กันคีย์รกในโปรเจกต์ที่ไม่เคยแตะเรื่องนี้
+      if (iCoverOn.checked) delete d.coverOn; else d.coverOn = false;
+      if (iCoverFull.checked) delete d.coverFull; else d.coverFull = false;
       const ord = parseInt(iOrder.value, 10);
       if (Number.isFinite(ord) && ord > 0) d.order = ord;
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      // ปก/สถานะของเล่มเปลี่ยน = ลำดับหน้าของทั้งเล่มเปลี่ยน → ทิ้งแคชสายหน้า
+      try { const { bumpBookFlow } = await import('./read-ui.js'); bumpBookFlow(); } catch {}
       await buildTree();
       setStatus(tt('ui.section.savePropsBookDone') + (d.title || ''));
       close(true);

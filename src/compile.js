@@ -23,7 +23,8 @@ import { pagesWithContinueds } from './sp-continued.js';
 import { mergeProseFormat, proseExportCss } from './prose-format.js';
 // [alpha.132 · X-1] คอมเมนต์ `<!--align:x-->` เป็นรูปแบบของ md.js — ห้ามมีสำเนา regex ที่สอง
 import { stripAlign, stripMentions as mdStripMentions, markerVars,
-         mdBlocks, inlineHtml as mdInlineHtml } from './md.js';
+         mdBlocks, inlineHtml as mdInlineHtml,
+         figureClass, figureImgStyle } from './md.js';
 
 export const PAGE_BREAK = t('ui.compile.msg');
 
@@ -287,7 +288,12 @@ export function mdToHtmlBody(md, o = {}) {
     if (b.kind === 'figure') {
       closeAll();
       // โครงเดียวกับ `toDOM` ของโหนด figure ในตัวแก้ไข (รูปเดี่ยวใน <figure> ไม่มีคำบรรยาย)
-      out.push(`<figure${attrOf(al)}><img alt="${escAttr(b.alt)}" src="${escAttr(b.src)}"></figure>`);
+      // [alpha.142 ข้อ 6] คลาส/สไตล์มาจาก `figureClass`/`figureImgStyle` ของ md.js — ตัวเดียวกับที่จอใช้
+      const fc = figureClass(b.imgOpts);
+      const fs = figureImgStyle(b.imgOpts);
+      out.push(`<figure${attrOf(al)}${fc ? ` class="${escAttr(fc)}"` : ''}>`
+        + `<img alt="${escAttr(b.alt)}" src="${escAttr(b.src)}"${fs ? ` style="${escAttr(fs)}"` : ''}>`
+        + '</figure>');
       continue;
     }
     if (b.kind === 'code') {

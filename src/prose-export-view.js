@@ -23,7 +23,7 @@
 import { PAPER_SIZES, MARGIN_DEFAULTS } from './sp-format.js';
 import { num } from './num.js';
 import { measureProseBlocks, sliceProsePages, withMeasureMode,
-         renderProseClipPages, DPI } from './prose-measure.js';
+         renderProseClipPages, whenImagesReady, DPI } from './prose-measure.js';
 
 /** คลาสห่อของเอกสารตัวอย่าง — ทุกกฎ CSS ที่ส่งออกถูกจำกัดขอบเขตไว้ใต้ตัวนี้ */
 export const XPV_CLASS = 'k-xpv-doc';
@@ -89,7 +89,8 @@ export function scopeCss(css, sel) {
  * @param {string} bodyHtml        ผลของ `mdToHtmlBody()` — ก้อนเดียวกับที่จะกลายเป็น PDF
  * @param {string} css             ผลของ `proseExportCss()` — ชุดเดียวกับที่จะฝังในไฟล์
  * @param {object} opts            {paper, margins, scale, gap, label, numTop, numRight}
- * @returns {{box:HTMLElement, pageCount:number}}
+ * @returns {{box:HTMLElement, pageCount:number, ready:(Promise<number>|null)}}
+ *          `ready` = จำนวนหน้าหลังรูปโหลดครบ (null = ไม่มีรูปค้างตั้งแต่แรก)
  */
 export function renderExportPagePreview(host, bodyHtml, css, opts = {}) {
   const paper = opts.paper || PAPER_SIZES.letter;
@@ -115,21 +116,50 @@ export function renderExportPagePreview(host, bodyHtml, css, opts = {}) {
                      + 'width:' + textW + 'in;max-width:none;margin:0;padding:0;';
   meas.innerHTML = bodyHtml;
   document.body.append(meas);
-  let pages = [];
-  try {
-    pages = withMeasureMode(() => {
+
+  /**
+   * วัด → หั่น → วาด หนึ่งรอบเต็ม (เรียกซ้ำได้)
+   *
+   * ★ `renderProseClipPages()` **ล้างกล่องทิ้งก่อนเสมอ** — และผู้เรียกเอา "หน้าหน้าเล่ม"
+   * (ปก/หน้ารายชื่อ) มาแทรกไว้ข้างหน้าทีหลัง · การวาดรอบสอง (หลังรูปโหลดครบ) จึงกลืนมันหายไป
+   * ทั้งชุด (เทส `[81r2] ตัวอย่างโชว์หน้าปกให้เห็น` จับได้ = บทเรียนข้อ 48 ซ้ำรอย)
+   * → ตีตราแผ่นที่ **เราเป็นคนสร้าง** ไว้ แล้วคืนของคนอื่นกลับที่เดิมทุกครั้ง
+   */
+  const paint = () => {
+    let blocks = [];
+    let pages = withMeasureMode(() => {
       const origin = meas.getBoundingClientRect().top;
-      const { blocks, totalHeight } = measureProseBlocks(meas, origin, 1);
+      const mm = measureProseBlocks(meas, origin, 1);
+      blocks = mm.blocks;
       if (!blocks.length) return [];
-      return sliceProsePages(blocks, contentH, totalHeight).map((p, i) => ({ ...p, index: i + 1 }));
+      return sliceProsePages(blocks, contentH, mm.totalHeight).map((p, i) => ({ ...p, index: i + 1 }));
     });
     if (!pages.length) pages = [{ start: 0, end: contentH, index: 1 }];
+    const keep = [...box.children].filter((n) => !n.dataset || n.dataset.xpv !== '1');
     renderProseClipPages(box, meas, pages, {
       scale: num(opts.scale, 1) || 1, gap: num(opts.gap, 14), paper, margins: m,
       numTop: opts.numTop, numRight: opts.numRight, label: opts.label,
+      // [alpha.143 ข้อ 2] แผ่นของ "รูปเต็มหน้า" ถูกทาภาพชนขอบกระดาษเหมือนมุมมองจัดหน้า
+      blocks,
     });
-  } finally {
+    for (const n of box.children) n.dataset.xpv = '1';
+    if (keep.length) box.prepend(...keep);      // หน้าหน้าเล่มอยู่ข้างหน้าเสมอ (ผู้เรียกแทรกไว้แบบนั้น)
+    return pages;
+  };
+
+  // ══ [alpha.143 ข้อ 1] ★ รูปที่ยังโหลดไม่เสร็จสูง 0 — วัดตอนนั้น = ทั้งไฟล์เหลื่อม ══
+  // วาดรอบแรกทันที (ผู้ใช้เห็นหน้าเลย ไม่ต้องรอ) แล้ววาดซ้ำอีกรอบเมื่อรูปมาครบ
+  // `ready` มีไว้ให้เทส/ผู้เรียกที่อยากรอผลสุดท้ายจริง ๆ · null = ไม่มีรูปค้าง
+  let pages = [];
+  try { pages = paint(); } catch (e) { meas.remove(); throw e; }
+  const wait = whenImagesReady(meas);
+  if (!wait) { meas.remove(); return { box, pageCount: pages.length, ready: null }; }
+  const ready = wait.then(() => {
+    let n = pages.length;
+    // กล่องอาจถูกทิ้งไปแล้ว (ผู้ใช้เปลี่ยนตัวเลือกส่งออกระหว่างรอรูป) → ไม่ต้องวาดทับของใหม่
+    try { if (box.isConnected) n = paint().length; } catch {}
     meas.remove();
-  }
-  return { box, pageCount: pages.length };
+    return n;
+  });
+  return { box, pageCount: pages.length, ready };
 }

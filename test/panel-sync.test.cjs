@@ -101,7 +101,23 @@ check('outlineMsg: ธงบทหนัง', om.sp === true);
 check('outlineMsg: รายการว่างก็ไม่พัง', S.outlineMsg('', '', null).items.length === 0);
 check('outlineMsg: ตัด field แปลกปลอมทิ้ง (ส่งข้าม IPC = ต้อง clone ได้)',
       Object.keys(S.outlineMsg('a', 'b', [{ kind: 'h', label: 'x', lvl: 1, pos: 3, node: {} }]).items[0])
-        .sort().join() === 'kind,label,line,lvl,pos');
+        .sort().join() === 'choices,color,comments,key,kind,label,line,locked,lvl,page,pos,star',
+      Object.keys(S.outlineMsg('a', 'b', [{ kind: 'h', label: 'x', lvl: 1, pos: 3, node: {} }]).items[0])
+        .sort().join());
+// [alpha.140] คอลัมน์ที่อยู่ + เครื่องหมายของผู้ใช้ต้องข้ามหน้าต่างไปด้วย
+{
+  const om2 = S.outlineMsg('a', 'b', [{ kind: 'beat', label: 'x', lvl: 4, pos: 3,
+                                        page: 2, key: 'k1', color: 'ส้ม', star: true,
+                                        choices: 2, comments: 1, locked: true }]);
+  const i0 = om2.items[0];
+  check('outlineMsg: พกเลขหน้าไปด้วย', i0.page === 2);
+  check('outlineMsg: พกคีย์/สี/ดาวไปด้วย', i0.key === 'k1' && i0.color === 'ส้ม' && i0.star === true);
+  check('outlineMsg: พกวัตถุดิบของสถานะจุดไปด้วย',
+        i0.choices === 2 && i0.comments === 1 && i0.locked === true);
+  const i1 = S.outlineMsg('a', 'b', [{ kind: 'beat', label: 'x', lvl: 4 }]).items[0];
+  check('outlineMsg: ไม่มีค่าก็ได้ค่าปริยายที่ clone ได้',
+        i1.page === null && i1.color === '' && i1.star === false && i1.choices === 0);
+}
 
 // ── gotoMsg ──
 const g1 = S.gotoMsg(SCENE, { pos: 42 });

@@ -142,6 +142,22 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('isFmtbarButton แยกได้ว่าปุ่มไหนอยู่แถบไหน',
         T.isFmtbarButton('tb-bold') === true && T.isFmtbarButton('tb-kanban') === false);
 
+  // ★★ [alpha.139] ประตูกันพลาด: `FMTBAR_IDS` ต้องตรงกับรายการจริงใน `setupFloatingFormatBar()`
+  // (คอมเมนต์บอกไว้ว่า "ต้องตรงกัน" มาตั้งแต่ .111 แต่ไม่เคยมีใครตรวจ — ย้ายปุ่มเข้า/ออกทีไร
+  //  ก็มีโอกาสหลุดข้างเดียว แล้วปุ่มนั้นกลายเป็นปุ่มที่ตั้งค่าไม่ได้/ซ่อนไม่ได้เงียบ ๆ)
+  {
+    const src = require('fs').readFileSync(path.join(__dirname, '../src/app.js'), 'utf8');
+    const i0 = src.indexOf("['#tb-sp-elem'");
+    const i1 = src.indexOf('].forEach((sel)', i0);
+    check('หาอ่านรายการปุ่มใน setupFloatingFormatBar() ได้', i0 > 0 && i1 > i0);
+    const moved = [...src.slice(i0, i1).matchAll(/'#([\w-]+)'/g)].map((m) => m[1]);
+    check('★ ลำดับปุ่มบนแถบลอยตรงกับ FMTBAR_IDS เป๊ะ',
+          moved.join(',') === ids.join(','),
+          'app.js[' + moved.join(',') + '] cfg[' + ids.join(',') + ']');
+    check('★ ปุ่มส่วนเสริมท้ายชื่อตัวละครอยู่บนแถบลอย (ไม่ใช่แถบเครื่องมือ) — alpha.139',
+          moved.includes('tb-sp-ext'));
+  }
+
   // ★ กติกาข้อสำคัญที่สุด: ปุ่มเดียวห้ามมีสวิตช์สองที่
   const main = T.mainbarGroups().flatMap((g) => g.buttons.map((b) => b.id));
   const fmt = T.fmtbarGroups().flatMap((g) => g.buttons.map((b) => b.id));

@@ -95,10 +95,20 @@ export function outlineMsg(file, title, items, opts = {}) {
     title: title || '',
     sp: !!opts.sp,                        // ไอคอนหน้าชื่อฉาก (🎬 บทหนัง · 📖 นิยาย)
     empty: opts.empty || '',              // ข้อความตอนไม่มีอะไรให้แสดง (หน้าต่างหลักรู้เหตุผลดีกว่า)
+    // [alpha.140] แถวในหน้าต่างที่ฉีกออกไปต้อง "หน้าตาเหมือนกันเป๊ะ" กับหน้าต่างหลัก
+    // → ต้องพกคอลัมน์ที่อยู่ (หน้า) · เครื่องหมายของผู้ใช้ (สี/ดาว) · และวัตถุดิบของสถานะจุด
+    // มาด้วย ไม่งั้นแผงที่ฉีกออกไปกลายเป็นรายการเปล่า ๆ คนละหน้าตากับที่เห็นในหน้าต่างหลัก
     items: (items || []).map((it) => ({
       kind: it.kind, label: it.label, lvl: it.lvl,
       pos: typeof it.pos === 'number' ? it.pos : null,
       line: typeof it.line === 'number' ? it.line : null,
+      page: typeof it.page === 'number' ? it.page : null,
+      key: it.key || '',
+      color: it.color || '',
+      star: !!it.star,
+      choices: typeof it.choices === 'number' ? it.choices : 0,
+      comments: typeof it.comments === 'number' ? it.comments : 0,
+      locked: !!it.locked,
     })),
   };
 }

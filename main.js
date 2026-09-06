@@ -114,7 +114,8 @@ const A = isMac ? '⌥' : 'Alt';
 const toggles = {
   paperMode: true, readingMode: false, focusMode: false, typewriter: false,
   lineNumbers: false, splitView: false, format: 'prose',
-  theme: 'dark', fabEnabled: true,          // [alpha.60r2 ข้อ 9 + 10]
+  // [alpha.138] ธีม: รายชื่อมาจาก renderer (THEMES ใน core.js) — main ไม่มีรายชื่อของตัวเอง
+  theme: 'k2', themes: [], fabEnabled: true,          // [alpha.60r2 ข้อ 9 + 10]
   // alpha.57 — โหมดมุมมองบท (normal/draft/side/overview1/overview4) + สวิตช์ของเมนู "บท"
   spView: 'normal', showFormat: false, checkBeforeExport: true,
   pageGuides: false,                    // [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ
@@ -281,13 +282,15 @@ function buildMenu() {
         { label: tt('ui.menu.pageGuides'), type: 'checkbox', checked: !!toggles.pageGuides,
           click: () => send('page-guides') },
       ] },
-      // [alpha.60r2 ข้อ 10] Ctrl+Shift+P ย้ายมาสลับธีมของโปรแกรม — โหมดหน้ากระดาษยังกดที่นี่/ปุ่ม 📄 ได้
-      { label: ttf('ui.menu.themeLightDarkP', C, S), submenu: [
-        { label: tt('ui.menu.darkDark'), type: 'radio', checked: toggles.theme !== 'light',
-          click: () => send('toggle-theme', 'dark') },
-        { label: tt('ui.menu.lightLight'), type: 'radio', checked: toggles.theme === 'light',
-          click: () => send('toggle-theme', 'light') },
-      ] },
+      // [alpha.138] ธีมสี — **ไม่มีปุ่มบนแถบ ไม่มีคีย์ลัดแล้ว** (ผู้ใช้สั่ง) เหลือที่นี่กับ ตั้งค่า → ทั่วไป
+      // รายการสร้างจากทะเบียนธีมที่ renderer ส่งมา (`toggles.themes`) — main ไม่เก็บรายชื่อเอง
+      { label: tt('ui.menu.theme'), submenu:
+        (Array.isArray(toggles.themes) && toggles.themes.length
+          ? toggles.themes.map((th) => ({
+              label: th.label, type: 'radio', checked: toggles.theme === th.id,
+              click: () => send('toggle-theme', th.id) }))
+          // ยังไม่ได้รับทะเบียนจาก renderer (ช่วงบูต) — เมนูว่างเปล่าไม่ได้ ต้องมีอย่างน้อยหนึ่งรายการ
+          : [{ label: tt('ui.menu.theme'), enabled: false }]) },
       chk(tt('ui.menu.showNumLineLeft'), toggles.lineNumbers, () => send('line-numbers')),
       // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot $sub $in $act $intercut (( )) = # ! )
       chk(tt('ui.menu.hidePageLineShot'), toggles.markdownCodes,
@@ -737,6 +740,7 @@ const MENU_PANELS = [
   { id: 'dashboard', label: tt('ui.common.dashboard') },
   { id: 'kanban', label: 'Kanban' },
   { id: 'books', label: tt('ui.common.manageBook') },
+  { id: 'chapters', label: tt('ui.chapters.title') },
   { id: 'timeline', label: tt('ui.common.lineTime') },
   { id: 'maps', label: tt('ui.common.map') },
   { id: 'gallery', label: (C, S) => ttf('ui.menu.libraryImageG', C, S) },

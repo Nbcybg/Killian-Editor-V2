@@ -47,18 +47,44 @@
   --danger-soft:#5a2b2b;  /* พื้นปุ่มอันตรายตอนชี้ */
   --canvas:#262624;       /* พื้นกระดานวาด (Planner) */
 }
-/* [alpha.60r2 ข้อ 10] ธีมสว่าง — Ctrl+Shift+P สลับ dark ↔ light
-   สลับเฉพาะ "เปลือกโปรแกรม" ผ่านตัวแปรชุดเดียวกัน · ไม่แตะ --paper-* เลย
-   → หน้ากระดาษ (สีกระดาษ/หมึก/ขอบ/เงา) และทุกมุมมองหน้ากระดาษเหมือนเดิมทุกประการ
-   ปุ่ม 📄 "โหมดหน้ากระดาษ" ยังทำงานแยกของมันตามเดิม (แค่ไม่ผูกกับคีย์ลัดนี้แล้ว) */
-body.theme-light {
-  --bg:#faf9f5; --side:#f0eee7; --bar:#e9e7df; --border:#d5d2c7;
-  --fg:#2b2a26; --bright:#131210; --dim:#6d6a61;
-  --accent:#b8532f; --accent-hi:#c15f3c; --link:#2f6ba8; --sel:#f0cdb8;
-  --orange:#a86b32; --curline:#efece2;
-  --paper-surround:#cfccc2;                 /* พื้นรอบกระดาษ — ตัวกระดาษเองไม่เปลี่ยน */
-  --hover:#dcd9cf; --hover-soft:#e2dfd5; --titlebar:#e4e1d7; --sunken:#f2f0e9;
-  --chip:#e7e2d5; --danger-soft:#efd3cb; --canvas:#f6f4ef;
+
+/* ══ [alpha.137] ธีม "K2" — จานสีประจำโปรแกรม (ผู้ใช้กำหนดจากภาพจานสี) ══
+   กรมท่า #1e1250 · ม่วง #452f5e · ส้ม #ff6640 · เหลือง #ffc55c
+   กติกาเดิมทุกประการ: สลับเฉพาะ "เปลือกโปรแกรม" ผ่านตัวแปรชุดเดียวกัน — ห้ามแตะ --paper-*
+   (สี่สีดิบเก็บไว้เป็นตัวแปรของตัวเองด้วย เผื่อที่ไหนอยากอ้างสีจานตรง ๆ) */
+body.theme-k2 {
+  --k2-navy:#1e1250; --k2-purple:#452f5e; --k2-orange:#ff6640; --k2-yellow:#ffc55c;
+  --bg:#1e1250; --side:#180e40; --bar:#241659; --border:#452f5e;
+  --fg:#ece8f7; --bright:#ffffff; --dim:#a99ec4;
+  --accent:#ff6640; --accent-hi:#ffc55c; --link:#ffc55c; --sel:#452f5e;
+  --orange:#ffc55c; --curline:#271a5e;
+  --hover:#3a2670;        /* พื้นตอนเอาเมาส์ชี้ปุ่ม */
+  --hover-soft:#271a5e;   /* พื้นตอนชี้แถวในรายการ / แท็บที่ยังไม่ถูกเลือก */
+  --titlebar:#150c36;     /* แถบชื่อหน้าต่าง (frameless) */
+  --sunken:#180e40;       /* พื้นจม — บล็อกโค้ด / กล่องผลลัพธ์ / ทูลทิป */
+  --chip:#452f5e;         /* พื้นป้ายชื่อ (mention / pill) */
+  --danger-soft:#6d2740;  /* พื้นปุ่มอันตรายตอนชี้ */
+  --canvas:#180e40;       /* พื้นกระดานวาด (Planner) */
+}
+
+/* ══ [alpha.138] ธีม "K2 สว่าง" — จานสีเดียวกัน กลับเฉด ══
+   ผู้ใช้: *"ไม่ต้องทำ dark/light เก็บ k2 กับ k2-light"* → ธีมสว่างของเดิม (โทนครีม Claude) ถูกลบทิ้ง
+   กติกาเดิม: แตะเฉพาะเปลือกโปรแกรม · `--paper-surround` = พื้น **รอบ** กระดาษ (เป็นเปลือก ไม่ใช่กระดาษ) */
+body.theme-k2-light {
+  --k2-navy:#1e1250; --k2-purple:#452f5e; --k2-orange:#ff6640; --k2-yellow:#ffc55c;
+  --bg:#f8f6fc; --side:#eae5f5; --bar:#e2dcf0; --border:#c6bcdc;
+  --fg:#241a45; --bright:#120b2e; --dim:#6a5f8a;
+  /* ส้มของจานบนพื้นสว่างจ้าเกินไป → ใช้เฉดเข้มขึ้นเป็นสีเน้นหลัก ส่วนสีเน้นรองคือส้มตัวจริง */
+  --accent:#d94a20; --accent-hi:#ff6640; --link:#5a3ea8; --sel:#ffd9a3;
+  --orange:#b26a12; --curline:#efe9fa;
+  --paper-surround:#cbc2de;                 /* พื้นรอบกระดาษ — ตัวกระดาษเองไม่เปลี่ยน */
+  --hover:#dcd3ee;        /* พื้นตอนเอาเมาส์ชี้ปุ่ม */
+  --hover-soft:#e7e1f4;   /* พื้นตอนชี้แถวในรายการ / แท็บที่ยังไม่ถูกเลือก */
+  --titlebar:#ded6f0;     /* แถบชื่อหน้าต่าง (frameless) */
+  --sunken:#f1edfa;       /* พื้นจม — บล็อกโค้ด / กล่องผลลัพธ์ / ทูลทิป */
+  --chip:#e0d8f2;         /* พื้นป้ายชื่อ (mention / pill) */
+  --danger-soft:#f2ccd6;  /* พื้นปุ่มอันตรายตอนชี้ */
+  --canvas:#f8f6fc;       /* พื้นกระดานวาด (Planner) */
 }
 * { box-sizing:border-box; }
 html,body { height:100%; margin:0; }
@@ -80,18 +106,36 @@ select option { background:var(--bar); color:var(--fg); }
 select option:checked, select option:hover { background:var(--sel); color:var(--bright); }
 ::selection { background:var(--sel); color:var(--bright); }
 
-#topbar { display:flex; align-items:center; gap:10px; padding:6px 12px;
-  background:var(--side); border-bottom:1px solid var(--border); }
-#projname { font-weight:600; color:var(--accent-hi); }
-#open-btn { margin-left:auto; }
 
 #toolbar { display:flex; align-items:center; gap:2px; padding:4px 10px;
-  background:var(--bar); border-bottom:1px solid var(--border); }
+  background:var(--bar); border-bottom:1px solid var(--border);
+  /* [alpha.137] แถบเดียวถือทั้งปุ่มโปรเจกต์ (มีข้อความ) และปุ่มเครื่องมือทั้งหมด →
+     บนหน้าต่างแคบมันยาวเกินแถว · เดิมลูกยุบตัวได้ ข้อความจึงล้นออกมาทับกันเอง
+     กติกา: ลูกทุกตัว **ห้ามยุบ** (flex:none) แล้วให้แถบเลื่อนแนวนอนแทน
+     — ปุ่มท้ายแถวต้องกดถึงเสมอ ไม่ใช่ถูกตัดหายไปเงียบ ๆ */
+  flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent; }
+#toolbar > * { flex:none; }
+#toolbar::-webkit-scrollbar { height:6px; }
+#toolbar::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+#toolbar::-webkit-scrollbar-thumb:hover { background:var(--dim); }
+#toolbar::-webkit-scrollbar-track { background:transparent; }
 #toolbar .tb { min-width:32px; background:transparent; }
 #toolbar .tb:hover { background:var(--hover); }
 #toolbar .tb.on { background:var(--sel); color:var(--bright); }
 #toolbar .tb.dis { opacity:.4; pointer-events:none; }
 #toolbar .sep { width:1px; height:20px; background:var(--border); margin:0 6px; }
+/* [alpha.139] เส้นคั่น "หมวด" ของแถบเครื่องมือ (แบบ Firefox/Chrome) — แทรกตอนรันจาก TOOLBAR_GROUPS
+   โดย applyToolbarGroupSeps() หลัง setupFloatingFormatBar() (ซึ่งลบ .sep ในแถบทิ้งทั้งหมด) */
+#toolbar .tb-gsep { height:22px; opacity:.85; }
+/* [alpha.137] #topbar ถูกลบทิ้งแล้ว — ปุ่มโปรเจกต์ 3 ตัวย้ายมาอยู่หัว #toolbar บรรทัดเดียวกัน
+   (ชื่อโปรเจกต์อยู่กลางแถบชื่อหน้าต่าง #tb-title อยู่แล้ว · แถบความคืบหน้าไปอยู่กลางแถบสถานะ) */
+#toolbar .tb-txt { display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  padding:4px 10px; min-width:0; font-size:calc(12.5px * var(--ui-scale, 1));
+  border:1px solid var(--border); border-radius:7px; }
+#toolbar .tb-txt:hover { background:var(--hover); border-color:var(--accent-hi); }
+/* เส้นคั่นของแถบโปรเจกต์ — ห้ามใช้ class="sep" (setupFloatingFormatBar ลบ .sep ทิ้งทั้งหมด) */
+#toolbar .k-topsep { width:1px; height:22px; background:var(--border); margin:0 8px; flex:none; }
 /* ปุ่มที่เป็น "สวิตช์" (ข้อ 3) — มีจุดบอกสถานะมุมล่างขวา ให้รู้ว่ากดแล้วค้างเปิด/ปิด
    ไม่ใช่คำสั่งครั้งเดียว (เดิมดูไม่ออกจนกว่าจะกดลองดู)
    ห้ามผูกกับ #toolbar — setupFloatingFormatBar() ย้ายปุ่มพวกนี้ไปแถบลอย ปุ่มจะไม่มีจุดบอกสถานะ */
@@ -116,7 +160,6 @@ select option:checked, select option:hover { background:var(--sel); color:var(--
    ซ่อนด้วย CSS แทนการรื้อ DOM — โค้ดที่อ้าง $('#tabs')/$('#statusbar') ยังทำงานได้ตามปกติ
    (ขอบหน้าต่างเป็นของ OS จริงในโหมดนี้ แถบหัวของเราเองจึงต้องหายไป) */
 body.panel-window #titlebar,
-body.panel-window #topbar,
 body.panel-window #toolbar,
 body.panel-window #tabs,
 body.panel-window #statusbar,
@@ -509,7 +552,7 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
 
 /* ---------- พิมพ์: เหลือเฉพาะหน้ากระดาษ ---------- */
 @media print {
-  #topbar,#toolbar,#tabs,#statusbar,.k-tab-bar,.k-panel-head { display:none !important; }
+  #toolbar,#tabs,#statusbar,.k-tab-bar,.k-panel-head { display:none !important; }
   .k-panel:not(.k-holds-docs), .k-tab-group:not(.k-holds-docs), .k-dock:not(.k-holds-docs),
   .k-resize-handle, .k-float-panel, .k-min-tray { display:none !important; }
   body { background:#fff; color:#000; }
@@ -518,7 +561,7 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
   .ProseMirror { margin:0; max-width:none; color:#000; }
   .ProseMirror h1,.ProseMirror h2,.ProseMirror h3 { color:#000; }
 }
-body.printing #topbar, body.printing #toolbar,
+body.printing #toolbar,
 body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 
 /* ---------- ค้นหา/แทนที่ ---------- */
@@ -531,7 +574,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 /* [alpha.81 ข้อ 5] ไฮไลต์ผลค้นหา — ธีมมืดใช้เหลืองเข้ม ธีมสว่างใช้เหลืองอ่อน
    (เดิมเป็นเหลืองเข้มตายตัว → ธีมสว่างได้หมึกดำบนพื้นเขียวขี้ม้า อ่านแทบไม่ออก) */
 .find-hit { background:var(--find-hit, #6b5518); border-radius:2px; }
-body.theme-light { --find-hit:#ffe08a; }
+body.theme-k2-light { --find-hit:#ffe08a; }
 
 /* ---------- index/outline ---------- */
 /* เนื้อแผงถูก Panel System วางลง .k-panel-body → ต้องยืดเต็มช่องที่ได้รับ */
@@ -563,12 +606,66 @@ body.theme-light { --find-hit:#ffe08a; }
   cursor:nwse-resize; display:none;
   background:linear-gradient(135deg,transparent 50%,var(--dim) 50%,var(--dim) 60%,transparent 60%); }
 .k-panel-floating .k-panel-resize { display:block; }
-.ol-item { padding:3px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;
-  overflow:hidden; text-overflow:ellipsis; }
+/* ── [alpha.140] แผง Navigation: แถบเครื่องมือ + สองคอลัมน์ + แบ่งหน้า ── */
+#outline { display:flex; flex-direction:column; }
+.nav-bar { flex:0 0 auto; padding:4px 4px 0; border-bottom:1px solid var(--border); }
+.nav-row { display:flex; align-items:center; gap:4px; margin-bottom:4px; }
+.nav-q { flex:1; min-width:0; background:var(--bg); color:var(--fg);
+  border:1px solid var(--border); border-radius:6px; padding:3px 7px;
+  font-size:calc(12px * var(--ui-scale, 1)); font-family:inherit; }
+.nav-q:focus { outline:none; border-color:var(--accent); }
+.nav-legend-btn { cursor:pointer; opacity:.6; padding:0 4px; border-radius:4px;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.nav-legend-btn:hover { opacity:1; background:var(--hover); }
+.nav-chips { flex-wrap:wrap; gap:3px; }
+.nav-chip { cursor:pointer; user-select:none; border:1px solid var(--border);
+  border-radius:999px; padding:1px 7px; font-size:calc(10.5px * var(--ui-scale, 1));
+  color:var(--dim); background:transparent; white-space:nowrap; }
+.nav-chip:hover { background:var(--hover); color:var(--fg); }
+.nav-chip.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+.nav-chip-color { width:14px; padding:1px 0; text-align:center; background:var(--c); border-color:var(--c); opacity:.55; }
+.nav-chip-color.on { opacity:1; box-shadow:0 0 0 2px var(--accent-hi); }
+.nav-chip-clear { margin-left:auto; }
+.nav-bar.nav-filtered .nav-chip-clear { color:var(--accent-hi); border-color:var(--accent-hi); }
+.nav-cols { display:flex; gap:6px; padding:2px 8px 3px; color:var(--dim);
+  font-size:calc(10px * var(--ui-scale, 1)); letter-spacing:.4px; border-top:1px solid var(--border); }
+.nav-list { flex:1; min-height:0; overflow:auto; }
+.nav-foot { flex:0 0 auto; display:flex; align-items:center; gap:3px; flex-wrap:wrap;
+  padding:3px 6px; border-top:1px solid var(--border); font-size:calc(11px * var(--ui-scale, 1)); }
+.nav-pg { background:var(--bg); color:var(--fg); border:1px solid var(--border);
+  border-radius:5px; padding:0 6px; cursor:pointer; font-family:inherit; }
+.nav-pg:disabled { opacity:.35; cursor:default; }
+.nav-pg-lbl { color:var(--dim); padding:0 4px; }
+.nav-pg-n { margin-left:auto; color:var(--dim); }
+
+.ol-item { display:flex; gap:6px; align-items:baseline; padding:3px 8px; border-radius:6px;
+  cursor:pointer; border-left:3px solid transparent; }
 .ol-item:hover { background:var(--hover-soft); }
+.ol-item.on { background:var(--hover); box-shadow:inset 0 0 0 1px var(--border); }
+.ol-item.nav-colored { border-left-color:var(--row-color, transparent); }
+.ol-item.nav-choice .nav-label { font-weight:700; }
+.ol-item > .nav-col-loc { flex:0 0 auto; min-width:52px; text-align:right; color:var(--dim);
+  font-size:calc(10px * var(--ui-scale, 1)); font-variant-numeric:tabular-nums; }
+.ol-item > .nav-col-text { flex:1; min-width:0; display:flex; gap:4px; align-items:baseline;
+  overflow:hidden; }
+.nav-cols > .nav-col-loc { flex:0 0 auto; min-width:52px; text-align:right; }
+.nav-cols > .nav-col-text { flex:1; min-width:0; }
+.ol-item .nav-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.nav-mk { flex:0 0 auto; font-size:calc(10px * var(--ui-scale, 1)); opacity:.9; }
+.nav-mk-todo { color:#d9b757; } .nav-mk-empty { color:var(--dim); }
+.nav-mk-choice { color:var(--accent-hi); font-weight:700; }
+.nav-swatch { display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:middle; }
 .ol-item.lvl1 { font-weight:600; } .ol-item.lvl2 { padding-left:18px; }
 .ol-item.lvl3 { padding-left:28px; color:var(--dim); }
 .ol-item.lvl4,.ol-item.lvl5,.ol-item.lvl6 { padding-left:38px; color:var(--dim); }
+/* ไฮไลต์บล็อกที่เพิ่งกระโดดไป — ไม่งั้นในหน้ายาว ๆ หาไม่เจอว่าเคอร์เซอร์ไปโผล่ตรงไหน
+   เป็น "แผ่นทับ" ลูกของ .pane (ไม่ใช่คลาสบน DOM ของ ProseMirror ซึ่งถูกสร้างใหม่ทับได้ตลอด) */
+.k-nav-flash { position:absolute; pointer-events:none; z-index:3; border-radius:4px;
+  background:var(--accent); animation:k-nav-flash 1.4s ease-out forwards; }
+@keyframes k-nav-flash { 0% { opacity:.45; } 100% { opacity:0; } }
+/* คำอธิบายสัญลักษณ์ในหน้าตั้งค่า */
+.nav-legend { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:2px 12px; margin:4px 0 10px; }
+.nav-legend-row { color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); }
 .dim { color:var(--dim); padding:4px 8px; }
 
 /* ---------- SmartType popup ---------- */
@@ -1552,7 +1649,7 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
 .dash-num { font-size:calc(26px * var(--ui-scale, 1)); font-weight:700; color:var(--bright); }
 .dash-label { color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); margin-top:4px; }
 /* ---------- โหมดโฟกัส ---------- */
-body.focus-mode #titlebar, body.focus-mode #topbar, body.focus-mode #toolbar,
+body.focus-mode #titlebar, body.focus-mode #toolbar,
 body.focus-mode #tabs, body.focus-mode #statusbar,
 body.focus-mode #findbar { display:none !important; }
 /* แผงข้างทั้งหมดหายไป — เหลือเฉพาะสายที่ถือแผงเอกสาร (แทนกฎ #sidebar เดิม)
@@ -2228,25 +2325,21 @@ body.paper-mode .k-paper .sp-raw { color:#888; }
   width:calc(30px * var(--ui-scale, 1)); flex:none; }
 .k-fab-item-tx { padding-right:10px; }
 #k-fab-menu[data-disp="text"] .k-fab-item-tx { padding:0 14px; }
-/* บันทึกทั้งหมดปุ่ม */
-#save-all-btn { background:transparent; border:1px solid var(--border); border-radius:6px;
-  padding:3px 8px; cursor:pointer; font-size:calc(14px * var(--ui-scale, 1)); }
-#save-all-btn:hover { background:var(--hover); }
-/* ปุ่มหน้าแรก */
-#home-btn { background:transparent; border:1px solid var(--border); border-radius:6px;
-  padding:3px 8px; cursor:pointer; font-size:calc(14px * var(--ui-scale, 1)); }
-#home-btn:hover { background:var(--hover); }
+/* [alpha.137] ปุ่มบันทึก/หน้าแรกเดิมของ #topbar ถูกถอดกฎทิ้ง —
+   ปุ่มบันทึกโปรเจกต์ใช้กฎ `.tb-txt` ร่วมกับปุ่มโปรเจกต์ตัวอื่น · ปุ่มหน้าแรกไปอยู่เมนู มุมมอง */
 
 /* ====== กลุ่ม 4: Status Bar + Progress Bar + Filter Bar ====== */
-/* Progress bar ใน top bar */
-#prog-wrap { flex:0 1 180px; min-width:80px; height:4px; background:var(--border);
-  border-radius:2px; overflow:hidden; cursor:pointer; margin:0 8px; }
+/* [alpha.137] Progress bar ย้ายมาอยู่ "กลางแถบสถานะล่าง" ตามที่ผู้ใช้ขอ */
+#status-mid { flex:1; display:flex; align-items:center; justify-content:center;
+  gap:12px; min-width:0; }
+#prog-wrap { flex:0 0 calc(180px * var(--ui-scale, 1)); min-width:80px; height:4px; background:var(--border);
+  border-radius:2px; overflow:hidden; cursor:pointer; }
 #prog-bar { width:100%; height:100%; }
 #prog-fill { height:100%; width:0%; background:var(--accent); border-radius:2px;
   transition:width .5s ease; }
 #prog-wrap:hover #prog-fill { background:var(--accent-hi); }
 /* Status bar extras */
-#status-center { flex:1; text-align:center; font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); }
+#status-center { flex:0 1 auto; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); }
 #status-mode, #status-save, #status-scenes { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); margin-left:10px; }
 #status-save { font-size:calc(13px * var(--ui-scale, 1)); }
 /* Filter bar ใต้หัว explorer */
@@ -2349,7 +2442,7 @@ body.reading-mode .k-resize-handle,
 body.reading-mode .k-panel-head,
 body.reading-mode .k-tab-group .k-tab-bar { display:none !important; }
 body.reading-mode #statusbar { display:none !important; }
-body.reading-mode #topbar { display:none !important; }
+
 body.reading-mode #k-fab { display:none; }
 /* [alpha.60r2 ข้อ 9] ปิดปุ่มลอยได้จากตั้งค่า — ต้องซ่อนเมนูของมันด้วย ไม่งั้นเมนูค้างลอยอยู่ */
 body.k-fab-off #k-fab, body.k-fab-off #k-fab-menu { display:none !important; }
@@ -2505,7 +2598,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
    เพราะ @page ใช้ CSS variable ไม่ได้ · ที่นี่เหลือแค่กฎที่ไม่ขึ้นกับขนาดกระดาษ */
 @media print {
   body { background:#fff !important; color:#000 !important; }
-  #titlebar,#topbar,#toolbar,#statusbar,#k-fab,#tabs { display:none !important; }
+  #titlebar,#toolbar,#statusbar,#k-fab,#tabs { display:none !important; }
   .k-panel:not(.k-holds-docs), .k-tab-group:not(.k-holds-docs), .k-dock:not(.k-holds-docs),
   .k-resize-handle, .k-tab-bar, .k-panel-head, .k-min-tray { display:none !important; }
   #panes { position:static !important; }
@@ -3740,6 +3833,20 @@ body.paper-mode .k-paper .sp-page-break-num { background:var(--paper); color:var
    (`firstBlock.paddingTop = 0` ใน renderPageView) และทำให้ที่ว่างท้ายหน้าไม่ติดลบ
    ★ ต้องยกเว้นตอนวัด ไม่งั้นเรขาคณิตขึ้นกับ "ตอนนี้เส้นคั่นอยู่ตรงไหน" = จัดหน้าไม่นิ่ง */
 body:not(.k-measuring) .ed-page-break + * { margin-top:0 !important; }
+/* ══ [alpha.143r2] ★★ คู่แฝดอีกด้าน: **บล็อกสุดท้ายของหน้าไม่มีระยะท้าย** ══
+   ผู้ใช้: *"น่าจะเกิดจาก padding ของรูป — เมื่อรูปอยู่ชิดขอบและไม่มีตัวหนังสือ (เพราะ force
+            ไปหน้าใหม่) padding ขอบล่างของรูปต้องถูกลดหรือเป็น 0 ถูกเปล่า"* — **ถูกต้อง**
+
+   ตัวจัดหน้าไม่นับระยะเว้นท้ายบล็อกเป็นความจุของหน้ามาตั้งแต่ alpha.82 (กฎ AbiWord:
+   วัดจากหมึกบรรทัดสุดท้าย ไม่ใช่ขอบกล่อง) แต่ **ตอนวาดกลับยังกินที่จริง** — ระยะนั้นไปแทรก
+   ระหว่างบล็อกสุดท้ายกับกล่องเส้นคั่น ทำให้ "เนื้อหาที่หน้านั้นใช้ไป" บวมขึ้นเท่ากับระยะท้าย
+   หน้าที่เกือบเต็มอยู่แล้ว (โดยเฉพาะหน้าที่จบด้วย **รูป** ซึ่งมีระยะ 1em ทั้งบนและล่าง)
+   จึงล้นเกินเพดาน แล้ว `pad` ถูกหนีบเป็น 0 = ชดเชยไม่ไหว → หมึกไหลต่ำกว่าพื้นที่พิมพ์
+
+   กฎบรรทัดบน (`.ed-page-break + *`) ดูแลด้าน "หัวหน้าใหม่" มาตั้งแต่ alpha.93 —
+   ด้าน "ท้ายหน้าเดิม" ไม่เคยมีใครดูแล · ยกเว้นตอนวัดเหมือนกันเป๊ะ ไม่งั้นเรขาคณิตขึ้นกับ
+   ตำแหน่งเส้นคั่นปัจจุบัน = จัดหน้าไม่นิ่ง (เหตุผลเดียวกับกฎบน) */
+body:not(.k-measuring) .ProseMirror *:has(+ .ed-page-break) { margin-bottom:0 !important; }
 /* ══ [alpha.103 ข้อ 1] ★ คู่แฝดที่หายไป: **บล็อกแรกของหน้าแรก** ══
    ผู้ใช้: *"ถ้าบรรทัดแรกในฉากมีระยะบรรทัดไม่เหมือนตัวอักษรทั่วไป มันล้นหน้ากระดาษ"*
    กฎบรรทัดบนดูแล "บล็อกแรกของหน้า 2 เป็นต้นไป" มาตั้งแต่ alpha.93 แต่ **หน้าแรกไม่เคยมีใครดูแล**
@@ -3905,6 +4012,35 @@ body.paper-mode .pane.sp-view-layout > .workspace > .ProseMirror {
   box-shadow:0 4px 26px rgba(0,0,0,.45); }
 /* ตัวแก้ไขต้องอยู่ "บน" แผ่นเสมอ (.ProseMirror มี position:relative อยู่แล้ว) */
 .pane.k-paper > .workspace > .ProseMirror { z-index:1; }
+
+/* [alpha.143r ข้อ 3] ป้ายบอกหน้าที่ริมแถบเลื่อน (แบบ Google Docs) — โผล่ตอนเลื่อน แล้วจางหาย
+   อยู่ใน `.pane` (ตัวที่เลื่อน) จึงต้องบวก scrollTop เข้ากับ `top` เอง ดู drawPageHud() */
+.k-page-hud { position:absolute; right:14px; z-index:5; pointer-events:none; user-select:none;
+  padding:3px 10px; border-radius:6px; background:var(--sunken); color:var(--dim);
+  border:1px solid var(--border); box-shadow:0 2px 10px rgba(0,0,0,.35);
+  font-size:calc(11px * var(--ui-scale, 1)); white-space:nowrap;
+  opacity:0; transition:opacity .18s; }
+.k-page-hud.on { opacity:.95; }
+
+/* ══ [alpha.143r] ★★ ผ้าคลุมพื้นโต๊ะ = **mask จริง ๆ** ไม่ใช่แผ่นทึบมาปิดทับ ══
+   ผู้ใช้: *"เงาหน้ากระดาษโดนตัดเลยดูแปลก ๆ เพราะมันเป็นแผ่นมาบัง · มันควรเป็น container
+            มากกว่า แบบเกิน container จะไม่แสดง คือเป็น mask จริง ๆ"* — ถูกต้องทุกคำ
+   รอบแรกทำเป็น `<div>` พื้นสีโต๊ะปูทับช่องว่าง ซึ่ง **กินเงาของแผ่นกระดาษไปด้วย** (เงาแผ่ออก
+   นอกขอบกระดาษ ก็เลยโดนแผ่นทึบบังหายเป็นเส้นตรง) · ตอนนี้ตัดที่ตัวเนื้อหาเองด้วย `mask-image`
+   → อะไรที่ล้นออกนอก "แผ่น" ก็แค่ไม่ถูกวาด · ชั้นแผ่นที่อยู่ข้างหลังยังวาดเงาของมันครบทุกใบ
+
+   เรขาคณิตของโหมดนี้เป็นคาบซ้ำเป๊ะอยู่แล้ว (`k × (สูงกระดาษ + ช่องว่าง)`) จึงใช้
+   `repeating-linear-gradient` ได้ตรง ๆ: ทึบเท่าความสูงกระดาษ แล้วโปร่งเท่าช่องว่าง วนไปเรื่อย ๆ
+   — ไม่ต้องมี element เพิ่มแม้แต่ตัวเดียว และไม่ต้องอัปเดตตอนเลื่อนจอ
+   ค่า `--k-pg-h` / `--k-pg-gap` ตั้งจาก `renderPaperSheets()` (ที่เดียวกับที่วางแผ่น) */
+.pane.sp-view-layout > .workspace > .ProseMirror {
+  --k-pg-band:repeating-linear-gradient(to bottom,
+    #000 0 var(--k-pg-h, 1056px),
+    transparent var(--k-pg-h, 1056px) calc(var(--k-pg-h, 1056px) + var(--k-pg-gap, 28px)));
+  -webkit-mask-image:var(--k-pg-band); mask-image:var(--k-pg-band);
+  -webkit-mask-origin:border-box; mask-origin:border-box;
+  -webkit-mask-repeat:repeat; mask-repeat:repeat;
+}
 
 /* [alpha.100 ข้อ 2] เส้นบอกระยะขอบกระดาษ — สวิตช์ที่ ตั้งค่า → หน้ากระดาษ (ค่าเริ่มต้น = ปิด)
    ผู้ใช้: *"มี toggle แสดงระยะตัดตก แต่ต้องมีทั้งหัวและล่าง กับไม่มีเลย"*
@@ -5829,11 +5965,28 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
   pointer-events:none; }
 
 /* ─── [alpha.124 ข้อ 33] จุดที่ตัวตรวจบทแจ้ง — เห็นในเอกสาร ไม่ใช่มีแต่ตัวเลขบนแถบสถานะ ───
-   ใช้เส้นขอบซ้ายบางแทนการขีดเส้นใต้ทั้งบล็อก: บทภาพยนตร์วัดระยะเยื้องจากขอบกระดาษ
-   (กฎข้อ 15/31) จึงห้ามกินพื้นที่ในบรรทัด — เส้นวางในระยะขอบด้วย box-shadow ที่ไม่กิน layout */
-.ProseMirror .sp-err-error { box-shadow:inset 3px 0 0 -1px var(--danger, #d9534f); }
-.ProseMirror .sp-err-warn  { box-shadow:inset 3px 0 0 -1px var(--warn, #d9b757); }
-.ProseMirror .sp-err-error, .ProseMirror .sp-err-warn { border-radius:2px; }
+   ใช้ขีดสั้น ๆ ในระยะขอบแทนการขีดเส้นใต้ทั้งบล็อก: บทภาพยนตร์วัดระยะเยื้องจากขอบกระดาษ
+   (กฎข้อ 15/31) จึงห้ามกินพื้นที่ในบรรทัด
+
+   [alpha.138] **เดิมเป็น `box-shadow:inset` = เส้นสูงเท่าทั้งบล็อก ชิดตัวอักษรพอดี** → ผู้ใช้เจอสองอาการ:
+     1. บล็อกยาวที่คาบเกี่ยวรอยต่อหน้า ทำให้เส้น **ลากทะลุช่องว่างระหว่างแผ่นกระดาษ** ในมุมมองจัดหน้า
+        (เนื้อหาไหลเป็นสายเดียว แผ่นกระดาษเป็นฉากหลัง — inset shadow จึงยาวข้ามหน้าไปด้วย)
+     2. เส้นอยู่ที่ขอบในของกล่องพอดี = **ติดตัวอักษร**
+   แก้: เป็น `::before` ลอย **นอกกล่องไปทางซ้าย** และสูงแค่ *บรรทัดเดียว* (กริดของโมเดล `--sp-line-h`)
+   → ไม่แตะตัวอักษร · ไม่มีทางยาวข้ามหน้า · ยังไม่กิน layout เพราะเป็น absolute
+   (`top` ใช้สูตรเดียวกับ widget เลขฉาก: `--k-pad` = จำนวนบรรทัดของระยะเว้นนำ) */
+.ProseMirror .sp-err-error, .ProseMirror .sp-err-warn { position:relative; }
+.ProseMirror .sp-err-error::before, .ProseMirror .sp-err-warn::before {
+  content:''; position:absolute; pointer-events:none;
+  left:calc(-1 * var(--sp-err-gap, 12px)); width:3px; border-radius:2px;
+  top:calc(var(--k-pad, 0) * var(--sp-line-h, 16px));
+  height:var(--sp-line-h, 16px);
+}
+.ProseMirror .sp-err-error::before { background:var(--danger, #d9534f); }
+.ProseMirror .sp-err-warn::before  { background:var(--warn, #d9b757); }
+/* ตอน "วัดของจริง" (k-measuring) ห้ามมีอะไรนอกเหนือเนื้อหาโผล่มากวนการวัด */
+body.k-measuring .ProseMirror .sp-err-error::before,
+body.k-measuring .ProseMirror .sp-err-warn::before { display:none; }
 
 /* [alpha.124 ข้อ 42] Kanban: เลือกฉบับร่าง + เส้นบอกตำแหน่งวางการ์ด */
 .kb-draft { margin-left:auto; max-width:240px; }
@@ -5874,3 +6027,84 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
   padding:3px 8px 3px 22px; font-size:calc(11.5px * var(--ui-scale, 1)); }
 .tree-draft-sel { flex:1; min-width:0; padding:2px 6px;
   font-size:calc(11.5px * var(--ui-scale, 1)); }
+
+/* ══════════ [alpha.141] โหมดอ่านทั้งเล่ม + จัดการบท ══════════ */
+/* ช่องติ๊กที่ "ไม่ใช่ .wiki-check" โดยตั้งใจ — เทสหลายจุดอ้าง .wiki-check ตามลำดับ
+   แทรกตัวใหม่เข้ากลุ่มเดิมเมื่อไหร่ พังพร้อมกันหมด (บทเรียนข้อ 12) */
+.wiki-flowchk { width:18px; height:18px; margin:0; flex:0 0 auto;
+  accent-color:var(--accent-hi); cursor:pointer; }
+.k-sec-readrow .k-sec-read { padding:4px 10px; cursor:pointer; }
+
+/* --- โอเวอร์เลย์โหมดอ่าน --- */
+/* ══ [alpha.141r] ★ กล่องซ้อนทับที่กินพื้นที่ถึงขอบบนจอ = คลิกไม่ได้ ══
+   `#titlebar` เป็น `-webkit-app-region:drag` และ **OS คิดเขตลากจากกรอบของ element
+   โดยไม่สนลำดับการซ้อน** — อะไรที่ไปทับ 36px บนสุด คลิกจะถูกกลืนไปเป็น "ลากหน้าต่าง" หมด
+   (บทเรียนเดียวกับแผงลอยใน 0.56a #6 · แถบเครื่องมือของโหมดอ่านอยู่ที่ y 0–48 พอดี
+   ผู้ใช้จึงกดปุ่มบนแถบไม่ได้เลยสักปุ่ม เหลือแต่คีย์ลัด)
+   แก้ที่ `.k-overlay` ทั้งตระกูล ไม่ใช่เฉพาะโหมดอ่าน — กล่องอื่นที่สูงพอจะชนขอบบนก็เจอเหมือนกัน */
+.k-overlay, .k-overlay * { -webkit-app-region:no-drag; }
+.k-rd-overlay { background:rgba(0,0,0,.82); z-index:120; align-items:stretch; justify-content:stretch; }
+.k-rd-wrap { flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; }
+.k-rd-bar { flex:0 0 auto; display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  padding:8px 14px; background:var(--side); border-bottom:1px solid var(--border); }
+.k-rd-title { font-weight:600; color:var(--bright); margin-right:6px; }
+.k-rd-pick { max-width:240px; }
+.k-rd-btn { padding:4px 10px; cursor:pointer; }
+.k-rd-jump { width:72px; }
+.k-rd-pageno { min-width:96px; text-align:center; color:var(--dim); }
+.k-rd-close { margin-left:auto; }
+/* ★ `.sp-pageview` เป็น `position:absolute; inset:0` (มีไว้ปูทับ pane ของตัวแก้ไข)
+   เวทีของโหมดอ่านยืมคลาสนั้นมาเพื่อได้ CSS หน้ากระดาษฟรี ๆ จึงต้อง **ถอดการวางตำแหน่งทิ้ง**
+   ไม่งั้นเวทีปูทับแถบเครื่องมือของตัวเองจนหายไปทั้งแถบ (เจอจากภาพสกรีนช็อตของ e2e)
+   min-height:0 = เวทีย่อลงได้จริง (บทเรียนข้อ 18) */
+.k-rd-stage { position:relative; inset:auto; flex:1 1 auto; min-height:0; overflow:auto;
+  display:flex; flex-wrap:wrap; align-items:flex-start; align-content:flex-start;
+  justify-content:center; gap:18px; padding:18px; }
+.k-rd-busy { color:var(--dim); padding:40px; text-align:center; width:100%; }
+
+/* --- จัดการบท (ใช้โครงการ์ดชุดเดียวกับจัดการเล่ม) --- */
+.chapters-wrap .chapters-book { max-width:220px; }
+.chapters-hint { margin:6px 0 10px; }
+.chapter-card .book-cover.cover-off { opacity:.45; }
+.chapter-cover-text { padding:6px; font-size:calc(11px * var(--ui-scale, 1)); line-height:1.4;
+  overflow:hidden; text-align:center; }
+.chapter-cover-on { display:flex; align-items:center; gap:6px; margin:4px 0; cursor:pointer; }
+.chapter-cover-on input { width:18px; height:18px; accent-color:var(--accent-hi); cursor:pointer; }
+.chapter-cover-txt { min-height:52px; }
+.chapters-wrap .books-title { white-space:nowrap; }
+
+/* [alpha.142] ธงของหน้าปกเล่มบนการ์ดจัดการเล่ม + hint ขนาดรูปในกล่องคุณสมบัติเล่ม */
+.book-cover-flags { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0; }
+.k-sec-covhint { margin:2px 0 8px; line-height:1.5; }
+
+/* ══ [alpha.142 ข้อ 6] รูปในเอกสาร: เต็มหน้า · ความกว้างเป็น % · ขอบมนปรับได้ ══
+   คู่แฝดของกฎใน `proseExportCss()` — แก้ที่นี่ต้องไปแก้ที่นั่นด้วยเสมอ (กฎถาวรข้อ 5)
+   `aspect-ratio` ไม่ใช่ความสูงเป็นนิ้ว เพราะบนจอเอกสารถูกย่อตามระดับซูม แต่สัดส่วนไม่เปลี่ยน
+   → ตัวจัดหน้าที่วัดของจริงจึงได้ความสูง "เท่าหนึ่งหน้าพอดี" ทั้งบนจอและในไฟล์ */
+/* ══ [alpha.143 ข้อ 2] ★ รูปเต็มหน้า = **แทนหน้ากระดาษทั้งแผ่น** ══
+   ผู้ใช้: *"ขนาดรูปแบบเต็มหน้า ต้องเต็มจริง ๆ … หน้านั้นจะเป็นรูปภาพอย่างเดียว"*
+
+   กล่องของ `<figure>` สูงเท่า **พื้นที่พิมพ์หนึ่งหน้าเป๊ะ** (aspect-ratio) — ตัวจัดหน้าจึงให้
+   แผ่นเต็มใบกับมันพอดี (คู่กับ breakBefore/breakAfter ใน prose-measure.js)
+   ส่วนตัวรูปวางแบบ `absolute` **ล้นออกไปถึงขอบกระดาษ** ซึ่งไม่กินที่ในสายเนื้อหาเลย
+   → หน้าตาชนขอบจริง โดยที่การวัด/หั่นหน้าไม่ขยับแม้แต่พิกเซลเดียว
+   (กฎคู่แฝดอยู่ใน `proseExportCss()` — ฝั่งไฟล์ใช้ @page ไร้ระยะขอบแทน) */
+.ProseMirror figure.k-img-page { margin:0; position:relative; width:100%;
+  aspect-ratio:var(--page-ar, 6 / 9); overflow:visible; }
+/* วางแบบ absolute เสมอ (ไม่ใช่แค่ตอนล้นขอบ) — ความสูงของกล่องมาจาก `aspect-ratio` ล้วน ๆ
+   ตัวรูปจึงไม่มีทางไปดันความสูงของบล็อกให้เพี้ยนจากที่ตัวจัดหน้าจองไว้ */
+.ProseMirror figure.k-img-page img { position:absolute; inset:0;
+  width:100%; height:100%; object-fit:cover; max-width:none; max-height:none; }
+/* ★ มุมมองจัดหน้า: ภาพถูกทาที่ **ตัวแผ่นกระดาษ** (paintFullPageSheets ใน app.js) ซึ่งอยู่ที่
+   ตำแหน่งตายตัว จึงชนขอบเป๊ะเสมอ — รูปในสายเนื้อหาจึงต้องซ่อน ไม่งั้นเห็นภาพซ้อนสองชั้น
+   (รอบแรกลองให้รูปล้นออกไปชนขอบเอง แล้วสกรีนช็อตของ e2e ฟ้องว่ายังเหลือขอบขาวราวหนึ่ง
+    บรรทัดที่หัวแผ่น เพราะสายเนื้อหากับแผ่นคลาดกันได้เล็กน้อยเป็นปกติ — ดูคอมเมนต์ยาวใน app.js)
+   กล่องของรูปยังกินที่เท่าเดิมทุกประการ (visibility ไม่ใช่ display) การจัดหน้าจึงไม่ขยับ */
+.pane.sp-view-layout > .workspace > .ProseMirror figure.k-img-page img { visibility:hidden; }
+.k-paper-sheet.k-sheet-image { background-size:cover; background-position:center;
+  background-repeat:no-repeat; }
+/* [alpha.143 ข้อ 1] รูปที่ตั้งความกว้างเอง (25/50/75/100%) ต้องไม่สูงเกินหนึ่งหน้า —
+   บล็อกที่สูงเกินหน้าตัดตามบรรทัดไม่ได้ ตัวจัดหน้าเลยต้องตัดดิบ แล้วเส้นคั่นหายไปทั้งจุด */
+/* ★ ต้องหักระยะขอบของ `<figure>` (บน 1em + ล่าง 1em) ออกด้วย — ไม่งั้นบล็อกรวมสูง "เกินหนึ่งหน้า
+   นิดเดียว" ซึ่งพาไปเข้าเส้นทางตัดดิบพอดี แล้วรูปถูกผ่ากลางคาบสองแผ่น (ผู้ใช้ส่งภาพมายืนยัน) */
+.ProseMirror figure.k-img-w img { max-height:calc(var(--page-content-h, 9in) - 2.2em); }

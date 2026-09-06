@@ -91,7 +91,10 @@ function sliceProsePagesRaw(blocks, contentHeight, totalHeight) {
 
   for (let i = 0; i < list.length; i++) {
     const b = list[i];
-    if (b.breakBefore && b.top > pageStart) newPage(b.top);
+    // [alpha.143 ข้อ 2] `breakAfter` ของบล็อกก่อนหน้า = `breakBefore` ของบล็อกนี้
+    // (รูปเต็มหน้าจึงอยู่บนแผ่นของตัวเองเสมอ ไม่มีข้อความมาต่อท้ายในแผ่นเดียวกัน)
+    const forced = b.breakBefore || (i > 0 && list[i - 1].breakAfter);
+    if (forced && b.top > pageStart) newPage(b.top);
     // [AbiWord ข้อ 4] ระยะเว้นท้ายย่อหน้าไม่กินความจุของหน้า — วัดจากหมึกบรรทัดสุดท้าย
     const inkBottom = b.top + b.height - Math.max(0, num(b.spaceAfterPx, 0));
     // ══ [alpha.103r ข้อ 2] ★★ บล็อกที่สูงเกินหนึ่งหน้า **ต้องยอมให้ตัดกลาง** ══
@@ -259,9 +262,28 @@ export function lineStartCharOffset(node, lineTop) {
 export const FORCE_BREAK_SEL = '.k-manual-page-break, .pb';
 const isForcedBreak = (el) => !!(el && el.matches && el.matches(FORCE_BREAK_SEL));
 
+/**
+ * ══ [alpha.143 ข้อ 2] ★ รูป "เต็มหน้า" = **กินแผ่นทั้งแผ่น ไม่แบ่งกับใคร** ══
+ *
+ * ผู้ใช้: *"ขนาดรูปแบบเต็มหน้า ต้องเต็มจริง ๆ เรียกว่าแทนหน้ากระดาษเลย …
+ *          เมื่อใช้แบบเต็มหน้า หน้านั้นจะไม่ได้ถูกใช้เลย จะเป็นรูปภาพอย่างเดียว"*
+ *
+ * ของเดิม `fit=page` เป็นแค่ "กล่องสูงเท่าพื้นที่พิมพ์" ที่ไหลอยู่ในสายเนื้อหาตามปกติ →
+ * ถ้ามันเริ่มกลางหน้า ที่เหลือของหน้าก่อนก็ยังมีข้อความ แล้วตัวรูปถูกดันไปคร่อมสองแผ่น
+ * (กลายเป็นบล็อกสูงเกินหนึ่งหน้า = เข้าเส้นทาง "ตัดดิบ" ซึ่งแปลงพิกัดกลับไม่ได้ → เส้นคั่นหาย)
+ *
+ * กติกาใหม่: **บังคับขึ้นหน้าใหม่ทั้งก่อนและหลัง** — แผ่นนั้นจึงมีแต่รูปใบเดียว
+ * ส่วนการทาให้ชนขอบกระดาษเป็นหน้าที่ของตัววาด (`fullPageImages` + `opts.bleed`)
+ */
+export const FULLPAGE_SEL = 'figure.k-img-page';
+export const isFullPageFigure = (el) => !!(el && el.matches && el.matches(FULLPAGE_SEL));
+
 /** ชนิดของบล็อกจากชื่อแท็ก — ใช้ตัดสินกฎ widow/keepNext */
 function blockRules(el) {
   if (isForcedBreak(el)) return { splitMinLines: 99, breakBefore: true };
+  if (isFullPageFigure(el)) {
+    return { splitMinLines: 99, breakBefore: true, breakAfter: true, fullPage: true };
+  }
   const tag = (el.tagName || '').toLowerCase();
   if (/^h[1-6]$/.test(tag)) return { splitMinLines: 99, keepNext: true };  // หัวข้อห้ามฉีก + ห้ามค้างท้ายหน้า
   if (tag === 'hr' || tag === 'figure' || tag === 'img') return { splitMinLines: 99 };
@@ -453,6 +475,37 @@ export function resetCutFail() {
   CUT_FAIL.threw = 0; CUT_FAIL.ok = 0;
 }
 
+/**
+ * ══ [alpha.143r ข้อ 4] ★★ ตำแหน่ง "ก่อนบล็อกนี้" ที่ถูกต้องกับ **ทุกชนิดโหนด** ══
+ *
+ * ผู้ใช้ส่งภาพมาว่ารูปที่อยู่ตรงขอบล่างทำให้หน้าเลื่อน แล้วหมึกไหลต่ำกว่าพื้นที่พิมพ์ ·
+ * วัดจริงแล้วพบว่า **โมเดลถูกทุกหน้า** (789/859/168 จากเพดาน 864) แต่ที่วาดจริงได้ 745/903
+ * = มีบล็อกหนึ่งขนาด 44px หลุดจากหน้า 1 ไปโผล่หน้า 2 แล้วหน้า 2 ล้นเกินเพดาน 39px
+ *
+ * ต้นตอ: `view.posAtDOM(el, 0) - 1`
+ *   · `<p>` — `posAtDOM(el, 0)` = ตำแหน่ง **ข้างใน** ย่อหน้า → ลบ 1 = ก่อนย่อหน้า ✔
+ *   · `<figure>` (โหนด atom ไม่มีตำแหน่งข้างใน) — `posAtDOM(el, 0)` = **ก่อนโหนดอยู่แล้ว**
+ *     → ลบ 1 อีกที = ไปโผล่ก่อน *บล็อกก่อนหน้า* = เส้นคั่นเลื่อนขึ้นหนึ่งบล็อกเต็ม ๆ
+ * ดังนั้นหน้าที่ **เริ่มด้วยรูป** จะดูดย่อหน้าสุดท้ายของหน้าก่อนมาด้วยเสมอ (แล้วล้น)
+ *
+ * ท่าที่ถูก: ได้ตำแหน่งมาแล้วให้ **ถามกลับ** ว่าโหนดที่ตำแหน่งนั้นคือ element ตัวเดียวกันไหม
+ * (`nodeDOM`) — ตรงก็คือ "ก่อนบล็อก" อยู่แล้ว ไม่ตรงค่อยถอยหนึ่ง · ใช้ได้กับทุกชนิดโหนด
+ * โดยไม่ต้องรู้ว่าอันไหนเป็น atom
+ */
+export function posBeforeBlock(view, el) {
+  if (!view || !el) return null;
+  let p;
+  try { p = view.posAtDOM(el, 0); } catch { return null; }
+  if (!Number.isFinite(p)) return null;
+  const doc = view.state && view.state.doc;
+  const size = doc ? doc.content.size : 0;
+  for (const cand of [p, p - 1]) {
+    if (cand < 0 || cand > size) continue;
+    try { if (view.nodeDOM(cand) === el) return cand; } catch { /* ไม่ใช่ขอบโหนด */ }
+  }
+  return Math.max(0, p - 1);
+}
+
 export function prosePosAtCut(view, blocks, y) {
   if (!view || !Number.isFinite(y)) return null;
   const list = blocks || [];
@@ -461,7 +514,7 @@ export function prosePosAtCut(view, blocks, y) {
   //    ยืดมาคาบเกี่ยวหัวบล็อกถัดไป ถ้าไล่เรียงลำดับเฉย ๆ บล็อกก่อนหน้าจะคว้าไปแล้วหาไม่เจอ
   for (const b of list) {
     if (Math.abs(y - b.top) >= 0.6) continue;
-    try { return Math.max(0, view.posAtDOM(b.el, 0) - 1); } catch { return null; }
+    return posBeforeBlock(view, b.el);
   }
   // 2) จุดตัดกลางบล็อก → หาบรรทัดที่ตรงกับพิกัดนั้น
   for (const b of list) {
@@ -551,6 +604,58 @@ export function proseBreakList(view, blocks, pages, basePage = 1, contentHeight 
 // ═══════════════════ มุมมองหน้ากระดาษ (เรียงหน้าคู่ / ภาพรวม) ═══════════════════
 
 /**
+ * ══ [alpha.143 ข้อ 2] แผ่นไหนเป็น "รูปเต็มหน้า" และรูปใบไหน ══
+ *
+ * คีย์ = **ลำดับที่เท่าไรในชุดหน้าที่ส่งเข้ามา** (ไม่ใช่เลขหน้าของทั้งเล่ม) — ตรงกับ
+ * argument ที่ `renderProseClipPages` ส่งให้ `opts.bleed()` เป๊ะ ผู้เรียกทุกคนจึงไม่ต้อง
+ * รู้เรื่องนี้เลย แค่ส่ง `blocks` ที่วัดมาให้ · หน้าที่หัวแผ่นตรงกับบล็อกรูปเต็มหน้า = แผ่นนั้นทั้งแผ่น
+ * @param {Array<object>} blocks ผลของ measureProseBlocks
+ * @param {Array<{start:number}>} pages ชุดหน้าที่กำลังจะวาด
+ * @returns {Map<number,string>} ลำดับหน้า (1-based) → URL ของรูป
+ */
+export function fullPageImages(blocks, pages) {
+  const out = new Map();
+  const list = (pages && pages.pages) || pages || [];
+  const full = (blocks || []).filter((b) => b && b.fullPage);
+  if (!full.length || !list.length) return out;
+  for (let i = 0; i < list.length; i++) {
+    const start = num(list[i] && list[i].start, 0);
+    for (const b of full) {
+      if (Math.abs(num(b.top, -1e9) - start) > 0.6) continue;
+      const im = b.el && b.el.querySelector ? b.el.querySelector('img') : null;
+      const src = im ? (im.currentSrc || im.getAttribute('src') || '') : '';
+      if (src) out.set(i + 1, src);
+      break;
+    }
+  }
+  return out;
+}
+
+/**
+ * ══ [alpha.143 ข้อ 1] ★ รอรูปโหลดให้เสร็จก่อนวัด — วัดก่อนรูปมา = **หน้าเหลื่อมทั้งไฟล์** ══
+ *
+ * ผู้ใช้: *"รูปใหญ่ เช่น 75% หรือรูปปกติ ทำให้การคำนวณตัดหน้าเหลื่อมหมดเลย"*
+ *
+ * `<img>` ที่ยังไม่โหลดสูง 0 — ตัววัดจึงคิดว่าย่อหน้าถัด ๆ ไปอยู่สูงกว่าความจริงราวหนึ่งหน้า
+ * แล้ว **ไม่มีใครสั่งวัดใหม่อีกเลย** เพราะสายจัดหน้าถูกปลุกด้วย "เอกสารเปลี่ยน" เท่านั้น
+ * (ตระกูลเดียวกับ alpha.104r ฟอนต์/ระยะขอบ และ alpha.109 รอฟอนต์โหลด)
+ * โหมดอ่านทั้งเล่มมีตัวรอแบบนี้ของตัวเองมาตั้งแต่ต้น — ย้ายมาไว้ที่นี่ให้ทุกสายใช้ตัวเดียวกัน
+ */
+export function whenImagesReady(root, ms = 2500) {
+  const imgs = root && root.querySelectorAll
+    ? [...root.querySelectorAll('img')].filter((im) => !im.complete)
+    : [];
+  if (!imgs.length) return null;                       // null = ไม่มีอะไรต้องรอ (ผู้เรียกวัดได้เลย)
+  return Promise.race([
+    Promise.all(imgs.map((im) => new Promise((res) => {
+      im.addEventListener('load', res, { once: true });
+      im.addEventListener('error', res, { once: true });
+    }))),
+    new Promise((res) => setTimeout(res, ms)),
+  ]);
+}
+
+/**
  * [alpha.82] วาดหน้ากระดาษจาก "สำเนาเนื้อหาจริง แล้วครอบตามช่วง Y ของหน้า"
  *
  * ของเดิม renderProsePageView() สร้างย่อหน้าขึ้นมาใหม่จากผลการเดา — เนื้อหาบนหน้าจึงไม่ตรง
@@ -577,6 +682,10 @@ export function renderProseClipPages(host, pm, pages, opts = {}) {
   master.removeAttribute('id');
   for (const g of master.querySelectorAll('.' + GAP_CLASS)) g.remove();
 
+  // [alpha.143 ข้อ 2] แผ่นที่เป็น "รูปเต็มหน้า" — ผู้เรียกส่ง `blocks` มาก็พอ ที่เหลือที่นี่จัดการเอง
+  // (ผู้เรียกที่ไม่ส่งมาก็ได้พฤติกรรมเดิมทุกประการ)
+  const fullMap = opts.blocks ? fullPageImages(opts.blocks, list) : null;
+
   const els = [];
   for (const pg of list) {
     const slot = document.createElement('div');
@@ -598,7 +707,33 @@ export function renderProseClipPages(host, pm, pages, opts = {}) {
     page.style.paddingRight = num(m.right, 1) + 'in';
     page.style.transform = 'scale(' + scale + ')';
 
-    const label = opts.label ? opts.label(els.length + 1) : '';
+    // ══ [alpha.142r] ★ ภาพเต็มหน้า **ชนขอบกระดาษ** ══
+    //
+    // ผู้ใช้: "ปกเล่ม ถ้ามีรูป ควรขึ้นรูปเต็มหน้า" — ครั้งแรกทำเป็น "เต็มพื้นที่พิมพ์"
+    // แล้วภาพที่ได้ยังมีกรอบขาวรอบรูป (เห็นจากสกรีนช็อตของ e2e) ซึ่งไม่ใช่ปกหนังสือ
+    //
+    // เนื้อหาในสายเอกสารไม่มีทางล้นออกไปในระยะขอบได้เลย เพราะ `.ed-page-clip` เป็น
+    // `overflow:hidden` และมันคือหัวใจของการหั่นหน้า (จะไปเปิด overflow ไม่ได้)
+    // → ทางที่ถูกคือ **ทาที่พื้นของแผ่นกระดาษเอง**: `.sp-page` กินเต็มแผ่นและ `overflow:hidden`
+    //   อยู่แล้ว พื้นหลังของมันจึงชนขอบพอดีโดยไม่ต้องแตะตรรกะจัดหน้าแม้แต่บรรทัดเดียว
+    // ผู้เรียกที่ไม่ส่ง `bleed` มา (มุมมองจัดหน้า · ช่องตัวอย่างส่งออก) ไม่รู้จักเรื่องนี้เลย
+    const pageNo = els.length + 1;
+    // สองที่มาคนละเรื่องกัน — **หน้าปก** (ผู้เรียกบอกมา) กับ **รูปเต็มหน้าในเนื้อเรื่อง**
+    // ต่างกันตรงเลขหน้า: ปกบทยังพิมพ์เลขตามธรรมเนียม (คำสั่งจาก alpha.141–142)
+    // ส่วนแผ่นที่เป็นรูปล้วนกลางเล่มไม่พิมพ์เลขทับรูป
+    const coverUrl = typeof opts.bleed === 'function' ? (opts.bleed(pageNo) || '') : '';
+    const fullUrl = fullMap ? (fullMap.get(pageNo) || '') : '';
+    const bleedUrl = coverUrl || fullUrl;
+    if (bleedUrl) {
+      page.style.backgroundImage = 'url("' + String(bleedUrl).replace(/"/g, '%22') + '")';
+      page.style.backgroundSize = 'cover';
+      page.style.backgroundPosition = 'center';
+      page.style.backgroundRepeat = 'no-repeat';
+    }
+
+    // [alpha.143 ข้อ 2] แผ่นที่เป็น "รูปเต็มหน้าในเนื้อเรื่อง" ไม่พิมพ์เลขทับรูป
+    // (ยังนับเป็นหนึ่งแผ่นตามปกติ เลขของแผ่นถัด ๆ ไปจึงไม่ขยับ) · หน้าปกยังพิมพ์เลขเหมือนเดิม
+    const label = opts.label && !fullUrl ? opts.label(pageNo) : '';
     if (label) {
       const n = document.createElement('div');
       n.className = 'sp-page-num';
@@ -624,7 +759,11 @@ export function renderProseClipPages(host, pm, pages, opts = {}) {
     if (Number.isFinite(sp)) clip.dataset.pos = String(sp);
     const inner = master.cloneNode(true);
     inner.style.cssText = 'width:' + textW + 'in;max-width:none;padding:0;min-height:0;' +
-                          'margin:' + (-num(pg.start, 0)) + 'px 0 0;';
+                          'margin:' + (-num(pg.start, 0)) + 'px 0 0;'
+      // แผ่นที่ทาพื้นด้วยภาพแล้ว ไม่ต้องวาดตัวภาพในสายเอกสารซ้ำอีก (ไม่งั้นภาพซ้อนกันสองชั้น)
+      // ★ ต้องต่อท้าย `cssText` ไม่ใช่ตั้ง `style.visibility` ก่อนหน้า — การกำหนด `cssText`
+      //   **ล้างสไตล์อินไลน์ทั้งก้อนทิ้ง** (เทสจับได้ทันทีในรอบแรก)
+      + (bleedUrl ? 'visibility:hidden;' : '');
     clip.append(inner);
     page.append(clip);
     slot.append(page);

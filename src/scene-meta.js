@@ -5,7 +5,7 @@
 // ผลคือแก้ไฟล์ .md นอกโปรแกรมแล้วข้อมูลไม่ตรงกัน และ scenes.json บวมจนอ่านด้วยตาไม่ไหว
 //
 // ตอนนี้:
-//   scenes.json = **ดัชนีเบา** (id · title · order · fileName · chapterGuid · status · color · flag · wordCount · startPage)
+//   scenes.json = **ดัชนีเบา** (id · title · order · fileName · chapterGuid · status · color · flag · wordCount · startPage · pageFlow)
 //   .md frontmatter = **คุณสมบัติจริง** (เรื่องย่อ · POV · อารมณ์ · … ) — แก้นอกโปรแกรมได้ตรง ๆ
 //
 // ทุกทางอ่าน/เขียนคุณสมบัติฉากต้องผ่าน readSceneMeta/writeSceneMeta ไฟล์นี้เท่านั้น
@@ -23,6 +23,8 @@ export const SCENE_HEAVY_KEYS = [
 export const SCENE_INDEX_KEYS = [
   'id', 'title', 'order', 'fileName', 'chapterGuid',
   'status', 'color', 'flag', 'isFavorite', 'wordCount', 'startPage', 'date',
+  // [alpha.141] 'continue' = ไล่เลขหน้าต่อจากฉาก/บทก่อนหน้าในเล่มเดียวกัน (ดู book-flow.js)
+  'pageFlow',
 ];
 const HEAVY = new Set(SCENE_HEAVY_KEYS);
 const BOOL_KEYS = new Set(['isFlashback', 'isFlashforward']);

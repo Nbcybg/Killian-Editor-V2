@@ -227,6 +227,20 @@ export async function withBusy(msg, fn) {
 // [alpha.60 ข้อ 94] แยกเป็น 2 ระดับ:
 //   global (user) — เก็บใน %APPDATA%/Killian2/settings.json · ใช้ร่วมกันทุกโปรเจกต์
 //   project      — เก็บใน project.khn.json · ต่อโปรเจกต์
+// ══ [alpha.137] ธีมของโปรแกรม — **แหล่งความจริงเดียว** ══
+// กล่องตั้งค่า (ตั้งค่า → ทั่วไป → ธีมสี) · เมนู มุมมอง · applyTheme() อ่านจากรายการนี้ทั้งหมด
+// เพิ่มธีมใหม่ = เพิ่มที่นี่ + เขียน `body.theme-<id>` ใน style.css + เพิ่มคีย์ป้ายใน CSV
+// ห้ามให้ธีมแตะ --paper-* (กฎเหล็ก: ธีมเปลี่ยนเฉพาะเปลือกโปรแกรม ไม่แตะหน้ากระดาษ)
+//
+// [alpha.138] ผู้ใช้สั่งเลิกธีม dark/light ของเดิม — เหลือจานสีประจำโปรแกรมสองเฉด
+// และ **ไม่มีปุ่มบนแถบ ไม่มีคีย์ลัด** อีกแล้ว (เลือกจาก dropdown ในตั้งค่าอย่างเดียว)
+export const THEMES = ['k2', 'k2-light'];
+export const THEME_LABEL_KEYS = {
+  k2: 'ui.settings.themeK2', 'k2-light': 'ui.settings.themeK2Light',
+};
+/** ค่าเก่าที่เคยบันทึกไว้ในไฟล์โปรเจกต์/ตั้งค่าผู้ใช้ → ธีมที่ใช้แทน (ห้ามลบ ไม่งั้นของเก่าตกไปค่าเริ่มต้นเงียบ ๆ) */
+export const THEME_ALIAS = { dark: 'k2', light: 'k2-light' };
+
 export const GLOBAL_DEFAULTS = {
   autoSaveMinutes: 5, maxBackups: 10, autoBackup: true, lineNumbers: false,
   // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง — ปิดได้ (บางคนบอกว่ามันบังงาน)
@@ -235,9 +249,10 @@ export const GLOBAL_DEFAULTS = {
   fab: null,
   // [alpha.111] ปุ่มที่ถูกถอดออกจากแถบรูปแบบลอย แยกตามโหมด { prose:{hidden:{}}, screenplay:{hidden:{}} }
   fmtbar: null,
-  // [alpha.60r2 ข้อ 10] ธีมของโปรแกรม — Ctrl+Shift+P สลับ dark ↔ light
+  // [alpha.60r2 ข้อ 10] ธีมของโปรแกรม — Ctrl+Shift+P วนธีม (ดู THEMES ด้านล่าง)
   // (คนละเรื่องกับ paperMode ซึ่งเป็น "หน้าตาของกระดาษ" ไม่ใช่ของ UI)
-  theme: 'dark',
+  // [alpha.137] ค่าเริ่มต้น = 'k2' — จานสีประจำโปรแกรมที่ผู้ใช้กำหนด
+  theme: 'k2',
   uiFontSize: 0, uiScale: 1, spellCheck: true, spellCheckDict: true, autoMention: true, recycleDays: 30,
   paperMode: true, fontFamily: '', language: 'th', spFontFamily: '',
   // [alpha.100 ข้อ 4] สีกระดาษ — เลือกเองได้ (พรีเซ็ต/สีใดก็ได้) · '' = ค่าเริ่มต้น (ขาว)
@@ -313,6 +328,11 @@ export const PROJECT_DEFAULTS = {
   // ค่าเริ่มต้น 32 ตามที่ผู้ใช้กำหนด · หนีบช่วง 4–500 ที่ history-data.clampLimit
   historyLimit: 32,
   historyOff: false,        // true = ปิดการจดประวัติทั้งโปรเจกต์
+  // [alpha.140] แผง Navigation — ผู้ใช้เลือกได้ว่าจะเลื่อนยาวหรือแบ่งหน้า และหน้าละกี่แถว
+  //   'scroll' = รายการเดียวเลื่อนยาว (ค่าเริ่มต้น · พฤติกรรมเดิม)
+  //   'page'   = แบ่งหน้า มีปุ่มหน้าก่อน/ถัดไปที่ท้ายแผง
+  navMode: 'scroll',
+  navPerPage: 50,           // หนีบช่วง 5–500 ที่ nav-model.clampPerPage
 };
 // รวมเป็น DEFAULT_SETTINGS — ให้โค้ดที่ใช้อยู่ไม่พัง (ยังอ้าง key ชื่อเดิมทุกตัว)
 export const DEFAULT_SETTINGS = { ...GLOBAL_DEFAULTS, ...PROJECT_DEFAULTS };
@@ -649,9 +669,7 @@ export const SHORTCUTS = [
   ['KeyR', true, true, 'fmt', 'align', 'right'],
   ['KeyJ', true, true, 'fmt', 'align', 'justify'],
   ['KeyM', true, true, 'toggle-format'],
-  // [alpha.60r2 ข้อ 10] Ctrl+Shift+P เดิมสลับ "โหมดหน้ากระดาษ" (ซ้ำกับปุ่ม 📄 บนแถบอยู่แล้ว)
-  // ตอนนี้ใช้สลับธีมสว่าง/มืดของโปรแกรม — โหมดหน้ากระดาษยังกดได้ที่ปุ่มและเมนู มุมมอง
-  ['KeyP', true, true, 'toggle-theme'],
+  // [alpha.138] Ctrl+Shift+P (สลับธีม) ถูกถอดตามคำสั่งผู้ใช้ — ธีมย้ายไปอยู่ในตั้งค่าอย่างเดียว
   ['KeyF', true, true, 'global-search'],
   ['KeyD', true, true, 'focus-mode'],
   ['KeyO', true, true, 'quick-open'],
@@ -728,6 +746,9 @@ export const SHORTCUTS = [
   ['KeyB', 'ctrl+alt', true, 'toggle-panel', 'backlinks'],
   ['KeyT', 'ctrl+alt', true, 'thesaurus'],
   ['KeyI', 'ctrl+alt', true, 'import-scrivener'],
+  // [alpha.141] จัดการบท (คู่กับ Ctrl+Alt+K = จัดการเล่ม) · อ่านทั้งเล่ม
+  ['KeyK', 'ctrl+alt', true, 'toggle-panel', 'chapters'],
+  ['KeyR', 'ctrl+alt', true, 'read-book'],
   // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
   ['KeyD', 'ctrl+alt', false, 'toggle-panel', 'dashboard'],
   ['KeyT', 'ctrl+alt', false, 'toggle-panel', 'timeline'],
@@ -789,7 +810,6 @@ export const SHORTCUT_LABELS = {
   'fmt:heading:1': 'shortcuts.heading1', 'fmt:heading:2': 'shortcuts.heading2', 'fmt:heading:3': 'shortcuts.heading3',
   'fmt:paragraph': 'shortcuts.bodyText', 'fmt:ul': 'shortcuts.bulletList', 'fmt:ol': 'shortcuts.numberedList',
   'fmt:clear': 'shortcuts.clearFormatting', 'toggle-format': 'shortcuts.toggleFormat', 'focus-mode': 'shortcuts.focusMode',
-  'toggle-theme': 'shortcuts.toggleTheme',
   'global-search': 'shortcuts.globalSearch',
   'quick-open': 'shortcuts.quickOpen', 'typewriter': 'shortcuts.typewriter',
   'fmt:align:left': 'shortcuts.alignLeft', 'fmt:align:center': 'shortcuts.alignCenter',
@@ -832,6 +852,8 @@ export const SHORTCUT_LABELS = {
   'toggle-panel:planner': 'ui.shortcuts.panelPlanner',
   'toggle-panel:branch': 'ui.shortcuts.panelBranch',
   'toggle-panel:books': 'ui.shortcuts.panelBooks',
+  'toggle-panel:chapters': 'ui.chapters.title',
+  'read-book': 'ui.readbook.title',
   'toggle-panel:codex': 'ui.shortcuts.panelCodex',
   'toggle-panel:history': 'ui.shortcuts.panelHistory',
   'toggle-panel:record': 'ui.shortcuts.panelRecord',
@@ -877,7 +899,7 @@ export const SHORTCUT_CATS = [
     ids: ['toggle-format', 'sp-element:parenthetical', 'sp-element:dialogue', 'sp-element:transition',
           'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
   { key: 'view', labelKey: 'ui.shortcuts.catView',
-    ids: ['toggle-theme', 'focus-mode', 'typewriter', 'reading-mode', 'line-numbers',
+    ids: ['focus-mode', 'typewriter', 'reading-mode', 'read-book', 'line-numbers',
           'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu',
           'fmtbar-here', 'fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock'] },
   { key: 'create', labelKey: 'ui.shortcuts.catCreate',
@@ -894,7 +916,9 @@ export const SHORTCUT_CATS = [
           'toggle-panel:starter', 'toggle-panel:tree', 'toggle-panel:outline',
           'toggle-panel:notes', 'toggle-panel:log', 'toggle-panel:search',
           // [alpha.125 ข้อ G]
-          'toggle-panel:backlinks'] },
+          'toggle-panel:backlinks',
+          // [alpha.141] จัดการบท
+          'toggle-panel:chapters'] },
   { key: 'other', labelKey: 'ui.shortcuts.catOther', ids: ['settings', 'dev-console', 'cheatsheet'] },
 ];
 

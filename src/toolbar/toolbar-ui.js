@@ -84,6 +84,41 @@ export function applyToolbarConfig(cfg) {
 }
 
 /**
+ * [alpha.139] เส้นคั่นหมวดบนแถบเครื่องมือ — แบบเดียวกับ Firefox/Chrome
+ *
+ * ผู้ใช้: *"หมวดหมู่ของแถบเครื่องมือ คั่นด้วย | เหมือน firefox หรือ chrome"*
+ *
+ * **ทำไมต้องสร้างตอนรัน ไม่ใช่เขียนไว้ใน index.html**: `setupFloatingFormatBar()` ย้ายปุ่ม
+ * จัดรูปแบบ 20 กว่าตัวออกไปแถบลอย **แล้วลบ `.sep` ใน `#toolbar` ทิ้งทั้งหมด** — เส้นคั่นที่เขียนไว้
+ * ในไฟล์จึงหายเกลี้ยงทุกครั้ง (แถบเลยเป็นไอคอนพรืดยาวเส้นเดียวมาตลอด)
+ * ตัวนี้จึงถูกเรียก **หลัง** การย้ายนั้น แล้วแทรกเส้นตามรอยต่อของ `TOOLBAR_GROUPS` ที่เหลืออยู่จริง
+ *
+ * เส้นที่แทรกมีคลาส `sep` ด้วย → `applyToolbarConfig()` เอาไปเข้าตรรกะเดิมได้ทันที
+ * (ซ่อนเส้นที่กลายเป็นเส้นซ้อน/เส้นหัวท้ายเมื่อผู้ใช้ปิดทั้งกลุ่ม — `layoutToolbar()`)
+ *
+ * @returns {number} จำนวนเส้นที่แทรก
+ */
+export function applyToolbarGroupSeps() {
+  const bar = document.querySelector('#toolbar');
+  if (!bar) return 0;
+  bar.querySelectorAll('.tb-gsep').forEach((n) => n.remove());
+  let prev = '', n = 0;
+  for (const kid of [...bar.children]) {
+    if (!kid.id) continue;                       // เส้นคั่นแถบโปรเจกต์ / ที่จับ — ไม่ใช่ปุ่ม
+    const g = TC.groupOf(kid.id);
+    if (!g) { prev = ''; continue; }             // ปุ่มโปรเจกต์ (ไม่สังกัดกลุ่มไหน)
+    if (prev && g !== prev) {
+      const sep = document.createElement('span');
+      sep.className = 'sep tb-gsep';
+      bar.insertBefore(sep, kid);
+      n++;
+    }
+    prev = g;
+  }
+  return n;
+}
+
+/**
  * [alpha.111] แถบรูปแบบลอย — ซ่อนตามที่ผู้ใช้ตั้งไว้ **ของโหมดปัจจุบัน**
  * และทำปุ่มที่โหมดนี้ใช้ไม่ได้เป็นสีเทา (`.tb-na`) โดยยังเห็นอยู่
  *

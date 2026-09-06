@@ -25,20 +25,18 @@
     <span class="win-btn win-close" id="win-close" title="ปิดโปรแกรม" data-i18n-title="ui.html.winClose" data-icon="x"></span>
   </span>
 </div>
-<div id="topbar">
-  <span id="projname" data-i18n="app.title">Killian 2</span>
-  <div id="prog-wrap">
-    <div id="prog-bar"><div id="prog-fill"></div></div>
-  </div>
-  <span id="elem-badge"></span>
-  <button id="new-btn" data-i18n="app.newProject">สร้างโปรเจกต์ใหม่…</button>
-  <button id="open-btn" data-i18n="app.openProject">เปิดโปรเจกต์…</button>
-  <button id="save-all-btn" title="บันทึกทั้งหมด (Ctrl+Shift+S)" data-i18n-title="ui.html.saveAllBtn" style="display:none" data-icon="save"></button>
-  <button id="home-btn" title="หน้าแรก" data-i18n-title="ui.html.homeBtn" data-icon="home"></button>
-</div>
+<!-- [alpha.137] แถบโปรเจกต์ + แถบเครื่องมือ = **บรรทัดเดียวกัน**
+     ผู้ใช้: "เอาเลือกรูปแบบออก (มีในแถบลอยแล้ว) · ลบชื่อ Killian 2 (ซ้ำหลายจุด) ·
+     progress bar ย้ายไปแถบสถานะล่างตรงกลาง · เหลือ 3 ปุ่ม icon+ข้อความ · ด้านขวาไม่มีอะไร ·
+     สร้างโปรเจกต์ใหม่ไปอยู่เมนู ไฟล์"
+     → #topbar ถูกลบทิ้งทั้งแถบ · ปุ่มโปรเจกต์มาอยู่หัว #toolbar (ซึ่งเป็นแผง adopt อยู่แล้ว)
+     ห้ามใช้ class="sep" คั่นตรงนี้ — setupFloatingFormatBar() ลบ .sep ใน #toolbar ทิ้งทั้งหมด -->
 <div id="toolbar">
-  <!-- [alpha.60r2 ข้อ 10] ธีมของโปรแกรม (มืด/สว่าง) — Ctrl+Shift+P · ไม่แตะหน้ากระดาษ -->
-  <button id="tb-theme" class="tb tb-toggle" title="ธีมมืด — คลิกเพื่อไปธีมสว่าง (Ctrl+Shift+P)" data-i18n-title="ui.html.tbTheme" data-icon="sun"></button>
+  <button id="open-btn" class="tb tb-txt" data-icon="folder" data-i18n="app.openProject" data-i18n-title="app.openProject">เปิดโปรเจกต์</button>
+  <button id="save-all-btn" class="tb tb-txt" style="display:none" data-icon="save" data-i18n="ui.html.saveProjBtn" data-i18n-title="ui.html.saveProjBtn">บันทึกโปรเจกต์</button>
+  <button id="search-all-btn" class="tb tb-txt tb-toggle" data-icon="search" data-i18n="ui.html.searchProjBtn" data-i18n-title="ui.html.searchProjBtn">ค้นหาทั้งโปรเจกต์</button>
+  <span class="k-topsep"></span>
+  <!-- [alpha.138] ปุ่มธีมถูกถอดออกตามคำสั่งผู้ใช้ — ธีมเลือกที่ ตั้งค่า → ทั่วไป → ธีมสี อย่างเดียว -->
   <button id="tb-mode" data-i18n="ui.html.tbModeText" title="สลับโหมดเอกสาร นิยาย ↔ บทหนัง (Ctrl+Shift+M)" data-i18n-title="ui.html.tbMode" style="display:none">📖 นิยาย ▾</button>
   <select id="tb-sp-elem" class="tb" style="display:none">
     <option value="action" data-i18n="ui.html.elAction">บรรยาย</option>
@@ -158,6 +156,7 @@
   <button id="tb-timeline" class="tb tb-toggle" title="เส้นเวลา (Ctrl+Alt+T)" data-i18n-title="ui.html.tbTimeline" data-icon="history"></button>
   <button id="tb-maps" class="tb tb-toggle" title="แผนที่ (Ctrl+Alt+M)" data-i18n-title="ui.html.tbMaps" data-icon="map"></button>
   <button id="tb-books" class="tb tb-toggle" title="จัดการเล่ม (Ctrl+Alt+K)" data-i18n-title="ui.html.tbBooks" data-icon="book"></button>
+  <button id="tb-chapters" class="tb tb-toggle" title="จัดการบท (Ctrl+Alt+Shift+K)" data-i18n-title="ui.html.tbChapters" data-icon="book-content"></button>
   <button id="tb-network" class="tb tb-toggle" title="ผังความสัมพันธ์ (Ctrl+Alt+N)" data-i18n-title="ui.html.tbNetwork" data-icon="link"></button>
   <!-- [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ ทั้งโปรเจกต์ -->
   <button id="tb-backlinks" class="tb tb-toggle" title="ฉากที่กล่าวถึง (Ctrl+Alt+Shift+B)" data-i18n-title="ui.worldAutoLink.panelTitle" data-icon="link"></button>
@@ -229,6 +228,8 @@
     <div id="dash-panel" class="k-featpanel"><div id="dash-body"></div></div>
     <div id="kanban-panel" class="k-featpanel"><div id="kanban-body"></div></div>
     <div id="books-panel" class="k-featpanel"><div id="books-body"></div></div>
+    <!-- [alpha.141] จัดการบท — คู่แฝดของจัดการเล่ม (ปกบท/ลำดับบท/สถิติ) -->
+    <div id="chapters-panel" class="k-featpanel"><div id="chapters-body"></div></div>
     <div id="tl-panel" class="k-featpanel"><div id="tl-body"></div></div>
     <div id="maps-panel" class="k-featpanel"><div id="maps-body"></div></div>
     <!-- [alpha.60r1 ข้อ 21] คลังรูปเป็นแผง — เดิมเป็นแท็บเอกสาร แย่งที่กับฉากที่กำลังเขียน -->
@@ -265,7 +266,11 @@
   <!-- [alpha.62 บั๊ก 9+10] "กำลังทำอะไรอยู่" — แทนหน้าจอ loading เต็มจอที่เคยทับกล่องบันทึก
        จนคลิกไม่ได้ (ต้อง force quit) · ตัวนี้ไม่บล็อกการคลิกอะไรเลย -->
   <span id="status-busy" style="display:none"><span class="k-busy-spin"></span><span id="status-busy-text"></span></span>
-  <span id="status-center"></span>
+  <!-- [alpha.137] ตรงกลางแถบสถานะ = คำใบ้ + แถบความคืบหน้า (ย้ายมาจาก #topbar ที่ถูกลบ)
+       #status-center ถูกเขียนด้วย textContent → ห้ามวางแถบไว้ "ข้างใน" มัน -->
+  <div id="status-mid"><span id="status-center"></span>
+    <div id="prog-wrap"><div id="prog-bar"><div id="prog-fill"></div></div></div>
+  </div>
   <div id="status-right">
     <span id="wc"></span>
     <!-- [54] จำนวนข้อผิดพลาดในบท — คลิกเพื่อไปข้อถัดไป -->

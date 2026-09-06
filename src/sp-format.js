@@ -20,6 +20,18 @@ export const PAPER_SIZES = {
   letter: { name: t('ui.spFormat.letterInch'), width: 8.5,  height: 11,    unit: 'in' },
   a4:     { name: t('ui.spFormat.a4Inch'), width: 8.27, height: 11.69, unit: 'in' },
   legal:  { name: t('ui.spFormat.legalInch'),  width: 8.5,  height: 14,    unit: 'in' },
+  // ── [alpha.142] ขนาดเล่มจริงของหนังสือ (ผู้ใช้ขอมาเป็นรายการ) ──
+  // Letter/A4/Legal เป็นขนาด "กระดาษพิมพ์" ไม่ใช่ขนาด "เล่ม" — คนเขียนนิยาย/ไลต์โนเวล
+  // ต้องจัดหน้าบนขนาดเล่มจริงตั้งแต่แรก ไม่งั้นจำนวนหน้า/จุดตัดหน้าที่เห็นตลอดทางไม่มีความหมาย
+  // ขนาดที่มาจากเซนติเมตรแปลงเป็นนิ้วไว้แล้ว (1 in = 2.54 cm) — ทั้งไฟล์นี้ใช้หน่วยนิ้ว
+  digest:   { name: t('ui.spFormat.paperDigest'),   width: 5.5,   height: 8.5,   unit: 'in' },
+  trade:    { name: t('ui.spFormat.paperTrade'),    width: 6,     height: 9,     unit: 'in' },
+  novella:  { name: t('ui.spFormat.paperNovella'),  width: 5,     height: 8,     unit: 'in' },
+  massmkt:  { name: t('ui.spFormat.paperMass'),     width: 4.25,  height: 6.87,  unit: 'in' },
+  bunko:    { name: t('ui.spFormat.paperBunko'),    width: 4.1,   height: 5.8,   unit: 'in' },
+  tankobon: { name: t('ui.spFormat.paperTankobon'), width: 5,     height: 7.5,   unit: 'in' },
+  pocketth: { name: t('ui.spFormat.paperPocket'),   width: 5.709, height: 8.268, unit: 'in' },
+  a5:       { name: t('ui.spFormat.paperA5'),       width: 5.827, height: 8.268, unit: 'in' },
   custom: { name: t('ui.spFormat.define'),                width: 8.5,  height: 11,    unit: 'in' },
 };
 export const MARGIN_DEFAULTS = { top: 1, bottom: 1, left: 1.5, right: 1 };
@@ -380,6 +392,15 @@ export function pageCssVars(fmt) {
     '--mg-left': m.left + 'in',
     '--mg-right': m.right + 'in',
     '--text-w': +textWidth(f.paper, m).toFixed(4) + 'in',
+    // [alpha.142 ข้อ 6] อัตราส่วน "กว้าง : สูง" ของพื้นที่พิมพ์ — รูปเต็มหน้าใช้ค่านี้ผ่าน
+    // `aspect-ratio` แทนการตั้งความสูงเป็นนิ้วตรง ๆ เพราะบนจอเอกสารถูกย่อ/ขยายตามระดับซูม
+    // (ตั้งเป็นนิ้ว = ความสูงคงที่ แต่ความกว้างหด → ตัวจัดหน้าวัดได้คนละค่ากับตอนพิมพ์จริง)
+    '--page-ar': +textWidth(f.paper, m).toFixed(4) + ' / '
+                 + +(num(f.paper.height, 11) - num(m.top, 1) - num(m.bottom, 1)).toFixed(4),
+    // [alpha.143 ข้อ 1] ความสูงพื้นที่พิมพ์หนึ่งหน้า — เพดานของรูปที่ปรับความกว้างเอง
+    // (รูปสูงเกินหนึ่งหน้า = บล็อกที่ตัดตามบรรทัดไม่ได้ → ตัวจัดหน้าต้อง "ตัดดิบ"
+    //  ซึ่งแปลงพิกัดกลับเป็นตำแหน่งในเอกสารไม่ได้ แล้วเส้นคั่นหน้าถูกทิ้งเงียบ ๆ = หน้าเหลื่อม)
+    '--page-content-h': +(num(f.paper.height, 11) - num(m.top, 1) - num(m.bottom, 1)).toFixed(4) + 'in',
     // [alpha.57a] เลขหน้า — ระยะจากขอบกระดาษ (ไม่ใช่จากขอบพื้นที่พิมพ์)
     '--pg-no-top': (f.pageNumbers?.top ?? 0.5) + 'in',
     '--pg-no-right': (f.pageNumbers?.right ?? 1) + 'in',

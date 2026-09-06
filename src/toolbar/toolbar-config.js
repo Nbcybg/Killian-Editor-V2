@@ -14,6 +14,10 @@
 /** ปุ่มที่ผู้ใช้ซ่อนไม่ได้ — โปรแกรมเป็นคนคุมการแสดงผลตามโหมดเอกสาร (นิยาย/บทหนัง) */
 export const LOCKED_BUTTONS = [
   'tb-mode', 'tb-sp-elem', 'tb-sp-ext', 'sp-view-select',
+  // [alpha.137] ปุ่มโปรเจกต์ที่หัวแถบ (เดิมอยู่บน #topbar ซึ่งถูกลบทั้งแถว) —
+  // เป็นทางเข้าหลักของการเปิด/บันทึก/ค้นหาทั้งผลงาน จึงซ่อนไม่ได้
+  // (ปุ่มบันทึกโผล่เมื่อมีโปรเจกต์เปิดอยู่เท่านั้น — โปรแกรมคุม display เอง)
+  'open-btn', 'save-all-btn', 'search-all-btn',
 ];
 
 /**
@@ -22,7 +26,8 @@ export const LOCKED_BUTTONS = [
  */
 export const TOOLBAR_GROUPS = [
   { key: 'view', labelKey: 'ui.tbcfg.grpView', buttons: [
-    { id: 'tb-theme' }, { id: 'tb-read' },
+    // [alpha.138] `tb-theme` ถูกถอดออกทั้งปุ่มและคีย์ลัด — ธีมอยู่ในตั้งค่าอย่างเดียว
+    { id: 'tb-read' },
     { id: 'tb-focus' }, { id: 'tb-typewriter' }, { id: 'tb-linenum' }, { id: 'tb-md-codes' },
   ] },
   { key: 'style', labelKey: 'ui.tbcfg.grpStyle', buttons: [
@@ -63,7 +68,8 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-comments' }, { id: 'tb-notes-panel' }, { id: 'tb-log' },
   ] },
   { key: 'story', labelKey: 'ui.tbcfg.grpStory', buttons: [
-    { id: 'tb-timeline' }, { id: 'tb-maps' }, { id: 'tb-books' }, { id: 'tb-network' },
+    { id: 'tb-timeline' }, { id: 'tb-maps' }, { id: 'tb-books' }, { id: 'tb-chapters' },
+    { id: 'tb-network' },
     { id: 'tb-planner' }, { id: 'tb-branch' }, { id: 'tb-floorplan' }, { id: 'tb-player' },
     { id: 'tb-gallery-board' }, { id: 'tb-backlinks' },
   ] },
@@ -205,7 +211,8 @@ export const FMT_MODES = ['prose', 'screenplay'];
  * (ตัวที่ไม่ได้อยู่ใน TOOLBAR_GROUPS เช่น `tb-fmt-here` ถือว่าเป็นของแถบ คุมไม่ได้)
  */
 export const FMTBAR_IDS = [
-  'tb-sp-elem', 'sp-view-select', 'tb-mode', 'tb-style', 'tb-case',
+  // [alpha.139] `tb-sp-ext` ย้ายมาจากแถบเครื่องมือ (ผู้ใช้สั่ง) — อยู่ติดกับตัวเลือกรูปแบบของบท
+  'tb-sp-elem', 'tb-sp-ext', 'sp-view-select', 'tb-mode', 'tb-style', 'tb-case',
   'tb-bold', 'tb-italic', 'tb-underline', 'tb-strike', 'tb-sup', 'tb-sub',
   'tb-color',
   'tb-ul', 'tb-ol', 'tb-quote',
@@ -231,7 +238,8 @@ export const FMT_UNSUPPORTED = {
   // [alpha.132 ข้อ 9] สีตัวอักษรเป็นของนิยายเท่านั้น — บทเก็บเป็น fountain ล้วน
   // ใส่สีลงไปจะพังการอ่านกลับ (กฎเดียวกับที่ align ของบทเป็น session-only)
   screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote', 'tb-color'],
-  prose: ['tb-sp-elem', 'tb-sp-cont'],   // (`tb-sp-ext` อยู่บนแถบหลัก ไม่ใช่แถบลอย)
+  // `tb-sp-ext` ไม่ต้องใส่: โปรแกรมซ่อนมันเองเมื่อไม่ใช่บท (refreshToolbar) จึงไม่มีอะไรให้ทำเป็นสีเทา
+  prose: ['tb-sp-elem', 'tb-sp-cont'],
 };
 
 /** โหมดนี้ใช้ปุ่มนี้ได้ไหม */

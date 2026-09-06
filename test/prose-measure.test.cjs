@@ -14,6 +14,7 @@ const build = (name) => {
 };
 const M = build('prose-measure');
 const P = build('prose-format');
+const X = build('prose-export-view');
 
 let pass = 0, fail = 0;
 function check(name, cond, extra) {
@@ -160,6 +161,56 @@ const para = (top, n, extra) => ({
   check('[103r-2] ★★ หัวข้อสั้นที่คร่อมขอบหน้า ยังถูกยกไปทั้งก้อน (ไม่ฉีก)',
         p2.length === 2 && Math.abs(p2[1].start - h2.top) < 0.001,
         JSON.stringify(p2.map((p) => p.start)));
+}
+
+// ═══════ [alpha.143] รูปในเอกสาร: เต็มหน้า = กินแผ่นทั้งแผ่น · เพดานหนึ่งหน้า ═══════
+{
+  const LH = 28;
+  // ย่อหน้า 3 บรรทัด → รูปเต็มหน้า → ย่อหน้า 3 บรรทัด (ถ้าไม่มีกฎ ทั้งชุดจะยัดกันสองหน้า)
+  const p1 = para(0, 3);
+  const fig = { top: 3 * LH, height: CH, splitMinLines: 99,
+                breakBefore: true, breakAfter: true, fullPage: true,
+                el: { querySelector: () => ({ currentSrc: 'file:///x/sunset.png',
+                                              getAttribute: () => 'sunset.png' }) } };
+  const p2 = para(3 * LH + CH, 3);
+  const pages = M.sliceProsePages([p1, fig, p2], CH, 3 * LH + CH + 3 * LH);
+  check('[143-2] ★★ รูปเต็มหน้าได้แผ่นของตัวเอง (ขึ้นหน้าใหม่ทั้งก่อนและหลัง)',
+        pages.length === 3
+        && Math.abs(pages[1].start - fig.top) < 0.001
+        && Math.abs(pages[2].start - (fig.top + CH)) < 0.001,
+        JSON.stringify(pages.map((x) => +x.start.toFixed(1))));
+  const map = M.fullPageImages([p1, fig, p2], pages.map((x, i) => ({ ...x, index: i + 1 })));
+  check('[143-2] ★ ตัววาดรู้ว่าแผ่นที่ 2 คือรูปเต็มหน้า และเป็นรูปใบไหน',
+        map.size === 1 && map.get(2) === 'file:///x/sunset.png', JSON.stringify([...map]));
+  // รูปเต็มหน้าที่หัวเอกสารพอดี = ไม่ต้องแทรกแผ่นว่างนำหน้า
+  const fig0 = { ...fig, top: 0 };
+  const pg0 = M.sliceProsePages([fig0, para(CH, 3)], CH, CH + 3 * LH);
+  check('[143-2] ★ รูปเต็มหน้าที่หัวเอกสารไม่สร้างแผ่นว่างนำหน้า',
+        pg0.length === 2 && pg0[0].start === 0, JSON.stringify(pg0.map((x) => x.start)));
+  check('[143-2] เอกสารที่ไม่มีรูปเต็มหน้า = ไม่มีแผ่นไหนถูกทาภาพ',
+        M.fullPageImages([p1, p2], pages).size === 0);
+}
+
+// ── กฎคู่แฝดของ CSS ที่ส่งออก (กฎถาวรข้อ 5: จอ · ตัวอย่าง · ไฟล์ ต้องมาจากที่เดียวกัน) ──
+{
+  const css = P.proseExportCss(P.mergeProseFormat({}),
+                               { width: 8.5, height: 11 },
+                               { top: 1, bottom: 1, left: 1.5, right: 1 });
+  const rule = (re) => (css.match(re) || [''])[0];
+  // [alpha.143r ข้อ 4] เพดาน = หนึ่งหน้า **ลบระยะขอบของ `<figure>` (1em+1em)** — ไม่งั้นบล็อกรวม
+  // สูงเกินหนึ่งหน้านิดเดียว แล้วตัวจัดหน้าต้องตัดดิบ = รูปถูกผ่ากลางคาบสองแผ่น
+  check('[143-1] ★ เพดานรูปที่ตั้งความกว้างเอง = หนึ่งหน้า ลบระยะขอบของกรอบรูป',
+        css.includes('figure.k-img-w img{max-height:calc(9in - 2.2em)}'),
+        rule(/figure\.k-img-w[^}]*}/));
+  check('[143-2] ★ กล่องของรูปเต็มหน้าสูงเท่าพื้นที่พิมพ์หนึ่งหน้าพอดี (6 / 9)',
+        /figure\.k-img-page\{[^}]*aspect-ratio:6 \/ 9/.test(css),
+        rule(/figure\.k-img-page\{[^}]*}/));
+  check('[143-2] ★★ ตอนพิมพ์จริง แผ่นของรูปเต็มหน้าเป็นหน้าไร้ระยะขอบ (ภาพชนขอบกระดาษ)',
+        css.includes('@page k-bleed{size:8.5in 11in;margin:0}')
+        && /@media print\{figure\.k-img-page\{page:k-bleed;break-before:page;break-after:page/.test(css),
+        rule(/@page k-bleed[^}]*}/));
+  check('[143-2] ★ ช่องตัวอย่าง/หน้าจอไม่เอากฎของเครื่องพิมพ์ไปใช้ (scopeCss ทิ้ง @page/@media)',
+        !X.scopeCss(css, '.k-xpv-doc').includes('k-bleed'));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
