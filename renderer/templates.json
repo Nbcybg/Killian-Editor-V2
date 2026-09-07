@@ -1,0 +1,671 @@
+{
+  "version": 1,
+  "note": "แก้ไฟล์นี้ได้เลยด้วย Notepad — เพิ่ม/ลบ/แก้ field, section, property ได้ทุกจุด. type ที่ใช้ได้: String, Text, Int, Bool, Date, Enum, EntityRef. entityTypeKey = ชื่อโฟลเดอร์ในคลัง Wiki | บล็อก \"profile\" = หัวการ์ดโปรไฟล์ (subtitleField/statusField/badgeFields/statusWords) — รูปประจำตัวเป็นของ entity.images ทุกหมวดมีเหมือนกันหมด ไม่ต้องประกาศ",
+  "templates": [
+    {
+      "id": "46757dc9-a838-4e47-b2e0-aaddfeb03bc7",
+      "entityTypeKey": "characters",
+      "name": "ตัวละคร — ค่าเริ่มต้น",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Gender",
+          "label": "เพศ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Age",
+          "label": "อายุ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Role",
+          "label": "บทบาท",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Group",
+          "label": "กลุ่ม/ครอบครัว",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Birthday",
+          "label": "วันเกิด",
+          "type": "Date",
+          "defaultValue": ""
+        },
+        {
+          "key": "EyeColor",
+          "label": "สีตา",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "HairColor",
+          "label": "สีผม",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "HairLength",
+          "label": "ความยาวผม",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Height",
+          "label": "ส่วนสูง",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Build",
+          "label": "รูปร่าง",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "SkinTone",
+          "label": "สีผิว",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "DistinguishingFeatures",
+          "label": "ลักษณะเด่น",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Status",
+          "label": "สถานะ",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [],
+      "sections": [
+        {
+          "title": "ภูมิหลัง / Backstory",
+          "defaultContent": ""
+        },
+        {
+          "title": "บุคลิก-น้ำเสียง / Voice",
+          "defaultContent": ""
+        },
+        {
+          "title": "เป้าหมาย / Goals",
+          "defaultContent": ""
+        },
+        {
+          "title": "ปม / Conflict",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": true,
+      "includeImages": true,
+      "includeChapterOverrides": true,
+      "profile": {
+        "subtitleField": "Role",
+        "statusField": "Status",
+        "badgeFields": [
+          "Gender",
+          "Age",
+          "Group"
+        ],
+        "statusWords": {
+          "deceased": [
+            "dead",
+            "deceased",
+            "เสียชีวิต",
+            "ตาย"
+          ],
+          "unknown": [
+            "unknown",
+            "ไม่ทราบ",
+            "ไม่แน่ชัด"
+          ],
+          "living": [
+            "living",
+            "alive",
+            "มีชีวิต"
+          ]
+        }
+      }
+    },
+    {
+      "id": "06bb92eb-df6f-4e0d-bed8-074002dba31f",
+      "entityTypeKey": "characters",
+      "name": "ตัวละคร — แฟนตาซี",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Gender",
+          "label": "เพศ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Age",
+          "label": "อายุ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Role",
+          "label": "บทบาท",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Group",
+          "label": "กลุ่ม/ครอบครัว",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Birthday",
+          "label": "วันเกิด",
+          "type": "Date",
+          "defaultValue": ""
+        },
+        {
+          "key": "EyeColor",
+          "label": "สีตา",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "HairColor",
+          "label": "สีผม",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "HairLength",
+          "label": "ความยาวผม",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Height",
+          "label": "ส่วนสูง",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Build",
+          "label": "รูปร่าง",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "SkinTone",
+          "label": "สีผิว",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "DistinguishingFeatures",
+          "label": "ลักษณะเด่น",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Race",
+          "label": "เผ่าพันธุ์",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Status",
+          "label": "สถานะ",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [
+        {
+          "key": "Allegiance",
+          "label": "ฝ่าย",
+          "type": "Enum",
+          "defaultValue": "",
+          "options": [
+            "Light",
+            "Dark",
+            "Neutral"
+          ]
+        },
+        {
+          "key": "Magic affinity",
+          "label": "ธาตุเวทมนตร์",
+          "type": "Enum",
+          "defaultValue": "",
+          "options": [
+            "Fire",
+            "Water",
+            "Earth",
+            "Air",
+            "None"
+          ]
+        },
+        {
+          "key": "Hometown",
+          "label": "บ้านเกิด",
+          "type": "EntityRef",
+          "defaultValue": ""
+        }
+      ],
+      "sections": [
+        {
+          "title": "ภูมิหลัง / Backstory",
+          "defaultContent": ""
+        },
+        {
+          "title": "พลัง / Powers",
+          "defaultContent": ""
+        },
+        {
+          "title": "เป้าหมาย / Goals",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": true,
+      "includeImages": true,
+      "includeChapterOverrides": true,
+      "profile": {
+        "subtitleField": "Role",
+        "statusField": "Status",
+        "badgeFields": [
+          "Gender",
+          "Age",
+          "Group"
+        ],
+        "statusWords": {
+          "deceased": [
+            "dead",
+            "deceased",
+            "เสียชีวิต",
+            "ตาย"
+          ],
+          "unknown": [
+            "unknown",
+            "ไม่ทราบ",
+            "ไม่แน่ชัด"
+          ],
+          "living": [
+            "living",
+            "alive",
+            "มีชีวิต"
+          ]
+        }
+      }
+    },
+    {
+      "id": "dc0a9119-2578-496f-8f30-ea8cd6241281",
+      "entityTypeKey": "characters",
+      "name": "ตัวละคร — สืบสวน",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Gender",
+          "label": "เพศ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Age",
+          "label": "อายุ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Role",
+          "label": "บทบาท",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Group",
+          "label": "กลุ่ม/ครอบครัว",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Birthday",
+          "label": "วันเกิด",
+          "type": "Date",
+          "defaultValue": ""
+        },
+        {
+          "key": "EyeColor",
+          "label": "สีตา",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "HairColor",
+          "label": "สีผม",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "HairLength",
+          "label": "ความยาวผม",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Height",
+          "label": "ส่วนสูง",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Build",
+          "label": "รูปร่าง",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "SkinTone",
+          "label": "สีผิว",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "DistinguishingFeatures",
+          "label": "ลักษณะเด่น",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Occupation",
+          "label": "อาชีพ",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Status",
+          "label": "สถานะ",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [
+        {
+          "key": "Suspect",
+          "label": "เป็นผู้ต้องสงสัย",
+          "type": "Bool",
+          "defaultValue": "false"
+        },
+        {
+          "key": "Threat level",
+          "label": "ระดับอันตราย",
+          "type": "Enum",
+          "defaultValue": "",
+          "options": [
+            "Low",
+            "Medium",
+            "High"
+          ]
+        }
+      ],
+      "sections": [
+        {
+          "title": "ประวัติ / History",
+          "defaultContent": ""
+        },
+        {
+          "title": "แรงจูงใจ / Motive",
+          "defaultContent": ""
+        },
+        {
+          "title": "ข้อพิรุธ / Alibi",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": true,
+      "includeImages": true,
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Role",
+        "statusField": "Status",
+        "badgeFields": [
+          "Gender",
+          "Age",
+          "Group"
+        ],
+        "statusWords": {
+          "deceased": [
+            "dead",
+            "deceased",
+            "เสียชีวิต",
+            "ตาย"
+          ],
+          "unknown": [
+            "unknown",
+            "ไม่ทราบ",
+            "ไม่แน่ชัด"
+          ],
+          "living": [
+            "living",
+            "alive",
+            "มีชีวิต"
+          ]
+        }
+      }
+    },
+    {
+      "id": "b8b52ac0-4351-4e99-9fba-7ef5935ff42f",
+      "entityTypeKey": "locations",
+      "name": "สถานที่ — ค่าเริ่มต้น",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Type",
+          "label": "ชนิด",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Region",
+          "label": "ภูมิภาค",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Population",
+          "label": "ประชากร",
+          "type": "Int",
+          "defaultValue": ""
+        },
+        {
+          "key": "Description",
+          "label": "คำอธิบาย",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [],
+      "sections": [
+        {
+          "title": "บรรยากาศ / Atmosphere",
+          "defaultContent": ""
+        },
+        {
+          "title": "ประวัติ / History",
+          "defaultContent": ""
+        },
+        {
+          "title": "ผู้อยู่อาศัย / Inhabitants",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": false,
+      "includeImages": true,
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Type",
+        "statusField": "",
+        "badgeFields": [
+          "Region",
+          "Population"
+        ]
+      }
+    },
+    {
+      "id": "77e863b9-7c70-4e9e-9f2b-014891cdffbb",
+      "entityTypeKey": "items",
+      "name": "สิ่งของ — ค่าเริ่มต้น",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Type",
+          "label": "ชนิด",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Owner",
+          "label": "เจ้าของ",
+          "type": "EntityRef",
+          "defaultValue": ""
+        },
+        {
+          "key": "Origin",
+          "label": "ที่มา",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Description",
+          "label": "คำอธิบาย",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [],
+      "sections": [
+        {
+          "title": "ความสามารถ / Powers",
+          "defaultContent": ""
+        },
+        {
+          "title": "ประวัติ / History",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": false,
+      "includeImages": true,
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Type",
+        "statusField": "",
+        "badgeFields": [
+          "Owner",
+          "Origin"
+        ]
+      }
+    },
+    {
+      "id": "90c9c9fa-0a21-4a87-8b19-3e2fe9443a83",
+      "entityTypeKey": "lore",
+      "name": "ตำนาน — ค่าเริ่มต้น",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Category",
+          "label": "หมวดหมู่",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Era",
+          "label": "ยุคสมัย",
+          "type": "String",
+          "defaultValue": ""
+        },
+        {
+          "key": "Description",
+          "label": "คำอธิบาย",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [],
+      "sections": [
+        {
+          "title": "รายละเอียด / Details",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": false,
+      "includeImages": true,
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Category",
+        "statusField": "",
+        "badgeFields": [
+          "Era"
+        ]
+      }
+    },
+    {
+      "id": "1f3ac74b-c8f2-4cac-b26a-551355e246f7",
+      "entityTypeKey": "lore",
+      "name": "ระบบเวทมนตร์",
+      "builtIn": true,
+      "note": "",
+      "fields": [
+        {
+          "key": "Category",
+          "label": "หมวดหมู่",
+          "type": "String",
+          "defaultValue": "magic"
+        },
+        {
+          "key": "Source",
+          "label": "แหล่งพลัง",
+          "type": "String",
+          "defaultValue": ""
+        }
+      ],
+      "customPropertyDefs": [],
+      "sections": [
+        {
+          "title": "กฎ / Rules",
+          "defaultContent": ""
+        },
+        {
+          "title": "ข้อจำกัด / Limits",
+          "defaultContent": ""
+        },
+        {
+          "title": "ราคาที่ต้องจ่าย / Cost",
+          "defaultContent": ""
+        }
+      ],
+      "includeRelationships": false,
+      "includeImages": true,
+      "includeChapterOverrides": false,
+      "profile": {
+        "subtitleField": "Category",
+        "statusField": "",
+        "badgeFields": [
+          "Source"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,424 @@
+// text-width.js — เอนจินตัดบรรทัด "วัดจากความกว้างจริง" (alpha.82)
+//
+// ═══ ทำไมต้องเขียนใหม่ ═══
+//
+// ของเดิมทั้งนิยายและบทภาพยนตร์ประมาณจำนวนบรรทัดจาก **จำนวนตัวอักษร ÷ ตัวอักษรต่อนิ้ว**
+// โดยตั้ง `CHARS_PER_INCH = 10` ตายตัว (Courier 12pt — มาตรฐานบทภาพยนตร์ฝรั่ง)
+// ซึ่งผิดสองชั้นกับงานไทย:
+//   1. สระบน/ล่างและวรรณยุกต์ซ้อนอยู่บนพยัญชนะ **ไม่กินความกว้างเลย** แต่ถูกนับเต็มตัว
+//   2. ฟอนต์ไทยที่ใช้จริงไม่ได้กว้างตัวละ 0.1 นิ้ว — วัดจากของจริงได้ **10.2 ตัว/นิ้ว**
+//      ผิดแค่ 2% แต่พอคูณกับย่อหน้าที่ยาวใกล้เส้นแบ่งก็เกินไป **1 บรรทัดเต็ม**
+//      → ตัวจัดหน้าคิดว่าเนื้อเต็มหน้าเร็วกว่าความจริง หน้ากระดาษเลยสั้นยาวไม่เท่ากัน
+//
+// ═══ แบบที่วงการเขาใช้กัน (สำรวจก่อนออกแบบ) ═══
+//
+//   · unioffice (Go)  — ไม่จัดหน้าเอง เขียน OOXML แล้วให้ Word จัดให้
+//   · unipdf (Go)     — `GetRuneMetrics(r).Wx × fontSize` = advance width รายกลิฟจากฟอนต์
+//                       ตัดที่ช่องว่างล่าสุด ถ้าไม่มีช่องว่างก็ตัดกลางคำ
+//   · genoffice (TS/Electron — สแตกเดียวกับเรา · เคลม "page breaks land where Word puts them")
+//                     — `FontMetricsProvider` เป็น interface สลับได้ระหว่าง heuristic กับของจริง
+//                       ตัววัดจริงคือ **canvas measureText** (ไม่อ่าน DOM เลย) + แคชต่อฟอนต์
+//                       ละตินตัดที่ช่องว่างแบบ greedy · CJK ตัดรายตัวอักษร
+//
+// **ไม่มีเจ้าไหนใช้ "ตัวอักษรต่อนิ้ว"** — ทุกเจ้าวัดความกว้างจริงของกลิฟ
+//
+// ═══ โครงของไฟล์นี้ ═══
+//
+// บริสุทธิ์ 100% — ตัววัดถูก **ฉีดเข้ามา** (แบบเดียวกับที่ ai-core.js ฉีด http เข้ามา)
+//   · ไม่ฉีด  → ตกไปใช้ heuristic (ตัวอักษรที่มองเห็น ÷ cpi) → เทสด้วย node ได้ ไม่ต้องมี canvas
+//   · ฉีดแล้ว → ใช้ความกว้างจริงของฟอนต์ที่ผู้ใช้เลือก (ดู src/text-measure.js)
+//
+// และมี **ตัวตัดบรรทัดชุดเดียว** (`wrapLineStrings`) ที่ทั้งจอและ PDF เรียกใช้ —
+// เดิมมีสองชุดที่ "ต้องได้ผลเท่ากันเป๊ะ" แล้วมันไม่เท่ากันจริง (บั๊กบรรทัดเปล่าใน PDF)
+
+/** พิกเซล CSS ต่อนิ้ว */
+export const DPI = 96;
+
+/** ตัวอักษรต่อนิ้วของ Courier 12pt — ใช้เมื่อยังไม่มีตัววัดจริง (เทส/ตอนบูตก่อนฟอนต์พร้อม) */
+export const FALLBACK_CPI = 10;
+
+/**
+ * อักขระที่ "ไม่กินความกว้าง"
+ *
+ * ไทย: U+0E31 (ั), U+0E34–U+0E3A (ิ ี ึ ื ุ ู ฺ), U+0E47–U+0E4E (็ ่ ้ ๊ ๋ ์ ํ ๎)
+ * เติม combining mark สากลไว้ด้วย เผื่อข้อความละติน/เวียดนามที่ใส่สระแยก
+ */
+export const ZERO_WIDTH_RE = new RegExp(
+  '[' +
+  '\\u0E31\\u0E34-\\u0E3A\\u0E47-\\u0E4E' +   // ไทย: สระบน/ล่าง · ไม้ไต่คู้ · วรรณยุกต์ · การันต์
+  '\\u0300-\\u036F\\u0483-\\u0489' +          // combining ละติน/ซีริลลิก
+  '\\u0591-\\u05BD\\u064B-\\u065F\\u0670' +   // ฮีบรู/อาหรับ
+  '\\u200B-\\u200D\\uFEFF' +                  // ช่องว่างความกว้างศูนย์
+  ']', 'g');
+
+/** เวอร์ชันไม่มีธง g — `.test()` ของ regex ที่มี g เก็บ lastIndex ไว้ (เรียกซ้ำได้ผลสลับกัน) */
+const ZERO_WIDTH_ONE = new RegExp(ZERO_WIDTH_RE.source);
+
+/** ความยาวที่ "มองเห็นเป็นความกว้าง" (ตัดอักขระซ้อนที่กว้าง 0 ออก) — ใช้กับ heuristic เท่านั้น */
+export function visualLength(text) {
+  return String(text ?? '').replace(ZERO_WIDTH_RE, '').length;
+}
+
+// ────────────────────────────────────────────────────────────────
+// 1) ตัววัด (ฉีดเข้ามา)
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * @typedef {(text: string, kind: string) => number} Measurer
+ *   คืนความกว้างเป็น **พิกเซล CSS** · คืนค่าที่ไม่ใช่ตัวเลข = ให้ตกไปใช้ heuristic
+ *   `kind` บอกว่าเป็นข้อความของอะไร ('sp' = บทภาพยนตร์ · 'prose' = นิยาย) เพราะคนละฟอนต์
+ */
+let _measure = null;
+
+/**
+ * แคชผลตัดบรรทัดทั้งก้อน — **จำเป็น ไม่ใช่ของแถม**
+ *
+ * `paginate()` เรียกตัวตัดบรรทัดทุกบล็อกทุกครั้งที่จัดหน้าใหม่ (ทุก 300ms ขณะพิมพ์)
+ * และตัวตัดเรียก `measureText` หลายสิบครั้งต่อบล็อก (ค้นทวิภาคหาจุดตัด)
+ * ตอนแรกไม่ได้ใส่แคชชั้นนี้แล้ววัดได้ว่า e2e ช้าลงราว 8 เท่า — เนื้อหาส่วนใหญ่ไม่เปลี่ยน
+ * ระหว่างจัดหน้าสองรอบติดกัน จึงคุ้มมากที่จะจำผลไว้ทั้งก้อน
+ */
+const WRAP_CACHE_CAP = 4000;
+let _wrapCache = new Map();
+let _epoch = 0;
+
+/** ล้างของที่จำไว้ทั้งหมด — เรียกเมื่อฟอนต์/ขนาด/ตัววัดเปลี่ยน (ผลเดิมใช้ไม่ได้แล้ว) */
+export function bumpMeasureEpoch() { _epoch++; _wrapCache = new Map(); }
+/** รุ่นของการวัดปัจจุบัน (ใช้ในเทส/วินิจฉัย) */
+export function measureEpoch() { return _epoch; }
+
+/** ติดตั้งตัววัดจริง (แอปเรียกตอนบูตและทุกครั้งที่ฟอนต์/ขนาดเปลี่ยน) · null = ถอดออก */
+export function setMeasurer(fn) {
+  _measure = typeof fn === 'function' ? fn : null;
+  bumpMeasureEpoch();
+}
+/** มีตัววัดจริงติดตั้งอยู่ไหม (เทส/วินิจฉัยใช้) */
+export function hasMeasurer() { return !!_measure; }
+
+/**
+ * ความกว้างของข้อความเป็นพิกเซล
+ * @param {string} text
+ * @param {object} o { kind, cpi, heuristic }  `heuristic:true` = บังคับใช้สูตร ไม่แตะตัววัดจริง
+ */
+export function measureWidth(text, o = {}) {
+  const s = String(text ?? '');
+  if (!s) return 0;
+  if (!o.heuristic && _measure) {
+    // [alpha.104r] ★ ส่ง "หน้าตาของตัวอักษร" ไปด้วย — ตัวหนา/ตัวเอียงกว้างไม่เท่าตัวปกติ
+    // (note/วงเล็บ/สรุป = เอียง · หัวฉาก/ฉากย่อย/ช็อต/ตอน/โครงเรื่อง = หนา)
+    const w = _measure(s, o.kind || 'sp', o);
+    if (Number.isFinite(w) && w >= 0) return w;
+  }
+  return (visualLength(s) / (o.cpi > 0 ? o.cpi : FALLBACK_CPI)) * DPI;
+}
+
+// ────────────────────────────────────────────────────────────────
+// 2) แยกโทเคน
+// ────────────────────────────────────────────────────────────────
+
+// ตัวอักษรของภาษาที่ **ตัดบรรทัดตรงไหนก็ได้** (ไม่ใช้ช่องว่างคั่นคำ)
+const BREAKABLE_RE = /[฀-๿ក-៿က-႟⺀-鿿ꥠ-꥿가-힯豈-﫿＀-｠]/;
+const SPACE_RE = /\s/;
+
+export const TOK_SPACE = 'space';    // ช่องว่าง — จุดตัดบรรทัด และถูกกลืนเมื่อตัดตรงนั้น
+export const TOK_ATOM = 'atom';      // คำที่ห้ามตัดกลาง (ละติน/ตัวเลข)
+export const TOK_RUN = 'run';        // ช่วงที่ตัดตรงไหนก็ได้ (ไทย/เขมร/พม่า/CJK)
+
+/**
+ * ══════ [alpha.107] ★★ "รอยต่อสคริปต์ที่ติดกันสนิท" ไม่ใช่จุดขึ้นบรรทัดใหม่ ══════
+ *
+ * ผู้ใช้: *"เมื่อเราพิมพ์ภาษาไทยหน้าบรรทัดแล้วพิมพ์ภาษาอังกฤษต่อโดยไม่เว้น ... มันเลยตัดคำ
+ *           แบบไทย-อังกฤษ ไม่ใช่ตัดแบบตัวอักษร"* — ถูกต้อง และวัดยืนยันได้ถึงระดับตัวอักษร
+ *
+ * วัดจริงในโปรแกรม (กล่องกว้างเท่า element จริง · ข้อความ `…ข้อความทดสอบการคัดลอกGBJOIJ…`):
+ *   Chromium ตัดที่ตัวที่ 18 → `การคัด` | `ลอกGBJOIJ…`   (ขอบคำไทย · ลาก "ลอก" ลงไปกับละติน)
+ *   ของเราเดิมตัดที่ตัวที่ 21 → `คัดลอก` | `GBJOIJ…`      (ตรงรอยต่อไทย↔ละติน)
+ *
+ * เพราะ tokenize() แยกไทยเป็น RUN และละตินเป็น ATOM คนละก้อน แล้วตัวตัดบรรทัดถือว่า
+ * "ระหว่างสองโทเคน = ขึ้นบรรทัดใหม่ได้" ซึ่ง **Chromium ไม่ยอม** เมื่อไม่มีช่องว่างคั่น
+ * (ICU ถือว่าไทยที่ติดกับละตินเป็นก้อนเดียว ต้องถอยไปตัดที่ขอบคำไทยก่อนหน้า)
+ *
+ * ผลของความต่างนี้: บรรทัดคลาดทีละหนึ่ง สะสมไปเรื่อย ๆ จนบรรทัดสุดท้ายของหน้าล้นขอบล่าง
+ * แล้วตัวชดเชยที่ว่างท้ายหน้า (ซึ่งหนีบต่ำสุดที่ 0) ก็ได้แต่ปล่อยให้ล้นต่อ — ตรงกับที่ผู้ใช้
+ * อธิบายว่า *"มันไปเกินการชดเชยแทน ... เมื่อเกิน margin หน้า มันจะไม่ขึ้นหน้าใหม่"*
+ *
+ * เคสไทยล้วน/ละตินล้วนไม่มีรอยต่อแบบนี้เลย จึงตรงกับจอมาตลอด — บั๊กโผล่เฉพาะข้อความผสม
+ */
+export function scriptJunction(s, p) {
+  if (p <= 0 || p >= s.length) return false;
+  const a = s[p - 1], b = s[p];
+  if (SPACE_RE.test(a) || SPACE_RE.test(b)) return false;
+  if (ZERO_WIDTH_ONE.test(b)) return false;      // สระ/วรรณยุกต์เกาะตัวหน้าเสมอ ไม่ใช่รอยต่อ
+  return BREAKABLE_RE.test(a) !== BREAKABLE_RE.test(b);
+}
+
+/**
+ * แยกย่อหน้าเป็นโทเคน — ตัวตัดบรรทัดเดินตามนี้
+ * @returns {Array<{t:string, s:string}>}
+ */
+export function tokenize(para) {
+  const s = String(para ?? '');
+  const out = [];
+  let i = 0;
+  while (i < s.length) {
+    const start = i;
+    const ch = s[i];
+    let t;
+    if (SPACE_RE.test(ch)) t = TOK_SPACE;
+    else if (BREAKABLE_RE.test(ch)) t = TOK_RUN;
+    else t = TOK_ATOM;
+    let j = i + 1;
+    while (j < s.length) {
+      const c = s[j];
+      const tj = SPACE_RE.test(c) ? TOK_SPACE : (BREAKABLE_RE.test(c) ? TOK_RUN : TOK_ATOM);
+      // อักขระซ้อน (สระ/วรรณยุกต์) เกาะไปกับตัวก่อนหน้าเสมอ ไม่ว่าจะเป็นโทเคนชนิดไหน
+      if (tj !== t && !ZERO_WIDTH_ONE.test(c)) break;
+      j++;
+    }
+    out.push({ t, s: s.slice(start, j), i: start });
+    i = j;
+  }
+  // [alpha.107] ★ ไทยติดละตินโดยไม่เว้นวรรค = **ก้อนเดียวกัน** — รวมเป็น RUN ก้อนเดียว
+  // แล้วให้จุดตัดมาจากขอบคำ ICU เท่านั้น (ซึ่งกรองรอยต่อสคริปต์ออกไปแล้วใน breakPoints)
+  const merged = [];
+  for (const tok of out) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.t !== TOK_SPACE && tok.t !== TOK_SPACE
+        && prev.i + prev.s.length === tok.i) {
+      prev.s += tok.s;
+      prev.t = TOK_RUN;                 // ก้อนผสม: ตัดได้เฉพาะที่ขอบคำ (และกลางคำเมื่อจำเป็น)
+      continue;
+    }
+    merged.push({ ...tok });
+  }
+  return merged;
+}
+
+/**
+ * จำนวนอักขระที่ยาวที่สุดของ `s` ที่กว้างไม่เกิน `maxPx` (ค้นแบบทวิภาค — วัด O(log n) ครั้ง)
+ * ไม่ตัดคาอักขระซ้อนและไม่ตัดคา surrogate pair
+ */
+// ────────────────────────────────────────────────────────────────
+// [alpha.86] ขอบคำของภาษาที่ไม่มีช่องว่าง — ถาม ICU ตัวเดียวกับที่ Chromium ใช้
+//
+// เดิมไฟล์นี้ถือว่าไทย/เขมร/พม่า/CJK "ตัดตรงไหนก็ได้" (TOK_RUN) เพราะ canvas บอกจุดตัดไม่ได้
+// แต่ Chromium ตัดด้วย ICU แบบมีพจนานุกรม → ทุกบล็อกไทยคลาดกันได้ ±1 บรรทัด แบบสุ่ม
+// `Intl.Segmenter` **คือ ICU ตัวเดียวกัน** ที่ผูกมากับ V8 อยู่แล้ว (โปรเจกต์ใช้ใน search-engine.js)
+// ถามมันแทนการเดา จุดตัดจึงตรงกับที่เบราว์เซอร์วาดจริง
+// ────────────────────────────────────────────────────────────────
+let _seg = null, _segTried = false;
+function segmenter() {
+  if (_segTried) return _seg;
+  _segTried = true;
+  try {
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) _seg = new Intl.Segmenter('th', { granularity: 'word' });
+  } catch { _seg = null; }
+  return _seg;
+}
+const BP_CACHE_CAP = 4000;
+let _bpCache = new Map();
+
+/** ตำแหน่งที่ขึ้นบรรทัดใหม่ได้ภายในสตริง (เรียงน้อย→มาก) · null = ไม่มี ICU ให้ใช้ */
+export function breakPoints(s) {
+  const seg = segmenter();
+  if (!seg || !s) return null;
+  const hit = _bpCache.get(s);
+  if (hit) return hit;
+  const out = [];
+  // [alpha.107] ICU ให้ขอบคำที่รอยต่อสคริปต์ด้วย แต่ **Chromium ไม่ขึ้นบรรทัดใหม่ตรงนั้น**
+  // เมื่อไม่มีช่องว่างคั่น → คัดออก จุดตัดจึงถอยไปที่ขอบคำไทยก่อนหน้าเหมือนที่จอทำจริง
+  try {
+    for (const part of seg.segment(s)) {
+      if (part.index > 0 && !scriptJunction(s, part.index)) out.push(part.index);
+    }
+  }
+  catch { return null; }
+  if (_bpCache.size >= BP_CACHE_CAP) _bpCache = new Map();
+  _bpCache.set(s, out);
+  return out;
+}
+
+/**
+ * ถอยจุดตัด `k` กลับมาที่ขอบคำที่ ICU ยอม
+ * @returns {number} 0 = ไม่มีขอบคำไหนอยู่ก่อน k เลย (ผู้เรียกตัดสินใจเองว่าจะยกทั้งก้อนหรือตัดกลางคำ)
+ */
+export function snapWord(s, k) {
+  if (k <= 0 || k >= s.length) return k;
+  const bp = breakPoints(s);
+  if (!bp || !bp.length) return k;
+  let best = 0;
+  for (const p of bp) { if (p > k) break; best = p; }
+  return best;
+}
+
+export function fitPrefix(s, maxPx, measure) {
+  if (!s || maxPx <= 0) return 0;
+  // ═══ [alpha.87 ข้อ 1] ★ **หาหน้าต่างค้นหาแบบทวีคูณก่อน binary search** ═══
+  //
+  // เดิมเริ่มด้วย `hi = s.length` — binary search จึงวัดสตริง **ยาวเท่าข้อความที่เหลือทั้งก้อน**
+  // ตั้งแต่ครั้งแรก · ผู้เรียก (wrapCuts) ตัดคำยาวทีละบรรทัดโดยส่ง "ส่วนที่เหลือ" เข้ามาใหม่ทุกรอบ
+  // → ข้อความที่ไม่มีช่องว่างเลย 38,000 อักขระ = **คำเดียว** ถูกวัดแบบ O(n²):
+  //   ~640 บรรทัด × ~15 ครั้ง × เฉลี่ย 19,000 อักขระ ≈ 180 ล้านอักขระต่อการพิมพ์หนึ่งตัว
+  // วัดจริงด้วยโปรไฟล์ CPU: measureText 57.2% + fitPrefix 13.7% = **815ms ต่อการพิมพ์หนึ่งตัว**
+  //
+  // หนึ่งบรรทัดยาวได้ไม่กี่สิบอักขระ จึงไม่มีเหตุผลให้วัดทั้งก้อน — ขยายหน้าต่างทีละเท่าตัว
+  // จากเล็กไปใหญ่จนเกิน maxPx แล้วค่อย binary search ในหน้าต่างนั้น
+  // **ผลลัพธ์เท่าเดิมทุกกรณี** ต่างแค่ความยาวสตริงที่ส่งให้ measure (≈ 2 เท่าของที่พอดีจริง)
+  let lo = 0, hi = Math.min(s.length, 64);
+  while (hi < s.length && measure(s.slice(0, hi)) <= maxPx) {
+    lo = hi;
+    hi = Math.min(s.length, hi * 2);
+  }
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (measure(s.slice(0, mid)) <= maxPx) lo = mid; else hi = mid - 1;
+  }
+  let k = lo;
+  // อย่าตัดคา surrogate pair
+  if (k > 0 && k < s.length) {
+    const c = s.charCodeAt(k - 1);
+    if (c >= 0xD800 && c <= 0xDBFF) k--;
+  }
+  // ดึงอักขระซ้อนที่ตามหลังมาด้วย (กว้าง 0 จึงไม่ทำให้เกิน)
+  while (k < s.length && ZERO_WIDTH_ONE.test(s[k])) k++;
+  return k;
+}
+
+// ────────────────────────────────────────────────────────────────
+// 3) ตัดบรรทัด — **ตัวเดียวที่ทั้งจอและ PDF ใช้**
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * **หัวใจของไฟล์** — คืน "ตำแหน่งที่ขึ้นบรรทัดใหม่" เป็นดัชนีอักขระในข้อความต้นฉบับ
+ *
+ * คืนตำแหน่งแทนที่จะคืนสตริง เพราะผู้เรียกต้องการคนละอย่าง:
+ *   · นับบรรทัด        → `cuts.length + 1`
+ *   · วาด PDF          → หั่นเป็นสตริง
+ *   · ตัดบทพูดข้ามหน้า → ต้องได้ **ข้อความต้นฉบับ** กลับมาเป๊ะ ๆ ไม่ใช่สตริงที่ join ใหม่
+ * เดิมสามงานนี้มีอัลกอริทึมคนละชุด (และไม่ตรงกันจริง) — ตอนนี้มีชุดเดียว
+ *
+ * @param {string} text     ข้อความ (มี \n ได้ = บังคับขึ้นบรรทัด)
+ * @param {number} widthIn  ความกว้างที่ใช้ได้ (นิ้ว)
+ * @param {object} o        { kind, cpi, heuristic, indentIn }
+ * @returns {number[]} ดัชนีเริ่มต้นของบรรทัดที่ 2, 3, … (บรรทัดแรกเริ่มที่ 0 เสมอ)
+ */
+export function wrapCuts(text, widthIn, o = {}) {
+  const s = String(text ?? '');
+  // อาร์เรย์ที่คืนออกไปเป็นของแคช — ผู้เรียกอ่านอย่างเดียว ห้ามแก้
+  const ck = `${_epoch}|${o.kind || 'sp'}|${widthIn}|${o.indentIn || 0}|${o.cpi || ''}`
+           + `|${o.heuristic ? 1 : 0}|${s}`;
+  const hit = _wrapCache.get(ck);
+  if (hit) return hit;
+
+  const limit = Math.max(0.05, +widthIn || 0.05) * DPI;
+  const measure = (t) => measureWidth(t, o);
+  const spaceW = measure(' ');
+  const indent = Math.max(0, Math.min(limit - 1, (+o.indentIn || 0) * DPI));
+  const cuts = [];
+  let paraStart = 0;
+
+  for (const para of s.split('\n')) {
+    if (paraStart > 0) cuts.push(paraStart);          // ขึ้นย่อหน้าใหม่ = ขึ้นบรรทัดใหม่
+    let lineW = 0, hasContent = false, pendSpace = false;
+    // ย่อหน้าบรรทัดแรกกินที่ไปเท่าไร (มีเฉพาะบรรทัดแรกของทั้งข้อความ)
+    const base = () => (cuts.length === 0 ? indent : 0);
+    const cutAt = (i) => { cuts.push(i); lineW = 0; hasContent = false; pendSpace = false; };
+
+    for (const tok of tokenize(para)) {
+      const at = paraStart + tok.i;
+      if (tok.t === TOK_SPACE) { if (hasContent) pendSpace = true; continue; }
+
+      const sepW = (pendSpace && hasContent) ? spaceW : 0;
+      const avail = limit - base() - lineW - sepW;
+      const room = () => limit - base();
+
+      if (tok.t === TOK_ATOM) {
+        const w = measure(tok.s);
+        if (w <= avail) { lineW += sepW + w; hasContent = true; pendSpace = false; continue; }
+        // ยกทั้งคำไปบรรทัดใหม่ (ช่องว่างที่ค้างอยู่ถูกกลืนไปกับรอยตัด)
+        if (hasContent) cutAt(at);
+        let off = at, rest = tok.s;
+        // คำเดียวยาวกว่าหนึ่งบรรทัด (URL/คำประสมยาว) — ตัดกลางคำ เหมือนที่ unipdf ทำ
+        // ใช้ผลของ fitPrefix ตัดสินว่า "ลงบรรทัดเดียวพอไหม" แทนการวัดสตริงที่เหลือทั้งก้อนซ้ำ
+        for (;;) {
+          const k = fitPrefix(rest, room(), measure);
+          if (k >= rest.length) break;
+          const step = Math.max(1, k);
+          off += step; rest = rest.slice(step);
+          cutAt(off);
+        }
+        lineW = measure(rest); hasContent = !!rest;
+        continue;
+      }
+
+      // TOK_RUN — ไทย/CJK: "เติมเต็มบรรทัดปัจจุบันก่อน แล้วไหลต่อ"
+      // [alpha.86] จุดตัดต้องถอยไปที่ขอบคำของ ICU ก่อนเสมอ (snapWord) ให้ตรงกับ Chromium
+      let off = at, rest = tok.s;
+      if (avail > 0) {
+        // ไม่มีขอบคำไหนพอดีบรรทัดนี้ → snapWord คืน 0 = ยกทั้งก้อนไปบรรทัดใหม่ (ถูกแล้ว)
+        const k = snapWord(rest, fitPrefix(rest, avail, measure));
+        if (k > 0) {
+          lineW += sepW + measure(rest.slice(0, k));
+          hasContent = true; pendSpace = false;
+          off += k; rest = rest.slice(k);
+        }
+      }
+      if (!rest) continue;
+      cutAt(off);
+      for (;;) {
+        const raw = fitPrefix(rest, room(), measure);
+        if (raw >= rest.length) break;
+        // ที่ต้นบรรทัดต้องเดินหน้าให้ได้เสมอ — ไม่มีขอบคำก็ยอมตัดกลางคำเหมือนที่เบราว์เซอร์ทำ
+        const step = Math.max(1, snapWord(rest, raw) || raw);
+        off += step; rest = rest.slice(step);
+        cutAt(off);
+      }
+      lineW = measure(rest); hasContent = !!rest;
+    }
+    paraStart += para.length + 1;                     // +1 = อักขระ \n
+  }
+  if (_wrapCache.size >= WRAP_CACHE_CAP) _wrapCache = new Map();
+  _wrapCache.set(ck, cuts);
+  return cuts;
+}
+
+/**
+ * ตัดข้อความเป็นบรรทัดจริง ๆ (ตัดหางช่องว่างของแต่ละบรรทัดทิ้ง เหมือนที่ตัววาดทำ)
+ * @returns {string[]} อย่างน้อย 1 ใบเสมอ
+ */
+export function wrapLineStrings(text, widthIn, o = {}) {
+  const s = String(text ?? '');
+  const cuts = wrapCuts(s, widthIn, o);
+  const bounds = [0, ...cuts, s.length];
+  const out = [];
+  for (let i = 0; i < bounds.length - 1; i++) {
+    out.push(s.slice(bounds[i], bounds[i + 1]).replace(/\s+$/, ''));
+  }
+  return out.length ? out : [''];
+}
+
+/**
+ * จำนวนบรรทัดที่ข้อความกินจริง — **นับจากรอยตัดชุดเดียวกับที่ PDF และตัวตัดบทพูดใช้**
+ */
+export function wrapText(text, widthIn, o = {}) {
+  if (!String(text ?? '').trim()) return 1;
+  return wrapCuts(text, widthIn, o).length + 1;
+}
+
+// ────────────────────────────────────────────────────────────────
+// 4) ทางเข้าแบบ "คอลัมน์" (ฝั่งนิยายยังคิดเป็นจำนวนตัวอักษรต่อบรรทัด)
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * นับบรรทัดจากกริดตัวอักษร — ใช้กับตัวประมาณของนิยาย ซึ่งเป็น **ทางสำรอง**
+ * (ทางหลักของนิยายคือวัดกล่องบรรทัดจริงใน prose-measure.js อยู่แล้ว)
+ * บังคับ heuristic เสมอ เพราะ "คอลัมน์" เป็นกริดสมมติ ไม่ใช่ความกว้างของฟอนต์จริง
+ */
+export function wrapVisual(text, cols, indentCols = 0) {
+  const c = Math.max(1, Math.floor(cols));
+  return wrapText(text, c / FALLBACK_CPI, {
+    heuristic: true, cpi: FALLBACK_CPI,
+    indentIn: Math.max(0, Math.min(c - 1, Math.round(indentCols) || 0)) / FALLBACK_CPI,
+  });
+}
+

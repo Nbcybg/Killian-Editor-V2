@@ -1,0 +1,10 @@
+{
+  "normal":    { "label": "ปกติ (Normal) — 1 นิ้วรอบด้าน",        "top": 1,    "bottom": 1,    "left": 1,    "right": 1 },
+  "narrow":    { "label": "แคบ (Narrow) — 0.5 นิ้วรอบด้าน",        "top": 0.5,  "bottom": 0.5,  "left": 0.5,  "right": 0.5 },
+  "moderate":  { "label": "ปานกลาง (Moderate)",                    "top": 1,    "bottom": 1,    "left": 0.75, "right": 0.75 },
+  "wide":      { "label": "กว้าง (Wide)",                          "top": 1,    "bottom": 1,    "left": 1.5,  "right": 1.5 },
+  "screenplay":{ "label": "บทภาพยนตร์ (Final Draft มาตรฐาน)",      "top": 1,    "bottom": 1,    "left": 1.5,  "right": 1 },
+  "novel":     { "label": "นิยาย (ต้นฉบับส่งสำนักพิมพ์)",           "top": 1,    "bottom": 1,    "left": 1.25, "right": 1.25 },
+  "a4-narrow": { "label": "A4 แคบ (2 ซม.)",                        "top": 0.79, "bottom": 0.79, "left": 0.79, "right": 0.79 },
+  "a4-normal": { "label": "A4 ปกติ (2.5 / 3.17 ซม.)",              "top": 0.98, "bottom": 0.98, "left": 1.25, "right": 1.25 }
+}

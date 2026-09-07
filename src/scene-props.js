@@ -1,0 +1,162 @@
+// scene-props.js — แผงคุณสมบัติฉาก (สถานะ/สี/ปักหมุด/ล็อก/futureNote)
+import { t } from './i18n.js';
+import { buildTree, guid, updatePageNumberHint, refreshSpView } from './app.js';
+import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, log } from './core.js';
+import { allStatuses } from './custom-status.js';
+import * as spell from './spell.js';
+// [alpha.60r2 ข้อ 13] คุณสมบัติฉากอยู่ใน frontmatter ของ .md เป็นหลัก — scenes.json เป็นดัชนี/แคช
+// ทุกทางอ่าน-เขียนผ่าน readSceneMeta/writeSceneMeta ที่เดียว
+import { readSceneMeta, writeSceneMeta, SCENE_HEAVY_KEYS } from './scene-meta.js';
+// [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนเรื่องย่อ/POV/อารมณ์/ความขัดแย้ง จากเนื้อฉาก
+import { attachAiFieldButton } from './ai-synopsis.js';
+import { parseMdFile } from './md.js';
+import { escClose } from './ui.js';
+
+export async function sceneProps(dPath, ch, sc) {
+  const sf = await kapi.join(dPath, 'scenes.json');
+  const d = await kapi.readJson(sf);
+  const row = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+  if (!row) return;
+  // [alpha.60r2 ข้อ 13] ค่าที่โชว์ = frontmatter ของไฟล์จริงก่อน แล้วค่อยตกมาที่ดัชนี
+  // → แก้ .md นอกโปรแกรมแล้วเปิดกล่องนี้ ต้องเห็นค่าที่แก้ไว้ ไม่ใช่ค่าค้างใน scenes.json
+  const file = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
+  const M = await readSceneMeta(file, row);
+  const ov = el('div', 'k-overlay');
+  const box = el('div', 'k-dialog');
+  box.append(el('div', 'k-dlg-title', t('ui.scene.propsScene') + row.title));
+  // mk คืน <input> เหมือนเดิม แต่จำแถวไว้ให้ปุ่ม ✨ มาแปะทีหลังได้
+  const rowOf = new Map();
+  const mk = (label, val, tag = 'input') => {
+    const r = el('div', 'wiki-row');
+    r.append(el('label', null, label));
+    const i = el(tag, 'wiki-input');
+    i.value = val || '';
+    r.append(i); box.append(r); rowOf.set(i, r); return i;
+  };
+  // ช่องเลือก (สถานะ/สี) — คืน <select>
+  const mkSelect = (label, options, cur) => {
+    const r = el('div', 'wiki-row');
+    r.append(el('label', null, label));
+    const s = el('select', 'wiki-input k-dlg-select');
+    for (const [val, txt] of options) {
+      const o = el('option', null, txt); o.value = val;
+      if (val === cur) o.selected = true;
+      s.append(o);
+    }
+    r.append(s); box.append(r); return s;
+  };
+  // สวิตช์ (ปักหมุด) — คืน checkbox
+  const mkCheck = (label, checked) => {
+    const r = el('div', 'wiki-row');
+    r.append(el('label', null, label));
+    const c = el('input', 'wiki-check'); c.type = 'checkbox'; c.checked = !!checked;
+    r.append(c); box.append(r); return c;
+  };
+
+  // [alpha.120 ข้อ 6] เปลี่ยนชื่อฉากได้จากคุณสมบัติ (ทั้งกล่องและแผงต้องมีเหมือนกัน)
+  const iTitle = mk(t('ui.props.sceneName'), row.title);
+  const iSyn = mk(t('ui.common.synopsis'), M.synopsis, 'textarea');
+  const iStoryDate = mk(t('ui.common.timeStoryLineTime'), M.storyDate);
+  iStoryDate.placeholder = t('ui.scene.egDate');
+  // [alpha.57a ข้อ 2] เลขหน้าเริ่มต้นของไฟล์ฉากนี้ — เลขหน้าบนกระดาษนับต่อจากค่านี้
+  const iStartPage = mk(t('ui.scene.pageNumStartScreenplay'), row.startPage || '');
+  iStartPage.type = 'number'; iStartPage.min = '1';
+  iStartPage.placeholder = t('ui.scene.useOpenPageNumSettings');
+  // ══ [alpha.141] ★ "ไล่เลขหน้าต่อเนื่อง" — เลขหน้าไล่ต่อจากฉาก/บทก่อนหน้าในเล่มเดียวกัน ══
+  // ลำดับของฉากและบทมีอยู่แล้วใน draft.json/scenes.json · หน้าปกบทที่ติ๊กไว้ก็ถูกนับเป็นหน้าด้วย
+  // (คิดที่ book-flow.js ที่เดียว แล้วโหมดอ่านทั้งเล่มกับหน้ากระดาษใช้คำตอบเดียวกัน)
+  // ★ คลาส `wiki-flowchk` ไม่ใช่ `wiki-check` — เทสอ้างช่องติ๊กตามลำดับ (บทเรียนข้อ 12)
+  const flowRow = el('div', 'wiki-row');
+  flowRow.append(el('label', null, t('ui.scene.pageFlowContinue')));
+  const iFlow = el('input', 'wiki-flowchk');
+  iFlow.type = 'checkbox'; iFlow.checked = row.pageFlow === 'continue';
+  iFlow.title = t('ui.scene.pageFlowHint');
+  flowRow.append(iFlow); box.append(flowRow);
+  const iPov = mk(t('ui.common.viewPOV'), M.pov);
+  const iEmotion = mk(t('ui.common.mood'), M.emotion);
+  const iConflict = mk(t('ui.common.conflict'), M.conflict);
+  const iStatus = mkSelect(t('ui.common.status'),
+    [['Outline', t('ui.common.notSet')], ...allStatuses().map((s) => [s, dataLabel(s)])],
+    allStatuses().includes(row.status) ? row.status : 'Outline');
+  const iColor = mkSelect(t('ui.common.color'),
+    [['', t('ui.common.notHas')], ...SCENE_COLORS.map(([n, hex]) => [hex, '● ' + dataLabel(n)])], row.color || '');
+  const iFlag = mkCheck(t('ui.common.pinPin'), row.flag);
+  const iTags = mk(t('ui.common.tag2'), (M.tags || []).join(', '));
+  const iNote = mk(t('ui.common.note'), M.note, 'textarea');
+  const iFuture = mk(t('ui.scene.futureNoteWriter'), M.futureNote || '', 'textarea');
+  iFuture.placeholder = t('ui.scene.noteWriterShowOnly');
+  // [alpha.70 ข้อ 1] ปุ่ม "ดูบนแผนที่" — เดิมปักตำแหน่งฉากได้แต่ไม่มีทางกระโดดกลับไปดู
+  // (import แบบไดนามิก: maps-ui → app.js → scene-props เป็นวง ถ้า import ตรง ๆ ตอนโหลดโมดูล)
+  { const slot = el('div', 'props-mapslot'); box.append(slot);
+    import('./maps-ui.js').then(({ buildShowOnMapRow }) => buildShowOnMapRow(row))
+      .then((r) => slot.replaceWith(r)).catch(() => slot.remove()); }
+  // ป้ายเล่าเรื่อง (Narrative Markers) — ฉากนี้อยู่นอกลำดับเวลาหลัก
+  const iFb = mkCheck(t('ui.common.flashback'), M.isFlashback);
+  const iFf = mkCheck(t('ui.common.pageFlashforward'), M.isFlashforward);
+  // เลือกได้อย่างละหนึ่ง — ติ๊กตัวหนึ่งแล้วอีกตัวหลุดเอง
+  iFb.addEventListener('change', () => { if (iFb.checked) iFf.checked = false; });
+  iFf.addEventListener('change', () => { if (iFf.checked) iFb.checked = false; });
+
+  // ---- [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนให้ (อ่านเนื้อฉากจากไฟล์ .md ตรง ๆ) ----
+  const aiCtx = async () => {
+    let body = '';
+    try { body = parseMdFile(await kapi.readFile(file)).body || ''; } catch {}
+    return { body, title: row.title || '' };
+  };
+  attachAiFieldButton(rowOf.get(iSyn), iSyn, 'synopsis', aiCtx);
+  attachAiFieldButton(rowOf.get(iPov), iPov, 'pov', aiCtx);
+  attachAiFieldButton(rowOf.get(iEmotion), iEmotion, 'emotion', aiCtx);
+  attachAiFieldButton(rowOf.get(iConflict), iConflict, 'conflict', aiCtx);
+
+  const btns = el('div', 'k-dlg-btns');
+  const cB = el('button', null, t('ui.common.cancel'));
+  const okB = el('button', 'k-ok', t('ui.common.save'));
+  btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
+  cB.onclick = () => ov.remove();
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
+  okB.onclick = async () => {
+    // ชื่อฉากเขียนผ่าน setSceneTitle เท่านั้น (มันแก้ทั้ง scenes.json · frontmatter · ชื่อบนแท็บ)
+    const newTitle = iTitle.value.trim();
+    if (newTitle && newTitle !== row.title) {
+      const { setSceneTitle } = await import('./scene-ops.js');
+      await setSceneTitle(dPath, ch, row, newTitle);
+      row.title = newTitle;
+    }
+    row.synopsis = iSyn.value; row.pov = iPov.value; row.status = iStatus.value; row.storyDate = iStoryDate.value.trim();
+    // เก็บเฉพาะเมื่อผู้ใช้กรอกจริง (ค่าว่าง = เริ่มที่ 1) — กัน field ว่างรกทุกแถว
+    { const sp = parseInt(iStartPage.value, 10);
+      if (Number.isFinite(sp) && sp > 0) row.startPage = sp; else delete row.startPage; }
+    if (iFlow.checked) row.pageFlow = 'continue'; else delete row.pageFlow;
+    row.emotion = iEmotion.value; row.conflict = iConflict.value;
+    row.color = iColor.value; row.flag = iFlag.checked; row.note = iNote.value;
+    row.futureNote = iFuture.value;
+    if (iFb.checked && iFf.checked) iFf.checked = false;   // กันติ๊กพร้อมกัน (เผื่อถูกตั้งค่าจากโค้ด/เทส)
+    row.isFlashback = iFb.checked; row.isFlashforward = iFf.checked;
+    row.tags = iTags.value.split(',').map((x) => x.trim()).filter(Boolean);
+    // [alpha.60r2 ข้อ 13] เขียน frontmatter ก่อน (แหล่งความจริง) แล้วค่อยอัปเดตดัชนี
+    // ทำผ่าน writeSceneMeta ที่เดียว — ค่าว่าง/เท็จถูก delete ให้เอง ไม่เหลือบรรทัดรกในไฟล์
+    const props = {};
+    for (const k of SCENE_HEAVY_KEYS) props[k] = row[k];
+    await writeSceneMeta(file, props);
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    // ⚠ [alpha.124 ข้อ 38] เขียน frontmatter "ลับหลัง" แท็บที่เปิดไฟล์เดียวกันค้างอยู่ = ระเบิดเวลา
+    // แท็บถือ `meta` ชุดเก่าไว้ พอบันทึกครั้งถัดไป (หรือ autosave) มันจะเขียนทับคุณสมบัติที่เพิ่งตั้ง
+    // ทั้งหมด — แผงคุณสมบัติแก้เรื่องนี้ไปแล้วตั้งแต่ alpha.120 ข้อ 6 แต่ **กล่องนี้ยังไม่ได้แก้**
+    // (ทางเดียวกันเป๊ะ ต่างแค่ไฟล์) → ซิงก์ให้แท็บรู้ค่าใหม่ทันทีเหมือนกัน
+    const liveTab = state.tabs.get(file);
+    if (liveTab && liveTab.meta) {
+      try { liveTab.meta = parseMdFile(await kapi.readFile(file)).meta; }
+      catch (e) { log('warn', t('ui.props.writeMetaFail'), e); }
+    }
+    await buildTree();                 // สี/สถานะที่เพิ่งตั้งเห็นผลใน tree ทันที
+    // เลขหน้าเริ่มต้นเปลี่ยน → แท็บที่เปิดไฟล์นี้อยู่ต้องวาดเลขหน้าใหม่ทันที
+    const openTab = state.tabs.get(file);
+    if (openTab) {
+      openTab.startPage = row.startPage || 1;
+      openTab.pageFlow = row.pageFlow === 'continue' ? 'continue' : '';
+      updatePageNumberHint(); refreshSpView();
+    }
+    ov.remove(); setStatus(t('ui.scene.savePropsSceneDone'));
+  };
+}

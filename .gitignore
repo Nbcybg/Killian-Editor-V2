@@ -1,0 +1,12 @@
+node_modules/
+.claude/
+dist/
+dist*/
+tmp/
+*.log
+.git/
+.DS_Store
+Thumbs.db
+K2WIN/
+# [alpha.124] ผลข้างเคียงของ build บน Windows (ไม่มี /dev/null) — อย่าให้ git add -A ลากเข้ามา
+dev/
