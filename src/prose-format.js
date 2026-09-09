@@ -23,6 +23,9 @@ import { num } from './num.js';
 import { inlineDisplayText, RE_IMG, mdBlocks } from './md.js';
 // [alpha.82] ไทยนับสระ/วรรณยุกต์เป็นตัวเต็มไม่ได้ — ใช้ร่วมกับฝั่งบทภาพยนตร์
 import { visualLength, wrapVisual } from './text-width.js';
+// [alpha.145] ตาข่ายรองอักษรไทย — ทุกสแตกที่ไฟล์นี้ประกอบเองต้องผ่านตัวนี้
+// (lang-fonts.js import แค่ i18n.js → ไม่มีวงวน)
+import { withThaiFallback } from './lang-fonts.js';
 export { visualLength, ZERO_WIDTH_RE } from './text-width.js';
 
 const clamp = (v, lo, hi, d) => {
@@ -196,7 +199,9 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
                    `font-weight:${h.bold ? 700 : 400}`,
                    `font-style:${h.italic ? 'italic' : 'normal'}`,
                    `margin:${h.before}em 0 ${h.after}em`,
-                   `font-family:${proseHeadingStack(f)}`];
+                   // [alpha.145] หัวข้อเขียน font-family ลงไปตรง ๆ (ไม่ผ่าน --ed-font) จึงต้อง
+                   // ต่อตาข่ายไทยเอง ไม่งั้นหัวข้อ "ลอย" ทั้งที่เนื้อความไม่ลอย
+                   `font-family:${withThaiFallback(proseHeadingStack(f))}`];
     if (h.align) parts.push('text-align:' + h.align);
     if (f.headingColor) parts.push('color:' + f.headingColor);
     out.push(`${sel} h${lv}{${parts.join(';')}}`);
@@ -253,8 +258,9 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
   const p = paper || PAPER_SIZES.letter;
   const m = { ...MARGIN_DEFAULTS, ...(margins || {}) };
   const tw = textWidth(p, m);
-  const bodyFont = String((opts && opts.fontStack) || '').trim() || proseFontStack(f);
-  const headFont = String((opts && opts.headingStack) || '').trim() || proseHeadingStack(f);
+  // [alpha.145] ไฟล์ที่ส่งออกไปเปิดในเบราว์เซอร์อื่นก็ต้องไม่ลอย — ต่อตาข่ายไทยทั้งสองสแตก
+  const bodyFont = withThaiFallback(String((opts && opts.fontStack) || '').trim() || proseFontStack(f));
+  const headFont = withThaiFallback(String((opts && opts.headingStack) || '').trim() || proseHeadingStack(f));
   const body = [
     `font-family:${bodyFont}`,
     `font-size:${f.fontPt}pt`,
@@ -372,7 +378,8 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
     out.push(`figure.k-img-w img{max-height:calc(${+bh.toFixed(4)}in - 2.2em)}`);
   }
   out.push('pre{background:#f4f4f4;padding:10px 14px;border-radius:6px;overflow:auto;' +
-           'font-family:"Courier Prime","Courier New",monospace;font-size:.92em;text-indent:0}');
+           'font-family:' + withThaiFallback('"Courier Prime","Courier New",monospace') +
+           ';font-size:.92em;text-indent:0}');
   out.push('.pb{page-break-before:always;break-before:page;height:0}');
   out.push(`@page{size:${p.width}in ${p.height}in;margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`);
   out.push('@media print{body{margin:0;max-width:none;padding:0}}');

@@ -71,6 +71,20 @@ function parseCsvRows(text) {
 }
 
 const TEST = process.env.KILLIAN_TEST === '1';
+// ══ [alpha.145] ★ e2e ต้องไม่ขึ้นกับว่าหน้าต่างอยู่หน้าสุดหรือไม่ ══
+//
+// อาการ: รัน e2e ชุดเดิมสี่รอบ ได้ผลแดง **คนละจุดกันทุกรอบ** (432 / 694 / 927 / 4,308)
+// และแดงบนซอร์สที่ยังไม่ได้แก้อะไรเลยด้วย → ไม่ใช่บั๊กของโค้ด แต่เป็นสภาพแวดล้อม
+// ต้นเหตุ: Chromium **หรี่ตัวจับเวลาของหน้าต่างที่ถูกบัง/ไม่ได้โฟกัส** (background throttling)
+// เทสที่รอด้วย `setTimeout` ค่าคงที่ (มีอยู่หลายร้อยจุด) จึงอ่านผลก่อนงานจริงจะเสร็จ
+// เมื่อผู้พัฒนาสลับไปทำอย่างอื่นระหว่างที่หน้าต่างเทสเปิดอยู่
+//
+// สวิตช์สามตัวนี้ปิดการหรี่ทั้งหมด · เปิดเฉพาะโหมดเทส ไม่แตะพฤติกรรมของผู้ใช้จริง
+if (TEST) {
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+}
 let win = null;
 
 function recentFile() { return path.join(app.getPath('userData'), 'recent.json'); }
@@ -1543,9 +1557,21 @@ H('http:fetch', async (url, options) => {
   } catch (e) {
     // ยกเลิก/หมดเวลา = ไม่ใช่ข้อผิดพลาดที่ต้อง throw — คืนผลให้ฝั่งเรียกอ่านเหตุผลได้
     const aborted = ac.signal.aborted;
-    if (!aborted) throw e;
-    return { status: 0, ok: false, body: '', aborted: true, timedOut,
-             error: timedOut ? 'timeout ' + timeoutMs + 'ms' : 'aborted' };
+    if (aborted) {
+      return { status: 0, ok: false, body: '', aborted: true, timedOut,
+               error: timedOut ? 'timeout ' + timeoutMs + 'ms' : 'aborted' };
+    }
+    // [alpha.145] เดิม `throw e` → ฝั่ง renderer ได้ข้อความที่ Electron ห่อไว้อีกชั้น
+    // ("Error invoking remote method 'http:fetch': TypeError: fetch failed") ซึ่งกลืน
+    // `cause` ที่บอกสาเหตุจริง (ECONNREFUSED / ENOTFOUND / certificate) ไปทั้งหมด
+    // → คืนเป็นผลลัพธ์ธรรมดาพร้อมสาเหตุที่ลอกออกมาครบ ให้ ai-error.js อ่านได้
+    const causes = [];
+    for (let c = e; c && causes.length < 4; c = c.cause) {
+      const m = String((c && (c.code ? c.code + ' ' : '') + (c.message || c)) || '').trim();
+      if (m && !causes.includes(m)) causes.push(m);
+    }
+    return { status: 0, ok: false, body: causes.join(' — ') || String(e),
+             error: causes[0] || String(e), netError: true };
   } finally {
     clearTimeout(timer);
     if (reqId) httpInflight.delete(reqId);
@@ -1598,9 +1624,18 @@ H('http:stream', async (url, options, id) => {
     return { ok: true, status: res.status };
   } catch (e) {
     const aborted = ac.signal.aborted;
-    if (!aborted) return { ok: false, status: 0, body: String((e && e.message) || e) };
-    return { ok: false, status: 0, body: '', aborted: true, timedOut,
-             error: timedOut ? 'timeout ' + timeoutMs + 'ms' : 'aborted' };
+    if (aborted) {
+      return { ok: false, status: 0, body: '', aborted: true, timedOut,
+               error: timedOut ? 'timeout ' + timeoutMs + 'ms' : 'aborted' };
+    }
+    // [alpha.145] ลอก `cause` ออกมาให้ครบเหมือนฝั่ง http:fetch — "fetch failed" เฉย ๆ
+    // ไม่พอให้ผู้ใช้ตัดสินใจอะไรได้เลย (สาเหตุจริงอยู่ชั้นใน)
+    const causes = [];
+    for (let c = e; c && causes.length < 4; c = c.cause) {
+      const m = String((c && (c.code ? c.code + ' ' : '') + (c.message || c)) || '').trim();
+      if (m && !causes.includes(m)) causes.push(m);
+    }
+    return { ok: false, status: 0, body: causes.join(' — ') || String(e), netError: true };
   } finally {
     clearTimeout(timer);
     if (reqId) httpInflight.delete(reqId);

@@ -26,7 +26,7 @@ export function renderComparisonHtml(diffs, labels = {}) {
 
   let html = `<div class="k-compare-wrap">
 <style>
-.k-compare-wrap { font-family: 'Courier Prime', 'Courier New', monospace; font-size:12px;
+.k-compare-wrap { font-family: 'Courier Prime', 'Courier New', monospace, 'Thonburi', 'Leelawadee UI', 'TH Sarabun New', 'Sarabun', 'Noto Sans Thai'; font-size:12px;
   line-height:1.6; max-width:100%; overflow-x:auto; }
 .k-compare-header { display:flex; border-bottom:2px solid #666; margin-bottom:8px; }
 .k-compare-hdr-left, .k-compare-hdr-right { flex:1; padding:4px 8px; font-weight:bold; text-align:center; }

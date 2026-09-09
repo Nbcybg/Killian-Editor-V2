@@ -7,7 +7,7 @@
 //
 // ไฟล์นี้ไม่แตะ DOM/fs/network — เป็นแค่โครงข้อมูล + การคำนวณสถิติ → unit test ได้ตรง ๆ
 
-import { t as tt, t } from '../i18n.js';
+import { t as tt, t, T } from '../i18n.js';
 export const SESSION_DIR = 'Sessions';
 export const SESSION_VERSION = 1;
 
@@ -63,6 +63,27 @@ export const SCOPES = [
 export const DEFAULT_SCOPE = 'scene';
 export function scopeLabel(id) { return (SCOPES.find((s) => s.id === id) || SCOPES[0]).label; }
 
+/**
+ * ══ [alpha.145] ระดับการใช้ความคิดของโมเดล — ตั้งได้ **รายเซสชัน** ══
+ *
+ * ผู้ใช้: *"ไม่มีการปรับ effort level"*
+ * มีอยู่แล้วใน Parameters ของผู้ให้บริการ (`reasoningEffort`) แต่ **แก้ทีเดียวมีผลทุกเซสชัน**
+ * และต้องเข้าไปในกล่องตั้งค่า → แก้ผู้ให้บริการ → เลื่อนหาช่อง = ใช้จริงไม่ไหว
+ * ตอนนี้อยู่ข้างกล่องพิมพ์: ถามสั้น ๆ ใช้ minimal · ให้วางโครงทั้งเล่มค่อยขึ้น high
+ * ค่าว่าง `''` = ตามที่ตั้งไว้ในผู้ให้บริการ (ไม่ทับ)
+ */
+export const REASONING_EFFORTS = [
+  { id: '',        label: T`คิด: ตามผู้ให้บริการ` },
+  { id: 'minimal', label: T`คิด: น้อยสุด` },
+  { id: 'low',     label: T`คิด: น้อย` },
+  { id: 'medium',  label: T`คิด: กลาง` },
+  { id: 'high',    label: T`คิด: มาก` },
+];
+export function isReasoningEffort(v) { return REASONING_EFFORTS.some((r) => r.id === String(v || '')); }
+export function effortLabel(id) {
+  return (REASONING_EFFORTS.find((r) => r.id === String(id || '')) || REASONING_EFFORTS[0]).label;
+}
+
 // ปุ่มส่งข้อความ — ผู้ใช้เลือกได้ในตั้งค่า (บางคนพิมพ์หลายบรรทัดเป็นหลัก)
 export const SEND_KEYS = [
   { id: 'enter',       label: tt('ui.aiSession.enterSendShiftEnter') },
@@ -104,6 +125,10 @@ export function newSession(patch = {}) {
     providerId: patch.providerId || '',     // override จากตั้งค่า — เซสชันเลือกเจ้าของตัวเองได้
     model: patch.model || '',               // override โมเดล (อิสระจากตั้งค่ากลาง)
     contextLimit: patch.contextLimit || 0,  // 0 = ไม่รู้ (ยังไม่เคยตอบกลับมา)
+    // [alpha.145] ระดับการใช้ความคิดรายเซสชัน ('' = ตามผู้ให้บริการ)
+    effort: isReasoningEffort(patch.effort) ? String(patch.effort || '') : '',
+    // [alpha.145] id ของไฟล์ทักษะใน `Skills/` ที่เปิดใช้กับเซสชันนี้
+    skills: Array.isArray(patch.skills) ? patch.skills.map(String) : [],
     files: Array.isArray(patch.files) ? patch.files.slice() : [],
     messages: Array.isArray(patch.messages) ? patch.messages.slice() : [],
   };
@@ -128,6 +153,9 @@ export function newMessage(role, text, patch = {}) {
     provider: patch.provider || '',
     files: patch.files || [],
     error: patch.error || '',
+    // [alpha.145] คำอธิบายเต็ม + แนวทางแก้ของความผิดพลาด (ai-error.js) — เก็บลงไฟล์ด้วย
+    // เพื่อให้ย้อนดูทีหลังได้ว่ารอบนั้นพังเพราะอะไร
+    detail: patch.detail || '',
     // ── ของที่ transcript view ใช้แสดง (ไม่กระทบข้อความที่ส่งให้โมเดล) ──
     thinking: patch.thinking || '',   // ความคิดของโมเดล ถ้า provider ส่งกลับมา
     calls: patch.calls || null,       // คำสั่งที่โมเดลสั่งในข้อความนี้
@@ -176,6 +204,7 @@ export function archiveSession(session, on = true) {
  * จึงเหมาะกับ "คุยจนบริบทเต็ม/หลงประเด็น แล้วอยากเริ่มนับหนึ่งใหม่ในหัวข้อเดิม"
  * ค่าที่ต้องล้างไปพร้อมกัน: `contextLimit` (เดาจากยอด token ของรอบก่อน — ล้าสมัยทันทีที่ล้างประวัติ)
  * ค่าที่ต้อง **ไม่** ล้าง: โหมด · ระดับการเข้าถึง · โมเดล · ไฟล์แนบ · ชื่อที่ผู้ใช้ตั้งเอง
+ * · [alpha.145] ทักษะที่เปิดไว้ (`skills`) และระดับการใช้ความคิด (`effort`)
  * ชื่อที่ระบบตั้งให้เองจากข้อความแรก → คืนเป็นค่าเริ่มต้น เพื่อให้ตั้งใหม่จากคำถามแรกของรอบใหม่ได้
  */
 export function clearMessages(session) {

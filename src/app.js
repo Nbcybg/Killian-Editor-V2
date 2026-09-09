@@ -26125,6 +26125,60 @@ async function runTest(projectPath) {
           state.settings.fontFamily = keepFont138;
           state.settings.spFontFamily = keepSpFont138;
           applySettings();
+
+          // ══════════ [alpha.145] ★★ ตาข่ายรองไทย "ทุกช่อง" ไม่ใช่แค่ตัวแก้ไข ══════════
+          //
+          // ผู้ใช้ยังเจออยู่หลัง alpha.144: *"ทำไมอยู่ดี ๆ ก็ลอย และอยู่ดี ๆ ก็ไม่ลอย"*
+          //
+          // สิ่งที่ .144 ยังไม่รู้: ตัวสำรองของ Chromium **ขึ้นกับ generic family ท้ายสแตก**
+          //   ลงท้าย monospace  → Ayuthaya (ลอย)      ลงท้าย sans-serif → Thonburi (ปกติ)
+          // → ทุกช่องโมโนสเปซในโปรแกรม (Markdown ดิบ · แผงบันทึก · โค้ดบล็อกในแชท AI ·
+          //   เลขบรรทัด · ช่องพัฒนา) ลอยหมด ขณะที่เนื้อความปกติไม่ลอย
+          //
+          // เทสนี้ **วัดหมึกจริงจากสแตกที่คำนวณได้ของ element จริง** ไม่ใช่อ่าน CSS เป็นข้อความ
+          {
+            const probeFont = (cls) => {
+              const d = el('div', cls);
+              d.style.position = 'fixed'; d.style.left = '-9999px';
+              document.body.append(d);
+              const f = getComputedStyle(d).fontFamily;
+              d.remove();
+              return f;
+            };
+            const SURFACES = [
+              ['.plain-md (ช่องแก้ Markdown ดิบ)', 'plain-md'],
+              ['.k-logview (แผงบันทึก)', 'k-logview'],
+              ['.ai-md-pre-body (โค้ดบล็อกในแชท AI)', 'ai-md-pre-body'],
+              ['.ai-md-code (โค้ดในบรรทัด แชท AI)', 'ai-md-code'],
+              ['.k-ln-no (เลขบรรทัด)', 'k-ln-no'],
+              ['.k-dev-input (ช่องพัฒนา)', 'k-dev-input'],
+            ];
+            const BARE145 = 'ui-monospace, Menlo, Consolas, monospace';
+            const gBare = await stackGap(BARE145);
+            const pct145 = (g) => (g === null ? 'ว่าง' : (g * 100).toFixed(1) + '%');
+            check('[145] เครื่องนี้วัดสแตกโมโนสเปซดิบได้', gBare !== null, pct145(gBare));
+            for (const [label, cls] of SURFACES) {
+              const f = probeFont(cls);
+              check('[145] ตาข่ายไทยอยู่ในสแตกของ ' + label, /Thonburi/.test(f), f);
+              const g = await stackGap(f);
+              check('[145] ★ วรรณยุกต์ไม่ลอยใน ' + label + ' (วัดหมึกจริง)',
+                    g !== null && g <= 0.12, pct145(g) + ' | ' + f);
+              // เครื่องที่ทำซ้ำอาการได้เท่านั้นที่ยืนยันได้ว่า "ดีขึ้นจริง" ไม่ใช่เทสเปล่า
+              if (gBare !== null && gBare > 0.12) {
+                check('[145] ★ ' + label + ' เคยลอยจริงบนเครื่องนี้ และตอนนี้หายแล้ว',
+                      g < gBare * 0.6, 'ดิบ ' + pct145(gBare) + ' → ' + pct145(g));
+              }
+            }
+            // หัวข้อของ "รูปแบบนิยาย" เขียน font-family ลงกฎตรง ๆ (ไม่ผ่าน --ed-font)
+            const cssH145 = proseCss(mergeProseFormat({ fontFamily: '"Courier New", monospace' }));
+            const headRule = (cssH145.match(/h1\{[^}]*\}/) || [''])[0];
+            check('[145] ★ หัวข้อนิยายก็ได้ตาข่ายไทย (เดิมลอยทั้งที่เนื้อความไม่ลอย)',
+                  /Thonburi/.test(headRule), headRule.slice(0, 160));
+            const cssX145 = proseExportCss(mergeProseFormat({}), null, null,
+              { fontStack: '"Courier New", monospace' });
+            check('[145] ไฟล์ที่ส่งออกไปเปิดเครื่องอื่นก็ได้ตาข่ายไทย',
+                  /body\{[^}]*Thonburi/.test(cssX145), (cssX145.match(/body\{[^}]*\}/) || [''])[0].slice(0, 160));
+          }
         }
       }
 
@@ -32146,6 +32200,184 @@ async function runTest(projectPath) {
           await new Promise((r) => setTimeout(r, 180));
           check('[129-4] กลับมาโหมดปกติแล้ววาด Markdown อีกครั้ง',
                 !!document.getElementById('ai-chat-body').querySelector('.ai-msg-assistant .ai-md'));
+        }
+
+        // ══════════════ [alpha.145] บั๊กชุดที่ผู้ใช้รายงานหลังใช้แชทหนัก ๆ ══════════════
+        //
+        // *"บางครั้งคำตอบไม่ถูก refresh · ไม่มีบอกว่า AI กำลังทำงานอยู่ ต้องไปดูที่ status bar
+        //   อย่างเดียว · stream และคำตอบไม่โผล่ให้ ถ้าเกิดเผลอปิดหน้า หรือกดดู token ·
+        //   หน้า session ไม่ได้มีระบุเลยว่า session ไหนกำลังทำงานอยู่"*
+        //
+        // ต้นตอเดียวกันทั้งชุด: `send()` เดิมถือ **โหนด DOM** ไว้แล้วเขียนสตรีมลงไปตรง ๆ
+        // พอ `draw()` ล้าง host ทิ้ง (กด ← / กดป้าย token) โหนดนั้นหลุดจอ แต่สตรีมยังไหลลงที่เดิม
+        // ตอนนี้สถานะอยู่ที่ `S.run` (ข้อมูลล้วน) แล้วตัววาดอ่านจากตรงนั้นทุกครั้งที่วาดใหม่
+        {
+          const CP145 = await import('./ai/ai-chat-panel.js');
+          const st145 = _chatState();
+          const host145 = document.getElementById('ai-chat-body');
+          st145.view = 'session';
+          await renderAIChatPanel(host145);
+          await new Promise((r) => setTimeout(r, 120));
+
+          // จำลอง "กำลังคุยกับโมเดล" โดยไม่ต้องยิงเน็ตจริง
+          st145.run = { sessionId: st145.cur.id, title: st145.cur.title, reqId: 'e2e-145',
+                        startAt: Date.now(), label: 'กำลังคิด…', text: 'คำตอบที่ไหลมาแล้ว',
+                        thinking: 'ความคิดที่ไหลมาแล้ว' };
+          await renderAIChatPanel(host145);
+          await new Promise((r) => setTimeout(r, 80));
+          const pend145 = host145.querySelector('.ai-msg-pending');
+          check('[145] ★ วาดหน้าใหม่ระหว่างรอคำตอบ แล้วฟอง "กำลังคิด" ยังอยู่', !!pend145);
+          check('[145] ★ ข้อความที่สตรีมมาแล้วกลับมาครบ (ไม่หายไปกับ DOM เก่า)',
+                !!pend145 && pend145.textContent.includes('คำตอบที่ไหลมาแล้ว'),
+                pend145 && pend145.textContent.slice(0, 80));
+          check('[145] ความคิดของโมเดลก็กลับมาด้วย',
+                !!pend145 && pend145.textContent.includes('ความคิดที่ไหลมาแล้ว'));
+          check('[145] มีปุ่มหยุดในฟอง', !!host145.querySelector('.ai-pend-stop'));
+          check('[145] หัวเซสชันติดป้ายว่ากำลังทำงาน',
+                !!host145.querySelector('.ai-chat-title.running'));
+          check('[145] ปุ่มส่งถูกล็อกระหว่างรอ', host145.querySelector('.ai-chat-send').disabled === true);
+
+          // ★ เคสที่ผู้ใช้เจอจริง: กดป้าย token ไปหน้ารายละเอียด แล้วกลับมา
+          host145.querySelector('.ai-chat-ctx').click();
+          await new Promise((r) => setTimeout(r, 120));
+          check('[145] ระหว่างรอคำตอบยังกดดู token ได้',
+                !!document.getElementById('ai-chat-body').querySelector('.ai-chat-detail'));
+          // สตรีมที่ไหลมาระหว่างอยู่หน้าอื่น ต้องถูกเก็บไว้ (ไม่ตกหล่น)
+          _chatState().run.text = 'คำตอบที่ไหลมาแล้ว + ท่อนที่มาตอนอยู่หน้าอื่น';
+          document.getElementById('ai-chat-body').querySelector('.ai-chat-close').click();
+          await new Promise((r) => setTimeout(r, 150));
+          const back145 = document.getElementById('ai-chat-body').querySelector('.ai-msg-pending');
+          check('[145] ★★ กลับจากหน้ารายละเอียดแล้วสตรีมยังอยู่ครบ รวมท่อนที่มาระหว่างนั้น',
+                !!back145 && back145.textContent.includes('ท่อนที่มาตอนอยู่หน้าอื่น'),
+                back145 && back145.textContent.slice(0, 120));
+
+          // ★ หน้ารายการเซสชันต้องบอกได้ว่าตัวไหนกำลังทำงาน
+          _chatState().view = 'list';
+          await renderAIChatPanel(document.getElementById('ai-chat-body'));
+          await new Promise((r) => setTimeout(r, 120));
+          const hostL = document.getElementById('ai-chat-body');
+          const runRow = hostL.querySelector('.ai-chat-row.running');
+          check('[145] ★ แถวของเซสชันที่กำลังทำงานถูกทำเครื่องหมายไว้', !!runRow,
+                [...hostL.querySelectorAll('.ai-chat-row')].length + ' แถว');
+          check('[145] แถวนั้นมีสัญลักษณ์ ⏳', !!runRow && !!runRow.querySelector('.ai-chat-row-run'));
+          const banner = hostL.querySelector('.ai-chat-running');
+          check('[145] มีแถบ "กำลังทำงาน" เหนือรายการ และแสดงอยู่จริง',
+                !!banner && banner.style.display !== 'none' && banner.textContent.includes('กำลังทำงาน'),
+                banner && banner.textContent);
+          banner.click();
+          await new Promise((r) => setTimeout(r, 150));
+          check('[145] กดแถบแล้วกระโดดกลับไปหน้าเซสชันที่กำลังทำงาน',
+                _chatState().view === 'session' &&
+                !!document.getElementById('ai-chat-body').querySelector('.ai-msg-pending'));
+          _chatState().run = null;
+          await renderAIChatPanel(document.getElementById('ai-chat-body'));
+          await new Promise((r) => setTimeout(r, 100));
+          check('[145] จบงานแล้วฟอง "กำลังคิด" หายไป',
+                !document.getElementById('ai-chat-body').querySelector('.ai-msg-pending'));
+
+          // ── ข้อความผิดพลาดต้องบอกแนวทางแก้ ไม่ใช่ "HTTP 0" โดด ๆ ──
+          {
+            const AE145 = await import('./ai/ai-error.js');
+            const info145 = AE145.describeHttpError({ status: 0,
+              body: 'ECONNREFUSED connect 127.0.0.1:1234',
+              url: 'http://127.0.0.1:1234/v1/chat/completions', provider: 'เจ้าในเครื่อง' });
+            const c145 = _chatState();
+            c145.cur.view = 'normal';
+            c145.cur = AS.addMessage(c145.cur, AS.newMessage('assistant', '',
+              { error: info145.title, detail: info145.detail }));
+            await saveSession(c145.cur);
+            await renderAIChatPanel(document.getElementById('ai-chat-body'));
+            await new Promise((r) => setTimeout(r, 150));
+            const hostE = document.getElementById('ai-chat-body');
+            check('[145] ข้อความผิดพลาดขึ้นบนจอ', !!hostE.querySelector('.ai-msg-err'));
+            const fold145 = hostE.querySelector('.ai-msg-errdetail');
+            check('[145] ★ มีกล่องรายละเอียด + แนวทางแก้ (เดิมมีแค่บรรทัดเดียว)', !!fold145);
+            check('[145] รายละเอียดบอกปลายทางที่ยิงไป',
+                  !!fold145 && fold145.textContent.includes('127.0.0.1:1234'));
+            check('[145] รายละเอียดมีหัวข้อ "แนวทางแก้"',
+                  !!fold145 && fold145.textContent.includes('แนวทางแก้'));
+          }
+
+          // ── ★ ยิงของจริงไปยังพอร์ตที่ไม่มีอะไรฟังอยู่ — ต้องได้ทั้งคำอธิบายและบรรทัดในบันทึก ──
+          //
+          // ผู้ใช้: *"log ก็ไม่ได้เก็บอะไรเลย"* — เทสนี้เรียก `completeStream()` ตัวจริง
+          // (ไม่ใช่ฟังก์ชันปลอม) แล้ววัดจาก **แผงบันทึกของโปรแกรมเอง** ว่ามีบรรทัดจริง
+          {
+            const PU145 = await import('./ai/ai-provider-ui.js');
+            const AP145 = await import('./ai/ai-providers.js');
+            const seqBefore = logStore.lastSeq();
+            const deadProv = AP145.newProvider({
+              name: 'เจ้าที่ไม่มีอยู่จริง', model: 'x',
+              credential: { name: 'c', baseUrl: 'http://127.0.0.1:9/v1', allowedDomains: [] },
+              params: { maxRetries: 0, timeout: 5 },
+            });
+            const r145 = await PU145.completeStream(deadProv,
+              { messages: [{ role: 'user', content: 'สวัสดี' }] }, () => {});
+            check('[145] ★ ยิงไปพอร์ตที่ไม่มีใครฟัง → ล้มเหลว', r145.ok === false);
+            check('[145] ★★ ไม่ใช่ "HTTP 0" โดด ๆ อีกแล้ว — บอกสาเหตุจริง',
+                  !!r145.detail && r145.detail.length > 40, r145.error);
+            check('[145] คำอธิบายมีแนวทางแก้ให้ทำต่อ',
+                  Array.isArray(r145.hints) && r145.hints.length >= 1, JSON.stringify(r145.hints || []));
+            check('[145] รายละเอียดบอกปลายทางที่ยิงไป', !!r145.detail && r145.detail.includes('127.0.0.1:9'),
+                  (r145.detail || '').slice(0, 120));
+            const newLogs = logStore.all().filter((x) => x.seq > seqBefore);
+            // `splitSource()` ถอดคำนำหน้า "ai: " ออกไปเป็นช่อง source ให้แล้ว (ดู log-core.js)
+            const aiLog = newLogs.find((x) => x.level === 'error' && x.source === 'ai');
+            check('[145] ★★ ความผิดพลาดถูกจดลงแผงบันทึกจริง (เดิมไม่มีบรรทัดเลย)', !!aiLog,
+                  newLogs.map((x) => x.level + '/' + x.source + ':' + x.msg).join(' | ').slice(0, 200));
+            check('[145] บรรทัดในบันทึกแนบรายละเอียดเต็ม (กางดูแล้วรู้ว่าทำอะไรต่อ)',
+                  !!aiLog && String(aiLog.detail || '').includes('แนวทางแก้'),
+                  aiLog && String(aiLog.detail || '').slice(0, 120));
+          }
+
+          // ── ระดับการใช้ความคิด (effort) รายเซสชัน ──
+          {
+            const hostF = document.getElementById('ai-chat-body');
+            const eff = hostF.querySelector('.ai-chat-effort');
+            check('[145] ★ มีช่องปรับระดับการใช้ความคิดในกล่องพิมพ์', !!eff);
+            check('[145] มีครบ 5 ตัวเลือก', !!eff && eff.options.length === 5, eff && eff.options.length);
+            eff.value = 'high';
+            eff.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 150));
+            check('[145] เลือกแล้วบันทึกลงเซสชันตัวจริง', _chatState().cur.effort === 'high',
+                  _chatState().cur.effort);
+            const savedEff = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur)));
+            check('[145] ระดับการใช้ความคิดถูกเขียนลงไฟล์', savedEff.effort === 'high', savedEff.effort);
+            check('[145] บทสนทนาไม่หายตอนเปลี่ยนระดับการใช้ความคิด',
+                  (savedEff.messages || []).length === (_chatState().cur.messages || []).length);
+          }
+
+          // ── ทักษะ (Skills/*.md) ──
+          {
+            const SK145 = await import('./ai/ai-skills.js');
+            const dir145 = await SK145.ensureSkillDir(state.root);
+            check('[145] ★ สร้างโฟลเดอร์ทักษะได้', !!dir145 && await kapi.exists(dir145), dir145);
+            await kapi.writeFile(await kapi.join(dir145, 'tone.md'),
+              '---\nname: โทนของเรื่อง\ndescription: คุมโทนภาษา\n---\nเขียนด้วยประโยคสั้น\n');
+            const all145 = await SK145.loadSkills(state.root);
+            check('[145] อ่านไฟล์ทักษะกลับมาได้', all145.length >= 1 && all145.some((k) => k.id === 'tone'),
+                  all145.map((k) => k.id).join(','));
+            const cS = _chatState();
+            cS.cur.skills = ['tone'];
+            await saveSession(cS.cur);
+            const sp145 = await CP145.skillsPromptFor(cS.cur);
+            check('[145] ★ ทักษะที่เปิดไว้ถูกประกอบเข้า system prompt',
+                  sp145.text.includes('เขียนด้วยประโยคสั้น') && sp145.used.join(',') === 'tone',
+                  sp145.used.join(','));
+            check('[145] ทักษะที่ไม่ได้เปิดไม่ถูกส่งไป',
+                  (await CP145.skillsPromptFor({ skills: [] })).text === '');
+            await renderAIChatPanel(document.getElementById('ai-chat-body'));
+            await new Promise((r) => setTimeout(r, 200));
+            const skBtn = document.getElementById('ai-chat-body').querySelector('.ai-chat-skills');
+            check('[145] มีปุ่มทักษะในกล่องพิมพ์', !!skBtn);
+            check('[145] ปุ่มบอกจำนวนที่เปิดอยู่',
+                  !!skBtn && /1\/\d/.test(skBtn.textContent), skBtn && skBtn.textContent);
+            check('[145] ปุ่มถูกไฮไลต์เมื่อมีทักษะเปิดอยู่',
+                  !!skBtn && skBtn.classList.contains('on'));
+            cS.cur.skills = [];
+            await saveSession(cS.cur);
+          }
         }
 
         // ══ [alpha.129 ข้อ 1] งบประวัติแชท — เดิมตายตัว 6,000 token → AI ลืมแชทเก่าแล้วมั่ว ══

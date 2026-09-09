@@ -15,6 +15,8 @@ import {
   listProviders, activeProvider, upsertProvider, removeProvider,
 } from './ai-providers.js';
 import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
+// [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
+import { describeHttpError, shortError, redactSecrets } from './ai-error.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keys = null;                 // { <credentialId>: apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -79,7 +81,10 @@ async function persist(rows, activeId) {
 export async function sendRequest(provider, req) {
   const allowed = (provider.credential || {}).allowedDomains || [];
   if (!isDomainAllowed(req.url, allowed)) {
-    return { ok: false, status: 0, error: t('ui.aiProvider.domainNotListAllowed') + req.url };
+    // [alpha.145] ด่านของเราเองก็ต้องมีร่องรอย — เดิมเงียบสนิททั้งบนจอและในบันทึก
+    return failure(provider, req, { status: 0, blocked: true,
+      body: t('ui.aiProvider.domainNotListAllowed') + req.url
+            + ' | Allowed: ' + (allowed.join(', ') || '—') });
   }
   const opts = { method: req.method || 'POST', headers: req.headers };
   if (req.body !== undefined) opts.body = JSON.stringify(req.body);
@@ -100,7 +105,9 @@ export async function sendRequest(provider, req) {
         res = await kapi.httpFetch(req.url, opts);
       } catch (e) {
         if (attempt < retries) { await sleep(backoff(attempt)); continue; }
-        return { ok: false, status: 0, error: t('ui.aiProvider.connectCant') + (e && e.message) };
+        // [alpha.145] ข้อความจริงของชั้นเครือข่ายอยู่ใน e.message — เดิมต่อเป็นสตริงเดียว
+        // แล้วชั้นบนแยกไม่ออก · ส่งเป็น `body` ให้ `describeHttpError` อ่านได้เต็ม ๆ
+        return failure(provider, req, { status: 0, body: String((e && e.message) || e) });
       }
       if (res && res.ok) {
         let json = null;
@@ -109,13 +116,15 @@ export async function sendRequest(provider, req) {
       }
       // ผู้ใช้กดหยุดเอง หรือหมดเวลา — ห้ามลองใหม่ และต้องบอกเหตุผลตรง ๆ
       if (res && res.aborted) {
-        return { ok: false, status: 0, aborted: true, timedOut: !!res.timedOut,
-                 error: res.timedOut ? t('ui.aiProvider.timedOut') : t('ui.aiProvider.stopped') };
+        return failure(provider, req, { status: 0, aborted: true, timedOut: !!res.timedOut,
+                                        body: res.error || '' });
       }
       const st = (res && res.status) || 0;
-      const retryable = st === 429 || st === 408 || (st >= 500 && st < 600);
+      // [alpha.145] main.js เลิก throw ตอนเน็ตพังแล้ว (คืน netError มาแทน) → ทางลองใหม่
+      // ต้องรับเคสนี้ด้วย ไม่งั้น "เน็ตกระตุกหนึ่งวินาที" กลายเป็นล้มเหลวถาวรทันที
+      const retryable = (res && res.netError) || st === 429 || st === 408 || (st >= 500 && st < 600);
       if (retryable && attempt < retries) { await sleep(backoff(attempt)); continue; }
-      return { ok: false, status: st, error: httpMsg(st), body: (res && res.body) || '' };
+      return failure(provider, req, { status: st, body: (res && res.body) || '' });
     }
   } finally { clearBusy(); }
 }
@@ -123,12 +132,45 @@ export async function sendRequest(provider, req) {
 function hostOf(url) {
   try { return new URL(String(url)).host; } catch { return 'AI'; }
 }
-function httpMsg(s) {
-  if (s === 401 || s === 403) return t('ui.aiProvider.aPIKeyNotValid') + s + ')';
-  if (s === 404) return t('ui.aiProvider.notFoundToCheck');
-  if (s === 429) return t('ui.aiProvider.callHTTP');
-  if (s >= 500) return t('ui.common.sideProviderItemHTTP') + s + ')';
-  return t('ui.aiProvider.callNotOkHTTP') + s + ')';
+/**
+ * ══ [alpha.145] ★ ความล้มเหลวหนึ่งครั้ง = คำอธิบาย + แนวทางแก้ + บรรทัดในบันทึก ══
+ *
+ * ผู้ใช้: *"error ขึ้นแค่ ⚠ เรียกไม่สำเร็จ (HTTP 0) แต่ไม่รู้ว่าคืออะไรและแนวทางแก้ไข
+ *          log ก็ไม่ได้เก็บอะไรเลย"*
+ *
+ * ของเดิม `httpMsg(status)` ดู **แค่ตัวเลข** แล้วทิ้ง `body` ที่ main.js อุตส่าห์แนบมาให้
+ * (ข้อความจริงของเซิร์ฟเวอร์ · `ECONNREFUSED` · `certificate` …) → ทุกอย่างยุบเป็น "HTTP 0"
+ * ตอนนี้ทุกทางออกที่ล้มเหลวผ่านตัวนี้ตัวเดียว = ได้ทั้งข้อความบนจอ **และ** บรรทัดในบันทึก เสมอ
+ */
+function failure(provider, req, e) {
+  const info = describeHttpError({
+    ...e, url: req && req.url, provider: provider && provider.name,
+    model: (req && req.body && req.body.model) || (provider && provider.model) || '',
+  });
+  // ยกเลิกเอง = ไม่ใช่ข้อผิดพลาด — จดเป็น info ไม่ให้แผงบันทึกแดงโดยไม่จำเป็น
+  log(info.code === 'aborted' ? 'info' : 'error', 'ai: ' + shortError(info), info.detail);
+  return { ok: false, status: info.status, aborted: !!e.aborted, timedOut: !!e.timedOut,
+           error: info.title, detail: info.detail, hints: info.hints, code: info.code,
+           body: redactSecrets(String(e.body || '')) };
+}
+
+/**
+ * [alpha.145] จดทุกคำขอที่ **สำเร็จ** ลงบันทึกด้วย — ผู้ใช้: *"log ก็ไม่ได้เก็บอะไรเลย"*
+ * มีแต่บรรทัดตอนพังอย่างเดียวก็ยังไล่ไม่ได้ว่า "รอบไหนช้า/รอบไหนคำตอบถูกตัด"
+ * ห้ามมีเนื้อบทสนทนาในบันทึก — เก็บเฉพาะตัวเลขและปลายทาง
+ */
+function logCall(provider, req, { ms, usage, chars, stream }) {
+  const u = usage || {};
+  log('info', 'ai: ' + (provider && provider.name || '?') + ' · ' + ((req.body && req.body.model) || '?')
+      + ' · ' + (ms / 1000).toFixed(1) + 's · ' + (u.total || 0) + ' tok',
+      [(stream ? 'stream' : 'complete'),
+       'host=' + hostOf(req.url),
+       'in=' + (u.input || 0) + ' out=' + (u.output || 0)
+         + (u.reasoning ? ' think=' + u.reasoning : '') + (u.cached ? ' cache=' + u.cached : ''),
+       'chars=' + chars,
+       'max_tokens=' + (req.body && req.body.max_tokens !== undefined ? req.body.max_tokens : '—'),
+       'reasoning_effort=' + ((req.body && req.body.reasoning_effort) || '—'),
+      ].join(' · '));
 }
 
 /** ดึงรายชื่อโมเดลจาก API ของเจ้านั้น — ลองทีละเส้นทางจนกว่าจะได้ */
@@ -161,12 +203,15 @@ export async function complete(provider, opts = {}) {
   // [alpha.96] ส่งต่อชื่อคำขอ + เพดานเวลา เพื่อให้กด "หยุด" ได้จริง
   if (opts.reqId) req.reqId = opts.reqId;
   if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
+  const t0 = Date.now();
   const res = await sendRequest(provider, req);
   if (!res.ok) {
-    return { ok: false, text: '', error: res.error, status: res.status,
+    return { ok: false, text: '', error: res.error, detail: res.detail, hints: res.hints,
+             code: res.code, status: res.status,
              aborted: !!res.aborted, timedOut: !!res.timedOut };
   }
   const { text, thinking, usage } = parseChat(res.json);
+  logCall(provider, req, { ms: Date.now() - t0, usage, chars: (text || '').length, stream: false });
   return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
 }
 
@@ -192,7 +237,8 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
   if (opts.reqId) req.reqId = opts.reqId;
   if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
   if (!isDomainAllowed(req.url, (provider.credential || {}).allowedDomains || [])) {
-    return { ok: false, status: 0, error: t('ui.aiProvider.domainNotListAllowed') + req.url };
+    return failure(provider, req, { status: 0, blocked: true,
+      body: t('ui.aiProvider.domainNotListAllowed') + req.url });
   }
   const who = provider.name || hostOf(req.url);
   const httpOpts = { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) };
@@ -200,6 +246,7 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
   if (req.timeoutMs) httpOpts.__timeoutMs = req.timeoutMs;
   let text = '';
   let thinking = '';
+  const streamT0 = Date.now();
   try {
     setBusy(tf('ui.aiProvider.busyNext', who));
     const res = await kapi.httpStream(req.url, httpOpts, (line) => {
@@ -211,16 +258,23 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
       onChunk({ delta: c.delta || '', thinking: c.thinking || '', text, thinkingAll: thinking });
     });
     if (res && res.ok === false) {
-      return { ok: false, text, thinking, error: httpMsg(res.status || 0), status: res.status };
+      // ══ [alpha.145] ★ ต้นตอของ "⚠ เรียกไม่สำเร็จ (HTTP 0)" ที่ผู้ใช้เจอ ══
+      // main.js แนบเหตุผลจริงมาใน `res.body` ตลอด (ข้อความเซิร์ฟเวอร์ · ECONNREFUSED · …)
+      // แต่บรรทัดนี้เคยส่งแค่ `httpMsg(status)` แล้วทิ้ง body ทั้งก้อน
+      const f = failure(provider, req, { status: res.status || 0, body: res.body || res.error || '',
+                                         aborted: !!res.aborted, timedOut: !!res.timedOut });
+      return { ...f, text, thinking };
     }
     const usage = {
       input: estimateTokens((opts.messages || []).reduce((n, m) => n + (m.content || ''), '') + (opts.system || '')),
       output: estimateTokens(text), reasoning: estimateTokens(thinking), cached: 0, total: 0,
     };
     usage.total = usage.input + usage.output;
+    logCall(provider, req, { ms: Date.now() - streamT0, usage, chars: text.length, stream: true });
     return { ok: true, text: text.trim(), thinking, usage, model: req.body.model, provider: provider.name };
   } catch (e) {
-    return { ok: false, text, thinking, error: t('ui.aiProvider.connectCant') + (e && e.message) };
+    const f = failure(provider, req, { status: 0, body: String((e && e.message) || e) });
+    return { ...f, text, thinking };
   } finally { clearBusy(); }
 }
 
