@@ -36,7 +36,7 @@ import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
 // [alpha.135] ส่วน "อัปเดตโปรแกรม" ในแท็บ อัตโนมัติ — สร้างด้วยโค้ด (ปุ่ม/ค่าจริง ไม่ใช่ HTML ตายตัว)
 import { buildUpdateFields } from './update/update-ui.js';
-import { iconHtml } from './icons.js';
+import { iconHtml, initIcons } from './icons.js';
 // [alpha.140] หัวข้อ "แผงนำทาง" ในตั้งค่าโปรเจกต์ — กติกาแบ่งหน้า/คำอธิบายสัญลักษณ์อยู่ที่นี่ที่เดียว
 import { clampPerPage, NAV_FLAG_DEFS } from './nav-model.js';
 // [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
@@ -285,6 +285,7 @@ export function settingsDialog(openTab, opts = {}) {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-settings');
   box.innerHTML = tf('ui.dlg.alphaItemLevelUser', t('settings.title'), t('settings.general'), t('settings.writing'), t('settings.automation'), t('settings.language'), t('settings.shortcuts'), t('settings.projectName'), t('settings.author'), t('settings.autoSaveMinutes'), t('settings.autoSaveHint'), t('settings.autoBackup'), t('settings.maxBackups'), t('settings.maxBackupsHint'), t('settings.dailyGoal'), t('settings.projectGoal'), t('settings.fontFamily'), t('settings.fontFamilyHint'), t('settings.spFontFamily'), t('settings.spFontFamilyHint'), t('settings.lineNumbers'), t('settings.lineNumbersHint'), t('settings.spellCheck'), t('settings.spellCheckHint'), t('settings.spellCheckDict'), t('settings.spellCheckDictHint'), t('settings.autoMention'), t('settings.autoMentionHint'), t('settings.recycleDays'), t('settings.recycleDaysHint'), t('settings.focusDim'), t('settings.focusDimHint'), t('ui.settings.uiScale'), t('ui.settings.uiScaleHint'), iconHtml('cloud-lightning', 14), t('settings.autoSync'), t('settings.autoSyncHint'), t('settings.languageSelect'), t('ui.dlg.langReadNameFile'), t('ui.dlg.exportFileCSV'), t('ui.dlg.openFolderLang'), t('ui.dlg.loadFileLangNew2'), t('settings.shortcutsHint'), t('dialogs.cancel'), t('dialogs.save'));
+  initIcons(box);   // [alpha.147] ไอคอนหัวกลุ่มเมนูตั้งค่าเป็น data-icon ในเทมเพลต (ไม่ใช่อีโมจิในข้อความแล้ว)
   ov.appendChild(box); document.body.appendChild(ov);
 
   const q = (id) => box.querySelector(id);

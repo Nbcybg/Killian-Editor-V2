@@ -156,9 +156,10 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   const src = fs.readFileSync(path.join(ROOT, 'src/panels/panel-ui.js'), 'utf8');
   const csv = fs.readFileSync(path.join(ROOT, 'languages/k2_th.csv'), 'utf8');
   const keys = new Set(csv.split('\n').map((l) => l.split(',')[0]));
-  const ico = fs.readFileSync(path.join(ROOT, 'src/icons.js'), 'utf8');
-  const icoBody = ico.slice(ico.indexOf('const ICO'), ico.indexOf('const NF'));
-  const ICON = new Set([...icoBody.matchAll(/^ {2}'?([A-Za-z0-9_-]+)'?\s*:/gm)].map((m) => m[1]));
+  // [alpha.147] ชุดไอคอน = ไฟล์ใน icons/svg + ตัวสำรองใน icons/glyphs.csv (icons.js ไม่มีตารางในตัวแล้ว)
+  const { buildCommandsData } = require('../tools/commands-data.cjs');
+  const icoData = buildCommandsData(ROOT);
+  const ICON = new Set([...Object.keys(icoData.ICON_SVG), ...Object.keys(icoData.ICON_GLYPH)]);
 
   const badKey = [...src.matchAll(/i18n:\s*'([^']+)'/g)].map((m) => m[1])
     .filter((k) => !keys.has(k) && !keys.has('ui.' + k));

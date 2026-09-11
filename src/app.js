@@ -1,5 +1,5 @@
 ﻿// Killian 2 renderer — explorer + tabs + toolbar + statusbar
-import { t as tt, tf as ttf, T, tf } from './i18n.js';
+import { t as tt, tf as ttf, T, tf, setShortcutResolver } from './i18n.js';
 import { KEditor } from './editor.js';
 import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString,
          mdToDoc, docToMd } from './md.js';   // [alpha.132 · X-1] ยัด align กลับเป็นคอมเมนต์ตอนส่งออก
@@ -82,7 +82,7 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          csvToTable, tableToCsv, langFileName, fallbackLangName,
          SHORTCUTS, SHORTCUT_LABELS, shortcutId, SHORTCUT_CATS, shortcutCat, needsAlt,
          SHORTCUT_PANEL_SKIP,
-         formatShortcut, accelText, withShortcut, num,
+         formatShortcut, accelText, num,
          setBusy, clearBusy, busyMsg, withBusy,
          PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
          keepScroll,                      // [alpha.66r2] จำ-คืนตำแหน่งเลื่อนตอนรื้อ DOM สร้างใหม่
@@ -175,6 +175,7 @@ import * as PL from './panels/panel-layout.js';
 import { inGroupHandle, snapToEdges, clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panels/panel-drag.js';
 // [alpha.60r2 ข้อ 7] รายชื่อกล่องที่เลื่อนได้ — selftest ตรวจว่าครอบคลุมครบ
 import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
+import { PANEL_DEFS as PANEL_DEFS_147, panelIcon } from './panels/panel-ui.js';   // [alpha.147] e2e ไอคอนแผงจากทะเบียน
 // [alpha.73 ข้อ 6] ความกว้างต่ำสุดของเนื้อแผง (ค่าเริ่มต้น) — ค่าจริงต่อแผงอยู่ที่ `minW` ใน PANEL_DEFS
 import { PANEL_MIN_W_DEFAULT } from './panels/panel-renderer.js';
 // [alpha.73 ข้อ 2-4] นิยามสี/การควบคุม/กล้องของ Story Network
@@ -265,7 +266,7 @@ import { importScreenplayDialog, importSummary, elementsToMarkdown } from './imp
 // [alpha.60 ข้อ 74] เปรียบเทียบบทภาพยนตร์
 import { showComparisonDialog, compareScripts } from './sp-compare.js';
 import { resetAI, getAIClient, ragContext } from './ai/ai-bridge.js';
-import { icon, initIcons, iconHtml, iconLabel, hasIcon } from './icons.js';
+import { icon, initIcons, iconHtml, iconLabel, hasIcon, commandIcon, isRegisteredCommand } from './icons.js';
 // [97] หน้ารายชื่อตัวละคร (Cast of Characters) — หน้าเดี่ยวประจำเล่ม
 import { openRosterFlow, openRoster, renderRoster, saveRosterTab, isRosterTab,
          loadRoster, saveRoster, rosterTextFor } from './roster-ui.js';
@@ -351,6 +352,8 @@ export function applySettings() {
   applyPaperClass();                                 // [alpha.99 ข้อ 2] กระดาษเปิดตลอด ไม่มีสวิตช์
   document.body.classList.toggle('k-fab-off', state.settings.fabEnabled === false);   // [60r2 ข้อ 9]
   applyTheme();                                      // [60r2 ข้อ 10] ธีมสว่าง/มืดของ UI
+  // [alpha.147] ผู้ใช้เพิ่งตั้งคีย์ลัดใหม่ → tooltip ของทุกปุ่ม + accelerator ในเมนูระบบต้องตามทันที
+  try { applyCommandUi(); syncMenuToggles(); } catch {}
   // [alpha.57a ข้อ 5] ฟอนต์ตามภาษา — ต้องมาก่อนตั้ง --ed-font/--sp-font เพราะจะเอา "K2 Lang" ไปนำหน้า
   const nLang = applyProjectLangFonts();
   // [alpha.58r บั๊ก 18] ฟอนต์เริ่มต้นของ "นิยาย" = ตัวพิมพ์แบบสัดส่วน ไม่ใช่ Courier (ฟอนต์บท)
@@ -6532,6 +6535,8 @@ export function syncMenuToggles() {
       })(),
       panels: { 'tree-panel': !!ps.tree, 'props-panel': !!ps.props,
                 'outline-panel': !!ps.outline, ...ps },
+      // [alpha.147] คีย์ลัดที่ผู้ใช้ตั้งเอง → main ใช้เติม accelerator ของเมนูระบบให้ตรงกับของจริง
+      shortcuts: (state.settings && state.settings.shortcuts) || {},
     };
     // สร้างเมนู native ใหม่ทุกครั้งแพงเกินไป — ส่งเฉพาะตอนค่าเปลี่ยนจริง
     const sig = JSON.stringify(payload);
@@ -8663,7 +8668,12 @@ function refreshModeBtn() {
   b.style.display = editable ? '' : 'none';
   if (!editable) return;
   const sp = !!tab.sp;
-  b.innerHTML = (sp ? iconHtml('film', 16) : iconHtml('book', 16)) + (sp ? tt('ui.app.chapterFilm2') : tt('ui.app.novel2'));
+  // [alpha.147] ไอคอนของปุ่มนี้บอก "โหมดปัจจุบัน" จึงมาจากแถว set-format:<โหมด> ในทะเบียน (ไม่ใช่ toggle-format)
+  // — `data-icon-command` บอกว่าไอคอนตามคำสั่งไหน (e2e [147-1] ใช้ตรวจ) · ช่องว่าง = ไม่มีไอคอน
+  const iconCmd = 'set-format:' + (sp ? 'screenplay' : 'prose');
+  const ic = commandIcon(iconCmd);
+  b.setAttribute('data-icon-command', iconCmd);
+  b.innerHTML = (ic ? iconHtml(ic, 16) : '') + (sp ? tt('ui.app.chapterFilm2') : tt('ui.app.novel2'));
   b.title = tt('ui.app.toggleModeDocNovel');
 }
 
@@ -9787,34 +9797,12 @@ const FMTS = ['bold', 'italic', 'underline', 'strike', 'sup', 'sub'];
 // ตั้ง title ปุ่ม toolbar ให้แสดง shortcut (เรียกตอนเริ่ม + หลังเปลี่ยนภาษา)
 function updateToolbarTitles() {
   applyCaseOptions();          // [alpha.124 ข้อ 36] ป้ายรูปตัวพิมพ์ต้องตามภาษาที่เพิ่งเปลี่ยนด้วย
-  // ปุ่มฟอร์แมต
-  $('#tb-bold').title = withShortcut('toolbar.bold', 'KeyB', true, false);
-  $('#tb-italic').title = withShortcut('toolbar.italic', 'KeyI', true, false);
-  $('#tb-underline').title = withShortcut('toolbar.underline', 'KeyU', true, false);
-  $('#tb-strike').title = withShortcut('toolbar.strike', 'KeyX', true, true);
-  $('#tb-sup').title = withShortcut('toolbar.superscript', 'Equal', 'ctrl+alt', false);
-  $('#tb-sub').title = withShortcut('toolbar.subscript', 'Minus', 'ctrl+alt', false);
-  $('#tb-ul').title = withShortcut('toolbar.bulletList', 'Digit8', true, true);
-  $('#tb-ol').title = withShortcut('toolbar.numberList', 'Digit7', true, true);
-  $('#tb-quote').title = t('toolbar.quote');
-  $('#tb-align-left').title = withShortcut('toolbar.alignLeft', 'KeyL', true, true);
-  $('#tb-align-center').title = withShortcut('toolbar.alignCenter', 'KeyK', true, true);
-  $('#tb-align-right').title = withShortcut('toolbar.alignRight', 'KeyR', true, true);
-  $('#tb-align-justify').title = withShortcut('toolbar.alignJustify', 'KeyJ', true, true);
-  // ปุ่มโหมด
   // [alpha.60r2 ข้อ 10] Ctrl+Shift+P ย้ายไปเป็น "ธีมสว่าง/มืด" — ปุ่มกระดาษไม่มีคีย์ลัดแล้ว
   applyTheme();                       // ตั้ง title/สถานะของปุ่มธีมตามภาษาปัจจุบัน
-  $('#tb-mode').title = t('toolbar.toggleMode') + ' (Ctrl+Shift+M)';
-  // ปุ่มเครื่องมือ
-  $('#tb-img').title = t('toolbar.insertImage');
-  $('#tb-source').title = t('toolbar.viewSource');
-  $('#tb-read').title = t('toolbar.readingMode');
-  $('#tb-gsearch').title = withShortcut('toolbar.globalSearch', 'KeyF', true, true);
-  $('#tb-kanban').title = t('toolbar.kanban');
-  $('#tb-ai').title = t('toolbar.aiAssistant');
-  $('#tb-ai-chat').title = t('toolbar.aiChat');
-  $('#tb-starter') && ($('#tb-starter').title = t('toolbar.starter'));
-  $('#tb-plug').title = t('toolbar.plugins');
+  // [alpha.147] tooltip + คีย์ลัดของทุกปุ่มมาจากทะเบียนคำสั่ง (`data-command`) ทางเดียว
+  // เดิมไล่ตั้งทีละปุ่มด้วย withShortcut('toolbar.bold', 'KeyB', …) — คีย์ลัดถูกพิมพ์ซ้ำในโค้ด
+  // (ไม่ตามค่าที่ผู้ใช้ตั้งเอง) และ "(Ctrl+Shift+M)" ของปุ่มโหมดเขียนตายตัวทั้งที่ตั้งใหม่ได้
+  applyCommandUi();
 }
 // re-export ให้ core.js เรียกหลังเปลี่ยนภาษา
 export { updateToolbarTitles };
@@ -12135,7 +12123,7 @@ function restoreInactivePanes() {
 }
 
 // [alpha.72 ข้อ 5] คำสั่งที่ยิงรัวจนกลบ log (พิมพ์/เลื่อน/ซูม) — จดเป็น debug ไม่ใช่ info
-const QUIET_CMDS = new Set(['zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
+const QUIET_CMDS = new Set(['zoom', 'zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
                             'find', 'find-next', 'find-prev']);
 
 export async function handleCommand(ch, ...a) {
@@ -12718,14 +12706,16 @@ window.addEventListener('wheel', (e) => {
 }, { passive: false, capture: true });
 window.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-  // รีเซ็ตซูม: Ctrl+Shift+0 (เลี่ยงชน Ctrl+0 = ย่อหน้าปกติ) · ปรับ: Ctrl+= / Ctrl+-
+  // [alpha.147] Ctrl+= / Ctrl+- / Ctrl+Shift+0 ย้ายเข้าตาราง SHORTCUTS แล้ว (คำสั่ง zoom:1 · zoom:-1 · zoom:0
+  // ใน icons/commands.csv) — ตั้งใหม่เองได้ และขึ้นบน tooltip/เมนู/หน้าตั้งค่าเอง
+  // (เดิมเขียนตายตัวที่นี่ + พิมพ์ "(Ctrl+-)" ลงไฟล์ภาษา) · ตัวดักนี้เหลือแค่ปุ่มบนแป้นตัวเลข
+  // ซึ่งตาราง SHORTCUTS ผูกได้ทีละปุ่ม — ไม่งั้นกดแป้นตัวเลขแล้วซูมไม่ได้เหมือนเดิม
   //
-  // [alpha.124 ข้อ 2] **ต้องเช็ค Shift ด้วย**: เดิมกิ่ง Equal/Minus ไม่ดู `shiftKey` เลย
-  // → Ctrl+Shift+= ยิงทั้งซูมกระดาษ **และ** `fmtbar-lock` ในตาราง SHORTCUTS พร้อมกัน
-  if ((e.code === 'Digit0' || e.code === 'Numpad0') && e.shiftKey) { e.preventDefault(); resetPageScale(); }
-  else if (e.shiftKey) return;                       // Ctrl+Shift+อะไรก็ตาม = ไม่ใช่งานของตัวซูม
-  else if ((e.code === 'Equal' || e.code === 'NumpadAdd')) { e.preventDefault(); bumpPageScale(1); }
-  else if ((e.code === 'Minus' || e.code === 'NumpadSubtract')) { e.preventDefault(); bumpPageScale(-1); }
+  // [alpha.124 ข้อ 2] **ต้องเช็ค Shift ด้วย** — Ctrl+Shift+อะไรก็ตาม (นอกจาก Numpad0) ไม่ใช่งานของตัวซูม
+  if (e.code === 'Numpad0' && e.shiftKey) { e.preventDefault(); resetPageScale(); }
+  else if (e.shiftKey) return;
+  else if (e.code === 'NumpadAdd') { e.preventDefault(); bumpPageScale(1); }
+  else if (e.code === 'NumpadSubtract') { e.preventDefault(); bumpPageScale(-1); }
 }, true);
 
 // ---------------- คีย์ลัดที่ตั้งเองได้ ----------------
@@ -12737,6 +12727,40 @@ function effectiveShortcuts() {
     const o = ov[shortcutId(s)];
     return o ? [o.code, o.ctrl, o.shift, ...s.slice(3)] : s;
   });
+}
+
+/**
+ * [alpha.147] ★ คีย์ลัดของคำสั่ง "ตามที่ใช้งานจริง" (ค่าที่ผู้ใช้ตั้งเองชนะค่าเริ่มต้นใน icons/commands.csv)
+ * ผู้ใช้: *"ต้องแยกในส่วนของ shortcut เพราะคุณชอบลืมใส่ใน ui"*
+ * **ทุกที่ที่โชว์คีย์ลัดบนจอต้องมาทางนี้** — ห้ามพิมพ์ "(Ctrl+B)" ลงไฟล์ภาษาหรือโค้ดอีก
+ * (ในประโยคของไฟล์ภาษาให้เขียน `{sc:<คำสั่ง>}` แทน — i18n.js เติมให้ผ่าน setShortcutResolver)
+ * @returns {string} '' = คำสั่งนี้ไม่มีคีย์ลัด
+ */
+export function commandShortcutText(id) {
+  const s = effectiveShortcuts().find((x) => shortcutId(x) === id);
+  return s ? formatShortcut(s[0], s[1], s[2]) : '';
+}
+/** "ข้อความ (คีย์ลัด)" — คำสั่งไม่มีคีย์ลัดคืนข้อความเดิม */
+export function withCommandShortcut(text, id) {
+  const sc = commandShortcutText(id);
+  return sc ? `${text} (${sc})` : text;
+}
+setShortcutResolver(commandShortcutText);
+/**
+ * [alpha.147] ทุก element ที่มี `data-command`: ไอคอนจากทะเบียน + tooltip = ข้อความจากไฟล์ภาษา + คีย์ลัดจริง
+ * เรียกตอนเริ่ม · หลังเปลี่ยนภาษา · หลังผู้ใช้ตั้งคีย์ลัดใหม่ (เรียกซ้ำได้ ไอคอนไม่ซ้อน)
+ * @returns {number} จำนวน element ที่ผูกกับคำสั่ง
+ */
+export function applyCommandUi(root) {
+  const scope = root || document;
+  initIcons(scope);
+  const els = scope.querySelectorAll('[data-command]');
+  for (const b of els) {
+    const key = b.getAttribute('data-i18n-title')
+             || (b.getAttribute('data-i18n-attr') === 'title' ? b.getAttribute('data-i18n') : '');
+    if (key) b.title = withCommandShortcut(t(key), b.getAttribute('data-command'));
+  }
+  return els.length;
 }
 
 /**
@@ -12873,18 +12897,8 @@ function makeDraggable(elm, handle, opts = {}) {
 }
 
 // ---- แสดงคีย์ลัดใน title ของปุ่มในแถบเครื่องมือ (i18n-aware) ----
-// map: element ID -> shortcut ID (matching SHORTCUTS table)
-const TB_SC_MAP = {
-  'tb-bold': 'fmt:bold', 'tb-italic': 'fmt:italic', 'tb-underline': 'fmt:underline',
-  'tb-strike': 'fmt:strike', 'tb-sup': 'fmt:sup', 'tb-sub': 'fmt:sub',
-  'tb-ul': 'fmt:ul', 'tb-ol': 'fmt:ol',
-  'tb-align-left': 'fmt:align:left', 'tb-align-center': 'fmt:align:center',
-  'tb-align-right': 'fmt:align:right', 'tb-align-justify': 'fmt:align:justify',
-  'tb-gsearch': 'global-search', 'tb-mode': 'toggle-format',
-  'tb-close': 'close-tab', 'tb-focus': 'focus-mode',
-  'tb-typewriter': 'typewriter', 'tb-quickopen': 'quick-open',
-  'tb-gallery': 'gallery',
-};
+// [alpha.147] ตาราง TB_SC_MAP (ปุ่ม → คำสั่ง) ถูกถอด — ปุ่มบอกคำสั่งของตัวเองด้วย `data-command`
+// ใน index.html แล้ว (ตัวเดียวกับที่ icons/commands.csv ใช้) · เดิมมีแค่ 19 ปุ่มจาก 78 ที่โชว์คีย์ลัด
 /**
  * [alpha.124 ข้อ 36] สร้างรายการ "สลับรูปตัวพิมพ์" บนแถบเครื่องมือจากตารางจริง
  * เรียกซ้ำได้ (ตอนเปลี่ยนภาษา) — เก็บตัวเลือกหัว "Aa ▾" ไว้เสมอ
@@ -12902,37 +12916,11 @@ export function applyCaseOptions() {
 }
 
 export function applyToolbarShortcutTitles() {
-  for (const [id, sid] of Object.entries(TB_SC_MAP)) {
-    const btn = $('#' + id);
-    if (!btn) continue;
-    const sc = SHORTCUTS.find((s) => shortcutId(s) === sid);
-    if (sc) {
-      const label = t(SHORTCUT_LABELS[sid], SHORTCUT_LABELS[sid]);
-      btn.title = label + ' (' + formatShortcut(sc[0], sc[1], sc[2]) + ')';
-    }
-  }
-  // ปุ่มอื่นที่ไม่ได้มีใน SHORTCUTS หลัก
-  $('#tb-img') && ($('#tb-img').title = t('toolbar.insertImage'));
-  $('#tb-source') && ($('#tb-source').title = t('toolbar.viewSource'));
-  $('#tb-read') && ($('#tb-read').title = t('toolbar.readingMode'));
-  $('#tb-kanban') && ($('#tb-kanban').title = t('toolbar.kanban'));
-  $('#tb-ai') && ($('#tb-ai').title = t('toolbar.aiAssistant'));
-  $('#tb-ai-chat') && ($('#tb-ai-chat').title = t('toolbar.aiChat'));
-  $('#tb-starter') && ($('#tb-starter').title = t('toolbar.starter'));
-  // save-all + home
-  const sab = $('#save-all-btn');
-  // [alpha.124 ข้อ 4] เดิมฮาร์ดโค้ด "Ctrl+Shift+S" ซึ่งผิด (นั่นคือ บันทึกเป็น…) และไม่ตามค่าที่
-  // ผู้ใช้ตั้งเองด้วย — อ่านจากตารางจริงเสมอ เหมือนปุ่มอื่นทุกปุ่มบนแถบเครื่องมือ
-  if (sab) {
-    const scAll = effectiveShortcuts().find((x) => shortcutId(x) === 'save-all');
-    sab.title = t('shortcuts.saveAll')
-              + (scAll ? ' (' + formatShortcut(scAll[0], scAll[1], scAll[2]) + ')' : '');
-  }
+  // [alpha.147] ทุกปุ่มที่มี data-command (78 ปุ่ม — รวม save-all-btn/search-all-btn ที่ [alpha.124 ข้อ 4]
+  // เคยต้องเขียนแยก) ได้ไอคอน + tooltip + คีย์ลัดจริงจากทางเดียวกัน
+  applyCommandUi();
   const hb = $('#home-btn');
   if (hb) hb.title = t('app.home');
-  // [alpha.137] ปุ่ม "ค้นหาทั้งโปรเจกต์" บนแถบโปรเจกต์ (คนละตัวกับ #tb-gsearch บนแถบลอย)
-  const gsb = $('#search-all-btn');
-  if (gsb) gsb.title = withShortcut('toolbar.globalSearch', 'KeyF', true, true);
   // apply i18n to style select options
   $('#tb-style')?.querySelectorAll('option').forEach((o) => {
     const k = o.getAttribute('data-i18n');
@@ -13704,8 +13692,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const cur = tab.sp ? 'screenplay' : 'prose';
     const r = e.target.getBoundingClientRect();
     popupMenu(r.left, r.bottom + 4, [
-      { label: iconHtml('book', 14) + ' ' + (cur === 'prose' ? '✓ ' : '') + tt('ui.app.novel3'), click: () => switchFormat('prose') },
-      { label: iconHtml('film', 14) + ' ' + (cur === 'screenplay' ? '✓ ' : '') + tt('ui.common.chapterFilm'), click: () => switchFormat('screenplay') },
+      // [alpha.147] ไอคอนมาจากแถว set-format:<โหมด> ในทะเบียน (ว่าง = ไม่มีไอคอน)
+      { label: iconHtml(commandIcon('set-format:prose'), 14) + ' ' + (cur === 'prose' ? '✓ ' : '') + tt('ui.app.novel3'), click: () => switchFormat('prose') },
+      { label: iconHtml(commandIcon('set-format:screenplay'), 14) + ' ' + (cur === 'screenplay' ? '✓ ' : '') + tt('ui.common.chapterFilm'), click: () => switchFormat('screenplay') },
     ]);
   };
   $('#tb-style').onchange = (e) => {
@@ -14276,13 +14265,18 @@ export function renderFabMenu() {
   for (const a of fabMenuItems(cfg)) {
     const it = el('div', 'k-fab-item');
     it.dataset.action = a.id;
-    it.title = tt(a.labelKey);
-    if (cfg.display !== 'text') {
+    // [alpha.147] ไอคอน + คีย์ลัดมาจากทะเบียนคำสั่ง (icons/commands.csv) — FAB_ACTIONS ไม่เก็บไอคอนเองแล้ว
+    const cid = [a.cmd, ...(a.args || [])].join(':');
+    const icName = commandIcon(cid);
+    it.dataset.cmd = cid;
+    it.title = withCommandShortcut(tt(a.labelKey), cid);
+    if (cfg.display !== 'text' && icName) {
       const ic = el('span', 'k-fab-item-ic');
-      ic.innerHTML = iconHtml(a.icon, 18);
+      ic.innerHTML = iconHtml(icName, 18);
       it.append(ic);
     }
-    if (cfg.display !== 'icon') it.append(el('span', 'k-fab-item-tx', tt(a.labelKey)));
+    // ช่อง icon ว่าง (ผู้ใช้ตั้งใจไม่ให้มี) ในโหมด "ไอคอนล้วน" → ต้องโชว์ข้อความแทน ไม่งั้นได้ปุ่มว่างเปล่า
+    if (cfg.display !== 'icon' || !icName) it.append(el('span', 'k-fab-item-tx', tt(a.labelKey)));
     it.onclick = (e) => {
       e.stopPropagation();
       closeFabMenu();
@@ -21261,6 +21255,77 @@ async function runTest(projectPath) {
       // ปุ่มค้นหาทั้งโปรเจกต์ต้องทำงานจริง (คำสั่งเดียวกับ Ctrl+Shift+F)
       check('[137-4] ★ ปุ่มค้นหาทั้งโปรเจกต์ผูกคำสั่งไว้แล้ว',
             typeof $('#search-all-btn').onclick === 'function');
+
+      // ══ [alpha.147] ทะเบียนคำสั่ง: ไอคอน + คีย์ลัด แยกออกจากข้อความ ══
+      // ผู้ใช้: "แยก icon กับข้อความ · ทำ csv ของทุกคำสั่ง · ไม่ต้องการไอคอนก็ blank · shortcut ต้องแยก
+      //         เพราะคุณชอบลืมใส่ใน ui" — วัดจาก DOM จริง/เมนูตัวจริง ไม่ใช่เรียกฟังก์ชันแล้วเชื่อค่าคืน
+      {
+        const cmdEls = [...document.querySelectorAll('[data-command]')];
+        check('[147-1] ★ ปุ่มผูกคำสั่งด้วย data-command อย่างน้อย 70 ปุ่ม', cmdEls.length >= 70, cmdEls.length);
+        const iconBad = cmdEls.filter((b) => {
+          // ปุ่มที่ไอคอนบอกสถานะ (ปุ่มโหมดเอกสาร) ประกาศแถวที่ใช้ด้วย data-icon-command
+          const want = commandIcon(b.getAttribute('data-icon-command') || b.getAttribute('data-command'));
+          const got = [...b.children].filter((c) => c.hasAttribute('data-k-icon')).map((c) => c.getAttribute('data-k-icon'));
+          return want ? !(got.length === 1 && got[0] === want) : got.length !== 0;
+        }).map((b) => b.id + '=' + b.getAttribute('data-command'));
+        check('[147-1] ★★ ไอคอนทุกปุ่มตรงช่อง icon ในทะเบียน (ว่าง = ไม่มี · ไม่ซ้อนสองอัน)', iconBad.length === 0, iconBad.join(', '));
+        const scB = commandShortcutText('fmt:bold');
+        check('[147-2] ★ tooltip ตัวหนา = ข้อความจากไฟล์ภาษา + คีย์ลัดจริง',
+              !!scB && $('#tb-bold').title === tt('ui.html.tbBold') + ' (' + scB + ')', $('#tb-bold').title);
+        check('[147-2] ข้อความในไฟล์ภาษาไม่มีคีย์ลัดฝังแล้ว', !/Ctrl|⌘/.test(tt('ui.html.tbBold')), tt('ui.html.tbBold'));
+        const scM = commandShortcutText('toggle-format');
+        check('[147-2] ★ ปุ่มโหมดเอกสารได้คีย์ลัดจากตาราง (เดิม "(Ctrl+Shift+M)" เขียนตายตัวในโค้ด)',
+              !!scM && $('#tb-mode').title.endsWith('(' + scM + ')'), $('#tb-mode').title);
+        check('[147-2] ★ ปุ่มเปิดโปรเจกต์ได้คีย์ลัดของ open-project (เดิมไม่มี)',
+              $('#open-btn').title.endsWith('(' + commandShortcutText('open-project') + ')'), $('#open-btn').title);
+        // ผู้ใช้ตั้งคีย์ใหม่ → tooltip + {sc:…} ต้องตามทันที (เดิม withShortcut รับรหัสปุ่มจากโค้ด จึงไม่เคยตาม)
+        const keepSc = state.settings.shortcuts;
+        state.settings.shortcuts = { 'fmt:bold': { code: 'KeyJ', ctrl: 'ctrl+alt', shift: true },
+                                     'save-all': { code: 'KeyK', ctrl: 'ctrl+alt', shift: true } };
+        applyCommandUi();
+        const customB = formatShortcut('KeyJ', 'ctrl+alt', true);
+        check('[147-3] ★★ ตั้งคีย์ลัดเองแล้ว tooltip เปลี่ยนตามทันที', $('#tb-bold').title.endsWith('(' + customB + ')'), $('#tb-bold').title);
+        const pend = ttf('ui.app.hasPendingFileCtrl', 3);
+        check('[147-3] ★ {sc:save-all} ในประโยคเติมคีย์ที่ผู้ใช้ตั้ง', pend.includes(formatShortcut('KeyK', 'ctrl+alt', true)) && !pend.includes('{sc:'), pend);
+        state.settings.shortcuts = keepSc || {};
+        applyCommandUi();
+        check('[147-3] คืนค่าแล้ว tooltip กลับเป็นคีย์เดิม', $('#tb-bold').title.endsWith('(' + scB + ')'), $('#tb-bold').title);
+        const emo = [...document.querySelectorAll('#toolbar button')]
+          .filter((b) => /\p{Extended_Pictographic}/u.test(b.textContent)).map((b) => b.id + ':' + b.textContent.trim());
+        check('[147-4] ★ ปุ่มบนแถบเครื่องมือไม่มีอีโมจิในข้อความ', emo.length === 0, emo.join(' | '));
+        if ($('#k-fab-menu')) {
+          renderFabMenu();
+          const fabBad = [...document.querySelectorAll('#k-fab-menu .k-fab-item')].filter((it) => {
+            const want = commandIcon(it.dataset.cmd);
+            const ic = it.querySelector('[data-k-icon]');
+            return want ? !(ic && ic.getAttribute('data-k-icon') === want) : !!ic;
+          }).map((it) => it.dataset.cmd);
+          check('[147-5] ★ ปุ่มลอย FAB ใช้ไอคอนจากทะเบียน', fabBad.length === 0, fabBad.join(','));
+        }
+        const pdBad = PANEL_DEFS_147.filter((d) => isRegisteredCommand('toggle-panel:' + d.id)
+          && panelIcon(d) !== commandIcon('toggle-panel:' + d.id)).map((d) => d.id);
+        check('[147-6] ★ ไอคอนของแผงมาจากทะเบียน (toggle-panel:<id>)', pdBad.length === 0, pdBad.join(','));
+        // ซูม: Ctrl+= อยู่ในตาราง SHORTCUTS แล้ว — ตัวดักเดิมต้องไม่ซูมซ้ำอีกขั้น
+        resetPageScale();
+        const z0 = pageScale;
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Equal', key: '=', ctrlKey: true, bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 120));
+        check('[147-7] ★★ Ctrl+= ซูมหนึ่งขั้นพอดี (ไม่ซ้ำสองรอบ)', Math.abs(pageScale - z0 - 0.1) < 0.001, `${z0} → ${pageScale}`);
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit0', key: ')', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 120));
+        check('[147-7] Ctrl+Shift+0 รีเซ็ตซูมผ่านตาราง', Math.abs(pageScale - z0) < 0.001, `${pageScale}`);
+        if (typeof kapi !== 'undefined' && kapi.menuItemState) {
+          const ms = await kapi.menuItemState(['cmd:save', 'cmd:zoom:1', 'cmd:panels-hide-right']);
+          const by = Object.fromEntries(ms.map((x) => [x.id, x]));
+          check('[147-8] ★ เมนูระบบ: บันทึก มี accelerator จากตาราง', !!by['cmd:save']?.exists
+                && by['cmd:save'].accelerator === 'CommandOrControl+S', JSON.stringify(by['cmd:save']));
+          check('[147-8] ★ ป้ายเมนูไม่มีคีย์ลัดฝังแล้ว (OS แสดงชิดขวาเอง)', !!by['cmd:save']?.exists
+                && !/\(|Ctrl|⌘/.test(by['cmd:save'].label), by['cmd:save']?.label);
+          check('[147-8] ★★ เมนูซ่อนแผงฝั่งขวาบอก ] ตามคีย์จริง (เดิมข้อความบอก [)',
+                by['cmd:panels-hide-right']?.accelerator === 'CommandOrControl+Shift+]', JSON.stringify(by['cmd:panels-hide-right']));
+          check('[147-8] เมนูซูมขยาย = Ctrl+= จากตาราง', by['cmd:zoom:1']?.accelerator === 'CommandOrControl+=', JSON.stringify(by['cmd:zoom:1']));
+        }
+      }
       // เส้นคั่นของแถบโปรเจกต์ต้องรอดจาก setupFloatingFormatBar() (ซึ่งลบ .sep ทิ้งทั้งหมด)
       check('[137-4] ★ เส้นคั่นแถบโปรเจกต์ไม่ถูกแถบลอยลบทิ้ง',
             !!bar137.querySelector('.k-topsep'));
@@ -38171,7 +38236,9 @@ async function runTest(projectPath) {
         check('[81-9] เมนูไฟล์เรียกศูนย์รวมการส่งออกแล้ว',
               await (async () => {
                 try { const s = await kapi.readFile(await kapi.join(await kapi.appDir(), 'main.js'));
-                      return s.includes("send('export-hub')") && !s.includes("send('export-pdf')"); }
+                      // [alpha.147] รายการเมนูใช้ cmd('…') แทน () => send('…') แล้ว (ได้ accelerator จากทะเบียน)
+                      return (s.includes("cmd('export-hub')") || s.includes("send('export-hub')"))
+                          && !s.includes("cmd('export-pdf')") && !s.includes("send('export-pdf')"); }
                 catch { return true; }
               })());
       }

@@ -141,6 +141,7 @@
     lookup: () => lookup,
     makeMsgid: () => makeMsgid,
     setCatalog: () => setCatalog,
+    setShortcutResolver: () => setShortcutResolver,
     setTable: () => setTable,
     t: () => t,
     tKey: () => tKey,
@@ -238,11 +239,25 @@
     return formatMsg(t(key2), vals);
   }
   function formatMsg(tpl, vals) {
-    if (!vals || !vals.length) return String(tpl).replace(/\{\{|\}\}/g, (m) => m[0]);
-    return String(tpl).replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+    const s = withShortcutTokens(String(tpl));
+    if (!vals || !vals.length) return s.replace(/\{\{|\}\}/g, (m) => m[0]);
+    return s.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
       if (m === "{{" || m === "}}") return m[0];
       const v2 = vals[+d];
       return v2 == null ? "" : String(v2);
+    });
+  }
+  function setShortcutResolver(fn) {
+    _scResolver = typeof fn === "function" ? fn : null;
+  }
+  function withShortcutTokens(s) {
+    if (!s.includes("{sc:")) return s;
+    return s.replace(/\{sc:([^}\s]+)\}/g, (m, id) => {
+      try {
+        return _scResolver ? String(_scResolver(id) || "") : "";
+      } catch {
+        return "";
+      }
     });
   }
   function makeMsgid(strings) {
@@ -286,7 +301,7 @@
     }
     return false;
   }
-  var TABLE, langInfo, langCatalog, FALLBACK_NAMES, _memo, LANG_LS_KEY;
+  var TABLE, langInfo, langCatalog, FALLBACK_NAMES, _scResolver, _memo, LANG_LS_KEY;
   var init_i18n = __esm({
     "src/i18n.js"() {
       init_i18n_csv();
@@ -311,6 +326,7 @@
         hi: "\u0939\u093F\u0928\u094D\u0926\u0940",
         my: "\u1019\u103C\u1014\u103A\u1019\u102C"
       };
+      _scResolver = null;
       _memo = /* @__PURE__ */ new WeakMap();
       LANG_LS_KEY = "k2-lang";
       initSyncFromHost();
@@ -21483,51 +21499,679 @@
     }
   });
 
+  // src/generated/commands-data.js
+  var ICON_SVG, ICON_GLYPH, COMMAND_ICON, SHORTCUT_ROWS;
+  var init_commands_data = __esm({
+    "src/generated/commands-data.js"() {
+      ICON_SVG = {
+        "align-center": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 19h16v2H4zm3-4h10v2H7zm-3-4h16v2H4zm0-8h16v2H4zm3 4h10v2H7z"/>' },
+        "align-justify": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 7h16v2H4zm0-4h16v2H4zm0 8h16v2H4zm0 4h16v2H4zm2 4h12v2H6z"/>' },
+        "align-left": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 19h16v2H4zm0-4h11v2H4zm0-4h16v2H4zm0-8h16v2H4zm0 4h11v2H4z"/>' },
+        "align-right": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 19h16v2H4zm5-4h11v2H9zm-5-4h16v2H4zm0-8h16v2H4zm5 4h11v2H9z"/>' },
+        "archive": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m21.706 5.292l-2.999-2.999A1 1 0 0 0 18 2H6a1 1 0 0 0-.707.293L2.294 5.292A1 1 0 0 0 2 6v13c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6a1 1 0 0 0-.294-.708M6.414 4h11.172l1 1H5.414zM12 18l-5-5h3v-3h4v3h3z"/>' },
+        "bold": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M17.061 11.22A4.46 4.46 0 0 0 18 8.5C18 6.019 15.981 4 13.5 4H6v15h8c2.481 0 4.5-2.019 4.5-4.5a4.48 4.48 0 0 0-1.439-3.28M13.5 7c.827 0 1.5.673 1.5 1.5s-.673 1.5-1.5 1.5H9V7zm.5 9H9v-3h5c.827 0 1.5.673 1.5 1.5S14.827 16 14 16"/>' },
+        "book-content": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 2H6c-1.206 0-3 .799-3 3v14c0 2.201 1.794 3 3 3h15v-2H6.012C5.55 19.988 5 19.806 5 19q0-.15.024-.273c.112-.576.584-.717.988-.727H21V4a2 2 0 0 0-2-2m0 9l-2-1l-2 1V4h4z"/>' },
+        "book-open": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M21 3h-7a2.98 2.98 0 0 0-2 .78A2.98 2.98 0 0 0 10 3H3a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h5.758a2 2 0 0 1 1.414.586l1.121 1.121c.009.009.021.012.03.021c.086.08.182.15.294.196h.002a1 1 0 0 0 .762 0h.002c.112-.046.208-.117.294-.196c.009-.009.021-.012.03-.021l1.121-1.121A2 2 0 0 1 15.242 20H21a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1m-1 15h-4.758a4.03 4.03 0 0 0-2.242.689V6c0-.551.448-1 1-1h6z"/>' },
+        "book": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M6.012 18H21V4a2 2 0 0 0-2-2H6c-1.206 0-3 .799-3 3v14c0 2.201 1.794 3 3 3h15v-2H6.012C5.55 19.988 5 19.805 5 19s.55-.988 1.012-1M8 6h9v2H8z"/>' },
+        "bookmark": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 10.132v-6c0-1.103-.897-2-2-2H7c-1.103 0-2 .897-2 2V22l7-4.666L19 22z"/>' },
+        "bot": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M21.928 11.607c-.202-.488-.635-.605-.928-.633V8c0-1.103-.897-2-2-2h-6V4.61c.305-.274.5-.668.5-1.11a1.5 1.5 0 0 0-3 0c0 .442.195.836.5 1.11V6H5c-1.103 0-2 .897-2 2v2.997l-.082.006A1 1 0 0 0 1.99 12v2a1 1 0 0 0 1 1H3v5c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2v-5a1 1 0 0 0 1-1v-1.938a1 1 0 0 0-.072-.455M5 20V8h14l.001 3.996L19 12v2l.001.005l.001 5.995z"/><ellipse cx="8.5" cy="12" fill="currentColor" rx="1.5" ry="2"/><ellipse cx="15.5" cy="12" fill="currentColor" rx="1.5" ry="2"/><path fill="currentColor" d="M8 16h8v2H8z"/>' },
+        "brain": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M3.299 17.596c.432 1.332 1.745 2.182 3.146 2.182H6.5A2.78 2.78 0 0 0 9.223 22c.457 0 .884-.115 1.262-.313a.99.99 0 0 0 .515-.882V3.027a1 1 0 0 0-.785-.983a2.32 2.32 0 0 0-1.479.201c-.744.356-1.18 1.151-1.18 1.978v.055a2.778 2.778 0 0 0-2.744 4.433A3.33 3.33 0 0 0 2 12c0 1.178.611 2.211 1.533 2.812c-.43.771-.571 1.746-.234 2.784m15.889-8.885a2.778 2.778 0 0 0-2.744-4.433v-.055c0-.826-.437-1.622-1.181-1.978a2.32 2.32 0 0 0-1.478-.201a1 1 0 0 0-.785.983v17.777c0 .365.192.712.516.882c.378.199.804.314 1.261.314a2.78 2.78 0 0 0 2.723-2.223h.056c1.4 0 2.714-.85 3.146-2.182c.337-1.038.196-2.013-.234-2.784A3.35 3.35 0 0 0 22 12a3.33 3.33 0 0 0-2.812-3.289"/>' },
+        "briefcase": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M20 6h-3V4c0-1.103-.897-2-2-2H9c-1.103 0-2 .897-2 2v2H4c-1.103 0-2 .897-2 2v4h5v-2h2v2h6v-2h2v2h5V8c0-1.103-.897-2-2-2M9 4h6v2H9zm8 11h-2v-2H9v2H7v-2H2v6c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2v-6h-5z"/>' },
+        "camera": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 9c-1.626 0-3 1.374-3 3s1.374 3 3 3s3-1.374 3-3s-1.374-3-3-3"/><path fill="currentColor" d="M20 5h-2.586l-2.707-2.707A1 1 0 0 0 14 2h-4a1 1 0 0 0-.707.293L6.586 5H4c-1.103 0-2 .897-2 2v11c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V7c0-1.103-.897-2-2-2m-8 12c-2.71 0-5-2.29-5-5s2.29-5 5-5s5 2.29 5 5s-2.29 5-5 5"/>' },
+        "chart": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z"/>' },
+        "chat": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 5.589 2 10c0 2.908 1.897 5.516 5 6.934V22l5.34-4.004C17.697 17.852 22 14.32 22 10c0-4.411-4.486-8-10-8m-2.5 9a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3"/>' },
+        "check": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M11.488 21.754c.294.157.663.156.957-.001c8.012-4.304 8.581-12.713 8.574-15.104a.99.99 0 0 0-.596-.903l-8.05-3.566a1 1 0 0 0-.813.001L3.566 5.747a.99.99 0 0 0-.592.892c-.034 2.379.445 10.806 8.514 15.115M8.674 10.293l2.293 2.293l4.293-4.293l1.414 1.414l-5.707 5.707l-3.707-3.707z"/>' },
+        "chevron-down": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M16.939 7.939L12 12.879l-4.939-4.94l-2.122 2.122L12 17.121l7.061-7.06z"/>' },
+        "chevron-right": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M10.707 17.707L16.414 12l-5.707-5.707l-1.414 1.414L13.586 12l-4.293 4.293z"/>' },
+        "chevron-up": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m6.293 13.293l1.414 1.414L12 10.414l4.293 4.293l1.414-1.414L12 7.586z"/>' },
+        "clipboard": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 4h-3V2h-2v2h-4V2H8v2H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2m-7 10H7v-2h5zm5-4H7V8h10z"/>' },
+        "cloud-lightning": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M18.944 10.112C18.507 6.67 15.56 4 12 4C9.244 4 6.85 5.611 5.757 8.15C3.609 8.792 2 10.82 2 13c0 2.757 2.243 5 5 5h1.333L10 13h4l-2 3h2.975l-1.325 2H18c2.206 0 4-1.794 4-4a4.01 4.01 0 0 0-3.056-3.888M11 18H8.333L8 19h3v3l2.649-4H11.5z"/>' },
+        "code-alt": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m7.375 16.781l1.25-1.562L4.601 12l4.024-3.219l-1.25-1.562l-5 4a1 1 0 0 0 0 1.562zm9.25-9.562l-1.25 1.562L19.399 12l-4.024 3.219l1.25 1.562l5-4a1 1 0 0 0 0-1.562zm-1.649-4.003l-4 18l-1.953-.434l4-18z"/>' },
+        "cog": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m2.344 15.271l2 3.46a1 1 0 0 0 1.366.365l1.396-.806c.58.457 1.221.832 1.895 1.112V21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1.598a8 8 0 0 0 1.895-1.112l1.396.806c.477.275 1.091.11 1.366-.365l2-3.46a1.004 1.004 0 0 0-.365-1.366l-1.372-.793a7.7 7.7 0 0 0-.002-2.224l1.372-.793c.476-.275.641-.89.365-1.366l-2-3.46a1 1 0 0 0-1.366-.365l-1.396.806A8 8 0 0 0 15 4.598V3a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v1.598A8 8 0 0 0 7.105 5.71L5.71 4.904a1 1 0 0 0-1.366.365l-2 3.46a1.004 1.004 0 0 0 .365 1.366l1.372.793a7.7 7.7 0 0 0 0 2.224l-1.372.793c-.476.275-.641.89-.365 1.366M12 8c2.206 0 4 1.794 4 4s-1.794 4-4 4s-4-1.794-4-4s1.794-4 4-4"/>' },
+        "crosshair": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M11 2v3.055A7.01 7.01 0 0 0 5.055 11H2v2h3.055A7.01 7.01 0 0 0 11 18.945V22h2v-3.055A7.01 7.01 0 0 0 18.945 13H22v-2h-3.055A7.01 7.01 0 0 0 13 5.055V2zm1 5a5 5 0 1 1 0 10a5 5 0 0 1 0-10m0 3a2 2 0 1 0 0 4a2 2 0 0 0 0-4"/>' },
+        "dock-right": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M21 5c0-1.103-.897-2-2-2H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2zM5 5h9v14H5z"/>' },
+        "edit": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m18.988 2.012l3 3L19.701 7.3l-3-3zM8 16h3l7.287-7.287l-3-3L8 13z"/><path fill="currentColor" d="M19 19H8.158c-.026 0-.053.01-.079.01c-.033 0-.066-.009-.1-.01H5V5h6.847l2-2H5c-1.103 0-2 .896-2 2v14c0 1.104.897 2 2 2h14a2 2 0 0 0 2-2v-8.668l-2 2z"/>' },
+        "error": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12.884 2.532c-.346-.654-1.422-.654-1.768 0l-9 17A1 1 0 0 0 3 21h18a.998.998 0 0 0 .883-1.467zM13 18h-2v-2h2zm-2-4V9h2l.001 5z"/>' },
+        "expand": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m21 15.344l-2.121 2.121l-3.172-3.172l-1.414 1.414l3.172 3.172L15.344 21H21zM3 8.656l2.121-2.121l3.172 3.172l1.414-1.414l-3.172-3.172L8.656 3H3zM21 3h-5.656l2.121 2.121l-3.172 3.172l1.414 1.414l3.172-3.172L21 8.656zM3 21h5.656l-2.121-2.121l3.172-3.172l-1.414-1.414l-3.172 3.172L3 15.344z"/>' },
+        "extension": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 10V7c0-1.103-.897-2-2-2h-3c0-1.654-1.346-3-3-3S8 3.346 8 5H5c-1.103 0-2 .897-2 2v4h1a2 2 0 0 1 0 4H3v4c0 1.103.897 2 2 2h4v-1a2 2 0 0 1 4 0v1h4c1.103 0 2-.897 2-2v-3c1.654 0 3-1.346 3-3s-1.346-3-3-3"/>' },
+        "eye-off": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 19c.946 0 1.81-.103 2.598-.281l-1.757-1.757c-.273.021-.55.038-.841.038c-5.351 0-7.424-3.846-7.926-5a8.6 8.6 0 0 1 1.508-2.297L4.184 8.305C1.923 10.427 1.026 12.607 1.002 12.673l-.181.499l.181.499C1.031 13.746 3.845 19 12 19m0-14c-1.837 0-3.346.396-4.605.981L3.707 2.293L2.293 3.707l18 18l1.414-1.414l-3.319-3.319c2.614-1.951 3.547-4.615 3.573-4.694l.181-.499l-.181-.499C21.969 10.254 19.155 5 12 5m4.972 10.558l-2.28-2.28c.19-.39.308-.819.308-1.278a2.99 2.99 0 0 0-3-3c-.459 0-.888.118-1.277.309L8.915 7.501A9.3 9.3 0 0 1 12 7c5.351 0 7.424 3.846 7.926 5c-.302.692-1.166 2.342-2.954 3.558"/>' },
+        "eye": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6"/><path fill="currentColor" d="M12 5c-7.633 0-9.927 6.617-9.948 6.684L1.946 12l.105.316C2.073 12.383 4.367 19 12 19s9.927-6.617 9.948-6.684l.106-.316l-.105-.316C21.927 11.617 19.633 5 12 5m0 12c-5.351 0-7.424-3.846-7.926-5C4.578 10.842 6.652 7 12 7c5.351 0 7.424 3.846 7.926 5c-.504 1.158-2.578 5-7.926 5"/>' },
+        "file": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M18 22a2 2 0 0 0 2-2V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2zM13 4l5 5h-5zM7 8h3v2H7zm0 4h10v2H7zm0 4h10v2H7z"/>' },
+        "film": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 4v1h-2V3H7v2H5V3H3v18h2v-2h2v2h10v-2h2v2h2V3h-2zM5 7h2v2H5zm0 4h2v2H5zm0 6v-2h2v2zm12 0v-2h2v2zm2-4h-2v-2h2zm-2-4V7h2v2z"/>' },
+        "folder": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M20 5h-9.586L8.707 3.293A1 1 0 0 0 8 3H4c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V7c0-1.103-.897-2-2-2"/>' },
+        "fullscreen": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5 5h5V3H3v7h2zm5 14H5v-5H3v7h7zm11-5h-2v5h-5v2h7zm-2-4h2V3h-7v2h5z"/>' },
+        "globe": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m7.931 9h-2.764a14.7 14.7 0 0 0-1.792-6.243A8.01 8.01 0 0 1 19.931 11M12.53 4.027c1.035 1.364 2.427 3.78 2.627 6.973H9.03c.139-2.596.994-5.028 2.451-6.974zm-.98 15.947c-1.036-1.364-2.428-3.78-2.628-6.974h6.126c-.139 2.596-.994 5.028-2.451 6.974zM8.624 4.758A14.7 14.7 0 0 0 6.832 11H4.069a8.01 8.01 0 0 1 4.556-6.242M4.069 13h2.763a14.7 14.7 0 0 0 1.792 6.243A8.01 8.01 0 0 1 4.069 13m11.306 6.242A14.7 14.7 0 0 0 17.167 13h2.764a8.01 8.01 0 0 1-4.556 6.242"/>' },
+        "grid": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/>' },
+        "history": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 8v5h5v-2h-3V8z"/><path fill="currentColor" d="M21.292 8.497a9 9 0 0 0-1.928-2.862a9 9 0 0 0-4.55-2.452a9.1 9.1 0 0 0-3.626 0a8.97 8.97 0 0 0-4.552 2.453a9 9 0 0 0-1.928 2.86A9 9 0 0 0 4 12l.001.025H2L5 16l3-3.975H6.001L6 12a6.96 6.96 0 0 1 1.195-3.913a7 7 0 0 1 1.891-1.892a7 7 0 0 1 2.503-1.054a7.003 7.003 0 0 1 8.269 5.445a7.1 7.1 0 0 1 0 2.824a6.9 6.9 0 0 1-1.054 2.503c-.25.371-.537.72-.854 1.036a7.1 7.1 0 0 1-2.225 1.501a7 7 0 0 1-1.313.408a7.1 7.1 0 0 1-2.823 0a7 7 0 0 1-2.501-1.053a7.1 7.1 0 0 1-1.037-.855l-1.414 1.414A9 9 0 0 0 13 21a9.1 9.1 0 0 0 3.503-.707a9 9 0 0 0 3.959-3.26A8.97 8.97 0 0 0 22 12a8.9 8.9 0 0 0-.708-3.503"/>' },
+        "home": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12.74 2.32a1 1 0 0 0-1.48 0l-9 10A1 1 0 0 0 3 14h2v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7h2a1 1 0 0 0 1-1a1 1 0 0 0-.26-.68z"/>' },
+        "image-add": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="m9 13l3-4l3 4.5V12h4V5c0-1.103-.897-2-2-2H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h8v-4H5l3-4z"/><path fill="currentColor" d="M19 14h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/>' },
+        "image": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5 21h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2m3-7l2.363 2.363L14 11l5 7H5z"/>' },
+        "italic": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 7V4H9v3h2.868L9.012 17H5v3h10v-3h-2.868l2.856-10H19z"/>' },
+        "layout": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 3H5c-1.103 0-2 .897-2 2v4h18V5c0-1.103-.897-2-2-2M3 19c0 1.103.897 2 2 2h8V11H3zm12 2h4c1.103 0 2-.897 2-2v-8h-6z"/>' },
+        "link": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M8.465 11.293c1.133-1.133 3.109-1.133 4.242 0l.707.707l1.414-1.414l-.707-.707c-.943-.944-2.199-1.465-3.535-1.465s-2.592.521-3.535 1.465L4.929 12a5.01 5.01 0 0 0 0 7.071a4.98 4.98 0 0 0 3.535 1.462A4.98 4.98 0 0 0 12 19.071l.707-.707l-1.414-1.414l-.707.707a3.007 3.007 0 0 1-4.243 0a3.005 3.005 0 0 1 0-4.243z"/><path fill="currentColor" d="m12 4.929l-.707.707l1.414 1.414l.707-.707a3.007 3.007 0 0 1 4.243 0a3.005 3.005 0 0 1 0 4.243l-2.122 2.121c-1.133 1.133-3.109 1.133-4.242 0L10.586 12l-1.414 1.414l.707.707c.943.944 2.199 1.465 3.535 1.465s2.592-.521 3.535-1.465L19.071 12a5.01 5.01 0 0 0 0-7.071a5.006 5.006 0 0 0-7.071 0"/>' },
+        "list-ol": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5.282 12.064c-.428.328-.72.609-.875.851q-.233.361-.279.768h2.679v-.748H5.413c.081-.081.152-.151.212-.201q.093-.076.361-.27q.454-.327.626-.604c.116-.186.173-.375.173-.578a.9.9 0 0 0-.151-.512.9.9 0 0 0-.412-.341q-.262-.113-.733-.111q-.451 0-.706.114a.9.9 0 0 0-.396.338q-.141.216-.194.604l.894.076q.037-.28.147-.394a.38.38 0 0 1 .279-.108q.165 0 .272.108a.34.34 0 0 1 .108.258a.55.55 0 0 1-.108.297q-.11.154-.503.453m.055 6.386a.4.4 0 0 1-.282-.105q-.111-.104-.162-.378L4 18.085q.088.306.251.506t.417.306Q4.92 19 5.36 19q.45 0 .725-.14a1 1 0 0 0 .424-.403q.146-.26.146-.544a.8.8 0 0 0-.088-.393.7.7 0 0 0-.249-.261a1 1 0 0 0-.286-.11a.94.94 0 0 0 .345-.299a.67.67 0 0 0 .113-.383a.75.75 0 0 0-.281-.596q-.28-.238-.909-.238q-.548 0-.847.219q-.3.216-.404.626l.844.151q.034-.242.133-.338c.099-.096.151-.098.257-.098a.33.33 0 0 1 .241.089q.088.09.087.238q0 .155-.117.27c-.117.115-.177.112-.293.112a1 1 0 0 1-.116-.011l-.045.649a1 1 0 0 1 .289-.056q.199 0 .313.126q.115.123.115.352q0 .22-.119.354a.4.4 0 0 1-.301.134m.948-10.083V5h-.739a1.5 1.5 0 0 1-.394.523q-.252.212-.708.365v.754a2.6 2.6 0 0 0 .937-.48v2.206zM9 6h11v2H9zm0 5h11v2H9zm0 5h11v2H9z"/>' },
+        "list-ul": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm16-8V6H8.023v2H18.8zM8 11h12v2H8zm0 5h12v2H8z"/>' },
+        "lock-open": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2H9V7c0-1.654 1.346-3 3-3s3 1.346 3 3h2c0-2.757-2.243-5-5-5m6 10l.002 8H6v-8z"/>' },
+        "lock": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.757-2.243-5-5-5m0 2c1.654 0 3 1.346 3 3v3H9V7c0-1.654 1.346-3 3-3m6 8l.002 8H6v-8z"/>' },
+        "map": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C7.589 2 4 5.589 4 9.995C3.971 16.44 11.696 21.784 12 22c0 0 8.029-5.56 8-12c0-4.411-3.589-8-8-8m0 12c-2.21 0-4-1.79-4-4s1.79-4 4-4s4 1.79 4 4s-1.79 4-4 4"/>' },
+        "maximize": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5 5h5V3H3v7h2zm5 14H5v-5H3v7h7zm11-5h-2v5h-5v2h7zm-2-4h2V3h-7v2h5z"/>' },
+        "minus": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m5 11H7v-2h10z"/>' },
+        "note": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8l8-8V5a2 2 0 0 0-2-2m-7 16v-7h7z"/>' },
+        "plus": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/>' },
+        "quote-left": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M20.309 17.708C22.196 15.66 22.006 13.03 22 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292m-11.007 0C11.19 15.66 10.999 13.03 10.993 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292"/>' },
+        "reset": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m4.207 12.793l-1.414 1.414L12 13.414l-2.793 2.793l-1.414-1.414L10.586 12L7.793 9.207l1.414-1.414L12 10.586l2.793-2.793l1.414 1.414L13.414 12z"/>' },
+        "save": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5 21h14a2 2 0 0 0 2-2V8l-5-5H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2M7 5h4v2h2V5h2v4H7zm0 8h10v6H7z"/>' },
+        "search": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M10 2c-4.411 0-8 3.589-8 8s3.589 8 8 8a7.95 7.95 0 0 0 4.897-1.688l4.396 4.396l1.414-1.414l-4.396-4.396A7.95 7.95 0 0 0 18 10c0-4.411-3.589-8-8-8"/>' },
+        "star": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M21.947 9.179a1 1 0 0 0-.868-.676l-5.701-.453l-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107l-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4l4.536-4.082c.297-.268.406-.686.278-1.065"/>' },
+        "strikethrough": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M20 11h-8c-4 0-4-1.816-4-2.5C8 7.882 8 6 12 6c2.8 0 2.99 1.678 3 2.014L16 8h1c0-1.384-1.045-4-5-4c-5.416 0-6 3.147-6 4.5c0 .728.148 1.667.736 2.5H4v2h16zm-8 7c-3.793 0-3.99-1.815-4-2H6c0 .04.069 4 6 4c5.221 0 6-2.819 6-4.5c0-.146-.009-.317-.028-.5h-2.006c.032.2.034.376.034.5c0 .684 0 2.5-4 2.5"/>' },
+        "subscript": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 18h2.5l3.1-4.9h.1l3.1 4.9H16l-4.3-6.6L15.7 5h-2.4l-2.8 4.5h-.1L7.6 5H5.1l4 6.4zm14 2h5v-1.3h-2.8c1.7-1.3 2.7-2.1 2.7-3.3c0-1.1-.9-1.9-2.2-1.9c-1.2 0-2.2.7-2.4 1.9l1.3.3c.1-.6.5-.9 1-.9s.9.3.9.8c0 .7-.8 1.3-3.5 3.4z"/>' },
+        "sun": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M6.995 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007s-2.246-5.007-5.007-5.007S6.995 9.239 6.995 12M11 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2H2zm17 0h3v2h-3zM5.637 19.778l-1.414-1.414l2.121-2.121l1.414 1.414zM16.242 6.344l2.122-2.122l1.414 1.414l-2.122 2.122zM6.344 7.759L4.223 5.637l1.415-1.414l2.12 2.122zm13.434 10.605l-1.414 1.414l-2.122-2.122l1.414-1.414z"/>' },
+        "superscript": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M4 19h2.5l3.1-4.9h.1l3.1 4.9H16l-4.3-6.6L15.7 6h-2.4l-2.8 4.5h-.1L7.6 6H5.1l4 6.4zm14-9h5V8.7h-2.8c1.7-1.3 2.7-2.1 2.7-3.3c0-1.1-.9-1.9-2.2-1.9c-1.2 0-2.2.7-2.4 1.9l1.3.3c.1-.6.5-.9 1-.9s.9.3.9.8c0 .7-.8 1.3-3.5 3.4z"/>' },
+        "trash": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M6 7H5v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm4 12H8v-9h2zm6 0h-2v-9h2zm.618-15L15 2H9L7.382 4H3v2h18V4z"/>' },
+        "underline": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5 18h14v2H5zM6 4v6c0 3.309 2.691 6 6 6s6-2.691 6-6V4h-2v6c0 2.206-1.794 4-4 4s-4-1.794-4-4V4z"/>' },
+        "user": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M7.5 6.5C7.5 8.981 9.519 11 12 11s4.5-2.019 4.5-4.5S14.481 2 12 2S7.5 4.019 7.5 6.5M20 21h1v-1c0-3.859-3.141-7-7-7h-4c-3.86 0-7 3.141-7 7v1z"/>' },
+        "x": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m4.207 12.793l-1.414 1.414L12 13.414l-2.793 2.793l-1.414-1.414L10.586 12L7.793 9.207l1.414-1.414L12 10.586l2.793-2.793l1.414 1.414L13.414 12z"/>' }
+      };
+      ICON_GLYPH = {
+        "align-center-h": "\u21F9",
+        "align-center-v": "\u21F3",
+        "align-top": "\u2912",
+        "arrow-curve": "\u219D",
+        "arrow-down": "\u2193",
+        "arrow-left": "\u2190",
+        "arrow-turn-down": "\u2935",
+        "arrow-up": "\u2191",
+        "block": "\u{1F6AB}",
+        "branch": "\u{1F33F}",
+        "broom": "\u{1F9F9}",
+        "bulb": "\u{1F4A1}",
+        "check-circle": "\u2705",
+        "checkbox": "\u2610",
+        "checkbox-checked": "\u2611",
+        "checkmark": "\u2713",
+        "chevron-left": "\u25C0",
+        "city": "\u{1F3D9}",
+        "close": "\u2715",
+        "cloud": "\u2601",
+        "coin": "\u{1F4B0}",
+        "collection": "\u{1F5C2}",
+        "compass": "\u{1F9ED}",
+        "conflict": "\u2694",
+        "crystal-ball": "\u{1F52E}",
+        "desktop": "\u{1F5A5}",
+        "dice": "\u{1F3B2}",
+        "distribute-h": "\u21FF",
+        "distribute-v": "\u2195",
+        "doll": "\u{1F38E}",
+        "door": "\u{1F6AA}",
+        "download": "\u2913",
+        "export": "\u{1F4E4}",
+        "fantasy": "\u{1F409}",
+        "fast-forward": "\u23E9",
+        "file-pdf": "\u{1F4D5}",
+        "file-txt": "\u{1F163}",
+        "filter": "\u{1F53D}",
+        "fire": "\u{1F525}",
+        "flag-checkered": "\u{1F3C1}",
+        "folder-open": "\u{1F4C2}",
+        "font": "\u{1F524}",
+        "gamepad": "\u{1F3AE}",
+        "gantt": "\u25AC",
+        "group": "\u{1F465}",
+        "hand": "\u270B",
+        "hash": "\u2317",
+        "heart": "\u{1F49E}",
+        "heart-broken": "\u{1F494}",
+        "help": "\u2754",
+        "hourglass": "\u23F3",
+        "import": "\u{1F4E5}",
+        "indent": "\u21E5",
+        "info": "\u2139",
+        "keyboard": "\u2328",
+        "leaf": "\u{1F331}",
+        "line-curve": "\u2312",
+        "line-elbow": "\u2310",
+        "link-external": "\u2197",
+        "log": "\u{1F4DC}",
+        "magic": "\u2728",
+        "mask": "\u{1F3AD}",
+        "menu": "\u2630",
+        "mouse": "\u{1F5B1}",
+        "move": "\u2725",
+        "network": "\u{1F578}",
+        "news": "\u{1F4F0}",
+        "notepad": "\u{1F5D2}",
+        "outdent": "\u21E4",
+        "package": "\u{1F4E6}",
+        "page-break": "\u25A4",
+        "page-double": "\u25A5",
+        "page-header": "\u{1F4D1}",
+        "page-single": "\u25AF",
+        "palette": "\u{1F3A8}",
+        "panel-hide-all": "\u2B12",
+        "panel-hide-left": "\u25E8",
+        "panel-hide-right": "\u2B13",
+        "paperclip": "\u{1F4CE}",
+        "pause": "\u23F8",
+        "pen": "\u270D",
+        "pin": "\u{1F4CC}",
+        "play": "\u25B6",
+        "plot-hole": "\u{1F573}",
+        "plug": "\u{1F50C}",
+        "plus-plain": "\u271A",
+        "pointer": "\u{1F446}",
+        "printer": "\u{1F5A8}",
+        "radio-on": "\u25C9",
+        "receipt": "\u{1F9FE}",
+        "recycle": "\u267B",
+        "redo": "\u21B7",
+        "refresh": "\u{1F504}",
+        "repeat": "\u{1F501}",
+        "return": "\u21A9",
+        "rewind": "\u23EA",
+        "road": "\u{1F6E3}",
+        "rotate-left": "\u21BA",
+        "rotate-right": "\u293E",
+        "ruler": "\u{1F4D0}",
+        "scene-block": "\u25E7",
+        "selection": "\u2B1A",
+        "send": "\u27A4",
+        "sense-hearing": "\u{1F442}",
+        "sense-smell": "\u{1F443}",
+        "sense-taste": "\u{1F445}",
+        "sense-touch": "\u{1F590}",
+        "shape-cylinder": "\u26C1",
+        "shape-diamond": "\u25C7",
+        "shape-ellipse": "\u2B2D",
+        "shape-rect": "\u25AD",
+        "shape-rounded": "\u25A2",
+        "shape-triangle": "\u25B3",
+        "skip-next": "\u23ED",
+        "skip-previous": "\u23EE",
+        "smile": "\u{1F642}",
+        "sort-number": "\u{1F522}",
+        "square": "\u2B1B",
+        "square-outline": "\u2B1C",
+        "star-outline": "\u2606",
+        "stop": "\u23F9",
+        "subdirectory-right": "\u2937",
+        "swap": "\u2194",
+        "tag": "\u{1F3F7}",
+        "target": "\u{1F3AF}",
+        "text-case": "\u{1F520}",
+        "text-tool": "\u{1F143}",
+        "thought": "\u{1F4AD}",
+        "time": "\u{1F552}",
+        "timer": "\u23F1",
+        "torii": "\u26E9",
+        "tree": "\u{1F333}",
+        "undo": "\u21B6",
+        "volume": "\u{1F50A}",
+        "water": "\u{1F4A7}",
+        "window": "\u{1FA9F}",
+        "window-max": "\u25A3",
+        "window-restore": "\u25FB",
+        "wrench": "\u{1F6E0}",
+        "zap": "\u26A1"
+      };
+      COMMAND_ICON = {
+        "chapter": "folder",
+        "character": "",
+        "location": "",
+        "memo": "clipboard",
+        "new-entity:characters": "user",
+        "new-entity:items": "briefcase",
+        "new-entity:locations": "map",
+        "new-entity:lore": "book-content",
+        "quick-note": "note",
+        "scene": "file",
+        "delete-line": "",
+        "editor-redo": "",
+        "editor-undo": "",
+        "find": "",
+        "global-search": "search",
+        "goto": "file",
+        "goto-page": "",
+        "goto-scene": "",
+        "insert-image": "image-add",
+        "nbsp": "",
+        "quick-open": "search",
+        "select-scene": "",
+        "thesaurus": "",
+        "backup-now": "archive",
+        "close-all-tabs": "reset",
+        "close-tab": "x",
+        "compile": "",
+        "export-blog": "",
+        "export-hub": "book-content",
+        "import-scrivener": "",
+        "new-from-template": "star",
+        "new-project": "",
+        "open-project": "folder",
+        "print": "",
+        "save": "",
+        "save-all": "save",
+        "save-as": "",
+        "fmt:align:center": "align-center",
+        "fmt:align:justify": "align-justify",
+        "fmt:align:left": "align-left",
+        "fmt:align:right": "align-right",
+        "fmt:bold": "bold",
+        "fmt:clear": "",
+        "fmt:heading:1": "",
+        "fmt:heading:2": "",
+        "fmt:heading:3": "",
+        "fmt:italic": "italic",
+        "fmt:ol": "list-ol",
+        "fmt:paragraph": "",
+        "fmt:strike": "strikethrough",
+        "fmt:ul": "list-ul",
+        "fmt:underline": "underline",
+        "text-case-cycle": "",
+        "cheatsheet": "",
+        "dev-console": "wrench",
+        "settings": "cog",
+        "gallery": "image",
+        "kanban": "grid",
+        "toggle-panel:ai-analyzer": "brain",
+        "toggle-panel:ai-chat": "chat",
+        "toggle-panel:ai-hub": "brain",
+        "toggle-panel:backlinks": "link",
+        "toggle-panel:books": "book",
+        "toggle-panel:branch": "grid",
+        "toggle-panel:chapters": "book-content",
+        "toggle-panel:codex": "book-content",
+        "toggle-panel:comments": "chat",
+        "toggle-panel:dashboard": "chart",
+        "toggle-panel:dialogue": "chat",
+        "toggle-panel:dlgb": "chat",
+        "toggle-panel:floorplan": "map",
+        "toggle-panel:gallery": "image",
+        "toggle-panel:gallery-board": "camera",
+        "toggle-panel:history": "history",
+        "toggle-panel:kanban": "grid",
+        "toggle-panel:log": "clipboard",
+        "toggle-panel:maps": "map",
+        "toggle-panel:network": "link",
+        "toggle-panel:notes": "bookmark",
+        "toggle-panel:outline": "list-ul",
+        "toggle-panel:planner": "layout",
+        "toggle-panel:planner-props": "clipboard",
+        "toggle-panel:player": "film",
+        "toggle-panel:plugins": "extension",
+        "toggle-panel:props": "clipboard",
+        "toggle-panel:record": "note",
+        "toggle-panel:search": "search",
+        "toggle-panel:starter": "book-content",
+        "toggle-panel:timeline": "history",
+        "toggle-panel:tree": "book-content",
+        "sp-element:act-break": "",
+        "sp-element:dialogue": "",
+        "sp-element:note": "",
+        "sp-element:parenthetical": "",
+        "sp-element:shot": "",
+        "sp-element:transition": "",
+        "sp-find-error": "",
+        "toggle-format": "",
+        "fmtbar-align": "",
+        "fmtbar-here": "",
+        "fmtbar-lock": "",
+        "fmtbar-opacity": "",
+        "focus-mode": "expand",
+        "line-numbers": "list-ol",
+        "panels-hide-all": "panel-hide-all",
+        "panels-hide-left": "panel-hide-left",
+        "panels-hide-right": "panel-hide-right",
+        "read-book": "",
+        "reading-mode": "book-open",
+        "split-view": "dock-right",
+        "typewriter": "edit",
+        "workspace-menu": "collection",
+        "zoom:-1": "minus",
+        "zoom:0": "reset",
+        "zoom:1": "plus",
+        "scratchpad": "note",
+        "about": "",
+        "ai-analyzer": "brain",
+        "ai-assistant": "bot",
+        "ai-chat": "",
+        "ai-chat-dialog": "",
+        "ai-chat-new": "plus",
+        "ai-chat-toggle": "chat",
+        "ai-consistency": "",
+        "ai-dialogue": "",
+        "ai-plot": "",
+        "ai-settings": "",
+        "ai-summary": "",
+        "ai-title": "",
+        "ai-world": "",
+        "all-notes": "",
+        "auto-sync": "",
+        "auto-sync:false": "",
+        "auto-sync:true": "",
+        "books": "",
+        "branch-sync": "",
+        "branching": "",
+        "changelog": "",
+        "chapters": "",
+        "char-map": "font",
+        "check-update": "",
+        "comments": "chat",
+        "confirm-quit": "",
+        "custom-status": "",
+        "dashboard": "",
+        "export-draft": "",
+        "export-fdx": "",
+        "export-json": "",
+        "export-language-csv": "globe",
+        "export-panel-layout": "export",
+        "export-pdf": "",
+        "export-pdf-builtin": "",
+        "export-rtf": "",
+        "export-watermark": "",
+        "export-zip": "",
+        "floorplan": "",
+        "fmt": "",
+        "fmt:code": "",
+        "fmt:hr": "",
+        "fmt:quote": "",
+        "fmt:sub": "subscript",
+        "fmt:sup": "superscript",
+        "gallery-board": "palette",
+        "gallery-dups": "search",
+        "gallery-export-used": "export",
+        "gallery-new-album": "",
+        "gallery-unused": "broom",
+        "goto-page:1": "skip-previous",
+        "goto:page": "",
+        "goto:scene": "",
+        "home": "home",
+        "import-language-csv": "globe",
+        "import-script": "",
+        "insert-shortcode": "",
+        "lang-fonts": "font",
+        "maps": "",
+        "markdown-codes": "eye",
+        "network": "",
+        "new-entity": "",
+        "open-project-path": "",
+        "page-guides": "",
+        "page-headers": "page-header",
+        "page-numbers": "",
+        "page-setup": "ruler",
+        "panel-system": "layout",
+        "planner": "",
+        "player-history": "",
+        "player-mode": "play",
+        "plugin:k2test:hello": "",
+        "project-setup": "film",
+        "prose-indent": "",
+        "prose-setup": "book-open",
+        "remove-elements": "broom",
+        "reset-panels": "",
+        "revert": "return",
+        "roster": "mask",
+        "scene-numbers": "",
+        "set-format": "",
+        "set-format:prose": "book-open",
+        "set-format:screenplay": "film",
+        "show-log": "",
+        "show-panel": "",
+        "smart-manage": "brain",
+        "sp-auto-capitalize": "",
+        "sp-auto-correct-i": "",
+        "sp-check-all": "",
+        "sp-check-toggle": "",
+        "sp-compare": "chart",
+        "sp-continued": "",
+        "sp-element": "",
+        "sp-element-caps": "",
+        "sp-extension": "",
+        "sp-force-case": "",
+        "sp-report": "",
+        "sp-report:character": "group",
+        "sp-report:chart": "chart",
+        "sp-report:location": "map",
+        "sp-show-format": "",
+        "sp-thai-font": "",
+        "sp-view": "",
+        "sp-view:draft": "",
+        "sp-view:layout": "",
+        "sp-view:normal": "",
+        "sp-view:overview1": "",
+        "sp-view:overview4": "",
+        "sp-view:side": "",
+        "split-add": "",
+        "split-close": "",
+        "split-view:down": "",
+        "split-view:right": "",
+        "story-starter": "",
+        "story-starter-toggle": "book-open",
+        "sync-scene-meta": "refresh",
+        "test-run": "",
+        "text-case": "",
+        "text-case:aC": "",
+        "text-case:CC": "",
+        "text-case:iC": "",
+        "text-case:lc": "",
+        "text-case:SC": "",
+        "text-case:TC": "",
+        "text-case:UC": "",
+        "timeline": "",
+        "title-pages": "file",
+        "toggle-fab": "",
+        "toggle-home-always": "",
+        "toggle-open-last": "",
+        "toggle-panel": "",
+        "toggle-theme": "",
+        "toolbar-config": "",
+        "type-sound": "volume",
+        "ui-scale": "",
+        "ui-scale:-1": "",
+        "ui-scale:0": "",
+        "ui-scale:1": "",
+        "ui:filter-archive-toggle": "archive",
+        "ui:find-close": "",
+        "ui:find-next": "",
+        "ui:find-prev": "",
+        "ui:find-rep1": "",
+        "ui:find-repall": "",
+        "ui:open-btn": "folder",
+        "ui:search-all-btn": "search",
+        "ui:tb-color": "",
+        "ui:tb-indent": "",
+        "ui:tb-plug": "extension",
+        "ui:tb-quote": "quote-left",
+        "ui:tb-source": "code-alt",
+        "ui:tb-sp-cont": "",
+        "ui:tb-sp-ext": "",
+        "ui:tb-visual": "image",
+        "visual-tags": "",
+        "word-history": "",
+        "workspace": "",
+        "zoom": "",
+        "zoom:fit": ""
+      };
+      SHORTCUT_ROWS = [
+        ["Digit1", "ctrl+alt", false, "chapter"],
+        ["Digit3", "ctrl+alt", false, "character"],
+        ["Digit4", "ctrl+alt", false, "location"],
+        ["Digit5", "ctrl+alt", false, "memo"],
+        ["KeyQ", true, true, "quick-note"],
+        ["Digit2", "ctrl+alt", false, "scene"],
+        ["Delete", true, true, "delete-line"],
+        ["KeyZ", true, true, "editor-redo"],
+        ["KeyY", true, false, "editor-redo"],
+        ["KeyZ", true, false, "editor-undo"],
+        ["KeyF", true, false, "find"],
+        ["KeyF", true, true, "global-search"],
+        ["KeyG", true, false, "goto"],
+        ["Period", true, true, "goto-page"],
+        ["Comma", true, true, "goto-scene"],
+        ["KeyI", true, true, "insert-image"],
+        ["Space", true, true, "nbsp"],
+        ["KeyO", true, true, "quick-open"],
+        ["KeyA", true, true, "select-scene"],
+        ["KeyT", "ctrl+alt", true, "thesaurus"],
+        ["KeyW", true, true, "close-all-tabs"],
+        ["KeyW", true, false, "close-tab"],
+        ["KeyX", "ctrl+alt", false, "compile"],
+        ["KeyB", true, true, "export-blog"],
+        ["KeyE", true, true, "export-hub"],
+        ["KeyI", "ctrl+alt", true, "import-scrivener"],
+        ["KeyN", true, true, "new-from-template"],
+        ["KeyN", true, false, "new-project"],
+        ["KeyO", true, false, "open-project"],
+        ["KeyP", true, false, "print"],
+        ["KeyS", true, false, "save"],
+        ["KeyS", "ctrl+alt", false, "save-all"],
+        ["KeyS", true, true, "save-as"],
+        ["KeyK", true, true, "fmt", "align", "center"],
+        ["KeyJ", true, true, "fmt", "align", "justify"],
+        ["KeyL", true, true, "fmt", "align", "left"],
+        ["KeyR", true, true, "fmt", "align", "right"],
+        ["KeyB", true, false, "fmt", "bold"],
+        ["Space", true, false, "fmt", "clear"],
+        ["Digit1", true, false, "fmt", "heading", 1],
+        ["Digit2", true, false, "fmt", "heading", 2],
+        ["Digit3", true, false, "fmt", "heading", 3],
+        ["KeyI", true, false, "fmt", "italic"],
+        ["Digit7", true, true, "fmt", "ol"],
+        ["Digit0", true, false, "fmt", "paragraph"],
+        ["KeyX", true, true, "fmt", "strike"],
+        ["Digit8", true, true, "fmt", "ul"],
+        ["KeyU", true, false, "fmt", "underline"],
+        ["KeyU", "ctrl+alt", false, "text-case-cycle"],
+        ["Slash", "ctrl+alt", false, "cheatsheet"],
+        ["Backquote", true, true, "dev-console"],
+        ["Comma", true, false, "settings"],
+        ["KeyG", true, true, "gallery"],
+        ["KeyK", true, false, "kanban"],
+        ["KeyA", "ctrl+alt", false, "toggle-panel", "ai-analyzer"],
+        ["KeyW", "ctrl+alt", false, "toggle-panel", "ai-chat"],
+        ["KeyQ", "ctrl+alt", false, "toggle-panel", "ai-hub"],
+        ["KeyB", "ctrl+alt", true, "toggle-panel", "backlinks"],
+        ["KeyK", "ctrl+alt", false, "toggle-panel", "books"],
+        ["KeyB", "ctrl+alt", false, "toggle-panel", "branch"],
+        ["KeyK", "ctrl+alt", true, "toggle-panel", "chapters"],
+        ["KeyC", "ctrl+alt", false, "toggle-panel", "codex"],
+        ["KeyO", "ctrl+alt", false, "toggle-panel", "comments"],
+        ["KeyD", "ctrl+alt", false, "toggle-panel", "dashboard"],
+        ["KeyL", "ctrl+alt", false, "toggle-panel", "dialogue"],
+        ["KeyV", "ctrl+alt", false, "toggle-panel", "dlgb"],
+        ["KeyF", "ctrl+alt", false, "toggle-panel", "floorplan"],
+        ["KeyG", "ctrl+alt", false, "toggle-panel", "gallery-board"],
+        ["KeyH", "ctrl+alt", false, "toggle-panel", "history"],
+        ["Digit9", "ctrl+alt", false, "toggle-panel", "log"],
+        ["KeyM", "ctrl+alt", false, "toggle-panel", "maps"],
+        ["KeyN", "ctrl+alt", false, "toggle-panel", "network"],
+        ["Digit8", "ctrl+alt", false, "toggle-panel", "notes"],
+        ["Digit7", "ctrl+alt", false, "toggle-panel", "outline"],
+        ["KeyP", "ctrl+alt", false, "toggle-panel", "planner"],
+        ["KeyY", "ctrl+alt", false, "toggle-panel", "player"],
+        ["KeyE", "ctrl+alt", false, "toggle-panel", "plugins"],
+        ["KeyI", "ctrl+alt", false, "toggle-panel", "props"],
+        ["KeyJ", "ctrl+alt", false, "toggle-panel", "record"],
+        ["Digit0", "ctrl+alt", false, "toggle-panel", "search"],
+        ["KeyZ", "ctrl+alt", false, "toggle-panel", "starter"],
+        ["KeyT", "ctrl+alt", false, "toggle-panel", "timeline"],
+        ["Digit6", "ctrl+alt", false, "toggle-panel", "tree"],
+        ["Digit8", true, false, "sp-element", "act-break"],
+        ["Digit5", true, false, "sp-element", "dialogue"],
+        ["Digit9", true, false, "sp-element", "note"],
+        ["Digit4", true, false, "sp-element", "parenthetical"],
+        ["Digit7", true, false, "sp-element", "shot"],
+        ["Digit6", true, false, "sp-element", "transition"],
+        ["KeyU", true, true, "sp-find-error"],
+        ["KeyM", true, true, "toggle-format"],
+        ["Semicolon", true, true, "fmtbar-align"],
+        ["Slash", true, true, "fmtbar-here"],
+        ["Equal", true, true, "fmtbar-lock"],
+        ["Quote", true, true, "fmtbar-opacity"],
+        ["KeyD", true, true, "focus-mode"],
+        ["KeyR", "ctrl+alt", false, "line-numbers"],
+        ["Backslash", true, false, "panels-hide-all"],
+        ["BracketLeft", true, true, "panels-hide-left"],
+        ["BracketRight", true, true, "panels-hide-right"],
+        ["KeyR", "ctrl+alt", true, "read-book"],
+        ["KeyH", true, true, "reading-mode"],
+        ["Backslash", true, true, "split-view"],
+        ["KeyT", true, true, "typewriter"],
+        ["KeyY", true, true, "workspace-menu"],
+        ["Minus", true, false, "zoom", -1],
+        ["Digit0", true, true, "zoom", 0],
+        ["Equal", true, false, "zoom", 1],
+        ["Minus", "ctrl+alt", false, "fmt", "sub"],
+        ["Equal", "ctrl+alt", false, "fmt", "sup"]
+      ];
+    }
+  });
+
   // src/icons.js
   var icons_exports = {};
   __export(icons_exports, {
+    commandIcon: () => commandIcon,
     hasIcon: () => hasIcon,
     icon: () => icon,
     iconHtml: () => iconHtml,
     iconLabel: () => iconLabel,
-    initIcons: () => initIcons
+    initIcons: () => initIcons,
+    isRegisteredCommand: () => isRegisteredCommand
   });
   function hasIcon(name5) {
-    return !!(name5 && ICO[name5]);
+    return !!(name5 && (ICON_SVG[name5] || ICON_GLYPH[name5]));
+  }
+  function commandIcon(id) {
+    return id && COMMAND_ICON[id] || "";
+  }
+  function isRegisteredCommand(id) {
+    return !!id && Object.prototype.hasOwnProperty.call(COMMAND_ICON, id);
+  }
+  function svgMarkup(name5, sz, style) {
+    const def = ICON_SVG[name5];
+    const attrs = { viewBox: "0 0 24 24", fill: "currentColor", ...def.attrs };
+    const a = Object.entries(attrs).map(([k, v2]) => `${k}="${escAttr(v2)}"`).join(" ");
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" ${a} aria-hidden="true" data-k-icon="${escAttr(name5)}" style="${style}">${def.inner}</svg>`;
+  }
+  function glyphMarkup(name5, sz, style) {
+    const g = ICON_GLYPH[name5];
+    if (!g) return "";
+    return `<span class="k-icon-glyph" aria-hidden="true" data-k-icon="${escAttr(name5)}" style="${style};display:inline-block;line-height:1;text-align:center;width:${sz}px;font-size:${Math.round(sz * 0.82)}px">${escAttr(g)}</span>`;
   }
   function icon(name5, size) {
     const sz = size || 18;
-    const p = ICO[name5] || "";
-    if (!p && NF[name5]) {
-      const span = document.createElement("span");
-      span.setAttribute("data-nf", "1");
-      span.style.cssText = `vertical-align:middle;flex-shrink:0;pointer-events:none;font-size:${sz - 2}px`;
-      span.textContent = NF[name5];
-      return span;
+    const style = "vertical-align:middle;flex-shrink:0;pointer-events:none";
+    const html = name5 && ICON_SVG[name5] ? svgMarkup(name5, sz, style) : glyphMarkup(name5, sz, style);
+    const wrap2 = document.createElement("span");
+    wrap2.innerHTML = html;
+    if (!wrap2.firstElementChild) {
+      const blank = document.createElement("span");
+      blank.setAttribute("aria-hidden", "true");
+      blank.style.cssText = `${style};display:inline-block;width:${sz}px;height:${sz}px`;
+      return blank;
     }
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", String(sz));
-    svg.setAttribute("height", String(sz));
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("fill", "currentColor");
-    svg.setAttribute("aria-hidden", "true");
-    svg.style.cssText = "vertical-align:middle;flex-shrink:0;pointer-events:none";
-    if (p) svg.innerHTML = p;
-    return svg;
+    return wrap2.firstElementChild;
   }
   function iconHtml(name5, size) {
     const sz = size || 18;
-    const p = ICO[name5] || "";
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:middle;flex-shrink:0">${p}</svg>`;
+    const style = "vertical-align:middle;flex-shrink:0";
+    return name5 && ICON_SVG[name5] ? svgMarkup(name5, sz, style) : glyphMarkup(name5, sz, style);
   }
   function initIcons(root) {
-    const els = (root || document).querySelectorAll("[data-icon]");
-    for (const el2 of els) {
+    const scope = root || document;
+    for (const el2 of scope.querySelectorAll("[data-command]")) {
+      if (el2.hasAttribute("data-k-icon-done")) continue;
+      el2.setAttribute("data-k-icon-done", "1");
+      const name5 = commandIcon(el2.getAttribute("data-command"));
+      if (!name5) continue;
+      const sz = parseInt(el2.getAttribute("data-icon-size"), 10) || 18;
+      el2.insertBefore(icon(name5, sz), el2.firstChild);
+    }
+    for (const el2 of scope.querySelectorAll("[data-icon]")) {
       const name5 = el2.getAttribute("data-icon");
       const sz = parseInt(el2.getAttribute("data-icon-size"), 10) || 18;
       if (!name5) continue;
-      const svg = icon(name5, sz);
-      el2.insertBefore(svg, el2.firstChild);
+      el2.insertBefore(icon(name5, sz), el2.firstChild);
       el2.removeAttribute("data-icon");
       el2.removeAttribute("data-icon-size");
     }
@@ -21535,241 +22179,15 @@
   function iconLabel(name5, text, size) {
     const span = document.createElement("span");
     span.style.cssText = "display:inline-flex;align-items:center;gap:4px";
-    span.appendChild(icon(name5, size || 16));
+    if (name5) span.appendChild(icon(name5, size || 16));
     if (text) span.appendChild(document.createTextNode(text));
     return span;
   }
-  var ICO, NF;
+  var escAttr;
   var init_icons = __esm({
     "src/icons.js"() {
-      ICO = {
-        // ---- bx: (regular/outline) ----
-        "align-left": '<path fill="currentColor" d="M4 19h16v2H4zm0-4h11v2H4zm0-4h16v2H4zm0-8h16v2H4zm0 4h11v2H4z"/>',
-        "align-center": '<path fill="currentColor" d="M4 19h16v2H4zm3-4h10v2H7zm-3-4h16v2H4zm0-8h16v2H4zm3 4h10v2H7z"/>',
-        "align-right": '<path fill="currentColor" d="M4 19h16v2H4zm5-4h11v2H9zm-5-4h16v2H4zm0-8h16v2H4zm5 4h11v2H9z"/>',
-        "align-justify": '<path fill="currentColor" d="M4 7h16v2H4zm0-4h16v2H4zm0 8h16v2H4zm0 4h16v2H4zm2 4h12v2H6z"/>',
-        "bold": '<path fill="currentColor" d="M17.061 11.22A4.46 4.46 0 0 0 18 8.5C18 6.019 15.981 4 13.5 4H6v15h8c2.481 0 4.5-2.019 4.5-4.5a4.48 4.48 0 0 0-1.439-3.28M13.5 7c.827 0 1.5.673 1.5 1.5s-.673 1.5-1.5 1.5H9V7zm.5 9H9v-3h5c.827 0 1.5.673 1.5 1.5S14.827 16 14 16"/>',
-        "italic": '<path fill="currentColor" d="M19 7V4H9v3h2.868L9.012 17H5v3h10v-3h-2.868l2.856-10H19z"/>',
-        "underline": '<path fill="currentColor" d="M5 18h14v2H5zM6 4v6c0 3.309 2.691 6 6 6s6-2.691 6-6V4h-2v6c0 2.206-1.794 4-4 4s-4-1.794-4-4V4z"/>',
-        "strikethrough": '<path fill="currentColor" d="M20 11h-8c-4 0-4-1.816-4-2.5C8 7.882 8 6 12 6c2.8 0 2.99 1.678 3 2.014L16 8h1c0-1.384-1.045-4-5-4c-5.416 0-6 3.147-6 4.5c0 .728.148 1.667.736 2.5H4v2h16zm-8 7c-3.793 0-3.99-1.815-4-2H6c0 .04.069 4 6 4c5.221 0 6-2.819 6-4.5c0-.146-.009-.317-.028-.5h-2.006c.032.2.034.376.034.5c0 .684 0 2.5-4 2.5"/>',
-        // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — X ตัวใหญ่ + เลข 2 ที่มุมบน/มุมล่าง
-        "superscript": '<path fill="currentColor" d="M4 19h2.5l3.1-4.9h.1l3.1 4.9H16l-4.3-6.6L15.7 6h-2.4l-2.8 4.5h-.1L7.6 6H5.1l4 6.4zm14-9h5V8.7h-2.8c1.7-1.3 2.7-2.1 2.7-3.3c0-1.1-.9-1.9-2.2-1.9c-1.2 0-2.2.7-2.4 1.9l1.3.3c.1-.6.5-.9 1-.9s.9.3.9.8c0 .7-.8 1.3-3.5 3.4z"/>',
-        "subscript": '<path fill="currentColor" d="M4 18h2.5l3.1-4.9h.1l3.1 4.9H16l-4.3-6.6L15.7 5h-2.4l-2.8 4.5h-.1L7.6 5H5.1l4 6.4zm14 2h5v-1.3h-2.8c1.7-1.3 2.7-2.1 2.7-3.3c0-1.1-.9-1.9-2.2-1.9c-1.2 0-2.2.7-2.4 1.9l1.3.3c.1-.6.5-.9 1-.9s.9.3.9.8c0 .7-.8 1.3-3.5 3.4z"/>',
-        "list-ul": '<path fill="currentColor" d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm16-8V6H8.023v2H18.8zM8 11h12v2H8zm0 5h12v2H8z"/>',
-        "list-ol": '<path fill="currentColor" d="M5.282 12.064c-.428.328-.72.609-.875.851q-.233.361-.279.768h2.679v-.748H5.413c.081-.081.152-.151.212-.201q.093-.076.361-.27q.454-.327.626-.604c.116-.186.173-.375.173-.578a.9.9 0 0 0-.151-.512.9.9 0 0 0-.412-.341q-.262-.113-.733-.111q-.451 0-.706.114a.9.9 0 0 0-.396.338q-.141.216-.194.604l.894.076q.037-.28.147-.394a.38.38 0 0 1 .279-.108q.165 0 .272.108a.34.34 0 0 1 .108.258a.55.55 0 0 1-.108.297q-.11.154-.503.453m.055 6.386a.4.4 0 0 1-.282-.105q-.111-.104-.162-.378L4 18.085q.088.306.251.506t.417.306Q4.92 19 5.36 19q.45 0 .725-.14a1 1 0 0 0 .424-.403q.146-.26.146-.544a.8.8 0 0 0-.088-.393.7.7 0 0 0-.249-.261a1 1 0 0 0-.286-.11a.94.94 0 0 0 .345-.299a.67.67 0 0 0 .113-.383a.75.75 0 0 0-.281-.596q-.28-.238-.909-.238q-.548 0-.847.219q-.3.216-.404.626l.844.151q.034-.242.133-.338c.099-.096.151-.098.257-.098a.33.33 0 0 1 .241.089q.088.09.087.238q0 .155-.117.27c-.117.115-.177.112-.293.112a1 1 0 0 1-.116-.011l-.045.649a1 1 0 0 1 .289-.056q.199 0 .313.126q.115.123.115.352q0 .22-.119.354a.4.4 0 0 1-.301.134m.948-10.083V5h-.739a1.5 1.5 0 0 1-.394.523q-.252.212-.708.365v.754a2.6 2.6 0 0 0 .937-.48v2.206zM9 6h11v2H9zm0 5h11v2H9zm0 5h11v2H9z"/>',
-        "code-alt": '<path fill="currentColor" d="m7.375 16.781l1.25-1.562L4.601 12l4.024-3.219l-1.25-1.562l-5 4a1 1 0 0 0 0 1.562zm9.25-9.562l-1.25 1.562L19.399 12l-4.024 3.219l1.25 1.562l5-4a1 1 0 0 0 0-1.562zm-1.649-4.003l-4 18l-1.953-.434l4-18z"/>',
-        "bot": '<path fill="currentColor" d="M21.928 11.607c-.202-.488-.635-.605-.928-.633V8c0-1.103-.897-2-2-2h-6V4.61c.305-.274.5-.668.5-1.11a1.5 1.5 0 0 0-3 0c0 .442.195.836.5 1.11V6H5c-1.103 0-2 .897-2 2v2.997l-.082.006A1 1 0 0 0 1.99 12v2a1 1 0 0 0 1 1H3v5c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2v-5a1 1 0 0 0 1-1v-1.938a1 1 0 0 0-.072-.455M5 20V8h14l.001 3.996L19 12v2l.001.005l.001 5.995z"/><ellipse cx="8.5" cy="12" fill="currentColor" rx="1.5" ry="2"/><ellipse cx="15.5" cy="12" fill="currentColor" rx="1.5" ry="2"/><path fill="currentColor" d="M8 16h8v2H8z"/>',
-        "chevron-right": '<path fill="currentColor" d="M10.707 17.707L16.414 12l-5.707-5.707l-1.414 1.414L13.586 12l-4.293 4.293z"/>',
-        "expand": '<path fill="currentColor" d="m21 15.344l-2.121 2.121l-3.172-3.172l-1.414 1.414l3.172 3.172L15.344 21H21zM3 8.656l2.121-2.121l3.172 3.172l1.414-1.414l-3.172-3.172L8.656 3H3zM21 3h-5.656l2.121 2.121l-3.172 3.172l1.414 1.414l3.172-3.172L21 8.656zM3 21h5.656l-2.121-2.121l3.172-3.172l-1.414-1.414l-3.172 3.172L3 15.344z"/>',
-        "fullscreen": '<path fill="currentColor" d="M5 5h5V3H3v7h2zm5 14H5v-5H3v7h7zm11-5h-2v5h-5v2h7zm-2-4h2V3h-7v2h5z"/>',
-        "history": '<path fill="currentColor" d="M12 8v5h5v-2h-3V8z"/><path fill="currentColor" d="M21.292 8.497a9 9 0 0 0-1.928-2.862a9 9 0 0 0-4.55-2.452a9.1 9.1 0 0 0-3.626 0a8.97 8.97 0 0 0-4.552 2.453a9 9 0 0 0-1.928 2.86A9 9 0 0 0 4 12l.001.025H2L5 16l3-3.975H6.001L6 12a6.96 6.96 0 0 1 1.195-3.913a7 7 0 0 1 1.891-1.892a7 7 0 0 1 2.503-1.054a7.003 7.003 0 0 1 8.269 5.445a7.1 7.1 0 0 1 0 2.824a6.9 6.9 0 0 1-1.054 2.503c-.25.371-.537.72-.854 1.036a7.1 7.1 0 0 1-2.225 1.501a7 7 0 0 1-1.313.408a7.1 7.1 0 0 1-2.823 0a7 7 0 0 1-2.501-1.053a7.1 7.1 0 0 1-1.037-.855l-1.414 1.414A9 9 0 0 0 13 21a9.1 9.1 0 0 0 3.503-.707a9 9 0 0 0 3.959-3.26A8.97 8.97 0 0 0 22 12a8.9 8.9 0 0 0-.708-3.503"/>',
-        "link": '<path fill="currentColor" d="M8.465 11.293c1.133-1.133 3.109-1.133 4.242 0l.707.707l1.414-1.414l-.707-.707c-.943-.944-2.199-1.465-3.535-1.465s-2.592.521-3.535 1.465L4.929 12a5.01 5.01 0 0 0 0 7.071a4.98 4.98 0 0 0 3.535 1.462A4.98 4.98 0 0 0 12 19.071l.707-.707l-1.414-1.414l-.707.707a3.007 3.007 0 0 1-4.243 0a3.005 3.005 0 0 1 0-4.243z"/><path fill="currentColor" d="m12 4.929l-.707.707l1.414 1.414l.707-.707a3.007 3.007 0 0 1 4.243 0a3.005 3.005 0 0 1 0 4.243l-2.122 2.121c-1.133 1.133-3.109 1.133-4.242 0L10.586 12l-1.414 1.414l.707.707c.943.944 2.199 1.465 3.535 1.465s2.592-.521 3.535-1.465L19.071 12a5.01 5.01 0 0 0 0-7.071a5.006 5.006 0 0 0-7.071 0"/>',
-        // ---- bxs: (solid/filled) ----
-        "save": '<path fill="currentColor" d="M5 21h14a2 2 0 0 0 2-2V8l-5-5H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2M7 5h4v2h2V5h2v4H7zm0 8h10v6H7z"/>',
-        "file": '<path fill="currentColor" d="M18 22a2 2 0 0 0 2-2V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2zM13 4l5 5h-5zM7 8h3v2H7zm0 4h10v2H7zm0 4h10v2H7z"/>',
-        "book": '<path fill="currentColor" d="M6.012 18H21V4a2 2 0 0 0-2-2H6c-1.206 0-3 .799-3 3v14c0 2.201 1.794 3 3 3h15v-2H6.012C5.55 19.988 5 19.805 5 19s.55-.988 1.012-1M8 6h9v2H8z"/>',
-        "book-open": '<path fill="currentColor" d="M21 3h-7a2.98 2.98 0 0 0-2 .78A2.98 2.98 0 0 0 10 3H3a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h5.758a2 2 0 0 1 1.414.586l1.121 1.121c.009.009.021.012.03.021c.086.08.182.15.294.196h.002a1 1 0 0 0 .762 0h.002c.112-.046.208-.117.294-.196c.009-.009.021-.012.03-.021l1.121-1.121A2 2 0 0 1 15.242 20H21a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1m-1 15h-4.758a4.03 4.03 0 0 0-2.242.689V6c0-.551.448-1 1-1h6z"/>',
-        "note": '<path fill="currentColor" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8l8-8V5a2 2 0 0 0-2-2m-7 16v-7h7z"/>',
-        "layout": '<path fill="currentColor" d="M19 3H5c-1.103 0-2 .897-2 2v4h18V5c0-1.103-.897-2-2-2M3 19c0 1.103.897 2 2 2h8V11H3zm12 2h4c1.103 0 2-.897 2-2v-8h-6z"/>',
-        "dock-right": '<path fill="currentColor" d="M21 5c0-1.103-.897-2-2-2H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2zM5 5h9v14H5z"/>',
-        "grid": '<path fill="currentColor" d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/>',
-        "chat": '<path fill="currentColor" d="M12 2C6.486 2 2 5.589 2 10c0 2.908 1.897 5.516 5 6.934V22l5.34-4.004C17.697 17.852 22 14.32 22 10c0-4.411-4.486-8-10-8m-2.5 9a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3m5 0a1.5 1.5 0 1 1 0-3a1.5 1.5 0 0 1 0 3"/>',
-        // bxs:message-rounded-dots
-        "home": '<path fill="currentColor" d="M12.74 2.32a1 1 0 0 0-1.48 0l-9 10A1 1 0 0 0 3 14h2v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7h2a1 1 0 0 0 1-1a1 1 0 0 0-.26-.68z"/>',
-        "minus": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m5 11H7v-2h10z"/>',
-        // bxs:minus-circle
-        "plus": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/>',
-        // bxs:plus-circle
-        "reset": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m4.207 12.793l-1.414 1.414L12 13.414l-2.793 2.793l-1.414-1.414L10.586 12L7.793 9.207l1.414-1.414L12 10.586l2.793-2.793l1.414 1.414L13.414 12z"/>',
-        // bxs:x-circle
-        "x": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m4.207 12.793l-1.414 1.414L12 13.414l-2.793 2.793l-1.414-1.414L10.586 12L7.793 9.207l1.414-1.414L12 10.586l2.793-2.793l1.414 1.414L13.414 12z"/>',
-        // same as reset (x-circle)
-        "image": '<path fill="currentColor" d="M5 21h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2m3-7l2.363 2.363L14 11l5 7H5z"/>',
-        // bxs:image-alt
-        "image-add": '<path fill="currentColor" d="m9 13l3-4l3 4.5V12h4V5c0-1.103-.897-2-2-2H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h8v-4H5l3-4z"/><path fill="currentColor" d="M19 14h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/>',
-        "archive": '<path fill="currentColor" d="m21.706 5.292l-2.999-2.999A1 1 0 0 0 18 2H6a1 1 0 0 0-.707.293L2.294 5.292A1 1 0 0 0 2 6v13c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6a1 1 0 0 0-.294-.708M6.414 4h11.172l1 1H5.414zM12 18l-5-5h3v-3h4v3h3z"/>',
-        // bxs:archive-in
-        "book-content": '<path fill="currentColor" d="M19 2H6c-1.206 0-3 .799-3 3v14c0 2.201 1.794 3 3 3h15v-2H6.012C5.55 19.988 5 19.806 5 19q0-.15.024-.273c.112-.576.584-.717.988-.727H21V4a2 2 0 0 0-2-2m0 9l-2-1l-2 1V4h4z"/>',
-        // bxs:book-bookmark
-        "folder": '<path fill="currentColor" d="M20 5h-9.586L8.707 3.293A1 1 0 0 0 8 3H4c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V7c0-1.103-.897-2-2-2"/>',
-        "user": '<path fill="currentColor" d="M7.5 6.5C7.5 8.981 9.519 11 12 11s4.5-2.019 4.5-4.5S14.481 2 12 2S7.5 4.019 7.5 6.5M20 21h1v-1c0-3.859-3.141-7-7-7h-4c-3.86 0-7 3.141-7 7v1z"/>',
-        "map": '<path fill="currentColor" d="M12 2C7.589 2 4 5.589 4 9.995C3.971 16.44 11.696 21.784 12 22c0 0 8.029-5.56 8-12c0-4.411-3.589-8-8-8m0 12c-2.21 0-4-1.79-4-4s1.79-4 4-4s4 1.79 4 4s-1.79 4-4 4"/>',
-        "briefcase": '<path fill="currentColor" d="M20 6h-3V4c0-1.103-.897-2-2-2H9c-1.103 0-2 .897-2 2v2H4c-1.103 0-2 .897-2 2v4h5v-2h2v2h6v-2h2v2h5V8c0-1.103-.897-2-2-2M9 4h6v2H9zm8 11h-2v-2H9v2H7v-2H2v6c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2v-6h-5z"/>',
-        "bookmark": '<path fill="currentColor" d="M19 10.132v-6c0-1.103-.897-2-2-2H7c-1.103 0-2 .897-2 2V22l7-4.666L19 22z"/>',
-        "clipboard": '<path fill="currentColor" d="M19 4h-3V2h-2v2h-4V2H8v2H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2m-7 10H7v-2h5zm5-4H7V8h10z"/>',
-        // bxs:notepad
-        "camera": '<path fill="currentColor" d="M12 9c-1.626 0-3 1.374-3 3s1.374 3 3 3s3-1.374 3-3s-1.374-3-3-3"/><path fill="currentColor" d="M20 5h-2.586l-2.707-2.707A1 1 0 0 0 14 2h-4a1 1 0 0 0-.707.293L6.586 5H4c-1.103 0-2 .897-2 2v11c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V7c0-1.103-.897-2-2-2m-8 12c-2.71 0-5-2.29-5-5s2.29-5 5-5s5 2.29 5 5s-2.29 5-5 5"/>',
-        "cog": '<path fill="currentColor" d="m2.344 15.271l2 3.46a1 1 0 0 0 1.366.365l1.396-.806c.58.457 1.221.832 1.895 1.112V21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1.598a8 8 0 0 0 1.895-1.112l1.396.806c.477.275 1.091.11 1.366-.365l2-3.46a1.004 1.004 0 0 0-.365-1.366l-1.372-.793a7.7 7.7 0 0 0-.002-2.224l1.372-.793c.476-.275.641-.89.365-1.366l-2-3.46a1 1 0 0 0-1.366-.365l-1.396.806A8 8 0 0 0 15 4.598V3a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v1.598A8 8 0 0 0 7.105 5.71L5.71 4.904a1 1 0 0 0-1.366.365l-2 3.46a1.004 1.004 0 0 0 .365 1.366l1.372.793a7.7 7.7 0 0 0 0 2.224l-1.372.793c-.476.275-.641.89-.365 1.366M12 8c2.206 0 4 1.794 4 4s-1.794 4-4 4s-4-1.794-4-4s1.794-4 4-4"/>',
-        "brain": '<path fill="currentColor" d="M3.299 17.596c.432 1.332 1.745 2.182 3.146 2.182H6.5A2.78 2.78 0 0 0 9.223 22c.457 0 .884-.115 1.262-.313a.99.99 0 0 0 .515-.882V3.027a1 1 0 0 0-.785-.983a2.32 2.32 0 0 0-1.479.201c-.744.356-1.18 1.151-1.18 1.978v.055a2.778 2.778 0 0 0-2.744 4.433A3.33 3.33 0 0 0 2 12c0 1.178.611 2.211 1.533 2.812c-.43.771-.571 1.746-.234 2.784m15.889-8.885a2.778 2.778 0 0 0-2.744-4.433v-.055c0-.826-.437-1.622-1.181-1.978a2.32 2.32 0 0 0-1.478-.201a1 1 0 0 0-.785.983v17.777c0 .365.192.712.516.882c.378.199.804.314 1.261.314a2.78 2.78 0 0 0 2.723-2.223h.056c1.4 0 2.714-.85 3.146-2.182c.337-1.038.196-2.013-.234-2.784A3.35 3.35 0 0 0 22 12a3.33 3.33 0 0 0-2.812-3.289"/>',
-        // [alpha.60r2 ข้อ 10] ธีมสว่าง/มืด — ปุ่ม #tb-theme
-        "sun": '<path fill="currentColor" d="M6.995 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007s-2.246-5.007-5.007-5.007S6.995 9.239 6.995 12M11 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2H2zm17 0h3v2h-3zM5.637 19.778l-1.414-1.414l2.121-2.121l1.414 1.414zM16.242 6.344l2.122-2.122l1.414 1.414l-2.122 2.122zM6.344 7.759L4.223 5.637l1.415-1.414l2.12 2.122zm13.434 10.605l-1.414 1.414l-2.122-2.122l1.414-1.414z"/>',
-        "star": '<path fill="currentColor" d="M21.947 9.179a1 1 0 0 0-.868-.676l-5.701-.453l-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107l-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4l4.536-4.082c.297-.268.406-.686.278-1.065"/>',
-        "error": '<path fill="currentColor" d="M12.884 2.532c-.346-.654-1.422-.654-1.768 0l-9 17A1 1 0 0 0 3 21h18a.998.998 0 0 0 .883-1.467zM13 18h-2v-2h2zm-2-4V9h2l.001 5z"/>',
-        // bxs:error (alert-triangle)
-        "check": '<path fill="currentColor" d="M11.488 21.754c.294.157.663.156.957-.001c8.012-4.304 8.581-12.713 8.574-15.104a.99.99 0 0 0-.596-.903l-8.05-3.566a1 1 0 0 0-.813.001L3.566 5.747a.99.99 0 0 0-.592.892c-.034 2.379.445 10.806 8.514 15.115M8.674 10.293l2.293 2.293l4.293-4.293l1.414 1.414l-5.707 5.707l-3.707-3.707z"/>',
-        // bxs:check-shield
-        "edit": '<path fill="currentColor" d="m18.988 2.012l3 3L19.701 7.3l-3-3zM8 16h3l7.287-7.287l-3-3L8 13z"/><path fill="currentColor" d="M19 19H8.158c-.026 0-.053.01-.079.01c-.033 0-.066-.009-.1-.01H5V5h6.847l2-2H5c-1.103 0-2 .896-2 2v14c0 1.104.897 2 2 2h14a2 2 0 0 0 2-2v-8.668l-2 2z"/>',
-        "trash": '<path fill="currentColor" d="M6 7H5v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm4 12H8v-9h2zm6 0h-2v-9h2zm.618-15L15 2H9L7.382 4H3v2h18V4z"/>',
-        "chevron-down": '<path fill="currentColor" d="M16.939 7.939L12 12.879l-4.939-4.94l-2.122 2.122L12 17.121l7.061-7.06z"/>',
-        // [alpha.117] ล็อกแถบรูปแบบลอย + ชิดขอบบน (bx:lock-alt · bx:lock-open-alt · bx:chevron-up)
-        "chevron-up": '<path fill="currentColor" d="m6.293 13.293l1.414 1.414L12 10.414l4.293 4.293l1.414-1.414L12 7.586z"/>',
-        "lock": '<path fill="currentColor" d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.757-2.243-5-5-5m0 2c1.654 0 3 1.346 3 3v3H9V7c0-1.654 1.346-3 3-3m6 8l.002 8H6v-8z"/>',
-        "lock-open": '<path fill="currentColor" d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2H9V7c0-1.654 1.346-3 3-3s3 1.346 3 3h2c0-2.757-2.243-5-5-5m6 10l.002 8H6v-8z"/>',
-        "quote-left": '<path fill="currentColor" d="M20.309 17.708C22.196 15.66 22.006 13.03 22 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292m-11.007 0C11.19 15.66 10.999 13.03 10.993 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292"/>',
-        // bxs:quote-right
-        "film": '<path fill="currentColor" d="M19 4v1h-2V3H7v2H5V3H3v18h2v-2h2v2h10v-2h2v2h2V3h-2zM5 7h2v2H5zm0 4h2v2H5zm0 6v-2h2v2zm12 0v-2h2v2zm2-4h-2v-2h2zm-2-4V7h2v2z"/>',
-        "search": '<path fill="currentColor" d="M10 2c-4.411 0-8 3.589-8 8s3.589 8 8 8a7.95 7.95 0 0 0 4.897-1.688l4.396 4.396l1.414-1.414l-4.396-4.396A7.95 7.95 0 0 0 18 10c0-4.411-3.589-8-8-8"/>',
-        "cloud-lightning": '<path fill="currentColor" d="M18.944 10.112C18.507 6.67 15.56 4 12 4C9.244 4 6.85 5.611 5.757 8.15C3.609 8.792 2 10.82 2 13c0 2.757 2.243 5 5 5h1.333L10 13h4l-2 3h2.975l-1.325 2H18c2.206 0 4-1.794 4-4a4.01 4.01 0 0 0-3.056-3.888M11 18H8.333L8 19h3v3l2.649-4H11.5z"/>',
-        // ---- alternatives (ไม่มีใน Boxicons) ----
-        "extension": '<path fill="currentColor" d="M19 10V7c0-1.103-.897-2-2-2h-3c0-1.654-1.346-3-3-3S8 3.346 8 5H5c-1.103 0-2 .897-2 2v4h1a2 2 0 0 1 0 4H3v4c0 1.103.897 2 2 2h4v-1a2 2 0 0 1 4 0v1h4c1.103 0 2-.897 2-2v-3c1.654 0 3-1.346 3-3s-1.346-3-3-3"/>',
-        // bxs:extension ใช้แทน puzzle
-        "maximize": '<path fill="currentColor" d="M5 5h5V3H3v7h2zm5 14H5v-5H3v7h7zm11-5h-2v5h-5v2h7zm-2-4h2V3h-7v2h5z"/>',
-        // bx:fullscreen ใช้แทน maximize เต็มจอ
-        // [alpha.60r ข้อ 4] ไอคอนแดชบอร์ด
-        "chart": '<path fill="currentColor" d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z"/>',
-        // bxs:bar-chart-square
-        // [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสนำหน้าบรรทัด (bx:show / bx:hide)
-        "eye": '<path fill="currentColor" d="M12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6"/><path fill="currentColor" d="M12 5c-7.633 0-9.927 6.617-9.948 6.684L1.946 12l.105.316C2.073 12.383 4.367 19 12 19s9.927-6.617 9.948-6.684l.106-.316l-.105-.316C21.927 11.617 19.633 5 12 5m0 12c-5.351 0-7.424-3.846-7.926-5C4.578 10.842 6.652 7 12 7c5.351 0 7.424 3.846 7.926 5c-.504 1.158-2.578 5-7.926 5"/>',
-        "eye-off": '<path fill="currentColor" d="M12 19c.946 0 1.81-.103 2.598-.281l-1.757-1.757c-.273.021-.55.038-.841.038c-5.351 0-7.424-3.846-7.926-5a8.6 8.6 0 0 1 1.508-2.297L4.184 8.305C1.923 10.427 1.026 12.607 1.002 12.673l-.181.499l.181.499C1.031 13.746 3.845 19 12 19m0-14c-1.837 0-3.346.396-4.605.981L3.707 2.293L2.293 3.707l18 18l1.414-1.414l-3.319-3.319c2.614-1.951 3.547-4.615 3.573-4.694l.181-.499l-.181-.499C21.969 10.254 19.155 5 12 5m4.972 10.558l-2.28-2.28c.19-.39.308-.819.308-1.278a2.99 2.99 0 0 0-3-3c-.459 0-.888.118-1.277.309L8.915 7.501A9.3 9.3 0 0 1 12 7c5.351 0 7.424 3.846 7.926 5c-.302.692-1.166 2.342-2.954 3.558"/>',
-        // [alpha.111] เป้าเล็ง — ปุ่ม "เรียกแถบรูปแบบมาหาเคอร์เซอร์" บนแถบลอย
-        "crosshair": '<path fill="currentColor" d="M11 2v3.055A7.01 7.01 0 0 0 5.055 11H2v2h3.055A7.01 7.01 0 0 0 11 18.945V22h2v-3.055A7.01 7.01 0 0 0 18.945 13H22v-2h-3.055A7.01 7.01 0 0 0 13 5.055V2zm1 5a5 5 0 1 1 0 10a5 5 0 0 1 0-10m0 3a2 2 0 1 0 0 4a2 2 0 0 0 0-4"/>',
-        // [alpha.111] ลูกโลก — คำสั่ง "แผนที่" บนปุ่มลอย (แยกจาก 'map' ที่ใช้กับสถานที่ใน Wiki)
-        "globe": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m7.931 9h-2.764a14.7 14.7 0 0 0-1.792-6.243A8.01 8.01 0 0 1 19.931 11M12.53 4.027c1.035 1.364 2.427 3.78 2.627 6.973H9.03c.139-2.596.994-5.028 2.451-6.974zm-.98 15.947c-1.036-1.364-2.428-3.78-2.628-6.974h6.126c-.139 2.596-.994 5.028-2.451 6.974zM8.624 4.758A14.7 14.7 0 0 0 6.832 11H4.069a8.01 8.01 0 0 1 4.556-6.242M4.069 13h2.763a14.7 14.7 0 0 0 1.792 6.243A8.01 8.01 0 0 1 4.069 13m11.306 6.242A14.7 14.7 0 0 0 17.167 13h2.764a8.01 8.01 0 0 1-4.556 6.242"/>'
-      };
-      NF = {
-        "bold": "\uF032",
-        // nf-fa-bold
-        "italic": "\uF033",
-        // nf-fa-italic
-        "underline": "\uF0CD",
-        // nf-fa-underline
-        "strikethrough": "\uF0CC",
-        // nf-fa-strikethrough
-        "superscript": "\uF12B",
-        // nf-fa-superscript
-        "subscript": "\uF12C",
-        // nf-fa-subscript
-        "align-left": "\uF036",
-        // nf-fa-align_left
-        "align-center": "\uF037",
-        // nf-fa-align_center
-        "align-right": "\uF038",
-        // nf-fa-align_right
-        "align-justify": "\uF039",
-        // nf-fa-align_justify
-        "list-ul": "\uF0CA",
-        // nf-fa-list_ul
-        "list-ol": "\uF0CB",
-        // nf-fa-list_ol
-        "quote-left": "\uF10D",
-        // nf-fa-quote_left
-        "code-alt": "\uF121",
-        // nf-fa-code
-        "bot": "\uEBE1",
-        // nf-md-robot
-        "search": "\uF002",
-        // nf-fa-search
-        "home": "\uF015",
-        // nf-fa-home
-        "cog": "\uF013",
-        // nf-fa-cog
-        "minus": "\uF056",
-        // nf-fa-minus_circle
-        "plus": "\uF055",
-        // nf-fa-plus_circle
-        "x": "\uF057",
-        // nf-fa-times_circle
-        "reset": "\uF057",
-        // same as x
-        "save": "\uF0C7",
-        // nf-fa-floppy_o
-        "file": "\uF016",
-        // nf-fa-file_o
-        "book": "\uF02D",
-        // nf-fa-book
-        "book-open": "\uF518",
-        // nf-fa-book_open
-        "note": "\uF249",
-        // nf-md-note
-        "layout": "\uF0DB",
-        // nf-fa-columns
-        "dock-right": "\uF0DB",
-        // same
-        "grid": "\uF00A",
-        // nf-fa-th
-        "chat": "\uF086",
-        // nf-fa-comments
-        "image": "\uF03E",
-        // nf-fa-picture_o
-        "image-add": "\uF055",
-        // plus
-        "archive": "\uF187",
-        // nf-fa-archive
-        "book-content": "\uF02D",
-        // same
-        "folder": "\uF07B",
-        // nf-fa-folder
-        "user": "\uF007",
-        // nf-fa-user
-        "map": "\uF279",
-        // nf-fa-map
-        "briefcase": "\uF0B1",
-        // nf-fa-briefcase
-        "bookmark": "\uF02E",
-        // nf-fa-bookmark
-        "clipboard": "\uF0F6",
-        // nf-fa-clipboard
-        "camera": "\uF030",
-        // nf-fa-camera
-        "brain": "\uEB61",
-        // nf-md-brain
-        "star": "\uF005",
-        // nf-fa-star
-        "error": "\uF071",
-        // nf-fa-exclamation_triangle
-        "check": "\uF058",
-        // nf-fa-check_circle
-        "edit": "\uF304",
-        // nf-fa-pencil_square
-        "trash": "\uF1F8",
-        // nf-fa-trash
-        "chevron-down": "\uF078",
-        // nf-fa-chevron_down
-        "chevron-up": "\uF077",
-        // nf-fa-chevron_up
-        "lock": "\uF023",
-        // nf-fa-lock
-        "lock-open": "\uF09C",
-        // nf-fa-unlock
-        "chevron-right": "\uF054",
-        // nf-fa-chevron_right
-        "film": "\uF008",
-        // nf-fa-film
-        "expand": "\uF065",
-        // nf-fa-expand
-        "fullscreen": "\uF065",
-        // same
-        "history": "\uF1DA",
-        // nf-fa-history
-        "link": "\uF0C1",
-        // nf-fa-link
-        "cloud-lightning": "\uE7EF",
-        // nf-md-weather_lightning
-        "extension": "\uF12E",
-        // nf-fa-puzzle_piece
-        "maximize": "\uF065",
-        // same as expand
-        "chart": "\uF080",
-        // nf-fa-bar_chart
-        "eye": "\uF06E",
-        // nf-fa-eye
-        "eye-off": "\uF070",
-        // nf-fa-eye_slash
-        "crosshair": "\uF05B",
-        // nf-fa-crosshairs
-        "globe": "\uF0AC"
-        // nf-fa-globe
-      };
+      init_commands_data();
+      escAttr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
     }
   });
 
@@ -22158,7 +22576,6 @@
     withBusy: () => withBusy,
     withFamily: () => withFamily,
     withLangFamily: () => withLangFamily,
-    withShortcut: () => withShortcut,
     withSpFamily: () => withSpFamily,
     withThaiFallback: () => withThaiFallback,
     wrapLines: () => wrapLines
@@ -22494,16 +22911,12 @@
   function needsAlt(needCtrl) {
     return String(needCtrl).includes("alt");
   }
-  function withShortcut(labelKey, code3, ctrl, shift2) {
-    const label = t(labelKey, labelKey);
-    const sc = formatShortcut(code3, ctrl, shift2);
-    return label + " (" + sc + ")";
-  }
   var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, RAW_CONSOLE, logStore, logSubs, _busyMsg, THEMES, THEME_LABEL_KEYS, THEME_ALIAS, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, DATA_KEYS, BUILTIN_CATS, CAT_ICON, i18n, langHooks, SHORTCUTS, SHORTCUT_PANEL_SKIP, shortcutId, SHORTCUT_LABELS, SHORTCUT_CATS, isMac, accelText;
   var init_core = __esm({
     "src/core.js"() {
       init_smart();
       init_log_core();
+      init_commands_data();
       init_num();
       init_relationship_types();
       init_sp_format();
@@ -22799,161 +23212,7 @@
         syncNestedStrings();
       }
       langHooks = [];
-      SHORTCUTS = [
-        // [code, needCtrl, needShift, channel, ...args]   · needCtrl: true | false | 'ctrl+alt'
-        ["KeyS", true, false, "save"],
-        ["KeyS", true, true, "save-as"],
-        ["KeyN", true, false, "new-project"],
-        ["KeyO", true, false, "open-project"],
-        ["KeyP", true, false, "print"],
-        ["KeyW", true, false, "close-tab"],
-        ["KeyW", true, true, "close-all-tabs"],
-        ["KeyF", true, false, "find"],
-        ["Comma", true, false, "settings"],
-        // [alpha.81 ข้อ 9] Ctrl+Shift+E = "ศูนย์รวมการส่งออก" (เดิมเปิดกล่องเวิร์กโฟลว์ตรง ๆ)
-        // กล่องเวิร์กโฟลว์ยังอยู่ — เข้าจากปุ่ม "ปรับขั้นตอน…" ในศูนย์รวม
-        ["KeyE", true, true, "export-hub"],
-        ["KeyZ", true, false, "editor-undo"],
-        ["KeyZ", true, true, "editor-redo"],
-        ["KeyY", true, false, "editor-redo"],
-        ["KeyB", true, false, "fmt", "bold"],
-        ["KeyI", true, false, "fmt", "italic"],
-        ["KeyU", true, false, "fmt", "underline"],
-        ["KeyX", true, true, "fmt", "strike"],
-        // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เลียนแบบ Word (Ctrl+Shift+= / Ctrl+=) แต่ต้องเติม Alt
-        // เพราะตัวดักซูมหน้ากระดาษกิน Ctrl+= / Ctrl+- ไปแล้วโดยไม่ดูปุ่ม Shift (มันเช็คแค่ Alt)
-        ["Equal", "ctrl+alt", false, "fmt", "sup"],
-        ["Minus", "ctrl+alt", false, "fmt", "sub"],
-        ["Digit1", true, false, "fmt", "heading", 1],
-        ["Digit2", true, false, "fmt", "heading", 2],
-        ["Digit3", true, false, "fmt", "heading", 3],
-        ["Digit0", true, false, "fmt", "paragraph"],
-        ["Digit8", true, true, "fmt", "ul"],
-        ["Digit7", true, true, "fmt", "ol"],
-        ["Space", true, false, "fmt", "clear"],
-        ["KeyL", true, true, "fmt", "align", "left"],
-        ["KeyK", true, true, "fmt", "align", "center"],
-        ["KeyR", true, true, "fmt", "align", "right"],
-        ["KeyJ", true, true, "fmt", "align", "justify"],
-        ["KeyM", true, true, "toggle-format"],
-        // [alpha.138] Ctrl+Shift+P (สลับธีม) ถูกถอดตามคำสั่งผู้ใช้ — ธีมย้ายไปอยู่ในตั้งค่าอย่างเดียว
-        ["KeyF", true, true, "global-search"],
-        ["KeyD", true, true, "focus-mode"],
-        ["KeyO", true, true, "quick-open"],
-        ["KeyT", true, true, "typewriter"],
-        ["KeyB", true, true, "export-blog"],
-        ["Backslash", true, true, "split-view"],
-        ["KeyK", true, false, "kanban"],
-        // [alpha.61 ข้อ 3] ลบทั้งบรรทัด — Ctrl+Shift+K ไม่ว่าง (จัดกึ่งกลาง) จึงใช้ Ctrl+Shift+Delete
-        ["Delete", true, true, "delete-line"],
-        ["KeyG", true, true, "gallery"],
-        // [95] Per-element shortcuts — Ctrl+4..9 (Ctrl+1/2/3 จัดการใน handleCommand)
-        ["Digit4", true, false, "sp-element", "parenthetical"],
-        ["Digit5", true, false, "sp-element", "dialogue"],
-        ["Digit6", true, false, "sp-element", "transition"],
-        ["Digit7", true, false, "sp-element", "shot"],
-        ["Digit8", true, false, "sp-element", "act-break"],
-        ["Digit9", true, false, "sp-element", "note"],
-        // [79] เลือกทั้งฉาก
-        ["KeyA", true, true, "select-scene"],
-        // [77] Non-breaking space
-        ["Space", true, true, "nbsp"],
-        // [78] ไปที่หน้า/ฉาก · [54] ตรวจหาข้อผิดพลาดถัดไป (alpha.57)
-        ["KeyG", true, false, "goto"],
-        ["KeyU", true, true, "sp-find-error"],
-        // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium)
-        ["Backquote", true, true, "dev-console"],
-        // [alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType)
-        // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ)
-        // [alpha.124 ข้อ 6] **สลับให้ตรงทิศ**: `[` ชี้ซ้าย = ซ่อนฝั่งซ้าย · `]` ชี้ขวา = ซ่อนฝั่งขวา
-        // เดิมกลับด้านกันมาตั้งแต่ .66r3 (เลือกตามคีย์ที่ว่าง ไม่ได้เลือกตามความหมาย) — ผู้ใช้กดผิดทุกครั้ง
-        ["Backslash", true, false, "panels-hide-all"],
-        ["BracketLeft", true, true, "panels-hide-left"],
-        // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
-        ["KeyY", true, true, "workspace-menu"],
-        // ═══════════ [alpha.79] ชุดใหญ่ที่ขาดไป ═══════════
-        // ── คำสั่งเอกสาร (Ctrl+Shift) ──
-        ["KeyI", true, true, "insert-image"],
-        ["KeyQ", true, true, "quick-note"],
-        ["KeyH", true, true, "reading-mode"],
-        ["KeyN", true, true, "new-from-template"],
-        ["Period", true, true, "goto-page"],
-        ["Comma", true, true, "goto-scene"],
-        ["BracketRight", true, true, "panels-hide-right"],
-        // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งซ้าย)
-        ["KeyR", "ctrl+alt", false, "line-numbers"],
-        // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
-        ["Digit1", "ctrl+alt", false, "chapter"],
-        ["Digit2", "ctrl+alt", false, "scene"],
-        ["Digit3", "ctrl+alt", false, "character"],
-        ["Digit4", "ctrl+alt", false, "location"],
-        ["Digit5", "ctrl+alt", false, "memo"],
-        // [alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (Ctrl+Shift+/)
-        ["Slash", true, true, "fmtbar-here"],
-        // [alpha.117] สภาพของแถบรูปแบบลอย — วางไว้ติดกันบนแป้นพิมพ์กับ Ctrl+Shift+/ ให้จำเป็นชุด
-        ["Quote", true, true, "fmtbar-opacity"],
-        ["Semicolon", true, true, "fmtbar-align"],
-        ["Equal", true, true, "fmtbar-lock"],
-        // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
-        ["KeyS", "ctrl+alt", false, "save-all"],
-        // [alpha.124 ข้อ 7] "ปรับขั้นตอนส่งออก" มีชื่อใน SHORTCUT_LABELS มาตลอด แต่ไม่เคยมีแถวในตาราง
-        // → หน้า ตั้งค่า → ปุ่มลัด ไม่เคยแสดงรายการนี้เลย และตั้งเองก็ไม่ได้
-        ["KeyX", "ctrl+alt", false, "compile"],
-        // [alpha.124 ข้อ 3] ตารางคีย์ลัด (Cheatsheet) — เดิมผูก listener เองที่ Ctrl+Shift+/
-        // ซึ่ง **ชนกับ `fmtbar-here`** แล้วยิงทั้งคู่ · `?` เปล่า ๆ ยังเปิดได้เหมือนเดิม
-        ["Slash", "ctrl+alt", false, "cheatsheet"],
-        // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Sentence → lower → UPPER → …)
-        ["KeyU", "ctrl+alt", false, "text-case-cycle"],
-        // ══ [alpha.125 ข้อ G · ข้อ H] Ctrl+Alt+Shift — ชั้นที่ยังว่างทั้งชั้น ══
-        //
-        // Ctrl+Alt+<ตัวอักษร> ถูกใช้ครบทั้ง 26 ตัวแล้วตั้งแต่ alpha.124 (แผงมี 29 ตัว)
-        // ชั้นถัดไปที่ยังว่างสนิทคือเติม Shift เข้าไป — ตัวจับคีย์รองรับอยู่แล้ว
-        // (`needsAlt(needCtrl) === e.altKey` + เทียบ `needShift` แยก) และ `formatShortcut`
-        // ก็แสดงเป็น `Ctrl+Alt+Shift+B` ได้ถูกต้องอยู่แล้ว
-        ["KeyB", "ctrl+alt", true, "toggle-panel", "backlinks"],
-        ["KeyT", "ctrl+alt", true, "thesaurus"],
-        ["KeyI", "ctrl+alt", true, "import-scrivener"],
-        // [alpha.141] จัดการบท (คู่กับ Ctrl+Alt+K = จัดการเล่ม) · อ่านทั้งเล่ม
-        ["KeyK", "ctrl+alt", true, "toggle-panel", "chapters"],
-        ["KeyR", "ctrl+alt", true, "read-book"],
-        // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
-        ["KeyD", "ctrl+alt", false, "toggle-panel", "dashboard"],
-        ["KeyT", "ctrl+alt", false, "toggle-panel", "timeline"],
-        ["KeyM", "ctrl+alt", false, "toggle-panel", "maps"],
-        ["KeyN", "ctrl+alt", false, "toggle-panel", "network"],
-        ["KeyP", "ctrl+alt", false, "toggle-panel", "planner"],
-        ["KeyB", "ctrl+alt", false, "toggle-panel", "branch"],
-        ["KeyK", "ctrl+alt", false, "toggle-panel", "books"],
-        ["KeyC", "ctrl+alt", false, "toggle-panel", "codex"],
-        ["KeyH", "ctrl+alt", false, "toggle-panel", "history"],
-        ["KeyJ", "ctrl+alt", false, "toggle-panel", "record"],
-        ["KeyG", "ctrl+alt", false, "toggle-panel", "gallery-board"],
-        ["KeyF", "ctrl+alt", false, "toggle-panel", "floorplan"],
-        ["KeyY", "ctrl+alt", false, "toggle-panel", "player"],
-        ["KeyA", "ctrl+alt", false, "toggle-panel", "ai-analyzer"],
-        ["KeyO", "ctrl+alt", false, "toggle-panel", "comments"],
-        ["KeyI", "ctrl+alt", false, "toggle-panel", "props"],
-        // [alpha.79] แผงใหม่สองตัวของรอบนี้
-        ["KeyL", "ctrl+alt", false, "toggle-panel", "dialogue"],
-        ["KeyE", "ctrl+alt", false, "toggle-panel", "plugins"],
-        // ══ [alpha.116 ข้อ 7] ★ ปิดช่องว่างของตารางคีย์ลัด ══
-        //
-        // ผู้ใช้: *"เช็ค shortcut มีครบมั้ย"* — กวาดแล้วพบว่า **9 แผงไม่มีคีย์ลัดเลย**
-        // ทั้งที่แผงอื่นมีครบ (แผงที่มาทีหลังทุกตัวถูกลืม: ห้องซ้อมบท · Story Starter · แชท AI
-        //  และแผงพื้นฐานที่มีมาแต่ต้นอย่าง โครงเรื่อง/สารบัญ/บันทึก/ประวัติการบันทึก/ค้นหา)
-        //
-        // ประตูกันพลาดอยู่ที่ `test/shortcuts.test.cjs` — แผงที่ปิดได้ทุกตัวต้องมีคีย์ลัด
-        // หรือไม่ก็ต้องประกาศเหตุผลไว้ใน SHORTCUT_PANEL_SKIP ลืมเมื่อไหร่เทสแดงตั้งแต่ build
-        ["KeyQ", "ctrl+alt", false, "toggle-panel", "ai-hub"],
-        ["KeyW", "ctrl+alt", false, "toggle-panel", "ai-chat"],
-        ["KeyV", "ctrl+alt", false, "toggle-panel", "dlgb"],
-        ["KeyZ", "ctrl+alt", false, "toggle-panel", "starter"],
-        ["Digit6", "ctrl+alt", false, "toggle-panel", "tree"],
-        ["Digit7", "ctrl+alt", false, "toggle-panel", "outline"],
-        ["Digit8", "ctrl+alt", false, "toggle-panel", "notes"],
-        ["Digit9", "ctrl+alt", false, "toggle-panel", "log"],
-        ["Digit0", "ctrl+alt", false, "toggle-panel", "search"]
-      ];
+      SHORTCUTS = SHORTCUT_ROWS;
       SHORTCUT_PANEL_SKIP = {
         // เหตุผลเป็นข้อความของนักพัฒนา (โผล่ในผลเทสเท่านั้น ไม่ขึ้นหน้าจอ) จึงไม่ผ่านระบบภาษา
         "planner-props": "companion panel of Planner \u2014 opened by Planner itself",
@@ -23070,7 +23329,11 @@
         "toggle-panel:outline": "ui.shortcuts.panelOutline",
         "toggle-panel:notes": "ui.shortcuts.panelNotes",
         "toggle-panel:log": "ui.shortcuts.panelLog",
-        "toggle-panel:search": "ui.shortcuts.panelSearch"
+        "toggle-panel:search": "ui.shortcuts.panelSearch",
+        // [alpha.147] ซูมหน้ากระดาษ — เดิมเป็นตัวดักคีย์แยก (ตั้งใหม่ไม่ได้ · ไม่ขึ้นในหน้าตั้งค่า)
+        "zoom:1": "ui.shortcuts.zoomIn",
+        "zoom:-1": "ui.shortcuts.zoomOut",
+        "zoom:0": "ui.shortcuts.zoomReset"
       };
       SHORTCUT_CATS = [
         {
@@ -23164,7 +23427,10 @@
             "fmtbar-here",
             "fmtbar-opacity",
             "fmtbar-align",
-            "fmtbar-lock"
+            "fmtbar-lock",
+            "zoom:1",
+            "zoom:-1",
+            "zoom:0"
           ]
         },
         {
@@ -62468,6 +62734,7 @@
     right.title = t("ui.planner.scrollRight");
     const strip = el("div", "planner-toolbar-strip");
     strip.innerHTML = t("ui.planner.boardMainNewOpen");
+    initIcons(strip);
     const map2 = {
       "new": "onNew",
       "open": "onOpen",
@@ -62765,6 +63032,7 @@
       init_i18n();
       init_core();
       init_planner_data();
+      init_icons();
       SHAPE_LABEL = {
         rect: t("ui.planner.rect"),
         round: t("ui.planner.corner"),
@@ -64194,6 +64462,7 @@
       t("ui.plannerProps.fileBind"),
       tf("ui.plannerProps.pickProject", _esc(n2.file || ""))
     );
+    initIcons(fileRow);
     add(t("ui.common.tag"), tf("ui.plannerProps.msg2", _esc((n2.tags || []).join(", "))));
     add("", tf("ui.plannerProps.lockNotMoveEdit", n2.locked ? " checked" : ""));
     const actions = el("div", "planner-props-actions");
@@ -64418,6 +64687,7 @@
       init_i18n();
       init_core();
       init_planner_data();
+      init_icons();
       TYPE_LABELS = {
         scene: t("ui.plannerProps.scene"),
         chapter: t("ui.plannerProps.chapter"),
@@ -65402,12 +65672,12 @@
         closeAll();
         const fc = (0, import_md6.figureClass)(b.imgOpts);
         const fs = (0, import_md6.figureImgStyle)(b.imgOpts);
-        out.push(`<figure${attrOf(al)}${fc ? ` class="${escAttr(fc)}"` : ""}><img alt="${escAttr(b.alt)}" src="${escAttr(b.src)}"${fs ? ` style="${escAttr(fs)}"` : ""}></figure>`);
+        out.push(`<figure${attrOf(al)}${fc ? ` class="${escAttr2(fc)}"` : ""}><img alt="${escAttr2(b.alt)}" src="${escAttr2(b.src)}"${fs ? ` style="${escAttr2(fs)}"` : ""}></figure>`);
         continue;
       }
       if (b.kind === "code") {
         closeAll();
-        out.push("<pre" + (b.lang ? ` data-lang="${escAttr(b.lang)}"` : "") + "><code>" + esc(b.text) + "</code></pre>");
+        out.push("<pre" + (b.lang ? ` data-lang="${escAttr2(b.lang)}"` : "") + "><code>" + esc(b.text) + "</code></pre>");
         continue;
       }
       if (b.kind === "h") {
@@ -65699,7 +65969,7 @@ ${mdToHtmlBody(md, o)}
     }
     return { text, ext, stats: st0, warnings: warn };
   }
-  var import_md6, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, esc, escAttr, inline, escapeHtml, fill;
+  var import_md6, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, esc, escAttr2, inline, escapeHtml, fill;
   var init_compile = __esm({
     "src/compile.js"() {
       init_i18n();
@@ -65887,7 +66157,7 @@ ${mdToHtmlBody(md, o)}
       ];
       KEEP_COMMENT = /^<!--\s*(?:align:(?:left|center|right|justify)|pagebreak)\s*-->$/i;
       esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      escAttr = (s) => esc(s == null ? "" : s).replace(/"/g, "&quot;");
+      escAttr2 = (s) => esc(s == null ? "" : s).replace(/"/g, "&quot;");
       inline = (s, mono) => (0, import_md6.inlineHtml)(s, { mono });
       escapeHtml = esc;
       fill = (tpl, n2, title2, ctx2 = {}) => {
@@ -70081,6 +70351,7 @@ ${h.text}`;
     onPanelLayoutChange: () => onPanelLayoutChange,
     onTearOffClosed: () => onTearOffClosed,
     panelDesc: () => panelDesc,
+    panelIcon: () => panelIcon,
     panelId: () => panelId,
     panelLayoutReport: () => panelLayoutReport,
     panelMenuItems: () => panelMenuItems,
@@ -70256,15 +70527,19 @@ ${h.text}`;
     }
     return h;
   }
+  function panelIcon(d) {
+    const cid = "toggle-panel:" + d.id;
+    return isRegisteredCommand(cid) ? commandIcon(cid) : d.icon || "";
+  }
   function registerPanels() {
     const m = getPanelManager();
     for (const d of PANEL_DEFS) {
-      meta.set(d.id, { title: d.title, icon: d.icon, fixed: !!d.fixed, noHead: !!d.noHead, desc: d.desc || "" });
+      meta.set(d.id, { title: d.title, icon: panelIcon(d), fixed: !!d.fixed, noHead: !!d.noHead, desc: d.desc || "" });
       const node = d.adopt ? $(d.adopt) : null;
       if (node) adopted.set(d.id, node);
       m.registerPanel(d.id, {
         title: d.title,
-        icon: d.icon,
+        icon: panelIcon(d),
         closable: d.closable !== false,
         floatable: d.floatable !== false,
         defaultSide: d.defaultSide || "left",
@@ -71093,6 +71368,7 @@ ${h.text}`;
   var init_panel_ui = __esm({
     "src/panels/panel-ui.js"() {
       init_i18n();
+      init_icons();
       init_core();
       init_ui();
       init_panel_layout();
@@ -71127,7 +71403,6 @@ ${h.text}`;
         {
           id: "tree",
           title: t("ui.common.project"),
-          icon: "book-content",
           adopt: "#tree-panel",
           defaultSide: "left",
           i18n: "panel.project",
@@ -71136,7 +71411,6 @@ ${h.text}`;
         {
           id: "outline",
           title: "Navigation",
-          icon: "list-ul",
           adopt: "#outline-panel",
           defaultSide: "left",
           i18n: "panel.navigation",
@@ -71156,7 +71430,6 @@ ${h.text}`;
         {
           id: "props",
           title: t("ui.common.props"),
-          icon: "clipboard",
           adopt: "#props-panel",
           defaultSide: "right",
           i18n: "panel.properties",
@@ -71177,7 +71450,6 @@ ${h.text}`;
           id: "log",
           dockW: 420,
           title: t("ui.common.save"),
-          icon: "history",
           adopt: "#log-panel",
           defaultSide: "right",
           closable: true,
@@ -71189,7 +71461,6 @@ ${h.text}`;
           id: "search",
           dockW: 360,
           title: t("ui.panel.search"),
-          icon: "search",
           adopt: "#search-panel",
           defaultSide: "left",
           closable: true,
@@ -71200,7 +71471,6 @@ ${h.text}`;
         {
           id: "notes",
           title: t("ui.common.notebookNoteQuick"),
-          icon: "note",
           adopt: "#notes-panel",
           defaultSide: "right",
           closable: true,
@@ -71211,7 +71481,6 @@ ${h.text}`;
         {
           id: "comments",
           title: t("ui.common.comment"),
-          icon: "chat",
           adopt: "#comments-panel",
           defaultSide: "right",
           closable: true,
@@ -71225,7 +71494,6 @@ ${h.text}`;
           minW: 620,
           dockW: 640,
           title: t("ui.common.dashboard"),
-          icon: "grid",
           adopt: "#dash-panel",
           defaultSide: "left",
           closable: true,
@@ -71238,7 +71506,6 @@ ${h.text}`;
           minW: 800,
           dockW: 640,
           title: "Kanban",
-          icon: "grid",
           adopt: "#kanban-panel",
           defaultSide: "left",
           closable: true,
@@ -71251,7 +71518,6 @@ ${h.text}`;
           minW: 400,
           dockW: 640,
           title: t("ui.common.manageBook"),
-          icon: "book-content",
           adopt: "#books-panel",
           defaultSide: "left",
           closable: true,
@@ -71265,7 +71531,6 @@ ${h.text}`;
           minW: 400,
           dockW: 640,
           title: t("ui.chapters.title"),
-          icon: "book-content",
           adopt: "#chapters-panel",
           defaultSide: "left",
           closable: true,
@@ -71278,7 +71543,6 @@ ${h.text}`;
           minW: 620,
           dockW: 640,
           title: t("ui.common.lineTime"),
-          icon: "history",
           adopt: "#tl-panel",
           defaultSide: "left",
           closable: true,
@@ -71290,7 +71554,6 @@ ${h.text}`;
           id: "maps",
           dockW: 640,
           title: t("ui.common.map"),
-          icon: "layout",
           adopt: "#maps-panel",
           defaultSide: "left",
           closable: true,
@@ -71304,7 +71567,6 @@ ${h.text}`;
           minW: 600,
           dockW: 640,
           title: t("ui.common.libraryImage"),
-          icon: "image",
           adopt: "#gal-panel",
           defaultSide: "left",
           closable: true,
@@ -71318,7 +71580,6 @@ ${h.text}`;
           minW: 400,
           dockW: 640,
           title: t("ui.common.boardMood"),
-          icon: "layout",
           adopt: "#galboard-panel",
           defaultSide: "right",
           closable: true,
@@ -71332,7 +71593,6 @@ ${h.text}`;
           minW: 400,
           dockW: 640,
           title: t("ui.common.aIAnalyze"),
-          icon: "brain",
           adopt: "#ai-analyzer-panel",
           defaultSide: "right",
           closable: true,
@@ -71347,7 +71607,6 @@ ${h.text}`;
           minW: 320,
           dockW: 420,
           title: t("ui.panel.aiHubTitle"),
-          icon: "brain",
           adopt: "#ai-hub-panel",
           defaultSide: "right",
           closable: true,
@@ -71360,7 +71619,6 @@ ${h.text}`;
           id: "ai-chat",
           dockW: 640,
           title: t("ui.common.aIAssistantWrite"),
-          icon: "chat",
           adopt: "#ai-chat-panel",
           defaultSide: "right",
           closable: true,
@@ -71374,7 +71632,6 @@ ${h.text}`;
           minW: 400,
           dockW: 640,
           title: t("ui.panel.networkTitle"),
-          icon: "grid",
           adopt: "#net-panel",
           defaultSide: "left",
           closable: true,
@@ -71388,7 +71645,6 @@ ${h.text}`;
           minW: 300,
           dockW: 380,
           title: t("ui.worldAutoLink.panelTitle"),
-          icon: "link",
           adopt: "#backlinks-panel",
           defaultSide: "right",
           closable: true,
@@ -71401,7 +71657,6 @@ ${h.text}`;
           minW: 800,
           dockW: 640,
           title: t("ui.panel.plannerTitle"),
-          icon: "grid",
           adopt: "#planner-panel",
           defaultSide: "left",
           closable: true,
@@ -71412,7 +71667,6 @@ ${h.text}`;
         {
           id: "planner-props",
           title: t("ui.panel.propsPlanner"),
-          icon: "clipboard",
           adopt: "#planner-props-panel",
           defaultSide: "right",
           closable: true,
@@ -71424,7 +71678,6 @@ ${h.text}`;
           id: "floorplan",
           dockW: 640,
           title: t("ui.common.graphArea"),
-          icon: "map",
           adopt: "#floor-panel",
           defaultSide: "left",
           closable: true,
@@ -71438,7 +71691,6 @@ ${h.text}`;
           minW: 700,
           dockW: 640,
           title: t("ui.common.graphBreakBranch2"),
-          icon: "grid",
           adopt: "#branch-panel",
           defaultSide: "left",
           closable: true,
@@ -71450,7 +71702,6 @@ ${h.text}`;
           id: "player",
           dockW: 440,
           title: t("ui.common.trialPlay"),
-          icon: "file",
           adopt: "#player-panel",
           defaultSide: "right",
           closable: true,
@@ -71463,7 +71714,6 @@ ${h.text}`;
           id: "codex",
           dockW: 680,
           title: t("ui.panel.codex"),
-          icon: "book-content",
           adopt: "#codex-panel",
           defaultSide: "left",
           closable: true,
@@ -71475,7 +71725,6 @@ ${h.text}`;
           id: "history",
           dockW: 420,
           title: t("ui.common.historyRun"),
-          icon: "history",
           adopt: "#history-panel",
           defaultSide: "right",
           closable: true,
@@ -71487,7 +71736,6 @@ ${h.text}`;
           id: "record",
           dockW: 460,
           title: t("ui.common.journal"),
-          icon: "note",
           adopt: "#record-panel",
           defaultSide: "right",
           closable: true,
@@ -71501,7 +71749,6 @@ ${h.text}`;
           minW: 460,
           dockW: 620,
           title: t("ui.panel.dialogueTitle"),
-          icon: "chat",
           adopt: "#dialogue-panel",
           defaultSide: "left",
           closable: true,
@@ -71516,7 +71763,6 @@ ${h.text}`;
           minW: 420,
           dockW: 620,
           title: t("ui.panel.dlgbTitle"),
-          icon: "chat",
           adopt: "#dlgb-panel",
           defaultSide: "right",
           closable: true,
@@ -71530,7 +71776,6 @@ ${h.text}`;
           minW: 460,
           dockW: 680,
           title: t("ui.panel.starterTitle"),
-          icon: "book-content",
           adopt: "#starter-panel",
           defaultSide: "left",
           closable: true,
@@ -71543,7 +71788,6 @@ ${h.text}`;
           minW: 420,
           dockW: 520,
           title: t("ui.panel.pluginsTitle"),
-          icon: "extension",
           adopt: "#plugins-panel",
           defaultSide: "right",
           closable: true,
@@ -74123,29 +74367,29 @@ ${h.text}`;
         text: "ui.fab.dispText"
       };
       FAB_ACTIONS = [
-        { id: "scene", cmd: "scene", icon: "file", grp: "create", labelKey: "ui.fab.actScene" },
-        { id: "chapter", cmd: "chapter", icon: "folder", grp: "create", labelKey: "ui.fab.actChapter" },
-        { id: "character", cmd: "new-entity", args: ["characters"], icon: "user", grp: "create", labelKey: "ui.fab.actCharacter" },
-        { id: "location", cmd: "new-entity", args: ["locations"], icon: "map", grp: "create", labelKey: "ui.fab.actLocation" },
-        { id: "item", cmd: "new-entity", args: ["items"], icon: "briefcase", grp: "create", labelKey: "ui.fab.actItem" },
-        { id: "lore", cmd: "new-entity", args: ["lore"], icon: "book-content", grp: "create", labelKey: "ui.fab.actLore" },
-        { id: "memo", cmd: "memo", icon: "clipboard", grp: "create", labelKey: "ui.fab.actMemo" },
-        { id: "template", cmd: "new-from-template", icon: "star", grp: "create", labelKey: "ui.fab.actTemplate" },
-        { id: "note", cmd: "scratchpad", icon: "note", grp: "write", labelKey: "ui.fab.actNote" },
-        { id: "quicknote", cmd: "quick-note", icon: "edit", grp: "write", labelKey: "ui.fab.actQuickNote" },
-        { id: "search", cmd: "global-search", icon: "search", grp: "write", labelKey: "ui.fab.actSearch" },
-        { id: "quickopen", cmd: "quick-open", icon: "book-open", grp: "write", labelKey: "ui.fab.actQuickOpen" },
-        { id: "image", cmd: "insert-image", icon: "image-add", grp: "write", labelKey: "ui.fab.actImage" },
-        { id: "dashboard", cmd: "toggle-panel", args: ["dashboard"], icon: "chart", grp: "view", labelKey: "ui.fab.actDashboard" },
-        { id: "timeline", cmd: "toggle-panel", args: ["timeline"], icon: "history", grp: "view", labelKey: "ui.fab.actTimeline" },
-        { id: "maps", cmd: "toggle-panel", args: ["maps"], icon: "globe", grp: "view", labelKey: "ui.fab.actMaps" },
-        { id: "kanban", cmd: "kanban", icon: "grid", grp: "view", labelKey: "ui.fab.actKanban" },
-        { id: "gallery", cmd: "gallery", icon: "image", grp: "view", labelKey: "ui.fab.actGallery" },
-        { id: "focus", cmd: "focus-mode", icon: "eye", grp: "view", labelKey: "ui.fab.actFocus" },
-        { id: "saveall", cmd: "save-all", icon: "save", grp: "file", labelKey: "ui.fab.actSaveAll" },
-        { id: "snapshot", cmd: "backup-now", icon: "archive", grp: "file", labelKey: "ui.fab.actSnapshot" },
-        { id: "export", cmd: "export-hub", icon: "book-content", grp: "file", labelKey: "ui.fab.actExport" },
-        { id: "settings", cmd: "settings", icon: "cog", grp: "file", labelKey: "ui.fab.actSettings" }
+        { id: "scene", cmd: "scene", grp: "create", labelKey: "ui.fab.actScene" },
+        { id: "chapter", cmd: "chapter", grp: "create", labelKey: "ui.fab.actChapter" },
+        { id: "character", cmd: "new-entity", args: ["characters"], grp: "create", labelKey: "ui.fab.actCharacter" },
+        { id: "location", cmd: "new-entity", args: ["locations"], grp: "create", labelKey: "ui.fab.actLocation" },
+        { id: "item", cmd: "new-entity", args: ["items"], grp: "create", labelKey: "ui.fab.actItem" },
+        { id: "lore", cmd: "new-entity", args: ["lore"], grp: "create", labelKey: "ui.fab.actLore" },
+        { id: "memo", cmd: "memo", grp: "create", labelKey: "ui.fab.actMemo" },
+        { id: "template", cmd: "new-from-template", grp: "create", labelKey: "ui.fab.actTemplate" },
+        { id: "note", cmd: "scratchpad", grp: "write", labelKey: "ui.fab.actNote" },
+        { id: "quicknote", cmd: "quick-note", grp: "write", labelKey: "ui.fab.actQuickNote" },
+        { id: "search", cmd: "global-search", grp: "write", labelKey: "ui.fab.actSearch" },
+        { id: "quickopen", cmd: "quick-open", grp: "write", labelKey: "ui.fab.actQuickOpen" },
+        { id: "image", cmd: "insert-image", grp: "write", labelKey: "ui.fab.actImage" },
+        { id: "dashboard", cmd: "toggle-panel", args: ["dashboard"], grp: "view", labelKey: "ui.fab.actDashboard" },
+        { id: "timeline", cmd: "toggle-panel", args: ["timeline"], grp: "view", labelKey: "ui.fab.actTimeline" },
+        { id: "maps", cmd: "toggle-panel", args: ["maps"], grp: "view", labelKey: "ui.fab.actMaps" },
+        { id: "kanban", cmd: "kanban", grp: "view", labelKey: "ui.fab.actKanban" },
+        { id: "gallery", cmd: "gallery", grp: "view", labelKey: "ui.fab.actGallery" },
+        { id: "focus", cmd: "focus-mode", grp: "view", labelKey: "ui.fab.actFocus" },
+        { id: "saveall", cmd: "save-all", grp: "file", labelKey: "ui.fab.actSaveAll" },
+        { id: "snapshot", cmd: "backup-now", grp: "file", labelKey: "ui.fab.actSnapshot" },
+        { id: "export", cmd: "export-hub", grp: "file", labelKey: "ui.fab.actExport" },
+        { id: "settings", cmd: "settings", grp: "file", labelKey: "ui.fab.actSettings" }
       ];
       FAB_GROUPS = [
         { key: "create", labelKey: "ui.fab.grpCreate" },
@@ -75211,6 +75455,7 @@ ${h.text}`;
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-settings");
     box2.innerHTML = tf("ui.dlg.alphaItemLevelUser", t("settings.title"), t("settings.general"), t("settings.writing"), t("settings.automation"), t("settings.language"), t("settings.shortcuts"), t("settings.projectName"), t("settings.author"), t("settings.autoSaveMinutes"), t("settings.autoSaveHint"), t("settings.autoBackup"), t("settings.maxBackups"), t("settings.maxBackupsHint"), t("settings.dailyGoal"), t("settings.projectGoal"), t("settings.fontFamily"), t("settings.fontFamilyHint"), t("settings.spFontFamily"), t("settings.spFontFamilyHint"), t("settings.lineNumbers"), t("settings.lineNumbersHint"), t("settings.spellCheck"), t("settings.spellCheckHint"), t("settings.spellCheckDict"), t("settings.spellCheckDictHint"), t("settings.autoMention"), t("settings.autoMentionHint"), t("settings.recycleDays"), t("settings.recycleDaysHint"), t("settings.focusDim"), t("settings.focusDimHint"), t("ui.settings.uiScale"), t("ui.settings.uiScaleHint"), iconHtml("cloud-lightning", 14), t("settings.autoSync"), t("settings.autoSyncHint"), t("settings.languageSelect"), t("ui.dlg.langReadNameFile"), t("ui.dlg.exportFileCSV"), t("ui.dlg.openFolderLang"), t("ui.dlg.loadFileLangNew2"), t("settings.shortcutsHint"), t("dialogs.cancel"), t("dialogs.save"));
+    initIcons(box2);
     ov.appendChild(box2);
     document.body.appendChild(ov);
     const q = (id) => box2.querySelector(id);
@@ -84234,7 +84479,8 @@ ${h.text}`;
       const { ok: ok2, broken } = await scanRecentProjects();
       if (!ok2.length && !broken.length) {
         const empty2 = el("div", "home-empty");
-        empty2.textContent = t("ui.home.notHasProjectNew");
+        empty2.innerHTML = t("ui.home.notHasProjectNew");
+        initIcons(empty2);
         grid.append(empty2);
         return;
       }
@@ -84379,6 +84625,7 @@ ${h.text}`;
       init_core();
       init_app();
       init_export_zip();
+      init_icons();
       HOME_VIEWS = [
         { id: "card", icon: "\u25A6", label: t("ui.home.card") },
         { id: "list", icon: "\u2630", label: t("ui.common.list2") }
@@ -157933,8 +158180,9 @@ ${s.body}`).join("\n\n");
   async function openAIAssistant() {
     if (!await aiReady2()) return;
     const t3 = state.active;
-    const sel = t3?.editor ? t3.editor.getSelectedText() : t3?.sp ? t3.sp.getSelectedText() : "";
-    const fullText = t3?.editor ? t3.editor.getText() : t3?.sp ? t3.sp.getText() : "";
+    const ed = t3?.editor || t3?.sp || null;
+    const sel = ed && ed.view ? ed.view.state.doc.textBetween(ed.view.state.selection.from, ed.view.state.selection.to, "\n") : "";
+    const fullText = ed ? ed.getText() : "";
     showDialog(t("ai.assistantTitle"), (box2, ov) => {
       const TASK_TH = {
         expand: t("ai.opExpand"),
@@ -157953,11 +158201,16 @@ ${s.body}`).join("\n\n");
         concise: t("ai.toneConcise"),
         lyrical: t("ai.toneDetailed")
       };
+      const opt = (text, value) => {
+        const o = el("option", "", text);
+        o.value = value;
+        return o;
+      };
       const taskSel = el("select");
-      Object.keys(TASK_TH).forEach((v2) => taskSel.append(el("option", "", TASK_TH[v2], { value: v2 })));
+      Object.keys(TASK_TH).forEach((v2) => taskSel.append(opt(TASK_TH[v2], v2)));
       const toneSel = el("select");
-      toneSel.append(el("option", "", t("ui.ai.notChangeTone"), { value: "" }));
-      Object.keys(TONE_TH).forEach((v2) => toneSel.append(el("option", "", TONE_TH[v2], { value: v2 })));
+      toneSel.append(opt(t("ui.ai.notChangeTone"), ""));
+      Object.keys(TONE_TH).forEach((v2) => toneSel.append(opt(TONE_TH[v2], v2)));
       const instrInput = el("textarea");
       instrInput.placeholder = t("ai.extraHint");
       instrInput.style.cssText = "width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical";
@@ -158237,7 +158490,11 @@ ${s.body}`).join("\n\n");
       const typeSel = el("select");
       ["magic", "city", "culture", "economy", "religion", "faction"].forEach((v2) => {
         const labels = { magic: t("ai.wMagic"), city: t("ai.wCity"), culture: t("ai.wCulture"), economy: t("ai.wEconomy"), religion: t("ai.wReligion"), faction: t("ai.wFaction") };
-        typeSel.append(el("option", "", labels[v2] || v2, { value: v2 }));
+        {
+          const o = el("option", "", labels[v2] || v2);
+          o.value = v2;
+          typeSel.append(o);
+        }
       });
       const promptInput = el("textarea");
       promptInput.placeholder = t("ai.worldPrompt");
@@ -166372,6 +166629,7 @@ ${css}
     allWorkflows: () => allWorkflows,
     anyPageModel: () => anyPageModel,
     applyCaseOptions: () => applyCaseOptions,
+    applyCommandUi: () => applyCommandUi,
     applyFmtbarState: () => applyFmtbarState,
     applyMarkdownCodes: () => applyMarkdownCodes,
     applyPageVars: () => applyPageVars,
@@ -166411,6 +166669,7 @@ ${css}
     clearFeaturePanels: () => clearFeaturePanels,
     clearTreeSel: () => clearTreeSel,
     closeTab: () => closeTab,
+    commandShortcutText: () => commandShortcutText,
     computeProjectStats: () => computeProjectStats,
     confirmQuit: () => confirmQuit,
     currentScriptSource: () => currentScriptSource,
@@ -166657,6 +166916,7 @@ ${css}
     watchPlannerRows: () => watchPlannerRows,
     watermarkDialog: () => watermarkDialog,
     wikiRoot: () => wikiRoot,
+    withCommandShortcut: () => withCommandShortcut,
     zoomFitWidth: () => zoomFitWidth
   });
   async function loadSettings(meta2) {
@@ -166689,6 +166949,11 @@ ${css}
     applyPaperClass();
     document.body.classList.toggle("k-fab-off", state.settings.fabEnabled === false);
     applyTheme();
+    try {
+      applyCommandUi();
+      syncMenuToggles();
+    } catch {
+    }
     const nLang = applyProjectLangFonts();
     const pf = proseFormat();
     const edStack = state.settings.fontFamily || DEFAULT_PROSE_FONT;
@@ -172915,7 +173180,9 @@ ${css}
           "props-panel": !!ps.props,
           "outline-panel": !!ps.outline,
           ...ps
-        }
+        },
+        // [alpha.147] คีย์ลัดที่ผู้ใช้ตั้งเอง → main ใช้เติม accelerator ของเมนูระบบให้ตรงกับของจริง
+        shortcuts: state.settings && state.settings.shortcuts || {}
       };
       const sig = JSON.stringify(payload);
       if (sig === _menuTogSig) return;
@@ -175328,7 +175595,10 @@ ${css}
     b.style.display = editable ? "" : "none";
     if (!editable) return;
     const sp = !!tab.sp;
-    b.innerHTML = (sp ? iconHtml("film", 16) : iconHtml("book", 16)) + (sp ? t("ui.app.chapterFilm2") : t("ui.app.novel2"));
+    const iconCmd = "set-format:" + (sp ? "screenplay" : "prose");
+    const ic = commandIcon(iconCmd);
+    b.setAttribute("data-icon-command", iconCmd);
+    b.innerHTML = (ic ? iconHtml(ic, 16) : "") + (sp ? t("ui.app.chapterFilm2") : t("ui.app.novel2"));
     b.title = t("ui.app.toggleModeDocNovel");
   }
   function smartIgnoreList() {
@@ -176506,30 +176776,8 @@ ${css}
   }
   function updateToolbarTitles() {
     applyCaseOptions();
-    $("#tb-bold").title = withShortcut("toolbar.bold", "KeyB", true, false);
-    $("#tb-italic").title = withShortcut("toolbar.italic", "KeyI", true, false);
-    $("#tb-underline").title = withShortcut("toolbar.underline", "KeyU", true, false);
-    $("#tb-strike").title = withShortcut("toolbar.strike", "KeyX", true, true);
-    $("#tb-sup").title = withShortcut("toolbar.superscript", "Equal", "ctrl+alt", false);
-    $("#tb-sub").title = withShortcut("toolbar.subscript", "Minus", "ctrl+alt", false);
-    $("#tb-ul").title = withShortcut("toolbar.bulletList", "Digit8", true, true);
-    $("#tb-ol").title = withShortcut("toolbar.numberList", "Digit7", true, true);
-    $("#tb-quote").title = t("toolbar.quote");
-    $("#tb-align-left").title = withShortcut("toolbar.alignLeft", "KeyL", true, true);
-    $("#tb-align-center").title = withShortcut("toolbar.alignCenter", "KeyK", true, true);
-    $("#tb-align-right").title = withShortcut("toolbar.alignRight", "KeyR", true, true);
-    $("#tb-align-justify").title = withShortcut("toolbar.alignJustify", "KeyJ", true, true);
     applyTheme();
-    $("#tb-mode").title = t("toolbar.toggleMode") + " (Ctrl+Shift+M)";
-    $("#tb-img").title = t("toolbar.insertImage");
-    $("#tb-source").title = t("toolbar.viewSource");
-    $("#tb-read").title = t("toolbar.readingMode");
-    $("#tb-gsearch").title = withShortcut("toolbar.globalSearch", "KeyF", true, true);
-    $("#tb-kanban").title = t("toolbar.kanban");
-    $("#tb-ai").title = t("toolbar.aiAssistant");
-    $("#tb-ai-chat").title = t("toolbar.aiChat");
-    $("#tb-starter") && ($("#tb-starter").title = t("toolbar.starter"));
-    $("#tb-plug").title = t("toolbar.plugins");
+    applyCommandUi();
   }
   function openTextColorPicker(anchor) {
     const tab = state.active;
@@ -179290,6 +179538,24 @@ ${css}
       return o ? [o.code, o.ctrl, o.shift, ...s.slice(3)] : s;
     });
   }
+  function commandShortcutText(id) {
+    const s = effectiveShortcuts().find((x) => shortcutId(x) === id);
+    return s ? formatShortcut(s[0], s[1], s[2]) : "";
+  }
+  function withCommandShortcut(text, id) {
+    const sc = commandShortcutText(id);
+    return sc ? `${text} (${sc})` : text;
+  }
+  function applyCommandUi(root) {
+    const scope = root || document;
+    initIcons(scope);
+    const els = scope.querySelectorAll("[data-command]");
+    for (const b of els) {
+      const key2 = b.getAttribute("data-i18n-title") || (b.getAttribute("data-i18n-attr") === "title" ? b.getAttribute("data-i18n") : "");
+      if (key2) b.title = withCommandShortcut(t(key2), b.getAttribute("data-command"));
+    }
+    return els.length;
+  }
   function allShortcutRows() {
     const ov = state.settings && state.settings.shortcuts || {};
     return SHORTCUTS.map((s) => {
@@ -179441,31 +179707,9 @@ ${css}
     return sel.options.length;
   }
   function applyToolbarShortcutTitles() {
-    for (const [id, sid] of Object.entries(TB_SC_MAP)) {
-      const btn2 = $("#" + id);
-      if (!btn2) continue;
-      const sc = SHORTCUTS.find((s) => shortcutId(s) === sid);
-      if (sc) {
-        const label = t(SHORTCUT_LABELS[sid], SHORTCUT_LABELS[sid]);
-        btn2.title = label + " (" + formatShortcut(sc[0], sc[1], sc[2]) + ")";
-      }
-    }
-    $("#tb-img") && ($("#tb-img").title = t("toolbar.insertImage"));
-    $("#tb-source") && ($("#tb-source").title = t("toolbar.viewSource"));
-    $("#tb-read") && ($("#tb-read").title = t("toolbar.readingMode"));
-    $("#tb-kanban") && ($("#tb-kanban").title = t("toolbar.kanban"));
-    $("#tb-ai") && ($("#tb-ai").title = t("toolbar.aiAssistant"));
-    $("#tb-ai-chat") && ($("#tb-ai-chat").title = t("toolbar.aiChat"));
-    $("#tb-starter") && ($("#tb-starter").title = t("toolbar.starter"));
-    const sab = $("#save-all-btn");
-    if (sab) {
-      const scAll = effectiveShortcuts().find((x) => shortcutId(x) === "save-all");
-      sab.title = t("shortcuts.saveAll") + (scAll ? " (" + formatShortcut(scAll[0], scAll[1], scAll[2]) + ")" : "");
-    }
+    applyCommandUi();
     const hb = $("#home-btn");
     if (hb) hb.title = t("app.home");
-    const gsb = $("#search-all-btn");
-    if (gsb) gsb.title = withShortcut("toolbar.globalSearch", "KeyF", true, true);
     $("#tb-style")?.querySelectorAll("option").forEach((o) => {
       const k = o.getAttribute("data-i18n");
       if (k) o.textContent = t(k);
@@ -180267,13 +180511,16 @@ ${css}
     for (const a of fabMenuItems(cfg)) {
       const it = el("div", "k-fab-item");
       it.dataset.action = a.id;
-      it.title = t(a.labelKey);
-      if (cfg.display !== "text") {
+      const cid = [a.cmd, ...a.args || []].join(":");
+      const icName = commandIcon(cid);
+      it.dataset.cmd = cid;
+      it.title = withCommandShortcut(t(a.labelKey), cid);
+      if (cfg.display !== "text" && icName) {
         const ic = el("span", "k-fab-item-ic");
-        ic.innerHTML = iconHtml(a.icon, 18);
+        ic.innerHTML = iconHtml(icName, 18);
         it.append(ic);
       }
-      if (cfg.display !== "icon") it.append(el("span", "k-fab-item-tx", t(a.labelKey)));
+      if (cfg.display !== "icon" || !icName) it.append(el("span", "k-fab-item-tx", t(a.labelKey)));
       it.onclick = (e) => {
         e.stopPropagation();
         closeFabMenu();
@@ -188207,6 +188454,80 @@ ${css}
           "[137-4] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E1C\u0E39\u0E01\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27",
           typeof $("#search-all-btn").onclick === "function"
         );
+        {
+          const cmdEls = [...document.querySelectorAll("[data-command]")];
+          check2("[147-1] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E1C\u0E39\u0E01\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E14\u0E49\u0E27\u0E22 data-command \u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 70 \u0E1B\u0E38\u0E48\u0E21", cmdEls.length >= 70, cmdEls.length);
+          const iconBad = cmdEls.filter((b) => {
+            const want = commandIcon(b.getAttribute("data-icon-command") || b.getAttribute("data-command"));
+            const got = [...b.children].filter((c) => c.hasAttribute("data-k-icon")).map((c) => c.getAttribute("data-k-icon"));
+            return want ? !(got.length === 1 && got[0] === want) : got.length !== 0;
+          }).map((b) => b.id + "=" + b.getAttribute("data-command"));
+          check2("[147-1] \u2605\u2605 \u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E17\u0E38\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E15\u0E23\u0E07\u0E0A\u0E48\u0E2D\u0E07 icon \u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 (\u0E27\u0E48\u0E32\u0E07 = \u0E44\u0E21\u0E48\u0E21\u0E35 \xB7 \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19\u0E2A\u0E2D\u0E07\u0E2D\u0E31\u0E19)", iconBad.length === 0, iconBad.join(", "));
+          const scB = commandShortcutText("fmt:bold");
+          check2(
+            "[147-2] \u2605 tooltip \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32 = \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32 + \u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E08\u0E23\u0E34\u0E07",
+            !!scB && $("#tb-bold").title === t("ui.html.tbBold") + " (" + scB + ")",
+            $("#tb-bold").title
+          );
+          check2("[147-2] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E1D\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27", !/Ctrl|⌘/.test(t("ui.html.tbBold")), t("ui.html.tbBold"));
+          const scM = commandShortcutText("toggle-format");
+          check2(
+            '[147-2] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E44\u0E14\u0E49\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E08\u0E32\u0E01\u0E15\u0E32\u0E23\u0E32\u0E07 (\u0E40\u0E14\u0E34\u0E21 "(Ctrl+Shift+M)" \u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E32\u0E22\u0E15\u0E31\u0E27\u0E43\u0E19\u0E42\u0E04\u0E49\u0E14)',
+            !!scM && $("#tb-mode").title.endsWith("(" + scM + ")"),
+            $("#tb-mode").title
+          );
+          check2(
+            "[147-2] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E14\u0E49\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07 open-project (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E21\u0E35)",
+            $("#open-btn").title.endsWith("(" + commandShortcutText("open-project") + ")"),
+            $("#open-btn").title
+          );
+          const keepSc = state.settings.shortcuts;
+          state.settings.shortcuts = {
+            "fmt:bold": { code: "KeyJ", ctrl: "ctrl+alt", shift: true },
+            "save-all": { code: "KeyK", ctrl: "ctrl+alt", shift: true }
+          };
+          applyCommandUi();
+          const customB = formatShortcut("KeyJ", "ctrl+alt", true);
+          check2("[147-3] \u2605\u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27 tooltip \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35", $("#tb-bold").title.endsWith("(" + customB + ")"), $("#tb-bold").title);
+          const pend = tf("ui.app.hasPendingFileCtrl", 3);
+          check2("[147-3] \u2605 {sc:save-all} \u0E43\u0E19\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E40\u0E15\u0E34\u0E21\u0E04\u0E35\u0E22\u0E4C\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07", pend.includes(formatShortcut("KeyK", "ctrl+alt", true)) && !pend.includes("{sc:"), pend);
+          state.settings.shortcuts = keepSc || {};
+          applyCommandUi();
+          check2("[147-3] \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27 tooltip \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E35\u0E22\u0E4C\u0E40\u0E14\u0E34\u0E21", $("#tb-bold").title.endsWith("(" + scB + ")"), $("#tb-bold").title);
+          const emo = [...document.querySelectorAll("#toolbar button")].filter((b) => new RegExp("\\p{Extended_Pictographic}", "u").test(b.textContent)).map((b) => b.id + ":" + b.textContent.trim());
+          check2("[147-4] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E35\u0E42\u0E21\u0E08\u0E34\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21", emo.length === 0, emo.join(" | "));
+          if ($("#k-fab-menu")) {
+            renderFabMenu();
+            const fabBad = [...document.querySelectorAll("#k-fab-menu .k-fab-item")].filter((it) => {
+              const want = commandIcon(it.dataset.cmd);
+              const ic = it.querySelector("[data-k-icon]");
+              return want ? !(ic && ic.getAttribute("data-k-icon") === want) : !!ic;
+            }).map((it) => it.dataset.cmd);
+            check2("[147-5] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22 FAB \u0E43\u0E0A\u0E49\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E08\u0E32\u0E01\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", fabBad.length === 0, fabBad.join(","));
+          }
+          const pdBad = PANEL_DEFS.filter((d) => isRegisteredCommand("toggle-panel:" + d.id) && panelIcon(d) !== commandIcon("toggle-panel:" + d.id)).map((d) => d.id);
+          check2("[147-6] \u2605 \u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E21\u0E32\u0E08\u0E32\u0E01\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 (toggle-panel:<id>)", pdBad.length === 0, pdBad.join(","));
+          resetPageScale();
+          const z0 = pageScale;
+          window.dispatchEvent(new KeyboardEvent("keydown", { code: "Equal", key: "=", ctrlKey: true, bubbles: true, cancelable: true }));
+          await new Promise((r) => setTimeout(r, 120));
+          check2("[147-7] \u2605\u2605 Ctrl+= \u0E0B\u0E39\u0E21\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E31\u0E49\u0E19\u0E1E\u0E2D\u0E14\u0E35 (\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33\u0E2A\u0E2D\u0E07\u0E23\u0E2D\u0E1A)", Math.abs(pageScale - z0 - 0.1) < 1e-3, `${z0} \u2192 ${pageScale}`);
+          window.dispatchEvent(new KeyboardEvent("keydown", { code: "Digit0", key: ")", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+          await new Promise((r) => setTimeout(r, 120));
+          check2("[147-7] Ctrl+Shift+0 \u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15\u0E0B\u0E39\u0E21\u0E1C\u0E48\u0E32\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07", Math.abs(pageScale - z0) < 1e-3, `${pageScale}`);
+          if (typeof kapi !== "undefined" && kapi.menuItemState) {
+            const ms = await kapi.menuItemState(["cmd:save", "cmd:zoom:1", "cmd:panels-hide-right"]);
+            const by = Object.fromEntries(ms.map((x) => [x.id, x]));
+            check2("[147-8] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E23\u0E30\u0E1A\u0E1A: \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u0E21\u0E35 accelerator \u0E08\u0E32\u0E01\u0E15\u0E32\u0E23\u0E32\u0E07", !!by["cmd:save"]?.exists && by["cmd:save"].accelerator === "CommandOrControl+S", JSON.stringify(by["cmd:save"]));
+            check2("[147-8] \u2605 \u0E1B\u0E49\u0E32\u0E22\u0E40\u0E21\u0E19\u0E39\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E25\u0E31\u0E14\u0E1D\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27 (OS \u0E41\u0E2A\u0E14\u0E07\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E40\u0E2D\u0E07)", !!by["cmd:save"]?.exists && !/\(|Ctrl|⌘/.test(by["cmd:save"].label), by["cmd:save"]?.label);
+            check2(
+              "[147-8] \u2605\u2605 \u0E40\u0E21\u0E19\u0E39\u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E02\u0E27\u0E32\u0E1A\u0E2D\u0E01 ] \u0E15\u0E32\u0E21\u0E04\u0E35\u0E22\u0E4C\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1A\u0E2D\u0E01 [)",
+              by["cmd:panels-hide-right"]?.accelerator === "CommandOrControl+Shift+]",
+              JSON.stringify(by["cmd:panels-hide-right"])
+            );
+            check2("[147-8] \u0E40\u0E21\u0E19\u0E39\u0E0B\u0E39\u0E21\u0E02\u0E22\u0E32\u0E22 = Ctrl+= \u0E08\u0E32\u0E01\u0E15\u0E32\u0E23\u0E32\u0E07", by["cmd:zoom:1"]?.accelerator === "CommandOrControl+=", JSON.stringify(by["cmd:zoom:1"]));
+          }
+        }
         check2(
           "[137-4] \u2605 \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E41\u0E16\u0E1A\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07",
           !!bar137.querySelector(".k-topsep")
@@ -207949,7 +208270,7 @@ ${css}
           await (async () => {
             try {
               const s = await kapi.readFile(await kapi.join(await kapi.appDir(), "main.js"));
-              return s.includes("send('export-hub')") && !s.includes("send('export-pdf')");
+              return (s.includes("cmd('export-hub')") || s.includes("send('export-hub')")) && !s.includes("cmd('export-pdf')") && !s.includes("send('export-pdf')");
             } catch {
               return true;
             }
@@ -211323,7 +211644,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md19, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY, TB_SC_MAP, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md19, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -211414,6 +211735,7 @@ ${css}
       init_kanban_ui();
       init_panel_layout();
       init_panel_drag();
+      init_panel_ui();
       init_panel_ui();
       init_panel_renderer();
       init_network_theme();
@@ -211806,6 +212128,7 @@ ${css}
         renderFeaturePanel(pid);
       });
       QUIET_CMDS = /* @__PURE__ */ new Set([
+        "zoom",
         "zoom-in",
         "zoom-out",
         "zoom-reset",
@@ -211840,40 +212163,20 @@ ${css}
       }, { passive: false, capture: true });
       window.addEventListener("keydown", (e) => {
         if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
-        if ((e.code === "Digit0" || e.code === "Numpad0") && e.shiftKey) {
+        if (e.code === "Numpad0" && e.shiftKey) {
           e.preventDefault();
           resetPageScale();
         } else if (e.shiftKey) return;
-        else if (e.code === "Equal" || e.code === "NumpadAdd") {
+        else if (e.code === "NumpadAdd") {
           e.preventDefault();
           bumpPageScale(1);
-        } else if (e.code === "Minus" || e.code === "NumpadSubtract") {
+        } else if (e.code === "NumpadSubtract") {
           e.preventDefault();
           bumpPageScale(-1);
         }
       }, true);
+      setShortcutResolver(commandShortcutText);
       LS_TS_KEY = "k2-ls-ts";
-      TB_SC_MAP = {
-        "tb-bold": "fmt:bold",
-        "tb-italic": "fmt:italic",
-        "tb-underline": "fmt:underline",
-        "tb-strike": "fmt:strike",
-        "tb-sup": "fmt:sup",
-        "tb-sub": "fmt:sub",
-        "tb-ul": "fmt:ul",
-        "tb-ol": "fmt:ol",
-        "tb-align-left": "fmt:align:left",
-        "tb-align-center": "fmt:align:center",
-        "tb-align-right": "fmt:align:right",
-        "tb-align-justify": "fmt:align:justify",
-        "tb-gsearch": "global-search",
-        "tb-mode": "toggle-format",
-        "tb-close": "close-tab",
-        "tb-focus": "focus-mode",
-        "tb-typewriter": "typewriter",
-        "tb-quickopen": "quick-open",
-        "tb-gallery": "gallery"
-      };
       _floatKeepRO = null;
       _floatKeepJob = 0;
       lastWikiField = null;
@@ -211931,8 +212234,9 @@ ${css}
           const cur = tab.sp ? "screenplay" : "prose";
           const r = e.target.getBoundingClientRect();
           popupMenu(r.left, r.bottom + 4, [
-            { label: iconHtml("book", 14) + " " + (cur === "prose" ? "\u2713 " : "") + t("ui.app.novel3"), click: () => switchFormat("prose") },
-            { label: iconHtml("film", 14) + " " + (cur === "screenplay" ? "\u2713 " : "") + t("ui.common.chapterFilm"), click: () => switchFormat("screenplay") }
+            // [alpha.147] ไอคอนมาจากแถว set-format:<โหมด> ในทะเบียน (ว่าง = ไม่มีไอคอน)
+            { label: iconHtml(commandIcon("set-format:prose"), 14) + " " + (cur === "prose" ? "\u2713 " : "") + t("ui.app.novel3"), click: () => switchFormat("prose") },
+            { label: iconHtml(commandIcon("set-format:screenplay"), 14) + " " + (cur === "screenplay" ? "\u2713 " : "") + t("ui.common.chapterFilm"), click: () => switchFormat("screenplay") }
           ]);
         };
         $("#tb-style").onchange = (e) => {

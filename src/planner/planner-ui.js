@@ -7,6 +7,7 @@
 import { t, tf } from '../i18n.js';
 import { el } from '../core.js';
 import { STATUSES, SHAPES, GRID_STYLES } from './planner-data.js';
+import { initIcons } from '../icons.js';
 
 const SHAPE_LABEL = {
   rect: t('ui.planner.rect'), round: t('ui.planner.corner'), ellipse: t('ui.planner.ellipse'), diamond: t('ui.planner.cut'),
@@ -97,6 +98,7 @@ export function createPlannerToolbar(cb) {
   const strip = el('div', 'planner-toolbar-strip');
 
   strip.innerHTML = t('ui.planner.boardMainNewOpen');
+  initIcons(strip);   // [alpha.147] ปุ่มซูม +/− เป็น data-icon ในเทมเพลตแล้ว
 
   const map = {
     'new': 'onNew', 'open': 'onOpen', 'save': 'onSave', 'save-as': 'onSaveAs',

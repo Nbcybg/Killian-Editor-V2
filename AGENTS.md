@@ -20,8 +20,10 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **4,200+ checks · ALL OK** (alpha.126) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **5,500+ ข้อ · 85 ไฟล์** · ~22 วินาที)
+ปัจจุบัน **4,801 checks · ALL OK** (alpha.147) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **8,592 ข้อ · 100 ไฟล์** · ~30 วินาที)
+**[alpha.147] บน macOS ไม่มี xvfb** — รัน `KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj ./node_modules/.bin/electron .`
+เป็นคำสั่งเดี่ยวของมันเอง (ต่อ `;`/`&&` กับคำสั่งอื่นแล้วตายกลางทาง → อ่านผลของรอบเก่า) · เช็คผลด้วยเนื้อหาใหม่เสมอ
 **ตัวเลขสองบรรทัดนี้ล้าสมัยง่ายมาก** — รอบไหนแตะเทส ให้รันจริงแล้วอัปเดตด้วย
 (alpha.125 เจอว่ามันค้างอยู่ที่ตัวเลขของ alpha.93 นานหลายสิบรุ่น จน agent รุ่นถัดมาเข้าใจผิด)
 **[alpha.92] `test:unit` รันผ่าน `tools/run-unit.cjs`** — หาไฟล์ `test/*.test.{cjs,mjs,js}` เอง
@@ -298,11 +300,41 @@ T`ข้อความไทย`                  ✗   →   t('ui.x.y')      
 | element เจ้าบ้าน | `renderer/index.html` | `[80-7]` |
 | ปุ่มบนแถบ | `renderer/index.html` + `TB_PANEL_BUTTONS` (app.js) + `toolbar-config.js` | `[80-7]` |
 | เมนู มุมมอง → แผง | `MENU_PANELS` (main.js) | `menu:panelIds` |
-| **คีย์ลัด** | `SHORTCUTS` + `SHORTCUT_LABELS` + `SHORTCUT_CATS` (core.js) | `shortcuts.test.cjs` |
+| **คีย์ลัด** | ช่อง `shortcut` ของ `toggle-panel:<id>` ใน **`icons/commands.csv`** (alpha.147) + `SHORTCUT_LABELS` + `SHORTCUT_CATS` (core.js) | `shortcuts.test.cjs` · `commands-registry.test.cjs` |
+| **ไอคอน** | ช่อง `icon` ของ `toggle-panel:<id>` ใน `icons/commands.csv` (ห้ามใส่ `icon:` ใน PANEL_DEFS) | `commands-registry.test.cjs` |
 
 จงใจไม่มีอย่างใดอย่างหนึ่ง = ต้องประกาศเหตุผลไว้ (`MENU_PANELS_SKIP` · `SHORTCUT_PANEL_SKIP`)
 **ห้ามปล่อยหายเงียบ ๆ** — ที่มาของกฎนี้: alpha.69 พบว่าเมนูตกหล่นสามแผงมาตั้งแต่ .62
 และ alpha.116 พบว่า **คีย์ลัดขาดไปเก้าแผง** ด้วยเหตุผลเดียวกันเป๊ะ (ไม่มีใครตรวจ)
+
+### ⚠️ กฎถาวร (alpha.147) — ไอคอน + คีย์ลัด อยู่ใน "ทะเบียนคำสั่ง" ห้ามฝังในข้อความ
+
+> ผู้ใช้: **"แยก icon กับข้อความ · เปลี่ยนก็แค่ใส่ svg ใหม่ลงไปใน folder svg โดยใช้ชื่อเดิม ·
+> ทำ csv ของทุกคำสั่ง (ย้ำว่าทุกคำสั่ง) · ไม่ต้องการไอคอนก็ blank · shortcut ต้องแยก เพราะคุณชอบลืมใส่ใน ui"**
+
+```
+icons/svg/<ชื่อ>.svg   รูปไอคอน — เปลี่ยนรูป = วางไฟล์ใหม่ชื่อเดิม
+icons/commands.csv     ทุกคำสั่ง: ช่อง icon (ว่าง = ไม่มีไอคอน) · shortcut (ค่าเริ่มต้น · หลายคีย์คั่น " / ") · shortcut_note
+icons/glyphs.csv       ตัวสำรองของชื่อที่ยังไม่มี svg
+  └─ node build.js → tools/commands-data.cjs → src/generated/commands-data.js (+ commands-data.cjs ให้ main)
+```
+
+| จะทำ | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ปุ่มใหม่ใน `index.html` | `data-command="<คำสั่ง>"` + `data-i18n-title` → `applyCommandUi()` ใส่ไอคอน + tooltip + คีย์ลัดให้ | `data-icon` บนปุ่ม · `title="… (Ctrl+X)"` |
+| เมนูระบบใหม่ (main.js) | `click: cmd('ch', ...args)` → accelerator มาเอง | `click: () => send(…)` (ไม่ได้คีย์ลัด) · `ttf(key, C, S)` |
+| ป้าย/tooltip ที่สร้างในโค้ด | `withCommandShortcut(text, id)` · ไอคอน `commandIcon(id)` | `formatShortcut('KeyB', …)` ของคำสั่งที่มีในตาราง · `withShortcut` (ถอดแล้ว) |
+| ประโยคที่เอ่ยถึงคีย์ลัด | `กด {sc:save-all} เพื่อบันทึกทั้งหมด` ในไฟล์ภาษา | พิมพ์ `Ctrl+Alt+S` ลงไป (ผู้ใช้ตั้งใหม่ได้ · mac เป็น ⌥⌘) |
+| ข้อความในไฟล์ภาษา | ข้อความล้วน | อีโมจินำหน้า/ท้าย · `"กด 📌 …"` (เขียนเป็นชื่อปุ่มแทน) |
+| เพิ่มคำสั่งใน `handleCommand` | `node tools/commands-sync.cjs` แล้วเติมช่อง icon/shortcut ใน CSV · `node build.js` | แก้ `src/generated/*` มือ |
+| แผงใหม่ | ไอคอน/คีย์ลัดที่แถว `toggle-panel:<id>` | `icon:` ใน PANEL_DEFS · `icon:` ใน FAB_ACTIONS |
+
+- **คีย์เฉพาะที่ไม่ใช่คำสั่ง** (Enter/Shift+Enter ในช่องแชท · Ctrl+Z/D/[ ] ของกระดานวางแผน · Esc) เขียนเป็นข้อความได้ —
+  ไม่ใช่ของตาราง SHORTCUTS · `tools/i18n-strip-icons.cjs` ข้าม `ui.planner*` ด้วยเหตุนี้
+- **เมนูระบบแสดง SVG ไม่ได้** (ข้อจำกัดของ Electron) → ไอคอนใช้กับ UI ใน renderer เท่านั้น
+- ไอคอนประดับที่ไม่ใช่คำสั่ง (ปุ่มหน้าต่าง · หัวกลุ่มในกล่องตั้งค่า) ใช้ `data-icon="<ชื่อ>"` ในเทมเพลต + `initIcons(root)`
+- ประตูกันพลาด: **`test/commands-registry.test.cjs`** (คำสั่งครบ · ไฟล์ generated ตรง CSV · ชื่อไอคอนมีจริง ·
+  ไฟล์ภาษาไม่มีอีโมจิ/คีย์ลัดฝัง · `{sc:}` ชี้คำสั่งที่มีคีย์ลัด · main.js ใช้ `cmd()`) + e2e ชุด `[147]`
 
 ### ⚠️ กฎถาวร (alpha.137) — ธีมสี + แถบบน (แถบเดียว)
 

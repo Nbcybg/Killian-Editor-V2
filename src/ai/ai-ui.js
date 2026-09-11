@@ -42,19 +42,27 @@ export async function openAIAssistant() {
   if (!(await aiReady())) return;
 
   const t = state.active;
-  const sel = t?.editor ? t.editor.getSelectedText() : (t?.sp ? t.sp.getSelectedText() : '');
-  const fullText = t?.editor ? t.editor.getText() : (t?.sp ? t.sp.getText() : '');
+  // [alpha.147] เดิมเรียก `getSelectedText()` ซึ่งไม่มีทั้งใน KEditor และ SPEditor → กล่องไม่เคยเปิดได้เลย
+  // (log ของผู้ใช้: "t3.editor.getSelectedText is not a function") — อ่านช่วงที่เลือกจาก PM ตรง ๆ
+  const ed = t?.editor || t?.sp || null;
+  const sel = ed && ed.view
+    ? ed.view.state.doc.textBetween(ed.view.state.selection.from, ed.view.state.selection.to, '\n')
+    : '';
+  const fullText = ed ? ed.getText() : '';
 
   showDialog(tr('ai.assistantTitle'), (box, ov) => {
     const TASK_TH = { expand: tr('ai.opExpand'), summarize: tr('ai.opSummarize'), rewrite: tr('ai.opRewrite'),
                       changeTone: tr('ai.opTone'), continue: tr('ai.opContinue') };
     const TONE_TH = { formal: tr('ai.toneFormal'), casual: tr('ai.toneCasual'), humorous: tr('ai.toneFunny'), dark: tr('ai.toneDark'),
                       romantic: tr('ai.toneRomantic'), tense: tr('ai.toneTense'), concise: tr('ai.toneConcise'), lyrical: tr('ai.toneDetailed') };
+    // [alpha.147] `el()` รับแค่ (tag, cls, text) — อาร์กิวเมนต์ที่สี่ `{ value }` ถูกทิ้งเงียบ ๆ
+    // → <option> ไม่มี value → select.value คืน "ข้อความไทย" แล้วส่ง task="ขยายความ" ไปให้เอนจิน
+    const opt = (text, value) => { const o = el('option', '', text); o.value = value; return o; };
     const taskSel = el('select');
-    Object.keys(TASK_TH).forEach((v) => taskSel.append(el('option', '', TASK_TH[v], { value: v })));
+    Object.keys(TASK_TH).forEach((v) => taskSel.append(opt(TASK_TH[v], v)));
     const toneSel = el('select');
-    toneSel.append(el('option', '', tt('ui.ai.notChangeTone'), { value: '' }));
-    Object.keys(TONE_TH).forEach((v) => toneSel.append(el('option', '', TONE_TH[v], { value: v })));
+    toneSel.append(opt(tt('ui.ai.notChangeTone'), ''));
+    Object.keys(TONE_TH).forEach((v) => toneSel.append(opt(TONE_TH[v], v)));
     const instrInput = el('textarea'); instrInput.placeholder = tr('ai.extraHint');
     instrInput.style.cssText = 'width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical';
 
@@ -332,7 +340,7 @@ export async function openWorldGenerator() {
     const typeSel = el('select');
     ['magic', 'city', 'culture', 'economy', 'religion', 'faction'].forEach((v) => {
       const labels = { magic: tr('ai.wMagic'), city: tr('ai.wCity'), culture: tr('ai.wCulture'), economy: tr('ai.wEconomy'), religion: tr('ai.wReligion'), faction: tr('ai.wFaction') };
-      typeSel.append(el('option', '', labels[v] || v, { value: v }));
+      { const o = el('option', '', labels[v] || v); o.value = v; typeSel.append(o); }   // [alpha.147] el() ไม่รับ {value}
     });
 
     const promptInput = el('textarea');

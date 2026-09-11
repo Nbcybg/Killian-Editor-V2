@@ -1,0 +1,296 @@
+﻿id,kind,glyph,unicode,name,svg_file,status,source_or_suggest,nerdfont,code_refs,i18n_refs,test_refs,files,defined_at,note
+I001,svg,,,align-center,svg/align-center.svg,has_svg,Boxicons,U+F037,1,0,0,renderer/index.html:102,src/icons.js:7,
+I002,svg,,,align-justify,svg/align-justify.svg,has_svg,Boxicons,U+F039,1,0,0,renderer/index.html:104,src/icons.js:9,
+I003,svg,,,align-left,svg/align-left.svg,has_svg,Boxicons,U+F036,1,0,0,renderer/index.html:101,src/icons.js:6,
+I004,svg,,,align-right,svg/align-right.svg,has_svg,Boxicons,U+F038,1,0,0,renderer/index.html:103,src/icons.js:8,
+I005,svg,,,archive,svg/archive.svg,has_svg,bxs:archive-in,U+F187,4,0,0,app.js:4593; gallery.js:1197; toolbar/fab-config.js:54; renderer/index.html:192,src/icons.js:43,
+I006,svg,,,arrow-down,svg/arrow-down.svg,missing,,,1,0,0,app.js:2183,,โค้ดเรียกชื่อนี้แต่ icons.js ไม่มี → ได้ SVG ว่าง
+I007,svg,,,bold,svg/bold.svg,has_svg,Boxicons,U+F032,1,0,0,renderer/index.html:87,src/icons.js:10,
+I008,svg,,,book,svg/book.svg,has_svg,Boxicons,U+F02D,5,0,0,app.js:8666; app.js:13707; app.js:14589; relationship-types.js:10; renderer/index.html:158,src/icons.js:29,
+I009,svg,,,book-content,svg/book-content.svg,has_svg,bxs:book-bookmark,U+F02D,13,0,0,ai/ai-hub-def.js:41; app.js:4111; panels/panel-ui.js:37; panels/panel-ui.js:61; panels/panel-ui.js:64; panels/panel-ui.js:108; panels/panel-ui.js:124; toolbar/fab-config.js:36; toolbar/fab-config.js:55; renderer/index.html:120; renderer/index.html:147; renderer/index.html:159; renderer/index.html:188,src/icons.js:44,
+I010,svg,,,book-open,svg/book-open.svg,has_svg,Boxicons,U+F518,3,0,0,toolbar/fab-config.js:43; renderer/index.html:118; renderer/index.html:143,src/icons.js:30,
+I011,svg,,,bookmark,svg/bookmark.svg,has_svg,Boxicons,U+F02E,6,0,0,core.js:456; gallery/album-tags.js:15; relationship-types.js:13; wiki.js:240; wiki.js:284; renderer/index.html:169,src/icons.js:49,
+I012,svg,,,bot,svg/bot.svg,has_svg,Boxicons,U+EBE1,1,0,0,renderer/index.html:137,src/icons.js:20,
+I013,svg,,,brain,svg/brain.svg,has_svg,Boxicons,U+EB61,9,0,0,ai/ai-hub-def.js:54; ai-analyzer-ui.js:588; ai-hub-ui.js:89; panels/panel-ui.js:78; panels/panel-ui.js:82; wiki.js:145; wiki.js:352; renderer/index.html:139; renderer/index.html:145,src/icons.js:53,
+I014,svg,,,briefcase,svg/briefcase.svg,has_svg,Boxicons,U+F0B1,2,0,0,core.js:456; toolbar/fab-config.js:35,src/icons.js:48,
+I015,svg,,,camera,svg/camera.svg,has_svg,Boxicons,U+F030,2,0,0,wiki.js:228; renderer/index.html:167,src/icons.js:51,
+I016,svg,,,chart,svg/chart.svg,has_svg,bxs:bar-chart-square,U+F080,2,0,0,toolbar/fab-config.js:46; renderer/index.html:136,src/icons.js:74,
+I017,svg,,,chat,svg/chat.svg,has_svg,bxs:message-rounded-dots,U+F086,13,0,0,ai/ai-hub-def.js:36; ai/ai-hub-def.js:38; ai/ai-hub-def.js:46; panels/panel-ui.js:54; panels/panel-ui.js:86; panels/panel-ui.js:115; panels/panel-ui.js:120; relationship-types.js:11; sensory-profile.js:8; renderer/index.html:141; renderer/index.html:151; renderer/index.html:152; renderer/index.html:168,src/icons.js:35,
+I018,svg,,,check,svg/check.svg,has_svg,bxs:check-shield,U+F058,4,0,0,ai/ai-hub-def.js:58; app.js:6852; gallery.js:530; wiki.js:216,src/icons.js:58,
+I019,svg,,,chevron-down,svg/chevron-down.svg,has_svg,Boxicons,U+F078,0,0,0,,src/icons.js:61,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I020,svg,,,chevron-right,svg/chevron-right.svg,has_svg,Boxicons,U+F054,1,0,0,app.js:3599,src/icons.js:21,
+I021,svg,,,chevron-up,svg/chevron-up.svg,has_svg,bx:chevron-up,U+F077,0,0,0,,src/icons.js:63,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I022,svg,,,clipboard,svg/clipboard.svg,has_svg,bxs:notepad,U+F0F6,7,0,0,ai/ai-hub-def.js:48; app.js:2199; panels/panel-ui.js:44; panels/panel-ui.js:97; toolbar/fab-config.js:37; renderer/index.html:122; renderer/index.html:170,src/icons.js:50,
+I023,svg,,,cloud-lightning,svg/cloud-lightning.svg,has_svg,Boxicons,U+E7EF,2,0,0,dialogs.js:287; relationship-types.js:8,src/icons.js:69,
+I024,svg,,,code-alt,svg/code-alt.svg,has_svg,Boxicons,U+F121,1,0,0,renderer/index.html:115,src/icons.js:19,
+I025,svg,,,cog,svg/cog.svg,has_svg,Boxicons,U+F013,4,0,0,ai/ai-hub-def.js:66; ai-hub-ui.js:42; toolbar/fab-config.js:56; wiki.js:260,src/icons.js:52,
+I026,svg,,,crosshair,svg/crosshair.svg,has_svg,Boxicons,U+F05B,1,0,0,app.js:13233,src/icons.js:79,
+I027,svg,,,dock-right,svg/dock-right.svg,has_svg,Boxicons,U+F0DB,1,0,0,renderer/index.html:127,src/icons.js:33,
+I028,svg,,,edit,svg/edit.svg,has_svg,Boxicons,U+F304,8,0,0,ai/ai-hub-def.js:44; app.js:4737; app.js:4739; sensory-profile.js:10; toolbar/fab-config.js:41; wiki.js:114; wiki.js:580; renderer/index.html:131,src/icons.js:59,
+I029,svg,,,error,svg/error.svg,has_svg,bxs:error,U+F071,1,0,0,wiki.js:556,src/icons.js:57,
+I030,svg,,,expand,svg/expand.svg,has_svg,Boxicons,U+F065,1,0,0,renderer/index.html:130,src/icons.js:22,
+I031,svg,,,extension,svg/extension.svg,has_svg,bxs:extension,U+F12E,4,0,0,app.js:7503; panels/panel-ui.js:127; renderer/index.html:153; renderer/index.html:171,src/icons.js:71,
+I032,svg,,,eye,svg/eye.svg,has_svg,bx:show,U+F06E,2,0,0,toolbar/fab-config.js:51; renderer/index.html:117,src/icons.js:76,
+I033,svg,,,eye-off,svg/eye-off.svg,has_svg,bx:hide,U+F070,0,0,0,,src/icons.js:77,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I034,svg,,,file,svg/file.svg,has_svg,Boxicons,U+F016,5,0,0,app.js:5032; app.js:14568; panels/panel-ui.js:42; panels/panel-ui.js:105; toolbar/fab-config.js:31,src/icons.js:28,
+I035,svg,,,film,svg/film.svg,has_svg,Boxicons,U+F008,6,0,0,app.js:8666; app.js:8927; app.js:13708; app.js:14588; gallery/album-tags.js:17; renderer/index.html:166,src/icons.js:67,
+I036,svg,,,folder,svg/folder.svg,has_svg,Boxicons,U+F07B,8,0,0,app.js:4144; app.js:4593; app.js:4642; app.js:13981; gallery.js:1197; toolbar/fab-config.js:32; wiki.js:252; renderer/index.html:35,src/icons.js:45,
+I037,svg,,,fullscreen,svg/fullscreen.svg,has_svg,Boxicons,U+F065,0,0,0,,src/icons.js:23,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I038,svg,,,globe,svg/globe.svg,has_svg,Boxicons,U+F0AC,2,0,0,ai/ai-hub-def.js:62; toolbar/fab-config.js:48,src/icons.js:81,
+I039,svg,,,grid,svg/grid.svg,has_svg,Boxicons,U+F00A,9,0,0,panels/panel-ui.js:46; panels/panel-ui.js:57; panels/panel-ui.js:59; panels/panel-ui.js:89; panels/panel-ui.js:95; panels/panel-ui.js:103; toolbar/fab-config.js:49; renderer/index.html:134; renderer/index.html:164,src/icons.js:34,
+I040,svg,,,history,svg/history.svg,has_svg,Boxicons,U+F1DA,8,0,0,app.js:4802; panels/panel-ui.js:48; panels/panel-ui.js:67; panels/panel-ui.js:110; toolbar/fab-config.js:47; wiki.js:223; renderer/index.html:148; renderer/index.html:156,src/icons.js:24,
+I041,svg,,,home,svg/home.svg,has_svg,Boxicons,U+F015,1,0,0,relationship-types.js:5,src/icons.js:36,
+I042,svg,,,image,svg/image.svg,has_svg,bxs:image-alt,U+F03E,8,0,0,gallery.js:1197; panels/panel-ui.js:72; sensory-profile.js:7; toolbar/fab-config.js:50; wiki-ui.js:255; wiki.js:522; renderer/index.html:109; renderer/index.html:110,src/icons.js:41,
+I043,svg,,,image-add,svg/image-add.svg,has_svg,Boxicons,U+F055,2,0,0,toolbar/fab-config.js:44; renderer/index.html:106,src/icons.js:42,
+I044,svg,,,italic,svg/italic.svg,has_svg,Boxicons,U+F033,1,0,0,renderer/index.html:88,src/icons.js:11,
+I045,svg,,,layout,svg/layout.svg,has_svg,Boxicons,U+F0DB,6,0,0,gallery.js:242; panels/panel-ui.js:35; panels/panel-ui.js:69; panels/panel-ui.js:75; renderer/index.html:126; renderer/index.html:163,src/icons.js:32,
+I046,svg,,,link,svg/link.svg,has_svg,Boxicons,U+F0C1,6,0,0,panels/panel-ui.js:92; wiki-ui.js:216; wiki.js:88; wiki.js:101; renderer/index.html:160; renderer/index.html:162,src/icons.js:25,
+I047,svg,,,list-ol,svg/list-ol.svg,has_svg,Boxicons,U+F0CB,2,0,0,renderer/index.html:98; renderer/index.html:132,src/icons.js:18,
+I048,svg,,,list-ul,svg/list-ul.svg,has_svg,Boxicons,U+F0CA,4,0,0,app.js:2185; panels/panel-ui.js:39; renderer/index.html:97; renderer/index.html:121,src/icons.js:17,
+I049,svg,,,lock,svg/lock.svg,has_svg,bx:lock-alt,U+F023,0,0,0,,src/icons.js:64,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I050,svg,,,lock-open,svg/lock-open.svg,has_svg,bx:lock-open-alt,U+F09C,0,0,0,,src/icons.js:65,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I051,svg,,,map,svg/map.svg,has_svg,Boxicons,U+F279,5,0,0,core.js:456; panels/panel-ui.js:100; toolbar/fab-config.js:34; renderer/index.html:157; renderer/index.html:165,src/icons.js:47,
+I052,svg,,,maximize,svg/maximize.svg,has_svg,bx:fullscreen,U+F065,1,0,0,renderer/index.html:24,src/icons.js:72,path ซ้ำกับ fullscreen
+I053,svg,,,minus,svg/minus.svg,has_svg,bxs:minus-circle,U+F056,3,0,0,relationship-types.js:12; renderer/index.html:23; renderer/index.html:282,src/icons.js:37,
+I054,svg,,,note,svg/note.svg,has_svg,Boxicons,U+F249,6,0,0,panels/panel-ui.js:52; panels/panel-ui.js:112; sensory-profile.js:9; toolbar/fab-config.js:40; renderer/index.html:125; renderer/index.html:149,src/icons.js:31,
+I055,svg,,,plus,svg/plus.svg,has_svg,bxs:plus-circle,U+F055,10,0,0,app.js:4735; app.js:4795; gallery.js:269; wiki.js:440; wiki.js:466; wiki.js:532; wiki.js:608; wiki.js:662; renderer/index.html:284; renderer/index.html:292,src/icons.js:38,
+I056,svg,,,quote-left,svg/quote-left.svg,has_svg,bxs:quote-right,U+F10D,1,0,0,renderer/index.html:99,src/icons.js:66,
+I057,svg,,,reset,svg/reset.svg,has_svg,bxs:x-circle,U+F057,4,0,0,app.js:2191; gallery.js:235; renderer/index.html:129; renderer/index.html:286,src/icons.js:39,
+I058,svg,,,save,svg/save.svg,has_svg,Boxicons,U+F0C7,6,0,0,app.js:14601; toolbar/fab-config.js:53; wiki.js:214; wiki.js:217; renderer/index.html:21; renderer/index.html:36,src/icons.js:27,
+I059,svg,,,search,svg/search.svg,has_svg,Boxicons,U+F002,9,0,0,ai/ai-hub-def.js:56; app.js:3475; app.js:4798; panels/panel-ui.js:50; toolbar/fab-config.js:42; renderer/index.html:37; renderer/index.html:119; renderer/index.html:123; renderer/index.html:133,src/icons.js:68,
+I060,svg,,,star,svg/star.svg,has_svg,Boxicons,U+F005,5,0,0,ai/ai-hub-def.js:50; relationship-types.js:6; sensory-profile.js:11; toolbar/fab-config.js:38; wiki.js:567,src/icons.js:56,
+I061,svg,,,strikethrough,svg/strikethrough.svg,has_svg,Boxicons,U+F0CC,1,0,0,renderer/index.html:90,src/icons.js:13,
+I062,svg,,,subscript,svg/subscript.svg,has_svg,วาดเอง (alpha.97),U+F12C,1,0,0,renderer/index.html:93,src/icons.js:16,
+I063,svg,,,sun,svg/sun.svg,has_svg,Boxicons,,0,0,0,,src/icons.js:55,ไม่พบที่เรียกด้วยชื่อนี้ในซอร์ส (อาจสร้างชื่อแบบไดนามิก)
+I064,svg,,,superscript,svg/superscript.svg,has_svg,วาดเอง (alpha.97),U+F12B,1,0,0,renderer/index.html:92,src/icons.js:15,
+I065,svg,,,trash,svg/trash.svg,has_svg,Boxicons,U+F1F8,1,0,0,app.js:4738,src/icons.js:60,
+I066,svg,,,underline,svg/underline.svg,has_svg,Boxicons,U+F0CD,1,0,0,renderer/index.html:89,src/icons.js:12,
+I067,svg,,,user,svg/user.svg,has_svg,Boxicons,U+F007,4,0,0,core.js:456; gallery/album-tags.js:16; relationship-types.js:7; toolbar/fab-config.js:33,src/icons.js:46,
+I068,svg,,,x,svg/x.svg,has_svg,Boxicons,U+F057,8,0,0,relationship-types.js:9; wiki.js:452; wiki.js:496; wiki.js:558; wiki.js:654; wiki.js:679; renderer/index.html:25; renderer/index.html:128,src/icons.js:40,path ซ้ำกับ reset
+I069,symbol,→,U+2192,,,keep_text,,,33,56,147,ai-analyzer-ui.js; ai/ai-analyze.js; ai/ai-error.js; ai/ai-plot.js; ai/ai-tools.js; app.js; branch-graph.js; branching-ui.js; dialogs.js; dialogue/builder-core.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-props.js; player-mode.js; plugins/plugin-core.js; starter/starter-wizard.js; timeline-ui.js,,"ส่วนใหญ่อยู่ในประโยค/เส้นทางเมนู (เช่น ""ตั้งค่า → AI"") — ไม่ใช่ไอคอน"
+I070,symbol,✕,U+2715,close,svg/close.svg,need_svg,bx:x,,38,9,0,ai/ai-chat-panel.js; app.js; books.js; branching-ui.js; chapters-ui.js; custom-status.js; dialogs.js; dialogue/builder-ui.js; floorplan-ui.js; gallery.js; languages/k2_en.csv; languages/k2_th.csv; panels/panel-layout.js; panels/panel-renderer.js; pdf-ui.js; planner/planner-props.js; read-ui.js; renderer/index.html; roster-ui.js; session-notes.js; starter/starter-richtext.js; toolbar/toolbar-ui.js; tools/thesaurus-ui.js; visual-tags.js; visual/vis-player.js; visual/vis-ui.js,,ปุ่มปิด — ต่างจาก x ที่เป็นวงกลมทึบ
+I071,emoji,📄,U+1F4C4,file,svg/file.svg,has_svg,Boxicons,,30,10,0,app.js; branching-ui.js; chapters-ui.js; dashboard.js; export-formats.js; floorplan-ui.js; global-search.js; home-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; planner/planner-data.js; planner/planner-render.js; planner/planner-ui.js; player-choices.js; player-mode.js; quick-open.js; scene-table.js; session-notes.js; timeline-ui.js,,
+I072,emoji,❌,U+274C,x,svg/x.svg,has_svg,Boxicons,,28,8,0,ai-analyzer-ui.js; ai-settings.js; ai-summary.js; ai/ai-chat-panel.js; ai/ai-provider-ui.js; ai/ai-ui.js; dialogue/builder-ui.js; gallery/gallery-ai.js; languages/k2_en.csv; languages/k2_th.csv; starter/starter-chat.js; wiki-ui.js,,
+I073,emoji,📝,U+1F4DD,note,svg/note.svg,has_svg,Boxicons,,23,12,1,ai/ai-analyze.js; app.js; branching-ui.js; dash-review.js; export-formats.js; home-ui.js; languages/k2_en.csv; languages/k2_th.csv; network.js; planner/planner-data.js; planner/planner-ui.js; scene-table.js; starter/starter-chat.js; starter/starter-scenario.js; timeline-ui.js,,
+I074,symbol,⚠,U+26A0,error,svg/error.svg,has_svg,bxs:error,,24,9,0,ai-analyzer-ui.js; ai/ai-chat-panel.js; ai/ai-provider-ui.js; app.js; branching-ui.js; dialogue/dialogue-ui.js; export-blog.js; export-hub.js; gallery.js; home-ui.js; import-sp.js; kanban/kanban-ui.js; languages/k2_en.csv; languages/k2_th.csv; log-core.js; main.js; nav-model.js; sp-validator.js; starter/starter-cast.js,,error ที่มีอยู่ = สามเหลี่ยมเตือน · บางจุดมี U+FE0F ต่อท้าย
+I075,emoji,🗑,U+1F5D1,trash,svg/trash.svg,has_svg,Boxicons,,10,22,0,ai-analyzer-ui.js; ai/ai-provider-ui.js; books.js; comments/comment-ui.js; dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; panels/panel-ui.js; planner/planner-ui.js; record/record-ui.js,,
+I076,emoji,📖,U+1F4D6,book-open,svg/book-open.svg,has_svg,Boxicons,,13,12,0,ai-summary.js; ai/ai-session.js; app.js; books.js; home-ui.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html; starter/starter-chat.js; starter/starter-export.js; starter/starter-steps-def.js; starter/starter-ui.js,,
+I077,symbol,▶,U+25B6,play,svg/play.svg,need_svg,bx:play,,17,8,1,ai/ai-ui.js; branch-graph.js; branching-ui.js; kanban/kanban-ui.js; languages/k2_en.csv; languages/k2_th.csv; network.js; player-mode.js; read-ui.js; starter/starter-chat.js; visual/vis-player.js,,บางจุดมี U+FE0F ต่อท้าย
+I078,symbol,●,U+25CF,,,keep_text,,,21,2,5,app.js; books.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-render.js; planner/planner.js; renderer/style.css; roster-ui.js; scene-ops.js; scene-props.js; toolbar/toolbar-ui.js,,จุดสถานะ/ยังไม่บันทึก — ทำด้วย CSS ได้
+I079,emoji,🔍,U+1F50D,search,svg/search.svg,has_svg,Boxicons,,6,16,0,ai/ai-session.js; app.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; visual-tags.js,,
+I080,emoji,🖼,U+1F5BC,image,svg/image.svg,has_svg,bxs:image-alt,,10,12,0,app.js; branching-ui.js; gallery.js; languages/k2_en.csv; languages/k2_th.csv; network.js; planner/planner-data.js; planner/planner-render.js; planner/planner-ui.js; prose-view.js; starter/starter-richtext.js; starter/starter-steps-def.js,,
+I081,emoji,🎬,U+1F3AC,film,svg/film.svg,has_svg,Boxicons,,10,10,0,ai/ai-analyze.js; app.js; dialogue/builder-ui.js; export-formats.js; languages/k2_en.csv; languages/k2_th.csv; starter/starter-export.js; visual/vis-ui.js,,
+I082,emoji,💬,U+1F4AC,chat,svg/chat.svg,has_svg,bxs:message-rounded-dots,,11,9,0,ai/ai-session.js; ai/ai-ui.js; comments/comment-ui.js; dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; nav-model.js; planner/planner-data.js; planner/planner-render.js; planner/planner-ui.js; visual-tags.js,,
+I083,emoji,📋,U+1F4CB,clipboard,svg/clipboard.svg,has_svg,bxs:notepad,,9,11,1,ai/ai-session.js; app.js; branching-ui.js; global-search.js; kanban/kanban-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner.js; quick-open.js,,
+I084,emoji,📌,U+1F4CC,pin,svg/pin.svg,need_svg,bxs:pin,,9,10,0,floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; maps.js; network.js; planner/planner-data.js; planner/planner-ui.js; renderer/style.css; session-notes.js,,
+I085,emoji,📂,U+1F4C2,folder-open,svg/folder-open.svg,need_svg,bxs:folder-open,,4,14,0,ai-analyzer-ui.js; ai/ai-chat-panel.js; home-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I086,emoji,✨,U+2728,magic,svg/magic.svg,need_svg,bxs:magic-wand,,7,10,0,ai-synopsis.js; ai/ai-chat-panel.js; ai/ai-world.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html; starter/starter-ai.js; starter/starter-ui.js,,
+I087,emoji,➕,U+2795,plus,svg/plus.svg,has_svg,bxs:plus-circle,,3,13,3,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js,,
+I088,emoji,📍,U+1F4CD,map,svg/map.svg,has_svg,Boxicons,,8,7,1,app.js; comments/comment-ui.js; floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; maps.js; starter/starter-steps-def.js,,map ที่มีอยู่ = หมุดปักแผนที่
+I089,emoji,🔄,U+1F504,refresh,svg/refresh.svg,need_svg,bx:refresh,,6,9,0,app.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; network.js; player-mode.js; quick-open.js; wiki-ui.js,,
+I090,emoji,📤,U+1F4E4,export,svg/export.svg,need_svg,bx:export,,2,13,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; starter/starter-ui.js,,
+I091,symbol,⚙,U+2699,cog,svg/cog.svg,has_svg,Boxicons,,9,5,0,ai-analyzer-ui.js; app.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; starter/starter-model.js; starter/starter-scenario.js,,บางจุดมี U+FE0F ต่อท้าย
+I092,emoji,💾,U+1F4BE,save,svg/save.svg,has_svg,Boxicons,,6,7,0,ai-analyzer-ui.js; ai/ai-error.js; ai/ai-provider-ui.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I093,symbol,▾,U+25BE,chevron-down,svg/chevron-down.svg,has_svg,Boxicons,,8,5,0,app.js; languages/k2_en.csv; languages/k2_th.csv; panels/panel-layout.js; planner/planner-ui.js; renderer/index.html; renderer/style.css,,
+I094,emoji,📁,U+1F4C1,folder,svg/folder.svg,has_svg,Boxicons,,4,9,0,app.js; home-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-data.js; planner/planner-ui.js,,
+I095,symbol,✎,U+270E,edit,svg/edit.svg,has_svg,Boxicons,,5,8,0,books.js; dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; nav-model.js; network.js,,
+I096,symbol,↩,U+21A9,return,svg/return.svg,need_svg,bx:subdirectory-left,,5,8,0,branch-graph.js; branching-ui.js; comments/comment-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I097,symbol,✏,U+270F,edit,svg/edit.svg,has_svg,Boxicons,,6,7,0,comments/comment-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; planner/planner-props.js; player-mode.js; record/record-ui.js; starter/starter-scenario.js,,บางจุดมี U+FE0F ต่อท้าย
+I098,emoji,🏷,U+1F3F7,tag,svg/tag.svg,need_svg,bx:tag,,3,9,0,ai/ai-chat-panel.js; comments/comment-ui.js; languages/k2_en.csv; languages/k2_th.csv; starter/starter-steps-def.js,,
+I099,emoji,✅,U+2705,check-circle,svg/check-circle.svg,need_svg,bxs:check-circle,,3,9,0,ai/ai-chat-panel.js; ai/ai-provider-ui.js; languages/k2_en.csv; languages/k2_th.csv; session-notes.js,,check ที่มีอยู่เป็นรูปโล่ ไม่ใช่ติ๊กในวงกลม
+I100,emoji,📚,U+1F4DA,book-content,svg/book-content.svg,has_svg,bxs:book-bookmark,,6,6,0,app.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html; starter/starter-cast.js,,
+I101,emoji,🌿,U+1F33F,branch,svg/branch.svg,need_svg,bx:git-branch,,4,8,0,app.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; player-mode.js,,
+I102,emoji,🔗,U+1F517,link,svg/link.svg,has_svg,Boxicons,,5,6,0,ai/ai-analyze.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; starter/starter-richtext.js; timeline-ui.js,,
+I103,symbol,←,U+2190,arrow-left,svg/arrow-left.svg,need_svg,bx:left-arrow-alt,,8,3,0,ai/ai-chat-panel.js; dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-props.js; starter/starter-cast.js; starter/starter-chat.js; starter/starter-scenario.js; starter/starter-wizard.js,,
+I104,emoji,🤖,U+1F916,bot,svg/bot.svg,has_svg,Boxicons,,2,9,0,ai/ai-chat-panel.js; languages/k2_en.csv; languages/k2_th.csv,,
+I105,emoji,🧠,U+1F9E0,brain,svg/brain.svg,has_svg,Boxicons,,4,7,0,ai-analyzer-ui.js; ai/ai-session.js; dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html,,
+I106,emoji,🗺,U+1F5FA,globe,svg/globe.svg,has_svg,Boxicons,,6,5,0,app.js; floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv; main.js; maps-ui.js; network.js,,"ใช้ globe ตามคำสั่ง ""แผนที่"" เดิม"
+I107,emoji,📥,U+1F4E5,import,svg/import.svg,need_svg,bx:import,,3,8,0,languages/k2_en.csv; languages/k2_th.csv; network.js; player-mode.js; starter/starter-ui.js,,
+I108,emoji,📊,U+1F4CA,chart,svg/chart.svg,has_svg,bxs:bar-chart-square,,2,8,0,ai/ai-analyze.js; app.js; languages/k2_en.csv; languages/k2_th.csv,,
+I109,emoji,🔒,U+1F512,lock,svg/lock.svg,has_svg,bx:lock-alt,,5,5,1,app.js; languages/k2_en.csv; languages/k2_th.csv; nav-model.js; planner/planner-ui.js; renderer/style.css; scene-table.js,,
+I110,emoji,👤,U+1F464,user,svg/user.svg,has_svg,Boxicons,,8,1,0,ai/ai-analyze.js; app.js; comments/comment-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-data.js; planner/planner-props.js; planner/planner-ui.js; starter/starter-cast.js,,
+I111,emoji,📎,U+1F4CE,paperclip,svg/paperclip.svg,need_svg,bx:paperclip,,8,1,0,ai/ai-chat-panel.js; app.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-render.js; quick-open.js,,
+I112,symbol,✓,U+2713,checkmark,svg/checkmark.svg,need_svg,bx:check,,9,0,1,ai/ai-chat-panel.js; app.js; branching-ui.js; comments/comment-ui.js; dialogue/builder-ui.js,,
+I113,emoji,🔖,U+1F516,bookmark,svg/bookmark.svg,has_svg,Boxicons,,9,0,0,app.js; project.js; starter/starter-cast.js; visual-tags.js; wiki-ui.js,,
+I114,symbol,▼,U+25BC,chevron-down,svg/chevron-down.svg,has_svg,Boxicons,,8,1,0,app.js; kanban/kanban-ui.js; languages/k2_en.csv; languages/k2_th.csv; network.js; pdf-ui.js; scene-table.js; visual/vis-ui.js,,
+I115,symbol,↔,U+2194,swap,svg/swap.svg,need_svg,bx:transfer-alt,,2,7,0,languages/k2_en.csv; languages/k2_th.csv; renderer/index.html; starter/starter-richtext.js,,
+I116,emoji,🗂,U+1F5C2,collection,svg/collection.svg,need_svg,bxs:collection,,1,8,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-render.js,,
+I117,emoji,⭐,U+2B50,star,svg/star.svg,has_svg,Boxicons,,4,4,1,ai/ai-analyze.js; app.js; dashboard.js; languages/k2_en.csv; languages/k2_th.csv; scene-table.js,,
+I118,symbol,↻,U+21BB,refresh,svg/refresh.svg,need_svg,bx:refresh,,5,3,0,ai/ai-chat-panel.js; app.js; dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; network.js; world-story/auto-link-ui.js,,
+I119,symbol,⏹,U+23F9,stop,svg/stop.svg,need_svg,bx:stop,,8,0,0,ai-settings.js; ai/ai-chat-panel.js; dialogue/builder-ui.js; starter/starter-ai.js; starter/starter-chat.js,,
+I120,symbol,▲,U+25B2,chevron-up,svg/chevron-up.svg,has_svg,bx:chevron-up,,7,1,0,app.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; pdf-ui.js; scene-table.js; visual/vis-ui.js,,
+I121,symbol,⇋,U+21CB,swap,svg/swap.svg,need_svg,bx:transfer-alt,,2,6,0,app.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I122,emoji,🕘,U+1F558,history,svg/history.svg,has_svg,Boxicons,,2,6,0,app.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html,,
+I123,symbol,↑,U+2191,arrow-up,svg/arrow-up.svg,need_svg,bx:up-arrow-alt,,4,4,0,app.js; dialogs.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html; toolbar/toolbar-ui.js,,บางจุดเป็นแป้นลัด Ctrl+↑ — คงไว้
+I124,symbol,↓,U+2193,arrow-down,svg/arrow-down.svg,need_svg,bx:down-arrow-alt,,3,5,0,app.js; languages/k2_en.csv; languages/k2_th.csv; renderer/index.html; toolbar/toolbar-ui.js,,บางจุดเป็นแป้นลัด Ctrl+↓ — คงไว้
+I125,emoji,🏁,U+1F3C1,flag-checkered,svg/flag-checkered.svg,need_svg,bxs:flag-checkered,,8,0,0,branch-graph.js; branching-ui.js; player-mode.js,,
+I126,emoji,🎨,U+1F3A8,palette,svg/palette.svg,need_svg,bxs:palette,,3,5,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js,,
+I127,emoji,🎯,U+1F3AF,target,svg/target.svg,need_svg,bx:target-lock,,7,0,1,branching-ui.js; player-choices.js; player-mode.js; starter/starter-steps-def.js,,
+I128,symbol,▸,U+25B8,chevron-right,svg/chevron-right.svg,has_svg,Boxicons,,3,4,0,languages/k2_en.csv; languages/k2_th.csv; panels/panel-renderer.js; renderer/style.css,,
+I129,emoji,🌐,U+1F310,globe,svg/globe.svg,has_svg,Boxicons,,2,5,0,branching-ui.js; export-formats.js; languages/k2_en.csv; languages/k2_th.csv,,
+I130,symbol,▦,U+25A6,grid,svg/grid.svg,has_svg,Boxicons,,3,4,0,home-ui.js; languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; planner/planner-ui.js,,
+I131,emoji,📐,U+1F4D0,ruler,svg/ruler.svg,need_svg,bx:ruler,,1,6,0,languages/k2_en.csv; languages/k2_th.csv; network.js,,
+I132,emoji,⏳,U+23F3,hourglass,svg/hourglass.svg,need_svg,bx:hourglass,,5,1,0,ai-synopsis.js; ai/ai-chat-panel.js; languages/k2_en.csv; languages/k2_th.csv; renderer/style.css; starter/starter-chat.js,,
+I133,symbol,☑,U+2611,checkbox-checked,svg/checkbox-checked.svg,need_svg,bx:checkbox-checked,,6,0,0,ai/ai-chat-panel.js; app.js; panels/panel-ui.js; visual/vis-ui.js,,
+I134,symbol,☐,U+2610,checkbox,svg/checkbox.svg,need_svg,bx:checkbox,,6,0,0,ai/ai-chat-panel.js; app.js; panels/panel-ui.js; visual/vis-ui.js,,
+I135,emoji,🔓,U+1F513,lock-open,svg/lock-open.svg,has_svg,bx:lock-open-alt,,2,4,0,ai/ai-session.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,
+I136,symbol,⤓,U+2913,download,svg/download.svg,need_svg,bx:download,,3,2,0,ai-analyzer-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I137,symbol,⤢,U+2922,expand,svg/expand.svg,has_svg,Boxicons,,3,2,0,app.js; branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; read-ui.js,,
+I138,symbol,★,U+2605,star,svg/star.svg,has_svg,Boxicons,,5,0,15,app.js; books.js; nav-model.js,,
+I139,emoji,👁,U+1F441,eye,svg/eye.svg,has_svg,bx:show,,2,3,1,floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv; visual/vis-player.js,,
+I140,emoji,🧹,U+1F9F9,broom,svg/broom.svg,need_svg,,,1,4,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I141,emoji,📷,U+1F4F7,camera,svg/camera.svg,has_svg,Boxicons,,2,3,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I142,symbol,⬇,U+2B07,arrow-down,svg/arrow-down.svg,need_svg,bx:down-arrow-alt,,2,3,0,dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,บางจุดมี U+FE0F ต่อท้าย
+I143,emoji,🎭,U+1F3AD,mask,svg/mask.svg,need_svg,,,0,5,0,languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I144,symbol,⚔,U+2694,conflict,svg/conflict.svg,need_svg,,,4,0,1,ai/ai-analyze.js; ai/ai-world.js; visual-tags.js,,ไม่มีใน Boxicons — หาจากชุดอื่น (ดาบไขว้) · บางจุดมี U+FE0F ต่อท้าย
+I145,emoji,🔁,U+1F501,repeat,svg/repeat.svg,need_svg,bx:repeat,,4,0,0,ai/ai-analyze.js; branching-ui.js,,
+I146,emoji,⚡,U+26A1,zap,svg/zap.svg,need_svg,bxs:zap,,1,3,0,ai/ai-chat-panel.js; languages/k2_en.csv; languages/k2_th.csv,,
+I147,emoji,🧩,U+1F9E9,extension,svg/extension.svg,has_svg,bxs:extension,,4,0,0,ai/ai-chat-panel.js; ai/ai-skills.js; branching-ui.js,,
+I148,emoji,🛣,U+1F6E3,road,svg/road.svg,need_svg,,,1,3,0,app.js; languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I149,symbol,ℹ,U+2139,info,svg/info.svg,need_svg,bx:info-circle,,2,2,0,app.js; languages/k2_en.csv; languages/k2_th.csv; log-core.js,,บางจุดมี U+FE0F ต่อท้าย
+I150,symbol,◀,U+25C0,chevron-left,svg/chevron-left.svg,need_svg,bx:chevron-left,,4,0,0,branching-ui.js; player-mode.js; read-ui.js; visual/vis-player.js,,
+I151,symbol,⌘,U+2318,,,keep_text,,,2,2,1,core.js; languages/k2_th.csv; main.js,,สัญลักษณ์แป้นพิมพ์
+I152,symbol,☰,U+2630,menu,svg/menu.svg,need_svg,bx:menu,,4,0,0,branching-ui.js; home-ui.js; nav-model.js; panels/panel-layout.js,,
+I153,emoji,🖥,U+1F5A5,desktop,svg/desktop.svg,need_svg,bx:desktop,,3,1,1,languages/k2_en.csv; languages/k2_th.csv; panels/panel-renderer.js; panels/panel-ui.js,,ปุ่มฉีกแผง (tear-off) — e2e อ้างอีโมจินี้
+I154,emoji,💭,U+1F4AD,thought,svg/thought.svg,need_svg,,,2,2,0,dialogue/builder-ui.js; languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons (ลูกโป่งความคิด)
+I155,emoji,🚫,U+1F6AB,block,svg/block.svg,need_svg,bx:block,,3,1,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I156,emoji,🧭,U+1F9ED,compass,svg/compass.svg,need_svg,bx:compass,,4,0,0,branching-ui.js; maps-ui.js; starter/starter-scenario.js; starter/starter-steps-def.js,,
+I157,symbol,↺,U+21BA,rotate-left,svg/rotate-left.svg,need_svg,bx:rotate-left,,2,2,0,dialogs.js; languages/k2_en.csv; languages/k2_th.csv,,
+I158,emoji,🕒,U+1F552,time,svg/time.svg,need_svg,bx:time,,1,3,0,floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I159,symbol,⇥,U+21E5,indent,svg/indent.svg,need_svg,bx:right-indent,,3,1,0,languages/k2_en.csv; languages/k2_th.csv; nav-model.js; renderer/index.html; starter/starter-richtext.js,,
+I160,emoji,🔤,U+1F524,font,svg/font.svg,need_svg,bx:font,,1,3,0,languages/k2_en.csv; languages/k2_th.csv; network.js,,
+I161,emoji,⬛,U+2B1B,square,svg/square.svg,need_svg,bxs:square,,2,2,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-data.js; planner/planner-ui.js,,
+I162,symbol,⬆,U+2B06,arrow-up,svg/arrow-up.svg,need_svg,bx:up-arrow-alt,,1,3,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,บางจุดมี U+FE0F ต่อท้าย
+I163,symbol,⇄,U+21C4,swap,svg/swap.svg,need_svg,bx:transfer-alt,,3,1,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js; visual/vis-ui.js,,
+I164,emoji,🗒,U+1F5D2,notepad,svg/notepad.svg,need_svg,,,1,3,0,languages/k2_en.csv; languages/k2_th.csv; renderer/index.html,,
+I165,emoji,🎮,U+1F3AE,gamepad,svg/gamepad.svg,need_svg,bx:joystick,,0,4,0,languages/k2_en.csv; languages/k2_th.csv,,
+I166,symbol,⬒,U+2B12,panel-hide-all,svg/panel-hide-all.svg,need_svg,,,0,4,0,languages/k2_en.csv; languages/k2_th.csv,,
+I167,emoji,⏪,U+23EA,rewind,svg/rewind.svg,need_svg,bx:rewind,,2,1,1,app.js; languages/k2_en.csv; languages/k2_th.csv; visual-tags.js,,
+I168,symbol,☆,U+2606,star-outline,svg/star-outline.svg,need_svg,bx:star,,1,2,0,app.js; languages/k2_en.csv; languages/k2_th.csv,,
+I169,symbol,⤷,U+2937,subdirectory-right,svg/subdirectory-right.svg,need_svg,bx:subdirectory-right,,3,0,0,app.js; branching-ui.js; nav-model.js,,
+I170,emoji,🔎,U+1F50E,search,svg/search.svg,has_svg,Boxicons,,1,2,1,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I171,emoji,💔,U+1F494,heart-broken,svg/heart-broken.svg,need_svg,,,3,0,0,branching-ui.js,,ไม่มีใน Boxicons
+I172,symbol,➤,U+27A4,send,svg/send.svg,need_svg,bx:send,,2,1,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,
+I173,emoji,📦,U+1F4E6,package,svg/package.svg,need_svg,bx:package,,2,1,0,export-formats.js; floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I174,emoji,🧾,U+1F9FE,receipt,svg/receipt.svg,need_svg,bx:receipt,,1,2,0,export-formats.js; languages/k2_en.csv; languages/k2_th.csv,,
+I175,emoji,🔊,U+1F50A,volume,svg/volume.svg,need_svg,bx:volume-full,,1,2,0,floorplan-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I176,symbol,⌗,U+2317,hash,svg/hash.svg,need_svg,bx:hash,,1,2,0,languages/k2_en.csv; languages/k2_th.csv; layout/split-ui.js,,
+I177,emoji,🚪,U+1F6AA,door,svg/door.svg,need_svg,bx:door-open,,2,1,0,languages/k2_en.csv; languages/k2_th.csv; maps-ui.js; maps.js,,
+I178,emoji,🅃,U+1F143,text-tool,svg/text-tool.svg,need_svg,bx:text,,1,2,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,
+I179,symbol,↳,U+21B3,subdirectory-right,svg/subdirectory-right.svg,need_svg,bx:subdirectory-right,,2,1,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-chat.js; starter/starter-scenario.js,,
+I180,emoji,👥,U+1F465,group,svg/group.svg,need_svg,bx:group,,1,2,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-steps-def.js,,
+I181,symbol,✚,U+271A,plus-plain,svg/plus-plain.svg,need_svg,bx:plus,,0,3,0,languages/k2_en.csv; languages/k2_th.csv,,
+I182,emoji,🔥,U+1F525,fire,svg/fire.svg,need_svg,bxs:hot,,0,3,0,languages/k2_en.csv; languages/k2_th.csv,,
+I183,symbol,⬓,U+2B13,panel-hide-right,svg/panel-hide-right.svg,need_svg,,,0,3,0,languages/k2_en.csv; languages/k2_th.csv,,
+I184,emoji,🕳,U+1F573,plot-hole,svg/plot-hole.svg,need_svg,,,1,1,0,ai/ai-analyze.js; languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons · บางจุดมี U+FE0F ต่อท้าย
+I185,symbol,✍,U+270D,pen,svg/pen.svg,need_svg,bxs:pen,,1,1,0,ai/ai-session.js; languages/k2_en.csv; languages/k2_th.csv,,บางจุดมี U+FE0F ต่อท้าย
+I186,emoji,💡,U+1F4A1,bulb,svg/bulb.svg,need_svg,bxs:bulb,,2,0,0,ai/ai-ui.js,,
+I187,emoji,⛔,U+26D4,block,svg/block.svg,need_svg,bx:block,,2,0,0,app.js; log-core.js,,
+I188,emoji,⏩,U+23E9,fast-forward,svg/fast-forward.svg,need_svg,bx:fast-forward,,1,1,1,app.js; languages/k2_en.csv; languages/k2_th.csv,,
+I189,emoji,📕,U+1F4D5,file-pdf,svg/file-pdf.svg,need_svg,bxs:file-pdf,,2,0,0,app.js; export-formats.js,,
+I190,symbol,⏮,U+23EE,skip-previous,svg/skip-previous.svg,need_svg,bx:skip-previous,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; read-ui.js,,
+I191,symbol,➜,U+279C,send,svg/send.svg,need_svg,bx:send,,1,1,0,branching-ui.js; languages/k2_en.csv; languages/k2_th.csv,,
+I192,symbol,⌥,U+2325,,,keep_text,,,2,0,0,core.js; main.js,,สัญลักษณ์แป้นพิมพ์
+I193,symbol,▌,U+258C,,,keep_text,,,2,0,0,dialogs.js; nav-model.js,,แถบสี (ป้ายสีในผังนำทาง)
+I194,emoji,💧,U+1F4A7,water,svg/water.svg,need_svg,bx:water,,1,1,0,export-formats.js; languages/k2_en.csv; languages/k2_th.csv,,
+I195,symbol,◉,U+25C9,radio-on,svg/radio-on.svg,need_svg,bx:radio-circle-marked,,2,0,0,floorplan-ui.js; maps-ui.js,,
+I196,emoji,👆,U+1F446,pointer,svg/pointer.svg,need_svg,bx:pointer,,2,0,0,maps-ui.js; network.js,,
+I197,symbol,✥,U+2725,move,svg/move.svg,need_svg,bx:move,,2,0,0,maps-ui.js; network.js,,
+I198,emoji,➖,U+2796,minus,svg/minus.svg,has_svg,bxs:minus-circle,,2,0,0,maps-ui.js,,
+I199,emoji,📏,U+1F4CF,ruler,svg/ruler.svg,need_svg,bx:ruler,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; maps-ui.js,,
+I200,symbol,▤,U+25A4,page-break,svg/page-break.svg,need_svg,,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; nav-model.js,,
+I201,symbol,⤾,U+293E,rotate-right,svg/rotate-right.svg,need_svg,bx:rotate-right,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; network.js,,
+I202,symbol,⌐,U+2310,line-elbow,svg/line-elbow.svg,need_svg,,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,
+I203,symbol,⌒,U+2312,line-curve,svg/line-curve.svg,need_svg,,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; planner/planner-ui.js,,
+I204,symbol,▥,U+25A5,page-double,svg/page-double.svg,need_svg,,,2,0,0,read-ui.js,,
+I205,emoji,🎲,U+1F3B2,dice,svg/dice.svg,need_svg,bxs:dice-5,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-chat.js,,
+I206,emoji,🙂,U+1F642,smile,svg/smile.svg,need_svg,bx:smile,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-chat.js,,
+I207,symbol,↶,U+21B6,undo,svg/undo.svg,need_svg,bx:undo,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-richtext.js,,
+I208,symbol,↷,U+21B7,redo,svg/redo.svg,need_svg,bx:redo,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-richtext.js,,
+I209,symbol,⇤,U+21E4,outdent,svg/outdent.svg,need_svg,bx:left-indent,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; starter/starter-richtext.js,,
+I210,emoji,🪟,U+1FA9F,window,svg/window.svg,need_svg,bx:window,,1,1,0,languages/k2_en.csv; languages/k2_th.csv; renderer/style.css,,
+I211,emoji,🔌,U+1F50C,plug,svg/plug.svg,need_svg,bx:plug,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I212,emoji,🛠,U+1F6E0,wrench,svg/wrench.svg,need_svg,bx:wrench,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I213,emoji,🔠,U+1F520,text-case,svg/text-case.svg,need_svg,,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I214,emoji,🔽,U+1F53D,filter,svg/filter.svg,need_svg,bx:filter,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I215,symbol,✖,U+2716,close,svg/close.svg,need_svg,bx:x,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I216,emoji,🏠,U+1F3E0,home,svg/home.svg,has_svg,Boxicons,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I217,symbol,✔,U+2714,checkmark,svg/checkmark.svg,need_svg,bx:check,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I218,symbol,◨,U+25E8,panel-hide-left,svg/panel-hide-left.svg,need_svg,,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I219,emoji,❔,U+2754,help,svg/help.svg,need_svg,bx:help-circle,,0,2,0,languages/k2_en.csv; languages/k2_th.csv,,
+I220,symbol,⏱,U+23F1,timer,svg/timer.svg,need_svg,bx:timer,,1,0,0,ai/ai-analyze.js,,บางจุดมี U+FE0F ต่อท้าย
+I221,emoji,💞,U+1F49E,heart,svg/heart.svg,need_svg,bxs:heart,,1,0,0,ai/ai-analyze.js,,
+I222,emoji,🙋,U+1F64B,user,svg/user.svg,has_svg,Boxicons,,1,0,0,ai/ai-chat-panel.js,,
+I223,emoji,⬜,U+2B1C,square-outline,svg/square-outline.svg,need_svg,bx:square,,1,0,0,ai/ai-chat-panel.js,,
+I224,emoji,🔴,U+1F534,,,keep_text,,,1,0,0,ai/ai-ui.js,,จุดสีสถานะ — ทำด้วย CSS ได้
+I225,emoji,🟡,U+1F7E1,,,keep_text,,,1,0,0,ai/ai-ui.js,,จุดสีสถานะ — ทำด้วย CSS ได้
+I226,emoji,⚪,U+26AA,,,keep_text,,,1,0,0,ai/ai-ui.js,,จุดสีสถานะ — ทำด้วย CSS ได้
+I227,emoji,🏙,U+1F3D9,city,svg/city.svg,need_svg,bx:buildings,,1,0,0,ai/ai-world.js,,
+I228,emoji,🎎,U+1F38E,doll,svg/doll.svg,need_svg,,,1,0,0,ai/ai-world.js,,ไม่มีใน Boxicons
+I229,emoji,💰,U+1F4B0,coin,svg/coin.svg,need_svg,bx:coin,,1,0,0,ai/ai-world.js,,
+I230,symbol,⛩,U+26E9,torii,svg/torii.svg,need_svg,,,1,0,0,ai/ai-world.js,,ไม่มีใน Boxicons
+I231,symbol,♻,U+267B,recycle,svg/recycle.svg,need_svg,bx:recycle,,1,0,0,app.js,,
+I232,symbol,⏭,U+23ED,skip-next,svg/skip-next.svg,need_svg,bx:skip-next,,1,0,0,read-ui.js,,
+I233,symbol,⇧,U+21E7,,,keep_text,,,1,0,1,core.js,,สัญลักษณ์แป้นพิมพ์
+I234,emoji,🌳,U+1F333,tree,svg/tree.svg,need_svg,,,1,0,0,branching-ui.js,,ไม่มีใน Boxicons
+I235,emoji,🅣,U+1F163,file-txt,svg/file-txt.svg,need_svg,bxs:file-txt,,1,0,0,export-formats.js,,
+I236,emoji,📰,U+1F4F0,news,svg/news.svg,need_svg,bx:news,,1,0,0,export-formats.js,,
+I237,symbol,◧,U+25E7,scene-block,svg/scene-block.svg,need_svg,,,1,0,0,nav-model.js,,
+I238,symbol,○,U+25CB,,,keep_text,,,1,0,0,nav-model.js,,"ป้าย ""ฉากว่าง"" ในผังนำทาง"
+I239,symbol,⬤,U+2B24,,,keep_text,,,1,0,0,network.js,,จุดสี — ทำด้วย CSS ได้
+I240,symbol,◻,U+25FB,window-restore,svg/window-restore.svg,need_svg,,,1,0,0,panels/panel-ui.js,,
+I241,symbol,▣,U+25A3,window-max,svg/window-max.svg,need_svg,,,1,0,0,panels/panel-ui.js,,
+I242,emoji,🆃,U+1F183,text-tool,svg/text-tool.svg,need_svg,bx:text,,1,0,0,planner/planner-data.js,,
+I243,symbol,⬉,U+2B09,pointer,svg/pointer.svg,need_svg,bx:pointer,,1,0,0,planner/planner-ui.js,,
+I244,emoji,✋,U+270B,hand,svg/hand.svg,need_svg,bx:hand,,1,0,0,planner/planner-ui.js,,
+I245,symbol,↝,U+219D,arrow-curve,svg/arrow-curve.svg,need_svg,,,1,0,0,planner/planner-ui.js,,
+I246,symbol,▯,U+25AF,page-single,svg/page-single.svg,need_svg,,,1,0,0,read-ui.js,,
+I247,symbol,█,U+2588,,,keep_text,,,1,0,0,sp-reports.js,,แท่งกราฟตัวอักษรในรายงานบท
+I248,symbol,░,U+2591,,,keep_text,,,1,0,0,sp-reports.js,,แท่งกราฟตัวอักษรในรายงานบท
+I249,symbol,♀,U+2640,,,keep_text,,,1,0,0,starter/starter-model.js,,สัญลักษณ์เพศ (ข้อมูลตัวละคร)
+I250,symbol,♂,U+2642,,,keep_text,,,1,0,0,starter/starter-model.js,,สัญลักษณ์เพศ (ข้อมูลตัวละคร)
+I251,symbol,⚧,U+26A7,,,keep_text,,,1,0,0,starter/starter-model.js,,สัญลักษณ์เพศ (ข้อมูลตัวละคร)
+I252,emoji,🌱,U+1F331,leaf,svg/leaf.svg,need_svg,bxs:leaf,,1,0,0,starter/starter-model.js,,
+I253,symbol,❝,U+275D,quote-left,svg/quote-left.svg,has_svg,bxs:quote-right,,1,0,0,starter/starter-richtext.js,,
+I254,emoji,❓,U+2753,help,svg/help.svg,need_svg,bx:help-circle,,1,0,0,starter/starter-steps-def.js,,
+I255,emoji,🕓,U+1F553,time,svg/time.svg,need_svg,bx:time,,1,0,0,starter/starter-steps-def.js,,
+I256,symbol,▬,U+25AC,gantt,svg/gantt.svg,need_svg,,,1,0,0,timeline-ui.js,,
+I257,emoji,🔮,U+1F52E,crystal-ball,svg/crystal-ball.svg,need_svg,,,1,0,0,visual-tags.js,,ไม่มีใน Boxicons
+I258,emoji,🕸,U+1F578,network,svg/network.svg,need_svg,,,1,0,0,main.js,,
+I259,emoji,🌍,U+1F30D,globe,svg/globe.svg,has_svg,Boxicons,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I260,symbol,↗,U+2197,link-external,svg/link-external.svg,need_svg,bx:link-external,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I261,symbol,⌨,U+2328,keyboard,svg/keyboard.svg,need_svg,bx:keyboard,,0,1,0,languages/k2_th.csv,,
+I262,emoji,📗,U+1F4D7,book,svg/book.svg,has_svg,Boxicons,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I263,emoji,🎉,U+1F389,,,keep_text,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,อีโมจิตกแต่งท้ายประโยค
+I264,emoji,📜,U+1F4DC,log,svg/log.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I265,emoji,📸,U+1F4F8,camera,svg/camera.svg,has_svg,Boxicons,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I266,emoji,🔢,U+1F522,sort-number,svg/sort-number.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I267,symbol,⤵,U+2935,arrow-turn-down,svg/arrow-turn-down.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I268,emoji,🖨,U+1F5A8,printer,svg/printer.svg,need_svg,bx:printer,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I269,emoji,🎞,U+1F39E,film,svg/film.svg,has_svg,Boxicons,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I270,emoji,📑,U+1F4D1,page-header,svg/page-header.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I271,emoji,🖱,U+1F5B1,mouse,svg/mouse.svg,need_svg,bx:mouse,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I272,symbol,⏸,U+23F8,pause,svg/pause.svg,need_svg,bx:pause,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I273,symbol,▢,U+25A2,shape-rounded,svg/shape-rounded.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I274,symbol,◇,U+25C7,shape-diamond,svg/shape-diamond.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I275,symbol,⛁,U+26C1,shape-cylinder,svg/shape-cylinder.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I276,symbol,⬭,U+2B2D,shape-ellipse,svg/shape-ellipse.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I277,symbol,▭,U+25AD,shape-rect,svg/shape-rect.svg,need_svg,bx:rectangle,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I278,symbol,△,U+25B3,shape-triangle,svg/shape-triangle.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I279,symbol,⇹,U+21F9,align-center-h,svg/align-center-h.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I280,symbol,⇳,U+21F3,align-center-v,svg/align-center-v.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I281,symbol,◆,U+25C6,shape-diamond,svg/shape-diamond.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I282,symbol,⇿,U+21FF,distribute-h,svg/distribute-h.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I283,symbol,↕,U+2195,distribute-v,svg/distribute-v.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I284,symbol,⬚,U+2B1A,selection,svg/selection.svg,need_svg,bx:selection,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I285,symbol,⤒,U+2912,align-top,svg/align-top.svg,need_svg,bx:vertical-top,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I286,emoji,🐉,U+1F409,fantasy,svg/fantasy.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I287,emoji,😄,U+1F604,,,keep_text,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,อีโมจิอารมณ์ — ความหมายอยู่ที่สีหน้า แนะนำคงไว้
+I288,emoji,😖,U+1F616,,,keep_text,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,อีโมจิอารมณ์ — ความหมายอยู่ที่สีหน้า แนะนำคงไว้
+I289,emoji,😴,U+1F634,,,keep_text,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,อีโมจิอารมณ์ — ความหมายอยู่ที่สีหน้า แนะนำคงไว้
+I290,emoji,👃,U+1F443,sense-smell,svg/sense-smell.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I291,emoji,👅,U+1F445,sense-taste,svg/sense-taste.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I292,emoji,👂,U+1F442,sense-hearing,svg/sense-hearing.svg,need_svg,,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,ไม่มีใน Boxicons
+I293,emoji,🖐,U+1F590,sense-touch,svg/sense-touch.svg,need_svg,bx:hand,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,
+I294,symbol,☁,U+2601,cloud,svg/cloud.svg,need_svg,bx:cloud,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,บางจุดมี U+FE0F ต่อท้าย
+I295,symbol,⛶,U+26F6,fullscreen,svg/fullscreen.svg,has_svg,Boxicons,,0,1,0,languages/k2_en.csv; languages/k2_th.csv,,

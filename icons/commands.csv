@@ -1,0 +1,277 @@
+﻿command_id,label_th,icon,shortcut,svg,category,kind,label_en,where,i18n_keys,handler,shortcut_note,note
+chapter,สร้างบทใหม่,folder,Ctrl+Alt+1,มี,create,คำสั่ง,New chapter,ปุ่มลอย FAB,ui.shortcuts.newChapter ui.fab.actChapter,src/app.js:12235,สร้างของใหม่ (Ctrl+Alt+ตัวเลข),
+character,สร้างตัวละครใหม่,,Ctrl+Alt+3,,create,คำสั่ง,New character,,ui.shortcuts.newCharacter,src/app.js:12252,,
+location,สร้างสถานที่ใหม่,,Ctrl+Alt+4,,create,คำสั่ง,New location,,ui.shortcuts.newLocation,src/app.js:12253,,
+memo,สร้างบันทึกช่วยจำ,clipboard,Ctrl+Alt+5,มี,create,คำสั่ง,New memo,ปุ่มลอย FAB,ui.shortcuts.newMemo ui.fab.actMemo,src/app.js:12254,,
+new-entity:characters,สร้างตัวละคร,user,,มี,create,คำสั่ง,New character,ปุ่มลอย FAB | เรียกในโค้ด,ui.fab.actCharacter,src/app.js:12243,,
+new-entity:items,สร้างสิ่งของ,briefcase,,มี,create,คำสั่ง,New item,ปุ่มลอย FAB,ui.fab.actItem,src/app.js:12243,,
+new-entity:locations,สร้างสถานที่,map,,มี,create,คำสั่ง,New location,ปุ่มลอย FAB | เรียกในโค้ด,ui.fab.actLocation,src/app.js:12243,,
+new-entity:lore,สร้างตำนาน/ความรู้,book-content,,มี,create,คำสั่ง,New lore entry,ปุ่มลอย FAB,ui.fab.actLore,src/app.js:12243,,
+quick-note,โน้ตด่วน,note,Ctrl+Shift+Q,มี,create,คำสั่ง,Quick note,ปุ่มลอย FAB | เมนู: แก้ไข | แถบเครื่องมือ #tb-note,ui.shortcuts.quickNote ui.fab.actQuickNote ui.menu.noteQuick ui.html.tbNote,src/app.js:12396,,
+scene,สร้างฉากใหม่,file,Ctrl+Alt+2,มี,create,คำสั่ง,New scene,ปุ่มลอย FAB,ui.shortcuts.newScene ui.fab.actScene,src/app.js:12228,,
+delete-line,ลบทั้งบรรทัด,,Ctrl+Shift+Delete,,edit,คำสั่ง,Delete line,เมนู: แก้ไข,ui.shortcuts.deleteLine ui.menu.delLineDelete,src/app.js:12408,[alpha.61 ข้อ 3] ลบทั้งบรรทัด — Ctrl+Shift+K ไม่ว่าง (จัดกึ่งกลาง) จึงใช้ Ctrl+Shift+Delete,
+editor-redo,ทำซ้ำ,,Ctrl+Shift+Z / Ctrl+Y,,edit,คำสั่ง,Redo,เมนูคลิกขวา (main.js:651),shortcuts.redo ui.menu.repeatY,src/app.js:12199,,
+editor-undo,เลิกทำ,,Ctrl+Z,,edit,คำสั่ง,Undo,เมนูคลิกขวา (main.js:650) | เรียกในโค้ด,shortcuts.undo ui.menu.doZ,src/app.js:12198,,
+find,ค้นหา,,Ctrl+F,,edit,คำสั่ง,Find,เมนู: แก้ไข | เมนูคลิกขวา (main.js:654),shortcuts.find ui.menu.searchF,src/app.js:12206,,
+global-search,ค้นหาทั้งโปรเจกต์,search,Ctrl+Shift+F,มี,edit,คำสั่ง,Search Project,ปุ่มลอย FAB | เรียกในโค้ด | แถบเครื่องมือ #search-all-btn | แถบเครื่องมือ #tb-gsearch,shortcuts.globalSearch ui.fab.actSearch ui.html.searchProjBtn ui.html.tbGsearch,src/app.js:12290,[alpha.138] Ctrl+Shift+P (สลับธีม) ถูกถอดตามคำสั่งผู้ใช้ — ธีมย้ายไปอยู่ในตั้งค่าอย่างเดียว,
+goto,ไปที่หน้า/ฉาก,file,Ctrl+G,มี,edit,คำสั่ง,Go to Page/Scene,เมนู: รูปแบบ | เมนู: บท,shortcuts.goto ui.menu.pageChapterG ui.menu.pageSceneG,src/app.js:12565,[78] ไปที่หน้า/ฉาก · [54] ตรวจหาข้อผิดพลาดถัดไป (alpha.57),
+goto-page,ไปที่หน้า,,Ctrl+Shift+.,,edit,คำสั่ง,Go to page,,ui.shortcuts.gotoPage,src/app.js:12566,,
+goto-scene,ไปที่ฉาก,,"Ctrl+Shift+,",,edit,คำสั่ง,Go to scene,,ui.shortcuts.gotoScene,src/app.js:12567,,
+insert-image,แทรกรูป,image-add,Ctrl+Shift+I,มี,edit,คำสั่ง,Insert image,ปุ่มลอย FAB | เมนู: รูปแบบ | เมนูคลิกขวา (main.js:653) | แถบเครื่องมือ #tb-img,ui.shortcuts.insertImage ui.fab.actImage ui.menu.insertImage ui.html.tbImg,src/app.js:12200,[alpha.79] ชุดใหญ่ที่ขาดไป คำสั่งเอกสาร (Ctrl+Shift),
+nbsp,ช่องว่างไม่ตัดคำ,,Ctrl+Shift+Space,,edit,คำสั่ง,Non-Breaking Space,,shortcuts.nbsp,src/app.js:12488,[77] Non-breaking space,
+quick-open,เปิดไฟล์ด่วน,search,Ctrl+Shift+O,มี,edit,คำสั่ง,Quick Open,ปุ่มลอย FAB | เมนู: มุมมอง | เรียกในโค้ด | แถบเครื่องมือ #tb-quickopen,shortcuts.quickOpen ui.fab.actQuickOpen ui.menu.searchFileQuickO ui.html.tbQuickopen,src/app.js:12288,,
+select-scene,เลือกทั้งฉาก,,Ctrl+Shift+A,,edit,คำสั่ง,Select Scene,,shortcuts.selectScene,src/app.js:12483,[79] เลือกทั้งฉาก,
+thesaurus,คลังคำพ้อง/คำตรงข้าม,,Ctrl+Alt+Shift+T,,edit,คำสั่ง,Thesaurus,เมนู: เครื่องมือ,ui.shortcuts.thesaurus ui.menu.thesaurusT,src/app.js:12450,,
+backup-now,สำรองโปรเจกต์เดี๋ยวนี้,archive,,มี,file,คำสั่ง,สำรองโปรเจกต์เดี๋ยวนี้,ปุ่มลอย FAB | เมนู: ไฟล์,ui.fab.actSnapshot ui.menu.project,src/app.js:12301,,
+close-all-tabs,ปิดทุกแท็บ,reset,Ctrl+Shift+W,มี,file,คำสั่ง,Close all tabs,เมนู: ไฟล์ | แถบเครื่องมือ #tb-close-all,shortcuts.closeAllTabs ui.menu.closeAllTabW ui.html.tbCloseAll,src/app.js:12177,,
+close-tab,ปิดแท็บ,x,Ctrl+W,มี,file,คำสั่ง,Close Tab,เมนู: ไฟล์ | แถบเครื่องมือ #tb-close,shortcuts.closeTab ui.menu.closeTabW ui.html.tbClose,src/app.js:12176,,
+compile,ส่งออกด้วยเวิร์กโฟลว์,,Ctrl+Alt+X,,file,คำสั่ง,Compile,เมนู: ไฟล์,shortcuts.compile ui.menu.exportWorkFlowSteps,src/app.js:12427,"[alpha.124 ข้อ 7] ""ปรับขั้นตอนส่งออก"" มีชื่อใน SHORTCUT_LABELS มาตลอด แต่ไม่เคยมีแถวในตาราง → หน้า ตั้งค่า → ปุ่มลัด ไม่เคยแสดงรายการนี้เลย และตั้งเองก็ไม่ได้",
+export-blog,ส่งออกเป็น HTML สำหรับบล็อก,,Ctrl+Shift+B,,file,คำสั่ง,Export as Blog HTML,,shortcuts.exportBlog,src/app.js:12298,,
+export-hub,ศูนย์รวมการส่งออก,book-content,Ctrl+Shift+E,มี,file,คำสั่ง,Export hub,ปุ่มลอย FAB | เมนู: ไฟล์ | เมนู: บท,shortcuts.exportHub ui.fab.actExport ui.menu.exportHub,src/app.js:12426,"[alpha.81 ข้อ 9] Ctrl+Shift+E = ""ศูนย์รวมการส่งออก"" (เดิมเปิดกล่องเวิร์กโฟลว์ตรง ๆ) กล่องเวิร์กโฟลว์ยังอยู่ — เข้าจากปุ่ม ""ปรับขั้นตอน…"" ในศูนย์รวม",
+import-scrivener,นำเข้าจาก Scrivener,,Ctrl+Alt+Shift+I,,file,คำสั่ง,Import from Scrivener,เมนู: ไฟล์,ui.shortcuts.importScrivener ui.menu.importScrivenerScrivI,src/app.js:12303,,
+new-from-template,สร้างจากเทมเพลต,star,Ctrl+Shift+N,มี,file,คำสั่ง,New from template,ปุ่มลอย FAB | เมนู: ไฟล์,ui.shortcuts.newFromTemplate ui.fab.actTemplate ui.menu.newProjectTemplate,src/app.js:12302,,
+new-project,สร้างโปรเจกต์ใหม่,,Ctrl+N,,file,คำสั่ง,New Project,เมนู: ไฟล์,shortcuts.newProject ui.menu.newProjectNewN,src/app.js:12137,,
+open-project,เปิดโปรเจกต์,folder,Ctrl+O,มี,file,คำสั่ง,Open Project,เมนู: ไฟล์ | แถบเครื่องมือ #open-btn,shortcuts.openProject ui.menu.openProjectO app.openProject,src/app.js:12141,,
+print,พิมพ์,,Ctrl+P,,file,คำสั่ง,Print,เมนู: ไฟล์,shortcuts.print ui.menu.printP,src/app.js:12156,,
+save,บันทึก,,Ctrl+S,,file,คำสั่ง,Save,เมนู: ไฟล์ | เมนูคลิกขวา (main.js:656),shortcuts.save ui.menu.saveS,src/app.js:12143,"[code, needCtrl, needShift, channel, ...args] · needCtrl: true | false | 'ctrl+alt'",
+save-all,บันทึกทั้งหมด,save,Ctrl+Alt+S,มี,file,คำสั่ง,Save All,ปุ่มลอย FAB | เมนู: ไฟล์ | เรียกในโค้ด | แถบเครื่องมือ #save-all-btn,shortcuts.saveAll ui.fab.actSaveAll ui.menu.saveAllS ui.html.saveProjBtn,src/app.js:12144,บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว,
+save-as,บันทึกเป็น…,,Ctrl+Shift+S,,file,คำสั่ง,Save As...,เมนู: ไฟล์,shortcuts.saveAs ui.menu.save,src/app.js:12145,,
+fmt:align:center,กึ่งกลาง,align-center,Ctrl+Shift+K,มี,format,คำสั่ง,Align Center,เมนู: รูปแบบ › จัดหน้า | แถบเครื่องมือ #tb-align-center,shortcuts.alignCenter ui.menu.centerK ui.html.tbAlignCenter,src/app.js:12179,,
+fmt:align:justify,เต็มบรรทัด,align-justify,Ctrl+Shift+J,มี,format,คำสั่ง,Justify,เมนู: รูปแบบ › จัดหน้า | แถบเครื่องมือ #tb-align-justify,shortcuts.justify ui.menu.fullLineJ ui.html.tbAlignJustify,src/app.js:12179,,
+fmt:align:left,ชิดซ้าย,align-left,Ctrl+Shift+L,มี,format,คำสั่ง,Align Left,เมนู: รูปแบบ › จัดหน้า | แถบเครื่องมือ #tb-align-left,shortcuts.alignLeft ui.menu.alignLeftL ui.html.tbAlignLeft,src/app.js:12179,,
+fmt:align:right,ชิดขวา,align-right,Ctrl+Shift+R,มี,format,คำสั่ง,Align Right,เมนู: รูปแบบ › จัดหน้า | แถบเครื่องมือ #tb-align-right,shortcuts.alignRight ui.menu.rightR ui.html.tbAlignRight,src/app.js:12179,,
+fmt:bold,ตัวหนา,bold,Ctrl+B,มี,format,คำสั่ง,Bold,เมนู: รูปแบบ | เมนูคลิกขวา (main.js:644) | แถบเครื่องมือ #tb-bold,shortcuts.bold ui.menu.itemBoldB ui.html.tbBold,src/app.js:12179,,
+fmt:clear,ล้างรูปแบบ,,Ctrl+Space,,format,คำสั่ง,Clear Formatting,เมนู: รูปแบบ | เมนูคลิกขวา (main.js:648),shortcuts.clearFormatting ui.menu.clearFormatSpace,src/app.js:12179,,
+fmt:heading:1,หัวข้อ 1,,Ctrl+1,,format,คำสั่ง,Heading 1,เรียกในโค้ด,shortcuts.heading1,src/app.js:12179,,
+fmt:heading:2,หัวข้อ 2,,Ctrl+2,,format,คำสั่ง,Heading 2,เรียกในโค้ด,shortcuts.heading2,src/app.js:12179,,
+fmt:heading:3,หัวข้อ 3,,Ctrl+3,,format,คำสั่ง,Heading 3,เรียกในโค้ด,shortcuts.heading3,src/app.js:12179,,
+fmt:italic,ตัวเอียง,italic,Ctrl+I,มี,format,คำสั่ง,Italic,เมนู: รูปแบบ | เมนูคลิกขวา (main.js:645) | แถบเครื่องมือ #tb-italic,shortcuts.italic ui.menu.itemI ui.html.tbItalic,src/app.js:12179,,
+fmt:ol,รายการตัวเลข,list-ol,Ctrl+Shift+7,มี,format,คำสั่ง,Numbered List,เมนู: รูปแบบ | แถบเครื่องมือ #tb-ol,shortcuts.numberedList ui.menu.listItemNum ui.html.tbOl,src/app.js:12179,,
+fmt:paragraph,ข้อความปกติ,,Ctrl+0,,format,คำสั่ง,Body Text,เมนู: รูปแบบ,shortcuts.bodyText ui.menu.textNormal,src/app.js:12179,,
+fmt:strike,ขีดฆ่า,strikethrough,Ctrl+Shift+X,มี,format,คำสั่ง,Strikethrough,เมนู: รูปแบบ | เมนูคลิกขวา (main.js:647) | แถบเครื่องมือ #tb-strike,shortcuts.strikethrough ui.menu.dashX ui.html.tbStrike,src/app.js:12179,,
+fmt:ul,รายการหัวข้อย่อย,list-ul,Ctrl+Shift+8,มี,format,คำสั่ง,Bullet List,เมนู: รูปแบบ | แถบเครื่องมือ #tb-ul,shortcuts.bulletList ui.menu.listHeadingCollapse ui.html.tbUl,src/app.js:12179,,
+fmt:underline,ขีดเส้นใต้,underline,Ctrl+U,มี,format,คำสั่ง,Underline,เมนู: รูปแบบ | เมนูคลิกขวา (main.js:646) | แถบเครื่องมือ #tb-underline,shortcuts.underline ui.menu.dashLineUnderU ui.html.tbUnderline,src/app.js:12179,,
+text-case-cycle,วนรูปตัวพิมพ์,,Ctrl+Alt+U,,format,คำสั่ง,Cycle letter case,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.shortcuts.textCaseCycle ui.menu.textCaseCycleU,src/app.js:12438,[alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Sentence → lower → UPPER → …),
+cheatsheet,สรุปปุ่มลัดทั้งหมด,,Ctrl+Alt+/,,other,คำสั่ง,Keyboard shortcut cheat sheet,,ui.shortcuts.cheatsheet,src/app.js:12448,[alpha.124 ข้อ 3] ตารางคีย์ลัด (Cheatsheet) — เดิมผูก listener เองที่ Ctrl+Shift+/ ซึ่ง **ชนกับ `fmtbar-here`** แล้วยิงทั้งคู่ · `?` เปล่า ๆ ยังเปิดได้เหมือนเดิม,
+dev-console,คอนโซลนักพัฒนา,wrench,Ctrl+Shift+`,ยังไม่มี,other,คำสั่ง,Developer console,เมนู: ช่วยเหลือ,shortcuts.devConsole ui.menu.consoleDev,src/app.js:12435,[alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium),ยังไม่มี svg/wrench.svg (ใช้ตัวสำรองใน glyphs.csv)
+settings,ตั้งค่าโปรเจกต์,cog,"Ctrl+,",มี,other,คำสั่ง,Settings,ปุ่มลอย FAB | เมนู: ไฟล์,shortcuts.settings ui.fab.actSettings ui.menu.settingsProject,src/app.js:12428,,
+gallery,คลังรูปภาพ,image,Ctrl+Shift+G,มี,panels,คำสั่ง,Image Gallery,ปุ่มลอย FAB | เมนู: มุมมอง › คลังรูปภาพ (Gallery) | เรียกในโค้ด | แถบเครื่องมือ #tb-gallery,shortcuts.gallery ui.fab.actGallery ui.menu.openLibraryImageG ui.html.tbGallery,src/app.js:12201,,
+kanban,กระดาน Kanban,grid,Ctrl+K,มี,panels,คำสั่ง,Kanban Board,ปุ่มลอย FAB | เมนู: มุมมอง,shortcuts.kanban ui.fab.actKanban ui.menu.kanbanBoardStatus,src/app.js:12518,,
+toggle-panel:ai-analyzer,แผง: AI วิเคราะห์,brain,Ctrl+Alt+A,มี,panels,คำสั่ง,Panel: AI analyzer,แผง | เมนู: มุมมอง › แผง,ui.shortcuts.panelAiAnalyzer ui.common.aIAnalyze,src/app.js:12402,,
+toggle-panel:ai-chat,แผงผู้ช่วยเขียน (แชท AI),chat,Ctrl+Alt+W,มี,panels,คำสั่ง,Writing assistant panel (AI chat),แผง | เมนู: มุมมอง › แผง | เมนูคลิกขวา (main.js:593),ui.shortcuts.panelAiChat ui.common.aIAssistantWrite ui.menu.panelAIAssistantWrite,src/app.js:12402,,
+toggle-panel:ai-hub,แผง AI Hub,brain,Ctrl+Alt+Q,มี,panels,คำสั่ง,AI Hub panel,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-ai-hub,ui.shortcuts.panelAiHub ui.panel.aiHubTitle ui.menu.aiHubPanel ui.html.tbAiHub,src/app.js:12402,"[alpha.116 ข้อ 7] ปิดช่องว่างของตารางคีย์ลัด ผู้ใช้: *""เช็ค shortcut มีครบมั้ย""* — กวาดแล้วพบว่า **9 แผงไม่มีคีย์ลัดเลย** ทั้งที่แผงอื่นมีครบ (แผงที่มาทีหลังทุกตัวถูกลืม: ห้องซ้อมบท · Story Starter · แชท AI และแผงพื้นฐานที่มีมาแต่ต้นอย่าง โครงเรื่อง/สารบัญ/บันทึก/ประวัติการบันทึก/ค้นหา) ประตูกันพลาดอยู่ที่ `test/shortcuts.test.cjs` — แผงที่ปิดได้ทุกตัวต้องมีคีย์ลัด หรือไม่ก็ต้องประกาศเหตุผลไว้ใน SHORTCUT_PANEL_SKIP ลืมเมื่อไหร่เทสแดงตั้งแต่ build",
+toggle-panel:backlinks,แผงฉากที่กล่าวถึง,link,Ctrl+Alt+Shift+B,มี,panels,คำสั่ง,Mentions panel,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-backlinks,ui.shortcuts.panelBacklinks ui.worldAutoLink.panelTitle,src/app.js:12402,[alpha.125 ข้อ G · ข้อ H] Ctrl+Alt+Shift — ชั้นที่ยังว่างทั้งชั้น Ctrl+Alt+<ตัวอักษร> ถูกใช้ครบทั้ง 26 ตัวแล้วตั้งแต่ alpha.124 (แผงมี 29 ตัว) ชั้นถัดไปที่ยังว่างสนิทคือเติม Shift เข้าไป — ตัวจับคีย์รองรับอยู่แล้ว (`needsAlt(needCtrl) === e.altKey` + เทียบ `needShift` แยก) และ `formatShortcut` ก็แสดงเป็น `Ctrl+Alt+Shift+B` ได้ถูกต้องอยู่แล้ว,
+toggle-panel:books,แผง: จัดการเล่ม,book,Ctrl+Alt+K,มี,panels,คำสั่ง,Panel: book manager,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-books,ui.shortcuts.panelBooks ui.common.manageBook ui.html.tbBooks,src/app.js:12402,,
+toggle-panel:branch,แผง: ผังแตกสาย,grid,Ctrl+Alt+B,มี,panels,คำสั่ง,Panel: branching,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-branch,ui.shortcuts.panelBranch ui.common.graphBreakBranch2 ui.html.tbBranch,src/app.js:12402,,
+toggle-panel:chapters,จัดการบท,book-content,Ctrl+Alt+Shift+K,มี,panels,คำสั่ง,Chapter Manager,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-chapters,ui.chapters.title ui.html.tbChapters,src/app.js:12402,[alpha.141] จัดการบท (คู่กับ Ctrl+Alt+K = จัดการเล่ม) · อ่านทั้งเล่ม,
+toggle-panel:codex,แผง: สารานุกรม,book-content,Ctrl+Alt+C,มี,panels,คำสั่ง,Panel: codex,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-codex,ui.shortcuts.panelCodex ui.panel.codex ui.menu.codexCodex ui.html.tbCodex,src/app.js:12402,,
+toggle-panel:comments,แผง: คอมเมนต์,chat,Ctrl+Alt+O,มี,panels,คำสั่ง,Panel: comments,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-comments,ui.shortcuts.panelComments ui.common.comment ui.html.tbComments,src/app.js:12402,,
+toggle-panel:dashboard,แผง: แดชบอร์ด,chart,Ctrl+Alt+D,มี,panels,คำสั่ง,Panel: dashboard,ปุ่มลอย FAB | แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-dashboard,ui.shortcuts.panelDashboard ui.fab.actDashboard ui.common.dashboard ui.html.tbDashboard,src/app.js:12402,สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด,
+toggle-panel:dialogue,แผง: บทพูด,chat,Ctrl+Alt+L,มี,panels,คำสั่ง,Panel: dialogue,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-dialogue,ui.shortcuts.panelDialogue ui.panel.dialogueTitle ui.menu.dialoguePanel ui.html.tbDialogue,src/app.js:12402,[alpha.79] แผงใหม่สองตัวของรอบนี้,
+toggle-panel:dlgb,แผงห้องซ้อมบท,chat,Ctrl+Alt+V,มี,panels,คำสั่ง,Rehearsal room panel,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-dlgb,ui.shortcuts.panelDlgb ui.panel.dlgbTitle ui.menu.dlgbPanel ui.html.tbDlgb,src/app.js:12402,,
+toggle-panel:floorplan,แผง: ผังพื้นที่,map,Ctrl+Alt+F,มี,panels,คำสั่ง,Panel: floor plan,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-floorplan,ui.shortcuts.panelFloorplan ui.common.graphArea ui.html.tbFloorplan,src/app.js:12402,,
+toggle-panel:gallery,คลังรูปภาพ,image,,มี,panels,คำสั่ง,คลังรูปภาพ,แผง | เมนู: มุมมอง › แผง,ui.common.libraryImage,src/app.js:12402,,
+toggle-panel:gallery-board,แผง: กระดานอารมณ์,camera,Ctrl+Alt+G,มี,panels,คำสั่ง,Panel: mood board,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-gallery-board,ui.shortcuts.panelGalleryBoard ui.common.boardMood ui.html.tbGalleryBoard,src/app.js:12402,,
+toggle-panel:history,แผง: ประวัติการทำงาน,history,Ctrl+Alt+H,มี,panels,คำสั่ง,Panel: history,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-history,ui.shortcuts.panelHistory ui.common.historyRun ui.html.tbHistory,src/app.js:12402,,
+toggle-panel:kanban,Kanban ตามสถานะ (กดซ้ำ = ปิดแผง),grid,,มี,panels,คำสั่ง,Kanban by status (press again to close),แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-kanban,ui.html.tbKanban,src/app.js:12402,,
+toggle-panel:log,แผงประวัติการบันทึก,clipboard,Ctrl+Alt+9,มี,panels,คำสั่ง,Save log panel,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-log,ui.shortcuts.panelLog ui.common.save ui.menu.saveLog ui.html.tbLog,src/app.js:12402,,
+toggle-panel:maps,แผง: แผนที่,map,Ctrl+Alt+M,มี,panels,คำสั่ง,Panel: maps,ปุ่มลอย FAB | แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-maps,ui.shortcuts.panelMaps ui.fab.actMaps ui.common.map ui.html.tbMaps,src/app.js:12402,,
+toggle-panel:network,แผง: Story Network,link,Ctrl+Alt+N,มี,panels,คำสั่ง,Panel: Story Network,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-network,ui.shortcuts.panelNetwork ui.panel.networkTitle ui.html.tbNetwork,src/app.js:12402,,
+toggle-panel:notes,แผงสมุดบันทึก,bookmark,Ctrl+Alt+8,มี,panels,คำสั่ง,Notebook panel,แผง | เมนู: มุมมอง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-notes-panel,ui.shortcuts.panelNotes ui.common.notebookNoteQuick ui.html.tbNotesPanel,src/app.js:12402,,
+toggle-panel:outline,แผงสารบัญ (Navigation),list-ul,Ctrl+Alt+7,มี,panels,คำสั่ง,Navigation panel,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-outline-panel,ui.shortcuts.panelOutline ui.html.tbOutlinePanel,src/app.js:12402,,
+toggle-panel:planner,แผง: กระดานวางแผน,layout,Ctrl+Alt+P,มี,panels,คำสั่ง,Panel: planner,แผง | เมนู: มุมมอง › แผง | เรียกในโค้ด | แถบเครื่องมือ #tb-planner,ui.shortcuts.panelPlanner ui.panel.plannerTitle ui.html.tbPlanner,src/app.js:12402,,
+toggle-panel:planner-props,คุณสมบัติ Planner,clipboard,,มี,panels,คำสั่ง,คุณสมบัติ Planner,แผง,ui.panel.propsPlanner,src/app.js:12402,,
+toggle-panel:player,แผง: ทดลองเล่น,film,Ctrl+Alt+Y,มี,panels,คำสั่ง,Panel: play test,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-player,ui.shortcuts.panelPlayer ui.common.trialPlay ui.html.tbPlayer,src/app.js:12402,,
+toggle-panel:plugins,แผง: ปลั๊กอิน,extension,Ctrl+Alt+E,มี,panels,คำสั่ง,Panel: plugins,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-plugins,ui.shortcuts.panelPlugins ui.panel.pluginsTitle ui.menu.pluginsPanel ui.html.tbPlugins,src/app.js:12402,,
+toggle-panel:props,แผง: คุณสมบัติ,clipboard,Ctrl+Alt+I,มี,panels,คำสั่ง,Panel: properties,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-props-panel,ui.shortcuts.panelProps ui.common.props ui.html.tbPropsPanel,src/app.js:12402,,
+toggle-panel:record,แผง: บันทึกประจำวัน,note,Ctrl+Alt+J,มี,panels,คำสั่ง,Panel: journal,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-record,ui.shortcuts.panelRecord ui.common.journal ui.html.tbRecord,src/app.js:12402,,
+toggle-panel:search,แผงค้นหาทั้งโปรเจกต์,search,Ctrl+Alt+0,มี,panels,คำสั่ง,Project search panel,แผง | เมนู: มุมมอง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-search-panel,ui.shortcuts.panelSearch ui.panel.search ui.menu.searchProjectF2 ui.html.tbSearchPanel,src/app.js:12402,,
+toggle-panel:starter,แผง Story Starter,book-content,Ctrl+Alt+Z,มี,panels,คำสั่ง,Story Starter panel,แผง | เมนู: มุมมอง › แผง | เมนูคลิกขวา (main.js:597),ui.shortcuts.panelStarter ui.panel.starterTitle ui.menu.panelStoryStarter,src/app.js:12402,,
+toggle-panel:timeline,แผง: เส้นเวลา,history,Ctrl+Alt+T,มี,panels,คำสั่ง,Panel: timeline,ปุ่มลอย FAB | แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-timeline,ui.shortcuts.panelTimeline ui.fab.actTimeline ui.common.lineTime ui.html.tbTimeline,src/app.js:12402,,
+toggle-panel:tree,แผงโครงเรื่อง (Explorer),book-content,Ctrl+Alt+6,มี,panels,คำสั่ง,Project explorer panel,แผง | เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-tree-panel,ui.shortcuts.panelTree ui.common.project ui.menu.projectExplorer ui.html.tbTreePanel,src/app.js:12402,,
+sp-element:act-break,บทหนัง: ตอน,,Ctrl+8,,script,คำสั่ง,Script: act break,,shortcuts.spActBreak,src/app.js:12472,,
+sp-element:dialogue,บทหนัง: บทพูด,,Ctrl+5,,script,คำสั่ง,Script: dialogue,เรียกในโค้ด,shortcuts.spDialogue,src/app.js:12472,,
+sp-element:note,บทหนัง: โน้ต,,Ctrl+9,,script,คำสั่ง,Script: note,,shortcuts.spNote,src/app.js:12472,,
+sp-element:parenthetical,บทหนัง: วงเล็บ,,Ctrl+4,,script,คำสั่ง,Script: parenthetical,,shortcuts.spParenthetical,src/app.js:12472,[95] Per-element shortcuts — Ctrl+4..9 (Ctrl+1/2/3 จัดการใน handleCommand),
+sp-element:shot,บทหนัง: ช็อต,,Ctrl+7,,script,คำสั่ง,Script: shot,,shortcuts.spShot,src/app.js:12472,,
+sp-element:transition,บทหนัง: ทรานซิชัน,,Ctrl+6,,script,คำสั่ง,Script: transition,,shortcuts.spTransition,src/app.js:12472,,
+sp-find-error,ตรวจหาข้อผิดพลาดถัดไป,,Ctrl+Shift+U,,script,คำสั่ง,Find Next Error,เมนู: บท,shortcuts.findError ui.menu.checkFindErrorU,src/app.js:12568,,
+toggle-format,สลับโหมดเอกสาร,,Ctrl+Shift+M,,script,คำสั่ง,Toggle Mode,เมนู: รูปแบบ › โหมดเอกสาร | แถบเครื่องมือ #tb-mode,shortcuts.toggleFormat ui.menu.toggleModeNovelChapter ui.html.tbMode,src/app.js:12429,,
+fmtbar-align,แถบรูปแบบ: สลับชิดขอบบน/ล่าง,,Ctrl+Shift+;,,view,คำสั่ง,Format bar: snap to top / bottom edge,,ui.shortcuts.fmtbarAlign,src/app.js:12259,,
+fmtbar-here,เรียกแถบรูปแบบมาที่เคอร์เซอร์,,Ctrl+Shift+/,,view,คำสั่ง,Bring format bar to cursor,,ui.shortcuts.fmtbarHere,src/app.js:12256,[alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (Ctrl+Shift+/),
+fmtbar-lock,ล็อก/ปลดล็อกแถบรูปแบบ,,Ctrl+Shift+=,,view,คำสั่ง,Lock or unlock the format bar,,ui.shortcuts.fmtbarLock,src/app.js:12260,,
+fmtbar-opacity,วนความจางของแถบรูปแบบ (100/50/5%),,Ctrl+Shift+',,view,คำสั่ง,Cycle format bar opacity (100/50/5%),,ui.shortcuts.fmtbarOpacity,src/app.js:12258,[alpha.117] สภาพของแถบรูปแบบลอย — วางไว้ติดกันบนแป้นพิมพ์กับ Ctrl+Shift+/ ให้จำเป็นชุด,
+focus-mode,โหมดโฟกัส,expand,Ctrl+Shift+D,มี,view,คำสั่ง,Focus Mode,ปุ่มลอย FAB | เมนู: มุมมอง | เรียกในโค้ด | แถบเครื่องมือ #tb-focus,shortcuts.focusMode ui.fab.actFocus ui.menu.modeFocusD ui.html.tbFocus,src/app.js:12216,,
+line-numbers,แสดงเลขบรรทัด,list-ol,Ctrl+Alt+R,มี,view,คำสั่ง,Show line numbers,เมนู: รูปแบบ | เรียกในโค้ด | แถบเครื่องมือ #tb-linenum,shortcuts.lineNumbers ui.menu.showNumLineLeft ui.html.tbLinenum,src/app.js:12271,,
+panels-hide-all,ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน),panel-hide-all,Ctrl+\,ยังไม่มี,view,คำสั่ง,Hide all panels (canvas only),เมนู: มุมมอง › จัดพื้นที่ทำงาน,shortcuts.panelsHideAll ui.menu.hideShowPanelAll,src/app.js:12524,[alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType) Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ) [alpha.124 ข้อ 6] **สลับให้ตรงทิศ**: `[` ชี้ซ้าย = ซ่อนฝั่งซ้าย · `]` ชี้ขวา = ซ่อนฝั่งขวา เดิมกลับด้านกันมาตั้งแต่ .66r3 (เลือกตามคีย์ที่ว่าง ไม่ได้เลือกตามความหมาย) — ผู้ใช้กดผิดทุกครั้ง,ยังไม่มี svg/panel-hide-all.svg (ใช้ตัวสำรองใน glyphs.csv)
+panels-hide-left,ซ่อนแผงฝั่งซ้าย,panel-hide-left,Ctrl+Shift+[,ยังไม่มี,view,คำสั่ง,Hide left panels,เมนู: มุมมอง › จัดพื้นที่ทำงาน,shortcuts.panelsHideLeft ui.menu.hidePanelSideLeft,src/app.js:12526,,ยังไม่มี svg/panel-hide-left.svg (ใช้ตัวสำรองใน glyphs.csv)
+panels-hide-right,ซ่อนแผงฝั่งขวา,panel-hide-right,Ctrl+Shift+],ยังไม่มี,view,คำสั่ง,Hide right panels,เมนู: มุมมอง › จัดพื้นที่ทำงาน,shortcuts.panelsHideRight ui.menu.hidePanelSideRight,src/app.js:12525,คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งซ้าย),ยังไม่มี svg/panel-hide-right.svg (ใช้ตัวสำรองใน glyphs.csv)
+read-book,อ่านทั้งเล่ม,,Ctrl+Alt+Shift+R,,view,คำสั่ง,Read whole book,,ui.readbook.title,src/app.js:12211,,
+reading-mode,โหมดอ่าน,book-open,Ctrl+Shift+H,มี,view,คำสั่ง,Reading mode,เมนู: มุมมอง | แถบเครื่องมือ #tb-read,ui.shortcuts.readingMode ui.menu.modeReadFullScreen ui.html.tbRead,src/app.js:12270,,
+split-view,แยกหน้าจอ,dock-right,Ctrl+Shift+\,มี,view,คำสั่ง,Split View,เรียกในโค้ด | แถบเครื่องมือ #tb-split,shortcuts.splitView ui.html.tbSplit,src/app.js:12519,,
+typewriter,โหมดเครื่องพิมพ์ดีด,edit,Ctrl+Shift+T,มี,view,คำสั่ง,Typewriter Mode,เมนู: มุมมอง | เรียกในโค้ด | แถบเครื่องมือ #tb-typewriter,shortcuts.typewriter ui.menu.modeTypewriterT ui.html.tbTypewriter,src/app.js:12277,,
+workspace-menu,เวิร์กสเปซ (ชุดการจัดวางแผง),collection,Ctrl+Shift+Y,ยังไม่มี,view,คำสั่ง,Workspaces (panel layout sets),เมนู: มุมมอง › จัดพื้นที่ทำงาน,shortcuts.workspaceMenu ui.menu.workY,src/app.js:12527,เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง),ยังไม่มี svg/collection.svg (ใช้ตัวสำรองใน glyphs.csv)
+zoom:-1,ซูมหน้ากระดาษ: ย่อ,minus,Ctrl+-,มี,view,คำสั่ง,Page zoom: out,เมนู: รูปแบบ › ซูม | แถบเครื่องมือ #zoom-out,ui.shortcuts.zoomOut ui.menu.collapse ui.html.zoomOut,src/app.js:12419,[alpha.147] เดิมเป็นตัวดักคีย์แยกใน app.js (ตั้งใหม่ไม่ได้) · แป้นตัวเลข NumpadSubtract ยังดักแยกอยู่,
+zoom:0,ซูมหน้ากระดาษ: รีเซ็ต,reset,Ctrl+Shift+0,มี,view,คำสั่ง,Page zoom: reset,เมนู: รูปแบบ › ซูม | แถบเครื่องมือ #zoom-reset,ui.shortcuts.zoomReset ui.menu.resetZoom ui.html.zoomReset,src/app.js:12419,[alpha.147] Ctrl+0 เป็นของ fmt:paragraph จึงต้องเติม Shift · Numpad0 ยังดักแยกอยู่,
+zoom:1,ซูมหน้ากระดาษ: ขยาย,plus,Ctrl+=,มี,view,คำสั่ง,Page zoom: in,เมนู: รูปแบบ › ซูม | แถบเครื่องมือ #zoom-in,ui.shortcuts.zoomIn ui.menu.expand ui.html.zoomIn,src/app.js:12419,[alpha.147] เดิมเป็นตัวดักคีย์แยกใน app.js · Ctrl+Shift+= เป็นของ fmtbar-lock · แป้นตัวเลข NumpadAdd ยังดักแยกอยู่,
+scratchpad,กระดาษทด,note,,มี,write,คำสั่ง,Scratchpad,ปุ่มลอย FAB,ui.fab.actNote,src/app.js:12297,,
+about,เกี่ยวกับ Killian 2,,,,,คำสั่ง,เกี่ยวกับ Killian 2,เมนู: ช่วยเหลือ,ui.common.killian,src/app.js:12431,,
+ai-analyzer,AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ),brain,,มี,,คำสั่ง,AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ),เมนู: มุมมอง | เรียกในโค้ด | แถบเครื่องมือ #tb-ai-analyzer,ui.menu.aIAnalyzePaceStory ui.html.tbAiAnalyzer,src/app.js:12223,,
+ai-assistant,ผู้ช่วยเขียน (Expand/Summarize/Rewrite)…,bot,,มี,,คำสั่ง,ผู้ช่วยเขียน (Expand/Summarize/Rewrite)…,เมนูคลิกขวา (main.js:599) | แถบเครื่องมือ #tb-ai,ui.menu.assistantWriteExpandSummarize ui.html.tbAi,src/app.js:12529,,
+ai-chat,,,,,,คำสั่ง,,,,src/app.js:12536,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+ai-chat-dialog,แชทกับเรื่องของคุณ (กล่องเดิม)…,,,,,คำสั่ง,แชทกับเรื่องของคุณ (กล่องเดิม)…,เมนูคลิกขวา (main.js:604),ui.menu.storyYoursDialogPrev,src/app.js:12545,,
+ai-chat-new,เซสชันแชทใหม่,plus,,มี,,คำสั่ง,เซสชันแชทใหม่,เมนูคลิกขวา (main.js:594),ui.menu.sessionNew,src/app.js:12543,,
+ai-chat-toggle,AI ผู้ช่วยเขียน (กดซ้ำ = ปิดแผง),chat,,มี,,คำสั่ง,AI writing assistant (press again to close),เรียกในโค้ด | แถบเครื่องมือ #tb-ai-chat,ui.html.tbAiChat,src/app.js:12539,,
+ai-consistency,ตรวจสอบความสม่ำเสมอของตัวละคร…,,,,,คำสั่ง,ตรวจสอบความสม่ำเสมอของตัวละคร…,เมนูคลิกขวา (main.js:602),ui.menu.checkAlwaysCharacter,src/app.js:12532,,
+ai-dialogue,สร้างบทสนทนา…,,,,,คำสั่ง,สร้างบทสนทนา…,เมนูคลิกขวา (main.js:601),ui.menu.newDialogue,src/app.js:12531,,
+ai-plot,ตรวจสอบ Plot Hole…,,,,,คำสั่ง,ตรวจสอบ Plot Hole…,เมนูคลิกขวา (main.js:600),ui.menu.checkPlotHole,src/app.js:12530,,
+ai-settings,ตั้งค่า AI…,,,,,คำสั่ง,ตั้งค่า AI…,เมนู: ไฟล์ | เมนูคลิกขวา (main.js:589) | เรียกในโค้ด,ui.menu.settingsAI ui.menu.settingsAIProviderCredential,src/app.js:12384,,
+ai-summary,สรุปเนื้อหาโปรเจกต์…,,,,,คำสั่ง,สรุปเนื้อหาโปรเจกต์…,เมนูคลิกขวา (main.js:606),ui.menu.summaryBodyProject,src/app.js:12385,,
+ai-title,แนะนำชื่อเรื่อง…,,,,,คำสั่ง,แนะนำชื่อเรื่อง…,เมนูคลิกขวา (main.js:607),ui.menu.suggestTitle,src/app.js:12386,,
+ai-world,สร้างโลก (Worldbuilding)…,,,,,คำสั่ง,สร้างโลก (Worldbuilding)…,เมนูคลิกขวา (main.js:603),ui.menu.newWorldWorldbuilding,src/app.js:12534,,
+all-notes,ดูโน้ตทั้งหมด…,,,,,คำสั่ง,ดูโน้ตทั้งหมด…,เมนู: แก้ไข,ui.menu.viewNoteAll,src/app.js:12395,,
+auto-sync,,,,,,คำสั่ง,,,,src/app.js:12552,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+auto-sync:false,,,,,,คำสั่ง,,เรียกในโค้ด,,src/app.js:12552,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+auto-sync:true,,,,,,คำสั่ง,,เรียกในโค้ด,,src/app.js:12552,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+books,จัดการเล่มและฉบับร่าง (Books),,,,,คำสั่ง,จัดการเล่มและฉบับร่าง (Books),เมนู: มุมมอง,ui.menu.manageBookDraftBooks,src/app.js:12208,,
+branch-sync,สร้างทางเลือกจาก [ข้อความ] ในฉากนี้,,,,,คำสั่ง,สร้างทางเลือกจาก [ข้อความ] ในฉากนี้,เมนู: มุมมอง,ui.menu.newChoiceTextScene,src/app.js:12292,,
+branching,ผังเรื่องแตกสาย (Branch Tree),,,,,คำสั่ง,ผังเรื่องแตกสาย (Branch Tree),เมนู: มุมมอง,ui.menu.graphStoryBreakBranch,src/app.js:12291,,
+changelog,บันทึกการเปลี่ยนแปลง (Changelog),,,,,คำสั่ง,บันทึกการเปลี่ยนแปลง (Changelog),เมนู: ช่วยเหลือ,ui.menu.saveChangeChangelog,src/app.js:12139,,
+chapters,,,,,,คำสั่ง,,,,src/app.js:12210,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+char-map,แผนที่อักขระพิเศษ…,font,,ยังไม่มี,,คำสั่ง,แผนที่อักขระพิเศษ…,เมนู: มุมมอง,ui.menu.mapChar,src/app.js:12510,,ยังไม่มี svg/font.svg (ใช้ตัวสำรองใน glyphs.csv)
+check-update,ตรวจหาอัปเดต…,,,,,คำสั่ง,Check for updates…,เมนู: ช่วยเหลือ,ui.menu.checkUpdate,src/app.js:12433,,
+comments,คอมเมนต์ในฉากนี้ (แผง),chat,,มี,,คำสั่ง,คอมเมนต์ในฉากนี้ (แผง),เมนู: แก้ไข,ui.menu.commentScenePanel,src/app.js:12398,,
+confirm-quit,,,,,,คำสั่ง,,,,src/app.js:12138,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+custom-status,จัดการสถานะฉาก…,,,,,คำสั่ง,จัดการสถานะฉาก…,เมนู: ไฟล์,ui.menu.manageStatusScene,src/app.js:12392,,
+dashboard,แดชบอร์ด,,,,,คำสั่ง,แดชบอร์ด,เมนู: มุมมอง,ui.common.dashboard,src/app.js:12207,,
+export-draft,,,,,,คำสั่ง,,,,src/app.js:12418,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-fdx,,,,,,คำสั่ง,,,,src/app.js:12575,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-json,,,,,,คำสั่ง,,,,src/app.js:12300,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-language-csv,ส่งออกภาษาเป็น CSV (key · ไทย · อังกฤษ)…,globe,,มี,,คำสั่ง,ส่งออกภาษาเป็น CSV (key · ไทย · อังกฤษ)…,เมนู: เครื่องมือ,ui.menu.exportLangCSVKey,src/app.js:12220,,
+export-panel-layout,ส่งออกการจัดวางแผง (JSON)…,export,,ยังไม่มี,,คำสั่ง,ส่งออกการจัดวางแผง (JSON)…,เมนู: มุมมอง › แผง,ui.menu.exportLayoutPanelJSON,src/app.js:12406,,ยังไม่มี svg/export.svg (ใช้ตัวสำรองใน glyphs.csv)
+export-pdf,,,,,,คำสั่ง,,,,src/app.js:12175,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-pdf-builtin,,,,,,คำสั่ง,,,,src/app.js:12587,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-rtf,,,,,,คำสั่ง,,,,src/app.js:12576,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-watermark,,,,,,คำสั่ง,,,,src/app.js:12577,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+export-zip,,,,,,คำสั่ง,,,,src/app.js:12299,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+floorplan,ผังพื้นที่ (Floor Plan),,,,,คำสั่ง,ผังพื้นที่ (Floor Plan),เมนู: มุมมอง,ui.menu.graphAreaFloorPlan,src/app.js:12295,,
+fmt,,,,,,คำสั่ง,,เมนู: รูปแบบ,,src/app.js:12179,,เมนูส่ง argument แบบไดนามิก (รายการเปลี่ยนตามข้อมูล) · ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+fmt:code,บล็อกโค้ด,,,,,คำสั่ง,บล็อกโค้ด,เมนู: รูปแบบ,ui.menu.blockCode,src/app.js:12179,,
+fmt:hr,แทรกเส้นคั่น (---),,,,,คำสั่ง,แทรกเส้นคั่น (---),เมนู: รูปแบบ,ui.menu.insertLine,src/app.js:12179,,
+fmt:quote,คำพูดยกมา,,,,,คำสั่ง,คำพูดยกมา,เมนู: รูปแบบ,ui.menu.wordSpeakLift,src/app.js:12179,,
+fmt:sub,ตัวห้อย,subscript,Ctrl+Alt+-,มี,,คำสั่ง,Subscript,แถบเครื่องมือ #tb-sub,shortcuts.subscript ui.html.tbSub,src/app.js:12179,,
+fmt:sup,ตัวยก,superscript,Ctrl+Alt+=,มี,,คำสั่ง,Superscript,แถบเครื่องมือ #tb-sup,shortcuts.superscript ui.html.tbSup,src/app.js:12179,[alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เลียนแบบ Word (Ctrl+Shift+= / Ctrl+=) แต่ต้องเติม Alt เพราะตัวดักซูมหน้ากระดาษกิน Ctrl+= / Ctrl+- ไปแล้วโดยไม่ดูปุ่ม Shift (มันเช็คแค่ Alt),
+gallery-board,กระดานอารมณ์ (Mood Board) — เปิดเป็นแผงข้าง ๆ แล้วลากรูปมาวางได้,palette,,ยังไม่มี,,คำสั่ง,กระดานอารมณ์ (Mood Board) — เปิดเป็นแผงข้าง ๆ แล้วลากรูปมาวางได้,เมนู: มุมมอง › คลังรูปภาพ (Gallery) | เรียกในโค้ด,ui.menu.boardMoodMoodBoard,src/app.js:12203,,ยังไม่มี svg/palette.svg (ใช้ตัวสำรองใน glyphs.csv)
+gallery-dups,หารูปซ้ำในคลัง,search,,มี,,คำสั่ง,หารูปซ้ำในคลัง,เมนู: มุมมอง › คลังรูปภาพ (Gallery),ui.common.findImageDupLibrary,src/app.js:12204,,
+gallery-export-used,ส่งออกเฉพาะรูปที่ถูกใช้จริง…,export,,ยังไม่มี,,คำสั่ง,ส่งออกเฉพาะรูปที่ถูกใช้จริง…,เมนู: มุมมอง › คลังรูปภาพ (Gallery),ui.common.exportOnlyImageUse,src/app.js:12204,,ยังไม่มี svg/export.svg (ใช้ตัวสำรองใน glyphs.csv)
+gallery-new-album,＋ สร้างอัลบั้มใหม่…,,,,,คำสั่ง,＋ สร้างอัลบั้มใหม่…,เมนู: มุมมอง › คลังรูปภาพ (Gallery),ui.common.newAlbumNew,src/app.js:12203,,
+gallery-unused,รูปที่ยังไม่ถูกใช้,broom,,ยังไม่มี,,คำสั่ง,รูปที่ยังไม่ถูกใช้,เมนู: มุมมอง › คลังรูปภาพ (Gallery) | เรียกในโค้ด,ui.menu.imageNotUse,src/app.js:12203,,ยังไม่มี svg/broom.svg (ใช้ตัวสำรองใน glyphs.csv)
+goto-page:1,ไปหน้าแรก,skip-previous,,ยังไม่มี,,คำสั่ง,ไปหน้าแรก,เมนู: บท | เรียกในโค้ด,ui.menu.pageFirst,src/app.js:12566,,ยังไม่มี svg/skip-previous.svg (ใช้ตัวสำรองใน glyphs.csv)
+goto:page,ไปที่หน้า…,,,,,คำสั่ง,ไปที่หน้า…,เมนู: บท,ui.menu.page,src/app.js:12565,,
+goto:scene,ไปที่ฉาก…,,,,,คำสั่ง,ไปที่ฉาก…,เมนู: บท,ui.menu.scene,src/app.js:12565,,
+home,หน้าแรก (Home),home,,มี,,คำสั่ง,หน้าแรก (Home),เมนู: มุมมอง,ui.menu.pageFirstHome,src/app.js:12417,,
+import-language-csv,นำเข้าภาษาจาก CSV…,globe,,มี,,คำสั่ง,นำเข้าภาษาจาก CSV…,เมนู: เครื่องมือ,ui.menu.importLangCSV,src/app.js:12221,,
+import-script,นำเข้าบทภาพยนตร์… (Fountain · FDX · Celtx · Fade In · Adobe Story),,,,,คำสั่ง,นำเข้าบทภาพยนตร์… (Fountain · FDX · Celtx · Fade In · Adobe Story),เมนู: ไฟล์,ui.menu.importScreenplayFountainFDX,src/app.js:12305,,
+insert-shortcode,แทรกโค้ดสั้น…,,,,,คำสั่ง,Insert shortcode…,เมนู: รูปแบบ,ui.menu.insertShortcode,src/app.js:12499,,
+lang-fonts,ฟอนต์ตามภาษา (ไทย/ละติน/อื่น ๆ)…,font,,ยังไม่มี,,คำสั่ง,ฟอนต์ตามภาษา (ไทย/ละติน/อื่น ๆ)…,เมนู: ไฟล์,ui.menu.fontLangOther,src/app.js:12583,,ยังไม่มี svg/font.svg (ใช้ตัวสำรองใน glyphs.csv)
+maps,แผนที่ (Maps),,,,,คำสั่ง,แผนที่ (Maps),เมนู: มุมมอง,ui.menu.mapMaps,src/app.js:12213,,
+markdown-codes,ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …),eye,,มี,,คำสั่ง,ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …),เมนู: รูปแบบ | เรียกในโค้ด | แถบเครื่องมือ #tb-md-codes,ui.menu.hidePageLineShot ui.html.tbMdCodes,src/app.js:12225,,
+network,Story Network (แผนผังความสัมพันธ์),,,,,คำสั่ง,Story Network (แผนผังความสัมพันธ์),เมนู: มุมมอง,ui.menu.storyNetworkGraphRelation,src/app.js:12214,,
+new-entity,,,,,,คำสั่ง,,,,src/app.js:12243,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+open-project-path,,,,,,คำสั่ง,,เมนูคลิกขวา (main.js:241),,src/app.js:12142,,เมนูส่ง argument แบบไดนามิก (รายการเปลี่ยนตามข้อมูล) · ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+page-guides,เส้นบอกระยะขอบกระดาษ,,,,,คำสั่ง,เส้นบอกระยะขอบกระดาษ,เมนู: รูปแบบ › มุมมองหน้ากระดาษ,ui.menu.pageGuides,src/app.js:12557,,
+page-headers,หัวกระดาษทุกหน้า (Page Headers)…,page-header,,ยังไม่มี,,คำสั่ง,หัวกระดาษทุกหน้า (Page Headers)…,เมนู: ไฟล์ | เมนู: บท,ui.menu.headPaperAllPage,src/app.js:12586,,ยังไม่มี svg/page-header.svg (ใช้ตัวสำรองใน glyphs.csv)
+page-numbers,เลขหน้า (ชิดขวาบนกระดาษ),,,,,คำสั่ง,เลขหน้า (ชิดขวาบนกระดาษ),เมนู: บท,ui.menu.pageNumRightTopPaper,src/app.js:12580,,
+page-setup,หน้ากระดาษ · ระยะขอบ · รูปแบบบท…,ruler,,ยังไม่มี,,คำสั่ง,หน้ากระดาษ · ระยะขอบ · รูปแบบบท…,เมนู: ไฟล์ | เมนู: รูปแบบ | เมนู: บท › ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ) | เมนู: บท,ui.menu.pagePaperGapMargin ui.menu.pagePaperGapMargin2 ui.menu.setPrintBigLine,src/app.js:12516,,ยังไม่มี svg/ruler.svg (ใช้ตัวสำรองใน glyphs.csv)
+panel-system,จัดการแผง (แสดง/ซ่อน)…,layout,,มี,,คำสั่ง,จัดการแผง (แสดง/ซ่อน)…,เมนู: มุมมอง › แผง | แถบเครื่องมือ #tb-panels,ui.menu.managePanelShowHide ui.html.tbPanels,src/app.js:12522,,
+planner,Planner (กระดานวางแผน),,,,,คำสั่ง,Planner (กระดานวางแผน),เมนู: มุมมอง,ui.menu.plannerBoardPlanner,src/app.js:12215,,
+player-history,ประวัติการตัดสินใจ…,,,,,คำสั่ง,ประวัติการตัดสินใจ…,เมนู: แก้ไข,ui.menu.historyDecide,src/app.js:12394,,
+player-mode,ทดลองเล่นเรื่องแตกสาย (Player Mode),play,,ยังไม่มี,,คำสั่ง,ทดลองเล่นเรื่องแตกสาย (Player Mode),เมนู: มุมมอง,ui.menu.trialPlayStoryBreak,src/app.js:12294,,ยังไม่มี svg/play.svg (ใช้ตัวสำรองใน glyphs.csv)
+plugin:k2test:hello,,,,,,คำสั่ง,,เรียกในโค้ด,,,,ไม่มี case ใน handleCommand · ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+project-setup,ข้อมูลผลงาน (ผู้เขียน · ตัวแทน · ลิขสิทธิ์)…,film,,มี,,คำสั่ง,ข้อมูลผลงาน (ผู้เขียน · ตัวแทน · ลิขสิทธิ์)…,เมนู: ไฟล์,ui.menu.dataResultTaskAuthor,src/app.js:12514,,
+prose-indent,,,,,,คำสั่ง,,,,src/app.js:12563,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+prose-setup,รูปแบบนิยาย (ย่อหน้า · ช่วงบรรทัด · หัวข้อ)…,book-open,,มี,,คำสั่ง,รูปแบบนิยาย (ย่อหน้า · ช่วงบรรทัด · หัวข้อ)…,เมนู: รูปแบบ,ui.menu.formatNovelParaRange,src/app.js:12469,,
+remove-elements,ลบ element ตามประเภท…,broom,,ยังไม่มี,,คำสั่ง,ลบ element ตามประเภท…,เมนู: มุมมอง,ui.menu.delElementType,src/app.js:12509,,ยังไม่มี svg/broom.svg (ใช้ตัวสำรองใน glyphs.csv)
+reset-panels,รีเซ็ตการจัดวางแผงทั้งหมด,,,,,คำสั่ง,รีเซ็ตการจัดวางแผงทั้งหมด,เมนู: มุมมอง › แผง,ui.menu.resetLayoutPanelAll,src/app.js:12403,,
+revert,กลับไปเวอร์ชันล่าสุด (Revert),return,,ยังไม่มี,,คำสั่ง,กลับไปเวอร์ชันล่าสุด (Revert),เมนู: ไฟล์,ui.menu.backVersionLatestRevert,src/app.js:12508,,ยังไม่มี svg/return.svg (ใช้ตัวสำรองใน glyphs.csv)
+roster,หน้ารายชื่อตัวละคร (Cast of Characters)…,mask,,ยังไม่มี,,คำสั่ง,หน้ารายชื่อตัวละคร (Cast of Characters)…,เมนู: บท | เมนู: มุมมอง,ui.menu.pageListCharacterCast,src/app.js:12512,,ยังไม่มี svg/mask.svg (ใช้ตัวสำรองใน glyphs.csv)
+scene-numbers,เลขฉาก (ข้างหัวฉากทั้งสองฝั่ง),,,,,คำสั่ง,เลขฉาก (ข้างหัวฉากทั้งสองฝั่ง),เมนู: บท,ui.menu.numSceneHeadScene,src/app.js:12579,,
+set-format,,,,,,คำสั่ง,,,,src/app.js:12430,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+set-format:prose,นิยาย,book-open,,มี,,คำสั่ง,นิยาย,เมนู: รูปแบบ › โหมดเอกสาร,ui.common.novel,src/app.js:12430,,
+set-format:screenplay,บทหนัง,film,,มี,,คำสั่ง,บทหนัง,เมนู: รูปแบบ › โหมดเอกสาร,ui.menu.chapterFilm,src/app.js:12430,,
+show-log,บันทึกการทำงานของโปรแกรม (Log)…,,,,,คำสั่ง,บันทึกการทำงานของโปรแกรม (Log)…,เมนู: ช่วยเหลือ,ui.menu.saveRunAppLog,src/app.js:12140,,
+show-panel,,,,,,คำสั่ง,,,,src/app.js:12399,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+smart-manage,จัดการ SmartType (ลบคำที่จำผิด)…,brain,,มี,,คำสั่ง,จัดการ SmartType (ลบคำที่จำผิด)…,เมนู: บท,ui.menu.manageSmartTypeDelWord,src/app.js:12582,,
+sp-auto-capitalize,แก้ตัวแรกของประโยคเป็นตัวใหญ่ให้อัตโนมัติ,,,,,คำสั่ง,แก้ตัวแรกของประโยคเป็นตัวใหญ่ให้อัตโนมัติ,เมนู: บท › ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ),ui.menu.editItemFirstSentence,src/app.js:12413,,
+sp-auto-correct-i,แก้ i เดี่ยว ๆ เป็น I ให้อัตโนมัติ,,,,,คำสั่ง,แก้ i เดี่ยว ๆ เป็น I ให้อัตโนมัติ,เมนู: บท › ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ),ui.menu.editIIAuto,src/app.js:12414,,
+sp-check-all,ตรวจทั้งบท (รายการข้อผิดพลาด)…,,,,,คำสั่ง,ตรวจทั้งบท (รายการข้อผิดพลาด)…,เมนู: บท,ui.menu.checkChapterListError,src/app.js:12569,,
+sp-check-toggle,ตรวจก่อนพิมพ์/ส่งออก,,,,,คำสั่ง,ตรวจก่อนพิมพ์/ส่งออก,เมนู: บท,ui.menu.checkBeforePrintExport,src/app.js:12570,,
+sp-compare,เปรียบเทียบบท / สคริปต์…,chart,,มี,,คำสั่ง,เปรียบเทียบบท / สคริปต์…,เมนู: เครื่องมือ,ui.menu.compareChapter,src/app.js:12353,,
+sp-continued,ข้อความต่อเนื่อง (CONTINUED · MORE · cont'd),,,,,คำสั่ง,ข้อความต่อเนื่อง (CONTINUED · MORE · cont'd),เมนู: บท,ui.menu.textContCONTINUEDMORE,src/app.js:12560,,
+sp-element,,,,,,คำสั่ง,,,,src/app.js:12472,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+sp-element-caps,,,,,,คำสั่ง,,เมนู: บท › ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ) › บังคับตัวพิมพ์ใหญ่เฉพาะชนิด,,src/app.js:12412,,เมนูส่ง argument แบบไดนามิก (รายการเปลี่ยนตามข้อมูล) · ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+sp-extension,ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)…,,,,,คำสั่ง,ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)…,เมนู: บท,ui.menu.partNameVO,src/app.js:12581,,
+sp-force-case,บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน),,,,,คำสั่ง,บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน),เมนู: บท › ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ),ui.menu.forcePrintBigFormat,src/app.js:12410,,
+sp-report,,,,,,คำสั่ง,,,,src/app.js:12564,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+sp-report:character,รายงานตัวละคร (Character Report)…,group,,ยังไม่มี,,คำสั่ง,รายงานตัวละคร (Character Report)…,เมนูคลิกขวา (main.js:232),ui.menu.reportCharacterReport,src/app.js:12564,,ยังไม่มี svg/group.svg (ใช้ตัวสำรองใน glyphs.csv)
+sp-report:chart,กราฟบทพูดต่อหน้า (Dialogue Chart)…,chart,,มี,,คำสั่ง,กราฟบทพูดต่อหน้า (Dialogue Chart)…,เมนูคลิกขวา (main.js:232),ui.menu.graphDialogueNextPage,src/app.js:12564,,
+sp-report:location,รายงานสถานที่ (Location Report)…,map,,มี,,คำสั่ง,รายงานสถานที่ (Location Report)…,เมนูคลิกขวา (main.js:232),ui.menu.reportPlaceLocationReport,src/app.js:12564,,
+sp-show-format,แสดงรูปแบบ (เส้นขอบ element + เครื่องหมายจบบรรทัด),,,,,คำสั่ง,แสดงรูปแบบ (เส้นขอบ element + เครื่องหมายจบบรรทัด),เมนู: บท,ui.menu.showFormatLineMargin,src/app.js:12558,,
+sp-thai-font,,,,,,คำสั่ง,,,,src/app.js:12562,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+sp-view,,,,,,คำสั่ง,,,,src/app.js:12555,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+sp-view:draft,ร่าง — ข้อความล้วน (Draft),,,,,คำสั่ง,ร่าง — ข้อความล้วน (Draft),เมนู: รูปแบบ › มุมมองหน้ากระดาษ | เมนู: บท › มุมมองบท,ui.common.draftTextDraft,src/app.js:12555,,
+sp-view:layout,จัดหน้า — เห็นหน้าจริง (Layout),,,,,คำสั่ง,จัดหน้า — เห็นหน้าจริง (Layout),เมนู: รูปแบบ › มุมมองหน้ากระดาษ | เมนู: บท › มุมมองบท,ui.common.arrangePageSeePage,src/app.js:12555,,
+sp-view:normal,ปกติ (หน้ากระดาษ),,,,,คำสั่ง,ปกติ (หน้ากระดาษ),เมนู: รูปแบบ › มุมมองหน้ากระดาษ | เมนู: บท › มุมมองบท,ui.common.normalPagePaper,src/app.js:12555,,
+sp-view:overview1,ภาพรวม 1px/ตัวอักษร,,,,,คำสั่ง,ภาพรวม 1px/ตัวอักษร,เมนู: รูปแบบ › มุมมองหน้ากระดาษ | เมนู: บท › มุมมองบท,ui.common.overviewPxChar,src/app.js:12555,,
+sp-view:overview4,ภาพรวม 4px/ตัวอักษร,,,,,คำสั่ง,ภาพรวม 4px/ตัวอักษร,เมนู: รูปแบบ › มุมมองหน้ากระดาษ | เมนู: บท › มุมมองบท,ui.common.overviewPxChar2,src/app.js:12555,,
+sp-view:side,เรียงหน้าคู่ (Side-by-Side),,,,,คำสั่ง,เรียงหน้าคู่ (Side-by-Side),เมนู: รูปแบบ › มุมมองหน้ากระดาษ | เมนู: บท › มุมมองบท,ui.common.pagePairSideBy,src/app.js:12555,,
+split-add,,,,,,คำสั่ง,,,,src/app.js:12520,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+split-close,ยกเลิกแยกหน้าจอ,,,,,คำสั่ง,ยกเลิกแยกหน้าจอ,เมนู: มุมมอง › แยกหน้าจอ (Split View),ui.menu.cancelSplitPageScreen,src/app.js:12521,,
+split-view:down,แยกบน-ล่าง,,,,,คำสั่ง,แยกบน-ล่าง,เมนู: มุมมอง › แยกหน้าจอ (Split View),ui.menu.splitTopBottom,src/app.js:12519,,
+split-view:right,แยกซ้าย-ขวา,,,,,คำสั่ง,แยกซ้าย-ขวา,เมนู: มุมมอง › แยกหน้าจอ (Split View),ui.menu.splitLeftRight,src/app.js:12519,,
+story-starter,,,,,,คำสั่ง,,,,src/app.js:12547,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+story-starter-toggle,Story Starter (ตั้งต้นเรื่อง · เล่นเป็นตอนกับ AI),book-open,,มี,,คำสั่ง,Story Starter — set a story up and play it out with AI,เรียกในโค้ด | แถบเครื่องมือ #tb-starter,ui.html.tbStarter,src/app.js:12548,,
+sync-scene-meta,ซิงก์คุณสมบัติฉากจากไฟล์ .md (แก้ไฟล์นอกโปรแกรมแล้วใช้),refresh,,ยังไม่มี,,คำสั่ง,ซิงก์คุณสมบัติฉากจากไฟล์ .md (แก้ไฟล์นอกโปรแกรมแล้วใช้),เมนู: เครื่องมือ,ui.menu.propsSceneFileMd,src/app.js:12218,,ยังไม่มี svg/refresh.svg (ใช้ตัวสำรองใน glyphs.csv)
+test-run,,,,,,คำสั่ง,,,,src/app.js:12470,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+text-case,,,,,,คำสั่ง,,,,src/app.js:12190,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+text-case:aC,aLtErNaTe cAsE — สลับตัวเล็ก/ใหญ่,,,,,คำสั่ง,aLtErNaTe cAsE — สลับตัวเล็ก/ใหญ่,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.aLtErNaTeCAsEToggleItem,src/app.js:12190,,
+text-case:CC,Capitalize Case — ขึ้นต้นทุกคำ,,,,,คำสั่ง,Capitalize Case — ขึ้นต้นทุกคำ,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.capitalizeCaseAllWord,src/app.js:12190,,
+text-case:iC,iNVERSE cASE — กลับตัวเล็ก↔ใหญ่,,,,,คำสั่ง,iNVERSE cASE — กลับตัวเล็ก↔ใหญ่,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.iNVERSECASEBackItem,src/app.js:12190,,
+text-case:lc,lower case — ตัวเล็กทั้งหมด,,,,,คำสั่ง,lower case — ตัวเล็กทั้งหมด,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.lowerCaseItemSmall,src/app.js:12190,,
+text-case:SC,Sentence case — ขึ้นต้นประโยคตัวใหญ่,,,,,คำสั่ง,Sentence case — ขึ้นต้นประโยคตัวใหญ่,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.sentenceCaseSentenceItem,src/app.js:12190,,
+text-case:TC,Title Case — แบบชื่อเรื่อง,,,,,คำสั่ง,Title Case — แบบชื่อเรื่อง,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.titleCaseStyleTitle,src/app.js:12190,,
+text-case:UC,UPPER CASE — ตัวใหญ่ทั้งหมด,,,,,คำสั่ง,UPPER CASE — ตัวใหญ่ทั้งหมด,เมนู: รูปแบบ › รูปตัวพิมพ์ (Change Case),ui.textCase.uPPERCASEItemBig,src/app.js:12190,,
+timeline,เส้นเวลา (Timeline),,,,,คำสั่ง,เส้นเวลา (Timeline),เมนู: มุมมอง,ui.menu.lineTimeTimeline,src/app.js:12212,,
+title-pages,หน้าปก (Title Pages)…,file,,มี,,คำสั่ง,หน้าปก (Title Pages)…,เมนู: ไฟล์ | เมนู: บท,ui.menu.coverTitlePages,src/app.js:12585,,
+toggle-fab,ปุ่มลอยมุมขวาล่าง (FAB),,,,,คำสั่ง,ปุ่มลอยมุมขวาล่าง (FAB),เมนู: รูปแบบ | เรียกในโค้ด,ui.menu.btnFloatCornerRight,src/app.js:12262,,
+toggle-home-always,แสดงหน้าแรกเสมอเมื่อเริ่มโปรแกรม,,,,,คำสั่ง,แสดงหน้าแรกเสมอเมื่อเริ่มโปรแกรม,เมนู: มุมมอง,ui.menu.showPageFirstAlways,src/app.js:12416,,
+toggle-open-last,เปิดโปรเจกต์ล่าสุดเมื่อเริ่มโปรแกรม (ข้ามหน้าแรก),,,,,คำสั่ง,เปิดโปรเจกต์ล่าสุดเมื่อเริ่มโปรแกรม (ข้ามหน้าแรก),เมนู: ไฟล์,ui.menu.openProjectLatestStart,src/app.js:12415,,
+toggle-panel,,,,,,คำสั่ง,,,,src/app.js:12402,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+toggle-theme,,,,,,คำสั่ง,,เมนู: รูปแบบ › ธีมสี | เรียกในโค้ด,,src/app.js:12217,,เมนูส่ง argument แบบไดนามิก (รายการเปลี่ยนตามข้อมูล) · ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+toolbar-config,ปรับปุ่มบนแถบเครื่องมือ…,,,,,คำสั่ง,Customize toolbar…,เมนู: มุมมอง › แผง,ui.menu.toolbarCfg,src/app.js:12405,,
+type-sound,เสียงเครื่องพิมพ์ดีดขณะพิมพ์,volume,,ยังไม่มี,,คำสั่ง,เสียงเครื่องพิมพ์ดีดขณะพิมพ์,เมนู: มุมมอง,ui.menu.soundTypewriterPrint,src/app.js:12280,,ยังไม่มี svg/volume.svg (ใช้ตัวสำรองใน glyphs.csv)
+ui-scale,,,,,,คำสั่ง,,,,src/app.js:12424,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+ui-scale:-1,ย่อ UI,,,,,คำสั่ง,ย่อ UI,เมนู: มุมมอง › ขนาด UI (แถบเครื่องมือ/แผง/กล่อง),ui.menu.collapseUI,src/app.js:12424,,
+ui-scale:0,ขนาด UI ปกติ (100%),,,,,คำสั่ง,ขนาด UI ปกติ (100%),เมนู: มุมมอง › ขนาด UI (แถบเครื่องมือ/แผง/กล่อง),ui.menu.sizeUINormal,src/app.js:12424,,
+ui-scale:1,ขยาย UI,,,,,คำสั่ง,ขยาย UI,เมนู: มุมมอง › ขนาด UI (แถบเครื่องมือ/แผง/กล่อง),ui.menu.expandUI,src/app.js:12424,,
+ui:filter-archive-toggle,ซ่อน/แสดงฉากที่เก็บถาวร,archive,,มี,,ปุ่ม UI,Show/hide archived scenes,แถบเครื่องมือ #filter-archive-toggle,panel.archiveToggle,,,
+ui:find-close,ปิดแถบค้นหา,,,,,ปุ่ม UI,Close the find bar,แถบเครื่องมือ #find-close,ui.html.findClose,,,
+ui:find-next,ถัดไป,,,,,ปุ่ม UI,Next,แถบเครื่องมือ #find-next,toolbar.findNext,,,
+ui:find-prev,ก่อนหน้า,,,,,ปุ่ม UI,Previous,แถบเครื่องมือ #find-prev,toolbar.findPrev,,,
+ui:find-rep1,แทนที่,,,,,ปุ่ม UI,Replace,แถบเครื่องมือ #find-rep1,toolbar.replace,,,
+ui:find-repall,ทั้งหมด,,,,,ปุ่ม UI,Replace All,แถบเครื่องมือ #find-repall,toolbar.replaceAll,,,
+ui:open-btn,เปิดโปรเจกต์…,folder,,มี,,ปุ่ม UI,Open Project...,แถบเครื่องมือ #open-btn,app.openProject,,,ไม่พบคำสั่งนี้ในโค้ดแล้ว — ลบแถวได้ถ้าเลิกใช้จริง
+ui:search-all-btn,ค้นหาทั้งโปรเจกต์,search,,มี,,ปุ่ม UI,Search whole project,แถบเครื่องมือ #search-all-btn,ui.html.searchProjBtn,,,ไม่พบคำสั่งนี้ในโค้ดแล้ว — ลบแถวได้ถ้าเลิกใช้จริง
+ui:tb-color,สีตัวอักษร,,,,,ปุ่ม UI,Text colour,แถบเครื่องมือ #tb-color,ui.html.tbColor,,,
+ui:tb-indent,ย่อหน้าอัตโนมัติ (บรรทัดแรกของย่อหน้า),,,,,ปุ่ม UI,Automatic first-line indent,แถบเครื่องมือ #tb-indent,ui.html.tbIndent,,,
+ui:tb-plug,คำสั่งจากปลั๊กอิน,extension,,มี,,ปุ่ม UI,Commands from plugins,แถบเครื่องมือ #tb-plug,ui.html.tbPlug,,,
+ui:tb-quote,คำพูดยกมา,quote-left,,มี,,ปุ่ม UI,Block quote,แถบเครื่องมือ #tb-quote,ui.html.tbQuote,,,
+ui:tb-source,ดู Markdown ดิบของฉากนี้,code-alt,,มี,,ปุ่ม UI,View the raw Markdown of this scene,แถบเครื่องมือ #tb-source,ui.html.tbSource,,,
+ui:tb-sp-cont,ข้อความต่อเนื่องอัตโนมัติ — (CONTINUED) · CONTINUED: · (MORE) · ชื่อ+(cont'd),,,,,ปุ่ม UI,Automatic continuation text — (CONTINUED) · CONTINUED: · (MORE) · NAME (cont'd),แถบเครื่องมือ #tb-sp-cont,ui.html.tbSpCont,,,
+ui:tb-sp-ext,ส่วนเสริมท้ายชื่อตัวละคร (Extension),,,,,ปุ่ม UI,Character name extension (V.O. / O.S. / cont'd),แถบเครื่องมือ #tb-sp-ext,ui.html.tbSpExt,,,
+ui:tb-visual,เล่าด้วยภาพ (Visual telling) — สตอรีบอร์ดของฉากนี้,image,,มี,,ปุ่ม UI,Visual telling — the storyboard for this scene,แถบเครื่องมือ #tb-visual,ui.html.tbVisual,,,
+visual-tags,จัดการแท็บสี (Visual Tags)…,,,,,คำสั่ง,จัดการแท็บสี (Visual Tags)…,เมนู: ไฟล์,ui.menu.manageTabColorVisual,src/app.js:12393,,
+word-history,ตรวจหาคำซ้ำ · สถิติการใช้คำ (Word History)…,,,,,คำสั่ง,ตรวจหาคำซ้ำ · สถิติการใช้คำ (Word History)…,เมนู: เครื่องมือ | เรียกในโค้ด,ui.menu.checkFindWordDup,src/app.js:12461,,
+workspace,,,,,,คำสั่ง,,,,src/app.js:12528,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+zoom,,,,,,คำสั่ง,,,,src/app.js:12419,,ไม่มีป้ายชื่อ (คำสั่งภายใน / รายการไดนามิก)
+zoom:fit,พอดีความกว้างหน้ากระดาษ,,,,,คำสั่ง,พอดีความกว้างหน้ากระดาษ,เมนู: รูปแบบ › ซูม,ui.menu.fitWidePagePaper,src/app.js:12419,,

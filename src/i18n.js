@@ -162,11 +162,26 @@ export function tf(key, ...vals) {
  * @param {any[]} vals
  */
 export function formatMsg(tpl, vals) {
-  if (!vals || !vals.length) return String(tpl).replace(/\{\{|\}\}/g, (m) => m[0]);
-  return String(tpl).replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+  const s = withShortcutTokens(String(tpl));
+  if (!vals || !vals.length) return s.replace(/\{\{|\}\}/g, (m) => m[0]);
+  return s.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
     if (m === '{{' || m === '}}') return m[0];
     const v = vals[+d];
     return v == null ? '' : String(v);
+  });
+}
+
+// ───────── [alpha.147] คีย์ลัดในประโยค: `{sc:<คำสั่ง>}` ─────────
+// ไฟล์ภาษาห้ามพิมพ์ "Ctrl+Alt+S" ลงไปตรง ๆ — ผู้ใช้ตั้งคีย์ใหม่ได้ และบน mac ต้องเป็น ⌥⌘S
+// เขียน `กด {sc:save-all} เพื่อบันทึกทั้งหมด` แล้วโปรแกรมเติมคีย์จริงให้ตอนแสดง
+// (โมดูลนี้บริสุทธิ์ ไม่รู้จักตารางคีย์ลัด → app.js ลงทะเบียนตัวแปลงผ่าน setShortcutResolver)
+let _scResolver = null;
+/** @param {(commandId:string)=>string} fn  คืนข้อความคีย์ลัด ('' = คำสั่งนั้นไม่มีคีย์ลัด) */
+export function setShortcutResolver(fn) { _scResolver = typeof fn === 'function' ? fn : null; }
+function withShortcutTokens(s) {
+  if (!s.includes('{sc:')) return s;
+  return s.replace(/\{sc:([^}\s]+)\}/g, (m, id) => {
+    try { return _scResolver ? String(_scResolver(id) || '') : ''; } catch { return ''; }
   });
 }
 

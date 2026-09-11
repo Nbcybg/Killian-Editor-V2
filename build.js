@@ -35,7 +35,16 @@ syncChangelog();
 const CJS_MODULES = [
   ['src/history/history-data.js', 'history-data.cjs'],
   ['src/update/update-check.js', 'update-check.cjs'],
+  // [alpha.147] ทะเบียนคำสั่ง — main.js ต้องใช้คีย์ลัดชุดเดียวกับ renderer (accelerator ในเมนูระบบ)
+  ['src/generated/commands-data.js', 'commands-data.cjs'],
 ];
+
+// [alpha.147] icons/ (svg + commands.csv + glyphs.csv) → src/generated/commands-data.js
+// ต้องมาก่อน bundle เสมอ — แก้ CSV/วาง svg ใหม่แล้ว build ทีเดียวเห็นผล · CSV เขียนผิด = build ล้มพร้อมบอกแถว
+try {
+  const d = require('./tools/commands-data.cjs').writeCommandsData();
+  for (const w of d.warnings) console.log('  ⚠ ' + w);
+} catch (e) { console.error(e.message); process.exit(1); }
 
 const esbuild = require('esbuild');
 Promise.all([

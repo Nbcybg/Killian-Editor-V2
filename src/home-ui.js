@@ -4,6 +4,7 @@ import { $, el, state, setStatus, log, t as tr } from './core.js';
 import { activate, closeTab, loadProject, newProject } from './app.js';
 // [alpha.60r3 ข้อ 9] ปุ่มส่งออก/นำเข้าโปรเจกต์บนหน้าแรก
 import { exportProjectZip, importProjectZip } from './export-zip.js';
+import { initIcons } from './icons.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
 export const HOME_VIEWS = [
@@ -267,7 +268,10 @@ async function loadProjects(grid) {
     const { ok, broken } = await scanRecentProjects();
     if (!ok.length && !broken.length) {
       const empty = el('div', 'home-empty');
-      empty.textContent = t('ui.home.notHasProjectNew');   // กฎข้อ 11: ข้อความ ไม่ใช่ HTML
+      // [alpha.147] ค่าในไฟล์ภาษาเป็น HTML (<h2>…<p>…) มาตั้งแต่ยกข้อความออกจากโค้ด — textContent
+      // โชว์แท็กดิบ ๆ บนหน้าแรก · ไฟล์ภาษาเป็นของโปรแกรมเอง (เหมือนเทมเพลตกล่องตั้งค่า) จึงใส่เป็น HTML ได้
+      empty.innerHTML = t('ui.home.notHasProjectNew');
+      initIcons(empty);
       grid.append(empty);
       return;
     }
