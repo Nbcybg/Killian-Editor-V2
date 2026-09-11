@@ -143,7 +143,9 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
         // [alpha.84 ข้อ 2] อยู่ในบล็อกที่เยื้องมาแล้ว → บอก CSS ว่าต้องหักกลับกี่นิ้ว
         if (inBlock && Number.isFinite(b.ind)) d.style.setProperty('--k-pb-ind', b.ind + 'in');
         // [alpha.93 ข้อ 5] ที่ว่างท้ายหน้าที่เส้นนี้ปิด — CSS เอาไปกางเป็นก้นหน้าที่ยังว่าง
-        if (Number.isFinite(b.pad) && b.pad > 0.5) d.style.setProperty('--k-pb-pad', b.pad + 'px');
+        // [alpha.146] `Math.abs` — ค่า **ติดลบ** คือ "หน้านี้เนื้อล้น กล่องต้องหดกลืนส่วนเกิน"
+        // (เดิม `> 0.5` ทิ้งค่าติดลบเงียบ ๆ → ตัวชดเชยส่งค่ามาแล้วไม่มีอะไรเกิดขึ้น)
+        if (Number.isFinite(b.pad) && Math.abs(b.pad) > 0.5) d.style.setProperty('--k-pb-pad', b.pad + 'px');
         d.setAttribute('contenteditable', 'false');
         const lbl = document.createElement('span');
         lbl.className = 'sp-page-break-num';
@@ -223,7 +225,8 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
     let n = 0;
     els.forEach((e, i) => {
       const pad = Number(list[i] && list[i].pad);
-      e.style.setProperty('--k-pb-pad', (Number.isFinite(pad) && pad > 0.5 ? pad : 0) + 'px');
+      // [alpha.146] ค่าติดลบต้องผ่านไปถึง CSS (ดูคอมเมนต์ยาวที่ tuneProsePagePads)
+      e.style.setProperty('--k-pb-pad', (Number.isFinite(pad) && Math.abs(pad) > 0.5 ? pad : 0) + 'px');
       n++;
     });
     return n;

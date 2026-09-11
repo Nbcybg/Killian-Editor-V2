@@ -32,6 +32,18 @@
   unicode-range:U+0E00-0E7F, U+F700-F71F; }
 
 :root {
+  /* ══ [alpha.145] ★ ตาข่ายรองอักษรไทย — ต่อท้ายทุก font stack ในไฟล์นี้ ══
+     วัดจริงบนเครื่อง (แคนวาส 80px · ระยะจากท้องวรรณยุกต์ถึงหัวพยัญชนะของ `ท` + `่`
+     ยิ่งมากยิ่งลอย) — บทเรียนใหม่ที่ alpha.144 ยังไม่รู้:
+
+       ลูกโซ่ที่ลงท้ายด้วย monospace  → Chromium เลือก **Ayuthaya** ให้ = gap 27  (ลอย)
+       ลูกโซ่ที่ลงท้ายด้วย sans-serif → Chromium เลือก **Thonburi** ให้ = gap  6  (ปกติ)
+
+     ตัวเลือกสำรองของเบราว์เซอร์จึง **ขึ้นกับ generic family ท้ายสแตก** ไม่ใช่ค่าคงที่
+     → เอกสาร/แผงเดียวกันจึง "ลอยบ้างไม่ลอยบ้าง" ตามว่าชิ้นนั้นเป็นช่องโมโนสเปซหรือไม่
+     กติกา: **ห้ามมี font stack ไหนในไฟล์นี้ที่ปล่อยให้ไทยตกไปถึงตัวเลือกของเบราว์เซอร์**
+     (ด่านถาวร: test/thai-font-net.test.cjs อ่านไฟล์นี้แล้วฟ้องแถวที่ลืม) */
+  --thai-net:"Thonburi","Leelawadee UI","TH Sarabun New","Sarabun","Noto Sans Thai";
   --bg:#262624; --side:#1f1e1c; --bar:#30302d; --border:#3f3e3a;
   --fg:#e8e6df; --bright:#faf9f5; --dim:#98958b;
   --accent:#c15f3c; --accent-hi:#d97757; --link:#7aa8d8; --sel:#7a4a2e;
@@ -46,6 +58,21 @@
   --chip:#3d3a34;         /* พื้นป้ายชื่อ (mention / pill) */
   --danger-soft:#5a2b2b;  /* พื้นปุ่มอันตรายตอนชี้ */
   --canvas:#262624;       /* พื้นกระดานวาด (Planner) */
+  --void:#191816;         /* พื้นหลังใต้การ์ดแผง — ดูที่ช่องว่างระหว่างแผงเท่านั้น */
+
+  /* ══ [alpha.146] ★ สเกลรูปทรงของเปลือกโปรแกรม — มุมโค้งมีแค่ห้าขั้น ══
+     ก่อนหน้านี้มีมุมโค้งกระจายอยู่ 4/5/6/7/8/9/10/12px ปนกันในแผงเดียวกัน
+     → หน้าจอไม่มีจังหวะเดียว และปรับความโค้งทั้งแอปทีเดียวไม่ได้
+     กติกา: มุมโค้งของ "เปลือกโปรแกรม" ทุกตัวต้องอ้างสี่ตัวนี้ ห้ามเขียนเลข px ลงกฎ
+       --r-xs  ขีดเส้นเล็ก (หัวแถบเลื่อน · ไฮไลต์)
+       --r-sm  ปุ่ม · ช่องกรอก · แถวในรายการ · แท็บ
+       --r-md  การ์ด: แผง · แผงลอย · เมนู · แถบลอย
+       --r-lg  กล่องโต้ตอบ
+       --r-pill ป้ายทรงแคปซูล
+     --shell-gap = ช่องว่างระหว่างการ์ด **ต้องเท่าความกว้างของ .k-resize-handle**
+     (ที่จับปรับขนาดคือช่องว่างในตัว ไม่มีชิ้นสอง) */
+  --r-xs:3px; --r-sm:5px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  --shell-gap:5px;
 }
 
 /* ══ [alpha.137] ธีม "K2" — จานสีประจำโปรแกรม (ผู้ใช้กำหนดจากภาพจานสี) ══
@@ -65,6 +92,7 @@ body.theme-k2 {
   --chip:#452f5e;         /* พื้นป้ายชื่อ (mention / pill) */
   --danger-soft:#6d2740;  /* พื้นปุ่มอันตรายตอนชี้ */
   --canvas:#180e40;       /* พื้นกระดานวาด (Planner) */
+  --void:#150c36;         /* พื้นหลังใต้การ์ดแผง */
 }
 
 /* ══ [alpha.138] ธีม "K2 สว่าง" — จานสีเดียวกัน กลับเฉด ══
@@ -85,6 +113,7 @@ body.theme-k2-light {
   --chip:#e0d8f2;         /* พื้นป้ายชื่อ (mention / pill) */
   --danger-soft:#f2ccd6;  /* พื้นปุ่มอันตรายตอนชี้ */
   --canvas:#f8f6fc;       /* พื้นกระดานวาด (Planner) */
+  --void:#ded6f0;         /* พื้นหลังใต้การ์ดแผง */
 }
 * { box-sizing:border-box; }
 html,body { height:100%; margin:0; }
@@ -93,10 +122,10 @@ html,body { height:100%; margin:0; }
    ไม่เกี่ยวกับ --page-scale (ซูมหน้ากระดาษ) และไม่แตะ --ed-fs/--sp-fs (ฟอนต์เนื้อเรื่อง) */
 :root { --ui-scale:1; }
 body { display:flex; flex-direction:column; background:var(--bg); color:var(--fg);
-  font-family:"Segoe UI", "Leelawadee UI", "Noto Sans Thai", system-ui, sans-serif;
+  font-family:"Segoe UI", "Leelawadee UI", "Noto Sans Thai", system-ui, sans-serif, var(--thai-net);
   font-size:calc(var(--ui-fs, 14px) * var(--ui-scale, 1)); line-height:1.5; }
 button, select { font:inherit; color:var(--fg); background:var(--bar);
-  border:1px solid transparent; border-radius:6px; padding:4px 10px; cursor:pointer; }
+  border:1px solid transparent; border-radius:var(--r-sm); padding:4px 10px; cursor:pointer; }
 button:hover { background:var(--hover); }
 /* [alpha.81 ข้อ 4] รายการที่กางออกของ <select> ("แผง BIU ตัว dropdown เปลี่ยนสี")
    Chromium วาดรายการนั้นด้วยพื้น **ขาวของระบบ** เสมอ แต่ <option> สืบทอด color จาก <select>
@@ -117,7 +146,7 @@ select option:checked, select option:hover { background:var(--sel); color:var(--
   scrollbar-color:var(--border) transparent; }
 #toolbar > * { flex:none; }
 #toolbar::-webkit-scrollbar { height:6px; }
-#toolbar::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+#toolbar::-webkit-scrollbar-thumb { background:var(--border); border-radius:var(--r-xs); }
 #toolbar::-webkit-scrollbar-thumb:hover { background:var(--dim); }
 #toolbar::-webkit-scrollbar-track { background:transparent; }
 #toolbar .tb { min-width:32px; background:transparent; }
@@ -146,7 +175,7 @@ select option:checked, select option:hover { background:var(--sel); color:var(--
 .tb.tb-toggle.on::after { background:var(--accent-hi); border-color:var(--accent-hi);
   box-shadow:0 0 4px var(--accent-hi); }
 #tb-mode { -webkit-app-region:no-drag; background:var(--panel,var(--hover-soft)); color:var(--fg);
-  border:1px solid var(--border); border-radius:6px; padding:3px 10px; font-size:calc(12px * var(--ui-scale, 1));
+  border:1px solid var(--border); border-radius:var(--r-sm); padding:3px 10px; font-size:calc(12px * var(--ui-scale, 1));
   white-space:nowrap; cursor:pointer; }
 #tb-mode:hover { background:var(--sel); color:var(--bright); }
 #tb-style { background:var(--bg); border:1px solid var(--border); min-width:120px; }
@@ -154,6 +183,18 @@ select option:checked, select option:hover { background:var(--sel); color:var(--
 #main { flex:1; display:flex; min-height:0; }
 /* ---------- Panel System (Photoshop-style) — ทุกพื้นที่คือแผง ---------- */
 #app-root { flex:1; display:flex; min-height:0; min-width:0; overflow:hidden; }
+
+/* ══ [alpha.146] เปลือกแบบ "การ์ด" — รูปทรงตามธีม CBlack ของ Cinnamon ══
+   เดิมเปลือกโปรแกรมเป็นแผ่นตันแผ่นเดียว: แผงชนกันสนิท เส้นแบ่งคือขอบ 1px ด้านเดียวของเพื่อนบ้าน
+   CBlack วางรูปทรงคนละแบบ — **ทุกชิ้นเป็นกล่องที่มีขอบครบสี่ด้าน มุมโค้ง ลอยอยู่บนพื้นหลัง**
+   สายตาจึงแยกชิ้นออกจากกันด้วย "เส้น + ช่องว่าง" ไม่ใช่ด้วยการไล่เฉดพื้น (ธีมนั้นแบนสนิท)
+   ที่นี่ทำสามอย่าง — **ไม่แตะจานสี** (ผู้ใช้ย้ำว่าเอาแค่รูปทรง · --void = ค่าเดียวกับ --titlebar):
+     1. #app-root มีพื้น --void แล้วเว้นขอบ --shell-gap รอบนอก → การ์ดไม่ชนขอบหน้าต่าง
+     2. .k-panel / .k-tab-group ได้ขอบครบสี่ด้าน + มุม --r-md
+        (ช่องว่าง *ระหว่าง* การ์ดคือ .k-resize-handle 5px ที่มีอยู่แล้ว — ไม่ต้องเพิ่ม gap ซ้อน)
+     3. แผงที่อยู่ในกลุ่มแท็บไม่มีขอบของตัวเอง — กลุ่มแท็บเป็นการ์ด ตัวมันเป็นแค่เนื้อใน
+        (ไม่งั้นได้ขอบซ้อนขอบ มุมโค้งซ้อนมุมโค้ง) */
+#app-root { background:var(--void); padding:var(--shell-gap); }
 
 /* ---------- [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off) ----------
    หน้าต่างลูกใช้ index.html ก้อนเดียวกับหน้าต่างหลัก จึงมีของที่ไม่เกี่ยวติดมาทั้งชุด
@@ -168,6 +209,10 @@ body.panel-window #k-fab-menu,
 body.panel-window .k-min-tray { display:none !important; }
 body.panel-window #main { padding:0; }
 .k-panelwin { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; }
+/* [alpha.146] ในหน้าต่างที่ฉีกออกไป ขอบหน้าต่างเป็นของ OS จริง — การ์ดของเราจะกลายเป็น
+   ขอบซ้อนขอบ + มุมโค้งลอยอยู่ในกรอบเหลี่ยม จึงถอดรูปทรงการ์ดทิ้งทั้งหน้าต่าง */
+body.panel-window #app-root { padding:0; background:transparent; }
+body.panel-window .k-panel, body.panel-window .k-tab-group { border:0; border-radius:0; }
 .k-panelwin > .k-panel-body { flex:1; min-height:0; overflow:auto; }
 /* หัวแผงในหน้าต่างลูกเหลือไว้แค่ชื่อ (ปุ่ม ลอย/ผนึก/ปิด ไม่มีความหมายเมื่อมีแผงเดียว) */
 .k-panelwin > .k-panel-head { cursor:default; }
@@ -202,11 +247,11 @@ body.panel-window #main { padding:0; }
 .k-resize-handle:hover, body.k-resizing .k-resize-handle { background:var(--accent-hi); opacity:.55; }
 /* กลุ่มแท็บ */
 .k-tab-group { display:flex; flex-direction:column; min-width:0; min-height:0;
-  background:var(--side); border-right:1px solid var(--border); overflow:hidden; }
+  background:var(--side); border:1px solid var(--border); border-radius:var(--r-md); overflow:hidden; }
 .k-tab-bar { display:flex; gap:2px; padding:3px 4px 0; background:var(--side);
   border-bottom:1px solid var(--border); min-height:26px; align-items:center; overflow:hidden; }
 .k-tab { display:flex; align-items:center; gap:5px; padding:4px 9px; cursor:pointer;
-  border-radius:7px 7px 0 0; color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); white-space:nowrap;
+  border-radius:var(--r-sm) var(--r-sm) 0 0; color:var(--dim); font-size:calc(11.5px * var(--ui-scale, 1)); white-space:nowrap;
   max-width:150px; user-select:none; }
 .k-tab:hover { background:var(--hover-soft); color:var(--fg); }
 .k-tab.active { background:var(--bg); color:var(--bright); box-shadow:inset 0 0 0 2px var(--accent-hi); }
@@ -219,13 +264,24 @@ body.panel-window #main { padding:0; }
 /* แถบไอคอน (ย่อกลุ่มแท็บ) */
 .k-tab-group.icon-strip { flex:0 0 34px !important; }
 .k-tab-group.icon-strip .k-tab-bar { flex-direction:column; padding:4px 2px; align-items:stretch; }
-.k-tab-group.icon-strip .k-tab { max-width:none; justify-content:center; border-radius:6px; padding:6px 2px; }
+.k-tab-group.icon-strip .k-tab { max-width:none; justify-content:center; border-radius:var(--r-sm); padding:6px 2px; }
 .k-tab-group.icon-strip .k-tab-title { display:none; }
 .k-tab-group.icon-strip .k-tab-content { display:none; }
 .k-tab-group.icon-strip .k-strip-btn { margin:6px auto 0; }
 /* แผง */
 .k-panel { display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden;
-  background:var(--side); }
+  background:var(--side); border:1px solid var(--border); border-radius:var(--r-md); }
+/* แผงในกลุ่มแท็บ = เนื้อในของการ์ด ไม่ใช่การ์ดอีกใบ */
+.k-tab-content > .k-panel { border:0; border-radius:0; }
+/* [alpha.146] ช่องว่างระหว่างการ์ดปกติมาจาก .k-resize-handle (5px) — แต่แผงที่ปรับขนาดไม่ได้
+   (แถบเครื่องมือ · แถบสถานะ · .k-panel-fixed) **ไม่มีที่จับ** จึงไม่มีช่องว่างเลยและไปชนการ์ดข้าง ๆ
+   เว้นด้วย margin ได้อย่างปลอดภัยเฉพาะแผงกลุ่มนี้ เพราะมันเป็น flex:0 0 auto
+   (ขนาดมาจากเนื้อหา ไม่ใช่ flex-basis ที่ตัวลากปรับขนาดเขียนเป็น px — ใส่ margin ให้แผงพวกนั้น
+    จะทำให้เลขที่ JS วัดกับที่ JS เขียนเพี้ยนกันทีละนิดทุกครั้งที่ลาก) */
+.k-dock[data-dir="col"] > .k-panel.k-panel-fixed:not(:last-child)  { margin-bottom:var(--shell-gap); }
+.k-dock[data-dir="col"] > .k-panel.k-panel-fixed:not(:first-child) { margin-top:var(--shell-gap); }
+.k-dock[data-dir="row"] > .k-panel.k-panel-fixed:not(:last-child)  { margin-right:var(--shell-gap); }
+.k-dock[data-dir="row"] > .k-panel.k-panel-fixed:not(:first-child) { margin-left:var(--shell-gap); }
 .k-panel[data-panel-id="docs"] { background:var(--bg); }
 .k-panel-head { display:flex; align-items:center; gap:5px; padding:3px 4px 3px 7px;
   background:var(--side); border-bottom:1px solid var(--border); cursor:grab;
@@ -263,7 +319,7 @@ body.panel-window #main { padding:0; }
 /* 0.56a #6: แผงลอยที่ทับแถบหัวหน้าต่างเคยลากไม่ได้ — #titlebar เป็น -webkit-app-region:drag
    ซึ่ง OS คิดจาก "กรอบของ element" ไม่สนลำดับการซ้อน → ต้องเจาะ no-drag ให้แผงลอยเอง */
 .k-float-panel { position:fixed; z-index:66; display:flex; flex-direction:column;
-  background:var(--side); border:1px solid var(--border); border-radius:9px;
+  background:var(--side); border:1px solid var(--border); border-radius:var(--r-md);
   box-shadow:0 10px 34px rgba(0,0,0,.5); overflow:hidden;
   -webkit-app-region:no-drag; }
 .k-float-panel * { -webkit-app-region:no-drag; }
@@ -276,7 +332,7 @@ body.panel-window #main { padding:0; }
    ของระบบเก่า (.k-panel-floating) ที่เปิดให้ ระบบใหม่ใช้ .k-float-panel จึงถูกซ่อนตลอด */
 .k-float-panel > .k-panel-resize { display:block; z-index:2; }
 /* โซนปล่อยตอนลาก */
-.k-drop-zone { position:fixed; pointer-events:none; z-index:200; border-radius:5px;
+.k-drop-zone { position:fixed; pointer-events:none; z-index:200; border-radius:var(--r-sm);
   background:rgba(90,150,255,.22); border:2px solid #5f9fd9; }
 /* [alpha.66r3] สเปกแยกหน้าตาของ Drop Zone ตามสิ่งที่จะเกิดขึ้น — ผู้ใช้ต้อง "มั่นใจ" ก่อนปล่อย
    แทรก (insert) = ครึ่งพื้นที่ + เส้นหนาสีน้ำเงินตรงขอบที่จะแทรกเข้าไป
@@ -317,7 +373,7 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
 /* แถบเครื่องมือ/แถบสถานะเป็นแผงแบบไม่มีหัว → ต้องกินความกว้างเต็มช่องที่ได้รับ */
 #toolbar, #statusbar { flex:1 1 auto; min-width:0; }
 #tree-search { width:100%; box-sizing:border-box; margin-bottom:8px; padding:6px 9px;
-  background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:7px;
+  background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:var(--r-sm);
   font-size:calc(12px * var(--ui-scale, 1)); outline:none; }
 #tree-search:focus { border-color:var(--accent-hi); }
 .sc-tags { margin-left:6px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--accent-hi); opacity:.85; }
@@ -330,14 +386,14 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
 .sec-title:hover .tw, .ch-title:hover .tw { color:var(--accent-hi); }
 .sec.collapsed > *:not(.sec-title) { display:none; }
 .chapter.collapsed > *:not(.ch-title) { display:none; }
-.scene { padding:3px 8px 3px 22px; border-radius:6px; cursor:pointer; color:var(--fg); }
+.scene { padding:3px 8px 3px 22px; border-radius:var(--r-sm); cursor:pointer; color:var(--fg); }
 .scene:hover { background:var(--hover-soft); }
 
 #content { flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
 /* แถบรูปแบบอักษรแบบลอย — ลากย้ายได้ · จำตำแหน่ง */
 .k-fmtbar { position:absolute; z-index:40; display:flex; align-items:center; gap:2px;
   padding:4px 6px 4px 3px; background:var(--bar); border:1px solid var(--border);
-  border-radius:9px; box-shadow:0 6px 20px rgba(0,0,0,.4); user-select:none; }
+  border-radius:var(--r-md); box-shadow:0 6px 20px rgba(0,0,0,.4); user-select:none; }
 .k-fmtbar.k-dragging { opacity:.9; box-shadow:0 10px 28px rgba(0,0,0,.55); }
 .k-fmtbar .tb { min-width:30px; background:transparent; border:none; }
 .k-fmtbar .tb:hover { background:var(--hover); }
@@ -345,17 +401,17 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
 .k-fmtbar #tb-style { min-width:110px; }
 /* ปุ่มโหมดเอกสาร (📖 นิยาย ▾) + โหมดกระดาษ (📄) ในแถบลอย */
 .k-fmtbar #tb-mode { -webkit-app-region:no-drag; background:transparent; border:none;
-  color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); padding:4px 8px; border-radius:6px; white-space:nowrap; cursor:pointer; }
+  color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); padding:4px 8px; border-radius:var(--r-sm); white-space:nowrap; cursor:pointer; }
 .k-fmtbar #tb-mode:hover { background:var(--hover); }
 .k-fmtbar #tb-paper.on { background:var(--accent-hi); color:#fff; }
 .k-fmtbar-grip { cursor:grab; padding:0 5px; display:flex; flex-direction:column; gap:3px;
   align-self:stretch; align-items:center; justify-content:center; }
-.k-fmtbar-grip span { width:12px; height:2px; background:var(--dim); border-radius:2px; }
+.k-fmtbar-grip span { width:12px; height:2px; background:var(--dim); border-radius:var(--r-xs); }
 .k-fmtbar.k-dragging .k-fmtbar-grip { cursor:grabbing; }
 #tabs { display:flex; gap:2px; background:var(--side); padding:4px 8px 0;
   border-bottom:1px solid var(--border); overflow-x:auto; }
 .tab { display:flex; align-items:center; gap:8px; padding:6px 12px;
-  background:var(--hover-soft); border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; }
+  background:var(--hover-soft); border-radius:var(--r-sm) var(--r-sm) 0 0; cursor:pointer; white-space:nowrap; }
 .tab.on { background:var(--bg); color:var(--bright); box-shadow:inset 0 0 0 2px var(--accent); }
 .tab-x { color:var(--dim); padding:0 2px; } .tab-x:hover { color:#e5695e; }
 
@@ -439,7 +495,7 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
 .ProseMirror hr.ProseMirror-selectednode { border-top-color:var(--accent-hi); }
 .ProseMirror pre { background:var(--sunken); border:1px solid var(--border); border-radius:6px;
   padding:10px 14px; overflow-x:auto; text-indent:0; margin:.6em 0;
-  font-family:"Courier Prime","Courier New",monospace; font-size:.92em; line-height:1.5;
+  font-family:"Courier Prime","Courier New",monospace, var(--thai-net); font-size:.92em; line-height:1.5;
   white-space:pre-wrap; }
 .ProseMirror pre code { font-family:inherit; }
 /* [alpha.98 ข้อ 3] ค่าฐานต้องตรงกับที่ proseCss() ออกให้ — รายการกินที่เท่าย่อหน้า
@@ -534,17 +590,17 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
    ตำแหน่ง top ตั้งจาก JS (refreshLineGutter) ซึ่งชดเชยครึ่งหนึ่งของความสูงบรรทัดจริงให้แล้ว */
 .k-ln-no { position:absolute; right:8px; width:32px; text-align:right;
   font-size:calc(11px * var(--ui-scale, 1)); line-height:1.35;
-  font-family:ui-monospace, Consolas, "Courier New", monospace;
+  font-family:ui-monospace, Consolas, "Courier New", monospace, var(--thai-net);
   color:var(--dim); opacity:.75; font-variant-numeric:tabular-nums; }
 .plain-md { width:100%; height:100%; background:var(--bg); color:var(--fg); border:0;
-  resize:none; outline:none; padding:24px 48px; font:15px/1.8 Consolas, monospace; }
+  resize:none; outline:none; padding:24px 48px; font:15px/1.8 Consolas, monospace, var(--thai-net); }
 
 #statusbar { display:flex; justify-content:space-between; align-items:center; padding:3px 12px;
   background:var(--bar); border-top:1px solid var(--border); color:var(--dim); font-size:calc(12px * var(--ui-scale, 1)); }
 #status-right { display:flex; align-items:center; gap:14px; }
 #zoom-ctl { display:flex; align-items:center; gap:4px; }
 #zoom-ctl button { background:transparent; border:1px solid var(--border); color:var(--fg);
-  width:20px; height:20px; border-radius:5px; padding:0; font-size:calc(13px * var(--ui-scale, 1)); line-height:1;
+  width:20px; height:20px; border-radius:var(--r-sm); padding:0; font-size:calc(13px * var(--ui-scale, 1)); line-height:1;
   cursor:pointer; display:flex; align-items:center; justify-content:center; }
 #zoom-ctl button:hover { border-color:var(--accent-hi); color:var(--bright); }
 #zoom-slider { width:110px; height:4px; accent-color:var(--accent-hi); cursor:pointer; }
@@ -555,6 +611,9 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
   #toolbar,#tabs,#statusbar,.k-tab-bar,.k-panel-head { display:none !important; }
   .k-panel:not(.k-holds-docs), .k-tab-group:not(.k-holds-docs), .k-dock:not(.k-holds-docs),
   .k-resize-handle, .k-float-panel, .k-min-tray { display:none !important; }
+  /* [alpha.146] กระดาษที่พิมพ์ออกมาไม่ต้องมีขอบการ์ดของหน้าจอ */
+  .k-panel, .k-tab-group { border:0 !important; border-radius:0 !important; }
+  #app-root { padding:0 !important; background:#fff !important; }
   body { background:#fff; color:#000; }
   .pane { position:static; overflow:visible; }
   .pane:not(.on) { display:none; }
@@ -569,11 +628,11 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
   background:var(--side); border-bottom:1px solid var(--border); }
 #findbar.on { display:flex; }
 #findbar input { background:var(--bg); color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:4px 10px; width:200px; }
+  border-radius:var(--r-sm); padding:4px 10px; width:200px; }
 #find-n { color:var(--dim); min-width:60px; font-size:calc(12px * var(--ui-scale, 1)); }
 /* [alpha.81 ข้อ 5] ไฮไลต์ผลค้นหา — ธีมมืดใช้เหลืองเข้ม ธีมสว่างใช้เหลืองอ่อน
    (เดิมเป็นเหลืองเข้มตายตัว → ธีมสว่างได้หมึกดำบนพื้นเขียวขี้ม้า อ่านแทบไม่ออก) */
-.find-hit { background:var(--find-hit, #6b5518); border-radius:2px; }
+.find-hit { background:var(--find-hit, #6b5518); border-radius:var(--r-xs); }
 body.theme-k2-light { --find-hit:#ffe08a; }
 
 /* ---------- index/outline ---------- */
@@ -594,10 +653,10 @@ body.theme-k2-light { --find-hit:#ffe08a; }
 .k-panel-floating #tree { max-height:none; overflow:auto; }
 #outline-head { position:relative; }
 .k-panel-float { position:absolute; right:4px; top:4px; cursor:pointer; opacity:.6;
-  font-size:calc(13px * var(--ui-scale, 1)); padding:0 4px; border-radius:4px; }
+  font-size:calc(13px * var(--ui-scale, 1)); padding:0 4px; border-radius:var(--r-xs); }
 .k-panel-float:hover { opacity:1; background:var(--hover); }
 .k-panel-floating { z-index:60; background:var(--side); border:1px solid var(--border);
-  border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.5); padding:6px 8px; overflow:auto;
+  border-radius:var(--r-md); box-shadow:0 12px 40px rgba(0,0,0,.5); padding:6px 8px; overflow:auto;
   display:flex; flex-direction:column; }
 .k-panel-floating #outline-head { cursor:grab; padding:4px 6px 6px; }
 .k-panel-floating.k-dragging #outline-head { cursor:grabbing; }
@@ -683,7 +742,7 @@ body.theme-k2-light { --find-hit:#ffe08a; }
 /* ---------- dialog / เมนูคลิกขวา ---------- */
 .k-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:80;
   display:flex; align-items:center; justify-content:center; }
-.k-dialog { background:var(--side); border:1px solid var(--border); border-radius:12px;
+.k-dialog { background:var(--side); border:1px solid var(--border); border-radius:var(--r-lg);
   padding:18px 20px; min-width:340px; box-shadow:0 16px 48px rgba(0,0,0,.6);
   max-height:88vh; overflow:auto; }
 .wiki-check { width:18px; height:18px; margin:0; flex:0 0 auto; accent-color:var(--accent-hi); cursor:pointer; }
@@ -693,10 +752,10 @@ body.theme-k2-light { --find-hit:#ffe08a; }
    → document.querySelector('.k-dlg-input') คว้าของในแผงแทนของในกล่อง (บทเรียนข้อ 10 ขยายผล)
    แผงใช้ .k-field-input / .k-field-select ที่หน้าตาเหมือนกันเป๊ะแทน */
 .k-dlg-input, .k-field-input { width:100%; background:var(--bg); color:var(--fg);
-  border:1px solid var(--border); border-radius:8px; padding:8px 12px; }
+  border:1px solid var(--border); border-radius:var(--r-sm); padding:8px 12px; }
 .k-dlg-input:focus, .k-field-input:focus { outline:none; border-color:var(--accent-hi); }
 .k-dlg-select, .k-field-select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border);
-  border-radius:6px; padding:7px 9px; font-size:calc(14px * var(--ui-scale, 1)); cursor:pointer; }
+  border-radius:var(--r-sm); padding:7px 9px; font-size:calc(14px * var(--ui-scale, 1)); cursor:pointer; }
 .k-dlg-select:focus, .k-field-select:focus { outline:none; border-color:var(--accent-hi); }
 .k-dlg-btns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
 /* ---- กล่อง "บันทึกทั้งหมด" พร้อมรายการไฟล์ที่ค้าง (บั๊ก #3) ---- */
@@ -800,7 +859,7 @@ body.theme-k2-light { --find-hit:#ffe08a; }
   border-radius:999px; padding:1px 8px; }
 .cmp-field { display:flex; flex-direction:column; gap:3px; margin:2px 0 8px 26px; }
 .cmp-field label { font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); }
-.cmp-field textarea.k-dlg-input { min-height:64px; font-family:ui-monospace,monospace; font-size:calc(12px * var(--ui-scale, 1)); }
+.cmp-field textarea.k-dlg-input { min-height:64px; font-family:ui-monospace,monospace, var(--thai-net); font-size:calc(12px * var(--ui-scale, 1)); }
 .cmp-preview { max-height:180px; overflow:auto; background:var(--bg); border:1px solid var(--border);
   border-radius:8px; padding:10px 12px; margin:12px 0 0; font-size:calc(12px * var(--ui-scale, 1)); white-space:pre-wrap;
   color:var(--fg); }
@@ -833,7 +892,7 @@ body.theme-k2-light { --find-hit:#ffe08a; }
 .xhub-preview > .dim, .xhub-preview > .k-hint { padding:14px 16px; }
 .xhub-frame { width:100%; height:100%; border:0; background:#fff; display:block; }
 .xhub-pre { margin:0; padding:12px 14px; white-space:pre-wrap; word-break:break-word;
-  font-family:ui-monospace, Consolas, monospace; font-size:calc(12px * var(--ui-scale, 1));
+  font-family:ui-monospace, Consolas, monospace, var(--thai-net); font-size:calc(12px * var(--ui-scale, 1));
   color:var(--fg); background:var(--bg); min-height:100%; }
 /* [alpha.81r ข้อ 5] มุมมองหน้ากระดาษในช่องตัวอย่าง = `.sp-pageview` ตัวจริง (ได้หน้าตาครบทุกกฎ)
    ที่นี่แค่ปลดการตรึงเต็มแผง (`position:absolute; inset:0`) ให้มันไหลอยู่ในช่องตัวอย่างแทน */
@@ -1184,7 +1243,7 @@ body.theme-k2-light { --find-hit:#ffe08a; }
 .k-xname-preset { max-width:190px; }
 .k-xname .k-xname-save, .k-xname .k-xname-del { padding:4px 10px; border-radius:7px; cursor:pointer; }
 .k-xname .k-xname-del:disabled { opacity:.45; cursor:default; }
-.k-xname-preview { margin-top:6px; font-family:var(--mono, monospace); word-break:break-all; }
+.k-xname-preview { margin-top:6px; font-family:var(--mono, monospace), var(--thai-net); word-break:break-all; }
 .k-xname-hint { margin-top:3px; }
 
 /* ══ [alpha.132 ข้อ 9] สีตัวอักษร: ปุ่มบนแถบ + ป๊อปอัปเลือกสี ══
@@ -1235,10 +1294,10 @@ body.theme-k2-light { --find-hit:#ffe08a; }
   background:var(--titlebar); border-bottom:1px solid var(--border); -webkit-app-region:drag;
   user-select:none; }
 #tb-logo { color:var(--accent-hi); font-weight:700; margin-right:8px; }
-.tb-menu { -webkit-app-region:no-drag; padding:4px 10px; border-radius:6px;
+.tb-menu { -webkit-app-region:no-drag; padding:4px 10px; border-radius:var(--r-sm);
   cursor:pointer; color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); position:relative; }
 .tb-menu:hover { background:var(--hover-soft); }
-.k-logview { max-height:60vh; overflow:auto; font-family:ui-monospace,Menlo,Consolas,monospace;
+.k-logview { max-height:60vh; overflow:auto; font-family:ui-monospace,Menlo,Consolas,monospace, var(--thai-net);
   font-size:calc(12px * var(--ui-scale, 1)); line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 /* [alpha.65r4] เลื่อนขึ้นไปอ่าน = หยุดตามบรรทัดล่าสุด · ปุ่มนี้พากลับไปก้น
    แผงบันทึกต้องสูงเท่าช่องที่ได้รับ (ไม่ใช่สูงตามเนื้อหา) ไม่งั้นไม่มีแถบเลื่อนของตัวเองให้ล็อก */
@@ -1353,7 +1412,7 @@ body.k-mod-down .k-mention { cursor:pointer; }
    Final Draft ครึ่งเท่า) และเส้นคั่นหน้าในตัวแก้ไขไม่ตรงกับที่ paginate()/ตอนพิมพ์คิดไว้
    — ตอนส่งออก PDF ใช้ line-height:1 อยู่แล้ว จอกับกระดาษจึงเคยไม่ตรงกัน
    ปรับได้ที่ ตั้งค่า → หน้ากระดาษ ผ่าน --sp-lh (ค่ามาตรฐาน = 1) */
-.sp { font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace);
+.sp { font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace), var(--thai-net);
   font-size:var(--sp-fs, 16px);
   /* [alpha.86] ★ ระยะบรรทัดต้องเป็น "ความสูงบรรทัดของโมเดล" (พิกเซล) ไม่ใช่ตัวคูณของขนาดฟอนต์
      `--sp-lh` เป็นตัวคูณ → พอผู้ใช้ตั้งฟอนต์บทเป็น 11pt จอได้บรรทัดละ 14.67px
@@ -1498,7 +1557,7 @@ figure.sp-image.ProseMirror-selectednode img { outline:3px solid var(--accent-hi
 body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .ProseMirror::before {
   content:var(--pg-no-first, ""); position:absolute;
   top:var(--pg-no-top, .5in); right:var(--pg-no-right, 1in);
-  color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace);
+  color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace), var(--thai-net);
   pointer-events:none; }
 .pane > .workspace > .ProseMirror { position:relative; }
 
@@ -1539,23 +1598,26 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
 /* [alpha.97 ข้อ 6] Markdown ดิบ: แก้ไขได้ + รางเลขบรรทัด
    รางเป็น element แยกที่ซิงก์ scrollTop กับ textarea — ทำใน textarea เองไม่ได้
    เพราะข้อความในนั้นเป็น "ค่าของ element" ไม่ใช่ลูกใน DOM ที่จะแปะ ::before ได้
-   ★ font/line-height ของรางกับ textarea ต้องเท่ากันเป๊ะ ไม่งั้นเลขเลื่อนหนีทีละบรรทัด */
+   ★ font/line-height ของรางกับ textarea ต้องเท่ากันเป๊ะ ไม่งั้นเลขเลื่อนหนีทีละบรรทัด
+   [alpha.144] ★ ลูกโซ่ไทยต่อท้าย `Consolas` ก่อนถึง `monospace` — ห้ามปล่อยให้อักษรไทย
+   ตกไปถึง "ตัวเลือกของเบราว์เซอร์" ซึ่งบน macOS คือ Ayuthaya = วรรณยุกต์ลอย
+   (แก้ทั้งสองกฎพร้อมกันเสมอ ไม่งั้นรางเลขเลื่อนหนี) */
 .k-src-wrap { display:flex; align-items:stretch; height:52vh; box-sizing:border-box;
   background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
 .k-src-gutter { flex:0 0 auto; min-width:46px; overflow:hidden; text-align:right;
   padding:12px 8px 12px 10px; box-sizing:border-box;
   background:var(--sunken); color:var(--dim); border-right:1px solid var(--border);
-  font:13px/1.6 ui-monospace,'Cascadia Code',Consolas,monospace;
+  font:13px/1.6 ui-monospace,'Cascadia Code',Consolas,Thonburi,'Leelawadee UI','TH Sarabun New',Sarabun,monospace, var(--thai-net);
   user-select:none; white-space:pre; }
 .k-src-view { flex:1 1 auto; width:100%; height:100%; resize:none; box-sizing:border-box;
   background:transparent; color:var(--fg); border:0; border-radius:0;
-  padding:12px 14px; font:13px/1.6 ui-monospace,'Cascadia Code',Consolas,monospace;
+  padding:12px 14px; font:13px/1.6 ui-monospace,'Cascadia Code',Consolas,Thonburi,'Leelawadee UI','TH Sarabun New',Sarabun,monospace, var(--thai-net);
   white-space:pre; overflow:auto; outline:none; }
 .k-src-hint { margin:6px 2px 0; }
 #st-keys { max-height:46vh; overflow:auto; }
 .k-key-row { display:flex; align-items:center; gap:8px; padding:5px 2px; border-bottom:1px solid var(--border); }
 .k-key-label { flex:1; font-size:calc(13px * var(--ui-scale, 1)); color:var(--fg); }
-.k-key-accel { min-width:96px; text-align:center; font:12px/1.5 ui-monospace,Consolas,monospace;
+.k-key-accel { min-width:96px; text-align:center; font:12px/1.5 ui-monospace,Consolas,monospace, var(--thai-net);
   background:var(--bg); border:1px solid var(--border); border-radius:5px; padding:3px 8px; color:var(--fg); }
 .k-key-accel.dup { border-color:#e5695e; color:#e5695e; }
 .k-key-accel.rec { border-color:#d97757; color:#d97757; }
@@ -1818,7 +1880,7 @@ body.k-split-on #tabs { display:none !important; }
 .k-cmp-count { margin-left:auto; font-size:calc(12px * var(--ui-scale, 1)); color:var(--accent-hi); }
 .k-cmp-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:58vh; overflow:auto; }
 .k-cmp-col { background:var(--bg); border:1px solid var(--border); border-radius:8px;
-  padding:8px 10px; font:12px/1.6 ui-monospace,Consolas,monospace; white-space:pre-wrap; overflow:auto; }
+  padding:8px 10px; font:12px/1.6 ui-monospace,Consolas,monospace, var(--thai-net); white-space:pre-wrap; overflow:auto; }
 .k-cmp-line { min-height:1.2em; padding:0 3px; border-radius:3px; }
 .cmp-add { background:rgba(111,174,111,.22); }
 .cmp-del { background:rgba(217,87,94,.22); }
@@ -2560,7 +2622,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
   padding:6px 12px; border-bottom:1px solid rgba(255,255,255,.03); font-size:calc(12.5px * var(--ui-scale, 1)); }
 .k-keys-row:last-child { border-bottom:none; }
 .k-keys-name { color:var(--fg); }
-.k-keys-key { color:var(--accent-hi); font-family:ui-monospace,Consolas,monospace;
+.k-keys-key { color:var(--accent-hi); font-family:ui-monospace,Consolas,monospace, var(--thai-net);
   font-size:calc(11.5px * var(--ui-scale, 1)); background:rgba(193,95,60,.12); padding:2px 6px; border-radius:4px; }
 
 /* ====== Context Menu polish (ข้อ 51) — เส้นคั่น ====== */
@@ -2591,7 +2653,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
 /* ====== Font Family (ข้อ 27) ====== */
 /* ฟอนต์เนื้อเรื่อง — ค่าเริ่มต้นคือ Courier Final Draft 12pt ทุกภาษา (ทั้งนิยายและบทหนัง)
    ผู้ใช้เปลี่ยนฟอนต์/ขนาดได้ที่ ตั้งค่า → การเขียน (--ed-font / --ed-fs ถูกตั้งจาก app.js) */
-.ProseMirror { font-family:var(--ed-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace); }
+.ProseMirror { font-family:var(--ed-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace), var(--thai-net); }
 
 /* ====== Screenplay Print CSS @page (ข้อ 30) ====== */
 /* @page (ขนาดกระดาษ+ระยะขอบตอนพิมพ์) ถูกสร้างจาก sp-format.js → <style id="k-sp-format">
@@ -2610,7 +2672,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
   .pane > .workspace > .ProseMirror { width:auto !important; padding:0 !important;
     margin:0 !important; border:0 !important; box-shadow:none !important; background:#fff !important; }
   .pane .sp { background:#fff; color:#000;
-    font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace);
+    font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace), var(--thai-net);
     font-size:var(--sp-fs, 12pt); }
 }
 
@@ -2626,7 +2688,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
   background:var(--bar); border-bottom:1px solid var(--border); flex-wrap:wrap; }
 .scratch-info { flex:1; font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); }
 .scratch-area { flex:1; width:100%; background:var(--bg); color:var(--fg);
-  border:none; outline:none; padding:20px; font:14px/1.7 var(--ed-font, "Segoe UI", system-ui, sans-serif);
+  border:none; outline:none; padding:20px; font:14px/1.7 var(--ed-font, "Segoe UI", system-ui, sans-serif), var(--thai-net);
   resize:none; }
 
 /* ====== Profile Header (ข้อ 55) ====== */
@@ -2911,7 +2973,7 @@ body.fm2 #tabs { display:none; }
 .branch-doc-ok { font-size:calc(12.5px * var(--ui-scale, 1)); color:#6fae8a; }
 .branch-doc-lbl { font-size:calc(12px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); margin-top:4px; }
 .branch-doc-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.branch-doc-mark { font-family:ui-monospace, "Cascadia Code", Consolas, monospace;
+.branch-doc-mark { font-family:ui-monospace, "Cascadia Code", Consolas, monospace, var(--thai-net);
   font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--link); background:var(--bg); border:1px solid var(--border);
   border-radius:5px; padding:3px 8px; flex:1; min-width:0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -3592,7 +3654,7 @@ button, select { padding:calc(4px * var(--uis)) calc(10px * var(--uis)); border-
   padding:var(--mg-top) var(--mg-right) calc(var(--mg-bottom) + 20vh) var(--mg-left);
   background:var(--side); color:var(--fg);
   border:1px solid var(--border); border-radius:2px; box-shadow:0 4px 26px rgba(0,0,0,.45);
-  font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace);
+  font-family:var(--sp-font, "Courier Prime", "Courier Final Draft", "Courier New", "TH Sarabun New", "Sarabun", monospace), var(--thai-net);
   font-size:var(--sp-fs, 16px); line-height:1.5;
   /* คอลัมน์ที่รายละเอียดตัวละครเริ่ม (1 tab จากชื่อ) — บรรทัดที่ขึ้นใหม่ต้องชิดคอลัมน์นี้ */
   --roster-tab:2.5in;
@@ -3828,7 +3890,10 @@ body.paper-mode .k-paper .sp-page-break-num { background:var(--paper); color:var
    ตัวชดเชยอิ่มตัว แก้ไม่ได้ = "ข้อความล้วนไม่มีปัญหา มีหัวข้อเมื่อไหร่พังทันที"
    ใช้ `height` แทน → กล่องไม่ว่างอีกต่อไป margin ของสองฝั่งเลิกยุบผ่านมัน และ pad
    มีผลกับระยะแบบ 1:1 ตัวชดเชยจึงลงตัวในรอบเดียวเสมอ */
-.ed-page-break { margin:0; height:var(--k-pb-pad, 0px); border-top:0; }
+/* [alpha.146 · เคส P-2] `max(0px, …)` — ตัวชดเชยส่งค่า **ติดลบ** มาได้แล้ว (= หน้านี้เนื้อล้น
+   พื้นที่พิมพ์ กล่องต้องหดกลืนส่วนเกิน) แต่มันส่งมาเฉพาะ **มุมมองจัดหน้า** ซึ่งกล่องสูง 220px
+   จึงหดได้จริง · มุมมองนี้กล่องสูงเท่าที่ว่างพอดี หดต่ำกว่า 0 ไม่ได้ — ตาข่ายกันค่าแปลกปลอม */
+.ed-page-break { margin:0; height:max(0px, var(--k-pb-pad, 0px)); border-top:0; }
 /* บล็อกแรกของหน้าใหม่ไม่มีระยะนำ — ตรงกับที่ตัววาดหน้ากระดาษจริงทำมาตลอด
    (`firstBlock.paddingTop = 0` ใน renderPageView) และทำให้ที่ว่างท้ายหน้าไม่ติดลบ
    ★ ต้องยกเว้นตอนวัด ไม่งั้นเรขาคณิตขึ้นกับ "ตอนนี้เส้นคั่นอยู่ตรงไหน" = จัดหน้าไม่นิ่ง */
@@ -3936,7 +4001,7 @@ body.paper-mode .k-paper .ed-page-break::before { border-top-color:var(--paper-l
    ซ่อนไว้เป็นค่าเริ่มต้น แล้วเปิดเฉพาะโหมดที่มี "ขอบบนของแผ่นถัดไป" ให้วางจริง ๆ
    (บทเรียน K-1: กฎของ widget ต้องผูกกับที่อยู่ของมันเสมอ) */
 .sp-page-break > .sp-page-no-next { display:none; position:absolute;
-  color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace);
+  color:var(--dim); font:var(--sp-fs, 16px)/1 var(--sp-font, monospace), var(--thai-net);
   pointer-events:none; user-select:none; }
 .pane.sp-view-layout .sp-page-break > .sp-page-no-next {
   display:block; right:var(--pg-no-right, 1in); top:auto;
@@ -4081,7 +4146,12 @@ body.k-page-guides .k-paper-sheet::before {
   --pb-mb:var(--mg-bottom, 1in);
   /* [alpha.98 ข้อ 7] ที่ว่างท้ายหน้ารวมอยู่ในความสูง — ต้องไม่ใช้ margin (ยุบกับหัวข้อได้) */
   margin-top:0;
-  height:calc(var(--k-pb-pad, 0px) + var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in));
+  /* [alpha.146 · เคส P-2] ★★ ที่นี่คือที่เดียวที่ค่าติดลบมีผลจริง — และเป็นที่เดียวที่ต้องมีผล
+     แผ่นกระดาษถูกปูที่ `k × (สูงกระดาษ + ช่องว่าง)` **ตายตัว** (renderPaperSheets)
+     ถ้าสายเนื้อหาเดินยาวกว่านั้นแม้แต่ 4px มันจะ **สะสม** ทุกหน้าจนตัวหนังสือหลุดลงพื้นโต๊ะ
+     กล่องนี้คร่อม "ขอบล่างแผ่น + ช่องว่าง + ขอบบนแผ่นถัดไป" = 220px จึงหดกลืนส่วนที่ล้นได้
+     `max(0px, …)` กันเฉพาะกรณีสุดขั้ว (ล้นเกิน 220px) ที่หดยังไงก็ไม่พอ */
+  height:max(0px, calc(var(--k-pb-pad, 0px) + var(--pb-mb) + var(--pb-gap) + var(--mg-top, 1in)));
   border:0;
   margin-right:calc(-1 * var(--mg-right, 1in));
   margin-left:calc(-1 * var(--mg-left, 1.5in));
@@ -4107,8 +4177,9 @@ body.k-page-guides .k-paper-sheet::before {
 .pane.sp-view-layout .sp-page-break.k-pb-inline {
   width:calc(100% + var(--mg-left, 1.5in) + var(--mg-right, 1in));
   margin:0 0 0 calc(-1 * var(--mg-left, 1.5in));
-  height:calc(var(--k-pb-pad, 0px) + var(--mg-bottom, 1in)
-              + var(--sp-page-gap, 28px) + var(--mg-top, 1in));
+  /* [alpha.146] คู่แฝดของกฎระดับบล็อกด้านบน — จุดตัดกลางย่อหน้าก็ต้องหดกลืนส่วนล้นได้ */
+  height:max(0px, calc(var(--k-pb-pad, 0px) + var(--mg-bottom, 1in)
+              + var(--sp-page-gap, 28px) + var(--mg-top, 1in)));
 }
 /* เส้นประวางที่ขอบบนของกล่อง เหมือนจุดตัดระดับบล็อกในโหมดเดียวกัน (ค่าปกติคือกึ่งกลาง) */
 .pane.sp-view-layout .sp-page-break.k-pb-inline::before { top:0; }
@@ -4132,7 +4203,7 @@ body.k-page-guides .k-paper-sheet::before {
    วาดเป็นลูกของ widget เส้นคั่นหน้า (ไม่ใช่บล็อกในเนื้อหน้า) เหมือนที่ pdf-generator.js
    ทำมาตลอด → การจัดหน้าไม่ขยับเลยไม่ว่าจะเปิดหรือปิดเครื่องหมายพวกนี้ */
 .sp-cont-edge { position:absolute; white-space:pre; pointer-events:none; user-select:none;
-  font-family:var(--sp-font, "Courier Prime", monospace); font-size:var(--sp-fs, 16px);
+  font-family:var(--sp-font, "Courier Prime", monospace), var(--thai-net); font-size:var(--sp-fs, 16px);
   line-height:var(--sp-lh, 1); font-style:italic; opacity:.75; color:var(--dim); }
 /* โหมดปกติ: เส้นประบาง ๆ มี margin 14px หัวท้าย — วางคร่อมเส้นพอดี */
 .sp-cont-edge.sp-cont-bottom { right:0; bottom:2px; text-align:right; }
@@ -4159,7 +4230,7 @@ body.paper-mode .k-paper .sp-cont-edge { color:var(--paper-dim); }
 /* ---- alpha.58 · [55][56] เครื่องหมายต่อเนื่อง (CONTINUED / MORE / cont'd) ---- */
 /* วาดด้วย decoration — ไม่ใช่ข้อความจริงในไฟล์ จึงลบไม่ได้และไม่หลุดไปอยู่ใน .md */
 .sp-cont-mark { user-select:none; pointer-events:none; opacity:.75;
-  font-family:var(--sp-font, "Courier Prime", monospace); font-size:var(--sp-fs, 16px);
+  font-family:var(--sp-font, "Courier Prime", monospace), var(--thai-net); font-size:var(--sp-fs, 16px);
   line-height:var(--sp-lh, 1); white-space:pre; }
 .sp-cont-mark.sp-continued-bottom { text-align:right; font-style:italic; }
 .sp-cont-mark.sp-continued-top { text-align:left; font-style:italic; }
@@ -4195,7 +4266,7 @@ body.paper-mode .k-paper .sp-cont-mark { color:var(--paper-dim); }
   background:var(--paper); color:var(--paper-ink);
   border:0; border-radius:2px;
   box-shadow:0 0 0 1px var(--paper-edge), 0 2px 14px rgba(0,0,0,.30);
-  font-family:var(--sp-font, "Courier Prime", "Courier New", monospace);
+  font-family:var(--sp-font, "Courier Prime", "Courier New", monospace), var(--thai-net);
   font-size:var(--sp-fs, 16px); line-height:var(--sp-lh, 1); overflow:hidden; cursor:pointer; }
 .sp-pageview .sp-page:hover { outline:2px solid var(--accent-hi); }
 /* [alpha.83r ข้อ 2] ★ **คำยาวที่ไม่มีจุดตัดต้องถูกหั่น** — ไม่งั้นทะลุขอบกระดาษ
@@ -4320,7 +4391,7 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 
 /* ---- [70] กล่อง PDF ลายน้ำ ---- */
 .k-wm-dlg { min-width:min(620px, 92vw); }
-.k-wm-list { width:100%; font-family:var(--ed-font, monospace); }
+.k-wm-list { width:100%; font-family:var(--ed-font, monospace), var(--thai-net); }
 .k-wm-prog { min-height:1.4em; margin-top:6px; }
 
 /* ---- alpha.57a ข้อ 5: ตารางฟอนต์ตามภาษา (ตั้งค่า → ฟอนต์ตามภาษา) ---- */
@@ -4363,12 +4434,12 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 /* ══════════ alpha.58r ══════════ */
 /* [ข้อ 4] คอนโซลนักพัฒนา — เมนู ช่วยเหลือ → คอนโซลนักพัฒนา (Ctrl+Shift+`) */
 .k-dev-dlg { width:900px; max-width:94vw; }
-.k-dev-input { width:100%; font-family:"Courier Prime","Courier New",monospace;
+.k-dev-input { width:100%; font-family:"Courier Prime","Courier New",monospace, var(--thai-net);
   font-size:calc(13px * var(--ui-scale, 1)); resize:vertical; }
 .k-dev-btns { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
 .k-dev-out { background:var(--sunken); border:1px solid var(--border); border-radius:8px;
   padding:8px 10px; height:300px; overflow:auto; margin:0;
-  font-family:"Courier Prime","Courier New",monospace;
+  font-family:"Courier Prime","Courier New",monospace, var(--thai-net);
   font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.5;
   white-space:pre-wrap; word-break:break-word; color:var(--fg); }
 .k-dev-line { padding:1px 0; }
@@ -4428,7 +4499,7 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 .k-tp-preview { display:flex; flex-direction:column; align-items:center; gap:6px; }
 .k-tp-paper { position:relative; flex:0 0 auto; background:#fff; color:#111;
   border:1px solid var(--paper-edge); box-shadow:0 2px 14px rgba(0,0,0,.30);
-  font-family:var(--sp-font, "Courier Prime", "Courier New", monospace); overflow:hidden; }
+  font-family:var(--sp-font, "Courier Prime", "Courier New", monospace), var(--thai-net); overflow:hidden; }
 .k-tp-guide { position:absolute; border:1px dashed rgba(0,0,0,.25); pointer-events:none; }
 .k-tp-paper .sp-tp-str { cursor:pointer; outline:1px solid transparent; }
 .k-tp-paper .sp-tp-str:hover { outline-color:var(--accent-hi); }
@@ -4558,7 +4629,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   background:var(--bar); border-radius:0 4px 4px 0; }
 .ai-md-hr { border:0; border-top:1px solid var(--border); margin:.7em 0; }
 .ai-md-code { padding:1px 4px; border-radius:4px; background:var(--bar);
-  border:1px solid var(--border); font-family:ui-monospace, Menlo, Consolas, monospace;
+  border:1px solid var(--border); font-family:ui-monospace, Menlo, Consolas, monospace, var(--thai-net);
   font-size:.92em; }
 .ai-md-pre { margin:.5em 0; border:1px solid var(--border); border-radius:6px; overflow:hidden;
   background:var(--bar); }
@@ -4566,7 +4637,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   padding:2px 6px 2px 9px; border-bottom:1px solid var(--border);
   font-size:calc(10.5px * var(--ui-scale, 1)); }
 .ai-md-pre-body { margin:0; padding:8px 10px; overflow-x:auto; white-space:pre;
-  font-family:ui-monospace, Menlo, Consolas, monospace;
+  font-family:ui-monospace, Menlo, Consolas, monospace, var(--thai-net);
   font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1.55; }
 
 /* A) รายการเซสชัน */
@@ -4590,6 +4661,19 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .ai-chat-row-meta span { display:block; }
 .ai-chat-archtoggle { flex:0 0 auto; font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim);
   display:flex; align-items:center; gap:6px; }
+
+/* ══ [alpha.145] ป้าย "กำลังทำงาน" — ผู้ใช้ต้องเห็นได้จากทุกหน้าของแผง ══
+   เดิมมีที่เดียวคือแถบสถานะล่างจอ (setBusy) ซึ่งอยู่คนละมุมกับแผงแชท */
+.ai-chat-running { flex:0 0 auto; width:100%; text-align:left; cursor:pointer;
+  background:color-mix(in srgb, var(--accent) 18%, var(--bar)); color:var(--bright);
+  border:1px solid var(--accent); border-radius:8px; padding:5px 9px;
+  font:inherit; font-size:calc(11.5px * var(--ui-scale, 1)); }
+.ai-chat-running:hover { background:color-mix(in srgb, var(--accent) 30%, var(--bar)); }
+.ai-chat-row.running { border-color:var(--accent); }
+.ai-chat-row-run { color:var(--accent-hi); animation:k-ai-pulse 1.2s ease-in-out infinite; }
+.ai-chat-title.running::after { content:"⏳"; margin-left:6px; color:var(--accent-hi);
+  animation:k-ai-pulse 1.2s ease-in-out infinite; }
+@keyframes k-ai-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
 
 /* B) เซสชัน */
 .ai-chat-session, .ai-chat-detail { display:flex; flex-direction:column; height:100%; min-height:0; }
@@ -4623,6 +4707,9 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .ai-msg-user .ai-msg-text { background:var(--sel); }
 .ai-msg-assistant .ai-msg-text { background:var(--bar); border:1px solid var(--border); }
 .ai-msg-err { color:#e06c62; font-size:calc(11.5px * var(--ui-scale, 1)); padding:4px 10px; }
+/* [alpha.145] รายละเอียด + แนวทางแก้ของความผิดพลาด (พับไว้ กางเองเมื่ออยากรู้) */
+.ai-msg-errdetail > .ai-fold-sum { color:#e06c62; }
+.ai-msg-errdetail .ai-fold-pre { white-space:pre-wrap; }
 .ai-msg-files { font-size:calc(10.5px * var(--ui-scale, 1)); padding:2px 10px; }
 .ai-msg-pending .ai-msg-who { opacity:.7; }
 /* [alpha.96] ตัวบอกสถานะระหว่างรอคำตอบ — เวลาที่ผ่านไป + ความคิดที่ไหลมาแบบสด */
@@ -4686,6 +4773,9 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .ai-chat-ctrls select, .ai-chat-file { background:var(--bar); border:1px solid var(--border);
   color:var(--fg); border-radius:6px; padding:3px 6px; cursor:pointer;
   font-size:calc(11px * var(--ui-scale, 1)); max-width:170px; }
+/* [alpha.145] ระดับการใช้ความคิด + ทักษะ (Skills/*.md) */
+.ai-chat-effort { max-width:150px; }
+.ai-chat-skills.on { border-color:var(--accent); color:var(--accent-hi); }
 .ai-chat-files { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
 .ai-chat-filechip { background:var(--bar); border:1px solid var(--border); border-radius:999px;
   padding:1px 8px; font-size:calc(10.5px * var(--ui-scale, 1)); }
@@ -5117,7 +5207,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .k-plug-api-hint { font-size:calc(11px * var(--ui-scale, 1)); margin-bottom:8px; line-height:1.6; }
 .k-plug-api-row { display:flex; flex-direction:column; gap:1px; padding:5px 0;
   border-top:1px solid var(--border); }
-.k-plug-api-sig { font-family:ui-monospace, Consolas, monospace; color:var(--accent-hi);
+.k-plug-api-sig { font-family:ui-monospace, Consolas, monospace, var(--thai-net); color:var(--accent-hi);
   font-size:calc(11.5px * var(--ui-scale, 1)); word-break:break-word; }
 .k-plug-api-desc { font-size:calc(11px * var(--ui-scale, 1)); line-height:1.5; }
 
@@ -5141,7 +5231,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   border:1px solid var(--border); border-radius:5px; background:none; cursor:pointer; }
 .k-netc-cell .st-netcol-t { flex:0 0 78px; width:78px; background:var(--bg); color:var(--fg);
   border:1px solid var(--border); border-radius:5px; padding:3px 6px;
-  font-family:ui-monospace, Consolas, monospace; font-size:calc(11px * var(--ui-scale, 1)); }
+  font-family:ui-monospace, Consolas, monospace, var(--thai-net); font-size:calc(11px * var(--ui-scale, 1)); }
 .k-netc-cell .st-netcol-t:focus { outline:none; border-color:var(--accent-hi); }
 
 /* ปุ่มอันตรายบนการ์ดปลั๊กอิน (ถอนการติดตั้ง) */
@@ -5840,12 +5930,12 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 .st-mentions-label { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
 .st-mentions .st-mentionchip { background:var(--bar); color:var(--link); cursor:pointer;
   border:1px dashed var(--border); border-radius:6px; padding:1px 8px; font:inherit;
-  font-family:var(--mono, monospace); font-size:calc(10.5px * var(--ui-scale, 1)); }
+  font-family:var(--mono, monospace), var(--thai-net); font-size:calc(10.5px * var(--ui-scale, 1)); }
 .st-mentions .st-mentionchip:hover { border-style:solid; border-color:var(--accent);
   color:var(--bright); }
 .st-mention-warn { color:var(--accent-hi); padding:4px 2px 0;
   font-size:calc(10.5px * var(--ui-scale, 1)); }
-.st-shortcode-preview { font-family:var(--mono, monospace); }
+.st-shortcode-preview { font-family:var(--mono, monospace), var(--thai-net); }
 
 /* ── ช่อง Prompt เพิ่มเองได้ ── */
 .st-prompts { margin-top:14px; }
@@ -5869,7 +5959,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 .st-img-thumb { aspect-ratio:16 / 9; width:100%; max-width:260px; }
 .st-sc-card .st-sc-thumb { flex:0 0 130px; max-width:130px; margin-right:10px; }
 .st-sc-adv { color:var(--accent-hi); }
-.st-opener-img { font-family:var(--mono, monospace); }
+.st-opener-img { font-family:var(--mono, monospace), var(--thai-net); }
 
 /* ── รูปประกอบในช่องแชท (บทเปิด) ── */
 .st-turn-img { margin:6px 0 8px; }
@@ -6108,3 +6198,4 @@ body.k-measuring .ProseMirror .sp-err-warn::before { display:none; }
 /* ★ ต้องหักระยะขอบของ `<figure>` (บน 1em + ล่าง 1em) ออกด้วย — ไม่งั้นบล็อกรวมสูง "เกินหนึ่งหน้า
    นิดเดียว" ซึ่งพาไปเข้าเส้นทางตัดดิบพอดี แล้วรูปถูกผ่ากลางคาบสองแผ่น (ผู้ใช้ส่งภาพมายืนยัน) */
 .ProseMirror figure.k-img-w img { max-height:calc(var(--page-content-h, 9in) - 2.2em); }
+

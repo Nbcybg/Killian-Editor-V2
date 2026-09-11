@@ -23,6 +23,7 @@ import { t as tt, tf as ttf } from './i18n.js';
 import { $, el, state, setStatus, log, withBusy } from './core.js';
 import { runWorkflow, mdToHtml } from './compile.js';
 import { num } from './num.js';
+import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข่ายรองอักษรไทย
 // ตรรกะล้วน (ตารางรูปแบบ · เลือกตัวสร้าง · ค่าที่จำไว้) อยู่ใน export-formats.js — ทดสอบด้วย node ได้
 import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub, exportPageNumberFmt,
          defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
@@ -160,7 +161,7 @@ async function frontMatterHtml(A, cfg, model, coverUrl) {
     `@page{size:${spf.paper.width}in ${spf.paper.height}in;` +
       `margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`,
     'html,body{margin:0;padding:0}',
-    `body{font-family:${proseFontStack(pf)};` +
+    `body{font-family:${withThaiFallback(proseFontStack(pf))};` +
       `font-size:${pf.fontPt}pt;line-height:1.5;color:#111}`,
     // ความสูงหนึ่งหน้าเต็ม (หักระยะขอบบน-ล่าง) → แต่ละ section = หนึ่งแผ่นเป๊ะ
     `.k-front{height:${+(spf.paper.height - m.top - m.bottom).toFixed(3)}in;` +

@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────
 // 1) พารามิเตอร์ที่ผู้ใช้ตั้งได้ (ลำดับตามที่ผู้ใช้สั่ง — UI วาดตามอาร์เรย์นี้ตรง ๆ)
 // ────────────────────────────────────────────────────────────────
-import { t } from '../i18n.js';
+import { t, T } from '../i18n.js';
 export const PARAM_DEFS = [
   { key: 'thinkingMode', label: 'Thinking mode', th: t('ui.aiProviders.modeThinkBeforeReply'), type: 'select',
     options: ['off', 'auto', 'on'], def: 'off',
@@ -27,8 +27,13 @@ export const PARAM_DEFS = [
     min: -2, max: 2, step: 0.1, def: null },
   { key: 'maxRetries', label: 'Max Retries', th: t('ui.aiProviders.tryNewHighLast'), type: 'int',
     min: 0, max: 10, def: 2 },
+  // ══ [alpha.145] ★ **-1 = ไม่จำกัด** ══
+  // ผู้ใช้: *"max token ไม่สามารถใช้เป็น -1 ได้"* — ของเดิม `min:1` หนีบ -1 เป็น 1 เงียบ ๆ
+  // แล้วคำตอบถูกตัดเหลือคำเดียวโดยไม่มีใครบอกว่าเกิดอะไรขึ้น
+  // -1 (และ 0) = **ไม่ส่งฟิลด์ `max_tokens` ไปเลย** = ปล่อยตามค่าเริ่มต้นของผู้ให้บริการ
+  // (สำนวนเดียวกับ LM Studio / llama.cpp ที่ใช้ -1 แปลว่า "ไม่จำกัด")
   { key: 'maxTokens', label: 'Maximum Number of Tokens', th: t('ui.aiProviders.longAnswerHighLast'), type: 'int',
-    min: 1, max: 200000, def: 2048 },
+    min: -1, max: 200000, def: 2048, hint: T`-1 = ไม่จำกัด (ไม่ส่ง max_tokens ไปเลย · ให้ผู้ให้บริการตัดสินเอง)` },
   { key: 'presencePenalty', label: 'Presence Penalty', th: t('ui.aiProviders.speakStoryNew'), type: 'number',
     min: -2, max: 2, step: 0.1, def: null },
   { key: 'reasoningEffort', label: 'Reasoning Effort', th: t('ui.aiProviders.levelUseResult'), type: 'select',
@@ -228,7 +233,7 @@ export function parseModels(json) {
  * คำขอ "คุยกับโมเดล" — รูปแบบ OpenAI chat/completions (มาตรฐานที่เจ้าอื่นทำตามกันหมด)
  * พารามิเตอร์ที่ผู้ใช้ปล่อยว่าง (null) จะ **ไม่ถูกส่ง** เพื่อไม่ให้เซิร์ฟเวอร์ที่ไม่รองรับตอบ 400
  */
-export function chatRequest(provider, { messages = [], system = '', stream = false, model, temperature, maxTokens } = {}) {
+export function chatRequest(provider, { messages = [], system = '', stream = false, model, temperature, maxTokens, reasoningEffort } = {}) {
   const base = trimSlash((provider && provider.credential && provider.credential.baseUrl) || '');
   const pr = normalizeParams((provider && provider.params) || {});
   const url = /\/chat\/completions$/i.test(base) ? base
@@ -241,16 +246,21 @@ export function chatRequest(provider, { messages = [], system = '', stream = fal
   if (stream) body.stream = true;
   const put = (k, v) => { if (v !== null && v !== undefined && v !== '') body[k] = v; };
   put('temperature', temperature !== undefined ? temperature : pr.temperature);
-  put('max_tokens', maxTokens !== undefined ? maxTokens : pr.maxTokens);
+  // [alpha.145] -1/0 = ไม่จำกัด → ไม่ส่งฟิลด์นี้เลย (ผู้ให้บริการใช้ค่าเริ่มต้นของตัวเอง)
+  // ต้องเช็คหลัง `put` ไม่ได้ — `put` มองว่า -1 เป็นค่าที่ตั้งไว้จริง
+  const mt = maxTokens !== undefined ? maxTokens : pr.maxTokens;
+  if (typeof mt === 'number' && isFinite(mt) && mt > 0) body.max_tokens = mt;
   put('frequency_penalty', pr.frequencyPenalty);
   put('presence_penalty', pr.presencePenalty);
   put('top_p', pr.topP);
   put('top_k', pr.topK);
-  put('reasoning_effort', pr.reasoningEffort);
+  // [alpha.145] ระดับการใช้ความคิดสั่งทับได้รายเซสชัน (แชท AI) — ไม่ส่งมา = ใช้ของผู้ให้บริการ
+  put('reasoning_effort', reasoningEffort !== undefined && reasoningEffort !== null
+    ? reasoningEffort : pr.reasoningEffort);
   if (pr.responseFormat && pr.responseFormat !== 'text') body.response_format = { type: pr.responseFormat };
   // Thinking mode — ส่งทั้งสองสำนวนที่ใช้กันจริง เจ้าที่ไม่รู้จักจะเมินฟิลด์ที่เกิน
   if (pr.thinkingMode === 'on') body.thinking = { type: 'enabled' };
-  else if (pr.thinkingMode === 'off' && pr.reasoningEffort) body.thinking = { type: 'disabled' };
+  else if (pr.thinkingMode === 'off' && body.reasoning_effort) body.thinking = { type: 'disabled' };
   return { url, method: 'POST', headers: buildHeaders(provider), body,
            timeoutMs: (pr.timeout || 60) * 1000, maxRetries: pr.maxRetries ?? 2 };
 }

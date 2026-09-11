@@ -15696,6 +15696,223 @@
     }
   });
 
+  // src/lang-fonts.js
+  function defaultLangFonts() {
+    return [
+      {
+        id: "sp-thai",
+        label: t("ui.common.msg8"),
+        range: SP_THAI_RANGE,
+        target: "screenplay",
+        builtin: "",
+        file: "",
+        family: SP_THAI_FALLBACKS.join(", "),
+        system: true,
+        size: 85,
+        ascent: 0,
+        descent: 0,
+        enabled: true
+      },
+      {
+        id: "thai",
+        label: t("ui.common.msg8"),
+        range: "U+0E00-0E7F",
+        target: "all",
+        builtin: "CourierThaiMono.ttf",
+        family: "",
+        file: "",
+        system: false,
+        size: 100,
+        ascent: 0,
+        descent: 0,
+        enabled: false
+      }
+    ];
+  }
+  function normalizeRange(range3) {
+    const parts = String(range3 || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const ok2 = parts.filter((p) => SAFE_RANGE.test(p)).map((p) => p.replace(/\s+/g, "").toUpperCase());
+    return ok2.join(", ");
+  }
+  function cssFamilyName(name5) {
+    return String(name5 || "").replace(/["'();{}\\]/g, "").trim();
+  }
+  function isUsable(row3) {
+    if (!row3 || row3.enabled === false) return false;
+    const src2 = row3.builtin || row3.file || cssFamilyName(row3.family);
+    if (!src2) return false;
+    return !row3.range || !!normalizeRange(row3.range);
+  }
+  function rowTarget(row3) {
+    const v2 = String(row3 && row3.target || "all");
+    return FONT_TARGETS.includes(v2) ? v2 : "all";
+  }
+  function rowAppliesTo(row3, target) {
+    const t22 = rowTarget(row3);
+    return t22 === "all" || t22 === target;
+  }
+  function familyList(row3) {
+    return String(row3 && row3.family || "").split(",").map((x) => cssFamilyName(x)).filter(Boolean);
+  }
+  function buildLangFontCss(rows, resolveUrl, opts = {}) {
+    const famName = opts.family || LANG_FAMILY;
+    const target = opts.target || "";
+    const out = [];
+    for (const row3 of rows || []) {
+      if (!isUsable(row3)) continue;
+      if (target && !rowAppliesTo(row3, target)) continue;
+      const range3 = normalizeRange(row3.range);
+      const srcs = [];
+      const url = (row3.builtin || row3.file) && resolveUrl ? resolveUrl(row3) : "";
+      if (url) srcs.push('url("' + String(url).replace(/"/g, "%22") + '")');
+      for (const f of familyList(row3)) srcs.push('local("' + f + '")');
+      if (!srcs.length) continue;
+      const size = clampPct(row3.size, 50, 150, 100);
+      const asc = clampPct(row3.ascent, 0, 200, 0);
+      const desc = clampPct(row3.descent, 0, 200, 0);
+      out.push('@font-face{font-family:"' + famName + '";font-display:swap;src:' + srcs.join(",") + ";" + (range3 ? "unicode-range:" + range3 + ";" : "") + (size !== 100 ? "size-adjust:" + size + "%;" : "") + (asc > 0 ? "ascent-override:" + asc + "%;" : "") + (desc > 0 ? "descent-override:" + desc + "%;" : "") + "}");
+    }
+    return out.join("\n");
+  }
+  function withFamily(stack, famName, hasRows) {
+    const s = String(stack || "").trim();
+    if (!hasRows || !famName) return s;
+    if (s.startsWith('"' + famName + '"')) return s;
+    return '"' + famName + '"' + (s ? ", " + s : "");
+  }
+  function withLangFamily(stack, hasRows) {
+    return withFamily(stack, LANG_FAMILY, hasRows);
+  }
+  function withSpFamily(stack, hasRows) {
+    return withFamily(stack, SP_FAMILY, hasRows);
+  }
+  function stackFamilies(stack) {
+    return String(stack || "").split(",").map((s) => s.trim().replace(/^["']|["']$/g, "").toLowerCase()).filter(Boolean);
+  }
+  function withThaiFallback(stack) {
+    const s = String(stack || "").trim();
+    const have = new Set(stackFamilies(s));
+    const add = THAI_SAFE_FALLBACKS.filter((f) => !have.has(f.toLowerCase())).map((f) => '"' + f + '"');
+    if (!add.length) return s;
+    return s ? s + ", " + add.join(", ") : add.join(", ");
+  }
+  function upgradeThaiChain(family) {
+    const cur = String(family || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const same = cur.length === SP_THAI_FALLBACKS_LEGACY.length && cur.every((f, i5) => f.toLowerCase() === SP_THAI_FALLBACKS_LEGACY[i5].toLowerCase());
+    return same ? SP_THAI_FALLBACKS.join(", ") : String(family || "");
+  }
+  function normalizeLangFonts(list) {
+    if (!Array.isArray(list)) return defaultLangFonts();
+    return list.map((r, i5) => ({
+      id: String(r?.id || "f" + i5),
+      label: String(r?.label || ""),
+      range: String(r?.range || ""),
+      target: rowTarget(r),
+      builtin: String(r?.builtin || ""),
+      file: String(r?.file || ""),
+      family: upgradeThaiChain(r?.family),
+      // [alpha.97 ข้อ 12] ชื่อฟอนต์มาจาก "รายชื่อฟอนต์ในเครื่อง" — ใช้เตือนว่าย้ายเครื่องแล้วอาจหาย
+      system: r?.system === true,
+      size: clampPct(r?.size, 50, 150, 100),
+      ascent: clampPct(r?.ascent, 0, 200, 0),
+      descent: clampPct(r?.descent, 0, 200, 0),
+      enabled: r?.enabled !== false
+    }));
+  }
+  function usableCounts(rows) {
+    const list = normalizeLangFonts(rows).filter(isUsable);
+    return {
+      prose: list.filter((r) => rowAppliesTo(r, "prose")).length,
+      screenplay: list.filter((r) => rowAppliesTo(r, "screenplay")).length,
+      total: list.length
+    };
+  }
+  function migrateSpThai(list, spThai) {
+    const rows = normalizeLangFonts(list);
+    if (!spThai || typeof spThai !== "object") return { rows, moved: false };
+    const has2 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
+    if (has2) return { rows, moved: false };
+    const fam = cssFamilyName(spThai.family);
+    rows.unshift(normalizeLangFonts([{
+      id: "sp-thai",
+      label: t("ui.common.msg8"),
+      range: SP_THAI_RANGE,
+      target: "screenplay",
+      family: fam ? [fam, ...SP_THAI_FALLBACKS.filter((f) => f !== fam)].join(", ") : SP_THAI_FALLBACKS.join(", "),
+      system: true,
+      size: clampPct(spThai.size, 50, 150, SP_THAI_SIZE),
+      ascent: clampPct(spThai.ascent, 0, 200, 0),
+      descent: clampPct(spThai.descent, 0, 200, 0),
+      enabled: spThai.enabled !== false
+    }])[0]);
+    return { rows, moved: true };
+  }
+  function putStyle(id, css) {
+    let st = document.getElementById(id);
+    if (!st) {
+      st = document.createElement("style");
+      st.id = id;
+      document.head.appendChild(st);
+    }
+    st.textContent = css;
+    return !!css;
+  }
+  function applyLangFonts(rows, resolveUrl) {
+    const list = normalizeLangFonts(rows).filter(isUsable);
+    putStyle(
+      "k-lang-fonts",
+      buildLangFontCss(list, resolveUrl, { family: LANG_FAMILY, target: "prose" })
+    );
+    putStyle(
+      "k-sp-fonts",
+      buildLangFontCss(list, resolveUrl, { family: SP_FAMILY, target: "screenplay" })
+    );
+    return usableCounts(list);
+  }
+  var LANG_FAMILY, SP_FAMILY, FONT_TARGETS, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, SAFE_RANGE, clampPct, THAI_SAFE_FALLBACKS, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_FALLBACKS_LEGACY, SP_THAI_SIZE;
+  var init_lang_fonts = __esm({
+    "src/lang-fonts.js"() {
+      init_i18n();
+      LANG_FAMILY = "K2 Lang";
+      SP_FAMILY = "K2 SP";
+      FONT_TARGETS = ["all", "prose", "screenplay"];
+      SCRIPT_PRESETS = [
+        { key: "thai", label: t("ui.common.msg8"), range: "U+0E00-0E7F" },
+        { key: "latin", label: t("ui.fonts.english"), range: "U+0000-024F, U+2000-206F" },
+        { key: "lao", label: t("ui.fonts.msg2"), range: "U+0E80-0EFF" },
+        { key: "khmer", label: t("ui.fonts.khmer"), range: "U+1780-17FF" },
+        { key: "myanmar", label: t("ui.fonts.msg"), range: "U+1000-109F" },
+        { key: "cjk", label: t("ui.fonts.chineseJapanese"), range: "U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF" },
+        { key: "hangul", label: t("ui.fonts.korean"), range: "U+1100-11FF, U+AC00-D7AF" },
+        { key: "cyrillic", label: t("ui.fonts.cyrillic"), range: "U+0400-04FF" },
+        { key: "arabic", label: t("ui.fonts.msg3"), range: "U+0600-06FF" },
+        { key: "devanagari", label: t("ui.fonts.msg4"), range: "U+0900-097F" },
+        { key: "all", label: t("ui.fonts.allChar"), range: "" }
+      ];
+      BUILTIN_FONT_FILES = [
+        { file: "CourierPrime-Regular.ttf", label: t("ui.fonts.courierPrimeDefaultChapter") },
+        { file: "CourierThaiMono.ttf", label: t("ui.fonts.courierThaiMonoWide") },
+        { file: "CourierThaiProp.ttf", label: t("ui.fonts.courierThaiProportionalWide") }
+      ];
+      SYSTEM_THAI_FONTS = [
+        { family: "Thonburi", label: t("ui.fonts.thonburiMacNoFloat") },
+        { family: "Leelawadee UI", label: "Leelawadee UI (Windows)" },
+        { family: "TH Sarabun New", label: t("ui.fonts.tHSarabunNew") },
+        { family: "Ayuthaya", label: t("ui.fonts.ayuthayaMacFloat") }
+      ];
+      SAFE_RANGE = /^\s*u\+[0-9a-f]{1,6}(-[0-9a-f]{1,6})?\s*$/i;
+      clampPct = (v2, lo, hi, dflt) => {
+        const n2 = parseFloat(v2);
+        return Number.isFinite(n2) ? Math.max(lo, Math.min(hi, n2)) : dflt;
+      };
+      THAI_SAFE_FALLBACKS = ["Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun", "Noto Sans Thai"];
+      SP_THAI_RANGE = "U+0E00-0E7F";
+      SP_THAI_FALLBACKS = ["Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun", "Tahoma"];
+      SP_THAI_FALLBACKS_LEGACY = ["Ayuthaya", "Thonburi", "Leelawadee UI", "Sarabun", "Tahoma"];
+      SP_THAI_SIZE = 85;
+    }
+  });
+
   // src/prose-format.js
   var prose_format_exports = {};
   __export(prose_format_exports, {
@@ -15786,7 +16003,9 @@
         `font-weight:${h.bold ? 700 : 400}`,
         `font-style:${h.italic ? "italic" : "normal"}`,
         `margin:${h.before}em 0 ${h.after}em`,
-        `font-family:${proseHeadingStack(f)}`
+        // [alpha.145] หัวข้อเขียน font-family ลงไปตรง ๆ (ไม่ผ่าน --ed-font) จึงต้อง
+        // ต่อตาข่ายไทยเอง ไม่งั้นหัวข้อ "ลอย" ทั้งที่เนื้อความไม่ลอย
+        `font-family:${withThaiFallback(proseHeadingStack(f))}`
       ];
       if (h.align) parts.push("text-align:" + h.align);
       if (f.headingColor) parts.push("color:" + f.headingColor);
@@ -15819,8 +16038,8 @@
     const p = paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...margins || {} };
     const tw = textWidth(p, m);
-    const bodyFont = String(opts && opts.fontStack || "").trim() || proseFontStack(f);
-    const headFont = String(opts && opts.headingStack || "").trim() || proseHeadingStack(f);
+    const bodyFont = withThaiFallback(String(opts && opts.fontStack || "").trim() || proseFontStack(f));
+    const headFont = withThaiFallback(String(opts && opts.headingStack || "").trim() || proseHeadingStack(f));
     const body = [
       `font-family:${bodyFont}`,
       `font-size:${f.fontPt}pt`,
@@ -15884,7 +16103,7 @@
       out.push("@media print{figure.k-img-page{page:k-bleed;break-before:page;break-after:page;position:static;aspect-ratio:auto;width:" + pw + "in;height:" + ph + "in}figure.k-img-page img{position:static;width:" + pw + "in;height:" + ph + "in;object-fit:cover;border-radius:0}}");
       out.push(`figure.k-img-w img{max-height:calc(${+bh.toFixed(4)}in - 2.2em)}`);
     }
-    out.push('pre{background:#f4f4f4;padding:10px 14px;border-radius:6px;overflow:auto;font-family:"Courier Prime","Courier New",monospace;font-size:.92em;text-indent:0}');
+    out.push("pre{background:#f4f4f4;padding:10px 14px;border-radius:6px;overflow:auto;font-family:" + withThaiFallback('"Courier Prime","Courier New",monospace') + ";font-size:.92em;text-indent:0}");
     out.push(".pb{page-break-before:always;break-before:page;height:0}");
     out.push(`@page{size:${p.width}in ${p.height}in;margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`);
     out.push("@media print{body{margin:0;max-width:none;padding:0}}");
@@ -16102,6 +16321,7 @@
       init_num();
       import_md = __toESM(require_md());
       init_text_width();
+      init_lang_fonts();
       init_text_width();
       clamp = (v2, lo, hi, d) => {
         const n2 = parseFloat(v2);
@@ -16249,7 +16469,7 @@
           d.className = cls + (inline2 ? " k-pb-inline" : inBlock ? " k-pb-in-block" : "");
           d.dataset.page = String(b.page || "");
           if (inBlock && Number.isFinite(b.ind)) d.style.setProperty("--k-pb-ind", b.ind + "in");
-          if (Number.isFinite(b.pad) && b.pad > 0.5) d.style.setProperty("--k-pb-pad", b.pad + "px");
+          if (Number.isFinite(b.pad) && Math.abs(b.pad) > 0.5) d.style.setProperty("--k-pb-pad", b.pad + "px");
           d.setAttribute("contenteditable", "false");
           const lbl = document.createElement("span");
           lbl.className = "sp-page-break-num";
@@ -16310,7 +16530,7 @@
       let n2 = 0;
       els.forEach((e, i5) => {
         const pad3 = Number(list[i5] && list[i5].pad);
-        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad3) && pad3 > 0.5 ? pad3 : 0) + "px");
+        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad3) && Math.abs(pad3) > 0.5 ? pad3 : 0) + "px");
         n2++;
       });
       return n2;
@@ -19149,16 +19369,16 @@
         n2.textContent = label;
         page2.append(n2);
       }
-      const clip3 = document.createElement("div");
-      clip3.className = "ed-page-clip";
+      const clip4 = document.createElement("div");
+      clip4.className = "ed-page-clip";
       const sliceH = num(pg.end, NaN) - num(pg.start, 0);
-      clip3.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
+      clip4.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
       const sp = opts.startPos && opts.startPos[els.length];
-      if (Number.isFinite(sp)) clip3.dataset.pos = String(sp);
+      if (Number.isFinite(sp)) clip4.dataset.pos = String(sp);
       const inner = master.cloneNode(true);
       inner.style.cssText = "width:" + textW + "in;max-width:none;padding:0;min-height:0;margin:" + -num(pg.start, 0) + "px 0 0;" + (bleedUrl ? "visibility:hidden;" : "");
-      clip3.append(inner);
-      page2.append(clip3);
+      clip4.append(inner);
+      page2.append(clip4);
       slot.append(page2);
       host2.append(slot);
       els.push(page2);
@@ -21788,206 +22008,6 @@
     }
   });
 
-  // src/lang-fonts.js
-  function defaultLangFonts() {
-    return [
-      {
-        id: "sp-thai",
-        label: t("ui.common.msg8"),
-        range: SP_THAI_RANGE,
-        target: "screenplay",
-        builtin: "",
-        file: "",
-        family: SP_THAI_FALLBACKS.join(", "),
-        system: true,
-        size: 85,
-        ascent: 0,
-        descent: 0,
-        enabled: true
-      },
-      {
-        id: "thai",
-        label: t("ui.common.msg8"),
-        range: "U+0E00-0E7F",
-        target: "all",
-        builtin: "CourierThaiMono.ttf",
-        family: "",
-        file: "",
-        system: false,
-        size: 100,
-        ascent: 0,
-        descent: 0,
-        enabled: false
-      }
-    ];
-  }
-  function normalizeRange(range3) {
-    const parts = String(range3 || "").split(",").map((s) => s.trim()).filter(Boolean);
-    const ok2 = parts.filter((p) => SAFE_RANGE.test(p)).map((p) => p.replace(/\s+/g, "").toUpperCase());
-    return ok2.join(", ");
-  }
-  function cssFamilyName(name5) {
-    return String(name5 || "").replace(/["'();{}\\]/g, "").trim();
-  }
-  function isUsable(row3) {
-    if (!row3 || row3.enabled === false) return false;
-    const src2 = row3.builtin || row3.file || cssFamilyName(row3.family);
-    if (!src2) return false;
-    return !row3.range || !!normalizeRange(row3.range);
-  }
-  function rowTarget(row3) {
-    const v2 = String(row3 && row3.target || "all");
-    return FONT_TARGETS.includes(v2) ? v2 : "all";
-  }
-  function rowAppliesTo(row3, target) {
-    const t22 = rowTarget(row3);
-    return t22 === "all" || t22 === target;
-  }
-  function familyList(row3) {
-    return String(row3 && row3.family || "").split(",").map((x) => cssFamilyName(x)).filter(Boolean);
-  }
-  function buildLangFontCss(rows, resolveUrl, opts = {}) {
-    const famName = opts.family || LANG_FAMILY;
-    const target = opts.target || "";
-    const out = [];
-    for (const row3 of rows || []) {
-      if (!isUsable(row3)) continue;
-      if (target && !rowAppliesTo(row3, target)) continue;
-      const range3 = normalizeRange(row3.range);
-      const srcs = [];
-      const url = (row3.builtin || row3.file) && resolveUrl ? resolveUrl(row3) : "";
-      if (url) srcs.push('url("' + String(url).replace(/"/g, "%22") + '")');
-      for (const f of familyList(row3)) srcs.push('local("' + f + '")');
-      if (!srcs.length) continue;
-      const size = clampPct(row3.size, 50, 150, 100);
-      const asc = clampPct(row3.ascent, 0, 200, 0);
-      const desc = clampPct(row3.descent, 0, 200, 0);
-      out.push('@font-face{font-family:"' + famName + '";font-display:swap;src:' + srcs.join(",") + ";" + (range3 ? "unicode-range:" + range3 + ";" : "") + (size !== 100 ? "size-adjust:" + size + "%;" : "") + (asc > 0 ? "ascent-override:" + asc + "%;" : "") + (desc > 0 ? "descent-override:" + desc + "%;" : "") + "}");
-    }
-    return out.join("\n");
-  }
-  function withFamily(stack, famName, hasRows) {
-    const s = String(stack || "").trim();
-    if (!hasRows || !famName) return s;
-    if (s.startsWith('"' + famName + '"')) return s;
-    return '"' + famName + '"' + (s ? ", " + s : "");
-  }
-  function withLangFamily(stack, hasRows) {
-    return withFamily(stack, LANG_FAMILY, hasRows);
-  }
-  function withSpFamily(stack, hasRows) {
-    return withFamily(stack, SP_FAMILY, hasRows);
-  }
-  function normalizeLangFonts(list) {
-    if (!Array.isArray(list)) return defaultLangFonts();
-    return list.map((r, i5) => ({
-      id: String(r?.id || "f" + i5),
-      label: String(r?.label || ""),
-      range: String(r?.range || ""),
-      target: rowTarget(r),
-      builtin: String(r?.builtin || ""),
-      file: String(r?.file || ""),
-      family: String(r?.family || ""),
-      // [alpha.97 ข้อ 12] ชื่อฟอนต์มาจาก "รายชื่อฟอนต์ในเครื่อง" — ใช้เตือนว่าย้ายเครื่องแล้วอาจหาย
-      system: r?.system === true,
-      size: clampPct(r?.size, 50, 150, 100),
-      ascent: clampPct(r?.ascent, 0, 200, 0),
-      descent: clampPct(r?.descent, 0, 200, 0),
-      enabled: r?.enabled !== false
-    }));
-  }
-  function usableCounts(rows) {
-    const list = normalizeLangFonts(rows).filter(isUsable);
-    return {
-      prose: list.filter((r) => rowAppliesTo(r, "prose")).length,
-      screenplay: list.filter((r) => rowAppliesTo(r, "screenplay")).length,
-      total: list.length
-    };
-  }
-  function migrateSpThai(list, spThai) {
-    const rows = normalizeLangFonts(list);
-    if (!spThai || typeof spThai !== "object") return { rows, moved: false };
-    const has2 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
-    if (has2) return { rows, moved: false };
-    const fam = cssFamilyName(spThai.family);
-    rows.unshift(normalizeLangFonts([{
-      id: "sp-thai",
-      label: t("ui.common.msg8"),
-      range: SP_THAI_RANGE,
-      target: "screenplay",
-      family: fam ? [fam, ...SP_THAI_FALLBACKS.filter((f) => f !== fam)].join(", ") : SP_THAI_FALLBACKS.join(", "),
-      system: true,
-      size: clampPct(spThai.size, 50, 150, SP_THAI_SIZE),
-      ascent: clampPct(spThai.ascent, 0, 200, 0),
-      descent: clampPct(spThai.descent, 0, 200, 0),
-      enabled: spThai.enabled !== false
-    }])[0]);
-    return { rows, moved: true };
-  }
-  function putStyle(id, css) {
-    let st = document.getElementById(id);
-    if (!st) {
-      st = document.createElement("style");
-      st.id = id;
-      document.head.appendChild(st);
-    }
-    st.textContent = css;
-    return !!css;
-  }
-  function applyLangFonts(rows, resolveUrl) {
-    const list = normalizeLangFonts(rows).filter(isUsable);
-    putStyle(
-      "k-lang-fonts",
-      buildLangFontCss(list, resolveUrl, { family: LANG_FAMILY, target: "prose" })
-    );
-    putStyle(
-      "k-sp-fonts",
-      buildLangFontCss(list, resolveUrl, { family: SP_FAMILY, target: "screenplay" })
-    );
-    return usableCounts(list);
-  }
-  var LANG_FAMILY, SP_FAMILY, FONT_TARGETS, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, SAFE_RANGE, clampPct, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE;
-  var init_lang_fonts = __esm({
-    "src/lang-fonts.js"() {
-      init_i18n();
-      LANG_FAMILY = "K2 Lang";
-      SP_FAMILY = "K2 SP";
-      FONT_TARGETS = ["all", "prose", "screenplay"];
-      SCRIPT_PRESETS = [
-        { key: "thai", label: t("ui.common.msg8"), range: "U+0E00-0E7F" },
-        { key: "latin", label: t("ui.fonts.english"), range: "U+0000-024F, U+2000-206F" },
-        { key: "lao", label: t("ui.fonts.msg2"), range: "U+0E80-0EFF" },
-        { key: "khmer", label: t("ui.fonts.khmer"), range: "U+1780-17FF" },
-        { key: "myanmar", label: t("ui.fonts.msg"), range: "U+1000-109F" },
-        { key: "cjk", label: t("ui.fonts.chineseJapanese"), range: "U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF" },
-        { key: "hangul", label: t("ui.fonts.korean"), range: "U+1100-11FF, U+AC00-D7AF" },
-        { key: "cyrillic", label: t("ui.fonts.cyrillic"), range: "U+0400-04FF" },
-        { key: "arabic", label: t("ui.fonts.msg3"), range: "U+0600-06FF" },
-        { key: "devanagari", label: t("ui.fonts.msg4"), range: "U+0900-097F" },
-        { key: "all", label: t("ui.fonts.allChar"), range: "" }
-      ];
-      BUILTIN_FONT_FILES = [
-        { file: "CourierPrime-Regular.ttf", label: t("ui.fonts.courierPrimeDefaultChapter") },
-        { file: "CourierThaiMono.ttf", label: t("ui.fonts.courierThaiMonoWide") },
-        { file: "CourierThaiProp.ttf", label: t("ui.fonts.courierThaiProportionalWide") }
-      ];
-      SYSTEM_THAI_FONTS = [
-        { family: "Ayuthaya", label: t("ui.common.ayuthayaMacOSNotFloat") },
-        { family: "Thonburi", label: "Thonburi (macOS)" },
-        { family: "Leelawadee UI", label: "Leelawadee UI (Windows)" },
-        { family: "TH Sarabun New", label: t("ui.fonts.tHSarabunNew") }
-      ];
-      SAFE_RANGE = /^\s*u\+[0-9a-f]{1,6}(-[0-9a-f]{1,6})?\s*$/i;
-      clampPct = (v2, lo, hi, dflt) => {
-        const n2 = parseFloat(v2);
-        return Number.isFinite(n2) ? Math.max(lo, Math.min(hi, n2)) : dflt;
-      };
-      SP_THAI_RANGE = "U+0E00-0E7F";
-      SP_THAI_FALLBACKS = ["Ayuthaya", "Thonburi", "Leelawadee UI", "Sarabun", "Tahoma"];
-      SP_THAI_SIZE = 85;
-    }
-  });
-
   // src/core.js
   var core_exports = {};
   __export(core_exports, {
@@ -22039,12 +22059,14 @@
     SP_FAMILY: () => SP_FAMILY,
     SP_STRINGS: () => SP_STRINGS,
     SP_THAI_FALLBACKS: () => SP_THAI_FALLBACKS,
+    SP_THAI_FALLBACKS_LEGACY: () => SP_THAI_FALLBACKS_LEGACY,
     SP_THAI_RANGE: () => SP_THAI_RANGE,
     SP_THAI_SIZE: () => SP_THAI_SIZE,
     STATUS_COLORS: () => STATUS_COLORS,
     SYSTEM_THAI_FONTS: () => SYSTEM_THAI_FONTS,
     T: () => T,
     THAI_FONT_STACK: () => THAI_FONT_STACK,
+    THAI_SAFE_FALLBACKS: () => THAI_SAFE_FALLBACKS,
     THEMES: () => THEMES,
     THEME_ALIAS: () => THEME_ALIAS,
     THEME_LABEL_KEYS: () => THEME_LABEL_KEYS,
@@ -22138,6 +22160,7 @@
     withLangFamily: () => withLangFamily,
     withShortcut: () => withShortcut,
     withSpFamily: () => withSpFamily,
+    withThaiFallback: () => withThaiFallback,
     wrapLines: () => wrapLines
   });
   function elPath(root, e) {
@@ -22731,7 +22754,7 @@
       ptToPx = (pt) => +((parseFloat(pt) || 12) * PT_PX2).toFixed(2);
       BASE_ED_FS = ptToPx(12);
       BASE_SP_FS = ptToPx(12);
-      THAI_FONT_STACK = '"Ayuthaya", "Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun"';
+      THAI_FONT_STACK = '"Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun"';
       DEFAULT_SCRIPT_FONT = '"Courier Prime", "Courier Final Draft", "Courier New", ' + THAI_FONT_STACK + ", monospace";
       SCALE_MIN = 0.5;
       SCALE_MAX = 2.5;
@@ -30498,7 +30521,7 @@
     }
     return out.sort((a, b) => a.localeCompare(b));
   }
-  function chatRequest(provider, { messages = [], system = "", stream: stream2 = false, model, temperature, maxTokens } = {}) {
+  function chatRequest(provider, { messages = [], system = "", stream: stream2 = false, model, temperature, maxTokens, reasoningEffort } = {}) {
     const base4 = trimSlash(provider && provider.credential && provider.credential.baseUrl || "");
     const pr = normalizeParams(provider && provider.params || {});
     const url = /\/chat\/completions$/i.test(base4) ? base4 : /\/v1$/i.test(base4) ? base4 + "/chat/completions" : base4 + "/v1/chat/completions";
@@ -30511,15 +30534,16 @@
       if (v2 !== null && v2 !== void 0 && v2 !== "") body[k] = v2;
     };
     put("temperature", temperature !== void 0 ? temperature : pr.temperature);
-    put("max_tokens", maxTokens !== void 0 ? maxTokens : pr.maxTokens);
+    const mt = maxTokens !== void 0 ? maxTokens : pr.maxTokens;
+    if (typeof mt === "number" && isFinite(mt) && mt > 0) body.max_tokens = mt;
     put("frequency_penalty", pr.frequencyPenalty);
     put("presence_penalty", pr.presencePenalty);
     put("top_p", pr.topP);
     put("top_k", pr.topK);
-    put("reasoning_effort", pr.reasoningEffort);
+    put("reasoning_effort", reasoningEffort !== void 0 && reasoningEffort !== null ? reasoningEffort : pr.reasoningEffort);
     if (pr.responseFormat && pr.responseFormat !== "text") body.response_format = { type: pr.responseFormat };
     if (pr.thinkingMode === "on") body.thinking = { type: "enabled" };
-    else if (pr.thinkingMode === "off" && pr.reasoningEffort) body.thinking = { type: "disabled" };
+    else if (pr.thinkingMode === "off" && body.reasoning_effort) body.thinking = { type: "disabled" };
     return {
       url,
       method: "POST",
@@ -30658,14 +30682,20 @@
           max: 10,
           def: 2
         },
+        // ══ [alpha.145] ★ **-1 = ไม่จำกัด** ══
+        // ผู้ใช้: *"max token ไม่สามารถใช้เป็น -1 ได้"* — ของเดิม `min:1` หนีบ -1 เป็น 1 เงียบ ๆ
+        // แล้วคำตอบถูกตัดเหลือคำเดียวโดยไม่มีใครบอกว่าเกิดอะไรขึ้น
+        // -1 (และ 0) = **ไม่ส่งฟิลด์ `max_tokens` ไปเลย** = ปล่อยตามค่าเริ่มต้นของผู้ให้บริการ
+        // (สำนวนเดียวกับ LM Studio / llama.cpp ที่ใช้ -1 แปลว่า "ไม่จำกัด")
         {
           key: "maxTokens",
           label: "Maximum Number of Tokens",
           th: t("ui.aiProviders.longAnswerHighLast"),
           type: "int",
-          min: 1,
+          min: -1,
           max: 2e5,
-          def: 2048
+          def: 2048,
+          hint: T`-1 = ไม่จำกัด (ไม่ส่ง max_tokens ไปเลย · ให้ผู้ให้บริการตัดสินเอง)`
         },
         {
           key: "presencePenalty",
@@ -30733,6 +30763,7 @@
     DEFAULT_SEND_KEY: () => DEFAULT_SEND_KEY,
     DEFAULT_VIEW: () => DEFAULT_VIEW,
     HISTORY_KEEP_LAST: () => HISTORY_KEEP_LAST,
+    REASONING_EFFORTS: () => REASONING_EFFORTS,
     SCOPES: () => SCOPES,
     SEND_KEYS: () => SEND_KEYS,
     SESSION_DIR: () => SESSION_DIR,
@@ -30746,9 +30777,11 @@
     compact: () => compact,
     contextLabel: () => contextLabel,
     costOf: () => costOf,
+    effortLabel: () => effortLabel,
     estimateTokens: () => estimateTokens,
     hasConversation: () => hasConversation,
     historyBudget: () => historyBudget,
+    isReasoningEffort: () => isReasoningEffort,
     isSendKey: () => isSendKey,
     modeCap: () => modeCap,
     modeDef: () => modeDef,
@@ -30780,6 +30813,12 @@
   }
   function scopeLabel(id) {
     return (SCOPES.find((s) => s.id === id) || SCOPES[0]).label;
+  }
+  function isReasoningEffort(v2) {
+    return REASONING_EFFORTS.some((r) => r.id === String(v2 || ""));
+  }
+  function effortLabel(id) {
+    return (REASONING_EFFORTS.find((r) => r.id === String(id || "")) || REASONING_EFFORTS[0]).label;
   }
   function isSendKey(ev, sendKey = DEFAULT_SEND_KEY) {
     if (!ev || ev.key !== "Enter" || ev.isComposing) return false;
@@ -30817,6 +30856,10 @@
       // override โมเดล (อิสระจากตั้งค่ากลาง)
       contextLimit: patch.contextLimit || 0,
       // 0 = ไม่รู้ (ยังไม่เคยตอบกลับมา)
+      // [alpha.145] ระดับการใช้ความคิดรายเซสชัน ('' = ตามผู้ให้บริการ)
+      effort: isReasoningEffort(patch.effort) ? String(patch.effort || "") : "",
+      // [alpha.145] id ของไฟล์ทักษะใน `Skills/` ที่เปิดใช้กับเซสชันนี้
+      skills: Array.isArray(patch.skills) ? patch.skills.map(String) : [],
       files: Array.isArray(patch.files) ? patch.files.slice() : [],
       messages: Array.isArray(patch.messages) ? patch.messages.slice() : []
     };
@@ -30838,6 +30881,9 @@
       provider: patch.provider || "",
       files: patch.files || [],
       error: patch.error || "",
+      // [alpha.145] คำอธิบายเต็ม + แนวทางแก้ของความผิดพลาด (ai-error.js) — เก็บลงไฟล์ด้วย
+      // เพื่อให้ย้อนดูทีหลังได้ว่ารอบนั้นพังเพราะอะไร
+      detail: patch.detail || "",
       // ── ของที่ transcript view ใช้แสดง (ไม่กระทบข้อความที่ส่งให้โมเดล) ──
       thinking: patch.thinking || "",
       // ความคิดของโมเดล ถ้า provider ส่งกลับมา
@@ -31075,7 +31121,7 @@
     flushPara();
     return out;
   }
-  var SESSION_DIR, SESSION_VERSION, CHAT_MODES, DEFAULT_MODE, TRANSCRIPT_VIEWS, DEFAULT_VIEW, SCOPES, DEFAULT_SCOPE, SEND_KEYS, DEFAULT_SEND_KEY, _seq2, n, DEFAULT_HISTORY_TOKENS, HISTORY_KEEP_LAST;
+  var SESSION_DIR, SESSION_VERSION, CHAT_MODES, DEFAULT_MODE, TRANSCRIPT_VIEWS, DEFAULT_VIEW, SCOPES, DEFAULT_SCOPE, REASONING_EFFORTS, SEND_KEYS, DEFAULT_SEND_KEY, _seq2, n, DEFAULT_HISTORY_TOKENS, HISTORY_KEEP_LAST;
   var init_ai_session = __esm({
     "src/ai/ai-session.js"() {
       init_i18n();
@@ -31150,6 +31196,13 @@
         { id: "none", label: t("ui.aiSession.notInTo") }
       ];
       DEFAULT_SCOPE = "scene";
+      REASONING_EFFORTS = [
+        { id: "", label: T`คิด: ตามผู้ให้บริการ` },
+        { id: "minimal", label: T`คิด: น้อยสุด` },
+        { id: "low", label: T`คิด: น้อย` },
+        { id: "medium", label: T`คิด: กลาง` },
+        { id: "high", label: T`คิด: มาก` }
+      ];
       SEND_KEYS = [
         { id: "enter", label: t("ui.aiSession.enterSendShiftEnter") },
         { id: "shift-enter", label: t("ui.aiSession.shiftEnterSendEnter") }
@@ -31159,6 +31212,178 @@
       n = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
       DEFAULT_HISTORY_TOKENS = 32e3;
       HISTORY_KEEP_LAST = 4;
+    }
+  });
+
+  // src/ai/ai-error.js
+  var ai_error_exports = {};
+  __export(ai_error_exports, {
+    clip: () => clip,
+    describeHttpError: () => describeHttpError,
+    hostOf: () => hostOf2,
+    redactSecrets: () => redactSecrets,
+    serverMessage: () => serverMessage,
+    shortError: () => shortError
+  });
+  function redactSecrets(text) {
+    return String(text ?? "").replace(/\b(sk|xai|gsk|pplx|or)-[A-Za-z0-9_-]{6,}/g, "$1-\u2022\u2022\u2022\u2022").replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi, "$1\u2022\u2022\u2022\u2022").replace(/("?(?:api[_-]?key|x-api-key|authorization)"?\s*[:=]\s*"?)[^"'\s,}]{8,}/gi, "$1\u2022\u2022\u2022\u2022").replace(/([?&](?:api[_-]?key|key|token|access[_-]?token|auth)=)[^&\s]+/gi, "$1\u2022\u2022\u2022\u2022");
+  }
+  function clip(text, max2 = 600) {
+    const s = String(text ?? "").trim();
+    return s.length > max2 ? s.slice(0, max2) + " \u2026" : s;
+  }
+  function serverMessage(body) {
+    const raw = String(body ?? "").trim();
+    if (!raw) return "";
+    let d = null;
+    try {
+      d = JSON.parse(raw);
+    } catch {
+    }
+    if (d && typeof d === "object") {
+      const e = d.error;
+      if (typeof e === "string" && e.trim()) return e.trim();
+      if (e && typeof e === "object") {
+        const m = e.message || e.detail || e.type || "";
+        const code3 = e.code ? " [" + e.code + "]" : "";
+        if (String(m).trim()) return String(m).trim() + code3;
+      }
+      for (const k of ["message", "detail", "msg", "reason"]) {
+        if (typeof d[k] === "string" && d[k].trim()) return d[k].trim();
+      }
+      return "";
+    }
+    if (/^\s*</.test(raw)) return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    return raw;
+  }
+  function hostOf2(url) {
+    try {
+      return new URL(String(url)).host;
+    } catch {
+      return "";
+    }
+  }
+  function networkKind(text) {
+    const s = String(text || "");
+    if (/ECONNREFUSED|Connection refused/i.test(s)) {
+      return {
+        key: "refused",
+        reason: T`เครื่องปลายทางปฏิเสธการเชื่อมต่อ (ไม่มีอะไรฟังอยู่ที่พอร์ตนั้น)`,
+        hints: [
+          T`ถ้าเป็นโมเดลในเครื่อง (Ollama / LM Studio / llama.cpp) — เปิดโปรแกรมนั้นให้ทำงานอยู่ก่อน`,
+          T`ตรวจเลขพอร์ตใน Base URL ให้ตรงกับที่โปรแกรมนั้นเปิดจริง`
+        ]
+      };
+    }
+    if (/ENOTFOUND|getaddrinfo|DNS/i.test(s)) {
+      return {
+        key: "dns",
+        reason: T`หาชื่อโดเมนไม่เจอ (DNS)`,
+        hints: [T`ตรวจว่าพิมพ์ Base URL ถูกต้อง`, T`ตรวจว่าเครื่องต่ออินเทอร์เน็ตอยู่`]
+      };
+    }
+    if (/certificate|SSL|TLS|self[- ]signed/i.test(s)) {
+      return {
+        key: "tls",
+        reason: T`ใบรับรองความปลอดภัย (TLS) ของปลายทางใช้ไม่ได้`,
+        hints: [T`เซิร์ฟเวอร์ในเครือข่ายภายในมักใช้ใบรับรองที่ออกเอง — ลองใช้ http:// แทน https:// ถ้าเป็นเครื่องในบ้าน`]
+      };
+    }
+    if (/ETIMEDOUT|ECONNRESET|EPIPE|socket hang up|network|fetch failed/i.test(s)) {
+      return {
+        key: "net",
+        reason: T`ต่อกับเซิร์ฟเวอร์ไม่ติด (เครือข่ายขาดกลางทาง)`,
+        hints: [
+          T`ตรวจอินเทอร์เน็ต / VPN / ไฟร์วอลล์`,
+          T`ถ้าเป็นเครื่องในบ้าน ลองเปิด Base URL ในเบราว์เซอร์ดูว่าตอบไหม`
+        ]
+      };
+    }
+    return null;
+  }
+  function describeHttpError(e = {}) {
+    const status = Number(e.status) || 0;
+    const rawBody = redactSecrets(String(e.body ?? ""));
+    const srvMsg = serverMessage(rawBody);
+    const host2 = hostOf2(e.url);
+    let reason = "";
+    let hints = [];
+    let code3 = "http-" + status;
+    if (e.aborted && e.timedOut) {
+      code3 = "timeout";
+      reason = T`หมดเวลารอคำตอบ`;
+      hints = [
+        T`เพิ่มค่า Timeout ใน ตั้งค่า AI → แก้ผู้ให้บริการ → Parameters`,
+        T`โมเดลที่คิดเยอะ (reasoning) ใช้เวลานาน — ลดระดับการใช้ความคิด หรือลดความยาวคำตอบ`
+      ];
+    } else if (e.aborted) {
+      code3 = "aborted";
+      reason = T`ผู้ใช้กดหยุดเอง`;
+      hints = [];
+    } else if (status === 0) {
+      const k = networkKind(srvMsg || rawBody || e.error);
+      code3 = k ? "net-" + k.key : "net";
+      reason = k ? k.reason : srvMsg || T`ยังติดต่อเซิร์ฟเวอร์ไม่ได้เลย (คำขอไปไม่ถึงปลายทาง)`;
+      hints = k ? k.hints : [
+        T`ตรวจ Base URL · อินเทอร์เน็ต · ไฟร์วอลล์`,
+        T`ตรวจว่าโดเมนอยู่ใน Allowed HTTP Request Domains ของผู้ให้บริการ`
+      ];
+    } else if (status === 401 || status === 403) {
+      reason = T`เซิร์ฟเวอร์ไม่รับกุญแจ (API key) ที่ส่งไป`;
+      hints = [
+        T`ใส่คีย์ใหม่ที่ ตั้งค่า AI → แก้ผู้ให้บริการ → Credential แล้วกด 💾 Save Credential`,
+        T`คีย์บางเจ้าผูกกับองค์กร/โครงการ — ตรวจว่าคีย์นี้ใช้กับ Base URL นี้ได้จริง`
+      ];
+    } else if (status === 404) {
+      reason = T`ปลายทางไม่มีอยู่จริง (404)`;
+      hints = [
+        T`Base URL มักต้องลงท้ายด้วย /v1 — ตรวจให้ตรงกับคู่มือของผู้ให้บริการ`,
+        T`ตรวจชื่อโมเดล: กด "ดึงรายชื่อโมเดล" แล้วเลือกจากรายการแทนการพิมพ์เอง`
+      ];
+    } else if (status === 408) {
+      reason = T`เซิร์ฟเวอร์บอกว่าคำขอใช้เวลานานเกินไป`;
+      hints = [T`ลองใหม่อีกครั้ง หรือเพิ่ม Max Retries ใน Parameters`];
+    } else if (status === 429) {
+      reason = T`ยิงถี่เกินโควตา หรือเครดิตหมด (429)`;
+      hints = [
+        T`รอสักครู่แล้วลองใหม่`,
+        T`ตรวจยอดเครดิต/โควตาในหน้าผู้ให้บริการ`,
+        T`เพิ่ม Max Retries ใน Parameters ให้ระบบถอยแล้วลองเองอัตโนมัติ`
+      ];
+    } else if (status === 400 || status === 422) {
+      reason = T`ผู้ให้บริการไม่รับพารามิเตอร์ที่ส่งไป (${String(status)})`;
+      hints = [
+        T`ดูข้อความของเซิร์ฟเวอร์ด้านล่าง — มักบอกชื่อฟิลด์ที่ผิดมาตรง ๆ`,
+        T`ตัวที่ผิดบ่อย: Max Tokens สูงเกินที่โมเดลรับ · Reasoning Effort / Thinking mode ที่โมเดลนี้ไม่มี · Response Format = json_object`
+      ];
+    } else if (status >= 500) {
+      reason = T`ฝั่งผู้ให้บริการมีปัญหา (${String(status)})`;
+      hints = [T`รอสักครู่แล้วลองใหม่ — ไม่ใช่ปัญหาที่เครื่องเรา`];
+    } else {
+      reason = T`เรียกไม่สำเร็จ (HTTP ${String(status)})`;
+      hints = [];
+    }
+    const title2 = status ? tm("AI: {0} (HTTP {1})", reason, String(status)) : tm("AI: {0}", reason);
+    const lines = [];
+    if (e.provider) lines.push(T`ผู้ให้บริการ: ` + e.provider);
+    if (e.model) lines.push(T`โมเดล: ` + e.model);
+    if (host2) lines.push(T`ปลายทาง: ` + host2);
+    if (e.url) lines.push("URL: " + redactSecrets(e.url));
+    lines.push("HTTP: " + (status || T`ไปไม่ถึงเซิร์ฟเวอร์`));
+    if (srvMsg) lines.push(T`เซิร์ฟเวอร์ตอบ: ` + clip(srvMsg));
+    else if (rawBody) lines.push(T`เนื้อคำตอบ: ` + clip(rawBody));
+    if (e.error && e.error !== reason) lines.push(T`ข้อความภายใน: ` + redactSecrets(String(e.error)));
+    if (hints.length) lines.push("", T`แนวทางแก้:`, ...hints.map((h, i5) => i5 + 1 + ". " + h));
+    return { title: title2, reason, hints, detail: lines.join("\n"), code: code3, serverMessage: srvMsg, host: host2, status };
+  }
+  function shortError(info) {
+    const parts = [info.reason];
+    if (info.serverMessage) parts.push(clip(info.serverMessage, 160));
+    return parts.filter(Boolean).join(" \u2014 ").replace(/\s+/g, " ");
+  }
+  var init_ai_error = __esm({
+    "src/ai/ai-error.js"() {
+      init_i18n();
     }
   });
 
@@ -31236,7 +31461,11 @@
   async function sendRequest(provider, req) {
     const allowed = (provider.credential || {}).allowedDomains || [];
     if (!isDomainAllowed(req.url, allowed)) {
-      return { ok: false, status: 0, error: t("ui.aiProvider.domainNotListAllowed") + req.url };
+      return failure(provider, req, {
+        status: 0,
+        blocked: true,
+        body: t("ui.aiProvider.domainNotListAllowed") + req.url + " | Allowed: " + (allowed.join(", ") || "\u2014")
+      });
     }
     const opts = { method: req.method || "POST", headers: req.headers };
     if (req.body !== void 0) opts.body = JSON.stringify(req.body);
@@ -31245,7 +31474,7 @@
     const retries = Math.max(0, req.maxRetries ?? 0);
     const backoff2 = (n2) => Math.min(8e3, 500 * Math.pow(2, n2));
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const who = provider.name || hostOf2(req.url);
+    const who = provider.name || hostOf3(req.url);
     try {
       for (let attempt = 0; ; attempt++) {
         setBusy(attempt ? tf("ui.aiProvider.busyNextTryNew", who, attempt) : tf("ui.aiProvider.busyNext", who));
@@ -31257,7 +31486,7 @@
             await sleep(backoff2(attempt));
             continue;
           }
-          return { ok: false, status: 0, error: t("ui.aiProvider.connectCant") + (e && e.message) };
+          return failure(provider, req, { status: 0, body: String(e && e.message || e) });
         }
         if (res && res.ok) {
           let json = null;
@@ -31268,39 +31497,66 @@
           return { ok: true, status: res.status, json, body: res.body };
         }
         if (res && res.aborted) {
-          return {
-            ok: false,
+          return failure(provider, req, {
             status: 0,
             aborted: true,
             timedOut: !!res.timedOut,
-            error: res.timedOut ? t("ui.aiProvider.timedOut") : t("ui.aiProvider.stopped")
-          };
+            body: res.error || ""
+          });
         }
         const st = res && res.status || 0;
-        const retryable2 = st === 429 || st === 408 || st >= 500 && st < 600;
+        const retryable2 = res && res.netError || st === 429 || st === 408 || st >= 500 && st < 600;
         if (retryable2 && attempt < retries) {
           await sleep(backoff2(attempt));
           continue;
         }
-        return { ok: false, status: st, error: httpMsg(st), body: res && res.body || "" };
+        return failure(provider, req, { status: st, body: res && res.body || "" });
       }
     } finally {
       clearBusy();
     }
   }
-  function hostOf2(url) {
+  function hostOf3(url) {
     try {
       return new URL(String(url)).host;
     } catch {
       return "AI";
     }
   }
-  function httpMsg(s) {
-    if (s === 401 || s === 403) return t("ui.aiProvider.aPIKeyNotValid") + s + ")";
-    if (s === 404) return t("ui.aiProvider.notFoundToCheck");
-    if (s === 429) return t("ui.aiProvider.callHTTP");
-    if (s >= 500) return t("ui.common.sideProviderItemHTTP") + s + ")";
-    return t("ui.aiProvider.callNotOkHTTP") + s + ")";
+  function failure(provider, req, e) {
+    const info = describeHttpError({
+      ...e,
+      url: req && req.url,
+      provider: provider && provider.name,
+      model: req && req.body && req.body.model || provider && provider.model || ""
+    });
+    log(info.code === "aborted" ? "info" : "error", "ai: " + shortError(info), info.detail);
+    return {
+      ok: false,
+      status: info.status,
+      aborted: !!e.aborted,
+      timedOut: !!e.timedOut,
+      error: info.title,
+      detail: info.detail,
+      hints: info.hints,
+      code: info.code,
+      body: redactSecrets(String(e.body || ""))
+    };
+  }
+  function logCall(provider, req, { ms, usage, chars: chars3, stream: stream2 }) {
+    const u = usage || {};
+    log(
+      "info",
+      "ai: " + (provider && provider.name || "?") + " \xB7 " + (req.body && req.body.model || "?") + " \xB7 " + (ms / 1e3).toFixed(1) + "s \xB7 " + (u.total || 0) + " tok",
+      [
+        stream2 ? "stream" : "complete",
+        "host=" + hostOf3(req.url),
+        "in=" + (u.input || 0) + " out=" + (u.output || 0) + (u.reasoning ? " think=" + u.reasoning : "") + (u.cached ? " cache=" + u.cached : ""),
+        "chars=" + chars3,
+        "max_tokens=" + (req.body && req.body.max_tokens !== void 0 ? req.body.max_tokens : "\u2014"),
+        "reasoning_effort=" + (req.body && req.body.reasoning_effort || "\u2014")
+      ].join(" \xB7 ")
+    );
   }
   async function fetchModels(provider) {
     const reqs = modelsRequests(provider);
@@ -31328,18 +31584,23 @@
     const req = chatRequest(provider, opts);
     if (opts.reqId) req.reqId = opts.reqId;
     if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
+    const t0 = Date.now();
     const res = await sendRequest(provider, req);
     if (!res.ok) {
       return {
         ok: false,
         text: "",
         error: res.error,
+        detail: res.detail,
+        hints: res.hints,
+        code: res.code,
         status: res.status,
         aborted: !!res.aborted,
         timedOut: !!res.timedOut
       };
     }
     const { text, thinking, usage } = parseChat(res.json);
+    logCall(provider, req, { ms: Date.now() - t0, usage, chars: (text || "").length, stream: false });
     return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
   }
   async function completeStream(provider, opts = {}, onChunk = () => {
@@ -31355,14 +31616,19 @@
     if (opts.reqId) req.reqId = opts.reqId;
     if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
     if (!isDomainAllowed(req.url, (provider.credential || {}).allowedDomains || [])) {
-      return { ok: false, status: 0, error: t("ui.aiProvider.domainNotListAllowed") + req.url };
+      return failure(provider, req, {
+        status: 0,
+        blocked: true,
+        body: t("ui.aiProvider.domainNotListAllowed") + req.url
+      });
     }
-    const who = provider.name || hostOf2(req.url);
+    const who = provider.name || hostOf3(req.url);
     const httpOpts = { method: "POST", headers: req.headers, body: JSON.stringify(req.body) };
     if (req.reqId) httpOpts.__reqId = req.reqId;
     if (req.timeoutMs) httpOpts.__timeoutMs = req.timeoutMs;
     let text = "";
     let thinking = "";
+    const streamT0 = Date.now();
     try {
       setBusy(tf("ui.aiProvider.busyNext", who));
       const res = await kapi.httpStream(req.url, httpOpts, (line) => {
@@ -31374,7 +31640,13 @@
         onChunk({ delta: c.delta || "", thinking: c.thinking || "", text, thinkingAll: thinking });
       });
       if (res && res.ok === false) {
-        return { ok: false, text, thinking, error: httpMsg(res.status || 0), status: res.status };
+        const f = failure(provider, req, {
+          status: res.status || 0,
+          body: res.body || res.error || "",
+          aborted: !!res.aborted,
+          timedOut: !!res.timedOut
+        });
+        return { ...f, text, thinking };
       }
       const usage = {
         input: estimateTokens((opts.messages || []).reduce((n2, m) => n2 + (m.content || ""), "") + (opts.system || "")),
@@ -31384,9 +31656,11 @@
         total: 0
       };
       usage.total = usage.input + usage.output;
+      logCall(provider, req, { ms: Date.now() - streamT0, usage, chars: text.length, stream: true });
       return { ok: true, text: text.trim(), thinking, usage, model: req.body.model, provider: provider.name };
     } catch (e) {
-      return { ok: false, text, thinking, error: t("ui.aiProvider.connectCant") + (e && e.message) };
+      const f = failure(provider, req, { status: 0, body: String(e && e.message || e) });
+      return { ...f, text, thinking };
     } finally {
       clearBusy();
     }
@@ -31772,6 +32046,7 @@
       init_core();
       init_ai_providers();
       init_ai_session();
+      init_ai_error();
       KEY_FILE = "ai-key.json";
       _keys = null;
     }
@@ -70249,7 +70524,9 @@ ${h.text}`;
       if (!total) continue;
       const used = kids.reduce((a, e) => {
         const r = e.getBoundingClientRect();
-        return a + (row3 ? r.width : r.height);
+        const cs = getComputedStyle(e);
+        const mg = row3 ? (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0) : (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+        return a + (row3 ? r.width : r.height) + mg;
       }, 0);
       const gap = total - used;
       if (gap <= GAP_TOL) continue;
@@ -75006,7 +75283,7 @@ ${h.text}`;
       const n2 = usableCounts(list);
       document.documentElement.style.setProperty(
         "--sp-font",
-        withSpFamily(v2 || DEFAULT_SCRIPT_FONT, n2.screenplay > 0)
+        withThaiFallback(withSpFamily(v2 || DEFAULT_SCRIPT_FONT, n2.screenplay > 0))
       );
     };
     (async () => {
@@ -75019,8 +75296,9 @@ ${h.text}`;
         { name: t("ui.dlg.courierThaiMonoMore"), value: '"Courier Thai Mono", "Courier Prime", monospace' },
         { name: t("ui.dlg.courierThaiProportionalMore"), value: '"Courier Thai Proportional", "Courier Prime", monospace' },
         // [alpha.60r3a] ฟอนต์ระบบที่วางวรรณยุกต์ไทยได้ถูกต้อง — แจกมากับโปรแกรมไม่ได้ แต่ถ้าเครื่องมีก็ใช้ได้เลย
-        { name: t("ui.common.ayuthayaMacOSNotFloat"), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
-        { name: "Thonburi (macOS)", value: 'Thonburi, "Leelawadee UI", sans-serif' },
+        // [alpha.144] Thonburi ขึ้นแทน Ayuthaya (วัดแล้ว Ayuthaya วางวรรณยุกต์ห่างกว่าตัวอื่น 4 เท่า)
+        { name: t("ui.fonts.thonburiMacNoFloat"), value: 'Thonburi, "Leelawadee UI", sans-serif' },
+        { name: t("ui.fonts.ayuthayaMacFloat"), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
         { name: "Segoe UI", value: '"Segoe UI", system-ui, sans-serif' },
         { name: "Sarabun", value: "Sarabun, sans-serif" },
         { name: "Noto Sans Thai", value: '"Noto Sans Thai", sans-serif' },
@@ -75118,7 +75396,8 @@ ${h.text}`;
       { name: t("ui.dlg.defaultNovelCaseRatio"), value: "" },
       { name: "Sarabun", value: '"Sarabun", sans-serif' },
       { name: "TH Sarabun New", value: '"TH Sarabun New", sans-serif' },
-      { name: t("ui.common.ayuthayaMacOSNotFloat"), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
+      // [alpha.144] เลิกชูฟอนต์ที่วรรณยุกต์ลอยเป็นตัวเลือกแนะนำ — Thonburi ทำหน้าที่นี้แทน
+      { name: t("ui.fonts.thonburiMacNoFloat"), value: 'Thonburi, "Leelawadee UI", sans-serif' },
       { name: "Noto Serif Thai", value: '"Noto Serif Thai", serif' },
       { name: "Noto Sans Thai", value: '"Noto Sans Thai", sans-serif' },
       { name: "Leelawadee UI", value: '"Leelawadee UI", sans-serif' },
@@ -75794,10 +76073,10 @@ ${h.text}`;
       q("#st-fonts-preview").textContent = n2.total ? tf("ui.dlg.useRowSampleEnglish", n2.total) : t("ui.dlg.cantDefineRowUse");
       const sample = q("#st-fonts-sample");
       sample.textContent = t("ui.dlg.iNTNightSceneOne");
-      sample.style.fontFamily = withSpFamily(
+      sample.style.fontFamily = withThaiFallback(withSpFamily(
         q("#st-spfontfamily")?.value || DEFAULT_SCRIPT_FONT,
         n2.screenplay > 0
-      );
+      ));
       applySpFont(q("#st-spfontfamily")?.value ?? s.spFontFamily, W.langFonts);
     };
     function renderFonts() {
@@ -76218,7 +76497,7 @@ ${h.text}`;
       s.fontFamily = origFontFamily;
       document.documentElement.style.setProperty(
         "--ed-font",
-        withLangFamily(origFontFamily || DEFAULT_PROSE_FONT, nLangBack.prose > 0)
+        withThaiFallback(withLangFamily(origFontFamily || DEFAULT_PROSE_FONT, nLangBack.prose > 0))
       );
       s.focusDim = origDim;
       applyFocusDim();
@@ -88556,6 +88835,128 @@ img{max-width:100%}` }
     }
   });
 
+  // src/ai/ai-skills.js
+  var ai_skills_exports = {};
+  __export(ai_skills_exports, {
+    SKILL_DIR: () => SKILL_DIR,
+    SKILL_MAX_CHARS: () => SKILL_MAX_CHARS,
+    buildSkillsPrompt: () => buildSkillsPrompt,
+    ensureSkillDir: () => ensureSkillDir,
+    isUsableSkill: () => isUsableSkill,
+    loadSkills: () => loadSkills,
+    parseSkillFile: () => parseSkillFile,
+    skillId: () => skillId,
+    skillsLabel: () => skillsLabel,
+    starterSkillMd: () => starterSkillMd
+  });
+  function skillId(fileName) {
+    return String(fileName || "").replace(/\.md$/i, "");
+  }
+  function parseSkillFile(text, fileName = "") {
+    const raw = String(text ?? "").replace(/^﻿/, "");
+    const id = skillId(fileName);
+    let body = raw;
+    const meta2 = {};
+    const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
+    if (m) {
+      for (const line of m[1].split(/\r?\n/)) {
+        const i5 = line.indexOf(":");
+        if (i5 <= 0) continue;
+        const k = line.slice(0, i5).trim().toLowerCase();
+        const v2 = line.slice(i5 + 1).trim().replace(/^["']|["']$/g, "");
+        if (k) meta2[k] = v2;
+      }
+      body = raw.slice(m[0].length);
+    }
+    let name5 = meta2.name || "";
+    if (!name5) {
+      const h = /^\s*#\s+(.+)$/m.exec(body.split(/\r?\n/).slice(0, 3).join("\n"));
+      name5 = h && h[1].trim() || id;
+    }
+    const trimmed = body.trim();
+    return { id, name: name5, description: meta2.description || "", body: trimmed, chars: trimmed.length };
+  }
+  function isUsableSkill(s) {
+    return !!(s && s.body && s.body.trim());
+  }
+  function buildSkillsPrompt(skills = [], opts = {}) {
+    const max2 = opts.maxChars || SKILL_MAX_CHARS;
+    const used = [];
+    const skipped = [];
+    const parts = [];
+    let chars3 = 0;
+    for (const s of skills) {
+      if (!isUsableSkill(s)) {
+        if (s && s.id) skipped.push(s.id);
+        continue;
+      }
+      const head2 = "## " + (s.name || s.id) + (s.description ? " \u2014 " + s.description : "");
+      const block = head2 + "\n" + s.body.trim();
+      if (chars3 + block.length > max2) {
+        skipped.push(s.id);
+        continue;
+      }
+      chars3 += block.length;
+      parts.push(block);
+      used.push(s.id);
+    }
+    if (!parts.length) return { text: "", used, skipped, chars: 0 };
+    const header = T`ทักษะที่ผู้เขียนกำหนดให้คุณ (ทำตามอย่างเคร่งครัด · สำคัญกว่าคำแนะนำทั่วไปข้างบน):`;
+    return { text: "\n\n" + header + "\n\n" + parts.join("\n\n"), used, skipped, chars: chars3 };
+  }
+  function skillsLabel(all = [], onIds = []) {
+    const on2 = (all || []).filter((s) => (onIds || []).includes(s.id)).length;
+    return tm("\u{1F9E9} {0}/{1}", String(on2), String((all || []).length));
+  }
+  function starterSkillMd() {
+    return [
+      "---",
+      "name: " + T`โทนการเขียนของเรื่องนี้`,
+      "description: " + T`ตัวอย่าง — แก้ไฟล์นี้ได้เลย หรือสร้างไฟล์ .md ใหม่ในโฟลเดอร์นี้`,
+      "---",
+      "",
+      T`เขียนด้วยประโยคสั้น กระชับ ไม่ใช้คำฟุ่มเฟือย`,
+      T`ใช้คำสรรพนามตามที่ตัวละครใช้จริงในเรื่อง ห้ามเปลี่ยนเอง`,
+      T`ห้ามสรุปตอนจบให้ ถ้าผู้เขียนไม่ได้ขอ`,
+      ""
+    ].join("\n");
+  }
+  async function ensureSkillDir(root, io = typeof kapi !== "undefined" ? kapi : null) {
+    if (!root || !io) return "";
+    const d = await io.join(root, SKILL_DIR);
+    if (!await io.exists(d)) await io.mkdir(d);
+    return d;
+  }
+  async function loadSkills(root, io = typeof kapi !== "undefined" ? kapi : null) {
+    if (!root || !io) return [];
+    try {
+      const d = await io.join(root, SKILL_DIR);
+      if (!await io.exists(d)) return [];
+      const out = [];
+      for (const f of await io.listFiles(d)) {
+        if (!/\.md$/i.test(f)) continue;
+        try {
+          const p = await io.join(d, f);
+          const s = parseSkillFile(await io.readFile(p), f);
+          s.file = p;
+          out.push(s);
+        } catch {
+        }
+      }
+      return out.sort((a, b) => String(a.name).localeCompare(String(b.name), "th"));
+    } catch {
+      return [];
+    }
+  }
+  var SKILL_DIR, SKILL_MAX_CHARS;
+  var init_ai_skills = __esm({
+    "src/ai/ai-skills.js"() {
+      init_i18n();
+      SKILL_DIR = "Skills";
+      SKILL_MAX_CHARS = 12e3;
+    }
+  });
+
   // src/ai/ai-tools.js
   function toolByName(name5) {
     return TOOLS2.find((t3) => t3.name === name5) || null;
@@ -89382,12 +89783,17 @@ img{max-width:100%}` }
     copyText: () => copyText,
     estimateTokens: () => estimateTokens,
     invalidateChatRag: () => invalidateChatRag,
+    isRunning: () => isRunning,
     loadSessions: () => loadSessions,
     newChatSession: () => newChatSession,
     renderAIChatPanel: () => renderAIChatPanel,
     restartSession: () => restartSession,
-    saveSession: () => saveSession2
+    saveSession: () => saveSession2,
+    skillsPromptFor: () => skillsPromptFor
   });
+  function isRunning(id) {
+    return !!(S3.run && S3.run.sessionId === id);
+  }
   function live(s) {
     return s && S3.cur && S3.cur.id === s.id ? S3.cur : s;
   }
@@ -89618,6 +90024,7 @@ img{max-width:100%}` }
     if (S3.view === "list") h.append(listView());
     else if (S3.view === "detail") h.append(detailView());
     else h.append(sessionView());
+    paintRunBadges();
   }
   function listView() {
     const wrap2 = el("div", "ai-chat-list");
@@ -89629,6 +90036,17 @@ img{max-width:100%}` }
     const addBtn = el("button", "k-ok ai-chat-new", t("ui.aiChatPanel.sessionNew"));
     bar.append(q, addBtn);
     wrap2.append(bar);
+    const running = el("button", "ai-chat-running");
+    running.style.display = "none";
+    running.onclick = () => {
+      if (!S3.run) return;
+      const target = S3.sessions.find((x) => x.id === S3.run.sessionId) || (S3.cur && S3.cur.id === S3.run.sessionId ? S3.cur : null);
+      if (!target) return;
+      S3.cur = target;
+      S3.view = "session";
+      draw();
+    };
+    wrap2.append(running);
     const rows = el("div", "ai-chat-rows");
     wrap2.append(rows);
     const arch = el("label", "ai-chat-archtoggle");
@@ -89649,6 +90067,7 @@ img{max-width:100%}` }
         return;
       }
       for (const s of list) rows.append(sessionRow(s));
+      paintRunBadges();
     }
     q.oninput = () => {
       S3.query = q.value;
@@ -89712,6 +90131,7 @@ img{max-width:100%}` }
     };
     const title2 = el("div", "ai-chat-title", s.title || t("ui.aiChatPanel.session"));
     title2.title = s.title || "";
+    if (isRunning(s.id)) title2.classList.add("running");
     const right = el("div", "ai-chat-head-right");
     const st = sessionStats(s);
     const badge = el("button", "ai-chat-ctx", contextLabel(st));
@@ -89752,7 +90172,21 @@ img{max-width:100%}` }
     head2.append(back, title2, right);
     wrap2.append(head2);
     const body = el("div", "ai-chat-msgs ai-view-" + (s.view || DEFAULT_VIEW));
-    if (!(s.messages || []).length) {
+    wrap2.append(body);
+    renderMessages(body, s);
+    wrap2.append(composer(s, body));
+    setTimeout(() => {
+      body.scrollTop = body.scrollHeight;
+    }, 0);
+    return wrap2;
+  }
+  function msgsHost() {
+    return S3.host && S3.view === "session" ? S3.host.querySelector(".ai-chat-msgs") : null;
+  }
+  function renderMessages(body, s) {
+    if (!body || !s) return;
+    body.innerHTML = "";
+    if (!(s.messages || []).length && !isRunning(s.id)) {
       body.append(el(
         "div",
         "ai-chat-empty dim",
@@ -89760,12 +90194,86 @@ img{max-width:100%}` }
       ));
     }
     for (const m of s.messages || []) body.append(msgNode(m, s.view));
-    wrap2.append(body);
-    wrap2.append(composer(s, body));
-    setTimeout(() => {
-      body.scrollTop = body.scrollHeight;
-    }, 0);
-    return wrap2;
+    if (isRunning(s.id)) body.append(pendingNode());
+    body.scrollTop = body.scrollHeight;
+  }
+  function repaint() {
+    const body = msgsHost();
+    if (body && S3.cur) renderMessages(body, S3.cur);
+    paintRunBadges();
+  }
+  function pendingNode() {
+    const r = S3.run;
+    const n2 = el("div", "ai-msg ai-msg-assistant ai-msg-pending");
+    const who = el("div", "ai-msg-who dim");
+    who.append(el("span", "ai-pend-label", r.label || t("ui.aiChatPanel.busyThink")));
+    who.append(el(
+      "span",
+      "ai-msg-elapsed ai-pend-time",
+      tf("ui.aiChatPanel.useTime", ((Date.now() - r.startAt) / 1e3).toFixed(1))
+    ));
+    const stop = el("button", "ai-msg-copy ai-pend-stop", "\u23F9");
+    stop.type = "button";
+    stop.title = t("ui.aiChatPanel.stopHint");
+    stop.onclick = () => {
+      if (kapi.httpAbort) kapi.httpAbort(r.reqId);
+    };
+    who.append(stop);
+    const think = el("div", "ai-msg-thinking-live ai-pend-think");
+    think.style.display = r.thinking ? "" : "none";
+    if (r.thinking) think.textContent = t("ui.aiChatPanel.ideaModel") + "\n" + r.thinking;
+    const txt = el("div", "ai-msg-text ai-pend-text");
+    txt.style.display = r.text ? "" : "none";
+    if (r.text) txt.textContent = r.text;
+    n2.append(who, think, txt);
+    return n2;
+  }
+  function paintPending() {
+    const r = S3.run;
+    if (!r) return;
+    const host2 = msgsHost();
+    const n2 = host2 && host2.querySelector(".ai-msg-pending");
+    if (!n2) return;
+    const lb = n2.querySelector(".ai-pend-label");
+    if (lb) lb.textContent = r.label || t("ui.aiChatPanel.busyThink");
+    const tm2 = n2.querySelector(".ai-pend-time");
+    if (tm2) tm2.textContent = tf("ui.aiChatPanel.useTime", ((Date.now() - r.startAt) / 1e3).toFixed(1));
+    const th = n2.querySelector(".ai-pend-think");
+    if (th) {
+      th.style.display = r.thinking ? "" : "none";
+      if (r.thinking) th.textContent = t("ui.aiChatPanel.ideaModel") + "\n" + r.thinking;
+    }
+    const tx = n2.querySelector(".ai-pend-text");
+    if (tx) {
+      tx.style.display = r.text ? "" : "none";
+      if (r.text) tx.textContent = r.text;
+    }
+    host2.scrollTop = host2.scrollHeight;
+  }
+  function paintRunBadges() {
+    if (!S3.host) return;
+    const runId = S3.run ? S3.run.sessionId : "";
+    const secs = S3.run ? ((Date.now() - S3.run.startAt) / 1e3).toFixed(0) : "0";
+    for (const row3 of S3.host.querySelectorAll(".ai-chat-row")) {
+      const on2 = row3.dataset.session === runId;
+      row3.classList.toggle("running", on2);
+      let b = row3.querySelector(".ai-chat-row-run");
+      if (on2 && !b) {
+        b = el("span", "ai-chat-row-run", "\u23F3");
+        row3.querySelector(".ai-chat-row-meta").prepend(b);
+      }
+      if (b) {
+        b.style.display = on2 ? "" : "none";
+        b.title = T`กำลังทำงานอยู่ ${secs} วินาที`;
+      }
+    }
+    const banner = S3.host.querySelector(".ai-chat-running");
+    if (banner) {
+      banner.style.display = S3.run ? "" : "none";
+      banner.textContent = S3.run ? T`⏳ กำลังทำงาน: ${S3.run.title || t("ui.aiChatPanel.session")} · ${secs} วิ — กดเพื่อกลับไปดู` : "";
+    }
+    const head2 = S3.host.querySelector(".ai-chat-head .ai-chat-title");
+    if (head2 && S3.cur) head2.classList.toggle("running", isRunning(S3.cur.id));
   }
   function msgNode(m, view2 = DEFAULT_VIEW) {
     if (m.toolResult && view2 !== "verbose" && view2 !== "thinking") return el("span", "ai-msg-hidden");
@@ -89815,7 +90323,10 @@ img{max-width:100%}` }
         tf("ui.aiChatPanel.tokenInOut", m.usage.input || 0, m.usage.output || 0) + (m.usage.reasoning ? tf("ui.aiChatPanel.think", m.usage.reasoning) : "") + (m.usage.cached ? tf("ui.aiChatPanel.cache", m.usage.cached) : "") + (m.ms ? tf("ui.aiChatPanel.useTime", (m.ms / 1e3).toFixed(1)) : "") + (m.at ? " \xB7 " + fmtDate(m.at) : "")
       ));
     }
-    if (m.error) n2.append(el("div", "ai-msg-err", "\u26A0 " + m.error));
+    if (m.error) {
+      n2.append(el("div", "ai-msg-err", "\u26A0 " + m.error));
+      if (m.detail) n2.append(foldBlock(T`รายละเอียด · แนวทางแก้`, m.detail, "ai-msg-errdetail"));
+    }
     if (m.files && m.files.length) {
       n2.append(el("div", "ai-msg-files dim", "\u{1F4CE} " + m.files.map((f) => f.name || f.path).join(", ")));
     }
@@ -89941,8 +90452,19 @@ img{max-width:100%}` }
     }
     scopeSel.value = s.scope || DEFAULT_SCOPE;
     scopeSel.title = t("ui.aiChatPanel.levelInToAI");
-    ctrls.append(fileBtn, scBtn, modeSel, modelSel, scopeSel);
+    const effortSel = el("select", "ai-chat-effort");
+    for (const e of REASONING_EFFORTS) {
+      const o = el("option", null, e.label);
+      o.value = e.id;
+      effortSel.append(o);
+    }
+    effortSel.value = isReasoningEffort(s.effort) ? s.effort || "" : "";
+    effortSel.title = T`ระดับการใช้ความคิดของโมเดล (reasoning effort) — มีผลเฉพาะเซสชันนี้`;
+    const skillBtn = el("button", "ai-chat-file ai-chat-skills", "\u{1F9E9}");
+    skillBtn.title = T`ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)`;
+    ctrls.append(fileBtn, scBtn, skillBtn, modeSel, modelSel, scopeSel, effortSel);
     box2.append(ctrls);
+    refreshSkillBtn(skillBtn, s);
     fillModelSelect(modelSel, s);
     const filesRow = el("div", "ai-chat-files dim");
     const drawFiles = () => {
@@ -89980,6 +90502,14 @@ img{max-width:100%}` }
       S3.cur = c;
       await saveSession2(c);
     };
+    effortSel.onchange = async () => {
+      const c = live(s);
+      c.effort = isReasoningEffort(effortSel.value) ? effortSel.value : "";
+      S3.cur = c;
+      await saveSession2(c);
+      setStatus(effortLabel(c.effort));
+    };
+    skillBtn.onclick = (e) => skillMenu(e, live(s), skillBtn);
     scopeSel.onchange = async () => {
       const c = live(s);
       c.scope = scopeSel.value;
@@ -90010,7 +90540,8 @@ img{max-width:100%}` }
       const { openResolvedShortcodeMenu: openResolvedShortcodeMenu2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       await openResolvedShortcodeMenu2(e, ta);
     };
-    const doSend = () => send(live(s), ta, body, sendBtn);
+    if (S3.run) sendBtn.disabled = true;
+    const doSend = () => send(live(s), ta, sendBtn);
     sendBtn.onclick = doSend;
     ta.onkeydown = (e) => {
       if (!isSendKey(e, aiMeta().sendKey || DEFAULT_SEND_KEY)) return;
@@ -90019,6 +90550,58 @@ img{max-width:100%}` }
     };
     setTimeout(() => ta.focus(), 0);
     return box2;
+  }
+  async function refreshSkillBtn(btn2, s) {
+    if (!btn2) return;
+    _skills = await loadSkills(state.root);
+    const on2 = (live(s).skills || []).filter((id) => _skills.some((k) => k.id === id));
+    btn2.textContent = _skills.length ? skillsLabel(_skills, on2) : "\u{1F9E9}";
+    btn2.classList.toggle("on", on2.length > 0);
+    btn2.title = _skills.length ? T`ทักษะที่เปิดอยู่: ` + (on2.length ? on2.join(", ") : T`— ไม่มี —`) : T`ยังไม่มีไฟล์ทักษะ — กดเพื่อสร้างโฟลเดอร์ ${SKILL_DIR}/ พร้อมไฟล์ตัวอย่าง`;
+  }
+  async function skillMenu(ev, s, btn2) {
+    _skills = await loadSkills(state.root);
+    const on2 = new Set(live(s).skills || []);
+    const items = _skills.map((k) => ({
+      label: (on2.has(k.id) ? "\u2611 " : "\u2610 ") + k.name + (k.description ? " \u2014 " + k.description : "") + T`  (${String(k.chars)} ตัวอักษร)`,
+      click: async () => {
+        const c = live(s);
+        const set = new Set(c.skills || []);
+        if (set.has(k.id)) set.delete(k.id);
+        else set.add(k.id);
+        c.skills = [...set];
+        S3.cur = c;
+        await saveSession2(c);
+        await refreshSkillBtn(btn2, c);
+        setStatus(T`${set.has(k.id) ? "\u2705" : "\u2B1C"} ทักษะ: ${k.name}`);
+      }
+    }));
+    if (items.length) items.push("-");
+    items.push({
+      label: _skills.length ? T`📂 เปิดโฟลเดอร์ทักษะ` : T`✨ สร้างโฟลเดอร์ทักษะ + ไฟล์ตัวอย่าง`,
+      click: async () => {
+        const d = await ensureSkillDir(state.root);
+        if (!d) {
+          setStatus(t("ui.aiChatPanel.openProjectBeforeDone"));
+          return;
+        }
+        if (!_skills.length) {
+          const f = await kapi.join(d, "skill.md");
+          if (!await kapi.exists(f)) await kapi.writeFile(f, starterSkillMd());
+        }
+        if (kapi.revealInOS) await kapi.revealInOS(d);
+        await refreshSkillBtn(btn2, live(s));
+        setStatus(T`ทักษะอยู่ที่ ${SKILL_DIR}/ — ไฟล์ .md หนึ่งไฟล์ = หนึ่งทักษะ`);
+      }
+    });
+    popupMenu(ev.clientX, ev.clientY, items);
+  }
+  async function skillsPromptFor(session) {
+    const ids = session && session.skills || [];
+    if (!ids.length) return { text: "", used: [], skipped: [], chars: 0 };
+    const all = await loadSkills(state.root);
+    const picked = ids.map((id) => all.find((k) => k.id === id)).filter(Boolean);
+    return buildSkillsPrompt(picked);
   }
   function fillModelSelect(sel, s) {
     sel.innerHTML = "";
@@ -90044,7 +90627,7 @@ img{max-width:100%}` }
     _reqSeq += 1;
     return "chat-" + Date.now().toString(36) + "-" + _reqSeq;
   }
-  async function send(s0, ta, body, sendBtn) {
+  async function send(s0, ta, sendBtn) {
     const s = live(s0);
     const text = String(ta.value || "").trim();
     if (!text || S3.sending) return;
@@ -90054,55 +90637,47 @@ img{max-width:100%}` }
       return;
     }
     S3.sending = true;
-    sendBtn.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
     ta.value = "";
     const reqId = newReqId();
-    const view2 = S3.cur ? S3.cur.view || DEFAULT_VIEW : DEFAULT_VIEW;
     const userMsg = newMessage("user", text, { files: (s.files || []).slice() });
     S3.cur = addMessage(s, userMsg);
     await saveSession2(S3.cur);
-    body.append(msgNode(userMsg, view2));
-    const pend = el("div", "ai-msg ai-msg-assistant ai-msg-pending");
-    const pendWho = el("div", "ai-msg-who dim");
-    const whoLabel = el("span", null, t("ui.aiChatPanel.busyThink"));
-    const whoTime = el("span", "ai-msg-elapsed");
-    const stopBtn = el("button", "ai-msg-copy", "\u23F9");
-    stopBtn.type = "button";
-    stopBtn.title = t("ui.aiChatPanel.stopHint");
-    stopBtn.onclick = () => {
-      if (kapi.httpAbort) kapi.httpAbort(reqId);
+    S3.run = {
+      sessionId: S3.cur.id,
+      title: S3.cur.title,
+      reqId,
+      startAt: Date.now(),
+      label: t("ui.aiChatPanel.busyThink"),
+      text: "",
+      thinking: ""
     };
-    pendWho.append(whoLabel, whoTime, stopBtn);
-    const pendThink = el("div", "ai-msg-thinking-live");
-    pendThink.style.display = "none";
-    const pendText = el("div", "ai-msg-text");
-    pendText.style.display = "none";
-    pend.append(pendWho, pendThink, pendText);
-    body.append(pend);
-    body.scrollTop = body.scrollHeight;
-    let liveText2 = "";
-    let liveThink = "";
-    const startAt = Date.now();
+    repaint();
     const tick = setInterval(() => {
-      whoTime.textContent = tf("ui.aiChatPanel.useTime", ((Date.now() - startAt) / 1e3).toFixed(1));
+      paintPending();
+      paintRunBadges();
     }, 400);
-    const renderPend = () => {
-      if (liveText2) {
-        pendText.textContent = liveText2;
-        pendText.style.display = "";
-      }
-      if (liveThink) {
-        pendThink.textContent = t("ui.aiChatPanel.ideaModel") + "\n" + liveThink;
-        pendThink.style.display = "";
-      }
-      body.scrollTop = body.scrollHeight;
-    };
-    const stopTick = () => clearInterval(tick);
     const md = modeDef(S3.cur.mode);
     const cap = modeCap(S3.cur.mode);
     let system = md.system;
     const tp = toolsSystemPrompt(cap);
     if (tp) system += "\n\n" + tp;
+    try {
+      const sk = await skillsPromptFor(S3.cur);
+      if (sk.text) {
+        system += sk.text;
+        log(
+          "info",
+          "ai: " + T`ใช้ทักษะ ${String(sk.used.length)} ตัว (${String(sk.chars)} ตัวอักษร)`,
+          sk.used.join(", ")
+        );
+      }
+      if (sk.skipped.length) {
+        setStatus(T`⚠ ทักษะยาวเกินโควตา ข้ามไป: ${sk.skipped.join(", ")}`);
+      }
+    } catch (e) {
+      log("warn", "ai: " + T`อ่านทักษะไม่สำเร็จ`, e);
+    }
     try {
       const ctx2 = await collectScope(S3.cur, { query: text });
       if (ctx2) system += t("ui.aiChatPanel.dataProjectLevelIn") + scopeLabel(S3.cur.scope) + "):\n" + ctx2;
@@ -90118,25 +90693,26 @@ img{max-width:100%}` }
         const hist = buildChatMessages(S3.cur, { maxTokens: historyBudget(S3.cur, aiMeta()) });
         if (hist.dropped > 0 && hist.dropped !== lastDropped) {
           lastDropped = hist.dropped;
-          body.insertBefore(el(
+          const b = msgsHost();
+          const pn = b && b.querySelector(".ai-msg-pending");
+          if (b) b.insertBefore(el(
             "div",
             "ai-chat-trim dim",
             tf("ui.aiChatPanel.historyTrimmed", hist.dropped)
-          ), pend);
+          ), pn || null);
         }
         res = await completeStream(prov, {
           system,
           messages: hist.messages,
           model: s.model || void 0,
-          reqId
+          reqId,
+          // [alpha.145] ระดับการใช้ความคิดรายเซสชัน ('' = ไม่ทับค่าของผู้ให้บริการ)
+          reasoningEffort: S3.cur.effort || void 0
         }, (c) => {
-          if (c.thinking) {
-            liveThink += c.thinking;
-          }
-          if (c.delta) {
-            liveText2 = c.text;
-          }
-          renderPend();
+          if (!S3.run) return;
+          if (c.thinking) S3.run.thinking += c.thinking;
+          if (c.delta) S3.run.text = c.text;
+          paintPending();
         });
         const ms = Date.now() - rt0;
         const calls = res.ok ? parseToolCalls(res.text) : [];
@@ -90148,7 +90724,12 @@ img{max-width:100%}` }
           system,
           ms,
           calls: calls.length ? calls : null
-        }) : newMessage("assistant", "", { error: res.error || t("ui.aiChatPanel.callAINotOk"), system, ms });
+        }) : newMessage("assistant", "", {
+          error: res.error || t("ui.aiChatPanel.callAINotOk"),
+          detail: res.detail || "",
+          system,
+          ms
+        });
         if (res.ok && res.usage) {
           const used = (res.usage.input || 0) + (res.usage.output || 0);
           S3.cur.contextLimit = Math.max(S3.cur.contextLimit || 0, guessLimit(used));
@@ -90157,50 +90738,58 @@ img{max-width:100%}` }
         if (!calls.length) {
           S3.cur = addMessage(S3.cur, reply);
           await saveSession2(S3.cur);
-          pend.remove();
-          body.append(msgNode(reply, view2));
+          S3.run = null;
+          repaint();
           break;
         }
-        whoLabel.textContent = t("ui.aiChatPanel.busyAct") + calls.length + t("ui.aiChatPanel.cmd");
+        S3.run.label = t("ui.aiChatPanel.busyAct") + calls.length + t("ui.aiChatPanel.cmd");
+        S3.run.text = "";
+        S3.run.thinking = "";
+        paintPending();
         const results = await runCalls(calls, S3.cur, cap);
         reply.results = results;
         touched = touched || touchesProject(results);
         S3.cur = addMessage(S3.cur, reply);
         S3.cur = addMessage(S3.cur, newMessage("user", resultsMessage(results), { toolResult: true }));
         await saveSession2(S3.cur);
-        body.append(msgNode(reply, view2));
-        body.scrollTop = body.scrollHeight;
+        repaint();
         if (results.some((r) => r.cancelled)) {
-          pend.remove();
+          S3.run = null;
+          repaint();
           break;
         }
         if (round === MAX_TOOL_ROUNDS - 1) {
-          pend.remove();
-          body.append(el(
+          S3.run = null;
+          repaint();
+          const b = msgsHost();
+          if (b) b.append(el(
             "div",
             "ai-chat-empty dim",
             tf("ui.aiChatPanel.roundNotEndPrint", MAX_TOOL_ROUNDS)
           ));
         } else {
-          whoLabel.textContent = t("ui.aiChatPanel.busyThinkNext");
+          S3.run.label = t("ui.aiChatPanel.busyThinkNext");
+          paintPending();
         }
       }
     } catch (e) {
-      log("warn", t("ui.aiChatPanel.sendFailed"), e);
+      log("error", "ai: " + t("ui.aiChatPanel.sendFailed"), e && e.stack || String(e));
       const emsg = e && e.message || String(e);
       res = res || { ok: false, error: emsg };
-      const errMsg = newMessage("assistant", "", { error: emsg });
+      const errMsg = newMessage("assistant", "", { error: emsg, detail: e && e.stack || "" });
       S3.cur = addMessage(S3.cur, errMsg);
       try {
         await saveSession2(S3.cur);
       } catch {
       }
-      body.append(msgNode(errMsg, view2));
     } finally {
-      stopTick();
-      if (pend.isConnected) pend.remove();
+      clearInterval(tick);
+      S3.run = null;
       S3.sending = false;
-      sendBtn.disabled = false;
+      if (sendBtn && sendBtn.isConnected) sendBtn.disabled = false;
+      const live2 = S3.host && S3.host.querySelector(".ai-chat-send");
+      if (live2) live2.disabled = false;
+      repaint();
     }
     if (touched) {
       try {
@@ -90209,11 +90798,10 @@ img{max-width:100%}` }
         log("warn", "refreshAfterActions", e);
       }
     }
-    body.scrollTop = body.scrollHeight;
     const t3 = S3.host && S3.host.querySelector(".ai-chat-title");
-    if (t3) t3.textContent = S3.cur.title;
+    if (t3 && S3.cur) t3.textContent = S3.cur.title;
     const badge = S3.host && S3.host.querySelector(".ai-chat-ctx");
-    if (badge) {
+    if (badge && S3.cur) {
       const st2 = sessionStats(S3.cur);
       badge.textContent = contextLabel(st2);
       badge.title = [
@@ -90223,7 +90811,7 @@ img{max-width:100%}` }
         t("ui.aiChatPanel.clickViewDetail")
       ].join("\n");
     }
-    if (res && !res.ok) setStatus("\u274C AI: " + (res.error || ""));
+    if (res && !res.ok) setStatus("\u274C " + (res.error || ""));
   }
   async function runCalls(calls, session, cap) {
     const results = [];
@@ -90442,13 +91030,14 @@ img{max-width:100%}` }
   function _chatState() {
     return S3;
   }
-  var MAX_TOOL_ROUNDS, S3, RAG, _reqSeq;
+  var MAX_TOOL_ROUNDS, S3, RAG, _skills, _reqSeq;
   var init_ai_chat_panel = __esm({
     "src/ai/ai-chat-panel.js"() {
       init_i18n();
       init_core();
       init_ui();
       init_ai_session();
+      init_ai_skills();
       init_ai_provider_ui();
       init_ai_tools();
       init_ai_actions();
@@ -90464,10 +91053,25 @@ img{max-width:100%}` }
         query: "",
         showArchived: false,
         sending: false,
-        root: null
+        root: null,
         // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
+        // ══ [alpha.145] ★ สถานะ "กำลังทำงาน" ต้องอยู่ **นอก DOM** ══
+        //
+        // ผู้ใช้: *"stream และคำตอบ ไม่โผล่ให้ ถ้าเกิดเผลอปิดหน้า หรือกดดู token ·
+        //          ไม่มีบอกว่า AI กำลังทำงานอยู่ ต้องไปดูที่ status bar อย่างเดียว ·
+        //          หน้า session ไม่ได้มีระบุเลยว่า session ไหนกำลังทำงานอยู่"*
+        //
+        // ต้นตอ: `send()` ของเดิมถือ **โหนด DOM** ไว้ในตัวแปรท้องถิ่น (`pend`, `body`) แล้วเขียน
+        // ข้อความที่ไหลมาลงไปตรง ๆ · พอผู้ใช้กด ← กลับรายการ หรือกดป้าย token (ไปหน้ารายละเอียด)
+        // `draw()` ล้าง `S.host.innerHTML` ทิ้ง → โหนดที่ `send()` ถืออยู่ **หลุดจากหน้าจอ**
+        // สตรีมยังไหลอยู่จริง แต่ไหลลงโหนดที่ไม่มีใครเห็น และคำตอบสุดท้ายก็ถูก append ลงที่นั่น
+        //
+        // ตอนนี้ทุกอย่างอยู่ใน `S.run` (ข้อมูลล้วน) แล้วให้ตัววาดอ่านจากตรงนี้ทุกครั้งที่วาดใหม่
+        //   { sessionId, reqId, startAt, label, text, thinking }
+        run: null
       };
       RAG = { session: null, root: "", building: null, stale: true };
+      _skills = [];
       _reqSeq = 0;
     }
   });
@@ -116191,13 +116795,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   });
 
   // node_modules/pdf-lib/es/api/operators.js
-  var clip, cos, sin, tan, concatTransformationMatrix, translate, scale, rotateRadians, rotateDegrees, skewRadians, setDashPattern, LineCapStyle, setLineCap, LineJoinStyle, setGraphicsState, pushGraphicsState, popGraphicsState, setLineWidth, appendBezierCurve, appendQuadraticCurve, closePath, moveTo, lineTo, stroke, fill2, fillAndStroke, endPath, nextLine, showText, beginText, endText, setFontAndSize, setLineHeight, TextRenderingMode, setTextMatrix, rotateAndSkewTextRadiansAndTranslate, drawObject, setFillingGrayscaleColor, setStrokingGrayscaleColor, setFillingRgbColor, setStrokingRgbColor, setFillingCmykColor, setStrokingCmykColor, beginMarkedContent, endMarkedContent;
+  var clip2, cos, sin, tan, concatTransformationMatrix, translate, scale, rotateRadians, rotateDegrees, skewRadians, setDashPattern, LineCapStyle, setLineCap, LineJoinStyle, setGraphicsState, pushGraphicsState, popGraphicsState, setLineWidth, appendBezierCurve, appendQuadraticCurve, closePath, moveTo, lineTo, stroke, fill2, fillAndStroke, endPath, nextLine, showText, beginText, endText, setFontAndSize, setLineHeight, TextRenderingMode, setTextMatrix, rotateAndSkewTextRadiansAndTranslate, drawObject, setFillingGrayscaleColor, setStrokingGrayscaleColor, setFillingRgbColor, setStrokingRgbColor, setFillingCmykColor, setStrokingCmykColor, beginMarkedContent, endMarkedContent;
   var init_operators = __esm({
     "node_modules/pdf-lib/es/api/operators.js"() {
       init_objects2();
       init_rotations();
       init_core2();
-      clip = function() {
+      clip2 = function() {
         return PDFOperator_default.of(PDFOperatorNames_default.ClipNonZero);
       };
       cos = Math.cos;
@@ -117124,7 +117728,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           lineTo(clipX + clipWidth, clipY + clipHeight),
           lineTo(clipX + clipWidth, clipY),
           closePath(),
-          clip(),
+          clip2(),
           endPath()
         ];
         var background = drawRectangle({
@@ -117178,7 +117782,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           lineTo(clipX + clipWidth, clipY + clipHeight),
           lineTo(clipX + clipWidth, clipY),
           closePath(),
-          clip(),
+          clip2(),
           endPath()
         ];
         var background = drawRectangle({
@@ -155644,7 +156248,7 @@ ${indent}</Paragraph>`;
     const css = [
       `@page{size:${spf.paper.width}in ${spf.paper.height}in;margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`,
       "html,body{margin:0;padding:0}",
-      `body{font-family:${proseFontStack2(pf)};font-size:${pf.fontPt}pt;line-height:1.5;color:#111}`,
+      `body{font-family:${withThaiFallback(proseFontStack2(pf))};font-size:${pf.fontPt}pt;line-height:1.5;color:#111}`,
       // ความสูงหนึ่งหน้าเต็ม (หักระยะขอบบน-ล่าง) → แต่ละ section = หนึ่งแผ่นเป๊ะ
       `.k-front{height:${+(spf.paper.height - m.top - m.bottom).toFixed(3)}in;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;break-after:page;page-break-after:always;overflow:hidden}`,
       ".k-front:last-child{break-after:auto;page-break-after:auto}",
@@ -156319,6 +156923,7 @@ ${pages.join("\n")}
       init_core();
       init_compile();
       init_num();
+      init_lang_fonts();
       init_export_formats();
       init_ui();
       init_export_name_ui();
@@ -159289,7 +159894,7 @@ ${s.body}`).join("\n\n");
     castBlock: () => castBlock,
     charDescPrompt: () => charDescPrompt,
     charDialoguePrompt: () => charDialoguePrompt,
-    clip: () => clip2,
+    clip: () => clip3,
     conditionsPrompt: () => conditionsPrompt,
     descPrompt: () => descPrompt,
     gmOpening: () => gmOpening,
@@ -159320,7 +159925,7 @@ ${s.body}`).join("\n\n");
       anyLabel: t("ui.starter.mentionAny")
     };
   }
-  function clip2(text, max2 = 1200) {
+  function clip3(text, max2 = 1200) {
     const s = String(text || "").trim();
     if (s.length <= max2) return s;
     const cut = s.slice(0, max2);
@@ -159340,18 +159945,18 @@ ${s.body}`).join("\n\n");
       const head2 = "- " + c.name + (c.gender ? " (" + genderLabel(c.gender) + ")" : "") + (c.selfPronoun ? " \xB7 " + t("ui.starter.pSelfPronoun") + c.selfPronoun : "");
       lines.push(head2);
       const body = full ? c.persona || c.blurb : c.blurb || c.persona;
-      if (String(body || "").trim()) lines.push("  " + clip2(body, full ? 900 : 200).replace(/\n+/g, " "));
+      if (String(body || "").trim()) lines.push("  " + clip3(body, full ? 900 : 200).replace(/\n+/g, " "));
       if ((c.tags || []).length) lines.push("  " + t("ui.starter.pCharTags") + c.tags.join(", "));
       if (!full) continue;
       const dlg = String(c.dialogue || "").trim();
       if (dlg) {
         lines.push("  " + t("ui.starter.pCharDialogue"));
-        for (const ln of clip2(expandMentions(dlg, all), 900).split(/\r?\n/)) {
+        for (const ln of clip3(expandMentions(dlg, all), 900).split(/\r?\n/)) {
           if (ln.trim()) lines.push("    " + ln.trim());
         }
       }
       const pr = promptsText(c.prompts, all);
-      if (pr) for (const ln of clip2(pr, 900).split(/\r?\n/)) {
+      if (pr) for (const ln of clip3(pr, 900).split(/\r?\n/)) {
         if (ln.trim()) lines.push("  \xB7 " + ln.trim());
       }
     }
@@ -159360,7 +159965,7 @@ ${s.body}`).join("\n\n");
   function wBlock(s) {
     const rows = filledW(s);
     if (!rows.length) return "";
-    return [t("ui.starter.pWHead"), ...rows.map((r) => "- " + r.label + ": " + clip2(r.value, 300))].join("\n");
+    return [t("ui.starter.pWHead"), ...rows.map((r) => "- " + r.label + ": " + clip3(r.value, 300))].join("\n");
   }
   function starterBlock(s, { cast = true, full = true, intro = true } = {}) {
     const out = [];
@@ -159371,7 +159976,7 @@ ${s.body}`).join("\n\n");
       const body = introText(s);
       if (body) {
         out.push(t("ui.starter.pIntroHead"));
-        out.push(clip2(body, 1500));
+        out.push(clip3(body, 1500));
       }
     }
     const w = wBlock(s);
@@ -159387,7 +159992,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pNameTask"),
       tagLine(s),
-      body ? t("ui.starter.pIntroHead") + "\n" + clip2(body, 800) : "",
+      body ? t("ui.starter.pIntroHead") + "\n" + clip3(body, 800) : "",
       t("ui.starter.pNameRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -159404,7 +160009,7 @@ ${s.body}`).join("\n\n");
     const who = [
       t("ui.starter.pCharName") + (ch.name || t("ui.starter.pCharNoName")),
       ch.gender ? t("ui.starter.pCharGender") + genderLabel(ch.gender) : "",
-      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip2(ch.persona, 400) : ""
+      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip3(ch.persona, 400) : ""
     ].filter(Boolean).join("\n");
     return [
       t("ui.starter.pCharTask"),
@@ -159418,7 +160023,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pScTask"),
       starterBlock(s, { full: false }),
-      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip2(prev.synopsis || prev.recap || "", 700) : "",
+      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip3(prev.synopsis || prev.recap || "", 700) : "",
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       t("ui.starter.pScRule")
     ].filter(Boolean).join("\n\n");
@@ -159427,7 +160032,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pScNameTask"),
       tagLine(s),
-      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 700) : "",
+      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 700) : "",
       t("ui.starter.pNameRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -159443,7 +160048,7 @@ ${s.body}`).join("\n\n");
     const mc = mentionCtx(s, sc, userChars);
     const ex = (v2, max2) => {
       const body = String(v2 || "").trim();
-      return body ? clip2(expandMentions(body, cast, mc), max2) : "";
+      return body ? clip3(expandMentions(body, cast, mc), max2) : "";
     };
     const desc = ex(sc && sc.desc, 1200);
     const mood = ex(sc && sc.mood, 400);
@@ -159453,14 +160058,14 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pGmRole"),
       starterBlock(s, { full: true }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? t("ui.starter.pScSynopsis") + "\n" + clip2(sc.synopsis, 900) : "",
+      String(sc && sc.synopsis || "").trim() ? t("ui.starter.pScSynopsis") + "\n" + clip3(sc.synopsis, 900) : "",
       // [alpha.122] ช่องขั้นสูงของตอน — GM ต้องรู้ทั้งฉาก เป้าหมาย และ "จบยังไงถึงเรียกว่าสำเร็จ"
       desc ? t("ui.starter.pScDesc") + "\n" + desc : "",
       // [alpha.123] โทน = สำนวนและจังหวะการเล่า · แยกจากคำอธิบายซึ่งเป็นข้อเท็จจริงของฉาก
       mood ? t("ui.starter.pScMood") + "\n" + mood + "\n" + t("ui.starter.pScMoodRule") : "",
       goal ? t("ui.starter.pScGoal") + "\n" + goal : "",
       cond ? t("ui.starter.pScCond") + "\n" + cond + "\n" + t("ui.starter.pScCondRule") : "",
-      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip2(prev.synopsis || "", 600) : "",
+      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip3(prev.synopsis || "", 600) : "",
       owned.length ? tf("ui.starter.pGmUserChars", owned.join(", ")) : "",
       t("ui.starter.pGmRules"),
       lenRule,
@@ -159470,11 +160075,11 @@ ${s.body}`).join("\n\n");
   function gmOpening(s, sc) {
     const own = openerText(sc, s && s.cast || [], mentionCtx(s, sc));
     if (own) {
-      return [t("ui.starter.pGmOpenGiven"), clip2(own, 1500), t("ui.starter.pGmOpenGivenRule")].join("\n\n");
+      return [t("ui.starter.pGmOpenGiven"), clip3(own, 1500), t("ui.starter.pGmOpenGivenRule")].join("\n\n");
     }
     return [
       t("ui.starter.pGmOpenTask"),
-      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 600) : "",
+      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 600) : "",
       t("ui.starter.pGmOpenRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -159486,7 +160091,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pRecapTask"),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      clip2(transcript, 6e3),
+      clip3(transcript, 6e3),
       t("ui.starter.pRecapRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -159519,7 +160124,7 @@ ${s.body}`).join("\n\n");
     const who = [
       t("ui.starter.pCharName") + (ch.name || t("ui.starter.pCharNoName")),
       ch.gender ? t("ui.starter.pCharGender") + genderLabel(ch.gender) : "",
-      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip2(ch.persona, 700) : "",
+      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip3(ch.persona, 700) : "",
       (ch.tags || []).length ? t("ui.starter.pCharTags") + ch.tags.join(", ") : ""
     ].filter(Boolean).join("\n");
     return [
@@ -159535,8 +160140,8 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pOpenerTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 800) : "",
-      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip2(sc.desc, 800) : "",
+      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 800) : "",
+      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip3(sc.desc, 800) : "",
       t("ui.starter.pOpenerRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -159545,7 +160150,7 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pGoalTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 800) : "",
+      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 800) : "",
       t("ui.starter.pGoalRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -159555,8 +160160,8 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pCondTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.goal || "").trim() ? t("ui.starter.pScGoal") + "\n" + clip2(sc.goal, 400) : "",
-      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 600) : "",
+      String(sc && sc.goal || "").trim() ? t("ui.starter.pScGoal") + "\n" + clip3(sc.goal, 400) : "",
+      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 600) : "",
       tf(
         "ui.starter.pCondRule",
         mentionToken(sample),
@@ -159570,8 +160175,8 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pMoodTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? clip2(sc.synopsis, 700) : "",
-      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip2(sc.desc, 700) : "",
+      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 700) : "",
+      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip3(sc.desc, 700) : "",
       t("ui.starter.pMoodRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -161664,7 +162269,7 @@ ${s.body}`).join("\n\n");
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
-      tail ? t("ui.starter.pCvTail") + "\n" + clip2(tail, TAIL_CHARS) : "",
+      tail ? t("ui.starter.pCvTail") + "\n" + clip3(tail, TAIL_CHARS) : "",
       t("ui.starter.pCvSource"),
       chunkText2(chunk, nameOf2),
       t("ui.starter.pCvRuleProse"),
@@ -161770,7 +162375,7 @@ ${s.body}`).join("\n\n");
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
-      tail ? t("ui.starter.pCvTail") + "\n" + clip2(tail, TAIL_CHARS) : "",
+      tail ? t("ui.starter.pCvTail") + "\n" + clip3(tail, TAIL_CHARS) : "",
       t("ui.starter.pCvSource"),
       chunkText2(chunk, nameOf2),
       t("ui.starter.pCvRuleSp"),
@@ -164648,7 +165253,7 @@ ${sc.body || ""}
     const rightLabel = labels.new || t("ui.spCompare.editionNew");
     let html = `<div class="k-compare-wrap">
 <style>
-.k-compare-wrap { font-family: 'Courier Prime', 'Courier New', monospace; font-size:12px;
+.k-compare-wrap { font-family: 'Courier Prime', 'Courier New', monospace, 'Thonburi', 'Leelawadee UI', 'TH Sarabun New', 'Sarabun', 'Noto Sans Thai'; font-size:12px;
   line-height:1.6; max-width:100%; overflow-x:auto; }
 .k-compare-header { display:flex; border-bottom:2px solid #666; margin-bottom:8px; }
 .k-compare-hdr-left, .k-compare-hdr-right { flex:1; padding:4px 8px; font-weight:bold; text-align:center; }
@@ -165670,7 +166275,7 @@ ${sc.body || ""}
     const css = [
       fontFaceCss(opts.fontUrls),
       "*{box-sizing:border-box;}",
-      `html,body{margin:0;padding:0;background:#fff;color:#000;font-family:"Courier Prime","Courier Final Draft","Courier New",monospace;font-size:12pt;line-height:1;}`,
+      `html,body{margin:0;padding:0;background:#fff;color:#000;font-family:` + withThaiFallback('"Courier Prime","Courier Final Draft","Courier New",monospace') + `;font-size:12pt;line-height:1;}`,
       `.pg{position:relative;width:${+tw.toFixed(4)}in;min-height:${+ph.toFixed(4)}in;page-break-after:always;break-after:page;overflow:hidden;}`,
       ".pg:last-child{page-break-after:auto;break-after:auto;}",
       ".pg-body{position:relative;z-index:1;}",
@@ -165736,6 +166341,7 @@ ${css}
       init_i18n();
       init_sp_format();
       init_num();
+      init_lang_fonts();
       DEFAULT_WM = {
         fontSize: 54,
         // px
@@ -166086,12 +166692,15 @@ ${css}
     const nLang = applyProjectLangFonts();
     const pf = proseFormat();
     const edStack = state.settings.fontFamily || DEFAULT_PROSE_FONT;
-    document.documentElement.style.setProperty("--ed-font", withLangFamily(edStack, nLang.prose > 0));
+    document.documentElement.style.setProperty(
+      "--ed-font",
+      withThaiFallback(withLangFamily(edStack, nLang.prose > 0))
+    );
     applyProseVars(pf);
     const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
     document.documentElement.style.setProperty(
       "--sp-font",
-      withSpFamily(spStack, nLang.screenplay > 0)
+      withThaiFallback(withSpFamily(spStack, nLang.screenplay > 0))
     );
     refreshTextMeasurer();
     remeasureAfterFonts();
@@ -176375,6 +176984,7 @@ ${css}
     const target = (num(spf.paper.height, 11) - num(spf.margins.top, 1) - num(spf.margins.bottom, 1)) * 96;
     if (!(target > 8)) return false;
     const z = zoomFactorOf(pm2) || 1;
+    const paperView146 = isPaperView(viewOfTab(t3));
     const cs = getComputedStyle(pm2);
     const top0 = pm2.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
     const lineY = (e) => (e.getBoundingClientRect().top - top0) / z;
@@ -176386,7 +176996,7 @@ ${css}
       const used = y - prev - prevH;
       prev = y;
       prevH = els[i5].getBoundingClientRect().height / z;
-      const want = Math.max(0, Math.round((target - used) * 10) / 10);
+      const want = Math.max(paperView146 ? -400 : 0, Math.round((target - used) * 10) / 10);
       if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
       list[i5].pad = want;
       changed = true;
@@ -176422,7 +177032,7 @@ ${css}
       const used = y - prev - prevH;
       prev = y;
       prevH = els[i5].getBoundingClientRect().height / z;
-      const want = Math.max(0, Math.round((target - used) * 10) / 10);
+      const want = Math.max(-400, Math.round((target - used) * 10) / 10);
       if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
       list[i5].pad = want;
       changed = true;
@@ -184013,6 +184623,64 @@ ${css}
         resetPanels();
         await new Promise((r) => setTimeout(r, 30));
       }
+      {
+        const rootEl2 = $("#app-root");
+        const csRoot = getComputedStyle(rootEl2);
+        const px2 = (v4) => parseFloat(v4) || 0;
+        const gap = px2(csRoot.getPropertyValue("--shell-gap"));
+        check2(
+          "[146] \u2605 \u0E21\u0E35\u0E2A\u0E40\u0E01\u0E25\u0E21\u0E38\u0E21\u0E42\u0E04\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E23\u0E1A\u0E2B\u0E49\u0E32\u0E02\u0E31\u0E49\u0E19 \u0E41\u0E25\u0E30\u0E40\u0E23\u0E35\u0E22\u0E07\u0E08\u0E32\u0E01\u0E40\u0E25\u0E47\u0E01\u0E44\u0E1B\u0E43\u0E2B\u0E0D\u0E48",
+          ["--r-xs", "--r-sm", "--r-md", "--r-lg"].map((k) => px2(csRoot.getPropertyValue(k))).every((v4, i5, a) => v4 > 0 && (i5 === 0 || v4 > a[i5 - 1])),
+          ["--r-xs", "--r-sm", "--r-md", "--r-lg"].map((k) => csRoot.getPropertyValue(k)).join("/")
+        );
+        check2("[146] --shell-gap \u0E21\u0E35\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07", gap >= 3, String(gap));
+        check2(
+          "[146] #app-root \u0E40\u0E27\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E23\u0E2D\u0E1A\u0E19\u0E2D\u0E01\u0E40\u0E17\u0E48\u0E32 --shell-gap (\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E44\u0E21\u0E48\u0E0A\u0E19\u0E02\u0E2D\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07)",
+          px2(csRoot.paddingTop) === gap && px2(csRoot.paddingLeft) === gap,
+          `${csRoot.paddingTop}/${csRoot.paddingLeft} gap=${gap}`
+        );
+        check2(
+          "[146] #app-root \u0E21\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E1E\u0E37\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E23\u0E39\u0E42\u0E1B\u0E23\u0E48\u0E07)",
+          !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(csRoot.backgroundColor),
+          csRoot.backgroundColor
+        );
+        const rh = document.querySelector("#app-root .k-resize-handle");
+        check2(
+          "[146] \u2605 \u0E17\u0E35\u0E48\u0E08\u0E31\u0E1A\u0E1B\u0E23\u0E31\u0E1A\u0E02\u0E19\u0E32\u0E14\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32 --shell-gap (\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E31\u0E49\u0E07\u0E08\u0E2D)",
+          !!rh && Math.round(rh.getBoundingClientRect().width || rh.getBoundingClientRect().height) === gap,
+          rh && JSON.stringify(rh.getBoundingClientRect())
+        );
+        const cards = [...document.querySelectorAll("#app-root .k-panel, #app-root .k-tab-group")];
+        const outer = cards.filter((c) => !c.parentElement.closest(".k-tab-content"));
+        const inner = cards.filter((c) => c.parentElement.closest(".k-tab-content"));
+        const noBorder = outer.filter((c) => {
+          const cs = getComputedStyle(c);
+          return !["Top", "Right", "Bottom", "Left"].every((d) => px2(cs["border" + d + "Width"]) >= 1);
+        });
+        const noRadius = outer.filter((c) => px2(getComputedStyle(c).borderTopLeftRadius) <= 0);
+        check2(
+          "[146] \u2605\u2605 \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E0A\u0E31\u0E49\u0E19\u0E19\u0E2D\u0E01\u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E04\u0E23\u0E1A\u0E2A\u0E35\u0E48\u0E14\u0E49\u0E32\u0E19",
+          outer.length >= 4 && noBorder.length === 0,
+          `${noBorder.length}/${outer.length} :: ` + noBorder.map((c) => c.dataset.panelId || c.className).join(",")
+        );
+        check2(
+          "[146] \u2605\u2605 \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E0A\u0E31\u0E49\u0E19\u0E19\u0E2D\u0E01\u0E21\u0E35\u0E21\u0E38\u0E21\u0E42\u0E04\u0E49\u0E07",
+          noRadius.length === 0,
+          noRadius.map((c) => c.dataset.panelId || c.className).join(",")
+        );
+        check2(
+          "[146] \u0E41\u0E1C\u0E07\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E01\u0E31\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E2D\u0E19\u0E02\u0E2D\u0E1A)",
+          inner.every((c) => px2(getComputedStyle(c).borderTopWidth) === 0),
+          inner.filter((c) => px2(getComputedStyle(c).borderTopWidth) !== 0).map((c) => c.dataset.panelId).join(",")
+        );
+        const bar = pEl("statusbar");
+        const above = bar && bar.previousElementSibling;
+        check2(
+          "[146] \u2605\u2605 \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E27\u0E49\u0E19\u0E23\u0E30\u0E22\u0E30\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E21\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E0A\u0E19\u0E01\u0E31\u0E19\u0E2A\u0E19\u0E34\u0E17)",
+          !!above && Math.round(bar.getBoundingClientRect().top - above.getBoundingClientRect().bottom) >= gap,
+          above && `${Math.round(bar.getBoundingClientRect().top - above.getBoundingClientRect().bottom)} < ${gap}`
+        );
+      }
       check2(
         "tree + Navigation \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
         !!tabGroupOf(PMG.root, "tree") && tabGroupOf(PMG.root, "tree") === tabGroupOf(PMG.root, "outline")
@@ -189985,7 +190653,8 @@ ${css}
                 await settle130();
                 const sL = seams131();
                 const pitchL = spf131.paper.height * 96 + num(state.settings.spPageGap, 28);
-                note("[131-P1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0394=" + JSON.stringify(sL) + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E15\u0E48\u0E2D\u0E41\u0E1C\u0E48\u0E19=" + Math.round(pitchL));
+                const bL = boxes131();
+                note("[131-P1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0394=" + JSON.stringify(sL) + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E15\u0E48\u0E2D\u0E41\u0E1C\u0E48\u0E19=" + Math.round(pitchL) + " \xB7 \u0E01\u0E25\u0E48\u0E2D\u0E07=" + JSON.stringify(bL.map((x) => (x.inline ? "i" : "b") + ":h" + Math.round(x.h) + "/p" + Math.round(x.pad) + "/x" + Math.round(x.extra))) + " \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14=" + Math.round(line131) + " \xB7 \u0E01\u0E27\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E07=" + Math.round(pm3().getBoundingClientRect().width));
                 check2(
                   "[131-P1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E48\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E4A\u0E30",
                   sL.length > 2 && Math.max(...sL) - Math.min(...sL) <= 1,
@@ -189996,6 +190665,32 @@ ${css}
                   sL.every((d) => Math.abs(d - pitchL) <= 1.5),
                   JSON.stringify(sL) + " vs " + Math.round(pitchL)
                 );
+                {
+                  const sheets146 = [...t100.pane.querySelectorAll(".k-paper-layer > .k-paper-sheet")];
+                  const bx146 = boxes131();
+                  const seamY = bx146.map((b) => b.bot - b.extra);
+                  const n146 = Math.min(sheets146.length, seamY.length);
+                  const shTop = (i5) => sheets146[i5].getBoundingClientRect().top;
+                  const drift = [];
+                  for (let i5 = 0; i5 < n146; i5++)
+                    drift.push(Math.round((seamY[i5] - seamY[0] - (shTop(i5) - shTop(0))) * 10) / 10);
+                  note("[146-P2] \u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + sheets146.length + " \u0E43\u0E1A \xB7 \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D " + seamY.length + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E17\u0E35\u0E48\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E04\u0E25\u0E32\u0E14\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19=" + JSON.stringify(drift));
+                  check2(
+                    "[146-P2] \u2605 \u0E21\u0E35\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E43\u0E2B\u0E49\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 3 \u0E43\u0E1A",
+                    n146 >= 3,
+                    `\u0E41\u0E1C\u0E48\u0E19=${sheets146.length} \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D=${seamY.length}`
+                  );
+                  check2(
+                    "[146-P2] \u2605\u2605 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E44\u0E2B\u0E25\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E1A\u0E1A\u0E2A\u0E30\u0E2A\u0E21\u0E17\u0E35\u0E25\u0E30\u0E2B\u0E19\u0E49\u0E32",
+                    drift.every((d) => Math.abs(d) <= 1.5),
+                    JSON.stringify(drift)
+                  );
+                  check2(
+                    "[146-P2] \u2605\u2605 \u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E41\u0E1C\u0E48\u0E19 (\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E01\u0E32\u0E23\u0E2A\u0E30\u0E2A\u0E21\u0E41\u0E23\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E38\u0E14)",
+                    Math.abs(drift[drift.length - 1] || 0) <= 1.5,
+                    "\u0E04\u0E25\u0E32\u0E14 " + (drift[drift.length - 1] || 0) + "px \u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32 " + drift.length
+                  );
+                }
                 setSpView(view131, true);
                 await wait103(300);
               }
@@ -191506,7 +192201,7 @@ ${css}
         applySettings();
         check2(
           "#2 \u0E15\u0E31\u0E49\u0E07\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07 \u2192 --sp-font \u0E16\u0E39\u0E01\u0E40\u0E0B\u0E47\u0E15",
-          getComputedStyle(document.documentElement).getPropertyValue("--sp-font").trim().endsWith('"TH Sarabun New", sans-serif'),
+          getComputedStyle(document.documentElement).getPropertyValue("--sp-font").trim().includes('"TH Sarabun New", sans-serif'),
           getComputedStyle(document.documentElement).getPropertyValue("--sp-font")
         );
         const spProbe = el("div", "sp sp-action", "\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -193096,6 +193791,153 @@ ${css}
               gu !== null && gu <= 0.065,
               gu === null ? "\u0E27\u0E48\u0E32\u0E07" : (gu * 100).toFixed(1) + "%"
             );
+          }
+          {
+            const stackGap = async (stack, txt = "\u0E17\u0E48", px2 = 110) => {
+              const cv = document.createElement("canvas");
+              cv.width = px2 * 2;
+              cv.height = px2 * 2;
+              const cx2 = cv.getContext("2d");
+              cx2.fillStyle = "#fff";
+              cx2.fillRect(0, 0, cv.width, cv.height);
+              cx2.fillStyle = "#000";
+              cx2.textBaseline = "alphabetic";
+              cx2.font = px2 + "px " + stack;
+              cx2.fillText(txt, px2 * 0.4, px2 * 1.4);
+              const d = cx2.getImageData(0, 0, cv.width, cv.height).data;
+              const rows = [];
+              for (let y = 0; y < cv.height; y++) {
+                let ink = false;
+                for (let x = 0; x < cv.width && !ink; x++) if (d[(y * cv.width + x) * 4] < 128) ink = true;
+                rows.push(ink);
+              }
+              const ys = rows.map((v4, i5) => v4 ? i5 : -1).filter((i5) => i5 >= 0);
+              if (!ys.length) return null;
+              let gap = 0, cur = 0;
+              for (let i5 = ys[0]; i5 <= ys[ys.length - 1]; i5++) {
+                if (!rows[i5]) {
+                  cur++;
+                  gap = Math.max(gap, cur);
+                } else cur = 0;
+              }
+              return gap / px2;
+            };
+            const keepFont138 = state.settings.fontFamily;
+            const keepSpFont138 = state.settings.spFontFamily;
+            state.settings.fontFamily = '"Courier New", monospace';
+            state.settings.spFontFamily = '"Courier New", monospace';
+            applySettings();
+            const ed138 = document.documentElement.style.getPropertyValue("--ed-font");
+            const sp138 = document.documentElement.style.getPropertyValue("--sp-font");
+            check2(
+              "[144] \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E25\u0E30\u0E15\u0E34\u0E19\u0E25\u0E49\u0E27\u0E19\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E31\u0E27\u0E2A\u0E41\u0E15\u0E01 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E22\u0E31\u0E07\u0E44\u0E14\u0E49 Courier New \u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E27\u0E49)",
+              /^"?Courier New"?/.test(ed138.trim()),
+              ed138
+            );
+            check2(
+              "[144] \u2605 \u0E2A\u0E41\u0E15\u0E01\u0E19\u0E34\u0E22\u0E32\u0E22\u0E21\u0E35\u0E25\u0E39\u0E01\u0E42\u0E0B\u0E48\u0E44\u0E17\u0E22\u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E43\u0E2B\u0E49\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E2D\u0E07",
+              /Thonburi/.test(ed138),
+              ed138
+            );
+            check2("[144] \u2605 \u0E2A\u0E41\u0E15\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E01\u0E47\u0E44\u0E14\u0E49\u0E25\u0E39\u0E01\u0E42\u0E0B\u0E48\u0E44\u0E17\u0E22\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E31\u0E19", /Thonburi/.test(sp138), sp138);
+            check2(
+              "[144] Ayuthaya (\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E27\u0E23\u0E23\u0E13\u0E22\u0E38\u0E01\u0E15\u0E4C\u0E25\u0E2D\u0E22) \u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E2A\u0E41\u0E15\u0E01\u0E17\u0E35\u0E48\u0E40\u0E23\u0E32\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E40\u0E2D\u0E07",
+              !/Ayuthaya/i.test(ed138) && !/Ayuthaya/i.test(sp138),
+              ed138 + " | " + sp138
+            );
+            const RAW138 = '"Courier New", monospace';
+            const gRaw = await stackGap(RAW138);
+            const gFix = await stackGap(ed138 || RAW138);
+            const pct2 = (g) => g === null ? "\u0E27\u0E48\u0E32\u0E07" : (g * 100).toFixed(1) + "%";
+            check2(
+              "[144] \u2605\u2605 \u0E27\u0E23\u0E23\u0E13\u0E22\u0E38\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E25\u0E2D\u0E22\u0E14\u0E49\u0E27\u0E22\u0E2A\u0E41\u0E15\u0E01\u0E17\u0E35\u0E48\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E43\u0E2B\u0E49 (\u0E27\u0E31\u0E14\u0E2B\u0E21\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07)",
+              gFix !== null && gFix <= 0.12,
+              "\u0E14\u0E34\u0E1A " + pct2(gRaw) + " \u2192 \u0E2B\u0E25\u0E31\u0E07\u0E41\u0E01\u0E49 " + pct2(gFix)
+            );
+            check2(
+              "[144] \u0E15\u0E32\u0E02\u0E48\u0E32\u0E22\u0E23\u0E2D\u0E07\u0E44\u0E17\u0E22\u0E44\u0E21\u0E48\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E0A\u0E48\u0E2D\u0E07\u0E44\u0E1F\u0E41\u0E22\u0E48\u0E25\u0E07\u0E01\u0E27\u0E48\u0E32\u0E2A\u0E41\u0E15\u0E01\u0E14\u0E34\u0E1A",
+              gFix !== null && gRaw !== null && gFix <= gRaw + 5e-3,
+              "\u0E14\u0E34\u0E1A " + pct2(gRaw) + " vs \u0E2B\u0E25\u0E31\u0E07\u0E41\u0E01\u0E49 " + pct2(gFix)
+            );
+            if (gRaw !== null && gRaw > 0.12) {
+              check2(
+                "[144] \u2605 \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E17\u0E33\u0E0B\u0E49\u0E33\u0E2D\u0E32\u0E01\u0E32\u0E23\u0E44\u0E14\u0E49 \u0E41\u0E25\u0E30\u0E15\u0E32\u0E02\u0E48\u0E32\u0E22\u0E23\u0E2D\u0E07\u0E44\u0E17\u0E22\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+                gFix < gRaw * 0.6,
+                "\u0E14\u0E34\u0E1A " + pct2(gRaw) + " \u2192 \u0E2B\u0E25\u0E31\u0E07\u0E41\u0E01\u0E49 " + pct2(gFix)
+              );
+            }
+            const probe138 = el("div", "k-src-view");
+            probe138.style.position = "fixed";
+            probe138.style.left = "-9999px";
+            document.body.append(probe138);
+            const srcFont138 = getComputedStyle(probe138).fontFamily;
+            probe138.remove();
+            check2(
+              "[144] \u2605 \u0E0A\u0E48\u0E2D\u0E07 markdown \u0E21\u0E35\u0E25\u0E39\u0E01\u0E42\u0E0B\u0E48\u0E44\u0E17\u0E22\u0E43\u0E19\u0E2A\u0E41\u0E15\u0E01\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E1E\u0E36\u0E48\u0E07\u0E14\u0E27\u0E07\u0E27\u0E48\u0E32\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19)",
+              /Thonburi/.test(srcFont138),
+              srcFont138
+            );
+            state.settings.fontFamily = keepFont138;
+            state.settings.spFontFamily = keepSpFont138;
+            applySettings();
+            {
+              const probeFont = (cls) => {
+                const d = el("div", cls);
+                d.style.position = "fixed";
+                d.style.left = "-9999px";
+                document.body.append(d);
+                const f = getComputedStyle(d).fontFamily;
+                d.remove();
+                return f;
+              };
+              const SURFACES = [
+                [".plain-md (\u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E01\u0E49 Markdown \u0E14\u0E34\u0E1A)", "plain-md"],
+                [".k-logview (\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)", "k-logview"],
+                [".ai-md-pre-body (\u0E42\u0E04\u0E49\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E43\u0E19\u0E41\u0E0A\u0E17 AI)", "ai-md-pre-body"],
+                [".ai-md-code (\u0E42\u0E04\u0E49\u0E14\u0E43\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \u0E41\u0E0A\u0E17 AI)", "ai-md-code"],
+                [".k-ln-no (\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14)", "k-ln-no"],
+                [".k-dev-input (\u0E0A\u0E48\u0E2D\u0E07\u0E1E\u0E31\u0E12\u0E19\u0E32)", "k-dev-input"]
+              ];
+              const BARE145 = "ui-monospace, Menlo, Consolas, monospace";
+              const gBare = await stackGap(BARE145);
+              const pct145 = (g) => g === null ? "\u0E27\u0E48\u0E32\u0E07" : (g * 100).toFixed(1) + "%";
+              check2("[145] \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E27\u0E31\u0E14\u0E2A\u0E41\u0E15\u0E01\u0E42\u0E21\u0E42\u0E19\u0E2A\u0E40\u0E1B\u0E0B\u0E14\u0E34\u0E1A\u0E44\u0E14\u0E49", gBare !== null, pct145(gBare));
+              for (const [label, cls] of SURFACES) {
+                const f = probeFont(cls);
+                check2("[145] \u0E15\u0E32\u0E02\u0E48\u0E32\u0E22\u0E44\u0E17\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E2A\u0E41\u0E15\u0E01\u0E02\u0E2D\u0E07 " + label, /Thonburi/.test(f), f);
+                const g = await stackGap(f);
+                check2(
+                  "[145] \u2605 \u0E27\u0E23\u0E23\u0E13\u0E22\u0E38\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E25\u0E2D\u0E22\u0E43\u0E19 " + label + " (\u0E27\u0E31\u0E14\u0E2B\u0E21\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07)",
+                  g !== null && g <= 0.12,
+                  pct145(g) + " | " + f
+                );
+                if (gBare !== null && gBare > 0.12) {
+                  check2(
+                    "[145] \u2605 " + label + " \u0E40\u0E04\u0E22\u0E25\u0E2D\u0E22\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49 \u0E41\u0E25\u0E30\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49\u0E2B\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27",
+                    g < gBare * 0.6,
+                    "\u0E14\u0E34\u0E1A " + pct145(gBare) + " \u2192 " + pct145(g)
+                  );
+                }
+              }
+              const cssH145 = proseCss(mergeProseFormat({ fontFamily: '"Courier New", monospace' }));
+              const headRule = (cssH145.match(/h1\{[^}]*\}/) || [""])[0];
+              check2(
+                "[145] \u2605 \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E19\u0E34\u0E22\u0E32\u0E22\u0E01\u0E47\u0E44\u0E14\u0E49\u0E15\u0E32\u0E02\u0E48\u0E32\u0E22\u0E44\u0E17\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E25\u0E2D\u0E22\u0E17\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E21\u0E48\u0E25\u0E2D\u0E22)",
+                /Thonburi/.test(headRule),
+                headRule.slice(0, 160)
+              );
+              const cssX145 = proseExportCss(
+                mergeProseFormat({}),
+                null,
+                null,
+                { fontStack: '"Courier New", monospace' }
+              );
+              check2(
+                "[145] \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2D\u0E37\u0E48\u0E19\u0E01\u0E47\u0E44\u0E14\u0E49\u0E15\u0E32\u0E02\u0E48\u0E32\u0E22\u0E44\u0E17\u0E22",
+                /body\{[^}]*Thonburi/.test(cssX145),
+                (cssX145.match(/body\{[^}]*\}/) || [""])[0].slice(0, 160)
+              );
+            }
           }
         }
         {
@@ -197762,17 +198604,17 @@ ${css}
           !!T3.pane.querySelector(".sp-pageview .ed-page .ed-page-clip > .ProseMirror")
         );
         {
-          const clip3 = T3.pane.querySelector(".sp-pageview .ed-page-clip");
+          const clip4 = T3.pane.querySelector(".sp-pageview .ed-page-clip");
           const spf15 = spFormat();
           const want = (spf15.paper.height - spf15.margins.top - spf15.margins.bottom) * 96;
           check2(
             "[83-3] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E27\u0E01\u0E40\u0E2A\u0E21\u0E2D",
-            !!clip3 && parseFloat(clip3.style.height) <= want + 0.5 && parseFloat(clip3.style.height) > 0,
-            (clip3 && clip3.style.height) + " <= " + want
+            !!clip4 && parseFloat(clip4.style.height) <= want + 0.5 && parseFloat(clip4.style.height) > 0,
+            (clip4 && clip4.style.height) + " <= " + want
           );
           check2(
             "[82] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22",
-            !!clip3 && !clip3.querySelector(".ed-page-break")
+            !!clip4 && !clip4.querySelector(".ed-page-break")
           );
           const pg2 = T3.pane.querySelectorAll(".sp-pageview .ed-page")[1];
           const inner2 = pg2 && pg2.querySelector(".ed-page-clip > .ProseMirror");
@@ -200173,6 +201015,228 @@ ${css}
           );
         }
         {
+          const CP145 = await Promise.resolve().then(() => (init_ai_chat_panel(), ai_chat_panel_exports));
+          const st145 = _chatState();
+          const host145 = document.getElementById("ai-chat-body");
+          st145.view = "session";
+          await renderAIChatPanel(host145);
+          await new Promise((r) => setTimeout(r, 120));
+          st145.run = {
+            sessionId: st145.cur.id,
+            title: st145.cur.title,
+            reqId: "e2e-145",
+            startAt: Date.now(),
+            label: "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E34\u0E14\u2026",
+            text: "\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E25\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27",
+            thinking: "\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E25\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27"
+          };
+          await renderAIChatPanel(host145);
+          await new Promise((r) => setTimeout(r, 80));
+          const pend145 = host145.querySelector(".ai-msg-pending");
+          check2('[145] \u2605 \u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E23\u0E2D\u0E04\u0E33\u0E15\u0E2D\u0E1A \u0E41\u0E25\u0E49\u0E27\u0E1F\u0E2D\u0E07 "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E34\u0E14" \u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48', !!pend145);
+          check2(
+            "[145] \u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E2A\u0E15\u0E23\u0E35\u0E21\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A (\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E01\u0E31\u0E1A DOM \u0E40\u0E01\u0E48\u0E32)",
+            !!pend145 && pend145.textContent.includes("\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E25\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27"),
+            pend145 && pend145.textContent.slice(0, 80)
+          );
+          check2(
+            "[145] \u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E42\u0E21\u0E40\u0E14\u0E25\u0E01\u0E47\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E14\u0E49\u0E27\u0E22",
+            !!pend145 && pend145.textContent.includes("\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E25\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27")
+          );
+          check2("[145] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E22\u0E38\u0E14\u0E43\u0E19\u0E1F\u0E2D\u0E07", !!host145.querySelector(".ai-pend-stop"));
+          check2(
+            "[145] \u0E2B\u0E31\u0E27\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E15\u0E34\u0E14\u0E1B\u0E49\u0E32\u0E22\u0E27\u0E48\u0E32\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19",
+            !!host145.querySelector(".ai-chat-title.running")
+          );
+          check2("[145] \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E16\u0E39\u0E01\u0E25\u0E47\u0E2D\u0E01\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E23\u0E2D", host145.querySelector(".ai-chat-send").disabled === true);
+          host145.querySelector(".ai-chat-ctx").click();
+          await new Promise((r) => setTimeout(r, 120));
+          check2(
+            "[145] \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E23\u0E2D\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E22\u0E31\u0E07\u0E01\u0E14\u0E14\u0E39 token \u0E44\u0E14\u0E49",
+            !!document.getElementById("ai-chat-body").querySelector(".ai-chat-detail")
+          );
+          _chatState().run.text = "\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E2B\u0E25\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27 + \u0E17\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E21\u0E32\u0E15\u0E2D\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E37\u0E48\u0E19";
+          document.getElementById("ai-chat-body").querySelector(".ai-chat-close").click();
+          await new Promise((r) => setTimeout(r, 150));
+          const back145 = document.getElementById("ai-chat-body").querySelector(".ai-msg-pending");
+          check2(
+            "[145] \u2605\u2605 \u0E01\u0E25\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E15\u0E23\u0E35\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E23\u0E27\u0E21\u0E17\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E21\u0E32\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E19\u0E31\u0E49\u0E19",
+            !!back145 && back145.textContent.includes("\u0E17\u0E48\u0E2D\u0E19\u0E17\u0E35\u0E48\u0E21\u0E32\u0E15\u0E2D\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E2D\u0E37\u0E48\u0E19"),
+            back145 && back145.textContent.slice(0, 120)
+          );
+          _chatState().view = "list";
+          await renderAIChatPanel(document.getElementById("ai-chat-body"));
+          await new Promise((r) => setTimeout(r, 120));
+          const hostL = document.getElementById("ai-chat-body");
+          const runRow = hostL.querySelector(".ai-chat-row.running");
+          check2(
+            "[145] \u2605 \u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E44\u0E27\u0E49",
+            !!runRow,
+            [...hostL.querySelectorAll(".ai-chat-row")].length + " \u0E41\u0E16\u0E27"
+          );
+          check2("[145] \u0E41\u0E16\u0E27\u0E19\u0E31\u0E49\u0E19\u0E21\u0E35\u0E2A\u0E31\u0E0D\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C \u23F3", !!runRow && !!runRow.querySelector(".ai-chat-row-run"));
+          const banner = hostL.querySelector(".ai-chat-running");
+          check2(
+            '[145] \u0E21\u0E35\u0E41\u0E16\u0E1A "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19" \u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E41\u0E25\u0E30\u0E41\u0E2A\u0E14\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07',
+            !!banner && banner.style.display !== "none" && banner.textContent.includes("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19"),
+            banner && banner.textContent
+          );
+          banner.click();
+          await new Promise((r) => setTimeout(r, 150));
+          check2(
+            "[145] \u0E01\u0E14\u0E41\u0E16\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E17\u0E33\u0E07\u0E32\u0E19",
+            _chatState().view === "session" && !!document.getElementById("ai-chat-body").querySelector(".ai-msg-pending")
+          );
+          _chatState().run = null;
+          await renderAIChatPanel(document.getElementById("ai-chat-body"));
+          await new Promise((r) => setTimeout(r, 100));
+          check2(
+            '[145] \u0E08\u0E1A\u0E07\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27\u0E1F\u0E2D\u0E07 "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E04\u0E34\u0E14" \u0E2B\u0E32\u0E22\u0E44\u0E1B',
+            !document.getElementById("ai-chat-body").querySelector(".ai-msg-pending")
+          );
+          {
+            const AE145 = await Promise.resolve().then(() => (init_ai_error(), ai_error_exports));
+            const info145 = AE145.describeHttpError({
+              status: 0,
+              body: "ECONNREFUSED connect 127.0.0.1:1234",
+              url: "http://127.0.0.1:1234/v1/chat/completions",
+              provider: "\u0E40\u0E08\u0E49\u0E32\u0E43\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07"
+            });
+            const c145 = _chatState();
+            c145.cur.view = "normal";
+            c145.cur = AS.addMessage(c145.cur, AS.newMessage(
+              "assistant",
+              "",
+              { error: info145.title, detail: info145.detail }
+            ));
+            await saveSession2(c145.cur);
+            await renderAIChatPanel(document.getElementById("ai-chat-body"));
+            await new Promise((r) => setTimeout(r, 150));
+            const hostE = document.getElementById("ai-chat-body");
+            check2("[145] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14\u0E02\u0E36\u0E49\u0E19\u0E1A\u0E19\u0E08\u0E2D", !!hostE.querySelector(".ai-msg-err"));
+            const fold145 = hostE.querySelector(".ai-msg-errdetail");
+            check2("[145] \u2605 \u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 + \u0E41\u0E19\u0E27\u0E17\u0E32\u0E07\u0E41\u0E01\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27)", !!fold145);
+            check2(
+              "[145] \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E1A\u0E2D\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E22\u0E34\u0E07\u0E44\u0E1B",
+              !!fold145 && fold145.textContent.includes("127.0.0.1:1234")
+            );
+            check2(
+              '[145] \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D "\u0E41\u0E19\u0E27\u0E17\u0E32\u0E07\u0E41\u0E01\u0E49"',
+              !!fold145 && fold145.textContent.includes("\u0E41\u0E19\u0E27\u0E17\u0E32\u0E07\u0E41\u0E01\u0E49")
+            );
+          }
+          {
+            const PU145 = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+            const AP145 = await Promise.resolve().then(() => (init_ai_providers(), ai_providers_exports));
+            const seqBefore = logStore.lastSeq();
+            const deadProv = AP145.newProvider({
+              name: "\u0E40\u0E08\u0E49\u0E32\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07",
+              model: "x",
+              credential: { name: "c", baseUrl: "http://127.0.0.1:9/v1", allowedDomains: [] },
+              params: { maxRetries: 0, timeout: 5 }
+            });
+            const r145 = await PU145.completeStream(
+              deadProv,
+              { messages: [{ role: "user", content: "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35" }] },
+              () => {
+              }
+            );
+            check2("[145] \u2605 \u0E22\u0E34\u0E07\u0E44\u0E1B\u0E1E\u0E2D\u0E23\u0E4C\u0E15\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E1F\u0E31\u0E07 \u2192 \u0E25\u0E49\u0E21\u0E40\u0E2B\u0E25\u0E27", r145.ok === false);
+            check2(
+              '[145] \u2605\u2605 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 "HTTP 0" \u0E42\u0E14\u0E14 \u0E46 \u0E2D\u0E35\u0E01\u0E41\u0E25\u0E49\u0E27 \u2014 \u0E1A\u0E2D\u0E01\u0E2A\u0E32\u0E40\u0E2B\u0E15\u0E38\u0E08\u0E23\u0E34\u0E07',
+              !!r145.detail && r145.detail.length > 40,
+              r145.error
+            );
+            check2(
+              "[145] \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E21\u0E35\u0E41\u0E19\u0E27\u0E17\u0E32\u0E07\u0E41\u0E01\u0E49\u0E43\u0E2B\u0E49\u0E17\u0E33\u0E15\u0E48\u0E2D",
+              Array.isArray(r145.hints) && r145.hints.length >= 1,
+              JSON.stringify(r145.hints || [])
+            );
+            check2(
+              "[145] \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E1A\u0E2D\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E22\u0E34\u0E07\u0E44\u0E1B",
+              !!r145.detail && r145.detail.includes("127.0.0.1:9"),
+              (r145.detail || "").slice(0, 120)
+            );
+            const newLogs = logStore.all().filter((x) => x.seq > seqBefore);
+            const aiLog = newLogs.find((x) => x.level === "error" && x.source === "ai");
+            check2(
+              "[145] \u2605\u2605 \u0E04\u0E27\u0E32\u0E21\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14\u0E16\u0E39\u0E01\u0E08\u0E14\u0E25\u0E07\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E25\u0E22)",
+              !!aiLog,
+              newLogs.map((x) => x.level + "/" + x.source + ":" + x.msg).join(" | ").slice(0, 200)
+            );
+            check2(
+              "[145] \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E19\u0E1A\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E40\u0E15\u0E47\u0E21 (\u0E01\u0E32\u0E07\u0E14\u0E39\u0E41\u0E25\u0E49\u0E27\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E15\u0E48\u0E2D)",
+              !!aiLog && String(aiLog.detail || "").includes("\u0E41\u0E19\u0E27\u0E17\u0E32\u0E07\u0E41\u0E01\u0E49"),
+              aiLog && String(aiLog.detail || "").slice(0, 120)
+            );
+          }
+          {
+            const hostF = document.getElementById("ai-chat-body");
+            const eff = hostF.querySelector(".ai-chat-effort");
+            check2("[145] \u2605 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E1B\u0E23\u0E31\u0E1A\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C", !!eff);
+            check2("[145] \u0E21\u0E35\u0E04\u0E23\u0E1A 5 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01", !!eff && eff.options.length === 5, eff && eff.options.length);
+            eff.value = "high";
+            eff.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 150));
+            check2(
+              "[145] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07",
+              _chatState().cur.effort === "high",
+              _chatState().cur.effort
+            );
+            const savedEff = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur))
+            );
+            check2("[145] \u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C", savedEff.effort === "high", savedEff.effort);
+            check2(
+              "[145] \u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14",
+              (savedEff.messages || []).length === (_chatState().cur.messages || []).length
+            );
+          }
+          {
+            const SK145 = await Promise.resolve().then(() => (init_ai_skills(), ai_skills_exports));
+            const dir145 = await SK145.ensureSkillDir(state.root);
+            check2("[145] \u2605 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E17\u0E31\u0E01\u0E29\u0E30\u0E44\u0E14\u0E49", !!dir145 && await kapi.exists(dir145), dir145);
+            await kapi.writeFile(
+              await kapi.join(dir145, "tone.md"),
+              "---\nname: \u0E42\u0E17\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\ndescription: \u0E04\u0E38\u0E21\u0E42\u0E17\u0E19\u0E20\u0E32\u0E29\u0E32\n---\n\u0E40\u0E02\u0E35\u0E22\u0E19\u0E14\u0E49\u0E27\u0E22\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E2A\u0E31\u0E49\u0E19\n"
+            );
+            const all145 = await SK145.loadSkills(state.root);
+            check2(
+              "[145] \u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E31\u0E01\u0E29\u0E30\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E44\u0E14\u0E49",
+              all145.length >= 1 && all145.some((k) => k.id === "tone"),
+              all145.map((k) => k.id).join(",")
+            );
+            const cS = _chatState();
+            cS.cur.skills = ["tone"];
+            await saveSession2(cS.cur);
+            const sp145 = await CP145.skillsPromptFor(cS.cur);
+            check2(
+              "[145] \u2605 \u0E17\u0E31\u0E01\u0E29\u0E30\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E16\u0E39\u0E01\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E40\u0E02\u0E49\u0E32 system prompt",
+              sp145.text.includes("\u0E40\u0E02\u0E35\u0E22\u0E19\u0E14\u0E49\u0E27\u0E22\u0E1B\u0E23\u0E30\u0E42\u0E22\u0E04\u0E2A\u0E31\u0E49\u0E19") && sp145.used.join(",") === "tone",
+              sp145.used.join(",")
+            );
+            check2(
+              "[145] \u0E17\u0E31\u0E01\u0E29\u0E30\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E2A\u0E48\u0E07\u0E44\u0E1B",
+              (await CP145.skillsPromptFor({ skills: [] })).text === ""
+            );
+            await renderAIChatPanel(document.getElementById("ai-chat-body"));
+            await new Promise((r) => setTimeout(r, 200));
+            const skBtn = document.getElementById("ai-chat-body").querySelector(".ai-chat-skills");
+            check2("[145] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E31\u0E01\u0E29\u0E30\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C", !!skBtn);
+            check2(
+              "[145] \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48",
+              !!skBtn && /1\/\d/.test(skBtn.textContent),
+              skBtn && skBtn.textContent
+            );
+            check2(
+              "[145] \u0E1B\u0E38\u0E48\u0E21\u0E16\u0E39\u0E01\u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E21\u0E35\u0E17\u0E31\u0E01\u0E29\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48",
+              !!skBtn && skBtn.classList.contains("on")
+            );
+            cS.cur.skills = [];
+            await saveSession2(cS.cur);
+          }
+        }
+        {
           let longS = AS.newSession();
           for (let i5 = 0; i5 < 40; i5++) {
             longS = AS.addMessage(longS, AS.newMessage(i5 % 2 ? "assistant" : "user", "\u0E01".repeat(800)));
@@ -201063,10 +202127,11 @@ ${css}
           !document.querySelector(".k-float-group") && pm11.isDocked("notes") && pm11.isDocked("comments")
         );
         const tbEl = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        const rootBox11 = document.querySelector("#app-root .k-panel-root") || $("#app-root");
         check2(
           "[66r11] ...\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 (\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E44\u0E1B\u0E40\u0E01\u0E32\u0E30\u0E02\u0E49\u0E32\u0E07\u0E21\u0E31\u0E19)",
-          tbEl.getBoundingClientRect().width >= $("#app-root").getBoundingClientRect().width - 2,
-          `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round($("#app-root").getBoundingClientRect().width)}`
+          tbEl.getBoundingClientRect().width >= rootBox11.getBoundingClientRect().width - 2,
+          `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round(rootBox11.getBoundingClientRect().width)}`
         );
         check2(
           "[66r11] ...\u0E41\u0E25\u0E30\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E43\u0E1A\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E1C\u0E19\u0E36\u0E01",

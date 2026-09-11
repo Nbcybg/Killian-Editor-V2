@@ -56,15 +56,27 @@ export const BUILTIN_FONT_FILES = [
 ];
 
 /**
- * [alpha.60r3a] ฟอนต์ไทย "ของระบบ" ที่วางวรรณยุกต์ได้ถูกต้อง — เลือกได้จากกล่องฟอนต์ตามภาษา
+ * [alpha.60r3a] ฟอนต์ไทย "ของระบบ" — เลือกได้จากกล่องฟอนต์ตามภาษา
  * แจกมากับโปรแกรมไม่ได้ (สิทธิ์ของผู้ผลิต) แต่ถ้าเครื่องมีอยู่แล้วก็ใช้ได้ทันที
- * Ayuthaya = ฟอนต์ระบบของ macOS · Leelawadee UI = ของ Windows
+ * Thonburi/Ayuthaya = ฟอนต์ระบบของ macOS · Leelawadee UI = ของ Windows
+ *
+ * ══ [alpha.144] ★★ **Ayuthaya คือตัวที่ "ลอย" ไม่ใช่ตัวที่แก้** ══
+ *
+ * alpha.60r3a สรุปกลับด้าน แล้วเอา Ayuthaya ไปไว้หัวลูกโซ่ทุกที่ในโปรแกรม พร้อมป้ายว่า
+ * "วรรณยุกต์ไม่ลอย" · วัดจริงบนเครื่อง (แคนวาส 80px · ระยะจากท้องวรรณยุกต์ถึงหัวพยัญชนะ
+ * ของ `ท` + `่` — ยิ่งมากยิ่งลอย):
+ *
+ *     CourierThaiMono 3 · Tahoma 2 · TH Sarabun New 6 · Thonburi 7 · Sarabun 8
+ *     **Ayuthaya 28**  ← ห่างกว่าตัวอื่น 4 เท่า = อาการ "วรรณยุกต์ลอย" ที่ผู้ใช้เห็น
+ *
+ * (บทเรียน 48 ที่ว่า CourierThaiMono วางมาร์กห่างก็ผิดด้วย — มันแน่นที่สุดในกลุ่มนี้)
+ * → Thonburi ขึ้นหัวลูกโซ่แทน · Ayuthaya ยังเลือกเองได้ แต่ป้ายบอกความจริงแล้ว
  */
 export const SYSTEM_THAI_FONTS = [
-  { family: 'Ayuthaya',       label: t('ui.common.ayuthayaMacOSNotFloat') },
-  { family: 'Thonburi',       label: 'Thonburi (macOS)' },
+  { family: 'Thonburi',       label: t('ui.fonts.thonburiMacNoFloat') },
   { family: 'Leelawadee UI',  label: 'Leelawadee UI (Windows)' },
   { family: 'TH Sarabun New', label: t('ui.fonts.tHSarabunNew') },
+  { family: 'Ayuthaya',       label: t('ui.fonts.ayuthayaMacFloat') },
 ];
 
 /**
@@ -179,6 +191,56 @@ export function withLangFamily(stack, hasRows) { return withFamily(stack, LANG_F
 /** สแตกของบทภาพยนตร์ */
 export function withSpFamily(stack, hasRows) { return withFamily(stack, SP_FAMILY, hasRows); }
 
+/**
+ * ══ [alpha.144] ★★ ตาข่ายรองอักษรไทย — ท้ายสแตกทุกเส้นทาง ══
+ *
+ * ผู้ใช้: *"bug วรรณยุกต์ลอย · ตอนนี้เอกสารมีทั้งลอยและไม่ลอย"*
+ *
+ * ต้นตอ: ผู้ใช้ตั้งฟอนต์เป็น `"Courier New", monospace` ซึ่ง **ไม่มีอักษรไทยสักตัว**
+ * เราไม่ได้บอกต่อว่าไทยควรไปที่ไหน → Chromium เลือกเองเป็น **Ayuthaya** (ตัวที่ลอยที่สุด)
+ * ขณะที่ช่อง markdown ใช้ `ui-monospace` ซึ่งตกไป Thonburi → **เอกสารเดียวกันลอยบ้างไม่ลอยบ้าง**
+ * วัดจริง (ระยะวรรณยุกต์–พยัญชนะ ที่ 80px):
+ *     `"Courier New", monospace`              → 28  (ลอย)
+ *     `"Courier New", monospace, Thonburi`    →  7  (ปกติ)
+ *
+ * กติกา: **ห้ามปล่อยให้อักษรไทยตกไปถึงตัวเลือกของเบราว์เซอร์** ต่อท้ายลูกโซ่ไทยที่วางมาร์กถูก
+ * ไว้เสมอ · มันไม่มีผลกับฟอนต์ที่มีไทยอยู่แล้ว (ตัวหน้าชนะทุกกรณี) และไม่แตะละติน
+ * — ต่างจาก "ฟอนต์ตามภาษา" (K2 Lang) ที่อยู่ **หัวสแตก** และตั้งใจทับของผู้ใช้
+ */
+export const THAI_SAFE_FALLBACKS = ['Thonburi', 'Leelawadee UI', 'TH Sarabun New', 'Sarabun', 'Noto Sans Thai'];
+
+/** ชื่อวงศ์ในสแตกหนึ่ง (ตัดอัญประกาศ/ช่องว่าง) — ใช้เทียบว่ามีอยู่แล้วหรือยัง */
+function stackFamilies(stack) {
+  return String(stack || '').split(',')
+    .map((s) => s.trim().replace(/^["']|["']$/g, '').toLowerCase()).filter(Boolean);
+}
+
+/**
+ * ต่อท้ายลูกโซ่ฟอนต์ไทยที่วางวรรณยุกต์ถูก — เรียกซ้ำได้ (ไม่เติมตัวที่มีอยู่แล้ว)
+ * @param {string} stack สแตกที่ประกอบเสร็จแล้ว (รวมวงศ์ K2 Lang/K2 SP ถ้ามี)
+ * @returns {string}
+ */
+export function withThaiFallback(stack) {
+  const s = String(stack || '').trim();
+  const have = new Set(stackFamilies(s));
+  const add = THAI_SAFE_FALLBACKS.filter((f) => !have.has(f.toLowerCase()))
+    .map((f) => '"' + f + '"');
+  if (!add.length) return s;
+  return s ? s + ', ' + add.join(', ') : add.join(', ');
+}
+
+/**
+ * [alpha.144] แถว `sp-thai` ของโปรเจกต์เก่ายังเป็นลูกโซ่ที่ **Ayuthaya นำ** (ตัวที่ลอย)
+ * → สลับให้เป็นลูกโซ่ใหม่ แต่ **เฉพาะแถวที่ยังตรงกับค่าเริ่มต้นเดิมเป๊ะ ๆ** เท่านั้น
+ * ผู้ใช้ที่เคยพิมพ์ชื่อฟอนต์เองไว้ไม่ถูกแตะ (คนละกติกากับ "รีเซ็ต")
+ */
+function upgradeThaiChain(family) {
+  const cur = String(family || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const same = cur.length === SP_THAI_FALLBACKS_LEGACY.length
+    && cur.every((f, i) => f.toLowerCase() === SP_THAI_FALLBACKS_LEGACY[i].toLowerCase());
+  return same ? SP_THAI_FALLBACKS.join(', ') : String(family || '');
+}
+
 /** ทำให้แถวที่อ่านจาก project.khn.json อยู่ในรูปที่ UI ใช้ได้เสมอ */
 export function normalizeLangFonts(list) {
   if (!Array.isArray(list)) return defaultLangFonts();
@@ -189,7 +251,7 @@ export function normalizeLangFonts(list) {
     target: rowTarget(r),
     builtin: String(r?.builtin || ''),
     file: String(r?.file || ''),
-    family: String(r?.family || ''),
+    family: upgradeThaiChain(r?.family),
     // [alpha.97 ข้อ 12] ชื่อฟอนต์มาจาก "รายชื่อฟอนต์ในเครื่อง" — ใช้เตือนว่าย้ายเครื่องแล้วอาจหาย
     system: r?.system === true,
     size: clampPct(r?.size, 50, 150, 100),
@@ -227,8 +289,10 @@ export function usableCounts(rows) {
 
 /** ช่วงอักษรไทย (รวมเลขไทยและอักขระพิเศษ) */
 export const SP_THAI_RANGE = 'U+0E00-0E7F';
-/** ลูกโซ่ฟอนต์ไทยมาตรฐาน — ตัวแรกที่เครื่องมีจะถูกใช้ */
-export const SP_THAI_FALLBACKS = ['Ayuthaya', 'Thonburi', 'Leelawadee UI', 'Sarabun', 'Tahoma'];
+/** ลูกโซ่ฟอนต์ไทยมาตรฐาน — ตัวแรกที่เครื่องมีจะถูกใช้ ([alpha.144] Ayuthaya ออกจากหัวแถว) */
+export const SP_THAI_FALLBACKS = ['Thonburi', 'Leelawadee UI', 'TH Sarabun New', 'Sarabun', 'Tahoma'];
+/** ลูกโซ่เดิม (Ayuthaya นำ) — ใช้จำหน้าแถวที่ยังไม่เคยถูกผู้ใช้แก้ ตอนอัปเกรดโปรเจกต์เก่า */
+export const SP_THAI_FALLBACKS_LEGACY = ['Ayuthaya', 'Thonburi', 'Leelawadee UI', 'Sarabun', 'Tahoma'];
 /** 85 = ค่าที่วัดแล้วตัวไทยเท่า Courier Prime พอดี */
 export const SP_THAI_SIZE = 85;
 

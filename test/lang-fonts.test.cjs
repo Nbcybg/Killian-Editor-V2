@@ -171,7 +171,56 @@ check('รายการ null ไม่พัง', LF.buildLangFontCss(null, ur
 check('ช่วงอักษรไทยของบทยังเป็นค่าเดิม', LF.SP_THAI_RANGE === 'U+0E00-0E7F');
 check('85% = ค่าที่วัดแล้วเท่า Courier Prime', LF.SP_THAI_SIZE === 85);
 check('ลูกโซ่ฟอนต์ไทยมาตรฐานยังครบ',
-  LF.SP_THAI_FALLBACKS.includes('Ayuthaya') && LF.SP_THAI_FALLBACKS.includes('Leelawadee UI'));
+  LF.SP_THAI_FALLBACKS.includes('Thonburi') && LF.SP_THAI_FALLBACKS.includes('Leelawadee UI'));
+
+// ═══ [alpha.144] วรรณยุกต์ลอย — ฟอนต์ที่ "ลอย" ต้องไม่อยู่หัวลูกโซ่ไหนอีก ═══
+// วัดจริงบนเครื่อง (แคนวาส 80px · ระยะท้องวรรณยุกต์ถึงหัวพยัญชนะ `ท`+`่`):
+//   CourierThaiMono 3 · Tahoma 2 · TH Sarabun New 6 · Thonburi 7 · Sarabun 8 · Ayuthaya 28
+check('[144] Ayuthaya ไม่ใช่ตัวแรกของลูกโซ่ฟอนต์ไทยของบท',
+  LF.SP_THAI_FALLBACKS[0] === 'Thonburi', LF.SP_THAI_FALLBACKS.join(','));
+check('[144] Ayuthaya หลุดออกจากลูกโซ่มาตรฐานแล้ว',
+  !LF.SP_THAI_FALLBACKS.includes('Ayuthaya'), LF.SP_THAI_FALLBACKS.join(','));
+check('[144] ยังเก็บลูกโซ่เดิมไว้เทียบตอนอัปเกรดโปรเจกต์เก่า',
+  LF.SP_THAI_FALLBACKS_LEGACY[0] === 'Ayuthaya');
+check('[144] Thonburi ขึ้นก่อน Ayuthaya ในรายการฟอนต์ระบบ',
+  LF.SYSTEM_THAI_FONTS.findIndex((f) => f.family === 'Thonburi')
+    < LF.SYSTEM_THAI_FONTS.findIndex((f) => f.family === 'Ayuthaya'));
+
+// ── ตาข่ายรองอักษรไทยท้ายสแตก ──
+// ต้นตอบั๊ก: ผู้ใช้ตั้ง `"Courier New", monospace` ซึ่งไม่มีอักษรไทยเลย → Chromium เลือก
+// Ayuthaya ให้เอง = วรรณยุกต์ลอย · ต่อลูกโซ่ไทยท้ายสแตกแล้ววัดได้ 28 → 7
+{
+  const CN = '"Courier New", monospace';
+  const out = LF.withThaiFallback(CN);
+  check('[144] สแตกละตินล้วนได้ลูกโซ่ไทยต่อท้าย', out.startsWith(CN) && /Thonburi/.test(out), out);
+  check('[144] ตัวไทยตัวแรกที่ต่อให้คือ Thonburi ไม่ใช่ Ayuthaya',
+    /Thonburi/.test(out) && !/Ayuthaya/.test(out), out);
+  check('[144] เรียกซ้ำแล้วไม่บวมขึ้นเรื่อย ๆ (idempotent)',
+    LF.withThaiFallback(out) === out, LF.withThaiFallback(out));
+  const already = 'Sarabun, "TH Sarabun New", serif';
+  check('[144] ฟอนต์ที่มีไทยอยู่แล้วยังอยู่หัวสแตก (ตาข่ายไม่แย่งที่)',
+    LF.withThaiFallback(already).startsWith(already), LF.withThaiFallback(already));
+  check('[144] ไม่เติมชื่อที่มีอยู่แล้วซ้ำ',
+    (LF.withThaiFallback(already).match(/Sarabun/g) || []).length
+      === (already.match(/Sarabun/g) || []).length + 0
+      || !/Sarabun".*"Sarabun/.test(LF.withThaiFallback(already)));
+  check('[144] สแตกว่างก็ยังได้ลูกโซ่ไทย', /Thonburi/.test(LF.withThaiFallback('')));
+  check('[144] วงศ์ K2 Lang ยังอยู่หัวสแตกหลังต่อตาข่าย',
+    LF.withThaiFallback(LF.withLangFamily('"Courier New"', true)).startsWith('"K2 Lang"'),
+    LF.withThaiFallback(LF.withLangFamily('"Courier New"', true)));
+}
+
+// ── อัปเกรดแถวของโปรเจกต์เก่า (ลูกโซ่ Ayuthaya นำ → Thonburi นำ) ──
+{
+  const legacy = LF.normalizeLangFonts([{ id: 'sp-thai', range: 'U+0E00-0E7F', target: 'screenplay',
+    family: LF.SP_THAI_FALLBACKS_LEGACY.join(', '), system: true }]);
+  check('[144] แถวเดิมที่ยังเป็นค่าเริ่มต้นถูกสลับเป็นลูกโซ่ใหม่',
+    legacy[0].family === LF.SP_THAI_FALLBACKS.join(', '), legacy[0].family);
+  const mine = LF.normalizeLangFonts([{ id: 'sp-thai', range: 'U+0E00-0E7F', target: 'screenplay',
+    family: 'Ayuthaya, Tahoma', system: true }]);
+  check('[144] แถวที่ผู้ใช้พิมพ์เองไม่ถูกแตะ',
+    mine[0].family === 'Ayuthaya, Tahoma', mine[0].family);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

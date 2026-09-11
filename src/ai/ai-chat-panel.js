@@ -8,7 +8,7 @@
 //
 // เซสชันเก็บเป็นไฟล์ JSON ใน `<โปรเจกต์>/Sessions/` — เปลี่ยนโปรเจกต์ = เห็นคนละชุด
 
-import { t as tt, tf as ttf, t, tf } from '../i18n.js';
+import { t as tt, tf as ttf, t, tf, T, tm } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import {
@@ -17,8 +17,11 @@ import {
   modeDef, scopeLabel, isSendKey, newSession, newMessage, addMessage, renameSession,
   archiveSession, clearMessages, sessionFileName, sessionStats, contextLabel, compact, usd,
   searchSessions, buildChatMessages, historyBudget, rawJson, shareMarkdown, estimateTokens,
-  parseChatMarkdown,
+  parseChatMarkdown, REASONING_EFFORTS, effortLabel, isReasoningEffort,
 } from './ai-session.js';
+// [alpha.145] ทักษะ (Skills/*.md) — คำสั่งประจำตัวที่ผู้ใช้เขียนเอง เปิด/ปิดรายเซสชัน
+import { SKILL_DIR, loadSkills, buildSkillsPrompt, skillsLabel,
+         ensureSkillDir, starterSkillMd } from './ai-skills.js';
 import { providerList, providerById, currentProvider, completeStream, aiMeta } from './ai-provider-ui.js';
 import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, describeCall,
          toolByName, resultsMessage } from './ai-tools.js';
@@ -37,7 +40,24 @@ const S = {
   showArchived: false,
   sending: false,
   root: null,            // โปรเจกต์ที่โหลดรายการนี้มา (เปลี่ยนโปรเจกต์ = โหลดใหม่)
+  // ══ [alpha.145] ★ สถานะ "กำลังทำงาน" ต้องอยู่ **นอก DOM** ══
+  //
+  // ผู้ใช้: *"stream และคำตอบ ไม่โผล่ให้ ถ้าเกิดเผลอปิดหน้า หรือกดดู token ·
+  //          ไม่มีบอกว่า AI กำลังทำงานอยู่ ต้องไปดูที่ status bar อย่างเดียว ·
+  //          หน้า session ไม่ได้มีระบุเลยว่า session ไหนกำลังทำงานอยู่"*
+  //
+  // ต้นตอ: `send()` ของเดิมถือ **โหนด DOM** ไว้ในตัวแปรท้องถิ่น (`pend`, `body`) แล้วเขียน
+  // ข้อความที่ไหลมาลงไปตรง ๆ · พอผู้ใช้กด ← กลับรายการ หรือกดป้าย token (ไปหน้ารายละเอียด)
+  // `draw()` ล้าง `S.host.innerHTML` ทิ้ง → โหนดที่ `send()` ถืออยู่ **หลุดจากหน้าจอ**
+  // สตรีมยังไหลอยู่จริง แต่ไหลลงโหนดที่ไม่มีใครเห็น และคำตอบสุดท้ายก็ถูก append ลงที่นั่น
+  //
+  // ตอนนี้ทุกอย่างอยู่ใน `S.run` (ข้อมูลล้วน) แล้วให้ตัววาดอ่านจากตรงนี้ทุกครั้งที่วาดใหม่
+  //   { sessionId, reqId, startAt, label, text, thinking }
+  run: null,
 };
+
+/** เซสชันนี้กำลังคุยกับโมเดลอยู่ไหม (ตัวเดียวที่ทุกที่ในไฟล์ควรถาม) */
+export function isRunning(id) { return !!(S.run && S.run.sessionId === id); }
 
 /**
  * [alpha.129 ข้อ 2] ★ เซสชัน "ตัวจริง ณ วินาทีนี้"
@@ -308,6 +328,9 @@ function draw() {
   if (S.view === 'list') h.append(listView());
   else if (S.view === 'detail') h.append(detailView());
   else h.append(sessionView());
+  // [alpha.145] ป้าย "กำลังทำงาน" ต้องทาหลังโหนดเข้า DOM แล้ว — ตัววาดรายการเรียก
+  // `paintRunBadges()` ตั้งแต่ตอนยังประกอบ wrap อยู่ ซึ่ง `S.host` ยังไม่มีแถวพวกนั้นเลย
+  paintRunBadges();
 }
 
 // ══════════════════════════ A) รายการเซสชัน ══════════════════════════
@@ -322,6 +345,18 @@ function listView() {
   const addBtn = el('button', 'k-ok ai-chat-new', tt('ui.aiChatPanel.sessionNew'));
   bar.append(q, addBtn);
   wrap.append(bar);
+
+  // [alpha.145] อยู่หน้ารายการก็ต้องรู้ว่ามีเซสชันไหนกำลังทำงาน — กดแล้วกลับไปดูได้ทันที
+  const running = el('button', 'ai-chat-running');
+  running.style.display = 'none';
+  running.onclick = () => {
+    if (!S.run) return;
+    const target = S.sessions.find((x) => x.id === S.run.sessionId)
+                || (S.cur && S.cur.id === S.run.sessionId ? S.cur : null);
+    if (!target) return;
+    S.cur = target; S.view = 'session'; draw();
+  };
+  wrap.append(running);
 
   const rows = el('div', 'ai-chat-rows');
   wrap.append(rows);
@@ -342,6 +377,7 @@ function listView() {
       return;
     }
     for (const s of list) rows.append(sessionRow(s));
+    paintRunBadges();
   }
   q.oninput = () => { S.query = q.value; fill(); };
   cb.onchange = () => { S.showArchived = cb.checked; fill(); };
@@ -389,6 +425,7 @@ function sessionView() {
   back.onclick = () => { S.view = 'list'; draw(); };
   const title = el('div', 'ai-chat-title', s.title || tt('ui.aiChatPanel.session'));
   title.title = s.title || '';
+  if (isRunning(s.id)) title.classList.add('running');
   const right = el('div', 'ai-chat-head-right');
   const st = sessionStats(s);
   const badge = el('button', 'ai-chat-ctx', contextLabel(st));
@@ -432,18 +469,131 @@ function sessionView() {
 
   // ── ข้อความ ──
   const body = el('div', 'ai-chat-msgs ai-view-' + (s.view || DEFAULT_VIEW));
-  if (!(s.messages || []).length) {
-    body.append(el('div', 'ai-chat-empty dim',
-      tt('ui.aiChatPanel.startMode') + modeDef(s.mode).label + tt('ui.aiChatPanel.seeData') + scopeLabel(s.scope)
-      + (s._draft ? tt('ui.aiChatPanel.sessionSaveSendText') : '')));
-  }
-  for (const m of s.messages || []) body.append(msgNode(m, s.view));
   wrap.append(body);
+  renderMessages(body, s);
 
   // ── กล่องพิมพ์ ──
   wrap.append(composer(s, body));
   setTimeout(() => { body.scrollTop = body.scrollHeight; }, 0);
   return wrap;
+}
+
+// ══════════════════════════ [alpha.145] ตัววาดที่ "วาดใหม่กี่ครั้งก็ได้" ══════════════════════════
+//
+// กติกาใหม่ของแผงนี้: **ห้ามจำโหนด DOM ข้ามรอบ** — ทุกอย่างวาดจาก `S.cur` + `S.run` เสมอ
+// (บทเรียนเดียวกับ `live()` ของ alpha.129 แต่คราวนี้เป็นฝั่งหน้าจอ)
+
+/** กล่องข้อความของหน้าจอตอนนี้ — คืน null เมื่อผู้ใช้ไม่ได้อยู่หน้าเซสชัน */
+function msgsHost() {
+  return (S.host && S.view === 'session') ? S.host.querySelector('.ai-chat-msgs') : null;
+}
+
+/** วาดบทสนทนาทั้งชุด + ฟอง "กำลังคิด" (ถ้าเซสชันนี้กำลังทำงานอยู่) */
+function renderMessages(body, s) {
+  if (!body || !s) return;
+  body.innerHTML = '';
+  if (!(s.messages || []).length && !isRunning(s.id)) {
+    body.append(el('div', 'ai-chat-empty dim',
+      tt('ui.aiChatPanel.startMode') + modeDef(s.mode).label + tt('ui.aiChatPanel.seeData') + scopeLabel(s.scope)
+      + (s._draft ? tt('ui.aiChatPanel.sessionSaveSendText') : '')));
+  }
+  for (const m of s.messages || []) body.append(msgNode(m, s.view));
+  if (isRunning(s.id)) body.append(pendingNode());
+  body.scrollTop = body.scrollHeight;
+}
+
+/** วาดใหม่เฉพาะส่วนข้อความ (ถ้าผู้ใช้ยังอยู่หน้าเซสชันที่กำลังทำงาน) */
+function repaint() {
+  const body = msgsHost();
+  if (body && S.cur) renderMessages(body, S.cur);
+  paintRunBadges();
+}
+
+/**
+ * ฟอง "กำลังคิด…" — สร้างใหม่ทุกครั้งที่วาด (ไม่มีใครถือโหนดนี้ไว้)
+ * เนื้อหามาจาก `S.run` ล้วน ๆ จึงกลับมาครบเสมอแม้ผู้ใช้จะออกไปหน้าอื่นแล้วกลับเข้ามา
+ */
+function pendingNode() {
+  const r = S.run;
+  const n = el('div', 'ai-msg ai-msg-assistant ai-msg-pending');
+  const who = el('div', 'ai-msg-who dim');
+  who.append(el('span', 'ai-pend-label', r.label || tt('ui.aiChatPanel.busyThink')));
+  who.append(el('span', 'ai-msg-elapsed ai-pend-time',
+    ttf('ui.aiChatPanel.useTime', ((Date.now() - r.startAt) / 1000).toFixed(1))));
+  const stop = el('button', 'ai-msg-copy ai-pend-stop', '⏹');
+  stop.type = 'button';
+  stop.title = tt('ui.aiChatPanel.stopHint');
+  stop.onclick = () => { if (kapi.httpAbort) kapi.httpAbort(r.reqId); };
+  who.append(stop);
+  const think = el('div', 'ai-msg-thinking-live ai-pend-think');
+  think.style.display = r.thinking ? '' : 'none';
+  if (r.thinking) think.textContent = tt('ui.aiChatPanel.ideaModel') + '\n' + r.thinking;
+  const txt = el('div', 'ai-msg-text ai-pend-text');
+  txt.style.display = r.text ? '' : 'none';
+  if (r.text) txt.textContent = r.text;
+  n.append(who, think, txt);
+  return n;
+}
+
+/**
+ * อัปเดตเฉพาะ "เนื้อใน" ของฟองที่วาดอยู่ — เรียกทุกก้อนที่สตรีมมา
+ * ไม่มีฟองอยู่บนจอ (ผู้ใช้ไปหน้าอื่น) = เก็บค่าไว้ใน S.run เฉย ๆ แล้ววาดครบตอนกลับเข้ามา
+ */
+function paintPending() {
+  const r = S.run;
+  if (!r) return;
+  const host = msgsHost();
+  const n = host && host.querySelector('.ai-msg-pending');
+  if (!n) return;
+  const lb = n.querySelector('.ai-pend-label');
+  if (lb) lb.textContent = r.label || tt('ui.aiChatPanel.busyThink');
+  const tm2 = n.querySelector('.ai-pend-time');
+  if (tm2) tm2.textContent = ttf('ui.aiChatPanel.useTime', ((Date.now() - r.startAt) / 1000).toFixed(1));
+  const th = n.querySelector('.ai-pend-think');
+  if (th) {
+    th.style.display = r.thinking ? '' : 'none';
+    if (r.thinking) th.textContent = tt('ui.aiChatPanel.ideaModel') + '\n' + r.thinking;
+  }
+  const tx = n.querySelector('.ai-pend-text');
+  if (tx) {
+    tx.style.display = r.text ? '' : 'none';
+    if (r.text) tx.textContent = r.text;
+  }
+  host.scrollTop = host.scrollHeight;
+}
+
+/**
+ * [alpha.145] ป้าย "กำลังทำงาน" ทุกที่ที่ผู้ใช้อาจมองหา
+ *   · หัวเซสชัน (อยู่ในหน้านั้นอยู่แล้ว)
+ *   · แถวในรายการเซสชัน (ผู้ใช้: "หน้า session ไม่ได้มีระบุเลยว่า session ไหนกำลังทำงานอยู่")
+ *   · แถบเหนือรายการ กดแล้วกระโดดกลับไปหน้าที่กำลังทำงาน
+ */
+function paintRunBadges() {
+  if (!S.host) return;
+  const runId = S.run ? S.run.sessionId : '';
+  const secs = S.run ? ((Date.now() - S.run.startAt) / 1000).toFixed(0) : '0';
+  for (const row of S.host.querySelectorAll('.ai-chat-row')) {
+    const on = row.dataset.session === runId;
+    row.classList.toggle('running', on);
+    let b = row.querySelector('.ai-chat-row-run');
+    if (on && !b) {
+      b = el('span', 'ai-chat-row-run', '⏳');
+      row.querySelector('.ai-chat-row-meta').prepend(b);
+    }
+    if (b) {
+      b.style.display = on ? '' : 'none';
+      b.title = T`กำลังทำงานอยู่ ${secs} วินาที`;
+    }
+  }
+  const banner = S.host.querySelector('.ai-chat-running');
+  if (banner) {
+    banner.style.display = S.run ? '' : 'none';
+    banner.textContent = S.run
+      ? T`⏳ กำลังทำงาน: ${S.run.title || tt('ui.aiChatPanel.session')} · ${secs} วิ — กดเพื่อกลับไปดู`
+      : '';
+  }
+  const head = S.host.querySelector('.ai-chat-head .ai-chat-title');
+  if (head && S.cur) head.classList.toggle('running', isRunning(S.cur.id));
 }
 /**
  * วาดข้อความหนึ่งก้อนตามมุมมองที่เลือก
@@ -501,7 +651,12 @@ function msgNode(m, view = DEFAULT_VIEW) {
       + (m.ms ? ttf('ui.aiChatPanel.useTime', (m.ms / 1000).toFixed(1)) : '')
       + (m.at ? ' · ' + fmtDate(m.at) : '')));
   }
-  if (m.error) n.append(el('div', 'ai-msg-err', '⚠ ' + m.error));
+  if (m.error) {
+    n.append(el('div', 'ai-msg-err', '⚠ ' + m.error));
+    // [alpha.145] รายละเอียด + แนวทางแก้ (มาจาก ai-error.js) — เดิมมีแค่บรรทัดเดียวว่า
+    // "เรียกไม่สำเร็จ (HTTP 0)" ซึ่งบอกอะไรผู้ใช้ไม่ได้เลย
+    if (m.detail) n.append(foldBlock(T`รายละเอียด · แนวทางแก้`, m.detail, 'ai-msg-errdetail'));
+  }
   if (m.files && m.files.length) {
     n.append(el('div', 'ai-msg-files dim', '📎 ' + m.files.map((f) => f.name || f.path).join(', ')));
   }
@@ -633,8 +788,20 @@ function composer(s, body) {
   for (const sc of SCOPES) { const o = el('option', null, sc.label); o.value = sc.id; scopeSel.append(o); }
   scopeSel.value = s.scope || DEFAULT_SCOPE;
   scopeSel.title = tt('ui.aiChatPanel.levelInToAI');
-  ctrls.append(fileBtn, scBtn, modeSel, modelSel, scopeSel);
+
+  // [alpha.145] ระดับการใช้ความคิด — ผู้ใช้: "ไม่มีการปรับ effort level"
+  const effortSel = el('select', 'ai-chat-effort');
+  for (const e of REASONING_EFFORTS) { const o = el('option', null, e.label); o.value = e.id; effortSel.append(o); }
+  effortSel.value = isReasoningEffort(s.effort) ? (s.effort || '') : '';
+  effortSel.title = T`ระดับการใช้ความคิดของโมเดล (reasoning effort) — มีผลเฉพาะเซสชันนี้`;
+
+  // [alpha.145] ทักษะ — ผู้ใช้: "ไม่มีการใส่ skill.md เลย"
+  const skillBtn = el('button', 'ai-chat-file ai-chat-skills', '🧩');
+  skillBtn.title = T`ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)`;
+
+  ctrls.append(fileBtn, scBtn, skillBtn, modeSel, modelSel, scopeSel, effortSel);
   box.append(ctrls);
+  refreshSkillBtn(skillBtn, s);
 
   fillModelSelect(modelSel, s);
 
@@ -674,6 +841,14 @@ function composer(s, body) {
 
   // ทุกตัวเขียนลง `live(s)` — ไม่งั้นการตั้งค่าครั้งเดียวลบบทสนทนาทั้งเซสชันทิ้ง (ดู `live()`)
   modeSel.onchange = async () => { const c = live(s); c.mode = modeSel.value; S.cur = c; await saveSession(c); };
+  effortSel.onchange = async () => {
+    const c = live(s);
+    c.effort = isReasoningEffort(effortSel.value) ? effortSel.value : '';
+    S.cur = c;
+    await saveSession(c);
+    setStatus(effortLabel(c.effort));
+  };
+  skillBtn.onclick = (e) => skillMenu(e, live(s), skillBtn);
   scopeSel.onchange = async () => { const c = live(s); c.scope = scopeSel.value; S.cur = c; await saveSession(c); };
   modelSel.onchange = async () => {
     const [pid, model] = String(modelSel.value).split(' ');
@@ -696,7 +871,8 @@ function composer(s, body) {
     await openResolvedShortcodeMenu(e, ta);
   };
 
-  const doSend = () => send(live(s), ta, body, sendBtn);
+  if (S.run) sendBtn.disabled = true;
+  const doSend = () => send(live(s), ta, sendBtn);
   sendBtn.onclick = doSend;
   ta.onkeydown = (e) => {
     if (!isSendKey(e, aiMeta().sendKey || DEFAULT_SEND_KEY)) return;
@@ -705,6 +881,71 @@ function composer(s, body) {
   };
   setTimeout(() => ta.focus(), 0);
   return box;
+}
+
+// ══════════════════════════ [alpha.145] ทักษะ (Skills/*.md) ══════════════════════════
+/** แคชทักษะของโปรเจกต์ (โหลดใหม่ทุกครั้งที่เปิดเมนู — ผู้ใช้แก้ไฟล์นอกโปรแกรมได้ตลอด) */
+let _skills = [];
+
+/** ป้ายบนปุ่ม 🧩 — "🧩 2/5" (เปิดอยู่กี่ตัวจากทั้งหมดกี่ตัว) */
+async function refreshSkillBtn(btn, s) {
+  if (!btn) return;
+  _skills = await loadSkills(state.root);
+  const on = (live(s).skills || []).filter((id) => _skills.some((k) => k.id === id));
+  btn.textContent = _skills.length ? skillsLabel(_skills, on) : '🧩';
+  btn.classList.toggle('on', on.length > 0);
+  btn.title = _skills.length
+    ? T`ทักษะที่เปิดอยู่: ` + (on.length ? on.join(', ') : T`— ไม่มี —`)
+    : T`ยังไม่มีไฟล์ทักษะ — กดเพื่อสร้างโฟลเดอร์ ${SKILL_DIR}/ พร้อมไฟล์ตัวอย่าง`;
+}
+
+/** เมนูติ๊กเปิด/ปิดทักษะรายไฟล์ + ทางลัดไปเปิดโฟลเดอร์ */
+async function skillMenu(ev, s, btn) {
+  _skills = await loadSkills(state.root);
+  const on = new Set(live(s).skills || []);
+  const items = _skills.map((k) => ({
+    label: (on.has(k.id) ? '☑ ' : '☐ ') + k.name
+           + (k.description ? ' — ' + k.description : '')
+           + T`  (${String(k.chars)} ตัวอักษร)`,
+    click: async () => {
+      const c = live(s);
+      const set = new Set(c.skills || []);
+      if (set.has(k.id)) set.delete(k.id); else set.add(k.id);
+      c.skills = [...set];
+      S.cur = c;
+      await saveSession(c);
+      await refreshSkillBtn(btn, c);
+      setStatus(T`${set.has(k.id) ? '✅' : '⬜'} ทักษะ: ${k.name}`);
+    },
+  }));
+  if (items.length) items.push('-');
+  items.push({
+    label: _skills.length ? T`📂 เปิดโฟลเดอร์ทักษะ` : T`✨ สร้างโฟลเดอร์ทักษะ + ไฟล์ตัวอย่าง`,
+    click: async () => {
+      const d = await ensureSkillDir(state.root);
+      if (!d) { setStatus(tt('ui.aiChatPanel.openProjectBeforeDone')); return; }
+      if (!_skills.length) {
+        const f = await kapi.join(d, 'skill.md');
+        if (!(await kapi.exists(f))) await kapi.writeFile(f, starterSkillMd());
+      }
+      if (kapi.revealInOS) await kapi.revealInOS(d);
+      await refreshSkillBtn(btn, live(s));
+      setStatus(T`ทักษะอยู่ที่ ${SKILL_DIR}/ — ไฟล์ .md หนึ่งไฟล์ = หนึ่งทักษะ`);
+    },
+  });
+  popupMenu(ev.clientX, ev.clientY, items);
+}
+
+/**
+ * ส่วนต่อท้าย system prompt จากทักษะที่เปิดอยู่ — คืน '' เมื่อไม่มี
+ * (แยกออกมาเพื่อให้เทสเรียกได้โดยไม่ต้องกดปุ่ม)
+ */
+export async function skillsPromptFor(session) {
+  const ids = (session && session.skills) || [];
+  if (!ids.length) return { text: '', used: [], skipped: [], chars: 0 };
+  const all = await loadSkills(state.root);
+  const picked = ids.map((id) => all.find((k) => k.id === id)).filter(Boolean);
+  return buildSkillsPrompt(picked);
 }
 
 function fillModelSelect(sel, s) {
@@ -732,7 +973,7 @@ function fillModelSelect(sel, s) {
 let _reqSeq = 0;
 function newReqId() { _reqSeq += 1; return 'chat-' + Date.now().toString(36) + '-' + _reqSeq; }
 
-async function send(s0, ta, body, sendBtn) {
+async function send(s0, ta, sendBtn) {
   // ก้อนที่ปิดทับไว้ตอนวาดหน้าเป็นของเก่าทันทีที่คุยไปหนึ่งรอบ — ยึด `S.cur` เสมอ (ดู `live()`)
   const s = live(s0);
   const text = String(ta.value || '').trim();
@@ -743,57 +984,42 @@ async function send(s0, ta, body, sendBtn) {
     return;
   }
   S.sending = true;
-  sendBtn.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
   ta.value = '';
   const reqId = newReqId();
 
-  const view = S.cur ? (S.cur.view || DEFAULT_VIEW) : DEFAULT_VIEW;
   const userMsg = newMessage('user', text, { files: (s.files || []).slice() });
   S.cur = addMessage(s, userMsg);
   // ข้อความแรก = เซสชันเกิดจริง (addMessage ตั้งชื่อจากข้อความนี้ให้แล้ว) → บันทึกลงไฟล์ตอนนี้
   await saveSession(S.cur);
-  body.append(msgNode(userMsg, view));
 
-  // ฟอง "กำลังคิด" แบบสด — เห็นข้อความ/ความคิดไหลมา + ใช้เวลาเท่าไร + ปุ่มหยุด
-  // (เดิมมีแค่ข้อความนิ่ง ๆ "กำลังคิด…" — ผู้ใช้ไม่รู้ว่าติดต่ออยู่จริงหรือค้าง)
-  const pend = el('div', 'ai-msg ai-msg-assistant ai-msg-pending');
-  const pendWho = el('div', 'ai-msg-who dim');
-  const whoLabel = el('span', null, tt('ui.aiChatPanel.busyThink'));
-  const whoTime = el('span', 'ai-msg-elapsed');
-  const stopBtn = el('button', 'ai-msg-copy', '⏹');
-  stopBtn.type = 'button';
-  stopBtn.title = tt('ui.aiChatPanel.stopHint');
-  stopBtn.onclick = () => { if (kapi.httpAbort) kapi.httpAbort(reqId); };
-  pendWho.append(whoLabel, whoTime, stopBtn);
-  const pendThink = el('div', 'ai-msg-thinking-live');
-  pendThink.style.display = 'none';
-  const pendText = el('div', 'ai-msg-text');
-  pendText.style.display = 'none';
-  pend.append(pendWho, pendThink, pendText);
-  body.append(pend);
-  body.scrollTop = body.scrollHeight;
+  // ══ [alpha.145] สถานะ "กำลังทำงาน" อยู่ใน S.run — ไม่มีใครถือโหนด DOM ไว้อีกแล้ว ══
+  // ผู้ใช้จะกด ← กลับรายการ กดป้าย token ไปหน้ารายละเอียด หรือปิด/เปิดแผงระหว่างรอก็ได้
+  // ทุกครั้งที่วาดใหม่ ฟอง "กำลังคิด…" กลับมาพร้อมข้อความที่ไหลมาแล้วครบถ้วน
+  S.run = { sessionId: S.cur.id, title: S.cur.title, reqId, startAt: Date.now(),
+            label: tt('ui.aiChatPanel.busyThink'), text: '', thinking: '' };
+  repaint();
 
-  let liveText = '';
-  let liveThink = '';
-  const startAt = Date.now();
-  const tick = setInterval(() => {
-    whoTime.textContent = ttf('ui.aiChatPanel.useTime', ((Date.now() - startAt) / 1000).toFixed(1));
-  }, 400);
-  const renderPend = () => {
-    if (liveText) { pendText.textContent = liveText; pendText.style.display = ''; }
-    if (liveThink) {
-      pendThink.textContent = tt('ui.aiChatPanel.ideaModel') + '\n' + liveThink;
-      pendThink.style.display = '';
-    }
-    body.scrollTop = body.scrollHeight;
-  };
-  const stopTick = () => clearInterval(tick);
+  // นาฬิกาเดินบนจอ + ป้าย "กำลังทำงาน" ทุกที่ (รายการเซสชัน · แถบเหนือรายการ)
+  const tick = setInterval(() => { paintPending(); paintRunBadges(); }, 400);
 
   const md = modeDef(S.cur.mode);
   const cap = modeCap(S.cur.mode);
   let system = md.system;
   const tp = toolsSystemPrompt(cap);
   if (tp) system += '\n\n' + tp;
+  // [alpha.145] ทักษะที่ผู้ใช้เขียนเอง (Skills/*.md) — ต่อท้าย system prompt
+  try {
+    const sk = await skillsPromptFor(S.cur);
+    if (sk.text) {
+      system += sk.text;
+      log('info', 'ai: ' + T`ใช้ทักษะ ${String(sk.used.length)} ตัว (${String(sk.chars)} ตัวอักษร)`,
+          sk.used.join(', '));
+    }
+    if (sk.skipped.length) {
+      setStatus(T`⚠ ทักษะยาวเกินโควตา ข้ามไป: ${sk.skipped.join(', ')}`);
+    }
+  } catch (e) { log('warn', 'ai: ' + T`อ่านทักษะไม่สำเร็จ`, e); }
   try {
     const ctx = await collectScope(S.cur, { query: text });
     if (ctx) system += tt('ui.aiChatPanel.dataProjectLevelIn') + scopeLabel(S.cur.scope) + '):\n' + ctx;
@@ -812,15 +1038,20 @@ async function send(s0, ta, body, sendBtn) {
       if (hist.dropped > 0 && hist.dropped !== lastDropped) {
         lastDropped = hist.dropped;
         // ตัดจริงเมื่อไหร่ต้องเห็นบนจอ — ไม่งั้นผู้ใช้เจอแค่ "AI มั่ว" โดยไม่รู้ว่าประวัติถูกตัด
-        body.insertBefore(el('div', 'ai-chat-trim dim',
-          ttf('ui.aiChatPanel.historyTrimmed', hist.dropped)), pend);
+        const b = msgsHost();
+        const pn = b && b.querySelector('.ai-msg-pending');
+        if (b) b.insertBefore(el('div', 'ai-chat-trim dim',
+          ttf('ui.aiChatPanel.historyTrimmed', hist.dropped)), pn || null);
       }
       res = await completeStream(prov, {
         system, messages: hist.messages, model: s.model || undefined, reqId,
+        // [alpha.145] ระดับการใช้ความคิดรายเซสชัน ('' = ไม่ทับค่าของผู้ให้บริการ)
+        reasoningEffort: S.cur.effort || undefined,
       }, (c) => {
-        if (c.thinking) { liveThink += c.thinking; }
-        if (c.delta) { liveText = c.text; }
-        renderPend();
+        if (!S.run) return;
+        if (c.thinking) S.run.thinking += c.thinking;
+        if (c.delta) S.run.text = c.text;
+        paintPending();
       });
       const ms = Date.now() - rt0;
 
@@ -829,7 +1060,9 @@ async function send(s0, ta, body, sendBtn) {
         ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
                                               thinking: res.thinking, system, ms,
                                               calls: calls.length ? calls : null })
-        : newMessage('assistant', '', { error: res.error || tt('ui.aiChatPanel.callAINotOk'), system, ms });
+        // [alpha.145] เก็บ "รายละเอียด + แนวทางแก้" ลงข้อความด้วย (ai-error.js)
+        : newMessage('assistant', '', { error: res.error || tt('ui.aiChatPanel.callAINotOk'),
+                                        detail: res.detail || '', system, ms });
 
       if (res.ok && res.usage) {
         const used = (res.usage.input || 0) + (res.usage.output || 0);
@@ -840,12 +1073,14 @@ async function send(s0, ta, body, sendBtn) {
       if (!calls.length) {                          // ไม่มีคำสั่ง = จบรอบ
         S.cur = addMessage(S.cur, reply);
         await saveSession(S.cur);
-        pend.remove();
-        body.append(msgNode(reply, view));
+        S.run = null;
+        repaint();
         break;
       }
 
-      whoLabel.textContent = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
+      S.run.label = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
+      S.run.text = ''; S.run.thinking = '';
+      paintPending();
       const results = await runCalls(calls, S.cur, cap);
       reply.results = results;
       touched = touched || touchesProject(results);
@@ -853,46 +1088,51 @@ async function send(s0, ta, body, sendBtn) {
       // ผลของคำสั่งกลับเข้าบทสนทนาในนามผู้ใช้ — โมเดลอ่านต่อได้ในรอบถัดไป
       S.cur = addMessage(S.cur, newMessage('user', resultsMessage(results), { toolResult: true }));
       await saveSession(S.cur);
-      body.append(msgNode(reply, view));
-      body.scrollTop = body.scrollHeight;
+      repaint();
 
       if (results.some((r) => r.cancelled)) {       // ผู้ใช้กดยกเลิก = หยุดทั้งชุด
-        pend.remove();
+        S.run = null;
+        repaint();
         break;
       }
       if (round === MAX_TOOL_ROUNDS - 1) {
-        pend.remove();
-        body.append(el('div', 'ai-chat-empty dim',
+        S.run = null;
+        repaint();
+        const b = msgsHost();
+        if (b) b.append(el('div', 'ai-chat-empty dim',
           ttf('ui.aiChatPanel.roundNotEndPrint', MAX_TOOL_ROUNDS)));
       } else {
-        whoLabel.textContent = tt('ui.aiChatPanel.busyThinkNext');
+        S.run.label = tt('ui.aiChatPanel.busyThinkNext');
+        paintPending();
       }
     }
   } catch (e) {
     // [alpha.129 ข้อ 3] เดิมไม่มี catch: ข้อผิดพลาดใด ๆ (เขียนไฟล์ไม่ได้ · คำสั่งพัง · วาดพัง)
     // ทำให้หลุดออกไปทั้งที่ `S.sending` ยังเป็น true → **ปุ่มส่งค้างถาวร ส่งข้อความไม่ได้อีกเลย**
     // และฟอง "กำลังคิด…" ค้างบนจอ ผู้ใช้เข้าใจว่าโปรแกรมแฮงก์
-    log('warn', tt('ui.aiChatPanel.sendFailed'), e);
+    log('error', 'ai: ' + tt('ui.aiChatPanel.sendFailed'), (e && e.stack) || String(e));
     const emsg = (e && e.message) || String(e);
     res = res || { ok: false, error: emsg };
-    const errMsg = newMessage('assistant', '', { error: emsg });
+    const errMsg = newMessage('assistant', '', { error: emsg, detail: (e && e.stack) || '' });
     S.cur = addMessage(S.cur, errMsg);
     try { await saveSession(S.cur); } catch {}
-    body.append(msgNode(errMsg, view));
   } finally {
-    stopTick();
-    if (pend.isConnected) pend.remove();
+    clearInterval(tick);
+    S.run = null;
     S.sending = false;
-    sendBtn.disabled = false;
+    if (sendBtn && sendBtn.isConnected) sendBtn.disabled = false;
+    // ปุ่มส่งของหน้าที่วาดใหม่ระหว่างรอ = คนละปุ่มกับที่ปิดไว้ตอนเริ่ม → ปลดล็อกจากหน้าจอจริง
+    const live2 = S.host && S.host.querySelector('.ai-chat-send');
+    if (live2) live2.disabled = false;
+    repaint();
   }
   if (touched) { try { await refreshAfterActions(); } catch (e) { log('warn', 'refreshAfterActions', e); } }
 
-  body.scrollTop = body.scrollHeight;
   // ชื่อเซสชันอาจเพิ่งถูกตั้งจากข้อความแรก → วาดหัวใหม่
   const t = S.host && S.host.querySelector('.ai-chat-title');
-  if (t) t.textContent = S.cur.title;
+  if (t && S.cur) t.textContent = S.cur.title;
   const badge = S.host && S.host.querySelector('.ai-chat-ctx');
-  if (badge) {
+  if (badge && S.cur) {
     const st2 = sessionStats(S.cur);
     badge.textContent = contextLabel(st2);
     badge.title = [tt('ui.aiChatPanel.msg') + usd(st2.usd),
@@ -900,7 +1140,8 @@ async function send(s0, ta, body, sendBtn) {
                    tt('ui.aiChatPanel.use2') + st2.total.toLocaleString(),
                    tt('ui.aiChatPanel.clickViewDetail')].join('\n');
   }
-  if (res && !res.ok) setStatus('❌ AI: ' + (res.error || ''));
+  // [alpha.145] ล้มเหลว = บอกบนแถบสถานะแบบสั้น ๆ (รายละเอียดเต็มอยู่ในฟองข้อความ + แผงบันทึก)
+  if (res && !res.ok) setStatus('❌ ' + (res.error || ''));
 }
 /**
  * ลงมือทำคำสั่งทั้งชุดตามลำดับ

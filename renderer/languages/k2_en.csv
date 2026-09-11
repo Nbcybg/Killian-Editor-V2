@@ -2174,7 +2174,6 @@ ui.common.arrangePage,จัดหน้า
 ui.common.arrangePageSeePage,จัดหน้า — เห็นหน้าจริง (Layout)
 ui.common.author,ผู้เขียน
 ui.common.avgScene,เฉลี่ย/ฉาก
-ui.common.ayuthayaMacOSNotFloat,Ayuthaya (macOS · วรรณยุกต์ไม่ลอย)
 ui.common.back,วนกลับ
 ui.common.board,กระดาน
 ui.common.board2,กระดาน 
@@ -3241,6 +3240,8 @@ ui.fonts.msg2,ลาว
 ui.fonts.msg3,อาหรับ
 ui.fonts.msg4,เทวนาครี
 ui.fonts.tHSarabunNew,TH Sarabun New (ราชการไทย)
+ui.fonts.thonburiMacNoFloat,Thonburi (macOS · วรรณยุกต์ไม่ลอย)
+ui.fonts.ayuthayaMacFloat,Ayuthaya (macOS · วรรณยุกต์ลอย)
 ui.gallery.addImage,＋ เพิ่มรูป…
 ui.gallery.addImageDone,เพิ่มรูปแล้ว: 
 ui.gallery.addImageItemIn,เพิ่มรูป {0} ใบเข้าอัลบั้ม {1}

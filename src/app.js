@@ -74,7 +74,7 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, defaultLangFonts, normalizeLangFonts,
          buildLangFontCss, withLangFamily, applyLangFonts,
          SP_FAMILY, FONT_TARGETS, withSpFamily, migrateSpThai, usableCounts, rowAppliesTo,
-         normalizeRange, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE,
+         normalizeRange, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE, withThaiFallback,
          SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX,
          SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, dataLabel, BUILTIN_CATS, CAT_ICON,
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
@@ -361,14 +361,17 @@ export function applySettings() {
   // แล้วค่อยให้ "ฟอนต์ตามภาษา" แทนที่เป็นช่วงอักขระ ซึ่งละเอียดกว่าและตั้งได้ทีละภาษา
   const pf = proseFormat();
   const edStack = state.settings.fontFamily || DEFAULT_PROSE_FONT;
-  document.documentElement.style.setProperty('--ed-font', withLangFamily(edStack, nLang.prose > 0));
+  // [alpha.144] ★ ต่อ "ตาข่ายรองอักษรไทย" ท้ายสแตกเสมอ — ผู้ใช้ที่ตั้งฟอนต์ละตินล้วน
+  // (เช่น `"Courier New", monospace`) เคยได้ Ayuthaya จาก Chromium = วรรณยุกต์ลอย
+  document.documentElement.style.setProperty(
+    '--ed-font', withThaiFallback(withLangFamily(edStack, nLang.prose > 0)));
   applyProseVars(pf);                                // [16][17][23][24] ย่อหน้า/ช่วงบรรทัด/หัวข้อ/ยกคำพูด
   // ฟอนต์บทหนังแยกจากนิยาย (บั๊ก #2) — ว่าง = Courier Final Draft เช่นกัน
   // [alpha.97 ข้อ 12] บทมีวงศ์ของตัวเอง ("K2 SP") ที่สร้างจากแถวที่ target = screenplay/all
   // — รวมแถว "ไทย 85%" ที่เดิมเป็นระบบแยก (spThaiFont) เข้ามาอยู่ในตารางเดียวกันแล้ว
   const spStack = state.settings.spFontFamily || DEFAULT_SCRIPT_FONT;
   document.documentElement.style.setProperty(
-    '--sp-font', withSpFamily(spStack, nLang.screenplay > 0));
+    '--sp-font', withThaiFallback(withSpFamily(spStack, nLang.screenplay > 0)));
   // [alpha.82] ฟอนต์เปลี่ยน = ความกว้างที่วัดไว้ใช้ไม่ได้แล้ว
   refreshTextMeasurer();
   // [alpha.109] ★ …และฟอนต์ `@font-face` ยังโหลดไม่เสร็จตอนนี้ — canvas จะวัดด้วยฟอนต์สำรอง
@@ -10463,6 +10466,8 @@ function tuneProsePagePads(t) {
                   - num(spf.margins.bottom, 1)) * 96;
   if (!(target > 8)) return false;
   const z = zoomFactorOf(pm) || 1;
+  // [alpha.146 · เคส P-2] มุมมองนี้ปูแผ่นกระดาษตายตัวไหม (ดู renderPaperSheets)
+  const paperView146 = isPaperView(viewOfTab(t));
   const cs = getComputedStyle(pm);
   const top0 = pm.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
   // ที่ว่างท้ายหน้ากางด้วย `margin-top` → **ขอบบนของกล่อง = รอยต่อหน้า** ทั้งชนิดบล็อกและ inline
@@ -10516,7 +10521,29 @@ function tuneProsePagePads(t) {
     const used = y - prev - prevH;
     prev = y;
     prevH = els[i].getBoundingClientRect().height / z;
-    const want = Math.max(0, Math.round((target - used) * 10) / 10);
+    // ══ [alpha.146 · เคส P-2] ★★ ที่ว่างท้ายหน้า **ติดลบได้** ══
+    //
+    // เดิมเป็น `Math.max(0, target - used)` — หน้าที่เนื้อ **ล้น** พื้นที่พิมพ์ถูกปัดเป็น 0
+    // คือ "ไม่ชดเชยอะไรเลย" · เหตุผลที่เคยเขียนไว้คือ *"ปล่อยให้หน้าถัดไปรับไป
+    // ไม่ใช่ดันแผ่นให้เพี้ยนทั้งเล่ม"* — **กลับหัวกลับหาง**: แผ่นกระดาษถูกปูที่
+    // `k × (สูงกระดาษ + ช่องว่าง)` **ตายตัว** (renderPaperSheets) ไม่มีใคร "รับไป" ได้
+    // ส่วนที่ล้นจึงกลายเป็นระยะที่สายเนื้อหาเดินเกินแผ่นไปทีละหน้า **แล้วสะสม**
+    // → หน้าท้าย ๆ ตัวหนังสือหลุดลงไปนั่งบนพื้นโต๊ะ
+    //
+    // ที่มาของส่วนที่ล้น: `used` วัดจากของจริง จึงรวม **ระยะเว้นท้ายย่อหน้าสุดท้ายของหน้า**
+    // ซึ่งไม่ยุบหายไปไหน (ตั้งแต่ alpha.98 กล่องเส้นคั่นใช้ `height` ไม่ใช่ `margin`
+    // margin ของ sibling จึงเลิกยุบผ่านมัน) · ค่านี้เล็กมาก (ระดับ 4px) และเป็น 0 ที่รอยต่อ
+    // ส่วนใหญ่ → ซ่อนตัวมาหลายสิบรุ่น จนเมตริกฟอนต์ขยับที่ alpha.144–.145 แล้วรอยต่อไป
+    // ตกหลังย่อหน้าที่มีระยะเว้นจริงเข้าพอดี
+    //
+    // ให้ค่าติดลบไหลลงไปถึง CSS ได้ = **กล่องเส้นคั่นหดตัวกลืนส่วนที่ล้น** แล้วหน้าถัดไป
+    // กลับมาเริ่มตรงหัวแผ่นพอดี · แต่ละมุมมองหดได้ไม่เท่ากัน จึงให้ CSS เป็นคนหนีบเอง
+    // (มุมมองจัดหน้ากล่องสูง 220px หดได้เยอะ · มุมมองปกติกล่องสูงเท่า pad หดไม่ได้เลย)
+    // ★ ค่าติดลบมีความหมาย **เฉพาะมุมมองที่ปูแผ่นกระดาษตายตัว** (จัดหน้า) เท่านั้น
+    // มุมมองปกติ/ร่างไม่มีแผ่น — ความคลาดไม่สะสมและไม่มีใครเห็น ส่วนกล่องเส้นคั่นที่นั่น
+    // สูงเท่าที่ว่างพอดี หดต่ำกว่า 0 ไม่ได้อยู่แล้ว · ส่งค่าติดลบไปก็ไม่เกิดอะไรขึ้นนอกจาก
+    // ทำให้ตัวเลขที่รายงานออกมาไม่ตรงกับรูปทรงจริงบนจอ
+    const want = Math.max(paperView146 ? -400 : 0, Math.round((target - used) * 10) / 10);
     if (Math.abs(want - num(list[i].pad, 0)) < 0.5) continue;
     list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
     changed = true;
@@ -10585,7 +10612,9 @@ function tuneSpPagePads(t) {
     const used = y - prev - prevH;                       // เนื้อหาที่หน้านี้ใช้ไปจริง
     prev = y;
     prevH = els[i].getBoundingClientRect().height / z;
-    const want = Math.max(0, Math.round((target - used) * 10) / 10);
+    // [alpha.146 · เคส P-2] กฎคู่แฝดของฝั่งนิยาย — ที่ว่างท้ายหน้าติดลบได้
+    // (แผ่นของบทก็ปูตายตัวเหมือนกัน ส่วนที่ล้นจึงสะสมแบบเดียวกันเป๊ะ)
+    const want = Math.max(-400, Math.round((target - used) * 10) / 10);
     if (Math.abs(want - num(list[i].pad, 0)) < 0.5) continue;
     list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
     changed = true;
@@ -18115,6 +18144,56 @@ async function runTest(projectPath) {
             `docs=${Math.round(pEl('docs').getBoundingClientRect().height)} root=${Math.round(rootH)}`);
       resetPanels(); await new Promise((r) => setTimeout(r, 30));
     }
+    // ═══ [146] รูปทรงเปลือกโปรแกรมแบบ "การ์ด" (ธีม CBlack) ═══
+    // วัดค่าที่ **คำนวณจริง** ไม่ใช่อ่านสตริงจากไฟล์ CSS — บทเรียน K-1: กฎที่เขียนไว้กับกฎที่ชนะจริง
+    // เป็นคนละเรื่อง (specificity/ลำดับ) · และ "มองเห็นไหม" ต้องวัดจากกล่องจริงเสมอ
+    {
+      const rootEl = $('#app-root');
+      const csRoot = getComputedStyle(rootEl);
+      const px = (v) => parseFloat(v) || 0;
+      const gap = px(csRoot.getPropertyValue('--shell-gap'));
+      check('[146] ★ มีสเกลมุมโค้งของเปลือกครบห้าขั้น และเรียงจากเล็กไปใหญ่',
+            ['--r-xs', '--r-sm', '--r-md', '--r-lg'].map((k) => px(csRoot.getPropertyValue(k)))
+              .every((v, i, a) => v > 0 && (i === 0 || v > a[i - 1])),
+            ['--r-xs', '--r-sm', '--r-md', '--r-lg'].map((k) => csRoot.getPropertyValue(k)).join('/'));
+      check('[146] --shell-gap มีค่าจริง', gap >= 3, String(gap));
+      check('[146] #app-root เว้นขอบรอบนอกเท่า --shell-gap (การ์ดไม่ชนขอบหน้าต่าง)',
+            px(csRoot.paddingTop) === gap && px(csRoot.paddingLeft) === gap,
+            `${csRoot.paddingTop}/${csRoot.paddingLeft} gap=${gap}`);
+      check('[146] #app-root มีพื้นหลังของตัวเอง (ช่องว่างระหว่างการ์ดต้องเห็นเป็นพื้น ไม่ใช่รูโปร่ง)',
+            !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(csRoot.backgroundColor), csRoot.backgroundColor);
+      // --shell-gap ต้องเท่าที่จับปรับขนาด — คอมเมนต์ใน style.css ประกาศกติกานี้ไว้
+      // ถ้าใครแก้ตัวใดตัวหนึ่งอย่างเดียว ช่องว่างระหว่างการ์ดจะกว้างไม่เท่ากันทั้งจอ
+      const rh = document.querySelector('#app-root .k-resize-handle');
+      check('[146] ★ ที่จับปรับขนาดกว้างเท่า --shell-gap (ช่องว่างระหว่างการ์ดเท่ากันทั้งจอ)',
+            !!rh && Math.round(rh.getBoundingClientRect().width || rh.getBoundingClientRect().height) === gap,
+            rh && JSON.stringify(rh.getBoundingClientRect()));
+      // การ์ด = ขอบครบสี่ด้าน + มุมโค้ง · แผงที่อยู่ในกลุ่มแท็บเป็นเนื้อใน ห้ามมีขอบซ้อน
+      const cards = [...document.querySelectorAll('#app-root .k-panel, #app-root .k-tab-group')];
+      const outer = cards.filter((c) => !c.parentElement.closest('.k-tab-content'));
+      const inner = cards.filter((c) => c.parentElement.closest('.k-tab-content'));
+      const noBorder = outer.filter((c) => {
+        const cs = getComputedStyle(c);
+        return !['Top', 'Right', 'Bottom', 'Left'].every((d) => px(cs['border' + d + 'Width']) >= 1);
+      });
+      const noRadius = outer.filter((c) => px(getComputedStyle(c).borderTopLeftRadius) <= 0);
+      check('[146] ★★ ทุกการ์ดชั้นนอกมีขอบครบสี่ด้าน', outer.length >= 4 && noBorder.length === 0,
+            `${noBorder.length}/${outer.length} :: ` + noBorder.map((c) => c.dataset.panelId || c.className).join(','));
+      check('[146] ★★ ทุกการ์ดชั้นนอกมีมุมโค้ง', noRadius.length === 0,
+            noRadius.map((c) => c.dataset.panelId || c.className).join(','));
+      check('[146] แผงในกลุ่มแท็บไม่มีขอบของตัวเอง (กันขอบซ้อนขอบ)',
+            inner.every((c) => px(getComputedStyle(c).borderTopWidth) === 0),
+            inner.filter((c) => px(getComputedStyle(c).borderTopWidth) !== 0)
+                 .map((c) => c.dataset.panelId).join(','));
+      // แผงที่ปรับขนาดไม่ได้ไม่มีที่จับ = ไม่มีช่องว่างในตัว → ต้องเว้นด้วย margin เอง
+      // (วัดระยะจริงระหว่างกล่อง ไม่ใช่อ่านค่า margin — margin ที่ถูกกฎอื่นทับก็ยังอ่านได้เป็นเลขสวย)
+      const bar = pEl('statusbar');
+      const above = bar && bar.previousElementSibling;
+      check('[146] ★★ แถบสถานะเว้นระยะจากการ์ดที่อยู่เหนือมันจริง (เดิมชนกันสนิท)',
+            !!above && Math.round(bar.getBoundingClientRect().top
+                                  - above.getBoundingClientRect().bottom) >= gap,
+            above && `${Math.round(bar.getBoundingClientRect().top - above.getBoundingClientRect().bottom)} < ${gap}`);
+    }
     check('tree + Navigation อยู่ในกลุ่มแท็บเดียวกัน',
           !!PL.tabGroupOf(PMG.root, 'tree') &&
           PL.tabGroupOf(PMG.root, 'tree') === PL.tabGroupOf(PMG.root, 'outline'));
@@ -23377,14 +23456,49 @@ async function runTest(projectPath) {
               setSpView('layout', true); await wait103(500); await settle130();
               const sL = seams131();
               const pitchL = (spf131.paper.height * 96) + num(state.settings.spPageGap, 28);
+              const bL = boxes131();
               note('[131-P1] มุมมองจัดหน้า: รอยต่อΔ=' + JSON.stringify(sL)
-                   + ' · ระยะแผ่นต่อแผ่น=' + Math.round(pitchL));
+                   + ' · ระยะแผ่นต่อแผ่น=' + Math.round(pitchL)
+                   + ' · กล่อง=' + JSON.stringify(bL.map((x) => (x.inline ? 'i' : 'b')
+                       + ':h' + Math.round(x.h) + '/p' + Math.round(x.pad) + '/x' + Math.round(x.extra)))
+                   + ' · บรรทัด=' + Math.round(line131)
+                   + ' · กว้างแผง=' + Math.round(pm().getBoundingClientRect().width));
               check('[131-P1] ★★ มุมมองจัดหน้า: ทุกหน้าห่างเท่ากันเป๊ะ',
                     sL.length > 2 && Math.max(...sL) - Math.min(...sL) <= 1,
                     JSON.stringify(sL));
               check('[131-P1] ★★ และห่างเท่ากับระยะแผ่นกระดาษจริง (เนื้อไม่เลื่อนออกจากแผ่น)',
                     sL.every((d) => Math.abs(d - pitchL) <= 1.5),
                     JSON.stringify(sL) + ' vs ' + Math.round(pitchL));
+              // ══ [146-P2] ★★ วัด "สิ่งที่ผู้ใช้เห็น" ไม่ใช่ตัวเลขในสายเนื้อหา ══
+              //
+              // เช็คสองข้อข้างบนวัดระยะ *ในสายเนื้อหาของตัวแก้ไข* — ซึ่งจับ P-2 ได้ก็จริง
+              // แต่ไม่ได้บอกว่าอาการที่ผู้ใช้เห็นคืออะไร จึงถูกอ่านว่า "เทสเข้มเกินไป" ได้ง่าย
+              //
+              // อาการจริงคือ: แผ่นกระดาษถูกปูที่ `k × (สูงกระดาษ + ช่องว่าง)` **ตายตัว**
+              // (renderPaperSheets ไม่วัด DOM เลย) ส่วนสายเนื้อหาเดินตามที่ว่างท้ายหน้าจริง
+              // → คลาดกันเมื่อไหร่ มัน **สะสม** ทุกหน้า จนตัวหนังสือหลุดลงไปนั่งบนพื้นโต๊ะ
+              // เทียบ "รอยต่อหน้าที่ n" กับ "หัวแผ่นที่ n" ตรง ๆ: คลาดคงที่ได้ สะสมไม่ได้
+              {
+                const sheets146 = [...t100.pane.querySelectorAll('.k-paper-layer > .k-paper-sheet')];
+                const bx146 = boxes131();
+                const seamY = bx146.map((b) => b.bot - b.extra);   // หน่วยเดียวกับ seams131()
+                const n146 = Math.min(sheets146.length, seamY.length);
+                const shTop = (i) => sheets146[i].getBoundingClientRect().top;
+                const drift = [];
+                for (let i = 0; i < n146; i++)
+                  drift.push(Math.round(((seamY[i] - seamY[0]) - (shTop(i) - shTop(0))) * 10) / 10);
+                note('[146-P2] แผ่นกระดาษ ' + sheets146.length + ' ใบ · รอยต่อ ' + seamY.length
+                     + ' · ระยะที่เนื้อหาคลาดจากแผ่น=' + JSON.stringify(drift));
+                check('[146-P2] ★ มีแผ่นกระดาษจริงให้เทียบอย่างน้อย 3 ใบ', n146 >= 3,
+                      `แผ่น=${sheets146.length} รอยต่อ=${seamY.length}`);
+                // ★★ หัวใจ: ความคลาดต้องไม่โตขึ้นทีละหน้า
+                check('[146-P2] ★★ ตัวหนังสือไม่ไหลออกจากแผ่นกระดาษแบบสะสมทีละหน้า',
+                      drift.every((d) => Math.abs(d) <= 1.5), JSON.stringify(drift));
+                // ...และหน้าสุดท้ายคือจุดที่อาการแรงสุด — บอกตัวเลขตรง ๆ เวลาแดง
+                check('[146-P2] ★★ หน้าสุดท้ายเนื้อหายังอยู่บนแผ่น (จุดที่การสะสมแรงที่สุด)',
+                      Math.abs(drift[drift.length - 1] || 0) <= 1.5,
+                      'คลาด ' + (drift[drift.length - 1] || 0) + 'px ที่หน้า ' + drift.length);
+              }
               setSpView(view131, true); await wait103(300);
             }
 
@@ -24663,10 +24777,11 @@ async function runTest(projectPath) {
       state.settings.spFontFamily = '"TH Sarabun New", sans-serif';
       applySettings();
       // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบท ถูกเสียบไว้หน้าสุดเสมอ (เปิดเป็นค่าเริ่มต้น)
-      // → เทียบแบบ "ลงท้ายด้วยสแตกที่ตั้ง" ไม่ใช่เท่ากันเป๊ะเหมือนเดิม
+      // [alpha.144] และตาข่ายรองไทยถูกต่อไว้ "ท้ายสุด" เสมอ → เทียบแบบ "มีสแตกที่ตั้งอยู่ในนั้น"
+      // ไม่ใช่ทั้งหัวหรือทั้งท้าย (สแตกจริงตอนนี้ = K2 SP + ของผู้ใช้ + ลูกโซ่ไทย)
       check('#2 ตั้งฟอนต์บทหนัง → --sp-font ถูกเซ็ต',
             getComputedStyle(document.documentElement).getPropertyValue('--sp-font').trim()
-              .endsWith('"TH Sarabun New", sans-serif'),
+              .includes('"TH Sarabun New", sans-serif'),
             getComputedStyle(document.documentElement).getPropertyValue('--sp-font'));
       // ต้องมีผลกับ .sp จริง และต้องไม่ไปเปลี่ยนฟอนต์ฝั่งนิยาย
       const spProbe = el('div', 'sp sp-action', 'ทดสอบ');
@@ -26039,6 +26154,142 @@ async function runTest(projectPath) {
           const gu = await markGap('Courier Thai Mono', 'กุ');
           check('[57a-5] ฟอนต์ไทยที่ฝังมา — สระล่างไม่ห้อยหลุด',
                 gu !== null && gu <= 0.065, gu === null ? 'ว่าง' : (gu * 100).toFixed(1) + '%');
+        }
+
+        // ════ [alpha.144] ★★ วรรณยุกต์ลอย เมื่อผู้ใช้ตั้งฟอนต์ที่ "ไม่มีอักษรไทย" ════
+        //
+        // ผู้ใช้: *"bug วรรณยุกต์ลอย · ตอนนี้เอกสารมีทั้งลอยและไม่ลอย"*
+        //
+        // ต้นตอ: `settings.fontFamily = '"Courier New", monospace'` — ไม่มีอักษรไทยสักตัว
+        // และเราไม่เคยบอกต่อว่าไทยควรไปไหน → Chromium เลือกเองเป็น **Ayuthaya** ซึ่งวางมาร์ก
+        // ห่างกว่าฟอนต์อื่น 4 เท่า · ช่อง markdown ใช้ `ui-monospace` จึงตกไป Thonburi = ไม่ลอย
+        // → **เอกสารเดียวกันลอยบ้างไม่ลอยบ้าง** ตรงกับที่ผู้ใช้เห็น
+        //
+        // เทสนี้ **วัดหมึกจริงบนแคนวาส** ไม่ใช่เช็คว่าฟังก์ชันคืนค่าอะไร (บทเรียน .66r10)
+        {
+          // ช่องว่างแนวตั้งที่กว้างที่สุดระหว่างหมึก — หน่วยเป็นสัดส่วนของ em
+          const stackGap = async (stack, txt = 'ท่', px = 110) => {
+            const cv = document.createElement('canvas');
+            cv.width = px * 2; cv.height = px * 2;
+            const cx = cv.getContext('2d');
+            cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+            cx.fillStyle = '#000'; cx.textBaseline = 'alphabetic';
+            cx.font = px + 'px ' + stack;
+            cx.fillText(txt, px * 0.4, px * 1.4);
+            const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+            const rows = [];
+            for (let y = 0; y < cv.height; y++) {
+              let ink = false;
+              for (let x = 0; x < cv.width && !ink; x++) if (d[(y * cv.width + x) * 4] < 128) ink = true;
+              rows.push(ink);
+            }
+            const ys = rows.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
+            if (!ys.length) return null;
+            let gap = 0, cur = 0;
+            for (let i = ys[0]; i <= ys[ys.length - 1]; i++) {
+              if (!rows[i]) { cur++; gap = Math.max(gap, cur); } else cur = 0;
+            }
+            return gap / px;
+          };
+
+          const keepFont138 = state.settings.fontFamily;
+          const keepSpFont138 = state.settings.spFontFamily;
+          state.settings.fontFamily = '"Courier New", monospace';   // ค่าที่ผู้ใช้ตั้งไว้จริง
+          state.settings.spFontFamily = '"Courier New", monospace';
+          applySettings();
+          const ed138 = document.documentElement.style.getPropertyValue('--ed-font');
+          const sp138 = document.documentElement.style.getPropertyValue('--sp-font');
+
+          check('[144] ฟอนต์ละตินล้วนยังอยู่หัวสแตก (ผู้ใช้ยังได้ Courier New ที่เลือกไว้)',
+                /^"?Courier New"?/.test(ed138.trim()), ed138);
+          check('[144] ★ สแตกนิยายมีลูกโซ่ไทยต่อท้าย ไม่ปล่อยให้เบราว์เซอร์เลือกเอง',
+                /Thonburi/.test(ed138), ed138);
+          check('[144] ★ สแตกบทหนังก็ได้ลูกโซ่ไทยเหมือนกัน', /Thonburi/.test(sp138), sp138);
+          check('[144] Ayuthaya (ตัวที่วรรณยุกต์ลอย) ไม่โผล่ในสแตกที่เราประกอบเอง',
+                !/Ayuthaya/i.test(ed138) && !/Ayuthaya/i.test(sp138), ed138 + ' | ' + sp138);
+
+          // วัดจริง: สแตกดิบ (ก่อนแก้) เทียบกับสแตกที่โปรแกรมประกอบให้ (หลังแก้)
+          const RAW138 = '"Courier New", monospace';
+          const gRaw = await stackGap(RAW138);
+          const gFix = await stackGap(ed138 || RAW138);
+          const pct = (g) => (g === null ? 'ว่าง' : (g * 100).toFixed(1) + '%');
+          check('[144] ★★ วรรณยุกต์ไม่ลอยด้วยสแตกที่โปรแกรมประกอบให้ (วัดหมึกจริง)',
+                gFix !== null && gFix <= 0.12, 'ดิบ ' + pct(gRaw) + ' → หลังแก้ ' + pct(gFix));
+          check('[144] ตาข่ายรองไทยไม่ทำให้ช่องไฟแย่ลงกว่าสแตกดิบ',
+                gFix !== null && gRaw !== null && gFix <= gRaw + 0.005,
+                'ดิบ ' + pct(gRaw) + ' vs หลังแก้ ' + pct(gFix));
+          // เครื่องที่ทำซ้ำอาการได้ (macOS = Chromium เลือก Ayuthaya) ต้องเห็นว่ามันดีขึ้นจริง
+          if (gRaw !== null && gRaw > 0.12) {
+            check('[144] ★ เครื่องนี้ทำซ้ำอาการได้ และตาข่ายรองไทยแก้ได้จริง',
+                  gFix < gRaw * 0.6, 'ดิบ ' + pct(gRaw) + ' → หลังแก้ ' + pct(gFix));
+          }
+
+          // ช่อง markdown (มุมมองซอร์ส) ต้องใช้กติกาเดียวกัน ไม่งั้นสองมุมมองแสดงคนละอย่าง
+          const probe138 = el('div', 'k-src-view');
+          probe138.style.position = 'fixed'; probe138.style.left = '-9999px';
+          document.body.append(probe138);
+          const srcFont138 = getComputedStyle(probe138).fontFamily;
+          probe138.remove();
+          check('[144] ★ ช่อง markdown มีลูกโซ่ไทยในสแตกด้วย (เดิมพึ่งดวงว่าเครื่องเลือกตัวไหน)',
+                /Thonburi/.test(srcFont138), srcFont138);
+
+          state.settings.fontFamily = keepFont138;
+          state.settings.spFontFamily = keepSpFont138;
+          applySettings();
+
+          // ══════════ [alpha.145] ★★ ตาข่ายรองไทย "ทุกช่อง" ไม่ใช่แค่ตัวแก้ไข ══════════
+          //
+          // ผู้ใช้ยังเจออยู่หลัง alpha.144: *"ทำไมอยู่ดี ๆ ก็ลอย และอยู่ดี ๆ ก็ไม่ลอย"*
+          //
+          // สิ่งที่ .144 ยังไม่รู้: ตัวสำรองของ Chromium **ขึ้นกับ generic family ท้ายสแตก**
+          //   ลงท้าย monospace  → Ayuthaya (ลอย)      ลงท้าย sans-serif → Thonburi (ปกติ)
+          // → ทุกช่องโมโนสเปซในโปรแกรม (Markdown ดิบ · แผงบันทึก · โค้ดบล็อกในแชท AI ·
+          //   เลขบรรทัด · ช่องพัฒนา) ลอยหมด ขณะที่เนื้อความปกติไม่ลอย
+          //
+          // เทสนี้ **วัดหมึกจริงจากสแตกที่คำนวณได้ของ element จริง** ไม่ใช่อ่าน CSS เป็นข้อความ
+          {
+            const probeFont = (cls) => {
+              const d = el('div', cls);
+              d.style.position = 'fixed'; d.style.left = '-9999px';
+              document.body.append(d);
+              const f = getComputedStyle(d).fontFamily;
+              d.remove();
+              return f;
+            };
+            const SURFACES = [
+              ['.plain-md (ช่องแก้ Markdown ดิบ)', 'plain-md'],
+              ['.k-logview (แผงบันทึก)', 'k-logview'],
+              ['.ai-md-pre-body (โค้ดบล็อกในแชท AI)', 'ai-md-pre-body'],
+              ['.ai-md-code (โค้ดในบรรทัด แชท AI)', 'ai-md-code'],
+              ['.k-ln-no (เลขบรรทัด)', 'k-ln-no'],
+              ['.k-dev-input (ช่องพัฒนา)', 'k-dev-input'],
+            ];
+            const BARE145 = 'ui-monospace, Menlo, Consolas, monospace';
+            const gBare = await stackGap(BARE145);
+            const pct145 = (g) => (g === null ? 'ว่าง' : (g * 100).toFixed(1) + '%');
+            check('[145] เครื่องนี้วัดสแตกโมโนสเปซดิบได้', gBare !== null, pct145(gBare));
+            for (const [label, cls] of SURFACES) {
+              const f = probeFont(cls);
+              check('[145] ตาข่ายไทยอยู่ในสแตกของ ' + label, /Thonburi/.test(f), f);
+              const g = await stackGap(f);
+              check('[145] ★ วรรณยุกต์ไม่ลอยใน ' + label + ' (วัดหมึกจริง)',
+                    g !== null && g <= 0.12, pct145(g) + ' | ' + f);
+              // เครื่องที่ทำซ้ำอาการได้เท่านั้นที่ยืนยันได้ว่า "ดีขึ้นจริง" ไม่ใช่เทสเปล่า
+              if (gBare !== null && gBare > 0.12) {
+                check('[145] ★ ' + label + ' เคยลอยจริงบนเครื่องนี้ และตอนนี้หายแล้ว',
+                      g < gBare * 0.6, 'ดิบ ' + pct145(gBare) + ' → ' + pct145(g));
+              }
+            }
+            // หัวข้อของ "รูปแบบนิยาย" เขียน font-family ลงกฎตรง ๆ (ไม่ผ่าน --ed-font)
+            const cssH145 = proseCss(mergeProseFormat({ fontFamily: '"Courier New", monospace' }));
+            const headRule = (cssH145.match(/h1\{[^}]*\}/) || [''])[0];
+            check('[145] ★ หัวข้อนิยายก็ได้ตาข่ายไทย (เดิมลอยทั้งที่เนื้อความไม่ลอย)',
+                  /Thonburi/.test(headRule), headRule.slice(0, 160));
+            const cssX145 = proseExportCss(mergeProseFormat({}), null, null,
+              { fontStack: '"Courier New", monospace' });
+            check('[145] ไฟล์ที่ส่งออกไปเปิดเครื่องอื่นก็ได้ตาข่ายไทย',
+                  /body\{[^}]*Thonburi/.test(cssX145), (cssX145.match(/body\{[^}]*\}/) || [''])[0].slice(0, 160));
+          }
         }
       }
 
@@ -32062,6 +32313,184 @@ async function runTest(projectPath) {
                 !!document.getElementById('ai-chat-body').querySelector('.ai-msg-assistant .ai-md'));
         }
 
+        // ══════════════ [alpha.145] บั๊กชุดที่ผู้ใช้รายงานหลังใช้แชทหนัก ๆ ══════════════
+        //
+        // *"บางครั้งคำตอบไม่ถูก refresh · ไม่มีบอกว่า AI กำลังทำงานอยู่ ต้องไปดูที่ status bar
+        //   อย่างเดียว · stream และคำตอบไม่โผล่ให้ ถ้าเกิดเผลอปิดหน้า หรือกดดู token ·
+        //   หน้า session ไม่ได้มีระบุเลยว่า session ไหนกำลังทำงานอยู่"*
+        //
+        // ต้นตอเดียวกันทั้งชุด: `send()` เดิมถือ **โหนด DOM** ไว้แล้วเขียนสตรีมลงไปตรง ๆ
+        // พอ `draw()` ล้าง host ทิ้ง (กด ← / กดป้าย token) โหนดนั้นหลุดจอ แต่สตรีมยังไหลลงที่เดิม
+        // ตอนนี้สถานะอยู่ที่ `S.run` (ข้อมูลล้วน) แล้วตัววาดอ่านจากตรงนั้นทุกครั้งที่วาดใหม่
+        {
+          const CP145 = await import('./ai/ai-chat-panel.js');
+          const st145 = _chatState();
+          const host145 = document.getElementById('ai-chat-body');
+          st145.view = 'session';
+          await renderAIChatPanel(host145);
+          await new Promise((r) => setTimeout(r, 120));
+
+          // จำลอง "กำลังคุยกับโมเดล" โดยไม่ต้องยิงเน็ตจริง
+          st145.run = { sessionId: st145.cur.id, title: st145.cur.title, reqId: 'e2e-145',
+                        startAt: Date.now(), label: 'กำลังคิด…', text: 'คำตอบที่ไหลมาแล้ว',
+                        thinking: 'ความคิดที่ไหลมาแล้ว' };
+          await renderAIChatPanel(host145);
+          await new Promise((r) => setTimeout(r, 80));
+          const pend145 = host145.querySelector('.ai-msg-pending');
+          check('[145] ★ วาดหน้าใหม่ระหว่างรอคำตอบ แล้วฟอง "กำลังคิด" ยังอยู่', !!pend145);
+          check('[145] ★ ข้อความที่สตรีมมาแล้วกลับมาครบ (ไม่หายไปกับ DOM เก่า)',
+                !!pend145 && pend145.textContent.includes('คำตอบที่ไหลมาแล้ว'),
+                pend145 && pend145.textContent.slice(0, 80));
+          check('[145] ความคิดของโมเดลก็กลับมาด้วย',
+                !!pend145 && pend145.textContent.includes('ความคิดที่ไหลมาแล้ว'));
+          check('[145] มีปุ่มหยุดในฟอง', !!host145.querySelector('.ai-pend-stop'));
+          check('[145] หัวเซสชันติดป้ายว่ากำลังทำงาน',
+                !!host145.querySelector('.ai-chat-title.running'));
+          check('[145] ปุ่มส่งถูกล็อกระหว่างรอ', host145.querySelector('.ai-chat-send').disabled === true);
+
+          // ★ เคสที่ผู้ใช้เจอจริง: กดป้าย token ไปหน้ารายละเอียด แล้วกลับมา
+          host145.querySelector('.ai-chat-ctx').click();
+          await new Promise((r) => setTimeout(r, 120));
+          check('[145] ระหว่างรอคำตอบยังกดดู token ได้',
+                !!document.getElementById('ai-chat-body').querySelector('.ai-chat-detail'));
+          // สตรีมที่ไหลมาระหว่างอยู่หน้าอื่น ต้องถูกเก็บไว้ (ไม่ตกหล่น)
+          _chatState().run.text = 'คำตอบที่ไหลมาแล้ว + ท่อนที่มาตอนอยู่หน้าอื่น';
+          document.getElementById('ai-chat-body').querySelector('.ai-chat-close').click();
+          await new Promise((r) => setTimeout(r, 150));
+          const back145 = document.getElementById('ai-chat-body').querySelector('.ai-msg-pending');
+          check('[145] ★★ กลับจากหน้ารายละเอียดแล้วสตรีมยังอยู่ครบ รวมท่อนที่มาระหว่างนั้น',
+                !!back145 && back145.textContent.includes('ท่อนที่มาตอนอยู่หน้าอื่น'),
+                back145 && back145.textContent.slice(0, 120));
+
+          // ★ หน้ารายการเซสชันต้องบอกได้ว่าตัวไหนกำลังทำงาน
+          _chatState().view = 'list';
+          await renderAIChatPanel(document.getElementById('ai-chat-body'));
+          await new Promise((r) => setTimeout(r, 120));
+          const hostL = document.getElementById('ai-chat-body');
+          const runRow = hostL.querySelector('.ai-chat-row.running');
+          check('[145] ★ แถวของเซสชันที่กำลังทำงานถูกทำเครื่องหมายไว้', !!runRow,
+                [...hostL.querySelectorAll('.ai-chat-row')].length + ' แถว');
+          check('[145] แถวนั้นมีสัญลักษณ์ ⏳', !!runRow && !!runRow.querySelector('.ai-chat-row-run'));
+          const banner = hostL.querySelector('.ai-chat-running');
+          check('[145] มีแถบ "กำลังทำงาน" เหนือรายการ และแสดงอยู่จริง',
+                !!banner && banner.style.display !== 'none' && banner.textContent.includes('กำลังทำงาน'),
+                banner && banner.textContent);
+          banner.click();
+          await new Promise((r) => setTimeout(r, 150));
+          check('[145] กดแถบแล้วกระโดดกลับไปหน้าเซสชันที่กำลังทำงาน',
+                _chatState().view === 'session' &&
+                !!document.getElementById('ai-chat-body').querySelector('.ai-msg-pending'));
+          _chatState().run = null;
+          await renderAIChatPanel(document.getElementById('ai-chat-body'));
+          await new Promise((r) => setTimeout(r, 100));
+          check('[145] จบงานแล้วฟอง "กำลังคิด" หายไป',
+                !document.getElementById('ai-chat-body').querySelector('.ai-msg-pending'));
+
+          // ── ข้อความผิดพลาดต้องบอกแนวทางแก้ ไม่ใช่ "HTTP 0" โดด ๆ ──
+          {
+            const AE145 = await import('./ai/ai-error.js');
+            const info145 = AE145.describeHttpError({ status: 0,
+              body: 'ECONNREFUSED connect 127.0.0.1:1234',
+              url: 'http://127.0.0.1:1234/v1/chat/completions', provider: 'เจ้าในเครื่อง' });
+            const c145 = _chatState();
+            c145.cur.view = 'normal';
+            c145.cur = AS.addMessage(c145.cur, AS.newMessage('assistant', '',
+              { error: info145.title, detail: info145.detail }));
+            await saveSession(c145.cur);
+            await renderAIChatPanel(document.getElementById('ai-chat-body'));
+            await new Promise((r) => setTimeout(r, 150));
+            const hostE = document.getElementById('ai-chat-body');
+            check('[145] ข้อความผิดพลาดขึ้นบนจอ', !!hostE.querySelector('.ai-msg-err'));
+            const fold145 = hostE.querySelector('.ai-msg-errdetail');
+            check('[145] ★ มีกล่องรายละเอียด + แนวทางแก้ (เดิมมีแค่บรรทัดเดียว)', !!fold145);
+            check('[145] รายละเอียดบอกปลายทางที่ยิงไป',
+                  !!fold145 && fold145.textContent.includes('127.0.0.1:1234'));
+            check('[145] รายละเอียดมีหัวข้อ "แนวทางแก้"',
+                  !!fold145 && fold145.textContent.includes('แนวทางแก้'));
+          }
+
+          // ── ★ ยิงของจริงไปยังพอร์ตที่ไม่มีอะไรฟังอยู่ — ต้องได้ทั้งคำอธิบายและบรรทัดในบันทึก ──
+          //
+          // ผู้ใช้: *"log ก็ไม่ได้เก็บอะไรเลย"* — เทสนี้เรียก `completeStream()` ตัวจริง
+          // (ไม่ใช่ฟังก์ชันปลอม) แล้ววัดจาก **แผงบันทึกของโปรแกรมเอง** ว่ามีบรรทัดจริง
+          {
+            const PU145 = await import('./ai/ai-provider-ui.js');
+            const AP145 = await import('./ai/ai-providers.js');
+            const seqBefore = logStore.lastSeq();
+            const deadProv = AP145.newProvider({
+              name: 'เจ้าที่ไม่มีอยู่จริง', model: 'x',
+              credential: { name: 'c', baseUrl: 'http://127.0.0.1:9/v1', allowedDomains: [] },
+              params: { maxRetries: 0, timeout: 5 },
+            });
+            const r145 = await PU145.completeStream(deadProv,
+              { messages: [{ role: 'user', content: 'สวัสดี' }] }, () => {});
+            check('[145] ★ ยิงไปพอร์ตที่ไม่มีใครฟัง → ล้มเหลว', r145.ok === false);
+            check('[145] ★★ ไม่ใช่ "HTTP 0" โดด ๆ อีกแล้ว — บอกสาเหตุจริง',
+                  !!r145.detail && r145.detail.length > 40, r145.error);
+            check('[145] คำอธิบายมีแนวทางแก้ให้ทำต่อ',
+                  Array.isArray(r145.hints) && r145.hints.length >= 1, JSON.stringify(r145.hints || []));
+            check('[145] รายละเอียดบอกปลายทางที่ยิงไป', !!r145.detail && r145.detail.includes('127.0.0.1:9'),
+                  (r145.detail || '').slice(0, 120));
+            const newLogs = logStore.all().filter((x) => x.seq > seqBefore);
+            // `splitSource()` ถอดคำนำหน้า "ai: " ออกไปเป็นช่อง source ให้แล้ว (ดู log-core.js)
+            const aiLog = newLogs.find((x) => x.level === 'error' && x.source === 'ai');
+            check('[145] ★★ ความผิดพลาดถูกจดลงแผงบันทึกจริง (เดิมไม่มีบรรทัดเลย)', !!aiLog,
+                  newLogs.map((x) => x.level + '/' + x.source + ':' + x.msg).join(' | ').slice(0, 200));
+            check('[145] บรรทัดในบันทึกแนบรายละเอียดเต็ม (กางดูแล้วรู้ว่าทำอะไรต่อ)',
+                  !!aiLog && String(aiLog.detail || '').includes('แนวทางแก้'),
+                  aiLog && String(aiLog.detail || '').slice(0, 120));
+          }
+
+          // ── ระดับการใช้ความคิด (effort) รายเซสชัน ──
+          {
+            const hostF = document.getElementById('ai-chat-body');
+            const eff = hostF.querySelector('.ai-chat-effort');
+            check('[145] ★ มีช่องปรับระดับการใช้ความคิดในกล่องพิมพ์', !!eff);
+            check('[145] มีครบ 5 ตัวเลือก', !!eff && eff.options.length === 5, eff && eff.options.length);
+            eff.value = 'high';
+            eff.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 150));
+            check('[145] เลือกแล้วบันทึกลงเซสชันตัวจริง', _chatState().cur.effort === 'high',
+                  _chatState().cur.effort);
+            const savedEff = await kapi.readJson(
+              await kapi.join(sdir, AS.sessionFileName(_chatState().cur)));
+            check('[145] ระดับการใช้ความคิดถูกเขียนลงไฟล์', savedEff.effort === 'high', savedEff.effort);
+            check('[145] บทสนทนาไม่หายตอนเปลี่ยนระดับการใช้ความคิด',
+                  (savedEff.messages || []).length === (_chatState().cur.messages || []).length);
+          }
+
+          // ── ทักษะ (Skills/*.md) ──
+          {
+            const SK145 = await import('./ai/ai-skills.js');
+            const dir145 = await SK145.ensureSkillDir(state.root);
+            check('[145] ★ สร้างโฟลเดอร์ทักษะได้', !!dir145 && await kapi.exists(dir145), dir145);
+            await kapi.writeFile(await kapi.join(dir145, 'tone.md'),
+              '---\nname: โทนของเรื่อง\ndescription: คุมโทนภาษา\n---\nเขียนด้วยประโยคสั้น\n');
+            const all145 = await SK145.loadSkills(state.root);
+            check('[145] อ่านไฟล์ทักษะกลับมาได้', all145.length >= 1 && all145.some((k) => k.id === 'tone'),
+                  all145.map((k) => k.id).join(','));
+            const cS = _chatState();
+            cS.cur.skills = ['tone'];
+            await saveSession(cS.cur);
+            const sp145 = await CP145.skillsPromptFor(cS.cur);
+            check('[145] ★ ทักษะที่เปิดไว้ถูกประกอบเข้า system prompt',
+                  sp145.text.includes('เขียนด้วยประโยคสั้น') && sp145.used.join(',') === 'tone',
+                  sp145.used.join(','));
+            check('[145] ทักษะที่ไม่ได้เปิดไม่ถูกส่งไป',
+                  (await CP145.skillsPromptFor({ skills: [] })).text === '');
+            await renderAIChatPanel(document.getElementById('ai-chat-body'));
+            await new Promise((r) => setTimeout(r, 200));
+            const skBtn = document.getElementById('ai-chat-body').querySelector('.ai-chat-skills');
+            check('[145] มีปุ่มทักษะในกล่องพิมพ์', !!skBtn);
+            check('[145] ปุ่มบอกจำนวนที่เปิดอยู่',
+                  !!skBtn && /1\/\d/.test(skBtn.textContent), skBtn && skBtn.textContent);
+            check('[145] ปุ่มถูกไฮไลต์เมื่อมีทักษะเปิดอยู่',
+                  !!skBtn && skBtn.classList.contains('on'));
+            cS.cur.skills = [];
+            await saveSession(cS.cur);
+          }
+        }
+
         // ══ [alpha.129 ข้อ 1] งบประวัติแชท — เดิมตายตัว 6,000 token → AI ลืมแชทเก่าแล้วมั่ว ══
         {
           let longS = AS.newSession();
@@ -32797,9 +33226,14 @@ async function runTest(projectPath) {
         check('[66r11] ผนึกทั้งกลุ่มเข้าหน้าต่างได้ (ไม่เหลือกล่องลอย)',
               !document.querySelector('.k-float-group') && pm11.isDocked('notes') && pm11.isDocked('comments'));
         const tbEl = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        // [alpha.146] วัดจาก `.k-panel-root` ไม่ใช่ `#app-root` — ตั้งแต่เปลือกเป็นการ์ด
+        // `#app-root` เว้นขอบรอบนอกไว้ `--shell-gap` แผงจึงกว้างน้อยกว่ามันเสมอ (บทเรียนข้อ 13:
+        // เทสที่ฮาร์ดโค้ดค่าเดิมพังทันทีที่ design token ขยับ) · ของที่เทสนี้ถามคือ
+        // "แถบเครื่องมือกินเต็มแถวของมันไหม" → กล่องที่ถือต้นไม้แผงคือตัวเทียบที่ถูกต้อง
+        const rootBox11 = document.querySelector('#app-root .k-panel-root') || $('#app-root');
         check('[66r11] ...แถบเครื่องมือยังเต็มความกว้าง (กลุ่มไม่ไปเกาะข้างมัน)',
-              tbEl.getBoundingClientRect().width >= $('#app-root').getBoundingClientRect().width - 2,
-              `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round($('#app-root').getBoundingClientRect().width)}`);
+              tbEl.getBoundingClientRect().width >= rootBox11.getBoundingClientRect().width - 2,
+              `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round(rootBox11.getBoundingClientRect().width)}`);
         check('[66r11] ...และแท็บทั้งสองใบยังอยู่ในกลุ่มเดียวกันหลังผนึก',
               !!PL.tabGroupOf(pm11.root, 'notes') && !!PL.tabGroupOf(pm11.root, 'comments'));
         resetPanels(); await wait62(280);

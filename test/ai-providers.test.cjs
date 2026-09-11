@@ -447,6 +447,63 @@ const check = (name, cond, extra) => {
   check('[chat] ไม่ส่ง override → ใช้ค่าพารามิเตอร์เดิม',
         noOv.body.temperature === 0.7 && noOv.body.max_tokens === 2048,
         JSON.stringify({ t: noOv.body.temperature, m: noOv.body.max_tokens }));
+
+  // ══ [alpha.145] Max Tokens = -1 (ไม่จำกัด) ══
+  // ผู้ใช้: *"max token ไม่สามารถใช้เป็น -1 ได้"* — ของเดิม min:1 หนีบเป็น 1 เงียบ ๆ
+  const mtDef = P.PARAM_DEFS.find((d) => d.key === 'maxTokens');
+  check('[145] ช่อง Max Tokens รับค่าต่ำสุดถึง -1', mtDef.min === -1, mtDef.min);
+  check('[145] -1 รอดจาก normalizeParams (ไม่ถูกหนีบเป็น 1)',
+        P.normalizeParams({ maxTokens: -1 }).maxTokens === -1,
+        P.normalizeParams({ maxTokens: -1 }).maxTokens);
+  check('[145] พิมพ์ "-1" เป็นข้อความก็รอด',
+        P.normalizeParams({ maxTokens: '-1' }).maxTokens === -1);
+  check('[145] ต่ำกว่า -1 ยังถูกหนีบที่ -1', P.normalizeParams({ maxTokens: -99 }).maxTokens === -1);
+  const unlim = P.chatRequest(P.newProvider({ credential: { baseUrl: 'https://a.com' },
+    params: { maxTokens: -1 } }), {});
+  check('[145] ★ -1 = ไม่ส่งฟิลด์ max_tokens ไปเลย',
+        !('max_tokens' in unlim.body), JSON.stringify(unlim.body));
+  const zero = P.chatRequest(P.newProvider({ credential: { baseUrl: 'https://a.com' },
+    params: { maxTokens: 0 } }), {});
+  check('[145] 0 ก็แปลว่าไม่จำกัดเหมือนกัน (ห้ามส่ง max_tokens:0)', !('max_tokens' in zero.body));
+  const ovNeg = P.chatRequest(P.newProvider({ credential: { baseUrl: 'https://a.com' } }),
+    { maxTokens: -1 });
+  check('[145] ผู้เรียกสั่ง -1 ก็ไม่ส่งเช่นกัน', !('max_tokens' in ovNeg.body));
+  check('[145] ค่าบวกยังส่งตามปกติ',
+        P.chatRequest(P.newProvider({ credential: { baseUrl: 'https://a.com' },
+          params: { maxTokens: 4096 } }), {}).body.max_tokens === 4096);
+
+  // ══ [alpha.145] ระดับการใช้ความคิด สั่งทับได้รายคำขอ (แชท AI ตั้งรายเซสชัน) ══
+  const prEff = P.newProvider({ credential: { baseUrl: 'https://a.com' },
+    params: { reasoningEffort: 'low' } });
+  check('[145] ไม่ส่ง override → ใช้ของผู้ให้บริการ',
+        P.chatRequest(prEff, {}).body.reasoning_effort === 'low');
+  check('[145] ★ ส่ง override → ทับของผู้ให้บริการ',
+        P.chatRequest(prEff, { reasoningEffort: 'high' }).body.reasoning_effort === 'high');
+  check('[145] override เป็นค่าว่าง = ไม่ส่งฟิลด์นี้เลย',
+        !('reasoning_effort' in P.chatRequest(prEff, { reasoningEffort: '' }).body),
+        JSON.stringify(P.chatRequest(prEff, { reasoningEffort: '' }).body));
+
+  // ══ [alpha.145] เซสชันเก็บระดับความคิด + ทักษะ ══
+  check('[145] เซสชันใหม่: ระดับความคิดว่าง = ตามผู้ให้บริการ', S.newSession().effort === '');
+  check('[145] เซสชันใหม่: ยังไม่เปิดทักษะไหนเลย',
+        Array.isArray(S.newSession().skills) && S.newSession().skills.length === 0);
+  check('[145] ค่าที่บันทึกไว้ถูกอ่านกลับ',
+        S.newSession({ effort: 'high', skills: ['tone', 'ban'] }).effort === 'high'
+        && S.newSession({ effort: 'high', skills: ['tone', 'ban'] }).skills.join(',') === 'tone,ban');
+  check('[145] ค่าระดับความคิดที่ไม่รู้จักถูกทิ้ง (ไม่ส่งขยะไปให้ API)',
+        S.newSession({ effort: 'ultra' }).effort === '');
+  check('[145] มีระดับความคิดครบ 5 ตัวเลือก (รวม "ตามผู้ให้บริการ")',
+        S.REASONING_EFFORTS.length === 5 && S.REASONING_EFFORTS[0].id === '');
+  check('[145] effortLabel ตกกลับตัวแรกเมื่อค่าไม่รู้จัก',
+        S.effortLabel('zzz') === S.REASONING_EFFORTS[0].label);
+  // "เริ่มใหม่" ต้องไม่ล้างทักษะ/ระดับความคิด (คนละเรื่องกับบทสนทนา)
+  const keep = S.clearMessages(S.newSession({ effort: 'low', skills: ['tone'],
+    messages: [{ role: 'user', text: 'x' }] }));
+  check('[145] ★ เริ่มใหม่แล้วทักษะ/ระดับความคิดยังอยู่',
+        keep.effort === 'low' && keep.skills.join(',') === 'tone' && keep.messages.length === 0);
+  // รายละเอียดข้อผิดพลาดถูกเก็บลงข้อความ (เพื่อย้อนดูทีหลังได้)
+  check('[145] ข้อความเก็บรายละเอียดข้อผิดพลาดได้',
+        S.newMessage('assistant', '', { error: 'x', detail: 'ปลายทาง: a.com' }).detail === 'ปลายทาง: a.com');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

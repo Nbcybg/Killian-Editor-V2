@@ -7,6 +7,7 @@
 import { t as tt, t } from './i18n.js';
 import { mergeSpFormat, spCss, textWidth } from './sp-format.js';
 import { num } from './num.js';
+import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข่ายรองอักษรไทย
 
 export const DEFAULT_WM = {
   fontSize: 54,            // px
@@ -95,7 +96,8 @@ export function buildWatermarkHtml(pages, fmt, opts = {}) {
     fontFaceCss(opts.fontUrls),
     '*{box-sizing:border-box;}',
     `html,body{margin:0;padding:0;background:#fff;color:#000;` +
-      `font-family:"Courier Prime","Courier Final Draft","Courier New",monospace;font-size:12pt;line-height:1;}`,
+      `font-family:` + withThaiFallback('"Courier Prime","Courier Final Draft","Courier New",monospace') +
+      `;font-size:12pt;line-height:1;}`,
     `.pg{position:relative;width:${+tw.toFixed(4)}in;min-height:${+ph.toFixed(4)}in;` +
       `page-break-after:always;break-after:page;overflow:hidden;}`,
     '.pg:last-child{page-break-after:auto;break-after:auto;}',

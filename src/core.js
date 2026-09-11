@@ -403,11 +403,14 @@ export const BASE_SP_FS = ptToPx(12); // 16px = 12pt (ตรงกับ .sp ใ
 // Courier Prime มาก่อน — ฝังมากับโปรแกรมแล้ว (renderer/assets/fonts) จึงได้หน้าตาเดียวกันทุกเครื่อง
 // "Courier Final Draft" ไว้ให้เครื่องที่ลงฟอนต์นั้นเองใช้ · ไทยตกไป TH Sarabun New/Sarabun
 //
-// [alpha.60r3a] **Ayuthaya มาก่อนฟอนต์ไทยตัวอื่นเสมอ** — ผู้ใช้รายงานว่าวรรณยุกต์ยัง "ลอย"
-// กับ CourierThaiMono (ฟอนต์ปี 1998 วางมาร์กห่างพยัญชนะ ~7% ของ em · ดูบทเรียน 48)
-// Ayuthaya เป็นฟอนต์ระบบของ macOS ที่วางมาร์กได้ถูกต้อง — แจกมากับโปรแกรมไม่ได้ (สิทธิ์ของ Apple)
-// จึงใส่ไว้ต้นลูกโซ่: เครื่อง Mac ได้ Ayuthaya ทันที · เครื่องอื่นตกไปตัวถัดไปเองตามเดิม
-export const THAI_FONT_STACK = '"Ayuthaya", "Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun"';
+// [alpha.60r3a] เดิมสรุปว่า **Ayuthaya วางมาร์กถูก** จึงเอาไว้ต้นลูกโซ่
+//
+// ══ [alpha.144] ★ กลับด้าน — **Ayuthaya คือตัวที่ทำให้วรรณยุกต์ลอย** ══
+// วัดจริงบนเครื่อง (แคนวาส 80px · ระยะท้องวรรณยุกต์ถึงหัวพยัญชนะของ `ท` + `่`):
+//   CourierThaiMono 3 · Tahoma 2 · TH Sarabun New 6 · Thonburi 7 · Sarabun 8 · **Ayuthaya 28**
+// บทเรียน 48 ที่โทษ CourierThaiMono ก็ผิด — มันแน่นที่สุดในกลุ่ม
+// → **Thonburi นำ** (ฟอนต์ระบบ macOS เหมือนกัน) · Windows ตกไป Leelawadee UI ตามเดิม
+export const THAI_FONT_STACK = '"Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun"';
 export const DEFAULT_SCRIPT_FONT =
   '"Courier Prime", "Courier Final Draft", "Courier New", ' + THAI_FONT_STACK + ', monospace';
 // ซูมหน้ากระดาษ = ย่อ/ขยาย "ทั้งหน้า" ด้วย CSS zoom (ฟอนต์+ระยะขอบ+ความกว้าง ไปพร้อมกัน)
@@ -475,7 +478,10 @@ export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, def
          // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
          SP_FAMILY, FONT_TARGETS, rowTarget, rowAppliesTo, familyList, withFamily,
          withSpFamily, usableCounts, migrateSpThai,
-         SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE } from './lang-fonts.js';
+         // [alpha.144] ตาข่ายรองอักษรไทยท้ายสแตก (กันวรรณยุกต์ลอยเมื่อฟอนต์ที่เลือกไม่มีไทย)
+         THAI_SAFE_FALLBACKS, withThaiFallback,
+         SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_FALLBACKS_LEGACY,
+         SP_THAI_SIZE } from './lang-fonts.js';
 
 // ---- ระบบภาษา (i18n) ----
 // เอนจินจริงอยู่ `src/i18n.js` (บริสุทธิ์ · โมดูลที่ import core ไม่ได้ก็ใช้ได้) — ตรงนี้เหลือแค่

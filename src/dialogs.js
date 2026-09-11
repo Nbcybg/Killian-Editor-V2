@@ -18,7 +18,8 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, 
          isLangFontUsable, withLangFamily,
          // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
          SP_THAI_FALLBACKS, SP_THAI_RANGE, SP_THAI_SIZE, FONT_TARGETS,
-         rowTarget, withSpFamily, usableCounts, migrateSpThai } from './core.js';
+         rowTarget, withSpFamily, usableCounts, migrateSpThai,
+         withThaiFallback } from './core.js';
 import { setTypeVolume, playType } from './typewriter-sound.js';
 // [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป (ตารางอยู่ใน margin-presets.json)
 import { marginPreset, marginPresetOptions, matchMarginPreset } from './margin-presets.js';
@@ -366,8 +367,10 @@ export function settingsDialog(openTab, opts = {}) {
     const list = rows || state.settings.langFonts;
     // [alpha.97 ข้อ 12] บทมีวงศ์ของตัวเอง ("K2 SP") ที่สร้างจากแถว target = screenplay/all
     const n = usableCounts(list);
+    // [alpha.144] พรีวิวต้องได้ตาข่ายรองไทยเหมือน applySettings เป๊ะ ไม่งั้นกล่องตั้งค่า
+    // โชว์วรรณยุกต์ลอย ทั้งที่ของจริงไม่ลอย (หรือกลับกัน) = ผู้ใช้ตัดสินใจจากภาพที่ผิด
     document.documentElement.style.setProperty(
-      '--sp-font', withSpFamily(v || DEFAULT_SCRIPT_FONT, n.screenplay > 0));
+      '--sp-font', withThaiFallback(withSpFamily(v || DEFAULT_SCRIPT_FONT, n.screenplay > 0)));
   };
 
   // โหลดฟอนต์จาก Fonts/ ในโปรเจกต์ (async, โหลดทีหลังไม่บล็อก)
@@ -381,8 +384,9 @@ export function settingsDialog(openTab, opts = {}) {
       { name: t('ui.dlg.courierThaiMonoMore'), value: '"Courier Thai Mono", "Courier Prime", monospace' },
       { name: t('ui.dlg.courierThaiProportionalMore'), value: '"Courier Thai Proportional", "Courier Prime", monospace' },
       // [alpha.60r3a] ฟอนต์ระบบที่วางวรรณยุกต์ไทยได้ถูกต้อง — แจกมากับโปรแกรมไม่ได้ แต่ถ้าเครื่องมีก็ใช้ได้เลย
-      { name: t('ui.common.ayuthayaMacOSNotFloat'), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
-      { name: 'Thonburi (macOS)', value: 'Thonburi, "Leelawadee UI", sans-serif' },
+      // [alpha.144] Thonburi ขึ้นแทน Ayuthaya (วัดแล้ว Ayuthaya วางวรรณยุกต์ห่างกว่าตัวอื่น 4 เท่า)
+      { name: t('ui.fonts.thonburiMacNoFloat'), value: 'Thonburi, "Leelawadee UI", sans-serif' },
+      { name: t('ui.fonts.ayuthayaMacFloat'), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
       { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
       { name: 'Sarabun', value: 'Sarabun, sans-serif' },
       { name: 'Noto Sans Thai', value: '"Noto Sans Thai", sans-serif' },
@@ -500,7 +504,8 @@ export function settingsDialog(openTab, opts = {}) {
     { name: t('ui.dlg.defaultNovelCaseRatio'), value: '' },
     { name: 'Sarabun', value: '"Sarabun", sans-serif' },
     { name: 'TH Sarabun New', value: '"TH Sarabun New", sans-serif' },
-    { name: t('ui.common.ayuthayaMacOSNotFloat'), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
+    // [alpha.144] เลิกชูฟอนต์ที่วรรณยุกต์ลอยเป็นตัวเลือกแนะนำ — Thonburi ทำหน้าที่นี้แทน
+    { name: t('ui.fonts.thonburiMacNoFloat'), value: 'Thonburi, "Leelawadee UI", sans-serif' },
     { name: 'Noto Serif Thai', value: '"Noto Serif Thai", serif' },
     { name: 'Noto Sans Thai', value: '"Noto Sans Thai", sans-serif' },
     { name: 'Leelawadee UI', value: '"Leelawadee UI", sans-serif' },
@@ -983,8 +988,8 @@ export function settingsDialog(openTab, opts = {}) {
     // — ไม่งั้นแถวที่ตั้งไว้ว่าใช้กับบทเท่านั้นจะไม่โผล่ในตัวอย่างเลย
     const sample = q('#st-fonts-sample');
     sample.textContent = t('ui.dlg.iNTNightSceneOne');
-    sample.style.fontFamily = withSpFamily(
-      q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT, n.screenplay > 0);
+    sample.style.fontFamily = withThaiFallback(withSpFamily(
+      q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT, n.screenplay > 0));
     applySpFont(q('#st-spfontfamily')?.value ?? s.spFontFamily, W.langFonts);
   };
   function renderFonts() {
@@ -1298,7 +1303,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.fontFamily = origFontFamily;
     // [alpha.97 ข้อ 12] สแตกนิยาย = สแตกฐานอย่างเดียว (ชั้น override ของ "รูปแบบนิยาย" ถูกตัดแล้ว)
     document.documentElement.style.setProperty('--ed-font',
-      withLangFamily(origFontFamily || DEFAULT_PROSE_FONT, nLangBack.prose > 0));
+      withThaiFallback(withLangFamily(origFontFamily || DEFAULT_PROSE_FONT, nLangBack.prose > 0)));
     s.focusDim = origDim; applyFocusDim();
     document.body.classList.toggle('k-ln', origLn);
     s.spellCheck = origSpell; s.autoMention = origMention;
