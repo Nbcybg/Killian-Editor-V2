@@ -12,6 +12,10 @@ export const ST_OK = 'ok';                 // โหลดสำเร็จ ท
 export const ST_OFF = 'off';               // ผู้ใช้ปิดเอง
 export const ST_OLD = 'old';               // ต้องใช้โปรแกรมรุ่นใหม่กว่า
 export const ST_ERR = 'err';               // โหลดแล้วพัง (ถูกปิดอัตโนมัติ)
+// [alpha.148] ปลั๊กอินในโฟลเดอร์โปรเจกต์ที่ผู้ใช้ยังไม่อนุญาต — **ไม่ถูกรันเลย**
+// เดิมทุกไฟล์ใน `<โปรเจกต์>/Plugins/*/main.js` ถูกรันทันทีที่เปิดโปรเจกต์ โดยไม่ถามสักคำ
+// = เปิดโปรเจกต์ที่คนอื่นส่งมา (zip/นำเข้า) แล้วโค้ดในนั้นอ่าน/เขียน/ลบไฟล์ใดก็ได้ในเครื่อง
+export const ST_UNTRUSTED = 'untrusted';
 
 /** ที่มา */
 export const ORIGIN_USER = 'user';
@@ -54,7 +58,8 @@ export function parseManifest(raw, folderName = '') {
 }
 
 /** สถานะของปลั๊กอินหนึ่งตัว */
-export function pluginStatus(p, { appVersion = '0', disabled = false, failed = false } = {}) {
+export function pluginStatus(p, { appVersion = '0', disabled = false, failed = false, untrusted = false } = {}) {
+  if (untrusted) return ST_UNTRUSTED;
   if (p && p.minAppVersion && !versionAtLeast(appVersion, p.minAppVersion)) return ST_OLD;
   if (failed) return ST_ERR;
   if (disabled) return ST_OFF;
@@ -76,7 +81,8 @@ export function mergePluginList(loaded = [], failed = [], opts = {}) {
       ...p,
       failed: !!failedFlag,
       error: error || p.error || '',
-      status: pluginStatus(p, { appVersion: app, disabled: isDisabled(p.name), failed: failedFlag }),
+      status: pluginStatus(p, { appVersion: app, disabled: isDisabled(p.name), failed: failedFlag,
+                                untrusted: !!(p && p.untrusted) }),
       shadowed: false,
     };
     if (!prev) { byName.set(p.name, row); return; }
@@ -87,13 +93,14 @@ export function mergePluginList(loaded = [], failed = [], opts = {}) {
   };
   for (const p of (loaded || [])) push(p, false, '');
   // `skipped` = ถูกข้ามเพราะผู้ใช้ปิดไว้ ไม่ใช่ "พัง" → สถานะต้องเป็น "ปิดอยู่" ไม่ใช่ "มีปัญหา"
-  for (const p of (failed || [])) push(p, !(p && p.skipped), p && p.error);
+  // `untrusted` = ยังไม่ได้อนุญาต ไม่ใช่ "พัง" เช่นกัน
+  for (const p of (failed || [])) push(p, !(p && (p.skipped || p.untrusted)), p && p.error);
   return sortPlugins([...byName.values()]);
 }
 
-/** เรียง: ทำงานอยู่ก่อน → มีปัญหา → ปิดไว้ · ในกลุ่มเดียวกันเรียงตามชื่อ */
+/** เรียง: รออนุญาต → มีปัญหา → ทำงานอยู่ → ปิดไว้ · ในกลุ่มเดียวกันเรียงตามชื่อ */
 export function sortPlugins(list) {
-  const rank = { [ST_ERR]: 0, [ST_OLD]: 1, [ST_OK]: 2, [ST_OFF]: 3 };
+  const rank = { [ST_UNTRUSTED]: -1, [ST_ERR]: 0, [ST_OLD]: 1, [ST_OK]: 2, [ST_OFF]: 3 };
   return [...(list || [])].sort((a, b) => {
     const d = (rank[a.status] ?? 9) - (rank[b.status] ?? 9);
     return d || String(a.name).localeCompare(String(b.name), 'th');
@@ -102,15 +109,51 @@ export function sortPlugins(list) {
 
 /** นับตามสถานะ — ใช้บนหัวแผง */
 export function pluginCounts(list) {
-  const c = { total: 0, ok: 0, off: 0, err: 0, old: 0 };
+  const c = { total: 0, ok: 0, off: 0, err: 0, old: 0, untrusted: 0 };
   for (const p of (list || [])) {
     c.total++;
-    if (p.status === ST_OK) c.ok++;
+    if (p.status === ST_UNTRUSTED) c.untrusted++;
+    else if (p.status === ST_OK) c.ok++;
     else if (p.status === ST_OFF) c.off++;
     else if (p.status === ST_OLD) c.old++;
     else if (p.status === ST_ERR) c.err++;
   }
   return c;
+}
+
+// ═══════════ [alpha.148] การอนุญาตปลั๊กอินของโปรเจกต์ ═══════════
+//
+// อนุญาต "ชุดปลั๊กอินชุดนี้ของโปรเจกต์นี้" ไม่ใช่ "โปรเจกต์นี้ตลอดไป" — เก็บลายนิ้วมือของไฟล์ไว้
+// ถ้ามีใครเพิ่ม/แก้ปลั๊กอินทีหลัง (ซิงก์โฟลเดอร์ · แตกซิปทับ) ลายนิ้วมือเปลี่ยน → ต้องถามใหม่
+// ที่เก็บการอนุญาตอยู่ใน userData ของเครื่อง **ไม่ใช่ในโปรเจกต์** (ของในโปรเจกต์ผู้ส่งแก้เองได้)
+
+/** FNV-1a 32 บิต — แค่ตรวจว่า "เปลี่ยนไหม" ไม่ได้ใช้กันการปลอมแปลงเชิงเข้ารหัส */
+export function hashText(s) {
+  let h = 0x811c9dc5;
+  const str = String(s == null ? '' : s);
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+/**
+ * ลายนิ้วมือของชุดปลั๊กอินในโปรเจกต์
+ * @param {{folder:string, manifest:string, code:string}[]} entries เนื้อไฟล์ดิบ (อ่านไม่ได้ = ส่งค่าว่าง)
+ * @returns {string} '' เมื่อไม่มีปลั๊กอินเลย
+ */
+export function pluginFingerprint(entries) {
+  const rows = (entries || []).filter((e) => e && e.folder)
+    .map((e) => String(e.folder) + '|' + hashText(e.manifest) + '|' + hashText(e.code))
+    .sort();
+  return rows.length ? rows.length + ':' + hashText(rows.join('\n')) : '';
+}
+
+/** ชุดนี้ได้รับอนุญาตแล้วหรือยัง (ไม่มีปลั๊กอินเลย = ไม่ต้องถาม) */
+export function isPluginSetTrusted(trust, root, fp) {
+  if (!fp) return true;
+  return !!(trust && root && trust[root] === fp);
 }
 
 /** ชื่อโฟลเดอร์ที่ปลอดภัย จากชื่อที่ผู้ใช้พิมพ์ */

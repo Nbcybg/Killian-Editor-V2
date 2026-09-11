@@ -700,7 +700,7 @@ function readJournal() {
   catch { return HD.newJournal(); }
 }
 function writeJournal(j) {
-  try { fs.mkdirSync(histDir(), { recursive: true }); fs.writeFileSync(histFile(), JSON.stringify(j, null, 2), 'utf-8'); }
+  try { writeFileAtomic(histFile(), JSON.stringify(j, null, 2), 'utf-8'); }
   catch (e) { console.error('[history] เขียนสมุดไม่สำเร็จ', e); }
 }
 /** คัดสำเนาไฟล์เดิมเก็บไว้ → คืน id ของก้อน · ไฟล์ยังไม่มี = null (ย้อนกลับ = ลบทิ้ง) */
@@ -879,17 +879,18 @@ ipcMain.handle('menu:itemState', (e, ids) => {
 
 // ---------------- IPC: filesystem (ผ่าน main เท่านั้น — renderer ไม่แตะ fs ตรง) ----------------
 const H = (name, fn) => ipcMain.handle(name, (e, ...a) => fn(...a));
+// [alpha.148] เขียนแบบ atomic (ไฟล์ชั่วคราว → rename) + กรองไฟล์ขยะของระบบ — เหตุผลเต็มอยู่หัว fs-safe.cjs
+const { isJunkName, writeFileAtomic } = require('./fs-safe.cjs');
 H('fs:readFile', (p) => fs.readFileSync(p, 'utf-8'));
-H('fs:writeFile', (p, data) => withHistory('write', [p], () => {
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, data, 'utf-8'); return true;
-}));
+H('fs:writeFile', (p, data) => withHistory('write', [p], () => writeFileAtomic(p, data, 'utf-8')));
 H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8')));
 H('fs:exists', (p) => fs.existsSync(p));
+// [alpha.148] `._ชื่อ.json` ของ macOS (ก๊อปผ่านไดรฟ์นอก/ซิป) เคยโผล่เป็นแถวผีทุกหมวด — กรองที่ด่านเดียวนี้
+// แทนการไล่แปะ 31 จุดเรียก (จุดใหม่ที่เพิ่มทีหลังได้ไปด้วยฟรี)
 H('fs:listDirs', (p) => fs.readdirSync(p, { withFileTypes: true })
-  .filter((d) => d.isDirectory()).map((d) => d.name));
+  .filter((d) => d.isDirectory() && !isJunkName(d.name)).map((d) => d.name));
 H('fs:listFiles', (p, ext) => fs.existsSync(p) ? fs.readdirSync(p, { withFileTypes: true })
-  .filter((d) => d.isFile() && (!ext || d.name.endsWith(ext))).map((d) => d.name) : []);
+  .filter((d) => d.isFile() && !isJunkName(d.name) && (!ext || d.name.endsWith(ext))).map((d) => d.name) : []);
 H('fs:mkdir', (p) => { fs.mkdirSync(p, { recursive: true }); return true; });
 // ย้าย/เปลี่ยนชื่อ = สองด้านในบันทึกเดียว (ต้นทางหายไป · ปลายทางถูกสร้างหรือทับของเดิม)
 H('fs:move', (src, dst) => withHistory('move', [src, dst], () => {
@@ -1038,11 +1039,7 @@ H('fs:writeImageData', (dstDir, name, base64) => {
 
 // เขียนไฟล์ไบนารีจาก byte array (ส่งออก .zip ฯลฯ) — renderer ส่ง Uint8Array มาทาง IPC
 // สำคัญ: ห้ามส่งเป็น string แล้วเขียน utf-8 (ไบต์ ≥0x80 จะบวมเป็น multi-byte ไฟล์เสีย)
-H('fs:writeBytes', (p, bytes) => withHistory('write', [p], () => {
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, Buffer.from(bytes));
-  return true;
-}));
+H('fs:writeBytes', (p, bytes) => withHistory('write', [p], () => writeFileAtomic(p, bytes)));
 // คัดลอกไฟล์ตรง ๆ (รักษาไบนารี — ใช้ตอนสำรองโปรเจกต์ ซึ่งมีรูปภาพปนอยู่)
 H('fs:copyFile', (src, dst) => withHistory('copy', [dst], () => {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
@@ -1050,14 +1047,24 @@ H('fs:copyFile', (src, dst) => withHistory('copy', [dst], () => {
   return true;
 }));
 // อ่านไฟล์เป็นไบต์ (ใช้แพ็ก zip ให้รูปไม่เสีย)
-H('fs:readBytes', (p) => Array.from(fs.readFileSync(p)));
+// [alpha.148] ส่ง Buffer ตรง ๆ (ไปถึง renderer เป็น Uint8Array) — เดิม `Array.from()` แปลงทุกไบต์เป็น
+// ตัวเลข JS แยกตัว: รูป 5MB = อาร์เรย์ 5 ล้านช่องวิ่งข้าม IPC → ส่งออก ZIP ของโปรเจกต์ที่มีรูปเยอะช้ามาก/กินแรม
+H('fs:readBytes', (p) => fs.readFileSync(p));
 
 // ---- ตรวจคำผิด: คลังคำหลัก (ไฟล์แยกใน assets/ ไม่ฝัง bundle) ----
 const ASSETS = path.join(__dirname, 'renderer', 'assets');
-H('spell:base', () => {
-  const rd = (f) => { try { return fs.readFileSync(path.join(ASSETS, f), 'utf-8'); } catch { return ''; } };
-  return { th: rd('dict_th.txt'), en: rd('dict_en.txt') };
-});
+// [alpha.148] คลังคำที่ **ดาวน์โหลดมา** เก็บใน userData — เดิมเขียนลง assets/ ซึ่งในตัวที่ build แล้ว
+// อยู่ใน app.asar (อ่านได้อย่างเดียว) → ดาวน์โหลดอัตโนมัติล้มเงียบทุกครั้ง · ตัว portable ของ Windows
+// ยังแตกตัวเองลงโฟลเดอร์ชั่วคราวใหม่ทุกครั้งที่เปิด ต่อให้เขียนได้ก็หายตอนปิดโปรแกรม
+function userDictDir() { return path.join(app.getPath('userData'), 'dictionaries'); }
+/** อ่านคลังคำ: ของที่ดาวน์โหลดไว้ (ใหม่กว่า) ก่อน → ของที่มากับโปรแกรม */
+function readDict(f) {
+  for (const d of [userDictDir(), ASSETS]) {
+    try { const s = fs.readFileSync(path.join(d, f), 'utf-8'); if (s) return s; } catch {}
+  }
+  return '';
+}
+H('spell:base', () => ({ th: readDict('dict_th.txt'), en: readDict('dict_en.txt') }));
 // คำเสริมของโปรเจกต์: <root>/dictionary.json (personal) + <root>/Plugins/dictionaries/*.txt (ปลั๊กอิน)
 H('spell:extra', (root) => {
   const words = new Set();
@@ -1083,12 +1090,12 @@ H('spell:addWord', (root, word) => {
   try { d = JSON.parse(fs.readFileSync(p, 'utf-8')); } catch {}
   const words = new Set((d.words || []).map(String));
   words.add(String(word).trim());
-  fs.writeFileSync(p, JSON.stringify({ words: [...words].sort() }, null, 2), 'utf-8');
+  writeFileAtomic(p, JSON.stringify({ words: [...words].sort() }, null, 2), 'utf-8');
   return true;
 });
 // ดาวน์โหลดคลังคำ (auto-provision ถ้าไฟล์หาย / อัปเดตจาก URL) → เขียนลง assets/
 H('spell:download', async (url, which) => {
-  const dest = path.join(ASSETS, which === 'en' ? 'dict_en.txt' : 'dict_th.txt');
+  const dest = path.join(userDictDir(), which === 'en' ? 'dict_en.txt' : 'dict_th.txt');
   const https = require('https');
   const text = await new Promise((resolve, reject) => {
     const get = (u, redirects = 0) => https.get(u, (res) => {
@@ -1100,13 +1107,14 @@ H('spell:download', async (url, which) => {
     }).on('error', reject);
     get(url);
   });
-  fs.mkdirSync(ASSETS, { recursive: true });
-  fs.writeFileSync(dest, text, 'utf-8');
+  writeFileAtomic(dest, text, 'utf-8');
   return text.split('\n').filter(Boolean).length;   // จำนวนคำที่ได้
 });
 // มีคลังคำหลักอยู่แล้วหรือไม่ (ใช้ตัดสินใจ auto-download)
 H('spell:hasBase', () => {
-  try { return fs.statSync(path.join(ASSETS, 'dict_th.txt')).size > 0; } catch { return false; }
+  return [userDictDir(), ASSETS].some((d) => {
+    try { return fs.statSync(path.join(d, 'dict_th.txt')).size > 0; } catch { return false; }
+  });
 });
 H('fs:copyInto', (src, dstDir) => {
   fs.mkdirSync(dstDir, { recursive: true });
@@ -1223,9 +1231,7 @@ H('plugins:listGlobal', () => {
 });
 H('settings:writeGlobal', (obj) => {
   try {
-    const p = globalSettingsPath();
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(obj, null, 2), 'utf-8');
+    writeFileAtomic(globalSettingsPath(), JSON.stringify(obj, null, 2), 'utf-8');
     return true;
   } catch { return false; }
 });
@@ -1306,7 +1312,7 @@ H('pdf:fromHtml', async (html, outPath, opts = {}) => {
 // [alpha.81r2] คืน "ไบต์" แทนการเขียนไฟล์ — ฝั่ง renderer ต้องเอา PDF หลายก้อนมาต่อกัน
 // (หน้าปก + หน้ารายชื่อตัวละคร + เนื้อเรื่อง) แล้วประทับเลขหน้าเองด้วย pdf-lib
 // จึงคุมได้ว่า "เลขหน้าไม่นับหน้าปกและหน้ารายชื่อ" ตามธรรมเนียมหนังสือจริง
-H('pdf:htmlToBytes', async (html, opts = {}) => Array.from(await htmlToPdfBuffer(html, opts)));
+H('pdf:htmlToBytes', async (html, opts = {}) => await htmlToPdfBuffer(html, opts));   // [alpha.148] Buffer ตรง ๆ
 H('recent:push', (p) => { pushRecent(p); return true; });
 H('recent:remove', (p) => { removeRecent(p); return true; });
 H('recent:list', () => readRecent());

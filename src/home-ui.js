@@ -5,6 +5,7 @@ import { activate, closeTab, loadProject, newProject } from './app.js';
 // [alpha.60r3 ข้อ 9] ปุ่มส่งออก/นำเข้าโปรเจกต์บนหน้าแรก
 import { exportProjectZip, importProjectZip } from './export-zip.js';
 import { initIcons } from './icons.js';
+import { fileUrlFromPath } from './file-url.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
 export const HOME_VIEWS = [
@@ -295,7 +296,8 @@ export function createProjectCard(project, onOpen) {
   const cover = el('div', 'home-card-cover');
   if (project.cover) {
     const img = el('img', 'home-card-img');
-    img.src = 'file://' + project.root.replace(/\\/g, '/') + '/' + project.cover;
+    // [alpha.148] เดิมต่อ 'file://' เอง → โฟลเดอร์ชื่อมี # ? % (เช่น "นิยาย #2") รูปไม่ขึ้น · Windows ได้ URL ผิดรูป
+    img.src = fileUrlFromPath(String(project.root).replace(/[\\/]+$/, '') + '/' + project.cover);
     img.onerror = () => { cover.innerHTML = '<div class="home-card-cover-ph">📖</div>'; };
     cover.append(img);
   } else {

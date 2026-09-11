@@ -14403,13 +14403,13 @@
         if (text.startsWith("---")) {
           const end = text.indexOf("\n---", 3);
           if (end !== -1) {
-            for (const line of text.slice(3, end).split("\n")) {
+            for (const line of text.slice(3, end).replace(/\r/g, "").split("\n")) {
               const m = /^(\w[\w-]*):\s*(.*)$/.exec(line);
               if (!m) continue;
               const v2 = m[2].trim();
               meta2[m[1]] = v2.startsWith("[") && v2.endsWith("]") ? v2.slice(1, -1).split(",").map((x) => x.trim()).filter(Boolean) : v2;
             }
-            body = text.slice(end + 4).replace(/^\n+/, "");
+            body = text.slice(end + 4).replace(/^\r?\n/, "").replace(/^\r?\n/, "");
           }
         }
         return { meta: meta2, body };
@@ -14419,7 +14419,7 @@
         for (const [k, v2] of Object.entries(meta2))
           out.push(Array.isArray(v2) ? `${k}: [${v2.join(", ")}]` : `${k}: ${v2}`);
         out.push("---\n");
-        return out.join("\n") + body;
+        return out.join("\n") + (/^\r?\n/.test(body) ? "\n" : "") + body;
       }
       function countWords8(body) {
         const t3 = body.replace(/[#>*_~\-!\[\]()]/g, " ");
@@ -16545,8 +16545,8 @@
       if (els.length !== list.length) return 0;
       let n2 = 0;
       els.forEach((e, i5) => {
-        const pad3 = Number(list[i5] && list[i5].pad);
-        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad3) && Math.abs(pad3) > 0.5 ? pad3 : 0) + "px");
+        const pad4 = Number(list[i5] && list[i5].pad);
+        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad4) && Math.abs(pad4) > 0.5 ? pad4 : 0) + "px");
         n2++;
       });
       return n2;
@@ -19300,8 +19300,8 @@
             break;
           }
         }
-        const pad3 = ch > 0 ? Math.max(0, Math.round((ch - used + g) * 10) / 10) : 0;
-        out.push({ pos, page: basePage + i5, pad: pad3 });
+        const pad4 = ch > 0 ? Math.max(0, Math.round((ch - used + g) * 10) / 10) : 0;
+        out.push({ pos, page: basePage + i5, pad: pad4 });
       }
       return out;
     });
@@ -19970,12 +19970,12 @@
     if (min === dt) return "top";
     return "bottom";
   }
-  function edgeZone(px2, py2, rect, pad3 = 12) {
+  function edgeZone(px2, py2, rect, pad4 = 12) {
     const { x, y, w, h } = rect;
     if (px2 < x || px2 > x + w || py2 < y || py2 > y + h) return null;
     const dl = px2 - x, dr = x + w - px2, dt = py2 - y, db = y + h - py2;
     const m = Math.min(dl, dr, dt, db);
-    if (m > pad3) return null;
+    if (m > pad4) return null;
     if (m === dl) return "left";
     if (m === dr) return "right";
     if (m === dt) return "top";
@@ -27677,14 +27677,14 @@
     const y2 = Math.max(...list.map((i5) => i5.y + i5.h));
     return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
   }
-  function fitScale2(bounds, viewW, viewH, pad3 = 40) {
+  function fitScale2(bounds, viewW, viewH, pad4 = 40) {
     if (!bounds || bounds.w <= 0 || bounds.h <= 0) return 1;
-    const s = Math.min((viewW - pad3 * 2) / bounds.w, (viewH - pad3 * 2) / bounds.h);
+    const s = Math.min((viewW - pad4 * 2) / bounds.w, (viewH - pad4 * 2) / bounds.h);
     return clamp2(Number.isFinite(s) ? Math.min(s, 1) : 1, ZOOM_MIN, ZOOM_MAX);
   }
-  function fitView(board2, viewW, viewH, pad3 = 40) {
+  function fitView(board2, viewW, viewH, pad4 = 40) {
     const b = boardBounds(board2);
-    const zoom = fitScale2(b, viewW, viewH, pad3);
+    const zoom = fitScale2(b, viewW, viewH, pad4);
     if (!b.w || !b.h) return { zoom: 1, panX: 0, panY: 0 };
     return {
       zoom,
@@ -30169,7 +30169,7 @@
       if (!dest) return false;
       setBusy(t("ui.galleryExport.busyWriteFile"));
       const bytes = await zip.generateAsync({ type: "uint8array" });
-      await kapi.writeBytes(dest, Array.from(bytes));
+      await kapi.writeBytes(dest, bytes);
       setStatus(tf("ui.galleryExport.exportImageItemDone", n2) + dest);
       return true;
     } catch (e) {
@@ -30180,16 +30180,16 @@
       clearBusy();
     }
   }
-  async function exportMoodBoard(root, albumId2, board2, { pad: pad3 = 40, bg = "#1b1d21" } = {}) {
+  async function exportMoodBoard(root, albumId2, board2, { pad: pad4 = 40, bg = "#1b1d21" } = {}) {
     const items = boardOrder(board2);
     if (!items.length) {
       setStatus(t("ui.galleryExport.boardEmptyNotHas"));
       return false;
     }
     const b = boardBounds(items);
-    const scale2 = Math.min(1, MAX_EDGE / Math.max(b.w + pad3 * 2, b.h + pad3 * 2));
-    const W = Math.max(1, Math.round((b.w + pad3 * 2) * scale2));
-    const H2 = Math.max(1, Math.round((b.h + pad3 * 2) * scale2));
+    const scale2 = Math.min(1, MAX_EDGE / Math.max(b.w + pad4 * 2, b.h + pad4 * 2));
+    const W = Math.max(1, Math.round((b.w + pad4 * 2) * scale2));
+    const H2 = Math.max(1, Math.round((b.h + pad4 * 2) * scale2));
     setBusy(t("ui.galleryExport.busyDrawBoardMood"));
     try {
       const canvas = document.createElement("canvas");
@@ -30210,8 +30210,8 @@
           im.src = url;
         });
         if (!img) continue;
-        const x = (it.x - b.x + pad3) * scale2;
-        const y = (it.y - b.y + pad3) * scale2;
+        const x = (it.x - b.x + pad4) * scale2;
+        const y = (it.y - b.y + pad4) * scale2;
         g.drawImage(img, x, y, it.w * scale2, it.h * scale2);
       }
       clearBusy();
@@ -36600,11 +36600,11 @@
           if (!g) return false;
           const nodes = this._nodes.filter((n2) => g.childrenIds.includes(n2.id));
           if (!nodes.length) return false;
-          const pad3 = 22;
-          g.x = Math.min(...nodes.map((n2) => n2.x)) - pad3;
-          g.y = Math.min(...nodes.map((n2) => n2.y)) - pad3 - 12;
-          g.width = Math.max(...nodes.map((n2) => n2.x + n2.width)) + pad3 - g.x;
-          g.height = Math.max(...nodes.map((n2) => n2.y + n2.height)) + pad3 - g.y;
+          const pad4 = 22;
+          g.x = Math.min(...nodes.map((n2) => n2.x)) - pad4;
+          g.y = Math.min(...nodes.map((n2) => n2.y)) - pad4 - 12;
+          g.width = Math.max(...nodes.map((n2) => n2.x + n2.width)) + pad4 - g.x;
+          g.height = Math.max(...nodes.map((n2) => n2.y + n2.height)) + pad4 - g.y;
           this._dirty = true;
           return true;
         }
@@ -60965,11 +60965,11 @@
               originX: "right",
               originY: "top"
             });
-            const pad3 = 6;
+            const pad4 = 6;
             kids.push(new import_fabric.fabric.Rect({
-              left: W - 10 - (txt.width + pad3 * 2),
+              left: W - 10 - (txt.width + pad4 * 2),
               top: 6,
-              width: txt.width + pad3 * 2,
+              width: txt.width + pad4 * 2,
               height: 16,
               rx: 8,
               ry: 8,
@@ -69060,17 +69060,42 @@ ${h.text}`;
     }
   });
 
+  // src/local-date.js
+  function localDay(d = /* @__PURE__ */ new Date()) {
+    const x = d instanceof Date ? d : new Date(d);
+    return x.getFullYear() + "-" + pad(x.getMonth() + 1) + "-" + pad(x.getDate());
+  }
+  function addDays(day, n2) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || ""));
+    if (!m) return "";
+    return localDay(new Date(+m[1], +m[2] - 1, +m[3] + (Number(n2) || 0)));
+  }
+  function fmtUtcStamp(ts) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})/.exec(ts || "");
+    if (!m) return ts || "";
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
+    return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  var pad;
+  var init_local_date = __esm({
+    "src/local-date.js"() {
+      pad = (n2) => String(n2).padStart(2, "0");
+    }
+  });
+
   // src/word-history.js
   function getWordHistory() {
     if (!state.meta) return [];
     return state.meta.wordHistory || [];
   }
-  async function recordDailyWords(totalWords) {
-    if (!state.meta || !state.root) return;
-    const today2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  async function recordDailyWords(totalWords, root = state.root) {
+    if (!state.meta || !state.root) return false;
+    if (root && state.root !== root) return false;
+    const today2 = localDay();
     const hist = getWordHistory();
     const idx4 = hist.findIndex((h) => h.date === today2);
     if (idx4 >= 0) {
+      if (hist[idx4].words === totalWords && state.meta.wordHistory === hist) return false;
       hist[idx4].words = totalWords;
     } else {
       hist.push({ date: today2, words: totalWords });
@@ -69081,6 +69106,38 @@ ${h.text}`;
       const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       await saveProjectMeta2();
     } catch {
+    }
+    return true;
+  }
+  function scheduleWordHistory(delay = WORD_HISTORY_DELAY) {
+    if (!state.root) return;
+    if (WH.timer) clearTimeout(WH.timer);
+    WH.root = state.root;
+    WH.timer = setTimeout(() => {
+      WH.timer = null;
+      flushWordHistory({ force: true }).catch(() => {
+      });
+    }, delay);
+  }
+  function wordHistoryPending() {
+    return !!WH.timer;
+  }
+  async function flushWordHistory({ force = false, timeoutMs = 2e3 } = {}) {
+    const pending = !!WH.timer;
+    if (WH.timer) {
+      clearTimeout(WH.timer);
+      WH.timer = null;
+    }
+    const root = WH.root || state.root;
+    WH.root = null;
+    if (!pending && !force || !root || state.root !== root) return false;
+    const work = countProjectWords().then((w) => recordDailyWords(w, root));
+    const timeout = new Promise((r) => setTimeout(() => r(false), timeoutMs));
+    try {
+      return await Promise.race([work, timeout]);
+    } catch (e) {
+      log("warn", "flushWordHistory failed", e);
+      return false;
     }
   }
   async function countProjectWords() {
@@ -69175,10 +69232,10 @@ ${h.text}`;
     if (!hist.length) return 0;
     const sorted = [...hist].sort((a, b) => b.date.localeCompare(a.date));
     let streak = 0;
-    const today2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const today2 = localDay();
     const todayEntry = sorted.find((h) => h.date === today2);
     if (!todayEntry || todayEntry.words <= 0) {
-      const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+      const yesterday = addDays(today2, -1);
       const yesterdayEntry = sorted.find((h) => h.date === yesterday);
       if (!yesterdayEntry || yesterdayEntry.words <= 0) return 0;
       streak = 1;
@@ -69201,11 +69258,14 @@ ${h.text}`;
     }
     return streak;
   }
-  var import_md7;
+  var import_md7, WH, WORD_HISTORY_DELAY;
   var init_word_history = __esm({
     "src/word-history.js"() {
       init_core();
       import_md7 = __toESM(require_md());
+      init_local_date();
+      WH = { timer: null, root: null };
+      WORD_HISTORY_DELAY = 15e3;
     }
   });
 
@@ -72463,7 +72523,7 @@ ${h.text}`;
     const noStatus = scenes.filter((s) => !(s.row && s.row.status));
     if (noStatus.length) pending.push({ text: tf("ui.central.sceneCantSetStatus", noStatus.length) });
     if (state.meta && Array.isArray(state.meta.wordHistory) && state.meta.wordHistory.length) {
-      const today2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const today2 = localDay();
       const t22 = state.meta.wordHistory.find((w) => w.date === today2);
       if (!t22 || !t22.words) pending.push({ text: t("ui.central.cantWrite") });
     }
@@ -72490,6 +72550,7 @@ ${h.text}`;
       init_auto_link_ui();
       init_project_scan();
       init_session_notes();
+      init_local_date();
       REFRESH_DELAY = 1500;
       stale = true;
       timer = null;
@@ -74346,14 +74407,14 @@ ${h.text}`;
   function fabAnimMs(n2, stagger = 45, dur = 220) {
     return Math.max(0, Math.max(0, n2 - 1) * stagger) + dur;
   }
-  function clampFabPos(pos, size, vw, vh, pad3 = 6) {
+  function clampFabPos(pos, size, vw, vh, pad4 = 6) {
     const w = size && size.width > 0 ? size.width : 52;
     const h = size && size.height > 0 ? size.height : 52;
-    const maxL = Math.max(pad3, vw - w - pad3);
-    const maxT = Math.max(pad3, vh - h - pad3);
+    const maxL = Math.max(pad4, vw - w - pad4);
+    const maxT = Math.max(pad4, vh - h - pad4);
     return {
-      left: Math.min(Math.max(pad3, Math.round(pos && pos.left || 0)), maxL),
-      top: Math.min(Math.max(pad3, Math.round(pos && pos.top || 0)), maxT)
+      left: Math.min(Math.max(pad4, Math.round(pos && pos.left || 0)), maxL),
+      top: Math.min(Math.max(pad4, Math.round(pos && pos.top || 0)), maxT)
     };
   }
   var FAB_MAX, FAB_DISPLAYS, FAB_DISPLAY_LABELS, FAB_ACTIONS, FAB_GROUPS, DEFAULT_FAB_ACTIONS, DEG;
@@ -78939,15 +79000,65 @@ ${h.text}`;
     }
   });
 
+  // src/recycle-core.js
+  function trashedAt(name5, mtime, now = Date.now()) {
+    const m = /^([0-9a-z]{8,9})-/.exec(String(name5 || ""));
+    if (m) {
+      const t3 = parseInt(m[1], 36);
+      if (t3 >= MIN_TS && t3 <= now + DAY) return t3;
+    }
+    return Number(mtime) || 0;
+  }
+  function isTrashCompanion(name5) {
+    return /\.k2restore\.json$/i.test(String(name5 || "")) || /\.vis\.csv$/i.test(String(name5 || ""));
+  }
+  function purgeCandidates(entries, days, now = Date.now()) {
+    if (!(Number(days) > 0)) return [];
+    const cutoff = now - Number(days) * DAY;
+    return (entries || []).filter((e) => e && e.name && !isTrashCompanion(e.name) && !String(e.name).startsWith("._")).filter((e) => trashedAt(e.name, e.mtime, now) < cutoff).map((e) => e.name);
+  }
+  function originalName(name5, now = Date.now()) {
+    const s = String(name5 || "");
+    const m = /^([0-9a-z]{8,9})-(.+)$/.exec(s);
+    if (m) {
+      const t3 = parseInt(m[1], 36);
+      if (t3 >= MIN_TS && t3 <= now + DAY) return m[2];
+    }
+    return s;
+  }
+  function nameCandidate(name5, i5, { dir: dir2 = false } = {}) {
+    const s = String(name5 || "");
+    if (!(i5 > 1)) return s;
+    const m = dir2 ? null : /^(.+?)(\.[^./\\]{1,10})$/.exec(s);
+    return m ? m[1] + "-" + i5 + m[2] : s + "-" + i5;
+  }
+  var MIN_TS, DAY;
+  var init_recycle_core = __esm({
+    "src/recycle-core.js"() {
+      MIN_TS = Date.UTC(2020, 0, 1);
+      DAY = 864e5;
+    }
+  });
+
   // src/recycle.js
   var recycle_exports = {};
   __export(recycle_exports, {
     deleteToTrash: () => deleteToTrash,
+    listPurgeable: () => listPurgeable,
     purgeRecycle: () => purgeRecycle,
     restoreFromTrash: () => restoreFromTrash
   });
+  async function freeName(dir2, name5, opts = {}) {
+    for (let i5 = 1; i5 < 500; i5++) {
+      const cand = nameCandidate(name5, i5, opts);
+      if (opts.taken && opts.taken.has(cand)) continue;
+      if (!await kapi.exists(await kapi.join(dir2, cand))) return cand;
+    }
+    return nameCandidate(name5, Date.now(), opts);
+  }
   async function restoreFromTrash(p, fname) {
     const sidecar = p + ".k2restore.json";
+    let note = "";
     if (await kapi.exists(sidecar)) {
       const info = await kapi.readJson(sidecar);
       if (info.kind === "album" || info.kind === "image") {
@@ -78960,39 +79071,18 @@ ${h.text}`;
         return;
       }
       if (info.kind === "section") {
-        await kapi.move(p, await kapi.join(info.root, info.folderName));
+        const folder = await freeName(info.root, info.folderName, { dir: true });
+        await kapi.move(p, await kapi.join(info.root, folder));
+        if (folder !== info.folderName) note = tf("ui.trash.restoredRenamed", folder);
         await kapi.remove(sidecar);
         await buildTree2();
         smart.loadNames(state.root);
         refreshNetwork();
-        setStatus(t("ui.trash.recoverRestoreBookDone"));
+        setStatus(note || t("ui.trash.recoverRestoreBookDone"));
         return;
       }
-      if (info.kind === "scene") {
-        const dst = await kapi.join(info.dPath, "Chapters", info.folderName, info.sc.fileName);
-        await kapi.move(p, dst);
-        try {
-          if (await kapi.exists(p + ".vis.csv"))
-            await kapi.move(p + ".vis.csv", dst.replace(/\.md$/i, "") + "_vis.csv");
-        } catch {
-        }
-        const sf = await kapi.join(info.dPath, "scenes.json");
-        const d = await kapi.readJson(sf);
-        d.chapters = d.chapters || {};
-        d.chapters[info.chGuid] = [...d.chapters[info.chGuid] || [], info.sc];
-        await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-      } else if (info.kind === "chapter") {
-        await kapi.move(p, await kapi.join(info.dPath, "Chapters", info.ch.folderName));
-        const df = await kapi.join(info.dPath, "draft.json");
-        const d = await kapi.readJson(df);
-        d.chapters = [...d.chapters || [], info.ch];
-        await kapi.writeFile(df, JSON.stringify(d, null, 2));
-        const sf = await kapi.join(info.dPath, "scenes.json");
-        const s2 = await kapi.readJson(sf);
-        s2.chapters = s2.chapters || {};
-        s2.chapters[info.ch.guid] = info.scenes || [];
-        await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
-      }
+      if (info.kind === "scene") note = await restoreScene(p, info);
+      else if (info.kind === "chapter") note = await restoreChapter(p, info);
       await kapi.remove(sidecar);
     } else if (fname.endsWith(".json")) {
       let cat = "characters";
@@ -79002,17 +79092,122 @@ ${h.text}`;
       }
       const w = await kapi.join(state.root, "Wiki");
       const base4 = await kapi.exists(w) ? w : await kapi.exists(await kapi.join(state.root, "Bible")) ? await kapi.join(state.root, "Bible") : w;
-      await kapi.mkdir(await kapi.join(base4, cat));
-      await kapi.move(p, await kapi.join(base4, cat, fname.replace(/^[a-z0-9]+-/, "")));
+      const catDir = await kapi.join(base4, cat);
+      await kapi.mkdir(catDir);
+      const want = originalName(fname);
+      const name5 = await freeName(catDir, want);
+      await kapi.move(p, await kapi.join(catDir, name5));
+      if (name5 !== want) note = tf("ui.trash.restoredRenamed", name5);
     } else {
-      await kapi.mkdir(await kapi.join(state.root, "Memos"));
-      await kapi.move(p, await kapi.join(state.root, "Memos", fname.replace(/^[a-z0-9]+-/, "")));
+      const memoDir = await kapi.join(state.root, "Memos");
+      await kapi.mkdir(memoDir);
+      const want = originalName(fname);
+      const name5 = await freeName(memoDir, want);
+      await kapi.move(p, await kapi.join(memoDir, name5));
+      if (name5 !== want) note = tf("ui.trash.restoredRenamed", name5);
     }
     await buildTree2();
     smart.loadNames(state.root);
     refreshNetwork();
-    logAction("recycle", t("ui.trash.recoverRestoreDone"), { from: p, name: fname });
-    setStatus(t("ui.trash.recoverRestoreDone"));
+    logAction("recycle", t("ui.trash.recoverRestoreDone"), { from: p, name: fname, note });
+    setStatus(note || t("ui.trash.recoverRestoreDone"));
+  }
+  async function freeChapterFolder(dPath, draft, want) {
+    const taken = new Set((draft.chapters || []).map((c) => c.folderName));
+    return freeName(await kapi.join(dPath, "Chapters"), want, { dir: true, taken });
+  }
+  async function restoreScene(p, info) {
+    let note = "";
+    const df = await kapi.join(info.dPath, "draft.json");
+    const draft = await kapi.readJson(df).catch(() => ({}));
+    draft.chapters = draft.chapters || [];
+    let ch = draft.chapters.find((c) => c.guid === info.chGuid);
+    if (!ch) {
+      const folder = await freeChapterFolder(info.dPath, draft, info.folderName);
+      const order = Math.max(0, ...draft.chapters.map((c) => c.order || 0)) + 1;
+      const title2 = String(info.folderName || "").replace(/^\d+\s*-\s*/, "") || t("ui.common.chapter");
+      ch = {
+        guid: info.chGuid,
+        title: title2,
+        order,
+        status: "Outline",
+        act: "I",
+        date: "",
+        isFavorite: false,
+        folderName: folder,
+        restoredFromScene: true
+      };
+      draft.chapters.push(ch);
+      await kapi.writeFile(df, JSON.stringify(draft, null, 2));
+      note = tf("ui.trash.restoredChapterRebuilt", title2);
+    }
+    const chDir = await kapi.join(info.dPath, "Chapters", ch.folderName);
+    await kapi.mkdir(chDir);
+    const sc = { ...info.sc };
+    const fileName = await freeName(chDir, sc.fileName);
+    if (fileName !== sc.fileName) {
+      note = note || tf("ui.trash.restoredRenamed", fileName);
+      sc.fileName = fileName;
+    }
+    const dst = await kapi.join(chDir, fileName);
+    await kapi.move(p, dst);
+    try {
+      const visDst = dst.replace(/\.md$/i, "") + "_vis.csv";
+      if (await kapi.exists(p + ".vis.csv") && !await kapi.exists(visDst)) await kapi.move(p + ".vis.csv", visDst);
+    } catch {
+    }
+    const sf = await kapi.join(info.dPath, "scenes.json");
+    const d = await kapi.readJson(sf).catch(() => ({}));
+    d.chapters = d.chapters || {};
+    const rows = d.chapters[ch.guid] || [];
+    d.chapters[ch.guid] = rows.some((r) => r.id === sc.id) ? rows.map((r) => r.id === sc.id ? sc : r) : [...rows, sc];
+    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    return note;
+  }
+  async function restoreChapter(p, info) {
+    let note = "";
+    const df = await kapi.join(info.dPath, "draft.json");
+    const draft = await kapi.readJson(df).catch(() => ({}));
+    draft.chapters = draft.chapters || [];
+    const sf = await kapi.join(info.dPath, "scenes.json");
+    const s2 = await kapi.readJson(sf).catch(() => ({}));
+    s2.chapters = s2.chapters || {};
+    const scenes = info.scenes || [];
+    const existing = draft.chapters.find((c) => c.guid === info.ch.guid);
+    if (existing) {
+      const dstDir = await kapi.join(info.dPath, "Chapters", existing.folderName);
+      await kapi.mkdir(dstDir);
+      const renamed = /* @__PURE__ */ new Map();
+      for (const f of await kapi.listFiles(p, "").catch(() => [])) {
+        const nm = await freeName(dstDir, f);
+        await kapi.move(await kapi.join(p, f), await kapi.join(dstDir, nm));
+        if (nm !== f) renamed.set(f, nm);
+      }
+      for (const dn of await kapi.listDirs(p).catch(() => [])) {
+        const nm = await freeName(dstDir, dn, { dir: true });
+        await kapi.move(await kapi.join(p, dn), await kapi.join(dstDir, nm));
+      }
+      await kapi.remove(p);
+      const rows = [...s2.chapters[existing.guid] || []];
+      for (const sc of scenes) {
+        if (rows.some((r) => r.id === sc.id)) continue;
+        rows.push(renamed.has(sc.fileName) ? { ...sc, fileName: renamed.get(sc.fileName) } : sc);
+      }
+      s2.chapters[existing.guid] = rows;
+      Object.assign(existing, { ...info.ch, folderName: existing.folderName });
+      delete existing.restoredFromScene;
+    } else {
+      const folder = await freeChapterFolder(info.dPath, draft, info.ch.folderName);
+      await kapi.move(p, await kapi.join(info.dPath, "Chapters", folder));
+      if (folder !== info.ch.folderName) note = tf("ui.trash.restoredRenamed", folder);
+      draft.chapters = [...draft.chapters, { ...info.ch, folderName: folder }];
+      const rows = [...s2.chapters[info.ch.guid] || []];
+      for (const sc of scenes) if (!rows.some((r) => r.id === sc.id)) rows.push(sc);
+      s2.chapters[info.ch.guid] = rows;
+    }
+    await kapi.writeFile(df, JSON.stringify(draft, null, 2));
+    await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
+    return note;
   }
   async function deleteToTrash(file, label) {
     if (!await confirmBox(tf("ui.trash.delMoveTrashProject", label))) return null;
@@ -79030,24 +79225,26 @@ ${h.text}`;
     setStatus(t("ui.trash.moveTrash") + label);
     return dst;
   }
+  async function listPurgeable(root, days = parseInt(state.settings.recycleDays, 10) || 0, now = Date.now()) {
+    if (!root || !(days > 0)) return [];
+    const recDir = await kapi.join(root, "Recycle");
+    if (!await kapi.exists(recDir)) return [];
+    const names = [
+      ...await kapi.listDirs(recDir).catch(() => []),
+      ...await kapi.listFiles(recDir, "").catch(() => [])
+    ];
+    const entries = [];
+    for (const name5 of names) entries.push({ name: name5, mtime: await kapi.mtime(await kapi.join(recDir, name5)) });
+    const out = [];
+    for (const name5 of purgeCandidates(entries, days, now)) out.push(await kapi.join(recDir, name5));
+    return out;
+  }
   async function purgeRecycle(root, { silent = false, force = false } = {}) {
     const days = parseInt(state.settings.recycleDays, 10) || 0;
     if (days <= 0) return 0;
     if (force) PURGE_C.skipped.delete(root);
     else if (PURGE_C.skipped.has(root)) return 0;
-    const recDir = await kapi.join(root, "Recycle");
-    if (!await kapi.exists(recDir)) return 0;
-    const cutoff = Date.now() - days * 864e5;
-    const doomed = [];
-    for (const name5 of await kapi.listDirs(recDir).catch(() => [])) {
-      const p = await kapi.join(recDir, name5);
-      if (await kapi.mtime(p) < cutoff) doomed.push(p);
-    }
-    for (const name5 of await kapi.listFiles(recDir, "").catch(() => [])) {
-      if (/\.k2restore\.json$/i.test(name5)) continue;
-      const p = await kapi.join(recDir, name5);
-      if (await kapi.mtime(p) < cutoff) doomed.push(p);
-    }
+    const doomed = await listPurgeable(root, days);
     if (!doomed.length) return 0;
     if (silent) return 0;
     if (!await confirmBox(tf("ui.trash.purgeAsk", doomed.length, days), t("ui.trash.purgeGo"))) {
@@ -79060,6 +79257,8 @@ ${h.text}`;
       try {
         await kapi.remove(p);
         await kapi.remove(p + ".k2restore.json").catch(() => {
+        });
+        await kapi.remove(p + ".vis.csv").catch(() => {
         });
         purged++;
       } catch {
@@ -79078,6 +79277,7 @@ ${h.text}`;
       init_app();
       init_core();
       init_ui();
+      init_recycle_core();
       PURGE_C = { skipped: /* @__PURE__ */ new Set() };
     }
   });
@@ -84028,6 +84228,7 @@ ${h.text}`;
   // src/export-zip.js
   var export_zip_exports = {};
   __export(export_zip_exports, {
+    ZIP_SKIP_ROOT_FILES: () => ZIP_SKIP_ROOT_FILES,
     commonPrefix: () => commonPrefix,
     exportProjectJson: () => exportProjectJson,
     exportProjectZip: () => exportProjectZip,
@@ -84045,11 +84246,12 @@ ${h.text}`;
       let nFiles = 0;
       const addDir2 = async (dir2, prefix2 = "") => {
         for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
+          if (!prefix2 && ZIP_SKIP_ROOT_FILES.includes(f)) continue;
           const full = await kapi.join(dir2, f);
           try {
             if (BIN_EXT.test(f)) {
               const bytes2 = await kapi.readBytes(full);
-              zip.file(prefix2 + f, new Uint8Array(bytes2));
+              zip.file(prefix2 + f, bytes2);
             } else {
               zip.file(prefix2 + f, await kapi.readFile(full));
             }
@@ -84070,7 +84272,7 @@ ${h.text}`;
       if (!dest) return false;
       setBusy(t("ui.exportZip.busyWriteFileZIP"));
       const bytes = await zip.generateAsync({ type: "uint8array" });
-      await kapi.writeBytes(dest, Array.from(bytes));
+      await kapi.writeBytes(dest, bytes);
       setStatus(tf("ui.exportZip.exportZIPDoneFile", nFiles) + dest);
       log("info", "export-zip: done " + nFiles + " files");
       return true;
@@ -84110,7 +84312,7 @@ ${h.text}`;
         if (parts.length > 1) await kapi.mkdir(await kapi.join(dest, ...parts.slice(0, -1)));
         if (BIN_EXT.test(rel)) {
           const buf = await zip.files[name5].async("uint8array");
-          await kapi.writeBytes(file, Array.from(buf));
+          await kapi.writeBytes(file, buf);
         } else {
           await kapi.writeFile(file, await zip.files[name5].async("string"));
         }
@@ -84194,14 +84396,30 @@ ${h.text}`;
       clearBusy();
     }
   }
-  var import_jszip2, SKIP_DIRS4, BIN_EXT;
+  var import_jszip2, SKIP_DIRS4, ZIP_SKIP_ROOT_FILES, BIN_EXT;
   var init_export_zip = __esm({
     "src/export-zip.js"() {
       init_i18n();
       init_core();
       import_jszip2 = __toESM(require_jszip_min());
       SKIP_DIRS4 = ["Snapshots", ".k2history", "Backups", "Recycle"];
+      ZIP_SKIP_ROOT_FILES = ["ai-key.json"];
       BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
+    }
+  });
+
+  // src/file-url.js
+  function fileUrlFromPath(p) {
+    let s = String(p || "").replace(/\\/g, "/");
+    if (!s) return "";
+    let prefix2 = "file://";
+    if (/^\/\/[^/]/.test(s)) s = s.slice(2);
+    else if (!s.startsWith("/")) prefix2 = "file:///";
+    const parts = s.split("/").map((seg, i5) => i5 === 0 && /^[A-Za-z]:$/.test(seg) ? seg : encodeURIComponent(seg));
+    return prefix2 + parts.join("/");
+  }
+  var init_file_url = __esm({
+    "src/file-url.js"() {
     }
   });
 
@@ -84497,7 +84715,7 @@ ${h.text}`;
     const cover = el("div", "home-card-cover");
     if (project.cover) {
       const img = el("img", "home-card-img");
-      img.src = "file://" + project.root.replace(/\\/g, "/") + "/" + project.cover;
+      img.src = fileUrlFromPath(String(project.root).replace(/[\\/]+$/, "") + "/" + project.cover);
       img.onerror = () => {
         cover.innerHTML = '<div class="home-card-cover-ph">\u{1F4D6}</div>';
       };
@@ -84626,6 +84844,7 @@ ${h.text}`;
       init_app();
       init_export_zip();
       init_icons();
+      init_file_url();
       HOME_VIEWS = [
         { id: "card", icon: "\u25A6", label: t("ui.home.card") },
         { id: "list", icon: "\u2630", label: t("ui.common.list2") }
@@ -88144,7 +88363,7 @@ ${BLOCK_END}
 
   // src/backup.js
   function today() {
-    return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    return localDay();
   }
   async function autoBackupNow(silent = false) {
     if (!state.root) {
@@ -88160,6 +88379,7 @@ ${BLOCK_END}
       const files = [];
       const scan = async (dir2, rel) => {
         for (const name5 of await kapi.listFiles(dir2, "").catch(() => [])) {
+          if (!rel && SKIP_ROOT_FILES.includes(name5)) continue;
           files.push({ src: await kapi.join(dir2, name5), rel: rel ? rel + "/" + name5 : name5 });
         }
         for (const name5 of await kapi.listDirs(dir2).catch(() => [])) {
@@ -88177,12 +88397,12 @@ ${BLOCK_END}
           log("warn", t("ui.backup.backupSkipFile") + f.src, e);
         }
       }
+      await kapi.writeFile(
+        await kapi.join(dest, BACKUP_DONE_MARK),
+        JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), files: n2 })
+      );
       const dirs = (await kapi.listDirs(backupDir).catch(() => [])).sort();
       while (dirs.length > MAX_KEEP) await kapi.remove(await kapi.join(backupDir, dirs.shift()));
-      try {
-        localStorage.setItem(LAST_KEY, ts);
-      } catch {
-      }
       if (!silent) setStatus(tf("ui.backup.projectDoneFile", ts, n2));
       log("info", `backup: saved ${ts} (${n2} files)`);
       return true;
@@ -88194,12 +88414,10 @@ ${BLOCK_END}
   }
   async function backupIfDue() {
     if (!state.root) return false;
-    let last2 = "";
     try {
-      last2 = localStorage.getItem(LAST_KEY) || "";
+      if (await kapi.exists(await kapi.join(state.root, "Backups", today(), BACKUP_DONE_MARK))) return false;
     } catch {
     }
-    if (last2 === today()) return false;
     return autoBackupNow(true);
   }
   function startAutoBackup() {
@@ -88211,14 +88429,16 @@ ${BLOCK_END}
       });
     }, 60 * 60 * 1e3);
   }
-  var SKIP_DIRS6, MAX_KEEP, LAST_KEY, backupTimer;
+  var SKIP_DIRS6, SKIP_ROOT_FILES, MAX_KEEP, BACKUP_DONE_MARK, backupTimer;
   var init_backup = __esm({
     "src/backup.js"() {
       init_i18n();
       init_core();
+      init_local_date();
       SKIP_DIRS6 = ["Recycle", "Snapshots", ".k2history", "Backups", "Research"];
+      SKIP_ROOT_FILES = ["ai-key.json"];
       MAX_KEEP = 7;
-      LAST_KEY = "k2-last-backup";
+      BACKUP_DONE_MARK = ".k2backup-done.json";
       backupTimer = null;
     }
   });
@@ -97243,7 +97463,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     return true;
   }
-  function pluginStatus(p, { appVersion = "0", disabled = false, failed = false } = {}) {
+  function pluginStatus(p, { appVersion = "0", disabled = false, failed = false, untrusted = false } = {}) {
+    if (untrusted) return ST_UNTRUSTED;
     if (p && p.minAppVersion && !versionAtLeast(appVersion, p.minAppVersion)) return ST_OLD;
     if (failed) return ST_ERR;
     if (disabled) return ST_OFF;
@@ -97260,7 +97481,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         ...p,
         failed: !!failedFlag,
         error: error2 || p.error || "",
-        status: pluginStatus(p, { appVersion: app, disabled: isDisabled(p.name), failed: failedFlag }),
+        status: pluginStatus(p, {
+          appVersion: app,
+          disabled: isDisabled(p.name),
+          failed: failedFlag,
+          untrusted: !!(p && p.untrusted)
+        }),
         shadowed: false
       };
       if (!prev) {
@@ -97273,26 +97499,44 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       } else prev.shadowed = true;
     };
     for (const p of loaded || []) push(p, false, "");
-    for (const p of failed || []) push(p, !(p && p.skipped), p && p.error);
+    for (const p of failed || []) push(p, !(p && (p.skipped || p.untrusted)), p && p.error);
     return sortPlugins([...byName.values()]);
   }
   function sortPlugins(list) {
-    const rank = { [ST_ERR]: 0, [ST_OLD]: 1, [ST_OK]: 2, [ST_OFF]: 3 };
+    const rank = { [ST_UNTRUSTED]: -1, [ST_ERR]: 0, [ST_OLD]: 1, [ST_OK]: 2, [ST_OFF]: 3 };
     return [...list || []].sort((a, b) => {
       const d = (rank[a.status] ?? 9) - (rank[b.status] ?? 9);
       return d || String(a.name).localeCompare(String(b.name), "th");
     });
   }
   function pluginCounts(list) {
-    const c = { total: 0, ok: 0, off: 0, err: 0, old: 0 };
+    const c = { total: 0, ok: 0, off: 0, err: 0, old: 0, untrusted: 0 };
     for (const p of list || []) {
       c.total++;
-      if (p.status === ST_OK) c.ok++;
+      if (p.status === ST_UNTRUSTED) c.untrusted++;
+      else if (p.status === ST_OK) c.ok++;
       else if (p.status === ST_OFF) c.off++;
       else if (p.status === ST_OLD) c.old++;
       else if (p.status === ST_ERR) c.err++;
     }
     return c;
+  }
+  function hashText2(s) {
+    let h = 2166136261;
+    const str3 = String(s == null ? "" : s);
+    for (let i5 = 0; i5 < str3.length; i5++) {
+      h ^= str3.charCodeAt(i5);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16).padStart(8, "0");
+  }
+  function pluginFingerprint(entries) {
+    const rows = (entries || []).filter((e) => e && e.folder).map((e) => String(e.folder) + "|" + hashText2(e.manifest) + "|" + hashText2(e.code)).sort();
+    return rows.length ? rows.length + ":" + hashText2(rows.join("\n")) : "";
+  }
+  function isPluginSetTrusted(trust, root, fp) {
+    if (!fp) return true;
+    return !!(trust && root && trust[root] === fp);
   }
   function safePluginFolder(name5) {
     return String(name5 || "").trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/^\.+/, "").replace(/\s+/g, "-").slice(0, 60) || "plugin";
@@ -97331,13 +97575,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     ].join("\n");
     return { "plugin.json": JSON.stringify(manifest2, null, 2), "main.js": main };
   }
-  var ST_OK, ST_OFF, ST_OLD, ST_ERR, ORIGIN_USER, ORIGIN_PROJECT, PLUGIN_API_DOC;
+  var ST_OK, ST_OFF, ST_OLD, ST_ERR, ST_UNTRUSTED, ORIGIN_USER, ORIGIN_PROJECT, PLUGIN_API_DOC;
   var init_plugin_core = __esm({
     "src/plugins/plugin-core.js"() {
       ST_OK = "ok";
       ST_OFF = "off";
       ST_OLD = "old";
       ST_ERR = "err";
+      ST_UNTRUSTED = "untrusted";
       ORIGIN_USER = "user";
       ORIGIN_PROJECT = "project";
       PLUGIN_API_DOC = [
@@ -97598,6 +97843,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (p.status === ST_OLD) {
       card.append(el("div", "k-plug-err", tf("ui.plug.needNewer", p.minAppVersion, app.APP_VERSION)));
     }
+    if (p.status === ST_UNTRUSTED) {
+      card.append(el("div", "k-plug-err", t("ui.plug.untrustedHint")));
+    }
     const info = app.pluginList();
     const cmds = (info.commands || []).filter((c) => c.plugin === p.name);
     if (cmds.length) {
@@ -97618,13 +97866,26 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       card.append(box2);
     }
     const acts = el("div", "k-plug-acts");
-    const off3 = p.status === ST_OFF || p.status === ST_ERR;
-    acts.append(mkBtn(off3 ? t("ui.plug.enable") : t("ui.plug.disable"), "", async () => {
-      app.setPluginDisabled(p.name, !off3);
-      await app.reloadPlugins();
-      await renderPluginPanel(host2);
-      setStatus(off3 ? tf("ui.plug.enabled", p.name) : tf("ui.plug.disabled", p.name));
-    }));
+    if (p.status === ST_UNTRUSTED) {
+      const trustBtn = mkBtn(t("ui.plug.trustProject"), t("ui.plug.untrustedHint"), async () => {
+        const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+        if (!await confirmBox2(t("ui.plug.trustAsk"), t("ui.plug.trustProject"))) return;
+        await app.trustProjectPlugins();
+        await app.reloadPlugins();
+        await renderPluginPanel(host2);
+        setStatus(t("ui.plug.trustedDone"));
+      });
+      trustBtn.classList.add("k-plug-trust");
+      acts.append(trustBtn);
+    } else {
+      const off3 = p.status === ST_OFF || p.status === ST_ERR;
+      acts.append(mkBtn(off3 ? t("ui.plug.enable") : t("ui.plug.disable"), "", async () => {
+        app.setPluginDisabled(p.name, !off3);
+        await app.reloadPlugins();
+        await renderPluginPanel(host2);
+        setStatus(off3 ? tf("ui.plug.enabled", p.name) : tf("ui.plug.disabled", p.name));
+      }));
+    }
     acts.append(mkBtn(t("ui.plug.openFolder"), "", async () => {
       try {
         await kapi.revealInOS(await kapi.join(await baseDirOf(p), p.folder || p.name));
@@ -97731,6 +97992,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   }
   function statusLabel2(st) {
+    if (st === ST_UNTRUSTED) return t("ui.plug.stUntrusted");
     if (st === ST_OK) return t("ui.plug.stOk");
     if (st === ST_OFF) return t("ui.plug.stOff");
     if (st === ST_OLD) return t("ui.plug.stOld");
@@ -100734,24 +100996,24 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const host2 = o.host || { left: 0, top: 0, width: 0, height: 0 };
     const bar = o.bar || { width: 0, height: 0 };
     const vp = o.viewport || { width: 0, height: 0 };
-    const pad3 = Number.isFinite(o.pad) ? o.pad : 8;
+    const pad4 = Number.isFinite(o.pad) ? o.pad : 8;
     const useCursor = !!(o.pointer && o.inEditor && Number.isFinite(o.pointer.x) && Number.isFinite(o.pointer.y));
     const cx2 = useCursor ? o.pointer.x : vp.width / 2;
     const top0 = useCursor ? o.pointer.y + FMTBAR_CURSOR_GAP : vp.height / 2 + FMTBAR_DROP;
     let left = cx2 - bar.width / 2 - host2.left;
     let top = top0 - host2.top;
-    const maxL = host2.width - bar.width - pad3;
-    const maxT = host2.height - bar.height - pad3;
-    left = maxL < pad3 ? pad3 : Math.min(Math.max(pad3, left), maxL);
-    top = maxT < pad3 ? pad3 : Math.min(Math.max(pad3, top), maxT);
+    const maxL = host2.width - bar.width - pad4;
+    const maxT = host2.height - bar.height - pad4;
+    left = maxL < pad4 ? pad4 : Math.min(Math.max(pad4, left), maxL);
+    top = maxT < pad4 ? pad4 : Math.min(Math.max(pad4, top), maxT);
     return { left: Math.round(left), top: Math.round(top), fallback: !useCursor };
   }
-  function clampBarPos(pos, bar, host2, pad3 = 4) {
+  function clampBarPos(pos, bar, host2, pad4 = 4) {
     const hw = Math.max(0, host2 && host2.width || 0);
     const hh = Math.max(0, host2 && host2.height || 0);
-    return clampBarInBox(pos, bar, { left: 0, top: 0, right: hw, bottom: hh }, pad3);
+    return clampBarInBox(pos, bar, { left: 0, top: 0, right: hw, bottom: hh }, pad4);
   }
-  function clampBarInBox(pos, bar, box2, pad3 = 4) {
+  function clampBarInBox(pos, bar, box2, pad4 = 4) {
     const p = pos || {};
     const b = box2 || {};
     const bw = Math.max(0, bar && bar.width || 0);
@@ -100762,9 +101024,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const bb = Number.isFinite(b.bottom) ? b.bottom : bt;
     const l0 = Number.isFinite(p.left) ? p.left : 0;
     const t0 = Number.isFinite(p.top) ? p.top : 0;
-    const minL = bl + pad3, minT = bt + pad3;
-    const maxL = br - bw - pad3;
-    const maxT = bb - bh - pad3;
+    const minL = bl + pad4, minT = bt + pad4;
+    const maxL = br - bw - pad4;
+    const maxT = bb - bh - pad4;
     const left = Math.round(maxL < minL ? minL : Math.min(Math.max(minL, l0), maxL));
     const top = Math.round(maxT < minT ? minT : Math.min(Math.max(minT, t0), maxT));
     return { left, top, moved: left !== Math.round(l0) || top !== Math.round(t0) };
@@ -100804,12 +101066,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function nextAlign(cur) {
     return normalizeAlign(cur) === "top" ? "bottom" : "top";
   }
-  function alignBarPos(align, pos, bar, host2, pad3 = 4) {
+  function alignBarPos(align, pos, bar, host2, pad4 = 4) {
     const hh = Math.max(0, host2 && host2.height || 0);
     const bh = Math.max(0, bar && bar.height || 0);
-    const want = normalizeAlign(align) === "top" ? pad3 : hh - bh - pad3;
-    const maxT = hh - bh - pad3;
-    const top = Math.round(maxT < pad3 ? pad3 : Math.min(Math.max(pad3, want), maxT));
+    const want = normalizeAlign(align) === "top" ? pad4 : hh - bh - pad4;
+    const maxT = hh - bh - pad4;
+    const top = Math.round(maxT < pad4 ? pad4 : Math.min(Math.max(pad4, want), maxT));
     const l = pos && Number.isFinite(pos.left) ? pos.left : 0;
     return { left: Math.round(l), top };
   }
@@ -100824,13 +101086,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function resetBarState() {
     return { opacity: FMTBAR_OPACITY_DEFAULT, align: FMTBAR_ALIGN_DEFAULT, locked: false };
   }
-  function defaultBarPos(bar, host2, pad3 = 16) {
+  function defaultBarPos(bar, host2, pad4 = 16) {
     const bw = Math.max(0, bar && bar.width || 0);
     const bh = Math.max(0, bar && bar.height || 0);
     const hw = Math.max(0, host2 && host2.width || 0);
     const hh = Math.max(0, host2 && host2.height || 0);
-    const left = Math.round(Math.max(pad3, (hw - bw) / 2));
-    const top = Math.round(Math.max(pad3, hh - bh - pad3));
+    const left = Math.round(Math.max(pad4, (hw - bw) / 2));
+    const top = Math.round(Math.max(pad4, hh - bh - pad4));
     return { left, top };
   }
   var FMTBAR_DROP, FMTBAR_TWEEN_MS, FMTBAR_CURSOR_GAP, FMTBAR_OPACITIES, FMTBAR_OPACITY_DEFAULT, FMTBAR_ALIGNS, FMTBAR_ALIGN_DEFAULT;
@@ -123167,12 +123429,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function objectToString(o) {
     return Object.prototype.toString.call(o);
   }
-  function pad(n2) {
+  function pad2(n2) {
     return n2 < 10 ? "0" + n2.toString(10) : n2.toString(10);
   }
   function timestamp() {
     var d = /* @__PURE__ */ new Date();
-    var time = [pad(d.getHours()), pad(d.getMinutes()), pad(d.getSeconds())].join(":");
+    var time = [pad2(d.getHours()), pad2(d.getMinutes()), pad2(d.getSeconds())].join(":");
     return [d.getDate(), months[d.getMonth()], time].join(" ");
   }
   function log2() {
@@ -155499,7 +155761,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return {
       ...m,
       draft: String(s.revisions || s.draft || "").trim(),
-      date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
+      date: localDay()
     };
   }
   function clearPdfFontCache() {
@@ -155883,7 +156145,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         TITLE: state.title || t("ui.common.title"),
         AUTHOR: (state.meta || {}).author || t("ui.common.author"),
         DRAFT: t("ui.pdf.draftTwo"),
-        DATE: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+        DATE: localDay(),
         SCENE: t("ui.pdf.iNTNight")
       });
       info.textContent = shown.length ? t("ui.pdf.samplePage") + shown.map((r) => `[${r.align}] ${r.text}`).join("   ") + tf("ui.pdf.linePage", headerLineCount(h)) : t("ui.pdf.pageNotHasHead");
@@ -156102,6 +156364,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_i18n();
       init_core();
       init_num();
+      init_local_date();
       init_ui();
       init_sp_title_pages();
       init_sp_headers();
@@ -156546,7 +156809,7 @@ ${pages.join("\n")}
             openPage: 0
           }
         });
-        await kapi.writeBytes(dest, Array.from(r3.bytes));
+        await kapi.writeBytes(dest, r3.bytes);
         return { dest, note: tf("ui.xhub.donePdf", r3.pageCount, r3.bookmarks.length) };
       }
       const h = { height: num(A.spFormat().paper.height, 11) };
@@ -156562,7 +156825,7 @@ ${pages.join("\n")}
         fontPt: num(A.proseFormat().fontPt, 12),
         meta: { title: built.title }
       });
-      await kapi.writeBytes(dest, Array.from(r.bytes));
+      await kapi.writeBytes(dest, r.bytes);
       return { dest, note: tf("ui.xhub.donePdfPages", r.pageCount, r.frontCount) };
     }
     if (cfg.format === "html") {
@@ -164024,7 +164287,7 @@ ${s.body}`).join("\n\n");
       const dest = await kapi.saveAsDialog((s.slug || "starter") + ".zip", "zip");
       if (!dest) return "";
       setBusy(t("ui.starter.packWriting"));
-      await kapi.writeBytes(dest, Array.from(bytes));
+      await kapi.writeBytes(dest, bytes);
       setStatus(t("ui.starter.packDone") + dest);
       return dest;
     } catch (e) {
@@ -164086,7 +164349,7 @@ ${s.body}`).join("\n\n");
         if (parts.length > 1) await kapi.mkdir(await kapi.join(dst, ...parts.slice(0, -1)));
         if (BIN_EXT2.test(rel)) {
           const buf = await f.async("uint8array");
-          await kapi.writeBytes(out, Array.from(buf));
+          await kapi.writeBytes(out, buf);
         } else {
           await kapi.writeFile(out, await f.async("string"));
         }
@@ -166293,7 +166556,7 @@ ${sc.body || ""}
     for (const L2 of rep.locations) {
       out.push(tf("ui.spReports.scenePage2", L2.location, L2.intExt.join("/") || "\u2014", L2.sceneCount, L2.pages));
       for (const s of L2.scenes) {
-        out.push(tf("ui.spReports.scenePage", pad2(s.n, 4), pad2(s.page, 4), s.heading) + (s.characters.length ? "   [" + s.characters.join(", ") + "]" : ""));
+        out.push(tf("ui.spReports.scenePage", pad3(s.n, 4), pad3(s.page, 4), s.heading) + (s.characters.length ? "   [" + s.characters.join(", ") + "]" : ""));
       }
       out.push("");
     }
@@ -166303,10 +166566,10 @@ ${sc.body || ""}
     const out = [
       tf("ui.spReports.reportPersonLineDialogue", rep.characters.length, rep.totalLines),
       "",
-      tf("ui.spReports.ratio", pad2(t("ui.common.character"), 24), pad2(t("ui.common.scene2"), 6), pad2(t("ui.common.dialogue"), 8), pad2(t("ui.common.line"), 8), pad2(t("ui.common.avgScene"), 12))
+      tf("ui.spReports.ratio", pad3(t("ui.common.character"), 24), pad3(t("ui.common.scene2"), 6), pad3(t("ui.common.dialogue"), 8), pad3(t("ui.common.line"), 8), pad3(t("ui.common.avgScene"), 12))
     ];
     for (const c of rep.characters) {
-      out.push(`${pad2(c.name, 24)}${pad2(c.sceneCount, 6)}${pad2(c.speeches, 8)}${pad2(c.totalLines, 8)}${pad2(c.avgLines, 12)}${c.share}%`);
+      out.push(`${pad3(c.name, 24)}${pad3(c.sceneCount, 6)}${pad3(c.speeches, 8)}${pad3(c.totalLines, 8)}${pad3(c.avgLines, 12)}${c.share}%`);
     }
     return out.join("\n");
   }
@@ -166318,11 +166581,11 @@ ${sc.body || ""}
     ];
     for (const p of rep.pages) {
       const bar = "\u2588".repeat(Math.round(p.percentages.dialogue / 5)) + "\u2591".repeat(Math.round(p.percentages.action / 5));
-      out.push(tf("ui.spReports.pageDialogueAction", pad2(p.page, 5), pad2(bar, 22), p.percentages.dialogue, p.percentages.action));
+      out.push(tf("ui.spReports.pageDialogueAction", pad3(p.page, 5), pad3(bar, 22), p.percentages.dialogue, p.percentages.action));
     }
     return out.join("\n");
   }
-  var INT_EXT, CHART_KINDS, CHART_LABELS, pad2;
+  var INT_EXT, CHART_KINDS, CHART_LABELS, pad3;
   var init_sp_reports = __esm({
     "src/sp-reports.js"() {
       init_i18n();
@@ -166344,7 +166607,7 @@ ${sc.body || ""}
         character: t("ui.spReports.name"),
         other: t("ui.common.other")
       };
-      pad2 = (s, n2) => {
+      pad3 = (s, n2) => {
         s = String(s ?? "");
         return s + " ".repeat(Math.max(0, n2 - s.length));
       };
@@ -166898,10 +167161,12 @@ ${css}
     treePaste: () => treePaste,
     treeSelectClick: () => treeSelectClick,
     treeSelectOnly: () => treeSelectOnly,
+    trustProjectPlugins: () => trustProjectPlugins,
     tweenFmtBar: () => tweenFmtBar,
     typeSoundMode: () => typeSoundMode,
     uiFontOffset: () => uiFontOffset,
     uniqueSceneFileName: () => uniqueSceneFileName,
+    untrustProjectPlugins: () => untrustProjectPlugins,
     updateErrorBadge: () => updateErrorBadge,
     updatePageNumberHint: () => updatePageNumberHint,
     updateSaveStatus: () => updateSaveStatus,
@@ -168871,6 +169136,10 @@ ${css}
       ]);
       if (v2 === null) return false;
       if (v2 === "save") for (const t3 of dirty) await saveTab(t3);
+    }
+    try {
+      await flushWordHistory();
+    } catch {
     }
     for (const t3 of state.tabs.values()) {
       t3.dirty = false;
@@ -174148,7 +174417,7 @@ ${css}
           wmOptions,
           fontUrls: await embeddedFontUrls(),
           title: src2.title,
-          date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+          date: localDay(),
           buildPdf: async (text) => (await buildScriptPdf({
             blocks: src2.blocks,
             title: src2.title,
@@ -174333,10 +174602,63 @@ ${css}
     setStatus(msg);
     return confirmBox(msg, t("ui.app.plugin"));
   }
+  async function readPluginTrust() {
+    try {
+      return await kapi.sessionRead(PLUGIN_TRUST_KEY) || {};
+    } catch {
+      return {};
+    }
+  }
+  async function readPluginSet(dir2, names) {
+    const set = /* @__PURE__ */ new Map();
+    for (const name5 of names) {
+      const e = { folder: name5, manifest: "", code: "", manifestErr: null, codeErr: null };
+      try {
+        e.manifest = await kapi.readFile(await kapi.join(dir2, name5, "plugin.json"));
+      } catch (err2) {
+        e.manifestErr = err2;
+      }
+      let entry = "main.js";
+      try {
+        entry = JSON.parse(e.manifest).entry || entry;
+      } catch {
+      }
+      try {
+        e.code = await kapi.readFile(await kapi.join(dir2, name5, entry));
+      } catch (err2) {
+        e.codeErr = err2;
+      }
+      set.set(name5, e);
+    }
+    return set;
+  }
+  async function projectPluginNames(root) {
+    const dir2 = await kapi.join(root, "Plugins");
+    if (!await kapi.exists(dir2)) return { dir: dir2, names: [] };
+    return { dir: dir2, names: (await kapi.listDirs(dir2).catch(() => [])).filter((n2) => n2 !== "dictionaries") };
+  }
+  async function trustProjectPlugins(root = state.root) {
+    if (!root) return false;
+    const { dir: dir2, names } = await projectPluginNames(root);
+    const fp = pluginFingerprint([...(await readPluginSet(dir2, names)).values()]);
+    const trust = await readPluginTrust();
+    if (fp) trust[root] = fp;
+    else delete trust[root];
+    await kapi.sessionWrite(PLUGIN_TRUST_KEY, trust);
+    logAction("plugin", "trust project plugins", { root, count: names.length });
+    return true;
+  }
+  async function untrustProjectPlugins(root = state.root) {
+    const trust = await readPluginTrust();
+    delete trust[root];
+    await kapi.sessionWrite(PLUGIN_TRUST_KEY, trust);
+    return true;
+  }
   async function loadPlugins() {
     plugins.commands = [];
     plugins.loaded = [];
     plugins.failed = [];
+    plugins.untrusted = 0;
     for (const s of plugins.shortcuts) {
       for (let i5 = SHORTCUTS.length - 1; i5 >= 0; i5--) if (SHORTCUTS[i5][3] === s.ch) SHORTCUTS.splice(i5, 1);
     }
@@ -174365,19 +174687,33 @@ ${css}
       } catch {
         continue;
       }
+      names = names.filter((n2) => n2 !== "dictionaries");
+      let pre = null;
+      if (origin === ORIGIN_PROJECT && names.length) {
+        pre = await readPluginSet(dir2, names);
+        if (!isPluginSetTrusted(await readPluginTrust(), state.root, pluginFingerprint([...pre.values()]))) {
+          for (const name5 of names) {
+            plugins.failed.push({ name: name5, origin, folder: name5, untrusted: true, error: t("ui.plug.untrustedHint") });
+          }
+          plugins.untrusted += names.length;
+          continue;
+        }
+      }
       for (const name5 of names) {
-        if (name5 === "dictionaries") continue;
         if (pluginDisabled(name5)) {
           plugins.failed.push({ name: name5, origin, folder: name5, skipped: true, error: t("ui.app.close2") });
           continue;
         }
         try {
-          const manifest2 = await kapi.readJson(await kapi.join(dir2, name5, "plugin.json"));
+          const got = pre && pre.get(name5);
+          if (got && got.manifestErr) throw got.manifestErr;
+          const manifest2 = got ? JSON.parse(got.manifest) : await kapi.readJson(await kapi.join(dir2, name5, "plugin.json"));
           if (manifest2.minAppVersion && !versionAtLeast2(APP_VERSION, manifest2.minAppVersion)) {
             plugins.failed.push({ name: name5, origin, error: t("ui.app.mustUseKillian") + manifest2.minAppVersion + t("ui.app.up") });
             continue;
           }
-          const code3 = await kapi.readFile(await kapi.join(dir2, name5, manifest2.entry || "main.js"));
+          if (got && got.codeErr) throw got.codeErr;
+          const code3 = got ? got.code : await kapi.readFile(await kapi.join(dir2, name5, manifest2.entry || "main.js"));
           new Function("k2", code3)(pluginApi(name5));
           if (seen.has(name5)) plugins.loaded = plugins.loaded.filter((x) => x.name !== name5);
           seen.add(name5);
@@ -174398,6 +174734,10 @@ ${css}
       }
     }
     if (plugins.loaded.length) setStatus(tf("ui.app.loadPluginItem", plugins.loaded.length) + (plugins.failed.length ? tf("ui.app.msg", plugins.failed.length) : ""));
+    if (plugins.untrusted) {
+      setStatus(tf("ui.plug.untrustedStatus", plugins.untrusted));
+      log("warn", "plugins: project plugins are not allowed to run yet", { root: state.root, count: plugins.untrusted });
+    }
     const btn2 = $("#tb-plug");
     if (btn2) btn2.style.display = plugins.commands.length ? "" : "none";
     return plugins;
@@ -175254,7 +175594,14 @@ ${css}
     setStatus(t("ui.app.newProjectNewDone") + name5);
   }
   async function confirmQuit(opts = {}) {
-    const doQuit = opts.quit || (() => kapi.quitNow());
+    const quitFn = opts.quit || (() => kapi.quitNow());
+    const doQuit = async () => {
+      try {
+        await flushWordHistory();
+      } catch {
+      }
+      quitFn();
+    };
     await saveUiSession(true);
     await saveOpenTabs();
     await flushStarter();
@@ -175898,7 +176245,7 @@ ${css}
   function resolveImg(dir2, rel) {
     const key2 = dir2 + "||" + rel;
     if (imgURLBase.has(key2)) return imgURLBase.get(key2);
-    const guess = "file://" + (dir2 + "/" + rel).replace(/\\/g, "/");
+    const guess = fileUrlFromPath(dir2 + "/" + rel);
     kapi.resolve(dir2, rel).then(async (abs) => {
       if (!await kapi.exists(abs)) {
         const base4 = rel.split("/").pop();
@@ -175956,6 +176303,7 @@ ${css}
     broadcastActiveScene();
   }
   function markDirty(tab) {
+    tab._rev = (tab._rev || 0) + 1;
     if (!tab.dirty) {
       tab.dirty = true;
       tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
@@ -176016,6 +176364,7 @@ ${css}
       setStatus(t("status.saved") + ": " + tab.title);
       return;
     }
+    const rev = tab._rev || 0;
     const body = tab.editor ? tab.editor.getMarkdown() : tab.sp ? tab.sp.getMarkdown() : tab.plain.value;
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
@@ -176032,8 +176381,13 @@ ${css}
     tab.meta.appVersion = APP_VERSION;
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
     await writeKeepingComments(tab.file, (0, import_md19.dumpMdFile)(tab.meta, body));
-    tab.dirty = false;
-    tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
+    if ((tab._rev || 0) === rev) {
+      tab.dirty = false;
+      tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
+    } else {
+      tab.dirty = true;
+      tab.tabBtn.querySelector(".tab-title").textContent = "\u25CF " + tab.title;
+    }
     setStatus(t("ui.app.saveDone") + tab.title);
     updateDirtyBadge();
     refreshCommentsPanel();
@@ -176052,6 +176406,7 @@ ${css}
       log("warn", t("ui.dialogue.errScan"), e);
     }
     await syncSceneWordCount(tab, body);
+    scheduleWordHistory();
     await refreshBacklinksAfterSave(tab, body);
     try {
       refreshNetwork();
@@ -176232,8 +176587,7 @@ ${css}
     setStatus(tf("ui.app.saveAllDoneList", n2));
     updateDirtyBadge();
     refreshStatusBar();
-    countProjectWords().then((w) => recordDailyWords(w)).catch(() => {
-    });
+    scheduleWordHistory(0);
     return n2;
   }
   function isSnapshotable(tab) {
@@ -176309,8 +176663,7 @@ ${css}
     setStatus(t("ui.app.saveVersionDone"));
   }
   function fmtTs(ts) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})/.exec(ts || "");
-    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : ts || "";
+    return fmtUtcStamp(ts);
   }
   function lineDiff2(aText, bText) {
     const A = (aText || "").split("\n"), B = (bText || "").split("\n");
@@ -184202,6 +184555,99 @@ ${css}
         sjR.chapters[chJson.guid].some((x) => x.title === "\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27") && await kapi.exists(await kapi.join(dPath, "Chapters", chJson.folderName, sc3.fileName)),
         JSON.stringify(sjR.chapters[chJson.guid].map((x) => x.title))
       );
+      {
+        const recD = await kapi.join(state.root, "Recycle");
+        const memoD = await kapi.join(state.root, "Memos");
+        await kapi.mkdir(recD);
+        await kapi.mkdir(memoD);
+        await kapi.writeFile(await kapi.join(memoD, "a148-\u0E42\u0E19\u0E49\u0E15.md"), "\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48");
+        const trM = Date.now().toString(36) + "-a148-\u0E42\u0E19\u0E49\u0E15.md";
+        await kapi.writeFile(await kapi.join(recD, trM), "\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32\u0E43\u0E19\u0E16\u0E31\u0E07");
+        await restoreFromTrash(await kapi.join(recD, trM), trM);
+        check2(
+          "[a148-R2] \u2605 \u0E01\u0E39\u0E49\u0E42\u0E19\u0E49\u0E15\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E0A\u0E19\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48 \u2192 \u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A",
+          await kapi.readFile(await kapi.join(memoD, "a148-\u0E42\u0E19\u0E49\u0E15.md")) === "\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48"
+        );
+        check2(
+          "[a148-R2] \u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E44\u0E14\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E23\u0E1A",
+          await kapi.readFile(await kapi.join(memoD, "a148-\u0E42\u0E19\u0E49\u0E15-2.md")).catch(() => "") === "\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32\u0E43\u0E19\u0E16\u0E31\u0E07"
+        );
+        await kapi.remove(await kapi.join(memoD, "a148-\u0E42\u0E19\u0E49\u0E15.md"));
+        await kapi.remove(await kapi.join(memoD, "a148-\u0E42\u0E19\u0E49\u0E15-2.md"));
+        const g148 = "a148-gone-chapter";
+        const sc148 = { id: "a148-sc", title: "\u0E09\u0E32\u0E01\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35", order: 1, fileName: "a148-orphan.md", status: "", wordCount: 0 };
+        const trS = Date.now().toString(36) + "-a148-orphan.md";
+        await kapi.writeFile(await kapi.join(recD, trS), "---\ntitle: \u0E09\u0E32\u0E01\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35\n---\n\u0E40\u0E19\u0E37\u0E49\u0E2D");
+        await kapi.writeFile(await kapi.join(recD, trS + ".k2restore.json"), JSON.stringify(
+          { kind: "scene", dPath, chGuid: g148, folderName: "99 - \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A", sc: sc148 }
+        ));
+        await restoreFromTrash(await kapi.join(recD, trS), trS);
+        const dj148 = await kapi.readJson(await kapi.join(dPath, "draft.json"));
+        const ch148 = (dj148.chapters || []).find((c) => c.guid === g148);
+        const sj148 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
+        check2(
+          "[a148-R3] \u2605 \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27\u0E16\u0E39\u0E01\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32 (guid \u0E40\u0E14\u0E34\u0E21)",
+          !!ch148,
+          JSON.stringify((dj148.chapters || []).map((c) => c.guid))
+        );
+        check2(
+          "[a148-R3] \u2605 \u0E09\u0E32\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E15\u0E49\u0E1A\u0E17\u0E19\u0E31\u0E49\u0E19\u0E43\u0E19 scenes.json + \u0E44\u0E1F\u0E25\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07\u0E1A\u0E17",
+          !!ch148 && (sj148.chapters[g148] || []).some((r) => r.id === "a148-sc") && await kapi.exists(await kapi.join(dPath, "Chapters", ch148.folderName, "a148-orphan.md"))
+        );
+        await buildTree2();
+        check2(
+          "[a148-R3] \u2605 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E08\u0E23\u0E34\u0E07",
+          [...document.querySelectorAll("#tree .scene")].some((x) => x.textContent.includes("\u0E09\u0E32\u0E01\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35"))
+        );
+        const trC = Date.now().toString(36) + "-99 - \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A";
+        await kapi.mkdir(await kapi.join(recD, trC));
+        await kapi.writeFile(await kapi.join(recD, trC, "a148-sib.md"), "---\ntitle: \u0E09\u0E32\u0E01\u0E1E\u0E35\u0E48\u0E19\u0E49\u0E2D\u0E07\n---\n\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07");
+        await kapi.writeFile(await kapi.join(recD, trC + ".k2restore.json"), JSON.stringify({
+          kind: "chapter",
+          dPath,
+          ch: { guid: g148, title: "\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A", order: 99, status: "Draft", folderName: "99 - \u0E1A\u0E17\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A" },
+          scenes: [{ id: "a148-sib", title: "\u0E09\u0E32\u0E01\u0E1E\u0E35\u0E48\u0E19\u0E49\u0E2D\u0E07", order: 2, fileName: "a148-sib.md" }]
+        }));
+        await restoreFromTrash(await kapi.join(recD, trC), trC);
+        const dj2 = await kapi.readJson(await kapi.join(dPath, "draft.json"));
+        const sj22 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
+        const ch2 = dj2.chapters.find((c) => c.guid === g148);
+        check2(
+          "[a148-R4] \u2605 \u0E01\u0E39\u0E49\u0E1A\u0E17\u0E15\u0E32\u0E21\u0E21\u0E32\u0E17\u0E35\u0E2B\u0E25\u0E31\u0E07 \u2192 \u0E21\u0E35\u0E1A\u0E17\u0E19\u0E35\u0E49\u0E1A\u0E17\u0E40\u0E14\u0E35\u0E22\u0E27 (\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33)",
+          dj2.chapters.filter((c) => c.guid === g148).length === 1
+        );
+        check2(
+          "[a148-R4] \u2605 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E39\u0E49\u0E44\u0E1B\u0E01\u0E48\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 + \u0E09\u0E32\u0E01\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A",
+          ["a148-sc", "a148-sib"].every((id) => (sj22.chapters[g148] || []).some((r) => r.id === id)),
+          JSON.stringify((sj22.chapters[g148] || []).map((r) => r.id))
+        );
+        check2(
+          "[a148-R4] \u0E1A\u0E17\u0E44\u0E14\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32 + \u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
+          !!ch2 && ch2.title === "\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E25\u0E1A" && !ch2.restoredFromScene && await kapi.exists(await kapi.join(dPath, "Chapters", ch2.folderName, "a148-sib.md"))
+        );
+        check2("[a148-R4] \u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E04\u0E49\u0E32\u0E07", !await kapi.exists(await kapi.join(recD, trC)));
+        if (ch2) await kapi.remove(await kapi.join(dPath, "Chapters", ch2.folderName));
+        dj2.chapters = dj2.chapters.filter((c) => c.guid !== g148);
+        delete sj22.chapters[g148];
+        await kapi.writeFile(await kapi.join(dPath, "draft.json"), JSON.stringify(dj2, null, 2));
+        await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj22, null, 2));
+        const charD = await kapi.join(state.root, "Wiki", "characters");
+        await kapi.mkdir(charD);
+        await kapi.writeFile(await kapi.join(charD, "._\u0E1C\u0E35\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35-abc.json"), "\0\x07Mac OS X");
+        await kapi.writeFile(await kapi.join(memoD, "._\u0E1C\u0E35\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35.md"), "\0\x07Mac OS X");
+        check2(
+          "[a148-J1] \u2605 kapi.listFiles \u0E44\u0E21\u0E48\u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C ._ \u0E02\u0E2D\u0E07 macOS",
+          !(await kapi.listFiles(charD, ".json")).some((f) => f.startsWith("._")) && !(await kapi.listFiles(memoD, ".md")).some((f) => f.startsWith("._"))
+        );
+        await buildTree2();
+        check2(
+          "[a148-J1] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E27\u0E1C\u0E35 ._ \u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49 (\u0E2B\u0E21\u0E27\u0E14 Wiki + Memos)",
+          ![...document.querySelectorAll("#tree .scene")].some((x) => /ผีเอทูอี/.test(x.textContent + (x.title || "")))
+        );
+        await kapi.remove(await kapi.join(charD, "._\u0E1C\u0E35\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35-abc.json"));
+        await kapi.remove(await kapi.join(memoD, "._\u0E1C\u0E35\u0E40\u0E2D\u0E17\u0E39\u0E2D\u0E35.md"));
+        await buildTree2();
+      }
       const entFile = (await kapi.listFiles(catDir, ".json")).find((f) => f !== "cat.json");
       const entPath = await kapi.join(catDir, entFile);
       const pDel2 = deleteToTrash(entPath, "\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E25\u0E1A\u0E16\u0E32\u0E27\u0E23");
@@ -187766,6 +188212,47 @@ ${css}
           "recycleDays=0 \u2192 \u0E44\u0E21\u0E48\u0E25\u0E49\u0E32\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)",
           await kapi.exists(await kapi.join(rRoot, "Recycle", "new-keep.md"))
         );
+        const old148 = (Date.now() - 40 * 864e5).toString(36) + "-a148-old.md";
+        const new148 = Date.now().toString(36) + "-a148-new.md";
+        const rec148 = await kapi.join(rRoot, "Recycle");
+        await kapi.writeFile(await kapi.join(rec148, old148), "\u0E25\u0E1A\u0E19\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27");
+        await kapi.writeFile(await kapi.join(rec148, old148 + ".k2restore.json"), "{}");
+        await kapi.writeFile(await kapi.join(rec148, new148), "\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E25\u0E1A");
+        const doomed148 = await listPurgeable(rRoot, 30);
+        check2(
+          "[a148-R1] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E25\u0E1A\u0E40\u0E01\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14\u0E08\u0E32\u0E01\u0E40\u0E27\u0E25\u0E32\u0E43\u0E19\u0E0A\u0E37\u0E48\u0E2D (\u0E41\u0E21\u0E49 mtime \u0E22\u0E31\u0E07\u0E43\u0E2B\u0E21\u0E48)",
+          doomed148.some((p) => p.endsWith(old148)),
+          JSON.stringify(doomed148)
+        );
+        check2("[a148-R1] \u2605 \u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E25\u0E1A\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E25\u0E37\u0E2D\u0E01", !doomed148.some((p) => p.endsWith(new148)));
+        check2(
+          "[a148-R1] \u0E43\u0E1A\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E22\u0E01 (\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49)",
+          !doomed148.some((p) => p.endsWith(".k2restore.json"))
+        );
+        for (const f of [old148, old148 + ".k2restore.json", new148]) await kapi.remove(await kapi.join(rec148, f));
+      }
+      {
+        activate(t3.file);
+        const tab148 = state.active;
+        markDirty(tab148);
+        const p148 = saveTab(tab148);
+        markDirty(tab148);
+        await p148;
+        check2('[a148-S1] \u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E23\u0E2D\u0E40\u0E02\u0E35\u0E22\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C \u2192 \u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01"', tab148.dirty === true);
+        check2(
+          "[a148-S1] \u0E1B\u0E49\u0E32\u0E22\u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E21\u0E35\u0E08\u0E38\u0E14 \u25CF \u0E43\u0E2B\u0E49\u0E40\u0E2B\u0E47\u0E19",
+          tab148.tabBtn.querySelector(".tab-title").textContent.startsWith("\u25CF "),
+          tab148.tabBtn.querySelector(".tab-title").textContent
+        );
+        await saveTab(tab148);
+        check2("[a148-S1] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E2D\u0E1A\u0E16\u0E31\u0E14\u0E44\u0E1B (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E32\u0E23\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E17\u0E23\u0E01) \u2192 \u0E2A\u0E30\u0E2D\u0E32\u0E14", tab148.dirty === false);
+        check2("[a148-W1] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E41\u0E25\u0E49\u0E27 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E34\u0E27\u0E08\u0E14\u0E2A\u0E16\u0E34\u0E15\u0E34\u0E04\u0E33\u0E23\u0E32\u0E22\u0E27\u0E31\u0E19", wordHistoryPending() === true);
+        await flushWordHistory();
+        check2(
+          '[a148-W1] \u2605 Ctrl+S \u0E18\u0E23\u0E23\u0E21\u0E14\u0E32\u0E01\u0E47\u0E08\u0E14\u0E22\u0E2D\u0E14\u0E04\u0E33\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E08\u0E14\u0E40\u0E09\u0E1E\u0E32\u0E30 "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14")',
+          !!getWordHistory().find((h) => h.date === localDay()),
+          JSON.stringify(getWordHistory().slice(-2))
+        );
       }
       check2(
         "accelText \u0E41\u0E1B\u0E25\u0E07\u0E04\u0E35\u0E22\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E16\u0E39\u0E01",
@@ -187797,6 +188284,15 @@ ${css}
       await kapi.testShot("/tmp/k2_keys.png");
       document.querySelector(".k-settings .k-cancel").click();
       check2("\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E17\u0E1A settings.shortcuts", Object.keys(state.settings.shortcuts).length === 0);
+      await untrustProjectPlugins();
+      await loadPlugins();
+      check2(
+        "[a148-P0] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E35\u0E48\u0E21\u0E35\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E25\u0E22",
+        !plugins.commands.some((c) => c.label === "\u0E19\u0E31\u0E1A\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49") && plugins.untrusted > 0,
+        JSON.stringify({ cmds: plugins.commands.map((c) => c.label), untrusted: plugins.untrusted })
+      );
+      await trustProjectPlugins();
+      await loadPlugins();
       check2(
         "\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E16\u0E39\u0E01\u0E42\u0E2B\u0E25\u0E14 + \u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07",
         plugins.commands.some((c) => c.label === "\u0E19\u0E31\u0E1A\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49"),
@@ -188939,8 +189435,8 @@ ${css}
         hidePanel("comments");
       }
       {
-        const today2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-        const yst = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+        const today2 = localDay();
+        const yst = addDays(today2, -1);
         state.meta.wordHistory = [{ date: yst, words: 1e3 }, { date: today2, words: 1500 }];
         check2(
           "calcStreak \u0E19\u0E31\u0E1A\u0E27\u0E31\u0E19\u0E40\u0E02\u0E35\u0E22\u0E19\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E01\u0E31\u0E19\u0E44\u0E14\u0E49",
@@ -189727,7 +190223,7 @@ ${css}
       {
         const okB = await autoBackupNow(true);
         check2("\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", okB);
-        const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+        const day = localDay();
         const bDir = await kapi.join(state.root, "Backups", day);
         check2("\u0E21\u0E35\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49", await kapi.exists(bDir));
         const srcPng = await kapi.join(state.root, "Images", "sunset.png");
@@ -189740,6 +190236,25 @@ ${css}
           `${a.length} vs ${b.length}`
         );
         check2("\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E0B\u0E49\u0E33\u0E43\u0E19\u0E27\u0E31\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E16\u0E39\u0E01\u0E02\u0E49\u0E32\u0E21", await backupIfDue() === false);
+        check2("[a148-B1] \u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E04\u0E23\u0E1A\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49", await kapi.exists(await kapi.join(bDir, BACKUP_DONE_MARK)));
+        try {
+          localStorage.setItem("k2-last-backup", localDay());
+        } catch {
+        }
+        await kapi.remove(await kapi.join(bDir, BACKUP_DONE_MARK));
+        const keyP148 = await kapi.join(state.root, "ai-key.json");
+        const hadKey148 = await kapi.exists(keyP148);
+        if (!hadKey148) await kapi.writeFile(keyP148, JSON.stringify({ apiKey: "sk-e2e-a148" }));
+        check2(
+          "[a148-B2] \u2605 \u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 \u2192 \u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E2D\u0E37\u0E48\u0E19\u0E01\u0E31\u0E49\u0E19)",
+          await backupIfDue() === true
+        );
+        check2("[a148-B3] \u2605 \u0E04\u0E35\u0E22\u0E4C AI \u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E0A\u0E38\u0E14\u0E2A\u0E33\u0E23\u0E2D\u0E07", !await kapi.exists(await kapi.join(bDir, "ai-key.json")));
+        if (!hadKey148) await kapi.remove(keyP148);
+        try {
+          localStorage.removeItem("k2-last-backup");
+        } catch {
+        }
         await kapi.remove(await kapi.join(state.root, "Backups"));
       }
       {
@@ -189752,6 +190267,14 @@ ${css}
           back.length === bytes.length && back.every((v4, i5) => v4 === bytes[i5]),
           JSON.stringify(back)
         );
+        check2(
+          "[a148-X1] readBytes \u0E04\u0E37\u0E19 Uint8Array (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2D\u0E32\u0E23\u0E4C\u0E40\u0E23\u0E22\u0E4C\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E17\u0E35\u0E25\u0E30\u0E44\u0E1A\u0E15\u0E4C)",
+          back instanceof Uint8Array,
+          Object.prototype.toString.call(back)
+        );
+        await kapi.writeBytes(p, new Uint8Array([7, 250]));
+        const back2 = await kapi.readBytes(p);
+        check2("[a148-X1] writeBytes \u0E23\u0E31\u0E1A Uint8Array \u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C", back2.length === 2 && back2[0] === 7 && back2[1] === 250);
         await kapi.remove(p);
       }
       {
@@ -190911,12 +191434,12 @@ ${css}
               {
                 const boxes131 = () => [...pm3().querySelectorAll(".ed-page-break")].map((e) => {
                   const r = e.getBoundingClientRect();
-                  const pad3 = parseFloat(e.style.getPropertyValue("--k-pb-pad")) || 0;
+                  const pad4 = parseFloat(e.style.getPropertyValue("--k-pb-pad")) || 0;
                   return {
                     bot: r.bottom,
                     h: r.height,
-                    pad: pad3,
-                    extra: r.height - pad3,
+                    pad: pad4,
+                    extra: r.height - pad4,
                     inline: e.classList.contains("k-pb-inline")
                   };
                 });
@@ -195014,8 +195537,8 @@ ${css}
                 {
                   const perQ = formatLines(spFormat());
                   const overs = [], spillsAll = [];
-                  for (let pad3 = 0; pad3 <= 24; pad3++) {
-                    const filler = Array.from({ length: pad3 }, () => "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E19\u0E33");
+                  for (let pad4 = 0; pad4 <= 24; pad4++) {
+                    const filler = Array.from({ length: pad4 }, () => "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E19\u0E33");
                     spT58.sp.setMarkdown(filler.concat([doc108]).join(L108));
                     await new Promise((r) => setTimeout(r, 90));
                     repaginateFast(spT58);
@@ -195023,7 +195546,7 @@ ${css}
                     const blk = blocksFromDoc(spT58.sp.view.state.doc);
                     const pg = pagesOf(blk, spFormat());
                     const used = pg.pages.map(usedOf108);
-                    if (used.some((u) => u > perQ)) overs.push(pad3 + ":" + used.join("/"));
+                    if (used.some((u) => u > perQ)) overs.push(pad4 + ":" + used.join("/"));
                     const vq = spT58.sp.view;
                     let lp = null;
                     vq.state.doc.forEach((n2, off3) => {
@@ -195039,7 +195562,7 @@ ${css}
                       await new Promise((r) => setTimeout(r, 150));
                       const pg2 = pagesOf(blocksFromDoc(spT58.sp.view.state.doc), spFormat());
                       const used2 = pg2.pages.map(usedOf108);
-                      if (used2.some((u) => u > perQ)) overs.push(pad3 + "*:" + used2.join("/"));
+                      if (used2.some((u) => u > perQ)) overs.push(pad4 + "*:" + used2.join("/"));
                       const shq = [...spT58.pane.querySelectorAll(".k-paper-layer > .k-paper-sheet")];
                       const pmq = spT58.pane.querySelector(":scope > .workspace > .ProseMirror");
                       const fq = spFormat();
@@ -195050,7 +195573,7 @@ ${css}
                         num(fq.margins.top, 1) * 96 * zq,
                         num(fq.margins.bottom, 1) * 96 * zq
                       );
-                      if (sp2.length) spillsAll.push(pad3 + "*:" + sp2.slice(0, 2).join("/"));
+                      if (sp2.length) spillsAll.push(pad4 + "*:" + sp2.slice(0, 2).join("/"));
                     }
                   }
                   note("[108] \u0E01\u0E27\u0E32\u0E14 25 \u0E23\u0E30\u0E22\u0E30\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19 \xD7 2 \u0E2A\u0E16\u0E32\u0E19\u0E30: \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E01\u0E34\u0E19\u0E42\u0E04\u0E27\u0E15\u0E32 " + overs.length + (overs.length ? " -> " + overs.slice(0, 5).join(" , ") : "") + " \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E25\u0E49\u0E33\u0E01\u0E23\u0E2D\u0E1A " + spillsAll.length + (spillsAll.length ? " -> " + spillsAll.slice(0, 5).join(" , ") : ""));
@@ -197739,8 +198262,8 @@ ${css}
                 const out2 = [];
                 for (const e of pm97.querySelectorAll(".ed-page-break")) {
                   const r = e.getBoundingClientRect();
-                  const pad3 = parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
-                  out2.push(+((r.top - prevBot) / z + pad3).toFixed(1));
+                  const pad4 = parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
+                  out2.push(+((r.top - prevBot) / z + pad4).toFixed(1));
                   prevBot = r.bottom;
                 }
                 return out2;
@@ -198744,8 +199267,8 @@ ${css}
                 const out2 = [];
                 for (const e of pm98.querySelectorAll(".ed-page-break")) {
                   const r = e.getBoundingClientRect();
-                  const pad3 = parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
-                  out2.push(+((r.top - prevBot) / z + pad3).toFixed(1));
+                  const pad4 = parseFloat(getComputedStyle(e).getPropertyValue("--k-pb-pad")) || 0;
+                  out2.push(+((r.top - prevBot) / z + pad4).toFixed(1));
                   prevBot = r.bottom;
                 }
                 return out2;
@@ -200594,6 +201117,20 @@ ${css}
             "k2.registerShortcut('hello', 'F9', true, true, () => { globalThis.__k2test.shortcut = true; });",
             "globalThis.__k2test.panelId = k2.registerPanel('demo', { title: '\u0E41\u0E1C\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A', render: (h) => { h.textContent = 'ok'; } });"
           ].join("\n"));
+          await untrustProjectPlugins();
+          delete globalThis.__k2test;
+          await loadPlugins();
+          check2(
+            "[a148-P1] \u2605 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 \u2192 \u0E42\u0E04\u0E49\u0E14\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E23\u0E31\u0E19\u0E40\u0E25\u0E22",
+            globalThis.__k2test === void 0 && !pluginList().loaded.some((x) => x.origin === "project"),
+            JSON.stringify(pluginList().loaded.map((x) => x.name + ":" + x.origin))
+          );
+          check2(
+            '[a148-P1] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 \u2192 \u0E02\u0E36\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19 "\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15" (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 "\u0E1E\u0E31\u0E07") \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E49\u0E07\u0E18\u0E07\u0E1B\u0E34\u0E14\u0E16\u0E32\u0E27\u0E23',
+            pluginList().failed.some((x) => x.name === "k2test" && x.untrusted) && pluginDisabled("k2test") === false,
+            JSON.stringify(pluginList().failed.map((x) => x.name + ":" + !!x.untrusted))
+          );
+          await trustProjectPlugins();
           await loadPlugins();
           const pl = pluginList();
           const T3 = globalThis.__k2test || {};
@@ -200672,6 +201209,13 @@ ${css}
           await kapi.mkdir(dirBad);
           await kapi.writeFile(await kapi.join(dirBad, "plugin.json"), '{"name":"\u0E1E\u0E31\u0E07","entry":"main.js"}');
           await kapi.writeFile(await kapi.join(dirBad, "main.js"), 'throw new Error("\u0E15\u0E31\u0E49\u0E07\u0E43\u0E08\u0E43\u0E2B\u0E49\u0E1E\u0E31\u0E07");');
+          await loadPlugins();
+          check2(
+            "[a148-P2] \u2605 \u0E21\u0E35\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32\u0E2B\u0E25\u0E31\u0E07\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 \u2192 \u0E02\u0E2D\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14 (\u0E44\u0E21\u0E48\u0E23\u0E31\u0E19\u0E41\u0E21\u0E49\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E40\u0E04\u0E22\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15)",
+            !pluginList().loaded.some((x) => x.name === "k2test") && pluginList().failed.some((x) => x.name === "k2bad" && x.untrusted),
+            JSON.stringify(pluginList().failed.map((x) => x.name + ":" + !!x.untrusted))
+          );
+          await trustProjectPlugins();
           await loadPlugins();
           const pl2 = pluginList();
           check2(
@@ -205283,8 +205827,26 @@ ${css}
         return false;
       };
       {
+        await untrustProjectPlugins();
         await reloadPlugins();
         showPanel("plugins");
+        await renderPluginPanel($("#plugins-body"));
+        check2(
+          '[a148-P3] \u0E41\u0E1C\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E42\u0E0A\u0E27\u0E4C\u0E01\u0E32\u0E23\u0E4C\u0E14 "\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15" \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15',
+          await until79(() => document.querySelector("#plugins-body .k-plug-card.k-plug-untrusted .k-plug-trust")),
+          $("#plugins-body") ? $("#plugins-body").textContent.slice(0, 160) : "\u0E44\u0E21\u0E48\u0E21\u0E35 host"
+        );
+        const trustBtn148 = document.querySelector("#plugins-body .k-plug-trust");
+        if (trustBtn148) {
+          trustBtn148.click();
+          await until79(() => document.querySelector(".k-dialog .k-ok"));
+          document.querySelector(".k-dialog .k-ok")?.click();
+        }
+        check2(
+          "[a148-P3] \u2605 \u0E01\u0E14\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27 \u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E17\u0E33\u0E07\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07",
+          await until79(() => pluginList().loaded.some((p) => p.origin === "project")),
+          JSON.stringify(pluginList().failed.map((x) => x.name + ":" + !!x.untrusted))
+        );
         check2("[79-1] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E44\u0E14\u0E49", isPanelOpen("plugins"));
         await renderFeaturePanel("plugins");
         const host2 = $("#plugins-body");
@@ -211644,7 +212206,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md19, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md19, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n();
@@ -211716,6 +212278,8 @@ ${css}
       init_typewriter();
       init_word_history();
       init_backup();
+      init_local_date();
+      init_file_url();
       init_export_zip();
       init_comment_ui();
       init_export_blog();
@@ -211892,6 +212456,7 @@ ${css}
       ];
       plugins = { commands: [], loaded: [], failed: [], shortcuts: [], panels: [] };
       pluginBus = new EventBus({ onError: (e, ev) => log("warn", "plugin event " + ev, e) });
+      PLUGIN_TRUST_KEY = "plugin-trust";
       galInst = null;
       state.templates = [];
       state.templatesDoc = { version: 1, note: "", templates: [] };

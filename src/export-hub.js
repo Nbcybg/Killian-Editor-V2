@@ -224,7 +224,7 @@ async function writeOut(A, cfg, built, nameOpts) {
                 colorMode: o.colorMode === 'color' ? 'color' : 'mono',
                 watermark: o.watermark, openPage: 0 },
       });
-      await kapi.writeBytes(dest, Array.from(r.bytes));
+      await kapi.writeBytes(dest, r.bytes);
       return { dest, note: ttf('ui.xhub.donePdf', r.pageCount, r.bookmarks.length) };
     }
     // นิยาย → HTML ที่มี @page → printToPDF ในหน้าต่างซ่อน (ได้ตัวอักษรจริง ไม่ใช่ภาพ)
@@ -240,7 +240,7 @@ async function writeOut(A, cfg, built, nameOpts) {
       pageNumbers: o.pageNumbers !== false, startPage: 1,
       fontPt: num(A.proseFormat().fontPt, 12), meta: { title: built.title },
     });
-    await kapi.writeBytes(dest, Array.from(r.bytes));
+    await kapi.writeBytes(dest, r.bytes);
     return { dest, note: ttf('ui.xhub.donePdfPages', r.pageCount, r.frontCount) };
   }
   if (cfg.format === 'html') { await kapi.writeFile(dest, built.html); return { dest, note: '' }; }

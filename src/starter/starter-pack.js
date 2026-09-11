@@ -58,7 +58,7 @@ export async function exportStarterZip(s) {
     const dest = await kapi.saveAsDialog((s.slug || 'starter') + '.zip', 'zip');
     if (!dest) return '';
     setBusy(t('ui.starter.packWriting'));
-    await kapi.writeBytes(dest, Array.from(bytes));
+    await kapi.writeBytes(dest, bytes);
     setStatus(t('ui.starter.packDone') + dest);
     return dest;
   } catch (e) {
@@ -123,7 +123,7 @@ export async function unpackStarter(bytes) {
       if (parts.length > 1) await kapi.mkdir(await kapi.join(dst, ...parts.slice(0, -1)));
       if (BIN_EXT.test(rel)) {
         const buf = await f.async('uint8array');
-        await kapi.writeBytes(out, Array.from(buf));
+        await kapi.writeBytes(out, buf);
       } else {
         await kapi.writeFile(out, await f.async('string'));
       }

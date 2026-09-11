@@ -51,7 +51,7 @@ export async function exportImages(root, items, { name = t('ui.galleryExport.lib
     if (!dest) return false;
     setBusy(t('ui.galleryExport.busyWriteFile'));
     const bytes = await zip.generateAsync({ type: 'uint8array' });
-    await kapi.writeBytes(dest, Array.from(bytes));
+    await kapi.writeBytes(dest, bytes);
     setStatus(tf('ui.galleryExport.exportImageItemDone', n) + dest);
     return true;
   } catch (e) {

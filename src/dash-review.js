@@ -16,6 +16,7 @@ import { el, state, log } from './core.js';
 import { ensureAutoLink, resetAutoLink } from './world-story/auto-link-ui.js';
 import { listScenes, listEntities, findScenePath } from './project-scan.js';
 import { getFutureNotes } from './session-notes.js';
+import { localDay } from './local-date.js';
 
 const REFRESH_DELAY = 1500;   // ms — หน่วงก่อนสร้างดัชนีใหม่ (บันทึกรัว ๆ จะได้ไม่สแกนซ้ำทุกครั้ง)
 let stale = true;             // ดัชนีล้าสมัยหรือยัง (ตั้งเมื่อมีการบันทึกไฟล์)
@@ -140,7 +141,7 @@ export async function renderReview(pane) {
   const noStatus = scenes.filter((s) => !(s.row && s.row.status));
   if (noStatus.length) pending.push({ text: tf('ui.central.sceneCantSetStatus', noStatus.length) });
   if (state.meta && Array.isArray(state.meta.wordHistory) && state.meta.wordHistory.length) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDay();          // [alpha.148] วันของเครื่อง ให้ตรงกับที่ recordDailyWords จด
     const t2 = state.meta.wordHistory.find((w) => w.date === today);
     if (!t2 || !t2.words) pending.push({ text: t('ui.central.cantWrite') });
   }

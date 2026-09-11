@@ -4,6 +4,9 @@ import { state, setStatus, log, setBusy, clearBusy } from './core.js';
 import JSZip from 'jszip';
 
 const SKIP_DIRS = ['Snapshots', '.k2history', 'Backups', 'Recycle'];
+// [alpha.148] ไฟล์ที่ห้ามติดไปกับซิปเด็ดขาด — ZIP นี้มีไว้ "ส่งให้คนอื่น"
+// `ai-key.json` = API key ของเจ้าของเครื่อง (เก็บแยกจาก project.khn.json ก็เพราะเหตุนี้ แต่ซิปเคยพาไปด้วย)
+export const ZIP_SKIP_ROOT_FILES = ['ai-key.json'];
 // นามสกุลที่ต้องอ่านเป็นไบต์ (ถ้าอ่านเป็น utf-8 ไฟล์จะเสีย)
 const BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
 
@@ -16,11 +19,12 @@ export async function exportProjectZip() {
     let nFiles = 0;
     const addDir = async (dir, prefix = '') => {
       for (const f of await kapi.listFiles(dir, '').catch(() => [])) {
+        if (!prefix && ZIP_SKIP_ROOT_FILES.includes(f)) continue;
         const full = await kapi.join(dir, f);
         try {
           if (BIN_EXT.test(f)) {
             const bytes = await kapi.readBytes(full);       // ไบต์ดิบ — รูปไม่เสีย
-            zip.file(prefix + f, new Uint8Array(bytes));
+            zip.file(prefix + f, bytes);
           } else {
             zip.file(prefix + f, await kapi.readFile(full));
           }
@@ -42,7 +46,7 @@ export async function exportProjectZip() {
     setBusy(t('ui.exportZip.busyWriteFileZIP'));
     const bytes = await zip.generateAsync({ type: 'uint8array' });
     // ส่งเป็น byte array ผ่าน IPC — ห้ามแปลงเป็น string (utf-8 จะบวมไฟล์เสีย)
-    await kapi.writeBytes(dest, Array.from(bytes));
+    await kapi.writeBytes(dest, bytes);            // [alpha.148] Uint8Array ตรง ๆ (ไม่ใช่ Array.from ทีละไบต์)
     setStatus(tf('ui.exportZip.exportZIPDoneFile', nFiles) + dest);
     log('info', 'export-zip: done ' + nFiles + ' files');
     return true;
@@ -94,7 +98,7 @@ export async function importProjectZip(srcZip, dstParent) {
       if (parts.length > 1) await kapi.mkdir(await kapi.join(dest, ...parts.slice(0, -1)));
       if (BIN_EXT.test(rel)) {
         const buf = await zip.files[name].async('uint8array');
-        await kapi.writeBytes(file, Array.from(buf));
+        await kapi.writeBytes(file, buf);
       } else {
         await kapi.writeFile(file, await zip.files[name].async('string'));
       }

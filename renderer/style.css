@@ -5182,6 +5182,9 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   display:flex; flex-direction:column; gap:6px; }
 .k-plug-card.k-plug-err { border-color:#e06c50; }
 .k-plug-card.k-plug-off { opacity:.62; }
+/* [alpha.148] ปลั๊กอินของโปรเจกต์ที่ยังไม่ได้รับอนุญาตให้รัน */
+.k-plug-card.k-plug-untrusted { border-color:#d8a23a; }
+.k-plug-card.k-plug-untrusted .k-plug-badge { color:#d8a23a; border-color:#d8a23a; }
 .k-plug-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
 .k-plug-name { font-weight:600; font-size:calc(13px * var(--ui-scale, 1)); }
 .k-plug-ver, .k-plug-origin, .k-plug-shadow { font-size:calc(10.5px * var(--ui-scale, 1)); }

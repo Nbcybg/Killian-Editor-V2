@@ -135,6 +135,10 @@ function cardFor(p, host, app) {
   if (p.status === PC.ST_OLD) {
     card.append(el('div', 'k-plug-err', ttf('ui.plug.needNewer', p.minAppVersion, app.APP_VERSION)));
   }
+  // [alpha.148] ปลั๊กอินที่มากับโปรเจกต์และยังไม่ได้รับอนุญาต — บอกให้ชัดว่าทำไมไม่ทำงาน และเสี่ยงอะไร
+  if (p.status === PC.ST_UNTRUSTED) {
+    card.append(el('div', 'k-plug-err', tt('ui.plug.untrustedHint')));
+  }
 
   // คำสั่ง/แผงที่ปลั๊กอินตัวนี้ลงทะเบียนไว้ — พิสูจน์ให้เห็นว่ามันทำงานอยู่จริง
   const info = app.pluginList();
@@ -154,13 +158,27 @@ function cardFor(p, host, app) {
   }
 
   const acts = el('div', 'k-plug-acts');
-  const off = p.status === PC.ST_OFF || p.status === PC.ST_ERR;
-  acts.append(mkBtn(off ? tt('ui.plug.enable') : tt('ui.plug.disable'), '', async () => {
-    app.setPluginDisabled(p.name, !off);
-    await app.reloadPlugins();
-    await renderPluginPanel(host);
-    setStatus(off ? ttf('ui.plug.enabled', p.name) : ttf('ui.plug.disabled', p.name));
-  }));
+  if (p.status === PC.ST_UNTRUSTED) {
+    // ถามอีกชั้นเสมอ — ปุ่มนี้คือการยอมให้โค้ดของคนอื่นเข้าถึงไฟล์ในเครื่อง
+    const trustBtn = mkBtn(tt('ui.plug.trustProject'), tt('ui.plug.untrustedHint'), async () => {
+      const { confirmBox } = await import('../ui.js');
+      if (!(await confirmBox(tt('ui.plug.trustAsk'), tt('ui.plug.trustProject')))) return;
+      await app.trustProjectPlugins();
+      await app.reloadPlugins();
+      await renderPluginPanel(host);
+      setStatus(tt('ui.plug.trustedDone'));
+    });
+    trustBtn.classList.add('k-plug-trust');
+    acts.append(trustBtn);
+  } else {
+    const off = p.status === PC.ST_OFF || p.status === PC.ST_ERR;
+    acts.append(mkBtn(off ? tt('ui.plug.enable') : tt('ui.plug.disable'), '', async () => {
+      app.setPluginDisabled(p.name, !off);
+      await app.reloadPlugins();
+      await renderPluginPanel(host);
+      setStatus(off ? ttf('ui.plug.enabled', p.name) : ttf('ui.plug.disabled', p.name));
+    }));
+  }
   acts.append(mkBtn(tt('ui.plug.openFolder'), '', async () => {
     try {
       await kapi.revealInOS(await kapi.join(await baseDirOf(p), p.folder || p.name));
@@ -268,6 +286,7 @@ export async function installFlow(host, appMod) {
 }
 
 function statusLabel(st) {
+  if (st === PC.ST_UNTRUSTED) return tt('ui.plug.stUntrusted');
   if (st === PC.ST_OK) return tt('ui.plug.stOk');
   if (st === PC.ST_OFF) return tt('ui.plug.stOff');
   if (st === PC.ST_OLD) return tt('ui.plug.stOld');

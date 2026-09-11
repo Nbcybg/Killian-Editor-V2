@@ -124,7 +124,7 @@ import { openBookReader, closeBookReader, isBookReaderOpen, bookReaderPages, boo
          gotoPage as readerGotoPage, computeBookFlow, cachedStartPage, bumpBookFlow,
          bookFlowKey } from './read-ui.js';
 import { isPageFlowContinue } from './book-flow.js';
-import { restoreFromTrash, deleteToTrash, purgeRecycle } from './recycle.js';
+import { restoreFromTrash, deleteToTrash, purgeRecycle, listPurgeable } from './recycle.js';
 import { openDashboard, renderDashboard } from './dashboard.js';
 import { openHome, renderHome, showHomeDialog } from './home-ui.js';
 import { openTagPane, renderTagList, filterByTag } from './tag-pane.js';
@@ -141,8 +141,10 @@ import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
 import { toggleFocusMode2, cursorBlock, isFocusMode, focusDim, applyFocusDim } from './focus-mode.js';
 import { toggleTypewriter, twScroll, isTypewriter, scrollHost } from './typewriter.js';
 import { recordDailyWords, countProjectWords, calcStreak, getWordHistory,
-         rebuildWordCounts } from './word-history.js';
-import { autoBackupNow, startAutoBackup, backupIfDue } from './backup.js';
+         rebuildWordCounts, scheduleWordHistory, flushWordHistory, wordHistoryPending } from './word-history.js';
+import { autoBackupNow, startAutoBackup, backupIfDue, BACKUP_DONE_MARK } from './backup.js';
+import { localDay, addDays, fmtUtcStamp } from './local-date.js';   // [alpha.148] วันของเครื่อง ไม่ใช่ UTC
+import { fileUrlFromPath } from './file-url.js';
 import { exportProjectZip, exportProjectJson, importProjectZip,
          safeRel, commonPrefix } from './export-zip.js';   // [60r3 ข้อ 9]
 import { renderCommentPanel, commentStore, migrateSceneComments, clearCommentAnchors,
@@ -221,7 +223,7 @@ import { setAutoSync, isAutoSyncOn, resetTaskEngine,
 // [alpha.60r3 ข้อ 7] EventBus ก้อนเดียวที่ปลั๊กอินทุกตัวใช้ร่วมกัน (k2.on / k2.emit)
 import { EventBus } from './auto-task/event-queue.js';
 // [alpha.79] แผงปลั๊กอิน · แผงบทพูด · เอาปุ่มเข้า-ออกจากแถบเครื่องมือ · จำสถานะล่าสุด
-import { ORIGIN_USER, ORIGIN_PROJECT } from './plugins/plugin-core.js';
+import { ORIGIN_USER, ORIGIN_PROJECT, pluginFingerprint, isPluginSetTrusted } from './plugins/plugin-core.js';
 import { renderPluginPanel, resetPluginPanel } from './plugins/plugin-panel.js';
 import { renderDialoguePanel, resetDialogue, scanDialogue, markDialogueStale, visibleRows as dialogueRows,
          openAt as dialogueOpenAt, applyEdit as dialogueApplyEdit,
@@ -2680,6 +2682,8 @@ async function closeProjectIfAny() {
     if (v === null) return false;
     if (v === 'save') for (const t of dirty) await saveTab(t);
   }
+  // [alpha.148] จดสถิติคำที่ค้างอยู่ก่อน state.root เปลี่ยน (หลังจากนี้ตัวจดจะไม่ยอมเขียนข้ามโปรเจกต์)
+  try { await flushWordHistory(); } catch {}
   for (const t of state.tabs.values()) {
     t.dirty = false;
     t.editor?.destroy(); t.wiki?.destroy(); t.sp?.destroy();
@@ -7404,7 +7408,7 @@ export async function watermarkDialog() {
       const made = await generateWatermarkedPDFs(kapi, {
         pages, fmt, recipients: rs, outDir, prefix: pre.value,
         wmTemplate: tpl.value, wmOptions, fontUrls: await embeddedFontUrls(),
-        title: src.title, date: new Date().toISOString().slice(0, 10),
+        title: src.title, date: localDay(),
         buildPdf: async (text) => (await buildScriptPdf({
           blocks: src.blocks, title: src.title, fmt,
           opts: { ...savedPdfOptions(), openPage: 0, watermark: text,
@@ -7576,8 +7580,63 @@ async function pluginPath(rel) {
 /** ข้อความสั้น ๆ ของกล่อง alert ที่ปลั๊กอินเรียก (window.alert ใช้ไม่ได้ใน Electron — บทเรียน 3) */
 function aboutBox(msg) { setStatus(msg); return confirmBox(msg, tt('ui.app.plugin')); }
 
+// ═══════════ [alpha.148] ★ ปลั๊กอินของโปรเจกต์ต้องได้รับอนุญาตก่อนรัน ═══════════
+//
+// เดิม: ทุก `<โปรเจกต์>/Plugins/*/main.js` ถูก `new Function()` ทันทีที่เปิดโปรเจกต์ ไม่ถามสักคำ
+// = เปิดโปรเจกต์ที่คนอื่นส่งมา (zip · นำเข้า) แล้วโค้ดในนั้นได้ `kapi` ครบ อ่าน/เขียน/ลบไฟล์ใดก็ได้
+//
+// ตอนนี้: อ่านไฟล์ทั้งชุดก่อน → ลายนิ้วมือ (plugin-core.js) → ยังไม่อนุญาต = ไม่รัน แสดงเป็น "รออนุญาต"
+// ในแผงปลั๊กอิน (ไม่เด้งกล่องถามตอนเปิดโปรเจกต์ — กล่องที่โผล่เองระหว่างโหลดถูกกดผ่านโดยไม่อ่านได้ง่าย)
+// ปลั๊กอินของผู้ใช้ (userData/Plugins) ผู้ใช้ติดตั้งเองกับมือ → ไม่ต้องถาม
+//
+// ที่เก็บ: userData/sessions/plugin-trust.json — ของเครื่องนี้ ไม่ใช่ของโปรเจกต์ (ผู้ส่งแก้เองไม่ได้)
+// และไม่ปนกับ settings.json ซึ่งกล่องตั้งค่าเขียนทับทั้งก้อน · รูปแบบ `{ "<root>": "<ลายนิ้วมือ>" }`
+const PLUGIN_TRUST_KEY = 'plugin-trust';
+async function readPluginTrust() {
+  try { return (await kapi.sessionRead(PLUGIN_TRUST_KEY)) || {}; } catch { return {}; }
+}
+/** อ่านไฟล์ของปลั๊กอินทั้งชุด — โค้ดที่ถูกรันคือก้อนเดียวกับที่เอาไปทำลายนิ้วมือ (ไม่อ่านซ้ำ) */
+async function readPluginSet(dir, names) {
+  const set = new Map();
+  for (const name of names) {
+    const e = { folder: name, manifest: '', code: '', manifestErr: null, codeErr: null };
+    try { e.manifest = await kapi.readFile(await kapi.join(dir, name, 'plugin.json')); }
+    catch (err) { e.manifestErr = err; }
+    let entry = 'main.js';
+    try { entry = JSON.parse(e.manifest).entry || entry; } catch {}
+    try { e.code = await kapi.readFile(await kapi.join(dir, name, entry)); }
+    catch (err) { e.codeErr = err; }
+    set.set(name, e);
+  }
+  return set;
+}
+async function projectPluginNames(root) {
+  const dir = await kapi.join(root, 'Plugins');
+  if (!(await kapi.exists(dir))) return { dir, names: [] };
+  return { dir, names: (await kapi.listDirs(dir).catch(() => [])).filter((n) => n !== 'dictionaries') };
+}
+/** อนุญาตชุดปลั๊กอิน "ตามที่อยู่บนดิสก์ตอนนี้" ของโปรเจกต์ — ปุ่มในแผงปลั๊กอินเรียก */
+export async function trustProjectPlugins(root = state.root) {
+  if (!root) return false;
+  const { dir, names } = await projectPluginNames(root);
+  const fp = pluginFingerprint([...(await readPluginSet(dir, names)).values()]);
+  const trust = await readPluginTrust();
+  if (fp) trust[root] = fp; else delete trust[root];
+  await kapi.sessionWrite(PLUGIN_TRUST_KEY, trust);
+  logAction('plugin', 'trust project plugins', { root, count: names.length });
+  return true;
+}
+/** ถอนการอนุญาต (เทสใช้เริ่มจากสภาพสะอาด) */
+export async function untrustProjectPlugins(root = state.root) {
+  const trust = await readPluginTrust();
+  delete trust[root];
+  await kapi.sessionWrite(PLUGIN_TRUST_KEY, trust);
+  return true;
+}
+
 async function loadPlugins() {
   plugins.commands = []; plugins.loaded = []; plugins.failed = [];
+  plugins.untrusted = 0;
   // ถอดคีย์ลัดของรอบก่อนออกก่อน (เปลี่ยนโปรเจกต์แล้วต้องไม่เหลือปุ่มลัดค้าง)
   for (const s of plugins.shortcuts) {
     for (let i = SHORTCUTS.length - 1; i >= 0; i--) if (SHORTCUTS[i][3] === s.ch) SHORTCUTS.splice(i, 1);
@@ -7602,8 +7661,20 @@ async function loadPlugins() {
   for (const [dir, origin] of sources) {
     let names = [];
     try { names = await kapi.listDirs(dir); } catch { continue; }
+    names = names.filter((n) => n !== 'dictionaries');   // โฟลเดอร์พจนานุกรม ไม่ใช่ปลั๊กอิน
+    // [alpha.148] ปลั๊กอินที่มากับโปรเจกต์: อ่านทั้งชุด → ยังไม่อนุญาต = จดเป็น "รออนุญาต" แล้ว **ไม่รัน**
+    let pre = null;
+    if (origin === ORIGIN_PROJECT && names.length) {
+      pre = await readPluginSet(dir, names);
+      if (!isPluginSetTrusted(await readPluginTrust(), state.root, pluginFingerprint([...pre.values()]))) {
+        for (const name of names) {
+          plugins.failed.push({ name, origin, folder: name, untrusted: true, error: tt('ui.plug.untrustedHint') });
+        }
+        plugins.untrusted += names.length;
+        continue;
+      }
+    }
     for (const name of names) {
-      if (name === 'dictionaries') continue;            // โฟลเดอร์พจนานุกรม ไม่ใช่ปลั๊กอิน
       // [alpha.79] `skipped` แยก "ผู้ใช้ปิดเอง" ออกจาก "โหลดแล้วพัง" —
       // ทั้งสองอย่างลงกอง failed เหมือนกัน แต่ต้องแสดงผลคนละแบบ
       // (ไม่งั้นปลั๊กอินที่ผู้ใช้กดปิดจะขึ้นป้าย "มีปัญหา" สีแดงทั้งที่ไม่มีอะไรพัง)
@@ -7612,12 +7683,17 @@ async function loadPlugins() {
         continue;
       }
       try {
-        const manifest = await kapi.readJson(await kapi.join(dir, name, 'plugin.json'));
+        const got = pre && pre.get(name);
+        if (got && got.manifestErr) throw got.manifestErr;
+        const manifest = got ? JSON.parse(got.manifest)
+          : await kapi.readJson(await kapi.join(dir, name, 'plugin.json'));
         if (manifest.minAppVersion && !versionAtLeast(APP_VERSION, manifest.minAppVersion)) {
           plugins.failed.push({ name, origin, error: tt('ui.app.mustUseKillian') + manifest.minAppVersion + tt('ui.app.up') });
           continue;
         }
-        const code = await kapi.readFile(await kapi.join(dir, name, manifest.entry || 'main.js'));
+        if (got && got.codeErr) throw got.codeErr;
+        const code = got ? got.code
+          : await kapi.readFile(await kapi.join(dir, name, manifest.entry || 'main.js'));
         new Function('k2', code)(pluginApi(name));
         // ชื่อซ้ำ = ของโปรเจกต์ (มาทีหลัง) ทับของผู้ใช้ — บันทึกไว้ตัวเดียว
         if (seen.has(name)) plugins.loaded = plugins.loaded.filter((x) => x.name !== name);
@@ -7635,6 +7711,10 @@ async function loadPlugins() {
   }
   if (plugins.loaded.length) setStatus(ttf('ui.app.loadPluginItem', plugins.loaded.length)
     + (plugins.failed.length ? ttf('ui.app.msg', plugins.failed.length) : ''));
+  if (plugins.untrusted) {
+    setStatus(ttf('ui.plug.untrustedStatus', plugins.untrusted));
+    log('warn', 'plugins: project plugins are not allowed to run yet', { root: state.root, count: plugins.untrusted });
+  }
   const btn = $('#tb-plug');
   if (btn) btn.style.display = plugins.commands.length ? '' : 'none';
   return plugins;
@@ -8343,7 +8423,9 @@ async function createProjectAt(parent, name) {
  * @param {{quit?: () => any}} [opts]
  */
 export async function confirmQuit(opts = {}) {
-  const doQuit = opts.quit || (() => kapi.quitNow());
+  const quitFn = opts.quit || (() => kapi.quitNow());
+  // [alpha.148] สถิติคำรายวันของรอบสุดท้ายยังรออยู่ในตัวจับเวลา (หน่วงรวบ) → จดก่อนปิดจริง
+  const doQuit = async () => { try { await flushWordHistory(); } catch {} quitFn(); };
   // [alpha.79] **บันทึกเซสชันก่อนทุกอย่าง** — เดิมทางนี้ไม่เคยจดอะไรเลย
   // (`saveOpenTabs()` อยู่ใน closeProjectIfAny ซึ่งเป็นทางของ "เปลี่ยนโปรเจกต์" เท่านั้น)
   // ต้องมาก่อนกล่องถาม เพราะถ้าผู้ใช้กด "ออกโดยไม่บันทึก" เราก็ยังอยากจำได้ว่าเปิดอะไรไว้
@@ -8951,7 +9033,7 @@ export function resolveImg(dir, rel) {
   // แปลง path ใน md → file:// (sync ผ่าน cache ที่เตรียมไว้ — fallback เดา URL ตรง ๆ)
   const key = dir + '||' + rel;
   if (imgURLBase.has(key)) return imgURLBase.get(key);
-  const guess = 'file://' + (dir + '/' + rel).replace(/\\/g, '/');
+  const guess = fileUrlFromPath(dir + '/' + rel);   // [alpha.148] เข้ารหัส # ? % + รูปแบบ Windows ให้ถูก
   kapi.resolve(dir, rel).then(async (abs) => {
     if (!(await kapi.exists(abs))) {         // ไฟล์เก่าอาจนับชั้นผิด → หาในคลังรูปจากชื่อ
       const base = rel.split('/').pop();
@@ -9021,6 +9103,9 @@ export function activate(file) {
 }
 
 export function markDirty(tab) {
+  // [alpha.148] นับรุ่นของการแก้ **ทุกครั้ง** (ไม่ใช่แค่ตอนธงพลิก) — saveTab ใช้ตัดสินว่ามีการพิมพ์
+  // เข้ามาระหว่างรอเขียนดิสก์หรือไม่ ก่อนจะยอมล้างธง "ยังไม่บันทึก"
+  tab._rev = (tab._rev || 0) + 1;
   if (!tab.dirty) {
     tab.dirty = true; tab.tabBtn.querySelector('.tab-title').textContent = '● ' + tab.title;
     // [alpha.68] เพิ่งกลายเป็น "ยังไม่บันทึก" → แผงที่ฉีกออกไปต้องล็อกอ่านอย่างเดียวทันที
@@ -9080,6 +9165,7 @@ export async function saveTab(tab) {
     setStatus(t('status.saved') + ': ' + tab.title);
     return;
   }
+  const rev = tab._rev || 0;                   // [alpha.148] รุ่นของเนื้อที่กำลังจะเขียน (ดู markDirty)
   const body = tab.editor ? tab.editor.getMarkdown()
     : tab.sp ? tab.sp.getMarkdown() : tab.plain.value;
   tab.body = body;
@@ -9103,8 +9189,16 @@ export async function saveTab(tab) {
   // คอมเมนต์เก็บอยู่ท้ายไฟล์เดียวกัน — เขียนทับตรง ๆ = คอมเมนต์หาย
   // (ไม่มีคอมเมนต์ = เขียนตัวต่อตัวเหมือนเดิม ไม่แตะท้ายไฟล์)
   await writeKeepingComments(tab.file, dumpMdFile(tab.meta, body));
-  tab.dirty = false;
-  tab.tabBtn.querySelector('.tab-title').textContent = tab.title;
+  // [alpha.148] ★ มีการพิมพ์เข้ามา **ระหว่างรอเขียนดิสก์** (บันทึกอัตโนมัติมักยิงตอนกำลังพิมพ์)
+  // → ตัวอักษรเหล่านั้นไม่ได้อยู่ใน `body` ที่เพิ่งเขียน · เดิมล้างธงทิ้งอยู่ดี แท็บดูเหมือนบันทึกแล้ว
+  // ปิดแท็บ/โปรแกรมก็ไม่มีกล่องถาม = งานช่วงท้ายหายเงียบ ๆ
+  if ((tab._rev || 0) === rev) {
+    tab.dirty = false;
+    tab.tabBtn.querySelector('.tab-title').textContent = tab.title;
+  } else {
+    tab.dirty = true;
+    tab.tabBtn.querySelector('.tab-title').textContent = '● ' + tab.title;
+  }
   setStatus(tt('ui.app.saveDone') + tab.title);
   updateDirtyBadge();                          // [alpha.120 ข้อ 5] แถวในต้นไม้เลิกเอียงทันทีที่บันทึก
   refreshCommentsPanel();
@@ -9119,6 +9213,7 @@ export async function saveTab(tab) {
   try { markDialogueStale(); } catch (e) { log('warn', tt('ui.dialogue.errScan'), e); }
   // [alpha.124 ข้อ 23] จำนวนคำของฉากต้องลง scenes.json ทุกครั้งที่บันทึก
   await syncSceneWordCount(tab, body);
+  scheduleWordHistory();                       // [alpha.148] สถิติคำรายวันต้องจดหลังทุกการบันทึก (หน่วงรวบ)
   // [alpha.60r3 ข้อ 1] ดัชนี Wiki↔ฉากต้องตามทันด้วย ไม่งั้น "ฉากที่กล่าวถึง" ค้างอยู่ที่ค่าตอนเปิดโปรแกรม
   await refreshBacklinksAfterSave(tab, body);
   // [alpha.65] Story Network — refresh when scenes are saved (scene links may change)
@@ -9325,7 +9420,7 @@ export async function saveAllTabs(silent = false) {
   updateDirtyBadge();
   refreshStatusBar();
   // บันทึกสถิติคำ (ข้อ 58)
-  countProjectWords().then((w) => recordDailyWords(w)).catch(() => {});
+  scheduleWordHistory(0);                      // [alpha.148] ทางเดียวกับ saveTab (เดิมจดเฉพาะที่นี่ที่เดียว)
   return n;
 }
 
@@ -9393,9 +9488,10 @@ async function manualSnapshot(dPath, ch, sc) {
 }
 
 export function fmtTs(ts) {
-  // 2026-07-20T08-30-00 → 20/07/2026 08:30
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})/.exec(ts || '');
-  return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : (ts || '');
+  // 2026-07-20T08-30-00 (UTC — ชื่อไฟล์มาจาก toISOString) → 20/07/2026 15:30 (เวลาเครื่อง)
+  // [alpha.148] เดิมโชว์ตัวเลขในชื่อไฟล์ตรง ๆ = เวลา UTC → ประวัติเวอร์ชันช้าไป 7 ชั่วโมงสำหรับผู้ใช้ในไทย
+  // ชื่อไฟล์ยังเป็น UTC เหมือนเดิม (เรียงลำดับของเก่า/ใหม่ปนกันได้ถูกต้อง) — แก้แค่ตอนแสดง
+  return fmtUtcStamp(ts);
 }
 
 // กล่องประวัติเวอร์ชัน — ดูตัวอย่าง/กู้คืน/ลบ
@@ -17567,6 +17663,87 @@ async function runTest(projectPath) {
           await kapi.exists(await kapi.join(dPath, 'Chapters', chJson.folderName, sc3.fileName)),
           JSON.stringify(sjR.chapters[chJson.guid].map((x) => x.title)));
 
+    // ---- [alpha.148] กู้คืนต้องไม่เขียนทับ · ฉากที่บทถูกลบไปแล้วต้องไม่หาย · ไฟล์ขยะ ._ ไม่โผล่ ----
+    {
+      const recD = await kapi.join(state.root, 'Recycle');
+      const memoD = await kapi.join(state.root, 'Memos');
+      await kapi.mkdir(recD); await kapi.mkdir(memoD);
+      // (1) โน้ตชื่อซ้ำ
+      await kapi.writeFile(await kapi.join(memoD, 'a148-โน้ต.md'), 'ของใหม่');
+      const trM = Date.now().toString(36) + '-a148-โน้ต.md';
+      await kapi.writeFile(await kapi.join(recD, trM), 'ของเก่าในถัง');
+      await restoreFromTrash(await kapi.join(recD, trM), trM);
+      check('[a148-R2] ★ กู้โน้ตที่ชื่อชนของใหม่ → ของใหม่ไม่ถูกเขียนทับ',
+            (await kapi.readFile(await kapi.join(memoD, 'a148-โน้ต.md'))) === 'ของใหม่');
+      check('[a148-R2] ของที่กู้คืนได้ชื่อใหม่ เนื้อครบ',
+            (await kapi.readFile(await kapi.join(memoD, 'a148-โน้ต-2.md')).catch(() => '')) === 'ของเก่าในถัง');
+      await kapi.remove(await kapi.join(memoD, 'a148-โน้ต.md'));
+      await kapi.remove(await kapi.join(memoD, 'a148-โน้ต-2.md'));
+
+      // (2) ฉากที่บทของมันถูกลบไปแล้ว
+      const g148 = 'a148-gone-chapter';
+      const sc148 = { id: 'a148-sc', title: 'ฉากกำพร้าเอทูอี', order: 1, fileName: 'a148-orphan.md', status: '', wordCount: 0 };
+      const trS = Date.now().toString(36) + '-a148-orphan.md';
+      await kapi.writeFile(await kapi.join(recD, trS), '---\ntitle: ฉากกำพร้าเอทูอี\n---\nเนื้อ');
+      await kapi.writeFile(await kapi.join(recD, trS + '.k2restore.json'), JSON.stringify(
+        { kind: 'scene', dPath, chGuid: g148, folderName: '99 - บทที่ถูกลบ', sc: sc148 }));
+      await restoreFromTrash(await kapi.join(recD, trS), trS);
+      const dj148 = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+      const ch148 = (dj148.chapters || []).find((c) => c.guid === g148);
+      const sj148 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+      check('[a148-R3] ★ บทที่ถูกลบไปแล้วถูกสร้างกลับมา (guid เดิม)', !!ch148,
+            JSON.stringify((dj148.chapters || []).map((c) => c.guid)));
+      check('[a148-R3] ★ ฉากอยู่ใต้บทนั้นใน scenes.json + ไฟล์อยู่ในโฟลเดอร์ของบท',
+            !!ch148 && (sj148.chapters[g148] || []).some((r) => r.id === 'a148-sc') &&
+            await kapi.exists(await kapi.join(dPath, 'Chapters', ch148.folderName, 'a148-orphan.md')));
+      await buildTree();
+      check('[a148-R3] ★ ฉากที่กู้คืนโผล่ในต้นไม้จริง',
+            [...document.querySelectorAll('#tree .scene')].some((x) => x.textContent.includes('ฉากกำพร้าเอทูอี')));
+
+      // (3) กู้บทเดียวกันตามมาทีหลัง → รวมเข้าบทที่สร้างไว้ ไม่เกิดบทซ้ำ ไม่ทับแถวของฉากที่กู้ไปก่อน
+      const trC = Date.now().toString(36) + '-99 - บทที่ถูกลบ';
+      await kapi.mkdir(await kapi.join(recD, trC));
+      await kapi.writeFile(await kapi.join(recD, trC, 'a148-sib.md'), '---\ntitle: ฉากพี่น้อง\n---\nเนื้อสอง');
+      await kapi.writeFile(await kapi.join(recD, trC + '.k2restore.json'), JSON.stringify({
+        kind: 'chapter', dPath,
+        ch: { guid: g148, title: 'บทที่ถูกลบ', order: 99, status: 'Draft', folderName: '99 - บทที่ถูกลบ' },
+        scenes: [{ id: 'a148-sib', title: 'ฉากพี่น้อง', order: 2, fileName: 'a148-sib.md' }] }));
+      await restoreFromTrash(await kapi.join(recD, trC), trC);
+      const dj2 = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+      const sj2 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+      const ch2 = dj2.chapters.find((c) => c.guid === g148);
+      check('[a148-R4] ★ กู้บทตามมาทีหลัง → มีบทนี้บทเดียว (ไม่ซ้ำ)',
+            dj2.chapters.filter((c) => c.guid === g148).length === 1);
+      check('[a148-R4] ★ ฉากที่กู้ไปก่อนยังอยู่ + ฉากของบทกลับมาครบ',
+            ['a148-sc', 'a148-sib'].every((id) => (sj2.chapters[g148] || []).some((r) => r.id === id)),
+            JSON.stringify((sj2.chapters[g148] || []).map((r) => r.id)));
+      check('[a148-R4] บทได้ชื่อจริงกลับมา + ไฟล์ของบทอยู่ในโฟลเดอร์เดียวกัน',
+            !!ch2 && ch2.title === 'บทที่ถูกลบ' && !ch2.restoredFromScene &&
+            await kapi.exists(await kapi.join(dPath, 'Chapters', ch2.folderName, 'a148-sib.md')));
+      check('[a148-R4] ถังขยะไม่เหลือโฟลเดอร์บทค้าง', !(await kapi.exists(await kapi.join(recD, trC))));
+      // เก็บกวาด — ห้ามทิ้งบททดสอบไว้ให้เทสถัดไปนับผิด
+      if (ch2) await kapi.remove(await kapi.join(dPath, 'Chapters', ch2.folderName));
+      dj2.chapters = dj2.chapters.filter((c) => c.guid !== g148);
+      delete sj2.chapters[g148];
+      await kapi.writeFile(await kapi.join(dPath, 'draft.json'), JSON.stringify(dj2, null, 2));
+      await kapi.writeFile(await kapi.join(dPath, 'scenes.json'), JSON.stringify(sj2, null, 2));
+
+      // (4) ไฟล์ AppleDouble ของ macOS (._ชื่อ) ต้องไม่โผล่เป็นแถวผี
+      const charD = await kapi.join(state.root, 'Wiki', 'characters');
+      await kapi.mkdir(charD);
+      await kapi.writeFile(await kapi.join(charD, '._ผีเอทูอี-abc.json'), ' Mac OS X');
+      await kapi.writeFile(await kapi.join(memoD, '._ผีเอทูอี.md'), ' Mac OS X');
+      check('[a148-J1] ★ kapi.listFiles ไม่คืนไฟล์ ._ ของ macOS',
+            !(await kapi.listFiles(charD, '.json')).some((f) => f.startsWith('._')) &&
+            !(await kapi.listFiles(memoD, '.md')).some((f) => f.startsWith('._')));
+      await buildTree();
+      check('[a148-J1] ★ ไม่มีแถวผี ._ ในต้นไม้ (หมวด Wiki + Memos)',
+            ![...document.querySelectorAll('#tree .scene')].some((x) => /ผีเอทูอี/.test(x.textContent + (x.title || ''))));
+      await kapi.remove(await kapi.join(charD, '._ผีเอทูอี-abc.json'));
+      await kapi.remove(await kapi.join(memoD, '._ผีเอทูอี.md'));
+      await buildTree();
+    }
+
     // ลบถาวร: ลบ entity แล้วเผาทิ้งจากถังขยะ
     const entFile = (await kapi.listFiles(catDir, '.json')).find((f) => f !== 'cat.json');
     const entPath = await kapi.join(catDir, entFile);
@@ -20601,6 +20778,42 @@ async function runTest(projectPath) {
       await purgeRecycle(rRoot, { silent: true });   // 0 = ไม่ล้าง — ต้องไม่ throw
       check('recycleDays=0 → ไม่ล้างอัตโนมัติ (ไฟล์ยังอยู่)',
             await kapi.exists(await kapi.join(rRoot, 'Recycle', 'new-keep.md')));
+
+      // [alpha.148] ★ อายุของของในถังนับจาก "เวลาที่ลบ" (ฝังอยู่ในชื่อ) ไม่ใช่ mtime
+      // ไฟล์ทดสอบถูกเขียนตอนนี้ (mtime ใหม่) แต่ชื่อบอกว่าลบเมื่อ 40 วันก่อน → ต้องถูกเลือก
+      const old148 = (Date.now() - 40 * 86400000).toString(36) + '-a148-old.md';
+      const new148 = Date.now().toString(36) + '-a148-new.md';
+      const rec148 = await kapi.join(rRoot, 'Recycle');
+      await kapi.writeFile(await kapi.join(rec148, old148), 'ลบนานแล้ว');
+      await kapi.writeFile(await kapi.join(rec148, old148 + '.k2restore.json'), '{}');
+      await kapi.writeFile(await kapi.join(rec148, new148), 'เพิ่งลบ');
+      const doomed148 = await listPurgeable(rRoot, 30);
+      check('[a148-R1] ★ เลือกของที่ลบเกินกำหนดจากเวลาในชื่อ (แม้ mtime ยังใหม่)',
+            doomed148.some((p) => p.endsWith(old148)), JSON.stringify(doomed148));
+      check('[a148-R1] ★ ของที่เพิ่งลบไม่ถูกเลือก', !doomed148.some((p) => p.endsWith(new148)));
+      check('[a148-R1] ใบกู้คืนไม่ถูกนับเป็นรายการแยก (ตัวเลขในกล่องตรงกับต้นไม้)',
+            !doomed148.some((p) => p.endsWith('.k2restore.json')));
+      for (const f of [old148, old148 + '.k2restore.json', new148]) await kapi.remove(await kapi.join(rec148, f));
+    }
+
+    // ---- [alpha.148] พิมพ์ระหว่างรอเขียนดิสก์ ต้องไม่ถูกนับว่าบันทึกแล้ว + Ctrl+S จดสถิติคำรายวัน ----
+    {
+      activate(t.file);
+      const tab148 = state.active;
+      markDirty(tab148);
+      const p148 = saveTab(tab148);      // เริ่มเขียน (ยังไม่ await)
+      markDirty(tab148);                 // จำลองตัวอักษรที่พิมพ์เข้ามาระหว่างรอดิสก์
+      await p148;
+      check('[a148-S1] ★ พิมพ์ระหว่างรอเขียนดิสก์ → แท็บยังเป็น "ยังไม่บันทึก"', tab148.dirty === true);
+      check('[a148-S1] ป้ายแท็บยังมีจุด ● ให้เห็น',
+            tab148.tabBtn.querySelector('.tab-title').textContent.startsWith('● '),
+            tab148.tabBtn.querySelector('.tab-title').textContent);
+      await saveTab(tab148);
+      check('[a148-S1] บันทึกรอบถัดไป (ไม่มีการพิมพ์แทรก) → สะอาด', tab148.dirty === false);
+      check('[a148-W1] บันทึกไฟล์เดียวแล้ว ตั้งคิวจดสถิติคำรายวัน', wordHistoryPending() === true);
+      await flushWordHistory();
+      check('[a148-W1] ★ Ctrl+S ธรรมดาก็จดยอดคำของวันนี้ (เดิมจดเฉพาะ "บันทึกทั้งหมด")',
+            !!getWordHistory().find((h) => h.date === localDay()), JSON.stringify(getWordHistory().slice(-2)));
     }
 
     // ---- ปุ่มลัดตั้งเอง (configurable shortcuts) ----
@@ -20633,6 +20846,15 @@ async function runTest(projectPath) {
     check('ยกเลิกแล้วไม่กระทบ settings.shortcuts', Object.keys(state.settings.shortcuts).length === 0);
 
     // ---- Plugin โหลด + คำสั่งทำงาน ----
+    // [alpha.148] ปลั๊กอินของ fixture (Plugins/demo) มากับโปรเจกต์ → ต้องได้รับอนุญาตก่อน
+    // (การอนุญาตอยู่ใน userData ข้ามรอบเทสได้ → ถอนก่อนเสมอ ไม่งั้นผลขึ้นกับรอบที่แล้ว)
+    await untrustProjectPlugins();
+    await loadPlugins();
+    check('[a148-P0] ★ เปิดโปรเจกต์ที่มีปลั๊กอินแต่ยังไม่อนุญาต → ไม่มีคำสั่งของปลั๊กอินโปรเจกต์เลย',
+          !plugins.commands.some((c) => c.label === 'นับอักขระฉากนี้') && plugins.untrusted > 0,
+          JSON.stringify({ cmds: plugins.commands.map((c) => c.label), untrusted: plugins.untrusted }));
+    await trustProjectPlugins();
+    await loadPlugins();
     check('ปลั๊กอินถูกโหลด + ลงทะเบียนคำสั่ง',
           plugins.commands.some((c) => c.label === 'นับอักขระฉากนี้'),
           JSON.stringify(plugins.commands.map((c) => c.label)));
@@ -21694,8 +21916,8 @@ async function runTest(projectPath) {
 
     // ---- สถิติคำรายวัน + วันเขียนติดต่อกัน (แสดงในแดชบอร์ด) ----
     {
-      const today = new Date().toISOString().slice(0, 10);
-      const yst = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const today = localDay();
+      const yst = addDays(today, -1);
       state.meta.wordHistory = [{ date: yst, words: 1000 }, { date: today, words: 1500 }];
       check('calcStreak นับวันเขียนติดต่อกันได้', calcStreak(state.meta.wordHistory) === 2,
             String(calcStreak(state.meta.wordHistory)));
@@ -22369,7 +22591,7 @@ async function runTest(projectPath) {
     {
       const okB = await autoBackupNow(true);
       check('สำรองโปรเจกต์สำเร็จ', okB);
-      const day = new Date().toISOString().slice(0, 10);
+      const day = localDay();
       const bDir = await kapi.join(state.root, 'Backups', day);
       check('มีโฟลเดอร์สำรองของวันนี้', await kapi.exists(bDir));
       const srcPng = await kapi.join(state.root, 'Images', 'sunset.png');
@@ -22380,6 +22602,19 @@ async function runTest(projectPath) {
             a.length === b.length && a[0] === b[0] && a[a.length - 1] === b[b.length - 1],
             `${a.length} vs ${b.length}`);
       check('สำรองซ้ำในวันเดียวกันถูกข้าม', (await backupIfDue()) === false);
+      // [alpha.148] ป้าย "สำรองวันนี้ครบแล้ว" อยู่ในโฟลเดอร์สำรองของโปรเจกต์นั้นเอง
+      check('[a148-B1] มีป้ายสำรองครบในโฟลเดอร์ของวันนี้', await kapi.exists(await kapi.join(bDir, BACKUP_DONE_MARK)));
+      // ★ จำลอง "เปิดโปรเจกต์อื่นแล้วสำรองไปแล้ววันนี้" — ตัวจำเดิมใน localStorage ต้องไม่กั้นโปรเจกต์นี้อีก
+      try { localStorage.setItem('k2-last-backup', localDay()); } catch {}
+      await kapi.remove(await kapi.join(bDir, BACKUP_DONE_MARK));
+      const keyP148 = await kapi.join(state.root, 'ai-key.json');
+      const hadKey148 = await kapi.exists(keyP148);
+      if (!hadKey148) await kapi.writeFile(keyP148, JSON.stringify({ apiKey: 'sk-e2e-a148' }));
+      check('[a148-B2] ★ โปรเจกต์นี้ยังไม่มีป้ายของตัวเอง → สำรองจริง (ไม่ถูกโปรเจกต์อื่นกั้น)',
+            (await backupIfDue()) === true);
+      check('[a148-B3] ★ คีย์ AI ไม่ติดไปกับชุดสำรอง', !(await kapi.exists(await kapi.join(bDir, 'ai-key.json'))));
+      if (!hadKey148) await kapi.remove(keyP148);
+      try { localStorage.removeItem('k2-last-backup'); } catch {}
       await kapi.remove(await kapi.join(state.root, 'Backups'));
     }
 
@@ -22392,6 +22627,12 @@ async function runTest(projectPath) {
       check('writeBytes/readBytes รักษาไบต์ >0x7F ได้ครบ',
             back.length === bytes.length && back.every((v, i) => v === bytes[i]),
             JSON.stringify(back));
+      // [alpha.148] ส่งไบต์เป็น Uint8Array ตรง ๆ — เดิมเป็นอาร์เรย์ตัวเลขทีละไบต์ (รูปใหญ่ = ช้า/กินแรม)
+      check('[a148-X1] readBytes คืน Uint8Array (ไม่ใช่อาร์เรย์ตัวเลขทีละไบต์)', back instanceof Uint8Array,
+            Object.prototype.toString.call(back));
+      await kapi.writeBytes(p, new Uint8Array([7, 250]));
+      const back2 = await kapi.readBytes(p);
+      check('[a148-X1] writeBytes รับ Uint8Array ได้ครบทุกไบต์', back2.length === 2 && back2[0] === 7 && back2[1] === 250);
       await kapi.remove(p);
     }
 
@@ -31810,6 +32051,18 @@ async function runTest(projectPath) {
             "k2.registerShortcut('hello', 'F9', true, true, () => { globalThis.__k2test.shortcut = true; });",
             "globalThis.__k2test.panelId = k2.registerPanel('demo', { title: 'แผงทดสอบ', render: (h) => { h.textContent = 'ok'; } });",
           ].join('\n'));
+          // [alpha.148] ★ ปลั๊กอินของโปรเจกต์ต้องได้รับอนุญาตก่อน — ยังไม่อนุญาต = ห้ามรันแม้บรรทัดเดียว
+          // (การอนุญาตเก็บใน userData ข้ามรอบเทสได้ → ถอนออกก่อนเพื่อเริ่มจากสภาพของผู้ใช้ที่เพิ่งได้โปรเจกต์มา)
+          await untrustProjectPlugins();
+          delete globalThis.__k2test;
+          await loadPlugins();
+          check('[a148-P1] ★ ยังไม่อนุญาต → โค้ดของปลั๊กอินโปรเจกต์ไม่ถูกรันเลย',
+                globalThis.__k2test === undefined && !pluginList().loaded.some((x) => x.origin === 'project'),
+                JSON.stringify(pluginList().loaded.map((x) => x.name + ':' + x.origin)));
+          check('[a148-P1] ยังไม่อนุญาต → ขึ้นเป็น "รออนุญาต" (ไม่ใช่ "พัง") และไม่ถูกตั้งธงปิดถาวร',
+                pluginList().failed.some((x) => x.name === 'k2test' && x.untrusted) && pluginDisabled('k2test') === false,
+                JSON.stringify(pluginList().failed.map((x) => x.name + ':' + !!x.untrusted)));
+          await trustProjectPlugins();
           await loadPlugins();
           const pl = pluginList();
           const T = globalThis.__k2test || {};
@@ -31855,6 +32108,12 @@ async function runTest(projectPath) {
           await kapi.mkdir(dirBad);
           await kapi.writeFile(await kapi.join(dirBad, 'plugin.json'), '{"name":"พัง","entry":"main.js"}');
           await kapi.writeFile(await kapi.join(dirBad, 'main.js'), 'throw new Error("ตั้งใจให้พัง");');
+          await loadPlugins();
+          check('[a148-P2] ★ มีปลั๊กอินเพิ่มเข้ามาหลังอนุญาต → ขออนุญาตใหม่ทั้งชุด (ไม่รันแม้ตัวที่เคยอนุญาต)',
+                !pluginList().loaded.some((x) => x.name === 'k2test') &&
+                pluginList().failed.some((x) => x.name === 'k2bad' && x.untrusted),
+                JSON.stringify(pluginList().failed.map((x) => x.name + ':' + !!x.untrusted)));
+          await trustProjectPlugins();
           await loadPlugins();
           const pl2 = pluginList();
           check('[r3-7] ปลั๊กอินที่พังถูกจดไว้ใน failed', pl2.failed.some((x) => x.name === 'k2bad'),
@@ -35662,8 +35921,23 @@ async function runTest(projectPath) {
       {
         // บล็อกเทสปลั๊กอินก่อนหน้า (r3-7) ลบโฟลเดอร์ k2test/k2bad ทิ้งแล้วแต่ไม่ได้โหลดใหม่
         // → รายการในหน่วยความจำยังค้างของที่ไม่มีอยู่จริง · อ่านใหม่ก่อนเริ่มเทสแผง
+        // [alpha.148] เริ่มจาก "ยังไม่อนุญาต" แล้วอนุญาตผ่านปุ่มจริงในแผง (กดปุ่ม → กล่องยืนยัน → ตกลง)
+        await untrustProjectPlugins();
         await reloadPlugins();
         showPanel('plugins');
+        await renderPluginPanel($('#plugins-body'));
+        check('[a148-P3] แผงปลั๊กอินโชว์การ์ด "รออนุญาต" พร้อมปุ่มอนุญาต',
+              await until79(() => document.querySelector('#plugins-body .k-plug-card.k-plug-untrusted .k-plug-trust')),
+              $('#plugins-body') ? $('#plugins-body').textContent.slice(0, 160) : 'ไม่มี host');
+        const trustBtn148 = document.querySelector('#plugins-body .k-plug-trust');
+        if (trustBtn148) {
+          trustBtn148.click();
+          await until79(() => document.querySelector('.k-dialog .k-ok'));
+          document.querySelector('.k-dialog .k-ok')?.click();
+        }
+        check('[a148-P3] ★ กดอนุญาตในแผงแล้ว ปลั๊กอินของโปรเจกต์ทำงานจริง',
+              await until79(() => pluginList().loaded.some((p) => p.origin === 'project')),
+              JSON.stringify(pluginList().failed.map((x) => x.name + ':' + !!x.untrusted)));
         check('[79-1] เปิดแผงปลั๊กอินได้', isPanelOpen('plugins'));
         await renderFeaturePanel('plugins');
         const host = $('#plugins-body');

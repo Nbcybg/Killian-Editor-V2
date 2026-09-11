@@ -5040,12 +5040,18 @@ ui.plug.stErr,มีปัญหา
 ui.plug.stOff,ปิดอยู่
 ui.plug.stOk,ทำงานอยู่
 ui.plug.stOld,รุ่นไม่พอ
+ui.plug.stUntrusted,รออนุญาต
 ui.plug.summary,ทั้งหมด {0} · ทำงานอยู่ {1}
 ui.plug.summaryErr, · มีปัญหา {0}
+ui.plug.trustAsk,อนุญาตให้ปลั๊กอินทุกตัวในโฟลเดอร์ Plugins ของโปรเจกต์นี้ทำงาน? ปลั๊กอินรันโค้ดได้เต็มที่ (อ่าน เขียน ลบไฟล์ และเชื่อมต่ออินเทอร์เน็ต) ถ้าไม่แน่ใจว่าใครเขียนอย่าอนุญาต · ถ้าปลั๊กอินถูกแก้หรือเพิ่มทีหลัง โปรแกรมจะถามใหม่
+ui.plug.trustedDone,อนุญาตปลั๊กอินของโปรเจกต์นี้แล้ว
+ui.plug.trustProject,อนุญาตปลั๊กอินของโปรเจกต์นี้
 ui.plug.uninstall,ถอนออก
 ui.plug.uninstallAsk,"ถอน ""{0}"" ออก — ลบโฟลเดอร์ทิ้งถาวร"
 ui.plug.uninstalled,ถอน {0} ออกแล้ว
 ui.plug.uninstallHint,ลบโฟลเดอร์ของปลั๊กอินนี้ออกจากเครื่อง
+ui.plug.untrustedHint,ปลั๊กอินนี้มากับโปรเจกต์และยังไม่ได้รับอนุญาตให้ทำงาน — ปลั๊กอินอ่าน เขียน และลบไฟล์ในเครื่องได้ทั้งหมด อนุญาตเฉพาะโปรเจกต์ที่คุณไว้ใจ
+ui.plug.untrustedStatus,โปรเจกต์นี้มีปลั๊กอิน {0} ตัวที่ยังไม่ได้อนุญาตให้ทำงาน — ตรวจสอบได้ที่แผงปลั๊กอิน
 ui.plugin.failed,ปลั๊กอินพัง — ปิดไว้ชั่วคราว
 ui.plugin.loaded,โหลดปลั๊กอิน
 ui.plugin.needsNewer,ต้องใช้ Killian รุ่นใหม่กว่านี้
@@ -6173,6 +6179,8 @@ ui.trash.recoverRestoreAlbumDone,กู้คืนอัลบั้มแล�
 ui.trash.recoverRestoreBookDone,กู้คืนเล่มแล้ว
 ui.trash.recoverRestoreDone,กู้คืนแล้ว
 ui.trash.recoverRestoreImageDone,กู้คืนรูปแล้ว
+ui.trash.restoredChapterRebuilt,กู้คืนฉากแล้ว — บทเดิมถูกลบไปแล้ว จึงสร้างบท “{0}” กลับมาให้
+ui.trash.restoredRenamed,กู้คืนแล้ว — ชื่อเดิมมีอยู่แล้ว จึงบันทึกเป็น “{0}”
 ui.tree.clipEmpty,ยังไม่ได้คัดลอกอะไรไว้
 ui.tree.collapseAll,พับทุกหัวข้อ
 ui.tree.confirmDeleteN,ย้าย {0} รายการที่เลือกไปถังขยะ?

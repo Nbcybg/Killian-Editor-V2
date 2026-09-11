@@ -8,6 +8,7 @@
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { el, state, setStatus, log, textWidth } from './core.js';
 import { num } from './num.js';
+import { localDay } from './local-date.js';
 import { confirmBox, escClose } from './ui.js';
 import { TitlePageEditor, normalizeTitlePages, defaultTitlePages,
          titlePageInnerHtml } from './sp-title-pages.js';
@@ -49,7 +50,7 @@ export function pdfMeta(title) {
   const m = scriptMeta(title);
   const s = state.meta || {};
   return { ...m, draft: String(s.revisions || s.draft || '').trim(),
-           date: new Date().toISOString().slice(0, 10) };
+           date: localDay() };
 }
 
 // ───────── ฟอนต์ที่ฝังลง PDF ─────────
@@ -376,7 +377,7 @@ export async function openHeaderDialog() {
     const h = mergeHeaders(cur());
     const shown = headerStringsFor(2, h, { PAGE: 2, PAGES: 120, TITLE: state.title || tt('ui.common.title'),
       AUTHOR: (state.meta || {}).author || tt('ui.common.author'), DRAFT: tt('ui.pdf.draftTwo'),
-      DATE: new Date().toISOString().slice(0, 10), SCENE: tt('ui.pdf.iNTNight') });
+      DATE: localDay(), SCENE: tt('ui.pdf.iNTNight') });
     info.textContent = shown.length
       ? tt('ui.pdf.samplePage') + shown.map((r) => `[${r.align}] ${r.text}`).join('   ') +
         ttf('ui.pdf.linePage', headerLineCount(h))

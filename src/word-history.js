@@ -1,6 +1,7 @@
 // word-history.js + streak.js — สถิติคำรายวัน + การนับวันเขียนติดต่อ
 import { state, log } from './core.js';
 import { parseMdFile, countWords } from './md.js';
+import { localDay, addDays } from './local-date.js';
 
 // ---- Word History (ข้อ 58) ----
 export function getWordHistory() {
@@ -8,14 +9,19 @@ export function getWordHistory() {
   return state.meta.wordHistory || [];
 }
 
-// บันทึกจำนวนคำวันนี้ (เรียกตอน autosave หรือก่อนปิดโปรแกรม)
-export async function recordDailyWords(totalWords) {
-  if (!state.meta || !state.root) return;
-  const today = new Date().toISOString().slice(0, 10);
+// บันทึกจำนวนคำวันนี้
+// [alpha.148] "วันนี้" = วันของเครื่องผู้ใช้ (เดิม toISOString = วัน UTC → ตีหนึ่งถึงหกโมงเช้าเวลาไทยไปลงเมื่อวาน)
+// · ค่าไม่เปลี่ยน = ไม่แตะดิสก์ (ตอนนี้ถูกเรียกหลังทุกการบันทึก ไม่ใช่แค่ "บันทึกทั้งหมด")
+// · `root` = โปรเจกต์ตอนที่นับ — ถ้าผู้ใช้สลับโปรเจกต์ไประหว่างรอ ห้ามเขียนทับของโปรเจกต์ใหม่
+export async function recordDailyWords(totalWords, root = state.root) {
+  if (!state.meta || !state.root) return false;
+  if (root && state.root !== root) return false;
+  const today = localDay();
   const hist = getWordHistory();
   // อัปเดตวันนี้ หรือเพิ่มใหม่
   const idx = hist.findIndex((h) => h.date === today);
   if (idx >= 0) {
+    if (hist[idx].words === totalWords && state.meta.wordHistory === hist) return false;
     hist[idx].words = totalWords;
   } else {
     hist.push({ date: today, words: totalWords });
@@ -27,6 +33,45 @@ export async function recordDailyWords(totalWords) {
     const { saveProjectMeta } = await import('./app.js');
     await saveProjectMeta();
   } catch {}
+  return true;
+}
+
+// ═══════════ [alpha.148] ★ จดสถิติคำหลัง "ทุก" การบันทึก ═══════════
+//
+// ต้นตอ: `recordDailyWords` มีผู้เรียกจริงแค่ที่เดียวคือ "บันทึกทั้งหมด" — และตัวนั้นยังเลิกทำ
+// ทันทีถ้าไม่มีงานค้าง · Ctrl+S / บันทึกอัตโนมัติ / ปิดโปรแกรม ไม่เคยจดเลย
+// → กราฟคำรายวันกับวันเขียนติดต่อกันเป็นศูนย์ สำหรับทุกคนที่ไม่ได้กด "บันทึกทั้งหมด"
+//
+// หน่วงรวบ: การบันทึกรัว ๆ (autosave หลายแท็บ) = นับทั้งโปรเจกต์ + เขียน project.khn.json ครั้งเดียว
+// ก่อนปิดโปรแกรม/เปลี่ยนโปรเจกต์ต้อง `flushWordHistory()` ไม่งั้นรอบสุดท้ายหายไปกับตัวจับเวลา
+const WH = { timer: null, root: null };
+export const WORD_HISTORY_DELAY = 15000;
+
+export function scheduleWordHistory(delay = WORD_HISTORY_DELAY) {
+  if (!state.root) return;
+  if (WH.timer) clearTimeout(WH.timer);
+  WH.root = state.root;
+  WH.timer = setTimeout(() => { WH.timer = null; flushWordHistory({ force: true }).catch(() => {}); }, delay);
+}
+
+/** มีรอบที่รอจดอยู่ไหม (เทสใช้) */
+export function wordHistoryPending() { return !!WH.timer; }
+
+/**
+ * จดรอบที่ค้างอยู่ทันที
+ * @param {{force?: boolean, timeoutMs?: number}} opts force = จดแม้ไม่มีรอบค้าง ·
+ *        timeoutMs = เพดานเวลารอ (โปรเจกต์ใหญ่มากห้ามทำให้ปิดโปรแกรมค้าง)
+ */
+export async function flushWordHistory({ force = false, timeoutMs = 2000 } = {}) {
+  const pending = !!WH.timer;
+  if (WH.timer) { clearTimeout(WH.timer); WH.timer = null; }
+  const root = WH.root || state.root;
+  WH.root = null;
+  if ((!pending && !force) || !root || state.root !== root) return false;
+  const work = countProjectWords().then((w) => recordDailyWords(w, root));
+  const timeout = new Promise((r) => setTimeout(() => r(false), timeoutMs));
+  try { return await Promise.race([work, timeout]); }
+  catch (e) { log('warn', 'flushWordHistory failed', e); return false; }
 }
 
 // คำนวณจำนวนคำรวมจากทุกฉากในโปรเจกต์
@@ -137,18 +182,19 @@ export async function rebuildWordCounts({ force = false } = {}) {
 }
 
 // ---- Writing Streak (ข้อ 59) ----
+// [alpha.148] วันนี้/เมื่อวาน = วันของเครื่อง (local-date.js) ให้ตรงกับที่ recordDailyWords จด
 export function calcStreak(wordHistory) {
   const hist = wordHistory || getWordHistory();
   if (!hist.length) return 0;
   // เรียงวันที่ใหม่สุดก่อน
   const sorted = [...hist].sort((a, b) => b.date.localeCompare(a.date));
   let streak = 0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDay();
   // เช็ค: วันนี้เขียนหรือยัง (มีคำ > 0)
   const todayEntry = sorted.find((h) => h.date === today);
   if (!todayEntry || todayEntry.words <= 0) {
     // วันนี้ยังไม่ได้เขียน → เช็คเมื่อวาน
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterday = addDays(today, -1);
     const yesterdayEntry = sorted.find((h) => h.date === yesterday);
     if (!yesterdayEntry || yesterdayEntry.words <= 0) return 0;
     // เริ่มนับจากเมื่อวาน

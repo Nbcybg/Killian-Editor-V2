@@ -186,3 +186,20 @@ console.log('alpha.103 align map (list / quote) OK');
   if (M.figureImgStyle({}) !== '') throw new Error('ไม่ตั้งอะไร = ไม่มีสไตล์ (ใช้ค่าเริ่มต้นของ CSS)');
 }
 console.log('alpha.142 image options OK');
+
+// [alpha.148] บรรทัดว่างหัวฉากต้องรอด "บันทึก → เปิดใหม่" (เดิม parseMdFile กิน \n นำหน้าทิ้งหมด)
+{
+  for (const body of ['ข้อความ', '\nบรรทัดว่างหนึ่ง', '\n\nสองบรรทัด', '', '\n', '\n\n\n']) {
+    const back = parseMdFile(dumpMdFile({ title: 'ท' }, body)).body;
+    if (back !== body) throw new Error('บรรทัดว่างหัวฉากหาย: ' + JSON.stringify(body) + ' → ' + JSON.stringify(back));
+  }
+  // ไฟล์ปกติต้องเหมือนเดิมทุกไบต์ (ไม่มีบรรทัดขยะเพิ่มในไฟล์ทุกไฟล์)
+  if (dumpMdFile({ title: 'ท' }, 'abc') !== '---\ntitle: ท\n---\nabc') throw new Error('ไฟล์ปกติเปลี่ยนรูป');
+  // ไฟล์ที่มีอยู่แล้ว (ของเรา · เขียนมือ/v1 ที่เว้นบรรทัดหลัง --- · CRLF ของ Windows) ได้เนื้อเหมือนเดิม
+  for (const raw of ['---\ntitle: ท\n---\nabc', '---\ntitle: ท\n---\n\nabc', '---\r\ntitle: ท\r\n---\r\n\r\nabc']) {
+    const got = parseMdFile(raw);
+    if (got.body !== 'abc' || got.meta.title !== 'ท')
+      throw new Error('ไฟล์เดิมอ่านแล้วเพี้ยน: ' + JSON.stringify(raw) + ' → ' + JSON.stringify(got));
+  }
+  console.log('alpha.148 leading blank lines OK');
+}

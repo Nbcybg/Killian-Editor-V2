@@ -5040,12 +5040,18 @@ ui.plug.stErr,error
 ui.plug.stOff,off
 ui.plug.stOk,active
 ui.plug.stOld,too old
+ui.plug.stUntrusted,Needs permission
 ui.plug.summary,{0} total · {1} active
 ui.plug.summaryErr, · {0} failed
+ui.plug.trustAsk,"Allow every plugin in this project's Plugins folder to run? Plugins run code with full access (read, write and delete files, connect to the internet). If you are not sure who wrote them, do not allow. If the plugins change later you will be asked again."
+ui.plug.trustedDone,This project's plugins are now allowed
+ui.plug.trustProject,Allow this project's plugins
 ui.plug.uninstall,Uninstall
 ui.plug.uninstallAsk,"Uninstall ""{0}"" — deletes its folder"
 ui.plug.uninstalled,Uninstalled {0}
 ui.plug.uninstallHint,Delete this plugin's folder
+ui.plug.untrustedHint,"This plugin came with the project and is not allowed to run yet. Plugins can read, write and delete any file on this computer — only allow projects you trust."
+ui.plug.untrustedStatus,This project has {0} plugin(s) that are not allowed to run yet — review them in the Plugins panel
 ui.plugin.failed,Plugin crashed - disabled for now
 ui.plugin.loaded,Plugins loaded
 ui.plugin.needsNewer,Requires a newer version of Killian
@@ -6173,6 +6179,8 @@ ui.trash.recoverRestoreAlbumDone,กู้คืนอัลบั้มแล�
 ui.trash.recoverRestoreBookDone,กู้คืนเล่มแล้ว
 ui.trash.recoverRestoreDone,กู้คืนแล้ว
 ui.trash.recoverRestoreImageDone,กู้คืนรูปแล้ว
+ui.trash.restoredChapterRebuilt,"Scene restored — its chapter had been deleted, so chapter “{0}” was recreated"
+ui.trash.restoredRenamed,"Restored — the original name was taken, saved as “{0}”"
 ui.tree.clipEmpty,Nothing has been copied yet
 ui.tree.collapseAll,Collapse all
 ui.tree.confirmDeleteN,Move the {0} selected items to the trash?

@@ -20,8 +20,11 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **4,801 checks · ALL OK** (alpha.147) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **8,592 ข้อ · 100 ไฟล์** · ~30 วินาที)
+ปัจจุบัน **4,831 checks · ALL OK** (alpha.148) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **8,675 ข้อ · 104 ไฟล์** · ~30 วินาที)
+**[alpha.148] ปลั๊กอินของโปรเจกต์ต้องได้รับอนุญาตก่อนรัน** — เทสที่พึ่ง `Plugins/*` ของ fixture ต้อง
+`await untrustProjectPlugins()` → (เช็คสภาพยังไม่อนุญาต) → `await trustProjectPlugins()` → `loadPlugins()`
+เพราะการอนุญาตเก็บใน userData **ข้ามรอบเทสได้** · การเขียนไฟล์ทั้งหมดผ่าน `fs-safe.cjs` (atomic, ไม่ fsync — ~22ms/ไฟล์)
 **[alpha.147] บน macOS ไม่มี xvfb** — รัน `KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj ./node_modules/.bin/electron .`
 เป็นคำสั่งเดี่ยวของมันเอง (ต่อ `;`/`&&` กับคำสั่งอื่นแล้วตายกลางทาง → อ่านผลของรอบเก่า) · เช็คผลด้วยเนื้อหาใหม่เสมอ
 **ตัวเลขสองบรรทัดนี้ล้าสมัยง่ายมาก** — รอบไหนแตะเทส ให้รันจริงแล้วอัปเดตด้วย

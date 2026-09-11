@@ -735,14 +735,18 @@ function parseMdFile(text) {
   if (text.startsWith('---')) {
     const end = text.indexOf('\n---', 3);
     if (end !== -1) {
-      for (const line of text.slice(3, end).split('\n')) {
+      // [alpha.148] \r\n (ไฟล์ที่แก้บน Windows) — `.` ใน regex ข้างล่างไม่กิน \r → เมทาดาทาหายทั้งหัวไฟล์
+      for (const line of text.slice(3, end).replace(/\r/g, '').split('\n')) {
         const m = /^(\w[\w-]*):\s*(.*)$/.exec(line);
         if (!m) continue;
         const v = m[2].trim();
         meta[m[1]] = v.startsWith('[') && v.endsWith(']')
           ? v.slice(1, -1).split(',').map((x) => x.trim()).filter(Boolean) : v;
       }
-      body = text.slice(end + 4).replace(/^\n+/, '');
+      // [alpha.148] ตัดแค่ "ตัวคั่น" หลังเส้น --- หนึ่งบรรทัด + บรรทัดว่างตามธรรมเนียมอีกหนึ่ง
+      // เดิม /^\n+/ กินบรรทัดว่างหัวฉากที่ผู้ใช้เว้นไว้ทิ้งหมดทุกครั้งที่เปิดไฟล์ (และไม่รู้จัก \r\n)
+      // ไฟล์ทั่วไป (`---\nbody` ของเรา · `---\n\nbody` ที่เขียนมือ/v1) ได้ body เหมือนเดิมทุกไบต์
+      body = text.slice(end + 4).replace(/^\r?\n/, '').replace(/^\r?\n/, '');
     }
   }
   return { meta, body };
@@ -753,7 +757,9 @@ function dumpMdFile(meta, body) {
   for (const [k, v] of Object.entries(meta))
     out.push(Array.isArray(v) ? `${k}: [${v.join(', ')}]` : `${k}: ${v}`);
   out.push('---\n');
-  return out.join('\n') + body;
+  // [alpha.148] เนื้อที่ขึ้นต้นด้วยบรรทัดว่าง → คั่นด้วยบรรทัดว่างตามธรรมเนียมหนึ่งบรรทัดก่อน
+  // parseMdFile ตัดบรรทัดนั้นทิ้ง แล้วได้บรรทัดว่างของผู้ใช้กลับมาครบ (เนื้อปกติไม่เปลี่ยนแม้แต่ไบต์เดียว)
+  return out.join('\n') + (/^\r?\n/.test(body) ? '\n' : '') + body;
 }
 
 function countWords(body) {
