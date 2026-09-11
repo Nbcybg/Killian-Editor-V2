@@ -643,9 +643,18 @@ export function auditPanelGaps(opts = {}) {
     if (!kids.length) continue;
     const total = row ? dockEl.clientWidth : dockEl.clientHeight;
     if (!total) continue;
+    // [alpha.146] ★ ต้องนับ `margin` ของลูกด้วย — `getBoundingClientRect()` ไม่รวมมัน
+    // ตั้งแต่เปลือกเป็นการ์ด แผงที่ปรับขนาดไม่ได้ (แถบเครื่องมือ/แถบสถานะ) เว้นระยะจาก
+    // เพื่อนบ้านด้วย margin `--shell-gap` → ถ้าไม่นับ ตัวตรวจจะเห็นเป็น "ช่องว่างค้าง" 10px
+    // ทุก dock แนวตั้ง แล้ว **ลงมือยืดแผงกลางเพื่อปิดรูที่ตั้งใจให้มี** (ดูขั้นตอน (1) ข้างล่าง)
+    // = สัดส่วนที่ผู้ใช้ลากไว้ถูกเขียนทับทุกครั้งที่เปิด/ปิดแผง + log ท่วม
+    // (margin ติดลบก็บวกตามจริง — พื้นที่ที่ "มีเจ้าของ" คือกล่องบวก margin ของมันเสมอ)
     const used = kids.reduce((a, e) => {
       const r = e.getBoundingClientRect();
-      return a + (row ? r.width : r.height);
+      const cs = getComputedStyle(e);
+      const mg = row ? (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0)
+                     : (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+      return a + (row ? r.width : r.height) + mg;
     }, 0);
     const gap = total - used;
     if (gap <= GAP_TOL) continue;

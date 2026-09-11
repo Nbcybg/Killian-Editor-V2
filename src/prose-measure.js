@@ -594,6 +594,9 @@ export function proseBreakList(view, blocks, pages, basePage = 1, contentHeight 
           break;
         }
       }
+      // [alpha.146 · เคส P-2] ค่าตั้งต้นยังหนีบที่ 0 — "ที่ว่างท้ายหน้าติดลบ" เป็นการชดเชย
+      // ที่มีความหมายเฉพาะมุมมองที่มีแผ่นกระดาษปูตายตัว ซึ่งที่นี่ไม่รู้จัก
+      // คนที่รู้คือ `tuneProsePagePads` (วัดของจริงบนจอ + รู้ว่าตอนนี้อยู่มุมมองไหน)
       const pad = ch > 0 ? Math.max(0, Math.round((ch - used + g) * 10) / 10) : 0;
       out.push({ pos, page: basePage + i, pad });
     }

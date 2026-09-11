@@ -16469,7 +16469,7 @@
           d.className = cls + (inline2 ? " k-pb-inline" : inBlock ? " k-pb-in-block" : "");
           d.dataset.page = String(b.page || "");
           if (inBlock && Number.isFinite(b.ind)) d.style.setProperty("--k-pb-ind", b.ind + "in");
-          if (Number.isFinite(b.pad) && b.pad > 0.5) d.style.setProperty("--k-pb-pad", b.pad + "px");
+          if (Number.isFinite(b.pad) && Math.abs(b.pad) > 0.5) d.style.setProperty("--k-pb-pad", b.pad + "px");
           d.setAttribute("contenteditable", "false");
           const lbl = document.createElement("span");
           lbl.className = "sp-page-break-num";
@@ -16530,7 +16530,7 @@
       let n2 = 0;
       els.forEach((e, i5) => {
         const pad3 = Number(list[i5] && list[i5].pad);
-        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad3) && pad3 > 0.5 ? pad3 : 0) + "px");
+        e.style.setProperty("--k-pb-pad", (Number.isFinite(pad3) && Math.abs(pad3) > 0.5 ? pad3 : 0) + "px");
         n2++;
       });
       return n2;
@@ -70524,7 +70524,9 @@ ${h.text}`;
       if (!total) continue;
       const used = kids.reduce((a, e) => {
         const r = e.getBoundingClientRect();
-        return a + (row3 ? r.width : r.height);
+        const cs = getComputedStyle(e);
+        const mg = row3 ? (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0) : (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+        return a + (row3 ? r.width : r.height) + mg;
       }, 0);
       const gap = total - used;
       if (gap <= GAP_TOL) continue;
@@ -176982,6 +176984,7 @@ ${css}
     const target = (num(spf.paper.height, 11) - num(spf.margins.top, 1) - num(spf.margins.bottom, 1)) * 96;
     if (!(target > 8)) return false;
     const z = zoomFactorOf(pm2) || 1;
+    const paperView146 = isPaperView(viewOfTab(t3));
     const cs = getComputedStyle(pm2);
     const top0 = pm2.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
     const lineY = (e) => (e.getBoundingClientRect().top - top0) / z;
@@ -176993,7 +176996,7 @@ ${css}
       const used = y - prev - prevH;
       prev = y;
       prevH = els[i5].getBoundingClientRect().height / z;
-      const want = Math.max(0, Math.round((target - used) * 10) / 10);
+      const want = Math.max(paperView146 ? -400 : 0, Math.round((target - used) * 10) / 10);
       if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
       list[i5].pad = want;
       changed = true;
@@ -177029,7 +177032,7 @@ ${css}
       const used = y - prev - prevH;
       prev = y;
       prevH = els[i5].getBoundingClientRect().height / z;
-      const want = Math.max(0, Math.round((target - used) * 10) / 10);
+      const want = Math.max(-400, Math.round((target - used) * 10) / 10);
       if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
       list[i5].pad = want;
       changed = true;
@@ -184620,6 +184623,64 @@ ${css}
         resetPanels();
         await new Promise((r) => setTimeout(r, 30));
       }
+      {
+        const rootEl2 = $("#app-root");
+        const csRoot = getComputedStyle(rootEl2);
+        const px2 = (v4) => parseFloat(v4) || 0;
+        const gap = px2(csRoot.getPropertyValue("--shell-gap"));
+        check2(
+          "[146] \u2605 \u0E21\u0E35\u0E2A\u0E40\u0E01\u0E25\u0E21\u0E38\u0E21\u0E42\u0E04\u0E49\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E23\u0E1A\u0E2B\u0E49\u0E32\u0E02\u0E31\u0E49\u0E19 \u0E41\u0E25\u0E30\u0E40\u0E23\u0E35\u0E22\u0E07\u0E08\u0E32\u0E01\u0E40\u0E25\u0E47\u0E01\u0E44\u0E1B\u0E43\u0E2B\u0E0D\u0E48",
+          ["--r-xs", "--r-sm", "--r-md", "--r-lg"].map((k) => px2(csRoot.getPropertyValue(k))).every((v4, i5, a) => v4 > 0 && (i5 === 0 || v4 > a[i5 - 1])),
+          ["--r-xs", "--r-sm", "--r-md", "--r-lg"].map((k) => csRoot.getPropertyValue(k)).join("/")
+        );
+        check2("[146] --shell-gap \u0E21\u0E35\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07", gap >= 3, String(gap));
+        check2(
+          "[146] #app-root \u0E40\u0E27\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E23\u0E2D\u0E1A\u0E19\u0E2D\u0E01\u0E40\u0E17\u0E48\u0E32 --shell-gap (\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E44\u0E21\u0E48\u0E0A\u0E19\u0E02\u0E2D\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07)",
+          px2(csRoot.paddingTop) === gap && px2(csRoot.paddingLeft) === gap,
+          `${csRoot.paddingTop}/${csRoot.paddingLeft} gap=${gap}`
+        );
+        check2(
+          "[146] #app-root \u0E21\u0E35\u0E1E\u0E37\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E1E\u0E37\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E23\u0E39\u0E42\u0E1B\u0E23\u0E48\u0E07)",
+          !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(csRoot.backgroundColor),
+          csRoot.backgroundColor
+        );
+        const rh = document.querySelector("#app-root .k-resize-handle");
+        check2(
+          "[146] \u2605 \u0E17\u0E35\u0E48\u0E08\u0E31\u0E1A\u0E1B\u0E23\u0E31\u0E1A\u0E02\u0E19\u0E32\u0E14\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32 --shell-gap (\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E17\u0E31\u0E49\u0E07\u0E08\u0E2D)",
+          !!rh && Math.round(rh.getBoundingClientRect().width || rh.getBoundingClientRect().height) === gap,
+          rh && JSON.stringify(rh.getBoundingClientRect())
+        );
+        const cards = [...document.querySelectorAll("#app-root .k-panel, #app-root .k-tab-group")];
+        const outer = cards.filter((c) => !c.parentElement.closest(".k-tab-content"));
+        const inner = cards.filter((c) => c.parentElement.closest(".k-tab-content"));
+        const noBorder = outer.filter((c) => {
+          const cs = getComputedStyle(c);
+          return !["Top", "Right", "Bottom", "Left"].every((d) => px2(cs["border" + d + "Width"]) >= 1);
+        });
+        const noRadius = outer.filter((c) => px2(getComputedStyle(c).borderTopLeftRadius) <= 0);
+        check2(
+          "[146] \u2605\u2605 \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E0A\u0E31\u0E49\u0E19\u0E19\u0E2D\u0E01\u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E04\u0E23\u0E1A\u0E2A\u0E35\u0E48\u0E14\u0E49\u0E32\u0E19",
+          outer.length >= 4 && noBorder.length === 0,
+          `${noBorder.length}/${outer.length} :: ` + noBorder.map((c) => c.dataset.panelId || c.className).join(",")
+        );
+        check2(
+          "[146] \u2605\u2605 \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E0A\u0E31\u0E49\u0E19\u0E19\u0E2D\u0E01\u0E21\u0E35\u0E21\u0E38\u0E21\u0E42\u0E04\u0E49\u0E07",
+          noRadius.length === 0,
+          noRadius.map((c) => c.dataset.panelId || c.className).join(",")
+        );
+        check2(
+          "[146] \u0E41\u0E1C\u0E07\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E2D\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E01\u0E31\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E2D\u0E19\u0E02\u0E2D\u0E1A)",
+          inner.every((c) => px2(getComputedStyle(c).borderTopWidth) === 0),
+          inner.filter((c) => px2(getComputedStyle(c).borderTopWidth) !== 0).map((c) => c.dataset.panelId).join(",")
+        );
+        const bar = pEl("statusbar");
+        const above = bar && bar.previousElementSibling;
+        check2(
+          "[146] \u2605\u2605 \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E27\u0E49\u0E19\u0E23\u0E30\u0E22\u0E30\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E21\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E0A\u0E19\u0E01\u0E31\u0E19\u0E2A\u0E19\u0E34\u0E17)",
+          !!above && Math.round(bar.getBoundingClientRect().top - above.getBoundingClientRect().bottom) >= gap,
+          above && `${Math.round(bar.getBoundingClientRect().top - above.getBoundingClientRect().bottom)} < ${gap}`
+        );
+      }
       check2(
         "tree + Navigation \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
         !!tabGroupOf(PMG.root, "tree") && tabGroupOf(PMG.root, "tree") === tabGroupOf(PMG.root, "outline")
@@ -190592,7 +190653,8 @@ ${css}
                 await settle130();
                 const sL = seams131();
                 const pitchL = spf131.paper.height * 96 + num(state.settings.spPageGap, 28);
-                note("[131-P1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0394=" + JSON.stringify(sL) + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E15\u0E48\u0E2D\u0E41\u0E1C\u0E48\u0E19=" + Math.round(pitchL));
+                const bL = boxes131();
+                note("[131-P1] \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D\u0394=" + JSON.stringify(sL) + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E41\u0E1C\u0E48\u0E19\u0E15\u0E48\u0E2D\u0E41\u0E1C\u0E48\u0E19=" + Math.round(pitchL) + " \xB7 \u0E01\u0E25\u0E48\u0E2D\u0E07=" + JSON.stringify(bL.map((x) => (x.inline ? "i" : "b") + ":h" + Math.round(x.h) + "/p" + Math.round(x.pad) + "/x" + Math.round(x.extra))) + " \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14=" + Math.round(line131) + " \xB7 \u0E01\u0E27\u0E49\u0E32\u0E07\u0E41\u0E1C\u0E07=" + Math.round(pm3().getBoundingClientRect().width));
                 check2(
                   "[131-P1] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E48\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E4A\u0E30",
                   sL.length > 2 && Math.max(...sL) - Math.min(...sL) <= 1,
@@ -190603,6 +190665,32 @@ ${css}
                   sL.every((d) => Math.abs(d - pitchL) <= 1.5),
                   JSON.stringify(sL) + " vs " + Math.round(pitchL)
                 );
+                {
+                  const sheets146 = [...t100.pane.querySelectorAll(".k-paper-layer > .k-paper-sheet")];
+                  const bx146 = boxes131();
+                  const seamY = bx146.map((b) => b.bot - b.extra);
+                  const n146 = Math.min(sheets146.length, seamY.length);
+                  const shTop = (i5) => sheets146[i5].getBoundingClientRect().top;
+                  const drift = [];
+                  for (let i5 = 0; i5 < n146; i5++)
+                    drift.push(Math.round((seamY[i5] - seamY[0] - (shTop(i5) - shTop(0))) * 10) / 10);
+                  note("[146-P2] \u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 " + sheets146.length + " \u0E43\u0E1A \xB7 \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D " + seamY.length + " \xB7 \u0E23\u0E30\u0E22\u0E30\u0E17\u0E35\u0E48\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E04\u0E25\u0E32\u0E14\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19=" + JSON.stringify(drift));
+                  check2(
+                    "[146-P2] \u2605 \u0E21\u0E35\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E43\u0E2B\u0E49\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 3 \u0E43\u0E1A",
+                    n146 >= 3,
+                    `\u0E41\u0E1C\u0E48\u0E19=${sheets146.length} \u0E23\u0E2D\u0E22\u0E15\u0E48\u0E2D=${seamY.length}`
+                  );
+                  check2(
+                    "[146-P2] \u2605\u2605 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E44\u0E2B\u0E25\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E41\u0E1A\u0E1A\u0E2A\u0E30\u0E2A\u0E21\u0E17\u0E35\u0E25\u0E30\u0E2B\u0E19\u0E49\u0E32",
+                    drift.every((d) => Math.abs(d) <= 1.5),
+                    JSON.stringify(drift)
+                  );
+                  check2(
+                    "[146-P2] \u2605\u2605 \u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E41\u0E1C\u0E48\u0E19 (\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E01\u0E32\u0E23\u0E2A\u0E30\u0E2A\u0E21\u0E41\u0E23\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E38\u0E14)",
+                    Math.abs(drift[drift.length - 1] || 0) <= 1.5,
+                    "\u0E04\u0E25\u0E32\u0E14 " + (drift[drift.length - 1] || 0) + "px \u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32 " + drift.length
+                  );
+                }
                 setSpView(view131, true);
                 await wait103(300);
               }
@@ -202039,10 +202127,11 @@ ${css}
           !document.querySelector(".k-float-group") && pm11.isDocked("notes") && pm11.isDocked("comments")
         );
         const tbEl = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        const rootBox11 = document.querySelector("#app-root .k-panel-root") || $("#app-root");
         check2(
           "[66r11] ...\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E22\u0E31\u0E07\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 (\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E44\u0E1B\u0E40\u0E01\u0E32\u0E30\u0E02\u0E49\u0E32\u0E07\u0E21\u0E31\u0E19)",
-          tbEl.getBoundingClientRect().width >= $("#app-root").getBoundingClientRect().width - 2,
-          `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round($("#app-root").getBoundingClientRect().width)}`
+          tbEl.getBoundingClientRect().width >= rootBox11.getBoundingClientRect().width - 2,
+          `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round(rootBox11.getBoundingClientRect().width)}`
         );
         check2(
           "[66r11] ...\u0E41\u0E25\u0E30\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E43\u0E1A\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E1C\u0E19\u0E36\u0E01",

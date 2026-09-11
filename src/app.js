@@ -10466,6 +10466,8 @@ function tuneProsePagePads(t) {
                   - num(spf.margins.bottom, 1)) * 96;
   if (!(target > 8)) return false;
   const z = zoomFactorOf(pm) || 1;
+  // [alpha.146 · เคส P-2] มุมมองนี้ปูแผ่นกระดาษตายตัวไหม (ดู renderPaperSheets)
+  const paperView146 = isPaperView(viewOfTab(t));
   const cs = getComputedStyle(pm);
   const top0 = pm.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0) * z;
   // ที่ว่างท้ายหน้ากางด้วย `margin-top` → **ขอบบนของกล่อง = รอยต่อหน้า** ทั้งชนิดบล็อกและ inline
@@ -10519,7 +10521,29 @@ function tuneProsePagePads(t) {
     const used = y - prev - prevH;
     prev = y;
     prevH = els[i].getBoundingClientRect().height / z;
-    const want = Math.max(0, Math.round((target - used) * 10) / 10);
+    // ══ [alpha.146 · เคส P-2] ★★ ที่ว่างท้ายหน้า **ติดลบได้** ══
+    //
+    // เดิมเป็น `Math.max(0, target - used)` — หน้าที่เนื้อ **ล้น** พื้นที่พิมพ์ถูกปัดเป็น 0
+    // คือ "ไม่ชดเชยอะไรเลย" · เหตุผลที่เคยเขียนไว้คือ *"ปล่อยให้หน้าถัดไปรับไป
+    // ไม่ใช่ดันแผ่นให้เพี้ยนทั้งเล่ม"* — **กลับหัวกลับหาง**: แผ่นกระดาษถูกปูที่
+    // `k × (สูงกระดาษ + ช่องว่าง)` **ตายตัว** (renderPaperSheets) ไม่มีใคร "รับไป" ได้
+    // ส่วนที่ล้นจึงกลายเป็นระยะที่สายเนื้อหาเดินเกินแผ่นไปทีละหน้า **แล้วสะสม**
+    // → หน้าท้าย ๆ ตัวหนังสือหลุดลงไปนั่งบนพื้นโต๊ะ
+    //
+    // ที่มาของส่วนที่ล้น: `used` วัดจากของจริง จึงรวม **ระยะเว้นท้ายย่อหน้าสุดท้ายของหน้า**
+    // ซึ่งไม่ยุบหายไปไหน (ตั้งแต่ alpha.98 กล่องเส้นคั่นใช้ `height` ไม่ใช่ `margin`
+    // margin ของ sibling จึงเลิกยุบผ่านมัน) · ค่านี้เล็กมาก (ระดับ 4px) และเป็น 0 ที่รอยต่อ
+    // ส่วนใหญ่ → ซ่อนตัวมาหลายสิบรุ่น จนเมตริกฟอนต์ขยับที่ alpha.144–.145 แล้วรอยต่อไป
+    // ตกหลังย่อหน้าที่มีระยะเว้นจริงเข้าพอดี
+    //
+    // ให้ค่าติดลบไหลลงไปถึง CSS ได้ = **กล่องเส้นคั่นหดตัวกลืนส่วนที่ล้น** แล้วหน้าถัดไป
+    // กลับมาเริ่มตรงหัวแผ่นพอดี · แต่ละมุมมองหดได้ไม่เท่ากัน จึงให้ CSS เป็นคนหนีบเอง
+    // (มุมมองจัดหน้ากล่องสูง 220px หดได้เยอะ · มุมมองปกติกล่องสูงเท่า pad หดไม่ได้เลย)
+    // ★ ค่าติดลบมีความหมาย **เฉพาะมุมมองที่ปูแผ่นกระดาษตายตัว** (จัดหน้า) เท่านั้น
+    // มุมมองปกติ/ร่างไม่มีแผ่น — ความคลาดไม่สะสมและไม่มีใครเห็น ส่วนกล่องเส้นคั่นที่นั่น
+    // สูงเท่าที่ว่างพอดี หดต่ำกว่า 0 ไม่ได้อยู่แล้ว · ส่งค่าติดลบไปก็ไม่เกิดอะไรขึ้นนอกจาก
+    // ทำให้ตัวเลขที่รายงานออกมาไม่ตรงกับรูปทรงจริงบนจอ
+    const want = Math.max(paperView146 ? -400 : 0, Math.round((target - used) * 10) / 10);
     if (Math.abs(want - num(list[i].pad, 0)) < 0.5) continue;
     list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
     changed = true;
@@ -10588,7 +10612,9 @@ function tuneSpPagePads(t) {
     const used = y - prev - prevH;                       // เนื้อหาที่หน้านี้ใช้ไปจริง
     prev = y;
     prevH = els[i].getBoundingClientRect().height / z;
-    const want = Math.max(0, Math.round((target - used) * 10) / 10);
+    // [alpha.146 · เคส P-2] กฎคู่แฝดของฝั่งนิยาย — ที่ว่างท้ายหน้าติดลบได้
+    // (แผ่นของบทก็ปูตายตัวเหมือนกัน ส่วนที่ล้นจึงสะสมแบบเดียวกันเป๊ะ)
+    const want = Math.max(-400, Math.round((target - used) * 10) / 10);
     if (Math.abs(want - num(list[i].pad, 0)) < 0.5) continue;
     list[i].pad = want;                    // แก้ที่วัตถุตัวเดิมที่ปลั๊กอินถืออยู่ (ลายเซ็นไม่เปลี่ยน)
     changed = true;
@@ -18118,6 +18144,56 @@ async function runTest(projectPath) {
             `docs=${Math.round(pEl('docs').getBoundingClientRect().height)} root=${Math.round(rootH)}`);
       resetPanels(); await new Promise((r) => setTimeout(r, 30));
     }
+    // ═══ [146] รูปทรงเปลือกโปรแกรมแบบ "การ์ด" (ธีม CBlack) ═══
+    // วัดค่าที่ **คำนวณจริง** ไม่ใช่อ่านสตริงจากไฟล์ CSS — บทเรียน K-1: กฎที่เขียนไว้กับกฎที่ชนะจริง
+    // เป็นคนละเรื่อง (specificity/ลำดับ) · และ "มองเห็นไหม" ต้องวัดจากกล่องจริงเสมอ
+    {
+      const rootEl = $('#app-root');
+      const csRoot = getComputedStyle(rootEl);
+      const px = (v) => parseFloat(v) || 0;
+      const gap = px(csRoot.getPropertyValue('--shell-gap'));
+      check('[146] ★ มีสเกลมุมโค้งของเปลือกครบห้าขั้น และเรียงจากเล็กไปใหญ่',
+            ['--r-xs', '--r-sm', '--r-md', '--r-lg'].map((k) => px(csRoot.getPropertyValue(k)))
+              .every((v, i, a) => v > 0 && (i === 0 || v > a[i - 1])),
+            ['--r-xs', '--r-sm', '--r-md', '--r-lg'].map((k) => csRoot.getPropertyValue(k)).join('/'));
+      check('[146] --shell-gap มีค่าจริง', gap >= 3, String(gap));
+      check('[146] #app-root เว้นขอบรอบนอกเท่า --shell-gap (การ์ดไม่ชนขอบหน้าต่าง)',
+            px(csRoot.paddingTop) === gap && px(csRoot.paddingLeft) === gap,
+            `${csRoot.paddingTop}/${csRoot.paddingLeft} gap=${gap}`);
+      check('[146] #app-root มีพื้นหลังของตัวเอง (ช่องว่างระหว่างการ์ดต้องเห็นเป็นพื้น ไม่ใช่รูโปร่ง)',
+            !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(csRoot.backgroundColor), csRoot.backgroundColor);
+      // --shell-gap ต้องเท่าที่จับปรับขนาด — คอมเมนต์ใน style.css ประกาศกติกานี้ไว้
+      // ถ้าใครแก้ตัวใดตัวหนึ่งอย่างเดียว ช่องว่างระหว่างการ์ดจะกว้างไม่เท่ากันทั้งจอ
+      const rh = document.querySelector('#app-root .k-resize-handle');
+      check('[146] ★ ที่จับปรับขนาดกว้างเท่า --shell-gap (ช่องว่างระหว่างการ์ดเท่ากันทั้งจอ)',
+            !!rh && Math.round(rh.getBoundingClientRect().width || rh.getBoundingClientRect().height) === gap,
+            rh && JSON.stringify(rh.getBoundingClientRect()));
+      // การ์ด = ขอบครบสี่ด้าน + มุมโค้ง · แผงที่อยู่ในกลุ่มแท็บเป็นเนื้อใน ห้ามมีขอบซ้อน
+      const cards = [...document.querySelectorAll('#app-root .k-panel, #app-root .k-tab-group')];
+      const outer = cards.filter((c) => !c.parentElement.closest('.k-tab-content'));
+      const inner = cards.filter((c) => c.parentElement.closest('.k-tab-content'));
+      const noBorder = outer.filter((c) => {
+        const cs = getComputedStyle(c);
+        return !['Top', 'Right', 'Bottom', 'Left'].every((d) => px(cs['border' + d + 'Width']) >= 1);
+      });
+      const noRadius = outer.filter((c) => px(getComputedStyle(c).borderTopLeftRadius) <= 0);
+      check('[146] ★★ ทุกการ์ดชั้นนอกมีขอบครบสี่ด้าน', outer.length >= 4 && noBorder.length === 0,
+            `${noBorder.length}/${outer.length} :: ` + noBorder.map((c) => c.dataset.panelId || c.className).join(','));
+      check('[146] ★★ ทุกการ์ดชั้นนอกมีมุมโค้ง', noRadius.length === 0,
+            noRadius.map((c) => c.dataset.panelId || c.className).join(','));
+      check('[146] แผงในกลุ่มแท็บไม่มีขอบของตัวเอง (กันขอบซ้อนขอบ)',
+            inner.every((c) => px(getComputedStyle(c).borderTopWidth) === 0),
+            inner.filter((c) => px(getComputedStyle(c).borderTopWidth) !== 0)
+                 .map((c) => c.dataset.panelId).join(','));
+      // แผงที่ปรับขนาดไม่ได้ไม่มีที่จับ = ไม่มีช่องว่างในตัว → ต้องเว้นด้วย margin เอง
+      // (วัดระยะจริงระหว่างกล่อง ไม่ใช่อ่านค่า margin — margin ที่ถูกกฎอื่นทับก็ยังอ่านได้เป็นเลขสวย)
+      const bar = pEl('statusbar');
+      const above = bar && bar.previousElementSibling;
+      check('[146] ★★ แถบสถานะเว้นระยะจากการ์ดที่อยู่เหนือมันจริง (เดิมชนกันสนิท)',
+            !!above && Math.round(bar.getBoundingClientRect().top
+                                  - above.getBoundingClientRect().bottom) >= gap,
+            above && `${Math.round(bar.getBoundingClientRect().top - above.getBoundingClientRect().bottom)} < ${gap}`);
+    }
     check('tree + Navigation อยู่ในกลุ่มแท็บเดียวกัน',
           !!PL.tabGroupOf(PMG.root, 'tree') &&
           PL.tabGroupOf(PMG.root, 'tree') === PL.tabGroupOf(PMG.root, 'outline'));
@@ -23380,14 +23456,49 @@ async function runTest(projectPath) {
               setSpView('layout', true); await wait103(500); await settle130();
               const sL = seams131();
               const pitchL = (spf131.paper.height * 96) + num(state.settings.spPageGap, 28);
+              const bL = boxes131();
               note('[131-P1] มุมมองจัดหน้า: รอยต่อΔ=' + JSON.stringify(sL)
-                   + ' · ระยะแผ่นต่อแผ่น=' + Math.round(pitchL));
+                   + ' · ระยะแผ่นต่อแผ่น=' + Math.round(pitchL)
+                   + ' · กล่อง=' + JSON.stringify(bL.map((x) => (x.inline ? 'i' : 'b')
+                       + ':h' + Math.round(x.h) + '/p' + Math.round(x.pad) + '/x' + Math.round(x.extra)))
+                   + ' · บรรทัด=' + Math.round(line131)
+                   + ' · กว้างแผง=' + Math.round(pm().getBoundingClientRect().width));
               check('[131-P1] ★★ มุมมองจัดหน้า: ทุกหน้าห่างเท่ากันเป๊ะ',
                     sL.length > 2 && Math.max(...sL) - Math.min(...sL) <= 1,
                     JSON.stringify(sL));
               check('[131-P1] ★★ และห่างเท่ากับระยะแผ่นกระดาษจริง (เนื้อไม่เลื่อนออกจากแผ่น)',
                     sL.every((d) => Math.abs(d - pitchL) <= 1.5),
                     JSON.stringify(sL) + ' vs ' + Math.round(pitchL));
+              // ══ [146-P2] ★★ วัด "สิ่งที่ผู้ใช้เห็น" ไม่ใช่ตัวเลขในสายเนื้อหา ══
+              //
+              // เช็คสองข้อข้างบนวัดระยะ *ในสายเนื้อหาของตัวแก้ไข* — ซึ่งจับ P-2 ได้ก็จริง
+              // แต่ไม่ได้บอกว่าอาการที่ผู้ใช้เห็นคืออะไร จึงถูกอ่านว่า "เทสเข้มเกินไป" ได้ง่าย
+              //
+              // อาการจริงคือ: แผ่นกระดาษถูกปูที่ `k × (สูงกระดาษ + ช่องว่าง)` **ตายตัว**
+              // (renderPaperSheets ไม่วัด DOM เลย) ส่วนสายเนื้อหาเดินตามที่ว่างท้ายหน้าจริง
+              // → คลาดกันเมื่อไหร่ มัน **สะสม** ทุกหน้า จนตัวหนังสือหลุดลงไปนั่งบนพื้นโต๊ะ
+              // เทียบ "รอยต่อหน้าที่ n" กับ "หัวแผ่นที่ n" ตรง ๆ: คลาดคงที่ได้ สะสมไม่ได้
+              {
+                const sheets146 = [...t100.pane.querySelectorAll('.k-paper-layer > .k-paper-sheet')];
+                const bx146 = boxes131();
+                const seamY = bx146.map((b) => b.bot - b.extra);   // หน่วยเดียวกับ seams131()
+                const n146 = Math.min(sheets146.length, seamY.length);
+                const shTop = (i) => sheets146[i].getBoundingClientRect().top;
+                const drift = [];
+                for (let i = 0; i < n146; i++)
+                  drift.push(Math.round(((seamY[i] - seamY[0]) - (shTop(i) - shTop(0))) * 10) / 10);
+                note('[146-P2] แผ่นกระดาษ ' + sheets146.length + ' ใบ · รอยต่อ ' + seamY.length
+                     + ' · ระยะที่เนื้อหาคลาดจากแผ่น=' + JSON.stringify(drift));
+                check('[146-P2] ★ มีแผ่นกระดาษจริงให้เทียบอย่างน้อย 3 ใบ', n146 >= 3,
+                      `แผ่น=${sheets146.length} รอยต่อ=${seamY.length}`);
+                // ★★ หัวใจ: ความคลาดต้องไม่โตขึ้นทีละหน้า
+                check('[146-P2] ★★ ตัวหนังสือไม่ไหลออกจากแผ่นกระดาษแบบสะสมทีละหน้า',
+                      drift.every((d) => Math.abs(d) <= 1.5), JSON.stringify(drift));
+                // ...และหน้าสุดท้ายคือจุดที่อาการแรงสุด — บอกตัวเลขตรง ๆ เวลาแดง
+                check('[146-P2] ★★ หน้าสุดท้ายเนื้อหายังอยู่บนแผ่น (จุดที่การสะสมแรงที่สุด)',
+                      Math.abs(drift[drift.length - 1] || 0) <= 1.5,
+                      'คลาด ' + (drift[drift.length - 1] || 0) + 'px ที่หน้า ' + drift.length);
+              }
               setSpView(view131, true); await wait103(300);
             }
 
@@ -33115,9 +33226,14 @@ async function runTest(projectPath) {
         check('[66r11] ผนึกทั้งกลุ่มเข้าหน้าต่างได้ (ไม่เหลือกล่องลอย)',
               !document.querySelector('.k-float-group') && pm11.isDocked('notes') && pm11.isDocked('comments'));
         const tbEl = document.querySelector('#app-root .k-panel[data-panel-id="toolbar"]');
+        // [alpha.146] วัดจาก `.k-panel-root` ไม่ใช่ `#app-root` — ตั้งแต่เปลือกเป็นการ์ด
+        // `#app-root` เว้นขอบรอบนอกไว้ `--shell-gap` แผงจึงกว้างน้อยกว่ามันเสมอ (บทเรียนข้อ 13:
+        // เทสที่ฮาร์ดโค้ดค่าเดิมพังทันทีที่ design token ขยับ) · ของที่เทสนี้ถามคือ
+        // "แถบเครื่องมือกินเต็มแถวของมันไหม" → กล่องที่ถือต้นไม้แผงคือตัวเทียบที่ถูกต้อง
+        const rootBox11 = document.querySelector('#app-root .k-panel-root') || $('#app-root');
         check('[66r11] ...แถบเครื่องมือยังเต็มความกว้าง (กลุ่มไม่ไปเกาะข้างมัน)',
-              tbEl.getBoundingClientRect().width >= $('#app-root').getBoundingClientRect().width - 2,
-              `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round($('#app-root').getBoundingClientRect().width)}`);
+              tbEl.getBoundingClientRect().width >= rootBox11.getBoundingClientRect().width - 2,
+              `${Math.round(tbEl.getBoundingClientRect().width)} vs ${Math.round(rootBox11.getBoundingClientRect().width)}`);
         check('[66r11] ...และแท็บทั้งสองใบยังอยู่ในกลุ่มเดียวกันหลังผนึก',
               !!PL.tabGroupOf(pm11.root, 'notes') && !!PL.tabGroupOf(pm11.root, 'comments'));
         resetPanels(); await wait62(280);
