@@ -12,10 +12,15 @@ const fs = require('fs');
 let LANG_TABLE = Object.create(null);
 let LANG_CODE = '';
 /** t/tf ฝั่ง main — ใช้คีย์ชุดเดียวกับ renderer อ่านจากไฟล์ CSV ก้อนเดียวกัน (ไม่มี fallback) */
+// [alpha.147] `{sc:<คำสั่ง>}` ในไฟล์ภาษา = คีย์ลัดจริงของคำสั่งนั้น เติมตอนแสดง (เหมือนฝั่ง renderer)
+const withSc = (s) => {
+  if (!s.includes('{sc:')) return s;
+  try { return s.replace(/\{sc:([^}]+)\}/g, (m, id) => shortcutLabel(id)); } catch { return s.replace(/\{sc:[^}]+\}/g, ''); }
+};
 function t(key) {
   const v = LANG_TABLE[key];
   const s = (typeof v === 'string' && v !== '') ? v : String(key);
-  return s.replace(/\{\{|\}\}/g, (m) => m[0]);      // คลาย {{ }} เหมือนฝั่ง renderer
+  return withSc(s.replace(/\{\{|\}\}/g, (m) => m[0]));      // คลาย {{ }} เหมือนฝั่ง renderer
 }
 function tf(key, ...vals) {
   const tpl = t(key);
@@ -115,6 +120,67 @@ function removeRecent(p) {
 
 const send = (ch, ...a) => win && win.webContents.send('menu', ch, ...a);
 
+// ---- [alpha.147] คำสั่งของเมนู + คีย์ลัดจากทะเบียนคำสั่ง ----
+// ผู้ใช้: *"ต้องแยกในส่วนของ shortcut เพราะคุณชอบลืมใส่ใน ui"*
+// ป้ายชื่อในไฟล์ภาษาไม่มีคีย์ลัดแล้ว ("บันทึก" ไม่ใช่ "บันทึก (Ctrl+S)") — คีย์ลัดมาจาก icons/commands.csv
+// (ผ่าน commands-data.cjs) + ที่ผู้ใช้ตั้งเองซึ่ง renderer ส่งมากับ menu:toggles
+// `cmd()` ติดป้าย id ไว้กับฟังก์ชัน click → applyAccelerators() เติมคีย์ลัดให้ทุกรายการเอง
+// **เพิ่มรายการเมนูใหม่ด้วย cmd() = ได้คีย์ลัดบนเมนูฟรี ไม่ต้องจำไปใส่**
+const cmd = (ch, ...a) => Object.assign(() => send(ch, ...a), { cmdId: [ch, ...a].join(':') });
+let SHORTCUT_ROWS = [];
+try { ({ SHORTCUT_ROWS } = require('./commands-data.cjs')); } catch (e) { console.error('[menu] โหลด commands-data.cjs ไม่ได้ — รัน node build.js', e && e.message); }
+const ACC_KEY = { Comma: ',', Period: '.', Slash: '/', Backslash: '\\', Backquote: '`', BracketLeft: '[',
+  BracketRight: ']', Semicolon: ';', Quote: "'", Minus: '-', Equal: '=' };
+const accKey = (code) => ACC_KEY[code] || String(code).replace(/^Key/, '').replace(/^Digit/, '');
+/** คีย์ลัดที่ใช้งานจริงของคำสั่ง (ค่าที่ผู้ใช้ตั้งเองชนะ) → [code, ctrl, shift] | null */
+function shortcutOf(id) {
+  const ov = (toggles && toggles.shortcuts) || {};
+  if (ov[id] && ov[id].code) return [ov[id].code, ov[id].ctrl, ov[id].shift];
+  const row = SHORTCUT_ROWS.find((s) => s.slice(3).join(':') === id);
+  return row ? row.slice(0, 3) : null;
+}
+/** ข้อความคีย์ลัดรูปเดียวกับ formatShortcut ฝั่ง renderer (⌘⇧E บน mac · Ctrl+Shift+E ที่อื่น) */
+function shortcutLabel(id) {
+  const s = shortcutOf(id);
+  if (!s) return '';
+  const [code, ctrl, shift] = s;
+  const parts = [];
+  if (ctrl) parts.push(isMac ? '⌘' : 'Ctrl');
+  if (String(ctrl).includes('alt')) parts.push(isMac ? '⌥' : 'Alt');
+  if (shift) parts.push(isMac ? '⇧' : 'Shift');
+  parts.push(accKey(code));
+  return parts.join(isMac ? '' : '+');
+}
+// เมนู OS โชว์คีย์ลัดชิดขวาเอง แต่ **ไม่ลงทะเบียนกับระบบ** (registerAccelerator:false) —
+// ตัวดักคีย์ตัวจริงอยู่ฝั่ง renderer (onShortcut จับด้วย e.code → ทำงานทุกแป้นพิมพ์รวมภาษาไทย ·
+// ตั้งใหม่เองได้) ลงทะเบียนซ้ำที่นี่ = คำสั่งยิงสองครั้ง
+function applyAccelerators(items) {
+  for (const it of items || []) {
+    if (!it || typeof it !== 'object') continue;
+    const id = it.click && it.click.cmdId;
+    // id คงที่ `cmd:<คำสั่ง>` → menu:itemState ส่องคีย์ลัด/ป้ายของเมนูตัวจริงได้ (เมนู native เป็นจุดบอดของ e2e)
+    if (id && !it.id) it.id = 'cmd:' + id;
+    const s = id ? shortcutOf(id) : null;
+    if (s) {
+      it.accelerator = [s[1] ? 'CommandOrControl' : '', String(s[1]).includes('alt') ? 'Alt' : '',
+        s[2] ? 'Shift' : '', accKey(s[0])].filter(Boolean).join('+');
+      it.registerAccelerator = false;
+    }
+    if (Array.isArray(it.submenu)) applyAccelerators(it.submenu);
+  }
+  return items;
+}
+/** สร้างเมนูพร้อมคีย์ลัด — accelerator ตัวไหนที่ Electron ไม่รับ ต้องได้เมนูไม่มีคีย์ลัด ไม่ใช่ไม่มีเมนูเลย */
+function buildMenuSafe(items) {
+  try { return Menu.buildFromTemplate(applyAccelerators(items)); } catch (e) {
+    console.error('[menu] accelerator ใช้ไม่ได้ — สร้างเมนูโดยไม่มีคีย์ลัด:', e && e.message);
+    const strip = (list) => { for (const it of list || []) if (it && typeof it === 'object') {
+      delete it.accelerator; delete it.registerAccelerator; if (Array.isArray(it.submenu)) strip(it.submenu);
+    } return list; };
+    return Menu.buildFromTemplate(strip(items));
+  }
+}
+
 const isMac = process.platform === 'darwin';
 const C = isMac ? '⌘' : 'Ctrl';
 const S = 'Shift';
@@ -168,133 +234,133 @@ const SP_REPORT_ITEMS = [
 const spReportMenuItems = () => SP_REPORT_ITEMS.map((r) => ({
   id: r.id, label: tt(r.key),
   enabled: toggles.format === 'screenplay',
-  click: () => send('sp-report', r.arg),
+  click: cmd('sp-report', r.arg),
 }));
 
 function buildMenu() {
   // [alpha.124 ข้อ 43] ติดป้าย ⚠ ให้รายการที่หาโฟลเดอร์ไม่เจอแล้ว — เห็นตั้งแต่ในเมนู
   // ว่าอันไหนพัง ไม่ต้องกดเข้าไปเจอคำเตือนถึงจะรู้ (ยังกดได้ ฝั่ง renderer จะถามว่าลบออกไหม)
   const recents = readRecent().map((p) => ({
-    label: (fs.existsSync(p) ? '' : '⚠ ') + p, click: () => send('open-project-path', p),
+    label: (fs.existsSync(p) ? '' : '⚠ ') + p, click: cmd('open-project-path', p),
   }));
   const tpl = [
     { id: 'File', label: tt('ui.menu.file2'), submenu: [
-      { label: ttf('ui.menu.newProjectNewN', C), click: () => send('new-project') },
-      { label: ttf('ui.menu.openProjectO', C), click: () => send('open-project') },
+      { label: tt('ui.menu.newProjectNewN'), click: cmd('new-project') },
+      { label: tt('ui.menu.openProjectO'), click: cmd('open-project') },
       { label: tt('ui.menu.projectLatest'), submenu: recents.length ? recents : [{ label: tt('ui.common.empty'), enabled: false }] },
       // [alpha.61 ข้อ 1] เปิดโปรเจกต์ล่าสุดทันทีเมื่อเริ่มโปรแกรม (ข้ามหน้าแรก)
       chk(tt('ui.menu.openProjectLatestStart'), toggles.openLastProject,
-          () => send('toggle-open-last')),
+          cmd('toggle-open-last')),
       { type: 'separator' },
-      { label: ttf('ui.menu.saveS', C), click: () => send('save') },
-      { label: ttf('ui.menu.saveAllS', C, A), click: () => send('save-all') },
-      { label: tt('ui.menu.save'), click: () => send('save-as') },
+      { label: tt('ui.menu.saveS'), click: cmd('save') },
+      { label: tt('ui.menu.saveAllS'), click: cmd('save-all') },
+      { label: tt('ui.menu.save'), click: cmd('save-as') },
       { type: 'separator' },
-      { label: ttf('ui.menu.printP', C), click: () => send('print') },
+      { label: tt('ui.menu.printP'), click: cmd('print') },
       // [alpha.81 ข้อ 9] เดิมเมนูนี้มีทางส่งออก 9 ทางแยกกัน ผู้ใช้ต้องเดาเองว่าทางไหนให้ผลอะไร
       // ตอนนี้เหลือทางเดียว = "ศูนย์รวมการส่งออก" (เลือกรูปแบบ · ตั้งค่า · เห็นตัวอย่างก่อนบันทึก)
       // ทางเดิมทั้งหมดยังอยู่ครบในกล่องนั้น ไม่มีความสามารถไหนหายไป
-      { label: ttf('ui.menu.exportHub', C, S), click: () => send('export-hub') },
+      { label: tt('ui.menu.exportHub'), click: cmd('export-hub') },
       { type: 'separator' },
-      { label: tt('ui.menu.exportWorkFlowSteps'), click: () => send('compile') },
-      { label: tt('ui.menu.coverTitlePages'), click: () => send('title-pages') },
-      { label: tt('ui.menu.headPaperAllPage'), click: () => send('page-headers') },
+      { label: tt('ui.menu.exportWorkFlowSteps'), click: cmd('compile') },
+      { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
+      { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
       { type: 'separator' },
-      { label: tt('ui.menu.newProjectTemplate'), click: () => send('new-from-template') },
-      { label: ttf('ui.menu.importScrivenerScrivI', C, A, S), click: () => send('import-scrivener') },
-      { label: tt('ui.menu.importScreenplayFountainFDX'), click: () => send('import-script') }, // [alpha.60 ข้อ 62-66]
-      { label: tt('ui.menu.project'), click: () => send('backup-now') },
+      { label: tt('ui.menu.newProjectTemplate'), click: cmd('new-from-template') },
+      { label: tt('ui.menu.importScrivenerScrivI'), click: cmd('import-scrivener') },
+      { label: tt('ui.menu.importScreenplayFountainFDX'), click: cmd('import-script') }, // [alpha.60 ข้อ 62-66]
+      { label: tt('ui.menu.project'), click: cmd('backup-now') },
       { type: 'separator' },
-      { label: ttf('ui.menu.settingsProject', C), click: () => send('settings') },
-      { label: tt('ui.menu.dataResultTaskAuthor'), click: () => send('project-setup') },
-      { label: tt('ui.menu.pagePaperGapMargin'), click: () => send('page-setup') },
-      { label: tt('ui.menu.fontLangOther'), click: () => send('lang-fonts') },
-      { label: tt('ui.menu.settingsAI'), click: () => send('ai-settings') },
-      { label: tt('ui.menu.manageStatusScene'), click: () => send('custom-status') },
-      { label: tt('ui.menu.manageTabColorVisual'), click: () => send('visual-tags') },
+      { label: tt('ui.menu.settingsProject'), click: cmd('settings') },
+      { label: tt('ui.menu.dataResultTaskAuthor'), click: cmd('project-setup') },
+      { label: tt('ui.menu.pagePaperGapMargin'), click: cmd('page-setup') },
+      { label: tt('ui.menu.fontLangOther'), click: cmd('lang-fonts') },
+      { label: tt('ui.menu.settingsAI'), click: cmd('ai-settings') },
+      { label: tt('ui.menu.manageStatusScene'), click: cmd('custom-status') },
+      { label: tt('ui.menu.manageTabColorVisual'), click: cmd('visual-tags') },
       { type: 'separator' },
-      { label: ttf('ui.menu.closeTabW', C), click: () => send('close-tab') },
-      { label: ttf('ui.menu.closeAllTabW', C, S), click: () => send('close-all-tabs') },
+      { label: tt('ui.menu.closeTabW'), click: cmd('close-tab') },
+      { label: tt('ui.menu.closeAllTabW'), click: cmd('close-all-tabs') },
       { type: 'separator' },
-      { label: tt('ui.menu.backVersionLatestRevert'), click: () => send('revert') },
+      { label: tt('ui.menu.backVersionLatestRevert'), click: cmd('revert') },
       { type: 'separator' },
       { role: 'quit', label: tt('ui.menu.exitApp') },
     ] },
     { id: 'Edit', label: tt('ui.common.edit'), submenu: [
       // role = ระบบปฏิบัติการจัดการเอง → ใช้ได้แม้แป้นพิมพ์อยู่ภาษาไทย
-      { role: 'undo', label: ttf('ui.menu.doZ', C) }, { role: 'redo', label: ttf('ui.menu.repeatY', C) },
+      { role: 'undo', label: tt('ui.menu.doZ') }, { role: 'redo', label: tt('ui.menu.repeatY') },
       { type: 'separator' },
-      { role: 'cut', label: ttf('ui.menu.cutX', C) }, { role: 'copy', label: ttf('ui.menu.copyC', C) },
-      { role: 'paste', label: ttf('ui.menu.pasteV', C) },
+      { role: 'cut', label: tt('ui.menu.cutX') }, { role: 'copy', label: tt('ui.menu.copyC') },
+      { role: 'paste', label: tt('ui.menu.pasteV') },
       // [alpha.61 ข้อ 3] วางแบบข้อความล้วน + ลบ — เดิมไม่มีทั้งคู่ (ผู้ใช้เจอเองว่า Ctrl+Shift+V ไม่ทำงาน)
       // ใช้ role ของ Electron → ทำงานทุกแป้นพิมพ์ รวมภาษาไทย (หลักเดียวกับ undo/redo)
-      { role: 'pasteAndMatchStyle', label: ttf('ui.menu.pasteStyleTextV', C, S) },
+      { role: 'pasteAndMatchStyle', label: tt('ui.menu.pasteStyleTextV') },
       { role: 'delete', label: tt('ui.menu.delDelete') },
-      { label: ttf('ui.menu.delLineDelete', C, S), click: () => send('delete-line') },
-      { role: 'selectAll', label: ttf('ui.menu.pickAllA', C) },
+      { label: tt('ui.menu.delLineDelete'), click: cmd('delete-line') },
+      { role: 'selectAll', label: tt('ui.menu.pickAllA') },
       { type: 'separator' },
-      { label: ttf('ui.menu.searchF', C), click: () => send('find') },
+      { label: tt('ui.menu.searchF'), click: cmd('find') },
       { type: 'separator' },
-      { label: tt('ui.menu.noteQuick'), click: () => send('quick-note') },
-      { label: tt('ui.menu.viewNoteAll'), click: () => send('all-notes') },
-      { label: tt('ui.menu.commentScenePanel'), click: () => send('comments') },
+      { label: tt('ui.menu.noteQuick'), click: cmd('quick-note') },
+      { label: tt('ui.menu.viewNoteAll'), click: cmd('all-notes') },
+      { label: tt('ui.menu.commentScenePanel'), click: cmd('comments') },
       { type: 'separator' },
-      { label: tt('ui.menu.historyDecide'), click: () => send('player-history') },
+      { label: tt('ui.menu.historyDecide'), click: cmd('player-history') },
     ] },
     { id: 'Format', label: tt('ui.menu.format2'), submenu: [
       { label: tt('ui.menu.modeDoc'), submenu: [
         { label: tt('ui.common.novel'), type: 'radio', checked: toggles.format !== 'screenplay',
-          click: () => send('set-format', 'prose') },
+          click: cmd('set-format', 'prose') },
         { label: tt('ui.menu.chapterFilm'), type: 'radio', checked: toggles.format === 'screenplay',
-          click: () => send('set-format', 'screenplay') },
+          click: cmd('set-format', 'screenplay') },
         { type: 'separator' },
-        { label: ttf('ui.menu.toggleModeNovelChapter', C, S), click: () => send('toggle-format') },
+        { label: tt('ui.menu.toggleModeNovelChapter'), click: cmd('toggle-format') },
       ] },
       { type: 'separator' },
-      { label: ttf('ui.menu.itemBoldB', C), click: () => send('fmt', 'bold') },
-      { label: ttf('ui.menu.itemI', C), click: () => send('fmt', 'italic') },
-      { label: ttf('ui.menu.dashLineUnderU', C), click: () => send('fmt', 'underline') },
-      { label: ttf('ui.menu.dashX', C, S), click: () => send('fmt', 'strike') },
+      { label: tt('ui.menu.itemBoldB'), click: cmd('fmt', 'bold') },
+      { label: tt('ui.menu.itemI'), click: cmd('fmt', 'italic') },
+      { label: tt('ui.menu.dashLineUnderU'), click: cmd('fmt', 'underline') },
+      { label: tt('ui.menu.dashX'), click: cmd('fmt', 'strike') },
       { type: 'separator' },
-      ...[1, 2, 3].map((n) => ({ label: ttf('ui.menu.heading', n, C, n), click: () => send('fmt', 'heading', n) })),
-      { label: ttf('ui.menu.textNormal', C), click: () => send('fmt', 'paragraph') },
-      { label: tt('ui.menu.wordSpeakLift'), click: () => send('fmt', 'quote') },
+      ...[1, 2, 3].map((n) => ({ label: ttf('ui.menu.heading', n), click: cmd('fmt', 'heading', n) })),
+      { label: tt('ui.menu.textNormal'), click: cmd('fmt', 'paragraph') },
+      { label: tt('ui.menu.wordSpeakLift'), click: cmd('fmt', 'quote') },
       { type: 'separator' },
-      { label: ttf('ui.menu.listHeadingCollapse', C, S), click: () => send('fmt', 'ul') },
-      { label: ttf('ui.menu.listItemNum', C, S), click: () => send('fmt', 'ol') },
-      { label: ttf('ui.menu.clearFormatSpace', C), click: () => send('fmt', 'clear') },
+      { label: tt('ui.menu.listHeadingCollapse'), click: cmd('fmt', 'ul') },
+      { label: tt('ui.menu.listItemNum'), click: cmd('fmt', 'ol') },
+      { label: tt('ui.menu.clearFormatSpace'), click: cmd('fmt', 'clear') },
       { type: 'separator' },
       { label: tt('ui.common.arrangePage'), submenu: [
-        { label: ttf('ui.menu.alignLeftL', C, S), click: () => send('fmt', 'align', 'left') },
-        { label: ttf('ui.menu.centerK', C, S), click: () => send('fmt', 'align', 'center') },
-        { label: ttf('ui.menu.rightR', C, S), click: () => send('fmt', 'align', 'right') },
-        { label: ttf('ui.menu.fullLineJ', C, S), click: () => send('fmt', 'align', 'justify') },
+        { label: tt('ui.menu.alignLeftL'), click: cmd('fmt', 'align', 'left') },
+        { label: tt('ui.menu.centerK'), click: cmd('fmt', 'align', 'center') },
+        { label: tt('ui.menu.rightR'), click: cmd('fmt', 'align', 'right') },
+        { label: tt('ui.menu.fullLineJ'), click: cmd('fmt', 'align', 'justify') },
       ] },
       { label: tt('ui.menu.zoom'), submenu: [
-        { label: ttf('ui.menu.expand', C), click: () => send('zoom', 1) },
-        { label: ttf('ui.menu.collapse', C), click: () => send('zoom', -1) },
-        { label: ttf('ui.menu.resetZoom', C, S), click: () => send('zoom', 0) },
+        { label: tt('ui.menu.expand'), click: cmd('zoom', 1) },
+        { label: tt('ui.menu.collapse'), click: cmd('zoom', -1) },
+        { label: tt('ui.menu.resetZoom'), click: cmd('zoom', 0) },
         // alpha.58 (บั๊ก 3) — กระดาษ 8.5 นิ้วจริงกว้างกว่าพื้นที่ทำงาน โปรแกรมบทอื่นเปิดมาที่ fit width
-        { label: tt('ui.menu.fitWidePagePaper'), click: () => send('zoom', 'fit') },
+        { label: tt('ui.menu.fitWidePagePaper'), click: cmd('zoom', 'fit') },
       ] },
       // [alpha.58r บั๊ก 15] มุมมองหน้ากระดาษใช้ได้กับนิยายด้วย — เดิมอยู่แต่ในเมนู "บท"
       { label: tt('ui.menu.viewPagePaper'), submenu: [
         { label: tt('ui.common.normalPagePaper'), type: 'radio', checked: toggles.spView === 'normal',
-          click: () => send('sp-view', 'normal') },
+          click: cmd('sp-view', 'normal') },
         { label: tt('ui.common.arrangePageSeePage'), type: 'radio', checked: toggles.spView === 'layout',
-          click: () => send('sp-view', 'layout') },
+          click: cmd('sp-view', 'layout') },
         { label: tt('ui.common.draftTextDraft'), type: 'radio', checked: toggles.spView === 'draft',
-          click: () => send('sp-view', 'draft') },
+          click: cmd('sp-view', 'draft') },
         { label: tt('ui.common.pagePairSideBy'), type: 'radio', checked: toggles.spView === 'side',
-          click: () => send('sp-view', 'side') },
+          click: cmd('sp-view', 'side') },
         { label: tt('ui.common.overviewPxChar'), type: 'radio', checked: toggles.spView === 'overview1',
-          click: () => send('sp-view', 'overview1') },
+          click: cmd('sp-view', 'overview1') },
         { label: tt('ui.common.overviewPxChar2'), type: 'radio', checked: toggles.spView === 'overview4',
-          click: () => send('sp-view', 'overview4') },
+          click: cmd('sp-view', 'overview4') },
         { type: 'separator' },
         // [alpha.100 ข้อ 2] เส้นประบอกระยะขอบกระดาษในมุมมองจัดหน้า — ครบทั้งสี่ด้านทุกแผ่น
         { label: tt('ui.menu.pageGuides'), type: 'checkbox', checked: !!toggles.pageGuides,
-          click: () => send('page-guides') },
+          click: cmd('page-guides') },
       ] },
       // [alpha.138] ธีมสี — **ไม่มีปุ่มบนแถบ ไม่มีคีย์ลัดแล้ว** (ผู้ใช้สั่ง) เหลือที่นี่กับ ตั้งค่า → ทั่วไป
       // รายการสร้างจากทะเบียนธีมที่ renderer ส่งมา (`toggles.themes`) — main ไม่เก็บรายชื่อเอง
@@ -302,168 +368,168 @@ function buildMenu() {
         (Array.isArray(toggles.themes) && toggles.themes.length
           ? toggles.themes.map((th) => ({
               label: th.label, type: 'radio', checked: toggles.theme === th.id,
-              click: () => send('toggle-theme', th.id) }))
+              click: cmd('toggle-theme', th.id) }))
           // ยังไม่ได้รับทะเบียนจาก renderer (ช่วงบูต) — เมนูว่างเปล่าไม่ได้ ต้องมีอย่างน้อยหนึ่งรายการ
           : [{ label: tt('ui.menu.theme'), enabled: false }]) },
-      chk(tt('ui.menu.showNumLineLeft'), toggles.lineNumbers, () => send('line-numbers')),
+      chk(tt('ui.menu.showNumLineLeft'), toggles.lineNumbers, cmd('line-numbers')),
       // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot $sub $in $act $intercut (( )) = # ! )
       chk(tt('ui.menu.hidePageLineShot'), toggles.markdownCodes,
-          () => send('markdown-codes')),
+          cmd('markdown-codes')),
       // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง
-      chk(tt('ui.menu.btnFloatCornerRight'), toggles.fabEnabled, () => send('toggle-fab')),
+      chk(tt('ui.menu.btnFloatCornerRight'), toggles.fabEnabled, cmd('toggle-fab')),
       { type: 'separator' },
       // [alpha.58r บั๊ก 16–24] รูปแบบของนิยาย (ย่อหน้า/ช่วงบรรทัด/หัวข้อ/ยกคำพูด/ฟอนต์)
-      { label: tt('ui.menu.formatNovelParaRange'), click: () => send('prose-setup') },
+      { label: tt('ui.menu.formatNovelParaRange'), click: cmd('prose-setup') },
       // [alpha.58r บั๊ก 22] คนเขียนนิยายเห็นแต่เมนู "รูปแบบ" — ปุ่มหน้ากระดาษต้องอยู่ตรงนี้ด้วย
-      { label: tt('ui.menu.pagePaperGapMargin2'), click: () => send('page-setup') },
-      { label: ttf('ui.menu.pageChapterG', C), click: () => send('goto') },
+      { label: tt('ui.menu.pagePaperGapMargin2'), click: cmd('page-setup') },
+      { label: tt('ui.menu.pageChapterG'), click: cmd('goto') },
       { type: 'separator' },
       // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก
       // [alpha.124 ข้อ 36] ป้ายมาจากไฟล์ภาษา (ตารางเดียวกับ CASE_LABELS ใน text-case.js)
       // เดิมฮาร์ดโค้ดอังกฤษไว้ทั้งเมนูและแถบเครื่องมือ ทั้งที่ตารางภาษาของมันมีอยู่แล้ว
       // แต่กลายเป็นโค้ดตาย — ผู้ใช้ไทยเห็นแต่ "aLtErNaTe cAsE" โดยไม่รู้ว่ามันทำอะไร
       { label: tt('ui.menu.imageCaseChangeCase'), submenu: [
-        { label: tt('ui.textCase.sentenceCaseSentenceItem'), click: () => send('text-case', 'SC') },
-        { label: tt('ui.textCase.lowerCaseItemSmall'), click: () => send('text-case', 'lc') },
-        { label: tt('ui.textCase.uPPERCASEItemBig'), click: () => send('text-case', 'UC') },
-        { label: tt('ui.textCase.capitalizeCaseAllWord'), click: () => send('text-case', 'CC') },
-        { label: tt('ui.textCase.aLtErNaTeCAsEToggleItem'), click: () => send('text-case', 'aC') },
-        { label: tt('ui.textCase.titleCaseStyleTitle'), click: () => send('text-case', 'TC') },
-        { label: tt('ui.textCase.iNVERSECASEBackItem'), click: () => send('text-case', 'iC') },
+        { label: tt('ui.textCase.sentenceCaseSentenceItem'), click: cmd('text-case', 'SC') },
+        { label: tt('ui.textCase.lowerCaseItemSmall'), click: cmd('text-case', 'lc') },
+        { label: tt('ui.textCase.uPPERCASEItemBig'), click: cmd('text-case', 'UC') },
+        { label: tt('ui.textCase.capitalizeCaseAllWord'), click: cmd('text-case', 'CC') },
+        { label: tt('ui.textCase.aLtErNaTeCAsEToggleItem'), click: cmd('text-case', 'aC') },
+        { label: tt('ui.textCase.titleCaseStyleTitle'), click: cmd('text-case', 'TC') },
+        { label: tt('ui.textCase.iNVERSECASEBackItem'), click: cmd('text-case', 'iC') },
         { type: 'separator' },
-        { label: ttf('ui.menu.textCaseCycleU', C, A), click: () => send('text-case-cycle') },
+        { label: tt('ui.menu.textCaseCycleU'), click: cmd('text-case-cycle') },
       ] },
       { type: 'separator' },
-      { label: tt('ui.menu.insertImage'), click: () => send('insert-image') },
+      { label: tt('ui.menu.insertImage'), click: cmd('insert-image') },
       // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` — ทะเบียนอยู่ที่ src/shortcode.js
-      { label: tt('ui.menu.insertShortcode'), click: () => send('insert-shortcode') },
-      { label: tt('ui.menu.insertLine'), click: () => send('fmt', 'hr') },
-      { label: tt('ui.menu.blockCode'), click: () => send('fmt', 'code') },
+      { label: tt('ui.menu.insertShortcode'), click: cmd('insert-shortcode') },
+      { label: tt('ui.menu.insertLine'), click: cmd('fmt', 'hr') },
+      { label: tt('ui.menu.blockCode'), click: cmd('fmt', 'code') },
     ] },
     // ---- alpha.57: เมนูเฉพาะงานบทภาพยนตร์ ----
     { id: 'Script', label: tt('ui.common.chapter'), submenu: [
       { label: tt('ui.menu.viewChapter'), submenu: [
         { label: tt('ui.common.normalPagePaper'), type: 'radio', checked: toggles.spView === 'normal',
-          click: () => send('sp-view', 'normal') },
+          click: cmd('sp-view', 'normal') },
         { label: tt('ui.common.arrangePageSeePage'), type: 'radio', checked: toggles.spView === 'layout',
-          click: () => send('sp-view', 'layout') },
+          click: cmd('sp-view', 'layout') },
         { label: tt('ui.common.draftTextDraft'), type: 'radio', checked: toggles.spView === 'draft',
-          click: () => send('sp-view', 'draft') },
+          click: cmd('sp-view', 'draft') },
         { label: tt('ui.common.pagePairSideBy'), type: 'radio', checked: toggles.spView === 'side',
-          click: () => send('sp-view', 'side') },
+          click: cmd('sp-view', 'side') },
         { label: tt('ui.common.overviewPxChar'), type: 'radio', checked: toggles.spView === 'overview1',
-          click: () => send('sp-view', 'overview1') },
+          click: cmd('sp-view', 'overview1') },
         { label: tt('ui.common.overviewPxChar2'), type: 'radio', checked: toggles.spView === 'overview4',
-          click: () => send('sp-view', 'overview4') },
+          click: cmd('sp-view', 'overview4') },
       ] },
       chk(tt('ui.menu.showFormatLineMargin'), toggles.showFormat,
-          () => send('sp-show-format')),
+          cmd('sp-show-format')),
       { type: 'separator' },
       // [alpha.61 ข้อ 4] ตัวพิมพ์ใหญ่/เล็ก — บทหนังเคยบังคับหลายจุด ตอนนี้ปิดได้ครบจากที่เดียว
       { label: tt('ui.menu.caseBigSmall'), submenu: [
         chk(tt('ui.menu.forcePrintBigFormat'),
-            toggles.spForceCase, () => send('sp-force-case')),
+            toggles.spForceCase, cmd('sp-force-case')),
         chk(tt('ui.menu.editItemFirstSentence'), toggles.spAutoCapitalize,
-            () => send('sp-auto-capitalize')),
+            cmd('sp-auto-capitalize')),
         chk(tt('ui.menu.editIIAuto'), toggles.spAutoCorrectI,
-            () => send('sp-auto-correct-i')),
+            cmd('sp-auto-correct-i')),
         { type: 'separator' },
         // [alpha.62 บั๊ก 11] ปิดเป็นรายชนิดได้ — เดิมมีแต่สวิตช์ "ปิดทั้งบท" กับตารางรูปแบบที่ซ่อนอยู่
         // ในกล่องตั้งค่า → ผู้ใช้ที่อยากให้ "ชื่อตัวละคร" ตามที่พิมพ์ แต่หัวฉากยังเป็นตัวใหญ่ ทำไม่ได้เลย
         { label: tt('ui.menu.forceCaseBigOnly'),
           submenu: (toggles.spCaps || []).map((c) =>
-            chk(c.label, c.on, () => send('sp-element-caps', c.el))) },
+            chk(c.label, c.on, cmd('sp-element-caps', c.el))) },
         { type: 'separator' },
-        { label: tt('ui.menu.setPrintBigLine'), click: () => send('page-setup') },
+        { label: tt('ui.menu.setPrintBigLine'), click: cmd('page-setup') },
       ] },
       // alpha.58 [55][56] — ระบบต่อเนื่อง
       chk(tt('ui.menu.textContCONTINUEDMORE'), toggles.continueds,
-          () => send('sp-continued')),
+          cmd('sp-continued')),
       { type: 'separator' },
       // alpha.58 [71][72][73] — รายงาน (alpha.136: เทาเมื่อแท็บที่เปิดอยู่ไม่ใช่บท)
       ...spReportMenuItems(),
       { type: 'separator' },
       // alpha.57a — เลขฉาก/เลขหน้า/ส่วนเสริม/SmartType
-      chk(tt('ui.menu.numSceneHeadScene'), toggles.sceneNumbers, () => send('scene-numbers')),
-      chk(tt('ui.menu.pageNumRightTopPaper'), toggles.pageNumbers, () => send('page-numbers')),
-      { label: tt('ui.menu.partNameVO'), click: () => send('sp-extension') },
-      { label: tt('ui.menu.manageSmartTypeDelWord'), click: () => send('smart-manage') },
+      chk(tt('ui.menu.numSceneHeadScene'), toggles.sceneNumbers, cmd('scene-numbers')),
+      chk(tt('ui.menu.pageNumRightTopPaper'), toggles.pageNumbers, cmd('page-numbers')),
+      { label: tt('ui.menu.partNameVO'), click: cmd('sp-extension') },
+      { label: tt('ui.menu.manageSmartTypeDelWord'), click: cmd('smart-manage') },
       { type: 'separator' },
       // [alpha.58r บั๊ก 11] goto-page / goto-scene เคยมีแต่ case ใน handleCommand ไม่มีทางกด
-      { label: ttf('ui.menu.pageSceneG', C), click: () => send('goto') },
-      { label: tt('ui.menu.page'), click: () => send('goto', 'page') },
-      { label: tt('ui.menu.scene'), click: () => send('goto', 'scene') },
-      { label: tt('ui.menu.pageFirst'), click: () => send('goto-page', 1) },
+      { label: tt('ui.menu.pageSceneG'), click: cmd('goto') },
+      { label: tt('ui.menu.page'), click: cmd('goto', 'page') },
+      { label: tt('ui.menu.scene'), click: cmd('goto', 'scene') },
+      { label: tt('ui.menu.pageFirst'), click: cmd('goto-page', 1) },
       { type: 'separator' },
-      { label: ttf('ui.menu.checkFindErrorU', C, S), click: () => send('sp-find-error') },
-      { label: tt('ui.menu.checkChapterListError'), click: () => send('sp-check-all') },
-      chk(tt('ui.menu.checkBeforePrintExport'), toggles.checkBeforeExport, () => send('sp-check-toggle')),
+      { label: tt('ui.menu.checkFindErrorU'), click: cmd('sp-find-error') },
+      { label: tt('ui.menu.checkChapterListError'), click: cmd('sp-check-all') },
+      chk(tt('ui.menu.checkBeforePrintExport'), toggles.checkBeforeExport, cmd('sp-check-toggle')),
       { type: 'separator' },
-      { label: tt('ui.menu.pageListCharacterCast'), click: () => send('roster') },
+      { label: tt('ui.menu.pageListCharacterCast'), click: cmd('roster') },
       // alpha.59 [90][91] — หน้าปกหลายหน้า + หัวกระดาษที่ซ้ำทุกหน้า
-      { label: tt('ui.menu.coverTitlePages'), click: () => send('title-pages') },
-      { label: tt('ui.menu.headPaperAllPage'), click: () => send('page-headers') },
-      { label: tt('ui.menu.pagePaperGapMargin'), click: () => send('page-setup') },
+      { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
+      { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
+      { label: tt('ui.menu.pagePaperGapMargin'), click: cmd('page-setup') },
       { type: 'separator' },
       // [alpha.81 ข้อ 9] fdx / rtf / PDF / PDF ลายน้ำ ย้ายเข้าศูนย์รวมการส่งออกหมดแล้ว
-      { label: ttf('ui.menu.exportHub', C, S), click: () => send('export-hub') },
+      { label: tt('ui.menu.exportHub'), click: cmd('export-hub') },
     ] },
     // [alpha.60 ข้อ 74] เมนู "เครื่องมือ"
     { id: 'Tools', label: tt('ui.menu.tool'), submenu: [
-      { label: tt('ui.menu.compareChapter'), click: () => send('sp-compare') },
-      { label: tt('ui.menu.checkFindWordDup'), click: () => send('word-history') },
+      { label: tt('ui.menu.compareChapter'), click: cmd('sp-compare') },
+      { label: tt('ui.menu.checkFindWordDup'), click: cmd('word-history') },
       // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำในเอกสาร
       // (และผู้ใช้ที่ไม่เคยคลิกขวาก็ไม่มีทางรู้ว่ามีฟีเจอร์นี้อยู่เลย)
-      { label: ttf('ui.menu.thesaurusT', C, A, S), click: () => send('thesaurus') },
+      { label: tt('ui.menu.thesaurusT'), click: cmd('thesaurus') },
       // [alpha.60r2 ข้อ 13] frontmatter ของ .md = แหล่งความจริงของคุณสมบัติฉาก
       { label: tt('ui.menu.propsSceneFileMd'),
-        click: () => send('sync-scene-meta') },
+        click: cmd('sync-scene-meta') },
       { type: 'separator' },
       // [alpha.60r3 ข้อ 4] ชุดเครื่องมือผู้แปล — ทำงานใน Excel/Sheets แล้วนำเข้ากลับ
-      { label: tt('ui.menu.exportLangCSVKey'), click: () => send('export-language-csv') },
-      { label: tt('ui.menu.importLangCSV'), click: () => send('import-language-csv') },
+      { label: tt('ui.menu.exportLangCSVKey'), click: cmd('export-language-csv') },
+      { label: tt('ui.menu.importLangCSV'), click: cmd('import-language-csv') },
     ] },
     { id: 'View', label: tt('ui.common.view'), submenu: [
       // [alpha.61 ข้อ 1] หน้าแรก — เปิดเดี๋ยวนี้ + สวิตช์ "แสดงเสมอตอนเริ่มโปรแกรม"
-      { label: tt('ui.menu.pageFirstHome'), click: () => send('home') },
+      { label: tt('ui.menu.pageFirstHome'), click: cmd('home') },
       chk(tt('ui.menu.showPageFirstAlways'), toggles.showHomeAlways,
-          () => send('toggle-home-always')),
+          cmd('toggle-home-always')),
       { type: 'separator' },
-      { label: tt('ui.common.dashboard'), click: () => send('dashboard') },
-      { label: tt('ui.menu.manageBookDraftBooks'), click: () => send('books') },
-      { label: tt('ui.menu.lineTimeTimeline'), click: () => send('timeline') },
-      { label: tt('ui.menu.mapMaps'), click: () => send('maps') },
-      { label: tt('ui.menu.storyNetworkGraphRelation'), click: () => send('network') },
-      { label: tt('ui.menu.plannerBoardPlanner'), click: () => send('planner') },
-      { label: tt('ui.menu.kanbanBoardStatus'), click: () => send('kanban') },
+      { label: tt('ui.common.dashboard'), click: cmd('dashboard') },
+      { label: tt('ui.menu.manageBookDraftBooks'), click: cmd('books') },
+      { label: tt('ui.menu.lineTimeTimeline'), click: cmd('timeline') },
+      { label: tt('ui.menu.mapMaps'), click: cmd('maps') },
+      { label: tt('ui.menu.storyNetworkGraphRelation'), click: cmd('network') },
+      { label: tt('ui.menu.plannerBoardPlanner'), click: cmd('planner') },
+      { label: tt('ui.menu.kanbanBoardStatus'), click: cmd('kanban') },
       // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-      { label: tt('ui.menu.aIAnalyzePaceStory'), click: () => send('ai-analyzer') },
+      { label: tt('ui.menu.aIAnalyzePaceStory'), click: cmd('ai-analyzer') },
       // [alpha.63] คลังรูปเป็นระบบอัลบั้มแล้ว — คำสั่งย่อยต้องมีทางกดจริง (บทเรียน 14b/46)
-      { label: ttf('ui.menu.libraryImageGalleryG', C, S), submenu: [
-        { label: ttf('ui.menu.openLibraryImageG', C, S), click: () => send('gallery') },
-        { label: tt('ui.common.newAlbumNew'), click: () => send('gallery-new-album') },
-        { label: tt('ui.menu.boardMoodMoodBoard'), click: () => send('gallery-board') },
-        { label: tt('ui.menu.imageNotUse'), click: () => send('gallery-unused') },
-        { label: tt('ui.common.findImageDupLibrary'), click: () => send('gallery-dups') },
-        { label: tt('ui.common.exportOnlyImageUse'), click: () => send('gallery-export-used') },
+      { label: tt('ui.menu.libraryImageGalleryG'), submenu: [
+        { label: tt('ui.menu.openLibraryImageG'), click: cmd('gallery') },
+        { label: tt('ui.common.newAlbumNew'), click: cmd('gallery-new-album') },
+        { label: tt('ui.menu.boardMoodMoodBoard'), click: cmd('gallery-board') },
+        { label: tt('ui.menu.imageNotUse'), click: cmd('gallery-unused') },
+        { label: tt('ui.common.findImageDupLibrary'), click: cmd('gallery-dups') },
+        { label: tt('ui.common.exportOnlyImageUse'), click: cmd('gallery-export-used') },
       ] },
       { label: tt('ui.menu.splitPageScreenSplit'), submenu: [
-        chk(ttf('ui.menu.splitLeftRight', C, S), toggles.splitView === 'right', () => send('split-view', 'right')),
-        chk(tt('ui.menu.splitTopBottom'), toggles.splitView === 'down', () => send('split-view', 'down')),
-        { label: tt('ui.menu.cancelSplitPageScreen'), enabled: !!toggles.splitView, click: () => send('split-close') },
+        chk(tt('ui.menu.splitLeftRight'), toggles.splitView === 'right', cmd('split-view', 'right')),
+        chk(tt('ui.menu.splitTopBottom'), toggles.splitView === 'down', cmd('split-view', 'down')),
+        { label: tt('ui.menu.cancelSplitPageScreen'), enabled: !!toggles.splitView, click: cmd('split-close') },
       ] },
-      { label: tt('ui.menu.graphStoryBreakBranch'), click: () => send('branching') },
-      { label: tt('ui.menu.trialPlayStoryBreak'), click: () => send('player-mode') },
-      { label: tt('ui.menu.newChoiceTextScene'), click: () => send('branch-sync') },
-      { label: tt('ui.menu.graphAreaFloorPlan'), click: () => send('floorplan') },
-      { label: tt('ui.common.notebookNoteQuick'), click: () => send('toggle-panel', 'notes') },
+      { label: tt('ui.menu.graphStoryBreakBranch'), click: cmd('branching') },
+      { label: tt('ui.menu.trialPlayStoryBreak'), click: cmd('player-mode') },
+      { label: tt('ui.menu.newChoiceTextScene'), click: cmd('branch-sync') },
+      { label: tt('ui.menu.graphAreaFloorPlan'), click: cmd('floorplan') },
+      { label: tt('ui.common.notebookNoteQuick'), click: cmd('toggle-panel', 'notes') },
       { type: 'separator' },
-      { label: tt('ui.menu.delElementType'), click: () => send('remove-elements') },
-      { label: tt('ui.menu.mapChar'), click: () => send('char-map') },
-      { label: tt('ui.menu.pageListCharacterCast'), click: () => send('roster') },
+      { label: tt('ui.menu.delElementType'), click: cmd('remove-elements') },
+      { label: tt('ui.menu.mapChar'), click: cmd('char-map') },
+      { label: tt('ui.menu.pageListCharacterCast'), click: cmd('roster') },
       { type: 'separator' },
-      { label: ttf('ui.menu.searchFileQuickO', C, S), click: () => send('quick-open') },
-      { label: ttf('ui.menu.searchProjectF2', C, S), click: () => send('toggle-panel', 'search') },
+      { label: tt('ui.menu.searchFileQuickO'), click: cmd('quick-open') },
+      { label: tt('ui.menu.searchProjectF2'), click: cmd('toggle-panel', 'search') },
       { type: 'separator' },
       { label: tt('ui.menu.panel'), submenu: [
         // [alpha.69] สร้างจาก MENU_PANELS ตัวเดียว (ดูด้านบนสุดของไฟล์) — เดิมเขียนเรียงมือทีละบรรทัด
@@ -473,34 +539,34 @@ function buildMenu() {
         ...MENU_PANELS.map((p) => (p.sep
           ? { type: 'separator' }
           : chk(typeof p.label === 'function' ? p.label(C, S, A) : p.label,
-                toggles.panels[p.id], () => send('toggle-panel', p.id)))),
+                toggles.panels[p.id], cmd('toggle-panel', p.id)))),
         { type: 'separator' },
-        { label: tt('ui.menu.managePanelShowHide'), click: () => send('panel-system') },
+        { label: tt('ui.menu.managePanelShowHide'), click: cmd('panel-system') },
         // [alpha.79] เอาปุ่มเข้า-ออกจากแถบเครื่องมือ
-        { label: tt('ui.menu.toolbarCfg'), click: () => send('toolbar-config') },
-        { label: tt('ui.menu.exportLayoutPanelJSON'), click: () => send('export-panel-layout') },
-        { label: tt('ui.menu.resetLayoutPanelAll'), click: () => send('reset-panels') },
+        { label: tt('ui.menu.toolbarCfg'), click: cmd('toolbar-config') },
+        { label: tt('ui.menu.exportLayoutPanelJSON'), click: cmd('export-panel-layout') },
+        { label: tt('ui.menu.resetLayoutPanelAll'), click: cmd('reset-panels') },
       ] },
       // [alpha.66r3] ระบบจัดการพื้นที่ + เวิร์กสเปซ (สเปกระบบแผงแบบ Photoshop)
       { label: tt('ui.menu.arrangeAreaRun'), submenu: [
-        { label: ttf('ui.menu.hideShowPanelAll', C), click: () => send('panels-hide-all') },
-        { label: ttf('ui.menu.hidePanelSideRight', C, S), click: () => send('panels-hide-right') },
-        { label: tt('ui.menu.hidePanelSideLeft'), click: () => send('panels-hide-left') },
+        { label: tt('ui.menu.hideShowPanelAll'), click: cmd('panels-hide-all') },
+        { label: tt('ui.menu.hidePanelSideRight'), click: cmd('panels-hide-right') },
+        { label: tt('ui.menu.hidePanelSideLeft'), click: cmd('panels-hide-left') },
         { type: 'separator' },
-        { label: ttf('ui.menu.workY', C, S), click: () => send('workspace-menu') },
+        { label: tt('ui.menu.workY'), click: cmd('workspace-menu') },
       ] },
       { type: 'separator' },
-      chk(tt('ui.menu.modeReadFullScreen'), toggles.readingMode, () => send('reading-mode')),
-      chk(ttf('ui.menu.modeFocusD', C, S), toggles.focusMode, () => send('focus-mode')),
-      chk(ttf('ui.menu.modeTypewriterT', C, S), toggles.typewriter, () => send('typewriter')),
-      chk(tt('ui.menu.soundTypewriterPrint'), toggles.typeSound, () => send('type-sound')),
+      chk(tt('ui.menu.modeReadFullScreen'), toggles.readingMode, cmd('reading-mode')),
+      chk(tt('ui.menu.modeFocusD'), toggles.focusMode, cmd('focus-mode')),
+      chk(tt('ui.menu.modeTypewriterT'), toggles.typewriter, cmd('typewriter')),
+      chk(tt('ui.menu.soundTypewriterPrint'), toggles.typeSound, cmd('type-sound')),
       { type: 'separator' },
       // ห้ามใช้ role:'zoomIn'/'zoomOut'/'resetZoom' ของ Electron — เป็น zoom ระดับ webContents
       // ทั้งหน้าต่าง จะซ้อนทับกับซูมหน้ากระดาษ (--page-scale) และขนาด UI (--ui-scale) จนเพี้ยน
       { label: tt('ui.menu.sizeUIBarTool'), submenu: [
-        { label: tt('ui.menu.expandUI'), click: () => send('ui-scale', 1) },
-        { label: tt('ui.menu.collapseUI'), click: () => send('ui-scale', -1) },
-        { label: tt('ui.menu.sizeUINormal'), click: () => send('ui-scale', 0) },
+        { label: tt('ui.menu.expandUI'), click: cmd('ui-scale', 1) },
+        { label: tt('ui.menu.collapseUI'), click: cmd('ui-scale', -1) },
+        { label: tt('ui.menu.sizeUINormal'), click: cmd('ui-scale', 0) },
       ] },
       { type: 'separator' },
       { role: 'togglefullscreen', label: tt('ui.menu.fullScreen') },
@@ -508,42 +574,42 @@ function buildMenu() {
     ] },
     { id: 'Help', label: tt('ui.menu.help2'), submenu: [
       // [alpha.135] ตรวจหาอัปเดตด้วยตัวเอง — ทางเดียวกับสวิตช์ "ตรวจตอนเปิดโปรแกรม" ในตั้งค่า
-      { label: tt('ui.menu.checkUpdate'), click: () => send('check-update') },
+      { label: tt('ui.menu.checkUpdate'), click: cmd('check-update') },
       { type: 'separator' },
-      { label: tt('ui.menu.saveChangeChangelog'), click: () => send('changelog') },
-      { label: tt('ui.menu.saveRunAppLog'), click: () => send('show-log') },
+      { label: tt('ui.menu.saveChangeChangelog'), click: cmd('changelog') },
+      { label: tt('ui.menu.saveRunAppLog'), click: cmd('show-log') },
       { type: 'separator' },
       // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — อยู่ที่เดียวกับ "เกี่ยวกับ" + มีคีย์ลัด
-      { label: ttf('ui.menu.consoleDev', C, S), click: () => send('dev-console') },
+      { label: tt('ui.menu.consoleDev'), click: cmd('dev-console') },
       { label: tt('ui.menu.openDevToolsChromium'), click: () => {
         try { win && win.webContents.toggleDevTools(); } catch {}
       } },
       { type: 'separator' },
-      { label: tt('ui.common.killian'), click: () => send('about') },
+      { label: tt('ui.common.killian'), click: cmd('about') },
     ] },
     { id: 'AI', label: 'AI', submenu: [
       { label: tt('ui.menu.settingsAIProviderCredential'),
-        click: () => send('ai-settings') },
+        click: cmd('ai-settings') },
       { type: 'separator' },
       // [alpha.61 ข้อ 2] แชทเป็นแผงแบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
-      chk(tt('ui.menu.panelAIAssistantWrite'), toggles.panels['ai-chat'], () => send('toggle-panel', 'ai-chat')),
-      { label: tt('ui.menu.sessionNew'), click: () => send('ai-chat-new') },
+      chk(tt('ui.menu.panelAIAssistantWrite'), toggles.panels['ai-chat'], cmd('toggle-panel', 'ai-chat')),
+      { label: tt('ui.menu.sessionNew'), click: cmd('ai-chat-new') },
       { type: 'separator' },
       // [alpha.94] Story Starter — สร้างเรื่อง/ตัวละครทีละขั้น แล้วเล่นเป็นตอนกับ Game Master
-      chk(tt('ui.menu.panelStoryStarter'), toggles.panels['starter'], () => send('toggle-panel', 'starter')),
+      chk(tt('ui.menu.panelStoryStarter'), toggles.panels['starter'], cmd('toggle-panel', 'starter')),
       { type: 'separator' },
-      { label: tt('ui.menu.assistantWriteExpandSummarize'), click: () => send('ai-assistant') },
-      { label: tt('ui.menu.checkPlotHole'), click: () => send('ai-plot') },
-      { label: tt('ui.menu.newDialogue'), click: () => send('ai-dialogue') },
-      { label: tt('ui.menu.checkAlwaysCharacter'), click: () => send('ai-consistency') },
-      { label: tt('ui.menu.newWorldWorldbuilding'), click: () => send('ai-world') },
-      { label: tt('ui.menu.storyYoursDialogPrev'), click: () => send('ai-chat-dialog') },
+      { label: tt('ui.menu.assistantWriteExpandSummarize'), click: cmd('ai-assistant') },
+      { label: tt('ui.menu.checkPlotHole'), click: cmd('ai-plot') },
+      { label: tt('ui.menu.newDialogue'), click: cmd('ai-dialogue') },
+      { label: tt('ui.menu.checkAlwaysCharacter'), click: cmd('ai-consistency') },
+      { label: tt('ui.menu.newWorldWorldbuilding'), click: cmd('ai-world') },
+      { label: tt('ui.menu.storyYoursDialogPrev'), click: cmd('ai-chat-dialog') },
       { type: 'separator' },
-      { label: tt('ui.menu.summaryBodyProject'), click: () => send('ai-summary') },
-      { label: tt('ui.menu.suggestTitle'), click: () => send('ai-title') },
+      { label: tt('ui.menu.summaryBodyProject'), click: cmd('ai-summary') },
+      { label: tt('ui.menu.suggestTitle'), click: cmd('ai-title') },
     ] },
   ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(tpl));
+  Menu.setApplicationMenu(buildMenuSafe(tpl));
 }
 
 let forceQuit = false;
@@ -571,25 +637,25 @@ function createWindow() {
     const ef = params.editFlags || {};
     const inEdit = params.isEditable;
     if (!inEdit && !params.selectionText) return;  // นอกตัวแก้ไข → เมนูของ renderer เอง
-    const menu = Menu.buildFromTemplate([
+    const menu = buildMenuSafe([
       { role: 'cut', label: tt('ui.menu.cut'), enabled: ef.canCut },
       { role: 'copy', label: tt('ui.common.copy'), enabled: ef.canCopy },
       { role: 'paste', label: tt('ui.menu.paste'), enabled: ef.canPaste },
       { role: 'selectAll', label: tt('ui.menu.pickAll') },
       { type: 'separator' },
-      { label: ttf('ui.menu.itemBoldB', C), enabled: inEdit, click: () => send('fmt', 'bold') },
-      { label: ttf('ui.menu.itemI', C), enabled: inEdit, click: () => send('fmt', 'italic') },
-      { label: ttf('ui.menu.dashLineUnderU', C), enabled: inEdit, click: () => send('fmt', 'underline') },
-      { label: ttf('ui.menu.dashX', C, S), enabled: inEdit, click: () => send('fmt', 'strike') },
-      { label: ttf('ui.menu.clearFormatSpace', C), enabled: inEdit, click: () => send('fmt', 'clear') },
+      { label: tt('ui.menu.itemBoldB'), enabled: inEdit, click: cmd('fmt', 'bold') },
+      { label: tt('ui.menu.itemI'), enabled: inEdit, click: cmd('fmt', 'italic') },
+      { label: tt('ui.menu.dashLineUnderU'), enabled: inEdit, click: cmd('fmt', 'underline') },
+      { label: tt('ui.menu.dashX'), enabled: inEdit, click: cmd('fmt', 'strike') },
+      { label: tt('ui.menu.clearFormatSpace'), enabled: inEdit, click: cmd('fmt', 'clear') },
       { type: 'separator' },
-      { label: ttf('ui.menu.doZ', C), enabled: inEdit, click: () => send('editor-undo') },
-      { label: ttf('ui.menu.repeatY', C), enabled: inEdit, click: () => send('editor-redo') },
+      { label: tt('ui.menu.doZ'), enabled: inEdit, click: cmd('editor-undo') },
+      { label: tt('ui.menu.repeatY'), enabled: inEdit, click: cmd('editor-redo') },
       { type: 'separator' },
-      { label: tt('ui.menu.insertImage'), enabled: inEdit, click: () => send('insert-image') },
-      { label: ttf('ui.menu.searchF', C), click: () => send('find') },
+      { label: tt('ui.menu.insertImage'), enabled: inEdit, click: cmd('insert-image') },
+      { label: tt('ui.menu.searchF'), click: cmd('find') },
       { type: 'separator' },
-      { label: ttf('ui.menu.saveS', C), click: () => send('save') },
+      { label: tt('ui.menu.saveS'), click: cmd('save') },
     ]);
     menu.popup({ window: win });
   });
@@ -747,7 +813,7 @@ const MENU_PANELS = [
   { id: 'props', label: tt('ui.common.props') },
   { id: 'log', label: tt('ui.menu.saveLog') },
   { id: 'comments', label: tt('ui.common.comment') },
-  { id: 'search', label: (C, S) => ttf('ui.menu.searchProjectF', C, S) },
+  { id: 'search', label: (C, S) => tt('ui.menu.searchProjectF') },
   { id: 'notes', label: tt('ui.common.notebookNoteQuick') },
   { sep: true },
   // บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ
@@ -757,7 +823,7 @@ const MENU_PANELS = [
   { id: 'chapters', label: tt('ui.chapters.title') },
   { id: 'timeline', label: tt('ui.common.lineTime') },
   { id: 'maps', label: tt('ui.common.map') },
-  { id: 'gallery', label: (C, S) => ttf('ui.menu.libraryImageG', C, S) },
+  { id: 'gallery', label: (C, S) => tt('ui.menu.libraryImageG') },
   { id: 'gallery-board', label: tt('ui.common.boardMood') },
   { id: 'ai-hub', label: tt('ui.menu.aiHubPanel') },
   { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
@@ -768,7 +834,7 @@ const MENU_PANELS = [
   // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
   { id: 'network', label: '🕸 Story Network' },
   // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ (เดิมมีแต่แท็บในหน้า Wiki)
-  { id: 'backlinks', label: (C, S, A) => ttf('ui.menu.backlinksPanelB', C, A, S) },
+  { id: 'backlinks', label: (C, S, A) => tt('ui.menu.backlinksPanelB') },
   { id: 'planner', label: '🗺 Planner' },
   { id: 'floorplan', label: tt('ui.common.graphArea') },
   { id: 'branch', label: tt('ui.common.graphBreakBranch2') },
@@ -805,8 +871,9 @@ ipcMain.handle('menu:itemState', (e, ids) => {
   const want = Array.isArray(ids) && ids.length ? ids : SP_REPORT_ITEMS.map((r) => r.id);
   return want.map((id) => {
     const it = menu && menu.getMenuItemById(id);
-    return it ? { id, exists: true, enabled: !!it.enabled, visible: !!it.visible, label: it.label }
-              : { id, exists: false, enabled: false, visible: false, label: '' };
+    return it ? { id, exists: true, enabled: !!it.enabled, visible: !!it.visible, label: it.label,
+                  accelerator: it.accelerator || '' }   // [alpha.147]
+              : { id, exists: false, enabled: false, visible: false, label: '', accelerator: '' };
   });
 });
 

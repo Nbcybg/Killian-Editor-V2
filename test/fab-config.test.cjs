@@ -22,7 +22,9 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('ไม่มี id ซ้ำ', new Set(ids).size === ids.length,
         ids.filter((x, i) => ids.indexOf(x) !== i).join(','));
   check('ทุกคำสั่งมีช่องคำสั่งจริง (cmd)', F.FAB_ACTIONS.every((a) => typeof a.cmd === 'string' && a.cmd));
-  check('ทุกคำสั่งมีไอคอน', F.FAB_ACTIONS.every((a) => typeof a.icon === 'string' && a.icon));
+  // [alpha.147] ไอคอนย้ายไปอยู่ icons/commands.csv — ตารางนี้ห้ามมีไอคอนของตัวเองอีก (ไม่งั้นมีสองแหล่ง)
+  check('[147] FAB_ACTIONS ไม่เก็บไอคอนเอง (มาจากทะเบียนคำสั่ง)', F.FAB_ACTIONS.every((a) => a.icon === undefined),
+        F.FAB_ACTIONS.filter((a) => a.icon !== undefined).map((a) => a.id).join(','));
   check('ทุกคำสั่งอยู่ในกลุ่มที่ประกาศไว้',
         F.FAB_ACTIONS.every((a) => F.FAB_GROUPS.some((g) => g.key === a.grp)),
         F.FAB_ACTIONS.filter((a) => !F.FAB_GROUPS.some((g) => g.key === a.grp)).map((a) => a.id).join(','));

@@ -24,11 +24,13 @@ check('ครบทั้ง 9 ประเภทตามสเปก',
       ['family', 'romantic', 'ally', 'rival', 'enemy', 'mentor', 'acquaintance', 'neutral', 'custom']
         .every((k) => k in R.REL_COLOR));
 
-// ── ไอคอนต้องมีจริงใน icons.js (ไม่งั้นวาดออกมาเป็น svg ว่าง) ──
+// ── ไอคอนต้องมีจริง (ไม่งั้นวาดออกมาเป็นช่องว่าง) ──
+// [alpha.147] รูปไอคอนย้ายจาก icons.js ไปอยู่ icons/svg/<ชื่อ>.svg (+ ตัวสำรองใน icons/glyphs.csv)
 {
-  const ico = fs.readFileSync(path.join(__dirname, '../src/icons.js'), 'utf8');
-  const missing = R.REL_TYPES.filter((t) => !new RegExp(`'${t.icon}':`).test(ico)).map((t) => t.icon);
-  check('ไอคอนของทุกประเภทมีอยู่จริงใน icons.js', missing.length === 0, missing.join());
+  const { buildCommandsData } = require('../tools/commands-data.cjs');
+  const d = buildCommandsData(path.join(__dirname, '..'));
+  const missing = R.REL_TYPES.filter((t) => !d.ICON_SVG[t.icon] && !d.ICON_GLYPH[t.icon]).map((t) => t.icon);
+  check('ไอคอนของทุกประเภทมีอยู่จริง (icons/svg หรือ glyphs.csv)', missing.length === 0, missing.join());
 }
 
 // ── categorizeRole: เดาประเภทจากบทบาท (ไทย) ──

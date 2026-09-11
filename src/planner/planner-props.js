@@ -7,6 +7,7 @@ import { el } from '../core.js';
 import {
   STATUSES, EDGE_STYLES, EDGE_ROUTINGS, ARROW_HEADS, NODE_TYPES, SHAPES, PORT_POSITIONS,
 } from './planner-data.js';
+import { initIcons } from '../icons.js';
 
 const TYPE_LABELS = {
   scene: tt('ui.plannerProps.scene'), chapter: tt('ui.plannerProps.chapter'), entity: '👤 Wiki', note: tt('ui.plannerProps.note'), sticky: tt('ui.plannerProps.sticky'),
@@ -97,6 +98,7 @@ function _renderNodeProps(container, n, ctx) {
   // ── ผูกไฟล์จาก Explorer (บั๊ก 3) ──
   const fileRow = add(tt('ui.plannerProps.fileBind'),
     ttf('ui.plannerProps.pickProject', _esc(n.file || '')));
+  initIcons(fileRow);   // [alpha.147] ปุ่มเอาลิงก์ออกเป็น data-icon ในเทมเพลตแล้ว
   add(tt('ui.common.tag'), ttf('ui.plannerProps.msg2', _esc((n.tags || []).join(', '))));
   add('', ttf('ui.plannerProps.lockNotMoveEdit', n.locked ? ' checked' : ''));
 
