@@ -29,9 +29,12 @@ let pass = 0, fail = 0;
 const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  x FAIL:', n, i ? ':: ' + i : ''); } };
 
 const css = fs.readFileSync(path.join(ROOT, 'renderer/style.css'), 'utf8');
+// [alpha.157] ตัวแปรสีของแต่ละธีมอยู่ไฟล์ของตัวเอง renderer/themes/<id>.css (ผู้ใช้สั่งแยกไฟล์)
+const themeCss = (id) => { try { return fs.readFileSync(path.join(ROOT, 'renderer/themes/' + id + '.css'), 'utf8'); } catch { return ''; } };
 /** เนื้อในของบล็อก `body.theme-<id> { … }` ('' = ไม่มีบล็อกนั้น) */
 const blockOf = (id) => {
   const head = 'body.theme-' + id + ' {';
+  const css = themeCss(id);
   const i = css.indexOf(head);
   if (i < 0) return '';
   const j = css.indexOf('\n}', i);
@@ -61,7 +64,10 @@ const langDir = path.join(ROOT, 'languages');
 const langs = fs.readdirSync(langDir).filter((f) => /^k2_.+\.csv$/.test(f))
   .map((f) => [f, lexCsv(fs.readFileSync(path.join(langDir, f), 'utf8'))]);
 for (const id of C.THEMES) {
-  check('ธีม ' + id + ' มีบล็อก body.theme-' + id + ' ใน style.css', !!blockOf(id));
+  check('ธีม ' + id + ' มีบล็อก body.theme-' + id + ' ในไฟล์ themes/' + id + '.css', !!blockOf(id));
+  check('ธีม ' + id + ' ถูกโหลดใน index.html', fs.readFileSync(path.join(ROOT, 'renderer/index.html'), 'utf8').includes('href="themes/' + id + '.css"'));
+  check('ธีม ' + id + ' ไม่มีบล็อกซ้ำค้างใน style.css', !css.includes('body.theme-' + id + ' {'));
+  check('ธีม ' + id + ' กำหนดพื้นรอบกระดาษ + ชุดแท็บ (alpha.157)', ['--paper-surround', '--tab-bar', '--tab-bg', '--tab-fg-on'].every((v) => blockOf(id).includes(v + ':')));
   check('ธีม ' + id + ' มีคีย์ป้ายใน THEME_LABEL_KEYS', !!C.THEME_LABEL_KEYS[id]);
   for (const [f, tbl] of langs) {
     const k = C.THEME_LABEL_KEYS[id];

@@ -22,7 +22,7 @@ import {
   filterScope, describeScope, analyze, countWords,
   scopeTokens, estimateAnalysis, estimateTotal, estimateUsd, usageOfResults,
   SESSION_DIR, newAnalysisSession, migrateAnalysisSession, sessionSummary, sessionFileName,
-  resultCsv, sessionCsv,
+  resultCsv, sessionCsv, COMPOSITION_LABELS,
 } from './ai/ai-analyze.js';
 
 export { ANALYSES, ANALYSIS_IDS };
@@ -334,12 +334,53 @@ function renderLocal(id, local) {
   } else if (id === 'screentime') {
     box.append(barList(L.rows.map((r) => ({ label: r.name, value: r.words, display: r.share + '%',
       sub: tf('ui.aia.rowScreentime', r.scenes, r.mentions), sceneId: r.sceneIds[0] }))));
+  } else if (id === 'composition') {
+    box.append(compositionView(L));
   } else if (id === 'score') {
     box.append(scoreBox(L.criteria, L.total, t('ui.aia.scoreLocalHead')));
   } else if (L.rows && L.rows.length) {
     box.append(noteList(L.rows.map((r) => ({ title: r.title, note: r.note, sceneId: r.id }))));
   }
   return box;
+}
+
+/** [alpha.157] แถบซ้อนสามสีต่อฉาก + ภาพรวม · คลิกแถวกระโดดไปฉาก */
+const CMP_ORDER = ['dialogue', 'interiority', 'narration'];
+function stackBar(p) {
+  const bar = el('div', 'aia-cmp-bar');
+  for (const k of CMP_ORDER) {
+    const seg = el('div', 'aia-cmp-seg aia-cmp-' + k);
+    seg.style.width = (p[k] || 0) + '%';
+    seg.title = COMPOSITION_LABELS[k] + ' ' + (p[k] || 0) + '%';
+    if ((p[k] || 0) >= 12) seg.textContent = Math.round(p[k]) + '%';
+    bar.append(seg);
+  }
+  return bar;
+}
+function compositionView(L) {
+  const wrap = el('div', 'aia-cmp');
+  const legend = el('div', 'aia-cmp-legend');
+  for (const k of CMP_ORDER) {
+    const it = el('span', 'aia-cmp-key aia-cmp-' + k);
+    it.append(el('i'), document.createTextNode(COMPOSITION_LABELS[k] + ' · ' + tf('ui.aia.cmpLeanN', L.lean[k] || 0)));
+    legend.append(it);
+  }
+  if (L.lean.balanced) legend.append(el('span', 'aia-cmp-key', COMPOSITION_LABELS.balanced + ' · ' + tf('ui.aia.cmpLeanN', L.lean.balanced)));
+  wrap.append(legend);
+  const all = el('div', 'aia-cmp-row aia-cmp-total');
+  all.append(el('div', 'aia-cmp-name', t('ui.aia.cmpOverall')), stackBar(L.overall),
+    el('div', 'aia-cmp-lean', COMPOSITION_LABELS[L.overallLean] || '—'));
+  wrap.append(all);
+  for (const r of L.rows) {
+    const row = el('div', 'aia-cmp-row' + (r.lean ? ' lean-' + r.lean : ''));
+    const name = el('div', 'aia-cmp-name');
+    name.textContent = r.title || r.id;
+    if (r.chapterTitle) name.title = r.chapterTitle;
+    row.append(name, stackBar(r), el('div', 'aia-cmp-lean', COMPOSITION_LABELS[r.lean] || '—'));
+    if (r.id) { row.classList.add('aia-jump'); row.onclick = () => jumpToScene(r.id); }
+    wrap.append(row);
+  }
+  return wrap;
 }
 
 function scoreBox(criteria, total, head) {

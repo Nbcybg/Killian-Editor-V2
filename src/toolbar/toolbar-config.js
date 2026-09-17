@@ -90,6 +90,10 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-plugins' },                        // [alpha.79] แผงจัดการปลั๊กอิน
     { id: 'tb-plug' },                           // เมนูคำสั่งที่ปลั๊กอินลงทะเบียนไว้
   ] },
+  // [alpha.157] ขวาสุด: ซ่อน/แสดงแผงทีละฝั่ง (ปิดได้ที่ ตั้งค่า → แถบเครื่องมือ เหมือนกลุ่มอื่น)
+  { key: 'layout', labelKey: 'ui.tbcfg.grpLayout', buttons: [
+    { id: 'tb-side-left' }, { id: 'tb-side-top' }, { id: 'tb-side-bottom' }, { id: 'tb-side-right' },
+  ] },
 ];
 
 /** id ของทุกปุ่มที่ตั้งค่าได้ (เรียงตามลำดับบนแถบ) */

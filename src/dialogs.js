@@ -1,4 +1,6 @@
 // dialogs.js — กล่องโต้ตอบ: ตั้งค่าโปรเจกต์ · ประวัติเวอร์ชัน · changelog · ตัวดู log
+import { buildLoglineFields } from './logline-ui.js';
+import { compactLogline } from './logline.js';
 import { tf } from './i18n.js';
 import { settingsTemplate } from './settings-template.js';   // [alpha.154] โครงกล่องตั้งค่าออกจากไฟล์ภาษา
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
@@ -342,6 +344,8 @@ export function settingsDialog(openTab, opts = {}) {
       navMain.append(page);
     }
   }
+  // ── [alpha.157] ไม่แสดงหน้า Home ตอนเปิดโปรแกรม (= openLastProject ตัวเดิมของเมนู ไฟล์) ──
+  if (q('#st-skip-home')) q('#st-skip-home').checked = s.openLastProject === true;
   // ── [alpha.137] ธีมสี (แท็บ "ทั่วไป") ──
   // ช่องอยู่ในเทมเพลตเหมือนช่องอื่นทุกช่อง · **รายชื่อธีมมาจาก `THEMES` ที่เดียว**
   // (เพิ่มธีมใหม่ = แก้ core.js + style.css + คีย์ป้ายใน CSV เท่านั้น ไม่ต้องแตะกล่องนี้)
@@ -671,6 +675,8 @@ export function settingsDialog(openTab, opts = {}) {
     ['#st-copyright', 'copyright'],
   ];
   for (const [sel, key] of SETUP_FIELDS) q(sel).value = m[key] || '';
+  // [alpha.157] Logline 6 ช่องของโปรเจกต์ = เข็มทิศเรื่องของ AI (ดู logline.js)
+  const loglineUi = q('#st-logline-host') ? buildLoglineFields(q('#st-logline-host'), m.logline) : null;
 
   // ---- [85] หน้ากระดาษ + [84] กฎตัดหน้า + [92] ข้อความมาตรฐาน ----
   const paperSel = q('#st-paper');
@@ -1392,6 +1398,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.uiScale = Math.min(2, Math.max(0.75, parseFloat(q('#st-uiscale').value) || 1));
     // [alpha.137] ธีมสี — พรีวิวไว้แล้ว ตรงนี้แค่ยืนยันค่าลง settings ที่จะถูกบันทึก
     if (q('#st-theme') && THEMES.includes(q('#st-theme').value)) s.theme = q('#st-theme').value;
+    if (q('#st-skip-home')) s.openLastProject = !!q('#st-skip-home').checked;
     s.shortcuts = workKeys;
     // Auto-sync (เก็บลง settings ด้วย — ไม่งั้นเปิดโปรแกรมใหม่แล้วกลับไปปิด)
     s.autoSync = q('#st-autosync').checked;
@@ -1439,6 +1446,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.prose = JSON.parse(JSON.stringify(mergeProseFormat(readProse())));
     // [98] ข้อมูลผลงาน
     for (const [sel, key] of SETUP_FIELDS) m[key] = q(sel).value.trim();
+    if (loglineUi) { const ll = compactLogline(loglineUi.read()); if (ll) m.logline = ll; else delete m.logline; }
     g.dailyWords = num('#st-daily', 500);
     g.projectWords = num('#st-proj', 50000);
     // ── [alpha.73 ข้อ 2+3] อ่านค่าคืนจากช่องที่สร้างเอง (ครบทุกคีย์เสมอ) ──

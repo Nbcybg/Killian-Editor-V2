@@ -3,8 +3,12 @@ const call = (ch) => (...a) => ipcRenderer.invoke(ch, ...a);
 // [alpha.67] ทุกคำสั่งที่ "เปลี่ยนไฟล์" ต้องบอกหน้าต่างอื่นให้รู้ (tear-off = หลายหน้าต่างดูโปรเจกต์เดียวกัน)
 // ดักที่นี่ทีเดียวแทนการไล่แปะตามจุดเรียกนับร้อยแห่งใน renderer — จุดใหม่ที่เพิ่มทีหลังก็ได้ไปด้วยฟรี ๆ
 // (main เป็นคนหน่วงรวบก่อนกระจาย จึงเขียนรัว ๆ ตอน autosave ได้โดยไม่ท่วม)
+// [alpha.157] ผู้ฟัง "ในหน้าต่างเดียวกัน" — main กระจายให้หน้าต่างอื่นเท่านั้น (ไม่ส่งกลับหาคนเขียน)
+// Kanban ↔ Explorer อยู่หน้าต่างเดียวกัน จึงต้องมีช่องนี้ ไม่งั้นลากการ์ดแล้วต้นไม้ไม่รู้ (และกลับกัน)
+const localWriters = new Set();
 const callW = (ch) => (...a) => ipcRenderer.invoke(ch, ...a).then((r) => {
   try { ipcRenderer.invoke('panel:fileChanged', a[0]); } catch {}
+  for (const fn of localWriters) { try { fn(String(a[0] || '')); } catch {} }
   return r;
 });
 // preload ทำงานในโหมด sandbox → `require('./package.json')` ล้มเสมอ และตกมาที่ '2.0.0'
@@ -97,6 +101,8 @@ contextBridge.exposeInMainWorld('kapi', {
   clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'),
   winMin: call('win:minimize'), winMax: call('win:maximize'), winClose: call('win:close'),
   quitNow: call('win:quitNow'), menuPopup: call('menu:popup'),
+  // [alpha.157] splash → หน้าต่างหลัก (ขยายเต็มจอ) · ข้อความ/เปอร์เซ็นต์ของสิ่งที่กำลังโหลด
+  splashProgress: call('splash:progress'), splashDone: call('splash:done'),
   menuToggles: call('menu:toggles'),        // แจ้งสถานะสวิตช์ให้เมนู native ติ๊กถูกให้ตรง
   // [alpha.69] รายการแผงที่อยู่ในเมนู มุมมอง → แผง (เมนู native สร้างในฝั่ง main — renderer มองไม่เห็น)
   // มีไว้ให้ e2e เทียบกับ PANEL_DEFS: เพิ่มแผงใหม่แล้วลืมใส่เมนู = เทสแดงทันที
@@ -124,6 +130,7 @@ contextBridge.exposeInMainWorld('kapi', {
   tearOffList: call('panel:tearOffList'),          // id ของแผงที่ถูกฉีกออกอยู่ตอนนี้
   broadcast: call('panel:broadcast'),              // ส่งข้อความถึงหน้าต่างอื่นทุกบาน (ไม่ย้อนกลับหาผู้ส่ง)
   onSync: (cb) => ipcRenderer.on('k2:sync', (e, msg) => cb(msg || {})),
+  onLocalWrite: (cb) => { localWriters.add(cb); return true; },
   // ---- [alpha.69] สมุดประวัติการทำงาน (History) ----
   // main เป็นคนจดเอง (ดักที่ handler ของ fs) — renderer แค่บอกว่าโปรเจกต์ไหน/เก็บกี่ครั้ง แล้วอ่าน/สั่งย้อน
   historyConfig: call('history:config'),           // {root, limit, enabled} → เปิด/ปิดการจด

@@ -60,6 +60,7 @@ export function settingsTemplate(a = []) {
       <div class="k-row"><label>${a[6]}</label><input type="text" id="st-title"></div>
       <div class="k-row"><label>${a[7]}</label><input type="text" id="st-author"></div>
       <div class="k-row"><label>${tx('ui.setTpl.themeColor')}<span class="k-hint">${tx('ui.setTpl.colorAppBarPanel')}</span></label><select id="st-theme" class="k-dlg-select" style="width:100%"></select></div>
+      <div class="k-row"><label>${tx('ui.setTpl.skipHome')}<span class="k-hint">${tx('ui.setTpl.skipHomeHint')}</span></label><input type="checkbox" id="st-skip-home"></div>
       <div class="k-row"><label>${a[8]}<span class="k-hint">${a[9]}</span></label><input type="number" id="st-auto" min="0" max="120"></div>
       <div class="k-row"><label>${a[10]}</label><input type="checkbox" id="st-backup"></div>
       <div class="k-row"><label>${a[11]}<span class="k-hint">${a[12]}</span></label><input type="number" id="st-maxbak" min="1" max="200"></div>
@@ -102,6 +103,7 @@ export function settingsTemplate(a = []) {
       <div id="st-update-host"></div>
     </div>
     <div class="k-set-page k-set-2col" data-p="setup">
+      <div id="st-logline-host" class="k-full"></div>
       <div class="k-hint" style="margin-bottom:10px">${tx('ui.setTpl.dataTopCoverChapter')}</div>
       <div class="k-set-sub">${tx('ui.setTpl.author')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.author2')}</label><input type="text" id="st-email"></div>

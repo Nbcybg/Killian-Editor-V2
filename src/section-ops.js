@@ -1,4 +1,6 @@
 // section-ops.js — จัดการเล่ม (section): เพิ่ม/แก้ชื่อ/ลบ/เรียง/สถิติ/บันทึก meta
+import { buildLoglineFields } from './logline-ui.js';
+import { compactLogline } from './logline.js';
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, safeName, refreshNetwork, closeTabsUnderPath } from './app.js';
 import { el, setStatus, state, logAction } from './core.js';
@@ -186,6 +188,9 @@ export async function sectionProps(secPath, sec) {
     box.append(el('div', 'k-hint k-sec-covhint', coverHintLine()));
   }
 
+  // [alpha.157] Logline ของเล่ม — ช่องที่เว้นว่างใช้ของโปรเจกต์ (ตัวจางในช่องคือค่าที่จะตกไปใช้)
+  const loglineUi = buildLoglineFields(box, d.logline, { placeholderFrom: state.meta && state.meta.logline });
+
   const readRow = el('div', 'wiki-row k-sec-readrow');
   readRow.append(el('label', null, tt('ui.readbook.label')));
   const readBtn = el('button', 'k-sec-read', tt('ui.readbook.button'));
@@ -217,6 +222,7 @@ export async function sectionProps(secPath, sec) {
       if (iCoverFull.checked) delete d.coverFull; else d.coverFull = false;
       const ord = parseInt(iOrder.value, 10);
       if (Number.isFinite(ord) && ord > 0) d.order = ord;
+      { const ll = compactLogline(loglineUi.read()); if (ll) d.logline = ll; else delete d.logline; }
       await kapi.writeFile(sf, JSON.stringify(d, null, 2));
       // ปก/สถานะของเล่มเปลี่ยน = ลำดับหน้าของทั้งเล่มเปลี่ยน → ทิ้งแคชสายหน้า
       try { const { bumpBookFlow } = await import('./read-ui.js'); bumpBookFlow(); } catch {}

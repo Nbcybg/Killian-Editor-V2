@@ -207,8 +207,19 @@ export function setStatus(s) { $('#status').textContent = s; }
 //   clearBusy()   — ล้างทั้งหมด · busyMsg() — อ่านข้อความปัจจุบัน (เทสใช้)
 //   withBusy(msg, fn) — ครอบงานยาว ๆ · finally เสมอ ต่อให้ fn โยน error ก็ไม่ค้าง
 let _busyMsg = '';
+// [alpha.157] หน้าจอ splash ตอนเปิดโปรแกรม: ระหว่างที่ยังเปิดอยู่ ทุกข้อความ "กำลังทำอะไร" ส่งไปแสดงที่ splash ด้วย
+// (ผู้ใช้: "splash screen loading ระบุว่า load อะไรบ้าง") — ใช้ข้อความชุดเดียวกับแถบสถานะ จึงตรงกับงานจริงเสมอ
+const _splash = { on: false, pct: 0 };
+export function setSplashActive(on) { _splash.on = !!on; if (!on) _splash.pct = 0; return _splash.on; }
+export function splashProgress(msg, pct) {
+  if (!_splash.on || typeof kapi === 'undefined' || typeof kapi.splashProgress !== 'function') return false;
+  if (Number.isFinite(pct)) _splash.pct = Math.max(_splash.pct, pct);
+  try { kapi.splashProgress(String(msg || ''), _splash.pct); } catch {}
+  return true;
+}
 export function setBusy(msg) {
   _busyMsg = msg == null ? '' : String(msg);
+  if (_busyMsg) splashProgress(_busyMsg);
   const wrap = $('#status-busy');
   if (!wrap) return _busyMsg;                        // หน้า HTML เก่า/เทสหน่วย → เงียบ ๆ ไม่พัง
   const txt = $('#status-busy-text');
@@ -430,8 +441,9 @@ export const SCENE_COLORS = [
 ];
 // สีประจำสถานะมาตรฐาน (สถานะที่ผู้ใช้เพิ่มเองเก็บสีไว้ที่ meta.customStatusColors — ดู custom-status.js)
 export const STATUS_COLORS = {
-  'โครงร่าง': '#8a8f98', 'กำลังเขียน': '#d97757', 'เขียนเสร็จ': '#5f9fd9',
-  'ตรวจแล้ว': '#6fae6f', 'เก็บถาวร': '#a97fd0',
+  // [alpha.157] เฉดสด (ผู้ใช้: "สีควรเป็น colorful") — ค่านี้เป็นค่าเริ่มต้นตอนวาด ไม่ได้ถูกเขียนลงไฟล์
+  'โครงร่าง': '#94a3b8', 'กำลังเขียน': '#ff7a2f', 'เขียนเสร็จ': '#3b9bff',
+  'ตรวจแล้ว': '#2ecc71', 'เก็บถาวร': '#a66bff',
 };
 /* /i18n-skip */
 export const DEFAULT_STATUS_COLOR = '#8a8f98';

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Killian 2</title>
+<!-- [alpha.157] หน้าจอ splash ตอนเปิดโปรแกรม
+     เปลี่ยนภาพได้โดยไม่ต้อง build: วางไฟล์ทับ renderer/splash/background.png และ renderer/splash/logo.png
+     (ไม่มีไฟล์ = ใช้ placeholder .svg ที่มากับโปรแกรม) · ข้อความ/เปอร์เซ็นต์ส่งมาจาก main.js ทาง window.__splash() -->
+<style>
+  html, body { margin:0; height:100%; overflow:hidden; background:transparent;
+    font-family:"Segoe UI", "Leelawadee UI", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
+    -webkit-user-select:none; user-select:none; }
+  .card { position:absolute; inset:0; overflow:hidden; background:#1e1250; color:#fff; -webkit-app-region:drag; }
+  .bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .shade { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%, rgba(30,18,80,0) 0%, rgba(21,12,54,.55) 75%); }
+  .center { position:absolute; left:0; right:0; top:44%; transform:translateY(-50%); text-align:center; }
+  .logo { max-width:62%; max-height:120px; display:block; margin:0 auto; filter:drop-shadow(0 4px 18px rgba(0,0,0,.35)); }
+  .ver { margin-top:10px; font-size:12px; letter-spacing:.5px; color:rgba(255,255,255,.72); }
+  .foot { position:absolute; left:0; right:0; bottom:0; }
+  .msg { padding:0 10px 6px; font-size:12px; color:rgba(255,255,255,.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 2px rgba(0,0,0,.5); }
+  .track { height:5px; background:rgba(255,255,255,.14); }
+  .fill { height:100%; width:0; background:linear-gradient(90deg, #ff6640, #ffc55c); transition:width .25s ease-out; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="bg" id="bg" src="splash/background.png" alt="" onerror="this.onerror=null; this.src='splash/background-placeholder.svg'">
+    <div class="shade"></div>
+    <div class="center">
+      <img class="logo" id="logo" src="splash/logo.png" alt="Killian 2" onerror="this.onerror=null; this.src='splash/logo-placeholder.svg'">
+      <div class="ver" id="ver"></div>
+    </div>
+    <div class="foot">
+      <div class="msg" id="msg"></div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+    </div>
+  </div>
+<script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    document.getElementById('ver').textContent = q.get('v') ? 'v ' + q.get('v') : '';
+    document.getElementById('msg').textContent = q.get('m') || '';
+    var best = 0;
+    window.__splash = function (msg, pct) {
+      if (msg) document.getElementById('msg').textContent = msg;
+      var p = Number(pct);
+      if (isFinite(p)) { best = Math.max(best, Math.min(100, p)); document.getElementById('fill').style.width = best + '%'; }
+      return best;
+    };
+  })();
+</script>
+</body>
+</html>

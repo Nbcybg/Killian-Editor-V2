@@ -13,6 +13,10 @@ import { pathKey } from './tab-bridge.js';
 import { SCENE_COLORS, dataLabel, el, setStatus, state, log, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { ask, confirmBox, popupMenu, escClose } from './ui.js';
+import { vivid } from './color-util.js';
+import { buildLoglineFields } from './logline-ui.js';
+import { compactLogline } from './logline.js';
+import { mutateJson } from './json-store.js';
 import { dumpMdFile, parseMdFile } from './md.js';
 import { gi } from './icons.js';
 import { listSections, addSection } from './section-ops.js';
@@ -113,20 +117,27 @@ export function lockMessage(source) {
 
 // ═══════════════════ เมนูย่อย: สี · สถานะ ═══════════════════
 export function colorMenu(e, current, apply) {
+  // [alpha.157] ช่องสี่เหลี่ยมสีจริงหน้าชื่อสี (เดิมเป็นจุด bullet สีเดียวกันหมด แยกสีไม่ออก)
   popupMenu(e.clientX, e.clientY, [
     ...SCENE_COLORS.map(([name, hex]) => ({
-      label: (hex === current ? gi('checkmark') + ' ' : '') + gi('dot') + ' ' + dataLabel(name),
+      text: dataLabel(name), swatch: vivid(hex), checked: hex === current,
       click: () => apply(hex),
     })),
     '-',
-    { label: t('ui.treeAct.clearColor'), click: () => apply('') },
+    { label: t('ui.treeAct.clearColor'), swatch: '', click: () => apply('') },
   ]);
 }
 
-/** @param {Array<[string,string]>} options [ค่า, ป้าย] */
-export function statusMenu(e, options, current, apply, clearValue = '') {
+/**
+ * @param {Array<[string,string]>} options [ค่า, ป้าย]
+ * @param {Function} [colorOf] ค่า → สี (สถานะฉากมีสีประจำ — แสดงเป็นช่องสี่เหลี่ยมหน้าชื่อ)
+ */
+export function statusMenu(e, options, current, apply, clearValue = '', colorOf = null) {
   popupMenu(e.clientX, e.clientY, [
-    ...options.map(([v, label]) => ({ text: (v === current ? gi('checkmark') + ' ' : '') + label, click: () => apply(v) })),
+    ...options.map(([v, label]) => ({
+      text: label, checked: v === current, click: () => apply(v),
+      ...(colorOf ? { swatch: vivid(colorOf(v)) } : {}),
+    })),
     '-',
     { label: t('ui.treeAct.clearStatus'), click: () => apply(clearValue) },
   ]);
@@ -1007,6 +1018,26 @@ export async function renderItemProps(host, kind, ctx) {
   host.replaceChildren();
   const defs = await itemFieldDefs(kind);
   const vals = await readItemValues(kind, ctx);
+  if (kind === 'book') {
+    // [alpha.157] Logline ของเล่มในแผงคุณสมบัติ (บันทึกเมื่อออกจากช่อง)
+    const tail = el('div', 'props-logline-host');
+    queueMicrotask(async () => {
+      const s = await readSection(ctx.secPath);
+      buildLoglineFields(tail, s.logline, {
+        placeholderFrom: state.meta && state.meta.logline,
+        onChange: async (val) => {
+          const cur = await readSection(ctx.secPath);
+          const next = compactLogline(val);
+          if (JSON.stringify(next || null) === JSON.stringify(cur.logline || null)) return;
+          await mutateJson(kapi, await kapi.join(ctx.secPath, 'section.json'), (d) => {
+            if (next) d.logline = next; else delete d.logline;
+          }, { fallback: {} });
+          setStatus(t('ui.logline.saved'));
+        },
+      });
+    });
+    host._loglineTail = tail;
+  }
   host.append(el('div', 'props-name', tf('ui.treeAct.propsTitle', ctx.title || '')));
   for (const def of defs) {
     const r = el('div', 'props-row'); r.append(el('label', null, def.label));
@@ -1021,6 +1052,7 @@ export async function renderItemProps(host, kind, ctx) {
     else inp.addEventListener('change', () => commit().catch(() => {}));
     r.append(inp); host.append(r);
   }
+  if (host._loglineTail) { host.append(host._loglineTail); delete host._loglineTail; }
   return host;
 }
 

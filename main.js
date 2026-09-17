@@ -76,6 +76,8 @@ function parseCsvRows(text) {
 }
 
 const TEST = process.env.KILLIAN_TEST === '1';
+// [alpha.157] โฟลเดอร์ข้อมูลผู้ใช้แยก (นักพัฒนา/เทส) — ไม่แตะเลย์เอาต์/โปรเจกต์ล่าสุดของเครื่องจริง
+if (process.env.KILLIAN_USERDATA) { try { app.setPath('userData', process.env.KILLIAN_USERDATA); } catch {} }
 // ══ [alpha.145] ★ e2e ต้องไม่ขึ้นกับว่าหน้าต่างอยู่หน้าสุดหรือไม่ ══
 //
 // อาการ: รัน e2e ชุดเดิมสี่รอบ ได้ผลแดง **คนละจุดกันทุกรอบ** (432 / 694 / 927 / 4,308)
@@ -618,10 +620,54 @@ function buildMenu() {
 }
 
 let forceQuit = false;
+
+// ═══ [alpha.157] ลำดับเปิดโปรแกรม: splash → หน้าต่างหลัก (ขยายเต็มจอ) ═══
+// ผู้ใช้: *"1. เปิด desktop app 2. splash screen loading ระบุว่า load อะไรบ้าง 3. หน้า home 4. app แบบ maximize"*
+// หน้าต่างหลักถูกสร้างแบบซ่อนไว้ให้โหลดไปพร้อมกัน · renderer ส่ง `splash:progress` ระหว่างบูต
+// แล้ว `splash:done` เมื่อพร้อม → ปิด splash + ขยายเต็มจอ + แสดง · เผื่อ renderer ค้าง: เพดาน 30 วินาที
+// โหมดเทส / KILLIAN_NO_SPLASH = ไม่มี splash (หน้าต่างโผล่ทันทีเหมือนเดิม — e2e ไม่ต้องรอ)
+let splash = null;
+let splashTimer = null;
+const USE_SPLASH = !TEST && process.env.KILLIAN_NO_SPLASH !== '1';
+function createSplash() {
+  if (!USE_SPLASH) return null;
+  splash = new BrowserWindow({
+    width: 560, height: 340, frame: false, resizable: false, maximizable: false, minimizable: false,
+    fullscreenable: false, center: true, show: false, backgroundColor: '#1e1250', skipTaskbar: false,
+    title: 'Killian 2', webPreferences: { contextIsolation: true, nodeIntegration: false },
+  });
+  splash.loadFile('renderer/splash.html', { query: { v: app.getVersion(), m: tt('ui.splash.start') } });
+  splash.once('ready-to-show', () => { try { splash.show(); } catch {} });
+  splash.on('closed', () => { splash = null; });
+  splashTimer = setTimeout(() => finishSplash(), 30000);
+  return splash;
+}
+function splashSay(msg, pct) {
+  if (!splash || splash.isDestroyed()) return false;
+  const js = 'window.__splash && window.__splash(' + JSON.stringify(String(msg || '')) + ',' + (Number.isFinite(+pct) ? +pct : 'NaN') + ')';
+  splash.webContents.executeJavaScript(js).catch(() => {});
+  return true;
+}
+function finishSplash() {
+  clearTimeout(splashTimer); splashTimer = null;
+  if (win && !win.isDestroyed() && !win.isVisible()) {
+    try { win.maximize(); } catch {}
+    win.show();
+    win.focus();
+  }
+  if (splash && !splash.isDestroyed()) {
+    splashSay('', 100);
+    const s = splash;
+    setTimeout(() => { try { s.close(); } catch {} }, 180);
+  }
+  return true;
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1000, minHeight: 640,
-    backgroundColor: '#262624',
+    show: !USE_SPLASH,                               // [alpha.157] มี splash = แสดงเมื่อบูตเสร็จ (ขยายเต็มจอ)
+    backgroundColor: '#1e1250',
     frame: false,                                   // หน้าต่าง custom เต็มรูปแบบ
     webPreferences: { preload: path.join(__dirname, 'preload.js'),
                       contextIsolation: true, nodeIntegration: false,
@@ -1630,6 +1676,9 @@ H('win:setBounds', (box) => {
 H('win:minimize', () => win.minimize());
 H('win:maximize', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
 H('win:close', () => win.close());
+// [alpha.157] splash — ข้อความ "กำลังโหลดอะไร" + ปิด splash แล้วแสดงหน้าต่างหลักแบบขยายเต็มจอ
+H('splash:progress', (msg, pct) => splashSay(msg, pct));
+H('splash:done', () => finishSplash());
 H('win:quitNow', () => {
   forceQuit = true;
   // [alpha.67] หน้าต่างแผงที่ฉีกออกไปต้องปิดตามหน้าต่างหลัก — ไม่งั้นโปรแกรมค้างอยู่ทั้งที่ผู้ใช้สั่งออก
@@ -2109,7 +2158,9 @@ app.whenReady().then(() => {
   // โหลดตารางคำแปลก่อนสร้างหน้าต่าง/เมนู — เมนู OS ถูกสร้างครั้งเดียวตอนเปิด
   try { loadLangTable(lastLangCode()); } catch {}
   if (TEST) startMockSse();            // [alpha.115] เซิร์ฟเวอร์ SSE จำลองสำหรับเทสสตรีม
+  createSplash();
   createWindow();
+  splashSay(tt('ui.splash.window'), 4);
   if (TEST) {
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {

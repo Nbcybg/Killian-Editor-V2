@@ -125,6 +125,12 @@ ui.aia.analyzePaceStory,วิเคราะห์จังหวะเรื�
 ui.aia.arcGap,Absent
 ui.aia.arcHead,{0} — {1} mentions across {2} scenes
 ui.aia.busy,Analysing…
+ui.aia.cmpBalanced,Balanced
+ui.aia.cmpDialogue,Dialogue
+ui.aia.cmpInteriority,Interiority
+ui.aia.cmpLeanN,leads in {0} scene(s)
+ui.aia.cmpNarration,Narration
+ui.aia.cmpOverall,Overall
 ui.aia.confirmDelSession,Delete session “{0}”?
 ui.aia.crCast,Cast balance
 ui.aia.crCastNote,{0} characters · lead takes {1}%
@@ -176,10 +182,12 @@ ui.aia.csvSaved,CSV saved to {0}
 ui.aia.csWord,Word
 ui.aia.csWords,Words
 ui.aia.dArc,"How often each character appears per chapter, and where they disappear."
+ui.aia.dComposition,"How much of each scene is dialogue, interiority and narration — and which way it leans"
 ui.aia.dConflict,Which scenes carry conflict and which are flat.
 ui.aia.dContinuity,Whether character and world details stay consistent across the chosen scope.
 ui.aia.dgArc,{0}: mentioned {1} times across {2} scenes
 ui.aia.dgArcGap, · absent: {0}
+ui.aia.dgComposition,{0} [{1}] dialogue={2}% interiority={3}% narration={4}% → {5}
 ui.aia.dgConflict,{0} [{1}] no conflict marker found
 ui.aia.dgLength,{0} [{1}] {2} words ({3} min)
 ui.aia.dgNote,{0} [{1}] {2}
@@ -269,6 +277,7 @@ ui.aia.stChapter,Chapters
 ui.aia.stCharAppear,Characters seen
 ui.aia.stCharGap,Characters with gaps
 ui.aia.stCharOnce,One-shot characters
+ui.aia.stCmpLean,Leans toward
 ui.aia.stConflictDensity,Markers per 1k words
 ui.aia.stDialogueAvg,Avg dialogue
 ui.aia.stFastRun,Fast runs
@@ -294,8 +303,10 @@ ui.aia.stTopPair,Strongest pair
 ui.aia.stUniqueWord,Unique words
 ui.aia.stWindow,Proximity window
 ui.aia.sysEditor,"You are a meticulous, blunt manuscript editor. Analyse only what appears in the material given; never invent events or details. Answer with JSON only, nothing outside the JSON."
+ui.aia.tComposition,Scene composition (dialogue/interiority/narration)
 ui.aia.tagNeedAI,needs AI
 ui.aia.taskArc,"From each character’s appearances, say whose arc breaks, who vanishes for too long, and who shows no development."
+ui.aia.taskComposition,"Read the per-scene split of dialogue/interiority/narration. Say which scenes lean so far that pacing or emotion suffers, where to add dialogue or the character's inner thoughts, and whether the overall balance suits the genre."
 ui.aia.taskConflict,"Judge whether each scene has real conflict: who wants what, who blocks it, and which scenes need more friction."
 ui.aia.taskContinuity,"Check whether character and world details (names, traits, abilities, rules) stay consistent or contradict."
 ui.aia.taskLength,"From scene lengths, say which to split, which are too short to land, and whether the breathing room is right."
@@ -2482,19 +2493,38 @@ ui.compile.writeDoneCheckDone,"เขียนเสร็จ, ตรวจแ�
 ui.core.notFoundLangUse2,"ไม่พบภาษา ""{{0}}"" ใช้ภาษาอังกฤษแทน"
 ui.core.notHasText2,(ไม่มีข้อความ)
 ui.core.resourceLoadNotOk2,resource: โหลดไม่สำเร็จ <
+ui.dash.actSummary,{0} words added · wrote on {1} of {2} days · best day {3}
+ui.dash.activity,Writing activity
 ui.dash.avgWordChapterTime,เฉลี่ย {0} คำ/บท · เวลาอ่านรวม ~{1} นาที
 ui.dash.goalWord,เป้าหมาย: {0} / {1} คำ ({2}%)
 ui.dash.imageAlbumTagArea,{0} รูป · {1} อัลบั้ม · {2} แท็ก · พื้นที่รวม {3}
+ui.dash.kanbanStatus,Scene status (Kanban)
 ui.dash.libraryImage,คลังรูป
 ui.dash.loadPartHubNot,โหลดส่วนศูนย์รวมไม่สำเร็จ
 ui.dash.longEachChapterWord,ความยาวแต่ละบท (คำ)
+ui.dash.milestoneHit,Reached {0} words
+ui.dash.milestones,Milestones
+ui.dash.msGoal,Goal
+ui.dash.msLeft,{0} words to go
+ui.dash.msStart,Project started
+ui.dash.msWords,{0} words
 ui.dash.nextStuck,ไปต่อจากที่ค้าง
 ui.dash.notSetStatus,ยังไม่ตั้งสถานะ
 ui.dash.notStartWriteNext,ยังไม่เริ่มนับวันเขียนติดต่อกัน
+ui.dash.openKanban,Open Kanban
 ui.dash.openLibraryImage,เปิดคลังรูป
 ui.dash.pageStatusScene,ความคืบหน้าตามสถานะฉาก
+ui.dash.projectStart,Project started {0}
+ui.dash.rangeAll,All
+ui.dash.readHM,{0} h {1} min
+ui.dash.readHint,Based on an average reading speed of {0} words/min
+ui.dash.readM,{0} min
+ui.dash.readTime,Total reading time
 ui.dash.saveTaskDoneGraph,บันทึกงานสัก 2 วันแล้วกราฟคำรายวันจะขึ้นที่นี่
 ui.dash.scenePinPin,ฉากปักหมุด ({0})
+ui.dash.topWordHint,"""{0}"" used {1} times ({2} per 10k words)"
+ui.dash.topWords,Most used words
+ui.dash.topWordsNote,Out of {0} words · {1} unique · connectors and character names excluded
 ui.dash.useSourceDone,ใช้ในต้นฉบับแล้ว
 ui.dash.viewAllExport,ดูทั้งหมด / ส่งออก…
 ui.dash.wikiCat,Wiki ตามหมวด
@@ -3289,6 +3319,8 @@ ui.home.openProject,Open Project
 ui.home.openProjectBeforeExport,เปิดโปรเจกต์ก่อน จึงจะส่งออกเป็น .zip ได้
 ui.home.pageFirst,หน้าแรก
 ui.home.pathCopied,Path copied
+ui.home.quitApp,Quit
+ui.home.quitAppHint,Close Killian 2 (asks first if anything is unsaved)
 ui.home.revealInOS,Show this folder in the file manager
 ui.home.search,ค้นหา
 ui.home.searchProject,ค้นหาโปรเจกต์…
@@ -3371,6 +3403,10 @@ ui.html.tbRead,Reading mode (full screen)
 ui.html.tbRecord,"Daily journal — what you did today, exportable as CSV"
 ui.html.tbRedo,Redo
 ui.html.tbSearchPanel,Search
+ui.html.tbSideBottom,Hide/show bottom panels
+ui.html.tbSideLeft,Hide/show left panels
+ui.html.tbSideRight,Hide/show right panels
+ui.html.tbSideTop,Hide/show top panels
 ui.html.tbSource,View the raw Markdown of this scene
 ui.html.tbSpCont,Automatic continuation text — (CONTINUED) · CONTINUED: · (MORE) · NAME (cont'd)
 ui.html.tbSpExt,Character name extension (V.O. / O.S. / cont'd)
@@ -3448,13 +3484,21 @@ ui.importSp.readFileNotOk,อ่านไฟล์ไม่สำเร็จ:
 ui.importSp.replaceTab,Replace the open tab
 ui.importSp.xMLNotValid,XML ไม่ถูกต้อง: 
 ui.kanban.add,+ เพิ่มคอลัมน์
+ui.kanban.addStatus,Add status
+ui.kanban.addStatusHint,A new column is a new scene status for the whole project (shows in the Explorer right away)
 ui.kanban.deleteColumn,Delete column
+ui.kanban.deleteMove,"Delete status ""{0}""? The {1} scene(s) in this column move to ""{2}"""
 ui.kanban.draftPick,Choose which draft the board shows
+ui.kanban.hiddenBuiltin," (hidden from the board)"
+ui.kanban.manageStatus,Manage statuses
 ui.kanban.moveScenesFirst,Move the scenes out of this column first
 ui.kanban.newColumn,New column name
 ui.kanban.newColumnHint,e.g. Needs review
 ui.kanban.newDraftBeforeUse,สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้
+ui.kanban.restoreStatus,Show again
 ui.kanban.sceneNotFound,Scene file not found: 
+ui.kanban.statusExists,A status with this name already exists
+ui.kanban.unset,Not set
 ui.layoutSplit.fieldEmpty,ช่องว่าง
 ui.layoutSplit.leftRight,ซ้าย-ขวา
 ui.layoutSplit.topBottom,บน-ล่าง
@@ -3463,6 +3507,23 @@ ui.log.dup,[วนซ้ำ]
 ui.log.dupTimes,  (ซ้ำ {0} ครั้ง)
 ui.log.error,ผิดพลาด
 ui.log.msg,เตือน
+ui.logline.compassHead,Story compass (the author's logline — use it to keep the story on its spine)
+ui.logline.compassRule,"Keep suggestions and prose consistent with this compass. If the content drifts from the goal, obstacle or stakes, briefly tell the author."
+ui.logline.goal,Goal (Want)
+ui.logline.hGoal,What they concretely want
+ui.logline.hInciting,What event ends their old normal
+ui.logline.hLogline,"When [incident], [hero] must [goal] before [stakes]"
+ui.logline.hObstacle,Who or what stands in the way
+ui.logline.hProtagonist,Who — the flaw or edge that makes them worth following
+ui.logline.hStakes,What is lost if they fail
+ui.logline.inciting,Inciting incident (When)
+ui.logline.logline,Logline (one sentence)
+ui.logline.obstacle,Antagonist / Obstacle
+ui.logline.protagonist,Protagonist (Who)
+ui.logline.saved,Logline saved
+ui.logline.stakes,Stakes
+ui.logline.title,Logline
+ui.logline.why,AI uses this as a compass so the story stays on track
 ui.maps.addMap,＋ เพิ่มแผนที่
 ui.maps.backSizeFitFrame,กลับไปขนาดพอดีกรอบ (100%)
 ui.maps.busyNextRouteClick,กำลังต่อเส้นทาง “{0}” — คลิกหมุดตามลำดับที่เดินทาง ({1} จุด)
@@ -3973,6 +4034,8 @@ ui.panel.sceneGuard2,read-only until you save there
 ui.panel.search,ค้นหา
 ui.panel.searchPlaceholder,Search / Filter — e.g. status:draft tag:action
 ui.panel.selectScene,Select a scene to view properties
+ui.panel.sideHidden,Panels on this side hidden — press again to show them
+ui.panel.sideShown,Panels on this side are back
 ui.panel.sortBy,Sort by
 ui.panel.sortDefault,Default order
 ui.panel.sortModified,Modified time
@@ -4648,6 +4711,15 @@ ui.project.screenplay,บทภาพยนตร์
 ui.project.start,คดีเริ่มต้น
 ui.project.structureChapterFilmAct,"โครงสร้างบทหนัง — 3 องก์, scenes เป็นบทภาพยนตร์"
 ui.project.structureNovelChapterScene,โครงสร้างนิยายทั่วไป — บท+ฉาก+ตัวละคร+สถานที่
+ui.props.act,Act
+ui.props.actHint,e.g. Act 1
+ui.props.actSaved,Chapter act set: {0}
+ui.props.actTip,The act belongs to the chapter — every scene in it shares the same act
+ui.props.chapter,Chapter
+ui.props.chapterTip,Choosing another chapter moves this scene to the end of it
+ui.props.mentions,Mentioned in this scene
+ui.props.mentionsNone,No Wiki names found in this scene yet
+ui.props.movedTo,"Scene moved to ""{0}"""
 ui.props.renameHint,Edit the scene name here — press Enter to save
 ui.props.sceneName,Scene name
 ui.props.writeMetaFail,Could not write scene properties to the file
@@ -4848,6 +4920,8 @@ ui.session.restoredTabs,Reopened {0} files
 ui.session.tooOld,Saved session is too old — starting fresh
 ui.session.warnSave,Could not save session state
 ui.session.warnTabs,Could not record open tabs
+ui.setTpl.skipHome,Skip Home on startup
+ui.setTpl.skipHomeHint,Open the last project right away · no recent project = empty app
 ui.settings.author,Author
 ui.settings.autoBackup,Auto-backup versions on save
 ui.settings.automation,Automation
@@ -5319,6 +5393,15 @@ ui.spHeaders.nameAuthor,ชื่อผู้เขียน
 ui.spHeaders.nameDraftRoundEdit,ชื่อฉบับร่าง / รอบแก้
 ui.spHeaders.pageNumCurrent,เลขหน้าปัจจุบัน
 ui.spHeaders.text,ข้อความลิขสิทธิ์
+ui.splash.home,Preparing Home…
+ui.splash.language,Loading language and fonts…
+ui.splash.project,Opening last project: {0}
+ui.splash.ready,Ready
+ui.splash.recent,Reading recent projects…
+ui.splash.settings,Loading settings…
+ui.splash.start,Starting…
+ui.splash.update,Checking for updates…
+ui.splash.window,Creating the main window…
 ui.split.closed,Split view closed
 ui.split.closePane,Close pane
 ui.split.closePaneHint,Close this pane (the tab stays open)
@@ -5856,6 +5939,7 @@ ui.tbcfg.grpEdit,Edit
 ui.tbcfg.grpExt,Extensions
 ui.tbcfg.grpFind,Search
 ui.tbcfg.grpInsert,Insert
+ui.tbcfg.grpLayout,Panel sides
 ui.tbcfg.grpPanels,Panels
 ui.tbcfg.grpStory,Story tools
 ui.tbcfg.grpStyle,Text style
@@ -6021,6 +6105,10 @@ ui.tip.panel-system,"Choose which panels to show or hide, and see what each one 
 ui.tip.panels-hide-all,"Temporarily hides every panel, leaving just the writing area. Press again to bring them back where they were."
 ui.tip.panels-hide-left,Temporarily hides the panels on the left; press again to restore them.
 ui.tip.panels-hide-right,Temporarily hides the panels on the right; press again to restore them.
+ui.tip.panels-side-bottom,Hide panels docked below the writing area; press again to bring them back
+ui.tip.panels-side-left,Hide every panel docked left of the writing area; press again to bring them back
+ui.tip.panels-side-right,Hide every panel docked right of the writing area; press again to bring them back
+ui.tip.panels-side-top,Hide panels docked above the writing area; press again to bring them back
 ui.tip.pb-align-center,Centres the text inside the card horizontally.
 ui.tip.pb-align-left,Pushes the text inside the card to the left. The card itself does not move.
 ui.tip.pb-align-right,Pushes the text inside the card to the right.

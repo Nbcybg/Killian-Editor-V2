@@ -25,8 +25,8 @@ export async function recordDailyWords(totalWords, root = state.root) {
     hist[idx].words = totalWords;
   } else {
     hist.push({ date: today, words: totalWords });
-    // เก็บแค่ 180 วัน
-    if (hist.length > 180) hist.shift();
+    // เก็บย้อนหลัง
+    if (hist.length > 1100) hist.shift();   // [alpha.157] ~3 ปี (ช่วง "ทั้งหมด" ของ Activity)
   }
   state.meta.wordHistory = hist;
   try {

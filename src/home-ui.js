@@ -65,6 +65,9 @@ export function buildHomeActions(opts = {}) {
   const newBtn = mk('k-ok home-btn-new', tr('home.newProject'));
   const openBtn = mk('home-btn-open', tr('home.openProject'));
   const closeBtn = mk('home-btn-close', tr('home.close'), t('ui.home.closePageFirst'));
+  // [alpha.157] ผู้ใช้: "หน้า home จะมีปุ่มออกจากโปรแกรม" — ทางเดียวกับปุ่ม ✕ ของหน้าต่าง (ถามบันทึกงานค้างก่อน)
+  const quitBtn = mk('k-danger-soft home-btn-quit', gi('close') + ' ' + t('ui.home.quitApp'), t('ui.home.quitAppHint'));
+  quitBtn.onclick = () => { try { kapi.winClose(); } catch {} };
 
   function applyView(mode) {
     const m = setHomeView(mode);
@@ -114,9 +117,10 @@ export function buildHomeActions(opts = {}) {
 
   actions.append(viewWrap, findBtn, findInp, exportBtn, importBtn, spacer, newBtn, openBtn);
   if (opts.onClose) actions.append(closeBtn); else closeBtn.remove();
+  actions.append(quitBtn);
   applyView(homeView());
   return { actions, viewWrap, viewBtns, applyView, findBtn, findInp, applyFind,
-           exportBtn, importBtn, spacer, newBtn, openBtn, closeBtn };
+           exportBtn, importBtn, spacer, newBtn, openBtn, closeBtn, quitBtn };
 }
 
 // เปิดหน้า Home — สร้างแท็บใหม่ หรือเปิดแท็บที่มีอยู่แล้ว

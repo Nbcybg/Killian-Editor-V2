@@ -37,7 +37,8 @@ import { LAYOUT_VERSION as PANEL_LAYOUT_VERSION,
 // [alpha.60r2 ข้อ 2] selftest ต้องตั้ง selection เองก่อนสั่งเปลี่ยนรูปตัวพิมพ์
 import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from 'prosemirror-state';
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
-import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog, escClose } from './ui.js';
+import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider } from './ui.js';
+import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
 import { mutateJson } from './json-store.js';   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
 import { diskConflict, focusAction } from './disk-conflict.js';   // [alpha.156] ไฟล์ถูกแก้นอกโปรแกรม
 import { sprintDirtyList, stopSprint } from './sprint-ui.js';     // [alpha.156] ทะเบียนงานค้าง
@@ -67,7 +68,7 @@ import { MAPS_VERSION, PIN_COLORS, PIN_KIND, newMap, newPin, clamp, findMap, sor
          migrateMaps, mapCategories, groupMaps, mapOverlays, toggleOverlay, gridLines, clampZoom, zoomStep,
          filterPins, matchPin, movePins, deletePins, clonePins, newRoute, routePoints, routePath, routeLength,
          addPinToRoute, deleteRoute, mapRoutes, scenePinCounts, scenesForMap, MAP_ZOOM_MIN, MAP_ZOOM_MAX } from './maps.js';
-import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus,
+import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus,
          DEFAULT_SETTINGS, GLOBAL_DEFAULTS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS,
          BASE_ED_FS, BASE_SP_FS, PT_PX, ptToPx, DEFAULT_SCRIPT_FONT,
          spCycleKeys, spKeyLabel, spKeyMatch,
@@ -142,7 +143,8 @@ import { openVisual, createVisual, hasVis, visPathOf, renderVisual, openVisualFo
 import { openScratchpad, renderNotesPanel } from './scratchpad.js';
 import { openQuickOpen, quickOpenCache } from './quick-open.js';
 import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
-         statusColor, statusesToJson, importStatuses, setStatusColor } from './custom-status.js';
+         statusColor, statusesToJson, importStatuses, setStatusColor, paintStatusChip } from './custom-status.js';
+import { vivid } from './color-util.js';
 import { toggleFocusMode2, cursorBlock, isFocusMode, focusDim, applyFocusDim } from './focus-mode.js';
 import { toggleTypewriter, twScroll, isTypewriter, scrollHost } from './typewriter.js';
 import { recordDailyWords, countProjectWords, calcStreak, getWordHistory,
@@ -192,7 +194,7 @@ import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePan
          isPanelOpen, resetPanelSystem, PANEL_DEFS, panelId, setPanelShowHook,
          onPanelLayoutChange, panelDesc, setPanelCloseGuard,
          // [alpha.66r3] เวิร์กสเปซ + ระบบจัดการพื้นที่
-         toggleSpace, panelsHidden, hiddenMode, workspaceMenu, workspaceMenuItems,
+         toggleSpace, panelsHidden, hiddenMode, workspaceMenu, workspaceMenuItems, toggleSide, sideHidden,
          listWorkspaces, saveWorkspace, applyWorkspace, deleteWorkspace,
          BUILTIN_WORKSPACES, auditPanelGaps,
          // ส่งออกการจัดวางแผงเป็นไฟล์ (ใช้เป็นเลย์เอาต์อ้างอิง / แนบตอนรายงานบั๊กเรื่องแผง)
@@ -2954,26 +2956,50 @@ export async function saveGlobalSetting(key, value) {
   state.settings[key] = value;
   return value;
 }
+// ══ [alpha.157] ลำดับเปิดโปรแกรมตามที่ผู้ใช้กำหนด ══
+//   1. เปิดโปรแกรม → 2. splash (บอกว่ากำลังโหลดอะไร) → 3. หน้า Home (มีปุ่มออกจากโปรแกรม)
+//   3.1 ติ๊ก "ไม่แสดงหน้า Home" (= openLastProject) → เปิดโปรเจกต์ล่าสุดเลย · ไม่มีโปรเจกต์ล่าสุด = แอปเปล่า
+//   4. หน้าต่างหลักขยายเต็มจอ (main.js ทำตอนได้ `splash:done`)
+// showHomeOnStartup=true (เมนู มุมมอง) ยังบังคับให้เห็นหน้าแรกเสมอเหมือนเดิม
+export function startupPlan(g = {}, recent = []) {
+  const skipHome = g.openLastProject === true;
+  const last = skipHome && recent && recent[0] ? recent[0] : '';
+  const showHome = g.showHomeOnStartup === true || !skipHome;
+  return { skipHome, last, showHome };
+}
 export async function bootSequence() {
+  setSplashActive(true);
+  splashProgress(tt('ui.splash.settings'), 8);
   setBusy(tt('ui.app.busyStartApp'));
   const g = await bootGlobalSettings();
   // ค่ายังไม่มีโปรเจกต์ → ยัดลง state.settings ไว้ก่อน เพื่อให้เมนู/สวิตช์อ่านค่าถูกตั้งแต่วินาทีแรก
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
   syncMenuToggles();
+  splashProgress(tt('ui.splash.language'), 18);
+  try { await (document.fonts && document.fonts.ready); } catch {}
   // [alpha.135] **ตรวจอัปเดตก่อนเข้าโปรแกรม** — ก่อนเปิดโปรเจกต์/หน้าแรก ตามที่ผู้ใช้สั่ง
   // ยังไม่มีอะไรค้างในหน่วยความจำตอนนี้ กด "แทนที่แล้วเปิดใหม่" จึงไม่มีงานหาย
   // เงียบสนิทเมื่อไม่มีรุ่นใหม่ · ปิดสวิตช์ไว้ = ไม่ติดต่อเน็ตเลย · พังก็ต้องไม่ขวางการเปิดโปรแกรม
+  splashProgress(tt('ui.splash.update'), 30);
   try { await startupUpdateCheck(); } catch (e) { log('warn', tt('ui.upd.failCheck'), e); }
+  splashProgress(tt('ui.splash.recent'), 42);
   let recent = [];
   try { recent = (await kapi.listRecent()) || []; } catch {}
-  const openedLast = !!(g.openLastProject && recent[0]);
-  if (openedLast) await loadProject(recent[0]);
+  const plan = startupPlan(g, recent);
+  let openedLast = false;
+  if (plan.last) {
+    splashProgress(ttf('ui.splash.project', String(plan.last).split(/[\\/]/).pop()), 55);
+    try { await loadProject(plan.last); openedLast = !!state.root; } catch (e) { log('warn', 'open last project', e); }
+  }
+  splashProgress(plan.showHome ? tt('ui.splash.home') : tt('ui.splash.ready'), 96);
   clearBusy();
-  // ไม่มีโปรเจกต์ล่าสุดให้เปิด หรือผู้ใช้สั่ง "แสดงหน้าแรกเสมอ" → เปิดหน้าแรก
-  if (!openedLast || g.showHomeOnStartup === true) {
+  setSplashActive(false);
+  try { await kapi.splashDone(); } catch {}
+  // ไม่ได้ติ๊กข้ามหน้าแรก หรือผู้ใช้สั่ง "แสดงหน้าแรกเสมอ" → เปิดหน้าแรก
+  if (plan.showHome) {
     try { const { showHomeDialog } = await import('./home-ui.js'); await showHomeDialog(); } catch {}
   }
-  return { openedLast, showedHome: !openedLast || g.showHomeOnStartup === true };
+  return { openedLast, showedHome: plan.showHome, skipHome: plan.skipHome };
 }
 /**
  * [alpha.67] ลำดับเริ่มของ "หน้าต่างแผงที่ฉีกออกมา" (tear-off)
@@ -4003,7 +4029,15 @@ function treeBlankMenu() {
 // กดแล้วบอกว่าต้องไปปลดล็อกที่ไหน แทนที่จะทำงาน
 export function showTreeMenu(e, kind, ctx) {
   e.preventDefault(); if (e.stopPropagation) e.stopPropagation();
-  popupMenu(e.clientX, e.clientY, buildMenuItems(kind, (id) => treeMenuItem(kind, id, ctx, e)));
+  popupMenu(e.clientX, e.clientY, buildMenuItems(kind, (id) => subMenuItem(id, treeMenuItem(kind, id, ctx, e))));
+}
+
+// [alpha.157] รายการที่ "มีต่อ" เปิดเมนูลูกด้วย hover — ตัวที่เปิดเมนูเองถูกดักรายการผ่าน menuItemsOf()
+const TREE_SUB_IDS = new Set(['color', 'status', 'move', 'visual', 'restore']);
+function subMenuItem(id, item) {
+  if (!item || !TREE_SUB_IDS.has(id) || typeof item.click !== 'function') return item;
+  const click = item.click;
+  return { label: String(item.label || '').replace(/\s*(▸|…)\s*$/, ''), sub: () => menuItemsOf(click) };
 }
 
 function treeMenuItem(kind, id, c, e) {
@@ -4093,7 +4127,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return it(async () => kapi.revealInOS(await folder()));
         case 'color': return it(() => TA.colorMenu(pos(), ch.color || '', (v) => TA.setChapterFields(dPath, ch.guid, { color: v })));
         case 'status': return it(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), ch.status || '',
-          (v) => TA.setChapterFields(dPath, ch.guid, { status: v || 'Outline' })));
+          (v) => TA.setChapterFields(dPath, ch.guid, { status: v || 'Outline' }), '', statusColor));
         case 'pin': return it(async () => TA.togglePinItem('chapter', ch.guid, { title, dRel: await TA.relOf(dPath) }),
           TA.pinned('chapter', ch.guid));
         case 'lock': return it(async () => { await TA.setChapterFields(dPath, ch.guid, { locked: !ch.locked });
@@ -4132,7 +4166,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return free(() => revealFile(file));
         case 'color': return free(() => TA.colorMenu(pos(), sc.color || '', (v) => setSceneMeta(dPath, ch, sc, { color: v })));
         case 'status': return free(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), sc.status || '',
-          (v) => setSceneMeta(dPath, ch, sc, { status: v || 'Outline' })));
+          (v) => setSceneMeta(dPath, ch, sc, { status: v || 'Outline' }), '', statusColor));
         case 'pin': return free(async () => TA.togglePinItem('scene', sc.id, { title, dRel: await TA.relOf(dPath) }),
           TA.pinned('scene', sc.id));
         case 'saveVersion': return free(() => manualSnapshot(dPath, ch, sc));
@@ -4185,7 +4219,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return free(() => revealFile(file));
         case 'color': return free(() => TA.colorMenu(pos(), meta.color || '', (v) => TA.setMemoFields(file, { color: v })));
         case 'status': return free(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), meta.status || '',
-          (v) => TA.setMemoFields(file, { status: v })));
+          (v) => TA.setMemoFields(file, { status: v }), '', statusColor));
         case 'pin': return free(() => TA.togglePinItem('memo', rel, { title }), TA.pinned('memo', rel));
         case 'saveVersion': return free(() => manualFileSnapshot(file));
         case 'versionHistory': return free(async () => {
@@ -4253,7 +4287,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return free(() => revealFile(path));
         case 'color': return free(() => TA.colorMenu(pos(), meta.color || '', (v) => TA.setItemFields(path, { color: v })));
         case 'status': return free(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), meta.status || '',
-          (v) => TA.setItemFields(path, { status: v })));
+          (v) => TA.setItemFields(path, { status: v }), '', statusColor));
         case 'pin': return free(() => TA.togglePinItem('board', rel, { title }), TA.pinned('board', rel));
         case 'lock': return free(async () => {
           await TA.setItemFields(path, { locked: !meta.locked });
@@ -4545,13 +4579,13 @@ async function _buildTreeInner() {
     const secEl = el('div', 'sec');
     // [alpha.155] หัวเล่ม: จุดสี · ดาว/กุญแจ · ชิปสถานะ (ชุดเดียวกับแถวฉาก)
     const secTitle = el('div', 'sec-title');
-    if (sec.color) { const dot = el('span', 'sc-dot'); dot.style.background = sec.color; secTitle.append(dot); }
+    if (sec.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(sec.color) || sec.color; secTitle.append(dot); }
     secTitle.append(document.createTextNode(
       (sec.locked ? gi('lock') : sec.flag ? gi('star') : gi('books')) + ' ' + (sec.title || name)));
     if (sec.status && sec.status !== 'outline') {
       const st = SECTION_STATUSES.find((s) => s[0] === sec.status);
       const chip = el('span', 'sc-status', st ? st[1] : sec.status);
-      if (st) { chip.style.color = st[2]; chip.style.borderColor = st[2]; }
+      if (st) paintStatusChip(chip, st[2]);
       secTitle.append(chip);
     }
     // ปุ่ม + บนหัวเล่ม = เพิ่มบทลงในฉบับร่างแรกของเล่ม (ทางลัด)
@@ -4612,12 +4646,12 @@ async function _buildTreeInner() {
           const chHead = el('div', 'ch-title');
           // [alpha.124 ข้อ 20] ชื่อบทเป็นข้อความของผู้ใช้ → ห้ามลง innerHTML (กฎข้อ 11)
           // [alpha.155] จุดสี · ดาว/กุญแจ · ชิปสถานะ ของบท (draft.json)
-          if (ch.color) { const dot = el('span', 'sc-dot'); dot.style.background = ch.color; chHead.append(dot); }
+          if (ch.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(ch.color) || ch.color; chHead.append(dot); }
           chHead.append(icon(ch.locked || sec.locked ? 'lock' : ch.isFavorite ? 'star' : 'folder', 14), ' ' + (ch.title || ''));
           if (ch.status && ch.status !== 'Outline') {
             const chChip = el('span', 'sc-status', dataLabel(ch.status));
             const chCol = statusColor(ch.status);
-            if (chCol) { chChip.style.color = chCol; chChip.style.borderColor = chCol; }
+            if (chCol) paintStatusChip(chChip, chCol);
             chHead.append(chChip);
           }
           const addSc = el('span', 'row-add', '+');
@@ -4669,7 +4703,7 @@ async function _buildTreeInner() {
           }
           for (const sc of sortSceneRows(scenesAll[ch.guid] || [], sortMode, chMtimes)) {
             const scEl = el('div', 'scene');
-            if (sc.color) { const dot = el('span', 'sc-dot'); dot.style.background = sc.color; scEl.append(dot); }
+            if (sc.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(sc.color) || sc.color; scEl.append(dot); }
             const isMemo = sc.type === 'memo';
             if (isMemo) scEl.classList.add('sc-memo');
             scEl.dataset.chGuid = ch.guid;
@@ -4695,7 +4729,7 @@ async function _buildTreeInner() {
               // ชิปสถานะได้สีประจำสถานะ (มาตรฐาน หรือที่ผู้ใช้ตั้งเองในกล่องจัดการสถานะ)
               const stChip = el('span', 'sc-status', sc.status);
               const stCol = statusColor(sc.status);
-              if (stCol) { stChip.style.color = stCol; stChip.style.borderColor = stCol; }
+              if (stCol) { paintStatusChip(stChip, stCol); scEl.style.setProperty('--row-st', vivid(stCol)); }
               scEl.append(stChip);
             }
             // แท็ก: ตัวที่ตั้งสี/ไอคอนไว้ (Visual Tags ข้อ 84) ได้ชิปสี · ที่เหลือเป็น #ข้อความ
@@ -4896,12 +4930,12 @@ async function _buildTreeInner() {
   for (const { f, p, title, meta } of memoRows) {
     const mFlag = TA.isMemoFlag(meta.flag), mLocked = TA.isMemoFlag(meta.locked);
     const it = el('div', 'scene');
-    if (meta.color) { const dot = el('span', 'sc-dot'); dot.style.background = meta.color; it.append(dot); }
+    if (meta.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(meta.color) || meta.color; it.append(dot); }
     it.append(document.createTextNode((mLocked ? gi('lock') : mFlag ? gi('star') : gi('file')) + ' ' + title));
     if (meta.status) {
       const mChip = el('span', 'sc-status', dataLabel(meta.status));
       const mCol = statusColor(meta.status);
-      if (mCol) { mChip.style.color = mCol; mChip.style.borderColor = mCol; }
+      if (mCol) paintStatusChip(mChip, mCol);
       it.append(mChip);
     }
     it.dataset.path = p;
@@ -6088,6 +6122,19 @@ function safeBoardName(s) {
  *  buildTree() ของการสร้างกระดานใหม่ → แถวกระดานที่เพิ่งสร้างหายไปจากต้นไม้)
  */
 let _treeJob = Promise.resolve();
+/** [alpha.157] ปุ่มฝั่งติดสว่าง = ฝั่งนั้น "แสดงอยู่" (กดแล้วซ่อน) */
+export function syncSideToggles() {
+  for (const b of document.querySelectorAll('.k-side-toggles [data-side]')) {
+    const hid = sideHidden(b.dataset.side);
+    b.classList.toggle('on', !hid);
+    b.setAttribute('aria-pressed', hid ? 'false' : 'true');
+  }
+  return true;
+}
+
+// [alpha.157] ชุดสถานะ/สีเปลี่ยน (จาก Kanban หรือกล่องจัดการสถานะ) → ต้นไม้วาดชิปใหม่ทันที
+window.addEventListener('k2-statuses-changed', () => { refreshTreeQueued(); });
+
 export function refreshTreeQueued() {
   _treeJob = _treeJob.then(() => buildTree())
     .then(() => auditPlannerRows(tt('ui.app.new3')))
@@ -6318,11 +6365,11 @@ async function buildPlannerSection(tree) {
     // [alpha.155] ดาว/กุญแจ/สี/สถานะ ของกระดานมาจาก Explorer meta — ตั้งตอนสร้างแถวเท่านั้น ไม่แตะตอนงานค้างเปลี่ยน
     const it = el('div', 'scene' + (isCur ? ' k-row-open' : '') + (isCur && curDirty ? ' k-row-unsaved' : ''),
       (bMeta.locked ? gi('lock') : bMeta.flag ? gi('star') : gi('clipboard')) + ' ' + b.name);
-    if (bMeta.color) { const dot = el('span', 'sc-dot'); dot.style.background = bMeta.color; it.prepend(dot); }
+    if (bMeta.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(bMeta.color) || bMeta.color; it.prepend(dot); }
     if (bMeta.status) {
       const bChip = el('span', 'sc-status', dataLabel(bMeta.status));
       const bCol = statusColor(bMeta.status);
-      if (bCol) { bChip.style.color = bCol; bChip.style.borderColor = bCol; }
+      if (bCol) paintStatusChip(bChip, bCol);
       it.append(bChip);
     }
     it.dataset.path = b.path;
@@ -6446,7 +6493,7 @@ async function buildBranchPlanSection(tree) {
     const it = el('div', 'scene branch-plan-row' + (isCur ? ' k-row-open' : '') + (dirty ? ' k-row-unsaved' : ''),
       (pMeta.locked ? gi('lock') : pMeta.flag ? gi('star') : gi('branch')) + ' ' + p.name);
     // คุณสมบัติแบบฉาก: จุดสี + ป้ายสถานะ (เหมือนแถวฉากใน Explorer)
-    if (p.plan.color) { const dot = el('span', 'sc-dot'); dot.style.background = p.plan.color; it.prepend(dot); }
+    if (p.plan.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(p.plan.color) || p.plan.color; it.prepend(dot); }
     if (p.plan.status) it.append(el('span', 'sc-status', dataLabel(p.plan.status)));   // [alpha.155] ค่าสถานะ = ข้อมูล · ป้ายตามภาษา
     it.dataset.path = p.path;
     it.dataset.branchPlan = p.path;
@@ -6886,6 +6933,7 @@ function toggleFocus(on) {
 // ต้องส่งสถานะสวิตช์ทุกตัวไปให้ main แล้ว main สร้างเมนูใหม่ด้วย type:'checkbox'/'radio'
 let _menuTogSig = '';
 export function syncMenuToggles() {
+  try { syncSideToggles(); } catch {}
   if (typeof kapi === 'undefined' || !kapi.menuToggles) return;
   try {
     const ps = panelToggleState();
@@ -7178,6 +7226,16 @@ async function renderPropsPanel() {
     const c = el('input', 'wiki-check'); c.type = 'checkbox'; c.checked = !!checked; r.append(c); body.append(r); return c;
   };
 
+  // [alpha.157] องก์ + บท (ย้ายฉากไปบทอื่นได้จากตรงนี้) — คลาสของตัวเอง ไม่นับรวมกับ .wiki-input
+  {
+    const acHost = el('div', 'props-ac-host');
+    body.append(acHost);
+    try {
+      await buildActChapterRows(acHost, { dPath, ch, sc }, { onMoved: async () => {
+        propsTarget_C.t = null; await buildTree(); renderPropsPanel(); } });
+    } catch (e) { log('warn', 'act/chapter rows', e); }
+    if (stale()) return;
+  }
   const iSyn = mk(tt('ui.common.synopsis'), row.synopsis, 'textarea');
   const iStoryDate = mk(tt('ui.common.timeStoryLineTime'), row.storyDate);
   iStoryDate.placeholder = tt('ui.app.date');
@@ -7222,6 +7280,14 @@ async function renderPropsPanel() {
     if (stale()) return;
     body.append(mapRow);
   } catch (e) { log('warn', tt('ui.app.propsNewRowPos'), e); }
+
+  // ---- [alpha.157] ฉากนี้กล่าวถึงอะไรบ้าง (แบ่งตามหมวด Wiki) ----
+  try {
+    const mHost = el('div', 'props-mentions-host');
+    body.append(mHost);
+    await buildMentionsBox(mHost, file0);
+    if (stale()) return;
+  } catch (e) { log('warn', 'mentions', e); }
 
   // ---- บันทึกอัตโนมัติ (ข้อ 13) — ไม่ต้องกดปุ่มแล้ว ----
   // พิมพ์แล้วรอเงียบ 600ms ค่อยเขียน (กันเขียนไฟล์ทุกตัวอักษร) · เปลี่ยน dropdown/checkbox = เขียนทันที
@@ -8978,7 +9044,7 @@ async function sceneMoveMenu(e, dPath, ch, sc) {
     .sort((a, b) => (a.order || 0) - (b.order || 0));
   if (!chapters.length) { setStatus(tt('ui.app.notHasChapterOther')); return; }
   popupMenu(e.clientX, e.clientY,
-    chapters.map((c) => ({ label: c.title, click: () => moveSceneToChapter(dPath, ch, sc, c) })));
+    chapters.map((c) => ({ text: c.title || '', click: () => moveSceneToChapter(dPath, ch, sc, c) })));
 }
 
 // ลากสลับลำดับบท (วางบท src ไว้ก่อนบท dst) — คำนวณ order ใหม่ให้เรียงเป็นเลขจำนวนเต็ม
@@ -12594,6 +12660,7 @@ window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
 // (ไม่มี UI ไม่มีข้อความให้แปล · ใช้ตอนอาการเกิดบนเอกสารจริงของผู้ใช้ที่เครื่องพัฒนาจำลองไม่ได้)
 window.k2PageDoctor = k2PageDoctor;
 window.__k2menu = null;
+/*DEVHOOK*/ window.__k2dev = { openScene: (...a) => openScene(...a), closeTab: (...a) => closeTab(...a), saveTab: (...a) => saveTab(...a), markDirty: (...a) => markDirty(...a), activate: (...a) => activate(...a), loadProject: (...a) => loadProject(...a), handleCommand: (...a) => handleCommand(...a), showPanel: (...a) => showPanel(...a), hidePanel: (...a) => hidePanel(...a), renderFeaturePanel: (...a) => renderFeaturePanel(...a), state, PANEL_DEFS_IDS: () => getPanelManager().openIds() };
 
 // ═════════ [alpha.58r ข้อ 4] คอนโซลนักพัฒนา ═════════
 // อยู่ในเมนู "ช่วยเหลือ" ที่เดียวกับ "เกี่ยวกับ" + คีย์ลัด Ctrl+Shift+`
@@ -13415,6 +13482,11 @@ export async function handleCommand(ch, ...a) {
     case 'panels-hide-all': toggleSpace('all'); syncMenuToggles(); break;
     case 'panels-hide-right': toggleSpace('right'); syncMenuToggles(); break;
     case 'panels-hide-left': toggleSpace('left'); syncMenuToggles(); break;
+    // [alpha.157] ปุ่มขวาสุดของแถบเครื่องมือ — ซ่อน/แสดงแผงทีละฝั่ง (สี่ฝั่งอิสระต่อกัน)
+    case 'panels-side-left': toggleSide('left'); syncSideToggles(); break;
+    case 'panels-side-top': toggleSide('top'); syncSideToggles(); break;
+    case 'panels-side-bottom': toggleSide('bottom'); syncSideToggles(); break;
+    case 'panels-side-right': toggleSide('right'); syncSideToggles(); break;
     case 'workspace-menu': workspaceMenu(); break;
     case 'workspace': applyWorkspace(a[0]); syncMenuToggles(); break;
     case 'ai-assistant': openAIAssistant(); break;
@@ -14540,8 +14612,27 @@ export function KTooltip(trigger, text, opts = {}) {
     trigger.dataset.ktAbove = '0';               // บอกให้โชว์ใต้แทน (ปุ่มบน toolbar)
   }
 }
+let _tipHeld = null;
+function releaseHeldTitle() {
+  if (_tipHeld && !_tipHeld.host.getAttribute('title')) _tipHeld.host.setAttribute('title', _tipHeld.text);
+  _tipHeld = null;
+}
 function setupHoverTips() {
+  setHoverTipHider(hideTip);
   document.addEventListener('mouseover', (e) => {
+    // [alpha.157] ผู้ใช้: "hover tool tip จะต้องไม่ขึ้นทับ right click menu"
+    // เมนูคลิกขวาเปิดอยู่ = ไม่มีทูลทิปเลย (ทั้งของแถวใต้เมนูและของตัวเมนูเอง)
+    if (menuOpen()) {
+      if (_tipHost) hideTip();
+      // ทูลทิปของ Chromium เอง (จาก attribute title) ก็ต้องไม่ขึ้น — พักค่าไว้ แล้วคืนตอนเมาส์ออก
+      const held = e.target instanceof Element ? e.target.closest('[title]') : null;
+      if (held && held.getAttribute('title')) {
+        releaseHeldTitle();
+        _tipHeld = { host: held, text: held.getAttribute('title') };
+        held.removeAttribute('title');
+      }
+      return;
+    }
     let host = e.target instanceof Element ? e.target.closest('[title]') : null;
     // [alpha.60r ข้อ 7] ทำงานกับปุ่มที่ disabled (pointer-events:none) — elementFromPoint ยังหาสิ่งที่อยู่ใต้เมาส์ได้
     if (!host && e.target instanceof Element) {
@@ -14572,6 +14663,7 @@ function setupHoverTips() {
     }
   }, true);
   document.addEventListener('mouseout', (e) => {
+    if (_tipHeld && !(e.relatedTarget instanceof Node && _tipHeld.host.contains(e.relatedTarget))) releaseHeldTitle();
     if (!_tipHost) return;
     const to = e.relatedTarget;
     if (to instanceof Node && _tipHost.contains(to)) return;
@@ -14620,6 +14712,11 @@ window.addEventListener('DOMContentLoaded', () => {
   //   ของ DOMContentLoaded → **ตัวผูกปุ่มที่เหลือทั้งหมดหลังบรรทัดนั้นไม่ถูกรัน**
   //   ผลคือปุ่มครึ่งแถบกดแล้วเงียบ และแถบรูปแบบลอยไม่ถูกสร้างเลย — โดยไม่มี error ให้ผู้ใช้เห็น
   $('#tb-find').onclick = () => openFind();
+  // [alpha.157] ขวาสุดของแถบ: ซ่อน/แสดงแผงทีละฝั่ง
+  for (const b of document.querySelectorAll('.k-side-toggles [data-side]')) {
+    b.onclick = () => handleCommand('panels-side-' + b.dataset.side);
+  }
+  syncSideToggles();
   $('#tb-img').onclick = insertImage;
   // [alpha.62 บั๊ก 14] สวิตช์จริง — กดเปิด กดซ้ำปิด (บทเรียนเดียวกับปุ่มแชท AI ใน 62-2)
   $('#tb-gallery').onclick = () => toggleGallery();
@@ -26669,9 +26766,11 @@ async function runTest(projectPath) {
           await buildTree();
           const chip = [...document.querySelectorAll('#tree .sc-status')]
             .find((c) => c.textContent.trim() === 'รอตรวจ');
-          check('ชิปสถานะใน Explorer ได้สีของสถานะนั้น',
-                !!chip && getComputedStyle(chip).color === 'rgb(18, 52, 86)',
-                chip ? getComputedStyle(chip).color : 'ไม่พบชิป');
+          // [alpha.157] ชิปเป็น "พื้นสีเต็ม" แล้ว (ผู้ใช้: สีเต็มแถบ) — สีสถานะอยู่ที่พื้น · ตัวอักษรเลือกให้อ่านออก
+          check('ชิปสถานะใน Explorer ได้สีของสถานะนั้น (พื้นสีเต็ม + ตัวอักษรขาวบนสีเข้ม)',
+                !!chip && getComputedStyle(chip).backgroundColor === 'rgb(18, 52, 86)'
+                && getComputedStyle(chip).color === 'rgb(255, 255, 255)',
+                chip ? getComputedStyle(chip).backgroundColor + ' / ' + getComputedStyle(chip).color : 'ไม่พบชิป');
           await setSceneMeta(dPath, chS, scS2, { status: '' });
         }
         // ส่งออก → ลบ → นำเข้ากลับ
@@ -33763,11 +33862,11 @@ async function runTest(projectPath) {
           check('[r3-5] แผง ai-analyzer อยู่ใน PANEL_DEFS',
                 PANEL_DEFS.some((d) => d.id === 'ai-analyzer'));
           check('[r3-5] มี element เจ้าบ้านใน index.html', !!$('#ai-analyzer-panel'));
-          check('[r3-5] การ์ดครบ 11 ชนิดตามที่ผู้ใช้สั่ง', ANALYZER_CARDS.length === 11,
+          check('[r3-5] การ์ดครบ 12 ชนิดตามที่ผู้ใช้สั่ง', ANALYZER_CARDS.length === 12,
                 ANALYZER_CARDS.map((c) => c.id).join(','));
-          check('[r3-5] ลำดับการ์ดตรงกับสเปก 1-11',
+          check('[r3-5] ลำดับการ์ดตรงกับสเปก 1-11 + สัดส่วนฉาก',
                 ANALYZER_CARDS.map((c) => c.id).join(',')
-                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime');
+                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition');
           check('[r3-5] ไม่มีคีย์ภาษาหลุดมาเป็นชื่อการ์ด',
                 !ANALYZER_CARDS.some((c) => c.title.startsWith('ui.') || c.desc.startsWith('ui.')),
                 ANALYZER_CARDS.filter((c) => c.title.startsWith('ui.')).map((c) => c.id).join(','));
@@ -33775,9 +33874,9 @@ async function runTest(projectPath) {
           await renderFeaturePanel('ai-analyzer');
           const aiaHost = $('#ai-analyzer-body');
           // แผงอ่านไฟล์ทั้งโปรเจกต์แบบ async — ห้ามวัดผลทันทีหลังสั่งวาด (บทเรียน alpha.65r)
-          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 11);
+          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 12);
           check('[r3-5] เปิดแผงแล้ววาดเนื้อหาจริง', !!aiaHost.querySelector('.aia-wrap'));
-          check('[r3-5] วาดการ์ดครบ 11 ใบ', aiaHost.querySelectorAll('.aia-card').length === 11,
+          check('[r3-5] วาดการ์ดครบ 12 ใบ', aiaHost.querySelectorAll('.aia-card').length === 12,
                 aiaHost.querySelectorAll('.aia-card').length);
           const aiaTxt = aiaHost.textContent;
           for (const kw of ['จังหวะเรื่อง', 'ส่วนโค้งตัวละคร', 'คำที่ใช้บ่อย', 'ความขัดแย้ง', 'ความยาวฉาก',
@@ -33866,7 +33965,7 @@ async function runTest(projectPath) {
           };
           // รอจนแผงวาดของรอบใหม่เสร็จ — เงื่อนไข "ไม่มี X" เป็นจริงชั่วคราวระหว่างล้างกับเติม
           const settled = async (extra) => waitFor(() =>
-            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 11
+            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 12
             && !!$('#aia-usage') && (!extra || extra()));
           showPanel('ai-analyzer');
           await renderFeaturePanel('ai-analyzer');
@@ -33889,14 +33988,14 @@ async function runTest(projectPath) {
           // ── ข้อ 2: บอกโทเคน "ก่อนใช้" และ "หลังใช้" ──
           const uline = $('#aia-usage');
           check('[89r] มีแถบโทเคนบนแผง', !!uline);
-          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 11 ชนิด)',
+          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 12 ชนิด)',
                 !!uline.querySelector('.aia-usage-before')
                 && /\d/.test(uline.querySelector('.aia-usage-before').textContent),
                 uline.textContent);
           check('[89r] บอกยอดที่ใช้ไปแล้ว (ยังไม่ได้เรียก AI → บอกว่ายังไม่ได้เรียก)',
                 !!uline.querySelector('.aia-usage-after'), uline.textContent);
           const estChips = document.querySelectorAll('#ai-analyzer-body .aia-chip-est');
-          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 11, estChips.length);
+          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 12, estChips.length);
           check('[89r] ชิปบอกทั้งจำนวนโทเคนและราคา',
                 /\d/.test(estChips[0].textContent) && estChips[0].textContent.includes('$'),
                 estChips[0].textContent);
@@ -33917,7 +34016,7 @@ async function runTest(projectPath) {
           check('[89r] ปิด AI แล้วบอกว่าไม่มีค่าใช้จ่าย',
                 $('#aia-usage').textContent.includes('ไม่มีค่าใช้จ่าย'), $('#aia-usage').textContent);
           await clickWhen('#aia-use-ai');
-          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 11);
+          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 12);
 
           // ── ข้อ 1: เซสชันเก็บในโปรเจกต์ ──
           await runAnalysis('length');
@@ -34244,11 +34343,12 @@ async function runTest(projectPath) {
           check('[61-1] เรียงปุ่ม: มุมมอง · ค้นหา · ส่งออก · นำเข้า · ช่องว่าง · สร้างใหม่ · เปิด · ปิด',
                 JSON.stringify(order) === JSON.stringify(['home-view-modes', 'home-btn-find',
                   'home-find-input', 'home-btn-export', 'home-btn-import',
-                  'home-actions-spacer', 'home-btn-new', 'home-btn-open', 'home-btn-close']),
+                  'home-actions-spacer', 'home-btn-new', 'home-btn-open', 'home-btn-close', 'home-btn-quit']),
                 JSON.stringify(order));
           check('[r3-9] ปุ่มส่งออก/นำเข้ามีจริง',
                 !!acts.querySelector('.home-btn-export') && !!acts.querySelector('.home-btn-import'));
           check('[r3-9] ปุ่มปิดกล่องมีจริง', !!acts.querySelector('.home-btn-close'));
+          check('[157-home] ★ หน้าแรกมีปุ่มออกจากโปรแกรม (ท้ายแถว)', !!acts.querySelector('.home-btn-quit') && acts.lastElementChild.classList.contains('home-btn-quit'));
           check('[61-1] สวิตช์มุมมองแบบเดิม (📋 หัวกล่อง) ถูกแทนที่ด้วยปุ่มโหมด 2 ใบในแถบล่าง',
                 !ov9.querySelector('.home-view-btn') &&
                 acts.querySelectorAll('.home-view-mode').length === 2);
@@ -44367,6 +44467,213 @@ async function runTest(projectPath) {
           await JS.mutateJson(kapi, sf, (d) => { if (!d.chapters || !(c.guid in d.chapters)) return false; delete d.chapters[c.guid]; });
         }
         await buildTree();
+      }
+
+      // ══ [alpha.157] ★ Kanban↔Explorer ซิงก์สถานะ · เมนูย่อย hover · แดชบอร์ด · สัดส่วนฉาก ·
+      //    องก์/บท/mention · Logline · ปุ่มฝั่งแผง · ธีมแยกไฟล์ · ลำดับเปิดโปรแกรม ══
+      // ทุกข้อกดปุ่ม/ส่งอีเวนต์จริงแล้ววัดผลที่จอ (บทเรียน .66r10: เรียกฟังก์ชันตรง ๆ ผ่านหลอกได้)
+      {
+        const w157 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until157 = async (fn, ms = 4000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await w157(60); }
+          return false;
+        };
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+        const CS = await import('./custom-status.js');
+        const CU = await import('./color-util.js');
+        const d157 = (await listDrafts())[0];
+        const draft157 = await kapi.readJson(await kapi.join(d157.dPath, 'draft.json'));
+        const sc157All = await kapi.readJson(await kapi.join(d157.dPath, 'scenes.json'));
+        const ch157 = (draft157.chapters || []).find((c) => ((sc157All.chapters || {})[c.guid] || []).length);
+        const sc157 = ((sc157All.chapters || {})[ch157.guid] || [])[0];
+        check('[157-0] เงื่อนไข: มีฉากให้ทดสอบ', !!ch157 && !!sc157);
+
+        // ── 1) เพิ่มสถานะจากกระดาน = Explorer รู้ทันที · สีหัวคอลัมน์ = สีชิปในต้นไม้ ──
+        const before157 = CS.allStatuses().length;
+        await CS.addCustomStatus('ทดสอบ157', '#ff5fb8');
+        await openKanban();
+        const colOf = (k) => [...document.querySelectorAll('#kanban-body .kb-col')].find((c) => c.dataset.status === k);
+        check('[157-1] ★ สถานะใหม่เป็นคอลัมน์ Kanban + อยู่ในเมนูสถานะของ Explorer',
+              await until157(() => !!colOf('ทดสอบ157')) && CS.allStatuses().length === before157 + 1
+              && TA.sceneStatusOptions().some(([v]) => v === 'ทดสอบ157'));
+        const head157 = colOf('ทดสอบ157') && colOf('ทดสอบ157').querySelector('.kb-col-head');
+        check('[157-1] หัวคอลัมน์เป็นสีเต็มแถบ + ตัวอักษรอ่านออก',
+              !!head157 && getComputedStyle(head157).backgroundColor === 'rgb(255, 95, 184)'
+              && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, head157 && getComputedStyle(head157).backgroundColor);
+        // ลากการ์ดลงคอลัมน์ใหม่ (ส่งอีเวนต์ drop จริง) → ต้นไม้ได้ชิปสถานะสีเต็ม
+        const card157 = document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`);
+        check('[157-1] การ์ดมีชื่อบท (ไม่ใช่ guid สี่ตัวแรก)', !!card157 && card157.textContent.includes(ch157.title || '§'), card157 && card157.textContent);
+        await colOf('ทดสอบ157').ondrop({ preventDefault() {}, clientY: 99999,
+          dataTransfer: { getData: (t) => (t === 'text/plain' ? sc157.id : ''), types: ['text/plain'] } });
+        const chip157 = () => [...document.querySelectorAll('#tree .sc-status')].find((c) => c.textContent === 'ทดสอบ157');
+        check('[157-1] ★ ลากการ์ดแล้วต้นไม้วาดชิปสถานะใหม่เอง', await until157(() => !!chip157()));
+        check('[157-1] ชิปสถานะในต้นไม้เป็นพื้นสีเต็ม (สีเดียวกับหัวคอลัมน์)',
+              !!chip157() && getComputedStyle(chip157()).backgroundColor === 'rgb(255, 95, 184)');
+        // เปลี่ยนสถานะจากฝั่ง Explorer → การ์ดย้ายคอลัมน์เอง (ไม่ต้องเปิดกระดานใหม่)
+        const SO157 = await import('./scene-ops.js');
+        await SO157.setSceneMeta(d157.dPath, ch157, sc157, { status: 'Outline' });
+        check('[157-1] ★ เปลี่ยนสถานะจาก Explorer แล้วการ์ดบนกระดานย้ายเอง (ฉากล้างสถานะ → ยังไม่กำหนด ไม่ใช่คอลัมน์ Outline)',
+              await until157(() => !colOf('ทดสอบ157').querySelector(`.kb-card[data-scene-id="${sc157.id}"]`)
+                && !!colOf('__unset__') && !!colOf('__unset__').querySelector(`.kb-card[data-scene-id="${sc157.id}"]`) && !colOf('Outline')));
+        // ลำดับคอลัมน์ = ลำดับเมนูสถานะ
+        await CS.setStatusOrder(['ทดสอบ157', ...CS.allStatuses().filter((x) => x !== 'ทดสอบ157')]);
+        check('[157-1] ★ สลับลำดับคอลัมน์ = ลำดับในเมนูสถานะของ Explorer',
+              await until157(() => { const k = [...document.querySelectorAll('#kanban-body .kb-col')].map((c) => c.dataset.status).filter((x) => x !== '__unset__');
+                return k[0] === 'ทดสอบ157' && TA.sceneStatusOptions()[0][0] === 'ทดสอบ157'; }));
+        // ลบสถานะมาตรฐาน = ซ่อน (กู้คืนได้) · ลบสถานะที่เพิ่มเอง = หายจริง
+        await CS.deleteStatus('เก็บถาวร');
+        check('[157-1] ลบคอลัมน์สถานะมาตรฐาน = ซ่อนจากทั้งกระดานและเมนู',
+              await until157(() => !colOf('เก็บถาวร')) && !CS.allStatuses().includes('เก็บถาวร'));
+        await CS.unhideStatus('เก็บถาวร');
+        await CS.deleteStatus('ทดสอบ157');
+        state.meta.statusOrder = undefined; await saveProjectMeta();
+        check('[157-1] แสดงคืน + ลบสถานะที่เพิ่มเอง', CS.allStatuses().includes('เก็บถาวร') && !CS.allStatuses().includes('ทดสอบ157'));
+        hidePanel('kanban');
+
+        // ── 2) เมนูคลิกขวา: เมนูย่อยเปิดด้วย hover · ช่องสีสี่เหลี่ยม · ทูลทิปไม่ทับเมนู ──
+        await buildTree();
+        const row157 = [...document.querySelectorAll('#tree .scene')].find((r) => r.textContent.includes(sc157.title));
+        const rr = row157.getBoundingClientRect();
+        row157.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rr.left + 40, clientY: rr.top + 6 }));
+        await w157(120);
+        const subRows = [...document.querySelectorAll('.k-menu .k-menu-item.k-menu-has-sub')];
+        check('[157-2] รายการที่มีต่อ (สี/สถานะ/ย้ายไป) เป็นเมนูย่อย มีลูกศร ไม่ใช่ข้อความ ▸', subRows.length >= 3
+              && subRows.every((r) => !!r.querySelector('.k-menu-arrow') && !r.textContent.includes('▸')), subRows.map((r) => r.textContent).join('|'));
+        const colorRow = subRows.find((r) => r.textContent.trim() === tt('ui.treeMenu.color').replace(/\s*▸\s*$/, ''));
+        colorRow.dispatchEvent(new MouseEvent('mouseenter'));
+        check('[157-2] ★ ชี้ค้าง (ไม่คลิก) แล้วเมนูสีเปิดเอง', await until157(() => !!document.querySelector('.k-submenu')));
+        const sw157 = [...document.querySelectorAll('.k-submenu .k-menu-swatch')];
+        check('[157-2] ★ ทุกสีมีช่องสี่เหลี่ยมสีจริงหน้าชื่อ', sw157.length >= SCENE_COLORS.length
+              && sw157.slice(0, SCENE_COLORS.length).every((x, i) => x.style.background && getComputedStyle(x).borderRadius !== '50%'
+                && getComputedStyle(x).width === getComputedStyle(x).height), sw157.length);
+        const tipHost = document.querySelector('#toolbar [title]') || document.querySelector('[title]');
+        if (tipHost) tipHost.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 5, clientY: 5 }));
+        await w157(60);
+        check('[157-2] ★ ทูลทิปไม่ขึ้นทับเมนูคลิกขวา', !document.querySelector('#k-tip.on'));
+        // คลิกสีจากเมนูย่อย = ลงไฟล์จริง
+        [...document.querySelectorAll('.k-submenu .k-menu-item')][1].click();
+        await until157(async () => ((await kapi.readJson(await kapi.join(d157.dPath, 'scenes.json'))).chapters[ch157.guid] || []).find((x) => x.id === sc157.id).color === SCENE_COLORS[1][1]);
+        check('[157-2] เลือกสีจากเมนูย่อยแล้วบันทึกลงฉาก',
+              ((await kapi.readJson(await kapi.join(d157.dPath, 'scenes.json'))).chapters[ch157.guid] || []).find((x) => x.id === sc157.id).color === SCENE_COLORS[1][1]);
+        check('[157-2] เลือกแล้วเมนูทั้งชุดปิด', !document.querySelector('.k-menu'));
+        if (tipHost && tipHost.dataset) tipHost.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+
+        // ── 3) แดชบอร์ด: เวลาอ่านรวม · ช่วง 7d/30d/90d/ทั้งหมด · หลักไมล์ · สรุป Kanban · คำที่ใช้บ่อย ──
+        const today157 = localDay();
+        state.meta.wordHistory = [{ date: addDays(today157, -40), words: 800 }, { date: addDays(today157, -3), words: 5200 }, { date: today157, words: 5400 }];
+        await openDashboard();
+        await until157(() => document.querySelectorAll('#dash-body .dash-act-range').length === 4);
+        check('[157-3] ★ การ์ดสถิติใหญ่มี "เวลาอ่านรวม"', [...document.querySelectorAll('#dash-body .dash-label')].some((x) => x.textContent === tt('ui.dash.readTime')));
+        const rng = (k) => document.querySelector(`#dash-body .dash-act-range[data-range="${k}"]`);
+        rng('7d').click(); await w157(40);
+        check('[157-3] ★ กด 7d = กราฟ 7 วัน', document.querySelectorAll('#dash-body .dash-days .dash-day').length === 7);
+        rng('90d').click(); await w157(40);
+        check('[157-3] กด 90d = 90 วัน', document.querySelectorAll('#dash-body .dash-days .dash-day').length === 90);
+        rng('all').click(); await w157(40);
+        check('[157-3] ทั้งหมด = ตั้งแต่วันเริ่มโปรเจกต์ + มีวันที่เริ่มโปรเจกต์กำกับ',
+              document.querySelectorAll('#dash-body .dash-days .dash-day').length >= 41 && !!document.querySelector('#dash-body .dash-ms-start'));
+        check('[157-3] ★ หลักไมล์ 1,000 / 5,000 คำ มีวันที่ + ธงบนกราฟ',
+              document.querySelectorAll('#dash-body .dash-ms').length >= 3 && !!document.querySelector('#dash-body .dash-day-ms .dash-day-flag'));
+        rng('30d').click();
+        check('[157-3] ★ สรุปสถานะตามคอลัมน์ Kanban (ครบทุกคอลัมน์) + ปุ่มเปิด Kanban',
+              document.querySelectorAll('#dash-body .dash-kanban .dash-kb-col').length >= CS.allStatuses().length
+              && !!document.querySelector('#dash-body .dash-kb-open'));
+        document.querySelector('#dash-body .dash-kb-open').click();
+        check('[157-3] กดปุ่มแล้ว Kanban เปิดจริง', await until157(() => isPanelOpen('kanban')));
+        hidePanel('kanban');
+        check('[157-3] คำที่ใช้บ่อยแสดงเป็นชิปพร้อมจำนวน', !document.querySelector('#dash-body .dash-words')
+              || !!document.querySelector('#dash-body .dash-words .dash-word i'));
+
+        // ── 4) คุณสมบัติ: องก์ · บท · mention แบ่งตามหมวด Wiki ──
+        setPropsTarget(d157.dPath, ch157, sc157);
+        showPanel('props');
+        await renderPropsPanel();
+        const actIn = document.querySelector('#props-body .props-act-input');
+        const chSel = document.querySelector('#props-body .props-chapter-select');
+        check('[157-4] ★ แผงคุณสมบัติมีช่ององก์ + เลือกบท (ครบทุกบทของฉบับร่าง)',
+              !!actIn && !!chSel && chSel.options.length === (draft157.chapters || []).length && chSel.value === ch157.guid);
+        check('[157-4] ช่องใหม่ไม่ใช้คลาส .wiki-input (เทสเดิมที่นับช่องตามลำดับไม่เลื่อน)',
+              !actIn.classList.contains('wiki-input') && !chSel.classList.contains('wiki-input'));
+        actIn.value = 'องก์ทดสอบ157'; actIn.dispatchEvent(new Event('change'));
+        check('[157-4] ★ กรอกองก์แล้วลง draft.json ของบท',
+              await until157(async () => ((await kapi.readJson(await kapi.join(d157.dPath, 'draft.json'))).chapters || []).find((c) => c.guid === ch157.guid).act === 'องก์ทดสอบ157'));
+        check('[157-4] ★ มีกล่อง "ฉากนี้กล่าวถึง"', !!document.querySelector('#props-body .props-mentions'));
+        await smart.loadNames(state.root);
+        const anyName = (smart.titles || [])[0];
+        if (anyName) {
+          const { sceneMentions } = await import('./scene-mentions.js');
+          const g157 = sceneMentions('ก่อน ' + anyName + ' หลัง', smart.byCat, smart.fileOf, { titles: smart.titles });
+          check('[157-4] mention จับชื่อ Wiki จริงของโปรเจกต์ได้ พร้อมหมวด', g157.length === 1 && g157[0].items[0].file === smart.fileOf[anyName], JSON.stringify(g157));
+        }
+        await (await import('./json-store.js')).mutateJson(kapi, await kapi.join(d157.dPath, 'draft.json'), (d) => { const c = d.chapters.find((x) => x.guid === ch157.guid); delete c.act; });
+
+        // ── 5) Logline 6 ช่อง: ตั้งค่าโปรเจกต์ · เล่ม · เข็มทิศ AI ──
+        const { currentCompass } = await import('./logline-ui.js');
+        check('[157-5] ยังไม่กรอก logline = ไม่แตะคำขอ AI', (await currentCompass()) === '');
+        state.meta.logline = { goal: 'ตามหาแม่ให้เจอ157', stakes: 'แม่จะหายไปตลอดกาล' };
+        const cmp157 = await currentCompass();
+        check('[157-5] ★ กรอกแล้วเข็มทิศมีป้ายไทย + ค่าที่กรอก', cmp157.includes('ตามหาแม่ให้เจอ157') && cmp157.includes(tt('ui.logline.goal')), cmp157);
+        delete state.meta.logline;
+        settingsDialog();
+        await until157(() => document.querySelectorAll('.k-settings #st-logline-host .k-logline-input').length === 6);
+        check('[157-5] ★ ตั้งค่าโปรเจกต์ (ข้อมูลผลงาน) มีช่อง Logline ครบ 6 ช่อง',
+              document.querySelectorAll('.k-settings #st-logline-host .k-logline-input').length === 6);
+        const sk = document.querySelector('.k-settings #st-skip-home');
+        check('[157-6] ★ ตั้งค่ามีสวิตช์ "ไม่แสดงหน้า Home"', !!sk);
+        document.querySelector('.k-settings .k-cancel')?.click();
+        await w157(60);
+        document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+
+        // ── 6) ลำดับเปิดโปรแกรม ──
+        check('[157-6] ติ๊กข้ามหน้าแรก + มีโปรเจกต์ล่าสุด = เปิดเลย ไม่มีหน้าแรก',
+              JSON.stringify(startupPlan({ openLastProject: true }, ['/a'])) === JSON.stringify({ skipHome: true, last: '/a', showHome: false }));
+        check('[157-6] ★ ติ๊กข้ามหน้าแรก + ไม่มีโปรเจกต์ล่าสุด = แอปเปล่า (ไม่เด้งหน้าแรก)',
+              startupPlan({ openLastProject: true }, []).showHome === false && startupPlan({ openLastProject: true }, []).last === '');
+        check('[157-6] ไม่ติ๊ก = หน้าแรกเสมอ', startupPlan({}, ['/a']).showHome === true && startupPlan({}, ['/a']).last === '');
+        check('[157-6] preload มีช่อง splash', typeof kapi.splashProgress === 'function' && typeof kapi.splashDone === 'function');
+
+        // ── 7) ปุ่มซ่อน/แสดงแผงทีละฝั่ง (ขวาสุดของแถบ) ──
+        const sideBtns = [...document.querySelectorAll('#toolbar .k-side-toggles [data-side]')];
+        check('[157-7] ★ มีปุ่ม ซ้าย · บน · ล่าง · ขวา อยู่ท้ายแถบเครื่องมือ',
+              sideBtns.map((b) => b.dataset.side).join() === 'left,top,bottom,right'
+              && $('#toolbar').lastElementChild === $('.k-side-toggles'));
+        showPanel('tree');
+        await w157(80);
+        const PUI = await import('./panels/panel-ui.js');
+        const docsR = document.querySelector('#app-root .k-panel[data-panel-id="docs"]').getBoundingClientRect();
+        const treeEl = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+        const treeSide = PUI.sideOfRect((treeEl.closest('.k-tab-group') || treeEl).getBoundingClientRect(), docsR);
+        if (treeSide) {
+          const btn = sideBtns.find((b) => b.dataset.side === treeSide);
+          btn.click(); await w157(120);
+          check('[157-7] ★ กดปุ่มฝั่งของ Explorer = Explorer ถูกซ่อน · ปุ่มดับ', !isPanelOpen('tree') && !btn.classList.contains('on'));
+          const other = sideBtns.find((b) => b.dataset.side !== treeSide && PUI.sideHidden(b.dataset.side) === false);
+          check('[157-7] ฝั่งอื่นไม่โดนด้วย', !!other && other.classList.contains('on'));
+          btn.click(); await w157(120);
+          check('[157-7] ★ กดซ้ำ = แสดงคืน', isPanelOpen('tree') && btn.classList.contains('on'));
+        }
+        check('[157-7] sideOfRect ตัดสินฝั่งถูก', PUI.sideOfRect({ left: 0, right: 100, top: 0, bottom: 500, width: 100, height: 500 }, { left: 110, right: 900, top: 0, bottom: 500 }) === 'left'
+              && PUI.sideOfRect({ left: 110, right: 900, top: 520, bottom: 700, width: 790, height: 180 }, { left: 110, right: 900, top: 0, bottom: 500 }) === 'bottom');
+
+        // ── 8) ธีม: ไฟล์แยก · พื้นรอบกระดาษไม่ค้างสีธีมเก่า · แท็บทรงเม็ด ──
+        const links = [...document.querySelectorAll('link[rel=stylesheet]')].map((l) => l.getAttribute('href'));
+        check('[157-8] ★ ธีมโหลดจากไฟล์แยก', links.includes('themes/k2.css') && links.includes('themes/k2-light.css') && links.includes('themes/base.css'));
+        const cs157 = getComputedStyle(document.body);
+        check('[157-8] ★ พื้นรอบกระดาษมาจากธีม (ไม่ใช่เทาอมน้ำตาล #3a3936 ของจานสีเก่า)',
+              cs157.getPropertyValue('--paper-surround').trim() !== '' && getComputedStyle($('#panes')).backgroundColor !== 'rgb(58, 57, 54)',
+              getComputedStyle($('#panes')).backgroundColor);
+        const actTab = document.querySelector('#app-root .k-tab.active');
+        check('[157-8] แท็บแผงเป็นทรงเม็ด มีปุ่มปิด', !!actTab && parseFloat(getComputedStyle(actTab).borderRadius) >= 6
+              && (!!actTab.querySelector('.k-tab-x') || actTab.dataset.panelId === 'docs'));
+        const okBtn = document.createElement('button'); okBtn.className = 'k-ok'; okBtn.textContent = 'x'; document.body.append(okBtn);
+        const okCs = getComputedStyle(okBtn);
+        const rgb2hex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3).map((n) => (+n).toString(16).padStart(2, '0')).join('');
+        check('[157-8] ★ ตัวอักษรบนปุ่มหลักไม่จม (คอนทราสต์ ≥ 4.5)', CU.contrast(rgb2hex(okCs.color), rgb2hex(okCs.backgroundColor)) >= 4.5,
+              okCs.color + ' on ' + okCs.backgroundColor);
+        okBtn.remove();
+        hidePanel('dashboard');
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

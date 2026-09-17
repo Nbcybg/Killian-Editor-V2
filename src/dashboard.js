@@ -1,7 +1,10 @@
 // dashboard.js — แดชบอร์ดโปรเจกต์ (สถิติ/analytics/ฉากปักหมุด/ไปต่อจากที่ค้าง)
 // แยกจาก app.js — feature นี้เป็นจุดที่ feature ใหม่ (แก้แดชบอร์ด, กราฟ, theme) จะมาต่อยอด
 import { t, tf } from './i18n.js';
-import { $, state, el, SCENE_STATUSES } from './core.js';
+import { $, state, el, dataLabel } from './core.js';
+import { allStatuses, statusColor } from './custom-status.js';
+import { vivid, inkOn } from './color-util.js';
+import { ACTIVITY_RANGES, READ_WPM, readingTime, activitySeries, milestones, nextMilestone, projectStartDay, statusBreakdown } from './dashboard-stats.js';
 import { parseMdFile, countWords } from './md.js';
 import { getWordHistory, calcStreak } from './word-history.js';
 import { renderChoicePanel, showPlayerHistory } from './player-choices.js';
@@ -59,10 +62,14 @@ export async function renderDashboard(pane) {
     c.append(v, el('div', 'dash-label', label));
     cards.append(c); return v;
   };
-  const vCh = card(t('ui.common.chapter')), vSc = card(t('ui.common.scene2')), vW = card(t('ui.dash.wordAll')), vE = card('Wiki entities');
+  const vCh = card(t('ui.common.chapter')), vSc = card(t('ui.common.scene2')), vW = card(t('ui.dash.wordAll'));
+  // [alpha.157] ผู้ใช้: "เพิ่มในสถิติ คือ เวลาอ่านรวม ลงไปในสถิติใหญ่"
+  const vRead = card(t('ui.dash.readTime'));
+  const vE = card('Wiki entities');
   let nCh = 0, nSc = 0, words = 0;
   const sceneRows = [];
-  const byStatus = {};            // สถานะฉาก → จำนวน
+  const sceneStatuses = [];       // สถานะของทุกฉาก (สรุปตามคอลัมน์ Kanban)
+  const sceneTexts = [];          // เนื้อฉากทั้งหมด (คำที่ใช้บ่อย)
   const chapterWords = [];        // { title, words, scenes }
   for (const secName of await kapi.listDirs(root)) {
     if (stale()) return false;              // ★ จุดที่เคยตาย — โปรเจกต์ปิดไปแล้วระหว่างวนลูป
@@ -82,13 +89,13 @@ export async function renderDashboard(pane) {
         let cw = 0, cs = 0;
         for (const sc of scAll[ch.guid] || []) {
           nSc++; cs++;
-          const st = SCENE_STATUSES.includes(sc.status) ? sc.status : t('ui.dash.notSetStatus');
-          byStatus[st] = (byStatus[st] || 0) + 1;
+          sceneStatuses.push(sc.status || '');
           const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
           try {
             const { body } = parseMdFile(await kapi.readFile(file));
             const w = countWords(body); words += w; cw += w;
             sceneRows.push({ title: sc.title, ch: ch.title, file, flag: sc.flag });
+            sceneTexts.push({ id: sc.id, title: sc.title, text: body });
           } catch {}
         }
         chapterWords.push({ title: ch.title, words: cw, scenes: cs });
@@ -98,7 +105,14 @@ export async function renderDashboard(pane) {
   vCh.textContent = nCh.toLocaleString();
   vSc.textContent = nSc.toLocaleString();
   vW.textContent = words.toLocaleString();
-  const allEnts = await loadAllEntities();
+  {
+    const rt = readingTime(words);
+    vRead.textContent = rt.hours ? tf('ui.dash.readHM', rt.hours, rt.mins) : tf('ui.dash.readM', rt.minutes);
+    vRead.title = tf('ui.dash.readHint', READ_WPM);
+  }
+  // [alpha.157] เฉพาะ entity ของ Wiki — loadAllEntities พ่วงโหนดโครงสร้าง (บท/ฉาก/เล่ม) มาให้ผังเรื่องด้วย
+  // ซึ่งทำให้การ์ด "Wiki entities" นับบท/ฉากรวม และแผง "Wiki ตามหมวด" มีหมวด scene/chapter โผล่
+  const allEnts = (await loadAllEntities()).filter((e) => /[\\/](Wiki|Bible)[\\/]/.test(String(e.file || '')));
   vE.textContent = allEnts.length.toLocaleString();
   // ความคืบหน้าเทียบเป้าหมายทั้งโปรเจกต์ (ตั้งได้ในตั้งค่าโปรเจกต์)
   const goal = parseInt(state.goals.projectWords, 10) || 0;
@@ -113,37 +127,8 @@ export async function renderDashboard(pane) {
     wrap.append(gwrap);
   }
 
-  // ---- สถิติการเขียนรายวัน + วันเขียนติดต่อกัน (word-history.js) ----
-  {
-    const hist = getWordHistory();
-    const streak = calcStreak(hist);
-    const box = el('div', 'dash-streak');
-    const head = el('div', 'dash-goal-label',
-      streak > 0 ? tf('ui.dash.writeNext', streak) : t('ui.dash.notStartWriteNext'));
-    box.append(head);
-    if (hist.length >= 2) {
-      // แท่งคำที่เขียนต่อวัน 14 วันหลังสุด (ผลต่างของยอดรวมสะสม)
-      const last = hist.slice(-15);
-      const days = [];
-      for (let i = 1; i < last.length; i++) {
-        days.push({ date: last[i].date, delta: Math.max(0, (last[i].words || 0) - (last[i - 1].words || 0)) });
-      }
-      const max = Math.max(1, ...days.map((d) => d.delta));
-      const chart = el('div', 'dash-days');
-      chart.style.cssText = 'display:flex;align-items:flex-end;gap:3px;height:60px;margin:8px 0';
-      for (const d of days) {
-        const bar = el('div', 'dash-day-bar');
-        bar.style.cssText = `flex:1;min-width:6px;border-radius:2px 2px 0 0;background:${d.delta ? '#6fae6f' : 'var(--border)'};height:${Math.max(3, Math.round((d.delta / max) * 100))}%`;
-        bar.title = tf('ui.dash.word', d.date, d.delta.toLocaleString());
-        chart.append(bar);
-      }
-      box.append(chart);
-      box.append(el('div', 'dim', tf('ui.dash.wordAddNextLast', days.length)));
-    } else {
-      box.append(el('div', 'dim', t('ui.dash.saveTaskDoneGraph')));
-    }
-    wrap.append(box);
-  }
+  // ---- [alpha.157] กิจกรรมการเขียน: ช่วง 7d/30d/90d/ทั้งหมด · วันเริ่มโปรเจกต์ · หลักไมล์ ----
+  wrap.append(buildActivity(goal, words));
 
   // ---- สถิติเชิงลึก (analytics) ----
   // แถบสัดส่วน (คืน element) — ใช้ซ้ำได้ทั้งสถานะ/หมวด
@@ -158,7 +143,7 @@ export async function renderDashboard(pane) {
       const track = el('div', 'dash-stat-track');
       const fill = el('div', 'dash-stat-fill');
       fill.style.width = Math.round((r.n / max) * 100) + '%';
-      fill.style.background = palette[i % palette.length];
+      fill.style.background = r.color || palette[i % palette.length];
       track.append(fill); line.append(track);
       const pct = total ? Math.round((r.n / total) * 100) : 0;
       line.append(el('div', 'dash-stat-val', `${r.n.toLocaleString()} (${pct}%)`));
@@ -166,18 +151,13 @@ export async function renderDashboard(pane) {
     });
     return box2;
   };
-  const PAL = ['#5f9fd9', '#6fae6f', '#d9b757', '#d97757', '#a97fd0', '#d9575e', '#7fb8b0'];
+  const PAL = ['#3b9bff', '#2ecc71', '#ffc42e', '#ff7a2f', '#a66bff', '#ff4d6d', '#1abc9c'];
 
   if (nSc > 0) {
     const grid = el('div', 'dash-analytics'); wrap.append(grid);
 
-    // ความคืบหน้าตามสถานะฉาก
-    const left2 = el('div', 'dash-apanel');
-    left2.append(el('div', 'dash-apanel-title', t('ui.dash.pageStatusScene')));
-    const order = [...SCENE_STATUSES, t('ui.dash.notSetStatus')];
-    left2.append(statBars(
-      order.filter((s) => byStatus[s]).map((s) => ({ label: s, n: byStatus[s] })), nSc, PAL));
-    grid.append(left2);
+    // [alpha.157] สถานะตามคอลัมน์ Kanban (สี/ลำดับชุดเดียวกับกระดาน) + ปุ่มเปิดกระดาน
+    grid.append(buildKanbanSummary(sceneStatuses, nSc));
 
     // Wiki ตามหมวด
     if (allEnts.length) {
@@ -191,6 +171,30 @@ export async function renderDashboard(pane) {
       grid.append(right2);
     }
 
+    // [alpha.157] คำที่ใช้บ่อย (ตัดคำเชื่อม/ชื่อตัวละครออก — ตัวเดียวกับการ์ด "การใช้คำ" ของ AI วิเคราะห์)
+    try {
+      const { analyzeWords } = await import('./ai/ai-analyze.js');
+      const chars = allEnts.filter((e) => e.cat === 'characters').map((e) => ({ name: e.name, aliases: e.aliases || [] }));
+      const res = analyzeWords(sceneTexts, { top: 30, characters: chars });
+      if (res.rows.length) {
+        const wpanel = el('div', 'dash-apanel dash-words');
+        wpanel.append(el('div', 'dash-apanel-title', t('ui.dash.topWords')));
+        const cloud = el('div', 'dash-word-cloud');
+        const max = res.rows[0].count || 1;
+        for (const r of res.rows) {
+          const chip = el('span', 'dash-word');
+          chip.style.setProperty('--w', (0.35 + 0.65 * (r.count / max)).toFixed(2));
+          const w = el('b'); w.textContent = r.word;
+          chip.append(w, el('i', null, r.count.toLocaleString()));
+          chip.title = tf('ui.dash.topWordHint', r.word, r.count, r.per10k);
+          cloud.append(chip);
+        }
+        wpanel.append(cloud);
+        wpanel.append(el('div', 'dash-stat-note', tf('ui.dash.topWordsNote', res.total.toLocaleString(), res.unique.toLocaleString())));
+        grid.append(wpanel);
+      }
+    } catch (e) { /* ตัดคำพังต้องไม่ทำแดชบอร์ดล้ม */ }
+
     // ความยาวแต่ละบท (คำ)
     if (chapterWords.length) {
       const cpanel = el('div', 'dash-apanel dash-apanel-wide');
@@ -199,7 +203,7 @@ export async function renderDashboard(pane) {
       cpanel.append(statBars(
         chapterWords.map((c) => ({ label: c.title || t('ui.common.notNamed'), n: c.words })), words, PAL));
       cpanel.append(el('div', 'dash-stat-note',
-        tf('ui.dash.avgWordChapterTime', avg.toLocaleString(), Math.max(1, Math.round(words / 250)))));
+        tf('ui.dash.avgWordChapterTime', avg.toLocaleString(), readingTime(words).minutes)));
       grid.append(cpanel);
     }
   }
@@ -279,6 +283,144 @@ export async function renderDashboard(pane) {
     centHost.append(el('div', 'dim', t('ui.dash.loadPartHubNot')));
   }
   return true;
+}
+
+
+// ═════════ [alpha.157] กิจกรรมการเขียน ═════════
+const ACT_KEY = 'k2-dash-activity-range';
+function activityRange() {
+  try { const v = localStorage.getItem(ACT_KEY); return ACTIVITY_RANGES.includes(v) ? v : '30d'; } catch { return '30d'; }
+}
+const fmtDay = (d) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || '');
+  if (!m) return d || '';
+  try { return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch { return d; }
+};
+
+/** กล่อง Activity — วาดใหม่เฉพาะตัวเองตอนสลับช่วง (ไม่อ่านทั้งโปรเจกต์ใหม่) */
+export function buildActivity(goal = 0, words = 0) {
+  const box = el('div', 'dash-streak dash-activity');
+  const draw = () => {
+    box.replaceChildren();
+    const hist = getWordHistory();
+    const range = activityRange();
+    const start = projectStartDay(state.meta || {}, hist);
+    const head = el('div', 'dash-act-head');
+    head.append(el('div', 'dash-apanel-title', t('ui.dash.activity')));
+    const seg = el('div', 'dash-act-ranges');
+    for (const r of ACTIVITY_RANGES) {
+      const b = el('button', 'dash-act-range' + (r === range ? ' on' : ''), r === 'all' ? t('ui.dash.rangeAll') : r);
+      b.dataset.range = r;
+      b.onclick = () => { try { localStorage.setItem(ACT_KEY, r); } catch {} draw(); };
+      seg.append(b);
+    }
+    head.append(seg);
+    box.append(head);
+
+    const streak = calcStreak(hist);
+    const info = el('div', 'dash-act-info');
+    info.append(el('span', 'dash-act-chip', streak > 0 ? tf('ui.dash.writeNext', streak) : t('ui.dash.notStartWriteNext')));
+    if (start) info.append(el('span', 'dash-act-chip', tf('ui.dash.projectStart', fmtDay(start))));
+    box.append(info);
+
+    const ser = activitySeries(hist, range, { start });
+    const ms = milestones(hist, goal);
+    const msByDay = new Map();
+    for (const m of ms) msByDay.set(m.date, [...(msByDay.get(m.date) || []), m]);
+    if (hist.length >= 1) {
+      const max = Math.max(1, ...ser.days.map((d) => d.delta));
+      const chart = el('div', 'dash-days');
+      chart.dataset.range = range;
+      for (const d of ser.days) {
+        const col = el('div', 'dash-day');
+        const bar = el('div', 'dash-day-bar' + (d.delta ? ' on' : ''));
+        bar.style.height = Math.max(3, Math.round((d.delta / max) * 100)) + '%';
+        const hits = msByDay.get(d.date);
+        col.title = tf('ui.dash.word', fmtDay(d.date), d.delta.toLocaleString())
+          + (hits ? '\n' + hits.map((m) => tf('ui.dash.milestoneHit', m.words.toLocaleString())).join('\n') : '');
+        if (hits) { col.classList.add('dash-day-ms'); col.append(el('span', 'dash-day-flag', gi('flag-checkered'))); }
+        if (d.date === start) col.classList.add('dash-day-start');
+        col.append(bar);
+        chart.append(col);
+      }
+      box.append(chart);
+      const foot = el('div', 'dash-act-foot');
+      foot.append(el('span', null, fmtDay(ser.from)), el('span', null, fmtDay(ser.to)));
+      box.append(foot);
+      box.append(el('div', 'dim', tf('ui.dash.actSummary', ser.sum.toLocaleString(), ser.active, ser.days.length,
+        ser.best && ser.best.delta ? fmtDay(ser.best.date) + ' (+' + ser.best.delta.toLocaleString() + ')' : '—')));
+    } else {
+      box.append(el('div', 'dim', t('ui.dash.saveTaskDoneGraph')));
+    }
+
+    // หลักไมล์
+    const msBox = el('div', 'dash-milestones');
+    msBox.append(el('div', 'dash-ms-title', gi('flag-checkered') + ' ' + t('ui.dash.milestones')));
+    const list = el('div', 'dash-ms-list');
+    if (start) {
+      const row = el('div', 'dash-ms dash-ms-start');
+      row.append(el('span', 'dash-ms-dot'), el('b', null, t('ui.dash.msStart')), el('span', 'dim', fmtDay(start)));
+      list.append(row);
+    }
+    for (const m of ms) {
+      const row = el('div', 'dash-ms' + (m.goal ? ' dash-ms-goal' : ''));
+      row.append(el('span', 'dash-ms-dot'),
+        el('b', null, (m.goal ? t('ui.dash.msGoal') + ' · ' : '') + tf('ui.dash.msWords', m.words.toLocaleString())),
+        el('span', 'dim', fmtDay(m.date)));
+      list.append(row);
+    }
+    const nx = nextMilestone(words, goal);
+    if (nx) {
+      const row = el('div', 'dash-ms dash-ms-next');
+      row.append(el('span', 'dash-ms-dot'), el('b', null, tf('ui.dash.msWords', nx.words.toLocaleString())),
+        el('span', 'dim', tf('ui.dash.msLeft', nx.left.toLocaleString())));
+      list.append(row);
+    }
+    msBox.append(list);
+    box.append(msBox);
+  };
+  draw();
+  return box;
+}
+
+/** สรุปจำนวนฉากต่อคอลัมน์ Kanban + แถบสัดส่วนสีเต็มแถบ + ปุ่มเปิดกระดาน */
+export function buildKanbanSummary(sceneStatuses, total) {
+  const panel = el('div', 'dash-apanel dash-kanban');
+  const head = el('div', 'dash-act-head');
+  head.append(el('div', 'dash-apanel-title', t('ui.dash.kanbanStatus')));
+  const open = el('button', 'k-tpl-add dash-kb-open', gi('clipboard') + ' ' + t('ui.dash.openKanban'));
+  open.onclick = async () => { const { openKanban } = await import('./kanban/kanban-ui.js'); openKanban(); };
+  head.append(open);
+  panel.append(head);
+  const rows = statusBreakdown(sceneStatuses, allStatuses(), '');
+  const colorOf = (r) => (r.unset ? '#8f9bb3' : vivid(statusColor(r.key)));
+  const labelOf = (r) => (r.unset ? t('ui.kanban.unset') : dataLabel(r.key));
+  const strip = el('div', 'dash-kb-strip');
+  for (const r of rows) {
+    if (!r.n) continue;
+    const seg = el('div', 'dash-kb-seg');
+    seg.style.flexGrow = String(r.n);
+    seg.style.background = colorOf(r);
+    seg.title = labelOf(r) + ': ' + r.n;
+    strip.append(seg);
+  }
+  panel.append(strip);
+  const cols = el('div', 'dash-kb-cols');
+  for (const r of rows) {
+    const c = el('div', 'dash-kb-col' + (r.n ? '' : ' empty'));
+    const hex = colorOf(r);
+    c.style.setProperty('--kb-col', hex);
+    const top = el('div', 'dash-kb-col-head');
+    top.style.background = hex; top.style.color = inkOn(hex);
+    top.textContent = labelOf(r);
+    const n = el('div', 'dash-kb-n', r.n.toLocaleString());
+    const pct = el('div', 'dim', (total ? Math.round(100 * r.n / total) : 0) + '%');
+    c.append(top, n, pct);
+    cols.append(c);
+  }
+  panel.append(cols);
+  return panel;
 }
 
 // ---------------- ตัวจัดการเล่ม (Book Manager) ----------------
