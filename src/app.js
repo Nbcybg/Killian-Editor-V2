@@ -4037,7 +4037,7 @@ const TREE_SUB_IDS = new Set(['color', 'status', 'move', 'visual', 'restore']);
 function subMenuItem(id, item) {
   if (!item || !TREE_SUB_IDS.has(id) || typeof item.click !== 'function') return item;
   const click = item.click;
-  return { label: String(item.label || '').replace(/\s*(▸|…)\s*$/, ''), sub: () => menuItemsOf(click) };
+  return { label: item.label, sub: () => menuItemsOf(click) };
 }
 
 function treeMenuItem(kind, id, c, e) {
@@ -12660,7 +12660,6 @@ window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
 // (ไม่มี UI ไม่มีข้อความให้แปล · ใช้ตอนอาการเกิดบนเอกสารจริงของผู้ใช้ที่เครื่องพัฒนาจำลองไม่ได้)
 window.k2PageDoctor = k2PageDoctor;
 window.__k2menu = null;
-/*DEVHOOK*/ window.__k2dev = { openScene: (...a) => openScene(...a), closeTab: (...a) => closeTab(...a), saveTab: (...a) => saveTab(...a), markDirty: (...a) => markDirty(...a), activate: (...a) => activate(...a), loadProject: (...a) => loadProject(...a), handleCommand: (...a) => handleCommand(...a), showPanel: (...a) => showPanel(...a), hidePanel: (...a) => hidePanel(...a), renderFeaturePanel: (...a) => renderFeaturePanel(...a), state, PANEL_DEFS_IDS: () => getPanelManager().openIds() };
 
 // ═════════ [alpha.58r ข้อ 4] คอนโซลนักพัฒนา ═════════
 // อยู่ในเมนู "ช่วยเหลือ" ที่เดียวกับ "เกี่ยวกับ" + คีย์ลัด Ctrl+Shift+`
@@ -44492,6 +44491,9 @@ async function runTest(projectPath) {
         // ── 1) เพิ่มสถานะจากกระดาน = Explorer รู้ทันที · สีหัวคอลัมน์ = สีชิปในต้นไม้ ──
         const before157 = CS.allStatuses().length;
         await CS.addCustomStatus('ทดสอบ157', '#ff5fb8');
+        // เทสก่อนหน้าอาจพับคอลัมน์ไว้ (เลย์เอาต์ของเครื่อง) — การ์ดในคอลัมน์ที่พับไม่ถูกวาด
+        try { localStorage.removeItem('k2-kanban-layout'); } catch {}
+        resetKanban();
         await openKanban();
         const colOf = (k) => [...document.querySelectorAll('#kanban-body .kb-col')].find((c) => c.dataset.status === k);
         check('[157-1] ★ สถานะใหม่เป็นคอลัมน์ Kanban + อยู่ในเมนูสถานะของ Explorer',
@@ -44502,8 +44504,13 @@ async function runTest(projectPath) {
               !!head157 && getComputedStyle(head157).backgroundColor === 'rgb(255, 95, 184)'
               && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, head157 && getComputedStyle(head157).backgroundColor);
         // ลากการ์ดลงคอลัมน์ใหม่ (ส่งอีเวนต์ drop จริง) → ต้นไม้ได้ชิปสถานะสีเต็ม
+        // กระดานจำฉบับร่างที่เทสก่อนหน้าเลือกไว้ — เลือกฉบับร่างของฉากที่ใช้ทดสอบให้ชัด
+        await (await import('./kanban/kanban-ui.js')).setKanbanDraft(d157.dPath);
+        await until157(() => !!document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`));
         const card157 = document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`);
-        check('[157-1] การ์ดมีชื่อบท (ไม่ใช่ guid สี่ตัวแรก)', !!card157 && card157.textContent.includes(ch157.title || '§'), card157 && card157.textContent);
+        check('[157-1] การ์ดมีชื่อบท (ไม่ใช่ guid สี่ตัวแรก)', !!card157 && card157.textContent.includes(ch157.title || '§'),
+              card157 ? card157.textContent : 'ไม่พบการ์ด ' + sc157.id + ' · มี: ' + [...document.querySelectorAll('#kanban-body .kb-card')].map((c) => c.dataset.sceneId).join(',')
+                + ' · คอลัมน์: ' + [...document.querySelectorAll('#kanban-body .kb-col')].map((c) => c.dataset.status + (c.classList.contains('kb-collapsed') ? '(พับ)' : '')).join(','));
         await colOf('ทดสอบ157').ondrop({ preventDefault() {}, clientY: 99999,
           dataTransfer: { getData: (t) => (t === 'text/plain' ? sc157.id : ''), types: ['text/plain'] } });
         const chip157 = () => [...document.querySelectorAll('#tree .sc-status')].find((c) => c.textContent === 'ทดสอบ157');
@@ -44540,7 +44547,7 @@ async function runTest(projectPath) {
         const subRows = [...document.querySelectorAll('.k-menu .k-menu-item.k-menu-has-sub')];
         check('[157-2] รายการที่มีต่อ (สี/สถานะ/ย้ายไป) เป็นเมนูย่อย มีลูกศร ไม่ใช่ข้อความ ▸', subRows.length >= 3
               && subRows.every((r) => !!r.querySelector('.k-menu-arrow') && !r.textContent.includes('▸')), subRows.map((r) => r.textContent).join('|'));
-        const colorRow = subRows.find((r) => r.textContent.trim() === tt('ui.treeMenu.color').replace(/\s*▸\s*$/, ''));
+        const colorRow = subRows.find((r) => r.textContent.trim() === tt('ui.treeMenu.color'));
         colorRow.dispatchEvent(new MouseEvent('mouseenter'));
         check('[157-2] ★ ชี้ค้าง (ไม่คลิก) แล้วเมนูสีเปิดเอง', await until157(() => !!document.querySelector('.k-submenu')));
         const sw157 = [...document.querySelectorAll('.k-submenu .k-menu-swatch')];

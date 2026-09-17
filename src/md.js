@@ -342,7 +342,9 @@ function alignToString(map) {
 }
 function alignFromString(v) {
   const out = {};
-  const list = Array.isArray(v) ? v : String(v || '').split(',');
+  // [alpha.157] ★ alpha.156 เขียนค่ารูป `[…]` ลง frontmatter เป็นสตริง JSON (กันหัวไฟล์พัง) → อ่านกลับได้
+  // `"[0:center, 3:right]"` ทั้งก้อน **มีวงเล็บติดมา** · ตัวแยกเดิมจับ `[0:center` ไม่ได้ = การจัดหน้าหายทุกครั้งที่เปิดไฟล์ใหม่
+  const list = Array.isArray(v) ? v : String(v || '').trim().replace(/^\[/, '').replace(/\]$/, '').split(',');
   for (const part of list) {
     const m = /^\s*(\d+(?:\.\d+)*)\s*:\s*(left|center|right|justify)\s*$/.exec(String(part));
     if (m && m[2] !== 'left') out[m[1]] = m[2];

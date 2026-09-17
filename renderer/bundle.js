@@ -14095,7 +14095,7 @@
       }
       function alignFromString2(v2) {
         const out = {};
-        const list = Array.isArray(v2) ? v2 : String(v2 || "").split(",");
+        const list = Array.isArray(v2) ? v2 : String(v2 || "").trim().replace(/^\[/, "").replace(/\]$/, "").split(",");
         for (const part of list) {
           const m = /^\s*(\d+(?:\.\d+)*)\s*:\s*(left|center|right|justify)\s*$/.exec(String(part));
           if (m && m[2] !== "left") out[m[1]] = m[2];
@@ -178852,7 +178852,7 @@ ${css}
   function subMenuItem(id, item) {
     if (!item || !TREE_SUB_IDS.has(id) || typeof item.click !== "function") return item;
     const click = item.click;
-    return { label: String(item.label || "").replace(/\s*(▸|…)\s*$/, ""), sub: () => menuItemsOf(click) };
+    return { label: item.label, sub: () => menuItemsOf(click) };
   }
   function treeMenuItem(kind, id, c, e) {
     const guard = (fn) => LOCK_BLOCKED.has(id) && c.lockSrc ? () => setStatus(lockMessage(c.lockSrc)) : fn;
@@ -224113,6 +224113,11 @@ ${css}
         check2("[157-0] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", !!ch157 && !!sc157);
         const before157 = CS.allStatuses().length;
         await CS.addCustomStatus("\u0E17\u0E14\u0E2A\u0E2D\u0E1A157", "#ff5fb8");
+        try {
+          localStorage.removeItem("k2-kanban-layout");
+        } catch {
+        }
+        resetKanban();
         await openKanban();
         const colOf = (k) => [...document.querySelectorAll("#kanban-body .kb-col")].find((c) => c.dataset.status === k);
         check2(
@@ -224125,8 +224130,14 @@ ${css}
           !!head157 && getComputedStyle(head157).backgroundColor === "rgb(255, 95, 184)" && CU.contrast("#ff5fb8", CU.inkOn("#ff5fb8")) >= 4.5,
           head157 && getComputedStyle(head157).backgroundColor
         );
+        await (await Promise.resolve().then(() => (init_kanban_ui(), kanban_ui_exports))).setKanbanDraft(d157.dPath);
+        await until157(() => !!document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`));
         const card157 = document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`);
-        check2("[157-1] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 guid \u0E2A\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01)", !!card157 && card157.textContent.includes(ch157.title || "\xA7"), card157 && card157.textContent);
+        check2(
+          "[157-1] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 guid \u0E2A\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01)",
+          !!card157 && card157.textContent.includes(ch157.title || "\xA7"),
+          card157 ? card157.textContent : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E01\u0E32\u0E23\u0E4C\u0E14 " + sc157.id + " \xB7 \u0E21\u0E35: " + [...document.querySelectorAll("#kanban-body .kb-card")].map((c) => c.dataset.sceneId).join(",") + " \xB7 \u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C: " + [...document.querySelectorAll("#kanban-body .kb-col")].map((c) => c.dataset.status + (c.classList.contains("kb-collapsed") ? "(\u0E1E\u0E31\u0E1A)" : "")).join(",")
+        );
         await colOf("\u0E17\u0E14\u0E2A\u0E2D\u0E1A157").ondrop({
           preventDefault() {
           },
@@ -224171,7 +224182,7 @@ ${css}
         await w157(120);
         const subRows = [...document.querySelectorAll(".k-menu .k-menu-item.k-menu-has-sub")];
         check2("[157-2] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E21\u0E35\u0E15\u0E48\u0E2D (\u0E2A\u0E35/\u0E2A\u0E16\u0E32\u0E19\u0E30/\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B) \u0E40\u0E1B\u0E47\u0E19\u0E40\u0E21\u0E19\u0E39\u0E22\u0E48\u0E2D\u0E22 \u0E21\u0E35\u0E25\u0E39\u0E01\u0E28\u0E23 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 \u25B8", subRows.length >= 3 && subRows.every((r) => !!r.querySelector(".k-menu-arrow") && !r.textContent.includes("\u25B8")), subRows.map((r) => r.textContent).join("|"));
-        const colorRow2 = subRows.find((r) => r.textContent.trim() === t("ui.treeMenu.color").replace(/\s*▸\s*$/, ""));
+        const colorRow2 = subRows.find((r) => r.textContent.trim() === t("ui.treeMenu.color"));
         colorRow2.dispatchEvent(new MouseEvent("mouseenter"));
         check2("[157-2] \u2605 \u0E0A\u0E35\u0E49\u0E04\u0E49\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E04\u0E25\u0E34\u0E01) \u0E41\u0E25\u0E49\u0E27\u0E40\u0E21\u0E19\u0E39\u0E2A\u0E35\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07", await until157(() => !!document.querySelector(".k-submenu")));
         const sw157 = [...document.querySelectorAll(".k-submenu .k-menu-swatch")];
@@ -224770,7 +224781,6 @@ ${css}
       };
       window.k2PageDoctor = k2PageDoctor;
       window.__k2menu = null;
-      window.__k2dev = { openScene: (...a) => openScene(...a), closeTab: (...a) => closeTab(...a), saveTab: (...a) => saveTab(...a), markDirty: (...a) => markDirty(...a), activate: (...a) => activate(...a), loadProject: (...a) => loadProject(...a), handleCommand: (...a) => handleCommand(...a), showPanel: (...a) => showPanel(...a), hidePanel: (...a) => hidePanel(...a), renderFeaturePanel: (...a) => renderFeaturePanel(...a), state, PANEL_DEFS_IDS: () => getPanelManager().openIds() };
       DEV_HISTORY_KEY = "k2-dev-history";
       CREDITS = [
         { group: t("ui.app.writeCode"), items: [

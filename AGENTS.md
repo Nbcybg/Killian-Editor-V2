@@ -20,8 +20,12 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **4,871 checks · ALL OK** (alpha.149) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **8,736 ข้อ · 104 ไฟล์** · ~35 วินาที)
+ปัจจุบัน **5,194 checks · ALL OK** (alpha.157) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **9,233 ข้อ · 118 ไฟล์** · ~35 วินาที)
+**[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
+ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
+เมนูย่อย: `popupMenu` รับ `sub`/`swatch`/`checked` · ฟังก์ชันที่เปิดเมนูเองใช้เป็นเมนูย่อยผ่าน `menuItemsOf(fn)` ·
+สถานะฉาก: แหล่งเดียว `allStatuses()` (ลำดับ/ซ่อน อยู่ใน project.khn.json) · Kanban ฟัง `kapi.onLocalWrite` + `k2-statuses-changed`
 **[alpha.148] ปลั๊กอินของโปรเจกต์ต้องได้รับอนุญาตก่อนรัน** — เทสที่พึ่ง `Plugins/*` ของ fixture ต้อง
 `await untrustProjectPlugins()` → (เช็คสภาพยังไม่อนุญาต) → `await trustProjectPlugins()` → `loadPlugins()`
 เพราะการอนุญาตเก็บใน userData **ข้ามรอบเทสได้** · การเขียนไฟล์ทั้งหมดผ่าน `fs-safe.cjs` (atomic, ไม่ fsync — ~22ms/ไฟล์)

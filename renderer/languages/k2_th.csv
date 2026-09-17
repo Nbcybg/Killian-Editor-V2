@@ -6457,7 +6457,7 @@ ui.treeMenu.backup,สำรอง (Backup)
 ui.treeMenu.bookFromChapter,สร้างเล่มจากบทนี้
 ui.treeMenu.branchPanel,แผงแตกสาย
 ui.treeMenu.chapterFromScenes,สร้างบทจากฉากที่เลือก
-ui.treeMenu.color,สี ▸
+ui.treeMenu.color,สี
 ui.treeMenu.comment,คอมเมนต์
 ui.treeMenu.compare,เทียบกับแผนอื่น…
 ui.treeMenu.compareVersion,เทียบเวอร์ชัน…
@@ -6475,7 +6475,7 @@ ui.treeMenu.manageBooks,จัดการเล่ม
 ui.treeMenu.manageChapters,จัดการบท
 ui.treeMenu.manageScenes,จัดการฉาก
 ui.treeMenu.moodBoard,กระดานอารมณ์ (Mood board)
-ui.treeMenu.move,ย้ายไป ▸
+ui.treeMenu.move,ย้ายไป
 ui.treeMenu.moveDown,▼ เลื่อนลง
 ui.treeMenu.moveUp,▲ เลื่อนขึ้น
 ui.treeMenu.open,เปิด
@@ -6507,13 +6507,13 @@ ui.treeMenu.searchProject,ค้นหาทั้งโปรเจกต์
 ui.treeMenu.splitView,เปิดในแยกหน้าจอ (Split view)
 ui.treeMenu.star,ติดดาว
 ui.treeMenu.starOff,เอาดาวออก
-ui.treeMenu.status,สถานะ ▸
+ui.treeMenu.status,สถานะ
 ui.treeMenu.switchFormat,เปลี่ยนเป็นนิยาย/บทหนัง
 ui.treeMenu.toMemo,เปลี่ยนเป็น Memo
 ui.treeMenu.versionHistory,ประวัติเวอร์ชัน…
 ui.treeMenu.view,ดูรูปเต็ม
 ui.treeMenu.viewQuickNotes,ดู Quick note
-ui.treeMenu.visual,เล่าด้วยภาพ ▸
+ui.treeMenu.visual,เล่าด้วยภาพ
 ui.ui.hasFileCantSave,มี {0} ไฟล์ที่ยังไม่ได้บันทึก
 ui.ui.notSave,ไม่บันทึก
 ui.ui.savePick,บันทึกที่เลือก ({0})
