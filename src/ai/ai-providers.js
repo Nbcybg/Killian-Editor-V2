@@ -180,9 +180,12 @@ export function buildHeaders(provider) {
   const h = { 'Content-Type': 'application/json' };
   if (key) {
     h.Authorization = 'Bearer ' + key;
-    // เจ้าที่ใช้ x-api-key (Anthropic) ก็ยิงชุดเดียวกันได้ — เซิร์ฟเวอร์ที่ไม่รู้จักจะเมินหัวที่เกิน
-    h['x-api-key'] = key;
-    h['anthropic-version'] = '2023-06-01';
+    // [alpha.149] หัว x-api-key/anthropic-version เฉพาะปลายทางของ Anthropic เท่านั้น
+    // (เดิมส่งคีย์ซ้ำสองหัวให้ **ทุกเจ้า** — พร็อกซี/เกตเวย์ที่จดหัวคำขอลงบันทึกได้คีย์ไปสองชุด)
+    if (/anthropic/i.test(hostOf(c.baseUrl))) {
+      h['x-api-key'] = key;
+      h['anthropic-version'] = '2023-06-01';
+    }
   }
   const custom = ((provider && provider.params) || {}).customHeaders || {};
   for (const [k, v] of Object.entries(custom)) {
@@ -258,9 +261,11 @@ export function chatRequest(provider, { messages = [], system = '', stream = fal
   put('reasoning_effort', reasoningEffort !== undefined && reasoningEffort !== null
     ? reasoningEffort : pr.reasoningEffort);
   if (pr.responseFormat && pr.responseFormat !== 'text') body.response_format = { type: pr.responseFormat };
-  // Thinking mode — ส่งทั้งสองสำนวนที่ใช้กันจริง เจ้าที่ไม่รู้จักจะเมินฟิลด์ที่เกิน
+  // Thinking mode — ส่งเฉพาะเมื่อผู้ใช้ **เปิด** เอง
+  // [alpha.149] เดิม `off` (ค่าเริ่มต้น) + มี reasoning_effort → ส่ง `thinking: disabled` ไปพร้อมกัน
+  // = ตั้ง "คิด: มาก" ในแชทแล้วคำขอบอกโมเดลให้ **ปิด** การคิดในคราวเดียวกัน (วัดจริงจากคำขอที่ส่งออกไป)
+  // ระดับการคิดที่เลือกไว้ต้องชนะเสมอ · `off` จึงแปลว่า "ไม่ส่งอะไร ปล่อยตามผู้ให้บริการ"
   if (pr.thinkingMode === 'on') body.thinking = { type: 'enabled' };
-  else if (pr.thinkingMode === 'off' && body.reasoning_effort) body.thinking = { type: 'disabled' };
   return { url, method: 'POST', headers: buildHeaders(provider), body,
            timeoutMs: (pr.timeout || 60) * 1000, maxRetries: pr.maxRetries ?? 2 };
 }
@@ -282,7 +287,35 @@ export function parseChat(json) {
   const cached = numOr((u.prompt_tokens_details || {}).cached_tokens,
                        u.cache_read_input_tokens, u.cached_tokens, 0);
   const total = numOr(u.total_tokens, input + output);
-  return { text: String(text || ''), thinking: parseThinking(json), usage: { input, output, reasoning, cached, total } };
+  // [alpha.149] คำตอบถูกตัดเพราะชนเพดาน token ไหม — UI ใช้โชว์ปุ่ม "ต่อ"
+  const finish = normFinish((ch && ch.finish_reason) || json.stop_reason || json.done_reason);
+  return { text: String(text || ''), thinking: parseThinking(json), usage: { input, output, reasoning, cached, total },
+           finish, truncated: finish === 'length' };
+}
+
+/**
+ * [alpha.149] เหตุผลที่คำตอบจบ → รูปเดียวกันทุกเจ้า ('length' = ชนเพดาน token · '' = ไม่รู้)
+ * OpenAI `finish_reason:length` · Anthropic `stop_reason:max_tokens` · Ollama `done_reason:length`
+ */
+export function normFinish(reason) {
+  const s = String(reason || '').trim().toLowerCase();
+  if (!s) return '';
+  if (s === 'length' || s === 'max_tokens' || s === 'max_output_tokens') return 'length';
+  return s;
+}
+
+/**
+ * [alpha.149] ข้อผิดพลาดที่ผู้ให้บริการส่งมา **ในสตรีม** (สถานะ HTTP ยังเป็น 200)
+ * OpenAI-compatible/OpenRouter `{error:{message}}` · Anthropic `{type:"error",error:{message}}` · Ollama `{error:"…"}`
+ * @returns {string} '' = ไม่ใช่ข้อผิดพลาด
+ */
+export function streamErrorOf(d) {
+  if (!d || typeof d !== 'object') return '';
+  const e = d.type === 'error' ? (d.error || d) : (!d.choices ? d.error : null);
+  if (!e) return '';
+  if (typeof e === 'string') return e.trim();
+  const m = e.message || e.detail || e.type || e.code;
+  return String(m || JSON.stringify(e)).trim();
 }
 
 /**
@@ -319,13 +352,22 @@ export function parseStreamChunk(line) {
   try { d = JSON.parse(payload); } catch { return null; }
   if (!d || typeof d !== 'object') return null;
 
+  // ══ [alpha.149] ★ ข้อผิดพลาดกลางสตรีม ══
+  // เครดิตหมด/เนื้อหาถูกปฏิเสธ มักมาเป็นก้อน SSE ธรรมดา (HTTP 200) · เดิมไม่มีใครอ่าน
+  // → คำตอบว่างเปล่า ไม่มีข้อความผิดพลาด ผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น (วัดจริงด้วยเซิร์ฟเวอร์จำลอง)
+  const err = streamErrorOf(d);
+  if (err) return { error: err };
+
   let delta = '';
   let thinking = '';
+  let finish = '';
 
   // Anthropic — ใช้ `type` เป็นตัวชี้ ตรวจก่อนเพราะ `choices` ไม่มีในสตรีมของ Anthropic
   if (d.type === 'content_block_delta' && d.delta) {
     if (d.delta.type === 'thinking_delta') thinking = d.delta.thinking || '';
     else if (typeof d.delta.text === 'string') delta = d.delta.text;
+  } else if (d.type === 'message_delta' && d.delta && d.delta.stop_reason) {
+    finish = normFinish(d.delta.stop_reason);           // [alpha.149] max_tokens = ถูกตัด
   } else if (d.type === 'message_stop') {
     return { done: true };
   }
@@ -337,6 +379,7 @@ export function parseStreamChunk(line) {
     if (typeof dl.content === 'string') delta = dl.content;
     if (typeof dl.reasoning_content === 'string') thinking = dl.reasoning_content;
     else if (typeof dl.reasoning === 'string') thinking = dl.reasoning;
+    if (ch.finish_reason) finish = normFinish(ch.finish_reason);   // [alpha.149]
   }
   // Ollama เนทีฟ (เผื่อมีคนต่อ base URL ไปที่ Ollama) — message.content / response
   if (!delta && !thinking) {
@@ -344,11 +387,28 @@ export function parseStreamChunk(line) {
     if (typeof m.content === 'string') delta = m.content;
     if (typeof m.thinking === 'string') thinking = m.thinking;
     if (typeof d.response === 'string') delta = d.response;
-    if (d.done) return { done: true, delta, thinking };
+    if (d.done) return { done: true, delta, thinking, finish: normFinish(d.done_reason) };
   }
 
-  if (!delta && !thinking) return null;
-  return { delta, thinking };
+  if (!delta && !thinking && !finish) return null;
+  const out = { delta, thinking };
+  if (finish) out.finish = finish;
+  return out;
+}
+
+/**
+ * [alpha.149] ตารางราคาไหน (`PRICES` ของ ai-core.js) ใช้กับผู้ให้บริการที่ผู้ใช้เพิ่มเอง
+ * เดิมทุกเจ้าถูกคิดด้วยราคาของ OpenAI (gpt-4o-mini) — DeepSeek/Claude/เครื่องในบ้านได้ตัวเลขผิดหมด
+ * @returns {string} 'openai' | 'claude' | 'ollama' (เครื่องในบ้าน = ฟรี) | '' = ไม่รู้ราคา
+ */
+export function priceKeyOf(provider) {
+  const host = hostOf((provider && provider.credential && provider.credential.baseUrl) || '');
+  if (!host) return '';
+  if (/(^|\.)openai\.com$/.test(host)) return 'openai';
+  if (/(^|\.)anthropic\.com$/.test(host)) return 'claude';
+  if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1'
+      || /^192\.168\./.test(host) || /^10\./.test(host) || /\.local$/.test(host)) return 'ollama';
+  return '';
 }
 
 function emptyUsage() { return { input: 0, output: 0, reasoning: 0, cached: 0, total: 0 }; }

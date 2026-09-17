@@ -1,6 +1,7 @@
 // project.js — สร้างโปรเจกต์จาก template (นิยาย, บทหนัง, แฟนตาซี, สืบสวน)
 import { t } from './i18n.js';
 import { el, setStatus, log, DEFAULT_SETTINGS, DEFAULT_GOALS, CAT_ICON } from './core.js';
+import { gi } from './icons.js';
 
 // ป้ายไทย + ไอคอนของหมวด Wiki (เดิมใส่ label เป็นคีย์อังกฤษ ผิดหลัก "ไทย 100%")
 const CAT_LABEL = {
@@ -65,7 +66,7 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
     // หมวดที่ไม่ใช่หมวดมาตรฐานเท่านั้นที่ต้องประกาศ (BUILTIN_CATS มีอยู่แล้วในตัวโปรแกรม)
     wikiCats: tpl.wikiCats
       .filter((k) => !['characters', 'locations', 'items', 'lore'].includes(k))
-      .map((k) => ({ key: k, label: CAT_LABEL[k] || k, icon: CAT_ICON[k] || '🔖' })),
+      .map((k) => ({ key: k, label: CAT_LABEL[k] || k, icon: CAT_ICON[k] || gi('bookmark') })),
   });
 
   // สร้างเล่มตาม template

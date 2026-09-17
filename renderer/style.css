@@ -391,11 +391,30 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
 
 #content { flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
 /* แถบรูปแบบอักษรแบบลอย — ลากย้ายได้ · จำตำแหน่ง */
+/* ══ [alpha.151 ข้อ 5+6] ★ แถบต้องไม่ยาวเกินพื้นที่จนกดปุ่มท้ายแถบไม่ได้ ══
+   ผู้ใช้: *"comment ใช้จาก float bar ไม่ได้ แต่ใช้จาก menu ได้"* + *"float bar ยาวมาก"*
+   ต้นตอเดียวกัน: แถบ `nowrap` กว้าง ~1350px ในพื้นที่ 1080px → ปุ่มหมวดท้าย ๆ
+   (คอมเมนต์ · ค้นหา) ยื่นออกไปนอกจอ กดไม่โดนเลย — ไม่ใช่ปุ่มเสีย แต่เอื้อมไม่ถึง
+   ตอนนี้ขึ้นบรรทัดใหม่แทนที่จะไหลออกนอกกรอบ (แถบสูงขึ้น ดีกว่ากดไม่ได้) */
 .k-fmtbar { position:absolute; z-index:40; display:flex; align-items:center; gap:2px;
+  /* ══ [alpha.151 ข้อ 5+6] ความกว้างของแถบต้องไม่ขึ้นกับ "ตำแหน่ง" ของมันเอง ══
+     แถบเป็น absolute → ความกว้างแบบ shrink-to-fit = ที่ว่างที่เหลือใน #content **นับจาก left**
+     ซึ่งแปลว่าขยับแถบไปทางขวา = แถบแคบลง = พับเพิ่มแถว = สูงขึ้น = ตำแหน่งที่ควรอยู่เปลี่ยนอีก
+     (กด "รีเซ็ต" แล้วได้ตำแหน่งไม่ตรงกับที่คำนวณ เพราะขนาดเปลี่ยนหลังย้ายเสร็จ)
+     และเปิดแผงข้างกว้าง ๆ จน #content เหลือแคบ แถบก็พับเป็นกำแพงสิบแถวสูง 300px
+     → `max-content` ตัดวงจรนี้ทิ้ง: กว้างเท่าเนื้อหาเสมอ ไม่ขึ้นกับ `left`
+     ส่วน `max-width` เป็น **เปอร์เซ็นต์ของกรอบ** (ไม่ใช่ของที่ว่างที่เหลือ) จึงไม่ขึ้นกับตำแหน่งเช่นกัน
+     และยังกันแถบไม่ให้ยื่นออกนอก #content ไปโดนแผงข้างบัง/ถูกตัดขอบ — ล้นเมื่อไหร่ก็พับแถวแทน */
+  flex-wrap:wrap; width:max-content; max-width:calc(100% - 16px); row-gap:1px;
   padding:4px 6px 4px 3px; background:var(--bar); border:1px solid var(--border);
   border-radius:var(--r-md); box-shadow:0 6px 20px rgba(0,0,0,.4); user-select:none; }
 .k-fmtbar.k-dragging { opacity:.9; box-shadow:0 10px 28px rgba(0,0,0,.55); }
-.k-fmtbar .tb { min-width:30px; background:transparent; border:none; }
+.k-fmtbar .tb { min-width:30px; background:transparent; border:none; white-space:nowrap; }
+/* ══ [alpha.151 ข้อ 6] เส้นคั่นหมวดบนแถบลอย ══
+   ผู้ใช้: *"ตอนนี้ float bar ยาวมาก และยังไม่มี | คั่น"* — เส้นคั่นถูกแทรกลงแถบตั้งแต่ .150
+   แต่ CSS ของ `.sep` เขียนไว้ใต้ `#toolbar` เท่านั้น บนแถบลอยจึงเป็น span เปล่ากว้าง 0 */
+.k-fmtbar .sep { flex:0 0 auto; width:1px; height:20px; background:var(--border); margin:0 5px; }
+.k-fmtbar .tb.danger:hover { background:var(--danger, #8a3b3b); color:#fff; }
 .k-fmtbar .tb:hover { background:var(--hover); }
 .k-fmtbar .tb.on { background:var(--sel); color:var(--bright); }
 .k-fmtbar #tb-style { min-width:110px; }
@@ -573,6 +592,9 @@ img.ProseMirror-separator { display:inline !important; border:none !important; m
   vertical-align:baseline; }
 .ProseMirror sup { top:-.45em; }
 .ProseMirror sub { top:.22em; }
+/* [alpha.150] สีเน้นข้อความ — **กฎคู่แฝด** กับ proseCss()/proseExportCss() ใน prose-format.js
+   (พื้นมาจาก inline style ของมาร์กเอง · ที่นี่บังคับสีตัวอักษร/มุมให้เท่ากันทั้งจอและไฟล์) */
+.ProseMirror mark { color:#1a1815; border-radius:2px; padding:0 .06em; }
 
 /* เลขบรรทัด (นับตามย่อหน้า/บล็อกระดับบน) — เปิดด้วย body.k-ln
    [alpha.58r บั๊ก 2] "เปิดเลขบรรทัดแล้วข้อความต้องไม่ขยับ"
@@ -1156,6 +1178,12 @@ body.theme-k2-light { --find-hit:#ffe08a; }
 /* ---- จุดสี + ป้ายสถานะบนแถวฉาก ---- */
 .sc-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;
   vertical-align:middle; flex:0 0 auto; }
+/* [alpha.155] แถวชื่อโปรเจกต์บนสุดของต้นไม้ (คลิกขวา = เมนู 0. Project) + หมวดปักหมุด */
+#tree .tree-proj { font-weight:700; color:var(--fg); margin:2px 0 8px; padding:2px 4px;
+  cursor:default; user-select:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#tree .tree-proj:hover { color:var(--bright); }
+#tree .scene.pin-row.pin-missing { opacity:.55; font-style:italic; }
+.sec-title .sc-status, .ch-title .sc-status { font-weight:400; letter-spacing:0; }
 .sc-status { margin-left:6px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--dim); border:1px solid var(--border);
   border-radius:4px; padding:0 5px; vertical-align:middle; }
 /* ป้ายเล่าเรื่อง (Narrative Markers): ⏪ ย้อนอดีต / ⏩ ล่วงหน้า */
@@ -1226,6 +1254,13 @@ body.theme-k2-light { --find-hit:#ffe08a; }
 .k-menu-item.k-menu-label { cursor:default; opacity:.8; font-size:.92em; }
 .k-menu-item.k-menu-label:hover { background:transparent; color:inherit; }
 .k-menu-sep { height:1px; background:var(--border); margin:5px 6px; }
+/* [alpha.149] คีย์ลัดเป็นคอลัมน์ชิดขวาของเมนู (แบบเมนูของเบราว์เซอร์) — ไม่ต่อท้ายข้อความในวงเล็บอีก
+   ผู้ใช้: "ชื่อ menu กับ shortcut … ตอนนี้มันติดกับข้อความโดยไม่แบ่งแยก" */
+.k-menu-item.k-menu-has-accel { display:flex; align-items:center; gap:28px; }
+.k-menu-item.k-menu-has-accel > .k-menu-text { flex:1 1 auto; min-width:0; }
+.k-menu-accel { flex:0 0 auto; margin-left:auto; color:var(--dim); font-size:.9em;
+  white-space:nowrap; font-variant-numeric:tabular-nums; }
+.k-menu-item:hover > .k-menu-accel { color:inherit; opacity:.75; }
 
 /* ══ [alpha.132r] ช่องตัวอย่างโหมด "ขาวดำ" — บังคับดำทั้งแผ่นเหมือนที่ไฟล์จริงทำ ══
    (กฎนี้ต้องชนะสีหัวข้อ/สีคำพูดยกมา/สีตัวอักษรที่ผู้เขียนตั้งเอง จึงต้องมี !important
@@ -1758,6 +1793,16 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 #k-tip.on { opacity:1; visibility:visible; }
 #k-tip.multiline { white-space:pre-line; }   /* tooltip ฉากเป็นหลายบรรทัดคั่นด้วย \n */
 
+/* ══ [alpha.150] คำแนะนำสองชั้น: ชื่อ+คีย์ลัด แล้วประโยคอธิบาย ══
+   ผู้ใช้: *"hover tooltip ที่ไม่มีคำอธิบาย เช่น align left (ctrl+L) | Align your content with…"*
+   หัวเรื่องเน้นให้อ่านก่อน · คำอธิบายจางลงหนึ่งระดับและกว้างขึ้นเพื่อให้เป็นประโยคอ่านได้ */
+#k-tip.k-tip-rich { max-width:330px; padding:8px 11px 9px; }
+#k-tip .k-tip-head { font-weight:600; color:var(--bright); }
+#k-tip.k-tip-rich .k-tip-head { margin-bottom:3px; }
+#k-tip .k-tip-desc { color:var(--fg); opacity:.82; font-weight:400;
+  font-size:calc(11.5px * var(--ui-scale, 1)); line-height:1.6; white-space:normal; }
+#k-tip.k-tip-rich .k-tip-desc { border-top:1px solid var(--border); padding-top:5px; }
+
 /* [alpha.124 ข้อ 39] ถาดแผงที่ย่อไว้ (#k-min-tray-* / .k-min-chip) ถูกถอดออกทั้งชุดแล้ว
    ตัวสร้างชิป (`syncMinTray` ใน panel-ui.js) ไม่มีใครเรียกตั้งแต่ alpha.50 — ถาดไม่เคยโผล่จริง
    รายงาน "ปุ่มลอยทับชิปกู้คืนแผง" จึงเป็นบั๊กของโค้ดที่ตายแล้ว ไม่ใช่ของหน้าจอที่ผู้ใช้เห็น
@@ -1820,6 +1865,10 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 .k-split-body > .pane { display:block !important; position:absolute; inset:0; }
 .k-split-pane { position:relative; overflow:hidden; background:var(--bg);
   box-shadow:inset 0 0 0 1px var(--border); display:flex; flex-direction:column; }
+/* [alpha.154 ข้อ 5] ★ ผู้ใช้: *"split view สีพื้นหลังถูกเปลี่ยนได้ไง"* — จอปกติในโหมดกระดาษทาพื้นด้วย
+   `body.paper-mode #panes { --paper-surround }` แต่ช่องแยกจอเขียน `var(--bg)` ตายตัว
+   → กดแยกจอปุ๊บพื้นเปลี่ยนเป็นสีพื้นของธีม (ธีม K2 = ม่วง) · ช่องต้องใช้กฎคู่แฝดกับ #panes เสมอ */
+body.paper-mode .k-split-pane { background:var(--paper-surround); }
 .k-split-pane.focus { box-shadow:inset 0 0 0 2px var(--accent); }
 /* กล่องเนื้อหาใต้แถบแท็บย่อย (บั๊ก #12) — .pane วางทับเต็มกล่องนี้แทนเต็มช่อง */
 .k-split-body { position:relative; flex:1; min-height:0; min-width:0; overflow:hidden; }
@@ -1954,6 +2003,44 @@ body.k-split-on #tabs { display:none !important; }
 .planner-stage.planner-drop-on::after { content:''; position:absolute; inset:0;
   background:rgba(217,119,87,0.08); pointer-events:none; }
 
+/* ══ [alpha.151 ข้อ 3] แถบรูปแบบ "ของกระดาน" — ลอยอยู่ในเวที ลากย้ายได้ ══ */
+.planner-fmtbar { position:absolute; z-index:9; left:50%; top:8px;
+  background:var(--side); border:1px solid var(--border); border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.45); padding:3px 6px 3px 3px; gap:1px;
+  max-width:calc(100% - 16px); flex-wrap:nowrap; overflow-x:auto; }
+.planner-fmtbar::-webkit-scrollbar { height:5px; }
+.planner-fmtbar .tb { min-width:27px; height:26px; display:inline-flex;
+  align-items:center; justify-content:center; }
+.planner-fmtbar .tb.tb-na { opacity:.32; pointer-events:none; }
+.planner-fmtbar .tb.on { background:var(--sel); color:var(--bright); }
+
+/* ══ [alpha.150 ข้อ 2] รูปพื้นหลังกระดาน — ชั้นของตัวเองใต้ canvas ══
+   เบลอที่นี่ = เบลอเฉพาะรูป · ถ้าไปเบลอทั้งเวทีการ์ดจะเบลอตามหมด */
+.planner-bgimg { position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-repeat:no-repeat; background-position:center; opacity:0; }
+.planner-stage .canvas-container { z-index:1; }
+.planner-rail, .planner-ctxbar { z-index:8; }
+
+/* ══ [alpha.150 ข้อ 4] กระดานเต็มจอ ══
+   ยกทั้งแผงขึ้นมาคลุมหน้าต่าง — ไม่ใช้ Fullscreen API ของเบราว์เซอร์ เพราะกล่องโต้ตอบ
+   ของโปรแกรม (เลือกรูป/ยืนยัน) อยู่นอก element นั้นแล้วจะถูกซ่อนหายไปทั้งกล่อง */
+.planner-fullscreen { position:fixed !important; inset:0 !important; z-index:9000 !important;
+  width:auto !important; height:auto !important; max-width:none !important; max-height:none !important;
+  background:var(--bg); border-radius:0 !important; }
+body.planner-fullscreen-on #statusbar { display:none; }
+.planner-btn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* ══ [alpha.150 ข้อ 2] กล่องพื้นกระดาน ══ */
+.planner-bg-dialog { min-width:340px; }
+.planner-bg-rows { display:flex; flex-direction:column; gap:9px; padding:10px 2px; }
+.planner-bg-rows label { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--fg); }
+.planner-bg-rows input[type=range] { flex:1 1 auto; max-width:190px; }
+.planner-bg-name { color:var(--muted); font-size:calc(11.5px * var(--ui-scale, 1));
+  max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.planner-bg-btns { display:flex; gap:6px; justify-content:flex-end; }
+.k-dlg-multi { min-height:180px; resize:vertical; font-family:inherit; line-height:1.5; }
+
 /* แผงเตี้ยมาก: ยุบแถบกรอง แล้วแถบสถานะ เพื่อให้ย่อลงได้จริง (บั๊ก 65r5) */
 #planner-body.planner-compact > .planner-filter { display:none; }
 #planner-body.planner-mini > .planner-status { display:none; }
@@ -2026,6 +2113,44 @@ body.k-split-on #tabs { display:none !important; }
   padding:6px 8px; font-family:inherit; line-height:1.3; outline:none;
   box-shadow:0 6px 24px rgba(0,0,0,.5); }
 
+
+/* ══ [alpha.152 ข้อ 5] แผงที่กำลังเลือกอยู่ — คีย์ลัดของแผงทำงานเฉพาะแผงนี้ ══
+   ผู้ใช้: *"แผงที่มี shortcut ต้องทำการเลือกแผงก่อน ทำเครื่องหมาย เช่น สีหัวแถบเข้ม"*
+   ใช้ทั้งสองสัญญาณพร้อมกัน (พื้นเข้มขึ้น + ขีดสีที่ขอบซ้าย) เพื่อให้เห็นได้แม้ธีมสว่าง */
+/* [alpha.154 ข้อ 3] ผู้ใช้: *"สีนี้ไม่ชอบ เอาสีปรับทึบเล็กน้อยดีกว่า ง่าย ๆ เหมือน windows
+   ที่จะทึบกว่าเดิมประมาณ 20% แต่ไม่ใช่สีต่างกันไปเลย"* — เลิกใช้สีเน้น (--sel + ขีดส้มขอบซ้าย)
+   เหลือแค่ "สีเดิมของหัวแผง ทึบลง 20%" ทุกธีม (color-mix กับดำ = เฉดเดิม เข้มขึ้น ไม่เปลี่ยนสี) */
+.k-panel > .k-panel-head, .k-float-panel > .k-panel-head { transition:background .12s; }
+.k-panel.k-panel-focus > .k-panel-head,
+.k-float-panel.k-panel-focus > .k-panel-head {
+  background:color-mix(in srgb, var(--side) 80%, #000); }
+.k-panel.k-panel-focus > .k-panel-head .k-panel-head-title { color:var(--fg); }
+.k-tab.k-panel-focus { background:color-mix(in srgb, var(--side) 80%, #000); }
+
+
+/* ══ [alpha.153 ข้อ 3] รายการสิ่งที่ต้องทำในแผงคุณสมบัติ — ติ๊ก/แก้/เลื่อน/ลบ ได้ในที่เดียว ══
+   ผู้ใช้: *"todo ใช้งานยาก … add เป็น list มีพร้อม checkbox ดีกว่าพิมพ์รายการ"* */
+.planner-todo-edit { display:flex; flex-direction:column; gap:3px; }
+.planner-todo-row { display:flex; align-items:center; gap:4px; }
+.planner-todo-row.done .planner-todo-text { text-decoration:line-through; opacity:.55; }
+.planner-todo-check { flex:0 0 auto; width:14px; height:14px; margin:0; cursor:pointer; accent-color:var(--accent); }
+.planner-todo-text { flex:1 1 auto; min-width:0; background:var(--input, var(--bar)); color:var(--fg);
+  border:1px solid var(--border); border-radius:var(--r-xs); padding:3px 6px;
+  font-family:inherit; font-size:calc(12px * var(--ui-scale, 1)); }
+.planner-todo-text:focus { outline:none; border-color:var(--accent); }
+.planner-todo-btn { flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+  width:20px; height:20px; padding:0; background:transparent; color:var(--dim);
+  border:1px solid transparent; border-radius:var(--r-xs); cursor:pointer; }
+.planner-todo-btn:hover:not(:disabled) { background:var(--hover); color:var(--bright); }
+.planner-todo-btn:disabled { opacity:.25; cursor:default; }
+.planner-todo-btn.danger:hover { background:var(--danger, #8a3b3b); color:#fff; }
+.planner-todo-add { margin-top:2px; display:flex; align-items:center; gap:4px; justify-content:center;
+  padding:4px 8px; background:transparent; color:var(--dim); cursor:pointer;
+  border:1px dashed var(--border); border-radius:var(--r-xs); font-family:inherit;
+  font-size:calc(11px * var(--ui-scale, 1)); }
+.planner-todo-add:hover { border-color:var(--accent); color:var(--bright); background:var(--hover); }
+.planner-todo-sum { padding-top:2px; color:var(--dim); font-size:calc(10px * var(--ui-scale, 1)); }
+
 /* ---- แถบสถานะล่าง: พิกัด x y (บั๊ก 8) ---- */
 .planner-status { display:flex; align-items:center; gap:10px; flex:0 0 auto; min-width:0;
   padding:3px 10px; background:var(--bar); border-top:1px solid var(--border);
@@ -2074,6 +2199,13 @@ body.k-split-on #tabs { display:none !important; }
 .planner-props-section input[type="range"] { padding:0; }
 .planner-prop-2col { display:flex; gap:6px; }
 .planner-prop-2col > * { flex:1; min-width:0; }
+/* [alpha.150] แถวช่องกรอก + ปุ่มท้ายแถว (ไฟล์รูปของการ์ดรูป) */
+.planner-prop-row { display:flex; gap:6px; align-items:center; }
+.planner-prop-row > input { flex:1 1 auto; min-width:0; }
+.planner-prop-btn { flex:0 0 auto; background:var(--side); color:var(--fg);
+  border:1px solid var(--border); border-radius:6px; padding:4px 9px; cursor:pointer;
+  font-size:calc(11.5px * var(--ui-scale, 1)); }
+.planner-prop-btn:hover { background:var(--hover); color:var(--bright); }
 .planner-check { display:flex !important; align-items:center; gap:6px; color:var(--fg) !important;
   font-size:calc(12px*var(--ui-scale,1)) !important; cursor:pointer; }
 .planner-check input { width:auto !important; accent-color:var(--accent); }
@@ -4305,14 +4437,16 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
   transform:translateY(-50%) rotate(-35deg); font-size:54pt; font-weight:700;
   color:#000; opacity:.1; pointer-events:none; white-space:nowrap; overflow:hidden; }
 .sp-pageview .ed-page { color:var(--paper-ink); }
-.sp-pageview .ed-page p, .sp-pageview .ed-page li { color:var(--paper-ink); margin-top:0; }
+/* [alpha.149] ★ `:not(.k-xpv-doc *)` — เอกสารของช่องตัวอย่างส่งออก/โหมดอ่านทั้งเล่ม (.k-xpv-doc) พก CSS
+   ของไฟล์จริงมาเอง และถูก "วัด" นอกแผ่นซึ่งกฎพวกนี้ไม่ถึง · ปล่อยให้รั่วเข้าไปตอน "วาด" = วัดกับวาดคนละความสูง
+   → เส้นตัดหน้าเฉือนรูป/ตัวหนังสือ (หัวข้อ line-height 1.3 ทับ 1.75 ของไฟล์ = เลื่อน 14px ต่อหัวข้อ) */
+.sp-pageview .ed-page p:not(.k-xpv-doc *), .sp-pageview .ed-page li:not(.k-xpv-doc *) { color:var(--paper-ink); margin-top:0; }
 .sp-pageview .ed-page, .sp-pageview .sp-page { overflow-wrap:break-word; word-break:break-word; }
-.sp-pageview .ed-page h1, .sp-pageview .ed-page h2, .sp-pageview .ed-page h3,
-.sp-pageview .ed-page h4, .sp-pageview .ed-page h5, .sp-pageview .ed-page h6 {
+.sp-pageview .ed-page :is(h1, h2, h3, h4, h5, h6):not(.k-xpv-doc *) {
   color:#111; margin:1em 0 .4em; line-height:1.3; }
-.sp-pageview .ed-page blockquote { color:#4a4438; font-style:italic;
+.sp-pageview .ed-page blockquote:not(.k-xpv-doc *) { color:#4a4438; font-style:italic;
   border-left:3px solid var(--paper-line); padding-left:12px; margin:.6em 0; }
-.sp-pageview .ed-page hr { border:0; border-top:1px solid var(--paper-line); margin:1em 0; }
+.sp-pageview .ed-page hr:not(.k-xpv-doc *) { border:0; border-top:1px solid var(--paper-line); margin:1em 0; }
 .sp-pageview .ed-page .pv-figure { color:#7a7466; font-style:italic; text-align:center; margin:1em 0; }
 /* เส้นคั่นหน้าในตัวแก้ไขนิยาย — ใช้หน้าตาเดียวกับของบทภาพยนตร์ */
 .ed-page-break { pointer-events:none; }
@@ -4670,10 +4804,23 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   font:inherit; font-size:calc(11.5px * var(--ui-scale, 1)); }
 .ai-chat-running:hover { background:color-mix(in srgb, var(--accent) 30%, var(--bar)); }
 .ai-chat-row.running { border-color:var(--accent); }
-.ai-chat-row-run { color:var(--accent-hi); animation:k-ai-pulse 1.2s ease-in-out infinite; }
-.ai-chat-title.running::after { content:"⏳"; margin-left:6px; color:var(--accent-hi);
-  animation:k-ai-pulse 1.2s ease-in-out infinite; }
 @keyframes k-ai-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+/* ══ [alpha.149] ไอคอนสถานะหน้าชื่อเซสชัน — ৹ พร้อม · ↻ กำลังคิด (หมุน) · ⚠ ผิดพลาด ══
+   (แทนป้าย ⏳ เดิมที่โผล่แค่ตอนกำลังทำงาน — ผู้ใช้ต้องการเห็นสถานะของทุกเซสชันตลอดเวลา) */
+.ai-chat-status { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; color:var(--dim); }
+.ai-chat-status.ai-st-running { color:var(--accent-hi); }
+.ai-chat-status.ai-st-running svg { animation:k-spin 1.1s linear infinite; }
+.ai-chat-status.ai-st-error { color:#e5695e; }
+/* ปุ่ม "ต่อ" ใต้คำตอบที่ไม่ครบ */
+.ai-msg-cont { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;
+  padding-top:6px; border-top:1px dashed var(--border); }
+.ai-msg-cont-note { font-size:calc(11px * var(--ui-scale, 1)); }
+.ai-msg-cont-btn { display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+  border-radius:999px; border:1px solid var(--accent); background:transparent; color:var(--bright);
+  cursor:pointer; font:inherit; font-size:calc(11.5px * var(--ui-scale, 1)); }
+.ai-msg-cont-btn:hover { background:color-mix(in srgb, var(--accent) 22%, transparent); }
+.ai-msg-cont-btn:disabled { opacity:.5; cursor:default; }
 
 /* B) เซสชัน */
 .ai-chat-session, .ai-chat-detail { display:flex; flex-direction:column; height:100%; min-height:0; }
@@ -5182,6 +5329,9 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   display:flex; flex-direction:column; gap:6px; }
 .k-plug-card.k-plug-err { border-color:#e06c50; }
 .k-plug-card.k-plug-off { opacity:.62; }
+/* [alpha.148] ปลั๊กอินของโปรเจกต์ที่ยังไม่ได้รับอนุญาตให้รัน */
+.k-plug-card.k-plug-untrusted { border-color:#d8a23a; }
+.k-plug-card.k-plug-untrusted .k-plug-badge { color:#d8a23a; border-color:#d8a23a; }
 .k-plug-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
 .k-plug-name { font-weight:600; font-size:calc(13px * var(--ui-scale, 1)); }
 .k-plug-ver, .k-plug-origin, .k-plug-shadow { font-size:calc(10.5px * var(--ui-scale, 1)); }
@@ -6199,3 +6349,30 @@ body.k-measuring .ProseMirror .sp-err-warn::before { display:none; }
    นิดเดียว" ซึ่งพาไปเข้าเส้นทางตัดดิบพอดี แล้วรูปถูกผ่ากลางคาบสองแผ่น (ผู้ใช้ส่งภาพมายืนยัน) */
 .ProseMirror figure.k-img-w img { max-height:calc(var(--page-content-h, 9in) - 2.2em); }
 
+
+/* ══ [alpha.156] ตรวจสุขภาพโปรเจกต์ · แทนที่ทั้งโปรเจกต์ · สปรินต์การเขียน ══ */
+.k-doctor .k-doctor-summary, .k-replace .k-replace-summary { margin:8px 0 6px; font-weight:600; }
+.k-doctor-list, .k-replace-list { max-height:52vh; overflow:auto; border:1px solid var(--border); border-radius:8px; padding:4px 8px; }
+.k-doctor-row { display:flex; gap:9px; align-items:flex-start; padding:7px 2px; border-bottom:1px solid var(--border); cursor:pointer; }
+.k-doctor-row:last-child, .k-replace-row:last-child { border-bottom:0; }
+.k-doctor-row.k-doctor-nofix { cursor:default; opacity:.8; }
+.k-doctor-mid { flex:1; min-width:0; }
+.k-doctor-text { color:var(--fg); }
+.k-doctor-where { font-size:.85em; word-break:break-all; }
+.k-doctor-fix { font-size:.85em; color:var(--accent); }
+.k-replace-opts { gap:14px; flex-wrap:wrap; margin:6px 0; }
+.k-replace-row { padding:6px 2px; border-bottom:1px solid var(--border); }
+.k-replace-row.k-replace-locked { opacity:.6; }
+.k-replace-name { font-weight:600; }
+.k-replace-badge { margin-left:8px; font-size:.8em; padding:0 6px; border-radius:6px; border:1px solid var(--border); }
+.k-replace-line { font-size:.88em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.k-replace-line mark { background:var(--accent); color:var(--bg); border-radius:3px; padding:0 2px; }
+.k-sprint { position:fixed; right:18px; bottom:44px; z-index:900; min-width:150px; padding:10px 12px;
+  background:var(--side, var(--bg)); color:var(--fg); border:1px solid var(--border); border-radius:10px;
+  box-shadow:0 6px 22px rgba(0,0,0,.28); font-size:13px; }
+.k-sprint-clock { font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+.k-sprint.k-sprint-paused .k-sprint-clock { opacity:.5; }
+.k-sprint-bar { height:4px; margin:6px 0 2px; border-radius:2px; background:var(--border); overflow:hidden; }
+.k-sprint-fill { height:100%; background:var(--accent); transition:width .3s; }
+.k-sprint-btns { display:flex; gap:6px; margin-top:8px; }
+.k-sprint-btns button { flex:1; }

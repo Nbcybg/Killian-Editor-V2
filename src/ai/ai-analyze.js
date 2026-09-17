@@ -10,6 +10,7 @@
 import { t as tt, tf as ttf } from '../i18n.js';
 import { tokenize } from '../search-engine.js';
 import { extractJson, validate, estimateTokens, chunkText, estimateCost, SEVERITY, SEV_RANK } from './ai-core.js';
+import { gi } from '../icons.js';
 
 export { SEVERITY, SEV_RANK };
 
@@ -466,17 +467,17 @@ function round1(v) { return +(Number(v) || 0).toFixed(1); }
 // ═══════════════ ทะเบียนการวิเคราะห์ทั้ง 11 ชนิด ═══════════════
 // order = ลำดับที่ผู้ใช้สั่งมา (1–11)
 export const ANALYSES = [
-  { id: 'pacing',     icon: '📊', ai: 'assist', title: tt('ui.aia.analyzePaceStory'),  desc: tt('ui.aia.dPacing') },
-  { id: 'arc',        icon: '👤', ai: 'assist', title: tt('ui.aia.partCurveCharacter'), desc: tt('ui.aia.dArc'), needsChars: true },
-  { id: 'words',      icon: '📝', ai: 'assist', title: tt('ui.aia.wordUse'),           desc: tt('ui.aia.dWords') },
-  { id: 'conflict',   icon: '⚔️', ai: 'assist', title: tt('ui.common.conflict'),        desc: tt('ui.aia.dConflict') },
-  { id: 'length',     icon: '⏱️', ai: 'assist', title: tt('ui.aia.longScene'),          desc: tt('ui.aia.dLength') },
-  { id: 'plothole',   icon: '🕳️', ai: 'core',   title: tt('ui.aia.tPlotHole'),          desc: tt('ui.aia.dPlotHole') },
-  { id: 'continuity', icon: '🔗', ai: 'core',   title: tt('ui.aia.tContinuity'),        desc: tt('ui.aia.dContinuity'), needsChars: true },
-  { id: 'repeat',     icon: '🔁', ai: 'assist', title: tt('ui.aia.tRepeat'),            desc: tt('ui.aia.dRepeat') },
-  { id: 'shipping',   icon: '💞', ai: 'assist', title: tt('ui.aia.tShipping'),          desc: tt('ui.aia.dShipping'), needsChars: true },
-  { id: 'score',      icon: '⭐', ai: 'core',   title: tt('ui.aia.tScore'),             desc: tt('ui.aia.dScore') },
-  { id: 'screentime', icon: '🎬', ai: 'assist', title: tt('ui.aia.tScreentime'),        desc: tt('ui.aia.dScreentime'), needsChars: true },
+  { id: 'pacing',     icon: gi('chart'), ai: 'assist', title: tt('ui.aia.analyzePaceStory'),  desc: tt('ui.aia.dPacing') },
+  { id: 'arc',        icon: gi('user'), ai: 'assist', title: tt('ui.aia.partCurveCharacter'), desc: tt('ui.aia.dArc'), needsChars: true },
+  { id: 'words',      icon: gi('note'), ai: 'assist', title: tt('ui.aia.wordUse'),           desc: tt('ui.aia.dWords') },
+  { id: 'conflict',   icon: gi('sword-e'), ai: 'assist', title: tt('ui.common.conflict'),        desc: tt('ui.aia.dConflict') },
+  { id: 'length',     icon: gi('timer-e'), ai: 'assist', title: tt('ui.aia.longScene'),          desc: tt('ui.aia.dLength') },
+  { id: 'plothole',   icon: gi('hole-e'), ai: 'core',   title: tt('ui.aia.tPlotHole'),          desc: tt('ui.aia.dPlotHole') },
+  { id: 'continuity', icon: gi('link'), ai: 'core',   title: tt('ui.aia.tContinuity'),        desc: tt('ui.aia.dContinuity'), needsChars: true },
+  { id: 'repeat',     icon: gi('repeat'), ai: 'assist', title: tt('ui.aia.tRepeat'),            desc: tt('ui.aia.dRepeat') },
+  { id: 'shipping',   icon: gi('heart'), ai: 'assist', title: tt('ui.aia.tShipping'),          desc: tt('ui.aia.dShipping'), needsChars: true },
+  { id: 'score',      icon: gi('star'), ai: 'core',   title: tt('ui.aia.tScore'),             desc: tt('ui.aia.dScore') },
+  { id: 'screentime', icon: gi('film'), ai: 'assist', title: tt('ui.aia.tScreentime'),        desc: tt('ui.aia.dScreentime'), needsChars: true },
 ];
 export const ANALYSIS_IDS = ANALYSES.map((a) => a.id);
 export function analysisById(id) { return ANALYSES.find((a) => a.id === id) || null; }
@@ -546,7 +547,7 @@ export function localDigest(id, local = {}) {
   const takeRows = (rows, fmt, n = 12) => (rows || []).slice(0, n).forEach((r) => lines.push('- ' + fmt(r)));
   if (id === 'pacing') takeRows(local.rows, (r) => ttf('ui.aia.dgPacing', r.title, r.id, r.tempo, r.dialogue, r.words), 20);
   if (id === 'arc') takeRows(local.chars, (c) => ttf('ui.aia.dgArc', c.name, c.total, c.scenes)
-    + (c.gaps.length ? ttf('ui.aia.dgArcGap', c.gaps.map((g) => g.from + '→' + g.to).join(', ')) : ''));
+    + (c.gaps.length ? ttf('ui.aia.dgArcGap', c.gaps.map((g) => g.from + gi('arrow-right') + g.to).join(', ')) : ''));
   if (id === 'words') takeRows(local.rows, (r) => ttf('ui.aia.dgWords', r.word, r.count, r.per10k), 30);
   if (id === 'conflict') takeRows(local.empty, (r) => ttf('ui.aia.dgConflict', r.title, r.id), 20);
   if (id === 'length') takeRows(local.rows, (r) => ttf('ui.aia.dgLength', r.title, r.id, r.words, r.minutes), 25);
@@ -709,7 +710,9 @@ export function estimateTotal(ids = ANALYSIS_IDS, base = {}) {
 
 /** ราคาโดยประมาณของค่าที่ estimateAnalysis คืนมา (ollama = 0) */
 export function estimateUsd(provider, model, est = {}) {
-  return estimateCost(provider || 'openai', model || '', { input: est.input || 0, output: est.output || 0 }).usd;
+  // [alpha.149] ไม่รู้ว่าเป็นเจ้าไหน = ไม่รู้ราคา (null → หน้าจอโชว์ "—") ไม่ใช่ราคา OpenAI
+  if (!provider) return null;
+  return estimateCost(provider, model || '', { input: est.input || 0, output: est.output || 0 }).usd;
 }
 
 /** โทเคน/ราคาที่ **ใช้ไปจริง** จากผลที่เก็บไว้ (หลังใช้งาน) */

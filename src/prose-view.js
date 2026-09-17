@@ -14,6 +14,7 @@ import { mergeProseFormat, paginateProse, proseMetrics, prosePageLabel,
 import { PAPER_SIZES, MARGIN_DEFAULTS } from './sp-format.js';
 import { num } from './num.js';
 import { createPageBreakPlugin } from './page-break-plugin.js';
+import { gi } from './icons.js';
 
 // ───────── รายการโหมด (ชื่อเดียวกับบทภาพยนตร์ เพื่อให้เมนู/คลาส CSS ใช้ร่วมกันได้) ─────────
 export const PROSE_VIEWS = ['normal', 'layout', 'draft', 'side', 'overview1', 'overview4'];
@@ -180,7 +181,7 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
       } else if (type === 'figure') {
         d = document.createElement('div');
         d.className = 'pv-figure';
-        d.textContent = '🖼 ' + (b.alt || t('ui.prose.image'));
+        d.textContent = gi('frame') + ' ' + (b.alt || t('ui.prose.image'));
       } else {
         d = document.createElement('p');
         d.style.textIndent = f.firstLineIndent + 'in';

@@ -42,7 +42,8 @@ const srcFiles = walk(path.join(ROOT, 'src')).concat([path.join(ROOT, 'main.js')
 
 const used = new Map();                                     // คีย์ → ไฟล์แรกที่เจอ
 // tt/ttf = นามแฝงในไฟล์ที่มีตัวแปรท้องถิ่นชื่อ t บังอยู่ (ดู tools/i18n-shadow.cjs)
-const CALL = /(^|[^A-Za-z0-9_$.])(t|tf|tt|ttf)\(\s*'([^']+)'/g;
+// [alpha.154] tx/txf = ข้อความจากไฟล์ภาษาที่ลงใน HTML (src/i18n-html.js) — นับเป็นการใช้คีย์เหมือนกัน
+const CALL = /(^|[^A-Za-z0-9_$.])(t|tf|tt|ttf|tx|txf)\(\s*'([^']+)'/g;
 for (const abs of srcFiles) {
   const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
   // ตัวอย่างในคอมเมนต์ (`tf('ui.scene.chapterNum', 7)` ในเอกสารของ i18n.js) ไม่ใช่โค้ดจริง
@@ -122,23 +123,14 @@ check('ไม่มีข้อความไทยที่ต้องแป�
   const raw = fs.readFileSync(htmlPath, 'utf8');
   // ตัดคอมเมนต์ HTML ทิ้ง (คำอธิบายในนั้นเป็นของนักพัฒนา ไม่ใช่ข้อความบนหน้าจอ)
   const html = raw.replace(/<!--[\s\S]*?-->/g, ' ');
-  const bad = [];
-
-  // 1) title="…" ที่ไม่มีคีย์กำกับ
-  const TITLE = /<[a-z]+[^>]*\stitle="([^"]*)"[^>]*>/g;
   let m;
-  while ((m = TITLE.exec(html))) {
-    if (!THAI.test(m[1])) continue;
-    if (/data-i18n-title=/.test(m[0]) || /data-i18n-attr="title"/.test(m[0])) continue;
-    bad.push('title: ' + m[1].slice(0, 30));
-  }
-  // 2) ข้อความไทยระหว่างแท็กที่ไม่มีคีย์กำกับ
-  const TEXT = /<([a-z]+)([^>]*)>([^<>]*[฀-๿][^<>]*)</g;
-  while ((m = TEXT.exec(html))) {
-    if (/data-i18n=/.test(m[2])) continue;
-    bad.push('<' + m[1] + '>: ' + m[3].trim().slice(0, 30));
-  }
-  check('★ index.html ไม่มีข้อความไทยที่ไม่ได้ผ่านระบบภาษา', bad.length === 0,
+  // [alpha.154 ข้อ 6] ★ ผู้ใช้: *"บอกแล้วว่าอย่า hardcode ... ภาษาอยู่ส่วนภาษา ไม่ซ้ำซ้อน"*
+  // กฎเดิมยอมให้มีข้อความไทย "สำรอง" ใน HTML ถ้ามีคีย์กำกับ — ผลคือข้อความชุดเดียวกันอยู่สองที่
+  // (HTML + CSV) และแก้ที่ CSV แล้ว HTML ก็ยังเป็นของเก่า · ตอนนี้: **ไม่มีไทยใน index.html เลย**
+  // (นอกคอมเมนต์) — ข้อความทั้งหมดเติมจากไฟล์ภาษาผ่าน `applyDataI18n()` ตอนเริ่มโปรแกรม
+  const bad = html.split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => THAI.test(l))
+    .map(([n, l]) => n + ': ' + l.trim().slice(0, 40));
+  check('★ index.html ไม่มีข้อความไทยเลย (ข้อความมาจากไฟล์ภาษาเท่านั้น)', bad.length === 0,
         bad.length + ' จุด: ' + bad.slice(0, 5).join(' · '));
 
   // 3) คีย์ที่ index.html อ้าง ต้องมีจริงในไฟล์ภาษาทุกไฟล์
@@ -154,8 +146,29 @@ check('ไม่มีข้อความไทยที่ต้องแป�
 }
 
 // ───────── คีย์ต้องอ่านรู้เรื่อง ─────────
-const badShape = [...used.keys()].filter((k) => !/^ui\.[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9:]*$/.test(k));
+// [alpha.150] อนุญาต `-` ในส่วนชื่อด้วย — คีย์คำอธิบายของปุ่ม (`ui.tip.<คำสั่ง>`) สร้างจาก
+// id ของคำสั่งตรง ๆ ซึ่งมีขีดกลางอยู่แล้วทั้งระบบ (`editor-undo` · `toggle-panel:comments`)
+// การแปลงชื่ออีกชั้นจะทำให้เกิด "ตารางแปลง id → คีย์" ซึ่งเป็นแหล่งความจริงที่สองทันที
+const badShape = [...used.keys()].filter((k) => !/^ui\.[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9:-]*$/.test(k));
 check('คีย์ทุกตัวอยู่ในรูป ui.<module>.<name>', badShape.length === 0, badShape.slice(0, 5).join(' · '));
+// ═══════ [alpha.154] ★ ไฟล์ภาษาเก็บ "ข้อความล้วน" — ห้ามมีโครง HTML ═══════
+//
+// ผู้ใช้: *"ย้าย HTML ในกล่องตั้งค่าออกจาก CSV"* → *"ย้าย HTML ที่เหลือออกจาก CSV ด้วย"*
+// โครงอยู่ในโค้ด (template + `tx()`/`txf()` จาก src/i18n-html.js) · คนแปลเห็นแต่ประโยค
+// ยกเว้น: คำสั่งถึง AI ที่ **เอ่ยถึงแท็กเป็นคำ** (บอก AI ว่าให้ตอบเป็น <p> <b> / รูปแบบ JSON ที่มี "<id ฉาก>")
+// ซึ่งไม่ใช่โครงหน้าจอ และคำแปลต้องมีคำนั้นอยู่จริง
+const HTML_IN_TEXT_OK = new Set([
+  'ui.aiCharacter.sceneIdAspectSeverityCritical',   // ตัวอย่าง JSON ในคำสั่ง AI: "sceneId":"<id ฉาก>"
+  'ui.aiPlot.descriptionExplainProblemThai',        // ตัวอย่าง JSON ในคำสั่ง AI: "<id ของฉาก>"
+  'ui.starter.pDescRule',                           // บอก AI ว่าให้ตอบด้วยแท็ก <p> <b> <i> <br> เท่านั้น
+]);
+const HTML_TAG = /<\/?[a-zA-Z][a-zA-Z0-9-]*(\s[^<>]*)?\/?>/;
+for (const f of langFiles) {
+  const tagged = Object.keys(tables[f]).filter((k) => !HTML_IN_TEXT_OK.has(k) && HTML_TAG.test(tables[f][k]));
+  check(`★ ${f}: ไม่มีโครง HTML ในข้อความ (โครงอยู่ในโค้ด)`, tagged.length === 0,
+        tagged.length + ' คีย์: ' + tagged.slice(0, 5).join(' · '));
+}
+
 const thaiKeys = Object.keys(tables[base]).filter((k) => THAI.test(k));
 check('ไม่มีคีย์ที่เป็นข้อความไทยหลงเหลือในไฟล์ภาษา', thaiKeys.length === 0, thaiKeys.slice(0, 3).join(' · '));
 

@@ -8,13 +8,15 @@
 //   · เนื้อแผง (#tree-panel, #content, …) ถูก "ย้ายเข้า" host เท่านั้น ห้ามสร้างใหม่ → โค้ดเก่ายังอ้าง id ได้
 //   · ลาก resize/float ไม่ยิง re-render ระหว่างลาก (จะทำให้ ProseMirror ถูกถอด-ใส่ 60 ครั้ง/วินาที)
 //     → ปรับ style สดตอนลาก แล้ว commit ลง store ครั้งเดียวตอนปล่อย
+import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t } from '../i18n.js';
 import { el } from '../core.js';
 import { popupMenu } from '../ui.js';        // [60r3 ข้อ 8] เมนูคลิกขวาบนหัวแผง
-import { iconHtml, hasIcon } from '../icons.js';
+import { iconHtml, hasIcon, gi } from '../icons.js';
 import * as PL from './panel-layout.js';
 import { makePanelDraggable, makeTabDraggable, makeFloatDraggable, createDropOverlay,
          clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panel-drag.js';
+import { applyPanelFocus } from './panel-focus.js';
 
 export { createDropOverlay };
 
@@ -30,6 +32,8 @@ export function renderPanelLayout(container, pm, opts = {}) {
   for (const f of pm.store.floats || []) renderFloatPanel(f, pm, opts, container);
   markDocsChain(container);
   markWorkspace(container, root, opts);
+  // [alpha.152 ข้อ 5] วาดใหม่ทีไรคลาส "แผงที่เลือกอยู่" หลุดทุกที — ทาคืนทันทีในรอบเดียวกัน
+  applyPanelFocus(container);
   return container;
 }
 
@@ -237,7 +241,7 @@ function buildHead(node, pm, opts, md, floating) {
   const def = pm.registry.get(node.id) || {};
   // [alpha.67] 🖥 ฉีกแผงออกเป็นหน้าต่าง OS จริง — วางไว้ก่อน ⧉ (ลอย) เพราะเป็นการ "ออกไปไกลกว่า"
   if (opts.canTearOff && opts.canTearOff(node.id)) {
-    const tb = el('span', 'k-panel-btn k-panel-btn-tearoff', '🖥');
+    const tb = el('span', 'k-panel-btn k-panel-btn-tearoff', gi('desktop'));
     tb.title = t('ui.panelRenderer.moveWindowSplitDrag');
     tb.dataset.act = 'tearoff';
     tb.onclick = (e) => { e.stopPropagation(); opts.onTearOff(node.id); };
@@ -247,7 +251,7 @@ function buildHead(node, pm, opts, md, floating) {
     if (b.key === 'close' && def.closable === false) continue;
     if (b.key === 'float' && def.floatable === false) continue;
     const btn = el('span', 'k-panel-btn k-panel-btn-' + b.key,
-                   b.key === 'float' && floating ? '⊡' : (b.key === 'collapse' && node.collapsed ? '▸' : b.icon));
+                   b.key === 'float' && floating ? '⊡' : (b.key === 'collapse' && node.collapsed ? gi('triangle-right-sm') : b.icon));
     btn.title = b.title;
     btn.dataset.act = b.key;
     btn.onclick = (e) => {
@@ -290,7 +294,7 @@ function buildHead(node, pm, opts, md, floating) {
 export function headMenuItems(node, pm, opts, md, floating) {
   const def = pm.registry.get(node.id) || {};
   const title = md.title || node.title || node.id;
-  const items = [{ label: t('ui.panelRenderer.whatIsThis') + escapeHtml(title) + '</b>', disabled: true }];
+  const items = [{ label: `${tx('ui.panelRenderer.whatIsThis2')} <b>` + escapeHtml(title) + '</b>', disabled: true }];
   for (const line of wrapDesc(md.desc || '')) items.push({ label: '<span class="dim">' + escapeHtml(line) + '</span>', disabled: true });
   items.push('-');
   if (def.closable !== false) {
@@ -438,7 +442,7 @@ function renderFloatGroup(f, pm, opts, container) {
     bar.appendChild(tab);
   });
   // ปุ่มปิดของกลุ่ม (ปิดแท็บที่เปิดอยู่)
-  const closeBtn = el('span', 'k-panel-btn k-panel-btn-close', '✕');
+  const closeBtn = el('span', 'k-panel-btn k-panel-btn-close', gi('close'));
   closeBtn.title = t('ui.panelRenderer.closePanelOpen');
   closeBtn.onclick = (e) => { e.stopPropagation(); const c = kids[active]; if (c) pm.hidePanel(c.id); };
   const dockBtn = el('span', 'k-panel-btn k-panel-btn-float', '⊡');
@@ -452,7 +456,7 @@ function renderFloatGroup(f, pm, opts, container) {
   // (หัวแผงข้างในก็มีปุ่มนี้ แต่ในกลุ่มลอยแถบแท็บอยู่บนสุด ผู้ใช้เอื้อมถึงก่อน)
   const actId = (kids[active] || {}).id;
   if (actId && opts.canTearOff && opts.canTearOff(actId)) {
-    const toBtn = el('span', 'k-panel-btn k-panel-btn-tearoff', '🖥');
+    const toBtn = el('span', 'k-panel-btn k-panel-btn-tearoff', gi('desktop'));
     toBtn.title = t('ui.panelRenderer.moveTabWindowSplit');
     toBtn.dataset.act = 'tearoff';
     toBtn.onclick = (e) => { e.stopPropagation(); opts.onTearOff(actId); };

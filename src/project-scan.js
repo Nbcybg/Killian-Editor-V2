@@ -5,6 +5,8 @@
 // ทำให้ backlinks/plot-hole/AI chat เห็นเนื้อหาเป็นค่าว่างทั้งหมด
 import { t } from './i18n.js';
 import { log, state } from './core.js';
+import { parseMdFile } from './md.js';
+import { withFileLock } from './json-store.js';
 
 // ---- io adapter ที่ join เป็น sync ----
 // เอนจินบริสุทธิ์ (KanbanBoard/importScrivener/KeyStore) เรียก io.join(...) แบบ sync
@@ -32,6 +34,8 @@ export function syncIo() {
     listDirs: (p) => kapi.listDirs(p),
     move: (a, b) => kapi.move(a, b),
     remove: (p) => kapi.remove(p),
+    // [alpha.156] คิวของไฟล์ตัวเดียวกับ mutateJson — Kanban ใช้กันเขียน scenes.json ชนกับงานอื่น
+    withLock: (p, fn) => withFileLock(p, fn),
   };
 }
 
@@ -87,6 +91,9 @@ export async function listScenes(root, { withText = false } = {}) {
           if (withText) {
             try { row.text = (await kapi.exists(p)) ? await kapi.readFile(p) : ''; }
             catch { row.text = ''; }
+            // [alpha.149] เนื้อเรื่องล้วน (ไม่มี frontmatter) — ตัวนับคำ/ตัวส่งให้ AI ต้องใช้ตัวนี้
+            // เดิม `title:` `type: scene` `format: prose` ถูกนับเป็นคำและถูกส่งไปกินโควตาของ AI ทุกฉาก
+            try { row.body = parseMdFile(row.text).body; } catch { row.body = row.text; }
           }
           out.push(row);
         }

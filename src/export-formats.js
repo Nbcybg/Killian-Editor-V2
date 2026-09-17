@@ -11,6 +11,7 @@ import { num } from './num.js';
 import { PAGE_NUMBER_DEFAULTS } from './sp-format.js';
 // [alpha.132 ข้อ 6] เทมเพลตชื่อไฟล์ส่งออก (บริสุทธิ์เหมือนกัน — import ได้)
 import { buildExportName, DEFAULT_EXPORT_NAME } from './export-name.js';
+import { gi } from './icons.js';
 
 // ═══════════════════════ ส่วนบริสุทธิ์ (ไม่แตะ DOM / ไม่แตะ kapi) ═══════════════════════
 
@@ -23,25 +24,30 @@ import { buildExportName, DEFAULT_EXPORT_NAME } from './export-name.js';
  *  · `needScript` true = ใช้ได้เฉพาะเอกสารที่เป็นบทภาพยนตร์
  */
 export const EXPORT_FORMATS = [
-  { key: 'pdf',  ext: 'pdf',  icon: '📕', binary: true, preview: 'page',
+  { key: 'pdf',  ext: 'pdf',  icon: gi('file-pdf'), binary: true, preview: 'page',
     labelKey: 'ui.xhub.fPdf', descKey: 'ui.xhub.fPdfDesc' },
-  { key: 'html', ext: 'html', icon: '🌐', preview: 'html',
+  { key: 'html', ext: 'html', icon: gi('globe'), preview: 'html',
     labelKey: 'ui.xhub.fHtml', descKey: 'ui.xhub.fHtmlDesc' },
-  { key: 'md',   ext: 'md',   icon: '📝', preview: 'text',
+  { key: 'md',   ext: 'md',   icon: gi('note'), preview: 'text',
     labelKey: 'ui.xhub.fMd', descKey: 'ui.xhub.fMdDesc' },
   { key: 'txt',  ext: 'txt',  icon: '🅣', preview: 'text',
     labelKey: 'ui.xhub.fTxt', descKey: 'ui.xhub.fTxtDesc' },
-  { key: 'rtf',  ext: 'rtf',  icon: '📄', preview: 'text',
+  { key: 'rtf',  ext: 'rtf',  icon: gi('file'), preview: 'text',
     labelKey: 'ui.xhub.fRtf', descKey: 'ui.xhub.fRtfDesc' },
-  { key: 'fdx',  ext: 'fdx',  icon: '🎬', preview: 'text', needScript: true,
+  { key: 'fdx',  ext: 'fdx',  icon: gi('film'), preview: 'text', needScript: true,
     labelKey: 'ui.xhub.fFdx', descKey: 'ui.xhub.fFdxDesc' },
-  { key: 'blog', ext: 'html', icon: '📰', preview: 'info', handoff: true,
+  // [alpha.156] อีบุ๊ก + Word — ประกอบจากมาร์กดาวน์ของเวิร์กโฟลว์ด้วย md.js (export-ebook.js)
+  { key: 'epub', ext: 'epub', icon: gi('book-open'), binary: true, preview: 'text',
+    labelKey: 'ui.xhub.fEpub', descKey: 'ui.xhub.fEpubDesc' },
+  { key: 'docx', ext: 'docx', icon: gi('file'), binary: true, preview: 'text',
+    labelKey: 'ui.xhub.fDocx', descKey: 'ui.xhub.fDocxDesc' },
+  { key: 'blog', ext: 'html', icon: gi('news'), preview: 'info', handoff: true,
     labelKey: 'ui.xhub.fBlog', descKey: 'ui.xhub.fBlogDesc' },
-  { key: 'watermark', ext: 'pdf', icon: '💧', preview: 'info', handoff: true, needScript: true,
+  { key: 'watermark', ext: 'pdf', icon: gi('water'), preview: 'info', handoff: true, needScript: true,
     labelKey: 'ui.xhub.fWm', descKey: 'ui.xhub.fWmDesc' },
-  { key: 'zip',  ext: 'zip',  icon: '📦', preview: 'info', handoff: true,
+  { key: 'zip',  ext: 'zip',  icon: gi('package'), preview: 'info', handoff: true,
     labelKey: 'ui.xhub.fZip', descKey: 'ui.xhub.fZipDesc' },
-  { key: 'json', ext: 'json', icon: '🧾', preview: 'info', handoff: true,
+  { key: 'json', ext: 'json', icon: gi('receipt'), preview: 'info', handoff: true,
     labelKey: 'ui.xhub.fJson', descKey: 'ui.xhub.fJsonDesc' },
 ];
 

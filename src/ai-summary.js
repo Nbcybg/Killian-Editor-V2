@@ -4,6 +4,8 @@ import { $, el, state, setStatus, log } from './core.js';
 import { callAI, aiConfigured, getAISettings } from './ai-settings.js';
 import { listEntities } from './project-scan.js';
 import { hashText } from './num.js';
+import { parseMdFile } from './md.js';
+import { gi } from './icons.js';
 
 const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
@@ -12,7 +14,7 @@ const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots
 async function aiReady() {
   const r = await aiConfigured();
   if (r.ok) return true;
-  setStatus('❌ ' + r.why);
+  setStatus(gi('fail') + ' ' + r.why);
   return false;
 }
 
@@ -73,7 +75,8 @@ export async function collectProjectText(opts = {}) {
     if (j.chTitle && j.chTitle !== lastCh) { text += '### ' + j.chTitle + '\n'; lastCh = j.chTitle; }
     try {
       const raw = await kapi.readFile(j.file);
-      text += raw.slice(0, perScene) + '\n\n';
+      // [alpha.149] เนื้อเรื่องล้วน — frontmatter เคยกินโควตา 2,000 ตัวอักษรต่อฉากไปฟรี ๆ
+      text += parseMdFile(raw).body.slice(0, perScene) + '\n\n';
       scenes++;
     } catch { /* ไฟล์หาย/อ่านไม่ได้ → ข้าม */ }
     if (text.length > maxChars) break;               // เกินโควตา context แล้ว ไม่ต้องอ่านต่อ
@@ -260,7 +263,7 @@ export async function showAITitleSuggestions(currentTitle, callback, opts = {}) 
 
   const list = el('div', 'k-pick-list');
   for (const tt of titles) {
-    const row = el('div', 'k-menu-item', '📖 ' + tt);
+    const row = el('div', 'k-menu-item', gi('book-open') + ' ' + tt);
     row.onclick = () => { ov.remove(); callback(tt); };
     list.append(row);
   }

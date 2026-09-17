@@ -17,6 +17,7 @@ import { $, el, state, setStatus, log, smart } from '../core.js';
 import { parseMdFile, dumpMdFile } from '../md.js';
 import { listScenes, listEntities } from '../project-scan.js';
 import * as DC from './dialogue-core.js';
+import { gi } from '../icons.js';
 
 const S = () => (state._dialogue || (state._dialogue = {
   rows: null, names: [], scenes: [],
@@ -325,7 +326,7 @@ function rowEl(r) {
   d.append(who, ln, txt);
   if (!r.closed) {
     const warn = el('span', 'k-dlgp-warn');
-    warn.textContent = '⚠';
+    warn.textContent = gi('warning');
     warn.title = tt('ui.dialogue.unclosedHint');
     d.append(warn);
   }

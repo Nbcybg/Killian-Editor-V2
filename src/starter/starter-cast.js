@@ -24,6 +24,7 @@ import { suggestNames, starterText, sourceLabel } from './starter-names.js';
 import { shortcodeOf, mentionToken, normalizePrompts, isReserved, MENTION_ANY }
   from '../entity-mention.js';
 import { mentionField, promptFields, tagInput } from './starter-fields.js';
+import { gi } from '../icons.js';
 
 // ES module: ตัวแปรที่ reassign ข้ามไฟล์ไม่ได้ → เก็บใน object (กฎเหล็กข้อ 2 ใน AGENTS.md)
 const CAST_C = { editing: '' };
@@ -120,15 +121,15 @@ export async function renderCastStep(host, ctx) {
     const pic = el('div', 'st-cast-pic');
     const url = await imageUrl(s.slug, ch.image);
     if (url) { const im = el('img'); im.src = url; im.alt = ch.name || ''; pic.append(im); }
-    else pic.append(el('span', 'st-cast-noimg', '👤'));
+    else pic.append(el('span', 'st-cast-noimg', gi('user')));
     card.append(pic);
 
     const info = el('div', 'st-cast-info');
     info.append(el('div', 'st-cast-name', ch.name || t('ui.starter.castNoName')));
     const meta = [];
     if (ch.gender) meta.push((GENDERS.find((g) => g.id === ch.gender) || {}).label || '');
-    if (ch.wikiPath) meta.push('📚 ' + t('ui.starter.inWiki'));
-    if (adv) meta.push('🔖 ' + mentionToken(shortcodeOf(ch)));
+    if (ch.wikiPath) meta.push(gi('books') + ' ' + t('ui.starter.inWiki'));
+    if (adv) meta.push(gi('bookmark') + ' ' + mentionToken(shortcodeOf(ch)));
     if (meta.length) info.append(el('div', 'st-cast-meta', meta.join(' · ')));
     const desc = String(ch.persona || '').trim();
     info.append(el('div', 'st-cast-desc',
@@ -140,7 +141,7 @@ export async function renderCastStep(host, ctx) {
       info.append(tg);
     }
     // ตัวที่ยังไม่ได้ตั้งชื่อ = ตัวที่กันปุ่ม "เสร็จสิ้น" อยู่ → ต้องเห็นเหตุผลตรงนี้เลย
-    if (!charReady(ch)) info.append(el('div', 'st-cast-todo', '⚠ ' + t('ui.starter.castNeedName')));
+    if (!charReady(ch)) info.append(el('div', 'st-cast-todo', gi('warning') + ' ' + t('ui.starter.castNeedName')));
     card.append(info);
 
     const btns = el('div', 'st-cast-btns');
@@ -204,7 +205,7 @@ async function renderEditor(host, ctx, ch) {
   const save = () => { s.cast = upsertChar(s.cast, ch); ctx.save(); };
 
   const head = el('div', 'st-row-btns');
-  const back = el('button', 'st-back', '← ' + t('ui.starter.castBackToList'));
+  const back = el('button', 'st-back', gi('arrow-left') + ' ' + t('ui.starter.castBackToList'));
   back.onclick = async () => {
     CAST_C.editing = '';
     s.cast = pruneBlank(s.cast, '');       // เข้ามาแล้วไม่พิมพ์อะไรเลย = ไม่ต้องเหลือการ์ดเปล่าไว้

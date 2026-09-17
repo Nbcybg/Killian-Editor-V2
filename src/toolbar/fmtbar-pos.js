@@ -60,6 +60,22 @@ export function fmtBarTarget(o = {}) {
   const maxT = host.height - bar.height - pad;
   left = maxL < pad ? pad : Math.min(Math.max(pad, left), maxL);
   top = maxT < pad ? pad : Math.min(Math.max(pad, top), maxT);
+
+  // ══ [alpha.151 ข้อ 5] ★★ อยู่ในกรอบ `#content` ยังไม่พอ — ต้องอยู่ใน **หน้าต่าง** ด้วย ══
+  //
+  // ผู้ใช้: *"comment ใช้จาก float bar ไม่ได้ แต่ใช้จาก menu ได้"*
+  //
+  // เปิดแผงกระดาน/แผงข้างกว้าง ๆ แล้ว `#content` จะหดจนแคบกว่าตัวแถบ · ของเดิมพอเจอแบบนั้น
+  // ก็ปักไว้ที่ขอบซ้ายของ `#content` เฉย ๆ ซึ่งอาจอยู่ค่อนไปทางขวาของจอ → ครึ่งขวาของแถบ
+  // (ที่มีปุ่มบันทึกความเห็น/ค้นหา) ยื่นออกไปนอกจอ กดไม่โดนทั้งที่ยังเห็นปุ่มอยู่ครึ่งเดียว
+  //
+  // อยู่ในหน้าต่างสำคัญกว่าอยู่ในกรอบ — ล้นออกไปทับแผงข้างยังกดได้ ล้นออกนอกจอกดไม่ได้เลย
+  const fitWin = (v, size, hostEdge, vpSize) => {
+    const lo = pad - hostEdge, hi = vpSize - size - pad - hostEdge;
+    return hi >= lo ? Math.min(Math.max(v, lo), hi) : v;
+  };
+  if (vp.width > 0) left = fitWin(left, bar.width, host.left, vp.width);
+  if (vp.height > 0) top = fitWin(top, bar.height, host.top, vp.height);
   return { left: Math.round(left), top: Math.round(top), fallback: !useCursor };
 }
 
@@ -144,6 +160,37 @@ export function visibleHostBox(hostRect, viewport) {
   const bottom = Math.max(top, Math.min(hh, vh - ht));
   return { left, top, right, bottom };
 }
+
+/**
+ * ══ [alpha.151 ข้อ 5] ★★ กรอบที่ควรหนีบแถบเข้าไป — ทีละแกน ══
+ *
+ * ผู้ใช้: *"comment ใช้จาก float bar ไม่ได้ แต่ใช้จาก menu ได้"*
+ *
+ * ปกติหนีบเข้า "ส่วนที่มองเห็นได้ของ host" (`visibleHostBox`) ซึ่งถูกต้องเสมอ —
+ * **ยกเว้นตอนแถบใหญ่กว่ากรอบนั้น** เช่นเปิดแผงกระดานแล้ว `#content` เหลือกว้าง 300px
+ * ส่วนแถบกว้าง 1,400px · หนีบเข้า host ได้ผลลัพธ์ว่า "ชิดซ้ายของ host" ซึ่งอยู่กลางจอ
+ * แล้วครึ่งขวาของแถบ (ปุ่มบันทึกความเห็น · ค้นหา) ยื่นออกไปนอกจอ กดไม่โดน
+ *
+ * แกนไหนที่แถบใหญ่กว่ากรอบ ให้หนีบกับ **หน้าต่าง** แทน — ล้นไปทับแผงข้างยังกดได้
+ * ล้นออกนอกจอกดไม่ได้เลย · อีกแกนยังใช้กฎเดิมทุกประการ
+ *
+ * @returns กรอบในพิกัด **สัมพัทธ์กับ host** แบบเดียวกับที่ `clampBarInBox` รับ
+ */
+export function barClampBox(hostRect, bar, viewport) {
+  const hr = hostRect || {};
+  const hl = Number.isFinite(hr.left) ? hr.left : 0;
+  const ht = Number.isFinite(hr.top) ? hr.top : 0;
+  const vis = visibleHostBox(hr, viewport);
+  const vw = viewport && viewport.width > 0 ? viewport.width : 0;
+  const vh = viewport && viewport.height > 0 ? viewport.height : 0;
+  const bw = Math.max(0, (bar && bar.width) || 0);
+  const bh = Math.max(0, (bar && bar.height) || 0);
+  const out = { ...vis };
+  if (vw && bw > vis.right - vis.left) { out.left = -hl; out.right = vw - hl; }
+  if (vh && bh > vis.bottom - vis.top) { out.top = -ht; out.bottom = vh - ht; }
+  return out;
+}
+
 
 // ═══════ [alpha.117] จาง · ชิดขอบ · ล็อก — สามอย่างที่แทน "ปุ่มย่อ" ═══════
 //

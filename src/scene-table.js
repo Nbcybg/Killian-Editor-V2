@@ -3,6 +3,7 @@ import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { getVisualTags, renderVisualTagChips } from './visual-tags.js';
 import { statusColor } from './custom-status.js';
+import { gi } from './icons.js';
 
 export async function openSceneTable() {
   const key = '::scenetable::';
@@ -148,7 +149,7 @@ async function renderBody(wrap, filter) {
   for (const col of cols) {
     const th = el('th');
     th.style.width = col.w;
-    th.textContent = (col.key === _sortCol ? (_sortDir === 'asc' ? '▲ ' : '▼ ') : '') + col.label;
+    th.textContent = (col.key === _sortCol ? (_sortDir === 'asc' ? gi('triangle-up') + ' ' : gi('triangle-down') + ' ') : '') + col.label;
     th.style.cursor = 'pointer';
     th.onclick = () => {
       if (_sortCol === col.key) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
@@ -172,7 +173,7 @@ async function renderBody(wrap, filter) {
 
     // ชื่อ
     const tdTitle = el('td');
-    const icon = sc.type === 'memo' ? '📝 ' : sc.locked ? '🔒 ' : sc.flag ? '⭐ ' : '📄 ';
+    const icon = sc.type === 'memo' ? gi('note') + ' ' : sc.locked ? gi('lock') + ' ' : sc.flag ? gi('star') + ' ' : gi('file') + ' ';
     tdTitle.textContent = icon + (sc.title || '');
     if (sc.synopsis) tdTitle.title = sc.synopsis;
     row.append(tdTitle);

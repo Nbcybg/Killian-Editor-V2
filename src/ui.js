@@ -2,7 +2,8 @@
 
 // allowEmpty (alpha.60r2 ข้อ 12): ปกติ "ว่าง" = ยกเลิก — แต่บางช่อง (คำบรรยายรูป) ต้องลบให้ว่างได้
 // เปิดแล้ว: ตกลง → คืนสตริง (อาจว่าง) · ยกเลิก/Esc/คลิกนอกกล่อง → คืน null เหมือนเดิม
-import { t as tt, tf as ttf, t, tf } from './i18n.js';
+import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
+import { t as tt, tf as ttf, t, tf, shortcutText } from './i18n.js';
 import { splitSpeech, KIND_SPEECH } from './speech-split.js';
 /**
  * [alpha.124 ข้อ 15] ★ Esc ปิดกล่อง — ตัวช่วยกลางตัวเดียวของทั้งโปรแกรม
@@ -35,13 +36,29 @@ export function escClose(ov, onEsc) {
   return off;
 }
 
-export function ask(title, { placeholder = '', value = '', okLabel = tt('ui.common.msg3'), allowEmpty = false } = {}) {
+/**
+ * @param {object}  opts
+ * @param {boolean} opts.multiline [alpha.150] ช่องกรอกเป็นหลายบรรทัด (Enter = ขึ้นบรรทัดใหม่,
+ *                  Ctrl+Enter = ตกลง) — ใช้กับรายการสิ่งที่ต้องทำของกระดาน
+ */
+export function ask(title, { placeholder = '', value = '', okLabel = tt('ui.common.msg3'), allowEmpty = false,
+                             multiline = false } = {}) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
     const box = document.createElement('div'); box.className = 'k-dialog';
-    box.innerHTML = tt('ui.ui.cancel2');
+    box.innerHTML = `<div class="k-dlg-title"></div>
+      <input class="k-dlg-input">
+      <div class="k-dlg-btns"><button class="k-cancel">${tx('ui.common.cancel')}</button>
+      <button class="k-ok"></button></div>`;
     box.querySelector('.k-dlg-title').textContent = title;
-    const inp = box.querySelector('.k-dlg-input');
+    let inp = box.querySelector('.k-dlg-input');
+    if (multiline) {
+      const ta = document.createElement('textarea');
+      ta.className = inp.className + ' k-dlg-multi';
+      ta.rows = 10;
+      inp.replaceWith(ta);
+      inp = ta;
+    }
     inp.placeholder = placeholder; inp.value = value;
     box.querySelector('.k-ok').textContent = okLabel;
     ov.appendChild(box); document.body.appendChild(ov);
@@ -50,7 +67,10 @@ export function ask(title, { placeholder = '', value = '', okLabel = tt('ui.comm
     box.querySelector('.k-cancel').onclick = () => done(null);
     ov.onclick = (e) => { if (e.target === ov) done(null); };
     inp.onkeydown = (e) => {
-      if (e.key === 'Enter') done(allowEmpty ? inp.value.trim() : (inp.value.trim() || null));
+      // หลายบรรทัด: Enter เปล่า ๆ ต้องขึ้นบรรทัดใหม่ ไม่ใช่ปิดกล่อง
+      if (e.key === 'Enter' && (!multiline || e.ctrlKey || e.metaKey)) {
+        done(allowEmpty ? inp.value.trim() : (inp.value.trim() || null));
+      }
       if (e.key === 'Escape') done(null);
     };
     inp.focus(); inp.select();
@@ -61,7 +81,9 @@ export function confirmBox(title, okLabel = tt('ui.common.del')) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
     const box = document.createElement('div'); box.className = 'k-dialog';
-    box.innerHTML = tt('ui.ui.cancel');
+    box.innerHTML = `<div class="k-dlg-title"></div>
+      <div class="k-dlg-btns"><button class="k-cancel">${tx('ui.common.cancel')}</button>
+      <button class="k-ok k-danger"></button></div>`;
     box.querySelector('.k-dlg-title').textContent = title;
     box.querySelector('.k-ok').textContent = okLabel;
     ov.appendChild(box); document.body.appendChild(ov);
@@ -84,8 +106,25 @@ export function popupMenu(x, y, items) {
     d.className = 'k-menu-item' + (it.danger ? ' k-danger' : '') + (it.disabled ? ' k-menu-label' : '');
     // [alpha.124 ข้อ 20] `label` เป็น HTML (หลายรายการฝังไอคอน SVG) — รายการที่ข้อความ
     // มาจากผู้ใช้ (คำในเอกสาร · ชื่อไฟล์) ต้องส่งมาทาง `text` เพื่อลง textContent เท่านั้น
-    if (it.text !== undefined) d.textContent = it.text;
-    else d.innerHTML = it.label;
+    // [alpha.149] คีย์ลัดเป็น **คอลัมน์ชิดขวา** (แบบเมนูเบราว์เซอร์) — ห้ามต่อ "(Ctrl+…)" ท้ายป้ายอีก
+    //   `accel` = ข้อความคีย์ตรง ๆ (คีย์เฉพาะที่ เช่นของกระดาน) · `cmd` = id คำสั่ง → คีย์ที่ใช้งานจริง
+    //   (ตามที่ผู้ใช้ตั้งเอง · ⌘ บน mac) · ไม่มีคีย์ลัด = โครง DOM เหมือนเดิมทุกประการ
+    const accel = it.accel || (it.cmd ? shortcutText(it.cmd) : '');
+    let host = d;
+    if (accel) {
+      d.classList.add('k-menu-has-accel');
+      host = document.createElement('span');
+      host.className = 'k-menu-text';
+      d.appendChild(host);
+    }
+    if (it.text !== undefined) host.textContent = it.text;
+    else host.innerHTML = it.label;
+    if (accel) {
+      const k = document.createElement('span');
+      k.className = 'k-menu-accel';
+      k.textContent = accel;
+      d.appendChild(k);
+    }
     if (!it.disabled) d.onclick = () => { closeMenu(); it.click(); };
     m.appendChild(d);
   }

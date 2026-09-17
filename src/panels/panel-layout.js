@@ -9,6 +9,7 @@
 // spec: docs/08-panel-system.md
 
 import { t } from '../i18n.js';
+import { gi } from '../icons.js';
 let _uid = 0;
 const nid = (p = 'n') => `${p}${Date.now().toString(36)}${(_uid++).toString(36)}`;
 
@@ -509,6 +510,46 @@ export function dockChildOf(root, id) {
   });
   return hit;
 }
+/**
+ * ══ [alpha.154 ข้อ 1] ★★ ตรึงขนาดที่ผู้ใช้ "เห็นอยู่" ก่อนโครงเปลี่ยน ══
+ *
+ * ผู้ใช้: *"เมื่อย้าย panel แล้ว panel ถูกหด หรือขยายเอง"*
+ *
+ * ใน dock ที่มีแผงเอกสาร (โหมด px) แผงที่ **ไม่เคยถูกลากที่จับ** ไม่มี px ของตัวเอง
+ * จึงถูกวาดเป็น `flex-grow:<สัดส่วน>` แข่งกับแผงเอกสาร (`flex-grow:1`) — ขนาดของมันจึงเป็น
+ * "ส่วนแบ่งของพื้นที่ที่เหลือ" ซึ่งเปลี่ยนทุกครั้งที่มีแผงอื่นในแถวเดียวกันเปิด/ปิด/ย้ายเข้าออก
+ * (probe: เปิดแดชบอร์ด 640px แถวเดียวกัน → แผงโปรเจกต์ที่ไม่เคยลากหดเหลือ 107px)
+ *
+ * ทางแก้: ก่อนต้นไม้ใหม่ถูกใช้ ลูกของ dock โหมด px ที่ยังไม่มีขนาด → ตรึงด้วย **ขนาดบนจอตอนนี้**
+ * (ผู้ใช้เพิ่งลงมือเอง = เลย์เอาต์นิ่งและเห็นอยู่กับตา — เหตุผลเดียวกับ 66r5 ตอนปล่อยที่จับ)
+ * ไม่แตะ: ตัวยืด (สายแผงเอกสาร) · แผงแข็ง (พับ/ตายตัว) · ตัวที่มี px อยู่แล้ว · dock โหมดสัดส่วน ·
+ *         โหนดที่ไม่มีขนาดบนจอ (ยังไม่เคยวาด/ซ่อนหลังแท็บ/หน้าต่างย่อ)
+ * @param {object} root ต้นไม้ **ใหม่** (หลังเปลี่ยนโครง)
+ * @param {Record<string,{w:number,h:number}>} measured id ของโหนด → ขนาดบนจอก่อนเปลี่ยน
+ * @returns {object} root เดิมถ้าไม่มีอะไรต้องตรึง · ไม่งั้นสำเนาที่ตรึงแล้ว
+ */
+export function pinDockSizes(root, measured, isFixedPanel = () => false, docsId = 'docs') {
+  if (!root || !measured) return root;
+  const next = clone(root);
+  let changed = false;
+  walk(next, (n) => {
+    if (!n || n.type !== 'dock') return;
+    const fi = flexChildIndex(n, docsId);
+    if (fi < 0) return;                                   // โหมดสัดส่วน — ไม่มีตัวยืดให้แข่ง
+    const row = n.dir === 'row';
+    (n.children || []).forEach((c, i) => {
+      if (i === fi || nodeHidden(c) || nodeRigid(c, isFixedPanel)) return;
+      if (nodePxDeep(c, row) > 0) return;
+      const m = measured[c.id];
+      const v = m ? Math.round(row ? m.w : m.h) : 0;
+      if (!(v >= MIN_PANEL_PX)) return;
+      if (row) c.pxW = v; else c.pxH = v;
+      changed = true;
+    });
+  });
+  return changed ? next : root;
+}
+
 /** เขียนขนาด px ให้ลูกของ dock — updates = { <ดัชนีลูก>: px } */
 export function setDockPx(root, dockId, updates, row) {
   const next = clone(root);
@@ -709,10 +750,10 @@ export function tabGroupOf(root, panelId) {
 export const PANEL_BUTTONS = [
   // [alpha.66r3] เมนูแผง (☰) — Progressive Disclosure: คำสั่งลึก ๆ ของแผงอยู่หลังปุ่มนี้
   // เดิมมีแต่คลิกขวาบนหัวแผง ซึ่งไม่มีอะไรบอกว่ามีอยู่
-  { key: 'menu',     icon: '☰', title: t('ui.panelLayout.panel'),   action: 'panelMenu' },
-  { key: 'collapse', icon: '▾', title: t('ui.panelLayout.collapseExpand'), action: 'collapsePanel' },
+  { key: 'menu',     icon: gi('menu'), title: t('ui.panelLayout.panel'),   action: 'panelMenu' },
+  { key: 'collapse', icon: gi('caret-down'), title: t('ui.panelLayout.collapseExpand'), action: 'collapsePanel' },
   { key: 'float',    icon: '⧉', title: t('ui.panelLayout.float'), action: 'toggleFloat' },
-  { key: 'close',    icon: '✕', title: t('ui.panelLayout.closePanel'),   action: 'hidePanel' },
+  { key: 'close',    icon: gi('close'), title: t('ui.panelLayout.closePanel'),   action: 'hidePanel' },
 ];
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }

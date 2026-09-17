@@ -24,36 +24,36 @@ export const FAB_DISPLAY_LABELS = {
 
 /**
  * คำสั่งทั้งหมดที่เอาขึ้น FAB ได้
- * `cmd`/`args` = ช่องคำสั่งของ handleCommand · `icon` = ชื่อไอคอนใน icons.js
+ * `cmd`/`args` = ช่องคำสั่งของ handleCommand · ไอคอน = [alpha.147] ช่อง icon ของคำสั่งนั้นใน icons/commands.csv
  * `grp` = กลุ่มในกล่องตั้งค่า (create / write / view / file)
  */
 export const FAB_ACTIONS = [
-  { id: 'scene',     cmd: 'scene',        icon: 'file',         grp: 'create', labelKey: 'ui.fab.actScene' },
-  { id: 'chapter',   cmd: 'chapter',      icon: 'folder',       grp: 'create', labelKey: 'ui.fab.actChapter' },
-  { id: 'character', cmd: 'new-entity', args: ['characters'], icon: 'user',    grp: 'create', labelKey: 'ui.fab.actCharacter' },
-  { id: 'location',  cmd: 'new-entity', args: ['locations'],  icon: 'map',     grp: 'create', labelKey: 'ui.fab.actLocation' },
-  { id: 'item',      cmd: 'new-entity', args: ['items'],      icon: 'briefcase',    grp: 'create', labelKey: 'ui.fab.actItem' },
-  { id: 'lore',      cmd: 'new-entity', args: ['lore'],       icon: 'book-content', grp: 'create', labelKey: 'ui.fab.actLore' },
-  { id: 'memo',      cmd: 'memo',         icon: 'clipboard',    grp: 'create', labelKey: 'ui.fab.actMemo' },
-  { id: 'template',  cmd: 'new-from-template', icon: 'star',    grp: 'create', labelKey: 'ui.fab.actTemplate' },
+  { id: 'scene',     cmd: 'scene',        grp: 'create', labelKey: 'ui.fab.actScene' },
+  { id: 'chapter',   cmd: 'chapter',      grp: 'create', labelKey: 'ui.fab.actChapter' },
+  { id: 'character', cmd: 'new-entity', args: ['characters'], grp: 'create', labelKey: 'ui.fab.actCharacter' },
+  { id: 'location',  cmd: 'new-entity', args: ['locations'],  grp: 'create', labelKey: 'ui.fab.actLocation' },
+  { id: 'item',      cmd: 'new-entity', args: ['items'],      grp: 'create', labelKey: 'ui.fab.actItem' },
+  { id: 'lore',      cmd: 'new-entity', args: ['lore'],       grp: 'create', labelKey: 'ui.fab.actLore' },
+  { id: 'memo',      cmd: 'memo',         grp: 'create', labelKey: 'ui.fab.actMemo' },
+  { id: 'template',  cmd: 'new-from-template', grp: 'create', labelKey: 'ui.fab.actTemplate' },
 
-  { id: 'note',      cmd: 'scratchpad',   icon: 'note',         grp: 'write',  labelKey: 'ui.fab.actNote' },
-  { id: 'quicknote', cmd: 'quick-note',   icon: 'edit',         grp: 'write',  labelKey: 'ui.fab.actQuickNote' },
-  { id: 'search',    cmd: 'global-search', icon: 'search',      grp: 'write',  labelKey: 'ui.fab.actSearch' },
-  { id: 'quickopen', cmd: 'quick-open',   icon: 'book-open',    grp: 'write',  labelKey: 'ui.fab.actQuickOpen' },
-  { id: 'image',     cmd: 'insert-image', icon: 'image-add',    grp: 'write',  labelKey: 'ui.fab.actImage' },
+  { id: 'note',      cmd: 'scratchpad',   grp: 'write',  labelKey: 'ui.fab.actNote' },
+  { id: 'quicknote', cmd: 'quick-note',   grp: 'write',  labelKey: 'ui.fab.actQuickNote' },
+  { id: 'search',    cmd: 'global-search', grp: 'write',  labelKey: 'ui.fab.actSearch' },
+  { id: 'quickopen', cmd: 'quick-open',   grp: 'write',  labelKey: 'ui.fab.actQuickOpen' },
+  { id: 'image',     cmd: 'insert-image', grp: 'write',  labelKey: 'ui.fab.actImage' },
 
-  { id: 'dashboard', cmd: 'toggle-panel', args: ['dashboard'], icon: 'chart',  grp: 'view',   labelKey: 'ui.fab.actDashboard' },
-  { id: 'timeline',  cmd: 'toggle-panel', args: ['timeline'],  icon: 'history', grp: 'view',  labelKey: 'ui.fab.actTimeline' },
-  { id: 'maps',      cmd: 'toggle-panel', args: ['maps'],      icon: 'globe',  grp: 'view',   labelKey: 'ui.fab.actMaps' },
-  { id: 'kanban',    cmd: 'kanban',       icon: 'grid',         grp: 'view',   labelKey: 'ui.fab.actKanban' },
-  { id: 'gallery',   cmd: 'gallery',      icon: 'image',        grp: 'view',   labelKey: 'ui.fab.actGallery' },
-  { id: 'focus',     cmd: 'focus-mode',   icon: 'eye',          grp: 'view',   labelKey: 'ui.fab.actFocus' },
+  { id: 'dashboard', cmd: 'toggle-panel', args: ['dashboard'], grp: 'view',   labelKey: 'ui.fab.actDashboard' },
+  { id: 'timeline',  cmd: 'toggle-panel', args: ['timeline'],  grp: 'view',  labelKey: 'ui.fab.actTimeline' },
+  { id: 'maps',      cmd: 'toggle-panel', args: ['maps'],      grp: 'view',   labelKey: 'ui.fab.actMaps' },
+  { id: 'kanban',    cmd: 'kanban',       grp: 'view',   labelKey: 'ui.fab.actKanban' },
+  { id: 'gallery',   cmd: 'gallery',      grp: 'view',   labelKey: 'ui.fab.actGallery' },
+  { id: 'focus',     cmd: 'focus-mode',   grp: 'view',   labelKey: 'ui.fab.actFocus' },
 
-  { id: 'saveall',   cmd: 'save-all',     icon: 'save',         grp: 'file',   labelKey: 'ui.fab.actSaveAll' },
-  { id: 'snapshot',  cmd: 'backup-now',   icon: 'archive',      grp: 'file',   labelKey: 'ui.fab.actSnapshot' },
-  { id: 'export',    cmd: 'export-hub',   icon: 'book-content', grp: 'file',   labelKey: 'ui.fab.actExport' },
-  { id: 'settings',  cmd: 'settings',     icon: 'cog',          grp: 'file',   labelKey: 'ui.fab.actSettings' },
+  { id: 'saveall',   cmd: 'save-all',     grp: 'file',   labelKey: 'ui.fab.actSaveAll' },
+  { id: 'snapshot',  cmd: 'backup-now',   grp: 'file',   labelKey: 'ui.fab.actSnapshot' },
+  { id: 'export',    cmd: 'export-hub',   grp: 'file',   labelKey: 'ui.fab.actExport' },
+  { id: 'settings',  cmd: 'settings',     grp: 'file',   labelKey: 'ui.fab.actSettings' },
 ];
 
 /** กลุ่มในกล่องตั้งค่า (เรียงตามลำดับที่จะโชว์) */

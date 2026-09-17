@@ -15,6 +15,7 @@ import { currentProvider, providerById, providerList, complete, completeStream }
 import { aiConfigured } from '../ai-settings.js';
 import { PARAM_DEFS } from '../ai/ai-providers.js';
 import * as C from './builder-core.js';
+import { gi } from '../icons.js';
 
 // ────────────────────────────── สถานะของแผง ──────────────────────────────
 const S = {
@@ -288,7 +289,7 @@ function drawSession() {
 
   // ── หัว ──
   const head = el('div', 'dlgb-head');
-  const back = el('button', 'dlgb-back', '←');
+  const back = el('button', 'dlgb-back', gi('arrow-left'));
   back.title = t('ui.dlgb.backToList');
   back.onclick = async () => { await saveBuilderDirty(); S.view = 'list'; drawList(); };
   const title = el('div', 'dlgb-title', s.title || t('ui.dlgb.untitledRow'));
@@ -296,7 +297,7 @@ function drawSession() {
   const st = C.sessionStats(s);
   const badge = el('button', 'dlgb-ctx', tf('ui.dlgb.badge', st.spoken, st.total));
   badge.title = tf('ui.dlgb.badgeTip', st.calls, st.input, st.output, Math.round(st.ms / 100) / 10);
-  const eye = el('button', 'dlgb-eye' + (S.showThinking ? ' on' : ''), S.showThinking ? '🧠' : '💬');
+  const eye = el('button', 'dlgb-eye' + (S.showThinking ? ' on' : ''), S.showThinking ? gi('brain') : gi('chat'));
   eye.title = S.showThinking ? t('ui.dlgb.viewThinking') : t('ui.dlgb.viewNormal');
   eye.onclick = () => { S.showThinking = !S.showThinking; drawSession(); };
   const more = el('button', 'dlgb-more', '⋯');
@@ -365,10 +366,10 @@ function bubble(s, tn) {
                     + (tn.kind === C.KIND_USER ? ' dlgb-usertyped' : ''));
 
   const head = el('div', 'dlgb-bub-head');
-  if (isDir) head.append(el('span', 'dlgb-bub-name', '🎬 ' + t('ui.dlgb.director')));
+  if (isDir) head.append(el('span', 'dlgb-bub-name', gi('film') + ' ' + t('ui.dlgb.director')));
   else {
     head.append(el('span', 'dlgb-bub-name',
-                   (isMono ? '💭 ' : '') + (C.castName(s, tn.speaker) || t('ui.dlgb.unknown'))));
+                   (isMono ? gi('thought') + ' ' : '') + (C.castName(s, tn.speaker) || t('ui.dlgb.unknown'))));
     if (isMono) head.append(el('span', 'dlgb-bub-to', t('ui.dlgb.monoTag')));
     else {
       const to = C.castName(s, tn.listener);
@@ -376,7 +377,7 @@ function bubble(s, tn) {
     }
   }
   if (tn.inserted) {
-    const chk = el('span', 'dlgb-bub-ins', '✓');
+    const chk = el('span', 'dlgb-bub-ins', gi('checkmark'));
     chk.title = tf('ui.dlgb.insertedInto', tn.inserted.scene || '');
     head.append(chk);
   }
@@ -401,11 +402,11 @@ function bubble(s, tn) {
   // ปุ่มในฟอง
   const acts = el('div', 'dlgb-bub-acts');
   if (!isDir) {
-    acts.append(mkAct('↻', t('ui.dlgb.actReroll'), () => reroll(tn)));
+    acts.append(mkAct(gi('refresh-thin'), t('ui.dlgb.actReroll'), () => reroll(tn)));
   }
-  acts.append(mkAct('✎', t('ui.dlgb.actEdit'), () => editTurn(tn)));
-  acts.append(mkAct('⬇', t('ui.dlgb.actInsert'), () => insertTurn(tn)));
-  acts.append(mkAct('🗑', t('ui.dlgb.actDelete'), async () => {
+  acts.append(mkAct(gi('pencil-thin'), t('ui.dlgb.actEdit'), () => editTurn(tn)));
+  acts.append(mkAct(gi('arrow-down-thick'), t('ui.dlgb.actInsert'), () => insertTurn(tn)));
+  acts.append(mkAct(gi('trash'), t('ui.dlgb.actDelete'), async () => {
     S.cur.turns = S.cur.turns.filter((x) => x.id !== tn.id);
     touch(); await saveSession(); drawSession();
   }));
@@ -425,7 +426,7 @@ function pendingBubble() {
   const head = el('div', 'dlgb-bub-head');
   head.append(el('span', 'dlgb-bub-name', t('ui.dlgb.thinking')));
   head.append(el('span', 'dlgb-bub-elapsed', ''));
-  const stopBtn = el('button', 'dlgb-bub-stop', '⏹');
+  const stopBtn = el('button', 'dlgb-bub-stop', gi('stop'));
   stopBtn.type = 'button';
   stopBtn.title = t('ui.dlgb.stopHint');
   stopBtn.onclick = () => { if (kapi.httpAbort && S.reqId) kapi.httpAbort(S.reqId); };
@@ -492,7 +493,7 @@ function composer(s) {
     send(inp);
   };
   // [alpha.116 ข้อ 1] 💭 รำพึงคนเดียว — ตั้งช่อง "พูดกับ" เป็นตัวเองแล้วส่งในคลิกเดียว
-  const bMono = el('button', 'dlgb-mono-btn', '💭');
+  const bMono = el('button', 'dlgb-mono-btn', gi('thought'));
   bMono.title = t('ui.dlgb.monoTip');
   bMono.disabled = S.sending;
   bMono.onclick = () => {
@@ -501,7 +502,7 @@ function composer(s) {
     touch();
     send(inp);
   };
-  const bDir = el('button', 'dlgb-dir', '🎬');
+  const bDir = el('button', 'dlgb-dir', gi('film'));
   bDir.title = t('ui.dlgb.directorTip');
   bDir.onclick = () => directorNote();
   row.append(inp, bSend, bCont, bMono, bDir);
@@ -605,7 +606,7 @@ async function sendOne(s, pair) {
   // สตรีมสด — บทพูดไหลลงฟอง "กำลังคิด" ทีละก้อน ไม่ต้องรอ generate จบ
   const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId },
     (c) => updatePending({ text: c.text, thinking: c.thinkingAll }));
-  if (!res.ok) { setStatus('❌ ' + (res.error || t('ui.dlgb.errSend'))); return; }
+  if (!res.ok) { setStatus(gi('fail') + ' ' + (res.error || t('ui.dlgb.errSend'))); return; }
   const parsed = C.parseSpokenLine(res.text, req.cast.name, { aliases: req.cast.aliases });
   if (!parsed.text) { setStatus(t('ui.dlgb.emptyReply')); return; }
   s.turns.push(C.newTurn({
@@ -627,7 +628,7 @@ async function sendBatch(s) {
   // สตรีมสดเหมือนโหมดทีละคน — บทพูดไหลลงฟอง "กำลังคิด" ทีละก้อน
   const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId },
     (c) => updatePending({ text: c.text, thinking: c.thinkingAll }));
-  if (!res.ok) { setStatus('❌ ' + (res.error || t('ui.dlgb.errSend'))); return; }
+  if (!res.ok) { setStatus(gi('fail') + ' ' + (res.error || t('ui.dlgb.errSend'))); return; }
   const rows = C.parseBatch(s, res.text);
   if (!rows.length) { setStatus(t('ui.dlgb.emptyReply')); return; }
   const ms = Date.now() - t0;
@@ -890,7 +891,7 @@ async function castEditor(holder, onSave) {
     pron.value = c.selfPronoun;
     pron.title = t('ui.dlgb.selfPronTip');
     pron.onchange = () => { c.selfPronoun = pron.value.trim(); onSave(); };
-    const bDel = el('button', 'k-danger dlgb-cast-del', '✕');
+    const bDel = el('button', 'k-danger dlgb-cast-del', gi('close'));
     bDel.title = t('ui.dlgb.removeFromCast');
     bDel.onclick = () => { C.removeCast(holder, c.id); onSave(); draw(); };
     head.append(pron, bDel);

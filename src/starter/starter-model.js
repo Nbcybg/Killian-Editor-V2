@@ -17,6 +17,7 @@ import { t } from '../i18n.js';
 import { newCastMember } from '../dialogue/builder-core.js';
 import { normalizePrompts, expandMentions, migrateMentions } from '../entity-mention.js';
 import { htmlToPlain } from './starter-html.js';
+import { gi } from '../icons.js';
 
 // v1 → v2 = [alpha.122] โหมดพื้นฐาน/ขั้นสูง + ช่องขั้นสูงของตัวละครและของตอน
 // ไฟล์ v1 เปิดได้ทุกตัว: ช่องใหม่ทุกช่องมีค่าเริ่มต้นว่าง และโหมดตกกลับเป็น "พื้นฐาน"
@@ -31,9 +32,9 @@ export const IMAGE_DIR = 'images';            // รูปของ starter อ�
  * ค่านี้ถูกเขียนลง starter.json แล้วอ่านกลับ ถ้าเก็บคำไทยไว้ พอสลับภาษาไฟล์เก่าจะอ่านไม่ออก
  */
 export const GENDERS = [
-  { id: 'female', label: t('ui.starter.genderFemale'), icon: '♀' },
-  { id: 'male',   label: t('ui.starter.genderMale'),   icon: '♂' },
-  { id: 'other',  label: t('ui.starter.genderOther'),  icon: '⚧' },
+  { id: 'female', label: t('ui.starter.genderFemale'), icon: gi('gender-female') },
+  { id: 'male',   label: t('ui.starter.genderMale'),   icon: gi('gender-male') },
+  { id: 'other',  label: t('ui.starter.genderOther'),  icon: gi('gender-other') },
   { id: '',       label: t('ui.starter.genderUnset'),  icon: '–' },
 ];
 export function genderDef(id) { return GENDERS.find((g) => g.id === id) || GENDERS[3]; }
@@ -50,8 +51,8 @@ export function genderLabel(id) { return genderDef(id).label; }
 export const MODE_BASIC = 'basic';
 export const MODE_ADV = 'adv';
 export const MODES = [
-  { id: MODE_BASIC, icon: '🌱', label: t('ui.starter.modeBasic'), hint: t('ui.starter.modeBasicHint') },
-  { id: MODE_ADV,   icon: '⚙️', label: t('ui.starter.modeAdv'),   hint: t('ui.starter.modeAdvHint') },
+  { id: MODE_BASIC, icon: gi('leaf'), label: t('ui.starter.modeBasic'), hint: t('ui.starter.modeBasicHint') },
+  { id: MODE_ADV,   icon: gi('cog-e'), label: t('ui.starter.modeAdv'),   hint: t('ui.starter.modeAdvHint') },
 ];
 export function normMode(v) { return v === MODE_ADV ? MODE_ADV : MODE_BASIC; }
 export function isAdv(s) { return normMode(s && s.mode) === MODE_ADV; }

@@ -2,6 +2,7 @@
 import { t, tf } from './i18n.js';
 import { state, setStatus, el } from './core.js';
 import { escClose } from './ui.js';
+import { gi } from './icons.js';
 
 const NOTES_KEY = 'k2-session-notes';
 
@@ -85,12 +86,12 @@ export function renderFutureNotes(host, { onChanged = null, onOpenScene = null }
     body.append(el('div', 'fn-text', n.text));
     let when = '';
     try { when = new Date(n.timestamp).toLocaleDateString('th-TH'); } catch { when = ''; }
-    body.append(el('div', 'fn-meta', [n.sceneTitle && '📄 ' + n.sceneTitle, when].filter(Boolean).join(' · ')));
+    body.append(el('div', 'fn-meta', [n.sceneTitle && gi('file') + ' ' + n.sceneTitle, when].filter(Boolean).join(' · ')));
     if (n.sceneId && onOpenScene) {
       body.style.cursor = 'pointer';
       body.onclick = () => onOpenScene(n.sceneId, n.sceneTitle);
     }
-    const del = el('span', 'fn-del', '✕');
+    const del = el('span', 'fn-del', gi('close'));
     del.title = t('ui.notes.delNote');
     del.onclick = async (e) => { e.stopPropagation(); await removeSessionNote(n.id); if (onChanged) onChanged(); };
     row.append(chk, body, del);
@@ -156,11 +157,17 @@ export async function quickNote(sceneId, sceneTitle) {
 }
 
 // ดูโน้ตทั้งหมด
-export async function showAllNotes() {
-  const notes = [...getSessionNotes()].reverse();
+/**
+ * @param {{ids?: Set<string>|string[], title?: string}} [filter] [alpha.155] ดูเฉพาะโน้ตของเล่ม/บท/memo
+ *   (`ids` = sceneId ที่นับว่าเป็นของชิ้นนั้น — รวมโน้ตที่ติดกับฉากข้างใน)
+ */
+export async function showAllNotes(filter = null) {
+  const want = filter && filter.ids ? new Set(filter.ids) : null;
+  const notes = [...getSessionNotes()].filter((n) => !want || want.has(n.sceneId)).reverse();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', t('ui.notes.noteAll') + notes.length + ')'));
+  box.append(el('div', 'k-dlg-title',
+    (filter && filter.title ? filter.title + ' — ' : '') + t('ui.notes.noteAll') + notes.length + ')'));
   const list = el('div', 'k-pick-list'); list.style.maxHeight = '50vh';
   if (!notes.length) {
     list.append(el('div', 'dim', t('ui.notes.notHasNotePress')));
@@ -169,7 +176,7 @@ export async function showAllNotes() {
       const row = el('div', 'k-menu-item');
       row.style.cssText = 'flex-direction:column;align-items:stretch;gap:2px';
       // ข้อความโน้ตมาจากผู้ใช้ → textContent เท่านั้น
-      const body = el('div', null, (n.future ? (n.done ? '✅ ' : '📌 ') : '') + n.text.slice(0, 120));
+      const body = el('div', null, (n.future ? (n.done ? gi('check-circle') + ' ' : gi('pin') + ' ') : '') + n.text.slice(0, 120));
       body.style.fontSize = '12px';
       const sub = el('small', null,
         [n.sceneTitle, new Date(n.timestamp).toLocaleString('th-TH'),

@@ -1229,6 +1229,73 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
   check('[68r] กลุ่มจริง ๆ (เห็น 2 ใบ) ยังคิดแบบเดิม', PL.nodeRigid(gm) === false);
 }
 
+// ══ [alpha.154 ข้อ 1] ตรึงขนาดที่เห็นอยู่ก่อนโครงเปลี่ยน + ปั๊มเวลาให้ด่านกู้เซสชัน ══
+{
+  const mk = () => {
+    const row = PL.dock('row', [
+      PL.tabs([PL.panel('tree'), PL.panel('outline')], 0, 'grpL'),
+      { ...PL.panel('dashboard'), pxW: 640 },
+      PL.panel('docs'),
+    ], [0.16, 0.33, 0.51], 'rowD');
+    return PL.dock('col', [PL.panel('toolbar'), row, PL.panel('statusbar')], [0, 1, 0], 'colD');
+  };
+  const fixed = (id) => id === 'toolbar' || id === 'statusbar';
+  const m0 = { grpL: { w: 300, h: 700 }, dashboard: { w: 640, h: 700 }, docs: { w: 480, h: 700 }, toolbar: { w: 1400, h: 50 } };
+  const r1 = PL.pinDockSizes(mk(), m0, fixed);
+  const g1 = PL.nodeById(r1, 'grpL');
+  check('[154-1] ★ กลุ่มที่ยังไม่มีขนาด ถูกตรึงด้วยความกว้างบนจอ', g1.pxW === 300, JSON.stringify(g1));
+  check('[154-1] ตัวที่มี px อยู่แล้วไม่ถูกทับ', PL.nodeById(r1, 'dashboard').pxW === 640);
+  check('[154-1] แผงเอกสาร (ตัวยืด) ไม่ถูกตรึง', !PL.findPanel(r1, 'docs').pxW);
+  check('[154-1] แถบตายตัว/dock โหมดสัดส่วนไม่ถูกแตะ', !PL.findPanel(r1, 'toolbar').pxH && !PL.nodeById(r1, 'rowD').pxH);
+  const base = mk();
+  check('[154-1] ไม่มีขนาดบนจอ = คืนต้นไม้เดิม (ไม่สร้างสำเนา)', PL.pinDockSizes(base, {}, fixed) === base);
+  check('[154-1] เล็กกว่า MIN_PANEL_PX = ไม่ตรึง (ค่ามาจากเฟรมที่ยังไม่นิ่ง)',
+        !PL.nodeById(PL.pinDockSizes(mk(), { grpL: { w: 40, h: 700 } }, fixed), 'grpL').pxW);
+  const hid = PL.setPanelHidden(PL.setPanelHidden(mk(), 'tree', true), 'outline', true);
+  check('[154-1] โหนดที่ถูกซ่อนทั้งก้อนไม่ถูกตรึง', !PL.nodeById(PL.pinDockSizes(hid, m0, fixed), 'grpL').pxW);
+  const noDocs = PL.dock('row', [PL.panel('A'), PL.panel('B')], [0.5, 0.5], 'rr');
+  check('[154-1] dock ที่ไม่มีแผงเอกสาร (โหมดสัดส่วน) ไม่ถูกตรึง',
+        PL.pinDockSizes(noDocs, { A: { w: 300, h: 100 }, B: { w: 300, h: 100 } }) === noDocs);
+  const colDocs = PL.dock('col', [PL.panel('docs'), PL.panel('log')], [0.7, 0.3], 'cc');
+  check('[154-1] dock แนวตั้งที่มีแผงเอกสาร → ตรึงความสูง',
+        PL.findPanel(PL.pinDockSizes(colDocs, { log: { w: 500, h: 210 } }), 'log').pxH === 210);
+  // ย้ายแผงออกจากแถว: พี่น้องที่เหลือต้องได้ขนาดเดิม (อาการของผู้ใช้)
+  const moved = PL.pinDockSizes(PL.removePanel(mk(), 'dashboard'), m0, fixed);
+  check('[154-1] ★ ย้ายแผงหนึ่งออก พี่น้องที่ไม่เคยลากยังกว้างเท่าที่เห็น', PL.nodeById(moved, 'grpL').pxW === 300);
+
+  // PanelStore: ด่าน beforeUpdate + ข้ามตอนสวมเวิร์กสเปซ + ข้ามในหน้าต่างอ่านอย่างเดียว
+  const mem = new Map();
+  const st = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+  const S = new PS.PanelStore(st, 'k154');
+  let calls = 0;
+  S.beforeUpdate = (next) => { calls++; return { ...next, pinned: true }; };
+  S.update(PL.panel('A'));
+  check('[154-1] update() ใช้ต้นไม้ที่ด่านคืนมา', calls === 1 && S.root.pinned === true);
+  check('[154-1] ★ save() ปั๊ม k2-ls-ts', +mem.get(PS.LS_TS_KEY) > 0 && PS.LS_TS_KEY === 'k2-ls-ts');
+  mem.set(PS.LS_TS_KEY, '1');
+  S.save();
+  check('[154-1] ★★ เซฟค่าเดิมซ้ำ (เช่นตอนบูต) ไม่ปั๊มเวลา — ไม่งั้นของค้างดูใหม่กว่าไฟล์เซสชัน',
+        mem.get(PS.LS_TS_KEY) === '1', mem.get(PS.LS_TS_KEY));
+  S.applySnapshot({ root: PL.panel('B'), floats: [] });
+  check('[154-1] สวมเวิร์กสเปซไม่ผ่านด่านตรึงขนาด', calls === 1 && !S.root.pinned && S.root.id === 'B');
+  S.beforeUpdate = () => { throw new Error('boom'); };
+  S.update(PL.panel('C'));
+  check('[154-1] ด่านพัง = ใช้ต้นไม้เดิมต่อ ไม่ทำเลย์เอาต์ล่ม', S.root.id === 'C');
+  const R = new PS.PanelStore(st, 'k154r'); R.readOnly = true;
+  let rc = 0; R.beforeUpdate = (n) => { rc++; return n; };
+  R.update(PL.panel('D'));
+  check('[154-1] หน้าต่างอ่านอย่างเดียวไม่ผ่านด่าน (ไม่วัด DOM ของหน้าต่างอื่น)', rc === 0);
+
+  // SplitStore ก็ต้องปั๊มเวลาเหมือนกัน
+  const outS = tmp('_sl154.cjs');
+  esbuild.buildSync({ entryPoints: [path.join(__dirname, '../src/layout/split-layout.js')], outfile: outS, format: 'cjs', bundle: true, logLevel: 'silent' });
+  const SL = require(outS);
+  const mem2 = new Map();
+  const ss = new SL.SplitStore({ getItem: (k) => mem2.get(k) ?? null, setItem: (k, v) => mem2.set(k, v), removeItem: (k) => mem2.delete(k) }, 'sk154');
+  ss.update(null);
+  check('[154-1] SplitStore.save() ปั๊ม k2-ls-ts', +mem2.get('k2-ls-ts') > 0);
+}
+
 console.log(`\npanel: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

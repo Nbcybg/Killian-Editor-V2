@@ -7,6 +7,7 @@ import { resolveNetColors, resolveNetControls, controlsHint, buttonIndex,
 import { state } from './core.js';
 import { seedLayout, forceLayout, loadPositions, savePositions, clearPositions, nodeKey } from './network-layout.js';
 import { ensureAutoLink, getBacklinksFor } from './world-story/auto-link-ui.js';
+import { gi } from './icons.js';
 
 const CAT_ARR = ['characters','locations','items','lore','scene','chapter','book'];
 // [alpha.73 ข้อ 3] **ห้ามมีเลขสีในไฟล์นี้อีก** — ทุกสีมาจาก network-theme.js ที่เดียว
@@ -32,9 +33,9 @@ function edgeKey(a, b) { const x = nodeKey(a), y = nodeKey(b); return x < y ? x 
 
 // [alpha.71 ข้อ 3] โหมดเครื่องมือของผัง — แทน "ดับเบิลคลิกเท่านั้น" + "ลากได้ตลอดเวลา" แบบเดิม
 export const NET_TOOLS = [
-  { id: 'open', icon: '👆', label: tt('ui.common.openView'), hint: tt('ui.net.clickNodeOpenPage') },
-  { id: 'edit', icon: '✎', label: tt('ui.common.edit'), hint: tt('ui.net.clickNodeOpenPage2') },
-  { id: 'move', icon: '✥', label: tt('ui.common.movePos'), hint: tt('ui.net.dragNodeMovePos') },
+  { id: 'open', icon: gi('pointer'), label: tt('ui.common.openView'), hint: tt('ui.net.clickNodeOpenPage') },
+  { id: 'edit', icon: gi('pencil-thin'), label: tt('ui.common.edit'), hint: tt('ui.net.clickNodeOpenPage2') },
+  { id: 'move', icon: gi('move'), label: tt('ui.common.movePos'), hint: tt('ui.net.dragNodeMovePos') },
 ];
 
 function tagStyle(n) { for(const t of n.tags||[]){const v=visualTagFor(t);if(v)return v;} return null; }
@@ -44,9 +45,9 @@ function hexToRgba(hex, alpha){const h=hex.replace('#','');const r=parseInt(h.su
 // ── toolbar ──
 function buildToolbar(pane, cb) {
   const bar=document.createElement('div');bar.className='net-toolbar';
-  const tg=document.createElement('button');tg.className='net-tbar-toggle';tg.textContent='▼';tg.title=tt('ui.net.hide');
+  const tg=document.createElement('button');tg.className='net-tbar-toggle';tg.textContent=gi('triangle-down');tg.title=tt('ui.net.hide');
   const bd=document.createElement('div');bd.className='net-tbar-body';let col=false;
-  tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.textContent=col?'▶':'▼';};
+  tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.textContent=col?gi('play'):gi('triangle-down');};
   const ca=new Set(CAT_ARR.slice(0,4)),tf=new Set([...REL_TYPES.map(t=>t.key),'co-occur','scene-link','ent-scene']);
   const cr=document.createElement('div');cr.className='net-tbar-row';
   // ชิปหมวด: ชื่อ/คีย์มาจาก network-theme.js · สีถูกทาทีหลังโดย _paintToolbarColors()
@@ -60,7 +61,7 @@ function buildToolbar(pane, cb) {
   const si=document.createElement('input');si.type='text';si.className='net-tbar-input';si.placeholder=tt('ui.net.search');
   let tm;si.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>cb.search(si.value.trim()),200);};si.onkeydown=e=>{if(e.key==='Enter')cb.search(si.value.trim());};sw.appendChild(si);
   const gridRow=document.createElement('div');gridRow.className='net-tbar-row';
-  const gridBtn=document.createElement('button');gridBtn.className='net-tbar-btn net-tog on';gridBtn.textContent='📐';gridBtn.title=tt('ui.net.showGrid');
+  const gridBtn=document.createElement('button');gridBtn.className='net-tbar-btn net-tog on';gridBtn.textContent=gi('ruler');gridBtn.title=tt('ui.net.showGrid');
   const gridSize=document.createElement('input');gridSize.type='range';gridSize.className='net-grid-slider';gridSize.min='20';gridSize.max='120';gridSize.value='60';gridSize.title=tt('ui.net.sizeGridPx');
   gridBtn.onclick=()=>{cb.toggleGrid();gridBtn.classList.toggle('on');};
   gridSize.oninput=()=>{cb.setGridPx(Number(gridSize.value));gridSize.title=tt('ui.net.sizeGrid')+gridSize.value+'px';};
@@ -71,7 +72,7 @@ function buildToolbar(pane, cb) {
   // เดิมคลิกโหนดไม่ทำอะไร (ต้องดับเบิลคลิก) และลากได้ตลอดเวลา → เผลอลากทั้งผังโดยไม่ตั้งใจบ่อย
   const toolRow=document.createElement('div');toolRow.className='net-tbar-row net-tbar-tools';
   const lblBtn=document.createElement('button');
-  lblBtn.className='net-tbar-btn net-tog on net-lbl-btn';lblBtn.textContent='🔤';lblBtn.title=tt('ui.net.showItemFilmName');
+  lblBtn.className='net-tbar-btn net-tog on net-lbl-btn';lblBtn.textContent=gi('font');lblBtn.title=tt('ui.net.showItemFilmName');
   lblBtn.onclick=()=>{lblBtn.classList.toggle('on');cb.toggleLabels();};
   toolRow.appendChild(lblBtn);
   const sep=document.createElement('span');sep.className='net-tbar-sep';toolRow.appendChild(sep);
@@ -91,7 +92,7 @@ function buildToolbar(pane, cb) {
   toolRow.append(szLbl,size);
 
   const btns=document.createElement('div');btns.className='net-tbar-actions';
-  [{t:'🔄',ti:tt('ui.common.refresh'),f:cb.refresh},{t:'📌',ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout},{t:'🖼',ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'},{t:'🗺',ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog'},{t:'📥',ti:tt('ui.common.export'),f:cb.export},{t:'⤾',ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
+  [{t:gi('refresh'),ti:tt('ui.common.refresh'),f:cb.refresh},{t:gi('pin'),ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout},{t:gi('frame'),ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'},{t:gi('map'),ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog'},{t:gi('import'),ti:tt('ui.common.export'),f:cb.export},{t:'⤾',ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
   bd.append(cr,tr,toolRow,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
   return {bar,btns,toolRow,destroy:()=>bar.remove()};
 }
@@ -585,7 +586,7 @@ export class StoryNetwork {
     const zc=this._mode3D?this._viewZ():0;
     this._sb.textContent=ttf('ui.net.line', this.nodes.length, st, this.edges.length)+
       `X ${Math.round(c.x)} · Y ${Math.round(c.y)} · Z ${Math.round(zc)}`+
-      (this._mode3D?` · ↻ ${Math.round(this._rx*180/Math.PI)}°,${Math.round(this._ry*180/Math.PI)}°`:'')+
+      (this._mode3D?` · ${gi('refresh-thin')} ${Math.round(this._rx*180/Math.PI)}°,${Math.round(this._ry*180/Math.PI)}°`:'')+
       ttf('ui.net.zoom', Math.round(this._scale*100));
   }
 
@@ -802,7 +803,7 @@ export class StoryNetwork {
           addItem(tt('ui.net.findDisk'),()=>{try{this.onReveal(node.file);}catch{}});
         }
         if(node.cat)addItem(tt('ui.net.cat')+node.cat,()=>{},{dim:true});
-        if(node.desc)addItem('📝 '+(node.desc.length>50?node.desc.slice(0,49)+'…':node.desc),()=>{},{dim:true});
+        if(node.desc)addItem(gi('note') + ' '+(node.desc.length>50?node.desc.slice(0,49)+'…':node.desc),()=>{},{dim:true});
         if(node.tags&&node.tags.length)addItem(tt('ui.net.tag')+node.tags.join(', '),()=>{},{dim:true});
         if(node.relationships&&node.relationships.length){
           addItem(tt('ui.net.relation')+node.relationships.length+')…',()=>{
@@ -810,7 +811,7 @@ export class StoryNetwork {
             sm.style.cssText='position:fixed;left:'+(e.clientX+170)+'px;top:'+e.clientY+'px;z-index:81;background:var(--side);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.4);';
             for(const r of node.relationships.slice(0,15)){
               const sd=document.createElement('div');sd.className='k-menu-item';
-              sd.textContent=(this._edgeCol[r.type]?'⬤ ':'')+(r.targetName||r.target||'?')+' — '+(r.role||'');
+              sd.textContent=(this._edgeCol[r.type]?gi('circle-solid') + ' ':'')+(r.targetName||r.target||'?')+' — '+(r.role||'');
               sd.style.color=this._edgeCol[r.type]||'inherit';
               sd.onclick=()=>{document.body.removeChild(sm);};
               sm.appendChild(sd);

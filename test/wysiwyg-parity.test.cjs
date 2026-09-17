@@ -129,6 +129,18 @@ function docKinds(doc) {
         MD.inlineHtml('<span style="color:#ff0000">แดง</span>'));
   check('★ โหมดขาวดำทิ้งสีแต่เก็บข้อความครบ',
         MD.inlineHtml('<span style="color:#ff0000">แดง</span>', { mono: true }) === 'แดง');
+  // ── [alpha.150] สีเน้นข้อความ: ต้องเดินทางเดียวกับสีตัวอักษรทุกช่วง ──
+  const HL = '<mark style="background:#fff3a3">เน้น</mark>';
+  check('★ สีเน้นข้อความกลายเป็นพื้นสีจริง', MD.inlineHtml(HL) === HL, MD.inlineHtml(HL));
+  check('★ โหมดขาวดำทิ้งสีเน้นแต่เก็บข้อความครบ',
+        MD.inlineHtml(HL, { mono: true }) === 'เน้น');
+  const HLC = '<mark style="background:#fff3a3"><span style="color:#ff0000">**ทั้งสาม**</span></mark>';
+  check('★ สีเน้น + สีตัวอักษร + ตัวหนา ซ้อนกันได้ครบทั้งสามชั้น',
+        MD.inlineHtml(HLC) === '<mark style="background:#fff3a3"><span style="color:#ff0000"><strong>ทั้งสาม</strong></span></mark>',
+        MD.inlineHtml(HLC));
+  // เขียนกลับแล้วต้องได้ไฟล์เดิมเป๊ะ (ไม่งั้นบันทึกสองรอบไฟล์ไม่เหมือนเดิม)
+  check('★ สีเน้น: .md → doc → .md ได้ของเดิม',
+        MD.docToMd(MD.mdToDoc(HLC)).trim() === HLC, MD.docToMd(MD.mdToDoc(HLC)).trim());
 }
 
 // ───────── 3. mdToHtmlBody: ทุกอย่างข้างบนต้องไปถึงไฟล์ที่ส่งออก ─────────
@@ -248,6 +260,61 @@ function docKinds(doc) {
         !/h1\+p[^{]*\{text-indent:0\}/.test(on.replace(/\s*\{\s*/g, '{')), '');
   check('★ ย่อหน้าปกติยังได้ระยะย่อตามที่ตั้ง',
         file.includes('text-indent:0.5in'), '');
+}
+
+// ───────── [alpha.149] ตัวแปลง path รูป (`imgSrc`) ─────────
+// HTML ของนิยายถูกวางที่อื่นเสมอ (โหมดอ่าน · ช่องตัวอย่าง · ไฟล์ชั่วคราวของ PDF) — path สัมพัทธ์กับไฟล์ฉาก
+// จึงชี้ผิดที่ · ผู้เรียกส่งตัวแปลงมาได้ แต่ **ไม่ส่ง = ผลเดิมทุกตัวอักษร**
+{
+  const md = '![รูป](../../../../../Images/sunset.png "w=60%")';
+  const plain = C.mdToHtmlBody(md);
+  check('[149] ไม่ส่ง imgSrc = src เดิมทุกตัวอักษร', plain.includes('src="../../../../../Images/sunset.png"'), plain);
+  const hooked = C.mdToHtmlBody(md, { imgSrc: (s) => 'file:///R/Images/' + s.split('/').pop() });
+  check('[149] ★ ส่ง imgSrc = src ผ่านตัวแปลงของผู้เรียก', hooked.includes('src="file:///R/Images/sunset.png"'), hooked);
+  check('[149] ★ ตัวแปลงไม่แตะโครง figure (คลาส · สไตล์ · alt เดิม)',
+        hooked.replace(/src="[^"]*"/, '') === plain.replace(/src="[^"]*"/, ''), hooked + ' vs ' + plain);
+  const full = C.mdToHtml(md, 't', null, null, null, { imgSrc: () => 'X.png' });
+  check('[149] mdToHtml ส่ง imgSrc ต่อถึงเนื้อเอกสาร', full.includes('src="X.png"'), '');
+  let wfText = '';
+  try {
+    const wf = C.runWorkflow({ title: 't', author: '', chapters: [{ title: 'c', scenes: [
+      { title: 's', body: md, type: 'scene', format: 'prose' }] }] },
+      { ext: 'html', steps: [{ key: 'to-html', on: true }] }, { imgSrc: () => 'Y.png' });
+    wfText = String(wf && wf.text);
+  } catch (e) { wfText = 'THROW ' + e.message; }
+  check('[149] ★ runWorkflow ขั้น to-html ใช้ imgSrc ที่ผู้เรียกส่งมา', wfText.includes('src="Y.png"'), wfText.slice(0, 300));
+}
+
+// ───────── [alpha.149] ระยะบรรทัดของหัวข้อ = กฎคู่แฝด จอ ↔ ไฟล์ ─────────
+// ตัวแก้ไขได้ 1.3 จาก style.css แต่ไฟล์ไม่เคยตั้ง → รับ 1.75 ของเนื้อความ (H1 สูงกว่าจอ 14.4px)
+// และช่องตัวอย่างวัดกับวาดคนละค่า → เส้นตัดหน้าเฉือนรูป/ตัวหนังสือ
+{
+  const fsx = require('fs');
+  const css = fsx.readFileSync(path.join(__dirname, '..', 'renderer', 'style.css'), 'utf8');
+  const m = css.match(/\.ProseMirror h1,\s*\.ProseMirror h2[^{]*\{[^}]*line-height:([0-9.]+)/);
+  const want = PF.HEADING_LINE_HEIGHT;
+  check('[149] ตัวแก้ไข (style.css) ตั้ง line-height ของหัวข้อ = HEADING_LINE_HEIGHT',
+        !!m && +m[1] === want, m ? m[1] : 'ไม่เจอกฎ');
+  const fmt = PF.mergeProseFormat({});
+  const file = PF.proseExportCss(fmt);
+  const screen = PF.proseCss(fmt, '.X');
+  const lhOf = (src, lv, pre) => {
+    // ไม่รับ "," นำหน้า — `p,h1,…,h6{white-space:…}` เป็นกฎรวม ไม่ใช่กฎของหัวข้อระดับนั้น
+    const r = new RegExp('(^|[};\\s])' + pre + 'h' + lv + '\\{([^}]*)\\}');
+    const g = src.match(r);
+    const v = g && g[2].match(/line-height:([0-9.]+)/);
+    return v ? +v[1] : null;
+  };
+  for (let lv = 1; lv <= 6; lv++) {
+    check('[149] ★ h' + lv + ': ไฟล์ = จอ = ' + want,
+          lhOf(file, lv, '') === want && lhOf(screen, lv, '\\.X ') === want,
+          lhOf(file, lv, '') + ' / ' + lhOf(screen, lv, '\\.X '));
+  }
+  // กฎหน้ากระดาษของโปรแกรมต้องไม่ถึงเอกสารของช่องตัวอย่าง (ตัววัดอยู่นอกแผ่น กฎพวกนี้ไม่ถึง)
+  const leak = css.split('}').filter((r) => /\.sp-pageview \.ed-page [^{]*(h1|blockquote|hr|\bp\b)/.test(r)
+                                        && !/:not\(\.k-xpv-doc \*\)/.test(r));
+  check('[149] ★ กฎ .sp-pageview .ed-page ของเนื้อหาไม่รั่วเข้าเอกสารตัวอย่าง (.k-xpv-doc)', leak.length === 0,
+        leak.map((x) => x.trim().slice(0, 80)).join(' | '));
 }
 
 console.log(NL + 'wysiwyg-parity: ' + pass + ' passed, ' + fail + ' failed');

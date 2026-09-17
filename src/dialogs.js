@@ -1,5 +1,6 @@
 // dialogs.js — กล่องโต้ตอบ: ตั้งค่าโปรเจกต์ · ประวัติเวอร์ชัน · changelog · ตัวดู log
 import { tf } from './i18n.js';
+import { settingsTemplate } from './settings-template.js';   // [alpha.154] โครงกล่องตั้งค่าออกจากไฟล์ภาษา
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
          applyProseVars, proseFormat, applyPaperVars, renderPaperSheets,
@@ -36,7 +37,7 @@ import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
 // [alpha.135] ส่วน "อัปเดตโปรแกรม" ในแท็บ อัตโนมัติ — สร้างด้วยโค้ด (ปุ่ม/ค่าจริง ไม่ใช่ HTML ตายตัว)
 import { buildUpdateFields } from './update/update-ui.js';
-import { iconHtml } from './icons.js';
+import { iconHtml, initIcons, gi } from './icons.js';
 // [alpha.140] หัวข้อ "แผงนำทาง" ในตั้งค่าโปรเจกต์ — กติกาแบ่งหน้า/คำอธิบายสัญลักษณ์อยู่ที่นี่ที่เดียว
 import { clampPerPage, NAV_FLAG_DEFS } from './nav-model.js';
 // [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
@@ -275,7 +276,8 @@ export function settingsDialog(openTab, opts = {}) {
     langFonts: migrateSpThai(s.langFonts, s.spThaiFont).rows,
     // [alpha.58r บั๊ก 5] ช่วงบรรทัดบท + ช่องว่างคั่นหน้าในโหมดจัดหน้า
     spLineHeight: Number.isFinite(+s.spLineHeight) ? +s.spLineHeight : 1,
-    spPageGap: parseInt(s.spPageGap, 10) || 28,
+    // [alpha.156] กฎ 20 — `|| 28` ทำให้ตั้งระยะห่างเป็น 0 ไม่ได้ (0 เป็น falsy)
+    spPageGap: (() => { const v = parseInt(s.spPageGap, 10); return Number.isFinite(v) && v >= 0 ? v : 28; })(),
   };
 
   // [alpha.137] ธีมสีของโปรแกรม — พรีวิวสดตอนเลือก จึงต้องจำของเดิมไว้คืนตอนกดยกเลิก
@@ -284,13 +286,15 @@ export function settingsDialog(openTab, opts = {}) {
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-settings');
-  box.innerHTML = tf('ui.dlg.alphaItemLevelUser', t('settings.title'), t('settings.general'), t('settings.writing'), t('settings.automation'), t('settings.language'), t('settings.shortcuts'), t('settings.projectName'), t('settings.author'), t('settings.autoSaveMinutes'), t('settings.autoSaveHint'), t('settings.autoBackup'), t('settings.maxBackups'), t('settings.maxBackupsHint'), t('settings.dailyGoal'), t('settings.projectGoal'), t('settings.fontFamily'), t('settings.fontFamilyHint'), t('settings.spFontFamily'), t('settings.spFontFamilyHint'), t('settings.lineNumbers'), t('settings.lineNumbersHint'), t('settings.spellCheck'), t('settings.spellCheckHint'), t('settings.spellCheckDict'), t('settings.spellCheckDictHint'), t('settings.autoMention'), t('settings.autoMentionHint'), t('settings.recycleDays'), t('settings.recycleDaysHint'), t('settings.focusDim'), t('settings.focusDimHint'), t('ui.settings.uiScale'), t('ui.settings.uiScaleHint'), iconHtml('cloud-lightning', 14), t('settings.autoSync'), t('settings.autoSyncHint'), t('settings.languageSelect'), t('ui.dlg.langReadNameFile'), t('ui.dlg.exportFileCSV'), t('ui.dlg.openFolderLang'), t('ui.dlg.loadFileLangNew2'), t('settings.shortcutsHint'), t('dialogs.cancel'), t('dialogs.save'));
+  box.innerHTML = settingsTemplate([t('settings.title'), t('settings.general'), t('settings.writing'), t('settings.automation'), t('settings.language'), t('settings.shortcuts'), t('settings.projectName'), t('settings.author'), t('settings.autoSaveMinutes'), t('settings.autoSaveHint'), t('settings.autoBackup'), t('settings.maxBackups'), t('settings.maxBackupsHint'), t('settings.dailyGoal'), t('settings.projectGoal'), t('settings.fontFamily'), t('settings.fontFamilyHint'), t('settings.spFontFamily'), t('settings.spFontFamilyHint'), t('settings.lineNumbers'), t('settings.lineNumbersHint'), t('settings.spellCheck'), t('settings.spellCheckHint'), t('settings.spellCheckDict'), t('settings.spellCheckDictHint'), t('settings.autoMention'), t('settings.autoMentionHint'), t('settings.recycleDays'), t('settings.recycleDaysHint'), t('settings.focusDim'), t('settings.focusDimHint'), t('ui.settings.uiScale'), t('ui.settings.uiScaleHint'), iconHtml('cloud-lightning', 14), t('settings.autoSync'), t('settings.autoSyncHint'), t('settings.languageSelect'), t('ui.dlg.langReadNameFile'), t('ui.dlg.exportFileCSV'), t('ui.dlg.openFolderLang'), t('ui.dlg.loadFileLangNew2'), t('settings.shortcutsHint'), t('dialogs.cancel'), t('dialogs.save')]);
+  initIcons(box);   // [alpha.147] ไอคอนหัวกลุ่มเมนูตั้งค่าเป็น data-icon ในเทมเพลต (ไม่ใช่อีโมจิในข้อความแล้ว)
   ov.appendChild(box); document.body.appendChild(ov);
 
   const q = (id) => box.querySelector(id);
   // ══ [alpha.140] หัวข้อ "แผงนำทาง" — สร้างจาก JS ไม่ใช่จากเทมเพลตก้อนใหญ่ ══
-  // เหตุผล: เทมเพลตของกล่องนี้เป็นสตริงเดียวยาว 26KB ในไฟล์ภาษา — เพิ่มช่องทีไรต้องไปแก้ CSV
-  // ทั้งแถว ซึ่งพังง่ายและ diff อ่านไม่ออก · หัวข้อใหม่ตั้งแต่นี้ไปประกอบเป็น DOM ตรง ๆ
+  // เหตุผล (ตอนนั้น): เทมเพลตของกล่องนี้เป็นสตริงเดียวยาว 26KB ในไฟล์ภาษา
+  // [alpha.154] โครงย้ายมาอยู่ `settings-template.js` แล้ว (ข้อความเป็นคีย์ `ui.setTpl.*`) —
+  // เพิ่มช่องใหม่แก้ที่เทมเพลตนั้นได้ตรง ๆ หรือประกอบเป็น DOM แบบหัวข้อนี้ก็ได้
   {
     const navList = box.querySelector('.k-set-nav');
     const navMain = box.querySelector('.k-set-main');
@@ -892,7 +896,7 @@ export function settingsDialog(openTab, opts = {}) {
       const accel = el('span', 'k-key-accel', spKeyLabel(W.keys[dir]));
       row.append(accel);
       const edit = el('button', 'k-key-btn', t('ui.dlg.change'));
-      const reset = el('button', 'k-key-btn', '↺');
+      const reset = el('button', 'k-key-btn', gi('rotate-left'));
       reset.title = t('ui.dlg.restoreDefault');
       edit.onclick = () => {
         accel.textContent = t('ui.dlg.pressBtnNeed'); accel.classList.add('rec');
@@ -1078,9 +1082,9 @@ export function settingsDialog(openTab, opts = {}) {
       sz.oninput = () => { row.size = parseFloat(sz.value) || 100; previewFonts(); };
       r.append(sz, el('span', 'k-hint', '%'));
       // ลำดับ + ลบ
-      const up = el('button', 'k-key-btn', '↑'); up.title = t('ui.common.scroll');
+      const up = el('button', 'k-key-btn', gi('arrow-up')); up.title = t('ui.common.scroll');
       up.onclick = () => { if (i > 0) { const [x] = W.langFonts.splice(i, 1); W.langFonts.splice(i - 1, 0, x); renderFonts(); previewFonts(); } };
-      const del = el('button', 'k-danger-btn', '✕');
+      const del = el('button', 'k-danger-btn', gi('close'));
       del.onclick = () => { W.langFonts.splice(i, 1); renderFonts(); previewFonts(); };
       r.append(up, del);
       fontsHost.append(r);
@@ -1192,7 +1196,7 @@ export function settingsDialog(openTab, opts = {}) {
         accelText(r.cur.code, r.cur.ctrl, r.cur.shift));
       row.append(accel);
       const edit = el('button', 'k-key-btn', t('dialogs.edit'));
-      const reset = el('button', 'k-key-btn', '↺');
+      const reset = el('button', 'k-key-btn', gi('rotate-left'));
       reset.title = t('dialogs.reset');
       reset.style.visibility = workKeys[r.id] ? 'visible' : 'hidden';
       edit.onclick = () => {

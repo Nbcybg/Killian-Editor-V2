@@ -2,6 +2,7 @@
 // แยกจาก src/thesaurus.js เดิม (ซึ่งเป็น UI ของ K1 เก่า — ไฟล์นี้เป็น UI ใหม่สำหรับ tools/thesaurus.js)
 import { el, setStatus, state, t, log } from '../core.js';
 import { getSynonyms, getAntonyms } from '../tools/thesaurus.js';
+import { gi } from '../icons.js';
 
 // แสดง popup คำพ้อง/คำตรงข้าม
 export async function showThesaurusPopup(word, x, y) {
@@ -55,7 +56,7 @@ export async function showThesaurusPopup(word, x, y) {
       pop.append(item);
     }
   }
-  const close = el('div', 'k-thes-close', '✕');
+  const close = el('div', 'k-thes-close', gi('close'));
   close.onclick = () => pop.remove();
   pop.append(close);
   document.body.append(pop);

@@ -1,14 +1,17 @@
 // home-ui.js — หน้า Home แสดงรายการโปรเจกต์ทั้งหมดแบบ Grid (เหมือน Notion)
+import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t } from './i18n.js';
 import { $, el, state, setStatus, log, t as tr } from './core.js';
 import { activate, closeTab, loadProject, newProject } from './app.js';
 // [alpha.60r3 ข้อ 9] ปุ่มส่งออก/นำเข้าโปรเจกต์บนหน้าแรก
 import { exportProjectZip, importProjectZip } from './export-zip.js';
+import { initIcons, gi } from './icons.js';
+import { fileUrlFromPath } from './file-url.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
 export const HOME_VIEWS = [
-  { id: 'card', icon: '▦', label: t('ui.home.card') },
-  { id: 'list', icon: '☰', label: t('ui.common.list2') },
+  { id: 'card', icon: gi('grid'), label: t('ui.home.card') },
+  { id: 'list', icon: gi('menu'), label: t('ui.common.list2') },
 ];
 /** โหมดที่ผู้ใช้เลือกไว้ล่าสุด (localStorage) — ค่าที่อ่านไม่รู้จักถือเป็น 'card' */
 export function homeView() {
@@ -235,7 +238,7 @@ export async function scanRecentProjects() {
 export function createBrokenCard(row, onChanged) {
   const card = el('div', 'home-card home-card-broken');
   card.dataset.search = String(row.root || '').toLowerCase();
-  card.append(el('div', 'home-card-title', '⚠ ' + t('ui.home.brokenTitle')));
+  card.append(el('div', 'home-card-title', gi('warning') + ' ' + t('ui.home.brokenTitle')));
   const pathEl = el('div', 'home-broken-path', row.root);
   pathEl.title = row.root;
   card.append(pathEl);
@@ -267,7 +270,14 @@ async function loadProjects(grid) {
     const { ok, broken } = await scanRecentProjects();
     if (!ok.length && !broken.length) {
       const empty = el('div', 'home-empty');
-      empty.textContent = t('ui.home.notHasProjectNew');   // กฎข้อ 11: ข้อความ ไม่ใช่ HTML
+      // [alpha.147] ค่าในไฟล์ภาษาเป็น HTML (<h2>…<p>…) มาตั้งแต่ยกข้อความออกจากโค้ด — textContent
+      // โชว์แท็กดิบ ๆ บนหน้าแรก · ไฟล์ภาษาเป็นของโปรแกรมเอง (เหมือนเทมเพลตกล่องตั้งค่า) จึงใส่เป็น HTML ได้
+      empty.innerHTML = `
+        <div class="home-empty-icon" data-icon="book-content" data-icon-size="64"></div>
+        <h2>${tx('ui.home.notHasProject')}</h2>
+        <p>${tx('ui.home.newProjectFirstYours')}</p>
+      `;
+      initIcons(empty);
       grid.append(empty);
       return;
     }
@@ -291,11 +301,12 @@ export function createProjectCard(project, onOpen) {
   const cover = el('div', 'home-card-cover');
   if (project.cover) {
     const img = el('img', 'home-card-img');
-    img.src = 'file://' + project.root.replace(/\\/g, '/') + '/' + project.cover;
-    img.onerror = () => { cover.innerHTML = '<div class="home-card-cover-ph">📖</div>'; };
+    // [alpha.148] เดิมต่อ 'file://' เอง → โฟลเดอร์ชื่อมี # ? % (เช่น "นิยาย #2") รูปไม่ขึ้น · Windows ได้ URL ผิดรูป
+    img.src = fileUrlFromPath(String(project.root).replace(/[\\/]+$/, '') + '/' + project.cover);
+    img.onerror = () => { cover.innerHTML = '<div class="home-card-cover-ph">' + gi('book-open') + '</div>'; };
     cover.append(img);
   } else {
-    cover.append(el('div', 'home-card-cover-ph', '📖'));
+    cover.append(el('div', 'home-card-cover-ph', gi('book-open')));
   }
   
   // เนื้อหาการ์ด
@@ -311,9 +322,9 @@ export function createProjectCard(project, onOpen) {
   // สถิติ
   const stats = el('div', 'home-card-stats');
   const statItems = [
-    { icon: '📄', label: t('ui.common.scene2'), val: project.totalScenes },
-    { icon: '📁', label: t('ui.common.chapter'), val: project.totalChapters },
-    { icon: '📝', label: t('ui.common.word2'), val: project.totalWords.toLocaleString() },
+    { icon: gi('file'), label: t('ui.common.scene2'), val: project.totalScenes },
+    { icon: gi('folder'), label: t('ui.common.chapter'), val: project.totalChapters },
+    { icon: gi('note'), label: t('ui.common.word2'), val: project.totalWords.toLocaleString() },
   ];
   for (const s of statItems) {
     const si = el('span', 'home-stat');
@@ -337,7 +348,7 @@ export function createProjectCard(project, onOpen) {
   const pathTxt = el('span', 'home-card-pathtxt', project.root);
   pathTxt.title = project.root;
   pathRow.append(pathTxt);
-  const reveal = el('button', 'home-card-pathbtn', '📂');
+  const reveal = el('button', 'home-card-pathbtn', gi('folder-open'));
   reveal.title = t('ui.home.revealInOS');
   reveal.onclick = (e) => { e.stopPropagation(); kapi.revealInOS(project.root).catch(() => {}); };
   const copy = el('button', 'home-card-pathbtn', '⧉');
@@ -422,7 +433,11 @@ async function loadPanelProjects(grid, onOpen) {
   try {
     const { ok, broken } = await scanRecentProjects();
     if (!ok.length && !broken.length) {
-      grid.append(el('div', 'home-empty', el('p', null, t('ui.home.notHasProject'))));
+      // [alpha.150] เดิมส่ง element เป็นอาร์กิวเมนต์ "ข้อความ" ของ el() → ถูกแปลงเป็นสตริง
+      // แล้วโชว์ `[object HTMLParagraphElement]` บนหน้าจอจริง (เห็นตอนถ่ายจอหน้าแรก)
+      const emptyBox = el('div', 'home-empty');
+      emptyBox.append(el('p', null, t('ui.home.notHasProject')));
+      grid.append(emptyBox);
       return;
     }
     // ใช้การ์ดชุดเดียวกับหน้า Home (.home-card) — มีสไตล์จริงและสลับมุมมองการ์ด/รายการได้

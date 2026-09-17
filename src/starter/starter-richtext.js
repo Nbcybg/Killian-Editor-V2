@@ -14,6 +14,7 @@ import { el, setStatus, log } from '../core.js';
 import { t } from '../i18n.js';
 import { sanitizeHtml, htmlToStorage, htmlToDisplay } from './starter-html.js';
 import { importImage, starterDir } from './starter-store.js';
+import { gi } from '../icons.js';
 
 // ป้ายกำกับเก็บเป็น **ฟังก์ชัน** ไม่ใช่คีย์ที่เอาไปต่อสตริง
 // (`t('ui.starter.' + key)` ทำให้ตัวตรวจภาษาหาคีย์จริงไม่เจอ แล้วขึ้นเป็นคีย์กำพร้า)
@@ -25,8 +26,8 @@ import { importImage, starterDir } from './starter-store.js';
 //   · ขาดของที่คนคาดหวังจริง ๆ: ขีดฆ่า · หัวข้อ · รายการมีเลข · คำพูด · ลิงก์ · เลิกทำ/ทำซ้ำ
 //     → เพิ่มครบในรอบนี้ (ทุกตัวอยู่ในรายการแท็กที่ starter-html.js อนุญาตอยู่แล้ว)
 const CMDS = [
-  { cmd: 'undo', label: '↶', tip: () => t('ui.starter.rtUndo'), noState: true },
-  { cmd: 'redo', label: '↷', tip: () => t('ui.starter.rtRedo'), noState: true },
+  { cmd: 'undo', label: gi('undo'), tip: () => t('ui.starter.rtUndo'), noState: true },
+  { cmd: 'redo', label: gi('redo'), tip: () => t('ui.starter.rtRedo'), noState: true },
   { sep: true },
   { cmd: 'bold', label: 'B', cls: 'st-rt-b', tip: () => t('ui.starter.rtBold') },
   { cmd: 'italic', label: 'I', cls: 'st-rt-i', tip: () => t('ui.starter.rtItalic') },
@@ -36,17 +37,17 @@ const CMDS = [
   { cmd: 'formatBlock', arg: 'h2', label: 'H2', tip: () => t('ui.starter.rtH2'), noState: true },
   { cmd: 'formatBlock', arg: 'h3', label: 'H3', tip: () => t('ui.starter.rtH3'), noState: true },
   { cmd: 'formatBlock', arg: 'p', label: '¶', tip: () => t('ui.starter.rtPara'), noState: true },
-  { cmd: 'formatBlock', arg: 'blockquote', label: '❝', tip: () => t('ui.starter.rtQuote'), noState: true },
+  { cmd: 'formatBlock', arg: 'blockquote', label: gi('quote-open'), tip: () => t('ui.starter.rtQuote'), noState: true },
   { sep: true },
-  { cmd: 'justifyLeft', label: '⇤', tip: () => t('ui.starter.rtLeft') },
-  { cmd: 'justifyCenter', label: '↔', tip: () => t('ui.starter.rtCenter') },
-  { cmd: 'justifyRight', label: '⇥', tip: () => t('ui.starter.rtRight') },
+  { cmd: 'justifyLeft', label: gi('outdent'), tip: () => t('ui.starter.rtLeft') },
+  { cmd: 'justifyCenter', label: gi('swap'), tip: () => t('ui.starter.rtCenter') },
+  { cmd: 'justifyRight', label: gi('indent'), tip: () => t('ui.starter.rtRight') },
   { sep: true },
   { cmd: 'insertUnorderedList', label: '•', tip: () => t('ui.starter.rtList') },
   { cmd: 'insertOrderedList', label: '1.', tip: () => t('ui.starter.rtListNum') },
   { cmd: 'insertHorizontalRule', label: '—', tip: () => t('ui.starter.rtRule'), noState: true },
   { sep: true },
-  { cmd: 'removeFormat', label: '✕', tip: () => t('ui.starter.rtClear'), noState: true },
+  { cmd: 'removeFormat', label: gi('close'), tip: () => t('ui.starter.rtClear'), noState: true },
 ];
 
 /**
@@ -115,7 +116,7 @@ export async function richEditor({ slug, value = '', onChange = () => {}, minHei
 
   // ── แทรกรูป ──
   bar.append(el('span', 'st-rt-sep'));
-  const imgBtn = el('button', 'st-rt-btn', '🖼');
+  const imgBtn = el('button', 'st-rt-btn', gi('frame'));
   imgBtn.type = 'button';
   imgBtn.title = t('ui.starter.rtImage');
   imgBtn.onmousedown = (e) => e.preventDefault();
@@ -139,7 +140,7 @@ export async function richEditor({ slug, value = '', onChange = () => {}, minHei
 
   // ── ลิงก์ ──
   // ต้องมีข้อความที่เลือกไว้ก่อน (execCommand createLink ไม่สร้างข้อความให้เอง)
-  const linkBtn = el('button', 'st-rt-btn', '🔗');
+  const linkBtn = el('button', 'st-rt-btn', gi('link'));
   linkBtn.type = 'button';
   linkBtn.title = t('ui.starter.rtLink');
   linkBtn.onmousedown = (e) => e.preventDefault();

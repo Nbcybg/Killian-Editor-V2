@@ -13,6 +13,7 @@ import { t } from './i18n.js';
 import { $, el, state, setStatus, log, normalizeRoster, newRoster, rosterToText, mergeSpFormat } from './core.js';
 import { activate, closeTab, pickFromList } from './app.js';
 import { listSections } from './section-ops.js';
+import { gi } from './icons.js';
 
 export const ROSTER_PREFIX = '::roster::';
 export const rosterKey = (secPath) => ROSTER_PREFIX + secPath;
@@ -88,7 +89,7 @@ export async function renderRoster(tab) {
   const fmt = mergeSpFormat(spFormatFromSettings());
 
   const dirty = () => {
-    if (!tab.dirty) { tab.dirty = true; tab.tabBtn.querySelector('.tab-title').textContent = '● ' + tab.title; }
+    if (!tab.dirty) { tab.dirty = true; tab.tabBtn.querySelector('.tab-title').textContent = gi('dot') + ' ' + tab.title; }
   };
   const clean = () => { tab.dirty = false; tab.tabBtn.querySelector('.tab-title').textContent = tab.title; };
 
@@ -139,7 +140,7 @@ export async function renderRoster(tab) {
       const row = el('div', 'roster-row');
       const name = ce('roster-name', c.name, (v) => { c.name = v.replace(/:$/, ''); });
       const detail = ce('roster-detail', c.detail, (v) => { c.detail = v; });
-      const del = el('span', 'roster-del', '✕');
+      const del = el('span', 'roster-del', gi('close'));
       del.title = t('ui.roster.delCharacterExitPage');
       del.onclick = () => { r.characters.splice(i, 1); dirty(); paint(); };
       row.append(name, el('span', 'roster-colon', ':'), detail, del);

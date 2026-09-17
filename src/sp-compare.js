@@ -1,5 +1,6 @@
 // sp-compare.js — [alpha.60 ข้อ 74] เปรียบเทียบบทภาพยนตร์ 2 ฉบับ
 // LCS diff + color-coded HTML output (deleted=แดง, added=เขียว, context=ขาว, change=เหลือง)
+import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t, tf } from './i18n.js';
 import { parseScript, SP_ELEMS } from './fountain.js';
 import { escClose } from './ui.js';
@@ -88,13 +89,18 @@ export function showComparisonDialog(oldText, newText, labels) {
 
   const ov = document.createElement('div');
   ov.className = 'k-overlay';
-  ov.innerHTML = tf('ui.spCompare.compareClose', html);
+  ov.innerHTML = ((a) => `<div class="k-dialog" style="max-width:95vw;max-height:90vh;overflow:auto;padding:16px">
+    <div class="k-dlg-title">${tx('ui.spCompare.compare')}</div>
+    <div style="max-height:75vh;overflow:auto;border:1px solid #ccc;margin:8px 0">${a[0]}</div>
+    <div style="text-align:right"><button class="k-ok">${tx('ui.common.close')}</button></div>
+  </div>`)([html]);
   document.body.appendChild(ov);
 
   const stats = diffStats(diffs);
   const el = ov.querySelector('.k-dlg-title');
   if (el) {
-    el.innerHTML += tf('ui.spCompare.msg', stats.equal, stats.inserted, stats.deleted, stats.changed);
+    el.innerHTML += ((a) => ` <span style="font-weight:normal;color:#666;font-size:0.8em">
+      ${txf('ui.spCompare.text', a)} <span style="color:#070">+${a[1]}</span> · <span style="color:#b00">-${a[2]}</span> · <span style="color:#a90">~${a[3]}</span>)</span>`)([stats.equal, stats.inserted, stats.deleted, stats.changed]);
   }
 
   ov.querySelector('.k-ok').onclick = () => ov.remove();

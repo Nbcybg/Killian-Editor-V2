@@ -18,6 +18,7 @@
 import { t as tt, t } from '../i18n.js';
 import { $, el, setStatus, state, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
 import * as SL from '../layout/split-layout.js';
+import { gi } from '../icons.js';
 
 const ROOT_ID = 'split-root';
 
@@ -168,7 +169,7 @@ function renderLeaf(node, sm) {
   if (t) body.appendChild(t.pane);
   else {
     const hint = el('div', 'k-split-empty');
-    hint.append(el('div', 'k-split-empty-icon', '⌗'));
+    hint.append(el('div', 'k-split-empty-icon', gi('hash')));
     hint.append(el('div', '', tr('split.emptyPane')));
     hint.append(el('div', 'dim', tr('split.emptyPaneHint')));
     body.appendChild(hint);

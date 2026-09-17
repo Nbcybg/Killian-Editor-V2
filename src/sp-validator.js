@@ -6,6 +6,7 @@
 // → ผู้เรียกเอาไปหาตำแหน่งจริงในเอกสารต่อได้
 
 import { t, tf } from './i18n.js';
+import { gi } from './icons.js';
 export const SP_ERRORS = {
   EMPTY_ELEMENT: 'empty-element',
   ORPHAN_CHARACTER: 'orphan-character',
@@ -148,7 +149,7 @@ export function summaryText(errors) {
   const parts = [];
   if (s.errors) parts.push(tf('ui.spValidator.error', s.errors));
   if (s.warnings) parts.push(tf('ui.spValidator.itemView', s.warnings));
-  return '⚠️ ' + parts.join(' · ');
+  return gi('warning-e') + ' ' + parts.join(' · ');
 }
 
 /** ข้อผิดพลาดถัดไปหลังบล็อกที่ N (วนกลับต้นเมื่อหมด) — คืน null เมื่อไม่มีเลย */

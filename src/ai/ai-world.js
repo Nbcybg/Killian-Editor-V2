@@ -2,6 +2,7 @@
 // spec: docs/76-ai-world.md · ผลลัพธ์เป็นข้อมูลมีโครงสร้าง → เขียนเข้า Wiki ได้ตรง ๆ
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { extractJson, validate, estimateTokens } from './ai-core.js';
+import { gi } from '../icons.js';
 
 const SYSTEM = tt('ui.aiWorld.youNewWorldWorldbuilder')
   + tt('ui.aiWorld.newDetailWheelHas')
@@ -11,7 +12,7 @@ const SYSTEM = tt('ui.aiWorld.youNewWorldWorldbuilder')
 // fields = ค่าเดี่ยว (ลง Wiki เป็นฟิลด์) · sections = เนื้อหายาว (ลง Wiki เป็นหัวข้อ)
 export const WORLD_TEMPLATES = {
   magic: {
-    label: tt('ui.aiWorld.system'), category: 'lore', icon: '✨',
+    label: tt('ui.aiWorld.system'), category: 'lore', icon: gi('magic'),
     fields: [
       { key: 'name', label: tt('ui.aiWorld.nameSystem') },
       { key: 'source', label: tt('ui.aiWorld.msg10') },
@@ -23,7 +24,7 @@ export const WORLD_TEMPLATES = {
     sections: [tt('ui.aiWorld.ruleSystem'), tt('ui.aiWorld.howto'), tt('ui.aiWorld.sideEffect'), tt('ui.aiWorld.resultNext'), tt('ui.aiWorld.knotWriteNext')],
   },
   city: {
-    label: tt('ui.aiWorld.msg8'), category: 'locations', icon: '🏙',
+    label: tt('ui.aiWorld.msg8'), category: 'locations', icon: gi('city'),
     fields: [
       { key: 'name', label: tt('ui.aiWorld.name3') },
       { key: 'population', label: tt('ui.aiWorld.msg2') },
@@ -35,7 +36,7 @@ export const WORLD_TEMPLATES = {
     sections: [tt('ui.aiWorld.overviewAmbience'), tt('ui.aiWorld.districtImportant'), tt('ui.aiWorld.hasPowerGroup'), tt('ui.aiWorld.problem'), tt('ui.aiWorld.knotWriteNext')],
   },
   culture: {
-    label: tt('ui.aiWorld.msg5'), category: 'lore', icon: '🎎',
+    label: tt('ui.aiWorld.msg5'), category: 'lore', icon: gi('doll'),
     fields: [
       { key: 'name', label: tt('ui.aiWorld.nameGroup') },
       { key: 'values', label: tt('ui.aiWorld.valueMain') },
@@ -47,7 +48,7 @@ export const WORLD_TEMPLATES = {
     sections: [tt('ui.aiWorld.dailyLife'), tt('ui.aiWorld.customFestival'), tt('ui.aiWorld.name'), tt('ui.aiWorld.relationGroupOther'), tt('ui.aiWorld.knotWriteNext')],
   },
   economy: {
-    label: tt('ui.aiWorld.msg9'), category: 'lore', icon: '💰',
+    label: tt('ui.aiWorld.msg9'), category: 'lore', icon: gi('coin'),
     fields: [
       { key: 'name', label: tt('ui.aiWorld.nameSystem2') },
       { key: 'currency', label: tt('ui.aiWorld.center') },
@@ -59,7 +60,7 @@ export const WORLD_TEMPLATES = {
     sections: [tt('ui.aiWorld.structureTrade'), tt('ui.aiWorld.classIncome'), tt('ui.aiWorld.busyItem'), tt('ui.aiWorld.knotWriteNext')],
   },
   religion: {
-    label: tt('ui.aiWorld.name4'), category: 'lore', icon: '⛩',
+    label: tt('ui.aiWorld.name4'), category: 'lore', icon: gi('torii'),
     fields: [
       { key: 'name', label: tt('ui.aiWorld.name2') },
       { key: 'deity', label: tt('ui.aiWorld.thing2') },
@@ -71,7 +72,7 @@ export const WORLD_TEMPLATES = {
     sections: [tt('ui.aiWorld.originLegend'), tt('ui.aiWorld.ritual'), tt('ui.aiWorld.power'), tt('ui.aiWorld.see'), tt('ui.aiWorld.knotWriteNext')],
   },
   faction: {
-    label: tt('ui.aiWorld.group'), category: 'lore', icon: '⚔',
+    label: tt('ui.aiWorld.group'), category: 'lore', icon: gi('conflict'),
     fields: [
       { key: 'name', label: tt('ui.common.nameGroup') },
       { key: 'goal', label: tt('ui.common.goal') },

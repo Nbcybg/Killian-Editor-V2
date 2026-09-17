@@ -16,6 +16,7 @@ import { t as tt, tf as ttf } from '../i18n.js';
 import { $, el, state, setStatus } from '../core.js';
 import * as TC from './toolbar-config.js';
 import * as FB from './fab-config.js';
+import { gi } from '../icons.js';
 
 /** ปุ่มจริงบนแถบ (หรือ null ถ้าไม่มี) */
 const btn = (id) => document.getElementById(id);
@@ -36,12 +37,20 @@ export function labelOf(id) {
  * → โค้ดที่มองแค่ `#toolbar` จะ **ไม่เห็นปุ่มจัดรูปแบบเลย**
  *   (เจอตอนเทส [79-5]: ปิดกลุ่ม "จัดหน้า" แล้วปุ่มไม่หาย เพราะมันไม่ได้อยู่ในแถบนั้นแล้ว)
  */
-export const TB_HOSTS = ['#toolbar', '.k-fmtbar'];
+/** แถบรูปแบบลอยของหน้าเขียน — คุมด้วย `settings.fmtbar` ซึ่งแยกตามโหมดเอกสาร */
+// ══ [alpha.151 ข้อ 3] แถบของกระดานใช้คลาส `.k-fmtbar` ร่วมกัน (หน้าตาเหมือนกัน) ══
+// ตัวเลือกเดิม `.k-fmtbar` เฉย ๆ จึงคว้าแถบผิดตัวได้ เมื่อกระดานเปิดอยู่และอยู่หน้ากว่าใน DOM
+// → การตั้งค่าของหน้าเขียนไปลงที่แถบกระดานแทน · ต้องกันแถบกระดานออกให้ชัด
+//
+// **ต้องมีตัวเดียวในโปรแกรม** — ที่ไหนก็ตามที่เขียน `'.k-fmtbar'` ซ้ำเป็นสตริงของตัวเอง
+// จะหลุดจากกฎนี้เงียบ ๆ (เจอจริง: `TB_HOSTS` เคยเขียนซ้ำ แล้วเมนูคลิกขวาบนแถบลอย
+// กลายเป็นเมนูของแถบเครื่องมือหลัก เพราะเทียบ `sel === TB_FMT_HOST` ไม่ตรงอีกต่อไป)
+export const TB_FMT_HOST = '.k-fmtbar:not(.planner-fmtbar)';
+
+export const TB_HOSTS = ['#toolbar', TB_FMT_HOST];
 
 /** แถบที่ `settings.toolbar` (ก้อนรวม) คุม — **ไม่รวมแถบลอย** ตั้งแต่ alpha.111 */
 export const TB_MAIN_HOSTS = ['#toolbar'];
-/** แถบรูปแบบลอย — คุมด้วย `settings.fmtbar` ซึ่งแยกตามโหมดเอกสาร */
-export const TB_FMT_HOST = '.k-fmtbar';
 
 /** ลำดับจริงของลูกในแถบ → `id` ที่ตั้งค่าได้ · `'sep'` · `null` (ของแถบเอง/ปุ่มที่โปรแกรมคุม) */
 function barSeq(bar) {
@@ -145,9 +154,19 @@ export function applyFmtbarConfig(cfg, mode) {
   return true;
 }
 
-/** โหมดของแท็บที่เปิดอยู่ — wiki/นิยายใช้เอนจินเดียวกันจึงนับเป็น 'prose' */
+/**
+ * โหมดของแท็บที่เปิดอยู่
+ *
+ * [alpha.151 ข้อ 1] เดิมยุบทุกอย่างที่ไม่ใช่บทเป็น 'prose' — Wiki/แดชบอร์ด/หน้าแรก
+ * จึงถูกบังคับใช้ชุดปุ่มของนิยายทั้งที่คนละงานกัน · ตอนนี้ได้โหมด `all` ของตัวเอง
+ * (กระดานไม่อยู่ในนี้ — มันมีแถบของตัวเองแยกต่างหาก ดู PLANNER_BAR_GROUPS)
+ */
 export function currentFmtMode() {
-  return state.active && state.active.sp ? 'screenplay' : 'prose';
+  const t = state.active;
+  if (!t) return 'all';
+  if (t.sp) return 'screenplay';
+  if (t.editor) return 'prose';
+  return 'all';
 }
 
 /**
@@ -202,8 +221,8 @@ export function buildToolbarList(host, opts = {}) {
       const src = btn(b.id);
       // ก๊อปไอคอนของปุ่มจริงมาโชว์ (ปุ่มที่ยังไม่มีในหน้าจอ = โชว์จุด)
       if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
-      else if (src && src.dataset && src.dataset.icon) ic.textContent = '●';
-      else ic.textContent = '●';
+      else if (src && src.dataset && src.dataset.icon) ic.textContent = gi('dot');
+      else ic.textContent = gi('dot');
       const name = el('span', 'k-tbcfg-name', labelOf(b.id));
       const miss = !src ? el('span', 'k-tbcfg-miss dim', tt('ui.tbcfg.missing')) : null;
       const sw = el('input', 'k-tbcfg-sw');
@@ -309,6 +328,11 @@ export function toolbarDialog() {
 async function saveFmtbar(next) {
   state.settings.fmtbar = next;
   applyFmtbarConfig(next);
+  // [alpha.151 ข้อ 3] แถบของกระดานอ่านค่าชุดเดียวกัน — ต้องทาใหม่พร้อมกัน
+  try {
+    const pl = typeof window !== 'undefined' && window.k2ActivePlanner && window.k2ActivePlanner();
+    if (pl && pl.syncFmtBar) pl.syncFmtBar();
+  } catch { /* ไม่มีกระดานเปิดอยู่ = ไม่ต้องทำอะไร */ }
   try {
     const app = await import('../app.js');
     await app.saveGlobalSetting('fmtbar', next);
@@ -331,9 +355,13 @@ export function buildFmtbarList(host, opts = {}) {
   // ── สวิตช์โหมด ──
   const tabs = el('div', 'k-fmtcfg-modes');
   const modeBtns = {};
+  // [alpha.151 ข้อ 1] สี่โหมด — ชื่อมาจากไฟล์ภาษา ไม่ใช่เงื่อนไขสองทางที่เขียนไว้ในโค้ด
+  const MODE_LABEL = {
+    prose: 'ui.fmtcfg.modeProse', screenplay: 'ui.fmtcfg.modeScreen',
+    all: 'ui.fmtcfg.modeAll', planner: 'ui.fmtcfg.modePlanner',
+  };
   for (const m of TC.FMT_MODES) {
-    const b = el('button', 'k-fmtcfg-mode',
-                 tt(m === 'screenplay' ? 'ui.fmtcfg.modeScreen' : 'ui.fmtcfg.modeProse'));
+    const b = el('button', 'k-fmtcfg-mode', tt(MODE_LABEL[m] || m));
     b.dataset.mode = m;
     b.onclick = () => { mode = m; redrawAll(); };
     modeBtns[m] = b;
@@ -352,35 +380,53 @@ export function buildFmtbarList(host, opts = {}) {
 
   function redrawAll() {
     for (const m of TC.FMT_MODES) modeBtns[m].classList.toggle('on', m === mode);
-    const c = TC.fmtbarCounts(cfgNow(), mode);
-    count.textContent = ttf('ui.tbcfg.count', c.on, c.total);
+    // [alpha.151 ข้อ 3] โหมด `planner` คุมปุ่มของ **แถบกระดาน** ซึ่งเป็นคนละชุดกับของตัวแก้ไข
+    const onBoard = mode === 'planner';
+    const groups = onBoard ? TC.plannerBarGroups() : TC.fmtbarGroups();
+    const ids = groups.flatMap((g) => g.buttons.map((b) => b.id));
+    const shownN = ids.filter((id) => (onBoard ? !TC.plannerBarHidden(cfgNow(), id)
+                                               : !TC.fmtbarHidden(cfgNow(), mode, id))).length;
+    count.textContent = ttf('ui.tbcfg.count', shownN, ids.length);
     list.replaceChildren();
-    for (const g of TC.fmtbarGroups()) {
+    for (const g of groups) {
       const sec = el('div', 'k-tbcfg-sec');
       const head = el('div', 'k-tbcfg-head');
       head.append(el('span', 'k-tbcfg-gname', tt(g.labelKey)));
+      const setAll = (on) => {
+        let next = cfgNow();
+        for (const b of g.buttons) next = TC.setFmtbarVisible(next, mode, b.id, on);
+        return save(next);
+      };
       const onAll = el('button', 'k-tbcfg-mini', tt('ui.tbcfg.allOn'));
-      onAll.onclick = () => save(TC.setFmtbarGroupVisible(cfgNow(), mode, g.key, true));
+      onAll.onclick = () => setAll(true);
       const offAll = el('button', 'k-tbcfg-mini', tt('ui.tbcfg.allOff'));
-      offAll.onclick = () => save(TC.setFmtbarGroupVisible(cfgNow(), mode, g.key, false));
+      offAll.onclick = () => setAll(false);
       head.append(onAll, offAll);
       sec.append(head);
 
       for (const b of g.buttons) {
-        const ok = TC.fmtSupported(mode, b.id);
+        const ok = onBoard || TC.fmtSupported(mode, b.id);
         const row = el('div', 'k-tbcfg-row' + (ok ? '' : ' k-tbcfg-na'));
         row.dataset.btn = b.id;
         const ic = el('span', 'k-tbcfg-icon');
         const src = btn(b.id);
         if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
-        else ic.textContent = '●';
+        else ic.textContent = gi('dot');
         row.append(ic, el('span', 'k-tbcfg-name', labelOf(b.id)));
-        if (!ok) row.append(el('span', 'k-tbcfg-miss dim', tt('ui.fmtcfg.naTag')));
         const sw = el('input', 'k-tbcfg-sw');
         sw.type = 'checkbox';
-        sw.checked = !TC.fmtbarHidden(cfgNow(), mode, b.id);
-        sw.disabled = !ok;
-        sw.onchange = () => save(TC.setFmtbarVisible(cfgNow(), mode, b.id, sw.checked));
+        if (ok) {
+          sw.checked = onBoard ? !TC.plannerBarHidden(cfgNow(), b.id)
+                               : !TC.fmtbarHidden(cfgNow(), mode, b.id);
+          sw.onchange = () => save(TC.setFmtbarVisible(cfgNow(), mode, b.id, sw.checked));
+        } else {
+          // ══ [alpha.151 ข้อ 6] ★ ปุ่มที่โหมดนี้ใช้ไม่ได้ = **ไม่โผล่บนแถบ** ══
+          // เดิมช่องนี้ถูกปิดตาย (`disabled`) ผู้ใช้จึงทำอะไรไม่ได้เลย และปุ่มก็ยังกินที่บนแถบ
+          // ตอนนี้ติ๊กได้ = "ขอเห็นไว้ก่อน" (โผล่แบบสีเทา) · ไม่ติ๊ก = หายไปจากแถบจริง ๆ
+          row.append(el('span', 'k-tbcfg-miss dim', tt('ui.fmtcfg.naTag')));
+          sw.checked = TC.forcedShown(cfgNow(), mode).has(b.id);
+          sw.onchange = () => save(TC.setFmtbarForceShown(cfgNow(), mode, b.id, sw.checked));
+        }
         row.append(sw);
         sec.append(row);
       }
@@ -491,13 +537,13 @@ export function buildFabList(host) {
       const row = el('div', 'k-fabcfg-pick');
       row.append(el('span', 'k-fabcfg-num', String(i + 1)));
       row.append(el('span', 'k-tbcfg-name', tt(a.labelKey)));
-      const up = el('button', 'k-tbcfg-mini', '↑');
+      const up = el('button', 'k-tbcfg-mini', gi('arrow-up'));
       up.disabled = i === 0;
       up.onclick = () => save(FB.moveFabAction(cfgNow(), id, -1));
-      const dn = el('button', 'k-tbcfg-mini', '↓');
+      const dn = el('button', 'k-tbcfg-mini', gi('arrow-down'));
       dn.disabled = i === cfg.actions.length - 1;
       dn.onclick = () => save(FB.moveFabAction(cfgNow(), id, 1));
-      const rm = el('button', 'k-tbcfg-mini', '✕');
+      const rm = el('button', 'k-tbcfg-mini', gi('close'));
       rm.onclick = () => save(FB.toggleFabAction(cfgNow(), id, false));
       row.append(up, dn, rm);
       chosen.append(row);

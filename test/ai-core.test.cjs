@@ -57,6 +57,12 @@ check('ข้อความว่าง → 0', AI.estimateTokens('') === 0);
 const cost = AI.estimateCost('openai', 'gpt-4o-mini', { input: 1e6, output: 1e6 });
 check('estimateCost คิดตามราคา in/out', Math.abs(cost.usd - 0.75) < 1e-6, String(cost.usd));
 check('ollama ฟรีเสมอ', AI.estimateCost('ollama', 'llama3', { input: 1e6, output: 1e6 }).usd === 0);
+{
+  const u = AI.estimateCost('deepseek', 'deepseek-chat', { input: 1e6, output: 1e6 });
+  check('[149] ★ เจ้าที่ไม่มีในตารางราคา = usd null (ไม่เดาเป็นราคา OpenAI)', u.usd === null && u.unknown === true, JSON.stringify(u));
+  check('[149] เจ้าที่ไม่รู้ราคายังนับ token ได้', u.in === 1e6 && u.out === 1e6);
+  check('[149] estimateCost ไม่ส่งชื่อเจ้า = ไม่รู้ราคา', AI.estimateCost('', 'x', { input: 5 }).usd === null);
+}
 check('โมเดลไม่รู้จัก → ใช้ราคา default', AI.estimateCost('openai', 'ไม่มีรุ่นนี้', { input: 1e6, output: 0 }).usd > 0);
 
 const meta = {};

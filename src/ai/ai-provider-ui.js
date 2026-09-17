@@ -17,6 +17,7 @@ import {
 import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 // [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
 import { describeHttpError, shortError, redactSecrets } from './ai-error.js';
+import { gi } from '../icons.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keys = null;                 // { <credentialId>: apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -210,9 +211,9 @@ export async function complete(provider, opts = {}) {
              code: res.code, status: res.status,
              aborted: !!res.aborted, timedOut: !!res.timedOut };
   }
-  const { text, thinking, usage } = parseChat(res.json);
+  const { text, thinking, usage, finish, truncated } = parseChat(res.json);
   logCall(provider, req, { ms: Date.now() - t0, usage, chars: (text || '').length, stream: false });
-  return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name };
+  return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name, finish, truncated };
 }
 
 /**
@@ -243,27 +244,50 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
   const who = provider.name || hostOf(req.url);
   const httpOpts = { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) };
   if (req.reqId) httpOpts.__reqId = req.reqId;
+  // [alpha.149] สำหรับสตรีม main.js ตีความค่านี้เป็น "เงียบนานเกิน" (ไม่ใช่เวลารวมทั้งคำตอบ)
   if (req.timeoutMs) httpOpts.__timeoutMs = req.timeoutMs;
   let text = '';
   let thinking = '';
+  let finish = '';
+  let streamError = '';
   const streamT0 = Date.now();
+  const retries = Math.max(0, req.maxRetries ?? 0);
+  const backoff = (n) => Math.min(8000, 500 * Math.pow(2, n));
   try {
-    setBusy(tf('ui.aiProvider.busyNext', who));
-    const res = await kapi.httpStream(req.url, httpOpts, (line) => {
-      const c = parseStreamChunk(line);
-      if (!c) return;
-      if (c.done) return;
-      if (c.thinking) thinking += c.thinking;
-      if (c.delta) text += c.delta;
-      onChunk({ delta: c.delta || '', thinking: c.thinking || '', text, thinkingAll: thinking });
-    });
-    if (res && res.ok === false) {
-      // ══ [alpha.145] ★ ต้นตอของ "⚠ เรียกไม่สำเร็จ (HTTP 0)" ที่ผู้ใช้เจอ ══
-      // main.js แนบเหตุผลจริงมาใน `res.body` ตลอด (ข้อความเซิร์ฟเวอร์ · ECONNREFUSED · …)
-      // แต่บรรทัดนี้เคยส่งแค่ `httpMsg(status)` แล้วทิ้ง body ทั้งก้อน
-      const f = failure(provider, req, { status: res.status || 0, body: res.body || res.error || '',
-                                         aborted: !!res.aborted, timedOut: !!res.timedOut });
-      return { ...f, text, thinking };
+    for (let attempt = 0; ; attempt++) {
+      setBusy(attempt ? tf('ui.aiProvider.busyNextTryNew', who, attempt) : tf('ui.aiProvider.busyNext', who));
+      const res = await kapi.httpStream(req.url, httpOpts, (line) => {
+        const c = parseStreamChunk(line);
+        if (!c) return;
+        // [alpha.149] ข้อผิดพลาดกลางสตรีม (HTTP 200) — เดิมไม่มีใครอ่าน = คำตอบว่างไม่มีคำอธิบาย
+        if (c.error) { streamError = streamError || c.error; return; }
+        if (c.finish) finish = c.finish;
+        if (!c.delta && !c.thinking) return;
+        if (c.thinking) thinking += c.thinking;
+        if (c.delta) text += c.delta;
+        onChunk({ delta: c.delta || '', thinking: c.thinking || '', text, thinkingAll: thinking });
+      });
+      if (res && res.ok === false) {
+        // [alpha.149] ลองใหม่ได้เฉพาะตอน "ยังไม่มีอะไรไหลมาเลย" — ไหลมาแล้วยิงซ้ำ = ได้ข้อความซ้ำซ้อน
+        // (เดิมสตรีมไม่ลองใหม่เลยสักครั้ง ขณะที่คำขอแบบธรรมดาลองตาม Max Retries)
+        const st = res.status || 0;
+        const retryable = !res.aborted && (res.netError || st === 429 || st === 408 || (st >= 500 && st < 600));
+        if (retryable && !text && !thinking && attempt < retries) {
+          await new Promise((r) => setTimeout(r, backoff(attempt)));
+          continue;
+        }
+        // ══ [alpha.145] ★ ต้นตอของ "⚠ เรียกไม่สำเร็จ (HTTP 0)" ที่ผู้ใช้เจอ ══
+        // main.js แนบเหตุผลจริงมาใน `res.body` ตลอด (ข้อความเซิร์ฟเวอร์ · ECONNREFUSED · …)
+        const f = failure(provider, req, { status: st, body: res.body || res.error || '',
+                                           aborted: !!res.aborted, timedOut: !!res.timedOut });
+        // [alpha.149] `partial` = มีข้อความไหลมาแล้วก่อนพัง/ถูกหยุด — ผู้เรียกต้องเก็บไว้ ไม่ใช่ทิ้ง
+        return { ...f, text, thinking, partial: !!text.trim() };
+      }
+      break;
+    }
+    if (streamError) {
+      const f = failure(provider, req, { status: 0, streamError: true, body: streamError });
+      return { ...f, text, thinking, partial: !!text.trim() };
     }
     const usage = {
       input: estimateTokens((opts.messages || []).reduce((n, m) => n + (m.content || ''), '') + (opts.system || '')),
@@ -271,10 +295,11 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
     };
     usage.total = usage.input + usage.output;
     logCall(provider, req, { ms: Date.now() - streamT0, usage, chars: text.length, stream: true });
-    return { ok: true, text: text.trim(), thinking, usage, model: req.body.model, provider: provider.name };
+    return { ok: true, text: text.trim(), thinking, usage, model: req.body.model, provider: provider.name,
+             finish, truncated: finish === 'length' };
   } catch (e) {
     const f = failure(provider, req, { status: 0, body: String((e && e.message) || e) });
-    return { ...f, text, thinking };
+    return { ...f, text, thinking, partial: !!text.trim() };
   } finally { clearBusy(); }
 }
 
@@ -295,7 +320,7 @@ export async function showAISettingsDialog() {
   const addBtn = el('button', 'ai-prov-add', t('ui.aiProvider.add'));
   addBtn.title = t('ui.aiProvider.addProviderNew');
   const editBtn = el('button', 'ai-prov-edit', t('ui.aiProvider.edit'));
-  const delBtn = el('button', 'ai-prov-del', '🗑');
+  const delBtn = el('button', 'ai-prov-del', gi('trash'));
   delBtn.title = t('ui.aiProvider.delProvider2');
   provRow.append(provSel, addBtn, editBtn, delBtn);
   box.append(provRow);
@@ -404,6 +429,16 @@ export async function showAISettingsDialog() {
     aiMeta().sendKey = sendSel.value;
     aiMeta().historyTokens = Math.max(0, Math.round(Number(histInp.value) || 0));
     await persist(rows, activeId);
+    // [alpha.149] ลบผู้ให้บริการแล้ว คีย์ของมันต้องไม่ค้างอยู่ใน ai-key.json ต่อไป
+    try {
+      const keys = await loadKeys();
+      const used = new Set(rows.map((p) => (p.credential || {}).id).filter(Boolean));
+      const stale = Object.keys(keys).filter((k) => !used.has(k));
+      if (stale.length) {
+        for (const k of stale) delete keys[k];
+        await saveKeys(keys);
+      }
+    } catch (e) { log('warn', 'ai: key cleanup', e); }
     close();
     setStatus(t('ui.common.saveSettingsAIDone'));
   };
@@ -468,7 +503,7 @@ export function providerDialog(existing) {
 
     const credBtns = el('div', 'ai-cred-btns');
     const testBtn = el('button', 'ai-cred-test', t('ui.aiProvider.testConnect'));
-    const saveCredBtn = el('button', 'k-ok ai-cred-save', '💾 Save Credential');
+    const saveCredBtn = el('button', 'k-ok ai-cred-save', gi('save') + ' Save Credential');
     const credMsg = el('span', 'ai-cred-msg dim');
     credBtns.append(testBtn, saveCredBtn, credMsg);
     s2.append(credBtns);
@@ -591,7 +626,7 @@ export function providerDialog(existing) {
       setBusy(true, credMsg, t('ui.aiProvider.busyTest'));
       const r = await testCredential(p);
       setBusy(false);
-      say(credMsg, r.ok, (r.ok ? '✅ ' : '❌ ') + r.msg);
+      say(credMsg, r.ok, (r.ok ? gi('check-circle') + ' ' : gi('fail') + ' ') + r.msg);
       if (r.ok && r.models.length) fillModels(r.models, modelSel.value);
     };
     loadModelsBtn.onclick = async () => {
@@ -601,7 +636,7 @@ export function providerDialog(existing) {
       const r = await fetchModels(p);
       setBusy(false);
       if (r.ok) { fillModels(r.models, modelSel.value); say(modelMsg, true, tf('ui.aiProvider.foundModel', r.models.length)); }
-      else say(modelMsg, false, '❌ ' + r.error);
+      else say(modelMsg, false, gi('fail') + ' ' + r.error);
     };
     saveCredBtn.onclick = async () => {
       const p = collect();
@@ -633,7 +668,7 @@ export function providerDialog(existing) {
     ok.onclick = async () => {
       const p = collect();
       const errs = validateProvider(p);
-      if (errs.length) { errBox.textContent = '⚠ ' + errs.join(' · '); return; }
+      if (errs.length) { errBox.textContent = gi('warning') + ' ' + errs.join(' · '); return; }
       const keys = await loadKeys();
       keys[p.credential.id] = p.credential.apiKey;
       await saveKeys(keys);

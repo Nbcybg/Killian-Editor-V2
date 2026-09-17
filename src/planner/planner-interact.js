@@ -8,10 +8,13 @@ import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { fabric } from 'fabric';
 import { log } from '../core.js';
 import { absBox } from './planner-render.js';
+import { todoRowAt, setBend } from './planner-data.js';
 
 export const TOOLS = ['select', 'hand', 'sticky', 'text', 'shape', 'frame', 'comment', 'connector',
-                      'scene', 'chapter', 'entity', 'note'];
-const CREATE_TOOLS = new Set(['sticky', 'text', 'shape', 'frame', 'comment', 'scene', 'chapter', 'entity', 'note']);
+                      'scene', 'chapter', 'entity', 'note', 'image', 'todo'];
+// [alpha.150 ข้อ 6+9] `image` / `todo` เป็นเครื่องมือสร้างเต็มตัว (ลากกำหนดขนาดได้เหมือนตัวอื่น)
+const CREATE_TOOLS = new Set(['sticky', 'text', 'shape', 'frame', 'comment', 'scene', 'chapter', 'entity', 'note',
+                              'image', 'todo']);
 // [บั๊ก 5] ลากกำหนดขนาดก่อนแล้วค่อยเกิดวัตถุ — ใช้ได้กับทุกเครื่องมือ ไม่ใช่แค่รูปทรง/เฟรม
 // (คลิกเปล่า ๆ ยังได้ขนาดมาตรฐานเหมือนเดิม)
 const DRAG_SIZED = CREATE_TOOLS;
@@ -36,6 +39,16 @@ export class PlannerInteraction {
     this._editor = null;
 
     this._onKeyDownBound = this._onKeyDown.bind(this);
+    this._onWinBlurBound = () => this.cancelTransient('window-blur');
+    // ══ [alpha.153 ข้อ 2] ตาข่ายรองระดับเอกสาร — ไม่พึ่งสายอีเวนต์ของ fabric ══
+    //
+    // `mouse:up` ของ fabric มาไม่ถึงได้หลายทาง (ปล่อยเมาส์นอกหน้าต่าง · อีเวนต์ถูกกลืนระหว่างทาง)
+    // และพอ `_panning` ค้าง กรอบนำก็หายทั้งกระดาน เพราะ `mouse:move` เช็ก `_panning` ก่อนเสมอ
+    // → ดักที่ `document` ตรง ๆ อีกชั้น · ในทางปกติ fabric จบให้ก่อนอยู่แล้ว ตาข่ายนี้จึงไม่ทำอะไร
+    this._onDocUpBound = () => { if (this._panning) this._endPan(); };
+    this._onDocDownBound = () => {
+      if (this._panning) this.cancelTransient('doc-mousedown/stale');
+    };
     this._onKeyUpBound = this._onKeyUp.bind(this);
 
     this._bindPointer();
@@ -50,6 +63,12 @@ export class PlannerInteraction {
   // ═════════ เครื่องมือ ═════════
   setTool(name, opts = {}) {
     if (!TOOLS.includes(name)) name = 'select';
+    // [alpha.155] กระดานล็อก = เลื่อนดูได้อย่างเดียว (planner.setBoardLocked ตั้งค่านี้)
+    if (this._boardLocked && name !== 'hand') name = 'hand';
+    // [alpha.153 ข้อ 4] `syncNodeInteractivity()` เรียกตัวนี้ซ้ำทุกครั้งที่สร้าง/แก้การ์ด —
+    // ถ้าจดเป็น info ทุกครั้ง พิมพ์ชื่อการ์ดทีเดียวก็ได้สิบบรรทัดทับของจริงหมด (บทเรียน alpha.128)
+    // → เปลี่ยนเครื่องมือจริงเท่านั้นที่เป็น info · เรียกซ้ำของเดิมลง debug
+    const changed = this.tool !== name;
     this.tool = name;
     if (opts.shape) this._shapeKind = opts.shape;
     if ('lock' in opts) this._sticky = !!opts.lock;
@@ -72,17 +91,25 @@ export class PlannerInteraction {
     this.renderer.hidePorts();
     this.renderer.refresh();
     this._log(`tool=${name}${name === 'shape' ? '/' + this._shapeKind : ''} ` +
-              `selection=${cv.selection} objectsEvented=${interactive}`);
+              `selection=${cv.selection} objectsEvented=${interactive}`,
+              undefined, changed ? 'info' : 'debug');
     if (this._cb.onToolChange) this._cb.onToolChange(name, this._shapeKind);
     return name;
   }
 
-  /** log สายกระดาน — เปิด/ปิดได้ที่ this.debug
-   *  [alpha.128] ลดจาก info → debug: รอบไล่บั๊กจบไปตั้งแต่ alpha.75 แต่สายนี้ยังยิง INFO รัว ๆ
-   *  (298 บรรทัดต่อการรันหนึ่งรอบ) ทับเหตุการณ์จริงในแผงบันทึก · ยังเขียนลงไฟล์ครบเหมือนเดิม */
-  _log(msg, extra) {
+  /**
+   * log สายกระดาน — เปิด/ปิดได้ที่ this.debug
+   *
+   * [alpha.128] เคยลดจาก info → debug เพราะยิงรัว 298 บรรทัดต่อรอบ
+   * ══ [alpha.153 ข้อ 4] ★ กลับมาเป็น `info` ══
+   * ผู้ใช้: *"planner ยังไม่มี log ใน system log เลยไม่รู้ว่ามัน error มั้ย ทำให้ละเอียดเลย"*
+   * แผงบันทึกเปิดเฉพาะ error/warn/info เป็นค่าเริ่มต้น — ทุกอย่างที่เป็น `debug` จึง **มองไม่เห็น**
+   * ทั้งที่เขียนลงไฟล์อยู่ · ที่ยิงรัวจริง ๆ (ลากเมาส์ · พิมพ์) ถูกย้ายไปใช้ `_dbg` แยกต่างหากแล้ว
+   * ที่เหลือคือ "หนึ่งบรรทัดต่อหนึ่งการกระทำ" ซึ่งเป็นของที่ผู้ใช้ต้องเห็นเวลาไล่ปัญหา
+   */
+  _log(msg, extra, level) {
     if (this.debug === false) return;
-    log('debug', 'planner: ' + msg, extra);
+    log(level || 'info', 'planner: ' + msg, extra);
   }
 
   getTool() { return this.tool; }
@@ -101,6 +128,9 @@ export class PlannerInteraction {
       // [บั๊ก 65r2-6] แผงถูกย้าย/เปิดใหม่แล้ว fabric ยังจำ offset เดิม → พิกัดเมาส์เพี้ยนทั้งกระดาน
       // (กรอบนำตอนลากสร้างวัตถุไปโผล่คนละที่ = เหมือน "guide หายไป")
       cv.calcOffset();
+      // [alpha.153 ข้อ 2] กดเมาส์ใหม่ทั้งที่ยังค้างสถานะลากอยู่ = รอบก่อนจบไม่สะอาด
+      // (ปล่อยเมาส์นอกหน้าต่าง) — ล้างทิ้งก่อน ไม่งั้น `_panning` ที่ค้างจะกลืนกรอบนำไปตลอด
+      if (this._panning || this._bending) this.cancelTransient('mousedown/stale');
       // เลื่อนกระดาน: ล้อกลาง (บั๊ก 6) / space / เครื่องมือมือ / alt+ลาก
       if (e.button === 1 || this._spaceDown || this.tool === 'hand' || e.altKey) {
         if (e.button === 1) e.preventDefault();     // กันไอคอน autoscroll ของเบราว์เซอร์
@@ -109,8 +139,13 @@ export class PlannerInteraction {
       }
       if (e.button === 2) return;                       // คลิกขวา = เมนู (จัดการแยก)
 
+      // [alpha.150 ข้อ 9] คลิกช่องติ๊กบนการ์ดรายการ — ต้องมาก่อนการเลือก/ลาก ไม่งั้นกลายเป็นการลากการ์ด
+      if (this.tool === 'select' && t && t.kind === 'node' && t.ntype === 'todo' && this._todoClick(t, opt)) return;
+
       if (t && t.kind === 'port') { this._startPortDrag(t, opt); return; }
       if (t && t.kind === 'edgeend') { this._startRelink(t, opt); return; }
+      // [alpha.151 ข้อ 9] ลากมือจับกลางท่อน = ดันท่อนนั้นไปตั้งฉากกับตัวมันเอง
+      if (t && t.kind === 'bend') { this._startBendDrag(t, opt); return; }
 
       if (this.tool === 'connector') { this._connectorClick(t, opt); return; }
 
@@ -147,6 +182,7 @@ export class PlannerInteraction {
 
     cv.on('mouse:move', (opt) => {
       const e = opt.e;
+      if (this._bending) { this._moveBendDrag(opt); return; }
       if (this._panning) { this._movePan(e); return; }
       if (this._creating) { this._moveCreate(opt); return; }
       if (this._dragConnect) { this._movePortDrag(opt); return; }
@@ -156,6 +192,7 @@ export class PlannerInteraction {
     });
 
     cv.on('mouse:up', (opt) => {
+      if (this._bending) { this._endBendDrag(); return; }
       if (this._panning) { this._endPan(); return; }
       if (this._creating) { this._endCreate(opt); return; }
       if (this._dragConnect) { this._endPortDrag(opt); return; }
@@ -166,6 +203,24 @@ export class PlannerInteraction {
     cv.on('selection:updated', () => { this.renderer.hidePorts(); this.renderer.hideEdgeHandles(); });
 
     cv.on('mouse:out', () => { if (this._cb.onPointer) this._cb.onPointer(null); });
+  }
+
+  /**
+   * [alpha.150 ข้อ 9] คลิกบนการ์ดรายการติ๊ก — คืน true ถ้า "กินคลิกไปแล้ว"
+   *
+   * แปลงพิกัดกระดาน → พิกัดภายในการ์ดด้วย `absBox()` (ซึ่งคูณ matrix ของกลุ่มมาให้แล้ว —
+   * ห้ามใช้ left/top ตรง ๆ ตามบทเรียนข้อ 19) แล้วถามตำแหน่งข้อจาก `todoRowAt()`
+   * ซึ่งเป็นฟังก์ชันเดียวกับที่ตัววาดใช้จัดระยะ — คลิกจึงตรงกับข้อที่เห็นเสมอ
+   */
+  _todoClick(t, opt) {
+    const n = this.data.getNode(t.nid);
+    if (!n || n.locked) return false;
+    const p = this.renderer.canvas.getPointer(opt.e);
+    const box = absBox(t);
+    const hit = todoRowAt(n, p.x - box.x, p.y - box.y);
+    if (hit.index < 0 || !hit.onBox) return false;
+    if (this._cb.onToggleTodo) this._cb.onToggleTodo(t.nid, hit.index);
+    return true;
   }
 
   _reportPointer(opt) {
@@ -212,7 +267,45 @@ export class PlannerInteraction {
   }
 
   // ── เลื่อนกระดาน ──
+  /**
+   * ══ [alpha.153 ข้อ 2] ★★ ล้างสถานะ "กำลังลาก" ที่ค้างอยู่ ══
+   *
+   * ผู้ใช้: *"bug ที่เป็น guide เราย้อนรอยได้อย่างงี้ เกิดจากการ pan ลอง check ดู"* — และถูก
+   *
+   * `mouse:move` เช็ก `_panning` **ก่อน** `_creating` เสมอ (ต้องเป็นแบบนั้น ไม่งั้นเลื่อนกระดาน
+   * ระหว่างวาดไม่ได้) → ถ้า `_panning` ค้างอยู่เมื่อไหร่ `_moveCreate` ก็ไม่ถูกเรียกอีกเลย
+   * **กรอบนำหายสนิททั้งกระดาน** จนกว่าจะปิดเปิดแผงใหม่ ตรงกับอาการที่ผู้ใช้เจอเป๊ะ
+   *
+   * ค้างได้สองทาง และทั้งสองทางเกิดจากการเลื่อนกระดานจริง ๆ:
+   *   1. ปล่อยเมาส์ **นอกหน้าต่าง** ระหว่างลากเลื่อน → `mouse:up` ไม่เคยมาถึง `_panning` ค้าง
+   *   2. กด Space ค้างไว้แล้วสลับหน้าต่าง (Alt+Tab) → `keyup` หายไปกับหน้าต่างเดิม
+   *      `_spaceDown` ค้างเป็น true → กดเมาส์ครั้งต่อไปกลายเป็นเลื่อนกระดานแทนการวาด
+   *
+   * ทางแก้: ล้างทุกสถานะเมื่อหน้าต่างเสียโฟกัส + ตรวจซ้ำตอนกดเมาส์ครั้งใหม่
+   * @returns {boolean} true ถ้ามีอะไรค้างอยู่จริง
+   */
+  cancelTransient(why) {
+    const had = !!(this._panning || this._creating || this._bending || this._spaceDown);
+    if (this._creating && this._creating.ghost) {
+      try { this.renderer.canvas.remove(this._creating.ghost); } catch { /* ถูกลบไปแล้วก็ดี */ }
+    }
+    this._panning = null;
+    this._creating = null;
+    this._bending = null;
+    this._spaceDown = false;
+    const cv = this.renderer.canvas;
+    cv.selection = this.tool === 'select';
+    cv.defaultCursor = this.tool === 'hand' ? 'grab'
+                     : CREATE_TOOLS.has(this.tool) ? 'crosshair' : 'default';
+    if (had) {
+      log('warn', 'planner: ' + tt('ui.planner.panStuckCleared'), { why: why || '?', tool: this.tool });
+      this.renderer.refresh();
+    }
+    return had;
+  }
+
   _startPan(e) {
+    this._log(`pan/start tool=${this.tool} space=${this._spaceDown} alt=${!!e.altKey} btn=${e.button}`);
     this._panning = { x: e.clientX, y: e.clientY };
     const cv = this.renderer.canvas;
     this._panPrevSel = cv.selection;
@@ -228,6 +321,8 @@ export class PlannerInteraction {
   }
 
   _endPan() {
+    // [alpha.153 ข้อ 4] เลื่อนกระดานคือต้นเหตุของบั๊กกรอบนำ — ต้องมีร่องรอยทุกครั้งที่จบการเลื่อน
+    this._log(`pan/end vt=${(this.renderer.canvas.viewportTransform || []).slice(4).map(_r).join(',')}`);
     this._panning = null;
     const cv = this.renderer.canvas;
     cv.selection = this._panPrevSel !== false;
@@ -238,6 +333,10 @@ export class PlannerInteraction {
   // ── สร้างวัตถุใหม่ตามเครื่องมือ (บั๊ก 4) ──
   _startCreate(opt) {
     const cv = this.renderer.canvas;
+    // [alpha.151 ข้อ 8] วัดตำแหน่ง canvas ใหม่ก่อนอ่านพิกัดเสมอ — แถบ/แผงรอบ ๆ อาจเพิ่งขยับ
+    // ในเฟรมเดียวกันนี้ (เปิดแถบรูปแบบ · พับแผงข้าง) แล้ว `_offset` ที่ fabric จำไว้ค้างของเก่า
+    // → กรอบนำไปโผล่คนละที่กับเมาส์ ซึ่งผู้ใช้เห็นเป็น "guide bug"
+    cv.calcOffset();
     const p = cv.getPointer(opt.e);
     this._creating = { x: p.x, y: p.y, ghost: null, moved: false };
     cv.selection = false;
@@ -252,17 +351,20 @@ export class PlannerInteraction {
 
   _moveCreate(opt) {
     if (!DRAG_SIZED.has(this.tool)) return;
-    const p = this.renderer.canvas.getPointer(opt.e);
     const c = this._creating;
+    if (!c) return;
+    const p = this.renderer.canvas.getPointer(opt.e);
     // เกณฑ์ "ขยับพอจะถือว่าลาก" คิดเป็นพิกเซลบนจอ ไม่ใช่หน่วยกระดาน
     // (ซูมเข้ามาก ๆ แล้ว 4 หน่วยกระดาน = ลากยาวหลายสิบพิกเซลกว่ากรอบนำจะโผล่)
     const minMove = 4 / (this.renderer.getZoom() || 1);
     if (Math.abs(p.x - c.x) < minMove && Math.abs(p.y - c.y) < minMove) return;
     c.moved = true;
-    const box = _rectFrom(c.x, c.y, p.x, p.y);
+    // [alpha.150 ข้อ 3] เปิด snap ไว้ = กรอบนำต้องปัดเข้ากริด **ตั้งแต่ตอนลาก**
+    // (ของเดิมปัดเฉพาะตำแหน่งตอนวางเสร็จ → สิ่งที่เห็นตอนลากกับสิ่งที่ได้ไม่ตรงกัน)
+    const box = this.data.snapBox(_rectFrom(c.x, c.y, p.x, p.y));
     if (!c.ghost) {
       this._log(ttf('ui.plannerInteract.createGuideOccurFrame', _r(box.width), _r(box.height), _r(box.x), _r(box.y)),
-        { objects: this.renderer.canvas.getObjects().length, zoom: _r(this.renderer.getZoom()) });
+        { objects: this.renderer.canvas.getObjects().length, zoom: _r(this.renderer.getZoom()) }, 'debug');
     }
     if (!c.ghost) {
       c.ghost = new fabric.Rect({
@@ -281,7 +383,7 @@ export class PlannerInteraction {
     this._creating = null;
     if (c.ghost) this.renderer.canvas.remove(c.ghost);
     const p = this.renderer.canvas.getPointer(opt.e);
-    const box = c.moved ? _rectFrom(c.x, c.y, p.x, p.y) : null;
+    const box = c.moved ? this.data.snapBox(_rectFrom(c.x, c.y, p.x, p.y)) : null;
     this._log(`create/end tool=${this.tool} ${box ? tt('ui.plannerInteract.dragDefineSize') : tt('ui.plannerInteract.clickSizeDefault')}`,
       box ? { w: _r(box.width), h: _r(box.height) } : undefined);
     this.renderer.canvas.selection = this.tool === 'select';
@@ -417,11 +519,61 @@ export class PlannerInteraction {
     this._cleanupDragConnect();
   }
 
+  // ═════════ [alpha.151 ข้อ 9] ลากท่อนของเส้นหักมุมฉาก ═════════
+  _startBendDrag(t, opt) {
+    const e = this.data.getEdge(t.eid);
+    if (!e) return;
+    const p = this.renderer.canvas.getPointer(opt.e);
+    this._bending = {
+      eid: t.eid, index: t.bendIndex, axis: t.bendAxis,
+      start: p, base: (e.bends || [])[t.bendIndex] || 0,
+    };
+    this.renderer.canvas.selection = false;
+  }
+
+  _moveBendDrag(opt) {
+    const b = this._bending;
+    if (!b) return;
+    const p = this.renderer.canvas.getPointer(opt.e);
+    // ท่อนตั้ง (axis 'v') ลากซ้าย-ขวา · ท่อนนอน (axis 'h') ลากขึ้น-ลง
+    const raw = b.base + (b.axis === 'v' ? p.x - b.start.x : p.y - b.start.y);
+    const g = this.data.getGrid();
+    const val = g.snap && g.size > 0 ? Math.round(raw / g.size) * g.size : Math.round(raw);
+    if (val === b.last) return;
+    b.last = val;
+    const e = this.data.getEdge(b.eid);
+    if (!e) return;
+    this.data.updateEdge(b.eid, { bends: setBend(e.bends, b.index, val) });
+    const fresh = this.data.getEdge(b.eid);
+    this.renderer.renderEdge(fresh);
+    this.renderer.showEdgeHandles(fresh);
+    this.renderer.restack();
+    this.renderer.refresh();
+  }
+
+  _endBendDrag() {
+    const b = this._bending;
+    this._bending = null;
+    this.renderer.canvas.selection = this.tool === 'select';
+    if (b && b.last !== undefined && this._cb.onCommit) this._cb.onCommit();
+  }
+
   // ═════════ ล้อเมาส์ ═════════
   _bindWheel() {
     this.renderer.canvas.on('mouse:wheel', (opt) => {
       const e = opt.e;
       e.preventDefault(); e.stopPropagation();
+      // [alpha.150 ข้อ 5] หมุนล้อบนการ์ดที่เนื้อหาล้น = เลื่อนเนื้อ **ในการ์ด** ไม่ใช่ซูมกระดาน
+      // (Ctrl ค้าง = บังคับซูมเสมอ — ทางออกเวลาอยากซูมทั้งที่เมาส์ทับการ์ดพอดี)
+      // [alpha.150r] Shift+ล้อ = เลื่อนแนวนอน (ท่ามาตรฐานของทุกโปรแกรม) — จำเป็นกับการ์ดรูป
+      // ที่ขยายจนกว้างเกินกรอบ เพราะรูปไม่ตัดบรรทัดเหมือนข้อความ
+      const over = opt.target;
+      if (!e.ctrlKey && over && over.kind === 'node' && this._cb.onScrollNode &&
+          (over.scrollMax > 0 || over.scrollMaxX > 0)) {
+        const step = Math.sign(e.deltaY || e.deltaX) * 40;
+        const horiz = e.shiftKey || (!(over.scrollMax > 0) && over.scrollMaxX > 0);
+        if (this._cb.onScrollNode(over.nid, horiz ? 0 : step, horiz ? step : 0)) return;
+      }
       if (e.shiftKey && !e.ctrlKey) { this.renderer.pan(-e.deltaY, 0); return; }
       const factor = Math.pow(0.999, e.deltaY);
       this.renderer.zoom(factor, { x: e.offsetX, y: e.offsetY });
@@ -452,6 +604,17 @@ export class PlannerInteraction {
       if (!t) return;
       this.renderer.hidePorts();
       if (this._cb.onTransforming) this._cb.onTransforming();
+      // ══ [alpha.151 ข้อ 7] ★ snap ต้องมีผลกับ "การยืดขอบ" ด้วย ══
+      // ผู้ใช้: *"snap ยังใช้ไม่ได้กับการปรับขนาด card ต่าง ๆ"*
+      // รอบ .150 ปัดขนาดเฉพาะตอน **ปล่อยเมาส์** — ระหว่างลากจึงยังลื่นไหลอิสระ
+      // และมุมที่ไม่ได้จับก็ขยับตามไปด้วย ผู้ใช้เลยรู้สึกว่า "ไม่ snap"
+      // ตอนนี้ปัดสด ๆ ระหว่างลาก: คิดขนาดที่ปัดแล้วย้อนกลับเป็น scale ให้ fabric
+      this._snapScaling(t);
+      // [alpha.154 ข้อ 2] วาดเนื้อการ์ดตามขนาดสด ๆ — รูป/ตัวอักษรไม่ถูกยืดระหว่างลาก
+      if (t.kind === 'node' && t.type !== 'activeSelection') {
+        const n = this.data.getNode(t.nid);
+        if (n) this.renderer.reflowNode(t, n);
+      }
       this._liveEdges(t);
     });
     cv.on('object:resizing', (opt) => { if (opt.target) this._liveEdges(opt.target); });
@@ -462,6 +625,23 @@ export class PlannerInteraction {
       this._commitTransform(t);
       if (this._cb.onCommit) this._cb.onCommit();
     });
+  }
+
+  /**
+   * [alpha.151 ข้อ 7] ปัดขนาด+ตำแหน่งเข้ากริดระหว่างยืดขอบ
+   * ทำเฉพาะการ์ดใบเดียว — กล่องเลือกหลายใบมีพิกัดเทียบกึ่งกลางกล่อง แตะแล้วกระเด็น (บทเรียนข้อ 19)
+   */
+  _snapScaling(t) {
+    const g = this.data.getGrid();
+    if (!g.snap || !(g.size > 0)) return false;
+    if (!t || t.kind !== 'node' || t.type === 'activeSelection') return false;
+    const baseW = t.width || 1, baseH = t.height || 1;
+    const w = this.data.snapSize(baseW * Math.abs(t.scaleX));
+    const h = this.data.snapSize(baseH * Math.abs(t.scaleY));
+    t.set({ scaleX: w / baseW, scaleY: h / baseH,
+            left: this.data.snapValue(t.left), top: this.data.snapValue(t.top) });
+    t.setCoords();
+    return true;
   }
 
   /** ระหว่างลาก — อัปเดตข้อมูลพิกัดให้ตรง เพื่อคำนวณเส้นได้ */
@@ -532,8 +712,9 @@ export class PlannerInteraction {
       const box = absBox(o);
       n.x = g.snap ? Math.round(box.x / g.size) * g.size : Math.round(box.x);
       n.y = g.snap ? Math.round(box.y / g.size) * g.size : Math.round(box.y);
-      const newW = Math.max(16, Math.round(box.width));
-      const newH = Math.max(16, Math.round(box.height));
+      // [alpha.150 ข้อ 3] snap มีผลกับ **ขนาด** ด้วย ไม่ใช่แค่ตำแหน่ง (ยืดขอบแล้วต้องลงกริดพอดี)
+      const newW = Math.max(16, Math.round(g.snap ? this.data.snapSize(box.width) : box.width));
+      const newH = Math.max(16, Math.round(g.snap ? this.data.snapSize(box.height) : box.height));
       if (Math.abs(newW - n.width) > 0.5 || Math.abs(newH - n.height) > 0.5) {
         n.width = newW; n.height = newH;
         needRebuild.push(n.id);
@@ -621,9 +802,19 @@ export class PlannerInteraction {
     const ta = document.createElement('textarea');
     ta.className = 'planner-inline-edit';
     ta.value = useSynopsis ? (n.synopsis || '') : (n.title || '');
+    // ══ [alpha.152 ข้อ 3] ★★ กล่องแก้ข้อความต้องใช้ "สีของการ์ดใบนั้น" ไม่ใช่พื้นเข้มตายตัว ══
+    //
+    // ผู้ใช้: *"ตัวหนังสือใน comment มองไม่เห็น และพิมพ์แล้วไม่ขึ้นอะไรให้เลย
+    //          มันจะขึ้นจนกว่าจะพิมพ์เสร็จ"*
+    //
+    // การ์ดบันทึกความเห็นเป็นกระดาษสีครีมตัวหนังสือเข้ม (`textColor:'#26241f'`) แต่ CSS ของ
+    // กล่องแก้ข้อความตั้งพื้นเป็น `rgba(26,24,21,.94)` ไว้ตายตัว → **ดำบนดำ** พิมพ์ไปก็ไม่เห็นอะไร
+    // พอปิดกล่อง การ์ดวาดใหม่ด้วยสีของตัวเอง ข้อความถึงโผล่ — ตรงกับที่ผู้ใช้เล่าเป๊ะ
+    // → ยืมสีพื้น/สีอักษรของการ์ดมาใช้ กลายเป็น WYSIWYG ไปในตัว
+    const bg = n.color || 'rgba(26,24,21,.94)';
     ta.style.cssText = `left:${left}px;top:${top}px;width:${Math.max(60, n.width * zoom)}px;` +
                        `height:${Math.max(28, n.height * zoom)}px;font-size:${Math.max(9, (n.fontSize || 13) * zoom)}px;` +
-                       `color:${n.textColor || '#faf9f5'};`;
+                       `color:${n.textColor || '#faf9f5'};background:${bg};`;
     this._host.appendChild(ta);
     ta.focus(); ta.select();
     const commit = (save) => {
@@ -669,9 +860,19 @@ export class PlannerInteraction {
   // ═════════ คีย์บอร์ด ═════════
   _onKeyDown(e) {
     if (this._editor) return;                                  // กำลังพิมพ์ในการ์ด
-    const tag = (e.target && e.target.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
-    if (this._cb.isActive && !this._cb.isActive()) return;     // แผงไม่ได้อยู่หน้า → ไม่กิน key
+    // ══ [alpha.152 ข้อ 5] ★★ ดูที่ "ช่องที่โฟกัสอยู่จริง" ไม่ใช่แค่ปลายทางของอีเวนต์ ══
+    //
+    // ผู้ใช้: *"shortcut มันไปจับนอก planner … พิมพ์ในคุณสมบัติ ไม่ได้เลือกแผง planner
+    //          กลายเป็นไปโดน shortcut พิมพ์ไม่ได้"*
+    //
+    // ปุ่มเครื่องมือของกระดาน (V H N T S F C L I K) เป็น **ตัวอักษรเปล่า ๆ ไม่มี Ctrl** —
+    // หลุดออกไปนอกกระดานเมื่อไหร่ก็กลืนทุกตัวอักษรที่ผู้ใช้พิมพ์ · ด่านเดิมดูแค่ `e.target`
+    // ซึ่งพลาดได้หลายทาง (อีเวนต์ที่ถูกยิงใหม่ · โฟกัสอยู่คนละ subtree) → ถามที่ตัวจริง:
+    // `document.activeElement`
+    const inField = (el) => !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+                                     || el.tagName === 'SELECT' || el.isContentEditable);
+    if (inField(e.target) || inField(document.activeElement)) return;
+    if (this._cb.isActive && !this._cb.isActive()) return;     // แผงไม่ได้ถูกเลือกอยู่ → ไม่กิน key
 
     if (e.code === 'Space' && !this._spaceDown) {
       this._spaceDown = true;
@@ -679,20 +880,33 @@ export class PlannerInteraction {
       e.preventDefault();
       return;
     }
-    if (e.key === 'Escape') { this.cancelDragConnect(); if (this._cb.onDeselect) this._cb.onDeselect(); return; }
+    // [alpha.150 ข้อ 4] F11 = เต็มจอ · Esc ออกจากเต็มจอ **ก่อน** ที่จะไปยกเลิกการเลือก
+    // (ไม่งั้นกด Esc แล้วเลิกเลือกเฉย ๆ แต่ยังติดเต็มจอ = ออกไม่ได้นอกจากหาปุ่มเจอ)
+    if (e.code === 'F11') { e.preventDefault(); this._cb.onFullscreen && this._cb.onFullscreen(); return; }
+    if (e.key === 'Escape') {
+      if (this._cb.isFullscreen && this._cb.isFullscreen()) { this._cb.onFullscreen && this._cb.onFullscreen(false); return; }
+      this.cancelDragConnect(); if (this._cb.onDeselect) this._cb.onDeselect(); return;
+    }
 
     const mod = e.ctrlKey || e.metaKey;
-    const k = (e.key || '').toLowerCase();
+    // ══ [alpha.152 ข้อ 4] ★★ อ่าน "ปุ่มกายภาพ" (`e.code`) ไม่ใช่ตัวอักษรที่พิมพ์ออกมา (`e.key`) ══
+    //
+    // ผู้ใช้: *"shortcut ของ planner ไม่ถูกผูกจาก os ทำให้ต้องเปลี่ยนภาษาตลอดเวลาใช้ shortcut"*
+    //
+    // แป้นไทย: กด Ctrl+Z ได้ `e.key === 'ผ'` — เทียบกับ `'z'` ไม่มีวันตรง ทั้งกระดานจึงใช้ไม่ได้
+    // จนกว่าจะสลับกลับเป็นอังกฤษ · ปุ่มเครื่องมือ (V/H/N/…) ใช้ `e.code` ถูกอยู่แล้วตั้งแต่ต้น
+    // ส่วนชุด Ctrl ตกหล่นไป — ที่เหลือของโปรแกรม (`onShortcut`) ก็ใช้ `e.code` เหมือนกัน
+    const c = e.code || '';
 
-    if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) this._cb.onRedo && this._cb.onRedo(); else this._cb.onUndo && this._cb.onUndo(); return; }
-    if (mod && k === 'y') { e.preventDefault(); this._cb.onRedo && this._cb.onRedo(); return; }
-    if (mod && k === 'd') { e.preventDefault(); this._cb.onDuplicate && this._cb.onDuplicate(); return; }
-    if (mod && k === 'a') { e.preventDefault(); this._cb.onSelectAll && this._cb.onSelectAll(); return; }
-    if (mod && k === 's') { e.preventDefault(); this._cb.onSave && this._cb.onSave(); return; }
-    if (mod && k === 'g') { e.preventDefault(); this._cb.onGroup && this._cb.onGroup(); return; }
-    if (mod && (k === '0')) { e.preventDefault(); this._cb.onZoomReset && this._cb.onZoomReset(); return; }
-    if (mod && (k === '=' || k === '+')) { e.preventDefault(); this.renderer.zoom(1.2); return; }
-    if (mod && k === '-') { e.preventDefault(); this.renderer.zoom(1 / 1.2); return; }
+    if (mod && c === 'KeyZ') { e.preventDefault(); if (e.shiftKey) this._cb.onRedo && this._cb.onRedo(); else this._cb.onUndo && this._cb.onUndo(); return; }
+    if (mod && c === 'KeyY') { e.preventDefault(); this._cb.onRedo && this._cb.onRedo(); return; }
+    if (mod && c === 'KeyD') { e.preventDefault(); this._cb.onDuplicate && this._cb.onDuplicate(); return; }
+    if (mod && c === 'KeyA') { e.preventDefault(); this._cb.onSelectAll && this._cb.onSelectAll(); return; }
+    if (mod && c === 'KeyS') { e.preventDefault(); this._cb.onSave && this._cb.onSave(); return; }
+    if (mod && c === 'KeyG') { e.preventDefault(); this._cb.onGroup && this._cb.onGroup(); return; }
+    if (mod && (c === 'Digit0' || c === 'Numpad0')) { e.preventDefault(); this._cb.onZoomReset && this._cb.onZoomReset(); return; }
+    if (mod && (c === 'Equal' || c === 'NumpadAdd')) { e.preventDefault(); this.renderer.zoom(1.2); return; }
+    if (mod && (c === 'Minus' || c === 'NumpadSubtract')) { e.preventDefault(); this.renderer.zoom(1 / 1.2); return; }
     // ลำดับซ้อนทับ (บั๊ก 65r2-1) — Ctrl+] / Ctrl+[ · เติม Shift = สุดขอบ
     if (mod && e.code === 'BracketRight') {
       e.preventDefault(); this._cb.onOrder && this._cb.onOrder(e.shiftKey ? 'front' : 'forward'); return;
@@ -730,7 +944,8 @@ export class PlannerInteraction {
     }
     // ปุ่มลัดเครื่องมือแบบ Miro (จับด้วย e.code = ปุ่มกายภาพ → ใช้ได้ทุกผังแป้นพิมพ์)
     const TOOL_KEYS = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyT: 'text', KeyS: 'shape',
-                        KeyF: 'frame', KeyC: 'comment', KeyL: 'connector' };
+                        KeyF: 'frame', KeyC: 'comment', KeyL: 'connector',
+                        KeyI: 'image', KeyK: 'todo' };
     if (TOOL_KEYS[e.code]) { e.preventDefault(); this.setTool(TOOL_KEYS[e.code]); }
   }
 
@@ -744,11 +959,19 @@ export class PlannerInteraction {
   bindKeyboard() {
     document.addEventListener('keydown', this._onKeyDownBound);
     document.addEventListener('keyup', this._onKeyUpBound);
+    // [alpha.153 ข้อ 2] สลับหน้าต่างระหว่างกด Space/ลากค้าง → keyup กับ mouseup หายไปกับหน้าต่างเดิม
+    window.addEventListener('blur', this._onWinBlurBound);
+    // ระยะ capture: ต้องมาก่อนตัวจับของ fabric ที่ผูกไว้บน canvas (ซึ่งอาจไม่ยิงเลยถ้าสถานะค้าง)
+    document.addEventListener('mousedown', this._onDocDownBound, true);
+    document.addEventListener('mouseup', this._onDocUpBound);
   }
 
   unbindKeyboard() {
     document.removeEventListener('keydown', this._onKeyDownBound);
     document.removeEventListener('keyup', this._onKeyUpBound);
+    window.removeEventListener('blur', this._onWinBlurBound);
+    document.removeEventListener('mousedown', this._onDocDownBound, true);
+    document.removeEventListener('mouseup', this._onDocUpBound);
   }
 
   // ═════════ ลากจาก Explorer มาวาง ═════════

@@ -142,20 +142,51 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('isFmtbarButton แยกได้ว่าปุ่มไหนอยู่แถบไหน',
         T.isFmtbarButton('tb-bold') === true && T.isFmtbarButton('tb-kanban') === false);
 
-  // ★★ [alpha.139] ประตูกันพลาด: `FMTBAR_IDS` ต้องตรงกับรายการจริงใน `setupFloatingFormatBar()`
-  // (คอมเมนต์บอกไว้ว่า "ต้องตรงกัน" มาตั้งแต่ .111 แต่ไม่เคยมีใครตรวจ — ย้ายปุ่มเข้า/ออกทีไร
-  //  ก็มีโอกาสหลุดข้างเดียว แล้วปุ่มนั้นกลายเป็นปุ่มที่ตั้งค่าไม่ได้/ซ่อนไม่ได้เงียบ ๆ)
+  // ★★ [alpha.150] ประตูกันพลาดเดิม (.139) คือ "รายการที่เขียนมือใน app.js ต้องตรงกับ FMTBAR_IDS"
+  // — ตอนนี้ **ไม่มีรายการที่เขียนมือแล้ว**: `setupFloatingFormatBar()` วนจาก `fmtbarSequence()`
+  // ซึ่งสร้างจาก `FMTBAR_GROUPS` ก้อนเดียวกับที่หน้าตั้งค่าใช้ · เทสจึงเปลี่ยนไปตรวจสิ่งที่ยัง
+  // ผิดพลาดได้จริง: app.js ต้องเดินผ่านแหล่งเดียวนั้น และลำดับ/เส้นคั่นที่ได้ต้องถูกต้อง
   {
     const src = require('fs').readFileSync(path.join(__dirname, '../src/app.js'), 'utf8');
-    const i0 = src.indexOf("['#tb-sp-elem'");
-    const i1 = src.indexOf('].forEach((sel)', i0);
-    check('หาอ่านรายการปุ่มใน setupFloatingFormatBar() ได้', i0 > 0 && i1 > i0);
-    const moved = [...src.slice(i0, i1).matchAll(/'#([\w-]+)'/g)].map((m) => m[1]);
-    check('★ ลำดับปุ่มบนแถบลอยตรงกับ FMTBAR_IDS เป๊ะ',
-          moved.join(',') === ids.join(','),
-          'app.js[' + moved.join(',') + '] cfg[' + ids.join(',') + ']');
+    check('★ setupFloatingFormatBar() ประกอบแถบจาก fmtbarSequence() (ไม่มีรายการเขียนมือคู่ขนาน)',
+          /for \(const id of fmtbarSequence\(\)\)/.test(src));
+    check('★ ไม่มีรายการปุ่มเขียนมือหลงเหลือใน app.js', src.indexOf("['#tb-sp-elem'") < 0);
+    const seq = T.fmtbarSequence();
+    check('★ ลำดับปุ่มในแถบ (ตัดเส้นคั่น) ตรงกับ FMTBAR_IDS เป๊ะ',
+          seq.filter((x) => x !== 'sep').join(',') === ids.join(','), seq.join(','));
+    check('★ มีเส้นคั่นหนึ่งเส้นต่อรอยต่อหมวด',
+          seq.filter((x) => x === 'sep').length === T.FMTBAR_GROUPS.length - 1);
+    check('★ ไม่มีเส้นคั่นสองเส้นติดกัน และไม่มีเส้นคั่นหัว/ท้าย',
+          seq[0] !== 'sep' && seq[seq.length - 1] !== 'sep'
+          && !seq.some((x, i) => x === 'sep' && seq[i + 1] === 'sep'));
     check('★ ปุ่มส่วนเสริมท้ายชื่อตัวละครอยู่บนแถบลอย (ไม่ใช่แถบเครื่องมือ) — alpha.139',
-          moved.includes('tb-sp-ext'));
+          ids.includes('tb-sp-ext'));
+    // [alpha.150 ข้อ 1] หมวดที่ผู้ใช้สั่งมาต้องอยู่ครบและเรียงตามที่สั่ง
+    check('★ หมวดของแถบลอยเรียงตามที่ผู้ใช้สั่ง',
+          T.FMTBAR_GROUPS.map((g) => g.key).join(',')
+            === 'history,doc,block,font,color,list,align,insert,view,find',
+          T.FMTBAR_GROUPS.map((g) => g.key).join(','));
+    check('★ undo/redo เป็นหมวดแรกสุด', ids[0] === 'tb-undo' && ids[1] === 'tb-redo');
+    check('★ ค้นในเอกสาร/ค้นทั้งผลงาน เป็นหมวดสุดท้าย',
+          ids.slice(-2).join(',') === 'tb-find,tb-gsearch', ids.slice(-2).join(','));
+  }
+
+  // ── [alpha.150 ข้อ 1] ปุ่มจัดแนวตั้ง = ของกระดานวางแผนเท่านั้น ──
+  {
+    // [alpha.151 ข้อ 1+3] ปุ่มจัดแนวตั้งย้ายไปอยู่บนแถบของกระดานแล้ว — ไม่อยู่บนแถบตัวแก้ไขอีก
+    check('★★ [151-3] ปุ่มจัดแนวตั้งไม่อยู่บนแถบของตัวแก้ไขแล้ว',
+          !T.FMTBAR_IDS.includes('tb-valign-top') && !T.allButtonIds().includes('tb-valign-top'));
+    check('★★ [151-3] ย้ายไปอยู่บนแถบของกระดานครบสามตัว',
+          ['pb-valign-top', 'pb-valign-middle', 'pb-valign-bottom']
+            .every((x) => T.PLANNER_BAR_IDS.includes(x)));
+    // [alpha.151 ข้อ 6] ปุ่มที่โหมดนี้ใช้ไม่ได้ **ไม่โผล่เลย** — ไม่ใช่โผล่แบบสีเทา
+    const seq2 = ['tb-bold', 'tb-sp-cont'];
+    const onProse = T.layoutFmtbar(seq2, null, 'prose');
+    check('★★ [151-6] ปุ่มที่โหมดนี้ใช้ไม่ได้ ไม่โผล่เลย', onProse.show[1] === false);
+    check('★ ปุ่มที่ใช้ได้ยังโผล่ตามปกติ', onProse.show[0] === true);
+    const forced = T.layoutFmtbar(seq2, T.setFmtbarForceShown(null, 'prose', 'tb-sp-cont', true), 'prose');
+    check('★★ [151-6] ผู้ใช้ติ๊กในตั้งค่า → โผล่กลับมา (แต่ยังเป็นสีเทาเพราะกดไม่ได้จริง)',
+          forced.show[1] === true && forced.grey[1] === true);
   }
 
   // ★ กติกาข้อสำคัญที่สุด: ปุ่มเดียวห้ามมีสวิตช์สองที่
@@ -170,10 +201,44 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('นับปุ่มของแถบหลักไม่รวมปุ่มบนแถบลอย',
         T.mainbarCounts(null).total === main.length, T.mainbarCounts(null).total);
 
-  check('โหมดมีสองโหมด', T.FMT_MODES.join(',') === 'prose,screenplay');
+  // ── [alpha.151 ข้อ 1] สี่โหมด: นิยาย · บท · ทุกที่ · กระดาน ──
+  check('★ โหมดมีสี่โหมด', T.FMT_MODES.join(',') === 'prose,screenplay,all,planner',
+        T.FMT_MODES.join(','));
+  check('★ แถบของตัวแก้ไขใช้สามโหมด (กระดานมีแถบของตัวเอง)',
+        T.EDITOR_FMT_MODES.join(',') === 'prose,screenplay,all');
   check('โหมดที่ไม่รู้จักตกเป็นนิยาย',
-        T.fmtMode('wiki') === 'prose' && T.fmtMode(undefined) === 'prose'
-        && T.fmtMode('screenplay') === 'screenplay');
+        T.fmtMode('wiki') === 'prose' && T.fmtMode(undefined) === 'prose');
+  check('★ โหมดที่รู้จักไม่ถูกยุบทิ้งอีกแล้ว',
+        T.fmtMode('screenplay') === 'screenplay' && T.fmtMode('all') === 'all'
+        && T.fmtMode('planner') === 'planner');
+
+  // ── [alpha.151 ข้อ 3] แถบของกระดานเป็นคนละอัน ──
+  {
+    const pseq = T.plannerBarSequence();
+    const pids = pseq.filter((x) => x !== 'sep');
+    check('★★ แถบกระดานมีปุ่มของตัวเอง (ไม่ใช่ปุ่มชุดเดียวกับตัวแก้ไข)',
+          pids.length >= 20 && pids.every((x) => x.startsWith('pb-')), pids.length);
+    check('★ ไม่มีปุ่มไหนอยู่ทั้งสองแถบ',
+          pids.every((x) => !T.FMTBAR_IDS.includes(x)));
+    check('★ เส้นคั่นหนึ่งเส้นต่อรอยต่อหมวด',
+          pseq.filter((x) => x === 'sep').length === T.PLANNER_BAR_GROUPS.length - 1);
+    check('★ ปุ่มจัดข้อความในการ์ดครบหกทิศ',
+          ['pb-align-left', 'pb-align-center', 'pb-align-right',
+           'pb-valign-top', 'pb-valign-middle', 'pb-valign-bottom'].every((x) => pids.includes(x)));
+    check('★ มีปุ่มแทรกรูปในการ์ด', pids.includes('pb-image'));
+    // ซ่อน/แสดงได้จากหน้าตั้งค่าเหมือนแถบอีกอัน
+    const c0 = T.setFmtbarVisible(null, 'planner', 'pb-image', false);
+    check('★★ ปิดปุ่มของแถบกระดานแล้วถูกซ่อนจริง', T.plannerBarHidden(c0, 'pb-image') === true);
+    const lay = T.layoutPlannerBar(c0);
+    check('★★ ปุ่มที่ถูกซ่อน **ไม่ถูกวาดเลย** (ข้อ 6 — ไม่ใช่ทำเป็นสีเทา)',
+          lay.show[lay.seq.indexOf('pb-image')] === false);
+    check('★ เปิดกลับ → โผล่กลับมา (สองทาง)',
+          T.plannerBarHidden(T.setFmtbarVisible(c0, 'planner', 'pb-image', true), 'pb-image') === false);
+    check('★ ตั้งค่าแถบกระดานไม่กระทบแถบตัวแก้ไข',
+          T.fmtbarHidden(c0, 'prose', 'tb-bold') === false);
+    check('หมวดของแถบกระดานมีป้ายชื่อครบ',
+          T.plannerBarGroups().every((g) => g.labelKey && g.buttons.length));
+  }
 
   // ── ปุ่มที่โหมดนั้นใช้ไม่ได้ ──
   check('บทภาพยนตร์: ช่องหัวข้อ/ยกคำพูด/ตัวยก/ตัวห้อย ใช้ไม่ได้',
@@ -240,8 +305,8 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
     const r = T.layoutFmtbar(seq, null, 'screenplay');
     check('layoutFmtbar คืนสองชุดยาวเท่าลำดับที่ส่งไป',
           r.show.length === seq.length && r.grey.length === seq.length);
-    check('ปุ่มที่ใช้ไม่ได้ในบท ถูกทำเครื่องหมายเทา (แต่ยังแสดง)',
-          r.grey[3] === true && r.grey[4] === true && r.show[3] === true && r.show[4] === true);
+    check('★ [151-6] ปุ่มที่ใช้ไม่ได้ในบท ถูกตัดออกจากแถบ ไม่ใช่ทำเป็นสีเทา',
+          r.grey[3] === true && r.grey[4] === true && r.show[3] === false && r.show[4] === false);
     check('ปุ่มที่ใช้ได้ ไม่โดนเทา', r.grey[1] === false);
     check('ที่จับลากของแถบไม่เคยโดนเทา/ซ่อน', r.grey[0] === false && r.show[0] === true);
     const r2 = T.layoutFmtbar(seq, null, 'prose');

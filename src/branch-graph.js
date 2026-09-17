@@ -9,6 +9,7 @@
 // ---- ขนาดกล่องโหนดบนผัง (px) — UI ใช้ค่าเดียวกันตอนวาด SVG ----
 // [alpha.66 ข้อ 5] กล่องใหญ่ขึ้นเพราะตัวหนังสือในผังถูกขยายให้เท่า UI หลัก (เดิม 12.5px เล็กกว่าที่อื่น)
 import { t as tt, t } from './i18n.js';
+import { gi } from './icons.js';
 export const NODE_W = 208, NODE_H = 68;
 export const GAP_X = 108, GAP_Y = 26, PAD = 30;
 
@@ -555,7 +556,7 @@ export function graphToOutline(graph, opts = {}) {
     });
   };
   for (const r of exportRoots(graph, opts.analysis)) {
-    lines.push('▶ ' + titleOf(r));
+    lines.push(gi('play') + ' ' + titleOf(r));
     walk(r, '  ', [r]);
     lines.push('');
   }
@@ -640,8 +641,8 @@ export function graphToHtmlTree(graph, opts = {}) {
   const showBody = opts.excerpt !== false;
 
   const sceneLine = (n) => {
-    const badge = rootSet.has(n.id) ? `<span class="badge b-root">▶ ${esc(L.root || tt('ui.common.dotStart'))}</span>`
-      : endSet.has(n.id) ? `<span class="badge b-end">🏁 ${esc(L.ending || tt('ui.common.actEnd'))}</span>` : '';
+    const badge = rootSet.has(n.id) ? `<span class="badge b-root">${gi('play')} ${esc(L.root || tt('ui.common.dotStart'))}</span>`
+      : endSet.has(n.id) ? `<span class="badge b-end">${gi('flag-finish')} ${esc(L.ending || tt('ui.common.actEnd'))}</span>` : '';
     const style = n.color ? ` style="border-left-color:${esc(n.color)}"` : '';
     return `<span class="scene"${style}><span class="t">${esc(n.title)}</span>`
       + (n.chapterName ? `<span class="c">${esc(n.chapterName)}</span>` : '') + `</span>${badge}`;
@@ -658,7 +659,7 @@ export function graphToHtmlTree(graph, opts = {}) {
       const label = `<span class="choice"${cstyle}>[${esc(c.text || '—')}]</span> →`;
       if (!c.nextSceneId) return `<li>${label} <span class="open">${esc(openTxt)}</span></li>`;
       if (!target) return `<li>${label} <span class="open">(${esc(goneTxt)}: ${esc(c.nextSceneId)})</span></li>`;
-      if (looped) return `<li>${label} ${sceneLine(target)} <span class="loop">↩ ${esc(loopTxt)}</span></li>`;
+      if (looped) return `<li>${label} ${sceneLine(target)} <span class="loop">${gi('reply')} ${esc(loopTxt)}</span></li>`;
       return `<li>${label} ${walk(c.nextSceneId, [...stack, c.nextSceneId], depth + 1)}</li>`;
     }).join('\n');
     const inner = (ex ? `<div class="excerpt">${esc(ex)}</div>` : '') + (kids ? `<ul>\n${kids}\n</ul>` : '');

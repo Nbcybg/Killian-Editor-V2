@@ -1,6 +1,7 @@
 // player-choices.js — ประวัติการตัดสินใจ (ข้อ 83)
 import { t, tf } from './i18n.js';
 import { state, setStatus, el, log } from './core.js';
+import { gi } from './icons.js';
 
 export function getPlayerHistory() {
   if (!state.meta) return [];
@@ -76,10 +77,10 @@ export function renderChoicePanel(host, opts = {}) {
   for (const c of [...rows].reverse().slice(0, limit)) {
     const row = el('div', 'pc-row');
     // ข้อความจากผู้ใช้ → textContent เท่านั้น (innerHTML = ช่องโหว่สคริปต์ฝัง)
-    row.append(el('div', 'pc-choice', '🎯 ' + (c.choice || '')));
+    row.append(el('div', 'pc-choice', gi('target') + ' ' + (c.choice || '')));
     let when = '';
     try { when = new Date(c.timestamp).toLocaleString('th-TH'); } catch { when = c.timestamp || ''; }
-    row.append(el('div', 'pc-meta', `📄 ${c.sceneTitle || '—'} · ${when}`));
+    row.append(el('div', 'pc-meta', gi('file') + ` ${c.sceneTitle || '—'} · ${when}`));
     if (onOpenScene && c.sceneId) {
       row.classList.add('pc-clickable');
       row.onclick = () => onOpenScene(c.sceneId, c.sceneTitle);
@@ -107,10 +108,10 @@ export async function showPlayerHistory() {
       const row = el('div', 'k-menu-item');
       row.style.cssText = 'flex-direction:column;align-items:stretch;gap:2px';
       // ข้อความจากผู้ใช้ → textContent เท่านั้น (innerHTML = ช่องโหว่สคริปต์ฝัง)
-      const top = el('div', null, '🎯 ' + (c.choice || ''));
+      const top = el('div', null, gi('target') + ' ' + (c.choice || ''));
       top.style.cssText = 'font-size:13px;color:var(--bright)';
       const sub = el('div', null,
-        `📄 ${c.sceneTitle || '—'} · ${new Date(c.timestamp).toLocaleString('th-TH')}`);
+        gi('file') + ` ${c.sceneTitle || '—'} · ${new Date(c.timestamp).toLocaleString('th-TH')}`);
       sub.style.cssText = 'font-size:11px;color:var(--dim)';
       row.append(top, sub);
       list.append(row);

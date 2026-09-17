@@ -1,16 +1,46 @@
 // scene-ops.js — จัดการฉากและบท: เพิ่ม/แก้ชื่อ/ลบ/ทำสำเนา/ย้าย/เมนูสถานะ·สี
+//
+// ══ [alpha.156] กติกาของไฟล์นี้ ══
+// 1. `scenes.json` / `draft.json` แก้ผ่าน `mutateJson()` เท่านั้น (อ่านสด → แก้ → เขียน ในคิวของไฟล์)
+//    เดิมอ่านแล้วเขียนทั้งก้อน → งานที่วิ่งซ้อน (บันทึกอัตโนมัติ · แผงคุณสมบัติ · Kanban) ทับกันหาย
+//    ⚠ ห้ามเรียก saveTab/updateSceneRow **ข้างใน** fn ของ mutateJson (มันแตะ scenes.json เอง = รอตัวเอง)
+// 2. ชื่อไฟล์ฉากใหม่ต้องผ่าน `freeSceneFileName()` — เดิมตั้งจากเลขลำดับตรง ๆ แล้วเขียนทับ
+//    ฉากเดิมที่ชื่อชนเป็นไฟล์ว่าง (ลากเรียงฉาก → ลบฉากท้าย → เพิ่มฉาก = scene-03.md ถูกทับ)
+// 3. เขียน frontmatter ของไฟล์ที่เปิดอยู่ = ต้องซิงก์ `meta` ของแท็บ (`syncOpenTabMeta`)
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { buildTree, closeTab, guid, openScene, safeName, saveTab, uniqueSceneFileName, refreshNetwork } from './app.js';
-import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, logAction } from './core.js';
+import { buildTree, closeTab, guid, openScene, safeName, saveTab, refreshNetwork,
+         closeTabsUnderPath, syncOpenTabMeta, moveSnapshots } from './app.js';
+import { SCENE_STATUSES, dataLabel, el, setStatus, state, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { deleteToTrash } from './recycle.js';
-import { ask, confirmBox, popupMenu } from './ui.js';
+import { ask, confirmBox } from './ui.js';
 import { countWords, dumpMdFile, parseMdFile } from './md.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติหนักของฉากอยู่ใน frontmatter — เขียนผ่านที่นี่ที่เดียว
 import { SCENE_HEAVY_KEYS, writeSceneMeta } from './scene-meta.js';
 // ตาราง "เล่าด้วยภาพ" เป็นไฟล์คู่ข้างฉาก (<ชื่อฉาก>_vis.csv) — ทุกที่ที่ย้าย/ลบ/ทำสำเนาฉาก
 // ต้องพาไฟล์นี้ไปด้วย ไม่งั้นกลายเป็นไฟล์กำพร้าที่ผู้ใช้มองไม่เห็นแต่ยังกินที่
 import { visFileName } from './visual/vis-core.js';
+import { gi } from './icons.js';
+import { mutateJson } from './json-store.js';
+
+/**
+ * [alpha.156] ชื่อไฟล์ฉากที่ว่างจริง — ไม่ชนทั้ง "ไฟล์บนดิสก์" และ "ชื่อที่แถวใน scenes.json จองไว้"
+ * (แถวที่ไฟล์หายไปแล้วก็ยังจองชื่อ ไม่งั้นกู้ไฟล์กลับมาทีหลังแล้วสองแถวชี้ไฟล์เดียวกัน)
+ * รูปชื่อเดียวกับ `uniqueSceneFileName()` ของเดิม: scene-03.md → scene-03-2.md → …
+ */
+export async function freeSceneFileName(dPath, folderName, order, taken = new Set()) {
+  const base = 'scene-' + String(order).padStart(2, '0');
+  for (let n = 1; n < 1000; n++) {
+    const name = n === 1 ? base + '.md' : `${base}-${n}.md`;
+    if (taken.has(name)) continue;
+    if (await kapi.exists(await kapi.join(dPath, 'Chapters', folderName, name))) continue;
+    return name;
+  }
+  return base + '-' + Date.now().toString(36) + '.md';
+}
+
+const rowsOf = (d, guid0) => ((d && d.chapters) || {})[guid0] || [];
+const nextOrder = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
 
 export async function renameScene(dPath, ch, sc) {
   const title = await ask(tt('ui.scene.nameSceneNew'), { value: sc.title }); if (!title) return;
@@ -21,15 +51,22 @@ export async function renameScene(dPath, ch, sc) {
 export async function setSceneTitle(dPath, ch, sc, title) {
   if (!title || title === sc.title) return;
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  for (const s of d.chapters[ch.guid] || []) if (s.id === sc.id) s.title = title;
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await mutateJson(kapi, sf, (d) => {
+    let hit = false;
+    for (const s of rowsOf(d, ch.guid)) if (s.id === sc.id) { s.title = title; hit = true; }
+    return hit ? undefined : false;
+  });
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
   const { meta, body } = parseMdFile(await kapi.readFile(file));
   meta.title = title;
   await kapi.writeFile(file, dumpMdFile(meta, body));
   const t = state.tabs.get(file);
-  if (t) { t.title = title; t.tabBtn.querySelector('.tab-title').textContent = (t.dirty ? '● ' : '') + title; }
+  if (t) {
+    t.title = title;
+    // [alpha.156] ไม่งั้นบันทึกครั้งถัดไปแท็บเขียน "ชื่อเก่า" กลับลง frontmatter
+    if (t.meta) t.meta.title = title;
+    t.tabBtn.querySelector('.tab-title').textContent = (t.dirty ? gi('dot') + ' ' : '') + title;
+  }
   await buildTree();
 }
 
@@ -41,9 +78,11 @@ export async function renameChapter(dPath, ch) {
 export async function setChapterTitle(dPath, ch, title) {
   if (!title || title === ch.title) return;
   const df = await kapi.join(dPath, 'draft.json');
-  const d = await kapi.readJson(df);
-  for (const c of d.chapters || []) if (c.guid === ch.guid) c.title = title;
-  await kapi.writeFile(df, JSON.stringify(d, null, 2));
+  await mutateJson(kapi, df, (d) => {
+    let hit = false;
+    for (const c of d.chapters || []) if (c.guid === ch.guid) { c.title = title; hit = true; }
+    return hit ? undefined : false;
+  });
   await buildTree();
 }
 
@@ -106,20 +145,26 @@ export async function chapterProps(dPath, ch) {
     ov.onclick = (e) => { if (e.target === ov) close(false); };
     box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(false); });
     okB.onclick = async () => {
-      const title = iTitle.value.trim();
-      if (title) cur.title = title;
-      cur.status = iStatus.value;
-      cur.act = iAct.value.trim();
-      cur.date = iDate.value.trim();
-      cur.isFavorite = iFav.checked;
-      // ค่าว่างอย่าทิ้งบรรทัดขยะไว้ในไฟล์ (บทเรียน 26)
-      const note = iNote.value.trim();
-      if (note) cur.note = note; else delete cur.note;
-      if (!cur.act) delete cur.act;
-      if (!cur.date) delete cur.date;
-      await kapi.writeFile(df, JSON.stringify(d, null, 2));
+      // [alpha.156] เขียนลงแถว "สด" ไม่ใช่ `d` ที่อ่านตอนเปิดกล่อง (ระหว่างนั้นอาจมีบทใหม่/ย้ายลำดับ)
+      const res = await mutateJson(kapi, df, (fresh) => {
+        const live = (fresh.chapters || []).find((c) => c.guid === ch.guid);
+        if (!live) return false;
+        const title = iTitle.value.trim();
+        if (title) live.title = title;
+        live.status = iStatus.value;
+        live.act = iAct.value.trim();
+        live.date = iDate.value.trim();
+        live.isFavorite = iFav.checked;
+        // ค่าว่างอย่าทิ้งบรรทัดขยะไว้ในไฟล์ (บทเรียน 26)
+        const note = iNote.value.trim();
+        if (note) live.note = note; else delete live.note;
+        if (!live.act) delete live.act;
+        if (!live.date) delete live.date;
+        return live;
+      });
+      if (!res.changed) { setStatus(tt('ui.scene.notFoundChapterDraft')); close(false); return; }
       await buildTree();
-      setStatus(tt('ui.scene.savePropsChapterDone') + (cur.title || ''));
+      setStatus(tt('ui.scene.savePropsChapterDone') + (res.result.title || ''));
       close(true);
     };
   });
@@ -140,15 +185,17 @@ export async function listChapters(dPath) {
  * [alpha.141] เขียนคุณสมบัติของบทลง draft.json — ทางเดียวของทุกที่ที่แก้ค่าบท
  * @returns {Promise<object|null>} แถวบทหลังแก้ (null = ไม่เจอบท)
  */
-export async function saveChapterMeta(dPath, guid, patch) {
+export async function saveChapterMeta(dPath, guid0, patch) {
   const df = await kapi.join(dPath, 'draft.json');
-  let d;
-  try { d = await kapi.readJson(df); } catch { return null; }
-  const cur = (d.chapters || []).find((c) => c.guid === guid);
-  if (!cur) return null;
-  Object.assign(cur, patch);
-  await kapi.writeFile(df, JSON.stringify(d, null, 2));
-  return cur;
+  try {
+    const res = await mutateJson(kapi, df, (d) => {
+      const cur = (d.chapters || []).find((c) => c.guid === guid0);
+      if (!cur) return false;
+      Object.assign(cur, patch);
+      return cur;
+    });
+    return res.changed ? res.result : null;
+  } catch { return null; }
 }
 
 /** [alpha.141] จำนวนฉาก/คำของบทหนึ่ง (สำหรับการ์ดใน "จัดการบท") */
@@ -176,9 +223,10 @@ export async function deleteScene(dPath, ch, sc) {
   await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
     { kind: 'scene', dPath, chGuid: ch.guid, folderName: ch.folderName, sc }, null, 2));
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((s) => s.id !== sc.id);
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await mutateJson(kapi, sf, (d) => {
+    d.chapters = d.chapters || {};
+    d.chapters[ch.guid] = rowsOf(d, ch.guid).filter((s) => s.id !== sc.id);
+  });
   await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
   // [alpha.128] คำสั่งโครงสร้างมาจากเมนูคลิกขวา จึงไม่ผ่าน handleCommand ที่จด `cmd:` ให้
   // → เดิมไล่ย้อนไม่ได้เลยว่าฉากหายไปตอนไหน · จดที่ตัวการทำงานจริงแทน
@@ -189,20 +237,22 @@ export async function deleteScene(dPath, ch, sc) {
 export async function deleteChapter(dPath, ch) {
   const dir = await kapi.join(dPath, 'Chapters', ch.folderName);
   if (!(await confirmBox(ttf('ui.scene.delChapterChapterAll', ch.title)))) return;
+  // [alpha.156] ★ ปิดแท็บของฉากในบทนี้ก่อนย้ายโฟลเดอร์ (บันทึกงานค้างลงไฟล์ก่อน — ถังขยะได้ของล่าสุด)
+  // เดิมไม่ปิดเลย → บันทึกอัตโนมัติเขียนไฟล์กลับที่เดิม = โฟลเดอร์บทที่ลบไปแล้วเกิดใหม่เป็นโฟลเดอร์ผี
+  await closeTabsUnderPath(dir, { save: true });
   const dst = await kapi.join(state.root, 'Recycle',
                               Date.now().toString(36) + '-' + ch.folderName);
-  const scenesNow = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters?.[ch.guid] || [];
+  const sf = await kapi.join(dPath, 'scenes.json');
+  const scenesNow = rowsOf(await kapi.readJson(sf).catch(() => ({})), ch.guid);
   await kapi.move(dir, dst);
   await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
     { kind: 'chapter', dPath, ch, scenes: scenesNow }, null, 2));
   const df = await kapi.join(dPath, 'draft.json');
-  const d = await kapi.readJson(df);
-  d.chapters = (d.chapters || []).filter((c) => c.guid !== ch.guid);
-  await kapi.writeFile(df, JSON.stringify(d, null, 2));
-  const sf = await kapi.join(dPath, 'scenes.json');
-  const s2 = await kapi.readJson(sf);
-  if (s2.chapters) delete s2.chapters[ch.guid];
-  await kapi.writeFile(sf, JSON.stringify(s2, null, 2));
+  await mutateJson(kapi, df, (d) => { d.chapters = (d.chapters || []).filter((c) => c.guid !== ch.guid); });
+  await mutateJson(kapi, sf, (s2) => {
+    if (!s2.chapters || !(ch.guid in s2.chapters)) return false;
+    delete s2.chapters[ch.guid];
+  });
   logAction('chapter', ttf('ui.scene.delChapter2', ch.title),
             { dPath, scenes: scenesNow.length, trash: dst });
   await buildTree(); refreshNetwork();
@@ -217,12 +267,19 @@ export async function addChapter(dPath, preset) {
   const title = preset || await ask(tt('ui.scene.nameChapterNew'));
   if (!title) return null;
   const df = await kapi.join(dPath, 'draft.json');
-  const d = await kapi.readJson(df);
-  const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
-  const ch = { guid: guid(), title, order, status: 'Outline', act: 'I', date: '',
-               isFavorite: false, folderName: String(order).padStart(2, '0') + ' - ' + safeName(title) };
-  d.chapters = [...(d.chapters || []), ch];
-  await kapi.writeFile(df, JSON.stringify(d, null, 2));
+  let ch = null;
+  await mutateJson(kapi, df, async (d) => {
+    const order = nextOrder(d.chapters);
+    const taken = new Set((d.chapters || []).map((c) => c.folderName));
+    // [alpha.156] โฟลเดอร์ชื่อนี้มีอยู่แล้ว (เล่มที่กู้คืน/ก๊อปมาเอง) → ต่อท้ายเลข ไม่ไปยึดโฟลเดอร์ของคนอื่น
+    let folderName = String(order).padStart(2, '0') + ' - ' + safeName(title);
+    for (let n = 2; taken.has(folderName) || await kapi.exists(await kapi.join(dPath, 'Chapters', folderName)); n++) {
+      folderName = String(order).padStart(2, '0') + ' - ' + safeName(title) + ' ' + n;
+    }
+    ch = { guid: guid(), title, order, status: 'Outline', act: 'I', date: '',
+           isFavorite: false, folderName };
+    d.chapters = [...(d.chapters || []), ch];
+  });
   await kapi.mkdir(await kapi.join(dPath, 'Chapters', ch.folderName));
   logAction('chapter', tt('ui.scene.addChapter') + title, { dPath, folder: ch.folderName });
   await buildTree(); setStatus(tt('ui.scene.addChapter') + title); refreshNetwork();
@@ -240,17 +297,20 @@ export async function addScene(dPath, ch, preset, opts = {}) {
   const title = preset || await ask(tt('ui.scene.nameSceneNew'));
   if (!title) return null;
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  d.chapters = d.chapters || {};
-  const list = d.chapters[ch.guid] || [];
-  const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-  const sc = { id: guid(), title, order, fileName: 'scene-' + String(order).padStart(2, '0') + '.md',
-               chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
-  d.chapters[ch.guid] = [...list, sc];
-  const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
-  const meta = { title, type: 'scene', format: 'prose', pov: '', tags: [], ...(opts.meta || {}) };
-  await kapi.writeFile(file, dumpMdFile(meta, opts.body || ''));
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  let sc = null, file = '';
+  await mutateJson(kapi, sf, async (d) => {
+    d.chapters = d.chapters || {};
+    const list = rowsOf(d, ch.guid);
+    const order = nextOrder(list);
+    // [alpha.156] ★ เดิม `'scene-' + order` ตรง ๆ → ชนไฟล์ของฉากที่ถูกเรียงลำดับใหม่แล้วเขียนทับเป็นไฟล์ว่าง
+    const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list.map((s) => s.fileName)));
+    sc = { id: guid(), title, order, fileName,
+           chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
+    file = await kapi.join(dPath, 'Chapters', ch.folderName, fileName);
+    const meta = { title, type: 'scene', format: 'prose', pov: '', tags: [], ...(opts.meta || {}) };
+    await kapi.writeFile(file, dumpMdFile(meta, opts.body || ''));
+    d.chapters[ch.guid] = [...list, sc];
+  });
   logAction('scene', tt('ui.scene.addScene') + title, { file });
   await buildTree();
   if (!opts.silent) openScene(file, title);
@@ -260,18 +320,24 @@ export async function addScene(dPath, ch, preset, opts = {}) {
 
 export async function setSceneMeta(dPath, ch, sc, patch) {
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  const row = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-  if (!row) return;
-  Object.assign(row, patch);
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  let fileName = null;
+  const res = await mutateJson(kapi, sf, (d) => {
+    const row = rowsOf(d, ch.guid).find((x) => x.id === sc.id);
+    if (!row) return false;
+    Object.assign(row, patch);
+    fileName = row.fileName;
+  });
+  if (!res.changed) return;
   // [alpha.60r2 ข้อ 13] คุณสมบัติที่เป็นของ "เนื้อฉาก" ต้องลง frontmatter ของ .md ด้วย
   // ไม่งั้นแก้จากเมนูคลิกขวาแล้วไฟล์จริงไม่รู้เรื่อง (เปิดนอกโปรแกรมก็ไม่เห็น)
   const heavy = {};
   for (const k of SCENE_HEAVY_KEYS) if (k in (patch || {})) heavy[k] = patch[k];
   if (Object.keys(heavy).length) {
-    try { await writeSceneMeta(await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName), heavy); }
-    catch {}
+    try {
+      const file = await kapi.join(dPath, 'Chapters', ch.folderName, fileName);
+      await writeSceneMeta(file, heavy);
+      await syncOpenTabMeta(file);          // [alpha.156] แท็บที่เปิดอยู่ต้องไม่เขียนค่าเก่ากลับ
+    } catch {}
   }
   await buildTree();
 }
@@ -283,82 +349,102 @@ export async function toggleSceneFlag(dPath, ch, sc) {
 
 export async function duplicateScene(dPath, ch, sc) {
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  const list = d.chapters[ch.guid] || [];
-  const row = list.find((x) => x.id === sc.id);
-  if (!row) return;
-  const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-  const fileName = 'scene-' + String(order).padStart(2, '0') + '.md';
-  const newTitle = row.title + tt('ui.common.msg');
-  const srcFile = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
-  let meta = { title: newTitle, type: 'scene', format: 'prose', pov: '', tags: [] }, body = '';
-  try { const parsed = parseMdFile(await kapi.readFile(srcFile)); meta = parsed.meta; body = parsed.body; } catch {}
-  meta.title = newTitle;
-  const nrow = { ...row, id: guid(), title: newTitle, order, fileName, isFavorite: false };
-  d.chapters[ch.guid] = [...list, nrow];
-  await kapi.writeFile(await kapi.join(dPath, 'Chapters', ch.folderName, fileName), dumpMdFile(meta, body));
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-  await copyVisSidecar(dPath, ch.folderName, row.fileName, fileName);
+  // งานค้างของต้นฉบับต้องลงไฟล์ก่อน (สำเนาอ่านจากดิสก์) — ทำ **นอกคิว** เพราะ saveTab แตะ scenes.json เอง
+  if (sc && sc.fileName) {
+    const openSrc = state.tabs.get(await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName));
+    if (openSrc && openSrc.dirty) await saveTab(openSrc);
+  }
+  let made = null;
+  await mutateJson(kapi, sf, async (d) => {
+    const list = rowsOf(d, ch.guid);
+    const row = list.find((x) => x.id === sc.id);
+    if (!row) return false;
+    const order = nextOrder(list);
+    // [alpha.156] ★ ชื่อไฟล์ต้องว่างจริง (เดิมชนแล้วเขียนทับฉากอื่น — ต้นตอเดียวกับ addScene)
+    const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list.map((s) => s.fileName)));
+    const newTitle = row.title + tt('ui.common.msg');
+    const srcFile = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
+    let meta = { title: newTitle, type: 'scene', format: 'prose', pov: '', tags: [] }, body = '';
+    try { const parsed = parseMdFile(await kapi.readFile(srcFile)); meta = parsed.meta; body = parsed.body; } catch {}
+    meta.title = newTitle;
+    const nrow = { ...row, id: guid(), title: newTitle, order, fileName, isFavorite: false };
+    await kapi.writeFile(await kapi.join(dPath, 'Chapters', ch.folderName, fileName), dumpMdFile(meta, body));
+    d.chapters[ch.guid] = [...list, nrow];
+    made = { srcName: row.fileName, fileName, newTitle };
+  });
+  if (!made) return;
+  await copyVisSidecar(dPath, ch.folderName, made.srcName, made.fileName);
   await buildTree();
-  openScene(await kapi.join(dPath, 'Chapters', ch.folderName, fileName), newTitle);
+  openScene(await kapi.join(dPath, 'Chapters', ch.folderName, made.fileName), made.newTitle);
 }
 
 export async function moveSceneOrder(dPath, ch, sc, dir) {
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  const list = (d.chapters[ch.guid] || []).slice()
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const i = list.findIndex((x) => x.id === sc.id);
-  const j = i + dir;
-  if (i < 0 || j < 0 || j >= list.length) return;           // สุดขอบแล้ว
-  const oa = list[i].order || 0, ob = list[j].order || 0;
-  list[i].order = ob; list[j].order = oa;                    // สลับเลขลำดับ
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-  await buildTree();
+  const res = await mutateJson(kapi, sf, (d) => {
+    const list = rowsOf(d, ch.guid).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const i = list.findIndex((x) => x.id === sc.id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return false;     // สุดขอบแล้ว
+    const oa = list[i].order || 0, ob = list[j].order || 0;
+    list[i].order = ob; list[j].order = oa;                    // สลับเลขลำดับ (แถวชุดเดียวกับใน d)
+  });
+  if (res.changed) await buildTree();
 }
 
 export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
   if (dstCh.guid === ch.guid) return;
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  d.chapters = d.chapters || {};
-  const from = d.chapters[ch.guid] || [];
-  const row = from.find((x) => x.id === sc.id);   // ดึง row จริง (fileName สดจากทะเบียน ไม่พึ่งค่าที่ caller ส่ง)
-  if (!row) return;
+  // ดึง row จริง (fileName สดจากทะเบียน ไม่พึ่งค่าที่ caller ส่ง) — อ่านอย่างเดียว เพื่อจัดการแท็บก่อนเข้าคิว
+  const row0 = rowsOf(await kapi.readJson(sf), ch.guid).find((x) => x.id === sc.id);
+  if (!row0) return;
 
   // แท็บที่เปิดฉากนี้ค้างอยู่ = พาธเดิม — เซฟแล้วปิดก่อนย้าย (พาธกำลังจะเปลี่ยน) กัน stale tab เขียนทับ
-  const oldPath = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
+  // (ต้องทำนอก mutateJson — saveTab อัปเดตจำนวนคำใน scenes.json เอง)
+  const oldPath = await kapi.join(dPath, 'Chapters', ch.folderName, row0.fileName);
   const openTab = state.tabs.get(oldPath);
-  if (openTab) { if (openTab.dirty) await saveTab(openTab); openTab.dirty = false; closeTab(oldPath); }
+  if (openTab) { if (openTab.dirty) await saveTab(openTab); openTab.dirty = false; closeTab(oldPath, { discard: true }); }
 
-  const dst = d.chapters[dstCh.guid] || [];
-  const order = Math.max(0, ...dst.map((s) => s.order || 0)) + 1;
-  const newFile = await uniqueSceneFileName(dPath, dstCh.folderName, order);
-
-  // ย้ายไฟล์เนื้อหาจริงก่อน แล้วค่อยแก้ทะเบียน (ถ้าย้ายไฟล์พลาด ทะเบียนยังตรงของเดิม)
-  await kapi.move(oldPath, await kapi.join(dPath, 'Chapters', dstCh.folderName, newFile));
-  await moveVisSidecar(dPath, ch.folderName, row.fileName, dstCh.folderName, newFile);
-  d.chapters[ch.guid] = from.filter((x) => x.id !== sc.id);
-  row.order = order; row.fileName = newFile; row.chapterGuid = dstCh.guid;
-  d.chapters[dstCh.guid] = [...dst, row];
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  let moved = null;
+  await mutateJson(kapi, sf, async (d) => {
+    d.chapters = d.chapters || {};
+    const from = rowsOf(d, ch.guid);
+    const row = from.find((x) => x.id === sc.id);
+    if (!row) return false;
+    const dst = rowsOf(d, dstCh.guid);
+    const order = nextOrder(dst);
+    const newFile = await freeSceneFileName(dPath, dstCh.folderName, order, new Set(dst.map((s) => s.fileName)));
+    const src = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
+    const newPath = await kapi.join(dPath, 'Chapters', dstCh.folderName, newFile);
+    // ย้ายไฟล์เนื้อหาจริงก่อน แล้วค่อยแก้ทะเบียน (ถ้าย้ายไฟล์พลาด → โยน error → ไม่เขียนทะเบียน)
+    await kapi.move(src, newPath);
+    await moveVisSidecar(dPath, ch.folderName, row.fileName, dstCh.folderName, newFile);
+    d.chapters[ch.guid] = from.filter((x) => x.id !== sc.id);
+    row.order = order; row.fileName = newFile; row.chapterGuid = dstCh.guid;
+    d.chapters[dstCh.guid] = [...dst, row];
+    moved = { row, src, newPath };
+  });
+  if (!moved) return;
+  // [alpha.156] ประวัติเวอร์ชันต้องตามไฟล์ไปด้วย (ผูกกับ path)
+  await moveSnapshots(moved.src, moved.newPath);
+  logAction('scene', ttf('ui.scene.movedToChapter', moved.row.title, dstCh.title), { from: moved.src, to: moved.newPath });
   await buildTree();
-  setStatus(tt('ui.scene.move') + row.title + tt('ui.scene.chapter2') + dstCh.title + tt('ui.common.done2'));
+  setStatus(tt('ui.scene.move') + moved.row.title + tt('ui.scene.chapter2') + dstCh.title + tt('ui.common.done2'));
 }
 
 export async function moveChapterBefore(dPath, srcGuid, dstGuid) {
   if (srcGuid === dstGuid) return;
   const df = await kapi.join(dPath, 'draft.json');
-  const d = await kapi.readJson(df);
-  const list = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-  const si = list.findIndex((c) => c.guid === srcGuid);
-  if (si < 0) return;
-  const [moved] = list.splice(si, 1);
-  const di = dstGuid ? list.findIndex((c) => c.guid === dstGuid) : list.length;
-  list.splice(di < 0 ? list.length : di, 0, moved);
-  list.forEach((c, i) => { c.order = i + 1; });
-  d.chapters = list;
-  await kapi.writeFile(df, JSON.stringify(d, null, 2));
+  const res = await mutateJson(kapi, df, (d) => {
+    const list = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const si = list.findIndex((c) => c.guid === srcGuid);
+    if (si < 0) return false;
+    const [moved] = list.splice(si, 1);
+    const di = dstGuid ? list.findIndex((c) => c.guid === dstGuid) : list.length;
+    list.splice(di < 0 ? list.length : di, 0, moved);
+    list.forEach((c, i) => { c.order = i + 1; });
+    d.chapters = list;
+  });
+  if (!res.changed) return;
   await buildTree();
   setStatus(tt('ui.scene.reorderChapterNewDone'));
 }
@@ -367,62 +453,47 @@ export async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
   const sf = await kapi.join(dPath, 'scenes.json');
   // ข้ามบท → ย้ายไฟล์ก่อน (moveSceneToChapter) แล้วค่อยจัดตำแหน่ง
   if (srcCh.guid !== dstCh.guid) {
-    const d0 = await kapi.readJson(sf);
-    const row0 = (d0.chapters[srcCh.guid] || []).find((x) => x.id === srcId);
+    const row0 = rowsOf(await kapi.readJson(sf), srcCh.guid).find((x) => x.id === srcId);
     if (!row0) return;
     await moveSceneToChapter(dPath, srcCh, { id: srcId }, dstCh);
-    // หา id ที่ย้ายมา (ชื่อเดิม) แล้วจัดก่อน dstId
     srcCh = dstCh;
   }
-  const d = await kapi.readJson(sf);
-  const list = (d.chapters[dstCh.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-  const si = list.findIndex((x) => x.id === srcId);
-  if (si < 0) { await buildTree(); return; }
-  const [moved] = list.splice(si, 1);
-  const di = dstId ? list.findIndex((x) => x.id === dstId) : list.length;
-  list.splice(di < 0 ? list.length : di, 0, moved);
-  list.forEach((x, i) => { x.order = i + 1; });
-  d.chapters[dstCh.guid] = list;
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  const res = await mutateJson(kapi, sf, (d) => {
+    const list = rowsOf(d, dstCh.guid).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const si = list.findIndex((x) => x.id === srcId);
+    if (si < 0) return false;
+    const [moved] = list.splice(si, 1);
+    const di = dstId ? list.findIndex((x) => x.id === dstId) : list.length;
+    list.splice(di < 0 ? list.length : di, 0, moved);
+    list.forEach((x, i) => { x.order = i + 1; });
+    d.chapters[dstCh.guid] = list;
+  });
   await buildTree();
-  setStatus(tt('ui.scene.reorderSceneNewDone'));
+  if (res.changed) setStatus(tt('ui.scene.reorderSceneNewDone'));
 }
 
-export function sceneStatusMenu(e, dPath, ch, sc) {
-  popupMenu(e.clientX, e.clientY, [
-    // allStatuses = มาตรฐาน + ที่ผู้ใช้เพิ่มเอง (custom-status.js)
-    ...allStatuses().map((s) => ({ label: s, click: () => setSceneMeta(dPath, ch, sc, { status: s }) })),
-    '-',
-    { label: tt('ui.scene.clearStatus'), click: () => setSceneMeta(dPath, ch, sc, { status: 'Outline' }) },
-  ]);
-}
-
-export function sceneColorMenu(e, dPath, ch, sc) {
-  popupMenu(e.clientX, e.clientY, [
-    ...SCENE_COLORS.map(([name, hex]) => ({ label: '● ' + name, click: () => setSceneMeta(dPath, ch, sc, { color: hex }) })),
-    '-',
-    { label: tt('ui.scene.clearColor'), click: () => setSceneMeta(dPath, ch, sc, { color: '' }) },
-  ]);
-}
+// [alpha.155] เมนูสี/สถานะของฉากย้ายไปเป็นตัวกลางของทุกชนิดแถว — colorMenu/statusMenu ใน tree-actions.js
 
 // ---- เรียงลำดับหมายเลขใหม่ (Renumber: ข้อ 16) ----
 // รีเซ็ต order ของบทในฉบับร่างให้เรียง 1,2,3... และเรียงฉากในแต่ละบท
 export async function renumberChapters(dPath) {
   const df = await kapi.join(dPath, 'draft.json');
-  const draft = await kapi.readJson(df);
-  const chapters = (draft.chapters || []).sort((a, b) => (a.order || 0) - (b.order || 0));
-  chapters.forEach((ch, i) => { ch.order = i + 1; });
-  await kapi.writeFile(df, JSON.stringify(draft, null, 2));
-
+  let guids = [];
+  await mutateJson(kapi, df, (draft) => {
+    const chapters = (draft.chapters || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+    chapters.forEach((ch, i) => { ch.order = i + 1; });
+    guids = chapters.map((c) => c.guid);
+  });
   const sf = await kapi.join(dPath, 'scenes.json');
-  const scData = await kapi.readJson(sf);
-  for (const ch of chapters) {
-    const scenes = (scData.chapters[ch.guid] || []).sort((a, b) => (a.order || 0) - (b.order || 0));
-    scenes.forEach((sc, i) => { sc.order = i + 1; });
-  }
-  await kapi.writeFile(sf, JSON.stringify(scData, null, 2));
+  await mutateJson(kapi, sf, (scData) => {
+    scData.chapters = scData.chapters || {};
+    for (const g of guids) {
+      const scenes = (scData.chapters[g] || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+      scenes.forEach((sc, i) => { sc.order = i + 1; });
+    }
+  });
   await buildTree();
-  setStatus(tt('ui.scene.orderChapterSceneNew') + chapters.length + tt('ui.scene.chapter'));
+  setStatus(tt('ui.scene.orderChapterSceneNew') + guids.length + tt('ui.scene.chapter'));
 }
 
 // ───────── ไฟล์คู่ของ "เล่าด้วยภาพ" ─────────

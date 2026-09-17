@@ -66,7 +66,8 @@ const COLOR_PRESETS = [
     — ไฟล์นี้ **ไม่ import i18n** เพราะ `md.js` ต้องเป็นโมดูลไม่มีลูกโซ่ (เทสด้วย node ล้วน ๆ) */
 function presetLabelKey(hex) {
   const c = normColor(hex);
-  const d = COLOR_PRESETS.find((x) => x.hex === c);
+  // [alpha.150] ค้นทั้งจานสีตัวอักษรและจานสีเน้น — ป๊อปอัปตัวเดียวใช้ได้ทั้งสองงาน
+  const d = COLOR_PRESETS.find((x) => x.hex === c) || HILITE_PRESETS.find((x) => x.hex === c);
   return d ? d.key : '';
 }
 
@@ -122,6 +123,36 @@ function colorSpanMd(color, inner) {
   return c ? `<span style="color:${c}">${inner}</span>` : String(inner == null ? '' : inner);
 }
 
+// ═══════════════ [alpha.150] สีเน้นข้อความ (highlight) ═══════════════
+//
+// เดินทางเดียวกับสีตัวอักษรทุกประการ — ต่างแค่แท็ก: ใช้ `<mark>` ซึ่งเป็นแท็กมาตรฐาน
+// ของ HTML สำหรับ "ข้อความที่ถูกเน้น" (ตัวอ่านมาร์กดาวน์ส่วนใหญ่แสดงเป็นพื้นสีให้เลย
+// ส่วน v1 เห็นเป็นข้อความธรรมดา = ข้อมูลไม่หาย ตรงกับกฎไฟล์เข้ากันได้)
+//
+// **สีเน้นอยู่ชั้นนอกสุดเสมอ** (นอกกว่าสีตัวอักษร) เพื่อให้มีลำดับตายตัวหนึ่งแบบ —
+// ไม่งั้นเขียนกลับสองรอบได้ไฟล์ไม่เหมือนเดิม แล้วเทส round-trip แดงแบบหาต้นตอยาก
+
+/** จานสีเน้นสำเร็จ — ค่าทั้งหมดจงใจให้จาง ตัวหนังสือสีเข้มยังอ่านออกบนพื้นนี้ */
+const HILITE_PRESETS = [
+  { hex: '#fff3a3', key: 'ui.color.hlYellow' },
+  { hex: '#c8f0c0', key: 'ui.color.hlGreen' },
+  { hex: '#bfe3ff', key: 'ui.color.hlBlue' },
+  { hex: '#ffd6ea', key: 'ui.color.hlPink' },
+  { hex: '#ffd9b3', key: 'ui.color.hlOrange' },
+  { hex: '#e2d6ff', key: 'ui.color.hlPurple' },
+  { hex: '#e0e0e0', key: 'ui.color.hlGray' },
+];
+
+/** regex ของสีเน้นในไฟล์ .md — กลุ่ม 1 = ค่าสี · กลุ่ม 2 = เนื้อใน */
+const HILITE_SPAN_RE = /<mark style="background:([^"<>]{1,32})">([\s\S]*?)<\/mark>/;
+
+/** ประกอบแท็กสีเน้นสำหรับเขียนลงไฟล์ */
+function hiliteSpanMd(color, inner) {
+  const c = normColor(color);
+  return c ? `<mark style="background:${c}">${inner}</mark>` : String(inner == null ? '' : inner);
+}
+
 module.exports = { RECENT_MAX, SAVED_MAX, normColor, COLOR_PRESETS, presetLabelKey,
                    cleanColorList, pushRecent, toggleSaved, normalizeColorStore,
-                   COLOR_SPAN_RE, colorSpanMd };
+                   COLOR_SPAN_RE, colorSpanMd,
+                   HILITE_PRESETS, HILITE_SPAN_RE, hiliteSpanMd };

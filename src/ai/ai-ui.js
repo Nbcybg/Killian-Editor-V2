@@ -3,6 +3,7 @@ import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { $, el, state, setStatus, log, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
 import { callAI, aiConfigured } from '../ai-settings.js';
 import { listScenes, listEntities } from '../project-scan.js';
+import { gi } from '../icons.js';
 
 // ───────── helper: เช็คว่า AI พร้อมหรือยัง ─────────
 // [alpha.62 บั๊ก 6] ถามจุดเดียวที่ `aiConfigured()` — รู้จักทั้งทะเบียนใหม่ (alpha.61) และค่าตั้งแบบเก่า
@@ -10,7 +11,7 @@ async function aiReady() {
   if (!state.root) { setStatus(tr('ai.noProject')); return false; }
   const r = await aiConfigured();
   if (r.ok) return true;
-  setStatus('❌ ' + (r.why || tr('ai.needSetup')));
+  setStatus(gi('fail') + ' ' + (r.why || tr('ai.needSetup')));
   return false;
 }
 
@@ -42,19 +43,27 @@ export async function openAIAssistant() {
   if (!(await aiReady())) return;
 
   const t = state.active;
-  const sel = t?.editor ? t.editor.getSelectedText() : (t?.sp ? t.sp.getSelectedText() : '');
-  const fullText = t?.editor ? t.editor.getText() : (t?.sp ? t.sp.getText() : '');
+  // [alpha.147] เดิมเรียก `getSelectedText()` ซึ่งไม่มีทั้งใน KEditor และ SPEditor → กล่องไม่เคยเปิดได้เลย
+  // (log ของผู้ใช้: "t3.editor.getSelectedText is not a function") — อ่านช่วงที่เลือกจาก PM ตรง ๆ
+  const ed = t?.editor || t?.sp || null;
+  const sel = ed && ed.view
+    ? ed.view.state.doc.textBetween(ed.view.state.selection.from, ed.view.state.selection.to, '\n')
+    : '';
+  const fullText = ed ? ed.getText() : '';
 
   showDialog(tr('ai.assistantTitle'), (box, ov) => {
     const TASK_TH = { expand: tr('ai.opExpand'), summarize: tr('ai.opSummarize'), rewrite: tr('ai.opRewrite'),
                       changeTone: tr('ai.opTone'), continue: tr('ai.opContinue') };
     const TONE_TH = { formal: tr('ai.toneFormal'), casual: tr('ai.toneCasual'), humorous: tr('ai.toneFunny'), dark: tr('ai.toneDark'),
                       romantic: tr('ai.toneRomantic'), tense: tr('ai.toneTense'), concise: tr('ai.toneConcise'), lyrical: tr('ai.toneDetailed') };
+    // [alpha.147] `el()` รับแค่ (tag, cls, text) — อาร์กิวเมนต์ที่สี่ `{ value }` ถูกทิ้งเงียบ ๆ
+    // → <option> ไม่มี value → select.value คืน "ข้อความไทย" แล้วส่ง task="ขยายความ" ไปให้เอนจิน
+    const opt = (text, value) => { const o = el('option', '', text); o.value = value; return o; };
     const taskSel = el('select');
-    Object.keys(TASK_TH).forEach((v) => taskSel.append(el('option', '', TASK_TH[v], { value: v })));
+    Object.keys(TASK_TH).forEach((v) => taskSel.append(opt(TASK_TH[v], v)));
     const toneSel = el('select');
-    toneSel.append(el('option', '', tt('ui.ai.notChangeTone'), { value: '' }));
-    Object.keys(TONE_TH).forEach((v) => toneSel.append(el('option', '', TONE_TH[v], { value: v })));
+    toneSel.append(opt(tt('ui.ai.notChangeTone'), ''));
+    Object.keys(TONE_TH).forEach((v) => toneSel.append(opt(TONE_TH[v], v)));
     const instrInput = el('textarea'); instrInput.placeholder = tr('ai.extraHint');
     instrInput.style.cssText = 'width:100%;min-height:60px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit;resize:vertical';
 
@@ -101,9 +110,9 @@ export async function openAIAssistant() {
           stream: true, onChunk: (c) => { acc += c; resultDiv.textContent = acc; },
         });
         if (res.ok) resultDiv.textContent = res.text || acc || tr('ai.noAnswer');
-        else resultDiv.textContent = '❌ ' + (res.error || tr('ai.errorRetry'));
+        else resultDiv.textContent = gi('fail') + ' ' + (res.error || tr('ai.errorRetry'));
       } catch (e) {
-        resultDiv.textContent = '❌ ' + ((e && e.message) || tr('ai.errorRetry'));
+        resultDiv.textContent = gi('fail') + ' ' + ((e && e.message) || tr('ai.errorRetry'));
       } finally {
         runBtn.disabled = false;
       }
@@ -148,7 +157,7 @@ export async function openPlotHoleDetector() {
     let allScenes = [];
     try {
       allScenes = (await listScenes(state.root, { withText: true }))
-        .map((s) => ({ id: s.id, title: s.title, chapterId: s.chapterId, text: s.text || '',
+        .map((s) => ({ id: s.id, title: s.title, chapterId: s.chapterId, text: s.body || '',   // [alpha.149] ไม่มี frontmatter
                        storyDate: s.row.storyDate || '', pov: s.row.pov || '' }));
     } catch (e) { resultDiv.textContent = tr('ai.readFail') + e.message; return; }
 
@@ -162,17 +171,17 @@ export async function openPlotHoleDetector() {
 
     resultDiv.textContent = '';
     if (!res.holes.length) {
-      resultDiv.textContent = res.error ? '❌ ' + res.error : tr('ai.noPlotHoles');
+      resultDiv.textContent = res.error ? gi('fail') + ' ' + res.error : tr('ai.noPlotHoles');
     } else {
       resultDiv.append(el('div', 'dim', ttf('ui.ai.foundDotCheckRound', res.holes.length, res.batches)));
       for (const h of res.holes) {
         const row = el('div');
         row.style.cssText = 'margin:8px 0;padding:8px 10px;background:var(--side);border-radius:6px;border-left:3px solid var(--accent)';
-        const sev = { high: '🔴', medium: '🟡', low: '⚪' }[h.severity] || '•';
+        const sev = { high: gi('dot-red'), medium: gi('dot-yellow'), low: gi('dot-white') }[h.severity] || '•';
         row.append(el('div', '', `${sev} [${h.type || tr('ai.general')}] ${h.description || ''}`));
         if (h.sceneTitle || h.sceneId) row.append(el('div', 'dim', tr('ai.sceneLabel') + (h.sceneTitle || h.sceneId)));
         if (h.evidence) row.append(el('div', 'dim', tr('ai.evidenceLabel') + h.evidence));
-        if (h.suggestion) row.append(el('div', '', '💡 ' + h.suggestion));
+        if (h.suggestion) row.append(el('div', '', gi('bulb') + ' ' + h.suggestion));
         resultDiv.append(row);
       }
       if (res.failedBatches) resultDiv.append(el('div', 'dim', ttf('ui.ai.hasRoundCallAI', res.failedBatches)));
@@ -206,8 +215,11 @@ export async function openDialogueGenerator() {
     resultDiv.style.cssText = 'max-height:35vh;overflow-y:auto;white-space:pre-wrap;margin:8px 0;padding:8px;background:var(--side);border-radius:6px;min-height:60px;font-size:14px;line-height:1.8';
 
     const fmtSel = el('select');
-    fmtSel.append(el('option', '', tt('ui.common.screenplay'), { value: 'screenplay' }));
-    fmtSel.append(el('option', '', tt('ui.ai.edit'), { value: 'prose' }));
+    // [alpha.149] `el()` รับแค่ (tag, cls, text) — `{ value }` เคยถูกทิ้งเงียบ ๆ → value = ป้ายภาษาไทย
+    // เอนจินเช็ค `format === 'prose'` ไม่เคยตรง = เลือก "ร้อยแก้ว" แล้วยังได้บทภาพยนตร์ (บั๊กเดียวกับ alpha.147)
+    for (const [value, label] of [['screenplay', tt('ui.common.screenplay')], ['prose', tt('ui.ai.edit')]]) {
+      const o = el('option', '', label); o.value = value; fmtSel.append(o);
+    }
 
     box.append(el('div', 'k-row'));
     box.querySelector('.k-row').append(el('label', '', tr('ai.charA')), charA);
@@ -248,9 +260,9 @@ export async function openDialogueGenerator() {
         if (res.ok) {
           resultDiv.textContent = res.text;
           if (res.speakers?.length) resultDiv.title = tr('ai.speakerLabel') + res.speakers.join(', ');
-        } else resultDiv.textContent = '❌ ' + (res.error || tr('ai.error'));
+        } else resultDiv.textContent = gi('fail') + ' ' + (res.error || tr('ai.error'));
       } catch (e) {
-        resultDiv.textContent = '❌ ' + ((e && e.message) || tr('ai.error'));
+        resultDiv.textContent = gi('fail') + ' ' + ((e && e.message) || tr('ai.error'));
       } finally {
         runBtn.disabled = false;
       }
@@ -292,7 +304,7 @@ export async function openConsistencyCheck(entityPath) {
 
     // ใช้เอนจิน ai-character.js — หาฉากที่ตัวละครปรากฏเอง + ตรวจออฟไลน์ + แปลงคำตอบเป็นโครงสร้าง
     const scenes = (await listScenes(state.root, { withText: true }))
-      .map((s) => ({ id: s.id, title: s.title, text: s.text || '', storyDate: s.row.storyDate || '' }));
+      .map((s) => ({ id: s.id, title: s.title, text: s.body || '', storyDate: s.row.storyDate || '' }));
     resultDiv.textContent = tr('ai.sendingToAi');
     const { checkConsistency } = await import('./ai-character.js');
     const { getAIClient } = await import('./ai-bridge.js');
@@ -300,7 +312,7 @@ export async function openConsistencyCheck(entityPath) {
 
     resultDiv.textContent = '';
     if (!res.issues.length) {
-      resultDiv.textContent = res.error ? '❌ ' + res.error : tr('ai.noInconsist');
+      resultDiv.textContent = res.error ? gi('fail') + ' ' + res.error : tr('ai.noInconsist');
     } else {
       resultDiv.append(el('div', 'dim', ttf('ui.ai.foundDotSceneAppear', res.issues.length, res.appearances || 0)));
       for (const it of res.issues) {
@@ -309,7 +321,7 @@ export async function openConsistencyCheck(entityPath) {
         row.append(el('div', '', `• [${it.aspect || tr('ai.general')}] ${it.issue || ''}`));
         if (it.sceneTitle || it.sceneId) row.append(el('div', 'dim', tr('ai.sceneLabel') + (it.sceneTitle || it.sceneId)));
         if (it.evidence) row.append(el('div', 'dim', tr('ai.evidenceLabel') + it.evidence));
-        if (it.suggestion) row.append(el('div', '', '💡 ' + it.suggestion));
+        if (it.suggestion) row.append(el('div', '', gi('bulb') + ' ' + it.suggestion));
         resultDiv.append(row);
       }
     }
@@ -332,7 +344,7 @@ export async function openWorldGenerator() {
     const typeSel = el('select');
     ['magic', 'city', 'culture', 'economy', 'religion', 'faction'].forEach((v) => {
       const labels = { magic: tr('ai.wMagic'), city: tr('ai.wCity'), culture: tr('ai.wCulture'), economy: tr('ai.wEconomy'), religion: tr('ai.wReligion'), faction: tr('ai.wFaction') };
-      typeSel.append(el('option', '', labels[v] || v, { value: v }));
+      { const o = el('option', '', labels[v] || v); o.value = v; typeSel.append(o); }   // [alpha.147] el() ไม่รับ {value}
     });
 
     const promptInput = el('textarea');
@@ -366,9 +378,9 @@ export async function openWorldGenerator() {
         const res = await generateWorld(typeSel.value, promptInput.value.trim() || tr('ai.freeform'),
                                         { client: getAIClient() });
         if (res.ok) { lastWorld = res.world; resultDiv.textContent = toMarkdown(res.world); }
-        else resultDiv.textContent = '❌ ' + (res.error || tr('ai.error'));
+        else resultDiv.textContent = gi('fail') + ' ' + (res.error || tr('ai.error'));
       } catch (e) {
-        resultDiv.textContent = '❌ ' + ((e && e.message) || tr('ai.error'));
+        resultDiv.textContent = gi('fail') + ' ' + ((e && e.message) || tr('ai.error'));
       } finally {
         runBtn.disabled = false;
       }
@@ -392,10 +404,14 @@ export async function openWorldGenerator() {
                   .concat(lastWorld ? [] : [{ title: tr('ai.description'), content: r }]),
         created: new Date().toISOString(),
       };
-      const catDir = await kapi.join(await kapi.join(state.root, 'Wiki'), cat);
+      // [alpha.149] โปรเจกต์รุ่นเก่าใช้โฟลเดอร์ Bible/ · ชื่อไฟล์ต้องไม่ชนของเดิม
+      // (เดิม `ชื่อ.json` ตายตัว → สร้างโลกชื่อซ้ำ = เขียนทับอันก่อนเงียบ ๆ)
+      const wikiName = (await kapi.exists(await kapi.join(state.root, 'Wiki')))
+        || !(await kapi.exists(await kapi.join(state.root, 'Bible'))) ? 'Wiki' : 'Bible';
+      const catDir = await kapi.join(await kapi.join(state.root, wikiName), cat);
       await kapi.mkdir(catDir);
       const name = entity.name || 'Worldbuilding';
-      const file = await kapi.join(catDir, name.replace(/[\/\\:*?"<>|]/g, '_') + '.json');
+      const file = await kapi.join(catDir, name.replace(/[\/\\:*?"<>|]/g, '_') + '-' + Date.now().toString(36) + '.json');
       await kapi.writeFile(file, JSON.stringify(entity, null, 2));
       setStatus(tr('ai.savedToWiki') + name);
     };
@@ -419,7 +435,7 @@ export async function openAIChat() {
   pane.style.cssText = 'display:flex;flex-direction:column;height:100%';
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', '💬 Chat with Story'));
+  tabBtn.append(el('span', 'tab-title', gi('chat') + ' Chat with Story'));
   const x = el('span', 'tab-x', '×'); tabBtn.append(x);
   $('#tabs').append(tabBtn);
 
@@ -433,7 +449,7 @@ export async function openAIChat() {
   inputBar.style.cssText = 'display:flex;padding:8px 12px;border-top:1px solid var(--border);background:var(--side)';
   const input = el('input'); input.placeholder = tr('ai.chatPlaceholder');
   input.style.cssText = 'flex:1;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;outline:none';
-  const sendBtn = el('button', '', '▶');
+  const sendBtn = el('button', '', gi('play'));
   sendBtn.style.cssText = 'margin-left:8px;min-width:48px';
   inputBar.append(input, sendBtn);
   pane.append(inputBar);
@@ -490,7 +506,7 @@ export async function openAIChat() {
       const res = await client.stream(
         { messages: [...msgs, { role: 'user', content: prompt }], system, feature: 'chat' },
         (chunk) => { acc += chunk; bubble.textContent = acc; chatArea.scrollTop = chatArea.scrollHeight; });
-      if (!res.ok) { bubble.textContent = '❌ ' + (res.error || tr('ai.callFail')); return; }
+      if (!res.ok) { bubble.textContent = gi('fail') + ' ' + (res.error || tr('ai.callFail')); return; }
       if (!acc) { acc = res.text || ''; bubble.textContent = acc || tr('ai.noAnswer'); }
       history.push({ role: 'assistant', content: acc });
       addSources(ctx.sources);
@@ -504,7 +520,7 @@ export async function openAIChat() {
 
   input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); } };
 
-  const tab = { file: KEY, title: '💬 Chat', pane, tabBtn, dirty: false,
+  const tab = { file: KEY, title: gi('chat') + ' Chat', pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, net: null, planner: null };
   tabBtn.onclick = (ev) => { if (ev.target !== x) activate(KEY); };
   x.onclick = () => closeTab(KEY);

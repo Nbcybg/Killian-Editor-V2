@@ -7,6 +7,7 @@ import { parseScript, SP_ELEMS, classify, splitCharacter,
 import { el } from './core.js';
 import { confirmBox, escClose } from './ui.js';
 import JSZip from 'jszip';
+import { gi } from './icons.js';
 
 // [62-66] ตารางนำเข้าทั้ง 5 รูปแบบ — name/ext ใช้ใน UI · parse รับ content (string|Uint8Array)
 export const SP_IMPORTERS = {
@@ -74,7 +75,7 @@ function importPreviewDialog({ filePath, result, summary, markdown }) {
     box.append(pre);
 
     if (!summary.scenes && !summary.dialogueBlocks)
-      box.append(el('div', 'k-hint imp-sp-warn', '⚠ ' + t('ui.importSp.previewEmpty')));
+      box.append(el('div', 'k-hint imp-sp-warn', gi('warning') + ' ' + t('ui.importSp.previewEmpty')));
 
     const done = (v) => { ov.remove(); resolve(v); };
     const btns = el('div', 'k-dlg-btns');

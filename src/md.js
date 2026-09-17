@@ -5,7 +5,8 @@
 //   [alpha.132 ข้อ 9] สีตัวอักษร = `<span style="color:#rrggbb">…</span>` (HTML inline ตามมาตรฐาน
 //   Markdown — v1 และตัวอ่านอื่นเห็นเป็นข้อความ ไม่มีข้อมูลหาย) · ค่าสีถูกกรองด้วย text-color.js
 
-const { normColor, COLOR_SPAN_RE, colorSpanMd } = require('./text-color.js');   // ทั้งคู่เป็น CommonJS
+const { normColor, COLOR_SPAN_RE, colorSpanMd,
+        HILITE_SPAN_RE, hiliteSpanMd } = require('./text-color.js');   // ทั้งคู่เป็น CommonJS
 
 const PATS = [
   [/\*\*\*([^*\n]+)\*\*\*/, ['strong', 'em']],
@@ -122,19 +123,24 @@ function parseInline(s, base = []) {
     // (ค่าสีที่กรองไม่ผ่านถือว่า "ไม่ใช่สแปนสี" แล้วปล่อยข้อความเดิมไว้ทั้งดุ้น ตามกฎไม่มีข้อมูลหาย)
     let best = null;
     const cm = COLOR_SPAN_RE.exec(s);
-    if (cm && normColor(cm[1])) best = { m: cm, marks: null, color: normColor(cm[1]) };
+    if (cm && normColor(cm[1])) best = { m: cm, marks: null, attr: 'color', color: normColor(cm[1]) };
+    // [alpha.150] สีเน้นข้อความ — แข่งตำแหน่งกับตัวอื่นด้วยกติกาเดียวกัน (ซ้ายสุดชนะ)
+    const hm = HILITE_SPAN_RE.exec(s);
+    if (hm && normColor(hm[1]) && (best === null || hm.index < best.m.index)) {
+      best = { m: hm, marks: null, attr: 'highlight', color: normColor(hm[1]) };
+    }
     for (const [rx, marks] of PATS) {
       const m = rx.exec(s);
-      if (m && (best === null || m.index < best.m.index)) best = { m, marks, color: null };
+      if (m && (best === null || m.index < best.m.index)) best = { m, marks, attr: null, color: null };
     }
     if (!best) { segs.push({ text: s, marks: base }); break; }
-    const { m, marks, color } = best;
+    const { m, marks, attr, color } = best;
     if (m.index) segs.push({ text: s.slice(0, m.index), marks: base });
-    const next = color
-      ? [...base.filter((x) => typeof x === 'string' || x.type !== 'color'),
-         { type: 'color', attrs: { color } }]
+    const next = attr
+      ? [...base.filter((x) => typeof x === 'string' || x.type !== attr),
+         { type: attr, attrs: { color } }]
       : [...new Set([...base, ...marks])];
-    segs.push(...parseInline(color ? m[2] : m[1], next));
+    segs.push(...parseInline(attr ? m[2] : m[1], next));
     s = s.slice(m.index + m[0].length);
   }
   return segs;
@@ -180,7 +186,9 @@ function inlineDisplayText(text) {
   return stripMentions(parseInline(String(text == null ? '' : text))
     .map((seg) => {
       const c = (seg.marks || []).find((m) => m && typeof m === 'object' && m.type === 'color');
-      return c ? colorSpanMd((c.attrs || {}).color, seg.text) : seg.text;
+      const h = (seg.marks || []).find((m) => m && typeof m === 'object' && m.type === 'highlight');
+      const inner = c ? colorSpanMd((c.attrs || {}).color, seg.text) : seg.text;
+      return h ? hiliteSpanMd((h.attrs || {}).color, inner) : inner;
     })
     .join(''));
 }
@@ -246,7 +254,11 @@ function inlineHtml(text, opts) {
       for (const [name, tag] of MARK_TAGS) if (has(name)) s = `<${tag}>${s}</${tag}>`;
       const col = marks.find((m) => m && typeof m === 'object' && m.type === 'color');
       const hex = col ? normColor((col.attrs || {}).color) : '';
-      return hex && !mono ? `<span style="color:${hex}">${s}</span>` : s;
+      if (hex && !mono) s = `<span style="color:${hex}">${s}</span>`;
+      // [alpha.150] สีเน้นอยู่ชั้นนอกกว่าสีตัวอักษร — ลำดับเดียวกับตอนเขียนลงไฟล์
+      const hl = marks.find((m) => m && typeof m === 'object' && m.type === 'highlight');
+      const hhex = hl ? normColor((hl.attrs || {}).color) : '';
+      return hhex && !mono ? `<mark style="background:${hhex}">${s}</mark>` : s;
     })
     .join('');
 }
@@ -598,6 +610,23 @@ function emitRuns(runs) {
  * [alpha.132 ข้อ 9] เขียนชุด run หนึ่งบรรทัด โดยห่อ **ช่วงที่สีเดียวกันติดกัน** ด้วยสแปนสี
  * (สีอยู่นอกเครื่องหมายมาร์กดาวน์เสมอ — `<span …>**หนา**</span>` อ่านกลับได้ตรงทั้งสองชั้น)
  */
+/**
+ * [alpha.150] ชั้นนอกสุด — ห่อช่วงที่ "สีเน้นเดียวกันติดกัน" ด้วย `<mark>`
+ * ลำดับชั้นตายตัว: mark → span สี → เครื่องหมายมาร์กดาวน์ (อ่านกลับได้ครบทุกชั้น)
+ */
+function emitStyled(runs) {
+  let out = '';
+  for (let i = 0; i < runs.length;) {
+    const h = runs[i].hl;
+    let j = i;
+    while (j < runs.length && runs[j].hl === h) j++;
+    const chunk = emitColored(runs.slice(i, j));
+    out += h ? hiliteSpanMd(h, chunk) : chunk;
+    i = j;
+  }
+  return out;
+}
+
 function emitColored(runs) {
   let out = '';
   for (let i = 0; i < runs.length;) {
@@ -620,13 +649,15 @@ function inlineToMd(content) {
     if (n.type !== 'text') continue;
     const marks = n.marks || [];
     const cmk = marks.find((m) => m.type === 'color');
+    const hmk = marks.find((m) => m.type === 'highlight');
     parts[parts.length - 1].push({
       text: n.text,
       color: cmk ? normColor((cmk.attrs || {}).color) : '',
+      hl: hmk ? normColor((hmk.attrs || {}).color) : '',
       sig: new Set(marks.map((m) => m.type).filter((t) => MARKSET.includes(t))),
     });
   }
-  return parts.map(emitColored).join('\\\n');
+  return parts.map(emitStyled).join('\\\n');
 }
 
 // ---------- doc → md ----------
@@ -729,31 +760,117 @@ function mdLineCounts(doc, opts) { return docToMdParts(doc, opts).counts; }
 // (regex ตัวเดียวกับ BLOCK_RE ใน comments/comment-core.js — md.js เป็น CommonJS จึงไม่ import ข้ามมา)
 const K2_COMMENTS_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
 
+// ══ [alpha.156] ★ ค่าที่มีหลายบรรทัดต้องไม่ทำ frontmatter พัง ══
+//
+// เดิมเขียน `synopsis: บรรทัดแรก\nบรรทัดสอง` ตรง ๆ → ตอนอ่านกลับได้แค่บรรทัดแรก (ที่เหลือหายเงียบ)
+// และถ้าในเรื่องย่อมีบรรทัด `---` frontmatter จบก่อนเวลา → คีย์ที่เหลือไหลลงไปเป็น **เนื้อฉาก**
+// (ช่องเรื่องย่อ/โน้ต/โน้ตอนาคตในแผงคุณสมบัติเป็น textarea — ผู้ใช้กด Enter ได้ตามปกติ)
+//
+// ตอนนี้: ค่าที่ "อ่านกลับแบบตรงตัวไม่ได้" ถูกเขียนเป็นสตริง JSON ในเครื่องหมายคำพูด
+//   ขึ้นบรรทัดใหม่ · ช่องว่างหัว/ท้าย (ถูก trim ตอนอ่าน) · ขึ้นต้นด้วย `"` · รูป `[…]` (ถูกอ่านเป็นลิสต์)
+// ค่าธรรมดา (ส่วนใหญ่ทั้งหมด) เขียนเหมือนเดิมทุกไบต์ → ไฟล์เดิมไม่เปลี่ยน · v1 ยังเปิดอ่านได้
+function fmNeedsQuote(s) {
+  return /[\r\n]/.test(s) || /^\s|\s$/.test(s) || s.startsWith('"') || (s.startsWith('[') && s.endsWith(']'));
+}
+function fmEncode(v) {
+  const s = v == null ? '' : String(v);
+  return fmNeedsQuote(s) ? JSON.stringify(s) : s;
+}
+function fmDecode(v) {
+  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+    try { const s = JSON.parse(v); if (typeof s === 'string') return s; } catch {}
+  }
+  return v.startsWith('[') && v.endsWith(']')
+    ? v.slice(1, -1).split(',').map((x) => x.trim()).filter(Boolean) : v;
+}
+
 function parseMdFile(text) {
   let meta = {}, body = String(text || '').replace(K2_COMMENTS_RE, '');
   text = body;
   if (text.startsWith('---')) {
     const end = text.indexOf('\n---', 3);
     if (end !== -1) {
-      for (const line of text.slice(3, end).split('\n')) {
+      // [alpha.148] \r\n (ไฟล์ที่แก้บน Windows) — `.` ใน regex ข้างล่างไม่กิน \r → เมทาดาทาหายทั้งหัวไฟล์
+      for (const line of text.slice(3, end).replace(/\r/g, '').split('\n')) {
         const m = /^(\w[\w-]*):\s*(.*)$/.exec(line);
         if (!m) continue;
-        const v = m[2].trim();
-        meta[m[1]] = v.startsWith('[') && v.endsWith(']')
-          ? v.slice(1, -1).split(',').map((x) => x.trim()).filter(Boolean) : v;
+        meta[m[1]] = fmDecode(m[2].trim());
       }
-      body = text.slice(end + 4).replace(/^\n+/, '');
+      // [alpha.148] ตัดแค่ "ตัวคั่น" หลังเส้น --- หนึ่งบรรทัด + บรรทัดว่างตามธรรมเนียมอีกหนึ่ง
+      // เดิม /^\n+/ กินบรรทัดว่างหัวฉากที่ผู้ใช้เว้นไว้ทิ้งหมดทุกครั้งที่เปิดไฟล์ (และไม่รู้จัก \r\n)
+      // ไฟล์ทั่วไป (`---\nbody` ของเรา · `---\n\nbody` ที่เขียนมือ/v1) ได้ body เหมือนเดิมทุกไบต์
+      body = text.slice(end + 4).replace(/^\r?\n/, '').replace(/^\r?\n/, '');
     }
   }
   return { meta, body };
 }
 
+/**
+ * ══ [alpha.156] ★ กู้ frontmatter ที่ถูกเขียนพังไปแล้ว (ก่อนมี fmEncode) ══
+ *
+ * สองอาการจากบั๊กเดิม — ทั้งคู่ "ข้อความยังอยู่ในไฟล์" จนกว่าจะถูกบันทึกทับอีกรอบ จึงกู้ได้:
+ *  1. **ค่าหลายบรรทัด** — `synopsis: บรรทัดแรก` แล้วบรรทัดถัดไปไม่มี `คีย์:` นำหน้า
+ *     parseMdFile ข้ามทิ้ง → ตัวแก้ไขเห็นแค่บรรทัดแรก และบันทึกครั้งถัดไปลบที่เหลือถาวร
+ *  2. **frontmatter จบก่อนเวลา** — เรื่องย่อมีบรรทัด `---` → คีย์ที่เหลือไหลลงไปเป็นเนื้อฉาก
+ *     (ดูจาก: หลัง `---` ตัวแรกยังเป็นบรรทัด `คีย์ที่รู้จัก:` และมี `---` ตามมาอีกตัว)
+ *
+ * @returns {{text:string, changed:boolean, recovered:string[]}} ไม่มีอะไรต้องกู้ = ข้อความเดิมทุกไบต์
+ */
+const FM_KNOWN_KEYS = new Set(['title', 'type', 'format', 'pov', 'tags', 'synopsis', 'emotion', 'conflict',
+  'note', 'futureNote', 'storyDate', 'isFlashback', 'isFlashforward', 'align', 'modified', 'appVersion',
+  'revision', 'locked', 'status', 'color', 'flag', 'startPage', 'pageFlow', 'created', 'author']);
+function repairFrontmatter(text) {
+  const src = String(text == null ? '' : text);
+  const same = { text: src, changed: false, recovered: [] };
+  const cm = K2_COMMENTS_RE.exec(src);
+  const main = cm ? src.slice(0, cm.index) : src;
+  const tail = cm ? src.slice(cm.index) : '';
+  const lines = main.replace(/\r\n/g, '\n').split('\n');
+  if (!lines.length || lines[0].trim() !== '---') return same;
+  const KEY = /^(\w[\w-]*):\s*(.*)$/;
+  let firstEnd = -1, end = -1;
+  for (let j = 1; j < lines.length; j++) {
+    if (lines[j].trim() !== '---') continue;
+    if (firstEnd < 0) firstEnd = j;
+    let k = j + 1;
+    while (k < lines.length && !lines[k].trim()) k++;
+    const m = k < lines.length ? KEY.exec(lines[k]) : null;
+    const moreFence = m && FM_KNOWN_KEYS.has(m[1]) && lines.slice(k + 1).some((l) => l.trim() === '---');
+    if (moreFence) continue;                       // ยังไม่จบจริง — คีย์ไหลต่ออยู่
+    end = j; break;
+  }
+  if (end < 0) return same;
+  const meta = {};
+  const recovered = new Set();
+  let lastKey = null, cont = 0;
+  for (const raw of lines.slice(1, end)) {
+    const m = KEY.exec(raw);
+    if (m) {
+      lastKey = m[1];
+      meta[lastKey] = fmDecode(m[2].trim());
+      if (end !== firstEnd) recovered.add(lastKey);
+      continue;
+    }
+    if (lastKey && typeof meta[lastKey] === 'string' && raw.length) {
+      meta[lastKey] += '\n' + raw; cont++; recovered.add(lastKey);
+    }
+  }
+  if (!cont && end === firstEnd) return same;
+  let body = lines.slice(end + 1).join('\n');
+  body = body.replace(/^\n/, '');                  // บรรทัดว่างตามธรรมเนียมหนึ่งบรรทัด (เหมือน parseMdFile)
+  return { text: dumpMdFile(meta, body) + (tail ? '\n' + tail.replace(/^\n+/, '') : ''), changed: true, recovered: [...recovered] };
+}
+
 function dumpMdFile(meta, body) {
   const out = ['---'];
   for (const [k, v] of Object.entries(meta))
-    out.push(Array.isArray(v) ? `${k}: [${v.join(', ')}]` : `${k}: ${v}`);
+    // รายการ: ตัดการขึ้นบรรทัดในแต่ละช่องทิ้ง (แท็กหลายบรรทัดไม่มีความหมาย และจะทำหัวไฟล์พัง)
+    out.push(Array.isArray(v) ? `${k}: [${v.map((x) => String(x).replace(/[\r\n]+/g, ' ')).join(', ')}]`
+                              : `${k}: ${fmEncode(v)}`);
   out.push('---\n');
-  return out.join('\n') + body;
+  // [alpha.148] เนื้อที่ขึ้นต้นด้วยบรรทัดว่าง → คั่นด้วยบรรทัดว่างตามธรรมเนียมหนึ่งบรรทัดก่อน
+  // parseMdFile ตัดบรรทัดนั้นทิ้ง แล้วได้บรรทัดว่างของผู้ใช้กลับมาครบ (เนื้อปกติไม่เปลี่ยนแม้แต่ไบต์เดียว)
+  return out.join('\n') + (/^\r?\n/.test(body) ? '\n' : '') + body;
 }
 
 function countWords(body) {
@@ -778,5 +895,9 @@ module.exports = { mdToDoc, docToMd, mdLineCounts, parseMdFile, dumpMdFile, coun
                    // [alpha.133 · Y-1+Y-2] สคีมาบล็อก + ตัวแปลง inline ตัวเดียวของทั้งโปรแกรม
                    // (ตัวแก้ไข · ไฟล์ที่ส่งออก · ช่องตัวอย่าง อ่านจากสองตัวนี้เท่านั้น)
                    mdBlocks, inlineHtml,
+                   // [alpha.156] ตัวแยก inline → ช่วงข้อความ + มาร์ก (ส่งออก DOCX ต้องการระดับ "run" ไม่ใช่ HTML)
+                   parseInline,
+                   // [alpha.156] กู้ frontmatter ที่ตัวเขียนเดิมทำพัง (ตรวจสุขภาพโปรเจกต์ใช้)
+                   repairFrontmatter,
                    // [alpha.132r3 ข้อ 3] รูปแบบของจุดนำ/หมายเลขข้อ (มาจากอักษรตัวแรกของข้อ)
                    markerVars };

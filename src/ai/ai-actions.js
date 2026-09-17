@@ -12,11 +12,29 @@ import { t, tf } from '../i18n.js';
 import { state, setStatus, smart } from '../core.js';
 import { dumpMdFile, parseMdFile } from '../md.js';
 import { listScenes, listEntities } from '../project-scan.js';
+// [alpha.149] ★ ไฟล์ที่เปิดอยู่ในแท็บ ต้องถูกแก้ "ผ่านแท็บ" — เขียนดิสก์ตรง ๆ แล้วแท็บยังถือของเก่า
+// พอผู้ใช้บันทึก ข้อความที่ AI เขียนก็หาย (วัดจริง: ไฟล์มี → กด Ctrl+S → หาย) · รายละเอียดหัว tab-bridge.js
+import { tabHandle, closeTabsUnder } from '../tab-bridge.js';
 
 const SKIP_DIRS = ['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', 'Plugins', 'Recycle', 'Sessions'];
 
 const guid = () => 'k2-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const safeName = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '').trim() || 'untitled';
+/**
+ * [alpha.149] ★ ชื่อหมวด Wiki มาจาก **คำตอบของโมเดล** — ต้องไม่พาไฟล์ออกนอกโฟลเดอร์ Wiki
+ * เดิมส่งเข้า `kapi.join(wiki, cat)` ตรง ๆ → `"../../ที่ไหนก็ได้"` เขียนไฟล์นอกโปรเจกต์ได้
+ * (ข้อความในฉากที่คัดลอกมาจากเว็บก็หลอกให้โมเดลสั่งแบบนี้ได้) · คืน '' = ใช้ไม่ได้
+ */
+export function safeCat(cat) {
+  const s = String(cat == null || cat === '' ? 'characters' : cat).trim();
+  if (!s || /[\\/]/.test(s) || /^\.+$/.test(s) || s.includes('..')) return '';
+  return s.replace(/[:*?"<>|]/g, '').trim();
+}
+/** เนื้อฉาก "ตัวจริง ณ ตอนนี้" — แท็บที่เปิดอยู่ชนะไฟล์บนดิสก์ (มีส่วนที่ยังไม่บันทึกได้) */
+function liveBody(path, diskBody) {
+  const h = tabHandle(path);
+  return h && h.kind !== 'wiki' ? h.getText() : diskBody;
+}
 const eq = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 
 // ────────────────────────────── หาของในโปรเจกต์ ──────────────────────────────
@@ -126,7 +144,8 @@ const HANDLERS = {
     if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
     const raw = (await kapi.exists(sc.path)) ? await kapi.readFile(sc.path) : '';
     const { meta, body } = parseMdFile(raw);
-    return ok(tf('ui.aiActions.readSceneDone', sc.title), { title: sc.title, book: sc.section, meta, text: body });
+    return ok(tf('ui.aiActions.readSceneDone', sc.title),
+              { title: sc.title, book: sc.section, meta, text: liveBody(sc.path, body) });
   },
 
   async 'entity.read'(a) {
@@ -137,7 +156,8 @@ const HANDLERS = {
 
   async 'entity.create'(a) {
     if (await findEntityFile(a.name)) return err(tf('ui.aiActions.hasUseEntityUpdate', a.name));
-    const cat = String(a.cat || 'characters').trim();
+    const cat = safeCat(a.cat);
+    if (!cat) return err(tf('ui.aiActions.badCat', String(a.cat || '')));
     const dir = await kapi.join(await wikiBase(), cat);
     await kapi.mkdir(dir);
     const e = {
@@ -170,13 +190,19 @@ const HANDLERS = {
       }
       e.sections = cur;
     }
+    // [alpha.149] หน้า Wiki นี้เปิดแก้ค้างอยู่ → ไม่เขียนทับ (ไม่งั้นงานของใครสักคนหาย) · ไม่ค้าง = โหลดใหม่ให้เห็นทันที
+    const h = tabHandle(hit.path);
+    if (h && h.dirty) return err(tf('ui.aiActions.entityOpenDirty', hit.name));
     await kapi.writeFile(hit.path, JSON.stringify(e, null, 2));
+    if (h) await h.reloadFromDisk();
     return ok(tf('ui.aiActions.editDone', hit.name));
   },
 
   async 'entity.delete'(a) {
     const hit = await findEntityFile(a.name);
     if (!hit) return err(tf('ui.aiActions.notFound', a.name));
+    const h = tabHandle(hit.path);
+    if (h) h.close();                  // ผู้ใช้ยืนยันการลบแล้ว — แท็บของไฟล์ที่ไม่มีอยู่แล้วต้องไม่ค้าง
     await moveToTrash(hit.path);
     return ok(tf('ui.aiActions.moveTrashDone', hit.name));
   },
@@ -201,6 +227,7 @@ const HANDLERS = {
   async 'book.delete'(a) {
     const b = await findBook(a.title);
     if (!b) return err(tf('ui.aiActions.notFoundBook2', a.title));
+    closeTabsUnder(b.path);            // [alpha.149] แท็บของฉากในเล่มที่ย้ายไปถังขยะต้องไม่ค้าง (บันทึกแล้วไฟล์ผีกลับมา)
     const dst = await moveToTrash(b.path);
     await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
       { kind: 'section', root: state.root, folderName: b.name }, null, 2));
@@ -243,6 +270,7 @@ const HANDLERS = {
     const sdata = (await kapi.exists(sf)) ? await kapi.readJson(sf) : { chapters: {} };
     const scenes = (sdata.chapters || {})[c.ch.guid] || [];
     if (await kapi.exists(dir)) {
+      closeTabsUnder(dir);             // [alpha.149]
       const dst = await moveToTrash(dir);
       await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
         { kind: 'chapter', dPath: b.draftPath, ch: c.ch, scenes }, null, 2));
@@ -265,12 +293,19 @@ const HANDLERS = {
     const list = d.chapters[c.ch.guid] || [];
     if (list.some((s) => eq(s.title, a.title))) return err(tf('ui.aiActions.chapterHasScene', a.title));
     const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-    const sc = { id: guid(), title: String(a.title), order,
-                 fileName: 'scene-' + String(order).padStart(2, '0') + '.md',
+    // [alpha.149] ★ ชื่อไฟล์ต้องไม่ชนไฟล์ที่มีอยู่แล้ว — `scene-NN.md` ที่ไม่ได้อยู่ใน scenes.json
+    // (กู้จากถังขยะ · ก๊อปมาเอง · ฉากที่ถูกถอดออกจากรายการ) เคยถูกเขียนทับเงียบ ๆ
+    const chDir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
+    const base = 'scene-' + String(order).padStart(2, '0');
+    let fileName = base + '.md';
+    for (let k = 2; k < 1000 && (await kapi.exists(await kapi.join(chDir, fileName))); k++) {
+      fileName = base + '-' + k + '.md';
+    }
+    const sc = { id: guid(), title: String(a.title), order, fileName,
                  chapterGuid: c.ch.guid, date: '', isFavorite: false, wordCount: 0,
                  synopsis: String(a.synopsis || '') };
     d.chapters[c.ch.guid] = [...list, sc];
-    const file = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName, sc.fileName);
+    const file = await kapi.join(chDir, sc.fileName);
     await kapi.writeFile(file, dumpMdFile(
       { title: sc.title, type: 'scene', format: 'prose', pov: '', tags: [] }, String(a.text || '')));
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
@@ -281,15 +316,26 @@ const HANDLERS = {
     const sc = await findScene(a);
     if (!sc) return err(tf('ui.aiActions.notFoundSceneNew', a.title));
     const raw = (await kapi.exists(sc.path)) ? await kapi.readFile(sc.path) : '';
-    const { meta, body } = parseMdFile(raw);
+    const { meta, body: diskBody } = parseMdFile(raw);
     const add = String(a.text || '');
     const mode = String(a.mode || 'append');
+    const h = tabHandle(sc.path);
+    const live = !!(h && h.kind !== 'wiki');
+    // [alpha.149] ต่อจาก "เนื้อที่ผู้ใช้เห็นอยู่" — แท็บที่ค้างการแก้ไว้ชนะไฟล์บนดิสก์
+    const body = live ? h.getText() : diskBody;
     const next = mode === 'replace' ? add
                : mode === 'prepend' ? (add + (body ? '\n\n' + body : ''))
                : (body ? body.replace(/\s+$/, '') + '\n\n' + add : add);
-    await kapi.writeFile(sc.path, dumpMdFile(meta, next));
     const verb = mode === 'replace' ? t('ui.common.overwrite') : mode === 'prepend' ? t('ui.common.insertPage') : t('ui.aiActions.writeNext');
-    return ok(tf('ui.aiActions.sceneDoneMergeChar', verb, sc.title, next.length));
+    const msg = tf('ui.aiActions.sceneDoneMergeChar', verb, sc.title, next.length);
+    if (live && h.dirty) {
+      // แท็บมีงานที่ยังไม่บันทึก → เขียนลงแท็บอย่างเดียว (ห้ามบันทึกงานของผู้ใช้แทนเขาเงียบ ๆ)
+      h.setText(next, { keepAlign: mode === 'append' });
+      return ok(msg + ' · ' + t('ui.aiActions.openTabUnsaved'));
+    }
+    await kapi.writeFile(sc.path, dumpMdFile(meta, next));
+    if (live) await h.reloadFromDisk();          // แท็บเห็นของใหม่ทันที · บันทึกทีหลังจะไม่เขียนทับอีก
+    return ok(msg);
   },
 
   async 'scene.rename'(a) {
@@ -305,6 +351,9 @@ const HANDLERS = {
       const { meta, body } = parseMdFile(await kapi.readFile(sc.path));
       await kapi.writeFile(sc.path, dumpMdFile({ ...meta, title: String(a.newTitle) }, body));
     }
+    // [alpha.149] แท็บที่เปิดอยู่ถือ meta.title ของเก่า — บันทึกทีหลังจะเขียนชื่อเดิมกลับลงไฟล์
+    const h = tabHandle(sc.path);
+    if (h) h.rename(String(a.newTitle));
     return ok(tf('ui.aiActions.changeNameSceneDone', a.newTitle));
   },
 
@@ -314,6 +363,8 @@ const HANDLERS = {
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
     const d = await kapi.readJson(sf);
     const folderName = (sc.path.split(/[\\/]/).slice(-2, -1)[0]) || '';
+    const h = tabHandle(sc.path);
+    if (h) h.close();                  // [alpha.149] ไม่งั้นบันทึกแท็บค้าง = ไฟล์ฉากที่ลบไปแล้วเกิดใหม่
     if (await kapi.exists(sc.path)) {
       const dst = await moveToTrash(sc.path);
       await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(

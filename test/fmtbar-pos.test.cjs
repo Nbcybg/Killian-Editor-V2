@@ -266,5 +266,79 @@ const at = (o) => P.fmtBarTarget({ host: HOST, bar: BAR, viewport: VP, ...o });
 check('เวลาเคลื่อนที่อยู่ในช่วงที่รู้สึกว่า "ลื่นแต่ไม่อืด"',
       P.FMTBAR_TWEEN_MS >= 200 && P.FMTBAR_TWEEN_MS <= 700, P.FMTBAR_TWEEN_MS);
 
+
+// ═══════ [alpha.151 ข้อ 5] ★★ อยู่ในกรอบยังไม่พอ — ต้องอยู่ใน "หน้าต่าง" ด้วย ═══════
+//
+// ผู้ใช้: *"comment ใช้จาก float bar ไม่ได้ แต่ใช้จาก menu ได้"*
+// เปิดแผงกระดานแล้ว #content หดจนแคบกว่าแถบ · ของเดิมปักไว้ที่ขอบซ้ายของ #content
+// ซึ่งอยู่ค่อนไปทางขวาของจอ → ครึ่งขวาของแถบ (ปุ่มบันทึกความเห็น/ค้นหา) ยื่นออกนอกจอ
+{
+  const WIDE = { width: 1200, height: 36 };
+  const VP2 = { width: 1440, height: 900 };
+  // #content ถูกแผงกระดานเบียดไปอยู่ทางขวา เหลือกว้าง 300
+  const SQUEEZED = { left: 1100, top: 90, width: 300, height: 700 };
+  const r = P.fmtBarTarget({ pointer: { x: 1200, y: 400 }, inEditor: true,
+                             host: SQUEEZED, bar: WIDE, viewport: VP2 });
+  const winL = r.left + SQUEEZED.left;
+  check('★★ กรอบแคบกว่าแถบ → ขอบซ้ายของแถบยังอยู่ในจอ', winL >= 0, winL);
+  check('★★ และขอบขวาก็ยังอยู่ในจอ (ปุ่มท้ายแถบกดได้จริง)',
+        winL + WIDE.width <= VP2.width, winL + WIDE.width);
+
+  // แนวตั้งก็เหมือนกัน — กรอบเตี้ยที่วางไว้ค่อนล่างจอ ต้องไม่ดันแถบลงไปใต้ขอบจอ
+  const LOW = { left: 20, top: 700, width: 1400, height: 60 };
+  const r2 = P.fmtBarTarget({ host: LOW, bar: { width: 400, height: 300 }, viewport: VP2 });
+  const winT = r2.top + LOW.top;
+  check('★ แถบสูงในกรอบที่อยู่ค่อนล่างจอ → ยังอยู่ในจอทั้งใบ',
+        winT >= 0 && winT + 300 <= VP2.height, winT + ' + 300 / ' + VP2.height);
+
+  // กรณีปกติ (กรอบกว้างพอ) ต้องไม่ถูกกฎใหม่แตะเลย
+  const plain = P.fmtBarTarget({ pointer: { x: 700, y: 300 }, inEditor: true,
+                                 host: HOST, bar: BAR, viewport: VP });
+  check('★ กรอบกว้างพอ → กฎกันล้นจอไม่เปลี่ยนผลลัพธ์เดิม (ยังกึ่งกลางที่เมาส์)',
+        Math.abs(plain.left + BAR.width / 2 + HOST.left - 700) < 1, JSON.stringify(plain));
+
+  // จอเล็กกว่าตัวแถบเอง = ยัดยังไงก็ล้น → อย่าไปขยับมันมั่ว ปล่อยตามกรอบเดิม
+  const tinyVp = P.fmtBarTarget({ host: HOST, bar: { width: 2000, height: 36 },
+                                  viewport: { width: 900, height: 600 } });
+  check('จอเล็กกว่าแถบ → ไม่พยายามยัด (คืนค่าตามกรอบเดิม ไม่ติดลบมั่ว)',
+        Number.isFinite(tinyVp.left) && tinyVp.left === 8, JSON.stringify(tinyVp));
+}
+
+
+// ═══════ [alpha.151 ข้อ 5] barClampBox — แถบใหญ่กว่ากรอบ ให้หนีบกับหน้าต่างแทน ═══════
+{
+  const VP3 = { width: 1440, height: 900 };
+  // #content ถูกแผงกระดานเบียดไปอยู่ทางขวา เหลือกว้าง 300 · แถบกว้าง 1400
+  const SQ = { left: 1100, top: 90, width: 300, height: 700 };
+  const box = P.barClampBox(SQ, { width: 1400, height: 36 }, VP3);
+  check('★★ แกนนอน: แถบกว้างกว่ากรอบ → กรอบหนีบขยายเป็นความกว้างของหน้าต่าง',
+        box.left === -1100 && box.right === 340, JSON.stringify(box));
+  check('★ แกนตั้งยังใช้กฎเดิม (แถบเตี้ยกว่ากรอบ ไม่ต้องแตะ)',
+        box.top === 0 && box.bottom === 700, JSON.stringify(box));
+  // หนีบจริงแล้วต้องอยู่ในจอทั้งใบ
+  const c = P.clampBarInBox({ left: 8, top: 100 }, { width: 1400, height: 36 }, box);
+  check('★★ หนีบแล้วขอบขวาของแถบอยู่ในจอ (ปุ่มท้ายแถบกดได้)',
+        c.left + SQ.left >= 0 && c.left + SQ.left + 1400 <= VP3.width,
+        (c.left + SQ.left) + '..' + (c.left + SQ.left + 1400));
+
+  // กรอบกว้างพอ → ต้องได้ผลเท่ากับ visibleHostBox เป๊ะ (กฎใหม่ไม่รั่วไปเคสปกติ)
+  const wide = { left: 260, top: 90, width: 1000, height: 700 };
+  check('★ กรอบกว้างพอ → เหมือน visibleHostBox ทุกประการ',
+        JSON.stringify(P.barClampBox(wide, { width: 520, height: 36 }, VP3))
+        === JSON.stringify(P.visibleHostBox(wide, VP3)));
+  check('ไม่รู้ขนาดหน้าต่าง → ไม่เดา ใช้กฎเดิม',
+        JSON.stringify(P.barClampBox(wide, { width: 5000, height: 36 }, {}))
+        === JSON.stringify(P.visibleHostBox(wide, {})));
+  check('เรียกเปล่า ๆ ก็ไม่พัง', (() => {
+    const r = P.barClampBox();
+    return Number.isFinite(r.left) && Number.isFinite(r.right);
+  })());
+  // แกนตั้ง: กรอบเตี้ยกว่าแถบ → ขยายเป็นความสูงของหน้าต่าง
+  const short = { left: 20, top: 600, width: 1400, height: 80 };
+  const bv = P.barClampBox(short, { width: 400, height: 300 }, VP3);
+  check('★ แกนตั้ง: แถบสูงกว่ากรอบ → หนีบกับความสูงของหน้าต่างแทน',
+        bv.top === -600 && bv.bottom === 300, JSON.stringify(bv));
+}
+
 console.log(`\nfmtbar-pos: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

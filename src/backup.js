@@ -2,12 +2,19 @@
 // บทเรียน: ห้ามก๊อปไฟล์ด้วย readFile+writeFile (utf-8) — รูปภาพจะเสีย → ใช้ kapi.copyFile
 import { t, tf } from './i18n.js';
 import { state, setStatus, log } from './core.js';
+import { localDay } from './local-date.js';
 
 const SKIP_DIRS = ['Recycle', 'Snapshots', '.k2history', 'Backups', 'Research'];
+// [alpha.148] คีย์ AI เป็นของเครื่องนี้ ไม่ใช่ของผลงาน — ห้ามติดไปกับชุดสำรอง (ซึ่งมักถูกก๊อปไปแชร์ต่อ)
+const SKIP_ROOT_FILES = ['ai-key.json'];
 const MAX_KEEP = 7;
-const LAST_KEY = 'k2-last-backup';        // วันที่สำรองล่าสุด (กันสำรองซ้ำวันเดียวกัน)
+// [alpha.148] ป้าย "สำรองวันนี้ครบแล้ว" อยู่ **ในโฟลเดอร์สำรองของโปรเจกต์นั้นเอง**
+// เดิมจำไว้ใน localStorage คีย์เดียวใช้ร่วมทุกโปรเจกต์ → เปิดโปรเจกต์ A (สำรองแล้ว) แล้วเปิด B
+// ในวันเดียวกัน = B ถูกข้ามทั้งวัน · ป้ายเขียนตอนจบ → สำรองที่ล้มกลางทางจะถูกทำใหม่รอบถัดไป
+export const BACKUP_DONE_MARK = '.k2backup-done.json';
 
-function today() { return new Date().toISOString().slice(0, 10); }
+/** วันนี้ของเครื่องผู้ใช้ (เดิม UTC → ตีหนึ่งถึงหกโมงเช้าเวลาไทยได้ชื่อโฟลเดอร์ของเมื่อวาน) */
+function today() { return localDay(); }
 
 export async function autoBackupNow(silent = false) {
   if (!state.root) { if (!silent) setStatus(t('ui.common.cantOpenProject')); return false; }
@@ -22,6 +29,7 @@ export async function autoBackupNow(silent = false) {
     const files = [];
     const scan = async (dir, rel) => {
       for (const name of await kapi.listFiles(dir, '').catch(() => [])) {
+        if (!rel && SKIP_ROOT_FILES.includes(name)) continue;
         files.push({ src: await kapi.join(dir, name), rel: rel ? rel + '/' + name : name });
       }
       for (const name of await kapi.listDirs(dir).catch(() => [])) {
@@ -36,12 +44,13 @@ export async function autoBackupNow(silent = false) {
       try { await kapi.copyFile(f.src, await kapi.join(dest, ...f.rel.split('/'))); n++; }
       catch (e) { log('warn', t('ui.backup.backupSkipFile') + f.src, e); }
     }
+    await kapi.writeFile(await kapi.join(dest, BACKUP_DONE_MARK),
+                         JSON.stringify({ at: new Date().toISOString(), files: n }));
 
     // เก็บสูงสุด MAX_KEEP รุ่น (เรียงตามชื่อ = เรียงตามวันที่)
     const dirs = (await kapi.listDirs(backupDir).catch(() => [])).sort();
     while (dirs.length > MAX_KEEP) await kapi.remove(await kapi.join(backupDir, dirs.shift()));
 
-    try { localStorage.setItem(LAST_KEY, ts); } catch {}
     if (!silent) setStatus(tf('ui.backup.projectDoneFile', ts, n));
     log('info', `backup: saved ${ts} (${n} files)`);
     return true;
@@ -56,9 +65,9 @@ export async function autoBackupNow(silent = false) {
 // (setInterval 24 ชม. อย่างเดียวใช้ไม่ได้: โปรแกรมพกพาแทบไม่เคยเปิดค้างครบวัน)
 export async function backupIfDue() {
   if (!state.root) return false;
-  let last = '';
-  try { last = localStorage.getItem(LAST_KEY) || ''; } catch {}
-  if (last === today()) return false;
+  try {
+    if (await kapi.exists(await kapi.join(state.root, 'Backups', today(), BACKUP_DONE_MARK))) return false;
+  } catch {}
   return autoBackupNow(true);
 }
 
@@ -68,4 +77,3 @@ export function startAutoBackup() {
   backupIfDue().catch(() => {});                                  // เช็คทันทีตอนเริ่ม
   backupTimer = setInterval(() => { backupIfDue().catch(() => {}); }, 60 * 60 * 1000);
 }
-

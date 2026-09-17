@@ -15,6 +15,7 @@ import {
 } from './starter-model.js';
 import { STEP_RENDERERS } from './starter-steps.js';
 import { resetCastEditor } from './starter-cast.js';
+import { gi } from '../icons.js';
 
 /**
  * @param {HTMLElement} host
@@ -38,7 +39,7 @@ export function renderWizard(host, ctx) {
 
   // ── หัว: ชื่อเรื่อง + ปุ่มออก ──────────────────────────────
   const head = el('div', 'st-wz-head');
-  const back = el('button', 'st-back', '← ' + t('ui.starter.backToList'));
+  const back = el('button', 'st-back', gi('arrow-left') + ' ' + t('ui.starter.backToList'));
   back.onclick = () => ctx.goList();
   head.append(back);
   head.append(el('div', 'st-wz-title', s.name || t('ui.starter.untitled')));
@@ -91,7 +92,7 @@ export function renderWizard(host, ctx) {
 
   // ── ท้าย: ก่อนหน้า / ถัดไป / เสร็จสิ้น ───────────────────
   const foot = el('div', 'st-wz-foot');
-  const prev = el('button', 'st-nav', '← ' + t('ui.starter.prevStep'));
+  const prev = el('button', 'st-nav', gi('arrow-left') + ' ' + t('ui.starter.prevStep'));
   prev.disabled = isFirstStep(i);
   prev.onclick = () => { s.step = clampStep(i - 1); ctx.save(); ctx.rerender(); };
   foot.append(prev);

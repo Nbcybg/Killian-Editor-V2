@@ -7,6 +7,7 @@ import { $, el, state, setStatus, log, t as tr } from '../core.js';   // บท�
 import { CommentStore, countComments, openComments, reanchorAll } from './comment-core.js';
 import { setCommentAnchors, refreshCommentAnchors } from '../editor.js';
 import { TextSelection } from 'prosemirror-state';
+import { gi } from '../icons.js';
 
 // ───────── store (ตัวเดียวทั้งแอป — io = kapi) ─────────
 let _store = null;
@@ -132,7 +133,7 @@ export async function renderCommentPanel(host) {
 
   // หัวแผง: ชื่อฉาก + ตัวกรอง
   const head = el('div', 'k-cm-head');
-  head.append(el('span', 'k-cm-scene', '💬 ' + (activeTitle() || file.split(/[\\/]/).pop())));
+  head.append(el('span', 'k-cm-scene', gi('chat') + ' ' + (activeTitle() || file.split(/[\\/]/).pop())));
   const nOpen = openComments(all).length;
   head.append(el('span', 'k-cm-count', ttf('ui.cmtComment.listNotClose', countComments(all), nOpen)));
   const fBtn = el('button', 'k-cm-filter' + (filterOpen ? ' on' : ''),
@@ -163,7 +164,7 @@ export async function renderCommentPanel(host) {
   inp.rows = 2;
   // [alpha.121] แทรกโค้ดสั้น (วันที่ · ชื่อบท/ฉาก · สถานะ ฯลฯ) เป็นค่าจริงทันที — คอมเมนต์ไม่มี
   // ขั้นตอนคอมไพล์ทีหลังเหมือนเอกสารนิยาย/บทหนัง จึงแทนค่าเลยแทนที่จะแทรก placeholder ค้าง
-  const scB = el('button', 'k-cm-scbtn', '🏷');
+  const scB = el('button', 'k-cm-scbtn', gi('tag'));
   scB.type = 'button';
   scB.title = tt('ui.cmtComment.insertShortcode');
   scB.onclick = async () => {
@@ -204,16 +205,16 @@ function commentCard(c, file, host, depth) {
   if (depth) card.style.marginInlineStart = Math.min(depth, 4) * 14 + 'px';
 
   const top = el('div', 'k-cm-top');
-  top.append(el('span', 'k-cm-author', '👤 ' + (c.author || tt('ui.common.notSpecifyName'))));
+  top.append(el('span', 'k-cm-author', gi('user') + ' ' + (c.author || tt('ui.common.notSpecifyName'))));
   top.append(el('span', 'k-cm-when', fmtWhen(c.timestamp) + (c.editedAt ? tr('cmt.edited') : '')));
   const acts = el('span', 'k-cm-acts');
 
   const mk = (label, title, fn, cls) => { const b = el('span', 'k-cm-act' + (cls ? ' ' + cls : ''), label); b.title = title; b.onclick = fn; return b; };
-  if (!depth) acts.append(mk(c.resolved ? '↩' : '✓', c.resolved ? tr('cmt.reopen') : tr('cmt.resolve'),
+  if (!depth) acts.append(mk(c.resolved ? gi('return') : gi('checkmark'), c.resolved ? tr('cmt.reopen') : tr('cmt.resolve'),
     async () => { await store.resolve(file, c.id, !c.resolved); setStatus(c.resolved ? tr('cmt.reopened') : tr('cmt.resolved')); renderCommentPanel(host); }));
-  acts.append(mk('✏️', tr('cmt.edit'), () => startEdit()));
-  acts.append(mk('↩💬', tr('cmt.reply'), () => startReply()));
-  acts.append(mk('🗑', tr('cmt.deleteHint'), async () => {
+  acts.append(mk(gi('pencil-e'), tr('cmt.edit'), () => startEdit()));
+  acts.append(mk(gi('reply-comment'), tr('cmt.reply'), () => startReply()));
+  acts.append(mk(gi('trash'), tr('cmt.deleteHint'), async () => {
     const { confirmBox } = await import('../ui.js');
     if (!(await confirmBox(tr('cmt.deleteConfirm'), tr('cmt.delete')))) return;
     await store.remove(file, c.id); setStatus(tr('cmt.deleted')); renderCommentPanel(host);
@@ -227,7 +228,7 @@ function commentCard(c, file, host, depth) {
 
   if (c.anchor && c.anchor.quote) {
     const q = el('div', 'k-cm-quote' + (c.anchor.lost ? ' lost' : ''),
-                 (c.anchor.lost ? tr('cmt.anchorLost') : '📍 ') + '“' + short(c.anchor.quote, 60) + '”');
+                 (c.anchor.lost ? tr('cmt.anchorLost') : gi('map-pin') + ' ') + '“' + short(c.anchor.quote, 60) + '”');
     q.title = c.anchor.lost ? tr('cmt.anchorLostHint') : tr('cmt.anchorOkHint');
     if (!c.anchor.lost) {
       // ชี้ = เน้นอันนี้อันเดียว · เลิกชี้ = กลับไปไฮไลต์ทุกสมอตามข้อมูลจริง (ไม่ใช่ข้อความในหน้าจอที่ถูกตัดสั้น)

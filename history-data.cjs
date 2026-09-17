@@ -174,11 +174,23 @@ function t(key) {
   return formatMsg(v != null ? v : String(key), []);
 }
 function formatMsg(tpl, vals) {
-  if (!vals || !vals.length) return String(tpl).replace(/\{\{|\}\}/g, (m) => m[0]);
-  return String(tpl).replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+  const s = withShortcutTokens(String(tpl));
+  if (!vals || !vals.length) return s.replace(/\{\{|\}\}/g, (m) => m[0]);
+  return s.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
     if (m === "{{" || m === "}}") return m[0];
     const v = vals[+d];
     return v == null ? "" : String(v);
+  });
+}
+var _scResolver = null;
+function withShortcutTokens(s) {
+  if (!s.includes("{sc:")) return s;
+  return s.replace(/\{sc:([^}\s]+)\}/g, (m, id) => {
+    try {
+      return _scResolver ? String(_scResolver(id) || "") : "";
+    } catch {
+      return "";
+    }
   });
 }
 var _memo = /* @__PURE__ */ new WeakMap();

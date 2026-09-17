@@ -16,6 +16,7 @@ import { ask, confirmBox } from './ui.js';
 import { openEntity } from './wiki-ui.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { collectPlacedScenes } from './floorplan-ui.js';
+import { gi } from './icons.js';
 
 // ── สถานะการดู (ไม่บันทึกลงไฟล์) — อยู่นอก mapsState_C.s เพราะ s ถูกสร้างใหม่ทุกครั้งที่โหลด maps.json
 const view = {
@@ -36,9 +37,9 @@ let scenesCache = null;              // ฉากที่ปักหมุด�
 let portraitCache = null;            // entityFile → ชื่อไฟล์รูปประจำตัว (ข้อ 2)
 
 export const MAP_TOOLS = [
-  { id: 'open', icon: '👆', label: t('ui.common.openView'), hint: t('ui.maps.clickPinOpenLink') },
-  { id: 'edit', icon: '✎', label: t('ui.common.edit'), hint: t('ui.maps.clickPinOpenDialog') },
-  { id: 'move', icon: '✥', label: t('ui.common.movePos'), hint: t('ui.maps.dragPinMoveMode') },
+  { id: 'open', icon: gi('pointer'), label: t('ui.common.openView'), hint: t('ui.maps.clickPinOpenLink') },
+  { id: 'edit', icon: gi('pencil-thin'), label: t('ui.common.edit'), hint: t('ui.maps.clickPinOpenDialog') },
+  { id: 'move', icon: gi('move'), label: t('ui.common.movePos'), hint: t('ui.maps.dragPinMoveMode') },
 ];
 
 export const PIN_SCALE_MIN = 0.6, PIN_SCALE_MAX = 3, PIN_SCALE_STEP = 0.2;
@@ -143,15 +144,15 @@ export async function buildShowOnMapRow(row) {
   const box = el('div', 'props-maprow-body');
   if (!loc) {
     box.append(el('span', 'dim', t('ui.maps.notPlaced')));
-    const b = el('button', 'cmp-mini', '📌 ' + t('ui.maps.placeIt'));
+    const b = el('button', 'cmp-mini', gi('pin') + ' ' + t('ui.maps.placeIt'));
     b.title = t('ui.maps.placeItHint');
     b.onclick = async () => { const { openFloorPlan } = await import('./floorplan-ui.js'); await openFloorPlan(); };
     box.append(b);
   } else if (loc.missing) {
     box.append(el('span', 'dim', loc.text));
   } else {
-    box.append(el('span', 'props-mapwhere', '📍 ' + loc.text));
-    const b = el('button', 'cmp-mini k-ok props-mapbtn', '🗺 ' + t('ui.maps.showOnMap'));
+    box.append(el('span', 'props-mapwhere', gi('map-pin') + ' ' + loc.text));
+    const b = el('button', 'cmp-mini k-ok props-mapbtn', gi('map') + ' ' + t('ui.maps.showOnMap'));
     b.title = t('ui.maps.showOnMapHint');
     b.onclick = () => focusMapPin(loc.map.id, loc.pin ? loc.pin.id : null,
                                   loc.x != null ? { x: loc.x, y: loc.y } : null);
@@ -222,7 +223,7 @@ export async function renderMaps(pane) {
     for (const m of g.maps) {
       const chip = el('div', 'map-chip' + (m.id === S.currentId ? ' on' : ''), m.name);
       const st = pinStats(m);
-      if (st.portal) chip.append(el('span', 'map-chip-badge', '🚪' + st.portal));
+      if (st.portal) chip.append(el('span', 'map-chip-badge', gi('door') + st.portal));
       chip.onclick = () => { S.currentId = m.id; view.sel.clear(); view.routeEdit = null; view.focusPin = null; renderMaps(pane); };
       row.append(chip);
     }
@@ -290,8 +291,8 @@ export async function renderMaps(pane) {
   // ── แถบซูม + โอเวอร์เลย์ (ข้อ 3, 4) ──
   const ov = mapOverlays(cur);
   const tools2 = el('div', 'map-tools2');
-  const zOut = el('button', 'cmp-mini', '➖'); zOut.title = t('ui.maps.zoomOutCtrlWheel');
-  const zIn = el('button', 'cmp-mini', '➕'); zIn.title = t('ui.maps.zoomInCtrlWheel');
+  const zOut = el('button', 'cmp-mini', gi('minus-thick')); zOut.title = t('ui.maps.zoomOutCtrlWheel');
+  const zIn = el('button', 'cmp-mini', gi('plus-thick')); zIn.title = t('ui.maps.zoomInCtrlWheel');
   const zSlider = el('input', 'map-zoom-slider'); zSlider.type = 'range';
   zSlider.min = String(MAP_ZOOM_MIN); zSlider.max = String(MAP_ZOOM_MAX); zSlider.step = String(MAP_ZOOM_STEP);
   zSlider.value = String(view.zoom);
@@ -317,16 +318,16 @@ export async function renderMaps(pane) {
   zSlider.oninput = () => setZoom(zSlider.value);
   const zFit = el('button', 'cmp-mini', t('ui.common.fitScreen')); zFit.title = t('ui.maps.backSizeFitFrame');
   zFit.onclick = () => setZoom(1);
-  tools2.append(el('span', 'map-tool-lbl', '🔍'), zOut, zSlider, zIn, zLabel, zFit);
+  tools2.append(el('span', 'map-tool-lbl', gi('search')), zOut, zSlider, zIn, zLabel, zFit);
   tools2.append(el('span', 'map-tool-sep', ''));
   const mkOv = (key, icon, label) => {
     const b = el('button', 'cmp-mini map-ov-btn' + (ov[key] ? ' on' : ''), icon + ' ' + label);
     b.onclick = async () => { toggleOverlay(cur, key); await save(); redraw(); };
     tools2.append(b);
   };
-  mkOv('grid', '▦', t('ui.maps.tableGrid'));
-  mkOv('compass', '🧭', t('ui.maps.compass'));
-  mkOv('scale', '📏', t('ui.maps.part'));
+  mkOv('grid', gi('grid'), t('ui.maps.tableGrid'));
+  mkOv('compass', gi('compass'), t('ui.maps.compass'));
+  mkOv('scale', gi('ruler-straight'), t('ui.maps.part'));
   if (ov.grid) {
     const gs = el('input', 'map-grid-size'); gs.type = 'number'; gs.min = '2'; gs.max = '50';
     gs.value = String(ov.gridSize); gs.title = t('ui.maps.countFieldGridNext');
@@ -367,8 +368,8 @@ export async function renderMaps(pane) {
   tools3.append(el('span', 'map-tool-sep', ''));
   // ขยาย/ย่อหมุด (รวมรูปประจำตัวของเอนทิตี้) — บันทึกต่อแผนที่
   const curScale = pinScaleOf(cur);
-  const psOut = el('button', 'cmp-mini', '➖'); psOut.title = t('ui.maps.collapsePin');
-  const psIn = el('button', 'cmp-mini', '➕'); psIn.title = t('ui.maps.expandPin');
+  const psOut = el('button', 'cmp-mini', gi('minus-thick')); psOut.title = t('ui.maps.collapsePin');
+  const psIn = el('button', 'cmp-mini', gi('plus-thick')); psIn.title = t('ui.maps.expandPin');
   const psLbl = el('span', 'map-zoom-label', Math.round(curScale * 100) + '%');
   const setScale = async (v) => {
     cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v.toFixed(2)));
@@ -577,7 +578,7 @@ export async function renderMaps(pane) {
     const scHere = hereScenes.filter((s) => s.pinId === pin.id);
     if (scHere.length) el2.append(el('span', 'map-pin-count', String(scHere.length)));
     el2.title = [pin.label || (PIN_KIND[pin.kind] || {}).label || '', pin.note,
-                 scHere.length ? scHere.map((s) => '📄 ' + s.title).join('\n') : '']
+                 scHere.length ? scHere.map((s) => gi('file') + ' ' + s.title).join('\n') : '']
       .filter(Boolean).join('\n');
     el2.onclick = async (e) => {
       e.stopPropagation();
@@ -595,7 +596,7 @@ export async function renderMaps(pane) {
       if (pin.kind === 'portal' && pin.toMap) { S.currentId = pin.toMap; view.sel.clear(); view.focusPin = null; redraw(); return; }
       if (pin.kind === 'entity' && pin.entityFile) { openEntity(pin.entityFile); return; }
       // หมุดที่ไม่มีลิงก์ในโหมด "เปิด/ดู" — บอกข้อมูลเฉย ๆ ไม่เปิดกล่องแก้ (ต้องกดปุ่ม ✎ ก่อน)
-      setStatus('📌 ' + (pin.label || t('ui.common.notNamed')) + (pin.note ? ' — ' + pin.note : '')
+      setStatus(gi('pin') + ' ' + (pin.label || t('ui.common.notNamed')) + (pin.note ? ' — ' + pin.note : '')
                 + t('ui.maps.pressBtnEditTop'));
     };
     el2.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); editPin(); };
@@ -641,9 +642,9 @@ export async function renderMaps(pane) {
   // ฉากที่ปักพิกัดลอย (ไม่ผูกหมุด) — โชว์เป็นจุดจาง ๆ ให้รู้ว่ามีอะไรอยู่ตรงนั้น
   for (const s of hereScenes) {
     if (s.pinId || s.pinX == null) continue;
-    const d = el('div', 'map-scene-dot', '◉');
+    const d = el('div', 'map-scene-dot', gi('radio-on'));
     d.style.left = s.pinX + '%'; d.style.top = s.pinY + '%';
-    d.title = '📄 ' + (s.title || '') + t('ui.maps.scenePinCantBind');
+    d.title = gi('file') + ' ' + (s.title || '') + t('ui.maps.scenePinCantBind');
     canvas.append(d);
   }
 
@@ -657,7 +658,7 @@ export async function renderMaps(pane) {
   // เข็มทิศ + มาตราส่วน (ข้อ 4)
   if (ov.compass) {
     const c = el('div', 'map-compass');
-    c.innerHTML = '<span class="map-compass-n">N</span><span class="map-compass-needle">▲</span>';
+    c.innerHTML = '<span class="map-compass-n">N</span><span class="map-compass-needle">' + gi('triangle-up') + '</span>';
     c.title = t('ui.maps.topImage');
     canvas.append(c);
   }
@@ -696,21 +697,21 @@ export async function renderMaps(pane) {
     row.append(el('span', 'map-route-meta', tf('ui.maps.dotGap', pts.length, routeLength(pts))));
     const bEdit = el('button', 'cmp-mini', r.id === view.routeEdit ? t('ui.maps.done') : t('ui.maps.nextDot'));
     bEdit.onclick = () => { view.routeEdit = view.routeEdit === r.id ? null : r.id; redraw(); };
-    const bColor = el('button', 'cmp-mini', '🎨');
+    const bColor = el('button', 'cmp-mini', gi('palette'));
     bColor.title = t('ui.maps.recolorLine');
     bColor.onclick = async () => {
       const i = ROUTE_COLORS.indexOf(r.color);
       r.color = ROUTE_COLORS[(i + 1) % ROUTE_COLORS.length];
       await save(); redraw();
     };
-    const bDash = el('button', 'cmp-mini' + (r.dashed ? ' on' : ''), '┅');
+    const bDash = el('button', 'cmp-mini' + (r.dashed ? ' on' : ''), gi('line-dash'));
     bDash.title = t('ui.maps.lineLineSolid');
     bDash.onclick = async () => { r.dashed = !r.dashed; await save(); redraw(); };
-    const bRen = el('button', 'cmp-mini', '✏');
+    const bRen = el('button', 'cmp-mini', gi('pencil'));
     bRen.title = t('ui.maps.changeNameRoute');
     bRen.onclick = async () => { const v = await ask(t('ui.maps.nameRoute'), { value: r.name }); if (!v) return;
       r.name = v.trim(); await save(); redraw(); };
-    const bDel = el('button', 'cmp-mini k-danger', '🗑');
+    const bDel = el('button', 'cmp-mini k-danger', gi('trash'));
     bDel.title = t('ui.maps.delRoutePin');
     bDel.onclick = async () => {
       if (!(await confirmBox(tf('ui.maps.delRoutePinNot', r.name), t('ui.common.del')))) return;

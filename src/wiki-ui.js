@@ -1,11 +1,12 @@
 // wiki-ui.js — Wiki: หมวด (สร้าง/แก้/ลบ) + เอนทิตี้ (เพิ่ม/เปิด/ทำสำเนา)
+import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
 // บทเรียน 68: ไฟล์นี้มี `for (const t of state.tabs.values())` อยู่แล้ว → import เป็น `tr` เสมอ
 import { $, BUILTIN_CATS, el, setStatus, smart, state, t as tr } from './core.js';
 import { pickImage } from './gallery.js';
 import { confirmBox, ask } from './ui.js';
-import { iconHtml } from './icons.js';
+import { iconHtml, gi } from './icons.js';
 import { CAT_TH, WikiEditor } from './wiki.js';
 import { ensureAutoLink, renderBacklinksTab, rebuildAutoLink } from './world-story/auto-link-ui.js';
 import { handleEntityRenamed } from './auto-task/event-ui.js';
@@ -26,12 +27,12 @@ export function wikiCats() {
 export function applyWikiCats() { for (const c of wikiCats()) if (c.key && c.label) CAT_TH[c.key] = c.label; }
 
 export async function newWikiCat() {
-  const res = await catEditDialog({ label: '', icon: '🔖' }, tt('ui.wiki.newCatNew'));
+  const res = await catEditDialog({ label: '', icon: gi('bookmark') }, tt('ui.wiki.newCatNew'));
   if (!res) return null;
   const key = catKeyFrom(res.label);
   const exist = await allCatKeys();
   if (exist.includes(key)) { setStatus(tt('ui.wiki.hasCatNameDone')); return null; }
-  wikiCats().push({ key, label: res.label, icon: res.icon || '🔖' });
+  wikiCats().push({ key, label: res.label, icon: res.icon || gi('bookmark') });
   await saveProjectMeta(); applyWikiCats();
   await kapi.mkdir(await kapi.join(await wikiRoot(), key));
   await buildTree();
@@ -44,7 +45,7 @@ export async function editWikiCat(key) {
   const res = await catEditDialog({ label: catLabel(key), icon: catIcon(key) }, tt('ui.wiki.editCat'));
   if (!res) return;
   if (cur) { cur.label = res.label; cur.icon = res.icon || cur.icon; }
-  else wikiCats().push({ key, label: res.label, icon: res.icon || '🔖' });
+  else wikiCats().push({ key, label: res.label, icon: res.icon || gi('bookmark') });
   await saveProjectMeta(); applyWikiCats();
   await buildTree(); setStatus(tt('ui.wiki.editCatDone'));
 }
@@ -153,7 +154,10 @@ export async function openEntity(file) {
         const opts = tps.map((t) =>
           `<option value="${t.id}"${t.id === curId ? ' selected' : ''}>${t.name || t.id}${t.id === curId ? tt('ui.wiki.current') : ''}</option>`
         ).join('');
-        box.innerHTML = ttf('ui.wiki.changeTemplateDataPrev', opts);
+        box.innerHTML = ((a) => `<div class="k-dlg-title">${tx('ui.wiki.changeTemplate3')}</div>
+          <div class="k-hint" style="margin:8px 0">${tx('ui.wiki.dataPrevAddOnly')}</div>
+          <select id="tp-select" class="k-dlg-select" style="width:100%">${a[0]}</select>
+          <div class="k-dlg-btns"><button class="k-cancel">${tx('ui.common.cancel')}</button><button class="k-ok">${tx('ui.wiki.changeTemplate3')}</button></div>`)([opts]);
         ov.appendChild(box); document.body.appendChild(ov);
         box.querySelector('.k-cancel').onclick = () => { ov.remove(); resolve(null); };
         ov.onclick = (e) => { if (e.target === ov) { ov.remove(); resolve(null); } };
@@ -214,7 +218,7 @@ export async function openEntity(file) {
       blHead.style.cssText = 'font-weight:600;color:var(--dim);margin-bottom:8px;display:flex;align-items:center;gap:6px';
       const blTitle = el('span');
       blTitle.innerHTML = iconHtml('link', 14) + ' ' + tr('wiki.backlinksTitle');
-      const reBtn = el('button', 'wiki-bl-refresh', '🔄');
+      const reBtn = el('button', 'wiki-bl-refresh', gi('refresh'));
       reBtn.type = 'button';
       reBtn.title = tr('wiki.backlinksRefresh');
       reBtn.onclick = async () => {
@@ -339,7 +343,7 @@ export async function fillFieldWithAI(req) {
 
   setStatus(ttf('ui.wiki.aiWorking', label));
   const res = await complete(prov, { system, messages: [{ role: 'user', content: prompt }] });
-  if (!res || !res.ok) { setStatus('❌ ' + ((res && res.error) || tt('ui.wiki.aiFailed'))); return null; }
+  if (!res || !res.ok) { setStatus(gi('fail') + ' ' + ((res && res.error) || tt('ui.wiki.aiFailed'))); return null; }
   const next = fieldResult(res.text, label);
   if (!next) { setStatus(tt('ui.wiki.aiEmpty')); return null; }
 

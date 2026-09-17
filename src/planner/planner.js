@@ -1,19 +1,25 @@
 // planner.js — Orchestrator ของ Planner v4 (กระดานวางแผนแบบ Miro)
 // ประกอบ data → render → interact → ui → props เข้าด้วยกัน + จัดการไฟล์กระดาน
+import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import {
   PlannerData, CARD_W, CARD_H, uid, TYPE_DEFAULTS, snapTo,
+  normTodoItems, toggleTodo, todoRowAt, IMAGE_FITS, parseTodoText, todoToText,
+  IMG_SCALE_MIN, IMG_SCALE_MAX,
 } from './planner-data.js';
 import { PlannerRenderer } from './planner-render.js';
 import { PlannerInteraction } from './planner-interact.js';
 import {
   createPlannerToolbar, createPlannerFilterBar, createPlannerRail,
-  createPlannerStatus, createContextBar, updatePlannerCount, TOOL_LABELS,
+  createPlannerStatus, createContextBar, updatePlannerCount, TOOL_LABELS, FIT_LABELS,
+  createPlannerFmtBar,
 } from './planner-ui.js';
-import { absBox } from './planner-render.js';
-import { setStatus, el, log } from '../core.js';
+import { absBox, glyphOf } from './planner-render.js';
+import { setStatus, el, log, formatShortcut } from '../core.js';
 import { popupMenu, ask, confirmBox, choose } from '../ui.js';
+import { projectImageUrl } from '../file-url.js';
 import { fabric } from 'fabric';
+import { isPanelFocused } from '../panels/panel-focus.js';
 
 const COLORS = {
   scene: '#3f3e3a', chapter: '#5f7a9f', entity: '#7a6f9f', note: '#5f8a6f',
@@ -32,7 +38,8 @@ export class PlannerBoard {
     this._onDirtyCB = opts.onDirty || null;
     this._onReveal = opts.onReveal || null;
     this._svc = opts.services || {};              // pickFile / listBoards / boardsDir …
-    this.title = '📋 Planner';
+    // ชื่อที่โชว์บนหัวแผง — ไอคอนมาจากทะเบียน (icons/glyphs.csv) ไม่ฮาร์ดโค้ดอีโมจิ
+    this.title = _withGlyphTitle('clipboard', 'Planner');
     /** เปิดไฟล์ที่ผูกกับการ์ด (ทางเดียวกับดับเบิลคลิก) — เปิดไว้ให้ e2e/สคริปต์เรียกได้ */
     this.onOpenFile = (f) => (this._onOpenFile ? this._onOpenFile(f) : null);
 
@@ -40,7 +47,9 @@ export class PlannerBoard {
       this._init(opts.path);
     } catch (e) {
       console.error('PlannerBoard init failed', e);
-      this.pane.innerHTML = tt('ui.planner.plannerOpenCant') + (e.message || e) + '</div>';
+      // [alpha.156] ข้อความ error อาจมีชื่อไฟล์/เนื้อ JSON ของผู้ใช้ → ห้ามลง innerHTML ดิบ (กฎข้อ 11)
+      const msg = String((e && e.message) || e).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      this.pane.innerHTML = `<div style="color:#e05555;padding:20px">${tx('ui.planner.plannerOpenCant2')} ` + msg + '</div>';
     }
   }
 
@@ -56,9 +65,17 @@ export class PlannerBoard {
     this.rail = createPlannerRail({ onTool: (t, o) => this._pickTool(t, o) });
     this.canvasEl = document.createElement('canvas');
     this.ctxBar = createContextBar(this._ctxBarCallbacks());
+    // [alpha.150 ข้อ 2] ชั้นรูปพื้นหลัง — ต้องอยู่ **ก่อน** canvas ใน DOM (อยู่ใต้สุด)
+    this.bgLayer = el('div', 'planner-bgimg');
+    this.stage.appendChild(this.bgLayer);
     this.stage.appendChild(this.canvasEl);
     this.stage.appendChild(this.rail);
     this.stage.appendChild(this.ctxBar);
+    // [alpha.151 ข้อ 3] แถบรูปแบบของกระดาน — ลอยอยู่ในเวที ลากย้ายได้ จำตำแหน่งไว้
+    this.fmtBar = createPlannerFmtBar(this._fmtBarCallbacks(),
+                                      () => (this._svc.getFmtbarCfg ? this._svc.getFmtbarCfg() : null));
+    this.stage.appendChild(this.fmtBar);
+    this._makeBarDraggable(this.fmtBar);
 
     this.pane.appendChild(this.toolbar);
     this.pane.appendChild(this.filterBar);
@@ -68,6 +85,10 @@ export class PlannerBoard {
     // ---- ชั้นวาด ----
     this.renderer = new PlannerRenderer(this.canvasEl, {
       gridHost: this.stage,
+      bgHost: this.bgLayer,
+      // path ที่เก็บในไฟล์กระดาน (`Images/x.png`) → URL ที่เปิดได้จริงจากหน้าโปรแกรม
+      imageUrl: (s) => projectImageUrl(this.root, s),
+      onImageReady: () => this._rerenderImages(),
       getEdge: (id) => this.data.getEdge(id),
       onViewportChange: (vp) => { this.toolbar.setZoom(vp.zoom); this.syncContextBar(); },
     });
@@ -75,7 +96,17 @@ export class PlannerBoard {
     // ---- ชั้นโต้ตอบ ----
     this.interaction = new PlannerInteraction(this.renderer, this.data, {
       host: this.stage,
-      isActive: () => this.pane.isConnected && this.pane.offsetParent !== null,
+      // [alpha.150] `offsetParent` ของ element ที่ `position:fixed` เป็น null เสมอ (บทเรียนข้อ 6)
+      // — ซึ่งคือกระดานตอนเต็มจอพอดี · ถ้าใช้เกณฑ์เดิมล้วน ๆ คีย์ลัดทั้งชุดจะตายทันทีที่เข้าเต็มจอ
+      // (ยกเว้นเฉพาะกรณีนี้ ไม่เปลี่ยนเกณฑ์ทั้งอัน — เกณฑ์ที่กว้างกว่าทำให้คีย์ลัดของกระดาน
+      //  ทำงานตอนแผงปิดอยู่ แล้วไปกินคีย์ของเทสอื่น)
+      // ══ [alpha.152 ข้อ 5] ★★ "เห็นอยู่" ไม่พอ — ต้อง "ถูกเลือกอยู่" ด้วย ══
+      // คีย์เครื่องมือของกระดานเป็นตัวอักษรเปล่า ๆ (V H N T S F C L I K) ไม่มี Ctrl นำหน้า
+      // เกณฑ์เดิมจึงกลืนทุกตัวอักษรที่ผู้ใช้พิมพ์ที่อื่นทั้งโปรแกรมตราบใดที่กระดานเปิดค้างไว้
+      // (เต็มจอ = ไม่มีแผงอื่นให้เลือกอยู่แล้ว ถือว่าถูกเลือกเสมอ)
+      isActive: () => this.pane.isConnected
+                      && (this.pane.classList.contains('planner-fullscreen')
+                          || (this.pane.offsetParent !== null && isPanelFocused(this.panelId || 'planner'))),
       onPointer: (p) => this.statusBar.setXY(p),
       onToolChange: (t, shape) => {
         this.rail.setActive(t);
@@ -109,6 +140,10 @@ export class PlannerBoard {
       onStatus: (m) => setStatus(m),
       onOpenFile: (f) => { if (this._onOpenFile) this._onOpenFile(f); },
       onContextMenu: (kind, id, ev, pt) => this._contextMenu(kind, id, ev, pt),
+      onFullscreen: (v) => this.toggleFullscreen(v),              // [alpha.150 ข้อ 4]
+      isFullscreen: () => this.pane.classList.contains('planner-fullscreen'),
+      onScrollNode: (id, dy, dx) => this.scrollNode(id, dy, dx),  // [alpha.150 ข้อ 5] สองแกน
+      onToggleTodo: (id, i) => this.toggleTodoItem(id, i),        // [alpha.150 ข้อ 9]
       onViewportSettled: () => this._persistViewport(),
     });
     this.interaction.bindDrop(this.stage, (kind, d, ev) => this.dropPayload(kind, d, ev));
@@ -129,9 +164,126 @@ export class PlannerBoard {
       this._fitRaf = requestAnimationFrame(() => { this._fitRaf = null; this._fit(); });
     });
     this._resizeObserver.observe(this.pane);
+    // [alpha.151 ข้อ 8] เฝ้า "เวที" ด้วย ไม่ใช่แค่แผง — _fit วัดขนาดจากเวที แต่เดิมเฝ้าแค่แผง
+    // เวทีที่ยังกว้าง 0 อยู่ทั้งที่แผงมีขนาดแล้ว (แถบบนยังจัดวางไม่เสร็จ) จึงไม่มีใครปลุก _fit ซ้ำ
+    this._resizeObserver.observe(this.stage);
     this._autoSaveTimer = setInterval(() => { if (this.data.isDirty()) this.save(true); }, 60000);
 
     this._ready = this._load().then(() => { this._snapshot(true); this._fit(); });
+  }
+
+  /**
+   * [alpha.151 ข้อ 3] ตัวจัดการปุ่มบนแถบของกระดาน
+   * ทุกตัวเป็น "คำสั่งของกระดาน" ตรง ๆ — ไม่ผ่าน handleCommand เพราะไม่ใช่คำสั่งระดับโปรแกรม
+   */
+  _fmtBarCallbacks() {
+    return {
+      onUndo: () => this.undo(),
+      onRedo: () => this.redo(),
+      onAlignH: (d) => this.alignText('h', d),
+      onAlignV: (d) => this.alignText('v', d),
+      onFont: (d) => this.bumpFontSize(d),
+      onColor: (kind, btn) => this._pickNodeColor(kind, btn),
+      onImage: () => this.insertImage(),
+      onNew: (type) => {
+        const p = this._centerPoint();
+        const n = this._createFromTool(type, { x: p.x, y: p.y, quiet: true });
+        if (type === 'todo') this.editTodo(n);
+        return n;
+      },
+      onTool: (t2) => this._pickTool(t2),
+      onOrder: (m) => this.orderSelection(m),
+      onLock: () => {
+        const ids = this._selectedNodeIds();
+        if (!ids.length) { setStatus(tt('ui.planner.alignPickFirst')); return; }
+        const lock = !this.data.isLocked(ids[0]);
+        for (const id of ids) this._commitEdit(id, { locked: lock });
+      },
+      onDuplicate: () => this._duplicateSelected(),
+      onDelete: () => this._deleteSelected(),
+      onGrid: () => this.setGrid({ show: !this.data.getGrid().show }),
+      onSnap: () => this.setGrid({ snap: !this.data.getGrid().snap }),
+      onFit: () => this._zoomFit(),
+      onFullscreen: () => this.toggleFullscreen(),
+    };
+  }
+
+  /** เปิดป๊อปอัปเลือกสีให้ช่องใดช่องหนึ่งของการ์ดที่เลือก */
+  _pickNodeColor(kind, anchor) {
+    const ids = this._selectedNodeIds();
+    if (!ids.length) { setStatus(tt('ui.planner.alignPickFirst')); return null; }
+    const key = kind === 'text' ? 'textColor' : kind === 'border' ? 'borderColor' : 'color';
+    const cur = (this.data.getNode(ids[0]) || {})[key] || '';
+    if (!this._svc.pickColor) {
+      // ไม่มีป๊อปอัปให้ใช้ (เช่นในเทส) — ใช้ช่องสีของระบบแทน ไม่ปล่อยให้ปุ่มตาย
+      const inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = /^#[0-9a-f]{6}$/i.test(cur) ? cur : '#3f3e3a';
+      inp.oninput = () => { for (const id of ids) this._commitEdit(id, { [key]: inp.value }); };
+      inp.click();
+      return inp;
+    }
+    return this._svc.pickColor(anchor, cur, (hex) => {
+      for (const id of ids) this._commitEdit(id, { [key]: hex });
+    });
+  }
+
+  /** ลากย้ายแถบในเวทีกระดาน + จำตำแหน่ง (ต่อแผง ไม่ต่อกระดาน — เป็นเรื่องของหน้าจอ) */
+  _makeBarDraggable(bar) {
+    const KEY = 'k2-planner-fmtbar';
+    const grip = bar.querySelector('.k-fmtbar-grip');
+    const place = (x, y) => {
+      const host = this.stage.getBoundingClientRect();
+      const w = bar.offsetWidth || 300, h = bar.offsetHeight || 34;
+      bar.style.left = Math.round(Math.max(4, Math.min(host.width - w - 4, x))) + 'px';
+      bar.style.top = Math.round(Math.max(4, Math.min(host.height - h - 4, y))) + 'px';
+    };
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
+    // ค่าเริ่มต้น: ขอบบน กึ่งกลาง — ไม่ทับรางเครื่องมือที่อยู่ซ้ายมือ
+    setTimeout(() => {
+      const host = this.stage.getBoundingClientRect();
+      if (saved && Number.isFinite(saved.left)) place(saved.left, saved.top);
+      else place((host.width - (bar.offsetWidth || 300)) / 2, 8);
+    }, 0);
+    if (!grip) return bar;
+    grip.onmousedown = (e) => {
+      e.preventDefault();
+      const host = this.stage.getBoundingClientRect();
+      const dx = e.clientX - (host.left + parseInt(bar.style.left, 10) || 0);
+      const dy = e.clientY - (host.top + parseInt(bar.style.top, 10) || 0);
+      bar.classList.add('k-dragging');
+      const move = (ev) => place(ev.clientX - host.left - dx, ev.clientY - host.top - dy);
+      const up = () => {
+        bar.classList.remove('k-dragging');
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        try {
+          localStorage.setItem(KEY, JSON.stringify({ left: parseInt(bar.style.left, 10),
+                                                     top: parseInt(bar.style.top, 10) }));
+        } catch {}
+      };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    };
+    return bar;
+  }
+
+  /** อัปเดตสถานะปุ่มบนแถบของกระดาน (ติดไฟ/สีเทา) */
+  syncFmtBar() {
+    if (!this.fmtBar) return null;
+    const ids = this._selectedNodeIds();
+    const g = this.data.getGrid();
+    this.fmtBar.applyConfig();
+    this.fmtBar.syncState({
+      hasSelection: ids.length > 0,
+      align: this.currentTextAlign('h'),
+      valign: this.currentTextAlign('v'),
+      grid: g.show, snap: g.snap,
+      locked: ids.length > 0 && ids.every((id) => this.data.isLocked(id)),
+      fullscreen: this.pane.classList.contains('planner-fullscreen'),
+    });
+    return this.fmtBar;
   }
 
   _ctxBarCallbacks() {
@@ -213,19 +365,290 @@ export class PlannerBoard {
       onZoomReset: () => { this.renderer.resetZoom(); this._persistViewport(); },
       onZoomFit: () => this._zoomFit(),
       onExportPng: () => this.exportPNG(),
+      onExportJson: () => this.exportJSON(),                    // [alpha.150 ข้อ 10]
+      onFullscreen: () => this.toggleFullscreen(),              // [alpha.150 ข้อ 4]
       onSample: () => this.loadSample(),
       getGrid: () => this.data.getGrid(),
       getBackground: () => this.data.getSettings().background,
+      getBackgroundImage: () => this.data.getBackgroundImage(), // [alpha.150 ข้อ 2]
       onGridChange: (p) => this.setGrid(p),
       onBackgroundChange: (c) => { this.data.setBackground(c); this.renderer.setBackground(c); this._markDirty(); },
+      onBackgroundImageChange: (p) => this.setBoardBackground(p),
+      onPickBackgroundImage: () => this.pickBoardBackground(),
+      onBackgroundDialog: () => this._boardBackgroundDialog(),
     };
+  }
+
+  // ═════════════════ [alpha.150] รูป · เต็มจอ · ส่งออก JSON ═════════════════
+
+  /** รูปโหลดเสร็จทีหลัง → วาดโหนดที่ใช้รูปใหม่รอบเดียว (รวบด้วย rAF กันรัวตอนโหลดหลายใบพร้อมกัน) */
+  _rerenderImages() {
+    if (this._imgRaf) return;
+    this._imgRaf = requestAnimationFrame(() => {
+      this._imgRaf = null;
+      for (const n of this.data.getAllNodes()) if (n.src) this.renderer.rebuildNode(n);
+      this.renderer.restack();
+      this.renderer.refresh();
+    });
+  }
+
+  /** ข้อ 4 — ดูกระดานเต็มจอ (กด Esc หรือกดปุ่มซ้ำเพื่อออก) */
+  toggleFullscreen(on) {
+    const v = on === undefined ? !this.pane.classList.contains('planner-fullscreen') : !!on;
+    this.pane.classList.toggle('planner-fullscreen', v);
+    document.body.classList.toggle('planner-fullscreen-on', v);
+    if (this.toolbar.setFullscreen) this.toolbar.setFullscreen(v);
+    // ขนาดพื้นที่เปลี่ยนทั้งผืน — ต้องวัดใหม่ ไม่งั้น `canvas._offset` ค้าง (บทเรียนข้อ 24)
+    requestAnimationFrame(() => this._fit());
+    setStatus(tt(v ? 'ui.planner.fullOn' : 'ui.planner.fullOff'));
+    return v;
+  }
+
+  /** ข้อ 10 — ส่งออกกระดานเป็นไฟล์ JSON (เลือกที่เก็บเอง) */
+  async exportJSON() {
+    try {
+      const def = _safeName(this.data.getFileBase()) + '.json';
+      const target = await kapi.saveAsDialog(def, 'json');
+      if (!target) return null;
+      await kapi.writeFile(target, JSON.stringify(this.data.toJSON(), null, 2));
+      setStatus(ttf('ui.planner.exportJsonDone', target));
+      log('info', ttf('ui.planner.exportJsonDone', target), this.data.countStats());
+      return target;
+    } catch (e) {
+      setStatus(tt('ui.planner.exportJsonFail') + (e.message || e));
+      return null;
+    }
+  }
+
+  /** ข้อ 2 — ตั้งรูปพื้นหลังกระดาน (เลือกรูป · วิธีวาง · เบลอ · ความจาง) */
+  async pickBoardBackground() {
+    if (!this._svc.pickImage) { setStatus(tt('ui.planner.pickImageNot')); return null; }
+    const picked = await this._svc.pickImage();
+    if (!picked || !picked.file) return null;
+    const bg = this.data.setBackgroundImage({ src: 'Images/' + picked.file });
+    this.renderer.setBackgroundImage(bg);
+    this._markDirty();
+    return bg;
+  }
+
+  setBoardBackground(props) {
+    const bg = this.data.setBackgroundImage(props);
+    this.renderer.setBackgroundImage(bg);
+    this._markDirty();
+    return bg;
+  }
+
+  /**
+   * ข้อ 2 — กล่อง "พื้นกระดาน": สี · รูป · วิธีวาง · เบลอ · ความจาง
+   * ทุกช่องมีผลทันทีที่ขยับ (ไม่ต้องกดตกลง) — ผู้ใช้เห็นผลตอนเลือก ไม่ต้องเดา
+   */
+  _boardBackgroundDialog() {
+    document.querySelectorAll('.planner-bg-dialog').forEach((d) => d.closest('.k-overlay')?.remove());
+    const ov = el('div', 'k-overlay');
+    const box = el('div', 'k-dialog planner-bg-dialog');
+    const bg = this.data.getBackgroundImage();
+    box.innerHTML = ((a) => `<div class="k-dlg-title">${tx('ui.planner.bgBoard')}</div>
+<div class="planner-bg-rows">
+  <label><span>${tx('ui.planner.colorBg')}</span><input type="color" id="plbg-color" value="${a[0]}"></label>
+  <label><span>${tx('ui.planner.imageBg')}</span><span class="planner-bg-name" id="plbg-name">${a[4]}</span></label>
+  <div class="planner-bg-btns"><button id="plbg-pick">${tx('ui.planner.imgPick')}</button><button id="plbg-clear">${tx('ui.vis.clearImage')}</button></div>
+  <label><span>${tx('ui.planner.howPaste')}</span><select id="plbg-fit">${a[1]}</select></label>
+  <label><span>${tx('ui.planner.blur')}</span><input type="range" id="plbg-blur" min="0" max="30" step="1" value="${a[2]}"></label>
+  <label><span>${tx('ui.fmtbar.menuOpacity')}</span><input type="range" id="plbg-op" min="0" max="1" step="0.05" value="${a[3]}"></label>
+</div>
+<div class="k-dlg-btns"><button class="k-ok" id="plbg-close">${tx('ui.planner.doneDone')}</button></div>`)([this.data.getSettings().background || '#262624', IMAGE_FITS.map((f) => `<option value="${f}"${bg.fit === f ? ' selected' : ''}>${FIT_LABELS[f] || f}</option>`).join(''), bg.blur, bg.opacity, bg.src ? _fileLabel(bg.src) : tt('ui.planner.bgNone')]);
+    ov.append(box);
+    document.body.append(ov);
+    const q = (s) => box.querySelector(s);
+    const close = () => ov.remove();
+    q('#plbg-color').oninput = (e) => {
+      this.data.setBackground(e.target.value); this.renderer.setBackground(e.target.value); this._markDirty();
+    };
+    q('#plbg-pick').onclick = async () => {
+      const v = await this.pickBoardBackground();
+      if (v) q('#plbg-name').textContent = _fileLabel(v.src);
+    };
+    q('#plbg-clear').onclick = () => {
+      this.setBoardBackground({ src: '' }); q('#plbg-name').textContent = tt('ui.planner.bgNone');
+    };
+    q('#plbg-fit').onchange = (e) => this.setBoardBackground({ fit: e.target.value });
+    q('#plbg-blur').oninput = (e) => this.setBoardBackground({ blur: parseFloat(e.target.value) });
+    q('#plbg-op').oninput = (e) => this.setBoardBackground({ opacity: parseFloat(e.target.value) });
+    q('#plbg-close').onclick = close;
+    ov.onclick = (e) => { if (e.target === ov) close(); };
+    return box;
+  }
+
+  /** ข้อ 6 — แทรกรูปเป็นการ์ดบนกระดาน */
+  async insertImageNode(x, y) {
+    if (!this._svc.pickImage) { setStatus(tt('ui.planner.pickImageNot')); return null; }
+    const picked = await this._svc.pickImage();
+    if (!picked || !picked.file) return null;
+    const n = this._createFromTool('image', { quiet: true,
+                                              x: x == null ? this._centerPoint().x : x,
+                                              y: y == null ? this._centerPoint().y : y });
+    this._commitEdit(n.id, { src: 'Images/' + picked.file, title: picked.name || picked.caption || '' });
+    return n;
+  }
+
+  _centerPoint() {
+    return {
+      x: (this.renderer.getWidth() / 2 - this.renderer.getViewport().x) / this.renderer.getZoom(),
+      y: (this.renderer.getHeight() / 2 - this.renderer.getViewport().y) / this.renderer.getZoom(),
+    };
+  }
+
+  /** ข้อ 9 — แก้รายการสิ่งที่ต้องทำ (ทีละบรรทัด · `- [x] ` = ติ๊กแล้ว) */
+  async editTodo(n) {
+    const v = await ask(tt('ui.planner.todoEditHint'),
+                        { value: todoToText(n.items), multiline: true, allowEmpty: true });
+    if (v == null) return null;
+    const items = parseTodoText(v);
+    this._commitEdit(n.id, { items });
+    return items;
+  }
+
+  /** ติ๊ก/ปลดติ๊กข้อหนึ่ง (คลิกบนการ์ด) */
+  toggleTodoItem(nodeId, index) {
+    const n = this.data.getNode(nodeId);
+    if (!n || n.type !== 'todo') return false;
+    this._commitEdit(nodeId, { items: toggleTodo(n.items, index) });
+    return true;
+  }
+
+  /**
+   * ══ [alpha.151 ข้อ 2] ★ จัดวาง "ตัวหนังสือในการ์ด" ไม่ใช่ขยับการ์ด ══
+   *
+   * ผู้ใช้: *"คือ planner ตัว card เวลาเราใส่ตัวหนังสือมันจะอยู่ตรงกลาง card อย่างเดียวไง
+   *          เราอยากได้แบบ บาง card ตัวหนังสืออยู่ขอบบนซ้าย บางครั้งกลางกลาง — ไม่ใช่ขยับ card"*
+   *
+   * รอบ .150 ผมตีความเป็น "จัดตำแหน่งการ์ดบนกระดาน" ซึ่งผิดคนละเรื่อง
+   * @param {'h'|'v'} axis  แกน · @param {string} dir left/center/right หรือ top/middle/bottom
+   */
+  alignText(axis, dir) {
+    if (this._boardLockBlocked()) return false;
+    const ids =this._selectedNodeIds().filter((id) => !this.data.isLocked(id));
+    if (!ids.length) { setStatus(tt('ui.planner.alignPickFirst')); return false; }
+    const key = axis === 'v' ? 'textVAlign' : 'textAlign';
+    for (const id of ids) this.data.updateNode(id, { [key]: dir });
+    for (const id of ids) this.renderer.rebuildNode(this.data.getNode(id));
+    this.interaction.syncNodeInteractivity();
+    if (ids.length > 1) this._selectNodes(ids);
+    else this.renderer.setActiveObject(this.renderer._nodeVis.get(ids[0]));
+    this.renderer.restack();
+    this.renderer.refresh();
+    this._snapshot();
+    this.syncContextBar();
+    setStatus(tt('ui.planner.alignTextDone'));
+    return true;
+  }
+
+  /** ค่าการจัดวางของสิ่งที่เลือกอยู่ (ปนกัน = '') — ใช้ติดไฟปุ่มบนแถบ */
+  currentTextAlign(axis) {
+    const key = axis === 'v' ? 'textVAlign' : 'textAlign';
+    const vals = new Set(this._selectedNodeIds().map((id) => (this.data.getNode(id) || {})[key]));
+    return vals.size === 1 ? [...vals][0] : '';
+  }
+
+  /**
+   * [alpha.151 ข้อ 4] แทรกรูป **ลงในการ์ดที่เลือก** — ไม่มีการ์ดที่เลือก = สร้างการ์ดรูปใบใหม่
+   * (ของเดิมมีแต่ทางหลัง ผู้ใช้จึงรายงานว่า "ใน card ยังแทรกรูปไม่ได้")
+   */
+  async insertImage() {
+    const ids = this._selectedNodeIds();
+    if (!ids.length) return this.insertImageNode();
+    if (!this._svc.pickImage) { setStatus(tt('ui.planner.pickImageNot')); return null; }
+    const picked = await this._svc.pickImage();
+    if (!picked || !picked.file) return null;
+    for (const id of ids) this._commitEdit(id, { src: 'Images/' + picked.file });
+    setStatus(ttf('ui.planner.imgInCardDone', ids.length));
+    return picked;
+  }
+
+  /** เอารูปออกจากการ์ดที่เลือก */
+  clearImage() {
+    const ids = this._selectedNodeIds();
+    if (!ids.length) return false;
+    for (const id of ids) this._commitEdit(id, { src: '' });
+    return true;
+  }
+
+  /** ขนาดตัวอักษรของการ์ดที่เลือก (`delta` = บวก/ลบจากค่าเดิม) */
+  bumpFontSize(delta) {
+    const ids = this._selectedNodeIds();
+    if (!ids.length) { setStatus(tt('ui.planner.alignPickFirst')); return false; }
+    for (const id of ids) {
+      const n = this.data.getNode(id);
+      if (n) this.data.updateNode(id, { fontSize: (n.fontSize || 12) + delta });
+    }
+    for (const id of ids) this.renderer.rebuildNode(this.data.getNode(id));
+    this.renderer.restack();
+    this.renderer.refresh();
+    this._snapshot();
+    return true;
+  }
+
+  /** ข้อ 5 — หมุนล้อบนการ์ดที่เนื้อหาล้น = เลื่อนเนื้อหาในการ์ด (ไม่ใช่ซูมกระดาน) */
+  scrollNode(nodeId, dy, dx) {
+    const n = this.data.getNode(nodeId);
+    const vis = this.renderer._nodeVis.get(nodeId);
+    if (!n || !vis) return false;
+    const maxY = vis.scrollMax || 0, maxX = vis.scrollMaxX || 0;
+    const nextY = Math.max(0, Math.min(maxY, (n.scrollY || 0) + (dy || 0)));
+    const nextX = Math.max(0, Math.min(maxX, (n.scrollX || 0) + (dx || 0)));
+    if (nextY === (n.scrollY || 0) && nextX === (n.scrollX || 0)) return false;
+    this.data.updateNode(nodeId, { scrollY: nextY, scrollX: nextX });
+    this.renderer.rebuildNode(this.data.getNode(nodeId));
+    this.renderer.restack();
+    this.renderer.refresh();
+    return true;
+  }
+
+  /**
+   * [alpha.150r] ย่อ/ขยายรูปที่แทรก — ผู้ใช้: *"insert ภาพต้องปรับขนาดได้นะ"*
+   * `mode` = 'set' ตั้งค่าตรง ๆ · 'mul' คูณจากค่าเดิม (ปุ่ม + / −)
+   * ย่อลงจนไม่ล้นแล้ว ตำแหน่งเลื่อนต้องกลับมาที่ 0 เอง ไม่งั้นรูปค้างอยู่นอกกรอบ
+   */
+  setImageScale(nodeId, v, mode) {
+    const n = this.data.getNode(nodeId);
+    if (!n || n.type !== 'image') return false;
+    const cur = n.scale == null ? 1 : n.scale;
+    const next = Math.max(IMG_SCALE_MIN, Math.min(IMG_SCALE_MAX, mode === 'mul' ? cur * v : v));
+    this._commitEdit(nodeId, { scale: next, scrollX: 0, scrollY: 0 });
+    setStatus(ttf('ui.planner.imgScaleSet', Math.round(next * 100)));
+    return next;
+  }
+
+  // ══ [alpha.155] ล็อกทั้งกระดาน (เมนูคลิกขวาใน Explorer) ══
+  // กระดานที่ล็อก = เลื่อน/ซูมดูได้ แต่สร้าง/แก้/ลบ/ย้อนกลับไม่ได้ · ค่าล็อกเก็บที่ Explorer (project.khn.json)
+  // ไม่ใช่ในไฟล์กระดาน — ตรวจที่ทางเข้าของทุกการแก้ (_addNode · _commitEdit · _deleteSelected · …)
+  setBoardLocked(v) {
+    this._boardLocked = !!v;
+    if (this.interaction) {
+      this.interaction._boardLocked = this._boardLocked;
+      this.interaction.setTool(this._boardLocked ? 'hand' : 'select');
+    }
+    return this._boardLocked;
+  }
+  isBoardLocked() { return !!this._boardLocked; }
+  _boardLockBlocked() {
+    if (!this._boardLocked) return false;
+    setStatus(tt('ui.treeAct.boardLocked'));
+    return true;
+  }
+  async _applyBoardLock() {
+    let v = false;
+    try { if (this._svc.isBoardLocked) v = !!(await this._svc.isBoardLocked(this.data.getPath())); } catch { v = false; }
+    this.setBoardLocked(v);
   }
 
   // ═════════════════ โหลด / บันทึก / ไฟล์กระดาน (บั๊ก 5) ═════════════════
   async _load() {
     await this.data.load();
+    this._applyBoardLock().catch(() => {});
     this.renderer.setGrid(this.data.getGrid());
     this.renderer.setBackground(this.data.getSettings().background);
+    this.renderer.setBackgroundImage(this.data.getBackgroundImage());
     const vp = this.data.getViewport();
     if (vp.zoom !== 1 || vp.x || vp.y) this.renderer.setViewport(vp.x, vp.y, vp.zoom);
     this._renderAll();
@@ -237,13 +660,26 @@ export class PlannerBoard {
       path: this.data.getPath(), ...this.data.countStats(),
       grid: this.data.getGrid(), viewport: this.data.getViewport(),
     });
+    this._act('board loaded', { board: this.data.getName(), path: this.data.getPath(),
+                                ...this.data.countStats() });
     return true;
   }
 
   async save(silent) {
     this._persistViewport(true);
     const wasNew = !(await kapi.exists(await this.data._defaultPath()).catch(() => true));
-    const ok = await this.data.save();
+    // [alpha.153 ข้อ 4] เดิมถ้า `data.save()` โยน error ออกมา ทั้งก้อนตายเงียบ — ไม่มีทั้งข้อความ
+    // บนแถบสถานะและบรรทัดในบันทึก ผู้ใช้เห็นแค่ "จุดงานค้าง" ไม่หายไปเฉย ๆ
+    let ok = false;
+    try {
+      ok = await this.data.save();
+    } catch (e) {
+      this._fail('save threw', e, { board: this.data.getName(), path: this.data.getPath() });
+      this._syncDirty();
+      setStatus(tt('ui.planner.saveBoardNotOk'));
+      return false;
+    }
+    if (!ok) this._fail('save returned false', null, { board: this.data.getName(), path: this.data.getPath() });
     this._syncDirty();
     log('info', ttf('ui.planner.plannerSave', this.data.getName(), ok ? tt('ui.common.ok') : tt('ui.common.fail')) +
         (wasNew ? tt('ui.planner.fileNewRefreshExplorer') : ''), { path: this.data.getPath() });
@@ -331,8 +767,10 @@ export class PlannerBoard {
     if (!(await this.confirmDiscard(tt('ui.planner.openBoardOther')))) return false;
     this.renderer.clear();
     await this.data.load(path);
+    await this._applyBoardLock();
     this.renderer.setGrid(this.data.getGrid());
     this.renderer.setBackground(this.data.getSettings().background);
+    this.renderer.setBackgroundImage(this.data.getBackgroundImage());
     const vp = this.data.getViewport();
     this.renderer.setViewport(vp.x, vp.y, vp.zoom);
     this._renderAll();
@@ -443,37 +881,75 @@ export class PlannerBoard {
     let x, y, w = d.width, h = d.height;
     if (box && box.width > 8 && box.height > 8) { x = box.x; y = box.y; w = box.width; h = box.height; }
     else { x = info.x - d.width / 2; y = info.y - d.height / 2; }
+    // [alpha.150 ข้อ 3] snap ต้องมีผลกับ **ขนาด** ด้วย และต้องมีผลกับทุกทางที่สร้างวัตถุ —
+    // ไม่ใช่เฉพาะตอนลากด้วยเมาส์ (เมนูคลิกขวา · ปุ่มบนราง · คำสั่ง ก็ต้องลงกริดเหมือนกัน)
+    // ปัดซ้ำกับกล่องที่ปัดมาแล้วไม่มีผลข้างเคียง (snapTo เป็น idempotent)
+    const snapped = this.data.snapBox({ x, y, width: w, height: h });
+    x = snapped.x; y = snapped.y; w = snapped.width; h = snapped.height;
     const n = this.data.addNode(tool, NEW_TITLE[tool] != null ? NEW_TITLE[tool] : tt('ui.common.new2'), COLORS[tool], x, y,
       { width: Math.round(w), height: Math.round(h), shape: tool === 'shape' ? (info.shape || 'rect') : d.shape || 'rect' });
     const v = this.renderer.renderNode(n);
     v._lockedByData = false;
+    // [alpha.152 ข้อ 1] เช่นเดียวกับ `_addNode` — ล็อกเครื่องมือไว้แล้ววาดติด ๆ กัน
+    // การ์ดใบก่อนหน้าจะกลายเป็นหลุมดำที่ fabric คว้าไปลากแทนการวาดกรอบนำ
+    this.interaction.syncNodeInteractivity();
     this.renderer.restack();
     this.renderer.setActiveObject(v);
     this._showProps('node', n);
     this._snapshot();
     this.renderer.refresh();
     // โพสต์อิต/ข้อความ/คอมเมนต์ = พิมพ์ต่อได้ทันที
-    if (['sticky', 'text', 'comment'].includes(tool)) setTimeout(() => this.interaction.editText(n), 10);
+    // [alpha.150] `info.quiet` = "สร้างเฉย ๆ อย่าเด้ง UI ขึ้นมา" — ผู้เรียกที่จัดการต่อเองอยู่แล้ว
+    // (เมนูคลิกขวา · คำสั่ง · เทส) ใช้ธงนี้ ไม่งั้นกล่องพิมพ์ข้อความลอยค้างทับกระดาน
+    if (!info.quiet && ['sticky', 'text', 'comment'].includes(tool)) {
+      setTimeout(() => this.interaction.editText(n), 10);
+    }
+    // [alpha.150] วางรูปแล้วต้องได้เลือกรูปทันที · วางรายการแล้วต้องได้พิมพ์ข้อทันที
+    // (ยกเว้นตอนถูกเรียกจากเมนู/คำสั่งที่จัดการเองอยู่แล้ว — ส่ง `info.quiet`)
+    if (!info.quiet && tool === 'image' && !n.src && this._svc.pickImage) {
+      setTimeout(async () => {
+        const p = await this._svc.pickImage();
+        if (p && p.file) this._commitEdit(n.id, { src: 'Images/' + p.file });
+      }, 10);
+    }
+    if (!info.quiet && tool === 'todo') setTimeout(() => this.editTodo(this.data.getNode(n.id)), 10);
     return n;
   }
 
   _addNode(type, title, color, x, y) {
+    if (this._boardLockBlocked()) return null;
     const cx = x != null ? x : (this.renderer.getWidth() / 2 - this.renderer.getViewport().x) / this.renderer.getZoom();
     const cy = y != null ? y : (this.renderer.getHeight() / 2 - this.renderer.getViewport().y) / this.renderer.getZoom();
     const n = this.data.addNode(type, title || NEW_TITLE[type] || tt('ui.common.new2'), color || COLORS[type], cx, cy);
     const v = this.renderer.renderNode(n);
     v._lockedByData = false;
+    // ══ [alpha.152 ข้อ 1] ★★ การ์ดที่เพิ่งเกิดต้องเชื่อฟัง "เครื่องมือที่เลือกอยู่" ทันที ══
+    //
+    // ผู้ใช้: *"ถ้าเรา double click สร้าง card ตัวไกด์ตอนสร้าง card ครั้งถัดไปจะหาย"*
+    //
+    // ตอนใช้เครื่องมือวาด การ์ดทุกใบต้อง `evented:false` (ตั้งไว้ใน `setTool`) ไม่งั้น fabric
+    // จะคว้าการ์ดที่อยู่ใต้เมาส์ไปลากแทนการวาดกรอบนำ — ซึ่งเป็นเหตุผลที่มีบรรทัดนั้นตั้งแต่ 65r3-2
+    // แต่ `setTool` วนแค่การ์ดที่ **มีอยู่ ณ ตอนเรียก** · การ์ดที่เกิดทีหลังจึงเกิดมาพร้อม
+    // ค่าปริยาย `evented:true` และกลายเป็นหลุมดำกลางกระดาน: ลากทับเมื่อไหร่ไม่มีกรอบนำ
+    // (ดับเบิลคลิกที่ว่างสร้างการ์ดตรงที่เมาส์อยู่พอดี ครั้งถัดไปจึงมักเริ่มลากทับมันเต็ม ๆ)
+    this.interaction.syncNodeInteractivity();
     this.renderer.restack();
     this.renderer.setActiveObject(v);
     this._showProps('node', n);
     this._snapshot();
     this.renderer.refresh();
+    this._act(`create ${type}`, { id: n.id, at: `${Math.round(n.x)},${Math.round(n.y)}`,
+                                 board: this.data.getName(), total: this.data.getAllNodes().length });
     return n;
   }
 
   _commitEdit(id, props) {
+    if (this._boardLockBlocked()) return false;
     const n = this.data.getNode(id);
-    if (!n) return false;
+    if (!n) { this._fail('edit: node not found', null, { id }); return false; }
+    // ช่องที่เปลี่ยนอย่างเดียว ไม่ใช่ค่าทั้งก้อน — บันทึกจะได้อ่านออกว่า "ผู้ใช้แก้อะไร"
+    // ระดับ debug เพราะยิงทุก 300ms ระหว่างพิมพ์ — ไม่งั้นท่วมบันทึกจนกลบเรื่องที่สำคัญกว่า
+    this._dbg('edit ' + n.type, { id, fields: Object.keys(props || {}).join(',') });
     this.data.updateNode(id, props);
     this.renderer.rebuildNode(this.data.getNode(id));
     this.renderer.updateEdgesFor(this.data.edgesTouching([id]));
@@ -486,6 +962,7 @@ export class PlannerBoard {
 
   // ═════════════════ เส้นเชื่อม ═════════════════
   _handleConnect(fromId, fromPort, toId, toPort) {
+    if (this._boardLockBlocked()) return null;
     const e = this.data.addEdge(fromId, fromPort, toId, toPort, { routing: 'curved', arrowEnd: 'arrow' });
     if (!e) { setStatus(tt('ui.planner.connectCantHasLine')); return null; }
     this.renderer.renderEdge(e);
@@ -604,6 +1081,7 @@ export class PlannerBoard {
   }
 
   _deleteSelected() {
+    if (this._boardLockBlocked()) return false;
     const ids = this._selectedNodeIds();
     const act = this.renderer.getActiveObject();
     const groups = act ? (act.type === 'activeSelection' ? act.getObjects() : [act]).filter((o) => o.kind === 'group') : [];
@@ -629,12 +1107,14 @@ export class PlannerBoard {
     this._renderAll();
     this._snapshot();
     this._showProps('none', null);
+    this._act('delete node', { id, board: this.data.getName(), left: this.data.getAllNodes().length });
     setStatus(tt('ui.planner.delDone'));
     return true;
   }
 
   _duplicateSelected(ids) {
-    const src = (ids || this._selectedNodeIds()).map((i) => this.data.getNode(i)).filter(Boolean);
+    if (this._boardLockBlocked()) return null;
+    const src =(ids || this._selectedNodeIds()).map((i) => this.data.getNode(i)).filter(Boolean);
     if (!src.length) { setStatus(tt('ui.planner.pickObjectRepeatBefore')); return null; }
     const made = [];
     for (const n of src) {
@@ -652,6 +1132,7 @@ export class PlannerBoard {
     this._applyFilter();
     this._snapshot();
     this._selectNodes(made.map((m) => m.id));
+    this._act('duplicate', { count: made.length, ids: made.map((m) => m.id).join(',').slice(0, 120) });
     setStatus(ttf('ui.planner.repeatItemDone', made.length));
     return made;
   }
@@ -743,14 +1224,33 @@ export class PlannerBoard {
       if (n.file) items.push({ label: tt('ui.planner.openFile'), click: () => this._onOpenFile && this._onOpenFile(n.file) },
                              { label: tt('ui.planner.pointPosExplorer'), click: () => this._onReveal && this._onReveal(n.file) });
       items.push({ label: tt('ui.planner.editText'), click: () => this.interaction.editText(n) });
+      // [alpha.150] เมนูเฉพาะชนิด — รายการติ๊ก / รูป
+      if (n.type === 'todo') items.push({ label: tt('ui.planner.todoEdit'), click: () => this.editTodo(n) });
+      if (n.type === 'image') {
+        items.push({ label: tt('ui.planner.imgPick'), click: async () => {
+          if (!this._svc.pickImage) { setStatus(tt('ui.planner.pickImageNot')); return; }
+          const p = await this._svc.pickImage();
+          if (p && p.file) this._commitEdit(n.id, { src: 'Images/' + p.file });
+        } });
+        for (const f of IMAGE_FITS) {
+          items.push({ label: _tick(n.fit === f) + (FIT_LABELS[f] || f),
+                       click: () => this._commitEdit(n.id, { fit: f }) });
+        }
+        // [alpha.150r] ย่อ/ขยายรูป — เกิน 100% แล้วรูปล้นกรอบ เลื่อนดูต่อได้ (ล้อ · Shift+ล้อ)
+        items.push('-');
+        items.push({ label: tt('ui.planner.imgBigger'), click: () => this.setImageScale(n.id, 1.25, 'mul') });
+        items.push({ label: tt('ui.planner.imgSmaller'), click: () => this.setImageScale(n.id, 1 / 1.25, 'mul') });
+        items.push({ label: tt('ui.planner.imgScaleReset'), click: () => this.setImageScale(n.id, 1, 'set') });
+      }
       items.push({ label: tt('ui.planner.bindFileProject'), click: () => this._pickFileFor(n.id) });
       items.push('-');
       items.push({ label: tt('ui.common.repeat'), click: () => this._duplicateSelected() });
       items.push('-');
-      items.push({ label: tt('ui.planner.liftTopCtrlShift2'), click: () => this.orderSelection('front') });
-      items.push({ label: tt('ui.planner.liftOneLayerCtrl'), click: () => this.orderSelection('forward') });
-      items.push({ label: tt('ui.planner.reduceOneLayerCtrl'), click: () => this.orderSelection('backward') });
-      items.push({ label: tt('ui.planner.sendBottomLastCtrl2'), click: () => this.orderSelection('back') });
+      // [alpha.149] คีย์ลัดเฉพาะของกระดาน = คอลัมน์ชิดขวาของเมนู (เดิมฝัง <span> ไว้ในไฟล์ภาษา ติดกับข้อความ)
+      items.push({ label: tt('ui.planner.liftTopCtrlShift2'), accel: formatShortcut('BracketRight', true, true), click: () => this.orderSelection('front') });
+      items.push({ label: tt('ui.planner.liftOneLayerCtrl'), accel: formatShortcut('BracketRight', true, false), click: () => this.orderSelection('forward') });
+      items.push({ label: tt('ui.planner.reduceOneLayerCtrl'), accel: formatShortcut('BracketLeft', true, false), click: () => this.orderSelection('backward') });
+      items.push({ label: tt('ui.planner.sendBottomLastCtrl2'), accel: formatShortcut('BracketLeft', true, true), click: () => this.orderSelection('back') });
       items.push('-');
       items.push({ label: n.locked ? tt('ui.common.unlock') : tt('ui.planner.lock'), click: () => this._commitEdit(n.id, { locked: !n.locked }) });
       items.push({ label: tt('ui.planner.groupPick'), click: () => this._createGroupFromSelection() });
@@ -763,7 +1263,7 @@ export class PlannerBoard {
       items.push({ label: tt('ui.planner.editBadge'), click: () => this._editEdgeLabel(id) });
       items.push({ label: tt('ui.common.toggle'), click: () => this._flipEdge(id) });
       for (const [r, label] of [['straight', tt('ui.planner.lineAt2')], ['orthogonal', tt('ui.common.cornerScene')], ['curved', tt('ui.common.curve')]]) {
-        items.push({ label: (e.routing === r ? '● ' : '　') + label, click: () => this._changeEdge(id, { routing: r }) });
+        items.push({ label: _tick(e.routing === r) + label, click: () => this._changeEdge(id, { routing: r }) });
       }
       items.push('-');
       items.push({ label: tt('ui.planner.delLine'), danger: true, click: () => this._deleteEdge(id) });
@@ -781,11 +1281,22 @@ export class PlannerBoard {
       items.push({ label: tt('ui.planner.text'), click: () => this._createFromTool('text', { x: pt.x, y: pt.y }) });
       items.push({ label: tt('ui.planner.shape'), click: () => this._createFromTool('shape', { x: pt.x, y: pt.y, shape: this.interaction.getShapeKind() }) });
       items.push({ label: tt('ui.planner.comment'), click: () => this._createFromTool('comment', { x: pt.x, y: pt.y }) });
+      // [alpha.150 ข้อ 6+9] แทรกรูป · รายการสิ่งที่ต้องทำ — จากเมนูคลิกขวาตรงจุดที่คลิก
+      items.push({ label: tt('ui.planner.insertImageHere'), click: () => this.insertImageNode(pt.x, pt.y) });
+      items.push({ label: tt('ui.planner.todoHere'), click: () => {
+        const n = this._createFromTool('todo', { x: pt.x, y: pt.y, quiet: true });
+        this.editTodo(n);
+      } });
+      items.push('-');
+      // [alpha.150 ข้อ 2] คลิกขวาที่ว่าง = ตั้งพื้นกระดาน (สี + รูป)
+      items.push({ label: tt('ui.planner.canvasSetup'), click: () => this._boardBackgroundDialog() });
       items.push('-');
       items.push({ label: tt('ui.planner.fitScreen'), click: () => this._zoomFit() });
+      items.push({ label: tt('ui.planner.fullScreen'), click: () => this.toggleFullscreen() });
       items.push({ label: this.data.getGrid().show ? tt('ui.planner.hideGrid') : tt('ui.planner.showGrid'), click: () => this.setGrid({ show: !this.data.getGrid().show }) });
       items.push({ label: this.data.getGrid().snap ? tt('ui.planner.closeSnap') : tt('ui.planner.openSnap'), click: () => this.setGrid({ snap: !this.data.getGrid().snap }) });
       items.push('-');
+      items.push({ label: tt('ui.planner.exportJson'), click: () => this.exportJSON() });
       items.push({ label: tt('ui.planner.saveBoard'), click: () => this.save() });
     }
     popupMenu(ev.clientX, ev.clientY, items);
@@ -836,6 +1347,34 @@ export class PlannerBoard {
   // ═════════════════ Undo / Redo ═════════════════
   _markDirty() { this._syncDirty(); if (this._onDirtyCB) this._onDirtyCB(); }
 
+  /**
+   * ══ [alpha.153 ข้อ 4] ★★ บันทึกของกระดานต้องลงบันทึกระบบจริง ══
+   *
+   * ผู้ใช้: *"planner ยังไม่มี log ใน system log เลยไม่รู้ว่ามัน error มั้ย ทำให้ละเอียดเลย"*
+   *
+   * ของเดิมมีอยู่ 11 บรรทัดทั้งกระดาน และเกือบทั้งหมดเป็นระดับ `debug` ซึ่งแผงบันทึกซ่อนไว้
+   * ตามค่าเริ่มต้น → เปิดแผงบันทึกมาดูก็ไม่เห็นอะไรเลย ไม่รู้ว่ากระดานทำงานถึงไหนหรือพังตรงไหน
+   *
+   * ตอนนี้ทุกการกระทำที่เปลี่ยนงานของผู้ใช้ลง `info` พร้อมรายละเอียดที่ใช้ไล่เหตุได้จริง
+   * (ชื่อกระดาน · ชนิด/ไอดีของวัตถุ · จำนวนที่โดน) ส่วนที่พังลง `warn`/`error`
+   * คำนำหน้า `planner:` ทำให้แผงบันทึกจัดกลุ่มตาม "ที่มา" ได้เอง (ดู log-core splitSource)
+   */
+  _act(what, detail) {
+    try { log('info', 'planner: ' + what, detail); } catch { /* บันทึกพังห้ามลากงานผู้ใช้ลงไปด้วย */ }
+  }
+
+  /** รายละเอียดยิบย่อยที่ยิงถี่ (พิมพ์ · ลาก · ซูม) — เปิดดูได้จากตัวกรองระดับในแผงบันทึก */
+  _dbg(what, detail) {
+    try { log('debug', 'planner: ' + what, detail); } catch { /* เงียบ */ }
+  }
+
+  /** บันทึกความผิดพลาดของกระดาน — ที่เดียวกัน จะได้ไม่มีทางหล่นหาย */
+  _fail(what, err, detail) {
+    try {
+      log('error', 'planner: ' + what, { error: (err && err.message) || String(err || '?'), ...(detail || {}) });
+    } catch { /* ไม่มีอะไรทำได้แล้ว */ }
+  }
+
   _snapshot(initial) {
     if (this._restoring) return;
     const snap = JSON.stringify({
@@ -870,15 +1409,26 @@ export class PlannerBoard {
   }
 
   undo() {
-    if (this._histIndex <= 0) { setStatus(tt('ui.planner.undoCantDone')); return false; }
+    if (this._boardLockBlocked()) return false;
+    if (this._histIndex <= 0) {
+      this._dbg('undo: nothing to undo', { depth: this._history.length });
+      setStatus(tt('ui.planner.undoCantDone')); return false;
+    }
     const ok = this._restore(this._histIndex - 1);
-    if (ok) setStatus(tt('ui.planner.undo'));
+    if (ok) { this._act('undo', { step: this._histIndex, depth: this._history.length }); setStatus(tt('ui.planner.undo')); }
+    else this._fail('undo failed', null, { want: this._histIndex - 1 });
     return ok;
   }
 
   redo() {
-    if (this._histIndex >= this._history.length - 1) { setStatus(tt('ui.planner.repeatCantDone')); return false; }
+    if (this._boardLockBlocked()) return false;
+    if (this._histIndex >= this._history.length - 1) {
+      this._dbg('redo: nothing to redo', { depth: this._history.length });
+      setStatus(tt('ui.planner.repeatCantDone')); return false;
+    }
     const ok = this._restore(this._histIndex + 1);
+    if (ok) this._act('redo', { step: this._histIndex, depth: this._history.length });
+    else this._fail('redo failed', null, { want: this._histIndex + 1 });
     if (ok) setStatus(tt('ui.planner.repeat'));
     return ok;
   }
@@ -887,6 +1437,7 @@ export class PlannerBoard {
   setPropsCallback(fn) { this._propsCallback = fn; }
 
   _showProps(mode, data) {
+    try { this.syncFmtBar(); } catch {}
     if (mode !== 'edge') this.renderer._selectedEdgeId = null;
     this._selectedNodeId = (mode === 'node' && data) ? data.id : null;
     // แถบคุณสมบัติลอยเหนือสิ่งที่เลือก — ทำงานแม้แผงคุณสมบัติจะถูกปิดอยู่ (บั๊ก 7)
@@ -913,6 +1464,8 @@ export class PlannerBoard {
         this._snapshot();
       };
       ctx.onPickFile = () => (this._svc.pickFile ? this._svc.pickFile() : Promise.resolve(null));
+      // [alpha.150 ข้อ 6] ปุ่ม "เลือก…" ของช่องไฟล์รูปในแผงคุณสมบัติ
+      ctx.onPickImage = () => (this._svc.pickImage ? this._svc.pickImage() : Promise.resolve(null));
       ctx.onConnectFrom = () => { this._pickTool('connector'); setStatus(tt('ui.planner.toolLineLinkClick')); };
       ctx.onCenterNode = (id) => this.centerOn(id);
       ctx.onRevealFile = (file) => { if (this._onReveal && file) this._onReveal(file); else setStatus(tt('ui.planner.cardCantBindFile')); };
@@ -1070,9 +1623,27 @@ export class PlannerBoard {
     }
     const r = this.stage.getBoundingClientRect();
     if (!r.width || !r.height) {
-      log('warn', tt('ui.planner.plannerFitSkipBoard'));
+      // ══ [alpha.151 ข้อ 8] เวทียังไม่มีขนาด (แผงถูกซ่อน/กำลังวาดใหม่) ══
+      //
+      // ผู้ใช้เห็นบรรทัดนี้ในบันทึกแล้วสงสัยว่าเป็นต้นตอของกรอบนำที่เพี้ยน — ถูกครึ่งเดียว:
+      // การข้ามไม่ใช่ปัญหา (ไม่มีขนาดก็คำนวณอะไรไม่ได้จริง ๆ) แต่ **การข้ามแล้วไม่กลับมาทำใหม่**
+      // ต่างหาก เพราะรอบนั้น `calcOffset()` ไม่ได้ถูกเรียก → fabric ยังจำพิกัดเดิมของ canvas
+      // ถ้าไม่มีการเปลี่ยนขนาดอีกเลยหลังแผงกลับมา ก็ไม่มีใครเรียก fit() ซ้ำ (บทเรียนข้อ 24)
+      // → นัดกลับมาทำใหม่เองเมื่อเวทีมีขนาดแล้ว แทนที่จะปล่อยค้าง · และลดเป็น debug
+      //   เพราะเป็นเหตุการณ์ปกติทุกครั้งที่พับ/ปิดแผง ไม่ใช่ความผิดพลาด
+      log('debug', tt('ui.planner.plannerFitSkipBoard'));
+      if (!this._refitTimer) {
+        this._refitTimer = setInterval(() => {
+          const r2 = this.stage.getBoundingClientRect();
+          if (!r2.width || !r2.height) return;
+          clearInterval(this._refitTimer);
+          this._refitTimer = null;
+          this._fit();
+        }, 250);
+      }
       return false;
     }
+    if (this._refitTimer) { clearInterval(this._refitTimer); this._refitTimer = null; }
     const changed = this.renderer.fit(r.width, r.height);
     this.toolbar.syncArrows && this.toolbar.syncArrows();
     if (changed) {
@@ -1092,6 +1663,7 @@ export class PlannerBoard {
     if (this._fitRaf) cancelAnimationFrame(this._fitRaf);
     if (this.data && this.data.isDirty()) { try { this.data.save(); } catch {} }
     if (this.interaction) this.interaction.destroy();
+    if (this._refitTimer) { clearInterval(this._refitTimer); this._refitTimer = null; }
     if (this._resizeObserver) this._resizeObserver.disconnect();
     if (this.toolbar && this.toolbar._ro) this.toolbar._ro.disconnect();
     if (this.renderer) this.renderer.dispose();
@@ -1108,7 +1680,7 @@ export function boardPicker(boards, currentPath) {
     const list = el('div', 'planner-board-list');
     for (const b of boards) {
       const row = el('div', 'planner-board-row' + (b.path === currentPath ? ' current' : ''));
-      row.append(el('span', 'planner-board-ic', b.path === currentPath ? '●' : '📋'),
+      row.append(el('span', 'planner-board-ic', glyphOf(b.path === currentPath ? 'dot' : 'clipboard')),
                  el('span', 'planner-board-nm', b.name));
       row.onclick = () => { ov.remove(); resolve(b.path); };
       row.ondblclick = row.onclick;
@@ -1128,4 +1700,18 @@ export function boardPicker(boards, currentPath) {
 /** ชื่อไฟล์ที่ปลอดภัยกับ Windows/macOS */
 function _safeName(s) {
   return String(s || tt('ui.common.board')).replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 80) || tt('ui.common.board');
+}
+
+/** เครื่องหมาย "ข้อนี้เลือกอยู่" ในเมนู — ไอคอนมาจากทะเบียน ไม่ฮาร์ดโค้ด */
+function _tick(on) { return on ? glyphOf('dot') + ' ' : '　'; }
+
+/** "ไอคอนจากทะเบียน + ข้อความ" สำหรับที่ที่รับได้แค่สตริง (ชื่อแผง) */
+function _withGlyphTitle(iconName, text) {
+  const g = glyphOf(iconName);
+  return g ? g + ' ' + text : text;
+}
+
+/** ชื่อไฟล์สั้น ๆ จาก path (โชว์ในกล่องพื้นกระดาน) */
+function _fileLabel(p) {
+  return String(p || '').split(/[\\/]/).pop() || String(p || '');
 }

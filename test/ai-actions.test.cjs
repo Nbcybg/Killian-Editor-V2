@@ -90,7 +90,7 @@ Object.defineProperty(globalThis, 'navigator', { value: { platform: 'Win32' }, c
 // ai-actions กับ core ต้องใช้ `state` **ก้อนเดียวกัน** → บันเดิลรวมทีเดียวผ่านไฟล์ทางเข้าชั่วคราว
 const entry = path.join(os.tmpdir(), '_aiact-entry.mjs');
 const src = path.join(__dirname, '..', 'src').replace(/\\/g, '/');
-fs.writeFileSync(entry, `export * from '${src}/ai/ai-actions.js';\nexport { state } from '${src}/core.js';\n`);
+fs.writeFileSync(entry, `export * from '${src}/ai/ai-actions.js';\nexport { state } from '${src}/core.js';\n` + `export { setTabBridge, pathKey } from '${src}/tab-bridge.js';\n`);
 const out = path.join(os.tmpdir(), '_aiactions.cjs');
 require('esbuild').buildSync({ entryPoints: [entry], outfile: out, format: 'cjs', bundle: true, logLevel: 'silent' });
 const A = require(out);
@@ -224,6 +224,63 @@ seed();
        A.touchesProject([{ tool: 'scene.write', ok: false }]) === false);
     ck('รายการว่าง/undefined ไม่พัง',
        A.touchesProject([]) === false && A.touchesProject() === false);
+  }
+
+  // ───────── [alpha.149] กันพลาด: หมวดเอนทิตี้ · ชื่อไฟล์ฉากชน · แท็บที่เปิดอยู่ ─────────
+  {
+    ck('[149] safeCat ปฏิเสธ ../', A.safeCat('../../evil') === '' && A.safeCat('..') === '');
+    ck('[149] safeCat ปฏิเสธสแลช', A.safeCat('a/b') === '' && A.safeCat('a\\b') === '');
+    ck('[149] safeCat ว่าง = characters · ชื่อไทยผ่าน', A.safeCat('') === 'characters' && A.safeCat('ตัวละครรอง') === 'ตัวละครรอง');
+    const nBefore = FS.size;
+    const bad = await run('entity.create', { name: 'ผี', cat: '../../../outside' });
+    ck('[149] ★ entity.create หมวด ../ ถูกปฏิเสธ ไม่มีไฟล์หลุดออกนอกโปรเจกต์',
+       bad.ok === false && FS.size === nBefore && ![...FS.keys()].some((k) => !k.startsWith(ROOT)),
+       JSON.stringify(bad) + ' ' + [...FS.keys()].filter((k) => !k.startsWith(ROOT)).join(','));
+
+    // scene.create: ไฟล์ scene-NN.md ที่มีอยู่แล้วแต่ไม่อยู่ใน scenes.json ห้ามถูกทับ
+    const sj = JSON.parse(FS.get(ROOT + '/เล่ม 1/Draft/default/scenes.json'));
+    const all = Object.values(sj.chapters || {}).flat();
+    const nextOrder = Math.max(0, ...all.map((s) => s.order || 0)) + 1;
+    const first = [...FS.keys()].find((k) => k.endsWith('.md') && !k.includes('/Recycle/'));
+    const chDir = first.split('/').slice(0, -1).join('/');
+    const orphan = chDir + '/scene-' + String(nextOrder).padStart(2, '0') + '.md';
+    FS.set(orphan, 'ของเดิมที่ห้ามหาย');
+    const cr = await run('scene.create', { chapter: 'บทเปิดเรื่อง', title: 'ฉากชนชื่อไฟล์', text: 'ใหม่' });
+    ck('[149] สร้างฉากได้แม้ชื่อไฟล์ชน', cr.ok === true, cr.error);
+    ck('[149] ★ ไฟล์เดิมที่ชื่อชนไม่ถูกเขียนทับ', FS.get(orphan) === 'ของเดิมที่ห้ามหาย', FS.get(orphan));
+    const sj2 = JSON.parse(FS.get(ROOT + '/เล่ม 1/Draft/default/scenes.json'));
+    const made = Object.values(sj2.chapters || {}).flat().find((s) => s.title === 'ฉากชนชื่อไฟล์');
+    ck('[149] ฉากใหม่ได้ชื่อไฟล์ที่ไม่ซ้ำ และไฟล์มีอยู่จริง',
+       !!made && made.fileName !== orphan.split('/').pop() && FS.has(chDir + '/' + made.fileName), made && made.fileName);
+    await run('scene.delete', { title: 'ฉากชนชื่อไฟล์' });
+    FS.delete(orphan);
+    for (const k of [...FS.keys()]) if (k.includes('/Recycle/')) FS.delete(k);   // เทสลบข้างล่างนับไฟล์ .md ทั้งหมด
+
+    // แท็บที่เปิดอยู่: ค้างการแก้ = ลงแท็บอย่างเดียว · ไม่ค้าง = เขียนดิสก์แล้วโหลดแท็บใหม่
+    const scPath = [...FS.keys()].find((k) => k.endsWith('.md') && !k.includes('/Recycle/'));
+    const log = [];
+    const fake = { kind: 'prose', dirty: true, text: 'เนื้อในแท็บที่ยังไม่บันทึก',
+      getText() { return this.text; },
+      setText(b, o) { log.push(['set', o && o.keepAlign]); this.text = b; },
+      async reloadFromDisk() { log.push(['reload']); },
+      rename(t) { log.push(['rename', t]); }, close() { log.push(['close']); } };
+    A.setTabBridge({ find: (p) => (A.pathKey(p) === A.pathKey(scPath) ? fake : null), closeUnder: () => 0 });
+    const diskBefore = FS.get(scPath);
+    const rd = await run('scene.read', { title: 'ฉากแรก' });
+    ck('[149] ★ scene.read เห็นเนื้อในแท็บ (รวมที่ยังไม่บันทึก)', rd.ok && JSON.stringify(rd).includes('เนื้อในแท็บที่ยังไม่บันทึก'),
+       JSON.stringify(rd).slice(0, 200));
+    const w1 = await run('scene.write', { title: 'ฉากแรก', text: 'AI เขียนต่อ' });
+    ck('[149] ★ แท็บค้างการแก้ → เขียนลงแท็บ ไม่แตะไฟล์', w1.ok && FS.get(scPath) === diskBefore
+       && fake.text === 'เนื้อในแท็บที่ยังไม่บันทึก\n\nAI เขียนต่อ' && log.some((x) => x[0] === 'set' && x[1] === true),
+       JSON.stringify(log) + ' ' + fake.text);
+    fake.dirty = false; log.length = 0;
+    const w2 = await run('scene.write', { title: 'ฉากแรก', text: 'รอบสอง' });
+    ck('[149] ★ แท็บไม่ค้าง → เขียนดิสก์ แล้วสั่งแท็บโหลดใหม่', w2.ok && FS.get(scPath).includes('รอบสอง')
+       && log.some((x) => x[0] === 'reload'), JSON.stringify(log));
+    log.length = 0;
+    const rn = await run('scene.rename', { title: 'ฉากแรก', newTitle: 'ฉากแรก' });
+    ck('[149] scene.rename บอกแท็บให้เปลี่ยนชื่อด้วย', rn.ok && log.some((x) => x[0] === 'rename'), JSON.stringify(log));
+    A.setTabBridge(null);
   }
 
   // ───────── ลบ (ต้องลงถังขยะ ไม่ใช่หายถาวร) ─────────

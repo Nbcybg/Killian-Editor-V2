@@ -8,6 +8,7 @@ import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { sortMaps, findMap, breadcrumb, clamp, PIN_KIND } from './maps.js';
 import { extractNum } from './timeline.js';
+import { gi } from './icons.js';
 
 const FIELDS = [
   ['clues', t('ui.common.thingSee'), t('ui.floorplan.egTopBg')],
@@ -162,13 +163,13 @@ export async function renderFloorPlan(pane, mapId) {
 
     // หมุดปกติของแผนที่
     for (const p of (cur.pins || [])) {
-      const dot = el('span', 'floor-pin', PIN_KIND[p.kind]?.icon || '📌');
+      const dot = el('span', 'floor-pin', PIN_KIND[p.kind]?.icon || gi('pin'));
       dot.style.left = p.x + '%'; dot.style.top = p.y + '%';
       if (p.color) dot.style.color = p.color;
       // ฉากที่ผูกกับหมุดนี้ — hover เห็นได้เลยว่าเกิดอะไรตรงนี้บ้าง
       const here = scenes.filter((s) => s.mapId === cur.id && s.pinId === p.id);
       dot.title = (p.label || t('ui.common.notNamed'))
-        + (here.length ? '\n' + here.map((s) => '📄 ' + s.title).join('\n') : '');
+        + (here.length ? '\n' + here.map((s) => gi('file') + ' ' + s.title).join('\n') : '');
       dot.onclick = (e) => {
         e.stopPropagation();
         if (fs.picking && ctx) return bindSceneTo(p.id, p.x, p.y);
@@ -186,7 +187,7 @@ export async function renderFloorPlan(pane, mapId) {
         const you = el('div', 'floor-you');
         you.style.left = px + '%'; you.style.top = py + '%';
         you.title = t('ui.floorplan.you') + (ctx.row.title || '');
-        you.append(el('span', 'floor-you-dot', '◉'));
+        you.append(el('span', 'floor-you-dot', gi('radio-on')));
         you.append(el('span', 'floor-you-label', ctx.row.title || t('ui.floorplan.sceneCurrent')));
         holder.append(you);
       }
@@ -215,7 +216,7 @@ export async function renderFloorPlan(pane, mapId) {
       redraw();
     }
   } else {
-    main.append(el('div', 'floor-ph', '🗺'));
+    main.append(el('div', 'floor-ph', gi('map')));
     main.append(el('div', 'dim', maps.length ? t('ui.floorplan.mapNotHasImage')
                                              : t('ui.floorplan.notPlannedNewView')));
   }
@@ -230,9 +231,9 @@ export async function renderFloorPlan(pane, mapId) {
     const where = ctx.row.mapId ? findMap(maps, ctx.row.mapId) : null;
     const pin = where && (where.pins || []).find((p) => p.id === ctx.row.pinId);
     panel.append(el('div', 'dim floor-where', where
-      ? '📍 ' + (where.name || '') + (pin ? ' · ' + (pin.label || t('ui.common.pin')) : '')
+      ? gi('map-pin') + ' ' + (where.name || '') + (pin ? ' · ' + (pin.label || t('ui.common.pin')) : '')
       : t('ui.floorplan.cantPinPosPress')));
-    if (ctx.row.storyDate) panel.append(el('div', 'dim', '🕒 ' + ctx.row.storyDate));
+    if (ctx.row.storyDate) panel.append(el('div', 'dim', gi('time') + ' ' + ctx.row.storyDate));
   }
 
   if (cur) {
@@ -250,7 +251,7 @@ export async function renderFloorPlan(pane, mapId) {
       const row = el('div', 'floor-item');
       row.append(el('span', 'floor-item-text', v));
       if (ctx) {
-        const del = el('span', 'floor-item-del', '✕');
+        const del = el('span', 'floor-item-del', gi('close'));
         del.title = t('ui.floorplan.delList');
         del.onclick = async () => {
           await updateSceneRow(ctx.dPath, ctx.row.id, (r) => {
@@ -292,10 +293,10 @@ export async function renderFloorPlan(pane, mapId) {
       item.append(el('div', 'floor-tl-when', s.storyDate || t('ui.common.notSpecifyTime')));
       item.append(el('div', 'floor-tl-title', s.title || t('ui.common.notNamed')));
       const pin = (cur.pins || []).find((p) => p.id === s.pinId);
-      if (pin) item.append(el('div', 'floor-tl-pin', '📍 ' + (pin.label || t('ui.common.pin'))));
-      const seen = [(s.clues || []).length && `👁${s.clues.length}`,
-                    (s.sounds || []).length && `🔊${s.sounds.length}`,
-                    (s.discoveries || []).length && `📦${s.discoveries.length}`].filter(Boolean);
+      if (pin) item.append(el('div', 'floor-tl-pin', gi('map-pin') + ' ' + (pin.label || t('ui.common.pin'))));
+      const seen = [(s.clues || []).length && gi('eye') + `${s.clues.length}`,
+                    (s.sounds || []).length && gi('volume') + `${s.sounds.length}`,
+                    (s.discoveries || []).length && gi('package') + `${s.discoveries.length}`].filter(Boolean);
       if (seen.length) item.append(el('div', 'floor-tl-badges', seen.join(' ')));
       item.title = [s.title, s.chapterName, s.synopsis].filter(Boolean).join('\n') + t('ui.floorplan.clickOpenScene');
       item.onclick = () => openScene(s.filePath, s.title);

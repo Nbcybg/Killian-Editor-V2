@@ -28,6 +28,15 @@ import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข�
 import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub, exportPageNumberFmt,
          defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
 import { escClose } from './ui.js';
+import { projectImageUrl } from './file-url.js';
+import { gi } from './icons.js';
+
+/**
+ * [alpha.149] path รูปในเนื้อฉาก → URL เต็มใต้ `<ราก>/Images/`
+ * HTML ของนิยายถูกวางที่อื่นเสมอ (ช่องตัวอย่างในหน้าโปรแกรม · ไฟล์ชั่วคราวของ PDF · ไฟล์ .html ที่บันทึก)
+ * path สัมพัทธ์กับไฟล์ฉาก (`../../../../../Images/x.png`) จึงชี้ผิดที่ทุกครั้ง = รูปหายทั้งตัวอย่างและไฟล์
+ */
+const projectImg = (src) => projectImageUrl(state.root, src);
 // [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — แถวเดียวกันเป๊ะกับกล่องส่งออก PDF ของบท
 import { exportNameRow } from './export-name-ui.js';
 export { EXPORT_FORMATS, formatDef, docKind, pdfEngine, defaultHubSettings, normalizeHub,
@@ -86,6 +95,7 @@ async function compose(A, cfg, model, wf, markdownOut) {
     // [alpha.133 · Y-3] PDF ของนิยายยังต้องเดินผ่าน `mdToHtml()` อีกก้าว — บอกให้เวิร์กโฟลว์
     // เก็บคอมเมนต์รูปแบบ (`<!--align:x-->` / ตัวคั่นหน้า) ไว้ ไม่งั้นถูกลบก่อนถึงตัวที่ใช้มัน
     markdownOut: !!markdownOut,
+    imgSrc: projectImg,
   });
 }
 
@@ -116,7 +126,7 @@ async function proseHtml(A, text, title, wysiwyg, mono) {
   const spf = A.spFormat();
   // [alpha.132r] โหมดสี/ขาวดำ เป็นตัวเลือกของ **PDF** — ส่งต่อไปถึงชั้น CSS ที่นั่นเลย
   // [alpha.132r3] ฟอนต์ต้องเป็นตัวเดียวกับบนจอ (ไม่งั้นไฟล์ที่ได้เป็นคนละฟอนต์กับที่เขียนอยู่)
-  const o = { mono: !!mono, ...(wysiwyg ? liveProseFonts() : {}) };
+  const o = { mono: !!mono, imgSrc: projectImg, ...(wysiwyg ? liveProseFonts() : {}) };
   const html = wysiwyg ? mdToHtml(text, title, A.proseFormat(), spf.paper, spf.margins, o)
                        : mdToHtml(text, title, null, spf.paper, spf.margins, o);
   return withFontCss(A, html);
@@ -224,7 +234,7 @@ async function writeOut(A, cfg, built, nameOpts) {
                 colorMode: o.colorMode === 'color' ? 'color' : 'mono',
                 watermark: o.watermark, openPage: 0 },
       });
-      await kapi.writeBytes(dest, Array.from(r.bytes));
+      await kapi.writeBytes(dest, r.bytes);
       return { dest, note: ttf('ui.xhub.donePdf', r.pageCount, r.bookmarks.length) };
     }
     // นิยาย → HTML ที่มี @page → printToPDF ในหน้าต่างซ่อน (ได้ตัวอักษรจริง ไม่ใช่ภาพ)
@@ -240,12 +250,68 @@ async function writeOut(A, cfg, built, nameOpts) {
       pageNumbers: o.pageNumbers !== false, startPage: 1,
       fontPt: num(A.proseFormat().fontPt, 12), meta: { title: built.title },
     });
-    await kapi.writeBytes(dest, Array.from(r.bytes));
+    await kapi.writeBytes(dest, r.bytes);
     return { dest, note: ttf('ui.xhub.donePdfPages', r.pageCount, r.frontCount) };
   }
   if (cfg.format === 'html') { await kapi.writeFile(dest, built.html); return { dest, note: '' }; }
+  if (cfg.format === 'epub' || cfg.format === 'docx') {
+    const r = await buildEbookBytes(A, cfg, built);
+    await kapi.writeBytes(dest, r.bytes);                       // ไบนารี (กฎ 10)
+    return { dest, note: r.note };
+  }
   await kapi.writeFile(dest, built.text);
   return { dest, note: '' };
+}
+
+/** file:///C:/x/รูป.png → C:/x/รูป.png · file:///Users/x → /Users/x · ไม่ใช่ไฟล์ = '' */
+function pathFromFileUrl(url) {
+  const s = String(url || '');
+  if (!/^file:/i.test(s)) return '';
+  try {
+    const u = new URL(s);
+    const p = decodeURIComponent(u.pathname);
+    if (u.host) return '//' + u.host + p;                       // UNC
+    return /^\/[A-Za-z]:\//.test(p) ? p.slice(1) : p;
+  } catch { return ''; }
+}
+
+/**
+ * [alpha.156] ประกอบ EPUB/DOCX เป็นไบต์ — ทางเดียวของทั้งปุ่มส่งออกและ e2e
+ * รูปที่เนื้อหาอ้างถึงถูกอ่านจากดิสก์ตรงนี้ (โมดูลประกอบแพ็กเกจเป็นโมดูลบริสุทธิ์ ไม่แตะ kapi)
+ */
+async function buildEbookBytes(A, cfg, built) {
+  const E = await import('./export-ebook.js');
+  const { PAGE_BREAK } = await import('./compile.js');
+  const JSZip = (await import('jszip')).default;
+  const md = built.md || '';
+  const images = new Map();
+  for (const src of E.collectImageSrcs(md, { breakMarker: PAGE_BREAK })) {
+    const p = pathFromFileUrl(projectImg(src));
+    if (!p) continue;
+    try { images.set(src, new Uint8Array(await kapi.readBytes(p))); }
+    catch (e) { log('warn', tt('ui.xhub.ebookImgFail') + src, e); }
+  }
+  const lang = String((state.settings && state.settings.language) || 'th');
+  const common = { title: built.title || '', author: built.author || '', breakMarker: PAGE_BREAK, images };
+  let pkg;
+  if (cfg.format === 'epub') {
+    const uuid = (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : 'k2-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    pkg = E.buildEpub(md, { ...common, language: lang, identifier: 'urn:uuid:' + uuid });
+  } else {
+    const spf = A.spFormat();
+    const stack = String(liveProseFonts().fontStack || '');
+    const font = stack.split(',')[0].replace(/["']/g, '').trim() || 'Tahoma';
+    pkg = E.buildDocx(md, { ...common, font, fontPt: num(A.proseFormat().fontPt, 16),
+                            paper: spf.paper, margins: spf.margins,
+                            language: lang === 'th' ? 'th-TH' : lang });
+  }
+  const zip = new JSZip();
+  for (const f of pkg.files) zip.file(f.path, f.data, f.store ? { compression: 'STORE' } : {});
+  const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+  const note = cfg.format === 'epub' ? ttf('ui.xhub.doneEpub', pkg.sections, pkg.images)
+                                     : ttf('ui.xhub.doneDocx', pkg.paragraphs, pkg.images);
+  return { bytes, note, pkg };
 }
 
 /**
@@ -266,7 +332,9 @@ async function buildAll(A, cfg, drafts) {
   const engine = pdfEngine(kind);
   // [alpha.133 · Y-3] PDF ของนิยาย = md → HTML → PDF · ผลของเวิร์กโฟลว์จึงยังเป็นมาร์กดาวน์
   // ที่ต้องถูกตีความต่ออีกก้าว (ต่างจาก .md/.txt/.rtf ที่จบเป็นข้อความแบนตรงนั้นเลย)
-  const r = await compose(A, cfg, model, wf2, cfg.format === 'pdf' && engine === 'html');
+  // [alpha.156] EPUB/DOCX ก็ตีความมาร์กดาวน์ต่ออีกก้าว (md.js) — ต้องเก็บคอมเมนต์จัดหน้า/ตัวคั่นหน้าไว้เหมือนกัน
+  const isEbook = cfg.format === 'epub' || cfg.format === 'docx';
+  const r = await compose(A, cfg, model, wf2, (cfg.format === 'pdf' && engine === 'html') || isEbook);
   const { parseScript, stripFountainCodes } = await import('./fountain.js');
   // [alpha.81r ข้อ 4] ทางที่ผ่าน `parseScript` (PDF บทหนัง · rtf · fdx) พาร์เซอร์กินรหัสไปแล้ว
   // ทางที่เหลือเป็น Markdown ล้วน ๆ ต้องตัดรหัส fountain (`@ชื่อ` `.หัวฉาก` `((โน้ต))`) เองที่นี่
@@ -306,6 +374,12 @@ async function buildAll(A, cfg, drafts) {
   // `<Paragraph Type=…>`) ที่ผู้ใช้อ่านไม่รู้เรื่องเลยว่าเนื้อในถูกไหม · เก็บ "บทฉบับข้อความ"
   // ไว้ต่างหากให้ตัววาดพรีวิวใช้ ส่วน `out.text` ยังเป็นตัวจริงที่เขียนลงไฟล์เหมือนเดิม
   if (cfg.format === 'rtf' || cfg.format === 'fdx') out.preview = text;
+  if (isEbook) {
+    // ตัวจริงของไฟล์คือแพ็กเกจซิปที่ประกอบตอนบันทึก (writeOut) · ช่องตัวอย่างโชว์เนื้อที่จะเข้าไปในเล่ม
+    out.md = text;
+    out.author = model.author || '';
+    out.preview = text.replace(/<!--[\s\S]*?-->/g, '');
+  }
   if (cfg.format === 'rtf') {
     const { generateRtf } = await import('./export-rtf.js');
     const { projectTitlePages } = await import('./pdf-ui.js');
@@ -410,7 +484,7 @@ async function renderPreview(host, A, cfg, built) {
   if (!built) { host.append(el('div', 'dim', tt('ui.xhub.noPreview'))); return 'none'; }
   // [alpha.124 ข้อ 26] เตือนตั้งแต่ในช่องตัวอย่าง ไม่ใช่รอให้กดส่งออกแล้วค่อยบอกว่าไม่ได้
   if (def.needScript && built.kind !== 'screenplay')
-    host.append(el('div', 'k-hint xhub-badkind', '⚠ ' + tt('ui.xhub.needScriptOnly')));
+    host.append(el('div', 'k-hint xhub-badkind', gi('warning') + ' ' + tt('ui.xhub.needScriptOnly')));
   // [alpha.132r2] ★ บอกให้เห็น ๆ ว่า "ตามไฟล์ต้นทาง" ตัดสินได้เป็นอะไร
   //
   // ชนิดเอกสารเป็นตัวเลือก **ตัวสร้าง PDF**: นิยาย = md → HTML (ตีความมาร์กดาวน์) ·
@@ -514,7 +588,7 @@ async function renderPreview(host, A, cfg, built) {
       const baseP = exportPageNumberFmt(fmt);
       const numFmtP = { ...baseP,
         pageNumbers: { ...baseP.pageNumbers, show: cfg.pdf.pageNumbers !== false } };
-      const r6 = renderExportPagePreview(host, mdToHtmlBody(built.text, { mono }), css, {
+      const r6 = renderExportPagePreview(host, mdToHtmlBody(built.text, { mono, imgSrc: projectImg }), css, {
         paper: fmt.paper, margins: fmt.margins, scale: fs.scale, gap: 14,
         numTop: fmt.pageNumbers.top, numRight: fmt.pageNumbers.right,
         label: (n) => pageNumberLabel(n, numFmtP, 1),
@@ -712,6 +786,9 @@ export async function openExportHub() {
       c.onchange = () => { cfg.html.wysiwyg = c.checked; saveCfg(); refresh(); };
       colOpt.append(optRow(tt('ui.xhub.htmlWysiwyg'), c));
     }
+    if (cfg.format === 'epub' || cfg.format === 'docx') {
+      colOpt.append(el('div', 'k-hint', tt(cfg.format === 'epub' ? 'ui.xhub.epubHint' : 'ui.xhub.docxHint')));
+    }
     if (cfg.format === 'rtf') {
       colOpt.append(el('div', 'cmp-sub', tt('ui.xhub.rtfOpts')));
       const inp = el('input', 'k-dlg-input'); inp.type = 'number'; inp.min = '6'; inp.max = '48';
@@ -800,5 +877,7 @@ export async function openExportHub() {
   return { ov, cfg, refresh, close, nameRow,
            setFormat: (k) => { cfg.format = k; renderFormats(); renderOptions();
                                nameRow.setExt(formatDef(k).ext); return refresh(); },
-           build: () => buildAll(A, cfg, drafts) };
+           build: () => buildAll(A, cfg, drafts),
+           // [alpha.156] ไบต์ของ EPUB/DOCX โดยไม่ต้องผ่านกล่องบันทึก (e2e ตรวจแพ็กเกจจริง)
+           ebook: async () => buildEbookBytes(A, cfg, await buildAll(A, cfg, drafts)) };
 }

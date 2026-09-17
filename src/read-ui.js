@@ -21,6 +21,7 @@
 import { t, tf } from './i18n.js';
 import { el, log, setStatus, state, withBusy } from './core.js';
 import { escapeHtml, mdToHtmlBody } from './compile.js';
+import { projectImageUrl } from './file-url.js';
 import { mergeProseFormat, proseExportCss } from './prose-format.js';
 import { pageNumberLabel } from './sp-format.js';
 import { DPI, measureProseBlocks, renderProseClipPages, sliceProsePages, withMeasureMode,
@@ -31,6 +32,7 @@ import { bookParts, coverPagesOf, isCoverPart, pageIndexOfY, printedPageNumber,
 import { listSections } from './section-ops.js';
 import { listDraftsForSection } from './drafts.js';
 import { buildDraftModel, proseFormat, spFormat } from './app.js';
+import { gi } from './icons.js';
 
 // ───────────────────────── เก็บเนื้อหาของเล่ม ─────────────────────────
 
@@ -124,7 +126,10 @@ function partHtml(p, first) {
   }
   if (p.kind === 'chapterHead') return brk + '<h1 class="k-rd-chap">' + esc(p.title) + '</h1>';
   // ฉาก — ผ่านตัวแปลง .md ตัวเดียวของทั้งโปรแกรม (ห้ามมีตัวที่สอง · กฎถาวรข้อ 5)
-  return (p.sep ? '<hr class="k-rd-sep">' : '') + mdToHtmlBody(p.body || '', {});
+  // [alpha.149] รูปในเนื้อฉากต้องเป็น URL เต็ม — HTML นี้วางในหน้าโปรแกรม path สัมพัทธ์กับไฟล์ฉาก
+  // จึงถูกนับจาก renderer/index.html (log จริง: `file:///C:/Images/sunset.png`) = รูปหายทั้งเล่ม
+  return (p.sep ? '<hr class="k-rd-sep">' : '')
+    + mdToHtmlBody(p.body || '', { imgSrc: (s) => projectImageUrl(state.root, s) });
 }
 
 /**
@@ -368,9 +373,11 @@ function drawSpread() {
  * เปิดโหมด "อ่านทั้งเล่ม"
  * @param {string} [secPath] เล่มที่จะอ่าน · '' = ทั้งโปรเจกต์
  */
-export async function openBookReader(secPath = '') {
+export async function openBookReader(secPath = '', opts = {}) {
   closeBookReader();
   RD.secPath = String(secPath || '');
+  // [alpha.155] "อ่านทั้งบท" จากเมนูคลิกขวาของบท — ตัวอ่านเดิมทั้งชุด แค่กรองเหลือบทเดียว
+  RD.chapterGuid = String((opts && opts.chapterGuid) || '');
   const ov = el('div', 'k-overlay k-rd-overlay');
   RD.ov = ov;
 
@@ -393,8 +400,8 @@ export async function openBookReader(secPath = '') {
     b.setAttribute('aria-label', title);
     b.onclick = fn; bar.append(b); return b;
   };
-  mkBtn('k-rd-first', '⏮', t('ui.readbook.first'), () => gotoPage(1));
-  mkBtn('k-rd-prev', '◀', t('ui.readbook.prev'), () => gotoPage(RD.page - RD.cols));
+  mkBtn('k-rd-first', gi('skip-previous'), t('ui.readbook.first'), () => gotoPage(1));
+  mkBtn('k-rd-prev', gi('chevron-left'), t('ui.readbook.prev'), () => gotoPage(RD.page - RD.cols));
   const jump = el('input', 'k-rd-jump'); jump.type = 'number'; jump.min = '1';
   jump.title = t('ui.readbook.jump');
   jump.setAttribute('aria-label', t('ui.readbook.jump'));
@@ -403,11 +410,11 @@ export async function openBookReader(secPath = '') {
   const pageNo = el('div', 'k-rd-pageno', '…');
   pageNo.title = t('ui.readbook.pageTip');
   bar.append(pageNo);
-  mkBtn('k-rd-next', '▶', t('ui.readbook.next'), () => gotoPage(RD.page + RD.cols));
-  mkBtn('k-rd-last', '⏭', t('ui.readbook.last'), () => gotoPage(pageCount()));
-  const colsBtn = mkBtn('k-rd-cols', '▥', t('ui.readbook.spread'), () => {
+  mkBtn('k-rd-next', gi('play'), t('ui.readbook.next'), () => gotoPage(RD.page + RD.cols));
+  mkBtn('k-rd-last', gi('skip-next'), t('ui.readbook.last'), () => gotoPage(pageCount()));
+  const colsBtn = mkBtn('k-rd-cols', gi('page-double'), t('ui.readbook.spread'), () => {
     RD.cols = RD.cols === 1 ? 2 : 1;
-    colsBtn.textContent = RD.cols === 1 ? '▯' : '▥';
+    colsBtn.textContent = RD.cols === 1 ? gi('page-single') : gi('page-double');
     colsBtn.title = RD.cols === 1 ? t('ui.readbook.spreadTo2') : t('ui.readbook.spreadTo1');
     drawSpread();
   });
@@ -415,7 +422,7 @@ export async function openBookReader(secPath = '') {
   mkBtn('k-rd-zoomout', '−', t('ui.readbook.zoomOut'), () => { RD.zoom = Math.max(0.4, RD.zoom - 0.1); drawSpread(); });
   mkBtn('k-rd-zoomin', '+', t('ui.readbook.zoomIn'), () => { RD.zoom = Math.min(2.5, RD.zoom + 0.1); drawSpread(); });
   mkBtn('k-rd-fit', '⤢', t('ui.readbook.fit'), () => { RD.zoom = 1; drawSpread(); });
-  mkBtn('k-rd-close k-danger', '✕', t('ui.readbook.close'), () => closeBookReader());
+  mkBtn('k-rd-close k-danger', gi('close'), t('ui.readbook.close'), () => closeBookReader());
 
   const stage = el('div', 'k-rd-stage sp-pageview');
   stage.title = t('ui.readbook.stageTip');
@@ -446,6 +453,11 @@ export async function openBookReader(secPath = '') {
   try {
     await withBusy(t('ui.readbook.busy'), async () => {
       RD.books = await collectBooks(RD.secPath);
+      if (RD.chapterGuid) {
+        RD.books = RD.books
+          .map((b) => ({ ...b, chapters: (b.chapters || []).filter((c) => c.guid === RD.chapterGuid) }))
+          .filter((b) => b.chapters.length);
+      }
       if (!RD.books.length) throw new Error(t('ui.readbook.empty'));
       RD.doc = await buildBookDoc(RD.books);
       RD.mz = await measureBookDoc(RD.doc);

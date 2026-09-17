@@ -21,6 +21,7 @@
 import { $, el, state, setStatus, log, t } from './core.js';
 import { buildGraph, analyzeGraph } from './branch-graph.js';
 import { collectScenes } from './branching-ui.js';
+import { gi } from './icons.js';
 
 const tr = (key, fb) => t('player.' + key, fb);
 const MAX_RUNS = 40;                    // เก็บรอบการเล่นล่าสุดเท่านี้ (ไฟล์โปรเจกต์ไม่บวม)
@@ -161,12 +162,12 @@ export async function renderPlayer(host, opts = {}) {
   // ───────── หัวแถบ ─────────
   const head = el('div', 'player-head');
   const titleBox = el('div', 'player-titlebox');
-  titleBox.append(el('div', 'player-title', '📄 ' + node.title));
+  titleBox.append(el('div', 'player-title', gi('file') + ' ' + node.title));
   titleBox.append(el('div', 'player-sub',
     (node.chapterName ? node.chapterName + ' · ' : '') +
     `${tr('step', t('ui.player.step2'))} ${step}` +
-    (analysis.roots.includes(node.id) ? ' · ▶ ' + tr('atStart', t('ui.common.dotStart')) : '') +
-    (!node.choices.length ? ' · 🏁 ' + tr('atEnd', t('ui.common.actEnd')) : '')));
+    (analysis.roots.includes(node.id) ? ' · ' + gi('play') + ' ' + tr('atStart', t('ui.common.dotStart')) : '') +
+    (!node.choices.length ? ' · ' + gi('flag-finish') + ' ' + tr('atEnd', t('ui.common.actEnd')) : '')));
   head.append(titleBox);
 
   const tools = el('div', 'player-tools');
@@ -177,7 +178,7 @@ export async function renderPlayer(host, opts = {}) {
   for (const id of startIds) {
     const n = graph.byId.get(id);
     if (!n) continue;
-    const o = el('option', null, '▶ ' + n.title); o.value = id; startSel.append(o);
+    const o = el('option', null, gi('play') + ' ' + n.title); o.value = id; startSel.append(o);
   }
   startSel.value = run.startSceneId;
   startSel.onchange = () => { ps.run = newRun(graph.byId.get(startSel.value)); persistRun(ps.run); renderPlayer(host); };
@@ -190,14 +191,14 @@ export async function renderPlayer(host, opts = {}) {
     persistRun(ps.run);
     renderPlayer(host);
   };
-  const openB = el('button', 'player-btn', '✏️ ' + tr('editScene', t('ui.player.editScene2')));
+  const openB = el('button', 'player-btn', gi('pencil-e') + ' ' + tr('editScene', t('ui.player.editScene2')));
   openB.title = tr('editSceneHint', t('ui.player.openSceneAreaWrite'));
   openB.onclick = async () => {
     if (!node.filePath) { setStatus(tr('noFile', t('ui.common.sceneNotHasFile'))); return; }
     const { openScene } = await import('./app.js');
     await openScene(node.filePath, node.title);
   };
-  const mapB = el('button', 'player-btn', '🌿 ' + tr('showOnMap', t('ui.player.viewTopGraph')));
+  const mapB = el('button', 'player-btn', gi('branch') + ' ' + tr('showOnMap', t('ui.player.viewTopGraph')));
   mapB.onclick = async () => {
     const { openBranchingTree } = await import('./branching-ui.js');
     if (state._branch) state._branch.sel = node.id;
@@ -205,7 +206,7 @@ export async function renderPlayer(host, opts = {}) {
     await openBranchingTree();
   };
   // เนื้อฉากถูกเก็บไว้ใช้ซ้ำระหว่างเดินเรื่อง → ต้องมีทางสั่งอ่านใหม่หลังไปแก้ต้นฉบับมา
-  const reloadB = el('button', 'player-btn', '🔄');
+  const reloadB = el('button', 'player-btn', gi('refresh'));
   reloadB.title = tr('reload', t('ui.player.readBodyStoryNew'));
   reloadB.onclick = () => renderPlayer(host, { reload: true });
   tools.append(restartB, openB, mapB, reloadB);
@@ -215,7 +216,7 @@ export async function renderPlayer(host, opts = {}) {
   // ───────── เส้นทางที่เดินมา (breadcrumb) ─────────
   const trail = el('div', 'player-trail');
   run.steps.forEach((s, i) => {
-    if (i) trail.append(el('span', 'player-trail-sep', '→'));
+    if (i) trail.append(el('span', 'player-trail-sep', gi('arrow-right')));
     const chip = el('span', 'player-trail-chip' + (i === run.steps.length - 1 ? ' on' : ''), s.sceneTitle);
     chip.title = (s.choice ? `[${s.choice}] → ` : '') + s.sceneTitle + ' — ' + tr('jumpBack', t('ui.player.clickUndo'));
     chip.onclick = () => {
@@ -265,8 +266,8 @@ export async function renderPlayer(host, opts = {}) {
       const b = el('button', 'player-choice' + (target ? '' : ' player-choice-dead'));
       b.append(el('span', 'player-choice-text', c.text || tr('aChoice', t('ui.common.choice'))));
       b.append(el('span', 'player-choice-to',
-        target ? '→ ' + target.title
-               : (c.nextSceneId ? '→ ' + tr('goneScene', t('ui.common.sceneFind')) : tr('noTarget', t('ui.common.notSpecifyTo2')))));
+        target ? gi('arrow-right') + ' ' + target.title
+               : (c.nextSceneId ? gi('arrow-right') + ' ' + tr('goneScene', t('ui.common.sceneFind')) : tr('noTarget', t('ui.common.notSpecifyTo2')))));
       if (c.color) b.style.borderLeftColor = c.color;
       if (!target) {
         b.title = tr('deadHint', t('ui.player.choiceNotHasTo'));
@@ -289,14 +290,14 @@ export async function renderPlayer(host, opts = {}) {
       choiceBox.append(b);
     });
   } else {
-    choiceBox.append(el('div', 'player-end', '🏁 ' + tr('theEnd', t('ui.player.endBranchDone'))));
+    choiceBox.append(el('div', 'player-end', gi('flag-checkered') + ' ' + tr('theEnd', t('ui.player.endBranchDone'))));
     choiceBox.append(el('div', 'dim', `${tr('walked', t('ui.player.all'))} ${run.steps.length} ${tr('scenesUnit', t('ui.common.scene2'))}`));
   }
   wrap.append(choiceBox);
 
   // ───────── แถบล่าง: ย้อนกลับ · ประวัติ ─────────
   const foot = el('div', 'player-foot');
-  const backB = el('button', 'player-btn player-back', '◀ ' + tr('back', t('ui.player.undo')));
+  const backB = el('button', 'player-btn player-back', gi('chevron-left') + ' ' + tr('back', t('ui.player.undo')));
   backB.disabled = run.steps.length < 2;
   backB.title = tr('backHint', t('ui.player.oneStepChoiceLatest'));
   backB.onclick = async () => {
@@ -306,7 +307,7 @@ export async function renderPlayer(host, opts = {}) {
     await persistRun(run);
     renderPlayer(host);
   };
-  const histB = el('button', 'player-btn', '🎯 ' + tr('history', t('ui.common.history')) + ` (${getPlaythroughs().length})`);
+  const histB = el('button', 'player-btn', gi('target') + ' ' + tr('history', t('ui.common.history')) + ` (${getPlaythroughs().length})`);
   histB.title = tr('historyHint', t('ui.player.roundPlayAll'));
   histB.onclick = () => showPlaythroughsDialog(graph, host);
   foot.append(backB, histB);
@@ -321,7 +322,7 @@ export function showPlaythroughsDialog(graph, host) {
   const runs = [...getPlaythroughs()].reverse();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog branch-dlg');
-  box.append(el('div', 'k-dlg-title', '🎯 ' + tr('runsTitle', t('ui.player.roundPlay')) + ` (${runs.length})`));
+  box.append(el('div', 'k-dlg-title', gi('target') + ' ' + tr('runsTitle', t('ui.player.roundPlay')) + ` (${runs.length})`));
   const list = el('div', 'k-pick-list');
   list.style.maxHeight = '50vh';
   if (!runs.length) {
@@ -333,7 +334,7 @@ export function showPlaythroughsDialog(graph, host) {
     try { when = new Date(r.startedAt).toLocaleString(); } catch {}
     const path = (r.steps || []).map((s) => s.sceneTitle).join(' → ');
     row.append(el('div', 'player-run-head',
-      `${r.endedAt ? '🏁' : '▶'} ${(r.steps || []).length} ${tr('scenesUnit', t('ui.common.scene2'))} · ${when}`));
+      `${r.endedAt ? gi('flag-checkered') : gi('play')} ${(r.steps || []).length} ${tr('scenesUnit', t('ui.common.scene2'))} · ${when}`));
     const p = el('div', 'player-run-path', path);
     p.title = path;
     row.append(p);
@@ -349,7 +350,7 @@ export function showPlaythroughsDialog(graph, host) {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const expB = el('button', null, '📥 ' + tr('exportRuns', t('ui.common.export')));
+  const expB = el('button', null, gi('import') + ' ' + tr('exportRuns', t('ui.common.export')));
   expB.onclick = async () => {
     const dest = await kapi.saveAsDialog('playthroughs.json', 'json');
     if (!dest) return;

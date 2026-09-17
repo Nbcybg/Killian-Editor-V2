@@ -196,12 +196,14 @@ async function runInstall(info, src, ui) {
   }); } catch {}
 
   let dl = null;
-  try { dl = await kapi.updateDownload(info.assetUrl, info.assetName); }
+  try { dl = await kapi.updateDownload(info.assetUrl, info.assetName, info.assetDigest || ''); }
   catch (e) { dl = { ok: false, error: String((e && e.message) || e) }; }
   try { off && off(); } catch {}
 
   if (!dl || !dl.ok) {
-    const msg = dl && dl.error === 'blocked' ? t('ui.upd.badUrl') : tf('ui.upd.failDl', (dl && dl.error) || '?');
+    const msg = dl && dl.error === 'blocked' ? t('ui.upd.badUrl')
+      : dl && dl.error === 'digest-mismatch' ? t('ui.upd.badDigest')
+      : tf('ui.upd.failDl', (dl && dl.error) || '?');
     log('error', msg);
     ptxt.textContent = msg;
     for (const b of btns.querySelectorAll('button')) b.disabled = false;

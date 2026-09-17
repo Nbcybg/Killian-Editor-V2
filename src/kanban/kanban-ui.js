@@ -5,6 +5,7 @@ import { allStatuses, statusColor } from '../custom-status.js';
 import { chapterFolders, scenePath, syncIo } from '../project-scan.js';
 import { ask } from '../ui.js';
 import { showPanel, isPanelOpen } from '../panels/panel-ui.js';
+import { gi } from '../icons.js';
 
 let board = null;   // KanbanBoard instance
 
@@ -94,7 +95,7 @@ function renderKanban(b) {
 
   // หัวกระดาน + ปุ่มเพิ่มคอลัมน์
   const head = el('div', 'kb-head');
-  head.append(el('span', 'kb-title', '📋 Kanban — ' + data.total + t('ui.common.scene')));
+  head.append(el('span', 'kb-title', gi('clipboard') + ' Kanban — ' + data.total + t('ui.common.scene')));
   const addBtn = el('button', 'kb-add-col', t('ui.kanban.add'));
   addBtn.onclick = async () => {
     // window.prompt() เป็น no-op ใน Electron — ต้องใช้กล่องของโปรแกรมเอง
@@ -128,7 +129,7 @@ function renderKanban(b) {
     const colHex = statusColor(col.key);
     if (colHex) colHead.style.borderTop = '3px solid ' + colHex;
     const colTitle = el('span', 'kb-col-title');
-    colTitle.textContent = (col.over ? '⚠ ' : '') + col.label + ' (' + col.count + ')';
+    colTitle.textContent = (col.over ? gi('warning') + ' ' : '') + col.label + ' (' + col.count + ')';
     colHead.append(colTitle);
 
     // ปุ่มลบคอลัมน์ (เฉพาะคอลัมน์ที่กำหนดเอง)
@@ -144,7 +145,7 @@ function renderKanban(b) {
     }
 
     // ยุบ/ขยาย
-    const toggleBtn = el('span', 'kb-col-toggle', col.collapsed ? '▶' : '▼');
+    const toggleBtn = el('span', 'kb-col-toggle', col.collapsed ? gi('play') : gi('triangle-down'));
     toggleBtn.onclick = async () => {
       b.store.layout = { ...b.store.layout, collapsed: col.collapsed
         ? b.store.layout.collapsed.filter((k) => k !== col.key)

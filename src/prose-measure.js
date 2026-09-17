@@ -224,6 +224,30 @@ export function domLineRects(el, zoomFactor) {
       lastH = Math.max(lastH, r.height);                // ชิ้นส่วนอื่นของบรรทัดเดียวกัน
     }
   }
+
+  // ══ [alpha.149] ★ บรรทัดว่างที่เกิดจาก Shift+Enter ก็เป็น "บรรทัด" ══
+  //
+  // ผู้ใช้: *"การตัดหน้าโดยใช้ Shift+Enter มันไม่แบ่งหน้า แต่ยกทั้งย่อหน้าไปไว้อีกหน้า"*
+  //
+  // ตัวอ่านบรรทัดข้างบนเห็นแต่ **text node** — บรรทัดว่างมีแค่ `<br>` ไม่มีตัวอักษรเลย
+  // จึงไม่เคยถูกนับเป็นจุดตัด · ย่อหน้าที่กด Shift+Enter เว้นบรรทัดไว้หลายบรรทัด (ท่าที่คนเขียน
+  // ใช้ดันเนื้อลงไป) เลยเหลือจุดตัดแค่บรรทัดที่มีตัวอักษร → `lineCut()` หาจุดไม่ได้ →
+  // ตกไปทาง "ยกทั้งบล็อกไปหน้าใหม่" แล้วท้ายหน้าก่อนเหลือที่ว่างเป็นสิบบรรทัด
+  //
+  // `<br>` มีกล่องสูงเท่าบรรทัดจริง (กว้าง 0) อยู่บนกริดเดียวกับตัวอักษร (วัดจริง: สูง 19 ห่าง 28 เท่าข้อความ)
+  // → เก็บเฉพาะ `<br>` ที่ **ไม่มีตัวอักษรอยู่บรรทัดเดียวกัน** (ตัวที่ปิดท้ายบรรทัดข้อความถูกข้าม
+  //   ไม่งั้นจุดตัดของบรรทัดนั้นจะชี้ไป "ท้ายบรรทัด" แทน "ต้นบรรทัด")
+  let added = false;
+  for (const br of el.querySelectorAll('br')) {
+    if (br.closest('.' + GAP_CLASS)) continue;
+    const r = br.getBoundingClientRect();
+    if (!(r.height > 0)) continue;
+    const tol = Math.max(2, Math.min(r.height * 0.5, 12));
+    if (lines.some((l) => Math.abs(l.top - r.top) <= tol)) continue;
+    lines.push({ offset: (r.top - top0 - gapAbove(r.top)) / z, top: r.top, node: br });
+    added = true;
+  }
+  if (added) lines.sort((a, b) => a.top - b.top);
   return lines;
 }
 
@@ -538,7 +562,12 @@ export function prosePosAtCut(view, blocks, y) {
         // "ตอนนี้" — ผู้เรียกอยู่ในโหมดยุบเส้นคั่นอยู่แล้ว ช่องว่างจึงไม่มีผลกับผลลัพธ์
         const zNow = zoomFactorOf(view.dom);
         const topNow = b.el.getBoundingClientRect().top + ln.offset * zNow;
-        const p = view.posAtDOM(ln.node, lineStartCharOffset(ln.node, topNow));
+        // [alpha.149] บรรทัดว่าง (Shift+Enter) มี `<br>` เป็นตัวแทน ไม่ใช่ text node
+        // → "ก่อน `<br>` ตัวนั้น" = ต้นบรรทัดว่างพอดี (ต่อจาก `<br>` ที่ปิดบรรทัดก่อนหน้า)
+        const p = ln.node.nodeType === 3
+          ? view.posAtDOM(ln.node, lineStartCharOffset(ln.node, topNow))
+          : view.posAtDOM(ln.node.parentNode,
+                          Array.prototype.indexOf.call(ln.node.parentNode.childNodes, ln.node));
         CUT_FAIL.ok++;
         return p;
       } catch { CUT_FAIL.threw++; return null; }

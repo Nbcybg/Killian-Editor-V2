@@ -22,13 +22,14 @@ import {
 } from './starter-render-prose.js';
 import { spPrompt, spBody } from './starter-render-sp.js';
 import { writeScenario } from './starter-store.js';
+import { gi } from '../icons.js';
 
 /** ชื่อเล่มปลายทาง — **เป็นข้อมูลบนดิสก์ ไม่ใช่ข้อความ UI** จึงไม่แปลตามภาษา */
 export const EXPORT_BOOK = 'Story Starter';
 
 export const FORMATS = [
-  { id: 'prose', label: t('ui.starter.cvProse'), icon: '📖' },
-  { id: 'screenplay', label: t('ui.starter.cvSp'), icon: '🎬' },
+  { id: 'prose', label: t('ui.starter.cvProse'), icon: gi('book-open') },
+  { id: 'screenplay', label: t('ui.starter.cvSp'), icon: gi('film') },
 ];
 
 // ───────────────────────── หาที่ลง ─────────────────────────

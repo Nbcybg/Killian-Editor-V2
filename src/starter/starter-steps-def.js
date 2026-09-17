@@ -10,16 +10,17 @@
 
 import { t } from '../i18n.js';
 import { charReady, hasIntro } from './starter-model.js';
+import { gi } from '../icons.js';
 
 /**
  * ช่อง 4W — **map เปิด** ค่าเก็บใน `starter.w[key]`
  * `key` ถูกเขียนลงไฟล์ จึงต้องเป็นภาษาอังกฤษคงที่ · `label` เป็นคำแปลเท่านั้น
  */
 export const W_FIELDS = [
-  { key: 'what',  icon: '❓', label: t('ui.starter.wWhat'),  hint: t('ui.starter.wWhatHint') },
-  { key: 'when',  icon: '🕓', label: t('ui.starter.wWhen'),  hint: t('ui.starter.wWhenHint') },
-  { key: 'where', icon: '📍', label: t('ui.starter.wWhere'), hint: t('ui.starter.wWhereHint') },
-  { key: 'why',   icon: '🎯', label: t('ui.starter.wWhy'),   hint: t('ui.starter.wWhyHint') },
+  { key: 'what',  icon: gi('question'), label: t('ui.starter.wWhat'),  hint: t('ui.starter.wWhatHint') },
+  { key: 'when',  icon: gi('clock-4'), label: t('ui.starter.wWhen'),  hint: t('ui.starter.wWhenHint') },
+  { key: 'where', icon: gi('map-pin'), label: t('ui.starter.wWhere'), hint: t('ui.starter.wWhereHint') },
+  { key: 'why',   icon: gi('target'), label: t('ui.starter.wWhy'),   hint: t('ui.starter.wWhyHint') },
 ];
 /** ช่อง 4W ที่กรอกแล้ว → [{key,label,value}] (ใช้ทั้งใน UI และตอนสร้าง prompt) */
 export function filledW(s) {
@@ -56,24 +57,24 @@ export function isPresetTag(tag) {
  * `required:false` = ข้ามได้ ไม่นับในแถบความคืบหน้า และไม่กันปุ่ม "เสร็จสิ้น"
  */
 export const STEPS = [
-  { id: 'tags', icon: '🏷', required: true,
+  { id: 'tags', icon: gi('tag'), required: true,
     title: t('ui.starter.stepTags'), desc: t('ui.starter.stepTagsDesc'),
     filled: (s) => (s.tags || []).length > 0 },
 
-  { id: 'intro', icon: '📖', required: true,
+  { id: 'intro', icon: gi('book-open'), required: true,
     title: t('ui.starter.stepIntro'), desc: t('ui.starter.stepIntroDesc'),
     // [alpha.96] คำบรรยายเป็น HTML แล้ว — `<p><br></p>` ที่ตัวแก้ไขทิ้งไว้ต้องไม่นับว่ากรอกแล้ว
     filled: (s) => !!String(s.name || '').trim() && hasIntro(s) },
 
-  { id: 'cast', icon: '👥', required: true,
+  { id: 'cast', icon: gi('group'), required: true,
     title: t('ui.starter.stepCast'), desc: t('ui.starter.stepCastDesc'),
     filled: (s) => (s.cast || []).some(charReady) },
 
-  { id: 'w', icon: '🧭', required: false,
+  { id: 'w', icon: gi('compass'), required: false,
     title: t('ui.starter.stepW'), desc: t('ui.starter.stepWDesc'),
     filled: (s) => filledW(s).length > 0 },
 
-  { id: 'cover', icon: '🖼', required: false,
+  { id: 'cover', icon: gi('frame'), required: false,
     title: t('ui.starter.stepCover'), desc: t('ui.starter.stepCoverDesc'),
     filled: (s) => !!String(s.cover || '').trim() || !!String(s.banner || '').trim() },
 ];

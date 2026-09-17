@@ -14,6 +14,7 @@ import { aiConfigured, callAI } from '../ai-settings.js';
 import * as AC from './album-core.js';
 import * as TG from './album-tags.js';
 import { usageOf } from './usage-index.js';
+import { gi } from '../icons.js';
 
 /** ขนาดด้านยาวสุดของภาพที่ส่งให้ AI — ใหญ่กว่านี้เปลือง token โดยไม่ได้อะไรเพิ่ม */
 const VISION_EDGE = 768;
@@ -97,7 +98,7 @@ const SYS_TAG = tt('ui.galleryAi.youHelpSetTag') +
  */
 export async function aiCaptionImages(root, items, { usage = null, overwrite = false } = {}) {
   const cfg = await aiConfigured();
-  if (!cfg.ok) { setStatus('❌ AI: ' + cfg.why); return 0; }
+  if (!cfg.ok) { setStatus(gi('fail') + ' AI: ' + cfg.why); return 0; }
   const list = (items || []).filter((i) => overwrite || !i.caption ||
     i.caption === i.file.replace(/\.[^.]+$/, ''));
   if (!list.length) { setStatus(tt('ui.galleryAi.imagePickHasCaption')); return 0; }
@@ -141,7 +142,7 @@ export function parseTagAnswer(text, { entities = [] } = {}) {
 /** แนะนำแท็กให้รูปที่เลือก (เพิ่มทับของเดิม ไม่ลบแท็กที่ผู้ใช้ตั้งเอง) → จำนวนใบที่เปลี่ยน */
 export async function aiTagImages(root, items, { usage = null, entities = [] } = {}) {
   const cfg = await aiConfigured();
-  if (!cfg.ok) { setStatus('❌ AI: ' + cfg.why); return 0; }
+  if (!cfg.ok) { setStatus(gi('fail') + ' AI: ' + cfg.why); return 0; }
   const list = items || [];
   if (!list.length) return 0;
   let n = 0;

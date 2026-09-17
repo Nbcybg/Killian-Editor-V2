@@ -26,6 +26,7 @@ import { renderChat, resetChatState } from './starter-chat.js';
 import { offerReconcile } from './starter-wiki.js';
 import { resetCastEditor, pruneBlank } from './starter-cast.js';
 import { exportStarterZip, importStarterZip } from './starter-pack.js';
+import { gi } from '../icons.js';
 
 // สถานะของแผง — แผงเดียวในแอป (ES module: ต้องเก็บใน object ไม่ใช่ let ที่ export)
 const S = {
@@ -165,12 +166,12 @@ async function renderList(host) {
   host.append(wrap);
 
   const head = el('div', 'st-list-head');
-  head.append(el('div', 'st-list-title', '✨ Story Starter'));
+  head.append(el('div', 'st-list-title', gi('magic') + ' Story Starter'));
   const add = el('button', 'k-ok', '+ ' + t('ui.starter.createNew'));
   add.onclick = () => createFlow();
   head.append(add);
   // นำเข้าจากไฟล์ .zip ที่คนอื่นส่งมา (หรือของตัวเองจากอีกโปรเจกต์)
-  const imp = el('button', null, '📥 ' + t('ui.starter.packImport'));
+  const imp = el('button', null, gi('import') + ' ' + t('ui.starter.packImport'));
   imp.title = t('ui.starter.packImportHint');
   imp.onclick = async () => {
     const got = await importStarterZip();
@@ -211,7 +212,7 @@ async function renderList(host) {
       const cover = el('div', 'st-img-box st-img-cover st-card-cover');
       const url = await imageUrl(s.slug, s.cover);
       if (url) { const im = el('img'); im.src = url; im.alt = s.name || ''; cover.append(im); }
-      else cover.append(el('span', 'st-card-noimg', '📖'));
+      else cover.append(el('span', 'st-card-noimg', gi('book-open')));
       card.append(cover);
 
       const body = el('div', 'st-card-body');
@@ -230,7 +231,7 @@ async function renderList(host) {
       const btns = el('div', 'st-card-btns');
       const open = el('button', 'k-ok', s.done ? t('ui.starter.open') : t('ui.starter.continueSetup'));
       open.onclick = () => openStarter(s.slug, s.done ? 'home' : 'wizard');
-      const exp = el('button', null, '📤');
+      const exp = el('button', null, gi('export'));
       exp.title = t('ui.starter.packExport');
       exp.onclick = () => exportStarterZip(s);
       const del = el('button', 'st-danger', t('ui.common.del'));

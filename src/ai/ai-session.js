@@ -8,20 +8,21 @@
 // ไฟล์นี้ไม่แตะ DOM/fs/network — เป็นแค่โครงข้อมูล + การคำนวณสถิติ → unit test ได้ตรง ๆ
 
 import { t as tt, t, T } from '../i18n.js';
+import { gi } from '../icons.js';
 export const SESSION_DIR = 'Sessions';
 export const SESSION_VERSION = 1;
 
 // โหมดการทำงานของผู้ช่วย (ผู้ใช้สลับได้ที่กล่องพิมพ์)
 // `cap` = สิทธิ์ที่ส่งให้ ai-tools.js ตัดสินว่าคำสั่งไหนเรียกได้ ('read' | 'write' | 'full')
 export const CHAT_MODES = [
-  { id: 'plan',  label: tt('ui.aiSession.plannerRead'), icon: '📖', write: false, cap: 'read',
+  { id: 'plan',  label: tt('ui.aiSession.plannerRead'), icon: gi('book-open'), write: false, cap: 'read',
     system: tt('ui.aiSession.youAssistantWriterMode') +
             tt('ui.aiSession.readProjectCmdRead') +
             tt('ui.aiSession.userEditTextEdit') },
-  { id: 'write', label: tt('ui.aiSession.helpWriteNewEdit'), icon: '✍️', write: true, cap: 'write',
+  { id: 'write', label: tt('ui.aiSession.helpWriteNewEdit'), icon: gi('write-e'), write: true, cap: 'write',
     system: tt('ui.aiSession.youAssistantWriterMode2') +
             tt('ui.aiSession.delCantWriteNext') },
-  { id: 'agent', label: tt('ui.aiSession.unlockFullDoAll'), icon: '🔓', write: true, cap: 'full',
+  { id: 'agent', label: tt('ui.aiSession.unlockFullDoAll'), icon: gi('lock-open'), write: true, cap: 'full',
     system: tt('ui.aiSession.youAssistantWriterAct') +
             tt('ui.aiSession.cmdBottomRunEnd') +
             tt('ui.aiSession.beforeDelResultShort') },
@@ -33,13 +34,13 @@ export function modeCap(id) { return modeDef(id).cap || 'read'; }
 
 // มุมมอง transcript — เปลี่ยนได้ที่หัวเซสชัน มีผลกับการแสดงผลเท่านั้น (ไม่กระทบข้อมูล)
 export const TRANSCRIPT_VIEWS = [
-  { id: 'normal',   label: tt('ui.aiSession.normal'),       icon: '💬',
+  { id: 'normal',   label: tt('ui.aiSession.normal'),       icon: gi('chat'),
     hint: tt('ui.aiSession.onlyDialogueHideBlock') },
-  { id: 'thinking', label: tt('ui.aiSession.idea'),     icon: '🧠',
+  { id: 'thinking', label: tt('ui.aiSession.idea'),     icon: gi('brain'),
     hint: tt('ui.aiSession.dialogueIdeaModelSend') },
-  { id: 'verbose',  label: tt('ui.common.detailed'),     icon: '🔍',
+  { id: 'verbose',  label: tt('ui.common.detailed'),     icon: gi('search'),
     hint: tt('ui.aiSession.allSystemPromptContext') },
-  { id: 'summary',  label: tt('ui.common.summary'),        icon: '📋',
+  { id: 'summary',  label: tt('ui.common.summary'),        icon: gi('clipboard'),
     hint: tt('ui.aiSession.collapseLineNextText') },
 ];
 export const DEFAULT_VIEW = 'normal';
@@ -163,7 +164,35 @@ export function newMessage(role, text, patch = {}) {
     system: patch.system || '',       // system prompt ที่ใช้จริงในรอบนี้ (โหมดละเอียด)
     ms: patch.ms || 0,                // เวลาที่ใช้รอคำตอบ (ms)
     toolResult: !!patch.toolResult,   // ข้อความนี้คือผลคำสั่งที่ป้อนกลับให้โมเดล ไม่ใช่ผู้ใช้พิมพ์เอง
+    // [alpha.149] คำตอบไม่ครบ → UI โชว์ปุ่ม "ต่อ"
+    truncated: !!patch.truncated,     // ชนเพดาน Max Tokens (finish_reason = length)
+    partial: !!patch.partial,         // ถูกหยุด/หมดเวลา/พังกลางทาง แต่มีข้อความที่ไหลมาแล้ว (เก็บไว้ ไม่ทิ้ง)
   };
+}
+
+/**
+ * [alpha.149] ต่อข้อความจากปุ่ม "ต่อ" เข้ากับคำตอบเดิม — บริสุทธิ์
+ * โมเดลมักทวนท้ายของเดิมซ้ำสองสามคำก่อนเขียนต่อ → ตัดส่วนที่ซ้อนกันออก (ยาวสุด 200 ตัวอักษร · สั้นสุด 8)
+ * ไม่เติมช่องว่างให้เอง: ภาษาไทยไม่มีช่องว่างระหว่างคำ และคำตอบมักถูกตัดกลางคำอยู่แล้ว
+ */
+export function joinContinuation(prev, next) {
+  const a = String(prev ?? '');
+  const b = String(next ?? '');
+  if (!b) return a;
+  if (!a) return b;
+  const max = Math.min(200, a.length, b.length);
+  for (let k = max; k >= 8; k--) {
+    if (a.endsWith(b.slice(0, k))) return a + b.slice(k);
+  }
+  return a + b;
+}
+
+/** [alpha.149] ข้อความนี้กด "ต่อ" ได้ไหม — ต้องเป็นคำตอบล่าสุดของเซสชัน และยังไม่ครบ */
+export function canContinue(session, msg) {
+  if (!session || !msg || msg.role !== 'assistant' || msg.toolResult) return false;
+  if (!(msg.truncated || msg.partial) || !String(msg.text || '').trim()) return false;
+  const last = [...(session.messages || [])].reverse().find((m) => !m.toolResult);
+  return !!last && last.id === msg.id;
 }
 
 /** เพิ่มข้อความ (คืนเซสชันใหม่ · ไม่แก้ของเดิม) */

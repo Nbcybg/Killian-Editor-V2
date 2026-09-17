@@ -154,5 +154,38 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   }
 }
 
+// ═══════════ [alpha.148] ปลั๊กอินของโปรเจกต์ต้องได้รับอนุญาตก่อนรัน ═══════════
+{
+  const a = [{ folder: 'demo', manifest: '{"name":"x"}', code: 'k2.registerCommand("a")' }];
+  const fp = P.pluginFingerprint(a);
+  check('ลายนิ้วมือไม่ว่างเมื่อมีปลั๊กอิน', !!fp && /^1:/.test(fp), fp);
+  check('ไม่มีปลั๊กอิน = ลายนิ้วมือว่าง', P.pluginFingerprint([]) === '' && P.pluginFingerprint(null) === '');
+  check('ลำดับโฟลเดอร์ไม่มีผล', P.pluginFingerprint([a[0], { folder: 'b', manifest: '', code: 'x' }])
+        === P.pluginFingerprint([{ folder: 'b', manifest: '', code: 'x' }, a[0]]));
+  check('★ แก้โค้ดแม้ตัวเดียว = ลายนิ้วมือเปลี่ยน',
+        P.pluginFingerprint([{ ...a[0], code: a[0].code + ';fetch("evil")' }]) !== fp);
+  check('★ เพิ่มปลั๊กอินตัวใหม่ = ลายนิ้วมือเปลี่ยน',
+        P.pluginFingerprint([...a, { folder: 'new', manifest: '{}', code: '' }]) !== fp);
+  check('แก้ manifest = ลายนิ้วมือเปลี่ยน', P.pluginFingerprint([{ ...a[0], manifest: '{"name":"y"}' }]) !== fp);
+  check('hashText คงที่และยาว 8 หลัก', P.hashText('ทดสอบ') === P.hashText('ทดสอบ') && P.hashText('ทดสอบ').length === 8);
+
+  const trust = { '/p/novel': fp };
+  check('อนุญาตแล้ว = ผ่าน', P.isPluginSetTrusted(trust, '/p/novel', fp) === true);
+  check('★ ยังไม่เคยอนุญาต = ไม่ผ่าน', P.isPluginSetTrusted({}, '/p/novel', fp) === false);
+  check('★ อนุญาตโปรเจกต์อื่น ไม่นับ', P.isPluginSetTrusted(trust, '/p/other', fp) === false);
+  check('★ อนุญาตไว้แต่ชุดปลั๊กอินเปลี่ยน = ถามใหม่', P.isPluginSetTrusted(trust, '/p/novel', fp + 'x') === false);
+  check('ไม่มีปลั๊กอิน = ไม่ต้องถาม', P.isPluginSetTrusted(null, '/p/novel', '') === true);
+
+  const list = P.mergePluginList(
+    [{ name: 'ok1', origin: P.ORIGIN_USER }],
+    [{ name: 'proj', origin: P.ORIGIN_PROJECT, untrusted: true, error: 'x' }]);
+  const proj = list.find((p) => p.name === 'proj');
+  check('รายการที่ยังไม่อนุญาตได้สถานะ untrusted ไม่ใช่ "พัง"',
+        proj && proj.status === P.ST_UNTRUSTED && proj.failed === false, JSON.stringify(proj));
+  check('รออนุญาตขึ้นก่อนเพื่อนในแผง', list[0].name === 'proj', list.map((p) => p.name).join(','));
+  const cnt = P.pluginCounts(list);
+  check('นับรออนุญาตแยก ไม่ปนกับทำงานอยู่', cnt.untrusted === 1 && cnt.ok === 1 && cnt.err === 0, JSON.stringify(cnt));
+}
+
 console.log(`\nplugin-core: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

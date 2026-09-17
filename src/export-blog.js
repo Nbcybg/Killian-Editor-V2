@@ -1,11 +1,13 @@
 // export-blog.js — ส่งออกเป็น HTML สำหรับบล็อก (Medium/WordPress) · Ctrl+Shift+B
 // เดิมยัด markdown ดิบ (รวม frontmatter) ลง <div> → บล็อกได้ตัวอักษร # ** ติดไปด้วย
 // รอบนี้: เลือกธีม/หัวบท/หัวฉากได้ + ฝังรูปเป็น data URI (อัปโหลดที่เดียวจบ ไม่ต้องแนบรูปแยก)
+import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t, tf } from './i18n.js';
 import { el, state, setStatus, log, setBusy, clearBusy } from './core.js';
 import { mdToHtmlBody, escapeHtml, stripComments, stripMentions } from './compile.js';
 import { parseMdFile } from './md.js';
 import { escClose } from './ui.js';
+import { gi } from './icons.js';
 
 const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
@@ -125,7 +127,15 @@ export async function buildBlogHtml(opts = {}) {
 
   const title = escapeHtml(state.title || 'Blog Export');
   const css = (BLOG_THEMES[o.theme] || BLOG_THEMES.medium).css;
-  const html = tf('ui.exportBlog.exportKillian', title, css, title, body);
+  const html = ((a) => `<!DOCTYPE html>
+<html lang="th">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${a[0]}</title>
+<style>${a[1]}
+</style></head><body>
+<h1>${a[2]}</h1>
+${a[3]}<p style="color:#999;font-size:12px;margin-top:40px">${tx('ui.exportBlog.exportKillian2')}</p>
+</body></html>`)([title, css, title, body]);
   const nImages = [...imgCache.values()].filter((v) => v.startsWith('data:')).length;
   return { html, nScenes, nImages, skipped };
 }
@@ -249,7 +259,7 @@ export async function exportBlogHTML(preset) {
     await kapi.writeFile(dest, html);
     try { const { saveProjectMeta } = await import('./app.js'); await saveProjectMeta(); } catch {}
     setStatus(tf('ui.exportBlog.exportHTMLBlockDone', nScenes, nImages ? tf('ui.exportBlog.imageFile', nImages) : '') + dest
-              + (skipped.length ? ' · ⚠ ' + tf('ui.exportBlog.skippedN', skipped.length) : ''));
+              + (skipped.length ? ' · ' + gi('warning') + ' ' + tf('ui.exportBlog.skippedN', skipped.length) : ''));
     if (skipped.length) log('warn', tf('ui.exportBlog.skippedN', skipped.length), skipped);
     return true;
   } catch (e) {

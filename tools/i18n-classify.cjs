@@ -52,7 +52,7 @@ function markedFor(src) {
 // **ของใหม่ให้ใช้เครื่องหมายในซอร์สแทน** — ตารางนี้เหลือไว้ให้ของเดิมที่ยังไม่ได้ย้าย
 const SKIP_RANGES = {
   // [alpha.132] core.js ย้ายไปใช้เครื่องหมาย /* i18n-skip */ ในซอร์สแล้ว (ช่วงเลขบรรทัดเลื่อนทุกครั้งที่แทรกโค้ด)
-  'src/planner/planner-data.js': [[14, 24]],        // PLANNER_STATUSES (เก็บใน Planners/*.json)
+  // [alpha.150] planner-data.js ย้ายไปใช้เครื่องหมาย /* i18n-skip */ ในซอร์สแล้ว
   'src/kanban/kanban-core.js': [[8, 20]],           // คอลัมน์ = สถานะฉากตัวเดียวกับ scenes.json
   'src/branch-plans.js': [[20, 28]],                // PLAN_STATUSES (เก็บใน Branches/*.json)
   'src/visual-tags.js': [[1, 12]],                  // แท็กมาตรฐาน = ค่าที่เก็บใน scenes.json
@@ -69,7 +69,7 @@ const SKIP_RANGES = {
   // [alpha.79] samplePluginFiles() — **เนื้อไฟล์ที่เขียนลงดิสก์** (plugin.json + main.js ของ
   // ปลั๊กอินตัวอย่าง) ไม่ใช่ข้อความบนหน้าจอของโปรแกรม · เป็นซอร์สโค้ดที่ผู้ใช้เปิดไปแก้ต่อ
   // แปลตามภาษา UI ไม่ได้ (ไฟล์บนดิสก์ต้องคงที่ ไม่งั้นสลับภาษาแล้วไฟล์ที่สร้างไว้ไม่ตรงกัน)
-  'src/plugins/plugin-core.js': [[128, 163]],
+  'src/plugins/plugin-core.js': [[174, 209]],      // [alpha.148] เลื่อนตามบล็อก "อนุญาตปลั๊กอิน" ที่แทรกด้านบน
 };
 
 /** app.js: บล็อก selftest — ชื่อเทสเป็นของนักพัฒนา ไม่ใช่ข้อความของผู้ใช้ */

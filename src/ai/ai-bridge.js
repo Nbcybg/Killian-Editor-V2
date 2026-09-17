@@ -6,11 +6,14 @@ import { AIClient, KeyStore, CostTracker, RagPipeline, VectorIndex,
          httpFromKapi, INDEX_FILE, buildContext, estimateCost, localEmbed } from './ai-core.js';
 import { getAISettings } from '../ai-settings.js';
 import { currentProvider, complete as providerComplete, completeStream as providerStream } from './ai-provider-ui.js';
+import { priceKeyOf } from './ai-providers.js';
 import { listScenes, listEntities, syncIo } from '../project-scan.js';
+import { hashText } from '../num.js';
 
 let _client = null;
 let _rag = null;
 let _ragRoot = '';       // โปรเจกต์ที่ดัชนีปัจจุบันสร้างจาก
+let _ragStale = false;   // [alpha.149] เนื้อหาเปลี่ยนหลังสร้างดัชนี (บันทึกไฟล์) → ต้องตรวจใหม่ก่อนใช้
 export const tracker = new CostTracker({});
 
 // io adapter สำหรับ KeyStore (join ต้องเป็น sync — ดู syncIo ใน project-scan.js)
@@ -48,8 +51,10 @@ function registryClient() {
       });
       if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
       const usage = normUsage(r.usage);
+      // [alpha.149] ราคาตามเจ้าจริง (priceKeyOf) — เดิม `p.provider` ไม่มีอยู่ในทะเบียนใหม่ = ราคา OpenAI ทุกเจ้า
       return { ok: true, text: (r.text || '').trim(), thinking: r.thinking || '', usage,
-               cost: estimateCost(p.provider || 'openai', r.model || '', usage), provider: r.provider, model: r.model };
+               cost: estimateCost(priceKeyOf(p), r.model || '', usage), provider: r.provider, model: r.model,
+               truncated: !!r.truncated };
     },
     async stream(opts = {}, onChunk = () => {}) {
       const p = await currentProvider();
@@ -61,10 +66,12 @@ function registryClient() {
         temperature: opts.temperature, maxTokens: opts.maxTokens,
         reqId: opts.reqId, timeoutMs: opts.timeoutMs,
       }, (c) => onChunk(c.delta || '', { partial: c.text }));
-      if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+      if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut,
+                                         partialText: r.text || '' });
       const usage = normUsage(r.usage);
       return { ok: true, text: r.text, thinking: r.thinking || '', usage,
-               cost: estimateCost(p.provider || 'openai', r.model || '', usage), provider: r.provider, model: r.model };
+               cost: estimateCost(priceKeyOf(p), r.model || '', usage), provider: r.provider, model: r.model,
+               truncated: !!r.truncated };
     },
     async embed(texts, opts = {}) {
       // ทะเบียนใหม่ไม่มี remote embeddings — ใช้ local อย่างเดียว (RAG ยังทำงานได้แบบออฟไลน์)
@@ -111,32 +118,56 @@ export async function collectDocs(root) {
                           meta: { kind: 'wiki', title: e.name, cat: e.cat, path: e.path } });
   }
   for (const s of await listScenes(root, { withText: true })) {
-    if (s.text && s.text.trim()) {
-      docs.push({ id: 'scene:' + s.id, text: s.text,
+    // [alpha.149] เนื้อเรื่องล้วน — frontmatter ไม่ใช่เนื้อหาที่ควรถูกค้นเจอ
+    const body = s.body != null ? s.body : s.text;
+    if (body && body.trim()) {
+      docs.push({ id: 'scene:' + s.id, text: body,
                   meta: { kind: 'scene', title: s.title, sceneId: s.id, path: s.path } });
     }
   }
   return docs;
 }
 
-/** สร้าง/คืน RagPipeline ของโปรเจกต์ปัจจุบัน (โหลดดัชนีที่เคยเก็บไว้ก่อน) */
+/** [alpha.149] ลายเซ็นของเนื้อหาทั้งชุด — ดัชนีบนดิสก์ใช้ได้เฉพาะเมื่อเนื้อหายังเหมือนตอนสร้าง */
+export function docsSignature(docs) {
+  const SEP = String.fromCharCode(1), REC = String.fromCharCode(2);
+  return hashText((docs || []).map((d) => d.id + SEP + d.text).join(REC));
+}
+
+/** เนื้อหาในโปรเจกต์เปลี่ยน (บันทึกไฟล์) → ดัชนีของผู้ช่วยเขียนต้องถูกตรวจใหม่ก่อนใช้ครั้งถัดไป */
+export function invalidateRag() { _ragStale = true; }
+
+/**
+ * สร้าง/คืน RagPipeline ของโปรเจกต์ปัจจุบัน
+ *
+ * [alpha.149] ★ เดิมสร้างดัชนี `.ai-index.json` **ครั้งเดียว** แล้วใช้ตลอดไป (สร้างใหม่เฉพาะตอนดัชนีว่าง)
+ * → ผู้ช่วยเขียนตอบจากเนื้อหาเก่าเสมอ ฉากใหม่ไม่เคยถูกค้นเจอ · ตอนนี้ดัชนีพกลายเซ็นของเนื้อหา
+ * ไม่ตรงกับของจริง = สร้างใหม่ · อ่านไฟล์เพื่อทำลายเซ็นถูกกว่าการฝังเวกเตอร์ใหม่มาก (ฝังด้วยเน็ต = เสียเงิน)
+ */
 export async function getRag({ rebuild = false, onProgress = null } = {}) {
   if (!state.root) return null;
-  if (_rag && _ragRoot === state.root && !rebuild) return _rag;
+  if (_rag && _ragRoot === state.root && !rebuild && !_ragStale) return _rag;
   const client = getAIClient();
+  const docs = await collectDocs(state.root);
+  const sig = docsSignature(docs);
   let index = new VectorIndex({});
   const idxPath = await kapi.join(state.root, INDEX_FILE);
   if (!rebuild) {
-    try { if (await kapi.exists(idxPath)) index = VectorIndex.fromJSON(await kapi.readJson(idxPath)); } catch {}
+    try {
+      if (await kapi.exists(idxPath)) {
+        const j = await kapi.readJson(idxPath);
+        if (j && j.sig === sig) index = VectorIndex.fromJSON(j);
+      }
+    } catch {}
   }
   _rag = new RagPipeline({ client, index });
   _ragRoot = state.root;
-  if (!index.size) {
+  _ragStale = false;
+  if (!index.size && docs.length) {
     onProgress && onProgress(t('ui.aiBridge.busyNewIndexBody'));
-    const docs = await collectDocs(state.root);
     const res = await _rag.indexDocs(docs);
     log('info', t('ui.aiBridge.aiRagNewIndex'), { docs: docs.length, chunks: res.added, model: res.model });
-    try { await kapi.writeFile(idxPath, JSON.stringify(_rag.index.toJSON())); } catch {}
+    try { await kapi.writeFile(idxPath, JSON.stringify({ ..._rag.index.toJSON(), sig })); } catch {}
   }
   return _rag;
 }
@@ -150,4 +181,4 @@ export async function ragContext(query, opts = {}) {
 }
 
 /** ล้างทุกอย่างเมื่อเปลี่ยนโปรเจกต์ (คีย์/ดัชนีของโปรเจกต์เดิมห้ามข้ามมา) */
-export function resetAI() { _client = null; _rag = null; _ragRoot = ''; }
+export function resetAI() { _client = null; _rag = null; _ragRoot = ''; _ragStale = false; }

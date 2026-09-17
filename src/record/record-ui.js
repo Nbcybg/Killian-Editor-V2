@@ -7,6 +7,7 @@
 import { t as tt, t } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import * as RD from './record-data.js';
+import { gi } from '../icons.js';
 
 const S = () => (state._record || (state._record = { data: null, q: '', mood: '', editing: null }));
 
@@ -154,10 +155,10 @@ export async function renderRecordPanel(host) {
     for (const t of e.tags || []) foot.append(el('span', 'k-rec-chip k-rec-tag', '#' + t));
     if (e.words) foot.append(el('span', 'k-rec-chip', e.words + tt('ui.common.word')));
     if (e.minutes) foot.append(el('span', 'k-rec-chip', e.minutes + tt('ui.recOrd.min')));
-    const edit = el('span', 'k-rec-act', '✏️');
+    const edit = el('span', 'k-rec-act', gi('pencil-e'));
     edit.title = tt('ui.common.edit');
     edit.onclick = () => { s.editing = e.id; drawList(); };
-    const del = el('span', 'k-rec-act', '🗑');
+    const del = el('span', 'k-rec-act', gi('trash'));
     del.title = tt('ui.common.del');
     del.onclick = async () => {
       const { confirmBox } = await import('../ui.js');

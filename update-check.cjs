@@ -151,6 +151,7 @@ function decideUpdate({
     assetUrl: "",
     assetName: "",
     assetSize: 0,
+    assetDigest: "",
     url: rel && rel.html_url ? rel.html_url : UPDATE_RELEASES_URL,
     notes: rel && rel.body ? String(rel.body) : ""
   };
@@ -164,7 +165,9 @@ function decideUpdate({
         asset,
         assetUrl: asset.browser_download_url,
         assetName: asset.name,
-        assetSize: asset.size || 0
+        assetSize: asset.size || 0,
+        // [alpha.156] GitHub ใส่ `digest: "sha256:…"` ให้ไฟล์แนบ — main ตรวจกับไฟล์ที่โหลดมาจริง
+        assetDigest: typeof asset.digest === "string" ? asset.digest : ""
       };
     }
     return { ...base, status: "noAsset" };

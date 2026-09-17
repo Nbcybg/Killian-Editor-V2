@@ -1,6 +1,6 @@
 // section-ops.js — จัดการเล่ม (section): เพิ่ม/แก้ชื่อ/ลบ/เรียง/สถิติ/บันทึก meta
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { buildTree, closeTab, guid, safeName, refreshNetwork } from './app.js';
+import { buildTree, closeTab, guid, safeName, refreshNetwork, closeTabsUnderPath } from './app.js';
 import { el, setStatus, state, logAction } from './core.js';
 
 // [alpha.60r3 ข้อ 3] สถานะเล่ม — ต้องตรงกับ SECTION_STATUSES ใน app.js
@@ -235,7 +235,10 @@ export async function deleteSection(secPath, sec) {
   if (nSec <= 1) { setStatus(tt('ui.section.delCantMustLess')); return; }
   if (!(await confirmBox(ttf('ui.section.delBookBookAll', sec.title), tt('ui.section.delBook')))) return;
   // ปิดแท็บที่เปิดไฟล์อยู่ในเล่มนี้ก่อน
-  for (const t of [...state.tabs.keys()]) if (typeof t === 'string' && t.startsWith(secPath)) closeTab(t);
+  // [alpha.156] ★ ต้อง **รอ** ให้บันทึก+ปิดจบก่อนย้ายโฟลเดอร์ — เดิม closeTab() ไม่ await ของแท็บที่ค้าง
+  // การบันทึกจึงแข่งกับการย้าย แล้วเขียนไฟล์กลับที่เดิม (โฟลเดอร์ผีไม่มี section.json) ·
+  // และ `startsWith(secPath)` ไม่มีตัวคั่น → ลบ "เล่ม1" ไปปิดแท็บของ "เล่ม10" ด้วย
+  await closeTabsUnderPath(secPath, { save: true });
   const dst = await kapi.join(state.root, 'Recycle',
     Date.now().toString(36) + '-' + (secPath.split(/[\\/]/).pop()));
   await kapi.move(secPath, dst);

@@ -11,6 +11,8 @@ import { readSceneMeta, writeSceneMeta, SCENE_HEAVY_KEYS } from './scene-meta.js
 import { attachAiFieldButton } from './ai-synopsis.js';
 import { parseMdFile } from './md.js';
 import { escClose } from './ui.js';
+import { gi } from './icons.js';
+import { mutateJson } from './json-store.js';
 
 export async function sceneProps(dPath, ch, sc) {
   const sf = await kapi.join(dPath, 'scenes.json');
@@ -79,7 +81,7 @@ export async function sceneProps(dPath, ch, sc) {
     [['Outline', t('ui.common.notSet')], ...allStatuses().map((s) => [s, dataLabel(s)])],
     allStatuses().includes(row.status) ? row.status : 'Outline');
   const iColor = mkSelect(t('ui.common.color'),
-    [['', t('ui.common.notHas')], ...SCENE_COLORS.map(([n, hex]) => [hex, '● ' + dataLabel(n)])], row.color || '');
+    [['', t('ui.common.notHas')], ...SCENE_COLORS.map(([n, hex]) => [hex, gi('dot') + ' ' + dataLabel(n)])], row.color || '');
   const iFlag = mkCheck(t('ui.common.pinPin'), row.flag);
   const iTags = mk(t('ui.common.tag2'), (M.tags || []).join(', '));
   const iNote = mk(t('ui.common.note'), M.note, 'textarea');
@@ -139,7 +141,15 @@ export async function sceneProps(dPath, ch, sc) {
     const props = {};
     for (const k of SCENE_HEAVY_KEYS) props[k] = row[k];
     await writeSceneMeta(file, props);
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    // [alpha.156] อ่าน scenes.json **สด** แล้วแก้เฉพาะแถวนี้ — `d` ที่อ่านตอนเปิดกล่องอาจเก่าแล้ว
+    // (ระหว่างที่กล่องเปิด บันทึกอัตโนมัติอัปเดตจำนวนคำ / AI เพิ่มฉาก) เขียนทั้งก้อน = ของคนอื่นหาย
+    // ชื่อฉากไม่ต้องยุ่ง — setSceneTitle ข้างบนเขียนไปแล้ว
+    const INDEX_FIELDS = ['status', 'color', 'flag', 'startPage', 'pageFlow', ...SCENE_HEAVY_KEYS];
+    await mutateJson(kapi, sf, (fresh) => {
+      const live = ((fresh.chapters || {})[ch.guid] || []).find((x) => x.id === sc.id);
+      if (!live) return false;
+      for (const k of INDEX_FIELDS) { if (k in row) live[k] = row[k]; else delete live[k]; }
+    });
     // ⚠ [alpha.124 ข้อ 38] เขียน frontmatter "ลับหลัง" แท็บที่เปิดไฟล์เดียวกันค้างอยู่ = ระเบิดเวลา
     // แท็บถือ `meta` ชุดเก่าไว้ พอบันทึกครั้งถัดไป (หรือ autosave) มันจะเขียนทับคุณสมบัติที่เพิ่งตั้ง
     // ทั้งหมด — แผงคุณสมบัติแก้เรื่องนี้ไปแล้วตั้งแต่ alpha.120 ข้อ 6 แต่ **กล่องนี้ยังไม่ได้แก้**

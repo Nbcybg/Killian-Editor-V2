@@ -9,6 +9,8 @@ import * as PL from './panel-layout.js';
 export const LAYOUT_VERSION = 2;
 const KEY = 'k2-panel-layout';
 const WS_KEY = 'k2-panel-workspaces';        // [alpha.66r3] พรีเซ็ตเวิร์กสเปซที่ผู้ใช้บันทึกเอง
+/** [alpha.154] เวลาที่ค่า UI ใน localStorage ถูกแก้ล่าสุด — คีย์เดียวกับ LS_TS_KEY ใน app.js */
+export const LS_TS_KEY = 'k2-ls-ts';
 
 // storage เริ่มต้น: ใช้ localStorage ถ้ามี, ไม่งั้น in-memory (เช่นตอนรัน node test)
 function defaultStorage() {
@@ -91,8 +93,15 @@ export class PanelStore {
   }
   save() {
     if (this.readOnly) return false;
-    this.storage.setItem(this.key, serializeLayout(
-      { root: this.root, floats: this.floats, splitRatios: this.splitRatios }));
+    const str = serializeLayout({ root: this.root, floats: this.floats, splitRatios: this.splitRatios });
+    let prev = null;
+    try { prev = this.storage.getItem(this.key); } catch {}
+    this.storage.setItem(this.key, str);
+    // [alpha.154 ข้อ 1] ปั๊มเวลาแก้ล่าสุด — ฝั่งกู้เซสชันใช้เทียบว่าไฟล์เซสชันเก่ากว่าของจริงไหม
+    // (เดิมมีแต่แถบลอยที่ปั๊ม เลย์เอาต์แผงไม่เคยปั๊ม → ด่านนั้นไม่เคยกันเลย์เอาต์แผงได้เลย)
+    // ★ ปั๊มเฉพาะตอน **ค่าเปลี่ยนจริง** — ตอนบูตระบบแผงเซฟของเดิมซ้ำ (`_prune`) ถ้าปั๊มด้วย
+    //   localStorage ที่ค้างจากการถูกฆ่ากลางคันจะดู "ใหม่กว่าไฟล์เซสชัน" แล้วเซสชันไม่ถูกกู้ (probe ยืนยัน)
+    if (prev !== str) { try { this.storage.setItem(LS_TS_KEY, String(Date.now())); } catch {} }
     return true;
   }
   reset() {
@@ -111,7 +120,14 @@ export class PanelStore {
   }
   getSplitRatio(id) { return this.splitRatios[id] || 0; }
   // อัปเดต layout (ผ่านฟังก์ชันจาก panel-layout) แล้วบันทึก + แจ้ง listener อัตโนมัติ
-  update(nextRoot) { this.root = nextRoot; this.save(); this._emit(); }
+  // [alpha.154 ข้อ 1] `beforeUpdate(next, prev)` = ด่านของชั้น UI ก่อนต้นไม้ใหม่ถูกใช้ (ตรึงขนาดที่เห็นอยู่)
+  // ไม่ตั้ง = พฤติกรรมเดิมทุกประการ · สวมเวิร์กสเปซ (`applySnapshot`) ปิดด่านเอง เพราะเป็นเลย์เอาต์ใหม่ทั้งชุด
+  update(nextRoot) {
+    if (this.beforeUpdate && !this._skipHook && !this.readOnly) {
+      try { nextRoot = this.beforeUpdate(nextRoot, this.root) || nextRoot; } catch {}
+    }
+    this.root = nextRoot; this.save(); this._emit();
+  }
   setFloats(floats) { this.floats = floats; this.save(); this._emit(); }
   /** บันทึกอย่างเดียว ไม่แจ้ง listener → ไม่ re-render
    *  ใช้กับการสลับลำดับ z เท่านั้น: re-render กลาง mousedown จะทำให้ DOM ที่กำลังลากหลุด */
@@ -156,7 +172,8 @@ export class PanelStore {
     if (!snap || !validRoot(snap.root)) return null;
     this.floats = Array.isArray(snap.floats) ? snap.floats.filter((f) => f && f.panel && f.panel.id) : [];
     this.splitRatios = cleanRatios(snap.splitRatios);
-    this.update(snap.root);                       // update() save + emit ให้เอง
+    this._skipHook = true;                        // [alpha.154] เลย์เอาต์ทั้งชุด — ห้ามเอาขนาดบนจอเดิมไปตรึงทับ
+    try { this.update(snap.root); } finally { this._skipHook = false; }   // update() save + emit ให้เอง
     return snap.homes || null;
   }
 }

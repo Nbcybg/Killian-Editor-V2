@@ -8,10 +8,11 @@
 // ตัวเชื่อมกับที่อื่น (แทรกลงฉาก/เปิดไฟล์/เปิดหน้า Wiki) รับเข้ามาเป็น callback ตอนสร้าง
 // เพื่อไม่ให้ import วนกลับไปหา app.js
 
+import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { ask, confirmBox, popupMenu, choose, escClose } from './ui.js';
 import { imageLightbox } from './wiki.js';
-import { iconHtml } from './icons.js';
+import { iconHtml, gi } from './icons.js';
 import { el, setStatus, withBusy } from './core.js';
 import * as AC from './gallery/album-core.js';
 import * as TG from './gallery/album-tags.js';
@@ -411,7 +412,7 @@ export class Gallery {
     const items = this.visibleItems();
     if (!items.length) {
       const d = el('div', 'gal-empty');
-      d.append(el('div', 'gal-empty-icon', '🖼'));
+      d.append(el('div', 'gal-empty-icon', gi('frame')));
       d.append(el('div', null, this.items.length
         ? tt('ui.gallery.notHasImageAt2')
         : tt('ui.gallery.notHasImageAlbum')));
@@ -469,7 +470,7 @@ export class Gallery {
     im.alt = it.caption || it.file;
     im.loading = 'lazy';
     fileURL(this.root, it.path).then((u) => { im.src = u; });
-    im.onerror = () => { th.classList.add('miss'); th.textContent = '⚠'; };
+    im.onerror = () => { th.classList.add('miss'); th.textContent = gi('warning'); };
     th.append(im);
     const main = el('div', 'gal2-row-main');
     const name = el('div', 'gal2-row-name', it.file);
@@ -614,7 +615,7 @@ export class Gallery {
     mk(tt('ui.gallery.tag'), () => this.tagSelection());
     mk(tt('ui.gallery.exportPick'), () => this.exportSelection());
     mk(tt('ui.common.del2'), () => this.deleteSelection(), 'k-danger');
-    mk('✕', () => { this.state.sel.clear(); this.syncSelection(); });
+    mk(gi('close'), () => { this.state.sel.clear(); this.syncSelection(); });
     return bar;
   }
 
@@ -779,9 +780,9 @@ export class Gallery {
     const rows = UI.usageOf(this.usage, it.file);
     if (!rows.length) return;
     popupMenu(e.clientX, e.clientY, [
-      { label: tt('ui.gallery.imageUse'), disabled: true },
+      { label: `<b>${tx('ui.gallery.imageUse3')}</b>`, disabled: true },
       ...rows.map((r) => ({
-        label: ttf('ui.gallery.line2', r.title, r.line),
+        label: ((a) => `${a[0]} <span class="dim">${txf('ui.gallery.line3', a)}</span>`)([r.title, r.line]),
         click: () => this.opts.onOpenFile && this.opts.onOpenFile(r.file),
       })),
     ]);

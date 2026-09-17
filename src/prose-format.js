@@ -139,6 +139,20 @@ export function proseCssVars(fmt) {
  * @param {object} fmt
  * @param {string} sel  ตัวเลือกฐาน (ค่าเริ่มต้น = '.ProseMirror' ในตัวแก้ไข)
  */
+/**
+ * ══ [alpha.149] ★ ระยะบรรทัดของหัวข้อ — **ค่าเดียวของทั้งจอและไฟล์** ══
+ *
+ * ผู้ใช้: *"preview ของ export ที่เป็น pdf ตัดหน้าแบบเฉือน ตัดกลางรูป · จำนวนหน้าไม่เหมือนใน editor ·
+ *          ตัดบรรทัดเฉือนตัวหนังสือออกครึ่งนึง"*
+ *
+ * ตัวแก้ไขได้ `line-height:1.3` จาก style.css (`.ProseMirror h1…h6`) แต่ `proseExportCss` ไม่เคยตั้งเลย
+ * → หัวข้อในไฟล์รับ 1.75 ของเนื้อความ (H1 32px: จอ 41.6 · ไฟล์ 56) = **ไฟล์สูงกว่าจอ 14.4px ต่อหัวข้อ**
+ * และช่องตัวอย่าง "วัด" ด้วย CSS ของไฟล์ แต่ "วาด" ในแผ่นที่กฎ `.sp-pageview .ed-page h1{line-height:1.3}`
+ * ของโปรแกรมรั่วเข้าไป → เนื้อทั้งหน้าลอยสูงกว่าที่ตัวหั่นคิดไว้ 14px → เส้นตัดเฉือนรูป/ตัวหนังสือ
+ * (วัดจริงบนหน้าต่างโปรแกรม: รูปถูกตัดที่ 803–893 ของแผ่นสูง 817 · บรรทัดเกินขอบ 9–10px)
+ */
+export const HEADING_LINE_HEIGHT = 1.3;
+
 export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .workspace > .ProseMirror') {
   const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
   const out = [];
@@ -193,12 +207,17 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
     out.push(`${sel} > h1+p,${sel} > h2+p,${sel} > h3+p,` +
              `${sel} > h4+p,${sel} > h5+p,${sel} > h6+p{text-indent:0}`);
   }
+  // [alpha.150] สีเน้นข้อความ — **กฎคู่แฝด** กับ proseExportCss ข้างล่าง (และกับ style.css ของตัวแก้ไข)
+  // พื้นมาจาก inline style ของมาร์กเอง · ตรงนี้บังคับสีตัวอักษร/มุมให้เหมือนกันทุกที่
+  out.push(`${sel} mark{color:#1a1815;border-radius:2px;padding:0 .06em}`);
   f.headings.forEach((h, i) => {
     const lv = i + 1;
     const parts = [`font-size:${+h.size.toFixed(3)}em`,
                    `font-weight:${h.bold ? 700 : 400}`,
                    `font-style:${h.italic ? 'italic' : 'normal'}`,
                    `margin:${h.before}em 0 ${h.after}em`,
+                   // [alpha.149] กฎคู่แฝดกับ proseExportCss — ดู HEADING_LINE_HEIGHT
+                   `line-height:${HEADING_LINE_HEIGHT}`,
                    // [alpha.145] หัวข้อเขียน font-family ลงไปตรง ๆ (ไม่ผ่าน --ed-font) จึงต้อง
                    // ต่อตาข่ายไทยเอง ไม่งั้นหัวข้อ "ลอย" ทั้งที่เนื้อความไม่ลอย
                    `font-family:${withThaiFallback(proseHeadingStack(f))}`];
@@ -291,10 +310,12 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
   //   · ฝั่งไฟล์ยังกิน `body > p:first-of-type` (ย่อหน้าแรกของเอกสาร) ซึ่งเป็นคนละเรื่อง
   //     กับสวิตช์นั้น — ผู้ใช้: *"ใช้ย่อหน้าอัตโนมัติ บรรทัดแรก ต้องย่อหน้า"*
   if (!f.indentAfterHeading) out.push('h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}');
+  // [alpha.150] กฎคู่แฝดของสีเน้นข้อความ (ดู proseCss)
+  out.push('mark{color:#1a1815;border-radius:2px;padding:0 .06em}');
   f.headings.forEach((h, i) => {
     out.push(`h${i + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` +
              (h.italic ? 'font-style:italic;' : '') +
-             `margin:${h.before}em 0 ${h.after}em;font-family:${headFont}` +
+             `margin:${h.before}em 0 ${h.after}em;line-height:${HEADING_LINE_HEIGHT};font-family:${headFont}` +
              (h.align ? ';text-align:' + h.align : '') +
              (f.headingColor ? ';color:' + f.headingColor : '') + '}');
   });

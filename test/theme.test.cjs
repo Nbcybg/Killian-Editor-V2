@@ -128,10 +128,12 @@ for (const id of C.THEMES) {
   check("ไม่มี 'tb-theme' ในทะเบียนปุ่มแถบเครื่องมือแล้ว", !tbcfg.includes("id: 'tb-theme'"));
 }
 
-// ── ช่องเลือกธีมต้องอยู่ในเทมเพลตกล่องตั้งค่าของทุกภาษา ──
-for (const [f, tbl] of langs) {
-  const tpl = tbl['ui.dlg.alphaItemLevelUser'] || '';
-  check(f + ': เทมเพลตกล่องตั้งค่ามีช่องเลือกธีม (#st-theme)', tpl.includes('id="st-theme"'));
+// ── ช่องเลือกธีมต้องอยู่ในเทมเพลตกล่องตั้งค่า ──
+// [alpha.154] โครงกล่องย้ายจากไฟล์ภาษามาอยู่ src/settings-template.js (ภาษาไหนก็โครงเดียวกัน)
+{
+  const tplSrc = fs.readFileSync(path.join(ROOT, 'src/settings-template.js'), 'utf8');
+  check('เทมเพลตกล่องตั้งค่ามีช่องเลือกธีม (#st-theme)', tplSrc.includes('id="st-theme"'));
+  for (const [f, tbl] of langs) check(f + ': ไม่มีเทมเพลตก้อนเดิมในไฟล์ภาษาแล้ว', !('ui.dlg.alphaItemLevelUser' in tbl));
 }
 
 console.log('theme: ' + pass + ' passed, ' + fail + ' failed');

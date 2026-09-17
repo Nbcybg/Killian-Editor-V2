@@ -9,6 +9,7 @@
 //
 // ผลลัพธ์เป็นเว็บสถิตล้วน (ไม่มี build step ไม่มี CDN) เปิดจากไฟล์ก็ใช้ได้ ตามหลัก "offline 100%"
 
+import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 export const CODEX_VERSION = 1;
 
@@ -118,7 +119,17 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
 
 function page(title, siteTitle, bodyHtml, opts = {}) {
   const depth = opts.home || 'index.html';
-  return ttf('ui.codexBuild.newKillianCodex', esc(title), esc(siteTitle), CSS, depth, esc(siteTitle), (opts.nav || []).map((n) => `<a href="${esc(n.href)}">${esc(n.label)}</a>`).join(''), bodyHtml);
+  return ((a) => `<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${a[0]} — ${a[1]}</title>
+<style>${a[2]}</style></head>
+<body>
+<header class="top"><h1><a href="${a[3]}">${a[4]}</a></h1>
+<nav>${a[5]}</nav></header>
+<div class="wrap">${a[6]}</div>
+<footer>${tx('ui.codexBuild.newKillianCodex2')}</footer>
+</body></html>`)([esc(title), esc(siteTitle), CSS, depth, esc(siteTitle), (opts.nav || []).map((n) => `<a href="${esc(n.href)}">${esc(n.label)}</a>`).join(''), bodyHtml]);
 }
 
 /** ย่อหน้าเนื้อหาแบบง่าย (ข้อความล้วน → &lt;p&gt;) — ไม่ตีความ markdown เพื่อไม่ให้ตีความผิด */
@@ -143,20 +154,20 @@ ${img ? `<img src="${esc(img)}" alt="${esc(e.name)}">` : ''}
 ${rows.length ? `<table>${rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}
 </aside>`;
 
-  const relSec = rels.length ? ttf('ui.codexBuild.relation', rels.map((r) => {
+  const relSec = rels.length ? ((a) => `<div class="sec"><h2>${tx('ui.wiki.relation')}</h2><ul class="plain">${a[0]}</ul></div>`)([rels.map((r) => {
       const label = esc(r.name || r.target.split(/[\\/]/).pop().replace(/\.json$/i, ''));
       const link = r.page ? `<a href="${esc(r.page)}">${label}</a>` : label;
       return `<li>${esc(r.role || tt('ui.codexBuild.item'))} — ${link}</li>`;
-    }).join('')) : '';
+    }).join('')]) : '';
 
-  const seenSec = seen.length ? ttf('ui.codexBuild.appearScene', seen.map((s) => `<li>${esc(s)}</li>`).join('')) : '';
+  const seenSec = seen.length ? ((a) => `<div class="sec"><h2>${tx('ui.codexBuild.appearScene2')}</h2><ul class="plain">${a[0]}</ul></div>`)([seen.map((s) => `<li>${esc(s)}</li>`).join('')]) : '';
 
   const bodyText = ent.body || ent.description || ent.desc || '';
   const main = `<article>
 <span class="cat-pill">${esc(catLabel(e.cat, labels))}</span>
 <h1>${esc(e.name)}</h1>
-${(e.aliases || []).length ? ttf('ui.codexBuild.knownName', esc((e.aliases || []).join(' · '))) : ''}
-<div class="body">${paragraphs(bodyText) || tt('ui.codexBuild.notHasDesc')}</div>
+${(e.aliases || []).length ? ((a) => `<div class="aka">${txf('ui.codexBuild.knownName2', a)}</div>`)([esc((e.aliases || []).join(' · '))]) : ''}
+<div class="body">${paragraphs(bodyText) || `<p class="empty">${tx('ui.codex.notHasDesc')}</p>`}</div>
 ${relSec}${seenSec}
 </article>`;
 
@@ -169,7 +180,13 @@ export function indexPage(entities, ctx) {
   const cards = entities.map((e) => `<a class="card" href="${esc(pages.get(e.path))}" data-n="${
     esc((e.name + ' ' + (e.aliases || []).join(' ') + ' ' + catLabel(e.cat, labels)).toLowerCase())}">
 <div class="n">${esc(e.name)}</div><div class="d">${esc(catLabel(e.cat, labels))}</div></a>`).join('\n');
-  const body = ttf('ui.codexBuild.varQDocumentGetElementById', entities.length, cards);
+  const body = ((a) => `<input class="q" id="q" placeholder="${txf('ui.codexBuild.searchCodexList', a)}">
+<div class="grid" id="g">${a[1]}</div>
+<script>
+var q=document.getElementById('q'),g=document.getElementById('g');
+q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();
+[].forEach.call(g.children,function(c){c.style.display=!v||c.dataset.n.indexOf(v)>=0?'':'none';});});
+</script>`)([entities.length, cards]);
   return page(tt('ui.common.pageFirst'), siteTitle, body, { nav });
 }
 
@@ -180,8 +197,8 @@ export function categoryPage(cat, entities, ctx) {
   const list = entities.length
     ? `<div class="grid">${entities.map((e) => `<a class="card" href="${esc(pages.get(e.path))}">
 <div class="n">${esc(e.name)}</div><div class="d">${esc((e.aliases || []).join(' · '))}</div></a>`).join('')}</div>`
-    : tt('ui.codexBuild.notHasListCat');
-  return page(label, siteTitle, ttf('ui.codexBuild.list', esc(label), entities.length, list), { nav });
+    : `<p class="empty">${tx('ui.codexBuild.notHasListCat2')}</p>`;
+  return page(label, siteTitle, ((a) => `<article><h1>${a[0]}</h1><p class="d">${txf('ui.codexBuild.list2', a)}</p></article><div class="sec">${a[2]}</div>`)([esc(label), entities.length, list]), { nav });
 }
 
 /**

@@ -20,6 +20,7 @@ import { gmSystem, gmOpening, gmUserTurn, recapPrompt, mentionCtx } from './star
 import { parseChoices, stripChoices } from './starter-choices.js';
 import { writeScenario, listScenarios, imageUrl, starterDir } from './starter-store.js';
 import { newReqId, stopAI, tokenBadge } from './starter-ai.js';
+import { gi } from '../icons.js';
 
 /** เพดานบริบทของบทสนทนา — เกินแล้วตัดหัวทิ้ง (บทเปิดฉากเก็บไว้เสมอ) */
 const MAX_CTX_TOKENS = 6000;
@@ -73,7 +74,7 @@ async function callGm(s, sc, extraUser, reqId) {
     log(r.aborted && !r.timedOut ? 'info' : 'error',
         'starter gm: ' + (r.aborted ? (r.timedOut ? 'timeout' : 'stopped by user') : 'failed'),
         { error: r.error, status: r.status, reqId });
-    setStatus((r.aborted && !r.timedOut ? '⏹ ' : '❌ ') + 'AI: ' + r.error);
+    setStatus((r.aborted && !r.timedOut ? gi('stop') + ' ' : gi('fail') + ' ') + 'AI: ' + r.error);
     return null;
   }
   log('info', 'starter gm: reply', { reqId, chars: (r.text || '').length, usage: r.usage || null });
@@ -93,7 +94,7 @@ export async function renderChat(host, ctx, sc) {
 
   // ── หัว ──────────────────────────────────────────────────
   const head = el('div', 'st-chat-head');
-  const back = el('button', 'st-back', '← ' + t('ui.starter.backToScenarios'));
+  const back = el('button', 'st-back', gi('arrow-left') + ' ' + t('ui.starter.backToScenarios'));
   back.onclick = () => ctx.goHome();
   head.append(back);
   head.append(el('div', 'st-chat-title', sc.title || t('ui.starter.scUntitled')));
@@ -146,9 +147,9 @@ export async function renderChat(host, ctx, sc) {
       empty.append(el('div', null, t('ui.starter.chatEmpty')));
       // [alpha.122] มีบทเปิดของตัวเอง = บอกให้เห็นก่อนกด ว่ากดแล้วจะได้อะไร (และไม่เสียโทเคน)
       if (hasOpener(sc)) {
-        empty.append(el('div', 'st-hint', '📖 ' + t('ui.starter.chatHasOpener')));
+        empty.append(el('div', 'st-hint', gi('book-open') + ' ' + t('ui.starter.chatHasOpener')));
       }
-      const start = el('button', 'k-ok', '▶ ' + t('ui.starter.chatStart'));
+      const start = el('button', 'k-ok', gi('play') + ' ' + t('ui.starter.chatStart'));
       start.onclick = () => send('', { opening: true });
       empty.append(start);
       log2.append(empty);
@@ -157,8 +158,8 @@ export async function renderChat(host, ctx, sc) {
     for (const turn of sc.turns) {
       const row = el('div', 'st-turn ' + (turn.role === ROLE_GM ? 'gm' : 'player'));
       const who = turn.role === ROLE_GM
-        ? '🎲 ' + t('ui.starter.gm')
-        : '🙂 ' + (nameOf(s, turn.speaker) || t('ui.starter.you'));
+        ? gi('dice') + ' ' + t('ui.starter.gm')
+        : gi('smile') + ' ' + (nameOf(s, turn.speaker) || t('ui.starter.you'));
       row.append(el('div', 'st-turn-who', who));
       if (turn.image) attachImage(row, turn.image);
       const body = el('div', 'st-turn-text');
@@ -167,7 +168,7 @@ export async function renderChat(host, ctx, sc) {
       if (turn.html) body.innerHTML = htmlToDisplay(sanitizeHtml(turn.html), baseUrl);
       else setSpeechText(body, turn.text);
       row.append(body);
-      if (turn.chosen) row.append(el('div', 'st-turn-chosen', '↳ ' + turn.chosen));
+      if (turn.chosen) row.append(el('div', 'st-turn-chosen', gi('arrow-branch') + ' ' + turn.chosen));
       log2.append(row);
     }
     log2.scrollTop = log2.scrollHeight;
@@ -182,11 +183,11 @@ export async function renderChat(host, ctx, sc) {
     if (CHAT_C.sending) {
       // [alpha.96] ต้องหยุดได้ — เดิมค้างเป็น "กำลังคิด…" แล้วทำอะไรไม่ได้เลย
       const busy = el('div', 'st-chat-busy');
-      busy.append(el('span', 'st-dim', '⏳ ' + t('ui.starter.gmThinking')));
-      const stop = el('button', 'st-danger st-chat-stop', '⏹ ' + t('ui.starter.aiStop'));
+      busy.append(el('span', 'st-dim', gi('hourglass') + ' ' + t('ui.starter.gmThinking')));
+      const stop = el('button', 'st-danger st-chat-stop', gi('stop') + ' ' + t('ui.starter.aiStop'));
       stop.onclick = async () => {
         stop.disabled = true;
-        stop.textContent = '⏹ ' + t('ui.starter.aiStopping');
+        stop.textContent = gi('stop') + ' ' + t('ui.starter.aiStopping');
         await stopAI(CHAT_C.reqId);
       };
       busy.append(stop);
@@ -249,7 +250,7 @@ export async function renderChat(host, ctx, sc) {
     // เครื่องมือท้ายตอน
     if ((sc.turns || []).length) {
       const tools = el('div', 'st-row-btns');
-      const recap = el('button', null, '📝 ' + t('ui.starter.makeRecap'));
+      const recap = el('button', null, gi('note') + ' ' + t('ui.starter.makeRecap'));
       recap.title = t('ui.starter.makeRecapHint');
       recap.onclick = () => makeRecap();
       tools.append(recap);

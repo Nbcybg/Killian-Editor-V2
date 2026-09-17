@@ -506,5 +506,78 @@ const check = (name, cond, extra) => {
         S.newMessage('assistant', '', { error: 'x', detail: 'ปลายทาง: a.com' }).detail === 'ปลายทาง: a.com');
 }
 
+// ══════════════════ [alpha.149] บั๊กโหมด AI ══════════════════
+{
+  const mk = (baseUrl, params = {}) => P.newProvider({ name: 'x', model: 'm',
+    params, credential: { name: 'c', baseUrl, apiKey: 'sk-123', allowedDomains: [] } });
+  // ── thinking ต้องไม่ถูกส่ง "ปิด" พร้อมระดับความคิด ──
+  const r1 = P.chatRequest(mk('https://api.deepseek.com/v1', { thinkingMode: 'off' }),
+    { messages: [{ role: 'user', content: 'x' }], reasoningEffort: 'high' });
+  check('[149] ★ thinking=off + ระดับความคิด "high" → ไม่ส่ง thinking:disabled ไปหักล้าง',
+        r1.body.thinking === undefined && r1.body.reasoning_effort === 'high', JSON.stringify(r1.body));
+  const r2 = P.chatRequest(mk('https://api.deepseek.com/v1', { thinkingMode: 'on' }), { messages: [] });
+  check('[149] thinking=on ยังส่ง {type:enabled}', r2.body.thinking && r2.body.thinking.type === 'enabled');
+  // ── คีย์ไม่ถูกส่งซ้ำสองหัวให้ทุกเจ้า ──
+  const h1 = P.buildHeaders(mk('https://openrouter.ai/api/v1'));
+  check('[149] ★ เจ้าที่ไม่ใช่ Anthropic ไม่ได้ x-api-key', !('x-api-key' in h1) && h1.Authorization === 'Bearer sk-123');
+  const h2 = P.buildHeaders(mk('https://api.anthropic.com/v1'));
+  check('[149] Anthropic ได้ x-api-key + anthropic-version', h2['x-api-key'] === 'sk-123' && !!h2['anthropic-version']);
+  // ── ข้อผิดพลาดกลางสตรีม ──
+  const e1 = P.parseStreamChunk('data: {"error":{"message":"Insufficient credits","code":402}}');
+  check('[149] ★ สตรีมส่ง {error} (OpenRouter) → อ่านเป็นข้อผิดพลาด', e1 && e1.error === 'Insufficient credits', JSON.stringify(e1));
+  const e2 = P.parseStreamChunk('data: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}');
+  check('[149] สตรีม Anthropic type:error → อ่านเป็นข้อผิดพลาด', e2 && e2.error === 'Overloaded', JSON.stringify(e2));
+  const e3 = P.parseStreamChunk('{"error":"model not found"}');
+  check('[149] Ollama {error:"…"} → อ่านเป็นข้อผิดพลาด', e3 && e3.error === 'model not found');
+  const ok1 = P.parseStreamChunk('data: {"choices":[{"delta":{"content":"สวัสดี"}}]}');
+  check('[149] ก้อนปกติไม่ถูกมองเป็นข้อผิดพลาด', ok1 && !ok1.error && ok1.delta === 'สวัสดี');
+  // ── เหตุผลที่จบ (ถูกตัดเพราะ Max Tokens) ──
+  const f1 = P.parseStreamChunk('data: {"choices":[{"delta":{},"finish_reason":"length"}]}');
+  check('[149] ★ ก้อนสุดท้ายที่มีแต่ finish_reason:length ไม่ถูกทิ้ง', f1 && f1.finish === 'length', JSON.stringify(f1));
+  const f2 = P.parseStreamChunk('data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}');
+  check('[149] Anthropic stop_reason:max_tokens → length', f2 && f2.finish === 'length', JSON.stringify(f2));
+  const f3 = P.parseStreamChunk('{"message":{"content":""},"done":true,"done_reason":"length"}');
+  check('[149] Ollama done_reason:length → length', f3 && f3.done && f3.finish === 'length', JSON.stringify(f3));
+  const f4 = P.parseStreamChunk('data: {"choices":[{"delta":{},"finish_reason":"stop"}]}');
+  check('[149] finish_reason:stop ไม่ใช่ถูกตัด', f4 && f4.finish === 'stop');
+  check('[149] normFinish รวมทุกสำนวน', P.normFinish('MAX_TOKENS') === 'length' && P.normFinish('max_output_tokens') === 'length'
+        && P.normFinish('') === '' && P.normFinish(null) === '');
+  const pc1 = P.parseChat({ choices: [{ message: { content: 'ครึ่ง' }, finish_reason: 'length' }] });
+  const pc2 = P.parseChat({ content: [{ type: 'text', text: 'ครบ' }], stop_reason: 'end_turn' });
+  check('[149] parseChat บอก truncated', pc1.truncated === true && pc2.truncated === false && pc2.finish === 'end_turn');
+  // ── ราคาตามเจ้าจริง ──
+  check('[149] ★ priceKeyOf: openai/anthropic/เครื่องในบ้าน/ไม่รู้จัก',
+        P.priceKeyOf(mk('https://api.openai.com/v1')) === 'openai'
+        && P.priceKeyOf(mk('https://api.anthropic.com/v1')) === 'claude'
+        && P.priceKeyOf(mk('http://127.0.0.1:11434')) === 'ollama'
+        && P.priceKeyOf(mk('http://localhost:1234/v1')) === 'ollama'
+        && P.priceKeyOf(mk('https://api.deepseek.com/v1')) === ''
+        && P.priceKeyOf(mk('https://evilopenai.com/v1')) === '');
+  // ── ปุ่ม "ต่อ" ──
+  check('[149] joinContinuation ต่อตรง ๆ ไม่เติมช่องว่าง (ไทยไม่มีช่องว่างระหว่างคำ)',
+        S.joinContinuation('เขาเดินเข้า', 'ไปในป่า') === 'เขาเดินเข้าไปในป่า');
+  check('[149] ★ joinContinuation ตัดท่อนที่โมเดลพูดซ้ำตอนต้น',
+        S.joinContinuation('ฝนตกหนักทั้งคืน จนเช้า', 'ทั้งคืน จนเช้าก็ยังไม่หยุด') === 'ฝนตกหนักทั้งคืน จนเช้าก็ยังไม่หยุด',
+        S.joinContinuation('ฝนตกหนักทั้งคืน จนเช้า', 'ทั้งคืน จนเช้าก็ยังไม่หยุด'));
+  check('[149] joinContinuation ซ้ำสั้นกว่า 8 ตัวไม่ตัด (กันกินคำจริง)', S.joinContinuation('abcde', 'cde!') === 'abcdecde!');
+  check('[149] joinContinuation ว่างฝั่งใดฝั่งหนึ่ง', S.joinContinuation('', 'b') === 'b' && S.joinContinuation('a', '') === 'a');
+  let cs = S.newSession();
+  cs = S.addMessage(cs, S.newMessage('user', 'เขียนต่อ'));
+  const cut = S.newMessage('assistant', 'ครึ่งเรื่อง', { truncated: true });
+  cs = S.addMessage(cs, cut);
+  check('[149] ★ canContinue: คำตอบล่าสุดที่ถูกตัด = ต่อได้', S.canContinue(cs, cut) === true);
+  check('[149] newMessage เก็บธง truncated/partial', cut.truncated === true
+        && S.newMessage('assistant', 'x', { partial: true }).partial === true
+        && S.newMessage('assistant', 'x').truncated === false);
+  const done = S.newMessage('assistant', 'ครบแล้ว');
+  check('[149] คำตอบที่ครบ = ต่อไม่ได้', S.canContinue(S.addMessage(cs, done), done) === false);
+  const cs2 = S.addMessage(cs, S.newMessage('user', 'คำถามใหม่'));
+  check('[149] ★ มีข้อความใหม่ตามหลังแล้ว = ต่อข้อความเก่าไม่ได้', S.canContinue(cs2, cut) === false);
+  const cs3 = S.addMessage(cs, S.newMessage('user', 'ผลคำสั่ง', { toolResult: true }));
+  check('[149] ผลคำสั่งที่ตามหลังไม่นับ', S.canContinue(cs3, cut) === true);
+  const empty = S.newMessage('assistant', '  ', { partial: true, error: 'x' });
+  check('[149] คำตอบว่างเปล่า = ไม่มีอะไรให้ต่อ', S.canContinue(S.addMessage(cs, empty), empty) === false);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

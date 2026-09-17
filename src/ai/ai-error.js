@@ -13,7 +13,7 @@
 // ไฟล์นี้เป็น **โมดูลบริสุทธิ์** (ไม่แตะ DOM/fs/network) → unit test ได้ตรง ๆ
 // หน้าที่: เอา { status, body, error, url, aborted, timedOut } มาแปลงเป็น
 //   { title, reason, hints[], detail } ที่เอาไปโชว์บนจอ **และ** เขียนลงบันทึกได้ทันที
-import { T, tm } from '../i18n.js';
+import { T, tm, t } from '../i18n.js';
 
 /** ปิดบังความลับก่อนขึ้นจอ/ลงไฟล์บันทึก — คีย์ห้ามรั่วออกจากเครื่องผู้ใช้เด็ดขาด */
 export function redactSecrets(text) {
@@ -123,6 +123,11 @@ export function describeHttpError(e = {}) {
     code = 'aborted';
     reason = T`ผู้ใช้กดหยุดเอง`;
     hints = [];
+  } else if (e.streamError) {
+    // [alpha.149] ผู้ให้บริการตอบ 200 แล้วส่งข้อผิดพลาดมาเป็นก้อนหนึ่งในสตรีม (เครดิตหมด · ถูกปฏิเสธ)
+    code = 'stream-error';
+    reason = t('ui.aiError.streamReason');
+    hints = [t('ui.aiError.streamHintServer'), t('ui.aiError.streamHintCredit')];
   } else if (status === 0) {
     const k = networkKind(srvMsg || rawBody || e.error);
     code = k ? 'net-' + k.key : 'net';

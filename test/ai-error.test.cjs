@@ -93,5 +93,14 @@ check('รายละเอียดเรียงแนวทางเป็�
 check('clip ตัดข้อความยาว', E.clip('x'.repeat(900), 100).length <= 104);
 check('clip ไม่แตะข้อความสั้น', E.clip('สั้น') === 'สั้น');
 
+// ── [alpha.149] ข้อผิดพลาดที่มากลางสตรีม (HTTP 200) ──
+{
+  const se = E.describeHttpError({ status: 0, streamError: true, body: 'Insufficient credits',
+    url: 'https://openrouter.ai/api/v1/chat/completions', provider: 'OpenRouter' });
+  check('[149] ★ streamError มีรหัสของตัวเอง ไม่ใช่ "เชื่อมต่อไม่ได้"', se.code === 'stream-error', se.code);
+  check('[149] streamError มีข้อความเซิร์ฟเวอร์ + แนวทางแก้',
+        E.shortError(se).includes('Insufficient credits') && se.detail.includes('แนวทางแก้'), se.detail);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

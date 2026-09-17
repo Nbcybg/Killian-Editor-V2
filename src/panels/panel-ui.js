@@ -8,6 +8,8 @@
 // เนื้อแผงคือ element เดิมใน index.html (#tree-panel, #content, …) — "ย้ายเข้า" host เท่านั้น ห้ามสร้างใหม่
 // เพราะโค้ดทั้งโปรเจกต์อ้าง id เหล่านี้ ($('#panes'), $('#tabs'), $('#props-body'), …)
 import { tf } from '../i18n.js';
+import { commandIcon, isRegisteredCommand, gi } from '../icons.js';
+import { tipText } from '../tooltip.js';
 import { $, el, setStatus, t, onLanguageChanged, log, state, PANEL_WIN,
          keepScroll, restoreScrollSnap, elByPath, scrollSnapshot } from '../core.js';
 import { popupMenu, ask, confirmBox } from '../ui.js';
@@ -29,104 +31,70 @@ const ALIAS = {
 export const panelId = (id) => ALIAS[id] || id;
 
 // ทะเบียนหน้าตาของแผง (registry ของ PanelManager เก็บแค่บางฟิลด์ จึงแยกเก็บที่นี่)
-// [alpha.60r3 ข้อ 8] `desc` = คำอธิบายภาษาไทยของแผง — โผล่ในเมนูคลิกขวาบนหัวแผง ("❔ นี่คืออะไร")
-// เขียนให้ตอบคำถามเดียว: "แผงนี้ใช้ทำอะไร และเปิดไว้ตอนไหน"
+// [alpha.60r3 ข้อ 8] คำอธิบายแผง — โผล่ในเมนูคลิกขวาบนหัวแผง ("❔ นี่คืออะไร")
+// [alpha.154] ไม่อยู่ในตารางนี้แล้ว → แถว `ui.tip.toggle-panel:<id>` ในไฟล์ภาษา (ดู panelDesc)
 export const PANEL_DEFS = [
-  { id: 'toolbar',   title: t('ui.panel.barTool'), icon: 'layout',       adopt: '#toolbar',       fixed: true, noHead: true, closable: false, floatable: false,
-    desc: t('ui.panel.btnArrangeFormatMode') },
-  { id: 'tree',      title: t('ui.common.project'),      icon: 'book-content', adopt: '#tree-panel',    defaultSide: 'left',  i18n: 'panel.project',
-    desc: t('ui.panel.tocResultTaskBook') },
-  { id: 'outline',   title: 'Navigation',    icon: 'list-ul',      adopt: '#outline-panel', defaultSide: 'left',  i18n: 'panel.navigation',
-    desc: t('ui.panel.outlineHeadingFileOpen') },
+  { id: 'toolbar',   title: t('ui.panel.barTool'), icon: 'layout',       adopt: '#toolbar',       fixed: true, noHead: true, closable: false, floatable: false },
+  { id: 'tree',      title: t('ui.common.project'), adopt: '#tree-panel',    defaultSide: 'left',  i18n: 'panel.project' },
+  { id: 'outline',   title: 'Navigation',      adopt: '#outline-panel', defaultSide: 'left',  i18n: 'panel.navigation' },
   // แผงเอกสารไม่มีหัวแผง (พื้นที่ทำงานหลัก — แถบแท็บเอกสาร #tabs ทำหน้าที่นั้นอยู่แล้ว)
-  { id: 'docs',      title: t('ui.panel.doc'),         icon: 'file',         adopt: '#content',       noHead: true, closable: false, floatable: false,
-    desc: t('ui.panel.areaWriteMainTab') },
-  { id: 'props',     title: t('ui.common.props'),      icon: 'clipboard',    adopt: '#props-panel',   defaultSide: 'right', i18n: 'panel.properties',
-    desc: t('ui.panel.propsScenePickSynopsis') },
-  { id: 'statusbar', title: t('ui.panel.barStatus'),      icon: 'grid',         adopt: '#statusbar',     fixed: true, noHead: true, closable: false, floatable: false,
-    desc: t('ui.panel.dataCollapseTaskOpen') },
-  { id: 'log', dockW: 420,       title: t('ui.common.save'),         icon: 'history',      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle',
-    desc: t('ui.panel.saveRunAppUse') },
-  { id: 'search', dockW: 360,    title: t('ui.panel.search'),          icon: 'search',       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.search',
-    desc: t('ui.panel.searchTextProjectAll') },
-  { id: 'notes',     title: t('ui.common.notebookNoteQuick'),    icon: 'note',         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'ui.common.notebookNoteQuick',
-    desc: t('ui.panel.noteIdeaNotSource') },
-  { id: 'comments',  title: t('ui.common.comment'),        icon: 'chat',         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle',
-    desc: t('ui.panel.commentSceneOpenReply') },
+  { id: 'docs',      title: t('ui.panel.doc'),         icon: 'file',         adopt: '#content',       noHead: true, closable: false, floatable: false },
+  { id: 'props',     title: t('ui.common.props'),    adopt: '#props-panel',   defaultSide: 'right', i18n: 'panel.properties' },
+  { id: 'statusbar', title: t('ui.panel.barStatus'),      icon: 'grid',         adopt: '#statusbar',     fixed: true, noHead: true, closable: false, floatable: false },
+  { id: 'log', dockW: 420,       title: t('ui.common.save'),      adopt: '#log-panel',     defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.logTitle' },
+  { id: 'search', dockW: 360,    title: t('ui.panel.search'),       adopt: '#search-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.search' },
+  { id: 'notes',     title: t('ui.common.notebookNoteQuick'),         adopt: '#notes-panel',   defaultSide: 'right', closable: true, floatable: true, i18n: 'ui.common.notebookNoteQuick' },
+  { id: 'comments',  title: t('ui.common.comment'),         adopt: '#comments-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.commentsTitle' },
   // ── บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ ──
-  { id: 'dashboard', minW: 620, dockW: 640, title: t('ui.common.dashboard'),        icon: 'grid',         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle',
-    desc: t('ui.panel.overviewPageCountWord') },
-  { id: 'kanban', minW: 800, dockW: 640,    title: 'Kanban',          icon: 'grid',         adopt: '#kanban-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.kanbanTitle',
-    desc: t('ui.panel.boardSceneStatusDrag') },
-  { id: 'books', minW: 400, dockW: 640,     title: t('ui.common.manageBook'),       icon: 'book-content', adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle',
-    desc: t('ui.panel.manageBookDraftCover') },
+  { id: 'dashboard', minW: 620, dockW: 640, title: t('ui.common.dashboard'),         adopt: '#dash-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.dashboardTitle' },
+  { id: 'kanban', minW: 800, dockW: 640,    title: 'Kanban',         adopt: '#kanban-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.kanbanTitle' },
+  { id: 'books', minW: 400, dockW: 640,     title: t('ui.common.manageBook'), adopt: '#books-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.booksTitle' },
   // [alpha.141] จัดการบท — ปกบท (รูป/ข้อความ) · ติ๊กใช้ปก · ลำดับบท · สถิติ
-  { id: 'chapters', minW: 400, dockW: 640, title: t('ui.chapters.title'), icon: 'book-content',
-    adopt: '#chapters-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'ui.chapters.title',
-    desc: t('ui.panel.chaptersDesc') },
-  { id: 'timeline', minW: 620, dockW: 640,  title: t('ui.common.lineTime'),         icon: 'history',      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle',
-    desc: t('ui.panel.orderEventTimeStory') },
-  { id: 'maps', dockW: 640,      title: t('ui.common.map'),           icon: 'layout',       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle',
-    desc: t('ui.panel.mapWorldStoryPin') },
+  { id: 'chapters', minW: 400, dockW: 640, title: t('ui.chapters.title'),
+    adopt: '#chapters-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'ui.chapters.title' },
+  { id: 'timeline', minW: 620, dockW: 640,  title: t('ui.common.lineTime'),      adopt: '#tl-panel',      defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.timelineTitle' },
+  { id: 'maps', dockW: 640,      title: t('ui.common.map'),       adopt: '#maps-panel',    defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.mapsTitle' },
   // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
-  { id: 'gallery', minW: 600, dockW: 640,   title: t('ui.common.libraryImage'),       icon: 'image',        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle',
-    desc: t('ui.panel.imageAllFolderImages') },
+  { id: 'gallery', minW: 600, dockW: 640,   title: t('ui.common.libraryImage'),        adopt: '#gal-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.galleryTitle' },
   // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
-  { id: 'gallery-board', minW: 400, dockW: 640, title: t('ui.common.boardMood'), icon: 'layout', adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle',
-    desc: t('ui.panel.itemPasteImageRef') },
+  { id: 'gallery-board', minW: 400, dockW: 640, title: t('ui.common.boardMood'), adopt: '#galboard-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.galleryBoardTitle' },
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-  { id: 'ai-analyzer', minW: 400, dockW: 640, title: t('ui.common.aIAnalyze'),  icon: 'brain',       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle',
-    desc: t('ui.panel.setToolAnalyzeSource') },
+  { id: 'ai-analyzer', minW: 400, dockW: 640, title: t('ui.common.aIAnalyze'),       adopt: '#ai-analyzer-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiAnalyzerTitle' },
   // [alpha.116 ข้อ 3] AI Hub — รวมทางเข้าของความสามารถ AI ทุกตัวไว้ที่เดียว
   // (ตัวมันเองไม่มีตรรกะ AI เลย — ทุกการ์ดยิงเข้า handleCommand ตัวเดิม)
-  { id: 'ai-hub', minW: 320, dockW: 420, title: t('ui.panel.aiHubTitle'), icon: 'brain',
-    adopt: '#ai-hub-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiHubTitle',
-    desc: t('ui.panel.aiHubDesc') },
+  { id: 'ai-hub', minW: 320, dockW: 420, title: t('ui.panel.aiHubTitle'),
+    adopt: '#ai-hub-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiHubTitle' },
   // [alpha.61 ข้อ 2] แชทกับ AI แบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
-  { id: 'ai-chat', dockW: 640,   title: t('ui.common.aIAssistantWrite'),       icon: 'chat',        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle',
-    desc: t('ui.panel.liftAIStoryTask') },
+  { id: 'ai-chat', dockW: 640,   title: t('ui.common.aIAssistantWrite'),        adopt: '#ai-chat-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.aiChatTitle' },
   // ── [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร ──
-  { id: 'network', minW: 400, dockW: 640,   title: t('ui.panel.networkTitle'),   icon: 'grid',          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.networkTitle',
-    desc: t('ui.panel.graphRelationCharacterPlace') },
+  { id: 'network', minW: 400, dockW: 640,   title: t('ui.panel.networkTitle'),          adopt: '#net-panel',     defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.networkTitle' },
   // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ในหน้าเดียว (ดัชนีตัวเดียวกับแท็บใน Wiki)
-  { id: 'backlinks', minW: 300, dockW: 380, title: t('ui.worldAutoLink.panelTitle'), icon: 'link',
+  { id: 'backlinks', minW: 300, dockW: 380, title: t('ui.worldAutoLink.panelTitle'),
     adopt: '#backlinks-panel', defaultSide: 'right', closable: true, floatable: true,
-    i18n: 'ui.worldAutoLink.panelTitle', desc: t('ui.worldAutoLink.panelDesc') },
-  { id: 'planner', minW: 800, dockW: 640,   title: t('ui.panel.plannerTitle'),         icon: 'grid',         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.plannerTitle',
-    desc: t('ui.panel.boardPlannerStyleCard') },
-  { id: 'planner-props', title: t('ui.panel.propsPlanner'), icon: 'clipboard', adopt: '#planner-props-panel', defaultSide: 'right',
-    closable: true, floatable: true, i18n: 'ui.panel.propsPlanner',
-    desc: t('ui.panel.propsCardLineLink') },
-  { id: 'floorplan', dockW: 640, title: t('ui.common.graphArea'),      icon: 'map',          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.common.graphArea',
-    desc: t('ui.panel.sceneOccurMapPin') },
+    i18n: 'ui.worldAutoLink.panelTitle' },
+  { id: 'planner', minW: 800, dockW: 640,   title: t('ui.panel.plannerTitle'),         adopt: '#planner-panel', defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.panel.plannerTitle' },
+  { id: 'planner-props', title: t('ui.panel.propsPlanner'), adopt: '#planner-props-panel', defaultSide: 'right',
+    closable: true, floatable: true, i18n: 'ui.panel.propsPlanner' },
+  { id: 'floorplan', dockW: 640, title: t('ui.common.graphArea'),          adopt: '#floor-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'ui.common.graphArea' },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
-  { id: 'branch', minW: 700, dockW: 640,    title: t('ui.common.graphBreakBranch2'),      icon: 'grid',          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle',
-    desc: t('ui.panel.graphStoryStyleBreak') },
-  { id: 'player', dockW: 440,    title: t('ui.common.trialPlay'),       icon: 'file',          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle',
-    desc: t('ui.panel.readStoryStylePlay') },
+  { id: 'branch', minW: 700, dockW: 640,    title: t('ui.common.graphBreakBranch2'),          adopt: '#branch-panel',  defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.branchTitle' },
+  { id: 'player', dockW: 440,    title: t('ui.common.trialPlay'),          adopt: '#player-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.playerTitle' },
   // ── [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน ──
-  { id: 'codex', dockW: 680,     title: t('ui.panel.codex'),      icon: 'book-content',  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle',
-    desc: t('ui.panel.wikiBookViewCodex') },
-  { id: 'history', dockW: 420,   title: t('ui.common.historyRun'), icon: 'history',       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle',
-    desc: t('ui.panel.doFileProjectDone') },
-  { id: 'record', dockW: 460,    title: t('ui.common.journal'),  icon: 'note',          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle',
-    desc: t('ui.panel.noteDoMoodCount') },
+  { id: 'codex', dockW: 680,     title: t('ui.panel.codex'),  adopt: '#codex-panel',   defaultSide: 'left',  closable: true, floatable: true, i18n: 'panel.codexTitle' },
+  { id: 'history', dockW: 420,   title: t('ui.common.historyRun'),       adopt: '#history-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.historyTitle' },
+  { id: 'record', dockW: 460,    title: t('ui.common.journal'),          adopt: '#record-panel',  defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.recordTitle' },
   // ── [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน ──
-  { id: 'dialogue', minW: 460, dockW: 620, title: t('ui.panel.dialogueTitle'), icon: 'chat',
-    adopt: '#dialogue-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.dialogueTitle',
-    desc: t('ui.panel.dialogueDesc') },
+  { id: 'dialogue', minW: 460, dockW: 620, title: t('ui.panel.dialogueTitle'),
+    adopt: '#dialogue-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.dialogueTitle' },
   // [alpha.82] ห้องซ้อมบท — คนละตัวกับ "บทพูดทั้งผลงาน" ข้างบน (ตัวนั้นรวบรวมของที่เขียนไปแล้ว
   // ตัวนี้ให้ AI สวมบทตัวละครจาก Wiki คุยกันสด ๆ แล้วหยิบบรรทัดที่ชอบไปใส่บท)
-  { id: 'dlgb', minW: 420, dockW: 620, title: t('ui.panel.dlgbTitle'), icon: 'chat',
-    adopt: '#dlgb-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.dlgbTitle',
-    desc: t('ui.panel.dlgbDesc') },
+  { id: 'dlgb', minW: 420, dockW: 620, title: t('ui.panel.dlgbTitle'),
+    adopt: '#dlgb-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.dlgbTitle' },
   // [alpha.94] Story Starter — สร้างเรื่องแบบทีละขั้น แล้วเล่นเป็นตอน ๆ กับ Game Master
-  { id: 'starter', minW: 460, dockW: 680, title: t('ui.panel.starterTitle'), icon: 'book-content',
-    adopt: '#starter-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.starterTitle',
-    desc: t('ui.panel.starterDesc') },
-  { id: 'plugins', minW: 420, dockW: 520, title: t('ui.panel.pluginsTitle'), icon: 'extension',
-    adopt: '#plugins-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.pluginsTitle',
-    desc: t('ui.panel.pluginsDesc') },
+  { id: 'starter', minW: 460, dockW: 680, title: t('ui.panel.starterTitle'),
+    adopt: '#starter-panel', defaultSide: 'left', closable: true, floatable: true, i18n: 'panel.starterTitle' },
+  { id: 'plugins', minW: 420, dockW: 520, title: t('ui.panel.pluginsTitle'),
+    adopt: '#plugins-panel', defaultSide: 'right', closable: true, floatable: true, i18n: 'panel.pluginsTitle' },
 ];
 // ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
 //
@@ -278,8 +246,11 @@ function titleOf(d) { return d.i18n ? t(d.i18n) : d.title; }
  * ตอนนี้อ่านจาก `d.desc` ตรง ๆ (ซึ่งเป็นค่าที่มาจากไฟล์ภาษาอยู่แล้ว)
  */
 export function panelDesc(id) {
-  const d = PANEL_DEFS.find((x) => x.id === panelId(id));
-  return d ? (d.desc || '') : '';
+  // [alpha.154 ข้อ 6] ★ คำอธิบายแผง = คำอธิบายของปุ่ม/คำสั่งเปิดแผงนั้น (`ui.tip.toggle-panel:<id>`)
+  // ผู้ใช้: *"hint คำอธิบาย panel และคำสั่ง ... แยกออกมา เวลาเราไปแปลจะง่าย ไม่ซ้ำซ้อน"*
+  // เดิมแผงมีคีย์ของตัวเองชื่อสุ่ม (`ui.panel.tocResultTaskBook`) ซ้อนกับคำอธิบายปุ่มอีกชุด
+  // ตอนนี้แผงหนึ่งมีคำอธิบายแถวเดียวในไฟล์ภาษา ใช้ทั้งเมนูหัวแผงและ tooltip ของปุ่ม
+  return tipText('toggle-panel:' + panelId(id));
 }
 
 let pm = null;
@@ -305,16 +276,23 @@ function srcHolder() {
   return h;
 }
 
+// [alpha.147] ไอคอนของแผงที่เปิด/ปิดได้ = ช่อง icon ของคำสั่ง `toggle-panel:<id>` ใน icons/commands.csv
+// (ว่าง = แผงนั้นไม่มีไอคอน) · แผงตายตัว (แถบเครื่องมือ · เอกสาร · แถบสถานะ) ไม่ใช่คำสั่ง จึงยังใช้ `icon` ของตัวเอง
+export function panelIcon(d) {
+  const cid = 'toggle-panel:' + d.id;
+  return isRegisteredCommand(cid) ? commandIcon(cid) : (d.icon || '');
+}
+
 // ───────── ลงทะเบียนแผงทั้งหมด ─────────
 export function registerPanels() {
   const m = getPanelManager();
   for (const d of PANEL_DEFS) {
-    meta.set(d.id, { title: d.title, icon: d.icon, fixed: !!d.fixed, noHead: !!d.noHead, desc: d.desc || '' });
+    meta.set(d.id, { title: d.title, icon: panelIcon(d), fixed: !!d.fixed, noHead: !!d.noHead, desc: panelDesc(d.id) });
     const node = d.adopt ? $(d.adopt) : null;
     if (node) adopted.set(d.id, node);
     m.registerPanel(d.id, {
       title: d.title,
-      icon: d.icon,
+      icon: panelIcon(d),
       closable: d.closable !== false,
       floatable: d.floatable !== false,
       defaultSide: d.defaultSide || 'left',
@@ -775,9 +753,20 @@ function sideOf(d) { return lastSide.get(d.id) || d.defaultSide || 'left'; }
 // `rememberSides()` / `sideOf()` ยังอยู่ — คำสั่ง "ซ่อนแผงฝั่งนี้" ใช้อยู่จริง
 
 // ───────── เริ่มระบบ ─────────
-export function initPanelSystem() {
+export function initPanelSystem(opts = {}) {
   const m = getPanelManager();
-  if (started) { renderPanels(true); return m; }
+  if (started) {
+    // [alpha.154 ข้อ 1] เปิดโปรเจกต์แล้วเซสชันกู้เลย์เอาต์ลง localStorage → โหลดเข้าหน่วยความจำจริง
+    if (opts.reload) {
+      homes.clear(); loadHomes();
+      if (m.load() && m.store.root && !PL.hasPanel(m.store.root, 'docs')) {
+        const anchor = PL.panelIds(m.store.root)[0];
+        m.store.update(PL.dockPanel(m.store.root, anchor, 'right', PL.panel('docs', t('ui.panel.doc'))));
+      }
+      lastSig = '';
+    }
+    renderPanels(true); return m;
+  }
   started = true;
   registerPanels();
   srcHolder();
@@ -791,10 +780,33 @@ export function initPanelSystem() {
     m.store.update(PL.dockPanel(m.store.root, anchor, 'right', PL.panel('docs', t('ui.panel.doc'))));
   }
   m.store.onChange(() => { savePanelLayout(); renderPanels(); });
+  // [alpha.154 ข้อ 1] ★ ก่อนโครงเปลี่ยนทุกครั้ง (เปิด/ปิด/ย้าย/ลอย/ผนึก) ตรึงขนาดที่ผู้ใช้เห็นอยู่
+  // ให้แผงที่ยังไม่มีขนาดของตัวเอง — ไม่งั้นมันเป็น "ส่วนแบ่งของที่ว่าง" แล้วหด/ขยายตามแผงอื่น
+  // (ตรรกะตัดสินอยู่ที่ PL.pinDockSizes · ที่นี่ทำแค่วัด DOM)
+  m.store.beforeUpdate = (next) => PL.pinDockSizes(next, measureDockedNodes(), (id) => !!(meta.get(id) || {}).fixed);
   onLanguageChanged(() => renderPanels(true));  // เปลี่ยนภาษา → ชื่อแผงเปลี่ยนตาม
   bindTearOffSync();                            // [alpha.67] ปิดหน้าต่างแผง → เอาแผงกลับที่เดิม
   renderPanels(true);
   return m;
+}
+
+/**
+ * [alpha.154 ข้อ 1] ขนาดบนจอของทุกโหนดที่ผนึกอยู่ (dock · กลุ่มแท็บ · แผง) → { id: {w,h} }
+ * เฉพาะ `.k-panel`/`.k-dock`/`.k-tab-group` — หัวแท็บ (`.k-tab`) ก็มี data-panel-id แต่เป็นขนาดของปุ่ม
+ * โหนดที่ไม่มีขนาด (ซ่อนหลังแท็บ · ยังไม่วาด · หน้าต่างย่อ) ไม่ถูกเก็บ = ไม่ถูกตรึง
+ */
+function measureDockedNodes() {
+  const out = {};
+  const h = document.getElementById(HOST_ID);
+  if (!h) return out;
+  for (const e of h.querySelectorAll('.k-panel[data-panel-id], .k-panel[data-tabs-id], .k-dock[data-dock-id], .k-tab-group[data-tabs-id]')) {
+    const r = e.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) continue;
+    for (const id of [e.dataset.panelId, e.dataset.dockId, e.dataset.tabsId]) {
+      if (id && !out[id]) out[id] = { w: r.width, h: r.height };
+    }
+  }
+  return out;
 }
 
 // ───────── คำสั่งที่ app.js/เมนูเรียก ─────────
@@ -816,7 +828,13 @@ function loadHomes() {
   } catch {}
 }
 function saveHomes() {
-  try { localStorage.setItem(HOME_KEY, JSON.stringify(Object.fromEntries(homes))); } catch {}
+  try {
+    const str = JSON.stringify(Object.fromEntries(homes));
+    const prev = localStorage.getItem(HOME_KEY);
+    localStorage.setItem(HOME_KEY, str);
+    // [alpha.154 ข้อ 1] ให้ด่านกู้เซสชันรู้ว่าใหม่กว่า — เฉพาะตอนเปลี่ยนจริง (ตัวนี้ถูกเรียกหลังวาดทุกครั้ง)
+    if (prev !== str) localStorage.setItem('k2-ls-ts', String(Date.now()));
+  } catch {}
 }
 /** จดตำแหน่งปัจจุบันของแผงไว้ก่อนปิด */
 function rememberHome(pid) {
@@ -1167,7 +1185,7 @@ export function panelMenuItems() {
     // ไม่งั้นผู้ใช้กดแล้วงงว่าทำไมไม่มีอะไรโผล่ในหน้าต่างนี้ (togglePanel เรียกมันกลับมาให้)
     const away = tornOff.has(d.id);
     return {
-      label: (away ? '🖥 ' : m.isOpen(d.id) ? '☑ ' : '☐ ') + titleOf(d)
+      label: (away ? gi('desktop') + ' ' : m.isOpen(d.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + titleOf(d)
              + (away ? t('ui.panel.menuAway') : ''),
       click: () => togglePanel(d.id),
     };
@@ -1198,7 +1216,7 @@ export function addPanelButton(id, node) {
 export function workspaceMenuItems() {
   const items = [{ label: t('ui.panel.wsPick'), disabled: true }];
   for (const w of listWorkspaces()) {
-    items.push({ label: (w.builtIn ? '◻ ' : '▣ ') + w.label, click: () => applyWorkspace(w.name) });
+    items.push({ label: (w.builtIn ? gi('window-restore') + ' ' : gi('window-max') + ' ') + w.label, click: () => applyWorkspace(w.name) });
   }
   items.push('-');
   items.push({ label: t('ui.panel.wsSave'),
@@ -1215,7 +1233,7 @@ export function workspaceMenuItems() {
       click: () => {
         const r = $('#tb-panels') ? $('#tb-panels').getBoundingClientRect() : { left: 40, bottom: 60 };
         popupMenu(r.left, r.bottom + 4, mine.map((w) => ({
-          label: '🗑 ' + w.label,
+          label: gi('trash') + ' ' + w.label,
           click: async () => {
             if (!(await confirmBox(t('ui.panel.wsDelAsk') + w.label + '” ?'))) return;
             deleteWorkspace(w.name);

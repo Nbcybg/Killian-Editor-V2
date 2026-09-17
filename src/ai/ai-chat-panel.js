@@ -18,6 +18,7 @@ import {
   archiveSession, clearMessages, sessionFileName, sessionStats, contextLabel, compact, usd,
   searchSessions, buildChatMessages, historyBudget, rawJson, shareMarkdown, estimateTokens,
   parseChatMarkdown, REASONING_EFFORTS, effortLabel, isReasoningEffort,
+  joinContinuation, canContinue,
 } from './ai-session.js';
 // [alpha.145] ทักษะ (Skills/*.md) — คำสั่งประจำตัวที่ผู้ใช้เขียนเอง เปิด/ปิดรายเซสชัน
 import { SKILL_DIR, loadSkills, buildSkillsPrompt, skillsLabel,
@@ -26,6 +27,12 @@ import { providerList, providerById, currentProvider, completeStream, aiMeta } f
 import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, describeCall,
          toolByName, resultsMessage } from './ai-tools.js';
 import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.js';
+// [alpha.149] ดัชนีของผู้ช่วยเขียน · ไอคอนสถานะ · แท็บที่เปิดอยู่ · ราคาตามเจ้าจริง
+import { invalidateRag } from './ai-bridge.js';
+import { icon, gi } from '../icons.js';
+import { tabHandle } from '../tab-bridge.js';
+import { priceKeyOf } from './ai-providers.js';
+import { estimateCost } from './ai-core.js';
 
 /** จำนวนรอบสูงสุดที่ยอมให้ AI สั่งคำสั่ง → เห็นผล → สั่งต่อ ในการส่งหนึ่งครั้ง */
 const MAX_TOOL_ROUNDS = 5;
@@ -165,6 +172,10 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
   const parts = [];
   const push = async (file, label) => {
     try {
+      // [alpha.149] ★ ไฟล์ที่เปิดอยู่ในแท็บ = ใช้เนื้อในแท็บ (รวมส่วนที่ยังไม่บันทึก)
+      // เดิมอ่านดิสก์เสมอ → AI มองไม่เห็นสิ่งที่ผู้ใช้เพิ่งพิมพ์ในฉากที่เปิดอยู่ (วัดจริง)
+      const h = tabHandle(file);
+      if (h && h.kind !== 'wiki') { parts.push('### ' + label + '\n' + h.getText()); return; }
       const raw = await kapi.readFile(file);
       const { parseMdFile } = await import('../md.js');
       parts.push('### ' + label + '\n' + parseMdFile(raw).body);
@@ -195,7 +206,7 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
     }
   }
   // แนบไฟล์ที่ผู้ใช้เพิ่มเองด้วย 📎 (นอกเหนือจาก scope)
-  for (const f of session.files || []) await push(f.path, '📎 ' + (f.name || f.path));
+  for (const f of session.files || []) await push(f.path, gi('paperclip') + ' ' + (f.name || f.path));
   const text = parts.join('\n\n');
   return text.length > maxChars ? text.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : text;
 }
@@ -213,7 +224,10 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
 const RAG = { session: null, root: '', building: null, stale: true };
 
 /** เนื้อหาในโปรเจกต์เปลี่ยน → ดัชนี RAG ของแชทล้าสมัย */
-export function invalidateChatRag() { RAG.stale = true; }
+export function invalidateChatRag() {
+  RAG.stale = true;
+  invalidateRag();          // [alpha.149] ดัชนีของผู้ช่วยเขียน (ai-bridge) เคยไม่มีใครล้างเลย = ตอบจากเนื้อหาเก่าตลอด
+}
 
 /** รวบรวมเอกสารของโปรเจกต์ในรูปที่ `collectDocs()` ของ ai-chat.js ต้องการ */
 async function ragSource() {
@@ -222,7 +236,9 @@ async function ragSource() {
   const { parseMdFile } = await import('../md.js');
   for (const f of files) {
     try {
-      const { meta = {}, body = '' } = parseMdFile(await kapi.readFile(f));
+      const { meta = {}, body: diskBody = '' } = parseMdFile(await kapi.readFile(f));
+      const h = tabHandle(f);                        // [alpha.149] แท็บที่เปิดอยู่ชนะดิสก์
+      const body = h && h.kind !== 'wiki' ? h.getText() : diskBody;
       if (!String(body).trim()) continue;
       scenes.push({ id: f, title: meta.title || f.split(/[\\/]/).pop().replace(/\.md$/i, ''),
                     text: body, chapterId: '', storyDate: meta.storyDate || '' });
@@ -231,7 +247,16 @@ async function ragSource() {
   let entities = [];
   try {
     const { listEntities } = await import('../project-scan.js');
-    entities = (await listEntities(state.root)) || [];
+    // [alpha.149] ★ `listEntities()` คืน "ห่อ" {name, aliases, path, entity} — ช่อง/หัวข้อจริงอยู่ใน `.entity`
+    // เดิมส่งห่อไปตรง ๆ → ai-chat.js หา fields/notes ไม่เจอ = ดัชนีได้แค่ชื่อ ไม่มีเนื้อหา Wiki เลยสักตัว
+    entities = ((await listEntities(state.root)) || []).map((w) => {
+      const e = (w && w.entity) || {};
+      const secs = Array.isArray(e.sections) ? e.sections : [];
+      const notes = [e.notes || e.summary || e.desc || '',
+        ...secs.map((x) => ((x && x.title) ? x.title + ': ' : '') + ((x && x.content) || ''))]
+        .filter((x) => String(x).trim()).join('\n');
+      return { ...e, id: e.id || w.path, name: w.name, aliases: w.aliases || e.aliases || [], notes };
+    });
   } catch {}
   return { scenes, entities };
 }
@@ -274,19 +299,26 @@ export async function collectRelevant(query, { maxChars = 24000, files = [] } = 
   try {
     const { buildContext } = await import('./ai-core.js');
     const hits = await sess.rag.retrieve(q, 8);
-    out = buildContext(hits, { maxChars });
+    // [alpha.149] ★ `buildContext()` คืน {text, sources, tokens} — เดิมเก็บทั้งก้อนแล้วเอาไปต่อสตริง
+    // = system prompt ได้คำว่า "[object Object]" แทนเนื้อหาโปรเจกต์ (วัดจริงจากคำขอที่ส่งออกไป)
+    // และ `maxChars` ไม่ใช่ตัวเลือกของมัน → งบถูกตรึงที่ค่าเริ่มต้น 1,500 token เงียบ ๆ
+    out = buildContext(hits, { maxTokens: Math.max(400, Math.floor(maxChars / 3)) }).text || '';
   } catch (e) { log('warn', tt('ui.aiChatPanel.ragRetrieveFail'), e); return ''; }
   // ไฟล์ที่ผู้ใช้แนบเองด้วย 📎 ต้องติดไปเสมอ ไม่ว่าจะเกี่ยวกับคำถามไหม
   for (const f of files) {
     try {
       const { parseMdFile } = await import('../md.js');
       const raw = await kapi.readFile(f.path);
-      out += '\n\n### 📎 ' + (f.name || f.path) + '\n' + parseMdFile(raw).body;
+      out += '\n\n### ' + gi('paperclip') + ' ' + (f.name || f.path) + '\n' + parseMdFile(raw).body;
     } catch {}
   }
   return out.length > maxChars ? out.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : out;
 }
 
+// [alpha.149] สำเนาสำรอง (Backups/) · ทักษะ · ผลวิเคราะห์ · Story Starter · เซสชันแชท ไม่ใช่เนื้อเรื่อง
+// เดิมระดับ "ทั้งโปรเจกต์" ส่งสำเนาเก่าใน Backups/ ให้ AI ด้วย (วัดจริง) และกินโควตาบริบทไปเปล่า ๆ
+const SCOPE_SKIP = new Set(['Snapshots', 'Recycle', 'Images', SESSION_DIR, 'Plugins',
+                            'Backups', SKILL_DIR, 'Analysis', 'Starters']);
 async function allMdFiles(root, depth = 0) {
   if (depth > 6) return [];
   const out = [];
@@ -295,7 +327,7 @@ async function allMdFiles(root, depth = 0) {
   try { files = await kapi.listFiles(root); } catch {}
   for (const f of files) if (/\.md$/i.test(f)) out.push(await kapi.join(root, f));
   for (const d of dirs) {
-    if (['Snapshots', 'Recycle', 'Images', SESSION_DIR, 'Plugins'].includes(d)) continue;
+    if (SCOPE_SKIP.has(d) || d.startsWith('.')) continue;
     out.push(...await allMdFiles(await kapi.join(root, d), depth + 1));
   }
   return out;
@@ -393,6 +425,7 @@ function sessionRow(s) {
   const row = el('div', 'ai-chat-row');
   if (s.archived) row.classList.add('archived');
   row.dataset.session = s.id;
+  row.append(statusIcon(s));          // [alpha.149] ৹ พร้อม · ↻ กำลังคิด (หมุน) · ⚠ ผิดพลาด
   const main = el('div', 'ai-chat-row-main');
   main.append(el('div', 'ai-chat-row-title', s.title || tt('ui.aiChatPanel.session')));
   const last = [...(s.messages || [])].reverse().find((m) => m.text);
@@ -420,7 +453,7 @@ function sessionView() {
 
   // ── หัว: ซ้าย = ชื่อเซสชัน · ขวา = ป้ายบริบท + เมนู ⋯ ──
   const head = el('div', 'ai-chat-head');
-  const back = el('button', 'ai-chat-back', '←');
+  const back = el('button', 'ai-chat-back', gi('arrow-left'));
   back.title = tt('ui.aiChatPanel.backListSession');
   back.onclick = () => { S.view = 'list'; draw(); };
   const title = el('div', 'ai-chat-title', s.title || tt('ui.aiChatPanel.session'));
@@ -438,7 +471,7 @@ function sessionView() {
   ].join('\n');
   badge.onclick = () => { S.view = 'detail'; draw(); };
   // [alpha.62 บั๊ก 3] เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เซสชันยังอยู่ที่เดิม)
-  const restart = el('button', 'ai-chat-restart', '↻');
+  const restart = el('button', 'ai-chat-restart', gi('refresh-thin'));
   restart.title = tt('ui.aiChatPanel.restartClearDialogueSession');
   restart.onclick = () => restartSession(live(s));
   // [alpha.63r4] มุมมอง transcript — ปกติ / ความคิด / ละเอียด / สรุป
@@ -464,7 +497,7 @@ function sessionView() {
   more.title = tt('ui.aiChatPanel.itemPickSession');
   more.onclick = (e) => sessionMenu(e, live(s));
   right.append(badge, viewSel, restart, more);
-  head.append(back, title, right);
+  head.append(back, statusIcon(s), title, right);
   wrap.append(head);
 
   // ── ข้อความ ──
@@ -497,7 +530,7 @@ function renderMessages(body, s) {
       tt('ui.aiChatPanel.startMode') + modeDef(s.mode).label + tt('ui.aiChatPanel.seeData') + scopeLabel(s.scope)
       + (s._draft ? tt('ui.aiChatPanel.sessionSaveSendText') : '')));
   }
-  for (const m of s.messages || []) body.append(msgNode(m, s.view));
+  for (const m of s.messages || []) body.append(msgNode(m, s.view, s));
   if (isRunning(s.id)) body.append(pendingNode());
   body.scrollTop = body.scrollHeight;
 }
@@ -520,7 +553,7 @@ function pendingNode() {
   who.append(el('span', 'ai-pend-label', r.label || tt('ui.aiChatPanel.busyThink')));
   who.append(el('span', 'ai-msg-elapsed ai-pend-time',
     ttf('ui.aiChatPanel.useTime', ((Date.now() - r.startAt) / 1000).toFixed(1))));
-  const stop = el('button', 'ai-msg-copy ai-pend-stop', '⏹');
+  const stop = el('button', 'ai-msg-copy ai-pend-stop', gi('stop'));
   stop.type = 'button';
   stop.title = tt('ui.aiChatPanel.stopHint');
   stop.onclick = () => { if (kapi.httpAbort) kapi.httpAbort(r.reqId); };
@@ -575,15 +608,8 @@ function paintRunBadges() {
   for (const row of S.host.querySelectorAll('.ai-chat-row')) {
     const on = row.dataset.session === runId;
     row.classList.toggle('running', on);
-    let b = row.querySelector('.ai-chat-row-run');
-    if (on && !b) {
-      b = el('span', 'ai-chat-row-run', '⏳');
-      row.querySelector('.ai-chat-row-meta').prepend(b);
-    }
-    if (b) {
-      b.style.display = on ? '' : 'none';
-      b.title = T`กำลังทำงานอยู่ ${secs} วินาที`;
-    }
+    // [alpha.149] ไอคอนสถานะแทนป้าย ⏳ — วาดใหม่เฉพาะตอนสถานะเปลี่ยน (ตัวนี้ถูกเรียกทุก 400ms ระหว่างรอ)
+    syncStatusIcon(row.querySelector('.ai-chat-status'), sessById(row.dataset.session) || { id: row.dataset.session });
   }
   const banner = S.host.querySelector('.ai-chat-running');
   if (banner) {
@@ -594,6 +620,37 @@ function paintRunBadges() {
   }
   const head = S.host.querySelector('.ai-chat-head .ai-chat-title');
   if (head && S.cur) head.classList.toggle('running', isRunning(S.cur.id));
+  if (S.cur) syncStatusIcon(S.host.querySelector('.ai-chat-head .ai-chat-status'), S.cur);
+}
+
+/**
+ * [alpha.149] สถานะของเซสชันสำหรับไอคอนหน้าชื่อ
+ * ผู้ใช้: *"เพิ่ม icon หน้า session บอกสถานะ ৹ ปกติ · recycle หมุน กำลัง thinking · สามเหลี่ยมตกใจ error"*
+ * @returns {'running'|'error'|'idle'} error = ข้อความล่าสุด (ไม่นับผลคำสั่ง) เป็นคำตอบที่พัง
+ */
+export function sessionStatus(s) {
+  if (!s) return 'idle';
+  if (isRunning(s.id)) return 'running';
+  const last = [...(s.messages || [])].reverse().find((m) => !m.toolResult);
+  return last && last.role === 'assistant' && last.error ? 'error' : 'idle';
+}
+const STATUS_KEY = { idle: 'ui.aiChatPanel.statusIdle', running: 'ui.aiChatPanel.statusRunning',
+                     error: 'ui.aiChatPanel.statusError' };
+function statusIcon(s) {
+  const n = el('span', 'ai-chat-status');
+  syncStatusIcon(n, s);
+  return n;
+}
+function syncStatusIcon(node, s) {
+  if (!node) return;
+  const st = sessionStatus(s);
+  if (node.dataset.st === st) return;
+  node.dataset.st = st;
+  node.className = 'ai-chat-status ai-st-' + st;
+  // ชื่อไอคอนเขียนเต็มทุกตัว — ประตูกันพลาดของ commands-registry ตรวจชื่อจากตัวอักษรในโค้ด
+  node.replaceChildren(st === 'running' ? icon('ai-status-running', 14)
+                     : st === 'error' ? icon('ai-status-error', 14) : icon('ai-status-idle', 14));
+  node.title = tt(STATUS_KEY[st]);
 }
 /**
  * วาดข้อความหนึ่งก้อนตามมุมมองที่เลือก
@@ -602,14 +659,14 @@ function paintRunBadges() {
  *   verbose  — เพิ่ม system prompt, JSON คำสั่งดิบ, ผลดิบ, token, เวลา
  *   summary  — บรรทัดเดียวต่อข้อความ
  */
-function msgNode(m, view = DEFAULT_VIEW) {
+function msgNode(m, view = DEFAULT_VIEW, sess = null) {
   // ผลคำสั่งที่ป้อนกลับให้โมเดลไม่ใช่บทสนทนา — โผล่เฉพาะโหมดที่ขอดูเบื้องหลัง
   if (m.toolResult && view !== 'verbose' && view !== 'thinking') return el('span', 'ai-msg-hidden');
   if (m.toolResult) return foldBlock(tt('ui.aiChatPanel.resultCmdSendBack'), m.text, 'ai-msg-toolresult');
   if (view === 'summary') return summaryNode(m);
   const n = el('div', 'ai-msg ai-msg-' + m.role);
   const who = el('div', 'ai-msg-who dim',
-    m.role === 'user' ? tt('ui.aiChatPanel.you') : m.role === 'assistant' ? (m.model ? '🤖 ' + m.model : tt('ui.aiChatPanel.assistant')) : m.role);
+    m.role === 'user' ? tt('ui.aiChatPanel.you') : m.role === 'assistant' ? (m.model ? gi('bot') + ' ' + m.model : tt('ui.aiChatPanel.assistant')) : m.role);
   // [alpha.62 บั๊ก 3] คัดลอกข้อความทีละก้อน — คำตอบของ AI ส่วนใหญ่เอาไปวางต่อในต้นฉบับ
   // (ลากคลุมเองไม่ได้เพราะแผงลอย/แผง dock กินอีเวนต์เมาส์ไปทำอย่างอื่น)
   const copy = el('button', 'ai-msg-copy', '⧉');
@@ -617,7 +674,7 @@ function msgNode(m, view = DEFAULT_VIEW) {
   copy.title = tt('ui.aiChatPanel.copyText');
   copy.onclick = async () => {
     const ok = await copyText(m.text || '');
-    copy.textContent = ok ? '✓' : '✕';
+    copy.textContent = ok ? gi('checkmark') : gi('close');
     setTimeout(() => { copy.textContent = '⧉'; }, 1200);
   };
   who.append(copy);
@@ -652,13 +709,26 @@ function msgNode(m, view = DEFAULT_VIEW) {
       + (m.at ? ' · ' + fmtDate(m.at) : '')));
   }
   if (m.error) {
-    n.append(el('div', 'ai-msg-err', '⚠ ' + m.error));
+    n.append(el('div', 'ai-msg-err', gi('warning') + ' ' + m.error));
     // [alpha.145] รายละเอียด + แนวทางแก้ (มาจาก ai-error.js) — เดิมมีแค่บรรทัดเดียวว่า
     // "เรียกไม่สำเร็จ (HTTP 0)" ซึ่งบอกอะไรผู้ใช้ไม่ได้เลย
     if (m.detail) n.append(foldBlock(T`รายละเอียด · แนวทางแก้`, m.detail, 'ai-msg-errdetail'));
   }
+  // [alpha.149] คำตอบไม่ครบ (ชนเพดาน Max Tokens · ถูกหยุด · หมดเวลา) → ปุ่ม "ต่อ" เขียนต่อในข้อความเดิม
+  if (sess && canContinue(sess, m) && !isRunning(sess.id)) {
+    const bar = el('div', 'ai-msg-cont');
+    bar.append(el('span', 'ai-msg-cont-note dim',
+      tt(m.truncated ? 'ui.aiChatPanel.truncatedNote' : 'ui.aiChatPanel.partialNote')));
+    const btn = el('button', 'ai-msg-cont-btn');
+    btn.type = 'button';
+    btn.title = tt('ui.aiChatPanel.continueTip');
+    btn.append(icon('chevron-right', 14), document.createTextNode(tt('ui.aiChatPanel.continueBtn')));
+    btn.onclick = () => { btn.disabled = true; continueReply(sess.id, m.id); };
+    bar.append(btn);
+    n.append(bar);
+  }
   if (m.files && m.files.length) {
-    n.append(el('div', 'ai-msg-files dim', '📎 ' + m.files.map((f) => f.name || f.path).join(', ')));
+    n.append(el('div', 'ai-msg-files dim', gi('paperclip') + ' ' + m.files.map((f) => f.name || f.path).join(', ')));
   }
   return n;
 }
@@ -689,7 +759,7 @@ function mdNode(text) {
       cp.title = tt('ui.aiChatPanel.copyText');
       cp.onclick = async () => {
         const ok = await copyText(b.text);
-        cp.textContent = ok ? '✓' : '✕';
+        cp.textContent = ok ? gi('checkmark') : gi('close');
         setTimeout(() => { cp.textContent = '⧉'; }, 1200);
       };
       head.append(cp);
@@ -717,7 +787,7 @@ function mdNode(text) {
 function summaryNode(m) {
   if (m.toolResult) return el('span', 'ai-msg-hidden');
   const n = el('div', 'ai-sum ai-sum-' + m.role);
-  const icon = m.role === 'user' ? '🙋' : m.error ? '⚠' : '🤖';
+  const icon = m.role === 'user' ? gi('raise-hand') : m.error ? gi('warning') : gi('bot');
   const body = m.error ? m.error
     : (m.calls && m.calls.length && !stripToolCalls(m.text)
         ? m.calls.map(describeCall).join(' · ')
@@ -726,7 +796,7 @@ function summaryNode(m) {
   const t = el('span', 'ai-sum-text', body.length > 120 ? body.slice(0, 119) + '…' : body);
   t.title = m.text || m.error || '';
   n.append(t);
-  if (m.calls && m.calls.length) n.append(el('span', 'ai-sum-tag dim', '⚡' + m.calls.length));
+  if (m.calls && m.calls.length) n.append(el('span', 'ai-sum-tag dim', gi('zap') + m.calls.length));
   if (m.usage && m.usage.total) n.append(el('span', 'ai-sum-tok dim', compact(m.usage.total)));
   return n;
 }
@@ -747,7 +817,7 @@ function callsNode(calls, results, view) {
   calls.forEach((c, i) => {
     const r = (results || [])[i];
     const row = el('div', 'ai-call' + (r ? (r.ok ? ' ok' : ' bad') : ''));
-    row.append(el('span', 'ai-call-icon', r ? (r.ok ? '✓' : '✕') : '·'));
+    row.append(el('span', 'ai-call-icon', r ? (r.ok ? gi('checkmark') : gi('close')) : '·'));
     row.append(el('span', 'ai-call-desc', describeCall(c)));
     if (r && (r.message || r.error)) row.append(el('span', 'ai-call-msg dim', r.error || r.message));
     box.append(row);
@@ -767,11 +837,11 @@ function composer(s, body) {
 
   // แถวควบคุม: 📎 ไฟล์ · โหมด · โมเดล (override) · ระดับการเข้าถึง
   const ctrls = el('div', 'ai-chat-ctrls');
-  const fileBtn = el('button', 'ai-chat-file', '📎');
+  const fileBtn = el('button', 'ai-chat-file', gi('paperclip'));
   fileBtn.title = tt('ui.aiChatPanel.addFileInContext');
   // [alpha.121] แทรกโค้ดสั้น (เรื่องย่อฉาก · ข้อมูลเอนทิตี้ · สถิติโปรเจกต์ ฯลฯ) ตรงเคอร์เซอร์
   // ต่างจากตัวแก้ไขเอกสาร: ค่าถูกแทนทันที ไม่ใช่ placeholder ค้าง (แชทไม่มีขั้นตอนคอมไพล์ทีหลัง)
-  const scBtn = el('button', 'ai-chat-file ai-chat-shortcode', '🏷');
+  const scBtn = el('button', 'ai-chat-file ai-chat-shortcode', gi('tag'));
   scBtn.title = tt('ui.aiChatPanel.insertShortcode');
   const modeSel = el('select', 'ai-chat-mode');
   for (const m of CHAT_MODES) { const o = el('option', null, m.icon + ' ' + m.label); o.value = m.id; modeSel.append(o); }
@@ -796,7 +866,7 @@ function composer(s, body) {
   effortSel.title = T`ระดับการใช้ความคิดของโมเดล (reasoning effort) — มีผลเฉพาะเซสชันนี้`;
 
   // [alpha.145] ทักษะ — ผู้ใช้: "ไม่มีการใส่ skill.md เลย"
-  const skillBtn = el('button', 'ai-chat-file ai-chat-skills', '🧩');
+  const skillBtn = el('button', 'ai-chat-file ai-chat-skills', gi('puzzle'));
   skillBtn.title = T`ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)`;
 
   ctrls.append(fileBtn, scBtn, skillBtn, modeSel, modelSel, scopeSel, effortSel);
@@ -811,7 +881,7 @@ function composer(s, body) {
     filesRow.innerHTML = '';
     filesRow.style.display = cf.length ? '' : 'none';
     for (const f of cf) {
-      const chip = el('span', 'ai-chat-filechip', '📎 ' + (f.name || f.path));
+      const chip = el('span', 'ai-chat-filechip', gi('paperclip') + ' ' + (f.name || f.path));
       const x = el('span', 'ai-chat-filex', '×');
       x.onclick = async () => {
         const c = live(s);
@@ -892,7 +962,7 @@ async function refreshSkillBtn(btn, s) {
   if (!btn) return;
   _skills = await loadSkills(state.root);
   const on = (live(s).skills || []).filter((id) => _skills.some((k) => k.id === id));
-  btn.textContent = _skills.length ? skillsLabel(_skills, on) : '🧩';
+  btn.textContent = _skills.length ? skillsLabel(_skills, on) : gi('puzzle');
   btn.classList.toggle('on', on.length > 0);
   btn.title = _skills.length
     ? T`ทักษะที่เปิดอยู่: ` + (on.length ? on.join(', ') : T`— ไม่มี —`)
@@ -904,7 +974,7 @@ async function skillMenu(ev, s, btn) {
   _skills = await loadSkills(state.root);
   const on = new Set(live(s).skills || []);
   const items = _skills.map((k) => ({
-    label: (on.has(k.id) ? '☑ ' : '☐ ') + k.name
+    label: (on.has(k.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + k.name
            + (k.description ? ' — ' + k.description : '')
            + T`  (${String(k.chars)} ตัวอักษร)`,
     click: async () => {
@@ -915,7 +985,7 @@ async function skillMenu(ev, s, btn) {
       S.cur = c;
       await saveSession(c);
       await refreshSkillBtn(btn, c);
-      setStatus(T`${set.has(k.id) ? '✅' : '⬜'} ทักษะ: ${k.name}`);
+      setStatus(T`${set.has(k.id) ? gi('check-circle') : gi('square-outline')} ทักษะ: ${k.name}`);
     },
   }));
   if (items.length) items.push('-');
@@ -973,6 +1043,36 @@ function fillModelSelect(sel, s) {
 let _reqSeq = 0;
 function newReqId() { _reqSeq += 1; return 'chat-' + Date.now().toString(36) + '-' + _reqSeq; }
 
+/**
+ * ══ [alpha.149] ★ คำตอบต้องลง "เซสชันที่ส่ง" ไม่ใช่ "เซสชันที่เปิดดูอยู่" ══
+ *
+ * เดิม `send()` เขียนทุกอย่างลง `S.cur` หลังรอคำตอบเสร็จ — ผู้ใช้ส่งในเซสชัน B แล้วกลับไปเปิด A
+ * ระหว่างรอ = คำตอบของ B ไปต่อท้าย A และ B ไม่ได้อะไรเลย (วัดจริงด้วยเซิร์ฟเวอร์จำลอง)
+ * ตอนนี้ถือแค่ **id** แล้วหยิบก้อนล่าสุดของเซสชันนั้นทุกครั้งที่จะเขียน
+ */
+function sessById(id) {
+  if (!id) return null;
+  if (S.cur && S.cur.id === id) return S.cur;
+  return S.sessions.find((x) => x.id === id) || null;
+}
+/** เขียนเซสชันกลับทั้งในหน่วยความจำ (S.cur/S.sessions) และลงไฟล์ */
+async function commitSess(next) {
+  if (!next) return next;
+  if (S.cur && S.cur.id === next.id) S.cur = next;
+  const i = S.sessions.findIndex((x) => x.id === next.id);
+  if (i >= 0) S.sessions[i] = next;
+  await saveSession(next);
+  return sessById(next.id) || next;
+}
+function patchMessage(sess, msgId, patch) {
+  return { ...sess, updated: new Date().toISOString(),
+           messages: (sess.messages || []).map((m) => (m.id === msgId ? { ...m, ...patch } : m)) };
+}
+function lastUserText(sess) {
+  const u = [...((sess && sess.messages) || [])].reverse().find((m) => m.role === 'user' && !m.toolResult);
+  return u ? u.text : '';
+}
+
 async function send(s0, ta, sendBtn) {
   // ก้อนที่ปิดทับไว้ตอนวาดหน้าเป็นของเก่าทันทีที่คุยไปหนึ่งรอบ — ยึด `S.cur` เสมอ (ดู `live()`)
   const s = live(s0);
@@ -983,34 +1083,55 @@ async function send(s0, ta, sendBtn) {
     setStatus(tt('ui.aiChatPanel.cantSettingsProviderAI'));
     return;
   }
-  S.sending = true;
-  if (sendBtn) sendBtn.disabled = true;
   ta.value = '';
-  const reqId = newReqId();
-
   const userMsg = newMessage('user', text, { files: (s.files || []).slice() });
   S.cur = addMessage(s, userMsg);
   // ข้อความแรก = เซสชันเกิดจริง (addMessage ตั้งชื่อจากข้อความนี้ให้แล้ว) → บันทึกลงไฟล์ตอนนี้
   await saveSession(S.cur);
+  await runAssistant(S.cur.id, prov, { query: text, sendBtn });
+}
+
+/**
+ * [alpha.149] ปุ่ม "ต่อ" — ให้โมเดลเขียนต่อจากคำตอบที่ถูกตัด (ชนเพดาน token) หรือหยุดกลางทาง
+ * ข้อความที่ได้ต่อท้าย **ข้อความเดิม** (ไม่เปิดฟองใหม่) คัดลอกไปใช้ต่อได้เป็นก้อนเดียว
+ * @returns {Promise<boolean>} false = ต่อไม่ได้ (ไม่ใช่คำตอบล่าสุด · ครบแล้ว · กำลังทำงานอยู่)
+ */
+export async function continueReply(sessionId, msgId) {
+  if (S.sending) return false;
+  const s = sessById(sessionId);
+  const m = s && (s.messages || []).find((x) => x.id === msgId);
+  if (!m || !canContinue(s, m)) return false;
+  const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
+  if (!prov) { setStatus(tt('ui.aiChatPanel.cantSettingsProviderAI')); return false; }
+  await runAssistant(sessionId, prov, { query: lastUserText(s), continueOf: msgId });
+  return true;
+}
+
+async function runAssistant(sid, prov, { query = '', continueOf = '', sendBtn = null } = {}) {
+  S.sending = true;
+  if (sendBtn) sendBtn.disabled = true;
+  const reqId = newReqId();
+  const start = sessById(sid);
 
   // ══ [alpha.145] สถานะ "กำลังทำงาน" อยู่ใน S.run — ไม่มีใครถือโหนด DOM ไว้อีกแล้ว ══
   // ผู้ใช้จะกด ← กลับรายการ กดป้าย token ไปหน้ารายละเอียด หรือปิด/เปิดแผงระหว่างรอก็ได้
   // ทุกครั้งที่วาดใหม่ ฟอง "กำลังคิด…" กลับมาพร้อมข้อความที่ไหลมาแล้วครบถ้วน
-  S.run = { sessionId: S.cur.id, title: S.cur.title, reqId, startAt: Date.now(),
-            label: tt('ui.aiChatPanel.busyThink'), text: '', thinking: '' };
+  S.run = { sessionId: sid, title: start.title, reqId, startAt: Date.now(),
+            label: tt(continueOf ? 'ui.aiChatPanel.busyContinue' : 'ui.aiChatPanel.busyThink'),
+            text: '', thinking: '' };
   repaint();
 
   // นาฬิกาเดินบนจอ + ป้าย "กำลังทำงาน" ทุกที่ (รายการเซสชัน · แถบเหนือรายการ)
   const tick = setInterval(() => { paintPending(); paintRunBadges(); }, 400);
 
-  const md = modeDef(S.cur.mode);
-  const cap = modeCap(S.cur.mode);
+  const md = modeDef(start.mode);
+  const cap = modeCap(start.mode);
   let system = md.system;
   const tp = toolsSystemPrompt(cap);
   if (tp) system += '\n\n' + tp;
   // [alpha.145] ทักษะที่ผู้ใช้เขียนเอง (Skills/*.md) — ต่อท้าย system prompt
   try {
-    const sk = await skillsPromptFor(S.cur);
+    const sk = await skillsPromptFor(start);
     if (sk.text) {
       system += sk.text;
       log('info', 'ai: ' + T`ใช้ทักษะ ${String(sk.used.length)} ตัว (${String(sk.chars)} ตัวอักษร)`,
@@ -1021,73 +1142,107 @@ async function send(s0, ta, sendBtn) {
     }
   } catch (e) { log('warn', 'ai: ' + T`อ่านทักษะไม่สำเร็จ`, e); }
   try {
-    const ctx = await collectScope(S.cur, { query: text });
-    if (ctx) system += tt('ui.aiChatPanel.dataProjectLevelIn') + scopeLabel(S.cur.scope) + '):\n' + ctx;
+    const ctx = await collectScope(start, { query });
+    if (ctx) system += tt('ui.aiChatPanel.dataProjectLevelIn') + scopeLabel(start.scope) + '):\n' + ctx;
   } catch (e) { log('warn', tt('ui.aiChatPanel.aiChatCollectContext'), e); }
 
   // ── วนรอบ: ถาม → โมเดลสั่งคำสั่ง → ทำจริง → ส่งผลกลับ → ถามต่อ ──
   let res = null;
   let touched = false;
   let lastDropped = 0;
+  let contId = continueOf;
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const rt0 = Date.now();
-      // สตรีมสด (transport ไม่รองรับ → ตกไป complete แล้วโผล่ทีเดียว UI ไม่ต้องแยกกรณี)
+      let cur = sessById(sid);
+      if (!cur) break;                              // เซสชันถูกลบระหว่างรอ
       // [alpha.129 ข้อ 1] ประวัติทั้งเซสชันตามงบของโมเดลจริง (เดิมตายตัว 6k → ลืมแชทเก่าตลอด)
-      const hist = buildChatMessages(S.cur, { maxTokens: historyBudget(S.cur, aiMeta()) });
+      const hist = buildChatMessages(cur, { maxTokens: historyBudget(cur, aiMeta()) });
       if (hist.dropped > 0 && hist.dropped !== lastDropped) {
         lastDropped = hist.dropped;
         // ตัดจริงเมื่อไหร่ต้องเห็นบนจอ — ไม่งั้นผู้ใช้เจอแค่ "AI มั่ว" โดยไม่รู้ว่าประวัติถูกตัด
-        const b = msgsHost();
+        const b = S.cur && S.cur.id === sid ? msgsHost() : null;
         const pn = b && b.querySelector('.ai-msg-pending');
         if (b) b.insertBefore(el('div', 'ai-chat-trim dim',
           ttf('ui.aiChatPanel.historyTrimmed', hist.dropped)), pn || null);
       }
+      const messages = contId
+        ? [...hist.messages, { role: 'user', content: tt('ui.aiChatPanel.continuePrompt') }]
+        : hist.messages;
       res = await completeStream(prov, {
-        system, messages: hist.messages, model: s.model || undefined, reqId,
+        system, messages, model: cur.model || undefined, reqId,
         // [alpha.145] ระดับการใช้ความคิดรายเซสชัน ('' = ไม่ทับค่าของผู้ให้บริการ)
-        reasoningEffort: S.cur.effort || undefined,
+        reasoningEffort: cur.effort || undefined,
       }, (c) => {
-        if (!S.run) return;
+        if (!S.run || S.run.sessionId !== sid) return;
         if (c.thinking) S.run.thinking += c.thinking;
         if (c.delta) S.run.text = c.text;
         paintPending();
       });
       const ms = Date.now() - rt0;
+      cur = sessById(sid);
+      if (!cur) break;
 
-      const calls = res.ok ? parseToolCalls(res.text) : [];
-      const reply = res.ok
-        ? newMessage('assistant', res.text, { usage: res.usage, model: res.model, provider: res.provider,
-                                              thinking: res.thinking, system, ms,
-                                              calls: calls.length ? calls : null })
-        // [alpha.145] เก็บ "รายละเอียด + แนวทางแก้" ลงข้อความด้วย (ai-error.js)
-        : newMessage('assistant', '', { error: res.error || tt('ui.aiChatPanel.callAINotOk'),
-                                        detail: res.detail || '', system, ms });
-
+      // [alpha.149] ★ ข้อความที่ไหลมาแล้วก่อนถูกหยุด/หมดเวลา/พัง **ต้องเก็บไว้** — เดิมทิ้งทั้งหมด
+      // เหลือแต่ "⚠ ผู้ใช้กดหยุดเอง" บนฟองว่าง ๆ (วัดจริง: ไหลมา 3 ท่อน → ข้อความว่าง)
+      const got = res.ok ? String(res.text || '') : (res.partial ? String(res.text || '').trim() : '');
+      const cost = res.ok && res.usage ? estimateCost(priceKeyOf(prov), res.model || '', res.usage) : null;
+      const usage = res.ok && res.usage ? { ...res.usage, usd: cost ? cost.usd : null } : null;
+      const failPatch = { error: res.error || tt('ui.aiChatPanel.callAINotOk'), detail: res.detail || '' };
+      let replyId;
+      if (contId) {
+        const prev = (cur.messages || []).find((x) => x.id === contId) || { text: '', ms: 0 };
+        const merged = joinContinuation(prev.text, got);
+        cur = patchMessage(cur, contId, {
+          text: merged,
+          ms: (prev.ms || 0) + ms,
+          truncated: !!(res.ok && res.truncated),
+          partial: !res.ok && !!merged.trim(),
+          ...(res.ok ? { error: '', detail: '' } : failPatch),
+          ...(usage ? { usage } : {}),
+          ...(res.ok && res.thinking ? { thinking: (prev.thinking ? prev.thinking + '\n' : '') + res.thinking } : {}),
+        });
+        replyId = contId;
+        contId = '';                                // รอบถัดไป (ถ้าโมเดลสั่งคำสั่ง) เป็นรอบปกติ
+      } else {
+        const reply = res.ok
+          ? newMessage('assistant', res.text, { usage, model: res.model, provider: res.provider,
+                                                thinking: res.thinking, system, ms, truncated: !!res.truncated })
+          // [alpha.145] เก็บ "รายละเอียด + แนวทางแก้" ลงข้อความด้วย (ai-error.js)
+          : newMessage('assistant', got, { ...failPatch, system, ms, partial: !!got });
+        cur = addMessage(cur, reply);
+        replyId = reply.id;
+      }
       if (res.ok && res.usage) {
         const used = (res.usage.input || 0) + (res.usage.output || 0);
-        S.cur.contextLimit = Math.max(S.cur.contextLimit || 0, guessLimit(used));
+        cur = { ...cur, contextLimit: Math.max(cur.contextLimit || 0, guessLimit(used)) };
       }
-      recordUsage(res, prov, s);
+      recordUsage(res, prov, cur, cost);
 
+      // คำตอบที่ถูกตัด = บล็อกคำสั่งอาจยังไม่ครบ → ยังไม่ลงมือทำ จนกว่าผู้ใช้จะกด "ต่อ" ให้ครบก่อน
+      const replyNow = (cur.messages || []).find((x) => x.id === replyId);
+      const calls = res.ok && !res.truncated && replyNow ? parseToolCalls(replyNow.text) : [];
       if (!calls.length) {                          // ไม่มีคำสั่ง = จบรอบ
-        S.cur = addMessage(S.cur, reply);
-        await saveSession(S.cur);
+        await commitSess(cur);
         S.run = null;
         repaint();
         break;
       }
 
-      S.run.label = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
-      S.run.text = ''; S.run.thinking = '';
-      paintPending();
-      const results = await runCalls(calls, S.cur, cap);
-      reply.results = results;
+      cur = patchMessage(cur, replyId, { calls });
+      await commitSess(cur);                        // เก็บคำตอบก่อนลงมือทำ — คำสั่งพังกลางทาง คำตอบไม่หาย
+      if (S.run) {
+        S.run.label = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
+        S.run.text = ''; S.run.thinking = '';
+      }
+      repaint();
+      const results = await runCalls(calls, cur, cap);
       touched = touched || touchesProject(results);
-      S.cur = addMessage(S.cur, reply);
+      cur = sessById(sid) || cur;
+      cur = patchMessage(cur, replyId, { results });
       // ผลของคำสั่งกลับเข้าบทสนทนาในนามผู้ใช้ — โมเดลอ่านต่อได้ในรอบถัดไป
-      S.cur = addMessage(S.cur, newMessage('user', resultsMessage(results), { toolResult: true }));
-      await saveSession(S.cur);
+      cur = addMessage(cur, newMessage('user', resultsMessage(results), { toolResult: true }));
+      await commitSess(cur);
       repaint();
 
       if (results.some((r) => r.cancelled)) {       // ผู้ใช้กดยกเลิก = หยุดทั้งชุด
@@ -1098,24 +1253,25 @@ async function send(s0, ta, sendBtn) {
       if (round === MAX_TOOL_ROUNDS - 1) {
         S.run = null;
         repaint();
-        const b = msgsHost();
+        const b = S.cur && S.cur.id === sid ? msgsHost() : null;
         if (b) b.append(el('div', 'ai-chat-empty dim',
           ttf('ui.aiChatPanel.roundNotEndPrint', MAX_TOOL_ROUNDS)));
-      } else {
+      } else if (S.run) {
         S.run.label = tt('ui.aiChatPanel.busyThinkNext');
         paintPending();
       }
     }
   } catch (e) {
-    // [alpha.129 ข้อ 3] เดิมไม่มี catch: ข้อผิดพลาดใด ๆ (เขียนไฟล์ไม่ได้ · คำสั่งพัง · วาดพัง)
-    // ทำให้หลุดออกไปทั้งที่ `S.sending` ยังเป็น true → **ปุ่มส่งค้างถาวร ส่งข้อความไม่ได้อีกเลย**
-    // และฟอง "กำลังคิด…" ค้างบนจอ ผู้ใช้เข้าใจว่าโปรแกรมแฮงก์
+    // [alpha.129 ข้อ 3] ข้อผิดพลาดใด ๆ ต้องไม่ทิ้งปุ่มส่งค้างถาวร/ฟอง "กำลังคิด…" ค้างบนจอ
     log('error', 'ai: ' + tt('ui.aiChatPanel.sendFailed'), (e && e.stack) || String(e));
     const emsg = (e && e.message) || String(e);
     res = res || { ok: false, error: emsg };
-    const errMsg = newMessage('assistant', '', { error: emsg, detail: (e && e.stack) || '' });
-    S.cur = addMessage(S.cur, errMsg);
-    try { await saveSession(S.cur); } catch {}
+    const cur = sessById(sid);
+    if (cur) {
+      try {
+        await commitSess(addMessage(cur, newMessage('assistant', '', { error: emsg, detail: (e && e.stack) || '' })));
+      } catch {}
+    }
   } finally {
     clearInterval(tick);
     S.run = null;
@@ -1127,21 +1283,29 @@ async function send(s0, ta, sendBtn) {
     repaint();
   }
   if (touched) { try { await refreshAfterActions(); } catch (e) { log('warn', 'refreshAfterActions', e); } }
+  // [alpha.149] สถิติการใช้ถูกจดลง meta แต่เดิมไม่มีใครบันทึก = หายเมื่อปิดโปรแกรม
+  if (S.usageDirty) {
+    S.usageDirty = false;
+    try { const { saveProjectMeta } = await import('../app.js'); await saveProjectMeta(); }
+    catch (e) { log('warn', 'ai: save usage', e); }
+  }
 
-  // ชื่อเซสชันอาจเพิ่งถูกตั้งจากข้อความแรก → วาดหัวใหม่
-  const t = S.host && S.host.querySelector('.ai-chat-title');
-  if (t && S.cur) t.textContent = S.cur.title;
-  const badge = S.host && S.host.querySelector('.ai-chat-ctx');
-  if (badge && S.cur) {
-    const st2 = sessionStats(S.cur);
-    badge.textContent = contextLabel(st2);
-    badge.title = [tt('ui.aiChatPanel.msg') + usd(st2.usd),
-                   tt('ui.aiChatPanel.usage2') + (st2.limit ? st2.percent + '%' : tt('ui.aiChatPanel.notDashRememberModel')),
-                   tt('ui.aiChatPanel.use2') + st2.total.toLocaleString(),
-                   tt('ui.aiChatPanel.clickViewDetail')].join('\n');
+  // ชื่อเซสชันอาจเพิ่งถูกตั้งจากข้อความแรก → วาดหัวใหม่ (เฉพาะตอนผู้ใช้ยังดูเซสชันนี้อยู่)
+  if (S.cur && S.cur.id === sid) {
+    const t = S.host && S.host.querySelector('.ai-chat-title');
+    if (t) t.textContent = S.cur.title;
+    const badge = S.host && S.host.querySelector('.ai-chat-ctx');
+    if (badge) {
+      const st2 = sessionStats(S.cur);
+      badge.textContent = contextLabel(st2);
+      badge.title = [tt('ui.aiChatPanel.msg') + usd(st2.usd),
+                     tt('ui.aiChatPanel.usage2') + (st2.limit ? st2.percent + '%' : tt('ui.aiChatPanel.notDashRememberModel')),
+                     tt('ui.aiChatPanel.use2') + st2.total.toLocaleString(),
+                     tt('ui.aiChatPanel.clickViewDetail')].join('\n');
+    }
   }
   // [alpha.145] ล้มเหลว = บอกบนแถบสถานะแบบสั้น ๆ (รายละเอียดเต็มอยู่ในฟองข้อความ + แผงบันทึก)
-  if (res && !res.ok) setStatus('❌ ' + (res.error || ''));
+  if (res && !res.ok) setStatus(gi('fail') + ' ' + (res.error || ''));
 }
 /**
  * ลงมือทำคำสั่งทั้งชุดตามลำดับ
@@ -1181,15 +1345,17 @@ function guessLimit(used) {
   for (const L of [8192, 16384, 32768, 65536, 128000, 200000, 1000000]) if (used <= L) return L;
   return used;
 }
-function recordUsage(res, prov, s) {
+function recordUsage(res, prov, s, cost) {
   if (!state.meta || !res.ok || !res.usage) return;
   const ai = aiMeta();
   const list = ai.usage || [];
   list.push({ date: new Date().toISOString(), tokens: res.usage.total || 0,
               in: res.usage.input || 0, out: res.usage.output || 0,
+              usd: cost ? cost.usd : null,               // [alpha.149] null = ไม่รู้ราคาของเจ้านี้
               provider: prov.name, model: res.model, feature: 'chat', session: s.id });
   if (list.length > 500) list.splice(0, list.length - 500);
   ai.usage = list;
+  S.usageDirty = true;                                   // [alpha.149] runAssistant บันทึก meta ให้ตอนจบ
 }
 
 /**
@@ -1241,12 +1407,12 @@ function sessionMenu(ev, s0) {
     } },
     '-',
     // [alpha.63r4] สิทธิ์ลงมือทำของ AI — ตั้งแยกรายเซสชัน
-    { label: (s.autoRun === false ? '☐' : '☑') + tt('ui.aiChatPanel.doCmdNotMust'), click: async () => {
+    { label: (s.autoRun === false ? gi('checkbox') : gi('checkbox-checked')) + tt('ui.aiChatPanel.doCmdNotMust'), click: async () => {
       const c = live(s); c.autoRun = c.autoRun === false; S.cur = c; s.autoRun = c.autoRun;
       await saveSession(c);
       setStatus(s.autoRun ? tt('ui.aiChatPanel.aIActNotAsk') : tt('ui.aiChatPanel.aIAskBeforeAll'));
     } },
-    { label: (s.confirmDestructive === false ? '☐' : '☑') + tt('ui.aiChatPanel.askBeforeAlwaysDel'), click: async () => {
+    { label: (s.confirmDestructive === false ? gi('checkbox') : gi('checkbox-checked')) + tt('ui.aiChatPanel.askBeforeAlwaysDel'), click: async () => {
       if (s.confirmDestructive !== false) {
         const okGo = await confirmBox(
           tt('ui.aiChatPanel.closeAskBeforeDel')
@@ -1292,7 +1458,7 @@ function detailView() {
 
   const head = el('div', 'ai-chat-head');
   head.append(el('div', 'ai-chat-title', tt('ui.aiChatPanel.detailContext')));
-  const closeBtn = el('button', 'ai-chat-close', '✕');
+  const closeBtn = el('button', 'ai-chat-close', gi('close'));
   closeBtn.title = tt('ui.aiChatPanel.closeBackSession');
   closeBtn.onclick = () => { S.view = 'session'; draw(); };
   const hr = el('div', 'ai-chat-head-right');

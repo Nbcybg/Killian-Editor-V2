@@ -21,6 +21,7 @@
 // ส่วนคำนวณทั้งหมด **บริสุทธิ์** (unit test: test/ai-skills.test.cjs)
 // ส่วนที่แตะไฟล์มีแค่ listSkillFiles/loadSkills/ensureSkillDir ท้ายไฟล์
 import { T, tm } from '../i18n.js';
+import { gi } from '../icons.js';
 
 export const SKILL_DIR = 'Skills';
 /** เพดานความยาวรวมของทักษะที่แนบไปกับคำขอหนึ่งครั้ง (กันเผลอแนบทั้งนิยาย) */
@@ -96,7 +97,7 @@ export function buildSkillsPrompt(skills = [], opts = {}) {
 /** ป้ายสั้น ๆ บนปุ่ม 🧩 — "ทักษะ 2/5" */
 export function skillsLabel(all = [], onIds = []) {
   const on = (all || []).filter((s) => (onIds || []).includes(s.id)).length;
-  return tm('🧩 {0}/{1}', String(on), String((all || []).length));
+  return tm(gi('puzzle') + ' {0}/{1}', String(on), String((all || []).length));
 }
 
 /** เนื้อไฟล์ตัวอย่าง — สร้างให้ครั้งแรกที่ผู้ใช้เปิดเมนูทักษะแล้วยังไม่มีอะไรเลย */

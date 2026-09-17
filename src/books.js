@@ -10,6 +10,7 @@ import { listDraftsForSection, createDraft, deleteDraft, renameDraft, setPrimary
 // [alpha.141] อ่านทั้งเล่ม + จัดการบท — ผู้ใช้ขอให้มีทางเข้าจากหน้าจัดการเล่มด้วย
 import { openBookReader, bumpBookFlow } from './read-ui.js';
 import { openChapterManager, coverHintLine } from './chapters-ui.js';
+import { gi } from './icons.js';
 
 // บั๊ก #18: จัดการเล่มเป็นแผง ไม่ใช่แท็บเอกสาร
 export async function openBookManager() {
@@ -52,7 +53,7 @@ export async function renderBookManager(pane) {
     for (const d of drafts) {
       const row = el('div', 'book-draft-row' + (d.primary ? ' draft-primary' : ''));
       const label = el('span', 'book-draft-name',
-        (d.primary ? '★ ' : '   ') + d.name);
+        (d.primary ? gi('star-filled') + ' ' : '   ') + d.name);
       row.append(label);
 
       if (!d.primary) {
@@ -67,7 +68,7 @@ export async function renderBookManager(pane) {
         };
         row.append(setBtn);
       }
-      const renBtn = el('button', 'cmp-mini', '✎');
+      const renBtn = el('button', 'cmp-mini', gi('pencil-thin'));
       renBtn.title = t('ui.books.changeNameDraft');
       renBtn.onclick = async () => {
         const n = await ask(t('ui.books.nameDraftNew'), { value: d.name });
@@ -80,7 +81,7 @@ export async function renderBookManager(pane) {
       };
       row.append(renBtn);
       if (!d.primary) {
-        const delBtn = el('button', 'cmp-mini k-danger', '🗑');
+        const delBtn = el('button', 'cmp-mini k-danger', gi('trash'));
         delBtn.title = t('ui.books.delDraft');
         delBtn.onclick = async () => {
           if (await deleteDraft(sec.secPath, d.name)) {
@@ -124,7 +125,7 @@ export async function renderBookManager(pane) {
         cover.append(img); cover.classList.remove('book-cover-empty');
       } else {
         cover.classList.add('book-cover-empty');
-        cover.append(el('div', 'book-cover-ph', '📖'));
+        cover.append(el('div', 'book-cover-ph', gi('book-open')));
       }
     };
     applyCover(s.meta.cover);
@@ -140,7 +141,7 @@ export async function renderBookManager(pane) {
     };
     coverBtns.append(pickCover);
     if (s.meta.cover) {
-      const clr = el('button', 'cmp-mini', '✕');
+      const clr = el('button', 'cmp-mini', gi('close'));
       clr.title = t('ui.books.coverOut');
       clr.onclick = async () => { s.meta = await saveSectionMeta(s.sf, { cover: '' }); applyCover(''); coverBtns.removeChild(clr); };
       coverBtns.append(clr);
@@ -166,7 +167,7 @@ export async function renderBookManager(pane) {
     pill.style.background = cur[2];
     pill.onclick = (e) => {
       popupMenu(e.clientX, e.clientY, SECTION_STATUSES.map(([k, label, color]) => ({
-        label: (k === (s.meta.status || 'outline') ? '● ' : '   ') + label,
+        label: (k === (s.meta.status || 'outline') ? gi('dot') + ' ' : '   ') + label,
         click: async () => { s.meta = await saveSectionMeta(s.sf, { status: k });
           pill.textContent = label; pill.style.background = color; },
       })));

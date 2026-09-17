@@ -62,8 +62,11 @@ function swatch(hex, { current = '', title = '', onPick } = {}) {
  * @param {string} current      สีปัจจุบันของช่วงที่เลือก ('' = ไม่มีสี)
  * @param {(hex:string)=>void} apply  เรียกเมื่อผู้ใช้เลือกสี ('' = ล้างสี)
  * @param {Function} [saveGlobal]     ตัวบันทึกการตั้งค่าระดับผู้ใช้ (ส่งมาจาก app.js)
+ * @param {{presets?:Array, presetKey?:string}} [opts]
+ *        [alpha.150] จานสีสำเร็จชุดอื่น — สีเน้นข้อความใช้จานจาง ๆ คนละชุดกับสีตัวอักษร
+ *        (ชุด "บันทึกไว้"/"ใช้ล่าสุด" ยังใช้ร่วมกัน — ผู้ใช้จำสีของตัวเองชุดเดียว)
  */
-export function openColorPicker(anchor, current, apply, saveGlobal) {
+export function openColorPicker(anchor, current, apply, saveGlobal, opts) {
   closeColorPicker();
   const store = colorStore();
   const pop = el('div', 'k-menu k-colorpop');
@@ -90,7 +93,8 @@ export function openColorPicker(anchor, current, apply, saveGlobal) {
     return wrap;
   };
 
-  pop.append(section('ui.color.presets', COLOR_PRESETS.map((p) => p.hex)));
+  const presets = (opts && opts.presets) || COLOR_PRESETS;
+  pop.append(section((opts && opts.presetKey) || 'ui.color.presets', presets.map((p) => p.hex)));
   let secSaved = section('ui.color.saved', store.saved);
   secSaved.classList.add('k-colorsec-saved');
   pop.append(secSaved);

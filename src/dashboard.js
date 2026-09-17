@@ -10,6 +10,7 @@ import { findScenePath } from './project-scan.js';
 import { loadAllEntities, catIconHtml, catLabel, openScene, renderFeaturePanel } from './app.js';
 import { guid } from './app.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
+import { gi } from './icons.js';
 
 /**
  * บั๊ก #18: แดชบอร์ดเป็น "แผง" ไม่ใช่แท็บเอกสารอีกต่อไป
@@ -253,14 +254,14 @@ export async function renderDashboard(pane) {
   if (favs.length) {
     wrap.append(el('div', 'wiki-sub', tf('ui.dash.scenePinPin', favs.length)));
     for (const r of favs) {
-      const d = el('div', 'scene', `⭐ ${r.title} — ${r.ch}`);
+      const d = el('div', 'scene', gi('star') + ` ${r.title} — ${r.ch}`);
       d.onclick = () => openScene(r.file, r.title);
       wrap.append(d);
     }
   }
   wrap.append(el('div', 'wiki-sub', t('ui.dash.nextStuck')));
   for (const r of sceneRows.slice(0, 8)) {
-    const d = el('div', 'scene', `📄 ${r.title} — ${r.ch}`);
+    const d = el('div', 'scene', gi('file') + ` ${r.title} — ${r.ch}`);
     d.onclick = () => openScene(r.file, r.title);
     wrap.append(d);
   }

@@ -10,6 +10,7 @@ import { t } from './i18n.js';
 import { buildPrompt } from './ai/ai-assistant.js';
 import { callAI } from './ai-settings.js';
 import { el, setStatus, t as tr } from './core.js';
+import { gi } from './icons.js';
 
 /** ช่องที่กดปุ่ม ✨ ได้ · label = ข้อความบนสถานะ · rule = ข้อกำหนดที่ต่อท้าย prompt */
 export const AI_SCENE_FIELDS = {
@@ -93,7 +94,7 @@ export function generateSceneSynopsis(body, title, onResult) {
 export function attachAiFieldButton(row, input, field, ctx, onFilled) {
   const def = AI_SCENE_FIELDS[field];
   if (!row || !input || !def) return null;
-  const b = el('button', 'k-ai-fill', '✨');
+  const b = el('button', 'k-ai-fill', gi('magic'));
   b.type = 'button';
   b.dataset.field = field;
   b.title = tr('ai.genSynopsis') + ' — ' + def.label;
@@ -101,7 +102,7 @@ export function attachAiFieldButton(row, input, field, ctx, onFilled) {
     if (b.disabled) return;
     b.disabled = true; b.classList.add('busy');
     const prev = b.textContent;
-    b.textContent = '⏳';
+    b.textContent = gi('hourglass');
     try {
       const c = (await ctx()) || {};
       await generateSceneField(field, c.body || '', c.title || '', (val) => {

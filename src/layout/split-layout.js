@@ -278,7 +278,15 @@ function migrate(d) {
 export class SplitStore {
   constructor(storage = defaultStorage(), key = KEY) { this.storage = storage; this.key = key; this.root = null; this.listeners = new Set(); }
   load() { const r = deserializeSplit(this.storage.getItem(this.key)); if (r) this.root = r; return !!r; }
-  save() { this.storage.setItem(this.key, serializeSplit(this.root)); }
+  save() {
+    const str = serializeSplit(this.root);
+    let prev = null;
+    try { prev = this.storage.getItem(this.key); } catch {}
+    this.storage.setItem(this.key, str);
+    // [alpha.154 ข้อ 1] ปั๊มเวลาให้ด่านกู้เซสชันรู้ว่าของในเครื่องใหม่กว่า (คีย์เดียวกับ panel-store)
+    // — เฉพาะตอนค่าเปลี่ยนจริง (เซฟซ้ำของเดิมตอนบูตต้องไม่ทำให้ของค้างดูใหม่)
+    if (prev !== str) { try { this.storage.setItem('k2-ls-ts', String(Date.now())); } catch {} }
+  }
   reset() { this.root = null; this.storage.removeItem(this.key); this._emit(); }
   update(next) { this.root = next; this.save(); this._emit(); }
   onChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }

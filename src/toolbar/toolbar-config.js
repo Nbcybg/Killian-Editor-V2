@@ -25,6 +25,11 @@ export const LOCKED_BUTTONS = [
  * `def:false` = ซ่อนไว้เป็นค่าเริ่มต้น (ปุ่มเฉพาะทาง)
  */
 export const TOOLBAR_GROUPS = [
+  // [alpha.150 ข้อ 1] ย้อนกลับ/ทำซ้ำ — อยู่บนแถบรูปแบบลอย แต่ต้องมีแถวที่นี่ด้วย
+  // เพราะ `isConfigurable()` ถือว่า "ปุ่มที่ตั้งค่าได้" = ปุ่มที่มีอยู่ในตารางนี้
+  { key: 'edit', labelKey: 'ui.tbcfg.grpEdit', buttons: [
+    { id: 'tb-undo' }, { id: 'tb-redo' },
+  ] },
   { key: 'view', labelKey: 'ui.tbcfg.grpView', buttons: [
     // [alpha.138] `tb-theme` ถูกถอดออกทั้งปุ่มและคีย์ลัด — ธีมอยู่ในตั้งค่าอย่างเดียว
     { id: 'tb-read' },
@@ -32,6 +37,8 @@ export const TOOLBAR_GROUPS = [
   ] },
   { key: 'style', labelKey: 'ui.tbcfg.grpStyle', buttons: [
     { id: 'tb-style' }, { id: 'tb-case' },
+    // [alpha.150 ข้อ 1] ปุ่มหัวข้อกดตรง ๆ + สีเน้นข้อความ
+    { id: 'tb-h2' }, { id: 'tb-h3' }, { id: 'tb-h4' }, { id: 'tb-highlight' },
     { id: 'tb-bold' }, { id: 'tb-italic' }, { id: 'tb-underline' }, { id: 'tb-strike' },
     // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย
     { id: 'tb-sup' }, { id: 'tb-sub' },
@@ -52,6 +59,7 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-source' },
   ] },
   { key: 'find', labelKey: 'ui.tbcfg.grpFind', buttons: [
+    { id: 'tb-find' },                           // [alpha.150 ข้อ 1] ค้นในเอกสาร
     { id: 'tb-gsearch' }, { id: 'tb-quickopen' },
   ] },
   { key: 'tabs', labelKey: 'ui.tbcfg.grpTabs', buttons: [
@@ -204,22 +212,138 @@ export function layoutToolbar(seq, visible) {
 // `settings.toolbar` เลิกยุ่งกับมันแล้ว — ไม่งั้นมีสวิตช์สองที่คุมปุ่มเดียวกัน แล้วเถียงกันเอง
 
 /** โหมดเอกสารที่แถบลอยรองรับ */
-export const FMT_MODES = ['prose', 'screenplay'];
+/**
+ * ══ [alpha.151 ข้อ 1] ★ สี่โหมด ไม่ใช่สองโหมด ══
+ *
+ * ผู้ใช้: *"float bar ต้องแยกเป็น 4 mode คือ นิยาย หนัง planner (เราเรียกว่า all app ดีกว่า)
+ *          ซึ่งใน editor จะได้ 2 mode เท่านั้น ส่วนใน planner หรือส่วนอื่น ๆ เช่น wiki จะใช้ all app"*
+ *
+ *   prose · screenplay  = แถบของ **ตัวแก้ไข** (สลับตามชนิดเอกสารที่เปิดอยู่)
+ *   all                 = แถบของตัวแก้ไขเมื่ออยู่ที่อื่น (Wiki · แดชบอร์ด · หน้าแรก)
+ *   planner             = แถบ **ของกระดานเอง** ซึ่งเป็นคนละอันในหน้าจอ (ดู PLANNER_BAR_GROUPS)
+ */
+export const FMT_MODES = ['prose', 'screenplay', 'all', 'planner'];
+
+/** โหมดที่ใช้กับ "แถบของตัวแก้ไข" (กระดานมีแถบของตัวเองแยกต่างหาก) */
+export const EDITOR_FMT_MODES = ['prose', 'screenplay', 'all'];
 
 /**
  * ปุ่มบนแถบรูปแบบลอย **เรียงตามลำดับจริง** — ต้องตรงกับรายการใน `setupFloatingFormatBar()`
  * (ตัวที่ไม่ได้อยู่ใน TOOLBAR_GROUPS เช่น `tb-fmt-here` ถือว่าเป็นของแถบ คุมไม่ได้)
  */
-export const FMTBAR_IDS = [
-  // [alpha.139] `tb-sp-ext` ย้ายมาจากแถบเครื่องมือ (ผู้ใช้สั่ง) — อยู่ติดกับตัวเลือกรูปแบบของบท
-  'tb-sp-elem', 'tb-sp-ext', 'sp-view-select', 'tb-mode', 'tb-style', 'tb-case',
-  'tb-bold', 'tb-italic', 'tb-underline', 'tb-strike', 'tb-sup', 'tb-sub',
-  'tb-color',
-  'tb-ul', 'tb-ol', 'tb-quote',
-  'tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify',
-  'tb-indent', 'tb-sp-cont',
-  'tb-img', 'tb-source', 'tb-read', 'tb-gsearch',
+/**
+ * ══ [alpha.150 ข้อ 1] หมวดของแถบรูปแบบลอย — **ลำดับที่ผู้ใช้สั่งมาเอง** ══
+ *
+ * ผู้ใช้: *"เรียงอย่างงี้ดีกว่า ทุกหมวดเลยนะ [undo][redo] | [mode][มุมมองหน้ากระดาษ] | …"*
+ *
+ * ตารางนี้เป็น **แหล่งความจริงเดียว** ของสามอย่างพร้อมกัน:
+ *   1. ลำดับปุ่มจริงบนแถบ (`setupFloatingFormatBar()` อ่านจาก `FMTBAR_IDS` ที่ได้จากตารางนี้)
+ *   2. เส้นคั่น — หนึ่งเส้นระหว่างหมวด (ไม่ต้องเขียนมือ = ไม่มีทางลืมเวลาเพิ่มปุ่ม)
+ *   3. หมวดในหน้าตั้งค่า (`fmtbarGroups()`)
+ * เดิมสามอย่างนี้เขียนแยกกันสามที่ แล้วต้องมีเทสคอยกวาดว่าตรงกันไหม
+ */
+export const FMTBAR_GROUPS = [
+  { key: 'history', labelKey: 'ui.fmtcfg.grpHistory', buttons: ['tb-undo', 'tb-redo'] },
+  { key: 'doc',     labelKey: 'ui.fmtcfg.grpDoc',     buttons: ['tb-mode', 'sp-view-select'] },
+  { key: 'block',   labelKey: 'ui.fmtcfg.grpBlock',
+    buttons: ['tb-sp-elem', 'tb-sp-ext', 'tb-style', 'tb-h2', 'tb-h3', 'tb-h4', 'tb-case'] },
+  { key: 'font',    labelKey: 'ui.fmtcfg.grpFont',
+    buttons: ['tb-bold', 'tb-italic', 'tb-underline', 'tb-strike', 'tb-sub', 'tb-sup'] },
+  { key: 'color',   labelKey: 'ui.fmtcfg.grpColor',
+    buttons: ['tb-highlight', 'tb-color', 'tb-note'] },
+  { key: 'list',    labelKey: 'ui.fmtcfg.grpList', buttons: ['tb-ul', 'tb-ol', 'tb-quote'] },
+  { key: 'align',   labelKey: 'ui.fmtcfg.grpAlign',
+    // [alpha.151 ข้อ 1+3] จัดแนวตั้งย้ายไปอยู่บน **แถบของกระดาน** แล้ว (`pb-valign-*`)
+    // — มันจัด "ข้อความในการ์ด" ซึ่งเป็นเรื่องของกระดานล้วน ๆ ไม่ใช่ของเอกสาร
+    buttons: ['tb-align-left', 'tb-align-center', 'tb-align-right', 'tb-align-justify'] },
+  { key: 'insert',  labelKey: 'ui.fmtcfg.grpInsert',
+    buttons: ['tb-img', 'tb-sp-cont', 'tb-indent', 'tb-comments'] },
+  { key: 'view',    labelKey: 'ui.fmtcfg.grpView',
+    buttons: ['tb-read', 'tb-typewriter', 'tb-md-codes', 'tb-source'] },
+  { key: 'find',    labelKey: 'ui.fmtcfg.grpFind', buttons: ['tb-find', 'tb-gsearch'] },
 ];
+
+/**
+ * ปุ่มบนแถบรูปแบบลอย **เรียงตามลำดับจริง** — สร้างจาก `FMTBAR_GROUPS` เสมอ
+ * (`setupFloatingFormatBar()` ใช้ตัวนี้ตรง ๆ จึงไม่มีทางเรียงไม่ตรงกับหน้าตั้งค่า)
+ */
+export const FMTBAR_IDS = FMTBAR_GROUPS.flatMap((g) => g.buttons);
+
+/** ลำดับจริงของลูกในแถบ รวมเส้นคั่นระหว่างหมวด — ใช้ประกอบแถบและคำนวณเส้นคั่น */
+export function fmtbarSequence() {
+  const out = [];
+  FMTBAR_GROUPS.forEach((g, i) => {
+    if (i) out.push('sep');
+    out.push(...g.buttons);
+  });
+  return out;
+}
+
+/**
+ * [alpha.151] `PLANNER_ONLY` ถูกถอดออก — กระดานมี **แถบของตัวเอง** (ข้างล่าง) แล้ว
+ * ปุ่มจัดแนวตั้งจึงไม่ต้องไปยืนเป็นสีเทาอยู่บนแถบของตัวแก้ไขอีก
+ */
+
+/**
+ * ══ [alpha.151 ข้อ 3] ★ แถบรูปแบบ **ของกระดาน** — คนละอันกับของตัวแก้ไข ══
+ *
+ * ผู้ใช้: *"float bar จะต้องไม่มีที่เดียวไง ตอนนี้มีที่เดียว planner เลยใช้ยาก
+ *          ต้องแยกส่วน คือ editor กับ planner"*
+ *
+ * ปุ่มของกระดานเป็นคนละชุดกับของเอกสารโดยธรรมชาติ (จัดข้อความ *ในการ์ด* · สีพื้นการ์ด ·
+ * ลำดับซ้อน · กริด) จึงมีตารางของตัวเอง แต่ **ผ่านระบบซ่อน/แสดงตัวเดียวกัน**
+ * โดยใช้โหมด `planner` ใน `settings.fmtbar`
+ */
+export const PLANNER_BAR_GROUPS = [
+  { key: 'history', labelKey: 'ui.fmtcfg.grpHistory', buttons: ['pb-undo', 'pb-redo'] },
+  { key: 'align', labelKey: 'ui.plannerBar.grpAlign',
+    buttons: ['pb-align-left', 'pb-align-center', 'pb-align-right',
+              'pb-valign-top', 'pb-valign-middle', 'pb-valign-bottom'] },
+  { key: 'font', labelKey: 'ui.fmtcfg.grpFont', buttons: ['pb-font-smaller', 'pb-font-bigger'] },
+  { key: 'color', labelKey: 'ui.plannerBar.grpColor',
+    buttons: ['pb-fill', 'pb-textcolor', 'pb-border'] },
+  { key: 'insert', labelKey: 'ui.fmtcfg.grpInsert',
+    buttons: ['pb-image', 'pb-sticky', 'pb-todo', 'pb-frame', 'pb-connector'] },
+  { key: 'order', labelKey: 'ui.plannerBar.grpOrder',
+    buttons: ['pb-front', 'pb-back', 'pb-lock', 'pb-duplicate', 'pb-delete'] },
+  { key: 'view', labelKey: 'ui.fmtcfg.grpView',
+    buttons: ['pb-grid', 'pb-snap', 'pb-fit', 'pb-fullscreen'] },
+];
+
+/** id ปุ่มของแถบกระดาน เรียงตามลำดับจริง */
+export const PLANNER_BAR_IDS = PLANNER_BAR_GROUPS.flatMap((g) => g.buttons);
+
+/** ลำดับจริงของลูกในแถบกระดาน รวมเส้นคั่นระหว่างหมวด */
+export function plannerBarSequence() {
+  const out = [];
+  PLANNER_BAR_GROUPS.forEach((g, i) => {
+    if (i) out.push('sep');
+    out.push(...g.buttons);
+  });
+  return out;
+}
+
+/** ปุ่มนี้อยู่บนแถบกระดานไหม */
+export function isPlannerBarButton(id) { return PLANNER_BAR_IDS.includes(id); }
+
+/** หมวดของแถบกระดานสำหรับหน้าตั้งค่า */
+export function plannerBarGroups() {
+  return PLANNER_BAR_GROUPS.map((g) => ({ ...g, buttons: g.buttons.map((id) => ({ id })) }));
+}
+
+/** ปุ่มของแถบกระดานถูกซ่อนไว้ไหม */
+export function plannerBarHidden(cfg, id) {
+  if (!PLANNER_BAR_IDS.includes(id)) return false;
+  const m = normalizeFmtbar(cfg).planner;
+  return !!(m && m.hidden[id]);
+}
+
+/** แผนการแสดงผลของแถบกระดาน — ปุ่มที่ถูกซ่อนจะไม่ถูกวาดเลย (ข้อ 6) */
+export function layoutPlannerBar(cfg) {
+  const seq = plannerBarSequence();
+  return { seq, show: layoutToolbar(seq, (id) => !plannerBarHidden(cfg, id)) };
+}
+
 
 /** ปุ่มนี้อยู่บนแถบลอย (ไม่ใช่บนแถบเครื่องมือหลัก) ไหม */
 export function isFmtbarButton(id) { return FMTBAR_IDS.includes(id); }
@@ -240,6 +364,10 @@ export const FMT_UNSUPPORTED = {
   screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote', 'tb-color'],
   // `tb-sp-ext` ไม่ต้องใส่: โปรแกรมซ่อนมันเองเมื่อไม่ใช่บท (refreshToolbar) จึงไม่มีอะไรให้ทำเป็นสีเทา
   prose: ['tb-sp-elem', 'tb-sp-cont'],
+  // [alpha.151] `all` = Wiki / แดชบอร์ด / หน้าแรก — ใช้เอนจินเดียวกับนิยาย
+  // ตัดเฉพาะปุ่มของบทภาพยนตร์ออก ที่เหลือใช้ได้จริงทุกตัว (Wiki ก็เป็น ProseMirror)
+  all: ['tb-sp-elem', 'tb-sp-cont'],
+  planner: [],
 };
 
 /** โหมดนี้ใช้ปุ่มนี้ได้ไหม */
@@ -248,8 +376,13 @@ export function fmtSupported(mode, id) {
   return !(list && list.includes(id));
 }
 
-/** โหมดเอกสารมาตรฐาน (อะไรที่ไม่ใช่ 'screenplay' ถือเป็น 'prose' — wiki ใช้เอนจินเดียวกับนิยาย) */
-export function fmtMode(mode) { return mode === 'screenplay' ? 'screenplay' : 'prose'; }
+/**
+ * โหมดมาตรฐาน — [alpha.151] ไม่ยุบทุกอย่างเป็น 'prose' อีกแล้ว
+ * ที่ที่ไม่ใช่ตัวแก้ไขนิยาย/บท (Wiki · แดชบอร์ด · หน้าแรก) ได้ชุดปุ่มของตัวเอง = `all`
+ */
+export function fmtMode(mode) {
+  return FMT_MODES.includes(mode) ? mode : 'prose';
+}
 
 /** ปุ่มบนแถบลอยที่ผู้ใช้ตั้งค่าได้ (ตัดตัวที่โปรแกรมคุมเองออก) */
 export function fmtbarConfigurableIds() {
@@ -279,8 +412,8 @@ export function mainbarCounts(cfg) {
  * (จึงไม่มีทางที่ชื่อกลุ่มสองที่จะไม่ตรงกัน)
  */
 export function fmtbarGroups() {
-  return TOOLBAR_GROUPS
-    .map((g) => ({ ...g, buttons: g.buttons.filter((b) => isFmtbarButton(b.id) && isConfigurable(b.id)) }))
+  return FMTBAR_GROUPS
+    .map((g) => ({ ...g, buttons: g.buttons.filter((id) => isConfigurable(id)).map((id) => ({ id })) }))
     .filter((g) => g.buttons.length);
 }
 
@@ -291,7 +424,8 @@ export function fmtbarGroups() {
  * ตัวที่เคยซ่อนไว้มาใส่ทั้งสองโหมด ผู้ใช้จะได้ไม่เจอปุ่มที่เคยเอาออกแล้วโผล่กลับมาเอง
  */
 export function normalizeFmtbar(cfg, legacy) {
-  const known = new Set(fmtbarConfigurableIds());
+  // [alpha.151] โหมด `planner` คุมปุ่มคนละชุด (แถบของกระดาน) จึงต้องรู้จักทั้งสองชุด
+  const known = new Set([...fmtbarConfigurableIds(), ...PLANNER_BAR_IDS]);
   const out = {};
   const src = (cfg && typeof cfg === 'object') ? cfg : null;
   let inherit = null;
@@ -304,7 +438,11 @@ export function normalizeFmtbar(cfg, legacy) {
     const raw = (src && src[m] && typeof src[m].hidden === 'object') ? src[m].hidden : null;
     if (raw) { for (const id of Object.keys(raw)) if (raw[id] && known.has(id)) hidden[id] = true; }
     else if (inherit) { for (const id of inherit) hidden[id] = true; }
-    out[m] = { hidden };
+    // [alpha.151 ข้อ 6] `shown` = "ขอเห็นปุ่มนี้แม้โหมดนี้จะใช้มันไม่ได้"
+    const shown = {};
+    const rs = (src && src[m] && typeof src[m].shown === 'object') ? src[m].shown : null;
+    if (rs) { for (const id of Object.keys(rs)) if (rs[id] && known.has(id)) shown[id] = true; }
+    out[m] = { hidden, shown };
   }
   return out;
 }
@@ -318,11 +456,15 @@ export function fmtbarHidden(cfg, mode, id) {
 /** เปิด/ปิดปุ่มหนึ่งตัวในโหมดหนึ่ง → คืน cfg ก้อนใหม่ */
 export function setFmtbarVisible(cfg, mode, id, on) {
   const next = normalizeFmtbar(cfg);
-  if (!fmtbarConfigurableIds().includes(id)) return next;
+  // [alpha.151] โหมด `planner` คุมปุ่มของแถบกระดาน ซึ่งเป็นคนละชุดกับของตัวแก้ไข
+  const ok = fmtMode(mode) === 'planner'
+    ? PLANNER_BAR_IDS.includes(id)
+    : fmtbarConfigurableIds().includes(id);
+  if (!ok) return next;
   const m = fmtMode(mode);
   const hidden = { ...next[m].hidden };
   if (on) delete hidden[id]; else hidden[id] = true;
-  return { ...next, [m]: { hidden } };
+  return { ...next, [m]: { ...next[m], hidden } };
 }
 
 /** เปิด/ปิดทั้งกลุ่มในโหมดหนึ่ง */
@@ -337,13 +479,13 @@ export function setFmtbarGroupVisible(cfg, mode, groupKey, on) {
 /** เปิดปุ่มทั้งหมดของโหมดหนึ่ง (อีกโหมดไม่กระทบ) */
 export function setFmtbarGroupVisibleAll(cfg, mode) {
   const next = normalizeFmtbar(cfg);
-  return { ...next, [fmtMode(mode)]: { hidden: {} } };
+  return { ...next, [fmtMode(mode)]: { hidden: {}, shown: next[fmtMode(mode)].shown || {} } };
 }
 
 /** คืนค่าเริ่มต้น (ทุกโหมดเปิดหมด) */
 export function resetFmtbarConfig() {
   const out = {};
-  for (const m of FMT_MODES) out[m] = { hidden: {} };
+  for (const m of FMT_MODES) out[m] = { hidden: {}, shown: {} };
   return out;
 }
 
@@ -362,9 +504,40 @@ export function fmtbarCounts(cfg, mode) {
 export function layoutFmtbar(seq, cfg, mode) {
   const list = Array.isArray(seq) ? seq : [];
   const m = fmtMode(mode);
-  const vis = (id) => !fmtbarHidden(cfg, m, id);
+  // ══ [alpha.151 ข้อ 6] ★ "สีเทา" ถูกถอดทิ้ง — ใช้ไม่ได้ในโหมดนี้ = **ไม่โผล่เลย** ══
+  //
+  // ผู้ใช้: *"ตอนนี้ float bar ยาวมาก … ส่วนที่เป็น grey out จะไม่ให้ปรากฏมาเลย
+  //          จนกว่าผู้ใช้จะติ๊กให้แสดงใน setting"*
+  //
+  // เดิมปุ่มที่โหมดนี้ใช้ไม่ได้ยังกินที่บนแถบอยู่ (แค่จางลง) — แถบจึงยาวเกินจอทั้งที่
+  // ครึ่งหนึ่งกดไม่ได้ · ตอนนี้ตัดออกจากแถบไปเลย แล้วให้ผู้ใช้ติ๊กกลับมาเองได้ที่หน้าตั้งค่า
+  // (`shown` = "ขอเห็นแม้โหมดนี้จะใช้ไม่ได้" — เก็บแยกจาก `hidden` เพื่อไม่ให้สองความหมายปนกัน)
+  const forced = forcedShown(cfg, m);
+  const vis = (id) => {
+    if (fmtbarHidden(cfg, m, id)) return false;
+    if (!fmtSupported(m, id) && !forced.has(id)) return false;
+    return true;
+  };
   const show = layoutToolbar(list.map((x) => (x == null ? ' keep' : x)),
                              (x) => (x === ' keep' ? true : vis(x)));
+  // ตัวที่ผู้ใช้สั่งให้โผล่ทั้งที่โหมดนี้ใช้ไม่ได้ — ยังทำเป็นสีเทาไว้ให้เห็นว่ากดไม่ได้
   const grey = list.map((x) => (x && x !== 'sep' ? !fmtSupported(m, x) : false));
   return { show, grey };
 }
+
+/** ปุ่มที่ผู้ใช้สั่งให้ "โผล่แม้โหมดนี้จะใช้ไม่ได้" */
+export function forcedShown(cfg, mode) {
+  const m = fmtMode(mode);
+  const raw = cfg && cfg[m] && cfg[m].shown;
+  return new Set(raw && typeof raw === 'object' ? Object.keys(raw).filter((k) => raw[k]) : []);
+}
+
+/** สั่งให้ปุ่มที่โหมดนี้ใช้ไม่ได้ โผล่/ไม่โผล่ (ค่าเริ่มต้น = ไม่โผล่) */
+export function setFmtbarForceShown(cfg, mode, id, on) {
+  const next = normalizeFmtbar(cfg);
+  const m = fmtMode(mode);
+  const shown = { ...(next[m].shown || {}) };
+  if (on) shown[id] = true; else delete shown[id];
+  return { ...next, [m]: { ...next[m], shown } };
+}
+

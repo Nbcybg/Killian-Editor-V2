@@ -181,9 +181,12 @@ export const PRICES = {
   ollama: { default: { in: 0, out: 0 } },           // รันเครื่องตัวเอง = ฟรี
 };
 export function estimateCost(provider, model, usage = {}) {
-  const table = PRICES[provider] || PRICES.openai;
-  const p = table[model] || table.default;
   const inTok = num(usage.input), outTok = num(usage.output);
+  // [alpha.149] ไม่รู้จักเจ้านี้ = **ไม่รู้ราคา** (usd: null) — เดิมตกไปใช้ราคา OpenAI เงียบ ๆ
+  // แล้วหน้าจอโชว์ตัวเลขผิดให้ผู้ใช้เชื่อ (DeepSeek/เกตเวย์/เครื่องในบ้าน ได้ราคา gpt-4o-mini หมด)
+  const table = PRICES[provider];
+  if (!table) return { usd: null, in: inTok, out: outTok, unknown: true };
+  const p = table[model] || table.default;
   return { usd: +(((inTok * p.in) + (outTok * p.out)) / 1e6).toFixed(6), in: inTok, out: outTok };
 }
 /** Records every call into meta.ai.usage[] (same row shape as the old ai-settings.js). */

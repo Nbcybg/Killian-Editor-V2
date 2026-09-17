@@ -6,6 +6,7 @@ import { findClashes, ganttBar, ganttData, ganttTicks, groupByTrack, mergeTimeli
 import { renderFutureNotes, notesForScene } from './session-notes.js';
 import { findScenePath } from './project-scan.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
+import { gi } from './icons.js';
 
 /** วาดเส้นเวลาใหม่ถ้าแผงเปิดอยู่ (เรียกหลังเพิ่มโน้ต "ไว้ทำภายหลัง") */
 export function refreshOpenTimeline() {
@@ -29,7 +30,7 @@ export async function renderTimeline(pane) {
   if (!state._tlView) state._tlView = 'cards';
   const viewTog = el('div', 'tl-viewtog');
   const bCards = el('button', 'tl-viewbtn' + (state._tlView === 'cards' ? ' on' : ''), tt('ui.timeline.card'));
-  const bGantt = el('button', 'tl-viewbtn' + (state._tlView === 'gantt' ? ' on' : ''), '▬ Gantt');
+  const bGantt = el('button', 'tl-viewbtn' + (state._tlView === 'gantt' ? ' on' : ''), gi('gantt') + ' Gantt');
   bCards.onclick = () => { state._tlView = 'cards'; renderTimeline(pane); };
   bGantt.onclick = () => { state._tlView = 'gantt'; renderTimeline(pane); };
   viewTog.append(bCards, bGantt); head.append(viewTog);
@@ -114,9 +115,9 @@ export async function renderTimeline(pane) {
         bar.style.left = left + '%'; bar.style.width = width + '%';
         bar.style.background = r.color || tr.color;
         bar.append(el('span', 'gantt-bar-label',
-          (r.kind === 'scene' ? '📄 ' : '') + r.title + ((r.refs || []).length ? ' 🔗' : '')));
+          (r.kind === 'scene' ? gi('file') + ' ' : '') + r.title + ((r.refs || []).length ? ' ' + gi('link') : '')));
         bar.title = [`${r.title} · ${r.when}${r.whenEnd ? ' → ' + r.whenEnd : ''}`,
-          ...(r.refs || []).map((x) => '🔗 ' + x.title)].join('\n');
+          ...(r.refs || []).map((x) => gi('link') + ' ' + x.title)].join('\n');
         bar.onclick = () => onEventClick(r);
         track.append(bar);
       }
@@ -145,14 +146,14 @@ export async function renderTimeline(pane) {
       card.style.borderLeftColor = it.color || tr.color;
       const when = el('div', 'tl-when',
         (it.when || tt('ui.common.notSpecifyTime')) + (it.whenEnd ? ' → ' + it.whenEnd : ''));
-      const title = el('div', 'tl-ev-title', (it.kind === 'scene' ? '📄 ' : '') + it.title);
+      const title = el('div', 'tl-ev-title', (it.kind === 'scene' ? gi('file') + ' ' : '') + it.title);
       card.append(when, title);
       if (it.desc) card.append(el('div', 'tl-ev-desc', it.desc));
       // ---- เอกสาร/โน้ตที่เหตุการณ์นี้อ้างอิง (ข้อ 5) — คลิกชิปเพื่อเปิดไฟล์นั้น ----
       if ((it.refs || []).length) {
         const rw = el('div', 'tl-ev-refs');
         for (const r of it.refs) {
-          const chip = el('span', 'tl-ev-ref', (r.kind === 'memo' ? '📝 ' : '📄 ') + r.title);
+          const chip = el('span', 'tl-ev-ref', (r.kind === 'memo' ? gi('note') + ' ' : gi('file') + ' ') + r.title);
           chip.title = tt('ui.timeline.open') + r.path;
           chip.onclick = (e) => { e.stopPropagation(); openRef(r); };   // กันไปโดนคลิกของการ์ด
           rw.append(chip);
@@ -163,7 +164,7 @@ export async function renderTimeline(pane) {
       if (it.kind === 'scene') {
         const notes = notesForScene(String(it.id || '').split(':').pop());
         if (notes.length) {
-          const b = el('div', 'tl-ev-notes', '📝 ' + notes.length + tt('ui.timeline.note'));
+          const b = el('div', 'tl-ev-notes', gi('note') + ' ' + notes.length + tt('ui.timeline.note'));
           b.title = notes.map((n) => '• ' + n.text).join('\n');
           card.append(b);
         }

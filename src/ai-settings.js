@@ -6,6 +6,7 @@
 // (`$` `el` `withBusy` `escClose` `tf`) ถูกถอดออกพร้อมกล่องนั้น
 import { t } from './i18n.js';
 import { state, setStatus, log } from './core.js';
+import { gi } from './icons.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keyCache = null;       // { apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -99,7 +100,7 @@ export async function callAI(prompt, system = '', opts = {}) {
       const lv = r.aborted && !r.timedOut ? 'info' : 'error';
       log(lv, 'ai: ' + (r.aborted ? (r.timedOut ? 'timeout' : 'stopped by user') : 'failed'),
           { error: r.error, status: r.status, ms: Date.now() - t0, provider: p.name });
-      setStatus((r.aborted && !r.timedOut ? '⏹ ' : '❌ ') + 'AI: ' + r.error);
+      setStatus((r.aborted && !r.timedOut ? gi('stop') + ' ' : gi('fail') + ' ') + 'AI: ' + r.error);
       return null;
     }
     recordUsage((r.usage && r.usage.total) || 0, p.name, r.model);
@@ -142,7 +143,7 @@ export async function callAI(prompt, system = '', opts = {}) {
     const res = await kapi.httpFetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
     if (!res || !res.ok) {
       log('error', 'AI HTTP ' + (res?.status), (res?.body || '').slice(0, 300));
-      setStatus('❌ AI: HTTP ' + (res?.status || 'error'));
+      setStatus(gi('fail') + ' AI: HTTP ' + (res?.status || 'error'));
       return null;
     }
     const data = JSON.parse(res.body);

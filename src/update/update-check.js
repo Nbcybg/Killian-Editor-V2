@@ -155,7 +155,7 @@ export function decideUpdate({ current, releases, manifestVersion = '', skip = '
   const version = rel ? releaseVersion(rel) : '';
   const base = {
     current: normalizeTag(current), version, release: rel || null, asset: null,
-    assetUrl: '', assetName: '', assetSize: 0,
+    assetUrl: '', assetName: '', assetSize: 0, assetDigest: '',
     url: rel && rel.html_url ? rel.html_url : UPDATE_RELEASES_URL,
     notes: rel && rel.body ? String(rel.body) : '',
   };
@@ -165,7 +165,9 @@ export function decideUpdate({ current, releases, manifestVersion = '', skip = '
     const asset = pickAsset(rel.assets, platform);
     if (asset) {
       return { ...base, status: 'update', asset, assetUrl: asset.browser_download_url,
-               assetName: asset.name, assetSize: asset.size || 0 };
+               assetName: asset.name, assetSize: asset.size || 0,
+               // [alpha.156] GitHub ใส่ `digest: "sha256:…"` ให้ไฟล์แนบ — main ตรวจกับไฟล์ที่โหลดมาจริง
+               assetDigest: typeof asset.digest === 'string' ? asset.digest : '' };
     }
     return { ...base, status: 'noAsset' };
   }

@@ -265,13 +265,32 @@ export class KanbanBoard {
   data(opts = {}) {
     return getKanbanData(this.scenes, { statuses: this.statuses, layout: this.store.layout, ...opts });
   }
+  // ══ [alpha.156] ★ ลากการ์ดต้องไม่เขียน scenes.json "ฉบับที่โหลดไว้ตอนเปิดแผง" ทับของใหม่ ══
+  // เดิม: load() ครั้งเดียว → ลากการ์ด = เขียน this.scenes ทั้งก้อน → ฉากที่เพิ่ม/ย้าย/เรียงใหม่
+  // ระหว่างที่แผง Kanban เปิดค้างอยู่ หายไปจากทะเบียน (จำนวนคำที่เพิ่งบันทึกก็ย้อนกลับ)
+  // ตอนนี้ (โหมดบันทึกอัตโนมัติ): อ่านไฟล์สดก่อนแก้ทุกครั้ง แล้วเขียนทันที — ทั้งหมดอยู่ในคิวของไฟล์
+  // ถ้า io มี `withLock` (แอปจริงส่ง withFileLock ของ json-store.js มาให้ · เทสไม่ต้องมี)
+  async _fresh() {
+    try { const data = await this.io.readJson(this.file); if (data && data.chapters) this.scenes = data; } catch {}
+  }
+  async _write() {
+    await this.io.writeFile(this.file, JSON.stringify(this.scenes, null, 2));
+    this.dirty = false;
+  }
+  _locked(fn) { return this.io.withLock ? this.io.withLock(this.file, fn) : fn(); }
+
   /** Drag-drop entry point: change status (+ position) and write scenes.json. */
   async updateSceneStatus(sceneId, status, index) {
-    const res = updateSceneStatus(this.scenes, sceneId, status, index == null ? {} : { index });
+    const res = await this._locked(async () => {
+      if (this.autoSave) await this._fresh();
+      const r = updateSceneStatus(this.scenes, sceneId, status, index == null ? {} : { index });
+      if (!r.changed) return r;
+      this.scenes = r.scenes;
+      this.dirty = true;
+      if (this.autoSave) await this._write();
+      return r;
+    });
     if (!res.changed) return res;
-    this.scenes = res.scenes;
-    this.dirty = true;
-    if (this.autoSave) await this.flush();
     this._emit();
     if (this.onLog) this.onLog({ type: 'scene:status', sceneId, from: res.from, to: res.to });
     return res;
@@ -279,8 +298,7 @@ export class KanbanBoard {
   async moveCard(sceneId, toStatus, toIndex) { return this.updateSceneStatus(sceneId, toStatus, toIndex); }
   async flush() {
     if (!this.dirty) return false;
-    await this.io.writeFile(this.file, JSON.stringify(this.scenes, null, 2));
-    this.dirty = false;
+    await this._locked(() => this._write());
     return true;
   }
   async addColumn(key, opts = {}) {
@@ -290,10 +308,15 @@ export class KanbanBoard {
     return this.store.layout;
   }
   async removeColumn(key, opts = {}) {
-    const res = removeColumn(this.store.layout, key, { ...opts, scenes: this.scenes });
+    let res;
+    await this._locked(async () => {
+      if (this.autoSave) await this._fresh();
+      res = removeColumn(this.store.layout, key, { ...opts, scenes: this.scenes });
+      if (!res.ok) return;
+      if (res.scenes) { this.scenes = res.scenes; this.dirty = true; if (this.autoSave) await this._write(); }
+    });
     if (!res.ok) return res;
     this.store.set(res.layout);
-    if (res.scenes) { this.scenes = res.scenes; this.dirty = true; if (this.autoSave) await this.flush(); }
     this._emit();
     return res;
   }

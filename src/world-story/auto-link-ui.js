@@ -4,6 +4,7 @@ import { t, tf } from '../i18n.js';
 import { el, setStatus, state } from '../core.js';
 import { AutoLink } from '../world-story/auto-link.js';
 import { listScenes, listEntities } from '../project-scan.js';
+import { gi } from '../icons.js';
 
 let autoLink = null;   // AutoLink instance
 let building = null;   // Promise ของการสร้างดัชนีที่กำลังวิ่งอยู่
@@ -142,7 +143,7 @@ export async function renderBacklinksPanel(host, onOpenScene) {
   }
   const head = el('div', 'bl-panel-head');
   head.append(el('span', 'k-dlg-title', t('ui.worldAutoLink.panelTitle')));
-  const reB = el('button', 'k-panel-btn', '↻');
+  const reB = el('button', 'k-panel-btn', gi('refresh-thin'));
   reB.title = t('ui.worldAutoLink.rebuild');
   head.append(reB);
   host.append(head);

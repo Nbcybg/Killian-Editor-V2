@@ -34,7 +34,15 @@ const fn = new Function('module', 'exports', 'require', result.outputFiles[0].te
 fn(mod, mod.exports, require);
 
 const { PlannerData, validatePort, validateEdgeStyle, uid,
-        createDefaultNode, CARD_W, CARD_H } = mod.exports;
+        createDefaultNode, CARD_W, CARD_H,
+        // [alpha.150] ของใหม่: รูป · รายการติ๊ก · พื้นหลังกระดาน · snap ขนาด
+        IMAGE_FITS, validateFit, _normBgImage, normTodoItems, todoProgress, toggleTodo,
+        parseTodoText, todoToText, todoRowAt, todoContentHeight, TODO_LAYOUT,
+        // [alpha.150r] ขนาดรูป + ตารางไอคอน (ต้องเก็บ "ชื่อ" ไม่ใช่อีโมจิ)
+        IMG_SCALE_MIN, IMG_SCALE_MAX, ICONS,
+        // [alpha.151] จัดข้อความในการ์ด · ดัดเส้นหักมุมฉาก
+        TEXT_ALIGNS, TEXT_VALIGNS, bendHandles, applyBends, setBend,
+        NODE_TYPES } = mod.exports;
 
 // ── Mock kapi (in-memory filesystem) ──
 function mockIo() {
@@ -469,6 +477,299 @@ async function v4Tests() {
   check('bounds ครอบทุกโหนด', bd.x === 0 && bd.y === 0 && bd.right === 680 && bd.bottom === 510,
         JSON.stringify(bd));
   check('bounds ของกระดานว่าง = null', new PlannerData('/proj', mockIo()).bounds() === null);
+
+  // ═══════════ [alpha.150] ขอบ · พื้น · รูป · รายการติ๊ก · snap ขนาด · พื้นหลังกระดาน ═══════════
+  console.log('\n--- alpha.150: ชนิดโหนดใหม่ + ช่องใหม่ ---');
+  check('[150] ชนิดโหนดมี image และ todo',
+        NODE_TYPES.includes('image') && NODE_TYPES.includes('todo'));
+  check('[150] วิธีวางรูปมีสี่แบบ', IMAGE_FITS.join(',') === 'full,fit,fill,tile');
+  check('[150] validateFit คัดค่าที่ไม่รู้จักออก',
+        validateFit('fill') === true && validateFit('zoom') === false);
+
+  const p150 = new PlannerData('/proj', mockIo());
+  const nb150 = p150.addNode('scene', 'ขอบ', null, 0, 0);
+  check('[150] การ์ดใหม่มีช่องขอบ/พื้นครบ',
+        nb150.borderWidth === 1 && nb150.borderColor === '' && nb150.fillOpacity === 1);
+  p150.updateNode(nb150.id, { borderColor: '#ff0000', borderWidth: 99, fillOpacity: 5 });
+  const nb150b = p150.getNode(nb150.id);
+  check('[150] ความหนาขอบถูกหนีบที่ 12', nb150b.borderWidth === 12, nb150b.borderWidth);
+  check('[150] ความจางพื้นถูกหนีบที่ 1', nb150b.fillOpacity === 1, nb150b.fillOpacity);
+  check('[150] สีขอบเก็บได้', nb150b.borderColor === '#ff0000');
+  p150.updateNode(nb150.id, { borderWidth: 0 });
+  check('[150] ความหนา 0 = ไม่มีขอบ (ไม่ใช่ตกกลับเป็นค่าเริ่มต้น)',
+        p150.getNode(nb150.id).borderWidth === 0);
+
+  const img150 = p150.addNode('image', 'รูป', null, 10, 10);
+  check('[150] การ์ดรูปไม่มีขอบเป็นค่าเริ่มต้น', img150.borderWidth === 0);
+  p150.updateNode(img150.id, { fit: 'tile', blur: 99, src: 'Images/a.png' });
+  const img150b = p150.getNode(img150.id);
+  check('[150] วิธีวางรูปเปลี่ยนได้', img150b.fit === 'tile');
+  check('[150] ค่าเบลอถูกหนีบที่ 30', img150b.blur === 30, img150b.blur);
+  p150.updateNode(img150.id, { fit: 'ไม่มีจริง' });
+  check('[150] วิธีวางที่ไม่รู้จักถูกปฏิเสธ (ค่าเดิมอยู่)', p150.getNode(img150.id).fit === 'tile');
+
+  console.log('\n--- alpha.150: รายการสิ่งที่ต้องทำ ---');
+  check('[150] normTodoItems รับทั้ง string และ object',
+        JSON.stringify(normTodoItems(['ก', { text: 'ข', done: true }]))
+          === JSON.stringify([{ text: 'ก', done: false }, { text: 'ข', done: true }]));
+  check('[150] normTodoItems ค่าที่ไม่ใช่ array → []', normTodoItems(null).length === 0);
+  const prog150 = todoProgress([{ text: 'a', done: true }, { text: 'b' }, { text: 'c' }]);
+  check('[150] ความคืบหน้า 1/3 = 33%',
+        prog150.done === 1 && prog150.total === 3 && prog150.percent === 33, JSON.stringify(prog150));
+  check('[150] รายการว่าง = 0%', todoProgress([]).percent === 0);
+  const tg150 = toggleTodo([{ text: 'a', done: false }], 0);
+  check('[150] toggleTodo คืนก้อนใหม่ที่ติ๊กแล้ว', tg150[0].done === true);
+  check('[150] toggleTodo ดัชนีนอกช่วง = ไม่เปลี่ยนอะไร',
+        toggleTodo([{ text: 'a' }], 5)[0].done === false);
+  const parsed150 = parseTodoText('[x] ทำแล้ว\n- [ ] ยังไม่ทำ\nเปล่า ๆ\n   ');
+  check('[150] parseTodoText อ่านสามรูปแบบ + ทิ้งบรรทัดว่าง',
+        parsed150.length === 3 && parsed150[0].done === true && parsed150[1].done === false
+        && parsed150[1].text === 'ยังไม่ทำ' && parsed150[2].text === 'เปล่า ๆ', JSON.stringify(parsed150));
+  check('[150] todoToText ↔ parseTodoText เป็นทางกลับกัน',
+        JSON.stringify(parseTodoText(todoToText(parsed150))) === JSON.stringify(parsed150));
+
+  const td150 = p150.addNode('todo', 'งาน', null, 0, 0,
+                          { items: [{ text: 'a' }, { text: 'b' }, { text: 'c' }] });
+  const TL150 = TODO_LAYOUT;
+  const hit150 = todoRowAt(td150, TL150.padX + 2, TL150.headH + 4);
+  check('[150] คลิกช่องติ๊กของข้อแรกได้ข้อ 0', hit150.index === 0 && hit150.onBox === true,
+        JSON.stringify(hit150));
+  const hitText150 = todoRowAt(td150, TL150.padX + TL150.boxSize + 40, TL150.headH + 4);
+  check('[150] คลิกบนตัวหนังสือ = ข้อเดียวกันแต่ไม่ใช่ช่องติ๊ก',
+        hitText150.index === 0 && hitText150.onBox === false, JSON.stringify(hitText150));
+  check('[150] คลิกข้อที่สาม', todoRowAt(td150, TL150.padX, TL150.headH + TL150.rowH * 2 + 4).index === 2);
+  check('[150] คลิกเหนือหัว = ไม่โดนข้อไหน', todoRowAt(td150, TL150.padX, 4).index === -1);
+  check('[150] คลิกใต้ข้อสุดท้าย = ไม่โดนข้อไหน',
+        todoRowAt(td150, TL150.padX, TL150.headH + TL150.rowH * 9).index === -1);
+  // เลื่อนเนื้อหาในการ์ดแล้ว การคลิกต้องเลื่อนตาม (ไม่งั้นติ๊กผิดข้อ)
+  p150.updateNode(td150.id, { scrollY: TL150.rowH });
+  check('[150] เลื่อนลงหนึ่งแถวแล้วตำแหน่งเดิมกลายเป็นข้อถัดไป',
+        todoRowAt(p150.getNode(td150.id), TL150.padX, TL150.headH + 4).index === 1);
+  check('[150] ความสูงเนื้อหาของรายการนับจากจำนวนข้อ',
+        todoContentHeight(td150) === TL150.headH + 3 * TL150.rowH + 6, todoContentHeight(td150));
+
+  console.log('\n--- alpha.150: snap ขนาด + พื้นหลังกระดาน ---');
+  const ps150 = new PlannerData('/proj', mockIo());
+  ps150.updateGrid({ snap: true, size: 20 });
+  check('[150] snapSize ปัดขนาดเข้ากริด', ps150.snapSize(47) === 40, ps150.snapSize(47));
+  check('[150] snapSize ไม่ยอมให้ขนาดเป็นศูนย์', ps150.snapSize(3) === 20, ps150.snapSize(3));
+  const sb150 = ps150.snapBox({ x: 13, y: 27, width: 47, height: 3 });
+  check('[150] snapBox ปัดทั้งตำแหน่งและขนาด',
+        sb150.x === 20 && sb150.y === 20 && sb150.width === 40 && sb150.height === 20, JSON.stringify(sb150));
+  ps150.updateGrid({ snap: false });
+  check('[150] ปิด snap แล้วขนาดไม่ถูกปัด', ps150.snapSize(47) === 47);
+
+  check('[150] พื้นหลังกระดานเริ่มต้นว่าง',
+        ps150.getBackgroundImage().src === '' && ps150.getBackgroundImage().fit === 'fill');
+  ps150.setBackgroundImage({ src: 'Images/bg150.png', blur: 8, opacity: 0.4, fit: 'tile' });
+  const bg150 = ps150.getBackgroundImage();
+  check('[150] ตั้งรูปพื้นหลังได้ครบทุกช่อง',
+        bg150.src === 'Images/bg150.png' && bg150.blur === 8 && bg150.opacity === 0.4 && bg150.fit === 'tile',
+        JSON.stringify(bg150));
+  ps150.setBackgroundImage({ blur: 999, opacity: -3, fit: 'มั่ว' });
+  const bg150b = ps150.getBackgroundImage();
+  check('[150] ค่านอกช่วงถูกหนีบ · วิธีวางที่ไม่รู้จักตกเป็นค่าเดิมของระบบ',
+        bg150b.blur === 30 && bg150b.opacity === 0 && bg150b.fit === 'fill', JSON.stringify(bg150b));
+  check('[150] _normBgImage รับค่าขยะได้โดยไม่พัง',
+        _normBgImage(null).src === '' && _normBgImage('x').fit === 'fill');
+
+  // ค่าใหม่ทั้งหมดต้องรอดการเขียนลงไฟล์แล้วอ่านกลับ (ไม่งั้นบันทึกแล้วหาย)
+  const io150 = mockIo();
+  const pw150 = new PlannerData('/proj', io150, '/proj/b.json');
+  pw150.setBackgroundImage({ src: 'Images/bg150.png', blur: 5, opacity: 0.5, fit: 'fit' });
+  const wn150 = pw150.addNode('todo', 'งาน', null, 0, 0,
+    { items: [{ text: 'ก', done: true }], borderColor: '#123456', borderWidth: 3,
+      fill: '#abcdef', fillOpacity: 0.25, scrollY: 40 });
+  pw150.updateNode(wn150.id, { src: 'Images/x.png', fit: 'fill', blur: 4 });
+  await pw150.save();
+  const pr150 = new PlannerData('/proj', io150, '/proj/b.json');
+  await pr150.load();
+  const rn150 = pr150.getAllNodes()[0];
+  check('[150] บันทึกแล้วอ่านกลับ: ขอบ/พื้น/รูป/เลื่อน ครบ',
+        rn150.borderColor === '#123456' && rn150.borderWidth === 3 && rn150.fill === '#abcdef'
+        && rn150.fillOpacity === 0.25 && rn150.src === 'Images/x.png' && rn150.fit === 'fill'
+        && rn150.blur === 4 && rn150.scrollY === 40, JSON.stringify(rn150));
+  check('[150] บันทึกแล้วอ่านกลับ: รายการติ๊กครบ',
+        rn150.items.length === 1 && rn150.items[0].done === true && rn150.items[0].text === 'ก');
+  check('[150] บันทึกแล้วอ่านกลับ: รูปพื้นหลังกระดานครบ',
+        pr150.getBackgroundImage().src === 'Images/bg150.png' && pr150.getBackgroundImage().blur === 5,
+        JSON.stringify(pr150.getBackgroundImage()));
+  check('[150] กระดานรุ่นเก่า (ไม่มีช่องใหม่) โหลดแล้วได้ค่าเริ่มต้น ไม่พัง',
+        (() => {
+          const old = new PlannerData('/p', mockIo());
+          old._parse({ version: '4.0', nodes: [{ id: 'a', type: 'scene' }] });
+          const n0 = old.getNode('a');
+          return n0.borderWidth === 1 && n0.fillOpacity === 1 && n0.src === ''
+                 && old.getBackgroundImage().src === '';
+        })());
+
+  // ═══════════ [alpha.150r] รูปปรับขนาดได้ + เลื่อนแนวนอน + ไอคอนออกจากโค้ด ═══════════
+  console.log('\n--- alpha.150r: ขนาดรูป + เลื่อนสองแกน ---');
+  const imgBoard150r = new PlannerData('/proj', mockIo());
+  const im150 = imgBoard150r.addNode('image', 'รูป', null, 0, 0);
+  check('[150r] รูปใหม่เริ่มที่ขนาดพอดีกรอบ (100%)', im150.scale === 1, im150.scale);
+  check('[150r] รูปใหม่ยังไม่เลื่อนทั้งสองแกน', im150.scrollX === 0 && im150.scrollY === 0);
+  imgBoard150r.updateNode(im150.id, { scale: 2.5 });
+  check('[150r] ขยายรูปได้', imgBoard150r.getNode(im150.id).scale === 2.5);
+  imgBoard150r.updateNode(im150.id, { scale: 99 });
+  check('[150r] ขนาดรูปถูกหนีบที่เพดาน', imgBoard150r.getNode(im150.id).scale === IMG_SCALE_MAX,
+        imgBoard150r.getNode(im150.id).scale);
+  imgBoard150r.updateNode(im150.id, { scale: 0 });
+  check('[150r] ขนาดรูปถูกหนีบที่พื้น', imgBoard150r.getNode(im150.id).scale === IMG_SCALE_MIN,
+        imgBoard150r.getNode(im150.id).scale);
+  check('[150r] ช่วงขนาดครอบทั้งย่อและขยาย', IMG_SCALE_MIN < 1 && IMG_SCALE_MAX > 1);
+  imgBoard150r.updateNode(im150.id, { scrollX: 120, scrollY: 40 });
+  check('[150r] ★ เลื่อนแนวนอนเก็บได้ (รูปไม่ตัดบรรทัด จึงล้นด้านข้างได้จริง)',
+        imgBoard150r.getNode(im150.id).scrollX === 120 && imgBoard150r.getNode(im150.id).scrollY === 40);
+  imgBoard150r.updateNode(im150.id, { scrollX: -50 });
+  check('[150r] เลื่อนแนวนอนติดลบไม่ได้', imgBoard150r.getNode(im150.id).scrollX === 0);
+
+  // ค่าที่เพิ่มต้องรอดการบันทึก/อ่านกลับเหมือนช่องอื่น
+  const ioR = mockIo();
+  const pwR = new PlannerData('/proj', ioR, '/proj/r.json');
+  const nR = pwR.addNode('image', 'รูป', null, 0, 0);
+  pwR.updateNode(nR.id, { src: 'Images/a.png', scale: 2, scrollX: 33, scrollY: 12 });
+  await pwR.save();
+  const prR = new PlannerData('/proj', ioR, '/proj/r.json');
+  await prR.load();
+  const backR = prR.getAllNodes()[0];
+  check('[150r] บันทึกแล้วอ่านกลับ: ขนาดรูปและตำแหน่งเลื่อนสองแกนครบ',
+        backR.scale === 2 && backR.scrollX === 33 && backR.scrollY === 12, JSON.stringify(backR));
+  check('[150r] กระดานรุ่นเก่าที่ไม่มีช่องพวกนี้ → ได้ค่าเริ่มต้น ไม่พัง',
+        (() => {
+          const o = new PlannerData('/p', mockIo());
+          o._parse({ version: '4.0', nodes: [{ id: 'i', type: 'image', src: 'Images/x.png' }] });
+          const g = o.getNode('i');
+          return g.scale === 1 && g.scrollX === 0 && g.scrollY === 0;
+        })());
+
+
+  // ═══════════ [alpha.151] จัดข้อความในการ์ด · รูปในการ์ด · ดัดเส้นหักมุมฉาก ═══════════
+  console.log('\n--- alpha.151: จัดข้อความในการ์ด ---');
+  const p151 = new PlannerData('/proj', mockIo());
+  const c151 = p151.addNode('scene', 'ฉาก', null, 0, 0);
+  check('[151] การ์ดใหม่: ข้อความชิดซ้ายบนเป็นค่าเริ่มต้น',
+        c151.textAlign === 'left' && c151.textVAlign === 'top');
+  p151.updateNode(c151.id, { textAlign: 'center', textVAlign: 'middle' });
+  check('[151] ★ จัดข้อความได้ทั้งสองแกน',
+        p151.getNode(c151.id).textAlign === 'center' &&
+        p151.getNode(c151.id).textVAlign === 'middle');
+  const beforeXY = { x: p151.getNode(c151.id).x, y: p151.getNode(c151.id).y };
+  p151.updateNode(c151.id, { textVAlign: 'bottom' });
+  check('[151] ★★ จัดข้อความแล้ว **ตำแหน่งการ์ดไม่ขยับ** (ผู้ใช้: "ไม่ใช่ขยับ card")',
+        p151.getNode(c151.id).x === beforeXY.x && p151.getNode(c151.id).y === beforeXY.y);
+  p151.updateNode(c151.id, { textAlign: 'มั่ว', textVAlign: 'มั่ว' });
+  check('[151] ค่าที่ไม่รู้จักถูกปฏิเสธ (ค่าเดิมอยู่)',
+        p151.getNode(c151.id).textAlign === 'center' &&
+        p151.getNode(c151.id).textVAlign === 'bottom');
+  check('[151] รายการทิศครบสามค่าในแต่ละแกน',
+        TEXT_ALIGNS.join(',') === 'left,center,right' &&
+        TEXT_VALIGNS.join(',') === 'top,middle,bottom');
+
+  console.log('\n--- alpha.151: รูปในการ์ด (ไม่ใช่แค่การ์ดที่เป็นรูปทั้งใบ) ---');
+  p151.updateNode(c151.id, { src: 'Images/a.png', imageH: 0.6 });
+  check('[151] ★ การ์ดฉากใส่รูปได้',
+        p151.getNode(c151.id).src === 'Images/a.png' && p151.getNode(c151.id).imageH === 0.6);
+  p151.updateNode(c151.id, { imageH: 9 });
+  check('[151] สัดส่วนความสูงของรูปถูกหนีบไม่เกินเต็มการ์ด', p151.getNode(c151.id).imageH === 1);
+
+  console.log('\n--- alpha.151: ดัดเส้นหักมุมฉาก ---');
+  {
+    const a151 = p151.addNode('scene', 'A', null, 0, 0, { width: 100, height: 60 });
+    const b151 = p151.addNode('scene', 'B', null, 400, 300, { width: 100, height: 60 });
+    const e151 = p151.addEdge(a151.id, 'right', b151.id, 'left', { routing: 'orthogonal' });
+    check('[151-9] เส้นใหม่ยังไม่ถูกดัด', Array.isArray(e151.bends) && e151.bends.length === 0);
+    const boxA = { x: 0, y: 0, width: 100, height: 60 };
+    const boxB = { x: 400, y: 300, width: 100, height: 60 };
+    const g0 = edgeGeometry(boxA, boxB, e151);
+    const h0 = bendHandles(g0);
+    check('[151-9] ★ เส้นหักมุมฉากมีมือจับให้ลากอย่างน้อยหนึ่งจุด', h0.length >= 1, h0.length);
+    check('[151-9] มือจับอยู่กลางท่อนจริง ๆ (ไม่ใช่ที่ปลายเส้น)',
+          h0.every((h) => (h.axis === 'v' || h.axis === 'h')
+                          && h.index >= 1 && h.index <= g0.points.length - 3),
+          JSON.stringify(h0));
+    // ลากท่อนแรกออกไป 40 หน่วย แล้วเส้นต้องขยับตามจริง
+    const moved = { ...e151, bends: setBend(e151.bends, h0[0].index, 40) };
+    const g1 = edgeGeometry(boxA, boxB, moved);
+    const h1 = bendHandles(g1);
+    const sameIdx = h1.find((h) => h.index === h0[0].index);
+    const delta = h0[0].axis === 'v' ? sameIdx.x - h0[0].x : sameIdx.y - h0[0].y;
+    check('[151-9] ★★ ลากมือจับแล้วท่อนนั้นเลื่อนไปตามระยะที่ลากจริง',
+          Math.abs(delta - 40) < 0.01, delta);
+    check('[151-9] ★ ปลายเส้นทั้งสองข้างยังเกาะขอบการ์ดเหมือนเดิม (ไม่หลุดออกจากพอร์ต)',
+          Math.abs(g1.start.x - g0.start.x) < 0.01 && Math.abs(g1.start.y - g0.start.y) < 0.01 &&
+          Math.abs(g1.end.x - g0.end.x) < 0.01 && Math.abs(g1.end.y - g0.end.y) < 0.01);
+    check('[151-9] ★ เส้นยังเป็นมุมฉากทุกท่อนหลังดัด',
+          g1.points.every((pt, i) => i === 0 ||
+            Math.abs(pt.x - g1.points[i - 1].x) < 0.01 || Math.abs(pt.y - g1.points[i - 1].y) < 0.01),
+          JSON.stringify(g1.points));
+    // ★ เก็บเป็น "ระยะ" ไม่ใช่พิกัด — การ์ดย้ายแล้วเส้นต้องตามไป แต่รูปทรงที่ดัดไว้ยังอยู่
+    const boxAmoved = { x: 60, y: 40, width: 100, height: 60 };
+    const g2 = edgeGeometry(boxAmoved, boxB, moved);
+    check('[151-9] ★★ ย้ายการ์ดแล้วเส้นตามไปเกาะขอบใหม่ (ไม่ค้างที่เดิม)',
+          Math.abs(g2.start.x - 160) < 0.01, g2.start.x);
+    const h2 = bendHandles(g2);
+    check('[151-9] ★★ …และรูปทรงที่ผู้ใช้ดัดไว้ยังอยู่ครบ', h2.length === h1.length, h2.length);
+
+    p151.updateEdge(e151.id, { bends: [0, 40, 0] });
+    check('[151-9] บันทึกค่าดัดลงเส้นได้', p151.getEdge(e151.id).bends[1] === 40);
+    p151.updateEdge(e151.id, { bends: 'มั่ว' });
+    check('[151-9] ค่าที่ไม่ใช่รายการตัวเลข = ไม่มีการดัด', p151.getEdge(e151.id).bends.length === 0);
+    check('[151-9] setBend ยืดรายการให้พอกับดัชนีที่ขอ',
+          setBend([], 3, 10).length === 4 && setBend([], 3, 10)[3] === 10);
+    check('[151-9] applyBends กับเส้นสั้น ๆ ไม่พัง',
+          applyBends([{ x: 0, y: 0 }, { x: 10, y: 0 }], [5]).length === 2);
+    check('[151-9] เส้นตรง/เส้นโค้งไม่มีมือจับ (ดัดได้เฉพาะหักมุมฉาก)',
+          bendHandles({ kind: 'bezier', points: [] }).length === 0);
+  }
+
+  // บันทึกแล้วอ่านกลับ — ช่องใหม่ต้องรอดทั้งหมด
+  {
+    const ioA = mockIo();
+    const pw2 = new PlannerData('/proj', ioA, '/proj/a151.json');
+    const n1 = pw2.addNode('scene', 'ก', null, 0, 0);
+    const n2 = pw2.addNode('scene', 'ข', null, 300, 300);
+    pw2.updateNode(n1.id, { textAlign: 'right', textVAlign: 'bottom', src: 'Images/x.png', imageH: 0.3 });
+    const ed = pw2.addEdge(n1.id, 'right', n2.id, 'left', { routing: 'orthogonal' });
+    pw2.updateEdge(ed.id, { bends: [0, 25] });
+    await pw2.save();
+    const pr2 = new PlannerData('/proj', ioA, '/proj/a151.json');
+    await pr2.load();
+    const back = pr2.getAllNodes()[0];
+    check('[151] บันทึกแล้วอ่านกลับ: การจัดข้อความ + รูปในการ์ดครบ',
+          back.textAlign === 'right' && back.textVAlign === 'bottom'
+          && back.src === 'Images/x.png' && back.imageH === 0.3, JSON.stringify(back));
+    check('[151-9] บันทึกแล้วอ่านกลับ: ค่าดัดเส้นครบ',
+          pr2.getAllEdges()[0].bends[1] === 25, JSON.stringify(pr2.getAllEdges()[0].bends));
+    check('[151] กระดานรุ่นเก่าไม่มีช่องใหม่ → ค่าเริ่มต้น ไม่พัง',
+          (() => {
+            const o = new PlannerData('/p', mockIo());
+            o._parse({ version: '4.0', nodes: [{ id: 'z', type: 'scene' }],
+                       edges: [] });
+            const z = o.getNode('z');
+            return z.textAlign === 'left' && z.textVAlign === 'top' && z.imageH === 0.45;
+          })());
+  }
+
+  console.log('\n--- alpha.150r: ไอคอนต้องมาจากทะเบียน ไม่ใช่ฮาร์ดโค้ด ---');
+  {
+    // กฎ alpha.147: "อย่าเขียนไอคอนลงโค้ด — เปลี่ยนไอคอน = วาง svg ชื่อเดิมลง icons/svg/"
+    // ICONS จึงต้องเก็บแค่ **ชื่อ** และทุกชื่อต้องมีของจริงอยู่ในทะเบียน
+    const glyphCsv = fs.readFileSync(path.join(__dirname, '..', 'icons', 'glyphs.csv'), 'utf8');
+    const svgDir = fs.readdirSync(path.join(__dirname, '..', 'icons', 'svg'));
+    const known = new Set(glyphCsv.split(/\r?\n/).slice(1)
+      .map((l) => l.split(',')[0]).filter(Boolean));
+    for (const f of svgDir) if (f.endsWith('.svg')) known.add(f.slice(0, -4));
+    const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
+    const badIcon = Object.entries(ICONS).filter(([, v]) => emoji.test(String(v)));
+    check('[150r] ★ ตาราง ICONS ไม่มีอีโมจิฮาร์ดโค้ดแล้ว (เก็บชื่อไอคอนอย่างเดียว)',
+          badIcon.length === 0, JSON.stringify(badIcon));
+    const missing = Object.entries(ICONS).filter(([, v]) => !known.has(v));
+    check('[150r] ★ ทุกชื่อไอคอนของกระดานมีอยู่จริงในทะเบียน (svg หรือตัวสำรอง)',
+          missing.length === 0, JSON.stringify(missing));
+    check('[150r] ทุกชนิดโหนดมีไอคอนกำกับครบ',
+          NODE_TYPES.every((t) => !!ICONS[t]), NODE_TYPES.filter((t) => !ICONS[t]).join(','));
+  }
 
 }
 

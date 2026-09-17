@@ -15,6 +15,7 @@
 //    แล้วเครื่องหมายต้องไม่กระโดดไปติดแถวอื่น (จึงใช้ ฉาก+ชนิด+ข้อความ+ลำดับซ้ำ)
 
 import { t } from './i18n.js';
+import { gi } from './icons.js';
 
 // ───────── ชนิดของแถว → กลุ่มตัวกรอง ─────────
 /** กลุ่มตัวกรอง (เรียงตามที่โผล่บนชิป) */
@@ -41,7 +42,7 @@ export const NAV_GROUP_KEYS = {
 };
 /** ไอคอนสั้น ๆ ของกลุ่ม (ไม่ใช่ข้อความ จึงไม่ต้องแปล) */
 export const NAV_GROUP_ICON = {
-  head: '§', scene: '◧', dialog: '☰', trans: '⇥', note: '✎', beat: '¶',
+  head: '§', scene: gi('scene-block'), dialog: gi('menu'), trans: gi('indent'), note: gi('pencil-thin'), beat: '¶',
 };
 
 // ───────── สถานะของจุด (flags) ─────────
@@ -52,13 +53,13 @@ export const NAV_GROUP_ICON = {
 /** @type {Array<{id:string, mark:string, key:string}>} */
 export const NAV_FLAG_DEFS = [
   { id: 'choice',  mark: '⤷', key: 'ui.nav.flagChoice' },   // ตัวหนา + จำนวนทางเลือก
-  { id: 'star',    mark: '★', key: 'ui.nav.flagStar' },
+  { id: 'star',    mark: gi('star-filled'), key: 'ui.nav.flagStar' },
   { id: 'color',   mark: '▌', key: 'ui.nav.flagColor' },
-  { id: 'todo',    mark: '⚠', key: 'ui.nav.flagTodo' },
-  { id: 'empty',   mark: '○', key: 'ui.nav.flagEmpty' },
-  { id: 'locked',  mark: '🔒', key: 'ui.nav.flagLocked' },
-  { id: 'comment', mark: '💬', key: 'ui.nav.flagComment' },
-  { id: 'break',   mark: '▤', key: 'ui.nav.flagBreak' },
+  { id: 'todo',    mark: gi('warning'), key: 'ui.nav.flagTodo' },
+  { id: 'empty',   mark: gi('circle-open'), key: 'ui.nav.flagEmpty' },
+  { id: 'locked',  mark: gi('lock'), key: 'ui.nav.flagLocked' },
+  { id: 'comment', mark: gi('chat'), key: 'ui.nav.flagComment' },
+  { id: 'break',   mark: gi('page-break'), key: 'ui.nav.flagBreak' },
 ];
 export const NAV_FLAG_IDS = NAV_FLAG_DEFS.map((f) => f.id);
 

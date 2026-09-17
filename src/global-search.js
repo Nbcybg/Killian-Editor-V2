@@ -16,6 +16,7 @@ import { $, el, state, setStatus, log } from './core.js';
 import { parseMdFile } from './md.js';
 import { escClose } from './ui.js';
 import { indexProject } from './search-engine.js';
+import { gi } from './icons.js';
 
 // ───────────────────────── ดัชนี (แคชระดับโมดูล) ─────────────────────────
 // ES module: ค่าที่ reassign ต้องอยู่ใน object — กฎเหล็กข้อ 2 ของ AGENTS.md
@@ -151,6 +152,13 @@ export function buildSearchUI(host, { onOpen } = {}) {
   const chkMd = mkChk(t('ui.search.mdSceneNoteMemo'), true);
   const chkJson = mkChk('.json (Wiki/scenes/section)', false);
   const chkName = mkChk(t('ui.search.searchOnlyNameFile'), false);
+  // [alpha.156] ค้นแล้วแทนที่ทั้งโปรเจกต์ต่อได้เลย (เดิมแทนที่ได้แค่ในฉากที่เปิดอยู่)
+  const replB = el('button', 'k-gsearch-replace', t('ui.replace.openBtn'));
+  replB.onclick = async () => {
+    const m = await import('./project-replace-ui.js');
+    m.openProjectReplace(qInput.value.trim());
+  };
+  typeRow.append(replB);
   host.append(searchRow, typeRow);
 
   // [alpha.125 ข้อ A] คำใบ้ไวยากรณ์ — ความสามารถพวกนี้มีมาตลอดในเอนจิน แต่ไม่เคยมีใครรู้
@@ -168,7 +176,7 @@ export function buildSearchUI(host, { onOpen } = {}) {
       const card = el('div', 'k-gsearch-hit');
       const head = el('div', 'k-gsearch-hit-head');
       // กฎข้อ 11: ชื่อไฟล์/ชื่อฉากเป็นข้อความของผู้ใช้ → el(tag, cls, text) เท่านั้น
-      head.append(el('span', 'k-gsearch-hit-name', (h.type === 'md' ? '📄 ' : '📋 ') + h.name));
+      head.append(el('span', 'k-gsearch-hit-name', (h.type === 'md' ? gi('file') + ' ' : gi('clipboard') + ' ') + h.name));
       let rel = h.file;
       try { rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file; } catch {}
       head.append(el('span', 'k-gsearch-hit-path', String(rel)));

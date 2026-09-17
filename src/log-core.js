@@ -12,10 +12,11 @@
 //   count  จำนวนครั้งที่บรรทัดเดิมซ้ำติดกัน (กัน log ท่วมจากลูปที่ยิงรัว)
 
 import { t, tf } from './i18n.js';
+import { gi } from './icons.js';
 export const LEVELS = ['error', 'warn', 'info', 'debug'];
 export const LEVEL_META = {
-  error: { icon: '⛔', label: t('ui.log.error'), rank: 0 },
-  warn:  { icon: '⚠', label: t('ui.log.msg'),   rank: 1 },
+  error: { icon: gi('forbidden'), label: t('ui.log.error'), rank: 0 },
+  warn:  { icon: gi('warning'), label: t('ui.log.msg'),   rank: 1 },
   info:  { icon: 'ℹ', label: t('ui.common.msg4'),  rank: 2 },
   debug: { icon: '·', label: t('ui.common.detailed'), rank: 3 },
 };

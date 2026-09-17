@@ -32,6 +32,7 @@ import { aiBtn, askAI, tokenBadge } from './starter-ai.js';
 import { renderRichView } from './starter-richtext.js';
 import { convertDialog } from './starter-export.js';
 import { bridgeDialog, canPush } from './starter-bridge.js';
+import { gi } from '../icons.js';
 
 // โทเคนตัวอย่างที่ยัดเข้า placeholder — **ห้ามเขียน `{{…}}` ตรง ๆ ในไฟล์ภาษา**
 // เพราะ `t()` คลาย `{{`→`{` (ดู formatMsg ใน i18n.js) · ต้องส่งผ่าน `tf(key, TOK_…)` เสมอ
@@ -123,7 +124,7 @@ export async function renderStarterHome(host, ctx) {
   host.append(wrap);
 
   const head = el('div', 'st-home-head');
-  const back = el('button', 'st-back', '← ' + t('ui.starter.backToList'));
+  const back = el('button', 'st-back', gi('arrow-left') + ' ' + t('ui.starter.backToList'));
   back.onclick = () => ctx.goList();
   head.append(back);
   wrap.append(head);
@@ -151,13 +152,13 @@ export async function renderStarterHome(host, ctx) {
   heroInfo.append(el('div', 'st-hero-blurb', s.blurb || t('ui.starter.noBlurb')));
 
   const heroBtns = el('div', 'st-row-btns');
-  const edit = el('button', null, '✏️ ' + t('ui.starter.editStarter'));
+  const edit = el('button', null, gi('pencil-e') + ' ' + t('ui.starter.editStarter'));
   edit.onclick = () => ctx.goWizard();
   heroBtns.append(edit);
   // สลับโหมดได้จากหน้าเรื่องด้วย — ช่องขั้นสูงของ **ตอน** อยู่ที่นี่ ไม่ได้อยู่ใน wizard
   heroBtns.append(modeSwitch({ ...ctx, rerender: () => renderStarterHome(host, ctx) }));
   if (rows.some((r) => (r.turns || []).length)) {
-    const cv = el('button', 'k-ok', '📝 ' + t('ui.starter.cvBtn'));
+    const cv = el('button', 'k-ok', gi('note') + ' ' + t('ui.starter.cvBtn'));
     cv.title = t('ui.starter.cvBtnHint');
     cv.onclick = async () => {
       const made = await convertDialog(s, rows);
@@ -166,7 +167,7 @@ export async function renderStarterHome(host, ctx) {
     heroBtns.append(cv);
   }
   if (canPush(s, rows)) {
-    const br = el('button', null, '🧭 ' + t('ui.starter.brBtn'));
+    const br = el('button', null, gi('compass') + ' ' + t('ui.starter.brBtn'));
     br.title = t('ui.starter.brBtnHint');
     br.onclick = () => bridgeDialog(s, rows);
     heroBtns.append(br);
@@ -241,7 +242,7 @@ export async function renderStarterHome(host, ctx) {
       if (sc.prevId) {
         const chain = chainOf(rows, sc.id);
         const prev = chain[chain.length - 2];
-        main.append(el('div', 'st-sc-prev', '↳ ' + t('ui.starter.scAfter')
+        main.append(el('div', 'st-sc-prev', gi('arrow-branch') + ' ' + t('ui.starter.scAfter')
           + (prev ? (prev.title || t('ui.starter.scUntitled')) : t('ui.starter.scPrevMissing'))));
       }
       if (String(sc.synopsis || '').trim()) {
@@ -259,7 +260,7 @@ export async function renderStarterHome(host, ctx) {
       }
       // ป้ายบอกว่าตอนนี้ตั้งค่าขั้นสูงไว้ — ไม่งั้นเปิดกล่องเข้าไปดูทีละตอนถึงจะรู้
       const nAdv = scenarioAdvFilled(sc);
-      if (nAdv) meta.append(el('span', 'st-sc-adv', '⚙️ ' + tf('ui.starter.scAdvBadge', nAdv)));
+      if (nAdv) meta.append(el('span', 'st-sc-adv', gi('cog-e') + ' ' + tf('ui.starter.scAdvBadge', nAdv)));
       main.append(meta);
       card.append(main);
 
@@ -268,7 +269,7 @@ export async function renderStarterHome(host, ctx) {
       open.onclick = () => ctx.openChat(sc);
       btns.append(open);
       if ((sc.turns || []).length) {
-        const cv1 = el('button', null, '📝');
+        const cv1 = el('button', null, gi('note'));
         cv1.title = t('ui.starter.cvOne');
         cv1.onclick = async () => {
           const made = await convertDialog(s, rows, sc);
@@ -330,7 +331,7 @@ export function scenarioDialog(ctx, sc, rows) {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog k-wide st-sc-dlg');
     box.append(el('div', 'k-dlg-title', t('ui.starter.scDlgTitle')
-      + (adv ? ' · ⚙️ ' + t('ui.starter.modeAdv') : '')));
+      + (adv ? ' · ' + gi('cog-e') + ' ' + t('ui.starter.modeAdv') : '')));
     const done = (v) => { ov.remove(); resolve(v); };
 
     // ── รูปย่อของตอน (ผู้ใช้ข้อ 2.3) ────────────────────────
@@ -422,7 +423,7 @@ export function scenarioDialog(ctx, sc, rows) {
     let descRow = null, openRow = null, goalRow = null, condRow = null, moodRow = null;
     if (adv) {
       const advBox = el('div', 'st-adv-box');
-      advBox.append(el('div', 'st-sub', '⚙️ ' + t('ui.starter.scAdvHead')));
+      advBox.append(el('div', 'st-sub', gi('cog-e') + ' ' + t('ui.starter.scAdvHead')));
       advBox.append(el('div', 'st-hint', tf('ui.starter.scAdvHint', TOK_ANY, TOK_USER)));
 
       descRow = mentionField(t('ui.starter.scDesc'), sc.desc, () => {},

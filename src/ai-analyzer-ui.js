@@ -8,13 +8,15 @@
 // (บริสุทธิ์ · unit test ได้) · ไฟล์นี้ทำแค่ (1) อ่านเขียนไฟล์ (2) วาดหน้าจอ (3) เรียกเอนจิน
 import { t, tf } from './i18n.js';
 import { el, setStatus, state, log } from './core.js';
-import { iconHtml } from './icons.js';
+import { iconHtml, gi } from './icons.js';
 import { ask, confirmBox } from './ui.js';
 import { listEntities } from './project-scan.js';
 import { getAIClient } from './ai/ai-bridge.js';
 import { aiConfigured, getAISettings } from './ai-settings.js';
 import { showAISettingsDialog, currentProvider } from './ai/ai-provider-ui.js';
 import { openScene, safeName } from './app.js';
+import { parseMdFile } from './md.js';
+import { priceKeyOf } from './ai/ai-providers.js';
 import {
   ANALYSES, ANALYSIS_IDS, analysisById, SCOPE_KINDS, SCOPE_LABELS,
   filterScope, describeScope, analyze, countWords,
@@ -130,6 +132,9 @@ export async function collectScenes(root = state.root) {
           const file = await kapi.join(dp, 'Chapters', ch.folderName || ch.guid, sc.fileName || (sc.id + '.md'));
           let text = '';
           try { text = (await kapi.exists(file)) ? await kapi.readFile(file) : ''; } catch { text = ''; }
+          // [alpha.149] ★ frontmatter ไม่ใช่ต้นฉบับ — เดิม `title:` `type: scene` `format: prose` ถูกนับคำ
+          // ติดอันดับคำซ้ำ/คำที่ใช้บ่อย และถูกส่งไปกินโควตาของ AI ทุกฉาก
+          try { text = parseMdFile(text).body; } catch { /* อ่านไม่ออก = ใช้ดิบ */ }
           out.push({
             id: sc.id, title: sc.title || sc.fileName || '', path: file, draftPath: dp,
             sectionKey: sec.key, sectionTitle: sec.title,
@@ -191,7 +196,8 @@ export async function analyzerStats(root = state.root) {
 async function refreshPrice() {
   try {
     const p = await currentProvider();
-    if (p) { S.price = { provider: p.provider || p.kind || 'openai', model: p.model || '' }; return S.price; }
+    // [alpha.149] ทะเบียนใหม่ไม่มีช่อง provider — ดูจากปลายทางจริง ('' = ไม่รู้ราคา → โชว์ "—")
+    if (p) { S.price = { provider: priceKeyOf(p), model: p.model || '' }; return S.price; }
   } catch { /* ยังไม่ได้ตั้งทะเบียนใหม่ → ตกไปใช้ค่าตั้งแบบเก่า */ }
   const ai = getAISettings();
   S.price = { provider: ai.provider || 'openai', model: ai.model || '' };
@@ -205,7 +211,7 @@ function base() {
   return S.base;
 }
 const fmtTok = (n) => Number(n || 0).toLocaleString();
-const fmtUsd = (n) => '$' + Number(n || 0).toFixed(4);
+const fmtUsd = (n) => (n == null || !isFinite(n) ? '—' : '$' + Number(n).toFixed(4));
 
 // ═══════════════ ตัวช่วยวาด ═══════════════
 function statsBar(stats) {
@@ -346,7 +352,7 @@ function scoreBox(criteria, total, head) {
 function renderAI(id, ai) {
   const box = el('div', 'aia-result-ai');
   box.append(el('div', 'aia-sub-head', t('ui.aia.aiHead')));
-  if (!ai.ok) { box.append(el('div', 'aia-err', '❌ ' + (ai.error || t('ui.aia.errAiFail')))); return box; }
+  if (!ai.ok) { box.append(el('div', 'aia-err', gi('fail') + ' ' + (ai.error || t('ui.aia.errAiFail')))); return box; }
   if (ai.kind === 'score') {
     box.append(scoreBox(ai.rows, ai.total, t('ui.aia.scoreAiHead')));
     if (ai.summary) box.append(el('div', 'aia-ai-text', ai.summary));
@@ -357,7 +363,7 @@ function renderAI(id, ai) {
       li.append(el('span', 'aia-sev', r.severityLabel));
       li.append(el('span', 'aia-find-title', r.title));
       if (r.detail) li.append(el('div', 'aia-find-detail', r.detail));
-      if (r.suggestion) li.append(el('div', 'aia-find-fix', '→ ' + r.suggestion));
+      if (r.suggestion) li.append(el('div', 'aia-find-fix', gi('arrow-right') + ' ' + r.suggestion));
       if (r.sceneId) { li.classList.add('is-link'); li.onclick = () => jumpToScene(r.sceneId); }
       ul.append(li);
     }
@@ -401,14 +407,14 @@ export async function runAnalysis(id, host) {
   S.saved.delete(key);                    // ผลใหม่ = ยังไม่ได้บันทึก (กฎงานค้าง alpha.72)
   if (slot) paintResult(slot, res);
   syncUsageLine();
-  setStatus('🧠 ' + def.title + ' — ' + (res.error ? res.error : t('ui.aia.done')));
+  setStatus(gi('brain') + ' ' + def.title + ' — ' + (res.error ? res.error : t('ui.aia.done')));
   return res;
 }
 
 function paintResult(slot, res) {
   slot.replaceChildren();
   if (!res) return;
-  if (res.error) { slot.append(el('div', 'aia-err', '⚠ ' + res.error)); return; }
+  if (res.error) { slot.append(el('div', 'aia-err', gi('warning') + ' ' + res.error)); return; }
   if (res.scope) slot.append(el('div', 'aia-scope-line', res.scope.text));
   slot.append(renderLocal(res.id, res.local || {}));
   if (res.truncated) slot.append(el('div', 'aia-warn', t('ui.aia.truncated')));
@@ -463,12 +469,12 @@ export async function saveSession(name) {
     await kapi.writeFile(file, JSON.stringify(sess, null, 2));
   } catch (e) {
     log('error', t('ui.aia.errSessionSave'), e);
-    setStatus('❌ ' + t('ui.aia.errSessionSave'));
+    setStatus(gi('fail') + ' ' + t('ui.aia.errSessionSave'));
     return null;
   }
   S.session = { id: sess.id, name: sess.name, file };
   for (const id of Object.keys(results)) S.saved.add(resultKey(id));
-  setStatus('💾 ' + tf('ui.aia.sessionSaved', sess.name));
+  setStatus(gi('save') + ' ' + tf('ui.aia.sessionSaved', sess.name));
   return { file, session: sess };
 }
 
@@ -486,7 +492,7 @@ export async function openSession(row) {
     S.saved.add(key);
   }
   S.session = { id: s.id, name: s.name, file: row.file };
-  setStatus('📂 ' + tf('ui.aia.sessionOpened', s.name || s.id));
+  setStatus(gi('folder-open') + ' ' + tf('ui.aia.sessionOpened', s.name || s.id));
   return true;
 }
 
@@ -496,7 +502,7 @@ export async function deleteSession(row) {
   try { await kapi.remove(row.file); }
   catch (e) { log('error', t('ui.aia.errSessionDel'), e); return false; }
   if (S.session.file === row.file) S.session = { id: '', name: '', file: '' };
-  setStatus('🗑 ' + tf('ui.aia.sessionDeleted', row.name || row.fileName));
+  setStatus(gi('trash') + ' ' + tf('ui.aia.sessionDeleted', row.name || row.fileName));
   return true;
 }
 
@@ -547,7 +553,7 @@ async function writeCsv(defName, text, outPath) {
   const p = outPath || await kapi.saveAsDialog(defName, 'csv');
   if (!p) return null;
   try { await kapi.writeFile(p, text); }
-  catch (e) { log('error', t('ui.aia.errCsv'), e); setStatus('❌ ' + t('ui.aia.errCsv')); return null; }
+  catch (e) { log('error', t('ui.aia.errCsv'), e); setStatus(gi('fail') + ' ' + t('ui.aia.errCsv')); return null; }
   setStatus('⤓ ' + tf('ui.aia.csvSaved', p));
   return p;
 }
@@ -601,14 +607,14 @@ export async function renderAIAnalyzerPanel(host) {
   const tools = el('div', 'aia-tools');
   // กล่องตั้งค่า AI คืน overlay ทันที (ไม่รอผู้ใช้กดปิด) → ต้องเฝ้าดูตอนมันหลุดจาก DOM
   // ไม่งั้นราคาต่อโทเคนบนแผงจะเป็นของผู้ให้บริการเจ้าเดิมทั้งที่ผู้ใช้เพิ่งเปลี่ยนไปแล้ว
-  const setBtn = miniBtn('⚙ ' + t('ui.aia.aiSettings'), t('ui.aia.aiSettingsTip'), async () => {
+  const setBtn = miniBtn(gi('cog') + ' ' + t('ui.aia.aiSettings'), t('ui.aia.aiSettingsTip'), async () => {
     const ov = await showAISettingsDialog();
     if (!ov) return;
     afterClosed(ov, async () => { await refreshPrice(); renderAIAnalyzerPanel(h); });
   });
   setBtn.id = 'aia-ai-settings';
   tools.append(setBtn);
-  const saveBtn = miniBtn('💾 ' + t('ui.aia.sessionSave'), t('ui.aia.sessionSaveTip'), async () => {
+  const saveBtn = miniBtn(gi('save') + ' ' + t('ui.aia.sessionSave'), t('ui.aia.sessionSaveTip'), async () => {
     const nm = await ask(t('ui.aia.sessionSaveTitle'), {
       value: S.session.name || describeScope(S.scope, S.scenes).text, allowEmpty: true });
     if (nm === null) return;
@@ -617,7 +623,7 @@ export async function renderAIAnalyzerPanel(host) {
   });
   saveBtn.id = 'aia-save-session';
   tools.append(saveBtn);
-  const listBtn = miniBtn('📂 ' + t('ui.aia.sessionList'), t('ui.aia.sessionListTip'), () => sessionDialog(h));
+  const listBtn = miniBtn(gi('folder-open') + ' ' + t('ui.aia.sessionList'), t('ui.aia.sessionListTip'), () => sessionDialog(h));
   listBtn.id = 'aia-open-session';
   tools.append(listBtn);
   const csvBtn = miniBtn('⤓ ' + t('ui.aia.exportCsv'), t('ui.aia.exportCsvTip'), () => exportAllCsv());

@@ -12,6 +12,7 @@
 import { el, setStatus, log } from '../core.js';
 import { t, tf } from '../i18n.js';
 import { callAI } from '../ai-settings.js';
+import { gi } from '../icons.js';
 
 /** เพดานเวลาต่อคำขอ — โมเดลคิดนานได้ แต่ไม่ใช่ค้างตลอดกาล */
 export const AI_TIMEOUT_MS = 180000;
@@ -72,18 +73,18 @@ export async function askAI(what, prompt, system, reqId = '') {
  * @param {(reqId:string)=>Promise<any>} run  ต้องส่ง reqId ต่อให้ `askAI`
  */
 export function aiBtn(label, run, { cls = 'st-ai' } = {}) {
-  const b = el('button', cls, '✨ ' + label);
+  const b = el('button', cls, gi('magic') + ' ' + label);
   const S = { busy: false, reqId: '' };
   b.onclick = async () => {
     if (S.busy) {                       // กดซ้ำระหว่างคิด = สั่งหยุด
-      b.textContent = '⏹ ' + t('ui.starter.aiStopping');
+      b.textContent = gi('stop') + ' ' + t('ui.starter.aiStopping');
       await stopAI(S.reqId);
       return;
     }
     S.busy = true;
     S.reqId = newReqId();
     b.classList.add('busy');
-    b.textContent = '⏹ ' + t('ui.starter.aiStop');
+    b.textContent = gi('stop') + ' ' + t('ui.starter.aiStop');
     b.title = t('ui.starter.aiStopHint');
     try { await run(S.reqId); }
     catch (e) {
@@ -92,7 +93,7 @@ export function aiBtn(label, run, { cls = 'st-ai' } = {}) {
     } finally {
       S.busy = false; S.reqId = '';
       b.classList.remove('busy');
-      b.textContent = '✨ ' + label;
+      b.textContent = gi('magic') + ' ' + label;
       b.title = '';
     }
   };

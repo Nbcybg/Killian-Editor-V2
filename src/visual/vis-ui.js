@@ -17,6 +17,7 @@ import { imageLightbox } from '../wiki.js';
 import { parseComments } from '../comments/comment-core.js';
 import { parseMdFile } from '../md.js';
 import * as VC from './vis-core.js';
+import { gi } from '../icons.js';
 
 export const VIS_TAB = '::vis::';
 
@@ -82,11 +83,11 @@ export async function openVisual(scenePath, sceneTitle) {
   const pane = el('div', 'pane');
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', '🎬 ' + (sceneTitle || t('ui.vis.title'))));
+  tabBtn.append(el('span', 'tab-title', gi('film') + ' ' + (sceneTitle || t('ui.vis.title'))));
   const x = el('span', 'tab-x', '×');
   tabBtn.append(x);
   $('#tabs').append(tabBtn);
-  const tab = { file: key, title: '🎬 ' + (sceneTitle || t('ui.vis.title')), pane, tabBtn,
+  const tab = { file: key, title: gi('film') + ' ' + (sceneTitle || t('ui.vis.title')), pane, tabBtn,
                 dirty: false, editor: null, plain: null, wiki: null, gal: null, dash: true,
                 visScene: scenePath };
   tabBtn.onclick = (e) => { if (e.target !== x) import('../app.js').then((m) => m.activate(key)); };
@@ -183,12 +184,12 @@ function colMenu(e, st) {
   const L = COL_LABEL();
   const items = [];
   for (const c of cols)
-    items.push({ label: (c.on ? '☑ ' : '☐ ') + L[c.key], click: async () => {
+    items.push({ label: (c.on ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + L[c.key], click: async () => {
       VC.toggleCol(cols, c.key); await writeCols(cols); await renderVisual(st.key); } });
   items.push('-');
   cols.forEach((c, i) => {
     if (i === 0) return;
-    items.push({ label: '▲ ' + L[c.key], click: async () => {
+    items.push({ label: gi('triangle-up') + ' ' + L[c.key], click: async () => {
       VC.moveCol(cols, c.key, -1); await writeCols(cols); await renderVisual(st.key); } });
   });
   items.push('-');
@@ -276,10 +277,10 @@ function headCell(st, col, label) {
 function moveCell(st, i) {
   const cell = el('div', 'vis-td vis-td-move');
   cell.dataset.row = String(i);
-  const up = el('button', 'vis-mini vis-up', '▲'); up.title = t('ui.vis.up');
+  const up = el('button', 'vis-mini vis-up', gi('triangle-up')); up.title = t('ui.vis.up');
   up.disabled = i === 0;
   up.onclick = async () => { VC.moveRow(st.rows, i, -1); await saveRows(st, true); await redraw(st); };
-  const dn = el('button', 'vis-mini vis-down', '▼'); dn.title = t('ui.vis.down');
+  const dn = el('button', 'vis-mini vis-down', gi('triangle-down')); dn.title = t('ui.vis.down');
   dn.disabled = i === st.rows.length - 1;
   dn.onclick = async () => { VC.moveRow(st.rows, i, 1); await saveRows(st, true); await redraw(st); };
   cell.append(up, dn);
@@ -289,7 +290,7 @@ function moveCell(st, i) {
 function delCell(st, i) {
   const cell = el('div', 'vis-td vis-td-del');
   cell.dataset.row = String(i);
-  const del = el('button', 'vis-mini vis-mini-del', '✕'); del.title = t('ui.vis.delRow');
+  const del = el('button', 'vis-mini vis-mini-del', gi('close')); del.title = t('ui.vis.delRow');
   del.onclick = async () => {
     if (!(await confirmBox(t('ui.vis.delRowAsk')))) return;
     VC.removeRow(st.rows, i);
@@ -306,11 +307,11 @@ async function cardFor(st, i, res, cols, names) {
   const L = COL_LABEL();
   const head = el('div', 'vis-card-head');
   head.append(el('span', 'vis-card-no', String(st.rows[i].no)));
-  const up = el('button', 'vis-mini vis-up', '▲'); up.disabled = i === 0;
+  const up = el('button', 'vis-mini vis-up', gi('triangle-up')); up.disabled = i === 0;
   up.onclick = async () => { VC.moveRow(st.rows, i, -1); await saveRows(st, true); await redraw(st); };
-  const dn = el('button', 'vis-mini vis-down', '▼'); dn.disabled = i === st.rows.length - 1;
+  const dn = el('button', 'vis-mini vis-down', gi('triangle-down')); dn.disabled = i === st.rows.length - 1;
   dn.onclick = async () => { VC.moveRow(st.rows, i, 1); await saveRows(st, true); await redraw(st); };
-  const del = el('button', 'vis-mini vis-mini-del', '✕'); del.title = t('ui.vis.delRow');
+  const del = el('button', 'vis-mini vis-mini-del', gi('close')); del.title = t('ui.vis.delRow');
   del.onclick = async () => {
     if (!(await confirmBox(t('ui.vis.delRowAsk')))) return;
     VC.removeRow(st.rows, i); await saveRows(st); await renderVisual(st.key);
@@ -347,7 +348,7 @@ async function fieldFor(st, i, res, key, names) {
       box.append(el('div', 'vis-noimg', t('ui.vis.noImage')));
     }
     const tools = el('div', 'vis-img-tools');
-    const pick = el('button', 'vis-mini vis-pick', row.image ? '⇄' : '＋');
+    const pick = el('button', 'vis-mini vis-pick', row.image ? gi('swap-lr') : '＋');
     pick.title = t('ui.vis.pickImage');
     pick.onclick = async () => {
       const got = await pickImage(state.root);
@@ -358,7 +359,7 @@ async function fieldFor(st, i, res, key, names) {
     };
     tools.append(pick);
     if (row.image) {
-      const clr = el('button', 'vis-mini', '✕'); clr.title = t('ui.vis.clearImage');
+      const clr = el('button', 'vis-mini', gi('close')); clr.title = t('ui.vis.clearImage');
       clr.onclick = async () => { row.image = ''; await saveRows(st); await redraw(st); };
       tools.append(clr);
     }
@@ -390,7 +391,7 @@ async function fieldFor(st, i, res, key, names) {
       }
     }
     const foot = el('div', 'vis-text-foot');
-    const bind = el('button', 'vis-mini vis-bind', '⇄');
+    const bind = el('button', 'vis-mini vis-bind', gi('swap-lr'));
     bind.title = t('ui.vis.editBind');
     bind.onclick = () => pickLinesDialog(st, i);
     foot.append(bind);

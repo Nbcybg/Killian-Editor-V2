@@ -3,6 +3,7 @@
 //     ตัวแปร let ที่ reassign (pageScale, autosaveTimer, floatBar, …) อยู่กับฟังก์ชันที่แก้มันในไฟล์ของมันเอง
 import { SmartType } from './smart.js';
 import { createLogStore, formatLine } from './log-core.js';
+import { SHORTCUT_ROWS } from './generated/commands-data.js';
 
 // ---- DOM helpers ----
 export const $ = (s) => document.querySelector(s);
@@ -638,161 +639,18 @@ export function applyDataI18n() {
 //
 // **หมายเหตุแป้นพิมพ์**: บนแป้นพิมพ์ยุโรปบางแบบ AltGr = Ctrl+Alt — ถ้าใครใช้แป้นแบบนั้น
 // ให้ตั้งใหม่ได้ที่ ตั้งค่า → ปุ่มลัด (ทุกรายการในตารางนี้ตั้งเองได้หมด)
-export const SHORTCUTS = [
-  // [code, needCtrl, needShift, channel, ...args]   · needCtrl: true | false | 'ctrl+alt'
-  ['KeyS', true, false, 'save'],
-  ['KeyS', true, true, 'save-as'],
-  ['KeyN', true, false, 'new-project'],
-  ['KeyO', true, false, 'open-project'],
-  ['KeyP', true, false, 'print'],
-  ['KeyW', true, false, 'close-tab'],
-  ['KeyW', true, true, 'close-all-tabs'],
-  ['KeyF', true, false, 'find'],
-  ['Comma', true, false, 'settings'],
-  // [alpha.81 ข้อ 9] Ctrl+Shift+E = "ศูนย์รวมการส่งออก" (เดิมเปิดกล่องเวิร์กโฟลว์ตรง ๆ)
-  // กล่องเวิร์กโฟลว์ยังอยู่ — เข้าจากปุ่ม "ปรับขั้นตอน…" ในศูนย์รวม
-  ['KeyE', true, true, 'export-hub'],
-  ['KeyZ', true, false, 'editor-undo'],
-  ['KeyZ', true, true, 'editor-redo'],
-  ['KeyY', true, false, 'editor-redo'],
-  ['KeyB', true, false, 'fmt', 'bold'],
-  ['KeyI', true, false, 'fmt', 'italic'],
-  ['KeyU', true, false, 'fmt', 'underline'],
-  ['KeyX', true, true, 'fmt', 'strike'],
-  // [alpha.97 ข้อ 4] ตัวยก/ตัวห้อย — เลียนแบบ Word (Ctrl+Shift+= / Ctrl+=) แต่ต้องเติม Alt
-  // เพราะตัวดักซูมหน้ากระดาษกิน Ctrl+= / Ctrl+- ไปแล้วโดยไม่ดูปุ่ม Shift (มันเช็คแค่ Alt)
-  ['Equal', 'ctrl+alt', false, 'fmt', 'sup'],
-  ['Minus', 'ctrl+alt', false, 'fmt', 'sub'],
-  ['Digit1', true, false, 'fmt', 'heading', 1],
-  ['Digit2', true, false, 'fmt', 'heading', 2],
-  ['Digit3', true, false, 'fmt', 'heading', 3],
-  ['Digit0', true, false, 'fmt', 'paragraph'],
-  ['Digit8', true, true, 'fmt', 'ul'],
-  ['Digit7', true, true, 'fmt', 'ol'],
-  ['Space', true, false, 'fmt', 'clear'],
-  ['KeyL', true, true, 'fmt', 'align', 'left'],
-  ['KeyK', true, true, 'fmt', 'align', 'center'],
-  ['KeyR', true, true, 'fmt', 'align', 'right'],
-  ['KeyJ', true, true, 'fmt', 'align', 'justify'],
-  ['KeyM', true, true, 'toggle-format'],
-  // [alpha.138] Ctrl+Shift+P (สลับธีม) ถูกถอดตามคำสั่งผู้ใช้ — ธีมย้ายไปอยู่ในตั้งค่าอย่างเดียว
-  ['KeyF', true, true, 'global-search'],
-  ['KeyD', true, true, 'focus-mode'],
-  ['KeyO', true, true, 'quick-open'],
-  ['KeyT', true, true, 'typewriter'],
-  ['KeyB', true, true, 'export-blog'],
-  ['Backslash', true, true, 'split-view'],
-  ['KeyK', true, false, 'kanban'],
-  // [alpha.61 ข้อ 3] ลบทั้งบรรทัด — Ctrl+Shift+K ไม่ว่าง (จัดกึ่งกลาง) จึงใช้ Ctrl+Shift+Delete
-  ['Delete', true, true, 'delete-line'],
-  ['KeyG', true, true, 'gallery'],
-  // [95] Per-element shortcuts — Ctrl+4..9 (Ctrl+1/2/3 จัดการใน handleCommand)
-  ['Digit4', true, false, 'sp-element', 'parenthetical'],
-  ['Digit5', true, false, 'sp-element', 'dialogue'],
-  ['Digit6', true, false, 'sp-element', 'transition'],
-  ['Digit7', true, false, 'sp-element', 'shot'],
-  ['Digit8', true, false, 'sp-element', 'act-break'],
-  ['Digit9', true, false, 'sp-element', 'note'],
-  // [79] เลือกทั้งฉาก
-  ['KeyA', true, true, 'select-scene'],
-  // [77] Non-breaking space
-  ['Space', true, true, 'nbsp'],
-  // [78] ไปที่หน้า/ฉาก · [54] ตรวจหาข้อผิดพลาดถัดไป (alpha.57)
-  ['KeyG', true, false, 'goto'],
-  ['KeyU', true, true, 'sp-find-error'],
-  // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — Ctrl+Shift+` (ไม่ชนกับ DevTools ของ Chromium)
-  ['Backquote', true, true, 'dev-console'],
-  // [alpha.66r3] จัดการพื้นที่แบบ Photoshop — Tab/Shift+Tab ใช้ไม่ได้ (Tab สงวนให้ SmartType)
-  // Ctrl+\ = ซ่อนแผงทั้งหมด (Ctrl+Shift+\ ไม่ว่าง — เป็นแยกจอ)
-  // [alpha.124 ข้อ 6] **สลับให้ตรงทิศ**: `[` ชี้ซ้าย = ซ่อนฝั่งซ้าย · `]` ชี้ขวา = ซ่อนฝั่งขวา
-  // เดิมกลับด้านกันมาตั้งแต่ .66r3 (เลือกตามคีย์ที่ว่าง ไม่ได้เลือกตามความหมาย) — ผู้ใช้กดผิดทุกครั้ง
-  ['Backslash', true, false, 'panels-hide-all'],
-  ['BracketLeft', true, true, 'panels-hide-left'],
-  // เวิร์กสเปซ — Ctrl+Shift+Y (ว่าง)
-  ['KeyY', true, true, 'workspace-menu'],
-
-  // ═══════════ [alpha.79] ชุดใหญ่ที่ขาดไป ═══════════
-  // ── คำสั่งเอกสาร (Ctrl+Shift) ──
-  ['KeyI', true, true, 'insert-image'],
-  ['KeyQ', true, true, 'quick-note'],
-  ['KeyH', true, true, 'reading-mode'],
-  ['KeyN', true, true, 'new-from-template'],
-  ['Period', true, true, 'goto-page'],
-  ['Comma', true, true, 'goto-scene'],
-  ['BracketRight', true, true, 'panels-hide-right'],  // คู่กับ Ctrl+Shift+[ (ซ่อนฝั่งซ้าย)
-  ['KeyR', 'ctrl+alt', false, 'line-numbers'],
-  // ── สร้างของใหม่ (Ctrl+Alt+ตัวเลข) ──
-  ['Digit1', 'ctrl+alt', false, 'chapter'],
-  ['Digit2', 'ctrl+alt', false, 'scene'],
-  ['Digit3', 'ctrl+alt', false, 'character'],
-  ['Digit4', 'ctrl+alt', false, 'location'],
-  ['Digit5', 'ctrl+alt', false, 'memo'],
-  // [alpha.111] เรียกแถบรูปแบบลอยมาที่เคอร์เซอร์ (Ctrl+Shift+/)
-  ['Slash', true, true, 'fmtbar-here'],
-  // [alpha.117] สภาพของแถบรูปแบบลอย — วางไว้ติดกันบนแป้นพิมพ์กับ Ctrl+Shift+/ ให้จำเป็นชุด
-  ['Quote', true, true, 'fmtbar-opacity'],
-  ['Semicolon', true, true, 'fmtbar-align'],
-  ['Equal', true, true, 'fmtbar-lock'],
-  // ── บันทึกทั้งหมด — เดิมเป็นตัวดักคีย์แยกที่ตั้งใหม่ไม่ได้ ตอนนี้อยู่ในตารางแล้ว ──
-  ['KeyS', 'ctrl+alt', false, 'save-all'],
-  // [alpha.124 ข้อ 7] "ปรับขั้นตอนส่งออก" มีชื่อใน SHORTCUT_LABELS มาตลอด แต่ไม่เคยมีแถวในตาราง
-  // → หน้า ตั้งค่า → ปุ่มลัด ไม่เคยแสดงรายการนี้เลย และตั้งเองก็ไม่ได้
-  ['KeyX', 'ctrl+alt', false, 'compile'],
-  // [alpha.124 ข้อ 3] ตารางคีย์ลัด (Cheatsheet) — เดิมผูก listener เองที่ Ctrl+Shift+/
-  // ซึ่ง **ชนกับ `fmtbar-here`** แล้วยิงทั้งคู่ · `?` เปล่า ๆ ยังเปิดได้เหมือนเดิม
-  ['Slash', 'ctrl+alt', false, 'cheatsheet'],
-  // [alpha.124 ข้อ 36] หมุนรูปตัวพิมพ์ของช่วงที่เลือก (Sentence → lower → UPPER → …)
-  ['KeyU', 'ctrl+alt', false, 'text-case-cycle'],
-  // ══ [alpha.125 ข้อ G · ข้อ H] Ctrl+Alt+Shift — ชั้นที่ยังว่างทั้งชั้น ══
-  //
-  // Ctrl+Alt+<ตัวอักษร> ถูกใช้ครบทั้ง 26 ตัวแล้วตั้งแต่ alpha.124 (แผงมี 29 ตัว)
-  // ชั้นถัดไปที่ยังว่างสนิทคือเติม Shift เข้าไป — ตัวจับคีย์รองรับอยู่แล้ว
-  // (`needsAlt(needCtrl) === e.altKey` + เทียบ `needShift` แยก) และ `formatShortcut`
-  // ก็แสดงเป็น `Ctrl+Alt+Shift+B` ได้ถูกต้องอยู่แล้ว
-  ['KeyB', 'ctrl+alt', true, 'toggle-panel', 'backlinks'],
-  ['KeyT', 'ctrl+alt', true, 'thesaurus'],
-  ['KeyI', 'ctrl+alt', true, 'import-scrivener'],
-  // [alpha.141] จัดการบท (คู่กับ Ctrl+Alt+K = จัดการเล่ม) · อ่านทั้งเล่ม
-  ['KeyK', 'ctrl+alt', true, 'toggle-panel', 'chapters'],
-  ['KeyR', 'ctrl+alt', true, 'read-book'],
-  // ── สวิตช์แผง (Ctrl+Alt+ตัวอักษร) — กดซ้ำ = ปิด ──
-  ['KeyD', 'ctrl+alt', false, 'toggle-panel', 'dashboard'],
-  ['KeyT', 'ctrl+alt', false, 'toggle-panel', 'timeline'],
-  ['KeyM', 'ctrl+alt', false, 'toggle-panel', 'maps'],
-  ['KeyN', 'ctrl+alt', false, 'toggle-panel', 'network'],
-  ['KeyP', 'ctrl+alt', false, 'toggle-panel', 'planner'],
-  ['KeyB', 'ctrl+alt', false, 'toggle-panel', 'branch'],
-  ['KeyK', 'ctrl+alt', false, 'toggle-panel', 'books'],
-  ['KeyC', 'ctrl+alt', false, 'toggle-panel', 'codex'],
-  ['KeyH', 'ctrl+alt', false, 'toggle-panel', 'history'],
-  ['KeyJ', 'ctrl+alt', false, 'toggle-panel', 'record'],
-  ['KeyG', 'ctrl+alt', false, 'toggle-panel', 'gallery-board'],
-  ['KeyF', 'ctrl+alt', false, 'toggle-panel', 'floorplan'],
-  ['KeyY', 'ctrl+alt', false, 'toggle-panel', 'player'],
-  ['KeyA', 'ctrl+alt', false, 'toggle-panel', 'ai-analyzer'],
-  ['KeyO', 'ctrl+alt', false, 'toggle-panel', 'comments'],
-  ['KeyI', 'ctrl+alt', false, 'toggle-panel', 'props'],
-  // [alpha.79] แผงใหม่สองตัวของรอบนี้
-  ['KeyL', 'ctrl+alt', false, 'toggle-panel', 'dialogue'],
-  ['KeyE', 'ctrl+alt', false, 'toggle-panel', 'plugins'],
-  // ══ [alpha.116 ข้อ 7] ★ ปิดช่องว่างของตารางคีย์ลัด ══
-  //
-  // ผู้ใช้: *"เช็ค shortcut มีครบมั้ย"* — กวาดแล้วพบว่า **9 แผงไม่มีคีย์ลัดเลย**
-  // ทั้งที่แผงอื่นมีครบ (แผงที่มาทีหลังทุกตัวถูกลืม: ห้องซ้อมบท · Story Starter · แชท AI
-  //  และแผงพื้นฐานที่มีมาแต่ต้นอย่าง โครงเรื่อง/สารบัญ/บันทึก/ประวัติการบันทึก/ค้นหา)
-  //
-  // ประตูกันพลาดอยู่ที่ `test/shortcuts.test.cjs` — แผงที่ปิดได้ทุกตัวต้องมีคีย์ลัด
-  // หรือไม่ก็ต้องประกาศเหตุผลไว้ใน SHORTCUT_PANEL_SKIP ลืมเมื่อไหร่เทสแดงตั้งแต่ build
-  ['KeyQ', 'ctrl+alt', false, 'toggle-panel', 'ai-hub'],
-  ['KeyW', 'ctrl+alt', false, 'toggle-panel', 'ai-chat'],
-  ['KeyV', 'ctrl+alt', false, 'toggle-panel', 'dlgb'],
-  ['KeyZ', 'ctrl+alt', false, 'toggle-panel', 'starter'],
-  ['Digit6', 'ctrl+alt', false, 'toggle-panel', 'tree'],
-  ['Digit7', 'ctrl+alt', false, 'toggle-panel', 'outline'],
-  ['Digit8', 'ctrl+alt', false, 'toggle-panel', 'notes'],
-  ['Digit9', 'ctrl+alt', false, 'toggle-panel', 'log'],
-  ['Digit0', 'ctrl+alt', false, 'toggle-panel', 'search'],
-];
+// [alpha.147] ★ ตารางคีย์ลัดย้ายไปอยู่ `icons/commands.csv` (ช่อง `shortcut`) แล้ว
+//
+// ผู้ใช้: *"ต้องแยกในส่วนของ shortcut เพราะคุณชอบลืมใส่ใน ui"*
+// เดิมคีย์ลัดหนึ่งตัวถูกเขียนไว้ **สามที่**: ตารางนี้ · ข้อความในไฟล์ภาษา ("บันทึก (Ctrl+S)") ·
+// และ `withShortcut('toolbar.bold', 'KeyB', …)` ใน app.js — แก้ที่หนึ่งแล้วอีกสองที่ไม่ตามไปด้วย
+// (alpha.147 เจอเมนู "ซ่อนแผงฝั่งขวา" บอก Ctrl+Shift+[ ทั้งที่คีย์จริงคือ Ctrl+Shift+])
+//
+// ตอนนี้เหลือที่เดียว: แก้คีย์ลัดค่าเริ่มต้น = แก้ช่อง `shortcut` ใน icons/commands.csv แล้ว `node build.js`
+// (หลายคีย์ของคำสั่งเดียวคั่นด้วย " / ") · เหตุผลเดิมของแต่ละคีย์ย้ายไปอยู่ช่อง `shortcut_note`
+// ข้อความบนจอ (tooltip · เมนู · ตั้งค่า) **ต้องเติมคีย์ลัดจากตารางนี้ตอนวาด** ห้ามพิมพ์ลงไฟล์ภาษา
+// รูปของแถวยังเหมือนเดิมทุกประการ: [code, needCtrl, needShift, channel, ...args]
+export const SHORTCUTS = SHORTCUT_ROWS;
 
 /**
  * [alpha.116 ข้อ 7] แผงที่ **จงใจ** ไม่มีคีย์ลัดของตัวเอง — ต้องมีเหตุผลกำกับเสมอ
@@ -881,6 +739,8 @@ export const SHORTCUT_LABELS = {
   'toggle-panel:notes': 'ui.shortcuts.panelNotes',
   'toggle-panel:log': 'ui.shortcuts.panelLog',
   'toggle-panel:search': 'ui.shortcuts.panelSearch',
+  // [alpha.147] ซูมหน้ากระดาษ — เดิมเป็นตัวดักคีย์แยก (ตั้งใหม่ไม่ได้ · ไม่ขึ้นในหน้าตั้งค่า)
+  'zoom:1': 'ui.shortcuts.zoomIn', 'zoom:-1': 'ui.shortcuts.zoomOut', 'zoom:0': 'ui.shortcuts.zoomReset',
 };
 
 /**
@@ -907,7 +767,8 @@ export const SHORTCUT_CATS = [
   { key: 'view', labelKey: 'ui.shortcuts.catView',
     ids: ['focus-mode', 'typewriter', 'reading-mode', 'read-book', 'line-numbers',
           'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu',
-          'fmtbar-here', 'fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock'] },
+          'fmtbar-here', 'fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock',
+          'zoom:1', 'zoom:-1', 'zoom:0'] },
   { key: 'create', labelKey: 'ui.shortcuts.catCreate',
     ids: ['chapter', 'scene', 'character', 'location', 'memo', 'quick-note'] },
   { key: 'panels', labelKey: 'ui.shortcuts.catPanels',
@@ -961,9 +822,6 @@ export function needsAlt(needCtrl) { return String(needCtrl).includes('alt'); }
 // ชื่อเก่า (he กัน break import ใน dialogs.js)
 export const accelText = formatShortcut;
 
-// ตัวช่วย: แทรก shortcut ลงใน title string — "ข้อความ (Ctrl+B)"
-export function withShortcut(labelKey, code, ctrl, shift) {
-  const label = t(labelKey, labelKey);
-  const sc = formatShortcut(code, ctrl, shift);
-  return label + ' (' + sc + ')';
-}
+// [alpha.147] `withShortcut(labelKey, code, ctrl, shift)` ถูกถอด — มันรับรหัสปุ่มจากผู้เรียก
+// จึงพิมพ์คีย์ลัดซ้ำไว้ในโค้ดทุกจุดที่ใช้ (และไม่ตามค่าที่ผู้ใช้ตั้งเอง)
+// ใช้ `withCommandShortcut(text, commandId)` ใน app.js แทน — อ่านจากตารางจริงเสมอ

@@ -3,6 +3,27 @@
 import { tf } from '../i18n.js';
 import { el, setStatus, state, log, t } from '../core.js';
 import { AutoTaskEngine, installDefaultRules, renameEntityTask } from '../auto-task/event-queue.js';
+import { tabHandle } from '../tab-bridge.js';
+
+/**
+ * [alpha.149] io ที่รู้จักแท็บ — ไล่แก้ชื่อลงไฟล์ที่เปิดอยู่แล้วแท็บยังถือของเก่า = บันทึกทีหลังชื่อเก่ากลับมา
+ * แท็บค้างการแก้ = แก้ในแท็บ (ไม่บันทึกงานของผู้ใช้แทน) · ไม่ค้าง = เขียนดิสก์แล้วโหลดแท็บใหม่
+ */
+function tabAwareIo() {
+  return {
+    readFile: async (p) => {
+      const h = tabHandle(p);
+      if (h && h.dirty && h.kind !== 'wiki') return h.getText();
+      return kapi.readFile(p).catch(() => null);
+    },
+    writeFile: async (p, c) => {
+      const h = tabHandle(p);
+      if (h && h.dirty && h.kind !== 'wiki') { h.setText(c); return; }
+      await kapi.writeFile(p, c);
+      if (h) await h.reloadFromDisk();
+    },
+  };
+}
 
 let engine = null;
 let ticker = null;
@@ -42,10 +63,7 @@ export function getTaskEngine() {
     // งานจริงที่ทำได้ตอนนี้: เปลี่ยนชื่อเอนทิตี้ → ไล่แก้ทุกไฟล์
     engine.registerTask('rename-entity', async (payload, ctx) => {
       const files = payload.files && payload.files.length ? payload.files : await listTextFiles(state.root);
-      const run = renameEntityTask({
-        readFile: (p) => kapi.readFile(p).catch(() => null),
-        writeFile: (p, c) => kapi.writeFile(p, c),
-      });
+      const run = renameEntityTask(tabAwareIo());
       const r = await run({ ...payload, files });
       if (r.changed) setStatus(tf('ui.autoTaskEvent.autoSyncUpdateName', r.files.length));
       return r;
@@ -97,10 +115,7 @@ export function resetTaskEngine() {
  */
 export async function renameAcrossProject(oldName, newName) {
   const files = await listTextFiles(state.root);
-  const run = renameEntityTask({
-    readFile: (p) => kapi.readFile(p).catch(() => null),
-    writeFile: (p, c) => kapi.writeFile(p, c),
-  });
+  const run = renameEntityTask(tabAwareIo());
   return run({ oldName, newName, files });
 }
 

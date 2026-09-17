@@ -8,6 +8,7 @@
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { el, state, setStatus, log, textWidth } from './core.js';
 import { num } from './num.js';
+import { localDay } from './local-date.js';
 import { confirmBox, escClose } from './ui.js';
 import { TitlePageEditor, normalizeTitlePages, defaultTitlePages,
          titlePageInnerHtml } from './sp-title-pages.js';
@@ -21,6 +22,7 @@ import { spFormat, scriptMeta, safeName, saveProjectMeta, checkBeforeExport,
 import { pagesOf, pageStartPositions } from './sp-view.js';
 // [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — ตัวเดียวกับที่ศูนย์ส่งออกใช้
 import { exportNameRow } from './export-name-ui.js';
+import { gi } from './icons.js';
 
 // ───────── ที่เก็บข้อมูล ─────────
 /** หน้าปกของโปรเจกต์นี้ (ยังไม่เคยตั้ง = อาร์เรย์ว่าง) */
@@ -49,7 +51,7 @@ export function pdfMeta(title) {
   const m = scriptMeta(title);
   const s = state.meta || {};
   return { ...m, draft: String(s.revisions || s.draft || '').trim(),
-           date: new Date().toISOString().slice(0, 10) };
+           date: localDay() };
 }
 
 // ───────── ฟอนต์ที่ฝังลง PDF ─────────
@@ -183,9 +185,9 @@ export async function openTitlePageDialog() {
     const btns = el('div', 'k-tp-page-btns');
     const bAdd = el('button', 'cmp-mini', tt('ui.pdf.addPage'));
     bAdd.onclick = () => { pageIdx = ed.addPage(); strIdx = -1; render(); };
-    const bUp = el('button', 'cmp-mini', '▲'); bUp.title = tt('ui.pdf.scrollPage');
+    const bUp = el('button', 'cmp-mini', gi('triangle-up')); bUp.title = tt('ui.pdf.scrollPage');
     bUp.onclick = () => { const t = ed.movePage(pageIdx, pageIdx - 1); if (t >= 0) { pageIdx = t; render(); } };
-    const bDn = el('button', 'cmp-mini', '▼'); bDn.title = tt('ui.pdf.scrollPage2');
+    const bDn = el('button', 'cmp-mini', gi('triangle-down')); bDn.title = tt('ui.pdf.scrollPage2');
     bDn.onclick = () => { const t = ed.movePage(pageIdx, pageIdx + 1); if (t >= 0) { pageIdx = t; render(); } };
     const bDup = el('button', 'cmp-mini', tt('ui.common.dup')); bDup.title = tt('ui.pdf.dupPage');
     bDup.onclick = () => { const t = ed.duplicatePage(pageIdx); if (t >= 0) { pageIdx = t; strIdx = -1; render(); } };
@@ -360,7 +362,7 @@ export async function openHeaderDialog() {
         const w = el('label', 'k-hdr-mark'); w.append(c, el('span', null, label));
         marks.append(w);
       }
-      const del = el('button', 'cmp-mini', '✕'); del.title = tt('ui.pdf.delItem');
+      const del = el('button', 'cmp-mini', gi('close')); del.title = tt('ui.pdf.delItem');
       del.onclick = () => { rows.splice(i, 1); refresh(); };
       r.append(tx, al, ox, marks, del);
       list.append(r);
@@ -376,7 +378,7 @@ export async function openHeaderDialog() {
     const h = mergeHeaders(cur());
     const shown = headerStringsFor(2, h, { PAGE: 2, PAGES: 120, TITLE: state.title || tt('ui.common.title'),
       AUTHOR: (state.meta || {}).author || tt('ui.common.author'), DRAFT: tt('ui.pdf.draftTwo'),
-      DATE: new Date().toISOString().slice(0, 10), SCENE: tt('ui.pdf.iNTNight') });
+      DATE: localDay(), SCENE: tt('ui.pdf.iNTNight') });
     info.textContent = shown.length
       ? tt('ui.pdf.samplePage') + shown.map((r) => `[${r.align}] ${r.text}`).join('   ') +
         ttf('ui.pdf.linePage', headerLineCount(h))

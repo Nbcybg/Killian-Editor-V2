@@ -2,6 +2,7 @@
 import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import Fuse from 'fuse.js';
+import { gi } from './icons.js';
 
 const SKIP_DIRS = ['Snapshots', 'Backups', 'Recycle', 'node_modules', '.git'];
 
@@ -45,7 +46,7 @@ export function openQuickOpen() {
   const hint = el('span', 'k-qo-hint', t('ui.quickOpen.pickEnterOpenEsc'));
   const count = el('span', 'k-qo-count');
   count.style.cssText = 'margin-left:auto';
-  const reBtn = el('button', 'k-qo-refresh', '🔄');
+  const reBtn = el('button', 'k-qo-refresh', gi('refresh'));
   reBtn.title = t('ui.quickOpen.scanFileNew');
   reBtn.style.cssText = 'border:none;background:none;cursor:pointer;font-size:13px';
   foot.append(hint, count, reBtn);
@@ -85,7 +86,7 @@ export function openQuickOpen() {
     selectedIdx = 0;
     results.forEach((f) => {
       const row = el('div', 'k-qo-row');
-      const icon = f.ext === 'md' ? '📄' : f.ext === 'json' ? '📋' : '📎';
+      const icon = f.ext === 'md' ? gi('file') : f.ext === 'json' ? gi('clipboard') : gi('paperclip');
       row.append(el('span', 'k-qo-icon', icon));
       row.append(el('span', 'k-qo-name', f.name));
       row.append(el('span', 'k-qo-rel', f.rel));

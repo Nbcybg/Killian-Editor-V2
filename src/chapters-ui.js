@@ -19,6 +19,7 @@ import { addChapter, chapterProps, chapterStats, deleteChapter, listChapters,
 import { isPanelOpen, showPanel } from './panels/panel-ui.js';
 import { pickImage } from './gallery.js';
 import { openBookReader, bumpBookFlow } from './read-ui.js';
+import { gi } from './icons.js';
 
 // เล่มที่กำลังดูอยู่ (จำข้ามการวาดใหม่ — ไม่เขียนลงไฟล์ เป็นสถานะของหน้าจอล้วน)
 const CH_UI = { secPath: '', dPath: '' };
@@ -105,7 +106,7 @@ export async function renderChapterManager(pane) {
         cover.append(el('div', 'chapter-cover-text', c.text));
       } else {
         cover.classList.add('book-cover-empty');
-        cover.append(el('div', 'book-cover-ph', c.on ? '📄' : '—'));
+        cover.append(el('div', 'book-cover-ph', c.on ? gi('file') : '—'));
       }
     };
     applyCover(cov);
@@ -120,7 +121,7 @@ export async function renderChapterManager(pane) {
       bumpBookFlow(); applyCover(cov); chk.checked = true;
       setStatus(t('ui.chapters.coverSetDone'));
     };
-    const clrBtn = el('button', 'cmp-mini', '✕');
+    const clrBtn = el('button', 'cmp-mini', gi('close'));
     clrBtn.title = t('ui.chapters.coverClear');
     clrBtn.onclick = async () => {
       cov.image = '';

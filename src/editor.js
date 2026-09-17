@@ -476,6 +476,20 @@ export const schema = new Schema({
              ],
              toDOM: (n) => ['span', { 'data-color': n.attrs.color,
                                       style: 'color:' + n.attrs.color }, 0] },
+    // ══ [alpha.150] ★ สีเน้นข้อความ (highlight) ══
+    // ทางเดินเหมือนมาร์ก `color` ทุกอย่าง — ค่าถูกกรองด้วย `normColor` ทุกทางเข้า
+    // ต่างแค่แท็ก `<mark>` และคุณสมบัติ `background` (md.js เขียน/อ่านกลับด้วยรูปเดียวกัน)
+    highlight: { attrs: { color: { default: '' } },
+                 parseDOM: [
+                   { tag: 'mark[data-hl]',
+                     getAttrs: (d) => { const c = normColor(d.getAttribute('data-hl'));
+                                        return c ? { color: c } : false; } },
+                   { tag: 'mark',
+                     getAttrs: (d) => { const c = normColor((d.style && d.style.backgroundColor) || '');
+                                        return c ? { color: c } : { color: '#fff3a3' }; } },
+                 ],
+                 toDOM: (n) => ['mark', { 'data-hl': n.attrs.color,
+                                          style: 'background:' + n.attrs.color }, 0] },
   },
 });
 
@@ -631,8 +645,9 @@ export function rangeAlign(state) {
  * [alpha.132 ข้อ 9] สีตัวอักษรของช่วงที่เลือก — เหมือนกันทั้งช่วง = คืนรหัสสี · ปนกัน/ไม่มี = `''`
  * (ไอดิออมเดียวกับ `rangeAlign` — อ่านทั้งช่วง ไม่ใช่จุดเดียว)
  */
-export function rangeColor(state) {
-  const mk = state.schema.marks.color;
+export function rangeColor(state, markName) {
+  // [alpha.150] `markName` เลือกได้ว่าจะถามสีตัวอักษร (`color` — ค่าเริ่มต้น) หรือสีเน้น (`highlight`)
+  const mk = state.schema.marks[markName || 'color'];
   if (!mk) return '';
   const { from, to, empty, $from } = state.selection;
   if (empty) {
@@ -1300,8 +1315,10 @@ export class KEditor {
       // ══ [alpha.132 ข้อ 9] ★ สีตัวอักษร — `arg` = รหัสสี · ค่าว่าง/ไม่ผ่านตัวกรอง = ล้างสี ══
       // ไม่ใช้ `toggleMark` เพราะสีเป็นมาร์ก "มีค่า": กดสีใหม่ทับสีเก่าต้องได้สีใหม่
       // ไม่ใช่สลับเปิด-ปิด (toggleMark จะถอดมาร์กออกเมื่อทั้งช่วงมีมาร์กนั้นอยู่แล้ว)
+      // [alpha.150] สีเน้นข้อความ — กฎเดียวกับสีตัวอักษรเป๊ะ (มาร์ก "มีค่า" ไม่ใช่สวิตช์)
+      case 'highlight':
       case 'color': {
-        const mk = s.marks.color;
+        const mk = name === 'highlight' ? s.marks.highlight : s.marks.color;
         const val = normColor(arg);
         const st = v.state;
         const { from, to, empty } = st.selection;
@@ -1511,6 +1528,7 @@ export class KEditor {
     // [alpha.132 ข้อ 9] ค่าสีของช่วงที่เลือก — เหมือนกันหมด = ค่านั้น · ปนกัน/ไม่มีสี = ''
     // (ชิปสีบนแถบเครื่องมือใช้ค่านี้บอกว่าตอนนี้ตัวอักษรสีอะไร)
     out.colorValue = rangeColor(st);
+    out.highlightValue = rangeColor(st, 'highlight');   // [alpha.150] สีเน้นของช่วงที่เลือก
     return out;
   }
 

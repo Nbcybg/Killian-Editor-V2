@@ -291,8 +291,11 @@ export function mdToHtmlBody(md, o = {}) {
       // [alpha.142 ข้อ 6] คลาส/สไตล์มาจาก `figureClass`/`figureImgStyle` ของ md.js — ตัวเดียวกับที่จอใช้
       const fc = figureClass(b.imgOpts);
       const fs = figureImgStyle(b.imgOpts);
+      // [alpha.149] `o.imgSrc` = ตัวแปลง path รูปของผู้เรียก — HTML ก้อนนี้ถูกไปวางที่อื่นเสมอ
+      // (หน้าโปรแกรม · ไฟล์ชั่วคราวของ PDF) path สัมพัทธ์กับไฟล์ฉากจึงชี้ผิดที่ · ไม่ส่ง = ค่าเดิม
+      const src = typeof o.imgSrc === 'function' ? o.imgSrc(b.src) : b.src;
       out.push(`<figure${attrOf(al)}${fc ? ` class="${escAttr(fc)}"` : ''}>`
-        + `<img alt="${escAttr(b.alt)}" src="${escAttr(b.src)}"${fs ? ` style="${escAttr(fs)}"` : ''}>`
+        + `<img alt="${escAttr(b.alt)}" src="${escAttr(src)}"${fs ? ` style="${escAttr(fs)}"` : ''}>`
         + '</figure>');
       continue;
     }
@@ -430,6 +433,8 @@ export function runWorkflow(model0, workflow,
       proseFormat = null, paper = null, margins = null, keepBlanks,
       // [alpha.132r3 ข้อ 1] สแตกฟอนต์ที่ใช้จริงบนจอ — ไม่ส่งมาก็ใช้ของ proseFormat ตามเดิม
       fontStack = '', headingStack = '',
+      // [alpha.149] ตัวแปลง path รูปในเนื้อฉาก → URL ที่เปิดได้จริง (ส่งต่อให้ mdToHtml ของขั้น to-html)
+      imgSrc = null,
       // ══ [alpha.133 · Y-3] ★★ "ผลลัพธ์นี้จะถูกตีความเป็นมาร์กดาวน์ต่อไหม" ══
       //
       // ผู้ใช้: *"การจัดหน้า … มีแค่ layout อย่างเดียวที่ถูกต้อง"*
@@ -627,7 +632,7 @@ export function runWorkflow(model0, workflow,
     if (st.key === 'to-html') {
       // [alpha.132r3 ข้อ 1] ปลายทาง .html ก็ต้องได้ฟอนต์ชุดเดียวกับบนจอ (ผู้เรียกส่งมาให้)
       text = mdToHtml(text, model.title, proseFormat, paper, margins,
-                      { fontStack, headingStack });
+                      { fontStack, headingStack, imgSrc });
       ext = 'html'; continue;
     }
     if (st.key === 'js') {

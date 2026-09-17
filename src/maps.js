@@ -9,13 +9,14 @@
 // route = { id, name, color, dashed, pinIds:[pinId] }  — เส้นทางระหว่างหมุด (alpha.70)
 
 import { t } from './i18n.js';
+import { gi } from './icons.js';
 export const MAPS_VERSION = '1.1';
 
 export const PIN_COLORS = ['#d9575e', '#5f9fd9', '#6fae6f', '#d9b757', '#a97fd0', '#d97757', '#7fb8b0'];
 export const PIN_KIND = {
-  entity: { icon: '📍', label: t('ui.maps.pos') },
-  portal: { icon: '🚪', label: t('ui.maps.portalMapOther') },
-  note:   { icon: '📌', label: t('ui.common.msg6') },
+  entity: { icon: gi('map-pin'), label: t('ui.maps.pos') },
+  portal: { icon: gi('door'), label: t('ui.maps.portalMapOther') },
+  note:   { icon: gi('pin'), label: t('ui.common.msg6') },
 };
 
 export function newMap(name, image) {

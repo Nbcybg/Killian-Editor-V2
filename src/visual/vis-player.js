@@ -4,6 +4,7 @@
 // อ่านอย่างเดียวล้วน ๆ — ไม่มีทางเขียนอะไรกลับไฟล์จากที่นี่
 import { el, state, t, tf } from '../core.js';
 import { displayText, liveText, resolveRow } from './vis-core.js';
+import { gi } from '../icons.js';
 
 let _cur = null;      // ตัวเล่นที่เปิดอยู่ (เปิดซ้อนกันไม่ได้)
 
@@ -35,14 +36,14 @@ export function openVisPlayer(st, startAt = 0) {
   boxWrap.append(scene, text, remark);
 
   const nav = el('div', 'vis-pl-nav');
-  const prev = el('button', 'vis-pl-btn vis-pl-prev', '◀');
+  const prev = el('button', 'vis-pl-btn vis-pl-prev', gi('chevron-left'));
   prev.title = t('ui.vis.prev');
   const counter = el('span', 'vis-pl-count');
-  const next = el('button', 'vis-pl-btn vis-pl-next', '▶');
+  const next = el('button', 'vis-pl-btn vis-pl-next', gi('play'));
   next.title = t('ui.vis.next');
-  const eye = el('button', 'vis-pl-btn vis-pl-eye', '👁');
+  const eye = el('button', 'vis-pl-btn vis-pl-eye', gi('eye'));
   eye.title = t('ui.vis.toggleText');
-  const close = el('button', 'vis-pl-btn vis-pl-close', '✕');
+  const close = el('button', 'vis-pl-btn vis-pl-close', gi('close'));
   close.title = t('ui.vis.close');
   nav.append(prev, counter, next, eye, close);
 

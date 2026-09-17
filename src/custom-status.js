@@ -5,6 +5,7 @@
 import { t, tf } from './i18n.js';
 import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR } from './core.js';
 import { ask, confirmBox, escClose } from './ui.js';
+import { gi } from './icons.js';
 
 export function getCustomStatuses() {
   if (!state.meta) return [];
@@ -127,7 +128,7 @@ export async function manageCustomStatuses() {
     row.append(pick);
 
     if (!builtIn) {
-      const del = el('span', 'k-status-del', '✕');
+      const del = el('span', 'k-status-del', gi('close'));
       del.style.cssText = 'float:right;cursor:pointer;margin-left:10px';
       del.title = t('ui.status.delStatus2');
       del.onclick = async (e) => {
