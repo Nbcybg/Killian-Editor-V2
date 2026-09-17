@@ -468,12 +468,18 @@ function dockedOnSide(side) {
   return out;
 }
 export function sideHidden(side) { return !!_sideStash[side]; }
-/** สลับฝั่งเดียว · คืน true = ซ่อนแล้ว · false = แสดงคืน (หรือฝั่งนั้นไม่มีแผง) */
+// [alpha.157r] ผู้ใช้: "เปิดปิดแผง บน ล่าง ใช้ไม่ได้" — เลย์เอาต์ปกติไม่มีแผงผนึกเหนือ/ใต้พื้นที่เขียนเลย
+// (ด้านบนคือแถบเครื่องมือ ด้านล่างคือแถบสถานะ ซึ่งปิดไม่ได้) → กดแล้วขึ้นแค่ "ไม่มีแผง" เงียบ ๆ
+// ตอนนี้ฝั่งบน/ล่างรวม "แถบ" ของฝั่งนั้นด้วย จึงมีผลเสมอ · ซ่อนด้วยคลาสบน <body> (แถบไม่ใช่แผงที่ปิดได้)
+const SIDE_BAR = { top: 'k-hide-toolbar', bottom: 'k-hide-statusbar' };
+/** สลับฝั่งเดียว · คืน true = ซ่อนแล้ว · false = แสดงคืน (หรือฝั่งนั้นไม่มีอะไรให้ซ่อน) */
 export function toggleSide(side) {
   if (!SIDES.includes(side)) return false;
+  const bar = SIDE_BAR[side];
   if (_sideStash[side]) {
     const ids = _sideStash[side];
     _sideStash[side] = null;
+    if (bar) document.body.classList.remove(bar);
     for (const id of ids) { try { showPanel(id); } catch {} }
     renderPanels(true);
     if (onShowHook) for (const id of ids) { try { onShowHook(id); } catch {} }
@@ -481,15 +487,19 @@ export function toggleSide(side) {
     return false;
   }
   const ids = dockedOnSide(side);
-  if (!ids.length) { setStatus(t('ui.panel.spaceNone')); return false; }
+  if (!ids.length && !bar) { setStatus(t('ui.panel.spaceNone')); return false; }
   for (const id of ids) { try { hidePanel(id, true); } catch {} }
+  if (bar) document.body.classList.add(bar);
   _sideStash[side] = ids;
   renderPanels(true);
   setStatus(t('ui.panel.sideHidden'));
   return true;
 }
 /** เปลี่ยนโปรเจกต์/รีเซ็ตเลย์เอาต์ = ลืมของที่พักไว้ (ไม่งั้นกดแสดงคืนแล้วเปิดแผงของเลย์เอาต์เก่า) */
-export function resetSideStash() { for (const k of SIDES) _sideStash[k] = null; }
+export function resetSideStash() {
+  for (const k of SIDES) _sideStash[k] = null;
+  try { document.body.classList.remove(...Object.values(SIDE_BAR)); } catch {}
+}
 
 // ───────── วาด ─────────
 function renderOpts() {

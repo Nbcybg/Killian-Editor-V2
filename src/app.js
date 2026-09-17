@@ -39,6 +39,7 @@ import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
 import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider } from './ui.js';
 import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
+import { startGlyphUpgrade } from './glyph-upgrade.js';
 import { mutateJson } from './json-store.js';   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
 import { diskConflict, focusAction } from './disk-conflict.js';   // [alpha.156] ไฟล์ถูกแก้นอกโปรแกรม
 import { sprintDirtyList, stopSprint } from './sprint-ui.js';     // [alpha.156] ทะเบียนงานค้าง
@@ -2993,12 +2994,15 @@ export async function bootSequence() {
   }
   splashProgress(plan.showHome ? tt('ui.splash.home') : tt('ui.splash.ready'), 96);
   clearBusy();
+  // ไม่ได้ติ๊กข้ามหน้าแรก หรือผู้ใช้สั่ง "แสดงหน้าแรกเสมอ" → เปิดหน้าแรก **ก่อน** แสดงหน้าต่าง
+  // [alpha.157r] หน้าแรกตอนเปิดโปรแกรมยืนเดี่ยว ๆ — ตัวโปรแกรมยังไม่โผล่จนกว่าจะเลือกโปรเจกต์/ปิดหน้าแรก
+  // (ถ้าแสดงหน้าต่างก่อน ผู้ใช้เห็นโปรแกรมเปล่าวาบหนึ่งก่อนหน้าแรกจะทับ)
+  if (plan.showHome) {
+    try { const { showHomeDialog } = await import('./home-ui.js'); showHomeDialog({ startup: true }).catch(() => {}); } catch {}
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
   setSplashActive(false);
   try { await kapi.splashDone(); } catch {}
-  // ไม่ได้ติ๊กข้ามหน้าแรก หรือผู้ใช้สั่ง "แสดงหน้าแรกเสมอ" → เปิดหน้าแรก
-  if (plan.showHome) {
-    try { const { showHomeDialog } = await import('./home-ui.js'); await showHomeDialog(); } catch {}
-  }
   return { openedLast, showedHome: plan.showHome, skipHome: plan.skipHome };
 }
 /**
@@ -12842,19 +12846,64 @@ export const CREDITS = [
   ] },
 ];
 
-export function aboutDialog() {
-  const ov = el('div', 'k-overlay');
+// ══ [alpha.157r] กล่อง "เกี่ยวกับ" แบบการ์ดสองฝั่ง (ภาพอ้างอิงจากผู้ใช้) ══
+// ซ้าย = พื้นสว่าง: โลโก้ · คำโปรย · รุ่น · ปุ่มแคปซูล · ปุ่มวงกลมล่างซ้าย
+// ขวา = ภาพประกอบเต็มช่อง + เมนูลิงก์ด้านบน · "เครดิต" เป็นแผ่นเลื่อนทับภาพ (เปิดไว้เป็นค่าเริ่มต้นไม่ได้ — มันบังภาพ)
+// ภาพเป็น placeholder: เปลี่ยนไฟล์ renderer/about/hero.svg + logo.svg (ได้ภาพจริงเป็น png ให้แก้ src สองบรรทัดนี้)
+export function aboutDialog(opts = {}) {
+  const ov = el('div', 'k-overlay k-about-ov');
   const box = el('div', 'k-dialog k-about-dlg');
-  box.append(el('div', 'k-dlg-title', tt('ui.common.killian')));
-  box.append(el('div', null, tt('ui.app.killianEditor') + APP_VERSION));
-  box.append(el('div', 'dim', tt('ui.app.appWriteNovelScreenplay')));
-  box.append(el('div', 'dim', tt('ui.app.fileTaskMarkdownJSON')));
+
+  // ── ซ้าย ──
+  const left = el('div', 'k-about-left');
+  const logo = el('img', 'k-about-logo');
+  logo.alt = 'Killian 2';
+  logo.src = 'about/logo.svg';
+  left.append(logo);
+  const title = el('div', 'k-dlg-title k-about-title', tt('ui.common.killian'));
+  const tag = el('div', 'k-about-tag', tt('ui.app.appWriteNovelScreenplay'));
+  const sub = el('div', 'k-about-sub', tt('ui.app.fileTaskMarkdownJSON'));
+  const ver = el('div', 'k-about-ver', tt('ui.app.killianEditor') + APP_VERSION);
+  const pills = el('div', 'k-about-pills');
+  const pChange = el('button', 'k-about-pill', tt('ui.about.changelog'));
+  pChange.onclick = async () => { ov.remove(); const { showChangelog } = await import('./dialogs.js'); showChangelog(); };
+  const pUpdate = el('button', 'k-about-pill', tt('ui.about.checkUpdate'));
+  pUpdate.onclick = () => { ov.remove(); handleCommand('check-update'); };
+  pills.append(pChange, pUpdate);
+  left.append(title, tag, sub, ver, pills);
+  const foot = el('div', 'k-about-foot');
+  const dev = el('button', 'k-about-round', '');
+  dev.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/><path d="m14 4-4 16"/></svg>';
+  dev.title = tt('ui.app.consoleDev');
+  const devLbl = el('button', 'k-about-round-label', tt('ui.app.consoleDev'));
+  const openDev = () => { ov.remove(); openDevConsole(); };
+  dev.onclick = openDev; devLbl.onclick = openDev;
+  foot.append(dev, devLbl);
+  left.append(foot);
+
+  // ── ขวา ──
+  const right = el('div', 'k-about-right');
+  const hero = el('img', 'k-about-hero');
+  hero.alt = '';
+  hero.src = 'about/hero.svg';
+  const nav = el('div', 'k-about-nav');
+  const credits = el('div', 'k-credits');
+  const navBtn = (label, fn, cls = '') => { const b = el('button', 'k-about-link ' + cls, label); b.onclick = fn; nav.append(b); return b; };
+  const setCredits = (on) => {
+    right.classList.toggle('show-credits', on);
+    bCredits.classList.toggle('on', on);
+    bCredits.setAttribute('aria-pressed', on ? 'true' : 'false');
+  };
+  const bCredits = navBtn(tt('ui.about.credits'), () => setCredits(!right.classList.contains('show-credits')));
+  navBtn('GitHub', () => { try { kapi.openExternal('https://github.com/JabCrossHook/Killian_Editor'); } catch {} });
+  navBtn(tt('ui.about.dataFolder'), () => { try { kapi.revealInOS(state.root || ''); } catch {} }).disabled = !state.root;
+  const close = navBtn(tt('ui.common.close'), () => ov.remove(), 'k-about-link-pill');
+  close.classList.add('k-ok');     // ปุ่มปิดหลักของกล่อง (ปุ่มเดิมก็เป็น .k-ok)
 
   // ---- เครดิต ----
-  const cr = el('div', 'k-credits');
-  cr.append(el('div', 'k-credits-head', tt('ui.app.use')));
+  credits.append(el('div', 'k-credits-head', tt('ui.app.use')));
   for (const g of CREDITS) {
-    cr.append(el('div', 'k-credit-group', g.group));
+    credits.append(el('div', 'k-credit-group', g.group));
     for (const it of g.items) {
       const row = el('div', 'k-credit-row');
       const nm = el('span', 'k-credit-name', it.name);
@@ -12866,21 +12915,16 @@ export function aboutDialog() {
       row.append(nm);
       if (it.lic) row.append(el('span', 'k-credit-lic', it.lic));
       row.append(el('div', 'k-credit-what', it.what));
-      cr.append(row);
+      credits.append(row);
     }
   }
-  box.append(cr);
-
-  const btns = el('div', 'k-dlg-btns');
-  const dev = el('button', 'cmp-mini', tt('ui.app.consoleDev'));
-  dev.onclick = () => { ov.remove(); openDevConsole(); };
-  const ok = el('button', 'k-ok', tt('ui.common.close'));
-  ok.onclick = () => ov.remove();
-  btns.append(dev, ok);
-  box.append(btns);
+  right.append(hero, nav, credits);
+  box.append(left, right);
   ov.append(box);
   document.body.append(ov);
+  if (opts.credits) setCredits(true);
   ov.addEventListener('mousedown', (e) => { if (e.target === ov) ov.remove(); });
+  escClose(ov, () => ov.remove());
   return ov;
 }
 
@@ -14678,6 +14722,8 @@ function setupHoverTips() {
 // (ความกว้างแถบข้างปรับด้วยที่จับของ dock ใน Panel System แล้ว — .k-resize-handle)
 
 window.addEventListener('DOMContentLoaded', () => {
+  // [alpha.157r] อีโมจิสีในหน้าจอ → ไอคอนเส้นชุดเดียวกัน (ดู glyph-icons.js)
+  try { startGlyphUpgrade(document.body); } catch (e) { log('warn', 'glyph upgrade', e); }
   // ---- ลงทะเบียนฮุกให้ toolbar+UI อัปเดตเมื่อเปลี่ยนภาษา ----
   onLanguageChanged(applyToolbarShortcutTitles);
   // ---- โหลดภาษาเริ่มต้น (ไทย) แล้วค่อยเปิดโปรเจกต์ ----
@@ -20657,16 +20703,20 @@ async function runTest(projectPath) {
       pb.renderer.discardActiveObject();
       for (const [tool, w, h] of [['sticky', 170, 120], ['text', 200, 60], ['shape', 240, 140]]) {
         pb.interaction.setTool(tool);
-        const bx = 1200, by = tool === 'sticky' ? 200 : tool === 'text' ? 400 : 600;
+        // [alpha.157r] ตำแหน่งต้องอยู่ในผืนผ้าใบที่มองเห็น — แถบแท็บทรงเม็ดสูงขึ้น ผืนผ้าใบในเลย์เอาต์เทสเตี้ยลง
+        // (เดิมลากถึงแถวที่ 720 ของกระดาน ซึ่งเลยขอบล่างไปแล้ว → วัตถุถูกตัดความสูงตามขอบ)
+        const bx = 1200, by = tool === 'sticky' ? 40 : tool === 'text' ? 180 : 260;
         const p1 = toClient(bx, by), p2 = toClient(bx + w, by + h);
         rawDown(p1.x, p1.y); rawMove(p2.x, p2.y); rawUp(p2.x, p2.y);
         await waitMs(40);
+        const pre157 = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
+        const preH157 = pre157 ? Math.round(pre157.height) : -1;
         pb.interaction.closeEditor();
         const made = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
         const cvR = cvEl.getBoundingClientRect();
         check(`[65r-5] ลากกำหนดขนาดแล้วค่อยสร้าง "${tool}" ได้ตามที่ลาก`,
               !!made && Math.abs(made.width - w) <= 4 && Math.abs(made.height - h) <= 4,
-              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h}`
+              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h} · ก่อนปิดตัวแก้ไข h=${preH157} · cv=${Math.round(cvEl.getBoundingClientRect().height)} off=${JSON.stringify(pb.renderer.canvas._offset)} p1=${Math.round(p1.y)} p2=${Math.round(p2.y)}`
                    : `ไม่เกิดวัตถุ · canvas=${Math.round(cvR.width)}x${Math.round(cvR.height)}`
                      + ` vt=${pb.renderer.canvas.viewportTransform.map((v) => Math.round(v * 100) / 100).join(',')}`
                      + ` p1=${Math.round(p1.x)},${Math.round(p1.y)} p2=${Math.round(p2.x)},${Math.round(p2.y)}`
@@ -24885,8 +24935,17 @@ async function runTest(projectPath) {
       for (const lib of ['Electron', 'ProseMirror', 'Fabric.js', 'pdf-lib', 'JSZip', 'Fuse.js', 'esbuild', 'Courier Prime']) {
         check('[76-19] เครดิตมี ' + lib, names.includes(lib), names);
       }
+      // [alpha.157r] เครดิตเป็นแผ่นเลื่อนทับภาพประกอบ — กดลิงก์ "เครดิต" บนเมนูของกล่องก่อน
       const ov = aboutDialog();
       await new Promise((r) => setTimeout(r, 20));
+      check('[157r-3] ★ กล่องเกี่ยวกับเป็นการ์ดสองฝั่ง (ซ้าย: โลโก้/ข้อความ · ขวา: ภาพ + เมนูลิงก์)',
+            !!ov.querySelector('.k-about-left .k-about-logo') && !!ov.querySelector('.k-about-right .k-about-hero')
+            && ov.querySelectorAll('.k-about-nav .k-about-link').length >= 3 && !!ov.querySelector('.k-about-foot .k-about-round'));
+      const heroR = ov.querySelector('.k-about-right').getBoundingClientRect(), leftR = ov.querySelector('.k-about-left').getBoundingClientRect();
+      check('[157r-3] ฝั่งภาพอยู่ขวาและกว้างกว่าฝั่งข้อความ', heroR.left >= leftR.right - 1 && heroR.width > leftR.width,
+            Math.round(leftR.width) + ' / ' + Math.round(heroR.width));
+      [...ov.querySelectorAll('.k-about-link')].find((b) => b.textContent === tt('ui.about.credits')).click();
+      await new Promise((r) => setTimeout(r, 320));
       const rows = ov.querySelectorAll('.k-credit-row');
       check('[76-20] กล่องเกี่ยวกับวาดแถวเครดิตครบทุกแถว', rows.length === flatCr.length, rows.length + ' vs ' + flatCr.length);
       const txt = ov.textContent;
@@ -35258,7 +35317,8 @@ async function runTest(projectPath) {
               ` · css=${cs62.width}/${cs62.maxWidth}`);
         const acts62 = dlg.querySelector('.home-actions');
         check('[62-1] มีแถบคำสั่งที่ขอบล่างของกล่อง', !!acts62);
-        const btn62 = acts62.querySelector('button');
+        // [alpha.157r] ปุ่มในสวิตช์มุมมองเป็นเม็ดเล็กในราง — วัดกับปุ่ม "ลูกตรง" ของแถบแทน
+        const btn62 = acts62.querySelector(':scope > button');
         check('[62-1] ปุ่มบนแถบคำสั่งอยู่บรรทัดเดียว ไม่ตกลงไปสองบรรทัด',
               acts62.getBoundingClientRect().height < btn62.getBoundingClientRect().height * 1.8,
               `${Math.round(acts62.getBoundingClientRect().height)} / ` +
@@ -44641,10 +44701,10 @@ async function runTest(projectPath) {
         check('[157-6] preload มีช่อง splash', typeof kapi.splashProgress === 'function' && typeof kapi.splashDone === 'function');
 
         // ── 7) ปุ่มซ่อน/แสดงแผงทีละฝั่ง (ขวาสุดของแถบ) ──
-        const sideBtns = [...document.querySelectorAll('#toolbar .k-side-toggles [data-side]')];
-        check('[157-7] ★ มีปุ่ม ซ้าย · บน · ล่าง · ขวา อยู่ท้ายแถบเครื่องมือ',
+        const sideBtns = [...document.querySelectorAll('#titlebar .k-side-toggles [data-side]')];
+        check('[157-7] ★ มีปุ่ม ซ้าย · บน · ล่าง · ขวา ขวาสุดของแถบชื่อหน้าต่าง (ถัดปุ่มหน้าต่าง)',
               sideBtns.map((b) => b.dataset.side).join() === 'left,top,bottom,right'
-              && $('#toolbar').lastElementChild === $('.k-side-toggles'));
+              && $('.k-side-toggles').nextElementSibling === $('#win-btns'));
         showPanel('tree');
         await w157(80);
         const PUI = await import('./panels/panel-ui.js');
@@ -44659,6 +44719,17 @@ async function runTest(projectPath) {
           check('[157-7] ฝั่งอื่นไม่โดนด้วย', !!other && other.classList.contains('on'));
           btn.click(); await w157(120);
           check('[157-7] ★ กดซ้ำ = แสดงคืน', isPanelOpen('tree') && btn.classList.contains('on'));
+        }
+        // [157r-1] ★ ผู้ใช้: "เปิดปิดแผง บน ล่าง ใช้ไม่ได้" — เลย์เอาต์ปกติไม่มีแผงบน/ล่าง ต้องยังมีผล (แถบของฝั่งนั้น)
+        for (const [side, pid] of [['top', 'toolbar'], ['bottom', 'statusbar']]) {
+          const b = sideBtns.find((x) => x.dataset.side === side);
+          const node = () => document.querySelector(`#app-root .k-panel[data-panel-id="${pid}"]`);
+          const h0 = node().getBoundingClientRect().height;
+          b.click(); await w157(120);
+          check(`[157r-1] ★ กดปุ่ม${side} แล้ว ${pid} หายจากจอจริง · ปุ่มยังกดได้`,
+                h0 > 0 && node().getBoundingClientRect().height === 0 && b.getBoundingClientRect().height > 0 && !b.classList.contains('on'));
+          b.click(); await w157(120);
+          check(`[157r-1] กดซ้ำ ${pid} กลับมา`, node().getBoundingClientRect().height > 0 && b.classList.contains('on'));
         }
         check('[157-7] sideOfRect ตัดสินฝั่งถูก', PUI.sideOfRect({ left: 0, right: 100, top: 0, bottom: 500, width: 100, height: 500 }, { left: 110, right: 900, top: 0, bottom: 500 }) === 'left'
               && PUI.sideOfRect({ left: 110, right: 900, top: 520, bottom: 700, width: 790, height: 180 }, { left: 110, right: 900, top: 0, bottom: 500 }) === 'bottom');
@@ -44681,6 +44752,62 @@ async function runTest(projectPath) {
         okBtn.remove();
         hidePanel('dashboard');
         document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+
+        // ══ [alpha.157r] รอบแก้บั๊ก/polish ══
+        // ── 2) หน้าแรกตอนเปิดโปรแกรม: ตัวโปรแกรมข้างหลังถูกซ่อน · ปิดหน้าแรกแล้วโผล่ ──
+        {
+          const HU = await import('./home-ui.js');
+          const ovS = await HU.showHomeDialog({ startup: true });
+          await w157(80);
+          check('[157r-2] ★ หน้าแรกตอนเปิดโปรแกรม = ไม่เห็นตัวโปรแกรมข้างหลัง',
+                document.body.classList.contains('k-home-only') && getComputedStyle($('#app-root')).visibility === 'hidden'
+                && getComputedStyle(ovS.querySelector('.k-home-dlg')).visibility === 'visible'
+                && getComputedStyle($('#win-btns')).visibility === 'visible');
+          ovS.querySelector('.home-btn-close').click();
+          await w157(60);
+          check('[157r-2] ★ ปิดหน้าแรกแล้วตัวโปรแกรมโผล่', !document.body.classList.contains('k-home-only')
+                && getComputedStyle($('#app-root')).visibility === 'visible' && !ovS.isConnected);
+          const ovM = await HU.showHomeDialog();
+          check('[157r-2] เปิดหน้าแรกจากเมนูทีหลัง = กล่องทับโปรแกรมแบบเดิม (ไม่ซ่อนโปรแกรม)', !document.body.classList.contains('k-home-only'));
+          ovM.remove();
+        }
+        // ── 4) อีโมจิสีในหน้าจอกลายเป็นไอคอนเส้น · textContent เดิมไม่เปลี่ยน · ไม่แตะตัวแก้ไข ──
+        {
+          const GU = await import('./glyph-upgrade.js');
+          const probe = el('button', 'k-probe157', gi('save') + ' ' + 'บันทึก');
+          document.body.append(probe);
+          await w157(80);
+          check('[157r-4] ★ อีโมจิในปุ่มถูกวางไอคอนเส้นทับ (อัตโนมัติ)', !!probe.querySelector('.k-gl svg'));
+          check('[157r-4] ★ textContent ยังเป็นข้อความเดิมทุกไบต์', probe.textContent === gi('save') + ' บันทึก', probe.textContent);
+          const glyphBox = probe.querySelector('.k-gl-t').getBoundingClientRect();
+          check('[157r-4] อักขระเดิมถูกซ่อน (ไม่กินที่)', glyphBox.width <= 1 && glyphBox.height <= 1);
+          probe.textContent = gi('refresh') + ' ใหม่';
+          await w157(80);
+          check('[157r-4] เขียนข้อความใหม่ทับ = แปลงให้อีกรอบเอง', !!probe.querySelector('.k-gl svg') && probe.textContent === gi('refresh') + ' ใหม่');
+          probe.remove();
+          const tab157 = [...state.tabs.values()].find((x) => x.editor || x.sp);
+          if (tab157) {
+            const pm157 = (tab157.editor || tab157.sp).view.dom;
+            const before = pm157.querySelectorAll('.k-gl').length;
+            GU.upgradeGlyphs(pm157);
+            check('[157r-4] ★ ไม่แตะเนื้อหาในตัวแก้ไข (อีโมจิของนักเขียน)', pm157.querySelectorAll('.k-gl').length === before);
+          }
+          check('[157r-4] ทั้งหน้าจอมีไอคอนที่ถูกแปลงแล้ว', GU.glyphUpgradeCount() > 0, GU.glyphUpgradeCount());
+        }
+        // ── 3) กล่องเกี่ยวกับ: ลิงก์เครดิตสลับแผ่นเครดิต · Esc ปิด ──
+        {
+          const ovA = aboutDialog();
+          await w157(40);
+          const right = ovA.querySelector('.k-about-right');
+          check('[157r-3] เปิดมาเห็นภาพประกอบ (เครดิตยังไม่บัง)', !right.classList.contains('show-credits'));
+          const lk = [...ovA.querySelectorAll('.k-about-link')].find((b) => b.textContent === tt('ui.about.credits'));
+          lk.click(); await w157(40);
+          check('[157r-3] กดเครดิต = แผ่นเครดิตเลื่อนขึ้น · กดซ้ำ = ซ่อน', right.classList.contains('show-credits') && lk.classList.contains('on')
+                && (lk.click(), !right.classList.contains('show-credits')));
+          check('[157r-3] ภาพ/โลโก้ placeholder โหลดได้จริง', await until157(() => ovA.querySelector('.k-about-hero').naturalWidth > 0
+                && ovA.querySelector('.k-about-logo').naturalWidth > 0));
+          ovA.remove();
+        }
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

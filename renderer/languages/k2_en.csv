@@ -3,6 +3,10 @@ meta.name,English
 meta.nativeName,English
 meta.version,3
 meta.author,Killian 2
+ui.about.changelog,What's new
+ui.about.checkUpdate,Check for updates
+ui.about.credits,Credits
+ui.about.dataFolder,Project folder
 ui.ai.aiChatRAGUse,ai chat: RAG ใช้ไม่ได้ → ถามตรง ๆ
 ui.ai.aiChatStreamFail,ai chat: stream ล้มเหลว
 ui.ai.aPIKeyNotValid,API key ไม่ถูกต้องหรือหมดสิทธิ์ (HTTP 

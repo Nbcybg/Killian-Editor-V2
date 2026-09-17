@@ -384,9 +384,20 @@ export function createProjectCard(project, onOpen) {
 }
 
 // เปิด Home เป็น overlay dialog (แทน panel)
-export async function showHomeDialog() {
-  const ov = el('div', 'k-overlay');
+/**
+ * @param {{startup?: boolean}} [opts] startup = หน้าแรกตอนเปิดโปรแกรม
+ *   [alpha.157r] ผู้ใช้: *"หน้า home ยังไม่ต้องมี app เลย คือซ่อนไว้ก่อน"* → ระหว่างที่หน้าแรกเปิดอยู่
+ *   ทั้งโปรแกรมข้างหลังถูกซ่อน (`body.k-home-only`) · ปิดหน้าแรกทางไหนก็ตาม (เปิดโปรเจกต์ · สร้างใหม่ ·
+ *   ปุ่มปิด · Esc) = โปรแกรมโผล่ · เปิดหน้าแรกจากเมนูทีหลัง = กล่องทับโปรแกรมแบบเดิม
+ */
+export async function showHomeDialog(opts = {}) {
+  const ov = el('div', 'k-overlay' + (opts.startup ? ' k-home-startup' : ''));
   ov.style.zIndex = '90';
+  if (opts.startup) {
+    document.body.classList.add('k-home-only');
+    const rawRemove = ov.remove.bind(ov);
+    ov.remove = () => { document.body.classList.remove('k-home-only'); rawRemove(); };
+  }
   // 0.56a #1: กล่องหน้าแรกต้อง "ขนาดเท่าเดิมเสมอ" ไม่ว่าจะมุมมองการ์ดหรือรายการ
   // (เดิมกล่องหดตามเนื้อใน → สลับมุมมองทีกล่องกระตุกทั้งใบ · แบบ DaVinci Resolve คือกรอบนิ่ง เนื้อในเลื่อน)
   const box = el('div', 'k-dialog k-home-dlg');
