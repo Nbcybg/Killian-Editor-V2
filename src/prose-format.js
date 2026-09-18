@@ -42,8 +42,13 @@ export const DPI = 96;
  * [บั๊ก 18] เดิมตกไปใช้ DEFAULT_SCRIPT_FONT (Courier Prime) ซึ่งเป็นฟอนต์ของ "บทภาพยนตร์"
  * ทำให้ตัวละตินเป็น Courier ส่วนตัวไทยหล่นไป Sarabun → ปนกันน่าเกลียดและอ่านยาว ๆ ไม่สบายตา
  */
+//
+// [alpha.159] ผู้ใช้: *"font นิยายแบบ default เป็น Garamond และมีให้ใช้จาก system หรือจาก project"*
+// Garamond ไม่มีอักษรไทย → ต่อลูกโซ่ไทยที่วางวรรณยุกต์ถูก (ชุดเดียวกับ THAI_SAFE_FALLBACKS) **ก่อน** `serif`
+// ไม่งั้น Chromium เลือกฟอนต์ไทยเอง (บทเรียน alpha.144–145: ได้ Ayuthaya = วรรณยุกต์ลอย)
 export const DEFAULT_PROSE_FONT =
-  '"Sarabun", "TH Sarabun New", "Noto Serif Thai", "Noto Sans Thai", Georgia, "Times New Roman", serif';
+  '"Garamond", "EB Garamond", "Adobe Garamond Pro", ' +
+  '"Thonburi", "Leelawadee UI", "TH Sarabun New", "Sarabun", "Noto Serif Thai", serif';
 
 // ───────── 23. หัวข้อ (h1–h6) ─────────
 // size = เท่าของขนาดตัวอักษรเนื้อเรื่อง · before/after = ระยะเว้นเป็น em ของ "ตัวหัวข้อเอง"
@@ -70,6 +75,9 @@ export const PROSE_DEFAULTS = {
   paraSpacing: 0,            // ระยะระหว่างย่อหน้า (em) — นิยายมาตรฐาน = 0 (ใช้ย่อหน้าแทน)
   firstLineIndent: 0.5,      // [16] ย่อหน้าบรรทัดแรก (นิ้ว) — 0 = ไม่ย่อ
   indentAfterHeading: false, // ย่อหน้าแรกหลังหัวข้อไหม (ธรรมเนียมสากล = ไม่ย่อ)
+  // [alpha.159] ผู้ใช้: "กำหนดได้ว่า tab จะกินพื้นที่ว่างเท่าไหร่" — เดิม `tab-size:4` ตายตัวใน style.css
+  tabSize: 4,                // ความกว้างของอักขระแท็บ 1 ตัว
+  tabUnit: 'space',          // space = จำนวนช่องว่าง · in = นิ้ว · cm = เซนติเมตร
   align: 'left',             // left | justify (จัดหน้าเริ่มต้นของย่อหน้า)
   headingFont: '',           // '' = เหมือนเนื้อเรื่อง
   headingColor: '',          // '' = ใช้สีของธีม
@@ -93,12 +101,27 @@ export function mergeProseFormat(user) {
     lineHeight: clamp(u.lineHeight, 0.8, 4, PROSE_DEFAULTS.lineHeight),
     paraSpacing: clamp(u.paraSpacing, 0, 4, PROSE_DEFAULTS.paraSpacing),
     firstLineIndent: clamp(u.firstLineIndent, 0, 3, PROSE_DEFAULTS.firstLineIndent),
+    tabUnit: TAB_UNITS.includes(u.tabUnit) ? u.tabUnit : PROSE_DEFAULTS.tabUnit,
+    tabSize: clamp(u.tabSize, 0, TAB_UNITS.includes(u.tabUnit) && u.tabUnit !== 'space' ? 10 : 32,
+                   u.tabUnit === 'in' ? 0.5 : u.tabUnit === 'cm' ? 1.27 : PROSE_DEFAULTS.tabSize),
     align: u.align === 'justify' ? 'justify' : 'left',
     avgCharEm: clamp(u.avgCharEm, 0.3, 1.2, PROSE_DEFAULTS.avgCharEm),
     headingNumberLevel: clamp(u.headingNumberLevel, 1, 6, 1),
     headings,
     quote: { ...QUOTE_DEFAULTS, ...(u.quote || {}) },
   };
+}
+
+/** หน่วยของความกว้างแท็บ */
+export const TAB_UNITS = ['space', 'in', 'cm'];
+/**
+ * [alpha.159] ค่า `tab-size` ของ CSS — **ตัวเดียวที่ทั้งจอและไฟล์ส่งออกใช้** (กฎถาวรข้อ 5)
+ * space → ตัวเลขล้วน (เท่าของความกว้างช่องว่าง) · in/cm → ความยาว
+ */
+export function proseTabCss(fmt) {
+  const f = fmt && fmt.headings ? fmt : mergeProseFormat(fmt);
+  const n = +(+f.tabSize).toFixed(3);
+  return f.tabUnit === 'space' ? String(n) : n + f.tabUnit;
 }
 
 /** ชุดฟอนต์ที่ใช้จริง (ว่าง = ค่ามาตรฐานของนิยาย) */
@@ -129,6 +152,7 @@ export function proseCssVars(fmt) {
     '--ed-lh': String(f.lineHeight),
     '--ed-para': f.paraSpacing + 'em',
     '--ed-indent': f.firstLineIndent + 'in',
+    '--ed-tab': proseTabCss(f),
     '--ed-align': f.align,
     '--ed-line-h': proseLinePx(f) + 'px',
   };
@@ -175,7 +199,8 @@ export function proseCss(fmt, sel = '.pane:not(.sp-pane):not(.wiki-pane) > .work
   // แก้: อ่านผ่านตัวแปรเสมอ แล้วให้สแตกของ "รูปแบบนิยาย" เป็นแค่ค่าสำรองเมื่อไม่มีตัวแปร
   out.push(`${sel}{font-family:var(--ed-font, ${proseFontStack(f)});` +
            `font-size:var(--ed-fs, ${proseFontPx(f)}px);` +
-           `line-height:${f.lineHeight};text-align:${f.align}}`);
+           `line-height:${f.lineHeight};text-align:${f.align};` +
+           `tab-size:${proseTabCss(f)};-moz-tab-size:${proseTabCss(f)}}`);
   out.push(`${sel} p{margin:0 0 ${f.paraSpacing}em;text-indent:${f.firstLineIndent}in}`);
   // ══ [alpha.98 ข้อ 3] ★ รายการต้องกินที่แนวตั้ง **เท่ากับย่อหน้าเป๊ะ** ══
   //
@@ -301,7 +326,8 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
                //
                // ★ ตั้งเฉพาะบล็อกที่ **มีแต่ข้อความอยู่ข้างใน** — ห้ามตั้งที่ `body`/`ul`/`blockquote`
                //   เพราะขึ้นบรรทัดใหม่ระหว่างแท็กใน HTML ที่เราประกอบจะกลายเป็นบรรทัดว่างจริง
-               'p,h1,h2,h3,h4,h5,h6{white-space:break-spaces}'];
+               // [alpha.159] ความกว้างแท็บ — กฎคู่แฝดของ `${sel}{tab-size}` ใน proseCss()
+               `p,h1,h2,h3,h4,h5,h6{white-space:break-spaces;tab-size:${proseTabCss(f)}}`];
   // ══ [alpha.134 ข้อ 1] ★ กฎ "ไม่ย่อหน้าแรก" ต้องเป็นกฎคู่แฝดกับ `proseCss()` ══
   //
   // สองอย่างที่ต่างกันมาตลอดและไม่มีใครสังเกต:

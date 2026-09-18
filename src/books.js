@@ -1,4 +1,5 @@
 // books.js — ตัวจัดการเล่ม/ร่าง (Book Manager): เพิ่ม/แก้/ลบ/เรียงเล่มและร่าง
+import { vivid, inkOn } from './color-util.js';
 import { t, tf } from './i18n.js';
 import { SECTION_STATUSES, buildTree, openCompileDialog, openFirstSceneOf, resolveImg } from './app.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
@@ -164,12 +165,14 @@ export async function renderBookManager(pane) {
     const stRow = el('div', 'book-status-row');
     const cur = statusOf(s.meta.status);
     const pill = el('span', 'book-status-pill'); pill.textContent = cur[1];
-    pill.style.background = cur[2];
+    // [alpha.157] พื้นสีสด + ตัวอักษรที่อ่านออกบนพื้นนั้น (ขาวบนเทาเดิมคอนทราสต์ 3.2) · เมนูมีช่องสี
+    const paintPill = (color) => { const v = vivid(color) || color; pill.style.background = v; pill.style.color = inkOn(v); };
+    paintPill(cur[2]);
     pill.onclick = (e) => {
       popupMenu(e.clientX, e.clientY, SECTION_STATUSES.map(([k, label, color]) => ({
-        label: (k === (s.meta.status || 'outline') ? gi('dot') + ' ' : '   ') + label,
+        text: label, swatch: vivid(color) || color, checked: k === (s.meta.status || 'outline'),
         click: async () => { s.meta = await saveSectionMeta(s.sf, { status: k });
-          pill.textContent = label; pill.style.background = color; },
+          pill.textContent = label; paintPill(color); },
       })));
     };
     stRow.append(pill);
@@ -216,11 +219,16 @@ export async function renderBookManager(pane) {
     readB.onclick = () => openBookReader(s.secPath);
     const chB = el('button', 'cmp-mini book-chapters', t('ui.chapters.title'));
     chB.onclick = () => openChapterManager(s.secPath);
+    // [alpha.159] รายชื่อตัวละคร (ของเล่มนี้) + หน้าปก — เดิมเข้าได้จากเมนูบทภาพยนตร์ทางเดียว
+    const castB = el('button', 'cmp-mini book-cast', t('ui.treeMenu.castOfCharacters'));
+    castB.onclick = async () => { const { openRoster } = await import('./roster-ui.js'); openRoster(s.secPath, s.title); };
+    const tpB = el('button', 'cmp-mini book-titlepage', t('ui.treeMenu.titlePage'));
+    tpB.onclick = async () => { const { openTitlePageDialog } = await import('./pdf-ui.js'); openTitlePageDialog(); };
     const expB = el('button', 'cmp-mini', t('ui.books.export'));
     expB.onclick = () => openCompileDialog();
     const delB = el('button', 'cmp-mini k-danger', t('ui.common.del2'));
     delB.onclick = async () => { await deleteSection(s.secPath, s.meta); renderBookManager(pane); };
-    acts.append(openB, readB, chB, expB, delB);
+    acts.append(openB, readB, chB, castB, tpB, expB, delB);
     bd.append(acts);
 
     // ---- ลากสลับลำดับเล่ม ----

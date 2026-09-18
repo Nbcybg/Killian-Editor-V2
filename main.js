@@ -76,6 +76,8 @@ function parseCsvRows(text) {
 }
 
 const TEST = process.env.KILLIAN_TEST === '1';
+// [alpha.157] โฟลเดอร์ข้อมูลผู้ใช้แยก (นักพัฒนา/เทส) — ไม่แตะเลย์เอาต์/โปรเจกต์ล่าสุดของเครื่องจริง
+if (process.env.KILLIAN_USERDATA) { try { app.setPath('userData', process.env.KILLIAN_USERDATA); } catch {} }
 // ══ [alpha.145] ★ e2e ต้องไม่ขึ้นกับว่าหน้าต่างอยู่หน้าสุดหรือไม่ ══
 //
 // อาการ: รัน e2e ชุดเดิมสี่รอบ ได้ผลแดง **คนละจุดกันทุกรอบ** (432 / 694 / 927 / 4,308)
@@ -618,10 +620,54 @@ function buildMenu() {
 }
 
 let forceQuit = false;
+
+// ═══ [alpha.157] ลำดับเปิดโปรแกรม: splash → หน้าต่างหลัก (ขยายเต็มจอ) ═══
+// ผู้ใช้: *"1. เปิด desktop app 2. splash screen loading ระบุว่า load อะไรบ้าง 3. หน้า home 4. app แบบ maximize"*
+// หน้าต่างหลักถูกสร้างแบบซ่อนไว้ให้โหลดไปพร้อมกัน · renderer ส่ง `splash:progress` ระหว่างบูต
+// แล้ว `splash:done` เมื่อพร้อม → ปิด splash + ขยายเต็มจอ + แสดง · เผื่อ renderer ค้าง: เพดาน 30 วินาที
+// โหมดเทส / KILLIAN_NO_SPLASH = ไม่มี splash (หน้าต่างโผล่ทันทีเหมือนเดิม — e2e ไม่ต้องรอ)
+let splash = null;
+let splashTimer = null;
+const USE_SPLASH = !TEST && process.env.KILLIAN_NO_SPLASH !== '1';
+function createSplash() {
+  if (!USE_SPLASH) return null;
+  splash = new BrowserWindow({
+    width: 560, height: 340, frame: false, resizable: false, maximizable: false, minimizable: false,
+    fullscreenable: false, center: true, show: false, backgroundColor: '#1e1250', skipTaskbar: false,
+    title: 'Killian 2', webPreferences: { contextIsolation: true, nodeIntegration: false },
+  });
+  splash.loadFile('renderer/splash.html', { query: { v: app.getVersion(), m: tt('ui.splash.start') } });
+  splash.once('ready-to-show', () => { try { splash.show(); } catch {} });
+  splash.on('closed', () => { splash = null; });
+  splashTimer = setTimeout(() => finishSplash(), 30000);
+  return splash;
+}
+function splashSay(msg, pct) {
+  if (!splash || splash.isDestroyed()) return false;
+  const js = 'window.__splash && window.__splash(' + JSON.stringify(String(msg || '')) + ',' + (Number.isFinite(+pct) ? +pct : 'NaN') + ')';
+  splash.webContents.executeJavaScript(js).catch(() => {});
+  return true;
+}
+function finishSplash() {
+  clearTimeout(splashTimer); splashTimer = null;
+  if (win && !win.isDestroyed() && !win.isVisible()) {
+    try { win.maximize(); } catch {}
+    win.show();
+    win.focus();
+  }
+  if (splash && !splash.isDestroyed()) {
+    splashSay('', 100);
+    const s = splash;
+    setTimeout(() => { try { s.close(); } catch {} }, 180);
+  }
+  return true;
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1000, minHeight: 640,
-    backgroundColor: '#262624',
+    show: !USE_SPLASH,                               // [alpha.157] มี splash = แสดงเมื่อบูตเสร็จ (ขยายเต็มจอ)
+    backgroundColor: '#1e1250',
     frame: false,                                   // หน้าต่าง custom เต็มรูปแบบ
     webPreferences: { preload: path.join(__dirname, 'preload.js'),
                       contextIsolation: true, nodeIntegration: false,
@@ -1015,23 +1061,63 @@ function fontFamiliesOf(file) {
   finally { if (fd !== null) { try { fs.closeSync(fd); } catch {} } }
 }
 
+/** น้ำหนัก/ความเอียงจากตาราง OS/2 ของไฟล์ sfnt เดี่ยว */
+function fontStyleOf(file) {
+  let fd = null;
+  try {
+    fd = fs.openSync(file, 'r');
+    const head = readAt(fd, 0, 12);
+    const n = head.length >= 12 ? head.readUInt16BE(4) : 0;
+    const dir = readAt(fd, 12, Math.min(n, 512) * 16);
+    for (let i = 0; i + 16 <= dir.length; i += 16) {
+      if (dir.toString('latin1', i, i + 4) !== 'OS/2') continue;
+      const t = readAt(fd, dir.readUInt32BE(i + 8), 64);
+      if (t.length < 64) break;
+      return { weight: t.readUInt16BE(4), italic: (t.readUInt16BE(62) & 1) === 1 };
+    }
+  } catch {} finally { if (fd !== null) { try { fs.closeSync(fd); } catch {} } }
+  return { weight: 400, italic: false };
+}
+
 let _sysFonts = null;
-H('fonts:list', () => {
-  if (_sysFonts) return _sysFonts;
+let _sysFontFiles = null;      // [alpha.159] ชื่อวงศ์ (ตัวเล็ก) → [ที่อยู่ไฟล์ .ttf/.otf]
+function scanSystemFonts() {
+  if (_sysFonts) return;
   const seen = new Set();
+  _sysFontFiles = new Map();
   for (const dir of FONT_DIRS) {
     if (!dir) continue;
     let names = [];
     try { names = fs.readdirSync(dir); } catch { continue; }
     for (const n of names) {
       if (!FONT_EXT.test(n)) continue;
-      for (const fam of fontFamiliesOf(path.join(dir, n))) {
-        if (fam.length <= 64) seen.add(fam);
+      const full = path.join(dir, n);
+      for (const fam of fontFamiliesOf(full)) {
+        if (fam.length > 64) continue;
+        seen.add(fam);
+        // pdf-lib ฝังได้แค่ไฟล์เดี่ยว (ttc = หลายฟอนต์ในไฟล์เดียว ใช้ไม่ได้)
+        if (/\.(ttf|otf)$/i.test(n)) {
+          const k = fam.toLowerCase();
+          if (!_sysFontFiles.has(k)) _sysFontFiles.set(k, []);
+          _sysFontFiles.get(k).push(full);
+        }
       }
     }
   }
   _sysFonts = [...seen].sort((a, b) => a.localeCompare(b));
-  return _sysFonts;
+}
+H('fonts:list', () => { scanSystemFonts(); return _sysFonts; });
+/** ไฟล์ของวงศ์แรกในรายการที่เครื่องมี · เลือกไฟล์น้ำหนักปกติก่อน (ชื่อไม่มี bold/italic/light) */
+H('fonts:file', (families) => {
+  scanSystemFonts();
+  for (const f of Array.isArray(families) ? families : [families]) {
+    const files = _sysFontFiles.get(String(f || '').trim().toLowerCase());
+    if (!files || !files.length) continue;
+    // ใกล้น้ำหนัก 400 ที่สุด + ไม่เอียง (อ่านจากตาราง OS/2 — ชื่อไฟล์เชื่อไม่ได้ เช่น LeelaUIb = ตัวหนา)
+    const score = (p) => { const w = fontStyleOf(p); return Math.abs(w.weight - 400) + (w.italic ? 1000 : 0); };
+    return files.slice().sort((x, y) => score(x) - score(y))[0];
+  }
+  return '';
 });
 
 H('fs:writeImageData', (dstDir, name, base64) => {
@@ -1630,6 +1716,9 @@ H('win:setBounds', (box) => {
 H('win:minimize', () => win.minimize());
 H('win:maximize', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
 H('win:close', () => win.close());
+// [alpha.157] splash — ข้อความ "กำลังโหลดอะไร" + ปิด splash แล้วแสดงหน้าต่างหลักแบบขยายเต็มจอ
+H('splash:progress', (msg, pct) => splashSay(msg, pct));
+H('splash:done', () => finishSplash());
 H('win:quitNow', () => {
   forceQuit = true;
   // [alpha.67] หน้าต่างแผงที่ฉีกออกไปต้องปิดตามหน้าต่างหลัก — ไม่งั้นโปรแกรมค้างอยู่ทั้งที่ผู้ใช้สั่งออก
@@ -2109,7 +2198,9 @@ app.whenReady().then(() => {
   // โหลดตารางคำแปลก่อนสร้างหน้าต่าง/เมนู — เมนู OS ถูกสร้างครั้งเดียวตอนเปิด
   try { loadLangTable(lastLangCode()); } catch {}
   if (TEST) startMockSse();            // [alpha.115] เซิร์ฟเวอร์ SSE จำลองสำหรับเทสสตรีม
+  createSplash();
   createWindow();
+  splashSay(tt('ui.splash.window'), 4);
   if (TEST) {
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {

@@ -96,23 +96,41 @@ export function confirmBox(title, okLabel = tt('ui.common.del')) {
 }
 
 let curMenu = null;
-export function popupMenu(x, y, items) {
-  closeMenu();
-  const m = document.createElement('div'); m.className = 'k-menu';
+// ══ [alpha.157] เมนูย่อยเปิดด้วย hover · ช่องสีสี่เหลี่ยม ══
+// ผู้ใช้: *"right click menu ตัวไหนมีต่อ ให้แค่ hover ก็เปิดเลย ไม่ต้องกด click"*
+//        *"ตัวที่เป็นสี จะต้องมีสีกำกับก่อนตัวหนังสือ เป็นช่องสี่เหลี่ยม (ของเก่าเป็นแค่ bullet)"*
+//
+//   `sub`    = ฟังก์ชันคืนรายการ (หรือ Promise ของรายการ) — วาดเป็นเมนูลูกข้างแถวตอนชี้ค้าง
+//   `swatch` = สี '#rrggbb' → ช่องสี่เหลี่ยมหน้าข้อความ · `checked` = เครื่องหมายถูกท้ายแถว
+//
+// เมนูลูกเป็น `.k-menu` ใบที่สองที่ผูกกับใบแม่ (`curSubs`) — ปิดแม่ = ปิดลูกทั้งหมด
+// คลิกนอกทุกใบ = ปิดทั้งชุด · ชี้แถวอื่นของแม่ = ปิดลูกที่ค้างอยู่
+let curSubs = [];
+const SUB_DELAY = 140;
+
+function buildMenuEl(items, depth) {
+  const m = document.createElement('div'); m.className = 'k-menu' + (depth ? ' k-submenu' : '');
+  m.dataset.depth = String(depth);
+  let hoverJob = null;
   for (const it of items) {
     if (it === '-') { m.appendChild(Object.assign(document.createElement('div'), { className: 'k-menu-sep' })); continue; }
     const d = document.createElement('div');
     // disabled = แถวหัวข้อ/คำอธิบาย (ไม่มี click) — ถ้าไม่กัน onclick จะเรียก it.click() ที่ไม่มีจริงแล้ว throw
-    d.className = 'k-menu-item' + (it.danger ? ' k-danger' : '') + (it.disabled ? ' k-menu-label' : '');
+    d.className = 'k-menu-item' + (it.danger ? ' k-danger' : '') + (it.disabled ? ' k-menu-label' : '')
+      + (it.sub ? ' k-menu-has-sub' : '') + (it.checked ? ' k-menu-checked' : '');
     // [alpha.124 ข้อ 20] `label` เป็น HTML (หลายรายการฝังไอคอน SVG) — รายการที่ข้อความ
     // มาจากผู้ใช้ (คำในเอกสาร · ชื่อไฟล์) ต้องส่งมาทาง `text` เพื่อลง textContent เท่านั้น
     // [alpha.149] คีย์ลัดเป็น **คอลัมน์ชิดขวา** (แบบเมนูเบราว์เซอร์) — ห้ามต่อ "(Ctrl+…)" ท้ายป้ายอีก
-    //   `accel` = ข้อความคีย์ตรง ๆ (คีย์เฉพาะที่ เช่นของกระดาน) · `cmd` = id คำสั่ง → คีย์ที่ใช้งานจริง
-    //   (ตามที่ผู้ใช้ตั้งเอง · ⌘ บน mac) · ไม่มีคีย์ลัด = โครง DOM เหมือนเดิมทุกประการ
     const accel = it.accel || (it.cmd ? shortcutText(it.cmd) : '');
     let host = d;
-    if (accel) {
+    if (accel || it.sub || it.swatch !== undefined) {
       d.classList.add('k-menu-has-accel');
+      if (it.swatch !== undefined) {
+        const sw = document.createElement('span');
+        sw.className = 'k-menu-swatch' + (it.swatch ? '' : ' k-menu-swatch-none');
+        if (it.swatch) sw.style.background = it.swatch;
+        d.appendChild(sw);
+      }
       host = document.createElement('span');
       host.className = 'k-menu-text';
       d.appendChild(host);
@@ -125,18 +143,110 @@ export function popupMenu(x, y, items) {
       k.textContent = accel;
       d.appendChild(k);
     }
-    if (!it.disabled) d.onclick = () => { closeMenu(); it.click(); };
+    if (it.sub) {
+      const arrow = document.createElement('span');
+      arrow.className = 'k-menu-arrow';
+      d.appendChild(arrow);
+    }
+    if (it.sub) {
+      const open = () => openSub(d, it, depth);
+      d.addEventListener('mouseenter', () => { clearTimeout(hoverJob); hoverJob = setTimeout(open, SUB_DELAY); });
+      d.addEventListener('mouseleave', () => clearTimeout(hoverJob));
+      d.onclick = (e) => { e.stopPropagation(); clearTimeout(hoverJob); open(); };
+    } else {
+      // ชี้แถวธรรมดา = ปิดเมนูลูกที่ค้างจากแถวอื่น
+      d.addEventListener('mouseenter', () => { clearTimeout(hoverJob); hoverJob = setTimeout(() => closeSubsFrom(depth + 1), SUB_DELAY); });
+      if (!it.disabled) d.onclick = () => { closeMenu(); it.click(); };
+    }
     m.appendChild(d);
   }
-  document.body.appendChild(m);
+  return m;
+}
+
+function placeMenu(m, x, y) {
   const r = m.getBoundingClientRect();
-  m.style.left = Math.min(x, window.innerWidth - r.width - 8) + 'px';
-  m.style.top = Math.min(y, window.innerHeight - r.height - 8) + 'px';
+  m.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+  m.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+}
+
+function closeSubsFrom(depth) {
+  const keep = [];
+  for (const sm of curSubs) {
+    if (+sm.dataset.depth >= depth) { sm.remove(); if (sm._owner) sm._owner.classList.remove('k-menu-open'); }
+    else keep.push(sm);
+  }
+  curSubs = keep;
+}
+
+async function openSub(row, it, depth) {
+  if (row.classList.contains('k-menu-open') && curSubs.some((sm) => sm._owner === row)) return;
+  closeSubsFrom(depth + 1);
+  row.classList.add('k-menu-open');
+  const token = {};
+  row._subToken = token;
+  let items = null;
+  try { items = await it.sub(); } catch { items = null; }
+  // ระหว่างรอ ผู้ใช้อาจย้ายไปชี้แถวอื่น/ปิดเมนูไปแล้ว
+  if (row._subToken !== token || !row.isConnected || !row.classList.contains('k-menu-open')) return;
+  if (!items || !items.length) { row.classList.remove('k-menu-open'); return; }
+  const sm = buildMenuEl(items, depth + 1);
+  sm._owner = row;
+  document.body.appendChild(sm);
+  const rr = row.getBoundingClientRect();
+  const sr = sm.getBoundingClientRect();
+  // ขวาของแถวก่อน · ชนขอบจอ = พลิกไปซ้าย
+  let x = rr.right + 2;
+  if (x + sr.width > window.innerWidth - 8) x = Math.max(4, rr.left - sr.width - 2);
+  sm.style.left = x + 'px';
+  sm.style.top = Math.max(4, Math.min(rr.top - 5, window.innerHeight - sr.height - 8)) + 'px';
+  curSubs.push(sm);
+}
+
+export function popupMenu(x, y, items) {
+  // [alpha.157] ตัวเก็บรายการของเมนูย่อย — ฟังก์ชันเดิมที่ "เปิดเมนูที่ตำแหน่งคลิก" ใช้ซ้ำเป็นเมนูลูกได้
+  if (_capture) { const c = _capture; _capture = null; c(items); return; }
+  closeMenu();
+  hideHoverTip();
+  const m = buildMenuEl(items, 0);
+  document.body.appendChild(m);
+  placeMenu(m, x, y);
   curMenu = m;
   setTimeout(() => document.addEventListener('mousedown', onDoc), 0);
 }
-function onDoc(e) { if (curMenu && !curMenu.contains(e.target)) closeMenu(); }
+
+// ══ [alpha.157] ใช้ฟังก์ชันที่ "เปิดเมนูเอง" เป็นเมนูย่อย ══
+// เมนูสี/สถานะ/ย้ายไป/กู้คืน ของ Explorer ถูกเขียนเป็น `popupMenu(e.clientX, e.clientY, …)` ทั้งหมด
+// (มีทั้งแบบ sync และแบบ await ไฟล์ก่อน) — แทนที่จะแยกทุกตัวเป็นสองร่าง ใช้ตัวดักตัวเดียว:
+// ระหว่างที่ `fn` ทำงาน การเรียก popupMenu **ครั้งแรก** จะคืนรายการมาแทนการเปิดเมนู
+// fn ไม่เรียก popupMenu เลย (เช่น "ไม่มีเล่มอื่นให้ย้าย" แล้วขึ้นแถบสถานะ) = ไม่มีเมนูลูก
+let _capture = null;
+let _captureChain = Promise.resolve();
+export function menuItemsOf(fn) {
+  const run = () => new Promise((resolve) => {
+    let done = false;
+    const finish = (items) => { if (done) return; done = true; if (_capture === finish) _capture = null; resolve(items || null); };
+    _capture = finish;
+    Promise.resolve().then(fn).then(() => finish(null), () => finish(null));
+  });
+  const p = _captureChain.then(run, run);
+  _captureChain = p.then(() => {}, () => {});
+  return p;
+}
+
+// [alpha.157] ทูลทิปต้องไม่ขึ้นทับเมนูคลิกขวา — ตัวซ่อนอยู่ใน app.js (ลงทะเบียนตอนบูต)
+let _hideTip = null;
+export function setHoverTipHider(fn) { _hideTip = fn; }
+function hideHoverTip() { try { if (_hideTip) _hideTip(); } catch {} }
+/** มีเมนูคลิกขวาเปิดอยู่ไหม (ตัวดัก tooltip ถามตัวนี้) */
+export function menuOpen() { return !!curMenu; }
+
+function onDoc(e) {
+  if (!curMenu) return;
+  if (curMenu.contains(e.target) || curSubs.some((sm) => sm.contains(e.target))) return;
+  closeMenu();
+}
 export function closeMenu() {
+  closeSubsFrom(0);
   if (curMenu) { curMenu.remove(); curMenu = null; document.removeEventListener('mousedown', onDoc); }
 }
 

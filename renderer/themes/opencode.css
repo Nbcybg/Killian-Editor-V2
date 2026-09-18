@@ -1,0 +1,38 @@
+/* renderer/themes/opencode.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-opencode {
+  --bg:#0a0a0a;
+  --side:#050505;
+  --bar:#141414;
+  --border:#2a2a2a;
+  --fg:#eeeeee;
+  --bright:#f8f8f8;
+  --dim:#939393;
+  --accent:#fab283;
+  --accent-hi:#9d7cd8;
+  --link:#5c9cf5;
+  --sel:#3a2a20;
+  --orange:#9d7cd8;
+  --curline:#131313;
+  --hover:#282828;
+  --hover-soft:#181818;
+  --titlebar:#070707;
+  --sunken:#080808;
+  --chip:#463428;
+  --danger-soft:#522527;
+  --canvas:#080808;
+  --void:#070707;
+  --paper-surround:#070707;
+  --tab-bar:#070707;
+  --tab-bg:#212121;
+  --tab-border:#3c3c3c;
+  --tab-fg:#939393;
+  --tab-fg-on:#f7f7f7;
+  --tab-hover:#181818;
+  --panel-head:#090909;
+  --input-bg:#080808;
+  --muted-strong:#c5c5c5;
+  --find-hit:#5b497b;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

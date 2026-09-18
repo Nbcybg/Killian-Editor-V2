@@ -215,7 +215,8 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   const ICON = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F0FF}\u{2460}-\u{24FF}\u{25A0}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0F}]/u;
   const SKIP_KIND = new Set(['test', 'data-range', 'skip-file', 'compare', 'data-call',
                              'console', 'already', 'tagged', 'obj-key', 'prop']);
-  const SKIP_FILES = new Set(['src/visual-tags.js', 'src/icons.js']);
+  // [alpha.157r] glyph-icons.js = ตาราง "อีโมจิ → ไอคอนเส้น" (อักขระเป็นกุญแจของตาราง ไม่ใช่ไอคอนที่วาดออกจอ)
+  const SKIP_FILES = new Set(['src/visual-tags.js', 'src/icons.js', 'src/glyph-icons.js']);
 
   const walk = (dir, out = []) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

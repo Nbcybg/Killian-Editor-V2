@@ -1,0 +1,38 @@
+/* renderer/themes/claude.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-claude {
+  --bg:#262624;
+  --side:#1f1e1d;
+  --bar:#30302e;
+  --border:#3e3e38;
+  --fg:#e8e6dc;
+  --bright:#f6f5f1;
+  --dim:#9a9992;
+  --accent:#d97757;
+  --accent-hi:#e8a55a;
+  --link:#8fb5d9;
+  --sel:#6b3f2a;
+  --orange:#e8a55a;
+  --curline:#2e2e2b;
+  --hover:#3f3f3c;
+  --hover-soft:#32322f;
+  --titlebar:#1b1b19;
+  --sunken:#1f1f1e;
+  --chip:#533a31;
+  --danger-soft:#653738;
+  --canvas:#1f1f1e;
+  --void:#1b1b19;
+  --paper-surround:#1b1b19;
+  --tab-bar:#1b1b19;
+  --tab-bg:#393936;
+  --tab-border:#51504c;
+  --tab-fg:#9a9992;
+  --tab-fg-on:#f4f3ee;
+  --tab-hover:#32322f;
+  --panel-head:#222220;
+  --input-bg:#1d1d1b;
+  --muted-strong:#c5c3bb;
+  --find-hit:#916c42;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

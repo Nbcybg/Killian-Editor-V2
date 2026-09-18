@@ -3,7 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <title>Killian 2</title>
+<link rel="stylesheet" href="themes/base.css">
 <link rel="stylesheet" href="style.css">
+<!-- [alpha.157] ธีมสีแยกไฟล์ — ตัวแปรของ body.theme-<id> -->
+<!-- themes:begin (สร้างจาก themes/themes.json · ห้ามแก้มือ) -->
+<link rel="stylesheet" href="themes/k2.css">
+<link rel="stylesheet" href="themes/k2-light.css">
+<link rel="stylesheet" href="themes/sakura-mist.css">
+<link rel="stylesheet" href="themes/plum-wine.css">
+<link rel="stylesheet" href="themes/lagoon.css">
+<link rel="stylesheet" href="themes/neon-pop.css">
+<link rel="stylesheet" href="themes/tropical.css">
+<link rel="stylesheet" href="themes/claude.css">
+<link rel="stylesheet" href="themes/opencode.css">
+<link rel="stylesheet" href="themes/kimi.css">
+<link rel="stylesheet" href="themes/vscode.css">
+<link rel="stylesheet" href="themes/word.css">
+<link rel="stylesheet" href="themes/excel.css">
+<link rel="stylesheet" href="themes/powerpoint.css">
+<link rel="stylesheet" href="themes/macintosh.css">
+<link rel="stylesheet" href="themes/gundam.css">
+<link rel="stylesheet" href="themes/dva.css">
+<link rel="stylesheet" href="themes/fruit.css">
+<link rel="stylesheet" href="themes/flower.css">
+<link rel="stylesheet" href="themes/rainbow.css">
+<!-- themes:end -->
 </head>
 <body>
 <div id="titlebar">
@@ -19,6 +43,14 @@
   <span class="tb-menu" data-m="AI" data-i18n="menu.ai">AI</span>
   <span id="tb-title"></span>
   <span id="tb-dirty-dot" style="display:none" title="" data-icon="save"></span>
+  <!-- [alpha.157r] ซ่อน/แสดงแผงทีละฝั่ง — อยู่บนแถบชื่อหน้าต่าง (ขวาสุด) เพราะ "บน" ซ่อนแถบเครื่องมือทั้งแถบได้
+       ถ้าอยู่ในแถบเครื่องมือ กดซ่อนแล้วปุ่มหายไปด้วย ไม่มีทางกดคืน (แบบเดียวกับ VS Code) -->
+  <span class="k-side-toggles">
+    <button id="tb-side-left" class="tb tb-toggle" data-side="left" data-command="panels-side-left" data-i18n-title="ui.html.tbSideLeft"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/><rect x="4.5" y="5.5" width="3" height="13" rx="1" fill="currentColor" stroke="none"/></svg></button>
+    <button id="tb-side-top" class="tb tb-toggle" data-side="top" data-command="panels-side-top" data-i18n-title="ui.html.tbSideTop"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><rect x="4.5" y="5.5" width="15" height="2.5" rx="1" fill="currentColor" stroke="none"/></svg></button>
+    <button id="tb-side-bottom" class="tb tb-toggle" data-side="bottom" data-command="panels-side-bottom" data-i18n-title="ui.html.tbSideBottom"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 15h18"/><rect x="4.5" y="16" width="15" height="2.5" rx="1" fill="currentColor" stroke="none"/></svg></button>
+    <button id="tb-side-right" class="tb tb-toggle" data-side="right" data-command="panels-side-right" data-i18n-title="ui.html.tbSideRight"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M15 4v16"/><rect x="16.5" y="5.5" width="3" height="13" rx="1" fill="currentColor" stroke="none"/></svg></button>
+  </span>
   <span id="win-btns">
     <span class="win-btn" id="win-min" data-i18n-title="ui.html.winMin" data-icon="minus"></span>
     <span class="win-btn" id="win-max" data-i18n-title="ui.html.winMax" data-icon="maximize"></span>

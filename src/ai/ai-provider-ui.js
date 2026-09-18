@@ -196,9 +196,26 @@ export async function testCredential(provider) {
               : { ok: false, msg: r.error, models: [] };
 }
 
+/**
+ * [alpha.157] เข็มทิศเรื่อง (Logline 6 ช่องของโปรเจกต์/เล่ม) ต่อท้าย system prompt ของ **ทุก** คำขอ
+ * ผู้ใช้: *"ส่วนนี้ AI จะช่วยจับได้ เพื่อช่วยในการเขียนที่ไม่หลุดมากเกินไป"*
+ * ที่นี่คือจุดต่ำสุดที่ทุกฟีเจอร์ AI วิ่งผ่าน (แชท · วิเคราะห์ · Story Starter · ✨ เติมช่อง)
+ * `opts.noCompass` = ข้าม (ทดสอบการเชื่อมต่อ ฯลฯ) · ยังไม่กรอก logline = ไม่แตะคำขอเลยแม้แต่ไบต์เดียว
+ */
+async function compassOpts(opts) {
+  if (!opts || opts.noCompass) return opts || {};
+  try {
+    const { currentCompass } = await import('../logline-ui.js');
+    const { withCompass } = await import('../logline.js');
+    const c = await currentCompass();
+    return c ? { ...opts, system: withCompass(opts.system, c) } : opts;
+  } catch { return opts; }
+}
+
 /** คุยกับโมเดลหนึ่งรอบ — ไม่โยน error ตลอด (คืน {ok,text,usage,error}) */
 export async function complete(provider, opts = {}) {
   if (!provider) return { ok: false, text: '', error: t('ui.aiProvider.cantSettingsProviderAI') };
+  opts = await compassOpts(opts);
   if (!provider.model && !opts.model) return { ok: false, text: '', error: t('ui.aiProvider.cantPickModel') };
   const req = chatRequest(provider, opts);
   // [alpha.96] ส่งต่อชื่อคำขอ + เพดานเวลา เพื่อให้กด "หยุด" ได้จริง
@@ -228,6 +245,7 @@ export async function complete(provider, opts = {}) {
  */
 export async function completeStream(provider, opts = {}, onChunk = () => {}) {
   if (!provider) return { ok: false, text: '', error: t('ui.aiProvider.cantSettingsProviderAI') };
+  opts = await compassOpts(opts);
   if (!provider.model && !opts.model) return { ok: false, text: '', error: t('ui.aiProvider.cantPickModel') };
   if (typeof kapi.httpStream !== 'function') {
     const r = await complete(provider, opts);

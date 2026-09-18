@@ -6,7 +6,9 @@
 // **ที่เก็บข้อมูล**: project.khn.json → `titlePages` (หน้าปก) และ `settings.spHeaders` (หัวกระดาษ)
 // เป็นค่า "ระดับโปรเจกต์" เหมือนขนาดกระดาษ/รูปแบบบท — ไม่ใช่รายเล่มแบบ roster.json
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { el, state, setStatus, log, textWidth } from './core.js';
+import { el, state, setStatus, log, textWidth, normalizeLangFonts, isLangFontUsable, rowAppliesTo,
+         normalizeRange, familyList } from './core.js';
+import { SP_THAI_FALLBACKS } from './lang-fonts.js';
 import { num } from './num.js';
 import { localDay } from './local-date.js';
 import { confirmBox, escClose } from './ui.js';
@@ -77,23 +79,45 @@ async function fontStamp(dir, files) {
   return parts.join('|');
 }
 
+/**
+ * [alpha.159] ไฟล์ฟอนต์ไทยที่จะฝังลง PDF ของบท — ไม่มีฟอนต์ไทยฝังมากับโปรแกรมแล้ว
+ * ลำดับ: แถว "ฟอนต์ตามภาษา" ของบท (ไฟล์ใน Fonts/ ของโปรเจกต์ → ชื่อฟอนต์ของเครื่อง)
+ *        → ลูกโซ่ไทยมาตรฐานของเครื่อง (Thonburi / Leelawadee UI / TH Sarabun New / Sarabun / Tahoma)
+ * @returns {Promise<string>} ที่อยู่ไฟล์ ('' = ไม่เจอ → PDF ตกไปฟอนต์มาตรฐาน ไทยพิมพ์ไม่ออก)
+ */
+export async function pdfThaiFontPath() {
+  const rows = normalizeLangFonts(state.settings.langFonts)
+    .filter((r) => isLangFontUsable(r) && rowAppliesTo(r, 'screenplay'))
+    .filter((r) => !r.range || /0E00/i.test(normalizeRange(r.range)));
+  for (const r of rows) {
+    if (r.file && state.root) {
+      try {
+        const p = await kapi.join(state.root, 'Fonts', r.file);
+        if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) return p;
+      } catch {}
+    }
+  }
+  const fams = [...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS];
+  try { return (await kapi.fontFile([...new Set(fams)])) || ''; } catch { return ''; }
+}
+
 export async function pdfFontBytes() {
   const out = { regular: null, latin: null, file: '' };
   let dir = '';
   const L = PDF_FONT_FILES.latin;
-  const all = [...PDF_FONT_FILES.main, L.regular, L.bold, L.italic, L.boldItalic].filter(Boolean);
+  const all = [L.regular, L.bold, L.italic, L.boldItalic].filter(Boolean);
   try {
     dir = await kapi.join(await kapi.appDir(), 'renderer', 'assets', 'fonts');
-    const stamp = await fontStamp(dir, all);
+    const thaiPath = await pdfThaiFontPath();
+    const stamp = await fontStamp(dir, all) + '|' + thaiPath + ':' + (thaiPath ? (await kapi.mtime(thaiPath) || 0) : 0);
     if (FONT_CACHE.set && FONT_CACHE.stamp === stamp) return FONT_CACHE.set;
     FONT_CACHE.stamp = stamp;
     const read = async (f) => {
       const p = await kapi.join(dir, f);
       return (await kapi.exists(p)) ? new Uint8Array(await kapi.readBytes(p)) : null;
     };
-    for (const f of PDF_FONT_FILES.main) {
-      const b = await read(f);
-      if (b) { out.regular = b; out.file = f; break; }
+    if (thaiPath) {
+      try { out.regular = new Uint8Array(await kapi.readBytes(thaiPath)); out.file = thaiPath; } catch {}
     }
     const lr = await read(L.regular);
     if (lr) {

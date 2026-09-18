@@ -3,6 +3,10 @@ meta.name,Thai
 meta.nativeName,ไทย
 meta.version,3
 meta.author,Killian 2
+ui.about.changelog,มีอะไรใหม่
+ui.about.checkUpdate,ตรวจรุ่นใหม่
+ui.about.credits,เครดิต
+ui.about.dataFolder,โฟลเดอร์โปรเจกต์
 ui.ai.aiChatRAGUse,ai chat: RAG ใช้ไม่ได้ → ถามตรง ๆ
 ui.ai.aiChatStreamFail,ai chat: stream ล้มเหลว
 ui.ai.aPIKeyNotValid,API key ไม่ถูกต้องหรือหมดสิทธิ์ (HTTP 
@@ -125,6 +129,12 @@ ui.aia.analyzePaceStory,วิเคราะห์จังหวะเรื�
 ui.aia.arcGap,หายไปช่วง
 ui.aia.arcHead,{0} — {1} ครั้ง ใน {2} ฉาก
 ui.aia.busy,กำลังวิเคราะห์…
+ui.aia.cmpBalanced,สมดุล
+ui.aia.cmpDialogue,บทพูด
+ui.aia.cmpInteriority,ภายในใจ
+ui.aia.cmpLeanN,เน้น {0} ฉาก
+ui.aia.cmpNarration,บรรยาย
+ui.aia.cmpOverall,ภาพรวม
 ui.aia.confirmDelSession,"ลบเซสชัน ""{0}"" ทิ้ง?"
 ui.aia.crCast,การกระจายน้ำหนักตัวละคร
 ui.aia.crCastNote,ตัวละคร {0} ตัว · ตัวหลักกิน {1}%
@@ -176,10 +186,12 @@ ui.aia.csvSaved,บันทึก CSV ที่ {0}
 ui.aia.csWord,คำ
 ui.aia.csWords,จำนวนคำ
 ui.aia.dArc,ตัวละครแต่ละตัวโผล่ถี่แค่ไหนในแต่ละบท และหายไปช่วงไหนบ้าง
+ui.aia.dComposition,แต่ละฉากเป็นบทพูด ความคิดในใจ และการบรรยายกี่เปอร์เซ็นต์ และเน้นหนักไปทางไหน
 ui.aia.dConflict,ฉากไหนมีร่องรอยความขัดแย้ง ฉากไหนเรียบจนไม่มีแรงผลัก
 ui.aia.dContinuity,ตรวจว่ารายละเอียดของตัวละครและโลกคงเส้นคงวาตลอดขอบเขตที่เลือก
 ui.aia.dgArc,{0}: ถูกเอ่ยถึง {1} ครั้ง ใน {2} ฉาก
 ui.aia.dgArcGap, · หายไปช่วง: {0}
+ui.aia.dgComposition,{0} [{1}] บทพูด={2}% ภายในใจ={3}% บรรยาย={4}% → {5}
 ui.aia.dgConflict,{0} [{1}] ไม่พบร่องรอยความขัดแย้ง
 ui.aia.dgLength,{0} [{1}] {2} คำ ({3} นาที)
 ui.aia.dgNote,{0} [{1}] {2}
@@ -269,6 +281,7 @@ ui.aia.stChapter,บท
 ui.aia.stCharAppear,ตัวละครที่ปรากฏ
 ui.aia.stCharGap,ตัวละครที่หายไปนาน
 ui.aia.stCharOnce,ตัวละครที่โผล่ครั้งเดียว
+ui.aia.stCmpLean,เน้นหนักไปทาง
 ui.aia.stConflictDensity,ความหนาแน่นต่อพันคำ
 ui.aia.stDialogueAvg,บทสนทนาเฉลี่ย
 ui.aia.stFastRun,ช่วงรัว
@@ -296,6 +309,7 @@ ui.aia.stWindow,ระยะที่นับว่าซ้ำ
 ui.aia.sysEditor,คุณคือบรรณาธิการต้นฉบับที่อ่านละเอียดและตรงไปตรงมา วิเคราะห์เฉพาะสิ่งที่ปรากฏในข้อมูลที่ให้มา ห้ามแต่งเหตุการณ์หรือรายละเอียดที่ไม่มีในต้นฉบับ ตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON
 ui.aia.tagNeedAI,ต้องใช้ AI
 ui.aia.taskArc,ดูการปรากฏตัวของตัวละครแต่ละตัวแล้วบอกว่าเส้นเรื่องของใครขาดช่วง ใครหายนานเกินไป และใครยังไม่มีพัฒนาการ
+ui.aia.taskComposition,อ่านสัดส่วนบทพูด/ภายในใจ/บรรยายรายฉาก แล้วบอกว่าฉากไหนเอียงมากเกินไปจนเสียจังหวะหรืออารมณ์ ฉากไหนควรเพิ่มบทพูดหรือความคิดตัวละคร และสัดส่วนรวมเหมาะกับแนวเรื่องหรือไม่
 ui.aia.taskConflict,ประเมินว่าแต่ละฉากมีความขัดแย้งจริงหรือไม่ ใครต้องการอะไร ใครขวาง และฉากไหนควรเพิ่มแรงเสียดทาน
 ui.aia.taskContinuity,ตรวจว่ารายละเอียดของตัวละครและโลก (ชื่อ ลักษณะ ความสามารถ กฎของโลก) คงเส้นคงวาหรือขัดกันเอง
 ui.aia.taskLength,ดูความยาวฉากแล้วบอกว่าฉากไหนควรหั่น ฉากไหนสั้นจนไม่ทันรู้สึก และจังหวะพักของเล่มพอดีหรือยัง
@@ -306,6 +320,7 @@ ui.aia.taskScore,ให้คะแนนต้นฉบับตามหัว
 ui.aia.taskScreentime,ดูน้ำหนักการปรากฏของตัวละครแล้วบอกว่าการกระจายเหมาะกับเรื่องแบบนี้หรือไม่ ใครควรได้พื้นที่มากขึ้นหรือน้อยลง
 ui.aia.taskShipping,ประเมินเคมีของคู่ตัวละครที่พบ ว่าคู่ไหนมีน้ำหนักจริง คู่ไหนยังขาดฉากที่ทำให้ผู้อ่านเชื่อ
 ui.aia.taskWords,ดูคำที่ใช้บ่อยแล้วบอกว่าคำไหนเป็นคำติดปากที่ควรลด และคำไหนสะท้อนแก่นเรื่องจริง ๆ
+ui.aia.tComposition,สัดส่วนฉาก (บทพูด/ภายในใจ/บรรยาย)
 ui.aia.tContinuity,ตรวจความสอดคล้อง
 ui.aia.tPlotHole,ตรวจ Plot Hole
 ui.aia.tRepeat,ตรวจหาคำซ้ำ
@@ -2482,19 +2497,38 @@ ui.compile.writeDoneCheckDone,"เขียนเสร็จ, ตรวจแ�
 ui.core.notFoundLangUse2,"ไม่พบภาษา ""{{0}}"" ใช้ภาษาอังกฤษแทน"
 ui.core.notHasText2,(ไม่มีข้อความ)
 ui.core.resourceLoadNotOk2,resource: โหลดไม่สำเร็จ <
+ui.dash.activity,กิจกรรมการเขียน
+ui.dash.actSummary,เขียนเพิ่ม {0} คำ · เขียน {1} จาก {2} วัน · วันที่ดีที่สุด {3}
 ui.dash.avgWordChapterTime,เฉลี่ย {0} คำ/บท · เวลาอ่านรวม ~{1} นาที
 ui.dash.goalWord,เป้าหมาย: {0} / {1} คำ ({2}%)
 ui.dash.imageAlbumTagArea,{0} รูป · {1} อัลบั้ม · {2} แท็ก · พื้นที่รวม {3}
+ui.dash.kanbanStatus,สถานะฉาก (Kanban)
 ui.dash.libraryImage,คลังรูป
 ui.dash.loadPartHubNot,โหลดส่วนศูนย์รวมไม่สำเร็จ
 ui.dash.longEachChapterWord,ความยาวแต่ละบท (คำ)
+ui.dash.milestoneHit,ถึง {0} คำ
+ui.dash.milestones,หลักไมล์
+ui.dash.msGoal,เป้าหมาย
+ui.dash.msLeft,อีก {0} คำ
+ui.dash.msStart,เริ่มโปรเจกต์
+ui.dash.msWords,{0} คำ
 ui.dash.nextStuck,ไปต่อจากที่ค้าง
 ui.dash.notSetStatus,ยังไม่ตั้งสถานะ
 ui.dash.notStartWriteNext,ยังไม่เริ่มนับวันเขียนติดต่อกัน
+ui.dash.openKanban,เปิด Kanban
 ui.dash.openLibraryImage,เปิดคลังรูป
 ui.dash.pageStatusScene,ความคืบหน้าตามสถานะฉาก
+ui.dash.projectStart,เริ่มโปรเจกต์ {0}
+ui.dash.rangeAll,ทั้งหมด
+ui.dash.readHint,คิดจากความเร็วอ่านเฉลี่ย {0} คำ/นาที
+ui.dash.readHM,{0} ชม. {1} นาที
+ui.dash.readM,{0} นาที
+ui.dash.readTime,เวลาอ่านรวม
 ui.dash.saveTaskDoneGraph,บันทึกงานสัก 2 วันแล้วกราฟคำรายวันจะขึ้นที่นี่
 ui.dash.scenePinPin,ฉากปักหมุด ({0})
+ui.dash.topWordHint,"""{0}"" ใช้ {1} ครั้ง ({2} ต่อหมื่นคำ)"
+ui.dash.topWords,คำที่ใช้บ่อย
+ui.dash.topWordsNote,จาก {0} คำ · คำไม่ซ้ำ {1} คำ · ไม่นับคำเชื่อมและชื่อตัวละคร
 ui.dash.useSourceDone,ใช้ในต้นฉบับแล้ว
 ui.dash.viewAllExport,ดูทั้งหมด / ส่งออก…
 ui.dash.wikiCat,Wiki ตามหมวด
@@ -2579,13 +2613,6 @@ ui.dlg.change,เปลี่ยน
 ui.dlg.changeLangDoneStart,เปลี่ยนภาษาแล้ว — เริ่มโปรแกรมใหม่เพื่อให้เปลี่ยนครบทุกจุดไหม
 ui.dlg.charLine,≈ {0} ตัวอักษร/บรรทัด (โดยประมาณ)
 ui.dlg.compareRight,เทียบด้านขวา
-ui.dlg.courierPrimeMoreApp,Courier Prime (ฝังมากับโปรแกรม)
-ui.dlg.courierPrimeStyleScreenplay,Courier Prime (แบบบทภาพยนตร์)
-ui.dlg.courierThaiMonoMore,Courier Thai Mono (ไทย · ฝังมากับโปรแกรม)
-ui.dlg.courierThaiProportionalMore,Courier Thai Proportional (ไทย · ฝังมากับโปรแกรม)
-ui.dlg.defaultChapterFilmCourier,ค่าเริ่มต้นบทหนัง (Courier Prime 12pt)
-ui.dlg.defaultCourierPrimePt,ค่าเริ่มต้น (Courier Prime 12pt)
-ui.dlg.defaultNovelCaseRatio,ค่าเริ่มต้นนิยาย (ตัวพิมพ์สัดส่วน)
 ui.dlg.defineRange,กำหนดช่วงเอง…
 ui.dlg.descUnderGraph,คำอธิบายใต้ผังจะเป็น: 
 ui.dlg.donePickRangeChar, แล้ว — เลือกช่วงอักขระที่จะใช้
@@ -2594,9 +2621,16 @@ ui.dlg.elementPrevEnter,ไป element ถัดไป (เดิม Enter)
 ui.dlg.exportFileCSV,ส่งออกไฟล์แปล (CSV)
 ui.dlg.exportTableLangLang,"ส่งออกตารางแปลของภาษาไหน (รหัสภาษา เช่น en, ja)"
 ui.dlg.exportTableRow,ส่งออกตารางแปล {0} แถว → {1}
+ui.dlg.fontDefaultProse,ค่าเริ่มต้น — Garamond
+ui.dlg.fontDefaultSp,ค่าเริ่มต้น — Courier Prime (มาตรฐานบทภาพยนตร์)
 ui.dlg.fontFromMachine,จากเครื่อง
 ui.dlg.fontFromMachineHint,เลือกจากรายชื่อฟอนต์ที่ลงไว้ในเครื่องนี้
+ui.dlg.fontFromSystemTag, (ในเครื่อง)
 ui.dlg.fontMachineWarn,"หมายเหตุ: ฟอนต์จากเครื่องผูกกับเครื่องนี้เท่านั้น — เปิดงานบนเครื่องอื่นแล้วอาจไม่มีฟอนต์ตัวนี้ แนะนำให้ใช้ปุ่ม ""นำเข้าฟอนต์"" เพื่อเก็บไฟล์ไว้ในโปรเจกต์แทน"
+ui.dlg.fontSameAsBody,เหมือนเนื้อเรื่อง
+ui.dlg.fontSampleHint,ตัวอย่างฟอนต์ที่เลือก — พิมพ์ข้อความของคุณเองได้ (ไม่ถูกบันทึก)
+ui.dlg.fontSamplePh,พิมพ์ข้อความเพื่อดูตัวอย่างฟอนต์
+ui.dlg.fontSampleText,The quick brown fox · ตัวอย่างข้อความภาษาไทย ๑๒๓ 123
 ui.dlg.fontSizeAdjustHint,ย่อ/ขยายกลิฟให้พอดีกล่องบรรทัด (100 = ขนาดจริง · ไทยในบทภาพยนตร์ใช้ 85)
 ui.dlg.fontTargetAll,ทั้งสองโหมด
 ui.dlg.fontTargetHint,แถวนี้ใช้กับโหมดไหน
@@ -2639,7 +2673,7 @@ ui.dlg.togglePagePrevTab,สลับไปข้างหน้า (เดิ�
 ui.dlg.toggleUndoPrevShift,สลับย้อนกลับ (เดิม Shift+Tab)
 ui.dlg.useFontPrintName,— ใช้ฟอนต์ที่ลงในเครื่อง (พิมพ์ชื่อ) —
 ui.dlg.useRow,ใช้แถวนี้
-ui.dlg.useRowSampleEnglish,ใช้อยู่ {0} แถว — ตัวอย่าง (ไทยผสมอังกฤษ):
+ui.dlg.useRowSampleEnglish,ใช้อยู่ {0} แถว — ตัวอย่าง:
 ui.dlg.warnToolbarPage,สร้างหน้าตั้งค่าแถบเครื่องมือไม่สำเร็จ
 ui.dlgb.actDelete,ลบบรรทัดนี้
 ui.dlgb.actEdit,แก้ข้อความ
@@ -3008,8 +3042,6 @@ ui.fonts.allChar,ทุกอักขระ
 ui.fonts.ayuthayaMacFloat,Ayuthaya (macOS · วรรณยุกต์ลอย)
 ui.fonts.chineseJapanese,จีน/ญี่ปุ่น (คันจิ)
 ui.fonts.courierPrimeDefaultChapter,Courier Prime (ละติน · มาตรฐานบท)
-ui.fonts.courierThaiMonoWide,Courier Thai Mono (ไทย · ความกว้างเท่ากันทุกตัว)
-ui.fonts.courierThaiProportionalWide,Courier Thai Proportional (ไทย · ความกว้างตามตัวอักษร)
 ui.fonts.cyrillic,ซีริลลิก
 ui.fonts.english,ละติน (อังกฤษ)
 ui.fonts.khmer,เขมร
@@ -3289,6 +3321,8 @@ ui.home.openProject,เปิดโปรเจกต์
 ui.home.openProjectBeforeExport,เปิดโปรเจกต์ก่อน จึงจะส่งออกเป็น .zip ได้
 ui.home.pageFirst,หน้าแรก
 ui.home.pathCopied,คัดลอกที่อยู่แล้ว
+ui.home.quitApp,ออกจากโปรแกรม
+ui.home.quitAppHint,ปิด Killian 2 (ถามก่อนถ้ามีงานที่ยังไม่บันทึก)
 ui.home.revealInOS,เปิดโฟลเดอร์นี้ในตัวจัดการไฟล์
 ui.home.search,ค้นหา
 ui.home.searchProject,ค้นหาโปรเจกต์…
@@ -3371,6 +3405,10 @@ ui.html.tbRead,โหมดอ่าน (เต็มจอ)
 ui.html.tbRecord,บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)
 ui.html.tbRedo,ทำซ้ำ
 ui.html.tbSearchPanel,ค้นหา
+ui.html.tbSideBottom,ซ่อน/แสดงแผงด้านล่าง
+ui.html.tbSideLeft,ซ่อน/แสดงแผงด้านซ้าย
+ui.html.tbSideRight,ซ่อน/แสดงแผงด้านขวา
+ui.html.tbSideTop,ซ่อน/แสดงแผงด้านบน
 ui.html.tbSource,ดู Markdown ดิบของฉากนี้
 ui.html.tbSpCont,ข้อความต่อเนื่องอัตโนมัติ — (CONTINUED) · CONTINUED: · (MORE) · ชื่อ+(cont'd)
 ui.html.tbSpExt,ส่วนเสริมท้ายชื่อตัวละคร (Extension)
@@ -3448,13 +3486,21 @@ ui.importSp.readFileNotOk,อ่านไฟล์ไม่สำเร็จ:
 ui.importSp.replaceTab,แทนที่เนื้อในแท็บที่เปิดอยู่
 ui.importSp.xMLNotValid,XML ไม่ถูกต้อง: 
 ui.kanban.add,+ เพิ่มคอลัมน์
+ui.kanban.addStatus,เพิ่มสถานะ
+ui.kanban.addStatusHint,เพิ่มคอลัมน์ = เพิ่มสถานะฉากของทั้งโปรเจกต์ (เห็นใน Explorer ทันที)
 ui.kanban.deleteColumn,ลบคอลัมน์
+ui.kanban.deleteMove,"ลบสถานะ ""{0}""? ฉาก {1} ฉากในคอลัมน์นี้จะย้ายไป ""{2}"""
 ui.kanban.draftPick,เลือกฉบับร่างที่จะแสดงบนกระดาน
+ui.kanban.hiddenBuiltin, (ซ่อนจากกระดานอยู่)
+ui.kanban.manageStatus,จัดการสถานะ
 ui.kanban.moveScenesFirst,ย้ายฉากออกจากคอลัมน์นี้ก่อน
 ui.kanban.newColumn,ชื่อคอลัมน์ใหม่
 ui.kanban.newColumnHint,เช่น รอรีวิว
 ui.kanban.newDraftBeforeUse,สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้
+ui.kanban.restoreStatus,แสดงคืน
 ui.kanban.sceneNotFound,ไม่พบไฟล์ฉาก: 
+ui.kanban.statusExists,มีสถานะชื่อนี้อยู่แล้ว
+ui.kanban.unset,ยังไม่กำหนด
 ui.layoutSplit.fieldEmpty,ช่องว่าง
 ui.layoutSplit.leftRight,ซ้าย-ขวา
 ui.layoutSplit.topBottom,บน-ล่าง
@@ -3463,6 +3509,23 @@ ui.log.dup,[วนซ้ำ]
 ui.log.dupTimes,  (ซ้ำ {0} ครั้ง)
 ui.log.error,ผิดพลาด
 ui.log.msg,เตือน
+ui.logline.compassHead,เข็มทิศเรื่อง (Logline ที่ผู้เขียนตั้งไว้ — ใช้ตรวจว่าเนื้อหาไม่หลุดแกนเรื่อง)
+ui.logline.compassRule,คำแนะนำ/ข้อความที่เขียนต้องสอดคล้องกับเข็มทิศนี้ ถ้าเนื้อหาเริ่มหลุดจากเป้าหมาย อุปสรรค หรือเดิมพัน ให้บอกผู้เขียนสั้น ๆ
+ui.logline.goal,เป้าหมาย (Goal / Want)
+ui.logline.hGoal,ตัวละครต้องการอะไรอย่างเป็นรูปธรรม
+ui.logline.hInciting,เหตุการณ์อะไรที่ผลักให้ชีวิตเดิมจบลง
+ui.logline.hLogline,เมื่อ [เหตุการณ์] [ตัวละคร] ต้อง [เป้าหมาย] ก่อนที่ [เดิมพัน]
+ui.logline.hObstacle,ใคร/อะไรขวางทาง
+ui.logline.hProtagonist,ใคร — ข้อบกพร่องหรือจุดเด่นที่ทำให้น่าติดตาม
+ui.logline.hStakes,ถ้าล้มเหลวจะเสียอะไร
+ui.logline.inciting,เหตุการณ์กระตุ้น (Inciting Incident / When)
+ui.logline.logline,Logline (ประโยคเดียว)
+ui.logline.obstacle,อุปสรรค / ตัวร้าย (Antagonist / Obstacle)
+ui.logline.protagonist,ตัวละครหลัก (Protagonist / Who)
+ui.logline.saved,บันทึก Logline แล้ว
+ui.logline.stakes,เดิมพัน (Stakes)
+ui.logline.title,Logline
+ui.logline.why,AI ใช้เป็นเข็มทิศ ช่วยให้เนื้อเรื่องไม่หลุดแกน
 ui.maps.addMap,＋ เพิ่มแผนที่
 ui.maps.backSizeFitFrame,กลับไปขนาดพอดีกรอบ (100%)
 ui.maps.busyNextRouteClick,กำลังต่อเส้นทาง “{0}” — คลิกหมุดตามลำดับที่เดินทาง ({1} จุด)
@@ -3973,6 +4036,8 @@ ui.panel.sceneGuard2,ดูได้อย่างเดียวจนกว�
 ui.panel.search,ค้นหา
 ui.panel.searchPlaceholder,ค้นหา / กรอง — เช่น status:กำลังเขียน tag:บู๊
 ui.panel.selectScene,เลือกฉากเพื่อดูคุณสมบัติ
+ui.panel.sideHidden,ซ่อนแผงฝั่งนี้แล้ว — กดปุ่มเดิมเพื่อแสดงคืน
+ui.panel.sideShown,แสดงแผงฝั่งนี้คืนแล้ว
 ui.panel.sortBy,เรียงตาม
 ui.panel.sortDefault,เรียงตามค่าเริ่มต้น
 ui.panel.sortModified,เวลาแก้ไข
@@ -4648,6 +4713,15 @@ ui.project.screenplay,บทภาพยนตร์
 ui.project.start,คดีเริ่มต้น
 ui.project.structureChapterFilmAct,"โครงสร้างบทหนัง — 3 องก์, scenes เป็นบทภาพยนตร์"
 ui.project.structureNovelChapterScene,โครงสร้างนิยายทั่วไป — บท+ฉาก+ตัวละคร+สถานที่
+ui.props.act,องก์ (Act)
+ui.props.actHint,เช่น องก์ 1
+ui.props.actSaved,ตั้งองก์ของบทแล้ว: {0}
+ui.props.actTip,"องก์เป็นของ ""บท"" — ทุกฉากในบทเดียวกันใช้องก์เดียวกัน"
+ui.props.chapter,บท (Chapter)
+ui.props.chapterTip,เลือกบทอื่น = ย้ายฉากนี้ไปไว้ท้ายบทนั้น
+ui.props.mentions,ฉากนี้กล่าวถึง
+ui.props.mentionsNone,ยังไม่พบชื่อจาก Wiki ในฉากนี้
+ui.props.movedTo,"ย้ายฉากไปบท ""{0}"" แล้ว"
 ui.props.renameHint,แก้ชื่อฉากได้ที่นี่ — กด Enter เพื่อบันทึก
 ui.props.sceneName,ชื่อฉาก
 ui.props.writeMetaFail,เขียนคุณสมบัติลงไฟล์ฉากไม่สำเร็จ
@@ -5075,12 +5149,19 @@ ui.setTpl.sizePt,ขนาด (pt)
 ui.setTpl.skipBefore,เว้นก่อน
 ui.setTpl.skipBeforeEm,เว้นก่อน (em)
 ui.setTpl.skipEm,เว้นหลัง (em)
+ui.setTpl.skipHome,ไม่แสดงหน้า Home ตอนเปิดโปรแกรม
+ui.setTpl.skipHomeHint,เปิดโปรเจกต์ล่าสุดทันที · ไม่มีโปรเจกต์ล่าสุด = เปิดโปรแกรมเปล่า
 ui.setTpl.soundTypewriter,เสียงเครื่องพิมพ์ดีด
 ui.setTpl.sourceSendPrintSkip,ต้นฉบับส่งสำนักพิมพ์ (เว้นบรรทัดคู่)
 ui.setTpl.storyNetwork,Story Network
 ui.setTpl.storyNetworkColorBtnFind,story network สี ปุ่มเมาส์ ผัง
 ui.setTpl.tab,Tab →
 ui.setTpl.tableFontApp,ตารางเดียวคุมฟอนต์ทั้งโปรแกรม:
+ui.setTpl.tabUnitCm,ซม.
+ui.setTpl.tabUnitIn,นิ้ว
+ui.setTpl.tabUnitSpace,ช่องว่าง
+ui.setTpl.tabWidth,ความกว้างของแท็บ
+ui.setTpl.tabWidthHint,กด Tab หนึ่งครั้งเว้นที่ว่างเท่าไร (มีผลทั้งบนจอและไฟล์ที่ส่งออก)
 ui.setTpl.text1,เคาะ
 ui.setTpl.text2,ลิขสิทธิ์
 ui.setTpl.text3,เอียง
@@ -5319,6 +5400,15 @@ ui.spHeaders.nameAuthor,ชื่อผู้เขียน
 ui.spHeaders.nameDraftRoundEdit,ชื่อฉบับร่าง / รอบแก้
 ui.spHeaders.pageNumCurrent,เลขหน้าปัจจุบัน
 ui.spHeaders.text,ข้อความลิขสิทธิ์
+ui.splash.home,กำลังเตรียมหน้าแรก…
+ui.splash.language,กำลังโหลดภาษาและฟอนต์…
+ui.splash.project,กำลังเปิดโปรเจกต์ล่าสุด: {0}
+ui.splash.ready,พร้อมแล้ว
+ui.splash.recent,กำลังอ่านรายการโปรเจกต์ล่าสุด…
+ui.splash.settings,กำลังโหลดการตั้งค่า…
+ui.splash.start,กำลังเริ่มโปรแกรม…
+ui.splash.update,กำลังตรวจสอบรุ่นใหม่…
+ui.splash.window,กำลังสร้างหน้าต่างหลัก…
 ui.split.closed,ยกเลิกแยกหน้าจอแล้ว
 ui.split.closePane,ปิดช่องนี้
 ui.split.closePaneHint,ปิดช่องนี้ (แท็บยังเปิดอยู่)
@@ -5856,6 +5946,7 @@ ui.tbcfg.grpEdit,แก้ไข
 ui.tbcfg.grpExt,ส่วนเสริม
 ui.tbcfg.grpFind,ค้นหา
 ui.tbcfg.grpInsert,แทรก
+ui.tbcfg.grpLayout,ซ่อน/แสดงแผงทีละฝั่ง
 ui.tbcfg.grpPanels,แผง
 ui.tbcfg.grpStory,เครื่องมือเล่าเรื่อง
 ui.tbcfg.grpStyle,รูปแบบข้อความ
@@ -5876,6 +5967,24 @@ ui.textCase.lowerCaseItemSmall,lower case — ตัวเล็กทั้ง�
 ui.textCase.sentenceCaseSentenceItem,Sentence case — ขึ้นต้นประโยคตัวใหญ่
 ui.textCase.titleCaseStyleTitle,Title Case — แบบชื่อเรื่อง
 ui.textCase.uPPERCASEItemBig,UPPER CASE — ตัวใหญ่ทั้งหมด
+ui.themes.claude,ดินเผา (แบบ Claude Code)
+ui.themes.dva,เกมเมอร์ชมพู (แบบ D.Va)
+ui.themes.excel,ตารางเขียว (แบบ Excel)
+ui.themes.flower,สวนดอกไม้
+ui.themes.fruit,สลัดผลไม้
+ui.themes.gundam,โมบิลสูทไตรรงค์ (แบบกันดั้ม)
+ui.themes.kimi,จันทร์เงา (แบบ Kimi)
+ui.themes.lagoon,ลากูนแดดจ้า
+ui.themes.macintosh,แพลทินัม (แบบ Macintosh คลาสสิก)
+ui.themes.neonPop,นีออนป๊อป
+ui.themes.opencode,เทอร์มินัลพีช (แบบ opencode)
+ui.themes.plumWine,ไวน์พลัม
+ui.themes.powerpoint,สไลด์ส้มอิฐ (แบบ PowerPoint)
+ui.themes.rainbow,สายรุ้ง
+ui.themes.sakuraMist,หมอกซากุระ
+ui.themes.tropical,ทรอปิคอล
+ui.themes.vscode,โค้ดมืด (แบบ VS Code)
+ui.themes.word,เอกสารน้ำเงิน (แบบ Word)
 ui.thes.close,ปิด
 ui.thes.copied,คัดลอก: 
 ui.thes.notFound,"ไม่พบคำพ้อง/คำตรงข้ามสำหรับ """
@@ -6021,6 +6130,10 @@ ui.tip.panel-system,เลือกแผงที่จะแสดงหรื
 ui.tip.panels-hide-all,ซ่อนแผงทั้งหมดชั่วคราว เหลือแต่พื้นที่เขียน กดอีกครั้งเพื่อคืนแผงกลับที่เดิม
 ui.tip.panels-hide-left,ซ่อนแผงฝั่งซ้ายทั้งหมดชั่วคราว กดอีกครั้งเพื่อคืนกลับที่เดิม
 ui.tip.panels-hide-right,ซ่อนแผงฝั่งขวาทั้งหมดชั่วคราว กดอีกครั้งเพื่อคืนกลับที่เดิม
+ui.tip.panels-side-bottom,ซ่อนแผงที่ผนึกอยู่ใต้พื้นที่เขียน กดอีกครั้งเพื่อแสดงคืน
+ui.tip.panels-side-left,ซ่อนแผงทั้งหมดที่ผนึกอยู่ทางซ้ายของพื้นที่เขียน กดอีกครั้งเพื่อแสดงคืนที่เดิม
+ui.tip.panels-side-right,ซ่อนแผงทั้งหมดที่ผนึกอยู่ทางขวาของพื้นที่เขียน กดอีกครั้งเพื่อแสดงคืนที่เดิม
+ui.tip.panels-side-top,ซ่อนแผงที่ผนึกอยู่เหนือพื้นที่เขียน กดอีกครั้งเพื่อแสดงคืน
 ui.tip.pb-align-center,จัดตัวหนังสือในการ์ดให้อยู่กึ่งกลางแนวนอน
 ui.tip.pb-align-left,ดันตัวหนังสือในการ์ดไปชิดซ้าย ตัวการ์ดไม่ขยับ
 ui.tip.pb-align-right,ดันตัวหนังสือในการ์ดไปชิดขวา
@@ -6368,8 +6481,9 @@ ui.treeMenu.aiSettings,ตั้งค่า AI
 ui.treeMenu.backup,สำรอง (Backup)
 ui.treeMenu.bookFromChapter,สร้างเล่มจากบทนี้
 ui.treeMenu.branchPanel,แผงแตกสาย
+ui.treeMenu.castOfCharacters,รายชื่อตัวละคร (Cast of Characters)
 ui.treeMenu.chapterFromScenes,สร้างบทจากฉากที่เลือก
-ui.treeMenu.color,สี ▸
+ui.treeMenu.color,สี
 ui.treeMenu.comment,คอมเมนต์
 ui.treeMenu.compare,เทียบกับแผนอื่น…
 ui.treeMenu.compareVersion,เทียบเวอร์ชัน…
@@ -6387,7 +6501,7 @@ ui.treeMenu.manageBooks,จัดการเล่ม
 ui.treeMenu.manageChapters,จัดการบท
 ui.treeMenu.manageScenes,จัดการฉาก
 ui.treeMenu.moodBoard,กระดานอารมณ์ (Mood board)
-ui.treeMenu.move,ย้ายไป ▸
+ui.treeMenu.move,ย้ายไป
 ui.treeMenu.moveDown,▼ เลื่อนลง
 ui.treeMenu.moveUp,▲ เลื่อนขึ้น
 ui.treeMenu.open,เปิด
@@ -6419,13 +6533,14 @@ ui.treeMenu.searchProject,ค้นหาทั้งโปรเจกต์
 ui.treeMenu.splitView,เปิดในแยกหน้าจอ (Split view)
 ui.treeMenu.star,ติดดาว
 ui.treeMenu.starOff,เอาดาวออก
-ui.treeMenu.status,สถานะ ▸
+ui.treeMenu.status,สถานะ
 ui.treeMenu.switchFormat,เปลี่ยนเป็นนิยาย/บทหนัง
+ui.treeMenu.titlePage,หน้าปก (Title Page)…
 ui.treeMenu.toMemo,เปลี่ยนเป็น Memo
 ui.treeMenu.versionHistory,ประวัติเวอร์ชัน…
 ui.treeMenu.view,ดูรูปเต็ม
 ui.treeMenu.viewQuickNotes,ดู Quick note
-ui.treeMenu.visual,เล่าด้วยภาพ ▸
+ui.treeMenu.visual,เล่าด้วยภาพ
 ui.ui.hasFileCantSave,มี {0} ไฟล์ที่ยังไม่ได้บันทึก
 ui.ui.notSave,ไม่บันทึก
 ui.ui.savePick,บันทึกที่เลือก ({0})

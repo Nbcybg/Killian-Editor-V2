@@ -427,12 +427,86 @@ export function toggleSpace(mode = 'all') {
   return true;
 }
 
+// ───────── [alpha.157] ซ่อน/แสดงแผง "ทีละฝั่ง" ซ้าย · บน · ล่าง · ขวา ─────────
+// ผู้ใช้: *"ใน toolbar ด้านขวาสุด เพิ่มปุ่มซ่อน panel ด้านซ้าย-บน-ล่าง-ขวา แล้วผู้ใช้สามารถปรับแสดง/ไม่แสดงได้"*
+// ต่างจาก toggleSpace (ที่เก็บได้ครั้งละชุดเดียว — กดซ่อนขวาแล้วซ่อนซ้าย = ขวากลับมาเอง)
+// ตรงที่สี่ฝั่งเป็นอิสระต่อกัน · ฝั่งของแผงตัดสินจาก "ตำแหน่งจริงเทียบพื้นที่เขียน" ไม่ใช่ defaultSide
+export const SIDES = ['left', 'top', 'bottom', 'right'];
+const _sideStash = { left: null, top: null, bottom: null, right: null };
+
+/** ฝั่งของแผงที่ผนึกอยู่ เทียบกับกล่องพื้นที่เขียน ('' = ลอย/ซ้อนทับ/หาไม่เจอ) — บริสุทธิ์ */
+export function sideOfRect(r, docs) {
+  if (!r || !docs || !r.width || !r.height) return '';
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  if (r.right <= docs.left + 2) return 'left';
+  if (r.left >= docs.right - 2) return 'right';
+  if (r.bottom <= docs.top + 2 && cx > docs.left - 2 && cx < docs.right + 2) return 'top';
+  if (r.top >= docs.bottom - 2 && cx > docs.left - 2 && cx < docs.right + 2) return 'bottom';
+  if (cx < docs.left) return 'left';
+  if (cx > docs.right) return 'right';
+  return cy < docs.top ? 'top' : cy > docs.bottom ? 'bottom' : '';
+}
+
+/** แผงที่เห็นอยู่ ปิดได้ และผนึกอยู่ฝั่งนั้น */
+function dockedOnSide(side) {
+  const m = getPanelManager();
+  const h = host();
+  const docsEl = h && h.querySelector('.k-panel[data-panel-id="docs"]');
+  const dr = docsEl && docsEl.getBoundingClientRect();
+  if (!dr || !dr.width) return [];
+  const out = [];
+  for (const d of PANEL_DEFS) {
+    if (d.closable === false || !m.isOpen(d.id)) continue;
+    if (m.isFloating && m.isFloating(d.id)) continue;
+    // แท็บที่ถูกซ่อนหลังแท็บอื่นไม่มีขนาด → ใช้กลุ่มแท็บที่ครอบแทน
+    let node = h.querySelector(`.k-panel[data-panel-id="${d.id}"]`);
+    if (!node) continue;
+    const grp = node.closest('.k-tab-group');
+    const r = (grp || node).getBoundingClientRect();
+    if (sideOfRect(r, dr) === side) out.push(d.id);
+  }
+  return out;
+}
+export function sideHidden(side) { return !!_sideStash[side]; }
+// [alpha.157r] ผู้ใช้: "เปิดปิดแผง บน ล่าง ใช้ไม่ได้" — เลย์เอาต์ปกติไม่มีแผงผนึกเหนือ/ใต้พื้นที่เขียนเลย
+// (ด้านบนคือแถบเครื่องมือ ด้านล่างคือแถบสถานะ ซึ่งปิดไม่ได้) → กดแล้วขึ้นแค่ "ไม่มีแผง" เงียบ ๆ
+// ตอนนี้ฝั่งบน/ล่างรวม "แถบ" ของฝั่งนั้นด้วย จึงมีผลเสมอ · ซ่อนด้วยคลาสบน <body> (แถบไม่ใช่แผงที่ปิดได้)
+const SIDE_BAR = { top: 'k-hide-toolbar', bottom: 'k-hide-statusbar' };
+/** สลับฝั่งเดียว · คืน true = ซ่อนแล้ว · false = แสดงคืน (หรือฝั่งนั้นไม่มีอะไรให้ซ่อน) */
+export function toggleSide(side) {
+  if (!SIDES.includes(side)) return false;
+  const bar = SIDE_BAR[side];
+  if (_sideStash[side]) {
+    const ids = _sideStash[side];
+    _sideStash[side] = null;
+    if (bar) document.body.classList.remove(bar);
+    for (const id of ids) { try { showPanel(id); } catch {} }
+    renderPanels(true);
+    if (onShowHook) for (const id of ids) { try { onShowHook(id); } catch {} }
+    setStatus(t('ui.panel.sideShown'));
+    return false;
+  }
+  const ids = dockedOnSide(side);
+  if (!ids.length && !bar) { setStatus(t('ui.panel.spaceNone')); return false; }
+  for (const id of ids) { try { hidePanel(id, true); } catch {} }
+  if (bar) document.body.classList.add(bar);
+  _sideStash[side] = ids;
+  renderPanels(true);
+  setStatus(t('ui.panel.sideHidden'));
+  return true;
+}
+/** เปลี่ยนโปรเจกต์/รีเซ็ตเลย์เอาต์ = ลืมของที่พักไว้ (ไม่งั้นกดแสดงคืนแล้วเปิดแผงของเลย์เอาต์เก่า) */
+export function resetSideStash() {
+  for (const k of SIDES) _sideStash[k] = null;
+  try { document.body.classList.remove(...Object.values(SIDE_BAR)); } catch {}
+}
+
 // ───────── วาด ─────────
 function renderOpts() {
   for (const d of PANEL_DEFS) {                 // รีเฟรชชื่อตามภาษาปัจจุบัน
     const m = meta.get(d.id) || {};
     // [alpha.73 ข้อ 6] minW เดินทางไปกับ meta → ตัววาดตั้ง --panel-min-w ให้เอง (ไม่ฮาร์ดโค้ดใน CSS)
-    meta.set(d.id, { ...m, title: titleOf(d), desc: panelDesc(d.id), minW: d.minW });
+    meta.set(d.id, { ...m, title: titleOf(d), desc: panelDesc(d.id), minW: d.minW, closable: d.closable });
   }
   return {
     meta,
@@ -1291,7 +1365,7 @@ export async function togglePanelDialog() {
 }
 
 // ───────── cleanup (เปลี่ยนโปรเจกต์) ─────────
-export function resetPanelSystem() { lastSig = ''; resetPanelHomes(); resetScrollMemo(); }
+export function resetPanelSystem() { lastSig = ''; resetPanelHomes(); resetScrollMemo(); resetSideStash(); }
 /** ลืมตำแหน่งเดิมของแผงที่ถูกปิดไว้ (ทั้งในหน่วยความจำและใน localStorage) */
 export function resetPanelHomes() {
   homes.clear();

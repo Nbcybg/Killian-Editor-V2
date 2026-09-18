@@ -29,9 +29,12 @@ let pass = 0, fail = 0;
 const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  x FAIL:', n, i ? ':: ' + i : ''); } };
 
 const css = fs.readFileSync(path.join(ROOT, 'renderer/style.css'), 'utf8');
+// [alpha.157] ตัวแปรสีของแต่ละธีมอยู่ไฟล์ของตัวเอง renderer/themes/<id>.css (ผู้ใช้สั่งแยกไฟล์)
+const themeCss = (id) => { try { return fs.readFileSync(path.join(ROOT, 'renderer/themes/' + id + '.css'), 'utf8'); } catch { return ''; } };
 /** เนื้อในของบล็อก `body.theme-<id> { … }` ('' = ไม่มีบล็อกนั้น) */
 const blockOf = (id) => {
   const head = 'body.theme-' + id + ' {';
+  const css = themeCss(id);
   const i = css.indexOf(head);
   if (i < 0) return '';
   const j = css.indexOf('\n}', i);
@@ -40,8 +43,13 @@ const blockOf = (id) => {
 
 // ── ทะเบียน ──
 // [alpha.138] ผู้ใช้สั่ง: ไม่เอา dark/light ของเดิม เหลือจานสีประจำโปรแกรมสองเฉด
-check('มีทะเบียนธีม THEMES', Array.isArray(C.THEMES) && C.THEMES.length === 2, JSON.stringify(C.THEMES));
-check('เหลือธีม k2 / k2-light เท่านั้น', C.THEMES.join(',') === 'k2,k2-light', String(C.THEMES));
+// [alpha.159] ทะเบียนย้ายไป themes.json — k2 / k2-light ยังต้องอยู่หัวรายการ (ค่าเริ่มต้น + ค่าแปลงของเก่า)
+check('มีทะเบียนธีม THEMES', Array.isArray(C.THEMES) && C.THEMES.length >= 2, JSON.stringify(C.THEMES));
+check('k2 / k2-light อยู่หัวรายการ', C.THEMES[0] === 'k2' && C.THEMES[1] === 'k2-light', String(C.THEMES));
+check('[alpha.159] มีธีมจานสีที่ผู้ใช้ขอครบ',
+      ['sakura-mist', 'plum-wine', 'lagoon', 'neon-pop', 'tropical', 'claude', 'opencode', 'kimi', 'vscode',
+       'word', 'excel', 'powerpoint', 'macintosh', 'gundam', 'dva', 'fruit', 'flower', 'rainbow']
+        .every((id) => C.THEMES.includes(id)), String(C.THEMES));
 check('ไม่มีชื่อธีมซ้ำ', new Set(C.THEMES).size === C.THEMES.length);
 // ค่าเก่าที่เคยบันทึกไว้ต้องยังเปิดได้ (ไม่ตกไปค่าเริ่มต้นเงียบ ๆ)
 check('มีตารางแปลงค่าเก่า dark→k2 · light→k2-light',
@@ -61,7 +69,10 @@ const langDir = path.join(ROOT, 'languages');
 const langs = fs.readdirSync(langDir).filter((f) => /^k2_.+\.csv$/.test(f))
   .map((f) => [f, lexCsv(fs.readFileSync(path.join(langDir, f), 'utf8'))]);
 for (const id of C.THEMES) {
-  check('ธีม ' + id + ' มีบล็อก body.theme-' + id + ' ใน style.css', !!blockOf(id));
+  check('ธีม ' + id + ' มีบล็อก body.theme-' + id + ' ในไฟล์ themes/' + id + '.css', !!blockOf(id));
+  check('ธีม ' + id + ' ถูกโหลดใน index.html', fs.readFileSync(path.join(ROOT, 'renderer/index.html'), 'utf8').includes('href="themes/' + id + '.css"'));
+  check('ธีม ' + id + ' ไม่มีบล็อกซ้ำค้างใน style.css', !css.includes('body.theme-' + id + ' {'));
+  check('ธีม ' + id + ' กำหนดพื้นรอบกระดาษ + ชุดแท็บ (alpha.157)', ['--paper-surround', '--tab-bar', '--tab-bg', '--tab-fg-on'].every((v) => blockOf(id).includes(v + ':')));
   check('ธีม ' + id + ' มีคีย์ป้ายใน THEME_LABEL_KEYS', !!C.THEME_LABEL_KEYS[id]);
   for (const [f, tbl] of langs) {
     const k = C.THEME_LABEL_KEYS[id];
@@ -100,7 +111,7 @@ for (const id of C.THEMES) {
 
 // ── ทั้งสองธีมต้องใช้จานสีเดียวกัน (คนละเฉด) และธีมสว่างต้อง "สว่างจริง" ──
 {
-  for (const id of C.THEMES) {
+  for (const id of ['k2', 'k2-light']) {
     const b = blockOf(id);
     for (const name of ['--k2-navy', '--k2-purple', '--k2-orange', '--k2-yellow']) {
       check('ธีม ' + id + ' ประกาศสีจาน ' + name, b.includes(name + ':'));
@@ -134,6 +145,53 @@ for (const id of C.THEMES) {
   const tplSrc = fs.readFileSync(path.join(ROOT, 'src/settings-template.js'), 'utf8');
   check('เทมเพลตกล่องตั้งค่ามีช่องเลือกธีม (#st-theme)', tplSrc.includes('id="st-theme"'));
   for (const [f, tbl] of langs) check(f + ': ไม่มีเทมเพลตก้อนเดิมในไฟล์ภาษาแล้ว', !('ui.dlg.alphaItemLevelUser' in tbl));
+}
+
+// ── [alpha.159] ธีมที่สร้างจาก themes.json ──
+{
+  const G = (() => {
+    const o = path.join(os.tmpdir(), '_k2themegen-test.cjs');
+    require('esbuild').buildSync({ entryPoints: [path.join(ROOT, 'src/theme-gen.js')], outfile: o,
+                                   format: 'cjs', bundle: true, logLevel: 'silent' });
+    return require(o);
+  })();
+  const spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'renderer/themes/themes.json'), 'utf8')).themes;
+  check('themes.json ตรงกับ THEMES (ลำดับเดียวกัน)', spec.map((x) => x.id).join(',') === C.THEMES.join(','));
+  const varsOf = (id) => Object.fromEntries([...blockOf(id).matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  for (const t of spec) {
+    check('ธีม ' + t.id + ' mode ตรงกับ THEME_MODES', C.THEME_MODES[t.id] === t.mode);
+    const v = varsOf(t.id);
+    const missing = G.THEME_VAR_NAMES.filter((n) => !v[n] && !(t.handmade && n === '--find-hit'));
+    check('ธีม ' + t.id + ' กำหนดตัวแปรครบทุกตัวใน THEME_VARS', missing.length === 0, missing.join(' '));
+    if (t.handmade) continue;
+    const probs = G.checkThemeVars(v);
+    check('ธีม ' + t.id + ' ผ่านเกณฑ์คอนทราสต์', probs.length === 0, probs.join(' | '));
+    const lum = G.mix(v['--bg'], v['--bg'], 0);
+    const bright = parseInt(lum.slice(1, 3), 16) * .299 + parseInt(lum.slice(3, 5), 16) * .587 + parseInt(lum.slice(5, 7), 16) * .114;
+    check('ธีม ' + t.id + ' พื้นตรงกับ mode (' + t.mode + ')', t.mode === 'dark' ? bright < 110 : bright > 180, v['--bg']);
+  }
+  // ไฟล์ที่สร้างต้องเป็นปัจจุบัน (ลืม build หลังแก้ themes.json = เทสแดง)
+  const r = require('../tools/theme-build.cjs').build(true);
+  check('ไฟล์ธีม/ทะเบียนตรงกับ themes.json (รัน node build.js แล้ว)', r.stale.length === 0, r.stale.join(', '));
+}
+
+// ── [alpha.159] สูตรคำนวณ ──
+{
+  const o = path.join(os.tmpdir(), '_k2themegen-test.cjs');
+  const G = require(o);
+  check('mix 0 = สีเดิม', G.mix('#123456', '#ffffff', 0) === '#123456');
+  check('mix 1 = สีปลาย', G.mix('#123456', '#ffffff', 1) === '#ffffff');
+  check('ensureContrast ไม่แตะสีที่ผ่านแล้ว', G.ensureContrast('#000000', '#ffffff', 4.5) === '#000000');
+  const pushed = G.ensureContrast('#ffff66', '#ffffff', 3);
+  check('ensureContrast ดันสีที่อ่านไม่ออกจนผ่าน', pushed !== '#ffff66', pushed);
+  const vars = G.themeVars({ mode: 'light', colors: { bg: '#ffffff', fg: '#222222', accent: '#ffff66', accentHi: '#ffee00', link: '#99ccff' } });
+  check('themeVars คืนครบทุกตัว', vars.length === G.THEME_VAR_NAMES.length && vars.every(([, x]) => !!x));
+  check('themeVars ผ่าน checkThemeVars เสมอ', G.checkThemeVars(vars).length === 0, G.checkThemeVars(vars).join(' | '));
+  const ov = Object.fromEntries(G.themeVars({ mode: 'dark', colors: { bg: '#101010', fg: '#eeeeee', accent: '#ff6640', accentHi: '#ffc55c', link: '#88bbff' },
+                                              vars: { '--chip': '#abcdef', '--nope': '#000' } }));
+  check('vars ทับตัวแปรที่รู้จักได้', ov['--chip'] === '#abcdef');
+  check('vars ตัวที่ไม่รู้จักถูกทิ้ง', !('--nope' in ov));
+  check('checkThemeVars จับตัวแปรขาด', G.checkThemeVars({ '--bg': '#000000' }).some((x) => x.includes('--fg')));
 }
 
 console.log('theme: ' + pass + ' passed, ' + fail + ' failed');

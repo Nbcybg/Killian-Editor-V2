@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="680" viewBox="0 0 1120 680">
+  <!-- [alpha.157] placeholder — แทนที่ด้วย renderer/splash/background.png -->
+  <defs>
+    <radialGradient id="a" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#452f5e"/><stop offset="1" stop-color="#1e1250"/></radialGradient>
+    <radialGradient id="b" cx="75%" cy="70%" r="45%"><stop offset="0" stop-color="#ff6640" stop-opacity=".35"/><stop offset="1" stop-color="#ff6640" stop-opacity="0"/></radialGradient>
+    <radialGradient id="c" cx="20%" cy="80%" r="40%"><stop offset="0" stop-color="#ffc55c" stop-opacity=".18"/><stop offset="1" stop-color="#ffc55c" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1120" height="680" fill="url(#a)"/><rect width="1120" height="680" fill="url(#b)"/><rect width="1120" height="680" fill="url(#c)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity=".06" stroke-width="2"><path d="M0 520 C 260 440 520 600 1120 470"/><path d="M0 560 C 300 480 600 640 1120 520"/></g>
+  <text x="1100" y="660" text-anchor="end" font-family="sans-serif" font-size="18" fill="#ffffff" fill-opacity=".25">BACKGROUND PLACEHOLDER</text>
+</svg>

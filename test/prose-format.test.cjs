@@ -27,6 +27,11 @@ check('[17] ระยะย่อหน้าเริ่มต้น = 0 (น�
 check('[18] ฟอนต์เริ่มต้นนิยายไม่ใช่ Courier',
   !/Courier/i.test(P.DEFAULT_PROSE_FONT), P.DEFAULT_PROSE_FONT);
 check('[18] ฟอนต์เริ่มต้นมีฟอนต์ไทย', /Sarabun|Thai/i.test(P.DEFAULT_PROSE_FONT));
+// [alpha.159] ผู้ใช้: "font นิยายแบบ default เป็น Garamond"
+check('[159] ฟอนต์เริ่มต้นนิยาย = Garamond (ตัวแรกของสแตก)', /^"Garamond"/.test(P.DEFAULT_PROSE_FONT), P.DEFAULT_PROSE_FONT);
+check('[159] ลูกโซ่ไทยอยู่ก่อน serif (ไม่ปล่อยให้ Chromium เลือกฟอนต์ไทยเอง)',
+  P.DEFAULT_PROSE_FONT.indexOf('Thonburi') > 0 &&
+  P.DEFAULT_PROSE_FONT.indexOf('Thonburi') < P.DEFAULT_PROSE_FONT.lastIndexOf('serif'));
 check('[18] proseFontStack ว่าง → ใช้ค่ามาตรฐาน', P.proseFontStack(D) === P.DEFAULT_PROSE_FONT);
 check('[18] ตั้งฟอนต์เองแล้วใช้ของเรา',
   P.proseFontStack(P.mergeProseFormat({ fontFamily: 'Georgia, serif' })) === 'Georgia, serif');
@@ -280,6 +285,24 @@ check('[กฎ20] ตั้งระยะห่างย่อหน้าเ�
   // รูปแบบเดียวกับ proseBlocksFromDoc → เอาไปเข้า paginateProse ได้ตรง ๆ
   const pg = P.paginateProse(P.mdToProseBlocks('ก\n'.repeat(400)), { fmt: P.mergeProseFormat({}) });
   check('เอาไปจัดหน้าได้จริง (ยาว ๆ แล้วได้หลายหน้า)', pg.count > 1, String(pg.count));
+}
+
+// ── [alpha.159] ความกว้างของแท็บ ──
+{
+  check('[159] แท็บเริ่มต้น = 4 ช่องว่าง', D.tabSize === 4 && D.tabUnit === 'space' && P.proseTabCss(D) === '4');
+  check('[159] แท็บหน่วยนิ้ว', P.proseTabCss(P.mergeProseFormat({ tabSize: 0.75, tabUnit: 'in' })) === '0.75in');
+  check('[159] แท็บหน่วย ซม.', P.proseTabCss(P.mergeProseFormat({ tabSize: 2, tabUnit: 'cm' })) === '2cm');
+  check('[159] หน่วยที่ไม่รู้จัก → ช่องว่าง', P.mergeProseFormat({ tabUnit: 'px' }).tabUnit === 'space');
+  check('[159] หนีบจำนวนช่องว่าง 0–32',
+    P.mergeProseFormat({ tabSize: 99 }).tabSize === 32 && P.mergeProseFormat({ tabSize: -1 }).tabSize === 0);
+  check('[159] ค่าไม่ใช่ตัวเลขในหน่วยนิ้ว → 0.5in',
+    P.proseTabCss(P.mergeProseFormat({ tabSize: 'x', tabUnit: 'in' })) === '0.5in');
+  check('[159] ตัวแปร --ed-tab ตามค่าที่ตั้ง', P.proseCssVars({ tabSize: 8 })['--ed-tab'] === '8');
+  const f159 = P.mergeProseFormat({ tabSize: 1.5, tabUnit: 'cm' });
+  const scr159 = P.proseCss(f159, '.X');
+  const exp159 = P.proseExportCss(f159);
+  check('[159] ★ กฎคู่แฝด: จอมี tab-size', scr159.includes('tab-size:1.5cm'), scr159.slice(0, 240));
+  check('[159] ★ กฎคู่แฝด: ไฟล์ส่งออกมี tab-size ค่าเดียวกัน', exp159.includes('tab-size:1.5cm'));
 }
 
 console.log(`\nprose-format: ${pass} passed, ${fail} failed`);

@@ -24,6 +24,9 @@ function syncChangelog() {
   if (fs.existsSync(src)) fs.copyFileSync(src, dst);
 }
 
+// [alpha.159] ธีมสี: renderer/themes/themes.json → css ของแต่ละธีม + <link> + src/generated/themes-data.js
+// ต้องมาก่อน syncLanguages() เพราะอาจเติมป้ายชื่อธีมใหม่ลงไฟล์ภาษา
+require('./tools/theme-build.cjs').build(false);
 syncLanguages();
 syncChangelog();
 

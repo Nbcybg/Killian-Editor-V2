@@ -169,6 +169,7 @@ function renderTabs(node, pm, opts, depth) {
     tab.dataset.panelId = child.id;
     tab.appendChild(iconSpan(md.icon, 'k-tab-icon'));
     tab.appendChild(el('span', 'k-tab-title', md.title || child.title || child.id));
+    if (!strip) addTabClose(tab, child.id, md, pm);
     tab.title = md.title || child.title || child.id;
     tab.onclick = () => {
       if (strip) { toggleStrip(node.id, pm, false); pm.activatePanel(child.id); return; }
@@ -195,6 +196,17 @@ function renderTabs(node, pm, opts, depth) {
   }
   box.appendChild(body);
   return box;
+}
+
+// [alpha.157] แท็บทรงเม็ดมีปุ่มปิดในตัว (ภาพอ้างอิงของผู้ใช้) — แผงที่ปิดไม่ได้ (เอกสาร ฯลฯ) ไม่มีปุ่ม
+function addTabClose(tab, id, md, pm) {
+  if (md.closable === false) return;
+  const x = el('span', 'k-tab-x', gi('close'));
+  x.title = t('ui.panelRenderer.closePanelOpen');
+  // กันตัวลากแท็บจับ mousedown ของปุ่มปิด (ไม่งั้นกดปิดแล้วกลายเป็นเริ่มลาก)
+  x.addEventListener('mousedown', (e) => e.stopPropagation());
+  x.onclick = (e) => { e.stopPropagation(); pm.hidePanel(id); };
+  tab.appendChild(x);
 }
 
 // ย่อ/คลี่กลุ่มแท็บ — ติดธงบนโหนด tabs โดยตรง (engine clone ผ่าน JSON จึงพาฟิลด์นี้ไปด้วย)
@@ -431,6 +443,7 @@ function renderFloatGroup(f, pm, opts, container) {
     tab.dataset.panelId = child.id;
     tab.appendChild(iconSpan(md.icon, 'k-tab-icon'));
     tab.appendChild(el('span', 'k-tab-title', md.title || child.title || child.id));
+    addTabClose(tab, child.id, md, pm);
     tab.title = md.title || child.title || child.id;
     tab.onclick = () => {
       const next = pm.floats.map((x) => (x.id === f.id

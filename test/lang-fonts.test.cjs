@@ -26,9 +26,10 @@ check('มีพรีเซ็ตไทยและช่วงถูกต้�
 check('พรีเซ็ตทุกตัวมีป้ายภาษาไทย', LF.SCRIPT_PRESETS.every((p) => p.label.length > 1));
 check('พรีเซ็ต "ทุกอักขระ" ไม่มีช่วง (= ครอบทั้งหมด)',
   LF.SCRIPT_PRESETS.find((p) => p.key === 'all').range === '');
-check('ฟอนต์ที่ฝังมามีทั้งละตินและไทย',
-  LF.BUILTIN_FONT_FILES.some((f) => /Prime/.test(f.file)) &&
-  LF.BUILTIN_FONT_FILES.filter((f) => /Thai/.test(f.file)).length === 2);
+// [alpha.159] ผู้ใช้สั่งลบ Courier Thai Mono/Prop — ฝังมากับโปรแกรมเหลือ Courier Prime ตัวเดียว
+check('[159] ฟอนต์ที่ฝังมาเหลือ Courier Prime ตัวเดียว',
+  LF.BUILTIN_FONT_FILES.length === 1 && /CourierPrime/.test(LF.BUILTIN_FONT_FILES[0].file),
+  JSON.stringify(LF.BUILTIN_FONT_FILES));
 
 // ── normalizeRange: กัน CSS injection + ช่วงมั่ว ──
 check('รับช่วงเดี่ยว', LF.normalizeRange('U+0E00-0E7F') === 'U+0E00-0E7F');
@@ -106,8 +107,8 @@ check('รายการ null ไม่พัง', LF.buildLangFontCss(null, ur
   check('[97-12] แถวแรก = ไทยของบทภาพยนตร์ ย่อ 85% และเปิดไว้',
     D[0].target === 'screenplay' && D[0].range === 'U+0E00-0E7F' &&
     D[0].size === 85 && D[0].enabled === true, JSON.stringify(D[0]));
-  check('[97-12] แถวไทยที่ฝังมากับโปรแกรมยังปิดไว้ก่อนเหมือนเดิม',
-    D[1].range === 'U+0E00-0E7F' && D[1].enabled === false && D[1].target === 'all');
+  check('[159] ค่าเริ่มต้นไม่มีแถวที่อ้างฟอนต์ Courier Thai แล้ว',
+    D.length === 1 && !D.some((r) => /Thai/.test(r.builtin)), JSON.stringify(D));
   check('[97-12] normalize เติม target/size/system ให้ครบทุกแถว',
     n.every((r) => 'target' in r && 'size' in r && 'system' in r));
   check('[97-12] target ที่ไม่รู้จัก → ตกเป็น all',
@@ -220,6 +221,27 @@ check('[144] Thonburi ขึ้นก่อน Ayuthaya ในรายการ
     family: 'Ayuthaya, Tahoma', system: true }]);
   check('[144] แถวที่ผู้ใช้พิมพ์เองไม่ถูกแตะ',
     mine[0].family === 'Ayuthaya, Tahoma', mine[0].family);
+}
+
+// ── [alpha.159] โปรเจกต์เก่าที่อ้าง Courier Thai + ฟอนต์ในโฟลเดอร์ Fonts/ ──
+{
+  const old = LF.normalizeLangFonts([{ id: 'thai', range: 'U+0E00-0E7F', builtin: 'CourierThaiMono.ttf', enabled: true }]);
+  check('[159] แถวเก่าที่อ้าง CourierThaiMono → ถอดไฟล์ออก', old[0].builtin === '', old[0].builtin);
+  check('[159] …แล้วกลายเป็นลูกโซ่ฟอนต์ไทยของเครื่อง (ยังใช้งานได้)',
+    old[0].family === LF.THAI_SAFE_FALLBACKS.join(', ') && old[0].system === true && LF.isUsable(old[0]),
+    JSON.stringify(old[0]));
+  const oldFam = LF.normalizeLangFonts([{ builtin: 'CourierThaiProp.ttf', family: 'Tahoma' }]);
+  check('[159] แถวเก่าที่มีชื่อฟอนต์อยู่แล้วเก็บชื่อเดิม', oldFam[0].family === 'Tahoma' && oldFam[0].builtin === '');
+  check('[159] Courier Prime ไม่ถูกถอด',
+    LF.normalizeLangFonts([{ builtin: 'CourierPrime-Regular.ttf' }])[0].builtin === 'CourierPrime-Regular.ttf');
+  check('[159] projectFontFamily = ชื่อไฟล์ไม่มีนามสกุล', LF.projectFontFamily('EBGaramond-Regular.ttf') === 'EBGaramond-Regular');
+  check('[159] projectFontFamily ตัดโฟลเดอร์ + อักขระอันตราย',
+    LF.projectFontFamily('C:\\x\\My"Font;.otf') === 'MyFont', LF.projectFontFamily('C:\\x\\My"Font;.otf'));
+  const css = LF.projectFontFaceCss(['A.ttf', 'readme.txt', 'B.woff2', 'C.otf'],
+    (f) => (f === 'C.otf' ? '' : 'file:///F/' + f));
+  check('[159] projectFontFaceCss ประกาศวงศ์ของไฟล์ฟอนต์',
+    css.includes('font-family:"A"') && css.includes('url("file:///F/A.ttf")') && css.includes('font-family:"B"'), css);
+  check('[159] projectFontFaceCss ข้ามไฟล์ที่ไม่ใช่ฟอนต์ / ไม่มี URL', !css.includes('readme') && !css.includes('"C"'), css);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

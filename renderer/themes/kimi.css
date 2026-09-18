@@ -1,0 +1,38 @@
+/* renderer/themes/kimi.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-kimi {
+  --bg:#101114;
+  --side:#0a0b0d;
+  --bar:#17191d;
+  --border:#2a2d33;
+  --fg:#e9ebf0;
+  --bright:#f6f7f9;
+  --dim:#929498;
+  --accent:#2f7bff;
+  --accent-hi:#7fb2ff;
+  --link:#6aa6ff;
+  --sel:#1d3566;
+  --orange:#7fb2ff;
+  --curline:#191a1d;
+  --hover:#2c2d31;
+  --hover-soft:#1d1e21;
+  --titlebar:#0b0c0e;
+  --sunken:#0d0e10;
+  --chip:#182c4f;
+  --danger-soft:#562a2e;
+  --canvas:#0d0e10;
+  --void:#0b0c0e;
+  --paper-surround:#0b0c0e;
+  --tab-bar:#0b0c0e;
+  --tab-bg:#26272a;
+  --tab-border:#404144;
+  --tab-fg:#929498;
+  --tab-fg-on:#f4f5f8;
+  --tab-hover:#1d1e21;
+  --panel-head:#0e0f12;
+  --input-bg:#0c0d0f;
+  --muted-strong:#c2c4c8;
+  --find-hit:#4d6a95;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

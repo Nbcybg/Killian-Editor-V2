@@ -1,0 +1,44 @@
+/* renderer/themes/macintosh.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-macintosh {
+  --theme-red:#e03a3e;
+  --theme-orange:#f5821f;
+  --theme-yellow:#fdb827;
+  --theme-green:#61bb46;
+  --theme-blue:#009ddc;
+  --theme-purple:#963d97;
+  --bg:#eeeeee;
+  --side:#dddddd;
+  --bar:#cccccc;
+  --border:#888888;
+  --fg:#000000;
+  --bright:#000000;
+  --dim:#5f5f5f;
+  --accent:#3a5fcd;
+  --accent-hi:#963d97;
+  --link:#0044aa;
+  --sel:#ccccff;
+  --orange:#963d97;
+  --curline:#e6e6e6;
+  --hover:#cfcfcf;
+  --hover-soft:#e0e0e0;
+  --titlebar:#d6d6d6;
+  --sunken:#e7e7e7;
+  --chip:#d3d9e9;
+  --danger-soft:#e9c8ca;
+  --canvas:#eeeeee;
+  --void:#d6d6d6;
+  --paper-surround:#c3c3c3;
+  --tab-bar:#d6d6d6;
+  --tab-bg:#fbfbfb;
+  --tab-border:#888888;
+  --tab-fg:#5f5f5f;
+  --tab-fg-on:#000000;
+  --tab-hover:#e0e0e0;
+  --panel-head:#e0e0e0;
+  --input-bg:#fcfcfc;
+  --muted-strong:#2b2b2b;
+  --find-hit:#c594c6;
+  --on-accent:#ffffff;
+  --on-accent-hi:#ffffff;
+}

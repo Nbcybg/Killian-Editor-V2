@@ -49,11 +49,40 @@ export const SCRIPT_PRESETS = [
 ];
 
 /** ฟอนต์ที่ฝังมากับโปรแกรม — เลือกได้ทันทีโดยไม่ต้องลงเครื่อง */
+// [alpha.159] เหลือ Courier Prime ตัวเดียว (Courier Thai Mono/Prop ถูกลบ — ผู้ใช้สั่ง)
 export const BUILTIN_FONT_FILES = [
   { file: 'CourierPrime-Regular.ttf',  label: t('ui.fonts.courierPrimeDefaultChapter') },
-  { file: 'CourierThaiMono.ttf',       label: t('ui.fonts.courierThaiMonoWide') },
-  { file: 'CourierThaiProp.ttf',       label: t('ui.fonts.courierThaiProportionalWide') },
 ];
+/** ไฟล์ฟอนต์ที่เคยฝังมากับโปรแกรมแต่ถูกลบไปแล้ว — แถวของโปรเจกต์เก่าที่ยังอ้างถึงต้องถูกแปลง */
+export const REMOVED_BUILTIN_FONTS = ['CourierThaiMono.ttf', 'CourierThaiProp.ttf'];
+
+/** นามสกุลไฟล์ฟอนต์ที่ใช้ในโฟลเดอร์ Fonts/ ของโปรเจกต์ได้ */
+export const FONT_FILE_RE = /\.(ttf|otf|woff2?)$/i;
+/**
+ * [alpha.159] ชื่อวงศ์ของไฟล์ฟอนต์ในโปรเจกต์ = ชื่อไฟล์ไม่มีนามสกุล
+ * (กล่องตั้งค่าเก็บค่าเป็น `"<ชื่อนี้>", serif` แล้ว `projectFontFaceCss()` ประกาศวงศ์ชื่อเดียวกันให้)
+ */
+export function projectFontFamily(file) {
+  return cssFamilyName(String(file || '').split(/[\\/]/).pop().replace(FONT_FILE_RE, ''));
+}
+/**
+ * `@font-face` ของทุกไฟล์ใน Fonts/ ของโปรเจกต์ — เดิมกล่องตั้งค่าให้เลือกได้แต่ **ไม่มีใครประกาศวงศ์ให้**
+ * เลือกแล้วจึงตกไปฟอนต์สำรองเงียบ ๆ (ใช้ได้เฉพาะเครื่องที่บังเอิญลงฟอนต์ชื่อเดียวกันไว้)
+ * @param {string[]} files ชื่อไฟล์
+ * @param {(file:string)=>string} urlOf คืน URL ที่โหลดได้ ('' = ข้าม)
+ */
+export function projectFontFaceCss(files, urlOf) {
+  const out = [];
+  for (const f of files || []) {
+    if (!FONT_FILE_RE.test(String(f))) continue;
+    const fam = projectFontFamily(f);
+    const url = urlOf ? urlOf(f) : '';
+    if (!fam || !url) continue;
+    out.push('@font-face{font-family:"' + fam + '";font-display:swap;src:url("' +
+             String(url).replace(/"/g, '%22') + '");}');
+  }
+  return out.join('\n');
+}
 
 /**
  * [alpha.60r3a] ฟอนต์ไทย "ของระบบ" — เลือกได้จากกล่องฟอนต์ตามภาษา
@@ -89,9 +118,6 @@ export function defaultLangFonts() {
     { id: 'sp-thai', label: t('ui.common.msg8'), range: SP_THAI_RANGE, target: 'screenplay',
       builtin: '', file: '', family: SP_THAI_FALLBACKS.join(', '), system: true,
       size: 85, ascent: 0, descent: 0, enabled: true },
-    { id: 'thai', label: t('ui.common.msg8'), range: 'U+0E00-0E7F', target: 'all',
-      builtin: 'CourierThaiMono.ttf', family: '', file: '', system: false,
-      size: 100, ascent: 0, descent: 0, enabled: false },
   ];
 }
 
@@ -249,11 +275,13 @@ export function normalizeLangFonts(list) {
     label: String(r?.label || ''),
     range: String(r?.range || ''),
     target: rowTarget(r),
-    builtin: String(r?.builtin || ''),
+    // [alpha.159] ไฟล์ Courier Thai ถูกลบ → แถวเก่าที่อ้างถึงกลายเป็นลูกโซ่ฟอนต์ไทยของเครื่องแทน
+    builtin: REMOVED_BUILTIN_FONTS.includes(String(r?.builtin || '')) ? '' : String(r?.builtin || ''),
     file: String(r?.file || ''),
-    family: upgradeThaiChain(r?.family),
+    family: REMOVED_BUILTIN_FONTS.includes(String(r?.builtin || '')) && !String(r?.family || '').trim()
+      ? THAI_SAFE_FALLBACKS.join(', ') : upgradeThaiChain(r?.family),
+    system: REMOVED_BUILTIN_FONTS.includes(String(r?.builtin || '')) ? true : r?.system === true,
     // [alpha.97 ข้อ 12] ชื่อฟอนต์มาจาก "รายชื่อฟอนต์ในเครื่อง" — ใช้เตือนว่าย้ายเครื่องแล้วอาจหาย
-    system: r?.system === true,
     size: clampPct(r?.size, 50, 150, 100),
     ascent: clampPct(r?.ascent, 0, 200, 0),
     descent: clampPct(r?.descent, 0, 200, 0),

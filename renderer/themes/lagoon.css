@@ -1,0 +1,42 @@
+/* renderer/themes/lagoon.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-lagoon {
+  --theme-c1:#218dae;
+  --theme-c2:#2bbbd7;
+  --theme-c3:#fce59a;
+  --theme-c4:#ffd758;
+  --bg:#fffbea;
+  --side:#fdf1c4;
+  --bar:#fce59a;
+  --border:#e8cf73;
+  --fg:#123b4a;
+  --bright:#091e25;
+  --dim:#71888a;
+  --accent:#1b7898;
+  --accent-hi:#259fb7;
+  --link:#1a6f8c;
+  --sel:#ffd758;
+  --orange:#259fb7;
+  --curline:#f7f4e4;
+  --hover:#e0e2d5;
+  --hover-soft:#f1efe0;
+  --titlebar:#e7e8da;
+  --sunken:#f8f5e5;
+  --chip:#dde7de;
+  --danger-soft:#f6d2c7;
+  --canvas:#fffbea;
+  --void:#e7e8da;
+  --paper-surround:#d4d8cd;
+  --tab-bar:#e7e8da;
+  --tab-bg:#fffefa;
+  --tab-border:#e8cf73;
+  --tab-fg:#71888a;
+  --tab-fg-on:#123b4a;
+  --tab-hover:#f1efe0;
+  --panel-head:#f1efe0;
+  --input-bg:#fffefb;
+  --muted-strong:#3d5e67;
+  --find-hit:#87cad7;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+}

@@ -20,8 +20,12 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **4,871 checks · ALL OK** (alpha.149) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **8,736 ข้อ · 104 ไฟล์** · ~35 วินาที)
+ปัจจุบัน **5,218 checks · ALL OK** (alpha.159 · ผ่านทั้ง dev และตัว packaged) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **9,476 ข้อ · 118 ไฟล์** · ~35 วินาที)
+**[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
+ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
+เมนูย่อย: `popupMenu` รับ `sub`/`swatch`/`checked` · ฟังก์ชันที่เปิดเมนูเองใช้เป็นเมนูย่อยผ่าน `menuItemsOf(fn)` ·
+สถานะฉาก: แหล่งเดียว `allStatuses()` (ลำดับ/ซ่อน อยู่ใน project.khn.json) · Kanban ฟัง `kapi.onLocalWrite` + `k2-statuses-changed`
 **[alpha.148] ปลั๊กอินของโปรเจกต์ต้องได้รับอนุญาตก่อนรัน** — เทสที่พึ่ง `Plugins/*` ของ fixture ต้อง
 `await untrustProjectPlugins()` → (เช็คสภาพยังไม่อนุญาต) → `await trustProjectPlugins()` → `loadPlugins()`
 เพราะการอนุญาตเก็บใน userData **ข้ามรอบเทสได้** · การเขียนไฟล์ทั้งหมดผ่าน `fs-safe.cjs` (atomic, ไม่ fsync — ~22ms/ไฟล์)
@@ -411,22 +415,25 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 
 ### ⚠️ กฎถาวร (alpha.137) — ธีมสี + แถบบน (แถบเดียว)
 
-**ธีมของโปรแกรมเพิ่มได้ แต่ต้องแตะครบสี่ที่** (ประตูกันพลาด = `test/theme.test.cjs`):
+**[alpha.159] ทะเบียนธีมย้ายไป `renderer/themes/themes.json` ที่เดียว** (คู่มือเต็ม: `renderer/themes/README.md`)
+เพิ่มธีม = เพิ่มก้อนใน themes.json (`id` · `mode` · `name.th/en` · `colors` 5 สีหลัก) → `node build.js` แล้ว **ตัวสร้างทำให้ครบ**:
 
-| ที่ | ไฟล์ |
+| ที่ | ไฟล์ (สร้างโดย `tools/theme-build.cjs` — ห้ามแก้มือ) |
 |---|---|
-| ทะเบียนธีม | `src/core.js` → `THEMES` + `THEME_LABEL_KEYS` (**แหล่งความจริงเดียว**) |
-| ตัวแปรสี | `renderer/style.css` → `body.theme-<id> { … }` |
-| ป้ายชื่อธีม | `languages/k2_*.csv` ทุกไฟล์ |
-| ช่องเลือกในตั้งค่า | มีอยู่แล้ว (`#st-theme`) — ตัวเลือก **สร้างจาก `THEMES` ตอนเปิดกล่อง** ห้ามเขียนรายชื่อตายในกล่อง |
-| เมนู มุมมอง → ธีมสี | สร้างจาก `toggles.themes` ที่ renderer ส่งไปให้ `main.js` — **main ห้ามมีรายชื่อธีมของตัวเอง** |
+| ตัวแปรสี | `renderer/themes/<id>.css` (สูตรใน `src/theme-gen.js` · ธีม `handmade:true` เขียนมือได้ — เทมเพลต `_template.css`) |
+| `<link>` | `renderer/index.html` ระหว่าง `<!-- themes:begin -->` … `<!-- themes:end -->` |
+| ทะเบียน | `src/generated/themes-data.js` → `THEMES` · `THEME_LABEL_KEYS` · `THEME_MODES` (core.js re-export) |
+| ป้ายชื่อ | `languages/k2_*.csv` คีย์ `ui.themes.<idCamel>` (เพิ่มเฉพาะที่ขาด · คำแปลที่แก้แล้วไม่ถูกทับ) |
+| ช่องเลือกในตั้งค่า / เมนู มุมมอง | สร้างจาก `THEMES` อยู่แล้ว — ไม่ต้องแตะ |
+
+`test/theme.test.cjs` ตรวจ: ตัวแปรครบ · คอนทราสต์ (`MIN_CONTRAST`) · mode ตรงกับความสว่างพื้น · ไฟล์ที่สร้างตรงกับ themes.json (ลืม build = แดง)
 
 - **ธีมห้ามแตะ `--paper-*`** (ยกเว้น `--paper-surround` ซึ่งเป็นพื้น *รอบ* กระดาษ = เปลือกโปรแกรม)
   — เปลี่ยนได้แค่หน้าตาโปรแกรม ห้ามกระทบหน้ากระดาษ/งานที่ส่งออกแม้แต่นิดเดียว
 - ธีมใหม่ต้องกำหนด **ตัวแปรพื้นผิวครบทุกตัว** (`--hover --hover-soft --titlebar --sunken --chip
   --danger-soft --canvas` ฯลฯ) ไม่งั้นมีพื้นผิวค้างสีของธีมเดิม (บทเรียน `[81-5]`)
 - ค่าเริ่มต้นตอนนี้ = **`k2`** (จานสีประจำโปรแกรม: `#1e1250` `#452f5e` `#ff6640` `#ffc55c`)
-- **[alpha.138] มีสองธีม: `k2` · `k2-light` เท่านั้น** — dark/light ของเดิมถูกลบทิ้ง
+- **[alpha.138] `k2` · `k2-light` อยู่หัวทะเบียนเสมอ** — dark/light ของเดิมถูกลบทิ้ง · [alpha.159] ธีมจานสีเพิ่มอีก 18 ชุด
   · ค่าเก่าในไฟล์แปลงด้วย `THEME_ALIAS` **แล้วเขียนกลับลง settings** (อย่าแปลงแค่ตอนวาด)
   · **ไม่มีปุ่มธีมบนแถบ ไม่มีคีย์ลัด** (ผู้ใช้สั่ง) — ธีมอยู่ในตั้งค่า + เมนู มุมมอง เท่านั้น
 - **เครื่องหมาย/เส้นที่ลากยาวเท่าความสูงของบล็อก = ระเบิดเวลาในมุมมองจัดหน้า** —

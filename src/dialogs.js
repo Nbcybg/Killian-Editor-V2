@@ -1,10 +1,12 @@
 // dialogs.js — กล่องโต้ตอบ: ตั้งค่าโปรเจกต์ · ประวัติเวอร์ชัน · changelog · ตัวดู log
+import { buildLoglineFields } from './logline-ui.js';
+import { compactLogline } from './logline.js';
 import { tf } from './i18n.js';
 import { settingsTemplate } from './settings-template.js';   // [alpha.154] โครงกล่องตั้งค่าออกจากไฟล์ภาษา
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
          applyProseVars, proseFormat, applyPaperVars, renderPaperSheets,
-         applyTheme, currentTheme } from './app.js';   // [alpha.137] ธีมสีในตั้งค่า
+         applyTheme, currentTheme, projectFontFiles } from './app.js';   // [alpha.137] ธีมสีในตั้งค่า
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
 import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, scanLanguages, languageCatalog,
@@ -20,7 +22,7 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, 
          // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
          SP_THAI_FALLBACKS, SP_THAI_RANGE, SP_THAI_SIZE, FONT_TARGETS,
          rowTarget, withSpFamily, usableCounts, migrateSpThai,
-         withThaiFallback } from './core.js';
+         withThaiFallback, projectFontFamily } from './core.js';
 import { setTypeVolume, playType } from './typewriter-sound.js';
 // [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป (ตารางอยู่ใน margin-presets.json)
 import { marginPreset, marginPresetOptions, matchMarginPreset } from './margin-presets.js';
@@ -194,6 +196,76 @@ function readNetColorFields(box) {
   return out;
 }
 
+/** ชื่อวงศ์แรกของสแตกฟอนต์ ('"EB Garamond", serif' → 'EB Garamond') */
+export function firstFamily(stack) {
+  return String(stack || '').split(',')[0].trim().replace(/^["']|["']$/g, '');
+}
+
+/**
+ * ══ [alpha.159] ช่องเลือกฟอนต์ 1 ช่อง = รายการ + ปุ่ม "จากเครื่อง…" + ช่องตัวอย่างที่พิมพ์ได้ ══
+ * เรียกซ้ำกับ select ตัวเดิมได้ (สร้างรายการใหม่ · ปุ่ม/ช่องตัวอย่างสร้างครั้งเดียว)
+ * @param {HTMLSelectElement} sel
+ * @param {{base:Array<{name,value}>, files:string[], generic:string, current:string,
+ *          fallback:string, onChange?:(v:string)=>void}} o
+ */
+export function setupFontPicker(sel, o) {
+  sel.innerHTML = '';
+  const add = (value, name) => {
+    const op = document.createElement('option');
+    op.value = value; op.textContent = name; sel.appendChild(op);
+    return op;
+  };
+  for (const b of o.base || []) add(b.value, b.name);
+  for (const f of o.files || []) {
+    const fam = projectFontFamily(f);
+    if (fam) add('"' + fam + '", ' + (o.generic || 'serif'), fam + t('ui.dlg.project'));
+  }
+  const ensure = (v) => {
+    if (v && ![...sel.options].some((x) => x.value === v)) add(v, firstFamily(v) + t('ui.dlg.fontFromSystemTag'));
+  };
+  ensure(o.current || '');
+  sel.value = o.current || '';
+  // ปุ่ม + ช่องตัวอย่าง (อยู่ต่อท้าย select ในแถวเดียวกัน)
+  let extra = sel.nextElementSibling;
+  if (!extra || !extra.classList.contains('k-font-extra')) {
+    extra = el('div', 'k-font-extra');
+    const sys = el('button', 'k-key-btn k-font-sys', t('ui.dlg.fontFromMachine'));
+    sys.type = 'button';
+    sys.title = t('ui.dlg.fontFromMachineHint');
+    const sample = el('input', 'k-dlg-input k-font-sample');
+    sample.type = 'text';
+    sample.value = t('ui.dlg.fontSampleText');
+    sample.placeholder = t('ui.dlg.fontSamplePh');
+    sample.title = t('ui.dlg.fontSampleHint');
+    extra.append(sys, sample);
+    sel.after(extra);
+  }
+  const sample = extra.querySelector('.k-font-sample');
+  const sysBtn = extra.querySelector('.k-font-sys');
+  const paint = () => { sample.style.fontFamily = withThaiFallback(sel.value || o.fallback || ''); };
+  // addEventListener ไม่ใช่ onchange — ผู้เรียกบางที่ (แท็บรูปแบบนิยาย) ผูก onchange ของตัวเองไว้ด้วย
+  if (!sel._fontPicker) {
+    sel._fontPicker = {};
+    sel.addEventListener('change', () => {
+      const fp = sel._fontPicker;
+      if (fp.paint) fp.paint();
+      if (fp.onChange) fp.onChange(sel.value);
+    });
+  }
+  sel._fontPicker.paint = paint;
+  sel._fontPicker.onChange = o.onChange || null;
+  sysBtn.onclick = async () => {
+    const picked = await pickSystemFont(firstFamily(sel.value));
+    if (!picked) return;
+    const v = '"' + picked.replace(/"/g, '') + '", ' + (o.generic || 'serif');
+    ensure(v);
+    sel.value = v;
+    sel.dispatchEvent(new Event('change'));
+  };
+  paint();
+  return sel;
+}
+
 /**
  * ══ [alpha.97 ข้อ 12] เลือกฟอนต์จาก "รายชื่อฟอนต์ที่ลงไว้ในเครื่อง" ══
  *
@@ -342,6 +414,8 @@ export function settingsDialog(openTab, opts = {}) {
       navMain.append(page);
     }
   }
+  // ── [alpha.157] ไม่แสดงหน้า Home ตอนเปิดโปรแกรม (= openLastProject ตัวเดิมของเมนู ไฟล์) ──
+  if (q('#st-skip-home')) q('#st-skip-home').checked = s.openLastProject === true;
   // ── [alpha.137] ธีมสี (แท็บ "ทั่วไป") ──
   // ช่องอยู่ในเทมเพลตเหมือนช่องอื่นทุกช่อง · **รายชื่อธีมมาจาก `THEMES` ที่เดียว**
   // (เพิ่มธีมใหม่ = แก้ core.js + style.css + คีย์ป้ายใน CSV เท่านั้น ไม่ต้องแตะกล่องนี้)
@@ -377,59 +451,26 @@ export function settingsDialog(openTab, opts = {}) {
       '--sp-font', withThaiFallback(withSpFamily(v || DEFAULT_SCRIPT_FONT, n.screenplay > 0)));
   };
 
-  // โหลดฟอนต์จาก Fonts/ ในโปรเจกต์ (async, โหลดทีหลังไม่บล็อก)
-  // ใช้รายการเดียวกันทั้งฟอนต์นิยาย (#st-fontfamily) และฟอนต์บทหนัง (#st-spfontfamily · บั๊ก #2)
+  // ══ [alpha.159] ตัวเลือกฟอนต์นิยาย/บท — ค่าเริ่มต้น + ไฟล์ใน Fonts/ ของโปรเจกต์ + ฟอนต์ของเครื่อง ══
+  // ผู้ใช้: *"font นิยายแบบ default เป็น Garamond … บทใช้ courier prime ที่เหลือลบออกหมด
+  //          สามารถดึงจาก system หรือ project ได้ และแสดงตัวอย่าง เป็น input ให้คนใช้ใส่ได้"*
+  // เดิมเป็นรายชื่อฟอนต์ฮาร์ดโค้ด 16 ตัว (Courier Thai / Sarabun / Tahoma …) ซึ่งเครื่องส่วนใหญ่ไม่มี
   (async () => {
     const fs = q('#st-fontfamily'); if (!fs) return;
     const spFs = q('#st-spfontfamily');
-    const builtin = [
-      { name: t('ui.dlg.defaultCourierPrimePt'), value: '' },
-      { name: t('ui.dlg.courierPrimeMoreApp'), value: DEFAULT_SCRIPT_FONT },
-      { name: t('ui.dlg.courierThaiMonoMore'), value: '"Courier Thai Mono", "Courier Prime", monospace' },
-      { name: t('ui.dlg.courierThaiProportionalMore'), value: '"Courier Thai Proportional", "Courier Prime", monospace' },
-      // [alpha.60r3a] ฟอนต์ระบบที่วางวรรณยุกต์ไทยได้ถูกต้อง — แจกมากับโปรแกรมไม่ได้ แต่ถ้าเครื่องมีก็ใช้ได้เลย
-      // [alpha.144] Thonburi ขึ้นแทน Ayuthaya (วัดแล้ว Ayuthaya วางวรรณยุกต์ห่างกว่าตัวอื่น 4 เท่า)
-      { name: t('ui.fonts.thonburiMacNoFloat'), value: 'Thonburi, "Leelawadee UI", sans-serif' },
-      { name: t('ui.fonts.ayuthayaMacFloat'), value: 'Ayuthaya, "Leelawadee UI", sans-serif' },
-      { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
-      { name: 'Sarabun', value: 'Sarabun, sans-serif' },
-      { name: 'Noto Sans Thai', value: '"Noto Sans Thai", sans-serif' },
-      { name: 'Leelawadee UI', value: '"Leelawadee UI", sans-serif' },
-      { name: 'TH Sarabun New', value: '"TH Sarabun New", sans-serif' },
-      { name: 'Tahoma', value: 'Tahoma, sans-serif' },
-      { name: 'Georgia', value: 'Georgia, serif' },
-      { name: 'Courier New', value: '"Courier New", monospace' },
-    ];
-    try {
-      const fontDir = await kapi.join(state.root, 'Fonts');
-      if (await kapi.exists(fontDir)) {
-        const fontFiles = await kapi.listFiles(fontDir);
-        for (const f of fontFiles) {
-          const name = f.replace(/\.[^.]+$/, '');
-          builtin.push({ name: name + t('ui.dlg.project'), value: '"' + name + '", sans-serif' });
-        }
-      }
-    } catch {}
-    for (const f of builtin) {
-      const opt = document.createElement('option');
-      opt.value = f.value;
-      opt.textContent = f.name;
-      if (f.value === (origFontFamily || '')) opt.selected = true;
-      fs.appendChild(opt);
-    }
+    let files = [];
+    try { await preloadLangFontUrls(); applyProjectLangFonts(); files = projectFontFiles(); } catch {}
+    setupFontPicker(fs, {
+      base: [{ name: t('ui.dlg.fontDefaultProse'), value: '' }],
+      files, generic: 'serif', current: origFontFamily, fallback: DEFAULT_PROSE_FONT,
+    });
     if (spFs) {
-      for (const f of builtin) {
-        const opt = document.createElement('option');
-        opt.value = f.value;
-        // ฟอนต์บทหนังค่าว่าง = Courier New ตามมาตรฐานบท (ไม่ใช่ Segoe UI แบบนิยาย)
-        opt.textContent = f.value === '' ? t('ui.dlg.defaultChapterFilmCourier') : f.name;
-        if (f.value === (origSpFontFamily || '')) opt.selected = true;
-        spFs.appendChild(opt);
-      }
-      // เห็นผลทันทีระหว่างเลือก (ยกเลิก = คืนค่าเดิม)
-      // ตั้ง --sp-font ตรง ๆ ไม่เรียก applySettings() — ไม่งั้นจะไปรีเซ็ตพรีวิวขนาดฟอนต์ที่กำลังเลื่อนอยู่
-      // ระหว่างอยู่ในกล่อง ให้ใช้แถวฟอนต์ตามภาษา "ที่กำลังพรีวิวอยู่" (W.langFonts)
-      spFs.onchange = () => applySpFont(spFs.value, W.langFonts);
+      setupFontPicker(spFs, {
+        base: [{ name: t('ui.dlg.fontDefaultSp'), value: '' }],
+        files, generic: 'monospace', current: origSpFontFamily, fallback: DEFAULT_SCRIPT_FONT,
+        // เห็นผลทันทีระหว่างเลือก (ยกเลิก = คืนค่าเดิม) — ตั้ง --sp-font ตรง ๆ ไม่เรียก applySettings()
+        onChange: (v) => applySpFont(v, W.langFonts),
+      });
     }
   })();
   q('#st-title').value = m.title || '';
@@ -504,29 +545,14 @@ export function settingsDialog(openTab, opts = {}) {
   // สำเนาทำงาน — เห็นผลสดบนหน้ากระดาษ แต่กด "ยกเลิก" แล้วคืนค่าเดิมได้
   const origProse = JSON.parse(JSON.stringify(s.prose || {}));
   const P = mergeProseFormat(s.prose);
-  const PROSE_FONTS = [
-    { name: t('ui.dlg.defaultNovelCaseRatio'), value: '' },
-    { name: 'Sarabun', value: '"Sarabun", sans-serif' },
-    { name: 'TH Sarabun New', value: '"TH Sarabun New", sans-serif' },
-    // [alpha.144] เลิกชูฟอนต์ที่วรรณยุกต์ลอยเป็นตัวเลือกแนะนำ — Thonburi ทำหน้าที่นี้แทน
-    { name: t('ui.fonts.thonburiMacNoFloat'), value: 'Thonburi, "Leelawadee UI", sans-serif' },
-    { name: 'Noto Serif Thai', value: '"Noto Serif Thai", serif' },
-    { name: 'Noto Sans Thai', value: '"Noto Sans Thai", sans-serif' },
-    { name: 'Leelawadee UI', value: '"Leelawadee UI", sans-serif' },
-    { name: 'Georgia', value: 'Georgia, serif' },
-    { name: 'Times New Roman', value: '"Times New Roman", serif' },
-    { name: 'Segoe UI', value: '"Segoe UI", system-ui, sans-serif' },
-    { name: t('ui.dlg.courierPrimeStyleScreenplay'), value: DEFAULT_SCRIPT_FONT },
-  ];
+  // [alpha.159] ฟอนต์หัวข้อ — ชุดเดียวกับฟอนต์นิยาย (ค่าเริ่มต้น = เหมือนเนื้อเรื่อง)
   const fillFontSel = (sel, val) => {
     if (!sel) return;
-    sel.innerHTML = '';
-    for (const f of PROSE_FONTS) {
-      const o = document.createElement('option');
-      o.value = f.value; o.textContent = f.name;
-      if (f.value === (val || '')) o.selected = true;
-      sel.appendChild(o);
-    }
+    setupFontPicker(sel, {
+      base: [{ name: t('ui.dlg.fontSameAsBody'), value: '' }],
+      files: projectFontFiles(), generic: 'serif', current: val,
+      fallback: s.fontFamily || DEFAULT_PROSE_FONT,
+    });
   };
   // [alpha.97 ข้อ 12] ช่อง "ฟอนต์นิยาย" ถูกตัดทิ้ง — ใช้สแตกฐาน (ตั้งค่า → ทั่วไป)
   // แล้วให้ "ฟอนต์ตามภาษา" แทนที่เป็นช่วงอักขระ ซึ่งละเอียดกว่า
@@ -536,6 +562,7 @@ export function settingsDialog(openTab, opts = {}) {
   q('#st-pr-para').value = P.paraSpacing;
   q('#st-pr-indent').value = P.firstLineIndent;
   q('#st-pr-indent-h').checked = !!P.indentAfterHeading;
+  q('#st-pr-tab').value = P.tabSize; q('#st-pr-tabunit').value = P.tabUnit;
   q('#st-pr-align').value = P.align;
   q('#st-pr-hcolor').value = P.headingColor || '';
   q('#st-pr-hnum').checked = !!P.headingNumber;
@@ -601,6 +628,11 @@ export function settingsDialog(openTab, opts = {}) {
     P.paraSpacing = parseFloat(q('#st-pr-para').value) || 0;
     P.firstLineIndent = parseFloat(q('#st-pr-indent').value) || 0;
     P.indentAfterHeading = q('#st-pr-indent-h').checked;
+    {
+      const tn = parseFloat(q('#st-pr-tab').value);
+      P.tabUnit = q('#st-pr-tabunit').value;
+      P.tabSize = Number.isFinite(tn) ? tn : (P.tabUnit === 'space' ? 4 : P.tabUnit === 'in' ? 0.5 : 1.27);
+    }
     P.align = q('#st-pr-align').value;
     P.headingFont = q('#st-pr-hfont').value || '';
     P.headingColor = q('#st-pr-hcolor').value.trim();
@@ -627,13 +659,19 @@ export function settingsDialog(openTab, opts = {}) {
       tf('ui.dlg.charLine', proseCharsPerLine(f, pp, W.margins));
   };
   for (const id of ['#st-pr-pt', '#st-pr-lh', '#st-pr-para', '#st-pr-indent',
-                    '#st-pr-indent-h', '#st-pr-align', '#st-pr-hfont', '#st-pr-hcolor',
+                    '#st-pr-indent-h', '#st-pr-tab', '#st-pr-align', '#st-pr-hfont', '#st-pr-hcolor',
                     '#st-pr-hnum', '#st-pr-hnumfmt', '#st-pr-hnumlv',
                     '#st-pr-qi', '#st-pr-qb', '#st-pr-qind', '#st-pr-qcolor',
                     '#st-pr-pgnum']) {
     const n = q(id); if (!n) continue;
     n.oninput = previewProse; n.onchange = previewProse;
   }
+  // [alpha.159] เปลี่ยนหน่วยแท็บ = ตัวเลขเดิมไม่มีความหมายในหน่วยใหม่ → ตั้งค่ามาตรฐานของหน่วยนั้นให้
+  q('#st-pr-tabunit').onchange = () => {
+    const u = q('#st-pr-tabunit').value;
+    q('#st-pr-tab').value = u === 'in' ? '0.5' : u === 'cm' ? '1.27' : '4';
+    previewProse();
+  };
   const loadProse = (src) => {
     const f = mergeProseFormat(src);
     Object.assign(P, f);
@@ -643,6 +681,7 @@ export function settingsDialog(openTab, opts = {}) {
     q('#st-pr-pt').value = P.fontPt; q('#st-pr-lh').value = P.lineHeight;
     q('#st-pr-para').value = P.paraSpacing; q('#st-pr-indent').value = P.firstLineIndent;
     q('#st-pr-indent-h').checked = !!P.indentAfterHeading;
+    q('#st-pr-tab').value = P.tabSize; q('#st-pr-tabunit').value = P.tabUnit;
     q('#st-pr-align').value = P.align;
     q('#st-pr-hcolor').value = P.headingColor || '';
     q('#st-pr-hnum').checked = !!P.headingNumber;
@@ -671,6 +710,8 @@ export function settingsDialog(openTab, opts = {}) {
     ['#st-copyright', 'copyright'],
   ];
   for (const [sel, key] of SETUP_FIELDS) q(sel).value = m[key] || '';
+  // [alpha.157] Logline 6 ช่องของโปรเจกต์ = เข็มทิศเรื่องของ AI (ดู logline.js)
+  const loglineUi = q('#st-logline-host') ? buildLoglineFields(q('#st-logline-host'), m.logline) : null;
 
   // ---- [85] หน้ากระดาษ + [84] กฎตัดหน้า + [92] ข้อความมาตรฐาน ----
   const paperSel = q('#st-paper');
@@ -990,8 +1031,10 @@ export function settingsDialog(openTab, opts = {}) {
       : t('ui.dlg.cantDefineRowUse');
     // [alpha.97 ข้อ 12] ตัวอย่างเป็น "บทภาพยนตร์" จึงต้องใช้วงศ์ของบท (K2 SP) ไม่ใช่ของนิยาย
     // — ไม่งั้นแถวที่ตั้งไว้ว่าใช้กับบทเท่านั้นจะไม่โผล่ในตัวอย่างเลย
+    // [alpha.159] ช่องตัวอย่างพิมพ์เองได้ — ตั้งข้อความเริ่มต้นครั้งเดียว ไม่งั้นทุกครั้งที่แก้แถว
+    // ข้อความที่ผู้ใช้เพิ่งพิมพ์จะถูกเขียนทับกลางคัน
     const sample = q('#st-fonts-sample');
-    sample.textContent = t('ui.dlg.iNTNightSceneOne');
+    if (!sample.dataset.ready) { sample.value = t('ui.dlg.iNTNightSceneOne'); sample.dataset.ready = '1'; }
     sample.style.fontFamily = withThaiFallback(withSpFamily(
       q('#st-spfontfamily')?.value || DEFAULT_SCRIPT_FONT, n.screenplay > 0));
     applySpFont(q('#st-spfontfamily')?.value ?? s.spFontFamily, W.langFonts);
@@ -1035,8 +1078,7 @@ export function settingsDialog(openTab, opts = {}) {
       const addOpt = (val, text) => { const o = el('option', null, text); o.value = val; fontSel.append(o); };
       addOpt('', t('ui.dlg.useFontPrintName'));
       for (const b of BUILTIN_FONT_FILES) addOpt('b:' + b.file, b.label);
-      // [alpha.60r3a] ฟอนต์ไทยของระบบ (Ayuthaya ฯลฯ) — ใช้ได้เมื่อเครื่องมีติดตั้งอยู่แล้ว
-      for (const f of SYSTEM_THAI_FONTS) addOpt('f:' + f.family, f.label);
+      // [alpha.159] รายชื่อฟอนต์ไทยของระบบที่ฮาร์ดโค้ดไว้ถูกเอาออก — เลือกจากเครื่องด้วยปุ่ม "จากเครื่อง…"
       for (const f of projectFonts) addOpt('p:' + f, f + t('ui.dlg.project'));
       fontSel.value = row.builtin ? 'b:' + row.builtin : (row.file ? 'p:' + row.file : '');
       const famIn = el('input', 'k-font-family');
@@ -1093,8 +1135,8 @@ export function settingsDialog(openTab, opts = {}) {
   }
   q('#st-fonts-add').onclick = () => {
     W.langFonts.push({ id: 'f' + W.langFonts.length, label: t('ui.common.msg8'), range: 'U+0E00-0E7F',
-                       target: 'all', builtin: 'CourierThaiMono.ttf', file: '', family: '',
-                       system: false, size: 100, ascent: 0, descent: 0, enabled: true });
+                       target: 'all', builtin: '', file: '', family: SP_THAI_FALLBACKS.join(', '),
+                       system: true, size: 100, ascent: 0, descent: 0, enabled: true });
     renderFonts();
   };
   q('#st-fonts-reset').onclick = () => { W.langFonts = defaultLangFonts(); renderFonts(); };
@@ -1392,6 +1434,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.uiScale = Math.min(2, Math.max(0.75, parseFloat(q('#st-uiscale').value) || 1));
     // [alpha.137] ธีมสี — พรีวิวไว้แล้ว ตรงนี้แค่ยืนยันค่าลง settings ที่จะถูกบันทึก
     if (q('#st-theme') && THEMES.includes(q('#st-theme').value)) s.theme = q('#st-theme').value;
+    if (q('#st-skip-home')) s.openLastProject = !!q('#st-skip-home').checked;
     s.shortcuts = workKeys;
     // Auto-sync (เก็บลง settings ด้วย — ไม่งั้นเปิดโปรแกรมใหม่แล้วกลับไปปิด)
     s.autoSync = q('#st-autosync').checked;
@@ -1439,6 +1482,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.prose = JSON.parse(JSON.stringify(mergeProseFormat(readProse())));
     // [98] ข้อมูลผลงาน
     for (const [sel, key] of SETUP_FIELDS) m[key] = q(sel).value.trim();
+    if (loglineUi) { const ll = compactLogline(loglineUi.read()); if (ll) m.logline = ll; else delete m.logline; }
     g.dailyWords = num('#st-daily', 500);
     g.projectWords = num('#st-proj', 50000);
     // ── [alpha.73 ข้อ 2+3] อ่านค่าคืนจากช่องที่สร้างเอง (ครบทุกคีย์เสมอ) ──

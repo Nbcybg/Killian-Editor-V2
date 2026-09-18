@@ -1,0 +1,41 @@
+/* renderer/themes/dva.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-dva {
+  --theme-pink:#ff5fb6;
+  --theme-blue:#7fe3ff;
+  --theme-mint:#9cf2c4;
+  --bg:#221a2e;
+  --side:#1a1424;
+  --bar:#2c2240;
+  --border:#4a3a66;
+  --fg:#fbeefa;
+  --bright:#fdf8fd;
+  --dim:#a499a8;
+  --accent:#ff5fb6;
+  --accent-hi:#7fe3ff;
+  --link:#9cf2c4;
+  --sel:#5a2a55;
+  --orange:#7fe3ff;
+  --curline:#2b2236;
+  --hover:#3e3649;
+  --hover-soft:#2f273a;
+  --titlebar:#181220;
+  --sunken:#1c1526;
+  --chip:#592b50;
+  --danger-soft:#622f3f;
+  --canvas:#1c1526;
+  --void:#181220;
+  --paper-surround:#181220;
+  --tab-bar:#181220;
+  --tab-bg:#382f42;
+  --tab-border:#52495b;
+  --tab-fg:#a499a8;
+  --tab-fg-on:#fdf7fd;
+  --tab-hover:#2f273a;
+  --panel-head:#1f1729;
+  --input-bg:#1a1423;
+  --muted-strong:#d4c8d5;
+  --find-hit:#5589a1;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

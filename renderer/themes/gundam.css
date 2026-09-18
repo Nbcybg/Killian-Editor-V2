@@ -1,0 +1,42 @@
+/* renderer/themes/gundam.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-gundam {
+  --theme-white:#f2f2f2;
+  --theme-blue:#1f4fa3;
+  --theme-red:#d7263d;
+  --theme-yellow:#f5c400;
+  --bg:#14213d;
+  --side:#0e182e;
+  --bar:#1b2c50;
+  --border:#2c4a86;
+  --fg:#f2f2f2;
+  --bright:#fafafa;
+  --dim:#999eaa;
+  --accent:#e8384f;
+  --accent-hi:#f5c400;
+  --link:#7fb0ff;
+  --sel:#1f4fa3;
+  --orange:#f5c400;
+  --curline:#1d2944;
+  --hover:#313c55;
+  --hover-soft:#212e48;
+  --titlebar:#0e172b;
+  --sunken:#101b32;
+  --chip:#492742;
+  --danger-soft:#593449;
+  --canvas:#101b32;
+  --void:#0e172b;
+  --paper-surround:#0e172b;
+  --tab-bar:#0e172b;
+  --tab-bg:#2a364f;
+  --tab-border:#454f65;
+  --tab-fg:#999eaa;
+  --tab-fg-on:#f9f9f9;
+  --tab-hover:#212e48;
+  --panel-head:#121e37;
+  --input-bg:#0f192e;
+  --muted-strong:#caccd1;
+  --find-hit:#907b1b;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

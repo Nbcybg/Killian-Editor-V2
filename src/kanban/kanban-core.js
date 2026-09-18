@@ -32,7 +32,7 @@ export function cardsOf(scenes) {
     for (const r of rows) {
       out.push({
         id: r.id, title: r.title || t('ui.common.notNamed'), chapterId,
-        status: r.status || '', kbOrder: r.kbOrder, order: r.order ?? 0,
+        status: (r.status && r.status !== 'Outline') ? r.status : '', kbOrder: r.kbOrder, order: r.order ?? 0,
         color: r.color || '', tags: r.tags || [], synopsis: r.synopsis || '',
         pov: r.pov || '', fileName: r.fileName || '', locked: !!r.locked, _seq: seq++,
       });

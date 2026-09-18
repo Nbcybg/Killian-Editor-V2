@@ -37,7 +37,9 @@ import { LAYOUT_VERSION as PANEL_LAYOUT_VERSION,
 // [alpha.60r2 ข้อ 2] selftest ต้องตั้ง selection เองก่อนสั่งเปลี่ยนรูปตัวพิมพ์
 import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from 'prosemirror-state';
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
-import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog, escClose } from './ui.js';
+import { ask, confirmBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider } from './ui.js';
+import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
+import { startGlyphUpgrade } from './glyph-upgrade.js';
 import { mutateJson } from './json-store.js';   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
 import { diskConflict, focusAction } from './disk-conflict.js';   // [alpha.156] ไฟล์ถูกแก้นอกโปรแกรม
 import { sprintDirtyList, stopSprint } from './sprint-ui.js';     // [alpha.156] ทะเบียนงานค้าง
@@ -67,7 +69,7 @@ import { MAPS_VERSION, PIN_COLORS, PIN_KIND, newMap, newPin, clamp, findMap, sor
          migrateMaps, mapCategories, groupMaps, mapOverlays, toggleOverlay, gridLines, clampZoom, zoomStep,
          filterPins, matchPin, movePins, deletePins, clonePins, newRoute, routePoints, routePath, routeLength,
          addPinToRoute, deleteRoute, mapRoutes, scenePinCounts, scenesForMap, MAP_ZOOM_MIN, MAP_ZOOM_MAX } from './maps.js';
-import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus,
+import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus,
          DEFAULT_SETTINGS, GLOBAL_DEFAULTS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS,
          BASE_ED_FS, BASE_SP_FS, PT_PX, ptToPx, DEFAULT_SCRIPT_FONT,
          spCycleKeys, spKeyLabel, spKeyMatch,
@@ -77,6 +79,7 @@ import { $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatu
          newRoster, normalizeRoster, rosterToText, textWidth,
          SCENE_NUMBER_DEFAULTS, PAGE_NUMBER_DEFAULTS, pageNumberLabel,
          LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, defaultLangFonts, normalizeLangFonts,
+         projectFontFaceCss, FONT_FILE_RE,
          buildLangFontCss, withLangFamily, applyLangFonts,
          SP_FAMILY, FONT_TARGETS, withSpFamily, migrateSpThai, usableCounts, rowAppliesTo,
          normalizeRange, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_SIZE, withThaiFallback,
@@ -142,7 +145,8 @@ import { openVisual, createVisual, hasVis, visPathOf, renderVisual, openVisualFo
 import { openScratchpad, renderNotesPanel } from './scratchpad.js';
 import { openQuickOpen, quickOpenCache } from './quick-open.js';
 import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
-         statusColor, statusesToJson, importStatuses, setStatusColor } from './custom-status.js';
+         statusColor, statusesToJson, importStatuses, setStatusColor, paintStatusChip } from './custom-status.js';
+import { vivid } from './color-util.js';
 import { toggleFocusMode2, cursorBlock, isFocusMode, focusDim, applyFocusDim } from './focus-mode.js';
 import { toggleTypewriter, twScroll, isTypewriter, scrollHost } from './typewriter.js';
 import { recordDailyWords, countProjectWords, calcStreak, getWordHistory,
@@ -192,7 +196,7 @@ import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePan
          isPanelOpen, resetPanelSystem, PANEL_DEFS, panelId, setPanelShowHook,
          onPanelLayoutChange, panelDesc, setPanelCloseGuard,
          // [alpha.66r3] เวิร์กสเปซ + ระบบจัดการพื้นที่
-         toggleSpace, panelsHidden, hiddenMode, workspaceMenu, workspaceMenuItems,
+         toggleSpace, panelsHidden, hiddenMode, workspaceMenu, workspaceMenuItems, toggleSide, sideHidden,
          listWorkspaces, saveWorkspace, applyWorkspace, deleteWorkspace,
          BUILTIN_WORKSPACES, auditPanelGaps,
          // ส่งออกการจัดวางแผงเป็นไฟล์ (ใช้เป็นเลย์เอาต์อ้างอิง / แนบตอนรายงานบั๊กเรื่องแผง)
@@ -987,6 +991,9 @@ export function spLineHeight() {
 // ---------------- [alpha.57a ข้อ 5] ฟอนต์ตามภาษา ----------------
 /** URL ของไฟล์ฟอนต์: ฝังมากับโปรแกรม → assets/fonts/ · ของโปรเจกต์ → Fonts/ (เก็บ URL ที่ resolve แล้ว) */
 const _langFontUrls = new Map();          // ชื่อไฟล์ในโปรเจกต์ → file:// URL (เติมโดย preloadLangFontUrls)
+let _projectFontFiles = [];               // [alpha.159] ไฟล์ฟอนต์ทั้งหมดใน Fonts/ ของโปรเจกต์
+/** [alpha.159] ชื่อไฟล์ฟอนต์ใน Fonts/ ที่อ่านไว้ล่าสุด (กล่องตั้งค่าใช้ทำรายการ) */
+export const projectFontFiles = () => [..._projectFontFiles];
 export function langFontUrl(row) {
   if (row.builtin) return 'assets/fonts/' + row.builtin;
   if (row.file) return _langFontUrls.get(row.file) || '';
@@ -995,7 +1002,17 @@ export function langFontUrl(row) {
 /** อ่านที่อยู่จริงของไฟล์ฟอนต์ในโปรเจกต์ล่วงหน้า (kapi เป็น async — CSS ต้องการ URL แบบ sync) */
 export async function preloadLangFontUrls() {
   const rows = normalizeLangFonts(state.settings.langFonts);
-  const need = rows.map((r) => r.file).filter((f) => f && !_langFontUrls.has(f));
+  // [alpha.159] ทุกไฟล์ใน Fonts/ ของโปรเจกต์ (ไม่ใช่แค่ที่แถวฟอนต์ตามภาษาอ้างถึง) — กล่องตั้งค่าเลือกเป็น
+  // ฟอนต์นิยาย/บท/หัวข้อได้ตรง ๆ จึงต้องมี @font-face ของทุกไฟล์ (ดู projectFontFaceCss)
+  _projectFontFiles = [];
+  if (state.root) {
+    try {
+      const dir = await kapi.join(state.root, 'Fonts');
+      if (await kapi.exists(dir)) _projectFontFiles = (await kapi.listFiles(dir)).filter((f) => FONT_FILE_RE.test(f));
+    } catch {}
+  }
+  const need = [...new Set([...rows.map((r) => r.file), ..._projectFontFiles])]
+    .filter((f) => f && !_langFontUrls.has(f));
   if (!need.length || !state.root) return _langFontUrls.size;
   for (const f of need) {
     try {
@@ -1014,6 +1031,12 @@ export function applyProjectLangFonts() {
     state.settings.langFonts = mig.rows;
     delete state.settings.spThaiFont;
     if (mig.moved) log('info', tt('ui.app.migSpThaiFont'));
+  }
+  // [alpha.159] วงศ์ของไฟล์ใน Fonts/ — ชื่อวงศ์ = ชื่อไฟล์ไม่มีนามสกุล
+  {
+    let st = document.getElementById('k-project-fonts');
+    if (!st) { st = document.createElement('style'); st.id = 'k-project-fonts'; document.head.appendChild(st); }
+    st.textContent = projectFontFaceCss(_projectFontFiles, (f) => _langFontUrls.get(f) || '');
   }
   return applyLangFonts(state.settings.langFonts, langFontUrl);
 }
@@ -1038,7 +1061,8 @@ export async function exportFontCss() {
     }
     // [alpha.97 ข้อ 12] ต้องออกทั้งสองวงศ์ — ไฟล์ที่ส่งออกมีทั้งเนื้อนิยายและบทในเล่มเดียวกันได้
     const url2 = (row) => (row.builtin ? (abs.get(row.builtin) || '') : langFontUrl(row));
-    return buildLangFontCss(state.settings.langFonts, url2,
+    return projectFontFaceCss(_projectFontFiles, (f) => _langFontUrls.get(f) || '') + '\n'
+      + buildLangFontCss(state.settings.langFonts, url2,
                             { family: LANG_FAMILY, target: 'prose' })
       + '\n' + buildLangFontCss(state.settings.langFonts, url2,
                                 { family: SP_FAMILY, target: 'screenplay' });
@@ -2954,26 +2978,53 @@ export async function saveGlobalSetting(key, value) {
   state.settings[key] = value;
   return value;
 }
+// ══ [alpha.157] ลำดับเปิดโปรแกรมตามที่ผู้ใช้กำหนด ══
+//   1. เปิดโปรแกรม → 2. splash (บอกว่ากำลังโหลดอะไร) → 3. หน้า Home (มีปุ่มออกจากโปรแกรม)
+//   3.1 ติ๊ก "ไม่แสดงหน้า Home" (= openLastProject) → เปิดโปรเจกต์ล่าสุดเลย · ไม่มีโปรเจกต์ล่าสุด = แอปเปล่า
+//   4. หน้าต่างหลักขยายเต็มจอ (main.js ทำตอนได้ `splash:done`)
+// showHomeOnStartup=true (เมนู มุมมอง) ยังบังคับให้เห็นหน้าแรกเสมอเหมือนเดิม
+export function startupPlan(g = {}, recent = []) {
+  const skipHome = g.openLastProject === true;
+  const last = skipHome && recent && recent[0] ? recent[0] : '';
+  const showHome = g.showHomeOnStartup === true || !skipHome;
+  return { skipHome, last, showHome };
+}
 export async function bootSequence() {
+  setSplashActive(true);
+  splashProgress(tt('ui.splash.settings'), 8);
   setBusy(tt('ui.app.busyStartApp'));
   const g = await bootGlobalSettings();
   // ค่ายังไม่มีโปรเจกต์ → ยัดลง state.settings ไว้ก่อน เพื่อให้เมนู/สวิตช์อ่านค่าถูกตั้งแต่วินาทีแรก
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
   syncMenuToggles();
+  splashProgress(tt('ui.splash.language'), 18);
+  try { await (document.fonts && document.fonts.ready); } catch {}
   // [alpha.135] **ตรวจอัปเดตก่อนเข้าโปรแกรม** — ก่อนเปิดโปรเจกต์/หน้าแรก ตามที่ผู้ใช้สั่ง
   // ยังไม่มีอะไรค้างในหน่วยความจำตอนนี้ กด "แทนที่แล้วเปิดใหม่" จึงไม่มีงานหาย
   // เงียบสนิทเมื่อไม่มีรุ่นใหม่ · ปิดสวิตช์ไว้ = ไม่ติดต่อเน็ตเลย · พังก็ต้องไม่ขวางการเปิดโปรแกรม
+  splashProgress(tt('ui.splash.update'), 30);
   try { await startupUpdateCheck(); } catch (e) { log('warn', tt('ui.upd.failCheck'), e); }
+  splashProgress(tt('ui.splash.recent'), 42);
   let recent = [];
   try { recent = (await kapi.listRecent()) || []; } catch {}
-  const openedLast = !!(g.openLastProject && recent[0]);
-  if (openedLast) await loadProject(recent[0]);
-  clearBusy();
-  // ไม่มีโปรเจกต์ล่าสุดให้เปิด หรือผู้ใช้สั่ง "แสดงหน้าแรกเสมอ" → เปิดหน้าแรก
-  if (!openedLast || g.showHomeOnStartup === true) {
-    try { const { showHomeDialog } = await import('./home-ui.js'); await showHomeDialog(); } catch {}
+  const plan = startupPlan(g, recent);
+  let openedLast = false;
+  if (plan.last) {
+    splashProgress(ttf('ui.splash.project', String(plan.last).split(/[\\/]/).pop()), 55);
+    try { await loadProject(plan.last); openedLast = !!state.root; } catch (e) { log('warn', 'open last project', e); }
   }
-  return { openedLast, showedHome: !openedLast || g.showHomeOnStartup === true };
+  splashProgress(plan.showHome ? tt('ui.splash.home') : tt('ui.splash.ready'), 96);
+  clearBusy();
+  // ไม่ได้ติ๊กข้ามหน้าแรก หรือผู้ใช้สั่ง "แสดงหน้าแรกเสมอ" → เปิดหน้าแรก **ก่อน** แสดงหน้าต่าง
+  // [alpha.157r] หน้าแรกตอนเปิดโปรแกรมยืนเดี่ยว ๆ — ตัวโปรแกรมยังไม่โผล่จนกว่าจะเลือกโปรเจกต์/ปิดหน้าแรก
+  // (ถ้าแสดงหน้าต่างก่อน ผู้ใช้เห็นโปรแกรมเปล่าวาบหนึ่งก่อนหน้าแรกจะทับ)
+  if (plan.showHome) {
+    try { const { showHomeDialog } = await import('./home-ui.js'); showHomeDialog({ startup: true }).catch(() => {}); } catch {}
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
+  setSplashActive(false);
+  try { await kapi.splashDone(); } catch {}
+  return { openedLast, showedHome: plan.showHome, skipHome: plan.skipHome };
 }
 /**
  * [alpha.67] ลำดับเริ่มของ "หน้าต่างแผงที่ฉีกออกมา" (tear-off)
@@ -4003,7 +4054,15 @@ function treeBlankMenu() {
 // กดแล้วบอกว่าต้องไปปลดล็อกที่ไหน แทนที่จะทำงาน
 export function showTreeMenu(e, kind, ctx) {
   e.preventDefault(); if (e.stopPropagation) e.stopPropagation();
-  popupMenu(e.clientX, e.clientY, buildMenuItems(kind, (id) => treeMenuItem(kind, id, ctx, e)));
+  popupMenu(e.clientX, e.clientY, buildMenuItems(kind, (id) => subMenuItem(id, treeMenuItem(kind, id, ctx, e))));
+}
+
+// [alpha.157] รายการที่ "มีต่อ" เปิดเมนูลูกด้วย hover — ตัวที่เปิดเมนูเองถูกดักรายการผ่าน menuItemsOf()
+const TREE_SUB_IDS = new Set(['color', 'status', 'move', 'visual', 'restore']);
+function subMenuItem(id, item) {
+  if (!item || !TREE_SUB_IDS.has(id) || typeof item.click !== 'function') return item;
+  const click = item.click;
+  return { label: item.label, sub: () => menuItemsOf(click) };
 }
 
 function treeMenuItem(kind, id, c, e) {
@@ -4045,6 +4104,9 @@ function treeMenuItem(kind, id, c, e) {
         case 'manageChapters': return it(() => openChapterManager(secPath));
         case 'searchIn': return it(() => setTreeScope({ sec: secPath.split(/[\\/]/).pop(), label: title }));
         case 'readBook': return it(() => openBookReader(secPath));
+        // [alpha.159] หน้ารายชื่อตัวละครเป็นของเล่ม (<Section>/roster.json) · หน้าปกเป็นของโปรเจกต์
+        case 'castOfCharacters': return free(() => openRoster(secPath, title));
+        case 'titlePage': return free(() => openTitlePageDialog());
         case 'quickNote': return it(() => quickNote(TA.noteIdOf('book', c), title));
         case 'viewQuickNotes': return it(async () => showAllNotes({ ids: await TA.bookNoteIds(secPath, sec), title }));
         case 'propsPopup': return it(() => sectionProps(secPath, sec));
@@ -4093,7 +4155,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return it(async () => kapi.revealInOS(await folder()));
         case 'color': return it(() => TA.colorMenu(pos(), ch.color || '', (v) => TA.setChapterFields(dPath, ch.guid, { color: v })));
         case 'status': return it(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), ch.status || '',
-          (v) => TA.setChapterFields(dPath, ch.guid, { status: v || 'Outline' })));
+          (v) => TA.setChapterFields(dPath, ch.guid, { status: v || 'Outline' }), '', statusColor));
         case 'pin': return it(async () => TA.togglePinItem('chapter', ch.guid, { title, dRel: await TA.relOf(dPath) }),
           TA.pinned('chapter', ch.guid));
         case 'lock': return it(async () => { await TA.setChapterFields(dPath, ch.guid, { locked: !ch.locked });
@@ -4132,7 +4194,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return free(() => revealFile(file));
         case 'color': return free(() => TA.colorMenu(pos(), sc.color || '', (v) => setSceneMeta(dPath, ch, sc, { color: v })));
         case 'status': return free(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), sc.status || '',
-          (v) => setSceneMeta(dPath, ch, sc, { status: v || 'Outline' })));
+          (v) => setSceneMeta(dPath, ch, sc, { status: v || 'Outline' }), '', statusColor));
         case 'pin': return free(async () => TA.togglePinItem('scene', sc.id, { title, dRel: await TA.relOf(dPath) }),
           TA.pinned('scene', sc.id));
         case 'saveVersion': return free(() => manualSnapshot(dPath, ch, sc));
@@ -4185,7 +4247,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return free(() => revealFile(file));
         case 'color': return free(() => TA.colorMenu(pos(), meta.color || '', (v) => TA.setMemoFields(file, { color: v })));
         case 'status': return free(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), meta.status || '',
-          (v) => TA.setMemoFields(file, { status: v })));
+          (v) => TA.setMemoFields(file, { status: v }), '', statusColor));
         case 'pin': return free(() => TA.togglePinItem('memo', rel, { title }), TA.pinned('memo', rel));
         case 'saveVersion': return free(() => manualFileSnapshot(file));
         case 'versionHistory': return free(async () => {
@@ -4253,7 +4315,7 @@ function treeMenuItem(kind, id, c, e) {
         case 'reveal': return free(() => revealFile(path));
         case 'color': return free(() => TA.colorMenu(pos(), meta.color || '', (v) => TA.setItemFields(path, { color: v })));
         case 'status': return free(() => TA.statusMenu(pos(), TA.sceneStatusOptions(), meta.status || '',
-          (v) => TA.setItemFields(path, { status: v })));
+          (v) => TA.setItemFields(path, { status: v }), '', statusColor));
         case 'pin': return free(() => TA.togglePinItem('board', rel, { title }), TA.pinned('board', rel));
         case 'lock': return free(async () => {
           await TA.setItemFields(path, { locked: !meta.locked });
@@ -4545,13 +4607,13 @@ async function _buildTreeInner() {
     const secEl = el('div', 'sec');
     // [alpha.155] หัวเล่ม: จุดสี · ดาว/กุญแจ · ชิปสถานะ (ชุดเดียวกับแถวฉาก)
     const secTitle = el('div', 'sec-title');
-    if (sec.color) { const dot = el('span', 'sc-dot'); dot.style.background = sec.color; secTitle.append(dot); }
+    if (sec.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(sec.color) || sec.color; secTitle.append(dot); }
     secTitle.append(document.createTextNode(
       (sec.locked ? gi('lock') : sec.flag ? gi('star') : gi('books')) + ' ' + (sec.title || name)));
     if (sec.status && sec.status !== 'outline') {
       const st = SECTION_STATUSES.find((s) => s[0] === sec.status);
       const chip = el('span', 'sc-status', st ? st[1] : sec.status);
-      if (st) { chip.style.color = st[2]; chip.style.borderColor = st[2]; }
+      if (st) paintStatusChip(chip, st[2]);
       secTitle.append(chip);
     }
     // ปุ่ม + บนหัวเล่ม = เพิ่มบทลงในฉบับร่างแรกของเล่ม (ทางลัด)
@@ -4612,12 +4674,12 @@ async function _buildTreeInner() {
           const chHead = el('div', 'ch-title');
           // [alpha.124 ข้อ 20] ชื่อบทเป็นข้อความของผู้ใช้ → ห้ามลง innerHTML (กฎข้อ 11)
           // [alpha.155] จุดสี · ดาว/กุญแจ · ชิปสถานะ ของบท (draft.json)
-          if (ch.color) { const dot = el('span', 'sc-dot'); dot.style.background = ch.color; chHead.append(dot); }
+          if (ch.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(ch.color) || ch.color; chHead.append(dot); }
           chHead.append(icon(ch.locked || sec.locked ? 'lock' : ch.isFavorite ? 'star' : 'folder', 14), ' ' + (ch.title || ''));
           if (ch.status && ch.status !== 'Outline') {
             const chChip = el('span', 'sc-status', dataLabel(ch.status));
             const chCol = statusColor(ch.status);
-            if (chCol) { chChip.style.color = chCol; chChip.style.borderColor = chCol; }
+            if (chCol) paintStatusChip(chChip, chCol);
             chHead.append(chChip);
           }
           const addSc = el('span', 'row-add', '+');
@@ -4669,7 +4731,7 @@ async function _buildTreeInner() {
           }
           for (const sc of sortSceneRows(scenesAll[ch.guid] || [], sortMode, chMtimes)) {
             const scEl = el('div', 'scene');
-            if (sc.color) { const dot = el('span', 'sc-dot'); dot.style.background = sc.color; scEl.append(dot); }
+            if (sc.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(sc.color) || sc.color; scEl.append(dot); }
             const isMemo = sc.type === 'memo';
             if (isMemo) scEl.classList.add('sc-memo');
             scEl.dataset.chGuid = ch.guid;
@@ -4695,7 +4757,7 @@ async function _buildTreeInner() {
               // ชิปสถานะได้สีประจำสถานะ (มาตรฐาน หรือที่ผู้ใช้ตั้งเองในกล่องจัดการสถานะ)
               const stChip = el('span', 'sc-status', sc.status);
               const stCol = statusColor(sc.status);
-              if (stCol) { stChip.style.color = stCol; stChip.style.borderColor = stCol; }
+              if (stCol) { paintStatusChip(stChip, stCol); scEl.style.setProperty('--row-st', vivid(stCol)); }
               scEl.append(stChip);
             }
             // แท็ก: ตัวที่ตั้งสี/ไอคอนไว้ (Visual Tags ข้อ 84) ได้ชิปสี · ที่เหลือเป็น #ข้อความ
@@ -4896,12 +4958,12 @@ async function _buildTreeInner() {
   for (const { f, p, title, meta } of memoRows) {
     const mFlag = TA.isMemoFlag(meta.flag), mLocked = TA.isMemoFlag(meta.locked);
     const it = el('div', 'scene');
-    if (meta.color) { const dot = el('span', 'sc-dot'); dot.style.background = meta.color; it.append(dot); }
+    if (meta.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(meta.color) || meta.color; it.append(dot); }
     it.append(document.createTextNode((mLocked ? gi('lock') : mFlag ? gi('star') : gi('file')) + ' ' + title));
     if (meta.status) {
       const mChip = el('span', 'sc-status', dataLabel(meta.status));
       const mCol = statusColor(meta.status);
-      if (mCol) { mChip.style.color = mCol; mChip.style.borderColor = mCol; }
+      if (mCol) paintStatusChip(mChip, mCol);
       it.append(mChip);
     }
     it.dataset.path = p;
@@ -6088,6 +6150,19 @@ function safeBoardName(s) {
  *  buildTree() ของการสร้างกระดานใหม่ → แถวกระดานที่เพิ่งสร้างหายไปจากต้นไม้)
  */
 let _treeJob = Promise.resolve();
+/** [alpha.157] ปุ่มฝั่งติดสว่าง = ฝั่งนั้น "แสดงอยู่" (กดแล้วซ่อน) */
+export function syncSideToggles() {
+  for (const b of document.querySelectorAll('.k-side-toggles [data-side]')) {
+    const hid = sideHidden(b.dataset.side);
+    b.classList.toggle('on', !hid);
+    b.setAttribute('aria-pressed', hid ? 'false' : 'true');
+  }
+  return true;
+}
+
+// [alpha.157] ชุดสถานะ/สีเปลี่ยน (จาก Kanban หรือกล่องจัดการสถานะ) → ต้นไม้วาดชิปใหม่ทันที
+window.addEventListener('k2-statuses-changed', () => { refreshTreeQueued(); });
+
 export function refreshTreeQueued() {
   _treeJob = _treeJob.then(() => buildTree())
     .then(() => auditPlannerRows(tt('ui.app.new3')))
@@ -6318,11 +6393,11 @@ async function buildPlannerSection(tree) {
     // [alpha.155] ดาว/กุญแจ/สี/สถานะ ของกระดานมาจาก Explorer meta — ตั้งตอนสร้างแถวเท่านั้น ไม่แตะตอนงานค้างเปลี่ยน
     const it = el('div', 'scene' + (isCur ? ' k-row-open' : '') + (isCur && curDirty ? ' k-row-unsaved' : ''),
       (bMeta.locked ? gi('lock') : bMeta.flag ? gi('star') : gi('clipboard')) + ' ' + b.name);
-    if (bMeta.color) { const dot = el('span', 'sc-dot'); dot.style.background = bMeta.color; it.prepend(dot); }
+    if (bMeta.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(bMeta.color) || bMeta.color; it.prepend(dot); }
     if (bMeta.status) {
       const bChip = el('span', 'sc-status', dataLabel(bMeta.status));
       const bCol = statusColor(bMeta.status);
-      if (bCol) { bChip.style.color = bCol; bChip.style.borderColor = bCol; }
+      if (bCol) paintStatusChip(bChip, bCol);
       it.append(bChip);
     }
     it.dataset.path = b.path;
@@ -6446,7 +6521,7 @@ async function buildBranchPlanSection(tree) {
     const it = el('div', 'scene branch-plan-row' + (isCur ? ' k-row-open' : '') + (dirty ? ' k-row-unsaved' : ''),
       (pMeta.locked ? gi('lock') : pMeta.flag ? gi('star') : gi('branch')) + ' ' + p.name);
     // คุณสมบัติแบบฉาก: จุดสี + ป้ายสถานะ (เหมือนแถวฉากใน Explorer)
-    if (p.plan.color) { const dot = el('span', 'sc-dot'); dot.style.background = p.plan.color; it.prepend(dot); }
+    if (p.plan.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(p.plan.color) || p.plan.color; it.prepend(dot); }
     if (p.plan.status) it.append(el('span', 'sc-status', dataLabel(p.plan.status)));   // [alpha.155] ค่าสถานะ = ข้อมูล · ป้ายตามภาษา
     it.dataset.path = p.path;
     it.dataset.branchPlan = p.path;
@@ -6886,6 +6961,7 @@ function toggleFocus(on) {
 // ต้องส่งสถานะสวิตช์ทุกตัวไปให้ main แล้ว main สร้างเมนูใหม่ด้วย type:'checkbox'/'radio'
 let _menuTogSig = '';
 export function syncMenuToggles() {
+  try { syncSideToggles(); } catch {}
   if (typeof kapi === 'undefined' || !kapi.menuToggles) return;
   try {
     const ps = panelToggleState();
@@ -7178,6 +7254,16 @@ async function renderPropsPanel() {
     const c = el('input', 'wiki-check'); c.type = 'checkbox'; c.checked = !!checked; r.append(c); body.append(r); return c;
   };
 
+  // [alpha.157] องก์ + บท (ย้ายฉากไปบทอื่นได้จากตรงนี้) — คลาสของตัวเอง ไม่นับรวมกับ .wiki-input
+  {
+    const acHost = el('div', 'props-ac-host');
+    body.append(acHost);
+    try {
+      await buildActChapterRows(acHost, { dPath, ch, sc }, { onMoved: async () => {
+        propsTarget_C.t = null; await buildTree(); renderPropsPanel(); } });
+    } catch (e) { log('warn', 'act/chapter rows', e); }
+    if (stale()) return;
+  }
   const iSyn = mk(tt('ui.common.synopsis'), row.synopsis, 'textarea');
   const iStoryDate = mk(tt('ui.common.timeStoryLineTime'), row.storyDate);
   iStoryDate.placeholder = tt('ui.app.date');
@@ -7222,6 +7308,14 @@ async function renderPropsPanel() {
     if (stale()) return;
     body.append(mapRow);
   } catch (e) { log('warn', tt('ui.app.propsNewRowPos'), e); }
+
+  // ---- [alpha.157] ฉากนี้กล่าวถึงอะไรบ้าง (แบ่งตามหมวด Wiki) ----
+  try {
+    const mHost = el('div', 'props-mentions-host');
+    body.append(mHost);
+    await buildMentionsBox(mHost, file0);
+    if (stale()) return;
+  } catch (e) { log('warn', 'mentions', e); }
 
   // ---- บันทึกอัตโนมัติ (ข้อ 13) — ไม่ต้องกดปุ่มแล้ว ----
   // พิมพ์แล้วรอเงียบ 600ms ค่อยเขียน (กันเขียนไฟล์ทุกตัวอักษร) · เปลี่ยน dropdown/checkbox = เขียนทันที
@@ -8978,7 +9072,7 @@ async function sceneMoveMenu(e, dPath, ch, sc) {
     .sort((a, b) => (a.order || 0) - (b.order || 0));
   if (!chapters.length) { setStatus(tt('ui.app.notHasChapterOther')); return; }
   popupMenu(e.clientX, e.clientY,
-    chapters.map((c) => ({ label: c.title, click: () => moveSceneToChapter(dPath, ch, sc, c) })));
+    chapters.map((c) => ({ text: c.title || '', click: () => moveSceneToChapter(dPath, ch, sc, c) })));
 }
 
 // ลากสลับลำดับบท (วางบท src ไว้ก่อนบท dst) — คำนวณ order ใหม่ให้เรียงเป็นเลขจำนวนเต็ม
@@ -12776,19 +12870,65 @@ export const CREDITS = [
   ] },
 ];
 
-export function aboutDialog() {
-  const ov = el('div', 'k-overlay');
+// ══ [alpha.157r] กล่อง "เกี่ยวกับ" แบบการ์ดสองฝั่ง (ภาพอ้างอิงจากผู้ใช้) ══
+// ซ้าย = พื้นสว่าง: โลโก้ · คำโปรย · รุ่น · ปุ่มแคปซูล · ปุ่มวงกลมล่างซ้าย
+// ขวา = ภาพประกอบเต็มช่อง + เมนูลิงก์ด้านบน · "เครดิต" เป็นแผ่นเลื่อนทับภาพ (เปิดไว้เป็นค่าเริ่มต้นไม่ได้ — มันบังภาพ)
+// เปลี่ยนภาพได้โดยไม่ต้อง build: วางไฟล์ทับ renderer/about/hero.png (ไม่มีไฟล์ = ใช้ placeholder .svg ที่มากับโปรแกรม)
+export function aboutDialog(opts = {}) {
+  const ov = el('div', 'k-overlay k-about-ov');
   const box = el('div', 'k-dialog k-about-dlg');
-  box.append(el('div', 'k-dlg-title', tt('ui.common.killian')));
-  box.append(el('div', null, tt('ui.app.killianEditor') + APP_VERSION));
-  box.append(el('div', 'dim', tt('ui.app.appWriteNovelScreenplay')));
-  box.append(el('div', 'dim', tt('ui.app.fileTaskMarkdownJSON')));
+
+  // ── ซ้าย ──
+  const left = el('div', 'k-about-left');
+  const logo = el('img', 'k-about-logo');
+  logo.alt = 'Killian 2';
+  logo.src = 'about/logo.svg';
+  left.append(logo);
+  const title = el('div', 'k-dlg-title k-about-title', tt('ui.common.killian'));
+  const tag = el('div', 'k-about-tag', tt('ui.app.appWriteNovelScreenplay'));
+  const sub = el('div', 'k-about-sub', tt('ui.app.fileTaskMarkdownJSON'));
+  const ver = el('div', 'k-about-ver', tt('ui.app.killianEditor') + APP_VERSION);
+  const pills = el('div', 'k-about-pills');
+  const pChange = el('button', 'k-about-pill', tt('ui.about.changelog'));
+  pChange.onclick = async () => { ov.remove(); const { showChangelog } = await import('./dialogs.js'); showChangelog(); };
+  const pUpdate = el('button', 'k-about-pill', tt('ui.about.checkUpdate'));
+  pUpdate.onclick = () => { ov.remove(); handleCommand('check-update'); };
+  pills.append(pChange, pUpdate);
+  left.append(title, tag, sub, ver, pills);
+  const foot = el('div', 'k-about-foot');
+  const dev = el('button', 'k-about-round', '');
+  dev.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 8-4 4 4 4"/><path d="m17 8 4 4-4 4"/><path d="m14 4-4 16"/></svg>';
+  dev.title = tt('ui.app.consoleDev');
+  const devLbl = el('button', 'k-about-round-label', tt('ui.app.consoleDev'));
+  const openDev = () => { ov.remove(); openDevConsole(); };
+  dev.onclick = openDev; devLbl.onclick = openDev;
+  foot.append(dev, devLbl);
+  left.append(foot);
+
+  // ── ขวา ──
+  const right = el('div', 'k-about-right');
+  const hero = el('img', 'k-about-hero');
+  hero.alt = '';
+  hero.src = 'about/hero.png';
+  hero.onerror = () => { hero.onerror = null; hero.src = 'about/hero.svg'; };
+  const nav = el('div', 'k-about-nav');
+  const credits = el('div', 'k-credits');
+  const navBtn = (label, fn, cls = '') => { const b = el('button', 'k-about-link ' + cls, label); b.onclick = fn; nav.append(b); return b; };
+  const setCredits = (on) => {
+    right.classList.toggle('show-credits', on);
+    bCredits.classList.toggle('on', on);
+    bCredits.setAttribute('aria-pressed', on ? 'true' : 'false');
+  };
+  const bCredits = navBtn(tt('ui.about.credits'), () => setCredits(!right.classList.contains('show-credits')));
+  navBtn('GitHub', () => { try { kapi.openExternal('https://github.com/JabCrossHook/Killian_Editor'); } catch {} });
+  navBtn(tt('ui.about.dataFolder'), () => { try { kapi.revealInOS(state.root || ''); } catch {} }).disabled = !state.root;
+  const close = navBtn(tt('ui.common.close'), () => ov.remove(), 'k-about-link-pill');
+  close.classList.add('k-ok');     // ปุ่มปิดหลักของกล่อง (ปุ่มเดิมก็เป็น .k-ok)
 
   // ---- เครดิต ----
-  const cr = el('div', 'k-credits');
-  cr.append(el('div', 'k-credits-head', tt('ui.app.use')));
+  credits.append(el('div', 'k-credits-head', tt('ui.app.use')));
   for (const g of CREDITS) {
-    cr.append(el('div', 'k-credit-group', g.group));
+    credits.append(el('div', 'k-credit-group', g.group));
     for (const it of g.items) {
       const row = el('div', 'k-credit-row');
       const nm = el('span', 'k-credit-name', it.name);
@@ -12800,21 +12940,16 @@ export function aboutDialog() {
       row.append(nm);
       if (it.lic) row.append(el('span', 'k-credit-lic', it.lic));
       row.append(el('div', 'k-credit-what', it.what));
-      cr.append(row);
+      credits.append(row);
     }
   }
-  box.append(cr);
-
-  const btns = el('div', 'k-dlg-btns');
-  const dev = el('button', 'cmp-mini', tt('ui.app.consoleDev'));
-  dev.onclick = () => { ov.remove(); openDevConsole(); };
-  const ok = el('button', 'k-ok', tt('ui.common.close'));
-  ok.onclick = () => ov.remove();
-  btns.append(dev, ok);
-  box.append(btns);
+  right.append(hero, nav, credits);
+  box.append(left, right);
   ov.append(box);
   document.body.append(ov);
+  if (opts.credits) setCredits(true);
   ov.addEventListener('mousedown', (e) => { if (e.target === ov) ov.remove(); });
+  escClose(ov, () => ov.remove());
   return ov;
 }
 
@@ -13415,6 +13550,11 @@ export async function handleCommand(ch, ...a) {
     case 'panels-hide-all': toggleSpace('all'); syncMenuToggles(); break;
     case 'panels-hide-right': toggleSpace('right'); syncMenuToggles(); break;
     case 'panels-hide-left': toggleSpace('left'); syncMenuToggles(); break;
+    // [alpha.157] ปุ่มขวาสุดของแถบเครื่องมือ — ซ่อน/แสดงแผงทีละฝั่ง (สี่ฝั่งอิสระต่อกัน)
+    case 'panels-side-left': toggleSide('left'); syncSideToggles(); break;
+    case 'panels-side-top': toggleSide('top'); syncSideToggles(); break;
+    case 'panels-side-bottom': toggleSide('bottom'); syncSideToggles(); break;
+    case 'panels-side-right': toggleSide('right'); syncSideToggles(); break;
     case 'workspace-menu': workspaceMenu(); break;
     case 'workspace': applyWorkspace(a[0]); syncMenuToggles(); break;
     case 'ai-assistant': openAIAssistant(); break;
@@ -14540,8 +14680,27 @@ export function KTooltip(trigger, text, opts = {}) {
     trigger.dataset.ktAbove = '0';               // บอกให้โชว์ใต้แทน (ปุ่มบน toolbar)
   }
 }
+let _tipHeld = null;
+function releaseHeldTitle() {
+  if (_tipHeld && !_tipHeld.host.getAttribute('title')) _tipHeld.host.setAttribute('title', _tipHeld.text);
+  _tipHeld = null;
+}
 function setupHoverTips() {
+  setHoverTipHider(hideTip);
   document.addEventListener('mouseover', (e) => {
+    // [alpha.157] ผู้ใช้: "hover tool tip จะต้องไม่ขึ้นทับ right click menu"
+    // เมนูคลิกขวาเปิดอยู่ = ไม่มีทูลทิปเลย (ทั้งของแถวใต้เมนูและของตัวเมนูเอง)
+    if (menuOpen()) {
+      if (_tipHost) hideTip();
+      // ทูลทิปของ Chromium เอง (จาก attribute title) ก็ต้องไม่ขึ้น — พักค่าไว้ แล้วคืนตอนเมาส์ออก
+      const held = e.target instanceof Element ? e.target.closest('[title]') : null;
+      if (held && held.getAttribute('title')) {
+        releaseHeldTitle();
+        _tipHeld = { host: held, text: held.getAttribute('title') };
+        held.removeAttribute('title');
+      }
+      return;
+    }
     let host = e.target instanceof Element ? e.target.closest('[title]') : null;
     // [alpha.60r ข้อ 7] ทำงานกับปุ่มที่ disabled (pointer-events:none) — elementFromPoint ยังหาสิ่งที่อยู่ใต้เมาส์ได้
     if (!host && e.target instanceof Element) {
@@ -14572,6 +14731,7 @@ function setupHoverTips() {
     }
   }, true);
   document.addEventListener('mouseout', (e) => {
+    if (_tipHeld && !(e.relatedTarget instanceof Node && _tipHeld.host.contains(e.relatedTarget))) releaseHeldTitle();
     if (!_tipHost) return;
     const to = e.relatedTarget;
     if (to instanceof Node && _tipHost.contains(to)) return;
@@ -14587,6 +14747,8 @@ function setupHoverTips() {
 // (ความกว้างแถบข้างปรับด้วยที่จับของ dock ใน Panel System แล้ว — .k-resize-handle)
 
 window.addEventListener('DOMContentLoaded', () => {
+  // [alpha.157r] อีโมจิสีในหน้าจอ → ไอคอนเส้นชุดเดียวกัน (ดู glyph-icons.js)
+  try { startGlyphUpgrade(document.body); } catch (e) { log('warn', 'glyph upgrade', e); }
   // ---- ลงทะเบียนฮุกให้ toolbar+UI อัปเดตเมื่อเปลี่ยนภาษา ----
   onLanguageChanged(applyToolbarShortcutTitles);
   // ---- โหลดภาษาเริ่มต้น (ไทย) แล้วค่อยเปิดโปรเจกต์ ----
@@ -14620,6 +14782,11 @@ window.addEventListener('DOMContentLoaded', () => {
   //   ของ DOMContentLoaded → **ตัวผูกปุ่มที่เหลือทั้งหมดหลังบรรทัดนั้นไม่ถูกรัน**
   //   ผลคือปุ่มครึ่งแถบกดแล้วเงียบ และแถบรูปแบบลอยไม่ถูกสร้างเลย — โดยไม่มี error ให้ผู้ใช้เห็น
   $('#tb-find').onclick = () => openFind();
+  // [alpha.157] ขวาสุดของแถบ: ซ่อน/แสดงแผงทีละฝั่ง
+  for (const b of document.querySelectorAll('.k-side-toggles [data-side]')) {
+    b.onclick = () => handleCommand('panels-side-' + b.dataset.side);
+  }
+  syncSideToggles();
   $('#tb-img').onclick = insertImage;
   // [alpha.62 บั๊ก 14] สวิตช์จริง — กดเปิด กดซ้ำปิด (บทเรียนเดียวกับปุ่มแชท AI ใน 62-2)
   $('#tb-gallery').onclick = () => toggleGallery();
@@ -20561,16 +20728,20 @@ async function runTest(projectPath) {
       pb.renderer.discardActiveObject();
       for (const [tool, w, h] of [['sticky', 170, 120], ['text', 200, 60], ['shape', 240, 140]]) {
         pb.interaction.setTool(tool);
-        const bx = 1200, by = tool === 'sticky' ? 200 : tool === 'text' ? 400 : 600;
+        // [alpha.157r] ตำแหน่งต้องอยู่ในผืนผ้าใบที่มองเห็น — แถบแท็บทรงเม็ดสูงขึ้น ผืนผ้าใบในเลย์เอาต์เทสเตี้ยลง
+        // (เดิมลากถึงแถวที่ 720 ของกระดาน ซึ่งเลยขอบล่างไปแล้ว → วัตถุถูกตัดความสูงตามขอบ)
+        const bx = 1200, by = tool === 'sticky' ? 40 : tool === 'text' ? 180 : 260;
         const p1 = toClient(bx, by), p2 = toClient(bx + w, by + h);
         rawDown(p1.x, p1.y); rawMove(p2.x, p2.y); rawUp(p2.x, p2.y);
         await waitMs(40);
+        const pre157 = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
+        const preH157 = pre157 ? Math.round(pre157.height) : -1;
         pb.interaction.closeEditor();
         const made = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
         const cvR = cvEl.getBoundingClientRect();
         check(`[65r-5] ลากกำหนดขนาดแล้วค่อยสร้าง "${tool}" ได้ตามที่ลาก`,
               !!made && Math.abs(made.width - w) <= 4 && Math.abs(made.height - h) <= 4,
-              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h}`
+              made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h} · ก่อนปิดตัวแก้ไข h=${preH157} · cv=${Math.round(cvEl.getBoundingClientRect().height)} off=${JSON.stringify(pb.renderer.canvas._offset)} p1=${Math.round(p1.y)} p2=${Math.round(p2.y)}`
                    : `ไม่เกิดวัตถุ · canvas=${Math.round(cvR.width)}x${Math.round(cvR.height)}`
                      + ` vt=${pb.renderer.canvas.viewportTransform.map((v) => Math.round(v * 100) / 100).join(',')}`
                      + ` p1=${Math.round(p1.x)},${Math.round(p1.y)} p2=${Math.round(p2.x)},${Math.round(p2.y)}`
@@ -24789,8 +24960,17 @@ async function runTest(projectPath) {
       for (const lib of ['Electron', 'ProseMirror', 'Fabric.js', 'pdf-lib', 'JSZip', 'Fuse.js', 'esbuild', 'Courier Prime']) {
         check('[76-19] เครดิตมี ' + lib, names.includes(lib), names);
       }
+      // [alpha.157r] เครดิตเป็นแผ่นเลื่อนทับภาพประกอบ — กดลิงก์ "เครดิต" บนเมนูของกล่องก่อน
       const ov = aboutDialog();
       await new Promise((r) => setTimeout(r, 20));
+      check('[157r-3] ★ กล่องเกี่ยวกับเป็นการ์ดสองฝั่ง (ซ้าย: โลโก้/ข้อความ · ขวา: ภาพ + เมนูลิงก์)',
+            !!ov.querySelector('.k-about-left .k-about-logo') && !!ov.querySelector('.k-about-right .k-about-hero')
+            && ov.querySelectorAll('.k-about-nav .k-about-link').length >= 3 && !!ov.querySelector('.k-about-foot .k-about-round'));
+      const heroR = ov.querySelector('.k-about-right').getBoundingClientRect(), leftR = ov.querySelector('.k-about-left').getBoundingClientRect();
+      check('[157r-3] ฝั่งภาพอยู่ขวาและกว้างกว่าฝั่งข้อความ', heroR.left >= leftR.right - 1 && heroR.width > leftR.width,
+            Math.round(leftR.width) + ' / ' + Math.round(heroR.width));
+      [...ov.querySelectorAll('.k-about-link')].find((b) => b.textContent === tt('ui.about.credits')).click();
+      await new Promise((r) => setTimeout(r, 320));
       const rows = ov.querySelectorAll('.k-credit-row');
       check('[76-20] กล่องเกี่ยวกับวาดแถวเครดิตครบทุกแถว', rows.length === flatCr.length, rows.length + ' vs ' + flatCr.length);
       const txt = ov.textContent;
@@ -26097,8 +26277,31 @@ async function runTest(projectPath) {
           await new Promise((r) => setTimeout(r, 80));
           const cs = getComputedStyle(document.body);
           check('[137-3] ★ ธีม K2 อยู่ในทะเบียนธีม', THEMES.includes('k2'), THEMES.join(','));
-          check('[138-2] ★★ เหลือแค่สองธีมของ K2 (dark/light ของเดิมถูกลบทิ้ง)',
-                THEMES.length === 2 && THEMES.join(',') === 'k2,k2-light', THEMES.join(','));
+          // [alpha.159] ทะเบียนย้ายไป themes.json + ธีมจานสีใหม่ — k2/k2-light ยังอยู่หัวรายการ
+          check('[138-2] ★★ ธีมของ K2 อยู่หัวทะเบียน (dark/light ของเดิมไม่กลับมา)',
+                THEMES[0] === 'k2' && THEMES[1] === 'k2-light' &&
+                !THEMES.includes('dark') && !THEMES.includes('light'), THEMES.join(','));
+          // [alpha.159] ★ ทุกธีมในทะเบียนมีไฟล์ css ถูกโหลดจริง: สลับแล้วพื้นเปลี่ยน · กระดาษไม่ขยับ
+          {
+            const seenBg = new Map();
+            const bad159 = [];
+            for (const id of THEMES) {
+              toggleTheme(id);
+              await new Promise((r) => setTimeout(r, 20));
+              const bgc = getComputedStyle(document.body).backgroundColor;
+              if (seenBg.has(bgc) && !(id.startsWith('word') || id === 'excel' || id === 'powerpoint')) {
+                // word/excel/powerpoint ใช้พื้นขาวเหมือนกันโดยตั้งใจ
+                if (!['word', 'excel', 'powerpoint'].includes(seenBg.get(bgc))) bad159.push(id + '=' + seenBg.get(bgc));
+              }
+              if (!seenBg.has(bgc)) seenBg.set(bgc, id);
+              if (!document.body.classList.contains('theme-' + id)) bad159.push(id + ':no-class');
+              if (sheet0 && getComputedStyle(sheet0).backgroundColor !== sheetBg0) bad159.push(id + ':paper');
+            }
+            check('[159-5] ★ ทุกธีมโหลดสีของตัวเองจริง + ไม่แตะกระดาษ', bad159.length === 0,
+                  bad159.join(' ') + ' · ' + THEMES.length + ' ธีม');
+            toggleTheme('k2');
+            await new Promise((r) => setTimeout(r, 40));
+          }
           check('[138-2] ★ ค่าเก่าที่บันทึกไว้ ("dark"/"light") ยังเปิดได้ ไม่ตกไปค่าเริ่มต้นมั่ว ๆ',
                 THEME_ALIAS.dark === 'k2' && THEME_ALIAS.light === 'k2-light');
           check('[137-3] ★ เลือกธีม K2 → body มีคลาส theme-k2 ตัวเดียว',
@@ -26669,9 +26872,11 @@ async function runTest(projectPath) {
           await buildTree();
           const chip = [...document.querySelectorAll('#tree .sc-status')]
             .find((c) => c.textContent.trim() === 'รอตรวจ');
-          check('ชิปสถานะใน Explorer ได้สีของสถานะนั้น',
-                !!chip && getComputedStyle(chip).color === 'rgb(18, 52, 86)',
-                chip ? getComputedStyle(chip).color : 'ไม่พบชิป');
+          // [alpha.157] ชิปเป็น "พื้นสีเต็ม" แล้ว (ผู้ใช้: สีเต็มแถบ) — สีสถานะอยู่ที่พื้น · ตัวอักษรเลือกให้อ่านออก
+          check('ชิปสถานะใน Explorer ได้สีของสถานะนั้น (พื้นสีเต็ม + ตัวอักษรขาวบนสีเข้ม)',
+                !!chip && getComputedStyle(chip).backgroundColor === 'rgb(18, 52, 86)'
+                && getComputedStyle(chip).color === 'rgb(255, 255, 255)',
+                chip ? getComputedStyle(chip).backgroundColor + ' / ' + getComputedStyle(chip).color : 'ไม่พบชิป');
           await setSceneMeta(dPath, chS, scS2, { status: '' });
         }
         // ส่งออก → ลบ → นำเข้ากลับ
@@ -26962,9 +27167,15 @@ async function runTest(projectPath) {
             !document.getElementById('k-sp-thai'));
       // ── กล่องตั้งค่า → แท็บฟอนต์: แถวต้องตั้งเป้าหมาย/สัดส่วน/เลือกจากเครื่องได้ ──
       settingsDialog('fonts');
-      await new Promise((r) => setTimeout(r, 200));
-      const dlg97 = [...document.querySelectorAll('.k-dialog')].pop();
-      const row97 = dlg97 && dlg97.querySelector('.k-font-row');
+      // [alpha.159] แถวฟอนต์วาดหลังอ่านโฟลเดอร์ Fonts/ ของโปรเจกต์ (async ผ่าน IPC) —
+      // รอเงื่อนไขจริง ไม่ใช่เดาเวลา (บทเรียน 41: เวลาตายตัวพังเฉพาะตัว packaged ที่บูตช้ากว่า)
+      let dlg97 = null, row97 = null;
+      for (let i = 0; i < 60; i++) {
+        dlg97 = [...document.querySelectorAll('.k-dialog')].pop();
+        row97 = dlg97 && dlg97.querySelector('.k-font-row');
+        if (row97) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
       check('[97-12] ★ แท็บฟอนต์มีแถวอย่างน้อยหนึ่งแถว', !!row97);
       check('[97-12] ★ แต่ละแถวเลือกได้ว่าใช้กับโหมดไหน (นิยาย/บท/ทั้งสอง)',
             !!row97 && !!row97.querySelector('.k-font-target') &&
@@ -27047,10 +27258,12 @@ async function runTest(projectPath) {
       check('#2 แท็บ "การเขียน" มีช่องเลือกแบบอักษรบทหนัง', !!spSel);
       // รายการฟอนต์เติมแบบ async (อ่านโฟลเดอร์ Fonts/ ผ่าน IPC) — รอจนเติมเสร็จ ไม่เดาเวลา
       for (let i = 0; i < 40; i++) {
-        if (spSel && spSel.options.length >= 8) break;
+        // [alpha.159] รายชื่อฮาร์ดโค้ดถูกลบ — รอจนตัวเลือกฟอนต์ประกอบเสร็จ (มีปุ่ม/ช่องตัวอย่างต่อท้าย)
+        if (spSel && spSel.nextElementSibling && spSel.nextElementSibling.classList.contains('k-font-extra')) break;
         await new Promise((r) => setTimeout(r, 50));
       }
-      check('#2 ช่องเลือกฟอนต์บทหนังมีรายการฟอนต์ให้เลือก', spSel && spSel.options.length >= 8,
+      // [alpha.159] ค่าเริ่มต้น (Courier Prime) + ค่าที่ตั้งไว้ (ฟอนต์ของเครื่อง) อย่างน้อยสองตัว
+      check('#2 ช่องเลือกฟอนต์บทหนังมีรายการฟอนต์ให้เลือก', spSel && spSel.options.length >= 2,
             spSel && String(spSel.options.length));
       check('#2 ช่องเลือกโชว์ค่าที่ตั้งไว้ปัจจุบัน',
             spSel && spSel.value === '"TH Sarabun New", sans-serif', spSel && spSel.value);
@@ -28264,16 +28477,17 @@ async function runTest(projectPath) {
         // ---- ข้อ 5: ฟอนต์ตามภาษา ----
         {
           const keep = state.settings.langFonts;
+          // [alpha.159] Courier Thai ถูกลบ — ทดสอบกลไกเดิมด้วย Courier Prime (ไฟล์เดียวที่ยังฝังมา)
           state.settings.langFonts = [
-            { id: 'thai', range: 'U+0E00-0E7F', builtin: 'CourierThaiMono.ttf', enabled: true },
+            { id: 'lat', range: 'U+0000-00FF', builtin: 'CourierPrime-Regular.ttf', enabled: true },
           ];
           const n = applyProjectLangFonts();
           check('[57a-5] สร้าง @font-face ตามภาษาเข้า <head>',
                 n.total === 1 && n.prose === 1 && !!document.getElementById('k-lang-fonts'),
                 JSON.stringify(n));
           const css = document.getElementById('k-lang-fonts').textContent;
-          check('[57a-5] CSS มี unicode-range ของไทย + ไฟล์ที่ฝังมา',
-                css.includes('unicode-range:U+0E00-0E7F') && css.includes('CourierThaiMono.ttf'), css);
+          check('[57a-5] CSS มี unicode-range + ไฟล์ที่ฝังมา',
+                css.includes('unicode-range:U+0000-00FF') && css.includes('CourierPrime-Regular.ttf'), css);
           applySettings();
           const edFont = document.documentElement.style.getPropertyValue('--ed-font');
           const spFont = document.documentElement.style.getPropertyValue('--sp-font');
@@ -28288,10 +28502,9 @@ async function runTest(projectPath) {
           // [alpha.78] ต้องส่ง "ข้อความไทย" ไปด้วย — @font-face ถูกจำกัด unicode-range ไว้ที่ไทย
           // (ค่าเริ่มต้นของ check/load คือ "BESbswy" ซึ่งเป็นละติน → นอกช่วง = คืน false ตลอด)
           try {
-            await document.fonts.load('16px "Courier Thai Mono"', 'ก');
-            check('[57a-5] โหลดไฟล์ฟอนต์ไทยที่ฝังมาได้จริง',
-                  document.fonts.check('16px "Courier Thai Mono"', 'ก'));
-          } catch (e) { check('[57a-5] โหลดไฟล์ฟอนต์ไทยที่ฝังมาได้จริง', false, String(e)); }
+            const got = await document.fonts.load('16px "' + LANG_FAMILY + '"', 'A');
+            check('[57a-5] โหลดไฟล์ฟอนต์ที่ฝังมาผ่านวงศ์ตามภาษาได้จริง', got.length > 0, String(got.length));
+          } catch (e) { check('[57a-5] โหลดไฟล์ฟอนต์ที่ฝังมาผ่านวงศ์ตามภาษาได้จริง', false, String(e)); }
           // ปิดทุกแถว = กลับไปใช้ stack เดิม ไม่มีวงศ์รวมนำหน้า
           state.settings.langFonts = [{ id: 'thai', range: 'U+0E00-0E7F', builtin: 'x.ttf', enabled: false }];
           applySettings();
@@ -28307,7 +28520,7 @@ async function runTest(projectPath) {
         {
           const keepLF = state.settings.langFonts;
           state.settings.langFonts = [
-            { id: 'thai', label: 'ไทย', range: 'U+0E00-0E7F', builtin: 'CourierThaiMono.ttf', enabled: true },
+            { id: 'thai', label: 'ไทย', range: 'U+0E00-0E7F', builtin: 'CourierPrime-Regular.ttf', enabled: true },
           ];
           applySettings();
           const spBefore = document.documentElement.style.getPropertyValue('--sp-font');
@@ -28337,35 +28550,21 @@ async function runTest(projectPath) {
           applySettings();
         }
 
-        // ---- [alpha.78] `…` `—` `“` ต้องไม่กลายเป็นวรรณยุกต์ลอย เมื่อเลือกฟอนต์ไทยตระกูล Courier ----
-        // CourierThaiMono/Prop (ฟอนต์ปี 1998) เอาช่วง General Punctuation ไปชี้ทับด้วย glyph
-        // วรรณยุกต์ (advance = 0) → `…` ออกมาหน้าตาเหมือน `๊` · แก้ด้วย unicode-range ใน style.css
+        // ---- [alpha.159] ฟอนต์ Courier Thai Mono/Prop ถูกลบออกจากโปรแกรมแล้ว (ผู้ใช้สั่ง) ----
+        // เทส [a78] เดิม (เครื่องหมายวรรคตอนของฟอนต์ปี 1998) + [57a-5](ข) (วรรณยุกต์ของฟอนต์นั้น) หมดความหมาย
         {
-          for (const fam of ['Courier Thai Mono', 'Courier Thai Proportional']) {
-            await document.fonts.load(`16px "${fam}"`, 'ก').catch(() => {});
+          const faces159 = [];
+          for (const sh of [...document.styleSheets]) {
+            let rules = [];
+            try { rules = [...sh.cssRules]; } catch {}
+            for (const r of rules) if (r.constructor && r.constructor.name === 'CSSFontFaceRule') faces159.push(r.style.getPropertyValue('font-family'));
           }
-          const cvs = document.createElement('canvas');
-          const cx = cvs.getContext('2d');
-          const w = (font, text) => { cx.font = font; return cx.measureText(text).width; };
-          for (const fam of ['Courier Thai Mono', 'Courier Thai Proportional']) {
-            const withThai = `16px "${fam}", "Courier Prime", monospace`;
-            const latinOnly = '16px "Courier Prime", monospace';
-            for (const [ch, name] of [['…', 'จุดไข่ปลา'], ['—', 'ขีดยาว'], ['“', 'อัญประกาศเปิด']]) {
-              const a = w(withThai, ch);
-              check(`[a78] ${fam}: ${name} ไม่ใช่มาร์กกว้าง 0`, a > 1, `${ch} = ${a}px`);
-              check(`[a78] ${fam}: ${name} ตกไปใช้ Courier Prime ตามลูกโซ่`,
-                    Math.abs(a - w(latinOnly, ch)) < 0.5, `${a} vs ${w(latinOnly, ch)}`);
-            }
-            // ...แต่อักษรไทยต้องยังใช้ฟอนต์นั้นอยู่ (ไม่ได้ปิดทั้งวงศ์ทิ้ง)
-            // วัดที่ 64px ไม่ใช่ 16px: ความกว้างของ canvas เป็นสัดส่วนตรงกับขนาดฟอนต์ แต่เกณฑ์
-            // 0.5px เป็นค่าคงที่ — ที่ 16px ส่วนต่างจริงของสองฟอนต์นี้อยู่แถว 0.37px จึงตกเกณฑ์
-            // ทั้งที่ฟอนต์ทำงานถูกต้อง (เจอตอน alpha.82 · เดิม FAIL บนเครื่องที่ต่างกันแค่การปัดเศษ)
-            const big = (font, text) => { cx.font = font; return cx.measureText(text).width; };
-            const thaiBig = big(`64px "${fam}", "Courier Prime", monospace`, 'กขคง');
-            const latinBig = big('64px "Courier Prime", monospace', 'กขคง');
-            check(`[a78] ${fam}: อักษรไทยยังใช้ฟอนต์นี้อยู่`,
-                  Math.abs(thaiBig - latinBig) > 0.5, `${thaiBig} vs ${latinBig}`);
-          }
+          check('[159-2] ★ ไม่มี @font-face ของ Courier Thai เหลืออยู่ในโปรแกรม',
+                !faces159.some((f) => /Courier Thai/i.test(f)), faces159.join(' | '));
+          check('[159-2] Courier Prime (OFL) ยังฝังมากับโปรแกรม',
+                faces159.some((f) => /Courier Prime/i.test(f)), faces159.join(' | '));
+          check('[159-2] ไม่มีไฟล์ Courier Thai ในรายการฟอนต์ฝังแล้ว',
+                !BUILTIN_FONT_FILES.some((b) => /Thai/i.test(b.file)), JSON.stringify(BUILTIN_FONT_FILES));
         }
 
         // ---- ข้อ 5 (ต่อ): "สระ/วรรณยุกต์ลอย" มี 2 ต้นเหตุ — CSS และตัวฟอนต์เอง ----
@@ -28377,46 +28576,7 @@ async function runTest(projectPath) {
           check('[57a-5] หัวฉากไม่มี letter-spacing (ดันสระ/วรรณยุกต์ไทยหลุดจากพยัญชนะ)',
                 ls === 'normal' || parseFloat(ls) === 0, ls);
 
-          // (ข) ตัวฟอนต์ไทยที่ฝังมา วางมาร์กสูงเกินไป → วัดช่องว่างจริงด้วยการวาดลง canvas
-          //     (ฟอนต์ต้นฉบับห่าง ~7% ของ em · ฟอนต์อ้างอิงห่าง ~3.5% · แก้แล้วต้องเข้าเกณฑ์อ้างอิง)
-          const markGap = async (family, text, px = 110) => {
-            await document.fonts.load(`${px}px "${family}"`);
-            const cv = document.createElement('canvas');
-            cv.width = px * 2; cv.height = px * 2;
-            const cx = cv.getContext('2d');
-            cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
-            cx.fillStyle = '#000'; cx.textBaseline = 'alphabetic';
-            cx.font = `${px}px "${family}"`;
-            cx.fillText(text, px * 0.4, px * 1.4);
-            const d = cx.getImageData(0, 0, cv.width, cv.height).data;
-            const rows = [];
-            for (let y = 0; y < cv.height; y++) {
-              let ink = false;
-              for (let x = 0; x < cv.width && !ink; x++) if (d[(y * cv.width + x) * 4] < 128) ink = true;
-              rows.push(ink);
-            }
-            const ys = rows.map((v, i) => (v ? i : -1)).filter((i) => i >= 0);
-            if (!ys.length) return null;
-            let gap = 0, cur = 0;
-            for (let i = ys[0]; i <= ys[ys.length - 1]; i++) {
-              if (!rows[i]) { cur++; gap = Math.max(gap, cur); } else cur = 0;
-            }
-            return gap / px;            // สัดส่วนต่อ em
-          };
-          const LIMIT = 0.05;           // ฟอนต์อ้างอิงอยู่ราว 0.027–0.036 · ต้นฉบับที่ยังไม่แก้ ~0.073
-          for (const [fam, txt, label] of [
-            ['Courier Thai Mono', 'ก่', 'พยัญชนะ+วรรณยุกต์'],
-            ['Courier Thai Mono', 'กี่', 'พยัญชนะ+สระบน+วรรณยุกต์'],
-            ['Courier Thai Proportional', 'ก้', 'ตัวสัดส่วน'],
-          ]) {
-            const g = await markGap(fam, txt);
-            check(`[57a-5] ฟอนต์ไทยที่ฝังมา — วรรณยุกต์ไม่ลอย (${label})`,
-                  g !== null && g <= LIMIT, `${fam} "${txt}" = ${g === null ? 'ว่าง' : (g * 100).toFixed(1) + '% ของ em'}`);
-          }
-          // สระล่างก็ต้องไม่ห้อยหลุด
-          const gu = await markGap('Courier Thai Mono', 'กุ');
-          check('[57a-5] ฟอนต์ไทยที่ฝังมา — สระล่างไม่ห้อยหลุด',
-                gu !== null && gu <= 0.065, gu === null ? 'ว่าง' : (gu * 100).toFixed(1) + '%');
+          // [alpha.159] (ข) เดิมวัดวรรณยุกต์ของ Courier Thai ที่ฝังมา — ฟอนต์นั้นถูกลบแล้ว
         }
 
         // ════ [alpha.144] ★★ วรรณยุกต์ลอย เมื่อผู้ใช้ตั้งฟอนต์ที่ "ไม่มีอักษรไทย" ════
@@ -32353,7 +32513,7 @@ async function runTest(projectPath) {
               ? JSON.parse(JSON.stringify(state.settings.langFonts)) : null;
             state.settings.langFonts = [
               { id: 'th98', range: 'U+0E00-0E7F', target: 'all',
-                builtin: 'CourierThaiMono.ttf', enabled: true },
+                builtin: 'CourierPrime-Regular.ttf', enabled: true },
             ];
             applySettings();
             await w98(150);
@@ -32370,6 +32530,138 @@ async function runTest(projectPath) {
             state.settings.langFonts = keepLF98;
             applySettings();
             await w98(120);
+          }
+
+          // ═══ [alpha.159 ข้อ 3] ความกว้างของแท็บตั้งได้ · จอกับไฟล์ส่งออกใช้ค่าเดียวกัน ═══
+          {
+            const keepPr159 = JSON.parse(JSON.stringify(state.settings.prose || {}));
+            T.editor.setMarkdown(String.fromCharCode(9) + 'เยื้องด้วยแท็บ');
+            await w98(200);
+            const tabOf = () => getComputedStyle(pm98).tabSize;
+            check('[159-3] ค่าเริ่มต้น: แท็บ = 4 ช่องว่าง', tabOf() === '4', tabOf());
+            const textStart = () => {
+              const para = pm98.querySelector('p');
+              const tn = [...(para ? para.childNodes : [])].find((nn) => nn.nodeType === 3);
+              if (!tn || tn.textContent.length < 2) return NaN;
+              const r = document.createRange();
+              r.setStart(tn, 1); r.setEnd(tn, 2);
+              return r.getBoundingClientRect().left;
+            };
+            const left4 = textStart();
+            state.settings.prose = { ...(state.settings.prose || {}), tabSize: 12, tabUnit: 'space' };
+            applySettings();
+            await w98(200);
+            check('[159-3] ★ ตั้งแท็บ = 12 ช่องว่าง → ตัวแก้ไขใช้จริง', tabOf() === '12', tabOf());
+            check('[159-3] ★ ข้อความหลังแท็บขยับไปขวาจริง (วัดตำแหน่งบนจอ)',
+                  textStart() > left4 + 10, left4 + ' → ' + textStart());
+            state.settings.prose = { ...(state.settings.prose || {}), tabSize: 2, tabUnit: 'cm' };
+            applySettings();
+            await w98(150);
+            check('[159-3] หน่วย ซม. ใช้ได้', parseFloat(tabOf()) > 70, tabOf());
+            check('[159-3] ★ CSS ที่ส่งออกมี tab-size ค่าเดียวกับจอ',
+                  proseExportCss(proseFormat()).includes('tab-size:2cm'));
+            state.settings.prose = keepPr159;
+            applySettings();
+            await w98(120);
+          }
+
+          // ═══ [alpha.159 ข้อ 2] ฟอนต์: ค่าเริ่มต้น Garamond · Courier Prime · ฟอนต์ในโปรเจกต์ · ช่องตัวอย่าง ═══
+          {
+            const rootVar159 = (v) => document.documentElement.style.getPropertyValue(v);
+            const keepFF159 = state.settings.fontFamily;
+            state.settings.fontFamily = '';
+            applySettings();
+            await w98(100);
+            check('[159-2] ★ ฟอนต์นิยายเริ่มต้น = Garamond',
+                  rootVar159('--ed-font').replace('"' + LANG_FAMILY + '", ', '').trim().startsWith('"Garamond"'),
+                  rootVar159('--ed-font'));
+            // ฟอนต์ในโฟลเดอร์ Fonts/ ของโปรเจกต์ต้องมี @font-face ให้จริง
+            const fdir159 = await kapi.join(state.root, 'Fonts');
+            await kapi.mkdir(fdir159);
+            const src159 = await kapi.join(await kapi.appDir(), 'renderer', 'assets', 'fonts', 'CourierPrime-Bold.ttf');
+            const dst159 = await kapi.join(fdir159, 'K2TestFont159.ttf');
+            await kapi.copyFile(src159, dst159);
+            await preloadLangFontUrls();
+            applySettings();
+            await w98(100);
+            const pf159 = (document.getElementById('k-project-fonts') || {}).textContent || '';
+            check('[159-2] ★ ไฟล์ใน Fonts/ ได้ @font-face ชื่อวงศ์ = ชื่อไฟล์',
+                  pf159.includes('font-family:"K2TestFont159"'), pf159.slice(0, 160));
+            let loaded159 = [];
+            try { loaded159 = await document.fonts.load('16px "K2TestFont159"', 'A'); } catch {}
+            check('[159-2] ★ ฟอนต์ในโปรเจกต์โหลดได้จริง', loaded159.length > 0, String(loaded159.length));
+            check('[159-2] ฟอนต์ในโปรเจกต์ติดไปกับ CSS ของไฟล์ส่งออก', (await exportFontCss()).includes('K2TestFont159'));
+            // กล่องตั้งค่า
+            document.querySelectorAll('.k-overlay').forEach((x) => x.remove());
+            settingsDialog('write');
+            let dlg159 = null, ffSel = null;
+            for (let i = 0; i < 40; i++) {
+              dlg159 = [...document.querySelectorAll('.k-settings')].pop();
+              ffSel = dlg159 && dlg159.querySelector('#st-fontfamily');
+              if (ffSel && ffSel.options.length && ffSel.nextElementSibling) break;
+              await w98(100);
+            }
+            const opts159 = ffSel ? [...ffSel.options].map((o) => o.textContent + '=' + o.value) : [];
+            check('[159-2] ★ ช่องฟอนต์นิยาย: ตัวแรก = ค่าเริ่มต้น Garamond',
+                  !!ffSel && ffSel.options[0].value === '' && /Garamond/.test(ffSel.options[0].textContent), opts159.join(' | '));
+            check('[159-2] ★ ไม่มีรายชื่อฟอนต์ฮาร์ดโค้ด (Courier Thai / Sarabun / Tahoma …) แล้ว',
+                  !opts159.some((o) => /Courier Thai|Tahoma|Sarabun|Segoe|Georgia|Leelawadee|Thonburi/i.test(o)), opts159.join(' | '));
+            check('[159-2] ★ ฟอนต์ในโปรเจกต์อยู่ในรายการ', opts159.some((o) => o.includes('K2TestFont159')), opts159.join(' | '));
+            const spSel159 = dlg159 && dlg159.querySelector('#st-spfontfamily');
+            check('[159-2] ★ ช่องฟอนต์บท: ค่าเริ่มต้น = Courier Prime',
+                  !!spSel159 && spSel159.options[0].value === '' && /Courier Prime/.test(spSel159.options[0].textContent));
+            const extra159 = ffSel && ffSel.nextElementSibling;
+            const sample159 = extra159 && extra159.querySelector('input.k-font-sample');
+            check('[159-2] ★ มีปุ่ม "จากเครื่อง" + ช่องตัวอย่างที่พิมพ์ได้',
+                  !!(extra159 && extra159.querySelector('.k-font-sys')) && !!sample159 && !sample159.readOnly && !sample159.disabled);
+            if (sample159 && ffSel) {
+              sample159.value = 'ทดสอบพิมพ์เอง';
+              check('[159-2] ช่องตัวอย่างใช้ฟอนต์เริ่มต้นเมื่อเลือกค่าเริ่มต้น',
+                    /Garamond/.test(sample159.style.fontFamily), sample159.style.fontFamily);
+              const pv = [...ffSel.options].find((o) => o.value.includes('K2TestFont159'));
+              if (pv) { ffSel.value = pv.value; ffSel.dispatchEvent(new Event('change')); }
+              check('[159-2] ★ เปลี่ยนฟอนต์ → ช่องตัวอย่างเปลี่ยนฟอนต์ตาม (ข้อความที่พิมพ์ยังอยู่)',
+                    sample159.style.fontFamily.includes('K2TestFont159') && sample159.value === 'ทดสอบพิมพ์เอง',
+                    sample159.style.fontFamily);
+            }
+            const hf159 = dlg159 && dlg159.querySelector('#st-pr-hfont');
+            check('[159-2] ช่องฟอนต์หัวข้อใช้ตัวเลือกชุดเดียวกัน (มีช่องตัวอย่าง)',
+                  !!hf159 && !!(hf159.nextElementSibling && hf159.nextElementSibling.querySelector('.k-font-sample')));
+            // [alpha.159r] ช่องตัวอย่างของหน้า "ฟอนต์ตามภาษา" ต้องพิมพ์เองได้ และห้ามถูกเขียนทับ
+            {
+              const fs159 = dlg159 && dlg159.querySelector('#st-fonts-sample');
+              check('[159r-2] ★ ตัวอย่างฟอนต์ตามภาษาเป็นช่องกรอกที่พิมพ์ได้',
+                    !!fs159 && fs159.tagName === 'INPUT' && !fs159.readOnly && !fs159.disabled,
+                    fs159 ? fs159.tagName : 'ไม่มี');
+              const prevHint = dlg159 && dlg159.querySelector('#st-fonts-preview');
+              check('[159r-2] ป้ายตัวอย่างไม่มีคำว่า "ไทยผสมอังกฤษ" แล้ว',
+                    !!prevHint && !/ไทยผสมอังกฤษ/.test(prevHint.textContent), prevHint && prevHint.textContent);
+              if (fs159) {
+                fs159.value = 'พิมพ์เองได้ ABC';
+                const addBtn159 = dlg159.querySelector('#st-fonts-add');
+                if (addBtn159) { addBtn159.click(); await w98(150); }
+                check('[159r-2] ★ แก้แถวฟอนต์แล้วข้อความที่พิมพ์ไว้ยังอยู่',
+                      dlg159.querySelector('#st-fonts-sample').value === 'พิมพ์เองได้ ABC',
+                      dlg159.querySelector('#st-fonts-sample').value);
+              }
+            }
+            if (dlg159) dlg159.querySelector('.k-cancel').click();
+            await w98(200);
+            document.querySelectorAll('.k-overlay').forEach((x) => x.remove());
+            // PDF ของบท: ฟอนต์ไทยมาจากเครื่อง (ไม่มีฝังมาแล้ว)
+            const PU159 = await import('./pdf-ui.js');
+            PU159.clearPdfFontCache();
+            const thaiP159 = await PU159.pdfThaiFontPath();
+            check('[159-2] ★ PDF บท: หาไฟล์ฟอนต์ไทยของเครื่องเจอ (.ttf/.otf)',
+                  /\.(ttf|otf)$/i.test(thaiP159), thaiP159 || 'ไม่พบ');
+            const fb159 = await pdfFontBytes();
+            check('[159-2] ★ PDF บท: ได้ไบต์ฟอนต์ไทย + ฟอนต์ละติน Courier Prime',
+                  !!(fb159.regular && fb159.regular.length > 1000) && !!(fb159.latin && fb159.latin.regular), fb159.file);
+            await kapi.remove(dst159);
+            await preloadLangFontUrls();
+            state.settings.fontFamily = keepFF159;
+            applySettings();
+            await w98(100);
           }
 
           // ═══ ข้อ 3 · toggle รายการแล้วบรรทัดห้ามขยับ ═══
@@ -33329,7 +33621,8 @@ async function runTest(projectPath) {
           check('[69] หาไฟล์ฟอนต์ที่มีอักษรไทยสำหรับฝังลง PDF ได้',
                 !!fonts59.regular && fonts59.regular.length > 1000, fonts59.file);
           check('[69] ฟอนต์ที่เลือกเป็นตัวที่มีอักษรไทย (Courier Prime ไม่มีไทยเลย)',
-                /Thai/.test(fonts59.file), fonts59.file);
+                // [alpha.159] ไม่มีฟอนต์ไทยฝังมาแล้ว — ต้องเป็นไฟล์ฟอนต์ไทยของเครื่อง/โปรเจกต์ ไม่ใช่ Courier Prime
+                /\.(ttf|otf)$/i.test(fonts59.file) && !/CourierPrime/i.test(fonts59.file), fonts59.file);
           const pdf59 = await buildScriptPdf({ blocks: blocks59, title: 'บททดสอบ', fmt: fmt59,
             titlePages: std, headers: hdr59,
             opts: { toc: true, openPage: 1, titlePages: true, headers: true } });
@@ -33339,8 +33632,9 @@ async function runTest(projectPath) {
           check('[69] ไฟล์เริ่มด้วย %PDF-', head59 === '%PDF-', head59);
           check('[90] หน้าปกถูกนับรวมในไฟล์', pdf59.titleCount === 1 &&
                 pdf59.pageCount === pdf59.titleCount + pdf59.scriptPages);
-          const txt59 = Array.from(pdf59.bytes.slice(0, 200000))
-            .map((b) => String.fromCharCode(b)).join('');
+          // [alpha.159] อ่านทั้งไฟล์ — ฟอนต์ไทยของเครื่องใหญ่กว่า Courier Thai เดิม
+          // (/FontFile2 ของ Leelawadee UI อยู่ที่ไบต์ ~201,000 เลยช่วง 200KB ที่เคยตัดไว้)
+          const txt59 = new TextDecoder('latin1').decode(pdf59.bytes);
           check('[87] ไฟล์มีสารบัญ /Outlines', txt59.includes('/Outlines'));
           check('[87] ชื่อฉากในสารบัญเป็น UTF-16 (ไทยไม่กลายเป็นขยะ)', txt59.includes('/Title <FEFF'));
           check('[89] ตั้ง /OpenAction ให้เปิดที่หน้าที่กำลังเขียน', txt59.includes('/OpenAction'));
@@ -33763,11 +34057,11 @@ async function runTest(projectPath) {
           check('[r3-5] แผง ai-analyzer อยู่ใน PANEL_DEFS',
                 PANEL_DEFS.some((d) => d.id === 'ai-analyzer'));
           check('[r3-5] มี element เจ้าบ้านใน index.html', !!$('#ai-analyzer-panel'));
-          check('[r3-5] การ์ดครบ 11 ชนิดตามที่ผู้ใช้สั่ง', ANALYZER_CARDS.length === 11,
+          check('[r3-5] การ์ดครบ 12 ชนิดตามที่ผู้ใช้สั่ง', ANALYZER_CARDS.length === 12,
                 ANALYZER_CARDS.map((c) => c.id).join(','));
-          check('[r3-5] ลำดับการ์ดตรงกับสเปก 1-11',
+          check('[r3-5] ลำดับการ์ดตรงกับสเปก 1-11 + สัดส่วนฉาก',
                 ANALYZER_CARDS.map((c) => c.id).join(',')
-                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime');
+                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition');
           check('[r3-5] ไม่มีคีย์ภาษาหลุดมาเป็นชื่อการ์ด',
                 !ANALYZER_CARDS.some((c) => c.title.startsWith('ui.') || c.desc.startsWith('ui.')),
                 ANALYZER_CARDS.filter((c) => c.title.startsWith('ui.')).map((c) => c.id).join(','));
@@ -33775,9 +34069,9 @@ async function runTest(projectPath) {
           await renderFeaturePanel('ai-analyzer');
           const aiaHost = $('#ai-analyzer-body');
           // แผงอ่านไฟล์ทั้งโปรเจกต์แบบ async — ห้ามวัดผลทันทีหลังสั่งวาด (บทเรียน alpha.65r)
-          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 11);
+          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 12);
           check('[r3-5] เปิดแผงแล้ววาดเนื้อหาจริง', !!aiaHost.querySelector('.aia-wrap'));
-          check('[r3-5] วาดการ์ดครบ 11 ใบ', aiaHost.querySelectorAll('.aia-card').length === 11,
+          check('[r3-5] วาดการ์ดครบ 12 ใบ', aiaHost.querySelectorAll('.aia-card').length === 12,
                 aiaHost.querySelectorAll('.aia-card').length);
           const aiaTxt = aiaHost.textContent;
           for (const kw of ['จังหวะเรื่อง', 'ส่วนโค้งตัวละคร', 'คำที่ใช้บ่อย', 'ความขัดแย้ง', 'ความยาวฉาก',
@@ -33866,7 +34160,7 @@ async function runTest(projectPath) {
           };
           // รอจนแผงวาดของรอบใหม่เสร็จ — เงื่อนไข "ไม่มี X" เป็นจริงชั่วคราวระหว่างล้างกับเติม
           const settled = async (extra) => waitFor(() =>
-            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 11
+            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 12
             && !!$('#aia-usage') && (!extra || extra()));
           showPanel('ai-analyzer');
           await renderFeaturePanel('ai-analyzer');
@@ -33889,14 +34183,14 @@ async function runTest(projectPath) {
           // ── ข้อ 2: บอกโทเคน "ก่อนใช้" และ "หลังใช้" ──
           const uline = $('#aia-usage');
           check('[89r] มีแถบโทเคนบนแผง', !!uline);
-          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 11 ชนิด)',
+          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 12 ชนิด)',
                 !!uline.querySelector('.aia-usage-before')
                 && /\d/.test(uline.querySelector('.aia-usage-before').textContent),
                 uline.textContent);
           check('[89r] บอกยอดที่ใช้ไปแล้ว (ยังไม่ได้เรียก AI → บอกว่ายังไม่ได้เรียก)',
                 !!uline.querySelector('.aia-usage-after'), uline.textContent);
           const estChips = document.querySelectorAll('#ai-analyzer-body .aia-chip-est');
-          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 11, estChips.length);
+          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 12, estChips.length);
           check('[89r] ชิปบอกทั้งจำนวนโทเคนและราคา',
                 /\d/.test(estChips[0].textContent) && estChips[0].textContent.includes('$'),
                 estChips[0].textContent);
@@ -33917,7 +34211,7 @@ async function runTest(projectPath) {
           check('[89r] ปิด AI แล้วบอกว่าไม่มีค่าใช้จ่าย',
                 $('#aia-usage').textContent.includes('ไม่มีค่าใช้จ่าย'), $('#aia-usage').textContent);
           await clickWhen('#aia-use-ai');
-          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 11);
+          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 12);
 
           // ── ข้อ 1: เซสชันเก็บในโปรเจกต์ ──
           await runAnalysis('length');
@@ -34244,11 +34538,12 @@ async function runTest(projectPath) {
           check('[61-1] เรียงปุ่ม: มุมมอง · ค้นหา · ส่งออก · นำเข้า · ช่องว่าง · สร้างใหม่ · เปิด · ปิด',
                 JSON.stringify(order) === JSON.stringify(['home-view-modes', 'home-btn-find',
                   'home-find-input', 'home-btn-export', 'home-btn-import',
-                  'home-actions-spacer', 'home-btn-new', 'home-btn-open', 'home-btn-close']),
+                  'home-actions-spacer', 'home-btn-new', 'home-btn-open', 'home-btn-close', 'home-btn-quit']),
                 JSON.stringify(order));
           check('[r3-9] ปุ่มส่งออก/นำเข้ามีจริง',
                 !!acts.querySelector('.home-btn-export') && !!acts.querySelector('.home-btn-import'));
           check('[r3-9] ปุ่มปิดกล่องมีจริง', !!acts.querySelector('.home-btn-close'));
+          check('[157-home] ★ หน้าแรกมีปุ่มออกจากโปรแกรม (ท้ายแถว)', !!acts.querySelector('.home-btn-quit') && acts.lastElementChild.classList.contains('home-btn-quit'));
           check('[61-1] สวิตช์มุมมองแบบเดิม (📋 หัวกล่อง) ถูกแทนที่ด้วยปุ่มโหมด 2 ใบในแถบล่าง',
                 !ov9.querySelector('.home-view-btn') &&
                 acts.querySelectorAll('.home-view-mode').length === 2);
@@ -35159,7 +35454,8 @@ async function runTest(projectPath) {
               ` · css=${cs62.width}/${cs62.maxWidth}`);
         const acts62 = dlg.querySelector('.home-actions');
         check('[62-1] มีแถบคำสั่งที่ขอบล่างของกล่อง', !!acts62);
-        const btn62 = acts62.querySelector('button');
+        // [alpha.157r] ปุ่มในสวิตช์มุมมองเป็นเม็ดเล็กในราง — วัดกับปุ่ม "ลูกตรง" ของแถบแทน
+        const btn62 = acts62.querySelector(':scope > button');
         check('[62-1] ปุ่มบนแถบคำสั่งอยู่บรรทัดเดียว ไม่ตกลงไปสองบรรทัด',
               acts62.getBoundingClientRect().height < btn62.getBoundingClientRect().height * 1.8,
               `${Math.round(acts62.getBoundingClientRect().height)} / ` +
@@ -39215,10 +39511,28 @@ async function runTest(projectPath) {
           check('[81-5] ธีมสว่าง: ' + v + ' เป็นสีสว่าง', lum(rgbOf(val)) > 150, v + '=' + val);
         }
         // ของจริงบนหน้าจอ: แถบแท็บกับแถบชื่อหน้าต่างต้องสว่างตามธีม (ภาพที่ผู้ใช้ส่งมาเป็นดำทั้งคู่)
-        const tabEl81 = document.querySelector('#tabs .tab');
-        if (tabEl81) check('[81-5] ธีมสว่าง: แถบแท็บสว่างจริง',
-                           lum(getComputedStyle(tabEl81).backgroundColor) > 150,
-                           getComputedStyle(tabEl81).backgroundColor);
+        // [alpha.159r] วัด **รางแท็บ + แท็บที่เลือกอยู่** — ตั้งแต่ดีไซน์แท็บทรงเม็ด (.157)
+        // แท็บที่ไม่ได้เลือกมีพื้นโปร่งใสโดยตั้งใจ · ของเดิมหยิบ `#tabs .tab` ตัวแรกมาวัด
+        // จึงผ่าน/ไม่ผ่านตามว่าแท็บใบแรกบังเอิญเป็นใบที่เปิดอยู่ไหม (แดงเฉพาะตัว packaged)
+        const barTabs81 = document.getElementById('tabs');
+        if (barTabs81) check('[81-5] ธีมสว่าง: รางแท็บสว่างจริง',
+                             lum(getComputedStyle(barTabs81).backgroundColor) > 150,
+                             getComputedStyle(barTabs81).backgroundColor);
+        // แท็บที่ "ถูกเลือก" — วัดด้วยแท็บทดสอบที่เราสร้างเอง ไม่ใช่แท็บใบที่บังเอิญเปิดอยู่
+        // (สถานะแท็บขึ้นกับเทสก่อนหน้า · ของเดิมจึงแดงเฉพาะบางรอบบนตัว packaged)
+        // ตรวจของจริงด้วยการรายงานแท็บทุกใบไว้ใน note เผื่อไล่ย้อน
+        {
+          const tabsBar81 = document.getElementById('tabs');
+          const probe81 = el('div', 'tab on');
+          probe81.append(el('span', 'tab-title', 'probe'));
+          if (tabsBar81) tabsBar81.append(probe81);
+          const bg81 = probe81.isConnected ? getComputedStyle(probe81).backgroundColor : '';
+          note('[81-5] แท็บจริงบนแถบ: ' + [...(tabsBar81 ? tabsBar81.querySelectorAll('.tab') : [])]
+               .map((x) => x.className + '=' + getComputedStyle(x).backgroundColor).join(' · '));
+          check('[81-5] ธีมสว่าง: แท็บที่ถูกเลือกสว่างจริง', lum(bg81) > 150,
+                bg81 + ' · --tab-bg=' + getComputedStyle(document.body).getPropertyValue('--tab-bg'));
+          probe81.remove();
+        }
         // [alpha.138] เก็บภาพธีมสว่างไว้ตรวจด้วยตาด้วย (ตัวเลขความสว่างบอกได้แค่ "ไม่ดำค้าง")
         try { await kapi.testShot('/tmp/k2_theme_light.png'); } catch {}
         const barEl81 = document.getElementById('titlebar');
@@ -40567,7 +40881,27 @@ async function runTest(projectPath) {
             await wait83(250);
             repaginateFast(tp83);
             await wait83(250);
-            for (const mode of ['normal', 'layout']) {
+            // ══ [alpha.159r] มุมมองปกติเหลือป้าย "หน้า N" ทางขวาอย่างเดียว ══
+            // ผู้ใช้: *"2 ที่อยู่ทางซ้าย bug เหรอ"* — เลขซ้าย (`.sp-page-no-next` ของ .88)
+            // กับป้ายขวา (`.sp-page-break-num`) บอกเลขเดียวกัน เห็นเลข 2 สองที่บนเส้นเดียว
+            // → ซ่อนเลขซ้ายในมุมมองปกติ · มุมมองจัดหน้ายังมีเลขหน้าจริงบนขอบกระดาษเหมือนเดิม
+            {
+              setSpView('normal');
+              await wait83(150);
+              repaginateFast(tp83);
+              await until83(() => tp83.pane.querySelectorAll('.ed-page-break').length > 0, 4000);
+              const left159 = [...tp83.pane.querySelectorAll('.ed-page-break > .sp-page-no-next')]
+                .filter((e) => getComputedStyle(e).display !== 'none');
+              check('[159r-1] ★ มุมมองปกติ: ไม่มีเลขหน้าซ้ำทางซ้ายของเส้นคั่นแล้ว',
+                    left159.length === 0, left159.length + ' ตัว');
+              const lbl159 = tp83.pane.querySelector('.ed-page-break > .sp-page-break-num');
+              const lr159 = lbl159 && lbl159.getBoundingClientRect();
+              check('[159r-1] ★ …แต่ป้าย "หน้า N" ทางขวายังอยู่และมองเห็นจริง',
+                    !!lbl159 && /\d/.test(lbl159.textContent) && lr159.width > 0 && lr159.height > 0 &&
+                    parseFloat(getComputedStyle(lbl159).opacity) > 0.05,
+                    lbl159 ? lbl159.textContent : 'ไม่มีป้าย');
+            }
+            for (const mode of ['layout']) {
               setSpView(mode);
               await wait83(150);
               repaginateFast(tp83);
@@ -42107,6 +42441,51 @@ async function runTest(projectPath) {
           check('[120-10] ★ เมนูเล่มสร้างได้ทั้งเล่มและบท',
                 secMenu.includes(tt('ui.treeMenu.addBook')) && secMenu.includes(tt('ui.treeMenu.addChapter')));
           check('[120-7] เมนูเล่มมี "หาในดิสก์"', secMenu.includes(tt('ui.treeMenu.reveal')));
+          // [alpha.159 ข้อ 1] รายชื่อตัวละคร + หน้าปก ต้องเข้าได้จากคลิกขวาที่เล่ม
+          check('[159-1] ★ เมนูเล่มมี "รายชื่อตัวละคร"', secMenu.includes(tt('ui.treeMenu.castOfCharacters')), secMenu.slice(0, 200));
+          check('[159-1] ★ เมนูเล่มมี "หน้าปก"', secMenu.includes(tt('ui.treeMenu.titlePage')));
+          {
+            const castIt = [...document.querySelectorAll('.k-menu .k-menu-item')]
+              .find((x) => x.textContent.includes(tt('ui.treeMenu.castOfCharacters')));
+            if (castIt) {
+              castIt.click();
+              await w120(500);
+              const act159 = state.active;
+              check('[159-1] ★ กด "รายชื่อตัวละคร" จากเมนูเล่ม → เปิดแท็บรายชื่อของเล่มนั้น',
+                    isRosterTab(act159), act159 ? act159.file : 'ไม่มีแท็บ');
+              if (isRosterTab(act159)) closeTab(act159.file);
+              await w120(150);
+            } else check('[159-1] ★ กด "รายชื่อตัวละคร" จากเมนูเล่ม → เปิดแท็บรายชื่อของเล่มนั้น', false, 'ไม่พบรายการเมนู');
+            closeMenu();
+            menuOf120(document.querySelector('#tree .sec-title'));
+            const tpIt = [...document.querySelectorAll('.k-menu .k-menu-item')]
+              .find((x) => x.textContent.includes(tt('ui.treeMenu.titlePage')));
+            if (tpIt) {
+              tpIt.click();
+              await w120(400);
+              check('[159-1] ★ กด "หน้าปก" จากเมนูเล่ม → เปิดตัวแก้ไขหน้าปก', !!document.querySelector('.k-tp-dlg .k-tp-pages'));
+              document.querySelectorAll('.k-overlay').forEach((x) => x.remove());
+            } else check('[159-1] ★ กด "หน้าปก" จากเมนูเล่ม → เปิดตัวแก้ไขหน้าปก', false, 'ไม่พบรายการเมนู');
+          }
+          // หน้าจัดการเล่ม: การ์ดทุกใบมีปุ่มทั้งสอง
+          {
+            await openBookManager();
+            let cards159 = [];
+            for (let i = 0; i < 30 && !(cards159 = [...document.querySelectorAll('#books-body .book-acts')]).length; i++) await w120(100);
+            check('[159-1] ★ หน้าจัดการเล่ม: ทุกการ์ดมีปุ่มรายชื่อตัวละคร + หน้าปก',
+                  cards159.length > 0 && cards159.every((a) => a.querySelector('.book-cast') && a.querySelector('.book-titlepage')),
+                  String(cards159.length));
+            const cb = cards159[0] && cards159[0].querySelector('.book-cast');
+            if (cb) {
+              cb.click();
+              let ok159 = false;
+              for (let i = 0; i < 30 && !(ok159 = isRosterTab(state.active)); i++) await w120(100);
+              check('[159-1] ปุ่มรายชื่อตัวละครในหน้าจัดการเล่มเปิดแท็บรายชื่อ', ok159);
+              if (ok159) closeTab(state.active.file);
+            }
+            hidePanel('books');
+            await w120(150);
+          }
           closeMenu();
           const chT = document.querySelector('#tree .ch-title');
           const chMenu = menuOf120(chT);
@@ -44367,6 +44746,288 @@ async function runTest(projectPath) {
           await JS.mutateJson(kapi, sf, (d) => { if (!d.chapters || !(c.guid in d.chapters)) return false; delete d.chapters[c.guid]; });
         }
         await buildTree();
+      }
+
+      // ══ [alpha.157] ★ Kanban↔Explorer ซิงก์สถานะ · เมนูย่อย hover · แดชบอร์ด · สัดส่วนฉาก ·
+      //    องก์/บท/mention · Logline · ปุ่มฝั่งแผง · ธีมแยกไฟล์ · ลำดับเปิดโปรแกรม ══
+      // ทุกข้อกดปุ่ม/ส่งอีเวนต์จริงแล้ววัดผลที่จอ (บทเรียน .66r10: เรียกฟังก์ชันตรง ๆ ผ่านหลอกได้)
+      {
+        const w157 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until157 = async (fn, ms = 4000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await w157(60); }
+          return false;
+        };
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+        const CS = await import('./custom-status.js');
+        const CU = await import('./color-util.js');
+        const d157 = (await listDrafts())[0];
+        const draft157 = await kapi.readJson(await kapi.join(d157.dPath, 'draft.json'));
+        const sc157All = await kapi.readJson(await kapi.join(d157.dPath, 'scenes.json'));
+        const ch157 = (draft157.chapters || []).find((c) => ((sc157All.chapters || {})[c.guid] || []).length);
+        const sc157 = ((sc157All.chapters || {})[ch157.guid] || [])[0];
+        check('[157-0] เงื่อนไข: มีฉากให้ทดสอบ', !!ch157 && !!sc157);
+
+        // ── 1) เพิ่มสถานะจากกระดาน = Explorer รู้ทันที · สีหัวคอลัมน์ = สีชิปในต้นไม้ ──
+        const before157 = CS.allStatuses().length;
+        await CS.addCustomStatus('ทดสอบ157', '#ff5fb8');
+        // เทสก่อนหน้าอาจพับคอลัมน์ไว้ (เลย์เอาต์ของเครื่อง) — การ์ดในคอลัมน์ที่พับไม่ถูกวาด
+        try { localStorage.removeItem('k2-kanban-layout'); } catch {}
+        resetKanban();
+        await openKanban();
+        const colOf = (k) => [...document.querySelectorAll('#kanban-body .kb-col')].find((c) => c.dataset.status === k);
+        check('[157-1] ★ สถานะใหม่เป็นคอลัมน์ Kanban + อยู่ในเมนูสถานะของ Explorer',
+              await until157(() => !!colOf('ทดสอบ157')) && CS.allStatuses().length === before157 + 1
+              && TA.sceneStatusOptions().some(([v]) => v === 'ทดสอบ157'));
+        const head157 = colOf('ทดสอบ157') && colOf('ทดสอบ157').querySelector('.kb-col-head');
+        check('[157-1] หัวคอลัมน์เป็นสีเต็มแถบ + ตัวอักษรอ่านออก',
+              !!head157 && getComputedStyle(head157).backgroundColor === 'rgb(255, 95, 184)'
+              && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, head157 && getComputedStyle(head157).backgroundColor);
+        // ลากการ์ดลงคอลัมน์ใหม่ (ส่งอีเวนต์ drop จริง) → ต้นไม้ได้ชิปสถานะสีเต็ม
+        // กระดานจำฉบับร่างที่เทสก่อนหน้าเลือกไว้ — เลือกฉบับร่างของฉากที่ใช้ทดสอบให้ชัด
+        await (await import('./kanban/kanban-ui.js')).setKanbanDraft(d157.dPath);
+        await until157(() => !!document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`));
+        const card157 = document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`);
+        check('[157-1] การ์ดมีชื่อบท (ไม่ใช่ guid สี่ตัวแรก)', !!card157 && card157.textContent.includes(ch157.title || '§'),
+              card157 ? card157.textContent : 'ไม่พบการ์ด ' + sc157.id + ' · มี: ' + [...document.querySelectorAll('#kanban-body .kb-card')].map((c) => c.dataset.sceneId).join(',')
+                + ' · คอลัมน์: ' + [...document.querySelectorAll('#kanban-body .kb-col')].map((c) => c.dataset.status + (c.classList.contains('kb-collapsed') ? '(พับ)' : '')).join(','));
+        await colOf('ทดสอบ157').ondrop({ preventDefault() {}, clientY: 99999,
+          dataTransfer: { getData: (t) => (t === 'text/plain' ? sc157.id : ''), types: ['text/plain'] } });
+        const chip157 = () => [...document.querySelectorAll('#tree .sc-status')].find((c) => c.textContent === 'ทดสอบ157');
+        check('[157-1] ★ ลากการ์ดแล้วต้นไม้วาดชิปสถานะใหม่เอง', await until157(() => !!chip157()));
+        check('[157-1] ชิปสถานะในต้นไม้เป็นพื้นสีเต็ม (สีเดียวกับหัวคอลัมน์)',
+              !!chip157() && getComputedStyle(chip157()).backgroundColor === 'rgb(255, 95, 184)');
+        // เปลี่ยนสถานะจากฝั่ง Explorer → การ์ดย้ายคอลัมน์เอง (ไม่ต้องเปิดกระดานใหม่)
+        const SO157 = await import('./scene-ops.js');
+        await SO157.setSceneMeta(d157.dPath, ch157, sc157, { status: 'Outline' });
+        check('[157-1] ★ เปลี่ยนสถานะจาก Explorer แล้วการ์ดบนกระดานย้ายเอง (ฉากล้างสถานะ → ยังไม่กำหนด ไม่ใช่คอลัมน์ Outline)',
+              await until157(() => !colOf('ทดสอบ157').querySelector(`.kb-card[data-scene-id="${sc157.id}"]`)
+                && !!colOf('__unset__') && !!colOf('__unset__').querySelector(`.kb-card[data-scene-id="${sc157.id}"]`) && !colOf('Outline')));
+        // ลำดับคอลัมน์ = ลำดับเมนูสถานะ
+        await CS.setStatusOrder(['ทดสอบ157', ...CS.allStatuses().filter((x) => x !== 'ทดสอบ157')]);
+        check('[157-1] ★ สลับลำดับคอลัมน์ = ลำดับในเมนูสถานะของ Explorer',
+              await until157(() => { const k = [...document.querySelectorAll('#kanban-body .kb-col')].map((c) => c.dataset.status).filter((x) => x !== '__unset__');
+                return k[0] === 'ทดสอบ157' && TA.sceneStatusOptions()[0][0] === 'ทดสอบ157'; }));
+        // ลบสถานะมาตรฐาน = ซ่อน (กู้คืนได้) · ลบสถานะที่เพิ่มเอง = หายจริง
+        await CS.deleteStatus('เก็บถาวร');
+        check('[157-1] ลบคอลัมน์สถานะมาตรฐาน = ซ่อนจากทั้งกระดานและเมนู',
+              await until157(() => !colOf('เก็บถาวร')) && !CS.allStatuses().includes('เก็บถาวร'));
+        await CS.unhideStatus('เก็บถาวร');
+        await CS.deleteStatus('ทดสอบ157');
+        state.meta.statusOrder = undefined; await saveProjectMeta();
+        check('[157-1] แสดงคืน + ลบสถานะที่เพิ่มเอง', CS.allStatuses().includes('เก็บถาวร') && !CS.allStatuses().includes('ทดสอบ157'));
+        hidePanel('kanban');
+
+        // ── 2) เมนูคลิกขวา: เมนูย่อยเปิดด้วย hover · ช่องสีสี่เหลี่ยม · ทูลทิปไม่ทับเมนู ──
+        await buildTree();
+        const row157 = [...document.querySelectorAll('#tree .scene')].find((r) => r.textContent.includes(sc157.title));
+        const rr = row157.getBoundingClientRect();
+        row157.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rr.left + 40, clientY: rr.top + 6 }));
+        await w157(120);
+        const subRows = [...document.querySelectorAll('.k-menu .k-menu-item.k-menu-has-sub')];
+        check('[157-2] รายการที่มีต่อ (สี/สถานะ/ย้ายไป) เป็นเมนูย่อย มีลูกศร ไม่ใช่ข้อความ ▸', subRows.length >= 3
+              && subRows.every((r) => !!r.querySelector('.k-menu-arrow') && !r.textContent.includes('▸')), subRows.map((r) => r.textContent).join('|'));
+        const colorRow = subRows.find((r) => r.textContent.trim() === tt('ui.treeMenu.color'));
+        colorRow.dispatchEvent(new MouseEvent('mouseenter'));
+        check('[157-2] ★ ชี้ค้าง (ไม่คลิก) แล้วเมนูสีเปิดเอง', await until157(() => !!document.querySelector('.k-submenu')));
+        const sw157 = [...document.querySelectorAll('.k-submenu .k-menu-swatch')];
+        check('[157-2] ★ ทุกสีมีช่องสี่เหลี่ยมสีจริงหน้าชื่อ', sw157.length >= SCENE_COLORS.length
+              && sw157.slice(0, SCENE_COLORS.length).every((x, i) => x.style.background && getComputedStyle(x).borderRadius !== '50%'
+                && getComputedStyle(x).width === getComputedStyle(x).height), sw157.length);
+        const tipHost = document.querySelector('#toolbar [title]') || document.querySelector('[title]');
+        if (tipHost) tipHost.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 5, clientY: 5 }));
+        await w157(60);
+        check('[157-2] ★ ทูลทิปไม่ขึ้นทับเมนูคลิกขวา', !document.querySelector('#k-tip.on'));
+        // คลิกสีจากเมนูย่อย = ลงไฟล์จริง
+        [...document.querySelectorAll('.k-submenu .k-menu-item')][1].click();
+        await until157(async () => ((await kapi.readJson(await kapi.join(d157.dPath, 'scenes.json'))).chapters[ch157.guid] || []).find((x) => x.id === sc157.id).color === SCENE_COLORS[1][1]);
+        check('[157-2] เลือกสีจากเมนูย่อยแล้วบันทึกลงฉาก',
+              ((await kapi.readJson(await kapi.join(d157.dPath, 'scenes.json'))).chapters[ch157.guid] || []).find((x) => x.id === sc157.id).color === SCENE_COLORS[1][1]);
+        check('[157-2] เลือกแล้วเมนูทั้งชุดปิด', !document.querySelector('.k-menu'));
+        if (tipHost && tipHost.dataset) tipHost.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+
+        // ── 3) แดชบอร์ด: เวลาอ่านรวม · ช่วง 7d/30d/90d/ทั้งหมด · หลักไมล์ · สรุป Kanban · คำที่ใช้บ่อย ──
+        const today157 = localDay();
+        state.meta.wordHistory = [{ date: addDays(today157, -40), words: 800 }, { date: addDays(today157, -3), words: 5200 }, { date: today157, words: 5400 }];
+        await openDashboard();
+        await until157(() => document.querySelectorAll('#dash-body .dash-act-range').length === 4);
+        check('[157-3] ★ การ์ดสถิติใหญ่มี "เวลาอ่านรวม"', [...document.querySelectorAll('#dash-body .dash-label')].some((x) => x.textContent === tt('ui.dash.readTime')));
+        const rng = (k) => document.querySelector(`#dash-body .dash-act-range[data-range="${k}"]`);
+        rng('7d').click(); await w157(40);
+        check('[157-3] ★ กด 7d = กราฟ 7 วัน', document.querySelectorAll('#dash-body .dash-days .dash-day').length === 7);
+        rng('90d').click(); await w157(40);
+        check('[157-3] กด 90d = 90 วัน', document.querySelectorAll('#dash-body .dash-days .dash-day').length === 90);
+        rng('all').click(); await w157(40);
+        check('[157-3] ทั้งหมด = ตั้งแต่วันเริ่มโปรเจกต์ + มีวันที่เริ่มโปรเจกต์กำกับ',
+              document.querySelectorAll('#dash-body .dash-days .dash-day').length >= 41 && !!document.querySelector('#dash-body .dash-ms-start'));
+        check('[157-3] ★ หลักไมล์ 1,000 / 5,000 คำ มีวันที่ + ธงบนกราฟ',
+              document.querySelectorAll('#dash-body .dash-ms').length >= 3 && !!document.querySelector('#dash-body .dash-day-ms .dash-day-flag'));
+        rng('30d').click();
+        check('[157-3] ★ สรุปสถานะตามคอลัมน์ Kanban (ครบทุกคอลัมน์) + ปุ่มเปิด Kanban',
+              document.querySelectorAll('#dash-body .dash-kanban .dash-kb-col').length >= CS.allStatuses().length
+              && !!document.querySelector('#dash-body .dash-kb-open'));
+        document.querySelector('#dash-body .dash-kb-open').click();
+        check('[157-3] กดปุ่มแล้ว Kanban เปิดจริง', await until157(() => isPanelOpen('kanban')));
+        hidePanel('kanban');
+        check('[157-3] คำที่ใช้บ่อยแสดงเป็นชิปพร้อมจำนวน', !document.querySelector('#dash-body .dash-words')
+              || !!document.querySelector('#dash-body .dash-words .dash-word i'));
+
+        // ── 4) คุณสมบัติ: องก์ · บท · mention แบ่งตามหมวด Wiki ──
+        setPropsTarget(d157.dPath, ch157, sc157);
+        showPanel('props');
+        await renderPropsPanel();
+        const actIn = document.querySelector('#props-body .props-act-input');
+        const chSel = document.querySelector('#props-body .props-chapter-select');
+        check('[157-4] ★ แผงคุณสมบัติมีช่ององก์ + เลือกบท (ครบทุกบทของฉบับร่าง)',
+              !!actIn && !!chSel && chSel.options.length === (draft157.chapters || []).length && chSel.value === ch157.guid);
+        check('[157-4] ช่องใหม่ไม่ใช้คลาส .wiki-input (เทสเดิมที่นับช่องตามลำดับไม่เลื่อน)',
+              !actIn.classList.contains('wiki-input') && !chSel.classList.contains('wiki-input'));
+        actIn.value = 'องก์ทดสอบ157'; actIn.dispatchEvent(new Event('change'));
+        check('[157-4] ★ กรอกองก์แล้วลง draft.json ของบท',
+              await until157(async () => ((await kapi.readJson(await kapi.join(d157.dPath, 'draft.json'))).chapters || []).find((c) => c.guid === ch157.guid).act === 'องก์ทดสอบ157'));
+        check('[157-4] ★ มีกล่อง "ฉากนี้กล่าวถึง"', !!document.querySelector('#props-body .props-mentions'));
+        await smart.loadNames(state.root);
+        const anyName = (smart.titles || [])[0];
+        if (anyName) {
+          const { sceneMentions } = await import('./scene-mentions.js');
+          const g157 = sceneMentions('ก่อน ' + anyName + ' หลัง', smart.byCat, smart.fileOf, { titles: smart.titles });
+          check('[157-4] mention จับชื่อ Wiki จริงของโปรเจกต์ได้ พร้อมหมวด', g157.length === 1 && g157[0].items[0].file === smart.fileOf[anyName], JSON.stringify(g157));
+        }
+        await (await import('./json-store.js')).mutateJson(kapi, await kapi.join(d157.dPath, 'draft.json'), (d) => { const c = d.chapters.find((x) => x.guid === ch157.guid); delete c.act; });
+
+        // ── 5) Logline 6 ช่อง: ตั้งค่าโปรเจกต์ · เล่ม · เข็มทิศ AI ──
+        const { currentCompass } = await import('./logline-ui.js');
+        check('[157-5] ยังไม่กรอก logline = ไม่แตะคำขอ AI', (await currentCompass()) === '');
+        state.meta.logline = { goal: 'ตามหาแม่ให้เจอ157', stakes: 'แม่จะหายไปตลอดกาล' };
+        const cmp157 = await currentCompass();
+        check('[157-5] ★ กรอกแล้วเข็มทิศมีป้ายไทย + ค่าที่กรอก', cmp157.includes('ตามหาแม่ให้เจอ157') && cmp157.includes(tt('ui.logline.goal')), cmp157);
+        delete state.meta.logline;
+        settingsDialog();
+        await until157(() => document.querySelectorAll('.k-settings #st-logline-host .k-logline-input').length === 6);
+        check('[157-5] ★ ตั้งค่าโปรเจกต์ (ข้อมูลผลงาน) มีช่อง Logline ครบ 6 ช่อง',
+              document.querySelectorAll('.k-settings #st-logline-host .k-logline-input').length === 6);
+        const sk = document.querySelector('.k-settings #st-skip-home');
+        check('[157-6] ★ ตั้งค่ามีสวิตช์ "ไม่แสดงหน้า Home"', !!sk);
+        document.querySelector('.k-settings .k-cancel')?.click();
+        await w157(60);
+        document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+
+        // ── 6) ลำดับเปิดโปรแกรม ──
+        check('[157-6] ติ๊กข้ามหน้าแรก + มีโปรเจกต์ล่าสุด = เปิดเลย ไม่มีหน้าแรก',
+              JSON.stringify(startupPlan({ openLastProject: true }, ['/a'])) === JSON.stringify({ skipHome: true, last: '/a', showHome: false }));
+        check('[157-6] ★ ติ๊กข้ามหน้าแรก + ไม่มีโปรเจกต์ล่าสุด = แอปเปล่า (ไม่เด้งหน้าแรก)',
+              startupPlan({ openLastProject: true }, []).showHome === false && startupPlan({ openLastProject: true }, []).last === '');
+        check('[157-6] ไม่ติ๊ก = หน้าแรกเสมอ', startupPlan({}, ['/a']).showHome === true && startupPlan({}, ['/a']).last === '');
+        check('[157-6] preload มีช่อง splash', typeof kapi.splashProgress === 'function' && typeof kapi.splashDone === 'function');
+
+        // ── 7) ปุ่มซ่อน/แสดงแผงทีละฝั่ง (ขวาสุดของแถบ) ──
+        const sideBtns = [...document.querySelectorAll('#titlebar .k-side-toggles [data-side]')];
+        check('[157-7] ★ มีปุ่ม ซ้าย · บน · ล่าง · ขวา ขวาสุดของแถบชื่อหน้าต่าง (ถัดปุ่มหน้าต่าง)',
+              sideBtns.map((b) => b.dataset.side).join() === 'left,top,bottom,right'
+              && $('.k-side-toggles').nextElementSibling === $('#win-btns'));
+        showPanel('tree');
+        await w157(80);
+        const PUI = await import('./panels/panel-ui.js');
+        const docsR = document.querySelector('#app-root .k-panel[data-panel-id="docs"]').getBoundingClientRect();
+        const treeEl = document.querySelector('#app-root .k-panel[data-panel-id="tree"]');
+        const treeSide = PUI.sideOfRect((treeEl.closest('.k-tab-group') || treeEl).getBoundingClientRect(), docsR);
+        if (treeSide) {
+          const btn = sideBtns.find((b) => b.dataset.side === treeSide);
+          btn.click(); await w157(120);
+          check('[157-7] ★ กดปุ่มฝั่งของ Explorer = Explorer ถูกซ่อน · ปุ่มดับ', !isPanelOpen('tree') && !btn.classList.contains('on'));
+          const other = sideBtns.find((b) => b.dataset.side !== treeSide && PUI.sideHidden(b.dataset.side) === false);
+          check('[157-7] ฝั่งอื่นไม่โดนด้วย', !!other && other.classList.contains('on'));
+          btn.click(); await w157(120);
+          check('[157-7] ★ กดซ้ำ = แสดงคืน', isPanelOpen('tree') && btn.classList.contains('on'));
+        }
+        // [157r-1] ★ ผู้ใช้: "เปิดปิดแผง บน ล่าง ใช้ไม่ได้" — เลย์เอาต์ปกติไม่มีแผงบน/ล่าง ต้องยังมีผล (แถบของฝั่งนั้น)
+        for (const [side, pid] of [['top', 'toolbar'], ['bottom', 'statusbar']]) {
+          const b = sideBtns.find((x) => x.dataset.side === side);
+          const node = () => document.querySelector(`#app-root .k-panel[data-panel-id="${pid}"]`);
+          const h0 = node().getBoundingClientRect().height;
+          b.click(); await w157(120);
+          check(`[157r-1] ★ กดปุ่ม${side} แล้ว ${pid} หายจากจอจริง · ปุ่มยังกดได้`,
+                h0 > 0 && node().getBoundingClientRect().height === 0 && b.getBoundingClientRect().height > 0 && !b.classList.contains('on'));
+          b.click(); await w157(120);
+          check(`[157r-1] กดซ้ำ ${pid} กลับมา`, node().getBoundingClientRect().height > 0 && b.classList.contains('on'));
+        }
+        check('[157-7] sideOfRect ตัดสินฝั่งถูก', PUI.sideOfRect({ left: 0, right: 100, top: 0, bottom: 500, width: 100, height: 500 }, { left: 110, right: 900, top: 0, bottom: 500 }) === 'left'
+              && PUI.sideOfRect({ left: 110, right: 900, top: 520, bottom: 700, width: 790, height: 180 }, { left: 110, right: 900, top: 0, bottom: 500 }) === 'bottom');
+
+        // ── 8) ธีม: ไฟล์แยก · พื้นรอบกระดาษไม่ค้างสีธีมเก่า · แท็บทรงเม็ด ──
+        const links = [...document.querySelectorAll('link[rel=stylesheet]')].map((l) => l.getAttribute('href'));
+        check('[157-8] ★ ธีมโหลดจากไฟล์แยก', links.includes('themes/k2.css') && links.includes('themes/k2-light.css') && links.includes('themes/base.css'));
+        const cs157 = getComputedStyle(document.body);
+        check('[157-8] ★ พื้นรอบกระดาษมาจากธีม (ไม่ใช่เทาอมน้ำตาล #3a3936 ของจานสีเก่า)',
+              cs157.getPropertyValue('--paper-surround').trim() !== '' && getComputedStyle($('#panes')).backgroundColor !== 'rgb(58, 57, 54)',
+              getComputedStyle($('#panes')).backgroundColor);
+        const actTab = document.querySelector('#app-root .k-tab.active');
+        check('[157-8] แท็บแผงเป็นทรงเม็ด มีปุ่มปิด', !!actTab && parseFloat(getComputedStyle(actTab).borderRadius) >= 6
+              && (!!actTab.querySelector('.k-tab-x') || actTab.dataset.panelId === 'docs'));
+        const okBtn = document.createElement('button'); okBtn.className = 'k-ok'; okBtn.textContent = 'x'; document.body.append(okBtn);
+        const okCs = getComputedStyle(okBtn);
+        const rgb2hex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3).map((n) => (+n).toString(16).padStart(2, '0')).join('');
+        check('[157-8] ★ ตัวอักษรบนปุ่มหลักไม่จม (คอนทราสต์ ≥ 4.5)', CU.contrast(rgb2hex(okCs.color), rgb2hex(okCs.backgroundColor)) >= 4.5,
+              okCs.color + ' on ' + okCs.backgroundColor);
+        okBtn.remove();
+        hidePanel('dashboard');
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+
+        // ══ [alpha.157r] รอบแก้บั๊ก/polish ══
+        // ── 2) หน้าแรกตอนเปิดโปรแกรม: ตัวโปรแกรมข้างหลังถูกซ่อน · ปิดหน้าแรกแล้วโผล่ ──
+        {
+          const HU = await import('./home-ui.js');
+          const ovS = await HU.showHomeDialog({ startup: true });
+          await w157(80);
+          check('[157r-2] ★ หน้าแรกตอนเปิดโปรแกรม = ไม่เห็นตัวโปรแกรมข้างหลัง',
+                document.body.classList.contains('k-home-only') && getComputedStyle($('#app-root')).visibility === 'hidden'
+                && getComputedStyle(ovS.querySelector('.k-home-dlg')).visibility === 'visible'
+                && getComputedStyle($('#win-btns')).visibility === 'visible');
+          ovS.querySelector('.home-btn-close').click();
+          await w157(60);
+          check('[157r-2] ★ ปิดหน้าแรกแล้วตัวโปรแกรมโผล่', !document.body.classList.contains('k-home-only')
+                && getComputedStyle($('#app-root')).visibility === 'visible' && !ovS.isConnected);
+          const ovM = await HU.showHomeDialog();
+          check('[157r-2] เปิดหน้าแรกจากเมนูทีหลัง = กล่องทับโปรแกรมแบบเดิม (ไม่ซ่อนโปรแกรม)', !document.body.classList.contains('k-home-only'));
+          ovM.remove();
+        }
+        // ── 4) อีโมจิสีในหน้าจอกลายเป็นไอคอนเส้น · textContent เดิมไม่เปลี่ยน · ไม่แตะตัวแก้ไข ──
+        {
+          const GU = await import('./glyph-upgrade.js');
+          const probe = el('button', 'k-probe157', gi('save') + ' ' + 'บันทึก');
+          document.body.append(probe);
+          await w157(80);
+          check('[157r-4] ★ อีโมจิในปุ่มถูกวางไอคอนเส้นทับ (อัตโนมัติ)', !!probe.querySelector('.k-gl svg'));
+          check('[157r-4] ★ textContent ยังเป็นข้อความเดิมทุกไบต์', probe.textContent === gi('save') + ' บันทึก', probe.textContent);
+          const glyphBox = probe.querySelector('.k-gl-t').getBoundingClientRect();
+          check('[157r-4] อักขระเดิมถูกซ่อน (ไม่กินที่)', glyphBox.width <= 1 && glyphBox.height <= 1);
+          probe.textContent = gi('refresh') + ' ใหม่';
+          await w157(80);
+          check('[157r-4] เขียนข้อความใหม่ทับ = แปลงให้อีกรอบเอง', !!probe.querySelector('.k-gl svg') && probe.textContent === gi('refresh') + ' ใหม่');
+          probe.remove();
+          const tab157 = [...state.tabs.values()].find((x) => x.editor || x.sp);
+          if (tab157) {
+            const pm157 = (tab157.editor || tab157.sp).view.dom;
+            const before = pm157.querySelectorAll('.k-gl').length;
+            GU.upgradeGlyphs(pm157);
+            check('[157r-4] ★ ไม่แตะเนื้อหาในตัวแก้ไข (อีโมจิของนักเขียน)', pm157.querySelectorAll('.k-gl').length === before);
+          }
+          check('[157r-4] ทั้งหน้าจอมีไอคอนที่ถูกแปลงแล้ว', GU.glyphUpgradeCount() > 0, GU.glyphUpgradeCount());
+        }
+        // ── 3) กล่องเกี่ยวกับ: ลิงก์เครดิตสลับแผ่นเครดิต · Esc ปิด ──
+        {
+          const ovA = aboutDialog();
+          await w157(40);
+          const right = ovA.querySelector('.k-about-right');
+          check('[157r-3] เปิดมาเห็นภาพประกอบ (เครดิตยังไม่บัง)', !right.classList.contains('show-credits'));
+          const lk = [...ovA.querySelectorAll('.k-about-link')].find((b) => b.textContent === tt('ui.about.credits'));
+          lk.click(); await w157(40);
+          check('[157r-3] กดเครดิต = แผ่นเครดิตเลื่อนขึ้น · กดซ้ำ = ซ่อน', right.classList.contains('show-credits') && lk.classList.contains('on')
+                && (lk.click(), !right.classList.contains('show-credits')));
+          check('[157r-3] ภาพ/โลโก้ placeholder โหลดได้จริง', await until157(() => ovA.querySelector('.k-about-hero').naturalWidth > 0
+                && ovA.querySelector('.k-about-logo').naturalWidth > 0));
+          ovA.remove();
+        }
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

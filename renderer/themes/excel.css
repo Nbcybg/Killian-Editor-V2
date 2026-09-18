@@ -1,0 +1,38 @@
+/* renderer/themes/excel.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-excel {
+  --bg:#ffffff;
+  --side:#f3f2f1;
+  --bar:#f3f2f1;
+  --border:#d2d0ce;
+  --fg:#252423;
+  --bright:#131212;
+  --dim:#7c7c7b;
+  --accent:#107c41;
+  --accent-hi:#21a366;
+  --link:#107c41;
+  --sel:#c6efce;
+  --orange:#21a366;
+  --curline:#f7f7f7;
+  --hover:#e3e3e2;
+  --hover-soft:#f2f2f2;
+  --titlebar:#e9e9e9;
+  --sunken:#f8f8f8;
+  --chip:#dbebe3;
+  --danger-soft:#f6d5d7;
+  --canvas:#ffffff;
+  --void:#e9e9e9;
+  --paper-surround:#d8d8d7;
+  --tab-bar:#e9e9e9;
+  --tab-bg:#ffffff;
+  --tab-border:#d2d0ce;
+  --tab-fg:#7c7c7b;
+  --tab-fg-on:#252423;
+  --tab-hover:#f2f2f2;
+  --panel-head:#f2f2f2;
+  --input-bg:#ffffff;
+  --muted-strong:#4c4b4b;
+  --find-hit:#85ccab;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+}

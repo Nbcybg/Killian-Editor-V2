@@ -1,0 +1,42 @@
+/* renderer/themes/neon-pop.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-neon-pop {
+  --theme-c1:#5003c0;
+  --theme-c2:#ab03a9;
+  --theme-c3:#ff467a;
+  --theme-c4:#ffd51e;
+  --bg:#1a0342;
+  --side:#130230;
+  --bar:#26055c;
+  --border:#5003c0;
+  --fg:#f4ecff;
+  --bright:#fbf7ff;
+  --dim:#9d8fb3;
+  --accent:#ff467a;
+  --accent-hi:#ffd51e;
+  --link:#f07cf0;
+  --sel:#5003c0;
+  --orange:#ffd51e;
+  --curline:#230c4a;
+  --hover:#36215b;
+  --hover-soft:#27114d;
+  --titlebar:#12022e;
+  --sunken:#150236;
+  --chip:#531450;
+  --danger-soft:#5d204c;
+  --canvas:#150236;
+  --void:#12022e;
+  --paper-surround:#12022e;
+  --tab-bar:#12022e;
+  --tab-bg:#301a55;
+  --tab-border:#4a366c;
+  --tab-fg:#9d8fb3;
+  --tab-fg-on:#faf6ff;
+  --tab-hover:#27114d;
+  --panel-head:#17033b;
+  --input-bg:#140232;
+  --muted-strong:#cdc2dd;
+  --find-hit:#98772e;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

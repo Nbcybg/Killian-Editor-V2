@@ -579,7 +579,7 @@ export async function renderBranchingTree(pane, opts = {}) {
   const findInp = el('input', 'branch-find-inp');
   findInp.type = 'search';
   findInp.value = bs.query || '';
-  findInp.placeholder = gi('search') + ' ' + tr('findPlaceholder', t('ui.branch.searchNameSceneChoice'));
+  findInp.placeholder = tr('findPlaceholder', t('ui.branch.searchNameSceneChoice'));   // [157r] ไม่มีอีโมจิในช่องกรอก (placeholder วางไอคอนเส้นไม่ได้)
   findInp.title = tr('findHint', t('ui.branch.printOnlySceneAt'));
   let findJob = null;
   findInp.oninput = () => {
@@ -1459,7 +1459,7 @@ function showAllPathsDialog(graph, startId) {
       tr('pathTruncHint', t('ui.branch.show'))));
   }
   const inp = el('input', 'k-dlg-input');
-  inp.placeholder = gi('search') + ' ' + tr('filterPaths', t('ui.branch.filterRoutePrintName'));
+  inp.placeholder = tr('filterPaths', t('ui.branch.filterRoutePrintName'));
   box.append(inp);
   const count = el('div', 'dim');
   box.append(count);

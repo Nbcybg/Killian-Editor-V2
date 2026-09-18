@@ -13,6 +13,7 @@ import { parseMdFile } from './md.js';
 import { escClose } from './ui.js';
 import { gi } from './icons.js';
 import { mutateJson } from './json-store.js';
+import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
 
 export async function sceneProps(dPath, ch, sc) {
   const sf = await kapi.join(dPath, 'scenes.json');
@@ -109,6 +110,14 @@ export async function sceneProps(dPath, ch, sc) {
   attachAiFieldButton(rowOf.get(iPov), iPov, 'pov', aiCtx);
   attachAiFieldButton(rowOf.get(iEmotion), iEmotion, 'emotion', aiCtx);
   attachAiFieldButton(rowOf.get(iConflict), iConflict, 'conflict', aiCtx);
+
+  // [alpha.157] องก์ + บท — วางท้ายกล่อง: เทสเดิมอ้าง <select> ตามลำดับ (บทเรียนข้อ 12) กรอก/เลือกได้จากคุณสมบัติฉากเลย (ชุดเดียวกับแผง)
+  { const acHost = el('div', 'props-ac-host'); box.append(acHost);
+    buildActChapterRows(acHost, { dPath, ch, sc: row }, { onMoved: async () => { ov.remove(); await buildTree(); } })
+      .catch((e) => log('warn', 'act/chapter rows', e)); }
+  // [alpha.157] ฉากนี้กล่าวถึงอะไรบ้าง (แบ่งตามหมวด Wiki)
+  { const mHost = el('div', 'props-mentions-host'); box.append(mHost);
+    buildMentionsBox(mHost, file).catch((e) => log('warn', 'mentions', e)); }
 
   const btns = el('div', 'k-dlg-btns');
   const cB = el('button', null, t('ui.common.cancel'));

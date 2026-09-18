@@ -28,7 +28,15 @@ function check(name, cond, extra) {
 const fmt = SF.mergeSpFormat();
 const FONT_DIR = path.join(__dirname, '..', 'renderer', 'assets', 'fonts');
 const readFont = (f) => { try { return new Uint8Array(fs.readFileSync(path.join(FONT_DIR, f))); } catch { return null; } };
-const thaiFont = readFont('CourierThaiMono.ttf');
+// [alpha.159] Courier Thai Mono ถูกลบจากโปรแกรม — PDF ของบทใช้ฟอนต์ไทยของเครื่อง/โปรเจกต์
+// เทสจึงใช้ฟอนต์ไทยของระบบที่มีแน่ ๆ บนเครื่องพัฒนา (Windows = Leelawadee UI · Linux = Garuda/Loma)
+const THAI_FONT_PATH = [
+  path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'LeelawUI.ttf'),
+  path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'tahoma.ttf'),
+  '/usr/share/fonts/truetype/tlwg/Garuda.ttf', '/usr/share/fonts/truetype/tlwg/Loma.ttf',
+  '/Library/Fonts/Sathu.ttf',
+].find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } }) || '';
+const thaiFont = THAI_FONT_PATH ? new Uint8Array(fs.readFileSync(THAI_FONT_PATH)) : null;
 const asText = (bytes) => Buffer.from(bytes).toString('latin1');
 
 // pdf-lib บีบอัด content stream ด้วย FlateDecode → จะตรวจ "ข้อความที่วาดจริง" ต้องคลายก่อน
@@ -173,7 +181,7 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     fonts: { regular: thaiFont },
     opts: { toc: true, titlePages: false, headers: false },
   });
-  check('มีฟอนต์ไทยอยู่ในโปรเจกต์ให้ฝัง', !!thaiFont, FONT_DIR);
+  check('มีฟอนต์ไทยของเครื่องให้ทดสอบ', !!thaiFont, THAI_FONT_PATH || 'ไม่พบ');
   check('คืน Uint8Array', r1.bytes instanceof Uint8Array && r1.bytes.length > 1000, r1.bytes.length);
   check('เป็นไฟล์ PDF จริง (%PDF-)', asText(r1.bytes.slice(0, 5)) === '%PDF-');
   check('ปิดไฟล์ด้วย %%EOF', asText(r1.bytes.slice(-8)).includes('%%EOF'));
@@ -375,51 +383,34 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     r14.pageCount === 1 && asText(r14.bytes).includes('/FontFile2'));
 
   // ── ฟอนต์ที่ฝัง: ไทยหนึ่งวงศ์ + ละตินอีกหนึ่งวงศ์ ──
-  check('PDF_FONT_FILES.main เป็นฟอนต์ที่มีอักษรไทย',
-    G.PDF_FONT_FILES.main[0].includes('Thai'), G.PDF_FONT_FILES.main.join(','));
-  check('ไฟล์ฟอนต์ในรายการมีอยู่จริงในโปรเจกต์ทั้งสองวงศ์',
-    G.PDF_FONT_FILES.main.every((f) => fs.existsSync(path.join(FONT_DIR, f))) &&
+  // [alpha.159] ไม่มีฟอนต์ไทยฝังมากับโปรแกรมแล้ว — เหลือวงศ์ละติน Courier Prime (OFL)
+  check('[159] PDF_FONT_FILES.main ว่าง (Courier Thai ถูกลบ)', G.PDF_FONT_FILES.main.length === 0);
+  check('[159] ไฟล์ Courier Thai ไม่อยู่ในโปรแกรมแล้ว',
+    !fs.existsSync(path.join(FONT_DIR, 'CourierThaiMono.ttf')) && !fs.existsSync(path.join(FONT_DIR, 'CourierThaiProp.ttf')));
+  check('ไฟล์ฟอนต์ละตินมีอยู่จริงทุกน้ำหนัก',
     Object.values(G.PDF_FONT_FILES.latin).every((f) => fs.existsSync(path.join(FONT_DIR, f))));
   check('CourierPrime ไม่มีอักษรไทย จึงเป็นวงศ์ละตินไม่ใช่วงศ์หลัก', (() => {
     const fk = require('@pdf-lib/fontkit');
     const prime = fk.create(fs.readFileSync(path.join(FONT_DIR, 'CourierPrime-Regular.ttf')));
-    const thai = fk.create(fs.readFileSync(path.join(FONT_DIR, G.PDF_FONT_FILES.main[0])));
-    const nodef = (f, s) => f.layout(s).glyphs.filter((g) => g.id === 0).length;
-    return nodef(prime, 'กิน') === 3 && nodef(thai, 'กิน') === 0 && nodef(thai, 'abc') === 0 &&
-      !Object.values(G.PDF_FONT_FILES.latin).some((f) => G.PDF_FONT_FILES.main.includes(f));
+    const nodef = (f, str) => f.layout(str).glyphs.filter((g) => g.id === 0).length;
+    return nodef(prime, 'กิน') === 3 && nodef(prime, 'abc') === 0;
   })());
-  check('ฟอนต์ไทยวางวรรณยุกต์เป็น advance 0 (ไม่กินคอลัมน์ของ monospace)', (() => {
-    const fk = require('@pdf-lib/fontkit');
-    const f = fk.create(fs.readFileSync(path.join(FONT_DIR, G.PDF_FONT_FILES.main[0])));
-    const adv = f.layout('ที่').glyphs.map((g) => g.advanceWidth);
-    return adv[0] > 0 && adv[1] === 0 && adv[2] === 0;
-  })());
-  // เหตุที่ต้องมีวงศ์ละติน: ฟอนต์ไทยยุคเก่าชี้ · © — ไปที่ glyph ไทยผิด ๆ (id ≠ 0 จึงไม่มีใครฟ้อง)
-  check('ฟอนต์ไทยชี้ · © — ไปที่ glyph ไทย จึงห้ามวาดด้วยวงศ์หลัก', (() => {
-    const fk = require('@pdf-lib/fontkit');
-    const thai = fk.create(fs.readFileSync(path.join(FONT_DIR, G.PDF_FONT_FILES.main[0])));
-    const prime = fk.create(fs.readFileSync(path.join(FONT_DIR, G.PDF_FONT_FILES.latin.regular)));
-    // glyph ที่ฟอนต์ไทยให้กับ · ต้องไม่ใช่ตัวเดียวกับที่ CourierPrime ให้ (ยืนยันว่าคนละรูป)
-    const gid = (f, ch) => f.layout(ch).glyphs[0].id;
-    return gid(thai, '·') !== 0 && gid(prime, '·') !== 0 &&
-      ['·', '©', '—', '…', '“'].every((ch) => gid(prime, ch) !== 0);
-  })());
-  check('needsLatinFont: ไทย/ASCII → วงศ์หลัก · เครื่องหมายสากล → วงศ์ละติน',
-    !G.needsLatinFont('ก') && !G.needsLatinFont('A') && !G.needsLatinFont(' ') &&
+  check('[159] needsLatinFont: ไทย → วงศ์หลัก · ASCII + เครื่องหมายสากล → วงศ์ละติน',
+    !G.needsLatinFont('ก') && G.needsLatinFont('A') && G.needsLatinFont(' ') &&
     G.needsLatinFont('·') && G.needsLatinFont('©') && G.needsLatinFont('—') &&
     G.needsLatinFont('…') && G.needsLatinFont('“'));
   check('needsLatinFont ไม่ดึง PUA ไทยของวินโดวส์ไปวงศ์ละติน',
-    !G.needsLatinFont(''));
+    !G.needsLatinFont(''));
   check('splitFontRuns ซอยเป็นช่วงตามฟอนต์', (() => {
     const r = G.splitFontRuns('ทอร่า · Tora');
-    return r.length === 3 && r[0].latin === false && r[1].latin === true &&
-      r[1].text === '·' && r[2].latin === false && r.map((x) => x.text).join('') === 'ทอร่า · Tora';
+    return r.length === 2 && r[0].latin === false && r[1].latin === true &&
+      r[1].text === ' · Tora' && r.map((x) => x.text).join('') === 'ทอร่า · Tora';
   })());
   check('splitFontRuns ไม่มีวงศ์ละติน → ช่วงเดียว',
     G.splitFontRuns('ก · A', false).length === 1);
   check('splitFontRuns ข้อความว่าง → []', G.splitFontRuns('').length === 0);
   check('splitFontRuns รวมตัวติดกันที่ใช้ฟอนต์เดียวกันเป็นช่วงเดียว',
-    G.splitFontRuns('abcก').length === 1 && G.splitFontRuns('—…©').length === 1);
+    G.splitFontRuns('abc—…©').length === 1 && G.splitFontRuns('ก่อนหน้า').length === 1);
   // ปิดเลขหน้าไว้ เพื่อให้เหลือแต่ "รอยวาดของข้อความ" ที่กำลังทดสอบจริง ๆ
   // ([alpha.132 ข้อ 2] เลขหน้าเปิดตามค่าเริ่มต้นแล้ว — ถ้าไม่ปิด จะมีรอยวาดของเลขหน้าปนมาด้วย)
   const rBold = await G.generatePdf({
@@ -524,8 +515,9 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     const EMO = String.fromCodePoint(0x1F600);
     check('[63] needsLatinFont: อีโมจิ → ใช้วงศ์ละติน (ไทยไม่มี glyph)', G.needsLatinFont(EMO));
     check('[63] needsLatinFont: ตัวอักษรไทย → ไม่ใช่ละติน', !G.needsLatinFont('ก'));
-    check('[63] needsLatinFont: ASCII → ไม่ใช่ละติน (ฟอนต์ไทยมีครบ)',
-      !G.needsLatinFont('A') && !G.needsLatinFont('1'));
+    // [alpha.159] ฟอนต์ไทยของเครื่องไม่มีละตินแบบ Courier → ASCII ไปวงศ์ละตินแล้ว
+    check('[159] needsLatinFont: ASCII → ละติน (Courier Prime)',
+      G.needsLatinFont('A') && G.needsLatinFont('1'));
     check('[63] needsLatinFont: PUA F701 (รูปเลื่อนของไทย) → ไม่ใช่ละติน',
       !G.needsLatinFont(String.fromCharCode(0xF701)));
     check('[63] needsLatinFont: มิดดอต · → ละติน', G.needsLatinFont(String.fromCharCode(0x00B7)));

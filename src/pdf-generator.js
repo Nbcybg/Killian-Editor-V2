@@ -58,21 +58,28 @@ export const PDF_DEFAULTS = {
  * `—` `–` `…` `“ ”` เป็นวรรณยุกต์ลอย ๆ  fontkit หา glyph เจอ (id ≠ 0) จึงไม่ฟ้องอะไรเลย
  * แล้วได้ไฟล์ที่ "อ่านออกแต่ผิด" ซึ่งจับได้แค่ตอนเปิดดูด้วยตา
  */
+/*
+ * ══ [alpha.159] ★ ไม่มีฟอนต์ไทยฝังมากับโปรแกรมแล้ว ══
+ * ผู้ใช้สั่งลบ Courier Thai Mono/Prop (ลิขสิทธิ์ + ใช้งานจริงไม่ได้) → `main` ว่าง
+ * pdf-ui.js หาฟอนต์ไทยเอง: ไฟล์ใน Fonts/ ของโปรเจกต์ → ฟอนต์ของเครื่องตามแถว "ฟอนต์ตามภาษา"
+ * ฟอนต์ไทยของเครื่องเป็นตัวแบบสัดส่วน (Leelawadee UI/Thonburi ฯลฯ) ไม่ใช่ Courier
+ * → **ASCII ต้องไปวงศ์ละติน (Courier Prime) ด้วย** ไม่งั้นตัวอังกฤษในบทกลายเป็นฟอนต์ไทย
+ */
 export const PDF_FONT_FILES = {
-  main: ['CourierThaiMono.ttf', 'CourierThaiProp.ttf'],
+  main: [],
   latin: { regular: 'CourierPrime-Regular.ttf', bold: 'CourierPrime-Bold.ttf',
            italic: 'CourierPrime-Italic.ttf', boldItalic: 'CourierPrime-BoldItalic.ttf' },
 };
 
 /**
  * ตัวอักษรนี้ต้องวาดด้วยฟอนต์ละตินไหม
- * ไทย (U+0E00–U+0E7F) · PUA ไทยแบบวินโดวส์ (U+F700–U+F71F) · ASCII → ฟอนต์หลัก
- * ที่เหลือ (เครื่องหมายสากล/อักษรมีเครื่องหมาย/สัญลักษณ์) → ฟอนต์ละติน
+ * ไทย (U+0E00–U+0E7F) · PUA ไทยแบบวินโดวส์ (U+F700–U+F71F) → ฟอนต์หลัก (ฟอนต์ไทย)
+ * ที่เหลือทั้งหมดรวม ASCII → ฟอนต์ละติน (Courier Prime) · [alpha.159] เดิม ASCII อยู่ฝั่งหลัก
+ * เพราะ Courier Thai Mono มีละตินแบบ Courier ในตัว — ฟอนต์ไทยของเครื่องไม่มี
  */
 export function needsLatinFont(ch) {
   const cp = String(ch).codePointAt(0);
   if (!Number.isFinite(cp)) return false;
-  if (cp <= 0x7e) return false;
   if (cp >= 0x0e00 && cp <= 0x0e7f) return false;
   if (cp >= 0xf700 && cp <= 0xf71f) return false;
   return true;

@@ -1,0 +1,36 @@
+/* renderer/themes/k2-light.css — [alpha.157] ธีมสีแยกไฟล์ (ผู้ใช้: "theme สี ให้ใช้เป็นไฟล์แยก css เลย")
+   กติกา: ไฟล์ธีมมีแค่ "ตัวแปรสี" ของ body.theme-<id> — กฎหน้าตาทั้งหมดอยู่ใน style.css แล้วอ้างตัวแปรเท่านั้น
+   เพิ่มธีมใหม่ = คัดลอกไฟล์นี้ · เปลี่ยนชื่อคลาส · ลงทะเบียนใน THEMES (core.js) + ป้ายในไฟล์ภาษา
+   ห้ามแตะ --paper-* ยกเว้น --paper-surround (พื้นรอบกระดาษเป็นเปลือกโปรแกรม ไม่ใช่ตัวกระดาษ) */
+/* ══ [alpha.138] ธีม "K2 สว่าง" — จานสีเดียวกัน กลับเฉด ══
+   ผู้ใช้: *"ไม่ต้องทำ dark/light เก็บ k2 กับ k2-light"* → ธีมสว่างของเดิม (โทนครีม Claude) ถูกลบทิ้ง
+   กติกาเดิม: แตะเฉพาะเปลือกโปรแกรม · `--paper-surround` = พื้น **รอบ** กระดาษ (เป็นเปลือก ไม่ใช่กระดาษ) */
+body.theme-k2-light {
+  --k2-navy:#1e1250; --k2-purple:#452f5e; --k2-orange:#ff6640; --k2-yellow:#ffc55c;
+  --bg:#f8f6fc; --side:#eae5f5; --bar:#e2dcf0; --border:#c6bcdc;
+  --fg:#241a45; --bright:#120b2e; --dim:#6a5f8a;
+  /* ส้มของจานบนพื้นสว่างจ้าเกินไป → ใช้เฉดเข้มขึ้นเป็นสีเน้นหลัก ส่วนสีเน้นรองคือส้มตัวจริง */
+  --accent:#d94a20; --accent-hi:#ff6640; --link:#5a3ea8; --sel:#ffd9a3;
+  --orange:#b26a12; --curline:#efe9fa;
+  --paper-surround:#cbc2de;                 /* พื้นรอบกระดาษ — ตัวกระดาษเองไม่เปลี่ยน */
+  --hover:#dcd3ee;        /* พื้นตอนเอาเมาส์ชี้ปุ่ม */
+  --hover-soft:#e7e1f4;   /* พื้นตอนชี้แถวในรายการ / แท็บที่ยังไม่ถูกเลือก */
+  --titlebar:#ded6f0;     /* แถบชื่อหน้าต่าง (frameless) */
+  --sunken:#f1edfa;       /* พื้นจม — บล็อกโค้ด / กล่องผลลัพธ์ / ทูลทิป */
+  --chip:#e0d8f2;         /* พื้นป้ายชื่อ (mention / pill) */
+  --danger-soft:#f2ccd6;  /* พื้นปุ่มอันตรายตอนชี้ */
+  --canvas:#f8f6fc;       /* พื้นกระดานวาด (Planner) */
+  --void:#ded6f0;         /* พื้นหลังใต้การ์ดแผง */
+  --tab-bar:#ded6f0;
+  --tab-bg:#ffffff;
+  --tab-border:#c6bcdc;
+  --tab-fg:#5a4f7c;
+  --tab-fg-on:#241a45;
+  --tab-hover:#ebe5f7;
+  --panel-head:#e6e0f3;
+  --input-bg:#ffffff;
+  --muted-strong:#4a3f6e;
+  --find-hit:#ffe08a;
+  --on-accent:#ffffff;
+  --on-accent-hi:#120b2e;
+}

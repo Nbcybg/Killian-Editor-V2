@@ -1,0 +1,42 @@
+/* renderer/themes/flower.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-flower {
+  --theme-peony:#c2477f;
+  --theme-lavender:#8e6cc9;
+  --theme-leaf:#4f9a6a;
+  --theme-petal:#f9dce8;
+  --bg:#fdf8fb;
+  --side:#f7eaf2;
+  --bar:#f2dfea;
+  --border:#e0c2d4;
+  --fg:#3d2a36;
+  --bright:#1f151b;
+  --dim:#8a7c85;
+  --accent:#b53d74;
+  --accent-hi:#8e6cc9;
+  --link:#3f8a5a;
+  --sel:#f9dce8;
+  --orange:#8e6cc9;
+  --curline:#f6f1f4;
+  --hover:#e4dde1;
+  --hover-soft:#f1ecef;
+  --titlebar:#eae3e7;
+  --sunken:#f7f2f5;
+  --chip:#f2dce7;
+  --danger-soft:#f4d0d4;
+  --canvas:#fdf8fb;
+  --void:#eae3e7;
+  --paper-surround:#dad3d8;
+  --tab-bar:#eae3e7;
+  --tab-bg:#fffdfe;
+  --tab-border:#e0c2d4;
+  --tab-fg:#8a7c85;
+  --tab-fg-on:#3d2a36;
+  --tab-hover:#f1ecef;
+  --panel-head:#f1ecef;
+  --input-bg:#fffefe;
+  --muted-strong:#604f59;
+  --find-hit:#c1aee1;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+}

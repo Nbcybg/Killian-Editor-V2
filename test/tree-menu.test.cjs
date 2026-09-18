@@ -25,7 +25,7 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // ───────── ลำดับตามรายการของผู้ใช้ (เขียนซ้ำตรงนี้ด้วยมือ = สัญญาที่ต้องรักษา) ─────────
 const USER_LIST = {
   project: 'addBook renameProject | quickOpen searchProject dashboard kanban journal | play playerHistory | branchPanel | projectSettings aiSettings reveal',
-  book: 'addBook rename reorder | addChapter duplicate star | manageBooks manageChapters searchIn readBook | quickNote viewQuickNotes | propsPopup propsPanel reveal | color status pin | lock backup restore | delete',
+  book: 'addBook rename reorder | addChapter duplicate star | manageBooks manageChapters searchIn readBook | castOfCharacters titlePage | quickNote viewQuickNotes | propsPopup propsPanel reveal | color status pin | lock backup restore | delete',
   chapter: 'addChapter bookFromChapter visual rename reorder | addScene copy paste duplicate move star | manageChapters manageScenes searchIn readChapter readBook | propsPopup propsPanel reveal | color status pin | lock backup restore | delete',
   scene: 'open addScene addChapter chapterFromScenes rename reorder switchFormat | copy paste duplicate moveUp moveDown move star | quickNote comment readScene | propsPopup propsPanel reveal | color status pin | saveVersion versionHistory compareVersion | splitView toMemo | lock backup restore | delete',
   memoHead: 'open addMemo | reveal',

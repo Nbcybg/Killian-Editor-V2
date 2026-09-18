@@ -1,0 +1,42 @@
+/* renderer/themes/plum-wine.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-plum-wine {
+  --theme-c1:#601d49;
+  --theme-c2:#bd5579;
+  --theme-c3:#ea9d9d;
+  --theme-c4:#ffebb8;
+  --bg:#3a1030;
+  --side:#2e0c26;
+  --bar:#4a1640;
+  --border:#601d49;
+  --fg:#ffebd6;
+  --bright:#fff7ef;
+  --dim:#b09394;
+  --accent:#ea9d9d;
+  --accent-hi:#ffebb8;
+  --link:#ffc9a8;
+  --sel:#601d49;
+  --orange:#ffebb8;
+  --curline:#421937;
+  --hover:#542c46;
+  --hover-soft:#461d3a;
+  --titlebar:#290b22;
+  --sunken:#300d27;
+  --chip:#66334b;
+  --danger-soft:#722940;
+  --canvas:#300d27;
+  --void:#290b22;
+  --paper-surround:#290b22;
+  --tab-bar:#290b22;
+  --tab-bg:#4e2641;
+  --tab-border:#654055;
+  --tab-fg:#b09394;
+  --tab-fg-on:#fff5eb;
+  --tab-hover:#461d3a;
+  --panel-head:#340e2b;
+  --input-bg:#2c0c24;
+  --muted-strong:#dcc4b8;
+  --find-hit:#a6887b;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

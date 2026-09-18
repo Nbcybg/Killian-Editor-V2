@@ -1,0 +1,42 @@
+/* renderer/themes/tropical.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-tropical {
+  --theme-c1:#ff9d50;
+  --theme-c2:#fff9d8;
+  --theme-c3:#1dced8;
+  --theme-c4:#55e07e;
+  --bg:#fff9d8;
+  --side:#fdf0c2;
+  --bar:#ffe7b8;
+  --border:#f2c98f;
+  --fg:#2d3a2e;
+  --bright:#171d17;
+  --dim:#818672;
+  --accent:#d9661a;
+  --accent-hi:#1198a0;
+  --link:#138a5a;
+  --sel:#b8f0d0;
+  --orange:#1198a0;
+  --curline:#f8f2d2;
+  --hover:#e4e0c2;
+  --hover-soft:#f2eece;
+  --titlebar:#eae6c7;
+  --sunken:#f9f3d3;
+  --chip:#f9e3bc;
+  --danger-soft:#f6d1ba;
+  --canvas:#fff9d8;
+  --void:#eae6c7;
+  --paper-surround:#d9d7b9;
+  --tab-bar:#eae6c7;
+  --tab-bg:#fffef5;
+  --tab-border:#f2c98f;
+  --tab-fg:#818672;
+  --tab-fg-on:#2d3a2e;
+  --tab-hover:#f2eece;
+  --panel-head:#f2eece;
+  --input-bg:#fffef7;
+  --muted-strong:#535c4d;
+  --find-hit:#7cc6cb;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

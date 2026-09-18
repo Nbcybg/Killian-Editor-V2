@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+  <!-- [alpha.157r] placeholder ของภาพประกอบกล่อง "เกี่ยวกับ" — แทนที่ไฟล์นี้ -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#2a1c63"/><stop offset=".55" stop-color="#1e1250"/><stop offset="1" stop-color="#0e0829"/></linearGradient>
+    <radialGradient id="glow" cx="30%" cy="42%" r="45%"><stop offset="0" stop-color="#ff6640" stop-opacity=".45"/><stop offset="1" stop-color="#ff6640" stop-opacity="0"/></radialGradient>
+    <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc55c"/><stop offset=".35" stop-color="#8a4f7a"/><stop offset="1" stop-color="#1e1250"/></linearGradient>
+    <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#452f5e"/><stop offset="1" stop-color="#150c36"/></linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#sky)"/>
+  <rect width="1200" height="900" fill="url(#glow)"/>
+  <circle cx="360" cy="330" r="46" fill="#ffc55c" fill-opacity=".85"/>
+  <path d="M0 640 L220 450 L300 520 L470 330 L560 430 L640 380 L820 560 L930 470 L1200 650 L1200 900 L0 900 Z" fill="url(#m1)" fill-opacity=".9"/>
+  <path d="M0 720 L160 600 L300 680 L430 560 L600 700 L760 590 L930 710 L1080 620 L1200 690 L1200 900 L0 900 Z" fill="url(#m2)"/>
+  <path d="M0 800 C 200 760 380 830 600 790 C 820 750 1000 820 1200 780 L1200 900 L0 900 Z" fill="#0b0622"/>
+  <text x="600" y="860" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#ffffff" fill-opacity=".28">HERO IMAGE PLACEHOLDER</text>
+</svg>

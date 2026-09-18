@@ -60,6 +60,7 @@ export function settingsTemplate(a = []) {
       <div class="k-row"><label>${a[6]}</label><input type="text" id="st-title"></div>
       <div class="k-row"><label>${a[7]}</label><input type="text" id="st-author"></div>
       <div class="k-row"><label>${tx('ui.setTpl.themeColor')}<span class="k-hint">${tx('ui.setTpl.colorAppBarPanel')}</span></label><select id="st-theme" class="k-dlg-select" style="width:100%"></select></div>
+      <div class="k-row"><label>${tx('ui.setTpl.skipHome')}<span class="k-hint">${tx('ui.setTpl.skipHomeHint')}</span></label><input type="checkbox" id="st-skip-home"></div>
       <div class="k-row"><label>${a[8]}<span class="k-hint">${a[9]}</span></label><input type="number" id="st-auto" min="0" max="120"></div>
       <div class="k-row"><label>${a[10]}</label><input type="checkbox" id="st-backup"></div>
       <div class="k-row"><label>${a[11]}<span class="k-hint">${a[12]}</span></label><input type="number" id="st-maxbak" min="1" max="200"></div>
@@ -72,8 +73,8 @@ export function settingsTemplate(a = []) {
       <div class="k-row"><label>${tx('ui.setTpl.closeNoteHistory')}<span class="k-hint">${tx('ui.setTpl.closeDonePanelHistory')}</span></label><input type="checkbox" id="st-histoff"></div>
     </div>
     <div class="k-set-page k-set-2col" data-p="write">
-      <div class="k-row"><label>${a[15]}<span class="k-hint">${a[16]}</span></label><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div>
-      <div class="k-row"><label>${a[17]}<span class="k-hint">${a[18]}</span></label><select id="st-spfontfamily" class="k-dlg-select" style="width:100%"></select></div>
+      <div class="k-row"><label>${a[15]}<span class="k-hint">${a[16]}</span></label><div class="k-font-field"><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
+      <div class="k-row"><label>${a[17]}<span class="k-hint">${a[18]}</span></label><div class="k-font-field"><select id="st-spfontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${tx('ui.setTpl.sizeFontNovelPt')}<span class="k-hint">${tx('ui.setTpl.defaultSourcePtFormat')}</span></label><input type="number" id="st-edpt" class="k-narrow" min="6" max="48" step="0.5"></div>
       <div class="k-row"><label>${tx('ui.setTpl.sizeFontScreenplayPt')}<span class="k-hint">${tx('ui.setTpl.defaultChapterPtAll')}</span></label><input type="number" id="st-sppt" class="k-narrow" min="6" max="48" step="0.5"></div>
       <div class="k-row"><label>${tx('ui.setTpl.sizeCharUI')}<span class="k-hint">${tx('ui.setTpl.adjustDefaultPxHas')}</span></label><input type="number" id="st-font" min="-6" max="16" step="1"></div>
@@ -102,6 +103,7 @@ export function settingsTemplate(a = []) {
       <div id="st-update-host"></div>
     </div>
     <div class="k-set-page k-set-2col" data-p="setup">
+      <div id="st-logline-host" class="k-full"></div>
       <div class="k-hint" style="margin-bottom:10px">${tx('ui.setTpl.dataTopCoverChapter')}</div>
       <div class="k-set-sub">${tx('ui.setTpl.author')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.author2')}</label><input type="text" id="st-email"></div>
@@ -184,9 +186,10 @@ export function settingsTemplate(a = []) {
       <div class="k-row"><label>${tx('ui.setTpl.gapBetweenParaEm')}<span class="k-hint">${tx('ui.setTpl.novelDefaultUsePara')}</span></label><input type="number" id="st-pr-para" class="k-narrow" min="0" max="4" step="0.05"></div>
       <div class="k-row"><label>${tx('ui.setTpl.paraLineFirstInch')}<span class="k-hint">${tx('ui.setTpl.defaultInchNotCollapse')}</span></label><input type="number" id="st-pr-indent" class="k-narrow" min="0" max="3" step="0.05"></div>
       <div class="k-row"><label>${tx('ui.setTpl.paraFirstHeading')}<span class="k-hint">${tx('ui.setTpl.paraFirstChapterNot')}</span></label><input type="checkbox" id="st-pr-indent-h"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.tabWidth')}<span class="k-hint">${tx('ui.setTpl.tabWidthHint')}</span></label><span style="display:flex;gap:6px;align-items:center"><input type="number" id="st-pr-tab" class="k-narrow" min="0" max="32" step="0.05"> <select id="st-pr-tabunit" class="k-dlg-select"><option value="space">${tx('ui.setTpl.tabUnitSpace')}</option><option value="in">${tx('ui.setTpl.tabUnitIn')}</option><option value="cm">${tx('ui.setTpl.tabUnitCm')}</option></select></span></div>
       <div class="k-row"><label>${tx('ui.setTpl.arrangePageStart')}</label><select id="st-pr-align" class="k-dlg-select"><option value="left">${tx('ui.setTpl.alignLeft')}</option><option value="justify">${tx('ui.setTpl.fullLine')}</option></select></div>
       <div class="k-set-sub k-full">${tx('ui.setTpl.headingH1H6')}</div>
-      <div class="k-row"><label>${tx('ui.setTpl.fontHeading')}<span class="k-hint">${tx('ui.setTpl.emptyBodyStory')}</span></label><select id="st-pr-hfont" class="k-dlg-select" style="width:100%"></select></div>
+      <div class="k-row"><label>${tx('ui.setTpl.fontHeading')}<span class="k-hint">${tx('ui.setTpl.emptyBodyStory')}</span></label><div class="k-font-field"><select id="st-pr-hfont" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${tx('ui.setTpl.colorHeading')}<span class="k-hint">${tx('ui.setTpl.emptyUseColorTheme')}</span></label><input type="text" id="st-pr-hcolor" class="k-narrow" placeholder="#c8792f"></div>
       <div class="k-full"><table class="k-sp-cycle-tbl" id="st-pr-heads">
         <thead><tr><th>${tx('ui.setTpl.level')}</th><th>${tx('ui.setTpl.size')}</th><th>${tx('ui.setTpl.bold')}</th><th>${tx('ui.setTpl.text3')}</th><th>${tx('ui.setTpl.skipBeforeEm')}</th><th>${tx('ui.setTpl.skipEm')}</th><th>${tx('ui.setTpl.arrangePage')}</th></tr></thead>
@@ -246,7 +249,7 @@ export function settingsTemplate(a = []) {
         <button id="st-fonts-reset" class="k-reset-btn">${tx('ui.setTpl.restoreDefault')}</button>
       </div>
       <div class="k-hint" id="st-fonts-preview" style="margin-top:14px"></div>
-      <div id="st-fonts-sample" style="margin-top:6px; font-size:22px; line-height:1.7"></div>
+      <input type="text" id="st-fonts-sample" class="k-dlg-input k-font-sample k-font-sample-big" placeholder="${tx('ui.dlg.fontSamplePh')}" title="${tx('ui.dlg.fontSampleHint')}">
     </div>
     <div class="k-set-page" data-p="lang">
       <div class="k-row"><label>${a[36]}</label>

@@ -206,7 +206,10 @@ function docKinds(doc) {
 {
   const css = PF.proseExportCss(PF.mergeProseFormat(null));
   check('★★ CSS ที่ส่งออกเก็บช่องว่างนำหน้าเหมือน .ProseMirror (เยื้องด้วยการเคาะวรรค)',
-        css.includes('p,h1,h2,h3,h4,h5,h6{white-space:break-spaces}'), '');
+        // [alpha.159] กฎเดียวกันมี tab-size (ความกว้างแท็บตั้งได้) ต่อท้ายแล้ว
+        /p,h1,h2,h3,h4,h5,h6\{white-space:break-spaces[;}]/.test(css), '');
+  check('[159] ★ CSS ที่ส่งออกมีความกว้างแท็บเท่าบนจอ (ค่าเริ่มต้น 4)',
+        css.includes('white-space:break-spaces;tab-size:4}'), '');
   check('★ ไม่ตั้ง white-space ที่ body/ul/blockquote (ขึ้นบรรทัดระหว่างแท็กจะกลายเป็นบรรทัดว่าง)',
         !/body\{[^}]*white-space/.test(css) && !/^ul[,{][^}]*white-space/m.test(css), '');
   check('★ รูปทั้งบรรทัดมีกฎ <figure> คู่กับตัวแก้ไข', css.includes('figure{margin:1em 0;'), '');

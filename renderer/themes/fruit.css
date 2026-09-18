@@ -1,0 +1,42 @@
+/* renderer/themes/fruit.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-fruit {
+  --theme-strawberry:#e8442e;
+  --theme-mango:#ffb400;
+  --theme-kiwi:#5ba930;
+  --theme-grape:#7b3fa0;
+  --bg:#fffaf0;
+  --side:#fff0d6;
+  --bar:#ffe6c2;
+  --border:#f0c89a;
+  --fg:#3b2a1e;
+  --bright:#1e150f;
+  --dim:#897d72;
+  --accent:#d63a24;
+  --accent-hi:#c58300;
+  --link:#3f8a1f;
+  --sel:#ffe08a;
+  --orange:#c58300;
+  --curline:#f8f3e9;
+  --hover:#e6dfd5;
+  --hover-soft:#f3eee3;
+  --titlebar:#ebe5db;
+  --sunken:#f9f4ea;
+  --chip:#f9ddd1;
+  --danger-soft:#f6d1cc;
+  --canvas:#fffaf0;
+  --void:#ebe5db;
+  --paper-surround:#dcd5ca;
+  --tab-bar:#ebe5db;
+  --tab-bg:#fffefb;
+  --tab-border:#f0c89a;
+  --tab-fg:#897d72;
+  --tab-fg-on:#3b2a1e;
+  --tab-hover:#f3eee3;
+  --panel-head:#f3eee3;
+  --input-bg:#fffefc;
+  --muted-strong:#5e4f44;
+  --find-hit:#dfbb73;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+}

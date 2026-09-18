@@ -131,14 +131,46 @@ check('score: ทุกเกณฑ์อยู่ในช่วง 0–10', sc
 check('score: total = ค่าเฉลี่ยของเกณฑ์', Math.abs(score.total - A.mean(score.criteria.map((c) => c.score))) < 0.06);
 check('score: บอกชัดว่าเป็นชั้นคำนวณเอง', score.source === 'local');
 
+
+// ═══════ 12) [alpha.157] สัดส่วนฉาก: บทพูด / ภายในใจ / บรรยาย ═══════
+{
+  const c1 = A.composeText('“ไปกันเถอะ” เธอบอก\n\nฝนตกหนักทั้งคืน ถนนเงียบสนิท');
+  check('composition: คำพูดในเครื่องหมายคำพูด = บทพูด', c1.dialogue === 'ไปกันเถอะ'.length, JSON.stringify(c1));
+  check('composition: ที่เหลือ = บรรยาย', c1.interiority === 0 && c1.narration > c1.dialogue, JSON.stringify(c1));
+  const c2 = A.composeText('*ทำไมต้องเป็นฉัน* เขาเดินต่อไป\nเขาคิดถึงแม่ที่บ้าน');
+  check('composition: ตัวเอียงนอกคำพูด + ประโยคที่มีร่องรอยความคิด = ภายในใจ',
+    c2.interiority === 'ทำไมต้องเป็นฉัน'.length + 'เขาคิดถึงแม่ที่บ้าน'.length, JSON.stringify(c2));
+  const c3 = A.composeText('@สมชาย\n(กระซิบ)\nอย่าเสียงดัง\n\n.ห้องมืด - กลางคืน');
+  check('composition: บล็อกบทพูดของบทภาพยนตร์ (ใต้ @ชื่อ) = บทพูด · ชื่อไม่นับ',
+    c3.dialogue === '(กระซิบ)'.length + 'อย่าเสียงดัง'.length && c3.narration === 0, JSON.stringify(c3));
+  const c4 = A.composeText('— ออกไป!\nShe wondered why.');
+  check('composition: บรรทัดขีดนำ = บทพูด · wondered = ภายในใจ', c4.dialogue === 'ออกไป!'.length && c4.interiority > 0, JSON.stringify(c4));
+  check('composition: ไม่มีข้อความ = 0 ทั้งหมด', A.composeText('').total === 0);
+  check('dominantKind: เด่นชัด', A.dominantKind({ dialogue: 70, interiority: 10, narration: 20 }) === 'dialogue');
+  check('dominantKind: ใกล้กันหมด = สมดุล', A.dominantKind({ dialogue: 34, interiority: 30, narration: 36 }) === 'balanced');
+  const res = A.analyzeComposition([
+    { id: 's1', title: 'คุยกัน', text: '“ไม่” “ใช่” “ไปเลย” “อยู่นี่”\nเขาว่า' },
+    { id: 's2', title: 'เงียบ', text: 'ลมพัดผ่านทุ่งกว้าง ใบไม้ปลิวไปทั่วลาน' },
+  ]);
+  check('analyzeComposition: รายฉากรวมได้ 100%', res.rows.every((r) => Math.abs(r.dialogue + r.interiority + r.narration - 100) < 0.11),
+    JSON.stringify(res.rows));
+  check('analyzeComposition: ฉากคุย = เน้นบทพูด · ฉากเงียบ = เน้นบรรยาย', res.rows[0].lean === 'dialogue' && res.rows[1].lean === 'narration',
+    res.rows.map((r) => r.lean).join());
+  check('analyzeComposition: นับฉากที่เอนแต่ละทาง', res.lean.dialogue === 1 && res.lean.narration === 1);
+  check('analyzeComposition: stats 4 ช่อง มีป้าย', res.stats.length === 4 && res.stats.every((x) => x.label && !x.label.startsWith('ui.')));
+  check('composition: CSV มีตาราง', A.localTable('composition', res).length === 3);
+  check('composition: digest ป้อน AI ครบทุกฉาก', A.localDigest('composition', res).split('\n').filter((l) => l.includes('[s')).length === 2,
+    A.localDigest('composition', res));
+}
+
 // ═══════ ทะเบียนการวิเคราะห์ ═══════
-check('ทะเบียน: ครบ 11 ชนิดตามที่ผู้ใช้สั่ง', A.ANALYSES.length === 11, A.ANALYSIS_IDS.join());
-check('ทะเบียน: id ไม่ซ้ำ', new Set(A.ANALYSIS_IDS).size === 11);
+check('ทะเบียน: ครบ 12 ชนิด (11 เดิม + สัดส่วนฉาก alpha.157)', A.ANALYSES.length === 12, A.ANALYSIS_IDS.join());
+check('ทะเบียน: id ไม่ซ้ำ', new Set(A.ANALYSIS_IDS).size === 12);
 check('ทะเบียน: ทุกใบมีชื่อ/คำอธิบาย/ไอคอน', A.ANALYSES.every((a) => a.title && a.desc && a.icon));
 check('ทะเบียน: ไม่มีคีย์ภาษาหลุดมาเป็นชื่อ', !A.ANALYSES.some((a) => a.title.startsWith('ui.') || a.desc.startsWith('ui.')),
   A.ANALYSES.filter((a) => a.title.startsWith('ui.')).map((a) => a.id).join());
-check('ทะเบียน: ลำดับตรงกับที่ผู้ใช้สั่ง 1–11',
-  A.ANALYSIS_IDS.join() === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime');
+check('ทะเบียน: ลำดับตรงกับที่ผู้ใช้สั่ง 1–11 แล้วต่อด้วยสัดส่วนฉาก',
+  A.ANALYSIS_IDS.join() === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition');
 check('ทะเบียน: analysisById หาเจอ/ไม่เจอถูกต้อง', A.analysisById('score').id === 'score' && A.analysisById('มั่ว') === null);
 
 // runLocal ต้องคืน stats ให้ครบทุกชนิด (ไม่มีชนิดไหนที่กดแล้วหน้าจอว่าง)
@@ -205,7 +237,7 @@ check('estimateAnalysis: ให้คะแนนเผื่อคำตอบ�
   A.estimateAnalysis('score', baseAll).output < A.estimateAnalysis('pacing', baseAll).output);
 check('estimateAnalysis: ขอบเขตว่างก็ไม่พัง', A.estimateAnalysis('pacing', {}).total > 0);
 const tot = A.estimateTotal(A.ANALYSIS_IDS, baseAll);
-check('estimateTotal: รวมครบ 11 ชนิด', tot.count === 11 && tot.total > est.total);
+check('estimateTotal: รวมครบ 12 ชนิด', tot.count === 12 && tot.total > est.total);
 check('estimateUsd: ollama ฟรี', A.estimateUsd('ollama', 'llama3', tot) === 0);
 check('estimateUsd: เจ้าที่คิดเงิน > 0', A.estimateUsd('openai', 'gpt-4o-mini', tot) > 0);
 check('estimateUsd: โมเดลแพงกว่า → ราคาสูงกว่า',

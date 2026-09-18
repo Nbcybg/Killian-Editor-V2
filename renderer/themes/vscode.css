@@ -1,0 +1,38 @@
+/* renderer/themes/vscode.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-vscode {
+  --bg:#1f1f1f;
+  --side:#181818;
+  --bar:#181818;
+  --border:#2b2b2b;
+  --fg:#cccccc;
+  --bright:#ebebeb;
+  --dim:#878787;
+  --accent:#0078d4;
+  --accent-hi:#4daafc;
+  --link:#4daafc;
+  --sel:#264f78;
+  --orange:#4daafc;
+  --curline:#262626;
+  --hover:#353535;
+  --hover-soft:#292929;
+  --titlebar:#161616;
+  --sunken:#191919;
+  --chip:#17354c;
+  --danger-soft:#603335;
+  --canvas:#191919;
+  --void:#161616;
+  --paper-surround:#161616;
+  --tab-bar:#161616;
+  --tab-bg:#303030;
+  --tab-border:#454545;
+  --tab-fg:#878787;
+  --tab-fg-on:#e6e6e6;
+  --tab-hover:#292929;
+  --panel-head:#1c1c1c;
+  --input-bg:#171717;
+  --muted-strong:#adadad;
+  --find-hit:#386b99;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+}

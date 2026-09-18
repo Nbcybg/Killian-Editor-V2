@@ -6,15 +6,65 @@ import { t, tf } from './i18n.js';
 import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR } from './core.js';
 import { ask, confirmBox, escClose } from './ui.js';
 import { gi } from './icons.js';
+import { vivid, inkOn } from './color-util.js';
 
 export function getCustomStatuses() {
   if (!state.meta) return [];
   return state.meta.customStatuses || [];
 }
 
-// สถานะทั้งหมดที่ใช้ได้จริง = มาตรฐาน + ที่ผู้ใช้เพิ่ม (เมนูสถานะฉากเรียกตัวนี้)
+// ══ [alpha.157] ★ กระดาน Kanban เป็น "แหล่งความจริง" ของรายการสถานะ ══
+// ผู้ใช้: *"สถานะใน explorer / kanban ซ้ำซ้อน และไม่ link กัน → ต้องอิงจาก kanban เป็นหลัก"*
+// เดิม Kanban เก็บคอลัมน์ที่เพิ่มเองไว้ใน localStorage (ของเครื่อง · ไม่ผูกโปรเจกต์) → Explorer ไม่เคยเห็น
+// ตอนนี้คอลัมน์ = สถานะใน project.khn.json ชุดเดียว:
+//   meta.statusOrder     = ลำดับคอลัมน์ (ลากสลับบนกระดาน)
+//   meta.hiddenStatuses  = สถานะมาตรฐานที่ลบคอลัมน์ทิ้งแล้ว (มาตรฐานลบจริงไม่ได้ — ค่าเป็นข้อมูลของ v1)
+export function getHiddenStatuses() {
+  return (state.meta && Array.isArray(state.meta.hiddenStatuses)) ? state.meta.hiddenStatuses : [];
+}
+/** เรียงตาม order ที่ให้มา แล้วต่อท้ายด้วยตัวที่ยังไม่เคยจัดลำดับ (บริสุทธิ์) */
+export function orderStatuses(list, order) {
+  if (!Array.isArray(order) || !order.length) return list.slice();
+  const rank = new Map(order.map((k, i) => [k, i]));
+  return list.slice().sort((a, b) => (rank.has(a) ? rank.get(a) : 1e6 + list.indexOf(a))
+                                   - (rank.has(b) ? rank.get(b) : 1e6 + list.indexOf(b)));
+}
+
+// สถานะทั้งหมดที่ใช้ได้จริง = มาตรฐาน (ที่ไม่ถูกซ่อน) + ที่ผู้ใช้เพิ่ม · เรียงตามคอลัมน์ของ Kanban
 export function allStatuses() {
-  return [...SCENE_STATUSES, ...getCustomStatuses()];
+  const hidden = new Set(getHiddenStatuses());
+  const list = [...SCENE_STATUSES.filter((s) => !hidden.has(s)), ...getCustomStatuses()];
+  return orderStatuses(list, state.meta && state.meta.statusOrder);
+}
+
+/** แจ้งทุกหน้าจอที่แสดงสถานะ (ต้นไม้ · Kanban · แดชบอร์ด) ว่าชุดสถานะ/สีเปลี่ยน */
+function announce() {
+  try { window.dispatchEvent(new CustomEvent('k2-statuses-changed')); } catch {}
+}
+
+/** ลากคอลัมน์บนกระดาน → ลำดับสถานะของทั้งโปรเจกต์ */
+export async function setStatusOrder(order) {
+  if (!state.meta || !Array.isArray(order)) return false;
+  state.meta.statusOrder = order.filter((s, i, a) => s && a.indexOf(s) === i);
+  await persist();
+  return true;
+}
+
+/** ลบคอลัมน์: สถานะที่เพิ่มเอง = ลบจริง · สถานะมาตรฐาน = ซ่อน (กู้คืนได้จากกล่องจัดการสถานะ) */
+export async function deleteStatus(label) {
+  if (!state.meta || !label) return false;
+  if (SCENE_STATUSES.includes(label)) {
+    state.meta.hiddenStatuses = [...new Set([...getHiddenStatuses(), label])];
+    await persist();
+    return true;
+  }
+  return removeCustomStatus(label);
+}
+export async function unhideStatus(label) {
+  if (!state.meta) return false;
+  state.meta.hiddenStatuses = getHiddenStatuses().filter((s) => s !== label);
+  await persist();
+  return true;
 }
 
 // ---- สี ----
@@ -32,6 +82,7 @@ export function statusColor(label) {
 async function persist() {
   const { saveProjectMeta } = await import('./app.js');
   await saveProjectMeta();
+  announce();
 }
 
 export async function setStatusColor(label, hex) {
@@ -118,7 +169,15 @@ export async function manageCustomStatuses() {
     const row = el('div', 'k-menu-item k-status-row');
     const dot = el('span', 'k-status-dot');
     dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${statusColor(s)}`;
-    row.append(dot, el('span', null, s + (builtIn ? t('ui.status.default') : '')));
+    const hiddenNow = builtIn && getHiddenStatuses().includes(s);
+    row.append(dot, el('span', null, s + (builtIn ? t('ui.status.default') : '') + (hiddenNow ? t('ui.kanban.hiddenBuiltin') : '')));
+    if (hiddenNow) {
+      row.classList.add('k-status-hidden');
+      const back = el('button', 'k-status-unhide', t('ui.kanban.restoreStatus'));
+      back.style.cssText = 'float:right;margin-left:10px';
+      back.onclick = async (e) => { e.stopPropagation(); await unhideStatus(s); render(); refreshStatusChips(); };
+      row.append(back);
+    }
 
     const pick = el('input', 'k-status-color');
     pick.type = 'color'; pick.value = statusColor(s);
@@ -176,6 +235,16 @@ export async function manageCustomStatuses() {
 export function refreshStatusChips(root = document) {
   for (const chip of root.querySelectorAll('.sc-status')) {
     const c = statusColor(chip.textContent.trim());
-    if (c) { chip.style.color = c; chip.style.borderColor = c; }
+    if (c) paintStatusChip(chip, c);
   }
+}
+
+/** [alpha.157] ชิปสถานะ = พื้นสีเต็ม (เฉดสด) + ตัวอักษรที่อ่านออกบนพื้นนั้น (ผู้ใช้: "สีเต็มแถบ · colorful") */
+export function paintStatusChip(chip, hex) {
+  const v = vivid(hex) || hex;
+  if (!chip || !v) return;
+  chip.classList.add('sc-status-filled');
+  chip.style.background = v;
+  chip.style.borderColor = v;
+  chip.style.color = inkOn(v) || '';
 }

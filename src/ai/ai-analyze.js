@@ -425,6 +425,105 @@ export function analyzeScreentime(scenes = [], characters = []) {
   };
 }
 
+
+// ═══════════════ 12) [alpha.157] สัดส่วนฉาก: บทพูด · ภายในใจ · บรรยาย ═══════════════
+// ผู้ใช้: *"เพิ่ม scene composition โดยจะเน้นไปที่ 3 ส่วน % ของ dialogue interiority narration
+//          โดยจะวิเคราะห์ว่า ในฉาก เน้นหนักไปในทางไหน"*
+//
+// ชั้นคำนวณเอง (ไม่ง้อ AI) — นับเป็น "อักขระที่ไม่ใช่ช่องว่าง" (ภาษาไทยไม่มีช่องว่างระหว่างคำ
+// การนับคำจะช้ากว่ามากโดยสัดส่วนแทบไม่ต่าง):
+//   บทพูด     = ข้อความในเครื่องหมายคำพูด · บรรทัดขีดนำ (— …) · บล็อกบทพูดของบทภาพยนตร์ (ใต้ @ชื่อ)
+//   ภายในใจ   = ตัวเอียงนอกเครื่องหมายคำพูด (ธรรมเนียมเขียนความคิด) · ประโยคที่มีร่องรอยความคิด/ความรู้สึก
+//   บรรยาย    = ที่เหลือทั้งหมด
+// ร่องรอยภายในใจเป็นข้อมูลภาษา (ห้ามแปล — เหตุผลเดียวกับ CONFLICT_WORDS)
+/* i18n-skip: คลังคำภาษา (ข้อมูล ไม่ใช่ข้อความ UI) */
+export const INTERIOR_WORDS = [
+  'คิด', 'นึก', 'รู้สึก', 'ในใจ', 'ใจหนึ่ง', 'ความรู้สึก', 'สงสัย', 'ไม่แน่ใจ', 'จำได้', 'ความทรงจำ', 'หวังว่า',
+  'กลัวว่า', 'อยากจะ', 'ภาวนา', 'ตระหนัก', 'ครุ่นคิด', 'ใคร่ครวญ', 'บอกตัวเอง', 'ถามตัวเอง', 'หัวใจ', 'เจ็บปวด',
+  'เสียใจ', 'รำพึง', 'ลังเล', 'ปลงใจ', 'เข้าใจแล้ว', 'รู้ดีว่า', 'ไม่อยากเชื่อ',
+];
+/* /i18n-skip */
+export const INTERIOR_WORDS_EN = /\b(thought|think|thinking|wonder(?:ed|ing)?|felt|feel(?:s|ing)?|realiz(?:e|ed|ing)|remember(?:ed|ing)?|knew|wish(?:ed)?|hope[ds]?|fear(?:ed)?|doubt(?:ed)?|imagin(?:e|ed)|recall(?:ed)?|himself|herself|myself)\b/i;
+export const COMPOSITION_KINDS = ['dialogue', 'interiority', 'narration'];
+const nonSpace = (x) => String(x || '').replace(/\s+/g, '').length;
+
+/**
+ * แยกข้อความของฉากเดียวเป็นสามกอง
+ * @returns {{dialogue:number, interiority:number, narration:number, total:number}} จำนวนอักขระ
+ */
+export function composeText(md) {
+  const out = { dialogue: 0, interiority: 0, narration: 0, total: 0 };
+  const raw = String(md || '').replace(/<!--[\s\S]*?-->/g, ' ').replace(/\r/g, '');
+  let inSpDialogue = false;
+  for (const line0 of raw.split('\n')) {
+    const line = line0.trim();
+    if (!line) { inSpDialogue = false; continue; }
+    // บทภาพยนตร์: @ชื่อ = หัวบทพูด (ไม่นับ) · บรรทัดถัดไปจนบรรทัดว่าง = บทพูด
+    if (/^@\S/.test(line)) { inSpDialogue = true; continue; }
+    if (/^(#{1,6}\s|\.[^.\s]|>\s*[A-Z]|\$shot\b|!\[)/.test(line)) { inSpDialogue = false; if (!/^#/.test(line)) continue; }
+    if (inSpDialogue) { out.dialogue += nonSpace(plainText(line)); continue; }
+    // บรรทัดขีดนำ = บทพูดทั้งบรรทัด
+    if (/^[—–]\s*\S/.test(line)) { out.dialogue += nonSpace(plainText(line.replace(/^[—–]\s*/, ''))); continue; }
+    // 1) ตัดบทพูดในเครื่องหมายคำพูดออกก่อน
+    let rest = line.replace(/!\[[^\]]*\]\([^)]*\)/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    rest = rest.replace(/[“"„«]([^”"»]*)[”"»]/g, (m, inner) => { out.dialogue += nonSpace(plainText(inner)); return ' '; });
+    // 2) ตัวเอียงนอกคำพูด = ความคิด
+    rest = rest.replace(/(?<![*\w])(\*|_)(?!\s)([^*_\n]+?)\1(?![*\w])/g, (m, mk, inner) => {
+      out.interiority += nonSpace(plainText(inner)); return ' ';
+    });
+    // 3) ที่เหลือแยกเป็นประโยค — มีร่องรอยความคิด = ภายในใจ
+    for (const sent of plainText(rest).split(/(?<=[.!?…])\s+|\s{2,}|(?<=[ๆฯ])\s+/)) {
+      const n = nonSpace(sent);
+      if (!n) continue;
+      if (INTERIOR_WORDS.some((w) => sent.includes(w)) || INTERIOR_WORDS_EN.test(sent)) out.interiority += n;
+      else out.narration += n;
+    }
+  }
+  out.total = out.dialogue + out.interiority + out.narration;
+  return out;
+}
+
+/** ส่วนที่เด่นของฉาก — ห่างอันดับสองไม่ถึง 10 จุด และไม่มีอะไรเกิน 45% = สมดุล */
+export function dominantKind(pct) {
+  const sorted = COMPOSITION_KINDS.map((k) => [k, pct[k] || 0]).sort((a, b) => b[1] - a[1]);
+  if (!sorted[0][1]) return '';
+  if (sorted[0][1] < 45 && sorted[0][1] - sorted[1][1] < 10) return 'balanced';
+  return sorted[0][0];
+}
+const pctOf = (c) => {
+  const t = c.total || 0;
+  const r = { dialogue: pct(c.dialogue, t), interiority: pct(c.interiority, t), narration: 0 };
+  r.narration = t ? +(100 - r.dialogue - r.interiority).toFixed(1) : 0;
+  return r;
+};
+export const COMPOSITION_LABELS = {
+  dialogue: tt('ui.aia.cmpDialogue'), interiority: tt('ui.aia.cmpInteriority'),
+  narration: tt('ui.aia.cmpNarration'), balanced: tt('ui.aia.cmpBalanced'),
+};
+
+export function analyzeComposition(scenes = []) {
+  const sum = { dialogue: 0, interiority: 0, narration: 0, total: 0 };
+  const rows = scenes.map((s) => {
+    const c = composeText(s.text);
+    for (const k of [...COMPOSITION_KINDS, 'total']) sum[k] += c[k];
+    const p = pctOf(c);
+    return { id: s.id, title: s.title, chapterTitle: s.chapterTitle || '', chars: c.total, ...p, lean: dominantKind(p) };
+  });
+  const overall = pctOf(sum);
+  const lean = { dialogue: 0, interiority: 0, narration: 0, balanced: 0 };
+  for (const r of rows) if (r.lean) lean[r.lean]++;
+  return {
+    rows, overall, lean, overallLean: dominantKind(overall),
+    stats: [
+      { label: COMPOSITION_LABELS.dialogue, value: overall.dialogue + '%' },
+      { label: COMPOSITION_LABELS.interiority, value: overall.interiority + '%' },
+      { label: COMPOSITION_LABELS.narration, value: overall.narration + '%' },
+      { label: tt('ui.aia.stCmpLean'), value: overall.dialogue + overall.interiority + overall.narration
+        ? (COMPOSITION_LABELS[dominantKind(overall)] || '—') : '—' },
+    ],
+  };
+}
+
 // ═══════════════ 10) ให้คะแนน (ชั้นคำนวณเอง) ═══════════════
 /**
  * คะแนนสุขภาพต้นฉบับจากตัวเลขล้วน ๆ 0–10 ต่อหัวข้อ — ไม่ใช่คะแนน "ความดีงามของเรื่อง"
@@ -478,6 +577,8 @@ export const ANALYSES = [
   { id: 'shipping',   icon: gi('heart'), ai: 'assist', title: tt('ui.aia.tShipping'),          desc: tt('ui.aia.dShipping'), needsChars: true },
   { id: 'score',      icon: gi('star'), ai: 'core',   title: tt('ui.aia.tScore'),             desc: tt('ui.aia.dScore') },
   { id: 'screentime', icon: gi('film'), ai: 'assist', title: tt('ui.aia.tScreentime'),        desc: tt('ui.aia.dScreentime'), needsChars: true },
+  // [alpha.157] สัดส่วนฉาก — บทพูด / ภายในใจ / บรรยาย
+  { id: 'composition', icon: gi('thought'), ai: 'assist', title: tt('ui.aia.tComposition'),   desc: tt('ui.aia.dComposition') },
 ];
 export const ANALYSIS_IDS = ANALYSES.map((a) => a.id);
 export function analysisById(id) { return ANALYSES.find((a) => a.id === id) || null; }
@@ -499,6 +600,7 @@ export function runLocal(id, scenes = [], characters = [], opts = {}) {
     case 'score':      return analyzeScoreLocal(scenes, characters);
     case 'plothole':   return localPlotSummary(scenes);
     case 'continuity': return localContinuity(scenes, characters);
+    case 'composition': return analyzeComposition(scenes);
     default:           return { stats: [] };
   }
 }
@@ -538,6 +640,7 @@ export const AI_TASK_KEYS = {
   conflict: 'ui.aia.taskConflict', length: 'ui.aia.taskLength', plothole: 'ui.aia.taskPlotHole',
   continuity: 'ui.aia.taskContinuity', repeat: 'ui.aia.taskRepeat', shipping: 'ui.aia.taskShipping',
   score: 'ui.aia.taskScore', screentime: 'ui.aia.taskScreentime',
+  composition: 'ui.aia.taskComposition',
 };
 
 /** ย่อผลชั้นคำนวณเองให้เป็นข้อความสั้น ๆ ป้อนโมเดล (ไม่ให้โมเดลนับเลขเอง) */
@@ -554,6 +657,8 @@ export function localDigest(id, local = {}) {
   if (id === 'repeat') takeRows(local.rows, (r) => ttf('ui.aia.dgRepeat', r.word, r.count, r.title, r.id, r.closest), 25);
   if (id === 'shipping') takeRows(local.rows, (r) => ttf('ui.aia.dgShipping', r.a, r.b, r.scenes, r.score), 15);
   if (id === 'screentime') takeRows(local.rows, (r) => ttf('ui.aia.dgScreentime', r.name, r.scenes, r.mentions, r.share), 20);
+  if (id === 'composition') takeRows(local.rows, (r) => ttf('ui.aia.dgComposition', r.title, r.id, r.dialogue, r.interiority, r.narration,
+    COMPOSITION_LABELS[r.lean] || '—'), 30);
   if (id === 'score') takeRows(local.criteria, (c) => ttf('ui.aia.dgScore', c.label, c.score, c.note), 10);
   if (id === 'plothole' || id === 'continuity') takeRows(local.rows, (r) => ttf('ui.aia.dgNote', r.title, r.id, r.note), 20);
   return lines.join('\n');
@@ -810,6 +915,9 @@ export function localTable(id, local = {}) {
     ...L.rows.map((r) => [r.a, r.b, r.scenes, r.mentions, r.score])];
   if (id === 'screentime' && L.rows) return [H(tt('ui.aia.csCharacter'), tt('ui.common.scene2'), tt('ui.aia.csMentions'), tt('ui.aia.csWords'), tt('ui.aia.csShare')),
     ...L.rows.map((r) => [r.name, r.scenes, r.mentions, r.words, r.share])];
+  if (id === 'composition' && L.rows) return [H(tt('ui.aia.csScene'), tt('ui.aia.csChapter'), COMPOSITION_LABELS.dialogue + ' %',
+    COMPOSITION_LABELS.interiority + ' %', COMPOSITION_LABELS.narration + ' %', tt('ui.aia.stCmpLean')),
+    ...L.rows.map((r) => [r.title, r.chapterTitle, r.dialogue, r.interiority, r.narration, COMPOSITION_LABELS[r.lean] || ''])];
   if (id === 'score' && L.criteria) return [H(tt('ui.aia.csCriterion'), tt('ui.aia.csScore'), tt('ui.aia.csNote')),
     ...L.criteria.map((c) => [c.label, c.score, c.note])];
   if (L.rows && L.rows.length) return [H(tt('ui.aia.csTitle'), tt('ui.aia.csNote')), ...L.rows.map((r) => [r.title, r.note || ''])];

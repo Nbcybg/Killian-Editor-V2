@@ -23,6 +23,8 @@ export const TREE_MENU_SPEC = {
     'addBook', 'rename', 'reorder', '-',
     'addChapter', 'duplicate', 'star', '-',
     'manageBooks', 'manageChapters', 'searchIn', 'readBook', '-',
+    // [alpha.159] ผู้ใช้: "เพิ่ม click ขวาที่เล่ม … cast of character กับ title page ต้องใส่"
+    'castOfCharacters', 'titlePage', '-',
     'quickNote', 'viewQuickNotes', '-',
     'propsPopup', 'propsPanel', 'reveal', '-',
     'color', 'status', 'pin', '-',

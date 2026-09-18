@@ -1,0 +1,42 @@
+/* renderer/themes/sakura-mist.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-sakura-mist {
+  --theme-c1:#fff5f5;
+  --theme-c2:#f7d6d0;
+  --theme-c3:#e2b4bd;
+  --theme-c4:#4a4a4a;
+  --bg:#fff5f5;
+  --side:#f9e6e3;
+  --bar:#f7d6d0;
+  --border:#e2b4bd;
+  --fg:#4a4a4a;
+  --bright:#252525;
+  --dim:#838080;
+  --accent:#b25a73;
+  --accent-hi:#b57985;
+  --link:#8e4a60;
+  --sel:#f7d6d0;
+  --orange:#b57985;
+  --curline:#f9efef;
+  --hover:#e7dfdf;
+  --hover-soft:#f4ebeb;
+  --titlebar:#ede4e4;
+  --sunken:#faf0f0;
+  --chip:#f3dee2;
+  --danger-soft:#f6cecf;
+  --canvas:#fff5f5;
+  --void:#ede4e4;
+  --paper-surround:#ded6d6;
+  --tab-bar:#ede4e4;
+  --tab-bg:#fffdfd;
+  --tab-border:#e2b4bd;
+  --tab-fg:#838080;
+  --tab-fg-on:#4a4a4a;
+  --tab-hover:#f4ebeb;
+  --panel-head:#f4ebeb;
+  --input-bg:#fffdfd;
+  --muted-strong:#6b6969;
+  --find-hit:#d6b5bc;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+}

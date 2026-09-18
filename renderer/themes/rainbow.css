@@ -1,0 +1,45 @@
+/* renderer/themes/rainbow.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-rainbow {
+  --theme-red:#ff5e5e;
+  --theme-orange:#ff9f43;
+  --theme-yellow:#ffd93d;
+  --theme-green:#6bcb77;
+  --theme-blue:#4dabf7;
+  --theme-indigo:#748ffc;
+  --theme-violet:#b197fc;
+  --bg:#1a1a24;
+  --side:#14141c;
+  --bar:#22222e;
+  --border:#3a3a4e;
+  --fg:#f1f1f6;
+  --bright:#f9f9fb;
+  --dim:#9b9ba2;
+  --accent:#ff5e5e;
+  --accent-hi:#ffd93d;
+  --link:#4dabf7;
+  --sel:#3b3470;
+  --orange:#ffd93d;
+  --curline:#23232c;
+  --hover:#36363f;
+  --hover-soft:#272731;
+  --titlebar:#121219;
+  --sunken:#15151e;
+  --chip:#532b33;
+  --danger-soft:#5d2f38;
+  --canvas:#15151e;
+  --void:#121219;
+  --paper-surround:#121219;
+  --tab-bar:#121219;
+  --tab-bg:#303039;
+  --tab-border:#494952;
+  --tab-fg:#9b9ba2;
+  --tab-fg-on:#f8f8fb;
+  --tab-hover:#272731;
+  --panel-head:#171720;
+  --input-bg:#14141b;
+  --muted-strong:#cacad0;
+  --find-hit:#988332;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+}

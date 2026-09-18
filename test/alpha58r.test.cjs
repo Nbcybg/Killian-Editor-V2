@@ -172,6 +172,14 @@ const doc = MD.mdToDoc('<!--align:center-->กลางหน้า\nปกต�
 check('[25] ยังอ่าน <!--align--> แบบเดิมได้', doc.content[0].attrs.align === 'center');
 check('[25] collectAlign ได้แผนที่', JSON.stringify(MD.collectAlign(doc)) === '{"0":"center"}');
 check('[25] alignToString', MD.alignToString({ 0: 'center', 3: 'right' }) === '0:center, 3:right');
+check('[157] alignFromString รับค่าที่ frontmatter ของ alpha.156 อ่านกลับมาพร้อมวงเล็บ',
+  JSON.stringify(MD.alignFromString('[0:center, 3:right]')) === '{"0":"center","3":"right"}');
+{
+  const txt = MD.dumpMdFile({ title: 'x', align: MD.alignToString({ 0: 'center', 3: 'right' }) }, 'body');
+  const back = MD.parseMdFile(txt).meta.align;
+  check('[157] ★ บันทึก → เปิดใหม่ การจัดหน้ากลับมาครบ (วงจรเต็มผ่าน dumpMdFile/parseMdFile)',
+    JSON.stringify(MD.alignFromString(back)) === '{"0":"center","3":"right"}', JSON.stringify(back));
+}
 check('[25] alignFromString (string)',
   JSON.stringify(MD.alignFromString('0:center, 3:right')) === '{"0":"center","3":"right"}');
 check('[25] alignFromString (array จาก frontmatter)',

@@ -207,8 +207,19 @@ export function setStatus(s) { $('#status').textContent = s; }
 //   clearBusy()   — ล้างทั้งหมด · busyMsg() — อ่านข้อความปัจจุบัน (เทสใช้)
 //   withBusy(msg, fn) — ครอบงานยาว ๆ · finally เสมอ ต่อให้ fn โยน error ก็ไม่ค้าง
 let _busyMsg = '';
+// [alpha.157] หน้าจอ splash ตอนเปิดโปรแกรม: ระหว่างที่ยังเปิดอยู่ ทุกข้อความ "กำลังทำอะไร" ส่งไปแสดงที่ splash ด้วย
+// (ผู้ใช้: "splash screen loading ระบุว่า load อะไรบ้าง") — ใช้ข้อความชุดเดียวกับแถบสถานะ จึงตรงกับงานจริงเสมอ
+const _splash = { on: false, pct: 0 };
+export function setSplashActive(on) { _splash.on = !!on; if (!on) _splash.pct = 0; return _splash.on; }
+export function splashProgress(msg, pct) {
+  if (!_splash.on || typeof kapi === 'undefined' || typeof kapi.splashProgress !== 'function') return false;
+  if (Number.isFinite(pct)) _splash.pct = Math.max(_splash.pct, pct);
+  try { kapi.splashProgress(String(msg || ''), _splash.pct); } catch {}
+  return true;
+}
 export function setBusy(msg) {
   _busyMsg = msg == null ? '' : String(msg);
+  if (_busyMsg) splashProgress(_busyMsg);
   const wrap = $('#status-busy');
   if (!wrap) return _busyMsg;                        // หน้า HTML เก่า/เทสหน่วย → เงียบ ๆ ไม่พัง
   const txt = $('#status-busy-text');
@@ -235,10 +246,9 @@ export async function withBusy(msg, fn) {
 //
 // [alpha.138] ผู้ใช้สั่งเลิกธีม dark/light ของเดิม — เหลือจานสีประจำโปรแกรมสองเฉด
 // และ **ไม่มีปุ่มบนแถบ ไม่มีคีย์ลัด** อีกแล้ว (เลือกจาก dropdown ในตั้งค่าอย่างเดียว)
-export const THEMES = ['k2', 'k2-light'];
-export const THEME_LABEL_KEYS = {
-  k2: 'ui.settings.themeK2', 'k2-light': 'ui.settings.themeK2Light',
-};
+// [alpha.159] รายชื่อธีมย้ายไปอยู่ renderer/themes/themes.json → สร้างเป็น src/generated/themes-data.js
+// ตอน build (tools/theme-build.cjs) · ที่นี่ re-export ให้ทุกที่ที่ import จาก core.js ใช้ได้เหมือนเดิม
+export { THEMES, THEME_LABEL_KEYS, THEME_MODES } from './generated/themes-data.js';
 /** ค่าเก่าที่เคยบันทึกไว้ในไฟล์โปรเจกต์/ตั้งค่าผู้ใช้ → ธีมที่ใช้แทน (ห้ามลบ ไม่งั้นของเก่าตกไปค่าเริ่มต้นเงียบ ๆ) */
 export const THEME_ALIAS = { dark: 'k2', light: 'k2-light' };
 
@@ -430,8 +440,9 @@ export const SCENE_COLORS = [
 ];
 // สีประจำสถานะมาตรฐาน (สถานะที่ผู้ใช้เพิ่มเองเก็บสีไว้ที่ meta.customStatusColors — ดู custom-status.js)
 export const STATUS_COLORS = {
-  'โครงร่าง': '#8a8f98', 'กำลังเขียน': '#d97757', 'เขียนเสร็จ': '#5f9fd9',
-  'ตรวจแล้ว': '#6fae6f', 'เก็บถาวร': '#a97fd0',
+  // [alpha.157] เฉดสด (ผู้ใช้: "สีควรเป็น colorful") — ค่านี้เป็นค่าเริ่มต้นตอนวาด ไม่ได้ถูกเขียนลงไฟล์
+  'โครงร่าง': '#94a3b8', 'กำลังเขียน': '#ff7a2f', 'เขียนเสร็จ': '#3b9bff',
+  'ตรวจแล้ว': '#2ecc71', 'เก็บถาวร': '#a66bff',
 };
 /* /i18n-skip */
 export const DEFAULT_STATUS_COLOR = '#8a8f98';
@@ -474,6 +485,7 @@ export { PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES, SP_
          CAPS_ELEMENTS, elementCaps, setElementCaps } from './sp-format.js';
 // ฟอนต์ตามภาษา (alpha.57a ข้อ 5) — โมดูลบริสุทธิ์ ส่งต่อจาก lang-fonts.js
 export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, defaultLangFonts, normalizeLangFonts,
+         projectFontFamily, projectFontFaceCss, FONT_FILE_RE, REMOVED_BUILTIN_FONTS,
          normalizeRange, cssFamilyName, isUsable as isLangFontUsable, buildLangFontCss,
          withLangFamily, applyLangFonts,
          // [alpha.84 ข้อ 1] ตัวปรับสัดส่วนฟอนต์ไทยของบทภาพยนตร์
