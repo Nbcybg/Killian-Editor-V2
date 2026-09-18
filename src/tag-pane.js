@@ -1,4 +1,5 @@
 // tag-pane.js — แท็บ "แท็ก" แสดงรายการแท็กทั้งหมด + จำนวน + กรอง + tag cloud
+import { buildTagTree, sortedTagEntries } from './tag-tree.js';
 import { t } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { activate, closeTab } from './app.js';
@@ -152,21 +153,12 @@ function renderTagTree(container, counts) {
   }
   
   // จัดกลุ่มตาม prefix (hierarchical: location:city:bangkok)
-  const tree = {};
-  for (const [tag, count] of sorted) {
-    const parts = tag.split(':');
-    let node = tree;
-    for (let i = 0; i < parts.length; i++) {
-      const key = parts.slice(0, i + 1).join(':');
-      if (!node[key]) node[key] = { count: 0, children: {} };
-      if (i === parts.length - 1) node[key].count = count; // ใบ
-      node = node[key].children;
-    }
-  }
+  // [alpha.159 · M35] ตัวแม่ได้ผลรวมของลูกหลาน (เดิม 0 ทุกตัว + เรียงกลับหัว) — ตรรกะอยู่ tag-tree.js
+  const tree = buildTagTree(counts);
   
   // เรนเดอร์ tree
   const renderNode = (obj, depth = 0) => {
-    const entries = Object.entries(obj).sort((a, b) => b[1].count - a[1].count);
+    const entries = sortedTagEntries(obj);
     for (const [key, node] of entries) {
       const row = el('div', 'tag-item');
       row.style.paddingLeft = (16 + depth * 20) + 'px';

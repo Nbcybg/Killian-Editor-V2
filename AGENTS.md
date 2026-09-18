@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,218 checks · ALL OK** (alpha.159 · ผ่านทั้ง dev และตัว packaged) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **9,476 ข้อ · 118 ไฟล์** · ~35 วินาที)
+ปัจจุบัน **5,274 checks · ALL OK** (alpha.159 รอบตรวจสอบ · macOS dev + packaged) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **9,656 ข้อ · 127 ไฟล์** · ~60 วินาที)
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
 เมนูย่อย: `popupMenu` รับ `sub`/`swatch`/`checked` · ฟังก์ชันที่เปิดเมนูเองใช้เป็นเมนูย่อยผ่าน `menuItemsOf(fn)` ·
@@ -361,6 +361,21 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 
 ประตูกันพลาด: unit `json-store` · `frontmatter` · `disk-conflict` · `project-doctor` + e2e `[156-1…7]`
 เครื่องมือกู้ของที่พังไปแล้ว: **เครื่องมือ → ตรวจสุขภาพโปรเจกต์** (`project-doctor.js` / `project-doctor-ui.js`)
+
+### ⚠️ บทเรียนรอบตรวจสอบ alpha.159 (159-audit)
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| สถานะของปลั๊กอิน ProseMirror (เส้นคั่นหน้า · สมอคอมเมนต์) | เก็บต่อ instance ที่สร้างใน `plugin()` + ผูก view ผ่าน `view()` hook · ฟังก์ชัน API รับ `view`/`dom` | ตัวแปรระดับโมดูล (ทุกแท็บ/แยกจอใช้ก้อนเดียว) |
+| หาแถวใน `scenes.json` จากไฟล์ | จับทั้ง **โฟลเดอร์บท + ชื่อไฟล์** (`sceneCtx`) | จับชื่อไฟล์อย่างเดียว — ทุกบทมี `scene-01.md` |
+| เขียน `.md` ทั้งไฟล์นอกตัวแก้ไข | `writeKeepingComments` / `writeMdKeepingComments(io, …)` (comment-core · บริสุทธิ์) | `writeFile(dumpMdFile(…))` = ลบเธรดคอมเมนต์ |
+| แทนเนื้อตัวแก้ไขจากโค้ด | `KEditor.setMarkdown` (ลงประวัติ undo เป็นขั้นแยกแล้ว) | สร้าง EditorState ใหม่ (ประวัติหาย) |
+| ฟอนต์ที่ฝังลง PDF | ผ่าน `embedFonts` (เรียก `avoidAatLayout` ให้เอง) · `.ttc` ใช้ไม่ได้ | ส่งฟอนต์ AAT (Sathu/Ayuthaya ของ macOS) เข้า fontkit ตรง ๆ — วนไม่จบกับสระอำจนแรมเต็ม |
+| ป้ายเงื่อนไขของช่องผล AI | ธง `dataset.state` (`resultReady`) | เทียบตัวอักษร/ไอคอน (`startsWith('❌')`) |
+| ข้อความ UI ใหม่ | `t('ui.…')` · เทส `i18n-keys` ตอนนี้กวาด `tr/trf/tm/tKey` + msgid ของ `` T`…` `` แล้ว | `` T`…` `` ใหม่ |
+| ตรวจว่า `t` ถูกบังไหม | `test/i18n-shadow-precise.test.cjs` (เดิน AST ระดับสโคป) | เชื่อคำเตือนระดับไฟล์ของ `tools/i18n-shadow.cjs` อย่างเดียว (แจ้งเกินจริง) |
+| e2e ที่ตั้ง `scrollTop` บนตัวแผงใบใหม่ | ตั้ง `style.scrollBehavior='auto'` ก่อน (CSS เป็น smooth = อ่านได้ค่ากลางทาง) | รอเวลาตายตัวแล้วเทียบค่าเป๊ะ |
+| แก้เทสที่วัดตำแหน่งบนจอ | ระวัง "เรขาคณิตบังเอิญ" (tab stop · จุดตัดบรรทัด) ที่ต่างตามเมตริกฟอนต์ของ OS | สรุปว่าโค้ดผิดจากผลบน OS เดียว |
 
 ### ⚠️ กฎถาวร (alpha.155) — **เมนูคลิกขวาของ Explorer: ลำดับอยู่ใน `tree-menu-spec.js` ที่เดียว**
 

@@ -158,6 +158,25 @@ check('ปกกับหัวบทบังคับขึ้นหน้า�
       B.startsNewPage({ kind: 'chapterHead' }) && B.startsNewPage({ kind: 'bookCover' })
       && !B.startsNewPage({ kind: 'scene' }));
 
+// ───────── [alpha.159 · H7] เลขหน้าที่ผู้ใช้ตั้งเอง ─────────
+check('[159-H7] ★ ไม่ได้ตั้ง = undefined (ห้ามเป็น 1 — ไม่งั้นทับสาย continue)',
+      B.explicitStartPage({}) === undefined && B.explicitStartPage(null) === undefined
+      && B.explicitStartPage({ startPage: '' }) === undefined && B.explicitStartPage({ startPage: 0 }) === undefined);
+check('[159-H7] ตั้งเลขเอง = เลขนั้น (รับทั้งแถวและค่าตรง ๆ)',
+      B.explicitStartPage({ startPage: 7 }) === 7 && B.explicitStartPage('12') === 12 && B.explicitStartPage(3) === 3);
+check('[159-H7] ค่าเสีย/ติดลบ = undefined', B.explicitStartPage({ startPage: 'abc' }) === undefined
+      && B.explicitStartPage(-4) === undefined);
+
+// ───────── [alpha.159 · QoL] หน้า N / M ตรงเคอร์เซอร์ ─────────
+{
+  const brk = [{ pos: 100 }, { pos: 250 }];
+  const a = B.pageAtPos(brk, 10), b = B.pageAtPos(brk, 100), c = B.pageAtPos(brk, 300, 7);
+  check('[159-QoL] ก่อนเส้นแรก = หน้า 1 / 3', a.page === 1 && a.total === 3, JSON.stringify(a));
+  check('[159-QoL] ตรงเส้นคั่นพอดี = หน้าใหม่แล้ว', b.page === 2, JSON.stringify(b));
+  check('[159-QoL] เลขหน้าเริ่มต้น 7 → หน้าที่พิมพ์ 9 / 9', c.printed === 9 && c.printedLast === 9, JSON.stringify(c));
+  check('[159-QoL] ไม่มีเส้นคั่น = หน้า 1 / 1 (ไม่พัง)', B.pageAtPos(null, 5).total === 1 && B.pageAtPos([], 5).page === 1);
+}
+
 console.log(`\nbook-flow: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

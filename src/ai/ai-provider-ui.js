@@ -55,6 +55,25 @@ export function aiMeta() {
   state.meta.ai = state.meta.ai || {};
   return state.meta.ai;
 }
+/**
+ * [alpha.159 · M30] จดการใช้ AI ลง `meta.ai.usage` — **ทางเดียว** ของทุกฟีเจอร์ (แชท · วิเคราะห์ · …)
+ * เดิมมีแต่แผงแชทที่จด → หน้า "การใช้งาน/ค่าใช้จ่าย" ไม่รวมงานวิเคราะห์ซึ่งกินโทเคนมากที่สุด
+ * ผู้เรียกเป็นคนบันทึก project meta เอง (แชทรวบทีเดียวตอนจบรอบ · วิเคราะห์บันทึกทันที)
+ * @returns {boolean} true = จดแล้ว
+ */
+export function recordAiUsage({ usage, cost, provider = '', model = '', feature = '', session = '' } = {}) {
+  if (!state.meta || !usage) return false;
+  const ai = aiMeta();
+  const list = ai.usage || [];
+  list.push({ date: new Date().toISOString(), tokens: usage.total || ((usage.input || 0) + (usage.output || 0)),
+              in: usage.input || 0, out: usage.output || 0,
+              usd: cost && Number.isFinite(cost.usd) ? cost.usd : null,
+              provider, model, feature, ...(session ? { session } : {}) });
+  if (list.length > 500) list.splice(0, list.length - 500);
+  ai.usage = list;
+  return true;
+}
+
 /** ผู้ให้บริการที่เลือกใช้อยู่ พร้อมคีย์จริง (null = ยังไม่ได้ตั้งค่าอะไรเลย) */
 export async function currentProvider() {
   const p = activeProvider(aiMeta());

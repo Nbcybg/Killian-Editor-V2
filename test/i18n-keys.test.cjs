@@ -72,6 +72,63 @@ for (const f of langFiles) {
         (missing[0] ? '  (ที่ ' + used.get(missing[0]) + ')' : ''));
 }
 
+// ───────── [alpha.159 · H10] นามแฝงอื่นของตัวแปลภาษา ─────────
+// เดิมกวาดแค่ t/tf/tt/ttf/tx/txf → `tr('ui.smart.acceptHint')` (นามแฝงของ core.t) ไม่มีแถวในไฟล์ภาษา
+// แต่เทสผ่าน · หน้าจอโชว์คีย์ดิบ · ตอนนี้กวาด tr/trf/tm/tKey ด้วย และเคารพกฎของ lookup()
+// (คีย์ที่ไม่ขึ้นต้นด้วย `ui.` จะถูกลองหาแบบ `ui.<คีย์>` อีกรอบ — `tr('ai.working')` = `ui.ai.working`)
+{
+  const ALIAS = /(^|[^A-Za-z0-9_$.])(tr|trf|tm|tKey)\(\s*'([^']+)'/g;
+  const aliasUsed = new Map();
+  for (const abs of srcFiles) {
+    const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+    const raw = fs.readFileSync(abs, 'utf8');
+    const src = stripComments(raw);
+    const tstart = testStart(rel, raw);
+    let m;
+    ALIAS.lastIndex = 0;
+    while ((m = ALIAS.exec(src))) {
+      const key = m[3];
+      if (!/^[a-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_:-]+)+$/.test(key)) continue;   // คีย์ดอตพาธเท่านั้น (tm รับ msgid ไทยได้)
+      if (tstart !== Infinity && src.slice(0, m.index).split('\n').length >= tstart) continue;
+      if (!aliasUsed.has(key)) aliasUsed.set(key, rel);
+    }
+  }
+  check('[159-H10] กวาดเจอการเรียกผ่านนามแฝง (tr/tm/tKey)', aliasUsed.size > 50, aliasUsed.size);
+  for (const f of langFiles) {
+    const tbl = tables[f];
+    const missing = [...aliasUsed.keys()].filter((k) => !tbl[k] && !tbl['ui.' + k]);
+    check(`[159-H10] ${f}: คีย์ที่เรียกผ่าน tr/tm/tKey มีครบ (ขาด 0)`, missing.length === 0,
+          missing.length + ' ขาด: ' + missing.slice(0, 4).join(' · ') + (missing[0] ? '  (ที่ ' + aliasUsed.get(missing[0]) + ')' : ''));
+  }
+}
+
+// ───────── [alpha.159 · H11] ข้อความ T`…` (msgid = ประโยคไทย) ต้องมีแถวในไฟล์ภาษา ─────────
+// ไม่มีแถว = แปลไม่ได้ตลอดกาล (โชว์ไทยบนจอภาษาอังกฤษ) โดยไม่มีอะไรฟ้อง — เจอค้าง 71 ข้อความในรอบ alpha.159
+{
+  const { lexStrings: lexS, unescape: cooked } = require('../tools/js-lex.cjs');
+  const esc = (x) => x.replace(/\{/g, '{{').replace(/\}/g, '}}');
+  const msgidOf = (tk) => { let o = ''; for (let i = 0; i < tk.parts.length; i++) { o += esc(cooked(tk.parts[i])); if (i < tk.parts.length - 1) o += '{' + i + '}'; } return o; };
+  const ids = new Map();
+  for (const abs of srcFiles) {
+    const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+    const raw = fs.readFileSync(abs, 'utf8');
+    const tstart = testStart(rel, raw);
+    for (const tk of lexS(raw)) {
+      if (tk.type !== 'tpl') continue;
+      if (!/(^|[^A-Za-z0-9_$.])T\s*$/.test(raw.slice(Math.max(0, tk.start - 4), tk.start))) continue;
+      if (tstart !== Infinity && tk.line >= tstart) continue;
+      const id = msgidOf(tk);
+      if (!ids.has(id)) ids.set(id, rel);
+    }
+  }
+  for (const f of langFiles) {
+    const missing = [...ids.keys()].filter((id) => !tables[f][id]);
+    check(`[159-H11] ${f}: ข้อความ T\`…\` ทุกตัวมีแถว (ขาด 0)`, missing.length === 0,
+          missing.length + ' ขาด: ' + missing.slice(0, 3).map((x) => JSON.stringify(x.slice(0, 30))).join(' · ')
+          + (missing[0] ? '  (ที่ ' + ids.get(missing[0]) + ')' : ''));
+  }
+}
+
 // ───────── ไฟล์ภาษาทุกไฟล์ต้องมีชุดคีย์เหมือนกัน ─────────
 const base = langFiles[0];
 for (const f of langFiles.slice(1)) {

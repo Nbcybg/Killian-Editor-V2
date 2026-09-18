@@ -20,7 +20,7 @@
 //
 // ส่วนคำนวณทั้งหมด **บริสุทธิ์** (unit test: test/ai-skills.test.cjs)
 // ส่วนที่แตะไฟล์มีแค่ listSkillFiles/loadSkills/ensureSkillDir ท้ายไฟล์
-import { T, tm } from '../i18n.js';
+import { t, T, tm } from '../i18n.js';
 import { gi } from '../icons.js';
 
 export const SKILL_DIR = 'Skills';
@@ -90,7 +90,7 @@ export function buildSkillsPrompt(skills = [], opts = {}) {
     used.push(s.id);
   }
   if (!parts.length) return { text: '', used, skipped, chars: 0 };
-  const header = T`ทักษะที่ผู้เขียนกำหนดให้คุณ (ทำตามอย่างเคร่งครัด · สำคัญกว่าคำแนะนำทั่วไปข้างบน):`;
+  const header = t('ui.aiSkills.authorDefineYouDo');
   return { text: '\n\n' + header + '\n\n' + parts.join('\n\n'), used, skipped, chars };
 }
 
@@ -104,13 +104,13 @@ export function skillsLabel(all = [], onIds = []) {
 export function starterSkillMd() {
   return [
     '---',
-    'name: ' + T`โทนการเขียนของเรื่องนี้`,
-    'description: ' + T`ตัวอย่าง — แก้ไฟล์นี้ได้เลย หรือสร้างไฟล์ .md ใหม่ในโฟลเดอร์นี้`,
+    'name: ' + t('ui.aiSkills.toneWriteStory'),
+    'description: ' + t('ui.aiSkills.sampleEditFileNew'),
     '---',
     '',
-    T`เขียนด้วยประโยคสั้น กระชับ ไม่ใช้คำฟุ่มเฟือย`,
-    T`ใช้คำสรรพนามตามที่ตัวละครใช้จริงในเรื่อง ห้ามเปลี่ยนเอง`,
-    T`ห้ามสรุปตอนจบให้ ถ้าผู้เขียนไม่ได้ขอ`,
+    t('ui.aiSkills.writeSentenceShortConcise'),
+    t('ui.aiSkills.useWordPronounCharacter'),
+    t('ui.aiSkills.forbidSummaryActEnd'),
     '',
   ].join('\n');
 }

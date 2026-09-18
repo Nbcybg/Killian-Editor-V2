@@ -2,6 +2,7 @@
 import { buildLoglineFields } from './logline-ui.js';
 import { compactLogline } from './logline.js';
 import { tf } from './i18n.js';
+import { translationProgress } from './i18n-csv.js';   // [alpha.159 · QoL]
 import { settingsTemplate } from './settings-template.js';   // [alpha.154] โครงกล่องตั้งค่าออกจากไฟล์ภาษา
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
@@ -1166,6 +1167,16 @@ export function settingsDialog(openTab, opts = {}) {
   })();
 
   // ---- ภาษา ----
+  /** [alpha.159 · QoL] "แปลแล้ว x จาก y (z%)" ของภาษาที่เลือก — ภาษาไทย (ต้นฉบับ) ไม่ต้องแสดง */
+  const showLangProgress = async (code, box) => {
+    if (!box) return;
+    if (!code || code === 'th') { box.textContent = ''; return; }
+    try {
+      const [thTxt, oTxt] = await Promise.all([kapi.langRead('th', state.root || ''), kapi.langRead(code, state.root || '')]);
+      const pr = translationProgress(csvToTable(thTxt), csvToTable(oTxt));
+      box.textContent = tf('ui.dlg.langProgress', pr.translated.toLocaleString(), pr.total.toLocaleString(), pr.pct);
+    } catch { box.textContent = ''; }
+  };
   // [alpha.76] รายการภาษา = ผลสแกนไฟล์ `k2_<code>.csv` จริง ๆ ไม่ใช่รายชื่อฮาร์ดโค้ด
   const fillLangs = async () => {
     const sel = q('#st-lang'); if (!sel) return;
@@ -1182,6 +1193,13 @@ export function settingsDialog(openTab, opts = {}) {
     }
     sel.value = i18n.lang || 'th';
     if (!sel.value && list[0]) sel.value = list[0].code;
+    // [alpha.159 · QoL] ความคืบหน้าการแปลของภาษาที่เลือก (เทียบแถวที่มีไทยในต้นฉบับ)
+    if (!sel._progEl) {
+      sel._progEl = el('div', 'k-hint k-lang-progress');
+      sel.insertAdjacentElement('afterend', sel._progEl);
+      sel.addEventListener('change', () => { showLangProgress(sel.value, sel._progEl); });
+    }
+    showLangProgress(sel.value, sel._progEl);
     try {
       const dirs = await kapi.langDirs(state.root || '');
       const box = q('#st-lang-dirs');

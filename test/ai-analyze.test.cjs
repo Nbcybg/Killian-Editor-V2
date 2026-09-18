@@ -339,6 +339,19 @@ const fakeClient = (text) => {
   check('analyze: ตั้งชื่อ feature ให้ตัวนับต้นทุน', c1.calls[0].feature === 'analyze:pacing');
   check('analyze: อุณหภูมิต่ำ (งานตรวจสอบ)', c1.calls[0].temperature <= 0.4);
 
+  // [alpha.159 · M30] ผลวิเคราะห์ต้องพาข้อมูลที่ตัวจดสถิติการใช้ต้องการ (usage · ต้นทุน · โมเดล · เจ้า)
+  const cM = { complete: async () => ({ ok: true, text: reply, usage: { input: 5, output: 7, total: 12 }, cost: { usd: 0.002 }, model: 'm-x', provider: 'เจ้า-x' }) };
+  const rM = await A.analyze('pacing', { scenes, characters: chars, scope: { kind: 'project' }, client: cM });
+  check('[159-M30] ★ ผลวิเคราะห์มี usage/cost/model/provider ให้จดสถิติ', rM.ai && rM.ai.usage.total === 12 && rM.ai.cost.usd === 0.002
+        && rM.ai.model === 'm-x' && rM.ai.provider === 'เจ้า-x', JSON.stringify(rM.ai && [rM.ai.model, rM.ai.provider]));
+  {
+    const fs = require('fs');
+    const ui = fs.readFileSync(path.join(__dirname, '../src/ai-analyzer-ui.js'), 'utf8');
+    const chat = fs.readFileSync(path.join(__dirname, '../src/ai/ai-chat-panel.js'), 'utf8');
+    check('[159-M30] ★ หน้าวิเคราะห์จดการใช้ผ่านตัวจดกลาง + บันทึก meta', /recordAiUsage\(/.test(ui) && /saveProjectMeta\(\)/.test(ui));
+    check('[159-M30] แชทใช้ตัวจดกลางตัวเดียวกัน (ไม่มีสำเนาที่สอง)', /recordAiUsage\(/.test(chat) && !/ai\.usage = list/.test(chat));
+  }
+
   const r2 = await A.analyze('pacing', { scenes, characters: chars, scope: { kind: 'project' }, useAI: false });
   check('analyze: ปิด AI แล้วยังได้ผลคำนวณเอง', r2.ai === null && r2.local.rows.length === 4);
 

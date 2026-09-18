@@ -13,6 +13,7 @@ const SECTION_STATUS_OPTS = [
 ];
 import { ask, confirmBox } from './ui.js';
 import { countWords, parseMdFile } from './md.js';
+import { mutateJson } from './json-store.js';   // [alpha.159 · M1]
 
 export async function reorderSections(fromFolder, dstFolder) {
   const secs = await listSections();
@@ -69,10 +70,9 @@ export async function sectionStats(secPath) {
 }
 
 export async function saveSectionMeta(sf, patch) {
-  let d = {}; try { d = await kapi.readJson(sf); } catch {}
-  Object.assign(d, patch);
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-  return d;
+  // [alpha.159 · M1] อ่านสด-แก้-เขียนในคิวของไฟล์ (ไม่ทับค่าที่อีกทางเพิ่งเขียน เช่น ร่างหลัก)
+  const r = await mutateJson(kapi, sf, (d) => { Object.assign(d, patch); }, { fallback: {} });
+  return r.data;
 }
 
 /**
@@ -109,8 +109,7 @@ export async function renameSection(secPath, sec) {
   const title = await ask(tt('ui.section.nameBookNew'), { value: sec.title }); if (!title || title === sec.title) return;
   // อัปเดตชื่อใน section.json (เก็บชื่อโฟลเดอร์เดิมไว้ — เลี่ยงย้ายโฟลเดอร์ที่อาจมีแท็บเปิดค้าง)
   const sf = await kapi.join(secPath, 'section.json');
-  const d = await kapi.readJson(sf); d.title = title;
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await mutateJson(kapi, sf, (d) => { d.title = title; });          // [alpha.159 · M1]
   await buildTree(); setStatus(tt('ui.section.changeNameBook') + title);
 }
 
@@ -223,7 +222,12 @@ export async function sectionProps(secPath, sec) {
       const ord = parseInt(iOrder.value, 10);
       if (Number.isFinite(ord) && ord > 0) d.order = ord;
       { const ll = compactLogline(loglineUi.read()); if (ll) d.logline = ll; else delete d.logline; }
-      await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      // [alpha.159 · M1] เขียนเฉพาะช่องของกล่องนี้ลงของสดในไฟล์ — `d` ถูกอ่านไว้ตอนเปิดกล่อง
+      // (ระหว่างนั้นเปลี่ยนร่างหลัก/ลากลำดับเล่ม = เดิมโดนก้อนเก่าเขียนทับ)
+      const OWN = ['title', 'status', 'blurb', 'cover', 'coverOn', 'coverFull', 'order', 'logline'];
+      await mutateJson(kapi, sf, (fresh) => {
+        for (const k of OWN) { if (k in d) fresh[k] = d[k]; else delete fresh[k]; }
+      }, { fallback: {} });
       // ปก/สถานะของเล่มเปลี่ยน = ลำดับหน้าของทั้งเล่มเปลี่ยน → ทิ้งแคชสายหน้า
       try { const { bumpBookFlow } = await import('./read-ui.js'); bumpBookFlow(); } catch {}
       await buildTree();

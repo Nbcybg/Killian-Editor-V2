@@ -1309,24 +1309,29 @@ async function readSceneBody(node) {
 }
 
 // ---- แทรก [ข้อความ] ลงท้ายฉาก เพื่อให้ทางเลือกมีที่อยู่จริงในเนื้อเรื่อง ----
-async function insertMarkerIntoScene(node, text) {
+export async function insertMarkerIntoScene(node, text) {
   if (!node.filePath) { setStatus(tr('noFile', t('ui.common.sceneNotHasFile'))); return false; }
   const { parseMdFile, dumpMdFile } = await import('./md.js');
-  const { state: st } = await import('./core.js');
-  const raw = await kapi.readFile(node.filePath);
-  const { meta, body } = parseMdFile(raw);
+  const { tabHandle } = await import('./tab-bridge.js');
+  const { writeMdKeepingComments } = await import('./comments/comment-core.js');
   const marker = '[' + text + ']';
-  if (body.includes(marker)) return true;
-  const next = (body.replace(/\s+$/, '') + '\n\n' + marker + '\n');
-  await kapi.writeFile(node.filePath, dumpMdFile(meta, next));
-  // ฉากเปิดค้างอยู่ → โหลดเนื้อใหม่ให้เห็นทันที (ไม่งั้นพิมพ์ต่อแล้วเขียนทับของที่เพิ่งแทรก)
-  const tab = st.tabs.get(node.filePath);
-  if (tab && !tab.dirty) {
-    if (tab.editor) tab.editor.setMarkdown(next);
-    else if (tab.sp) tab.sp.setMarkdown(next);
-  } else if (tab && tab.dirty) {
+  const append = (body) => body.replace(/\s+$/, '') + '\n\n' + marker + '\n';
+  // [alpha.159 · M5] เขียนเนื้อฉากนอกตัวแก้ไข = ผ่าน tabHandle (กฎ alpha.156)
+  // เดิมเขียนดิสก์ตรง ๆ เสมอ: แท็บค้างการแก้ → saveTab มองเป็น "แก้นอกโปรแกรม" แล้วถามผู้ใช้ ·
+  // แท็บไม่ค้าง → setMarkdown โดยไม่อัปเดตฐานของตัวตรวจ = ชนกันรอบหน้า · และ dumpMdFile ลบเธรดคอมเมนต์
+  const h = tabHandle(node.filePath);
+  if (h && h.kind !== 'wiki' && h.dirty) {
+    const live = h.getText();
+    if (live.includes(marker)) return true;
+    h.setText(append(live), { keepAlign: true });     // ค้างการแก้ = ลงแท็บอย่างเดียว ผู้ใช้เป็นคนบันทึก
     setStatus(tr('insertedDirty', t('ui.branch.insertFileDoneScene')));
+    return true;
   }
+  const { meta, body } = parseMdFile(await kapi.readFile(node.filePath));
+  if (body.includes(marker)) return true;
+  await writeMdKeepingComments(kapi, node.filePath, dumpMdFile(meta, append(body)));
+  // ฉากเปิดค้างอยู่ (ไม่ค้างการแก้) → โหลดใหม่จากดิสก์ให้เห็นทันที (ฐานของตัวตรวจชนกันตรงกับไฟล์)
+  if (h && h.kind !== 'wiki') await h.reloadFromDisk();
   return true;
 }
 

@@ -492,5 +492,27 @@ const ids = (s) => s.cast.map((c) => c.id);
   check('รำพึงยังนับเป็นเทิร์นที่พูดในสถิติ', B.sessionStats(s).spoken === 2);
 }
 
+// ═══════════ [alpha.159 · H12] ความยาวบทต้องไปถึงคำขอจริง ═══════════
+{
+  const fs = require('fs');
+  const outP = path.join(require('os').tmpdir(), '_dlgprov.cjs');
+  require('esbuild').buildSync({ entryPoints: [path.join(__dirname, '../src/ai/ai-providers.js')],
+    outfile: outP, bundle: true, format: 'cjs', platform: 'node', logLevel: 'silent' });
+  const PR = require(outP);
+  const s = mkSession(3);
+  const [A, C] = ids(s);
+  s.len = 'short';
+  const req = B.buildTurnRequest(s, A, C);
+  const prov = { kind: 'openai', baseUrl: 'https://example.invalid/v1', model: 'm', credential: {} };
+  const http = PR.chatRequest(prov, { system: req.system, messages: req.messages, maxTokens: req.maxTokens });
+  check('[159-H12] ★ body ของคำขอมี max_tokens = ความยาวที่ตั้ง', http.body.max_tokens === B.lengthDef('short').maxTokens,
+        JSON.stringify(http.body.max_tokens));
+  // ตัวต่อ UI: ทุกคำขอของห้องซ้อมบทต้องส่ง maxTokens (เดิมคำนวณไว้แต่ไม่ส่ง = สวิตช์ความยาวตาย)
+  const ui = fs.readFileSync(path.join(__dirname, '../src/dialogue/builder-ui.js'), 'utf8');
+  const calls = [...ui.matchAll(/\b(completeStream|complete)\(prov, \{([\s\S]*?)\}/g)];
+  check('[159-H12] ★ builder-ui: ทุก complete/completeStream ส่ง maxTokens', calls.length >= 3 && calls.every((m) => /maxTokens:/.test(m[2])),
+        calls.map((m) => m[1] + ':' + /maxTokens:/.test(m[2])).join(','));
+}
+
 console.log(`dialogue-builder: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

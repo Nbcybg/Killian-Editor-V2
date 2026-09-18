@@ -35,7 +35,7 @@ const ROOT = path.join(__dirname, '..');
 const APPLY = process.argv.includes('--apply');
 
 // อักขระที่ถือว่าเป็นไอคอน (พิกโตแกรม + สัญลักษณ์ที่โปรแกรมใช้แทนรูป)
-const ICONCH = '[\\u{1F300}-\\u{1FAFF}\\u{1F000}-\\u{1F0FF}\\u{2460}-\\u{24FF}\\u{25A0}-\\u{27BF}'
+const ICONCH = '[\\u{1F300}-\\u{1FAFF}\\u{1F000}-\\u{1F0FF}\\u{1F100}-\\u{1F2FF}\\u{2460}-\\u{24FF}\\u{25A0}-\\u{27BF}'
              + '\\u{2B00}-\\u{2BFF}\\u{FE0F}\\u{2300}-\\u{23FF}\\u{2190}-\\u{21FF}\\u{2500}-\\u{257F}]';
 const HAS_ICON = new RegExp(ICONCH, 'u');
 const LEAD = new RegExp('^(' + ICONCH + '+)([\\s\\S]*)$', 'u');

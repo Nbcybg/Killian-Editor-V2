@@ -2,6 +2,7 @@
 import { t, tf } from './i18n.js';
 import { setStatus, state, logAction } from './core.js';
 import { confirmBox, ask } from './ui.js';
+import { mutateJson } from './json-store.js';   // [alpha.159 · M1] section.json แก้ผ่านคิว
 
 /**
  * รายชื่อร่างในเล่ม
@@ -82,6 +83,10 @@ export async function deleteDraft(secPath, name) {
   if (!(await confirmBox(tf('ui.drafts.delDraftDraft', name), t('ui.drafts.delDraft')))) return false;
   const dPath = await kapi.join(secPath, 'Draft', name);
   const recycle = await kapi.join(state.root, 'Recycle', 'draft-' + Date.now().toString(36));
+  // [alpha.159 · H3] ปิดแท็บของฉากในร่างนี้ก่อนย้าย (บันทึกงานค้างลงไฟล์ก่อน — ถังได้ของล่าสุด)
+  // เดิมไม่ปิดเลย → บันทึกอัตโนมัติเขียนกลับที่เดิม = โฟลเดอร์ร่างที่ลบไปแล้วเกิดใหม่เป็นโฟลเดอร์ผี
+  const { closeTabsUnderPath } = await import('./app.js');
+  await closeTabsUnderPath(dPath, { save: true });
   await kapi.move(dPath, recycle);
   logAction('draft', t('ui.drafts.delDraft') + ': ' + name, { from: dPath, trash: recycle });
   return true;
@@ -92,23 +97,25 @@ export async function renameDraft(secPath, oldName, newName) {
   const oldPath = await kapi.join(secPath, 'Draft', oldName);
   const newPath = await kapi.join(secPath, 'Draft', newName);
   if (await kapi.exists(newPath)) { setStatus(t('ui.drafts.hasDraftNameDone')); return false; }
+  // [alpha.159 · H3] แท็บที่เปิดค้างใต้ชื่อเดิมต้องปิด (บันทึกก่อน) — ไม่งั้นบันทึกครั้งถัดไปเขียนกลับ
+  // ที่ path เก่า = ร่างชื่อเดิม "เด้งกลับมา" · และประวัติเวอร์ชันต้องย้ายตาม (กฎ alpha.156)
+  const { closeTabsUnderPath, moveSnapshots } = await import('./app.js');
+  await closeTabsUnderPath(oldPath, { save: true });
   await kapi.move(oldPath, newPath);
+  await moveSnapshots(oldPath, newPath);
   logAction('draft', tf('ui.drafts.renameDraftTo', oldName, newName), { secPath });
   const sf = await kapi.join(secPath, 'section.json');
-  let meta = {}; try { meta = await kapi.readJson(sf); } catch {}
-  if ((meta.primaryDraft || 'default') === oldName) {
+  await mutateJson(kapi, sf, (meta) => {
+    if ((meta.primaryDraft || 'default') !== oldName) return false;
     meta.primaryDraft = newName;
-    await kapi.writeFile(sf, JSON.stringify(meta, null, 2));
-  }
+  }, { fallback: {} });
   return true;
 }
 
 /** ตั้งร่างนี้เป็น primary */
 export async function setPrimaryDraft(secPath, name) {
   const sf = await kapi.join(secPath, 'section.json');
-  let meta = {}; try { meta = await kapi.readJson(sf); } catch {}
-  meta.primaryDraft = name;
-  await kapi.writeFile(sf, JSON.stringify(meta, null, 2));
+  await mutateJson(kapi, sf, (meta) => { meta.primaryDraft = name; }, { fallback: {} });
   const { buildTree } = await import('./app.js');
   await buildTree();
 }

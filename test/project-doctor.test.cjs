@@ -27,7 +27,8 @@ const types = (list) => list.map((x) => x.type);
 
   // อาการ 1: ค่าหลายบรรทัดจากตัวเขียนเดิม
   const broken1 = '---\ntitle: ฉาก\nsynopsis: บรรทัดแรก\nบรรทัดสอง\nบรรทัดสาม\npov: มานี\n---\nเนื้อฉาก';
-  check('(ยืนยันบั๊กเดิม) parseMdFile อ่านได้แค่บรรทัดแรก', D.parseMdFile(broken1).meta.synopsis === 'บรรทัดแรก');
+  // [alpha.159 · M31] ตัวอ่านเก็บบรรทัดต่อได้แล้ว (เดิมยืนยันว่าอ่านได้แค่บรรทัดแรก) — การกู้ยังจำเป็นเพื่อเขียนรูปแบบใหม่ลงไฟล์
+  check('[159-M31] parseMdFile อ่านค่าหลายบรรทัดรุ่นเก่าได้ครบแล้ว', D.parseMdFile(broken1).meta.synopsis === 'บรรทัดแรก\nบรรทัดสอง\nบรรทัดสาม');
   const r1 = D.repairFrontmatter(broken1);
   const p1 = D.parseMdFile(r1.text);
   check('กู้ค่าหลายบรรทัดกลับมาครบ', r1.changed && p1.meta.synopsis === 'บรรทัดแรก\nบรรทัดสอง\nบรรทัดสาม', JSON.stringify(p1.meta));

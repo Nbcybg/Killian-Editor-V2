@@ -1296,6 +1296,21 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
   check('[154-1] SplitStore.save() ปั๊ม k2-ls-ts', +mem2.get('k2-ls-ts') > 0);
 }
 
+// ── [alpha.159 · M15] openIds() ต้องคืนสมาชิกของกลุ่มแท็บลอย ไม่ใช่ id ของตัวกลุ่ม ──
+{
+  const { pm: pmG } = mkMgr();
+  for (const id of ['g1', 'g2', 'g3', 'solo']) pmG.registerPanel(id, { title: id });
+  pmG.showPanel('g3');
+  pmG.floats.push({ panel: { type: 'tabs', id: 'tabs-float-x', active: 0,
+    children: [{ type: 'panel', id: 'g1' }, { type: 'panel', id: 'g2' }] }, x: 0, y: 0, w: 200, h: 200 });
+  pmG.floats.push({ panel: { type: 'panel', id: 'solo' }, x: 5, y: 5, w: 100, h: 100 });
+  const ids = pmG.openIds();
+  check('[159-M15] ★ openIds คืนสมาชิกของกลุ่มลอย (g1,g2) ไม่ใช่ id ของกลุ่ม',
+        ids.includes('g1') && ids.includes('g2') && !ids.includes('tabs-float-x'), ids.join());
+  check('[159-M15] แผงลอยเดี่ยว + แผงผนึก ยังอยู่ครบ', ids.includes('solo') && ids.includes('g3'), ids.join());
+  check('[159-M15] ทุก id ที่คืนมามีตัวลงทะเบียน (วาดได้จริง)', ids.every((id) => pmG.registered().includes(id)), ids.join());
+}
+
 console.log(`\npanel: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

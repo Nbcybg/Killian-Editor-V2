@@ -16,7 +16,7 @@ import { TitlePageEditor, normalizeTitlePages, defaultTitlePages,
          titlePageInnerHtml } from './sp-title-pages.js';
 import { HEADER_DEFAULTS, HEADER_VARS, mergeHeaders, newHeaderString,
          headerStringsFor, headerLineCount } from './sp-headers.js';
-import { generatePdf, PDF_FONT_FILES, OMITTABLE_ELEMENTS, mergePdfOptions } from './pdf-generator.js';
+import { generatePdf, PDF_FONT_FILES, OMITTABLE_ELEMENTS, mergePdfOptions, pdfFontProblem } from './pdf-generator.js';
 import { SP_ELEMS } from './fountain.js';
 import { spFormat, scriptMeta, safeName, saveProjectMeta, checkBeforeExport,
          currentScriptSource, currentStartPage, saveGlobalSetting,
@@ -86,19 +86,31 @@ async function fontStamp(dir, files) {
  * @returns {Promise<string>} ที่อยู่ไฟล์ ('' = ไม่เจอ → PDF ตกไปฟอนต์มาตรฐาน ไทยพิมพ์ไม่ออก)
  */
 export async function pdfThaiFontPath() {
+  return (await pdfThaiFontCandidates())[0] || '';
+}
+/**
+ * [alpha.159 · M33] ไฟล์ฟอนต์ไทยที่ "ลองได้" เรียงตามลำดับความสำคัญ (ไม่ซ้ำ)
+ * เดิมคืนตัวแรกของลูกโซ่ตัวเดียว — บน macOS ได้ `Thonburi.ttc` (ฝังไม่ได้) แล้วไทยทั้งไฟล์เป็น ??????
+ * โดยไม่มีคำเตือน · ตอนนี้ pdfFontBytes() ไล่ทีละไฟล์แล้วข้ามตัวที่ `pdfFontProblem()` บอกว่าใช้ไม่ได้ (.ttc/ไฟล์เสีย)
+ */
+export async function pdfThaiFontCandidates() {
   const rows = normalizeLangFonts(state.settings.langFonts)
     .filter((r) => isLangFontUsable(r) && rowAppliesTo(r, 'screenplay'))
     .filter((r) => !r.range || /0E00/i.test(normalizeRange(r.range)));
+  const out = [];
+  const add = (p) => { if (p && !out.includes(p)) out.push(p); };
   for (const r of rows) {
     if (r.file && state.root) {
       try {
         const p = await kapi.join(state.root, 'Fonts', r.file);
-        if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) return p;
+        if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) add(p);
       } catch {}
     }
   }
-  const fams = [...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS];
-  try { return (await kapi.fontFile([...new Set(fams)])) || ''; } catch { return ''; }
+  const fams = [...new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS])];
+  // ถามทีละวงศ์ — ตัวที่เจอก่อนอาจฝังไม่ได้ (.ttc / AAT) ต้องมีตัวถัดไปให้ลอง
+  for (const fam of fams) { try { add(await kapi.fontFile([fam])); } catch {} }
+  return out;
 }
 
 export async function pdfFontBytes() {
@@ -108,17 +120,25 @@ export async function pdfFontBytes() {
   const all = [L.regular, L.bold, L.italic, L.boldItalic].filter(Boolean);
   try {
     dir = await kapi.join(await kapi.appDir(), 'renderer', 'assets', 'fonts');
-    const thaiPath = await pdfThaiFontPath();
-    const stamp = await fontStamp(dir, all) + '|' + thaiPath + ':' + (thaiPath ? (await kapi.mtime(thaiPath) || 0) : 0);
+    const cands = await pdfThaiFontCandidates();
+    const thaiPath = cands.join(';');
+    const stamp = await fontStamp(dir, all) + '|' + thaiPath + ':' + (cands[0] ? (await kapi.mtime(cands[0]) || 0) : 0);
     if (FONT_CACHE.set && FONT_CACHE.stamp === stamp) return FONT_CACHE.set;
     FONT_CACHE.stamp = stamp;
     const read = async (f) => {
       const p = await kapi.join(dir, f);
       return (await kapi.exists(p)) ? new Uint8Array(await kapi.readBytes(p)) : null;
     };
-    if (thaiPath) {
-      try { out.regular = new Uint8Array(await kapi.readBytes(thaiPath)); out.file = thaiPath; } catch {}
+    // [alpha.159 · M33] ตัวแรกที่ฝังได้จริง — .ttc ฝังไม่ได้ (ฟอนต์ AAT แก้ที่ avoidAatLayout ใน pdf-generator)
+    out.skipped = [];
+    for (const p of cands) {
+      let b = null;
+      try { b = new Uint8Array(await kapi.readBytes(p)); } catch { continue; }
+      const why = pdfFontProblem(b);
+      if (why) { out.skipped.push({ file: p, why }); continue; }
+      out.regular = b; out.file = p; break;
     }
+    if (out.skipped.length) log('debug', tt('ui.pdf.thaiFontSkipped'), out.skipped);
     const lr = await read(L.regular);
     if (lr) {
       out.latin = { regular: lr, bold: await read(L.bold),
@@ -591,13 +611,19 @@ export async function pdfExportDialog() {
 export async function buildScriptPdf({ blocks, title, fmt, opts, titlePages, headers }) {
   const f = fmt || spFormat();
   const fonts = await pdfFontBytes();
-  return generatePdf({
+  const r = await generatePdf({
     blocks: blocks || [], fmt: f,
     titlePages: titlePages === undefined ? projectTitlePages() : titlePages,
     headers: headers === undefined ? projectHeaders() : headers,
     meta: pdfMeta(title), fonts: { regular: fonts.regular, latin: fonts.latin },
     opts: { ...savedPdfOptions(), ...(opts || {}) },
   });
+  // [alpha.159 · M33] ทุกทางที่ทำ PDF ของบทผ่านจุดนี้ — ไทยพิมพ์ไม่ออกต้องบอกผู้ใช้ (เดิมเงียบแล้วได้ ??????)
+  if ((r.warnings || []).includes('thai-font-missing')) {
+    log('warn', tt('ui.pdf.thaiFontMissing'), { problem: r.fontProblem, skipped: fonts.skipped || [] });
+    setStatus(tt('ui.pdf.thaiFontMissing'));
+  }
+  return r;
 }
 
 /**

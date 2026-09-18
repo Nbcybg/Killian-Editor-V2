@@ -40,5 +40,16 @@ const round = (meta, body = 'เนื้อฉาก') => parseMdFile(dumpMdFil
   check('\\r\\n ในค่าไป-กลับได้', r3.meta.synopsis === 'a\r\nb', JSON.stringify(r3.meta.synopsis));
 }
 
+// ── [alpha.159 · M31] ไฟล์รุ่นเก่าที่เขียนค่าหลายบรรทัดดิบ ๆ ต้องอ่านได้ครบ (ไม่ตัดทิ้งตอนเปิด) ──
+{
+  const legacy = '---\ntitle: ฉากเก่า\nsynopsis: บรรทัดแรก\nบรรทัดสอง\nบรรทัดสาม\npov: มานี\n---\n\nเนื้อ';
+  const r = parseMdFile(legacy);
+  check('[159-M31] ★ ค่าหลายบรรทัดรุ่นเก่าอ่านครบทุกบรรทัด', r.meta.synopsis === 'บรรทัดแรก\nบรรทัดสอง\nบรรทัดสาม', JSON.stringify(r.meta.synopsis));
+  check('[159-M31] คีย์ถัดไปไม่ปนกับบรรทัดต่อ + เนื้อไม่เปลี่ยน', r.meta.pov === 'มานี' && r.body === 'เนื้อ', JSON.stringify(r));
+  const back = parseMdFile(dumpMdFile(r.meta, r.body));
+  check('[159-M31] ★ บันทึกกลับแล้วอ่านซ้ำได้ครบ (เขียนแบบใหม่ที่ escape แล้ว)', back.meta.synopsis === r.meta.synopsis && back.meta.pov === 'มานี');
+  check('[159-M31] ไฟล์ปกติไม่เปลี่ยนพฤติกรรม', parseMdFile('---\ntitle: ก\ntags: [a, b]\n---\nx').meta.tags.join() === 'a,b');
+}
+
 console.log(`\nfrontmatter: ${pass} ผ่าน · ${fail} ไม่ผ่าน`);
 if (fail) process.exit(1);

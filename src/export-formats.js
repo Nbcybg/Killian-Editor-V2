@@ -30,7 +30,7 @@ export const EXPORT_FORMATS = [
     labelKey: 'ui.xhub.fHtml', descKey: 'ui.xhub.fHtmlDesc' },
   { key: 'md',   ext: 'md',   icon: gi('note'), preview: 'text',
     labelKey: 'ui.xhub.fMd', descKey: 'ui.xhub.fMdDesc' },
-  { key: 'txt',  ext: 'txt',  icon: '🅣', preview: 'text',
+  { key: 'txt',  ext: 'txt',  icon: gi('file-txt'), preview: 'text',   // [alpha.159 · M36] เดิมฝัง '🅣' ตรง ๆ
     labelKey: 'ui.xhub.fTxt', descKey: 'ui.xhub.fTxtDesc' },
   { key: 'rtf',  ext: 'rtf',  icon: gi('file'), preview: 'text',
     labelKey: 'ui.xhub.fRtf', descKey: 'ui.xhub.fRtfDesc' },
@@ -134,7 +134,14 @@ export function normalizeHub(saved) {
  * เวิร์กโฟลว์เนื้อหาที่เหมาะกับรูปแบบปลายทาง เมื่อผู้ใช้ยังไม่ได้เลือกเอง
  * (เลือกจากพรีเซ็ตที่มี ext ตรงกันก่อน แล้วค่อยตกไปหาพรีเซ็ตที่ให้ Markdown ล้วน)
  */
-export function defaultWorkflowFor(fmtKey, workflows = PRESETS) {
+export function defaultWorkflowFor(fmtKey, workflows = PRESETS, kind = '') {
+  // [alpha.159 · M6] RTF/FDX ถูกแปลงผ่าน parseScript (เป็น "บท" เสมอ) — เดิมตกไปที่พรีเซ็ต `plain`
+  // ซึ่งมีขั้น strip-markdown ตัดรหัสบรรทัด (`.` หัวฉาก · `###`) ทิ้ง → หัวฉากไทยที่ไม่มี INT./EXT.
+  // ถูกเดาเป็นชื่อตัวละครแทน · ใช้พรีเซ็ตของบทภาพยนตร์เมื่อเอกสารไม่ใช่นิยาย
+  if ((fmtKey === 'rtf' || fmtKey === 'fdx') && kind !== 'prose') {
+    const sp = workflows.find((w) => w.id === 'screenplay');
+    if (sp) return sp;
+  }
   const want = { pdf: 'pdf', html: 'html', txt: 'txt', md: 'md', rtf: 'txt', fdx: 'txt' }[fmtKey] || 'md';
   return (workflows.find((w) => w.ext === want && w.builtIn)
        || workflows.find((w) => w.ext === want)

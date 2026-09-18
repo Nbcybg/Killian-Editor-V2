@@ -27,15 +27,29 @@ import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
 export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMode }) {
   const key = new PMKey(keyName);
   const text = label || ((page) => t('ui.common.page2') + (page || ''));
-  let list = [];
-  let sig = '';
+  // ══ [alpha.159 · H15] ★ สถานะ "ต่อตัวแก้ไข" ไม่ใช่ต่อโมดูล ══
+  // เดิม `list/sig/shape` เป็นตัวแปรของโรงงาน = **ทุกแท็บนิยายใช้รายการเส้นคั่นชุดเดียวกัน**
+  // → เปิดสองแท็บ (หรือแยกจอ) แล้วพิมพ์ในแท็บหนึ่ง: ปลั๊กอินของอีกแท็บ map รายการของ "แท็บที่จัดหน้าล่าสุด"
+  // ด้วย mapping ของตัวเอง แล้ววาดเส้นคั่นของเอกสารอื่นลงมา (เส้นตัดหน้าข้ามแท็บ)
+  // ตอนนี้ `plugin()` หนึ่งครั้ง = สถานะหนึ่งชุด (KEditor/SPEditor เรียกครั้งเดียวต่อ view)
+  // ผู้เรียกบอกได้ว่าหมายถึงตัวไหนผ่าน view/dom · ไม่บอก = ตัวที่ถูกตั้งค่าล่าสุด (พฤติกรรมเดิมของแท็บเดียว)
+  const newInst = () => ({ list: [], sig: '', shape: '', view: null });
+  const byView = new WeakMap();
+  const byDom = new WeakMap();
+  const detached = newInst();          // ยังไม่มีตัวแก้ไข (เทส/เรียกก่อน mount) — ไม่ไปแตะของใคร
+  let cur = null;
+  const instOf = (v) => (v && (byView.get(v) || byDom.get(v) || (v.dom && byDom.get(v.dom)))) || cur || detached;
+  // ตัวแปรเดิมของโรงงาน กลายเป็น "มุมมองของ instance ที่กำลังทำงาน" — ทุกฟังก์ชันข้างล่างตั้ง S ก่อนใช้
+  let S = detached;
+  const use = (v) => { S = instOf(v); return S; };
   // [alpha.83 ข้อ 4] "เลขหน้าจริง" ของหน้าที่เริ่มตรงเส้นคั่นนี้ — วางเป็นโอเวอร์เลย์ที่มุมขวาบน
   // ของหน้าถัดไป (ตำแหน่งเดียวกับที่ PDF พิมพ์) · null = ปิดเลขหน้า
   // เดิมโหมดปกติ/จัดหน้ามีเลขแค่ **หน้าแรก** (ผ่าน `::before` ของ .ProseMirror) หน้า 2 เป็นต้นไป
   // มีแต่ป้าย "หน้า N" กลางแถบคั่น ผู้ใช้จึงเห็นว่า "เปิดเลขหน้าแล้วไม่ขึ้น"
   let numFn = null;
   /** ตั้งตัวทำป้ายเลขหน้า — คืน true เมื่อผลลัพธ์ที่ได้เปลี่ยนจริง (ผู้เรียกค่อย refresh) */
-  function setNumberLabel(fn) {
+  function setNumberLabel(fn, view) {
+    use(view);
     const before = numSig();
     numFn = typeof fn === 'function' ? fn : null;
     return numSig() !== before;
@@ -44,7 +58,7 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
     if (!numFn) return '';
     try { return String(numFn(page) ?? ''); } catch { return ''; }
   };
-  const numSig = () => list.map((b) => numOf(b.page)).join(',');
+  const numSig = () => S.list.map((b) => numOf(b.page)).join(',');
 
   // [alpha.84 ข้อ 2] ลายเซ็นต้องรวม `ind` ด้วย — ย้ายจุดตัดไปอยู่ใน element ที่เยื้องต่างกัน
   // โดยตำแหน่งเท่าเดิมเป็นไปได้ (แก้ข้อความก่อนหน้า) ถ้าไม่รวมไว้ แถบคั่นจะค้างที่ระยะเดิม
@@ -56,12 +70,14 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
                                     b.contTop || '', b.contBottom || ''].join(':')).join(',');
 
   /** ตั้งรายการเส้นคั่นหน้า — คืน true เมื่อเปลี่ยนจริง */
-  function setBreaks(next) {
+  function setBreaks(next, view) {
+    use(view);
+    if (S !== detached) cur = S;       // ตัวที่ถูกจัดหน้าล่าสุด = ตัวตั้งต้นของการเรียกที่ไม่ระบุ view
     const clean = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
     const s = sigOf(clean);
-    if (s === sig) return false;
-    sig = s;
-    list = clean;
+    if (s === S.sig) return false;
+    S.sig = s;
+    S.list = clean;
     return true;
   }
 
@@ -78,13 +94,17 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
    * ที่ถูกคือเลื่อนตำแหน่งตาม `tr.mapping` ไปเลย — ได้ทั้งความถูกต้องระหว่างรอจัดหน้ารอบใหม่
    * และเมื่อผลจัดหน้าออกมาตรงกับที่เลื่อนไว้ `setBreaks` ก็คืน false → ไม่ต้องวาดใหม่เลยสักครั้ง
    */
-  function mapBreaks(mapping) {
-    if (!list.length) return;
-    list = list.map((b) => ({ ...b, pos: mapping.map(b.pos, -1) }))
-               .filter((b) => Number.isFinite(b.pos) && b.pos > 0);
-    sig = sigOf(list);
+  function mapBreaks(I, mapping) {
+    if (!I.list.length) return;
+    I.list = I.list.map((b) => ({ ...b, pos: mapping.map(b.pos, -1) }))
+                   .filter((b) => Number.isFinite(b.pos) && b.pos > 0);
+    I.sig = sigOf(I.list);
   }
-  function breaks() { return list.slice(); }
+  /**
+   * รายการเส้นคั่นของตัวแก้ไข — **คืนวัตถุตัวเดียวกับที่ปลั๊กอินถือ** (อาร์เรย์ใหม่ แต่สมาชิกตัวเดิม)
+   * ตัวชดเชยที่ว่างท้ายหน้า (tuneProsePagePads) แก้ `.pad` ลงวัตถุพวกนี้โดยตรง
+   */
+  function breaks(view) { return use(view).list.slice(); }
 
   /**
    * [alpha.82] เส้นคั่นหน้าอยู่กลางย่อหน้าได้แล้ว (การจัดหน้าจริงตัดตาม "บรรทัด" ไม่ใช่ย่อหน้า)
@@ -117,21 +137,21 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
    * ได้ของแถมอีกข้อ: เส้นคั่นที่ **พลิกจาก inline เป็นบล็อก** (ย่อหน้าถูกผ่า/รวม) ก็ถูกวาดใหม่
    * ตามรูปทรงจริง จากเดิมที่ใช้ DOM ผิดชนิดค้างไปจนกว่าจะมีอะไรมากระตุกให้วาดใหม่
    */
-  let shape = '';
-  const shapeOf = (doc) => {
+  const shapeOf = (I, doc) => {
     if (!doc) return '';
     const max = doc.content.size;
-    return list.filter((b) => b.pos <= max)
-               .map((b) => b.pos + (isInline(doc, b.pos) ? 'i' : 'b')).join(',');
+    return I.list.filter((b) => b.pos <= max)
+                 .map((b) => b.pos + (isInline(doc, b.pos) ? 'i' : 'b')).join(',');
   };
 
-  function decos(doc) {
-    shape = shapeOf(doc);
-    if (!list.length || !doc) return DecoSet.empty;
+  function decos(I, doc) {
+    I.shape = shapeOf(I, doc);
+    if (!I.list.length || !doc) return DecoSet.empty;
+    S = I;                                  // numOf() ในป้ายอ่านจาก S
     const max = doc.content.size;
     const out = [];
     const asBlock = midMode === 'block';
-    for (const b of list) {
+    for (const b of I.list) {
       if (b.pos > max) continue;
       const mid = isInline(doc, b.pos);
       const inline = mid && !asBlock;
@@ -185,26 +205,38 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
   }
 
   function plugin() {
+    const I = newInst();                   // [alpha.159 · H15] สถานะของตัวแก้ไขตัวนี้ตัวเดียว
     return new PMPlugin({
       key,
       state: {
-        init: (_c, st) => decos(st.doc),
+        init: (_c, st) => decos(I, st.doc),
         apply(tr, prev, _o, st) {
-          if (tr.getMeta(key)) return decos(st.doc);      // มีรายการใหม่จากตัวจัดหน้า → วาดใหม่
+          if (tr.getMeta(key)) return decos(I, st.doc);   // มีรายการใหม่จากตัวจัดหน้า → วาดใหม่
           if (!tr.docChanged) return prev;                // ไม่มีอะไรขยับ → ใช้ของเดิมทั้งชุด
-          mapBreaks(tr.mapping);
+          mapBreaks(I, tr.mapping);
           // ส่งชุดเดิมผ่าน mapping — Decoration ตัวเดิมถูกใช้ซ้ำ ProseMirror จึงไม่แตะ DOM เลย
           const next = prev.map(tr.mapping, tr.doc);
           // ★ [alpha.130 ข้อ 1] แต่ต้องพิสูจน์ก่อนว่ามันยัง "ตรงกับรายการจริง" อยู่
           // (ดูคอมเมนต์ยาวที่ `shapeOf` — ไม่ตรงเมื่อไหร่ = เส้นคั่นหายถาวร)
-          const want = shapeOf(tr.doc);
-          if (want !== shape || next.find().length !== want.split(',').filter(Boolean).length) {
-            return decos(tr.doc);
+          const want = shapeOf(I, tr.doc);
+          if (want !== I.shape || next.find().length !== want.split(',').filter(Boolean).length) {
+            return decos(I, tr.doc);
           }
           return next;
         },
       },
       props: { decorations(state) { return key.getState(state); } },
+      view(v) {
+        I.view = v; byView.set(v, I); byDom.set(v.dom, I);
+        if (!cur) cur = I;
+        return {
+          destroy() {
+            byView.delete(v); byDom.delete(v.dom);
+            if (cur === I) cur = null;
+            if (S === I) S = detached;
+          },
+        };
+      },
     });
   }
 
@@ -220,11 +252,17 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
    */
   function applyPads(dom) {
     if (!dom || !dom.querySelectorAll) return 0;
+    const I = byDom.get(dom) || cur || detached;   // [alpha.159 · H15] รายการของตัวแก้ไขเจ้าของ dom นี้
+    const list = I.list;
     const els = dom.querySelectorAll('.' + cls.split(' ').pop());
-    if (els.length !== list.length) return 0;
+    // [alpha.159 · QoL] จำนวนไม่ตรง (บางเส้นยังวาดไม่เสร็จ/เพิ่งถูก map หาย) = ทาเฉพาะตัวที่จับคู่ได้
+    // ด้วย "หน้าที่เท่าไร" (dataset.page) — เดิมไม่ทาเลยสักตัว หน้าที่ถูกต้องอยู่แล้วก็เสียที่ว่างท้ายหน้าไปด้วย
+    const byPage = new Map(list.map((b) => [String(b.page || ''), b]));
     let n = 0;
     els.forEach((e, i) => {
-      const pad = Number(list[i] && list[i].pad);
+      const it = els.length === list.length ? list[i] : byPage.get(String(e.dataset && e.dataset.page || ''));
+      if (!it) return;
+      const pad = Number(it.pad);
       // [alpha.146] ค่าติดลบต้องผ่านไปถึง CSS (ดูคอมเมนต์ยาวที่ tuneProsePagePads)
       e.style.setProperty('--k-pb-pad', (Number.isFinite(pad) && Math.abs(pad) > 0.5 ? pad : 0) + 'px');
       n++;
@@ -232,5 +270,7 @@ export function createPageBreakPlugin({ key: keyName, cls, decoKey, label, midMo
     return n;
   }
 
-  return { key, setBreaks, breaks, setNumberLabel, plugin, refresh, applyPads };
+  /** [alpha.159] รายการของตัวแก้ไขนี้ถูกผูกกับ view แล้วหรือยัง (เทส/วินิจฉัย) */
+  const hasView = (view) => !!(view && byView.get(view));
+  return { key, setBreaks, breaks, setNumberLabel, plugin, refresh, applyPads, hasView };
 }

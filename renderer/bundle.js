@@ -118,6 +118,22 @@
     if (cell !== "" || row3.length) endRow();
     return rows;
   }
+  function translationProgress(th, other) {
+    const TH = /[฀-๿]/;
+    let total = 0, translated = 0;
+    const pendingKeys = [];
+    for (const [k, v2] of Object.entries(th || {})) {
+      if (!k || k.startsWith("meta.") || k.startsWith("#")) continue;
+      const src2 = String(v2 == null ? "" : v2);
+      if (!TH.test(src2)) continue;
+      total++;
+      const o = other ? other[k] : void 0;
+      if (o != null && String(o) !== "" && String(o) !== src2) translated++;
+      else pendingKeys.push(k);
+    }
+    const pct2 = total ? Math.round(translated / total * 1e3) / 10 : 100;
+    return { total, translated, pending: total - translated, pct: pct2, pendingKeys };
+  }
   var init_i18n_csv = __esm({
     "src/i18n-csv.js"() {
     }
@@ -12072,6 +12088,9 @@
     }
     return cachedPreserveItems;
   }
+  function closeHistory(tr4) {
+    return tr4.setMeta(closeHistoryKey, true);
+  }
   function history(config2 = {}) {
     config2 = {
       depth: config2.depth || 100,
@@ -13996,7 +14015,7 @@
       function stripMentions3(s) {
         return String(s == null ? "" : s).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1");
       }
-      function inlinePlainText2(text) {
+      function inlinePlainText4(text) {
         return stripMentions3(parseInline2(String(text == null ? "" : text)).map((seg) => seg.text).join("")).replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
       }
       function inlineDisplayText2(text) {
@@ -14020,6 +14039,7 @@
         return out.join(";");
       }
       var HTML_ESC = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      var ATTR_Q = (s) => String(s == null ? "" : s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
       var MARK_TAGS = [
         ["strong", "strong"],
         ["em", "em"],
@@ -14031,7 +14051,7 @@
       function inlineHtml(text, opts) {
         const mono = !!(opts && opts.mono);
         return parseInline2(stripMentions3(text)).map((seg) => {
-          let s = HTML_ESC(seg.text).replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${a}" src="${u}">`);
+          let s = HTML_ESC(seg.text).replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${ATTR_Q(a)}" src="${ATTR_Q(u)}">`);
           if (!s) return "";
           const marks2 = seg.marks || [];
           const has2 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
@@ -14495,10 +14515,15 @@
         if (text.startsWith("---")) {
           const end = text.indexOf("\n---", 3);
           if (end !== -1) {
+            let last2 = null;
             for (const line of text.slice(3, end).replace(/\r/g, "").split("\n")) {
               const m = /^(\w[\w-]*):\s*(.*)$/.exec(line);
-              if (!m) continue;
+              if (!m) {
+                if (last2 !== null && line.trim() !== "") meta2[last2] += "\n" + line.trim();
+                continue;
+              }
               meta2[m[1]] = fmDecode(m[2].trim());
+              last2 = typeof meta2[m[1]] === "string" ? m[1] : null;
             }
             body = text.slice(end + 4).replace(/^\r?\n/, "").replace(/^\r?\n/, "");
           }
@@ -14608,7 +14633,7 @@
         // [alpha.132r2] ข้อความสำหรับแสดงผล (ช่องตัวอย่าง PDF) + ตัวถอดลิงก์เอนทิตี้
         RE_IMG: RE_IMG2,
         inlineDisplayText: inlineDisplayText2,
-        inlinePlainText: inlinePlainText2,
+        inlinePlainText: inlinePlainText4,
         stripMentions: stripMentions3,
         // [alpha.142 ข้อ 6] ตัวเลือกของรูป (เต็มหน้า/ความกว้าง %/ขอบมน) — ไวยากรณ์อยู่ที่นี่ที่เดียว
         splitImgTarget,
@@ -15439,9 +15464,9 @@
     const perPage = Math.max(4, opts.lines || formatLines(fmt));
     const R3 = fmt.rules, S11 = fmt.strings;
     const cfg = (el2) => fmt.elements[el2] || fmt.elements.action;
-    const CT = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
-    const wantDlgMarkers = CT.enabled !== false && CT.dialogue !== false;
-    const wantSceneMarks = CT.enabled !== false && CT.scene !== false;
+    const CT2 = { ...CONTINUED_DEFAULTS, ...fmt.continued || {} };
+    const wantDlgMarkers = CT2.enabled !== false && CT2.dialogue !== false;
+    const wantSceneMarks = CT2.enabled !== false && CT2.scene !== false;
     const pages = [];
     let cur = [], used = 0, lastChar = "";
     let sceneSeq = 0, curScene = 0, pageSceneStart = 0;
@@ -15593,8 +15618,8 @@
   function annotateContinued(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
     const S11 = f.strings;
-    const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
-    const on2 = CT.enabled !== false && CT.scene !== false;
+    const CT2 = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
+    const on2 = CT2.enabled !== false && CT2.scene !== false;
     for (const p of pages) {
       delete p.continuedBottom;
       delete p.continuedTop;
@@ -15612,7 +15637,7 @@
     let run3 = 1, contScene = 0;
     for (let i5 = 0; i5 < pages.length - 1; i5++) {
       const p = pages[i5], n2 = pages[i5 + 1];
-      const sameScene = n2.sceneStart === p.sceneEnd && (p.sceneEnd > 0 || CT.noHeading === true);
+      const sameScene = n2.sceneStart === p.sceneEnd && (p.sceneEnd > 0 || CT2.noHeading === true);
       const spans = on2 && sameScene && splitsAcross(n2) && !dialogueBreak(p, n2);
       if (!spans) {
         run3 = 1;
@@ -15626,7 +15651,7 @@
       run3++;
       p.continuedBottom = S11.continuedBottom;
       n2.contdRun = run3;
-      n2.continuedTop = CT.number !== false && run3 > 2 ? `${S11.continuedTop} (${run3 - 1})` : S11.continuedTop;
+      n2.continuedTop = CT2.number !== false && run3 > 2 ? `${S11.continuedTop} (${run3 - 1})` : S11.continuedTop;
     }
     return pages;
   }
@@ -16410,33 +16435,49 @@
     const out = [];
     if (!doc3 || typeof doc3.forEach !== "function") return out;
     let i5 = 0;
-    doc3.forEach((node, offset) => {
+    const textOf2 = (n2) => typeof n2.textBetween === "function" && n2.content ? n2.textBetween(0, n2.content.size, "\n", (leaf2) => leaf2.type && leaf2.type.name === "hard_break" ? "\n" : "") : n2.textContent || "";
+    const kids = (n2) => {
+      const arr = [];
+      if (n2 && n2.childCount > 0 && typeof n2.forEach === "function") n2.forEach((c, off3) => arr.push([c, off3]));
+      return arr;
+    };
+    const walk3 = (node, pos, ctx2) => {
       const name5 = node.type && node.type.name;
-      const text = node.textContent || "";
-      let type = "p", level = 0;
+      if (name5 === "bullet_list" || name5 === "ordered_list" || name5 === "blockquote" || name5 === "list_item") {
+        const inner = kids(node);
+        if (inner.length) {
+          const next = name5 === "blockquote" ? "blockquote" : name5 === "list_item" ? ctx2 : "li";
+          for (const [c, off3] of inner) walk3(c, pos + 1 + off3, next || "li");
+          return;
+        }
+      }
+      const text = textOf2(node);
+      let type = ctx2 || "p", level = 0;
       if (name5 === "heading") {
         level = node.attrs && node.attrs.level || 1;
         type = "h" + level;
       } else if (name5 === "blockquote") type = "blockquote";
-      else if (name5 === "bullet_list" || name5 === "ordered_list") type = "li";
+      else if (name5 === "bullet_list" || name5 === "ordered_list" || name5 === "list_item") type = "li";
       else if (name5 === "figure") type = "figure";
       else if (name5 === "horizontal_rule") type = "hr";
       else if (name5 === "code_block") type = "code";
       else if (name5 === "page_break") type = "pagebreak";
-      const b = { type, text, pos: offset, idx: i5++ };
+      const b = { type, text, pos, idx: i5++ };
       if (level) b.level = level;
       if (name5 === "figure") {
         b.src = node.attrs.resolved || node.attrs.src;
         b.alt = node.attrs.alt || "";
       }
       out.push(b);
-    });
+    };
+    doc3.forEach((node, offset) => walk3(node, offset, ""));
     return out;
   }
-  function mdToProseBlocks(md) {
+  function mdToProseBlocks(md, opts = {}) {
     const out = [];
     let i5 = 0;
-    for (const b of (0, import_md.mdBlocks)(md)) {
+    const breakMarker = opts.breakMarker !== void 0 ? opts.breakMarker : t("ui.compile.msg");
+    for (const b of (0, import_md.mdBlocks)(md, { breakMarker })) {
       const push = (o) => out.push({ ...o, idx: i5++ });
       if (b.kind === "pagebreak") {
         push({ type: "pagebreak", text: "" });
@@ -16447,7 +16488,7 @@
         continue;
       }
       if (b.kind === "figure") {
-        push({ type: "figure", text: "", alt: b.alt, src: b.src });
+        push({ type: "figure", text: "", alt: b.alt, src: b.src, imgOpts: b.imgOpts });
         continue;
       }
       if (b.kind === "code") {
@@ -16611,10 +16652,20 @@
   function createPageBreakPlugin({ key: keyName2, cls, decoKey: decoKey2, label, midMode }) {
     const key2 = new PluginKey(keyName2);
     const text = label || ((page2) => t("ui.common.page2") + (page2 || ""));
-    let list = [];
-    let sig = "";
+    const newInst = () => ({ list: [], sig: "", shape: "", view: null });
+    const byView = /* @__PURE__ */ new WeakMap();
+    const byDom = /* @__PURE__ */ new WeakMap();
+    const detached = newInst();
+    let cur = null;
+    const instOf = (v2) => v2 && (byView.get(v2) || byDom.get(v2) || v2.dom && byDom.get(v2.dom)) || cur || detached;
+    let S11 = detached;
+    const use = (v2) => {
+      S11 = instOf(v2);
+      return S11;
+    };
     let numFn = null;
-    function setNumberLabel(fn) {
+    function setNumberLabel(fn, view2) {
+      use(view2);
       const before = numSig();
       numFn = typeof fn === "function" ? fn : null;
       return numSig() !== before;
@@ -16627,7 +16678,7 @@
         return "";
       }
     };
-    const numSig = () => list.map((b) => numOf(b.page)).join(",");
+    const numSig = () => S11.list.map((b) => numOf(b.page)).join(",");
     const sigOf = (l) => l.map((b) => [
       b.pos,
       b.page,
@@ -16635,21 +16686,23 @@
       b.contTop || "",
       b.contBottom || ""
     ].join(":")).join(",");
-    function setBreaks(next) {
+    function setBreaks(next, view2) {
+      use(view2);
+      if (S11 !== detached) cur = S11;
       const clean3 = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
       const s = sigOf(clean3);
-      if (s === sig) return false;
-      sig = s;
-      list = clean3;
+      if (s === S11.sig) return false;
+      S11.sig = s;
+      S11.list = clean3;
       return true;
     }
-    function mapBreaks(mapping) {
-      if (!list.length) return;
-      list = list.map((b) => ({ ...b, pos: mapping.map(b.pos, -1) })).filter((b) => Number.isFinite(b.pos) && b.pos > 0);
-      sig = sigOf(list);
+    function mapBreaks(I2, mapping) {
+      if (!I2.list.length) return;
+      I2.list = I2.list.map((b) => ({ ...b, pos: mapping.map(b.pos, -1) })).filter((b) => Number.isFinite(b.pos) && b.pos > 0);
+      I2.sig = sigOf(I2.list);
     }
-    function breaks() {
-      return list.slice();
+    function breaks(view2) {
+      return use(view2).list.slice();
     }
     function isInline2(doc3, pos) {
       try {
@@ -16658,19 +16711,19 @@
         return false;
       }
     }
-    let shape = "";
-    const shapeOf = (doc3) => {
+    const shapeOf = (I2, doc3) => {
       if (!doc3) return "";
       const max2 = doc3.content.size;
-      return list.filter((b) => b.pos <= max2).map((b) => b.pos + (isInline2(doc3, b.pos) ? "i" : "b")).join(",");
+      return I2.list.filter((b) => b.pos <= max2).map((b) => b.pos + (isInline2(doc3, b.pos) ? "i" : "b")).join(",");
     };
-    function decos(doc3) {
-      shape = shapeOf(doc3);
-      if (!list.length || !doc3) return DecorationSet.empty;
+    function decos(I2, doc3) {
+      I2.shape = shapeOf(I2, doc3);
+      if (!I2.list.length || !doc3) return DecorationSet.empty;
+      S11 = I2;
       const max2 = doc3.content.size;
       const out = [];
       const asBlock = midMode === "block";
-      for (const b of list) {
+      for (const b of I2.list) {
         if (b.pos > max2) continue;
         const mid = isInline2(doc3, b.pos);
         const inline2 = mid && !asBlock;
@@ -16710,25 +16763,40 @@
       return DecorationSet.create(doc3, out);
     }
     function plugin() {
+      const I2 = newInst();
       return new Plugin({
         key: key2,
         state: {
-          init: (_c, st) => decos(st.doc),
+          init: (_c, st) => decos(I2, st.doc),
           apply(tr4, prev, _o, st) {
-            if (tr4.getMeta(key2)) return decos(st.doc);
+            if (tr4.getMeta(key2)) return decos(I2, st.doc);
             if (!tr4.docChanged) return prev;
-            mapBreaks(tr4.mapping);
+            mapBreaks(I2, tr4.mapping);
             const next = prev.map(tr4.mapping, tr4.doc);
-            const want = shapeOf(tr4.doc);
-            if (want !== shape || next.find().length !== want.split(",").filter(Boolean).length) {
-              return decos(tr4.doc);
+            const want = shapeOf(I2, tr4.doc);
+            if (want !== I2.shape || next.find().length !== want.split(",").filter(Boolean).length) {
+              return decos(I2, tr4.doc);
             }
             return next;
           }
         },
         props: { decorations(state2) {
           return key2.getState(state2);
-        } }
+        } },
+        view(v2) {
+          I2.view = v2;
+          byView.set(v2, I2);
+          byDom.set(v2.dom, I2);
+          if (!cur) cur = I2;
+          return {
+            destroy() {
+              byView.delete(v2);
+              byDom.delete(v2.dom);
+              if (cur === I2) cur = null;
+              if (S11 === I2) S11 = detached;
+            }
+          };
+        }
       });
     }
     function refresh(view2) {
@@ -16736,17 +16804,22 @@
     }
     function applyPads(dom) {
       if (!dom || !dom.querySelectorAll) return 0;
+      const I2 = byDom.get(dom) || cur || detached;
+      const list = I2.list;
       const els = dom.querySelectorAll("." + cls.split(" ").pop());
-      if (els.length !== list.length) return 0;
+      const byPage = new Map(list.map((b) => [String(b.page || ""), b]));
       let n2 = 0;
       els.forEach((e, i5) => {
-        const pad4 = Number(list[i5] && list[i5].pad);
+        const it = els.length === list.length ? list[i5] : byPage.get(String(e.dataset && e.dataset.page || ""));
+        if (!it) return;
+        const pad4 = Number(it.pad);
         e.style.setProperty("--k-pb-pad", (Number.isFinite(pad4) && Math.abs(pad4) > 0.5 ? pad4 : 0) + "px");
         n2++;
       });
       return n2;
     }
-    return { key: key2, setBreaks, breaks, setNumberLabel, plugin, refresh, applyPads };
+    const hasView = (view2) => !!(view2 && byView.get(view2));
+    return { key: key2, setBreaks, breaks, setNumberLabel, plugin, refresh, applyPads, hasView };
   }
   var init_page_break_plugin = __esm({
     "src/page-break-plugin.js"() {
@@ -16825,6 +16898,10 @@
         "maximize": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M5 5h5V3H3v7h2zm5 14H5v-5H3v7h7zm11-5h-2v5h-5v2h7zm-2-4h2V3h-7v2h5z"/>' },
         "minus": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m5 11H7v-2h10z"/>' },
         "note": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8l8-8V5a2 2 0 0 0-2-2m-7 16v-7h7z"/>' },
+        "panel-bottom": { "attrs": { "viewBox": "0 0 24 24", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" }, "inner": '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 15h18"/><rect x="4.5" y="16" width="15" height="2.5" rx="1" fill="currentColor" stroke="none"/>' },
+        "panel-left": { "attrs": { "viewBox": "0 0 24 24", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" }, "inner": '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/><rect x="4.5" y="5.5" width="3" height="13" rx="1" fill="currentColor" stroke="none"/>' },
+        "panel-right": { "attrs": { "viewBox": "0 0 24 24", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" }, "inner": '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M15 4v16"/><rect x="16.5" y="5.5" width="3" height="13" rx="1" fill="currentColor" stroke="none"/>' },
+        "panel-top": { "attrs": { "viewBox": "0 0 24 24", "fill": "none", "stroke": "currentColor", "stroke-width": "1.8", "stroke-linejoin": "round" }, "inner": '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><rect x="4.5" y="5.5" width="15" height="2.5" rx="1" fill="currentColor" stroke="none"/>' },
         "plus": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10s10-4.486 10-10S17.514 2 12 2m5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/>' },
         "quote-left": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M20.309 17.708C22.196 15.66 22.006 13.03 22 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292m-11.007 0C11.19 15.66 10.999 13.03 10.993 13V5a1 1 0 0 0-1-1h-6c-1.103 0-2 .897-2 2v7a1 1 0 0 0 1 1h3.078a2.9 2.9 0 0 1-.429 1.396c-.508.801-1.465 1.348-2.846 1.624l-.803.16V20h1c2.783 0 4.906-.771 6.309-2.292"/>' },
         "redo": { "attrs": { "viewBox": "0 0 24 24" }, "inner": '<path fill="currentColor" d="M11.5 8h5.67l-2.58-2.59L16 4l5 5-5 5-1.41-1.41L17.17 10H11.5A4.5 4.5 0 0 0 7 14.5 4.5 4.5 0 0 0 11.5 19H15v2h-3.5a6.5 6.5 0 0 1 0-13"/>' },
@@ -17266,16 +17343,13 @@
         "page-numbers": "",
         "page-setup": "ruler",
         "panel-system": "layout",
-        "panels-side-bottom": "",
-        "panels-side-left": "",
-        "panels-side-right": "",
-        "panels-side-top": "",
+        "panels-side-bottom": "panel-bottom",
+        "panels-side-left": "panel-left",
+        "panels-side-right": "panel-right",
+        "panels-side-top": "panel-top",
         "planner": "",
         "planner-align": "",
         "planner-valign": "",
-        "planner-valign:bottom": "align-bottom",
-        "planner-valign:middle": "align-middle",
-        "planner-valign:top": "align-top",
         "player-history": "",
         "player-mode": "play",
         "plugin:k2test:hello": "",
@@ -17354,8 +17428,6 @@
         "ui:find-prev": "",
         "ui:find-rep1": "",
         "ui:find-repall": "",
-        "ui:open-btn": "folder",
-        "ui:search-all-btn": "search",
         "ui:tb-case": "text-case",
         "ui:tb-color": "",
         "ui:tb-highlight": "highlight",
@@ -18282,6 +18354,7 @@
     commentAnchors: () => commentAnchors,
     decoSignature: () => decoSignature,
     docEdgeCmd: () => docEdgeCmd,
+    endBeforeTrailingSpace: () => endBeforeTrailingSpace,
     focusLinePlugin: () => focusLinePlugin,
     insertHardBreak: () => insertHardBreak,
     insertPageBreak: () => insertPageBreak,
@@ -18527,38 +18600,50 @@
   function refreshFocusLine(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(focusKey, true));
   }
-  function setCommentAnchors(quotes, active) {
-    _cmQuotes = [...new Set((quotes || []).filter((q) => q && q.length >= 2))];
-    _cmActive = active || "";
+  function setCommentAnchors(quotes, active, view2) {
+    const I2 = cmInst(view2);
+    if (I2 !== CM.detached) CM.cur = I2;
+    I2.quotes = [...new Set((quotes || []).filter((q) => q && q.length >= 2))];
+    I2.active = active || "";
   }
-  function commentAnchors() {
-    return _cmQuotes.slice();
+  function commentAnchors(view2) {
+    return cmInst(view2).quotes.slice();
   }
-  function cmScan(doc3, from2, to) {
-    if (!_cmQuotes.length) return [];
-    const out = [];
-    doc3.nodesBetween(from2, to, (node, pos) => {
-      if (!node.isText || !node.text) return;
-      for (const q of _cmQuotes) {
-        let i5 = -1;
-        while ((i5 = node.text.indexOf(q, i5 + 1)) >= 0) {
-          out.push(Decoration.inline(
-            pos + i5,
-            pos + i5 + q.length,
-            { class: "k-cm-anchor" + (q === _cmActive ? " on" : ""), title: t("ui.editor.hasCommentBindText") }
-          ));
+  function cmScanOf(I2) {
+    return (doc3, from2, to) => {
+      if (!I2.quotes.length) return [];
+      const out = [];
+      doc3.nodesBetween(from2, to, (node, pos) => {
+        if (!node.isText || !node.text) return;
+        for (const q of I2.quotes) {
+          let i5 = -1;
+          while ((i5 = node.text.indexOf(q, i5 + 1)) >= 0) {
+            out.push(Decoration.inline(
+              pos + i5,
+              pos + i5 + q.length,
+              { class: "k-cm-anchor" + (q === I2.active ? " on" : ""), title: t("ui.editor.hasCommentBindText") }
+            ));
+          }
         }
-      }
-    });
-    return out;
+      });
+      return out;
+    };
   }
   function commentAnchorPlugin() {
+    const I2 = { quotes: [], active: "" };
     return new Plugin({
       key: cmKey,
-      state: incrementalDecoState(cmKey, cmScan),
+      state: incrementalDecoState(cmKey, cmScanOf(I2)),
       props: { decorations(state2) {
         return cmKey.getState(state2);
-      } }
+      } },
+      view(v2) {
+        CM.byView.set(v2, I2);
+        return { destroy() {
+          CM.byView.delete(v2);
+          if (CM.cur === I2) CM.cur = null;
+        } };
+      }
     });
   }
   function refreshCommentAnchors(view2) {
@@ -18625,7 +18710,14 @@
     const pb = state2.schema.nodes.page_break;
     if (!pb) return false;
     if (dispatch) {
-      let tr4 = state2.tr.replaceSelectionWith(pb.create());
+      let tr4;
+      const selNode = state2.selection.node;
+      if (selNode && selNode.isBlock) {
+        tr4 = state2.tr.insert(state2.selection.to, pb.create());
+        tr4.setSelection(TextSelection.near(tr4.doc.resolve(Math.min(state2.selection.to + 1, tr4.doc.content.size)), 1));
+      } else {
+        tr4 = state2.tr.replaceSelectionWith(pb.create());
+      }
       const end = tr4.selection.to;
       if (!tr4.doc.resolve(Math.min(end, tr4.doc.content.size)).nodeAfter) {
         tr4 = tr4.insert(end, state2.schema.nodes.paragraph.create());
@@ -19001,8 +19093,24 @@
         if (after.top > y + 2) pos--;
       } catch {
       }
+      const lineStart = lineEdgePos(view2, false);
+      pos = endBeforeTrailingSpace(view2.state.doc, pos, Number.isFinite(lineStart) ? lineStart : lo);
     }
     return pos;
+  }
+  function endBeforeTrailingSpace(doc3, pos, min) {
+    let p = pos;
+    while (p > min) {
+      let ch = "";
+      try {
+        ch = doc3.textBetween(p - 1, p, "\n", "\uFFFC");
+      } catch {
+        break;
+      }
+      if (ch !== " " && ch !== "	" && ch !== "\xA0") break;
+      p--;
+    }
+    return p;
   }
   function lineEdgeCmd(toEnd, extend) {
     return (state2, dispatch, view2) => {
@@ -19060,8 +19168,8 @@
       const r = selectionDocRange(view2, sc);
       if (!r) return;
       const h = viewportHeight(sc);
-      const PAD2 = 8;
-      if (r.bottom > top + PAD2 && r.top < top + h - PAD2) {
+      const PAD3 = 8;
+      if (r.bottom > top + PAD3 && r.top < top + h - PAD3) {
         if (sc.scrollTop !== top) sc.scrollTop = top;
         if (sc.scrollLeft !== left) sc.scrollLeft = left;
         return;
@@ -19073,7 +19181,7 @@
     requestAnimationFrame(settle);
     return out;
   }
-  var import_md2, import_text_color2, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, _cmQuotes, _cmActive, schema, ENTER_CMD, BACKSPACE_CMD, isList, HOME_END_KEYS, KEditor;
+  var import_md2, import_text_color2, mentionKey, spellKey, WORD_END, SPELL_IDLE_MS, clampR, focusKey, _focusOn, cmKey, CM, cmInst, schema, ENTER_CMD, BACKSPACE_CMD, isList, HOME_END_KEYS, KEditor;
   var init_editor = __esm({
     "src/editor.js"() {
       init_i18n();
@@ -19109,8 +19217,8 @@
       focusKey = new PluginKey("kfocusline");
       _focusOn = false;
       cmKey = new PluginKey("kcomment");
-      _cmQuotes = [];
-      _cmActive = "";
+      CM = { byView: /* @__PURE__ */ new WeakMap(), cur: null, detached: { quotes: [], active: "" } };
+      cmInst = (view2) => view2 && CM.byView.get(view2) || CM.cur || CM.detached;
       schema = new Schema({
         nodes: {
           doc: { content: "block+" },
@@ -19486,7 +19594,13 @@
           return (0, import_md2.collectAlign)(this.view.state.doc.toJSON());
         }
         setMarkdown(md, alignMap) {
-          this.view.updateState(this._mkState(this._docFromMd(md, alignMap)));
+          const doc3 = this._docFromMd(md, alignMap);
+          const st = this.view.state;
+          if (st.doc.eq(doc3)) return;
+          const tr4 = closeHistory(st.tr.replaceWith(0, st.doc.content.size, doc3.content)).setMeta("k2SetMarkdown", true);
+          tr4.setSelection(Selection.atStart(tr4.doc));
+          const st2 = st.apply(tr4);
+          this.view.updateState(st2.apply(closeHistory(st2.tr)));
         }
         getText() {
           return this.view.state.doc.textBetween(0, this.view.state.doc.content.size, "\n");
@@ -21816,7 +21930,8 @@
           return this.isDocked(id) && !this.isHidden(id) || this.isFloating(id);
         }
         openIds() {
-          return [...this.root ? visiblePanelIds(this.root) : [], ...this.floats.map((f) => f.panel.id)];
+          const floatIds = this.floats.flatMap((f) => f.panel.type === "tabs" ? (f.panel.children || []).map((c) => c.id) : [f.panel.id]);
+          return [...this.root ? visiblePanelIds(this.root) : [], ...floatIds];
         }
         _node(id) {
           const d = this.registry.get(id);
@@ -22875,12 +22990,12 @@
           box2.style.top = "0px";
           const w = box2.offsetWidth, h = box2.offsetHeight;
           const vw = window.innerWidth, vh = window.innerHeight;
-          const GAP = 6, PAD2 = 8;
+          const GAP = 6, PAD3 = 8;
           let left = c.left;
-          if (left + w > vw - PAD2) left = Math.max(PAD2, vw - w - PAD2);
+          if (left + w > vw - PAD3) left = Math.max(PAD3, vw - w - PAD3);
           let top = c.bottom + GAP;
-          if (top + h > vh - PAD2 && c.top - GAP - h > PAD2) top = c.top - GAP - h;
-          else if (top + h > vh - PAD2) top = Math.max(PAD2, vh - h - PAD2);
+          if (top + h > vh - PAD3 && c.top - GAP - h > PAD3) top = c.top - GAP - h;
+          else if (top + h > vh - PAD3) top = Math.max(PAD3, vh - h - PAD3);
           box2.style.left = left + "px";
           box2.style.top = top + "px";
         }
@@ -22930,6 +23045,9 @@
         //   กติกาใหม่: **ยืนยันด้วย Tab อย่างเดียว** · Enter = ปิด popup แล้วขึ้นบรรทัดใหม่ตามปกติ
         onKey(ev) {
           if (!this.visible) return false;
+          const mod = ev.ctrlKey || ev.metaKey || ev.altKey;
+          if (mod && (ev.key === "Tab" || ev.key === "ArrowDown" || ev.key === "ArrowUp")) return false;
+          if (ev.key === "Tab" && ev.shiftKey) return false;
           if (ev.key === "ArrowDown") {
             this.sel = (this.sel + 1) % this.items.length;
             this.render();
@@ -23188,6 +23306,7 @@
     setElementCaps: () => setElementCaps,
     setSplashActive: () => setSplashActive,
     setStatus: () => setStatus,
+    setStatusAction: () => setStatusAction,
     shortcutCat: () => shortcutCat,
     shortcutId: () => shortcutId,
     smart: () => smart,
@@ -23337,6 +23456,25 @@
   }
   function setStatus(s) {
     $("#status").textContent = s;
+  }
+  function setStatusAction(s, label, onClick) {
+    const st = $("#status");
+    if (!st) return null;
+    st.textContent = s;
+    if (!label || typeof onClick !== "function") return null;
+    const a = document.createElement("button");
+    a.type = "button";
+    a.className = "k-status-link";
+    a.textContent = label;
+    a.onclick = (e) => {
+      e.stopPropagation();
+      try {
+        onClick();
+      } catch {
+      }
+    };
+    st.append(" \xB7 ", a);
+    return a;
   }
   function setSplashActive(on2) {
     _splash.on = !!on2;
@@ -23846,7 +23984,11 @@
         "\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E07": "ui.data.cYellow",
         "\u0E40\u0E02\u0E35\u0E22\u0E27": "ui.data.cGreen",
         "\u0E1F\u0E49\u0E32": "ui.data.cBlue",
-        "\u0E21\u0E48\u0E27\u0E07": "ui.data.cPurple"
+        "\u0E21\u0E48\u0E27\u0E07": "ui.data.cPurple",
+        /* i18n-skip: [alpha.159] ค่าสถานะของการ์ดกระดาน (planner-data.STATUSES) = ข้อมูลในไฟล์ แปลตอนวาดด้วย dataLabel() */
+        "\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E41\u0E25\u0E49\u0E27": "ui.data.stFinished",
+        "\u0E1E\u0E31\u0E01": "ui.data.stPaused"
+        /* /i18n-skip */
       };
       BUILTIN_CATS = ["characters", "locations", "items", "lore"];
       CAT_ICON = { characters: "user", locations: "map", items: "briefcase", lore: "bookmark" };
@@ -24343,6 +24485,7 @@
     removeCustomStatus: () => removeCustomStatus,
     setStatusColor: () => setStatusColor,
     setStatusOrder: () => setStatusOrder,
+    statusChip: () => statusChip,
     statusColor: () => statusColor,
     statusesToJson: () => statusesToJson,
     unhideStatus: () => unhideStatus
@@ -24562,10 +24705,17 @@
     escClose(ov, () => ov.remove());
   }
   function refreshStatusChips(root = document) {
-    for (const chip of root.querySelectorAll(".sc-status")) {
-      const c = statusColor(chip.textContent.trim());
+    for (const chip of root.querySelectorAll(".sc-status[data-status]")) {
+      const c = statusColor(chip.dataset.status);
       if (c) paintStatusChip(chip, c);
     }
+  }
+  function statusChip(value) {
+    const chip = el("span", "sc-status", dataLabel(value));
+    chip.dataset.status = String(value || "");
+    const c = statusColor(value);
+    if (c) paintStatusChip(chip, c);
+    return chip;
   }
   function paintStatusChip(chip, hex) {
     const v2 = vivid(hex) || hex;
@@ -25482,7 +25632,7 @@
     smart.loadNames(state.root);
     refreshNetwork();
     logAction("recycle", t("ui.trash.moveTrash") + label, { from: file, to: dst });
-    setStatus(t("ui.trash.moveTrash") + label);
+    setStatusAction(t("ui.trash.moveTrash") + label, t("ui.trash.revealInFolder"), () => kapi.revealInOS(dst));
     return dst;
   }
   async function listPurgeable(root, days = parseInt(state.settings.recycleDays, 10) || 0, now = Date.now()) {
@@ -25978,6 +26128,29 @@
     }
   });
 
+  // src/scene-file-name.js
+  async function freeSceneFileName(dPath, folderName, order, taken = /* @__PURE__ */ new Set()) {
+    const base4 = "scene-" + String(order).padStart(2, "0");
+    for (let n2 = 1; n2 < 1e3; n2++) {
+      const name5 = n2 === 1 ? base4 + ".md" : `${base4}-${n2}.md`;
+      if (taken.has(name5)) continue;
+      if (await kapi.exists(await kapi.join(dPath, "Chapters", folderName, name5))) continue;
+      return name5;
+    }
+    return base4 + "-" + Date.now().toString(36) + ".md";
+  }
+  function takenSceneFiles(scenesJson) {
+    const out = /* @__PURE__ */ new Set();
+    for (const rows of Object.values(scenesJson && scenesJson.chapters || {})) {
+      for (const r of rows || []) if (r && r.fileName) out.add(r.fileName);
+    }
+    return out;
+  }
+  var init_scene_file_name = __esm({
+    "src/scene-file-name.js"() {
+    }
+  });
+
   // src/scene-ops.js
   var scene_ops_exports = {};
   __export(scene_ops_exports, {
@@ -26001,18 +26174,9 @@
     setChapterTitle: () => setChapterTitle,
     setSceneMeta: () => setSceneMeta,
     setSceneTitle: () => setSceneTitle,
-    toggleSceneFlag: () => toggleSceneFlag
+    toggleSceneFlag: () => toggleSceneFlag,
+    trashVisSidecar: () => trashVisSidecar
   });
-  async function freeSceneFileName(dPath, folderName, order, taken = /* @__PURE__ */ new Set()) {
-    const base4 = "scene-" + String(order).padStart(2, "0");
-    for (let n2 = 1; n2 < 1e3; n2++) {
-      const name5 = n2 === 1 ? base4 + ".md" : `${base4}-${n2}.md`;
-      if (taken.has(name5)) continue;
-      if (await kapi.exists(await kapi.join(dPath, "Chapters", folderName, name5))) continue;
-      return name5;
-    }
-    return base4 + "-" + Date.now().toString(36) + ".md";
-  }
   async function renameScene(dPath, ch, sc) {
     const title2 = await ask(t("ui.scene.nameSceneNew"), { value: sc.title });
     if (!title2) return;
@@ -26547,6 +26711,8 @@
       init_vis_core();
       init_icons();
       init_json_store();
+      init_scene_file_name();
+      init_scene_file_name();
       rowsOf = (d, guid0) => (d && d.chapters || {})[guid0] || [];
       nextOrder = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
     }
@@ -32131,7 +32297,7 @@
           min: -1,
           max: 2e5,
           def: 2048,
-          hint: T`-1 = ไม่จำกัด (ไม่ส่ง max_tokens ไปเลย · ให้ผู้ให้บริการตัดสินเอง)`
+          hint: t("ui.aiProviders.notRememberNotSend")
         },
         {
           key: "presencePenalty",
@@ -32212,12 +32378,14 @@
     chatMessages: () => chatMessages,
     clearMessages: () => clearMessages,
     compact: () => compact,
+    contextCapFromError: () => contextCapFromError,
     contextLabel: () => contextLabel,
     costOf: () => costOf,
     effortLabel: () => effortLabel,
     estimateTokens: () => estimateTokens,
     hasConversation: () => hasConversation,
     historyBudget: () => historyBudget,
+    isAutoTitle: () => isAutoTitle,
     isReasoningEffort: () => isReasoningEffort,
     isSendKey: () => isSendKey,
     joinContinuation: () => joinContinuation,
@@ -32273,6 +32441,10 @@
       v: SESSION_VERSION,
       id: patch.id || newSessionId(),
       title: patch.title || t("ui.aiSession.sessionNew"),
+      // [alpha.159 · M23] "ชื่อนี้เป็นชื่อตั้งต้นที่รอประโยคแรก" เป็นธง — เดิมเทียบกับข้อความที่แปลแล้ว
+      // (เซสชันที่สร้างตอนเป็นภาษาไทยแล้วสลับเป็นอังกฤษ ติดชื่อ "เซสชันใหม่" ตลอดกาล)
+      // ไฟล์เก่าที่ไม่มีธงนี้ = undefined → isAutoTitle ตกกลับไปเทียบแบบเดิม
+      titleAuto: patch.titleAuto !== void 0 ? !!patch.titleAuto : patch.title ? void 0 : true,
       // [alpha.63r4] ต้องขนกลับมาด้วย — ของเดิมตกฟิลด์นี้ ทำให้ชื่อที่ผู้ใช้ตั้งเอง
       // ถูกชื่ออัตโนมัติทับทันทีที่ปิดแล้วเปิดโปรแกรมใหม่
       titleSet: !!patch.titleSet,
@@ -32362,11 +32534,16 @@
   function addMessage(session, msg) {
     const s = { ...session, messages: [...session.messages || [], msg] };
     s.updated = msg.at || (/* @__PURE__ */ new Date()).toISOString();
-    if (msg.role === "user" && !msg.toolResult && isAutoTitle(session)) s.title = titleFromText(msg.text);
+    if (msg.role === "user" && !msg.toolResult && isAutoTitle(session)) {
+      s.title = titleFromText(msg.text);
+      s.titleAuto = false;
+    }
     return s;
   }
   function isAutoTitle(s) {
-    return !s.titleSet && (!s.title || s.title === t("ui.aiSession.sessionNew"));
+    if (!s || s.titleSet) return false;
+    if (s.titleAuto !== void 0) return !!s.titleAuto;
+    return !s.title || s.title === t("ui.aiSession.sessionNew");
   }
   function titleFromText(text, max2 = 40) {
     const t3 = String(text || "").replace(/\s+/g, " ").trim();
@@ -32381,6 +32558,7 @@
       ...session,
       title: String(title2 || "").trim() || session.title,
       titleSet: true,
+      titleAuto: false,
       updated: (/* @__PURE__ */ new Date()).toISOString()
     };
   }
@@ -32389,7 +32567,10 @@
   }
   function clearMessages(session) {
     const s = { ...session, messages: [], contextLimit: 0, updated: (/* @__PURE__ */ new Date()).toISOString() };
-    if (!session.titleSet) s.title = t("ui.aiSession.sessionNew");
+    if (!session.titleSet) {
+      s.title = t("ui.aiSession.sessionNew");
+      s.titleAuto = true;
+    }
     return s;
   }
   function sessionStats(session, { prices = null } = {}) {
@@ -32458,7 +32639,28 @@
     const manual = Number(meta2 && meta2.historyTokens) || 0;
     if (manual > 0) return manual;
     const lim = Number(session && session.contextLimit) || 0;
-    return Math.max(DEFAULT_HISTORY_TOKENS, Math.floor(lim * 0.6));
+    let budget = Math.max(DEFAULT_HISTORY_TOKENS, Math.floor(lim * 0.6));
+    const cap = Number(session && session.contextCap) || 0;
+    if (cap > 0) budget = Math.min(budget, Math.max(512, Math.floor(cap * 0.6)));
+    return budget;
+  }
+  function contextCapFromError(text) {
+    const s = String(text || "");
+    const exceeded = /context[_ ]length[_ ]exceeded|maximum context length|context (?:window|size|length)|prompt is too long|too many tokens|exceeds? (?:the )?(?:model'?s? )?(?:maximum )?context|n_ctx|num_ctx/i.test(s);
+    if (!exceeded) return { exceeded: false, cap: 0 };
+    const pats = [
+      /maximum context length is (\d[\d,]*)/i,
+      /(\d[\d,]*)\s*maximum\b/i,
+      /context (?:window|size|length) (?:of |is |= ?|\()?(\d[\d,]*)/i,
+      /(?:n_ctx|num_ctx)\s*[:=]?\s*(\d[\d,]*)/i,
+      /limit(?: of| is)?\s*(\d[\d,]*)\s*tokens/i
+    ];
+    for (const re of pats) {
+      const m = re.exec(s);
+      const n2 = m ? parseInt(String(m[1]).replace(/,/g, ""), 10) : 0;
+      if (n2 >= 256) return { exceeded: true, cap: n2 };
+    }
+    return { exceeded: true, cap: 0 };
   }
   function buildChatMessages(session, opts = {}) {
     const {
@@ -32658,11 +32860,11 @@
       ];
       DEFAULT_SCOPE = "scene";
       REASONING_EFFORTS = [
-        { id: "", label: T`คิด: ตามผู้ให้บริการ` },
-        { id: "minimal", label: T`คิด: น้อยสุด` },
-        { id: "low", label: T`คิด: น้อย` },
-        { id: "medium", label: T`คิด: กลาง` },
-        { id: "high", label: T`คิด: มาก` }
+        { id: "", label: t("ui.aiSession.thinkProvider") },
+        { id: "minimal", label: t("ui.aiSession.thinkLessLast") },
+        { id: "low", label: t("ui.aiSession.thinkLess") },
+        { id: "medium", label: t("ui.aiSession.thinkCenter") },
+        { id: "high", label: t("ui.aiSession.thinkMore") }
       ];
       SEND_KEYS = [
         { id: "enter", label: t("ui.aiSession.enterSendShiftEnter") },
@@ -32729,34 +32931,34 @@
     if (/ECONNREFUSED|Connection refused/i.test(s)) {
       return {
         key: "refused",
-        reason: T`เครื่องปลายทางปฏิเสธการเชื่อมต่อ (ไม่มีอะไรฟังอยู่ที่พอร์ตนั้น)`,
+        reason: t("ui.aiError.toConnectNotHas"),
         hints: [
-          T`ถ้าเป็นโมเดลในเครื่อง (Ollama / LM Studio / llama.cpp) — เปิดโปรแกรมนั้นให้ทำงานอยู่ก่อน`,
-          T`ตรวจเลขพอร์ตใน Base URL ให้ตรงกับที่โปรแกรมนั้นเปิดจริง`
+          t("ui.aiError.modelOllamaLMStudio"),
+          t("ui.aiError.checkNumBaseURL")
         ]
       };
     }
     if (/ENOTFOUND|getaddrinfo|DNS/i.test(s)) {
       return {
         key: "dns",
-        reason: T`หาชื่อโดเมนไม่เจอ (DNS)`,
-        hints: [T`ตรวจว่าพิมพ์ Base URL ถูกต้อง`, T`ตรวจว่าเครื่องต่ออินเทอร์เน็ตอยู่`]
+        reason: t("ui.aiError.findNameDomainNot"),
+        hints: [t("ui.aiError.checkPrintBaseURL"), t("ui.aiError.checkNext")]
       };
     }
     if (/certificate|SSL|TLS|self[- ]signed/i.test(s)) {
       return {
         key: "tls",
-        reason: T`ใบรับรองความปลอดภัย (TLS) ของปลายทางใช้ไม่ได้`,
-        hints: [T`เซิร์ฟเวอร์ในเครือข่ายภายในมักใช้ใบรับรองที่ออกเอง — ลองใช้ http:// แทน https:// ถ้าเป็นเครื่องในบ้าน`]
+        reason: t("ui.aiError.itemTLSToUse"),
+        hints: [t("ui.aiError.innerUseItemOut")]
       };
     }
     if (/ETIMEDOUT|ECONNRESET|EPIPE|socket hang up|network|fetch failed/i.test(s)) {
       return {
         key: "net",
-        reason: T`ต่อกับเซิร์ฟเวอร์ไม่ติด (เครือข่ายขาดกลางทาง)`,
+        reason: t("ui.aiError.nextNotMissingCenter"),
         hints: [
-          T`ตรวจอินเทอร์เน็ต / VPN / ไฟร์วอลล์`,
-          T`ถ้าเป็นเครื่องในบ้าน ลองเปิด Base URL ในเบราว์เซอร์ดูว่าตอบไหม`
+          t("ui.aiError.checkVPN"),
+          t("ui.aiError.tryOpenBaseURL")
         ]
       };
     }
@@ -32772,14 +32974,14 @@
     let code3 = "http-" + status;
     if (e.aborted && e.timedOut) {
       code3 = "timeout";
-      reason = T`หมดเวลารอคำตอบ`;
+      reason = t("ui.aiError.timeAnswer");
       hints = [
-        T`เพิ่มค่า Timeout ใน ตั้งค่า AI → แก้ผู้ให้บริการ → Parameters`,
-        T`โมเดลที่คิดเยอะ (reasoning) ใช้เวลานาน — ลดระดับการใช้ความคิด หรือลดความยาวคำตอบ`
+        t("ui.aiError.addValueTimeoutSettings"),
+        t("ui.aiError.modelThinkReasoningUse")
       ];
     } else if (e.aborted) {
       code3 = "aborted";
-      reason = T`ผู้ใช้กดหยุดเอง`;
+      reason = t("ui.aiError.userPress");
       hints = [];
     } else if (e.streamError) {
       code3 = "stream-error";
@@ -32788,57 +32990,57 @@
     } else if (status === 0) {
       const k = networkKind(srvMsg || rawBody || e.error);
       code3 = k ? "net-" + k.key : "net";
-      reason = k ? k.reason : srvMsg || T`ยังติดต่อเซิร์ฟเวอร์ไม่ได้เลย (คำขอไปไม่ถึงปลายทาง)`;
+      reason = k ? k.reason : srvMsg || t("ui.aiError.nextCantWordNot");
       hints = k ? k.hints : [
-        T`ตรวจ Base URL · อินเทอร์เน็ต · ไฟร์วอลล์`,
-        T`ตรวจว่าโดเมนอยู่ใน Allowed HTTP Request Domains ของผู้ให้บริการ`
+        t("ui.aiError.checkBaseURL"),
+        t("ui.aiError.checkDomainAllowedHTTP")
       ];
     } else if (status === 401 || status === 403) {
-      reason = T`เซิร์ฟเวอร์ไม่รับกุญแจ (API key) ที่ส่งไป`;
+      reason = t("ui.aiError.notAPIKeySend");
       hints = [
-        T`ใส่คีย์ใหม่ที่ ตั้งค่า AI → แก้ผู้ให้บริการ → Credential แล้วกด 💾 Save Credential`,
-        T`คีย์บางเจ้าผูกกับองค์กร/โครงการ — ตรวจว่าคีย์นี้ใช้กับ Base URL นี้ได้จริง`
+        t("ui.aiError.putKeyNewSettings"),
+        t("ui.aiError.keyBindOutlineCheck")
       ];
     } else if (status === 404) {
-      reason = T`ปลายทางไม่มีอยู่จริง (404)`;
+      reason = t("ui.aiError.toNotHas");
       hints = [
-        T`Base URL มักต้องลงท้ายด้วย /v1 — ตรวจให้ตรงกับคู่มือของผู้ให้บริการ`,
-        T`ตรวจชื่อโมเดล: กด "ดึงรายชื่อโมเดล" แล้วเลือกจากรายการแทนการพิมพ์เอง`
+        t("ui.aiError.baseURLMustV1"),
+        t("ui.aiError.checkNameModelPress")
       ];
     } else if (status === 408) {
-      reason = T`เซิร์ฟเวอร์บอกว่าคำขอใช้เวลานานเกินไป`;
-      hints = [T`ลองใหม่อีกครั้ง หรือเพิ่ม Max Retries ใน Parameters`];
+      reason = t("ui.aiError.wordUseTime");
+      hints = [t("ui.aiError.tryNewTimesAdd")];
     } else if (status === 429) {
-      reason = T`ยิงถี่เกินโควตา หรือเครดิตหมด (429)`;
+      reason = t("ui.aiError.msg");
       hints = [
-        T`รอสักครู่แล้วลองใหม่`,
-        T`ตรวจยอดเครดิต/โควตาในหน้าผู้ให้บริการ`,
-        T`เพิ่ม Max Retries ใน Parameters ให้ระบบถอยแล้วลองเองอัตโนมัติ`
+        t("ui.aiError.doneTryNew"),
+        t("ui.aiError.checkPageProvider"),
+        t("ui.aiError.addMaxRetriesParameters")
       ];
     } else if (status === 400 || status === 422) {
-      reason = T`ผู้ให้บริการไม่รับพารามิเตอร์ที่ส่งไป (${String(status)})`;
+      reason = tf("ui.aiError.providerNotParamSend", String(status));
       hints = [
-        T`ดูข้อความของเซิร์ฟเวอร์ด้านล่าง — มักบอกชื่อฟิลด์ที่ผิดมาตรง ๆ`,
-        T`ตัวที่ผิดบ่อย: Max Tokens สูงเกินที่โมเดลรับ · Reasoning Effort / Thinking mode ที่โมเดลนี้ไม่มี · Response Format = json_object`
+        t("ui.aiError.viewTextBottomName"),
+        t("ui.aiError.itemMaxTokensHigh")
       ];
     } else if (status >= 500) {
-      reason = T`ฝั่งผู้ให้บริการมีปัญหา (${String(status)})`;
-      hints = [T`รอสักครู่แล้วลองใหม่ — ไม่ใช่ปัญหาที่เครื่องเรา`];
+      reason = tf("ui.aiError.sideProviderHasProblem", String(status));
+      hints = [t("ui.aiError.doneTryNewNot")];
     } else {
-      reason = T`เรียกไม่สำเร็จ (HTTP ${String(status)})`;
+      reason = tf("ui.aiError.callNotOkHTTP", String(status));
       hints = [];
     }
     const title2 = status ? tm("AI: {0} (HTTP {1})", reason, String(status)) : tm("AI: {0}", reason);
     const lines = [];
-    if (e.provider) lines.push(T`ผู้ให้บริการ: ` + e.provider);
-    if (e.model) lines.push(T`โมเดล: ` + e.model);
-    if (host2) lines.push(T`ปลายทาง: ` + host2);
+    if (e.provider) lines.push(t("ui.aiError.provider") + e.provider);
+    if (e.model) lines.push(t("ui.aiError.model") + e.model);
+    if (host2) lines.push(t("ui.aiError.to") + host2);
     if (e.url) lines.push("URL: " + redactSecrets(e.url));
-    lines.push("HTTP: " + (status || T`ไปไม่ถึงเซิร์ฟเวอร์`));
-    if (srvMsg) lines.push(T`เซิร์ฟเวอร์ตอบ: ` + clip(srvMsg));
-    else if (rawBody) lines.push(T`เนื้อคำตอบ: ` + clip(rawBody));
-    if (e.error && e.error !== reason) lines.push(T`ข้อความภายใน: ` + redactSecrets(String(e.error)));
-    if (hints.length) lines.push("", T`แนวทางแก้:`, ...hints.map((h, i5) => i5 + 1 + ". " + h));
+    lines.push("HTTP: " + (status || t("ui.aiError.notTo")));
+    if (srvMsg) lines.push(t("ui.aiError.reply") + clip(srvMsg));
+    else if (rawBody) lines.push(t("ui.aiError.bodyAnswer") + clip(rawBody));
+    if (e.error && e.error !== reason) lines.push(t("ui.aiError.textInner") + redactSecrets(String(e.error)));
+    if (hints.length) lines.push("", t("ui.aiError.edit"), ...hints.map((h, i5) => i5 + 1 + ". " + h));
     return { title: title2, reason, hints, detail: lines.join("\n"), code: code3, serverMessage: srvMsg, host: host2, status };
   }
   function shortError(info) {
@@ -33020,6 +33222,7 @@
     providerById: () => providerById,
     providerDialog: () => providerDialog,
     providerList: () => providerList,
+    recordAiUsage: () => recordAiUsage,
     saveKeys: () => saveKeys,
     sendRequest: () => sendRequest,
     showAISettingsDialog: () => showAISettingsDialog,
@@ -33057,6 +33260,25 @@
     if (!state.meta) return {};
     state.meta.ai = state.meta.ai || {};
     return state.meta.ai;
+  }
+  function recordAiUsage({ usage, cost, provider = "", model = "", feature: feature3 = "", session = "" } = {}) {
+    if (!state.meta || !usage) return false;
+    const ai = aiMeta();
+    const list = ai.usage || [];
+    list.push({
+      date: (/* @__PURE__ */ new Date()).toISOString(),
+      tokens: usage.total || (usage.input || 0) + (usage.output || 0),
+      in: usage.input || 0,
+      out: usage.output || 0,
+      usd: cost && Number.isFinite(cost.usd) ? cost.usd : null,
+      provider,
+      model,
+      feature: feature3,
+      ...session ? { session } : {}
+    });
+    if (list.length > 500) list.splice(0, list.length - 500);
+    ai.usage = list;
+    return true;
   }
   async function currentProvider() {
     const p = activeProvider(aiMeta());
@@ -35724,6 +35946,14 @@
   });
 
   // src/tab-bridge.js
+  var tab_bridge_exports = {};
+  __export(tab_bridge_exports, {
+    closeTabsUnder: () => closeTabsUnder,
+    isInsideRoot: () => isInsideRoot,
+    pathKey: () => pathKey,
+    setTabBridge: () => setTabBridge,
+    tabHandle: () => tabHandle
+  });
   function setTabBridge(b) {
     bridge = b && typeof b.find === "function" ? b : null;
   }
@@ -35734,15 +35964,21 @@
       return null;
     }
   }
-  function closeTabsUnder(dir2) {
+  async function closeTabsUnder(dir2) {
     try {
-      return bridge && bridge.closeUnder && dir2 ? bridge.closeUnder(dir2) : 0;
+      return bridge && bridge.closeUnder && dir2 ? await bridge.closeUnder(dir2) : 0;
     } catch {
       return 0;
     }
   }
   function pathKey(p) {
     return String(p || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  }
+  function isInsideRoot(root, p) {
+    const r = pathKey(root), k = pathKey(p);
+    if (!r || !k || k === r) return false;
+    if (!k.startsWith(r + "/")) return false;
+    return !k.slice(r.length + 1).split("/").some((seg) => seg === ".." || seg === ".");
   }
   var bridge;
   var init_tab_bridge = __esm({
@@ -36900,7 +37136,7 @@
           const draft = await kapi.readJson(await kapi.join(dp, "draft.json")).catch(() => ({}));
           const folderOf = {};
           for (const ch of draft.chapters || []) folderOf[ch.guid] = ch.folderName;
-          let dirty = false;
+          const fixes = /* @__PURE__ */ new Map();
           for (const cg of Object.keys(d.chapters || {})) {
             for (const sc of d.chapters[cg] || []) {
               if (sc.type === "memo") continue;
@@ -36922,13 +37158,23 @@
               const n2 = (0, import_md7.countWords)(body);
               out.words += n2;
               if (n2 !== cur) {
-                sc.wordCount = n2;
-                dirty = true;
+                fixes.set(sc.id, n2);
                 out.fixed++;
               }
             }
           }
-          if (dirty) await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+          if (fixes.size && !stale2()) {
+            await mutateJson(kapi, sf, (fresh) => {
+              let hit = false;
+              for (const rows of Object.values(fresh.chapters || {})) {
+                for (const r of rows || []) if (fixes.has(r.id)) {
+                  r.wordCount = fixes.get(r.id);
+                  hit = true;
+                }
+              }
+              if (!hit) return false;
+            });
+          }
         }
       }
       out.done = true;
@@ -36974,6 +37220,7 @@
       init_core();
       import_md7 = __toESM(require_md());
       init_local_date();
+      init_json_store();
       WH = { timer: null, root: null };
       WORD_HISTORY_DELAY = 15e3;
     }
@@ -38259,6 +38506,7 @@
     setPanelShowHook: () => setPanelShowHook,
     showPanel: () => showPanel,
     sideHidden: () => sideHidden,
+    sideNow: () => sideNow,
     sideOfRect: () => sideOfRect,
     tearOffPanel: () => tearOffPanel,
     togglePanel: () => togglePanel,
@@ -38638,11 +38886,17 @@
       canTearOff,
       onTearOff: (id) => tearOffPanel(id),
       // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
-      extraHeadMenu: (id) => [
-        { label: t("ui.panel.hidePanelAllArea"), click: () => toggleSpace("all") },
-        { label: t("ui.panel.hidePanelSide"), click: () => toggleSpace(sideOf({ id, defaultSide: "left" })) },
-        { label: t("ui.panel.work"), click: () => workspaceMenu() }
-      ],
+      extraHeadMenu: (id) => {
+        const side = sideNow(id);
+        return [
+          { label: t("ui.panel.hidePanelAllArea"), click: () => toggleSpace("all") },
+          {
+            label: t(side === "right" ? "ui.menu.hidePanelSideRight" : "ui.menu.hidePanelSideLeft"),
+            click: () => toggleSpace(side)
+          },
+          { label: t("ui.panel.work"), click: () => workspaceMenu() }
+        ];
+      },
       renderPanelBody: (id, body) => {
         const node = adopted.get(id);
         if (node) {
@@ -38864,6 +39118,18 @@
   }
   function sideOf(d) {
     return lastSide.get(d.id) || d.defaultSide || "left";
+  }
+  function sideNow(id) {
+    rememberSides();
+    const h = host();
+    const hr = h && h.getBoundingClientRect();
+    const node = h && (h.querySelector(`.k-panel[data-panel-id="${id}"]`) || document.querySelector(`.k-float-panel[data-panel-id="${id}"]`));
+    if (node && hr && hr.width) {
+      const r = node.getBoundingClientRect();
+      if (r.width) return r.left + r.width / 2 < hr.left + hr.width / 2 ? "left" : "right";
+    }
+    const def = PANEL_DEFS.find((d) => d.id === id) || { id, defaultSide: "left" };
+    return sideOf(def);
   }
   function initPanelSystem(opts = {}) {
     const m = getPanelManager();
@@ -40631,13 +40897,20 @@ ${h.text}`;
                 }
               }
             );
-            if (res && res.ok === false) return { ...fail(httpMessage(res.status), "http"), status: res.status };
+            if (res && res.ok === false) {
+              return {
+                ...fail(httpMessage(res.status), "http"),
+                status: res.status,
+                text,
+                partial: !!text.trim()
+              };
+            }
             const usage = { input: estimateTokens2(opts.prompt || ""), output: estimateTokens2(text), total: 0 };
             usage.total = usage.input + usage.output;
             if (this.tracker) this.tracker.record({ provider, model, usage, feature: opts.feature });
             return { ok: true, text: text.trim(), usage, cost: estimateCost(provider, model, usage), provider, model };
           } catch (e) {
-            return fail(t("ui.ai.textNotOk") + (e && e.message), "network");
+            return { ...fail(t("ui.ai.textNotOk") + (e && e.message), "network"), text, partial: !!text.trim() };
           } finally {
             this.limiter.release();
           }
@@ -40730,7 +41003,31 @@ ${h.text}`;
         async retrieve(query, k = 5, opts = {}) {
           if (!this.index.size) return [];
           const res = await this.client.embed([query], { ...this.embedOpts, ...this.index.model === "local" ? { local: true } : {} });
-          return this.index.search(res.vectors[0] || localEmbed(query), k, opts);
+          let qv = res && res.vectors && res.vectors[0] || localEmbed(query);
+          const dim = ((this.index.items[0] || {}).vector || []).length;
+          const modelDiff = !!(res && res.model && this.index.model && res.model !== this.index.model);
+          if (modelDiff || qv.length !== dim) {
+            const texts = this.index.items.map((it) => it.text);
+            let re = null;
+            try {
+              re = await this.client.embed(texts, { ...this.embedOpts, ...res && res.local ? { local: true } : {} });
+            } catch {
+            }
+            if (re && re.ok !== false && Array.isArray(re.vectors) && re.vectors.length === texts.length && (re.vectors[0] || []).length === qv.length) {
+              this.index.items.forEach((it, i5) => {
+                it.vector = re.vectors[i5] || localEmbed(it.text);
+              });
+              this.index.model = re.model || res && res.model || this.index.model;
+            } else {
+              this.index.items.forEach((it) => {
+                it.vector = localEmbed(it.text);
+              });
+              this.index.model = "local";
+              qv = localEmbed(query);
+            }
+            this.reindexed = (this.reindexed || 0) + 1;
+          }
+          return this.index.search(qv, k, opts);
         }
         async context(query, opts = {}) {
           const hits = await this.retrieve(query, opts.k || 5, opts);
@@ -41520,7 +41817,14 @@ ${h.text}`;
       scope,
       scenes: scenes.length,
       truncated: built.truncated,
-      ai: { ok: true, ...parsed, usage: res.usage, cost: res.cost }
+      ai: {
+        ok: true,
+        ...parsed,
+        usage: res.usage,
+        cost: res.cost,
+        model: res.model || "",
+        provider: res.provider || ""
+      }
     };
   }
   function scopeTokens(scenes = [], scope = {}, budget = 6e3) {
@@ -43610,7 +43914,12 @@ ${h.text}`;
       vRead.textContent = rt.hours ? tf("ui.dash.readHM", rt.hours, rt.mins) : tf("ui.dash.readM", rt.minutes);
       vRead.title = tf("ui.dash.readHint", READ_WPM);
     }
-    const allEnts = (await loadAllEntities()).filter((e) => /[\\/](Wiki|Bible)[\\/]/.test(String(e.file || "")));
+    let allEnts = [];
+    try {
+      allEnts = (await loadAllEntities()).filter((e) => /[\\/](Wiki|Bible)[\\/]/.test(String(e.file || "")));
+    } catch (e) {
+      log("warn", t("ui.dash.entitiesFail"), e);
+    }
     vE.textContent = allEnts.length.toLocaleString();
     const goal = parseInt(state.goals.projectWords, 10) || 0;
     if (goal > 0) {
@@ -48091,6 +48400,20 @@ ${h.text}`;
       }
       renderFonts();
     })();
+    const showLangProgress = async (code3, box3) => {
+      if (!box3) return;
+      if (!code3 || code3 === "th") {
+        box3.textContent = "";
+        return;
+      }
+      try {
+        const [thTxt, oTxt] = await Promise.all([kapi.langRead("th", state.root || ""), kapi.langRead(code3, state.root || "")]);
+        const pr = translationProgress(csvToTable(thTxt), csvToTable(oTxt));
+        box3.textContent = tf("ui.dlg.langProgress", pr.translated.toLocaleString(), pr.total.toLocaleString(), pr.pct);
+      } catch {
+        box3.textContent = "";
+      }
+    };
     const fillLangs = async () => {
       const sel = q("#st-lang");
       if (!sel) return;
@@ -48109,6 +48432,14 @@ ${h.text}`;
       }
       sel.value = i18n.lang || "th";
       if (!sel.value && list[0]) sel.value = list[0].code;
+      if (!sel._progEl) {
+        sel._progEl = el("div", "k-hint k-lang-progress");
+        sel.insertAdjacentElement("afterend", sel._progEl);
+        sel.addEventListener("change", () => {
+          showLangProgress(sel.value, sel._progEl);
+        });
+      }
+      showLangProgress(sel.value, sel._progEl);
       try {
         const dirs = await kapi.langDirs(state.root || "");
         const box3 = q("#st-lang-dirs");
@@ -48699,6 +49030,7 @@ ${h.text}`;
       init_logline_ui();
       init_logline();
       init_i18n();
+      init_i18n_csv();
       init_settings_template();
       init_app();
       init_prose_format();
@@ -51980,24 +52312,26 @@ ${h.text}`;
   function refreshSpErrorMarks(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(errKey, true));
   }
-  function setContinueds(list) {
+  function setContinueds(list, view2) {
+    const I2 = ctInst(view2);
+    if (I2 !== CT.detached) CT.cur = I2;
     const next = (list || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
     const sig = ctSigOf(next);
-    if (sig === _contSig) return false;
-    _contSig = sig;
-    _conts = next;
+    if (sig === I2.sig) return false;
+    I2.sig = sig;
+    I2.list = next;
     return true;
   }
-  function mapContinueds(mapping) {
-    if (!_conts.length) return;
-    _conts = _conts.map((m) => ({ ...m, pos: mapping.map(m.pos, -1) })).filter((m) => Number.isFinite(m.pos) && m.pos > 0);
-    _contSig = ctSigOf(_conts);
+  function mapContinueds(I2, mapping) {
+    if (!I2.list.length) return;
+    I2.list = I2.list.map((m) => ({ ...m, pos: mapping.map(m.pos, -1) })).filter((m) => Number.isFinite(m.pos) && m.pos > 0);
+    I2.sig = ctSigOf(I2.list);
   }
-  function ctDecos(doc3) {
-    if (!_conts.length || !doc3) return DecorationSet.empty;
+  function ctDecos(I2, doc3) {
+    if (!I2.list.length || !doc3) return DecorationSet.empty;
     const max2 = doc3.content.size;
     const out = [];
-    for (const m of _conts) {
+    for (const m of I2.list) {
       if (m.pos > max2) continue;
       out.push(Decoration.widget(m.pos, () => {
         const d = document.createElement("div");
@@ -52015,26 +52349,35 @@ ${h.text}`;
     return DecorationSet.create(doc3, out);
   }
   function spContinuedPlugin() {
+    const I2 = { list: [], sig: "" };
     return new Plugin({
       key: ctKey,
       state: {
-        init: (_c, st) => ctDecos(st.doc),
+        init: (_c, st) => ctDecos(I2, st.doc),
         apply(tr4, prev, _o, st) {
-          if (tr4.getMeta(ctKey)) return ctDecos(st.doc);
+          if (tr4.getMeta(ctKey)) return ctDecos(I2, st.doc);
           if (!tr4.docChanged) return prev;
-          mapContinueds(tr4.mapping);
+          mapContinueds(I2, tr4.mapping);
           return prev.map(tr4.mapping, tr4.doc);
         }
       },
       props: { decorations(state2) {
         return ctKey.getState(state2);
-      } }
+      } },
+      view(v2) {
+        CT.byView.set(v2, I2);
+        if (!CT.cur) CT.cur = I2;
+        return { destroy() {
+          CT.byView.delete(v2);
+          if (CT.cur === I2) CT.cur = null;
+        } };
+      }
     });
   }
   function refreshContinueds(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(ctKey, true));
   }
-  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, errKey, _errMarks, _errOn, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, applySpPagePads, setSpPageNumberLabel, ctKey, _conts, _contSig, ctSigOf;
+  var guideKey, _guideOn, _guideFmt, snKey, _snOn, _snSuffix, errKey, _errMarks, _errOn, SP_PB, setPageBreaks, pageBreaks, spPageBreakPlugin, refreshPageBreaks, applySpPagePads, setSpPageNumberLabel, ctKey, CT, ctInst, ctSigOf;
   var init_sp_format_guide = __esm({
     "src/sp-format-guide.js"() {
       init_i18n();
@@ -52064,8 +52407,8 @@ ${h.text}`;
       applySpPagePads = SP_PB.applyPads;
       setSpPageNumberLabel = SP_PB.setNumberLabel;
       ctKey = new PluginKey("kspcontinued");
-      _conts = [];
-      _contSig = "";
+      CT = { byView: /* @__PURE__ */ new WeakMap(), cur: null, detached: { list: [], sig: "" } };
+      ctInst = (view2) => view2 && CT.byView.get(view2) || CT.cur || CT.detached;
       ctSigOf = (l) => l.map((m) => [m.pos, m.type, m.text, m.mid ? 1 : 0, m.off || 0].join(":")).join("|");
     }
   });
@@ -82690,7 +83033,7 @@ ${h.text}`;
       ${a[0]}
     </select>
     <button class="planner-btn-small" id="pl-f-clear">${tx("ui.common.clear")}</button>
-  `)([STATUSES.filter(Boolean).map((s) => `<option value="${s}">${s}</option>`).join("")]);
+  `)([STATUSES.filter(Boolean).map((s) => `<option value="${escA(s)}">${escA(dataLabel(s))}</option>`).join("")]);
     let filter = { text: "", type: "", status: "" };
     const emit3 = () => {
       if (callbacks.onFilterChange) callbacks.onFilterChange({ ...filter });
@@ -82957,7 +83300,7 @@ ${h.text}`;
     bar.buttons = btns;
     return bar;
   }
-  var glyph, SHAPE_LABEL, FIT_LABELS, TOOL_DEFS, NODE_COLORS, EDGE_COLORS, TOOL_LABELS, PB_DEFS;
+  var escA, glyph, SHAPE_LABEL, FIT_LABELS, TOOL_DEFS, NODE_COLORS, EDGE_COLORS, TOOL_LABELS, PB_DEFS;
   var init_planner_ui = __esm({
     "src/planner/planner-ui.js"() {
       init_i18n_html();
@@ -82967,6 +83310,7 @@ ${h.text}`;
       init_toolbar_config();
       init_icons();
       init_commands_data();
+      escA = (v2) => String(v2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       glyph = (n2) => ICON_GLYPH[n2] || "";
       SHAPE_LABEL = {
         rect: t("ui.planner.rect"),
@@ -85149,7 +85493,7 @@ ${h.text}`;
     }
     if (isCard) {
       add(t("ui.common.status"), `<select class="planner-prop-input" id="plp-status">
-        ${STATUSES.map((s) => `<option value="${s}"${n2.status === s ? " selected" : ""}>${s || t("ui.common.notSpecify2")}</option>`).join("")}
+        ${STATUSES.map((s) => `<option value="${escA2(s)}"${n2.status === s ? " selected" : ""}>${escA2(s ? dataLabel(s) : t("ui.common.notSpecify2"))}</option>`).join("")}
       </select>`);
     }
     add(
@@ -85483,7 +85827,7 @@ ${h.text}`;
     if (s == null) return "";
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  var TYPE_LABELS, SHAPE_LABELS, ROUTING_LABELS, ARROW_LABELS, PORT_LABELS, _lastKey, _pending, _flushBound;
+  var escA2, TYPE_LABELS, SHAPE_LABELS, ROUTING_LABELS, ARROW_LABELS, PORT_LABELS, _lastKey, _pending, _flushBound;
   var init_planner_props = __esm({
     "src/planner/planner-props.js"() {
       init_i18n_html();
@@ -85493,6 +85837,7 @@ ${h.text}`;
       init_planner_ui();
       init_planner_props_focus();
       init_icons();
+      escA2 = (v2) => String(v2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       TYPE_LABELS = {
         scene: t("ui.plannerProps.scene"),
         chapter: t("ui.plannerProps.chapter"),
@@ -85744,12 +86089,16 @@ ${h.text}`;
       neg = true;
       tok = tok.slice(1);
     }
-    const m = /^([^:]+):(.*)$/.exec(tok);
-    if (m && FIELD[m[1].toLowerCase()]) return { field: FIELD[m[1].toLowerCase()], value: (m[2] || "").toLowerCase(), neg };
-    return { field: "*", value: tok.toLowerCase(), neg };
+    const m = /^([^:"]+):(.*)$/.exec(tok);
+    if (m && FIELD[m[1].toLowerCase()]) return { field: FIELD[m[1].toLowerCase()], value: unquote(m[2] || "").toLowerCase(), neg };
+    return { field: "*", value: unquote(tok).toLowerCase(), neg };
+  }
+  function queryValue(v2) {
+    const s = String(v2 ?? "");
+    return /[\s"]/.test(s) ? '"' + s.replace(/"/g, "") + '"' : s;
   }
   function parseGroups(q) {
-    const toks = (q || "").trim().split(/\s+/).filter(Boolean);
+    const toks = String(q || "").trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
     const groups = [[]];
     for (const tok of toks) {
       const up = tok.toUpperCase();
@@ -85808,7 +86157,11 @@ ${h.text}`;
       return t3.neg ? !ok2 : ok2;
     }));
   }
-  var FIELD;
+  function statusRankOf(statuses) {
+    const order = new Map((statuses || []).filter((s) => s && s !== "Outline").map((s, i5) => [s, i5]));
+    return (s) => !s || s === "Outline" || !order.has(s) ? 1e6 : order.get(s);
+  }
+  var FIELD, unquote;
   var init_sceneFilter = __esm({
     "src/sceneFilter.js"() {
       init_i18n();
@@ -85844,6 +86197,7 @@ ${h.text}`;
         "title": "title"
         /* /i18n-skip */
       };
+      unquote = (v2) => v2.length >= 2 && v2.startsWith('"') && v2.endsWith('"') ? v2.slice(1, -1) : v2;
     }
   });
 
@@ -86255,10 +86609,10 @@ ${h.text}`;
   }
   function computeContinueds(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
+    const CT2 = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const list = pages && pages.pages || pages || [];
     const out = [];
-    if (CT.enabled === false) return out;
+    if (CT2.enabled === false) return out;
     for (let i5 = 0; i5 < list.length - 1; i5++) {
       const cur = list[i5], next = list[i5 + 1];
       const pos = pageAnchor(next);
@@ -86279,11 +86633,11 @@ ${h.text}`;
           cls: CONTINUED_CLASS[type]
         });
       };
-      if (CT.dialogue !== false) {
+      if (CT2.dialogue !== false) {
         const lb = lastBlock(cur);
         if (lb && lb.more) add("more", lb.text || f.strings.dialogueMore);
       }
-      if (CT.dialogue !== false) {
+      if (CT2.dialogue !== false) {
         const fb = (next.blocks || [])[0];
         if (fb && fb.contd) add("contd", fb.text || "");
       }
@@ -86292,15 +86646,15 @@ ${h.text}`;
   }
   function pagesWithContinueds(pages, fmt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
-    const CT = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
+    const CT2 = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const list = pages && pages.pages || pages || [];
     return list.map((pg) => {
       const blocks = [];
-      if (CT.enabled !== false && CT.scene !== false && pg.continuedTop) {
+      if (CT2.enabled !== false && CT2.scene !== false && pg.continuedTop) {
         blocks.push({ el: "continued-top", text: pg.continuedTop, lines: 1 });
       }
       for (const b of pg.blocks || []) blocks.push(b);
-      if (CT.enabled !== false && CT.scene !== false && pg.continuedBottom) {
+      if (CT2.enabled !== false && CT2.scene !== false && pg.continuedBottom) {
         blocks.push({ el: "continued-bottom", text: pg.continuedBottom, lines: 1 });
       }
       return { ...pg, blocks };
@@ -86778,6 +87132,9 @@ ${mdToHtmlBody(md, o)}
     }
     if (ext !== "html" && !markdownOut) {
       text = text.split(PAGE_BREAK).join("\f");
+      if (String(ext).toLowerCase() !== "md") {
+        text = text.replace(/^[ \t]*<!--\s*pagebreak\s*-->[ \t]*$/gim, "\f").replace(/<!--\s*pagebreak\s*-->/gi, "\f");
+      }
       text = text.replace(/<!--\s*align:(?:left|center|right|justify)\s*-->/gi, "");
     }
     return { text, ext, stats: st0, warnings: warn };
@@ -86977,6 +87334,138 @@ ${mdToHtmlBody(md, o)}
         let s = String(tpl == null ? "" : tpl).replace(/\{n\}/g, n2).replace(/\{title\}/g, title2);
         return resolveVars(s, ctx2);
       };
+    }
+  });
+
+  // src/book-flow.js
+  function normChapterCover(ch) {
+    const c = ch && ch.cover || {};
+    return {
+      on: !!c.on,
+      image: String(c.image == null ? "" : c.image),
+      text: String(c.text == null ? "" : c.text),
+      full: c.full === void 0 ? true : !!c.full
+    };
+  }
+  function normBookCover(meta2) {
+    const m = meta2 || {};
+    return {
+      on: m.coverOn === void 0 ? true : !!m.coverOn,
+      // เล่มมีหน้าปกเสมอ เว้นแต่สั่งปิด
+      image: String(m.cover == null ? "" : m.cover),
+      text: String(m.blurb == null ? "" : m.blurb),
+      full: m.coverFull === void 0 ? true : !!m.coverFull
+    };
+  }
+  function coverImageHint(paper, margins, dpi = 300) {
+    const p = paper || { width: 8.5, height: 11 };
+    const wIn = Math.max(0.5, +p.width || 8.5);
+    const hIn = Math.max(0.5, +p.height || 11);
+    const d = Math.max(72, Math.round(+dpi || 300));
+    return {
+      wIn: +wIn.toFixed(3),
+      hIn: +hIn.toFixed(3),
+      wPx: Math.round(wIn * d),
+      hPx: Math.round(hIn * d),
+      ratio: +(wIn / hIn).toFixed(3),
+      dpi: d
+    };
+  }
+  function bookParts(book, opts = {}) {
+    const b = book || {};
+    const wantCovers = opts.covers !== false;
+    const out = [];
+    const bc = normBookCover(b.meta);
+    if (wantCovers && bc.on) {
+      out.push({
+        kind: "bookCover",
+        book: b.key || "",
+        title: b.title || "",
+        subtitle: b.author || "",
+        image: bc.image,
+        text: bc.text,
+        full: bc.full
+      });
+    }
+    for (const ch of b.chapters || []) {
+      const cc = normChapterCover(ch);
+      if (wantCovers && cc.on) {
+        out.push({
+          kind: "chapterCover",
+          book: b.key || "",
+          guid: ch.guid || "",
+          title: ch.title || "",
+          subtitle: "",
+          image: cc.image,
+          text: cc.text,
+          full: cc.full
+        });
+      } else {
+        out.push({ kind: "chapterHead", book: b.key || "", guid: ch.guid || "", title: ch.title || "" });
+      }
+      for (const sc of ch.scenes || []) {
+        if (sc && sc.type === "memo") continue;
+        out.push({
+          kind: "scene",
+          book: b.key || "",
+          guid: ch.guid || "",
+          id: sc.id || "",
+          file: sc.file || "",
+          title: sc.title || "",
+          body: String(sc.body == null ? "" : sc.body)
+        });
+      }
+    }
+    return out;
+  }
+  function projectParts(books, opts = {}) {
+    const out = [];
+    for (const b of books || []) out.push(...bookParts(b, opts));
+    return out;
+  }
+  function printedPageNumber(coverPages, phys) {
+    const list = (coverPages || []).map((x) => Math.round(+x)).filter(Number.isFinite);
+    const p = Math.max(1, Math.round(+phys || 1));
+    if (list.includes(p)) return 0;
+    let skipped = 0;
+    for (const c of list) if (c <= p) skipped++;
+    return Math.max(1, p - skipped);
+  }
+  function pageIndexOfY(pages, y) {
+    const list = Array.isArray(pages) ? pages : [];
+    if (!list.length) return 1;
+    const v2 = +y || 0;
+    for (let i5 = list.length - 1; i5 >= 0; i5--) if (v2 >= (+list[i5].start || 0) - 0.5) return i5 + 1;
+    return 1;
+  }
+  function startPageMap(parts) {
+    const m = /* @__PURE__ */ new Map();
+    for (const p of parts || []) {
+      if (p.kind !== "scene" || !p.file) continue;
+      if (!m.has(p.file)) m.set(p.file, Math.max(1, Math.round(+p.startPage || 1)));
+    }
+    return m;
+  }
+  function coverPagesOf(parts) {
+    return (parts || []).filter(isFrontMatter).map((p) => Math.round(+p.page || 0)).filter((n2) => n2 > 0);
+  }
+  function explicitStartPage(v2) {
+    const n2 = parseInt(v2 && typeof v2 === "object" ? v2.startPage : v2, 10);
+    return Number.isFinite(n2) && n2 > 0 ? n2 : void 0;
+  }
+  function pageAtPos(breaks, pos, first = 1) {
+    const list = (breaks || []).filter((b) => b && Number.isFinite(b.pos));
+    const page2 = 1 + list.filter((b) => b.pos <= pos).length;
+    const total = list.length + 1;
+    const f = Number.isFinite(+first) && +first > 0 ? Math.round(+first) : 1;
+    return { page: page2, total, printed: f + page2 - 1, printedLast: f + total - 1 };
+  }
+  var isCoverPart, isFrontMatter, isPageFlowContinue;
+  var init_book_flow = __esm({
+    "src/book-flow.js"() {
+      isCoverPart = (p) => !!p && (p.kind === "bookCover" || p.kind === "chapterCover");
+      isFrontMatter = (p) => !!p && p.kind === "bookCover";
+      isPageFlowContinue = (row3) => !!row3 && row3.pageFlow === "continue";
     }
   });
 
@@ -87434,7 +87923,7 @@ ${mdToHtmlBody(md, o)}
       await buildTree2();
       const openTab = state.tabs.get(file);
       if (openTab) {
-        openTab.startPage = row3.startPage || 1;
+        openTab.startPage = explicitStartPage(row3);
         openTab.pageFlow = row3.pageFlow === "continue" ? "continue" : "";
         updatePageNumberHint();
         refreshSpView();
@@ -87446,6 +87935,7 @@ ${mdToHtmlBody(md, o)}
   var import_md14;
   var init_scene_props = __esm({
     "src/scene-props.js"() {
+      init_book_flow();
       init_i18n();
       init_app();
       init_core();
@@ -87533,12 +88023,18 @@ ${mdToHtmlBody(md, o)}
           reqId: opts.reqId,
           timeoutMs: opts.timeoutMs
         }, (c) => onChunk(c.delta || "", { partial: c.text }));
-        if (!r.ok) return empty2(r.error, {
-          status: r.status,
-          aborted: !!r.aborted,
-          timedOut: !!r.timedOut,
-          partialText: r.text || ""
-        });
+        if (!r.ok) {
+          const got = r.text || "";
+          return empty2(r.error, {
+            status: r.status,
+            aborted: !!r.aborted,
+            timedOut: !!r.timedOut,
+            text: got,
+            thinking: r.thinking || "",
+            partial: !!got.trim(),
+            partialText: got
+          });
+        }
         const usage = normUsage(r.usage);
         return {
           ok: true,
@@ -88130,6 +88626,23 @@ ${mdToHtmlBody(md, o)}
       res = { id, error: String(e && e.message || e), local: { stats: [] }, ai: null };
     }
     S3.running.delete(key2);
+    if (res && res.ai && res.ai.ok && res.ai.usage) {
+      try {
+        const { recordAiUsage: recordAiUsage2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+        if (recordAiUsage2({
+          usage: res.ai.usage,
+          cost: res.ai.cost,
+          provider: res.ai.provider || "",
+          model: res.ai.model || "",
+          feature: "analyze:" + id
+        })) {
+          const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+          await saveProjectMeta2();
+        }
+      } catch (e) {
+        log("warn", t("ui.aia.errRun"), e);
+      }
+    }
     S3.results.set(key2, res);
     S3.saved.delete(key2);
     if (slot) paintResult(slot, res);
@@ -88578,127 +89091,6 @@ ${mdToHtmlBody(md, o)}
     }
   });
 
-  // src/book-flow.js
-  function normChapterCover(ch) {
-    const c = ch && ch.cover || {};
-    return {
-      on: !!c.on,
-      image: String(c.image == null ? "" : c.image),
-      text: String(c.text == null ? "" : c.text),
-      full: c.full === void 0 ? true : !!c.full
-    };
-  }
-  function normBookCover(meta2) {
-    const m = meta2 || {};
-    return {
-      on: m.coverOn === void 0 ? true : !!m.coverOn,
-      // เล่มมีหน้าปกเสมอ เว้นแต่สั่งปิด
-      image: String(m.cover == null ? "" : m.cover),
-      text: String(m.blurb == null ? "" : m.blurb),
-      full: m.coverFull === void 0 ? true : !!m.coverFull
-    };
-  }
-  function coverImageHint(paper, margins, dpi = 300) {
-    const p = paper || { width: 8.5, height: 11 };
-    const wIn = Math.max(0.5, +p.width || 8.5);
-    const hIn = Math.max(0.5, +p.height || 11);
-    const d = Math.max(72, Math.round(+dpi || 300));
-    return {
-      wIn: +wIn.toFixed(3),
-      hIn: +hIn.toFixed(3),
-      wPx: Math.round(wIn * d),
-      hPx: Math.round(hIn * d),
-      ratio: +(wIn / hIn).toFixed(3),
-      dpi: d
-    };
-  }
-  function bookParts(book, opts = {}) {
-    const b = book || {};
-    const wantCovers = opts.covers !== false;
-    const out = [];
-    const bc = normBookCover(b.meta);
-    if (wantCovers && bc.on) {
-      out.push({
-        kind: "bookCover",
-        book: b.key || "",
-        title: b.title || "",
-        subtitle: b.author || "",
-        image: bc.image,
-        text: bc.text,
-        full: bc.full
-      });
-    }
-    for (const ch of b.chapters || []) {
-      const cc = normChapterCover(ch);
-      if (wantCovers && cc.on) {
-        out.push({
-          kind: "chapterCover",
-          book: b.key || "",
-          guid: ch.guid || "",
-          title: ch.title || "",
-          subtitle: "",
-          image: cc.image,
-          text: cc.text,
-          full: cc.full
-        });
-      } else {
-        out.push({ kind: "chapterHead", book: b.key || "", guid: ch.guid || "", title: ch.title || "" });
-      }
-      for (const sc of ch.scenes || []) {
-        if (sc && sc.type === "memo") continue;
-        out.push({
-          kind: "scene",
-          book: b.key || "",
-          guid: ch.guid || "",
-          id: sc.id || "",
-          file: sc.file || "",
-          title: sc.title || "",
-          body: String(sc.body == null ? "" : sc.body)
-        });
-      }
-    }
-    return out;
-  }
-  function projectParts(books, opts = {}) {
-    const out = [];
-    for (const b of books || []) out.push(...bookParts(b, opts));
-    return out;
-  }
-  function printedPageNumber(coverPages, phys) {
-    const list = (coverPages || []).map((x) => Math.round(+x)).filter(Number.isFinite);
-    const p = Math.max(1, Math.round(+phys || 1));
-    if (list.includes(p)) return 0;
-    let skipped = 0;
-    for (const c of list) if (c <= p) skipped++;
-    return Math.max(1, p - skipped);
-  }
-  function pageIndexOfY(pages, y) {
-    const list = Array.isArray(pages) ? pages : [];
-    if (!list.length) return 1;
-    const v2 = +y || 0;
-    for (let i5 = list.length - 1; i5 >= 0; i5--) if (v2 >= (+list[i5].start || 0) - 0.5) return i5 + 1;
-    return 1;
-  }
-  function startPageMap(parts) {
-    const m = /* @__PURE__ */ new Map();
-    for (const p of parts || []) {
-      if (p.kind !== "scene" || !p.file) continue;
-      if (!m.has(p.file)) m.set(p.file, Math.max(1, Math.round(+p.startPage || 1)));
-    }
-    return m;
-  }
-  function coverPagesOf(parts) {
-    return (parts || []).filter(isFrontMatter).map((p) => Math.round(+p.page || 0)).filter((n2) => n2 > 0);
-  }
-  var isCoverPart, isFrontMatter, isPageFlowContinue;
-  var init_book_flow = __esm({
-    "src/book-flow.js"() {
-      isCoverPart = (p) => !!p && (p.kind === "bookCover" || p.kind === "chapterCover");
-      isFrontMatter = (p) => !!p && p.kind === "bookCover";
-      isPageFlowContinue = (row3) => !!row3 && row3.pageFlow === "continue";
-    }
-  });
-
   // src/drafts.js
   var drafts_exports = {};
   __export(drafts_exports, {
@@ -88793,6 +89185,8 @@ ${mdToHtmlBody(md, o)}
     if (!await confirmBox(tf("ui.drafts.delDraftDraft", name5), t("ui.drafts.delDraft"))) return false;
     const dPath = await kapi.join(secPath, "Draft", name5);
     const recycle = await kapi.join(state.root, "Recycle", "draft-" + Date.now().toString(36));
+    const { closeTabsUnderPath: closeTabsUnderPath2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    await closeTabsUnderPath2(dPath, { save: true });
     await kapi.move(dPath, recycle);
     logAction("draft", t("ui.drafts.delDraft") + ": " + name5, { from: dPath, trash: recycle });
     return true;
@@ -88804,29 +89198,23 @@ ${mdToHtmlBody(md, o)}
       setStatus(t("ui.drafts.hasDraftNameDone"));
       return false;
     }
+    const { closeTabsUnderPath: closeTabsUnderPath2, moveSnapshots: moveSnapshots2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    await closeTabsUnderPath2(oldPath, { save: true });
     await kapi.move(oldPath, newPath);
+    await moveSnapshots2(oldPath, newPath);
     logAction("draft", tf("ui.drafts.renameDraftTo", oldName, newName), { secPath });
     const sf = await kapi.join(secPath, "section.json");
-    let meta2 = {};
-    try {
-      meta2 = await kapi.readJson(sf);
-    } catch {
-    }
-    if ((meta2.primaryDraft || "default") === oldName) {
+    await mutateJson(kapi, sf, (meta2) => {
+      if ((meta2.primaryDraft || "default") !== oldName) return false;
       meta2.primaryDraft = newName;
-      await kapi.writeFile(sf, JSON.stringify(meta2, null, 2));
-    }
+    }, { fallback: {} });
     return true;
   }
   async function setPrimaryDraft(secPath, name5) {
     const sf = await kapi.join(secPath, "section.json");
-    let meta2 = {};
-    try {
-      meta2 = await kapi.readJson(sf);
-    } catch {
-    }
-    meta2.primaryDraft = name5;
-    await kapi.writeFile(sf, JSON.stringify(meta2, null, 2));
+    await mutateJson(kapi, sf, (meta2) => {
+      meta2.primaryDraft = name5;
+    }, { fallback: {} });
     const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
     await buildTree3();
   }
@@ -88835,6 +89223,7 @@ ${mdToHtmlBody(md, o)}
       init_i18n();
       init_core();
       init_ui();
+      init_json_store();
     }
   });
 
@@ -89765,14 +90154,10 @@ ${mdToHtmlBody(md, o)}
     };
   }
   async function saveSectionMeta(sf, patch) {
-    let d = {};
-    try {
-      d = await kapi.readJson(sf);
-    } catch {
-    }
-    Object.assign(d, patch);
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    return d;
+    const r = await mutateJson(kapi, sf, (d) => {
+      Object.assign(d, patch);
+    }, { fallback: {} });
+    return r.data;
   }
   async function addSection(preset) {
     const title2 = preset || await ask(t("ui.section.nameBookNew"), { placeholder: t("ui.section.egBookTwo") });
@@ -89811,9 +90196,9 @@ ${mdToHtmlBody(md, o)}
     const title2 = await ask(t("ui.section.nameBookNew"), { value: sec.title });
     if (!title2 || title2 === sec.title) return;
     const sf = await kapi.join(secPath, "section.json");
-    const d = await kapi.readJson(sf);
-    d.title = title2;
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await mutateJson(kapi, sf, (d) => {
+      d.title = title2;
+    });
     await buildTree2();
     setStatus(t("ui.section.changeNameBook") + title2);
   }
@@ -89944,7 +90329,13 @@ ${mdToHtmlBody(md, o)}
           if (ll) d.logline = ll;
           else delete d.logline;
         }
-        await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+        const OWN = ["title", "status", "blurb", "cover", "coverOn", "coverFull", "order", "logline"];
+        await mutateJson(kapi, sf, (fresh) => {
+          for (const k of OWN) {
+            if (k in d) fresh[k] = d[k];
+            else delete fresh[k];
+          }
+        }, { fallback: {} });
         try {
           const { bumpBookFlow: bumpBookFlow2 } = await Promise.resolve().then(() => (init_read_ui(), read_ui_exports));
           bumpBookFlow2();
@@ -89992,6 +90383,7 @@ ${mdToHtmlBody(md, o)}
       init_core();
       init_ui();
       import_md16 = __toESM(require_md());
+      init_json_store();
       SECTION_STATUS_OPTS = [
         ["outline", t("ui.common.outlineStory")],
         ["drafting", t("ui.common.busyWrite")],
@@ -143919,13 +144311,17 @@ ${mdToHtmlBody(md, o)}
     PDF_FONT_FILES: () => PDF_FONT_FILES,
     PT_PER_IN: () => PT_PER_IN,
     addOutline: () => addOutline,
+    avoidAatLayout: () => avoidAatLayout,
     embedFonts: () => embedFonts,
     generatePdf: () => generatePdf,
+    hasMorxTable: () => hasMorxTable,
+    hasThaiText: () => hasThaiText,
     layoutPageLines: () => layoutPageLines,
     mergeAndNumber: () => mergeAndNumber,
     mergePdfOptions: () => mergePdfOptions,
     needsLatinFont: () => needsLatinFont,
     pdfElementColor: () => pdfElementColor,
+    pdfFontProblem: () => pdfFontProblem,
     pdfNumberFmt: () => pdfNumberFmt,
     sanitizeForStandardFont: () => sanitizeForStandardFont,
     setOpenPage: () => setOpenPage,
@@ -144000,14 +144396,69 @@ ${mdToHtmlBody(md, o)}
   function sanitizeForStandardFont(text) {
     return String(text ?? "").replace(/[^\x20-\xff]/g, "?");
   }
+  function sfntTables(b) {
+    const n2 = b[4] << 8 | b[5];
+    const out = [];
+    for (let i5 = 0; i5 < n2; i5++) {
+      const o = 12 + i5 * 16;
+      if (o + 4 > b.length) return null;
+      out.push(String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]));
+    }
+    return out;
+  }
+  function hasMorxTable(bytes) {
+    const b = toBytes(bytes);
+    if (!b || b.length < 12) return false;
+    const t3 = sfntTables(b);
+    return !!t3 && t3.includes("morx");
+  }
+  function pdfFontProblem(bytes) {
+    const b = toBytes(bytes);
+    if (!b || b.length < 12) return "invalid";
+    const tag3 = String.fromCharCode(b[0], b[1], b[2], b[3]);
+    if (tag3 === "ttcf") return "collection";
+    const sfnt = b[0] === 0 && b[1] === 1 && b[2] === 0 && b[3] === 0 || tag3 === "true" || tag3 === "OTTO";
+    if (!sfnt) return "invalid";
+    return sfntTables(b) ? "" : "invalid";
+  }
+  function avoidAatLayout(pdfFont) {
+    try {
+      const fk = pdfFont && pdfFont.embedder && pdfFont.embedder.font;
+      if (!fk || !fk.directory || !fk.directory.tables || !fk.directory.tables.morx) return false;
+      if (Object.prototype.hasOwnProperty.call(fk, "_layoutEngine")) return false;
+      let proto = Object.getPrototypeOf(fk), getter = null;
+      while (proto && !getter) {
+        const d = Object.getOwnPropertyDescriptor(proto, "_layoutEngine");
+        if (d && d.get) getter = d.get;
+        proto = Object.getPrototypeOf(proto);
+      }
+      if (!getter) return false;
+      const shadow = Object.create(fk, { morx: { value: null } });
+      Object.defineProperty(fk, "_layoutEngine", { value: getter.call(shadow), configurable: true });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function hasThaiText(blocks, extra) {
+    const TH = /[\u0E00-\u0E7F]/;
+    if ((blocks || []).some((b) => b && TH.test(String(b.text || "")))) return true;
+    return TH.test(JSON.stringify(extra || ""));
+  }
   async function embedFonts(doc3, fonts) {
     const f = fonts || {};
     const reg = toBytes(f.regular);
-    if (reg) {
+    const problem = reg ? pdfFontProblem(reg) : "missing";
+    if (reg && !problem) {
       try {
         doc3.registerFontkit(fontkit_es_default);
-        const one = async (b) => toBytes(b) ? doc3.embedFont(toBytes(b), { subset: false }) : null;
-        const regular2 = await doc3.embedFont(reg, { subset: false });
+        const emb = async (b) => {
+          const f2 = await doc3.embedFont(b, { subset: false });
+          avoidAatLayout(f2);
+          return f2;
+        };
+        const one = async (b) => toBytes(b) ? emb(toBytes(b)) : null;
+        const regular2 = await emb(reg);
         const bold = await one(f.bold) || regular2;
         const italic = await one(f.italic) || regular2;
         const boldItalic = await one(f.boldItalic) || bold;
@@ -144034,7 +144485,8 @@ ${mdToHtmlBody(md, o)}
       italic: await doc3.embedFont(StandardFonts.CourierOblique),
       boldItalic: await doc3.embedFont(StandardFonts.CourierBoldOblique),
       latin: null,
-      custom: false
+      custom: false,
+      problem: problem || "broken"
     };
   }
   function makeDrawer(set, custom) {
@@ -144267,9 +144719,10 @@ ${mdToHtmlBody(md, o)}
         }
       }
       if (pg.continuedTop) {
+        const topPt = Math.max(0, mgT - lineH);
         draw3(page2, pg.continuedTop, {
           x: mgL,
-          y: baseline(-1),
+          y: ph - topPt - size * 0.82,
           size,
           boxWidth: tw * PT_PER_IN,
           align: "left"
@@ -144296,12 +144749,16 @@ ${mdToHtmlBody(md, o)}
     if (opts.toc && bookmarks.length) addOutline(doc3, bookmarks);
     if (opts.openPage > 0) setOpenPage(doc3, titles.length + opts.openPage - 1);
     const bytes = await doc3.save({ useObjectStreams: false });
+    const warnings = [];
+    if (!set.custom && hasThaiText(args.blocks, [meta2, args.titlePages])) warnings.push("thai-font-missing");
     return {
       bytes,
       pageCount: doc3.getPageCount(),
       titleCount: titles.length,
       scriptPages: paged.count,
-      bookmarks
+      bookmarks,
+      warnings,
+      fontProblem: set.custom ? "" : set.problem || ""
     };
   }
   function markerX(b, fmt) {
@@ -144707,6 +145164,7 @@ ${mdToHtmlBody(md, o)}
     pdfExportDialog: () => pdfExportDialog,
     pdfFontBytes: () => pdfFontBytes,
     pdfMeta: () => pdfMeta,
+    pdfThaiFontCandidates: () => pdfThaiFontCandidates,
     pdfThaiFontPath: () => pdfThaiFontPath,
     projectHeaders: () => projectHeaders,
     projectTitlePages: () => projectTitlePages,
@@ -144759,22 +145217,31 @@ ${mdToHtmlBody(md, o)}
     return parts.join("|");
   }
   async function pdfThaiFontPath() {
+    return (await pdfThaiFontCandidates())[0] || "";
+  }
+  async function pdfThaiFontCandidates() {
     const rows = normalizeLangFonts(state.settings.langFonts).filter((r) => isUsable(r) && rowAppliesTo(r, "screenplay")).filter((r) => !r.range || /0E00/i.test(normalizeRange(r.range)));
+    const out = [];
+    const add = (p) => {
+      if (p && !out.includes(p)) out.push(p);
+    };
     for (const r of rows) {
       if (r.file && state.root) {
         try {
           const p = await kapi.join(state.root, "Fonts", r.file);
-          if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) return p;
+          if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) add(p);
         } catch {
         }
       }
     }
-    const fams = [...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS];
-    try {
-      return await kapi.fontFile([...new Set(fams)]) || "";
-    } catch {
-      return "";
+    const fams = [.../* @__PURE__ */ new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS])];
+    for (const fam of fams) {
+      try {
+        add(await kapi.fontFile([fam]));
+      } catch {
+      }
     }
+    return out;
   }
   async function pdfFontBytes() {
     const out = { regular: null, latin: null, file: "" };
@@ -144783,21 +145250,33 @@ ${mdToHtmlBody(md, o)}
     const all = [L2.regular, L2.bold, L2.italic, L2.boldItalic].filter(Boolean);
     try {
       dir2 = await kapi.join(await kapi.appDir(), "renderer", "assets", "fonts");
-      const thaiPath = await pdfThaiFontPath();
-      const stamp = await fontStamp(dir2, all) + "|" + thaiPath + ":" + (thaiPath ? await kapi.mtime(thaiPath) || 0 : 0);
+      const cands = await pdfThaiFontCandidates();
+      const thaiPath = cands.join(";");
+      const stamp = await fontStamp(dir2, all) + "|" + thaiPath + ":" + (cands[0] ? await kapi.mtime(cands[0]) || 0 : 0);
       if (FONT_CACHE.set && FONT_CACHE.stamp === stamp) return FONT_CACHE.set;
       FONT_CACHE.stamp = stamp;
       const read3 = async (f) => {
         const p = await kapi.join(dir2, f);
         return await kapi.exists(p) ? new Uint8Array(await kapi.readBytes(p)) : null;
       };
-      if (thaiPath) {
+      out.skipped = [];
+      for (const p of cands) {
+        let b = null;
         try {
-          out.regular = new Uint8Array(await kapi.readBytes(thaiPath));
-          out.file = thaiPath;
+          b = new Uint8Array(await kapi.readBytes(p));
         } catch {
+          continue;
         }
+        const why = pdfFontProblem(b);
+        if (why) {
+          out.skipped.push({ file: p, why });
+          continue;
+        }
+        out.regular = b;
+        out.file = p;
+        break;
       }
+      if (out.skipped.length) log("debug", t("ui.pdf.thaiFontSkipped"), out.skipped);
       const lr = await read3(L2.regular);
       if (lr) {
         out.latin = {
@@ -145334,7 +145813,7 @@ ${mdToHtmlBody(md, o)}
   async function buildScriptPdf({ blocks, title: title2, fmt, opts, titlePages, headers }) {
     const f = fmt || spFormat();
     const fonts = await pdfFontBytes();
-    return generatePdf({
+    const r = await generatePdf({
       blocks: blocks || [],
       fmt: f,
       titlePages: titlePages === void 0 ? projectTitlePages() : titlePages,
@@ -145343,6 +145822,11 @@ ${mdToHtmlBody(md, o)}
       fonts: { regular: fonts.regular, latin: fonts.latin },
       opts: { ...savedPdfOptions(), ...opts || {} }
     });
+    if ((r.warnings || []).includes("thai-font-missing")) {
+      log("warn", t("ui.pdf.thaiFontMissing"), { problem: r.fontProblem, skipped: fonts.skipped || [] });
+      setStatus(t("ui.pdf.thaiFontMissing"));
+    }
+    return r;
   }
   async function writeCompiledPdf(dest, compiled, title2) {
     const { parseScript: parseScript2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
@@ -146291,12 +146775,22 @@ ${mdToHtmlBody(md, o)}
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
     };
-    document.addEventListener("keydown", function esc8(e) {
-      if (e.key === "Escape") {
-        ov.remove();
-        document.removeEventListener("keydown", esc8);
+    const onEsc = (e) => {
+      if (e.key !== "Escape" || !ov.isConnected) return;
+      const all = [...document.querySelectorAll(".k-overlay")];
+      if (all[all.length - 1] !== ov) return;
+      ov.remove();
+    };
+    document.addEventListener("keydown", onEsc);
+    const offEsc = () => document.removeEventListener("keydown", onEsc);
+    const removeOv = ov.remove.bind(ov);
+    ov.remove = () => {
+      try {
+        offEsc();
+      } catch {
       }
-    });
+      removeOv();
+    };
     const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));
     box2.style.setProperty("--home-thumb", thumb + "px");
     await loadPanelProjects(grid, () => ov.remove());
@@ -146349,6 +146843,32 @@ ${mdToHtmlBody(md, o)}
         { id: "card", icon: gi("grid"), label: t("ui.home.card") },
         { id: "list", icon: gi("menu"), label: t("ui.common.list2") }
       ];
+    }
+  });
+
+  // src/tag-tree.js
+  function buildTagTree(counts) {
+    const tree = {};
+    for (const [tag3, n2] of Object.entries(counts || {})) {
+      const c = Number(n2) || 0;
+      const parts = String(tag3).split(":").filter((p) => p !== "");
+      if (!parts.length) continue;
+      let node = tree;
+      for (let i5 = 0; i5 < parts.length; i5++) {
+        const key2 = parts.slice(0, i5 + 1).join(":");
+        if (!node[key2]) node[key2] = { own: 0, count: 0, children: {} };
+        node[key2].count += c;
+        if (i5 === parts.length - 1) node[key2].own += c;
+        node = node[key2].children;
+      }
+    }
+    return tree;
+  }
+  function sortedTagEntries(obj) {
+    return Object.entries(obj || {}).sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]));
+  }
+  var init_tag_tree = __esm({
+    "src/tag-tree.js"() {
     }
   });
 
@@ -146494,19 +147014,9 @@ ${mdToHtmlBody(md, o)}
       container.append(el("div", "tag-empty", t("ui.tags.notHasTagPut")));
       return;
     }
-    const tree = {};
-    for (const [tag3, count] of sorted) {
-      const parts = tag3.split(":");
-      let node = tree;
-      for (let i5 = 0; i5 < parts.length; i5++) {
-        const key2 = parts.slice(0, i5 + 1).join(":");
-        if (!node[key2]) node[key2] = { count: 0, children: {} };
-        if (i5 === parts.length - 1) node[key2].count = count;
-        node = node[key2].children;
-      }
-    }
+    const tree = buildTagTree(counts);
     const renderNode2 = (obj, depth = 0) => {
-      const entries = Object.entries(obj).sort((a, b) => b[1].count - a[1].count);
+      const entries = sortedTagEntries(obj);
       for (const [key2, node] of entries) {
         const row3 = el("div", "tag-item");
         row3.style.paddingLeft = 16 + depth * 20 + "px";
@@ -146560,6 +147070,7 @@ ${mdToHtmlBody(md, o)}
   var _tagView;
   var init_tag_pane = __esm({
     "src/tag-pane.js"() {
+      init_tag_tree();
       init_i18n();
       init_core();
       init_app();
@@ -148315,6 +148826,285 @@ details>summary::-webkit-details-marker{display:none}
     }
   });
 
+  // src/comments/comment-core.js
+  var comment_core_exports = {};
+  __export(comment_core_exports, {
+    BLOCK_END: () => BLOCK_END,
+    BLOCK_START: () => BLOCK_START,
+    CommentStore: () => CommentStore,
+    addComment: () => addComment,
+    countComments: () => countComments,
+    deleteComment: () => deleteComment,
+    editComment: () => editComment,
+    findComment: () => findComment,
+    fromScenesJson: () => fromScenesJson,
+    makeComment: () => makeComment,
+    mergeComments: () => mergeComments,
+    normalizeAnchor: () => normalizeAnchor,
+    openComments: () => openComments,
+    parseComments: () => parseComments,
+    quoteAt: () => quoteAt,
+    reanchor: () => reanchor,
+    reanchorAll: () => reanchorAll,
+    replyTo: () => replyTo,
+    resolveComment: () => resolveComment,
+    stripComments: () => stripComments2,
+    writeMdKeepingComments: () => writeMdKeepingComments
+  });
+  function makeComment({ text, author = "", position = null, now = Date.now(), id = null } = {}) {
+    return {
+      id: id || newId2(now),
+      author: String(author || ""),
+      text: String(text || ""),
+      timestamp: new Date(now).toISOString(),
+      resolved: false,
+      replies: [],
+      anchor: normalizeAnchor(position)
+    };
+  }
+  function normalizeAnchor(position) {
+    if (position == null) return null;
+    if (typeof position === "number") return { start: position, end: position, quote: "" };
+    const { start = 0, end = start, quote = "" } = position;
+    return { start: num3(start), end: num3(end), quote: String(quote || "") };
+  }
+  function parseComments(md) {
+    const m = BLOCK_RE.exec(String(md || ""));
+    if (!m) return [];
+    try {
+      const arr = JSON.parse(m[1].trim());
+      return Array.isArray(arr) ? arr.map(fix) : [];
+    } catch {
+      return [];
+    }
+  }
+  function fix(c) {
+    return {
+      id: c.id || newId2(Date.now()),
+      author: c.author || "",
+      text: c.text || "",
+      timestamp: c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
+      resolved: !!c.resolved,
+      replies: Array.isArray(c.replies) ? c.replies.map(fix) : [],
+      anchor: c.anchor ? normalizeAnchor(c.anchor) : null
+    };
+  }
+  function stripComments2(md) {
+    return String(md || "").replace(BLOCK_RE, "").replace(/\s+$/, "");
+  }
+  function mergeComments(md, comments) {
+    const body = stripComments2(md);
+    if (!comments || !comments.length) return body ? body + "\n" : "";
+    return `${body}
+
+${BLOCK_START}
+${JSON.stringify(comments, null, 1)}
+${BLOCK_END}
+`;
+  }
+  function addComment(comments, { text, author, position, now = Date.now(), id } = {}) {
+    const c = makeComment({ text, author, position, now, id });
+    return { comments: [...comments || [], c], comment: c };
+  }
+  function replyTo(comments, parentId, { text, author, now = Date.now(), id } = {}) {
+    const reply = makeComment({ text, author, now, id });
+    let found2 = false;
+    const walk3 = (list) => list.map((c) => {
+      if (c.id === parentId) {
+        found2 = true;
+        return { ...c, replies: [...c.replies, reply] };
+      }
+      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
+    });
+    const out = walk3(comments || []);
+    return { comments: out, reply: found2 ? reply : null, ok: found2 };
+  }
+  function resolveComment(comments, id, resolved = true) {
+    let found2 = false;
+    const walk3 = (list) => list.map((c) => {
+      if (c.id === id) {
+        found2 = true;
+        return { ...c, resolved: !!resolved, resolvedAt: resolved ? (/* @__PURE__ */ new Date()).toISOString() : null };
+      }
+      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
+    });
+    return { comments: walk3(comments || []), ok: found2 };
+  }
+  function editComment(comments, id, text) {
+    let found2 = false;
+    const walk3 = (list) => list.map((c) => {
+      if (c.id === id) {
+        found2 = true;
+        return { ...c, text: String(text), editedAt: (/* @__PURE__ */ new Date()).toISOString() };
+      }
+      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
+    });
+    return { comments: walk3(comments || []), ok: found2 };
+  }
+  function deleteComment(comments, id) {
+    let found2 = false;
+    const walk3 = (list) => list.filter((c) => {
+      if (c.id === id) {
+        found2 = true;
+        return false;
+      }
+      return true;
+    }).map((c) => c.replies.length ? { ...c, replies: walk3(c.replies) } : c);
+    return { comments: walk3(comments || []), ok: found2 };
+  }
+  function findComment(comments, id) {
+    for (const c of comments || []) {
+      if (c.id === id) return c;
+      const inner = findComment(c.replies, id);
+      if (inner) return inner;
+    }
+    return null;
+  }
+  function countComments(comments) {
+    return (comments || []).reduce((n2, c) => n2 + 1 + countComments(c.replies), 0);
+  }
+  function openComments(comments) {
+    return (comments || []).filter((c) => !c.resolved);
+  }
+  function reanchor(text, anchor) {
+    if (!anchor) return null;
+    const src2 = String(text || "");
+    const q = anchor.quote;
+    if (!q) {
+      const start = Math.min(anchor.start, src2.length);
+      return { ...anchor, start, end: Math.min(anchor.end, src2.length) };
+    }
+    if (src2.slice(anchor.start, anchor.end) === q) return { ...anchor };
+    let best = -1, bestDist = Infinity, from2 = 0, idx4;
+    while ((idx4 = src2.indexOf(q, from2)) >= 0) {
+      const d = Math.abs(idx4 - anchor.start);
+      if (d < bestDist) {
+        bestDist = d;
+        best = idx4;
+      }
+      from2 = idx4 + 1;
+    }
+    if (best < 0) return { ...anchor, lost: true };
+    return { start: best, end: best + q.length, quote: q };
+  }
+  function reanchorAll(text, comments) {
+    return (comments || []).map((c) => c.anchor ? { ...c, anchor: reanchor(text, c.anchor) } : c);
+  }
+  function quoteAt(text, start, end) {
+    return String(text || "").slice(start, end);
+  }
+  async function writeMdKeepingComments(io, path, fullText) {
+    let raw = "";
+    try {
+      raw = await io.readFile(path) || "";
+    } catch {
+      raw = "";
+    }
+    const comments = parseComments(raw);
+    if (!comments.length) {
+      await io.writeFile(path, fullText);
+      return false;
+    }
+    await io.writeFile(path, mergeComments(fullText, reanchorAll(fullText, comments)));
+    return true;
+  }
+  function fromScenesJson(scenesJson, opts = {}) {
+    const out = {};
+    const chapters = scenesJson && scenesJson.chapters || {};
+    for (const cg of Object.keys(chapters)) {
+      for (const row3 of chapters[cg] || []) {
+        if (!row3 || !Array.isArray(row3.comments) || !row3.comments.length) continue;
+        out[row3.id] = row3.comments.map((c) => ({
+          id: c.id || newId2(Date.now()),
+          author: c.author || opts.author || "",
+          text: c.text || "",
+          timestamp: c.date || c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
+          resolved: !!c.resolved,
+          replies: [],
+          anchor: null
+        }));
+      }
+    }
+    return out;
+  }
+  var BLOCK_START, BLOCK_END, BLOCK_RE, _seq3, newId2, num3, CommentStore;
+  var init_comment_core = __esm({
+    "src/comments/comment-core.js"() {
+      BLOCK_START = "<!-- k2-comments";
+      BLOCK_END = "-->";
+      BLOCK_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
+      _seq3 = 0;
+      newId2 = (now) => "c" + Number(now).toString(36) + (_seq3++).toString(36);
+      num3 = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
+      CommentStore = class {
+        constructor({ io, now = () => Date.now(), author = "" } = {}) {
+          this.io = io;
+          this.now = now;
+          this.author = author;
+        }
+        /** @returns {Promise<{body, comments}>} */
+        async read(path) {
+          let raw = "";
+          try {
+            raw = await this.io.readFile(path) || "";
+          } catch {
+            raw = "";
+          }
+          return { body: stripComments2(raw), comments: parseComments(raw), raw };
+        }
+        async write(path, body, comments) {
+          await this.io.writeFile(path, mergeComments(body, comments));
+          return true;
+        }
+        /** Add a comment to a scene file. position = number | {start,end,quote} */
+        async add(path, position, text, opts = {}) {
+          const { body, comments } = await this.read(path);
+          const anchor = normalizeAnchor(position);
+          if (anchor && !anchor.quote && anchor.end > anchor.start) anchor.quote = quoteAt(body, anchor.start, anchor.end);
+          const res = addComment(comments, { text, author: opts.author ?? this.author, position: anchor, now: this.now() });
+          await this.write(path, body, res.comments);
+          return res.comment;
+        }
+        async reply(path, parentId, text, opts = {}) {
+          const { body, comments } = await this.read(path);
+          const res = replyTo(comments, parentId, { text, author: opts.author ?? this.author, now: this.now() });
+          if (!res.ok) return null;
+          await this.write(path, body, res.comments);
+          return res.reply;
+        }
+        async resolve(path, id, resolved = true) {
+          const { body, comments } = await this.read(path);
+          const res = resolveComment(comments, id, resolved);
+          if (res.ok) await this.write(path, body, res.comments);
+          return res.ok;
+        }
+        async edit(path, id, text) {
+          const { body, comments } = await this.read(path);
+          const res = editComment(comments, id, text);
+          if (res.ok) await this.write(path, body, res.comments);
+          return res.ok;
+        }
+        async remove(path, id) {
+          const { body, comments } = await this.read(path);
+          const res = deleteComment(comments, id);
+          if (res.ok) await this.write(path, body, res.comments);
+          return res.ok;
+        }
+        async list(path, { openOnly = false, reanchor: doReanchor = true } = {}) {
+          const { body, comments } = await this.read(path);
+          const list = doReanchor ? reanchorAll(body, comments) : comments;
+          return openOnly ? openComments(list) : list;
+        }
+        /** Save an edited body while keeping the comments (re-anchored against the new text). */
+        async saveBody(path, newBody) {
+          const { comments } = await this.read(path);
+          await this.write(path, newBody, reanchorAll(newBody, comments));
+          return true;
+        }
+      };
+    }
+  });
+
   // src/branching-ui.js
   var branching_ui_exports = {};
   __export(branching_ui_exports, {
@@ -148326,6 +149116,7 @@ details>summary::-webkit-details-marker{display:none}
     compareWithPlan: () => compareWithPlan,
     currentBranchPlan: () => currentBranchPlan,
     inBranchPlan: () => inBranchPlan,
+    insertMarkerIntoScene: () => insertMarkerIntoScene,
     isBranchPlanDirty: () => isBranchPlanDirty,
     isPlanLocked: () => isPlanLocked,
     listBranchPlans: () => listBranchPlans,
@@ -149664,20 +150455,22 @@ ${tr2("mergeNote", t("ui.branch.textPersonSceneNot"))}`,
       return false;
     }
     const { parseMdFile: parseMdFile22, dumpMdFile: dumpMdFile9 } = await Promise.resolve().then(() => __toESM(require_md()));
-    const { state: st } = await Promise.resolve().then(() => (init_core(), core_exports));
-    const raw = await kapi.readFile(node.filePath);
-    const { meta: meta2, body } = parseMdFile22(raw);
+    const { tabHandle: tabHandle2 } = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
+    const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
     const marker = "[" + text + "]";
-    if (body.includes(marker)) return true;
-    const next = body.replace(/\s+$/, "") + "\n\n" + marker + "\n";
-    await kapi.writeFile(node.filePath, dumpMdFile9(meta2, next));
-    const tab = st.tabs.get(node.filePath);
-    if (tab && !tab.dirty) {
-      if (tab.editor) tab.editor.setMarkdown(next);
-      else if (tab.sp) tab.sp.setMarkdown(next);
-    } else if (tab && tab.dirty) {
+    const append2 = (body2) => body2.replace(/\s+$/, "") + "\n\n" + marker + "\n";
+    const h = tabHandle2(node.filePath);
+    if (h && h.kind !== "wiki" && h.dirty) {
+      const live2 = h.getText();
+      if (live2.includes(marker)) return true;
+      h.setText(append2(live2), { keepAlign: true });
       setStatus(tr2("insertedDirty", t("ui.branch.insertFileDoneScene")));
+      return true;
     }
+    const { meta: meta2, body } = parseMdFile22(await kapi.readFile(node.filePath));
+    if (body.includes(marker)) return true;
+    await writeMdKeepingComments2(kapi, node.filePath, dumpMdFile9(meta2, append2(body)));
+    if (h && h.kind !== "wiki") await h.reloadFromDisk();
     return true;
   }
   async function syncChoicesFromScene() {
@@ -150389,12 +151182,12 @@ ${preview2}` + (found2.length > 8 ? `
   }
   async function setSectionFields(secPath, patch) {
     const sf = await kapi.join(secPath, "section.json");
-    const d = await readJson(sf, {});
-    for (const [k, v2] of Object.entries(patch || {})) {
-      if (v2 === "" || v2 === false || v2 === null || v2 === void 0) delete d[k];
-      else d[k] = v2;
-    }
-    await writeJson2(sf, d);
+    const { data: d } = await mutateJson(kapi, sf, (sec) => {
+      for (const [k, v2] of Object.entries(patch || {})) {
+        if (v2 === "" || v2 === false || v2 === null || v2 === void 0) delete sec[k];
+        else sec[k] = v2;
+      }
+    }, { fallback: {} });
     if ("locked" in (patch || {})) await refreshOpenTabLocks(secPath);
     await buildTree2();
     return d;
@@ -150408,7 +151201,10 @@ ${preview2}` + (found2.length > 8 ? `
     const next = moveToPosition(secs, i5, v2);
     for (let k = 0; k < next.length; k++) {
       if ((next[k].meta.order || 0) === k + 1) continue;
-      await writeJson2(next[k].sf, { ...next[k].meta, order: k + 1 });
+      const ord = k + 1;
+      await mutateJson(kapi, next[k].sf, (sec) => {
+        sec.order = ord;
+      }, { fallback: {} });
     }
     await buildTree2();
     setStatus(t("ui.treeAct.reordered"));
@@ -150456,18 +151252,21 @@ ${preview2}` + (found2.length > 8 ? `
   }
   async function setChapterFields(dPath, chGuid, patch) {
     const df = await kapi.join(dPath, "draft.json");
-    const d = await readJson(df, { chapters: [] });
-    const cur = (d.chapters || []).find((c) => c.guid === chGuid);
-    if (!cur) return null;
-    for (const [k, v2] of Object.entries(patch || {})) {
-      if (k === "isFavorite") {
-        cur.isFavorite = !!v2;
-        continue;
+    const res = await mutateJson(kapi, df, (d) => {
+      const c = (d.chapters || []).find((x) => x.guid === chGuid);
+      if (!c) return false;
+      for (const [k, v2] of Object.entries(patch || {})) {
+        if (k === "isFavorite") {
+          c.isFavorite = !!v2;
+          continue;
+        }
+        if (v2 === "" || v2 === false || v2 === null || v2 === void 0) delete c[k];
+        else c[k] = v2;
       }
-      if (v2 === "" || v2 === false || v2 === null || v2 === void 0) delete cur[k];
-      else cur[k] = v2;
-    }
-    await writeJson2(df, d);
+      return { ...c };
+    }, { fallback: { chapters: [] } });
+    const cur = res.changed ? res.result : null;
+    if (!cur) return null;
     if ("locked" in (patch || {})) await refreshOpenTabLocks(await kapi.join(dPath, "Chapters", cur.folderName));
     await buildTree2();
     return cur;
@@ -150480,24 +151279,25 @@ ${preview2}` + (found2.length > 8 ? `
     if (i5 < 0) return false;
     const v2 = await ask(tf("ui.treeAct.positionAsk", list.length), { value: String(i5 + 1) });
     if (v2 === null || v2 === "") return false;
-    d.chapters = moveToPosition(list, i5, v2).map((c, k) => ({ ...c, order: k + 1 }));
-    await writeJson2(df, d);
+    await mutateJson(kapi, df, (fresh) => {
+      const l2 = sortByOrder(fresh.chapters);
+      const j = l2.findIndex((c) => c.guid === ch.guid);
+      if (j < 0) return false;
+      fresh.chapters = moveToPosition(l2, j, v2).map((c, k) => ({ ...c, order: k + 1 }));
+    });
     await buildTree2();
     setStatus(t("ui.treeAct.reordered"));
     return true;
   }
   async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGuid = null, title: title2 = "" } = {}) {
     const sdf = await kapi.join(srcD, "draft.json"), ssf = await kapi.join(srcD, "scenes.json");
+    const ddf = await kapi.join(dstD, "draft.json"), dsf = await kapi.join(dstD, "scenes.json");
     const sDraft = await readJson(sdf, { chapters: [] });
-    const sScenes = await readJson(ssf, { chapters: {} });
     const entry = (sDraft.chapters || []).find((c) => c.guid === chGuid);
     if (!entry) return null;
     const same = srcD === dstD;
     if (move && same) return entry;
-    const rows = (sScenes.chapters || {})[chGuid] || [];
-    const dDraft = same ? sDraft : await readJson(await kapi.join(dstD, "draft.json"), { chapters: [] });
-    const dScenes = same ? sScenes : await readJson(await kapi.join(dstD, "scenes.json"), { chapters: {} });
-    const dList = sortByOrder(dDraft.chapters);
+    const dList = sortByOrder((same ? sDraft : await readJson(ddf, { chapters: [] })).chapters);
     const newGuid = move && !dList.some((c) => c.guid === chGuid) ? chGuid : guid();
     const newTitle = title2 || entry.title || "";
     let at = afterGuid ? dList.findIndex((c) => c.guid === afterGuid) + 1 : dList.length;
@@ -150513,8 +151313,12 @@ ${preview2}` + (found2.length > 8 ? `
       await kapi.mkdir(await kapi.join(dstD, "Chapters"));
       await kapi.move(srcFolder, dstFolder);
       await moveSnapshots(srcFolder, dstFolder);
-    } else if (await kapi.exists(srcFolder)) await copyTree(srcFolder, dstFolder);
-    else await kapi.mkdir(dstFolder);
+    } else {
+      await saveTabsUnder(srcFolder);
+      if (await kapi.exists(srcFolder)) await copyTree(srcFolder, dstFolder);
+      else await kapi.mkdir(dstFolder);
+    }
+    const rows = ((await readJson(ssf, { chapters: {} })).chapters || {})[chGuid] || [];
     let newRows;
     if (move) newRows = rows.map((r) => ({ ...r, chapterGuid: newGuid }));
     else {
@@ -150530,20 +151334,43 @@ ${preview2}` + (found2.length > 8 ? `
     const newEntry2 = { ...entry, guid: newGuid, title: newTitle, folderName };
     if (!move) delete newEntry2.locked;
     if (move && !same) {
-      sDraft.chapters = (sDraft.chapters || []).filter((c) => c.guid !== chGuid);
-      if (sScenes.chapters) delete sScenes.chapters[chGuid];
+      await mutateJson(kapi, sdf, (d) => {
+        d.chapters = (d.chapters || []).filter((c) => c.guid !== chGuid);
+      });
+      await mutateJson(kapi, ssf, (sc) => {
+        if (!sc.chapters || !(chGuid in sc.chapters)) return false;
+        delete sc.chapters[chGuid];
+      });
     }
-    const inserted = [...dList];
-    inserted.splice(at, 0, newEntry2);
-    dDraft.chapters = inserted.map((c, k) => ({ ...c, order: k + 1 }));
-    dScenes.chapters = { ...dScenes.chapters || {}, [newGuid]: newRows };
-    if (move && !same) {
-      await writeJson2(sdf, sDraft);
-      await writeJson2(ssf, sScenes);
-    }
-    await writeJson2(await kapi.join(dstD, "draft.json"), dDraft);
-    await writeJson2(await kapi.join(dstD, "scenes.json"), dScenes);
+    await mutateJson(kapi, ddf, (d) => {
+      const list = sortByOrder(d.chapters);
+      let at2 = afterGuid ? list.findIndex((c) => c.guid === afterGuid) + 1 : list.length;
+      if (at2 <= 0 && afterGuid) at2 = list.length;
+      list.splice(at2, 0, newEntry2);
+      d.chapters = list.map((c, k) => ({ ...c, order: k + 1 }));
+    }, { fallback: { chapters: [] } });
+    await mutateJson(
+      kapi,
+      dsf,
+      (sc) => {
+        sc.chapters = { ...sc.chapters || {}, [newGuid]: newRows };
+      },
+      { fallback: { chapters: {} } }
+    );
     return newEntry2;
+  }
+  async function saveTabsUnder(dir2) {
+    const k = String(dir2 || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase() + "/";
+    const { saveTab: saveTab2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    for (const t22 of state.tabs.values()) {
+      const f = String(t22.file || "").replace(/\\/g, "/").toLowerCase();
+      if (t22.dirty && f.startsWith(k)) {
+        try {
+          await saveTab2(t22);
+        } catch {
+        }
+      }
+    }
   }
   async function duplicateChapter(dPath, ch) {
     const d = await readJson(await kapi.join(dPath, "draft.json"), { chapters: [] });
@@ -150599,8 +151426,12 @@ ${preview2}` + (found2.length > 8 ? `
     if (i5 < 0) return false;
     const v2 = await ask(tf("ui.treeAct.positionAsk", list.length), { value: String(i5 + 1) });
     if (v2 === null || v2 === "") return false;
-    d.chapters[ch.guid] = moveToPosition(list, i5, v2).map((x, k) => ({ ...x, order: k + 1 }));
-    await writeJson2(sf, d);
+    await mutateJson(kapi, sf, (fresh) => {
+      const l2 = sortByOrder((fresh.chapters || {})[ch.guid]);
+      const j = l2.findIndex((x) => x.id === sc.id);
+      if (j < 0) return false;
+      fresh.chapters[ch.guid] = moveToPosition(l2, j, v2).map((x, k) => ({ ...x, order: k + 1 }));
+    });
     await buildTree2();
     setStatus(t("ui.treeAct.reordered"));
     return true;
@@ -150614,14 +151445,13 @@ ${preview2}` + (found2.length > 8 ? `
     const newCh = await addChapter(dPath, name5);
     if (!newCh) return null;
     const df = await kapi.join(dPath, "draft.json");
-    const d = await readJson(df, { chapters: [] });
-    const sorted = sortByOrder(d.chapters);
-    const from2 = sorted.findIndex((c) => c.guid === newCh.guid);
-    const anchor = sorted.findIndex((c) => c.guid === ch.guid);
-    if (from2 >= 0 && anchor >= 0) {
-      d.chapters = moveToPosition(sorted, from2, anchor + 2).map((c, k) => ({ ...c, order: k + 1 }));
-      await writeJson2(df, d);
-    }
+    await mutateJson(kapi, df, (fresh) => {
+      const sorted = sortByOrder(fresh.chapters);
+      const from2 = sorted.findIndex((c) => c.guid === newCh.guid);
+      const anchor = sorted.findIndex((c) => c.guid === ch.guid);
+      if (from2 < 0 || anchor < 0) return false;
+      fresh.chapters = moveToPosition(sorted, from2, anchor + 2).map((c, k) => ({ ...c, order: k + 1 }));
+    });
     for (const it of same) await moveSceneToChapter(dPath, it.ch, { id: it.sc.id }, newCh);
     await buildTree2();
     const skipped = list.length - same.length;
@@ -151050,15 +151880,20 @@ ${preview2}` + (found2.length > 8 ? `
         await moveToRecycle(folder);
         await copyTree(payload, folder);
         const df = await kapi.join(ctx2.dPath, "draft.json"), sf = await kapi.join(ctx2.dPath, "scenes.json");
-        const d = await readJson(df, { chapters: [] });
-        const s = await readJson(sf, { chapters: {} });
-        const i5 = (d.chapters || []).findIndex((c) => c.guid === ctx2.ch.guid);
         const entry = { ...info.entry || ctx2.ch, folderName: ctx2.ch.folderName };
-        if (i5 >= 0) d.chapters[i5] = { ...entry, order: d.chapters[i5].order };
-        else d.chapters = [...d.chapters || [], { ...entry, order: (d.chapters || []).length + 1 }];
-        s.chapters = { ...s.chapters || {}, [ctx2.ch.guid]: info.rows || [] };
-        await writeJson2(df, d);
-        await writeJson2(sf, s);
+        await mutateJson(kapi, df, (d) => {
+          const i5 = (d.chapters || []).findIndex((c) => c.guid === ctx2.ch.guid);
+          if (i5 >= 0) d.chapters[i5] = { ...entry, order: d.chapters[i5].order };
+          else d.chapters = [...d.chapters || [], { ...entry, order: (d.chapters || []).length + 1 }];
+        }, { fallback: { chapters: [] } });
+        await mutateJson(
+          kapi,
+          sf,
+          (sc) => {
+            sc.chapters = { ...sc.chapters || {}, [ctx2.ch.guid]: info.rows || [] };
+          },
+          { fallback: { chapters: {} } }
+        );
       } else if (kind === "scene") {
         await closeTabsUnder2(ctx2.file, { save: false });
         await moveToRecycle(ctx2.file);
@@ -151067,14 +151902,14 @@ ${preview2}` + (found2.length > 8 ? `
         if (await kapi.exists(await kapi.join(payload, visName)))
           await kapi.copyFile(await kapi.join(payload, visName), ctx2.file.replace(/\.md$/i, "_vis.csv"));
         const sf = await kapi.join(ctx2.dPath, "scenes.json");
-        const s = await readJson(sf, { chapters: {} });
-        const rows = (s.chapters || {})[ctx2.ch.guid] || [];
-        const i5 = rows.findIndex((r) => r.id === ctx2.sc.id);
         const row3 = { ...info.row || ctx2.sc, id: ctx2.sc.id, fileName: ctx2.sc.fileName, chapterGuid: ctx2.ch.guid };
-        if (i5 >= 0) rows[i5] = { ...row3, order: rows[i5].order };
-        else rows.push({ ...row3, order: rows.length + 1 });
-        s.chapters = { ...s.chapters || {}, [ctx2.ch.guid]: rows };
-        await writeJson2(sf, s);
+        await mutateJson(kapi, sf, (sc) => {
+          const rows = (sc.chapters || {})[ctx2.ch.guid] || [];
+          const i5 = rows.findIndex((r) => r.id === ctx2.sc.id);
+          if (i5 >= 0) rows[i5] = { ...row3, order: rows[i5].order };
+          else rows.push({ ...row3, order: rows.length + 1 });
+          sc.chapters = { ...sc.chapters || {}, [ctx2.ch.guid]: rows };
+        }, { fallback: { chapters: {} } });
       } else if (kind === "memo") {
         await closeTabsUnder2(ctx2.file, { save: false });
         await moveToRecycle(ctx2.file);
@@ -151420,269 +152255,6 @@ ${preview2}` + (found2.length > 8 ? `
     }
   });
 
-  // src/comments/comment-core.js
-  var comment_core_exports = {};
-  __export(comment_core_exports, {
-    BLOCK_END: () => BLOCK_END,
-    BLOCK_START: () => BLOCK_START,
-    CommentStore: () => CommentStore,
-    addComment: () => addComment,
-    countComments: () => countComments,
-    deleteComment: () => deleteComment,
-    editComment: () => editComment,
-    findComment: () => findComment,
-    fromScenesJson: () => fromScenesJson,
-    makeComment: () => makeComment,
-    mergeComments: () => mergeComments,
-    normalizeAnchor: () => normalizeAnchor,
-    openComments: () => openComments,
-    parseComments: () => parseComments,
-    quoteAt: () => quoteAt,
-    reanchor: () => reanchor,
-    reanchorAll: () => reanchorAll,
-    replyTo: () => replyTo,
-    resolveComment: () => resolveComment,
-    stripComments: () => stripComments2
-  });
-  function makeComment({ text, author = "", position = null, now = Date.now(), id = null } = {}) {
-    return {
-      id: id || newId2(now),
-      author: String(author || ""),
-      text: String(text || ""),
-      timestamp: new Date(now).toISOString(),
-      resolved: false,
-      replies: [],
-      anchor: normalizeAnchor(position)
-    };
-  }
-  function normalizeAnchor(position) {
-    if (position == null) return null;
-    if (typeof position === "number") return { start: position, end: position, quote: "" };
-    const { start = 0, end = start, quote = "" } = position;
-    return { start: num3(start), end: num3(end), quote: String(quote || "") };
-  }
-  function parseComments(md) {
-    const m = BLOCK_RE.exec(String(md || ""));
-    if (!m) return [];
-    try {
-      const arr = JSON.parse(m[1].trim());
-      return Array.isArray(arr) ? arr.map(fix) : [];
-    } catch {
-      return [];
-    }
-  }
-  function fix(c) {
-    return {
-      id: c.id || newId2(Date.now()),
-      author: c.author || "",
-      text: c.text || "",
-      timestamp: c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
-      resolved: !!c.resolved,
-      replies: Array.isArray(c.replies) ? c.replies.map(fix) : [],
-      anchor: c.anchor ? normalizeAnchor(c.anchor) : null
-    };
-  }
-  function stripComments2(md) {
-    return String(md || "").replace(BLOCK_RE, "").replace(/\s+$/, "");
-  }
-  function mergeComments(md, comments) {
-    const body = stripComments2(md);
-    if (!comments || !comments.length) return body ? body + "\n" : "";
-    return `${body}
-
-${BLOCK_START}
-${JSON.stringify(comments, null, 1)}
-${BLOCK_END}
-`;
-  }
-  function addComment(comments, { text, author, position, now = Date.now(), id } = {}) {
-    const c = makeComment({ text, author, position, now, id });
-    return { comments: [...comments || [], c], comment: c };
-  }
-  function replyTo(comments, parentId, { text, author, now = Date.now(), id } = {}) {
-    const reply = makeComment({ text, author, now, id });
-    let found2 = false;
-    const walk3 = (list) => list.map((c) => {
-      if (c.id === parentId) {
-        found2 = true;
-        return { ...c, replies: [...c.replies, reply] };
-      }
-      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
-    });
-    const out = walk3(comments || []);
-    return { comments: out, reply: found2 ? reply : null, ok: found2 };
-  }
-  function resolveComment(comments, id, resolved = true) {
-    let found2 = false;
-    const walk3 = (list) => list.map((c) => {
-      if (c.id === id) {
-        found2 = true;
-        return { ...c, resolved: !!resolved, resolvedAt: resolved ? (/* @__PURE__ */ new Date()).toISOString() : null };
-      }
-      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
-    });
-    return { comments: walk3(comments || []), ok: found2 };
-  }
-  function editComment(comments, id, text) {
-    let found2 = false;
-    const walk3 = (list) => list.map((c) => {
-      if (c.id === id) {
-        found2 = true;
-        return { ...c, text: String(text), editedAt: (/* @__PURE__ */ new Date()).toISOString() };
-      }
-      return c.replies.length ? { ...c, replies: walk3(c.replies) } : c;
-    });
-    return { comments: walk3(comments || []), ok: found2 };
-  }
-  function deleteComment(comments, id) {
-    let found2 = false;
-    const walk3 = (list) => list.filter((c) => {
-      if (c.id === id) {
-        found2 = true;
-        return false;
-      }
-      return true;
-    }).map((c) => c.replies.length ? { ...c, replies: walk3(c.replies) } : c);
-    return { comments: walk3(comments || []), ok: found2 };
-  }
-  function findComment(comments, id) {
-    for (const c of comments || []) {
-      if (c.id === id) return c;
-      const inner = findComment(c.replies, id);
-      if (inner) return inner;
-    }
-    return null;
-  }
-  function countComments(comments) {
-    return (comments || []).reduce((n2, c) => n2 + 1 + countComments(c.replies), 0);
-  }
-  function openComments(comments) {
-    return (comments || []).filter((c) => !c.resolved);
-  }
-  function reanchor(text, anchor) {
-    if (!anchor) return null;
-    const src2 = String(text || "");
-    const q = anchor.quote;
-    if (!q) {
-      const start = Math.min(anchor.start, src2.length);
-      return { ...anchor, start, end: Math.min(anchor.end, src2.length) };
-    }
-    if (src2.slice(anchor.start, anchor.end) === q) return { ...anchor };
-    let best = -1, bestDist = Infinity, from2 = 0, idx4;
-    while ((idx4 = src2.indexOf(q, from2)) >= 0) {
-      const d = Math.abs(idx4 - anchor.start);
-      if (d < bestDist) {
-        bestDist = d;
-        best = idx4;
-      }
-      from2 = idx4 + 1;
-    }
-    if (best < 0) return { ...anchor, lost: true };
-    return { start: best, end: best + q.length, quote: q };
-  }
-  function reanchorAll(text, comments) {
-    return (comments || []).map((c) => c.anchor ? { ...c, anchor: reanchor(text, c.anchor) } : c);
-  }
-  function quoteAt(text, start, end) {
-    return String(text || "").slice(start, end);
-  }
-  function fromScenesJson(scenesJson, opts = {}) {
-    const out = {};
-    const chapters = scenesJson && scenesJson.chapters || {};
-    for (const cg of Object.keys(chapters)) {
-      for (const row3 of chapters[cg] || []) {
-        if (!row3 || !Array.isArray(row3.comments) || !row3.comments.length) continue;
-        out[row3.id] = row3.comments.map((c) => ({
-          id: c.id || newId2(Date.now()),
-          author: c.author || opts.author || "",
-          text: c.text || "",
-          timestamp: c.date || c.timestamp || (/* @__PURE__ */ new Date(0)).toISOString(),
-          resolved: !!c.resolved,
-          replies: [],
-          anchor: null
-        }));
-      }
-    }
-    return out;
-  }
-  var BLOCK_START, BLOCK_END, BLOCK_RE, _seq3, newId2, num3, CommentStore;
-  var init_comment_core = __esm({
-    "src/comments/comment-core.js"() {
-      BLOCK_START = "<!-- k2-comments";
-      BLOCK_END = "-->";
-      BLOCK_RE = /\n*<!--\s*k2-comments\s*([\s\S]*?)-->\s*$/;
-      _seq3 = 0;
-      newId2 = (now) => "c" + Number(now).toString(36) + (_seq3++).toString(36);
-      num3 = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
-      CommentStore = class {
-        constructor({ io, now = () => Date.now(), author = "" } = {}) {
-          this.io = io;
-          this.now = now;
-          this.author = author;
-        }
-        /** @returns {Promise<{body, comments}>} */
-        async read(path) {
-          let raw = "";
-          try {
-            raw = await this.io.readFile(path) || "";
-          } catch {
-            raw = "";
-          }
-          return { body: stripComments2(raw), comments: parseComments(raw), raw };
-        }
-        async write(path, body, comments) {
-          await this.io.writeFile(path, mergeComments(body, comments));
-          return true;
-        }
-        /** Add a comment to a scene file. position = number | {start,end,quote} */
-        async add(path, position, text, opts = {}) {
-          const { body, comments } = await this.read(path);
-          const anchor = normalizeAnchor(position);
-          if (anchor && !anchor.quote && anchor.end > anchor.start) anchor.quote = quoteAt(body, anchor.start, anchor.end);
-          const res = addComment(comments, { text, author: opts.author ?? this.author, position: anchor, now: this.now() });
-          await this.write(path, body, res.comments);
-          return res.comment;
-        }
-        async reply(path, parentId, text, opts = {}) {
-          const { body, comments } = await this.read(path);
-          const res = replyTo(comments, parentId, { text, author: opts.author ?? this.author, now: this.now() });
-          if (!res.ok) return null;
-          await this.write(path, body, res.comments);
-          return res.reply;
-        }
-        async resolve(path, id, resolved = true) {
-          const { body, comments } = await this.read(path);
-          const res = resolveComment(comments, id, resolved);
-          if (res.ok) await this.write(path, body, res.comments);
-          return res.ok;
-        }
-        async edit(path, id, text) {
-          const { body, comments } = await this.read(path);
-          const res = editComment(comments, id, text);
-          if (res.ok) await this.write(path, body, res.comments);
-          return res.ok;
-        }
-        async remove(path, id) {
-          const { body, comments } = await this.read(path);
-          const res = deleteComment(comments, id);
-          if (res.ok) await this.write(path, body, res.comments);
-          return res.ok;
-        }
-        async list(path, { openOnly = false, reanchor: doReanchor = true } = {}) {
-          const { body, comments } = await this.read(path);
-          const list = doReanchor ? reanchorAll(body, comments) : comments;
-          return openOnly ? openComments(list) : list;
-        }
-        /** Save an edited body while keeping the comments (re-anchored against the new text). */
-        async saveBody(path, newBody) {
-          const { comments } = await this.read(path);
-          await this.write(path, newBody, reanchorAll(newBody, comments));
-          return true;
-        }
-      };
-    }
-  });
-
   // src/comments/comment-ui.js
   var comment_ui_exports = {};
   __export(comment_ui_exports, {
@@ -151713,14 +152285,7 @@ ${BLOCK_END}
     _store = null;
   }
   async function writeKeepingComments(path, fullText) {
-    const store = commentStore();
-    const { comments } = await store.read(path);
-    if (!comments.length) {
-      await kapi.writeFile(path, fullText);
-      return false;
-    }
-    await store.write(path, fullText, reanchorAll(fullText, comments));
-    return true;
+    return writeMdKeepingComments(kapi, path, fullText);
   }
   function activeFile() {
     const t3 = state.active;
@@ -151744,12 +152309,14 @@ ${BLOCK_END}
       }
     };
     walk3(list || []);
-    setCommentAnchors(quotes, activeQuote);
-    refreshCommentAnchors(editorView());
+    const v2 = editorView();
+    setCommentAnchors(quotes, activeQuote, v2);
+    refreshCommentAnchors(v2);
   }
   function clearCommentAnchors() {
-    setCommentAnchors([], "");
-    refreshCommentAnchors(editorView());
+    const v2 = editorView();
+    setCommentAnchors([], "", v2);
+    refreshCommentAnchors(v2);
   }
   async function selectionAnchor() {
     const v2 = editorView();
@@ -151916,8 +152483,9 @@ ${BLOCK_END}
       q.title = c.anchor.lost ? t("cmt.anchorLostHint") : t("cmt.anchorOkHint");
       if (!c.anchor.lost) {
         q.onmouseenter = () => {
-          setCommentAnchors([c.anchor.quote], c.anchor.quote);
-          refreshCommentAnchors(editorView());
+          const v2 = editorView();
+          setCommentAnchors([c.anchor.quote], c.anchor.quote, v2);
+          refreshCommentAnchors(v2);
         };
         q.onmouseleave = () => syncAnchors(lastList, "");
         q.onclick = () => scrollToAnchor(c.anchor.quote);
@@ -152586,8 +153154,10 @@ ${BLOCK_END}
     head2.append(el("div", "sc-tbl-title", t("ui.scene.tableSceneAll")));
     const search2 = el("input", "sc-tbl-search");
     search2.placeholder = t("ui.scene.filterSearchNameTag");
+    let job = null;
     search2.oninput = () => {
-      setTimeout(() => renderBody(wrap2, search2.value.toLowerCase()), 50);
+      clearTimeout(job);
+      job = setTimeout(() => renderBody(wrap2, search2.value.toLowerCase()), 150);
     };
     head2.append(search2);
     wrap2.append(head2);
@@ -152636,8 +153206,17 @@ ${BLOCK_END}
   }
   async function renderBody(wrap2, filter) {
     const tableWrap = wrap2.querySelector("#sc-tbl-table-wrap") || wrap2;
+    const token = wrap2._renderSeq = (wrap2._renderSeq || 0) + 1;
+    const stale2 = () => token !== wrap2._renderSeq || !wrap2.isConnected;
+    let scenes = wrap2._scenes;
+    if (!scenes) {
+      tableWrap.innerHTML = "";
+      tableWrap.append(el("div", "dim sc-tbl-scanning", t("ui.scene.tableScanning")));
+      scenes = await loadAllScenes();
+      if (stale2()) return;
+      wrap2._scenes = scenes;
+    }
     tableWrap.innerHTML = "";
-    const scenes = await loadAllScenes();
     if (!scenes.length) {
       tableWrap.append(el("div", "dim", t("ui.scene.notHasSceneProject")));
       return;
@@ -153520,34 +154099,78 @@ ${BLOCK_END}
   });
 
   // src/scratchpad.js
-  function renderNotesPanel(host2) {
-    if (!host2 || host2.dataset.ready === "1") return;
-    host2.dataset.ready = "1";
-    let saved = "";
+  var scratchpad_exports = {};
+  __export(scratchpad_exports, {
+    flushScratch: () => flushScratch,
+    openScratchpad: () => openScratchpad,
+    renderNotesPanel: () => renderNotesPanel,
+    scratchValue: () => scratchValue,
+    setScratchValue: () => setScratchValue
+  });
+  function scratchValue() {
+    if (PAD2.value === null) {
+      try {
+        PAD2.value = localStorage.getItem(PAD_KEY) || "";
+      } catch {
+        PAD2.value = "";
+      }
+    }
+    return PAD2.value;
+  }
+  function flushScratch() {
+    clearTimeout(PAD2.timer);
+    PAD2.timer = null;
+    if (PAD2.value === null) return;
     try {
-      saved = localStorage.getItem("k2-scratchpad") || "";
+      localStorage.setItem(PAD_KEY, PAD2.value);
     } catch {
     }
+  }
+  function setScratchValue(v2, from2 = null, { now = false } = {}) {
+    PAD2.value = String(v2 ?? "");
+    for (const view2 of [...PAD2.views]) {
+      if (!view2.ta.isConnected) {
+        PAD2.views.delete(view2);
+        continue;
+      }
+      if (view2.ta !== from2 && view2.ta.value !== PAD2.value) {
+        view2.ta.value = PAD2.value;
+        view2.update();
+      }
+    }
+    clearTimeout(PAD2.timer);
+    if (now) flushScratch();
+    else PAD2.timer = setTimeout(flushScratch, 3e3);
+  }
+  function buildScratch() {
     const ta = el("textarea", "scratch-area");
-    ta.value = saved;
+    ta.value = scratchValue();
     ta.placeholder = t("ui.notes.scratchPh");
     ta.spellcheck = false;
-    let saveTimer = null;
-    ta.oninput = () => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        try {
-          localStorage.setItem("k2-scratchpad", ta.value);
-        } catch {
-        }
-      }, 3e3);
-    };
     const bar = el("div", "scratch-bar");
     const exportBtn = el("button", null, t("ui.common.exportMd"));
     const memoBtn = el("button", null, t("ui.notes.moveInMemo"));
     const clearBtn = el("button", "k-danger", t("ui.common.clear2"));
     const info = el("span", "scratch-info");
     bar.append(info, exportBtn, memoBtn, clearBtn);
+    const updateInfo = () => {
+      const lines = ta.value.split("\n").length;
+      const chars3 = ta.value.length;
+      const words = ta.value ? ta.value.trim().split(/\s+/).length : 0;
+      info.textContent = tf("ui.notes.lineWordChar", lines, words, chars3);
+    };
+    const view2 = { ta, update: updateInfo };
+    PAD2.views.add(view2);
+    ta.addEventListener("input", () => {
+      setScratchValue(ta.value, ta);
+      updateInfo();
+    });
+    ta.addEventListener("focus", () => {
+      if (ta.value !== scratchValue()) {
+        ta.value = scratchValue();
+        updateInfo();
+      }
+    });
     exportBtn.onclick = async () => {
       const dest = await kapi.saveAsDialog("scratchpad.md");
       if (!dest) return;
@@ -153577,27 +154200,81 @@ ${BLOCK_END}
     };
     clearBtn.onclick = () => {
       ta.value = "";
-      try {
-        localStorage.setItem("k2-scratchpad", "");
-      } catch {
-      }
+      setScratchValue("", ta, { now: true });
+      updateInfo();
       setStatus(t("ui.notes.clearNotebookNoteDone"));
     };
-    const updateInfo = () => {
-      const lines = ta.value.split("\n").length;
-      const chars3 = ta.value.length;
-      const words = ta.value ? ta.value.trim().split(/\s+/).length : 0;
-      info.textContent = tf("ui.notes.lineWordChar", lines, words, chars3);
-    };
-    ta.addEventListener("input", updateInfo);
     updateInfo();
+    return { bar, ta };
+  }
+  async function openScratchpad() {
+    const key2 = "::scratchpad::";
+    if (state.tabs.has(key2)) {
+      const { activate: activate3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      activate3(key2);
+      return;
+    }
+    const pane = el("div", "pane");
+    $("#panes").append(pane);
+    const tabBtn = el("div", "tab");
+    tabBtn.append(el("span", "tab-title", t("ui.notes.notebookNoteQuick")));
+    const x = el("span", "tab-x", "\xD7");
+    tabBtn.append(x);
+    $("#tabs").append(tabBtn);
+    const { bar, ta } = buildScratch();
+    pane.append(bar, ta);
+    const tab = {
+      file: key2,
+      title: t("ui.common.notebookNoteQuick"),
+      pane,
+      tabBtn,
+      dirty: false,
+      editor: null,
+      plain: ta,
+      wiki: null,
+      gal: null
+    };
+    tabBtn.onclick = (e) => {
+      if (e.target !== x) {
+        Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.activate(key2));
+      }
+    };
+    x.onclick = () => {
+      flushScratch();
+      Promise.resolve().then(() => (init_app(), app_exports)).then((m) => m.closeTab(key2));
+    };
+    state.tabs.set(key2, tab);
+    const { activate: activate2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    activate2(key2);
+    ta.focus();
+  }
+  function renderNotesPanel(host2) {
+    if (!host2 || host2.dataset.ready === "1") return;
+    host2.dataset.ready = "1";
+    const { bar, ta } = buildScratch();
     host2.append(bar, ta);
     ta.focus();
   }
+  var PAD_KEY, PAD2;
   var init_scratchpad = __esm({
     "src/scratchpad.js"() {
       init_i18n();
       init_core();
+      PAD_KEY = "k2-scratchpad";
+      PAD2 = { value: null, timer: null, views: /* @__PURE__ */ new Set() };
+      try {
+        window.addEventListener("beforeunload", flushScratch);
+        window.addEventListener("pagehide", flushScratch);
+        window.addEventListener("storage", (e) => {
+          if (e.key !== PAD_KEY) return;
+          PAD2.value = e.newValue || "";
+          for (const view2 of PAD2.views) if (view2.ta.isConnected && view2.ta.value !== PAD2.value) {
+            view2.ta.value = PAD2.value;
+            view2.update();
+          }
+        });
+      } catch {
+      }
     }
   });
 
@@ -155987,7 +156664,7 @@ img{max-width:100%}` }
       used.push(s.id);
     }
     if (!parts.length) return { text: "", used, skipped, chars: 0 };
-    const header = T`ทักษะที่ผู้เขียนกำหนดให้คุณ (ทำตามอย่างเคร่งครัด · สำคัญกว่าคำแนะนำทั่วไปข้างบน):`;
+    const header = t("ui.aiSkills.authorDefineYouDo");
     return { text: "\n\n" + header + "\n\n" + parts.join("\n\n"), used, skipped, chars: chars3 };
   }
   function skillsLabel(all = [], onIds = []) {
@@ -155997,13 +156674,13 @@ img{max-width:100%}` }
   function starterSkillMd() {
     return [
       "---",
-      "name: " + T`โทนการเขียนของเรื่องนี้`,
-      "description: " + T`ตัวอย่าง — แก้ไฟล์นี้ได้เลย หรือสร้างไฟล์ .md ใหม่ในโฟลเดอร์นี้`,
+      "name: " + t("ui.aiSkills.toneWriteStory"),
+      "description: " + t("ui.aiSkills.sampleEditFileNew"),
       "---",
       "",
-      T`เขียนด้วยประโยคสั้น กระชับ ไม่ใช้คำฟุ่มเฟือย`,
-      T`ใช้คำสรรพนามตามที่ตัวละครใช้จริงในเรื่อง ห้ามเปลี่ยนเอง`,
-      T`ห้ามสรุปตอนจบให้ ถ้าผู้เขียนไม่ได้ขอ`,
+      t("ui.aiSkills.writeSentenceShortConcise"),
+      t("ui.aiSkills.useWordPronounCharacter"),
+      t("ui.aiSkills.forbidSummaryActEnd"),
       ""
     ].join("\n");
   }
@@ -156113,7 +156790,10 @@ img{max-width:100%}` }
   }
   function stripToolCalls(text) {
     const src2 = String(text || "");
-    return src2.replace(/```k2\s*\n[\s\S]*?```/g, "").replace(/\n{3,}/g, "\n\n").trim();
+    return src2.replace(/```(k2|json)\s*\n([\s\S]*?)```/g, (whole, lang) => {
+      if (lang === "k2") return "";
+      return parseToolCalls(whole).some((c) => c.tool && !c.error) ? "" : whole;
+    }).replace(/\n{3,}/g, "\n\n").trim();
   }
   function validateCall(call, cap) {
     if (!call) return { ok: false, error: t("ui.aiTools.cmdEmpty") };
@@ -156320,8 +157000,13 @@ img{max-width:100%}` }
     refreshAfterActions: () => refreshAfterActions,
     runToolCall: () => runToolCall,
     safeCat: () => safeCat,
+    safeName: () => safeName3,
     touchesProject: () => touchesProject
   });
+  function assertInside(p) {
+    if (!isInsideRoot(state.root, p)) throw new Error(t("ui.aiActions.outsideProject"));
+    return p;
+  }
   function safeCat(cat) {
     const s = String(cat == null || cat === "" ? "characters" : cat).trim();
     if (!s || /[\\/]/.test(s) || /^\.+$/.test(s) || s.includes("..")) return "";
@@ -156434,7 +157119,7 @@ img{max-width:100%}` }
     } catch {
     }
   }
-  var import_md22, SKIP_DIRS8, guid2, safeName3, eq, ok, err, HANDLERS;
+  var import_md22, SKIP_DIRS8, guid2, safeName3, EMPTY_SCENES, eq, ok, err, HANDLERS;
   var init_ai_actions = __esm({
     "src/ai/ai-actions.js"() {
       init_i18n();
@@ -156442,9 +157127,16 @@ img{max-width:100%}` }
       import_md22 = __toESM(require_md());
       init_project_scan();
       init_tab_bridge();
+      init_json_store();
+      init_scene_file_name();
+      init_comment_core();
       SKIP_DIRS8 = ["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle", "Sessions"];
       guid2 = () => "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-      safeName3 = (s) => String(s || "").replace(/[\\/:*?"<>|]/g, "").trim() || "untitled";
+      safeName3 = (s) => {
+        const v2 = String(s || "").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "").trim();
+        return !v2 || /^\.+$/.test(v2) ? "untitled" : v2;
+      };
+      EMPTY_SCENES = () => ({ chapters: {} });
       eq = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
       ok = (message, data2) => ({ ok: true, message, data: data2 });
       err = (error2) => ({ ok: false, error: error2 });
@@ -156532,14 +157224,13 @@ img{max-width:100%}` }
         async "entity.delete"(a) {
           const hit = await findEntityFile(a.name);
           if (!hit) return err(tf("ui.aiActions.notFound", a.name));
-          const h = tabHandle(hit.path);
-          if (h) h.close();
+          if (tabHandle(hit.path)) await closeTabsUnder(hit.path);
           await moveToTrash(hit.path);
           return ok(tf("ui.aiActions.moveTrashDone", hit.name));
         },
         async "book.create"(a) {
           const title2 = String(a.title);
-          let dir2 = await kapi.join(state.root, safeName3(title2));
+          let dir2 = assertInside(await kapi.join(state.root, safeName3(title2)));
           if (await kapi.exists(dir2)) dir2 += "-" + Date.now().toString(36).slice(-4);
           const books = await listBooks();
           const order = Math.max(0, ...books.map((b) => b.order || 0)) + 1;
@@ -156566,7 +157257,7 @@ img{max-width:100%}` }
         async "book.delete"(a) {
           const b = await findBook(a.title);
           if (!b) return err(tf("ui.aiActions.notFoundBook2", a.title));
-          closeTabsUnder(b.path);
+          await closeTabsUnder(b.path);
           const dst = await moveToTrash(b.path);
           await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
             { kind: "section", root: state.root, folderName: b.name },
@@ -156579,22 +157270,24 @@ img{max-width:100%}` }
           const b = await findBook(a.book);
           if (!b) return err(a.book ? tf("ui.aiActions.notFoundBook2", a.book) : t("ui.aiActions.notHasBookProject"));
           const df = await kapi.join(b.draftPath, "draft.json");
-          const d = await kapi.exists(df) ? await kapi.readJson(df) : { chapters: [] };
-          if ((d.chapters || []).some((c) => eq(c.title, a.title))) return err(tf("ui.aiActions.bookHasChapter", a.title));
-          const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
-          const ch = {
-            guid: guid2(),
-            title: String(a.title),
-            order,
-            status: "Outline",
-            act: "I",
-            date: "",
-            isFavorite: false,
-            folderName: String(order).padStart(2, "0") + " - " + safeName3(a.title)
-          };
-          d.chapters = [...d.chapters || [], ch];
-          await kapi.writeFile(df, JSON.stringify(d, null, 2));
-          await kapi.mkdir(await kapi.join(b.draftPath, "Chapters", ch.folderName));
+          let ch = null;
+          await mutateJson(kapi, df, (d) => {
+            if ((d.chapters || []).some((c) => eq(c.title, a.title))) return false;
+            const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
+            ch = {
+              guid: guid2(),
+              title: String(a.title),
+              order,
+              status: "Outline",
+              act: "I",
+              date: "",
+              isFavorite: false,
+              folderName: String(order).padStart(2, "0") + " - " + safeName3(a.title)
+            };
+            d.chapters = [...d.chapters || [], ch];
+          }, { fallback: { chapters: [] } });
+          if (!ch) return err(tf("ui.aiActions.bookHasChapter", a.title));
+          await kapi.mkdir(assertInside(await kapi.join(b.draftPath, "Chapters", ch.folderName)));
           return ok(tf("ui.aiActions.addChapterDone", a.title, b.title));
         },
         async "chapter.rename"(a) {
@@ -156602,9 +157295,11 @@ img{max-width:100%}` }
           if (!b) return err(t("ui.aiActions.notFoundBook"));
           const c = await findChapter(b, a.title);
           if (!c) return err(tf("ui.aiActions.notFoundChapter", a.title));
-          c.ch.title = String(a.newTitle);
-          c.draft.chapters = c.draft.chapters.map((x) => x.guid === c.ch.guid ? c.ch : x);
-          await kapi.writeFile(c.draftFile, JSON.stringify(c.draft, null, 2));
+          await mutateJson(kapi, c.draftFile, (d) => {
+            const row3 = (d.chapters || []).find((x) => x.guid === c.ch.guid);
+            if (!row3) return false;
+            row3.title = String(a.newTitle);
+          });
           return ok(tf("ui.aiActions.changeNameChapterDone", a.newTitle));
         },
         async "chapter.delete"(a) {
@@ -156614,10 +157309,14 @@ img{max-width:100%}` }
           if (!c) return err(tf("ui.aiActions.notFoundChapter", a.title));
           const dir2 = await kapi.join(b.draftPath, "Chapters", c.ch.folderName);
           const sf = await kapi.join(b.draftPath, "scenes.json");
-          const sdata = await kapi.exists(sf) ? await kapi.readJson(sf) : { chapters: {} };
-          const scenes = (sdata.chapters || {})[c.ch.guid] || [];
+          if (await kapi.exists(dir2)) await closeTabsUnder(dir2);
+          let scenes = [];
+          await mutateJson(kapi, sf, (sd) => {
+            scenes = ((sd.chapters || {})[c.ch.guid] || []).slice();
+            if (!sd.chapters || !(c.ch.guid in sd.chapters)) return false;
+            delete sd.chapters[c.ch.guid];
+          }, { fallback: EMPTY_SCENES });
           if (await kapi.exists(dir2)) {
-            closeTabsUnder(dir2);
             const dst = await moveToTrash(dir2);
             await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
               { kind: "chapter", dPath: b.draftPath, ch: c.ch, scenes },
@@ -156625,10 +157324,11 @@ img{max-width:100%}` }
               2
             ));
           }
-          c.draft.chapters = (c.draft.chapters || []).filter((x) => x.guid !== c.ch.guid);
-          await kapi.writeFile(c.draftFile, JSON.stringify(c.draft, null, 2));
-          if (sdata.chapters) delete sdata.chapters[c.ch.guid];
-          await kapi.writeFile(sf, JSON.stringify(sdata, null, 2));
+          await mutateJson(kapi, c.draftFile, (d) => {
+            const before = (d.chapters || []).length;
+            d.chapters = (d.chapters || []).filter((x) => x.guid !== c.ch.guid);
+            if (d.chapters.length === before) return false;
+          });
           return ok(tf("ui.aiActions.delChapterSceneTrash", a.title, scenes.length));
         },
         async "scene.create"(a) {
@@ -156637,35 +157337,43 @@ img{max-width:100%}` }
           const c = await findChapter(b, a.chapter);
           if (!c) return err(a.chapter ? tf("ui.aiActions.notFoundChapter", a.chapter) : t("ui.common.bookNotHasChapter"));
           const sf = await kapi.join(b.draftPath, "scenes.json");
-          const d = await kapi.exists(sf) ? await kapi.readJson(sf) : { chapters: {} };
-          d.chapters = d.chapters || {};
-          const list = d.chapters[c.ch.guid] || [];
-          if (list.some((s) => eq(s.title, a.title))) return err(tf("ui.aiActions.chapterHasScene", a.title));
-          const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
           const chDir = await kapi.join(b.draftPath, "Chapters", c.ch.folderName);
-          const base4 = "scene-" + String(order).padStart(2, "0");
-          let fileName = base4 + ".md";
-          for (let k = 2; k < 1e3 && await kapi.exists(await kapi.join(chDir, fileName)); k++) {
-            fileName = base4 + "-" + k + ".md";
-          }
-          const sc = {
-            id: guid2(),
-            title: String(a.title),
-            order,
-            fileName,
-            chapterGuid: c.ch.guid,
-            date: "",
-            isFavorite: false,
-            wordCount: 0,
-            synopsis: String(a.synopsis || "")
-          };
-          d.chapters[c.ch.guid] = [...list, sc];
-          const file = await kapi.join(chDir, sc.fileName);
+          const snap2 = await kapi.readJson(sf).catch(() => EMPTY_SCENES());
+          const list0 = (snap2.chapters || {})[c.ch.guid] || [];
+          if (list0.some((s) => eq(s.title, a.title))) return err(tf("ui.aiActions.chapterHasScene", a.title));
+          const order0 = Math.max(0, ...list0.map((s) => s.order || 0)) + 1;
+          const fileName = await freeSceneFileName(b.draftPath, c.ch.folderName, order0, takenSceneFiles(snap2));
+          const file = assertInside(await kapi.join(chDir, fileName));
           await kapi.writeFile(file, (0, import_md22.dumpMdFile)(
-            { title: sc.title, type: "scene", format: "prose", pov: "", tags: [] },
+            { title: String(a.title), type: "scene", format: "prose", pov: "", tags: [] },
             String(a.text || "")
           ));
-          await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+          let dup = false;
+          await mutateJson(kapi, sf, (d) => {
+            d.chapters = d.chapters || {};
+            const list = d.chapters[c.ch.guid] || [];
+            if (list.some((s) => eq(s.title, a.title))) {
+              dup = true;
+              return false;
+            }
+            const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
+            d.chapters[c.ch.guid] = [...list, {
+              id: guid2(),
+              title: String(a.title),
+              order,
+              fileName,
+              chapterGuid: c.ch.guid,
+              date: "",
+              isFavorite: false,
+              wordCount: 0,
+              synopsis: String(a.synopsis || "")
+            }];
+          }, { fallback: EMPTY_SCENES });
+          if (dup) {
+            await kapi.remove(file).catch(() => {
+            });
+            return err(tf("ui.aiActions.chapterHasScene", a.title));
+          }
           return ok(tf("ui.aiActions.newSceneDone", a.title, b.title, c.ch.title));
         },
         async "scene.write"(a) {
@@ -156685,7 +157393,7 @@ img{max-width:100%}` }
             h.setText(next, { keepAlign: mode === "append" });
             return ok(msg + " \xB7 " + t("ui.aiActions.openTabUnsaved"));
           }
-          await kapi.writeFile(sc.path, (0, import_md22.dumpMdFile)(meta2, next));
+          await writeMdKeepingComments(kapi, sc.path, (0, import_md22.dumpMdFile)(meta2, next));
           if (live2) await h.reloadFromDisk();
           return ok(msg);
         },
@@ -156693,14 +157401,19 @@ img{max-width:100%}` }
           const sc = await findScene2(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
           const sf = await kapi.join(sc.draftPath, "scenes.json");
-          const d = await kapi.readJson(sf);
-          for (const k of Object.keys(d.chapters || {})) {
-            d.chapters[k] = (d.chapters[k] || []).map((s) => s.id === sc.id ? { ...s, title: String(a.newTitle) } : s);
-          }
-          await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+          await mutateJson(kapi, sf, (d) => {
+            let hit = false;
+            for (const k of Object.keys(d.chapters || {})) {
+              for (const s of d.chapters[k] || []) if (s.id === sc.id) {
+                s.title = String(a.newTitle);
+                hit = true;
+              }
+            }
+            if (!hit) return false;
+          });
           if (await kapi.exists(sc.path)) {
             const { meta: meta2, body } = (0, import_md22.parseMdFile)(await kapi.readFile(sc.path));
-            await kapi.writeFile(sc.path, (0, import_md22.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
+            await writeMdKeepingComments(kapi, sc.path, (0, import_md22.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
           }
           const h = tabHandle(sc.path);
           if (h) h.rename(String(a.newTitle));
@@ -156710,10 +157423,9 @@ img{max-width:100%}` }
           const sc = await findScene2(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
           const sf = await kapi.join(sc.draftPath, "scenes.json");
-          const d = await kapi.readJson(sf);
           const folderName = sc.path.split(/[\\/]/).slice(-2, -1)[0] || "";
-          const h = tabHandle(sc.path);
-          if (h) h.close();
+          if (tabHandle(sc.path)) await closeTabsUnder(sc.path);
+          if (tabHandle(sc.path)) return err(tf("ui.aiActions.sceneOpenUnsaved", sc.title));
           if (await kapi.exists(sc.path)) {
             const dst = await moveToTrash(sc.path);
             await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
@@ -156722,10 +157434,15 @@ img{max-width:100%}` }
               2
             ));
           }
-          for (const k of Object.keys(d.chapters || {})) {
-            d.chapters[k] = (d.chapters[k] || []).filter((s) => s.id !== sc.id);
-          }
-          await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+          await mutateJson(kapi, sf, (d) => {
+            let hit = false;
+            for (const k of Object.keys(d.chapters || {})) {
+              const n0 = (d.chapters[k] || []).length;
+              d.chapters[k] = (d.chapters[k] || []).filter((s) => s.id !== sc.id);
+              if (d.chapters[k].length !== n0) hit = true;
+            }
+            if (!hit) return false;
+          });
           return ok(tf("ui.aiActions.delSceneTrashDone", sc.title));
         }
       };
@@ -157415,7 +158132,7 @@ img{max-width:100%}` }
     const banner = S4.host.querySelector(".ai-chat-running");
     if (banner) {
       banner.style.display = S4.run ? "" : "none";
-      banner.textContent = S4.run ? T`⏳ กำลังทำงาน: ${S4.run.title || t("ui.aiChatPanel.session")} · ${secs} วิ — กดเพื่อกลับไปดู` : "";
+      banner.textContent = S4.run ? gi("hourglass") + " " + tf("ui.aiChatPanel.busyRunPressBack", S4.run.title || t("ui.aiChatPanel.session"), secs) : "";
     }
     const head2 = S4.host.querySelector(".ai-chat-head .ai-chat-title");
     if (head2 && S4.cur) head2.classList.toggle("running", isRunning(S4.cur.id));
@@ -157491,7 +158208,7 @@ img{max-width:100%}` }
     }
     if (m.error) {
       n2.append(el("div", "ai-msg-err", gi("warning") + " " + m.error));
-      if (m.detail) n2.append(foldBlock(T`รายละเอียด · แนวทางแก้`, m.detail, "ai-msg-errdetail"));
+      if (m.detail) n2.append(foldBlock(t("ui.aiChatPanel.detailEdit"), m.detail, "ai-msg-errdetail"));
     }
     if (sess && canContinue(sess, m) && !isRunning(sess.id)) {
       const bar = el("div", "ai-msg-cont");
@@ -157643,9 +158360,9 @@ img{max-width:100%}` }
       effortSel.append(o);
     }
     effortSel.value = isReasoningEffort(s.effort) ? s.effort || "" : "";
-    effortSel.title = T`ระดับการใช้ความคิดของโมเดล (reasoning effort) — มีผลเฉพาะเซสชันนี้`;
+    effortSel.title = t("ui.aiChatPanel.levelUseIdeaModel");
     const skillBtn = el("button", "ai-chat-file ai-chat-skills", gi("puzzle"));
-    skillBtn.title = T`ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)`;
+    skillBtn.title = t("ui.aiChatPanel.assistantFileMdFolder");
     ctrls.append(fileBtn, scBtn, skillBtn, modeSel, modelSel, scopeSel, effortSel);
     box2.append(ctrls);
     refreshSkillBtn(skillBtn, s);
@@ -157741,13 +158458,13 @@ img{max-width:100%}` }
     const on2 = (live(s).skills || []).filter((id) => _skills.some((k) => k.id === id));
     btn2.textContent = _skills.length ? skillsLabel(_skills, on2) : gi("puzzle");
     btn2.classList.toggle("on", on2.length > 0);
-    btn2.title = _skills.length ? T`ทักษะที่เปิดอยู่: ` + (on2.length ? on2.join(", ") : T`— ไม่มี —`) : T`ยังไม่มีไฟล์ทักษะ — กดเพื่อสร้างโฟลเดอร์ ${SKILL_DIR}/ พร้อมไฟล์ตัวอย่าง`;
+    btn2.title = _skills.length ? t("ui.aiChatPanel.open") + (on2.length ? on2.join(", ") : t("ui.aiChatPanel.notHas")) : tf("ui.aiChatPanel.notHasFilePress", SKILL_DIR);
   }
   async function skillMenu(ev, s, btn2) {
     _skills = await loadSkills(state.root);
     const on2 = new Set(live(s).skills || []);
     const items = _skills.map((k) => ({
-      label: (on2.has(k.id) ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + k.name + (k.description ? " \u2014 " + k.description : "") + T`  (${String(k.chars)} ตัวอักษร)`,
+      label: (on2.has(k.id) ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + k.name + (k.description ? " \u2014 " + k.description : "") + tf("ui.aiChatPanel.char", String(k.chars)),
       click: async () => {
         const c = live(s);
         const set = new Set(c.skills || []);
@@ -157757,12 +158474,12 @@ img{max-width:100%}` }
         S4.cur = c;
         await saveSession2(c);
         await refreshSkillBtn(btn2, c);
-        setStatus(T`${set.has(k.id) ? gi("check-circle") : gi("square-outline")} ทักษะ: ${k.name}`);
+        setStatus(tf("ui.aiChatPanel.msg2", set.has(k.id) ? gi("check-circle") : gi("square-outline"), k.name));
       }
     }));
     if (items.length) items.push("-");
     items.push({
-      label: _skills.length ? T`📂 เปิดโฟลเดอร์ทักษะ` : T`✨ สร้างโฟลเดอร์ทักษะ + ไฟล์ตัวอย่าง`,
+      label: _skills.length ? gi("folder-open") + " " + t("ui.aiChatPanel.openFolder") : gi("magic") + " " + t("ui.aiChatPanel.newFolderFileSample"),
       click: async () => {
         const d = await ensureSkillDir(state.root);
         if (!d) {
@@ -157775,7 +158492,7 @@ img{max-width:100%}` }
         }
         if (kapi.revealInOS) await kapi.revealInOS(d);
         await refreshSkillBtn(btn2, live(s));
-        setStatus(T`ทักษะอยู่ที่ ${SKILL_DIR}/ — ไฟล์ .md หนึ่งไฟล์ = หนึ่งทักษะ`);
+        setStatus(tf("ui.aiChatPanel.fileMdOneFile", SKILL_DIR));
       }
     });
     popupMenu(ev.clientX, ev.clientY, items);
@@ -157893,15 +158610,15 @@ img{max-width:100%}` }
         system += sk.text;
         log(
           "info",
-          "ai: " + T`ใช้ทักษะ ${String(sk.used.length)} ตัว (${String(sk.chars)} ตัวอักษร)`,
+          "ai: " + tf("ui.aiChatPanel.useItemChar", String(sk.used.length), String(sk.chars)),
           sk.used.join(", ")
         );
       }
       if (sk.skipped.length) {
-        setStatus(T`⚠ ทักษะยาวเกินโควตา ข้ามไป: ${sk.skipped.join(", ")}`);
+        setStatus(gi("warning") + " " + tf("ui.aiChatPanel.longSkip", sk.skipped.join(", ")));
       }
     } catch (e) {
-      log("warn", "ai: " + T`อ่านทักษะไม่สำเร็จ`, e);
+      log("warn", "ai: " + t("ui.aiChatPanel.readNotOk"), e);
     }
     try {
       const ctx2 = await collectScope(start, { query });
@@ -157981,6 +158698,14 @@ img{max-width:100%}` }
         if (res.ok && res.usage) {
           const used = (res.usage.input || 0) + (res.usage.output || 0);
           cur = { ...cur, contextLimit: Math.max(cur.contextLimit || 0, guessLimit(used)) };
+        }
+        if (!res.ok) {
+          const ce = contextCapFromError((res.error || "") + " " + (res.detail || ""));
+          if (ce.exceeded) {
+            const cap2 = ce.cap || Math.max(1024, Math.floor((hist.tokens || DEFAULT_HISTORY_TOKENS) / 0.6 / 2));
+            cur = { ...cur, contextCap: cur.contextCap ? Math.min(cur.contextCap, cap2) : cap2 };
+            setStatus(tf("ui.aiChatPanel.contextCapLearned", cap2.toLocaleString()));
+          }
         }
         recordUsage2(res, prov, cur, cost);
         const replyNow = (cur.messages || []).find((x) => x.id === replyId);
@@ -158113,24 +158838,10 @@ img{max-width:100%}` }
     return used;
   }
   function recordUsage2(res, prov, s, cost) {
-    if (!state.meta || !res.ok || !res.usage) return;
-    const ai = aiMeta();
-    const list = ai.usage || [];
-    list.push({
-      date: (/* @__PURE__ */ new Date()).toISOString(),
-      tokens: res.usage.total || 0,
-      in: res.usage.input || 0,
-      out: res.usage.output || 0,
-      usd: cost ? cost.usd : null,
-      // [alpha.149] null = ไม่รู้ราคาของเจ้านี้
-      provider: prov.name,
-      model: res.model,
-      feature: "chat",
-      session: s.id
-    });
-    if (list.length > 500) list.splice(0, list.length - 500);
-    ai.usage = list;
-    S4.usageDirty = true;
+    if (!res.ok || !res.usage) return;
+    if (recordAiUsage({ usage: res.usage, cost, provider: prov.name, model: res.model, feature: "chat", session: s.id })) {
+      S4.usageDirty = true;
+    }
   }
   async function copyText(text) {
     const s = String(text ?? "");
@@ -163426,7 +164137,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const pk = buildPickerRequest(s);
       const prov2 = await currentProvider();
       if (pk && prov2) {
-        const res2 = await complete(prov2, { system: pk.system, messages: pk.messages, reqId: S9.reqId });
+        const res2 = await complete(prov2, {
+          system: pk.system,
+          messages: pk.messages,
+          reqId: S9.reqId,
+          maxTokens: pk.maxTokens
+        });
         if (res2.ok) speaker = parsePickedSpeaker(s, res2.text);
       }
       if (!speaker) {
@@ -163450,7 +164166,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const t0 = Date.now();
     const res = await completeStream(
       prov,
-      { system: req.system, messages: req.messages, reqId: S9.reqId },
+      {
+        system: req.system,
+        messages: req.messages,
+        reqId: S9.reqId,
+        maxTokens: req.maxTokens
+      },
       (c) => updatePending({ text: c.text, thinking: c.thinkingAll })
     );
     if (!res.ok) {
@@ -163488,7 +164209,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const t0 = Date.now();
     const res = await completeStream(
       prov,
-      { system: req.system, messages: req.messages, reqId: S9.reqId },
+      {
+        system: req.system,
+        messages: req.messages,
+        reqId: S9.reqId,
+        maxTokens: req.maxTokens
+      },
       (c) => updatePending({ text: c.text, thinking: c.thinkingAll })
     );
     if (!res.ok) {
@@ -164441,7 +165167,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     out.rtf.fontPt = num(out.rtf.fontPt, 12);
     return out;
   }
-  function defaultWorkflowFor(fmtKey, workflows = PRESETS) {
+  function defaultWorkflowFor(fmtKey, workflows = PRESETS, kind = "") {
+    if ((fmtKey === "rtf" || fmtKey === "fdx") && kind !== "prose") {
+      const sp = workflows.find((w) => w.id === "screenplay");
+      if (sp) return sp;
+    }
     const want = { pdf: "pdf", html: "html", txt: "txt", md: "md", rtf: "txt", fdx: "txt" }[fmtKey] || "md";
     return workflows.find((w) => w.ext === want && w.builtIn) || workflows.find((w) => w.ext === want) || workflows.find((w) => w.id === "manuscript") || workflows[0] || null;
   }
@@ -164501,8 +165231,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         {
           key: "txt",
           ext: "txt",
-          icon: "\u{1F163}",
+          icon: gi("file-txt"),
           preview: "text",
+          // [alpha.159 · M36] เดิมฝัง '🅣' ตรง ๆ
           labelKey: "ui.xhub.fTxt",
           descKey: "ui.xhub.fTxtDesc"
         },
@@ -165082,7 +165813,7 @@ ${body}
     return out;
   }
   function plainText2(s) {
-    return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1");
+    return (0, import_md27.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2");
   }
   function paraCtrl(el2, fmt, fontPt) {
     const f = fmt && fmt.elements ? fmt : mergeSpFormat(fmt);
@@ -165161,9 +165892,10 @@ ${body}
     }
     return head2 + out.join("\n") + "\n}\n";
   }
-  var TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
+  var import_md27, TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
   var init_export_rtf = __esm({
     "src/export-rtf.js"() {
+      import_md27 = __toESM(require_md());
       init_i18n();
       init_sp_format();
       init_sp_title_pages();
@@ -165189,7 +165921,7 @@ ${body}
     return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
   }
   function plainText3(s) {
-    return String(s ?? "").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2").replace(/__([^_]+)__/g, "$1").replace(/~~([^~]+)~~/g, "$1").replace(/\[\[([^\]]+)\]\]/g, "$1").replace(/\u00A0/g, " ");
+    return (0, import_md28.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/\u00A0/g, " ");
   }
   function generateFdx(blocks, meta2 = {}, opts = {}) {
     const list = (blocks || []).filter((b) => b && b.el !== "blank" && String(b.text ?? "").trim() !== "");
@@ -165235,9 +165967,10 @@ ${title2.join("\n")}
 ` : "";
     return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<FinalDraft DocumentType="Script" Template="No" Version="1">\n  <Content>\n' + (body ? body + "\n" : "") + "  </Content>\n" + titlePage + "</FinalDraft>\n";
   }
-  var FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
+  var import_md28, FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
   var init_export_fdx = __esm({
     "src/export-fdx.js"() {
+      import_md28 = __toESM(require_md());
       init_i18n();
       FDX_TYPE_MAP = {
         scene: "Scene Heading",
@@ -165305,7 +166038,12 @@ ${indent}</Paragraph>`;
           }
         ] }]
       };
-      return { model: model2, kind: forced || (t3.sp ? "screenplay" : "prose") };
+      let startPage = 1;
+      try {
+        startPage = (await Promise.resolve().then(() => (init_app(), app_exports))).currentStartPage(t3) || 1;
+      } catch {
+      }
+      return { model: model2, kind: forced || (t3.sp ? "screenplay" : "prose"), startPage };
     }
     const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
     if (!d) return null;
@@ -165364,7 +166102,7 @@ ${indent}</Paragraph>`;
     const roster = cfg.pdf.roster !== false ? String(model.roster || "").trim() : "";
     if (!wantCover && !roster) return "";
     const spf = A.spFormat();
-    const esc8 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const esc8 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const pages = [];
     if (wantCover) {
       pages.push('<section class="k-front k-cover">' + (coverUrl2 ? `<img class="k-cover-img" src="${esc8(coverUrl2)}" alt="">` : "") + `<div class="k-cover-title">${esc8(model.title || "")}</div>` + (model.author ? `<div class="k-cover-author">${esc8(model.author)}</div>` : "") + "</section>");
@@ -165426,11 +166164,14 @@ ${pages.join("\n")}
             sceneNumbers: o.sceneNumbers !== false,
             colorMode: o.colorMode === "color" ? "color" : "mono",
             watermark: o.watermark,
-            openPage: 0
+            openPage: 0,
+            startPage: built.startPage || 1
           }
+          // [alpha.159 · M9] ขอบเขตแท็บ = เลขหน้าของฉากนั้น
         });
         await kapi.writeBytes(dest, r3.bytes);
-        return { dest, note: tf("ui.xhub.donePdf", r3.pageCount, r3.bookmarks.length) };
+        const thaiMiss = (r3.warnings || []).includes("thai-font-missing") ? " \xB7 " + t("ui.pdf.thaiFontMissing") : "";
+        return { dest, note: tf("ui.xhub.donePdf", r3.pageCount, r3.bookmarks.length) + thaiMiss };
       }
       const h = { height: num(A.spFormat().paper.height, 11) };
       const front = built.frontHtml ? await kapi.pdfHtmlToBytes(built.frontHtml, h) : null;
@@ -165441,7 +166182,8 @@ ${pages.join("\n")}
         fmt: exportPageNumberFmt(A.spFormat()),
         fonts: await pdfFontBytes2(),
         pageNumbers: o.pageNumbers !== false,
-        startPage: 1,
+        startPage: built.startPage || 1,
+        // [alpha.159 · M9]
         fontPt: num(A.proseFormat().fontPt, 12),
         meta: { title: built.title }
       });
@@ -165516,7 +166258,7 @@ ${pages.join("\n")}
     const mk2 = await buildModel(A, cfg, drafts);
     if (!mk2) return null;
     const { model, kind } = mk2;
-    const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows());
+    const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows(), kind);
     const wf22 = { ...wf2, steps: (wf2.steps || []).map((s) => s.key === "cover" || s.key === "roster" ? { ...s, on: false } : s) };
     const engine2 = pdfEngine(kind);
     const isEbook = cfg.format === "epub" || cfg.format === "docx";
@@ -165534,7 +166276,8 @@ ${pages.join("\n")}
       roster: model.roster || "",
       coverUrl: mk2.coverUrl || "",
       engine: engine2,
-      blocks: null
+      blocks: null,
+      startPage: mk2.startPage || 1
     };
     if (cfg.format === "html") {
       out.html = r.ext === "html" ? await withFontCss(A, r.text) : await proseHtml(A, text, model.title, cfg.html.wysiwyg);
@@ -165700,8 +166443,9 @@ ${pages.join("\n")}
           {
             scale: fs.scale,
             gap: 14,
-            startPage: 1,
+            startPage: built.startPage || 1,
             colorOf,
+            // [alpha.159 · M9]
             // บริบทตัวแปร ${…} ชุดเดียวกับที่ generatePdf ใช้
             headerRows: (n2) => headerStringsFor2(n2, hdr5, {
               TITLE: meta5.title || "",
@@ -165749,7 +166493,8 @@ ${pages.join("\n")}
           gap: 14,
           numTop: fmt.pageNumbers.top,
           numRight: fmt.pageNumbers.right,
-          label: (n2) => pageNumberLabel2(n2, numFmtP, 1)
+          label: (n2) => pageNumberLabel2(n2, numFmtP, built.startPage || 1)
+          // [alpha.159 · M9]
         });
         box2 = r6.box;
       }
@@ -166153,7 +166898,7 @@ ${pages.join("\n")}
       v: SESSION_VERSION2,
       root: String(root || ""),
       ts: 0,
-      tabs: { open: [], active: "", scroll: {} },
+      tabs: { open: [], active: "", scroll: {}, cursor: {} },
       panels: { layout: null, homes: null, workspaces: null, hidden: "" },
       split: null,
       ui: {},
@@ -166170,6 +166915,12 @@ ${pages.join("\n")}
     s.tabs.open = open.filter((x) => typeof x === "string" && x).slice(0, 200);
     s.tabs.active = typeof t3.active === "string" ? t3.active : "";
     s.tabs.scroll = t3.scroll && typeof t3.scroll === "object" ? { ...t3.scroll } : {};
+    s.tabs.cursor = {};
+    if (t3.cursor && typeof t3.cursor === "object") {
+      for (const [f, v2] of Object.entries(t3.cursor)) {
+        if (Array.isArray(v2) && v2.length === 2 && v2.every((n2) => Number.isInteger(n2) && n2 >= 0)) s.tabs.cursor[f] = [v2[0], v2[1]];
+      }
+    }
     if (s.tabs.active && !s.tabs.open.includes(s.tabs.active)) s.tabs.active = "";
     const p = raw.panels && typeof raw.panels === "object" ? raw.panels : {};
     s.panels.layout = p.layout ?? null;
@@ -166254,6 +167005,9 @@ ${pages.join("\n")}
     const scroll = {};
     for (const f of x.tabs.open) if (x.tabs.scroll[f] != null) scroll[f] = x.tabs.scroll[f];
     x.tabs.scroll = scroll;
+    const cursor = {};
+    for (const f of x.tabs.open) if (x.tabs.cursor[f]) cursor[f] = x.tabs.cursor[f];
+    x.tabs.cursor = cursor;
     if (!x.tabs.open.includes(x.tabs.active)) x.tabs.active = x.tabs.open[0] || "";
     return x;
   }
@@ -167101,6 +167855,22 @@ ${s.body}`).join("\n\n");
   });
 
   // src/ai/ai-ui.js
+  function setResult(div, text, st = "ok") {
+    div.textContent = text;
+    div.dataset.state = st;
+  }
+  function resultReady(div) {
+    return !!div && div.dataset.state === "ok" && !!div.textContent;
+  }
+  function failOrPartial(div, res, acc, fallbackKey) {
+    const kept = String(acc || res && res.text || "");
+    if (res && res.partial !== false && kept.trim()) {
+      setResult(div, kept, "ok");
+      setStatus(gi("warning") + " " + t("ai.partialKept") + " \xB7 " + (res && res.error || t(fallbackKey)));
+      return;
+    }
+    setResult(div, gi("fail") + " " + (res && res.error || t(fallbackKey)), "err");
+  }
   async function aiReady2() {
     if (!state.root) {
       setStatus(t("ai.noProject"));
@@ -167188,7 +167958,7 @@ ${s.body}`).join("\n\n");
       const runBtn = el("button", "k-ok", t("ui.ai.result"));
       runBtn.onclick = async () => {
         runBtn.disabled = true;
-        resultDiv.textContent = t("ai.working");
+        setResult(resultDiv, t("ai.working"), "busy");
         const task = taskSel.value;
         const tone = toneSel.value;
         const instr = instrInput.value.trim();
@@ -167212,13 +167982,13 @@ ${s.body}`).join("\n\n");
             stream: true,
             onChunk: (c) => {
               acc += c;
-              resultDiv.textContent = acc;
+              setResult(resultDiv, acc, "busy");
             }
           });
-          if (res.ok) resultDiv.textContent = res.text || acc || t("ai.noAnswer");
-          else resultDiv.textContent = gi("fail") + " " + (res.error || t("ai.errorRetry"));
+          if (res.ok) setResult(resultDiv, res.text || acc || t("ai.noAnswer"), res.text || acc ? "ok" : "err");
+          else failOrPartial(resultDiv, res, acc, "ai.errorRetry");
         } catch (e) {
-          resultDiv.textContent = gi("fail") + " " + (e && e.message || t("ai.errorRetry"));
+          setResult(resultDiv, gi("fail") + " " + (e && e.message || t("ai.errorRetry")), "err");
         } finally {
           runBtn.disabled = false;
         }
@@ -167226,7 +167996,7 @@ ${s.body}`).join("\n\n");
       const insertBtn = el("button", "", t("ui.ai.insertScene"));
       insertBtn.onclick = () => {
         const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r === t("ai.working")) return;
+        if (!resultReady(resultDiv)) return;
         if (t3?.sp) t3.sp.insertScript(r);
         else if (t3?.editor) t3.editor.insertLines(r);
         ov.remove();
@@ -167339,10 +168109,10 @@ ${s.body}`).join("\n\n");
       const runBtn = el("button", "k-ok", t("ui.ai.new"));
       runBtn.onclick = async () => {
         runBtn.disabled = true;
-        resultDiv.textContent = t("ai.dialogueWorking");
+        setResult(resultDiv, t("ai.dialogueWorking"), "busy");
         const a = charA.value.trim(), b = charB.value.trim(), ctx2 = context2.value.trim();
         if (!a || !b) {
-          resultDiv.textContent = t("ai.needBothChars");
+          setResult(resultDiv, t("ai.needBothChars"), "err");
           runBtn.disabled = false;
           return;
         }
@@ -167364,16 +168134,16 @@ ${s.body}`).join("\n\n");
               stream: true,
               onChunk: (c) => {
                 acc += c;
-                resultDiv.textContent = acc;
+                setResult(resultDiv, acc, "busy");
               }
             }
           );
           if (res.ok) {
-            resultDiv.textContent = res.text;
+            setResult(resultDiv, res.text, res.text ? "ok" : "err");
             if (res.speakers?.length) resultDiv.title = t("ai.speakerLabel") + res.speakers.join(", ");
-          } else resultDiv.textContent = gi("fail") + " " + (res.error || t("ai.error"));
+          } else failOrPartial(resultDiv, res, acc, "ai.error");
         } catch (e) {
-          resultDiv.textContent = gi("fail") + " " + (e && e.message || t("ai.error"));
+          setResult(resultDiv, gi("fail") + " " + (e && e.message || t("ai.error")), "err");
         } finally {
           runBtn.disabled = false;
         }
@@ -167381,7 +168151,7 @@ ${s.body}`).join("\n\n");
       const insertBtn = el("button", "", t("ui.ai.insert"));
       insertBtn.onclick = () => {
         const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r === t("ai.dialogueWorking")) return;
+        if (!resultReady(resultDiv)) return;
         const t3 = state.active;
         if (t3?.sp) t3.sp.insertScript(r);
         else if (t3?.editor) t3.editor.insertLines(r);
@@ -167471,7 +168241,7 @@ ${s.body}`).join("\n\n");
       let lastWorld = null;
       runBtn.onclick = async () => {
         runBtn.disabled = true;
-        resultDiv.textContent = t("ai.generating");
+        setResult(resultDiv, t("ai.generating"), "busy");
         lastWorld = null;
         try {
           const { generateWorld: generateWorld2, toMarkdown: toMarkdown2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
@@ -167483,10 +168253,10 @@ ${s.body}`).join("\n\n");
           );
           if (res.ok) {
             lastWorld = res.world;
-            resultDiv.textContent = toMarkdown2(res.world);
-          } else resultDiv.textContent = gi("fail") + " " + (res.error || t("ai.error"));
+            setResult(resultDiv, toMarkdown2(res.world), "ok");
+          } else setResult(resultDiv, gi("fail") + " " + (res.error || t("ai.error")), "err");
         } catch (e) {
-          resultDiv.textContent = gi("fail") + " " + (e && e.message || t("ai.error"));
+          setResult(resultDiv, gi("fail") + " " + (e && e.message || t("ai.error")), "err");
         } finally {
           runBtn.disabled = false;
         }
@@ -167494,7 +168264,7 @@ ${s.body}`).join("\n\n");
       const saveBtn = el("button", "", t("ui.ai.saveWiki"));
       saveBtn.onclick = async () => {
         const r = resultDiv.textContent;
-        if (!r || r.startsWith("\u274C") || r === t("ai.generating")) return;
+        if (!resultReady(resultDiv)) return;
         const { toWikiEntity: toWikiEntity2 } = await Promise.resolve().then(() => (init_ai_world(), ai_world_exports));
         const cats = { magic: "lore", city: "locations", culture: "lore", economy: "lore", religion: "lore", faction: "lore" };
         const cat = cats[typeSel.value] || "lore";
@@ -167605,7 +168375,12 @@ ${s.body}`).join("\n\n");
           }
         );
         if (!res.ok) {
-          bubble2.textContent = gi("fail") + " " + (res.error || t("ai.callFail"));
+          const kept = acc || res.text || "";
+          if (kept.trim()) {
+            bubble2.textContent = kept;
+            history2.push({ role: "assistant", content: kept });
+            setStatus(gi("warning") + " " + t("ai.partialKept") + " \xB7 " + (res.error || t("ai.callFail")));
+          } else bubble2.textContent = gi("fail") + " " + (res.error || t("ai.callFail"));
           return;
         }
         if (!acc) {
@@ -175215,6 +175990,13 @@ ${sc.body || ""}
   function safeFileName2(s) {
     return String(s ?? "").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim() || t("ui.common.notNamed2");
   }
+  function watermarkFileName(prefix2, name5, used = /* @__PURE__ */ new Set()) {
+    const base4 = sanitizeFileBase(safeFileName2(prefix2) + "_" + safeFileName2(name5));
+    let out = base4, n2 = 2;
+    while (used.has(out.toLowerCase())) out = sanitizeFileBase(base4 + " (" + n2++ + ")");
+    used.add(out.toLowerCase());
+    return out + ".pdf";
+  }
   function watermarkText(tpl, ctx2 = {}) {
     const t3 = String(tpl ?? "").trim() || t("ui.watermark.name");
     return t3.replace(/\{ชื่อ\}|\{name\}/g, ctx2.name ?? "").replace(/\{วันที่\}|\{date\}/g, ctx2.date ?? "").replace(/\{เรื่อง\}|\{title\}/g, ctx2.title ?? "").trim();
@@ -175299,10 +176081,11 @@ ${css}
       buildPdf
     } = args;
     const made = [];
+    const used = /* @__PURE__ */ new Set();
     for (let i5 = 0; i5 < recipients.length; i5++) {
       const r = recipients[i5];
       const text = watermarkText(r.watermark || wmTemplate, { name: r.name, title: title2, date });
-      const file = `${safeFileName2(prefix2)}_${safeFileName2(r.name)}.pdf`;
+      const file = watermarkFileName(prefix2, r.name, used);
       const dest = await api.join(outDir, file);
       if (typeof buildPdf === "function") {
         const bytes = await buildPdf(text, { ...wmOptions });
@@ -175327,6 +176110,7 @@ ${css}
       init_sp_format();
       init_num();
       init_lang_fonts();
+      init_export_name();
       DEFAULT_WM = {
         fontSize: 54,
         // px
@@ -175412,7 +176196,7 @@ ${css}
         if (seen.has(f)) continue;
         let title2 = "";
         try {
-          title2 = (0, import_md27.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
+          title2 = (0, import_md29.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
         } catch {
         }
         add({
@@ -175426,7 +176210,7 @@ ${css}
       }
     }
     for (const [key2, text] of Object.entries(s.texts || {})) {
-      const r = (0, import_md27.repairFrontmatter)(text);
+      const r = (0, import_md29.repairFrontmatter)(text);
       if (!r.changed) continue;
       const i5 = key2.lastIndexOf("/");
       add({
@@ -175473,10 +176257,10 @@ ${css}
     for (const it of issues || []) out[it.type] = (out[it.type] || 0) + 1;
     return out;
   }
-  var import_md27, DOCTOR_TYPES, chapterTitleFromFolder;
+  var import_md29, DOCTOR_TYPES, chapterTitleFromFolder;
   var init_project_doctor = __esm({
     "src/project-doctor.js"() {
-      import_md27 = __toESM(require_md());
+      import_md29 = __toESM(require_md());
       DOCTOR_TYPES = [
         "bad-json",
         "missing-file",
@@ -175497,7 +176281,9 @@ ${css}
     applyDoctorFixes: () => applyDoctorFixes,
     describeIssue: () => describeIssue,
     openProjectDoctor: () => openProjectDoctor,
-    scanProject: () => scanProject2
+    refreshDoctorBadge: () => refreshDoctorBadge,
+    scanProject: () => scanProject2,
+    scheduleDoctorBadge: () => scheduleDoctorBadge
   });
   function describeIssue(it) {
     const k = TYPE_KEY[it.type] || TYPE_KEY["bad-json"];
@@ -175576,7 +176362,7 @@ ${css}
         const p = await kapi.join(chDir, it.folder, it.file);
         if (await kapi.exists(p)) return false;
         await kapi.mkdir(await kapi.join(chDir, it.folder));
-        await kapi.writeFile(p, (0, import_md28.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
+        await kapi.writeFile(p, (0, import_md30.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
         return true;
       }
       case "attach-row": {
@@ -175605,9 +176391,9 @@ ${css}
           text = await kapi.readFile(await kapi.join(chDir, it.folder, it.file));
         } catch {
         }
-        const { meta: meta2, body } = (0, import_md28.parseMdFile)(text);
+        const { meta: meta2, body } = (0, import_md30.parseMdFile)(text);
         if (row0.title) meta2.title = row0.title;
-        await kapi.writeFile(await kapi.join(chDir, it.folder, name5), (0, import_md28.dumpMdFile)(meta2, body));
+        await kapi.writeFile(await kapi.join(chDir, it.folder, name5), (0, import_md30.dumpMdFile)(meta2, body));
         const r = await mutateJson(kapi, sf, (d) => {
           const row3 = ((d.chapters || {})[it.chGuid] || []).find((x) => x.id === it.rowId);
           if (!row3) return false;
@@ -175627,7 +176413,7 @@ ${css}
         const titles = {};
         for (const f of files) {
           try {
-            titles[f] = (0, import_md28.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
+            titles[f] = (0, import_md30.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
           } catch {
           }
         }
@@ -175647,7 +176433,7 @@ ${css}
       }
       case "repair-frontmatter": {
         const p = await kapi.join(chDir, it.folder, it.file);
-        const r = (0, import_md28.repairFrontmatter)(await kapi.readFile(p));
+        const r = (0, import_md30.repairFrontmatter)(await kapi.readFile(p));
         if (!r.changed) return false;
         await kapi.writeFile(p, r.text);
         const h = tabHandle(p);
@@ -175682,7 +176468,43 @@ ${css}
       A.refreshNetwork();
     } catch {
     }
+    refreshDoctorBadge().catch(() => {
+    });
     return { ok: ok2, failed };
+  }
+  function scheduleDoctorBadge(ms = 4e3) {
+    clearTimeout(BADGE.job);
+    const sameRoot = BADGE.root === (state.root || "");
+    const wait = sameRoot ? Math.max(ms, BADGE.lastAt + BADGE_MIN_GAP - Date.now()) : ms;
+    BADGE.job = setTimeout(() => {
+      refreshDoctorBadge().catch(() => {
+      });
+    }, wait);
+  }
+  async function refreshDoctorBadge() {
+    const b = document.getElementById("status-doctor");
+    if (!b) return -1;
+    if (!state.root) {
+      b.textContent = "";
+      b.title = "";
+      return -1;
+    }
+    const seq3 = ++BADGE.seq;
+    BADGE.lastAt = Date.now();
+    BADGE.root = state.root;
+    let n2 = 0;
+    try {
+      n2 = (await scanProject2()).length;
+    } catch {
+      return -1;
+    }
+    if (seq3 !== BADGE.seq) return -1;
+    b.textContent = n2 ? gi("checklist") + " " + n2 : "";
+    b.title = n2 ? tf("ui.doctor.badgeTip", n2) : "";
+    b.onclick = n2 ? () => {
+      openProjectDoctor();
+    } : null;
+    return n2;
   }
   async function openProjectDoctor() {
     if (!state.root) {
@@ -175763,16 +176585,17 @@ ${css}
     await scan();
     return { ov, scan, close: close2, issues: () => issues };
   }
-  var import_md28, TYPE_KEY, FIX_KEY, nextOrder2;
+  var import_md30, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
   var init_project_doctor_ui = __esm({
     "src/project-doctor-ui.js"() {
       init_i18n();
       init_core();
       init_ui();
-      import_md28 = __toESM(require_md());
+      import_md30 = __toESM(require_md());
       init_project_doctor();
       init_json_store();
       init_tab_bridge();
+      init_icons();
       TYPE_KEY = {
         "bad-json": "ui.doctor.tBadJson",
         "missing-file": "ui.doctor.tMissingFile",
@@ -175792,6 +176615,8 @@ ${css}
         "repair-frontmatter": "ui.doctor.fixRepairFrontmatter"
       };
       nextOrder2 = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
+      BADGE = { job: null, seq: 0, lastAt: 0, root: "" };
+      BADGE_MIN_GAP = 3e4;
     }
   });
 
@@ -175867,6 +176692,7 @@ ${css}
     cycleFmtbarOpacity: () => cycleFmtbarOpacity,
     defaultPlannerPath: () => defaultPlannerPath,
     deleteCurrentLine: () => deleteCurrentLine,
+    deleteSceneSilent: () => deleteSceneSilent,
     drawPageHud: () => drawPageHud,
     drawPanel: () => drawPanel,
     dropPaperMask: () => dropPaperMask,
@@ -176100,6 +176926,7 @@ ${css}
     uiFontOffset: () => uiFontOffset,
     uniqueSceneFileName: () => uniqueSceneFileName,
     untrustProjectPlugins: () => untrustProjectPlugins,
+    updateCursorPage: () => updateCursorPage,
     updateErrorBadge: () => updateErrorBadge,
     updatePageNumberHint: () => updatePageNumberHint,
     updateSaveStatus: () => updateSaveStatus,
@@ -176593,11 +177420,9 @@ ${css}
       for (const tb2 of state.tabs.values()) if (tb2.sp) refreshSceneNumbers(tb2.sp.view);
     }
     document.body.classList.toggle("sp-page-numbers", !!fmt.pageNumbers.show);
-    if (setSpPageNumberLabel(pageNumberLabelFor(fmt))) {
-      for (const tb2 of state.tabs.values()) if (tb2.sp) tb2.sp.refreshGuides();
-    }
-    if (setProsePageNumberLabel(prosePageNumberLabelFor(fmt))) {
-      for (const tb2 of state.tabs.values()) if (tb2.editor) refreshProsePageBreaks(tb2.editor.view);
+    for (const tb2 of state.tabs.values()) {
+      if (tb2.sp && setSpPageNumberLabel(pageNumberLabelFor(fmt), tb2.sp.view)) tb2.sp.refreshGuides();
+      if (tb2.editor && setProsePageNumberLabel(prosePageNumberLabelFor(fmt), tb2.editor.view)) refreshProsePageBreaks(tb2.editor.view);
     }
     const lv = layoutCssVars(fmt, state.settings.spPageGap);
     for (const k of Object.keys(lv)) R3.setProperty(k, lv[k]);
@@ -177334,6 +178159,21 @@ ${css}
     const label = isDoc && mk2 ? mk2(first) : "";
     pane.style.setProperty("--pg-no-first", label ? JSON.stringify(label) : '""');
     return label;
+  }
+  function updateCursorPage() {
+    const box2 = $("#status-page");
+    if (!box2) return "";
+    const t22 = state.active;
+    const v2 = t22 && (t22.editor || t22.sp) && (t22.editor || t22.sp).view;
+    if (!v2) {
+      box2.textContent = "";
+      return "";
+    }
+    const brk = t22.sp ? pageBreaks(v2) : prosePageBreaks(v2);
+    const r = pageAtPos(brk, v2.state.selection.head, currentStartPage(t22));
+    const txt = r.total > 1 ? tf("ui.app.pageAtCursor", r.printed, r.printedLast) : "";
+    if (box2.textContent !== txt) box2.textContent = txt;
+    return txt;
   }
   function extensionMenu(x, y) {
     const t22 = state.active;
@@ -178587,7 +179427,7 @@ ${css}
     for (const tab of hits) {
       if (!tab.editor && !tab.sp && !tab.plain) continue;
       try {
-        const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(tab.file));
+        const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(tab.file));
         if (body === tab.body) continue;
         tab.meta = meta2;
         tab.body = body;
@@ -178712,6 +179552,14 @@ ${css}
         if (sc) scroll[f] = Math.round(sc);
       }
       s.tabs.scroll = scroll;
+      const cursor = {};
+      for (const [f, tab] of state.tabs) {
+        const v2 = tab && (tab.editor || tab.sp) && (tab.editor || tab.sp).view;
+        if (!v2 || f.startsWith("::")) continue;
+        const { anchor, head: head2 } = v2.state.selection;
+        if (anchor || head2) cursor[f] = [anchor, head2];
+      }
+      s.tabs.cursor = cursor;
     } catch (e) {
       log("warn", t("ui.session.warnTabs"), e);
     }
@@ -178882,6 +179730,17 @@ ${css}
       setTimeout(put, 250);
       setTimeout(put, 900);
     }
+    for (const [f, pair] of Object.entries(pruned.tabs.cursor || {})) {
+      const tb2 = state.tabs.get(f);
+      const v2 = tb2 && (tb2.editor || tb2.sp) && (tb2.editor || tb2.sp).view;
+      if (!v2) continue;
+      try {
+        const max2 = v2.state.doc.content.size;
+        const [a, h] = pair.map((x) => Math.max(0, Math.min(max2, x)));
+        v2.dispatch(v2.state.tr.setSelection(TextSelection.between(v2.state.doc.resolve(a), v2.state.doc.resolve(h))));
+      } catch {
+      }
+    }
     if (n2) log("info", tf("ui.session.restoredTabs", n2));
     return n2;
   }
@@ -179044,10 +179903,7 @@ ${css}
     if (mode === "name") return out.sort((a, b) => _thCmp(a.title, b.title));
     if (mode === "words") return out.sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0));
     if (mode === "status") {
-      const rank = (s) => {
-        const i5 = SCENE_STATUSES.indexOf(s);
-        return !s || s === "Outline" || i5 < 0 ? 99 : i5;
-      };
+      const rank = statusRankOf(allStatuses());
       return out.sort((a, b) => rank(a.status) - rank(b.status) || (a.order || 0) - (b.order || 0));
     }
     if (mode === "modified") {
@@ -179208,7 +180064,7 @@ ${css}
         } else {
           let meta2 = {}, body = "";
           try {
-            const parsed = (0, import_md29.parseMdFile)(await kapi.readFile(it.file));
+            const parsed = (0, import_md31.parseMdFile)(await kapi.readFile(it.file));
             meta2 = parsed.meta;
             body = parsed.body;
           } catch {
@@ -179256,26 +180112,38 @@ ${css}
       return 0;
     }
     if (!await confirmBox(tf("ui.tree.confirmDeleteN", list.length), t("ui.app.del"))) return 0;
+    let ok2 = 0;
+    const failed = [];
+    let lastTrash = "";
     for (const it of list) {
       try {
-        await deleteSceneSilent(it.dPath, it.ch, it.sc);
+        lastTrash = await deleteSceneSilent(it.dPath, it.ch, it.sc) || lastTrash;
+        ok2++;
       } catch (e) {
+        failed.push(it.sc?.title || "");
         log("warn", t("ui.tree.delFail"), e);
       }
     }
     clearTreeSel();
     await buildTree2();
-    setStatus(tf("ui.tree.deletedN", list.length));
-    return list.length;
+    refreshNetwork();
+    const msgDel = tf("ui.tree.deletedN", ok2) + (failed.length ? " \xB7 " + tf("ui.tree.failedN", failed.length) : "");
+    if (lastTrash) setStatusAction(msgDel, t("ui.trash.revealInFolder"), () => kapi.revealInOS(lastTrash));
+    else setStatus(msgDel);
+    return ok2;
   }
   async function deleteSceneSilent(dPath, ch, sc) {
     const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
     const base4 = file.split(/[\\/]/).pop();
     const dst = await kapi.join(state.root, "Recycle", Date.now().toString(36) + "-" + base4);
+    const openTab = state.tabs.get(file);
+    if (openTab && openTab.dirty && await saveTab(openTab) === false) {
+      throw new Error(tf("ui.tree.delSkipUnsaved", sc.title || base4));
+    }
     await kapi.move(file, dst);
     if (state.tabs.has(file)) {
       state.tabs.get(file).dirty = false;
-      closeTab(file);
+      closeTab(file, { discard: true });
     }
     await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
       { kind: "scene", dPath, chGuid: ch.guid, folderName: ch.folderName, sc },
@@ -179283,9 +180151,13 @@ ${css}
       2
     ));
     const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id);
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await mutateJson(kapi, sf, (d) => {
+      d.chapters = d.chapters || {};
+      d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id);
+    });
+    await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
+    logAction("scene", tf("ui.scene.delScene2", sc.title), { dPath, chapter: ch.title, trash: dst });
+    return dst;
   }
   async function treeMoveMenu(items) {
     const list = items && items.length ? items : treeSelCtx();
@@ -180202,6 +181074,12 @@ ${css}
     }
     _treeBuilding = true;
     try {
+      bumpBookFlow();
+    } catch {
+    }
+    if (!PANEL_WIN) Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports)).then((m) => m.scheduleDoctorBadge()).catch(() => {
+    });
+    try {
       await _buildTreeInner();
     } catch (e) {
       log("error", t("ui.app.buildTreeNewNotOk"), e);
@@ -180312,10 +181190,7 @@ ${css}
             }
             chHead.append(icon(ch.locked || sec.locked ? "lock" : ch.isFavorite ? "star" : "folder", 14), " " + (ch.title || ""));
             if (ch.status && ch.status !== "Outline") {
-              const chChip = el("span", "sc-status", dataLabel(ch.status));
-              const chCol = statusColor(ch.status);
-              if (chCol) paintStatusChip(chChip, chCol);
-              chHead.append(chChip);
+              chHead.append(statusChip(ch.status));
             }
             const addSc = el("span", "row-add", "+");
             addSc.title = t("ui.app.addSceneChapter");
@@ -180419,13 +181294,9 @@ ${css}
               }
               if (sc.wordCount) scEl.append(el("span", "sc-wordcount", wordBadgeText(sc.wordCount)));
               if (sc.status && sc.status !== "Outline") {
-                const stChip = el("span", "sc-status", sc.status);
                 const stCol = statusColor(sc.status);
-                if (stCol) {
-                  paintStatusChip(stChip, stCol);
-                  scEl.style.setProperty("--row-st", vivid(stCol));
-                }
-                scEl.append(stChip);
+                if (stCol) scEl.style.setProperty("--row-st", vivid(stCol));
+                scEl.append(statusChip(sc.status));
               }
               if (sc.tags && sc.tags.length) {
                 const chips = renderAllTagChips(sc.tags, (t3) => {
@@ -180676,7 +181547,7 @@ ${css}
         raw = await kapi.readFile(p);
       } catch {
       }
-      const meta2 = (0, import_md29.parseMdFile)(raw).meta || {};
+      const meta2 = (0, import_md31.parseMdFile)(raw).meta || {};
       memoRows.push({
         f,
         p,
@@ -180699,10 +181570,7 @@ ${css}
       }
       it.append(document.createTextNode((mLocked ? gi("lock") : mFlag ? gi("star") : gi("file")) + " " + title2));
       if (meta2.status) {
-        const mChip = el("span", "sc-status", dataLabel(meta2.status));
-        const mCol = statusColor(meta2.status);
-        if (mCol) paintStatusChip(mChip, mCol);
-        it.append(mChip);
+        it.append(statusChip(meta2.status));
       }
       it.dataset.path = p;
       it.dataset.search = (title2 + " " + f).toLowerCase();
@@ -181656,7 +182524,7 @@ ${css}
     refreshToolbar();
   }
   async function moveMemoToChapter(memoPath, dPath, ch, beforeId) {
-    const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(memoPath));
+    const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(memoPath));
     const title2 = meta2.title || (memoPath.split(/[\\/]/).pop() || "memo").replace(/\.md$/i, "");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
@@ -181668,17 +182536,20 @@ ${css}
     } while (used.has(fileName));
     await kapi.writeFile(
       await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-      (0, import_md29.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
+      (0, import_md31.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body)
     );
     await kapi.remove(memoPath);
     const row3 = { id: guid(), title: title2, order: list.length + 1, fileName, type: "memo" };
-    const di = beforeId ? list.findIndex((x) => x.id === beforeId) : list.length;
-    list.splice(di < 0 ? list.length : di, 0, row3);
-    list.forEach((x, i5) => {
-      x.order = i5 + 1;
+    await mutateJson(kapi, sf, (fresh) => {
+      fresh.chapters = fresh.chapters || {};
+      const cur = (fresh.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      const di = beforeId ? cur.findIndex((x) => x.id === beforeId) : cur.length;
+      cur.splice(di < 0 ? cur.length : di, 0, row3);
+      cur.forEach((x, i5) => {
+        x.order = i5 + 1;
+      });
+      fresh.chapters[ch.guid] = cur;
     });
-    d.chapters[ch.guid] = list;
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     await buildTree2();
     setStatus(tf("ui.app.moveNoteInChapter", title2, ch.title));
     return true;
@@ -181693,31 +182564,36 @@ ${css}
       dst = await kapi.join(memoDir, base4 + (n2 ? "-" + n2 : "") + ".md");
       n2++;
     } while (await kapi.exists(dst));
-    const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(src2));
-    await kapi.writeFile(dst, (0, import_md29.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body));
+    const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(src2));
+    await kapi.writeFile(dst, (0, import_md31.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body));
     await kapi.remove(src2);
     const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id).sort((a, b) => (a.order || 0) - (b.order || 0)).map((x, i5) => ({ ...x, order: i5 + 1 }));
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await mutateJson(kapi, sf, (d) => {
+      d.chapters = d.chapters || {};
+      d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id).sort((a, b) => (a.order || 0) - (b.order || 0)).map((x, i5) => ({ ...x, order: i5 + 1 }));
+    });
     await buildTree2();
     setStatus(tf("ui.app.moveOutMEMODone", sc.title));
     return dst;
   }
   async function setRowMemo(dPath, ch, sc, on2) {
     const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+    const res = await mutateJson(kapi, sf, (d) => {
+      const r = ((d.chapters || {})[ch.guid] || []).find((x) => x.id === sc.id);
+      if (!r) return false;
+      if (on2) r.type = "memo";
+      else delete r.type;
+      return { ...r };
+    });
+    const row3 = res.changed ? res.result : null;
     if (!row3) return false;
-    if (on2) row3.type = "memo";
-    else delete row3.type;
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
     try {
       const file = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
-      const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
-      await kapi.writeFile(file, (0, import_md29.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md31.dumpMdFile)(meta2, body));
+      await syncOpenTabMeta(file);
     } catch {
     }
     await buildTree2();
@@ -182234,10 +183110,7 @@ ${css}
         it.prepend(dot);
       }
       if (bMeta.status) {
-        const bChip = el("span", "sc-status", dataLabel(bMeta.status));
-        const bCol = statusColor(bMeta.status);
-        if (bCol) paintStatusChip(bChip, bCol);
-        it.append(bChip);
+        it.append(statusChip(bMeta.status));
       }
       it.dataset.path = b.path;
       it.dataset.planner = b.path;
@@ -182415,7 +183288,7 @@ ${css}
         dot.style.background = vivid(p.plan.color) || p.plan.color;
         it.prepend(dot);
       }
-      if (p.plan.status) it.append(el("span", "sc-status", dataLabel(p.plan.status)));
+      if (p.plan.status) it.append(statusChip(p.plan.status));
       it.dataset.path = p.path;
       it.dataset.branchPlan = p.path;
       it.dataset.search = p.name;
@@ -182573,7 +183446,7 @@ ${css}
         const abs = await kapi.join(memoDir, f);
         let title2 = f.replace(/\.md$/i, "");
         try {
-          title2 = (0, import_md29.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
+          title2 = (0, import_md31.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
         } catch {
         }
         out.push({
@@ -183120,18 +183993,19 @@ ${css}
   }
   async function setSceneLock(dPath, ch, sc, locked) {
     const sf = await kapi.join(dPath, "scenes.json");
-    const d = await kapi.readJson(sf);
-    const row3 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-    if (row3) {
-      row3.locked = locked;
-      await kapi.writeFile(sf, JSON.stringify(d, null, 2));
-    }
+    const res = await mutateJson(kapi, sf, (d) => {
+      const r = ((d.chapters || {})[ch.guid] || []).find((x) => x.id === sc.id);
+      if (!r) return false;
+      r.locked = locked;
+      return { ...r };
+    });
+    const row3 = res.changed ? res.result : null;
     const file = await kapi.join(dPath, "Chapters", ch.folderName, (row3 || sc).fileName);
     try {
-      const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
       else delete meta2.locked;
-      await kapi.writeFile(file, (0, import_md29.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md31.dumpMdFile)(meta2, body));
     } catch {
     }
     const openTab = state.tabs.get(file);
@@ -183254,7 +184128,7 @@ ${css}
     if (stale2()) return;
     let vmeta = {};
     try {
-      vmeta = (0, import_md29.parseMdFile)(await kapi.readFile(file0)).meta;
+      vmeta = (0, import_md31.parseMdFile)(await kapi.readFile(file0)).meta;
     } catch {
     }
     if (stale2()) return;
@@ -183437,7 +184311,7 @@ ${css}
         const liveTab = state.tabs.get(file0);
         if (liveTab && liveTab.meta) {
           try {
-            liveTab.meta = (0, import_md29.parseMdFile)(await kapi.readFile(file0)).meta;
+            liveTab.meta = (0, import_md31.parseMdFile)(await kapi.readFile(file0)).meta;
           } catch {
           }
         }
@@ -183458,7 +184332,7 @@ ${css}
       const aiCtx = async () => {
         let mdBody = "";
         try {
-          mdBody = (0, import_md29.parseMdFile)(await kapi.readFile(file0)).body || "";
+          mdBody = (0, import_md31.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
         return { body: mdBody, title: row3.title || "" };
@@ -183491,7 +184365,7 @@ ${css}
       s.addEventListener("change", () => {
         const live2 = state.tabs.get(file0);
         if (!live2) return;
-        live2.startPage = row3.startPage || 1;
+        live2.startPage = explicitStartPage(row3);
         live2.pageFlow = row3.pageFlow === "continue" ? "continue" : "";
         updatePageNumberHint();
         refreshSpView();
@@ -183528,7 +184402,7 @@ ${css}
     }
   }
   function dumpAlignComments(body, map2) {
-    return (0, import_md29.docToMd)((0, import_md29.mdToDoc)(String(body || ""), map2), { alignComments: true });
+    return (0, import_md31.docToMd)((0, import_md31.mdToDoc)(String(body || ""), map2), { alignComments: true });
   }
   async function buildDraftModel(dPath, title2) {
     let book = "";
@@ -183564,13 +184438,13 @@ ${css}
         const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
         let body = "", meta2 = {};
         try {
-          ({ meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(file)));
+          ({ meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(file)));
         } catch {
           continue;
         }
         if (meta2 && meta2.align) {
           try {
-            const map2 = (0, import_md29.alignFromString)(meta2.align);
+            const map2 = (0, import_md31.alignFromString)(meta2.align);
             if (map2 && Object.keys(map2).length) {
               body = dumpAlignComments(body, map2);
             }
@@ -183601,7 +184475,7 @@ ${css}
           // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
           format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
-          words: (0, import_md29.countWords)(body || "")
+          words: (0, import_md31.countWords)(body || "")
         });
       }
       model.chapters.push(c);
@@ -184919,10 +185793,13 @@ ${css}
     try {
       const scenes = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
       const draft = await kapi.readJson(await kapi.join(dPath, "draft.json"));
-      const fname = t3.file.split(/[\\/]/).pop();
+      const parts = t3.file.split(/[\\/]/);
+      const fname = parts.pop();
+      const folder = parts.pop();
       const chapters = (draft.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
       for (let ci = 0; ci < chapters.length; ci++) {
         const ch = chapters[ci];
+        if (ch.folderName && folder && ch.folderName !== folder) continue;
         const list = ((scenes.chapters || {})[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
         const si = list.findIndex((s) => s.fileName === fname);
         if (si >= 0) return { dPath, ch, row: list[si], chapterNo: ci + 1, sceneNo: si + 1 };
@@ -184941,6 +185818,7 @@ ${css}
     const sf = await kapi.join(dir2, "scenes.json");
     const d = await kapi.readJson(sf);
     const draft = await kapi.readJson(await kapi.join(dir2, "draft.json"));
+    const patch = /* @__PURE__ */ new Map();
     let n2 = 0;
     for (const ch of draft.chapters || []) {
       for (const row3 of (d.chapters || {})[ch.guid] || []) {
@@ -184949,14 +185827,19 @@ ${css}
         for (const k of SCENE_HEAVY_KEYS) {
           const before = JSON.stringify(row3[k] ?? null), after = JSON.stringify(m[k] ?? null);
           if (before !== after) {
-            row3[k] = m[k];
+            if (!patch.has(row3.id)) patch.set(row3.id, {});
+            patch.get(row3.id)[k] = m[k];
             n2++;
           }
         }
       }
     }
     if (n2) {
-      await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      await mutateJson(kapi, sf, (fresh) => {
+        for (const rows of Object.values(fresh.chapters || {})) {
+          for (const r of rows || []) if (patch.has(r.id)) Object.assign(r, patch.get(r.id));
+        }
+      });
       await buildTree2();
     }
     setStatus(n2 ? tf("ui.app.propsSceneFileMd", n2) : t("ui.app.propsSceneAtFile"));
@@ -185224,7 +186107,7 @@ ${css}
     await W(await kapi.join(dr, "scenes.json"), { chapters: { [ch.guid]: [sc] } });
     await kapi.writeFile(
       await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-      (0, import_md29.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
+      (0, import_md31.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
     );
     for (const d of [
       "Images",
@@ -185339,11 +186222,11 @@ ${css}
     });
   }
   async function renameMemo(file) {
-    const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(file));
     const title2 = await ask(t("ui.app.nameMemoNew"), { value: meta2.title || "" });
     if (!title2) return;
     meta2.title = title2;
-    await kapi.writeFile(file, (0, import_md29.dumpMdFile)(meta2, body));
+    await kapi.writeFile(file, (0, import_md31.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -185403,7 +186286,7 @@ ${css}
     const dir2 = await kapi.join(state.root, "Memos");
     await kapi.mkdir(dir2);
     const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
-    await kapi.writeFile(file, (0, import_md29.dumpMdFile)({ title: title2, type: "memo" }, ""));
+    await kapi.writeFile(file, (0, import_md31.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
   }
@@ -185411,7 +186294,7 @@ ${css}
     if (PANEL_WIN) return requestOpenInMain(file);
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md29.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md31.parseMdFile)(raw);
     title2 = title2 || meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, "");
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
@@ -185484,7 +186367,7 @@ ${css}
         // ล็อก = แก้ไม่ได้
       });
       try {
-        tab.sp.applyAlignMap((0, import_md29.alignFromString)(tab.meta.align));
+        tab.sp.applyAlignMap((0, import_md31.alignFromString)(tab.meta.align));
       } catch {
       }
       pane.addEventListener("click", () => {
@@ -185498,7 +186381,7 @@ ${css}
         markdown: body,
         // [alpha.58r บั๊ก 25] จัดหน้าย่อหน้าเก็บใน frontmatter (`align: [3:center]`) → .md สะอาด
         // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
-        alignMap: (0, import_md29.alignFromString)(tab.meta.align),
+        alignMap: (0, import_md31.alignFromString)(tab.meta.align),
         alignComments: state.settings.mdAlignStyle === "comment",
         onChange: () => {
           markDirty(tab);
@@ -185529,17 +186412,18 @@ ${css}
     pane.classList.toggle("pane-locked", !!tab.locked);
     pane.classList.toggle("sp-pane", !!tab.sp);
     syncWorkspaceWidths();
-    if ((tab.sp || tab.editor) && tab.startPage === void 0) {
+    if ((tab.sp || tab.editor) && !tab._startPageLoaded && tab.startPage === void 0) {
+      tab._startPageLoaded = true;
       sceneCtx(tab.file).then((c) => {
         const row3 = c && c.row;
-        tab.startPage = row3 && parseInt(row3.startPage, 10) || 1;
+        tab.startPage = explicitStartPage(row3);
         tab.pageFlow = isPageFlowContinue(row3) ? "continue" : "";
         if (state.active === tab) {
           updatePageNumberHint();
           refreshSpView();
         }
       }).catch(() => {
-        tab.startPage = 1;
+        tab.startPage = void 0;
         tab.pageFlow = "";
       });
     }
@@ -185587,10 +186471,11 @@ ${css}
       delete tab.meta.spMap;
       delete tab.meta.spHash;
     }
-    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md29.alignToString)(conv.align) + "]";
+    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md31.alignToString)(conv.align) + "]";
     mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
-    await kapi.writeFile(tab.file, (0, import_md29.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md31.dumpMdFile)(tab.meta, body));
+    tab.diskBody = body;
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     if (tab.editor) smart.bindView(tab.editor.view);
@@ -186040,7 +186925,7 @@ ${css}
       if (!tab.file || !/\.md$/i.test(tab.file) || !tab.editor && !tab.sp) continue;
       let disk;
       try {
-        disk = (0, import_md29.parseMdFile)(await kapi.readFile(tab.file)).body;
+        disk = (0, import_md31.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         continue;
       }
@@ -186098,7 +186983,7 @@ ${css}
       const base4 = tab.diskBody !== void 0 ? tab.diskBody : tab.body;
       let diskNow;
       try {
-        diskNow = (0, import_md29.parseMdFile)(await kapi.readFile(tab.file)).body;
+        diskNow = (0, import_md31.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         diskNow = await kapi.exists(tab.file).catch(() => true) ? base4 : null;
       }
@@ -186116,19 +187001,19 @@ ${css}
     }
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
-      const am = (0, import_md29.alignToString)(tab.editor.getAlignMap());
+      const am = (0, import_md31.alignToString)(tab.editor.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     if (tab.sp) {
-      const am = (0, import_md29.alignToString)(tab.sp.getAlignMap());
+      const am = (0, import_md31.alignToString)(tab.sp.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
     tab.meta.appVersion = APP_VERSION;
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
-    await writeKeepingComments(tab.file, (0, import_md29.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md31.dumpMdFile)(tab.meta, body));
     tab.diskBody = body;
     tab._conflictWarned = false;
     tab._diskWarned = false;
@@ -186188,7 +187073,7 @@ ${css}
     try {
       const ctx2 = await sceneCtx(tab.file);
       if (!ctx2 || !ctx2.row || ctx2.row.type === "memo") return;
-      const n2 = (0, import_md29.countWords)(body || "");
+      const n2 = (0, import_md31.countWords)(body || "");
       if ((ctx2.row.wordCount || 0) === n2) return;
       await updateSceneRow(ctx2.dPath, ctx2.row.id, (r) => {
         r.wordCount = n2;
@@ -186467,7 +187352,7 @@ ${css}
           const t3 = state.tabs.get(file);
           if (t3 && (t3.editor || t3.sp)) return (t3.editor || t3.sp).getMarkdown();
         }
-        return (0, import_md29.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
+        return (0, import_md31.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
       } catch {
         return t("ui.app.readCant");
       }
@@ -186529,7 +187414,7 @@ ${css}
     const t22 = state.tabs.get(file);
     if (!t22 || !t22.meta) return false;
     try {
-      t22.meta = (0, import_md29.parseMdFile)(await kapi.readFile(file)).meta;
+      t22.meta = (0, import_md31.parseMdFile)(await kapi.readFile(file)).meta;
     } catch (e) {
       log("warn", t("ui.props.writeMetaFail"), e);
     }
@@ -186544,17 +187429,25 @@ ${css}
       const f = pathKey(t22.file);
       return f === k || f.startsWith(k + "/");
     });
+    let closed = 0;
     for (const t22 of hits) {
       if (save && t22.dirty) {
+        let r;
         try {
-          await saveTab(t22);
+          r = await saveTab(t22);
         } catch (e) {
           log("error", t("ui.app.saveBeforeCloseFail") + (t22.title || t22.file), e);
+          r = false;
+        }
+        if (r === false) {
+          setStatus(t("ui.app.saveCancelledKeepTab"));
+          continue;
         }
       }
       closeTab(t22.file, { discard: true });
+      closed++;
     }
-    return hits.length;
+    return closed;
   }
   async function moveSnapshots(oldPath, newPath) {
     if (!state.root || !oldPath || !newPath || oldPath === newPath) return 0;
@@ -186641,7 +187534,7 @@ ${css}
       { label: t("ui.app.closeTabDiscard"), value: "discard", danger: true },
       { label: t("ui.common.cancel"), value: null }
     ]).then((v2) => {
-      if (v2 === "save") saveTab(t3).then(done2);
+      if (v2 === "save") saveThenClose();
       else if (v2 === "discard") {
         t3.dirty = false;
         updateDirtyBadge();
@@ -186697,12 +187590,12 @@ ${css}
         }
       },
       async reloadFromDisk() {
-        const { meta: meta2, body } = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file));
+        const { meta: meta2, body } = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
         t3.meta = meta2;
         t3.body = body;
         t3.diskBody = body;
         if (t3.editor) {
-          t3.editor.setMarkdown(body, (0, import_md29.alignFromString)(meta2.align));
+          t3.editor.setMarkdown(body, (0, import_md31.alignFromString)(meta2.align));
           try {
             refreshMentions(t3.editor.view);
           } catch {
@@ -186710,7 +187603,7 @@ ${css}
         } else {
           t3.sp.setMarkdown(body);
           try {
-            t3.sp.applyAlignMap((0, import_md29.alignFromString)(meta2.align));
+            t3.sp.applyAlignMap((0, import_md31.alignFromString)(meta2.align));
           } catch {
           }
         }
@@ -186735,10 +187628,10 @@ ${css}
     if (!t3) return;
     if (!await confirmBox(t("ui.app.cancelChangeAllTab"), "Revert")) return;
     const content = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md29.parseMdFile)(content);
+    const { meta: meta2, body } = (0, import_md31.parseMdFile)(content);
     t3.diskBody = body;
     if (t3.editor) {
-      t3.editor.setMarkdown(body, (0, import_md29.alignFromString)(meta2.align));
+      t3.editor.setMarkdown(body, (0, import_md31.alignFromString)(meta2.align));
       refreshMentions(t3.editor.view);
     } else if (t3.sp) {
       const dir2 = file.replace(/[\\/][^\\/]*$/, "");
@@ -186771,7 +187664,7 @@ ${css}
         // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
       });
       try {
-        t3.sp.applyAlignMap((0, import_md29.alignFromString)(t3.meta.align));
+        t3.sp.applyAlignMap((0, import_md31.alignFromString)(t3.meta.align));
       } catch {
       }
       t3.sp.view.dom.classList.add("on");
@@ -186977,7 +187870,7 @@ ${css}
     if (!state.tabs.has(key2)) {
       let body = "";
       try {
-        body = (0, import_md29.parseMdFile)(await kapi.readFile(snap2.path)).body;
+        body = (0, import_md31.parseMdFile)(await kapi.readFile(snap2.path)).body;
       } catch {
         body = t("ui.app.readFileVersionCant");
       }
@@ -187499,11 +188392,11 @@ ${css}
         ind: st.indent,
         contBottom: onCt ? (pg.pages[i5 - 1] || {}).continuedBottom || "" : "",
         contTop: onCt ? (pg.pages[i5] || {}).continuedTop || "" : ""
-      })).slice(1).filter((x) => Number.isFinite(x.pos)));
-      const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt));
+      })).slice(1).filter((x) => Number.isFinite(x.pos)), t3.sp.view);
+      const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt), t3.sp.view);
       updatePageNumberHint();
       const marks2 = spContinuedOn() ? computeContinueds(pg, fmt) : [];
-      const cChanged = setContinueds(marks2);
+      const cChanged = setContinueds(marks2, t3.sp.view);
       if (changed || cChanged || nChanged) t3.sp.refreshGuides();
       setLayoutPageCount(t3, pg.count);
       refreshSpView();
@@ -187527,7 +188420,7 @@ ${css}
     const view2 = t3.editor.view;
     const pm2 = view2.dom;
     if (!pm2.isConnected) return false;
-    const list = prosePageBreaks();
+    const list = prosePageBreaks(view2);
     if (!list.length) return false;
     const els = [...pm2.querySelectorAll(".ed-page-break")];
     if (els.length !== list.length) return false;
@@ -187564,7 +188457,7 @@ ${css}
     if (nowMs < _spPadTuneUntil) return false;
     const pm2 = t3.sp.view.dom;
     if (!pm2 || !pm2.isConnected) return false;
-    const list = pageBreaks();
+    const list = pageBreaks(t3.sp.view);
     if (!list.length) return false;
     const els = [...pm2.querySelectorAll(".sp-page-break")];
     if (els.length !== list.length) return false;
@@ -187685,8 +188578,8 @@ ${css}
           ms: +_msSlice.toFixed(2),
           msMeasure: +_msMeasure.toFixed(2)
         };
-        const changed2 = setProsePageBreaks(list82);
-        const nChanged = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+        const changed2 = setProsePageBreaks(list82, t3.editor.view);
+        const nChanged = setProsePageNumberLabel(prosePageNumberLabelFor(spf), t3.editor.view);
         if (nChanged && !changed2) refreshProsePageBreaks(t3.editor.view);
         if (changed2) {
           refreshProsePageBreaks(t3.editor.view);
@@ -187710,9 +188603,10 @@ ${css}
       state._mzDiag = { path: "estimate", pages: ppg.count, breaks: -1, cached: false };
       const base4 = currentStartPage(t3) - 1;
       const changed = setProsePageBreaks(
-        prosePageStarts(ppg).map((pos, i5) => ({ pos, page: base4 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos))
+        prosePageStarts(ppg).map((pos, i5) => ({ pos, page: base4 + i5 + 1 })).slice(1).filter((x) => Number.isFinite(x.pos)),
+        t3.editor.view
       );
-      const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+      const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf), t3.editor.view);
       if (changed || nChanged2) refreshProsePageBreaks(t3.editor.view);
       setLayoutPageCount(t3, ppg.count);
       refreshSpView();
@@ -187762,7 +188656,7 @@ ${css}
         return;
       }
       const body = t3.editor ? t3.editor.getMarkdown() : t3.sp ? t3.sp.getText() : t3.plain.value;
-      let txt = tf("ui.app.wordChar", (0, import_md29.countWords)(body).toLocaleString(), body.length.toLocaleString());
+      let txt = tf("ui.app.wordChar", (0, import_md31.countWords)(body).toLocaleString(), body.length.toLocaleString());
       if (t3.sp) {
         txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t3);
         try {
@@ -187771,18 +188665,18 @@ ${css}
           log("warn", t("ui.app.checkChapterNotOk"), e);
         }
       } else {
-        setPageBreaks([]);
-        setContinueds([]);
         _spPageText = "";
         _spErrors = [];
       }
       if (t3.editor) {
         const n2 = repaginateProseNow(t3);
         if (n2) txt += tf("ui.app.page", n2);
-      } else {
-        setProsePageBreaks([]);
       }
       $("#wc").textContent = txt;
+      try {
+        updateCursorPage();
+      } catch {
+      }
       updateErrorBadge();
       updateProgressBar();
       scheduleLineGutter();
@@ -187814,6 +188708,8 @@ ${css}
     navUI.star = false;
     navUI.flags = [];
     navUI.page = 0;
+    _navPageOf.clear();
+    _navPageKey = "";
     saveNavUI();
     navShowBeats = true;
     localStorage.setItem("k2-nav-beats", "1");
@@ -187912,7 +188808,7 @@ ${css}
   }
   function navDecorate(t3, items) {
     const counts = navMdLines(t3);
-    const brk = t3 && t3.sp ? pageBreaks() : t3 && t3.editor ? prosePageBreaks() : [];
+    const brk = t3 && t3.sp ? pageBreaks(t3.sp.view) : t3 && t3.editor ? prosePageBreaks(t3.editor.view) : [];
     const base4 = currentStartPage(t3) || 1;
     const sid = t3 ? t3.file || "" : "";
     const quotes = navCmt.file && t3 && navCmt.file === t3.file ? navCmt.quotes : [];
@@ -188191,8 +189087,14 @@ ${css}
     host2.replaceChildren();
     const shown = filterNav(navRows, navUI);
     const perPage = clampPerPage(state.settings.navPerPage);
+    const pk = navCtx.book ? "::book::" : navCtx.tab && navCtx.tab.file || "";
+    if (pk !== _navPageKey) {
+      navUI.page = _navPageOf.get(pk) || 0;
+      _navPageKey = pk;
+    }
     const paged = state.settings.navMode === "page" ? navSlice(shown, navUI.page, perPage) : { page: 0, pages: 1, rows: shown };
     navUI.page = paged.page;
+    _navPageOf.set(pk, paged.page);
     if (!shown.length) {
       host2.append(el("div", "dim", navFilterOn() ? t("ui.nav.noMatch") : t("ui.app.notHasHeadingHead")));
     } else {
@@ -188314,7 +189216,7 @@ ${css}
       }
       if (!body) {
         try {
-          const f = (0, import_md29.parseMdFile)(await kapi.readFile(r.path));
+          const f = (0, import_md31.parseMdFile)(await kapi.readFile(r.path));
           body = f.body || "";
           fmt = fmt || f.meta.format || "";
         } catch {
@@ -189072,7 +189974,7 @@ ${css}
         const p = await kapi.saveAsDialog(t3.title + ".md");
         if (p) {
           const body = t3.editor ? t3.editor.getMarkdown() : t3.plain.value;
-          await kapi.writeFile(p, (0, import_md29.dumpMdFile)(t3.meta, body));
+          await kapi.writeFile(p, (0, import_md31.dumpMdFile)(t3.meta, body));
           setStatus("Save As: " + p);
         }
         break;
@@ -191117,7 +192019,7 @@ ${css}
     statusesEl.innerHTML = "";
     tagsEl.innerHTML = "";
     if (!state.root) return;
-    for (const st of SCENE_STATUSES) {
+    for (const st of allStatuses()) {
       const chip = el("span", "filter-chip", dataLabel(st));
       chip.dataset.status = st;
       chip.onclick = () => {
@@ -191125,9 +192027,9 @@ ${css}
         const q = $("#tree-search");
         const active = [...statusesEl.querySelectorAll(".filter-chip.on")].map((c) => c.dataset.status || c.textContent);
         if (active.length) {
-          q.value = active.map((s) => "status:" + s).join(" OR ");
+          q.value = active.map((s) => "status:" + queryValue(s)).join(" OR ");
         } else {
-          q.value = q.value.replace(/\bstatus:\S+/g, "").replace(/\s+OR\s+/g, " ").trim();
+          q.value = q.value.replace(/\bstatus:(?:"[^"]*"|\S+)/g, "").replace(/\s+OR\s+/g, " ").trim();
         }
         q.dispatchEvent(new Event("input", { bubbles: true }));
       };
@@ -191185,7 +192087,7 @@ ${css}
       for (const t3 of state.tabs.values()) {
         if ((t3.editor || t3.sp) && t3.file && /\.md$/i.test(t3.file)) {
           const text = t3.editor ? t3.editor.getText() : t3.sp ? t3.sp.getText() : "";
-          totalWords += (0, import_md29.countWords)(text);
+          totalWords += (0, import_md31.countWords)(text);
         }
       }
     } catch {
@@ -191436,7 +192338,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 800));
       const t3 = state.active;
       check2("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A prose", !!t3?.editor);
-      const orig = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const orig = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2(
         "round-trip \u0E1C\u0E48\u0E32\u0E19 editor \u0E08\u0E23\u0E34\u0E07",
         t3.editor.getMarkdown() === orig,
@@ -191468,13 +192370,13 @@ ${css}
       ));
       t3.editor.cmd("bold");
       await saveTab(t3);
-      const saved = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const saved = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2("\u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E19\u0E32 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C .md \u0E21\u0E35 **\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**", saved.includes("**\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**"), saved);
       t3.editor.cmd("bold");
       await saveTab(t3);
       check2(
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
-        (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       {
         const longBody = Array.from(
@@ -191530,8 +192432,8 @@ ${css}
         await saveTab(t3);
         check2(
           "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
-          (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
-          (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+          (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
         );
         activate(t3.file);
         await new Promise((r) => setTimeout(r, 150));
@@ -191585,7 +192487,7 @@ ${css}
       refreshOutline();
       check2("outline \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01", [...document.querySelectorAll(".ol-item")].some((x) => x.textContent.includes("\u0E15\u0E25\u0E32\u0E14 - \u0E40\u0E22\u0E47\u0E19")));
       activate(t3.file);
-      const fmtOf = async (f) => (0, import_md29.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
+      const fmtOf = async (f) => (0, import_md31.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
       check2("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22", !!t3.editor && !t3.sp && await fmtOf(t3.file) === "prose");
       const answerConvert = async (go, ok2) => {
         const done2 = go();
@@ -191603,7 +192505,7 @@ ${css}
       );
       check2(
         "[87] \u0E15\u0E2D\u0E1A\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-        !!state.active.editor && !state.active.sp && (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        !!state.active.editor && !state.active.sp && (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       await answerConvert(() => switchFormat("screenplay"), true);
       check2(
@@ -191614,7 +192516,7 @@ ${css}
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19 format \u0E25\u0E07 frontmatter (screenplay)",
         await fmtOf(t3.file) === "screenplay"
       );
-      const spDisk87 = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file));
+      const spDisk87 = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 **\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E01\u0E44\u0E1A\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E43\u0E2B\u0E49\u0E2D\u0E35\u0E01\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E2D\u0E48\u0E32\u0E19",
         !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
@@ -191633,7 +192535,7 @@ ${css}
         !!state.active.editor && !state.active.sp
       );
       check2("frontmatter \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 prose", await fmtOf(t3.file) === "prose");
-      const backDisk87 = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file));
+      const backDisk87 = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
         backDisk87.body === orig,
@@ -191662,7 +192564,7 @@ ${css}
         t3.editor.setMarkdown(huge);
         await new Promise((r) => setTimeout(r, 500));
         await saveTab(t3);
-        const diskA = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file));
+        const diskA = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E01\u0E29\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
           diskA.body.includes(huge),
@@ -191670,7 +192572,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("screenplay"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskB = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file));
+        const diskB = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E1A\u0E25\u0E47\u0E2D\u0E01",
           diskB.body.includes(huge),
@@ -191678,7 +192580,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("prose"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskC = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file));
+        const diskC = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
           diskC.body === diskA.body,
@@ -195016,7 +195918,7 @@ ${css}
       );
       check2(
         "[25] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A frontmatter \u0E44\u0E14\u0E49",
-        (0, import_md29.alignToString)(t3.editor.getAlignMap()) === "0:center"
+        (0, import_md31.alignToString)(t3.editor.getAlignMap()) === "0:center"
       );
       t3.editor.setMarkdown("\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A", { 0: "right" });
       selHead(t3.editor.view);
@@ -195953,7 +196855,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 400));
       const spTab = state.active;
       check2("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 WYSIWYG (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 textarea)", !!spTab.sp && !spTab.plain);
-      const spOrig = (0, import_md29.parseMdFile)(await kapi.readFile(spTab.file)).body;
+      const spOrig = (0, import_md31.parseMdFile)(await kapi.readFile(spTab.file)).body;
       spTab.sp.setMarkdown(spOrig);
       await new Promise((r) => setTimeout(r, 200));
       const spEls = [];
@@ -196139,7 +197041,7 @@ ${css}
       await saveTab(spTab);
       check2(
         "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 v1",
-        (0, import_md29.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
+        (0, import_md31.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
       );
       spTab.sp.setElement("character");
       vsp.dispatch(vsp.state.tr.insertText("\u0E22\u0E31\u0E22\u0E41"));
@@ -198968,8 +199870,8 @@ ${css}
       const mCh1 = mDj.chapters[0];
       const mFile = (await kapi.listFiles(await kapi.join(state.root, "Memos"), ".md"))[0];
       const mPath = await kapi.join(state.root, "Memos", mFile);
-      const mBody = (0, import_md29.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
-      await kapi.writeFile(mPath, (0, import_md29.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+      const mBody = (0, import_md31.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
+      await kapi.writeFile(mPath, (0, import_md31.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
       check2("\u0E21\u0E35\u0E42\u0E19\u0E49\u0E15\u0E43\u0E19 Memos \u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", await kapi.exists(mPath));
       await moveMemoToChapter(mPath, dP, mCh1, null);
       const mSj1 = await kapi.readJson(await kapi.join(dP, "scenes.json"));
@@ -198983,7 +199885,7 @@ ${css}
         "\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 + \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 Memos \u0E41\u0E25\u0E49\u0E27",
         await kapi.exists(await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)) && !await kapi.exists(mPath)
       );
-      const mMeta = (0, import_md29.parseMdFile)(await kapi.readFile(
+      const mMeta = (0, import_md31.parseMdFile)(await kapi.readFile(
         await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)
       )).meta;
       check2("\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E21\u0E35 type: memo \u0E43\u0E19 frontmatter", mMeta.type === "memo");
@@ -199126,7 +200028,7 @@ ${css}
         JSON.stringify(scP2.startPage)
       );
       const scP2File = await kapi.join(dPath, "Chapters", chP.folderName, scP2.fileName);
-      const scP2Fm = (0, import_md29.parseMdFile)(await kapi.readFile(scP2File)).meta;
+      const scP2Fm = (0, import_md31.parseMdFile)(await kapi.readFile(scP2File)).meta;
       check2(
         "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C/\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07/\u0E42\u0E19\u0E49\u0E15 \u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E25\u0E07 frontmatter .md",
         scP2Fm.emotion === "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07" && scP2Fm.conflict === "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D" && scP2Fm.note === "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A",
@@ -199149,7 +200051,7 @@ ${css}
         scFb.isFlashback === true && scFb.isFlashforward === false,
         JSON.stringify(scFb)
       );
-      const scFbFm = (0, import_md29.parseMdFile)(await kapi.readFile(
+      const scFbFm = (0, import_md31.parseMdFile)(await kapi.readFile(
         await kapi.join(dPath, "Chapters", chP.folderName, scFb.fileName)
       )).meta;
       check2(
@@ -199319,7 +200221,7 @@ ${css}
         await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj4, null, 2));
         await kapi.writeFile(
           await kapi.join(dPath, "Chapters", chP.folderName, "scene-50.md"),
-          (0, import_md29.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
+          (0, import_md31.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
         );
         await buildTree2();
         await moveSceneOrder(dPath, chP, { id: "scMove" }, -1);
@@ -199414,7 +200316,7 @@ ${css}
         const scLk = await findRow();
         check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 row.locked=true \u0E43\u0E19 scenes.json", scLk && scLk.locked === true);
         const lkFile = await kapi.join(dPath, "Chapters", chP.folderName, scLk.fileName);
-        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md29.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
+        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md31.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
         await openScene(lkFile, scLk.title);
         await new Promise((r) => setTimeout(r, 120));
         check2(
@@ -199436,7 +200338,7 @@ ${css}
         const rev0 = parseInt(t3.editor ? t3.meta.revision || 0 : 0, 10) || 0;
         markDirty(t3);
         await saveTab(t3);
-        const fm = (0, import_md29.parseMdFile)(await kapi.readFile(t3.file)).meta;
+        const fm = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).meta;
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E41\u0E2D\u0E1B\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 (appVersion) \u0E25\u0E07 frontmatter", !!fm.appVersion);
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49 (revision) \u0E02\u0E36\u0E49\u0E19", (parseInt(fm.revision, 10) || 0) >= 1, fm.revision);
         const dRows = lineDiff2("a\nb\nc", "a\nx\nc");
@@ -199458,7 +200360,7 @@ ${css}
         const sjc = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
         const chG = chP.guid;
         const secondFile = await kapi.join(dPath, "Chapters", chP.folderName, "cmp2.md");
-        await kapi.writeFile(secondFile, (0, import_md29.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
+        await kapi.writeFile(secondFile, (0, import_md31.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
         activate(t3.file);
         await openCompareRight(secondFile, "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32");
         await new Promise((r) => setTimeout(r, 150));
@@ -200641,12 +201543,12 @@ ${css}
         );
         check2(
           "parseMdFile \u0E15\u0E31\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01)",
-          !(0, import_md29.parseMdFile)(rawMig).body.includes("k2-comments")
+          !(0, import_md31.parseMdFile)(rawMig).body.includes("k2-comments")
         );
         check2("\u0E22\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0B\u0E49\u0E33", await migrateSceneComments(dPath) === 0);
         const cstore = commentStore();
         const cmRaw = (await cstore.read(cmFile)).body;
-        const cmQuote = ((0, import_md29.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
+        const cmQuote = ((0, import_md31.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
         const cmAt = cmRaw.indexOf(cmQuote);
         check2("\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E40\u0E08\u0E2D (\u0E43\u0E0A\u0E49\u0E1C\u0E39\u0E01\u0E2A\u0E21\u0E2D)", cmAt >= 0, cmQuote);
         const c1 = await cstore.add(cmFile, { start: cmAt, end: cmAt + cmQuote.length }, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -202679,7 +203581,7 @@ ${css}
                 );
               }
               const map103 = ed.getAlignMap();
-              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md29.alignToString)(map103));
+              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md31.alignToString)(map103));
               check2(
                 "[103-2] \u2605\u2605 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E40\u0E01\u0E47\u0E1A\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E15\u0E48\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
                 Object.values(map103).includes("right"),
@@ -203559,7 +204461,7 @@ ${css}
           await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sjA, null, 2));
           await kapi.writeFile(
             await kapi.join(dPath, "Chapters", ch3.folderName, "memo-rt.md"),
-            (0, import_md29.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
+            (0, import_md31.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
           );
           const dst = await moveRowToMemos(dPath, ch3, memoRow);
           check2("\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B MEMO \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Memos", await kapi.exists(dst), String(dst));
@@ -203626,8 +204528,8 @@ ${css}
           const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
           const scB = (sj4.chapters[ch4.guid] || [])[0];
           const scFile = await kapi.join(dPath, "Chapters", ch4.folderName, scB.fileName);
-          const { meta: bm, body: bb } = (0, import_md29.parseMdFile)(await kapi.readFile(scFile));
-          await kapi.writeFile(scFile, (0, import_md29.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
+          const { meta: bm, body: bb } = (0, import_md31.parseMdFile)(await kapi.readFile(scFile));
+          await kapi.writeFile(scFile, (0, import_md31.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
@@ -210448,6 +211350,8 @@ ${css}
             }
             {
               const keepPr159 = JSON.parse(JSON.stringify(state.settings.prose || {}));
+              state.settings.prose = { ...keepPr159, firstLineIndent: 0 };
+              applySettings();
               T3.editor.setMarkdown(String.fromCharCode(9) + "\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07\u0E14\u0E49\u0E27\u0E22\u0E41\u0E17\u0E47\u0E1A");
               await w98(200);
               const tabOf2 = () => getComputedStyle(pm98).tabSize;
@@ -210466,10 +211370,23 @@ ${css}
               applySettings();
               await w98(200);
               check2("[159-3] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E41\u0E17\u0E47\u0E1A = 12 \u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07 \u2192 \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07", tabOf2() === "12", tabOf2());
+              const diag159 = () => {
+                const para2 = pm98.querySelector("p");
+                const cs = para2 ? getComputedStyle(para2) : null;
+                return JSON.stringify({
+                  txt: para2 ? para2.textContent.slice(0, 6) : null,
+                  nodes: para2 ? [...para2.childNodes].map((n2) => n2.nodeType + ":" + (n2.textContent || "").slice(0, 4)) : null,
+                  ws: cs && cs.whiteSpace,
+                  ts: cs && cs.tabSize,
+                  ta: cs && cs.textAlign,
+                  ff: cs && cs.fontFamily.slice(0, 40),
+                  vis: para2 && para2.getBoundingClientRect().width
+                });
+              };
               check2(
                 "[159-3] \u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E22\u0E31\u0E1A\u0E44\u0E1B\u0E02\u0E27\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E27\u0E31\u0E14\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E08\u0E2D)",
                 textStart() > left4 + 10,
-                left4 + " \u2192 " + textStart()
+                left4 + " \u2192 " + textStart() + " \xB7 " + diag159()
               );
               state.settings.prose = { ...state.settings.prose || {}, tabSize: 2, tabUnit: "cm" };
               applySettings();
@@ -210768,7 +211685,7 @@ ${css}
               await w98(300);
               const view98 = T3.editor.view;
               view98.focus();
-              const mid = Math.round(view98.state.doc.content.size / 2);
+              const mid = Math.round(view98.state.doc.content.size / 2) + 5;
               T3.editor.gotoPos(mid);
               await w98(120);
               const xOf = () => view98.coordsAtPos(view98.state.selection.head).left;
@@ -214306,12 +215223,21 @@ ${css}
             !!b22 && Math.abs(b22.scrollLeft - 140) <= 8,
             b22 && String(b22.scrollLeft)
           );
-          b22.scrollTop = 700;
-          await wait62(320);
+          const want66 = Math.min(700, Math.floor(b22.scrollHeight - b22.clientHeight) - 2);
+          const sbH0 = ($("#statusbar") || {}).offsetHeight;
+          const geo0 = [b22.scrollHeight, b22.clientHeight];
+          b22.style.scrollBehavior = "auto";
+          b22.scrollTop = want66;
+          const trace66 = [b22.scrollTop];
+          for (const ms of [30, 60, 100, 130]) {
+            await wait62(ms);
+            trace66.push(bodyOf().scrollTop);
+          }
+          const ae66 = document.activeElement ? document.activeElement.className || document.activeElement.tagName : "";
           check2(
             "[66r2-1] \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E40\u0E2A\u0E23\u0E47\u0E08\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E08\u0E2D \u2014 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E15\u0E48\u0E2D\u0E44\u0E14\u0E49",
-            Math.abs(bodyOf().scrollTop - 700) <= 2,
-            String(bodyOf().scrollTop)
+            want66 > 400 && Math.abs(bodyOf().scrollTop - want66) <= 2,
+            String(bodyOf().scrollTop) + " / " + want66 + " \xB7 \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 " + sbH0 + "\u2192" + ($("#statusbar") || {}).offsetHeight + " \xB7 trace " + trace66.join(",") + " \xB7 focus " + ae66 + " \xB7 sh/ch " + geo0.join("/") + "\u2192" + [bodyOf().scrollHeight, bodyOf().clientHeight].join("/") + " same=" + (bodyOf() === b22) + " \xB7 " + JSON.stringify([...document.querySelectorAll("#status-right > *")].map((x) => x.offsetHeight))
           );
           big.remove();
         }
@@ -217919,8 +218845,8 @@ ${css}
           /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79),
           after79.slice(0, 300)
         );
-        const bodyBefore79 = (0, import_md29.parseMdFile)(before79).body.split("\n");
-        const bodyAfter79 = (0, import_md29.parseMdFile)(after79).body.split("\n");
+        const bodyBefore79 = (0, import_md31.parseMdFile)(before79).body.split("\n");
+        const bodyAfter79 = (0, import_md31.parseMdFile)(after79).body.split("\n");
         check2(
           "[79-2] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           bodyAfter79.length === bodyBefore79.length && bodyAfter79.filter((l, i5) => l !== bodyBefore79[i5]).length === 1,
@@ -219629,7 +220555,7 @@ ${css}
             tX.editor.cmd("align", "right");
             await new Promise((r) => setTimeout(r, 200));
             const mapX = tX.editor.getAlignMap();
-            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md29.alignToString)(mapX));
+            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md31.alignToString)(mapX));
             check2(
               "[132-X1] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
               Object.values(mapX).includes("center") && Object.values(mapX).includes("right"),
@@ -222557,7 +223483,7 @@ ${css}
           let fmF = {};
           for (let i5 = 0; i5 < 30; i5++) {
             try {
-              fmF = (0, import_md29.parseMdFile)(await kapi.readFile(row3.dataset.path)).meta;
+              fmF = (0, import_md31.parseMdFile)(await kapi.readFile(row3.dataset.path)).meta;
             } catch {
               fmF = {};
             }
@@ -222641,7 +223567,7 @@ ${css}
           await buildTree2();
           const row3 = scRows120()[0];
           const f120 = row3.dataset.path;
-          const wantTitle = (0, import_md29.parseMdFile)(await kapi.readFile(f120)).meta.title;
+          const wantTitle = (0, import_md31.parseMdFile)(await kapi.readFile(f120)).meta.title;
           if (state.tabs.has(f120)) {
             state.tabs.get(f120).dirty = false;
             closeTab(f120);
@@ -223027,8 +223953,8 @@ ${css}
             );
             check2(
               "[a124-20] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30",
-              !!ctx124 && ctx124.row.wordCount === (0, import_md29.countWords)(tb2.editor.getMarkdown()),
-              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md29.countWords)(tb2.editor.getMarkdown())
+              !!ctx124 && ctx124.row.wordCount === (0, import_md31.countWords)(tb2.editor.getMarkdown()),
+              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md31.countWords)(tb2.editor.getMarkdown())
             );
             check2(
               '[a124-21] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E25\u0E34\u0E01\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14 Ctrl+S',
@@ -223454,7 +224380,7 @@ ${css}
           if (rvFile) {
             activate(rvFile);
             const rvTab = state.tabs.get(rvFile);
-            const onDisk = (0, import_md29.parseMdFile)(await kapi.readFile(rvFile)).body;
+            const onDisk = (0, import_md31.parseMdFile)(await kapi.readFile(rvFile)).body;
             const MARK = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E08\u0E30\u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01";
             rvTab.sp.setMarkdown(onDisk + "\n\n" + MARK);
             markDirty(rvTab);
@@ -223769,7 +224695,7 @@ ${css}
           activate(fN);
           await w140(200);
         }
-        const diskBody140 = (0, import_md29.parseMdFile)(await kapi.readFile(tN.file)).body || "";
+        const diskBody140 = (0, import_md31.parseMdFile)(await kapi.readFile(tN.file)).body || "";
         tN.editor.setMarkdown(diskBody140);
         await w140(300);
         refreshOutline();
@@ -223790,7 +224716,7 @@ ${css}
           for (const pth of bookPaths) {
             let fm = {};
             try {
-              fm = (0, import_md29.parseMdFile)(await kapi.readFile(pth)).meta || {};
+              fm = (0, import_md31.parseMdFile)(await kapi.readFile(pth)).meta || {};
             } catch {
               continue;
             }
@@ -224621,7 +225547,7 @@ ${css}
         });
         await kapi.remove(await kapi.join(dirA, s1.fileName));
         const s3 = await SO.addScene(dPath2, chA, "\u0E09\u0E32\u0E01156\u0E2A\u0E32\u0E21", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21" });
-        const body2 = (0, import_md29.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
+        const body2 = (0, import_md31.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
         check2(
           "[156-1] \u2605\u2605 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E09\u0E32\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E21",
           body2 === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07" && s3.fileName !== s2.fileName,
@@ -224642,7 +225568,7 @@ ${css}
           const syn = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\n---\nnote: \u0E41\u0E17\u0E23\u0E01";
           await writeSceneMeta(f3, { synopsis: syn, pov: "\u0E21\u0E32\u0E19\u0E35" });
           const m3 = await readSceneMeta(f3);
-          const p3 = (0, import_md29.parseMdFile)(await kapi.readFile(f3));
+          const p3 = (0, import_md31.parseMdFile)(await kapi.readFile(f3));
           check2("[156-2] \u2605\u2605 \u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E04\u0E23\u0E1A", m3.synopsis === syn && m3.pov === "\u0E21\u0E32\u0E19\u0E35", JSON.stringify(m3.synopsis));
           check2("[156-2] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E1B\u0E19\u0E40\u0E21\u0E17\u0E32\u0E14\u0E32\u0E17\u0E32", p3.body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21", JSON.stringify(p3.body));
         }
@@ -224710,7 +225636,7 @@ ${css}
           const n2 = await closeTabsUnderPath(dirA, { save: true });
           check2(
             "[156-6] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19",
-            !state.tabs.has(f3) && (0, import_md29.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
+            !state.tabs.has(f3) && (0, import_md31.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
             n2
           );
           check2("[156-6] \u2605 \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2D\u0E37\u0E48\u0E19", state.tabs.has(fB));
@@ -224736,9 +225662,9 @@ ${css}
         {
           await openScene(f4, null);
           const tb2 = state.tabs.get(f4);
-          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md29.parseMdFile)(s).meta);
-          const diskBodyNow = async () => (0, import_md29.parseMdFile)(await kapi.readFile(f4)).body;
-          await kapi.writeFile(f4, (0, import_md29.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
+          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md31.parseMdFile)(s).meta);
+          const diskBodyNow = async () => (0, import_md31.parseMdFile)(await kapi.readFile(f4)).body;
+          await kapi.writeFile(f4, (0, import_md31.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
           tb2.editor.setMarkdown("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A156");
           markDirty(tb2);
           window.__k2conflictChoice = "skip";
@@ -224770,7 +225696,7 @@ ${css}
           const r3 = await saveTab(tb2);
           check2("[156-7] \u2605 \u0E41\u0E01\u0E49\u0E41\u0E04\u0E48\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E43\u0E19\u0E2B\u0E31\u0E27\u0E44\u0E1F\u0E25\u0E4C \u0E44\u0E21\u0E48\u0E16\u0E37\u0E2D\u0E27\u0E48\u0E32\u0E0A\u0E19\u0E01\u0E31\u0E19", r3 !== false && await diskBodyNow() === "\u0E2B\u0E25\u0E31\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34156");
           delete window.__k2conflictChoice;
-          await kapi.writeFile(f4, (0, import_md29.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
+          await kapi.writeFile(f4, (0, import_md31.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
           const n2 = await checkTabsAgainstDisk({ force: true });
           check2(
             "[156-7] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07: \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E14\u0E34\u0E2A\u0E01\u0E4C",
@@ -224781,7 +225707,7 @@ ${css}
         }
         {
           const D = await Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports));
-          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md29.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
+          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md31.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
           await JS.mutateJson(kapi, sf, (d) => {
             d.chapters[chA.guid].push({ id: "dup156", title: "\u0E0B\u0E49\u0E33156", order: 99, fileName: s2.fileName, chapterGuid: chA.guid });
           });
@@ -224851,7 +225777,7 @@ ${css}
           const r = await R3.runProjectReplace("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07", "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", {}, { docs });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14",
-            r.count === 1 && (0, import_md29.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
+            r.count === 1 && (0, import_md31.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
             JSON.stringify(r)
           );
           await openScene(fr, null);
@@ -224863,11 +225789,11 @@ ${css}
           await R3.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156", {}, { docs: docs2 });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07: \u0E41\u0E01\u0E49\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
-            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md29.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
+            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md31.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
           );
           closeTab(fr, { discard: true });
           const r3 = await R3.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E44\u0E21\u0E48\u0E04\u0E27\u0E23\u0E40\u0E01\u0E34\u0E14", {}, { docs: [{ ...docs[0], locked: true, body: "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156" }] });
-          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r3.count === 0 && (0, import_md29.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
+          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r3.count === 0 && (0, import_md31.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
           const ui = await R3.openProjectReplace("");
           check2("[156-10] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !!document.querySelector(".k-replace"));
           ui.close();
@@ -225232,6 +226158,416 @@ ${css}
           ovA.remove();
         }
       }
+      {
+        const w159 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until159 = async (fn, ms = 4e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            try {
+              if (await fn()) return true;
+            } catch {
+            }
+            await w159(60);
+          }
+          return false;
+        };
+        const okDlg159 = async () => {
+          await until159(() => !!document.querySelector(".k-dialog .k-ok"));
+          [...document.querySelectorAll(".k-dialog .k-ok")].pop().click();
+        };
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((n2) => n2.remove());
+        const SO = await Promise.resolve().then(() => (init_scene_ops(), scene_ops_exports));
+        const JS = await Promise.resolve().then(() => (init_json_store(), json_store_exports));
+        const d159 = (await listDrafts())[0];
+        const dPath2 = d159.dPath;
+        const secPath = dPath2.replace(/[\\/]Draft[\\/][^\\/]+$/, "");
+        const sf = await kapi.join(dPath2, "scenes.json");
+        const rows159 = async (g) => ((await kapi.readJson(sf)).chapters || {})[g] || [];
+        const recDir = await kapi.join(state.root, "Recycle");
+        const trashOf = async (fileName) => {
+          const hits = (await kapi.listFiles(recDir, ".md")).filter((f) => f.endsWith("-" + fileName)).sort();
+          return hits.length ? kapi.join(recDir, hits[hits.length - 1]) : "";
+        };
+        const ch = await SO.addChapter(dPath2, "\u0E1A\u0E17\u0E15\u0E23\u0E27\u0E08159");
+        const dir2 = await kapi.join(dPath2, "Chapters", ch.folderName);
+        check2("[159-P1-0] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E1A\u0E17\u0E0A\u0E31\u0E48\u0E27\u0E04\u0E23\u0E32\u0E27\u0E44\u0E14\u0E49", !!ch && await kapi.exists(dir2));
+        {
+          const a = await SO.addScene(dPath2, ch, "\u0E25\u0E1A\u0E2B\u0E25\u0E32\u0E22159\u0E01", { silent: true, body: "\u0E40\u0E14\u0E34\u0E21\u0E01159" });
+          const b = await SO.addScene(dPath2, ch, "\u0E25\u0E1A\u0E2B\u0E25\u0E32\u0E22159\u0E02", { silent: true, body: "\u0E40\u0E14\u0E34\u0E21\u0E02159" });
+          const fa = await kapi.join(dir2, a.fileName);
+          await openScene(fa, null);
+          const ta2 = state.tabs.get(fa);
+          check2("[159-H1] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49", !!ta2 && !!ta2.editor);
+          ta2.editor.setMarkdown("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159");
+          markDirty(ta2);
+          const pDel3 = treeDeleteSelected([{ dPath: dPath2, ch, sc: a }, { dPath: dPath2, ch, sc: b }]);
+          await okDlg159();
+          const n2 = await pDel3;
+          check2("[159-H1] \u0E25\u0E1A\u0E2A\u0E2D\u0E07\u0E09\u0E32\u0E01 + \u0E41\u0E17\u0E47\u0E1A\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14", n2 === 2 && !state.tabs.has(fa), n2);
+          check2("[159-H1] \u2605 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E1A", (await rows159(ch.guid)).length === 0);
+          const tp = await trashOf(a.fileName);
+          check2(
+            "[159-H1] \u2605\u2605 \u0E02\u0E2D\u0E07\u0E43\u0E19\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E04\u0E37\u0E2D\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07 (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E22\u0E49\u0E32\u0E22)",
+            !!tp && (0, import_md31.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
+            tp
+          );
+          await restoreFromTrash(tp, tp.split(/[\\/]/).pop());
+          const back = (await rows159(ch.guid)).find((r) => r.id === a.id);
+          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md31.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
+          await saveAllTabs(true);
+        }
+        {
+          const c = await SO.addScene(dPath2, ch, "\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A159", { silent: true, body: "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E40\u0E14\u0E34\u0E21159" });
+          const fc = await kapi.join(dir2, c.fileName);
+          await openScene(fc, null);
+          const tc = state.tabs.get(fc);
+          await kapi.writeFile(fc, (0, import_md31.dumpMdFile)((0, import_md31.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
+          tc.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159");
+          markDirty(tc);
+          window.__k2conflictChoice = "skip";
+          closeTab(fc, { ask: true });
+          await until159(() => [...document.querySelectorAll(".k-dialog button")].some((x) => x.textContent === t("ui.app.closeTabSave")));
+          [...document.querySelectorAll(".k-dialog button")].find((x) => x.textContent === t("ui.app.closeTabSave")).click();
+          await w159(300);
+          check2(
+            "[159-H2] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19 (\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0A\u0E19) = \u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07",
+            state.tabs.has(fc) && tc.dirty && tc.editor.getMarkdown().includes("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159")
+          );
+          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md31.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
+          window.__k2conflictChoice = "overwrite";
+          closeTab(fc, { ask: true });
+          await until159(() => [...document.querySelectorAll(".k-dialog button")].some((x) => x.textContent === t("ui.app.closeTabSave")));
+          [...document.querySelectorAll(".k-dialog button")].find((x) => x.textContent === t("ui.app.closeTabSave")).click();
+          check2("[159-H2] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1C\u0E48\u0E32\u0E19 = \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34", await until159(() => !state.tabs.has(fc)));
+          delete window.__k2conflictChoice;
+        }
+        {
+          const DR = await Promise.resolve().then(() => (init_drafts(), drafts_exports));
+          const mk2 = async (nm) => {
+            const p = await DR.createDraft(secPath, nm, null);
+            const dj = await kapi.readJson(await kapi.join(p, "draft.json"));
+            const c0 = dj.chapters[0];
+            const s0 = await SO.addScene(p, c0, "\u0E09\u0E32\u0E01\u0E43\u0E19\u0E23\u0E48\u0E32\u0E07" + nm, { silent: true, body: "\u0E40\u0E14\u0E34\u0E21" + nm });
+            return { p, c0, f: await kapi.join(p, "Chapters", c0.folderName, s0.fileName) };
+          };
+          const x = await mk2("\u0E23\u0E48\u0E32\u0E07\u0E25\u0E1A159");
+          await openScene(x.f, null);
+          const tx2 = state.tabs.get(x.f);
+          tx2.editor.setMarkdown("\u0E04\u0E49\u0E32\u0E07\u0E43\u0E19\u0E23\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E25\u0E1A159");
+          markDirty(tx2);
+          const pD = DR.deleteDraft(secPath, "\u0E23\u0E48\u0E32\u0E07\u0E25\u0E1A159");
+          await okDlg159();
+          check2("[159-H3] \u0E25\u0E1A\u0E23\u0E48\u0E32\u0E07\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", await pD === true);
+          check2("[159-H3] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E43\u0E19\u0E23\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E25\u0E1A\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14", !state.tabs.has(x.f));
+          await saveAllTabs(true);
+          await w159(200);
+          check2("[159-H3] \u2605\u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E23\u0E48\u0E32\u0E07\u0E1C\u0E35\u0E40\u0E01\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E2B\u0E25\u0E31\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", !await kapi.exists(x.p));
+          const y = await mk2("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159");
+          await snapshotFile(y.f, "\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E23\u0E48\u0E32\u0E07159");
+          await openScene(y.f, null);
+          const ty = state.tabs.get(y.f);
+          ty.editor.setMarkdown("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159");
+          markDirty(ty);
+          check2("[159-H3] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E23\u0E48\u0E32\u0E07\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", await DR.renameDraft(secPath, "\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159") === true);
+          const newF = y.f.replace("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159");
+          check2(
+            "[159-H3] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 + \u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48",
+            !state.tabs.has(y.f) && (0, import_md31.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
+          );
+          await saveAllTabs(true);
+          check2("[159-H3] \u2605\u2605 \u0E23\u0E48\u0E32\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A", !await kapi.exists(y.p));
+          check2(
+            "[159-H3] \u2605 \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E23\u0E48\u0E32\u0E07",
+            (await listSnapshots(newF)).some((s) => s.label.includes("159")) && (await listSnapshots(y.f)).length === 0
+          );
+          await closeTabsUnderPath(y.p.replace("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159"), { save: false });
+          await kapi.remove(y.p.replace("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159"));
+        }
+        {
+          const e = await SO.addScene(dPath2, ch, "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14159", { silent: true, body: "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C159" });
+          const fe = await kapi.join(dir2, e.fileName);
+          await kapi.writeFile(fe, (await kapi.readFile(fe)).replace(/\s*$/, "") + '\n\n<!-- k2-comments\n[{"id":"c159","text":"\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159","anchor":null}]\n-->\n');
+          await openScene(fe, null);
+          check2("[159-H4] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C", state.active && state.active.file === fe);
+          await switchFormat("screenplay");
+          const raw1 = await kapi.readFile(fe);
+          check2(
+            "[159-H4] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E41\u0E25\u0E49\u0E27\u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E31\u0E07\u0E21\u0E35\u0E1A\u0E25\u0E47\u0E2D\u0E01 k2-comments",
+            raw1.includes("k2-comments") && raw1.includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"),
+            raw1.slice(-160)
+          );
+          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md31.parseMdFile)(raw1).body);
+          await switchFormat("prose");
+          check2("[159-H4] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E22\u0E31\u0E07\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C", (await kapi.readFile(fe)).includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"));
+          closeTab(fe, { discard: true });
+        }
+        {
+          const q1 = await SO.addScene(dPath2, ch, "\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E2D159\u0E01", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32159" });
+          const q2 = await SO.addScene(dPath2, ch, "\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E2D159\u0E02", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E44\u0E25\u0E48\u0E40\u0E25\u0E02\u0E15\u0E48\u0E2D159" });
+          await JS.mutateJson(kapi, sf, (d) => {
+            const r = (d.chapters[ch.guid] || []).find((x) => x.id === q2.id);
+            r.pageFlow = "continue";
+            delete r.startPage;
+          });
+          await buildTree2();
+          const f1 = await kapi.join(dir2, q1.fileName), f2 = await kapi.join(dir2, q2.fileName);
+          const ctx7 = await sceneCtx(f2);
+          check2(
+            "[159-H7] \u2605 sceneCtx \u0E08\u0E31\u0E1A\u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E44\u0E1F\u0E25\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1A\u0E17\u0E41\u0E23\u0E01\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E0B\u0E49\u0E33)",
+            !!ctx7 && ctx7.row.id === q2.id && ctx7.ch.guid === ch.guid,
+            ctx7 && JSON.stringify([ctx7.row.id, ctx7.ch.title])
+          );
+          await openScene(f2, null);
+          const t23 = state.tabs.get(f2);
+          const ok7 = await until159(() => t23 && t23._startPageLoaded && t23.pageFlow === "continue", 6e3);
+          const row7 = (await rows159(ch.guid)).find((x) => x.id === q2.id);
+          check2(
+            "[159-H7] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E41\u0E17\u0E47\u0E1A\u0E42\u0E2B\u0E25\u0E14\u0E18\u0E07 continue",
+            ok7,
+            JSON.stringify({
+              tab: !!t23,
+              keys: t23 ? void 0 : [...state.tabs.keys()].slice(-3),
+              loaded: t23 && t23._startPageLoaded,
+              pf: t23 && t23.pageFlow,
+              sp: t23 && t23.startPage,
+              row: row7 && row7.pageFlow
+            })
+          );
+          check2("[159-H7] \u2605 \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E25\u0E02\u0E40\u0E2D\u0E07 \u2192 tab.startPage \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E31\u0E14 1", t23.startPage === void 0, t23.startPage);
+          const got = await until159(() => currentStartPage(t23) > 1, 2e4);
+          const map159 = await computeBookFlow(sectionPathOfFile(f2));
+          check2(
+            '[159-H7] \u2605\u2605 \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E34\u0E4A\u0E01 "\u0E44\u0E25\u0E48\u0E40\u0E25\u0E02\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07" \u0E44\u0E14\u0E49\u0E40\u0E25\u0E02\u0E08\u0E32\u0E01\u0E2A\u0E32\u0E22\u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 1)',
+            got && currentStartPage(t23) === map159.get(f2) && map159.get(f2) >= (map159.get(f1) || 1),
+            JSON.stringify([currentStartPage(t23), map159.get(f1), map159.get(f2)])
+          );
+          t23.startPage = 42;
+          check2("[159-H7] \u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07\u0E40\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E0A\u0E19\u0E30\u0E2A\u0E32\u0E22\u0E15\u0E48\u0E2D\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07", currentStartPage(t23) === 42);
+          closeTab(f2, { discard: true });
+        }
+        {
+          const para2 = (n2, w) => Array.from({ length: n2 }, (_2, i5) => w + " " + i5 + " " + "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E1E\u0E2D\u0E43\u0E2B\u0E49\u0E02\u0E36\u0E49\u0E19\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 ".repeat(6)).join("\n\n");
+          const pa = await SO.addScene(dPath2, ch, "\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32159\u0E01", { silent: true, body: para2(90, "\u0E01") });
+          const pb2 = await SO.addScene(dPath2, ch, "\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32159\u0E02", { silent: true, body: para2(40, "\u0E02") });
+          const fA = await kapi.join(dir2, pa.fileName), fB = await kapi.join(dir2, pb2.fileName);
+          await openScene(fA, null);
+          const tA = state.tabs.get(fA);
+          repaginateProseNow(tA);
+          check2("[159-H15] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E41\u0E17\u0E47\u0E1A \u0E01 \u0E16\u0E39\u0E01\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32", await until159(() => {
+            repaginateProseNow(tA);
+            return prosePageBreaks(tA.editor.view).length > 1;
+          }, 8e3));
+          await openScene(fB, null);
+          const tB = state.tabs.get(fB);
+          check2("[159-H15] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E41\u0E17\u0E47\u0E1A \u0E02 \u0E16\u0E39\u0E01\u0E41\u0E1A\u0E48\u0E07\u0E2B\u0E19\u0E49\u0E32", await until159(() => {
+            repaginateProseNow(tB);
+            return prosePageBreaks(tB.editor.view).length > 0;
+          }, 8e3));
+          const posA = () => prosePageBreaks(tA.editor.view).map((b) => b.pos).join(",");
+          const posB = () => prosePageBreaks(tB.editor.view).map((b) => b.pos).join(",");
+          const a0 = posA(), b0 = posB();
+          check2(
+            "[159-H15] \u2605\u2605 \u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E17\u0E47\u0E1A \u0E02 \u0E41\u0E25\u0E49\u0E27\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A \u0E01 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A",
+            a0 !== b0 && prosePageBreaks(tA.editor.view).length > prosePageBreaks(tB.editor.view).length,
+            a0.slice(0, 40) + " | " + b0.slice(0, 40)
+          );
+          tA.editor.view.dispatch(tA.editor.view.state.tr.insertText("\u0E01", 1));
+          check2(
+            "[159-H15] \u2605 \u0E41\u0E01\u0E49\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 \u0E01 (\u0E40\u0E1A\u0E37\u0E49\u0E2D\u0E07\u0E2B\u0E25\u0E31\u0E07) = \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E2D\u0E07 \u0E01 \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E15\u0E32\u0E21 \u0E01 \xB7 \u0E02\u0E2D\u0E07 \u0E02 \u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
+            posA() === a0.split(",").map((x) => +x + 1).join(",") && posB() === b0,
+            posA().slice(0, 40)
+          );
+          check2(
+            "[159-H15] \u2605 \u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A \u0E01 = \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07 \u0E01 \u0E40\u0E2D\u0E07",
+            tA.pane.querySelectorAll(".ed-page-break").length === prosePageBreaks(tA.editor.view).length,
+            tA.pane.querySelectorAll(".ed-page-break").length + " vs " + prosePageBreaks(tA.editor.view).length
+          );
+          closeTab(fA, { discard: true });
+          closeTab(fB, { discard: true });
+        }
+        {
+          const CSm = await Promise.resolve().then(() => (init_custom_status(), custom_status_exports));
+          await CSm.addCustomStatus("\u0E23\u0E2D \u0E1A\u0E01. 159", "#3fa7d6");
+          check2(
+            "[159-H9] \u2605 \u0E0A\u0E34\u0E1B\u0E01\u0E23\u0E2D\u0E07\u0E21\u0E35\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E2D\u0E07 (\u0E2D\u0E48\u0E32\u0E19 allStatuses)",
+            await until159(() => [...document.querySelectorAll("#filter-statuses .filter-chip")].some((c) => c.dataset.status === "\u0E23\u0E2D \u0E1A\u0E01. 159"))
+          );
+          const chip = [...document.querySelectorAll("#filter-statuses .filter-chip")].find((c) => c.dataset.status === "\u0E23\u0E2D \u0E1A\u0E01. 159");
+          if (chip) {
+            chip.click();
+            check2('[159-H9] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E0A\u0E34\u0E1B = \u0E04\u0E34\u0E27\u0E23\u0E35\u0E04\u0E23\u0E2D\u0E1A "\u2026" (\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E21\u0E35\u0E27\u0E23\u0E23\u0E04)', $("#tree-search").value === 'status:"\u0E23\u0E2D \u0E1A\u0E01. 159"', $("#tree-search").value);
+            chip.click();
+            check2("[159-H9] \u0E04\u0E25\u0E34\u0E01\u0E0B\u0E49\u0E33 = \u0E16\u0E2D\u0E14\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E2D\u0E2D\u0E01\u0E2B\u0E21\u0E14", $("#tree-search").value === "", $("#tree-search").value);
+          }
+          const sOrd = await SO.addScene(dPath2, ch, "\u0E40\u0E23\u0E35\u0E22\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30159", { silent: true, body: "x" });
+          await JS.mutateJson(kapi, sf, (d) => {
+            (d.chapters[ch.guid] || []).find((x) => x.id === sOrd.id).status = "\u0E23\u0E2D \u0E1A\u0E01. 159";
+          });
+          const rows = sortSceneRows([{ status: "\u0E23\u0E2D \u0E1A\u0E01. 159", order: 1 }, { status: "", order: 2 }, { status: allStatuses()[0], order: 3 }], "status");
+          check2('[159-H9] \u2605 \u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E2A\u0E16\u0E32\u0E19\u0E30: \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E35\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E25\u0E33\u0E14\u0E31\u0E1A (\u0E44\u0E21\u0E48\u0E01\u0E2D\u0E07\u0E17\u0E49\u0E32\u0E22\u0E01\u0E31\u0E1A "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E31\u0E49\u0E07")', rows[2].status === "", JSON.stringify(rows.map((r) => r.status)));
+          await CSm.removeCustomStatus("\u0E23\u0E2D \u0E1A\u0E01. 159");
+        }
+        {
+          const CSm = await Promise.resolve().then(() => (init_custom_status(), custom_status_exports));
+          const host16 = el("div");
+          const c16 = CSm.statusChip("\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19");
+          host16.append(c16);
+          c16.textContent = "Writing";
+          c16.style.background = "";
+          CSm.refreshStatusChips(host16);
+          check2(
+            "[159-M16] \u2605 \u0E1B\u0E49\u0E32\u0E22\u0E41\u0E1B\u0E25\u0E41\u0E25\u0E49\u0E27\u0E2A\u0E35\u0E22\u0E31\u0E07\u0E15\u0E23\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30 (\u0E2D\u0E48\u0E32\u0E19 dataset.status)",
+            c16.dataset.status === "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E02\u0E35\u0E22\u0E19" && !!c16.style.background,
+            c16.style.background
+          );
+          check2(
+            "[159-M16] \u0E0A\u0E34\u0E1B\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E21\u0E35 dataset.status \u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
+            [...document.querySelectorAll("#tree .scene .sc-status")].every((c) => !!c.dataset.status)
+          );
+        }
+        {
+          const PUI = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+          const onRight = ["props", "comments", "notes", "outline"].find((id) => {
+            const n2 = document.querySelector(`.k-panel[data-panel-id="${id}"]`);
+            return n2 && n2.getBoundingClientRect().width && PUI.sideNow(id) === "right";
+          });
+          const onLeft = ["tree"].find((id) => PUI.sideNow(id) === "left");
+          check2(
+            '[159-M17] \u2605 \u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E02\u0E27\u0E32 = "right" \xB7 \u0E41\u0E1C\u0E07\u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22 = "left" (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E14\u0E49 left \u0E40\u0E2A\u0E21\u0E2D)',
+            !!onLeft && (onRight ? PUI.sideNow(onRight) === "right" : true),
+            String(onRight) + "/" + String(onLeft)
+          );
+        }
+        {
+          const SPd = await Promise.resolve().then(() => (init_scratchpad(), scratchpad_exports));
+          await SPd.openScratchpad();
+          const taTab = state.tabs.get("::scratchpad::").plain;
+          const host19 = el("div");
+          document.body.append(host19);
+          SPd.renderNotesPanel(host19);
+          const taPanel = host19.querySelector(".scratch-area");
+          const keep19 = SPd.scratchValue();
+          taTab.value = "\u0E08\u0E32\u0E01\u0E41\u0E17\u0E47\u0E1A159";
+          taTab.dispatchEvent(new Event("input"));
+          check2("[159-M19] \u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A = \u0E41\u0E1C\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35", taPanel.value === "\u0E08\u0E32\u0E01\u0E41\u0E17\u0E47\u0E1A159", taPanel.value);
+          taPanel.value = "\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07159";
+          taPanel.dispatchEvent(new Event("input"));
+          check2("[159-M19] \u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E1C\u0E07 = \u0E41\u0E17\u0E47\u0E1A\u0E40\u0E2B\u0E47\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E16\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E40\u0E01\u0E48\u0E32\u0E44\u0E1B\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A)", taTab.value === "\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07159");
+          SPd.flushScratch();
+          check2("[159-M19] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 localStorage \u0E04\u0E48\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27", localStorage.getItem("k2-scratchpad") === "\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07159");
+          SPd.setScratchValue(keep19, null, { now: true });
+          host19.remove();
+          closeTab("::scratchpad::");
+        }
+        {
+          const HU = await Promise.resolve().then(() => (init_home_ui(), home_ui_exports));
+          const ov21 = await HU.showHomeDialog({});
+          ov21.remove();
+          const other = el("div", "k-overlay");
+          document.body.append(other);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          check2("[159-M21] \u2605 \u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E41\u0E25\u0E49\u0E27 Esc \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E22\u0E38\u0E48\u0E07\u0E01\u0E31\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2D\u0E37\u0E48\u0E19/\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E1F\u0E31\u0E07", other.isConnected && !ov21.isConnected);
+          other.remove();
+          const ov21b = await HU.showHomeDialog({});
+          const top = el("div", "k-overlay");
+          document.body.append(top);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          check2("[159-M21] \u2605 \u0E21\u0E35\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0B\u0E49\u0E2D\u0E19\u0E02\u0E49\u0E32\u0E07\u0E1A\u0E19 = Esc \u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01", ov21b.isConnected);
+          top.remove();
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          check2("[159-M21] \u0E40\u0E1B\u0E47\u0E19\u0E43\u0E1A\u0E1A\u0E19\u0E2A\u0E38\u0E14 = Esc \u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !ov21b.isConnected);
+        }
+        {
+          const TA = await Promise.resolve().then(() => (init_tree_actions(), tree_actions_exports));
+          const m2 = await SO.addScene(dPath2, ch, "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E1A\u0E17159", { silent: true, body: "\u0E2A\u0E31\u0E49\u0E19" });
+          const fm2 = await kapi.join(dir2, m2.fileName);
+          await openScene(fm2, null);
+          const tm2 = state.tabs.get(fm2);
+          tm2.editor.setMarkdown("\u0E2B\u0E19\u0E36\u0E48\u0E07 \u0E2A\u0E2D\u0E07 \u0E2A\u0E32\u0E21 \u0E2A\u0E35\u0E48 \u0E2B\u0E49\u0E32 \u0E2B\u0E01 \u0E40\u0E08\u0E47\u0E14 \u0E41\u0E1B\u0E14 \u0E40\u0E01\u0E49\u0E32 \u0E2A\u0E34\u0E1A");
+          markDirty(tm2);
+          const ne = await TA.copyChapterTo(dPath2, ch.guid, dPath2, { title: "\u0E2A\u0E33\u0E40\u0E19\u0E32\u0E1A\u0E17159" });
+          const srcRow = (await rows159(ch.guid)).find((r) => r.id === m2.id);
+          check2(
+            "[159-M2] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 (\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14)",
+            (0, import_md31.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
+          );
+          check2("[159-M2] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32", !!srcRow && srcRow.wordCount >= 5, JSON.stringify(srcRow && srcRow.wordCount));
+          const neRows = ne ? await rows159(ne.guid) : [];
+          const srcRows = await rows159(ch.guid);
+          const neRow = neRows.find((r) => r.title === "\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E1A\u0E17159");
+          const neFile = ne && neRow ? await kapi.join(dPath2, "Chapters", ne.folderName, neRow.fileName) : "";
+          check2(
+            "[159-M2] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E1A\u0E17\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 + id \u0E43\u0E2B\u0E21\u0E48 + \u0E41\u0E16\u0E27\u0E04\u0E23\u0E1A\u0E40\u0E17\u0E48\u0E32\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07",
+            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md31.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
+            JSON.stringify([neRows.length, srcRows.length, neRow && neRow.fileName])
+          );
+          closeTab(fm2, { discard: true });
+          if (ne) {
+            await kapi.remove(await kapi.join(dPath2, "Chapters", ne.folderName));
+            await JS.mutateJson(kapi, await kapi.join(dPath2, "draft.json"), (d) => {
+              d.chapters = (d.chapters || []).filter((x) => x.guid !== ne.guid);
+            });
+            await JS.mutateJson(kapi, sf, (d) => {
+              if (!d.chapters || !(ne.guid in d.chapters)) return false;
+              delete d.chapters[ne.guid];
+            });
+          }
+        }
+        {
+          const BR = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+          const m5 = await SO.addScene(dPath2, ch, "\u0E41\u0E17\u0E23\u0E01\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01159", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E14\u0E34\u0E21159" });
+          const f5 = await kapi.join(dir2, m5.fileName);
+          await kapi.writeFile(f5, (await kapi.readFile(f5)).replace(/\s*$/, "") + '\n\n<!-- k2-comments\n[{"id":"c5","text":"\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4CM5","anchor":null}]\n-->\n');
+          await openScene(f5, null);
+          const t5 = state.tabs.get(f5);
+          t5.editor.setMarkdown("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07159");
+          markDirty(t5);
+          const disk0 = await kapi.readFile(f5);
+          await BR.insertMarkerIntoScene({ filePath: f5 }, "\u0E44\u0E1B\u0E0B\u0E49\u0E32\u0E22159");
+          check2(
+            "[159-M5] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07: \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E25\u0E07\u0E41\u0E17\u0E47\u0E1A (\u0E15\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07) \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E25\u0E31\u0E1A\u0E2B\u0E25\u0E31\u0E07",
+            t5.editor.getMarkdown().includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07159") && t5.editor.getMarkdown().includes("[\u0E44\u0E1B\u0E0B\u0E49\u0E32\u0E22159]") && await kapi.readFile(f5) === disk0 && t5.dirty
+          );
+          await saveTab(t5);
+          await BR.insertMarkerIntoScene({ filePath: f5 }, "\u0E44\u0E1B\u0E02\u0E27\u0E32159");
+          const raw5 = await kapi.readFile(f5);
+          check2(
+            "[159-M5] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07: \u0E40\u0E02\u0E35\u0E22\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C + \u0E41\u0E17\u0E47\u0E1A\u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48 + \u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
+            raw5.includes("[\u0E44\u0E1B\u0E02\u0E27\u0E32159]") && raw5.includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4CM5") && t5.editor.getMarkdown().includes("[\u0E44\u0E1B\u0E02\u0E27\u0E32159]") && !t5.dirty,
+            raw5.slice(-160)
+          );
+          closeTab(f5, { discard: true });
+        }
+        {
+          const D5 = await Promise.resolve().then(() => (init_dialogs(), dialogs_exports));
+          D5.settingsDialog();
+          const langSel = await (async () => {
+            await until159(() => !!document.querySelector('.k-settings #st-lang option[value="en"]'));
+            return document.querySelector(".k-settings #st-lang");
+          })();
+          if (langSel) {
+            langSel.value = "en";
+            langSel.dispatchEvent(new Event("change"));
+          }
+          check2(
+            "[159-QoL] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1A\u0E2D\u0E01\u0E04\u0E27\u0E32\u0E21\u0E04\u0E37\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E32\u0E23\u0E41\u0E1B\u0E25\u0E02\u0E2D\u0E07\u0E20\u0E32\u0E29\u0E32\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01",
+            await until159(() => /%/.test((document.querySelector(".k-settings .k-lang-progress") || {}).textContent || "")),
+            (document.querySelector(".k-settings .k-lang-progress") || {}).textContent
+          );
+          document.querySelector(".k-settings .k-cancel")?.click();
+          document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+        }
+        await closeTabsUnderPath(dir2, { save: false });
+        await kapi.remove(dir2);
+        await JS.mutateJson(kapi, await kapi.join(dPath2, "draft.json"), (d) => {
+          d.chapters = (d.chapters || []).filter((x) => x.guid !== ch.guid);
+        });
+        await JS.mutateJson(kapi, sf, (d) => {
+          if (!d.chapters || !(ch.guid in d.chapters)) return false;
+          delete d.chapters[ch.guid];
+        });
+        await buildTree2();
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -225248,13 +226584,13 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md29, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJob, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md31, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJob, _cursorPageRaf, _spErrors, SP_REPORTS, SP_CASE_LABELS, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, FMTS, TB_PANEL_BUTTONS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n_html();
       init_i18n();
       init_editor();
-      import_md29 = __toESM(require_md());
+      import_md31 = __toESM(require_md());
       init_convert();
       init_prose_format();
       init_prose_view();
@@ -225446,6 +226782,17 @@ ${css}
       });
       _gapJob = null;
       _flowJob = null;
+      _cursorPageRaf = 0;
+      document.addEventListener("selectionchange", () => {
+        if (_cursorPageRaf) return;
+        _cursorPageRaf = requestAnimationFrame(() => {
+          _cursorPageRaf = 0;
+          try {
+            updateCursorPage();
+          } catch {
+          }
+        });
+      });
       _spErrors = [];
       SP_REPORTS = {
         location: { title: t("ui.app.reportPlace2"), file: t("ui.app.reportPlace") },
@@ -225507,6 +226854,8 @@ ${css}
       _treeJob = Promise.resolve();
       window.addEventListener("k2-statuses-changed", () => {
         refreshTreeQueued();
+        buildFilterBar().catch(() => {
+        });
       });
       _healAt = 0;
       _plannerRowObs = null;
@@ -225550,11 +226899,10 @@ ${css}
           }
           return null;
         },
+        // [alpha.159 · H5] ตัวกลางตัวเดียวกับทางคลิก — บันทึกงานค้างก่อนปิด (เดิมปิดแบบทิ้ง = งานหาย)
+        // รับได้ทั้งโฟลเดอร์และไฟล์เดี่ยว (ฉาก/หน้า Wiki ที่ AI ลบ)
         closeUnder(dir2) {
-          const k = pathKey(dir2) + "/";
-          const hits = [...state.tabs.values()].filter((t3) => t3.file && pathKey(t3.file).startsWith(k));
-          for (const t3 of hits) closeTab(t3.file, { discard: true });
-          return hits.length;
+          return closeTabsUnderPath(dir2, { save: true });
         }
       });
       FMTS = ["bold", "italic", "underline", "strike", "sup", "sub"];
@@ -225669,6 +227017,8 @@ ${css}
       navCmt = { file: "", quotes: [] };
       navRows = [];
       navCtx = { tab: null, book: false };
+      _navPageOf = /* @__PURE__ */ new Map();
+      _navPageKey = "";
       navWholeBook = localStorage.getItem("k2-nav-book") === "1";
       LOG_STICK_PX = 24;
       logView = { levels: /* @__PURE__ */ new Set(["error", "warn", "info"]), source: "", q: "", open: /* @__PURE__ */ new Set() };

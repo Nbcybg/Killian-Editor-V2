@@ -33,7 +33,7 @@ export const PARAM_DEFS = [
   // -1 (และ 0) = **ไม่ส่งฟิลด์ `max_tokens` ไปเลย** = ปล่อยตามค่าเริ่มต้นของผู้ให้บริการ
   // (สำนวนเดียวกับ LM Studio / llama.cpp ที่ใช้ -1 แปลว่า "ไม่จำกัด")
   { key: 'maxTokens', label: 'Maximum Number of Tokens', th: t('ui.aiProviders.longAnswerHighLast'), type: 'int',
-    min: -1, max: 200000, def: 2048, hint: T`-1 = ไม่จำกัด (ไม่ส่ง max_tokens ไปเลย · ให้ผู้ให้บริการตัดสินเอง)` },
+    min: -1, max: 200000, def: 2048, hint: t('ui.aiProviders.notRememberNotSend') },
   { key: 'presencePenalty', label: 'Presence Penalty', th: t('ui.aiProviders.speakStoryNew'), type: 'number',
     min: -2, max: 2, step: 0.1, def: null },
   { key: 'reasoningEffort', label: 'Reasoning Effort', th: t('ui.aiProviders.levelUseResult'), type: 'select',

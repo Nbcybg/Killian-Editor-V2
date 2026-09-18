@@ -283,6 +283,81 @@ seed();
     A.setTabBridge(null);
   }
 
+  // ───────── [alpha.159] H5/H8/M3/M4 ─────────
+  {
+    // H8: ชื่อจากโมเดลที่เป็น "." ล้วน ห้ามพาไฟล์ออกนอกโปรเจกต์
+    ck('[159-H8] safeName("..") ไม่ใช่ ".."', A.safeName('..') === 'untitled' && A.safeName('.') === 'untitled'
+       && A.safeName('...') === 'untitled' && A.safeName('../x') === '..x' && A.safeName('เล่มใหม่') === 'เล่มใหม่');
+    const nOut = () => [...FS.keys()].filter((k) => !k.startsWith(ROOT + '/')).length;
+    const o0 = nOut();
+    const bc = await run('book.create', { title: '..' });
+    ck('[159-H8] ★ book.create ชื่อ ".." เขียนอยู่ใต้โปรเจกต์เท่านั้น', nOut() === o0 &&
+       ![...FS.keys()].some((k) => k === '/mem/section.json'), JSON.stringify(bc) + ' ' + [...FS.keys()].filter((k) => !k.startsWith(ROOT + '/')).join(','));
+    await run('book.delete', { title: '..' });
+    const cc = await run('chapter.create', { title: '..' });
+    ck('[159-H8] chapter.create ชื่อ ".." → โฟลเดอร์อยู่ใต้ Chapters', cc.ok && nOut() === o0, JSON.stringify(cc));
+    await run('chapter.delete', { title: '..' });
+
+    // M3: ชื่อไฟล์ฉากใหม่ต้องไม่ชน "ชื่อที่แถวอื่นจองไว้" (แถวที่ไฟล์หายไปแล้ว)
+    const sfP = ROOT + '/เล่ม 1/Draft/default/scenes.json';
+    const sjA = JSON.parse(FS.get(sfP));
+    const chG = Object.keys(sjA.chapters)[0];
+    const rowsA = sjA.chapters[chG];
+    const nextO = Math.max(0, ...rowsA.map((s) => s.order || 0)) + 1;
+    const reserved = 'scene-' + String(nextO).padStart(2, '0') + '.md';
+    rowsA.push({ id: 'ghost', title: 'แถวผีจองชื่อ', order: 0, fileName: reserved });
+    FS.set(sfP, JSON.stringify(sjA));
+    const c3 = await run('scene.create', { chapter: 'บทเปิดเรื่อง', title: 'ฉาก M3', text: 'x' });
+    const made3 = Object.values(JSON.parse(FS.get(sfP)).chapters).flat().find((s) => s.title === 'ฉาก M3');
+    ck('[159-M3] ★ scene.create ใช้ freeSceneFileName — ไม่เอาชื่อที่แถวอื่นจองไว้',
+       c3.ok && made3 && made3.fileName !== reserved, made3 && made3.fileName);
+    const sjB = JSON.parse(FS.get(sfP));
+    sjB.chapters[chG] = sjB.chapters[chG].filter((s) => s.id !== 'ghost');
+    FS.set(sfP, JSON.stringify(sjB));
+
+    // M4: scene.write / scene.rename ต้องพาเธรดคอมเมนต์ท้ายไฟล์ไปด้วย
+    const scP = [...FS.keys()].find((k) => k.endsWith('/' + made3.fileName));
+    FS.set(scP, FS.get(scP).replace(/\s*$/, '') + '\n\n<!-- k2-comments\n[{"id":"c1","text":"โน้ตของบรรณาธิการ","anchor":null}]\n-->\n');
+    const w4 = await run('scene.write', { title: 'ฉาก M3', text: 'AI ต่อท้าย' });
+    ck('[159-M4] ★ scene.write ไม่ลบบล็อก k2-comments', w4.ok && FS.get(scP).includes('k2-comments')
+       && FS.get(scP).includes('โน้ตของบรรณาธิการ') && FS.get(scP).includes('AI ต่อท้าย'), FS.get(scP).slice(-200));
+    ck('[159-M4] ข้อความใหม่อยู่ "ก่อน" บล็อกคอมเมนต์ (บล็อกต้องอยู่ท้ายไฟล์เสมอ)',
+       FS.get(scP).indexOf('AI ต่อท้าย') < FS.get(scP).indexOf('k2-comments'));
+    const r4 = await run('scene.rename', { title: 'ฉาก M3', newTitle: 'ฉาก M3b' });
+    ck('[159-M4] ★ scene.rename ไม่ลบบล็อก k2-comments', r4.ok && FS.get(scP).includes('โน้ตของบรรณาธิการ')
+       && /title: ฉาก M3b/.test(FS.get(scP)), FS.get(scP).slice(0, 120));
+
+    // H5: ลบฉากที่เปิดค้างอยู่ → ต้อง "บันทึกก่อนปิด" ผ่าน bridge.closeUnder แล้ว **รอ** ให้เสร็จก่อนย้าย
+    const order = [];
+    let open = true;
+    const fake5 = { kind: 'prose', dirty: true, getText: () => 'x', setText() {}, async reloadFromDisk() {}, rename() {}, close() { order.push('close-discard'); } };
+    A.setTabBridge({
+      find: (p) => (open && A.pathKey(p) === A.pathKey(scP) ? fake5 : null),
+      closeUnder: async (p) => {
+        await new Promise((r) => setTimeout(r, 20));
+        FS.set(scP, FS.get(scP).replace('AI ต่อท้าย', 'งานที่พิมพ์ค้างไว้'));   // จำลอง saveTab
+        order.push('save+close:' + (A.pathKey(p) === A.pathKey(scP)));
+        open = false; return 1;
+      },
+    });
+    const d5 = await run('scene.delete', { title: 'ฉาก M3b' });
+    const trashed = [...FS.keys()].find((k) => k.includes('/Recycle/') && k.endsWith(made3.fileName));
+    ck('[159-H5] ★ scene.delete ปิดแท็บผ่าน closeUnder (บันทึกก่อน) ไม่ใช่ close() แบบทิ้ง',
+       d5.ok && order[0] === 'save+close:true' && !order.includes('close-discard'), JSON.stringify(order));
+    ck('[159-H5] ★ ของในถังขยะคือฉบับที่บันทึกล่าสุด (รอ closeUnder เสร็จก่อนย้าย)',
+       !!trashed && FS.get(trashed).includes('งานที่พิมพ์ค้างไว้'), trashed);
+    // บันทึกไม่ผ่าน (แท็บยังเปิดอยู่หลัง closeUnder) = ไม่ลบ
+    const c5 = await run('scene.create', { chapter: 'บทเปิดเรื่อง', title: 'ฉาก H5b', text: 'y' });
+    const p5 = [...FS.keys()].find((k) => !k.includes('/Recycle/') && k.endsWith('.md') && FS.get(k).includes('title: ฉาก H5b'));
+    A.setTabBridge({ find: (p) => (A.pathKey(p) === A.pathKey(p5) ? fake5 : null), closeUnder: async () => 0 });
+    const d5b = await run('scene.delete', { title: 'ฉาก H5b' });
+    ck('[159-H5] บันทึกไม่ผ่าน → ไม่ลบฉาก (ไฟล์ยังอยู่ แถวยังอยู่)', c5.ok && d5b.ok === false && FS.has(p5)
+       && Object.values(JSON.parse(FS.get(sfP)).chapters).flat().some((s) => s.title === 'ฉาก H5b'), JSON.stringify(d5b));
+    A.setTabBridge(null);
+    await run('scene.delete', { title: 'ฉาก H5b' });
+    for (const k of [...FS.keys()]) if (k.includes('/Recycle/')) FS.delete(k);
+  }
+
   // ───────── ลบ (ต้องลงถังขยะ ไม่ใช่หายถาวร) ─────────
   {
     const before = [...FS.keys()].filter((k) => k.endsWith('.md')).length;

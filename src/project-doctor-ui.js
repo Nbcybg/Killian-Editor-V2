@@ -9,6 +9,7 @@ import { parseMdFile, dumpMdFile, repairFrontmatter } from './md.js';
 import { diagnoseDraft, newSceneRow, newChapterEntry, summarize } from './project-doctor.js';
 import { mutateJson } from './json-store.js';
 import { tabHandle } from './tab-bridge.js';
+import { gi } from './icons.js';
 
 // คีย์เต็มเสมอ — ประตูกันพลาด i18n-keys ตรวจคีย์ที่ประกอบด้วยการต่อสตริงไม่ได้
 const TYPE_KEY = {
@@ -169,7 +170,37 @@ export async function applyDoctorFixes(list) {
   logAction('doctor', tf('ui.doctor.fixedN', ok, failed),
             (list || []).map((x) => ({ type: x.type, folder: x.folder || '', file: x.file || '' })));
   try { await A.buildTree(); A.refreshNetwork(); } catch {}
+  refreshDoctorBadge().catch(() => {});        // [alpha.159 · QoL] ซ่อมแล้วป้ายต้องอัปเดตทันที (ไม่รอรอบหน่วง)
   return { ok, failed };
+}
+
+// ══ [alpha.159 · QoL] ป้ายจำนวนปัญหาบนแถบสถานะ — เห็นก่อนที่ปัญหาจะกลายเป็นงานหาย ══
+// สแกนเบื้องหลังแบบหน่วงรวบ (หลังเปิดโปรเจกต์ / หลังโครงเปลี่ยน) · 0 ปัญหา = ป้ายว่าง (ซ่อนด้วย CSS :empty)
+// สแกนอ่านทุกไฟล์ฉากของโปรเจกต์ → โปรเจกต์ใหญ่หนักจริง · จึงหน่วงรวบ + เว้นอย่างน้อย MIN_GAP ระหว่างรอบ
+// (buildTree ถูกเรียกถี่มากระหว่างใช้งาน — ห้ามให้ทุกครั้งกลายเป็นการสแกนทั้งโปรเจกต์)
+const BADGE = { job: null, seq: 0, lastAt: 0, root: '' };
+const BADGE_MIN_GAP = 30000;
+export function scheduleDoctorBadge(ms = 4000) {
+  clearTimeout(BADGE.job);
+  // เปลี่ยนโปรเจกต์ = สแกนใหม่ได้ทันที (ป้ายของโปรเจกต์เก่าต้องไม่ค้าง)
+  const sameRoot = BADGE.root === (state.root || '');
+  const wait = sameRoot ? Math.max(ms, BADGE.lastAt + BADGE_MIN_GAP - Date.now()) : ms;
+  BADGE.job = setTimeout(() => { refreshDoctorBadge().catch(() => {}); }, wait);
+}
+/** @returns {Promise<number>} จำนวนปัญหาที่พบ (-1 = ไม่ได้สแกน) */
+export async function refreshDoctorBadge() {
+  const b = document.getElementById('status-doctor');
+  if (!b) return -1;
+  if (!state.root) { b.textContent = ''; b.title = ''; return -1; }
+  const seq = ++BADGE.seq;
+  BADGE.lastAt = Date.now(); BADGE.root = state.root;
+  let n = 0;
+  try { n = (await scanProject()).length; } catch { return -1; }
+  if (seq !== BADGE.seq) return -1;                  // มีรอบใหม่กว่าแล้ว — ทิ้งผลรอบนี้
+  b.textContent = n ? gi('checklist') + ' ' + n : '';
+  b.title = n ? tf('ui.doctor.badgeTip', n) : '';
+  b.onclick = n ? () => { openProjectDoctor(); } : null;
+  return n;
 }
 
 /** กล่องตรวจสุขภาพโปรเจกต์ (เมนู เครื่องมือ) */

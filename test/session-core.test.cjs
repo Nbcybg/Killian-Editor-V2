@@ -116,5 +116,15 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
         JSON.stringify(sum));
 }
 
+// ── [alpha.159 · QoL] ตำแหน่งเคอร์เซอร์ต่อแท็บ ──
+{
+  const m = S.migrateSession({ tabs: { open: ['/a.md', '/b.md'], cursor: { '/a.md': [5, 12], '/b.md': [3, 3], '/bad.md': ['x', 1], '/neg.md': [-1, 2] } } });
+  check('[159-QoL] เก็บเคอร์เซอร์ที่ถูกรูปแบบ · ทิ้งค่าเสีย', JSON.stringify(m.tabs.cursor) === JSON.stringify({ '/a.md': [5, 12], '/b.md': [3, 3] }),
+        JSON.stringify(m.tabs.cursor));
+  const p = S.pruneTabs(m, ['/a.md']);
+  check('[159-QoL] แท็บที่หายไปจากดิสก์ = เคอร์เซอร์ของมันหลุดด้วย', JSON.stringify(p.tabs.cursor) === JSON.stringify({ '/a.md': [5, 12] }));
+  check('[159-QoL] เซสชันรุ่นเก่า (ไม่มี cursor) = ว่าง ไม่พัง', JSON.stringify(S.migrateSession({ tabs: { open: [] } }).tabs.cursor) === '{}');
+}
+
 console.log(`\nsession-core: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -80,6 +80,7 @@ ui.ai.opRewrite,เขียนใหม่
 ui.ai.opSummarize,สรุปความ
 ui.ai.opTone,เปลี่ยนโทน
 ui.ai.orWord,หรือ
+ui.ai.partialKept,เก็บข้อความที่ได้มาก่อนการเชื่อมต่อขาดไว้แล้ว
 ui.ai.pickEntity,เลือกเอนทิตี้ (ตัวละคร) ก่อน
 ui.ai.plotTitle,ตรวจสอบ Plot Hole
 ui.ai.plotWorking,กำลังตรวจสอบ Plot Holes…
@@ -362,10 +363,12 @@ ui.aiActions.notFoundSceneNew,"ไม่พบฉาก ""{0}"" — สร้า
 ui.aiActions.notHasBookProject,ยังไม่มีเล่มในโปรเจกต์ — สร้างด้วย book.create ก่อน
 ui.aiActions.notKnownCmd,ไม่รู้จักคำสั่ง
 ui.aiActions.openTabUnsaved,ฉากนี้เปิดอยู่และมีงานที่ยังไม่บันทึก จึงเขียนลงแท็บไว้ก่อน (ยังไม่ลงไฟล์)
+ui.aiActions.outsideProject,ชื่อนี้พาไฟล์ออกนอกโปรเจกต์ — ไม่ได้เขียน
 ui.aiActions.readDone,"อ่าน ""{0}"" แล้ว"
 ui.aiActions.readSceneDone,"อ่านฉาก ""{0}"" แล้ว"
 ui.aiActions.readStructureDone,อ่านโครงสร้างแล้ว
 ui.aiActions.sceneDoneMergeChar,"{0}ฉาก ""{1}"" แล้ว (รวม {2} ตัวอักษร)"
+ui.aiActions.sceneOpenUnsaved,ไม่ได้ลบ {0} — ฉากนี้ยังมีงานค้างที่บันทึกไม่ได้
 ui.aiActions.writeNext,เขียนต่อ
 ui.aiAssistant.actionDetailed,บรรยายละเอียด
 ui.aiAssistant.addDetailSceneTouch,เพิ่มรายละเอียดของฉาก ประสาทสัมผัส และความรู้สึกตัวละคร ห้ามเพิ่มเหตุการณ์ใหม่ที่ขัดกับเนื้อเดิม
@@ -479,10 +482,12 @@ ui.aiChatPanel.arrangeKeepSessionDone,จัดเก็บเซสชันแ
 ui.aiChatPanel.askBeforeAlwaysDel, ถามก่อนเสมอเมื่อจะลบของ
 ui.aiChatPanel.askBeforeDelAlways,จะถามก่อนลบเสมอ
 ui.aiChatPanel.assistant,ผู้ช่วย
+ui.aiChatPanel.assistantFileMdFolder,ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)
 ui.aiChatPanel.backListSession,กลับไปรายการเซสชัน
 ui.aiChatPanel.btnSendSetFile,ปุ่มส่งตั้งได้ที่ ไฟล์ → ตั้งค่า AI
 ui.aiChatPanel.busyAct,กำลังลงมือทำ 
 ui.aiChatPanel.busyContinue,กำลังเขียนต่อ…
+ui.aiChatPanel.busyRunPressBack,กำลังทำงาน: {0} · {1} วิ — กดเพื่อกลับไปดู
 ui.aiChatPanel.busyThink,กำลังคิด…
 ui.aiChatPanel.busyThinkNext,กำลังคิดต่อ…
 ui.aiChatPanel.cache, · แคช {0}
@@ -491,6 +496,7 @@ ui.aiChatPanel.callAINotOk,เรียก AI ไม่สำเร็จ
 ui.aiChatPanel.cancelSet,ยกเลิกทั้งชุด
 ui.aiChatPanel.cantSettingsProviderAI,ยังไม่ได้ตั้งค่าผู้ให้บริการ AI — ไฟล์ → ตั้งค่า AI
 ui.aiChatPanel.changeName,เปลี่ยนชื่อ
+ui.aiChatPanel.char,  ({0} ตัวอักษร)
 ui.aiChatPanel.clickViewDetail,— คลิกเพื่อดูรายละเอียด —
 ui.aiChatPanel.closeAsk,ปิดการถาม
 ui.aiChatPanel.closeAskBeforeDel,"ปิดการถามก่อนลบ?
@@ -500,6 +506,7 @@ AI จะลบเล่ม/บท/ฉาก/เอนทิตี้ได้�
 ui.aiChatPanel.closeBackSession,ปิด — กลับไปที่เซสชัน
 ui.aiChatPanel.cmd, คำสั่ง…
 ui.aiChatPanel.cmdAct,คำสั่งที่ลงมือทำ (
+ui.aiChatPanel.contextCapLearned,โมเดลนี้รับบริบทได้ราว {0} token — รอบถัดไปจะตัดประวัติให้พอดี ลองส่งใหม่ได้เลย
 ui.aiChatPanel.continueBtn,ต่อ
 ui.aiChatPanel.continuePrompt,เขียนต่อจากคำตอบก่อนหน้าตรงจุดที่ค้างไว้ทันที ห้ามทวนข้อความเดิม ห้ามขึ้นต้นใหม่ ห้ามอธิบายเพิ่ม
 ui.aiChatPanel.continueTip,ให้ AI เขียนต่อจากตรงที่ค้างไว้ในข้อความเดิม
@@ -521,10 +528,12 @@ ui.aiChatPanel.delSession,"ลบเซสชัน ""{0}"" ?"
 ui.aiChatPanel.delSession2,ลบเซสชันนี้
 ui.aiChatPanel.delSessionDone,ลบเซสชันแล้ว
 ui.aiChatPanel.detailContext,รายละเอียดบริบท
+ui.aiChatPanel.detailEdit,รายละเอียด · แนวทางแก้
 ui.aiChatPanel.do,ทำเลย
 ui.aiChatPanel.doCmdNotMust, ทำคำสั่งเองโดยไม่ต้องถาม
 ui.aiChatPanel.exitArrangeKeep,เอาออกจากที่จัดเก็บ
 ui.aiChatPanel.export,โทเค็นส่งออก
+ui.aiChatPanel.fileMdOneFile,ทักษะอยู่ที่ {0}/ — ไฟล์ .md หนึ่งไฟล์ = หนึ่งทักษะ
 ui.aiChatPanel.helpWriteNewEdit,"ช่วยเขียน — สร้าง/แก้ เล่ม บท ฉาก เอนทิตี้ ได้จริง (ลบไม่ได้)
 "
 ui.aiChatPanel.historyTrimmed,— ตัดประวัติเก่าออก {0} ข้อความ เพื่อให้อยู่ในงบของโมเดล —
@@ -535,17 +544,25 @@ ui.aiChatPanel.itemPickSession,ตัวเลือกของเซสชั�
 ui.aiChatPanel.jSONModelCmd,JSON ที่โมเดลสั่ง
 ui.aiChatPanel.levelInTo,ระดับการเข้าถึง
 ui.aiChatPanel.levelInToAI,ระดับการเข้าถึง — AI จะเห็นเนื้อหาแค่ระดับนี้
+ui.aiChatPanel.levelUseIdeaModel,ระดับการใช้ความคิดของโมเดล (reasoning effort) — มีผลเฉพาะเซสชันนี้
+ui.aiChatPanel.longSkip,ทักษะยาวเกินโควตา ข้ามไป: {0}
 ui.aiChatPanel.mode,โหมด
 ui.aiChatPanel.modelSessionValueSet,โมเดลของเซสชันนี้ — ทับค่าที่ตั้งไว้ในตั้งค่า AI (อิสระต่อกัน)
 ui.aiChatPanel.modeRun,"โหมดการทำงาน
 "
 ui.aiChatPanel.msg,ต้นทุน: 
+ui.aiChatPanel.msg2,{0} ทักษะ: {1}
 ui.aiChatPanel.nameSession,ชื่อเซสชัน
+ui.aiChatPanel.newFolderFileSample,สร้างโฟลเดอร์ทักษะ + ไฟล์ตัวอย่าง
 ui.aiChatPanel.not,ไม่ทราบ
 ui.aiChatPanel.notDashRememberModel,ไม่รู้ขีดจำกัดของโมเดล
 ui.aiChatPanel.notFoundSessionAt,ไม่พบเซสชันที่ตรงกับคำค้น
+ui.aiChatPanel.notHas,— ไม่มี —
+ui.aiChatPanel.notHasFilePress,ยังไม่มีไฟล์ทักษะ — กดเพื่อสร้างโฟลเดอร์ {0}/ พร้อมไฟล์ตัวอย่าง
 ui.aiChatPanel.notHasSessionPress,"ยังไม่มีเซสชัน — กด ""เซสชันใหม่"" เพื่อเริ่มคุย"
 ui.aiChatPanel.notHasText,ยังไม่มีข้อความ
+ui.aiChatPanel.open,ทักษะที่เปิดอยู่: 
+ui.aiChatPanel.openFolder,เปิดโฟลเดอร์ทักษะ
 ui.aiChatPanel.openProjectBeforeDone,เปิดโปรเจกต์ก่อน แล้วเซสชันแชทจะถูกเก็บใน Sessions/ ของโปรเจกต์นั้น
 ui.aiChatPanel.partialNote,คำตอบหยุดกลางทาง — เก็บข้อความที่ได้มาแล้วไว้ให้
 ui.aiChatPanel.pickFileNotOk,เลือกไฟล์ไม่สำเร็จ
@@ -555,6 +572,7 @@ ui.aiChatPanel.printTextEnterSend,พิมพ์ข้อความ… (Enter
 ui.aiChatPanel.printTextShiftEnter,พิมพ์ข้อความ… (Shift+Enter = ส่ง · Enter = ขึ้นบรรทัด)
 ui.aiChatPanel.ragBuildFail,สร้างดัชนีค้นหาสำหรับ AI ไม่สำเร็จ
 ui.aiChatPanel.ragRetrieveFail,ดึงเนื้อหาที่เกี่ยวข้องมาให้ AI ไม่สำเร็จ
+ui.aiChatPanel.readNotOk,อ่านทักษะไม่สำเร็จ
 ui.aiChatPanel.restartClearDialogue,เริ่มใหม่ (ล้างบทสนทนา)
 ui.aiChatPanel.restartClearDialogueSession,เริ่มใหม่ — ล้างบทสนทนาของเซสชันนี้ (เก็บโหมด/โมเดล/ไฟล์แนบไว้)
 ui.aiChatPanel.restartClearDialogueText,"เริ่มใหม่ — ล้างบทสนทนา {0} ข้อความของ ""{1}"" ?"
@@ -595,6 +613,7 @@ ui.aiChatPanel.usage2,การใช้งาน:
 ui.aiChatPanel.uSD,ต้นทุน (USD)
 ui.aiChatPanel.use,โทเค็นที่ใช้
 ui.aiChatPanel.use2,โทเค็นที่ใช้: 
+ui.aiChatPanel.useItemChar,ใช้ทักษะ {0} ตัว ({1} ตัวอักษร)
 ui.aiChatPanel.userNotAllow,ผู้ใช้ไม่อนุญาต
 ui.aiChatPanel.useTaskLatest,ใช้งานล่าสุด
 ui.aiChatPanel.useTime, · ใช้เวลา {0} วิ
@@ -642,9 +661,53 @@ ui.aiDialogue.useFormatScreenplayStyle,ใช้รูปแบบบทภา�
 ui.aiDialogue.writeDialogueBetweenCharacter,เขียนบทสนทนาระหว่างตัวละคร 2 ตัวต่อไปนี้ ประมาณ {0} รอบการโต้ตอบ
 ui.aiDialogue.writeEditDialogueWord,"เขียนเป็นร้อยแก้ว: บทพูดอยู่ในเครื่องหมายคำพูด ""…"" สลับกับคำบรรยายสั้น ๆ ว่าใครพูดและทำอะไร"
 ui.aiDialogue.youWriterScreenplayThai,คุณเป็นนักเขียนบทภาพยนตร์ภาษาไทยมืออาชีพ เขียนบทสนทนาที่ฟังเหมือนคนพูดจริง 
+ui.aiError.addMaxRetriesParameters,เพิ่ม Max Retries ใน Parameters ให้ระบบถอยแล้วลองเองอัตโนมัติ
+ui.aiError.addValueTimeoutSettings,เพิ่มค่า Timeout ใน ตั้งค่า AI → แก้ผู้ให้บริการ → Parameters
+ui.aiError.baseURLMustV1,Base URL มักต้องลงท้ายด้วย /v1 — ตรวจให้ตรงกับคู่มือของผู้ให้บริการ
+ui.aiError.bodyAnswer,เนื้อคำตอบ: 
+ui.aiError.callNotOkHTTP,เรียกไม่สำเร็จ (HTTP {0})
+ui.aiError.checkBaseURL,ตรวจ Base URL · อินเทอร์เน็ต · ไฟร์วอลล์
+ui.aiError.checkDomainAllowedHTTP,ตรวจว่าโดเมนอยู่ใน Allowed HTTP Request Domains ของผู้ให้บริการ
+ui.aiError.checkNameModelPress,"ตรวจชื่อโมเดล: กด ""ดึงรายชื่อโมเดล"" แล้วเลือกจากรายการแทนการพิมพ์เอง"
+ui.aiError.checkNext,ตรวจว่าเครื่องต่ออินเทอร์เน็ตอยู่
+ui.aiError.checkNumBaseURL,ตรวจเลขพอร์ตใน Base URL ให้ตรงกับที่โปรแกรมนั้นเปิดจริง
+ui.aiError.checkPageProvider,ตรวจยอดเครดิต/โควตาในหน้าผู้ให้บริการ
+ui.aiError.checkPrintBaseURL,ตรวจว่าพิมพ์ Base URL ถูกต้อง
+ui.aiError.checkVPN,ตรวจอินเทอร์เน็ต / VPN / ไฟร์วอลล์
+ui.aiError.doneTryNew,รอสักครู่แล้วลองใหม่
+ui.aiError.doneTryNewNot,รอสักครู่แล้วลองใหม่ — ไม่ใช่ปัญหาที่เครื่องเรา
+ui.aiError.edit,แนวทางแก้:
+ui.aiError.findNameDomainNot,หาชื่อโดเมนไม่เจอ (DNS)
+ui.aiError.innerUseItemOut,เซิร์ฟเวอร์ในเครือข่ายภายในมักใช้ใบรับรองที่ออกเอง — ลองใช้ http:// แทน https:// ถ้าเป็นเครื่องในบ้าน
+ui.aiError.itemMaxTokensHigh,ตัวที่ผิดบ่อย: Max Tokens สูงเกินที่โมเดลรับ · Reasoning Effort / Thinking mode ที่โมเดลนี้ไม่มี · Response Format = json_object
+ui.aiError.itemTLSToUse,ใบรับรองความปลอดภัย (TLS) ของปลายทางใช้ไม่ได้
+ui.aiError.keyBindOutlineCheck,คีย์บางเจ้าผูกกับองค์กร/โครงการ — ตรวจว่าคีย์นี้ใช้กับ Base URL นี้ได้จริง
+ui.aiError.model,โมเดล: 
+ui.aiError.modelOllamaLMStudio,ถ้าเป็นโมเดลในเครื่อง (Ollama / LM Studio / llama.cpp) — เปิดโปรแกรมนั้นให้ทำงานอยู่ก่อน
+ui.aiError.modelThinkReasoningUse,โมเดลที่คิดเยอะ (reasoning) ใช้เวลานาน — ลดระดับการใช้ความคิด หรือลดความยาวคำตอบ
+ui.aiError.msg,ยิงถี่เกินโควตา หรือเครดิตหมด (429)
+ui.aiError.nextCantWordNot,ยังติดต่อเซิร์ฟเวอร์ไม่ได้เลย (คำขอไปไม่ถึงปลายทาง)
+ui.aiError.nextNotMissingCenter,ต่อกับเซิร์ฟเวอร์ไม่ติด (เครือข่ายขาดกลางทาง)
+ui.aiError.notAPIKeySend,เซิร์ฟเวอร์ไม่รับกุญแจ (API key) ที่ส่งไป
+ui.aiError.notTo,ไปไม่ถึงเซิร์ฟเวอร์
+ui.aiError.provider,ผู้ให้บริการ: 
+ui.aiError.providerNotParamSend,ผู้ให้บริการไม่รับพารามิเตอร์ที่ส่งไป ({0})
+ui.aiError.putKeyNewSettings,ใส่คีย์ใหม่ที่ ตั้งค่า AI → แก้ผู้ให้บริการ → Credential แล้วกด Save Credential
+ui.aiError.reply,เซิร์ฟเวอร์ตอบ: 
+ui.aiError.sideProviderHasProblem,ฝั่งผู้ให้บริการมีปัญหา ({0})
 ui.aiError.streamHintCredit,ตรวจยอดเครดิตในหน้าผู้ให้บริการ แล้วลองใหม่
 ui.aiError.streamHintServer,ดูข้อความของเซิร์ฟเวอร์ด้านล่าง — มักเป็นเครดิต/โควตาหมด หรือเนื้อหาถูกปฏิเสธ
 ui.aiError.streamReason,ผู้ให้บริการส่งข้อผิดพลาดมากลางคำตอบ
+ui.aiError.textInner,ข้อความภายใน: 
+ui.aiError.timeAnswer,หมดเวลารอคำตอบ
+ui.aiError.to,ปลายทาง: 
+ui.aiError.toConnectNotHas,เครื่องปลายทางปฏิเสธการเชื่อมต่อ (ไม่มีอะไรฟังอยู่ที่พอร์ตนั้น)
+ui.aiError.toNotHas,ปลายทางไม่มีอยู่จริง (404)
+ui.aiError.tryNewTimesAdd,ลองใหม่อีกครั้ง หรือเพิ่ม Max Retries ใน Parameters
+ui.aiError.tryOpenBaseURL,ถ้าเป็นเครื่องในบ้าน ลองเปิด Base URL ในเบราว์เซอร์ดูว่าตอบไหม
+ui.aiError.userPress,ผู้ใช้กดหยุดเอง
+ui.aiError.viewTextBottomName,ดูข้อความของเซิร์ฟเวอร์ด้านล่าง — มักบอกชื่อฟิลด์ที่ผิดมาตรง ๆ
+ui.aiError.wordUseTime,เซิร์ฟเวอร์บอกว่าคำขอใช้เวลานานเกินไป
 ui.aiField.askField,ช่วยเขียนค่าของช่อง “{0}” ให้หน่อย
 ui.aiField.hasCurrent,ตอนนี้ช่องนี้มีข้อความว่า “{0}” — ให้เกลาหรือต่อยอดจากของเดิม อย่าเปลี่ยนใจความ
 ui.aiField.headKnown,ข้อมูลที่รู้แล้ว:
@@ -779,6 +842,7 @@ ui.aiProviders.levelUseResult,ระดับการใช้เหตุผ�
 ui.aiProviders.longAnswerHighLast,ความยาวคำตอบสูงสุด
 ui.aiProviders.modeThinkBeforeReply,โหมดคิดก่อนตอบ
 ui.aiProviders.new,ความสร้างสรรค์
+ui.aiProviders.notRememberNotSend,-1 = ไม่จำกัด (ไม่ส่ง max_tokens ไปเลย · ให้ผู้ให้บริการตัดสินเอง)
 ui.aiProviders.onCmdModelThink,on = สั่งให้โมเดลคิดเป็นขั้นก่อนตอบ (ใช้ได้เฉพาะโมเดลที่รองรับ)
 ui.aiProviders.partHeadHTTPAdd,ส่วนหัว HTTP เพิ่มเติม
 ui.aiProviders.reduceUseWordDup,ลดการใช้คำซ้ำ
@@ -808,6 +872,11 @@ ui.aiSession.readProjectCmdRead,อ่านโปรเจกต์ได้ด
 ui.aiSession.sessionAI,เซสชัน AI
 ui.aiSession.sessionNew,เซสชันใหม่
 ui.aiSession.shiftEnterSendEnter,Shift+Enter = ส่ง · Enter = ขึ้นบรรทัด
+ui.aiSession.thinkCenter,คิด: กลาง
+ui.aiSession.thinkLess,คิด: น้อย
+ui.aiSession.thinkLessLast,คิด: น้อยสุด
+ui.aiSession.thinkMore,คิด: มาก
+ui.aiSession.thinkProvider,คิด: ตามผู้ให้บริการ
 ui.aiSession.unlockFullDoAll,ปลดล็อกเต็มที่ (ทำได้ทุกอย่าง)
 ui.aiSession.userEditTextEdit,ถ้าผู้ใช้ขอให้แก้ ให้เสนอเป็นข้อความว่าจะแก้อย่างไรแทน
 ui.aiSession.you,**คุณ:** 
@@ -822,6 +891,12 @@ ui.aiSet.connectAICant,เชื่อมต่อ AI ไม่ได้:
 ui.aiSet.fileKeepKeyPart,ไฟล์นี้เก็บคีย์ส่วนตัว — อย่าแชร์/อย่าใส่ใน zip ที่ส่งต่อ
 ui.aiSet.provider,"ผู้ให้บริการ """
 ui.aiSet.settingsAIFileSettings,ตั้งค่า AI ที่ ไฟล์ → ตั้งค่า AI ก่อน
+ui.aiSkills.authorDefineYouDo,ทักษะที่ผู้เขียนกำหนดให้คุณ (ทำตามอย่างเคร่งครัด · สำคัญกว่าคำแนะนำทั่วไปข้างบน):
+ui.aiSkills.forbidSummaryActEnd,ห้ามสรุปตอนจบให้ ถ้าผู้เขียนไม่ได้ขอ
+ui.aiSkills.sampleEditFileNew,ตัวอย่าง — แก้ไฟล์นี้ได้เลย หรือสร้างไฟล์ .md ใหม่ในโฟลเดอร์นี้
+ui.aiSkills.toneWriteStory,โทนการเขียนของเรื่องนี้
+ui.aiSkills.useWordPronounCharacter,ใช้คำสรรพนามตามที่ตัวละครใช้จริงในเรื่อง ห้ามเปลี่ยนเอง
+ui.aiSkills.writeSentenceShortConcise,เขียนด้วยประโยคสั้น กระชับ ไม่ใช้คำฟุ่มเฟือย
 ui.aiSum.aIBusyThinkName,AI กำลังคิดชื่อ…
 ui.aiSum.aISummaryBody,AI สรุปเนื้อหา
 ui.aiSum.aISummaryBody2,AI สรุปเนื้อหา — 
@@ -1504,6 +1579,7 @@ ui.app.orderItemNumNot,ลำดับ (ตัวเลข — ไม่บั�
 ui.app.out, เพื่อออก
 ui.app.outNotSave,ออกโดยไม่บันทึก
 ui.app.page, · {0} หน้า
+ui.app.pageAtCursor,หน้า {0} / {1}
 ui.app.pageChapterNotOk,นับหน้าบทไม่สำเร็จ
 ui.app.pageGuidesOff,ปิดเส้นบอกขอบกระดาษแล้ว
 ui.app.pageGuidesOn,เปิดเส้นบอกขอบกระดาษแล้ว
@@ -2500,6 +2576,7 @@ ui.core.resourceLoadNotOk2,resource: โหลดไม่สำเร็จ <
 ui.dash.activity,กิจกรรมการเขียน
 ui.dash.actSummary,เขียนเพิ่ม {0} คำ · เขียน {1} จาก {2} วัน · วันที่ดีที่สุด {3}
 ui.dash.avgWordChapterTime,เฉลี่ย {0} คำ/บท · เวลาอ่านรวม ~{1} นาที
+ui.dash.entitiesFail,อ่านข้อมูล Wiki ไม่สำเร็จ — แดชบอร์ดแสดงส่วนที่เหลือต่อ
 ui.dash.goalWord,เป้าหมาย: {0} / {1} คำ ({2}%)
 ui.dash.imageAlbumTagArea,{0} รูป · {1} อัลบั้ม · {2} แท็ก · พื้นที่รวม {3}
 ui.dash.kanbanStatus,สถานะฉาก (Kanban)
@@ -2545,7 +2622,9 @@ ui.data.cYellow,เหลือง
 ui.data.stArchived,เก็บถาวร
 ui.data.stChecked,ตรวจแล้ว
 ui.data.stDone,เขียนเสร็จ
+ui.data.stFinished,เสร็จแล้ว
 ui.data.stOutline,โครงร่าง
+ui.data.stPaused,พัก
 ui.data.stWriting,กำลังเขียน
 ui.dialogs.cancel,ยกเลิก
 ui.dialogs.close,ปิด
@@ -2641,6 +2720,7 @@ ui.dlg.importFontFail,นำเข้าฟอนต์ล้มเหลว
 ui.dlg.importFontNotOk,นำเข้าฟอนต์ไม่สำเร็จ
 ui.dlg.inch,{0} นิ้ว · 
 ui.dlg.iNTNightSceneOne,INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123
+ui.dlg.langProgress,แปลแล้ว {0} จาก {1} ข้อความ ({2}%)
 ui.dlg.langReadNameFile,ภาษาอ่านจาก **ชื่อไฟล์** ในโฟลเดอร์ languages — วางไฟล์ `k2_<รหัสภาษา>.csv` เพิ่ม (เช่น k2_ja.csv) แล้วเปิดโปรแกรมใหม่ ก็มีภาษานั้นเลย ไม่ต้องติดตั้งอะไร
 ui.dlg.linePage,{0} บรรทัด/หน้า
 ui.dlg.linePage2,≈ {0} บรรทัด/หน้า · 
@@ -2842,6 +2922,7 @@ ui.dlgBuilder.selfMono,รำพึงคนเดียว
 ui.dlgBuilder.unknownName,ไม่ทราบชื่อ
 ui.dlgBuilder.untitled,ยังไม่ตั้งชื่อ
 ui.doctor.allGood,ไม่พบปัญหา — ทะเบียนตรงกับไฟล์จริงทุกฉาก
+ui.doctor.badgeTip,โปรเจกต์มีปัญหา {0} จุด (ไฟล์หาย · แถวซ้ำ · หัวไฟล์พัง ฯลฯ) — คลิกเพื่อตรวจและซ่อม
 ui.doctor.confirmFix,ซ่อม {0} รายการที่เลือกหรือไม่
 ui.doctor.fixAttachRow,ผูกกลับเป็นฉากในบทนี้
 ui.doctor.fixCreateFile,สร้างไฟล์เปล่าแทน
@@ -4195,6 +4276,8 @@ ui.pdf.skipLineUnderHead,เว้นบรรทัดใต้หัวกร�
 ui.pdf.textAllItemLine,ข้อความ (ทุกชิ้นอยู่บรรทัดเดียวกัน — ต่างกันที่การจัดหน้า)
 ui.pdf.textNew,ข้อความใหม่
 ui.pdf.textPage,ข้อความในหน้านี้
+ui.pdf.thaiFontMissing,ไม่พบฟอนต์ไทยที่ฝังลง PDF ได้ — อักษรไทยในไฟล์จะเป็น ? · ตั้งฟอนต์ไทย (.ttf/.otf) ในตั้งค่า → ฟอนต์ตามภาษา
+ui.pdf.thaiFontSkipped,ข้ามฟอนต์ไทยที่ฝังลง PDF ไม่ได้
 ui.pdf.tITLEPAGE,${{TITLE}} หรือ ${{PAGE}}
 ui.pdf.tocBookmarkNextHead,[87] สารบัญ (bookmark ต่อหัวฉาก)
 ui.pdf.watermark,ลายน้ำ
@@ -4867,6 +4950,7 @@ ui.scene.savePropsChapterDone,บันทึกคุณสมบัติบ�
 ui.scene.savePropsSceneDone,บันทึกคุณสมบัติฉากแล้ว
 ui.scene.scene,{0} / {1} ฉาก
 ui.scene.sceneTableLoadScene,scene-table: โหลดฉากล้มเหลว
+ui.scene.tableScanning,กำลังสแกนฉากทั้งโปรเจกต์…
 ui.scene.tableScene,ตารางฉาก
 ui.scene.tableScene2,ตารางฉาก
 ui.scene.tableSceneAll,ตารางฉากทั้งหมด
@@ -5369,6 +5453,7 @@ ui.shortcuts.zoomIn,ซูมหน้ากระดาษ: ขยาย
 ui.shortcuts.zoomOut,ซูมหน้ากระดาษ: ย่อ
 ui.shortcuts.zoomReset,ซูมหน้ากระดาษ: รีเซ็ต
 ui.shortcuts.zoomWheel,ซูมหน้ากระดาษ
+ui.smart.acceptHint,Tab = ใช้คำนี้ · ↑↓ = เลือก · Esc = ปิด · คลิกขวา = ไม่จำคำนี้
 ui.spCompare.compare,เปรียบเทียบ
 ui.spCompare.edition,ฉบับเก่า
 ui.spCompare.editionNew,ฉบับใหม่
@@ -6373,6 +6458,7 @@ ui.trash.recoverRestoreDone,กู้คืนแล้ว
 ui.trash.recoverRestoreImageDone,กู้คืนรูปแล้ว
 ui.trash.restoredChapterRebuilt,กู้คืนฉากแล้ว — บทเดิมถูกลบไปแล้ว จึงสร้างบท “{0}” กลับมาให้
 ui.trash.restoredRenamed,กู้คืนแล้ว — ชื่อเดิมมีอยู่แล้ว จึงบันทึกเป็น “{0}”
+ui.trash.revealInFolder,เปิดในโฟลเดอร์
 ui.tree.clipEmpty,ยังไม่ได้คัดลอกอะไรไว้
 ui.tree.confirmDeleteN,ย้าย {0} รายการที่เลือกไปถังขยะ?
 ui.tree.confirmEmptyTrash,ลบของในถังขยะทั้งหมด {0} รายการถาวร? กู้คืนไม่ได้
@@ -6383,6 +6469,7 @@ ui.tree.cutN,ตัดไว้แล้ว {0} รายการ
 ui.tree.deletedN,ลบแล้ว {0} รายการ
 ui.tree.deleteSelected,ลบรายการที่เลือก
 ui.tree.delFail,ลบไม่สำเร็จ
+ui.tree.delSkipUnsaved,ไม่ได้ลบ {0} — ยังบันทึกงานค้างไม่สำเร็จ
 ui.tree.draftLabel,ฉบับร่าง
 ui.tree.draftPickHint,เลือกฉบับร่างที่จะแสดงในต้นไม้โปรเจกต์
 ui.tree.draftSwitched,"สลับไปฉบับร่าง ""{0}"" แล้ว"

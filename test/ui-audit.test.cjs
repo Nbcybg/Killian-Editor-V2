@@ -44,7 +44,9 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
 {
   // จุดที่รอบ alpha.128 ไล่ปิดไว้ — ถ้าใครลบ placeholder ออกต้องรู้ทันที
   const need = [
-    ['src/scratchpad.js', 'ui.notes.scratchPh', 2],
+    // [alpha.159 · M19] แท็บกับแผงสร้างช่องจาก buildScratch() ตัวเดียวแล้ว (เดิมคัดลอกสองก้อน)
+    // — จุดเดียวครอบทั้งสองทาง · ตรวจข้างล่างว่าทั้งสองทางยังเรียกตัวสร้างนั้นจริง
+    ['src/scratchpad.js', 'ui.notes.scratchPh', 1],
     ['src/session-notes.js', 'ui.notes.quickNotePh', 1],
     ['src/wiki.js', 'ui.wiki.secTitlePh', 1],
   ];
@@ -52,6 +54,12 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
     const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
     const got = (src.match(new RegExp(key.replace(/\./g, '\\.'), 'g')) || []).length;
     ck('ช่องกรอกใน ' + rel + ' ยังมี placeholder (' + key + ')', got >= n, got + '/' + n);
+  }
+  {
+    const sp = fs.readFileSync(path.join(ROOT, 'src/scratchpad.js'), 'utf8');
+    const body = (name) => { const i = sp.indexOf('function ' + name); return i < 0 ? '' : sp.slice(i, sp.indexOf('\n}\n', i)); };
+    ck('[159-M19] แท็บและแผงสมุดโน้ตด่วนสร้างช่องผ่าน buildScratch() (มี placeholder ทั้งคู่)',
+       /buildScratch\(\)/.test(body('openScratchpad')) && /buildScratch\(\)/.test(body('renderNotesPanel')));
   }
   // placeholder ทุกตัวต้องมาจากไฟล์ภาษา ห้ามเป็นข้อความไทยตรง ๆ
   const walk = (d, o = []) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -212,7 +220,8 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   // ไม่นับ: ลูกศร (U+2190–21FF) และเส้นตีตาราง (U+2500–257F) — สองชุดนี้ถูกใช้เป็น
   //        **เครื่องหมายวรรคตอนในประโยค** ("ตั้งค่า → ผู้ให้บริการ") กับผังต้นไม้ในเอกสาร
   //        ฟ้องเมื่อไหร่ก็ได้แต่เสียงรบกวน ไม่ได้ช่วยให้ใครเปลี่ยนไอคอนได้
-  const ICON = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F0FF}\u{2460}-\u{24FF}\u{25A0}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0F}]/u;
+  // [alpha.159 · M36] + U+1F100–1F2FF (ตัวอักษรในกรอบ เช่น 🅣) — เดิมหลุดตาข่าย ทำให้ '🅣' ฝังในโค้ดได้
+  const ICON = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F0FF}\u{1F100}-\u{1F2FF}\u{2460}-\u{24FF}\u{25A0}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0F}]/u;
   const SKIP_KIND = new Set(['test', 'data-range', 'skip-file', 'compare', 'data-call',
                              'console', 'already', 'tagged', 'obj-key', 'prop']);
   // [alpha.157r] glyph-icons.js = ตาราง "อีโมจิ → ไอคอนเส้น" (อักขระเป็นกุญแจของตาราง ไม่ใช่ไอคอนที่วาดออกจอ)
@@ -392,6 +401,15 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
      bad9.length === 0, bad9.join(','));
   ck('[152] ชุด Ctrl ของกระดานอ่านจาก e.code',
      /c === 'KeyZ'/.test(body9) && /c === 'KeyS'/.test(body9));
+}
+
+// ───────── [alpha.159 · M24] เมนู มุมมอง → แผง (main.js) ห้ามฝังป้าย/อีโมจิ ─────────
+{
+  const main = fs.readFileSync(path.join(ROOT, 'main.js'), 'utf8');
+  const a = main.indexOf('const MENU_PANELS = ['), b = main.indexOf('];', a);
+  const block = a >= 0 && b > a ? main.slice(a, b) : '';
+  const lits = [...block.matchAll(/label:\s*(['"`])([^'"`]*)\1/g)].map((m) => m[2]);
+  ck('[159-M24] ★ MENU_PANELS: ป้ายทุกตัวมาจากไฟล์ภาษา (ไม่มีสตริงฝัง/อีโมจิ)', !!block && lits.length === 0, lits.join(' | '));
 }
 
 console.log(`\nui-audit: ${pass} passed, ${fail} failed`);

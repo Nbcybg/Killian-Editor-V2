@@ -255,6 +255,40 @@ const script = [
   check('[70] ไม่มีผู้รับ → ไม่สร้างไฟล์',
     (await WM.generateWatermarkedPDFs(api, { pages, recipients: [], outDir: '/out' })).length === 0);
 
+  // ── [alpha.159 · M6] RTF/FDX ถอดเครื่องหมายด้วยตัวแยกตัวจริง (ไม่เหลือมาร์กอัปดิบ) ──
+  {
+    const raw = '**หนา** _ขีด_ ^ยก^ ~ห้อย~ <span style="color:#ff0000">แดง</span> <mark style="background:#ffee00">เน้น</mark> [ลิงก์](http://a.b) ![รูป](p.png) [[ทอร่า]] 3*4*5';
+    for (const [nm, M] of [['RTF', RTF], ['FDX', FDX]]) {
+      const p = M.plainText(raw);
+      check(`[159-M6] ★ ${nm}.plainText ไม่เหลือ _ ^ ~ <span> <mark> ลิงก์ รูป`,
+            !/[_^~<>]|\]\(|\[\[/.test(p.replace('3*4*5', '')), p);
+      check(`[159-M6] ${nm}.plainText ข้อความยังครบ`, ['หนา', 'ขีด', 'ยก', 'ห้อย', 'แดง', 'เน้น', 'ลิงก์', 'รูป', 'ทอร่า', '3*4*5'].every((w) => p.includes(w)), p);
+    }
+    const rtf = RTF.generateRtf([B('action', 'เธอ _ขีด_ <span style="color:#ff0000">แดง</span>')], {}, SF.mergeSpFormat(), {});
+    check('[159-M6] ★ ไฟล์ RTF ไม่มี <span …> หลุดเป็นข้อความ', !/span|_\\u/.test(rtf) && !rtf.includes('<span'), rtf.slice(-200));
+    const fdx = FDX.generateFdx([B('action', 'เธอ ^ยก^ [ลิงก์](http://x)')], {});
+    check('[159-M6] ★ ไฟล์ FDX ไม่มี ^ หรือ ](http หลุด', !fdx.includes('^ยก^') && !fdx.includes('](http'), fdx.slice(-200));
+    const EF = load('export-formats');
+    check('[159-M6] ★ ค่าเริ่มต้นของ RTF/FDX = พรีเซ็ตบทภาพยนตร์ (ไม่ใช่ plain ที่ตัดรหัสบรรทัด)',
+          EF.defaultWorkflowFor('rtf').id === 'screenplay' && EF.defaultWorkflowFor('fdx', undefined, 'screenplay').id === 'screenplay',
+          EF.defaultWorkflowFor('rtf').id);
+    check('[159-M6] เอกสารนิยาย → RTF ยังใช้ plain ตามเดิม', EF.defaultWorkflowFor('rtf', undefined, 'prose').id === 'plain');
+    check('[159-M6] รูปแบบอื่นไม่เปลี่ยน', EF.defaultWorkflowFor('md').ext === 'md' && EF.defaultWorkflowFor('txt').ext === 'txt');
+  }
+
+  // ── [alpha.159 · M10] ผู้รับชื่อซ้ำต้องได้ไฟล์ของตัวเองครบทุกคน ──
+  {
+    const writes = [];
+    const api2 = { join: async (...a) => a.join('/'), writeBytes: async (p) => { writes.push(p); }, pdfFromHtml: async (h, p) => { writes.push(p); } };
+    const made = await WM.generateWatermarkedPDFs(api2, { pages, recipients: [{ name: 'ทอร่า' }, { name: 'ทอร่า' }, { name: 'ทอ:ร่า' }, { name: 'TORA' }, { name: 'tora' }],
+      outDir: '/out', buildPdf: async () => new Uint8Array([1]) });
+    check('[159-M10] ★ ผู้รับ 5 คน = 5 ไฟล์ไม่ซ้ำกัน (ไม่สนตัวพิมพ์)', made.length === 5 && new Set(made.map((m) => m.toLowerCase())).size === 5,
+          JSON.stringify(made));
+    check('[159-M10] ชื่อซ้ำได้เลขต่อท้าย (2)', made.some((m) => /\(2\)\.pdf$/.test(m)), JSON.stringify(made));
+    check('[159-M10] ชื่อไฟล์ผ่านกฎชุดเดียว (ไม่มีอักขระต้องห้าม)', made.every((m) => !/[\\:*?"<>|]/.test(m.split('/').pop())));
+    check('[159-M10] watermarkFileName ชื่อว่าง = ยังได้ชื่อ', /\.pdf$/.test(WM.watermarkFileName('', '', new Set())));
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();

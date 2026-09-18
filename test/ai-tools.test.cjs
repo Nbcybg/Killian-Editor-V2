@@ -174,5 +174,16 @@ const check = (n, c, extra) => {
   check('viewDef ตกไปที่ปกติเมื่อไม่รู้จัก', S.viewDef('มั่ว').id === 'normal');
 }
 
+// ── [alpha.159 · M27] ```json ที่เป็นคำสั่ง ต้องถูกลอกออกเหมือน ```k2 · ที่ไม่ใช่คำสั่งต้องอยู่ต่อ ──
+{
+  const txt = 'จัดให้แล้ว\n\n```json\n{"tool":"scene.write","args":{"title":"ก","text":"x"}}\n```\n\nตัวอย่างข้อมูล:\n\n```json\n{"name":"ทอร่า","age":17}\n```';
+  const calls = T.parseToolCalls(txt);
+  check('[159-M27] เงื่อนไข: ```json ที่มีคำสั่งถูกแกะเป็นคำสั่ง', calls.length === 1 && calls[0].tool === 'scene.write');
+  const st = T.stripToolCalls(txt);
+  check('[159-M27] ★ ```json ที่เป็นคำสั่งถูกลอกออก (ไม่โชว์ JSON ดิบในแชท)', !st.includes('scene.write'), st);
+  check('[159-M27] ★ ```json ที่ไม่ใช่คำสั่ง (ข้อมูลตัวอย่าง) ยังอยู่ครบ', st.includes('"age":17') && st.includes('```json'), st);
+  check('[159-M27] ข้อความคนอ่านอยู่ครบ', st.includes('จัดให้แล้ว') && st.includes('ตัวอย่างข้อมูล'));
+}
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

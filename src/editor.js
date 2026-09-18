@@ -1,9 +1,9 @@
 // ProseMirror editor — หัวใจของ Killian 2 (word-processor grade)
 import { t as tt, t } from './i18n.js';
 import { Schema, Fragment, Slice } from 'prosemirror-model';
-import { EditorState, Plugin, TextSelection } from 'prosemirror-state';
+import { EditorState, Plugin, TextSelection, Selection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { history, undo, redo } from 'prosemirror-history';
+import { history, undo, redo, closeHistory } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, setBlockType, wrapIn, lift, chainCommands,
          splitBlockKeepMarks, newlineInCode, exitCode } from 'prosemirror-commands';
@@ -326,32 +326,47 @@ export function refreshFocusLine(view) {
 // ใช้ decoration แบบเดียวกับตรวจคำผิด — ห้ามใส่ class ลง DOM ตรง ๆ (DOMObserver ของ PM ซ่อมกลับ)
 // จับคู่ด้วย "ข้อความที่คอมเมนต์" (quote) ไม่ใช่ offset — ผู้เขียนแก้ไฟล์แล้วไฮไลต์ยังตามไปถูกที่
 const cmKey = new PMKey('kcomment');
-let _cmQuotes = [], _cmActive = '';
-export function setCommentAnchors(quotes, active) {
-  _cmQuotes = [...new Set((quotes || []).filter((q) => q && q.length >= 2))];   // '' ทำให้ indexOf วนไม่รู้จบ
-  _cmActive = active || '';
+// ══ [alpha.159 · H16] ★ รายการสมอเป็น "ของแต่ละตัวแก้ไข" ══
+// เดิม `_cmQuotes` เป็นตัวแปรระดับโมดูล = ทุกแท็บใช้ก้อนเดียว → แยกจอ/สลับแท็บแล้วตัวแก้ไขที่ไม่ได้โฟกัส
+// สแกนย่อหน้าที่เปลี่ยน (บันทึกอัตโนมัติ · AI เขียน · โหลดจากดิสก์) ด้วยข้อความคอมเมนต์ของ **อีกฉาก**
+// = ไฮไลต์ข้ามแท็บ · ตอนนี้ `commentAnchorPlugin()` หนึ่งครั้ง = รายการหนึ่งชุด ผูกกับ view ผ่าน view hook
+// ไม่ระบุ view = ตัวที่ถูกตั้งค่าล่าสุด (เทสเก่า/ทางเรียกเดิมของแท็บเดียว)
+const CM = { byView: new WeakMap(), cur: null, detached: { quotes: [], active: '' } };
+const cmInst = (view) => (view && CM.byView.get(view)) || CM.cur || CM.detached;
+export function setCommentAnchors(quotes, active, view) {
+  const I = cmInst(view);
+  if (I !== CM.detached) CM.cur = I;
+  I.quotes = [...new Set((quotes || []).filter((q) => q && q.length >= 2))];   // '' ทำให้ indexOf วนไม่รู้จบ
+  I.active = active || '';
 }
-export function commentAnchors() { return _cmQuotes.slice(); }
-function cmScan(doc, from, to) {
-  if (!_cmQuotes.length) return [];
-  const out = [];
-  doc.nodesBetween(from, to, (node, pos) => {
-    if (!node.isText || !node.text) return;
-    for (const q of _cmQuotes) {
-      let i = -1;
-      while ((i = node.text.indexOf(q, i + 1)) >= 0) {
-        out.push(Deco.inline(pos + i, pos + i + q.length,
-          { class: 'k-cm-anchor' + (q === _cmActive ? ' on' : ''), title: tt('ui.editor.hasCommentBindText') }));
+export function commentAnchors(view) { return cmInst(view).quotes.slice(); }
+function cmScanOf(I) {
+  return (doc, from, to) => {
+    if (!I.quotes.length) return [];
+    const out = [];
+    doc.nodesBetween(from, to, (node, pos) => {
+      if (!node.isText || !node.text) return;
+      for (const q of I.quotes) {
+        let i = -1;
+        while ((i = node.text.indexOf(q, i + 1)) >= 0) {
+          out.push(Deco.inline(pos + i, pos + i + q.length,
+            { class: 'k-cm-anchor' + (q === I.active ? ' on' : ''), title: tt('ui.editor.hasCommentBindText') }));
+        }
       }
-    }
-  });
-  return out;
+    });
+    return out;
+  };
 }
 export function commentAnchorPlugin() {
+  const I = { quotes: [], active: '' };
   return new PMPlugin({
     key: cmKey,
-    state: incrementalDecoState(cmKey, cmScan),
+    state: incrementalDecoState(cmKey, cmScanOf(I)),
     props: { decorations(state) { return cmKey.getState(state); } },
+    view(v) {
+      CM.byView.set(v, I);
+      return { destroy() { CM.byView.delete(v); if (CM.cur === I) CM.cur = null; } };
+    },
   });
 }
 export function refreshCommentAnchors(view) {
@@ -543,7 +558,16 @@ export function insertPageBreak(state, dispatch) {
   const pb = state.schema.nodes.page_break;
   if (!pb) return false;
   if (dispatch) {
-    let tr = state.tr.replaceSelectionWith(pb.create());
+    let tr;
+    const selNode = state.selection.node;
+    if (selNode && selNode.isBlock) {
+      // [alpha.159 · QoL] เลือกรูป (figure) หรือบล็อก atom อยู่ = แทรกเส้นตัดหน้า "หลัง" บล็อกนั้น
+      // เดิม replaceSelectionWith = เอาเส้นตัดหน้าไป **แทนที่รูป** (รูปหายไปจากเอกสาร)
+      tr = state.tr.insert(state.selection.to, pb.create());
+      tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(state.selection.to + 1, tr.doc.content.size)), 1));
+    } else {
+      tr = state.tr.replaceSelectionWith(pb.create());
+    }
     // หลังเส้นต้องมีย่อหน้าให้พิมพ์ต่อเสมอ ไม่งั้นเคอร์เซอร์ค้างบน atom
     const end = tr.selection.to;
     if (!tr.doc.resolve(Math.min(end, tr.doc.content.size)).nodeAfter) {
@@ -1110,8 +1134,30 @@ function lineEdgePos(view, toEnd) {
       const after = view.coordsAtPos(pos, 1);
       if (after.top > y + 2) pos--;
     } catch {}
+    // [alpha.159 · QoL] End = ท้าย "ตัวอักษรสุดท้าย" ของบรรทัด ไม่ใช่หลังช่องว่างที่ห้อยท้าย
+    // (บรรทัดที่ตัดคำตรงวรรค เคอร์เซอร์เคยไปหยุดหลังวรรค แล้วพิมพ์ต่อได้คำที่มีวรรคนำหน้า)
+    // ไม่ถอยเลยต้นบรรทัดที่วาดจริง — บรรทัดที่มีแต่ช่องว่างอยู่ที่เดิม
+    const lineStart = lineEdgePos(view, false);
+    pos = endBeforeTrailingSpace(view.state.doc, pos, Number.isFinite(lineStart) ? lineStart : lo);
   }
   return pos;
+}
+
+/**
+ * [alpha.159 · QoL] ถอยตำแหน่งกลับข้ามช่องว่างท้ายบรรทัด (วรรค · แท็บ · วรรคไม่ตัด) — บริสุทธิ์
+ * @param {object} doc เอกสาร ProseMirror (ใช้แค่ textBetween)
+ * @param {number} pos ตำแหน่งท้ายบรรทัดที่วาดจริง
+ * @param {number} min ห้ามถอยต่ำกว่านี้ (ต้นบรรทัด)
+ */
+export function endBeforeTrailingSpace(doc, pos, min) {
+  let p = pos;
+  while (p > min) {
+    let ch = '';
+    try { ch = doc.textBetween(p - 1, p, '\n', '\ufffc'); } catch { break; }
+    if (ch !== ' ' && ch !== '\t' && ch !== '\u00a0') break;
+    p--;
+  }
+  return p;
 }
 
 /** Home / End — คืน false เมื่อทำไม่ได้ เพื่อให้เบราว์เซอร์จัดการต่อตามเดิม */
@@ -1284,7 +1330,21 @@ export class KEditor {
   /** แผนที่จัดหน้าของบล็อกระดับบน — เก็บลง frontmatter (`align: [3:center]`) */
   getAlignMap() { return collectAlign(this.view.state.doc.toJSON()); }
   setMarkdown(md, alignMap) {
-    this.view.updateState(this._mkState(this._docFromMd(md, alignMap)));
+    // [alpha.159 · M13] เดิม `updateState(_mkState(doc))` = สร้าง state ใหม่ทั้งก้อน → **ประวัติ undo หายทั้งกอง**
+    // (AI เขียนลงแท็บ · แทนที่ทั้งโปรเจกต์ · โหลดจากดิสก์ แล้ว Ctrl+Z ย้อนกลับไม่ได้เลย)
+    // ตอนนี้แทนเนื้อทั้งเอกสารด้วย transaction ที่ลงประวัติ — แต่ยัง "เงียบ" เหมือนเดิม
+    // (apply ตรง ๆ ไม่ผ่าน dispatchTransaction → ไม่ยิง onChange · ผู้เรียกจัดการธงค้างเองตามเดิม)
+    const doc = this._docFromMd(md, alignMap);
+    const st = this.view.state;
+    if (st.doc.eq(doc)) return;
+    // closeHistory = ขั้น undo ของตัวเอง (ไม่รวบกับตัวอักษรที่เพิ่งพิมพ์ภายใน 500ms)
+    const tr = closeHistory(st.tr.replaceWith(0, st.doc.content.size, doc.content)).setMeta('k2SetMarkdown', true);
+    // เคอร์เซอร์ไปต้นเอกสารเหมือน state ใหม่ของเดิม (ผู้เรียก/เทสเก่าพึ่งพฤติกรรมนี้)
+    tr.setSelection(Selection.atStart(tr.doc));
+    const st2 = st.apply(tr);
+    // ปิดกลุ่มประวัติ "หลัง" ขั้นนี้ด้วย — ไม่งั้นการพิมพ์ครั้งถัดไป (ช่วงติดกัน · ภายใน 500ms)
+    // ถูกรวบเข้าขั้น setMarkdown แล้ว Ctrl+Z ครั้งเดียวย้อนทั้งสองอย่าง (e2e "Ctrl+Z ในตัวแก้ไข" จับได้)
+    this.view.updateState(st2.apply(closeHistory(st2.tr)));
   }
   getText() { return this.view.state.doc.textBetween(0, this.view.state.doc.content.size, '\n'); }
 

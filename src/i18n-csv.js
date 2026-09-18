@@ -162,3 +162,28 @@ export function importSummary(res) {
        + ` · อังกฤษเพิ่ม/แก้ ${res.enAdded + res.enChanged}`
        + (res.skipped ? ` · ข้าม ${res.skipped} แถวที่ไม่มีคีย์` : '');
 }
+
+/**
+ * [alpha.159 · QoL] ความคืบหน้าการแปลของภาษาหนึ่งเทียบกับต้นฉบับไทย (บริสุทธิ์)
+ * "ยังไม่แปล" = ค่าเท่ากับภาษาไทยทุกตัวอักษร **และ** มีอักษรไทยอยู่ (ข้อความสากลอย่าง "Ctrl" / "PDF" /
+ * ชื่อเฉพาะ ที่เหมือนกันทุกภาษาไม่นับว่าค้าง) · แถว meta.* และแถวหัวข้อ (#) ไม่นับ
+ * @param {Record<string,string>} th ตารางภาษาไทย (ต้นฉบับ)
+ * @param {Record<string,string>} other ตารางภาษาที่จะวัด
+ * @returns {{total:number, translated:number, pending:number, pct:number, pendingKeys:string[]}}
+ */
+export function translationProgress(th, other) {
+  const TH = /[฀-๿]/;
+  let total = 0, translated = 0;
+  const pendingKeys = [];
+  for (const [k, v] of Object.entries(th || {})) {
+    if (!k || k.startsWith('meta.') || k.startsWith('#')) continue;
+    const src = String(v == null ? '' : v);
+    if (!TH.test(src)) continue;                       // ต้นฉบับไม่มีไทย = ไม่ต้องแปล
+    total++;
+    const o = other ? other[k] : undefined;
+    if (o != null && String(o) !== '' && String(o) !== src) translated++;
+    else pendingKeys.push(k);
+  }
+  const pct = total ? Math.round((translated / total) * 1000) / 10 : 100;
+  return { total, translated, pending: total - translated, pct, pendingKeys };
+}

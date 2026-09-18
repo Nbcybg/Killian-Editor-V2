@@ -648,6 +648,14 @@ export function runWorkflow(model0, workflow,
   }
   if (ext !== 'html' && !markdownOut) {
     text = text.split(PAGE_BREAK).join('\f');
+    // [alpha.159 · M32] ขึ้นหน้าใหม่ "ด้วยมือ" ในเนื้อฉาก (`<!--pagebreak-->` ที่ตัวแก้ไขเขียน) ก็เป็น
+    // รูปแบบ ไม่ใช่ข้อความ — เดิมหลุดเข้า .txt/.rtf/.fdx ทั้งบรรทัด · ไฟล์แบนใช้ \f แทน (ตัวเดียวกับตัวคั่นฉาก)
+    // (.md ยังเก็บไว้ — markdownOut ไม่ผ่านสาขานี้ · KEEP_COMMENT ของ stripComments ปล่อยผ่านมาถึงตรงนี้)
+    // `.md` ที่ส่งออกยังเป็นมาร์กดาวน์ — คอมเมนต์ถูกซ่อนตอนแสดงผลอยู่แล้ว เก็บไว้ให้เปิดกลับได้
+    if (String(ext).toLowerCase() !== 'md') {
+      text = text.replace(/^[ \t]*<!--\s*pagebreak\s*-->[ \t]*$/gim, '\f')
+                 .replace(/<!--\s*pagebreak\s*-->/gi, '\f');
+    }
     // [alpha.132 . X-1] `.md`/`.txt`/`.rtf` ที่ส่งออกเป็น "ต้นฉบับแบน" ไม่ใช่ไฟล์โปรเจกต์
     // -> เอาคอมเมนต์รูปแบบออก ไม่งั้นผู้อ่านเห็น align โผล่กลางเรื่อง
     text = text.replace(/<!--\s*align:(?:left|center|right|justify)\s*-->/gi, '');

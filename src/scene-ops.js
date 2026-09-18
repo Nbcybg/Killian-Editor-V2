@@ -23,21 +23,9 @@ import { visFileName } from './visual/vis-core.js';
 import { gi } from './icons.js';
 import { mutateJson } from './json-store.js';
 
-/**
- * [alpha.156] ชื่อไฟล์ฉากที่ว่างจริง — ไม่ชนทั้ง "ไฟล์บนดิสก์" และ "ชื่อที่แถวใน scenes.json จองไว้"
- * (แถวที่ไฟล์หายไปแล้วก็ยังจองชื่อ ไม่งั้นกู้ไฟล์กลับมาทีหลังแล้วสองแถวชี้ไฟล์เดียวกัน)
- * รูปชื่อเดียวกับ `uniqueSceneFileName()` ของเดิม: scene-03.md → scene-03-2.md → …
- */
-export async function freeSceneFileName(dPath, folderName, order, taken = new Set()) {
-  const base = 'scene-' + String(order).padStart(2, '0');
-  for (let n = 1; n < 1000; n++) {
-    const name = n === 1 ? base + '.md' : `${base}-${n}.md`;
-    if (taken.has(name)) continue;
-    if (await kapi.exists(await kapi.join(dPath, 'Chapters', folderName, name))) continue;
-    return name;
-  }
-  return base + '-' + Date.now().toString(36) + '.md';
-}
+// [alpha.159] ย้ายไป scene-file-name.js (ai-actions ใช้ตัวเดียวกันได้โดยไม่ลาก app.js) — ส่งต่อชื่อเดิม
+export { freeSceneFileName } from './scene-file-name.js';
+import { freeSceneFileName } from './scene-file-name.js';
 
 const rowsOf = (d, guid0) => ((d && d.chapters) || {})[guid0] || [];
 const nextOrder = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
@@ -521,7 +509,7 @@ async function copyVisSidecar(dPath, folderName, srcFile, dstFile) {
  * ฉากถูกย้ายไปถังขยะที่ `trashPath` แล้ว — เอาตารางไปเก็บเป็น `<trashPath>.vis.csv`
  * (ไม่ใช้ deleteToTrash เพราะมันถามยืนยันซ้ำ · ชื่อคู่กันแบบนี้ทำให้กู้คืนพร้อมฉากได้ในที่เดียว)
  */
-async function trashVisSidecar(dPath, folderName, fileName, trashPath) {
+export async function trashVisSidecar(dPath, folderName, fileName, trashPath) {
   try {
     const src = await visOf(dPath, folderName, fileName);
     if (!trashPath || !(await kapi.exists(src))) return false;

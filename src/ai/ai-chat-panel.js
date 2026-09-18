@@ -16,14 +16,15 @@ import {
   TRANSCRIPT_VIEWS, DEFAULT_VIEW, viewDef, modeCap, hasConversation,
   modeDef, scopeLabel, isSendKey, newSession, newMessage, addMessage, renameSession,
   archiveSession, clearMessages, sessionFileName, sessionStats, contextLabel, compact, usd,
-  searchSessions, buildChatMessages, historyBudget, rawJson, shareMarkdown, estimateTokens,
+  searchSessions, buildChatMessages, historyBudget, contextCapFromError, DEFAULT_HISTORY_TOKENS,
+  rawJson, shareMarkdown, estimateTokens,
   parseChatMarkdown, REASONING_EFFORTS, effortLabel, isReasoningEffort,
   joinContinuation, canContinue,
 } from './ai-session.js';
 // [alpha.145] ทักษะ (Skills/*.md) — คำสั่งประจำตัวที่ผู้ใช้เขียนเอง เปิด/ปิดรายเซสชัน
 import { SKILL_DIR, loadSkills, buildSkillsPrompt, skillsLabel,
          ensureSkillDir, starterSkillMd } from './ai-skills.js';
-import { providerList, providerById, currentProvider, completeStream, aiMeta } from './ai-provider-ui.js';
+import { providerList, providerById, currentProvider, completeStream, aiMeta, recordAiUsage } from './ai-provider-ui.js';
 import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, describeCall,
          toolByName, resultsMessage } from './ai-tools.js';
 import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.js';
@@ -615,7 +616,7 @@ function paintRunBadges() {
   if (banner) {
     banner.style.display = S.run ? '' : 'none';
     banner.textContent = S.run
-      ? T`⏳ กำลังทำงาน: ${S.run.title || tt('ui.aiChatPanel.session')} · ${secs} วิ — กดเพื่อกลับไปดู`
+      ? gi('hourglass') + ' ' + ttf('ui.aiChatPanel.busyRunPressBack', S.run.title || tt('ui.aiChatPanel.session'), secs)
       : '';
   }
   const head = S.host.querySelector('.ai-chat-head .ai-chat-title');
@@ -712,7 +713,7 @@ function msgNode(m, view = DEFAULT_VIEW, sess = null) {
     n.append(el('div', 'ai-msg-err', gi('warning') + ' ' + m.error));
     // [alpha.145] รายละเอียด + แนวทางแก้ (มาจาก ai-error.js) — เดิมมีแค่บรรทัดเดียวว่า
     // "เรียกไม่สำเร็จ (HTTP 0)" ซึ่งบอกอะไรผู้ใช้ไม่ได้เลย
-    if (m.detail) n.append(foldBlock(T`รายละเอียด · แนวทางแก้`, m.detail, 'ai-msg-errdetail'));
+    if (m.detail) n.append(foldBlock(tt('ui.aiChatPanel.detailEdit'), m.detail, 'ai-msg-errdetail'));
   }
   // [alpha.149] คำตอบไม่ครบ (ชนเพดาน Max Tokens · ถูกหยุด · หมดเวลา) → ปุ่ม "ต่อ" เขียนต่อในข้อความเดิม
   if (sess && canContinue(sess, m) && !isRunning(sess.id)) {
@@ -863,11 +864,11 @@ function composer(s, body) {
   const effortSel = el('select', 'ai-chat-effort');
   for (const e of REASONING_EFFORTS) { const o = el('option', null, e.label); o.value = e.id; effortSel.append(o); }
   effortSel.value = isReasoningEffort(s.effort) ? (s.effort || '') : '';
-  effortSel.title = T`ระดับการใช้ความคิดของโมเดล (reasoning effort) — มีผลเฉพาะเซสชันนี้`;
+  effortSel.title = tt('ui.aiChatPanel.levelUseIdeaModel');
 
   // [alpha.145] ทักษะ — ผู้ใช้: "ไม่มีการใส่ skill.md เลย"
   const skillBtn = el('button', 'ai-chat-file ai-chat-skills', gi('puzzle'));
-  skillBtn.title = T`ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)`;
+  skillBtn.title = tt('ui.aiChatPanel.assistantFileMdFolder');
 
   ctrls.append(fileBtn, scBtn, skillBtn, modeSel, modelSel, scopeSel, effortSel);
   box.append(ctrls);
@@ -965,8 +966,8 @@ async function refreshSkillBtn(btn, s) {
   btn.textContent = _skills.length ? skillsLabel(_skills, on) : gi('puzzle');
   btn.classList.toggle('on', on.length > 0);
   btn.title = _skills.length
-    ? T`ทักษะที่เปิดอยู่: ` + (on.length ? on.join(', ') : T`— ไม่มี —`)
-    : T`ยังไม่มีไฟล์ทักษะ — กดเพื่อสร้างโฟลเดอร์ ${SKILL_DIR}/ พร้อมไฟล์ตัวอย่าง`;
+    ? tt('ui.aiChatPanel.open') + (on.length ? on.join(', ') : tt('ui.aiChatPanel.notHas'))
+    : ttf('ui.aiChatPanel.notHasFilePress', SKILL_DIR);
 }
 
 /** เมนูติ๊กเปิด/ปิดทักษะรายไฟล์ + ทางลัดไปเปิดโฟลเดอร์ */
@@ -976,7 +977,7 @@ async function skillMenu(ev, s, btn) {
   const items = _skills.map((k) => ({
     label: (on.has(k.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + k.name
            + (k.description ? ' — ' + k.description : '')
-           + T`  (${String(k.chars)} ตัวอักษร)`,
+           + ttf('ui.aiChatPanel.char', String(k.chars)),
     click: async () => {
       const c = live(s);
       const set = new Set(c.skills || []);
@@ -985,12 +986,12 @@ async function skillMenu(ev, s, btn) {
       S.cur = c;
       await saveSession(c);
       await refreshSkillBtn(btn, c);
-      setStatus(T`${set.has(k.id) ? gi('check-circle') : gi('square-outline')} ทักษะ: ${k.name}`);
+      setStatus(ttf('ui.aiChatPanel.msg2', set.has(k.id) ? gi('check-circle') : gi('square-outline'), k.name));
     },
   }));
   if (items.length) items.push('-');
   items.push({
-    label: _skills.length ? T`📂 เปิดโฟลเดอร์ทักษะ` : T`✨ สร้างโฟลเดอร์ทักษะ + ไฟล์ตัวอย่าง`,
+    label: _skills.length ? gi('folder-open') + ' ' + tt('ui.aiChatPanel.openFolder') : gi('magic') + ' ' + tt('ui.aiChatPanel.newFolderFileSample'),
     click: async () => {
       const d = await ensureSkillDir(state.root);
       if (!d) { setStatus(tt('ui.aiChatPanel.openProjectBeforeDone')); return; }
@@ -1000,7 +1001,7 @@ async function skillMenu(ev, s, btn) {
       }
       if (kapi.revealInOS) await kapi.revealInOS(d);
       await refreshSkillBtn(btn, live(s));
-      setStatus(T`ทักษะอยู่ที่ ${SKILL_DIR}/ — ไฟล์ .md หนึ่งไฟล์ = หนึ่งทักษะ`);
+      setStatus(ttf('ui.aiChatPanel.fileMdOneFile', SKILL_DIR));
     },
   });
   popupMenu(ev.clientX, ev.clientY, items);
@@ -1134,13 +1135,13 @@ async function runAssistant(sid, prov, { query = '', continueOf = '', sendBtn = 
     const sk = await skillsPromptFor(start);
     if (sk.text) {
       system += sk.text;
-      log('info', 'ai: ' + T`ใช้ทักษะ ${String(sk.used.length)} ตัว (${String(sk.chars)} ตัวอักษร)`,
+      log('info', 'ai: ' + ttf('ui.aiChatPanel.useItemChar', String(sk.used.length), String(sk.chars)),
           sk.used.join(', '));
     }
     if (sk.skipped.length) {
-      setStatus(T`⚠ ทักษะยาวเกินโควตา ข้ามไป: ${sk.skipped.join(', ')}`);
+      setStatus(gi('warning') + ' ' + ttf('ui.aiChatPanel.longSkip', sk.skipped.join(', ')));
     }
-  } catch (e) { log('warn', 'ai: ' + T`อ่านทักษะไม่สำเร็จ`, e); }
+  } catch (e) { log('warn', 'ai: ' + tt('ui.aiChatPanel.readNotOk'), e); }
   try {
     const ctx = await collectScope(start, { query });
     if (ctx) system += tt('ui.aiChatPanel.dataProjectLevelIn') + scopeLabel(start.scope) + '):\n' + ctx;
@@ -1216,6 +1217,17 @@ async function runAssistant(sid, prov, { query = '', continueOf = '', sendBtn = 
       if (res.ok && res.usage) {
         const used = (res.usage.input || 0) + (res.usage.output || 0);
         cur = { ...cur, contextLimit: Math.max(cur.contextLimit || 0, guessLimit(used)) };
+      }
+      // [alpha.159 · H14] ผู้ให้บริการปฏิเสธเพราะบริบทยาวเกิน = รู้ "เพดานจริง" แล้ว → จำไว้ในเซสชัน
+      // รอบถัดไป historyBudget() หดประวัติให้พอดี (เดิมพื้น 32k ตายตัว = โมเดล 8k ได้ HTTP 400 ทุกครั้ง)
+      if (!res.ok) {
+        const ce = contextCapFromError((res.error || '') + ' ' + (res.detail || ''));
+        if (ce.exceeded) {
+          // ไม่บอกตัวเลข = ถือว่าเพดานราวครึ่งหนึ่งของที่เพิ่งส่งไป (หดทีละครึ่งจนผ่าน)
+          const cap = ce.cap || Math.max(1024, Math.floor((hist.tokens || DEFAULT_HISTORY_TOKENS) / 0.6 / 2));
+          cur = { ...cur, contextCap: cur.contextCap ? Math.min(cur.contextCap, cap) : cap };
+          setStatus(ttf('ui.aiChatPanel.contextCapLearned', cap.toLocaleString()));
+        }
       }
       recordUsage(res, prov, cur, cost);
 
@@ -1346,16 +1358,11 @@ function guessLimit(used) {
   return used;
 }
 function recordUsage(res, prov, s, cost) {
-  if (!state.meta || !res.ok || !res.usage) return;
-  const ai = aiMeta();
-  const list = ai.usage || [];
-  list.push({ date: new Date().toISOString(), tokens: res.usage.total || 0,
-              in: res.usage.input || 0, out: res.usage.output || 0,
-              usd: cost ? cost.usd : null,               // [alpha.149] null = ไม่รู้ราคาของเจ้านี้
-              provider: prov.name, model: res.model, feature: 'chat', session: s.id });
-  if (list.length > 500) list.splice(0, list.length - 500);
-  ai.usage = list;
-  S.usageDirty = true;                                   // [alpha.149] runAssistant บันทึก meta ให้ตอนจบ
+  if (!res.ok || !res.usage) return;
+  // [alpha.159 · M30] ตัวจดกลาง (ai-provider-ui) — ฟีเจอร์อื่นจดรูปแบบเดียวกัน
+  if (recordAiUsage({ usage: res.usage, cost, provider: prov.name, model: res.model, feature: 'chat', session: s.id })) {
+    S.usageDirty = true;                                 // [alpha.149] บันทึก meta ตอนจบรอบ
+  }
 }
 
 /**

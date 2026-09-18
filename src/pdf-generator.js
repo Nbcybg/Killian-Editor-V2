@@ -241,6 +241,77 @@ export function sanitizeForStandardFont(text) {
   return String(text ?? '').replace(/[^\x20-\xff]/g, '?');
 }
 
+/** [alpha.159 · M33] ชื่อตารางทั้งหมดใน sfnt ('' = อ่านไม่ได้) — บริสุทธิ์ */
+function sfntTables(b) {
+  const n = (b[4] << 8) | b[5];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const o = 12 + i * 16;
+    if (o + 4 > b.length) return null;
+    out.push(String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]));
+  }
+  return out;
+}
+/** มีตาราง AAT `morx` ไหม (ข้อมูลประกอบ — ฟอนต์พวกนี้ยังฝังได้ ดู avoidAatLayout) */
+export function hasMorxTable(bytes) {
+  const b = toBytes(bytes);
+  if (!b || b.length < 12) return false;
+  const t = sfntTables(b);
+  return !!t && t.includes('morx');
+}
+
+/**
+ * [alpha.159 · M33] ฟอนต์ไฟล์นี้ฝังลง PDF ได้จริงไหม — อ่านแค่ "สารบัญตาราง" ของ sfnt (บริสุทธิ์)
+ *   'collection' = .ttc (หลายฟอนต์ในไฟล์เดียว — pdf-lib ฝังไม่ได้ · Thonburi ของ macOS เป็นแบบนี้)
+ *   'invalid'    = ไม่ใช่ไฟล์ฟอนต์ที่รู้จัก · '' = ใช้ได้
+ * (ฟอนต์ที่มี `morx` ใช้ได้ — ตัวที่เคยทำ fontkit วนไม่จบถูกกันที่ avoidAatLayout() แทนการปฏิเสธทั้งไฟล์)
+ * @param {Uint8Array|number[]|ArrayBuffer} bytes
+ */
+export function pdfFontProblem(bytes) {
+  const b = toBytes(bytes);
+  if (!b || b.length < 12) return 'invalid';
+  const tag = String.fromCharCode(b[0], b[1], b[2], b[3]);
+  if (tag === 'ttcf') return 'collection';
+  const sfnt = (b[0] === 0 && b[1] === 1 && b[2] === 0 && b[3] === 0) || tag === 'true' || tag === 'OTTO';
+  if (!sfnt) return 'invalid';
+  return sfntTables(b) ? '' : 'invalid';
+}
+
+/**
+ * [alpha.159 · M33] ★ ให้ fontkit จัดรูปอักษรด้วยตัว OpenType (GSUB/GPOS) แทน AAT (`morx`)
+ *
+ * fontkit เลือก AAT ก่อนเสมอเมื่อฟอนต์มี `morx` — และตัว AAT ของมัน **วนไม่จบ** กับสระอำ (ำ)
+ * ในฟอนต์ไทยของ macOS (Sathu · Ayuthaya · Silom · Krungthep — วัดจริง: แรมเต็มแล้วโปรเซสล่ม
+ * ทั้งตอนส่งออก PDF) · `morx` เป็น property ที่แก้ไม่ได้ จึงสร้างตัวจัดรูปใหม่ผ่านออบเจกต์ตัวแทนที่
+ * `morx = null` แล้วตรึงไว้ที่ `_layoutEngine` ของฟอนต์ **ก่อน** ถูกใช้ครั้งแรก
+ * ฟอนต์ที่ไม่มี GSUB/GPOS เลย (Sathu) = ไม่จัดรูปขั้นสูง แต่ไม่ค้าง · ไม่มี morx = ไม่แตะ
+ * @returns {boolean} true = เปลี่ยนตัวจัดรูปแล้ว
+ */
+export function avoidAatLayout(pdfFont) {
+  try {
+    const fk = pdfFont && pdfFont.embedder && pdfFont.embedder.font;
+    if (!fk || !fk.directory || !fk.directory.tables || !fk.directory.tables.morx) return false;
+    if (Object.prototype.hasOwnProperty.call(fk, '_layoutEngine')) return false;   // ถูกใช้ไปแล้ว — ไม่แตะ
+    let proto = Object.getPrototypeOf(fk), getter = null;
+    while (proto && !getter) {
+      const d = Object.getOwnPropertyDescriptor(proto, '_layoutEngine');
+      if (d && d.get) getter = d.get;
+      proto = Object.getPrototypeOf(proto);
+    }
+    if (!getter) return false;
+    const shadow = Object.create(fk, { morx: { value: null } });
+    Object.defineProperty(fk, '_layoutEngine', { value: getter.call(shadow), configurable: true });
+    return true;
+  } catch { return false; }
+}
+
+/** [alpha.159 · M33] มีอักษรไทยในบทไหม (บล็อก + หน้าปก + เมทาดาทา) */
+export function hasThaiText(blocks, extra) {
+  const TH = /[\u0E00-\u0E7F]/;
+  if ((blocks || []).some((b) => b && TH.test(String(b.text || '')))) return true;
+  return TH.test(JSON.stringify(extra || ''));
+}
+
 /**
  * ฝังฟอนต์ — ไม่มีไบต์ = ตกไปใช้ Courier มาตรฐาน (เขียนไทยไม่ได้ แต่ไม่พัง)
  * @param {object} fonts { regular, bold, italic, boldItalic, latin:{regular,bold,italic,boldItalic} }
@@ -249,12 +320,15 @@ export function sanitizeForStandardFont(text) {
 export async function embedFonts(doc, fonts) {
   const f = fonts || {};
   const reg = toBytes(f.regular);
-  if (reg) {
+  // [alpha.159 · M33] ไฟล์ที่ฝังไม่ได้/ทำ fontkit ค้าง = ไม่แตะเลย (ตกไปฟอนต์มาตรฐาน + ผู้เรียกเตือนผู้ใช้)
+  const problem = reg ? pdfFontProblem(reg) : 'missing';
+  if (reg && !problem) {
     try {
       doc.registerFontkit(fontkit);
       // subset:false — subsetting ฟอนต์ไทยเคยทำวรรณยุกต์หาย (ไฟล์ใหญ่ขึ้นแต่ถูกต้องเสมอ)
-      const one = async (b) => (toBytes(b) ? doc.embedFont(toBytes(b), { subset: false }) : null);
-      const regular = await doc.embedFont(reg, { subset: false });
+      const emb = async (b) => { const f = await doc.embedFont(b, { subset: false }); avoidAatLayout(f); return f; };
+      const one = async (b) => (toBytes(b) ? emb(toBytes(b)) : null);
+      const regular = await emb(reg);
       const bold = (await one(f.bold)) || regular;
       const italic = (await one(f.italic)) || regular;
       const boldItalic = (await one(f.boldItalic)) || bold;
@@ -276,7 +350,7 @@ export async function embedFonts(doc, fonts) {
     bold: await doc.embedFont(StandardFonts.CourierBold),
     italic: await doc.embedFont(StandardFonts.CourierOblique),
     boldItalic: await doc.embedFont(StandardFonts.CourierBoldOblique),
-    latin: null, custom: false,
+    latin: null, custom: false, problem: problem || 'broken',
   };
 }
 
@@ -523,8 +597,12 @@ export async function generatePdf(args = {}) {
     // paginate() ไม่กันบรรทัดไว้ให้สองตัวนี้ (บนจอเป็น decoration ที่ไม่กินที่ในเอกสาร)
     // → วาดใน "ระยะขอบ" เหมือนเลขหน้า: บนหนึ่งบรรทัดเหนือเนื้อหน้า ล่างหนึ่งบรรทัดใต้เนื้อหน้า
     // ระยะขอบ 1 นิ้ว = 6 บรรทัด จึงมีที่เหลือแน่นอน และการจัดหน้าไม่ขยับเลย
+    // [alpha.159 · M34] CONTINUED: ต้นหน้าวัดจาก **ขอบกระดาษจริง** (หนึ่งบรรทัดเหนือพื้นที่พิมพ์) —
+    // เดิม `baseline(-1)` นับรวมบรรทัดหัวกระดาษ → เปิดหัวกระดาษแล้วมันไปทับบรรทัดสุดท้ายของหัวกระดาษ
+    // ตรงกับช่องตัวอย่าง (`continuedBox().topIn` ใน sp-view.js = max(0, ขอบบน − 1 บรรทัด))
     if (pg.continuedTop) {
-      draw(page, pg.continuedTop, { x: mgL, y: baseline(-1), size, boxWidth: tw * PT_PER_IN,
+      const topPt = Math.max(0, mgT - lineH);
+      draw(page, pg.continuedTop, { x: mgL, y: ph - topPt - size * 0.82, size, boxWidth: tw * PT_PER_IN,
                                     align: 'left' });
     }
     if (pg.continuedBottom) {
@@ -552,8 +630,11 @@ export async function generatePdf(args = {}) {
   // อ่าน /Outlines /OpenAction ไม่เจอ · pdf-lib ไม่บีบอัด content stream อยู่แล้ว
   // ปิดไปจึงแลกขนาดไฟล์เพิ่มเล็กน้อยกับ "เปิดได้ทุกที่" + ตรวจสอบไฟล์ได้ตรง ๆ
   const bytes = await doc.save({ useObjectStreams: false });
+  // [alpha.159 · M33] มีอักษรไทยแต่ไม่มีฟอนต์ไทยที่ฝังได้ = ไทยทั้งไฟล์กลายเป็น ?????? — ต้องบอก ไม่ใช่เงียบ
+  const warnings = [];
+  if (!set.custom && hasThaiText(args.blocks, [meta, args.titlePages])) warnings.push('thai-font-missing');
   return { bytes, pageCount: doc.getPageCount(), titleCount: titles.length,
-           scriptPages: paged.count, bookmarks };
+           scriptPages: paged.count, bookmarks, warnings, fontProblem: set.custom ? '' : (set.problem || '') };
 }
 
 /** ระยะเยื้องของเครื่องหมายต่อเนื่อง (นิ้วจากขอบกระดาษ) */

@@ -8,6 +8,7 @@ import { t as tt, t } from './i18n.js';
 import { mergeSpFormat, spCss, textWidth } from './sp-format.js';
 import { num } from './num.js';
 import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข่ายรองอักษรไทย
+import { sanitizeFileBase } from './export-name.js';   // [alpha.159 · M10] กฎชื่อไฟล์ชุดเดียวทุกระบบ
 
 export const DEFAULT_WM = {
   fontSize: 54,            // px
@@ -19,6 +20,20 @@ export const DEFAULT_WM = {
 /** ชื่อไฟล์ที่ปลอดภัยกับทุกระบบไฟล์ */
 export function safeFileName(s) {
   return String(s ?? '').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim() || tt('ui.common.notNamed2');
+}
+
+/**
+ * [alpha.159 · M10] ชื่อไฟล์ของผู้รับหนึ่งคน — **ไม่ชนกัน** และผ่านกฎชื่อไฟล์ชุดเดียวของโปรแกรม
+ * เดิม `<prefix>_<ชื่อ>.pdf` ตรง ๆ → ผู้รับชื่อซ้ำ (หรือชื่อที่ต่างกันแค่อักขระต้องห้าม) เขียนทับไฟล์กัน
+ * แล้วคนแรกไม่ได้สำเนาของตัวเองเลย · ไม่สนตัวพิมพ์ (ดิสก์ของ Windows/macOS ไม่แยก)
+ * @param {Set<string>} used ชื่อที่ใช้ไปแล้วในรอบนี้ (ถูกเติมให้)
+ */
+export function watermarkFileName(prefix, name, used = new Set()) {
+  const base = sanitizeFileBase(safeFileName(prefix) + '_' + safeFileName(name));
+  let out = base, n = 2;
+  while (used.has(out.toLowerCase())) out = sanitizeFileBase(base + ' (' + (n++) + ')');
+  used.add(out.toLowerCase());
+  return out + '.pdf';
 }
 
 /** แทนค่าในแม่แบบลายน้ำ: {ชื่อ} {name} {วันที่} {date} {เรื่อง} {title} */
@@ -136,10 +151,11 @@ export async function generateWatermarkedPDFs(api, args = {}) {
   const { pages, fmt, recipients = [], outDir, prefix = 'script',
           wmTemplate = tt('ui.watermark.name'), wmOptions, fontUrls, title, date, onProgress, buildPdf } = args;
   const made = [];
+  const used = new Set();
   for (let i = 0; i < recipients.length; i++) {
     const r = recipients[i];
     const text = watermarkText(r.watermark || wmTemplate, { name: r.name, title, date });
-    const file = `${safeFileName(prefix)}_${safeFileName(r.name)}.pdf`;
+    const file = watermarkFileName(prefix, r.name, used);
     const dest = await api.join(outDir, file);
     if (typeof buildPdf === 'function') {
       const bytes = await buildPdf(text, { ...wmOptions });

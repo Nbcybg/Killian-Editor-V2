@@ -41,7 +41,13 @@ export async function renderSceneTable(pane) {
   head.append(el('div', 'sc-tbl-title', tt('ui.scene.tableSceneAll')));
   const search = el('input', 'sc-tbl-search');
   search.placeholder = tt('ui.scene.filterSearchNameTag');
-  search.oninput = () => { setTimeout(() => renderBody(wrap, search.value.toLowerCase()), 50); };
+  // [alpha.159 · M18] หน่วงแบบ "ตัวล่าสุดชนะ" — เดิมทุกตัวอักษรตั้ง setTimeout ใหม่โดยไม่ยกเลิกตัวเก่า
+  // แล้วแต่ละรอบสแกนดิสก์ทั้งโปรเจกต์ซ้อนกัน · รอบที่เสร็จทีหลัง (คิวรีเก่า) ทับผลของคิวรีใหม่
+  let job = null;
+  search.oninput = () => {
+    clearTimeout(job);
+    job = setTimeout(() => renderBody(wrap, search.value.toLowerCase()), 150);
+  };
   head.append(search);
   wrap.append(head);
 
@@ -95,9 +101,20 @@ async function loadAllScenes() {
 
 async function renderBody(wrap, filter) {
   const tableWrap = wrap.querySelector('#sc-tbl-table-wrap') || wrap;
+  // [alpha.159 · M18] เลขประจำรอบ — หลัง await ถ้ามีรอบใหม่แล้ว หรือแท็บถูกปิดไปแล้ว = ทิ้งผลของรอบนี้
+  const token = (wrap._renderSeq = (wrap._renderSeq || 0) + 1);
+  const stale = () => token !== wrap._renderSeq || !wrap.isConnected;
+  // สแกนดิสก์ครั้งเดียวต่อการเปิดตาราง — พิมพ์กรองใช้รายการเดิม (เดิมสแกนทั้งโปรเจกต์ทุกตัวอักษร)
+  let scenes = wrap._scenes;
+  if (!scenes) {
+    // [alpha.159 · QoL] บอกว่ากำลังสแกน (โปรเจกต์ใหญ่ใช้เวลาหลายวินาที — เดิมตารางว่างเปล่าเฉย ๆ)
+    tableWrap.innerHTML = '';
+    tableWrap.append(el('div', 'dim sc-tbl-scanning', tt('ui.scene.tableScanning')));
+    scenes = await loadAllScenes();
+    if (stale()) return;
+    wrap._scenes = scenes;
+  }
   tableWrap.innerHTML = '';
-
-  const scenes = await loadAllScenes();
   if (!scenes.length) {
     tableWrap.append(el('div', 'dim', tt('ui.scene.notHasSceneProject')));
     return;

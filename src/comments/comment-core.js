@@ -153,6 +153,23 @@ export function reanchorAll(text, comments) {
 /** Quote helper: pull the text a position range refers to. */
 export function quoteAt(text, start, end) { return String(text || '').slice(start, end); }
 
+/**
+ * [alpha.159] เขียนไฟล์ .md ทั้งไฟล์ใหม่โดย **พาเธรดคอมเมนต์เดิมไปด้วย** (โมดูลบริสุทธิ์ — รับ io เข้ามา)
+ * `fullText` = ไฟล์ใหม่ที่ไม่มีบล็อกคอมเมนต์ (frontmatter + เนื้อ) · สมอถูกหาใหม่ตามข้อความ
+ * ทางเขียนไฟล์ฉากนอกตัวแก้ไขทุกทาง (สลับโหมด · AI เขียน/เปลี่ยนชื่อฉาก) ต้องผ่านตัวนี้
+ * — `writeFile(dumpMdFile(meta, body))` ตรง ๆ = ลบบล็อก `k2-comments` ทิ้งถาวร
+ * @returns {Promise<boolean>} true = มีคอมเมนต์ที่ถูกพาไปด้วย
+ */
+export async function writeMdKeepingComments(io, path, fullText) {
+  let raw = '';
+  try { raw = (await io.readFile(path)) || ''; } catch { raw = ''; }
+  const comments = parseComments(raw);
+  // ไม่มีคอมเมนต์ = เขียนตัวต่อตัว (ไม่แตะท้ายไฟล์) — พฤติกรรมเดิมของ writeKeepingComments ทุกไบต์
+  if (!comments.length) { await io.writeFile(path, fullText); return false; }
+  await io.writeFile(path, mergeComments(fullText, reanchorAll(fullText, comments)));
+  return true;
+}
+
 // ────────────────────────────────────────────────────────────────
 // CommentStore — ผูกกับไฟล์ .md จริง (io = kapi ก็ได้)
 //   io = { readFile, writeFile, exists }

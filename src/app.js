@@ -61,7 +61,7 @@ import { decoSignature } from './editor.js';   // [alpha.88 ข้อ 6] ปร�
 import { blankLinesBefore } from './sp-format.js';   // [alpha.88 ข้อ 2+3]
 import { commentAnchors, refreshCommentAnchors } from './editor.js';
 import * as spell from './spell.js';
-import { sceneMatchesQuery, textMatchesQuery } from './sceneFilter.js';
+import { sceneMatchesQuery, textMatchesQuery, queryValue, statusRankOf } from './sceneFilter.js';
 import { STEP_DEFS, PRESETS, stepDef, mkStep, newWorkflow, cloneWorkflow, runWorkflow,
          mdToHtmlBody, mdToHtml } from './compile.js';
 import { TIMELINE_VERSION, mergeTimeline, groupByTrack, trackNames, newEvent, findClashes, sortEvents, ganttData, ganttBar, ganttTicks, normalizeRefs } from './timeline.js';
@@ -69,7 +69,7 @@ import { MAPS_VERSION, PIN_COLORS, PIN_KIND, newMap, newPin, clamp, findMap, sor
          migrateMaps, mapCategories, groupMaps, mapOverlays, toggleOverlay, gridLines, clampZoom, zoomStep,
          filterPins, matchPin, movePins, deletePins, clonePins, newRoute, routePoints, routePath, routeLength,
          addPinToRoute, deleteRoute, mapRoutes, scenePinCounts, scenesForMap, MAP_ZOOM_MIN, MAP_ZOOM_MAX } from './maps.js';
-import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus,
+import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus, setStatusAction,
          DEFAULT_SETTINGS, GLOBAL_DEFAULTS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS,
          BASE_ED_FS, BASE_SP_FS, PT_PX, ptToPx, DEFAULT_SCRIPT_FONT,
          spCycleKeys, spKeyLabel, spKeyMatch,
@@ -118,7 +118,7 @@ import { openTimeline, renderTimeline } from './timeline-ui.js';
 import { renameSection, deleteSection, addSection, listSections, sectionStats, saveSectionMeta, reorderSections, sectionProps } from './section-ops.js';
 import { renameScene, deleteScene, addScene, setSceneMeta, toggleSceneFlag, duplicateScene, moveSceneOrder, moveSceneToChapter, moveSceneBefore, renameChapter, deleteChapter, addChapter, moveChapterBefore,
          saveChapterMeta,
-         setSceneTitle, chapterProps } from './scene-ops.js';
+         setSceneTitle, chapterProps, trashVisSidecar } from './scene-ops.js';
 import { wikiCats, applyWikiCats, newWikiCat, editWikiCat, deleteWikiCat, addEntity, openEntity, duplicateEntity } from './wiki-ui.js';
 import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
 // [alpha.135] ระบบอัปเดต — ทางเข้าทั้งสามทาง (ตั้งค่า · ตอนเปิดโปรแกรม · เมนูช่วยเหลือ) เรียกตัวเดียวกัน
@@ -131,7 +131,7 @@ import { openBookReader, closeBookReader, isBookReaderOpen, bookReaderPages, boo
          bookReaderPage,
          gotoPage as readerGotoPage, computeBookFlow, cachedStartPage, bumpBookFlow,
          bookFlowKey } from './read-ui.js';
-import { isPageFlowContinue } from './book-flow.js';
+import { isPageFlowContinue, explicitStartPage, pageAtPos } from './book-flow.js';
 import { restoreFromTrash, deleteToTrash, purgeRecycle, listPurgeable } from './recycle.js';
 import { openDashboard, renderDashboard } from './dashboard.js';
 import { openHome, renderHome, showHomeDialog } from './home-ui.js';
@@ -145,7 +145,7 @@ import { openVisual, createVisual, hasVis, visPathOf, renderVisual, openVisualFo
 import { openScratchpad, renderNotesPanel } from './scratchpad.js';
 import { openQuickOpen, quickOpenCache } from './quick-open.js';
 import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
-         statusColor, statusesToJson, importStatuses, setStatusColor, paintStatusChip } from './custom-status.js';
+         statusColor, statusesToJson, importStatuses, setStatusColor, paintStatusChip, statusChip } from './custom-status.js';
 import { vivid } from './color-util.js';
 import { toggleFocusMode2, cursorBlock, isFocusMode, focusDim, applyFocusDim } from './focus-mode.js';
 import { toggleTypewriter, twScroll, isTypewriter, scrollHost } from './typewriter.js';
@@ -926,10 +926,11 @@ export function applyPageVars() {
   document.body.classList.toggle('sp-page-numbers', !!fmt.pageNumbers.show);
   // [alpha.83 ข้อ 4] ป้ายเลขหน้าบนเส้นคั่นหน้า (หน้า 2 เป็นต้นไปในโหมดปกติ/จัดหน้า)
   // เปลี่ยนพร้อมสวิตช์ทันที ไม่ต้องรอรอบจัดหน้าถัดไป
-  if (setSpPageNumberLabel(pageNumberLabelFor(fmt)))
-    for (const tb of state.tabs.values()) if (tb.sp) tb.sp.refreshGuides();
-  if (setProsePageNumberLabel(prosePageNumberLabelFor(fmt)))
-    for (const tb of state.tabs.values()) if (tb.editor) refreshProsePageBreaks(tb.editor.view);
+  // [alpha.159 · H15] เส้นคั่นเป็นของแต่ละตัวแก้ไขแล้ว — ถามทีละแท็บว่าป้ายของมันเปลี่ยนไหม
+  for (const tb of state.tabs.values()) {
+    if (tb.sp && setSpPageNumberLabel(pageNumberLabelFor(fmt), tb.sp.view)) tb.sp.refreshGuides();
+    if (tb.editor && setProsePageNumberLabel(prosePageNumberLabelFor(fmt), tb.editor.view)) refreshProsePageBreaks(tb.editor.view);
+  }
   // [alpha.58 · 58] Layout View — ความสูงเนื้อหน้า/ช่องว่างคั่นหน้า คิดจากขนาดกระดาษจริง
   const lv = layoutCssVars(fmt, state.settings.spPageGap);
   for (const k of Object.keys(lv)) R.setProperty(k, lv[k]);
@@ -1977,6 +1978,28 @@ export function updatePageNumberHint() {
   pane.style.setProperty('--pg-no-first', label ? JSON.stringify(label) : '""');
   return label;
 }
+
+/**
+ * [alpha.159 · QoL] "หน้า N / M" ตรงเคอร์เซอร์บนแถบสถานะ — อ่านจากรายการเส้นคั่นหน้าของแท็บนี้
+ * ที่ตัวจัดหน้าคำนวณไว้แล้ว (ไม่วัด DOM ใหม่) · เลขเป็น "เลขที่พิมพ์" (เคารพเลขหน้าเริ่มต้น/ไล่ต่อเนื่อง)
+ */
+export function updateCursorPage() {
+  const box = $('#status-page');
+  if (!box) return '';
+  const t2 = state.active;
+  const v = t2 && (t2.editor || t2.sp) && (t2.editor || t2.sp).view;
+  if (!v) { box.textContent = ''; return ''; }
+  const brk = t2.sp ? pageBreaks(v) : prosePageBreaks(v);
+  const r = pageAtPos(brk, v.state.selection.head, currentStartPage(t2));
+  const txt = r.total > 1 ? ttf('ui.app.pageAtCursor', r.printed, r.printedLast) : '';
+  if (box.textContent !== txt) box.textContent = txt;
+  return txt;
+}
+let _cursorPageRaf = 0;
+document.addEventListener('selectionchange', () => {
+  if (_cursorPageRaf) return;
+  _cursorPageRaf = requestAnimationFrame(() => { _cursorPageRaf = 0; try { updateCursorPage(); } catch {} });
+});
 
 /** เมนู "ส่วนเสริม" ของชื่อตัวละคร — เว้นจากชื่อ 1 วรรคเสมอ */
 export function extensionMenu(x, y) {
@@ -3397,6 +3420,15 @@ export async function captureSession() {
       if (sc) scroll[f] = Math.round(sc);
     }
     s.tabs.scroll = scroll;
+    // [alpha.159 · QoL] ตำแหน่งเคอร์เซอร์/ช่วงที่เลือกของทุกแท็บที่เป็นตัวแก้ไข (เปิดโปรแกรมใหม่แล้วกลับมาตรงเดิม)
+    const cursor = {};
+    for (const [f, tab] of state.tabs) {
+      const v = tab && (tab.editor || tab.sp) && (tab.editor || tab.sp).view;
+      if (!v || f.startsWith('::')) continue;
+      const { anchor, head } = v.state.selection;
+      if (anchor || head) cursor[f] = [anchor, head];
+    }
+    s.tabs.cursor = cursor;
   } catch (e) { log('warn', tt('ui.session.warnTabs'), e); }
   // แผง/แยกจอ: อ่านจาก localStorage ก้อนเดียวกับที่ระบบแผงใช้ (ที่นี่แค่ "ก๊อปลงไฟล์ให้ปลอดภัย")
   const ls = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
@@ -3558,6 +3590,17 @@ export async function restoreSessionTabs(s) {
       }
     };
     put(); setTimeout(put, 250); setTimeout(put, 900);   // เนื้อหา/การจัดหน้ายังทยอยวาด
+  }
+  // [alpha.159 · QoL] คืนเคอร์เซอร์/ช่วงที่เลือก — หนีบให้อยู่ในเอกสาร (ไฟล์อาจถูกแก้นอกโปรแกรมระหว่างปิด)
+  for (const [f, pair] of Object.entries(pruned.tabs.cursor || {})) {
+    const tb = state.tabs.get(f);
+    const v = tb && (tb.editor || tb.sp) && (tb.editor || tb.sp).view;
+    if (!v) continue;
+    try {
+      const max = v.state.doc.content.size;
+      const [a, h] = pair.map((x) => Math.max(0, Math.min(max, x)));
+      v.dispatch(v.state.tr.setSelection(PMTextSelection.between(v.state.doc.resolve(a), v.state.doc.resolve(h))));
+    } catch {}
   }
   if (n) log('info', ttf('ui.session.restoredTabs', n));
   return n;
@@ -3748,7 +3791,9 @@ function sortSceneRows(list, mode, mtimes) {
   if (mode === 'words') return out.sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0));
   if (mode === 'status') {
     // 'Outline' = ยังไม่ตั้ง → ไปท้ายเสมอ ไม่ใช่ปนกลางตามตัวอักษร
-    const rank = (s) => { const i = SCENE_STATUSES.indexOf(s); return (!s || s === 'Outline' || i < 0) ? 99 : i; };
+    // [alpha.159 · H9] ลำดับมาจาก allStatuses() (ตามที่ผู้ใช้ลากคอลัมน์ Kanban · รวมสถานะที่สร้างเอง)
+    // เดิมใช้ SCENE_STATUSES ตายตัว → สถานะที่สร้างเองไปกองท้ายรวมกับ "ยังไม่ตั้ง" และลำดับที่ผู้ใช้จัดถูกเมิน
+    const rank = statusRankOf(allStatuses());
     return out.sort((a, b) => rank(a.status) - rank(b.status) || (a.order || 0) - (b.order || 0));
   }
   if (mode === 'modified') {
@@ -3943,28 +3988,44 @@ export async function treeDeleteSelected(items) {
   const list = items && items.length ? items : treeSelCtx();
   if (!list.length) { setStatus(tt('ui.tree.nothingSelected')); return 0; }
   if (!(await confirmBox(ttf('ui.tree.confirmDeleteN', list.length), tt('ui.app.del')))) return 0;
+  let ok = 0; const failed = []; let lastTrash = '';
   for (const it of list) {
     // ลบหลายไฟล์ต้องไม่ถามซ้ำทีละไฟล์ — ย้ายเข้าถังเองแล้วเขียนใบกู้คืนแบบเดียวกับ deleteScene
-    try { await deleteSceneSilent(it.dPath, it.ch, it.sc); } catch (e) { log('warn', tt('ui.tree.delFail'), e); }
+    try { lastTrash = (await deleteSceneSilent(it.dPath, it.ch, it.sc)) || lastTrash; ok++; }
+    catch (e) { failed.push(it.sc?.title || ''); log('warn', tt('ui.tree.delFail'), e); }
   }
   clearTreeSel();
-  await buildTree();
-  setStatus(ttf('ui.tree.deletedN', list.length));
-  return list.length;
+  await buildTree(); refreshNetwork();
+  // [alpha.159] นับของที่ลบจริง (ตัวที่บันทึกไม่ผ่าน/พังไม่นับ) — แบบเดียวกับ ทำสำเนา/ย้าย
+  const msgDel = ttf('ui.tree.deletedN', ok) + (failed.length ? ' · ' + ttf('ui.tree.failedN', failed.length) : '');
+  if (lastTrash) setStatusAction(msgDel, tt('ui.trash.revealInFolder'), () => kapi.revealInOS(lastTrash));   // [alpha.159 · QoL]
+  else setStatus(msgDel);
+  return ok;
 }
 /** ลบฉากลงถังขยะโดยไม่ถามซ้ำ (ตัวถามอยู่ที่ผู้เรียก — กันกล่องเด้ง n ครั้ง) */
-async function deleteSceneSilent(dPath, ch, sc) {
+export async function deleteSceneSilent(dPath, ch, sc) {
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
   const base = file.split(/[\\/]/).pop();
   const dst = await kapi.join(state.root, 'Recycle', Date.now().toString(36) + '-' + base);
+  // [alpha.159 · H1] งานค้างต้องลงไฟล์ก่อนย้ายลงถัง (กฎ alpha.156 — เดิมทางลบหลายฉากทิ้งเงียบ ๆ
+  // แล้วของในถังเป็นฉบับเก่า) · บันทึกไม่สำเร็จ (กดยกเลิกในกล่องชนกับดิสก์) = ไม่ลบฉากนี้
+  const openTab = state.tabs.get(file);
+  if (openTab && openTab.dirty && (await saveTab(openTab)) === false) {
+    throw new Error(ttf('ui.tree.delSkipUnsaved', sc.title || base));
+  }
   await kapi.move(file, dst);
-  if (state.tabs.has(file)) { state.tabs.get(file).dirty = false; closeTab(file); }
+  if (state.tabs.has(file)) { state.tabs.get(file).dirty = false; closeTab(file, { discard: true }); }
   await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
     { kind: 'scene', dPath, chGuid: ch.guid, folderName: ch.folderName, sc }, null, 2));
+  // [alpha.159 · H1] แก้ทะเบียนผ่านคิว (อ่านสด) — เดิม readJson/writeFile ดิบทับของที่เพิ่งเขียน
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id);
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await mutateJson(kapi, sf, (d) => {
+    d.chapters = d.chapters || {};
+    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id);
+  });
+  await trashVisSidecar(dPath, ch.folderName, sc.fileName, dst);
+  logAction('scene', ttf('ui.scene.delScene2', sc.title), { dPath, chapter: ch.title, trash: dst });
+  return dst;
 }
 /** ย้ายหลายฉากไปบทอื่น (เลือกบทปลายทางจากรายการ) */
 async function treeMoveMenu(items) {
@@ -4580,6 +4641,11 @@ export async function buildTree() {
     return new Promise((resolve) => _treeWaiters.push(resolve));
   }
   _treeBuilding = true;
+  // [alpha.159 · H7] โครงเล่มอาจเปลี่ยน (เพิ่ม/ลบ/ย้ายฉาก) → สายหน้าเก่าใช้ไม่ได้ · แค่ทิ้งแคช
+  // (วัดใหม่แบบขี้เกียจ — เฉพาะตอนแท็บ "ไล่เลขต่อเนื่อง" ถามหาเลข)
+  try { bumpBookFlow(); } catch {}
+  // [alpha.159 · QoL] โครงโปรเจกต์อาจเปลี่ยน → ป้ายจำนวนปัญหาบนแถบสถานะสแกนใหม่ (หน่วงรวบ · เบื้องหลัง)
+  if (!PANEL_WIN) import('./project-doctor-ui.js').then((m) => m.scheduleDoctorBadge()).catch(() => {});
   try { await _buildTreeInner(); }
   catch (e) { log('error', tt('ui.app.buildTreeNewNotOk'), e); }
   finally {
@@ -4677,10 +4743,7 @@ async function _buildTreeInner() {
           if (ch.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(ch.color) || ch.color; chHead.append(dot); }
           chHead.append(icon(ch.locked || sec.locked ? 'lock' : ch.isFavorite ? 'star' : 'folder', 14), ' ' + (ch.title || ''));
           if (ch.status && ch.status !== 'Outline') {
-            const chChip = el('span', 'sc-status', dataLabel(ch.status));
-            const chCol = statusColor(ch.status);
-            if (chCol) paintStatusChip(chChip, chCol);
-            chHead.append(chChip);
+            chHead.append(statusChip(ch.status));        // [alpha.159 · M16] ชิปมี dataset.status
           }
           const addSc = el('span', 'row-add', '+');
           addSc.title = tt('ui.app.addSceneChapter');
@@ -4755,10 +4818,10 @@ async function _buildTreeInner() {
             if (sc.wordCount) scEl.append(el('span', 'sc-wordcount', wordBadgeText(sc.wordCount)));
             if (sc.status && sc.status !== 'Outline') {
               // ชิปสถานะได้สีประจำสถานะ (มาตรฐาน หรือที่ผู้ใช้ตั้งเองในกล่องจัดการสถานะ)
-              const stChip = el('span', 'sc-status', sc.status);
+              // [alpha.159 · M16] ป้ายตามภาษา (เดิมโชว์ค่าไทยดิบ) + ค่าจริงใน dataset ให้ตัวทาสีซ้ำอ่าน
               const stCol = statusColor(sc.status);
-              if (stCol) { paintStatusChip(stChip, stCol); scEl.style.setProperty('--row-st', vivid(stCol)); }
-              scEl.append(stChip);
+              if (stCol) scEl.style.setProperty('--row-st', vivid(stCol));
+              scEl.append(statusChip(sc.status));
             }
             // แท็ก: ตัวที่ตั้งสี/ไอคอนไว้ (Visual Tags ข้อ 84) ได้ชิปสี · ที่เหลือเป็น #ข้อความ
             if (sc.tags && sc.tags.length) {
@@ -4961,10 +5024,7 @@ async function _buildTreeInner() {
     if (meta.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(meta.color) || meta.color; it.append(dot); }
     it.append(document.createTextNode((mLocked ? gi('lock') : mFlag ? gi('star') : gi('file')) + ' ' + title));
     if (meta.status) {
-      const mChip = el('span', 'sc-status', dataLabel(meta.status));
-      const mCol = statusColor(meta.status);
-      if (mCol) paintStatusChip(mChip, mCol);
-      it.append(mChip);
+      it.append(statusChip(meta.status));
     }
     it.dataset.path = p;
     it.dataset.search = (title + ' ' + f).toLowerCase();
@@ -5782,11 +5842,15 @@ async function moveMemoToChapter(memoPath, dPath, ch, beforeId) {
                        dumpMdFile({ ...meta, title, type: 'memo' }, body));
   await kapi.remove(memoPath);
   const row = { id: guid(), title, order: list.length + 1, fileName, type: 'memo' };
-  const di = beforeId ? list.findIndex((x) => x.id === beforeId) : list.length;
-  list.splice(di < 0 ? list.length : di, 0, row);
-  list.forEach((x, i) => { x.order = i + 1; });
-  d.chapters[ch.guid] = list;
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  // [alpha.159 · M1] แทรกแถวผ่านคิว (อ่านสด) — ลำดับคิดใหม่จากของล่าสุดในไฟล์ ไม่ใช่ก้อนที่อ่านไว้ก่อนเขียนไฟล์
+  await mutateJson(kapi, sf, (fresh) => {
+    fresh.chapters = fresh.chapters || {};
+    const cur = (fresh.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const di = beforeId ? cur.findIndex((x) => x.id === beforeId) : cur.length;
+    cur.splice(di < 0 ? cur.length : di, 0, row);
+    cur.forEach((x, i) => { x.order = i + 1; });
+    fresh.chapters[ch.guid] = cur;
+  });
   await buildTree();
   setStatus(ttf('ui.app.moveNoteInChapter', title, ch.title));
   return true;
@@ -5804,10 +5868,11 @@ async function moveRowToMemos(dPath, ch, sc) {
   await kapi.writeFile(dst, dumpMdFile({ ...meta, title: sc.title, type: 'memo' }, body));
   await kapi.remove(src);
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id)
-    .sort((a, b) => (a.order || 0) - (b.order || 0)).map((x, i) => ({ ...x, order: i + 1 }));
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+  await mutateJson(kapi, sf, (d) => {                       // [alpha.159 · M1]
+    d.chapters = d.chapters || {};
+    d.chapters[ch.guid] = (d.chapters[ch.guid] || []).filter((x) => x.id !== sc.id)
+      .sort((a, b) => (a.order || 0) - (b.order || 0)).map((x, i) => ({ ...x, order: i + 1 }));
+  });
   await buildTree();
   setStatus(ttf('ui.app.moveOutMEMODone', sc.title));
   return dst;
@@ -5816,17 +5881,23 @@ async function moveRowToMemos(dPath, ch, sc) {
 // สลับให้ฉากกลายเป็นโน้ต (หรือกลับเป็นฉาก) — โน้ตจะไม่ถูกรวมตอนส่งออก
 async function setRowMemo(dPath, ch, sc, on) {
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  const row = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
+  // [alpha.159 · M1] แก้แถวผ่านคิว — คืนสำเนาของแถวให้ขั้นต่อไป (อัปเดต frontmatter) ใช้
+  const res = await mutateJson(kapi, sf, (d) => {
+    const r = ((d.chapters || {})[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!r) return false;
+    if (on) r.type = 'memo'; else delete r.type;
+    return { ...r };
+  });
+  const row = res.changed ? res.result : null;
   if (!row) return false;
-  if (on) row.type = 'memo'; else delete row.type;
-  await kapi.writeFile(sf, JSON.stringify(d, null, 2));
   // อัปเดต frontmatter ของไฟล์ให้ตรงกัน
   try {
     const file = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
     const { meta, body } = parseMdFile(await kapi.readFile(file));
     if (on) meta.type = 'memo'; else delete meta.type;
-    await kapi.writeFile(file, dumpMdFile(meta, body));
+    // [alpha.159 · M1] พาเธรดคอมเมนต์ไปด้วย + แท็บที่เปิดอยู่ต้องได้ meta ใหม่ (กฎ alpha.156)
+    await writeKeepingComments(file, dumpMdFile(meta, body));
+    await syncOpenTabMeta(file);
   } catch {}
   await buildTree();
   setStatus(on ? ttf('ui.app.noteDoneNotMerge', row.title) : ttf('ui.app.backSceneNormalDone', row.title));
@@ -6161,7 +6232,10 @@ export function syncSideToggles() {
 }
 
 // [alpha.157] ชุดสถานะ/สีเปลี่ยน (จาก Kanban หรือกล่องจัดการสถานะ) → ต้นไม้วาดชิปใหม่ทันที
-window.addEventListener('k2-statuses-changed', () => { refreshTreeQueued(); });
+window.addEventListener('k2-statuses-changed', () => {
+  refreshTreeQueued();
+  buildFilterBar().catch(() => {});        // [alpha.159 · H9] ชิปกรองต้องรู้จักสถานะใหม่ทันที
+});
 
 export function refreshTreeQueued() {
   _treeJob = _treeJob.then(() => buildTree())
@@ -6395,10 +6469,7 @@ async function buildPlannerSection(tree) {
       (bMeta.locked ? gi('lock') : bMeta.flag ? gi('star') : gi('clipboard')) + ' ' + b.name);
     if (bMeta.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(bMeta.color) || bMeta.color; it.prepend(dot); }
     if (bMeta.status) {
-      const bChip = el('span', 'sc-status', dataLabel(bMeta.status));
-      const bCol = statusColor(bMeta.status);
-      if (bCol) paintStatusChip(bChip, bCol);
-      it.append(bChip);
+      it.append(statusChip(bMeta.status));
     }
     it.dataset.path = b.path;
     it.dataset.planner = b.path;
@@ -6522,7 +6593,7 @@ async function buildBranchPlanSection(tree) {
       (pMeta.locked ? gi('lock') : pMeta.flag ? gi('star') : gi('branch')) + ' ' + p.name);
     // คุณสมบัติแบบฉาก: จุดสี + ป้ายสถานะ (เหมือนแถวฉากใน Explorer)
     if (p.plan.color) { const dot = el('span', 'sc-dot'); dot.style.background = vivid(p.plan.color) || p.plan.color; it.prepend(dot); }
-    if (p.plan.status) it.append(el('span', 'sc-status', dataLabel(p.plan.status)));   // [alpha.155] ค่าสถานะ = ข้อมูล · ป้ายตามภาษา
+    if (p.plan.status) it.append(statusChip(p.plan.status));   // [alpha.155] ค่าสถานะ = ข้อมูล · ป้ายตามภาษา · [159] + สี/dataset
     it.dataset.path = p.path;
     it.dataset.branchPlan = p.path;
     it.dataset.search = p.name;
@@ -7116,14 +7187,19 @@ export function applyLockToTab(tab) {
 // ตั้งสถานะล็อกของฉาก: เขียนทั้ง scenes.json (ให้ tree เห็น) + frontmatter (.md) + แท็บที่เปิดค้าง
 async function setSceneLock(dPath, ch, sc, locked) {
   const sf = await kapi.join(dPath, 'scenes.json');
-  const d = await kapi.readJson(sf);
-  const row = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
-  if (row) { row.locked = locked; await kapi.writeFile(sf, JSON.stringify(d, null, 2)); }
+  // [alpha.159 · M1] ผ่านคิว (อ่านสด) — เดิม readJson/writeFile ทับการเขียนที่ซ้อนกันอยู่
+  const res = await mutateJson(kapi, sf, (d) => {
+    const r = ((d.chapters || {})[ch.guid] || []).find((x) => x.id === sc.id);
+    if (!r) return false;
+    r.locked = locked;
+    return { ...r };
+  });
+  const row = res.changed ? res.result : null;
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, (row || sc).fileName);
   try {
     const { meta, body } = parseMdFile(await kapi.readFile(file));
     if (locked) meta.locked = 'true'; else delete meta.locked;
-    await kapi.writeFile(file, dumpMdFile(meta, body));
+    await writeKeepingComments(file, dumpMdFile(meta, body));   // [alpha.159 · M1] ไม่ลบเธรดคอมเมนต์
   } catch {}
   const openTab = state.tabs.get(file);
   if (openTab) {
@@ -7407,7 +7483,7 @@ async function renderPropsPanel() {
     s.addEventListener('change', () => {
       const live = state.tabs.get(file0);
       if (!live) return;
-      live.startPage = row.startPage || 1;
+      live.startPage = explicitStartPage(row);            // [alpha.159 · H7] ห้าม `|| 1`
       live.pageFlow = row.pageFlow === 'continue' ? 'continue' : '';
       updatePageNumberHint(); refreshSpView();
     });
@@ -8655,10 +8731,15 @@ export async function sceneCtx(file) {
   try {
     const scenes = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
     const draft = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
-    const fname = t.file.split(/[\\/]/).pop();
+    const parts = t.file.split(/[\\/]/);
+    const fname = parts.pop();
+    const folder = parts.pop();                     // โฟลเดอร์บทของไฟล์นี้
     const chapters = (draft.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     for (let ci = 0; ci < chapters.length; ci++) {
       const ch = chapters[ci];
+      // [alpha.159] ★ ต้องเป็นบทของไฟล์นี้ด้วย — ทุกบทมี scene-01.md ของตัวเอง · เดิมจับแค่ชื่อไฟล์
+      // → ได้แถวของบทแรกที่มีชื่อซ้ำ (เลขหน้าเริ่มต้น/ไล่ต่อเนื่อง/คุณสมบัติ มาจากฉากอื่น)
+      if (ch.folderName && folder && ch.folderName !== folder) continue;
       const list = ((scenes.chapters || {})[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
       const si = list.findIndex((s) => s.fileName === fname);
       if (si >= 0) return { dPath, ch, row: list[si], chapterNo: ci + 1, sceneNo: si + 1 };
@@ -8679,6 +8760,8 @@ export async function syncSceneMetaFromFiles(dPath) {
   const sf = await kapi.join(dir, 'scenes.json');
   const d = await kapi.readJson(sf);
   const draft = await kapi.readJson(await kapi.join(dir, 'draft.json'));
+  // อ่าน frontmatter ข้างนอกคิวก่อน (งานดิสก์ช้า) → เก็บเป็นแผนที่ id → ค่าที่ต้องเปลี่ยน
+  const patch = new Map();
   let n = 0;
   for (const ch of (draft.chapters || [])) {
     for (const row of ((d.chapters || {})[ch.guid] || [])) {
@@ -8686,11 +8769,22 @@ export async function syncSceneMetaFromFiles(dPath) {
       const m = await readSceneMeta(file, row);
       for (const k of SCENE_HEAVY_KEYS) {
         const before = JSON.stringify(row[k] ?? null), after = JSON.stringify(m[k] ?? null);
-        if (before !== after) { row[k] = m[k]; n++; }
+        if (before !== after) {
+          if (!patch.has(row.id)) patch.set(row.id, {});
+          patch.get(row.id)[k] = m[k]; n++;
+        }
       }
     }
   }
-  if (n) { await kapi.writeFile(sf, JSON.stringify(d, null, 2)); await buildTree(); }
+  // [alpha.159 · M1] ลงทะเบียนผ่านคิว (อ่านสด) — แตะเฉพาะช่องที่เปลี่ยนของแถวที่ยังอยู่
+  if (n) {
+    await mutateJson(kapi, sf, (fresh) => {
+      for (const rows of Object.values(fresh.chapters || {})) {
+        for (const r of rows || []) if (patch.has(r.id)) Object.assign(r, patch.get(r.id));
+      }
+    });
+    await buildTree();
+  }
   setStatus(n ? ttf('ui.app.propsSceneFileMd', n) : tt('ui.app.propsSceneAtFile'));
   return n;
 }
@@ -9205,14 +9299,17 @@ function mountEditor(tab, dir, body) {
   // [alpha.57a ข้อ 2] เลขหน้าเริ่มต้นของไฟล์นี้ (ตั้งในคุณสมบัติฉาก) — อ่านทีหลังได้ ไม่บล็อกการเปิด
   // [alpha.141] นิยายก็ต้องอ่านค่านี้ด้วย — เดิมเงื่อนไขเป็น `tab.sp &&` จึงมีแต่บทภาพยนตร์
   // ที่รู้เลขหน้าเริ่มต้นของตัวเอง (ฝั่งนิยายตกไปที่ 1 เสมอ ทั้งที่ช่องนั้นมีให้กรอกมาตั้งแต่ .57a)
-  if ((tab.sp || tab.editor) && tab.startPage === undefined) {
+  // [alpha.159 · H7] ธงโหลดแยกจากค่า — `startPage` ที่ไม่ได้ตั้งต้องเป็น undefined (ไม่ใช่ 1)
+  // ไม่งั้น currentStartPage() ไม่เคยไปถึงสาย "ไล่เลขหน้าต่อเนื่อง"
+  if ((tab.sp || tab.editor) && !tab._startPageLoaded && tab.startPage === undefined) {
+    tab._startPageLoaded = true;
     sceneCtx(tab.file).then((c) => {
       const row = c && c.row;
-      tab.startPage = (row && parseInt(row.startPage, 10)) || 1;
+      tab.startPage = explicitStartPage(row);
       // ธง "ไล่เลขหน้าต่อเนื่อง" ของฉากนี้ (คุณสมบัติฉาก → scenes.json → pageFlow)
       tab.pageFlow = isPageFlowContinue(row) ? 'continue' : '';
       if (state.active === tab) { updatePageNumberHint(); refreshSpView(); }
-    }).catch(() => { tab.startPage = 1; tab.pageFlow = ''; });
+    }).catch(() => { tab.startPage = undefined; tab.pageFlow = ''; });
   }
   // alpha.57 — เอาโหมดมุมมองที่เลือกไว้มาใช้กับแท็บที่เพิ่งเปิด/สลับมา
   // [alpha.110] มุมมองเป็นของแท็บแล้ว → แท็บใหม่ "รับมรดก" ค่าเริ่มต้นล่าสุดครั้งเดียวตอนเปิด
@@ -9266,7 +9363,9 @@ async function switchFormat(target) {
   mountEditor(tab, dir, body);
 
   tab.meta.modified = new Date().toISOString();
-  await kapi.writeFile(tab.file, dumpMdFile(tab.meta, body));
+  // [alpha.159 · H4] ต้องพาบล็อก `k2-comments` ไปด้วย — เดิม writeFile ตรง ๆ = เธรดคอมเมนต์หายถาวร
+  await writeKeepingComments(tab.file, dumpMdFile(tab.meta, body));
+  tab.diskBody = body;                               // ฐานของตัวตรวจ "แก้นอกโปรแกรม" = ของที่เพิ่งเขียน
   tab.dirty = false;
   tab.tabBtn.querySelector('.tab-title').textContent = tab.title;
 
@@ -10237,14 +10336,20 @@ export async function closeTabsUnderPath(dir, { save = true } = {}) {
     const f = pathKey(t2.file);
     return f === k || f.startsWith(k + '/');
   });
+  let closed = 0;
   for (const t2 of hits) {
     if (save && t2.dirty) {
-      try { await saveTab(t2); }
-      catch (e) { log('error', tt('ui.app.saveBeforeCloseFail') + (t2.title || t2.file), e); }
+      // [alpha.159] บันทึกไม่ผ่าน (คืน false = ผู้ใช้ยกเลิกในกล่องชนกับดิสก์ · throw = เขียนไม่ได้)
+      // → **ไม่ปิดทิ้ง** ปล่อยแท็บค้างไว้ให้ผู้ใช้ตัดสินเอง (เดิมปิดแบบ discard = งานหายเงียบ)
+      let r;
+      try { r = await saveTab(t2); }
+      catch (e) { log('error', tt('ui.app.saveBeforeCloseFail') + (t2.title || t2.file), e); r = false; }
+      if (r === false) { setStatus(tt('ui.app.saveCancelledKeepTab')); continue; }
     }
     closeTab(t2.file, { discard: true });
+    closed++;
   }
-  return hits.length;
+  return closed;
 }
 
 /**
@@ -10330,7 +10435,9 @@ export function closeTab(file, { discard = false, ask = false } = {}) {
     { label: tt('ui.app.closeTabDiscard'), value: 'discard', danger: true },
     { label: tt('ui.common.cancel'), value: null },
   ]).then((v) => {
-    if (v === 'save') saveTab(t).then(done);
+    // [alpha.159 · H2] ต้องผ่าน saveThenClose — เดิม `saveTab(t).then(done)` ปิดแท็บทิ้งแม้บันทึกคืน false
+    // (ผู้ใช้กดยกเลิกในกล่อง "ไฟล์ถูกแก้นอกโปรแกรม") = งานที่พิมพ์หายทั้งก้อน
+    if (v === 'save') saveThenClose();
     else if (v === 'discard') { t.dirty = false; updateDirtyBadge(); done(); }
     // null/Esc = ไม่ปิด ไม่บันทึก — แท็บอยู่เหมือนเดิมทุกประการ
   });
@@ -10404,12 +10511,9 @@ setTabBridge({
     }
     return null;
   },
-  closeUnder(dir) {
-    const k = pathKey(dir) + '/';
-    const hits = [...state.tabs.values()].filter((t) => t.file && pathKey(t.file).startsWith(k));
-    for (const t of hits) closeTab(t.file, { discard: true });
-    return hits.length;
-  },
+  // [alpha.159 · H5] ตัวกลางตัวเดียวกับทางคลิก — บันทึกงานค้างก่อนปิด (เดิมปิดแบบทิ้ง = งานหาย)
+  // รับได้ทั้งโฟลเดอร์และไฟล์เดี่ยว (ฉาก/หน้า Wiki ที่ AI ลบ)
+  closeUnder(dir) { return closeTabsUnderPath(dir, { save: true }); },
 });
 
 // [80] Revert — ยกเลิกการเปลี่ยนแปลงทั้งหมด โหลดใหม่จากดิสก์
@@ -11339,13 +11443,13 @@ function repaginateNow(t) {
                          contBottom: onCt ? (pg.pages[i - 1] || {}).continuedBottom || '' : '',
                          contTop: onCt ? (pg.pages[i] || {}).continuedTop || '' : '' }))
       .slice(1)
-      .filter((x) => Number.isFinite(x.pos)));
+      .filter((x) => Number.isFinite(x.pos)), t.sp.view);   // [alpha.159 · H15] รายการของแท็บนี้
     // [alpha.83 ข้อ 4] เลขหน้าจริงของหน้าที่ 2 เป็นต้นไปในโหมดปกติ/จัดหน้า
-    const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt));
+    const nChanged = setSpPageNumberLabel(pageNumberLabelFor(fmt), t.sp.view);
     updatePageNumberHint();
     // [alpha.58 · 55–56] เครื่องหมายต่อเนื่อง — คิดจากผลจัดหน้าชุดเดียวกัน จึงตรงกับเส้นคั่นหน้าเสมอ
     const marks = spContinuedOn() ? computeContinueds(pg, fmt) : [];
-    const cChanged = setContinueds(marks);
+    const cChanged = setContinueds(marks, t.sp.view);   // [alpha.159] รายการของแท็บนี้
     // วาดใหม่เฉพาะตอนตำแหน่งเส้นเปลี่ยนจริง — dispatch ทุก 300ms ไปกวนตำแหน่งเลื่อนตอนซูม
     if (changed || cChanged || nChanged) t.sp.refreshGuides();
     setLayoutPageCount(t, pg.count);       // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
@@ -11384,7 +11488,7 @@ function tuneProsePagePads(t) {
   const view = t.editor.view;
   const pm = view.dom;
   if (!pm.isConnected) return false;
-  const list = prosePageBreaks();
+  const list = prosePageBreaks(view);
   if (!list.length) return false;
   const els = [...pm.querySelectorAll('.ed-page-break')];
   if (els.length !== list.length) return false;         // ยังวาดไม่ครบ — รอรอบหน้า
@@ -11515,7 +11619,7 @@ function tuneSpPagePads(t) {
   if (nowMs < _spPadTuneUntil) return false;
   const pm = t.sp.view.dom;
   if (!pm || !pm.isConnected) return false;
-  const list = pageBreaks();
+  const list = pageBreaks(t.sp.view);
   if (!list.length) return false;
   const els = [...pm.querySelectorAll('.sp-page-break')];
   if (els.length !== list.length) return false;         // ยังวาดไม่ครบ — รอรอบหน้า
@@ -11681,9 +11785,9 @@ function repaginateProseNow(t) {
       state._mzDiag = { path: 'measured', pages: mz.pages.length, breaks: list82.length,
                         cached: !!(mz && mz.__fromCache), why: { ...CUT_FAIL },
                         ms: +( _msSlice).toFixed(2), msMeasure: +(_msMeasure).toFixed(2) };
-      const changed = setProsePageBreaks(list82);
+      const changed = setProsePageBreaks(list82, t.editor.view);   // [alpha.159 · H15]
       // [alpha.83 ข้อ 4] เลขหน้าจริงที่มุมขวาบนของหน้าถัดไป (โหมดปกติ/จัดหน้าของนิยาย)
-      const nChanged = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+      const nChanged = setProsePageNumberLabel(prosePageNumberLabelFor(spf), t.editor.view);
       if (nChanged && !changed) refreshProsePageBreaks(t.editor.view);
       if (changed) {
         refreshProsePageBreaks(t.editor.view);
@@ -11712,8 +11816,8 @@ function repaginateProseNow(t) {
     const base = currentStartPage(t) - 1;
     const changed = setProsePageBreaks(
       prosePageStarts(ppg).map((pos, i) => ({ pos, page: base + i + 1 })).slice(1)
-        .filter((x) => Number.isFinite(x.pos)));
-    const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf));
+        .filter((x) => Number.isFinite(x.pos)), t.editor.view);
+    const nChanged2 = setProsePageNumberLabel(prosePageNumberLabelFor(spf), t.editor.view);
     if (changed || nChanged2) refreshProsePageBreaks(t.editor.view);
     setLayoutPageCount(t, ppg.count);      // [alpha.81 ข้อ 7] หน้าสุดท้ายต้องเป็นแผ่นเต็ม
     refreshSpView();
@@ -11795,8 +11899,8 @@ function scheduleCount() {
       // [54] ตรวจข้อผิดพลาดพร้อมกัน (debounce เดียวกับการนับคำ)
       try { checkScreenplay(t); } catch (e) { log('warn', tt('ui.app.checkChapterNotOk'), e); }
     } else {
-      setPageBreaks([]);
-      setContinueds([]);
+      // [alpha.159 · H15] ไม่ล้างเส้นคั่น/CONTINUED ของบทอีกแล้ว — รายการเป็นของแต่ละตัวแก้ไข
+      // (เดิมรายการเป็นก้อนเดียวทั้งโมดูล การล้างตรงนี้ไปลบของแท็บบทที่เปิดค้างอยู่)
       _spPageText = '';
       _spErrors = [];
     }
@@ -11804,10 +11908,9 @@ function scheduleCount() {
     if (t.editor) {
       const n = repaginateProseNow(t);
       if (n) txt += ttf('ui.app.page', n);
-    } else {
-      setProsePageBreaks([]);
     }
     $('#wc').textContent = txt;
+    try { updateCursorPage(); } catch {}        // [alpha.159 · QoL] จัดหน้าเสร็จ = รู้ว่าเคอร์เซอร์อยู่หน้าไหน
     updateErrorBadge();
     updateProgressBar();
     scheduleLineGutter();                 // [60r2 ข้อ 11] เนื้อหาเปลี่ยน = เลขบรรทัดเปลี่ยนตาม
@@ -11882,6 +11985,7 @@ function saveNavUI() {
 export function resetNavUi() {
   navUI.q = ''; navUI.groups = []; navUI.colors = []; navUI.star = false;
   navUI.flags = []; navUI.page = 0;
+  _navPageOf.clear(); _navPageKey = '';
   saveNavUI();
   navShowBeats = true;
   localStorage.setItem('k2-nav-beats', '1');
@@ -11991,7 +12095,7 @@ function navLoadComments(file) {
 /** เติม บรรทัด/หน้า/สถานะ ให้แถวที่สแกนมา (ตัวเดียวกับที่ relay ส่งข้ามหน้าต่าง) */
 function navDecorate(t, items) {
   const counts = navMdLines(t);
-  const brk = t && t.sp ? pageBreaks() : (t && t.editor ? prosePageBreaks() : []);
+  const brk = t && t.sp ? pageBreaks(t.sp.view) : (t && t.editor ? prosePageBreaks(t.editor.view) : []);
   const base = currentStartPage(t) || 1;
   const sid = t ? (t.file || '') : '';
   const quotes = (navCmt.file && t && navCmt.file === t.file) ? navCmt.quotes : [];
@@ -12240,6 +12344,8 @@ function colorHex(name) {
 // รายการที่คำนวณไว้ล่าสุด — ตัวกรอง/แบ่งหน้า/คลิก อ่านจากก้อนนี้ (ไม่สแกนเอกสารซ้ำทุกครั้งที่พิมพ์)
 let navRows = [];
 let navCtx = { tab: null, book: false };
+const _navPageOf = new Map();          // [alpha.159 · QoL] ไฟล์ฉาก → หน้าที่ดูอยู่ในแผง Navigation
+let _navPageKey = '';
 
 /** วาดเฉพาะ "รายการ" (แถบเครื่องมือคงอยู่) — เรียกทุกครั้งที่ตัวกรอง/หน้าเปลี่ยน */
 function navDrawList() {
@@ -12251,10 +12357,15 @@ function navDrawList() {
 
   const shown = filterNav(navRows, navUI);
   const perPage = clampPerPage(state.settings.navPerPage);
+  // [alpha.159 · QoL] จำ "หน้าที่ดูอยู่" แยกต่อฉาก — สลับไปฉากอื่นแล้วกลับมา ต้องไม่ต้องไล่หน้าใหม่
+  // (เดิมเลขหน้าเป็นก้อนเดียวทั้งแผง: ฉากใหม่ได้หน้าค้างของฉากเก่า · กลับมาก็เสียหน้าเดิม)
+  const pk = navCtx.book ? '::book::' : ((navCtx.tab && navCtx.tab.file) || '');
+  if (pk !== _navPageKey) { navUI.page = _navPageOf.get(pk) || 0; _navPageKey = pk; }
   const paged = state.settings.navMode === 'page'
     ? navSlice(shown, navUI.page, perPage)
     : { page: 0, pages: 1, rows: shown };
   navUI.page = paged.page;
+  _navPageOf.set(pk, paged.page);
 
   if (!shown.length) {
     host.append(el('div', 'dim', navFilterOn() ? tt('ui.nav.noMatch') : tt('ui.app.notHasHeadingHead')));
@@ -15550,8 +15661,9 @@ async function buildFilterBar() {
   
   if (!state.root) return;
   
-  // ปุ่มสถานะ
-  for (const st of SCENE_STATUSES) {
+  // ปุ่มสถานะ — [alpha.159 · H9] แหล่งเดียว allStatuses() (ลำดับ/ซ่อน/สถานะที่ผู้ใช้สร้างเอง)
+  // เดิมวน SCENE_STATUSES ตายตัว → สถานะที่สร้างจาก Kanban/กล่องจัดการสถานะกรองไม่ได้เลย
+  for (const st of allStatuses()) {
     const chip = el('span', 'filter-chip', dataLabel(st));
     chip.dataset.status = st;                       // ค่าจริงเก็บใน dataset — ตัวกรองต้องใช้ค่าไทยเสมอ
     chip.onclick = () => {
@@ -15562,10 +15674,10 @@ async function buildFilterBar() {
       const active = [...statusesEl.querySelectorAll('.filter-chip.on')].map((c) => c.dataset.status || c.textContent);
       // สร้าง query จากสถานะที่เลือก
       if (active.length) {
-        q.value = active.map((s) => 'status:' + s).join(' OR ');
+        q.value = active.map((s) => 'status:' + queryValue(s)).join(' OR ');
       } else {
-        // ลบเฉพาะส่วน status: ออกจาก query
-        q.value = q.value.replace(/\bstatus:\S+/g, '').replace(/\s+OR\s+/g, ' ').trim();
+        // ลบเฉพาะส่วน status: ออกจาก query (รวมค่าที่อยู่ใน "…")
+        q.value = q.value.replace(/\bstatus:(?:"[^"]*"|\S+)/g, '').replace(/\s+OR\s+/g, ' ').trim();
       }
       q.dispatchEvent(new Event('input', { bubbles: true }));
     };
@@ -32535,6 +32647,11 @@ async function runTest(projectPath) {
           // ═══ [alpha.159 ข้อ 3] ความกว้างของแท็บตั้งได้ · จอกับไฟล์ส่งออกใช้ค่าเดียวกัน ═══
           {
             const keepPr159 = JSON.parse(JSON.stringify(state.settings.prose || {}));
+            // tab-size ของ CSS = "จุดหยุดแท็บ" (ทุก N ช่องว่างจากต้นบรรทัด) ไม่ใช่ระยะคงที่ —
+            // มีย่อหน้าบรรทัดแรกเมื่อไหร่ จุดหยุดถัดไปของ 4 กับ 12 อาจตรงกันพอดี (macOS: 108px เป็นพหุคูณของทั้งคู่)
+            // → วัดโดยปิดย่อหน้าบรรทัดแรก เพื่อให้ผลขึ้นกับความกว้างแท็บอย่างเดียว
+            state.settings.prose = { ...keepPr159, firstLineIndent: 0 };
+            applySettings();
             T.editor.setMarkdown(String.fromCharCode(9) + 'เยื้องด้วยแท็บ');
             await w98(200);
             const tabOf = () => getComputedStyle(pm98).tabSize;
@@ -32552,8 +32669,17 @@ async function runTest(projectPath) {
             applySettings();
             await w98(200);
             check('[159-3] ★ ตั้งแท็บ = 12 ช่องว่าง → ตัวแก้ไขใช้จริง', tabOf() === '12', tabOf());
+            // ข้อมูลวินิจฉัย (แสดงเฉพาะตอนล้ม) — สภาพของย่อหน้าที่วัดจริง
+            const diag159 = () => {
+              const para = pm98.querySelector('p');
+              const cs = para ? getComputedStyle(para) : null;
+              return JSON.stringify({ txt: para ? para.textContent.slice(0, 6) : null,
+                nodes: para ? [...para.childNodes].map((n) => n.nodeType + ':' + (n.textContent || '').slice(0, 4)) : null,
+                ws: cs && cs.whiteSpace, ts: cs && cs.tabSize, ta: cs && cs.textAlign,
+                ff: cs && cs.fontFamily.slice(0, 40), vis: para && para.getBoundingClientRect().width });
+            };
             check('[159-3] ★ ข้อความหลังแท็บขยับไปขวาจริง (วัดตำแหน่งบนจอ)',
-                  textStart() > left4 + 10, left4 + ' → ' + textStart());
+                  textStart() > left4 + 10, left4 + ' → ' + textStart() + ' · ' + diag159());
             state.settings.prose = { ...(state.settings.prose || {}), tabSize: 2, tabUnit: 'cm' };
             applySettings();
             await w98(150);
@@ -32786,7 +32912,9 @@ async function runTest(projectPath) {
             await w98(300);
             const view98 = T.editor.view;
             view98.focus();
-            const mid = Math.round(view98.state.doc.content.size / 2);
+            // +5 = กลางคำ — ครึ่งเอกสารพอดีตกหลังวรรคของหน่วยที่ 6 ซึ่งบน macOS เป็นต้นบรรทัดที่ตัดพอดี
+            // (เคอร์เซอร์อยู่ต้นบรรทัดอยู่แล้วก่อนกด Home = เทสวัดอะไรไม่ได้)
+            const mid = Math.round(view98.state.doc.content.size / 2) + 5;
             T.editor.gotoPos(mid);
             await w98(120);
             const xOf = () => view98.coordsAtPos(view98.state.selection.head).left;
@@ -35692,10 +35820,23 @@ async function runTest(projectPath) {
           check('[66r2-1] ขยับแผงแล้วตำแหน่งเลื่อนแนวนอนก็ยังอยู่ (เดิมไม่เคยถูกจดเลย)',
                 !!b2 && Math.abs(b2.scrollLeft - 140) <= 8, b2 && String(b2.scrollLeft));
           // ผู้ใช้ต้องเลื่อนต่อเองได้ ไม่ถูกล็อกไว้
-          b2.scrollTop = 700;
-          await wait62(320);
+          // เป้า 700 เว้นแต่แผงสูงจนเลื่อนได้ไม่ถึง (สูงสุด = scrollHeight − clientHeight ขึ้นกับขนาดหน้าต่าง)
+          // — เดิมตายตัว 700 แล้วแดงบนจอที่แผงสูงกว่า ทั้งที่จอเลื่อนไปสุดแล้วจริง (ไม่ได้ถูกล็อก)
+          const want66 = Math.min(700, Math.floor(b2.scrollHeight - b2.clientHeight) - 2);
+          const sbH0 = ($('#statusbar') || {}).offsetHeight;
+          const geo0 = [b2.scrollHeight, b2.clientHeight];
+          // ตัวแผงใบใหม่ได้ scroll-behavior:smooth จาก CSS — ตั้ง scrollTop = แอนิเมชัน ถ้าเครื่องช้าอ่านได้ค่ากลางทาง
+          // (เคสจริง: 684 จาก 700 ทั้งที่ช่วงเลื่อนได้ถึง 948) · ใบแรกตั้ง auto ไว้แล้ว ใบนี้ต้องตั้งด้วย
+          b2.style.scrollBehavior = 'auto';
+          b2.scrollTop = want66;
+          const trace66 = [b2.scrollTop];
+          for (const ms of [30, 60, 100, 130]) { await wait62(ms); trace66.push(bodyOf().scrollTop); }
+          const ae66 = document.activeElement ? (document.activeElement.className || document.activeElement.tagName) : '';
           check('[66r2-1] คืนค่าเสร็จแล้วไม่ล็อกจอ — ผู้ใช้เลื่อนต่อได้',
-                Math.abs(bodyOf().scrollTop - 700) <= 2, String(bodyOf().scrollTop));
+                want66 > 400 && Math.abs(bodyOf().scrollTop - want66) <= 2,
+                String(bodyOf().scrollTop) + ' / ' + want66 + ' · แถบสถานะ ' + sbH0 + '→' + ($('#statusbar') || {}).offsetHeight
+                + ' · trace ' + trace66.join(',') + ' · focus ' + ae66 + ' · sh/ch ' + geo0.join('/') + '→' + [bodyOf().scrollHeight, bodyOf().clientHeight].join('/') + ' same=' + (bodyOf() === b2)
+                + ' · ' + JSON.stringify([...document.querySelectorAll('#status-right > *')].map((x) => x.offsetHeight)));
           big.remove();
         }
         hidePanel('notes');
@@ -45028,6 +45169,361 @@ async function runTest(projectPath) {
                 && ovA.querySelector('.k-about-logo').naturalWidth > 0));
           ovA.remove();
         }
+      }
+
+      // ══ [alpha.159-audit] ★★ รอบตรวจสอบ: ข้อมูลหาย · ฟีเจอร์ตาย · ความปลอดภัย · parity ══
+      // ทุกข้อทำในบท/ร่างชั่วคราวของตัวเอง แล้วลบทิ้งตอนจบ — ไม่แตะฉากของบล็อกเทสอื่น
+      {
+        const w159 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until159 = async (fn, ms = 4000) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await w159(60); }
+          return false;
+        };
+        const okDlg159 = async () => {
+          await until159(() => !!document.querySelector('.k-dialog .k-ok'));
+          [...document.querySelectorAll('.k-dialog .k-ok')].pop().click();
+        };
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((n) => n.remove());
+        const SO = await import('./scene-ops.js');
+        const JS = await import('./json-store.js');
+        const d159 = (await listDrafts())[0];
+        const dPath = d159.dPath;
+        const secPath = dPath.replace(/[\\/]Draft[\\/][^\\/]+$/, '');
+        const sf = await kapi.join(dPath, 'scenes.json');
+        const rows159 = async (g) => (((await kapi.readJson(sf)).chapters || {})[g] || []);
+        const recDir = await kapi.join(state.root, 'Recycle');
+        const trashOf = async (fileName) => {
+          const hits = (await kapi.listFiles(recDir, '.md')).filter((f) => f.endsWith('-' + fileName)).sort();
+          return hits.length ? kapi.join(recDir, hits[hits.length - 1]) : '';
+        };
+        const ch = await SO.addChapter(dPath, 'บทตรวจ159');
+        const dir = await kapi.join(dPath, 'Chapters', ch.folderName);
+        check('[159-P1-0] เงื่อนไข: สร้างบทชั่วคราวได้', !!ch && await kapi.exists(dir));
+
+        // ── H1: ลบหลายฉาก — แท็บค้างต้องถูกบันทึกก่อนลงถัง + ทะเบียนแก้ผ่านคิว ──
+        {
+          const a = await SO.addScene(dPath, ch, 'ลบหลาย159ก', { silent: true, body: 'เดิมก159' });
+          const b = await SO.addScene(dPath, ch, 'ลบหลาย159ข', { silent: true, body: 'เดิมข159' });
+          const fa = await kapi.join(dir, a.fileName);
+          await openScene(fa, null);
+          const ta = state.tabs.get(fa);
+          check('[159-H1] เงื่อนไข: เปิดฉากได้', !!ta && !!ta.editor);
+          ta.editor.setMarkdown('พิมพ์ค้างก่อนลบ159'); markDirty(ta);
+          const pDel = treeDeleteSelected([{ dPath, ch, sc: a }, { dPath, ch, sc: b }]);
+          await okDlg159();
+          const n = await pDel;
+          check('[159-H1] ลบสองฉาก + แท็บถูกปิด', n === 2 && !state.tabs.has(fa), n);
+          check('[159-H1] ★ ทะเบียนไม่เหลือแถวของฉากที่ลบ', (await rows159(ch.guid)).length === 0);
+          const tp = await trashOf(a.fileName);
+          check('[159-H1] ★★ ของในถังขยะคือข้อความที่พิมพ์ค้าง (บันทึกก่อนย้าย)',
+                !!tp && parseMdFile(await kapi.readFile(tp)).body.includes('พิมพ์ค้างก่อนลบ159'), tp);
+          await restoreFromTrash(tp, tp.split(/[\\/]/).pop());
+          const back = (await rows159(ch.guid)).find((r) => r.id === a.id);
+          check('[159-H1] ★★ กู้จากถังแล้วได้ข้อความที่พิมพ์ค้าง', !!back &&
+                parseMdFile(await kapi.readFile(await kapi.join(dir, back.fileName))).body.includes('พิมพ์ค้างก่อนลบ159'));
+          await saveAllTabs(true);
+        }
+
+        // ── H2: ปิดแท็บ → "บันทึก" แต่ผู้ใช้ยกเลิกในกล่องชนกับดิสก์ = แท็บต้องไม่ถูกปิด ──
+        {
+          const c = await SO.addScene(dPath, ch, 'ปิดแท็บ159', { silent: true, body: 'ดิสก์เดิม159' });
+          const fc = await kapi.join(dir, c.fileName);
+          await openScene(fc, null);
+          const tc = state.tabs.get(fc);
+          await kapi.writeFile(fc, dumpMdFile(parseMdFile(await kapi.readFile(fc)).meta, 'แก้จากที่อื่น159'));
+          tc.editor.setMarkdown('งานในแท็บ159'); markDirty(tc);
+          window.__k2conflictChoice = 'skip';
+          closeTab(fc, { ask: true });
+          await until159(() => [...document.querySelectorAll('.k-dialog button')].some((x) => x.textContent === tt('ui.app.closeTabSave')));
+          [...document.querySelectorAll('.k-dialog button')].find((x) => x.textContent === tt('ui.app.closeTabSave')).click();
+          await w159(300);
+          check('[159-H2] ★★ บันทึกไม่ผ่าน (ยกเลิกในกล่องชน) = แท็บยังเปิดอยู่พร้อมงานค้าง',
+                state.tabs.has(fc) && tc.dirty && tc.editor.getMarkdown().includes('งานในแท็บ159'));
+          check('[159-H2] ไฟล์บนดิสก์ไม่ถูกทับ', parseMdFile(await kapi.readFile(fc)).body === 'แก้จากที่อื่น159');
+          window.__k2conflictChoice = 'overwrite';
+          closeTab(fc, { ask: true });
+          await until159(() => [...document.querySelectorAll('.k-dialog button')].some((x) => x.textContent === tt('ui.app.closeTabSave')));
+          [...document.querySelectorAll('.k-dialog button')].find((x) => x.textContent === tt('ui.app.closeTabSave')).click();
+          check('[159-H2] บันทึกผ่าน = ปิดแท็บตามปกติ', await until159(() => !state.tabs.has(fc)));
+          delete window.__k2conflictChoice;
+        }
+
+        // ── H3: ลบ/เปลี่ยนชื่อฉบับร่าง — ปิดแท็บ (บันทึกก่อน) · ไม่มีโฟลเดอร์ผี · ประวัติเวอร์ชันตามไป ──
+        {
+          const DR = await import('./drafts.js');
+          const mk = async (nm) => {
+            const p = await DR.createDraft(secPath, nm, null);
+            const dj = await kapi.readJson(await kapi.join(p, 'draft.json'));
+            const c0 = dj.chapters[0];
+            const s0 = await SO.addScene(p, c0, 'ฉากในร่าง' + nm, { silent: true, body: 'เดิม' + nm });
+            return { p, c0, f: await kapi.join(p, 'Chapters', c0.folderName, s0.fileName) };
+          };
+          const x = await mk('ร่างลบ159');
+          await openScene(x.f, null);
+          const tx = state.tabs.get(x.f);
+          tx.editor.setMarkdown('ค้างในร่างที่ลบ159'); markDirty(tx);
+          const pD = DR.deleteDraft(secPath, 'ร่างลบ159');
+          await okDlg159();
+          check('[159-H3] ลบร่างสำเร็จ', (await pD) === true);
+          check('[159-H3] ★ แท็บของฉากในร่างที่ลบถูกปิด', !state.tabs.has(x.f));
+          await saveAllTabs(true);
+          await w159(200);
+          check('[159-H3] ★★ ไม่มีโฟลเดอร์ร่างผีเกิดใหม่หลังบันทึก', !(await kapi.exists(x.p)));
+          const y = await mk('ร่างเดิม159');
+          await snapshotFile(y.f, 'ก่อนเปลี่ยนชื่อร่าง159');
+          await openScene(y.f, null);
+          const ty = state.tabs.get(y.f);
+          ty.editor.setMarkdown('ค้างก่อนเปลี่ยนชื่อ159'); markDirty(ty);
+          check('[159-H3] เปลี่ยนชื่อร่างสำเร็จ', (await DR.renameDraft(secPath, 'ร่างเดิม159', 'ร่างใหม่159')) === true);
+          const newF = y.f.replace('ร่างเดิม159', 'ร่างใหม่159');
+          check('[159-H3] ★ แท็บใต้ชื่อเดิมถูกปิด + งานค้างลงไฟล์ใหม่',
+                !state.tabs.has(y.f) && parseMdFile(await kapi.readFile(newF)).body.includes('ค้างก่อนเปลี่ยนชื่อ159'));
+          await saveAllTabs(true);
+          check('[159-H3] ★★ ร่างชื่อเดิมไม่เด้งกลับ', !(await kapi.exists(y.p)));
+          check('[159-H3] ★ ประวัติเวอร์ชันย้ายตามร่าง',
+                (await listSnapshots(newF)).some((s) => s.label.includes('159')) && (await listSnapshots(y.f)).length === 0);
+          await closeTabsUnderPath(y.p.replace('ร่างเดิม159', 'ร่างใหม่159'), { save: false });
+          await kapi.remove(y.p.replace('ร่างเดิม159', 'ร่างใหม่159'));
+        }
+
+        // ── H4: สลับนิยาย↔บท ต้องไม่ลบเธรดคอมเมนต์ ──
+        {
+          const e = await SO.addScene(dPath, ch, 'สลับโหมด159', { silent: true, body: 'ย่อหน้าที่มีคอมเมนต์159' });
+          const fe = await kapi.join(dir, e.fileName);
+          await kapi.writeFile(fe, (await kapi.readFile(fe)).replace(/\s*$/, '') +
+            '\n\n<!-- k2-comments\n[{"id":"c159","text":"คอมเมนต์ห้ามหาย159","anchor":null}]\n-->\n');
+          await openScene(fe, null);
+          check('[159-H4] เงื่อนไข: เปิดฉากที่มีคอมเมนต์', state.active && state.active.file === fe);
+          await switchFormat('screenplay');
+          const raw1 = await kapi.readFile(fe);
+          check('[159-H4] ★★ สลับเป็นบทแล้วไฟล์ยังมีบล็อก k2-comments', raw1.includes('k2-comments') && raw1.includes('คอมเมนต์ห้ามหาย159'),
+                raw1.slice(-160));
+          check('[159-H4] สลับแล้วแท็บไม่ค้าง + diskBody ตรงกับที่เขียน', !state.active.dirty
+                && state.active.diskBody === parseMdFile(raw1).body);
+          await switchFormat('prose');
+          check('[159-H4] ★ สลับกลับยังมีคอมเมนต์', (await kapi.readFile(fe)).includes('คอมเมนต์ห้ามหาย159'));
+          closeTab(fe, { discard: true });
+        }
+
+        // (เฟส 2–4 ต่อท้ายบล็อกนี้ — ใช้บทชั่วคราว ch/dir ตัวเดียวกัน)
+        // ── H7: "ไล่เลขหน้าต่อเนื่อง" ต้องทำงานจริงบนแท็บที่เปิด (เดิมถูก `|| 1` ทับทุกครั้ง) ──
+        {
+          const q1 = await SO.addScene(dPath, ch, 'หน้าต่อ159ก', { silent: true, body: 'เนื้อฉากก่อนหน้า159' });
+          const q2 = await SO.addScene(dPath, ch, 'หน้าต่อ159ข', { silent: true, body: 'เนื้อฉากที่ไล่เลขต่อ159' });
+          await JS.mutateJson(kapi, sf, (d) => {
+            const r = (d.chapters[ch.guid] || []).find((x) => x.id === q2.id);
+            r.pageFlow = 'continue'; delete r.startPage;
+          });
+          await buildTree();
+          const f1 = await kapi.join(dir, q1.fileName), f2 = await kapi.join(dir, q2.fileName);
+          // [alpha.159] ชื่อไฟล์ scene-NN.md ซ้ำข้ามบทเป็นเรื่องปกติ — sceneCtx ต้องได้แถวของบท "นี้"
+          const ctx7 = await sceneCtx(f2);
+          check('[159-H7] ★ sceneCtx จับแถวของบทที่ไฟล์อยู่จริง (ไม่ใช่บทแรกที่ชื่อไฟล์ซ้ำ)',
+                !!ctx7 && ctx7.row.id === q2.id && ctx7.ch.guid === ch.guid, ctx7 && JSON.stringify([ctx7.row.id, ctx7.ch.title]));
+          await openScene(f2, null);
+          const t2 = state.tabs.get(f2);
+          const ok7 = await until159(() => t2 && t2._startPageLoaded && t2.pageFlow === 'continue', 6000);
+          const row7 = (await rows159(ch.guid)).find((x) => x.id === q2.id);
+          check('[159-H7] เงื่อนไข: แท็บโหลดธง continue', ok7,
+                JSON.stringify({ tab: !!t2, keys: t2 ? undefined : [...state.tabs.keys()].slice(-3), loaded: t2 && t2._startPageLoaded,
+                                 pf: t2 && t2.pageFlow, sp: t2 && t2.startPage, row: row7 && row7.pageFlow }));
+          check('[159-H7] ★ แถวที่ไม่ได้พิมพ์เลขเอง → tab.startPage ไม่ถูกยัด 1', t2.startPage === undefined, t2.startPage);
+          const got = await until159(() => currentStartPage(t2) > 1, 20000);
+          const map159 = await computeBookFlow(sectionPathOfFile(f2));
+          check('[159-H7] ★★ ฉากที่ติ๊ก "ไล่เลขต่อเนื่อง" ได้เลขจากสายหน้าของเล่ม (ไม่ใช่ 1)',
+                got && currentStartPage(t2) === map159.get(f2) && map159.get(f2) >= (map159.get(f1) || 1),
+                JSON.stringify([currentStartPage(t2), map159.get(f1), map159.get(f2)]));
+          t2.startPage = 42;
+          check('[159-H7] เลขที่ผู้ใช้ตั้งเองยังชนะสายต่อเนื่อง', currentStartPage(t2) === 42);
+          closeTab(f2, { discard: true });
+        }
+
+        // ── H15: เส้นคั่นหน้าเป็นของแต่ละแท็บ (สองแท็บนิยายเปิดพร้อมกัน) ──
+        {
+          const para = (n, w) => Array.from({ length: n }, (_, i) => w + ' ' + i + ' ' + 'เนื้อความยาวพอให้ขึ้นหลายบรรทัด '.repeat(6)).join('\n\n');
+          const pa = await SO.addScene(dPath, ch, 'แบ่งหน้า159ก', { silent: true, body: para(90, 'ก') });
+          const pb = await SO.addScene(dPath, ch, 'แบ่งหน้า159ข', { silent: true, body: para(40, 'ข') });
+          const fA = await kapi.join(dir, pa.fileName), fB = await kapi.join(dir, pb.fileName);
+          await openScene(fA, null);
+          const tA = state.tabs.get(fA);
+          repaginateProseNow(tA);
+          check('[159-H15] เงื่อนไข: แท็บ ก ถูกแบ่งหน้า', await until159(() => { repaginateProseNow(tA); return prosePageBreaks(tA.editor.view).length > 1; }, 8000));
+          await openScene(fB, null);
+          const tB = state.tabs.get(fB);
+          check('[159-H15] เงื่อนไข: แท็บ ข ถูกแบ่งหน้า', await until159(() => { repaginateProseNow(tB); return prosePageBreaks(tB.editor.view).length > 0; }, 8000));
+          const posA = () => prosePageBreaks(tA.editor.view).map((b) => b.pos).join(',');
+          const posB = () => prosePageBreaks(tB.editor.view).map((b) => b.pos).join(',');
+          const a0 = posA(), b0 = posB();
+          check('[159-H15] ★★ จัดหน้าแท็บ ข แล้วรายการของแท็บ ก ไม่ถูกทับ', a0 !== b0 && prosePageBreaks(tA.editor.view).length > prosePageBreaks(tB.editor.view).length,
+                a0.slice(0, 40) + ' | ' + b0.slice(0, 40));
+          tA.editor.view.dispatch(tA.editor.view.state.tr.insertText('ก', 1));
+          check('[159-H15] ★ แก้เอกสาร ก (เบื้องหลัง) = ตำแหน่งของ ก เลื่อนตาม ก · ของ ข ไม่ขยับ',
+                posA() === a0.split(',').map((x) => +x + 1).join(',') && posB() === b0, posA().slice(0, 40));
+          check('[159-H15] ★ เส้นคั่นที่วาดในแท็บ ก = รายการของ ก เอง',
+                tA.pane.querySelectorAll('.ed-page-break').length === prosePageBreaks(tA.editor.view).length,
+                tA.pane.querySelectorAll('.ed-page-break').length + ' vs ' + prosePageBreaks(tA.editor.view).length);
+          closeTab(fA, { discard: true }); closeTab(fB, { discard: true });
+        }
+
+        // ── H9: ชิปกรองสถานะรู้จักสถานะที่ผู้ใช้สร้างเอง (มีวรรคได้) ──
+        {
+          const CSm = await import('./custom-status.js');
+          await CSm.addCustomStatus('รอ บก. 159', '#3fa7d6');
+          check('[159-H9] ★ ชิปกรองมีสถานะที่สร้างเอง (อ่าน allStatuses)',
+                await until159(() => [...document.querySelectorAll('#filter-statuses .filter-chip')].some((c) => c.dataset.status === 'รอ บก. 159')));
+          const chip = [...document.querySelectorAll('#filter-statuses .filter-chip')].find((c) => c.dataset.status === 'รอ บก. 159');
+          if (chip) {
+            chip.click();
+            check('[159-H9] ★ คลิกชิป = คิวรีครอบ "…" (สถานะมีวรรค)', $('#tree-search').value === 'status:"รอ บก. 159"', $('#tree-search').value);
+            chip.click();
+            check('[159-H9] คลิกซ้ำ = ถอดเงื่อนไขสถานะออกหมด', $('#tree-search').value === '', $('#tree-search').value);
+          }
+          const sOrd = await SO.addScene(dPath, ch, 'เรียงสถานะ159', { silent: true, body: 'x' });
+          await JS.mutateJson(kapi, sf, (d) => { (d.chapters[ch.guid] || []).find((x) => x.id === sOrd.id).status = 'รอ บก. 159'; });
+          const rows = sortSceneRows([{ status: 'รอ บก. 159', order: 1 }, { status: '', order: 2 }, { status: allStatuses()[0], order: 3 }], 'status');
+          check('[159-H9] ★ เรียงตามสถานะ: สถานะที่สร้างเองอยู่ในลำดับ (ไม่กองท้ายกับ "ยังไม่ตั้ง")', rows[2].status === '', JSON.stringify(rows.map((r) => r.status)));
+          await CSm.removeCustomStatus('รอ บก. 159');
+        }
+
+        // ── M16: ทาสีชิปซ้ำอ่านค่าจริงจาก dataset (ไม่ใช่ป้ายที่แปลแล้ว) ──
+        {
+          const CSm = await import('./custom-status.js');
+          const host16 = el('div');
+          const c16 = CSm.statusChip('กำลังเขียน');
+          host16.append(c16);
+          c16.textContent = 'Writing';                  // จำลองหน้าจอภาษาอังกฤษ
+          c16.style.background = '';
+          CSm.refreshStatusChips(host16);
+          check('[159-M16] ★ ป้ายแปลแล้วสียังตรงสถานะ (อ่าน dataset.status)', c16.dataset.status === 'กำลังเขียน' && !!c16.style.background,
+                c16.style.background);
+          check('[159-M16] ชิปในต้นไม้มี dataset.status ทุกตัว',
+                [...document.querySelectorAll('#tree .scene .sc-status')].every((c) => !!c.dataset.status));
+        }
+
+        // ── M17: เมนู "ซ่อนแผงฝั่งนี้" ใช้ฝั่งจริงของแผง ──
+        {
+          const PUI = await import('./panels/panel-ui.js');
+          const onRight = ['props', 'comments', 'notes', 'outline'].find((id) => {
+            const n = document.querySelector(`.k-panel[data-panel-id="${id}"]`);
+            return n && n.getBoundingClientRect().width && PUI.sideNow(id) === 'right';
+          });
+          const onLeft = ['tree'].find((id) => PUI.sideNow(id) === 'left');
+          check('[159-M17] ★ แผงฝั่งขวา = "right" · แผงฝั่งซ้าย = "left" (เดิมได้ left เสมอ)',
+                !!onLeft && (onRight ? PUI.sideNow(onRight) === 'right' : true), String(onRight) + '/' + String(onLeft));
+        }
+
+        // ── M19: สมุดโน้ตด่วน แท็บกับแผงถือค่าเดียวกัน ──
+        {
+          const SPd = await import('./scratchpad.js');
+          await SPd.openScratchpad();
+          const taTab = state.tabs.get('::scratchpad::').plain;
+          const host19 = el('div'); document.body.append(host19);
+          SPd.renderNotesPanel(host19);
+          const taPanel = host19.querySelector('.scratch-area');
+          const keep19 = SPd.scratchValue();
+          taTab.value = 'จากแท็บ159'; taTab.dispatchEvent(new Event('input'));
+          check('[159-M19] ★ พิมพ์ในแท็บ = แผงเห็นทันที', taPanel.value === 'จากแท็บ159', taPanel.value);
+          taPanel.value = 'จากแผง159'; taPanel.dispatchEvent(new Event('input'));
+          check('[159-M19] ★ พิมพ์ในแผง = แท็บเห็นทันที (ไม่มีใครถือค่าเก่าไปเขียนทับ)', taTab.value === 'จากแผง159');
+          SPd.flushScratch();
+          check('[159-M19] บันทึกลง localStorage ค่าเดียว', localStorage.getItem('k2-scratchpad') === 'จากแผง159');
+          SPd.setScratchValue(keep19, null, { now: true });
+          host19.remove();
+          closeTab('::scratchpad::');
+        }
+
+        // ── M21: ปิดกล่องหน้าแรกด้วยทางไหนก็ต้องถอดตัวฟัง Esc ──
+        {
+          const HU = await import('./home-ui.js');
+          const ov21 = await HU.showHomeDialog({});
+          ov21.remove();                                   // ปิดด้วยปุ่ม/คลิกพื้นหลัง (ไม่ใช่ Esc)
+          const other = el('div', 'k-overlay'); document.body.append(other);
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          check('[159-M21] ★ ปิดหน้าแรกแล้ว Esc ไม่ไปยุ่งกับกล่องอื่น/ไม่ค้างตัวฟัง', other.isConnected && !ov21.isConnected);
+          other.remove();
+          const ov21b = await HU.showHomeDialog({});
+          const top = el('div', 'k-overlay'); document.body.append(top);
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          check('[159-M21] ★ มีกล่องซ้อนข้างบน = Esc ไม่ปิดหน้าแรก', ov21b.isConnected);
+          top.remove();
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          check('[159-M21] เป็นใบบนสุด = Esc ปิดได้', !ov21b.isConnected);
+        }
+
+        // ── M2: คัดลอก/ย้ายบทตอนมีแท็บค้าง — จำนวนคำ/ทะเบียนต้องไม่เด้งกลับเป็นของเก่า ──
+        {
+          const TA = await import('./tree-actions.js');
+          const m2 = await SO.addScene(dPath, ch, 'คัดลอกบท159', { silent: true, body: 'สั้น' });
+          const fm2 = await kapi.join(dir, m2.fileName);
+          await openScene(fm2, null);
+          const tm2 = state.tabs.get(fm2);
+          tm2.editor.setMarkdown('หนึ่ง สอง สาม สี่ ห้า หก เจ็ด แปด เก้า สิบ'); markDirty(tm2);
+          const ne = await TA.copyChapterTo(dPath, ch.guid, dPath, { title: 'สำเนาบท159' });
+          const srcRow = (await rows159(ch.guid)).find((r) => r.id === m2.id);
+          check('[159-M2] ★ แท็บค้างถูกบันทึกก่อนคัดลอก (ไฟล์ต้นทางมีข้อความล่าสุด)',
+                parseMdFile(await kapi.readFile(fm2)).body.includes('สิบ') && !tm2.dirty);
+          check('[159-M2] ★★ จำนวนคำในทะเบียนไม่เด้งกลับเป็นของเก่า', !!srcRow && srcRow.wordCount >= 5, JSON.stringify(srcRow && srcRow.wordCount));
+          const neRows = ne ? await rows159(ne.guid) : [];
+          const srcRows = await rows159(ch.guid);
+          const neRow = neRows.find((r) => r.title === 'คัดลอกบท159');
+          const neFile = ne && neRow ? await kapi.join(dPath, 'Chapters', ne.folderName, neRow.fileName) : '';
+          check('[159-M2] สำเนาบทได้ข้อความล่าสุด + id ใหม่ + แถวครบเท่าต้นทาง', !!ne && !!neRow && neRow.id !== m2.id
+                && neRows.length === srcRows.length && parseMdFile(await kapi.readFile(neFile)).body.includes('สิบ'),
+                JSON.stringify([neRows.length, srcRows.length, neRow && neRow.fileName]));
+          closeTab(fm2, { discard: true });
+          if (ne) {
+            await kapi.remove(await kapi.join(dPath, 'Chapters', ne.folderName));
+            await JS.mutateJson(kapi, await kapi.join(dPath, 'draft.json'), (d) => { d.chapters = (d.chapters || []).filter((x) => x.guid !== ne.guid); });
+            await JS.mutateJson(kapi, sf, (d) => { if (!d.chapters || !(ne.guid in d.chapters)) return false; delete d.chapters[ne.guid]; });
+          }
+        }
+
+        // ── M5: แทรก [ทางเลือก] ลงฉากจากผังแตกสาย ต้องผ่านแท็บ (ไม่เขียนดิสก์ลับหลังแท็บค้าง · ไม่ลบคอมเมนต์) ──
+        {
+          const BR = await import('./branching-ui.js');
+          const m5 = await SO.addScene(dPath, ch, 'แทรกทางเลือก159', { silent: true, body: 'เนื้อเดิม159' });
+          const f5 = await kapi.join(dir, m5.fileName);
+          await kapi.writeFile(f5, (await kapi.readFile(f5)).replace(/\s*$/, '') +
+            '\n\n<!-- k2-comments\n[{"id":"c5","text":"คอมเมนต์M5","anchor":null}]\n-->\n');
+          await openScene(f5, null);
+          const t5 = state.tabs.get(f5);
+          t5.editor.setMarkdown('พิมพ์ค้าง159'); markDirty(t5);
+          const disk0 = await kapi.readFile(f5);
+          await BR.insertMarkerIntoScene({ filePath: f5 }, 'ไปซ้าย159');
+          check('[159-M5] ★ แท็บค้าง: เครื่องหมายลงแท็บ (ต่อจากที่พิมพ์ค้าง) ไม่เขียนดิสก์ลับหลัง',
+                t5.editor.getMarkdown().includes('พิมพ์ค้าง159') && t5.editor.getMarkdown().includes('[ไปซ้าย159]')
+                && (await kapi.readFile(f5)) === disk0 && t5.dirty);
+          await saveTab(t5);
+          await BR.insertMarkerIntoScene({ filePath: f5 }, 'ไปขวา159');
+          const raw5 = await kapi.readFile(f5);
+          check('[159-M5] ★ แท็บไม่ค้าง: เขียนดิสก์ + แท็บโหลดใหม่ + คอมเมนต์อยู่ครบ',
+                raw5.includes('[ไปขวา159]') && raw5.includes('คอมเมนต์M5') && t5.editor.getMarkdown().includes('[ไปขวา159]') && !t5.dirty,
+                raw5.slice(-160));
+          closeTab(f5, { discard: true });
+        }
+
+        // ── QoL: ความคืบหน้าการแปลในตั้งค่า → ภาษา ──
+        {
+          const D5 = await import('./dialogs.js');
+          D5.settingsDialog();
+          const langSel = await (async () => { await until159(() => !!document.querySelector('.k-settings #st-lang option[value="en"]')); return document.querySelector('.k-settings #st-lang'); })();
+          if (langSel) { langSel.value = 'en'; langSel.dispatchEvent(new Event('change')); }
+          check('[159-QoL] ★ ตั้งค่าบอกความคืบหน้าการแปลของภาษาที่เลือก',
+                await until159(() => /%/.test((document.querySelector('.k-settings .k-lang-progress') || {}).textContent || '')),
+                (document.querySelector('.k-settings .k-lang-progress') || {}).textContent);
+          document.querySelector('.k-settings .k-cancel')?.click();
+          document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+        }
+
+        // @@159-MORE@@
+
+        // ── เก็บกวาด ──
+        await closeTabsUnderPath(dir, { save: false });
+        await kapi.remove(dir);
+        await JS.mutateJson(kapi, await kapi.join(dPath, 'draft.json'), (d) => { d.chapters = (d.chapters || []).filter((x) => x.guid !== ch.guid); });
+        await JS.mutateJson(kapi, sf, (d) => { if (!d.chapters || !(ch.guid in d.chapters)) return false; delete d.chapters[ch.guid]; });
+        await buildTree();
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

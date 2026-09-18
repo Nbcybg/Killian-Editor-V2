@@ -158,6 +158,12 @@ export class SmartType {
   //   กติกาใหม่: **ยืนยันด้วย Tab อย่างเดียว** · Enter = ปิด popup แล้วขึ้นบรรทัดใหม่ตามปกติ
   onKey(ev) {
     if (!this.visible) return false;
+    // [alpha.159 · M14] ปุ่มที่มีตัวกดร่วม (Ctrl/⌘/Alt + Tab/ลูกศร) เป็นของคำสั่งอื่น — สลับ element ของบท
+    // (Ctrl+Tab · Ctrl+↑/↓) · สลับแท็บ · เดิมรายการคำเดาแย่งไปยืนยันคำ/เลื่อนแถบเลือก = สลับ element ไม่ได้
+    // ตอนที่รายการโผล่อยู่ · Shift+Tab (ถอย element) ก็ไม่ใช่ "ยืนยันคำ"
+    const mod = ev.ctrlKey || ev.metaKey || ev.altKey;
+    if (mod && (ev.key === 'Tab' || ev.key === 'ArrowDown' || ev.key === 'ArrowUp')) return false;
+    if (ev.key === 'Tab' && ev.shiftKey) return false;
     if (ev.key === 'ArrowDown') { this.sel = (this.sel + 1) % this.items.length; this.render(); return true; }
     if (ev.key === 'ArrowUp') { this.sel = (this.sel - 1 + this.items.length) % this.items.length; this.render(); return true; }
     if (ev.key === 'Tab') { this._accept(); return true; }

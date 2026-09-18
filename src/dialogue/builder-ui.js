@@ -587,7 +587,8 @@ async function sendOne(s, pair) {
     const pk = C.buildPickerRequest(s);
     const prov = await currentProvider();
     if (pk && prov) {
-      const res = await complete(prov, { system: pk.system, messages: pk.messages, reqId: S.reqId });
+      const res = await complete(prov, { system: pk.system, messages: pk.messages, reqId: S.reqId,
+                                         maxTokens: pk.maxTokens });   // [alpha.159 · H12]
       if (res.ok) speaker = C.parsePickedSpeaker(s, res.text);
     }
     if (!speaker) {
@@ -604,7 +605,9 @@ async function sendOne(s, pair) {
 
   const t0 = Date.now();
   // สตรีมสด — บทพูดไหลลงฟอง "กำลังคิด" ทีละก้อน ไม่ต้องรอ generate จบ
-  const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId },
+  // [alpha.159 · H12] ความยาวบท (สั้น/กลาง/ยาว) = เพดานโทเคนของคำขอ — เดิมคำนวณไว้แต่ไม่เคยส่ง (สวิตช์ตาย)
+  const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId,
+                                           maxTokens: req.maxTokens },
     (c) => updatePending({ text: c.text, thinking: c.thinkingAll }));
   if (!res.ok) { setStatus(gi('fail') + ' ' + (res.error || t('ui.dlgb.errSend'))); return; }
   const parsed = C.parseSpokenLine(res.text, req.cast.name, { aliases: req.cast.aliases });
@@ -626,7 +629,9 @@ async function sendBatch(s) {
   if (!prov) { setStatus(t('ui.dlgb.noProvider')); return; }
   const t0 = Date.now();
   // สตรีมสดเหมือนโหมดทีละคน — บทพูดไหลลงฟอง "กำลังคิด" ทีละก้อน
-  const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId },
+  // [alpha.159 · H12] ความยาวบท (สั้น/กลาง/ยาว) = เพดานโทเคนของคำขอ — เดิมคำนวณไว้แต่ไม่เคยส่ง (สวิตช์ตาย)
+  const res = await completeStream(prov, { system: req.system, messages: req.messages, reqId: S.reqId,
+                                           maxTokens: req.maxTokens },
     (c) => updatePending({ text: c.text, thinking: c.thinkingAll }));
   if (!res.ok) { setStatus(gi('fail') + ' ' + (res.error || t('ui.dlgb.errSend'))); return; }
   const rows = C.parseBatch(s, res.text);

@@ -35,6 +35,8 @@ const THAI_FONT_PATH = [
   path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'tahoma.ttf'),
   '/usr/share/fonts/truetype/tlwg/Garuda.ttf', '/usr/share/fonts/truetype/tlwg/Loma.ttf',
   '/Library/Fonts/Sathu.ttf',
+  // macOS: ฟอนต์ไทยของระบบอยู่ใน Supplemental (Sathu/Ayuthaya เป็น AAT morx ที่ fontkit วนไม่จบตอนเจอ ำ → ใช้ Tahoma)
+  '/System/Library/Fonts/Supplemental/Tahoma.ttf',
 ].find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } }) || '';
 const thaiFont = THAI_FONT_PATH ? new Uint8Array(fs.readFileSync(THAI_FONT_PATH)) : null;
 const asText = (bytes) => Buffer.from(bytes).toString('latin1');
@@ -502,6 +504,71 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     drawnText(rContStd.bytes).includes('He keeps walking') ||
     drawnText(rContStd.bytes).includes('HALLWAY') ||
     drawnText(rContStd.bytes).length > 100, drawnText(rContStd.bytes).slice(0, 60));
+
+  // ── [alpha.159 · M34] CONTINUED: ต้นหน้าต้องวัดจากขอบกระดาษ ไม่ทับหัวกระดาษ ──
+  {
+    /** ข้อความที่วาด + พิกัด y (จาก Tm ล่าสุดก่อน Tj) */
+    const drawnAt = (bytes) => {
+      const out = [];
+      const s = streamsText(bytes);
+      let y = NaN;
+      for (const m of s.matchAll(/([-\d.]+) ([-\d.]+) Tm|<([0-9A-Fa-f]+)>\s*Tj/g)) {
+        if (m[2] !== undefined && m[3] === undefined) { y = parseFloat(m[2]); continue; }
+        let t = '';
+        for (let i = 0; i + 1 < m[3].length; i += 2) t += String.fromCharCode(parseInt(m[3].slice(i, i + 2), 16));
+        out.push({ t, y });
+      }
+      return out;
+    };
+    const ascii = oneLongScene.map((b) => ({ ...b, text: b.text.replace(/[^\x20-\x7e]/g, 'x') }));
+    const mk = (headers) => G.generatePdf({ blocks: ascii, fmt, fonts: null,
+      headers: headers ? { enabled: true, firstPage: true, strings: [{ text: 'HEADER-ROW-M34', align: 'left' }] } : null,
+      opts: { titlePages: false, toc: false, headers: !!headers } });
+    const rH = await mk(true), rN = await mk(false);
+    const yOf = (r, needle) => drawnAt(r.bytes).filter((d) => d.t.includes(needle)).map((d) => d.y);
+    const cH = yOf(rH, 'CONTINUED:'), cN = yOf(rN, 'CONTINUED:'), hdrY = yOf(rH, 'HEADER-ROW-M34');
+    check('[159-M34] เงื่อนไข: มี CONTINUED: ต้นหน้าทั้งสองไฟล์ + มีหัวกระดาษ', cH.length > 0 && cN.length > 0 && hdrY.length > 0,
+          JSON.stringify([cH.length, cN.length, hdrY.length]));
+    check('[159-M34] ★ ตำแหน่ง CONTINUED: ไม่ขึ้นกับหัวกระดาษ (วัดจากขอบกระดาษ)', cH.length && Math.abs(cH[0] - cN[0]) < 0.5,
+          JSON.stringify([cH[0], cN[0]]));
+    check('[159-M34] ★★ CONTINUED: ไม่ทับบรรทัดหัวกระดาษ (อยู่เหนือหัวกระดาษ ≥ ครึ่งบรรทัด)',
+          cH.length && hdrY.length && cH[0] - Math.max(...hdrY) >= 5, JSON.stringify([cH[0], hdrY[0]]));
+  }
+
+  // ── [alpha.159 · M33] ฟอนต์ที่ฝังไม่ได้ / ไม่มีฟอนต์ไทย ต้องบอก ไม่ใช่เงียบแล้วได้ ?????? ──
+  {
+    const ttc = new Uint8Array([0x74, 0x74, 0x63, 0x66, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
+    check('[159-M33] .ttc = collection (pdf-lib ฝังไม่ได้)', G.pdfFontProblem(ttc) === 'collection');
+    // sfnt ปลอมที่มีตาราง morx หนึ่งตาราง → fontkit จะใช้ AAT (วนไม่จบกับสระอำ)
+    const aat = new Uint8Array(12 + 16); aat.set([0, 1, 0, 0, 0, 1]); aat.set([0x6d, 0x6f, 0x72, 0x78], 12);
+    check('[159-M33] ฟอนต์ที่มีตาราง morx ถูกรู้จัก (hasMorxTable) แต่ไม่ถูกปฏิเสธ', G.hasMorxTable(aat) && G.pdfFontProblem(aat) === '');
+    check('[159-M33] ไบต์ขยะ/ว่าง = invalid', G.pdfFontProblem(new Uint8Array([1, 2, 3])) === 'invalid' && G.pdfFontProblem(null) === 'invalid');
+    if (thaiFont) check('[159-M33] ฟอนต์ไทยที่ใช้ทดสอบ = ใช้ได้', G.pdfFontProblem(thaiFont) === '', G.pdfFontProblem(thaiFont));
+    const macAat = ['/System/Library/Fonts/Supplemental/Sathu.ttf', '/System/Library/Fonts/Supplemental/Ayuthaya.ttf']
+      .find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } });
+    if (macAat) {
+      check('[159-M33] Sathu/Ayuthaya ของ macOS มีตาราง morx', G.hasMorxTable(fs.readFileSync(macAat)), macAat);
+      // เดิม: fontkit ใช้ตัวจัดรูป AAT แล้ววนไม่จบกับ "ำ" จนแรมเต็ม (โปรเซสล่ม) · ตอนนี้ต้องเสร็จและฝังฟอนต์จริง
+      const t0 = Date.now();
+      const rMac = await G.generatePdf({ blocks: [{ el: 'action', text: 'สำเนา ทำน้ำ กำลังจำ' }, ...blocksSmall], fmt,
+        fonts: { regular: new Uint8Array(fs.readFileSync(macAat)) }, opts: { titlePages: false, watermark: 'สำเนา' } });
+      check('[159-M33] ★★ ฟอนต์ AAT ของ macOS + สระอำ = สร้าง PDF เสร็จ (ไม่ค้าง) + ฝังฟอนต์ไทยจริง',
+            (rMac.warnings || []).length === 0 && asText(rMac.bytes).includes('/FontFile2') && Date.now() - t0 < 20000,
+            JSON.stringify([rMac.warnings, Date.now() - t0]));
+    }
+    const rNo = await G.generatePdf({ blocks: blocksSmall, fmt, fonts: {}, opts: { titlePages: false } });
+    check('[159-M33] ★★ มีไทยแต่ไม่มีฟอนต์ไทย → คืนคำเตือน thai-font-missing', (rNo.warnings || []).includes('thai-font-missing'),
+          JSON.stringify(rNo.warnings));
+    const rTtc = await G.generatePdf({ blocks: blocksSmall, fmt, fonts: { regular: ttc }, opts: { titlePages: false } });
+    check('[159-M33] ★ .ttc ไม่ถูกส่งเข้า fontkit + เตือน + บอกสาเหตุ', (rTtc.warnings || []).includes('thai-font-missing') && rTtc.fontProblem === 'collection',
+          JSON.stringify([rTtc.warnings, rTtc.fontProblem]));
+    const rEn = await G.generatePdf({ blocks: [{ el: 'action', text: 'English only' }], fmt, fonts: {}, opts: { titlePages: false } });
+    check('[159-M33] ไม่มีอักษรไทย = ไม่เตือน', (rEn.warnings || []).length === 0, JSON.stringify(rEn.warnings));
+    if (thaiFont) {
+      const rOk = await G.generatePdf({ blocks: blocksSmall, fmt, fonts: { regular: thaiFont }, opts: { titlePages: false } });
+      check('[159-M33] มีฟอนต์ไทยที่ใช้ได้ = ไม่เตือน', (rOk.warnings || []).length === 0, JSON.stringify(rOk.warnings));
+    }
+  }
 
   // ── addOutline / setOpenPage เรียกตรง ๆ ──
   check('addOutline / setOpenPage ถูก export ให้เรียกแยกได้',

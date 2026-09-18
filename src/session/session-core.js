@@ -23,7 +23,7 @@ export function newSession(root = '') {
     v: SESSION_VERSION,
     root: String(root || ''),
     ts: 0,
-    tabs: { open: [], active: '', scroll: {} },
+    tabs: { open: [], active: '', scroll: {}, cursor: {} },
     panels: { layout: null, homes: null, workspaces: null, hidden: '' },
     split: null,
     ui: {},
@@ -47,6 +47,13 @@ export function migrateSession(raw) {
   s.tabs.open = open.filter((x) => typeof x === 'string' && x).slice(0, 200);
   s.tabs.active = typeof t.active === 'string' ? t.active : '';
   s.tabs.scroll = (t.scroll && typeof t.scroll === 'object') ? { ...t.scroll } : {};
+  // [alpha.159 · QoL] ตำแหน่งเคอร์เซอร์/ช่วงที่เลือกต่อแท็บ { file: [anchor, head] } — ค่าเสียทิ้งทีละตัว
+  s.tabs.cursor = {};
+  if (t.cursor && typeof t.cursor === 'object') {
+    for (const [f, v] of Object.entries(t.cursor)) {
+      if (Array.isArray(v) && v.length === 2 && v.every((n) => Number.isInteger(n) && n >= 0)) s.tabs.cursor[f] = [v[0], v[1]];
+    }
+  }
   // แท็บที่ active ต้องอยู่ในรายการที่เปิดด้วย (ไม่งั้นกู้แล้วชี้ไปไฟล์ที่ไม่ได้เปิด)
   if (s.tabs.active && !s.tabs.open.includes(s.tabs.active)) s.tabs.active = '';
 
@@ -147,6 +154,9 @@ export function pruneTabs(s, existsList) {
   const scroll = {};
   for (const f of x.tabs.open) if (x.tabs.scroll[f] != null) scroll[f] = x.tabs.scroll[f];
   x.tabs.scroll = scroll;
+  const cursor = {};
+  for (const f of x.tabs.open) if (x.tabs.cursor[f]) cursor[f] = x.tabs.cursor[f];
+  x.tabs.cursor = cursor;
   if (!x.tabs.open.includes(x.tabs.active)) x.tabs.active = x.tabs.open[0] || '';
   return x;
 }

@@ -4,7 +4,7 @@
 // เก็บท้ายไฟล์ .md เอง (<!-- k2-comments --> ) → แก้นอกโปรแกรมได้ · v1 (Python) ยังเปิดไฟล์ได้เหมือนเดิม
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { $, el, state, setStatus, log, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
-import { CommentStore, countComments, openComments, reanchorAll } from './comment-core.js';
+import { CommentStore, countComments, openComments, reanchorAll, writeMdKeepingComments } from './comment-core.js';
 import { setCommentAnchors, refreshCommentAnchors } from '../editor.js';
 import { TextSelection } from 'prosemirror-state';
 import { gi } from '../icons.js';
@@ -34,11 +34,8 @@ export function resetCommentStore() { _store = null; }
  * @returns {Promise<boolean>} true = ไฟล์นี้มีคอมเมนต์อยู่จริง
  */
 export async function writeKeepingComments(path, fullText) {
-  const store = commentStore();
-  const { comments } = await store.read(path);
-  if (!comments.length) { await kapi.writeFile(path, fullText); return false; }
-  await store.write(path, fullText, reanchorAll(fullText, comments));
-  return true;
+  // [alpha.159] ตรรกะอยู่ใน comment-core (บริสุทธิ์) — ai-actions ใช้ตัวเดียวกันโดยไม่ต้องลาก UI เข้ามา
+  return writeMdKeepingComments(kapi, path, fullText);
 }
 
 // ───────── ไฟล์ฉากที่กำลังโฟกัส ─────────
@@ -71,11 +68,13 @@ function syncAnchors(list, activeQuote) {
   const quotes = [];
   const walk = (cs) => { for (const c of cs) { if (c.anchor && c.anchor.quote && !c.resolved) quotes.push(c.anchor.quote); walk(c.replies || []); } };
   walk(list || []);
-  setCommentAnchors(quotes, activeQuote);
-  refreshCommentAnchors(editorView());
+  // [alpha.159 · H16] ผูกกับตัวแก้ไขของฉากนี้ตัวเดียว (ไม่ไปทับรายการของแท็บอื่น)
+  const v = editorView();
+  setCommentAnchors(quotes, activeQuote, v);
+  refreshCommentAnchors(v);
 }
 /** ล้างไฮไลต์ (เปลี่ยนแท็บ/ปิดแผง) */
-export function clearCommentAnchors() { setCommentAnchors([], ''); refreshCommentAnchors(editorView()); }
+export function clearCommentAnchors() { const v = editorView(); setCommentAnchors([], '', v); refreshCommentAnchors(v); }
 
 // ───────── ข้อความที่เลือกอยู่ในตัวแก้ไข → สมอ ─────────
 /** @returns {{start,end,quote}|null} — offset คิดเทียบกับ "ไฟล์ .md" (หาโดยค้นข้อความจริง) */
@@ -232,7 +231,7 @@ function commentCard(c, file, host, depth) {
     q.title = c.anchor.lost ? tr('cmt.anchorLostHint') : tr('cmt.anchorOkHint');
     if (!c.anchor.lost) {
       // ชี้ = เน้นอันนี้อันเดียว · เลิกชี้ = กลับไปไฮไลต์ทุกสมอตามข้อมูลจริง (ไม่ใช่ข้อความในหน้าจอที่ถูกตัดสั้น)
-      q.onmouseenter = () => { setCommentAnchors([c.anchor.quote], c.anchor.quote); refreshCommentAnchors(editorView()); };
+      q.onmouseenter = () => { const v = editorView(); setCommentAnchors([c.anchor.quote], c.anchor.quote, v); refreshCommentAnchors(v); };
       q.onmouseleave = () => syncAnchors(lastList, '');
       q.onclick = () => scrollToAnchor(c.anchor.quote);
     }

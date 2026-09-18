@@ -5,6 +5,24 @@ import { callAI, aiConfigured } from '../ai-settings.js';
 import { listScenes, listEntities } from '../project-scan.js';
 import { gi } from '../icons.js';
 
+// ══ [alpha.159 · M22] ★ สถานะของ "ช่องผล" อยู่ที่ธง ไม่ใช่ที่ตัวอักษร ══
+// เดิมปุ่มแทรก/บันทึกกันข้อความ error ด้วย `r.startsWith('❌')` — ไอคอนมาจากทะเบียน (gi('fail'))
+// เปลี่ยน glyph/ใส่ svg เมื่อไหร่ ด่านนี้พังเงียบแล้ว **ข้อความ error ถูกแทรกลงฉากจริง**
+// ตอนนี้ทุกทางเขียนช่องผลผ่าน setResult() ซึ่งตั้ง dataset.state = busy | err | ok
+function setResult(div, text, st = 'ok') { div.textContent = text; div.dataset.state = st; }
+/** ช่องผลมี "ผลลัพธ์จริง" ให้แทรก/บันทึก (ไม่ใช่ระหว่างรอ · ไม่ใช่ error · ไม่ว่าง) */
+export function resultReady(div) { return !!div && div.dataset.state === 'ok' && !!div.textContent; }
+/** ผลที่พังกลางสตรีม — เก็บข้อความที่ไหลมาแล้ว (H13) ไว้ในช่องผล + บอกในแถบสถานะ */
+function failOrPartial(div, res, acc, fallbackKey) {
+  const kept = String(acc || (res && res.text) || '');
+  if (res && res.partial !== false && kept.trim()) {
+    setResult(div, kept, 'ok');
+    setStatus(gi('warning') + ' ' + tr('ai.partialKept') + ' · ' + ((res && res.error) || tr(fallbackKey)));
+    return;
+  }
+  setResult(div, gi('fail') + ' ' + ((res && res.error) || tr(fallbackKey)), 'err');
+}
+
 // ───────── helper: เช็คว่า AI พร้อมหรือยัง ─────────
 // [alpha.62 บั๊ก 6] ถามจุดเดียวที่ `aiConfigured()` — รู้จักทั้งทะเบียนใหม่ (alpha.61) และค่าตั้งแบบเก่า
 async function aiReady() {
@@ -89,7 +107,7 @@ export async function openAIAssistant() {
     const runBtn = el('button', 'k-ok', tt('ui.ai.result'));
     runBtn.onclick = async () => {
       runBtn.disabled = true;
-      resultDiv.textContent = tr('ai.working');
+      setResult(resultDiv, tr('ai.working'), 'busy');
       const task = taskSel.value;
       const tone = toneSel.value;
       const instr = instrInput.value.trim();
@@ -107,12 +125,12 @@ export async function openAIAssistant() {
         let acc = '';
         const res = await aiAssistant(instr, { text }, {
           client: getAIClient(), rag, task, tone: tone || undefined, instruction: instr, text,
-          stream: true, onChunk: (c) => { acc += c; resultDiv.textContent = acc; },
+          stream: true, onChunk: (c) => { acc += c; setResult(resultDiv, acc, 'busy'); },
         });
-        if (res.ok) resultDiv.textContent = res.text || acc || tr('ai.noAnswer');
-        else resultDiv.textContent = gi('fail') + ' ' + (res.error || tr('ai.errorRetry'));
+        if (res.ok) setResult(resultDiv, res.text || acc || tr('ai.noAnswer'), res.text || acc ? 'ok' : 'err');
+        else failOrPartial(resultDiv, res, acc, 'ai.errorRetry');
       } catch (e) {
-        resultDiv.textContent = gi('fail') + ' ' + ((e && e.message) || tr('ai.errorRetry'));
+        setResult(resultDiv, gi('fail') + ' ' + ((e && e.message) || tr('ai.errorRetry')), 'err');
       } finally {
         runBtn.disabled = false;
       }
@@ -124,7 +142,7 @@ export async function openAIAssistant() {
       // [alpha.128] เดิมกัน "ข้อความระหว่างรอ" ด้วย `r.startsWith('กำลัง')` — แต่ข้อความนั้น
       // มาจากไฟล์ภาษา → หน้าจออังกฤษกันไม่ติด แล้วปุ่มแทรกจะยัด "Working…" ลงฉากจริง ๆ
       // เทียบกับข้อความตัวเดียวกันที่เพิ่งเขียนลงไปแทน
-      if (!r || r.startsWith('❌') || r === tr('ai.working')) return;
+      if (!resultReady(resultDiv)) return;             // [alpha.159 · M22] ธง ไม่ใช่ตัวอักษร
       // [alpha.82] เดิมเรียก cmd('insertText') ที่ไม่มีอยู่จริง → ปุ่มนี้ก็ไม่เคยแทรกอะไรเลย
       if (t?.sp) t.sp.insertScript(r);
       else if (t?.editor) t.editor.insertLines(r);
@@ -239,9 +257,9 @@ export async function openDialogueGenerator() {
     const runBtn = el('button', 'k-ok', tt('ui.ai.new'));
     runBtn.onclick = async () => {
       runBtn.disabled = true;
-      resultDiv.textContent = tr('ai.dialogueWorking');
+      setResult(resultDiv, tr('ai.dialogueWorking'), 'busy');
       const a = charA.value.trim(), b = charB.value.trim(), ctx = context.value.trim();
-      if (!a || !b) { resultDiv.textContent = tr('ai.needBothChars'); runBtn.disabled = false; return; }
+      if (!a || !b) { setResult(resultDiv, tr('ai.needBothChars'), 'err'); runBtn.disabled = false; return; }
       // ใช้เอนจิน ai-dialogue.js — ดึงบุคลิกจาก Wiki ก่อน แล้วค่อยใช้ที่พิมพ์ในกล่อง
       // [alpha.129 ข้อ 3] เดิมไม่มี try/catch: import พัง · เอนจินโยน · เครือข่ายล้ม
       // = หลุดออกไปทั้งที่ปุ่มยัง disabled และช่องผลค้างที่ "กำลังทำงาน…" ตลอดไป
@@ -256,13 +274,13 @@ export async function openDialogueGenerator() {
         let acc = '';
         const res = await generateDialogue(profA, profB, { situation: ctx },
           { client: getAIClient(), format: fmtSel.value, stream: true,
-            onChunk: (c) => { acc += c; resultDiv.textContent = acc; } });
+            onChunk: (c) => { acc += c; setResult(resultDiv, acc, 'busy'); } });
         if (res.ok) {
-          resultDiv.textContent = res.text;
+          setResult(resultDiv, res.text, res.text ? 'ok' : 'err');
           if (res.speakers?.length) resultDiv.title = tr('ai.speakerLabel') + res.speakers.join(', ');
-        } else resultDiv.textContent = gi('fail') + ' ' + (res.error || tr('ai.error'));
+        } else failOrPartial(resultDiv, res, acc, 'ai.error');
       } catch (e) {
-        resultDiv.textContent = gi('fail') + ' ' + ((e && e.message) || tr('ai.error'));
+        setResult(resultDiv, gi('fail') + ' ' + ((e && e.message) || tr('ai.error')), 'err');
       } finally {
         runBtn.disabled = false;
       }
@@ -270,7 +288,7 @@ export async function openDialogueGenerator() {
     const insertBtn = el('button', '', tt('ui.ai.insert'));
     insertBtn.onclick = () => {
       const r = resultDiv.textContent;
-      if (!r || r.startsWith('❌') || r === tr('ai.dialogueWorking')) return;   // [alpha.128] ดูข้อ 1
+      if (!resultReady(resultDiv)) return;   // [alpha.128] ดูข้อ 1 · [alpha.159 · M22] อ่านธง
       // [alpha.82] เดิมเรียก cmd('insertText') ซึ่ง **ไม่มีใน switch ของ cmd()** ทั้งสองตัวแก้ไข
       // → ตกไปที่ default เงียบ ๆ ปุ่มนี้จึงไม่เคยแทรกอะไรลงฉากเลยตั้งแต่วันแรก
       const t = state.active;
@@ -366,7 +384,7 @@ export async function openWorldGenerator() {
     let lastWorld = null;                     // ผลลัพธ์ที่ผ่าน schema แล้ว (ใช้ตอนบันทึกลง Wiki)
     runBtn.onclick = async () => {
       runBtn.disabled = true;
-      resultDiv.textContent = tr('ai.generating');
+      setResult(resultDiv, tr('ai.generating'), 'busy');
       lastWorld = null;
       // ใช้เอนจิน ai-world.js — มีเทมเพลตต่อประเภท + ตรวจว่าคำตอบครบโครง (ไม่ครบ = ลองใหม่)
       // [alpha.129 ข้อ 3] เดิมไม่มี try/catch: import พัง · เอนจินโยน · เครือข่ายล้ม
@@ -377,10 +395,10 @@ export async function openWorldGenerator() {
         const { getAIClient } = await import('./ai-bridge.js');
         const res = await generateWorld(typeSel.value, promptInput.value.trim() || tr('ai.freeform'),
                                         { client: getAIClient() });
-        if (res.ok) { lastWorld = res.world; resultDiv.textContent = toMarkdown(res.world); }
-        else resultDiv.textContent = gi('fail') + ' ' + (res.error || tr('ai.error'));
+        if (res.ok) { lastWorld = res.world; setResult(resultDiv, toMarkdown(res.world), 'ok'); }
+        else setResult(resultDiv, gi('fail') + ' ' + (res.error || tr('ai.error')), 'err');
       } catch (e) {
-        resultDiv.textContent = gi('fail') + ' ' + ((e && e.message) || tr('ai.error'));
+        setResult(resultDiv, gi('fail') + ' ' + ((e && e.message) || tr('ai.error')), 'err');
       } finally {
         runBtn.disabled = false;
       }
@@ -388,7 +406,7 @@ export async function openWorldGenerator() {
     const saveBtn = el('button', '', tt('ui.ai.saveWiki'));
     saveBtn.onclick = async () => {
       const r = resultDiv.textContent;
-      if (!r || r.startsWith('❌') || r === tr('ai.generating')) return;        // [alpha.128] ดูข้อ 1
+      if (!resultReady(resultDiv)) return;        // [alpha.128] ดูข้อ 1 · [alpha.159 · M22] อ่านธง
       const { toWikiEntity } = await import('./ai-world.js');
       const cats = { magic: 'lore', city: 'locations', culture: 'lore', economy: 'lore', religion: 'lore', faction: 'lore' };
       const cat = cats[typeSel.value] || 'lore';
@@ -506,7 +524,16 @@ export async function openAIChat() {
       const res = await client.stream(
         { messages: [...msgs, { role: 'user', content: prompt }], system, feature: 'chat' },
         (chunk) => { acc += chunk; bubble.textContent = acc; chatArea.scrollTop = chatArea.scrollHeight; });
-      if (!res.ok) { bubble.textContent = gi('fail') + ' ' + (res.error || tr('ai.callFail')); return; }
+      if (!res.ok) {
+        // [alpha.159 · H13] พังกลางทางแต่มีคำตอบไหลมาแล้ว = เก็บไว้ในฟอง + ประวัติ (เดิมทับด้วยข้อความ error)
+        const kept = acc || res.text || '';
+        if (kept.trim()) {
+          bubble.textContent = kept;
+          history.push({ role: 'assistant', content: kept });
+          setStatus(gi('warning') + ' ' + tr('ai.partialKept') + ' · ' + (res.error || tr('ai.callFail')));
+        } else bubble.textContent = gi('fail') + ' ' + (res.error || tr('ai.callFail'));
+        return;
+      }
       if (!acc) { acc = res.text || ''; bubble.textContent = acc || tr('ai.noAnswer'); }
       history.push({ role: 'assistant', content: acc });
       addSources(ctx.sources);

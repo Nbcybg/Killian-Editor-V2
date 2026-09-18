@@ -516,11 +516,17 @@ function renderOpts() {
     canTearOff,
     onTearOff: (id) => tearOffPanel(id),
     // [alpha.66r3] คำสั่งจัดการพื้นที่ที่อยู่หลังปุ่ม ☰ ของทุกแผง (Progressive Disclosure)
-    extraHeadMenu: (id) => [
-      { label: t('ui.panel.hidePanelAllArea'), click: () => toggleSpace('all') },
-      { label: t('ui.panel.hidePanelSide'), click: () => toggleSpace(sideOf({ id, defaultSide: 'left' })) },
-      { label: t('ui.panel.work'), click: () => workspaceMenu() },
-    ],
+    extraHeadMenu: (id) => {
+      // [alpha.159 · M17] ต้องรู้ฝั่ง "ตอนเปิดเมนู" — เดิมเรียก sideOf() กับตารางที่ยังว่าง (ไม่เคย rememberSides)
+      // และส่ง defaultSide:'left' ตายตัว → กดจากแผงฝั่งขวาก็ซ่อนฝั่งซ้ายเสมอ · ป้ายบอกฝั่งด้วย (QoL)
+      const side = sideNow(id);
+      return [
+        { label: t('ui.panel.hidePanelAllArea'), click: () => toggleSpace('all') },
+        { label: t(side === 'right' ? 'ui.menu.hidePanelSideRight' : 'ui.menu.hidePanelSideLeft'),
+          click: () => toggleSpace(side) },
+        { label: t('ui.panel.work'), click: () => workspaceMenu() },
+      ];
+    },
     renderPanelBody: (id, body) => {
       const node = adopted.get(id);
       if (node) { body.appendChild(node); return node; }
@@ -817,6 +823,23 @@ function rememberSides() {
   }
 }
 function sideOf(d) { return lastSide.get(d.id) || d.defaultSide || 'left'; }
+/**
+ * [alpha.159 · M17] ฝั่งของแผงนี้ "ตอนนี้" — วัดจากจอจริงก่อน (รวมแผงที่ปิดไม่ได้ ซึ่ง rememberSides ข้าม)
+ * วัดไม่ได้ (ซ่อนหลังแท็บอื่น) = ฝั่งที่จำไว้ล่าสุด → ค่าเริ่มต้นของแผง
+ */
+export function sideNow(id) {
+  rememberSides();
+  const h = host();
+  const hr = h && h.getBoundingClientRect();
+  const node = h && (h.querySelector(`.k-panel[data-panel-id="${id}"]`)
+    || document.querySelector(`.k-float-panel[data-panel-id="${id}"]`));
+  if (node && hr && hr.width) {
+    const r = node.getBoundingClientRect();
+    if (r.width) return r.left + r.width / 2 < hr.left + hr.width / 2 ? 'left' : 'right';
+  }
+  const def = PANEL_DEFS.find((d) => d.id === id) || { id, defaultSide: 'left' };
+  return sideOf(def);
+}
 
 // [alpha.124 ข้อ 39] ★ ถาดแผงที่ย่อไว้ (`#k-min-tray-*`) ถูกลบทิ้งแล้ว
 //

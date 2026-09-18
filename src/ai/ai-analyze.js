@@ -782,7 +782,8 @@ export async function analyze(id, o = {}) {
   if (!res || !res.ok) return { id, local, ai: { ok: false, error: (res && res.error) || tt('ui.aia.errAiFail') }, scope, scenes: scenes.length };
   const parsed = parseAnalysisReply(id, res.text, { sceneIds: built.sceneIds });
   return { id, local, scope, scenes: scenes.length, truncated: built.truncated,
-           ai: { ok: true, ...parsed, usage: res.usage, cost: res.cost } };
+           ai: { ok: true, ...parsed, usage: res.usage, cost: res.cost,
+                 model: res.model || '', provider: res.provider || '' } };   // [alpha.159 · M30] ให้ตัวจดสถิติรู้ที่มา
 }
 
 // ═══════════════ ประมาณโทเคน "ก่อน" ยิง AI ═══════════════

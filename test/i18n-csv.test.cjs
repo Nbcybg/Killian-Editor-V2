@@ -160,5 +160,25 @@ check('ไฟล์ภาษาจริง: ทุกค่าตรงกั�
 check('CSV ของไฟล์จริงมีคีย์เกิน 300 รายการ (ครอบคลุมทั้งแอป)',
   realBack.keys.length > 300, realBack.keys.length);
 
+// ── [alpha.159 · QoL] ความคืบหน้าการแปล ──
+{
+  const th = { 'meta.code': 'th', 'ui.a': 'บันทึก', 'ui.b': 'เปิด', 'ui.c': 'PDF', 'ui.d': 'ปิด' };
+  const en = { 'meta.code': 'en', 'ui.a': 'Save', 'ui.b': 'เปิด', 'ui.c': 'PDF', 'ui.d': '' };
+  const r = S.translationProgress(th, en);
+  check('[159-QoL] นับเฉพาะแถวที่ต้นฉบับมีไทย (PDF/meta ไม่นับ)', r.total === 3, JSON.stringify(r));
+  check('[159-QoL] ค่าเท่าไทย/ว่าง = ยังไม่แปล', r.translated === 1 && r.pending === 2 && r.pendingKeys.join() === 'ui.b,ui.d');
+  check('[159-QoL] เปอร์เซ็นต์ปัดทศนิยมหนึ่งตำแหน่ง', r.pct === 33.3, r.pct);
+  // รายงานของไฟล์จริง — **เตือน** ไม่ใช่เงื่อนไขผ่าน/ไม่ผ่าน (คำแปลเป็นงานต่อเนื่อง ไม่ใช่บั๊ก)
+  const { lexCsv } = require('../tools/csv-lite.cjs');
+  const fs = require('fs');
+  const langDir = path.join(__dirname, '..', 'languages');
+  const thT = lexCsv(fs.readFileSync(path.join(langDir, 'k2_th.csv'), 'utf8'));
+  for (const f of fs.readdirSync(langDir).filter((x) => /^k2_.+\.csv$/.test(x) && x !== 'k2_th.csv')) {
+    const pr = S.translationProgress(thT, lexCsv(fs.readFileSync(path.join(langDir, f), 'utf8')));
+    console.log(`  ⚠ ความคืบหน้าการแปล ${f}: ${pr.translated}/${pr.total} (${pr.pct}%) · ค้าง ${pr.pending} แถว`);
+    check(`[159-QoL] วัดความคืบหน้าการแปลของ ${f} ได้`, pr.total > 1000 && pr.pct >= 0 && pr.pct <= 100, JSON.stringify(pr.pct));
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

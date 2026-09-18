@@ -236,37 +236,43 @@ export const setSpPageNumberLabel = SP_PB.setNumberLabel;
 // เครื่องหมายพวกนี้ "ไม่ใช่เนื้อบท" — ห้ามแทรกเป็นข้อความจริง ไม่งั้นไฟล์ .md เพี้ยนและลบไม่ออก
 // จึงวาดเป็น widget decoration แบบเดียวกับเส้นคั่นหน้า (ตำแหน่งมาจาก computeContinueds ใน app.js)
 const ctKey = new PMKey('kspcontinued');
-let _conts = [];
-let _contSig = '';
+// ══ [alpha.159] ★ รายการเครื่องหมาย "ของแต่ละตัวแก้ไข" (บั๊กตระกูลเดียวกับเส้นคั่นหน้า H15) ══
+// เดิม `_conts` เป็นตัวแปรระดับโมดูล → เปิดบทสองแท็บ/แยกจอ แล้วแก้แท็บหนึ่ง ปลั๊กอินของอีกแท็บ
+// map รายการของแท็บที่จัดหน้าล่าสุด แล้ววาด CONTINUED/(MORE) ของอีกเรื่องลงมา
+// `spContinuedPlugin()` หนึ่งครั้ง = รายการหนึ่งชุด ผูก view ผ่าน view hook · ไม่ระบุ view = ตัวที่ตั้งค่าล่าสุด
+const CT = { byView: new WeakMap(), cur: null, detached: { list: [], sig: '' } };
+const ctInst = (view) => (view && CT.byView.get(view)) || CT.cur || CT.detached;
 
 /** ตั้งรายการเครื่องหมายต่อเนื่อง — คืน true เมื่อ "เปลี่ยนจริง" (ผู้เรียกค่อย dispatch · บทเรียน 44) */
 // [alpha.84 ข้อ 2] ลายเซ็นต้องรวม mid/off — เครื่องหมายชุดเดิมที่ย้ายเข้า-ออกจากกลางบล็อก
 // ได้ตำแหน่งเท่าเดิมแต่ต้องวาดคนละระยะ
 const ctSigOf = (l) => l.map((m) => [m.pos, m.type, m.text, m.mid ? 1 : 0, m.off || 0].join(':')).join('|');
 
-export function setContinueds(list) {
+export function setContinueds(list, view) {
+  const I = ctInst(view);
+  if (I !== CT.detached) CT.cur = I;
   const next = (list || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
   const sig = ctSigOf(next);
-  if (sig === _contSig) return false;
-  _contSig = sig;
-  _conts = next;
+  if (sig === I.sig) return false;
+  I.sig = sig;
+  I.list = next;
   return true;
 }
 
 /** [alpha.85 ข้อ 2] เลื่อนตำแหน่งตามการแก้ไข — เหตุผลเดียวกับ mapBreaks() ของเส้นคั่นหน้า */
-function mapContinueds(mapping) {
-  if (!_conts.length) return;
-  _conts = _conts.map((m) => ({ ...m, pos: mapping.map(m.pos, -1) }))
+function mapContinueds(I, mapping) {
+  if (!I.list.length) return;
+  I.list = I.list.map((m) => ({ ...m, pos: mapping.map(m.pos, -1) }))
                  .filter((m) => Number.isFinite(m.pos) && m.pos > 0);
-  _contSig = ctSigOf(_conts);
+  I.sig = ctSigOf(I.list);
 }
-export function continueds() { return _conts.slice(); }
+export function continueds(view) { return ctInst(view).list.slice(); }
 
-function ctDecos(doc) {
-  if (!_conts.length || !doc) return DecoSet.empty;
+function ctDecos(I, doc) {
+  if (!I.list.length || !doc) return DecoSet.empty;
   const max = doc.content.size;
   const out = [];
-  for (const m of _conts) {
+  for (const m of I.list) {
     if (m.pos > max) continue;
     out.push(Deco.widget(m.pos, () => {
       const d = document.createElement('div');
@@ -286,18 +292,24 @@ function ctDecos(doc) {
 }
 
 export function spContinuedPlugin() {
+  const I = { list: [], sig: '' };
   return new PMPlugin({
     key: ctKey,
     state: {
-      init: (_c, st) => ctDecos(st.doc),
+      init: (_c, st) => ctDecos(I, st.doc),
       apply(tr, prev, _o, st) {
-        if (tr.getMeta(ctKey)) return ctDecos(st.doc);
+        if (tr.getMeta(ctKey)) return ctDecos(I, st.doc);
         if (!tr.docChanged) return prev;
-        mapContinueds(tr.mapping);
+        mapContinueds(I, tr.mapping);
         return prev.map(tr.mapping, tr.doc);
       },
     },
     props: { decorations(state) { return ctKey.getState(state); } },
+    view(v) {
+      CT.byView.set(v, I);
+      if (!CT.cur) CT.cur = I;
+      return { destroy() { CT.byView.delete(v); if (CT.cur === I) CT.cur = null; } };
+    },
   });
 }
 export function refreshContinueds(view) {

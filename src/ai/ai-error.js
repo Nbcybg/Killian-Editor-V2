@@ -13,7 +13,7 @@
 // ไฟล์นี้เป็น **โมดูลบริสุทธิ์** (ไม่แตะ DOM/fs/network) → unit test ได้ตรง ๆ
 // หน้าที่: เอา { status, body, error, url, aborted, timedOut } มาแปลงเป็น
 //   { title, reason, hints[], detail } ที่เอาไปโชว์บนจอ **และ** เขียนลงบันทึกได้ทันที
-import { T, tm, t } from '../i18n.js';
+import { tf, T, tm, t } from '../i18n.js';
 
 /** ปิดบังความลับก่อนขึ้นจอ/ลงไฟล์บันทึก — คีย์ห้ามรั่วออกจากเครื่องผู้ใช้เด็ดขาด */
 export function redactSecrets(text) {
@@ -72,22 +72,22 @@ export function hostOf(url) {
 function networkKind(text) {
   const s = String(text || '');
   if (/ECONNREFUSED|Connection refused/i.test(s)) {
-    return { key: 'refused', reason: T`เครื่องปลายทางปฏิเสธการเชื่อมต่อ (ไม่มีอะไรฟังอยู่ที่พอร์ตนั้น)`,
-      hints: [T`ถ้าเป็นโมเดลในเครื่อง (Ollama / LM Studio / llama.cpp) — เปิดโปรแกรมนั้นให้ทำงานอยู่ก่อน`,
-              T`ตรวจเลขพอร์ตใน Base URL ให้ตรงกับที่โปรแกรมนั้นเปิดจริง`] };
+    return { key: 'refused', reason: t('ui.aiError.toConnectNotHas'),
+      hints: [t('ui.aiError.modelOllamaLMStudio'),
+              t('ui.aiError.checkNumBaseURL')] };
   }
   if (/ENOTFOUND|getaddrinfo|DNS/i.test(s)) {
-    return { key: 'dns', reason: T`หาชื่อโดเมนไม่เจอ (DNS)`,
-      hints: [T`ตรวจว่าพิมพ์ Base URL ถูกต้อง`, T`ตรวจว่าเครื่องต่ออินเทอร์เน็ตอยู่`] };
+    return { key: 'dns', reason: t('ui.aiError.findNameDomainNot'),
+      hints: [t('ui.aiError.checkPrintBaseURL'), t('ui.aiError.checkNext')] };
   }
   if (/certificate|SSL|TLS|self[- ]signed/i.test(s)) {
-    return { key: 'tls', reason: T`ใบรับรองความปลอดภัย (TLS) ของปลายทางใช้ไม่ได้`,
-      hints: [T`เซิร์ฟเวอร์ในเครือข่ายภายในมักใช้ใบรับรองที่ออกเอง — ลองใช้ http:// แทน https:// ถ้าเป็นเครื่องในบ้าน`] };
+    return { key: 'tls', reason: t('ui.aiError.itemTLSToUse'),
+      hints: [t('ui.aiError.innerUseItemOut')] };
   }
   if (/ETIMEDOUT|ECONNRESET|EPIPE|socket hang up|network|fetch failed/i.test(s)) {
-    return { key: 'net', reason: T`ต่อกับเซิร์ฟเวอร์ไม่ติด (เครือข่ายขาดกลางทาง)`,
-      hints: [T`ตรวจอินเทอร์เน็ต / VPN / ไฟร์วอลล์`,
-              T`ถ้าเป็นเครื่องในบ้าน ลองเปิด Base URL ในเบราว์เซอร์ดูว่าตอบไหม`] };
+    return { key: 'net', reason: t('ui.aiError.nextNotMissingCenter'),
+      hints: [t('ui.aiError.checkVPN'),
+              t('ui.aiError.tryOpenBaseURL')] };
   }
   return null;
 }
@@ -116,12 +116,12 @@ export function describeHttpError(e = {}) {
 
   if (e.aborted && e.timedOut) {
     code = 'timeout';
-    reason = T`หมดเวลารอคำตอบ`;
-    hints = [T`เพิ่มค่า Timeout ใน ตั้งค่า AI → แก้ผู้ให้บริการ → Parameters`,
-             T`โมเดลที่คิดเยอะ (reasoning) ใช้เวลานาน — ลดระดับการใช้ความคิด หรือลดความยาวคำตอบ`];
+    reason = t('ui.aiError.timeAnswer');
+    hints = [t('ui.aiError.addValueTimeoutSettings'),
+             t('ui.aiError.modelThinkReasoningUse')];
   } else if (e.aborted) {
     code = 'aborted';
-    reason = T`ผู้ใช้กดหยุดเอง`;
+    reason = t('ui.aiError.userPress');
     hints = [];
   } else if (e.streamError) {
     // [alpha.149] ผู้ให้บริการตอบ 200 แล้วส่งข้อผิดพลาดมาเป็นก้อนหนึ่งในสตรีม (เครดิตหมด · ถูกปฏิเสธ)
@@ -131,48 +131,48 @@ export function describeHttpError(e = {}) {
   } else if (status === 0) {
     const k = networkKind(srvMsg || rawBody || e.error);
     code = k ? 'net-' + k.key : 'net';
-    reason = k ? k.reason : (srvMsg || T`ยังติดต่อเซิร์ฟเวอร์ไม่ได้เลย (คำขอไปไม่ถึงปลายทาง)`);
-    hints = k ? k.hints : [T`ตรวจ Base URL · อินเทอร์เน็ต · ไฟร์วอลล์`,
-                           T`ตรวจว่าโดเมนอยู่ใน Allowed HTTP Request Domains ของผู้ให้บริการ`];
+    reason = k ? k.reason : (srvMsg || t('ui.aiError.nextCantWordNot'));
+    hints = k ? k.hints : [t('ui.aiError.checkBaseURL'),
+                           t('ui.aiError.checkDomainAllowedHTTP')];
   } else if (status === 401 || status === 403) {
-    reason = T`เซิร์ฟเวอร์ไม่รับกุญแจ (API key) ที่ส่งไป`;
-    hints = [T`ใส่คีย์ใหม่ที่ ตั้งค่า AI → แก้ผู้ให้บริการ → Credential แล้วกด 💾 Save Credential`,
-             T`คีย์บางเจ้าผูกกับองค์กร/โครงการ — ตรวจว่าคีย์นี้ใช้กับ Base URL นี้ได้จริง`];
+    reason = t('ui.aiError.notAPIKeySend');
+    hints = [t('ui.aiError.putKeyNewSettings'),
+             t('ui.aiError.keyBindOutlineCheck')];
   } else if (status === 404) {
-    reason = T`ปลายทางไม่มีอยู่จริง (404)`;
-    hints = [T`Base URL มักต้องลงท้ายด้วย /v1 — ตรวจให้ตรงกับคู่มือของผู้ให้บริการ`,
-             T`ตรวจชื่อโมเดล: กด "ดึงรายชื่อโมเดล" แล้วเลือกจากรายการแทนการพิมพ์เอง`];
+    reason = t('ui.aiError.toNotHas');
+    hints = [t('ui.aiError.baseURLMustV1'),
+             t('ui.aiError.checkNameModelPress')];
   } else if (status === 408) {
-    reason = T`เซิร์ฟเวอร์บอกว่าคำขอใช้เวลานานเกินไป`;
-    hints = [T`ลองใหม่อีกครั้ง หรือเพิ่ม Max Retries ใน Parameters`];
+    reason = t('ui.aiError.wordUseTime');
+    hints = [t('ui.aiError.tryNewTimesAdd')];
   } else if (status === 429) {
-    reason = T`ยิงถี่เกินโควตา หรือเครดิตหมด (429)`;
-    hints = [T`รอสักครู่แล้วลองใหม่`, T`ตรวจยอดเครดิต/โควตาในหน้าผู้ให้บริการ`,
-             T`เพิ่ม Max Retries ใน Parameters ให้ระบบถอยแล้วลองเองอัตโนมัติ`];
+    reason = t('ui.aiError.msg');
+    hints = [t('ui.aiError.doneTryNew'), t('ui.aiError.checkPageProvider'),
+             t('ui.aiError.addMaxRetriesParameters')];
   } else if (status === 400 || status === 422) {
-    reason = T`ผู้ให้บริการไม่รับพารามิเตอร์ที่ส่งไป (${String(status)})`;
-    hints = [T`ดูข้อความของเซิร์ฟเวอร์ด้านล่าง — มักบอกชื่อฟิลด์ที่ผิดมาตรง ๆ`,
-             T`ตัวที่ผิดบ่อย: Max Tokens สูงเกินที่โมเดลรับ · Reasoning Effort / Thinking mode ที่โมเดลนี้ไม่มี · Response Format = json_object`];
+    reason = tf('ui.aiError.providerNotParamSend', String(status));
+    hints = [t('ui.aiError.viewTextBottomName'),
+             t('ui.aiError.itemMaxTokensHigh')];
   } else if (status >= 500) {
-    reason = T`ฝั่งผู้ให้บริการมีปัญหา (${String(status)})`;
-    hints = [T`รอสักครู่แล้วลองใหม่ — ไม่ใช่ปัญหาที่เครื่องเรา`];
+    reason = tf('ui.aiError.sideProviderHasProblem', String(status));
+    hints = [t('ui.aiError.doneTryNewNot')];
   } else {
-    reason = T`เรียกไม่สำเร็จ (HTTP ${String(status)})`;
+    reason = tf('ui.aiError.callNotOkHTTP', String(status));
     hints = [];
   }
 
   const title = status ? tm('AI: {0} (HTTP {1})', reason, String(status))
                        : tm('AI: {0}', reason);
   const lines = [];
-  if (e.provider) lines.push(T`ผู้ให้บริการ: ` + e.provider);
-  if (e.model) lines.push(T`โมเดล: ` + e.model);
-  if (host) lines.push(T`ปลายทาง: ` + host);
+  if (e.provider) lines.push(t('ui.aiError.provider') + e.provider);
+  if (e.model) lines.push(t('ui.aiError.model') + e.model);
+  if (host) lines.push(t('ui.aiError.to') + host);
   if (e.url) lines.push('URL: ' + redactSecrets(e.url));
-  lines.push('HTTP: ' + (status || T`ไปไม่ถึงเซิร์ฟเวอร์`));
-  if (srvMsg) lines.push(T`เซิร์ฟเวอร์ตอบ: ` + clip(srvMsg));
-  else if (rawBody) lines.push(T`เนื้อคำตอบ: ` + clip(rawBody));
-  if (e.error && e.error !== reason) lines.push(T`ข้อความภายใน: ` + redactSecrets(String(e.error)));
-  if (hints.length) lines.push('', T`แนวทางแก้:`, ...hints.map((h, i) => (i + 1) + '. ' + h));
+  lines.push('HTTP: ' + (status || t('ui.aiError.notTo')));
+  if (srvMsg) lines.push(t('ui.aiError.reply') + clip(srvMsg));
+  else if (rawBody) lines.push(t('ui.aiError.bodyAnswer') + clip(rawBody));
+  if (e.error && e.error !== reason) lines.push(t('ui.aiError.textInner') + redactSecrets(String(e.error)));
+  if (hints.length) lines.push('', t('ui.aiError.edit'), ...hints.map((h, i) => (i + 1) + '. ' + h));
   return { title, reason, hints, detail: lines.join('\n'), code, serverMessage: srvMsg, host, status };
 }
 

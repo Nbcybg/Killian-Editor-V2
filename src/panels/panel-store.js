@@ -242,7 +242,11 @@ export class PanelManager {
   // จึงต้องแยกจาก `isDocked` ที่แปลว่า "มีสล็อตในต้นไม้" เฉย ๆ
   isOpen(id) { return (this.isDocked(id) && !this.isHidden(id)) || this.isFloating(id); }
   openIds() {
-    return [...(this.root ? PL.visiblePanelIds(this.root) : []), ...this.floats.map((f) => f.panel.id)];
+    // [alpha.159 · M15] กลุ่มแท็บลอยต้องคืน "id ของแผงสมาชิก" — เดิมคืน id ของตัวกลุ่ม (`tabs-…`)
+    // ซึ่งไม่มีตัววาด → เวิร์กสเปซที่กู้คืน/ตัวเรียก onShow ได้แผงเปล่า
+    const floatIds = this.floats.flatMap((f) => (f.panel.type === 'tabs'
+      ? (f.panel.children || []).map((c) => c.id) : [f.panel.id]));
+    return [...(this.root ? PL.visiblePanelIds(this.root) : []), ...floatIds];
   }
   _node(id) {
     const d = this.registry.get(id);

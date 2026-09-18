@@ -198,6 +198,23 @@ for (const lv of ['error', 'warn']) {
 
 // ---- แถบสถานะล่าง ----
 export function setStatus(s) { $('#status').textContent = s; }
+/**
+ * [alpha.159 · QoL] ข้อความสถานะ + ลิงก์ให้กดทำต่อ (เช่น "ย้ายไปถังขยะแล้ว · เปิดในโฟลเดอร์")
+ * ข้อความถัดไปของ setStatus() ล้างลิงก์ทิ้งเอง (textContent) — ไม่มีอะไรค้าง
+ */
+export function setStatusAction(s, label, onClick) {
+  const st = $('#status');
+  if (!st) return null;
+  st.textContent = s;
+  if (!label || typeof onClick !== 'function') return null;
+  const a = document.createElement('button');
+  a.type = 'button';
+  a.className = 'k-status-link';
+  a.textContent = label;
+  a.onclick = (e) => { e.stopPropagation(); try { onClick(); } catch {} };
+  st.append(' · ', a);
+  return a;
+}
 
 // ---------------- [alpha.62 บั๊ก 9+10] ตัวบอก "กำลังทำอะไรอยู่" ที่แถบสถานะล่าง ----------------
 // เดิมเป็นหน้าจอ loading เต็มจอ (#k-loader, z-index 999) — มันทับ "กล่องบันทึกก่อนปิด" (k-overlay z-index 80)
@@ -458,6 +475,9 @@ const DATA_KEYS = {
   'ตรวจแล้ว': 'ui.data.stChecked', 'เก็บถาวร': 'ui.data.stArchived',
   'แดง': 'ui.data.cRed', 'ส้ม': 'ui.data.cOrange', 'เหลือง': 'ui.data.cYellow',
   'เขียว': 'ui.data.cGreen', 'ฟ้า': 'ui.data.cBlue', 'ม่วง': 'ui.data.cPurple',
+  /* i18n-skip: [alpha.159] ค่าสถานะของการ์ดกระดาน (planner-data.STATUSES) = ข้อมูลในไฟล์ แปลตอนวาดด้วย dataLabel() */
+  'เสร็จแล้ว': 'ui.data.stFinished', 'พัก': 'ui.data.stPaused',
+  /* /i18n-skip */
 };
 export function dataLabel(v) {
   if (v == null || v === '') return '';

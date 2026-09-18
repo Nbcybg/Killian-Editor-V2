@@ -3,7 +3,7 @@
 //   meta.customStatuses      = ['รอแก้ไข', 'ส่งแล้ว']          (สถานะที่เพิ่มเอง)
 //   meta.customStatusColors  = { 'รอแก้ไข': '#d9575e', … }     (สีทับได้ทั้งสถานะมาตรฐานและที่เพิ่มเอง)
 import { t, tf } from './i18n.js';
-import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR } from './core.js';
+import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR, dataLabel } from './core.js';
 import { ask, confirmBox, escClose } from './ui.js';
 import { gi } from './icons.js';
 import { vivid, inkOn } from './color-util.js';
@@ -233,10 +233,25 @@ export async function manageCustomStatuses() {
 
 // ทาสีชิปสถานะที่วาดไว้แล้วใน Explorer/ตารางฉาก โดยไม่ต้อง build ต้นไม้ใหม่ทั้งชุด
 export function refreshStatusChips(root = document) {
-  for (const chip of root.querySelectorAll('.sc-status')) {
-    const c = statusColor(chip.textContent.trim());
+  // [alpha.159 · M16] ค่าจริงอยู่ที่ `dataset.status` — `textContent` เป็นป้ายที่ **แปลแล้ว**
+  // (หน้าจออังกฤษ "Writing" ไม่มีในตารางสีที่เก็บเป็นค่าไทย → ชิปทุกตัวกลายเป็นสีเทาตั้งต้น)
+  // ชิปที่ไม่มี dataset.status (สถานะเล่ม — คนละชุดสี) ไม่แตะ
+  for (const chip of root.querySelectorAll('.sc-status[data-status]')) {
+    const c = statusColor(chip.dataset.status);
     if (c) paintStatusChip(chip, c);
   }
+}
+
+/**
+ * [alpha.159 · M16] ชิปสถานะฉาก/บท/ไฟล์ — **ทางสร้างเดียว**: ป้ายตามภาษา · ค่าจริงใน dataset · สีประจำสถานะ
+ * @param {string} value ค่าที่เก็บในไฟล์งาน (ไทย)
+ */
+export function statusChip(value) {
+  const chip = el('span', 'sc-status', dataLabel(value));
+  chip.dataset.status = String(value || '');
+  const c = statusColor(value);
+  if (c) paintStatusChip(chip, c);
+  return chip;
 }
 
 /** [alpha.157] ชิปสถานะ = พื้นสีเต็ม (เฉดสด) + ตัวอักษรที่อ่านออกบนพื้นนั้น (ผู้ใช้: "สีเต็มแถบ · colorful") */

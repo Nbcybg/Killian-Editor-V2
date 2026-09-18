@@ -14,12 +14,29 @@ import { dumpMdFile, parseMdFile } from '../md.js';
 import { listScenes, listEntities } from '../project-scan.js';
 // [alpha.149] ★ ไฟล์ที่เปิดอยู่ในแท็บ ต้องถูกแก้ "ผ่านแท็บ" — เขียนดิสก์ตรง ๆ แล้วแท็บยังถือของเก่า
 // พอผู้ใช้บันทึก ข้อความที่ AI เขียนก็หาย (วัดจริง: ไฟล์มี → กด Ctrl+S → หาย) · รายละเอียดหัว tab-bridge.js
-import { tabHandle, closeTabsUnder } from '../tab-bridge.js';
+import { tabHandle, closeTabsUnder, isInsideRoot } from '../tab-bridge.js';
+// [alpha.159 · H5/M1] scenes.json/draft.json แก้ผ่านคิว (อ่านสด) — กฎ alpha.156 ใช้กับทาง AI ด้วย
+import { mutateJson } from '../json-store.js';
+import { freeSceneFileName, takenSceneFiles } from '../scene-file-name.js';   // [M3] ตัวเดียวกับทางคลิก
+import { writeMdKeepingComments } from '../comments/comment-core.js';          // [M4] ไม่ลบเธรดคอมเมนต์
 
 const SKIP_DIRS = ['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', 'Plugins', 'Recycle', 'Sessions'];
 
 const guid = () => 'k2-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-const safeName = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '').trim() || 'untitled';
+/**
+ * ชื่อไฟล์/โฟลเดอร์จากคำตอบของโมเดล — [alpha.159 · H8] `..` / `.` ล้วนต้องไม่ผ่าน
+ * (เดิมตัดแค่ตัวคั่น → `safeName('..')` = `'..'` แล้ว book.create เขียน section.json นอกโปรเจกต์)
+ */
+export const safeName = (s) => {
+  const v = String(s || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim();
+  return !v || /^\.+$/.test(v) ? 'untitled' : v;
+};
+/** ด่านสุดท้ายก่อนเขียน: path ที่ประกอบเสร็จต้องยังอยู่ใต้โปรเจกต์ */
+function assertInside(p) {
+  if (!isInsideRoot(state.root, p)) throw new Error(t('ui.aiActions.outsideProject'));
+  return p;
+}
+const EMPTY_SCENES = () => ({ chapters: {} });
 /**
  * [alpha.149] ★ ชื่อหมวด Wiki มาจาก **คำตอบของโมเดล** — ต้องไม่พาไฟล์ออกนอกโฟลเดอร์ Wiki
  * เดิมส่งเข้า `kapi.join(wiki, cat)` ตรง ๆ → `"../../ที่ไหนก็ได้"` เขียนไฟล์นอกโปรเจกต์ได้
@@ -201,15 +218,15 @@ const HANDLERS = {
   async 'entity.delete'(a) {
     const hit = await findEntityFile(a.name);
     if (!hit) return err(tf('ui.aiActions.notFound', a.name));
-    const h = tabHandle(hit.path);
-    if (h) h.close();                  // ผู้ใช้ยืนยันการลบแล้ว — แท็บของไฟล์ที่ไม่มีอยู่แล้วต้องไม่ค้าง
+    // ผู้ใช้ยืนยันการลบแล้ว — แท็บของไฟล์ที่ไม่มีอยู่แล้วต้องไม่ค้าง · [alpha.159] บันทึกงานค้างก่อน (ถังได้ของล่าสุด)
+    if (tabHandle(hit.path)) await closeTabsUnder(hit.path);
     await moveToTrash(hit.path);
     return ok(tf('ui.aiActions.moveTrashDone', hit.name));
   },
 
   async 'book.create'(a) {
     const title = String(a.title);
-    let dir = await kapi.join(state.root, safeName(title));
+    let dir = assertInside(await kapi.join(state.root, safeName(title)));
     if (await kapi.exists(dir)) dir += '-' + Date.now().toString(36).slice(-4);
     const books = await listBooks();
     const order = Math.max(0, ...books.map((b) => b.order || 0)) + 1;
@@ -227,7 +244,8 @@ const HANDLERS = {
   async 'book.delete'(a) {
     const b = await findBook(a.title);
     if (!b) return err(tf('ui.aiActions.notFoundBook2', a.title));
-    closeTabsUnder(b.path);            // [alpha.149] แท็บของฉากในเล่มที่ย้ายไปถังขยะต้องไม่ค้าง (บันทึกแล้วไฟล์ผีกลับมา)
+    // [alpha.149] แท็บของฉากในเล่มที่ย้ายไปถังขยะต้องไม่ค้าง · [alpha.159] บันทึกก่อน + รอจนปิดเสร็จ
+    await closeTabsUnder(b.path);
     const dst = await moveToTrash(b.path);
     await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
       { kind: 'section', root: state.root, folderName: b.name }, null, 2));
@@ -238,14 +256,16 @@ const HANDLERS = {
     const b = await findBook(a.book);
     if (!b) return err(a.book ? tf('ui.aiActions.notFoundBook2', a.book) : t('ui.aiActions.notHasBookProject'));
     const df = await kapi.join(b.draftPath, 'draft.json');
-    const d = (await kapi.exists(df)) ? await kapi.readJson(df) : { chapters: [] };
-    if ((d.chapters || []).some((c) => eq(c.title, a.title))) return err(tf('ui.aiActions.bookHasChapter', a.title));
-    const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
-    const ch = { guid: guid(), title: String(a.title), order, status: 'Outline', act: 'I', date: '',
-                 isFavorite: false, folderName: String(order).padStart(2, '0') + ' - ' + safeName(a.title) };
-    d.chapters = [...(d.chapters || []), ch];
-    await kapi.writeFile(df, JSON.stringify(d, null, 2));
-    await kapi.mkdir(await kapi.join(b.draftPath, 'Chapters', ch.folderName));
+    let ch = null;
+    await mutateJson(kapi, df, (d) => {
+      if ((d.chapters || []).some((c) => eq(c.title, a.title))) return false;
+      const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
+      ch = { guid: guid(), title: String(a.title), order, status: 'Outline', act: 'I', date: '',
+             isFavorite: false, folderName: String(order).padStart(2, '0') + ' - ' + safeName(a.title) };
+      d.chapters = [...(d.chapters || []), ch];
+    }, { fallback: { chapters: [] } });
+    if (!ch) return err(tf('ui.aiActions.bookHasChapter', a.title));
+    await kapi.mkdir(assertInside(await kapi.join(b.draftPath, 'Chapters', ch.folderName)));
     return ok(tf('ui.aiActions.addChapterDone', a.title, b.title));
   },
 
@@ -254,9 +274,11 @@ const HANDLERS = {
     if (!b) return err(t('ui.aiActions.notFoundBook'));
     const c = await findChapter(b, a.title);
     if (!c) return err(tf('ui.aiActions.notFoundChapter', a.title));
-    c.ch.title = String(a.newTitle);
-    c.draft.chapters = c.draft.chapters.map((x) => (x.guid === c.ch.guid ? c.ch : x));
-    await kapi.writeFile(c.draftFile, JSON.stringify(c.draft, null, 2));
+    await mutateJson(kapi, c.draftFile, (d) => {
+      const row = (d.chapters || []).find((x) => x.guid === c.ch.guid);
+      if (!row) return false;
+      row.title = String(a.newTitle);
+    });
     return ok(tf('ui.aiActions.changeNameChapterDone', a.newTitle));
   },
 
@@ -267,18 +289,24 @@ const HANDLERS = {
     if (!c) return err(tf('ui.aiActions.notFoundChapter', a.title));
     const dir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
     const sf = await kapi.join(b.draftPath, 'scenes.json');
-    const sdata = (await kapi.exists(sf)) ? await kapi.readJson(sf) : { chapters: {} };
-    const scenes = (sdata.chapters || {})[c.ch.guid] || [];
+    // [alpha.159 · H5] ปิดแท็บ (บันทึกงานค้างก่อน) **ก่อน** อ่านรายชื่อฉาก — บันทึกฉากอัปเดตแถวใน scenes.json
+    if (await kapi.exists(dir)) await closeTabsUnder(dir);
+    let scenes = [];
+    await mutateJson(kapi, sf, (sd) => {
+      scenes = ((sd.chapters || {})[c.ch.guid] || []).slice();
+      if (!sd.chapters || !(c.ch.guid in sd.chapters)) return false;
+      delete sd.chapters[c.ch.guid];
+    }, { fallback: EMPTY_SCENES });
     if (await kapi.exists(dir)) {
-      closeTabsUnder(dir);             // [alpha.149]
       const dst = await moveToTrash(dir);
       await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
         { kind: 'chapter', dPath: b.draftPath, ch: c.ch, scenes }, null, 2));
     }
-    c.draft.chapters = (c.draft.chapters || []).filter((x) => x.guid !== c.ch.guid);
-    await kapi.writeFile(c.draftFile, JSON.stringify(c.draft, null, 2));
-    if (sdata.chapters) delete sdata.chapters[c.ch.guid];
-    await kapi.writeFile(sf, JSON.stringify(sdata, null, 2));
+    await mutateJson(kapi, c.draftFile, (d) => {
+      const before = (d.chapters || []).length;
+      d.chapters = (d.chapters || []).filter((x) => x.guid !== c.ch.guid);
+      if (d.chapters.length === before) return false;
+    });
     return ok(tf('ui.aiActions.delChapterSceneTrash', a.title, scenes.length));
   },
 
@@ -288,27 +316,28 @@ const HANDLERS = {
     const c = await findChapter(b, a.chapter);
     if (!c) return err(a.chapter ? tf('ui.aiActions.notFoundChapter', a.chapter) : t('ui.common.bookNotHasChapter'));
     const sf = await kapi.join(b.draftPath, 'scenes.json');
-    const d = (await kapi.exists(sf)) ? await kapi.readJson(sf) : { chapters: {} };
-    d.chapters = d.chapters || {};
-    const list = d.chapters[c.ch.guid] || [];
-    if (list.some((s) => eq(s.title, a.title))) return err(tf('ui.aiActions.chapterHasScene', a.title));
-    const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-    // [alpha.149] ★ ชื่อไฟล์ต้องไม่ชนไฟล์ที่มีอยู่แล้ว — `scene-NN.md` ที่ไม่ได้อยู่ใน scenes.json
-    // (กู้จากถังขยะ · ก๊อปมาเอง · ฉากที่ถูกถอดออกจากรายการ) เคยถูกเขียนทับเงียบ ๆ
     const chDir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
-    const base = 'scene-' + String(order).padStart(2, '0');
-    let fileName = base + '.md';
-    for (let k = 2; k < 1000 && (await kapi.exists(await kapi.join(chDir, fileName))); k++) {
-      fileName = base + '-' + k + '.md';
-    }
-    const sc = { id: guid(), title: String(a.title), order, fileName,
-                 chapterGuid: c.ch.guid, date: '', isFavorite: false, wordCount: 0,
-                 synopsis: String(a.synopsis || '') };
-    d.chapters[c.ch.guid] = [...list, sc];
-    const file = await kapi.join(chDir, sc.fileName);
+    // [alpha.159 · M3/H5] ชื่อไฟล์ผ่าน freeSceneFileName (ตัวเดียวกับทางคลิก — กันทั้งไฟล์บนดิสก์
+    // และชื่อที่แถวอื่นจองไว้) · แถวใหม่เขียนผ่านคิวของ scenes.json · ไฟล์ .md เขียนก่อนแถว
+    // (แถวที่ชี้ไฟล์ที่ไม่มี = ฉากผีใน Explorer)
+    const snap = await kapi.readJson(sf).catch(() => EMPTY_SCENES());
+    const list0 = ((snap.chapters || {})[c.ch.guid]) || [];
+    if (list0.some((s) => eq(s.title, a.title))) return err(tf('ui.aiActions.chapterHasScene', a.title));
+    const order0 = Math.max(0, ...list0.map((s) => s.order || 0)) + 1;
+    const fileName = await freeSceneFileName(b.draftPath, c.ch.folderName, order0, takenSceneFiles(snap));
+    const file = assertInside(await kapi.join(chDir, fileName));
     await kapi.writeFile(file, dumpMdFile(
-      { title: sc.title, type: 'scene', format: 'prose', pov: '', tags: [] }, String(a.text || '')));
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+      { title: String(a.title), type: 'scene', format: 'prose', pov: '', tags: [] }, String(a.text || '')));
+    let dup = false;
+    await mutateJson(kapi, sf, (d) => {
+      d.chapters = d.chapters || {};
+      const list = d.chapters[c.ch.guid] || [];
+      if (list.some((s) => eq(s.title, a.title))) { dup = true; return false; }
+      const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
+      d.chapters[c.ch.guid] = [...list, { id: guid(), title: String(a.title), order, fileName,
+        chapterGuid: c.ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: String(a.synopsis || '') }];
+    }, { fallback: EMPTY_SCENES });
+    if (dup) { await kapi.remove(file).catch(() => {}); return err(tf('ui.aiActions.chapterHasScene', a.title)); }
     return ok(tf('ui.aiActions.newSceneDone', a.title, b.title, c.ch.title));
   },
 
@@ -333,7 +362,9 @@ const HANDLERS = {
       h.setText(next, { keepAlign: mode === 'append' });
       return ok(msg + ' · ' + t('ui.aiActions.openTabUnsaved'));
     }
-    await kapi.writeFile(sc.path, dumpMdFile(meta, next));
+    // [alpha.159 · M4] พาเธรดคอมเมนต์ไปด้วย — parseMdFile ตัดบล็อก k2-comments ออกแล้ว
+    // เขียน dumpMdFile ตรง ๆ = คอมเมนต์ของฉากหายถาวร (ทั้งตอนแท็บเปิดไม่ค้างและตอนไม่ได้เปิด)
+    await writeMdKeepingComments(kapi, sc.path, dumpMdFile(meta, next));
     if (live) await h.reloadFromDisk();          // แท็บเห็นของใหม่ทันที · บันทึกทีหลังจะไม่เขียนทับอีก
     return ok(msg);
   },
@@ -342,14 +373,17 @@ const HANDLERS = {
     const sc = await findScene(a);
     if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
-    const d = await kapi.readJson(sf);
-    for (const k of Object.keys(d.chapters || {})) {
-      d.chapters[k] = (d.chapters[k] || []).map((s) => (s.id === sc.id ? { ...s, title: String(a.newTitle) } : s));
-    }
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await mutateJson(kapi, sf, (d) => {
+      let hit = false;
+      for (const k of Object.keys(d.chapters || {})) {
+        for (const s of d.chapters[k] || []) if (s.id === sc.id) { s.title = String(a.newTitle); hit = true; }
+      }
+      if (!hit) return false;
+    });
     if (await kapi.exists(sc.path)) {
       const { meta, body } = parseMdFile(await kapi.readFile(sc.path));
-      await kapi.writeFile(sc.path, dumpMdFile({ ...meta, title: String(a.newTitle) }, body));
+      // [alpha.159 · M4] เขียนหัวไฟล์ใหม่ต้องไม่ลบเธรดคอมเมนต์ท้ายไฟล์
+      await writeMdKeepingComments(kapi, sc.path, dumpMdFile({ ...meta, title: String(a.newTitle) }, body));
     }
     // [alpha.149] แท็บที่เปิดอยู่ถือ meta.title ของเก่า — บันทึกทีหลังจะเขียนชื่อเดิมกลับลงไฟล์
     const h = tabHandle(sc.path);
@@ -361,19 +395,25 @@ const HANDLERS = {
     const sc = await findScene(a);
     if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
-    const d = await kapi.readJson(sf);
     const folderName = (sc.path.split(/[\\/]/).slice(-2, -1)[0]) || '';
-    const h = tabHandle(sc.path);
-    if (h) h.close();                  // [alpha.149] ไม่งั้นบันทึกแท็บค้าง = ไฟล์ฉากที่ลบไปแล้วเกิดใหม่
+    // [alpha.149] ไม่งั้นบันทึกแท็บค้าง = ไฟล์ฉากที่ลบไปแล้วเกิดใหม่
+    // [alpha.159 · H5] บันทึกงานค้างก่อนปิด (เดิม h.close() = ทิ้ง → ถังขยะได้ฉบับเก่า)
+    if (tabHandle(sc.path)) await closeTabsUnder(sc.path);
+    if (tabHandle(sc.path)) return err(tf('ui.aiActions.sceneOpenUnsaved', sc.title));   // บันทึกไม่ผ่าน = ไม่ลบ
     if (await kapi.exists(sc.path)) {
       const dst = await moveToTrash(sc.path);
       await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
         { kind: 'scene', dPath: sc.draftPath, folderName, chGuid: sc.chapterId, sc: sc.row }, null, 2));
     }
-    for (const k of Object.keys(d.chapters || {})) {
-      d.chapters[k] = (d.chapters[k] || []).filter((s) => s.id !== sc.id);
-    }
-    await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+    await mutateJson(kapi, sf, (d) => {
+      let hit = false;
+      for (const k of Object.keys(d.chapters || {})) {
+        const n0 = (d.chapters[k] || []).length;
+        d.chapters[k] = (d.chapters[k] || []).filter((s) => s.id !== sc.id);
+        if (d.chapters[k].length !== n0) hit = true;
+      }
+      if (!hit) return false;
+    });
     return ok(tf('ui.aiActions.delSceneTrashDone', sc.title));
   },
 };

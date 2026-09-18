@@ -69,7 +69,11 @@ async function buildModel(A, cfg, drafts) {
           format: t.sp ? 'screenplay' : 'prose', words: 0 },
       ] }],
     };
-    return { model, kind: forced || (t.sp ? 'screenplay' : 'prose') };
+    // [alpha.159 · M9] เลขหน้าเริ่มต้นของฉากนี้ (ตั้งเอง/ไล่ต่อเนื่องจากเล่ม) — ตัวเดียวกับที่หน้ากระดาษบนจอใช้
+    // เดิมขอบเขตแท็บเริ่มที่ 1 เสมอ → ส่งออกฉากที่ 5 ได้เลขหน้าไม่ตรงกับที่เห็นบนจอ
+    let startPage = 1;
+    try { startPage = (await import('./app.js')).currentStartPage(t) || 1; } catch {}
+    return { model, kind: forced || (t.sp ? 'screenplay' : 'prose'), startPage };
   }
   const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
   if (!d) return null;
@@ -150,8 +154,11 @@ async function frontMatterHtml(A, cfg, model, coverUrl) {
   const roster = cfg.pdf.roster !== false ? String(model.roster || '').trim() : '';
   if (!wantCover && !roster) return '';
   const spf = A.spFormat();
+  // [alpha.159 · M11] เครื่องหมายคำพูดต้องถูก escape ด้วย — ใช้ในแอตทริบิวต์ `src="…"` ของรูปปก
+  // (ชื่อไฟล์รูป/ชื่อโฟลเดอร์ที่มี `"` เคยทำแท็กพัง → แทรกแอตทริบิวต์ลงหน้าปกได้)
   const esc = (s) => String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const pages = [];
   if (wantCover) {
     pages.push('<section class="k-front k-cover">' +
@@ -232,10 +239,13 @@ async function writeOut(A, cfg, built, nameOpts) {
                 pageNumbers: o.pageNumbers !== false,
                 sceneNumbers: o.sceneNumbers !== false,
                 colorMode: o.colorMode === 'color' ? 'color' : 'mono',
-                watermark: o.watermark, openPage: 0 },
+                watermark: o.watermark, openPage: 0,
+                startPage: built.startPage || 1 },   // [alpha.159 · M9] ขอบเขตแท็บ = เลขหน้าของฉากนั้น
       });
       await kapi.writeBytes(dest, r.bytes);
-      return { dest, note: ttf('ui.xhub.donePdf', r.pageCount, r.bookmarks.length) };
+      // [alpha.159 · M33] ข้อความ "เสร็จแล้ว" ต้องไม่กลบคำเตือนว่าไทยพิมพ์ไม่ออก
+      const thaiMiss = (r.warnings || []).includes('thai-font-missing') ? ' · ' + tt('ui.pdf.thaiFontMissing') : '';
+      return { dest, note: ttf('ui.xhub.donePdf', r.pageCount, r.bookmarks.length) + thaiMiss };
     }
     // นิยาย → HTML ที่มี @page → printToPDF ในหน้าต่างซ่อน (ได้ตัวอักษรจริง ไม่ใช่ภาพ)
     // [alpha.81r2] หน้าปก/หน้ารายชื่อ ทำเป็น PDF อีกก้อนแล้วเอามาต่อหน้าเนื้อเรื่อง
@@ -247,7 +257,7 @@ async function writeOut(A, cfg, built, nameOpts) {
     const { pdfFontBytes } = await import('./pdf-ui.js');
     const r = await mergeAndNumber(front ? [front] : [], body, {
       fmt: exportPageNumberFmt(A.spFormat()), fonts: await pdfFontBytes(),
-      pageNumbers: o.pageNumbers !== false, startPage: 1,
+      pageNumbers: o.pageNumbers !== false, startPage: built.startPage || 1,   // [alpha.159 · M9]
       fontPt: num(A.proseFormat().fontPt, 12), meta: { title: built.title },
     });
     await kapi.writeBytes(dest, r.bytes);
@@ -323,7 +333,7 @@ async function buildAll(A, cfg, drafts) {
   if (!mk) return null;
   const { model, kind } = mk;
   const wf = A.allWorkflows().find((w) => w.id === cfg.workflow)
-          || defaultWorkflowFor(cfg.format, A.allWorkflows());
+          || defaultWorkflowFor(cfg.format, A.allWorkflows(), kind);
   // [alpha.81r2] หน้าปก/หน้ารายชื่อ คุมจาก "ตัวเลือก PDF" ในกล่องนี้ — ไม่ใช่จากเวิร์กโฟลว์
   // (เดิมกดติ๊กแล้วไม่มีอะไรเปลี่ยน เพราะสองสวิตช์นี้ไม่เคยถูกส่งไปถึงตัวสร้างเลย)
   // จึงปิดขั้นตอน cover/roster ของเวิร์กโฟลว์ทิ้ง ไม่ให้ซ้อนกับหน้าที่กล่องนี้ทำเอง
@@ -344,7 +354,7 @@ async function buildAll(A, cfg, drafts) {
   const text = viaScript ? r.text : stripFountainCodes(r.text);
   const out = { title: model.title, kind, warnings: r.warnings || [],
                 text, html: '', frontHtml: '', roster: model.roster || '',
-                coverUrl: mk.coverUrl || '', engine, blocks: null };
+                coverUrl: mk.coverUrl || '', engine, blocks: null, startPage: mk.startPage || 1 };
 
   // == [alpha.132] * ปลายทาง HTML ถูกแปลง **สองรอบ** มาตลอด ==
   //
@@ -551,7 +561,7 @@ async function renderPreview(host, A, cfg, built) {
       renderPageView(box,
                      // หัวกระดาษกินบรรทัดของเนื้อหา — ต้องหักตั้งแต่ตอนจัดหน้า เหมือน generatePdf()
                      pg5, fmtN,
-                     { scale: fs.scale, gap: 14, startPage: 1, colorOf,
+                     { scale: fs.scale, gap: 14, startPage: built.startPage || 1, colorOf,   // [alpha.159 · M9]
                        // บริบทตัวแปร ${…} ชุดเดียวกับที่ generatePdf ใช้
                        headerRows: (n) => headerStringsFor(n, hdr5, {
                          TITLE: meta5.title || '', AUTHOR: meta5.author || '',
@@ -591,7 +601,7 @@ async function renderPreview(host, A, cfg, built) {
       const r6 = renderExportPagePreview(host, mdToHtmlBody(built.text, { mono, imgSrc: projectImg }), css, {
         paper: fmt.paper, margins: fmt.margins, scale: fs.scale, gap: 14,
         numTop: fmt.pageNumbers.top, numRight: fmt.pageNumbers.right,
-        label: (n) => pageNumberLabel(n, numFmtP, 1),
+        label: (n) => pageNumberLabel(n, numFmtP, built.startPage || 1),   // [alpha.159 · M9]
       });
       box = r6.box;
     }

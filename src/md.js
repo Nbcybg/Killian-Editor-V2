@@ -231,6 +231,8 @@ function markerVars(text) {
 // (strong · em · u · s · sup · sub · span[style=color]) จึงหน้าตาเหมือนกันโดยโครงสร้าง
 const HTML_ESC = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** [alpha.159 · H6] ค่าที่ผ่าน HTML_ESC แล้ว → ปลอดภัยในแอตทริบิวต์ที่ครอบด้วย "…" */
+const ATTR_Q = (s) => String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 /** ลำดับการห่อแท็ก — คงที่เสมอ เพื่อให้ผลลัพธ์เทียบได้ในเทส */
 const MARK_TAGS = [['strong', 'strong'], ['em', 'em'], ['underline', 'u'],
                    ['strike', 's'], ['sup', 'sup'], ['sub', 'sub']];
@@ -247,7 +249,9 @@ function inlineHtml(text, opts) {
       let s = HTML_ESC(seg.text)
         // รูปในบรรทัด (`![คำบรรยาย](path)`) — ทำหลัง escape เสมอ ไม่งั้น HTML ที่ผู้เขียน
         // พิมพ์เองหลุดเข้าไฟล์ได้ · แอตทริบิวต์ยัง escape อยู่จากขั้นบน
-        .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${a}" src="${u}">`);
+        // [alpha.159 · H6] ★ `"` ต้องถูก escape ด้วย — HTML_ESC ไม่แตะเครื่องหมายคำพูด
+        // เดิม `![a" onerror="…](x)` = แทรกแอตทริบิวต์/ตัวจัดการอีเวนต์ลงไฟล์ HTML/PDF ที่ส่งออกได้
+        .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${ATTR_Q(a)}" src="${ATTR_Q(u)}">`);
       if (!s) return '';
       const marks = seg.marks || [];
       const has = (n) => marks.some((m) => (typeof m === 'string' ? m : m.type) === n);
@@ -793,10 +797,18 @@ function parseMdFile(text) {
     const end = text.indexOf('\n---', 3);
     if (end !== -1) {
       // [alpha.148] \r\n (ไฟล์ที่แก้บน Windows) — `.` ใน regex ข้างล่างไม่กิน \r → เมทาดาทาหายทั้งหัวไฟล์
+      let last = null;
       for (const line of text.slice(3, end).replace(/\r/g, '').split('\n')) {
         const m = /^(\w[\w-]*):\s*(.*)$/.exec(line);
-        if (!m) continue;
+        if (!m) {
+          // [alpha.159 · M31] ★ ไฟล์รุ่นเก่า (ก่อน alpha.156) เขียนค่าหลายบรรทัดดิบ ๆ — บรรทัดที่ไม่มี `คีย์:`
+          // คือบรรทัดต่อของค่าก่อนหน้า · เดิมทิ้งเงียบ ๆ ตอนเปิด แล้วบันทึกครั้งถัดไป = หายถาวร
+          // (กติกาเดียวกับ repairFrontmatter ของเครื่องมือตรวจสุขภาพ — ตัวนี้แค่ "อ่านให้ครบ" ไม่เขียนอะไร)
+          if (last !== null && line.trim() !== '') meta[last] += '\n' + line.trim();
+          continue;
+        }
         meta[m[1]] = fmDecode(m[2].trim());
+        last = typeof meta[m[1]] === 'string' ? m[1] : null;
       }
       // [alpha.148] ตัดแค่ "ตัวคั่น" หลังเส้น --- หนึ่งบรรทัด + บรรทัดว่างตามธรรมเนียมอีกหนึ่ง
       // เดิม /^\n+/ กินบรรทัดว่างหัวฉากที่ผู้ใช้เว้นไว้ทิ้งหมดทุกครั้งที่เปิดไฟล์ (และไม่รู้จัก \r\n)

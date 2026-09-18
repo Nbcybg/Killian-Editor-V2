@@ -167,6 +167,48 @@ check('redact เก็บ field อื่นไว้', red.headers['Content-Ty
     .stream({ prompt: 'x' }, (t) => got2.push(t));
   check('ไม่มี http.stream → fallback ส่งก้อนเดียว', got2.join() === 'ก้อนเดียว' && r.ok);
 
+  // ── [alpha.159 · M29] ดัชนีสร้างด้วยโมเดลหนึ่ง คำถามถูกฝังด้วยอีกตัว (มิติต่างกัน) → ต้องไม่คืนค่าว่างเงียบ ๆ ──
+  {
+    const remote = (dim) => (texts) => texts.map((t) => Array.from({ length: dim }, (_, i) => ((t.charCodeAt(i % t.length) || 1) % 7) + 1));
+    let mode = 'remote';
+    const cl = { embed: async (texts, o = {}) => (mode === 'remote' && !o.local
+      ? { ok: true, vectors: remote(8)(texts), model: 'remote-8' }
+      : { ok: true, vectors: texts.map((t) => AI.localEmbed(t)), model: 'local', local: true }) };
+    const rp = new AI.RagPipeline({ client: cl });
+    await rp.indexDocs([{ id: 'a', text: 'ทอร่าชอบเค้กสตรอว์เบอร์รี' }, { id: 'b', text: 'ลูน่าเป็นหมอผี' }]);
+    check('[159-M29] เงื่อนไข: ดัชนีสร้างด้วยโมเดลระยะไกล (8 มิติ)', rp.index.model === 'remote-8' && rp.index.items[0].vector.length === 8);
+    mode = 'local';                                    // ถอดคีย์/เปลี่ยนเจ้า → คำถามได้เวกเตอร์คนละมิติ
+    const hits = await rp.retrieve('เค้กสตรอว์เบอร์รี', 2);
+    check('[159-M29] ★★ มิติไม่ตรง = ฝังดัชนีใหม่แล้วค้นเจอ (ไม่ใช่ว่างเงียบ ๆ)', hits.length > 0 && hits[0].id.startsWith('a'), JSON.stringify(hits.map((h) => h.id)));
+    check('[159-M29] ดัชนีเปลี่ยนเป็นโมเดลที่ใช้อยู่ + มีธงให้ผู้เรียกบันทึกใหม่', rp.index.model === 'local' && rp.reindexed === 1);
+  }
+
+  // ── [alpha.159 · H13] สตรีมพังกลางทาง = คืนข้อความที่ไหลมาแล้ว + ธง partial ──
+  {
+    const mkBroken = (lines, res) => new AI.AIClient({
+      http: { fetch: async () => ({ ok: true, body: '{}' }),
+              stream: async (url, o, onLine) => { for (const l of lines) onLine(l); if (res instanceof Error) throw res; return res; } },
+      settings: { provider: 'openai' }, keyStore: new AI.KeyStore({ cache: 'sk-x' }),
+      limiter: new AI.RateLimiter({ rpm: 999, concurrent: 9, sleep: async () => {} }),
+    });
+    const part = ['data: {"choices":[{"delta":{"content":"ครึ่ง"}}]}', 'data: {"choices":[{"delta":{"content":"ทาง"}}]}'];
+    let rb = await mkBroken(part, { ok: false, status: 502 }).stream({ prompt: 'x' }, () => {});
+    check('[159-H13] ★ HTTP ล้มหลังมีข้อความ → ok:false แต่ text = ที่ไหลมาแล้ว + partial', rb.ok === false && rb.text === 'ครึ่งทาง' && rb.partial === true,
+          JSON.stringify([rb.ok, rb.text, rb.partial]));
+    rb = await mkBroken(part, new Error('ECONNRESET')).stream({ prompt: 'x' }, () => {});
+    check('[159-H13] ★ เครือข่ายขาดกลางสตรีม → ยังได้ข้อความที่ไหลมา', rb.ok === false && rb.text === 'ครึ่งทาง' && rb.partial === true,
+          JSON.stringify([rb.ok, rb.text, rb.partial]));
+    rb = await mkBroken([], { ok: false, status: 500 }).stream({ prompt: 'x' }, () => {});
+    check('[159-H13] ล้มตั้งแต่ยังไม่มีอะไรไหลมา → partial = false', rb.ok === false && !rb.partial && rb.text === '');
+  }
+  // ai-bridge (ทะเบียนผู้ให้บริการใหม่) — ตัวคืนผลตอนล้มต้องมี text/partial (ตรวจจากซอร์ส: ต้องมี kapi/DOM จริงถึงจะรันได้)
+  {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../src/ai/ai-bridge.js'), 'utf8');
+    const seg = src.slice(src.indexOf('async stream(opts'), src.indexOf('async embed('));
+    check('[159-H13] ai-bridge.stream ตอนล้มคืน text + partial (ไม่ใช่ partialText ที่ไม่มีใครอ่านอย่างเดียว)',
+          /text: got/.test(seg) && /partial: !!got\.trim\(\)/.test(seg));
+  }
+
   // ── embed + fallback local ──
   const ec = mkClient(async () => ({ ok: true, status: 200, body: JSON.stringify({ data: [{ embedding: [1, 0, 0] }, { embedding: [0, 1, 0] }] }) }));
   let e = await ec.embed(['ก', 'ข']);

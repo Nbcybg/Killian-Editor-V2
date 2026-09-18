@@ -196,5 +196,20 @@ const ids = new Set(rows.map((r) => r.command_id));
     .every((m) => !ids.has(`toggle-panel:${m[1]}`)));
 }
 
+// ═══════════ [alpha.159 · M25/M26] ทะเบียนต้องสะอาดทั้งสองทาง ═══════════
+{
+  const SYNC = require('../tools/commands-sync.cjs');
+  const dead = SYNC.rows.filter((r) => !SYNC.CMDS.has(r.command_id)).map((r) => r.command_id);
+  check('[159-M26] ★ ทุกแถวใน icons/commands.csv มีคำสั่งจริงในโค้ด (ไม่มีแถวตาย)', dead.length === 0, dead.join(', '));
+  const html = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+  const inl = [...html.matchAll(/<button\b[^>]*data-command="([^"]+)"[^>]*>[^<]*<svg/g)].map((m) => m[1]);
+  check('[159-M25] ★ ปุ่มที่มี data-command ไม่ฝัง <svg> ในตัว (ไอคอนมาจากทะเบียน)', inl.length === 0, inl.join(', '));
+  const csv = fs.readFileSync(path.join(__dirname, '..', 'icons', 'commands.csv'), 'utf8');
+  const side = ['left', 'top', 'bottom', 'right'].filter((sd) => !new RegExp('^panels-side-' + sd + ',panel-' + sd + ',', 'm').test(csv));
+  check('[159-M25] ปุ่มซ่อนแผงทั้งสี่ฝั่งมีไอคอนในทะเบียน + ไฟล์ svg', side.length === 0
+        && ['left', 'top', 'bottom', 'right'].every((sd) => fs.existsSync(path.join(__dirname, '..', 'icons', 'svg', 'panel-' + sd + '.svg'))),
+        side.join(','));
+}
+
 console.log(`commands-registry: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

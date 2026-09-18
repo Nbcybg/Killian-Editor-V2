@@ -1,4 +1,5 @@
 // scene-props.js — แผงคุณสมบัติฉาก (สถานะ/สี/ปักหมุด/ล็อก/futureNote)
+import { explicitStartPage } from './book-flow.js';
 import { t } from './i18n.js';
 import { buildTree, guid, updatePageNumberHint, refreshSpView } from './app.js';
 import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, log } from './core.js';
@@ -172,7 +173,7 @@ export async function sceneProps(dPath, ch, sc) {
     // เลขหน้าเริ่มต้นเปลี่ยน → แท็บที่เปิดไฟล์นี้อยู่ต้องวาดเลขหน้าใหม่ทันที
     const openTab = state.tabs.get(file);
     if (openTab) {
-      openTab.startPage = row.startPage || 1;
+      openTab.startPage = explicitStartPage(row);         // [alpha.159 · H7] ห้าม `|| 1` (ทับสาย continue)
       openTab.pageFlow = row.pageFlow === 'continue' ? 'continue' : '';
       updatePageNumberHint(); refreshSpView();
     }

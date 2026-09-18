@@ -1,7 +1,7 @@
 // dashboard.js — แดชบอร์ดโปรเจกต์ (สถิติ/analytics/ฉากปักหมุด/ไปต่อจากที่ค้าง)
 // แยกจาก app.js — feature นี้เป็นจุดที่ feature ใหม่ (แก้แดชบอร์ด, กราฟ, theme) จะมาต่อยอด
 import { t, tf } from './i18n.js';
-import { $, state, el, dataLabel } from './core.js';
+import { $, state, el, dataLabel, log } from './core.js';
 import { allStatuses, statusColor } from './custom-status.js';
 import { vivid, inkOn } from './color-util.js';
 import { ACTIVITY_RANGES, READ_WPM, readingTime, activitySeries, milestones, nextMilestone, projectStartDay, statusBreakdown } from './dashboard-stats.js';
@@ -112,7 +112,11 @@ export async function renderDashboard(pane) {
   }
   // [alpha.157] เฉพาะ entity ของ Wiki — loadAllEntities พ่วงโหนดโครงสร้าง (บท/ฉาก/เล่ม) มาให้ผังเรื่องด้วย
   // ซึ่งทำให้การ์ด "Wiki entities" นับบท/ฉากรวม และแผง "Wiki ตามหมวด" มีหมวด scene/chapter โผล่
-  const allEnts = (await loadAllEntities()).filter((e) => /[\\/](Wiki|Bible)[\\/]/.test(String(e.file || '')));
+  // [alpha.159 · QoL] อ่าน Wiki พัง (ไฟล์ JSON เสียสักไฟล์) ต้องไม่ทำให้แดชบอร์ดทั้งหน้าหยุดวาด
+  let allEnts = [];
+  try {
+    allEnts = (await loadAllEntities()).filter((e) => /[\\/](Wiki|Bible)[\\/]/.test(String(e.file || '')));
+  } catch (e) { log('warn', t('ui.dash.entitiesFail'), e); }
   vE.textContent = allEnts.length.toLocaleString();
   // ความคืบหน้าเทียบเป้าหมายทั้งโปรเจกต์ (ตั้งได้ในตั้งค่าโปรเจกต์)
   const goal = parseInt(state.goals.projectWords, 10) || 0;

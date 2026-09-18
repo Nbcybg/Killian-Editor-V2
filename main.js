@@ -865,7 +865,7 @@ ipcMain.handle('history:revert', (e, seq) => {
 const MENU_PANELS = [
   // id แผงเป็นชื่อสั้นของ Panel System (tree/outline/props) — ฝั่ง renderer มี alias ให้ชื่อเดิมด้วย
   { id: 'tree', label: tt('ui.menu.projectExplorer') },
-  { id: 'outline', label: 'Navigation' },
+  { id: 'outline', label: tt('ui.panel.navigation') },   // [alpha.159 · M24] เดิมฝังอังกฤษ
   { id: 'props', label: tt('ui.common.props') },
   { id: 'log', label: tt('ui.menu.saveLog') },
   { id: 'comments', label: tt('ui.common.comment') },
@@ -874,7 +874,7 @@ const MENU_PANELS = [
   { sep: true },
   // บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ
   { id: 'dashboard', label: tt('ui.common.dashboard') },
-  { id: 'kanban', label: 'Kanban' },
+  { id: 'kanban', label: tt('ui.treeMenu.kanban') },   // [alpha.159 · M24]
   { id: 'books', label: tt('ui.common.manageBook') },
   { id: 'chapters', label: tt('ui.chapters.title') },
   { id: 'timeline', label: tt('ui.common.lineTime') },
@@ -888,10 +888,10 @@ const MENU_PANELS = [
   { id: 'starter', label: tt('ui.menu.panelStoryStarter') },
   { sep: true },
   // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
-  { id: 'network', label: '🕸 Story Network' },
+  { id: 'network', label: tt('ui.menu.storyNetworkGraphRelation') },   // [alpha.159 · M24] เดิมอีโมจิ+อังกฤษฝัง
   // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ (เดิมมีแต่แท็บในหน้า Wiki)
   { id: 'backlinks', label: (C, S, A) => tt('ui.menu.backlinksPanelB') },
-  { id: 'planner', label: '🗺 Planner' },
+  { id: 'planner', label: tt('ui.menu.plannerBoardPlanner') },   // [alpha.159 · M24]
   { id: 'floorplan', label: tt('ui.common.graphArea') },
   { id: 'branch', label: tt('ui.common.graphBreakBranch2') },
   { id: 'player', label: tt('ui.common.trialPlay') },

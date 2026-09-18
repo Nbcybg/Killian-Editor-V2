@@ -88,5 +88,22 @@ check('textMatchesQuery รองรับไม่เอา',
 check('textMatchesQuery คิวรีว่าง = ผ่านหมด', F.textMatchesQuery('อะไรก็ได้', ''));
 check('textMatchesQuery ไม่สนตัวพิมพ์', F.textMatchesQuery('Tora The Blade', 'blade'));
 
+// ── [alpha.159 · H9] สถานะที่ผู้ใช้สร้างเอง (มีวรรคได้) + ลำดับตามโปรเจกต์ ──
+{
+  const sc = { title: 'x', status: 'รอ บก. อ่าน' };
+  check('[159-H9] queryValue ครอบ "…" เมื่อมีวรรค', F.queryValue('รอ บก. อ่าน') === '"รอ บก. อ่าน"' && F.queryValue('กำลังเขียน') === 'กำลังเขียน');
+  check('[159-H9] ★ status:"มีวรรค" จับคู่ได้', F.sceneMatchesQuery(sc, 'status:' + F.queryValue(sc.status)));
+  check('[159-H9] ★ ชิปสองสถานะ (หนึ่งมีวรรค) ด้วย OR', F.sceneMatchesQuery(sc, 'status:กำลังเขียน OR status:"รอ บก. อ่าน"')
+        && !F.sceneMatchesQuery({ status: 'ร่างแรก' }, 'status:"รอ บก. อ่าน"'));
+  check('[159-H9] คำค้นอิสระในเครื่องหมายคำพูด = วลีเดียว', F.parseGroups('"สองคำ ติดกัน" x')[0].length === 2
+        && F.parseGroups('"สองคำ ติดกัน"')[0][0].value === 'สองคำ ติดกัน');
+  const rank = F.statusRankOf(['ร่างแรก', 'สถานะเอง', 'กำลังเขียน', 'Outline']);
+  const rows = [{ status: 'กำลังเขียน' }, { status: '' }, { status: 'สถานะเอง' }, { status: 'Outline' }, { status: 'ร่างแรก' }, { status: 'ไม่รู้จัก' }];
+  const sorted = rows.slice().sort((a, b) => rank(a.status) - rank(b.status)).map((r) => r.status);
+  check('[159-H9] ★ เรียงตามลำดับของโปรเจกต์ (สถานะที่สร้างเองอยู่ในลำดับ) · ยังไม่ตั้ง/ไม่รู้จัก ท้ายสุด',
+        sorted.slice(0, 3).join() === 'ร่างแรก,สถานะเอง,กำลังเขียน' && sorted.slice(3).every((s) => ['', 'Outline', 'ไม่รู้จัก'].includes(s)),
+        sorted.join());
+}
+
 console.log(`\nPASS ${pass}  FAIL ${fail}`);
 if (fail) process.exit(1);

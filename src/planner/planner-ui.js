@@ -6,7 +6,8 @@
 // แก้บั๊ก 8 (x y): แถบสถานะล่างบอกพิกัดเคอร์เซอร์ · ซูม · จำนวนวัตถุ · สถานะบันทึก
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t, tf } from '../i18n.js';
-import { el } from '../core.js';
+import { el, dataLabel } from '../core.js';
+const escA = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 import { STATUSES, SHAPES, GRID_STYLES, ICONS } from './planner-data.js';
 import { plannerBarSequence, layoutPlannerBar } from '../toolbar/toolbar-config.js';
 import { initIcons, icon as iconEl, iconHtml, gi } from '../icons.js';
@@ -255,6 +256,7 @@ function _gridPopover(anchor, cb) {
 }
 
 /** แถบกรอง — เลื่อนแนวนอนได้เหมือนกัน */
+// [alpha.159 · QoL] ตัวเลือกสถานะของแถบกรอง: ค่า = ไทย (ข้อมูลในไฟล์) · ป้าย = ตามภาษา (dataLabel) · escape ทั้งสองฝั่ง
 export function createPlannerFilterBar(callbacks) {
   const bar = el('div', 'planner-filter');
   bar.innerHTML = ((a) => `
@@ -276,7 +278,7 @@ export function createPlannerFilterBar(callbacks) {
       ${a[0]}
     </select>
     <button class="planner-btn-small" id="pl-f-clear">${tx('ui.common.clear')}</button>
-  `)([STATUSES.filter(Boolean).map((s) => `<option value="${s}">${s}</option>`).join('')]);
+  `)([STATUSES.filter(Boolean).map((s) => `<option value="${escA(s)}">${escA(dataLabel(s))}</option>`).join('')]);
 
   let filter = { text: '', type: '', status: '' };
   const emit = () => { if (callbacks.onFilterChange) callbacks.onFilterChange({ ...filter }); };

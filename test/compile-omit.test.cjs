@@ -277,5 +277,21 @@ check('cloneWorkflow เติมขั้นตอนที่พรีเซ�
   }
 }
 
+// ── [alpha.159 · M32] ขึ้นหน้าใหม่ด้วยมือในเนื้อฉาก ต้องไม่หลุดเข้าไฟล์แบน ──
+{
+  const m32 = { title: 'ทดสอบ', author: '', chapters: [{ title: 'บทที่ 1', scenes: [
+    { title: 'ฉาก', format: 'prose', body: 'ย่อหน้าแรก\n\n<!--pagebreak-->\n\nย่อหน้าหน้าใหม่ <!-- pagebreak --> ท้าย', words: 4 }] }] };
+  const wfTxt = { id: 'm32', name: 'm32', ext: 'txt', steps: [] };
+  const txt = CP.runWorkflow(m32, wfTxt).text;
+  check('[159-M32] ★ .txt ไม่มี <!--pagebreak--> หลุดเป็นข้อความ', !/pagebreak/i.test(txt), JSON.stringify(txt));
+  check('[159-M32] .txt ได้ตัวขึ้นหน้าใหม่ (\\f) แทน', txt.includes('\f') && txt.includes('ย่อหน้าหน้าใหม่'), JSON.stringify(txt));
+  const mdFile = CP.runWorkflow(m32, { ...wfTxt, ext: 'md' }).text;
+  check('[159-M32] ส่งออกเป็นไฟล์ .md = เก็บคอมเมนต์ขึ้นหน้าใหม่ไว้ (ไม่ใช่ \\f)', /<!--\s*pagebreak\s*-->/.test(mdFile) && !mdFile.includes('\f'),
+        JSON.stringify(mdFile.slice(0, 120)));
+  const md = CP.runWorkflow(m32, wfTxt, { markdownOut: true }).text;
+  check('[159-M32] ปลายทางมาร์กดาวน์ (PDF นิยาย/EPUB) ยังเก็บ <!--pagebreak--> ไว้ให้ตัวแปลงขั้นถัดไป',
+        /<!--pagebreak-->/.test(md), JSON.stringify(md.slice(0, 120)));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -415,7 +415,20 @@ export async function showHomeDialog(opts = {}) {
   document.body.append(ov);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
 
-  document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { ov.remove(); document.removeEventListener('keydown', esc); } });
+  // [alpha.159 · M21] ทางปิดทุกทาง (ปุ่มปิด · คลิกพื้นหลัง · เปิดโปรเจกต์ · Esc) ผ่าน ov.remove() ตัวเดียว
+  // ซึ่งถอดตัวฟัง Esc เสมอ · เดิมผูก keydown ดิบ ถอดเฉพาะตอนกด Esc → ปิดด้วยทางอื่นแล้วตัวฟังค้าง
+  // และกด Esc ในกล่องอื่นที่ซ้อนอยู่ข้างบนก็ปิดหน้าแรกไปด้วย (ตอนนี้เช็ค "ใบบนสุด" ก่อน)
+  // (ฟังช่วง bubble ไม่ใช่ capture แบบ escClose — ช่องค้นหาใช้ Esc ล้างคำค้นแล้ว stopPropagation เอง)
+  const onEsc = (e) => {
+    if (e.key !== 'Escape' || !ov.isConnected) return;
+    const all = [...document.querySelectorAll('.k-overlay')];
+    if (all[all.length - 1] !== ov) return;           // มีกล่องอื่นซ้อนอยู่ข้างบน = ไม่ใช่คิวเรา
+    ov.remove();
+  };
+  document.addEventListener('keydown', onEsc);
+  const offEsc = () => document.removeEventListener('keydown', onEsc);
+  const removeOv = ov.remove.bind(ov);
+  ov.remove = () => { try { offEsc(); } catch {} removeOv(); };
 
   // บั๊ก #12: ขนาดต้อง "นิ่ง" — มุมมองที่เลือกไว้ถูกคืนสถานะโดย buildHomeActions แล้ว
   const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));

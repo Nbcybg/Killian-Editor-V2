@@ -444,6 +444,17 @@ export async function runAnalysis(id, host) {
     res = { id, error: String(e && e.message || e), local: { stats: [] }, ai: null };
   }
   S.running.delete(key);
+  // [alpha.159 · M30] งานวิเคราะห์กินโทเคนจริง — จดลงสถิติการใช้ชุดเดียวกับแชท แล้วบันทึกทันที
+  if (res && res.ai && res.ai.ok && res.ai.usage) {
+    try {
+      const { recordAiUsage } = await import('./ai/ai-provider-ui.js');
+      if (recordAiUsage({ usage: res.ai.usage, cost: res.ai.cost, provider: res.ai.provider || '',
+                          model: res.ai.model || '', feature: 'analyze:' + id })) {
+        const { saveProjectMeta } = await import('./app.js');
+        await saveProjectMeta();
+      }
+    } catch (e) { log('warn', t('ui.aia.errRun'), e); }
+  }
   S.results.set(key, res);
   S.saved.delete(key);                    // ผลใหม่ = ยังไม่ได้บันทึก (กฎงานค้าง alpha.72)
   if (slot) paintResult(slot, res);

@@ -553,23 +553,45 @@ export function proseBlocksFromDoc(doc) {
   const out = [];
   if (!doc || typeof doc.forEach !== 'function') return out;
   let i = 0;
-  doc.forEach((node, offset) => {
+  // [alpha.159 · M8] ข้อความของบล็อก — hard break (Shift+Enter) = ขึ้นบรรทัดจริง
+  // (`textContent` ทิ้งมันเงียบ ๆ → ตัวประมาณนับสองบรรทัดเป็นบรรทัดเดียว)
+  const textOf = (n) => (typeof n.textBetween === 'function' && n.content
+    ? n.textBetween(0, n.content.size, '\n', (leaf) => (leaf.type && leaf.type.name === 'hard_break' ? '\n' : ''))
+    : (n.textContent || ''));
+  const kids = (n) => {
+    const arr = [];
+    if (n && n.childCount > 0 && typeof n.forEach === 'function') n.forEach((c, off) => arr.push([c, off]));
+    return arr;
+  };
+  // [alpha.159 · M8] รายการ/คำพูดยกมา = **หนึ่งบล็อกต่อย่อหน้า** (แบบเดียวกับ mdToProseBlocks/mdToHtmlBody)
+  // เดิมยุบทั้งรายการเป็นบล็อกเดียว (ข้อความทุกข้อต่อกันไม่มีตัวคั่น) → ตัวประมาณหน้าคิดว่าเป็นย่อหน้ายาว
+  // ย่อหน้าเดียว · จำนวนหน้า/จุดตัดของทางสำรองจึงผิดจากของจริง
+  const walk = (node, pos, ctx) => {
     const name = node.type && node.type.name;
-    const text = node.textContent || '';
-    let type = 'p', level = 0;
+    if (name === 'bullet_list' || name === 'ordered_list' || name === 'blockquote' || name === 'list_item') {
+      const inner = kids(node);
+      if (inner.length) {
+        const next = name === 'blockquote' ? 'blockquote' : (name === 'list_item' ? ctx : 'li');
+        for (const [c, off] of inner) walk(c, pos + 1 + off, next || 'li');
+        return;
+      }
+    }
+    const text = textOf(node);
+    let type = ctx || 'p', level = 0;
     if (name === 'heading') { level = (node.attrs && node.attrs.level) || 1; type = 'h' + level; }
     else if (name === 'blockquote') type = 'blockquote';
-    else if (name === 'bullet_list' || name === 'ordered_list') type = 'li';
+    else if (name === 'bullet_list' || name === 'ordered_list' || name === 'list_item') type = 'li';
     else if (name === 'figure') type = 'figure';
     else if (name === 'horizontal_rule') type = 'hr';
     else if (name === 'code_block') type = 'code';
     // [alpha.133 · Y-5] ขึ้นหน้าใหม่ด้วยมือ (Ctrl+Enter) — ชนิดเดียวกับที่ mdToProseBlocks ให้
     else if (name === 'page_break') type = 'pagebreak';
-    const b = { type, text, pos: offset, idx: i++ };
+    const b = { type, text, pos, idx: i++ };
     if (level) b.level = level;
     if (name === 'figure') { b.src = node.attrs.resolved || node.attrs.src; b.alt = node.attrs.alt || ''; }
     out.push(b);
-  });
+  };
+  doc.forEach((node, offset) => walk(node, offset, ''));
   return out;
 }
 
@@ -580,18 +602,23 @@ export function proseBlocksFromDoc(doc) {
  * จึงต้องมีทางแปลงจากข้อความกลับเป็นบล็อกเพื่อ "จัดหน้า" ให้เห็นหน้ากระดาษจริง
  * — ใช้เกณฑ์ระดับบรรทัดชุดเดียวกับ `mdToHtmlBody` ใน compile.js (หัวข้อ/ยกคำพูด/รายการ/เส้นคั่น)
  */
-export function mdToProseBlocks(md) {
+export function mdToProseBlocks(md, opts = {}) {
   const out = [];
   let i = 0;
+  // [alpha.159 · M7] ตัวคั่นหน้าระหว่างฉาก/บท (`PAGE_BREAK` ของ compile.js — คีย์ภาษาเดียวกัน)
+  // ต้องส่งเข้า mdBlocks เหมือน mdToHtmlBody ไม่งั้นช่องตัวอย่างโชว์ `<!-- … -->` เป็นย่อหน้ากลางหน้า
+  // (import compile.js ตรง ๆ ไม่ได้ — compile.js import ไฟล์นี้อยู่ = วงกลม)
+  const breakMarker = opts.breakMarker !== undefined ? opts.breakMarker : t('ui.compile.msg');
   // ══ [alpha.133 · Y-1] ★ สคีมาบล็อกมาจาก `mdBlocks()` ที่เดียว (เหมือน mdToHtmlBody) ══
   // ของเดิมเป็นลูป regex ชุดที่สาม ซึ่งไม่รู้จัก `<!--align:x-->` · `<!--pagebreak-->` ·
   // รั้วโค้ด · hard break เลย — ช่องตัวอย่างจึงโชว์คอมเมนต์เป็นตัวหนังสือกลางหน้ากระดาษ
   // และนับบรรทัดผิดตั้งแต่ต้น (การตัดหน้าเลยไม่มีทางตรงกับไฟล์จริง)
-  for (const b of mdBlocks(md)) {
+  for (const b of mdBlocks(md, { breakMarker })) {
     const push = (o) => out.push({ ...o, idx: i++ });
     if (b.kind === 'pagebreak') { push({ type: 'pagebreak', text: '' }); continue; }
     if (b.kind === 'hr') { push({ type: 'hr', text: '' }); continue; }
-    if (b.kind === 'figure') { push({ type: 'figure', text: '', alt: b.alt, src: b.src }); continue; }
+    // [alpha.159 · M7] พาตัวเลือกของรูป (กว้าง %/เต็มหน้า/ขอบมน) ไปด้วย — mdToHtmlBody ใช้มันจัดขนาดจริง
+    if (b.kind === 'figure') { push({ type: 'figure', text: '', alt: b.alt, src: b.src, imgOpts: b.imgOpts }); continue; }
     if (b.kind === 'code') { push({ type: 'code', text: b.text, align: b.align }); continue; }
     if (b.kind === 'h') {
       push({ type: 'h' + b.level, level: b.level, align: b.align,

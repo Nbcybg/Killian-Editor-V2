@@ -74,11 +74,11 @@ export function scopeLabel(id) { return (SCOPES.find((s) => s.id === id) || SCOP
  * ค่าว่าง `''` = ตามที่ตั้งไว้ในผู้ให้บริการ (ไม่ทับ)
  */
 export const REASONING_EFFORTS = [
-  { id: '',        label: T`คิด: ตามผู้ให้บริการ` },
-  { id: 'minimal', label: T`คิด: น้อยสุด` },
-  { id: 'low',     label: T`คิด: น้อย` },
-  { id: 'medium',  label: T`คิด: กลาง` },
-  { id: 'high',    label: T`คิด: มาก` },
+  { id: '',        label: tt('ui.aiSession.thinkProvider') },
+  { id: 'minimal', label: tt('ui.aiSession.thinkLessLast') },
+  { id: 'low',     label: tt('ui.aiSession.thinkLess') },
+  { id: 'medium',  label: tt('ui.aiSession.thinkCenter') },
+  { id: 'high',    label: tt('ui.aiSession.thinkMore') },
 ];
 export function isReasoningEffort(v) { return REASONING_EFFORTS.some((r) => r.id === String(v || '')); }
 export function effortLabel(id) {
@@ -111,6 +111,10 @@ export function newSession(patch = {}) {
     v: SESSION_VERSION,
     id: patch.id || newSessionId(),
     title: patch.title || tt('ui.aiSession.sessionNew'),
+    // [alpha.159 · M23] "ชื่อนี้เป็นชื่อตั้งต้นที่รอประโยคแรก" เป็นธง — เดิมเทียบกับข้อความที่แปลแล้ว
+    // (เซสชันที่สร้างตอนเป็นภาษาไทยแล้วสลับเป็นอังกฤษ ติดชื่อ "เซสชันใหม่" ตลอดกาล)
+    // ไฟล์เก่าที่ไม่มีธงนี้ = undefined → isAutoTitle ตกกลับไปเทียบแบบเดิม
+    titleAuto: patch.titleAuto !== undefined ? !!patch.titleAuto : (patch.title ? undefined : true),
     // [alpha.63r4] ต้องขนกลับมาด้วย — ของเดิมตกฟิลด์นี้ ทำให้ชื่อที่ผู้ใช้ตั้งเอง
     // ถูกชื่ออัตโนมัติทับทันทีที่ปิดแล้วเปิดโปรแกรมใหม่
     titleSet: !!patch.titleSet,
@@ -201,11 +205,16 @@ export function addMessage(session, msg) {
   s.updated = msg.at || new Date().toISOString();
   // ชื่อเซสชันเริ่มต้น = ประโยคแรกที่ผู้ใช้พิมพ์ (แบบ opencode) จนกว่าจะเปลี่ยนชื่อเอง
   // ผลของคำสั่งที่ป้อนกลับให้โมเดลก็ role user เหมือนกัน — ห้ามเอามาตั้งเป็นชื่อเซสชัน
-  if (msg.role === 'user' && !msg.toolResult && isAutoTitle(session)) s.title = titleFromText(msg.text);
+  if (msg.role === 'user' && !msg.toolResult && isAutoTitle(session)) {
+    s.title = titleFromText(msg.text);
+    s.titleAuto = false;                           // ได้ชื่อจากประโยคแรกแล้ว — ไม่ทับอีก
+  }
   return s;
 }
-function isAutoTitle(s) {
-  return !s.titleSet && (!s.title || s.title === t('ui.aiSession.sessionNew'));
+export function isAutoTitle(s) {
+  if (!s || s.titleSet) return false;
+  if (s.titleAuto !== undefined) return !!s.titleAuto;        // [alpha.159 · M23] ธง ไม่ใช่ข้อความ
+  return !s.title || s.title === tt('ui.aiSession.sessionNew');  // ไฟล์รุ่นเก่าที่ยังไม่มีธง
 }
 /** ตัดข้อความแรกให้สั้นพอเป็นชื่อ (ไม่ตัดกลางคำอังกฤษ · ไทยตัดตรง ๆ ได้) */
 export function titleFromText(text, max = 40) {
@@ -219,7 +228,7 @@ export function titleFromText(text, max = 40) {
 
 /** เปลี่ยนชื่อเอง — ตั้ง titleSet ไว้ไม่ให้ถูกทับด้วยชื่ออัตโนมัติอีก */
 export function renameSession(session, title) {
-  return { ...session, title: String(title || '').trim() || session.title, titleSet: true,
+  return { ...session, title: String(title || '').trim() || session.title, titleSet: true, titleAuto: false,
            updated: new Date().toISOString() };
 }
 export function archiveSession(session, on = true) {
@@ -238,7 +247,7 @@ export function archiveSession(session, on = true) {
  */
 export function clearMessages(session) {
   const s = { ...session, messages: [], contextLimit: 0, updated: new Date().toISOString() };
-  if (!session.titleSet) s.title = tt('ui.aiSession.sessionNew');
+  if (!session.titleSet) { s.title = tt('ui.aiSession.sessionNew'); s.titleAuto = true; }   // [alpha.159 · M23]
   return s;
 }
 
@@ -343,7 +352,40 @@ export function historyBudget(session, meta = {}) {
   //   ซึ่งแย่กว่า 6,000 ของเดิมเสียอีก = บั๊กเดิมกลับมาในคราบใหม่
   // เหลือที่ให้ system prompt + บริบทโปรเจกต์ + คำตอบ → ใช้ราว 60% ของขีดจำกัดที่รู้
   const lim = Number(session && session.contextLimit) || 0;
-  return Math.max(DEFAULT_HISTORY_TOKENS, Math.floor(lim * 0.6));
+  let budget = Math.max(DEFAULT_HISTORY_TOKENS, Math.floor(lim * 0.6));
+  // ══ [alpha.159 · H14] ★ "เพดานจริง" ที่ผู้ให้บริการบอกมาเอง (ตอบ error ว่าเกินความยาวบริบท) ══
+  // พื้น 32,000 ข้างบนถูกต้องเมื่อ "ไม่รู้" — แต่โมเดลบริบท 8k (Ollama/โมเดลเล็ก) ได้ประวัติ 32k ทุกครั้ง
+  // = HTTP 400 วนไม่จบ · `contextCap` เป็นขอบบนที่รู้แน่ (ต่างจาก contextLimit ที่เป็นขอบล่างที่เดาเอา)
+  // จึงใช้ **หด** งบได้ · ผู้ใช้ตั้งเองยังชนะทุกกรณี (บรรทัดบนสุด)
+  const cap = Number(session && session.contextCap) || 0;
+  if (cap > 0) budget = Math.min(budget, Math.max(512, Math.floor(cap * 0.6)));
+  return budget;
+}
+
+/**
+ * [alpha.159 · H14] อ่าน error ของผู้ให้บริการว่าเป็น "ความยาวบริบทเกิน" ไหม + เพดานกี่ token (บริสุทธิ์)
+ * รูปแบบที่เจอจริง: OpenAI/DeepSeek `maximum context length is 8192 tokens` · `context_length_exceeded` ·
+ * Anthropic `prompt is too long: 210000 tokens > 200000 maximum` · Ollama/llama.cpp `exceeds the context
+ * size (4096)` · `context window of 32768` · `n_ctx: 8192`
+ * @returns {{exceeded:boolean, cap:number}} cap = 0 เมื่อรู้ว่าเกินแต่ไม่บอกตัวเลข
+ */
+export function contextCapFromError(text) {
+  const s = String(text || '');
+  const exceeded = /context[_ ]length[_ ]exceeded|maximum context length|context (?:window|size|length)|prompt is too long|too many tokens|exceeds? (?:the )?(?:model'?s? )?(?:maximum )?context|n_ctx|num_ctx/i.test(s);
+  if (!exceeded) return { exceeded: false, cap: 0 };
+  const pats = [
+    /maximum context length is (\d[\d,]*)/i,
+    /(\d[\d,]*)\s*maximum\b/i,
+    /context (?:window|size|length) (?:of |is |= ?|\()?(\d[\d,]*)/i,
+    /(?:n_ctx|num_ctx)\s*[:=]?\s*(\d[\d,]*)/i,
+    /limit(?: of| is)?\s*(\d[\d,]*)\s*tokens/i,
+  ];
+  for (const re of pats) {
+    const m = re.exec(s);
+    const n = m ? parseInt(String(m[1]).replace(/,/g, ''), 10) : 0;
+    if (n >= 256) return { exceeded: true, cap: n };
+  }
+  return { exceeded: true, cap: 0 };
 }
 
 /**

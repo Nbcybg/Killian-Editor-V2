@@ -3,6 +3,7 @@
 // ทดสอบด้วย node ได้ (test/sp-export.test.cjs)
 
 // ชนิดย่อหน้าใน FDX (Final Draft 8+ ใช้ชื่อพวกนี้)
+import { inlinePlainText } from './md.js';
 import { t } from './i18n.js';
 export const FDX_TYPE_MAP = {
   scene: 'Scene Heading',
@@ -49,12 +50,11 @@ export function escapeXml(s) {
 
 /** ตัดเครื่องหมายเน้นข้อความของ Markdown ออก — FDX เก็บสไตล์คนละแบบ */
 export function plainText(s) {
-  return String(s ?? '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1$2')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/~~([^~]+)~~/g, '$1')
-    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+  // [alpha.159 · M6] ถอดด้วยตัวแยกเครื่องหมายตัวจริงของ md.js (`inlinePlainText` → parseInline)
+  // เดิม regex ชุดของตัวเองรู้จักแค่ ** * __ ~~ [[ ]] → `_ขีดเส้นใต้_` `^ยก^` `~ห้อย~` `<span style>` `<mark>`
+  // และลิงก์ หลุดเข้าไฟล์เป็นตัวอักษรดิบ (กฎ: ห้ามเขียน regex ถอดมาร์กดาวน์ชุดที่สอง)
+  return inlinePlainText(String(s ?? ''))
+    .replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, '$1$2')
     .replace(/\u00A0/g, ' ');
 }
 

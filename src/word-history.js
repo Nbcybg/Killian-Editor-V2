@@ -2,6 +2,7 @@
 import { state, log } from './core.js';
 import { parseMdFile, countWords } from './md.js';
 import { localDay, addDays } from './local-date.js';
+import { mutateJson } from './json-store.js';   // [alpha.159 · M1]
 
 // ---- Word History (ข้อ 58) ----
 export function getWordHistory() {
@@ -154,7 +155,7 @@ export async function rebuildWordCounts({ force = false } = {}) {
         const draft = await kapi.readJson(await kapi.join(dp, 'draft.json')).catch(() => ({}));
         const folderOf = {};
         for (const ch of (draft.chapters || [])) folderOf[ch.guid] = ch.folderName;
-        let dirty = false;
+        const fixes = new Map();                 // [alpha.159 · M1] id แถว → จำนวนคำที่นับได้
         for (const cg of Object.keys(d.chapters || {})) {
           for (const sc of (d.chapters[cg] || [])) {
             if (sc.type === 'memo') continue;
@@ -170,10 +171,21 @@ export async function rebuildWordCounts({ force = false } = {}) {
             } catch { continue; }          // ไฟล์หาย = ข้าม ไม่ใช่เขียนทับด้วย 0
             const n = countWords(body);
             out.words += n;
-            if (n !== cur) { sc.wordCount = n; dirty = true; out.fixed++; }
+            if (n !== cur) { fixes.set(sc.id, n); out.fixed++; }
           }
         }
-        if (dirty) await kapi.writeFile(sf, JSON.stringify(d, null, 2));
+        // [alpha.159 · M1] ★ งานนี้วิ่งเบื้องหลังนานหลายวินาทีหลังเปิดโปรเจกต์ — เดิมเขียน `d` ก้อนที่อ่านไว้
+        // ตอนเริ่มกลับทั้งไฟล์ = แถวของฉากที่ผู้ใช้เพิ่ม/ย้าย/เปลี่ยนสถานะระหว่างนั้นหายไป
+        // ตอนนี้แตะเฉพาะ wordCount ของแถวที่ยังอยู่ ผ่านคิวของไฟล์ (อ่านสด)
+        if (fixes.size && !stale()) {
+          await mutateJson(kapi, sf, (fresh) => {
+            let hit = false;
+            for (const rows of Object.values(fresh.chapters || {})) {
+              for (const r of rows || []) if (fixes.has(r.id)) { r.wordCount = fixes.get(r.id); hit = true; }
+            }
+            if (!hit) return false;
+          });
+        }
       }
     }
     out.done = true;

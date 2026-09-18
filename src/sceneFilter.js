@@ -29,9 +29,16 @@ const FIELD = {
 function term(tok) {
   let neg = false;
   if (tok.startsWith('-') && tok.length > 1) { neg = true; tok = tok.slice(1); }
-  const m = /^([^:]+):(.*)$/.exec(tok);
-  if (m && FIELD[m[1].toLowerCase()]) return { field: FIELD[m[1].toLowerCase()], value: (m[2] || '').toLowerCase(), neg };
-  return { field: '*', value: tok.toLowerCase(), neg };
+  const m = /^([^:"]+):(.*)$/.exec(tok);
+  if (m && FIELD[m[1].toLowerCase()]) return { field: FIELD[m[1].toLowerCase()], value: unquote(m[2] || '').toLowerCase(), neg };
+  return { field: '*', value: unquote(tok).toLowerCase(), neg };
+}
+/** [alpha.159 · H9] ค่าในเครื่องหมายคำพูด (`status:"รอ แก้"`) — สถานะที่ผู้ใช้สร้างเองมีวรรคได้ */
+const unquote = (v) => (v.length >= 2 && v.startsWith('"') && v.endsWith('"') ? v.slice(1, -1) : v);
+/** ค่าสำหรับใส่ในคิวรี — มีวรรค/เครื่องหมายคำพูด = ครอบด้วย "" (ตัดเครื่องหมายคำพูดข้างในทิ้ง) */
+export function queryValue(v) {
+  const s = String(v ?? '');
+  return /[\s"]/.test(s) ? '"' + s.replace(/"/g, '') + '"' : s;
 }
 
 /**
@@ -39,7 +46,8 @@ function term(tok) {
  * @returns {Array<Array<{field:string,value:string,neg:boolean}>>}
  */
 export function parseGroups(q) {
-  const toks = (q || '').trim().split(/\s+/).filter(Boolean);
+  // [alpha.159] โทเคนที่มี "…" ห้ามถูกหั่นตรงวรรค (สถานะ/แท็กที่มีวรรค)
+  const toks = String(q || '').trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
   const groups = [[]];
   for (const tok of toks) {
     const up = tok.toUpperCase();
@@ -106,4 +114,15 @@ export function textMatchesQuery(hay, q) {
     const ok = h.includes(t.value);
     return t.neg ? !ok : ok;
   }));
+}
+
+/**
+ * [alpha.159 · H9] ตัวจัดอันดับ "เรียงตามสถานะ" — ลำดับมาจากรายการที่ส่งเข้ามา (allStatuses())
+ * 'Outline' / ว่าง / สถานะที่ไม่รู้จัก = ท้ายสุดเสมอ · บริสุทธิ์ (unit test ได้)
+ * @param {string[]} statuses ลำดับสถานะของโปรเจกต์
+ * @returns {(s:string) => number}
+ */
+export function statusRankOf(statuses) {
+  const order = new Map((statuses || []).filter((s) => s && s !== 'Outline').map((s, i) => [s, i]));
+  return (s) => (!s || s === 'Outline' || !order.has(s) ? 1e6 : order.get(s));
 }

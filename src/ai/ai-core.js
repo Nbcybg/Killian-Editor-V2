@@ -398,13 +398,17 @@ export class AIClient {
           const c = parseStreamChunk(provider, line);
           if (c && c.text) { text += c.text; onChunk(c.text, { partial: text }); }
         });
-      if (res && res.ok === false) return { ...fail(httpMessage(res.status), 'http'), status: res.status };
+      // [alpha.159 · H13] พังกลางทางหลังมีข้อความไหลมาแล้ว — แนบข้อความนั้นไปด้วย (ผู้เรียกเก็บไว้ได้)
+      if (res && res.ok === false) {
+        return { ...fail(httpMessage(res.status), 'http'), status: res.status,
+                 text, partial: !!text.trim() };
+      }
       const usage = { input: estimateTokens(opts.prompt || ''), output: estimateTokens(text), total: 0 };
       usage.total = usage.input + usage.output;
       if (this.tracker) this.tracker.record({ provider, model, usage, feature: opts.feature });
       return { ok: true, text: text.trim(), usage, cost: estimateCost(provider, model, usage), provider, model };
     } catch (e) {
-      return fail(tt('ui.ai.textNotOk') + (e && e.message), 'network');
+      return { ...fail(tt('ui.ai.textNotOk') + (e && e.message), 'network'), text, partial: !!text.trim() };
     } finally { this.limiter.release(); }
   }
 
@@ -580,7 +584,30 @@ export class RagPipeline {
   async retrieve(query, k = 5, opts = {}) {
     if (!this.index.size) return [];
     const res = await this.client.embed([query], { ...this.embedOpts, ...(this.index.model === 'local' ? { local: true } : {}) });
-    return this.index.search(res.vectors[0] || localEmbed(query), k, opts);
+    let qv = (res && res.vectors && res.vectors[0]) || localEmbed(query);
+    // ══ [alpha.159 · M29] ★ ดัชนีกับคำถามต้องมาจาก "ตัวฝังเวกเตอร์ตัวเดียวกัน" ══
+    // เดิมดัชนีสร้างด้วยโมเดลหนึ่ง (เช่นโมเดลของผู้ให้บริการ) แล้ววันหลังคำถามถูกฝังด้วยอีกตัว
+    // (ถอดคีย์ · เปลี่ยนเจ้า · ตกไป local) → มิติไม่เท่ากัน cosine = 0 ทุกแถว = คืนค่าว่างเงียบ ๆ
+    // ผู้ใช้เห็นแค่ "AI ไม่รู้เรื่องในโปรเจกต์เลย" · ตอนนี้ฝังของในดัชนีใหม่ด้วยตัวที่ใช้อยู่ แล้วค้นต่อ
+    const dim = ((this.index.items[0] || {}).vector || []).length;
+    const modelDiff = !!(res && res.model && this.index.model && res.model !== this.index.model);
+    if (modelDiff || qv.length !== dim) {
+      const texts = this.index.items.map((it) => it.text);
+      let re = null;
+      try { re = await this.client.embed(texts, { ...this.embedOpts, ...(res && res.local ? { local: true } : {}) }); } catch {}
+      if (re && re.ok !== false && Array.isArray(re.vectors) && re.vectors.length === texts.length
+          && (re.vectors[0] || []).length === qv.length) {
+        this.index.items.forEach((it, i) => { it.vector = re.vectors[i] || localEmbed(it.text); });
+        this.index.model = re.model || (res && res.model) || this.index.model;
+      } else {
+        // ฝังใหม่ไม่ได้ → ทั้งสองฝั่งใช้ตัวฝังออฟไลน์ (ได้ผลเสมอ ดีกว่าว่างเปล่า)
+        this.index.items.forEach((it) => { it.vector = localEmbed(it.text); });
+        this.index.model = 'local';
+        qv = localEmbed(query);
+      }
+      this.reindexed = (this.reindexed || 0) + 1;     // ผู้เรียกบันทึกดัชนีใหม่ลงไฟล์ได้ (บอกผู้ใช้ได้)
+    }
+    return this.index.search(qv, k, opts);
   }
   async context(query, opts = {}) {
     const hits = await this.retrieve(query, opts.k || 5, opts);

@@ -145,7 +145,13 @@ export function parseToolCalls(text) {
 /** ข้อความที่เอาบล็อกคำสั่งออกแล้ว — ใช้แสดงในแชทโหมดปกติ */
 export function stripToolCalls(text) {
   const src = String(text || '');
-  return src.replace(/```k2\s*\n[\s\S]*?```/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  // [alpha.159 · M27] ตัวลอกต้องจับ "บล็อกเดียวกับที่ parseToolCalls ถือเป็นคำสั่ง" — เดิมลอกแค่ ```k2
+  // โมเดลที่ใช้ ```json ห่อคำสั่ง: คำสั่งถูกทำจริงแต่ JSON ดิบยังโผล่ในแชท
+  // ```json ที่ **ไม่ใช่** คำสั่ง (ตัวอย่างข้อมูลที่ผู้ใช้ขอ) ต้องอยู่ต่อ → ตัดสินด้วย parseToolCalls ตัวเดียวกัน
+  return src.replace(/```(k2|json)\s*\n([\s\S]*?)```/g, (whole, lang) => {
+    if (lang === 'k2') return '';
+    return parseToolCalls(whole).some((c) => c.tool && !c.error) ? '' : whole;
+  }).replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /** ตรวจว่าคำสั่งนี้เรียกได้ไหมในโหมดปัจจุบัน */

@@ -579,5 +579,41 @@ const check = (name, cond, extra) => {
   check('[149] คำตอบว่างเปล่า = ไม่มีอะไรให้ต่อ', S.canContinue(S.addMessage(cs, empty), empty) === false);
 }
 
+// ── [alpha.159 · M23] ชื่อเซสชันอัตโนมัติเป็นธง ไม่เทียบกับข้อความที่แปลแล้ว ──
+{
+  const ns = S.newSession();
+  check('[159-M23] เซสชันใหม่ = รอชื่อจากประโยคแรก (ธง titleAuto)', ns.titleAuto === true && S.isAutoTitle(ns));
+  // จำลองไฟล์ที่สร้างตอนภาษาอื่น: ชื่อไม่ตรงกับคำแปลปัจจุบัน แต่ธงยังบอกว่าอัตโนมัติ
+  const other = S.newSession({ title: 'New session (other language)', titleAuto: true });
+  const got = S.addMessage(other, S.newMessage('user', 'ช่วยวางโครงบทที่สาม'));
+  check('[159-M23] ★ สลับภาษาแล้วชื่อยังถูกตั้งจากประโยคแรก', got.title === 'ช่วยวางโครงบทที่สาม' && got.titleAuto === false, got.title);
+  const got2 = S.addMessage(got, S.newMessage('user', 'ประโยคที่สอง'));
+  check('[159-M23] ประโยคที่สองไม่ทับชื่อ', got2.title === 'ช่วยวางโครงบทที่สาม');
+  check('[159-M23] เปลี่ยนชื่อเอง = ไม่อัตโนมัติอีก', S.isAutoTitle(S.renameSession(ns, 'x')) === false);
+  check('[159-M23] ไฟล์รุ่นเก่า (ไม่มีธง) ยังใช้กฎเดิม', S.isAutoTitle({ title: '' }) === true && S.isAutoTitle({ title: 'ชื่อจริง' }) === false);
+  check('[159-M23] ล้างบทสนทนา = กลับไปรอชื่ออัตโนมัติ', S.clearMessages(got2).titleAuto === true);
+}
+
+// ── [alpha.159 · H14] เพดานบริบทจริงที่ผู้ให้บริการบอกมา ต้องหดงบประวัติได้ ──
+{
+  const ce1 = S.contextCapFromError("This model's maximum context length is 8192 tokens. However, your messages resulted in 33000 tokens.");
+  check('[159-H14] ★ อ่านเพดานจาก error ของ OpenAI/DeepSeek', ce1.exceeded && ce1.cap === 8192, JSON.stringify(ce1));
+  const ce2 = S.contextCapFromError('prompt is too long: 210,000 tokens > 200,000 maximum');
+  check('[159-H14] อ่านเพดานจาก error ของ Anthropic', ce2.exceeded && ce2.cap === 200000, JSON.stringify(ce2));
+  const ce3 = S.contextCapFromError('the request exceeds the available context size (4096)');
+  check('[159-H14] อ่านเพดานจาก llama.cpp/Ollama', ce3.exceeded && ce3.cap === 4096, JSON.stringify(ce3));
+  const ce4 = S.contextCapFromError('context_length_exceeded');
+  check('[159-H14] รู้ว่าเกินแต่ไม่บอกตัวเลข = exceeded + cap 0', ce4.exceeded && ce4.cap === 0);
+  check('[159-H14] error อื่น (401 คีย์ผิด) ไม่นับ', S.contextCapFromError('Incorrect API key provided').exceeded === false);
+  const small = { ...S.newSession(), contextCap: 8192 };
+  const b = S.historyBudget(small, {});
+  check('[159-H14] ★★ โมเดล 8k: งบประวัติ < 8192 (เดิมพื้น 32,000 ตายตัว = HTTP 400)', b < 8192 && b >= 512, b);
+  check('[159-H14] ★ ไม่รู้เพดาน = พื้นเดิม 32,000 (ขอบล่างที่เดาไม่ถูกใช้หด)',
+        S.historyBudget({ ...S.newSession(), contextLimit: 8192 }, {}) === S.DEFAULT_HISTORY_TOKENS);
+  check('[159-H14] ผู้ใช้ตั้งเองยังชนะเพดาน', S.historyBudget(small, { historyTokens: 20000 }) === 20000);
+  check('[159-H14] เพดานใหญ่กว่าขอบล่าง = ใช้ขอบล่างตามเดิม',
+        S.historyBudget({ ...S.newSession(), contextLimit: 200000, contextCap: 1000000 }, {}) === 120000);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

@@ -170,11 +170,11 @@ export async function readSection(secPath) { return readJson(await kapi.join(sec
 /** แก้ section.json · ค่าว่าง/false = ลบช่อง (ไฟล์ไม่บวม) */
 export async function setSectionFields(secPath, patch) {
   const sf = await kapi.join(secPath, 'section.json');
-  const d = await readJson(sf, {});
-  for (const [k, v] of Object.entries(patch || {})) {
-    if (v === '' || v === false || v === null || v === undefined) delete d[k]; else d[k] = v;
-  }
-  await writeJson(sf, d);
+  const { data: d } = await mutateJson(kapi, sf, (sec) => {        // [alpha.159 · M1] อ่านสดในคิว
+    for (const [k, v] of Object.entries(patch || {})) {
+      if (v === '' || v === false || v === null || v === undefined) delete sec[k]; else sec[k] = v;
+    }
+  }, { fallback: {} });
   if ('locked' in (patch || {})) await refreshOpenTabLocks(secPath);
   await buildTree();
   return d;
@@ -189,7 +189,9 @@ export async function reorderSectionPrompt(secPath) {
   const next = moveToPosition(secs, i, v);
   for (let k = 0; k < next.length; k++) {
     if ((next[k].meta.order || 0) === k + 1) continue;
-    await writeJson(next[k].sf, { ...next[k].meta, order: k + 1 });
+    // [alpha.159 · M1] แตะเฉพาะ order ของไฟล์สด (meta ถูกอ่านไว้ก่อนกล่องถาม)
+    const ord = k + 1;
+    await mutateJson(kapi, next[k].sf, (sec) => { sec.order = ord; }, { fallback: {} });
   }
   await buildTree();
   setStatus(t('ui.treeAct.reordered'));
@@ -240,14 +242,18 @@ async function allDrafts() {
 // ═══════════════════ บท ═══════════════════
 export async function setChapterFields(dPath, chGuid, patch) {
   const df = await kapi.join(dPath, 'draft.json');
-  const d = await readJson(df, { chapters: [] });
-  const cur = (d.chapters || []).find((c) => c.guid === chGuid);
+  // [alpha.159 · M1] อ่านสด-แก้-เขียนในคิวของไฟล์
+  const res = await mutateJson(kapi, df, (d) => {
+    const c = (d.chapters || []).find((x) => x.guid === chGuid);
+    if (!c) return false;
+    for (const [k, v] of Object.entries(patch || {})) {
+      if (k === 'isFavorite') { c.isFavorite = !!v; continue; }          // ช่องเดิมของ v1 — เก็บ false ได้
+      if (v === '' || v === false || v === null || v === undefined) delete c[k]; else c[k] = v;
+    }
+    return { ...c };
+  }, { fallback: { chapters: [] } });
+  const cur = res.changed ? res.result : null;
   if (!cur) return null;
-  for (const [k, v] of Object.entries(patch || {})) {
-    if (k === 'isFavorite') { cur.isFavorite = !!v; continue; }          // ช่องเดิมของ v1 — เก็บ false ได้
-    if (v === '' || v === false || v === null || v === undefined) delete cur[k]; else cur[k] = v;
-  }
-  await writeJson(df, d);
   if ('locked' in (patch || {})) await refreshOpenTabLocks(await kapi.join(dPath, 'Chapters', cur.folderName));
   await buildTree();
   return cur;
@@ -261,8 +267,13 @@ export async function reorderChapterPrompt(dPath, ch) {
   if (i < 0) return false;
   const v = await ask(tf('ui.treeAct.positionAsk', list.length), { value: String(i + 1) });
   if (v === null || v === '') return false;
-  d.chapters = moveToPosition(list, i, v).map((c, k) => ({ ...c, order: k + 1 }));
-  await writeJson(df, d);
+  // [alpha.159 · M1] ระหว่างรอกล่องถาม ไฟล์อาจเปลี่ยนไปแล้ว — จัดลำดับจากของสดในคิว
+  await mutateJson(kapi, df, (fresh) => {
+    const l2 = sortByOrder(fresh.chapters);
+    const j = l2.findIndex((c) => c.guid === ch.guid);
+    if (j < 0) return false;
+    fresh.chapters = moveToPosition(l2, j, v).map((c, k) => ({ ...c, order: k + 1 }));
+  });
   await buildTree();
   setStatus(t('ui.treeAct.reordered'));
   return true;
@@ -274,16 +285,13 @@ export async function reorderChapterPrompt(dPath, ch) {
  */
 export async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGuid = null, title = '' } = {}) {
   const sdf = await kapi.join(srcD, 'draft.json'), ssf = await kapi.join(srcD, 'scenes.json');
+  const ddf = await kapi.join(dstD, 'draft.json'), dsf = await kapi.join(dstD, 'scenes.json');
   const sDraft = await readJson(sdf, { chapters: [] });
-  const sScenes = await readJson(ssf, { chapters: {} });
   const entry = (sDraft.chapters || []).find((c) => c.guid === chGuid);
   if (!entry) return null;
   const same = srcD === dstD;
   if (move && same) return entry;
-  const rows = (sScenes.chapters || {})[chGuid] || [];
-  const dDraft = same ? sDraft : await readJson(await kapi.join(dstD, 'draft.json'), { chapters: [] });
-  const dScenes = same ? sScenes : await readJson(await kapi.join(dstD, 'scenes.json'), { chapters: {} });
-  const dList = sortByOrder(dDraft.chapters);
+  const dList = sortByOrder((same ? sDraft : await readJson(ddf, { chapters: [] })).chapters);
   const newGuid = move && !dList.some((c) => c.guid === chGuid) ? chGuid : guid();
   const newTitle = title || entry.title || '';
   let at = afterGuid ? dList.findIndex((c) => c.guid === afterGuid) + 1 : dList.length;
@@ -297,10 +305,17 @@ export async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGui
   if (move) {
     await closeTabsUnder(srcFolder); await kapi.mkdir(await kapi.join(dstD, 'Chapters')); await kapi.move(srcFolder, dstFolder);
     await moveSnapshots(srcFolder, dstFolder);           // [alpha.156] ประวัติเวอร์ชันของทุกฉากตามบทไปด้วย
+  } else {
+    // [alpha.159 · M2] คัดลอกก็ต้องได้ "ของล่าสุด" — บันทึกแท็บที่ค้างของบทนี้ก่อนก๊อปไฟล์
+    await saveTabsUnder(srcFolder);
+    if (await kapi.exists(srcFolder)) await copyTree(srcFolder, dstFolder);
+    else await kapi.mkdir(dstFolder);
   }
-  else if (await kapi.exists(srcFolder)) await copyTree(srcFolder, dstFolder);
-  else await kapi.mkdir(dstFolder);
 
+  // ══ [alpha.159 · M2] ★ อ่านแถวฉาก "หลัง" ปิด/บันทึกแท็บ แล้วเขียนทุกไฟล์ผ่านคิว (อ่านสด) ══
+  // เดิมอ่าน scenes.json ไว้ก่อน closeTabsUnder() → การบันทึกแท็บอัปเดต wordCount ลงไฟล์ →
+  // แล้วโค้ดนี้เขียนก้อนเก่าทับทั้งไฟล์ = จำนวนคำ (และอะไรก็ตามที่เปลี่ยนระหว่างนั้น) เด้งกลับ
+  const rows = (((await readJson(ssf, { chapters: {} })).chapters) || {})[chGuid] || [];
   let newRows;
   if (move) newRows = rows.map((r) => ({ ...r, chapterGuid: newGuid }));
   else {
@@ -312,17 +327,29 @@ export async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGui
   const newEntry = { ...entry, guid: newGuid, title: newTitle, folderName };
   if (!move) delete newEntry.locked;
   if (move && !same) {
-    sDraft.chapters = (sDraft.chapters || []).filter((c) => c.guid !== chGuid);
-    if (sScenes.chapters) delete sScenes.chapters[chGuid];
+    await mutateJson(kapi, sdf, (d) => { d.chapters = (d.chapters || []).filter((c) => c.guid !== chGuid); });
+    await mutateJson(kapi, ssf, (sc) => { if (!sc.chapters || !(chGuid in sc.chapters)) return false; delete sc.chapters[chGuid]; });
   }
-  const inserted = [...dList];
-  inserted.splice(at, 0, newEntry);
-  dDraft.chapters = inserted.map((c, k) => ({ ...c, order: k + 1 }));
-  dScenes.chapters = { ...(dScenes.chapters || {}), [newGuid]: newRows };
-  if (move && !same) { await writeJson(sdf, sDraft); await writeJson(ssf, sScenes); }
-  await writeJson(await kapi.join(dstD, 'draft.json'), dDraft);
-  await writeJson(await kapi.join(dstD, 'scenes.json'), dScenes);
+  await mutateJson(kapi, ddf, (d) => {
+    const list = sortByOrder(d.chapters);
+    let at2 = afterGuid ? list.findIndex((c) => c.guid === afterGuid) + 1 : list.length;
+    if (at2 <= 0 && afterGuid) at2 = list.length;
+    list.splice(at2, 0, newEntry);
+    d.chapters = list.map((c, k) => ({ ...c, order: k + 1 }));
+  }, { fallback: { chapters: [] } });
+  await mutateJson(kapi, dsf, (sc) => { sc.chapters = { ...(sc.chapters || {}), [newGuid]: newRows }; },
+                   { fallback: { chapters: {} } });
   return newEntry;
+}
+
+/** [alpha.159 · M2] บันทึกแท็บที่ค้างของไฟล์ใต้โฟลเดอร์ (ไม่ปิด) — ก่อนคัดลอกให้ได้ของล่าสุด */
+async function saveTabsUnder(dir) {
+  const k = String(dir || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase() + '/';
+  const { saveTab } = await import('./app.js');
+  for (const t2 of state.tabs.values()) {
+    const f = String(t2.file || '').replace(/\\/g, '/').toLowerCase();
+    if (t2.dirty && f.startsWith(k)) { try { await saveTab(t2); } catch {} }
+  }
 }
 
 export async function duplicateChapter(dPath, ch) {
@@ -378,8 +405,12 @@ export async function reorderScenePrompt(dPath, ch, sc) {
   if (i < 0) return false;
   const v = await ask(tf('ui.treeAct.positionAsk', list.length), { value: String(i + 1) });
   if (v === null || v === '') return false;
-  d.chapters[ch.guid] = moveToPosition(list, i, v).map((x, k) => ({ ...x, order: k + 1 }));
-  await writeJson(sf, d);
+  await mutateJson(kapi, sf, (fresh) => {                    // [alpha.159 · M1] ของสดหลังกล่องถาม
+    const l2 = sortByOrder((fresh.chapters || {})[ch.guid]);
+    const j = l2.findIndex((x) => x.id === sc.id);
+    if (j < 0) return false;
+    fresh.chapters[ch.guid] = moveToPosition(l2, j, v).map((x, k) => ({ ...x, order: k + 1 }));
+  });
   await buildTree();
   setStatus(t('ui.treeAct.reordered'));
   return true;
@@ -396,14 +427,13 @@ export async function chapterFromScenes(dPath, ch, items) {
   if (!newCh) return null;
   // บทใหม่ไปอยู่ต่อจากบทต้นทาง (addChapter ต่อท้ายฉบับร่าง)
   const df = await kapi.join(dPath, 'draft.json');
-  const d = await readJson(df, { chapters: [] });
-  const sorted = sortByOrder(d.chapters);
-  const from = sorted.findIndex((c) => c.guid === newCh.guid);
-  const anchor = sorted.findIndex((c) => c.guid === ch.guid);
-  if (from >= 0 && anchor >= 0) {
-    d.chapters = moveToPosition(sorted, from, anchor + 2).map((c, k) => ({ ...c, order: k + 1 }));
-    await writeJson(df, d);
-  }
+  await mutateJson(kapi, df, (fresh) => {                    // [alpha.159 · M1]
+    const sorted = sortByOrder(fresh.chapters);
+    const from = sorted.findIndex((c) => c.guid === newCh.guid);
+    const anchor = sorted.findIndex((c) => c.guid === ch.guid);
+    if (from < 0 || anchor < 0) return false;
+    fresh.chapters = moveToPosition(sorted, from, anchor + 2).map((c, k) => ({ ...c, order: k + 1 }));
+  });
   for (const it of same) await moveSceneToChapter(dPath, it.ch, { id: it.sc.id }, newCh);
   await buildTree();
   const skipped = list.length - same.length;
@@ -823,14 +853,15 @@ export async function restoreItem(kind, ctx, backup) {
       await moveToRecycle(folder);
       await copyTree(payload, folder);
       const df = await kapi.join(ctx.dPath, 'draft.json'), sf = await kapi.join(ctx.dPath, 'scenes.json');
-      const d = await readJson(df, { chapters: [] });
-      const s = await readJson(sf, { chapters: {} });
-      const i = (d.chapters || []).findIndex((c) => c.guid === ctx.ch.guid);
       const entry = { ...(info.entry || ctx.ch), folderName: ctx.ch.folderName };
-      if (i >= 0) d.chapters[i] = { ...entry, order: d.chapters[i].order };
-      else d.chapters = [...(d.chapters || []), { ...entry, order: (d.chapters || []).length + 1 }];
-      s.chapters = { ...(s.chapters || {}), [ctx.ch.guid]: info.rows || [] };
-      await writeJson(df, d); await writeJson(sf, s);
+      // [alpha.159 · M1] ทะเบียนแก้ผ่านคิว (อ่านสด)
+      await mutateJson(kapi, df, (d) => {
+        const i = (d.chapters || []).findIndex((c) => c.guid === ctx.ch.guid);
+        if (i >= 0) d.chapters[i] = { ...entry, order: d.chapters[i].order };
+        else d.chapters = [...(d.chapters || []), { ...entry, order: (d.chapters || []).length + 1 }];
+      }, { fallback: { chapters: [] } });
+      await mutateJson(kapi, sf, (sc) => { sc.chapters = { ...(sc.chapters || {}), [ctx.ch.guid]: info.rows || [] }; },
+                       { fallback: { chapters: {} } });
     } else if (kind === 'scene') {
       await closeTabsUnder(ctx.file, { save: false });
       await moveToRecycle(ctx.file);
@@ -839,13 +870,13 @@ export async function restoreItem(kind, ctx, backup) {
       if (await kapi.exists(await kapi.join(payload, visName)))
         await kapi.copyFile(await kapi.join(payload, visName), ctx.file.replace(/\.md$/i, '_vis.csv'));
       const sf = await kapi.join(ctx.dPath, 'scenes.json');
-      const s = await readJson(sf, { chapters: {} });
-      const rows = (s.chapters || {})[ctx.ch.guid] || [];
-      const i = rows.findIndex((r) => r.id === ctx.sc.id);
       const row = { ...(info.row || ctx.sc), id: ctx.sc.id, fileName: ctx.sc.fileName, chapterGuid: ctx.ch.guid };
-      if (i >= 0) rows[i] = { ...row, order: rows[i].order }; else rows.push({ ...row, order: rows.length + 1 });
-      s.chapters = { ...(s.chapters || {}), [ctx.ch.guid]: rows };
-      await writeJson(sf, s);
+      await mutateJson(kapi, sf, (sc) => {                       // [alpha.159 · M1]
+        const rows = (sc.chapters || {})[ctx.ch.guid] || [];
+        const i = rows.findIndex((r) => r.id === ctx.sc.id);
+        if (i >= 0) rows[i] = { ...row, order: rows[i].order }; else rows.push({ ...row, order: rows.length + 1 });
+        sc.chapters = { ...(sc.chapters || {}), [ctx.ch.guid]: rows };
+      }, { fallback: { chapters: {} } });
     } else if (kind === 'memo') {
       await closeTabsUnder(ctx.file, { save: false });
       await moveToRecycle(ctx.file);

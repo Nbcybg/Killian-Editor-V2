@@ -5,6 +5,7 @@
 // สำคัญ: RTF เป็นไฟล์ ANSI — ภาษาไทย (และอักขระ >127 ทุกตัว) ต้องเขียนเป็น \uNNNN?
 //        ไม่งั้น Word/Pages เปิดแล้วได้ตัวขยะ (บทเรียนเดียวกับข้อ 14d เรื่องไบนารี)
 
+import { inlinePlainText } from './md.js';
 import { t } from './i18n.js';
 import { mergeSpFormat, textWidth } from './sp-format.js';
 import { normalizeTitlePages } from './sp-title-pages.js';
@@ -38,12 +39,11 @@ export function escapeRtf(s) {
 
 /** ตัดเครื่องหมายเน้นของ Markdown (RTF ใช้ระบบสไตล์ของตัวเอง) */
 export function plainText(s) {
-  return String(s ?? '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1$2')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/~~([^~]+)~~/g, '$1')
-    .replace(/\[\[([^\]]+)\]\]/g, '$1');
+  // [alpha.159 · M6] ถอดด้วยตัวแยกเครื่องหมายตัวจริงของ md.js (`inlinePlainText` → parseInline)
+  // เดิม regex ชุดของตัวเองรู้จักแค่ ** * __ ~~ [[ ]] → `_ขีดเส้นใต้_` `^ยก^` `~ห้อย~` `<span style>` `<mark>`
+  // และลิงก์ หลุดเข้าไฟล์เป็นตัวอักษรดิบ (กฎ: ห้ามเขียน regex ถอดมาร์กดาวน์ชุดที่สอง)
+  return inlinePlainText(String(s ?? ''))
+    .replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, '$1$2');
 }
 
 /** คำสั่งจัดย่อหน้าของ element หนึ่ง (เยื้องซ้าย/ขวา/ระยะก่อนหน้า/สไตล์) */

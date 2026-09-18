@@ -2,7 +2,7 @@
 // ตรรกะที่ไม่แตะดิสก์ (อายุของของในถัง · ชื่อกันชน) อยู่ใน recycle-core.js ซึ่งมี unit test
 import { t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, refreshNetwork, saveTab } from './app.js';
-import { setStatus, smart, state, logAction } from './core.js';
+import { setStatus, smart, state, logAction, setStatusAction } from './core.js';
 import { confirmBox } from './ui.js';
 import { purgeCandidates, originalName, nameCandidate } from './recycle-core.js';
 import { mutateJson } from './json-store.js';
@@ -206,7 +206,8 @@ export async function deleteToTrash(file, label) {
   // [alpha.128] การลบเป็นสิ่งที่ต้องไล่ย้อนได้ที่สุด แต่เดิมไม่มีร่องรอยในบันทึกเลยสักบรรทัด
   // (คำสั่งพวกนี้มาจากเมนูคลิกขวา จึงไม่ผ่าน handleCommand ที่จด `cmd:` ให้)
   logAction('recycle', t('ui.trash.moveTrash') + label, { from: file, to: dst });
-  setStatus(t('ui.trash.moveTrash') + label);
+  // [alpha.159 · QoL] บอกด้วยว่าของไปอยู่ไหน — กดแล้วเปิดโฟลเดอร์ถังขยะที่เลือกไฟล์นั้นไว้
+  setStatusAction(t('ui.trash.moveTrash') + label, t('ui.trash.revealInFolder'), () => kapi.revealInOS(dst));
   return dst;
 }
 

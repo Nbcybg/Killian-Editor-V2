@@ -4,7 +4,8 @@
 // บั๊ก 11 : เลือกหัวลูกศรไม่ได้ → มีทั้งหัวต้นทางและปลายทาง
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
-import { el } from '../core.js';
+import { el, dataLabel } from '../core.js';   // [alpha.159 · QoL] ป้ายสถานะตามภาษา
+const escA = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 import {
   STATUSES, EDGE_STYLES, EDGE_ROUTINGS, ARROW_HEADS, NODE_TYPES, SHAPES, PORT_POSITIONS,
   IMAGE_FITS, IMG_SCALE_MIN, IMG_SCALE_MAX,
@@ -189,7 +190,7 @@ function _renderNodeProps(container, n, ctx) {
   }
   if (isCard) {
     add(tt('ui.common.status'), `<select class="planner-prop-input" id="plp-status">
-        ${STATUSES.map((s) => `<option value="${s}"${n.status === s ? ' selected' : ''}>${s || tt('ui.common.notSpecify2')}</option>`).join('')}
+        ${STATUSES.map((s) => `<option value="${escA(s)}"${n.status === s ? ' selected' : ''}>${escA(s ? dataLabel(s) : tt('ui.common.notSpecify2'))}</option>`).join('')}
       </select>`);
   }
   add(isNote ? tt('ui.plannerProps.body') : tt('ui.plannerProps.summaryCollapse'),

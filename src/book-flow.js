@@ -200,3 +200,27 @@ export function coverPagesOf(parts) {
 
 /** ฉากนี้สั่ง "ไล่เลขหน้าต่อเนื่อง" ไหม (เก็บใน scenes.json → pageFlow) */
 export const isPageFlowContinue = (row) => !!row && row.pageFlow === 'continue';
+/**
+ * [alpha.159 · H7] เลขหน้าเริ่มต้นที่ "ผู้ใช้พิมพ์เอง" ของแถวฉาก — ไม่มี = `undefined` (ห้ามเป็น 1)
+ * เดิมทุกทางเปิดแท็บตั้ง `startPage = row.startPage || 1` → `currentStartPage()` เจอ 1 ก่อนเช็ค
+ * `pageFlow==='continue'` ทุกครั้ง = **ไล่เลขหน้าต่อเนื่องไม่เคยทำงานเลย** ตั้งแต่ alpha.141
+ */
+export function explicitStartPage(v) {
+  const n = parseInt(v && typeof v === 'object' ? v.startPage : v, 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/**
+ * [alpha.159 · QoL] เคอร์เซอร์อยู่หน้าไหน — จากรายการเส้นคั่นหน้าที่ตัวจัดหน้าคำนวณไว้แล้ว (ไม่วัดใหม่) · บริสุทธิ์
+ * @param {Array<{pos:number}>} breaks ตำแหน่งที่ "หน้าใหม่เริ่ม" (หน้า 2 เป็นต้นไป)
+ * @param {number} pos ตำแหน่งเคอร์เซอร์
+ * @param {number} [first=1] เลขหน้าที่พิมพ์ของหน้าแรก (เลขหน้าเริ่มต้น / ไล่ต่อเนื่องจากเล่ม)
+ * @returns {{page:number, total:number, printed:number, printedLast:number}}
+ */
+export function pageAtPos(breaks, pos, first = 1) {
+  const list = (breaks || []).filter((b) => b && Number.isFinite(b.pos));
+  const page = 1 + list.filter((b) => b.pos <= pos).length;
+  const total = list.length + 1;
+  const f = Number.isFinite(+first) && +first > 0 ? Math.round(+first) : 1;
+  return { page, total, printed: f + page - 1, printedLast: f + total - 1 };
+}

@@ -66,8 +66,13 @@ function registryClient() {
         temperature: opts.temperature, maxTokens: opts.maxTokens,
         reqId: opts.reqId, timeoutMs: opts.timeoutMs,
       }, (c) => onChunk(c.delta || '', { partial: c.text }));
-      if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut,
-                                         partialText: r.text || '' });
+      // [alpha.159 · H13] สตรีมล้มกลางทาง = **คืนข้อความที่ไหลมาแล้ว** (`text` + ธง `partial`)
+      // เดิมเซ็ตไว้ที่ `partialText` ซึ่งไม่มีผู้เรียกคนไหนอ่าน → ข้อความที่ผู้ใช้เห็นไหลมาหายตอนจบ
+      if (!r.ok) {
+        const got = r.text || '';
+        return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut,
+                                text: got, thinking: r.thinking || '', partial: !!got.trim(), partialText: got });
+      }
       const usage = normUsage(r.usage);
       return { ok: true, text: r.text, thinking: r.thinking || '', usage,
                cost: estimateCost(priceKeyOf(p), r.model || '', usage), provider: r.provider, model: r.model,
