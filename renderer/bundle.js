@@ -27051,7 +27051,10 @@ ${BLOCK_END}
   async function addImageFile(api, root, id, srcPath) {
     const dir2 = await albumDir(api, root, id);
     await api.mkdir(dir2);
-    const name5 = await api.copyInto(srcPath, dir2);
+    const norm4 = (p) => String(p || "").replace(/\\/g, "/").replace(/\/+$/, "");
+    const src2 = norm4(srcPath);
+    const same = src2.slice(0, src2.lastIndexOf("/")) === norm4(dir2);
+    const name5 = same ? src2.slice(src2.lastIndexOf("/") + 1) : await api.copyInto(srcPath, dir2);
     let doc3 = await readAlbumDoc(api, root, id);
     doc3 = syncAlbumDoc(doc3, [...Object.keys(doc3.images), name5]);
     await writeAlbumDoc(api, root, id, doc3);
@@ -33796,6 +33799,167 @@ ${BLOCK_END}
     }
   });
 
+  // src/ai/ai-agents.js
+  function userSystemPrompt(ai) {
+    const a = ai || {};
+    const txt = String(a.systemPrompt || "").trim();
+    if (!txt) return "";
+    return a.systemPromptOn === false ? "" : txt;
+  }
+  function withUserSystem(system, ai) {
+    const u = userSystemPrompt(ai);
+    const s = String(system || "");
+    if (!u) return s;
+    if (s.startsWith(u)) return s;
+    return s.trim() ? u + "\n\n" + s : u;
+  }
+  function newRef(p = {}) {
+    const kind = p.kind === "file" ? "file" : "text";
+    return {
+      id: p.id || uid("ref"),
+      kind,
+      name: String(p.name || "").trim(),
+      text: kind === "text" ? String(p.text || "") : "",
+      path: kind === "file" ? String(p.path || "") : ""
+    };
+  }
+  function newAgent(p = {}) {
+    return {
+      id: p.id || uid("agent"),
+      name: String(p.name || "").trim(),
+      persona: String(p.persona || ""),
+      refs: Array.isArray(p.refs) ? p.refs.map(newRef).filter((r) => r.kind === "file" ? r.path : r.text.trim()) : []
+    };
+  }
+  function validateAgent(a) {
+    const errs = [];
+    if (!a || !String(a.name || "").trim()) errs.push("name");
+    return errs;
+  }
+  function listAgents(ai) {
+    const rows = ai && Array.isArray(ai.agents) ? ai.agents : [];
+    return rows.filter((a) => a && a.id).map((a) => newAgent(a));
+  }
+  function upsertAgent(rows, agent2) {
+    const a = newAgent(agent2);
+    const list = (rows || []).slice();
+    const i5 = list.findIndex((x) => x.id === a.id);
+    if (i5 >= 0) list[i5] = a;
+    else list.push(a);
+    return list;
+  }
+  function removeAgent(rows, id) {
+    return (rows || []).filter((x) => x.id !== id);
+  }
+  function moveAgent(rows, id, dir2) {
+    const list = (rows || []).slice();
+    const i5 = list.findIndex((x) => x.id === id);
+    const j = i5 + (dir2 < 0 ? -1 : 1);
+    if (i5 < 0 || j < 0 || j >= list.length) return list;
+    [list[i5], list[j]] = [list[j], list[i5]];
+    return list;
+  }
+  function safeRefFileName(name5) {
+    const base4 = String(name5 || "").split(/[\\/]/).pop().replace(/[<>:"|?*\x00-\x1f]/g, "_").trim() || "reference";
+    return /\.txt$/i.test(base4) ? base4 : base4.replace(/\.[^.]*$/, "") + ".txt";
+  }
+  function agentRefText(agent2, fileTexts = {}, budget = REF_BUDGET) {
+    const parts = [];
+    const missing = [];
+    let left = Math.max(0, budget);
+    let truncated = false;
+    for (const r of agent2 && agent2.refs || []) {
+      if (left <= 0) {
+        truncated = true;
+        break;
+      }
+      let body = r.kind === "file" ? fileTexts[r.path] : r.text;
+      if (body == null) {
+        missing.push(r.name || r.path);
+        continue;
+      }
+      body = String(body).replace(/\r\n?/g, "\n").trim();
+      if (!body) continue;
+      if (body.length > left) {
+        body = body.slice(0, left);
+        truncated = true;
+      }
+      left -= body.length;
+      parts.push("### " + (r.name || r.path || "\u2014") + "\n" + body);
+    }
+    const text = parts.join("\n\n");
+    return { text, used: text.length, truncated, missing };
+  }
+  function buildRewritePrompt(o = {}, L2 = {}) {
+    const sys = [L2.role || ""];
+    if (o.agent) {
+      sys.push("", (L2.persona || "") + (o.agent.name ? " \u2014 " + o.agent.name : ""));
+      if (String(o.agent.persona || "").trim()) sys.push(String(o.agent.persona).trim());
+    }
+    for (const r of L2.rules || []) sys.push("- " + r);
+    if (o.format === "screenplay" && L2.screenplay) sys.push("- " + L2.screenplay);
+    const p = [];
+    const block = (head2, body) => {
+      if (String(body || "").trim()) p.push("## " + head2, String(body).trim(), "");
+    };
+    block(L2.refs || "References", o.refText);
+    block(L2.project || "Project context", o.project);
+    block(L2.before || "Before", o.before ? clipTail(o.before, AROUND_CHARS) : "");
+    block(L2.after || "After", o.after ? clipHead(o.after, AROUND_CHARS) : "");
+    p.push(
+      "## " + (L2.instruction || "Instruction"),
+      String(o.instruction || "").trim() || (L2.defaultInstruction || ""),
+      ""
+    );
+    p.push("## " + (L2.source || "Text to rewrite"), "<<<", String(o.text || ""), ">>>", "");
+    if (L2.output) p.push(L2.output);
+    return {
+      system: sys.filter((x, i5, a) => !(x === "" && a[i5 - 1] === "")).join("\n").trim(),
+      prompt: p.join("\n").trim()
+    };
+  }
+  function clipTail(s, n2) {
+    s = String(s);
+    return s.length > n2 ? "\u2026" + s.slice(s.length - n2) : s;
+  }
+  function clipHead(s, n2) {
+    s = String(s);
+    return s.length > n2 ? s.slice(0, n2) + "\u2026" : s;
+  }
+  function cleanRewriteOutput(out, original = "") {
+    let s = String(out || "").replace(/\r\n?/g, "\n").trim();
+    const fence = s.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
+    if (fence) s = fence[1].trim();
+    s = s.replace(/^<<<\s*\n?/, "").replace(/\n?\s*>>>$/, "").trim();
+    const o = String(original || "").trim();
+    const pairs = [['"', '"'], ["\u201C", "\u201D"], ["\u300C", "\u300D"], ["'", "'"]];
+    for (const [a, b] of pairs) {
+      if (s.length > 1 && s.startsWith(a) && s.endsWith(b) && !(o.startsWith(a) && o.endsWith(b)) && s.slice(1, -1).indexOf(b) < 0) {
+        s = s.slice(1, -1).trim();
+        break;
+      }
+    }
+    return s;
+  }
+  function resolveRange(textAt, from2, to, original) {
+    if (!(from2 < to)) return null;
+    let cur = "";
+    try {
+      cur = textAt(from2, to);
+    } catch {
+      return null;
+    }
+    return cur === original ? { from: from2, to } : null;
+  }
+  var REF_BUDGET, AROUND_CHARS, uid;
+  var init_ai_agents = __esm({
+    "src/ai/ai-agents.js"() {
+      REF_BUDGET = 12e3;
+      AROUND_CHARS = 1200;
+      uid = (p) => p + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+    }
+  });
+
   // src/timing.js
   var timing_exports = {};
   __export(timing_exports, {
@@ -34947,6 +35111,203 @@ ${BLOCK_END}
     }
   });
 
+  // src/ai/ai-agents-ui.js
+  var ai_agents_ui_exports = {};
+  __export(ai_agents_ui_exports, {
+    REF_DIR: () => REF_DIR,
+    agentDialog: () => agentDialog,
+    agentReferenceText: () => agentReferenceText,
+    importRefFile: () => importRefFile,
+    readAgentFiles: () => readAgentFiles
+  });
+  async function readAgentFiles(agent2) {
+    const out = {};
+    if (!state.root || !agent2) return out;
+    for (const r of agent2.refs || []) {
+      if (r.kind !== "file" || !r.path || out[r.path] != null) continue;
+      try {
+        const txt = await kapi.readFile(await kapi.join(state.root, r.path));
+        if (typeof txt === "string") out[r.path] = txt;
+      } catch (e) {
+        log("warn", "ai-agent: read reference", { path: r.path, error: String(e && e.message || e) });
+      }
+    }
+    return out;
+  }
+  async function agentReferenceText(agent2) {
+    if (!agent2) return { text: "", used: 0, truncated: false, missing: [] };
+    return agentRefText(agent2, await readAgentFiles(agent2), REF_BUDGET);
+  }
+  async function importRefFile() {
+    if (!state.root) return null;
+    const src2 = await kapi.openFileDialog("txt");
+    if (!src2) return null;
+    const base4 = String(src2).split(/[\\/]/).pop();
+    let rel = "";
+    try {
+      rel = await kapi.relative(state.root, src2);
+    } catch {
+    }
+    const inside = rel && !rel.startsWith("..") && !/^([a-zA-Z]:|[\\/])/.test(rel);
+    if (inside) return newRef({ kind: "file", name: base4, path: rel.replace(/\\/g, "/") });
+    const text = await kapi.readFile(src2);
+    if (typeof text !== "string") return null;
+    const dir2 = await kapi.join(state.root, REF_DIR);
+    await kapi.mkdir(dir2);
+    const name5 = safeRefFileName(base4);
+    let file = name5;
+    for (let i5 = 2; await kapi.exists(await kapi.join(dir2, file)); i5++) file = name5.replace(/\.txt$/i, "") + "-" + i5 + ".txt";
+    await kapi.writeFile(await kapi.join(dir2, file), text);
+    return newRef({ kind: "file", name: base4, path: REF_DIR + "/" + file });
+  }
+  function agentDialog(existing) {
+    return new Promise((resolve) => {
+      const A = newAgent(existing ? JSON.parse(JSON.stringify(existing)) : {});
+      const ov = el("div", "k-overlay k-ai-agent-ov");
+      ov.style.zIndex = "120";
+      const box2 = el("div", "k-dialog k-ai-agent");
+      box2.append(el("div", "k-dlg-title", existing ? t("ui.aiAgent.editTitle") : t("ui.aiAgent.addTitle")));
+      const field2 = (label, node, hint) => {
+        const r = el("div", "ai-field");
+        r.append(el("label", null, label), node);
+        if (hint) r.append(el("div", "ai-hint dim", hint));
+        box2.append(r);
+        return node;
+      };
+      const nameInp = field2("1. " + t("ui.aiAgent.name"), el("input", "wiki-input ai-agent-name"));
+      nameInp.value = A.name;
+      nameInp.placeholder = t("ui.aiAgent.namePh");
+      const persona = field2(
+        "2. " + t("ui.aiAgent.persona"),
+        el("textarea", "wiki-input ai-agent-persona"),
+        t("ui.aiAgent.personaHint")
+      );
+      persona.rows = 8;
+      persona.value = A.persona;
+      persona.placeholder = nl(t("ui.aiAgent.personaPh"));
+      const tplBtn = el("button", "ai-agent-tpl", t("ui.aiAgent.insertTemplate"));
+      tplBtn.onclick = () => {
+        const tpl = nl(t("ui.aiAgent.template"));
+        persona.value = persona.value.trim() ? persona.value.replace(/\s+$/, "") + "\n\n" + tpl : tpl;
+        persona.focus();
+      };
+      persona.parentNode.insertBefore(tplBtn, persona.nextSibling);
+      const refWrap = el("div", "ai-field");
+      refWrap.append(el("label", null, "3. " + t("ui.aiAgent.refs")));
+      const refList = el("div", "ai-agent-refs");
+      const refBtns = el("div", "ai-agent-ref-btns");
+      const addText = el("button", "ai-agent-add-text", gi("plus-thick") + " " + t("ui.aiAgent.addTextRef"));
+      const addFile = el("button", "ai-agent-add-file", gi("file") + " " + t("ui.aiAgent.addFileRef"));
+      const refMsg = el("span", "dim ai-agent-ref-msg");
+      refBtns.append(addText, addFile, refMsg);
+      refWrap.append(refList, refBtns, el("div", "ai-hint dim", tf("ui.aiAgent.refsHint", fmtNum(REF_BUDGET))));
+      box2.append(refWrap);
+      let refs = A.refs.slice();
+      function drawRefs() {
+        refList.replaceChildren();
+        if (!refs.length) refList.append(el("div", "dim ai-agent-ref-empty", t("ui.aiAgent.noRefs")));
+        refs.forEach((r, i5) => {
+          const row3 = el("div", "ai-agent-ref");
+          row3.dataset.kind = r.kind;
+          const head2 = el("div", "ai-agent-ref-head");
+          const nm = el("input", "wiki-input ai-agent-ref-name");
+          nm.value = r.name;
+          nm.placeholder = r.kind === "file" ? r.path : t("ui.aiAgent.refNamePh");
+          nm.oninput = () => {
+            refs[i5] = { ...refs[i5], name: nm.value };
+          };
+          const kind = el(
+            "span",
+            "dim ai-agent-ref-kind",
+            r.kind === "file" ? gi("file") + " " + r.path : gi("pen") + " " + t("ui.aiAgent.kindText")
+          );
+          const del2 = el("button", "ai-agent-ref-del", gi("trash"));
+          del2.title = t("ui.aiAgent.removeRef");
+          del2.onclick = () => {
+            refs.splice(i5, 1);
+            drawRefs();
+          };
+          head2.append(nm, kind, del2);
+          row3.append(head2);
+          if (r.kind === "text") {
+            const ta = el("textarea", "wiki-input ai-agent-ref-text");
+            ta.rows = 4;
+            ta.value = r.text;
+            ta.placeholder = t("ui.aiAgent.refTextPh");
+            ta.oninput = () => {
+              refs[i5] = { ...refs[i5], text: ta.value };
+            };
+            row3.append(ta);
+          }
+          refList.append(row3);
+        });
+      }
+      drawRefs();
+      addText.onclick = () => {
+        refs.push({ ...newRef({ kind: "text", text: " " }), text: "" });
+        drawRefs();
+        const last2 = refList.querySelector(".ai-agent-ref:last-child .ai-agent-ref-text");
+        if (last2) last2.focus();
+      };
+      addFile.onclick = async () => {
+        refMsg.textContent = "";
+        try {
+          const r = await importRefFile();
+          if (r) {
+            refs.push(r);
+            drawRefs();
+          }
+        } catch (e) {
+          refMsg.textContent = gi("fail") + " " + String(e && e.message || e);
+        }
+      };
+      const errBox = el("div", "ai-prov-err");
+      box2.append(errBox);
+      const btns = el("div", "k-dlg-btns");
+      const cancel = el("button", "k-cancel", t("ui.common.cancel"));
+      const ok2 = el("button", "k-ok ai-agent-ok", t("ui.common.save"));
+      btns.append(cancel, ok2);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      nameInp.focus();
+      const done2 = (v2) => {
+        ov.remove();
+        document.removeEventListener("keydown", esc8, true);
+        resolve(v2);
+      };
+      function esc8(e) {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          done2(null);
+        }
+      }
+      document.addEventListener("keydown", esc8, true);
+      cancel.onclick = () => done2(null);
+      ok2.onclick = () => {
+        const out = newAgent({ id: A.id, name: nameInp.value, persona: persona.value, refs });
+        if (validateAgent(out).length) {
+          errBox.textContent = gi("warning") + " " + t("ui.aiAgent.needName");
+          nameInp.focus();
+          return;
+        }
+        done2(out);
+      };
+    });
+  }
+  var REF_DIR, nl;
+  var init_ai_agents_ui = __esm({
+    "src/ai/ai-agents-ui.js"() {
+      init_i18n();
+      init_core();
+      init_icons();
+      init_locale();
+      init_ai_agents();
+      REF_DIR = "References";
+      nl = (s) => String(s).replace(/\\n/g, "\n");
+    }
+  });
+
   // src/ai/ai-provider-ui.js
   var ai_provider_ui_exports = {};
   __export(ai_provider_ui_exports, {
@@ -35159,6 +35520,7 @@ ${BLOCK_END}
     return r.ok ? { ok: true, msg: tf("ui.aiProvider.connectOkFoundModel", r.models.length), models: r.models } : { ok: false, msg: r.error, models: [] };
   }
   async function compassOpts(opts) {
+    opts = userSystemOpts(opts);
     if (!opts || opts.noCompass) return opts || {};
     try {
       const { currentCompass: currentCompass2 } = await Promise.resolve().then(() => (init_logline_ui(), logline_ui_exports));
@@ -35168,6 +35530,11 @@ ${BLOCK_END}
     } catch {
       return opts;
     }
+  }
+  function userSystemOpts(opts) {
+    if (!opts || opts.noUserSystem) return opts || {};
+    const system = withUserSystem(opts.system, aiMeta());
+    return system === (opts.system || "") ? opts : { ...opts, system };
   }
   async function complete(provider, opts = {}) {
     if (!provider) return { ok: false, text: "", error: t("ui.aiProvider.cantSettingsProviderAI") };
@@ -35339,6 +35706,83 @@ ${BLOCK_END}
     histRow.append(histInp);
     box2.append(histRow);
     box2.append(el("div", "dim ai-hist-hint", t("ui.aiProvider.historyTokensHint")));
+    const spSec = el("div", "ai-set-sec ai-sysprompt-sec");
+    const spHead = el("div", "ai-set-sec-head");
+    spHead.append(el("span", "ai-set-sec-title", t("ui.aiAgent.sysPrompt")));
+    const spOnLbl = el("label", "ai-sysprompt-on-lbl");
+    const spOn = el("input", "wiki-check ai-sysprompt-on");
+    spOn.type = "checkbox";
+    spOn.checked = ai.systemPromptOn !== false;
+    spOnLbl.append(spOn, document.createTextNode(" " + t("ui.aiAgent.sysPromptOn")));
+    spHead.append(spOnLbl);
+    const spTa = el("textarea", "wiki-input ai-sysprompt");
+    spTa.rows = 5;
+    spTa.value = ai.systemPrompt || "";
+    spTa.placeholder = t("ui.aiAgent.sysPromptPh");
+    spSec.append(spHead, spTa, el("div", "dim ai-hint", t("ui.aiAgent.sysPromptHint")));
+    box2.append(spSec);
+    const agSec = el("div", "ai-set-sec ai-agents-sec");
+    const agHead = el("div", "ai-set-sec-head");
+    agHead.append(el("span", "ai-set-sec-title", t("ui.aiAgent.agents")));
+    const agAdd = el("button", "ai-agent-add", gi("plus-thick") + " " + t("ui.aiAgent.add"));
+    agHead.append(agAdd);
+    const agList = el("div", "ai-agent-list");
+    agSec.append(agHead, agList, el("div", "dim ai-hint", t("ui.aiAgent.agentsHint")));
+    box2.append(agSec);
+    let agents = listAgents(ai);
+    const { agentDialog: agentDialog2 } = await Promise.resolve().then(() => (init_ai_agents_ui(), ai_agents_ui_exports));
+    function drawAgents() {
+      agList.replaceChildren();
+      if (!agents.length) agList.append(el("div", "dim ai-agent-empty", t("ui.aiAgent.empty")));
+      agents.forEach((a, i5) => {
+        const row3 = el("div", "ai-agent-row");
+        row3.dataset.id = a.id;
+        const info2 = el("div", "ai-agent-info");
+        info2.append(el("div", "ai-agent-title", a.name));
+        const sub = String(a.persona || "").replace(/\s+/g, " ").trim();
+        info2.append(el("div", "dim ai-agent-sub", (sub.length > 90 ? sub.slice(0, 90) + "\u2026" : sub) + (a.refs.length ? "  \xB7 " + tf("ui.aiAgent.refCount", a.refs.length) : "")));
+        const up = el("button", "ai-agent-up", "\u2191");
+        up.title = t("ui.aiAgent.moveUp");
+        up.disabled = i5 === 0;
+        const dn = el("button", "ai-agent-down", "\u2193");
+        dn.title = t("ui.aiAgent.moveDown");
+        dn.disabled = i5 === agents.length - 1;
+        const ed = el("button", "ai-agent-edit", t("ui.aiProvider.edit"));
+        const del2 = el("button", "ai-agent-del", gi("trash"));
+        del2.title = t("ui.aiAgent.delete");
+        up.onclick = () => {
+          agents = moveAgent(agents, a.id, -1);
+          drawAgents();
+        };
+        dn.onclick = () => {
+          agents = moveAgent(agents, a.id, 1);
+          drawAgents();
+        };
+        ed.onclick = async () => {
+          const r = await agentDialog2(a);
+          if (r) {
+            agents = upsertAgent(agents, r);
+            drawAgents();
+          }
+        };
+        del2.onclick = async () => {
+          const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+          if (!await confirmBox2(tf("ui.aiAgent.confirmDelete", a.name))) return;
+          agents = removeAgent(agents, a.id);
+          drawAgents();
+        };
+        row3.append(info2, up, dn, ed, del2);
+        agList.append(row3);
+      });
+    }
+    agAdd.onclick = async () => {
+      const r = await agentDialog2(null);
+      if (r) {
+        agents = upsertAgent(agents, r);
+        drawAgents();
+      }
+    };
+    drawAgents();
     const usage = ai.usage || [];
     if (usage.length) {
       const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
@@ -35411,6 +35855,9 @@ ${BLOCK_END}
     okB.onclick = async () => {
       aiMeta().sendKey = sendSel.value;
       aiMeta().historyTokens = Math.max(0, Math.round(Number(histInp.value) || 0));
+      aiMeta().systemPrompt = spTa.value.trim();
+      aiMeta().systemPromptOn = !!spOn.checked;
+      aiMeta().agents = agents;
       await persist2(rows, activeId);
       try {
         const keys4 = await loadKeys();
@@ -35684,6 +36131,7 @@ ${BLOCK_END}
       init_ai_session();
       init_ai_error();
       init_icons();
+      init_ai_agents();
       init_locale();
       KEY_FILE = "ai-key.json";
       _keys = null;
@@ -35754,6 +36202,7 @@ ${BLOCK_END}
   async function callAI(prompt, system = "", opts = {}) {
     const ai = getAISettings();
     const t0 = Date.now();
+    system = withUserSystem(system, ai);
     if (Array.isArray(ai.providers) && ai.providers.length) {
       const { currentProvider: currentProvider2, complete: complete2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
       const p = await currentProvider2();
@@ -35851,6 +36300,7 @@ ${BLOCK_END}
       init_err_text();
       init_core();
       init_icons();
+      init_ai_agents();
       KEY_FILE2 = "ai-key.json";
       _keyCache = null;
     }
@@ -36934,7 +37384,7 @@ ${BLOCK_END}
           const sel = this.state.sel.size > 1 && this.state.sel.has(it.path);
           const many = sel ? [...this.state.sel] : [it.path];
           popupMenu(e.clientX, e.clientY, [
-            { label: `<b>${sel ? many.length + t("ui.gallery.imagePick") : it.file}</b>`, disabled: true },
+            { label: `<b>${hx(sel ? many.length + t("ui.gallery.imagePick") : it.file)}</b>`, disabled: true },
             { label: t("ui.common.viewImageFull"), click: async () => imageLightbox(await fileURL(this.root, it.path), it.caption || it.file) },
             { label: t("ui.common.insertSceneOpen"), click: () => this.insert(many) },
             { label: t("ui.gallery.pasteTopBoardMood"), click: () => this.addToBoard(many) },
@@ -40243,6 +40693,7 @@ ${BLOCK_END}
     defaultFloatBox: () => defaultFloatBox,
     defaultLayout: () => defaultLayout,
     deleteWorkspace: () => deleteWorkspace,
+    dodgeHiddenChips: () => dodgeHiddenChips,
     exportPanelLayout: () => exportPanelLayout,
     getPanelManager: () => getPanelManager,
     hiddenMode: () => hiddenMode,
@@ -40966,6 +41417,23 @@ ${BLOCK_END}
       };
       bar.append(b);
     }
+    dodgeHiddenChips(bar);
+  }
+  function dodgeHiddenChips(bar = document.querySelector("#content > .k-hidden-chips")) {
+    if (!bar || !bar.isConnected) return 0;
+    bar.style.bottom = "";
+    const docs = bar.parentElement.getBoundingClientRect();
+    const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const blockers = [...document.querySelectorAll("#content .k-fmtbar:not(.planner-fmtbar), #k-fab")].filter((n2) => n2.offsetParent !== null || getComputedStyle(n2).position === "fixed").map((n2) => n2.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+    let lift3 = 0;
+    for (let i5 = 0; i5 < 3; i5++) {
+      const r = bar.getBoundingClientRect();
+      const b = blockers.filter((x) => hit(r, x));
+      if (!b.length) break;
+      lift3 = Math.max(lift3, docs.bottom - Math.min(...b.map((x) => x.top)) + 6);
+      bar.style.bottom = lift3 + "px";
+    }
+    return lift3;
   }
   function scheduleRemember() {
     clearTimeout(_rememberJob);
@@ -41207,9 +41675,16 @@ ${BLOCK_END}
     }
     return m.floatPanel(pid, home && home.float || defaultFloatBox(pid));
   }
+  function unknownPanel(m, pid) {
+    if (pid && m.registry.has(pid)) return false;
+    if (pid && !m.registry.size) return false;
+    log("warn", "panel: unknown panel id", { id: pid });
+    return true;
+  }
   function showPanel(id, opts = {}) {
     const m = getPanelManager();
     const pid = panelId(id);
+    if (unknownPanel(m, pid)) return false;
     if (tornOff.has(pid)) {
       focusTearOff(pid);
       return true;
@@ -41275,6 +41750,7 @@ ${BLOCK_END}
   function togglePanel(id, opts) {
     const m = getPanelManager();
     const pid = panelId(id);
+    if (unknownPanel(m, pid)) return false;
     if (tornOff.has(pid)) {
       recallPanel(pid);
       return true;
@@ -41411,7 +41887,7 @@ ${BLOCK_END}
   function workspaceMenuItems() {
     const items = [{ label: t("ui.panel.wsPick"), disabled: true }];
     for (const w of listWorkspaces()) {
-      items.push({ label: (w.builtIn ? gi("window-restore") + " " : gi("window-max") + " ") + w.label, click: () => applyWorkspace(w.name) });
+      items.push({ text: (w.builtIn ? gi("window-restore") + " " : gi("window-max") + " ") + w.label, click: () => applyWorkspace(w.name) });
     }
     items.push("-");
     items.push({
@@ -48266,7 +48742,7 @@ ${h.text}`;
     const items = [];
     const byId = (id) => document.getElementById(id);
     const mk2 = (b) => ({
-      label: btnLabel(b),
+      text: btnLabel(b),
       disabled: b.classList.contains("dis") || b.disabled,
       click: () => b.click()
     });
@@ -49001,7 +49477,8 @@ ${h.text}`;
     }
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const ok2 = await confirmBox2(
-      tf("ui.histOry.undo", label) + tf("ui.histOry.doFileFile", plan.undone.length, plan.ops.length) + t("ui.histOry.fileOverwriteDotBack")
+      tf("ui.histOry.undo", label) + tf("ui.histOry.doFileFile", plan.undone.length, plan.ops.length) + t("ui.histOry.fileOverwriteDotBack"),
+      t("ui.common.undoBtn")
     );
     if (!ok2) return false;
     s.busy = true;
@@ -52964,7 +53441,7 @@ ${h.text}`;
         }
         sec.innerHTML = "";
         const head2 = el("div", "wiki-bl-head");
-        head2.innerHTML = iconHtml("image", 14) + t("ui.wiki.imageLibraryTag") + ent.name + ` (${hits.length})`;
+        head2.innerHTML = iconHtml("image", 14) + tx("ui.wiki.imageLibraryTag") + hx(ent.name) + ` (${hits.length})`;
         sec.append(head2);
         const row3 = el("div", "wiki-tagged-row");
         for (const it of hits) {
@@ -53058,7 +53535,7 @@ ${h.text}`;
     }
     const cur = String(value || "").trim();
     if (cur && cur !== next) {
-      const ok2 = await confirmBox(tf("ui.wiki.aiReplaceAsk", label) + String.fromCharCode(10, 10) + next);
+      const ok2 = await confirmBox(tf("ui.wiki.aiReplaceAsk", label) + String.fromCharCode(10, 10) + next, t("ui.common.replaceBtn"));
       if (!ok2) {
         setStatus(t("ui.wiki.aiKept"));
         return null;
@@ -53533,7 +54010,10 @@ ${h.text}`;
     return n2;
   }
   function flush() {
+    if (S2.raf) cancelAnimationFrame(S2.raf);
+    clearTimeout(S2.to);
     S2.raf = 0;
+    S2.to = 0;
     const list = [...S2.pending];
     S2.pending.clear();
     for (const node of list) {
@@ -53554,7 +54034,10 @@ ${h.text}`;
         }
         for (const a of r.addedNodes) if (a.nodeType === 1 || a.nodeType === 3) S2.pending.add(a);
       }
-      if (S2.pending.size && !S2.raf) S2.raf = requestAnimationFrame(flush);
+      if (S2.pending.size && !S2.raf) {
+        S2.raf = requestAnimationFrame(flush);
+        S2.to = setTimeout(flush, 50);
+      }
     });
     S2.obs.observe(root, { childList: true, subtree: true, characterData: true });
     return true;
@@ -53567,7 +54050,7 @@ ${h.text}`;
     "src/glyph-upgrade.js"() {
       init_glyph_icons();
       SKIP_SEL = '.ProseMirror, [contenteditable="true"], textarea, input, select, option, svg, canvas, script, style, .k-gl, .k-gl-t, .k-no-glyph, .sp, .wiki-body, .k-dev-dlg pre, .aichat-msg, .k-log-list';
-      S2 = { obs: null, pending: /* @__PURE__ */ new Set(), raf: 0, count: 0 };
+      S2 = { obs: null, pending: /* @__PURE__ */ new Set(), raf: 0, to: 0, count: 0 };
     }
   });
 
@@ -56959,7 +57442,7 @@ ${h.text}`;
     const onBox = lx >= L2.padX - 3 && lx <= L2.padX + L2.boxSize + 3;
     return { index: i5, onBox };
   }
-  function uid(prefix2) {
+  function uid2(prefix2) {
     _uidSeq = (_uidSeq + 1) % 46656;
     return prefix2 + Date.now().toString(36) + _uidSeq.toString(36) + Math.random().toString(36).slice(2, 5);
   }
@@ -56996,7 +57479,7 @@ ${h.text}`;
     const t3 = NODE_TYPES.includes(type) ? type : "scene";
     const d = TYPE_DEFAULTS[t3] || TYPE_DEFAULTS.scene;
     return {
-      id: uid("pl-"),
+      id: uid2("pl-"),
       type: t3,
       title: title2 != null ? title2 : t("ui.common.new2"),
       color: color || d.color,
@@ -57043,7 +57526,7 @@ ${h.text}`;
   function createDefaultEdge(fromNodeId, fromPort, toNodeId, toPort, opts) {
     const o = opts || {};
     return {
-      id: uid("ed-"),
+      id: uid2("ed-"),
       from: { nodeId: fromNodeId, port: validatePort(fromPort) ? fromPort : "auto" },
       to: { nodeId: toNodeId, port: validatePort(toPort) ? toPort : "auto" },
       label: o.label || "",
@@ -57436,7 +57919,7 @@ ${h.text}`;
             return ids.has(fid) && ids.has(tid);
           }).map((e) => this._normEdge(e));
           this._groups = (data2.groups || []).map((g) => ({
-            id: g.id || uid("gp-"),
+            id: g.id || uid2("gp-"),
             name: g.name || t("ui.planner.group"),
             color: g.color || "#d97757",
             x: num(g.x, 0),
@@ -57470,7 +57953,7 @@ ${h.text}`;
           const type = NODE_TYPES.includes(n2.type) ? n2.type : "scene";
           const d = TYPE_DEFAULTS[type] || TYPE_DEFAULTS.scene;
           return {
-            id: n2.id || uid("pl-"),
+            id: n2.id || uid2("pl-"),
             type,
             title: n2.title != null ? n2.title : t("ui.common.notSpecifyName"),
             color: n2.color || d.color,
@@ -57509,7 +57992,7 @@ ${h.text}`;
           const from2 = typeof e.from === "object" && e.from ? e.from : { nodeId: e.from, port: "right" };
           const to = typeof e.to === "object" && e.to ? e.to : { nodeId: e.to, port: "left" };
           return {
-            id: e.id || uid("ed-"),
+            id: e.id || uid2("ed-"),
             from: { nodeId: from2.nodeId, port: validatePort(from2.port) ? from2.port : "right" },
             to: { nodeId: to.nodeId, port: validatePort(to.port) ? to.port : "left" },
             label: e.label || "",
@@ -57871,7 +58354,7 @@ ${h.text}`;
         // ───── Group CRUD ─────
         addGroup(name5, childrenIds, color) {
           const g = {
-            id: uid("gp-"),
+            id: uid2("gp-"),
             name: name5 || t("ui.planner.group"),
             color: color || "#d97757",
             x: 0,
@@ -86726,7 +87209,7 @@ ${h.text}`;
           for (const n2 of src2) {
             const copy2 = this.data.addNodeRaw({
               ...n2,
-              id: uid("pl-"),
+              id: uid2("pl-"),
               tags: [...n2.tags || []],
               x: n2.x + 28,
               y: n2.y + 28,
@@ -90166,6 +90649,10 @@ ${mdToHtmlBody(md, o)}
       log: (lv, msg, extra) => log(lv, msg, extra)
     });
     _client._root = state.root;
+    const baseComplete = _client.complete.bind(_client);
+    const baseStream = _client.stream.bind(_client);
+    _client.complete = (o = {}) => baseComplete({ ...o, system: withUserSystem(o.system, getAISettings()) });
+    _client.stream = (o = {}, cb) => baseStream({ ...o, system: withUserSystem(o.system, getAISettings()) }, cb);
     return _client;
   }
   async function collectDocs(root) {
@@ -90262,6 +90749,7 @@ ${mdToHtmlBody(md, o)}
       init_ai_settings();
       init_ai_provider_ui();
       init_ai_providers();
+      init_ai_agents();
       init_project_scan();
       init_num();
       init_tab_bridge();
@@ -92847,6 +93335,385 @@ ${mdToHtmlBody(md, o)}
         ["done", t("ui.common.writeEnd")],
         ["published", t("ui.common.printDone")]
       ];
+    }
+  });
+
+  // src/ai/ai-rewrite-ui.js
+  function closeRewriteBar() {
+    if (!_bar) return;
+    const b = _bar;
+    _bar = null;
+    b.close();
+  }
+  function promptLabels() {
+    return {
+      role: t("ui.aiRewrite.pRole"),
+      rules: [t("ui.aiRewrite.pRule1"), t("ui.aiRewrite.pRule2"), t("ui.aiRewrite.pRule3"), t("ui.aiRewrite.pRule4")],
+      persona: t("ui.aiRewrite.pPersona"),
+      screenplay: t("ui.aiRewrite.pScreenplay"),
+      refs: t("ui.aiRewrite.pRefs"),
+      project: t("ui.aiRewrite.pProject"),
+      before: t("ui.aiRewrite.pBefore"),
+      after: t("ui.aiRewrite.pAfter"),
+      instruction: t("ui.aiRewrite.pInstruction"),
+      defaultInstruction: t("ui.aiRewrite.pDefaultInstruction"),
+      source: t("ui.aiRewrite.pSource"),
+      output: t("ui.aiRewrite.pOutput")
+    };
+  }
+  async function mentionedWiki(text) {
+    if (!state.root || !text) return "";
+    try {
+      const { listEntities: listEntities2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
+      const hits = [];
+      for (const e of await listEntities2(state.root)) {
+        const names = [e.name, ...e.aliases || []].filter((n2) => n2 && String(n2).length >= 2);
+        if (!names.some((n2) => text.includes(n2))) continue;
+        const f = e.entity.fields || {};
+        const summary = Object.entries(f).filter(([, v2]) => v2 && typeof v2 === "string").map(([k, v2]) => k + ": " + v2).join(" \xB7 ").replace(/\s+/g, " ");
+        hits.push("- " + e.name + (summary ? " \u2014 " + (summary.length > 320 ? summary.slice(0, 320) + "\u2026" : summary) : ""));
+        if (hits.length >= 8) break;
+      }
+      return hits.join("\n");
+    } catch (e) {
+      log("warn", "rewrite: wiki", e);
+      return "";
+    }
+  }
+  async function projectSnippets(query) {
+    try {
+      const { ragContext: ragContext2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+      const r = await ragContext2(query, { k: 4, maxTokens: 900 });
+      return r && r.text || "";
+    } catch (e) {
+      log("warn", "rewrite: rag", e);
+      return "";
+    }
+  }
+  function openRewriteBar(tab) {
+    const ed = tab && (tab.editor || tab.sp);
+    const view2 = ed && ed.view;
+    if (!view2) return false;
+    const { from: from2, to } = view2.state.selection;
+    if (from2 >= to) {
+      setStatus(t("ui.aiRewrite.needSelection"));
+      return false;
+    }
+    if (view2.editable === false) {
+      setStatus(gi("warning") + " " + t("ui.aiRewrite.locked"));
+      return false;
+    }
+    closeRewriteBar();
+    const isSp = !!tab.sp && !tab.editor;
+    const original = view2.state.doc.textBetween(from2, to, "\n");
+    const cur = { from: from2, to, text: original, replaced: false };
+    const bar = el("div", "k-rewrite-bar");
+    bar.setAttribute("role", "dialog");
+    bar.setAttribute("aria-label", t("ui.aiRewrite.title"));
+    const head2 = el("div", "k-rewrite-head");
+    head2.append(el("span", "k-rewrite-title", gi("pen") + " " + t("ui.aiRewrite.title")));
+    const preview2 = el("span", "k-rewrite-src dim", original.replace(/\s+/g, " ").slice(0, 80) + (original.length > 80 ? "\u2026" : ""));
+    preview2.title = original;
+    const xBtn = el("button", "k-rewrite-x", gi("close"));
+    xBtn.title = t("ui.common.close");
+    head2.append(preview2, xBtn);
+    const agRow = el("div", "k-rewrite-row");
+    agRow.append(el("label", "k-rewrite-lbl", t("ui.aiRewrite.agent")));
+    const agSel = el("select", "wiki-input k-dlg-select k-rewrite-agent");
+    agRow.append(agSel);
+    const agents = listAgents(state.meta && state.meta.ai || {});
+    const opt = (text, value) => {
+      const o = el("option", null, text);
+      o.value = value;
+      agSel.append(o);
+    };
+    opt(t("ui.aiRewrite.noAgent"), "");
+    for (const a of agents) opt(a.name, a.id);
+    opt(gi("cog") + " " + t("ui.aiRewrite.manageAgents"), "::manage");
+    let lastAgent = "";
+    try {
+      lastAgent = localStorage.getItem(LAST_AGENT_KEY) || "";
+    } catch {
+    }
+    agSel.value = agents.some((a) => a.id === lastAgent) ? lastAgent : "";
+    let prevAgent = agSel.value;
+    agSel.onchange = async () => {
+      if (agSel.value === "::manage") {
+        agSel.value = prevAgent;
+        closeRewriteBar();
+        const { showAISettingsDialog: showAISettingsDialog2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+        showAISettingsDialog2();
+        return;
+      }
+      prevAgent = agSel.value;
+      try {
+        localStorage.setItem(LAST_AGENT_KEY, agSel.value);
+      } catch {
+      }
+    };
+    const inp = el("textarea", "wiki-input k-rewrite-input");
+    inp.rows = 2;
+    inp.placeholder = t("ui.aiRewrite.promptPh");
+    const out = el("div", "k-rewrite-out");
+    out.hidden = true;
+    const msg = el("div", "k-rewrite-msg dim");
+    const btns = el("div", "k-rewrite-btns");
+    const runB = el("button", "k-ok k-rewrite-run", t("ui.aiRewrite.run"));
+    const stopB = el("button", "k-rewrite-stop", gi("stop") + " " + t("ui.aiRewrite.stop"));
+    const undoB = el("button", "k-rewrite-undo", gi("undo") + " " + t("ui.aiRewrite.undo"));
+    const copyB = el("button", "k-rewrite-copy", t("ui.common.copy"));
+    const doneB = el("button", "k-rewrite-done", t("ui.aiRewrite.done"));
+    stopB.hidden = undoB.hidden = copyB.hidden = doneB.hidden = true;
+    btns.append(msg, stopB, undoB, copyB, runB, doneB);
+    bar.append(head2, agRow, inp, out, btns);
+    document.body.append(bar);
+    const hl = el("div", "k-rewrite-hls");
+    document.body.append(hl);
+    const paneOf = () => view2.dom.closest(".pane") || view2.dom.parentElement;
+    function drawHl() {
+      hl.replaceChildren();
+      const pr = paneOf().getBoundingClientRect();
+      Object.assign(hl.style, { left: pr.left + "px", top: pr.top + "px", width: pr.width + "px", height: pr.height + "px" });
+      try {
+        const a = view2.domAtPos(cur.from), b = view2.domAtPos(cur.to);
+        const rg = document.createRange();
+        rg.setStart(a.node, a.offset);
+        rg.setEnd(b.node, b.offset);
+        for (const rc of rg.getClientRects()) {
+          if (rc.width < 1 || rc.height < 1) continue;
+          const d = el("div", "k-rewrite-hl");
+          Object.assign(d.style, {
+            left: rc.left - pr.left + "px",
+            top: rc.top - pr.top + "px",
+            width: rc.width + "px",
+            height: rc.height + "px"
+          });
+          hl.append(d);
+        }
+      } catch {
+      }
+    }
+    function place() {
+      if (!bar.isConnected) return;
+      if (view2.isDestroyed) {
+        closeRewriteBar();
+        return;
+      }
+      let a, b;
+      try {
+        a = view2.coordsAtPos(Math.min(cur.from, view2.state.doc.content.size));
+        b = view2.coordsAtPos(Math.min(cur.to, view2.state.doc.content.size));
+      } catch {
+        return;
+      }
+      const W = window.innerWidth, H2 = window.innerHeight, M2 = 8;
+      const pr = paneOf().getBoundingClientRect();
+      const inPane = pr.width >= 380;
+      bar.style.width = inPane ? Math.min(560, pr.width - 2 * M2) + "px" : "";
+      const r = bar.getBoundingClientRect();
+      let top = b.bottom + M2;
+      if (top + r.height > H2 - M2) top = Math.max(M2, a.top - r.height - M2);
+      const lo = inPane ? pr.left + M2 : M2;
+      const hi = inPane ? pr.right - r.width - M2 : W - r.width - M2;
+      const left = Math.max(lo, Math.min(Math.min(a.left, b.left), hi));
+      bar.style.left = Math.round(left) + "px";
+      bar.style.top = Math.round(top) + "px";
+      drawHl();
+    }
+    place();
+    setTimeout(() => inp.focus(), 0);
+    let reqId = "";
+    let busy = false;
+    const onScroll = () => place();
+    const onResize = () => place();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    function onKey(e) {
+      if (e.key === "Escape" && _bar === ctl) {
+        e.stopPropagation();
+        e.preventDefault();
+        closeRewriteBar();
+      }
+    }
+    document.addEventListener("keydown", onKey, true);
+    const ctl = {
+      close() {
+        if (busy && reqId && kapi.httpAbort) {
+          try {
+            kapi.httpAbort(reqId);
+          } catch {
+          }
+        }
+        window.removeEventListener("scroll", onScroll, true);
+        window.removeEventListener("resize", onResize);
+        document.removeEventListener("keydown", onKey, true);
+        bar.remove();
+        hl.remove();
+        try {
+          if (!view2.isDestroyed) view2.focus();
+        } catch {
+        }
+      }
+    };
+    _bar = ctl;
+    xBtn.onclick = () => closeRewriteBar();
+    doneB.onclick = () => closeRewriteBar();
+    inp.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        if (!busy) run3();
+      }
+    };
+    runB.onclick = () => {
+      if (!busy) run3();
+    };
+    stopB.onclick = () => {
+      if (reqId && kapi.httpAbort) kapi.httpAbort(reqId);
+    };
+    copyB.onclick = () => {
+      navigator.clipboard.writeText(out.textContent || "").then(() => setStatus(t("ui.aiRewrite.copied")));
+    };
+    undoB.onclick = () => {
+      if (!cur.replaced) return;
+      if (replaceRange2(cur.text, original)) {
+        cur.replaced = false;
+        undoB.hidden = true;
+        msg.textContent = t("ui.aiRewrite.restored");
+      } else msg.textContent = gi("warning") + " " + t("ui.aiRewrite.changed");
+    };
+    function textAt(a, b) {
+      return view2.state.doc.textBetween(a, b, "\n");
+    }
+    function replaceRange2(expect, text) {
+      if (view2.isDestroyed) return false;
+      const rg = resolveRange(textAt, cur.from, cur.to, expect);
+      if (!rg) return false;
+      const before = view2.state.doc.content.size;
+      const multi = text.includes("\n");
+      if (!multi) {
+        view2.dispatch(view2.state.tr.insertText(text, rg.from, rg.to).scrollIntoView());
+      } else {
+        view2.dispatch(view2.state.tr.setSelection(TextSelection.create(view2.state.doc, rg.from, rg.to)));
+        const ok2 = isSp ? tab.sp.insertScript(text) : tab.editor.insertLines(text);
+        if (!ok2) return false;
+      }
+      const after = view2.state.doc.content.size;
+      cur.to = rg.to + (after - before);
+      cur.text = textAt(cur.from, cur.to);
+      try {
+        view2.dispatch(view2.state.tr.setSelection(TextSelection.create(view2.state.doc, cur.from, cur.to)));
+      } catch {
+      }
+      place();
+      return true;
+    }
+    async function run3() {
+      const { aiConfigured: aiConfigured2 } = await Promise.resolve().then(() => (init_ai_settings(), ai_settings_exports));
+      const ready2 = await aiConfigured2();
+      if (!ready2.ok) {
+        msg.textContent = gi("fail") + " " + (ready2.why || t("ui.aiRewrite.needSetup"));
+        return;
+      }
+      busy = true;
+      runB.disabled = true;
+      agSel.disabled = true;
+      stopB.hidden = false;
+      undoB.hidden = copyB.hidden = doneB.hidden = true;
+      out.hidden = false;
+      out.textContent = "";
+      out.dataset.state = "busy";
+      msg.textContent = t("ui.aiRewrite.gathering");
+      place();
+      reqId = "rewrite-" + Date.now().toString(36);
+      try {
+        const agent2 = agents.find((a) => a.id === agSel.value) || null;
+        const doc3 = view2.state.doc;
+        const beforeTxt = doc3.textBetween(Math.max(0, cur.from - AROUND_CHARS * 3), cur.from, "\n");
+        const afterTxt = doc3.textBetween(cur.to, Math.min(doc3.content.size, cur.to + AROUND_CHARS * 3), "\n");
+        const instruction = inp.value.trim();
+        let refText = "";
+        if (agent2) {
+          const { agentReferenceText: agentReferenceText2 } = await Promise.resolve().then(() => (init_ai_agents_ui(), ai_agents_ui_exports));
+          const r = await agentReferenceText2(agent2);
+          refText = r.text;
+          if (r.missing.length) log("warn", "rewrite: missing references", r.missing);
+        }
+        const wiki = await mentionedWiki(beforeTxt.slice(-AROUND_CHARS) + "\n" + original + "\n" + afterTxt.slice(0, AROUND_CHARS));
+        const rag = await projectSnippets(original + (instruction ? "\n" + instruction : ""));
+        const project = [wiki && t("ui.aiRewrite.pWiki") + "\n" + wiki, rag].filter(Boolean).join("\n\n");
+        const built = buildRewritePrompt(
+          {
+            text: original,
+            instruction,
+            agent: agent2,
+            refText,
+            project,
+            before: beforeTxt,
+            after: afterTxt,
+            format: isSp ? "screenplay" : "prose"
+          },
+          promptLabels()
+        );
+        msg.textContent = t("ui.aiRewrite.working");
+        const { getAIClient: getAIClient2 } = await Promise.resolve().then(() => (init_ai_bridge(), ai_bridge_exports));
+        let acc = "";
+        const res = await getAIClient2().stream(
+          { system: built.system, prompt: built.prompt, feature: "rewrite", reqId },
+          (delta) => {
+            acc += delta || "";
+            out.textContent = acc;
+            place();
+          }
+        );
+        const got = cleanRewriteOutput((res && res.ok ? res.text : "") || "", original);
+        if (!res || !res.ok || !got) {
+          out.dataset.state = "err";
+          const why = res && res.aborted && !res.timedOut ? t("ui.aiRewrite.stopped") : res && res.error || t("ui.aiRewrite.empty");
+          msg.textContent = gi("fail") + " " + why;
+          if (acc.trim()) {
+            out.textContent = acc;
+            copyB.hidden = false;
+          }
+          return;
+        }
+        out.textContent = got;
+        out.dataset.state = "ok";
+        const expect = cur.replaced ? cur.text : original;
+        if (replaceRange2(expect, got)) {
+          cur.replaced = true;
+          undoB.hidden = false;
+          msg.textContent = gi("check-circle") + " " + t("ui.aiRewrite.replaced");
+          setStatus(t("ui.aiRewrite.replaced"));
+        } else {
+          copyB.hidden = false;
+          msg.textContent = gi("warning") + " " + t("ui.aiRewrite.changed");
+        }
+        runB.textContent = t("ui.aiRewrite.again");
+        doneB.hidden = false;
+      } catch (e) {
+        out.dataset.state = "err";
+        msg.textContent = gi("fail") + " " + String(e && e.message || e);
+        log("error", "rewrite failed", e);
+      } finally {
+        busy = false;
+        runB.disabled = false;
+        agSel.disabled = false;
+        stopB.hidden = true;
+        place();
+      }
+    }
+    return true;
+  }
+  var LAST_AGENT_KEY, _bar;
+  var init_ai_rewrite_ui = __esm({
+    "src/ai/ai-rewrite-ui.js"() {
+      init_i18n();
+      init_core();
+      init_icons();
+      init_dist4();
+      init_ai_agents();
+      LAST_AGENT_KEY = "k2-rewrite-agent";
+      _bar = null;
     }
   });
 
@@ -101036,12 +101903,12 @@ ${mdToHtmlBody(md, o)}
           this.copyPDFIndirectObject = function(ref) {
             var alreadyMapped = _this.traversedObjects.has(ref);
             if (!alreadyMapped) {
-              var newRef = _this.dest.nextRef();
-              _this.traversedObjects.set(ref, newRef);
+              var newRef2 = _this.dest.nextRef();
+              _this.traversedObjects.set(ref, newRef2);
               var dereferencedValue = _this.src.lookup(ref);
               if (dereferencedValue) {
                 var cloned = _this.copy(dereferencedValue);
-                _this.dest.assign(newRef, cloned);
+                _this.dest.assign(newRef2, cloned);
               }
             }
             return _this.traversedObjects.get(ref);
@@ -154928,7 +155795,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (!plan) await preview2();
       if (!plan || !plan.total) return { files: 0, count: 0 };
       const nFiles = plan.files.filter((f) => !f.locked).length;
-      if (ask2 && !await confirmBox(tf("ui.replace.confirm", plan.total, nFiles))) return null;
+      if (ask2 && !await confirmBox(tf("ui.replace.confirm", plan.total, nFiles), t("ui.common.replaceBtn"))) return null;
       bRun.disabled = true;
       const res = await withBusy(t("ui.replace.scanning"), () => runProjectReplace(iFind.value, iWith.value, opts(), { docs }));
       setStatus(tf("ui.replace.done", res.count, res.files));
@@ -160779,7 +161646,7 @@ img{max-width:100%}` }
     _skills = await loadSkills(state.root);
     const on2 = new Set(live(s).skills || []);
     const items = _skills.map((k) => ({
-      label: (on2.has(k.id) ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + k.name + (k.description ? " \u2014 " + k.description : "") + tf("ui.aiChatPanel.char", String(k.chars)),
+      text: (on2.has(k.id) ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + k.name + (k.description ? " \u2014 " + k.description : "") + tf("ui.aiChatPanel.char", String(k.chars)),
       click: async () => {
         const c = live(s);
         const set = new Set(c.skills || []);
@@ -161186,7 +162053,7 @@ img{max-width:100%}` }
   async function restartSession(s, { confirm = true } = {}) {
     const target = live(s) || S4.cur;
     if (!target) return null;
-    if (confirm && (target.messages || []).length && !await confirmBox(tf("ui.aiChatPanel.restartClearDialogueText", (target.messages || []).length, target.title))) {
+    if (confirm && (target.messages || []).length && !await confirmBox(tf("ui.aiChatPanel.restartClearDialogueText", (target.messages || []).length, target.title), t("ui.common.clear"))) {
       return null;
     }
     S4.cur = clearMessages(target);
@@ -161926,14 +162793,14 @@ img{max-width:100%}` }
     root = clone4(root);
     const wantRow = side === "left" || side === "right";
     const before = side === "left" || side === "top";
-    const nl = leaf(newTabId);
+    const nl2 = leaf(newTabId);
     const loc = locate2(root, targetLeafId);
-    const mk2 = (existing) => split2(wantRow ? "row" : "col", before ? [nl, existing] : [existing, nl]);
+    const mk2 = (existing) => split2(wantRow ? "row" : "col", before ? [nl2, existing] : [existing, nl2]);
     if (!loc) return mk2(root);
     const parent = loc.parent;
     if (parent.type === "split" && parent.dir === (wantRow ? "row" : "col")) {
       const at = before ? loc.index : loc.index + 1;
-      parent.children.splice(at, 0, nl);
+      parent.children.splice(at, 0, nl2);
       parent.sizes = even(parent.children.length);
     } else {
       parent.children[loc.index] = mk2(parent.children[loc.index]);
@@ -162191,16 +163058,16 @@ img{max-width:100%}` }
           if (!this.root) return this.open(tabId);
           const target = targetLeafId && findLeaf(this.root, targetLeafId) || this._focusLeaf();
           this._set(this.has(tabId) ? moveTabToPane(this.root, tabId, target.id, side) : splitPane(this.root, target.id, side, tabId));
-          const nl = findLeafByTab(this.root, tabId);
-          if (nl) this.focusId = nl.id;
+          const nl2 = findLeafByTab(this.root, tabId);
+          if (nl2) this.focusId = nl2.id;
           return true;
         }
         /** Move an already-open tab into another pane (side='center' replaces it). */
         moveTab(tabId, targetLeafId, side = "right") {
           if (!this.root) return false;
           this._set(moveTabToPane(this.root, tabId, targetLeafId, side));
-          const nl = this.root && findLeafByTab(this.root, tabId);
-          this.focusId = nl ? nl.id : null;
+          const nl2 = this.root && findLeafByTab(this.root, tabId);
+          this.focusId = nl2 ? nl2.id : null;
           return true;
         }
         close(tabId) {
@@ -166695,7 +167562,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       } },
       "-",
       { label: t("ui.dlgb.mClearTurns"), danger: true, click: async () => {
-        if (!await confirmBox(t("ui.dlgb.confirmClear"))) return;
+        if (!await confirmBox(t("ui.dlgb.confirmClear"), t("ui.common.clear"))) return;
         s.turns = [];
         s.next = nextPair(s, Math.random);
         touch();
@@ -176921,18 +177788,21 @@ ${s.body}`).join("\n\n");
         if (SCRIV_FOLDER.has(it.type) || it.children && it.children.length) {
           const ch = { title: it.title || t("ui.common.notNamed"), scenes: [] };
           chapters.push(ch);
+          if (!chapter) loose = null;
           visit(it.children || [], ch);
           if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);
         } else if (SCRIV_TEXT.has(it.type)) {
           if (!chapter) {
-            loose = loose || { title: opts.looseTitle || t("ui.impOrtScrivener.notHasChapter"), scenes: [] };
+            if (!loose) {
+              loose = { title: opts.looseTitle || t("ui.impOrtScrivener.notHasChapter"), scenes: [] };
+              chapters.push(loose);
+            }
             pushScene(loose, it);
           } else pushScene(chapter, it);
         }
       }
     };
     visit(roots, null);
-    if (loose) chapters.unshift(loose);
     const kept = chapters.filter((c) => c.scenes.length);
     return {
       sections: [{ title: opts.sectionTitle || t("ui.common.bookOne"), chapters: kept }],
@@ -177088,11 +177958,11 @@ ${sc.body || ""}
     ];
     if (preview2.warnings?.length) lines.push(t("ui.imp.warnPrefix") + preview2.warnings.length + t("ui.imp.warnSuffix"));
     if (preview2.warnings?.length) log("warn", t("ui.impOrt.scrivenerImportHasWord"), preview2.warnings);
-    if (!await confirmBox(lines.join("\n") + t("ui.impOrt.pickFolderToDone"))) return null;
+    if (!await confirmBox(lines.join("\n") + t("ui.impOrt.pickFolderToDone"), t("ui.common.importBtn"))) return null;
     const dest = await kapi.openProjectDialog();
     if (!dest) return null;
     if (await kapi.exists(io.join(dest, "project.khn.json"))) {
-      if (!await confirmBox(t("ui.imp.overwrite"))) return null;
+      if (!await confirmBox(t("ui.imp.overwrite"), t("ui.common.overwrite"))) return null;
     }
     setBusy(t("ui.imp.working"));
     let res;
@@ -177131,6 +178001,16 @@ ${sc.body || ""}
   });
 
   // src/import-sp.js
+  var import_sp_exports = {};
+  __export(import_sp_exports, {
+    SP_IMPORTERS: () => SP_IMPORTERS,
+    detectFormat: () => detectFormat,
+    elementsToMarkdown: () => elementsToMarkdown,
+    importScreenplay: () => importScreenplay,
+    importScreenplayDialog: () => importScreenplayDialog,
+    importSummary: () => importSummary,
+    splitFountainTitlePage: () => splitFountainTitlePage
+  });
   async function importScreenplayDialog(injectFn) {
     const filePath = await kapi.openScreenplayFile();
     if (!filePath) return null;
@@ -177140,6 +178020,7 @@ ${sc.body || ""}
       return null;
     }
     const summary = importSummary(result.elements);
+    summary.title = result.title || "";
     const markdown = elementsToMarkdown(result.elements);
     const mode = await importPreviewDialog({ filePath, result, summary, markdown });
     if (!mode) return null;
@@ -177219,7 +178100,15 @@ ${sc.body || ""}
     }
     try {
       const elements = await importer.parse(content);
-      return { ok: true, elements, format: format3, importer: importer.name };
+      const titlePage = elements && elements.titlePage || {};
+      return {
+        ok: true,
+        elements,
+        format: format3,
+        importer: importer.name,
+        titlePage,
+        title: String(titlePage.title || "").replace(/[_*]/g, "").trim()
+      };
     } catch (e) {
       return { ok: false, error: errText(e) };
     }
@@ -177347,38 +178236,34 @@ ${sc.body || ""}
     return elements;
   }
   function parseFountainFromText(text) {
-    return parseScript(text);
+    const tp = splitFountainTitlePage(text);
+    const els = parseScript(tp.body);
+    els.titlePage = tp.fields;
+    return els;
+  }
+  function splitFountainTitlePage(text) {
+    const src2 = String(text == null ? "" : text).replace(/\r\n?/g, "\n").replace(/^\ufeff/, "");
+    const lines = src2.split("\n");
+    let i5 = 0;
+    while (i5 < lines.length && lines[i5].trim() === "") i5++;
+    const KEY4 = /^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$/;
+    if (i5 >= lines.length || !KEY4.test(lines[i5])) return { fields: {}, body: src2 };
+    const fields = {};
+    let last2 = "";
+    for (; i5 < lines.length; i5++) {
+      const l = lines[i5];
+      if (l.trim() === "") break;
+      const m = KEY4.exec(l);
+      if (m && !/^\s/.test(l)) {
+        last2 = m[1].trim().toLowerCase();
+        fields[last2] = m[2].trim();
+      } else if (last2 && /^\s/.test(l)) fields[last2] = (fields[last2] ? fields[last2] + "\n" : "") + l.trim();
+      else return { fields: {}, body: src2 };
+    }
+    return { fields, body: lines.slice(i5).join("\n").replace(/^\n+/, "") };
   }
   function elementsToMarkdown(elements) {
-    const lines = [];
-    let prevType = "action";
-    let prevBlank = true;
-    const guessNames = guessNamesForBlocks(elements);
-    for (let i5 = 0; i5 < elements.length; i5++) {
-      const { el: el2, text } = elements[i5];
-      if (el2 === "blank") {
-        lines.push("");
-        prevBlank = true;
-        continue;
-      }
-      const nextBlank = blockIsBlank(elements[i5 + 1]);
-      const prefix2 = SP_ELEMS[el2]?.prefix || "";
-      let line = prefix2 + text;
-      try {
-        let [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
-        if (got !== el2 && prefix2) {
-          line = prefix2.endsWith(" ") ? prefix2 + text : prefix2 + " " + text;
-          [got] = classify(line, prevBlank, prevType, void 0, nextBlank, guessNames);
-          if (got !== el2) line = prefix2 + text;
-        }
-        if (got !== el2 && el2 === "action") line = "!" + text;
-      } catch {
-      }
-      lines.push(line);
-      prevBlank = false;
-      prevType = el2;
-    }
-    return lines.join("\n");
+    return blocksToMd((elements || []).map((b) => b && b.el === "blank" ? { el: "action", text: "" } : b));
   }
   function importSummary(elements) {
     const counts = {};
@@ -178839,7 +179724,7 @@ ${css}
     bFix.onclick = async () => {
       const picked = issues.filter((it, i5) => it.fix && boxes[i5] && boxes[i5].checked);
       if (!picked.length) return;
-      if (!await confirmBox(tf("ui.doctor.confirmFix", picked.length))) return;
+      if (!await confirmBox(tf("ui.doctor.confirmFix", picked.length), t("ui.common.fixBtn"))) return;
       bFix.disabled = true;
       const res = await applyDoctorFixes(picked);
       setStatus(tf("ui.doctor.fixedN", res.ok, res.failed));
@@ -201577,6 +202462,198 @@ ${css}
             !/(^|\n)### (Backups|Recycle|Snapshots)[\\/]/.test(all9),
             (all9.match(/### [^\n]+/g) || []).slice(0, 8).join(" \xB7 ")
           );
+          {
+            const AU_RW = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+            const keepRW = { sp: state.meta.ai.systemPrompt, on: state.meta.ai.systemPromptOn, ag: state.meta.ai.agents };
+            const ovRW = await AU_RW.showAISettingsDialog();
+            const spTaRW = ovRW && ovRW.querySelector(".ai-sysprompt");
+            check2(
+              "[RW] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07 System prompt + \u0E2A\u0E48\u0E27\u0E19 Agents",
+              !!spTaRW && !!ovRW.querySelector(".ai-sysprompt-on") && !!ovRW.querySelector(".ai-agent-add")
+            );
+            if (spTaRW) {
+              spTaRW.value = "K2-SYS-TEST \u0E1B\u0E25\u0E14\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07";
+              ovRW.querySelector(".ai-agent-add").click();
+              await w9(60);
+              const dlgRW = document.querySelector(".k-ai-agent");
+              check2(
+                '[RW] \u0E01\u0E14 "\u0E40\u0E1E\u0E34\u0E48\u0E21 Agent" \u2192 \u0E01\u0E25\u0E48\u0E2D\u0E07 Agent \u0E40\u0E1B\u0E34\u0E14 (\u0E0A\u0E37\u0E48\u0E2D \xB7 \u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01 \xB7 \u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07)',
+                !!dlgRW && !!dlgRW.querySelector(".ai-agent-name") && !!dlgRW.querySelector(".ai-agent-persona") && !!dlgRW.querySelector(".ai-agent-add-file")
+              );
+              if (dlgRW) {
+                dlgRW.querySelector(".ai-agent-ok").click();
+                await w9(30);
+                check2(
+                  "[RW] \u0E44\u0E21\u0E48\u0E43\u0E2A\u0E48\u0E0A\u0E37\u0E48\u0E2D \u2192 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14 + \u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25",
+                  document.querySelector(".k-ai-agent") === dlgRW && !!dlgRW.querySelector(".ai-prov-err").textContent
+                );
+                dlgRW.querySelector(".ai-agent-name").value = "E2E \u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E21\u0E37\u0E14";
+                dlgRW.querySelector(".ai-agent-persona").value = "E2E-PERSONA \u0E42\u0E17\u0E19\u0E21\u0E37\u0E14\u0E2B\u0E21\u0E48\u0E19";
+                dlgRW.querySelector(".ai-agent-tpl").click();
+                check2(
+                  "[RW] \u0E1B\u0E38\u0E48\u0E21\u0E41\u0E21\u0E48\u0E41\u0E1A\u0E1A\u0E40\u0E15\u0E34\u0E21\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E17\u0E49\u0E32\u0E22\u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01 (\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21)",
+                  dlgRW.querySelector(".ai-agent-persona").value.startsWith("E2E-PERSONA") && dlgRW.querySelector(".ai-agent-persona").value.split("\n").length >= 5
+                );
+                dlgRW.querySelector(".ai-agent-add-text").click();
+                await w9(30);
+                const refTaRW = dlgRW.querySelector(".ai-agent-ref-text");
+                check2("[RW] \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E41\u0E1A\u0E1A\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E2D\u0E07\u0E44\u0E14\u0E49", !!refTaRW);
+                if (refTaRW) {
+                  refTaRW.value = "E2E-REF \u0E2A\u0E33\u0E19\u0E27\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07";
+                  refTaRW.dispatchEvent(new Event("input"));
+                }
+                dlgRW.querySelector(".ai-agent-ok").click();
+                await w9(60);
+              }
+              check2(
+                "[RW] \u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 Agent \u0E41\u0E25\u0E49\u0E27\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI",
+                !document.querySelector(".k-ai-agent") && ovRW.querySelectorAll(".ai-agent-row").length === 1,
+                ovRW.querySelectorAll(".ai-agent-row").length
+              );
+              ovRW.querySelector(".k-dlg-btns .k-ok").click();
+              await w9(120);
+            }
+            const agRW = (state.meta.ai.agents || [])[0];
+            check2(
+              "[RW] \u2605 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 system prompt + agent \u0E25\u0E07 project meta",
+              state.meta.ai.systemPrompt === "K2-SYS-TEST \u0E1B\u0E25\u0E14\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07" && state.meta.ai.systemPromptOn === true && !!agRW && agRW.name === "E2E \u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E21\u0E37\u0E14" && agRW.refs.length === 1 && agRW.refs[0].text.includes("E2E-REF"),
+              JSON.stringify({ sp: state.meta.ai.systemPrompt, ag: agRW }).slice(0, 200)
+            );
+            const lastRW = async () => {
+              try {
+                return JSON.parse((await kapi.httpFetch("http://127.0.0.1:8931/v1/last", { method: "GET" })).body || "{}");
+              } catch {
+                return {};
+              }
+            };
+            await cs9(prov9, { system: "FEATURE-SYS", messages: [{ role: "user", content: "ping" }] }, () => {
+            });
+            const b1RW = await lastRW();
+            const sys1RW = ((b1RW.messages || []).find((m) => m.role === "system") || {}).content || "";
+            check2(
+              "[RW] \u2605\u2605 System prompt \u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32 system \u0E02\u0E2D\u0E07\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C\u0E43\u0E19\u0E04\u0E33\u0E02\u0E2D\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E08\u0E23\u0E34\u0E07",
+              sys1RW.startsWith("K2-SYS-TEST \u0E1B\u0E25\u0E14\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07") && sys1RW.includes("FEATURE-SYS"),
+              sys1RW.slice(0, 120)
+            );
+            state.meta.ai.systemPromptOn = false;
+            await cs9(prov9, { system: "FEATURE-SYS", messages: [{ role: "user", content: "ping" }] }, () => {
+            });
+            const sys2RW = (((await lastRW()).messages || []).find((m) => m.role === "system") || {}).content || "";
+            check2("[RW] \u2605 \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C \u2192 \u0E44\u0E21\u0E48\u0E2A\u0E48\u0E07 system prompt \u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49", !sys2RW.includes("K2-SYS-TEST"), sys2RW.slice(0, 80));
+            state.meta.ai.systemPromptOn = true;
+            const titleRW = "\u0E09\u0E32\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A Rewrite";
+            const srcRW = "\u0E0A\u0E32\u0E22\u0E2B\u0E19\u0E38\u0E48\u0E21\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B\u0E43\u0E19\u0E1B\u0E48\u0E32\u0E21\u0E37\u0E14";
+            await rtc9({ tool: "scene.create", args: { title: titleRW, text: "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01 " + srcRW + " \u0E41\u0E25\u0E49\u0E27\u0E2B\u0E22\u0E38\u0E14\u0E19\u0E34\u0E48\u0E07" } });
+            const rowRW = (await ls9(state.root)).find((x) => x.title === titleRW);
+            if (rowRW) {
+              await openScene(rowRW.path, titleRW);
+              await w9(150);
+              const tabRW = [...state.tabs.values()].find((t4) => pathKey(t4.file) === pathKey(rowRW.path));
+              activate(tabRW.file);
+              await w9(60);
+              const vRW = tabRW.editor.view;
+              let fromRW = -1;
+              vRW.state.doc.descendants((n2, pos2) => {
+                if (fromRW < 0 && n2.isText && n2.text.includes(srcRW)) fromRW = pos2 + n2.text.indexOf(srcRW);
+              });
+              check2("[RW] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E09\u0E32\u0E01 + \u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E25\u0E37\u0E2D\u0E01", fromRW > 0);
+              vRW.dispatch(vRW.state.tr.setSelection(TextSelection.create(vRW.state.doc, fromRW, fromRW + srcRW.length)));
+              vRW.focus();
+              const dsel = window.getSelection();
+              const cRW = vRW.coordsAtPos(fromRW + 2);
+              const tgtRW = document.elementFromPoint(cRW.left + 1, cRW.top + 2) || vRW.dom;
+              check2("[RW] DOM selection \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", (dsel && dsel.toString()) === srcRW, dsel && dsel.toString());
+              tgtRW.dispatchEvent(new MouseEvent("contextmenu", {
+                bubbles: true,
+                cancelable: true,
+                clientX: cRW.left + 1,
+                clientY: cRW.top + 2
+              }));
+              await w9(60);
+              const itRW = [...document.querySelectorAll(".k-menu .k-menu-item")].find((x) => x.textContent.includes(t("ui.aiRewrite.menu")));
+              check2(
+                '[RW] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E35\u0E48\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 \u2192 \u0E21\u0E35\u0E40\u0E21\u0E19\u0E39 "Rewrite this"',
+                !!itRW,
+                [...document.querySelectorAll(".k-menu .k-menu-item")].map((x) => x.textContent).join(" | ")
+              );
+              if (itRW) itRW.click();
+              await w9(80);
+              const barRW = document.querySelector(".k-rewrite-bar");
+              check2(
+                "[RW] \u2605 \u0E41\u0E16\u0E1A Rewrite \u0E25\u0E2D\u0E22\u0E02\u0E36\u0E49\u0E19\u0E21\u0E32 \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01 Agent + \u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07",
+                !!barRW && !!barRW.querySelector(".k-rewrite-agent") && !!barRW.querySelector(".k-rewrite-input")
+              );
+              if (barRW) {
+                const brRW = barRW.getBoundingClientRect();
+                check2(
+                  "[RW] \u0E41\u0E16\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E15\u0E49\u0E2B\u0E23\u0E37\u0E2D\u0E40\u0E2B\u0E19\u0E37\u0E2D)",
+                  brRW.left >= 0 && brRW.right <= innerWidth && brRW.top >= 0 && brRW.bottom <= innerHeight && (brRW.top >= cRW.bottom - 1 || brRW.bottom <= cRW.top + 1),
+                  JSON.stringify({ bar: [brRW.top, brRW.bottom], sel: [cRW.top, cRW.bottom] })
+                );
+                const hlRW = [...document.querySelectorAll(".k-rewrite-hls .k-rewrite-hl")];
+                const hlBox = hlRW[0] && hlRW[0].getBoundingClientRect();
+                check2(
+                  "[RW] \u2605 \u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E08\u0E30\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E40\u0E2A\u0E35\u0E22\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E41\u0E25\u0E49\u0E27\u0E01\u0E47\u0E22\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19) \u0E15\u0E23\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21",
+                  hlRW.length >= 1 && Math.abs(hlBox.left - cRW.left) < 30 && Math.abs(hlBox.top - cRW.top) < 12,
+                  JSON.stringify({ n: hlRW.length, hl: hlBox && [hlBox.left, hlBox.top].map(Math.round), sel: [cRW.left, cRW.top].map(Math.round) })
+                );
+                const paneRW = vRW.dom.closest(".pane").getBoundingClientRect();
+                check2(
+                  "[RW] \u0E41\u0E16\u0E1A\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 (\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E44\u0E1B\u0E17\u0E31\u0E1A\u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07 \u0E46)",
+                  paneRW.width < 380 || brRW.left >= paneRW.left - 1 && brRW.right <= paneRW.right + 1,
+                  JSON.stringify({ bar: [brRW.left, brRW.right].map(Math.round), pane: [paneRW.left, paneRW.right].map(Math.round) })
+                );
+                const selRW = barRW.querySelector(".k-rewrite-agent");
+                check2(
+                  '[RW] \u0E0A\u0E48\u0E2D\u0E07 Agent \u0E21\u0E35 "\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49" + agent \u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 + \u0E17\u0E32\u0E07\u0E44\u0E1B\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23',
+                  [...selRW.options].some((o) => o.value === agRW.id) && selRW.options[0].value === "" && [...selRW.options].some((o) => o.value === "::manage")
+                );
+                selRW.value = agRW.id;
+                selRW.dispatchEvent(new Event("change"));
+                barRW.querySelector(".k-rewrite-input").value = "E2E-INSTR \u0E43\u0E2B\u0E49\u0E15\u0E36\u0E07\u0E40\u0E04\u0E23\u0E35\u0E22\u0E14\u0E02\u0E36\u0E49\u0E19";
+                barRW.querySelector(".k-rewrite-run").click();
+                await until9(() => ["ok", "err"].includes(barRW.querySelector(".k-rewrite-out").dataset.state), 2e4);
+                const outRW = barRW.querySelector(".k-rewrite-out");
+                const txtRW = tabRW.editor.getText();
+                check2(
+                  "[RW] \u2605\u2605 AI \u0E15\u0E2D\u0E1A \u2192 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 (\u0E23\u0E2D\u0E1A\u0E02\u0E49\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A)",
+                  outRW.dataset.state === "ok" && txtRW.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01 \u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A \u0E08\u0E1A \u0E41\u0E25\u0E49\u0E27\u0E2B\u0E22\u0E38\u0E14\u0E19\u0E34\u0E48\u0E07") && !txtRW.includes(srcRW),
+                  JSON.stringify({ st: outRW.dataset.state, msg: barRW.querySelector(".k-rewrite-msg").textContent, txt: txtRW.slice(0, 120) })
+                );
+                check2("[RW] \u0E41\u0E17\u0E47\u0E1A\u0E16\u0E39\u0E01\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E27\u0E48\u0E32\u0E21\u0E35\u0E01\u0E32\u0E23\u0E41\u0E01\u0E49", tabRW.dirty === true);
+                const bRW = await lastRW();
+                const sysRW = ((bRW.messages || []).find((m) => m.role === "system") || {}).content || "";
+                const usrRW = ((bRW.messages || []).filter((m) => m.role === "user").pop() || {}).content || "";
+                check2(
+                  "[RW] \u2605 \u0E04\u0E33\u0E02\u0E2D Rewrite \u0E21\u0E35 system prompt \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32 + \u0E1A\u0E38\u0E04\u0E25\u0E34\u0E01 agent",
+                  sysRW.startsWith("K2-SYS-TEST") && sysRW.includes("E2E-PERSONA"),
+                  sysRW.slice(0, 160)
+                );
+                check2(
+                  "[RW] \u2605 \u0E04\u0E33\u0E02\u0E2D Rewrite \u0E21\u0E35\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A \xB7 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 \xB7 \u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07\u0E02\u0E2D\u0E07 agent \xB7 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E23\u0E2D\u0E1A\u0E02\u0E49\u0E32\u0E07",
+                  usrRW.includes(srcRW) && usrRW.includes("E2E-INSTR") && usrRW.includes("E2E-REF") && usrRW.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01") && usrRW.includes("\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E22\u0E38\u0E14\u0E19\u0E34\u0E48\u0E07"),
+                  usrRW.slice(0, 200)
+                );
+                const undoRW = barRW.querySelector(".k-rewrite-undo");
+                check2("[RW] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E04\u0E37\u0E19\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E2B\u0E25\u0E31\u0E07\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", !!undoRW && !undoRW.hidden);
+                if (undoRW) undoRW.click();
+                await w9(30);
+                check2(
+                  "[RW] \u2605 \u0E01\u0E14\u0E04\u0E37\u0E19\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A \u2192 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32",
+                  tabRW.editor.getText().includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01 " + srcRW + " \u0E41\u0E25\u0E49\u0E27\u0E2B\u0E22\u0E38\u0E14\u0E19\u0E34\u0E48\u0E07"),
+                  tabRW.editor.getText().slice(0, 120)
+                );
+                document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+                await w9(30);
+                check2("[RW] Esc \u0E1B\u0E34\u0E14\u0E41\u0E16\u0E1A (\u0E41\u0E25\u0E30\u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22)", !document.querySelector(".k-rewrite-bar") && !document.querySelector(".k-rewrite-hls"));
+              }
+              closeTab(tabRW.file, { discard: true });
+            }
+            await rtc9({ tool: "scene.delete", args: { title: titleRW } });
+            state.meta.ai.systemPrompt = keepRW.sp;
+            state.meta.ai.systemPromptOn = keepRW.on;
+            state.meta.ai.agents = keepRW.ag;
+          }
           hidePanel("ai-chat");
           state.meta.ai.providers = keep9.providers;
           state.meta.ai.activeProviderId = keep9.active;
@@ -209694,6 +210771,7 @@ ${css}
         }
         const scRows120 = () => [...document.querySelectorAll("#tree .scene[data-path]")].filter((r) => r._ctx);
         {
+          hideTip();
           const rows = scRows120();
           check2("[120-3] \u0E21\u0E35\u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49", rows.length >= 2, rows.length);
           check2(
@@ -215809,6 +216887,172 @@ ${css}
         });
         await buildTree2();
       }
+      {
+        const wBH = (ms) => new Promise((r) => setTimeout(r, ms));
+        const rowBH = [...document.querySelectorAll("#tree .scene")].find((x) => x.dataset.path && /\.md$/i.test(x.dataset.path));
+        if (rowBH) {
+          rowBH.click();
+          await wBH(400);
+        }
+        document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+        await handleCommand("goto-page");
+        await wBH(80);
+        check2(
+          '[BH-1] \u2605 goto-page \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E44\u0E1B\u0E17\u0E35\u0E48\u2026" (\u0E40\u0E14\u0E34\u0E21: \u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E2B\u0E19\u0E49\u0E32 1 + "\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32  \u0E08\u0E32\u0E01 N \u0E2B\u0E19\u0E49\u0E32")',
+          !!document.querySelector(".k-goto-dlg") && !/ไปที่หน้า  จาก/.test($("#status").textContent),
+          $("#status").textContent
+        );
+        document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+        const r2a = togglePanel(void 0);
+        const r2b = showPanel("");
+        await wBH(80);
+        check2(
+          '[BH-2] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D = \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E1C\u0E07\u0E1C\u0E35 "undefined")',
+          r2a === false && r2b === false && !document.querySelector('.k-float-panel[data-panel-id="undefined"]') && ![...document.querySelectorAll(".k-float-panel")].some((p) => !p.querySelector(".k-panel-head-title")?.textContent.trim() && !p.querySelector(".k-tabs, .k-tab"))
+        );
+        setTreeScope({ guid: "bh-x", label: '<img src=x class="bh-inj">\u0E1A\u0E17' });
+        await wBH(30);
+        const chipBH = document.getElementById("tree-scope");
+        check2(
+          '[BH-3] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17/\u0E40\u0E25\u0E48\u0E21\u0E43\u0E19\u0E1B\u0E49\u0E32\u0E22 "\u0E04\u0E49\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30" \u0E41\u0E2A\u0E14\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E35\u0E40\u0E1B\u0E47\u0E19 HTML)',
+          !!chipBH && !chipBH.querySelector(".bh-inj") && chipBH.textContent.includes("<img"),
+          chipBH && chipBH.innerHTML.slice(0, 120)
+        );
+        setTreeScope(null);
+        for (const id of ["timeline", "kanban", "maps", "codex"]) {
+          togglePanel(id);
+          await wBH(120);
+          togglePanel(id);
+          await wBH(80);
+        }
+        await wBH(200);
+        const chipsBH = document.querySelector("#content > .k-hidden-chips");
+        const fmtBH = document.querySelector("#content .k-fmtbar:not(.planner-fmtbar)");
+        if (chipsBH && fmtBH && fmtBH.offsetParent !== null) {
+          const a = chipsBH.getBoundingClientRect(), b = fmtBH.getBoundingClientRect();
+          const hit = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+          check2(
+            "[BH-4] \u2605 \u0E0A\u0E34\u0E1B\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E0B\u0E48\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E08\u0E31\u0E14\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E25\u0E2D\u0E22 (\u0E22\u0E01\u0E2B\u0E25\u0E1A\u0E02\u0E36\u0E49\u0E19\u0E44\u0E1B)",
+            !hit,
+            JSON.stringify({ chips: [a.top, a.bottom, a.left, a.right].map(Math.round), fmt: [b.top, b.bottom, b.left, b.right].map(Math.round) })
+          );
+        } else {
+          check2("[BH-4] (\u0E02\u0E49\u0E32\u0E21) \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E2B\u0E23\u0E37\u0E2D\u0E41\u0E16\u0E1A\u0E25\u0E2D\u0E22\u0E43\u0E2B\u0E49\u0E27\u0E31\u0E14", true, JSON.stringify({ chips: !!chipsBH, fmt: !!fmtBH }));
+        }
+        const rowLog = document.createElement("div");
+        rowLog.className = "k-log-row";
+        rowLog.style.width = "240px";
+        rowLog.innerHTML = '<span class="k-log-time">10:00:00</span><span class="k-log-lv">i</span><span class="k-log-src">cmd</span><span class="k-log-msg">story-starter-toggle-with-a-very-long-name-here</span>';
+        const lp = document.createElement("div");
+        lp.className = "k-log-list";
+        lp.append(rowLog);
+        document.body.append(lp);
+        const msgTop = rowLog.querySelector(".k-log-msg").getBoundingClientRect().top;
+        const timeTop = rowLog.querySelector(".k-log-time").getBoundingClientRect().top;
+        check2(
+          "[BH-5] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E40\u0E27\u0E25\u0E32 (\u0E2B\u0E48\u0E2D\u0E43\u0E19\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07)",
+          Math.abs(msgTop - timeTop) < 8,
+          Math.round(msgTop) + " vs " + Math.round(timeTop)
+        );
+        lp.remove();
+        {
+          settingsDialog();
+          await wBH(400);
+          const tabsBH = [...document.querySelectorAll(".k-set-tab")];
+          const squashed = tabsBH.filter((x) => x.scrollHeight > x.clientHeight + 2);
+          check2(
+            "[BH2-6] \u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E08\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E42\u0E14\u0E19\u0E15\u0E31\u0E14",
+            tabsBH.length > 5 && squashed.length === 0,
+            tabsBH.length + " \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \xB7 \u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A " + squashed.length
+          );
+          document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+          const ISP = await Promise.resolve().then(() => (init_import_sp(), import_sp_exports));
+          const FO = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+          const mdBH = ISP.elementsToMarkdown([
+            { el: "character", text: "\u0E42\u0E17\u0E23\u0E30" },
+            { el: "parenthetical", text: "(\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A)" },
+            { el: "dialogue", text: "\u0E43\u0E04\u0E23\u0E2D\u0E22\u0E39\u0E48" }
+          ]);
+          check2(
+            '[BH2-7] \u2605 \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17: \u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A\u0E40\u0E02\u0E35\u0E22\u0E19\u0E40\u0E1B\u0E47\u0E19 ((\u2026)) \u0E41\u0E1A\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 (\u0E40\u0E14\u0E34\u0E21 "(((\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A)")',
+            mdBH.includes("((\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A))") && !mdBH.includes("((("),
+            mdBH
+          );
+          const backBH = FO.parseScript(mdBH).filter((b) => b.el === "parenthetical");
+          check2("[BH2-7] \u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A\u0E40\u0E14\u0E34\u0E21", backBH.length === 1 && backBH[0].text === "(\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A)", JSON.stringify(backBH));
+          const tpBH = ISP.splitFountainTitlePage("Title: \u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A\nAuthor: \u0E1C\u0E39\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\n    \u0E23\u0E48\u0E27\u0E21\u0E40\u0E02\u0E35\u0E22\u0E19\n\nINT. \u0E2B\u0E49\u0E2D\u0E07 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19\n");
+          check2(
+            "[BH2-7] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01 Fountain \u0E16\u0E39\u0E01\u0E41\u0E22\u0E01\u0E2D\u0E2D\u0E01 \u0E44\u0E21\u0E48\u0E1B\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E1A\u0E17",
+            tpBH.fields.title === "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E17\u0E14\u0E2A\u0E2D\u0E1A" && tpBH.fields.author === "\u0E1C\u0E39\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\n\u0E23\u0E48\u0E27\u0E21\u0E40\u0E02\u0E35\u0E22\u0E19" && tpBH.body.startsWith("INT."),
+            JSON.stringify(tpBH)
+          );
+          check2(
+            "[BH2-7] \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01 = \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",
+            ISP.splitFountainTitlePage("INT. \u0E2B\u0E49\u0E2D\u0E07 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19\n\n\u0E42\u0E17\u0E23\u0E30\u0E40\u0E14\u0E34\u0E19").body === "INT. \u0E2B\u0E49\u0E2D\u0E07 - \u0E01\u0E25\u0E32\u0E07\u0E27\u0E31\u0E19\n\n\u0E42\u0E17\u0E23\u0E30\u0E40\u0E14\u0E34\u0E19"
+          );
+          const csvBH = await kapi.join(state.root, "bh-lang-en.csv");
+          await kapi.writeFile(csvBH, "\uFEFFmeta.code,en\nmeta.name,English\nui.bh.testKey,BH english text\n");
+          const langBefore = i18n.lang;
+          await importLanguageCsv(csvBH);
+          const enFile = await kapi.join(state.root, "languages", "k2_en.csv");
+          const thFile = await kapi.join(state.root, "languages", "k2_th.csv");
+          const enTxt = await kapi.exists(enFile) ? await kapi.readFile(enFile) : "";
+          const thTxt = await kapi.exists(thFile) ? await kapi.readFile(thFile) : "";
+          check2(
+            "[BH2-8] \u2605\u2605 \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32 k2_en.csv (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E15\u0E32\u0E23\u0E32\u0E07) \u2192 \u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32 en \xB7 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22",
+            enTxt.includes("BH english text") && !thTxt.includes("BH english text") && i18n.lang === langBefore,
+            JSON.stringify({ en: enTxt.length, thHas: thTxt.includes("BH english text"), lang: i18n.lang })
+          );
+          await kapi.remove(csvBH);
+          if (enTxt && !enTxt.replace("BH english text", "").includes("ui.")) await kapi.remove(enFile);
+          const scRows2 = [...document.querySelectorAll("#tree .scene")].filter((x) => x.dataset.path && /\.md$/i.test(x.dataset.path)).slice(0, 2);
+          if (scRows2.length === 2) {
+            scRows2[0].click();
+            await wBH(300);
+            scRows2[1].click();
+            await wBH(300);
+            await handleCommand("split-view", "right");
+            await wBH(400);
+            const panes = [...document.querySelectorAll(".k-split-pane")];
+            let over = [];
+            for (const p of panes) {
+              const cb = p.querySelector(":scope > .cmp-close");
+              const bar = p.querySelector(":scope > .k-split-tabs");
+              if (!cb || !bar) continue;
+              const vis = bar.getBoundingClientRect();
+              const inner = vis.right - parseFloat(getComputedStyle(bar).borderInlineEndWidth || "0");
+              if (inner > cb.getBoundingClientRect().left + 1) over.push(Math.round(inner - cb.getBoundingClientRect().left));
+            }
+            check2(
+              '[BH2-9] \u2605 \u0E41\u0E1A\u0E48\u0E07\u0E08\u0E2D: \u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E08\u0E1A\u0E01\u0E48\u0E2D\u0E19\u0E1B\u0E38\u0E48\u0E21 "\u0E1B\u0E34\u0E14\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49" (\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E19)',
+              panes.length >= 2 && over.length === 0,
+              JSON.stringify({ panes: panes.length, over })
+            );
+            await handleCommand("split-view", "right");
+            await wBH(300);
+          }
+          const keepTheme = state.settings.theme;
+          toggleTheme("k2-light");
+          await wBH(300);
+          const cBH = (a, b) => {
+            const p = (s) => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
+            const L2 = (c) => {
+              const f = (v4) => {
+                v4 /= 255;
+                return v4 <= 0.03928 ? v4 / 12.92 : ((v4 + 0.055) / 1.055) ** 2.4;
+              };
+              return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+            };
+            const x = L2(p(a)), y = L2(p(b));
+            return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+          };
+          const logo = document.getElementById("tb-logo");
+          const lr = logo ? cBH(getComputedStyle(logo).color, getComputedStyle(document.getElementById("titlebar") || document.body).backgroundColor) : 99;
+          check2("[BH2-10] \u2605 \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E2A\u0E35\u0E40\u0E19\u0E49\u0E19 (\u0E42\u0E25\u0E42\u0E01\u0E49\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D) \u0E04\u0E2D\u0E19\u0E17\u0E23\u0E32\u0E2A\u0E15\u0E4C \u2265 4.5", lr >= 4.5, lr.toFixed(2));
+          toggleTheme(keepTheme);
+          await wBH(200);
+        }
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -219255,7 +220499,7 @@ ${css}
       const tree = $("#tree");
       if (tree && tree.parentNode) tree.parentNode.insertBefore(chip, tree);
     }
-    chip.innerHTML = iconHtml("search", 14) + t("ui.app.searchOnly") + treeScope.label + "  ";
+    chip.innerHTML = iconHtml("search", 14) + tx("ui.app.searchOnly") + hx(treeScope.label) + "  ";
     const x = el("span", "tree-scope-x", gi("close"));
     x.title = t("ui.app.cancelMargin");
     x.onclick = () => setTreeScope(null);
@@ -225733,7 +226977,12 @@ ${css}
         else if (/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(c)) cols.push([i5, c.split("-")[0] + (c.includes("-") ? "-" + c.split("-")[1].toUpperCase() : "")]);
       }
     }
-    if (!cols.length) cols.push([1, i18n.lang || "th"]);
+    if (!cols.length) {
+      const mc = rows.find((r) => String(r[0] == null ? "" : r[0]).trim() === "meta.code");
+      const code3 = mc ? String(mc[1] == null ? "" : mc[1]).trim() : "";
+      const norm4 = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code3) ? code3.split("-")[0].toLowerCase() + (code3.includes("-") ? "-" + code3.split("-")[1].toUpperCase() : "") : "";
+      cols.push([1, norm4 || i18n.lang || "th"]);
+    }
     const body = hasHead ? rows.slice(1) : rows;
     const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
     const dir2 = await kapi.join(state.root, "languages");
@@ -227528,7 +228777,7 @@ ${css}
   async function revertTab(file) {
     const t3 = state.tabs.get(file);
     if (!t3) return;
-    if (!await confirmBox(t("ui.app.cancelChangeAllTab"), "Revert")) return;
+    if (!await confirmBox(t("ui.app.cancelChangeAllTab"), t("ui.common.revertBtn"))) return;
     const content = await kapi.readFile(file);
     const { meta: meta2, body } = (0, import_md32.parseMdFile)(content);
     t3.diskBody = body;
@@ -227846,7 +229095,7 @@ ${css}
       e.stopPropagation();
       const r = more.getBoundingClientRect();
       popupMenu(r.left, r.bottom, [...state.tabs.entries()].map(([f, t3]) => ({
-        label: (t3.dirty ? gi("dot") + " " : "") + (t3.title || f),
+        text: (t3.dirty ? gi("dot") + " " : "") + (t3.title || f),
         checked: state.active && state.active.file === f,
         click: () => {
           activate(f);
@@ -229949,7 +231198,7 @@ ${css}
     const bCredits = navBtn(t("ui.about.credits"), () => setCredits(!right.classList.contains("show-credits")));
     navBtn("GitHub", () => {
       try {
-        kapi.openExternal("https://github.com/JabCrossHook/Killian_Editor");
+        kapi.openExternal(UPDATE_HOME_URL);
       } catch {
       }
     });
@@ -230498,8 +231747,8 @@ ${css}
             markDirty(t4);
             setStatus(t("ui.app.importScreenplay") + format3 + t("ui.app.done") + summary.scenes + t("ui.app.scene") + summary.characters + t("ui.app.character"));
           } else {
-            const sec = state.active?.meta;
-            let dPath = sec ? await kapi.join(state.root, sec.section, "Draft", sec.draft) : null;
+            const cur = await sceneCtx();
+            let dPath = cur ? cur.dPath : null;
             if (!dPath) {
               const ds = await listDrafts();
               if (ds.length === 1) dPath = ds[0].dPath;
@@ -230511,12 +231760,13 @@ ${css}
             }
             if (dPath) {
               const dj = await kapi.readJson(await kapi.join(dPath, "draft.json")).catch(() => ({}));
-              const ch2 = (dj.chapters || [])[0] || await addChapter(dPath, t("ui.app.import") + format3);
+              const ch2 = cur && cur.dPath === dPath && cur.ch || (dj.chapters || [])[0] || await addChapter(dPath, t("ui.app.import") + format3);
               if (!ch2) return;
               const row3 = await addScene(
                 dPath,
                 ch2,
-                t("ui.app.import") + format3 + "-" + Date.now().toString(36),
+                // ชื่อจากหน้าปกของไฟล์ (Fountain `Title:`) ก่อน · ไม่มีค่อยตั้งชื่อตามรูปแบบไฟล์
+                summary && summary.title || t("ui.app.import") + format3 + "-" + Date.now().toString(36),
                 { meta: { format: "screenplay" }, body: markdown, silent: true }
               );
               if (!row3) return;
@@ -230953,11 +232203,14 @@ ${css}
       case "goto":
         gotoDialog(a[0]);
         break;
+      // ไม่มีเลข (คีย์ลัด Ctrl+Shift+. ส่งมาเปล่า ๆ) = ถามเลขก่อน — เดิมกระโดดหน้า 1 เงียบ ๆ + "ไปที่หน้า  จาก N หน้า"
       case "goto-page":
-        gotoPage2(a[0]);
+        if (a[0] == null || a[0] === "") gotoDialog("page");
+        else gotoPage2(a[0]);
         break;
       case "goto-scene":
-        gotoScene(a[0]);
+        if (a[0] == null || a[0] === "") gotoDialog("scene");
+        else gotoScene(a[0]);
         break;
       case "sp-find-error":
         findNextSpError();
@@ -231210,6 +232463,10 @@ ${css}
     const up = () => {
       dragging = false;
       elm.classList.remove("k-dragging");
+      try {
+        dodgeHiddenChips();
+      } catch {
+      }
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
       if (key2) saveUiLayout(key2, {
@@ -231270,6 +232527,10 @@ ${css}
   }
   function keepFloatingUiInView() {
     let moved = 0;
+    try {
+      dodgeHiddenChips();
+    } catch {
+    }
     const host2 = $("#content");
     if (floatBar && host2 && floatBar.style.display !== "none") {
       const r = floatBar.getBoundingClientRect();
@@ -231379,7 +232640,7 @@ ${css}
       for (const sc of rows) {
         const text = sc.group === "wiki" ? "[" + sc.name + ":]" : "[" + sc.name + "]";
         items.push({
-          label: text + "  \xB7  " + shortcodeLabel(sc.name),
+          text: text + "  \xB7  " + shortcodeLabel(sc.name),
           click: () => insertShortcodeText(text)
         });
       }
@@ -231481,7 +232742,7 @@ ${css}
       for (const sc of rows) {
         if (sc.needsArg) {
           items.push({
-            label: "[" + sc.name + ":\u2026]  \xB7  " + shortcodeLabel(sc.name),
+            text: "[" + sc.name + ":\u2026]  \xB7  " + shortcodeLabel(sc.name),
             click: async () => {
               const arg = await ask(shortcodeLabel(sc.name));
               if (!arg) return;
@@ -231503,7 +232764,7 @@ ${css}
           v2 = "";
         }
         const preview2 = String(v2 || "").trim() ? "  \u2192  " + String(v2).slice(0, 24) : "";
-        items.push({ label: shortcodeLabel(sc.name) + preview2, click: () => insertTextAtField(targetEl, v2) });
+        items.push({ text: shortcodeLabel(sc.name) + preview2, click: () => insertTextAtField(targetEl, v2) });
       }
     }
     const x = ev && Number.isFinite(ev.clientX) ? ev.clientX : Math.round(window.innerWidth / 2);
@@ -232630,6 +233891,8 @@ ${css}
       init_wiki_ui();
       init_dialogs();
       init_update_ui();
+      init_update_check();
+      init_ai_rewrite_ui();
       init_books();
       init_chapters_ui();
       init_read_ui();
@@ -233558,7 +234821,10 @@ ${css}
           const sel = window.getSelection();
           const selWord = (sel?.toString() || "").trim();
           const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
-          if (!bad && !hasThes) return;
+          const rwTab = state.active;
+          const rwEd = rwTab && (rwTab.editor || rwTab.sp);
+          const canRewrite = inDoc && !!selWord && !!(rwEd && rwEd.view && rwEd.view.dom.contains(e.target) && !rwEd.view.state.selection.empty);
+          if (!bad && !hasThes && !canRewrite) return;
           e.preventDefault();
           e.stopPropagation();
           const items = [];
@@ -233586,6 +234852,12 @@ ${css}
             if (items.length) items.push("-");
             items.push({ text: tf("ui.app.thesaurusWordOpposite", selWord), click: () => {
               showThesaurusPopup(selWord, e.clientX, e.clientY);
+            } });
+          }
+          if (canRewrite) {
+            if (items.length && !hasThes) items.push("-");
+            items.push({ text: gi("pen") + " " + t("ui.aiRewrite.menu"), click: () => {
+              openRewriteBar(rwTab);
             } });
           }
           popupMenu(e.clientX, e.clientY, items);

@@ -126,7 +126,7 @@ async function revertTo(seq, label, host) {
   const ok = await confirmBox(
     tf('ui.histOry.undo', label)
     + tf('ui.histOry.doFileFile', plan.undone.length, plan.ops.length)
-    + t('ui.histOry.fileOverwriteDotBack'));
+    + t('ui.histOry.fileOverwriteDotBack'), t('ui.common.undoBtn'));
   if (!ok) return false;
   s.busy = true;
   try {

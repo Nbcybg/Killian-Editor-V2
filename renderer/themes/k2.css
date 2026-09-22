@@ -11,6 +11,7 @@ body.theme-k2 {
   --bg:#1e1250; --side:#180e40; --bar:#241659; --border:#452f5e;
   --fg:#ece8f7; --bright:#ffffff; --dim:#a99ec4;
   --accent:#ff6640; --accent-hi:#ffc55c; --link:#ffc55c; --sel:#452f5e;
+  --accent-ink:#ffc55c;   /* สีเน้นเมื่อเป็นตัวหนังสือ (ธีมมืด = accent-hi เดิม) */
   --orange:#ffc55c; --curline:#271a5e;
   --hover:#3a2670;        /* พื้นตอนเอาเมาส์ชี้ปุ่ม */
   --hover-soft:#271a5e;   /* พื้นตอนชี้แถวในรายการ / แท็บที่ยังไม่ถูกเลือก */

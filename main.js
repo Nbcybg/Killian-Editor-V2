@@ -952,8 +952,10 @@ H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8')));
 H('fs:exists', (p) => fs.existsSync(p));
 // [alpha.148] `._ชื่อ.json` ของ macOS (ก๊อปผ่านไดรฟ์นอก/ซิป) เคยโผล่เป็นแถวผีทุกหมวด — กรองที่ด่านเดียวนี้
 // แทนการไล่แปะ 31 จุดเรียก (จุดใหม่ที่เพิ่มทีหลังได้ไปด้วยฟรี)
-H('fs:listDirs', (p) => fs.readdirSync(p, { withFileTypes: true })
-  .filter((d) => d.isDirectory() && !isJunkName(d.name)).map((d) => d.name));
+// โฟลเดอร์ไม่มี = [] เหมือน fs:listFiles (เดิมโยน ENOENT — ผู้เรียกทุกจุดจับแล้วใช้ [] อยู่ดี
+// แต่ Electron พ่น stack "Error occurred in handler" ลง log ทุกครั้ง เช่นโปรเจกต์ที่ยังไม่มี Images/)
+H('fs:listDirs', (p) => fs.existsSync(p) ? fs.readdirSync(p, { withFileTypes: true })
+  .filter((d) => d.isDirectory() && !isJunkName(d.name)).map((d) => d.name) : []);
 H('fs:listFiles', (p, ext) => fs.existsSync(p) ? fs.readdirSync(p, { withFileTypes: true })
   .filter((d) => d.isFile() && !isJunkName(d.name) && (!ext || d.name.endsWith(ext))).map((d) => d.name) : []);
 H('fs:mkdir', (p) => { fs.mkdirSync(p, { recursive: true }); return true; });
@@ -1876,6 +1878,8 @@ ipcMain.handle('http:stream', async (e, url, options, id) => {
   } finally {
     clearTimeout(timer);
     if (reqId) httpInflight.delete(reqId);
+    // สัญญาณ "ส่งบรรทัดครบแล้ว" — ช่องเดียวกับบรรทัด จึงมาถึงหลังบรรทัดสุดท้ายเสมอ (ดู preload httpStream)
+    try { if (sender && !sender.isDestroyed()) sender.send(ch + ':end'); } catch {}
   }
 });
 // [alpha.115] เซิร์ฟเวอร์ SSE จำลอง — ไว้ให้ e2e พิสูจน์ว่า "สตรีมคำตอบ AI" ทำงานจริง

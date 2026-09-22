@@ -160,7 +160,7 @@ function btnLabel(b) {
 export function toolbarOverflowItems() {
   const items = [];
   const byId = (id) => document.getElementById(id);
-  const mk = (b) => ({ label: btnLabel(b), disabled: b.classList.contains('dis') || b.disabled,
+  const mk = (b) => ({ text: btnLabel(b), disabled: b.classList.contains('dis') || b.disabled,
                         click: () => b.click() });
   const ovf = OVF.list.map(byId).filter(Boolean);
   if (ovf.length) {

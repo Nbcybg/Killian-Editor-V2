@@ -985,7 +985,7 @@ async function skillMenu(ev, s, btn) {
   _skills = await loadSkills(state.root);
   const on = new Set(live(s).skills || []);
   const items = _skills.map((k) => ({
-    label: (on.has(k.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + k.name
+    text: (on.has(k.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + k.name
            + (k.description ? ' — ' + k.description : '')
            + ttf('ui.aiChatPanel.char', String(k.chars)),
     click: async () => {
@@ -1403,7 +1403,7 @@ export async function restartSession(s, { confirm = true } = {}) {
   const target = live(s) || S.cur;
   if (!target) return null;
   if (confirm && (target.messages || []).length
-      && !(await confirmBox(ttf('ui.aiChatPanel.restartClearDialogueText', (target.messages || []).length, target.title)))) {
+      && !(await confirmBox(ttf('ui.aiChatPanel.restartClearDialogueText', (target.messages || []).length, target.title), tt('ui.common.clear')))) {
     return null;
   }
   S.cur = clearMessages(target);

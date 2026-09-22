@@ -19841,6 +19841,157 @@ export async function runTest(projectPath) {
           check('[149-F] ★ ขอบเขตทั้งโปรเจกต์ไม่รวมสำเนาสำรอง/ถังขยะ/สแนปช็อต',
                 !/(^|\n)### (Backups|Recycle|Snapshots)[\\/]/.test(all9), (all9.match(/### [^\n]+/g) || []).slice(0, 8).join(' · '));
 
+          // ═══════ [RW] System prompt ของผู้ใช้ · Agents · "Rewrite this" — ผ่านหน้าจอจริงทั้งหมด ═══════
+          {
+            const AU_RW = await import('./ai/ai-provider-ui.js');
+            const keepRW = { sp: state.meta.ai.systemPrompt, on: state.meta.ai.systemPromptOn, ag: state.meta.ai.agents };
+            // 1) ตั้งค่า AI: กรอก system prompt + เพิ่ม agent ผ่านกล่องจริง แล้วกดบันทึก
+            const ovRW = await AU_RW.showAISettingsDialog();
+            const spTaRW = ovRW && ovRW.querySelector('.ai-sysprompt');
+            check('[RW] ★ ตั้งค่า AI มีช่อง System prompt + ส่วน Agents',
+                  !!spTaRW && !!ovRW.querySelector('.ai-sysprompt-on') && !!ovRW.querySelector('.ai-agent-add'));
+            if (spTaRW) {
+              spTaRW.value = 'K2-SYS-TEST ปลดตัวกรอง';
+              ovRW.querySelector('.ai-agent-add').click();
+              await w9(60);
+              const dlgRW = document.querySelector('.k-ai-agent');
+              check('[RW] กด "เพิ่ม Agent" → กล่อง Agent เปิด (ชื่อ · บุคลิก · อ้างอิง)',
+                    !!dlgRW && !!dlgRW.querySelector('.ai-agent-name') && !!dlgRW.querySelector('.ai-agent-persona')
+                    && !!dlgRW.querySelector('.ai-agent-add-file'));
+              if (dlgRW) {
+                dlgRW.querySelector('.ai-agent-ok').click();              // ไม่มีชื่อ → ต้องไม่ปิด
+                await w9(30);
+                check('[RW] ไม่ใส่ชื่อ → กล่องไม่ปิด + บอกเหตุผล',
+                      document.querySelector('.k-ai-agent') === dlgRW && !!dlgRW.querySelector('.ai-prov-err').textContent);
+                dlgRW.querySelector('.ai-agent-name').value = 'E2E นักเขียนมืด';
+                dlgRW.querySelector('.ai-agent-persona').value = 'E2E-PERSONA โทนมืดหม่น';
+                dlgRW.querySelector('.ai-agent-tpl').click();
+                check('[RW] ปุ่มแม่แบบเติมหัวข้อท้ายบุคลิก (ไม่ทับของเดิม)',
+                      dlgRW.querySelector('.ai-agent-persona').value.startsWith('E2E-PERSONA')
+                      && dlgRW.querySelector('.ai-agent-persona').value.split('\n').length >= 5);
+                dlgRW.querySelector('.ai-agent-add-text').click();
+                await w9(30);
+                const refTaRW = dlgRW.querySelector('.ai-agent-ref-text');
+                check('[RW] เพิ่มอ้างอิงแบบพิมพ์เองได้', !!refTaRW);
+                if (refTaRW) { refTaRW.value = 'E2E-REF สำนวนตัวอย่าง'; refTaRW.dispatchEvent(new Event('input')); }
+                dlgRW.querySelector('.ai-agent-ok').click();
+                await w9(60);
+              }
+              check('[RW] ★ บันทึก Agent แล้วโผล่ในรายการของตั้งค่า AI',
+                    !document.querySelector('.k-ai-agent') && ovRW.querySelectorAll('.ai-agent-row').length === 1,
+                    ovRW.querySelectorAll('.ai-agent-row').length);
+              ovRW.querySelector('.k-dlg-btns .k-ok').click();
+              await w9(120);
+            }
+            const agRW = (state.meta.ai.agents || [])[0];
+            check('[RW] ★ กดบันทึก → system prompt + agent ลง project meta',
+                  state.meta.ai.systemPrompt === 'K2-SYS-TEST ปลดตัวกรอง' && state.meta.ai.systemPromptOn === true
+                  && !!agRW && agRW.name === 'E2E นักเขียนมืด' && agRW.refs.length === 1 && agRW.refs[0].text.includes('E2E-REF'),
+                  JSON.stringify({ sp: state.meta.ai.systemPrompt, ag: agRW }).slice(0, 200));
+
+            // 2) system prompt ถูกส่งนำหน้า "ทุกคำขอ" จริง (อ่านจากเซิร์ฟเวอร์จำลอง)
+            const lastRW = async () => { try { return JSON.parse((await kapi.httpFetch('http://127.0.0.1:8931/v1/last', { method: 'GET' })).body || '{}'); } catch { return {}; } };
+            await cs9(prov9, { system: 'FEATURE-SYS', messages: [{ role: 'user', content: 'ping' }] }, () => {});
+            const b1RW = await lastRW();
+            const sys1RW = ((b1RW.messages || []).find((m) => m.role === 'system') || {}).content || '';
+            check('[RW] ★★ System prompt ของผู้ใช้อยู่นำหน้า system ของฟีเจอร์ในคำขอที่ส่งออกไปจริง',
+                  sys1RW.startsWith('K2-SYS-TEST ปลดตัวกรอง') && sys1RW.includes('FEATURE-SYS'), sys1RW.slice(0, 120));
+            state.meta.ai.systemPromptOn = false;
+            await cs9(prov9, { system: 'FEATURE-SYS', messages: [{ role: 'user', content: 'ping' }] }, () => {});
+            const sys2RW = (((await lastRW()).messages || []).find((m) => m.role === 'system') || {}).content || '';
+            check('[RW] ★ ปิดสวิตช์ → ไม่ส่ง system prompt ของผู้ใช้', !sys2RW.includes('K2-SYS-TEST'), sys2RW.slice(0, 80));
+            state.meta.ai.systemPromptOn = true;
+
+            // 3) Rewrite this: เลือกข้อความ → คลิกขวา → เมนู → แถบลอย → เขียนใหม่ → แทนที่ในเอกสาร
+            const titleRW = 'ฉากทดสอบ Rewrite';
+            const srcRW = 'ชายหนุ่มเดินเข้าไปในป่ามืด';
+            await rtc9({ tool: 'scene.create', args: { title: titleRW, text: 'บรรทัดแรก ' + srcRW + ' แล้วหยุดนิ่ง' } });
+            const rowRW = (await ls9(state.root)).find((x) => x.title === titleRW);
+            if (rowRW) {
+              await openScene(rowRW.path, titleRW);
+              await w9(150);
+              const tabRW = [...state.tabs.values()].find((t) => pathKey(t.file) === pathKey(rowRW.path));
+              activate(tabRW.file);
+              await w9(60);
+              const vRW = tabRW.editor.view;
+              let fromRW = -1;
+              vRW.state.doc.descendants((n, pos) => {
+                if (fromRW < 0 && n.isText && n.text.includes(srcRW)) fromRW = pos + n.text.indexOf(srcRW);
+              });
+              check('[RW] เตรียมฉาก + หาข้อความที่จะเลือก', fromRW > 0);
+              vRW.dispatch(vRW.state.tr.setSelection(PMTextSelection.create(vRW.state.doc, fromRW, fromRW + srcRW.length)));
+              vRW.focus();
+              const dsel = window.getSelection();
+              const cRW = vRW.coordsAtPos(fromRW + 2);
+              const tgtRW = document.elementFromPoint(cRW.left + 1, cRW.top + 2) || vRW.dom;
+              check('[RW] DOM selection ตรงกับข้อความที่เลือก', (dsel && dsel.toString()) === srcRW, dsel && dsel.toString());
+              tgtRW.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true,
+                                                                   clientX: cRW.left + 1, clientY: cRW.top + 2 }));
+              await w9(60);
+              const itRW = [...document.querySelectorAll('.k-menu .k-menu-item')]
+                .find((x) => x.textContent.includes(tt('ui.aiRewrite.menu')));
+              check('[RW] ★ คลิกขวาที่ข้อความที่เลือก → มีเมนู "Rewrite this"', !!itRW,
+                    [...document.querySelectorAll('.k-menu .k-menu-item')].map((x) => x.textContent).join(' | '));
+              if (itRW) itRW.click();
+              await w9(80);
+              const barRW = document.querySelector('.k-rewrite-bar');
+              check('[RW] ★ แถบ Rewrite ลอยขึ้นมา มีช่องเลือก Agent + ช่องคำสั่ง',
+                    !!barRW && !!barRW.querySelector('.k-rewrite-agent') && !!barRW.querySelector('.k-rewrite-input'));
+              if (barRW) {
+                const brRW = barRW.getBoundingClientRect();
+                check('[RW] แถบอยู่ในจอ และไม่ทับบรรทัดที่เลือก (อยู่ใต้หรือเหนือ)',
+                      brRW.left >= 0 && brRW.right <= innerWidth && brRW.top >= 0 && brRW.bottom <= innerHeight
+                      && (brRW.top >= cRW.bottom - 1 || brRW.bottom <= cRW.top + 1),
+                      JSON.stringify({ bar: [brRW.top, brRW.bottom], sel: [cRW.top, cRW.bottom] }));
+                const hlRW = [...document.querySelectorAll('.k-rewrite-hls .k-rewrite-hl')];
+                const hlBox = hlRW[0] && hlRW[0].getBoundingClientRect();
+                check('[RW] ★ ไฮไลต์ช่วงที่จะถูกเขียนใหม่ค้างอยู่ (ตัวแก้ไขเสียโฟกัสแล้วก็ยังเห็น) ตรงตำแหน่งข้อความ',
+                      hlRW.length >= 1 && Math.abs(hlBox.left - cRW.left) < 30 && Math.abs(hlBox.top - cRW.top) < 12,
+                      JSON.stringify({ n: hlRW.length, hl: hlBox && [hlBox.left, hlBox.top].map(Math.round), sel: [cRW.left, cRW.top].map(Math.round) }));
+                const paneRW = vRW.dom.closest('.pane').getBoundingClientRect();
+                check('[RW] แถบอยู่ในกรอบช่องตัวแก้ไข (ไม่ล้นไปทับแผงข้าง ๆ)',
+                      paneRW.width < 380 || (brRW.left >= paneRW.left - 1 && brRW.right <= paneRW.right + 1),
+                      JSON.stringify({ bar: [brRW.left, brRW.right].map(Math.round), pane: [paneRW.left, paneRW.right].map(Math.round) }));
+                const selRW = barRW.querySelector('.k-rewrite-agent');
+                check('[RW] ช่อง Agent มี "ไม่ใช้" + agent ที่ตั้งไว้ + ทางไปจัดการ',
+                      [...selRW.options].some((o) => o.value === agRW.id) && selRW.options[0].value === ''
+                      && [...selRW.options].some((o) => o.value === '::manage'));
+                selRW.value = agRW.id; selRW.dispatchEvent(new Event('change'));
+                barRW.querySelector('.k-rewrite-input').value = 'E2E-INSTR ให้ตึงเครียดขึ้น';
+                barRW.querySelector('.k-rewrite-run').click();
+                await until9(() => ['ok', 'err'].includes(barRW.querySelector('.k-rewrite-out').dataset.state), 20000);
+                const outRW = barRW.querySelector('.k-rewrite-out');
+                const txtRW = tabRW.editor.getText();
+                check('[RW] ★★ AI ตอบ → ข้อความที่เลือกถูกแทนที่ในเอกสาร (รอบข้างอยู่ครบ)',
+                      outRW.dataset.state === 'ok' && txtRW.includes('บรรทัดแรก สวัสดีครับ จบ แล้วหยุดนิ่ง') && !txtRW.includes(srcRW),
+                      JSON.stringify({ st: outRW.dataset.state, msg: barRW.querySelector('.k-rewrite-msg').textContent, txt: txtRW.slice(0, 120) }));
+                check('[RW] แท็บถูกทำเครื่องหมายว่ามีการแก้', tabRW.dirty === true);
+                const bRW = await lastRW();
+                const sysRW = ((bRW.messages || []).find((m) => m.role === 'system') || {}).content || '';
+                const usrRW = ((bRW.messages || []).filter((m) => m.role === 'user').pop() || {}).content || '';
+                check('[RW] ★ คำขอ Rewrite มี system prompt ผู้ใช้นำหน้า + บุคลิก agent',
+                      sysRW.startsWith('K2-SYS-TEST') && sysRW.includes('E2E-PERSONA'), sysRW.slice(0, 160));
+                check('[RW] ★ คำขอ Rewrite มีต้นฉบับ · คำสั่ง · อ้างอิงของ agent · เนื้อหารอบข้าง',
+                      usrRW.includes(srcRW) && usrRW.includes('E2E-INSTR') && usrRW.includes('E2E-REF')
+                      && usrRW.includes('บรรทัดแรก') && usrRW.includes('แล้วหยุดนิ่ง'), usrRW.slice(0, 200));
+                const undoRW = barRW.querySelector('.k-rewrite-undo');
+                check('[RW] มีปุ่มคืนต้นฉบับหลังแทนที่', !!undoRW && !undoRW.hidden);
+                if (undoRW) undoRW.click();
+                await w9(30);
+                check('[RW] ★ กดคืนต้นฉบับ → ข้อความเดิมกลับมา', tabRW.editor.getText().includes('บรรทัดแรก ' + srcRW + ' แล้วหยุดนิ่ง'),
+                      tabRW.editor.getText().slice(0, 120));
+                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                await w9(30);
+                check('[RW] Esc ปิดแถบ (และไฮไลต์หายไปด้วย)', !document.querySelector('.k-rewrite-bar') && !document.querySelector('.k-rewrite-hls'));
+              }
+              closeTab(tabRW.file, { discard: true });
+            }
+            await rtc9({ tool: 'scene.delete', args: { title: titleRW } });
+            state.meta.ai.systemPrompt = keepRW.sp;
+            state.meta.ai.systemPromptOn = keepRW.on;
+            state.meta.ai.agents = keepRW.ag;
+          }
+
           hidePanel('ai-chat');
           state.meta.ai.providers = keep9.providers;
           state.meta.ai.activeProviderId = keep9.active;
@@ -26751,6 +26902,8 @@ export async function runTest(projectPath) {
         const scRows120 = () => [...document.querySelectorAll('#tree .scene[data-path]')]
           .filter((r) => r._ctx);
         {
+          // เมาส์จริงของเครื่องค้างอยู่บนต้นไม้ = ทูลทิปยืม title ของแถวนั้นไป → คืนก่อนเช็ค (ไม่งั้นแดงตามตำแหน่งเมาส์)
+          hideTip();
           const rows = scRows120();
           check('[120-3] มีแถวฉากในต้นไม้', rows.length >= 2, rows.length);
           check('[120-3] ★ hover ทุกแถวฉากบอกชื่อไฟล์พร้อมนามสกุล',
@@ -32014,6 +32167,126 @@ export async function runTest(projectPath) {
         await JS.mutateJson(kapi, await kapi.join(dPath, 'draft.json'), (d) => { d.chapters = (d.chapters || []).filter((x) => x.guid !== ch.guid); });
         await JS.mutateJson(kapi, sf, (d) => { if (!d.chapters || !(ch.guid in d.chapters)) return false; delete d.chapters[ch.guid]; });
         await buildTree();
+      }
+
+      // ══ [BH] bug hunt รอบ 2 — พบจากการยิงทุกคำสั่งเข้าแอปจริง + ดูภาพหน้าจอ ══
+      {
+        const wBH = (ms) => new Promise((r) => setTimeout(r, ms));
+        const rowBH = [...document.querySelectorAll('#tree .scene')].find((x) => x.dataset.path && /\.md$/i.test(x.dataset.path));
+        if (rowBH) { rowBH.click(); await wBH(400); }
+        // 1) คีย์ลัด Ctrl+Shift+. ส่ง goto-page มาเปล่า ๆ → ต้องเปิดกล่องถามเลข ไม่ใช่กระโดดหน้า 1 เงียบ ๆ
+        document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+        await handleCommand('goto-page');
+        await wBH(80);
+        check('[BH-1] ★ goto-page ไม่มีเลขหน้า → เปิดกล่อง "ไปที่…" (เดิม: กระโดดหน้า 1 + "ไปที่หน้า  จาก N หน้า")',
+              !!document.querySelector('.k-goto-dlg') && !/ไปที่หน้า  จาก/.test($('#status').textContent), $('#status').textContent);
+        document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+        // 2) toggle-panel / show-panel ไม่ส่งชื่อ → ห้ามเกิดแผงลอยผีชื่อ "undefined"
+        const r2a = togglePanel(undefined);
+        const r2b = showPanel('');
+        await wBH(80);
+        check('[BH-2] ★ เปิดแผงโดยไม่ระบุชื่อ = ไม่ทำอะไร (ไม่มีแผงผี "undefined")',
+              r2a === false && r2b === false && !document.querySelector('.k-float-panel[data-panel-id="undefined"]')
+              && ![...document.querySelectorAll('.k-float-panel')].some((p) => !p.querySelector('.k-panel-head-title')?.textContent.trim()
+                                                                          && !p.querySelector('.k-tabs, .k-tab')));
+        // 3) ชื่อที่ผู้ใช้ตั้ง (มี < >) ต้องเป็นตัวหนังสือ ไม่ใช่ HTML
+        setTreeScope({ guid: 'bh-x', label: '<img src=x class="bh-inj">บท' });
+        await wBH(30);
+        const chipBH = document.getElementById('tree-scope');
+        check('[BH-3] ★ ชื่อบท/เล่มในป้าย "ค้นเฉพาะ" แสดงเป็นข้อความ (ไม่ถูกตีเป็น HTML)',
+              !!chipBH && !chipBH.querySelector('.bh-inj') && chipBH.textContent.includes('<img'), chipBH && chipBH.innerHTML.slice(0, 120));
+        setTreeScope(null);
+        // 4) ชิป "แผงที่ซ่อน" ต้องไม่ทับแถบจัดรูปแบบลอย
+        for (const id of ['timeline', 'kanban', 'maps', 'codex']) { togglePanel(id); await wBH(120); togglePanel(id); await wBH(80); }
+        await wBH(200);
+        const chipsBH = document.querySelector('#content > .k-hidden-chips');
+        const fmtBH = document.querySelector('#content .k-fmtbar:not(.planner-fmtbar)');
+        if (chipsBH && fmtBH && fmtBH.offsetParent !== null) {
+          const a = chipsBH.getBoundingClientRect(), b = fmtBH.getBoundingClientRect();
+          const hit = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+          check('[BH-4] ★ ชิปแผงที่ซ่อนไม่ทับแถบจัดรูปแบบลอย (ยกหลบขึ้นไป)', !hit,
+                JSON.stringify({ chips: [a.top, a.bottom, a.left, a.right].map(Math.round), fmt: [b.top, b.bottom, b.left, b.right].map(Math.round) }));
+        } else {
+          check('[BH-4] (ข้าม) ไม่มีชิปหรือแถบลอยให้วัด', true, JSON.stringify({ chips: !!chipsBH, fmt: !!fmtBH }));
+        }
+        // 5) ข้อความยาวในแผงบันทึกห่อในคอลัมน์ตัวเอง ไม่หลุดไปบรรทัดใหม่ทั้งก้อน
+        const rowLog = document.createElement('div');
+        rowLog.className = 'k-log-row';
+        rowLog.style.width = '240px';
+        rowLog.innerHTML = '<span class="k-log-time">10:00:00</span><span class="k-log-lv">i</span><span class="k-log-src">cmd</span><span class="k-log-msg">story-starter-toggle-with-a-very-long-name-here</span>';
+        const lp = document.createElement('div'); lp.className = 'k-log-list'; lp.append(rowLog); document.body.append(lp);
+        const msgTop = rowLog.querySelector('.k-log-msg').getBoundingClientRect().top;
+        const timeTop = rowLog.querySelector('.k-log-time').getBoundingClientRect().top;
+        check('[BH-5] ข้อความยาวในแผงบันทึกอยู่บรรทัดเดียวกับเวลา (ห่อในคอลัมน์ตัวเอง)', Math.abs(msgTop - timeTop) < 8,
+              Math.round(msgTop) + ' vs ' + Math.round(timeTop));
+        lp.remove();
+        // ══ [BH2] ตรวจให้หมด — คำสั่งกลุ่มไฟล์ · ทุกธีม · ข้อความถูกตัด ══
+        {
+          // 6) เมนูซ้ายของกล่องตั้งค่าต้องไม่ถูกบีบจนตัวหนังสือโดนตัด (flex column + overflow)
+          settingsDialog(); await wBH(400);
+          const tabsBH = [...document.querySelectorAll('.k-set-tab')];
+          const squashed = tabsBH.filter((x) => x.scrollHeight > x.clientHeight + 2);
+          check('[BH2-6] ★ รายการในเมนูกล่องตั้งค่าไม่ถูกบีบจนตัวหนังสือโดนตัด', tabsBH.length > 5 && squashed.length === 0,
+                tabsBH.length + ' รายการ · ถูกบีบ ' + squashed.length);
+          document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+          // 7) นำเข้าบท: วงเล็บคำกำกับ + หน้าปก Fountain
+          const ISP = await import('./import-sp.js');
+          const FO = await import('./fountain.js');
+          const mdBH = ISP.elementsToMarkdown([{ el: 'character', text: 'โทระ' }, { el: 'parenthetical', text: '(กระซิบ)' },
+                                              { el: 'dialogue', text: 'ใครอยู่' }]);
+          check('[BH2-7] ★ นำเข้าบท: วงเล็บเขียนเป็น ((…)) แบบเดียวกับตัวแก้ไข (เดิม "(((กระซิบ)")',
+                mdBH.includes('((กระซิบ))') && !mdBH.includes('(((') , mdBH);
+          const backBH = FO.parseScript(mdBH).filter((b) => b.el === 'parenthetical');
+          check('[BH2-7] อ่านกลับได้วงเล็บเดิม', backBH.length === 1 && backBH[0].text === '(กระซิบ)', JSON.stringify(backBH));
+          const tpBH = ISP.splitFountainTitlePage('Title: เรื่องทดสอบ\nAuthor: ผู้เขียน\n    ร่วมเขียน\n\nINT. ห้อง - กลางวัน\n');
+          check('[BH2-7] ★ หน้าปก Fountain ถูกแยกออก ไม่ปนเป็นเนื้อบท',
+                tpBH.fields.title === 'เรื่องทดสอบ' && tpBH.fields.author === 'ผู้เขียน\nร่วมเขียน' && tpBH.body.startsWith('INT.'),
+                JSON.stringify(tpBH));
+          check('[BH2-7] ไฟล์ที่ไม่มีหน้าปก = เนื้อเดิมทั้งหมด',
+                ISP.splitFountainTitlePage('INT. ห้อง - กลางวัน\n\nโทระเดิน').body === 'INT. ห้อง - กลางวัน\n\nโทระเดิน');
+          // 8) นำเข้าไฟล์ภาษาแบบที่โปรแกรมแจก (meta.code,en · ไม่มีหัวตาราง) ต้องลงภาษา en ไม่ทับภาษาที่ใช้อยู่
+          const csvBH = await kapi.join(state.root, 'bh-lang-en.csv');
+          await kapi.writeFile(csvBH, '﻿meta.code,en\nmeta.name,English\nui.bh.testKey,BH english text\n');
+          const langBefore = i18n.lang;
+          await importLanguageCsv(csvBH);
+          const enFile = await kapi.join(state.root, 'languages', 'k2_en.csv');
+          const thFile = await kapi.join(state.root, 'languages', 'k2_th.csv');
+          const enTxt = (await kapi.exists(enFile)) ? await kapi.readFile(enFile) : '';
+          const thTxt = (await kapi.exists(thFile)) ? await kapi.readFile(thFile) : '';
+          check('[BH2-8] ★★ นำเข้า k2_en.csv (ไม่มีหัวตาราง) → ลงไฟล์ภาษา en · ไม่แตะภาษาไทย',
+                enTxt.includes('BH english text') && !thTxt.includes('BH english text') && i18n.lang === langBefore,
+                JSON.stringify({ en: enTxt.length, thHas: thTxt.includes('BH english text'), lang: i18n.lang }));
+          await kapi.remove(csvBH);
+          if (enTxt && !enTxt.replace('BH english text', '').includes('ui.')) await kapi.remove(enFile);
+          // 9) แบ่งจอ: ชื่อแท็บต้องไม่มุดใต้ปุ่ม "ปิดช่องนี้"
+          const scRows = [...document.querySelectorAll('#tree .scene')].filter((x) => x.dataset.path && /\.md$/i.test(x.dataset.path)).slice(0, 2);
+          if (scRows.length === 2) {
+            scRows[0].click(); await wBH(300); scRows[1].click(); await wBH(300);
+            await handleCommand('split-view', 'right'); await wBH(400);
+            const panes = [...document.querySelectorAll('.k-split-pane')];
+            let over = [];
+            for (const p of panes) {
+              const cb = p.querySelector(':scope > .cmp-close'); const bar = p.querySelector(':scope > .k-split-tabs');
+              if (!cb || !bar) continue;
+              const vis = bar.getBoundingClientRect();              // พื้นที่มองเห็นของแถบ (ไม่รวม border ที่จองให้ปุ่ม)
+              const inner = vis.right - parseFloat(getComputedStyle(bar).borderInlineEndWidth || '0');
+              if (inner > cb.getBoundingClientRect().left + 1) over.push(Math.round(inner - cb.getBoundingClientRect().left));
+            }
+            check('[BH2-9] ★ แบ่งจอ: พื้นที่แสดงแท็บจบก่อนปุ่ม "ปิดช่องนี้" (ไม่ซ้อนกัน)', panes.length >= 2 && over.length === 0,
+                  JSON.stringify({ panes: panes.length, over }));
+            await handleCommand('split-view', 'right'); await wBH(300);
+          }
+          // 10) ธีมสว่าง: สีเน้นที่ใช้เป็นตัวหนังสือต้องอ่านออกบนแถบ/แผงข้าง (เดิม 1.7:1)
+          const keepTheme = state.settings.theme;
+          toggleTheme('k2-light'); await wBH(300);
+          const cBH = (a, b) => { const p = (s) => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
+            const L = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+            const x = L(p(a)), y = L(p(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+          const logo = document.getElementById('tb-logo');
+          const lr = logo ? cBH(getComputedStyle(logo).color, getComputedStyle(document.getElementById('titlebar') || document.body).backgroundColor) : 99;
+          check('[BH2-10] ★ ธีมสว่าง: ตัวหนังสือสีเน้น (โลโก้บนแถบชื่อ) คอนทราสต์ ≥ 4.5', lr >= 4.5, lr.toFixed(2));
+          toggleTheme(keepTheme); await wBH(200);
+        }
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

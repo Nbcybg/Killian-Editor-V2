@@ -14,9 +14,10 @@ body.theme-rainbow {
   --border:#3a3a4e;
   --fg:#f1f1f6;
   --bright:#f9f9fb;
-  --dim:#9b9ba2;
+  --dim:#a0a0a7;
   --accent:#ff5e5e;
   --accent-hi:#ffd93d;
+  --accent-ink:#ffd93d;
   --link:#4dabf7;
   --sel:#3b3470;
   --orange:#ffd93d;
@@ -33,7 +34,7 @@ body.theme-rainbow {
   --tab-bar:#121219;
   --tab-bg:#303039;
   --tab-border:#494952;
-  --tab-fg:#9b9ba2;
+  --tab-fg:#a0a0a7;
   --tab-fg-on:#f8f8fb;
   --tab-hover:#272731;
   --panel-head:#171720;

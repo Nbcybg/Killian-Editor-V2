@@ -90,7 +90,7 @@ select option:checked, select option:hover { background:var(--sel); color:var(--
 /* [alpha.161 · K3] ปุ่มที่ล้นหน้าต่างย้ายเข้าเมนู "»" (ท้ายแถบเสมอ) */
 #toolbar > .tb-ovf { display:none !important; }
 #toolbar > .tb-overflow { margin-left:auto; min-width:28px; }
-#toolbar > .tb-overflow.has-ovf { color:var(--accent-hi); }
+#toolbar > .tb-overflow.has-ovf { color:var(--accent-ink, var(--accent-hi)); }
 #toolbar::-webkit-scrollbar { height:6px; }
 #toolbar::-webkit-scrollbar-thumb { background:var(--border); border-radius:var(--r-xs); }
 #toolbar::-webkit-scrollbar-thumb:hover { background:var(--dim); }
@@ -250,7 +250,7 @@ body.panel-window .k-panel, body.panel-window .k-tab-group { border:0; border-ra
 /* ═══ [alpha.162 · W2] ของกลางของเนื้อแผง — หัวข้อ · แถบเครื่องมือ · สถานะว่าง ═══
    ตัวสร้างอยู่ที่ `src/panels/panel-chrome.js` (panelHead / panelBar / panelEmpty) */
 .k-pan-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:var(--pan-gap); }
-.k-pan-head-icon { display:flex; align-items:center; color:var(--accent-hi); }
+.k-pan-head-icon { display:flex; align-items:center; color:var(--accent-ink, var(--accent-hi)); }
 .k-pan-head-right { margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .k-pan-title { font-size:var(--pan-title-fs); font-weight:700; color:var(--bright);
   overflow:hidden; text-overflow:ellipsis; }
@@ -388,14 +388,14 @@ body.k-panel-dragging, body.k-resizing { user-select:none; }
   background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:var(--r-sm);
   font-size:calc(12px * var(--ui-scale, 1)); outline:none; }
 #tree-search:focus { border-color:var(--accent-hi); }
-.sc-tags { margin-left:6px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--accent-hi); opacity:.85; }
+.sc-tags { margin-left:6px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); opacity:.85; }
 .sec-title { font-weight:600; margin:6px 0; color:var(--dim); letter-spacing:.4px; cursor:pointer; }
 .chapter { margin:4px 0 4px 8px; }
 .ch-title { color:var(--fg); margin:4px 0; cursor:pointer; }
 /* accordion: caret หน้าหัว + ซ่อนเนื้อหาใต้หัวเมื่อพับ */
 .tw { display:inline-block; width:14px; text-align:center; color:var(--dim);
   font-size:calc(10px * var(--ui-scale, 1)); user-select:none; margin-right:2px; transition:color .12s; }
-.sec-title:hover .tw, .ch-title:hover .tw { color:var(--accent-hi); }
+.sec-title:hover .tw, .ch-title:hover .tw { color:var(--accent-ink, var(--accent-hi)); }
 .sec.collapsed > *:not(.sec-title) { display:none; }
 .chapter.collapsed > *:not(.ch-title) { display:none; }
 .scene { padding:3px 8px 3px 22px; border-radius:var(--r-sm); cursor:pointer; color:var(--fg); }
@@ -717,7 +717,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .nav-chip-color { width:14px; padding:1px 0; text-align:center; background:var(--c); border-color:var(--c); opacity:.55; }
 .nav-chip-color.on { opacity:1; box-shadow:0 0 0 2px var(--accent-hi); }
 .nav-chip-clear { margin-left:auto; }
-.nav-bar.nav-filtered .nav-chip-clear { color:var(--accent-hi); border-color:var(--accent-hi); }
+.nav-bar.nav-filtered .nav-chip-clear { color:var(--accent-ink, var(--accent-hi)); border-color:var(--accent-hi); }
 .nav-cols { display:flex; gap:6px; padding:2px 8px 3px; color:var(--dim);
   font-size:calc(10px * var(--ui-scale, 1)); letter-spacing:.4px; border-top:1px solid var(--border); }
 .nav-list { flex:1; min-height:0; overflow:auto; }
@@ -744,7 +744,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .ol-item .nav-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .nav-mk { flex:0 0 auto; font-size:calc(10px * var(--ui-scale, 1)); opacity:.9; }
 .nav-mk-todo { color:var(--st-warn); } .nav-mk-empty { color:var(--dim); }
-.nav-mk-choice { color:var(--accent-hi); font-weight:700; }
+.nav-mk-choice { color:var(--accent-ink, var(--accent-hi)); font-weight:700; }
 .nav-swatch { display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:middle; }
 .ol-item.lvl1 { font-weight:600; } .ol-item.lvl2 { padding-left:18px; }
 .ol-item.lvl3 { padding-left:28px; color:var(--dim); }
@@ -825,7 +825,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
   letter-spacing:.02em; padding:12px 8px 5px; display:flex; align-items:baseline; gap:5px; }
 .k-set-navgrp:first-of-type { padding-top:2px; }
 .k-set-navgrp-ic { font-size:calc(12px * var(--ui-scale, 1)); }
-.k-set-navgrp-sub { opacity:.65; font-size:calc(10px * var(--ui-scale, 1)); }
+.k-set-navgrp-sub { color:var(--dim); font-size:calc(10px * var(--ui-scale, 1)); }  /* เดิม opacity:.65 ทับ --dim อีกชั้น = 2:1 บนธีมสว่าง */
 /* ══ [alpha.162 · W3] ป้ายบอกขอบเขตของหน้า — "ค่านี้ตามผู้ใช้ไป" กับ "ค่านี้อยู่กับผลงานนี้" ══
    เดิมบอกด้วยหัวกลุ่มในรายการซ้ายอย่างเดียว ซึ่ง **โกหก** เพราะหลายหน้ามีค่าปนสองขอบเขต
    ตอนนี้ทุกหน้ามีขอบเขตเดียวและประกาศไว้บนหัวหน้า ( — เทสเทียบกับตารางค่าเริ่มต้นจริง) */
@@ -838,7 +838,9 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-set-scope-ic { display:flex; align-items:center;
   color:var(--dim); opacity:.9; }
 .k-set-scope[data-scope="global"] .k-set-scope-ic { color:var(--link); }
-.k-set-scope[data-scope="project"] .k-set-scope-ic { color:var(--accent-hi); }
+.k-set-scope[data-scope="project"] .k-set-scope-ic { color:var(--accent-ink, var(--accent-hi)); }
+/* ห้ามหดในเมนูแนวตั้ง (flex column): รายการเยอะกว่าความสูงกล่อง = ต้องเลื่อนดู ไม่ใช่ถูกบีบจนตัวหนังสือโดนตัดครึ่ง */
+.k-set-nav > * { flex-shrink:0; }
 .k-set-tab { padding:7px 10px 7px 22px; cursor:pointer; color:var(--fg);
   border-radius:6px; font-size:calc(13px * var(--ui-scale, 1));
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1010,7 +1012,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .tl-event.tl-clickable:hover { border-color:var(--accent-hi); transform:translateY(-2px); }
 .tl-event-scene { background:var(--bg); border-style:dashed; }
 .tl-event.tl-clash { box-shadow:0 0 0 2px #d9955f inset; }
-.tl-when { font-size:calc(12px * var(--ui-scale, 1)); color:var(--accent-hi); font-weight:600; margin-bottom:4px; }
+.tl-when { font-size:calc(12px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); font-weight:600; margin-bottom:4px; }
 .tl-ev-title { font-size:calc(14px * var(--ui-scale, 1)); font-weight:600; line-height:1.35; }
 .tl-ev-desc { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); margin-top:5px; line-height:1.5;
   display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
@@ -1056,7 +1058,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .map-crumb { display:flex; align-items:center; gap:6px; margin:4px 0 10px; font-size:calc(13px * var(--ui-scale, 1)); color:var(--dim); }
 .map-crumb-item { cursor:pointer; }
 .map-crumb-item.on { color:var(--bright); font-weight:600; }
-.map-crumb-item:hover { color:var(--accent-hi); }
+.map-crumb-item:hover { color:var(--accent-ink, var(--accent-hi)); }
 .map-crumb-sep { opacity:.5; }
 .map-tools { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
 .map-name-inp { background:var(--bg); border:1px solid var(--border); color:var(--bright);
@@ -1088,7 +1090,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .map-search { margin-left:auto; background:var(--bg); border:1px solid var(--border); color:var(--fg);
   border-radius:999px; padding:5px 12px; min-width:180px; font-size:calc(13px * var(--ui-scale, 1)); }
 .map-search:focus { outline:none; border-color:var(--accent-hi); }
-.map-search-note { color:var(--accent-hi); font-size:calc(12px * var(--ui-scale, 1)); margin:2px 0 6px; }
+.map-search-note { color:var(--accent-ink, var(--accent-hi)); font-size:calc(12px * var(--ui-scale, 1)); margin:2px 0 6px; }
 /* หมวดแผนที่ */
 .map-catbar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
 .map-cat { padding:3px 10px; border-radius:6px; border:1px solid var(--border); background:transparent;
@@ -1154,7 +1156,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .map-pin-count { position:absolute; top:-4px; right:-9px; min-width:15px; height:15px; padding:0 3px;
   border-radius:999px; background:var(--accent-hi); color:var(--on-accent-hi); font-size:10px; font-weight:700;
   display:flex; align-items:center; justify-content:center; }
-.map-scene-dot { position:absolute; transform:translate(-50%,-50%); color:var(--accent-hi);
+.map-scene-dot { position:absolute; transform:translate(-50%,-50%); color:var(--accent-ink, var(--accent-hi));
   font-size:15px; opacity:.65; pointer-events:auto; cursor:help; }
 .map-focus { position:absolute; transform:translate(-50%,-50%); width:44px; height:44px;
   border-radius:50%; border:3px solid var(--accent-hi); pointer-events:none; z-index:8;
@@ -1242,7 +1244,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-tpl-del { flex:0 0 auto; background:transparent; color:var(--dim); border:1px solid var(--border);
   border-radius:6px; width:30px; height:30px; cursor:pointer; }
 .k-tpl-del:hover { background:var(--danger-soft); color:#ff9b9b; }
-.k-tpl-add { align-self:flex-start; margin-top:6px; background:transparent; color:var(--accent-hi);
+.k-tpl-add { align-self:flex-start; margin-top:6px; background:transparent; color:var(--accent-ink, var(--accent-hi));
   border:1px dashed var(--border); border-radius:6px; padding:5px 12px; font-size:calc(12.5px * var(--ui-scale, 1)); cursor:pointer; }
 .k-tpl-opts { display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; }
 .k-tpl-chk { color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); cursor:pointer; display:flex; align-items:center; gap:4px; }
@@ -1254,7 +1256,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-ver-item.on { background:var(--sel); }
 .k-ver-item:hover { background:var(--panel,var(--hover-soft)); }
 .k-ver-time { color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); }
-.k-ver-label { display:inline-block; margin-top:3px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--accent-hi);
+.k-ver-label { display:inline-block; margin-top:3px; font-size:calc(10px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi));
   border:1px solid var(--border); border-radius:4px; padding:0 6px; }
 .k-ver-acts { display:flex; gap:5px; margin-top:6px; }
 .k-ver-acts button { background:transparent; color:var(--fg); border:1px solid var(--border);
@@ -1345,7 +1347,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .wiki-input { flex:1; background:var(--bg); color:var(--fg);
   border:1px solid var(--border); border-radius:8px; padding:7px 12px; }
 .wiki-input:focus { outline:none; border-color:var(--accent-hi); }
-.wiki-sub { margin:20px 0 6px; font-weight:600; color:var(--accent-hi); }
+.wiki-sub { margin:20px 0 6px; font-weight:600; color:var(--accent-ink, var(--accent-hi)); }
 .wiki-sec { border:1px solid var(--border); border-radius:10px; margin:10px 0; overflow:hidden; }
 .wiki-sec-title { display:flex; gap:8px; align-items:center; padding:8px 10px;
   background:var(--side); }
@@ -1359,7 +1361,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 #titlebar { display:flex; align-items:center; gap:2px; height:36px; padding:0 0 0 10px;
   background:var(--titlebar); border-bottom:1px solid var(--border); -webkit-app-region:drag;
   user-select:none; }
-#tb-logo { color:var(--accent-hi); font-weight:700; margin-right:8px; }
+#tb-logo { color:var(--accent-ink, var(--accent-hi)); font-weight:700; margin-right:8px; }
 .tb-menu { -webkit-app-region:no-drag; padding:4px 10px; border-radius:var(--r-sm);
   cursor:pointer; color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); position:relative; }
 .tb-menu:hover { background:var(--hover-soft); }
@@ -1398,9 +1400,10 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .k-log-time { color:var(--dim); font-variant-numeric:tabular-nums; flex:0 0 auto;
   font-size:calc(10.5px * var(--ui-scale, 1)); }
 .k-log-lv { flex:0 0 auto; }
-.k-log-src { color:var(--accent-hi); flex:0 0 auto; font-size:calc(10.5px * var(--ui-scale, 1));
+.k-log-src { color:var(--accent-ink, var(--accent-hi)); flex:0 0 auto; font-size:calc(10.5px * var(--ui-scale, 1));
   background:var(--bg); border-radius:4px; padding:0 5px; }
-.k-log-msg { flex:1 1 auto; word-break:break-word; }
+/* basis 0 = หดแล้วห่อบรรทัดในคอลัมน์ตัวเอง (เดิม auto = ข้อความยาวหลุดไปขึ้นบรรทัดใหม่ทั้งก้อน ชิดซ้าย) */
+.k-log-msg { flex:1 1 0; min-width:6em; word-break:break-word; }
 .k-log-count { flex:0 0 auto; color:var(--dim); background:var(--bg);
   border-radius:999px; padding:0 6px; font-size:calc(10px * var(--ui-scale, 1)); }
 .k-log-detail { flex:1 1 100%; margin:3px 0 5px 22px; padding:6px 8px; background:var(--bg);
@@ -1421,7 +1424,7 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
   cursor:pointer; color:var(--dim); }
 .win-btn:hover { background:var(--hover-soft); color:var(--fg); }
 .win-close:hover { background:#c1493e; color:#fff; }
-#elem-badge { color:var(--accent-hi); font-size:calc(12px * var(--ui-scale, 1)); }
+#elem-badge { color:var(--accent-ink, var(--accent-hi)); font-size:calc(12px * var(--ui-scale, 1)); }
 #elem-badge.elem-pick { cursor:pointer; padding:2px 8px; border:1px solid var(--border);
   border-radius:6px; background:var(--bar); }
 #elem-badge.elem-pick:hover { border-color:var(--accent-hi); }
@@ -1439,7 +1442,7 @@ body.k-mod-down .k-mention { cursor:pointer; }
 .rel-type-dot { display:inline-block; width:8px; height:8px; border-radius:50%;
   margin-right:5px; vertical-align:middle; flex:0 0 auto; }
 .wiki-rel-link { color:var(--link); cursor:pointer; text-decoration:underline dotted; }
-.wiki-rel-link:hover { color:var(--accent-hi); }
+.wiki-rel-link:hover { color:var(--accent-ink, var(--accent-hi)); }
 .wiki-field-link { display:inline-flex; gap:6px; margin-left:8px; align-items:center; }
 .wiki-field-link .wiki-rel-link { font-size:calc(12px * var(--ui-scale, 1)); white-space:nowrap; }
 .wiki-field-links { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
@@ -1577,8 +1580,8 @@ body.k-mod-down .k-mention { cursor:pointer; }
 /* ทรานซิชันเข้า = ชิดซ้าย · หัวข้อย่อย/สลับฉาก = ชิดซ้ายเหมือนหัวฉาก (ระยะจริงมาจาก spCss) */
 .sp-transition-in { text-align:left; color:var(--orange); }
 .sp-subheader { color:var(--link); }
-.sp-intercut { color:var(--accent-hi); }
-.sp-outline1,.sp-outline2,.sp-outline3 { color:var(--accent-hi); }
+.sp-intercut { color:var(--accent-ink, var(--accent-hi)); }
+.sp-outline1,.sp-outline2,.sp-outline3 { color:var(--accent-ink, var(--accent-hi)); }
 .sp-summary { color:var(--green); font-style:italic; }
 .sp-act-break { text-align:center; }
 /* ══ [alpha.114] ★★ เครื่องประดับของบล็อกห้ามกิน "ความกว้างข้อความ" ══
@@ -1649,7 +1652,7 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
 .wiki-img-x { position:absolute; top:4px; right:4px; background:rgba(0,0,0,.55); }
 /* ดาว = เลือกว่ารูปไหนขึ้นในวงกลมโปรไฟล์ (ข้อ 2) */
 .wiki-img-star { position:absolute; top:4px; left:4px; background:rgba(0,0,0,.55); }
-.wiki-img-star.on { color:var(--accent-hi); }
+.wiki-img-star.on { color:var(--accent-ink, var(--accent-hi)); }
 /* [alpha.60r2 ข้อ 12] เมทาดาทาของรูป — ปุ่มแก้ + คำบรรยายใต้รูป */
 .wiki-img-edit { position:absolute; bottom:4px; right:4px; background:rgba(0,0,0,.55); }
 .wiki-img-cap { max-width:180px; margin-top:4px; font-size:calc(11.5px * var(--ui-scale, 1));
@@ -1751,7 +1754,7 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
 .net-tbar-btn { background:var(--bar); color:var(--fg); border:1px solid var(--border);
   border-radius:6px; padding:2px 7px; font-size:calc(10.5px*var(--ui-scale,1)); cursor:pointer; }
 .net-tbar-btn:hover { border-color:var(--accent); color:var(--bright); }
-.net-tbar-btn.net-tog.on { border-color:var(--accent); color:var(--accent-hi); }
+.net-tbar-btn.net-tog.on { border-color:var(--accent); color:var(--accent-ink, var(--accent-hi)); }
 .net-grid-slider { width:60px; height:14px; cursor:pointer; accent-color:var(--accent); }
 /* minimap */
 .net-minimap { position:absolute; right:6px; top:6px; z-index:3; border-radius:6px;
@@ -1766,7 +1769,7 @@ body.sp-page-numbers .pane:not(.wiki-pane):not(.sp-view-draft) > .workspace > .P
   padding:4px 10px; text-align:center; border-top:1px solid var(--border); }
 /* ---------- Dashboard ---------- */
 .dash-wrap { max-width:860px; margin:0 auto; padding:var(--pan-page-pad); }
-.dash-title { font-size:var(--pan-title-fs); font-weight:700; color:var(--accent-hi); margin-bottom:var(--pan-gap); }
+.dash-title { font-size:var(--pan-title-fs); font-weight:700; color:var(--accent-ink, var(--accent-hi)); margin-bottom:var(--pan-gap); }
 .dash-cards { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px; }
 .dash-card { background:var(--side); border:1px solid var(--border); border-radius:12px;
   padding:16px 22px; min-width:130px; text-align:center; }
@@ -1803,7 +1806,7 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 .k-panel-btn:focus { outline:none; }
 .k-panel-btn:focus-visible { opacity:1; outline:2px solid var(--accent-hi); outline-offset:1px; }
 .k-tab-x:focus-visible { opacity:1; outline:2px solid var(--accent-hi); outline-offset:1px; }
-.k-panel-btn.on { opacity:1; color:var(--accent-hi); }
+.k-panel-btn.on { opacity:1; color:var(--accent-ink, var(--accent-hi)); }
 
 /* พับแผง (เก็บเฉพาะหัว — หัวต้องยังเห็นเสมอ ไม่งั้นคลี่กลับไม่ได้) */
 .k-collapsed #tree, .k-collapsed #tree-search,
@@ -1860,9 +1863,9 @@ body.focus-mode .k-tab-group .k-tab-bar { display:none !important; }
 
 /* หัว/รายการ Navigation */
 .nav-head { padding:5px 6px 4px; }
-.nav-scene { color:var(--accent-hi); font-weight:600; font-size:calc(12px * var(--ui-scale, 1)); }
+.nav-scene { color:var(--accent-ink, var(--accent-hi)); font-weight:600; font-size:calc(12px * var(--ui-scale, 1)); }
 .ol-item.nav-sceneHeading { color:var(--link); font-weight:600; }
-.ol-item.nav-character { color:var(--accent-hi); }
+.ol-item.nav-character { color:var(--accent-ink, var(--accent-hi)); }
 .ol-item.nav-transition { color:var(--dim); font-style:italic; }
 .ol-item.nav-outline { font-weight:600; }
 .ol-item.nav-summary, .ol-item.nav-quote { color:var(--dim); font-style:italic; }
@@ -1905,7 +1908,8 @@ body.paper-mode .k-split-pane { background:var(--paper-surround); }
 body.k-split-on #tabs { display:none !important; }
 .k-split-tabs { flex:0 0 auto; display:flex; align-items:stretch; gap:2px; overflow-x:auto;
   overflow-y:hidden; background:var(--bar); border-bottom:1px solid var(--border);
-  padding:2px 2px 0; min-height:calc(24px * var(--ui-scale, 1)); scrollbar-width:thin; }
+  padding:2px 2px 0; min-height:calc(24px * var(--ui-scale, 1)); scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent; }  /* ไม่มีบรรทัดนี้ = Chromium วาด scrollbar ระบบพื้นขาวในธีมมืด */
 .k-split-tabs::-webkit-scrollbar { height:4px; }
 .k-mtab { display:flex; align-items:center; gap:5px; max-width:170px; flex:0 0 auto;
   padding:2px 6px 2px 9px; border-radius:6px 6px 0 0; cursor:pointer; user-select:none;
@@ -1915,7 +1919,7 @@ body.k-split-on #tabs { display:none !important; }
 .k-mtab.on { background:var(--bg); color:var(--bright);
   border-color:var(--border); box-shadow:inset 0 2px 0 0 var(--accent); }
 .k-mtab-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.k-mtab.dirty .k-mtab-title::after { content:" ●"; color:var(--accent-hi); }
+.k-mtab.dirty .k-mtab-title::after { content:" ●"; color:var(--accent-ink, var(--accent-hi)); }
 .k-mtab-x { opacity:0; padding:0 2px; border-radius:4px; line-height:1; }
 .k-mtab:hover .k-mtab-x, .k-mtab.on .k-mtab-x { opacity:.55; }
 .k-mtab-x:hover { opacity:1; background:var(--border); }
@@ -1948,7 +1952,7 @@ body.k-split-on #tabs { display:none !important; }
 .k-cmp { min-width:720px; max-width:88vw; }
 .k-cmp-head { display:flex; align-items:center; gap:8px; margin:6px 0 10px; flex-wrap:wrap; }
 .k-cmp-lbl { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); }
-.k-cmp-count { margin-left:auto; font-size:calc(12px * var(--ui-scale, 1)); color:var(--accent-hi); }
+.k-cmp-count { margin-left:auto; font-size:calc(12px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); }
 .k-cmp-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:58vh; overflow:auto; }
 .k-cmp-col { background:var(--bg); border:1px solid var(--border); border-radius:8px;
   padding:8px 10px; font:12px/1.6 ui-monospace,Consolas,monospace, var(--thai-net); white-space:pre-wrap; overflow:auto; }
@@ -2569,7 +2573,7 @@ body.paper-mode .k-paper .sp-raw { color:#888; }
 .filter-chip:hover:not(.on) { border-color:var(--fg); color:var(--fg); }
 #filter-tags { display:flex; gap:4px; flex-wrap:wrap; flex:1; min-width:0; overflow:hidden; }
 .filter-tag-chip { padding:2px 7px; border-radius:999px; font-size:calc(10.5px * var(--ui-scale, 1)); cursor:pointer;
-  background:rgba(217,119,87,.15); color:var(--accent-hi);
+  background:rgba(217,119,87,.15); color:var(--accent-ink, var(--accent-hi));
   transition:all .12s; white-space:nowrap; user-select:none; }
 .filter-tag-chip:hover { background:var(--accent); color:var(--on-accent); }
 .filter-tag-chip.on { background:var(--accent); color:var(--on-accent); }
@@ -2778,7 +2782,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
   padding:6px 12px; border-bottom:1px solid rgba(255,255,255,.03); font-size:calc(12.5px * var(--ui-scale, 1)); }
 .k-keys-row:last-child { border-bottom:none; }
 .k-keys-name { color:var(--fg); }
-.k-keys-key { color:var(--accent-hi); font-family:ui-monospace,Consolas,monospace, var(--thai-net);
+.k-keys-key { color:var(--accent-ink, var(--accent-hi)); font-family:ui-monospace,Consolas,monospace, var(--thai-net);
   font-size:calc(11.5px * var(--ui-scale, 1)); background:rgba(193,95,60,.12); padding:2px 6px; border-radius:4px; }
 
 /* ====== Context Menu polish (ข้อ 51) — เส้นคั่น ====== */
@@ -2861,7 +2865,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
 .wiki-prof-name { font-size:calc(18px * var(--ui-scale, 1)); font-weight:600; color:var(--bright); margin-bottom:4px; }
 .wiki-prof-aliases { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); margin-bottom:4px; }
 .wiki-prof-aliases span { background:rgba(217,119,87,.15); padding:1px 6px; border-radius:4px; margin-right:4px; }
-.wiki-prof-role { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--accent-hi); margin-bottom:4px; }
+.wiki-prof-role { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); margin-bottom:4px; }
 .wiki-prof-status { display:inline-block; padding:2px 8px; border-radius:999px; font-size:calc(11px * var(--ui-scale, 1)); }
 .wiki-prof-status.living { background:rgba(111,174,111,.2); color:#8cc28c; }
 .wiki-prof-status.deceased { background:rgba(217,87,94,.2); color:#e5878c; }
@@ -2897,7 +2901,7 @@ body.reading-mode.paper-mode .pane.on > .workspace > .ProseMirror h6 { color:#11
 body.fm2 #tabs { display:none; }
 
 /* ====== Streak Badge ====== */
-#streak-badge { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--accent-hi); margin-left:8px; cursor:pointer; }
+#streak-badge { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); margin-left:8px; cursor:pointer; }
 #streak-badge:hover { text-shadow:0 0 8px var(--accent); }
 
 /* ====== Branching UI (ข้อ 81 · ยกเครื่อง alpha.66) — ผัง Branch Tree + แผง inspector ======
@@ -2954,7 +2958,7 @@ body.fm2 #tabs { display:none; }
   box-sizing:border-box; }
 .branch-find-inp:focus { outline:none; border-color:var(--accent-hi); }
 .branch-find.on .branch-find-inp { border-color:var(--accent-hi); }
-.branch-find-count { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--accent-hi); white-space:nowrap; }
+.branch-find-count { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); white-space:nowrap; }
 
 .branch-warn { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; flex:0 0 auto; }
 .branch-badge { font-size:calc(12px * var(--ui-scale, 1)); padding:3px 10px; border-radius:999px; border:1px solid transparent; }
@@ -3007,7 +3011,7 @@ body.fm2 #tabs { display:none; }
   font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); margin-top:5px;
   white-space:nowrap; overflow:hidden; }
 .branch-node-ch { overflow:hidden; text-overflow:ellipsis; }
-.branch-node-count { color:var(--accent-hi); flex:0 0 auto; }
+.branch-node-count { color:var(--accent-ink, var(--accent-hi)); flex:0 0 auto; }
 .branch-node.bn-root { border-left-color:#6fae6f; }
 .branch-node.bn-end  { border-left-color:#5f9fd9; }
 .branch-node.bn-loop { border-left-color:#d97757; }
@@ -3083,18 +3087,18 @@ body.fm2 #tabs { display:none; }
 .branch-grip { cursor:grab; color:var(--dim); font-size:calc(13px * var(--ui-scale, 1));
   padding:0 2px; flex:0 0 auto; user-select:none; }
 .branch-grip:active { cursor:grabbing; }
-.branch-grip:hover { color:var(--accent-hi); }
+.branch-grip:hover { color:var(--accent-ink, var(--accent-hi)); }
 .branch-edit-text { flex:1; min-width:0; font-size:calc(13px * var(--ui-scale, 1)); padding:5px 7px; }
 .branch-edit-to { flex:0 0 84px; max-width:84px; font-size:calc(12px * var(--ui-scale, 1)); padding:4px; }
 .branch-edit-go, .branch-edit-del, .branch-edit-col { background:transparent; border:1px solid var(--border);
   border-radius:5px; color:var(--dim); width:26px; height:26px; cursor:pointer;
   font-size:calc(12px * var(--ui-scale, 1)); flex:0 0 auto; padding:0; }
-.branch-edit-go:hover { color:var(--accent-hi); border-color:var(--accent-hi); }
+.branch-edit-go:hover { color:var(--accent-ink, var(--accent-hi)); border-color:var(--accent-hi); }
 .branch-edit-col:hover { border-color:var(--accent-hi); }
 .branch-edit-del:hover { color:var(--st-danger-alt); border-color:var(--st-danger-alt); }
 .branch-path { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); padding:4px 7px; background:var(--bg);
   border-radius:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.branch-path-hi { color:var(--accent-hi); border:1px solid var(--accent-hi); }
+.branch-path-hi { color:var(--accent-ink, var(--accent-hi)); border:1px solid var(--accent-hi); }
 
 /* [ข้อ 4] จานสีการ์ด/เส้น */
 .branch-colors { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
@@ -3110,7 +3114,7 @@ body.fm2 #tabs { display:none; }
 /* กล่องรายการ (เส้นทางทั้งหมด / ทางเลือกที่พัง) */
 .branch-dlg { min-width:min(680px, 92vw); }
 .branch-path-row { display:flex; gap:9px; align-items:baseline; }
-.branch-path-len { flex:0 0 auto; font-size:calc(11px * var(--ui-scale, 1)); color:var(--accent-hi); }
+.branch-path-len { flex:0 0 auto; font-size:calc(11px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); }
 .branch-path-txt { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .branch-broken-row { display:flex; gap:8px; align-items:center; }
 .branch-broken-sc { font-weight:600; color:var(--bright); }
@@ -3123,7 +3127,7 @@ body.fm2 #tabs { display:none; }
 .branch-doc-hint { font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); line-height:1.55;
   background:var(--bg); border:1px dashed var(--border); border-radius:6px; padding:7px 9px; }
 .branch-doc-ok { font-size:calc(12.5px * var(--ui-scale, 1)); color:#6fae8a; }
-.branch-doc-lbl { font-size:calc(12px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); margin-top:4px; }
+.branch-doc-lbl { font-size:calc(12px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-ink, var(--accent-hi)); margin-top:4px; }
 .branch-doc-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .branch-doc-mark { font-family:ui-monospace, "Cascadia Code", Consolas, monospace, var(--thai-net);
   font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--link); background:var(--bg); border:1px solid var(--border);
@@ -3187,7 +3191,7 @@ body.fm2 #tabs { display:none; }
 .player-choice-text { flex:1; min-width:0; font-weight:600; color:var(--bright); }
 .player-choice-to { flex:0 0 auto; font-size:calc(12px * var(--ui-scale, 1)); color:var(--dim); }
 .player-choice-dead { border-left-color:var(--st-danger-alt); opacity:.7; cursor:not-allowed; }
-.player-end { font-size:calc(17px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); }
+.player-end { font-size:calc(17px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-ink, var(--accent-hi)); }
 
 .player-foot { display:flex; gap:8px; align-items:center; padding:10px 18px;
   border-top:1px solid var(--border); background:var(--bar); }
@@ -3209,7 +3213,7 @@ body.fm2 #tabs { display:none; }
 .floor-pinbtn.on { background:var(--accent-hi); color:var(--on-accent-hi); border-color:var(--accent-hi); }
 .floor-crumb { display:flex; align-items:center; gap:5px; margin-top:6px; font-size:calc(11.5px * var(--ui-scale, 1)); }
 .floor-crumb-item { color:var(--link); cursor:pointer; }
-.floor-crumb-item:hover { color:var(--accent-hi); }
+.floor-crumb-item:hover { color:var(--accent-ink, var(--accent-hi)); }
 .floor-crumb-item.on { color:var(--dim); cursor:default; }
 .floor-crumb-sep { color:var(--dim); }
 
@@ -3234,7 +3238,7 @@ body.fm2 #tabs { display:none; }
 /* "คุณอยู่ที่นี่" — เต้นให้เห็นชัดว่าฉากปัจจุบันเกิดตรงไหน */
 .floor-you { position:absolute; transform:translate(-50%,-50%); pointer-events:none;
   display:flex; flex-direction:column; align-items:center; line-height:1; }
-.floor-you-dot { font-size:22px; color:var(--accent-hi);
+.floor-you-dot { font-size:22px; color:var(--accent-ink, var(--accent-hi));
   text-shadow:0 0 10px var(--accent-hi); animation:floor-pulse 1.6s ease-in-out infinite; }
 .floor-you-label { margin-top:2px; font-size:10px; color:var(--on-accent-hi); background:var(--accent-hi);
   padding:1px 6px; border-radius:999px; white-space:nowrap; }
@@ -3252,7 +3256,7 @@ body.fm2 #tabs { display:none; }
 .floor-item-del { opacity:.45; cursor:pointer; flex:0 0 auto; }
 .floor-item-del:hover { opacity:1; color:var(--st-danger-alt); }
 .floor-add { align-self:flex-start; font-size:calc(11px * var(--ui-scale, 1)); padding:2px 8px; margin-top:2px;
-  background:transparent; border:1px solid var(--border); color:var(--accent-hi);
+  background:transparent; border:1px solid var(--border); color:var(--accent-ink, var(--accent-hi));
   border-radius:5px; cursor:pointer; }
 .floor-add:hover { border-color:var(--accent-hi); }
 
@@ -3263,7 +3267,7 @@ body.fm2 #tabs { display:none; }
   padding:7px 10px; cursor:pointer; transition:border-color .15s, transform .15s; }
 .floor-tl-item:hover { border-color:var(--accent-hi); transform:translateY(-2px); }
 .floor-tl-item.on { box-shadow:0 0 0 2px var(--accent-hi) inset; }
-.floor-tl-when { font-size:calc(11px * var(--ui-scale, 1)); color:var(--accent-hi); font-weight:600; }
+.floor-tl-when { font-size:calc(11px * var(--ui-scale, 1)); color:var(--accent-ink, var(--accent-hi)); font-weight:600; }
 .floor-tl-title { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--bright); margin-top:2px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .floor-tl-pin { font-size:calc(10.5px * var(--ui-scale, 1)); color:var(--dim); margin-top:2px;
@@ -3295,18 +3299,18 @@ body.fm2 #tabs { display:none; }
 .cent-stats-grid { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
 .cent-stat-card { flex:1; min-width:96px; background:var(--bg); border-radius:8px;
   padding:10px 12px; text-align:center; }
-.cent-stat-num { font-size:calc(20px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); }
+.cent-stat-num { font-size:calc(20px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-ink, var(--accent-hi)); }
 .cent-stat-lbl { font-size:calc(10.5px * var(--ui-scale, 1)); color:var(--dim); margin-top:2px; }
 .cent-scene-link { color:var(--link); cursor:pointer; text-decoration:underline; }
-.cent-scene-link:hover { color:var(--accent-hi); }
+.cent-scene-link:hover { color:var(--accent-ink, var(--accent-hi)); }
 .cent-orphan { border-left-color:var(--st-warn); }
 .cent-todo-item.cent-clickable { cursor:pointer; }
-.cent-todo-item.cent-clickable:hover { color:var(--accent-hi); }
+.cent-todo-item.cent-clickable:hover { color:var(--accent-ink, var(--accent-hi)); }
 
 /* ====== Future Notes (ข้อ 85) — โน้ต "ไว้ทำภายหลัง" บนหน้าเส้นเวลา ====== */
 .tl-future { background:var(--side); border:1px solid var(--border); border-radius:10px;
   padding:12px 14px; margin-bottom:14px; }
-.fn-title { font-size:calc(13px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); margin-bottom:6px; }
+.fn-title { font-size:calc(13px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-ink, var(--accent-hi)); margin-bottom:6px; }
 .fn-list { display:flex; flex-direction:column; gap:5px; }
 .fn-row { display:flex; align-items:flex-start; gap:8px; padding:6px 9px; background:var(--bg);
   border-radius:6px; border-left:3px solid var(--st-warn); }
@@ -3335,7 +3339,7 @@ body.fm2 #tabs { display:none; }
 .k-ev-ref-x:hover { opacity:1; color:var(--warn, #d9575e); }
 
 /* ====== Player Choices (ข้อ 83) — แผงประวัติการตัดสินใจ (ใช้ซ้ำในแดชบอร์ด/หน้าตัวละคร) ====== */
-.pc-panel-title { font-size:calc(13px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-hi); margin-bottom:6px; }
+.pc-panel-title { font-size:calc(13px * var(--ui-scale, 1)); font-weight:600; color:var(--accent-ink, var(--accent-hi)); margin-bottom:6px; }
 .pc-sum { font-size:calc(11.5px * var(--ui-scale, 1)); color:var(--dim); margin-bottom:8px; }
 .pc-list { display:flex; flex-direction:column; gap:5px; }
 .pc-row { padding:6px 9px; background:var(--bg); border-radius:6px;
@@ -3357,7 +3361,7 @@ body.fm2 #tabs { display:none; }
 .vt-chips { display:inline-flex; flex-wrap:wrap; gap:3px; align-items:center; vertical-align:middle; }
 .vt-chip { display:inline-flex; align-items:center; gap:3px; padding:1px 7px;
   font-size:calc(10.5px * var(--ui-scale, 1)); line-height:1.5; white-space:nowrap; }
-.vt-chip-plain { color:var(--accent-hi); opacity:.85; background:transparent;
+.vt-chip-plain { color:var(--accent-ink, var(--accent-hi)); opacity:.85; background:transparent;
   border:none; padding:1px 2px; }
 .vt-card { cursor:pointer; transition:border-color .15s; }
 .vt-card:hover { border-color:var(--accent); }
@@ -3393,7 +3397,7 @@ body.fm2 #tabs { display:none; }
 /* ====== Backlinks (ข้อ 86) ====== */
 .bl-list { display:flex; flex-direction:column; gap:4px; }
 .bl-row { font-size:calc(13px * var(--ui-scale, 1)); padding:4px 8px; background:var(--bg); border-radius:6px; }
-.bl-count { color:var(--accent-hi); font-weight:600; }
+.bl-count { color:var(--accent-ink, var(--accent-hi)); font-weight:600; }
 .bl-name { color:var(--link); }
 .bl-name:hover { color:var(--accent); }
 .bl-via { color:var(--dim); font-size:calc(11px * var(--ui-scale, 1)); }
@@ -3415,7 +3419,7 @@ body.fm2 #tabs { display:none; }
 /* ====== [alpha.60r3a] `---` ขึ้นหน้าใหม่แบบบังคับ (element ของผู้ใช้) ======
    **คนละตัวกับ `.sp-page-break`** ซึ่งเป็นเส้นคั่นหน้า "อัตโนมัติ" ที่ paginate() วาดให้
    ตัวนี้คือบล็อกจริงในเอกสารที่ผู้ใช้แทรกเอง — ต้องเห็นชัดว่ามีคำสั่งอยู่ ไม่ใช่บรรทัดว่าง */
-.sp.sp-page-break-el { position:relative; text-align:center; color:var(--accent-hi);
+.sp.sp-page-break-el { position:relative; text-align:center; color:var(--accent-ink, var(--accent-hi));
   border-top:2px dashed var(--accent); margin:12px 0; min-height:1.3em;
   font-size:calc(11px * var(--ui-scale, 1)); letter-spacing:0; }
 .sp.sp-page-break-el::after { content:'— ขึ้นหน้าใหม่ —'; }
@@ -3541,7 +3545,7 @@ body.paper-mode .k-paper .sp.sp-page-break-el { border-top-color:#c9a06a; color:
   background:none; border:1px solid var(--border); border-radius:6px;
   color:var(--dim); cursor:pointer; padding:2px 7px; line-height:1.4;
   font-size:calc(13px * var(--ui-scale, 1)); }
-.k-ai-fill:hover:not(:disabled) { color:var(--accent-hi); border-color:var(--accent); }
+.k-ai-fill:hover:not(:disabled) { color:var(--accent-ink, var(--accent-hi)); border-color:var(--accent); }
 .k-ai-fill:disabled { opacity:.5; cursor:progress; }
 
 /* ====== Wiki Backlinks section ====== */
@@ -3824,7 +3828,7 @@ body.paper-mode .roster-page { background:var(--paper); color:var(--paper-ink); 
 .roster-del { position:absolute; right:-1.6em; top:0; text-indent:0;
   color:var(--dim); cursor:pointer; opacity:0; font-size:.8em; }
 .roster-row:hover .roster-del { opacity:.7; }
-.roster-del:hover { color:var(--accent-hi); opacity:1; }
+.roster-del:hover { color:var(--accent-ink, var(--accent-hi)); opacity:1; }
 .roster-empty { color:var(--dim); font-style:italic; }
 .roster-sec { margin-top:3em; }              /* ระหว่างหัวข้อเว้น 2 บรรทัด */
 .roster-sec:first-of-type { margin-top:1.5em; }
@@ -3842,7 +3846,7 @@ body.paper-mode .roster-page { background:var(--paper); color:var(--paper-ink); 
 .k-spfmt-tbl input[type=checkbox] { margin:0; cursor:pointer; }
 .k-spfmt-scroll { max-height:46vh; overflow:auto; }
 .k-set-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 18px; }
-.k-set-sub { color:var(--accent-hi); font-weight:600; margin:14px 0 6px;
+.k-set-sub { color:var(--accent-ink, var(--accent-hi)); font-weight:600; margin:14px 0 6px;
   font-size:calc(12.5px * var(--ui-scale, 1)); }
 .k-set-page .k-row input[type=number].k-narrow { width:90px; }
 
@@ -4599,7 +4603,7 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
   font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.5;
   white-space:pre-wrap; word-break:break-word; color:var(--fg); }
 .k-dev-line { padding:1px 0; }
-.k-dev-line.k-dev-in { color:var(--accent-hi); }
+.k-dev-line.k-dev-in { color:var(--accent-ink, var(--accent-hi)); }
 .k-dev-line.k-dev-err { color:var(--st-danger); }
 .k-dev-line.k-dev-log { color:var(--dim); }
 /* [alpha.76] เครดิต — รายการยาว ให้เลื่อนในตัวเอง ไม่ดันกล่องจนล้นจอ */
@@ -4713,7 +4717,7 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 .k-manual-page-break { position:relative; height:0; margin:1.4em 0;
   border-top:2px dashed var(--accent-hi); user-select:none; }
 .k-manual-page-break::after { content:attr(data-label); position:absolute; right:0; top:-.9em;
-  background:var(--bg); padding:0 8px; font-size:.72em; color:var(--accent-hi); letter-spacing:.04em; }
+  background:var(--bg); padding:0 8px; font-size:.72em; color:var(--accent-ink, var(--accent-hi)); letter-spacing:.04em; }
 body.paper-mode .k-paper .k-manual-page-break { border-top-color:#c9a06a; }
 body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); color:#a5752f; }
 .ProseMirror-selectednode.k-manual-page-break { border-top-color:var(--accent); }
@@ -4830,7 +4834,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
    (แทนป้าย ⏳ เดิมที่โผล่แค่ตอนกำลังทำงาน — ผู้ใช้ต้องการเห็นสถานะของทุกเซสชันตลอดเวลา) */
 .ai-chat-status { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
   width:16px; height:16px; color:var(--dim); }
-.ai-chat-status.ai-st-running { color:var(--accent-hi); }
+.ai-chat-status.ai-st-running { color:var(--accent-ink, var(--accent-hi)); }
 .ai-chat-status.ai-st-running svg { animation:k-spin 1.1s linear infinite; }
 .ai-chat-status.ai-st-error { color:var(--st-danger); }
 /* ปุ่ม "ต่อ" ใต้คำตอบที่ไม่ครบ */
@@ -4943,7 +4947,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   font-size:calc(11px * var(--ui-scale, 1)); max-width:170px; }
 /* [alpha.145] ระดับการใช้ความคิด + ทักษะ (Skills/*.md) */
 .ai-chat-effort { max-width:150px; }
-.ai-chat-skills.on { border-color:var(--accent); color:var(--accent-hi); }
+.ai-chat-skills.on { border-color:var(--accent); color:var(--accent-ink, var(--accent-hi)); }
 .ai-chat-files { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
 .ai-chat-filechip { background:var(--bar); border:1px solid var(--border); border-radius:999px;
   padding:1px 8px; font-size:calc(10.5px * var(--ui-scale, 1)); }
@@ -5139,7 +5143,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   border-radius:6px; padding:3px 7px; max-width:210px;
   font-size:calc(11.5px * var(--ui-scale, 1)); }
 .branch-plan-sel:focus { outline:none; border-color:var(--accent-hi); }
-.branch-plan-dirty { color:var(--accent-hi); font-size:calc(13px * var(--ui-scale, 1)); }
+.branch-plan-dirty { color:var(--accent-ink, var(--accent-hi)); font-size:calc(13px * var(--ui-scale, 1)); }
 .branch-plan-row { display:flex; align-items:center; }
 
 /* ═══ [alpha.73 ข้อ 6] บีบแผงแคบกว่าที่เนื้อหาต้องการ = มีแถบเลื่อนแนวนอน ไม่ใช่ยุบจนอ่านไม่ออก ═══
@@ -5309,14 +5313,14 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   font-size:calc(11px * var(--ui-scale, 1)); color:var(--dim); cursor:pointer;
   position:sticky; top:0; background:var(--card-bg, var(--bg)); z-index:1;
   border-bottom:1px solid var(--border); }
-.k-dlgp-group:hover .k-dlgp-gsc { color:var(--accent-hi); }
+.k-dlgp-group:hover .k-dlgp-gsc { color:var(--accent-ink, var(--accent-hi)); }
 .k-dlgp-gsep { opacity:.5; }
 .k-dlgp-gsc { color:var(--fg); font-weight:600; }
 .k-dlgp-gn { margin-left:auto; }
 .k-dlgp-item { display:flex; align-items:baseline; gap:8px; padding:5px 10px 5px 16px;
   cursor:pointer; font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.55; }
 .k-dlgp-item:hover { background:var(--card-bg, rgba(255,255,255,.05)); }
-.k-dlgp-who { flex:0 0 auto; max-width:130px; font-weight:600; color:var(--accent-hi);
+.k-dlgp-who { flex:0 0 auto; max-width:130px; font-weight:600; color:var(--accent-ink, var(--accent-hi));
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .k-dlgp-item-unk .k-dlgp-who { color:var(--dim); font-weight:400; font-style:italic; }
 .k-dlgp-line { flex:0 0 auto; font-size:calc(10.5px * var(--ui-scale, 1)); opacity:.7; }
@@ -5363,7 +5367,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
   line-height:1.6; word-break:break-word; }
 .k-plug-cmds { display:flex; gap:6px; flex-wrap:wrap; align-items:center;
   font-size:calc(11px * var(--ui-scale, 1)); }
-.k-plug-cmd { background:none; border:1px solid var(--accent-hi); color:var(--accent-hi);
+.k-plug-cmd { background:none; border:1px solid var(--accent-hi); color:var(--accent-ink, var(--accent-hi));
   border-radius:6px; padding:2px 9px; cursor:pointer;
   font-size:calc(11px * var(--ui-scale, 1)); }
 .k-plug-cmd:hover { background:var(--accent-hi); color:var(--on-accent-hi); }
@@ -5374,7 +5378,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .k-plug-api-hint { font-size:calc(11px * var(--ui-scale, 1)); margin-bottom:8px; line-height:1.6; }
 .k-plug-api-row { display:flex; flex-direction:column; gap:1px; padding:5px 0;
   border-top:1px solid var(--border); }
-.k-plug-api-sig { font-family:ui-monospace, Consolas, monospace, var(--thai-net); color:var(--accent-hi);
+.k-plug-api-sig { font-family:ui-monospace, Consolas, monospace, var(--thai-net); color:var(--accent-ink, var(--accent-hi));
   font-size:calc(11.5px * var(--ui-scale, 1)); word-break:break-word; }
 .k-plug-api-desc { font-size:calc(11px * var(--ui-scale, 1)); line-height:1.5; }
 
@@ -5449,7 +5453,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .dlgb-back, .dlgb-more, .dlgb-eye { background:none; border:1px solid transparent; color:var(--dim);
   cursor:pointer; border-radius:5px; padding:2px 7px; }
 .dlgb-back:hover, .dlgb-more:hover, .dlgb-eye:hover { color:var(--fg); border-color:var(--border); }
-.dlgb-eye.on { color:var(--accent-hi); border-color:var(--accent); }
+.dlgb-eye.on { color:var(--accent-ink, var(--accent-hi)); border-color:var(--accent); }
 .dlgb-title { flex:1; min-width:0; color:var(--bright); font-weight:600;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dlgb-head-right { flex:0 0 auto; display:flex; align-items:center; gap:6px; }
@@ -5487,7 +5491,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .dlgb-mono-btn:disabled { opacity:.4; cursor:default; }
 .dlgb-bub-head { display:flex; align-items:center; gap:6px; margin-bottom:3px;
   font-size:calc(11px * var(--ui-scale, 1)); }
-.dlgb-bub-name { color:var(--accent-hi); font-weight:600; }
+.dlgb-bub-name { color:var(--accent-ink, var(--accent-hi)); font-weight:600; }
 .dlgb-bub-to, .dlgb-bub-model { color:var(--dim); font-size:calc(10px * var(--ui-scale, 1)); }
 .dlgb-bub-model { margin-left:auto; opacity:.7; }
 .dlgb-bub-ins { color:#6bbf72; }
@@ -5546,7 +5550,7 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .dlgb-cast-card { border:1px solid var(--border); border-radius:8px; padding:8px 10px;
   margin-bottom:8px; background:var(--side); }
 .dlgb-cast-head { display:flex; align-items:center; gap:8px; }
-.dlgb-cast-name { flex:1; color:var(--accent-hi); font-weight:600; }
+.dlgb-cast-name { flex:1; color:var(--accent-ink, var(--accent-hi)); font-weight:600; }
 .dlgb-cast-del { flex:0 0 auto; padding:2px 8px; }
 .dlgb-mini { padding:3px 9px; font-size:calc(11px * var(--ui-scale, 1)); }
 .dlgb-add { display:flex; gap:6px; align-items:center; margin:6px 0; }
@@ -5731,7 +5735,7 @@ body.k-measuring .sp-page-break > * {
   color:#f4f1ea; background:linear-gradient(to top, rgba(0,0,0,.88) 62%, rgba(0,0,0,0));
   transition:opacity .18s; }
 .vis-player.text-off .vis-pl-box { opacity:0; pointer-events:none; }
-.vis-player .vis-pl-scene { color:var(--accent-hi); font-size:13px; margin-bottom:6px; }
+.vis-player .vis-pl-scene { color:var(--accent-ink, var(--accent-hi)); font-size:13px; margin-bottom:6px; }
 .vis-player .vis-pl-text { font-size:21px; line-height:1.75; white-space:pre-wrap; word-break:break-word;
   text-shadow:0 1px 3px rgba(0,0,0,.9); }
 .vis-player .vis-pl-remark { margin-top:10px; color:#b9b4a9; font-size:13.5px; white-space:pre-wrap;
@@ -5772,7 +5776,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 .st-dim { color:var(--dim); font-size:.9em; }
 .st-sub { color:var(--dim); font-size:.85em; margin-top:8px; }
 .st-flex { flex:1; }
-.st-err { color:var(--accent-hi); padding:12px; }
+.st-err { color:var(--accent-ink, var(--accent-hi)); padding:12px; }
 .st-back { background:transparent; color:var(--dim); padding:4px 6px; }
 .st-back:hover { color:var(--fg); background:var(--hover); }
 .st-ai { background:var(--sel); color:var(--bright); }
@@ -5833,7 +5837,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
   padding:3px 10px; font-size:.9em; }
 .st-tag.on { background:var(--sel); color:var(--bright); border-color:var(--accent-hi); }
 .st-tag-x { margin-left:6px; opacity:.7; }
-.st-tag-x:hover { opacity:1; color:var(--accent-hi); }
+.st-tag-x:hover { opacity:1; color:var(--accent-ink, var(--accent-hi)); }
 .st-tag-own { display:flex; gap:8px; margin:10px 0; }
 .st-tag-own input { flex:1; }
 .st-tag-group { margin-top:12px; }
@@ -6046,11 +6050,11 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 .aihub-card:hover:not(:disabled) { border-color:var(--accent); background:var(--hover); }
 .aihub-card.on { border-color:var(--accent-hi); }
 .aihub-card:disabled, .aihub-card.blocked { opacity:.45; cursor:default; }
-.aihub-ico { color:var(--accent-hi); display:flex; flex:0 0 auto; margin-top:1px; }
+.aihub-ico { color:var(--accent-ink, var(--accent-hi)); display:flex; flex:0 0 auto; margin-top:1px; }
 .aihub-cardbody { min-width:0; display:flex; flex-direction:column; gap:2px; }
 .aihub-name { color:var(--bright); font-weight:600; display:flex; align-items:center; gap:6px;
   flex-wrap:wrap; font-size:calc(12px * var(--ui-scale, 1)); }
-.aihub-openbadge { color:var(--accent-hi); font-weight:400;
+.aihub-openbadge { color:var(--accent-ink, var(--accent-hi)); font-weight:400;
   font-size:calc(10px * var(--ui-scale, 1)); }
 .aihub-desc { color:var(--dim); line-height:1.45;
   font-size:calc(10.5px * var(--ui-scale, 1)); }
@@ -6087,7 +6091,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 /* ── การ์ดตัวละคร: แท็ก + คำเตือนว่ายังไม่ได้ตั้งชื่อ ── */
 .st-cast-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
 .st-cast-tags .st-tag { font-size:calc(10.5px * var(--ui-scale, 1)); padding:1px 8px; }
-.st-cast-todo { color:var(--accent-hi); margin-top:5px;
+.st-cast-todo { color:var(--accent-ink, var(--accent-hi)); margin-top:5px;
   font-size:calc(10.5px * var(--ui-scale, 1)); }
 
 /* ── ชิปแทรกโค้ดสั้น `{[ชื่อ]}` ── */
@@ -6098,7 +6102,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
   font-family:var(--mono, monospace), var(--thai-net); font-size:calc(10.5px * var(--ui-scale, 1)); }
 .st-mentions .st-mentionchip:hover { border-style:solid; border-color:var(--accent);
   color:var(--bright); }
-.st-mention-warn { color:var(--accent-hi); padding:4px 2px 0;
+.st-mention-warn { color:var(--accent-ink, var(--accent-hi)); padding:4px 2px 0;
   font-size:calc(10.5px * var(--ui-scale, 1)); }
 .st-shortcode-preview { font-family:var(--mono, monospace), var(--thai-net); }
 
@@ -6123,7 +6127,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 /* ── รูปย่อของตอน ── */
 .st-img-thumb { aspect-ratio:16 / 9; width:100%; max-width:260px; }
 .st-sc-card .st-sc-thumb { flex:0 0 130px; max-width:130px; margin-right:10px; }
-.st-sc-adv { color:var(--accent-hi); }
+.st-sc-adv { color:var(--accent-ink, var(--accent-hi)); }
 .st-opener-img { font-family:var(--mono, monospace), var(--thai-net); }
 
 /* ── รูปประกอบในช่องแชท (บทเปิด) ── */
@@ -6147,9 +6151,9 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 /* ══════════ [alpha.123] คำสงวนของโค้ดสั้น · บทพูดตัวเอียง · ที่อยู่โปรเจกต์ ══════════ */
 
 /* ชิปคำสงวน ({{character}} / {{user}}) ต้องดูต่างจากชื่อคนจริง */
-.st-mentions .st-mentionchip.reserved { color:var(--accent-hi); border-style:dotted; }
+.st-mentions .st-mentionchip.reserved { color:var(--accent-ink, var(--accent-hi)); border-style:dotted; }
 .st-mentions .st-mentionchip.reserved:hover { border-style:solid; }
-.st-hint.st-warn { color:var(--accent-hi); }
+.st-hint.st-warn { color:var(--accent-ink, var(--accent-hi)); }
 
 /* บทพูดในเครื่องหมายคำพูด — เอียงพอให้แยกออก ไม่ถึงกับแย่งสายตา */
 .st-turn-text .k-speech, .dlgb-bub-text .k-speech { font-style:italic; opacity:.95; }
@@ -6464,7 +6468,7 @@ body.k-measuring .ProseMirror .sp-err-warn::before { display:none; }
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.25), 0 0 0 1px rgba(255,255,255,.12); }
 .k-menu-swatch-none { background:repeating-linear-gradient(45deg, transparent 0 3px, var(--dim) 3px 4px);
   box-shadow:inset 0 0 0 1px var(--border); }
-.k-menu-item.k-menu-checked::after { content:"✓"; margin-left:10px; color:var(--accent-hi); font-weight:700; }
+.k-menu-item.k-menu-checked::after { content:"✓"; margin-left:10px; color:var(--accent-ink, var(--accent-hi)); font-weight:700; }
 .k-menu-item.k-menu-checked.k-menu-has-accel::after { order:9; }
 .k-submenu { z-index:91; }
 
@@ -6568,7 +6572,7 @@ body.k-measuring .ProseMirror .sp-err-warn::before { display:none; }
 .aia-cmp-row { display:grid; grid-template-columns:minmax(80px, 30%) 1fr auto; gap:8px; align-items:center;
   font-size:calc(12px * var(--ui-scale, 1)); padding:2px 0; }
 .aia-cmp-row.aia-jump { cursor:pointer; }
-.aia-cmp-row.aia-jump:hover .aia-cmp-name { color:var(--accent-hi); text-decoration:underline; }
+.aia-cmp-row.aia-jump:hover .aia-cmp-name { color:var(--accent-ink, var(--accent-hi)); text-decoration:underline; }
 .aia-cmp-total { font-weight:700; padding-bottom:6px; border-bottom:1px dashed var(--border); margin-bottom:3px; }
 .aia-cmp-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
 .aia-cmp-bar { display:flex; height:16px; border-radius:6px; overflow:hidden; background:var(--bg); border:1px solid var(--border); }
@@ -6593,7 +6597,7 @@ body.k-measuring .ProseMirror .sp-err-warn::before { display:none; }
 .props-mention-chip i { font-style:normal; font-size:.8em; color:var(--muted-strong); }
 .k-logline { margin:10px 0 12px; padding:10px 12px; border-radius:12px; background:var(--bg); border:1px solid var(--border); }
 .k-logline-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
-.k-logline-title { font-weight:700; color:var(--accent-hi); }
+.k-logline-title { font-weight:700; color:var(--accent-ink, var(--accent-hi)); }
 .k-logline-row { display:flex; flex-direction:column; gap:3px; margin:7px 0; }
 .k-logline-row label { display:flex; align-items:center; gap:7px; font-size:calc(12px * var(--ui-scale, 1)); color:var(--fg); font-weight:600; }
 .k-logline-no { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%;
@@ -6682,7 +6686,7 @@ body.k-home-only .k-overlay.k-home-startup .k-home-dlg { box-shadow:0 30px 80px 
 /* อักขระเดิมคงไว้ใน DOM (textContent ไม่เปลี่ยน) แต่ไม่กินที่ — ห้ามใช้ position:absolute
    (กล่อง absolute ที่ไม่มีบรรพบุรุษจัดตำแหน่ง ไปรบกวนการวัดตำแหน่งของผืนผ้าใบกระดาน · e2e [65r-5]) */
 .k-gl-t { display:inline-block; width:0; height:0; overflow:hidden; font-size:0; line-height:0; vertical-align:top; pointer-events:none; }
-.k-gl-gold { color:var(--accent-hi); }
+.k-gl-gold { color:var(--accent-ink, var(--accent-hi)); }
 .k-gl-ok { color:#2ecc71; }
 .k-gl-bad { color:#ff5c6c; }
 .k-gl-warn { color:#ffb020; }
@@ -6733,7 +6737,7 @@ body.k-home-only .k-overlay.k-home-startup .k-home-dlg { box-shadow:0 30px 80px 
 .branch-zlabel { min-width:44px; text-align:center; color:var(--muted-strong); font-variant-numeric:tabular-nums; }
 .branch-plan-sel { height:var(--ctl-h); border-radius:var(--ctl-r); }
 .branch-tools, .branch-find { gap:6px; }
-.branch-title .k-gl { color:var(--accent-hi); margin-right:4px; }
+.branch-title .k-gl { color:var(--accent-ink, var(--accent-hi)); margin-right:4px; }
 
 /* ── ปุ่มหลัก (ส้ม) ในแผง: สูงเท่าปุ่มอื่น ── */
 :is(.branch-shell, .gal2, .tl-wrap, .kb-wrap, .dash-wrap) .k-ok { min-height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px; font-weight:600;
@@ -6753,7 +6757,9 @@ body.k-home-only .k-overlay.k-home-startup .k-home-dlg { box-shadow:0 30px 80px 
 .gal2-sidebar .gal2-album.on, .gal2-album.active { box-shadow:inset 3px 0 0 var(--accent-hi); }
 
 /* ── ช่องแยกจอ: ปุ่ม "ปิดช่องนี้" เป็นเม็ดเล็กในแถบแท็บ (เดิมเป็นป้ายส้มทึบห้อยใต้แถบ ทับเส้นกรอบ) ── */
-.k-split-pane > .k-split-tabs { padding-right:calc(96px * var(--ui-scale, 1)); }
+/* จองที่ให้ปุ่มด้วย border (อยู่นอกพื้นที่เลื่อน) ไม่ใช่ padding — padding ของกล่องที่เลื่อนได้ไม่กันแท็บที่ล้น
+   ช่องแคบเมื่อไหร่ ชื่อแท็บมุดเข้าไปใต้ปุ่ม "ปิดช่องนี้" แล้วตัวหนังสือซ้อนกันอ่านไม่ออก */
+.k-split-pane > .k-split-tabs { padding-inline-end:2px; border-inline-end:calc(96px * var(--ui-scale, 1)) solid var(--tab-bar, var(--bar)); }
 .k-split-pane > .cmp-close {
   top:calc(7px * var(--ui-scale, 1)); right:calc(8px * var(--ui-scale, 1)); height:calc(22px * var(--ui-scale, 1));
   display:inline-flex; align-items:center; gap:5px; padding:0 10px; border-radius:999px;
@@ -6782,3 +6788,66 @@ body.k-home-only .k-overlay.k-home-startup .k-home-dlg { box-shadow:0 30px 80px 
 #status-right, #status-right > * { white-space:nowrap; }
 #status-right { flex:0 0 auto; }
 #status { min-width:0; flex:0 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ══════════ ตั้งค่า AI: System prompt + Agents บุคลิกการเขียน ══════════ */
+.k-ai-settings .ai-set-sec { border:1px solid var(--border); border-radius:var(--r-sm, 8px);
+  padding:10px 12px; margin:12px 0 4px; }
+.ai-set-sec-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.ai-set-sec-title { font-weight:600; color:var(--bright); flex:1; min-width:0;
+  font-size:calc(13px * var(--ui-scale, 1)); }
+.ai-sysprompt-on-lbl { display:flex; align-items:center; gap:4px; cursor:pointer;
+  font-size:calc(12px * var(--ui-scale, 1)); }
+.k-ai-settings .ai-sysprompt { width:100%; resize:vertical; min-height:70px; font:inherit; }
+.k-ai-settings .ai-hint { font-size:calc(11px * var(--ui-scale, 1)); margin-top:4px; }
+.ai-agent-list { display:flex; flex-direction:column; gap:6px; }
+.ai-agent-row { display:flex; align-items:center; gap:6px; padding:6px 8px;
+  border:1px solid var(--border); border-radius:var(--r-sm, 6px); background:var(--bg); }
+.ai-agent-info { flex:1; min-width:0; }
+.ai-agent-title { color:var(--bright); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ai-agent-sub { font-size:calc(11px * var(--ui-scale, 1)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ai-agent-row button { padding:4px 8px; white-space:nowrap; }
+.ai-agent-empty { padding:10px; border:1px dashed var(--border); border-radius:var(--r-sm, 6px);
+  font-size:calc(12px * var(--ui-scale, 1)); }
+
+/* กล่องเพิ่ม/แก้ Agent */
+.k-dialog.k-ai-agent { width:min(760px, 96vw); max-height:88vh; overflow-y:auto; }
+.k-ai-agent .ai-field { margin-bottom:12px; }
+.k-ai-agent .ai-field > label { display:block; margin-bottom:4px; color:var(--bright);
+  font-size:calc(12.5px * var(--ui-scale, 1)); }
+.k-ai-agent .ai-field .wiki-input { width:100%; }
+.k-ai-agent textarea.wiki-input { resize:vertical; font:inherit; }
+.k-ai-agent .ai-hint { font-size:calc(11px * var(--ui-scale, 1)); margin-top:3px; }
+.ai-agent-tpl { margin-top:6px; padding:4px 10px; }
+.ai-agent-refs { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+.ai-agent-ref { border:1px solid var(--border); border-radius:var(--r-sm, 6px); padding:8px; background:var(--bg); }
+.ai-agent-ref-head { display:flex; align-items:center; gap:8px; }
+.ai-agent-ref-head .ai-agent-ref-name { flex:1; min-width:0; }
+.ai-agent-ref-kind { font-size:calc(11px * var(--ui-scale, 1)); max-width:45%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ai-agent-ref-text { margin-top:6px; }
+.ai-agent-ref-btns { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.ai-agent-ref-empty { font-size:calc(12px * var(--ui-scale, 1)); padding:6px 0; }
+
+/* ══════════ Rewrite this — แถบลอยใต้/เหนือข้อความที่เลือก ══════════ */
+.k-rewrite-bar { position:fixed; z-index:95; width:min(560px, calc(100vw - 16px));
+  background:var(--side); color:var(--fg); border:1px solid var(--border); border-radius:var(--r-lg, 10px);
+  box-shadow:0 12px 36px rgba(0,0,0,.45); padding:10px 12px; display:flex; flex-direction:column; gap:8px;
+  font-size:calc(13px * var(--ui-scale, 1)); }
+.k-rewrite-head { display:flex; align-items:center; gap:8px; min-width:0; }
+.k-rewrite-title { font-weight:600; color:var(--bright); white-space:nowrap; }
+.k-rewrite-src { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:calc(11.5px * var(--ui-scale, 1)); font-style:italic; }
+.k-rewrite-x { padding:2px 8px; }
+.k-rewrite-row { display:flex; align-items:center; gap:8px; }
+.k-rewrite-lbl { flex:0 0 auto; color:var(--dim); }
+.k-rewrite-agent { flex:1; min-width:0; }
+.k-rewrite-input { width:100%; resize:vertical; min-height:44px; font:inherit; }
+.k-rewrite-out { max-height:30vh; overflow-y:auto; white-space:pre-wrap; padding:8px;
+  border-radius:var(--r-sm, 6px); background:var(--bg); border:1px solid var(--border); line-height:1.7; }
+.k-rewrite-out[data-state="busy"] { color:var(--dim); }
+.k-rewrite-btns { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.k-rewrite-msg { flex:1; min-width:0; font-size:calc(11.5px * var(--ui-scale, 1)); }
+.k-rewrite-btns button { padding:5px 12px; white-space:nowrap; }
+/* ไฮไลต์ช่วงที่กำลังจะถูกเขียนใหม่ (ตัวแก้ไขเสียโฟกัสแล้วไม่วาด selection เอง) */
+.k-rewrite-hls { position:fixed; z-index:94; pointer-events:none; overflow:hidden; }
+.k-rewrite-hl { position:absolute; background:var(--sel); outline:1px solid var(--accent-hi); border-radius:2px; opacity:.55; }

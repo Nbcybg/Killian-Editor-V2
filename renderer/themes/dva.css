@@ -10,9 +10,10 @@ body.theme-dva {
   --border:#4a3a66;
   --fg:#fbeefa;
   --bright:#fdf8fd;
-  --dim:#a499a8;
+  --dim:#ada3b1;
   --accent:#ff5fb6;
   --accent-hi:#7fe3ff;
+  --accent-ink:#7fe3ff;
   --link:#9cf2c4;
   --sel:#5a2a55;
   --orange:#7fe3ff;
@@ -29,7 +30,7 @@ body.theme-dva {
   --tab-bar:#181220;
   --tab-bg:#382f42;
   --tab-border:#52495b;
-  --tab-fg:#a499a8;
+  --tab-fg:#ada3b1;
   --tab-fg-on:#fdf7fd;
   --tab-hover:#2f273a;
   --panel-head:#1f1729;

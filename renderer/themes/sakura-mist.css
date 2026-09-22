@@ -11,12 +11,13 @@ body.theme-sakura-mist {
   --border:#e2b4bd;
   --fg:#4a4a4a;
   --bright:#252525;
-  --dim:#838080;
+  --dim:#5c5a5a;
   --accent:#b25a73;
   --accent-hi:#b57985;
-  --link:#8e4a60;
+  --accent-ink:#764f56;
+  --link:#87465b;
   --sel:#f7d6d0;
-  --orange:#b57985;
+  --orange:#764f56;
   --curline:#f9efef;
   --hover:#e7dfdf;
   --hover-soft:#f4ebeb;
@@ -30,7 +31,7 @@ body.theme-sakura-mist {
   --tab-bar:#ede4e4;
   --tab-bg:#fffdfd;
   --tab-border:#e2b4bd;
-  --tab-fg:#838080;
+  --tab-fg:#5c5a5a;
   --tab-fg-on:#4a4a4a;
   --tab-hover:#f4ebeb;
   --panel-head:#f4ebeb;

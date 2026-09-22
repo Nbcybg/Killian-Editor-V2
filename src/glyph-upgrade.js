@@ -11,7 +11,7 @@ import { splitGlyphs, glyphSvg } from './glyph-icons.js';
 
 const SKIP_SEL = '.ProseMirror, [contenteditable="true"], textarea, input, select, option, svg, canvas, script, style, '
   + '.k-gl, .k-gl-t, .k-no-glyph, .sp, .wiki-body, .k-dev-dlg pre, .aichat-msg, .k-log-list';
-const S = { obs: null, pending: new Set(), raf: 0, count: 0 };
+const S = { obs: null, pending: new Set(), raf: 0, to: 0, count: 0 };
 
 function upgradeText(node) {
   const parent = node.parentElement;
@@ -56,7 +56,9 @@ export function upgradeGlyphs(root) {
 }
 
 function flush() {
-  S.raf = 0;
+  if (S.raf) cancelAnimationFrame(S.raf);
+  clearTimeout(S.to);
+  S.raf = 0; S.to = 0;
   const list = [...S.pending];
   S.pending.clear();
   for (const node of list) { if (node.isConnected) upgradeGlyphs(node); }
@@ -74,7 +76,8 @@ export function startGlyphUpgrade(root = document.body) {
       if (r.type === 'characterData') { S.pending.add(t); continue; }
       for (const a of r.addedNodes) if (a.nodeType === 1 || a.nodeType === 3) S.pending.add(a);
     }
-    if (S.pending.size && !S.raf) S.raf = requestAnimationFrame(flush);
+    // rAF หยุดเดินเมื่อหน้าต่างถูกบังทั้งบาน (macOS occlusion) → มี timeout สำรอง อันไหนมาก่อนทำก่อน
+    if (S.pending.size && !S.raf) { S.raf = requestAnimationFrame(flush); S.to = setTimeout(flush, 50); }
   });
   S.obs.observe(root, { childList: true, subtree: true, characterData: true });
   return true;

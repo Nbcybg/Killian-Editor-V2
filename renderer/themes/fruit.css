@@ -11,12 +11,13 @@ body.theme-fruit {
   --border:#f0c89a;
   --fg:#3b2a1e;
   --bright:#1e150f;
-  --dim:#897d72;
+  --dim:#605850;
   --accent:#d63a24;
   --accent-hi:#c58300;
-  --link:#3f8a1f;
+  --accent-ink:#764f00;
+  --link:#2f6817;
   --sel:#ffe08a;
-  --orange:#c58300;
+  --orange:#764f00;
   --curline:#f8f3e9;
   --hover:#e6dfd5;
   --hover-soft:#f3eee3;
@@ -30,7 +31,7 @@ body.theme-fruit {
   --tab-bar:#ebe5db;
   --tab-bg:#fffefb;
   --tab-border:#f0c89a;
-  --tab-fg:#897d72;
+  --tab-fg:#605850;
   --tab-fg-on:#3b2a1e;
   --tab-hover:#f3eee3;
   --panel-head:#f3eee3;

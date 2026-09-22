@@ -753,7 +753,7 @@ function sessionHeadMenu(ev) {
       } },
     '-',
     { label: t('ui.dlgb.mClearTurns'), danger: true, click: async () => {
-        if (!(await confirmBox(t('ui.dlgb.confirmClear')))) return;
+        if (!(await confirmBox(t('ui.dlgb.confirmClear'), t('ui.common.clear')))) return;
         s.turns = []; s.next = C.nextPair(s, Math.random);
         touch(); await saveSession(); drawSession();
       } },

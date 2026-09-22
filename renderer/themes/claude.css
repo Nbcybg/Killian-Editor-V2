@@ -7,9 +7,10 @@ body.theme-claude {
   --border:#3e3e38;
   --fg:#e8e6dc;
   --bright:#f6f5f1;
-  --dim:#9a9992;
+  --dim:#aeada8;
   --accent:#d97757;
   --accent-hi:#e8a55a;
+  --accent-ink:#e8a55a;
   --link:#8fb5d9;
   --sel:#6b3f2a;
   --orange:#e8a55a;
@@ -26,7 +27,7 @@ body.theme-claude {
   --tab-bar:#1b1b19;
   --tab-bg:#393936;
   --tab-border:#51504c;
-  --tab-fg:#9a9992;
+  --tab-fg:#aeada8;
   --tab-fg-on:#f4f3ee;
   --tab-hover:#32322f;
   --panel-head:#222220;

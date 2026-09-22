@@ -1,5 +1,5 @@
 ﻿// Killian 2 renderer — explorer + tabs + toolbar + statusbar
-import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
+import { tx, txf, hx } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, T, tf, setShortcutResolver, lookup } from './i18n.js';
 import { KEditor } from './editor.js';
 import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString,
@@ -129,6 +129,8 @@ import { wikiCats, applyWikiCats, newWikiCat, editWikiCat, deleteWikiCat, addEnt
 import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
 // [alpha.135] ระบบอัปเดต — ทางเข้าทั้งสามทาง (ตั้งค่า · ตอนเปิดโปรแกรม · เมนูช่วยเหลือ) เรียกตัวเดียวกัน
 import { checkForUpdates, startupUpdateCheck } from './update/update-ui.js';
+import { UPDATE_HOME_URL } from './update/update-check.js';
+import { openRewriteBar, closeRewriteBar } from './ai/ai-rewrite-ui.js';
 import { openBookManager, renderBookManager, refreshBooksIfOpen } from './books.js';
 // [alpha.141] จัดการบท + โหมดอ่านทั้งเล่ม + สายหน้าที่ทั้งเล่มใช้ร่วม (เลขหน้าไล่ต่อเนื่อง)
 import { openChapterManager, renderChapterManager, refreshChaptersIfOpen,
@@ -195,7 +197,7 @@ import * as PL from './panels/panel-layout.js';
 import { inGroupHandle, snapToEdges, clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panels/panel-drag.js';
 // [alpha.60r2 ข้อ 7] รายชื่อกล่องที่เลื่อนได้ — selftest ตรวจว่าครอบคลุมครบ
 import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
-import { PANEL_DEFS as PANEL_DEFS_147, panelIcon } from './panels/panel-ui.js';   // [alpha.147] e2e ไอคอนแผงจากทะเบียน
+import { PANEL_DEFS as PANEL_DEFS_147, panelIcon, dodgeHiddenChips } from './panels/panel-ui.js';   // [alpha.147] e2e ไอคอนแผงจากทะเบียน
 // [alpha.73 ข้อ 6] ความกว้างต่ำสุดของเนื้อแผง (ค่าเริ่มต้น) — ค่าจริงต่อแผงอยู่ที่ `minW` ใน PANEL_DEFS
 import { PANEL_MIN_W_DEFAULT } from './panels/panel-renderer.js';
 // [alpha.73 ข้อ 2-4] นิยามสี/การควบคุม/กล้องของ Story Network
@@ -3719,7 +3721,7 @@ function renderScopeChip() {
     chip = el('div', 'tree-scope'); chip.id = 'tree-scope';
     const tree = $('#tree'); if (tree && tree.parentNode) tree.parentNode.insertBefore(chip, tree);
   }
-  chip.innerHTML = iconHtml('search', 14) + tt('ui.app.searchOnly') + treeScope.label + '  ';
+  chip.innerHTML = iconHtml('search', 14) + tx('ui.app.searchOnly') + hx(treeScope.label) + '  ';
   const x = el('span', 'tree-scope-x', gi('close'));
   x.title = tt('ui.app.cancelMargin');
   x.onclick = () => setTreeScope(null);
@@ -9286,7 +9288,15 @@ export async function importLanguageCsv(srcPath) {
       else if (/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(c)) cols.push([i, c.split('-')[0] + (c.includes('-') ? '-' + c.split('-')[1].toUpperCase() : '')]);
     }
   }
-  if (!cols.length) cols.push([1, i18n.lang || 'th']);
+  // ไม่มีหัวตาราง = ไฟล์แบบที่โปรแกรมแจกเอง (`meta.code,en` · `ui.x,…`) — ภาษาอยู่ในแถว meta.code
+  // เดิมข้ามแถวนั้นแล้วถือว่าเป็น "ภาษาที่ใช้อยู่" → นำเข้า k2_en.csv ตอนหน้าจอเป็นไทย = คำอังกฤษทับภาษาไทยทั้งไฟล์
+  if (!cols.length) {
+    const mc = rows.find((r) => String(r[0] == null ? '' : r[0]).trim() === 'meta.code');
+    const code = mc ? String(mc[1] == null ? '' : mc[1]).trim() : '';
+    const norm = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code)
+      ? code.split('-')[0].toLowerCase() + (code.includes('-') ? '-' + code.split('-')[1].toUpperCase() : '') : '';
+    cols.push([1, norm || i18n.lang || 'th']);
+  }
   const body = hasHead ? rows.slice(1) : rows;
   const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
   const dir = await kapi.join(state.root, 'languages');
@@ -11047,7 +11057,7 @@ setTabBridge({
 export async function revertTab(file) {
   const t = state.tabs.get(file);
   if (!t) return;
-  if (!(await confirmBox(tt('ui.app.cancelChangeAllTab'), 'Revert'))) return;
+  if (!(await confirmBox(tt('ui.app.cancelChangeAllTab'), tt('ui.common.revertBtn')))) return;
   const content = await kapi.readFile(file);
   const { meta, body } = parseMdFile(content);
   t.diskBody = body;                             // [alpha.156] ย้อนกลับ = เนื้อบนดิสก์คือฐานใหม่
@@ -11327,7 +11337,7 @@ function bindTabStripMenus() {
     e.stopPropagation();
     const r = more.getBoundingClientRect();
     popupMenu(r.left, r.bottom, [...state.tabs.entries()].map(([f, t]) => ({
-      label: (t.dirty ? gi('dot') + ' ' : '') + (t.title || f),
+      text: (t.dirty ? gi('dot') + ' ' : '') + (t.title || f),
       checked: state.active && state.active.file === f,
       click: () => { activate(f); try { t.tabBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch {} },
     })));
@@ -13786,7 +13796,8 @@ export function aboutDialog(opts = {}) {
     bCredits.setAttribute('aria-pressed', on ? 'true' : 'false');
   };
   const bCredits = navBtn(tt('ui.about.credits'), () => setCredits(!right.classList.contains('show-credits')));
-  navBtn('GitHub', () => { try { kapi.openExternal('https://github.com/JabCrossHook/Killian_Editor'); } catch {} });
+  // ลิงก์รีโปมาจากที่เดียวกับระบบอัปเดต (กฎถาวร alpha.135) — เดิมฝังรีโปเก่าไว้ตรงนี้
+  navBtn('GitHub', () => { try { kapi.openExternal(UPDATE_HOME_URL); } catch {} });
   navBtn(tt('ui.about.dataFolder'), () => { try { kapi.revealInOS(state.root || ''); } catch {} }).disabled = !state.root;
   const close = navBtn(tt('ui.common.close'), () => ov.remove(), 'k-about-link-pill');
   close.classList.add('k-ok');     // ปุ่มปิดหลักของกล่อง (ปุ่มเดิมก็เป็น .k-ok)
@@ -14213,10 +14224,13 @@ export async function handleCommand(ch, ...a) {
           setStatus(tt('ui.app.importScreenplay') + format + tt('ui.app.done') + summary.scenes + tt('ui.app.scene') + summary.characters + tt('ui.app.character'));
         } else {
           // ยังไม่มีแท็บบท → สร้างแท็บฉากใหม่ในบทปัจจุบัน
-          const sec = state.active?.meta;
+          // ฉบับร่าง/บทของฉากที่เปิดอยู่ — เดิมอ่าน `state.active.meta.section/.draft` ซึ่ง **ไม่มีอยู่จริง**
+          // (meta = frontmatter ของไฟล์) → kapi.join(root, undefined, 'Draft', undefined) โยนทุกครั้งที่มีฉากเปิดอยู่
+          // = "สร้างเป็นฉากใหม่" ไม่เคยทำงานเลยในกรณีปกติที่สุด
+          const cur = await sceneCtx();
           // [alpha.124 ข้อ 29] ไม่มีแท็บฉากเปิดอยู่ ก็ยังนำเข้าได้ — ถามว่าจะลงฉบับร่างไหน
           // (เดิมตันตรงนี้: ต้องเปิดฉากอะไรสักฉากก่อนถึงจะนำเข้าบทได้ ซึ่งไม่มีเหตุผลเลย)
-          let dPath = sec ? await kapi.join(state.root, sec.section, 'Draft', sec.draft) : null;
+          let dPath = cur ? cur.dPath : null;
           if (!dPath) {
             const ds = await listDrafts();
             if (ds.length === 1) dPath = ds[0].dPath;
@@ -14232,10 +14246,12 @@ export async function handleCommand(ch, ...a) {
             // (ถึงจะมีจริงก็ยังพังต่อ: `activate()` ไม่คืนแท็บ → `tab?.sp` เป็น undefined เสมอ)
             // ตัวจริงคือ `addScene(dPath, ch, title, {meta, body})` ซึ่งต้องมี "บท" ปลายทางด้วย
             const dj = await kapi.readJson(await kapi.join(dPath, 'draft.json')).catch(() => ({}));
-            const ch = (dj.chapters || [])[0] || await addChapter(dPath, tt('ui.app.import') + format);
+            const ch = (cur && cur.dPath === dPath && cur.ch)
+              || (dj.chapters || [])[0] || await addChapter(dPath, tt('ui.app.import') + format);
             if (!ch) return;                            // ยกเลิกกล่องตั้งชื่อบท = ไม่นำเข้า
             const row = await addScene(dPath, ch,
-              tt('ui.app.import') + format + '-' + Date.now().toString(36),
+              // ชื่อจากหน้าปกของไฟล์ (Fountain `Title:`) ก่อน · ไม่มีค่อยตั้งชื่อตามรูปแบบไฟล์
+              (summary && summary.title) || (tt('ui.app.import') + format + '-' + Date.now().toString(36)),
               { meta: { format: 'screenplay' }, body: markdown, silent: true });
             if (!row) return;
             await openScene(row.path, row.title);       // เขียนลงไฟล์ไปแล้ว → เปิดมาก็ไม่ค้างสถานะยังไม่บันทึก
@@ -14484,8 +14500,9 @@ export async function handleCommand(ch, ...a) {
     case 'prose-indent': toggleProseIndent(a[0]); break;
     case 'sp-report': openSpReport(a[0] || 'location'); break;
     case 'goto': gotoDialog(a[0]); break;
-    case 'goto-page': gotoPage(a[0]); break;
-    case 'goto-scene': gotoScene(a[0]); break;
+    // ไม่มีเลข (คีย์ลัด Ctrl+Shift+. ส่งมาเปล่า ๆ) = ถามเลขก่อน — เดิมกระโดดหน้า 1 เงียบ ๆ + "ไปที่หน้า  จาก N หน้า"
+    case 'goto-page': if (a[0] == null || a[0] === '') gotoDialog('page'); else gotoPage(a[0]); break;
+    case 'goto-scene': if (a[0] == null || a[0] === '') gotoDialog('scene'); else gotoScene(a[0]); break;
     case 'sp-find-error': findNextSpError(); break;
     case 'sp-check-all': showErrorList(); break;
     case 'sp-check-toggle':
@@ -14834,6 +14851,7 @@ function makeDraggable(elm, handle, opts = {}) {
   };
   const up = () => {
     dragging = false; elm.classList.remove('k-dragging');
+    try { dodgeHiddenChips(); } catch {}          // แถบลอยย้ายไปทับชิปแผงที่ซ่อน → ยกชิปหลบ
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', up);
     if (key) saveUiLayout(key, { left: parseInt(elm.style.left, 10) || 0,
@@ -14905,6 +14923,7 @@ export function tb(id, cmd, arg) { $(id).onclick = () => {
 // **บันทึกทับค่าที่จำไว้** ไม่งั้นรอบหน้าเปิดโปรแกรมมาก็ยังชี้ไปนอกจอเหมือนเดิม
 export function keepFloatingUiInView() {
   let moved = 0;
+  try { dodgeHiddenChips(); } catch {}
   // แถบรูปแบบลอย — ลอยอยู่ใน #content
   const host = $('#content');
   if (floatBar && host && floatBar.style.display !== 'none') {
@@ -15019,7 +15038,7 @@ export function insertShortcodeMenu(ev) {
     for (const sc of rows) {
       // โค้ดที่ต้องมีเป้าหมาย (`[wiki:ชื่อ]`) แทรกโครงให้ก่อน แล้วผู้ใช้พิมพ์ชื่อต่อได้เลย
       const text = sc.group === 'wiki' ? '[' + sc.name + ':]' : '[' + sc.name + ']';
-      items.push({ label: text + '  ·  ' + shortcodeLabel(sc.name),
+      items.push({ text: text + '  ·  ' + shortcodeLabel(sc.name),
                    click: () => insertShortcodeText(text) });
     }
   }
@@ -15126,7 +15145,7 @@ export async function openResolvedShortcodeMenu(ev, targetEl) {
     if (items.length) items.push('-');
     for (const sc of rows) {
       if (sc.needsArg) {
-        items.push({ label: '[' + sc.name + ':…]  ·  ' + shortcodeLabel(sc.name),
+        items.push({ text: '[' + sc.name + ':…]  ·  ' + shortcodeLabel(sc.name),
           click: async () => {
             const arg = await ask(shortcodeLabel(sc.name));
             if (!arg) return;
@@ -15137,7 +15156,7 @@ export async function openResolvedShortcodeMenu(ev, targetEl) {
       }
       let v = ''; try { v = sc.get(ctx, { arg: '', opts: {} }); } catch { v = ''; }
       const preview = String(v || '').trim() ? '  →  ' + String(v).slice(0, 24) : '';
-      items.push({ label: shortcodeLabel(sc.name) + preview, click: () => insertTextAtField(targetEl, v) });
+      items.push({ text: shortcodeLabel(sc.name) + preview, click: () => insertTextAtField(targetEl, v) });
     }
   }
   const x = ev && Number.isFinite(ev.clientX) ? ev.clientX : Math.round(window.innerWidth / 2);
@@ -16044,7 +16063,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const sel = window.getSelection();
     const selWord = (sel?.toString() || '').trim();
     const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
-    if (!bad && !hasThes) return;
+    // "Rewrite this" — เลือกข้อความในเอกสารที่เปิดอยู่ (ยาวเท่าไหร่ก็ได้) → ให้ AI เขียนช่วงนั้นใหม่
+    const rwTab = state.active;
+    const rwEd = rwTab && (rwTab.editor || rwTab.sp);
+    const canRewrite = inDoc && !!selWord && !!(rwEd && rwEd.view && rwEd.view.dom.contains(e.target)
+      && !rwEd.view.state.selection.empty);
+    if (!bad && !hasThes && !canRewrite) return;
     e.preventDefault(); e.stopPropagation();
     const items = [];
     if (bad) {
@@ -16073,6 +16097,10 @@ window.addEventListener('DOMContentLoaded', () => {
       items.push({ text: ttf('ui.app.thesaurusWordOpposite', selWord), click: () => {
         showThesaurusPopup(selWord, e.clientX, e.clientY);
       } });
+    }
+    if (canRewrite) {
+      if (items.length && !hasThes) items.push('-');
+      items.push({ text: gi('pen') + ' ' + tt('ui.aiRewrite.menu'), click: () => { openRewriteBar(rwTab); } });
     }
     popupMenu(e.clientX, e.clientY, items);
   }, true);

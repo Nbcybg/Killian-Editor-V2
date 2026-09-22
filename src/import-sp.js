@@ -3,7 +3,7 @@
 // คืน element list → convertToK2Elements → fountain markdown → inject เข้า SPEditor
 import { t } from './i18n.js';
 import { parseScript, SP_ELEMS, classify, splitCharacter,
-         blockIsBlank, guessNamesForBlocks } from './fountain.js';
+         blockIsBlank, guessNamesForBlocks, blocksToMd } from './fountain.js';
 import { el } from './core.js';
 import { confirmBox, escClose } from './ui.js';
 import JSZip from 'jszip';
@@ -42,6 +42,7 @@ export async function importScreenplayDialog(injectFn) {
   }
 
   const summary = importSummary(result.elements);
+  summary.title = result.title || '';
   const markdown = elementsToMarkdown(result.elements);
   const mode = await importPreviewDialog({ filePath, result, summary, markdown });
   if (!mode) return null;
@@ -128,7 +129,9 @@ export async function importScreenplay(filePath, format) {
 
   try {
     const elements = await importer.parse(content);
-    return { ok: true, elements, format, importer: importer.name };
+    const titlePage = (elements && elements.titlePage) || {};
+    return { ok: true, elements, format, importer: importer.name, titlePage,
+             title: String(titlePage.title || '').replace(/[_*]/g, '').trim() };
   } catch (e) {
     return { ok: false, error: errText(e) };
   }
@@ -363,58 +366,45 @@ function parseFadeIn(jsonStr) {
 // ===================== [66] Fountain =====================
 // ใช้ parseScript ที่มีอยู่แล้วใน fountain.js — round-trip การันตีโดย lineFor+classify
 function parseFountainFromText(text) {
-  // parseScript คืน [{el, text}] — ใช้ได้เลย
-  return parseScript(text);
+  // หน้าปกของ Fountain (`Title:` `Author:` … ต้นไฟล์) ไม่ใช่เนื้อบท — เดิมหลุดเข้าไปเป็น "บรรยาย" บรรทัดแรก
+  const tp = splitFountainTitlePage(text);
+  const els = parseScript(tp.body);
+  els.titlePage = tp.fields;
+  return els;
+}
+
+/**
+ * แยกหน้าปกของ Fountain ออกจากเนื้อบท (สเปก: บรรทัด `Key: value` ต่อกันตั้งแต่ต้นไฟล์จนถึงบรรทัดว่างแรก
+ * · บรรทัดที่ย่อหน้า = ค่าต่อของคีย์ก่อนหน้า) · ไม่มีหน้าปก = คืนข้อความเดิมทั้งหมด
+ * @returns {{fields: Object<string,string>, body: string}}  คีย์เป็นตัวพิมพ์เล็ก (title · author · credit …)
+ */
+export function splitFountainTitlePage(text) {
+  const src = String(text == null ? '' : text).replace(/\r\n?/g, '\n').replace(/^\ufeff/, '');
+  const lines = src.split('\n');
+  let i = 0;
+  while (i < lines.length && lines[i].trim() === '') i++;
+  const KEY = /^([A-Za-z][A-Za-z ]{0,30}):\s*(.*)$/;
+  if (i >= lines.length || !KEY.test(lines[i])) return { fields: {}, body: src };
+  const fields = {};
+  let last = '';
+  for (; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.trim() === '') break;
+    const m = KEY.exec(l);
+    if (m && !/^\s/.test(l)) { last = m[1].trim().toLowerCase(); fields[last] = m[2].trim(); }
+    else if (last && /^\s/.test(l)) fields[last] = (fields[last] ? fields[last] + '\n' : '') + l.trim();
+    else return { fields: {}, body: src };          // ไม่ใช่รูปแบบหน้าปก — ถือเป็นเนื้อบทตามเดิม
+  }
+  return { fields, body: lines.slice(i).join('\n').replace(/^\n+/, '') };
 }
 
 // ===================== แปลง element → fountain markdown =====================
 // [62-66] ใช้ prefix จาก SP_ELEMS เพื่อสร้าง fountain markdown ที่ K2 อ่านกลับได้
 export function elementsToMarkdown(elements) {
-  const lines = [];
-  let prevType = 'action';
-  let prevBlank = true;
-  // เอกสารมีตัวละคร = ไฟล์จะมี `@` → ตอนอ่านกลับตัวเดาชื่อถูกปิด · ปิดตามให้ตรงกัน
-  const guessNames = guessNamesForBlocks(elements);
-
-  for (let i = 0; i < elements.length; i++) {
-    const { el, text } = elements[i];
-    if (el === 'blank') {
-      lines.push('');
-      prevBlank = true;
-      continue;
-    }
-
-    // บล็อกถัดไปว่างไหม — ต้องส่งให้ classify เหมือน lineFor() ไม่งั้นสองที่ตัดสินไม่ตรงกัน
-    const nextBlank = blockIsBlank(elements[i + 1]);
-    const prefix = SP_ELEMS[el]?.prefix || '';
-    let line = prefix + text;
-
-    // กัน round-trip: เช็คว่า classify อ่านกลับได้ element เดิมไหม
-    // ถ้าไม่ได้ ให้ใส่ prefix แบบชัดเจนของ element นั้น ๆ จาก SP_ELEMS
-    // (เดิมรองรับแค่ action/character/scene จาก ~15 ชนิด — ชนิดอื่นที่ classify เดาผิด
-    //  จะเงียบไปเลย เช่น ฉากย่อย/สลับฉาก/ทรานซิชันเข้า ที่มี prefix `$sub `/`$intercut `/`$in `)
-    try {
-      let [got] = classify(line, prevBlank, prevType, undefined, nextBlank, guessNames);
-      if (got !== el && prefix) {
-        // prefix สัญลักษณ์เดี่ยว (. ! @ > (( ) เขียนติดข้อความได้ · prefix คำ ($sub …) ต้องมีวรรค
-        line = prefix.endsWith(' ') ? prefix + text : prefix + ' ' + text;
-        [got] = classify(line, prevBlank, prevType, undefined, nextBlank, guessNames);
-        if (got !== el) line = prefix + text;          // แบบไม่มีวรรคยังใกล้เคียงกว่าไม่ใส่เลย
-      }
-      // [alpha.60r3a] "บรรยาย" ไม่มี prefix ของตัวเองแล้ว (มาตรฐานใหม่ = ข้อความเปล่า)
-      // ถ้าอ่านกลับกลายเป็นชนิดอื่น (เช่นโดนตัวจับชื่อตัวละครอัตโนมัติกิน) ต้องบังคับด้วย `!` แบบ v1
-      // — ตรงกับที่ `lineFor()` ทำ (โค้ดสองที่นี้ต้องตัดสินใจเหมือนกัน ไม่งั้นนำเข้าแล้วเนื้อเพี้ยน)
-      if (got !== el && el === 'action') line = '!' + text;
-      // element ที่ไม่มี prefix ของตัวเอง (บทพูด/วงเล็บ) พึ่งบริบทบรรทัดก่อนหน้าล้วน ๆ
-      // → ถ้าอ่านกลับไม่ได้ ต้องมี "ชื่อตัวละคร" นำหน้าอยู่แล้ว ไม่มีอะไรให้แก้ตรงนี้
-    } catch {}
-
-    lines.push(line);
-    prevBlank = false;
-    prevType = el;
-  }
-
-  return lines.join('\n');
+  // ตัวเขียนตัวเดียวของโปรแกรม (fountain.js · blocksToMd → lineFor) — เดิมไฟล์นี้มีสำเนาของตัวเอง
+  // ที่ต่อ prefix ตรง ๆ: วงเล็บคำกำกับ "(กระซิบ)" กลายเป็น "((" + "(กระซิบ)" = "(((กระซิบ)" บนจอ
+  // สองที่ที่ต้องตัดสินเหมือนกันเป๊ะ = บั๊กรอเกิด (ตามที่คอมเมนต์ของ blocksToMd เตือนไว้)
+  return blocksToMd((elements || []).map((b) => (b && b.el === 'blank' ? { el: 'action', text: '' } : b)));
 }
 
 // [62-66] สรุปสถิติหลังนำเข้า — ใช้ใน dialog ยืนยัน

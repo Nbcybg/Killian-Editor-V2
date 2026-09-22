@@ -116,14 +116,27 @@ contextBridge.exposeInMainWorld('kapi', {
   httpAbort: call('http:abort'),        // [alpha.96] ยกเลิกคำขอ AI ที่กำลังวิ่ง
   httpInflight: call('http:inflight'),
   // สตรีมทีละบรรทัด — main ส่งกลับทาง channel เฉพาะคำขอ แล้วถอด listener เมื่อจบ
-  httpStream: (url, options, onLine) => {
+  // ผลของ invoke มาถึงก่อนบรรทัดท้าย ๆ ที่ main ส่งด้วย sender.send ได้ (คนละทาง ไม่รับประกันลำดับ)
+  // เดิมถอด listener ทันทีที่ invoke จบ → ก้อนท้ายสตรีม (finish_reason · ตัวอักษรชุดสุดท้าย) หายเงียบ
+  // ตอนนี้ main ส่ง `<ch>:end` ต่อท้ายทุกบรรทัดในช่องเดียวกัน → รอให้ครบทั้งสองอย่างก่อนคืนผล
+  httpStream: (url, options, onLine) => new Promise((resolve, reject) => {
     const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const ch = 'http:stream:' + id;
+    let result = null, ended = false, guard = null;
     const h = (e, line) => { try { onLine(line); } catch {} };
+    const cleanup = () => { clearTimeout(guard); ipcRenderer.removeListener(ch, h); ipcRenderer.removeListener(ch + ':end', onEnd); };
+    const settle = () => { if (result && ended) { cleanup(); result.ok ? resolve(result.v) : reject(result.e); } };
+    function onEnd() { ended = true; settle(); }
     ipcRenderer.on(ch, h);
-    return ipcRenderer.invoke('http:stream', url, options, id)
-      .finally(() => ipcRenderer.removeListener(ch, h));
-  },
+    ipcRenderer.on(ch + ':end', onEnd);
+    ipcRenderer.invoke('http:stream', url, options, id).then(
+      (v) => { result = { ok: true, v }; settle(); },
+      (e) => { result = { ok: false, e }; settle(); });
+    // main รุ่นเก่า/หน้าต่างถูกปิดกลางทาง = ไม่มีสัญญาณจบ → อย่าค้างตลอดไป
+    guard = setTimeout(function wait() {
+      if (result && !ended) { ended = true; settle(); } else if (!ended) guard = setTimeout(wait, 2000);
+    }, 2000);
+  }),
   logWrite: call('log:write'), logRead: call('log:read'), logPath: call('log:path'), logReveal: call('log:reveal'),
   onMenu: (cb) => ipcRenderer.on('menu', (e, ch, ...a) => cb(ch, ...a)),
   // ---- [alpha.67] Tear-off: แผงเป็นหน้าต่าง OS จริง (หลายจอ) ----

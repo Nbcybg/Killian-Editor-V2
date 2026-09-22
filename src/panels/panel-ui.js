@@ -876,6 +876,30 @@ function renderHiddenChips() {
     b.onclick = (e) => { e.stopPropagation(); restoreHiddenPanel(c.id); };
     bar.append(b);
   }
+  dodgeHiddenChips(bar);            // วัดทันที (getBoundingClientRect บังคับ layout เอง · rAF หยุดตอนหน้าต่างถูกบัง)
+}
+
+/**
+ * ชิปอยู่มุมล่างขวาของพื้นที่เขียน — ที่เดียวกับแถบจัดรูปแบบลอย (ค่าเริ่มต้น) และปุ่ม FAB
+ * เดิมวาดทับทั้งสองอย่างจนกดปุ่มจัดรูปแบบแถวล่างไม่ได้ · ตอนนี้ซ้อนกันเมื่อไหร่ = ยกแถวชิปขึ้นเหนือสิ่งที่ขวาง
+ */
+export function dodgeHiddenChips(bar = document.querySelector('#content > .k-hidden-chips')) {
+  if (!bar || !bar.isConnected) return 0;
+  bar.style.bottom = '';
+  const docs = bar.parentElement.getBoundingClientRect();
+  const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+  const blockers = [...document.querySelectorAll('#content .k-fmtbar:not(.planner-fmtbar), #k-fab')]
+    .filter((n) => n.offsetParent !== null || getComputedStyle(n).position === 'fixed')
+    .map((n) => n.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+  let lift = 0;
+  for (let i = 0; i < 3; i++) {                     // ยกแล้วอาจไปชนอีกตัว — วนไม่เกินจำนวนสิ่งกีดขวาง
+    const r = bar.getBoundingClientRect();
+    const b = blockers.filter((x) => hit(r, x));
+    if (!b.length) break;
+    lift = Math.max(lift, docs.bottom - Math.min(...b.map((x) => x.top)) + 6);
+    bar.style.bottom = lift + 'px';
+  }
+  return lift;
 }
 
 // [alpha.60r2 ข้อ 8] เดิมจดตำแหน่งเดิมของแผง ("home") เฉพาะตอน "ปิดแผง"
@@ -1189,9 +1213,22 @@ function reopenFloat(m, pid, home) {
   return m.floatPanel(pid, (home && home.float) || defaultFloatBox(pid));
 }
 
+/**
+ * แผงที่ไม่มีในทะเบียน = ห้ามเปิด — เดิมคำสั่ง `toggle-panel`/`show-panel` ที่ไม่ส่งชื่อมา
+ * (อยู่ในทะเบียนคำสั่ง: ผูกคีย์ลัดเองได้ · ปลั๊กอินเรียกได้) สร้าง **แผงลอยผีชื่อ "undefined"**
+ * ไม่มีหัว ไม่มีเนื้อ ค้างกลางจอ
+ */
+function unknownPanel(m, pid) {
+  if (pid && m.registry.has(pid)) return false;
+  if (pid && !m.registry.size) return false;       // ทะเบียนยังไม่ถูกเติม (ช่วงบูต) — อย่าขวาง
+  log('warn', 'panel: unknown panel id', { id: pid });
+  return true;
+}
+
 export function showPanel(id, opts = {}) {
   const m = getPanelManager();
   const pid = panelId(id);
+  if (unknownPanel(m, pid)) return false;
   // [alpha.67] แผงนี้ถูกฉีกไปอยู่หน้าต่างแยกแล้ว — "เปิดแผง" ต้องแปลว่า **ยกหน้าต่างนั้นขึ้นมา**
   // ไม่ใช่วาดใบที่สองในหน้าต่างนี้ (จะได้แผงเดียวกันสองใบที่ไม่รู้จักกัน)
   // ยกเว้นตอนคืนแผงกลับจริง ๆ (onTearOffClosed) ซึ่งลบออกจาก tornOff ไปก่อนแล้ว
@@ -1263,6 +1300,7 @@ export function setPanelCloseGuard(id, fn) {
 export function togglePanel(id, opts) {
   const m = getPanelManager();
   const pid = panelId(id);
+  if (unknownPanel(m, pid)) return false;
   // [alpha.67] อยู่ในหน้าต่างแยก = เปิดอยู่ → กดสวิตช์ซ้ำ แปลว่า "เอากลับมา/ปิดหน้าต่างนั้น"
   if (tornOff.has(pid)) { recallPanel(pid); return true; }
   if (m.isOpen(pid)) return hidePanel(pid);
@@ -1420,7 +1458,7 @@ export function addPanelButton(id, node) {
 export function workspaceMenuItems() {
   const items = [{ label: t('ui.panel.wsPick'), disabled: true }];
   for (const w of listWorkspaces()) {
-    items.push({ label: (w.builtIn ? gi('window-restore') + ' ' : gi('window-max') + ' ') + w.label, click: () => applyWorkspace(w.name) });
+    items.push({ text: (w.builtIn ? gi('window-restore') + ' ' : gi('window-max') + ' ') + w.label, click: () => applyWorkspace(w.name) });
   }
   items.push('-');
   items.push({ label: t('ui.panel.wsSave'),

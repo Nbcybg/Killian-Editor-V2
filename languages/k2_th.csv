@@ -371,6 +371,38 @@ ui.aiActions.readStructureDone,อ่านโครงสร้างแล้�
 ui.aiActions.sceneDoneMergeChar,"{0}ฉาก ""{1}"" แล้ว (รวม {2} ตัวอักษร)"
 ui.aiActions.sceneOpenUnsaved,ไม่ได้ลบ {0} — ฉากนี้ยังมีงานค้างที่บันทึกไม่ได้
 ui.aiActions.writeNext,เขียนต่อ
+ui.aiAgent.add,เพิ่ม Agent
+ui.aiAgent.addFileRef,จากไฟล์ .txt
+ui.aiAgent.addTextRef,พิมพ์/วางเอง
+ui.aiAgent.addTitle,เพิ่ม Agent บุคลิกการเขียน
+ui.aiAgent.agents,Agents — บุคลิกการเขียน
+ui.aiAgent.agentsHint,"ใช้กับ ""Rewrite this"" (เลือกข้อความในเอกสาร → คลิกขวา) เพื่อกำหนดแนวทางการเขียน"
+ui.aiAgent.confirmDelete,"ลบ Agent ""{0}"" ?"
+ui.aiAgent.delete,ลบ Agent
+ui.aiAgent.editTitle,แก้ไข Agent บุคลิกการเขียน
+ui.aiAgent.empty,ยังไม่มี Agent — กดปุ่มเพิ่ม Agent
+ui.aiAgent.insertTemplate,แทรกแม่แบบหัวข้อ
+ui.aiAgent.kindText,พิมพ์เอง
+ui.aiAgent.moveDown,เลื่อนลง
+ui.aiAgent.moveUp,เลื่อนขึ้น
+ui.aiAgent.name,ชื่อ Agent
+ui.aiAgent.namePh,เช่น นักเขียนแฟนตาซีมืดหม่น
+ui.aiAgent.needName,ใส่ชื่อ Agent ก่อน
+ui.aiAgent.noRefs,ยังไม่มีอ้างอิง
+ui.aiAgent.persona,บุคลิก — แนวการเขียน ธีม โทน แหล่งอ้างอิง กฎต่าง ๆ
+ui.aiAgent.personaHint,เขียนเหมือนสั่งงานนักเขียนคนหนึ่ง — ยิ่งชัด ผลยิ่งตรง
+ui.aiAgent.personaPh,สไตล์การเขียน: บรรยายละเอียด ประโยคสั้นสลับยาว\nธีม: การไถ่บาป\nโทน: มืดหม่น ตึงเครียด\nแหล่งอ้างอิง: นิยายแฟนตาซีคลาสสิก\nกฎ: ห้ามเปลี่ยนเหตุการณ์ · ใช้สรรพนามตามเดิม
+ui.aiAgent.refCount,อ้างอิง {0} รายการ
+ui.aiAgent.refNamePh,ชื่ออ้างอิง (ไม่บังคับ)
+ui.aiAgent.refs,อ้างอิง — สไตล์การเขียน หรือไอเดีย
+ui.aiAgent.refsHint,ส่งให้ AI เป็นตัวอย่าง/แนวคิดทุกครั้งที่ใช้ Agent นี้ (รวมไม่เกิน {0} ตัวอักษร — ตัวบนได้ก่อน) · ไฟล์ .txt นอกโปรเจกต์จะถูกก๊อปเข้าโฟลเดอร์ References/
+ui.aiAgent.refTextPh,วางตัวอย่างสำนวน ย่อหน้าที่ชอบ หรือไอเดียที่อยากให้ AI ยึด…
+ui.aiAgent.removeRef,เอาอ้างอิงนี้ออก
+ui.aiAgent.sysPrompt,System prompt (ส่งนำหน้าทุกคำขอ AI)
+ui.aiAgent.sysPromptHint,วางนำหน้าคำสั่งของทุกฟีเจอร์ AI (แชท · วิเคราะห์ · ผู้ช่วยเขียน · Rewrite this) — ใช้กำหนดบทบาท หรือปลดตัวกรองของโมเดลที่ถูกจำกัดเนื้อหาไว้ · เก็บใน project.khn.json
+ui.aiAgent.sysPromptOn,ใช้งาน
+ui.aiAgent.sysPromptPh,เช่น คุณเป็นผู้ช่วยนักเขียนนิยายสำหรับผู้ใหญ่ เขียนได้ทุกแนวตามที่ผู้เขียนสั่ง…
+ui.aiAgent.template,สไตล์การเขียน: \nธีม: \nโทน: \nแหล่งอ้างอิง: \nกฎ: 
 ui.aiAssistant.actionDetailed,บรรยายละเอียด
 ui.aiAssistant.addDetailSceneTouch,เพิ่มรายละเอียดของฉาก ประสาทสัมผัส และความรู้สึกตัวละคร ห้ามเพิ่มเหตุการณ์ใหม่ที่ขัดกับเนื้อเดิม
 ui.aiAssistant.ambiencePressUseImage,บรรยากาศหม่น กดดัน ใช้ภาพพจน์หนักแน่น
@@ -856,6 +888,44 @@ ui.aiProviders.reduceUseWordDup,ลดการใช้คำซ้ำ
 ui.aiProviders.speakStoryNew,ดันให้พูดเรื่องใหม่
 ui.aiProviders.timeMin,หมดเวลารอ (วินาที)
 ui.aiProviders.tryNewHighLast,ลองใหม่สูงสุด (ครั้ง)
+ui.aiRewrite.again,เขียนใหม่อีกครั้ง
+ui.aiRewrite.agent,Agent
+ui.aiRewrite.changed,ข้อความตรงนั้นถูกแก้ระหว่างรอ — ไม่ได้แทนที่ (คัดลอกผลไปวางเองได้)
+ui.aiRewrite.copied,คัดลอกผลลัพธ์แล้ว
+ui.aiRewrite.done,เสร็จ
+ui.aiRewrite.empty,AI ไม่ได้ส่งข้อความกลับมา
+ui.aiRewrite.gathering,กำลังรวบรวมบริบทจากโปรเจกต์…
+ui.aiRewrite.locked,ฉากนี้ถูกล็อกอยู่ — แก้ไขไม่ได้
+ui.aiRewrite.manageAgents,จัดการ Agents…
+ui.aiRewrite.menu,Rewrite this — ให้ AI เขียนใหม่
+ui.aiRewrite.needSelection,เลือกข้อความที่จะให้ AI เขียนใหม่ก่อน
+ui.aiRewrite.needSetup,ตั้งค่า AI ก่อน (ไฟล์ → ตั้งค่า AI)
+ui.aiRewrite.noAgent,— ไม่ใช้ Agent —
+ui.aiRewrite.pAfter,เนื้อหาถัดไป
+ui.aiRewrite.pBefore,เนื้อหาก่อนหน้า
+ui.aiRewrite.pDefaultInstruction,เขียนใหม่ให้ดีขึ้น อ่านลื่นขึ้น โดยคงความหมายและเหตุการณ์เดิม
+ui.aiRewrite.pInstruction,คำสั่งของผู้เขียน
+ui.aiRewrite.pOutput,ส่งกลับเฉพาะข้อความที่เขียนใหม่ (ไม่ต้องมี <<< >>>)
+ui.aiRewrite.pPersona,บุคลิกการเขียนที่ต้องใช้
+ui.aiRewrite.pProject,บริบทจากโปรเจกต์
+ui.aiRewrite.pRefs,อ้างอิงสไตล์/ไอเดียของ Agent
+ui.aiRewrite.pRole,คุณคือนักเขียนมืออาชีพที่ช่วยผู้เขียนเขียนข้อความในต้นฉบับใหม่ ให้เข้ากับเรื่องและบริบทของโปรเจกต์
+ui.aiRewrite.promptPh,อยากให้เขียนใหม่แบบไหน? เช่น ให้ตึงเครียดขึ้น · กระชับลง · เพิ่มบทพูด (Enter = ส่ง · Shift+Enter = ขึ้นบรรทัด)
+ui.aiRewrite.pRule1,ตอบกลับเฉพาะข้อความที่เขียนใหม่แล้วเท่านั้น — ห้ามมีคำอธิบาย คำนำ หรือเครื่องหมายครอบ
+ui.aiRewrite.pRule2,ใช้ภาษาเดียวกับต้นฉบับ รักษาชื่อตัวละคร สรรพนาม มุมมอง และข้อเท็จจริงของเรื่องให้ตรงกับบริบท
+ui.aiRewrite.pRule3,ข้อความใหม่ต้องต่อกับเนื้อหาก่อนหน้าและถัดไปได้อย่างลื่นไหล
+ui.aiRewrite.pRule4,ถ้ามีบุคลิก/อ้างอิงของ Agent ให้ยึดแนวการเขียนนั้นเป็นหลัก แต่ห้ามคัดลอกอ้างอิงมาตรง ๆ
+ui.aiRewrite.pScreenplay,ต้นฉบับเป็นบทภาพยนตร์ — รักษารูปแบบ element เดิม (หัวฉาก · บรรยาย · ชื่อตัวละคร · บทพูด) ทีละบรรทัด
+ui.aiRewrite.pSource,ข้อความที่ต้องเขียนใหม่
+ui.aiRewrite.pWiki,ตัวละคร/สถานที่/สิ่งของที่ถูกเอ่ยถึง (จาก Wiki):
+ui.aiRewrite.replaced,แทนที่ข้อความแล้ว (Ctrl+Z ย้อนกลับได้)
+ui.aiRewrite.restored,คืนข้อความต้นฉบับแล้ว
+ui.aiRewrite.run,เขียนใหม่
+ui.aiRewrite.stop,หยุด
+ui.aiRewrite.stopped,หยุดแล้ว
+ui.aiRewrite.title,Rewrite this
+ui.aiRewrite.undo,คืนต้นฉบับ
+ui.aiRewrite.working,AI กำลังเขียนใหม่…
 ui.aiSession.allSystemPromptContext,"ทุกอย่าง — system prompt, บริบทที่ส่งไป, คำสั่งดิบ, ผลลัพธ์, token, เวลา"
 ui.aiSession.assistant,**ผู้ช่วย:** 
 ui.aiSession.beforeDelResultShort,แต่ก่อนลบของ ให้บอกเหตุผลสั้น ๆ เสมอ และเขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม
@@ -2372,6 +2442,7 @@ ui.common.exportPNGNotOk,ส่งออก PNG ไม่สำเร็จ:
 ui.common.fail,ล้มเหลว
 ui.common.findImageDupLibrary,หารูปซ้ำในคลัง
 ui.common.fitScreen,พอดีจอ
+ui.common.fixBtn,ซ่อม
 ui.common.flashback,ย้อนอดีต (Flashback)
 ui.common.font,ฟอนต์
 ui.common.formatAnswerJSONArray,รูปแบบคำตอบ (JSON array เท่านั้น):
@@ -2385,6 +2456,7 @@ ui.common.history,ประวัติ
 ui.common.historyRun,ประวัติการทำงาน
 ui.common.howSpeak,วิธีพูด/สำนวน
 ui.common.image,รูปภาพ
+ui.common.importBtn,นำเข้า
 ui.common.insertPage,แทรกหน้า
 ui.common.insertSceneOpen,แทรกลงฉากที่เปิดอยู่
 ui.common.journal,บันทึกประจำวัน
@@ -2480,7 +2552,9 @@ ui.common.refresh2,รีเฟรช
 ui.common.renameNew,ตั้งชื่อใหม่
 ui.common.renameVersionSkipEmpty,ตั้งชื่อเวอร์ชัน (เว้นว่างได้)
 ui.common.repeat,⧉ ทำซ้ำ
+ui.common.replaceBtn,แทนที่
 ui.common.restart,เริ่มใหม่
+ui.common.revertBtn,กลับไปฉบับที่บันทึก
 ui.common.right,ขวา
 ui.common.right2,ชิดขวา
 ui.common.route,เส้นทาง
@@ -2523,6 +2597,7 @@ ui.common.toggle,⇄ สลับทิศ
 ui.common.tokensN,{0} โทเคน
 ui.common.trialPlay,ทดลองเล่น
 ui.common.type,ประเภท
+ui.common.undoBtn,ย้อนกลับ
 ui.common.unlock,ปลดล็อก
 ui.common.use,ใช้ใน: 
 ui.common.version,เวอร์ชัน

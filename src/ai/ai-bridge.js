@@ -7,6 +7,7 @@ import { AIClient, KeyStore, CostTracker, RagPipeline, VectorIndex,
 import { getAISettings } from '../ai-settings.js';
 import { currentProvider, complete as providerComplete, completeStream as providerStream } from './ai-provider-ui.js';
 import { priceKeyOf } from './ai-providers.js';
+import { withUserSystem } from './ai-agents.js';
 import { listScenes, listEntities, syncIo } from '../project-scan.js';
 import { hashText } from '../num.js';
 import { liveBody } from '../tab-bridge.js';   // [alpha.160 · P1-3]
@@ -110,6 +111,12 @@ export function getAIClient() {
     log: (lv, msg, extra) => log(lv, msg, extra),
   });
   _client._root = state.root;
+  // System prompt ของผู้ใช้ — ทางเก่า (AIClient) ไม่ผ่าน ai-provider-ui จึงต้องครอบตรงนี้
+  // (stream ที่ตกไป complete เองจะไม่ต่อซ้ำ — withUserSystem เช็ค startsWith)
+  const baseComplete = _client.complete.bind(_client);
+  const baseStream = _client.stream.bind(_client);
+  _client.complete = (o = {}) => baseComplete({ ...o, system: withUserSystem(o.system, getAISettings()) });
+  _client.stream = (o = {}, cb) => baseStream({ ...o, system: withUserSystem(o.system, getAISettings()) }, cb);
   return _client;
 }
 

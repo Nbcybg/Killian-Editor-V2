@@ -371,6 +371,38 @@ ui.aiActions.readStructureDone,อ่านโครงสร้างแล้�
 ui.aiActions.sceneDoneMergeChar,"{0}ฉาก ""{1}"" แล้ว (รวม {2} ตัวอักษร)"
 ui.aiActions.sceneOpenUnsaved,Did not delete {0} — the scene has unsaved changes that could not be saved
 ui.aiActions.writeNext,เขียนต่อ
+ui.aiAgent.add,Add agent
+ui.aiAgent.addFileRef,From .txt file
+ui.aiAgent.addTextRef,Type / paste
+ui.aiAgent.addTitle,Add writing agent
+ui.aiAgent.agents,Agents — writing personas
+ui.aiAgent.agentsHint,"Used by ""Rewrite this"" (select text in a document → right-click) to set the writing direction"
+ui.aiAgent.confirmDelete,"Delete agent ""{0}""?"
+ui.aiAgent.delete,Delete agent
+ui.aiAgent.editTitle,Edit writing agent
+ui.aiAgent.empty,No agents yet — press Add agent
+ui.aiAgent.insertTemplate,Insert template
+ui.aiAgent.kindText,Typed
+ui.aiAgent.moveDown,Move down
+ui.aiAgent.moveUp,Move up
+ui.aiAgent.name,Agent name
+ui.aiAgent.namePh,e.g. Grimdark fantasy writer
+ui.aiAgent.needName,Enter an agent name first
+ui.aiAgent.noRefs,No references yet
+ui.aiAgent.persona,"Persona — writing style, theme, tone, sources, rules"
+ui.aiAgent.personaHint,"Write it like a brief for a writer — the clearer, the better the result"
+ui.aiAgent.personaPh,"Style: vivid, mix short and long sentences\nTheme: redemption\nTone: dark, tense\nSources: classic fantasy novels\nRules: never change events · keep the original pronouns"
+ui.aiAgent.refCount,{0} reference(s)
+ui.aiAgent.refNamePh,Reference name (optional)
+ui.aiAgent.refs,References — writing style or ideas
+ui.aiAgent.refsHint,Sent to the AI as examples/ideas whenever this agent is used (up to {0} characters in total — top first) · .txt files outside the project are copied into References/
+ui.aiAgent.refTextPh,"Paste a sample passage, a paragraph you like, or ideas for the AI to follow…"
+ui.aiAgent.removeRef,Remove this reference
+ui.aiAgent.sysPrompt,System prompt (sent before every AI request)
+ui.aiAgent.sysPromptHint,Placed before the instructions of every AI feature (chat · analysis · assistant · Rewrite this) — use it to set a role or lift the filter of content-restricted models · stored in project.khn.json
+ui.aiAgent.sysPromptOn,Enabled
+ui.aiAgent.sysPromptPh,e.g. You are a fiction-writing assistant for adult novels and write any genre the author asks for…
+ui.aiAgent.template,Writing style: \nTheme: \nTone: \nSources: \nRules: 
 ui.aiAssistant.actionDetailed,บรรยายละเอียด
 ui.aiAssistant.addDetailSceneTouch,เพิ่มรายละเอียดของฉาก ประสาทสัมผัส และความรู้สึกตัวละคร ห้ามเพิ่มเหตุการณ์ใหม่ที่ขัดกับเนื้อเดิม
 ui.aiAssistant.ambiencePressUseImage,บรรยากาศหม่น กดดัน ใช้ภาพพจน์หนักแน่น
@@ -856,6 +888,44 @@ ui.aiProviders.reduceUseWordDup,ลดการใช้คำซ้ำ
 ui.aiProviders.speakStoryNew,ดันให้พูดเรื่องใหม่
 ui.aiProviders.timeMin,หมดเวลารอ (วินาที)
 ui.aiProviders.tryNewHighLast,ลองใหม่สูงสุด (ครั้ง)
+ui.aiRewrite.again,Rewrite again
+ui.aiRewrite.agent,Agent
+ui.aiRewrite.changed,The text there changed while waiting — not replaced (you can copy the result)
+ui.aiRewrite.copied,Result copied
+ui.aiRewrite.done,Done
+ui.aiRewrite.empty,The AI returned no text
+ui.aiRewrite.gathering,Gathering context from the project…
+ui.aiRewrite.locked,This scene is locked — it can't be edited
+ui.aiRewrite.manageAgents,Manage agents…
+ui.aiRewrite.menu,Rewrite this — let AI rewrite
+ui.aiRewrite.needSelection,Select the text to rewrite first
+ui.aiRewrite.needSetup,Set up AI first (File → AI settings)
+ui.aiRewrite.noAgent,— No agent —
+ui.aiRewrite.pAfter,Following text
+ui.aiRewrite.pBefore,Preceding text
+ui.aiRewrite.pDefaultInstruction,Rewrite it better and more readable while keeping the meaning and events.
+ui.aiRewrite.pInstruction,Author's instruction
+ui.aiRewrite.pOutput,Return only the rewritten text (without <<< >>>).
+ui.aiRewrite.pPersona,Writing persona to use
+ui.aiRewrite.pProject,Project context
+ui.aiRewrite.pRefs,Agent style/idea references
+ui.aiRewrite.pRole,You are a professional writer helping an author rewrite a passage of their manuscript so it fits the story and the project's context.
+ui.aiRewrite.promptPh,How should it be rewritten? e.g. more tense · shorter · add dialogue (Enter = send · Shift+Enter = new line)
+ui.aiRewrite.pRule1,"Reply with the rewritten text only — no explanations, preambles or wrapping marks."
+ui.aiRewrite.pRule2,"Use the same language as the original; keep names, pronouns, point of view and story facts consistent with the context."
+ui.aiRewrite.pRule3,The new text must flow naturally from the preceding text into the following text.
+ui.aiRewrite.pRule4,"If an agent persona/references are given, follow that writing direction, but never copy the references verbatim."
+ui.aiRewrite.pScreenplay,The original is a screenplay — keep the same element layout (scene heading · action · character · dialogue) line by line.
+ui.aiRewrite.pSource,Text to rewrite
+ui.aiRewrite.pWiki,Characters/places/items mentioned (from the Wiki):
+ui.aiRewrite.replaced,Text replaced (Ctrl+Z to undo)
+ui.aiRewrite.restored,Original text restored
+ui.aiRewrite.run,Rewrite
+ui.aiRewrite.stop,Stop
+ui.aiRewrite.stopped,Stopped
+ui.aiRewrite.title,Rewrite this
+ui.aiRewrite.undo,Restore original
+ui.aiRewrite.working,AI is rewriting…
 ui.aiSession.allSystemPromptContext,"ทุกอย่าง — system prompt, บริบทที่ส่งไป, คำสั่งดิบ, ผลลัพธ์, token, เวลา"
 ui.aiSession.assistant,**ผู้ช่วย:** 
 ui.aiSession.beforeDelResultShort,แต่ก่อนลบของ ให้บอกเหตุผลสั้น ๆ เสมอ และเขียนต่อเนื้อเรื่องให้กลมกลืนกับสำนวนเดิม
@@ -2372,6 +2442,7 @@ ui.common.exportPNGNotOk,ส่งออก PNG ไม่สำเร็จ:
 ui.common.fail,ล้มเหลว
 ui.common.findImageDupLibrary,หารูปซ้ำในคลัง
 ui.common.fitScreen,พอดีจอ
+ui.common.fixBtn,Fix
 ui.common.flashback,ย้อนอดีต (Flashback)
 ui.common.font,ฟอนต์
 ui.common.formatAnswerJSONArray,รูปแบบคำตอบ (JSON array เท่านั้น):
@@ -2385,6 +2456,7 @@ ui.common.history,ประวัติ
 ui.common.historyRun,ประวัติการทำงาน
 ui.common.howSpeak,วิธีพูด/สำนวน
 ui.common.image,รูปภาพ
+ui.common.importBtn,Import
 ui.common.insertPage,แทรกหน้า
 ui.common.insertSceneOpen,แทรกลงฉากที่เปิดอยู่
 ui.common.journal,บันทึกประจำวัน
@@ -2480,7 +2552,9 @@ ui.common.refresh2,รีเฟรช
 ui.common.renameNew,ตั้งชื่อใหม่
 ui.common.renameVersionSkipEmpty,ตั้งชื่อเวอร์ชัน (เว้นว่างได้)
 ui.common.repeat,⧉ ทำซ้ำ
+ui.common.replaceBtn,Replace
 ui.common.restart,เริ่มใหม่
+ui.common.revertBtn,Revert
 ui.common.right,ขวา
 ui.common.right2,ชิดขวา
 ui.common.route,เส้นทาง
@@ -2523,6 +2597,7 @@ ui.common.toggle,⇄ สลับทิศ
 ui.common.tokensN,{0} tokens
 ui.common.trialPlay,ทดลองเล่น
 ui.common.type,ประเภท
+ui.common.undoBtn,Undo
 ui.common.unlock,ปลดล็อก
 ui.common.use,ใช้ใน: 
 ui.common.version,เวอร์ชัน

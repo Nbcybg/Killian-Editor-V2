@@ -8,7 +8,7 @@
 // ตัวเชื่อมกับที่อื่น (แทรกลงฉาก/เปิดไฟล์/เปิดหน้า Wiki) รับเข้ามาเป็น callback ตอนสร้าง
 // เพื่อไม่ให้ import วนกลับไปหา app.js
 
-import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
+import { tx, txf, hx } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { ask, confirmBox, popupMenu, choose, escClose } from './ui.js';
@@ -761,7 +761,7 @@ export class Gallery {
     const sel = this.state.sel.size > 1 && this.state.sel.has(it.path);
     const many = sel ? [...this.state.sel] : [it.path];
     popupMenu(e.clientX, e.clientY, [
-      { label: `<b>${sel ? many.length + tt('ui.gallery.imagePick') : it.file}</b>`, disabled: true },
+      { label: `<b>${hx(sel ? many.length + tt('ui.gallery.imagePick') : it.file)}</b>`, disabled: true },
       { label: tt('ui.common.viewImageFull'), click: async () => imageLightbox(await fileURL(this.root, it.path), it.caption || it.file) },
       { label: tt('ui.common.insertSceneOpen'), click: () => this.insert(many) },
       { label: tt('ui.gallery.pasteTopBoardMood'), click: () => this.addToBoard(many) },

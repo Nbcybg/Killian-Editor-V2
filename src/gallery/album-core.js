@@ -601,7 +601,12 @@ export async function deleteAlbum(api, root, id, { recycleDir = 'Recycle' } = {}
 export async function addImageFile(api, root, id, srcPath) {
   const dir = await albumDir(api, root, id);
   await api.mkdir(dir);
-  const name = await api.copyInto(srcPath, dir);
+  // เลือกไฟล์ที่อยู่ในอัลบั้มนี้อยู่แล้ว (กล่องเลือกไฟล์เปิดที่ Images/ บ่อย) = ใช้ไฟล์เดิม
+  // เดิม copyInto กันชื่อชนให้ → ได้สำเนาซ้ำทุกไบต์ `ชื่อ-1.png` ทุกครั้งที่เลือกซ้ำ
+  const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  const src = norm(srcPath);
+  const same = src.slice(0, src.lastIndexOf('/')) === norm(dir);
+  const name = same ? src.slice(src.lastIndexOf('/') + 1) : await api.copyInto(srcPath, dir);
   let doc = await readAlbumDoc(api, root, id);
   doc = syncAlbumDoc(doc, [...Object.keys(doc.images), name]);
   await writeAlbumDoc(api, root, id, doc);

@@ -11,12 +11,13 @@ body.theme-lagoon {
   --border:#e8cf73;
   --fg:#123b4a;
   --bright:#091e25;
-  --dim:#71888a;
+  --dim:#4f5f61;
   --accent:#1b7898;
   --accent-hi:#259fb7;
-  --link:#1a6f8c;
+  --accent-ink:#165f6e;
+  --link:#17647e;
   --sel:#ffd758;
-  --orange:#259fb7;
+  --orange:#165f6e;
   --curline:#f7f4e4;
   --hover:#e0e2d5;
   --hover-soft:#f1efe0;
@@ -30,7 +31,7 @@ body.theme-lagoon {
   --tab-bar:#e7e8da;
   --tab-bg:#fffefa;
   --tab-border:#e8cf73;
-  --tab-fg:#71888a;
+  --tab-fg:#4f5f61;
   --tab-fg-on:#123b4a;
   --tab-hover:#f1efe0;
   --panel-head:#f1efe0;

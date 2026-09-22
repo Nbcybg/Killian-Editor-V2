@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,595 checks · ALL OK** (alpha.160 + งาน 161/162-W1..W7 ที่ยังไม่ bump · Windows dev) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **10,125 ข้อ · 139 ไฟล์** · ~42 วินาที)
+ปัจจุบัน **5,639 checks · ALL OK** (alpha.160 + งาน 161/162-W1..W7 + AI Rewrite/Agents ที่ยังไม่ bump · macOS Intel) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **10,185 ข้อ · 140 ไฟล์** · ~57 วินาที)
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
 เมนูย่อย: `popupMenu` รับ `sub`/`swatch`/`checked` · ฟังก์ชันที่เปิดเมนูเองใช้เป็นเมนูย่อยผ่าน `menuItemsOf(fn)` ·
@@ -69,6 +69,13 @@ xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron .
   · **ไฟล์ .md ไม่ถูกแก้เลย** — ปิดสวิตช์แล้วรหัสกลับมาครบ
 - **ai-synopsis.js** (alpha.60r3) — ปุ่ม ✨ ให้ AI เติมคุณสมบัติฉาก (synopsis/pov/emotion/conflict)
   **`attachAiFieldButton()` = จุดเดียวที่ทั้งกล่อง (`scene-props.js`) และแผง (`renderPropsPanel`) เรียก**
+- **ai/ai-agents.js** (บริสุทธิ์ · unit `ai-agents`) — System prompt ของผู้ใช้ (`withUserSystem` = วางนำหน้า system ของ **ทุก** คำขอ
+  · ต่อไว้ที่ `complete`/`completeStream` ใน ai-provider-ui + ทางเก่า `callAI`/`AIClient` · กันซ้ำด้วย `startsWith`)
+  · ทะเบียน Agent `meta.ai.agents[]` (`newAgent/upsertAgent/removeAgent/moveAgent/agentRefText`) · `buildRewritePrompt`/`cleanRewriteOutput`/`resolveRange`
+  **ฟีเจอร์ AI ใหม่ห้ามต่อ system prompt ของผู้ใช้เอง** — ผ่าน `complete`/`completeStream` แล้วได้ให้อัตโนมัติ
+- **ai/ai-agents-ui.js** — กล่องเพิ่ม/แก้ Agent + นำเข้าอ้างอิง `.txt` (นอกโปรเจกต์ → ก๊อปเข้า `References/`)
+- **ai/ai-rewrite-ui.js** — "Rewrite this" (คลิกขวาที่ข้อความที่เลือก → แถบลอย) · แทนที่ผ่าน `insertText`/`insertLines`/`insertScript`
+  · e2e ชุด `[RW]` อ่านคำขอจริงจากเซิร์ฟเวอร์จำลอง (`GET http://127.0.0.1:8931/v1/last`)
 - **ai-analyzer-ui.js** (alpha.60r3) — แผง "🧠 AI วิเคราะห์" (**ตัวอย่างหน้าตา** มีป้ายกำกับ ไม่หลอกว่าเป็นผลจริง)
 - **core.js** — `$`, `el`, `state`, `smart`, `log`, `setStatus`, ค่าคงที่ (`DEFAULT_SETTINGS`, `SCENE_STATUSES`, `SCENE_COLORS`, `BUILTIN_CATS`, `CAT_ICON`, `BASE_ED_FS`, ...) — **ทุกโมดูลใหม่ import จากที่นี่**
 - **app.js** (~16,000 บรรทัด · alpha.160 — ตัวเลขเดิม "~5,300" ล้าสมัยมาหลายสิบรุ่น ก่อนแยก selftest ไฟล์นี้ยาว ~45,800) — orchestrator: bootstrap, explorer (buildTree/tree), tabs, toolbar (floatBar), commands, shortcuts, zoom

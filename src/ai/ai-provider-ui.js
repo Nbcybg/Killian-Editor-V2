@@ -19,6 +19,7 @@ import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 // [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
 import { describeHttpError, shortError, redactSecrets } from './ai-error.js';
 import { gi } from '../icons.js';
+import { withUserSystem, listAgents, upsertAgent, removeAgent, moveAgent } from './ai-agents.js';
 import { fmtNum } from '../locale.js';
 
 const KEY_FILE = 'ai-key.json';
@@ -224,6 +225,7 @@ export async function testCredential(provider) {
  * `opts.noCompass` = ข้าม (ทดสอบการเชื่อมต่อ ฯลฯ) · ยังไม่กรอก logline = ไม่แตะคำขอเลยแม้แต่ไบต์เดียว
  */
 async function compassOpts(opts) {
+  opts = userSystemOpts(opts);
   if (!opts || opts.noCompass) return opts || {};
   try {
     const { currentCompass } = await import('../logline-ui.js');
@@ -231,6 +233,17 @@ async function compassOpts(opts) {
     const c = await currentCompass();
     return c ? { ...opts, system: withCompass(opts.system, c) } : opts;
   } catch { return opts; }
+}
+
+/**
+ * System prompt ที่ผู้ใช้ตั้งเอง (ตั้งค่า AI → System prompt) วางนำหน้า system ของทุกคำขอ
+ * — บางโมเดลถูกกรองเนื้อหาไว้ ผู้ใช้จึงต้องใส่คำสั่งของตัวเองได้ในที่เดียวแล้วมีผลกับทุกฟีเจอร์
+ * `opts.noUserSystem` = ข้าม
+ */
+function userSystemOpts(opts) {
+  if (!opts || opts.noUserSystem) return opts || {};
+  const system = withUserSystem(opts.system, aiMeta());
+  return system === (opts.system || '') ? opts : { ...opts, system };
 }
 
 /** คุยกับโมเดลหนึ่งรอบ — ไม่โยน error ตลอด (คืน {ok,text,usage,error}) */
@@ -395,6 +408,66 @@ export async function showAISettingsDialog() {
   box.append(histRow);
   box.append(el('div', 'dim ai-hist-hint', t('ui.aiProvider.historyTokensHint')));
 
+  // ---- System prompt ของผู้ใช้ (นำหน้าทุกคำขอ) ----
+  // บางโมเดลถูกกรองเนื้อหาไว้ (soft censored) — ผู้ใช้ใส่คำสั่งของตัวเองได้ที่นี่ที่เดียว มีผลกับทุกฟีเจอร์ AI
+  const spSec = el('div', 'ai-set-sec ai-sysprompt-sec');
+  const spHead = el('div', 'ai-set-sec-head');
+  spHead.append(el('span', 'ai-set-sec-title', t('ui.aiAgent.sysPrompt')));
+  const spOnLbl = el('label', 'ai-sysprompt-on-lbl');
+  const spOn = el('input', 'wiki-check ai-sysprompt-on');
+  spOn.type = 'checkbox';
+  spOn.checked = ai.systemPromptOn !== false;
+  spOnLbl.append(spOn, document.createTextNode(' ' + t('ui.aiAgent.sysPromptOn')));
+  spHead.append(spOnLbl);
+  const spTa = el('textarea', 'wiki-input ai-sysprompt');
+  spTa.rows = 5;
+  spTa.value = ai.systemPrompt || '';
+  spTa.placeholder = t('ui.aiAgent.sysPromptPh');
+  spSec.append(spHead, spTa, el('div', 'dim ai-hint', t('ui.aiAgent.sysPromptHint')));
+  box.append(spSec);
+
+  // ---- Agents บุคลิกการเขียน (ใช้กับ "Rewrite this" ในตัวแก้ไข) ----
+  const agSec = el('div', 'ai-set-sec ai-agents-sec');
+  const agHead = el('div', 'ai-set-sec-head');
+  agHead.append(el('span', 'ai-set-sec-title', t('ui.aiAgent.agents')));
+  const agAdd = el('button', 'ai-agent-add', gi('plus-thick') + ' ' + t('ui.aiAgent.add'));
+  agHead.append(agAdd);
+  const agList = el('div', 'ai-agent-list');
+  agSec.append(agHead, agList, el('div', 'dim ai-hint', t('ui.aiAgent.agentsHint')));
+  box.append(agSec);
+  let agents = listAgents(ai);
+  const { agentDialog } = await import('./ai-agents-ui.js');
+  function drawAgents() {
+    agList.replaceChildren();
+    if (!agents.length) agList.append(el('div', 'dim ai-agent-empty', t('ui.aiAgent.empty')));
+    agents.forEach((a, i) => {
+      const row = el('div', 'ai-agent-row');
+      row.dataset.id = a.id;
+      const info = el('div', 'ai-agent-info');
+      info.append(el('div', 'ai-agent-title', a.name));
+      const sub = String(a.persona || '').replace(/\s+/g, ' ').trim();
+      info.append(el('div', 'dim ai-agent-sub', (sub.length > 90 ? sub.slice(0, 90) + '…' : sub)
+        + (a.refs.length ? '  · ' + tf('ui.aiAgent.refCount', a.refs.length) : '')));
+      const up = el('button', 'ai-agent-up', '↑'); up.title = t('ui.aiAgent.moveUp'); up.disabled = i === 0;
+      const dn = el('button', 'ai-agent-down', '↓'); dn.title = t('ui.aiAgent.moveDown'); dn.disabled = i === agents.length - 1;
+      const ed = el('button', 'ai-agent-edit', t('ui.aiProvider.edit'));
+      const del = el('button', 'ai-agent-del', gi('trash')); del.title = t('ui.aiAgent.delete');
+      up.onclick = () => { agents = moveAgent(agents, a.id, -1); drawAgents(); };
+      dn.onclick = () => { agents = moveAgent(agents, a.id, 1); drawAgents(); };
+      ed.onclick = async () => { const r = await agentDialog(a); if (r) { agents = upsertAgent(agents, r); drawAgents(); } };
+      del.onclick = async () => {
+        const { confirmBox } = await import('../ui.js');
+        if (!(await confirmBox(tf('ui.aiAgent.confirmDelete', a.name)))) return;
+        agents = removeAgent(agents, a.id);
+        drawAgents();
+      };
+      row.append(info, up, dn, ed, del);
+      agList.append(row);
+    });
+  }
+  agAdd.onclick = async () => { const r = await agentDialog(null); if (r) { agents = upsertAgent(agents, r); drawAgents(); } };
+  drawAgents();
+
   // ---- สรุปการใช้งาน ----
   const usage = ai.usage || [];
   if (usage.length) {
@@ -467,6 +540,9 @@ export async function showAISettingsDialog() {
   okB.onclick = async () => {
     aiMeta().sendKey = sendSel.value;
     aiMeta().historyTokens = Math.max(0, Math.round(Number(histInp.value) || 0));
+    aiMeta().systemPrompt = spTa.value.trim();
+    aiMeta().systemPromptOn = !!spOn.checked;
+    aiMeta().agents = agents;
     await persist(rows, activeId);
     // [alpha.149] ลบผู้ให้บริการแล้ว คีย์ของมันต้องไม่ค้างอยู่ใน ai-key.json ต่อไป
     try {

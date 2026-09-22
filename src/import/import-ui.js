@@ -30,12 +30,12 @@ export async function importScrivenerDialog(onOpenProject) {
   if (preview.warnings?.length) lines.push(t('ui.imp.warnPrefix') + preview.warnings.length + t('ui.imp.warnSuffix'));
   if (preview.warnings?.length) log('warn', t('ui.impOrt.scrivenerImportHasWord'), preview.warnings);
 
-  if (!(await confirmBox(lines.join('\n') + t('ui.impOrt.pickFolderToDone')))) return null;
+  if (!(await confirmBox(lines.join('\n') + t('ui.impOrt.pickFolderToDone'), t('ui.common.importBtn')))) return null;
 
   const dest = await kapi.openProjectDialog();
   if (!dest) return null;
   if (await kapi.exists(io.join(dest, 'project.khn.json'))) {
-    if (!(await confirmBox(t('ui.imp.overwrite')))) return null;
+    if (!(await confirmBox(t('ui.imp.overwrite'), t('ui.common.overwrite')))) return null;
   }
 
   setBusy(t('ui.imp.working'));

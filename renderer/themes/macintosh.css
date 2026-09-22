@@ -13,12 +13,13 @@ body.theme-macintosh {
   --border:#888888;
   --fg:#000000;
   --bright:#000000;
-  --dim:#5f5f5f;
+  --dim:#515151;
   --accent:#3a5fcd;
   --accent-hi:#963d97;
+  --accent-ink:#783179;
   --link:#0044aa;
   --sel:#ccccff;
-  --orange:#963d97;
+  --orange:#783179;
   --curline:#e6e6e6;
   --hover:#cfcfcf;
   --hover-soft:#e0e0e0;
@@ -32,7 +33,7 @@ body.theme-macintosh {
   --tab-bar:#d6d6d6;
   --tab-bg:#fbfbfb;
   --tab-border:#888888;
-  --tab-fg:#5f5f5f;
+  --tab-fg:#515151;
   --tab-fg-on:#000000;
   --tab-hover:#e0e0e0;
   --panel-head:#e0e0e0;
