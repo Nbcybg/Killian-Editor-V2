@@ -5,6 +5,7 @@
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
 import { el, dataLabel } from '../core.js';   // [alpha.159 · QoL] ป้ายสถานะตามภาษา
+import { PLANNER_NODE_COLORS, PLANNER_EDGE_COLORS, PLANNER_KIND } from '../palette.js';   // [alpha.162 · W6 ข้อ 2]
 const escA = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 import {
   STATUSES, EDGE_STYLES, EDGE_ROUTINGS, ARROW_HEADS, NODE_TYPES, SHAPES, PORT_POSITIONS,
@@ -200,9 +201,9 @@ function _renderNodeProps(container, n, ctx) {
   add(tt('ui.common.color'), ((a) => `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-color" type="color" value="${a[0]}" title="${tx('ui.planner.colorBg2')}">
       <input class="planner-prop-input" id="plp-textcolor" type="color" value="${a[1]}" title="${tx('ui.setTpl.colorChar')}">
-    </div>`)([_color(n.color, '#3f3e3a'), _color(n.textColor, '#faf9f5')]));
+    </div>`)([_color(n.color, PLANNER_NODE_COLORS[0]), _color(n.textColor, PLANNER_KIND.fillDefault)]));
   const swatch = el('div', 'planner-swatches');
-  for (const c of ['#3f3e3a', '#5f7a9f', '#7a6f9f', '#5f8a6f', '#d97757', '#f2c14e', '#c1666b', '#4a6fa5', '#e8e3d3', '#26241f']) {
+  for (const c of PLANNER_NODE_COLORS) {
     const b = el('button', 'planner-swatch');
     b.style.background = c; b.title = c;
     b.onclick = () => { const i = rows.querySelector('#plp-color'); if (i) i.value = c; ctx.onChangeNode && ctx.onChangeNode({ color: c }); };
@@ -215,13 +216,13 @@ function _renderNodeProps(container, n, ctx) {
 
   // ── [alpha.150 ข้อ 7] เส้นขอบ: สี + ความหนา (0 = ไม่มีขอบ) ──
   add(tt('ui.plannerProps.border'), `<div class="planner-prop-2col">
-      <input class="planner-prop-input" id="plp-bordercolor" type="color" value="${_color(n.borderColor || n.color, '#ffffff')}">
+      <input class="planner-prop-input" id="plp-bordercolor" type="color" value="${_color(n.borderColor || n.color, PLANNER_KIND.borderDefault)}">
       <input class="planner-prop-input" id="plp-borderw" type="number" min="0" max="12" step="0.5" value="${n.borderWidth == null ? 1 : n.borderWidth}">
     </div>`);
   // ── [alpha.150 ข้อ 8] พื้น: สีของตัวเอง + ความจาง (เฟรมใช้บ่อยที่สุด) ──
   add(ttf('ui.plannerProps.fillOpacity', Math.round((n.fillOpacity == null ? 1 : n.fillOpacity) * 100)),
     `<div class="planner-prop-2col">
-      <input class="planner-prop-input" id="plp-fill" type="color" value="${_color(n.fill || n.color, '#faf9f5')}">
+      <input class="planner-prop-input" id="plp-fill" type="color" value="${_color(n.fill || n.color, PLANNER_KIND.fillDefault)}">
       <input class="planner-prop-input" id="plp-fillop" type="range" min="0" max="1" step="0.05" value="${n.fillOpacity == null ? 1 : n.fillOpacity}">
     </div>`);
 
@@ -408,7 +409,7 @@ function _renderEdgeProps(container, e, ctx) {
       `<div class="planner-edge-ends">${_esc(ctx.endpoints.from)} <b>→</b> ${_esc(ctx.endpoints.to)}</div>`);
   }
   add(tt('ui.plannerProps.badge'), ((a) => `<input class="planner-prop-input" id="plpe-label" value="${a[0]}" placeholder="${tx('ui.plannerProps.egCont')}">`)([_esc(e.label)]));
-  add(tt('ui.common.color'), `<input class="planner-prop-input" id="plpe-color" type="color" value="${_color(e.color, '#d97757')}">`);
+  add(tt('ui.common.color'), `<input class="planner-prop-input" id="plpe-color" type="color" value="${_color(e.color, PLANNER_EDGE_COLORS[0])}">`);
   add(ttf('ui.plannerProps.bold', e.width || 2),
     `<input class="planner-prop-input" id="plpe-width" type="range" min="1" max="8" step="1" value="${e.width || 2}">`);
 
@@ -489,7 +490,7 @@ function _renderManyProps(container, ids, ctx) {
   const colorRow = el('div', 'planner-props-section');
   colorRow.innerHTML = `<label>${tx('ui.plannerProps.recolorAll2')}</label>`;
   const sw = el('div', 'planner-swatches');
-  for (const c of ['#3f3e3a', '#5f7a9f', '#7a6f9f', '#5f8a6f', '#d97757', '#f2c14e', '#c1666b', '#4a6fa5']) {
+  for (const c of PLANNER_NODE_COLORS.slice(0, 8)) {   // [alpha.162 · W6 ข้อ 2] จานเดียวกับโหนด (8 สีแรก — ตัดสีกระดาษ/หมึก)
     const b = el('button', 'planner-swatch');
     b.style.background = c;
     b.onclick = () => ctx.onChangeMany && ctx.onChangeMany({ color: c });

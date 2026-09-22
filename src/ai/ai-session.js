@@ -130,6 +130,9 @@ export function newSession(patch = {}) {
     providerId: patch.providerId || '',     // override จากตั้งค่า — เซสชันเลือกเจ้าของตัวเองได้
     model: patch.model || '',               // override โมเดล (อิสระจากตั้งค่ากลาง)
     contextLimit: patch.contextLimit || 0,  // 0 = ไม่รู้ (ยังไม่เคยตอบกลับมา)
+    // [alpha.160 · P1-4] ★ ขอบบนที่ "เรียนรู้" จาก HTTP 400 (H14) ต้องขนกลับมาตอนโหลดไฟล์
+    // เดิมไม่มีฟิลด์นี้ → loadSessions() สร้างใหม่ผ่าน newSession แล้วค่าหาย → โมเดล context เล็กวน 400 อีกทุกครั้งที่เปิดโปรแกรม
+    contextCap: Math.max(0, Number(patch.contextCap) || 0),
     // [alpha.145] ระดับการใช้ความคิดรายเซสชัน ('' = ตามผู้ให้บริการ)
     effort: isReasoningEffort(patch.effort) ? String(patch.effort || '') : '',
     // [alpha.145] id ของไฟล์ทักษะใน `Skills/` ที่เปิดใช้กับเซสชันนี้
@@ -211,10 +214,16 @@ export function addMessage(session, msg) {
   }
   return s;
 }
+/** ชื่อตั้งต้นที่ไฟล์เซสชันก่อน .159 เขียนลงไปจริง (ทั้งไฟล์ไทยและอังกฤษตอนนั้นใช้ค่าเดียวกัน) — เป็น "ข้อมูล" */
+/* i18n-skip: ค่าที่ไฟล์เซสชันเก่าเก็บไว้จริง (ข้อมูล ไม่ใช่ข้อความบนจอ) */
+export const LEGACY_DEFAULT_TITLES = new Set(['เซสชันใหม่']);
+/* /i18n-skip */
 export function isAutoTitle(s) {
   if (!s || s.titleSet) return false;
   if (s.titleAuto !== undefined) return !!s.titleAuto;        // [alpha.159 · M23] ธง ไม่ใช่ข้อความ
-  return !s.title || s.title === tt('ui.aiSession.sessionNew');  // ไฟล์รุ่นเก่าที่ยังไม่มีธง
+  // [alpha.162 · W6 ข้อ 5] ไฟล์รุ่นเก่า (ก่อนธง .159) = เทียบกับ **ค่าที่เคยถูกเขียนลงไฟล์จริง** ไม่ใช่ข้อความที่แปลตอนนี้
+  // (เดิม `=== tt(…)` → สลับภาษาแล้วเซสชันเก่าที่ยังชื่อตั้งต้นไม่ถูกตั้งชื่อให้อีกเลย)
+  return !s.title || LEGACY_DEFAULT_TITLES.has(s.title);
 }
 /** ตัดข้อความแรกให้สั้นพอเป็นชื่อ (ไม่ตัดกลางคำอังกฤษ · ไทยตัดตรง ๆ ได้) */
 export function titleFromText(text, max = 40) {

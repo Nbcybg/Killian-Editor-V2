@@ -158,7 +158,7 @@ export function pickWikiChar() {
     search.oninput = draw;
     box.append(search, list);
     const foot = el('div', 'k-dlg-foot');
-    const cancel = el('button', null, t('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', t('ui.common.cancel'));   // [162-W4] Esc เดินทางนี้
     cancel.onclick = () => done(null);
     foot.append(cancel);
     box.append(foot);
@@ -328,7 +328,7 @@ function reconcileDialog(rows) {
     }
 
     const foot = el('div', 'k-dlg-foot');
-    const cancel = el('button', null, t('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', t('ui.common.cancel'));
     cancel.onclick = () => done(null);
     const ok = el('button', 'k-ok', t('ui.starter.reconcileGo'));
     ok.onclick = () => done(rows);

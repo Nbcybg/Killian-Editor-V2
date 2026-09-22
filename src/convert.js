@@ -27,6 +27,7 @@ import { mdToDoc, docToMd } from './md.js';
 // ───────── ชนิดบล็อกฝั่งนิยาย (คู่ขนานกับ SP_ELEMS ของบท) ─────────
 // ป้ายไทยเป็น **ข้อมูล** แบบเดียวกับ SP_ELEMS — ใช้บอกผู้ใช้ว่าอะไรจะกลายเป็นอะไร
 export const PROSE_ELEMS = {
+  /* i18n-skip: PROSE_ELEMS = คำศัพท์ของไวยากรณ์ไฟล์งาน (คู่กับ SP_ELEMS) */
   h1: { th: 'หัวข้อ 1' }, h2: { th: 'หัวข้อ 2' }, h3: { th: 'หัวข้อ 3' },
   h4: { th: 'หัวข้อ 4' }, h5: { th: 'หัวข้อ 5' }, h6: { th: 'หัวข้อ 6' },
   p: { th: 'ย่อหน้า' }, pbold: { th: 'ย่อหน้าหนา' }, pitalic: { th: 'ย่อหน้าเอียง' },
@@ -34,6 +35,7 @@ export const PROSE_ELEMS = {
   ul: { th: 'รายการจุด' }, ol: { th: 'รายการเลข' }, hr: { th: 'เส้นคั่น' },
   code: { th: 'บล็อกโค้ด' }, img: { th: 'รูปภาพ' },
   pagebreak: { th: 'ขึ้นหน้าใหม่' }, blank: { th: 'บรรทัดว่าง' },
+  /* /i18n-skip */
 };
 
 // ───────── ตารางแมป: **ข้อมูล ไม่ใช่โค้ด** ─────────
@@ -262,7 +264,7 @@ export function convertBody(body, to, meta = {}) {
 export function lossReport(body, to) {
   const src = String(body ?? '');
   const counts = new Map();
-  const bump = (from, kind) => counts.set(from + ' ' + kind, (counts.get(from + ' ' + kind) || 0) + 1);
+  const bump = (from, kind) => counts.set(from + '\u0000' + kind, (counts.get(from + '\u0000' + kind) || 0) + 1);
   if (to === 'screenplay') {
     for (const b of proseBlocks(src)) {
       const back = REV[FWD[b.kind] || 'action'] || 'p';
@@ -274,6 +276,6 @@ export function lossReport(body, to) {
       if (back !== b.kind) bump(b.kind, back);
     }
   }
-  return [...counts].map(([k, n]) => ({ from: k.split(' ')[0], to: k.split(' ')[1], n }))
+  return [...counts].map(([k, n]) => ({ from: k.split('\u0000')[0], to: k.split('\u0000')[1], n }))
     .sort((a, b) => b.n - a.n);
 }

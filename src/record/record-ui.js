@@ -8,6 +8,8 @@ import { t as tt, t } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import * as RD from './record-data.js';
 import { gi } from '../icons.js';
+import { panelEmpty } from '../panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
+import { fmtNum } from '../locale.js';
 
 const S = () => (state._record || (state._record = { data: null, q: '', mood: '', editing: null }));
 
@@ -45,7 +47,7 @@ export async function renderRecordPanel(host) {
   h.classList.add('k-rec');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-rec-empty', tt('ui.recOrd.openProjectBeforeNote')));
+    h.append(panelEmpty(tt('ui.recOrd.openProjectBeforeNote')));
     return true;
   }
 
@@ -107,7 +109,7 @@ export async function renderRecordPanel(host) {
     const sum = RD.summarize(s.data.entries);
     stats.replaceChildren();
     for (const [label, val] of [[tt('ui.common.list2'), sum.entries], [tt('ui.recOrd.msg'), sum.days],
-                                [tt('ui.recOrd.wordMerge'), sum.words.toLocaleString()], [tt('ui.recOrd.minMerge'), sum.minutes]]) {
+                                [tt('ui.recOrd.wordMerge'), fmtNum(sum.words)], [tt('ui.recOrd.minMerge'), sum.minutes]]) {
       const b = el('span', 'k-rec-stat');
       b.append(el('b', null, String(val)), document.createTextNode(' ' + label));
       stats.append(b);
@@ -117,15 +119,14 @@ export async function renderRecordPanel(host) {
     list.replaceChildren();
     const rows = RD.filterEntries(s.data.entries, { q: s.q, mood: s.mood });
     if (!rows.length) {
-      list.append(el('div', 'dim k-rec-empty',
-        s.data.entries.length ? tt('ui.recOrd.notFoundSaveAt') : tt('ui.recOrd.notHasSaveWrite')));
+      list.append(panelEmpty(s.data.entries.length ? tt('ui.recOrd.notFoundSaveAt') : tt('ui.recOrd.notHasSaveWrite')));
       return;
     }
     for (const g of RD.groupByDay(rows)) {
       const head = el('div', 'k-rec-day-head');
       head.append(el('span', 'k-rec-day-name', g.day));
       const meta = [];
-      if (g.words) meta.push(g.words.toLocaleString() + tt('ui.common.word'));
+      if (g.words) meta.push(fmtNum(g.words) + tt('ui.common.word'));
       if (g.minutes) meta.push(g.minutes + tt('ui.recOrd.min'));
       if (meta.length) head.append(el('span', 'k-rec-day-meta', meta.join(' · ')));
       list.append(head);
@@ -138,7 +139,7 @@ export async function renderRecordPanel(host) {
     if (s.editing === e.id) {
       const ed = el('textarea', 'k-rec-edit'); ed.value = e.text; ed.rows = 3;
       const ok = el('button', null, tt('ui.recOrd.save'));
-      const no = el('button', null, tt('ui.common.cancel'));
+      const no = el('button', 'k-cancel', tt('ui.common.cancel'));
       ok.onclick = async () => {
         await saveRecords(RD.updateEntry(s.data, e.id, { text: ed.value.trim() }));
         s.editing = null; drawStats(); drawList(); setStatus(tt('ui.recOrd.editSaveDone'));

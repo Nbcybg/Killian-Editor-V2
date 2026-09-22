@@ -244,5 +244,26 @@ const para = (top, n, extra) => ({
         pg2.length === 2 && pg2[1].start === 836, JSON.stringify(pg2));
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-if (fail) process.exit(1);
+// ── [alpha.160 · P1-16] รูปที่มาช้ากว่า timeout ต้องทำให้ตัวอย่าง "วาดใหม่" อีกรอบ ──
+(async () => {
+  const mkImg = (complete) => { const l = {}; return { complete, l,
+    addEventListener(ev, fn) { l[ev] = fn; }, fire(ev) { if (l[ev]) l[ev](); } }; };
+  const slow = mkImg(false), done = mkImg(true);
+  const root = { querySelectorAll: () => [slow, done] };
+  let repaint = 0;
+  const p = M.afterLateImages(root, () => { repaint++; return 'ok'; });
+  check('[160-P1-16] มีรูปค้าง = คืน promise (ผู้เรียกต้องรอวาดใหม่)', p && typeof p.then === 'function');
+  check('[160-P1-16] ยังไม่มา = ยังไม่วาดใหม่', repaint === 0);
+  slow.fire('load');
+  const r = await p;
+  check('[160-P1-16] ★ รูปมาครบ = วาดใหม่หนึ่งครั้ง', repaint === 1 && r === 'ok');
+  const bad = mkImg(false);
+  const p2 = M.afterLateImages({ querySelectorAll: () => [bad] }, () => { repaint++; });
+  bad.fire('error');
+  await p2;
+  check('[160-P1-16] รูปพัง (error) ก็ปลดล็อกเหมือนกัน ไม่ค้าง', repaint === 2);
+  check('[160-P1-16] ไม่มีรูปค้าง = null (เก็บกวาดได้ทันที)', M.afterLateImages({ querySelectorAll: () => [done] }, () => {}) === null
+        && M.afterLateImages(null, () => {}) === null);
+  console.log(`\n${pass} passed, ${fail} failed`);
+  if (fail) process.exit(1);
+})();

@@ -10,7 +10,8 @@ import { t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, openScene, safeName, saveTab, saveProjectMeta, refreshNetwork,
          sectionPathOfFile, SECTION_STATUSES, applyLockToTab, closeTabsUnderPath, moveSnapshots } from './app.js';
 import { pathKey } from './tab-bridge.js';
-import { SCENE_COLORS, dataLabel, el, setStatus, state, log, logAction } from './core.js';
+import { flushTab } from './tab-guard.js';                          // [alpha.161 · D5]
+import { SCENE_COLORS, dataLabel, el, setStatus, setStatusAction, setStatusError, state, log, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { ask, confirmBox, popupMenu, escClose } from './ui.js';
 import { vivid } from './color-util.js';
@@ -18,11 +19,13 @@ import { buildLoglineFields } from './logline-ui.js';
 import { compactLogline } from './logline.js';
 import { mutateJson } from './json-store.js';
 import { dumpMdFile, parseMdFile } from './md.js';
+import { writeMdKeepingComments } from './comments/comment-core.js';   // [alpha.160 · P0-1]
 import { gi } from './icons.js';
 import { listSections, addSection } from './section-ops.js';
 import { addChapter, moveSceneToChapter, addScene } from './scene-ops.js';
 import { moveToPosition, stepIndex } from './tree-menu-spec.js';
 import * as IM from './tree-item-meta.js';
+import { fmtDateTime } from './locale.js';
 
 // ═══════════════════ ตัวช่วยกลาง ═══════════════════
 
@@ -186,7 +189,19 @@ export async function reorderSectionPrompt(secPath) {
   if (i < 0) return false;
   const v = await ask(tf('ui.treeAct.positionAsk', secs.length), { value: String(i + 1) });
   if (v === null || v === '') return false;
-  const next = moveToPosition(secs, i, v);
+  return moveSectionTo(secPath, v, secs);
+}
+
+/**
+ * [alpha.162 · W4 ข้อ 10] ย้ายเล่มไปตำแหน่งที่ `pos` (1 = บนสุด) — ทางเดียวที่เขียน `order` ของเล่ม
+ * ใช้ร่วมกันระหว่าง "จัดลำดับ…" (กล่องถามตำแหน่ง) กับการลากหัวเล่มวางบนหัวเล่มอื่น
+ * @param {string} secPath · @param {number|string} pos · @param {Array} [secs] รายการที่อ่านไว้แล้ว
+ */
+export async function moveSectionTo(secPath, pos, secs) {
+  secs = secs || await listSections();
+  const i = secs.findIndex((s) => s.secPath === secPath);
+  if (i < 0) return false;
+  const next = moveToPosition(secs, i, pos);
   for (let k = 0; k < next.length; k++) {
     if ((next[k].meta.order || 0) === k + 1) continue;
     // [alpha.159 · M1] แตะเฉพาะ order ของไฟล์สด (meta ถูกอ่านไว้ก่อนกล่องถาม)
@@ -303,11 +318,14 @@ export async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGui
   const srcFolder = await kapi.join(srcD, 'Chapters', entry.folderName);
   const dstFolder = await kapi.join(dstD, 'Chapters', folderName);
   if (move) {
-    await closeTabsUnder(srcFolder); await kapi.mkdir(await kapi.join(dstD, 'Chapters')); await kapi.move(srcFolder, dstFolder);
+    // [alpha.160 · P0-3] แท็บที่บันทึกไม่ผ่าน = ไม่ย้าย (คืน null — ผู้เรียกทุกตัวเช็ค `if (ne)` อยู่แล้ว)
+    if (!(await closeTabsUnder(srcFolder)).ok) { setStatus(tf('ui.app.moveCancelledUnsaved', newTitle)); return null; }
+    await kapi.mkdir(await kapi.join(dstD, 'Chapters')); await kapi.move(srcFolder, dstFolder);
     await moveSnapshots(srcFolder, dstFolder);           // [alpha.156] ประวัติเวอร์ชันของทุกฉากตามบทไปด้วย
   } else {
     // [alpha.159 · M2] คัดลอกก็ต้องได้ "ของล่าสุด" — บันทึกแท็บที่ค้างของบทนี้ก่อนก๊อปไฟล์
-    await saveTabsUnder(srcFolder);
+    // [alpha.161 · D5] บันทึกไม่ผ่าน = ไม่คัดลอก (เดิมกลืนผลแล้วก๊อปฉบับเก่า)
+    if (!(await saveTabsUnder(srcFolder))) { setStatus(tf('ui.treeAct.copyCancelledUnsaved', newTitle)); return null; }
     if (await kapi.exists(srcFolder)) await copyTree(srcFolder, dstFolder);
     else await kapi.mkdir(dstFolder);
   }
@@ -342,14 +360,19 @@ export async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGui
   return newEntry;
 }
 
-/** [alpha.159 · M2] บันทึกแท็บที่ค้างของไฟล์ใต้โฟลเดอร์ (ไม่ปิด) — ก่อนคัดลอกให้ได้ของล่าสุด */
+/**
+ * [alpha.159 · M2] บันทึกแท็บที่ค้างของไฟล์ใต้โฟลเดอร์ (ไม่ปิด) — ก่อนคัดลอกให้ได้ของล่าสุด
+ * [alpha.161 · D5] เดิม `try { await saveTab } catch {}` กลืนผล → คืนสถานะจริง (false = มีแท็บที่ยังค้าง)
+ * @returns {Promise<boolean>}
+ */
 async function saveTabsUnder(dir) {
-  const k = String(dir || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase() + '/';
-  const { saveTab } = await import('./app.js');
-  for (const t2 of state.tabs.values()) {
-    const f = String(t2.file || '').replace(/\\/g, '/').toLowerCase();
-    if (t2.dirty && f.startsWith(k)) { try { await saveTab(t2); } catch {} }
+  const k = pathKey(dir) + '/';
+  let ok = true;
+  for (const t2 of [...state.tabs.values()]) {
+    if (!t2.dirty || !pathKey(t2.file).startsWith(k)) continue;
+    if (!(await flushTab(t2, (x) => saveTab(x)))) ok = false;
   }
+  return ok;
 }
 
 export async function duplicateChapter(dPath, ch) {
@@ -378,6 +401,10 @@ export async function moveChapterMenu(e, dPath, ch) {
 export async function bookFromChapter(dPath, ch) {
   const name = await ask(t('ui.treeAct.bookFromChapterAsk'), { value: ch.title || '' });
   if (!name) return '';
+  // [alpha.160 · P0-3] ปิด/บันทึกแท็บของบทนี้ก่อนสร้างเล่ม — บันทึกไม่ผ่านจะได้ไม่เหลือเล่มเปล่าค้าง
+  if (!(await closeTabsUnder(await kapi.join(dPath, 'Chapters', ch.folderName))).ok) {
+    setStatus(tf('ui.app.moveCancelledUnsaved', ch.title || '')); return '';
+  }
   const secDir = await addSection(name);
   if (!secDir) return '';
   const dstD = await kapi.join(secDir, 'Draft', 'default');
@@ -456,7 +483,7 @@ export async function setMemoFields(file, patch) {
       if (arr.length) meta.tags = arr; else delete meta.tags; continue; }
     if (v === '' || v === null || v === undefined) delete meta[k]; else meta[k] = v;
   }
-  await kapi.writeFile(file, dumpMdFile(meta, body));
+  await writeMdKeepingComments(kapi, file, dumpMdFile(meta, body));   // [alpha.160 · P0-1]
   const tab = state.tabs.get(file);
   if (tab) {
     tab.meta = { ...(tab.meta || {}), ...meta };
@@ -496,20 +523,25 @@ export async function moveMemoStep(file, dir) {
     if (next[k].order === k + 1) continue;
     const { meta, body } = await readMemo(next[k].p);
     meta.order = k + 1;
-    await kapi.writeFile(next[k].p, dumpMdFile(meta, body));
+    await writeMdKeepingComments(kapi, next[k].p, dumpMdFile(meta, body));   // [alpha.160 · P0-1]
   }
   await buildTree();
   return true;
 }
 
 async function writeMemoCopy(srcFile, title) {
+  // [alpha.161 · D5] สำเนาอ่านจากดิสก์ — งานค้างของแท็บ memo ต้นฉบับต้องลงไฟล์ก่อน
+  if (!(await flushTab(state.tabs.get(srcFile), (x) => saveTab(x)))) {
+    setStatus(tf('ui.treeAct.copyCancelledUnsaved', title));
+    return null;
+  }
   const dir = await kapi.join(state.root, 'Memos');
   await kapi.mkdir(dir);
   const { meta, body } = await readMemo(srcFile);
   const dst = await kapi.join(dir, safeName(title) + '-' + Date.now().toString(36) + '.md');
   const m = { ...meta, title, type: 'memo' };
   delete m.locked; delete m.order;
-  await kapi.writeFile(dst, dumpMdFile(m, body));
+  await writeMdKeepingComments(kapi, dst, dumpMdFile(m, body), srcFile);   // [alpha.160 · P0-1] สำเนาพาเธรดไปด้วย
   return dst;
 }
 
@@ -518,18 +550,24 @@ export async function duplicateMemo(file) {
   const { meta } = await readMemo(file);
   const title = copyName(meta.title || file.split(/[\\/]/).pop().replace(/\.md$/i, ''), list.map((m) => m.title));
   const dst = await writeMemoCopy(file, title);
+  if (!dst) return null;                                  // [alpha.161 · D5] ต้นฉบับบันทึกไม่ผ่าน (แจ้งแล้ว)
   await buildTree();
-  setStatus(tf('ui.treeAct.duplicated', title));
+  setStatusAction(tf('ui.treeAct.duplicated', title), t('ui.treeAct.openCopy'), () => openScene(dst, title));   // [alpha.162 · W5 ข้อ 1]
   return dst;
 }
 
 export async function sceneFromMemo(file, dst) {
   if (!dst || !dst.dPath || !dst.chapter) return null;
+  // [alpha.161 · D5] memo ที่เปิดค้างอยู่ต้องลงไฟล์ก่อนอ่าน (เดิมได้ฉบับบนดิสก์) · บันทึกไม่ผ่าน = ไม่สร้าง
+  if (!(await flushTab(state.tabs.get(file), (x) => saveTab(x)))) {
+    setStatus(tf('ui.treeAct.copyCancelledUnsaved', file.split(/[\\/]/).pop()));
+    return null;
+  }
   const { meta, body } = await readMemo(file);
   const title = meta.title || file.split(/[\\/]/).pop().replace(/\.md$/i, '');
   const m = { ...meta, title, type: 'scene' };
   for (const k of ['order', 'flag', 'locked', 'color', 'status']) delete m[k];
-  const r = await addScene(dst.dPath, dst.chapter, title, { body, meta: m });
+  const r = await addScene(dst.dPath, dst.chapter, title, { body, meta: m, commentsFrom: file });   // [alpha.161 · D5] คงคอมเมนต์
   if (r) setStatus(tf('ui.treeAct.sceneFromMemoDone', title));
   return r;
 }
@@ -560,6 +598,7 @@ export async function pasteMemo() {
   if (!(await kapi.exists(it.file))) { setStatus(t('ui.treeAct.clipEmpty')); return null; }
   const list = await listMemos();
   const dst = await writeMemoCopy(it.file, copyName(it.title || 'memo', list.map((m) => m.title)));
+  if (!dst) return null;                                  // [alpha.161 · D5]
   await buildTree();
   setStatus(tf('ui.treeAct.pasted', it.title || ''));
   return dst;
@@ -774,8 +813,10 @@ export async function backupItem(kind, ctx) {
     const dir = await kapi.join(await backupRoot(kind, ctx), IM.backupStamp());
     const payload = await kapi.join(dir, 'payload');
     const info = { kind, title, created: new Date().toISOString() };
+    // [alpha.161 · D5] งานค้างบันทึกไม่ผ่าน = **ยกเลิก backup** (เดิมกลืนผล → ชุดสำรองเป็นฉบับเก่าโดยไม่มีใครรู้)
+    const unsaved = () => { const e = new Error(tf('ui.treeAct.backupCancelledUnsaved', title)); e.k2Unsaved = true; throw e; };
     if (kind === 'book') {
-      await closeTabsUnder(ctx.secPath, { save: true }).catch(() => {});
+      if (!(await closeTabsUnder(ctx.secPath, { save: true })).ok) unsaved();
       await copyTree(ctx.secPath, payload);
       info.folder = ctx.secPath.split(/[\\/]/).pop();
     } else if (kind === 'chapter') {
@@ -783,7 +824,7 @@ export async function backupItem(kind, ctx) {
       // [alpha.156] เทียบแบบมีตัวคั่น — "01 - บท" ต้องไม่ไปจับแท็บของ "01 - บทสอง"
       const fk = pathKey(folder) + '/';
       for (const [f, tab] of [...state.tabs.entries()]) {
-        if (typeof f === 'string' && pathKey(f).startsWith(fk) && tab.dirty) await saveTab(tab);
+        if (typeof f === 'string' && pathKey(f).startsWith(fk) && !(await flushTab(tab, (x) => saveTab(x)))) unsaved();
       }
       await copyTree(folder, payload);
       const d = await readJson(await kapi.join(ctx.dPath, 'draft.json'), { chapters: [] });
@@ -791,8 +832,7 @@ export async function backupItem(kind, ctx) {
       info.entry = (d.chapters || []).find((c) => c.guid === ctx.ch.guid) || ctx.ch;
       info.rows = (s.chapters || {})[ctx.ch.guid] || [];
     } else if (kind === 'scene') {
-      const tab = state.tabs.get(ctx.file);
-      if (tab && tab.dirty) await saveTab(tab);
+      if (!(await flushTab(state.tabs.get(ctx.file), (x) => saveTab(x)))) unsaved();
       await kapi.copyFile(ctx.file, await kapi.join(payload, ctx.sc.fileName));
       const vis = ctx.file.replace(/\.md$/i, '_vis.csv');
       if (await kapi.exists(vis)) await kapi.copyFile(vis, await kapi.join(payload, vis.split(/[\\/]/).pop()));
@@ -800,17 +840,18 @@ export async function backupItem(kind, ctx) {
       info.row = ((s.chapters || {})[ctx.ch.guid] || []).find((r) => r.id === ctx.sc.id) || ctx.sc;
       info.chGuid = ctx.ch.guid;
     } else if (kind === 'memo') {
-      const tab = state.tabs.get(ctx.file);
-      if (tab && tab.dirty) await saveTab(tab);
+      if (!(await flushTab(state.tabs.get(ctx.file), (x) => saveTab(x)))) unsaved();
       await kapi.copyFile(ctx.file, await kapi.join(payload, ctx.file.split(/[\\/]/).pop()));
     } else return false;
     await writeJson(await kapi.join(dir, 'item.json'), info);
     logAction('backup', tf('ui.treeAct.backupDone', title), { kind, dir });
-    setStatus(tf('ui.treeAct.backupDone', title));
+    // [alpha.162 · W5 ข้อ 1] ของที่เพิ่งสร้าง = ลิงก์พาไปดู
+    setStatusAction(tf('ui.treeAct.backupDone', title), t('ui.trash.revealInFolder'), () => kapi.revealInOS(dir));
     return dir;
   } catch (e) {
+    if (e && e.k2Unsaved) { log('warn', e.message); setStatus(e.message); return false; }   // [alpha.161 · D5]
     log('error', t('ui.treeAct.backupFail'), e);
-    setStatus(t('ui.treeAct.backupFail'));
+    setStatusError(t('ui.treeAct.backupFail'));
     return false;
   }
 }
@@ -824,7 +865,7 @@ export async function listItemBackups(kind, ctx) {
   return out;
 }
 
-const fmtLocal = (ms) => { try { return new Date(ms).toLocaleString(); } catch { return String(ms); } };
+const fmtLocal = (ms) => fmtDateTime(ms) || String(ms);
 
 /** เมนูเลือกชุดสำรอง → ยืนยัน → กู้ (ของปัจจุบันลงถังขยะก่อน) */
 export async function restoreItemMenu(e, kind, ctx) {
@@ -888,7 +929,7 @@ export async function restoreItem(kind, ctx, backup) {
     return true;
   } catch (err) {
     log('error', t('ui.treeAct.restoreFail'), err);
-    setStatus(t('ui.treeAct.restoreFail'));
+    setStatusError(t('ui.treeAct.restoreFail'));
     await buildTree();
     return false;
   }
@@ -1025,7 +1066,7 @@ export async function itemPropsDialog(kind, ctx) {
   }
   return new Promise((resolve) => {
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, t('ui.common.cancel'));
+    const cB = el('button', 'k-cancel', t('ui.common.cancel'));
     const okB = el('button', 'k-ok', t('ui.common.save'));
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     const close = (v) => { ov.remove(); resolve(v); };

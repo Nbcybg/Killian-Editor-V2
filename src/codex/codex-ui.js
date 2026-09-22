@@ -5,9 +5,12 @@
 //
 // ตัวสร้างเว็บอยู่ใน codex-build.js (บริสุทธิ์ · มี unit test) — ไฟล์นี้มีแต่เรื่องหน้าจอกับไฟล์
 import { t, tf } from '../i18n.js';
-import { $, el, state, setStatus, log } from '../core.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
+import { $, el, state, setStatus, setStatusError, log } from '../core.js';
 import { listEntities } from '../project-scan.js';
 import * as CB from './codex-build.js';
+import { panelEmpty } from '../panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
+import { cmpText } from '../locale.js';
 
 const S = () => (state._codex || (state._codex = { ents: null, q: '', cat: '', sel: null }));
 export function resetCodex() { state._codex = null; }
@@ -44,10 +47,10 @@ export async function renderCodexPanel(host) {
   h.classList.add('k-codex');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-codex-empty', t('ui.codex.openProjectBeforeHas')));
+    h.append(panelEmpty(t('ui.codex.openProjectBeforeHas')));
     return true;
   }
-  h.append(el('div', 'dim k-codex-empty', t('ui.codex.busyRead')));
+  h.append(panelEmpty(t('ui.codex.busyRead')));
   const ents = await listEntities(state.root);
   s.ents = ents;
   h.replaceChildren();
@@ -87,11 +90,10 @@ export async function renderCodexPanel(host) {
       if (s.cat && e.cat !== s.cat) return false;
       if (!needle) return true;
       return (e.name + ' ' + (e.aliases || []).join(' ')).toLowerCase().includes(needle);
-    }).sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'));
+    }).sort((a, b) => cmpText(String(a.name), String(b.name)));
     grid.replaceChildren();
     if (!rows.length) {
-      grid.append(el('div', 'dim k-codex-empty',
-        ents.length ? t('ui.codex.notFoundListAt') : t('ui.codex.notHasWikiNew')));
+      grid.append(panelEmpty(ents.length ? t('ui.codex.notFoundListAt') : t('ui.codex.notHasWikiNew')));
       return;
     }
     for (const e of rows) {
@@ -148,7 +150,7 @@ export async function renderCodexPanel(host) {
       try { await kapi.revealInOS(await kapi.join(out, 'index.html')); } catch {}
     } catch (e) {
       log('error', t('ui.codex.codexExportNotOk'), e);
-      setStatus(t('ui.codex.exportNotOk') + (e && e.message ? e.message : e));
+      setStatusError(failText(t('ui.codex.exportNotOk'), e));
     }
   }
 

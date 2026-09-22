@@ -112,6 +112,16 @@ export function linesForBody(fmt, hdr) {
 }
 
 /**
+ * [alpha.160 · P1-9] เลข ${PAGE} ของหน้า index (1-based) — ตัวเดียวที่ทั้งไฟล์ PDF และช่องตัวอย่างใช้
+ * เดิมตัวอย่างส่ง `PAGE: n` ตรง ๆ ขณะที่ไฟล์จริงใช้ `startPage + index - 1` → เล่มที่เริ่มหน้า 5
+ * ตัวอย่างขึ้น 1,2,3 ทั้งที่ไฟล์พิมพ์ 5,6,7
+ */
+export function headerPageNumber(startPage, index) {
+  const s = Math.round(Number(startPage));
+  return (Number.isFinite(s) && s >= 1 ? s : 1) + (Number(index) || 1) - 1;
+}
+
+/**
  * สตริงที่ต้องพิมพ์บนหัวของหน้า index (1-based)
  * @returns {Array<{text,align,xOffset,bold,italic,underline}>} — ว่าง = หน้านั้นไม่มีหัวกระดาษ
  */

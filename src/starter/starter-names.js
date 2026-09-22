@@ -21,6 +21,7 @@
 import { t } from '../i18n.js';
 // ตัวถอด HTML ของ Story Description อยู่ที่ starter-model.js อยู่แล้ว — ห้ามมีสองตัว
 import { introText } from './starter-model.js';
+import { cmpText, wordSegmenter } from '../locale.js';
 
 /** ความยาวชื่อที่ยอมรับ (สั้นกว่านี้ = เศษคำ · ยาวกว่านี้ = ทั้งวลี) */
 export const NAME_MIN = 2;
@@ -63,11 +64,10 @@ export function stripHtml(html) {
 
 /** ตัวตัดคำไทยของระบบ — ไม่มีก็ตกไปใช้ "ตัดที่ช่องว่าง/เครื่องหมาย" */
 function segments(text) {
+  // [alpha.162 · W7] ตัวตัดคำกลาง (locale.js) — ICU เลือกพจนานุกรมตามตัวอักษร ผลเท่ากันทุกภาษา
   try {
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-      const seg = new Intl.Segmenter('th', { granularity: 'word' });
-      return [...seg.segment(text)].filter((s) => s.isWordLike).map((s) => s.segment);
-    }
+    const seg = wordSegmenter();
+    if (seg) return [...seg.segment(text)].filter((s) => s.isWordLike).map((s) => s.segment);
   } catch {}
   return String(text).split(/[\s,.;:!?()"'“”‘’«»「」『』\-–—]+/).filter(Boolean);
 }
@@ -191,7 +191,7 @@ export function suggestNames(text, o = {}) {
   for (const n of capitalizedNames(src)) add(n, 'caps', 2);
 
   return [...found.values()]
-    .sort((a, b) => a.rank - b.rank || b.hits - a.hits || a.name.localeCompare(b.name))
+    .sort((a, b) => a.rank - b.rank || b.hits - a.hits || cmpText(a.name, b.name))
     .slice(0, limit)
     .map(({ name, hits, source }) => ({ name, hits, source }));
 }

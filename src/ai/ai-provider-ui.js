@@ -7,10 +7,11 @@
 // ไฟล์นี้ทำแค่ "วาดและยิงคำขอ" เท่านั้น
 
 import { t, tf } from '../i18n.js';
+import { retryBackoff } from '../timing.js';
 import { $, el, state, setStatus, log, setBusy, clearBusy } from '../core.js';
 import {
   PARAM_DEFS, defaultParams, normalizeParams, parseDomains, isDomainAllowed,
-  newProvider, validateProvider, stripSecrets, withSecrets,
+  newProvider, validateProvider, validateProviderIssues, stripSecrets, withSecrets,
   modelsRequests, parseModels, chatRequest, parseChat, parseStreamChunk,
   listProviders, activeProvider, upsertProvider, removeProvider,
 } from './ai-providers.js';
@@ -18,6 +19,7 @@ import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 // [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
 import { describeHttpError, shortError, redactSecrets } from './ai-error.js';
 import { gi } from '../icons.js';
+import { fmtNum } from '../locale.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keys = null;                 // { <credentialId>: apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -114,7 +116,7 @@ export async function sendRequest(provider, req) {
   const retries = Math.max(0, req.maxRetries ?? 0);
   // [alpha.96] ช่วยด้วยการหน่วงเวลาระหว่างรอบใหม่ — เดิมยิงซ้ำทันที ทำให้เน็ตช้า/เซิร์ฟเวอร์แออัดโดนถล่มซ้ำ
   // จน "ช้าจน timeout" ยิ่งยืดยาว (3 คำขอต่อเนื่อง = 3×60 วิ) หน่วงแบบ exponential สั้น ๆ ก็พอ
-  const backoff = (n) => Math.min(8000, 500 * Math.pow(2, n));
+  const backoff = retryBackoff;   // [alpha.162 · W6 ข้อ 7] timing.js
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const who = provider.name || hostOf(req.url);
   try {
@@ -289,7 +291,7 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
   let streamError = '';
   const streamT0 = Date.now();
   const retries = Math.max(0, req.maxRetries ?? 0);
-  const backoff = (n) => Math.min(8000, 500 * Math.pow(2, n));
+  const backoff = retryBackoff;   // [alpha.162 · W6 ข้อ 7] timing.js
   try {
     for (let attempt = 0; ; attempt++) {
       setBusy(attempt ? tf('ui.aiProvider.busyNextTryNew', who, attempt) : tf('ui.aiProvider.busyNext', who));
@@ -399,7 +401,7 @@ export async function showAISettingsDialog() {
     const total = usage.reduce((s, u) => s + (u.tokens || 0), 0);
     const cost = usage.reduce((s, u) => s + (u.usd || 0), 0);
     const stat = el('div', 'dim ai-usage-stat',
-      tf('ui.aiProvider.useDoneTokensTimes', total.toLocaleString(), usage.length, cost.toFixed(4)));
+      tf('ui.aiProvider.useDoneTokensTimes', fmtNum(total), usage.length, cost.toFixed(4)));
     box.append(stat);
   }
 
@@ -520,18 +522,19 @@ export function providerDialog(existing) {
     nameInp.value = P.name || '';
 
     // ── 2. Credential ──
-    const s2 = sec(2, 'Credential');
+    // [alpha.160 · P3] หัวข้อ/ป้ายเคยเป็นอังกฤษฝังโค้ด — ย้ายเข้า CSV (กฎถาวรข้อ 0)
+    const s2 = sec(2, t('ui.aiProvider.secCredential'));
     const credName = field(s2, t('ui.aiProvider.nameCredential'), el('input', 'wiki-input ai-cred-name'));
     credName.value = P.credential.name || '';
-    const apiInp = field(s2, 'API', el('input', 'wiki-input ai-cred-key'),
+    const apiInp = field(s2, t('ui.aiProvider.apiKey'), el('input', 'wiki-input ai-cred-key'),
                          tf('ui.aiProvider.keepSplitFolderProject', KEY_FILE));
     apiInp.type = 'password';
     apiInp.value = P.credential.apiKey || '';
     apiInp.placeholder = t('ui.aiProvider.skSkipEmptyNot');
-    const baseInp = field(s2, 'Base URL', el('input', 'wiki-input ai-cred-base'));
+    const baseInp = field(s2, t('ui.aiProvider.baseUrl'), el('input', 'wiki-input ai-cred-base'));
     baseInp.value = P.credential.baseUrl || '';
     baseInp.placeholder = 'https://api.openai.com/v1';
-    const domInp = field(s2, 'Allowed HTTP Request Domains',
+    const domInp = field(s2, t('ui.aiProvider.allowedDomains'),
                          el('textarea', 'wiki-input ai-cred-domains'),
                          t('ui.aiProvider.lineNewExampleCom'));
     domInp.rows = 2;
@@ -546,7 +549,7 @@ export function providerDialog(existing) {
     s2.append(credBtns);
 
     // ── 3. Model (ดึงจาก API) ──
-    const s3 = sec(3, 'Model');
+    const s3 = sec(3, t('ui.aiProvider.secModel'));
     const modelSel = field(s3, t('ui.common.model'), el('select', 'wiki-input k-dlg-select ai-model-sel'),
                            t('ui.aiProvider.pressFetchListModel'));
     const modelBtns = el('div', 'ai-model-btns');
@@ -570,7 +573,7 @@ export function providerDialog(existing) {
     fillModels(P.models, P.model);
 
     // ── 4. Parameters ──
-    const s4 = sec(4, 'Parameters');
+    const s4 = sec(4, t('ui.aiProvider.secParams'));
     const grid = el('div', 'ai-param-grid');
     const inputs = {};
     for (const d of PARAM_DEFS) {
@@ -658,7 +661,7 @@ export function providerDialog(existing) {
       // [alpha.128] เดิมกรองด้วยตัวอักษรไทย `e.includes('ชื่อผู้ให้บริการ')` ทั้งที่ข้อความนี้
       // มาจาก `t('ui.aiProviders.cantRenameProvider')` ซึ่งแปลตามภาษา → หน้าจออังกฤษกรองไม่ติด
       // แล้วปุ่ม "ทดสอบ" ถูกบล็อกด้วยข้อผิดพลาดที่ตั้งใจจะข้าม · เทียบกับข้อความตัวเดียวกันแทน
-      const errs = validateProvider(p).filter((e) => e !== t('ui.aiProviders.cantRenameProvider'));
+      const errs = validateProviderIssues(p).filter((e) => e.code !== 'name').map((e) => e.msg);
       if (errs.length) { say(credMsg, false, errs[0]); return; }
       setBusy(true, credMsg, t('ui.aiProvider.busyTest'));
       const r = await testCredential(p);
@@ -677,7 +680,7 @@ export function providerDialog(existing) {
     };
     saveCredBtn.onclick = async () => {
       const p = collect();
-      const errs = validateProvider(p).filter((e) => e !== t('ui.aiProviders.cantRenameProvider'));
+      const errs = validateProviderIssues(p).filter((e) => e.code !== 'name').map((e) => e.msg);
       if (errs.length) { say(credMsg, false, errs[0]); return; }
       const keys = await loadKeys();
       keys[p.credential.id] = p.credential.apiKey;

@@ -14,6 +14,7 @@
 //   3) ผู้ใช้กด "ไม่จำ" (ignored) = ไม่จำเด็ดขาด แม้เจอซ้ำกี่ครั้ง
 //
 // บริสุทธิ์ 100% — ทดสอบด้วย node ได้ (test/smart-terms.test.cjs)
+import { cmpText } from './locale.js';
 
 /** จำนวนบล็อกขั้นต่ำที่ต้องเจอคำนั้น ก่อนจะเอามาเดาให้ */
 export const DEFAULT_LEARN_MIN = 2;
@@ -90,7 +91,7 @@ export function learnedTerms(counts, opts = {}) {
     if (!looksLikeTerm(word)) continue;
     if (n >= min || known.has(key)) out.push([word, n]);
   }
-  out.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'th'));
+  out.sort((a, b) => b[1] - a[1] || cmpText(a[0], b[0]));
   return out.map(([w]) => w);
 }
 
@@ -110,6 +111,6 @@ export function pendingTerms(counts, opts = {}) {
     if (n >= min) continue;
     out.push({ word, count: n, ok: looksLikeTerm(word) });
   }
-  out.sort((a, b) => b.count - a.count || a.word.localeCompare(b.word, 'th'));
+  out.sort((a, b) => b.count - a.count || cmpText(a.word, b.word));
   return out;
 }

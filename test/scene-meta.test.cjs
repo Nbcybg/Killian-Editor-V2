@@ -1,7 +1,7 @@
 // test/scene-meta.test.cjs — unit test แหล่งความจริงเดียวของคุณสมบัติฉาก (alpha.60r2 · ข้อ 13)
 // [alpha.77] t() ไม่ตกกลับภาษาอื่น — ต้องมีตารางคำแปลจริงก่อน require บันเดิลที่ esbuild สร้าง
 require('./_lang.cjs').installLang('th');
-// ทดสอบเฉพาะส่วนบริสุทธิ์ (readSceneMeta/writeSceneMeta ต้องมี kapi จริง → อยู่ใน e2e)
+// ส่วนบริสุทธิ์ + writeSceneMeta บน kapi ปลอม (ดิสก์ในหน่วยความจำ · alpha.160)
 const path = require('path');
 const os = require('os');
 const esbuild = require('esbuild');
@@ -12,6 +12,11 @@ esbuild.buildSync({
   outfile: tmp, bundle: true, format: 'cjs', platform: 'node', logLevel: 'silent',
 });
 const S = require(tmp);
+const tmpCC = path.join(os.tmpdir(), 'k2-commentcore-test.cjs');
+esbuild.buildSync({
+  entryPoints: [path.join(__dirname, '..', 'src', 'comments', 'comment-core.js')],
+  outfile: tmpCC, bundle: true, format: 'cjs', platform: 'node', logLevel: 'silent',
+});
 
 let pass = 0, fail = 0;
 function check(name, cond, extra) {
@@ -132,5 +137,34 @@ check('frontmatter: meta/props เป็น null ไม่พัง',
   check('ไปกลับ: ป้ายล่วงหน้ายังเป็น false', back.isFlashforward === false);
 }
 
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+
+// ── [alpha.160 · P0-1] writeSceneMeta ต้องไม่ลบเธรดคอมเมนต์ (บล็อก k2-comments ท้ายไฟล์) ──
+(async () => {
+  const disk = new Map();
+  const K = globalThis.kapi || (globalThis.kapi = {});
+  K.readFile = async (p) => { if (!disk.has(p)) throw new Error('ENOENT ' + p); return disk.get(p); };
+  K.writeFile = async (p, s) => { disk.set(p, s); };
+  const f = '/proj/ch1/scene-1.md';
+  const thread = '[{"id":"c1","author":"ท็อป","text":"ตรงนี้เร็วไป","timestamp":1,"resolved":false,"replies":[],'
+    + '"anchor":{"start":0,"end":5,"quote":"ทอร่า"}}]';
+  disk.set(f, '---\ntitle: ฉากหนึ่ง\n---\nทอร่าเดินเข้าครัว\n\n<!-- k2-comments\n' + thread + '\n-->\n');
+  const ok = await S.writeSceneMeta(f, { synopsis: 'เรื่องย่อใหม่', pov: 'ทอร่า' });
+  const out = disk.get(f);
+  check('[P0-1] writeSceneMeta คืน true', ok === true);
+  check('[P0-1] frontmatter ได้ค่าใหม่', /synopsis: เรื่องย่อใหม่/.test(out), out);
+  check('[P0-1] บล็อก k2-comments ยังอยู่หลังบันทึกคุณสมบัติ',
+    /<!--\s*k2-comments/.test(out) && out.includes('ตรงนี้เร็วไป'), out);
+  check('[P0-1] เนื้อฉากไม่ถูกแตะ', out.includes('ทอร่าเดินเข้าครัว'));
+  await S.writeSceneMeta(f, { emotion: 'โกรธ' });
+  const out2 = disk.get(f);
+  check('[P0-1] บันทึกสองรอบ = บล็อกเดียว', (out2.match(/k2-comments/g) || []).length === 1, out2);
+  disk.set('/proj/b.md', '---\ntitle: บี\n---\nเนื้อ\n');
+  await S.writeSceneMeta('/proj/b.md', { pov: 'แคสซี่' });
+  check('[P0-1] ไฟล์ไม่มีคอมเมนต์ ไม่งอกบล็อก', !/k2-comments/.test(disk.get('/proj/b.md')));
+  // เส้นทางย้าย/สำเนาไฟล์: writeMdKeepingComments(io, dst, text, src) พาเธรดจากต้นทาง
+  const CC = require(tmpCC);
+  await CC.writeMdKeepingComments(K, '/proj/memo.md', '---\ntitle: โน้ต\n---\nทอร่าเดินเข้าครัว\n', f);
+  check('[P0-1] ย้าย/สำเนาไฟล์ พาเธรดคอมเมนต์จากไฟล์ต้นทาง', disk.get('/proj/memo.md').includes('ตรงนี้เร็วไป'));
+  console.log(`\n${pass} passed, ${fail} failed`);
+  process.exit(fail ? 1 : 0);
+})();

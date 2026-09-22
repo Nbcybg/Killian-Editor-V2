@@ -4,8 +4,10 @@
 // ตัวจดและตัวลงมือย้อนกลับอยู่ที่ **main** (ดักที่ handler ของ fs — ดู main.js)
 // เพราะเป็นจุดเดียวที่เห็นทุกการเขียนของทั้งโปรแกรม · แผงนี้เป็นแค่หน้าจอ + ปุ่ม
 import { t, tf } from '../i18n.js';
-import { $, el, state, setStatus, log } from '../core.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
+import { $, el, state, setStatus, setStatusError, log } from '../core.js';
 import * as HD from './history-data.js';
+import { panelEmpty } from '../panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 
 const S = () => (state._history || (state._history = { journal: null, busy: false }));
 export function resetHistory() { state._history = null; }
@@ -42,7 +44,7 @@ export async function renderHistoryPanel(host) {
   h.classList.add('k-hist');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-hist-empty', t('ui.histOry.openProjectBeforeHas')));
+    h.append(panelEmpty(t('ui.histOry.openProjectBeforeHas')));
     return true;
   }
   await loadHistory();
@@ -72,7 +74,7 @@ export async function renderHistoryPanel(host) {
   h.append(list);
 
   if (!rows.length) {
-    list.append(el('div', 'dim k-hist-empty', t('ui.histOry.notHasChangeSave')));
+    list.append(panelEmpty(t('ui.histOry.notHasChangeSave')));
     return true;
   }
 
@@ -143,7 +145,7 @@ async function revertTo(seq, label, host) {
     if (state.root) await loadProject(state.root);
   } catch (e) {
     log('error', t('ui.histOry.historyUndoFail'), e);
-    setStatus(t('ui.histOry.undoFail') + (e && e.message ? e.message : e));
+    setStatusError(failText(t('ui.histOry.undoFail'), e));
   } finally {
     s.busy = false;
   }

@@ -7,6 +7,8 @@ import { activate, closeTab, loadProject, newProject } from './app.js';
 import { exportProjectZip, importProjectZip } from './export-zip.js';
 import { initIcons, gi } from './icons.js';
 import { fileUrlFromPath } from './file-url.js';
+import { settingsDialog } from './dialogs.js';
+import { fmtDate, fmtNum } from './locale.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
 export const HOME_VIEWS = [
@@ -68,6 +70,17 @@ export function buildHomeActions(opts = {}) {
   // [alpha.157] ผู้ใช้: "หน้า home จะมีปุ่มออกจากโปรแกรม" — ทางเดียวกับปุ่ม ✕ ของหน้าต่าง (ถามบันทึกงานค้างก่อน)
   const quitBtn = mk('k-danger-soft home-btn-quit', gi('close') + ' ' + t('ui.home.quitApp'), t('ui.home.quitAppHint'));
   quitBtn.onclick = () => { try { kapi.winClose(); } catch {} };
+  // [alpha.162 · W4 ข้อ 12] ตั้งค่า/ภาษาได้ตั้งแต่ยังไม่มีโปรเจกต์ (ไม่มีโปรเจกต์ = กล่องแสดงเฉพาะหน้าระดับผู้ใช้)
+  // ปุ่มภาษาเป็นทางลัดไปหน้าภาษาของกล่องเดียวกัน — ไม่มีตัวสลับภาษาชุดที่สอง (ตัวถามเริ่มใหม่อยู่ที่นั่นแล้ว)
+  // ปุ่มไอคอนล้วน (ชื่อใน tooltip + aria-label) · อยู่ **มุมขวาบนของหัว Home** ไม่ใช่แถบคำสั่ง —
+  // แถบคำสั่งเต็มแล้ว (ต้องอยู่บรรทัดเดียว e2e [62-1]) และลำดับของมันผู้ใช้กำหนดไว้ (e2e [61-1])
+  // คนเรียกเอา `corner` ไปวางในหัวของตัวเอง (หัวทุกแบบเป็น `.home-head` ที่ position:relative)
+  const settingsBtn = mk('home-btn-icon home-btn-settings', gi('cog'), t('ui.home.settings') + ' — ' + t('ui.home.settingsHint'));
+  settingsBtn.setAttribute('aria-label', t('ui.home.settings'));
+  settingsBtn.onclick = () => settingsDialog();
+  const langBtn = mk('home-btn-icon home-btn-lang', gi('globe'), t('ui.home.language'));
+  langBtn.setAttribute('aria-label', t('ui.home.language'));
+  langBtn.onclick = () => settingsDialog('lang');
 
   function applyView(mode) {
     const m = setHomeView(mode);
@@ -118,9 +131,11 @@ export function buildHomeActions(opts = {}) {
   actions.append(viewWrap, findBtn, findInp, exportBtn, importBtn, spacer, newBtn, openBtn);
   if (opts.onClose) actions.append(closeBtn); else closeBtn.remove();
   actions.append(quitBtn);
+  const corner = el('div', 'home-corner');
+  corner.append(langBtn, settingsBtn);
   applyView(homeView());
-  return { actions, viewWrap, viewBtns, applyView, findBtn, findInp, applyFind,
-           exportBtn, importBtn, spacer, newBtn, openBtn, closeBtn, quitBtn };
+  return { actions, corner, viewWrap, viewBtns, applyView, findBtn, findInp, applyFind,
+           exportBtn, importBtn, spacer, newBtn, openBtn, closeBtn, quitBtn, settingsBtn, langBtn };
 }
 
 // เปิดหน้า Home — สร้างแท็บใหม่ หรือเปิดแท็บที่มีอยู่แล้ว
@@ -134,7 +149,7 @@ export async function openHome() {
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', t('ui.home.pageFirst')));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
+  const x = el('span', 'tab-x', gi('times')); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const tab = { file: key, title: t('ui.common.pageFirst'), pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, dash: true };
@@ -160,8 +175,9 @@ export async function renderHome(pane) {
   grid.id = 'home-grid';
 
   // [alpha.61 ข้อ 1] แถวปุ่มอยู่ "ขอบล่าง" — ปิดแท็บหน้าแรกเมื่อกด ✕
-  const { actions } = buildHomeActions({ onClose: () => closeTab('::home::'), grid });
+  const { actions, corner } = buildHomeActions({ onClose: () => closeTab('::home::'), grid });
   actions.classList.add('home-actions-bottom');
+  head.append(corner);                                  // [alpha.162 · W4 ข้อ 12]
 
   wrap.append(head, grid, actions);
   pane.append(wrap);
@@ -217,7 +233,7 @@ async function readRecentProject(root) {
       }
     }
     const modDate = lastModified ? new Date(lastModified) : null;
-    const dateStr = modDate ? modDate.toLocaleDateString('th-TH', {
+    const dateStr = modDate ? fmtDate(modDate, {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
     return { root, title: meta.title || root.replace(/^.*[\\/]/, ''),
              author: meta.author || '', cover: meta.cover || '',
@@ -328,7 +344,7 @@ export function createProjectCard(project, onOpen) {
   const statItems = [
     { icon: gi('file'), label: t('ui.common.scene2'), val: project.totalScenes },
     { icon: gi('folder'), label: t('ui.common.chapter'), val: project.totalChapters },
-    { icon: gi('note'), label: t('ui.common.word2'), val: project.totalWords.toLocaleString() },
+    { icon: gi('note'), label: t('ui.common.word2'), val: fmtNum(project.totalWords) },
   ];
   for (const s of statItems) {
     const si = el('span', 'home-stat');
@@ -355,7 +371,7 @@ export function createProjectCard(project, onOpen) {
   const reveal = el('button', 'home-card-pathbtn', gi('folder-open'));
   reveal.title = t('ui.home.revealInOS');
   reveal.onclick = (e) => { e.stopPropagation(); kapi.revealInOS(project.root).catch(() => {}); };
-  const copy = el('button', 'home-card-pathbtn', '⧉');
+  const copy = el('button', 'home-card-pathbtn', gi('duplicate'));
   copy.title = t('ui.home.copyPath');
   copy.onclick = async (e) => {
     e.stopPropagation();
@@ -408,8 +424,9 @@ export async function showHomeDialog(opts = {}) {
   const scroll = el('div', 'home-dlg-scroll');   // กรอบคงที่ · เลื่อนเฉพาะรายการข้างใน
   scroll.append(grid);
   // [alpha.61 ข้อ 1] แถบคำสั่ง (มุมมอง · ค้นหา · ส่งออก/นำเข้า · สร้าง/เปิด/ปิด) อยู่ขอบล่างของกล่อง
-  const { actions } = buildHomeActions({ onClose: () => ov.remove(), grid });
+  const { actions, corner } = buildHomeActions({ onClose: () => ov.remove(), grid });
   actions.classList.add('home-actions-bottom');
+  head.append(corner);                                  // [alpha.162 · W4 ข้อ 12]
   box.append(head, scroll, actions);
   ov.append(box);
   document.body.append(ov);
@@ -445,8 +462,9 @@ export async function renderHomePanel(host) {
   head.append(el('h2', 'home-title', 'Killian 2'));
   const list = el('div', 'home-grid');
   // แผงหน้าแรกปิดด้วยปุ่ม ✕ บนหัวแผงอยู่แล้ว → ไม่ต้องมีปุ่มปิดซ้ำในแถวคำสั่ง
-  const { actions } = buildHomeActions({ grid: list });
+  const { actions, corner } = buildHomeActions({ grid: list });
   actions.classList.add('home-actions-bottom');
+  head.append(corner);                                  // [alpha.162 · W4 ข้อ 12]
   wrap.append(head, list, actions);
   host.append(wrap);
 

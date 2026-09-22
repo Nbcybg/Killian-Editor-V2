@@ -32,6 +32,7 @@
 //     ใน app.js (ไฟล์นี้ยังบริสุทธิ์ 100% เหมือนเดิม ไม่แตะ DOM/kapi)
 
 import { t } from './i18n.js';
+import { fmtDate } from './locale.js';
 
 /**
  * ตัวจับโทเคน
@@ -75,8 +76,8 @@ export function formatDate(d, fmt) {
   if (fmt === 'iso') return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
   if (fmt === 'year') return String(dt.getFullYear());
   if (fmt === 'time') return `${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
-  if (fmt === 'weekday') { try { return dt.toLocaleDateString(undefined, { weekday: 'long' }); } catch { return ''; } }
-  try { return dt.toLocaleDateString(); } catch { return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`; }
+  if (fmt === 'weekday') return fmtDate(dt, { weekday: 'long' });
+  return fmtDate(dt) || `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
 }
 
 /** boolean → ป้ายที่แปลแล้ว (ใช่/ไม่ใช่) — ใช้กับ flag/locked/chapterflag */

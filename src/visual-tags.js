@@ -3,11 +3,13 @@ import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { state, setStatus, el } from './core.js';
 
 const DEFAULT_VISUAL_TAGS = [
+  /* i18n-skip: แท็กมาตรฐาน = ค่าที่เก็บใน scenes.json */
   { name: 'ต่อสู้', color: '#d9575e', icon: '⚔', shape: 'circle' },
   { name: 'พูดคุย', color: '#5f9fd9', icon: '💬', shape: 'tag' },
   { name: 'สำรวจ', color: '#6fae6f', icon: '🔍', shape: 'square' },
   { name: 'ความลับ', color: '#a97fd0', icon: '🔮', shape: 'circle' },
   { name: 'ย้อนอดีต', color: '#d9b757', icon: '⏪', shape: 'tag' },
+  /* /i18n-skip */
 ];
 
 export function getVisualTags() {
@@ -145,9 +147,10 @@ export async function manageVisualTags() {
     await addVisualTag({ name, icon: iconInp.value || '🔖', color: colorInp.value || '#d97757', shape: shapeSel.value || 'tag' });
     nameInp.value = ''; renderGrid();
   };
-  const closeB = el('button', null, tt('ui.common.close'));
+  const closeB = el('button', 'k-cancel', tt('ui.common.close'));
   closeB.onclick = () => ov.remove();
-  btns.append(addB, closeB);
+  // [alpha.162 · W4 ข้อ 9] ปุ่มหลักขวาสุด (`k-cancel` = ทางที่ Esc เดินด้วย)
+  btns.append(closeB, addB);
   box.append(btns);
   ov.append(box);
   document.body.append(ov);

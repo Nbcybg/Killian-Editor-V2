@@ -3,6 +3,7 @@
 // เดิมตัววาดใน tag-pane.js ใส่ count เฉพาะ "ใบ" → ทุกตัวแม่ได้ 0 แล้วการเรียง "มาก→น้อย"
 // ดันตัวแม่ทุกตัวไปท้ายรายการ (ผังกลับหัว: ลูกโผล่ก่อน แม่ 0 ห้อยท้าย)
 // ตอนนี้: `own` = จำนวนที่ใช้แท็กนี้ตรง ๆ · `count` = own + ผลรวมของทุกลูกหลาน (ตัวเลขที่แสดง)
+import { cmpText } from './locale.js';
 
 /**
  * @param {Record<string, number>} counts แท็ก → จำนวนครั้งที่ใช้
@@ -28,5 +29,5 @@ export function buildTagTree(counts) {
 
 /** ลูกของโหนดหนึ่งชั้น เรียงมาก→น้อย (เท่ากัน = ตามชื่อ) */
 export function sortedTagEntries(obj) {
-  return Object.entries(obj || {}).sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]));
+  return Object.entries(obj || {}).sort((a, b) => b[1].count - a[1].count || cmpText(a[0], b[0]));
 }

@@ -18,12 +18,26 @@ export class SmartType {
     document.body.appendChild(this.box);
   }
 
+  /**
+   * ชื่อจาก Wiki ทุกที่ + จำหมวดและไฟล์ต้นทาง (ให้คลิกชื่อแล้วเปิด Wiki ได้)
+   *
+   * ══ [alpha.162 · W1-19] ★ รอบที่ตกรุ่นต้องไม่เขียนผลทับรอบใหม่ ══
+   * เดิมเคลียร์ `byCat/fileOf/titles` ทันทีแล้ว **เติมลงตัวแปรของ instance ระหว่างสแกน**
+   * — ตัวนี้ถูกเรียกแบบไม่รอผลจากหลายที่ (เปิดโปรเจกต์ · เพิ่ม/ลบ/ย้ายเอนทิตี้ · กู้จากถังขยะ)
+   * สองรอบที่ซ้อนกันจึงเติมลงกองเดียวกัน = ชื่อของโปรเจกต์เก่าปนกับใหม่ (รอบที่จบทีหลังชนะบางส่วน)
+   * ตอนนี้สแกนลงกองของรอบตัวเอง แล้ว **คอมมิตครั้งเดียวตอนจบ เฉพาะเมื่อยังเป็นรอบล่าสุด**
+   */
   async loadNames(root) {
-    // ชื่อจาก Wiki ทุกที่ + จำหมวดและไฟล์ต้นทาง (ให้คลิกชื่อแล้วเปิด Wiki ได้)
+    const gen = (this._namesGen = (this._namesGen || 0) + 1);
+    // เปลี่ยนโปรเจกต์ = ของเก่าใช้ไม่ได้แล้วตั้งแต่วินาทีนี้ (ห้ามค้างชื่อข้ามโปรเจกต์)
+    if (this._namesRoot !== root) {
+      this._namesRoot = root;
+      this.byCat = {}; this.fileOf = {}; this.titles = []; this.names = [];
+    }
     const names = new Set();
-    this.byCat = {};
-    this.fileOf = {};
-    this.titles = [];
+    const byCat = {};
+    const fileOf = {};
+    const titles = [];
     const scanWiki = async (wikiDir) => {
       if (!(await kapi.exists(wikiDir))) return;
       for (const cat of await kapi.listDirs(wikiDir)) {
@@ -34,12 +48,12 @@ export class SmartType {
             const e = await kapi.readJson(p);
             const extra = [...(Array.isArray(e.aliases) ? e.aliases : []),
                            ...(Array.isArray(e.aka) ? e.aka : [])];
-            if (e.name && !this.titles.includes(e.name)) this.titles.push(e.name);
+            if (e.name && !titles.includes(e.name)) titles.push(e.name);
             for (const n of [e.name, ...extra]) {
               if (!n) continue;
               names.add(n);
-              this.fileOf[n] = p;
-              (this.byCat[cat] = this.byCat[cat] || []).push(n);
+              fileOf[n] = p;
+              (byCat[cat] = byCat[cat] || []).push(n);
             }
           } catch {}
         }
@@ -51,6 +65,8 @@ export class SmartType {
       await scanWiki(await kapi.join(root, sec, 'Wiki'));
       await scanWiki(await kapi.join(root, sec, 'Bible'));
     }
+    if (gen !== this._namesGen) return;                 // มีรอบใหม่เริ่มแล้ว — ผลรอบนี้ตกรุ่น
+    this.byCat = byCat; this.fileOf = fileOf; this.titles = titles;
     this.names = [...names];
   }
 
@@ -83,6 +99,9 @@ export class SmartType {
       if (hit.length) { best = hit.slice(0, 8); bestLen = k; break; }
     }
     if (!best.length) return this.hide();
+    // [alpha.160 · P1-13] ★ จำ view ที่รายการนี้ "เป็นของมัน" — เดิม `_accept()` ใช้ `this._view` ที่อัปเดตเฉพาะตอน
+    // bindView (สลับแท็บ) → แยกจอสองแผง แล้วพิมพ์ในแผงที่เพิ่งคลิก กด Tab = คำถูกแทรกลงเอกสาร **อีกแผง**
+    this._view = view;
     this.items = best; this.sel = 0; this.prefixLen = bestLen;
     this.render();
     const c = view.coordsAtPos(view.state.selection.from);

@@ -30,10 +30,13 @@ import { toolsSystemPrompt, parseToolCalls, stripToolCalls, validateCall, descri
 import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.js';
 // [alpha.149] ดัชนีของผู้ช่วยเขียน · ไอคอนสถานะ · แท็บที่เปิดอยู่ · ราคาตามเจ้าจริง
 import { invalidateRag } from './ai-bridge.js';
+import { createEpoch, runFresh } from '../epoch-guard.js';   // [alpha.161 · C2]
 import { icon, gi } from '../icons.js';
 import { tabHandle } from '../tab-bridge.js';
+import { scopePrefix, underPrefix } from './ai-scope.js';   // [alpha.160 · P1-2]
 import { priceKeyOf } from './ai-providers.js';
 import { estimateCost } from './ai-core.js';
+import { fmtDateTime, fmtNum } from '../locale.js';
 
 /** จำนวนรอบสูงสุดที่ยอมให้ AI สั่งคำสั่ง → เห็นผล → สั่งต่อ ในการส่งหนึ่งครั้ง */
 const MAX_TOOL_ROUNDS = 5;
@@ -193,15 +196,12 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
     // แต่ kapi.join คืนแบ็กสแลชเสมอ → f.startsWith(prefix) เป็น **false ทุกไฟล์**
     // เมื่อ root เป็นสแลชหน้า → บริบทที่ส่งให้ AI กลายเป็น **ค่าว่าง** อย่างเงียบ ๆ
     // (เจอตอนไล่เทส [a125-13] ที่แดงมาตั้งแต่ก่อนรอบนี้ — โมเดลตอบมั่วเพราะไม่มีบริบทเลย)
-    const norm = (x) => String(x || '').replace(/\\/g, '/');
-    const here = norm((active && active.file) || '');
-    const upto = (n) => here.split('/').slice(0, -n).join('/');
-    const prefix = scope === 'project' ? norm(state.root)
-                 : scope === 'chapter' ? upto(1)          // โฟลเดอร์บท
-                 : upto(3);                               // .../Draft/<ฉบับร่าง>/Chapters/<บท>/x.md → เล่ม
-    const files = await allMdFiles(state.root);
+    // [alpha.160 · P1-2] ★ book/chapter ที่ resolve ไม่ได้ (ไม่มีแท็บฉากเปิด · เปิดหน้า Wiki) = **ไม่ส่งเนื้อโปรเจกต์เลย**
+    // เดิม prefix = '' แล้ว `if (prefix && …)` เป็นเท็จ → ส่งทุกไฟล์ .md ของโปรเจกต์ออกไป
+    const prefix = scopePrefix(scope, (active && active.file) || '', state.root);
+    const files = prefix === null ? [] : await allMdFiles(state.root);
     for (const f of files) {
-      if (prefix && !norm(f).startsWith(prefix)) continue;
+      if (!underPrefix(f, prefix)) continue;
       await push(f, f.slice(state.root.length + 1));
       if (parts.join('\n').length > maxChars) break;
     }
@@ -222,11 +222,19 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
 // → ระดับนี้จึงทำงานได้แม้ออฟไลน์ ไม่มีค่าใช้จ่าย และไม่ต้องตั้งค่าอะไรเพิ่ม
 //
 // ดัชนีถูกแคชต่อโปรเจกต์ และล้างเมื่อบันทึกไฟล์ (app.js เรียก `invalidateChatRag()`)
-const RAG = { session: null, root: '', building: null, stale: true };
+const RAG = { session: null, root: '', building: null, stale: true, epoch: createEpoch() };
+// [alpha.161 · C2] ★ `epoch` = รุ่นของเนื้อหา — invalidate เพิ่มรุ่น · งานสร้างเก็บผลเป็น "สด" ได้เฉพาะรุ่นไม่เปลี่ยน
+// (เดิมงานสร้างที่เริ่มก่อน invalidateChatRag() แล้วเสร็จทีหลังตั้ง stale=false ทับ → ถามซ้ำได้คำตอบจากเนื้อเก่า)
 
 /** เนื้อหาในโปรเจกต์เปลี่ยน → ดัชนี RAG ของแชทล้าสมัย */
+/** [alpha.160 · P1-5] สถานะดัชนี (เทส/วินิจฉัย) — ส่งค่า = ตั้ง */
+export function chatRagStale(set) { if (set !== undefined) RAG.stale = !!set; return RAG.stale; }
+/** [alpha.161 · C2] รุ่นของดัชนี (เทส/วินิจฉัย) */
+export const chatRagEpoch = () => RAG.epoch.value;
+
 export function invalidateChatRag() {
   RAG.stale = true;
+  RAG.epoch.bump();
   invalidateRag();          // [alpha.149] ดัชนีของผู้ช่วยเขียน (ai-bridge) เคยไม่มีใครล้างเลย = ตอบจากเนื้อหาเก่าตลอด
 }
 
@@ -275,10 +283,15 @@ async function ensureRag() {
       ]);
       const client = await getAIClient();
       if (!client) return null;
-      const sess = new ChatSession({ client, k: 8 });
-      await sess.build(await ragSource());
+      // [alpha.161 · C2] จับรุ่นก่อนอ่านเนื้อหา · เปลี่ยนระหว่างสร้าง = สร้างใหม่ (ไม่เกิน 2 รอบ)
+      // ครบแล้วยังเปลี่ยน → ใช้ตอบคำถามนี้ได้ แต่คง stale=true ไว้ (ถามครั้งถัดไปสร้างใหม่)
+      const { value: sess, fresh } = await runFresh(RAG.epoch, async () => {
+        const s2 = new ChatSession({ client, k: 8 });
+        await s2.build(await ragSource());
+        return s2;
+      }, { maxRounds: 2 });
       if (state.root !== root) return null;      // เปลี่ยนโปรเจกต์ระหว่างสร้าง = ทิ้ง
-      RAG.session = sess; RAG.root = root; RAG.stale = false;
+      RAG.session = sess; RAG.root = root; RAG.stale = !fresh;
       return sess;
     } catch (e) {
       log('warn', tt('ui.aiChatPanel.ragBuildFail'), e);
@@ -441,10 +454,7 @@ function sessionRow(s) {
   return row;
 }
 function fmtDate(iso) {
-  try {
-    return new Date(iso).toLocaleString('th-TH',
-      { year: '2-digit', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch { return '—'; }
+  return fmtDateTime(iso, { year: '2-digit', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) || '—';
 }
 
 // ══════════════════════════ B) ตัวเซสชัน ══════════════════════════
@@ -467,7 +477,7 @@ function sessionView() {
   badge.title = [
     tt('ui.aiChatPanel.msg') + usd(st.usd),
     tt('ui.aiChatPanel.usage2') + (st.limit ? st.percent + '%' : tt('ui.aiChatPanel.notDashRememberModel')),
-    tt('ui.aiChatPanel.use2') + st.total.toLocaleString(),
+    tt('ui.aiChatPanel.use2') + fmtNum(st.total),
     tt('ui.aiChatPanel.clickViewDetail'),
   ].join('\n');
   badge.onclick = () => { S.view = 'detail'; draw(); };
@@ -494,7 +504,7 @@ function sessionView() {
     await saveSession(c);
     draw();
   };
-  const more = el('button', 'ai-chat-more', '⋯');
+  const more = el('button', 'ai-chat-more', gi('more'));
   more.title = tt('ui.aiChatPanel.itemPickSession');
   more.onclick = (e) => sessionMenu(e, live(s));
   right.append(badge, viewSel, restart, more);
@@ -670,13 +680,13 @@ function msgNode(m, view = DEFAULT_VIEW, sess = null) {
     m.role === 'user' ? tt('ui.aiChatPanel.you') : m.role === 'assistant' ? (m.model ? gi('bot') + ' ' + m.model : tt('ui.aiChatPanel.assistant')) : m.role);
   // [alpha.62 บั๊ก 3] คัดลอกข้อความทีละก้อน — คำตอบของ AI ส่วนใหญ่เอาไปวางต่อในต้นฉบับ
   // (ลากคลุมเองไม่ได้เพราะแผงลอย/แผง dock กินอีเวนต์เมาส์ไปทำอย่างอื่น)
-  const copy = el('button', 'ai-msg-copy', '⧉');
+  const copy = el('button', 'ai-msg-copy', gi('duplicate'));
   copy.type = 'button';
   copy.title = tt('ui.aiChatPanel.copyText');
   copy.onclick = async () => {
     const ok = await copyText(m.text || '');
     copy.textContent = ok ? gi('checkmark') : gi('close');
-    setTimeout(() => { copy.textContent = '⧉'; }, 1200);
+    setTimeout(() => { copy.textContent = gi('duplicate'); }, 1200);
   };
   who.append(copy);
   // โหมดปกติ/ความคิด: ซ่อนบล็อก ```k2 เพราะสรุปเป็นบรรทัดอ่านง่ายให้แล้วด้านล่าง
@@ -755,13 +765,13 @@ function mdNode(text) {
     if (b.type === 'code') {
       const wrap = el('div', 'ai-md-pre');
       const head = el('div', 'ai-md-pre-head dim', b.lang || 'code');
-      const cp = el('button', 'ai-msg-copy', '⧉');
+      const cp = el('button', 'ai-msg-copy', gi('duplicate'));
       cp.type = 'button';
       cp.title = tt('ui.aiChatPanel.copyText');
       cp.onclick = async () => {
         const ok = await copyText(b.text);
         cp.textContent = ok ? gi('checkmark') : gi('close');
-        setTimeout(() => { cp.textContent = '⧉'; }, 1200);
+        setTimeout(() => { cp.textContent = gi('duplicate'); }, 1200);
       };
       head.append(cp);
       wrap.append(head, el('pre', 'ai-md-pre-body', b.text));
@@ -883,7 +893,7 @@ function composer(s, body) {
     filesRow.style.display = cf.length ? '' : 'none';
     for (const f of cf) {
       const chip = el('span', 'ai-chat-filechip', gi('paperclip') + ' ' + (f.name || f.path));
-      const x = el('span', 'ai-chat-filex', '×');
+      const x = el('span', 'ai-chat-filex', gi('times'));
       x.onclick = async () => {
         const c = live(s);
         c.files = (c.files || []).filter((y) => y.path !== f.path);
@@ -922,7 +932,7 @@ function composer(s, body) {
   skillBtn.onclick = (e) => skillMenu(e, live(s), skillBtn);
   scopeSel.onchange = async () => { const c = live(s); c.scope = scopeSel.value; S.cur = c; await saveSession(c); };
   modelSel.onchange = async () => {
-    const [pid, model] = String(modelSel.value).split(' ');
+    const [pid, model] = String(modelSel.value).split('\u0000');
     const c = live(s);
     c.providerId = pid || ''; c.model = model || '';
     S.cur = c;
@@ -1032,12 +1042,12 @@ function fillModelSelect(sel, s) {
     g.label = p.name;
     for (const m of models) {
       const o = el('option', null, m);
-      o.value = p.id + ' ' + m;
+      o.value = p.id + '\u0000' + m;
       g.append(o);
     }
     sel.append(g);
   }
-  sel.value = s.providerId && s.model ? s.providerId + ' ' + s.model : '';
+  sel.value = s.providerId && s.model ? s.providerId + '\u0000' + s.model : '';
 }
 
 // ── ส่งข้อความ ──
@@ -1226,7 +1236,7 @@ async function runAssistant(sid, prov, { query = '', continueOf = '', sendBtn = 
           // ไม่บอกตัวเลข = ถือว่าเพดานราวครึ่งหนึ่งของที่เพิ่งส่งไป (หดทีละครึ่งจนผ่าน)
           const cap = ce.cap || Math.max(1024, Math.floor((hist.tokens || DEFAULT_HISTORY_TOKENS) / 0.6 / 2));
           cur = { ...cur, contextCap: cur.contextCap ? Math.min(cur.contextCap, cap) : cap };
-          setStatus(ttf('ui.aiChatPanel.contextCapLearned', cap.toLocaleString()));
+          setStatus(ttf('ui.aiChatPanel.contextCapLearned', fmtNum(cap)));
         }
       }
       recordUsage(res, prov, cur, cost);
@@ -1312,7 +1322,7 @@ async function runAssistant(sid, prov, { query = '', continueOf = '', sendBtn = 
       badge.textContent = contextLabel(st2);
       badge.title = [tt('ui.aiChatPanel.msg') + usd(st2.usd),
                      tt('ui.aiChatPanel.usage2') + (st2.limit ? st2.percent + '%' : tt('ui.aiChatPanel.notDashRememberModel')),
-                     tt('ui.aiChatPanel.use2') + st2.total.toLocaleString(),
+                     tt('ui.aiChatPanel.use2') + fmtNum(st2.total),
                      tt('ui.aiChatPanel.clickViewDetail')].join('\n');
     }
   }
@@ -1477,16 +1487,16 @@ function detailView() {
   const lastAssistant = [...(s.messages || [])].reverse().find((m) => m.role === 'assistant' && m.model);
   const rows = [
     [tt('ui.aiChatPanel.nameSession'), s.title || '—'],
-    [tt('ui.aiChatPanel.textSession'), (s.messages || []).length.toLocaleString() + tt('ui.aiChatPanel.text')],
+    [tt('ui.aiChatPanel.textSession'), fmtNum((s.messages || []).length) + tt('ui.aiChatPanel.text')],
     [tt('ui.common.provider'), prov ? prov.name : (lastAssistant && lastAssistant.provider) || tt('ui.aiChatPanel.settingsAI')],
     [tt('ui.common.model'), s.model || (lastAssistant && lastAssistant.model) || tt('ui.aiChatPanel.settingsAI')],
-    [tt('ui.aiChatPanel.dashRemember'), st.limit ? st.limit.toLocaleString() + ' tokens' : tt('ui.aiChatPanel.not')],
-    [tt('ui.aiChatPanel.use'), st.total.toLocaleString()],
+    [tt('ui.aiChatPanel.dashRemember'), st.limit ? ttf('ui.common.tokensN', fmtNum(st.limit)) : tt('ui.aiChatPanel.not')],
+    [tt('ui.aiChatPanel.use'), fmtNum(st.total)],
     [tt('ui.aiChatPanel.usage'), st.limit ? st.percent + '%' : '—'],
-    [tt('ui.aiChatPanel.import'), st.input.toLocaleString()],
-    [tt('ui.aiChatPanel.export'), st.output.toLocaleString()],
-    [tt('ui.aiChatPanel.styleUseResult'), st.reasoning.toLocaleString()],
-    [tt('ui.aiChatPanel.cache2'), st.cached.toLocaleString()],
+    [tt('ui.aiChatPanel.import'), fmtNum(st.input)],
+    [tt('ui.aiChatPanel.export'), fmtNum(st.output)],
+    [tt('ui.aiChatPanel.styleUseResult'), fmtNum(st.reasoning)],
+    [tt('ui.aiChatPanel.cache2'), fmtNum(st.cached)],
     [tt('ui.aiChatPanel.countTextUser'), String(st.userMsgs)],
     [tt('ui.aiChatPanel.countTextAssistant'), String(st.agentMsgs)],
     [tt('ui.aiChatPanel.uSD'), usd(st.usd)],

@@ -82,9 +82,22 @@ const resolve = (tbl, key) => tbl[key] || tbl['ui.' + key];
     check(`${f}: ชื่อคีย์ลัดมีคำแปลครบ`, missing.length === 0, missing.join(' · '));
   }
   // `editor-redo` ผูกสองปุ่มโดยตั้งใจ (Ctrl+Shift+Z ตามแนว mac · Ctrl+Y ตามแนว Windows)
-  const ALIAS_OK = ['editor-redo'];
+  // [alpha.162 · W4 ข้อ 5] อีกสามตัวที่ต้องมีทางที่สอง — เหตุผลคนละแบบ แต่ตรรกะเดียวกัน:
+  //   next-tab/prev-tab · Ctrl+Tab เป็นของ "วนธาตุบท" ตอนเคอร์เซอร์อยู่ในบทภาพยนตร์
+  //                       และบน mac ⌘Tab เป็นของ OS → Ctrl+PageDown/PageUp เป็นทางที่ไปถึงเสมอ
+  //   fmt:clear         · Ctrl+Space เป็นปุ่มเปิด/ปิด IME ของจีน–ญี่ปุ่น → Ctrl+Alt+Space เป็นทางสำรอง
+  const ALIAS_OK = ['editor-redo', 'next-tab', 'prev-tab', 'fmt:clear'];
   const dup = ids.filter((x, i) => ids.indexOf(x) !== i).filter((x) => !ALIAS_OK.includes(x));
   check('ไม่มี id ซ้ำในตาราง (นอกจากที่ตั้งใจให้มีสองปุ่ม)', dup.length === 0, dup.join(' · '));
+  // [alpha.162 · W4] สัญญาของ alpha.138: ผู้ใช้สั่งถอดคีย์ลัดธีม → Ctrl+Shift+P ต้อง "ว่าง" (e2e [138-1] ยึดไว้)
+  // รอบแรกของ W4 เผลอให้ส่งออก PDF ใช้คีย์นี้ แล้วไปแดงที่ e2e ข้อ 1,8xx — ดักตั้งแต่ unit
+  const RESERVED = [['KeyP', true, true, 'Ctrl+Shift+P (alpha.138)']];
+  const taken = RESERVED.filter(([code, c, sh]) => C.SHORTCUTS.some((x) => x[0] === code && x[1] === c && x[2] === sh));
+  check('★ [162-W4] คีย์ที่ผู้ใช้สั่งให้ว่างไว้ยังว่างอยู่', taken.length === 0, taken.map((x) => x[3]).join(' · '));
+  // ★ รายชื่อข้างบนต้องไม่กลายเป็นที่ซุกของซ้ำจริง — ทุกตัวต้องมีสองแถวจริง ๆ ไม่ใช่แถวเดียว
+  const aliasBad = ALIAS_OK.filter((id) => ids.filter((x) => x === id).length !== 2);
+  check('★ [162-W4] ทุก id ในรายชื่อ "ตั้งใจให้มีสองปุ่ม" มีสองแถวจริง',
+        aliasBad.length === 0, aliasBad.join(' · '));
 }
 
 // ═══════════ หมวด ═══════════
@@ -104,6 +117,8 @@ const resolve = (tbl, key) => tbl[key] || tbl['ui.' + key];
         ids.every((id) => typeof C.shortcutCat(id) === 'string'));
   const other = ids.filter((id) => C.shortcutCat(id) === 'other' && !C.SHORTCUT_CATS.find((c) => c.key === 'other').ids.includes(id));
   check('ไม่มีรายการตกไปหมวด "อื่น ๆ" โดยไม่ตั้งใจเกิน 3 รายการ', other.length <= 3, other.join(' · '));
+  // [alpha.162 · W4 ข้อ 5] เติมหมวดให้ครบแล้ว — รัดให้แน่นกว่าเพดาน 3 ที่เป็นแค่กันหลุด
+  check('★ [162-W4] ไม่มีคีย์ลัดตัวไหนตกกอง "อื่น ๆ" โดยไม่ได้ประกาศเลย', other.length === 0, other.join(' · '));
 }
 
 // ═══════════ formatShortcut ═══════════

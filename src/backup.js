@@ -1,7 +1,8 @@
 // backup.js — สำรองโปรเจกต์อัตโนมัติวันละครั้ง เก็บใน Backups/<YYYY-MM-DD>/
 // บทเรียน: ห้ามก๊อปไฟล์ด้วย readFile+writeFile (utf-8) — รูปภาพจะเสีย → ใช้ kapi.copyFile
 import { t, tf } from './i18n.js';
-import { state, setStatus, log } from './core.js';
+import { state, setStatus, setStatusAction, setStatusError, log } from './core.js';
+import { toast } from './ui.js';                  // [alpha.162 · W5 ข้อ 1]
 import { localDay } from './local-date.js';
 
 const SKIP_DIRS = ['Recycle', 'Snapshots', '.k2history', 'Backups', 'Research'];
@@ -51,12 +52,17 @@ export async function autoBackupNow(silent = false) {
     const dirs = (await kapi.listDirs(backupDir).catch(() => [])).sort();
     while (dirs.length > MAX_KEEP) await kapi.remove(await kapi.join(backupDir, dirs.shift()));
 
-    if (!silent) setStatus(tf('ui.backup.projectDoneFile', ts, n));
+    if (!silent) setStatusAction(tf('ui.backup.projectDoneFile', ts, n), t('ui.trash.revealInFolder'), () => kapi.revealInOS(dest));
+    // [alpha.162 · W5 ข้อ 1] สำรองอัตโนมัติ (silent) เดิมไม่บอกอะไรเลย → toast สั้น ๆ ไม่แย่งแถบสถานะ
+    else toast(tf('ui.backup.projectDoneFile', ts, n), { level: 'ok',
+      action: { label: t('ui.trash.revealInFolder'), onClick: () => kapi.revealInOS(dest) } });
     log('info', `backup: saved ${ts} (${n} files)`);
     return true;
   } catch (e) {
     log('error', 'backup failed', e);
-    if (!silent) setStatus(t('ui.backup.projectFail'));
+    // [alpha.162 · W5 ข้อ 1] ล้ม = บอกเสมอ แม้เป็นรอบอัตโนมัติ (เดิมรอบอัตโนมัติล้มเงียบ ไม่มีใครรู้ว่าไม่มีสำรอง)
+    if (!silent) setStatusError(t('ui.backup.projectFail'));
+    else toast(t('ui.backup.projectFail'), { level: 'error' });
     return false;
   }
 }

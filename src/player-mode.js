@@ -22,8 +22,12 @@ import { $, el, state, setStatus, log, t } from './core.js';
 import { buildGraph, analyzeGraph } from './branch-graph.js';
 import { collectScenes } from './branching-ui.js';
 import { gi } from './icons.js';
+import { panelEmpty } from './panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 
-const tr = (key, fb) => t('player.' + key, fb);
+// [alpha.162 · W6 ข้อ 6] ไม่มีค่าสำรอง — `t()` ไม่รับอาร์กิวเมนต์ที่สองมาตั้งแต่ .77 (ของเดิมเป็นโค้ดตายที่หลอกคนอ่าน)
+// คีย์ที่ประกอบตอนรันต้องมีจริงทุกตัว (เทส ui-audit [162-W6] ไล่ทุก tr('…') เทียบไฟล์ภาษา)
+const tr = (key) => t('player.' + key);
+import { fmtDateTime } from './locale.js';
 const MAX_RUNS = 40;                    // เก็บรอบการเล่นล่าสุดเท่านี้ (ไฟล์โปรเจกต์ไม่บวม)
 
 function pstate() {
@@ -126,13 +130,13 @@ export async function renderPlayer(host, opts = {}) {
   // แสดง "กำลังอ่าน" เฉพาะตอนแผงยังว่างจริง ๆ เท่านั้น
   const wrap = el('div', 'player-wrap');
   if (!host.firstChild) {
-    host.append(el('div', 'player-loading dim', tr('loading', t('ui.player.busyReadStory'))));
+    host.append(el('div', 'player-loading dim', tr('loading')));
   }
   let graph, analysis;
   try { ({ graph, analysis } = await loadGraph(opts.reload)); }
   catch (e) {
     log('error', t('ui.player.playerModeReadScene'), e);
-    if (gen === _playGen) host.replaceChildren(el('div', 'dim', tr('loadFail', t('ui.player.readSceneNotOk'))));
+    if (gen === _playGen) host.replaceChildren(el('div', 'dim', tr('loadFail')));
     return;
   }
   if (gen !== _playGen || !host.isConnected) return;
@@ -146,8 +150,7 @@ export async function renderPlayer(host, opts = {}) {
   if (!ps.run) {
     const rootId = analysis.roots[0] || (graph.nodes.find((n) => n.choices.length) || {}).id;
     if (!rootId) {
-      wrap.append(el('div', 'player-empty dim',
-        tr('empty', t('ui.player.notHasStoryBreak'))));
+      wrap.append(panelEmpty(tr('empty')));
       host.replaceChildren(wrap);
       return;
     }
@@ -165,14 +168,14 @@ export async function renderPlayer(host, opts = {}) {
   titleBox.append(el('div', 'player-title', gi('file') + ' ' + node.title));
   titleBox.append(el('div', 'player-sub',
     (node.chapterName ? node.chapterName + ' · ' : '') +
-    `${tr('step', t('ui.player.step2'))} ${step}` +
-    (analysis.roots.includes(node.id) ? ' · ' + gi('play') + ' ' + tr('atStart', t('ui.common.dotStart')) : '') +
-    (!node.choices.length ? ' · ' + gi('flag-finish') + ' ' + tr('atEnd', t('ui.common.actEnd')) : '')));
+    `${tr('step')} ${step}` +
+    (analysis.roots.includes(node.id) ? ' · ' + gi('play') + ' ' + tr('atStart') : '') +
+    (!node.choices.length ? ' · ' + gi('flag-finish') + ' ' + tr('atEnd') : '')));
   head.append(titleBox);
 
   const tools = el('div', 'player-tools');
   const startSel = el('select', 'k-field-select player-start');
-  startSel.title = tr('pickStart', t('ui.player.startPlayScene'));
+  startSel.title = tr('pickStart');
   const startIds = analysis.roots.length ? analysis.roots
     : graph.nodes.filter((n) => n.choices.length).map((n) => n.id);
   for (const id of startIds) {
@@ -184,21 +187,21 @@ export async function renderPlayer(host, opts = {}) {
   startSel.onchange = () => { ps.run = newRun(graph.byId.get(startSel.value)); persistRun(ps.run); renderPlayer(host); };
   if (startIds.length > 1) tools.append(startSel);
 
-  const restartB = el('button', 'player-btn', '⟲ ' + tr('restart', t('ui.common.restart')));
-  restartB.title = tr('restartHint', t('ui.player.startPlayRoundNew'));
+  const restartB = el('button', 'player-btn', (gi('rotate-ccw') + ' ') + tr('restart'));
+  restartB.title = tr('restartHint');
   restartB.onclick = () => {
     ps.run = newRun(graph.byId.get(run.startSceneId));
     persistRun(ps.run);
     renderPlayer(host);
   };
-  const openB = el('button', 'player-btn', gi('pencil-e') + ' ' + tr('editScene', t('ui.player.editScene2')));
-  openB.title = tr('editSceneHint', t('ui.player.openSceneAreaWrite'));
+  const openB = el('button', 'player-btn', gi('pencil-e') + ' ' + tr('editScene'));
+  openB.title = tr('editSceneHint');
   openB.onclick = async () => {
-    if (!node.filePath) { setStatus(tr('noFile', t('ui.common.sceneNotHasFile'))); return; }
+    if (!node.filePath) { setStatus(tr('noFile')); return; }
     const { openScene } = await import('./app.js');
     await openScene(node.filePath, node.title);
   };
-  const mapB = el('button', 'player-btn', gi('branch') + ' ' + tr('showOnMap', t('ui.player.viewTopGraph')));
+  const mapB = el('button', 'player-btn', gi('branch') + ' ' + tr('showOnMap'));
   mapB.onclick = async () => {
     const { openBranchingTree } = await import('./branching-ui.js');
     if (state._branch) state._branch.sel = node.id;
@@ -207,7 +210,7 @@ export async function renderPlayer(host, opts = {}) {
   };
   // เนื้อฉากถูกเก็บไว้ใช้ซ้ำระหว่างเดินเรื่อง → ต้องมีทางสั่งอ่านใหม่หลังไปแก้ต้นฉบับมา
   const reloadB = el('button', 'player-btn', gi('refresh'));
-  reloadB.title = tr('reload', t('ui.player.readBodyStoryNew'));
+  reloadB.title = tr('reload');
   reloadB.onclick = () => renderPlayer(host, { reload: true });
   tools.append(restartB, openB, mapB, reloadB);
   head.append(tools);
@@ -218,7 +221,7 @@ export async function renderPlayer(host, opts = {}) {
   run.steps.forEach((s, i) => {
     if (i) trail.append(el('span', 'player-trail-sep', gi('arrow-right')));
     const chip = el('span', 'player-trail-chip' + (i === run.steps.length - 1 ? ' on' : ''), s.sceneTitle);
-    chip.title = (s.choice ? `[${s.choice}] → ` : '') + s.sceneTitle + ' — ' + tr('jumpBack', t('ui.player.clickUndo'));
+    chip.title = (s.choice ? `[${s.choice}] → ` : '') + s.sceneTitle + ' — ' + tr('jumpBack');
     chip.onclick = () => {
       if (i === run.steps.length - 1) return;
       run.steps = run.steps.slice(0, i + 1);
@@ -237,7 +240,7 @@ export async function renderPlayer(host, opts = {}) {
 
   const text = node.body || '';
   if (!text.trim()) {
-    mount.append(el('div', 'dim', tr('emptyScene', t('ui.player.sceneNotHasBody'))));
+    mount.append(el('div', 'dim', tr('emptyScene')));
   } else {
     try {
       const { KEditor } = await import('./editor.js');
@@ -260,18 +263,18 @@ export async function renderPlayer(host, opts = {}) {
   // ───────── ทางเลือก ─────────
   const choiceBox = el('div', 'player-choices');
   if (node.choices.length) {
-    choiceBox.append(el('div', 'player-ask', tr('youWill', t('ui.player.you'))));
+    choiceBox.append(el('div', 'player-ask', tr('youWill')));
     node.choices.forEach((c) => {
       const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
       const b = el('button', 'player-choice' + (target ? '' : ' player-choice-dead'));
-      b.append(el('span', 'player-choice-text', c.text || tr('aChoice', t('ui.common.choice'))));
+      b.append(el('span', 'player-choice-text', c.text || tr('aChoice')));
       b.append(el('span', 'player-choice-to',
         target ? gi('arrow-right') + ' ' + target.title
-               : (c.nextSceneId ? gi('arrow-right') + ' ' + tr('goneScene', t('ui.common.sceneFind')) : tr('noTarget', t('ui.common.notSpecifyTo2')))));
+               : (c.nextSceneId ? gi('arrow-right') + ' ' + tr('goneScene') : tr('noTarget'))));
       if (c.color) b.style.borderLeftColor = c.color;
       if (!target) {
-        b.title = tr('deadHint', t('ui.player.choiceNotHasTo'));
-        b.onclick = () => setStatus(tr('deadHint', t('ui.player.choiceNotHasTo')));
+        b.title = tr('deadHint');
+        b.onclick = () => setStatus(tr('deadHint'));
       } else {
         b.onclick = async () => {
           run.steps.push({ sceneId: target.id, sceneTitle: target.title,
@@ -290,16 +293,16 @@ export async function renderPlayer(host, opts = {}) {
       choiceBox.append(b);
     });
   } else {
-    choiceBox.append(el('div', 'player-end', gi('flag-checkered') + ' ' + tr('theEnd', t('ui.player.endBranchDone'))));
-    choiceBox.append(el('div', 'dim', `${tr('walked', t('ui.player.all'))} ${run.steps.length} ${tr('scenesUnit', t('ui.common.scene2'))}`));
+    choiceBox.append(el('div', 'player-end', gi('flag-checkered') + ' ' + tr('theEnd')));
+    choiceBox.append(el('div', 'dim', `${tr('walked')} ${run.steps.length} ${tr('scenesUnit')}`));
   }
   wrap.append(choiceBox);
 
   // ───────── แถบล่าง: ย้อนกลับ · ประวัติ ─────────
   const foot = el('div', 'player-foot');
-  const backB = el('button', 'player-btn player-back', gi('chevron-left') + ' ' + tr('back', t('ui.player.undo')));
+  const backB = el('button', 'player-btn player-back', gi('chevron-left') + ' ' + tr('back'));
   backB.disabled = run.steps.length < 2;
-  backB.title = tr('backHint', t('ui.player.oneStepChoiceLatest'));
+  backB.title = tr('backHint');
   backB.onclick = async () => {
     if (run.steps.length < 2) return;
     run.steps.pop();
@@ -307,8 +310,8 @@ export async function renderPlayer(host, opts = {}) {
     await persistRun(run);
     renderPlayer(host);
   };
-  const histB = el('button', 'player-btn', gi('target') + ' ' + tr('history', t('ui.common.history')) + ` (${getPlaythroughs().length})`);
-  histB.title = tr('historyHint', t('ui.player.roundPlayAll'));
+  const histB = el('button', 'player-btn', gi('target') + ' ' + tr('history') + ` (${getPlaythroughs().length})`);
+  histB.title = tr('historyHint');
   histB.onclick = () => showPlaythroughsDialog(graph, host);
   foot.append(backB, histB);
   wrap.append(foot);
@@ -322,19 +325,19 @@ export function showPlaythroughsDialog(graph, host) {
   const runs = [...getPlaythroughs()].reverse();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog branch-dlg');
-  box.append(el('div', 'k-dlg-title', gi('target') + ' ' + tr('runsTitle', t('ui.player.roundPlay')) + ` (${runs.length})`));
+  box.append(el('div', 'k-dlg-title', gi('target') + ' ' + tr('runsTitle') + ` (${runs.length})`));
   const list = el('div', 'k-pick-list');
   list.style.maxHeight = '50vh';
   if (!runs.length) {
-    list.append(el('div', 'dim', tr('noRuns', t('ui.player.notHasRoundPlay'))));
+    list.append(el('div', 'dim', tr('noRuns')));
   }
   for (const r of runs) {
     const row = el('div', 'k-menu-item player-run-row');
     let when = r.startedAt;
-    try { when = new Date(r.startedAt).toLocaleString(); } catch {}
+    when = fmtDateTime(r.startedAt) || r.startedAt;
     const path = (r.steps || []).map((s) => s.sceneTitle).join(' → ');
     row.append(el('div', 'player-run-head',
-      `${r.endedAt ? gi('flag-checkered') : gi('play')} ${(r.steps || []).length} ${tr('scenesUnit', t('ui.common.scene2'))} · ${when}`));
+      `${r.endedAt ? gi('flag-checkered') : gi('play')} ${(r.steps || []).length} ${tr('scenesUnit')} · ${when}`));
     const p = el('div', 'player-run-path', path);
     p.title = path;
     row.append(p);
@@ -350,21 +353,21 @@ export function showPlaythroughsDialog(graph, host) {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const expB = el('button', null, gi('import') + ' ' + tr('exportRuns', t('ui.common.export')));
+  const expB = el('button', null, gi('import') + ' ' + tr('exportRuns'));
   expB.onclick = async () => {
     const dest = await kapi.saveAsDialog('playthroughs.json', 'json');
     if (!dest) return;
     await kapi.writeFile(dest, JSON.stringify(getPlaythroughs(), null, 2));
-    setStatus(tr('exported', t('ui.player.exportRoundPlayDone')) + dest);
+    setStatus(tr('exported') + dest);
   };
-  const clearB = el('button', 'k-danger', tr('clearRuns', t('ui.common.clear')));
+  const clearB = el('button', 'k-danger', tr('clearRuns'));
   clearB.onclick = async () => {
     await savePlaythroughs([]);
     ov.remove();
-    setStatus(tr('cleared', t('ui.player.clearRoundPlayDone')));
+    setStatus(tr('cleared'));
     refreshOpenPlayer();
   };
-  const close = el('button', 'k-ok', tr('close', t('ui.common.close')));
+  const close = el('button', 'k-ok', tr('close'));
   close.onclick = () => ov.remove();
   btns.append(expB, clearB, close);
   box.append(btns);

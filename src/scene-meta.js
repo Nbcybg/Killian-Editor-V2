@@ -12,6 +12,7 @@
 // ส่วนบนของไฟล์เป็นฟังก์ชันบริสุทธิ์ (มี unit test แยก) · ส่วนล่างแตะ kapi/ดิสก์
 
 import { dumpMdFile, parseMdFile } from './md.js';
+import { writeMdKeepingComments } from './comments/comment-core.js';   // [alpha.160 · P0-1]
 
 // ───────── ตารางฟิลด์ ─────────
 /** คุณสมบัติที่ย้ายไป frontmatter ของ .md (แหล่งความจริง) */
@@ -126,7 +127,8 @@ export async function writeSceneMeta(file, props) {
   try {
     const { meta, body } = parseMdFile(await kapi.readFile(file));
     applySceneMetaToFrontmatter(meta, props);
-    await kapi.writeFile(file, dumpMdFile(meta, body));
+    // [alpha.160 · P0-1] parseMdFile ตัดบล็อก k2-comments ทิ้ง — เขียนตรง ๆ = เธรดคอมเมนต์หายทุกครั้งที่บันทึกคุณสมบัติ
+    await writeMdKeepingComments(kapi, file, dumpMdFile(meta, body));
     return true;
   } catch { return false; }
 }

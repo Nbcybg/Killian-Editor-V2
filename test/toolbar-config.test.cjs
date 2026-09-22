@@ -47,8 +47,11 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
 // ═══════════ normalize / เปิด-ปิด ═══════════
 {
   const empty = T.normalizeToolbar(null);
-  check('ค่าเริ่มต้น = ไม่ซ่อนอะไรเลย', Object.keys(empty.hidden).length === 0);
-  check('ค่าเริ่มต้น: ทุกปุ่มมองเห็น', T.allButtonIds().every((id) => T.isButtonVisible(null, id)));
+  // [alpha.161 · K3] ปุ่มที่ประกาศ `def:false` (ปุ่มค้นหาที่ซ้ำกับปุ่มหัวแถบ) ซ่อนเป็นค่าเริ่มต้น — ตัวอื่นเปิดหมด
+  const defOff = T.allButtonIds().filter((id) => !T.defaultVisible(id));
+  check('ค่าเริ่มต้น = ซ่อนเฉพาะปุ่มที่ประกาศ def:false', Object.keys(empty.hidden).sort().join() === defOff.slice().sort().join(),
+        Object.keys(empty.hidden).join());
+  check('ค่าเริ่มต้น: ทุกปุ่มมองเห็น (ยกเว้น def:false)', T.allButtonIds().every((id) => T.isButtonVisible(null, id) === T.defaultVisible(id)));
 
   let cfg = T.setButtonVisible(null, 'tb-ai', false);
   check('ปิดปุ่มได้', T.isButtonVisible(cfg, 'tb-ai') === false);
@@ -66,9 +69,9 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   })());
   check('คีย์ที่ไม่รู้จักในไฟล์ตั้งค่า ถูกทิ้ง',
         !T.normalizeToolbar({ hidden: { 'tb-ผี': true } }).hidden['tb-ผี']);
-  check('ค่าที่ไม่ใช่ object ก็ไม่พัง',
-        Object.keys(T.normalizeToolbar('ข้อความมั่ว').hidden).length === 0
-        && Object.keys(T.normalizeToolbar(42).hidden).length === 0);
+  check('ค่าที่ไม่ใช่ object ก็ไม่พัง (ได้ค่าเริ่มต้น)',
+        Object.keys(T.normalizeToolbar('ข้อความมั่ว').hidden).length === defOff.length
+        && Object.keys(T.normalizeToolbar(42).hidden).length === defOff.length);
 
   const g = T.setGroupVisible(null, 'ai', false);
   check('ปิดทั้งกลุ่ม',
@@ -83,13 +86,22 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   const c2 = T.toolbarCounts(g);
   // [alpha.94] เดิมฮาร์ดโค้ด "- 3" ตามจำนวนปุ่มในกลุ่ม ai ตอนนั้น → เพิ่มปุ่มเข้ากลุ่มไหนก็แดง
   // นับจากทะเบียนจริงแทน (บทเรียนข้อ 13: เทสที่พึ่งค่าคงที่พังทุกครั้งที่ฟีเจอร์โต)
-  const aiGroupSize = (T.TOOLBAR_GROUPS.find((x) => x.key === 'ai') || { buttons: [] })
-    .buttons.filter((b) => T.isConfigurable(b.id)).length;
+  const aiIds = (T.TOOLBAR_GROUPS.find((x) => x.key === 'ai') || { buttons: [] })
+    .buttons.filter((b) => T.isConfigurable(b.id)).map((b) => b.id);
+  const aiGroupSize = aiIds.length;
+  // [alpha.162 · W5 ข้อ 4] ที่ซ่อน = กลุ่ม ai ∪ ปุ่ม def:false — **ยูเนียน** ไม่ใช่ลบสองครั้ง
+  // (เดิมสองชุดไม่ทับกัน สูตร "ลบทั้งคู่" จึงบังเอิญถูก · ตอนนี้ปุ่ม AI ห้าตัวเป็น def:false ด้วย)
+  const hiddenNow = new Set([...aiIds, ...defOff]);
   check('นับปุ่มที่เปิดอยู่ถูก',
-        c2.total === T.allButtonIds().length && c2.on === c2.total - aiGroupSize,
-        JSON.stringify(c2) + ' aiGroupSize=' + aiGroupSize);
-  check('รีเซ็ตแล้วกลับมาเปิดหมด',
-        T.toolbarCounts(T.resetToolbarConfig()).on === T.allButtonIds().length);
+        c2.total === T.allButtonIds().length && c2.on === c2.total - hiddenNow.size,
+        JSON.stringify(c2) + ' aiGroupSize=' + aiGroupSize + ' hidden=' + hiddenNow.size);
+  // [alpha.162 · W5 ข้อ 4] ปุ่มเมนู AI เปิดอยู่เป็นค่าเริ่มต้น · ห้าปุ่มเดิมซ่อน (เปิดคืนได้) · เมนูอ้างปุ่มที่มีจริงครบ
+  check('★ [162-W5] ค่าเริ่มต้น: ปุ่ม AI ปุ่มเดียว (tb-ai-group) · ห้าปุ่มเดิมซ่อนแต่ยังตั้งค่าได้',
+        T.defaultVisible('tb-ai-group') && T.AI_GROUP_IDS.length === 5
+        && T.AI_GROUP_IDS.every((id) => !T.defaultVisible(id) && T.isConfigurable(id)));
+  check('★ [162-W5] มีปุ่มตั้งค่าบนแถบเป็นค่าเริ่มต้น', T.defaultVisible('tb-settings') && T.isConfigurable('tb-settings'));
+  check('รีเซ็ตแล้วกลับมาเปิดหมด (ยกเว้น def:false)',
+        T.toolbarCounts(T.resetToolbarConfig()).on === T.allButtonIds().length - defOff.length);
 }
 
 // ═══════════ layoutToolbar — เส้นคั่น ═══════════
@@ -315,6 +327,23 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
     check('ปุ่มที่ซ่อนไว้ไม่แสดง', r3.show[T.FMTBAR_IDS.indexOf('tb-bold')] === false);
     check('ลำดับว่างไม่พัง', T.layoutFmtbar(null, null, 'prose').show.length === 0);
   }
+}
+
+// ── [alpha.161 · K3] overflowPlan: ปุ่มที่ล้นย้ายเข้าเมนู "»" ──
+{
+  const it = (id, w, locked) => ({ id, w, locked });
+  const row = [it('open-btn', 80, true), it('tb-undo', 30), it('tb-bold', 30), it('tb-ai', 30)];
+  check('[161-K3] พอดีแถบ = ไม่ย้ายอะไร', T.overflowPlan(row, 200).length === 0);
+  check('[161-K3] ★ ล้น → ย้ายจากท้ายแถบก่อน', JSON.stringify(T.overflowPlan(row, 145)) === '["tb-ai"]', JSON.stringify(T.overflowPlan(row, 145)));
+  check('[161-K3] ล้นมาก → ย้ายหลายตัว เรียงตามลำดับบนแถบ', JSON.stringify(T.overflowPlan(row, 115)) === '["tb-bold","tb-ai"]');
+  check('[161-K3] ★ ปุ่มที่โปรแกรมคุม (โปรเจกต์/โหมด) ไม่ถูกย้ายแม้แคบสุด', !T.overflowPlan(row, 0).includes('open-btn')
+        && T.overflowPlan(row, 0).length === 3);
+  check('[161-K3] ปุ่ม "»" เป็นปุ่มที่โปรแกรมคุม (ซ่อนไม่ได้)', T.LOCKED_BUTTONS.includes('tb-overflow') && !T.isConfigurable('tb-overflow'));
+  check('[161-K3] ค่าเพี้ยนไม่พัง', T.overflowPlan(null, 10).length === 0 && T.overflowPlan([it('', 50)], 0).length === 0);
+  check('[161-K3] ★ ปุ่มค้นหาซ้ำซ่อนเป็นค่าเริ่มต้น เหลือสองทาง (โปรเจกต์ + เอกสาร)',
+        T.defaultVisible('tb-gsearch') && !T.defaultVisible('tb-search-panel') && T.defaultVisible('tb-find')
+        && T.LOCKED_BUTTONS.includes('search-all-btn'));
+  check('[161-K3] ผู้ใช้เปิดปุ่มที่ซ่อนเป็นค่าเริ่มต้นคืนได้', T.isButtonVisible(T.setButtonVisible(null, 'tb-search-panel', true), 'tb-search-panel'));
 }
 
 console.log(`\ntoolbar-config: ${pass} passed, ${fail} failed`);

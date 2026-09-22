@@ -14,11 +14,12 @@ import { dumpMdFile, parseMdFile } from '../md.js';
 import { listScenes, listEntities } from '../project-scan.js';
 // [alpha.149] ★ ไฟล์ที่เปิดอยู่ในแท็บ ต้องถูกแก้ "ผ่านแท็บ" — เขียนดิสก์ตรง ๆ แล้วแท็บยังถือของเก่า
 // พอผู้ใช้บันทึก ข้อความที่ AI เขียนก็หาย (วัดจริง: ไฟล์มี → กด Ctrl+S → หาย) · รายละเอียดหัว tab-bridge.js
-import { tabHandle, closeTabsUnder, isInsideRoot } from '../tab-bridge.js';
+import { tabHandle, closeTabsUnder, isInsideRoot, liveBody } from '../tab-bridge.js';   // [alpha.160 · P1-3] liveBody ย้ายไปตัวกลาง
 // [alpha.159 · H5/M1] scenes.json/draft.json แก้ผ่านคิว (อ่านสด) — กฎ alpha.156 ใช้กับทาง AI ด้วย
 import { mutateJson } from '../json-store.js';
 import { freeSceneFileName, takenSceneFiles } from '../scene-file-name.js';   // [M3] ตัวเดียวกับทางคลิก
 import { writeMdKeepingComments } from '../comments/comment-core.js';          // [M4] ไม่ลบเธรดคอมเมนต์
+import { trashPathFor } from '../trash-path.js';                                // [alpha.162 · W1-4] ชื่อในถังไม่ชนกัน
 
 const SKIP_DIRS = ['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', 'Plugins', 'Recycle', 'Sessions'];
 
@@ -46,11 +47,6 @@ export function safeCat(cat) {
   const s = String(cat == null || cat === '' ? 'characters' : cat).trim();
   if (!s || /[\\/]/.test(s) || /^\.+$/.test(s) || s.includes('..')) return '';
   return s.replace(/[:*?"<>|]/g, '').trim();
-}
-/** เนื้อฉาก "ตัวจริง ณ ตอนนี้" — แท็บที่เปิดอยู่ชนะไฟล์บนดิสก์ (มีส่วนที่ยังไม่บันทึกได้) */
-function liveBody(path, diskBody) {
-  const h = tabHandle(path);
-  return h && h.kind !== 'wiki' ? h.getText() : diskBody;
 }
 const eq = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
 
@@ -94,20 +90,27 @@ async function findChapter(book, title) {
 }
 
 /** ฉากตามชื่อ — ค้นทั้งโปรเจกต์ถ้าไม่ระบุเล่ม/บท */
+// [alpha.160 · P0-4] ★ ระบุเล่ม/บทมาแล้ว **หาไม่เจอ = null** (ผู้เรียกตอบ error)
+// เดิม `findBook()` คืน null แล้วข้ามการกรองไปเฉย ๆ → คืน `rows[0]` ที่อาจเป็นฉากชื่อเดียวกันในเล่มอื่น
+// = `scene.write/rename/delete` ลงผิดฉาก · ตัวกรองบทเดิมทำงานเฉพาะตอนเหลือ >1 แถว และยึดเล่มแรกเสมอเมื่อไม่ระบุเล่ม
+// · `rows.filter(...) || rows` เป็นโค้ดตาย (อาร์เรย์ว่างไม่ falsy) — ตัดทิ้ง
 async function findScene({ title, book, chapter }) {
   const all = await listScenes(state.root);
   let rows = all.filter((s) => eq(s.title, title));
   if (!rows.length) return null;
+  let b = null;
   if (book) {
-    const b = await findBook(book);
-    if (b) rows = rows.filter((s) => s.section === b.name) || rows;
+    b = await findBook(book);
+    if (!b) return null;
+    rows = rows.filter((s) => s.section === b.name);
   }
-  if (chapter && rows.length > 1) {
-    const b = await findBook(book);
-    if (b) {
-      const c = await findChapter(b, chapter);
-      if (c) rows = rows.filter((s) => s.chapterId === c.ch.guid) || rows;
+  if (chapter) {
+    const guids = new Set();
+    for (const bk of (b ? [b] : await listBooks())) {
+      const c = await findChapter(bk, chapter);
+      if (c) guids.add(c.ch.guid);
     }
+    rows = rows.filter((s) => guids.has(s.chapterId));
   }
   return rows[0] || null;
 }
@@ -219,7 +222,9 @@ const HANDLERS = {
     const hit = await findEntityFile(a.name);
     if (!hit) return err(tf('ui.aiActions.notFound', a.name));
     // ผู้ใช้ยืนยันการลบแล้ว — แท็บของไฟล์ที่ไม่มีอยู่แล้วต้องไม่ค้าง · [alpha.159] บันทึกงานค้างก่อน (ถังได้ของล่าสุด)
-    if (tabHandle(hit.path)) await closeTabsUnder(hit.path);
+    // [alpha.160 · P0-3] post-check แบบเดียวกับ scene.delete — บันทึกไม่ผ่าน = ไม่ลบ
+    if (tabHandle(hit.path) && !(await closeTabsUnder(hit.path)).ok) return err(tf('ui.aiActions.dirOpenUnsaved', hit.name));
+    if (tabHandle(hit.path)) return err(tf('ui.aiActions.dirOpenUnsaved', hit.name));
     await moveToTrash(hit.path);
     return ok(tf('ui.aiActions.moveTrashDone', hit.name));
   },
@@ -245,8 +250,8 @@ const HANDLERS = {
     const b = await findBook(a.title);
     if (!b) return err(tf('ui.aiActions.notFoundBook2', a.title));
     // [alpha.149] แท็บของฉากในเล่มที่ย้ายไปถังขยะต้องไม่ค้าง · [alpha.159] บันทึกก่อน + รอจนปิดเสร็จ
-    await closeTabsUnder(b.path);
-    const dst = await moveToTrash(b.path);
+    if (!(await closeTabsUnder(b.path)).ok) return err(tf('ui.aiActions.dirOpenUnsaved', b.title));   // [alpha.160 · P0-3]
+    const dst = await moveToTrash(b.path, { dir: true });
     await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
       { kind: 'section', root: state.root, folderName: b.name }, null, 2));
     return ok(tf('ui.aiActions.moveBookTrashDone', b.title));
@@ -290,7 +295,7 @@ const HANDLERS = {
     const dir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
     const sf = await kapi.join(b.draftPath, 'scenes.json');
     // [alpha.159 · H5] ปิดแท็บ (บันทึกงานค้างก่อน) **ก่อน** อ่านรายชื่อฉาก — บันทึกฉากอัปเดตแถวใน scenes.json
-    if (await kapi.exists(dir)) await closeTabsUnder(dir);
+    if (await kapi.exists(dir) && !(await closeTabsUnder(dir)).ok) return err(tf('ui.aiActions.dirOpenUnsaved', a.title));   // [alpha.160 · P0-3]
     let scenes = [];
     await mutateJson(kapi, sf, (sd) => {
       scenes = ((sd.chapters || {})[c.ch.guid] || []).slice();
@@ -298,7 +303,7 @@ const HANDLERS = {
       delete sd.chapters[c.ch.guid];
     }, { fallback: EMPTY_SCENES });
     if (await kapi.exists(dir)) {
-      const dst = await moveToTrash(dir);
+      const dst = await moveToTrash(dir, { dir: true });
       await kapi.writeFile(dst + '.k2restore.json', JSON.stringify(
         { kind: 'chapter', dPath: b.draftPath, ch: c.ch, scenes }, null, 2));
     }
@@ -425,10 +430,12 @@ function normSections(sections, description) {
   return [{ title: t('ui.common.desc'), content: String(description || '') }];
 }
 
-/** ย้ายเข้า Recycle/ แบบเดียวกับที่ผู้ใช้ลบเอง (ไม่ถาม เพราะถามไปแล้วตอนยืนยันคำสั่ง) */
-async function moveToTrash(p) {
-  const base = String(p).split(/[\\/]/).pop();
-  const dst = await kapi.join(state.root, 'Recycle', Date.now().toString(36) + '-' + base);
+/**
+ * ย้ายเข้า Recycle/ แบบเดียวกับที่ผู้ใช้ลบเอง (ไม่ถาม เพราะถามไปแล้วตอนยืนยันคำสั่ง)
+ * [alpha.162 · W1-4] ชื่อปลายทางมาจาก `trashPathFor` ทางเดียวกับทางคลิก — เดิมประกอบเองแล้วชนกันได้
+ */
+async function moveToTrash(p, { dir = false } = {}) {
+  const dst = await trashPathFor(p, { dir });
   await kapi.move(p, dst);
   return dst;
 }
@@ -456,6 +463,10 @@ export function touchesProject(results) {
 
 /** รีเฟรช UI หลัง AI แก้ไฟล์ — import แบบ dynamic กัน circular กับ app.js */
 export async function refreshAfterActions() {
+  // [alpha.160 · P1-5] ★ AI เขียน/ลบฉากแล้ว ดัชนี RAG ต้องล้าง — เดิมล้างเฉพาะตอนผู้ใช้บันทึกแท็บ (saveTab)
+  // → แชท/ผู้ช่วยเขียนตอบจากดัชนีเก่าที่ยังไม่มีสิ่งที่ AI เพิ่งเขียน · ทำก่อน/แยกจากรีเฟรช UI (app.js อาจยังไม่พร้อม)
+  try { (await import('./ai-chat-panel.js')).invalidateChatRag(); } catch {}
+  try { (await import('../global-search.js')).invalidateSearchIndex(); } catch {}
   try {
     const app = await import('../app.js');
     await app.buildTree();

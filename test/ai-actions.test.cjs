@@ -90,7 +90,8 @@ Object.defineProperty(globalThis, 'navigator', { value: { platform: 'Win32' }, c
 // ai-actions กับ core ต้องใช้ `state` **ก้อนเดียวกัน** → บันเดิลรวมทีเดียวผ่านไฟล์ทางเข้าชั่วคราว
 const entry = path.join(os.tmpdir(), '_aiact-entry.mjs');
 const src = path.join(__dirname, '..', 'src').replace(/\\/g, '/');
-fs.writeFileSync(entry, `export * from '${src}/ai/ai-actions.js';\nexport { state } from '${src}/core.js';\n` + `export { setTabBridge, pathKey } from '${src}/tab-bridge.js';\n`);
+fs.writeFileSync(entry, `export * from '${src}/ai/ai-actions.js';\nexport { state } from '${src}/core.js';\n` + `export { setTabBridge, pathKey } from '${src}/tab-bridge.js';\n`
+  + `export { copyDraftContents } from '${src}/drafts.js';\n`);   // [alpha.160 · P0-5]
 const out = path.join(os.tmpdir(), '_aiactions.cjs');
 require('esbuild').buildSync({ entryPoints: [entry], outfile: out, format: 'cjs', bundle: true, logLevel: 'silent' });
 const A = require(out);
@@ -369,6 +370,86 @@ seed();
     ck('★ ไฟล์ไปอยู่ถังขยะ ไม่ใช่ลบถาวร', inTrash, [...FS.keys()].join('\n'));
     ck('ไฟล์ไม่ได้อยู่ที่เดิมแล้ว',
        [...FS.keys()].filter((k) => k.endsWith('.md') && !k.includes('/Recycle/')).length === before - 1);
+  }
+
+  // ───────── [alpha.160 · P0-4] ฉากชื่อซ้ำสองเล่ม — ระบุเล่ม/บทที่หาไม่เจอ ต้องไม่ตกไปฉากอื่น ─────────
+  {
+    seed();
+    await run('chapter.create', { title: 'บท A' });
+    await run('book.create', { title: 'เล่ม 2' });
+    await run('chapter.create', { book: 'เล่ม 2', title: 'บท B' });
+    const c1 = await run('scene.create', { chapter: 'บท A', title: 'ฉากซ้ำ', text: 'เนื้อเล่มหนึ่ง' });
+    const c2 = await run('scene.create', { book: 'เล่ม 2', chapter: 'บท B', title: 'ฉากซ้ำ', text: 'เนื้อเล่มสอง' });
+    ck('[P0-4] สร้างฉากชื่อซ้ำได้ทั้งสองเล่ม', c1.ok && c2.ok, (c1.error || '') + (c2.error || ''));
+    const mdOf = (needle) => [...FS.keys()].find((k) => k.endsWith('.md') && !k.includes('/Recycle/') && FS.get(k).includes(needle));
+    const f1 = mdOf('เนื้อเล่มหนึ่ง'), f2 = mdOf('เนื้อเล่มสอง');
+    ck('[P0-4] ไฟล์ของสองเล่มแยกกัน', !!f1 && !!f2 && f1 !== f2 && f2.includes('เล่ม 2'), f1 + ' | ' + f2);
+
+    const wBad = await run('scene.write', { title: 'ฉากซ้ำ', book: 'ไม่มีเล่มนี้', text: 'ห้ามลงไฟล์ไหนเลย' });
+    ck('[P0-4] ★ ระบุเล่มที่ไม่มี = error ไม่ใช่เขียนลงฉากชื่อเดียวกันในเล่มอื่น',
+       wBad.ok === false && !FS.get(f1).includes('ห้ามลง') && !FS.get(f2).includes('ห้ามลง'), JSON.stringify(wBad));
+    const wBadCh = await run('scene.write', { title: 'ฉากซ้ำ', chapter: 'ไม่มีบทนี้', text: 'ห้ามลงไฟล์ไหนเลย' });
+    ck('[P0-4] ★ ระบุบทที่ไม่มี = error', wBadCh.ok === false && !FS.get(f1).includes('ห้ามลง') && !FS.get(f2).includes('ห้ามลง'));
+    const wBadCh2 = await run('scene.write', { title: 'ฉากซ้ำ', book: 'เล่ม 2', chapter: 'บท A', text: 'ห้ามลงไฟล์ไหนเลย' });
+    ck('[P0-4] บทมีจริงแต่อยู่คนละเล่ม = error', wBadCh2.ok === false && !FS.get(f1).includes('ห้ามลง'));
+
+    const w2 = await run('scene.write', { title: 'ฉากซ้ำ', book: 'เล่ม 2', text: 'แก้เล่มสอง' });
+    ck('[P0-4] ระบุเล่ม 2 → เขียนลงเล่ม 2 เท่านั้น',
+       w2.ok && FS.get(f2).includes('แก้เล่มสอง') && FS.get(f1).includes('เนื้อเล่มหนึ่ง'), w2.error);
+    const wA = await run('scene.write', { title: 'ฉากซ้ำ', chapter: 'บท A', text: 'แก้บทเอ' });
+    ck('[P0-4] ระบุแค่บท (ไม่ระบุเล่ม) → หาบทนั้นทุกเล่ม และได้ฉากของบทนั้น',
+       wA.ok && FS.get(f1).includes('แก้บทเอ') && !FS.get(f2).includes('แก้บทเอ'), wA.error);
+    const wB = await run('scene.write', { title: 'ฉากซ้ำ', chapter: 'บท B', text: 'แก้บทบี' });
+    ck('[P0-4] ระบุบทของเล่ม 2 โดยไม่ระบุเล่ม → ได้ฉากของเล่ม 2 (เดิมยึดเล่มแรกเสมอ)',
+       wB.ok && FS.get(f2).includes('แก้บทบี') && !FS.get(f1).includes('แก้บทบี'), wB.error);
+
+    // ───────── [alpha.160 · P0-3] AI ลบเล่ม/บท/เอนทิตี้ — มีแท็บที่บันทึกไม่ผ่าน = ไม่ลบ ─────────
+    const stuck = { kind: 'prose', dirty: true, getText: () => 'x', setText() {}, async reloadFromDisk() {}, rename() {}, close() {} };
+    A.setTabBridge({ find: (p) => (A.pathKey(p).includes('เล่ม 2') ? stuck : null),
+                     closeUnder: async () => ({ closed: 0, skipped: 1, ok: false }) });
+    const dCh = await run('chapter.delete', { book: 'เล่ม 2', title: 'บท B' });
+    ck('[P0-3] ★ chapter.delete: แท็บบันทึกไม่ผ่าน → ไม่ลบบท (ไฟล์ยังอยู่)', dCh.ok === false && FS.has(f2), JSON.stringify(dCh));
+    const dBk = await run('book.delete', { title: 'เล่ม 2' });
+    ck('[P0-3] ★ book.delete: แท็บบันทึกไม่ผ่าน → ไม่ลบเล่ม', dBk.ok === false && FS.has(f2)
+       && ![...FS.keys()].some((k) => k.includes('/Recycle/')), JSON.stringify(dBk));
+    await run('entity.create', { name: 'แคสซี่', cat: 'characters', description: 'x' });
+    const ef = [...FS.keys()].find((k) => k.includes('/Wiki/characters/'));
+    A.setTabBridge({ find: (p) => (A.pathKey(p) === A.pathKey(ef) ? stuck : null),
+                     closeUnder: async () => ({ closed: 0, skipped: 1, ok: false }) });
+    const dEn = await run('entity.delete', { name: 'แคสซี่' });
+    ck('[P0-3] ★ entity.delete: แท็บบันทึกไม่ผ่าน → ไม่ลบ', dEn.ok === false && FS.has(ef), JSON.stringify(dEn));
+    // bridge รุ่นเก่าคืนตัวเลข + แท็บปิดแล้ว = ลบได้ตามปกติ
+    A.setTabBridge({ find: () => null, closeUnder: async () => 1 });
+    const dOk = await run('chapter.delete', { book: 'เล่ม 2', title: 'บท B' });
+    ck('[P0-3] ปิดแท็บได้ครบ → ลบบทได้ตามปกติ', dOk.ok === true && !FS.has(f2), JSON.stringify(dOk));
+    A.setTabBridge(null);
+  }
+
+  // ───────── [alpha.160 · P0-5] คัดลอกร่าง → guid/id ใหม่ทั้งชุด + ไฟล์คู่ข้างฉากตามไปด้วย ─────────
+  {
+    seed();
+    const D = ROOT + '/เล่ม 1/Draft/default';
+    FS.set(D + '/draft.json', JSON.stringify({ chapters: [{ guid: 'chA', title: 'บทหนึ่ง', order: 1, folderName: '01 - บทหนึ่ง' }] }));
+    FS.set(D + '/scenes.json', JSON.stringify({ chapters: { chA: [
+      { id: 's1', title: 'ฉาก 1', order: 1, fileName: 'scene-1.md', chapterGuid: 'chA', choices: [{ text: 'ไป', nextSceneId: 's2' }] },
+      { id: 's2', title: 'ฉาก 2', order: 2, fileName: 'scene-2.md', chapterGuid: 'chA' }] } }));
+    await fakeKapi.writeFile(D + '/Chapters/01 - บทหนึ่ง/scene-1.md', '---\ntitle: ฉาก 1\n---\nหนึ่ง');
+    await fakeKapi.writeFile(D + '/Chapters/01 - บทหนึ่ง/scene-2.md', '---\ntitle: ฉาก 2\n---\nสอง');
+    await fakeKapi.writeFile(D + '/Chapters/01 - บทหนึ่ง/scene-1_vis.csv', 'shot,desc\n1,กว้าง');
+    let n = 0;
+    await A.copyDraftContents(D, ROOT + '/เล่ม 1/Draft/สำเนา', () => 'new' + (++n));
+    const d2 = JSON.parse(FS.get(ROOT + '/เล่ม 1/Draft/สำเนา/draft.json'));
+    const s2 = JSON.parse(FS.get(ROOT + '/เล่ม 1/Draft/สำเนา/scenes.json'));
+    const g2 = d2.chapters[0].guid, rows2 = s2.chapters[g2] || [];
+    ck('[P0-5] ★ guid ของบทในร่างสำเนาเป็นของใหม่', g2 && g2 !== 'chA' && !('chA' in s2.chapters), JSON.stringify(d2));
+    ck('[P0-5] ★ id ของฉากเป็นของใหม่ทั้งหมด', rows2.length === 2 && rows2.every((r) => r.id !== 's1' && r.id !== 's2'),
+       JSON.stringify(rows2));
+    ck('[P0-5] chapterGuid ของแถวชี้บทใหม่', rows2.every((r) => r.chapterGuid === g2));
+    ck('[P0-5] ทางเลือกแตกสายชี้ฉากสำเนา ไม่ใช่ฉากต้นฉบับ',
+       rows2[0].choices[0].nextSceneId === rows2[1].id, JSON.stringify(rows2[0].choices));
+    ck('[P0-5] ร่างต้นฉบับไม่ถูกแตะ', JSON.parse(FS.get(D + '/draft.json')).chapters[0].guid === 'chA');
+    ck('[P0-5] ไฟล์ .md ถูกคัดลอก', FS.has(ROOT + '/เล่ม 1/Draft/สำเนา/Chapters/01 - บทหนึ่ง/scene-2.md'));
+    ck('[P0-5] ไฟล์คู่ _vis.csv ตามไปด้วย', FS.has(ROOT + '/เล่ม 1/Draft/สำเนา/Chapters/01 - บทหนึ่ง/scene-1_vis.csv'));
   }
 
   console.log(`\nai-actions: ${pass} passed, ${fail} failed`);

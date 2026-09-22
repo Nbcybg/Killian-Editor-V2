@@ -346,6 +346,7 @@ ui.aiActions.changeNameSceneDone,"เปลี่ยนชื่อฉากเ�
 ui.aiActions.chapterHasScene,"บทนี้มีฉาก ""{0}"" อยู่แล้ว"
 ui.aiActions.delChapterSceneTrash,"ลบบท ""{0}"" ({1} ฉาก) ไปถังขยะแล้ว"
 ui.aiActions.delSceneTrashDone,"ลบฉาก ""{0}"" ไปถังขยะแล้ว"
+ui.aiActions.dirOpenUnsaved,ไม่ได้ลบ {0} — มีแท็บในนั้นที่บันทึกไม่ได้
 ui.aiActions.editDone,"แก้ ""{0}"" แล้ว"
 ui.aiActions.entityOpenDirty,"หน้า Wiki ""{0}"" เปิดแก้ค้างอยู่และยังไม่บันทึก — บันทึกก่อนแล้วสั่งใหม่"
 ui.aiActions.hasUseEntityUpdate,"มี ""{0}"" อยู่แล้ว — ใช้ entity.update แทน"
@@ -793,6 +794,9 @@ ui.aiPlot.youReportOnlyThing,คุณเข้มงวดแต่ยุติ
 ui.aiProvider.add,เพิ่ม
 ui.aiProvider.addProvider,เพิ่มผู้ให้บริการ
 ui.aiProvider.addProviderNew,เพิ่มผู้ให้บริการใหม่
+ui.aiProvider.allowedDomains,โดเมนที่อนุญาตให้ส่งคำขอ HTTP
+ui.aiProvider.apiKey,คีย์ API
+ui.aiProvider.baseUrl,ที่อยู่ API (Base URL)
 ui.aiProvider.baseURLModel,Base URL: {0} · โมเดล: {1} · 
 ui.aiProvider.btnSendText,ปุ่มส่งข้อความในแชท
 ui.aiProvider.busyFetchListModel,กำลังดึงรายชื่อโมเดล…
@@ -828,6 +832,9 @@ ui.aiProvider.notSendValue,(ไม่ส่งค่านี้)
 ui.aiProvider.pressFetchListModel,"กด ""ดึงรายชื่อโมเดล"" เพื่อขอรายการจาก API ของเจ้านี้"
 ui.aiProvider.saveCredentialDoneKey,บันทึก Credential แล้ว (คีย์เก็บแยกที่ 
 ui.aiProvider.saveProvider,บันทึกผู้ให้บริการ
+ui.aiProvider.secCredential,ข้อมูลรับรอง (Credential)
+ui.aiProvider.secModel,โมเดล (Model)
+ui.aiProvider.secParams,พารามิเตอร์ (Parameters)
 ui.aiProvider.skSkipEmptyNot,sk-… (เว้นว่างได้ถ้าเซิร์ฟเวอร์ไม่ต้องใช้คีย์ เช่น Ollama)
 ui.aiProvider.testConnect,ทดสอบการเชื่อมต่อ
 ui.aiProvider.toReplyBackDone,ปลายทางตอบกลับแล้ว แต่ไม่มีรายชื่อโมเดลในคำตอบ
@@ -1199,6 +1206,7 @@ ui.app.clickViewImageFull,"
 ui.app.close, พัง — ปิดไว้ชั่วคราว
 ui.app.close2,ปิดไว้หลังเคยพัง
 ui.app.closeAllDirtyAsk,มีแท็บที่ยังไม่ได้บันทึก {0} แท็บ
+ui.app.closeAllKeptUnsaved,ปิดแล้ว {0} แท็บ · ค้างไว้ {1} แท็บที่บันทึกไม่ผ่าน
 ui.app.closeAppHasList,ปิดโปรแกรม — มี {0} รายการที่ยังไม่ได้บันทึก
 ui.app.closeAppPendingList,ขอปิดโปรแกรม · งานค้าง {0} รายการ
 ui.app.closeNotSave,ปิดโดยไม่บันทึก
@@ -1326,6 +1334,7 @@ ui.app.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตา�
 ui.app.foundErrorChapterEg,"พบ {0} ข้อผิดพลาดในบท (เช่น “{1}”)
 ส่งออกต่อไปเลยไหม?"
 ui.app.foundSceneMention,พบ {0} ฉากที่กล่าวถึง “{1}”
+ui.app.goalFromSaves,นับจากประวัติคำ (อัปเดตหลังบันทึก)
 ui.app.goalWord,เป้าหมายวันนี้: {0} / {1} คำ ({2}%)
 ui.app.gotoFindNone,ไม่พบรายการที่ตรง
 ui.app.gotoFindPlaceholder,พิมพ์ชื่อฉาก บท หรือเลขหน้า…
@@ -1418,6 +1427,7 @@ ui.app.modeReadPressEsc,โหมดอ่าน — กด Esc หรือ {sc
 ui.app.modeTypewriterClose,โหมดเครื่องพิมพ์ดีด: ปิด
 ui.app.modeTypewriterOpen,โหมดเครื่องพิมพ์ดีด: เปิด
 ui.app.mood,อารมณ์: 
+ui.app.moveCancelledUnsaved,ยกเลิกการลบ/ย้าย — {0} ยังมีงานที่บันทึกไม่ได้
 ui.app.moveCat,"ย้ายไปหมวด """
 ui.app.moveCatNewDone,ย้ายไปหมวดใหม่แล้ว
 ui.app.moveCommentPrevList,ย้ายคอมเมนต์เดิม {0} รายการเข้าไฟล์ฉากแล้ว
@@ -1691,6 +1701,8 @@ ui.app.saveAll,บันทึกทั้งหมด
 ui.app.saveAllDoneClose,บันทึกทั้งหมดแล้วปิด
 ui.app.saveAllDoneList,บันทึกทั้งหมดแล้ว ({0} รายการ)
 ui.app.saveAllSaveNotOk,saveAll: บันทึกไม่สำเร็จ: 
+ui.app.saveAsDone,บันทึกเป็น: {0}
+ui.app.saveAsUnsupported,แท็บนี้บันทึกเป็นไฟล์ .md ไม่ได้
 ui.app.saveAuto,บันทึกอัตโนมัติ
 ui.app.saveBeforeCloseFail,บันทึกก่อนปิดไม่สำเร็จ: 
 ui.app.saveCancelledKeepTab,ยังไม่ได้บันทึก แท็บยังเปิดอยู่
@@ -1698,12 +1710,14 @@ ui.app.saveCompleteListDone,บันทึกครบ {0} รายการ �
 ui.app.saved,บันทึกแล้ว
 ui.app.saveDone,บันทึกแล้ว: 
 ui.app.saveDoneOut,บันทึกแล้วออก
+ui.app.saveFail,บันทึกไม่สำเร็จ: 
 ui.app.saveFile,บันทึกเป็นไฟล์…
 ui.app.saveLatestLog,บันทึกล่าสุด (log)
 ui.app.saveList,บันทึก {0}/{1} รายการ
 ui.app.saveNotOkList,บันทึกไม่สำเร็จ {0} รายการ — ยังไม่ปิดโปรแกรม (ดูรายละเอียดในแผงบันทึก)
 ui.app.saveOpenTabsNotOk,บันทึก openTabs ไม่สำเร็จ
 ui.app.saveReportDone,บันทึกรายงานแล้ว: 
+ui.app.saveSettingsFail,บันทึกการตั้งค่าลงไฟล์ผลงานไม่สำเร็จ
 ui.app.saveSizeUINot,บันทึกขนาด UI ไม่สำเร็จ
 ui.app.saveTemplateDone,บันทึกเทมเพลตแล้ว
 ui.app.saveVersionDone,บันทึกเวอร์ชันแล้ว
@@ -2460,6 +2474,7 @@ ui.common.printDone,ตีพิมพ์แล้ว
 ui.common.project,โปรเจกต์
 ui.common.props,คุณสมบัติ
 ui.common.provider,ผู้ให้บริการ
+ui.common.pxDims,{0} × {1} พิกเซล
 ui.common.refresh,รีเฟรช
 ui.common.refresh2,รีเฟรช
 ui.common.renameNew,ตั้งชื่อใหม่
@@ -2498,12 +2513,14 @@ ui.common.synopsis,เรื่องย่อ
 ui.common.tag,แท็ก
 ui.common.tag2,"แท็ก (คั่น , )"
 ui.common.tag3,แท็ก: 
+ui.common.taskCancelled,ยกเลิกแล้ว — {0}
 ui.common.text,ข้อความ
 ui.common.thing,สิ่งของ
 ui.common.thingSee,สิ่งที่เห็น
 ui.common.timeStoryLineTime,เวลาในเรื่อง (เส้นเวลา)
 ui.common.title,ชื่อเรื่อง
 ui.common.toggle,⇄ สลับทิศ
+ui.common.tokensN,{0} โทเคน
 ui.common.trialPlay,ทดลองเล่น
 ui.common.type,ประเภท
 ui.common.unlock,ปลดล็อก
@@ -2685,6 +2702,8 @@ ui.dialogue.whereTurn,เดาจากการสลับกันพูด�
 ui.dirty.dirtyRegistryProviderMust,dirty-registry: provider ต้องมี list()
 ui.dirty.notHasItemSave,ไม่มีตัวบันทึก
 ui.dirty.saveNotOk,บันทึกไม่สำเร็จ
+ui.dlg.aiNotConfigured,ยังไม่ได้ตั้งค่า
+ui.dlg.aiReadProviderFail,อ่านข้อมูลผู้ให้บริการ AI ไม่สำเร็จ
 ui.dlg.areaPrint,พื้นที่พิมพ์ {0} × 
 ui.dlg.bodyStory,ตามเนื้อเรื่อง
 ui.dlg.cantDefineRowUse,"ยังไม่ได้กำหนดแถวไหน — ใช้ฟอนต์ตามค่าในแท็บ ""การเขียน"""
@@ -2743,6 +2762,7 @@ ui.dlg.settingsFactory,รีเซ็ตเป็นค่าโรงงาน
 ui.dlg.settingsFactoryAsk,คืนค่าตั้งค่าทั้งหมดกลับเป็นค่าเริ่มต้นของโปรแกรม? (ค่าปัจจุบันจะถูกเก็บไว้ให้กดคืนค่าก่อนหน้าได้)
 ui.dlg.settingsFactoryDone,รีเซ็ตเป็นค่าโรงงานแล้ว
 ui.dlg.settingsFactoryHint,คืนทุกหัวข้อกลับเป็นค่าเริ่มต้น — ค่าเดิมยังกดคืนได้
+ui.dlg.settingsNoProject,ยังไม่ได้เปิดโปรเจกต์ — แสดงเฉพาะค่าระดับผู้ใช้ (ใช้กับทุกผลงาน)
 ui.dlg.settingsPrevFail,เก็บค่าตั้งค่าก่อนหน้าไม่สำเร็จ
 ui.dlg.settingsRevert,คืนค่าก่อนหน้า
 ui.dlg.settingsRevertAsk,คืนค่าตั้งค่ากลับเป็นชุดก่อนการบันทึกครั้งล่าสุด?
@@ -2938,6 +2958,7 @@ ui.doctor.reportOnly,ซ่อมอัตโนมัติไม่ได้ �
 ui.doctor.rescan,ตรวจอีกครั้ง
 ui.doctor.scanning,กำลังตรวจโปรเจกต์…
 ui.doctor.summary,พบ {0} รายการ
+ui.doctor.taskName,ตรวจสุขภาพโปรเจกต์
 ui.doctor.tBadJson,อ่านไฟล์ {0} ไม่ได้ (JSON เสีย)
 ui.doctor.tDuplicateRef,"ฉาก ""{0}"" กับ ""{1}"" ใช้ไฟล์เดียวกัน ({2})"
 ui.doctor.tFrontmatter,หัวไฟล์ของ {0} พัง — กู้ค่าได้: {1}
@@ -2956,6 +2977,16 @@ ui.drafts.renameDraftTo,"เปลี่ยนชื่อฉบับร่า�
 ui.editor.ctrlClickOpenWiki,Ctrl+คลิก เปิดใน Wiki
 ui.editor.hasCommentBindText,มีคอมเมนต์ผูกกับข้อความนี้
 ui.editor.pageBreak,ขึ้นหน้าใหม่
+ui.err.badJson,รูปแบบ JSON ไม่ถูกต้อง
+ui.err.busy,ไฟล์กำลังถูกใช้งานอยู่ — ลองอีกครั้งในอีกสักครู่
+ui.err.denied,ไม่มีสิทธิ์เข้าถึงไฟล์นี้ — ลองปิดโปรแกรมอื่นที่เปิดไฟล์ค้างไว้ แล้วลองใหม่
+ui.err.isDir,ปลายทางเป็นโฟลเดอร์ ไม่ใช่ไฟล์
+ui.err.network,ติดต่อเครือข่ายไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วลองใหม่
+ui.err.noSpace,พื้นที่เก็บข้อมูลเต็ม
+ui.err.notFound,ไม่พบไฟล์หรือโฟลเดอร์ที่ต้องใช้ (อาจถูกย้ายหรือลบไปแล้ว)
+ui.err.readOnly,ที่เก็บนี้เขียนไม่ได้ (อ่านอย่างเดียว)
+ui.err.tooManyFiles,เปิดไฟล์พร้อมกันมากเกินไป — ลองปิดแท็บที่ไม่ใช้แล้วลองใหม่
+ui.err.unknown,เกิดข้อผิดพลาดที่ไม่รู้จัก (ดูรายละเอียดในแผงบันทึก)
 ui.errors.needScene,เปิดฉากก่อน
 ui.errors.noFile,ไม่พบไฟล์
 ui.errors.openProjectFirst,เปิดโปรเจกต์ก่อนจึงจะตั้งค่าได้
@@ -3004,6 +3035,7 @@ ui.exportZip.fileZIPEmpty,ไฟล์ ZIP นี้ว่างเปล่า
 ui.exportZip.importProjectDoneFile,นำเข้าโปรเจกต์แล้ว ({0} ไฟล์): 
 ui.exportZip.importZIPFail,นำเข้า ZIP ล้มเหลว: 
 ui.exportZip.importZipNotHas,import-zip: ไม่มี project.khn.json ที่ 
+ui.exportZip.taskName,ส่งออก ZIP
 ui.fab.actChapter,สร้างบท
 ui.fab.actCharacter,สร้างตัวละคร
 ui.fab.actDashboard,แดชบอร์ด
@@ -3127,6 +3159,7 @@ ui.fonts.cyrillic,ซีริลลิก
 ui.fonts.english,ละติน (อังกฤษ)
 ui.fonts.khmer,เขมร
 ui.fonts.korean,เกาหลี
+ui.fonts.leelawadeeWin,Leelawadee UI (Windows · ฟอนต์ระบบ)
 ui.fonts.msg,พม่า
 ui.fonts.msg2,ลาว
 ui.fonts.msg3,อาหรับ
@@ -3393,6 +3426,7 @@ ui.home.homePanelLoadFail,home-panel: โหลดล้มเหลว
 ui.home.homeReadProjectFail,home: อ่านโปรเจกต์ล้มเหลว: 
 ui.home.import,นำเข้า
 ui.home.importProjectFileZip,นำเข้าโปรเจกต์จากไฟล์ .zip
+ui.home.language,ภาษา
 ui.home.msg, โดย 
 ui.home.newProject,สร้างโปรเจกต์ใหม่
 ui.home.newProjectFirstYours,สร้างโปรเจกต์แรกของคุณ แล้วเริ่มเขียนนิยายหรือบทภาพยนตร์ได้เลย
@@ -3408,6 +3442,8 @@ ui.home.revealInOS,เปิดโฟลเดอร์นี้ในตัว�
 ui.home.search,ค้นหา
 ui.home.searchProject,ค้นหาโปรเจกต์…
 ui.home.searchProjectNameAuthor,ค้นหาโปรเจกต์จากชื่อ / ผู้เขียน / ที่อยู่ไฟล์
+ui.home.settings,ตั้งค่า
+ui.home.settingsHint,ภาษา ธีม ปุ่มลัด และค่าอื่นที่ใช้กับทุกผลงาน
 ui.html.elActBreak,ตอน
 ui.html.elAction,บรรยาย
 ui.html.elCharacter,ตัวละคร
@@ -3430,6 +3466,7 @@ ui.html.spViewSelect,มุมมองหน้ากระดาษ
 ui.html.tbAi,เครื่องมือ AI (ขยาย · สรุป · เขียนใหม่)
 ui.html.tbAiAnalyzer,AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)
 ui.html.tbAiChat,AI ผู้ช่วยเขียน (กดซ้ำ = ปิดแผง)
+ui.html.tbAiGroup,ผู้ช่วย AI (เมนู)
 ui.html.tbAiHub,AI Hub — ทางเข้าเดียวของทุกความสามารถ AI
 ui.html.tbAlignCenter,กึ่งกลาง
 ui.html.tbAlignJustify,เต็มบรรทัด
@@ -3486,6 +3523,7 @@ ui.html.tbRead,โหมดอ่าน (เต็มจอ)
 ui.html.tbRecord,บันทึกประจำวัน (จดว่าวันนี้ทำอะไร · ส่งออก CSV)
 ui.html.tbRedo,ทำซ้ำ
 ui.html.tbSearchPanel,ค้นหา
+ui.html.tbSettings,ตั้งค่า
 ui.html.tbSideBottom,ซ่อน/แสดงแผงด้านล่าง
 ui.html.tbSideLeft,ซ่อน/แสดงแผงด้านซ้าย
 ui.html.tbSideRight,ซ่อน/แสดงแผงด้านขวา
@@ -3708,6 +3746,7 @@ ui.menu.cancelSplitPageScreen,ยกเลิกแยกหน้าจอ
 ui.menu.caseBigSmall,ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ)
 ui.menu.centerK,กึ่งกลาง
 ui.menu.chapterFilm,บทหนัง
+ui.menu.cheatsheet,คู่มือปุ่มลัด…
 ui.menu.checkAlwaysCharacter,ตรวจสอบความสม่ำเสมอของตัวละคร…
 ui.menu.checkBeforePrintExport,ตรวจก่อนพิมพ์/ส่งออก
 ui.menu.checkChapterListError,ตรวจทั้งบท (รายการข้อผิดพลาด)…
@@ -3734,6 +3773,7 @@ ui.menu.dataResultTaskAuthor,ข้อมูลผลงาน (ผู้เข�
 ui.menu.delDelete,ลบ (Delete)
 ui.menu.delElementType,ลบ element ตามประเภท…
 ui.menu.delLineDelete,ลบทั้งบรรทัด
+ui.menu.developer,สำหรับนักพัฒนา
 ui.menu.dialoguePanel,บทพูดทั้งผลงาน
 ui.menu.dlgbPanel,ห้องซ้อมบท
 ui.menu.doZ,เลิกทำ
@@ -3810,6 +3850,8 @@ ui.menu.openDevToolsChromium,เปิด DevTools ของ Chromium
 ui.menu.openLibraryImageG,เปิดคลังรูป
 ui.menu.openProjectLatestStart,เปิดโปรเจกต์ล่าสุดเมื่อเริ่มโปรแกรม (ข้ามหน้าแรก)
 ui.menu.openProjectO,เปิดโปรเจกต์…
+ui.menu.openReleases,รุ่นที่เผยแพร่แล้ว
+ui.menu.openRepo,หน้าโครงการบน GitHub
 ui.menu.page,ไปที่หน้า…
 ui.menu.pageChapterG,ไปที่หน้า/บท…
 ui.menu.pageFirst,ไปหน้าแรก
@@ -3823,6 +3865,10 @@ ui.menu.pagePaperGapMargin2,หน้ากระดาษ · ระยะขอ
 ui.menu.pageSceneG,ไปที่หน้า/ฉาก…
 ui.menu.panel,แผง
 ui.menu.panelAIAssistantWrite,แผง AI ผู้ช่วยเขียน
+ui.menu.panelGroupAI,— AI —
+ui.menu.panelGroupPlan,— วางแผน —
+ui.menu.panelGroupReview,— ตรวจ —
+ui.menu.panelGroupWrite,— เขียน —
 ui.menu.panelPairPlannerPlanner,แผงคู่ของ Planner — Planner เป็นคนเปิด/ปิดให้เองตามการเลือกบนกระดาน
 ui.menu.panelStoryStarter,แผง Story Starter
 ui.menu.partNameVO,ส่วนเสริมท้ายชื่อตัวละคร (V.O. · O.S. · cont'd)…
@@ -3845,6 +3891,7 @@ ui.menu.reportCharacterReport,รายงานตัวละคร (Character
 ui.menu.reportPlaceLocationReport,รายงานสถานที่ (Location Report)…
 ui.menu.resetLayoutPanelAll,รีเซ็ตการจัดวางแผงทั้งหมด
 ui.menu.resetZoom,รีเซ็ตซูม
+ui.menu.revealActive,แสดงไฟล์ที่เปิดอยู่ในต้นไม้
 ui.menu.rightR,ชิดขวา
 ui.menu.save,บันทึกเป็น…
 ui.menu.saveAllS,บันทึกทั้งหมด
@@ -3863,6 +3910,7 @@ ui.menu.sessionNew,เซสชันแชทใหม่
 ui.menu.setPrintBigLine,ตั้งพิมพ์ใหญ่รายบรรทัดเอง (ตารางรูปแบบ)…
 ui.menu.settingsAI,ตั้งค่า AI…
 ui.menu.settingsAIProviderCredential,ตั้งค่า AI (ผู้ให้บริการ · Credential · โมเดล · พารามิเตอร์)…
+ui.menu.settingsGroup,ตั้งค่า
 ui.menu.settingsProject,ตั้งค่าโปรเจกต์…
 ui.menu.showFormatLineMargin,แสดงรูปแบบ (เส้นขอบ element + เครื่องหมายจบบรรทัด)
 ui.menu.showNumLineLeft,แสดงเลขบรรทัด (รางซ้ายของแผง)
@@ -4060,6 +4108,9 @@ ui.panel.branchTitle,ผังแตกสาย
 ui.panel.changelogNotFound,ไม่พบไฟล์ changelog
 ui.panel.changelogTitle,บันทึกการเปลี่ยนแปลง — Killian 2
 ui.panel.checkEditCommentNote,ตรวจแก้ — คอมเมนต์ + โน้ต
+ui.panel.chipClosed,{0} — เพิ่งปิด · คลิกเพื่อเปิดคืน
+ui.panel.chipStash,{0} — ซ่อนไว้ชั่วคราว · คลิกเพื่อแสดงคืน
+ui.panel.chipTorn,{0} — อยู่ในหน้าต่างแยก · คลิกเพื่อเรียกกลับ
 ui.panel.chooseVersion,เลือกเวอร์ชันเพื่อดูตัวอย่าง
 ui.panel.codex,สารานุกรม
 ui.panel.codexTitle,สารานุกรม
@@ -4083,6 +4134,7 @@ ui.panel.fab,สร้างใหม่
 ui.panel.float,ลอยแผงออกมา / ผนึกกลับ
 ui.panel.galleryBoardTitle,กระดานอารมณ์
 ui.panel.galleryTitle,คลังรูปภาพ
+ui.panel.hiddenChipsHint,แผงที่ไม่ได้อยู่บนจอ — คลิกเพื่อเอากลับมา
 ui.panel.hidePanelAllArea,ซ่อนแผงทั้งหมด (เหลือแต่พื้นที่เขียน)
 ui.panel.hidePanelSide,ซ่อนแผงฝั่งนี้
 ui.panel.historyTitle,ประวัติการทำงาน
@@ -4169,8 +4221,10 @@ ui.panelLayout.collapseExpand,ย่อ/ขยาย
 ui.panelLayout.float,ลอย/ผนึก
 ui.panelLayout.panel,เมนูแผง
 ui.panelRenderer.backInWindow,⊡ ผนึกกลับเข้าหน้าต่าง
+ui.panelRenderer.closeGroupN,ปิดทั้งกลุ่ม ({0} แผง)
 ui.panelRenderer.closePanelOpen,ปิดแผงที่เปิดอยู่
 ui.panelRenderer.closePanelOpenBack,ปิดแผง (เปิดกลับที่ มุมมอง → แผง)
+ui.panelRenderer.closeThisPanel,ปิดแผง {0}
 ui.panelRenderer.collapseBarIcon,ย่อเป็นแถบไอคอน
 ui.panelRenderer.dragAdjustRatioClick,ลากเพื่อปรับสัดส่วน (ดับเบิลคลิก = 50%)
 ui.panelRenderer.floatPanelOut,⧉ ลอยแผงออกมา
@@ -4181,7 +4235,25 @@ ui.panelRenderer.moveWindowSplitDrag,ย้ายไปหน้าต่าง�
 ui.panelRenderer.moveWindowSplitDrag2,ย้ายไปหน้าต่างแยก (ลากไปจออื่นได้)
 ui.panelRenderer.panel,▸ คลี่แผง
 ui.panelRenderer.panel2,▾ พับแผง
+ui.panelRenderer.tabsLabel,แท็บของกลุ่มแผง
 ui.panelRenderer.whatIsThis2,นี่คืออะไร —
+ui.panelTip.close,ปิดแผงนี้ — เปิดคืนได้จากชิปมุมล่างขวาของพื้นที่เขียน หรือเมนู มุมมอง → แผง
+ui.panelTip.collapse,พับแผงให้เหลือแต่หัว (กดอีกครั้งเพื่อคลี่)
+ui.panelTip.float,ยกแผงออกมาลอยเหนือพื้นที่เขียน หรือผนึกแผงที่ลอยอยู่กลับเข้าที่
+ui.panelTip.groupClose,ปิดทุกแผงในกลุ่มลอยนี้พร้อมกัน
+ui.panelTip.groupDock,ผนึกทั้งกลุ่มกลับเข้าหน้าต่างหลัก
+ui.panelTip.hiddenChip,แผงที่ปิด · ซ่อนไว้ · หรือย้ายไปหน้าต่างอื่น — คลิกเพื่อเอากลับมา
+ui.panelTip.logCopy,คัดลอกบรรทัดที่กรองอยู่ไปยังคลิปบอร์ด
+ui.panelTip.logRefresh,อ่านบันทึกการทำงานใหม่อีกครั้ง
+ui.panelTip.logReveal,เปิดโฟลเดอร์ที่เก็บไฟล์บันทึกในตัวจัดการไฟล์
+ui.panelTip.menu,คำสั่งทั้งหมดของแผงนี้ — ลอย · ฉีกไปหน้าต่างแยก · ปิด · จัดพื้นที่ · เวิร์กสเปซ
+ui.panelTip.navBeats,แสดง/ซ่อนย่อหน้าย่อยในรายการนำทาง
+ui.panelTip.navBook,สลับระหว่างนำทางเฉพาะฉากที่เปิดอยู่ กับทั้งเล่ม
+ui.panelTip.strip,ย่อกลุ่มแท็บนี้เป็นแถบไอคอนแคบ ๆ หรือคลี่กลับเป็นกลุ่มเต็ม
+ui.panelTip.tabClose,ปิดเฉพาะแผงนี้ แผงอื่นในกลุ่มยังอยู่
+ui.panelTip.tearoff,ย้ายแผงไปหน้าต่างของตัวเอง (ลากไปจออื่นได้) · ปิดหน้าต่างนั้นแล้วแผงกลับที่เดิม
+ui.panelTip.treeRefresh,อ่านโฟลเดอร์ของโปรเจกต์ใหม่ — ใช้เมื่อแก้ไฟล์จากนอกโปรแกรมแล้วต้นไม้ยังไม่รู้
+ui.panelTip.treeSearch,เปิด/ปิดช่องค้นหาชื่อในต้นไม้โปรเจกต์
 ui.paper.colorCream,ครีม
 ui.paper.colorDark,เข้ม
 ui.paper.colorGray,เทาอ่อน
@@ -4273,6 +4345,7 @@ ui.pdf.scrollPage,เลื่อนหน้าขึ้น
 ui.pdf.scrollPage2,เลื่อนหน้าลง
 ui.pdf.sizePt,ขนาด (pt)
 ui.pdf.skipLineUnderHead,เว้นบรรทัดใต้หัวกระดาษ
+ui.pdf.taskName,ส่งออก PDF
 ui.pdf.textAllItemLine,ข้อความ (ทุกชิ้นอยู่บรรทัดเดียวกัน — ต่างกันที่การจัดหน้า)
 ui.pdf.textNew,ข้อความใหม่
 ui.pdf.textPage,ข้อความในหน้านี้
@@ -4778,6 +4851,8 @@ ui.plugin.failed,ปลั๊กอินพัง — ปิดไว้ชั�
 ui.project.act,องก์ 1
 ui.project.act2,องก์ 2
 ui.project.act3,องก์ 3
+ui.project.blankDesc,หนึ่งเล่ม หนึ่งบท ไม่มีหมวด Wiki ตั้งต้น — เริ่มจากศูนย์เอง
+ui.project.blankName,โปรเจกต์ว่าง
 ui.project.chapter,บทนำ
 ui.project.chapterSummary,บทสรุป
 ui.project.chapterTwo,บทที่สอง
@@ -4944,6 +5019,7 @@ ui.scene.pinPin,ปักหมุด:
 ui.scene.propsChapter,คุณสมบัติบท — 
 ui.scene.propsScene,คุณสมบัติฉาก — 
 ui.scene.readDraftJsonCant,อ่าน draft.json ไม่ได้
+ui.scene.renameFileFail,เปลี่ยนชื่อในไฟล์ของฉาก {0} ไม่สำเร็จ — ยังไม่ได้เปลี่ยนชื่อ
 ui.scene.reorderChapterNewDone,จัดลำดับบทใหม่แล้ว
 ui.scene.reorderSceneNewDone,จัดลำดับฉากใหม่แล้ว
 ui.scene.savePropsChapterDone,บันทึกคุณสมบัติบทแล้ว: 
@@ -4956,10 +5032,14 @@ ui.scene.tableScene2,ตารางฉาก
 ui.scene.tableSceneAll,ตารางฉากทั้งหมด
 ui.scene.useOpenPageNumSettings,"1 — ใช้เมื่อเปิด ""เลขหน้า"" ในตั้งค่าโปรเจกต์"
 ui.scenes,ฉาก
+ui.search.busyIndex,กำลังสร้างดัชนีค้นหา
 ui.search.busySearch,กำลังค้นหา…
 ui.search.foundFile,พบ {0} ไฟล์
+ui.search.foundShowN,พบ {0} ไฟล์ · แสดง {1}
 ui.search.globalSearchSearchFail,global-search: ค้นล้มเหลว
+ui.search.indexCancelled,ยกเลิกการสร้างดัชนีแล้ว — ค้นใหม่เมื่อพร้อม
 ui.search.indexedN,ทำดัชนีไว้ {0} ไฟล์
+ui.search.indexName,สร้างดัชนีค้นหา
 ui.search.lineNo,บรรทัดที่ 
 ui.search.mdSceneNoteMemo,.md (ฉาก/โน้ต/Memo)
 ui.search.notFoundResult,ไม่พบผลลัพธ์
@@ -5058,6 +5138,9 @@ ui.setTpl.agentSAddress,Agent's Address
 ui.setTpl.agentSEmail,Agent's Email
 ui.setTpl.agentSName,Agent's Name
 ui.setTpl.agentSPhone,Agent's Phone
+ui.setTpl.aiCurrent,ใช้อยู่ตอนนี้
+ui.setTpl.aiIntro,ตั้งค่าผู้ให้บริการ คีย์ และโมเดลของผู้ช่วย AI — คีย์เก็บแยกไว้ในไฟล์ของเครื่องนี้ ไม่ลงไฟล์ผลงาน
+ui.setTpl.aiOpen,เปิดการตั้งค่าผู้ช่วย AI
 ui.setTpl.alignLeft,ชิดซ้าย
 ui.setTpl.alignNormalSkipLine,1.0 = ชิด · 1.75 = ปกติ · 2.0 = เว้นบรรทัดคู่
 ui.setTpl.arrangePage,จัดหน้า
@@ -5144,6 +5227,16 @@ ui.setTpl.gapMarginInch,ระยะขอบ (นิ้ว)
 ui.setTpl.gapMarginPaperWide,[81][82][83] ระยะเยื้อง (วัดจากขอบกระดาษ) · ความกว้าง · ระยะเว้นบรรทัด (10 = 1 บรรทัด) · ตัวอักษรบนจอ / ตอนพิมพ์
 ui.setTpl.gapMarginRightInch,ระยะจากขอบขวา (นิ้ว)
 ui.setTpl.gapMarginTopInch,ระยะจากขอบบน (นิ้ว)
+ui.setTpl.grpAuto,AI และอัตโนมัติ
+ui.setTpl.grpAutoSub,ผู้ช่วย · งานเบื้องหลัง · อัปเดต
+ui.setTpl.grpBars,แถบและปุ่ม
+ui.setTpl.grpBarsSub,เลือกปุ่มที่อยากเห็น
+ui.setTpl.grpDoc,รูปแบบเอกสาร
+ui.setTpl.grpDocSub,หน้ากระดาษ · นิยาย · บทภาพยนตร์
+ui.setTpl.grpGeneral,ทั่วไป
+ui.setTpl.grpGeneralSub,โปรแกรม · การเขียน · ภาษา
+ui.setTpl.grpProject,ผลงานนี้
+ui.setTpl.grpProjectSub,ข้อมูล · แผง · สี
 ui.setTpl.hasLineMarginLeft,มีเส้นขอบซ้าย
 ui.setTpl.hasOnlyFileScene,"มีเฉพาะไฟล์ที่เป็นฉาก · เลขเริ่มต้นตั้งรายไฟล์ที่ ""คุณสมบัติฉาก"""
 ui.setTpl.headingH1H6,หัวข้อ (h1–h6)
@@ -5197,6 +5290,8 @@ ui.setTpl.pickColor,เลือกสีเอง
 ui.setTpl.pickDoneFillValue,เลือกแล้วเติมค่าทั้งสี่ด้านให้ · แก้ตัวเลขเองได้ต่อ
 ui.setTpl.play,เล่นเมื่อไร
 ui.setTpl.printMin,รอหลังหยุดพิมพ์ (วินาที)
+ui.setTpl.prosePgNumBtn,ไปที่เลขหน้า
+ui.setTpl.prosePgNumMoved,สวิตช์เดียวกับของบทภาพยนตร์ — ย้ายไปอยู่หัวข้อเลขหน้าแล้ว
 ui.setTpl.putBlockPageClose,"ใส่ให้เองเมื่อบล็อกถูกหั่นคร่อมหน้า · ปิดแล้วใช้บล็อก ""ต่อเนื่อง (ซ้าย/ขวา)"" พิมพ์เองได้"
 ui.setTpl.putCONTINUEDAuto,ใส่ CONTINUED อัตโนมัติ
 ui.setTpl.putNumHeadingLevel,ใส่เลขให้หัวข้อระดับ
@@ -5214,6 +5309,8 @@ ui.setTpl.rightGapMarginPaper,ขวา: ระยะจากขอบกระ
 ui.setTpl.rightRight,ขวา (Right)
 ui.setTpl.ruleCutPageWidow,[84] กฎการตัดหน้า (widow / orphan)
 ui.setTpl.runRangeTimeSet,ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น
+ui.setTpl.scopeGlobal,ค่านี้ตามผู้ใช้ไปทุกผลงาน
+ui.setTpl.scopeProject,ค่านี้เก็บในผลงานนี้เท่านั้น
 ui.setTpl.screenplayBy,Screenplay By
 ui.setTpl.searchHeadingSettingsPh,ค้นหาหัวข้อตั้งค่า…
 ui.setTpl.setOkImage,ชุดสำเร็จรูป
@@ -5239,8 +5336,13 @@ ui.setTpl.soundTypewriter,เสียงเครื่องพิมพ์ด
 ui.setTpl.sourceSendPrintSkip,ต้นฉบับส่งสำนักพิมพ์ (เว้นบรรทัดคู่)
 ui.setTpl.storyNetwork,Story Network
 ui.setTpl.storyNetworkColorBtnFind,story network สี ปุ่มเมาส์ ผัง
+ui.setTpl.subGoals,เป้าหมายจำนวนคำ
 ui.setTpl.tab,Tab →
+ui.setTpl.tabAi,ผู้ช่วย AI
+ui.setTpl.tabAiFind,ai ผู้ช่วย ผู้ให้บริการ คีย์ โมเดล
 ui.setTpl.tableFontApp,ตารางเดียวคุมฟอนต์ทั้งโปรแกรม:
+ui.setTpl.tabPageNum,เลขหน้าและการตัดหน้า
+ui.setTpl.tabPageNumFind,เลขหน้า เลขฉาก continued ตัดหน้า ข้อความเริ่มต้น
 ui.setTpl.tabUnitCm,ซม.
 ui.setTpl.tabUnitIn,นิ้ว
 ui.setTpl.tabUnitSpace,ช่องว่าง
@@ -5331,6 +5433,8 @@ ui.shortcutCategories.edit,แก้ไข
 ui.shortcutCategories.file,ไฟล์
 ui.shortcutCategories.format,รูปแบบ
 ui.shortcutCategories.view,มุมมอง
+ui.shortcuts.about,เกี่ยวกับโปรแกรม
+ui.shortcuts.aiAssistant,ผู้ช่วย AI
 ui.shortcuts.alignCenter,กึ่งกลาง
 ui.shortcuts.alignLeft,ชิดซ้าย
 ui.shortcuts.alignRight,ชิดขวา
@@ -5354,6 +5458,7 @@ ui.shortcuts.deleteLine,ลบทั้งบรรทัด
 ui.shortcuts.devConsole,คอนโซลนักพัฒนา
 ui.shortcuts.exportBlog,ส่งออกเป็น HTML สำหรับบล็อก
 ui.shortcuts.exportHub,ศูนย์รวมการส่งออก
+ui.shortcuts.exportPdf,ส่งออกเป็น PDF
 ui.shortcuts.find,ค้นหา
 ui.shortcuts.findError,ตรวจหาข้อผิดพลาดถัดไป
 ui.shortcuts.fmtbarAlign,แถบรูปแบบ: สลับชิดขอบบน/ล่าง
@@ -5384,6 +5489,7 @@ ui.shortcuts.newLocation,สร้างสถานที่ใหม่
 ui.shortcuts.newMemo,สร้างบันทึกช่วยจำ
 ui.shortcuts.newProject,สร้างโปรเจกต์ใหม่
 ui.shortcuts.newScene,สร้างฉากใหม่
+ui.shortcuts.nextTab,แท็บถัดไป
 ui.shortcuts.numberedList,รายการตัวเลข
 ui.shortcuts.openProject,เปิดโปรเจกต์
 ui.shortcuts.panelAiAnalyzer,แผง: AI วิเคราะห์
@@ -5418,11 +5524,17 @@ ui.shortcuts.panelStarter,แผง Story Starter
 ui.shortcuts.panelTimeline,แผง: เส้นเวลา
 ui.shortcuts.panelTree,แผงโครงเรื่อง (Explorer)
 ui.shortcuts.paperMode,โหมดหน้ากระดาษ
+ui.shortcuts.prevTab,แท็บก่อนหน้า
 ui.shortcuts.print,พิมพ์
+ui.shortcuts.projectDoctor,ตรวจสุขภาพโปรเจกต์
+ui.shortcuts.projectReplace,ค้นหา/แทนที่ทั้งโปรเจกต์
 ui.shortcuts.quickNote,โน้ตด่วน
 ui.shortcuts.quickOpen,เปิดไฟล์ด่วน
 ui.shortcuts.readingMode,โหมดอ่าน
 ui.shortcuts.redo,ทำซ้ำ
+ui.shortcuts.reopenClosedTab,เปิดแท็บที่เพิ่งปิด
+ui.shortcuts.replace,แทนที่
+ui.shortcuts.revealActive,แสดงไฟล์ที่เปิดอยู่ในต้นไม้
 ui.shortcuts.save,บันทึก
 ui.shortcuts.saveAll,บันทึกทั้งหมด
 ui.shortcuts.saveAs,บันทึกเป็น…
@@ -5435,6 +5547,7 @@ ui.shortcuts.spNextElem,บทหนัง: element ถัดไป
 ui.shortcuts.spNote,บทหนัง: โน้ต
 ui.shortcuts.spParenthetical,บทหนัง: วงเล็บ
 ui.shortcuts.spPrevElem,บทหนัง: element ก่อนหน้า
+ui.shortcuts.sprint,จับเวลาเขียน
 ui.shortcuts.spShot,บทหนัง: ช็อต
 ui.shortcuts.spSwitchElem,บทหนัง: สลับชนิด element
 ui.shortcuts.spTransition,บทหนัง: ทรานซิชัน
@@ -5983,6 +6096,7 @@ ui.status.default,  (มาตรฐาน)
 ui.status.delStatus,"ลบสถานะ ""{0}"" ?"
 ui.status.delStatus2,ลบสถานะนี้
 ui.status.delStatusDone,ลบสถานะแล้ว: 
+ui.status.delStatusInUse,"ลบสถานะ ""{0}"" ? — มี {1} ฉากที่ยังใช้อยู่ (ฉากเหล่านั้นเก็บค่าเดิมไว้จนกว่าจะเปลี่ยนเอง)"
 ui.status.egEditSendDone,"เช่น รอแก้ไข, ส่งแล้ว"
 ui.status.export,ส่งออก…
 ui.status.exportSetStatusDone,ส่งออกชุดสถานะแล้ว: 
@@ -5995,6 +6109,7 @@ ui.status.nameStatusNew,ชื่อสถานะใหม่
 ui.status.notHasStatusDefine,ยังไม่มีสถานะที่กำหนดเอง
 ui.status.notHasStatusNew,ไม่มีสถานะใหม่ให้เพิ่ม (ซ้ำกับของเดิมทั้งหมด)
 ui.status.opened,เปิดโปรเจกต์: 
+ui.status.orphanOpt,{0} (ลบออกจากรายการแล้ว)
 ui.status.readSetStatusFile,อ่านชุดสถานะจากไฟล์ .json (รวมกับของเดิม ไม่ลบทิ้ง)
 ui.status.ready,พร้อม
 ui.status.recolorStatus,เปลี่ยนสีของสถานะนี้
@@ -6005,6 +6120,19 @@ ui.status.uiScale,ขนาด UI
 ui.status.versionRestored,กู้คืนเวอร์ชันแล้ว
 ui.status.zoom,ซูม
 ui.status.zoomReset,รีเซ็ตซูมแล้ว
+ui.tabs.closeOthers,ปิดแท็บอื่นทั้งหมด
+ui.tabs.closeRight,ปิดแท็บทางขวา
+ui.tabs.copyPath,คัดลอกที่อยู่ไฟล์
+ui.tabs.inBook,เล่ม {0}
+ui.tabs.inBookChapter,เล่ม {0} › บท {1}
+ui.tabs.overflowList,แท็บทั้งหมด
+ui.tabs.pathCopied,คัดลอกที่อยู่แล้ว: {0}
+ui.tabs.pin,ปักหมุดแท็บ
+ui.tabs.reopenNone,ไม่มีแท็บที่ปิดไปให้เปิดคืนแล้ว
+ui.tabs.revealInTree,แสดงในต้นไม้โปรเจกต์
+ui.tabs.revealNone,แท็บนี้ไม่มีไฟล์ในต้นไม้โปรเจกต์
+ui.tabs.revealNotFound,หาแถวของไฟล์นี้ในต้นไม้ไม่เจอ
+ui.tabs.unpin,เลิกปักหมุดแท็บ
 ui.tags.clickFilterExplorerShow,คลิกเพื่อกรอง Explorer → แสดงเฉพาะฉากที่มีแท็ก: 
 ui.tags.delTag,ลบแท็กนี้
 ui.tags.explorerShowOnlyScene, — Explorer แสดงเฉพาะฉากที่มีแท็กนี้
@@ -6096,6 +6224,7 @@ ui.tip.ai-chat-new,เริ่มเซสชันแชทกับ AI ให
 ui.tip.ai-chat-toggle,เปิดหรือปิดแผง AI ผู้ช่วยเขียน กดซ้ำเพื่อปิด
 ui.tip.ai-consistency,ให้ AI ตรวจว่าตัวละครพูดและทำตัวสม่ำเสมอกับข้อมูลใน Wiki และฉากก่อนหน้าหรือไม่
 ui.tip.ai-dialogue,ให้ AI ร่างบทสนทนาระหว่างตัวละครจากสถานการณ์ที่กำหนด แล้วนำไปแก้ต่อเอง
+ui.tip.ai-menu,เปิดเมนูรวมเครื่องมือ AI ทั้งหมด: AI Hub ผู้ช่วยเขียน แชท วิเคราะห์ และ Story Starter
 ui.tip.ai-plot,ให้ AI หาจุดที่เรื่องขัดกันหรือขาดเหตุผล (Plot Hole) พร้อมระบุฉากที่เกี่ยวข้อง
 ui.tip.ai-settings,ตั้งค่าผู้ให้บริการ AI คีย์ โมเดล และพารามิเตอร์ที่ทุกฟีเจอร์ AI ใช้ร่วมกัน
 ui.tip.ai-summary,ให้ AI สรุปเนื้อหาของทั้งโปรเจกต์ ใช้ทบทวนเรื่องหรือเตรียมเรื่องย่อ
@@ -6204,6 +6333,7 @@ ui.tip.new-entity:locations,สร้างหน้าสถานที่ใ�
 ui.tip.new-entity:lore,สร้างหน้าตำนานหรือความรู้ของโลกในเรื่องใน Wiki เช่น ประวัติศาสตร์ ศาสนา หรือกฎของเวทมนตร์
 ui.tip.new-from-template,สร้างโปรเจกต์ใหม่จากเทมเพลตที่วางโครงเรื่องและหมวด Wiki ไว้ให้แล้ว
 ui.tip.new-project,สร้างโปรเจกต์เปล่าในโฟลเดอร์ที่เลือก ไฟล์งานทั้งหมดเป็น .md และ .json ที่เปิดแก้นอกโปรแกรมได้
+ui.tip.next-tab,สลับไปแท็บถัดไปตามลำดับบนแถบแท็บ (ท้ายแถบวนกลับแท็บแรก)
 ui.tip.open-project,เปิดโฟลเดอร์โปรเจกต์ที่มีอยู่ (โฟลเดอร์ที่มีไฟล์ project.khn.json)
 ui.tip.open-project-path,เปิดโปรเจกต์จากรายการโปรเจกต์ล่าสุด
 ui.tip.page-guides,แสดงเส้นประบอกระยะขอบกระดาษทั้งสี่ด้าน ช่วยดูว่าข้อความจะอยู่ตรงไหนบนหน้าจริง
@@ -6264,6 +6394,7 @@ ui.tip.plNew,เริ่มกระดานเปล่าใบใหม่ 
 ui.tip.plOpen,สลับไปกระดานใบอื่นในโปรเจกต์นี้ ถ้ากระดานปัจจุบันยังไม่บันทึกจะถามก่อน
 ui.tip.plPng,ส่งออกกระดานเป็นรูป PNG ความละเอียดสองเท่า ครอบเฉพาะบริเวณที่มีของจริง
 ui.tip.plugin:k2test:hello,คำสั่งตัวอย่างของปลั๊กอินทดสอบ ใช้ยืนยันว่าระบบปลั๊กอินลงทะเบียนคำสั่งได้
+ui.tip.prev-tab,สลับไปแท็บก่อนหน้าตามลำดับบนแถบแท็บ (แท็บแรกวนไปแท็บท้าย)
 ui.tip.print,พิมพ์เอกสารที่เปิดอยู่ตามรูปแบบหน้ากระดาษที่ตั้งไว้ ถ้าเปิดการตรวจก่อนพิมพ์ไว้จะตรวจบทก่อน
 ui.tip.project-doctor,ตรวจว่าทะเบียนฉากตรงกับไฟล์จริง หาไฟล์กำพร้า ฉากที่ใช้ไฟล์ซ้ำกัน โฟลเดอร์ผี และหัวไฟล์ที่พัง แล้วซ่อมให้
 ui.tip.project-replace,แทนที่คำในเนื้อฉากและโน้ตทุกไฟล์ของโปรเจกต์ในครั้งเดียว ดูตัวอย่างก่อน และข้ามฉากที่ล็อกไว้
@@ -6275,7 +6406,10 @@ ui.tip.quick-open,ค้นหาไฟล์ในโปรเจกต์ด�
 ui.tip.read-book,อ่านทั้งเล่มต่อกันเป็นเอกสารเดียวแบบอ่านอย่างเดียว เหมาะกับการอ่านทวนภาพรวม
 ui.tip.reading-mode,เข้าโหมดอ่านเต็มจอ ซ่อนแถบเครื่องมือและแผงทั้งหมด เหลือแต่หน้ากระดาษ
 ui.tip.remove-elements,ลบบรรทัดทุกบรรทัดของ element ที่เลือกออกจากบทในครั้งเดียว เช่น ลบโน้ตทั้งหมดก่อนส่งบท ย้อนกลับได้
+ui.tip.reopen-closed-tab,เปิดเอกสารที่เพิ่งปิดไปกลับมาอีกครั้ง ย้อนได้ทีละแท็บตามลำดับที่ปิด
+ui.tip.replace,เปิดแถบค้นหาโดยไปยืนที่ช่องแทนที่เลย ใช้กับเอกสารที่เปิดอยู่ตอนนี้เท่านั้น
 ui.tip.reset-panels,คืนการจัดวางแผงทั้งหมดเป็นค่าเริ่มต้นของโปรแกรม ใช้เมื่อแผงหายหรือจัดจนสับสน
+ui.tip.reveal-active,เลื่อนต้นไม้โปรเจกต์ไปที่ไฟล์ที่เปิดอยู่ กางบท/เล่มที่พับไว้ให้ แล้วกะพริบแถวนั้น
 ui.tip.revert,ทิ้งการแก้ที่ยังไม่บันทึก แล้วโหลดเนื้อหาจากไฟล์ล่าสุดกลับมา
 ui.tip.roster,สร้างหน้ารายชื่อตัวละคร (Cast of Characters) ของเล่ม จากข้อมูลตัวละครใน Wiki
 ui.tip.save,บันทึกเอกสารในแท็บที่เปิดอยู่ลงไฟล์
@@ -6420,6 +6554,7 @@ ui.tip.zoom:-1,ย่อหน้ากระดาษลงหนึ่งข�
 ui.tip.zoom:0,คืนการซูมหน้ากระดาษเป็น 100%
 ui.tip.zoom:1,ขยายหน้ากระดาษให้ใหญ่ขึ้นหนึ่งขั้น ไม่เปลี่ยนขนาดฟอนต์จริงในไฟล์
 ui.tip.zoom:fit,ปรับซูมให้หน้ากระดาษกว้างพอดีกับพื้นที่เขียน
+ui.toolbar.ariaLabel,แถบเครื่องมือหลัก
 ui.toolbar.blockquote,คำพูดยกมา
 ui.toolbar.bold,ตัวหนา
 ui.toolbar.close,ปิด
@@ -6435,6 +6570,10 @@ ui.toolbar.heading6,หัวข้อ 6
 ui.toolbar.italic,ตัวเอียง
 ui.toolbar.kanban,Kanban ตามสถานะ
 ui.toolbar.normalText,ข้อความปกติ
+ui.toolbar.overflowHidden,— ซ่อนไว้ —
+ui.toolbar.overflowMore,— ล้นแถบ —
+ui.toolbar.overflowTip,ปุ่มที่ล้นแถบเมื่อหน้าต่างแคบ และปุ่มที่ซ่อนไว้ในตั้งค่า — กดใช้ได้จากเมนูนี้ทันที
+ui.toolbar.overflowTitle,ปุ่มเพิ่มเติม
 ui.toolbar.paperMode,โหมดหน้ากระดาษ
 ui.toolbar.plugins,คำสั่งจากปลั๊กอิน
 ui.toolbar.quote,คำพูดยกมา
@@ -6459,6 +6598,7 @@ ui.trash.recoverRestoreImageDone,กู้คืนรูปแล้ว
 ui.trash.restoredChapterRebuilt,กู้คืนฉากแล้ว — บทเดิมถูกลบไปแล้ว จึงสร้างบท “{0}” กลับมาให้
 ui.trash.restoredRenamed,กู้คืนแล้ว — ชื่อเดิมมีอยู่แล้ว จึงบันทึกเป็น “{0}”
 ui.trash.revealInFolder,เปิดในโฟลเดอร์
+ui.tree.addSceneHere,+ ฉาก
 ui.tree.clipEmpty,ยังไม่ได้คัดลอกอะไรไว้
 ui.tree.confirmDeleteN,ย้าย {0} รายการที่เลือกไปถังขยะ?
 ui.tree.confirmEmptyTrash,ลบของในถังขยะทั้งหมด {0} รายการถาวร? กู้คืนไม่ได้
@@ -6476,6 +6616,7 @@ ui.tree.draftSwitched,"สลับไปฉบับร่าง ""{0}"" แล
 ui.tree.duplicate,ทำซ้ำ
 ui.tree.duplicatedN,ทำซ้ำแล้ว {0} รายการ
 ui.tree.duplicateFail,ทำสำเนาไม่สำเร็จ
+ui.tree.dupSkipUnsaved,ไม่ได้ทำสำเนา {0} — ยังบันทึกงานค้างของต้นฉบับไม่สำเร็จ
 ui.tree.emptiedTrash,ล้างถังขยะแล้ว {0} รายการ
 ui.tree.emptyTrashN,ล้างถังขยะ ({0})
 ui.tree.failedN,ไม่สำเร็จ {0} รายการ
@@ -6488,6 +6629,7 @@ ui.tree.pasteFail,วางไม่สำเร็จ
 ui.tree.pasteWhere,วางลงบทไหน
 ui.tree.pickChapterFirst,เลือกบทปลายทางก่อน
 ui.tree.purgeNowByDays,ล้างของเก่าตามจำนวนวันที่ตั้งไว้
+ui.tree.renameInlineSceneOnly,F2 เปลี่ยนชื่อในแถวได้เฉพาะฉาก — แถวอื่นใช้เมนูคลิกขวา → เปลี่ยนชื่อ
 ui.tree.selectedCount,เลือกไว้ {0} รายการ
 ui.tree.skipCrossDraft,ข้าม {0} รายการ (ย้ายข้ามฉบับร่างไม่ได้)
 ui.tree.snapCountFail,นับจำนวนเวอร์ชันไม่สำเร็จ
@@ -6495,6 +6637,7 @@ ui.tree.trashEmptyAlready,ถังขยะว่างอยู่แล้ว
 ui.tree.trashSettings,ตั้งเวลาล้างถังขยะ (ตั้งค่าโปรเจกต์)
 ui.tree.versionCount,มี {0} เวอร์ชันเก็บไว้
 ui.treeAct.backNormalScene,กลับเป็นฉากปกติ
+ui.treeAct.backupCancelledUnsaved,ยกเลิกการสำรอง {0} — ยังมีงานที่บันทึกไม่ได้
 ui.treeAct.backupDone,สำรอง “{0}” แล้ว
 ui.treeAct.backupFail,สำรองไม่สำเร็จ
 ui.treeAct.boardLocked,กระดานนี้ถูกล็อกอยู่ — ปลดล็อกที่ Explorer ก่อนแก้
@@ -6506,6 +6649,7 @@ ui.treeAct.clearColor,ไม่มีสี
 ui.treeAct.clearStatus,ไม่ระบุสถานะ
 ui.treeAct.clipEmpty,ยังไม่ได้คัดลอกอะไรที่วางตรงนี้ได้
 ui.treeAct.copied,คัดลอก “{0}” แล้ว — คลิกขวาตรงที่ต้องการแล้วเลือก วาง
+ui.treeAct.copyCancelledUnsaved,ยกเลิกการคัดลอก — {0} ยังมีงานที่บันทึกไม่ได้
 ui.treeAct.copySuffix,(สำเนา)
 ui.treeAct.crossDraftSkipped,ข้าม {0} ฉากที่อยู่คนละฉบับร่าง
 ui.treeAct.duplicated,ทำสำเนา “{0}” แล้ว
@@ -6532,6 +6676,7 @@ ui.treeAct.movedChapter,ย้ายบท “{0}” ไปที่ “{1}” �
 ui.treeAct.nameTaken,มีไฟล์ชื่อนี้อยู่แล้ว
 ui.treeAct.noBackups,ยังไม่มีชุดสำรองของ “{0}”
 ui.treeAct.noOtherBook,ยังไม่มีเล่มอื่นให้ย้ายไป
+ui.treeAct.openCopy,เปิดสำเนา
 ui.treeAct.pasted,วาง “{0}” แล้ว
 ui.treeAct.pinMissing,(ไม่พบแล้ว)
 ui.treeAct.pinOff,เอาหมุด “{0}” ออกแล้ว
@@ -6570,14 +6715,17 @@ ui.treeMenu.bookFromChapter,สร้างเล่มจากบทนี้
 ui.treeMenu.branchPanel,แผงแตกสาย
 ui.treeMenu.castOfCharacters,รายชื่อตัวละคร (Cast of Characters)
 ui.treeMenu.chapterFromScenes,สร้างบทจากฉากที่เลือก
+ui.treeMenu.collapseAll,พับทั้งหมด
 ui.treeMenu.color,สี
 ui.treeMenu.comment,คอมเมนต์
 ui.treeMenu.compare,เทียบกับแผนอื่น…
 ui.treeMenu.compareVersion,เทียบเวอร์ชัน…
 ui.treeMenu.copy,คัดลอก (Copy)
+ui.treeMenu.copyPath,คัดลอกที่อยู่บนดิสก์
 ui.treeMenu.dashboard,Dashboard
 ui.treeMenu.delete,ลบ (ย้ายลงถังขยะ)
 ui.treeMenu.duplicate,ทำสำเนา (Duplicate)
+ui.treeMenu.expandAll,กางทั้งหมด
 ui.treeMenu.importImage,นำเข้ารูป (Import)…
 ui.treeMenu.insert,แทรกในฉากที่เปิดอยู่
 ui.treeMenu.journal,บันทึกประจำวัน
@@ -6608,6 +6756,8 @@ ui.treeMenu.quickOpen,ค้นหาไฟล์ด่วน
 ui.treeMenu.readBook,อ่านทั้งเล่ม
 ui.treeMenu.readChapter,อ่านทั้งบท
 ui.treeMenu.readScene,อ่านฉาก
+ui.treeMenu.refresh,รีเฟรชรายการ
+ui.treeMenu.refreshed,อ่านรายการจากดิสก์ใหม่แล้ว
 ui.treeMenu.rename,เปลี่ยนชื่อ
 ui.treeMenu.renameProject,เปลี่ยนชื่อ
 ui.treeMenu.reorder,เปลี่ยนลำดับ…
@@ -6892,6 +7042,7 @@ ui.xhub.pdfToc,สารบัญ (bookmark)
 ui.xhub.pdfWm,ลายน้ำ
 ui.xhub.pdfWmHint,ว่าง = ไม่ใส่ลายน้ำ
 ui.xhub.previewIsPlain,ช่องตัวอย่างแสดงเป็นข้อความล้วน — ไฟล์จริงจะมีรูปแบบครบ
+ui.xhub.revealFile,เปิดโฟลเดอร์
 ui.xhub.rtfFontPt,ขนาดฟอนต์ (pt)
 ui.xhub.rtfOpts,ตัวเลือก RTF
 ui.xhub.saveCfgFail,จำค่าส่งออกไม่สำเร็จ
@@ -6899,6 +7050,7 @@ ui.xhub.scope,ขอบเขต
 ui.xhub.scopeDraft,ฉบับร่างทั้งเล่ม
 ui.xhub.scopeTab,ฉาก/บทที่เปิดอยู่
 ui.xhub.title,ส่งออก
+ui.xhub.untitledBook,ไม่มีชื่อเรื่อง
 ui.xhub.wfAuto,เลือกให้อัตโนมัติตามรูปแบบ
 ui.xname.askPresetName,ตั้งชื่อพรีเซ็ตนี้ว่าอะไร
 ui.xname.ctxFail,อ่านบริบทของโค้ดสั้นสำหรับชื่อไฟล์ไม่สำเร็จ

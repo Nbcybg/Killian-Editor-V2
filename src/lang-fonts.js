@@ -103,7 +103,7 @@ export function projectFontFaceCss(files, urlOf) {
  */
 export const SYSTEM_THAI_FONTS = [
   { family: 'Thonburi',       label: t('ui.fonts.thonburiMacNoFloat') },
-  { family: 'Leelawadee UI',  label: 'Leelawadee UI (Windows)' },
+  { family: 'Leelawadee UI',  label: t('ui.fonts.leelawadeeWin') },
   { family: 'TH Sarabun New', label: t('ui.fonts.tHSarabunNew') },
   { family: 'Ayuthaya',       label: t('ui.fonts.ayuthayaMacFloat') },
 ];

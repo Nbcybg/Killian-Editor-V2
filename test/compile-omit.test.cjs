@@ -293,5 +293,22 @@ check('cloneWorkflow เติมขั้นตอนที่พรีเซ�
         /<!--pagebreak-->/.test(md), JSON.stringify(md.slice(0, 120)));
 }
 
+// ── [alpha.160 · P1-6] ส่งออก .md = ยังเป็นมาร์กดาวน์: align อยู่ครบ · ตัวคั่นหน้า = <!--pagebreak--> ไม่ใช่ \f ──
+{
+  const m6 = { title: 'ทดสอบ', author: '', chapters: [
+    { title: 'บทที่ 1', scenes: [{ title: 'ก', format: 'prose', body: '<!--align:center-->\nกึ่งกลาง160\n\nปกติ', words: 2 }] },
+    { title: 'บทที่ 2', scenes: [{ title: 'ข', format: 'prose', body: '<!--align:right-->\nชิดขวา160', words: 1 }] }] };
+  const steps = [CP.mkStep('page-break')];
+  const md = CP.runWorkflow(m6, { id: 'p6', name: 'p6', ext: 'md', steps }).text;
+  check('[160-P1-6] ★ .md ไม่มี form-feed (\\f) กลางไฟล์', !md.includes('\f'), JSON.stringify(md));
+  check('[160-P1-6] ★ .md เก็บ <!--align:x--> ครบทุกบรรทัด',
+        /<!--align:center-->/.test(md) && /<!--align:right-->/.test(md), JSON.stringify(md));
+  check('[160-P1-6] ★ .md ขึ้นหน้าใหม่ระหว่างบท = <!--pagebreak--> (ตัวเดียวกับที่ตัวแก้ไขเขียน)',
+        /<!--pagebreak-->/.test(md), JSON.stringify(md));
+  const txt = CP.runWorkflow(m6, { id: 'p6t', name: 'p6t', ext: 'txt', steps }).text;
+  check('[160-P1-6] .txt ยังเป็นต้นฉบับแบน (ไม่มี align · ขึ้นหน้าด้วย \\f)',
+        !/align:/.test(txt) && txt.includes('\f') && !/pagebreak/.test(txt), JSON.stringify(txt));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

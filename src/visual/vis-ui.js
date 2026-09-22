@@ -84,7 +84,7 @@ export async function openVisual(scenePath, sceneTitle) {
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', gi('film') + ' ' + (sceneTitle || t('ui.vis.title'))));
-  const x = el('span', 'tab-x', '×');
+  const x = el('span', 'tab-x', gi('times'));
   tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const tab = { file: key, title: gi('film') + ' ' + (sceneTitle || t('ui.vis.title')), pane, tabBtn,
@@ -348,7 +348,7 @@ async function fieldFor(st, i, res, key, names) {
       box.append(el('div', 'vis-noimg', t('ui.vis.noImage')));
     }
     const tools = el('div', 'vis-img-tools');
-    const pick = el('button', 'vis-mini vis-pick', row.image ? gi('swap-lr') : '＋');
+    const pick = el('button', 'vis-mini vis-pick', row.image ? gi('swap-lr') : gi('plus-full'));
     pick.title = t('ui.vis.pickImage');
     pick.onclick = async () => {
       const got = await pickImage(state.root);
@@ -382,7 +382,7 @@ async function fieldFor(st, i, res, key, names) {
         if (showLn) one.append(el('span', 'vis-lineno', String(p.idx + 1)));
         one.append(el('span', 'vis-text-body', VC.displayText(p.text)));
         if (p.status === 'changed') {
-          const b = el('button', 'vis-mini vis-sync', '⟳');
+          const b = el('button', 'vis-mini vis-sync', gi('sync'));
           b.title = t('ui.vis.statusChanged');
           b.onclick = async () => { VC.syncRow(row, res); await saveRows(st); await renderVisual(st.key); };
           one.append(el('span', 'vis-tag vis-tag-changed', t('ui.vis.statusChangedTag')), b);
@@ -493,7 +493,7 @@ export function pickLinesDialog(st, rowIdx) {
       btns.append(all);
     }
     const ok = el('button', 'k-ok', edit ? t('ui.common.save') : t('ui.vis.addSelected'));
-    const cancel = el('button', null, t('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', t('ui.common.cancel'));
     btns.append(ok, cancel);
     box.append(btns);
     ov.append(box);

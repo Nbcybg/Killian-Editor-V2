@@ -10,11 +10,13 @@ import { t } from '../i18n.js';
 export const KANBAN_VERSION = 1;
 const KEY = 'k2-kanban-layout';
 export const UNSET = '__unset__';                 // คอลัมน์ของฉากที่ยังไม่กำหนดสถานะ
+/* i18n-skip: คอลัมน์ = ค่าสถานะฉากที่เก็บใน scenes.json (อ่านกลับด้วยค่าเดิม) */
 export const UNSET_LABEL = 'ยังไม่กำหนด';
 
 // สถานะมาตรฐาน — สำเนาไว้ที่นี่เพื่อให้โมดูลบริสุทธิ์ (core.js แตะ DOM ไม่ได้ในเทส)
 // ผู้เรียกจริงส่ง allStatuses() จาก custom-status.js เข้ามาแทนได้
 export const DEFAULT_STATUSES = ['โครงร่าง', 'กำลังเขียน', 'เขียนเสร็จ', 'ตรวจแล้ว', 'เก็บถาวร'];
+/* /i18n-skip */
 
 // ───────── เลย์เอาต์กระดาน ─────────
 export function newLayout() {

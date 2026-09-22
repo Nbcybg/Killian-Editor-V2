@@ -20,7 +20,9 @@
 //  16  ลากย้ายทางเลือกข้ามฉาก + ปุ่มรวมทางเลือกที่ซ้ำกัน
 //  17  ช่องค้นหา — เน้นที่ตรง จางที่เหลือ
 import { tf } from './i18n.js';
-import { $, el, state, setStatus, log, t, SCENE_COLORS } from './core.js';
+import { themeColor, PRINT } from './palette.js';   // [alpha.162 · W6 ข้อ 2]
+import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
+import { $, el, state, setStatus, setStatusError, log, t, SCENE_COLORS } from './core.js';
 // [alpha.73 ข้อ 5] หลายแผนต่อหนึ่งโปรเจกต์ — ตรรกะแผนอยู่ใน branch-plans.js (บริสุทธิ์ · มี unit test)
 import { BRANCH_PLAN_DIR, newBranchPlan, normalizeBranchPlan, planFromState, planDirty,
          planNameFromFile, safePlanName, sortPlans, uniquePlanName, planSummary,
@@ -48,17 +50,19 @@ const PATH_LIMIT = 12;                 // แสดงในแผงขวา�
 const PATH_MAX = 400;                  // เพดานตอนกดดูทั้งหมด (กันเรื่องใหญ่ระเบิด)
 
 // ───────── i18n (ข้อ 11) — ทุกสตริงมีคีย์ ค่าเริ่มต้นเป็นไทยเหมือนเดิม ─────────
-const tr = (key, fb) => t('branch.' + key, fb);
+// [alpha.162 · W6 ข้อ 6] ไม่มีค่าสำรอง — `t()` ไม่รับอาร์กิวเมนต์ที่สองมาตั้งแต่ .77 (ของเดิมเป็นโค้ดตายที่หลอกคนอ่าน)
+// คีย์ที่ประกอบตอนรันต้องมีจริงทุกตัว (เทส ui-audit [162-W6] ไล่ทุก tr('…') เทียบไฟล์ภาษา)
+const tr = (key) => t('branch.' + key);
 const summaryLabels = () => ({
-  scenes: tr('sumScenes', t('ui.common.sceneGraph')), choices: tr('sumChoices', t('ui.common.choice')),
-  roots: tr('sumRoots', t('ui.common.dotStart')), endings: tr('sumEndings', t('ui.common.actEnd')),
+  scenes: tr('sumScenes'), choices: tr('sumChoices'),
+  roots: tr('sumRoots'), endings: tr('sumEndings'),
 });
 const exportLabels = () => ({
   ...summaryLabels(),
-  title: tr('title', t('ui.common.graphBreakBranch')), open: tr('openEnd', t('ui.common.notSpecifyTo2')),
-  gone: tr('goneScene', t('ui.common.sceneFind')), loop: tr('loopBack', t('ui.common.back')),
-  root: tr('roleRoot', t('ui.common.dotStart')), ending: tr('roleEnd', t('ui.common.actEnd')),
-  empty: tr('emptyGraph', t('ui.common.notHasSceneHas')),
+  title: tr('title'), open: tr('openEnd'),
+  gone: tr('goneScene'), loop: tr('loopBack'),
+  root: tr('roleRoot'), ending: tr('roleEnd'),
+  empty: tr('emptyGraph'),
 });
 
 // สถานะของหน้านี้ (จำระหว่าง re-render — ไม่ต้องเลือกโหนดใหม่ทุกครั้งที่แก้ทางเลือก)
@@ -321,7 +325,7 @@ export async function comparePlanDialog() {
     if (!rows.length) { body.append(E('div', 'dim', t('ui.branch.twoPlanNotHas'))); return; }
     for (const r of rows) {
       const line = E('div', 'branch-cmp-row' + (r.same ? ' same' : ''));
-      line.append(E('div', 'branch-cmp-title', (r.same ? '=' : '≠') + ' ' + r.title));
+      line.append(E('div', 'branch-cmp-title', (r.same ? '=' : gi('not-equal')) + ' ' + r.title));
       line.append(E('div', 'branch-cmp-side', (r.a.join(' · ') || '—')));
       line.append(E('div', 'branch-cmp-side', (r.b.join(' · ') || '—')));
       body.append(line);
@@ -426,13 +430,13 @@ export async function loadSceneBodies(scenes) {
  * ถ้ามันบังเอิญไปซ้อนเป็นแท็บร่วมกับแผงอื่นอยู่ จะ "เปิดคู่" แล้วไม่เห็นอะไรเปลี่ยนเลย
  */
 async function openSceneFromGraph(node, split) {
-  if (!node.filePath) { setStatus(tr('noFile', t('ui.common.sceneNotHasFile'))); return; }
+  if (!node.filePath) { setStatus(tr('noFile')); return; }
   const { openScene } = await import('./app.js');
   await openScene(node.filePath, node.title);
   if (!split) return;
   const { showPanel } = await import('./panels/panel-ui.js');
   showPanel('branch', { targetId: 'docs', side: 'left', forceMove: true });
-  setStatus(tr('splitDone', t('ui.branch.splitScreenDoneGraph')));
+  setStatus(tr('splitDone'));
 }
 
 // ───────── ตัวช่วยเรขาคณิตของเส้นเชื่อม (ข้อ 6: ป้ายอยู่กึ่งกลางเส้นจริง) ─────────
@@ -502,7 +506,7 @@ export async function renderBranchingTree(pane, opts = {}) {
   // ───────── หัวเรื่อง + แถบเครื่องมือ ─────────
   const head = el('div', 'branch-head');
   const titleRow = el('div', 'branch-title-row');
-  titleRow.append(el('div', 'branch-title', gi('branch') + ' ' + tr('titleFull', t('ui.branch.graphBreakBranchNon'))));
+  titleRow.append(el('div', 'branch-title', gi('branch') + ' ' + tr('titleFull')));
 
   const tools = el('div', 'branch-tools');
 
@@ -532,7 +536,7 @@ export async function renderBranchingTree(pane, opts = {}) {
     if (!planState.path) { setStatus(t('ui.branch.cantOpenPlanPress')); return; }
     await saveBranchPlan(); await fillPlans();
   };
-  const bSaveAs = el('button', 'branch-zbtn', gi('save') + '+');
+  const bSaveAs = el('button', 'branch-zbtn', gi('save') + gi('plus'));   // [alpha.162 · W2] ไอคอนจากทะเบียน
   bSaveAs.title = t('ui.branch.saveNewPlanCoverLayout');
   bSaveAs.onclick = async () => {
     const { ask } = await import('./ui.js');
@@ -542,7 +546,7 @@ export async function renderBranchingTree(pane, opts = {}) {
     const { refreshTreeQueued } = await import('./app.js');
     await refreshTreeQueued();
   };
-  const bNew = el('button', 'branch-zbtn', '＋');
+  const bNew = el('button', 'branch-zbtn', gi('plus'));   // [alpha.162 · W2]
   bNew.title = t('ui.branch.newNewPlanStartLayout');
   bNew.onclick = async () => {
     const { ask } = await import('./ui.js');
@@ -567,8 +571,8 @@ export async function renderBranchingTree(pane, opts = {}) {
   fillPlans();
 
   const viewTog = el('div', 'branch-viewtog');
-  const bTree = el('button', 'branch-viewbtn' + (bs.view === 'tree' ? ' on' : ''), gi('tree') + ' ' + tr('viewTree', t('ui.branch.graph')));
-  const bList = el('button', 'branch-viewbtn' + (bs.view === 'list' ? ' on' : ''), gi('menu') + ' ' + tr('viewList', t('ui.common.list2')));
+  const bTree = el('button', 'branch-viewbtn' + (bs.view === 'tree' ? ' on' : ''), gi('tree') + ' ' + tr('viewTree'));
+  const bList = el('button', 'branch-viewbtn' + (bs.view === 'list' ? ' on' : ''), gi('menu') + ' ' + tr('viewList'));
   bTree.onclick = () => { bs.view = 'tree'; redrawUi(); };
   bList.onclick = () => { bs.view = 'list'; redrawUi(); };
   viewTog.append(bTree, bList);
@@ -579,8 +583,8 @@ export async function renderBranchingTree(pane, opts = {}) {
   const findInp = el('input', 'branch-find-inp');
   findInp.type = 'search';
   findInp.value = bs.query || '';
-  findInp.placeholder = tr('findPlaceholder', t('ui.branch.searchNameSceneChoice'));   // [157r] ไม่มีอีโมจิในช่องกรอก (placeholder วางไอคอนเส้นไม่ได้)
-  findInp.title = tr('findHint', t('ui.branch.printOnlySceneAt'));
+  findInp.placeholder = tr('findPlaceholder');   // [157r] ไม่มีอีโมจิในช่องกรอก (placeholder วางไอคอนเส้นไม่ได้)
+  findInp.title = tr('findHint');
   let findJob = null;
   findInp.oninput = () => {
     clearTimeout(findJob);
@@ -598,10 +602,10 @@ export async function renderBranchingTree(pane, opts = {}) {
   tools.append(findWrap);
 
   if (bs.view === 'tree') {
-    const zOut = el('button', 'branch-zbtn', '−'); zOut.title = tr('zoomOut', t('ui.branch.collapseGraph'));
+    const zOut = el('button', 'branch-zbtn', gi('minus')); zOut.title = tr('zoomOut');
     const zLbl = el('span', 'branch-zlabel', Math.round(bs.zoom * 100) + '%');
-    const zIn = el('button', 'branch-zbtn', '+'); zIn.title = tr('zoomIn', t('ui.branch.expandGraph'));
-    const zFit = el('button', 'branch-zbtn', '⤢'); zFit.title = tr('zoomFit', t('ui.branch.fitScreen'));
+    const zIn = el('button', 'branch-zbtn', '+'); zIn.title = tr('zoomIn');
+    const zFit = el('button', 'branch-zbtn', gi('maximize')); zFit.title = tr('zoomFit');
     zOut.onclick = () => { bs.zoom = Math.max(ZOOM_MIN, +(bs.zoom - 0.15).toFixed(2)); redrawUi(); };
     zIn.onclick = () => { bs.zoom = Math.min(ZOOM_MAX, +(bs.zoom + 0.15).toFixed(2)); redrawUi(); };
     zFit.onclick = () => {
@@ -613,11 +617,11 @@ export async function renderBranchingTree(pane, opts = {}) {
     tools.append(zOut, zLbl, zIn, zFit);
 
     // จัดผังใหม่ = ลืมตำแหน่งที่ลากเอง (ข้อ 6)
-    const relayout = el('button', 'branch-zbtn', '⟲');
-    relayout.title = tr('relayout', t('ui.branch.arrangeGraphNewAuto'));
+    const relayout = el('button', 'branch-zbtn', gi('rotate-ccw'));
+    relayout.title = tr('relayout');
     relayout.onclick = () => {
       clearNodePositions();
-      setStatus(tr('relayoutDone', t('ui.branch.arrangeGraphNewDone')));
+      setStatus(tr('relayoutDone'));
       redrawUi();
     };
     tools.append(relayout);
@@ -625,7 +629,7 @@ export async function renderBranchingTree(pane, opts = {}) {
 
   // ---- โหมดทดลองเล่น (ข้อ 9) ----
   const playB = el('button', 'branch-zbtn branch-play', gi('play-e'));
-  playB.title = tr('playHint', t('ui.branch.trialPlayReadStory'));
+  playB.title = tr('playHint');
   playB.onclick = async () => {
     const { openPlayerMode } = await import('./player-mode.js');
     await openPlayerMode(bs.sel || null);
@@ -634,7 +638,7 @@ export async function renderBranchingTree(pane, opts = {}) {
 
   // ---- ส่งออก (ข้อ 7+10) ----
   const expB = el('button', 'branch-zbtn branch-export', gi('export'));
-  expB.title = tr('exportHint', t('ui.branch.exportGraphHTMLMarkdown'));
+  expB.title = tr('exportHint');
   expB.onclick = (ev) => openExportMenu(ev, graph, analysis, pane);
   tools.append(expB);
 
@@ -642,24 +646,24 @@ export async function renderBranchingTree(pane, opts = {}) {
   const dupN = countDuplicateChoices(graph);
   if (dupN) {
     const mergeB = el('button', 'branch-zbtn branch-dup', gi('broom') + dupN);
-    mergeB.title = tr('mergeDupHint', t('ui.branch.mergeChoiceDup')) + ` (${dupN})`;
+    mergeB.title = tr('mergeDupHint') + ` (${dupN})`;
     mergeB.onclick = () => mergeAllDuplicates(graph, redraw);
     tools.append(mergeB);
   }
 
   // สแกนทั้งโปรเจกต์: อ่านทุกฉากหา [ข้อความ] ที่ยังไม่ได้ผูกเป็นทางเลือก (ข้อ 15 เดิม)
   const scanB = el('button', 'branch-zbtn', gi('search-plus'));
-  scanB.title = tr('scanHint', t('ui.branch.scanAllSceneFind'));
+  scanB.title = tr('scanHint');
   scanB.onclick = () => scanAllScenes(scenes, redraw);
   tools.append(scanB);
 
   const refreshB = el('button', 'branch-zbtn', gi('refresh'));
-  refreshB.title = tr('reload', t('ui.branch.readScenesJsonNew'));
+  refreshB.title = tr('reload');
   refreshB.onclick = () => redraw();
   tools.append(refreshB);
 
   const sideTog = el('button', 'branch-zbtn', bs.sideOpen ? gi('play') : gi('chevron-left'));
-  sideTog.title = bs.sideOpen ? tr('hideSide', t('ui.branch.hidePanelChoice')) : tr('showSide', t('ui.branch.showPanelChoice'));
+  sideTog.title = bs.sideOpen ? tr('hideSide') : tr('showSide');
   sideTog.onclick = () => { bs.sideOpen = !bs.sideOpen; redrawUi(); };
   tools.append(sideTog);
 
@@ -678,15 +682,15 @@ export async function renderBranchingTree(pane, opts = {}) {
   };
   const brokeN = analysis.dangling.filter((e) => e.to).length;      // ชี้ไปฉากที่ไม่มีแล้ว
   const openN = analysis.dangling.length - brokeN;                  // ยังไม่ได้ระบุปลายทาง
-  if (openN) addWarn('bw-open', gi('warning') + ` ${openN} ${tr('warnOpen', t('ui.branch.choiceNotSpecifyTo2'))}`);
+  if (openN) addWarn('bw-open', gi('warning') + ` ${openN} ${tr('warnOpen')}`);
   if (brokeN) {
-    const b = addWarn('bw-lost', gi('heart-broken') + ` ${brokeN} ${tr('warnBroken', t('ui.branch.choicePointSceneNot'))}`);
+    const b = addWarn('bw-lost', gi('heart-broken') + ` ${brokeN} ${tr('warnBroken')}`);
     b.classList.add('branch-badge-btn');
     b.onclick = () => showBrokenDialog(graph, analysis, bs, redraw, redrawUi);
   }
-  if (analysis.unreachable.length) addWarn('bw-lost', gi('block') + ` ${analysis.unreachable.length} ${tr('warnLost', t('ui.branch.sceneNotTo'))}`);
-  if (analysis.cycles.length) addWarn('bw-loop', gi('repeat') + ` ${analysis.cycles.length} ${tr('warnLoop', t('ui.branch.sceneDup'))}`);
-  if (analysis.endings.length) addWarn('bw-end', gi('flag-checkered') + ` ${analysis.endings.length} ${tr('sumEndings', t('ui.common.actEnd'))}`);
+  if (analysis.unreachable.length) addWarn('bw-lost', gi('block') + ` ${analysis.unreachable.length} ${tr('warnLost')}`);
+  if (analysis.cycles.length) addWarn('bw-loop', gi('repeat') + ` ${analysis.cycles.length} ${tr('warnLoop')}`);
+  if (analysis.endings.length) addWarn('bw-end', gi('flag-checkered') + ` ${analysis.endings.length} ${tr('sumEndings')}`);
   if (warn.childNodes.length) wrap.append(warn);
 
   // ───────── (ข้อ 2) แถบ "เพิ่มทางเลือก" ขึ้นมาอยู่บนสุด — ทางเข้าต้องมาก่อนผลลัพธ์ ─────────
@@ -694,7 +698,7 @@ export async function renderBranchingTree(pane, opts = {}) {
 
   if (!analysis.total) {
     wrap.append(el('div', 'branch-empty dim',
-      tr('emptyHint', t('ui.branch.notHasSceneHas'))));
+      tr('emptyHint')));
   }
 
   // ───────── มุมมองผัง (SVG เส้น + กล่อง HTML) ─────────
@@ -757,7 +761,9 @@ export async function renderBranchingTree(pane, opts = {}) {
       }
       return id;
     };
-    markerFor('#98958b'); markerFor('#d97757');
+    // [alpha.162 · W6 ข้อ 2] สีเส้นบนจอตามธีม (เดิมเลข hex ตายตัว = ธีมสว่างยังได้เส้นสีของธีมมืด)
+    const edgeCol = themeColor('--dim', '#98958b'), edgeHot = themeColor('--accent-hi', '#d97757');
+    markerFor(edgeCol); markerFor(edgeHot);
     svg.append(defs);
 
     for (const e of graph.edges) {
@@ -767,7 +773,7 @@ export async function renderBranchingTree(pane, opts = {}) {
       const g = edgeGeom(a, b);
       const onPath = hi.edges.has(edgeKey(e.from, e.to));
       const hot = bs.sel === e.from || bs.sel === e.to;
-      const color = e.color || (onPath || hot ? '#d97757' : '#98958b');
+      const color = e.color || (onPath || hot ? edgeHot : edgeCol);
       const path = svgEl('path', {
         d: g.d,
         class: 'branch-edge' + (g.back ? ' branch-edge-back' : '')
@@ -775,7 +781,7 @@ export async function renderBranchingTree(pane, opts = {}) {
         'marker-end': `url(#${markerFor(color)})`,
       });
       if (e.color) path.style.stroke = e.color;
-      const tt = svgEl('title'); tt.textContent = e.text || tr('sumChoices', t('ui.common.choice'));
+      const tt = svgEl('title'); tt.textContent = e.text || tr('sumChoices');
       path.append(tt);
       svg.append(path);
 
@@ -790,7 +796,7 @@ export async function renderBranchingTree(pane, opts = {}) {
         label.textContent = shortText(e.text, 18);
         if (e.color) label.style.fill = e.color;
         const lt = svgEl('title');
-        lt.textContent = `[${e.text}] — ` + tr('labelClick', t('ui.branch.clickOpenSceneFrom'));
+        lt.textContent = `[${e.text}] — ` + tr('labelClick');
         gsub.append(rect, label);
         gsub.append(lt);
         gsub.addEventListener('click', () => {
@@ -852,18 +858,18 @@ export async function renderBranchingTree(pane, opts = {}) {
       box.append(el('div', 'branch-node-name', icon + n.title));
       const meta = el('div', 'branch-node-meta');
       meta.append(el('span', 'branch-node-ch', n.chapterName || '—'));
-      if (n.choices.length) meta.append(el('span', 'branch-node-count', '⤷ ' + n.choices.length));
+      if (n.choices.length) meta.append(el('span', 'branch-node-count', (gi('subdirectory-right') + ' ') + n.choices.length));
       box.append(meta);
 
       box.title = [
         n.title,
-        n.chapterName ? tr('chapterOf', t('ui.common.chapter2')) + n.chapterName : '',
-        tr('choiceCount', t('ui.branch.choice2')) + n.choices.length,
-        rootSet.has(n.id) ? gi('play') + ' ' + tr('roleRoot', t('ui.common.dotStart')) : '',
-        endSet.has(n.id) ? gi('flag-checkered') + ' ' + tr('roleEndFull', t('ui.branch.actEndNotHas')) : '',
-        cycleSet.has(n.id) ? gi('repeat') + ' ' + tr('roleLoop', t('ui.branch.dup2')) : '',
-        unreachSet.has(n.id) ? gi('block') + ' ' + tr('roleLost', t('ui.branch.dotStartNotTo')) : '',
-        tr('nodeHelp', t('ui.branch.clickPickDragMove')),
+        n.chapterName ? tr('chapterOf') + n.chapterName : '',
+        tr('choiceCount') + n.choices.length,
+        rootSet.has(n.id) ? gi('play') + ' ' + tr('roleRoot') : '',
+        endSet.has(n.id) ? gi('flag-checkered') + ' ' + tr('roleEndFull') : '',
+        cycleSet.has(n.id) ? gi('repeat') + ' ' + tr('roleLoop') : '',
+        unreachSet.has(n.id) ? gi('block') + ' ' + tr('roleLost') : '',
+        tr('nodeHelp'),
       ].filter(Boolean).join('\n');
 
       box.ondblclick = () => openSceneFromGraph(n, false);
@@ -908,16 +914,16 @@ export async function renderBranchingTree(pane, opts = {}) {
       n.choices.forEach((c, idx) => {
         const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
         const row = el('div', 'branch-choice' + (target ? '' : ' branch-choice-open'),
-                       gi('arrowhead') + ' ' + (c.text || tr('sumChoices', t('ui.common.choice'))));
+                       gi('arrowhead') + ' ' + (c.text || tr('sumChoices')));
         if (c.color) row.style.color = c.color;
-        row.title = tr('goTo', t('ui.branch.msg2')) + (target ? target.title : tr('openEndParen', t('ui.common.notSpecifyTo')));
+        row.title = tr('goTo') + (target ? target.title : tr('openEndParen'));
         if (target) row.onclick = async () => {
           const { recordChoice } = await import('./player-choices.js');
           await recordChoice(n.id, n.title, c.text);
           openSceneFromGraph(target, false);
         };
         const del = el('span', 'branch-choice-del', gi('close'));
-        del.title = tr('delChoice', t('ui.branch.delChoice2'));
+        del.title = tr('delChoice');
         del.onclick = async (e) => { e.stopPropagation(); await removeChoice(n, idx); redraw(); };
         row.append(del);
         choices.append(row);
@@ -977,7 +983,7 @@ export async function renderBranchingTree(pane, opts = {}) {
       p.path.classList.toggle('branch-edge-faded', !keep);
       if (p.label) p.label.parentNode.classList.toggle('branch-edge-faded', !keep);
     }
-    findCount.textContent = hit.size ? `${hit.size} ${tr('sumScenes', t('ui.common.sceneGraph'))}` : tr('noMatch', t('ui.common.notFound'));
+    findCount.textContent = hit.size ? `${hit.size} ${tr('sumScenes')}` : tr('noMatch');
     findWrap.classList.add('on');
   }
   if (bs.query) applyFilter();
@@ -1029,7 +1035,7 @@ function makeNodeDraggable(box, n, layout, bs, ctx) {
         saveNodePositions(pos);
         box.classList.add('bn-pinned');
         box._noClick = true;              // เบราว์เซอร์ยิง click ต่อท้ายการลาก — อย่าให้นับเป็นการเลือก
-        setStatus(tr('moved', t('ui.branch.moveCardDonePress')));
+        setStatus(tr('moved'));
       }
       start = null;
     };
@@ -1054,7 +1060,7 @@ async function dropChoiceOn(target, graph, redraw) {
   // ย้ายแบบสองขั้น: ถอดจากต้นทางก่อน แล้วค่อยต่อท้ายปลายทาง (mutateChoices ต่อคิวให้อยู่แล้ว)
   await mutateChoices(d.node, (list) => { list.splice(d.idx, 1); return list; });
   await mutateChoices(target, (list) => [...list, { ...d.choice }]);
-  setStatus(`${tr('movedChoice', t('ui.branch.moveChoice'))} "${d.choice.text}" → ${target.title}`);
+  setStatus(`${tr('movedChoice')} "${d.choice.text}" → ${target.title}`);
   redraw();
   return true;
 }
@@ -1067,18 +1073,18 @@ async function mergeAllDuplicates(graph, redraw) {
     const m = mergeDuplicateChoices(n.choices);
     if (m.removed) targets.push({ node: n, list: m.list, removed: m.removed });
   }
-  if (!targets.length) { setStatus(tr('noDup', t('ui.branch.notHasChoiceDup'))); return 0; }
+  if (!targets.length) { setStatus(tr('noDup')); return 0; }
   const total = targets.reduce((a, x) => a + x.removed, 0);
-  const preview = targets.slice(0, 8).map((x) => `• ${x.node.title} (−${x.removed})`).join('\n');
+  const preview = targets.slice(0, 8).map((x) => `• ${x.node.title} (${gi('minus')}${x.removed})`).join('\n');
   const ok = await confirmBox(
-    `${tr('mergeAsk', t('ui.branch.mergeChoiceDup'))} ${total} ${tr('items', t('ui.common.list2'))} ` +
-    `${tr('fromScenes', t('ui.branch.msg'))} ${targets.length} ${tr('sumScenes', t('ui.common.sceneGraph'))}\n\n${preview}` +
+    `${tr('mergeAsk')} ${total} ${tr('items')} ` +
+    `${tr('fromScenes')} ${targets.length} ${tr('sumScenes')}\n\n${preview}` +
     (targets.length > 8 ? `\n… +${targets.length - 8}` : '') +
-    `\n\n${tr('mergeNote', t('ui.branch.textPersonSceneNot'))}`,
-    tr('mergeOk', t('ui.branch.merge')));
+    `\n\n${tr('mergeNote')}`,
+    tr('mergeOk'));
   if (!ok) return 0;
   for (const x of targets) await mutateChoices(x.node, () => x.list);
-  setStatus(`${tr('mergedDone', t('ui.branch.mergeChoiceDupDone'))} ${total}`);
+  setStatus(`${tr('mergedDone')} ${total}`);
   redraw();
   return total;
 }
@@ -1088,9 +1094,8 @@ function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
   const rows = analysis.dangling.filter((e) => e.to);
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog branch-dlg');
-  box.append(el('div', 'k-dlg-title', gi('heart-broken') + ' ' + tr('brokenTitle', t('ui.branch.choicePointSceneNot2')) + ` (${rows.length})`));
-  box.append(el('div', 'dim', tr('brokenHint',
-    t('ui.branch.sceneToDelMove'))));
+  box.append(el('div', 'k-dlg-title', gi('heart-broken') + ' ' + tr('brokenTitle') + ` (${rows.length})`));
+  box.append(el('div', 'dim', tr('brokenHint')));
   const list = el('div', 'k-pick-list');
   list.style.maxHeight = '46vh';
   for (const e of rows) {
@@ -1099,10 +1104,10 @@ function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
     row.append(el('span', 'branch-broken-sc', (src && src.title) || e.from));
     row.append(el('span', 'branch-broken-ch', '[' + (e.text || '—') + ']'));
     row.append(el('span', 'dim', gi('arrow-right') + ' ' + e.to));
-    const fix = el('button', 'branch-doc-add', tr('fixIt', t('ui.branch.edit')));
+    const fix = el('button', 'branch-doc-add', tr('fixIt'));
     fix.onclick = () => { bs.sel = e.from; bs.sideOpen = true; ov.remove(); redrawUi(); };
     const del = el('button', 'branch-edit-del', gi('close'));
-    del.title = tr('delChoice', t('ui.branch.delChoice2'));
+    del.title = tr('delChoice');
     del.onclick = async () => {
       if (src) { await removeChoice(src, e.idx); ov.remove(); redraw(); }
     };
@@ -1111,7 +1116,7 @@ function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const close = el('button', 'k-ok', tr('close', t('ui.common.close')));
+  const close = el('button', 'k-ok', tr('close'));
   close.onclick = () => ov.remove();
   btns.append(close); box.append(btns);
   ov.append(box); document.body.append(ov);
@@ -1129,8 +1134,8 @@ export async function checkDanglingOnOpen() {
     const bad = danglingChoices(scenes);
     if (!bad.length) return 0;
     const names = [...new Set(bad.map((b) => b.sceneTitle))].slice(0, 3).join(', ');
-    setStatus(gi('heart-broken') + ` ${bad.length} ${tr('warnBroken', t('ui.branch.choicePointSceneNot'))} (${names}` +
-              `${bad.length > 3 ? '…' : ''}) — ${tr('openBranchToFix', t('ui.branch.openGraphBreakBranch'))}`);
+    setStatus(gi('heart-broken') + ` ${bad.length} ${tr('warnBroken')} (${names}` +
+              `${bad.length > 3 ? '…' : ''}) — ${tr('openBranchToFix')}`);
     log('warn', t('ui.branch.branchingFoundChoicePoint') + bad.length + t('ui.common.list'),
         bad.slice(0, 10));
     return bad.length;
@@ -1142,12 +1147,12 @@ function openExportMenu(ev, graph, analysis, pane) {
   const at = ev.currentTarget.getBoundingClientRect();
   import('./ui.js').then(({ popupMenu }) => {
     popupMenu(at.left, at.bottom + 4, [
-      { label: gi('globe') + ' ' + tr('expHtml', t('ui.branch.hTMLTreeClickHas')), click: () => exportBranchHtml(graph, analysis) },
-      { label: gi('note') + ' ' + tr('expMd', t('ui.branch.markdownOutlineListPara')), click: () => exportBranchMarkdown(graph, analysis) },
-      { label: gi('puzzle') + ' ' + tr('expJson', t('ui.branch.jSONStructureInTool')), click: () => exportBranchJson(graph, analysis) },
+      { label: gi('globe') + ' ' + tr('expHtml'), click: () => exportBranchHtml(graph, analysis) },
+      { label: gi('note') + ' ' + tr('expMd'), click: () => exportBranchMarkdown(graph, analysis) },
+      { label: gi('puzzle') + ' ' + tr('expJson'), click: () => exportBranchJson(graph, analysis) },
       '-',
-      { label: gi('frame') + ' ' + tr('expSvg', t('ui.branch.sVGImageGraphStyle')), click: () => exportBranchSvg(pane) },
-      { label: gi('camera') + ' ' + tr('expPng', t('ui.branch.pNGImageGraphSend')), click: () => exportBranchPng(pane) },
+      { label: gi('frame') + ' ' + tr('expSvg'), click: () => exportBranchSvg(pane) },
+      { label: gi('camera') + ' ' + tr('expPng'), click: () => exportBranchPng(pane) },
     ]);
   });
 }
@@ -1161,7 +1166,7 @@ async function exportBranchHtml(graph, analysis) {
   const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.html', 'html');
   if (!dest) return false;
   await kapi.writeFile(dest, html);
-  setStatus(tr('expDone', t('ui.branch.exportGraphDone')) + dest);
+  setStatus(tr('expDone') + dest);
   return true;
 }
 async function exportBranchMarkdown(graph, analysis) {
@@ -1169,7 +1174,7 @@ async function exportBranchMarkdown(graph, analysis) {
   const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.md', 'md');
   if (!dest) return false;
   await kapi.writeFile(dest, md);
-  setStatus(tr('expDone', t('ui.branch.exportGraphDone')) + dest);
+  setStatus(tr('expDone') + dest);
   return true;
 }
 async function exportBranchJson(graph, analysis) {
@@ -1178,21 +1183,22 @@ async function exportBranchJson(graph, analysis) {
   const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.json', 'json');
   if (!dest) return false;
   await kapi.writeFile(dest, JSON.stringify(j, null, 2));
-  setStatus(tr('expDone', t('ui.branch.exportGraphDone')) + dest);
+  setStatus(tr('expDone') + dest);
   return true;
 }
 
 // SVG บนจอพึ่ง CSS ของโปรแกรม → ไฟล์ที่ส่งออกต้องพกสไตล์ไปเอง ไม่งั้นเปิดที่อื่นได้เส้นดำล้วน
+// [alpha.162 · W6 ข้อ 2] สีของไฟล์ที่ส่งออก = PRINT (พื้นสว่างเสมอ ไม่ตามธีม · ที่เดียวใน palette.js)
 const SVG_STYLE = `
-.branch-edge{fill:none;stroke:#98958b;stroke-width:1.8;opacity:.75}
+.branch-edge{fill:none;stroke:${PRINT.edge};stroke-width:1.8;opacity:.75}
 .branch-edge-back{stroke-dasharray:5 4}
-.branch-edge-hot,.branch-edge-path{stroke:#d97757;stroke-width:2.6;opacity:1}
-.branch-edge-labelbg{fill:#fbfaf7;stroke:#d8d3c6;stroke-width:1}
-.branch-edge-label{fill:#57534a;font:12px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
-.bx{fill:#fff;stroke:#d8d3c6;stroke-width:1}
+.branch-edge-hot,.branch-edge-path{stroke:${PRINT.accent};stroke-width:2.6;opacity:1}
+.branch-edge-labelbg{fill:${PRINT.panel};stroke:${PRINT.rule};stroke-width:1}
+.branch-edge-label{fill:${PRINT.inkSoft};font:12px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
+.bx{fill:${PRINT.paper};stroke:${PRINT.rule};stroke-width:1}
 .bx-accent{stroke-width:4}
-.bt{fill:#2c2a26;font:600 13px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
-.bm{fill:#8a857a;font:11px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
+.bt{fill:${PRINT.inkTitle};font:600 13px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
+.bm{fill:${PRINT.inkMuted};font:11px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
 `;
 
 /** ผังปัจจุบันเป็น SVG ก้อนเดียวจบ (กล่องฉากบนจอเป็น <div> จึงต้องวาดใหม่เป็น <rect>+<text>) */
@@ -1205,11 +1211,11 @@ function buildStandaloneSvg(pane) {
   const out = svgEl('svg', { xmlns: SVG_NS, width: w, height: h, viewBox: `0 0 ${w} ${h}` });
   const st = svgEl('style'); st.textContent = SVG_STYLE;
   out.append(st);
-  out.append(svgEl('rect', { x: 0, y: 0, width: w, height: h, fill: '#fbfaf7' }));
+  out.append(svgEl('rect', { x: 0, y: 0, width: w, height: h, fill: PRINT.panel }));
   for (const child of src.childNodes) out.append(child.cloneNode(true));
   for (const box of canvas.querySelectorAll('.branch-node')) {
     const x = parseFloat(box.style.left) || 0, y = parseFloat(box.style.top) || 0;
-    const accent = box.style.borderLeftColor || '#9a958a';
+    const accent = box.style.borderLeftColor || PRINT.accentAlt;
     out.append(svgEl('rect', { x, y, width: NODE_W, height: NODE_H, rx: 8, ry: 8, class: 'bx' }));
     out.append(svgEl('path', { d: `M ${x + 2} ${y + 6} L ${x + 2} ${y + NODE_H - 6}`,
                                class: 'bx-accent', stroke: accent, fill: 'none' }));
@@ -1224,18 +1230,18 @@ function buildStandaloneSvg(pane) {
 
 async function exportBranchSvg(pane) {
   const built = buildStandaloneSvg(pane);
-  if (!built) { setStatus(tr('needTreeView', t('ui.branch.openViewGraphBefore'))); return false; }
+  if (!built) { setStatus(tr('needTreeView')); return false; }
   const text = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(built.svg);
   const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.svg', 'svg');
   if (!dest) return false;
   await kapi.writeFile(dest, text);
-  setStatus(tr('expDone', t('ui.branch.exportGraphDone')) + dest);
+  setStatus(tr('expDone') + dest);
   return true;
 }
 
 async function exportBranchPng(pane) {
   const built = buildStandaloneSvg(pane);
-  if (!built) { setStatus(tr('needTreeView', t('ui.branch.openViewGraphBefore'))); return false; }
+  if (!built) { setStatus(tr('needTreeView')); return false; }
   try {
     const text = new XMLSerializer().serializeToString(built.svg);
     // data: URI ของ SVG ต้องเป็น base64 — utf-8 ตรง ๆ พังทันทีที่มีตัวอักษรไทย
@@ -1251,11 +1257,11 @@ async function exportBranchPng(pane) {
     const b64 = cv.toDataURL('image/png').split(',')[1];
     const dir = await kapi.join(state.root, 'Images');
     const name = await kapi.writeImageData(dir, safeName(projTitle()) + '-branching.png', b64);
-    setStatus(gi('camera') + ' ' + tr('pngSaved', t('ui.branch.saveImageGraphLibrary')) + (typeof name === 'string' ? name : 'branching.png'));
+    setStatus(gi('camera') + ' ' + tr('pngSaved') + (typeof name === 'string' ? name : 'branching.png'));
     return true;
   } catch (e) {
     log('error', t('ui.branch.branchingExportPNGNot'), e);
-    setStatus(tr('pngFail', t('ui.common.exportPNGNotOk')) + e.message);
+    setStatusError(failText(tr('pngFail'), e));
     return false;
   }
 }
@@ -1310,7 +1316,7 @@ async function readSceneBody(node) {
 
 // ---- แทรก [ข้อความ] ลงท้ายฉาก เพื่อให้ทางเลือกมีที่อยู่จริงในเนื้อเรื่อง ----
 export async function insertMarkerIntoScene(node, text) {
-  if (!node.filePath) { setStatus(tr('noFile', t('ui.common.sceneNotHasFile'))); return false; }
+  if (!node.filePath) { setStatus(tr('noFile')); return false; }
   const { parseMdFile, dumpMdFile } = await import('./md.js');
   const { tabHandle } = await import('./tab-bridge.js');
   const { writeMdKeepingComments } = await import('./comments/comment-core.js');
@@ -1324,7 +1330,7 @@ export async function insertMarkerIntoScene(node, text) {
     const live = h.getText();
     if (live.includes(marker)) return true;
     h.setText(append(live), { keepAlign: true });     // ค้างการแก้ = ลงแท็บอย่างเดียว ผู้ใช้เป็นคนบันทึก
-    setStatus(tr('insertedDirty', t('ui.branch.insertFileDoneScene')));
+    setStatus(tr('insertedDirty'));
     return true;
   }
   const { meta, body } = parseMdFile(await kapi.readFile(node.filePath));
@@ -1342,7 +1348,7 @@ export async function insertMarkerIntoScene(node, text) {
 export async function syncChoicesFromScene() {
   const { sceneCtx, updateSceneRow } = await import('./app.js');
   const ctx = await sceneCtx();
-  if (!ctx) { setStatus(tr('needScene', t('ui.branch.openSceneBeforeDonePrint'))); return 0; }
+  if (!ctx) { setStatus(tr('needScene')); return 0; }
   const tab = state.tabs.get(state.active?.file);
   // ใช้เนื้อในตัวแก้ไขก่อน (ผู้ใช้เพิ่งพิมพ์ อาจยังไม่บันทึก) ไม่งั้นค่อยอ่านจากไฟล์
   let body = '';
@@ -1353,16 +1359,16 @@ export async function syncChoicesFromScene() {
   }
   const markers = scanChoiceMarkers(body);
   if (!markers.length) {
-    setStatus(tr('noMarker', t('ui.branch.notFoundChoiceScene')));
+    setStatus(tr('noMarker'));
     return 0;
   }
   const { missing } = diffChoiceMarkers(markers, ctx.row.choices || []);
-  if (!missing.length) { setStatus(tr('allLinked', t('ui.branch.choiceSceneBindComplete')) + markers.length + ')'); return 0; }
+  if (!missing.length) { setStatus(tr('allLinked') + markers.length + ')'); return 0; }
   await updateSceneRow(ctx.dPath, ctx.row.id, (r) => {
     r.choices = [...(r.choices || []), ...missing.map((t2) => ({ text: t2, nextSceneId: '' }))];
   });
-  setStatus(tr('addedFromText', t('ui.branch.addChoiceText')) + missing.length +
-            tr('addedFromTextTail', t('ui.branch.listDefineToGraph')));
+  setStatus(tr('addedFromText') + missing.length +
+            tr('addedFromTextTail'));
   refreshOpenBranchTab();
   return missing.length;
 }
@@ -1380,23 +1386,23 @@ async function scanAllScenes(scenes, redraw) {
     if (missing.length) found.push({ sc, missing });
   }
   if (!found.length) {
-    setStatus(tr('scanClean', t('ui.branch.scanCompleteDoneAll')));
+    setStatus(tr('scanClean'));
     return 0;
   }
   const total = found.reduce((n, f) => n + f.missing.length, 0);
   const preview = found.slice(0, 8)
     .map((f) => `• ${f.sc.title}: ${f.missing.map((x) => '[' + x + ']').join(' ')}`).join('\n');
   const ok = await confirmBox(
-    `${tr('scanFound', t('ui.branch.foundChoiceTextNot'))} ${total} ${tr('spots', t('ui.common.dot'))} ` +
-    `${tr('fromScenes', t('ui.branch.msg'))} ${found.length} ${tr('sumScenes', t('ui.common.sceneGraph'))}\n\n${preview}` +
+    `${tr('scanFound')} ${total} ${tr('spots')} ` +
+    `${tr('fromScenes')} ${found.length} ${tr('sumScenes')}\n\n${preview}` +
     (found.length > 8 ? `\n… +${found.length - 8}` : '') +
-    '\n\n' + tr('scanAsk', t('ui.branch.bindAllChoiceTo')),
-    tr('scanOk', t('ui.branch.bindAll')));
+    '\n\n' + tr('scanAsk'),
+    tr('scanOk'));
   if (!ok) return 0;
   for (const f of found) {
     await mutateChoices(f.sc, (list) => [...list, ...f.missing.map((x) => ({ text: x, nextSceneId: '' }))]);
   }
-  setStatus(`${tr('scanDone', t('ui.branch.bindChoiceTextDone'))} ${total}`);
+  setStatus(`${tr('scanDone')} ${total}`);
   redraw();
   return total;
 }
@@ -1404,26 +1410,26 @@ async function scanAllScenes(scenes, redraw) {
 // ───────── แผงเพิ่มทางเลือก (ข้อ 2: อยู่บนสุด) ─────────
 function buildAdder(graph, bs, redraw) {
   const adder = el('div', 'branch-adder');
-  adder.append(el('span', 'branch-adder-lbl', gi('plus-thick') + ' ' + tr('addChoice', t('ui.branch.addChoice3'))));
+  adder.append(el('span', 'branch-adder-lbl', gi('plus-thick') + ' ' + tr('addChoice')));
   const fromSel = el('select', 'k-field-select');
   const toSel = el('select', 'k-field-select');
-  const none = el('option', null, tr('openEndDash', t('ui.branch.notSpecify'))); none.value = ''; toSel.append(none);
+  const none = el('option', null, tr('openEndDash')); none.value = ''; toSel.append(none);
   for (const s of graph.nodes) {
     const a = el('option', null, s.title); a.value = s.id; fromSel.append(a);
     const b = el('option', null, s.title); b.value = s.id; toSel.append(b);
   }
   if (bs.sel && graph.byId.has(bs.sel)) fromSel.value = bs.sel;   // เลือกโหนดไว้ = เติมให้เลย
   const textInp = el('input', 'k-field-input');
-  textInp.placeholder = tr('choiceTextPh', t('ui.branch.textChoiceEgOpen'));
-  const addB = el('button', 'k-ok', '+ ' + tr('addChoiceBtn', t('ui.branch.addChoice2')));
+  textInp.placeholder = tr('choiceTextPh');
+  const addB = el('button', 'k-ok', '+ ' + tr('addChoiceBtn'));
   const doAdd = async () => {
     const from = graph.byId.get(fromSel.value);
     const text = textInp.value.trim();
-    if (!from || !text) { setStatus(tr('needFromText', t('ui.branch.pickScenePutText'))); return; }
+    if (!from || !text) { setStatus(tr('needFromText')); return; }
     await mutateChoices(from, (list) => [...list, { text, nextSceneId: toSel.value || '' }]);
     textInp.value = '';
     bs.sel = from.id;
-    setStatus(tr('added', t('ui.branch.addChoiceDone')));
+    setStatus(tr('added'));
     redraw();
   };
   addB.onclick = doAdd;
@@ -1443,7 +1449,7 @@ function colorRow(current, onPick) {
     row.append(dot);
     return dot;
   };
-  mk('', tr('colorNone', t('ui.branch.notDefineColor')), 'branch-color-none').textContent = '∅';
+  mk('', tr('colorNone'), 'branch-color-none').textContent = gi('empty-set');
   for (const [name, hex] of SCENE_COLORS) mk(hex, name);
   return row;
 }
@@ -1457,14 +1463,14 @@ function showAllPathsDialog(graph, startId) {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog branch-dlg');
   box.append(el('div', 'k-dlg-title',
-    gi('compass') + ` ${tr('allPaths', t('ui.branch.route'))} (${lines.length}${info.truncated ? '+' : ''})`));
+    gi('compass') + ` ${tr('allPaths')} (${lines.length}${info.truncated ? '+' : ''})`));
   if (info.truncated) {
     box.append(el('div', 'branch-badge bw-open',
-      gi('warning') + ` ${tr('pathTrunc', t('ui.branch.storyBreakBranchMore'))} ${PATH_MAX} ${tr('paths', t('ui.common.route'))} — ` +
-      tr('pathTruncHint', t('ui.branch.show'))));
+      gi('warning') + ` ${tr('pathTrunc')} ${PATH_MAX} ${tr('paths')} — ` +
+      tr('pathTruncHint')));
   }
   const inp = el('input', 'k-dlg-input');
-  inp.placeholder = tr('filterPaths', t('ui.branch.filterRoutePrintName'));
+  inp.placeholder = tr('filterPaths');
   box.append(inp);
   const count = el('div', 'dim');
   box.append(count);
@@ -1476,10 +1482,10 @@ function showAllPathsDialog(graph, startId) {
     const q = inp.value.trim().toLowerCase();
     list.replaceChildren();
     const rows = q ? lines.filter((l) => l.text.toLowerCase().includes(q)) : lines;
-    count.textContent = `${rows.length} / ${lines.length} ${tr('paths', t('ui.common.route'))}`;
+    count.textContent = `${rows.length} / ${lines.length} ${tr('paths')}`;
     for (const l of rows.slice(0, 300)) {
       const row = el('div', 'k-menu-item branch-path-row');
-      row.append(el('span', 'branch-path-len', l.ids.length + ' ' + tr('steps', t('ui.common.scene2'))));
+      row.append(el('span', 'branch-path-len', l.ids.length + ' ' + tr('steps')));
       row.append(el('span', 'branch-path-txt', l.text));
       row.title = l.text;
       row.onclick = async () => {
@@ -1496,12 +1502,12 @@ function showAllPathsDialog(graph, startId) {
   draw();
 
   const btns = el('div', 'k-dlg-btns');
-  const copyB = el('button', null, gi('clipboard') + ' ' + tr('copyPaths', t('ui.common.copyAll')));
+  const copyB = el('button', null, gi('clipboard') + ' ' + tr('copyPaths'));
   copyB.onclick = async () => {
-    try { await navigator.clipboard.writeText(lines.map((l) => l.text).join('\n')); setStatus(tr('copied', t('ui.branch.copyDone'))); }
-    catch { setStatus(tr('copyFail', t('ui.common.copyNotOk'))); }
+    try { await navigator.clipboard.writeText(lines.map((l) => l.text).join('\n')); setStatus(tr('copied')); }
+    catch { setStatus(tr('copyFail')); }
   };
-  const close = el('button', 'k-ok', tr('close', t('ui.common.close')));
+  const close = el('button', 'k-ok', tr('close'));
   close.onclick = () => ov.remove();
   btns.append(copyB, close); box.append(btns);
   ov.append(box); document.body.append(ov);
@@ -1513,9 +1519,9 @@ function showAllPathsDialog(graph, startId) {
 function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) {
   const side = el('div', 'branch-side');
   const shead = el('div', 'branch-side-head');
-  shead.append(el('span', null, gi('target') + ' ' + tr('inspector', t('ui.branch.choiceScene'))));
+  shead.append(el('span', null, gi('target') + ' ' + tr('inspector')));
   const closeB = el('span', 'branch-side-x', gi('close'));
-  closeB.title = tr('hideThis', t('ui.branch.hidePanel'));
+  closeB.title = tr('hideThis');
   closeB.onclick = () => { bs.sideOpen = false; redrawUi(); };
   shead.append(closeB);
   side.append(shead);
@@ -1526,8 +1532,8 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
   const node = bs.sel ? graph.byId.get(bs.sel) : null;
   if (!node) {
     body.append(el('div', 'dim', analysis.total
-      ? tr('pickNode', t('ui.branch.clickDialogSceneTop'))
-      : tr('pickNodeEmpty', t('ui.branch.notHasSceneGraph'))));
+      ? tr('pickNode')
+      : tr('pickNodeEmpty')));
     return side;
   }
 
@@ -1536,13 +1542,13 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
 
   // ปุ่มเปิดฉาก (ปกติ / คู่กับผัง) / ทดลองเล่นจากฉากนี้
   const acts = el('div', 'branch-side-acts');
-  const openB = el('button', 'k-ok', gi('file') + ' ' + tr('openScene', t('ui.branch.openScene2')));
+  const openB = el('button', 'k-ok', gi('file') + ' ' + tr('openScene'));
   openB.onclick = () => openSceneFromGraph(node, false);
-  const splitB = el('button', null, '⊞ ' + tr('openSplit', t('ui.branch.openPairGraph')));
-  splitB.title = tr('openSplitHint', t('ui.branch.openSceneAreaWriteSee'));
+  const splitB = el('button', null, (gi('split-grid') + ' ') + tr('openSplit'));
+  splitB.title = tr('openSplitHint');
   splitB.onclick = () => openSceneFromGraph(node, true);
-  const playB = el('button', null, gi('play-e') + ' ' + tr('playFrom', t('ui.branch.play')));
-  playB.title = tr('playFromHint', t('ui.branch.openModeTrialPlay'));
+  const playB = el('button', null, gi('play-e') + ' ' + tr('playFrom'));
+  playB.title = tr('playFromHint');
   playB.onclick = async () => {
     const { openPlayerMode } = await import('./player-mode.js');
     await openPlayerMode(node.id);
@@ -1552,16 +1558,16 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
 
   // ป้ายบอกบทบาทของฉากในผัง
   const roleWrap = el('div', 'branch-roles');
-  if (analysis.roots.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-root', gi('play') + ' ' + tr('roleRoot', t('ui.common.dotStart'))));
-  if (analysis.endings.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-end', gi('flag-checkered') + ' ' + tr('roleEnd', t('ui.common.actEnd'))));
-  if (analysis.cycles.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-loop', gi('repeat') + ' ' + tr('roleLoopShort', t('ui.branch.dup'))));
-  if (analysis.unreachable.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-lost', gi('block') + ' ' + tr('roleLostShort', t('ui.branch.inNotTo'))));
+  if (analysis.roots.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-root', gi('play') + ' ' + tr('roleRoot')));
+  if (analysis.endings.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-end', gi('flag-checkered') + ' ' + tr('roleEnd')));
+  if (analysis.cycles.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-loop', gi('repeat') + ' ' + tr('roleLoopShort')));
+  if (analysis.unreachable.includes(node.id)) roleWrap.append(el('span', 'branch-badge bw-lost', gi('block') + ' ' + tr('roleLostShort')));
   if (roleWrap.childNodes.length) body.append(roleWrap);
 
   // ---- (ข้อ 15) เส้นทางจากจุดเริ่มมาถึงฉากนี้ ----
   const hi = highlightPath(graph, node.id);
   if (hi.path.length > 1) {
-    body.append(el('div', 'branch-side-sub', tr('pathFromStart', t('ui.branch.routeDotStart'))));
+    body.append(el('div', 'branch-side-sub', tr('pathFromStart')));
     const line = el('div', 'branch-path branch-path-hi');
     line.textContent = hi.path.map((id) => (graph.byId.get(id) || {}).title || '?').join(' → ');
     line.title = line.textContent;
@@ -1569,19 +1575,19 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
   }
 
   // ---- (ข้อ 4) สีการ์ดฉาก ----
-  body.append(el('div', 'branch-side-sub', gi('palette') + ' ' + tr('cardColor', t('ui.branch.colorCardScene'))));
+  body.append(el('div', 'branch-side-sub', gi('palette') + ' ' + tr('cardColor')));
   body.append(colorRow(node.color, async (c) => {
     await setNodeColor(node, c);
-    setStatus(c ? tr('colorSet', t('ui.branch.recolorCardDone')) : tr('colorClear', t('ui.branch.clearColorCardDone')));
+    setStatus(c ? tr('colorSet') : tr('colorClear'));
     redraw();
   }));
 
   // ---- ทางเลือกที่เขียนไว้ในเนื้อฉากจริง (ข้อ 15 เดิม) ----
   // หัวใจ: ผังต้องผูกกับ "ข้อความในเอกสาร" ไม่ใช่ข้อมูลลอย ๆ ใน scenes.json
   const docSec = el('div', 'branch-doc');
-  docSec.append(el('div', 'branch-side-sub', gi('link') + ' ' + tr('docChoices', t('ui.branch.choiceBodyScene'))));
+  docSec.append(el('div', 'branch-side-sub', gi('link') + ' ' + tr('docChoices')));
   const docBody = el('div', 'branch-doc-body');
-  docBody.append(el('div', 'dim', tr('reading', t('ui.branch.busyReadScene'))));
+  docBody.append(el('div', 'dim', tr('reading')));
   docSec.append(docBody);
   body.append(docSec);
   readSceneBody(node).then((text) => {
@@ -1591,67 +1597,67 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
     const { missing, orphan, linked } = diffChoiceMarkers(markers, node.choices);
 
     docBody.append(el('div', 'branch-doc-hint',
-      tr('docHint', t('ui.branch.printTextSceneAt'))));
+      tr('docHint')));
 
     if (linked.length) {
-      const okLine = el('div', 'branch-doc-ok', gi('checkmark') + ` ${tr('docLinked', t('ui.branch.bindTextDone'))} ${linked.length}`);
+      const okLine = el('div', 'branch-doc-ok', gi('checkmark') + ` ${tr('docLinked')} ${linked.length}`);
       okLine.title = linked.map((x) => '• ' + x).join('\n');
       docBody.append(okLine);
     }
 
     if (missing.length) {
-      docBody.append(el('div', 'branch-doc-lbl', `${tr('docMissing', t('ui.branch.foundTextNotChoice'))} (${missing.length})`));
+      docBody.append(el('div', 'branch-doc-lbl', `${tr('docMissing')} (${missing.length})`));
       for (const txt of missing) {
         const row = el('div', 'branch-doc-row');
         row.append(el('span', 'branch-doc-mark', '[' + txt + ']'));
-        const b = el('button', 'branch-doc-add', '＋ ' + tr('docLink', t('ui.branch.bindChoice')));
+        const b = el('button', 'branch-doc-add', gi('plus') + ' ' + tr('docLink'));
         b.onclick = async () => {
           await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: '' }]);
-          setStatus(`${tr('docLinked1', t('ui.branch.bindChoiceDone'))}: ${txt}`);
+          setStatus(`${tr('docLinked1')}: ${txt}`);
           redraw();
         };
         row.append(b); docBody.append(row);
       }
-      const all = el('button', 'k-tpl-add', `＋ ${tr('docLinkAll', t('ui.branch.bindAll'))} (${missing.length})`);
+      const all = el('button', 'k-tpl-add', `${gi('plus')} ${tr('docLinkAll')} (${missing.length})`);
       all.onclick = async () => {
         await mutateChoices(node, (list) => [...list, ...missing.map((x) => ({ text: x, nextSceneId: '' }))]);
-        setStatus(tr('docLinkedAll', t('ui.branch.bindChoiceTextComplete')));
+        setStatus(tr('docLinkedAll'));
         redraw();
       };
       docBody.append(all);
     }
 
     if (orphan.length) {
-      docBody.append(el('div', 'branch-doc-lbl', `${tr('docOrphan', t('ui.branch.choiceNotHasText'))} (${orphan.length})`));
+      docBody.append(el('div', 'branch-doc-lbl', `${tr('docOrphan')} (${orphan.length})`));
       for (const txt of orphan) {
         const row = el('div', 'branch-doc-row branch-doc-orphan');
         row.append(el('span', 'branch-doc-mark', txt));
-        const b = el('button', 'branch-doc-add', gi('return') + ' ' + tr('docInsert', t('ui.branch.insertScene')));
+        const b = el('button', 'branch-doc-add', gi('return') + ' ' + tr('docInsert'));
         b.onclick = async () => {
-          if (await insertMarkerIntoScene(node, txt)) { setStatus(tr('docInserted', t('ui.branch.insertSceneDone'))); redraw(); }
+          if (await insertMarkerIntoScene(node, txt)) { setStatus(tr('docInserted')); redraw(); }
         };
         row.append(b); docBody.append(row);
       }
     }
 
     if (!missing.length && !orphan.length && !linked.length)
-      docBody.append(el('div', 'dim', tr('docNone', t('ui.branch.sceneNotHasText'))));
+      docBody.append(el('div', 'dim', tr('docNone')));
   });
 
   // ---- รายการทางเลือก: แก้ข้อความ + เปลี่ยนปลายทาง + สีเส้น + ลบ ----
-  body.append(el('div', 'branch-side-sub', tr('sumChoices', t('ui.common.choice')) + ' (' + node.choices.length + ')'));
-  if (!node.choices.length) body.append(el('div', 'dim', tr('noChoice', t('ui.branch.sceneNotHasChoice'))));
+  body.append(el('div', 'branch-side-sub', tr('sumChoices') + ' (' + node.choices.length + ')'));
+  if (!node.choices.length) body.append(el('div', 'dim', tr('noChoice')));
   if (node.choices.length) {
-    body.append(el('div', 'branch-drag-hint', tr('dragHint', t('ui.branch.dragBarPasteTop'))));
+    body.append(el('div', 'branch-drag-hint', tr('dragHint')));
   }
 
   node.choices.forEach((c, idx) => {
     const row = el('div', 'branch-edit-row');
 
     // ที่จับสำหรับลากทางเลือกไปฉากอื่น (ข้อ 16)
-    const grip = el('span', 'branch-grip', '⠿');
+    const grip = el('span', 'branch-grip', gi('grip-dots'));
     grip.draggable = true;
-    grip.title = tr('dragChoice', t('ui.branch.dragPasteTopScene'));
+    grip.title = tr('dragChoice');
     grip.addEventListener('dragstart', (ev) => {
       dragChoice = { node, idx, choice: { ...c } };
       row.classList.add('dragging');
@@ -1661,7 +1667,7 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
 
     const tIn = el('input', 'k-field-input branch-edit-text');
     tIn.value = c.text;
-    tIn.placeholder = tr('choiceText', t('ui.branch.textChoice'));
+    tIn.placeholder = tr('choiceText');
     const commitText = async () => {
       const v = tIn.value.trim();
       if (v === c.text) return;
@@ -1669,14 +1675,14 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
         if (list[idx]) list[idx] = { ...list[idx], text: v };
         return list;
       });
-      setStatus(tr('textEdited', t('ui.branch.editTextChoiceDone')));
+      setStatus(tr('textEdited'));
       redraw();
     };
     tIn.onblur = commitText;
     tIn.onkeydown = (e) => { if (e.key === 'Enter') tIn.blur(); };
 
     const tSel = el('select', 'k-field-select branch-edit-to');
-    const none = el('option', null, tr('openEndDash', t('ui.branch.notSpecify'))); none.value = ''; tSel.append(none);
+    const none = el('option', null, tr('openEndDash')); none.value = ''; tSel.append(none);
     for (const s of graph.nodes) { const o = el('option', null, s.title); o.value = s.id; tSel.append(o); }
     tSel.value = graph.byId.has(c.nextSceneId) ? c.nextSceneId : '';
     tSel.onchange = async () => {
@@ -1684,13 +1690,13 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
         if (list[idx]) list[idx] = { ...list[idx], nextSceneId: tSel.value };
         return list;
       });
-      setStatus(tr('targetChanged', t('ui.branch.changeToDone')));
+      setStatus(tr('targetChanged'));
       redraw();
     };
 
     // สีเส้น (ข้อ 4) — จานสีเล็ก ๆ กางเมื่อกด
     const colB = el('button', 'branch-edit-col', gi('palette'));
-    colB.title = tr('lineColor', t('ui.branch.colorLineChoice'));
+    colB.title = tr('lineColor');
     if (c.color) colB.style.borderColor = c.color;
     colB.onclick = () => {
       const open = row.parentNode.querySelector('.branch-colors-pop');
@@ -1700,7 +1706,7 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
           if (list[idx]) list[idx] = { ...list[idx], color: col };
           return list;
         });
-        setStatus(col ? tr('lineColorSet', t('ui.branch.recolorLineDone')) : tr('lineColorClear', t('ui.branch.clearColorLineDone')));
+        setStatus(col ? tr('lineColorSet') : tr('lineColorClear'));
         redraw();
       });
       pop.classList.add('branch-colors-pop');
@@ -1708,10 +1714,10 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
     };
 
     const goB = el('button', 'branch-edit-go', gi('arrow-right-thick'));
-    goB.title = tr('walkChoice', t('ui.branch.choiceSaveHistoryDecide'));
+    goB.title = tr('walkChoice');
     goB.onclick = async () => {
       const target = graph.byId.get(c.nextSceneId);
-      if (!target) { setStatus(tr('noTarget', t('ui.branch.choiceNotSpecifyTo'))); return; }
+      if (!target) { setStatus(tr('noTarget')); return; }
       const { recordChoice } = await import('./player-choices.js');
       await recordChoice(node.id, node.title, c.text);
       bs.sel = target.id;
@@ -1719,19 +1725,19 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
       redraw();
     };
     const delB = el('button', 'branch-edit-del', gi('close'));
-    delB.title = tr('delChoice', t('ui.branch.delChoice2'));
+    delB.title = tr('delChoice');
     delB.onclick = async () => { await removeChoice(node, idx); redraw(); };
 
     row.append(grip, tIn, tSel, colB, goB, delB);
     body.append(row);
   });
 
-  const addB = el('button', 'k-tpl-add', '+ ' + tr('addToThis', t('ui.branch.addChoiceScene')));
-  addB.title = tr('addToThisHint', t('ui.branch.newChoiceNewReady'));
+  const addB = el('button', 'k-tpl-add', '+ ' + tr('addToThis'));
+  addB.title = tr('addToThisHint');
   addB.onclick = async () => {
     const { ask } = await import('./ui.js');
-    const txt = (await ask(tr('choiceText', t('ui.branch.textChoice')),
-                           { placeholder: tr('choiceEg', t('ui.branch.eg')), okLabel: tr('add', t('ui.branch.add2')) }) || '').trim();
+    const txt = (await ask(tr('choiceText'),
+                           { placeholder: tr('choiceEg'), okLabel: tr('add') }) || '').trim();
     if (!txt) return;
     await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: '' }]);
     await insertMarkerIntoScene(node, txt);      // ผูกกับเนื้อเรื่องตั้งแต่แรก ไม่ปล่อยให้ลอย
@@ -1743,15 +1749,15 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
   const info = enumeratePathsInfo(graph, node.id, PATH_LIMIT);
   if (info.paths.length) {
     const sub = el('div', 'branch-side-sub branch-paths-head');
-    sub.append(el('span', null, `${tr('pathsFrom', t('ui.branch.routeScene'))} (${info.paths.length}${info.truncated ? '+' : ''})`));
-    const allB = el('button', 'branch-doc-add', tr('seeAll', t('ui.branch.viewAll')));
+    sub.append(el('span', null, `${tr('pathsFrom')} (${info.paths.length}${info.truncated ? '+' : ''})`));
+    const allB = el('button', 'branch-doc-add', tr('seeAll'));
     allB.onclick = () => showAllPathsDialog(graph, node.id);
     sub.append(allB);
     body.append(sub);
     if (info.truncated) {
       body.append(el('div', 'branch-badge bw-open branch-trunc',
-        gi('warning') + ` ${tr('truncWarn', t('ui.branch.show2'))} ${PATH_LIMIT} ${tr('paths', t('ui.common.route'))} — ` +
-        tr('truncWarnTail', t('ui.branch.hasMorePressView'))));
+        gi('warning') + ` ${tr('truncWarn')} ${PATH_LIMIT} ${tr('paths')} — ` +
+        tr('truncWarnTail')));
     }
     for (const p of info.paths.slice(0, 8)) {
       const line = el('div', 'branch-path');
@@ -1765,7 +1771,7 @@ function buildInspector(graph, layout, analysis, bs, redraw, redrawUi = redraw) 
   import('./player-choices.js').then(({ choicesByScene }) => {
     const hist = choicesByScene(node.id);
     if (!hist.length || !body.isConnected) return;
-    body.append(el('div', 'branch-side-sub', `${tr('pastChoices', t('ui.branch.pickScene'))} (${hist.length})`));
+    body.append(el('div', 'branch-side-sub', `${tr('pastChoices')} (${hist.length})`));
     for (const h of hist.slice(-5).reverse()) {
       body.append(el('div', 'branch-path', gi('target') + ' ' + (h.choice || '')));
     }

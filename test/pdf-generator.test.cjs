@@ -183,7 +183,29 @@ const meta = { title: 'ยามเมื่อฟ้าสาง', author: 'ท
     fonts: { regular: thaiFont },
     opts: { toc: true, titlePages: false, headers: false },
   });
-  check('มีฟอนต์ไทยของเครื่องให้ทดสอบ', !!thaiFont, THAI_FONT_PATH || 'ไม่พบ');
+  check('มีฟอนต์ไทยของเครื่องให้ทดสอบ', !!thaiFont, THAI_FONT_PATH || 'ไม่พบ');  // [alpha.162 · W5 ข้อ 2] ยกเลิกได้ระหว่างวาด (พักทุก 5 หน้า) + บอกความคืบหน้า · ไม่ยกเลิก = ผลเท่าเดิมทุกไบต์
+  {
+    const veryLong = [];
+    for (let s = 1; s <= 14; s++) {
+      veryLong.push({ el: 'scene', text: `INT. ห้อง ${s} - กลางคืน`, sceneNo: s });
+      for (let i = 0; i < 40; i++) veryLong.push({ el: 'action', text: `บรรทัดยาวของฉาก ${s} ที่ ${i}` });
+    }
+    const prog = [];
+    const rP = await G.generatePdf({ blocks: veryLong, fmt, meta, fonts: { regular: thaiFont },
+      opts: { toc: false, titlePages: false, headers: false }, onProgress: (d, n) => prog.push([d, n]) });
+    check('[162-W5] บทยาวพอให้ทดสอบการพัก (≥ 10 หน้า)', rP.scriptPages >= 10, rP.scriptPages);
+    check('★ [162-W5] generatePdf บอกความคืบหน้า (หน้าที่ / ทั้งหมด)',
+          prog.length >= 1 && prog.every(([d, n]) => d > 0 && d < n && n === rP.scriptPages), JSON.stringify(prog.slice(0, 3)));
+    const sig = { aborted: false };
+    let err = null;
+    try {
+      await G.generatePdf({ blocks: veryLong, fmt, meta, fonts: { regular: thaiFont },
+        opts: { toc: false, titlePages: false, headers: false }, signal: sig,
+        onProgress: () => { sig.aborted = true; } });
+    } catch (e) { err = e; }
+    check('★ [162-W5] generatePdf ยกเลิกได้กลางทาง (ไม่ต้องรอวาดครบทุกหน้า)', !!err && err.k2Cancelled === true, String(err));
+  }
+
   check('คืน Uint8Array', r1.bytes instanceof Uint8Array && r1.bytes.length > 1000, r1.bytes.length);
   check('เป็นไฟล์ PDF จริง (%PDF-)', asText(r1.bytes.slice(0, 5)) === '%PDF-');
   check('ปิดไฟล์ด้วย %%EOF', asText(r1.bytes.slice(-8)).includes('%%EOF'));

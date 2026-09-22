@@ -36,7 +36,7 @@ const CMDS = [
   { sep: true },
   { cmd: 'formatBlock', arg: 'h2', label: 'H2', tip: () => t('ui.starter.rtH2'), noState: true },
   { cmd: 'formatBlock', arg: 'h3', label: 'H3', tip: () => t('ui.starter.rtH3'), noState: true },
-  { cmd: 'formatBlock', arg: 'p', label: '¶', tip: () => t('ui.starter.rtPara'), noState: true },
+  { cmd: 'formatBlock', arg: 'p', label: gi('pilcrow'), tip: () => t('ui.starter.rtPara'), noState: true },
   { cmd: 'formatBlock', arg: 'blockquote', label: gi('quote-open'), tip: () => t('ui.starter.rtQuote'), noState: true },
   { sep: true },
   { cmd: 'justifyLeft', label: gi('outdent'), tip: () => t('ui.starter.rtLeft') },

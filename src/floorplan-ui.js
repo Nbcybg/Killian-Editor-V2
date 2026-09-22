@@ -9,6 +9,7 @@ import { $, el, state, setStatus, log } from './core.js';
 import { sortMaps, findMap, breadcrumb, clamp, PIN_KIND } from './maps.js';
 import { extractNum } from './timeline.js';
 import { gi } from './icons.js';
+import { cmpText } from './locale.js';
 
 const FIELDS = [
   ['clues', t('ui.common.thingSee'), t('ui.floorplan.egTopBg')],
@@ -81,7 +82,7 @@ function byStoryDate(a, b) {
   if (na != null && nb != null && na !== nb) return na - nb;
   if (na != null && nb == null) return -1;
   if (na == null && nb != null) return 1;
-  return String(a.storyDate || '').localeCompare(String(b.storyDate || ''), 'th');
+  return cmpText(String(a.storyDate || ''), String(b.storyDate || ''));
 }
 
 export async function renderFloorPlan(pane, mapId) {

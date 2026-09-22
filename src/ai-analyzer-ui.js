@@ -8,7 +8,7 @@
 // (บริสุทธิ์ · unit test ได้) · ไฟล์นี้ทำแค่ (1) อ่านเขียนไฟล์ (2) วาดหน้าจอ (3) เรียกเอนจิน
 import { t, tf } from './i18n.js';
 import { el, setStatus, state, log } from './core.js';
-import { iconHtml, gi } from './icons.js';
+import { iconHtml, icon, gi } from './icons.js';
 import { ask, confirmBox } from './ui.js';
 import { listEntities } from './project-scan.js';
 import { getAIClient } from './ai/ai-bridge.js';
@@ -16,6 +16,8 @@ import { aiConfigured, getAISettings } from './ai-settings.js';
 import { showAISettingsDialog, currentProvider } from './ai/ai-provider-ui.js';
 import { openScene, safeName } from './app.js';
 import { parseMdFile } from './md.js';
+import { liveBody } from './tab-bridge.js';   // [alpha.160 · P1-3]
+import { mergeSceneMeta } from './scene-meta.js';   // [alpha.160] คุณสมบัติหนักจาก frontmatter
 import { priceKeyOf } from './ai/ai-providers.js';
 import {
   ANALYSES, ANALYSIS_IDS, analysisById, SCOPE_KINDS, SCOPE_LABELS,
@@ -24,6 +26,7 @@ import {
   SESSION_DIR, newAnalysisSession, migrateAnalysisSession, sessionSummary, sessionFileName,
   resultCsv, sessionCsv, COMPOSITION_LABELS,
 } from './ai/ai-analyze.js';
+import { fmtNum } from './locale.js';
 
 export { ANALYSES, ANALYSIS_IDS };
 /** ชื่อเดิมที่ selftest/โมดูลอื่นเคยอ้าง — ตอนนี้คือทะเบียนตัวจริง ไม่ใช่ mockup แล้ว */
@@ -134,12 +137,17 @@ export async function collectScenes(root = state.root) {
           try { text = (await kapi.exists(file)) ? await kapi.readFile(file) : ''; } catch { text = ''; }
           // [alpha.149] ★ frontmatter ไม่ใช่ต้นฉบับ — เดิม `title:` `type: scene` `format: prose` ถูกนับคำ
           // ติดอันดับคำซ้ำ/คำที่ใช้บ่อย และถูกส่งไปกินโควตาของ AI ทุกฉาก
-          try { text = parseMdFile(text).body; } catch { /* อ่านไม่ออก = ใช้ดิบ */ }
+          let fm = null;
+          try { const pm = parseMdFile(text); text = pm.body; fm = pm.meta; } catch { /* อ่านไม่ออก = ใช้ดิบ */ }
+          text = liveBody(file, text);                // [alpha.160 · P1-3] แท็บที่เปิดอยู่ชนะดิสก์
+          // [alpha.160] POV/เวลาในเรื่องเป็นคุณสมบัติหนัก — อยู่ใน frontmatter (แหล่งความจริงเดียว · กฎ alpha.60r2)
+          // เดิมอ่าน `sc.pov`/`sc.storyDate` จาก scenes.json → แก้ .md นอกโปรแกรมแล้วการวิเคราะห์ใช้ค่าเก่า
+          const hm = mergeSceneMeta(sc, fm);
           out.push({
             id: sc.id, title: sc.title || sc.fileName || '', path: file, draftPath: dp,
             sectionKey: sec.key, sectionTitle: sec.title,
             chapterId: ch.guid, chapterTitle: ch.title || ch.folderName || '',
-            pov: sc.pov || '', storyDate: sc.storyDate || '', status: sc.status || '',
+            pov: hm.pov || '', storyDate: hm.storyDate || '', status: sc.status || '',
             text, words: countWords(text),
           });
         }
@@ -210,7 +218,7 @@ function base() {
   }
   return S.base;
 }
-const fmtTok = (n) => Number(n || 0).toLocaleString();
+const fmtTok = (n) => fmtNum(Number(n || 0));
 const fmtUsd = (n) => (n == null || !isFinite(n) ? '—' : '$' + Number(n).toFixed(4));
 
 // ═══════════════ ตัวช่วยวาด ═══════════════
@@ -318,7 +326,7 @@ function renderLocal(id, local) {
       display: r.count + ' (' + r.per10k + ')' })), { limit: 40 }));
   } else if (id === 'conflict') {
     box.append(barList(L.rows.map((r) => ({ label: r.title || r.id, value: r.score, display: r.score,
-      sub: r.hits.map((h) => h.word + '×' + h.count).join(' · ') || t('ui.aia.noMarker'),
+      sub: r.hits.map((h) => h.word + gi('times') + h.count).join(' · ') || t('ui.aia.noMarker'),
       sceneId: r.id, tone: r.score === 0 ? 'slow' : '' }))));
   } else if (id === 'length') {
     box.append(barList(L.rows.map((r) => ({ label: r.title || r.id, value: r.words,
@@ -326,10 +334,10 @@ function renderLocal(id, local) {
       tone: L.long.includes(r) ? 'fast' : L.short.includes(r) ? 'slow' : '' }))));
   } else if (id === 'repeat') {
     box.append(barList(L.rows.map((r) => ({ label: r.word, value: r.count,
-      display: r.count + '×', sub: tf('ui.aia.rowRepeat', r.title || r.id, r.closest), sceneId: r.id })),
+      display: r.count + gi('times'), sub: tf('ui.aia.rowRepeat', r.title || r.id, r.closest), sceneId: r.id })),
       { limit: 40 }));
   } else if (id === 'shipping') {
-    box.append(barList(L.rows.map((r) => ({ label: r.a + ' × ' + r.b, value: r.score, display: r.score,
+    box.append(barList(L.rows.map((r) => ({ label: r.a + ' ' + gi('times') + ' ' + r.b, value: r.score, display: r.score,
       sub: tf('ui.aia.rowShip', r.scenes, r.mentions), sceneId: r.sceneIds[0] }))));
   } else if (id === 'screentime') {
     box.append(barList(L.rows.map((r) => ({ label: r.name, value: r.words, display: r.share + '%',
@@ -516,7 +524,15 @@ export async function saveSession(name) {
     useAI: S.useAI, results,
   });
   const dir = await sessionDir(true);
-  const file = await kapi.join(dir, safeName(sessionFileName(sess)));
+  let file = await kapi.join(dir, safeName(sessionFileName(sess)));
+  // [alpha.160 · P3] ชื่อชน "เซสชันอื่น" (id ไม่ตรง) = เดิมเขียนทับเซสชันของคนอื่นเงียบ ๆ → ต่อท้ายด้วย id
+  try {
+    if (await kapi.exists(file)) {
+      const other = await kapi.readJson(file).catch(() => null);
+      if (other && other.id && other.id !== sess.id)
+        file = await kapi.join(dir, safeName(sessionFileName({ name: sess.name + '-' + sess.id })));
+    }
+  } catch {}
   try {
     await kapi.writeFile(file, JSON.stringify(sess, null, 2));
   } catch (e) {
@@ -524,6 +540,9 @@ export async function saveSession(name) {
     setStatus(gi('fail') + ' ' + t('ui.aia.errSessionSave'));
     return null;
   }
+  // [alpha.160 · P3] ★ เปลี่ยนชื่อเซสชันเดิม = ย้ายไฟล์ ไม่ใช่สร้างไฟล์ใหม่ทิ้งไฟล์เก่าไว้ (เดิมได้เซสชันซ้ำสองแถว)
+  const prev = S.session.id === sess.id ? S.session.file : '';
+  if (prev && prev !== file) { try { await kapi.remove(prev); } catch (e) { log('warn', t('ui.aia.errSessionSave'), e); } }
   S.session = { id: sess.id, name: sess.name, file };
   for (const id of Object.keys(results)) S.saved.add(resultKey(id));
   setStatus(gi('save') + ' ' + tf('ui.aia.sessionSaved', sess.name));
@@ -606,7 +625,7 @@ async function writeCsv(defName, text, outPath) {
   if (!p) return null;
   try { await kapi.writeFile(p, text); }
   catch (e) { log('error', t('ui.aia.errCsv'), e); setStatus(gi('fail') + ' ' + t('ui.aia.errCsv')); return null; }
-  setStatus('⤓ ' + tf('ui.aia.csvSaved', p));
+  setStatus((gi('download') + ' ') + tf('ui.aia.csvSaved', p));
   return p;
 }
 
@@ -643,7 +662,8 @@ export async function renderAIAnalyzerPanel(host) {
 
   const head = el('div', 'aia-head');
   const title = el('div', 'aia-title');
-  title.innerHTML = iconHtml('brain', 18) + ' ' + t('panel.aiAnalyzerTitle');
+  // [alpha.160 · P2] ข้อความจากไฟล์ภาษา (วางทับได้จากโฟลเดอร์โปรเจกต์) ห้ามเข้า innerHTML — ไอคอน node + text node
+  title.append(icon('brain', 18), document.createTextNode(' ' + t('panel.aiAnalyzerTitle')));
   head.append(title);
   head.append(miniBtn(t('ui.aia.reload'), '', async () => { await ensureLoaded(true); renderAIAnalyzerPanel(h); }));
   wrap.append(head);
@@ -678,7 +698,7 @@ export async function renderAIAnalyzerPanel(host) {
   const listBtn = miniBtn(gi('folder-open') + ' ' + t('ui.aia.sessionList'), t('ui.aia.sessionListTip'), () => sessionDialog(h));
   listBtn.id = 'aia-open-session';
   tools.append(listBtn);
-  const csvBtn = miniBtn('⤓ ' + t('ui.aia.exportCsv'), t('ui.aia.exportCsvTip'), () => exportAllCsv());
+  const csvBtn = miniBtn((gi('download') + ' ') + t('ui.aia.exportCsv'), t('ui.aia.exportCsvTip'), () => exportAllCsv());
   csvBtn.id = 'aia-export-csv';
   tools.append(csvBtn);
   wrap.append(tools);
@@ -693,7 +713,7 @@ export async function renderAIAnalyzerPanel(host) {
     { label: t('ui.common.book'), value: new Set(picked.map((s) => s.sectionKey)).size },
     { label: t('ui.common.chapter'), value: new Set(picked.map((s) => s.chapterId)).size },
     { label: t('ui.common.scene2'), value: picked.length },
-    { label: t('ui.common.word2'), value: picked.reduce((a, s) => a + s.words, 0).toLocaleString() },
+    { label: t('ui.common.word2'), value: fmtNum(picked.reduce((a, s) => a + s.words, 0)) },
     { label: t('ui.aia.wiki'), value: S.characters.length },
   ]));
 
@@ -735,7 +755,7 @@ export async function renderAIAnalyzerPanel(host) {
     btn.type = 'button';
     btn.onclick = () => runAnalysis(c.id);
     row.append(btn);
-    row.append(miniBtn('⤓', t('ui.aia.exportCsvOne'), () => exportResultCsv(c.id)));
+    row.append(miniBtn(gi('download'), t('ui.aia.exportCsvOne'), () => exportResultCsv(c.id)));
     card.append(row);
     const slot = el('div', 'aia-result');
     const prev = S.results.get(resultKey(c.id));

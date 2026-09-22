@@ -42,7 +42,7 @@ export const NAV_GROUP_KEYS = {
 };
 /** ไอคอนสั้น ๆ ของกลุ่ม (ไม่ใช่ข้อความ จึงไม่ต้องแปล) */
 export const NAV_GROUP_ICON = {
-  head: '§', scene: gi('scene-block'), dialog: gi('menu'), trans: gi('indent'), note: gi('pencil-thin'), beat: '¶',
+  head: gi('section-mark'), scene: gi('scene-block'), dialog: gi('menu'), trans: gi('indent'), note: gi('pencil-thin'), beat: gi('pilcrow'),
 };
 
 // ───────── สถานะของจุด (flags) ─────────
@@ -52,7 +52,7 @@ export const NAV_GROUP_ICON = {
 // (ไม่มีตัวไหนต้องให้ผู้ใช้มากรอกเพิ่ม ยกเว้น `star`/`color` ที่เป็นของผู้ใช้เอง)
 /** @type {Array<{id:string, mark:string, key:string}>} */
 export const NAV_FLAG_DEFS = [
-  { id: 'choice',  mark: '⤷', key: 'ui.nav.flagChoice' },   // ตัวหนา + จำนวนทางเลือก
+  { id: 'choice',  mark: gi('subdirectory-right'), key: 'ui.nav.flagChoice' },   // ตัวหนา + จำนวนทางเลือก
   { id: 'star',    mark: gi('star-filled'), key: 'ui.nav.flagStar' },
   { id: 'color',   mark: '▌', key: 'ui.nav.flagColor' },
   { id: 'todo',    mark: gi('warning'), key: 'ui.nav.flagTodo' },
@@ -93,7 +93,7 @@ export function navFlags(it) {
  */
 export function navKey(sceneId, kind, label, ord = 0) {
   const s = String(label || '').trim().replace(/\s+/g, ' ').slice(0, 80);
-  return [String(sceneId || ''), String(kind || ''), s, String(ord || 0)].join('');
+  return [String(sceneId || ''), String(kind || ''), s, String(ord || 0)].join('\u0001');
 }
 
 /** เติม `ord` (ลำดับของข้อความซ้ำ) ให้ทุกแถว แล้วคำนวณ `key` — แก้ในที่ คืนตัวเดิม */
@@ -219,6 +219,31 @@ export function blockOfMdLine(counts, line) {
     at += n;
   }
   return Math.max(0, c.length - 1);
+}
+
+// ───────── [alpha.161 · S] ผลค้นหาทั้งโปรเจกต์ → ตำแหน่งในเอกสาร ─────────
+/**
+ * ตำแหน่ง (pos ของ ProseMirror) ของคำ `term` ครั้งที่ `nth` (นับจาก 0 · ไม่สนตัวพิมพ์) ในเอกสาร
+ * `blocks` = บล็อกข้อความตามลำดับ `{ text, map }` — `map[i]` = pos ของอักขระที่ i (app.js สแกนให้)
+ * คำไม่ข้ามบล็อก (ผลค้นหาก็ไม่ข้ามบรรทัด) · nth เกินจำนวนที่มี = ครั้งสุดท้าย (ไฟล์ .md มีเครื่องหมายไวยากรณ์
+ * ที่ทำให้นับคลาดได้เล็กน้อย — ไปใกล้ที่สุดดีกว่าไม่ไปเลย) · ไม่เจอเลย = null
+ * @returns {number|null}
+ */
+export function nthTextPos(blocks, term, nth = 0) {
+  const w = String(term || '').toLowerCase();
+  if (!w) return null;
+  const want = Math.max(0, Math.floor(Number(nth) || 0));
+  let seen = 0, last = null;
+  for (const b of blocks || []) {
+    const s = String((b && b.text) || '').toLowerCase();
+    for (let k = s.indexOf(w); k >= 0; k = s.indexOf(w, k + 1)) {
+      const p = b.map && Number.isFinite(b.map[k]) ? b.map[k] : null;
+      if (p === null) continue;
+      if (seen === want) return p;
+      last = p; seen++;
+    }
+  }
+  return last;
 }
 
 // ───────── จับคู่แถวจากดิสก์ ↔ บล็อกจริงในเอกสาร ─────────

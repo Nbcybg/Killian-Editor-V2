@@ -305,7 +305,9 @@ const RE_ALIGN = /^<!--align:(left|center|right|justify)-->/;
 const ALIGNS = ['left', 'center', 'right', 'justify'];
 
 /** โหนดที่ "ถือ" ค่า align ได้จริง (บล็อกข้อความ) */
-const alignable = (n) => !!n && (n.type === 'paragraph' || n.type === 'heading');
+// [alpha.160 · P1-15] รูป (figure) ก็จัดหน้าได้ — `mdBlocks`/ไฟล์ส่งออกรองรับมาตั้งแต่ alpha.132 แต่ตัวแก้ไขไม่ถือค่า
+// → เปิดไฟล์ที่มี `<!--align:right-->` นำหน้ารูปแล้วบันทึก = การจัดหน้าของรูปหายเงียบ ๆ
+const alignable = (n) => !!n && (n.type === 'paragraph' || n.type === 'heading' || n.type === 'figure');
 /**
  * ══ [alpha.103 ข้อ 2] ★ บล็อกที่ **ห่อ** บล็อกข้อความไว้ข้างใน ══
  * ผู้ใช้: *"เมื่อใช้หัวข้อหรือ bullet จะถูกจัดชิดซ้ายเสมอ และปรับเปลี่ยนไม่ได้"*
@@ -490,7 +492,8 @@ function mdToDoc(md, alignMap) {
       const tg = splitImgTarget(m[2]);
       const o = parseImgOpts(tg.title);
       out.push({ type: 'figure', attrs: { src: tg.src, alt: m[1], md: line.trimEnd(),
-                                          fit: o.fit, w: o.w, radius: o.radius } });
+                                          fit: o.fit, w: o.w, radius: o.radius,
+                                          ...(align ? { align } : {}) } });   // [alpha.160 · P1-15]
       i++;
     } else if ((m = RE_H.exec(line))) {
       const rest = line.slice(m[0].length);
@@ -716,7 +719,8 @@ function docToMdParts(doc, opts) {
         // (ไม่งั้นปรับขนาด/ขอบมนแล้วไฟล์ไม่เปลี่ยน — ค่าที่ตั้งหายทันทีที่ปิดแท็บ)
         const o = { fit: a.fit || '', w: a.w || '', radius: a.radius === '' ? '' : a.radius };
         const title = imgOptsToTitle(o);
-        lines.push(title || !a.md ? imgLine(a.alt, a.src, o) : a.md);
+        // [alpha.160 · P1-15] เขียน `<!--align:x-->` นำหน้าบรรทัดรูปด้วย (ตัวเดียวกับย่อหน้า/หัวข้อ)
+        lines.push(alignPfx(node) + (title || !a.md ? imgLine(a.alt, a.src, o) : a.md));
         break;
       }
       case 'heading': {

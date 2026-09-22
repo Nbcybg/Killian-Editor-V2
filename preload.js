@@ -102,7 +102,7 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.62 บั๊ก 3] คลิปบอร์ดผ่าน main — เชื่อถือได้กว่า navigator.clipboard ในหน้าต่างไร้ขอบ
   clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'),
   winMin: call('win:minimize'), winMax: call('win:maximize'), winClose: call('win:close'),
-  quitNow: call('win:quitNow'), menuPopup: call('menu:popup'),
+  quitNow: call('win:quitNow'), menuPopup: call('menu:popup'), menuIds: call('menu:ids'),
   // [alpha.157] splash → หน้าต่างหลัก (ขยายเต็มจอ) · ข้อความ/เปอร์เซ็นต์ของสิ่งที่กำลังโหลด
   splashProgress: call('splash:progress'), splashDone: call('splash:done'),
   menuToggles: call('menu:toggles'),        // แจ้งสถานะสวิตช์ให้เมนู native ติ๊กถูกให้ตรง

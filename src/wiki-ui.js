@@ -1,7 +1,7 @@
 // wiki-ui.js — Wiki: หมวด (สร้าง/แก้/ลบ) + เอนทิตี้ (เพิ่ม/เปิด/ทำสำเนา)
 import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
+import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, openOnce, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
 // บทเรียน 68: ไฟล์นี้มี `for (const t of state.tabs.values())` อยู่แล้ว → import เป็น `tr` เสมอ
 import { $, BUILTIN_CATS, el, setStatus, smart, state, t as tr } from './core.js';
 import { pickImage } from './gallery.js';
@@ -82,7 +82,13 @@ export async function addEntity(catDir, cat) {
   openEntity(file);
 }
 
-export async function openEntity(file) {
+export function openEntity(file) {
+  if (state.tabs.has(file)) return activate(file);
+  // [alpha.162 · W1-13] กันเปิดซ้อน — ระหว่าง `await readJson` ยังไม่มีใครจองคีย์แท็บไว้
+  return openOnce(file, () => openEntityNow(file));
+}
+
+async function openEntityNow(file) {
   if (state.tabs.has(file)) return activate(file);
   // โหลดชื่อ entity ทั้งหมดก่อนวาด wiki (ถ้ายังไม่เคยโหลด)
   if (!smart.titles || !smart.titles.length) await smart.loadNames(state.root);
@@ -92,7 +98,7 @@ export async function openEntity(file) {
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', entity.name || 'entity'));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
+  const x = el('span', 'tab-x', gi('times')); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const tab = { file, title: entity.name || 'entity', pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null };
@@ -204,6 +210,10 @@ export async function openEntity(file) {
     },
   });
   tab.wiki.onDirty(() => markDirty(tab));
+  // [alpha.162 · W1-2] `render()` ถูกเรียกใน constructor ของ WikiEditor ซึ่ง **ยังไม่มี onDirty**
+  // (ตัวแปลงข้อมูลเก่า เช่น prompts รูปแบบเดิม ตั้ง dirty ตั้งแต่ตอนนั้น) → ธงค้างอยู่ฝั่ง wiki
+  // ฝั่งเดียว แท็บไม่รู้ = ไม่ขึ้นทะเบียนงานค้าง · เก็บตกให้ครบหลังผูก callback
+  if (tab.wiki.dirty) markDirty(tab);
   // ---- Backlinks (ข้อ 86): ฉากที่กล่าวถึงเอนทิตี้นี้ ----
   // [alpha.60r3 ข้อ 1] หัวข้อมีปุ่ม 🔄 บังคับสร้างดัชนีใหม่ทั้งชุด
   // (ดัชนีอัปเดตเองทุกครั้งที่บันทึกฉากแล้ว — ปุ่มนี้ไว้ใช้ตอนแก้ไฟล์ .md นอกโปรแกรม)

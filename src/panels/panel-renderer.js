@@ -9,7 +9,7 @@
 //   · ลาก resize/float ไม่ยิง re-render ระหว่างลาก (จะทำให้ ProseMirror ถูกถอด-ใส่ 60 ครั้ง/วินาที)
 //     → ปรับ style สดตอนลาก แล้ว commit ลง store ครั้งเดียวตอนปล่อย
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
-import { t } from '../i18n.js';
+import { t, tf, shortcutText } from '../i18n.js';
 import { el } from '../core.js';
 import { popupMenu } from '../ui.js';        // [60r3 ข้อ 8] เมนูคลิกขวาบนหัวแผง
 import { iconHtml, hasIcon, gi } from '../icons.js';
@@ -128,6 +128,48 @@ function renderDock(node, pm, opts, depth) {
   return box;
 }
 
+/**
+ * [alpha.162 · W5 ข้อ 3] แถบแท็บของกลุ่มแผงเป็น `div` ที่คลิกได้อย่างเดียว — คีย์บอร์ดเข้าไม่ถึง ·
+ * โปรแกรมอ่านหน้าจอไม่รู้ว่าเป็นแท็บ · ตัวนี้ใส่ความหมายมาตรฐาน (tablist/tab/aria-selected) +
+ * roving tabindex (Tab เข้า-ออกแถบทีเดียว) + ←→/↑↓ · Home/End ย้ายโฟกัส · Enter/Space เปิดแท็บ
+ * ใช้ร่วมกันทั้งกลุ่มที่ผนึกและกลุ่มลอย — แท็บใหม่ไม่ต้องจำใส่เอง
+ */
+export function a11yTabBar(bar, label) {
+  if (!bar) return bar;
+  bar.setAttribute('role', 'tablist');
+  if (label) bar.setAttribute('aria-label', label);
+  const vertical = bar.classList.contains('k-vertical');
+  if (vertical) bar.setAttribute('aria-orientation', 'vertical');
+  const tabs = [...bar.querySelectorAll(':scope > .k-tab')];
+  const cur = tabs.find((x) => x.classList.contains('active')) || tabs[0];
+  for (const x of tabs) {
+    const on = x.classList.contains('active');
+    x.setAttribute('role', 'tab');
+    x.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (x.title) x.setAttribute('aria-label', x.title);
+    x.tabIndex = x === cur ? 0 : -1;
+  }
+  bar.addEventListener('keydown', (e) => {
+    const list = [...bar.querySelectorAll(':scope > .k-tab')];
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    const prevK = vertical ? 'ArrowUp' : 'ArrowLeft';
+    const nextK = vertical ? 'ArrowDown' : 'ArrowRight';
+    let j = -1;
+    if (e.key === nextK) j = (i + 1) % list.length;
+    else if (e.key === prevK) j = (i - 1 + list.length) % list.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = list.length - 1;
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); list[i].click(); return; }
+    if (j < 0) return;
+    e.preventDefault();
+    list[i].tabIndex = -1;
+    list[j].tabIndex = 0;
+    list[j].focus();
+  });
+  return bar;
+}
+
 // ───────── tab group ─────────
 // วาด "ทุกแท็บ" ลง DOM เสมอ (ซ่อนตัวที่ไม่ active) — โค้ดเก่าพึ่ง element id ที่ต้องอยู่ใน DOM ตลอด
 function renderTabs(node, pm, opts, depth) {
@@ -179,16 +221,18 @@ function renderTabs(node, pm, opts, depth) {
     bar.appendChild(tab);
   }
   // ปุ่มย่อกลุ่มแท็บเป็นแถบไอคอน
-  const strBtn = el('span', 'k-panel-btn k-strip-btn', strip ? '»' : '«');
-  strBtn.title = strip ? t('ui.panelRenderer.groupTab') : t('ui.panelRenderer.collapseBarIcon');
-  strBtn.onclick = (e) => { e.stopPropagation(); toggleStrip(node.id, pm, !strip); };
+  const strBtn = makePanelButton({ glyph: strip ? gi('strip-expand') : gi('strip-collapse'), cls: 'k-strip-btn',
+    title: strip ? t('ui.panelRenderer.groupTab') : t('ui.panelRenderer.collapseBarIcon'),
+    tip: 'ui.panelTip.strip', onPress: () => toggleStrip(node.id, pm, !strip) });
   bar.appendChild(strBtn);
+  a11yTabBar(bar, t('ui.panelRenderer.tabsLabel'));   // [alpha.162 · W5 ข้อ 3]
   box.appendChild(bar);
 
   const body = el('div', 'k-tab-content');
+  const gOpts = { ...opts, inGroup: true };          // [alpha.161 · U3] หัวแผงในกลุ่ม = เมนู/ย่อ เท่านั้น
   for (let i = 0; i < kids.length; i++) {
     if (isHid(kids[i])) continue;
-    const panelEl = renderNode(kids[i], pm, opts, depth + 1);
+    const panelEl = renderNode(kids[i], pm, gOpts, depth + 1);
     if (!panelEl) continue;
     panelEl.classList.add('k-tabbed');
     if (i !== active) panelEl.classList.add('k-tab-hidden');
@@ -202,7 +246,9 @@ function renderTabs(node, pm, opts, depth) {
 function addTabClose(tab, id, md, pm) {
   if (md.closable === false) return;
   const x = el('span', 'k-tab-x', gi('close'));
-  x.title = t('ui.panelRenderer.closePanelOpen');
+  // [alpha.161 · U3] ชื่อบอกชัดว่าปิด "แผงนี้" (ต่างจากปุ่มปิดทั้งกลุ่มบนแถบกลุ่มลอย)
+  x.title = tf('ui.panelRenderer.closeThisPanel', md.title || id);
+  x.dataset.tip = 'ui.panelTip.tabClose';
   // กันตัวลากแท็บจับ mousedown ของปุ่มปิด (ไม่งั้นกดปิดแล้วกลายเป็นเริ่มลาก)
   x.addEventListener('mousedown', (e) => e.stopPropagation());
   x.onclick = (e) => { e.stopPropagation(); pm.hidePanel(id); };
@@ -223,7 +269,6 @@ function renderPanel(node, pm, opts, depth) {
   const md = metaOf(opts, node.id);
   const box = el('div', 'k-panel');
   box.dataset.panelId = node.id;
-  if (md.cls) box.classList.add(md.cls);
   if (node.collapsed) box.classList.add('k-collapsed');
   if (md.fixed) box.classList.add('k-panel-fixed');
   if (md.noHead) box.classList.add('k-panel-nohead');
@@ -238,6 +283,44 @@ function renderPanel(node, pm, opts, depth) {
   return box;
 }
 
+/**
+ * [alpha.161 · U2] ★ ปุ่มควบคุมของระบบแผง — คอมโพเนนต์เดียว (หัวแผง · แถบกลุ่มลอย · ย่อกลุ่มแท็บ)
+ * สร้างด้วย node ล้วน (ไม่ innerHTML) · `title` = ชื่อ (+ คีย์ลัดจริงถ้ามี) · `data-tip` = คำอธิบายบรรทัดสอง
+ * (ระบบทูลทิปตัวเดียวกับแถบเครื่องมือ — setupHoverTips อ่าน data-tip) · กดด้วยคีย์บอร์ดได้
+ * (tabindex=0 + Enter/Space · วงโฟกัสใน CSS `:focus-visible`) · คลาส `k-panel-btn-<act>` / `data-act` คงเดิม
+ * @param {{act?:string, glyph:string, title:string, tip?:string, sc?:string, cls?:string, onPress:(e:Event)=>void}} o
+ */
+export function makePanelButton(o) {
+  const b = el('span', 'k-panel-btn' + (o.act ? ' k-panel-btn-' + o.act : '') + (o.cls ? ' ' + o.cls : ''), o.glyph || '');
+  b.setAttribute('role', 'button');
+  b.tabIndex = 0;
+  if (o.act) b.dataset.act = o.act;
+  if (o.tip) b.dataset.tip = o.tip;
+  const sc = o.sc ? shortcutText(o.sc) : '';
+  const title = String(o.title || '') + (sc ? ' (' + sc + ')' : '');
+  if (title) { b.title = title; b.setAttribute('aria-label', title); }
+  b.onclick = (e) => { e.stopPropagation(); o.onPress(e); };
+  b.onkeydown = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); e.stopPropagation(); o.onPress(e);
+  };
+  // [alpha.162 · W2] บอก buildHead ว่าปุ่มนี้มีคีย์บอร์ดของตัวเองแล้ว — ไม่งั้นตัวปะของปุ่มที่โมดูลอื่น
+  // ฝากไว้ (ซึ่งเรียก ) จะทำงานซ้อนอีกชั้น = กด Enter หนึ่งครั้งได้ผลสองครั้ง (สวิตช์กลับที่เดิม)
+  b._k2kbd = true;
+  return b;
+}
+
+/**
+ * [alpha.162 · W2] หัวแผงของ "หน้าต่างที่ฉีกออกมา" — ไม่มีปุ่มควบคุม (หน้าต่างนั้นมีแผงเดียว)
+ * แต่ต้องเป็นโครงเดียวกับหัวแผงปกติ: ไอคอน + ชื่อ ในคลาสชุดเดียวกัน
+ */
+export function panelWindowHead({ title, icon: ic }) {
+  const head = el('div', 'k-panel-head k-panel-head-win');
+  head.appendChild(iconSpan(ic, 'k-panel-head-icon'));
+  head.appendChild(el('span', 'k-panel-head-title', title || ''));
+  return head;
+}
+
 function buildHead(node, pm, opts, md, floating) {
   const head = el('div', 'k-panel-head');
   head.appendChild(iconSpan(md.icon, 'k-panel-head-icon'));
@@ -246,30 +329,42 @@ function buildHead(node, pm, opts, md, floating) {
   // ปุ่มเสริมที่โมดูลอื่นฝากไว้ (🔄 รีเฟรช, 🔍 ค้นหา, ¶ beats) — element เดิมถูกใช้ซ้ำทุกรอบ render
   const ctrls = el('span', 'k-panel-ctrls');
   const extras = opts.headExtras ? (opts.headExtras(node.id) || []) : [];
-  for (const b of extras) ctrls.appendChild(b);
+  for (const b of extras) {
+    // [alpha.161 · U2] ปุ่มเสริมที่โมดูลอื่นฝากไว้ ต้องกดด้วยคีย์บอร์ดได้เหมือนปุ่มของระบบแผง
+    if (b && b.nodeType === 1 && b.classList.contains('k-panel-btn') && !b._k2kbd) {
+      b._k2kbd = true;
+      b.setAttribute('role', 'button');
+      if (b.tabIndex < 0) b.tabIndex = 0;
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault(); e.stopPropagation(); b.click();
+      });
+    }
+    ctrls.appendChild(b);
+  }
   head.appendChild(ctrls);
 
   const btns = el('span', 'k-panel-btns');
   const def = pm.registry.get(node.id) || {};
+  // [alpha.161 · U3] ★ แผงที่อยู่ "ในกลุ่มแท็บ" — แถบแท็บของกลุ่มมีปุ่มปิด (✕ บนแท็บ) และปุ่มของกลุ่มแล้ว
+  // เดิมหัวแผงข้างในโชว์ ปิด/ลอย/ฉีก ซ้ำอีกชุด (กลุ่มลอยมีปุ่มปิดสามตัวที่ทำคนละอย่าง) → เหลือแค่ เมนู/ย่อ
+  // คำสั่งลอย/ฉีก/ปิดของแผงเดี่ยวยังอยู่ครบในเมนู ☰ (headMenuItems)
+  const inGroup = !!opts.inGroup;
   // [alpha.67] 🖥 ฉีกแผงออกเป็นหน้าต่าง OS จริง — วางไว้ก่อน ⧉ (ลอย) เพราะเป็นการ "ออกไปไกลกว่า"
-  if (opts.canTearOff && opts.canTearOff(node.id)) {
-    const tb = el('span', 'k-panel-btn k-panel-btn-tearoff', gi('desktop'));
-    tb.title = t('ui.panelRenderer.moveWindowSplitDrag');
-    tb.dataset.act = 'tearoff';
-    tb.onclick = (e) => { e.stopPropagation(); opts.onTearOff(node.id); };
-    btns.appendChild(tb);
+  if (!inGroup && opts.canTearOff && opts.canTearOff(node.id)) {
+    btns.appendChild(makePanelButton({ act: 'tearoff', glyph: gi('desktop'), title: t('ui.panelRenderer.moveWindowSplitDrag'),
+      tip: 'ui.panelTip.tearoff', onPress: () => opts.onTearOff(node.id) }));
   }
   for (const b of PL.PANEL_BUTTONS) {
     if (b.key === 'close' && def.closable === false) continue;
     if (b.key === 'float' && def.floatable === false) continue;
-    const btn = el('span', 'k-panel-btn k-panel-btn-' + b.key,
-                   b.key === 'float' && floating ? '⊡' : (b.key === 'collapse' && node.collapsed ? gi('triangle-right-sm') : b.icon));
-    btn.title = b.title;
-    btn.dataset.act = b.key;
-    btn.onclick = (e) => {
-      e.stopPropagation();
+    if (inGroup && !b.group) continue;
+    const glyph = b.key === 'float' && floating ? gi('dock-window') : (b.key === 'collapse' && node.collapsed ? gi('triangle-right-sm') : b.icon);
+    const btn = makePanelButton({ act: b.key, glyph, title: b.title, tip: b.tip,
+      sc: b.key === 'close' ? 'toggle-panel:' + node.id : '', onPress: (e) => press(b, btn, e) });
+    const press = (b2, btn2, e) => {
       if (b.key === 'menu') {
-        const r = btn.getBoundingClientRect();
+        const r = btn2.getBoundingClientRect();
         popupMenu(Math.max(8, r.right - 240), r.bottom + 3, headMenuItems(node, pm, opts, md, floating));
       }
       else if (b.key === 'collapse') pm.collapsePanel(node.id);
@@ -362,8 +457,12 @@ export function panelMinW(md) {
 }
 
 function buildBody(node, opts) {
+  const md = metaOf(opts, node.id);
   const body = el('div', 'k-panel-body');
-  body.style.setProperty('--panel-min-w', panelMinW(metaOf(opts, node.id)) + 'px');
+  // [alpha.162 · W2] แผงที่เนื้อข้างในจัดการพื้นที่เอง (ธง `flush` ใน PANEL_DEFS)
+  // เดิมเป็นกฎ CSS `:has(#xxx-body)` สิบกฎกระจายทั้งไฟล์ — เพิ่มแผงใหม่ทีไรต้องไปเขียนกฎเพิ่มเอง
+  if (md.flush) body.classList.add('k-panel-flush');
+  body.style.setProperty('--panel-min-w', panelMinW(md) + 'px');
   if (opts.renderPanelBody) {
     const content = opts.renderPanelBody(node.id, body);
     if (content && content !== body && content.parentNode !== body) body.appendChild(content);
@@ -454,34 +553,31 @@ function renderFloatGroup(f, pm, opts, container) {
     makeTabDraggable(tab, child.id, g.id, i, pm, { host: opts.host, isFixedPanel: fixedPanel(opts) });
     bar.appendChild(tab);
   });
-  // ปุ่มปิดของกลุ่ม (ปิดแท็บที่เปิดอยู่)
-  const closeBtn = el('span', 'k-panel-btn k-panel-btn-close', gi('close'));
-  closeBtn.title = t('ui.panelRenderer.closePanelOpen');
-  closeBtn.onclick = (e) => { e.stopPropagation(); const c = kids[active]; if (c) pm.hidePanel(c.id); };
-  const dockBtn = el('span', 'k-panel-btn k-panel-btn-float', '⊡');
-  dockBtn.title = t('ui.panelRenderer.groupBackInWindow');
-  dockBtn.onclick = (e) => {
-    e.stopPropagation();
-    pm.dockFloatGroup(f.id, 'left', pm.isDocked('docs') ? 'docs' : undefined);
-  };
+  a11yTabBar(bar, t('ui.panelRenderer.tabsLabel'));   // [alpha.162 · W5 ข้อ 3]
+  // [alpha.161 · U3] หัวกลุ่มควบคุม "ทั้งกลุ่ม" — ✕ บนแท็บปิดทีละแผง · ปุ่มนี้ปิดทั้งกลุ่ม
+  // (เดิมปุ่มนี้ปิดแค่แท็บที่เปิดอยู่ = ซ้ำกับ ✕ บนแท็บ และหัวแผงข้างในยังมีปุ่มปิดอีกตัว = สามปุ่ม)
+  const closeBtn = makePanelButton({ act: 'close', cls: 'k-group-close', glyph: gi('close'),
+    title: tf('ui.panelRenderer.closeGroupN', kids.length), tip: 'ui.panelTip.groupClose',
+    onPress: () => { for (const c of kids.slice()) pm.hidePanel(c.id); } });
+  const dockBtn = makePanelButton({ act: 'float', glyph: gi('dock-window'), title: t('ui.panelRenderer.groupBackInWindow'),
+    tip: 'ui.panelTip.groupDock',
+    onPress: () => pm.dockFloatGroup(f.id, 'left', pm.isDocked('docs') ? 'docs' : undefined) });
   const btns = el('span', 'k-panel-btns');
-  // [alpha.67] ฉีก "แท็บที่เปิดอยู่" ของกลุ่มลอยออกไปเป็นหน้าต่างแยก
-  // (หัวแผงข้างในก็มีปุ่มนี้ แต่ในกลุ่มลอยแถบแท็บอยู่บนสุด ผู้ใช้เอื้อมถึงก่อน)
+  // [alpha.67] ฉีก "แท็บที่เปิดอยู่" ของกลุ่มลอยออกไปเป็นหน้าต่างแยก — แถบแท็บอยู่บนสุด ผู้ใช้เอื้อมถึงก่อน
+  // ([alpha.161] หัวแผงข้างในกลุ่มไม่มีปุ่มนี้ซ้ำแล้ว — ยังอยู่ในเมนู ☰ ของแผง)
   const actId = (kids[active] || {}).id;
   if (actId && opts.canTearOff && opts.canTearOff(actId)) {
-    const toBtn = el('span', 'k-panel-btn k-panel-btn-tearoff', gi('desktop'));
-    toBtn.title = t('ui.panelRenderer.moveTabWindowSplit');
-    toBtn.dataset.act = 'tearoff';
-    toBtn.onclick = (e) => { e.stopPropagation(); opts.onTearOff(actId); };
-    btns.appendChild(toBtn);
+    btns.appendChild(makePanelButton({ act: 'tearoff', glyph: gi('desktop'), title: t('ui.panelRenderer.moveTabWindowSplit'),
+      tip: 'ui.panelTip.tearoff', onPress: () => opts.onTearOff(actId) }));
   }
   btns.append(dockBtn, closeBtn);
   bar.appendChild(btns);
   pop.appendChild(bar);
 
   const body = el('div', 'k-tab-content');
+  const gOpts = { ...opts, inGroup: true };          // [alpha.161 · U3]
   kids.forEach((child, i) => {
-    const panelEl = renderNode(child, pm, opts, 1);
+    const panelEl = renderNode(child, pm, gOpts, 1);
     if (!panelEl) return;
     panelEl.classList.add('k-tabbed');
     if (i !== active) panelEl.classList.add('k-tab-hidden');

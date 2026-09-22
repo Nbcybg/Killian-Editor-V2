@@ -289,6 +289,28 @@ const script = [
     check('[159-M10] watermarkFileName ชื่อว่าง = ยังได้ชื่อ', /\.pdf$/.test(WM.watermarkFileName('', '', new Set())));
   }
 
+  // ── [alpha.160 · P1-6] ขึ้นหน้าใหม่ต้องไปถึงไฟล์ RTF/FDX (เดิม \f ถูกทิ้งทั้งสองทาง) ──
+  {
+    const blocks = [{ el: 'action', text: 'หน้าแรก160' }, { el: 'page-break', text: '' },
+                    { el: 'action', text: 'หน้าสอง160' }, { el: 'action', text: '\f' },
+                    { el: 'scene', text: 'INT. ครัว - กลางวัน', sceneNo: 1 }];
+    const rtf = RTF.generateRtf(blocks, {}, null, {});
+    const nPage = (rtf.match(/\\page\b/g) || []).length;
+    check('[160-P1-6] ★ RTF: page-break + บรรทัด \\f = \\page สองครั้ง', nPage === 2, nPage + ' :: ' + rtf.slice(-300));
+    check('[160-P1-6] RTF: \\page อยู่ระหว่างหน้าแรกกับหน้าสอง',
+          rtf.indexOf('\\page') > rtf.indexOf(RTF.escapeRtf('หน้าแรก160')) && rtf.indexOf('\\page') < rtf.indexOf(RTF.escapeRtf('หน้าสอง160')));
+    check('[160-P1-6] RTF: \\f กลางข้อความ = \\page (ไม่ถูกทิ้งเงียบ ๆ)', RTF.escapeRtf('ก\fข').includes('\\page'));
+    const fdx = FDX.generateFdx(blocks, {}, {});
+    const starts = (fdx.match(/StartsNewPage="Yes"/g) || []).length;
+    check('[160-P1-6] ★ FDX: ขึ้นหน้าใหม่ = StartsNewPage="Yes" บนย่อหน้าถัดไป (2 จุด)', starts === 2, fdx);
+    check('[160-P1-6] FDX: ย่อหน้า "หน้าสอง" เป็นตัวที่ขึ้นหน้าใหม่',
+          /<Paragraph Type="Action" StartsNewPage="Yes">\s*<Text>หน้าสอง160/.test(fdx), fdx);
+    check('[160-P1-6] FDX: ไม่มีย่อหน้าเปล่าจาก page-break', !/<Text><\/Text>/.test(fdx));
+    check('[160-P1-6] FDX: หัวฉากที่ขึ้นหน้าใหม่ยังมีเลขฉาก', /Number="1" StartsNewPage="Yes"/.test(fdx), fdx);
+    check('[160-P1-6] FDX: page-break ต้นเรื่องไม่ขึ้นหน้าเปล่า',
+          !/StartsNewPage/.test(FDX.generateFdx([{ el: 'page-break', text: '' }, { el: 'action', text: 'ก' }], {}, {})));
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();

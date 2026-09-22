@@ -105,5 +105,31 @@ check('textMatchesQuery ไม่สนตัวพิมพ์', F.textMatchesQ
         sorted.join());
 }
 
+// ── [alpha.161 · P4] ชิปตัวกรองต้องไม่ทำลายข้อความที่ผู้ใช้พิมพ์ ──
+{
+  const S = F.setChipClause, P = F.parseChipQuery;
+  check('[161-P4] ★ พิมพ์คำไว้แล้วกดชิปสถานะ → คำยังอยู่', S('ทอร่า', 'status', ['กำลังเขียน']) === 'ทอร่า status:กำลังเขียน',
+        S('ทอร่า', 'status', ['กำลังเขียน']));
+  const two = S('ทอร่า', 'status', ['กำลังเขียน', 'เขียนเสร็จ']);
+  check('[161-P4] ★ สองสถานะ = กระจายคำค้นไปทุกกลุ่ม OR (ไม่มีวงเล็บในไวยากรณ์)',
+        two === 'ทอร่า status:กำลังเขียน OR ทอร่า status:เขียนเสร็จ', two);
+  const scA = { title: 'ทอร่าไปตลาด', status: 'กำลังเขียน' }, scB = { title: 'คาสซี่', status: 'กำลังเขียน' };
+  check('[161-P4] ผลการกรอง = คำ AND (สถานะใดสถานะหนึ่ง)', F.sceneMatchesQuery(scA, two) && !F.sceneMatchesQuery(scB, two));
+  check('[161-P4] ★ เลิกเลือกชิปหมด → ลบเฉพาะเงื่อนไขสถานะ คำเดิมกลับมาเหมือนเดิม', S(two, 'status', []) === 'ทอร่า', S(two, 'status', []));
+  check('[161-P4] ไม่มีคำค้นเลย = ชิปล้วน (พฤติกรรมเดิม)', S('', 'status', ['ก', 'ข']) === 'status:ก OR status:ข', S('', 'status', ['ก', 'ข']));
+  const both = S(S('ทอร่า', 'status', ['ก']), 'tag', ['บู๊']);
+  check('[161-P4] ชิปสถานะ + ชิปแท็ก ใช้ร่วมกันได้ (กดแท็กไม่ลบสถานะ)', both === 'ทอร่า status:ก tag:บู๊', both);
+  check('[161-P4] ลบแท็กไม่แตะสถานะ/คำ', S(both, 'tag', []) === 'ทอร่า status:ก', S(both, 'tag', []));
+  check('[161-P4] ค่าที่มีวรรคใส่เครื่องหมายคำพูด และอ่านกลับได้',
+        S('x', 'status', ['รอ แก้']) === 'x status:"รอ แก้"' && P('x status:"รอ แก้"').status[0] === 'รอ แก้');
+  check('[161-P4] เงื่อนไขปฏิเสธที่ผู้ใช้พิมพ์เอง (-status:x) ไม่ใช่ของชิป — คงไว้',
+        S('ทอร่า -status:ร่าง', 'status', ['ก']) === 'ทอร่า -status:ร่าง status:ก');
+  const pq = P('ก status:A OR ข status:B tag:t');
+  check('[161-P4] parseChipQuery แยกข้อความของผู้ใช้ต่อกลุ่ม + ค่าชิป',
+        JSON.stringify(pq) === JSON.stringify({ free: ['ก', 'ข'], status: ['A', 'B'], tag: ['t'] }), JSON.stringify(pq));
+  check('[161-P4] คิวรีที่ผู้ใช้พิมพ์ OR เอง + ชิป → ทุกกลุ่มได้เงื่อนไขชิป',
+        S('ก OR ข', 'status', ['A']) === 'ก status:A OR ข status:A', S('ก OR ข', 'status', ['A']));
+}
+
 console.log(`\nPASS ${pass}  FAIL ${fail}`);
 if (fail) process.exit(1);

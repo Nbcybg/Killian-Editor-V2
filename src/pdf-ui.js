@@ -7,7 +7,8 @@
 // เป็นค่า "ระดับโปรเจกต์" เหมือนขนาดกระดาษ/รูปแบบบท — ไม่ใช่รายเล่มแบบ roster.json
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { el, state, setStatus, log, textWidth, normalizeLangFonts, isLangFontUsable, rowAppliesTo,
-         normalizeRange, familyList } from './core.js';
+         normalizeRange, familyList, withBusyTask } from './core.js';
+import { isCancelled, progressText } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
 import { SP_THAI_FALLBACKS } from './lang-fonts.js';
 import { num } from './num.js';
 import { localDay } from './local-date.js';
@@ -25,6 +26,7 @@ import { pagesOf, pageStartPositions } from './sp-view.js';
 // [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — ตัวเดียวกับที่ศูนย์ส่งออกใช้
 import { exportNameRow } from './export-name-ui.js';
 import { gi } from './icons.js';
+import { errText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 
 // ───────── ที่เก็บข้อมูล ─────────
 /** หน้าปกของโปรเจกต์นี้ (ยังไม่เคยตั้ง = อาร์เรย์ว่าง) */
@@ -309,7 +311,7 @@ export async function openTitlePageDialog() {
     gx.onchange = () => set({ x: gx.value });
     const gy = numInput(s.y, { min: -2, max: 40 });
     gy.onchange = () => set({ y: gy.value });
-    const pos = el('span'); pos.append(gx, document.createTextNode(' × '), gy);
+    const pos = el('span'); pos.append(gx, document.createTextNode((' ' + gi('times') + ' ')), gy);
     colProps.append(row(tt('ui.pdf.posXYInch'), pos, tt('ui.pdf.marginPaperLeftTop')));
 
     const gw = numInput(s.width, { min: 0, max: 40 });
@@ -580,8 +582,12 @@ export async function pdfExportDialog() {
       // [alpha.132 ข้อ 6] ชื่อที่เสนอ = ตัวเดียวกับที่ช่องตัวอย่างบอกไว้เป๊ะ
       const dest = await kapi.savePdfDialog(nameRow.name());
       if (!dest) { bGo.disabled = false; prog.textContent = ''; return; }
-      const r = await buildScriptPdf({ blocks: src.blocks, title: src.title, fmt, opts,
-                                       titlePages: titles, headers: hdr });
+      // [alpha.162 · W5 ข้อ 2] บทยาวใช้เวลา — บอกหน้าที่วาดถึง + ยกเลิกได้ (ปุ่มที่แถบสถานะ)
+      const busyMsg = tt('ui.pdf.busyNew');
+      const r = await withBusyTask(busyMsg, ({ signal, progress }) => buildScriptPdf({
+        blocks: src.blocks, title: src.title, fmt, opts, titlePages: titles, headers: hdr, signal,
+        onProgress: (d, n) => { progress(d, n); prog.textContent = progressText(busyMsg, d, n); },
+      }), { name: tt('ui.pdf.taskName') });
       await kapi.writeBytes(dest, Array.from(r.bytes));
       if (state.meta) { state.meta.pdfExport = opts; await saveProjectMeta(); }
       // [alpha.132r3 ข้อ 2] เปิดไฟล์ที่เพิ่งได้ (ถ้าผู้ใช้ติ๊กไว้ในแถวชื่อไฟล์)
@@ -593,7 +599,8 @@ export async function pdfExportDialog() {
       setStatus(tt('ui.common.exportPDF') + dest);
       log('info', tt('ui.pdf.exportPDFPdfLib'), { dest, pages: r.pageCount, toc: r.bookmarks.length });
     } catch (e) {
-      prog.textContent = tt('ui.common.error') + (e && e.message ? e.message : e);
+      if (isCancelled(e)) { prog.textContent = tf('ui.common.taskCancelled', tt('ui.pdf.taskName')); bGo.disabled = false; return; }
+      prog.textContent = tt('ui.common.error') + errText(e);
       log('error', tt('ui.pdf.newPDFNotOk'), e);
     }
     bGo.disabled = false;
@@ -608,7 +615,7 @@ export async function pdfExportDialog() {
  * สร้าง PDF ของบท — จุดเดียวที่ทุกทางเรียก (กล่องส่งออก · เวิร์กโฟลว์ ext=pdf · เทส)
  * @returns ผลจาก generatePdf (มี bytes / pageCount / bookmarks)
  */
-export async function buildScriptPdf({ blocks, title, fmt, opts, titlePages, headers }) {
+export async function buildScriptPdf({ blocks, title, fmt, opts, titlePages, headers, signal, onProgress }) {
   const f = fmt || spFormat();
   const fonts = await pdfFontBytes();
   const r = await generatePdf({
@@ -617,6 +624,7 @@ export async function buildScriptPdf({ blocks, title, fmt, opts, titlePages, hea
     headers: headers === undefined ? projectHeaders() : headers,
     meta: pdfMeta(title), fonts: { regular: fonts.regular, latin: fonts.latin },
     opts: { ...savedPdfOptions(), ...(opts || {}) },
+    signal, onProgress,                                   // [alpha.162 · W5 ข้อ 2]
   });
   // [alpha.159 · M33] ทุกทางที่ทำ PDF ของบทผ่านจุดนี้ — ไทยพิมพ์ไม่ออกต้องบอกผู้ใช้ (เดิมเงียบแล้วได้ ??????)
   if ((r.warnings || []).includes('thai-font-missing')) {

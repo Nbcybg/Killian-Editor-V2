@@ -24,23 +24,35 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // ───────── ลำดับตามรายการของผู้ใช้ (เขียนซ้ำตรงนี้ด้วยมือ = สัญญาที่ต้องรักษา) ─────────
 const USER_LIST = {
-  project: 'addBook renameProject | quickOpen searchProject dashboard kanban journal | play playerHistory | branchPanel | projectSettings aiSettings reveal',
-  book: 'addBook rename reorder | addChapter duplicate star | manageBooks manageChapters searchIn readBook | castOfCharacters titlePage | quickNote viewQuickNotes | propsPopup propsPanel reveal | color status pin | lock backup restore | delete',
-  chapter: 'addChapter bookFromChapter visual rename reorder | addScene copy paste duplicate move star | manageChapters manageScenes searchIn readChapter readBook | propsPopup propsPanel reveal | color status pin | lock backup restore | delete',
-  scene: 'open addScene addChapter chapterFromScenes rename reorder switchFormat | copy paste duplicate moveUp moveDown move star | quickNote comment readScene | propsPopup propsPanel reveal | color status pin | saveVersion versionHistory compareVersion | splitView toMemo | lock backup restore | delete',
+  project: 'addBook renameProject | quickOpen searchProject dashboard kanban journal | play playerHistory | branchPanel | projectSettings aiSettings reveal copyPath | expandAll collapseAll refresh',
+  book: 'addBook rename reorder | addChapter duplicate star | manageBooks manageChapters searchIn readBook | castOfCharacters titlePage | quickNote viewQuickNotes | propsPopup propsPanel reveal copyPath | color status pin | lock backup restore | delete',
+  chapter: 'addChapter bookFromChapter visual rename reorder | addScene copy paste duplicate move star | manageChapters manageScenes searchIn readChapter readBook | propsPopup propsPanel reveal copyPath | color status pin | lock backup restore | delete',
+  scene: 'open addScene addChapter chapterFromScenes rename reorder switchFormat | copy paste duplicate moveUp moveDown move star | quickNote comment readScene | propsPopup propsPanel reveal copyPath | color status pin | saveVersion versionHistory compareVersion | splitView toMemo | lock backup restore | delete',
   memoHead: 'open addMemo | reveal',
-  memo: 'open addMemo sceneFromMemo rename | copy paste duplicate moveUp moveDown move star | quickNote comment | propsPopup propsPanel reveal | color status pin | saveVersion versionHistory compareVersion | splitView | lock backup restore | delete',
+  memo: 'open addMemo sceneFromMemo rename | copy paste duplicate moveUp moveDown move star | quickNote comment | propsPopup propsPanel reveal copyPath | color status pin | saveVersion versionHistory compareVersion | splitView | lock backup restore | delete',
   galleryHead: 'openGallery addAlbum importImage moodBoard | reveal',
-  image: 'view insert rename | copy paste duplicate | propsPopup propsPanel reveal | delete',
+  image: 'view insert rename | copy paste duplicate | propsPopup propsPanel reveal copyPath | delete',
   plannerHead: 'addBoard openPlannerPanel | reveal',
-  board: 'open addBoard rename | copy paste duplicate star | propsPopup propsPanel reveal | color status pin | lock | delete',
+  board: 'open addBoard rename | copy paste duplicate star | propsPopup propsPanel reveal copyPath | color status pin | lock | delete',
   branchHead: 'openBranchPanel addPlan | reveal',
-  plan: 'open addPlan rename | copy paste duplicate star | propsPopup propsPanel reveal | color status pin | compare lock | delete',
+  plan: 'open addPlan rename | copy paste duplicate star | propsPopup propsPanel reveal copyPath | color status pin | compare lock | delete',
 };
 for (const [kind, want] of Object.entries(USER_LIST)) {
   const got = S.TREE_MENU_SPEC[kind].map((x) => (x === '-' ? '|' : x)).join(' ');
   check(`★ ลำดับเมนู ${kind} ตรงกับรายการของผู้ใช้`, got === want, got);
 }
+// [alpha.162 · W4 ข้อ 10] ทุกแถวที่เป็นไฟล์/โฟลเดอร์จริงคัดลอกที่อยู่ได้ · เมนูพื้นที่ว่างมีกาง/พับ/รีเฟรช
+{
+  const fileKinds = ['project', 'book', 'chapter', 'scene', 'memo', 'image', 'board', 'plan'];
+  const miss = fileKinds.filter((k) => !S.TREE_MENU_SPEC[k].includes('copyPath'));
+  check('★ [162-W4] ทุกแถวที่เป็นไฟล์/โฟลเดอร์มี "คัดลอกที่อยู่"', miss.length === 0, miss.join(','));
+  const pj = S.TREE_MENU_SPEC.project;
+  check('★ [162-W4] เมนูพื้นที่ว่างมี กางทั้งหมด · พับทั้งหมด · รีเฟรช',
+        ['expandAll', 'collapseAll', 'refresh'].every((x) => pj.includes(x)));
+  const idx = (k) => S.TREE_MENU_SPEC[k].indexOf('copyPath') - S.TREE_MENU_SPEC[k].indexOf('reveal');
+  check('[162-W4] "คัดลอกที่อยู่" อยู่ติดหลัง "หาใน disk" ทุกเมนู', fileKinds.every((k) => idx(k) === 1));
+}
+
 check('ไม่มีชนิดแถวเกินจากรายการของผู้ใช้', eq(Object.keys(S.TREE_MENU_SPEC).sort(), Object.keys(USER_LIST).sort()));
 check('★ ทุกเมนูมี "หาใน disk" (กฎ [120-7])', Object.values(S.TREE_MENU_SPEC).every((l) => l.includes('reveal')));
 
@@ -60,7 +72,8 @@ for (const f of fs.readdirSync(path.join(ROOT, 'languages')).filter((x) => /^k2_
   check('รายการลบเป็นสีอันตรายเสมอ', all.find((x) => x.id === 'delete').danger === true);
   const some = S.buildMenuItems('board', (id) => (['lock', 'color', 'status', 'pin'].includes(id) ? null : { label: id, click() {} }));
   const txt = some.map((x) => (x === '-' ? '|' : x.id)).join(' ');
-  check('ข้ามรายการที่ไม่แสดง แล้วยุบเส้นคั่นซ้อน', !txt.includes('| |') && txt.includes('reveal | delete'), txt);
+  // [alpha.162 · W4 ข้อ 10] คัดลอกที่อยู่ต่อท้าย "หาใน disk" → เพื่อนบ้านของเส้นคั่นก่อนลบเปลี่ยนตาม
+  check('ข้ามรายการที่ไม่แสดง แล้วยุบเส้นคั่นซ้อน', !txt.includes('| |') && txt.includes('reveal copyPath | delete'), txt);
   const none = S.buildMenuItems('memoHead', (id) => (id === 'reveal' ? { label: id, click() {} } : null));
   check('ไม่มีเส้นคั่นนำหน้า/ต่อท้าย', none.length === 1 && none[0].id === 'reveal', JSON.stringify(none));
   check('ชนิดที่ไม่รู้จัก = เมนูว่าง', S.buildMenuItems('nope', () => ({})).length === 0);

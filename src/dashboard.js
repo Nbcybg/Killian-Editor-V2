@@ -1,6 +1,7 @@
 // dashboard.js — แดชบอร์ดโปรเจกต์ (สถิติ/analytics/ฉากปักหมุด/ไปต่อจากที่ค้าง)
 // แยกจาก app.js — feature นี้เป็นจุดที่ feature ใหม่ (แก้แดชบอร์ด, กราฟ, theme) จะมาต่อยอด
 import { t, tf } from './i18n.js';
+import { CHART_SERIES, STATUS_UNSET } from './palette.js';   // [alpha.162 · W6 ข้อ 2]
 import { $, state, el, dataLabel, log } from './core.js';
 import { allStatuses, statusColor } from './custom-status.js';
 import { vivid, inkOn } from './color-util.js';
@@ -10,10 +11,11 @@ import { getWordHistory, calcStreak } from './word-history.js';
 import { renderChoicePanel, showPlayerHistory } from './player-choices.js';
 import { findScenePath } from './project-scan.js';
 // ฟังก์ชันที่ยังอยู่ใน app.js (เรียกตอน runtime เท่านั้น — circular import ปลอดภัยกับ esbuild bundle)
-import { loadAllEntities, catIconHtml, catLabel, openScene, renderFeaturePanel } from './app.js';
+import { loadAllEntities, catIconEl, catLabel, openScene, renderFeaturePanel } from './app.js';
 import { guid } from './app.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { gi } from './icons.js';
+import { fmtDate, fmtNum } from './locale.js';
 
 /**
  * บั๊ก #18: แดชบอร์ดเป็น "แผง" ไม่ใช่แท็บเอกสารอีกต่อไป
@@ -102,9 +104,9 @@ export async function renderDashboard(pane) {
       }
     }
   }
-  vCh.textContent = nCh.toLocaleString();
-  vSc.textContent = nSc.toLocaleString();
-  vW.textContent = words.toLocaleString();
+  vCh.textContent = fmtNum(nCh);
+  vSc.textContent = fmtNum(nSc);
+  vW.textContent = fmtNum(words);
   {
     const rt = readingTime(words);
     vRead.textContent = rt.hours ? tf('ui.dash.readHM', rt.hours, rt.mins) : tf('ui.dash.readM', rt.minutes);
@@ -117,14 +119,14 @@ export async function renderDashboard(pane) {
   try {
     allEnts = (await loadAllEntities()).filter((e) => /[\\/](Wiki|Bible)[\\/]/.test(String(e.file || '')));
   } catch (e) { log('warn', t('ui.dash.entitiesFail'), e); }
-  vE.textContent = allEnts.length.toLocaleString();
+  vE.textContent = fmtNum(allEnts.length);
   // ความคืบหน้าเทียบเป้าหมายทั้งโปรเจกต์ (ตั้งได้ในตั้งค่าโปรเจกต์)
   const goal = parseInt(state.goals.projectWords, 10) || 0;
   if (goal > 0) {
     const pct = Math.min(100, Math.round((words / goal) * 100));
     const gwrap = el('div', 'dash-goal');
     gwrap.append(el('div', 'dash-goal-label',
-      tf('ui.dash.goalWord', words.toLocaleString(), goal.toLocaleString(), pct)));
+      tf('ui.dash.goalWord', fmtNum(words), fmtNum(goal), pct)));
     const bar = el('div', 'dash-goal-bar');
     const fill = el('div', 'dash-goal-fill'); fill.style.width = pct + '%';
     bar.append(fill); gwrap.append(bar);
@@ -142,7 +144,10 @@ export async function renderDashboard(pane) {
     rows.forEach((r, i) => {
       const line = el('div', 'dash-stat-row');
       const nameEl = el('div', 'dash-stat-name');
-      nameEl.innerHTML = r.label;
+      // [alpha.160 · P2] `label` = ข้อความ (ชื่อบท/หมวดของผู้ใช้) → textContent เท่านั้น · ไอคอน (ของโปรแกรม) แยกเป็น node
+      // เดิม `innerHTML = r.label` โดย label = ชื่อบทที่ผู้ใช้ตั้ง → ชื่อบท `<img onerror=…>` รันโค้ดในหน้าที่มี kapi ได้
+      if (r.icon) nameEl.append(r.icon, document.createTextNode(' '));
+      nameEl.append(document.createTextNode(String(r.label ?? '')));
       line.append(nameEl);
       const track = el('div', 'dash-stat-track');
       const fill = el('div', 'dash-stat-fill');
@@ -150,12 +155,12 @@ export async function renderDashboard(pane) {
       fill.style.background = r.color || palette[i % palette.length];
       track.append(fill); line.append(track);
       const pct = total ? Math.round((r.n / total) * 100) : 0;
-      line.append(el('div', 'dash-stat-val', `${r.n.toLocaleString()} (${pct}%)`));
+      line.append(el('div', 'dash-stat-val', `${fmtNum(r.n)} (${pct}%)`));
       box2.append(line);
     });
     return box2;
   };
-  const PAL = ['#3b9bff', '#2ecc71', '#ffc42e', '#ff7a2f', '#a66bff', '#ff4d6d', '#1abc9c'];
+  const PAL = CHART_SERIES;   // [alpha.162 · W6 ข้อ 2] palette.js
 
   if (nSc > 0) {
     const grid = el('div', 'dash-analytics'); wrap.append(grid);
@@ -171,7 +176,7 @@ export async function renderDashboard(pane) {
       right2.append(el('div', 'dash-apanel-title', t('ui.dash.wikiCat')));
       right2.append(statBars(
         Object.entries(byCat).sort((a, b) => b[1] - a[1])
-          .map(([c, n]) => ({ label: catIconHtml(c) + ' ' + catLabel(c), n })), allEnts.length, PAL));
+          .map(([c, n]) => ({ icon: catIconEl(c), label: catLabel(c), n })), allEnts.length, PAL));
       grid.append(right2);
     }
 
@@ -189,12 +194,12 @@ export async function renderDashboard(pane) {
           const chip = el('span', 'dash-word');
           chip.style.setProperty('--w', (0.35 + 0.65 * (r.count / max)).toFixed(2));
           const w = el('b'); w.textContent = r.word;
-          chip.append(w, el('i', null, r.count.toLocaleString()));
+          chip.append(w, el('i', null, fmtNum(r.count)));
           chip.title = tf('ui.dash.topWordHint', r.word, r.count, r.per10k);
           cloud.append(chip);
         }
         wpanel.append(cloud);
-        wpanel.append(el('div', 'dash-stat-note', tf('ui.dash.topWordsNote', res.total.toLocaleString(), res.unique.toLocaleString())));
+        wpanel.append(el('div', 'dash-stat-note', tf('ui.dash.topWordsNote', fmtNum(res.total), fmtNum(res.unique))));
         grid.append(wpanel);
       }
     } catch (e) { /* ตัดคำพังต้องไม่ทำแดชบอร์ดล้ม */ }
@@ -207,7 +212,7 @@ export async function renderDashboard(pane) {
       cpanel.append(statBars(
         chapterWords.map((c) => ({ label: c.title || t('ui.common.notNamed'), n: c.words })), words, PAL));
       cpanel.append(el('div', 'dash-stat-note',
-        tf('ui.dash.avgWordChapterTime', avg.toLocaleString(), readingTime(words).minutes)));
+        tf('ui.dash.avgWordChapterTime', fmtNum(avg), readingTime(words).minutes)));
       grid.append(cpanel);
     }
   }
@@ -298,8 +303,7 @@ function activityRange() {
 const fmtDay = (d) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || '');
   if (!m) return d || '';
-  try { return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); }
-  catch { return d; }
+  return fmtDate(new Date(+m[1], +m[2] - 1, +m[3]), { day: 'numeric', month: 'short', year: 'numeric' }) || d;
 };
 
 /** กล่อง Activity — วาดใหม่เฉพาะตัวเองตอนสลับช่วง (ไม่อ่านทั้งโปรเจกต์ใหม่) */
@@ -341,8 +345,8 @@ export function buildActivity(goal = 0, words = 0) {
         const bar = el('div', 'dash-day-bar' + (d.delta ? ' on' : ''));
         bar.style.height = Math.max(3, Math.round((d.delta / max) * 100)) + '%';
         const hits = msByDay.get(d.date);
-        col.title = tf('ui.dash.word', fmtDay(d.date), d.delta.toLocaleString())
-          + (hits ? '\n' + hits.map((m) => tf('ui.dash.milestoneHit', m.words.toLocaleString())).join('\n') : '');
+        col.title = tf('ui.dash.word', fmtDay(d.date), fmtNum(d.delta))
+          + (hits ? '\n' + hits.map((m) => tf('ui.dash.milestoneHit', fmtNum(m.words))).join('\n') : '');
         if (hits) { col.classList.add('dash-day-ms'); col.append(el('span', 'dash-day-flag', gi('flag-checkered'))); }
         if (d.date === start) col.classList.add('dash-day-start');
         col.append(bar);
@@ -352,8 +356,8 @@ export function buildActivity(goal = 0, words = 0) {
       const foot = el('div', 'dash-act-foot');
       foot.append(el('span', null, fmtDay(ser.from)), el('span', null, fmtDay(ser.to)));
       box.append(foot);
-      box.append(el('div', 'dim', tf('ui.dash.actSummary', ser.sum.toLocaleString(), ser.active, ser.days.length,
-        ser.best && ser.best.delta ? fmtDay(ser.best.date) + ' (+' + ser.best.delta.toLocaleString() + ')' : '—')));
+      box.append(el('div', 'dim', tf('ui.dash.actSummary', fmtNum(ser.sum), ser.active, ser.days.length,
+        ser.best && ser.best.delta ? fmtDay(ser.best.date) + ' (+' + fmtNum(ser.best.delta) + ')' : '—')));
     } else {
       box.append(el('div', 'dim', t('ui.dash.saveTaskDoneGraph')));
     }
@@ -370,15 +374,15 @@ export function buildActivity(goal = 0, words = 0) {
     for (const m of ms) {
       const row = el('div', 'dash-ms' + (m.goal ? ' dash-ms-goal' : ''));
       row.append(el('span', 'dash-ms-dot'),
-        el('b', null, (m.goal ? t('ui.dash.msGoal') + ' · ' : '') + tf('ui.dash.msWords', m.words.toLocaleString())),
+        el('b', null, (m.goal ? t('ui.dash.msGoal') + ' · ' : '') + tf('ui.dash.msWords', fmtNum(m.words))),
         el('span', 'dim', fmtDay(m.date)));
       list.append(row);
     }
     const nx = nextMilestone(words, goal);
     if (nx) {
       const row = el('div', 'dash-ms dash-ms-next');
-      row.append(el('span', 'dash-ms-dot'), el('b', null, tf('ui.dash.msWords', nx.words.toLocaleString())),
-        el('span', 'dim', tf('ui.dash.msLeft', nx.left.toLocaleString())));
+      row.append(el('span', 'dash-ms-dot'), el('b', null, tf('ui.dash.msWords', fmtNum(nx.words))),
+        el('span', 'dim', tf('ui.dash.msLeft', fmtNum(nx.left))));
       list.append(row);
     }
     msBox.append(list);
@@ -398,7 +402,7 @@ export function buildKanbanSummary(sceneStatuses, total) {
   head.append(open);
   panel.append(head);
   const rows = statusBreakdown(sceneStatuses, allStatuses(), '');
-  const colorOf = (r) => (r.unset ? '#8f9bb3' : vivid(statusColor(r.key)));
+  const colorOf = (r) => (r.unset ? STATUS_UNSET : vivid(statusColor(r.key)));
   const labelOf = (r) => (r.unset ? t('ui.kanban.unset') : dataLabel(r.key));
   const strip = el('div', 'dash-kb-strip');
   for (const r of rows) {
@@ -418,7 +422,7 @@ export function buildKanbanSummary(sceneStatuses, total) {
     const top = el('div', 'dash-kb-col-head');
     top.style.background = hex; top.style.color = inkOn(hex);
     top.textContent = labelOf(r);
-    const n = el('div', 'dash-kb-n', r.n.toLocaleString());
+    const n = el('div', 'dash-kb-n', fmtNum(r.n));
     const pct = el('div', 'dim', (total ? Math.round(100 * r.n / total) : 0) + '%');
     c.append(top, n, pct);
     cols.append(c);

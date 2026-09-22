@@ -1,5 +1,6 @@
 // ai-ui.js — UI ทั้งหมดของ AI features (ข้อ 72–79): assistant, plot, dialogue, character, world, chat
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { $, el, state, setStatus, log, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
 import { callAI, aiConfigured } from '../ai-settings.js';
 import { listScenes, listEntities } from '../project-scan.js';
@@ -177,7 +178,7 @@ export async function openPlotHoleDetector() {
       allScenes = (await listScenes(state.root, { withText: true }))
         .map((s) => ({ id: s.id, title: s.title, chapterId: s.chapterId, text: s.body || '',   // [alpha.149] ไม่มี frontmatter
                        storyDate: s.row.storyDate || '', pov: s.row.pov || '' }));
-    } catch (e) { resultDiv.textContent = tr('ai.readFail') + e.message; return; }
+    } catch (e) { resultDiv.textContent = failText(tr('ai.readFail'), e); return; }
 
     if (!allScenes.length) { resultDiv.textContent = tr('ai.noScenes'); return; }
 
@@ -442,118 +443,11 @@ export async function openWorldGenerator() {
 // ══════════════════════════════════════════════════════════════
 // 6. AI Chat with Story (ข้อ 79)
 // ══════════════════════════════════════════════════════════════
+// [alpha.160 · P3] ★ แชทรุ่นเก่า (แท็บ `::ai-chat::` · ข้อความอังกฤษฝังโค้ด "Chat with Story") **เลิกใช้**
+// ซ้ำกับแผงแชท (alpha.61) และไม่มีฟีเจอร์ใดของแผงเลย (เซสชัน · ระดับการเข้าถึง · RAG · ไฟล์แนบ · สั่งงาน)
+// คง export ไว้ให้คำสั่ง/คีย์ลัดเดิม `ai-chat-dialog` ไม่พัง — ส่งต่อไปเปิดแผงใหม่
 export async function openAIChat() {
-  if (!(await aiReady())) return;
-
-  const KEY = '::ai-chat::';
-  const { activate, closeTab } = await import('../app.js');
-  if (state.tabs.has(KEY)) { activate(KEY); return; }
-
-  const pane = el('div', 'pane');
-  pane.style.cssText = 'display:flex;flex-direction:column;height:100%';
-  $('#panes').append(pane);
-  const tabBtn = el('div', 'tab');
-  tabBtn.append(el('span', 'tab-title', gi('chat') + ' Chat with Story'));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
-  $('#tabs').append(tabBtn);
-
-  // พื้นที่แชท
-  const chatArea = el('div');
-  chatArea.style.cssText = 'flex:1;overflow-y:auto;padding:12px 24px;font-size:14px;line-height:1.8';
-  pane.append(chatArea);
-
-  // แถบพิมพ์
-  const inputBar = el('div');
-  inputBar.style.cssText = 'display:flex;padding:8px 12px;border-top:1px solid var(--border);background:var(--side)';
-  const input = el('input'); input.placeholder = tr('ai.chatPlaceholder');
-  input.style.cssText = 'flex:1;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;outline:none';
-  const sendBtn = el('button', '', gi('play'));
-  sendBtn.style.cssText = 'margin-left:8px;min-width:48px';
-  inputBar.append(input, sendBtn);
-  pane.append(inputBar);
-
-  const history = [];
-
-  // track=false → แสดงอย่างเดียว ไม่นับเข้าประวัติที่ส่งให้โมเดล (ใช้กับฟองรอคำตอบ)
-  const addMsg = (role, text, track = true) => {
-    const msg = el('div');
-    msg.style.cssText = 'margin:6px 0;padding:8px 12px;border-radius:8px;white-space:pre-wrap;'
-      + (role === 'user' ? 'background:var(--sel);margin-left:40px;' : 'background:var(--bar);margin-right:40px;');
-    msg.textContent = text;
-    chatArea.append(msg);
-    chatArea.scrollTop = chatArea.scrollHeight;
-    if (track && text) history.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
-    return msg;
-  };
-
-  // แถวอ้างอิง (ฉาก/Wiki ที่ RAG ดึงมาใช้) — ให้ผู้ใช้ตรวจได้ว่าคำตอบมาจากไหน
-  const addSources = (sources) => {
-    if (!sources || !sources.length) return;
-    const s = el('div', 'dim');
-    s.style.cssText = 'margin:0 40px 8px 0;font-size:11px';
-    s.textContent = tr('ai.sources') + sources.map((x) => x.label).join(' · ');
-    chatArea.append(s);
-  };
-
-  sendBtn.onclick = async () => {
-    const q = input.value.trim();
-    if (!q) return;
-    input.value = '';
-    addMsg('user', q);
-
-    const bubble = addMsg('assistant', '…', false);
-    // ---- RAG: ค้นด้วย vector index แทนการยัดฉากแรก ๆ ทั้งดุ้น ----
-    let ctx = { text: '', sources: [] };
-    try {
-      const { ragContext } = await import('./ai-bridge.js');
-      bubble.textContent = tr('ai.searchingProject');
-      ctx = await ragContext(q, { k: 6, maxTokens: 1800 });
-    } catch (e) { log('warn', tt('ui.ai.aiChatRAGUse'), e); }
-
-    const system = tt('ui.ai.youAssistantWriterReply')
-      + tt('ui.ai.useDataContextMain');
-    const prompt = (ctx.text ? ctx.text + '\n\n' : '') + tt('ui.ai.wordAsk') + q;
-
-    bubble.textContent = '';
-    let acc = '';
-    try {
-      const { getAIClient } = await import('./ai-bridge.js');
-      const client = getAIClient();
-      // ประวัติล่าสุด (ตัดคำถามปัจจุบันออก) + คำถามที่แนบบริบท RAG แล้ว
-      const msgs = history.slice(-9, -1).filter((m) => m.content);
-      const res = await client.stream(
-        { messages: [...msgs, { role: 'user', content: prompt }], system, feature: 'chat' },
-        (chunk) => { acc += chunk; bubble.textContent = acc; chatArea.scrollTop = chatArea.scrollHeight; });
-      if (!res.ok) {
-        // [alpha.159 · H13] พังกลางทางแต่มีคำตอบไหลมาแล้ว = เก็บไว้ในฟอง + ประวัติ (เดิมทับด้วยข้อความ error)
-        const kept = acc || res.text || '';
-        if (kept.trim()) {
-          bubble.textContent = kept;
-          history.push({ role: 'assistant', content: kept });
-          setStatus(gi('warning') + ' ' + tr('ai.partialKept') + ' · ' + (res.error || tr('ai.callFail')));
-        } else bubble.textContent = gi('fail') + ' ' + (res.error || tr('ai.callFail'));
-        return;
-      }
-      if (!acc) { acc = res.text || ''; bubble.textContent = acc || tr('ai.noAnswer'); }
-      history.push({ role: 'assistant', content: acc });
-      addSources(ctx.sources);
-    } catch (e) {
-      // เอนจินใหม่ล้ม → กลับไปทางเดิม เพื่อไม่ให้ผู้ใช้ค้าง
-      log('error', tt('ui.ai.aiChatStreamFail'), e);
-      const result = await callAI(prompt, system);
-      bubble.textContent = result || tr('ai.errorMark');
-    }
-  };
-
-  input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); } };
-
-  const tab = { file: KEY, title: gi('chat') + ' Chat', pane, tabBtn, dirty: false,
-                editor: null, plain: null, wiki: null, gal: null, net: null, planner: null };
-  tabBtn.onclick = (ev) => { if (ev.target !== x) activate(KEY); };
-  x.onclick = () => closeTab(KEY);
-  state.tabs.set(KEY, tab);
-  activate(KEY);
-  addMsg('assistant', tr('ai.greeting') +
-    ' "' + tr('ai.sample1') + '" ' +
-    tr('ai.orWord') + ' "' + tr('ai.sample2') + '"');
+  const [{ showPanel }, { renderFeaturePanel }] = await Promise.all([import('../panels/panel-ui.js'), import('../app.js')]);
+  showPanel('ai-chat');
+  await renderFeaturePanel('ai-chat');
 }

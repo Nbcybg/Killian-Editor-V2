@@ -151,7 +151,7 @@ export function mentionPlugin(getNames) {
   let cacheKey = null, cacheRx = null;
   const rxOf = () => {
     const names = getNames() || [];
-    const k = names.length + '|' + names.join('');
+    const k = names.length + '|' + names.join('\u0001');
     if (k !== cacheKey) { cacheKey = k; cacheRx = buildMentionRegex(names); }
     return cacheRx;
   };
@@ -435,16 +435,19 @@ export const schema = new Schema({
     // การลากเลือกข้อความไปทั้งหน้า · ย้ายรูปใช้ตัด-วาง (Ctrl+X / Ctrl+V) ได้เหมือนเดิม
     figure: { group: 'block', atom: true, draggable: false, selectable: true,
               attrs: { src: {}, alt: { default: '' }, md: { default: '' }, resolved: { default: '' },
-                       fit: { default: '' }, w: { default: '' }, radius: { default: '' } },
+                       fit: { default: '' }, w: { default: '' }, radius: { default: '' },
+                       align: { default: null } },          // [alpha.160 · P1-15] จัดหน้าของรูปไป-กลับได้
               parseDOM: [{ tag: 'figure[data-md]', getAttrs: (d) => ({
                 src: d.getAttribute('data-src') || '', alt: d.getAttribute('data-alt') || '',
                 md: d.getAttribute('data-md') || '', resolved: '',
                 fit: d.getAttribute('data-fit') || '', w: d.getAttribute('data-w') || '',
-                radius: d.getAttribute('data-r') || '' }) }],
+                radius: d.getAttribute('data-r') || '',
+                align: d.getAttribute('data-align') || d.style.textAlign || null }) }],
               toDOM: (n) => ['figure', { 'data-md': n.attrs.md, 'data-src': n.attrs.src,
                                          'data-alt': n.attrs.alt, 'data-fit': n.attrs.fit,
                                          'data-w': n.attrs.w, 'data-r': n.attrs.radius,
-                                         class: figureClass(n.attrs), title: n.attrs.alt || '' },
+                                         class: figureClass(n.attrs), title: n.attrs.alt || '',
+                                         ...alignAttrs(n.attrs.align) },
                              ['img', { src: n.attrs.resolved || n.attrs.src,
                                        alt: n.attrs.alt, title: n.attrs.alt || '',
                                        style: figureImgStyle(n.attrs),

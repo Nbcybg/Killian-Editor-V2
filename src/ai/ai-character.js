@@ -91,8 +91,10 @@ function dedupe(rows) {
 }
 
 // ───────── ตรวจออฟไลน์: รูปแบบการพูด (ไทยมีสัญญาณชัด — คำลงท้าย/สรรพนาม) ─────────
+/* i18n-skip: สรรพนาม/คำลงท้ายไทย = ตัวจับรูปแบบการพูดในต้นฉบับไทย */
 export const POLITE_PARTICLES = ['ครับ', 'ค่ะ', 'คะ', 'จ้ะ', 'จ้า', 'ฮะ', 'ขอรับ', 'เจ้าค่ะ'];
 export const PRONOUNS = ['ผม', 'ฉัน', 'ดิฉัน', 'กระผม', 'หนู', 'ข้า', 'กู', 'เรา', 'ข้าพเจ้า', 'อั๊ว'];
+/* /i18n-skip */
 
 /** Count speech markers per scene for one character (dialogue lines only). */
 export function speechStats(appearances, characterName) {

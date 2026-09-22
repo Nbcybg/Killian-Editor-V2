@@ -1,8 +1,10 @@
 // tag-pane.js — แท็บ "แท็ก" แสดงรายการแท็กทั้งหมด + จำนวน + กรอง + tag cloud
 import { buildTagTree, sortedTagEntries } from './tag-tree.js';
+import { gi } from './icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { t } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { activate, closeTab } from './app.js';
+import { readSceneMeta } from './scene-meta.js';   // [alpha.160 · P1-14] แหล่งความจริงเดียวของคุณสมบัติฉาก
 
 // เก็บสถานะโหมดแสดงผล (list | cloud)
 let _tagView = 'list';
@@ -18,7 +20,7 @@ export async function openTagPane() {
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', t('ui.tags.tag4')));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
+  const x = el('span', 'tab-x', gi('times')); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const tab = { file: key, title: t('ui.common.tag'), pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, dash: true };
@@ -82,9 +84,18 @@ export async function getTagCounts() {
         if (!(await kapi.exists(sf))) continue;
         const scData = await kapi.readJson(sf);
         const chs = scData.chapters || {};
+        // [alpha.160 · P1-14] ★ แท็กเป็นคุณสมบัติหนัก — อยู่ใน frontmatter ของ .md (กฎ alpha.60r2)
+        // เดิมอ่าน `sc.tags` จาก scenes.json ตรง ๆ → แก้ไฟล์นอกโปรแกรมแล้วแผงแท็กโชว์ของเก่า
+        const draft = await kapi.readJson(await kapi.join(dPath, 'draft.json')).catch(() => ({}));
+        const folderOf = new Map((draft.chapters || []).map((c) => [c.guid, c.folderName]));
         for (const chGuid of Object.keys(chs)) {
           for (const sc of (chs[chGuid] || [])) {
-            for (const tag of (sc.tags || [])) {
+            let tags = sc.tags || [];
+            if (folderOf.get(chGuid) && sc.fileName) {
+              try { tags = (await readSceneMeta(await kapi.join(dPath, 'Chapters', folderOf.get(chGuid), sc.fileName), sc)).tags || []; }
+              catch { /* อ่านไม่ได้ = ใช้ดัชนีเดิม */ }
+            }
+            for (const tag of tags) {
               if (!tag) continue;
               counts[tag] = (counts[tag] || 0) + 1;
             }

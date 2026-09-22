@@ -6,6 +6,7 @@
 // **ตรรกะจริงอยู่ใน entity-mention.js ซึ่งบริสุทธิ์และมีเทส** — ไฟล์นี้เป็นแค่เปลือก DOM
 
 import { el } from '../core.js';
+import { gi } from '../icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { t, tf } from '../i18n.js';
 import {
   mentionChips, insertAt, unknownMentions, mentionToken,
@@ -124,7 +125,7 @@ export function tagInput(label, get, set, { placeholder = '' } = {}) {
     if (!rows.length) { picked.append(el('span', 'st-dim', t('ui.starter.noTagYet'))); return; }
     for (const tg of rows) {
       const c = el('span', 'st-tag on', tg);
-      const x = el('span', 'st-tag-x', '×');
+      const x = el('span', 'st-tag-x', gi('times'));
       x.title = t('ui.common.del');
       x.onclick = () => { set(toggleTag(get(), tg)); redraw(); };
       c.append(x);
@@ -202,7 +203,7 @@ export function promptFields(get, set, { cast = [], label = '', hint = '' } = {}
         const cur = normalizePrompts(get());
         if (cur[i]) { cur[i] = { ...cur[i], v: val.value }; set(cur); }
       };
-      const del = el('button', 'st-danger st-prompt-del', '×');
+      const del = el('button', 'st-danger st-prompt-del', gi('times'));
       del.type = 'button';
       del.title = t('ui.starter.promptDel');
       del.onclick = () => {

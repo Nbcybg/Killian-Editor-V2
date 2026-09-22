@@ -6,6 +6,7 @@
 // ที่อยู่ปลั๊กอิน 2 แห่ง (ชื่อซ้ำ → ของโปรเจกต์ชนะ):
 //   · `<โปรเจกต์>/Plugins/<ชื่อ>/`         ติดมากับผลงาน
 //   · `<userData>/Plugins/<ชื่อ>/`          ของผู้ใช้ ใช้ได้ทุกโปรเจกต์
+import { cmpText } from '../locale.js';
 
 /** สถานะที่แผงแสดง */
 export const ST_OK = 'ok';                 // โหลดสำเร็จ ทำงานอยู่
@@ -103,7 +104,7 @@ export function sortPlugins(list) {
   const rank = { [ST_UNTRUSTED]: -1, [ST_ERR]: 0, [ST_OLD]: 1, [ST_OK]: 2, [ST_OFF]: 3 };
   return [...(list || [])].sort((a, b) => {
     const d = (rank[a.status] ?? 9) - (rank[b.status] ?? 9);
-    return d || String(a.name).localeCompare(String(b.name), 'th');
+    return d || cmpText(String(a.name), String(b.name));
   });
 }
 
@@ -172,6 +173,7 @@ export function safePluginFolder(name) {
  * @param {string} appVersion รุ่นโปรแกรมตอนนี้ (ใส่ลง minAppVersion)
  */
 export function samplePluginFiles(name, appVersion = '') {
+  /* i18n-skip: เนื้อไฟล์ปลั๊กอินตัวอย่างที่เขียนลงดิสก์ (ต้องคงที่ทุกภาษา) */
   const n = String(name || 'ตัวอย่าง');
   const manifest = {
     name: n,
@@ -198,6 +200,7 @@ export function samplePluginFiles(name, appVersion = '') {
     '    const d = document.createElement("div");',
     '    d.style.padding = "12px";',
     '    d.textContent = "แผงนี้มาจากปลั๊กอิน — แก้ไฟล์ main.js แล้วกดโหลดใหม่ได้เลย";',
+  /* /i18n-skip */
     '    host.appendChild(d);',
     '  },',
     '});',

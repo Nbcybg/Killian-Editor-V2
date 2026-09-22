@@ -40,6 +40,8 @@ const CJS_MODULES = [
   ['src/update/update-check.js', 'update-check.cjs'],
   // [alpha.147] ทะเบียนคำสั่ง — main.js ต้องใช้คีย์ลัดชุดเดียวกับ renderer (accelerator ในเมนูระบบ)
   ['src/generated/commands-data.js', 'commands-data.cjs'],
+  // [alpha.162 · W6 ข้อ 7] ตัวเลขเวลาที่มีความหมาย — main (splash · ตรวจอัปเดต) ใช้ชุดเดียวกับ renderer
+  ['src/timing.js', 'timing.cjs'],
 ];
 
 // [alpha.147] icons/ (svg + commands.csv + glyphs.csv) → src/generated/commands-data.js

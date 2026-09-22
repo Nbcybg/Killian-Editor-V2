@@ -92,7 +92,19 @@ export function activitySeries(hist, range = '30d', opts = {}) {
   return { days, from, to: today, sum, active, best };
 }
 
-export const MILESTONE_STEPS = [1000, 5000, 10000, 25000, 50000, 75000, 100000, 150000, 200000, 300000, 500000, 1000000];
+/**
+ * [alpha.162 · W5 ข้อ 5] คำที่เขียน "วันนี้" — นิยามเดียวกับแท่งของแดชบอร์ด (ยอดสะสมวันนี้ − ยอดของวันก่อนหน้าที่จดไว้)
+ * แถบเป้ารายวันที่แถบสถานะเคยใช้ "จำนวนคำรวมของทุกแท็บที่เปิดอยู่" — เปิดฉากยาวฉากเดียวก็ครบเป้าวันนี้
+ * ทั้งที่ยังไม่ได้พิมพ์สักคำ · ตัวนี้อ่านจากประวัติคำ (จดหลังทุกการบันทึก) จึงตรงกับแดชบอร์ดเสมอ
+ * @param {Array<{date,words}>} hist · @param {string} [today] YYYY-MM-DD
+ */
+export function wordsWrittenToday(hist, today) {
+  const s = activitySeries(hist, '7d', today ? { today } : {});
+  const last = s.days[s.days.length - 1];
+  return last ? last.delta : 0;
+}
+
+export const MILESTONE_STEPS =[1000, 5000, 10000, 25000, 50000, 75000, 100000, 150000, 200000, 300000, 500000, 1000000];
 
 /**
  * วันที่ยอดสะสมข้ามหลักไมล์แต่ละขั้น (+ เป้าหมายโปรเจกต์ ถ้าตั้งไว้)

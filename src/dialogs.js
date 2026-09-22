@@ -4,14 +4,14 @@ import { compactLogline } from './logline.js';
 import { tf } from './i18n.js';
 import { translationProgress } from './i18n-csv.js';   // [alpha.159 · QoL]
 import { settingsTemplate } from './settings-template.js';   // [alpha.154] โครงกล่องตั้งค่าออกจากไฟล์ภาษา
-import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
+import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, flushTabForMove, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
          applyProjectLangFonts, preloadLangFontUrls, langFontUrl, refreshSpView, updatePageNumberHint,
          applyProseVars, proseFormat, applyPaperVars, renderPaperSheets,
          applyTheme, currentTheme, projectFontFiles } from './app.js';   // [alpha.137] ธีมสีในตั้งค่า
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
-import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, state, i18n, loadLanguage, scanLanguages, languageCatalog,
-         DEFAULT_SETTINGS, DEFAULT_GOALS, THEMES, THEME_LABEL_KEYS,
+import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, setStatusError, state, i18n, loadLanguage, scanLanguages, languageCatalog,
+         DEFAULT_SETTINGS, DEFAULT_GOALS, GLOBAL_DEFAULTS, THEMES, THEME_LABEL_KEYS,
          fallbackLangName, langFileName, csvToTable, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
          PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_KEYS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES,
@@ -34,7 +34,8 @@ import { SP_ELEMS, TAB_CYCLE } from './fountain.js';
 import { refreshDashboardIfOpen } from './dashboard.js';
 // refreshDashboardIfOpen — ใช้ต่อเมื่อ dashboard.js export ฟังก์ชันนี้
 const _refreshDash = () => { try { refreshDashboardIfOpen(); } catch {} };
-import { ask, confirmBox, escClose } from './ui.js';
+import { ask, confirmBox, infoBox, escClose } from './ui.js';
+import { failText } from './err-text.js';        // [alpha.162 · W4] บอกเหตุผลที่อ่านรู้เรื่องเมื่อบันทึกไม่ผ่าน
 import { parseMdFile } from './md.js';
 import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
@@ -49,6 +50,7 @@ import { NET_COLOR_GROUPS, NET_COLOR_DEFS, netColorDefsOf, normalizeNetColors,
 // [alpha.80] ชุดสีสำเร็จรูป — เลือกชุดเดียวได้สีทั้งผัง ไม่ต้องไล่ตั้ง 27 ช่อง
 import { allPresets, builtinPreset, presetLabel, applyPreset, matchPreset,
          addPreset, removePreset, canRemove } from './net-presets.js';
+import { fmtNum } from './locale.js';
 
 /**
  * สร้างช่องสีทั้งหมดของ Story Network จาก NET_COLOR_DEFS
@@ -321,8 +323,11 @@ export async function pickSystemFont(current) {
  * @param {object} [opts] ค่าเสริมของหน้านั้น — ตอนนี้มี `{ fmtMode }` (โหมดที่หน้า "แถบรูปแบบ" เปิดค้าง)
  */
 export function settingsDialog(openTab, opts = {}) {
-  if (!state.root) { alert(t('errors.openProjectFirst')); return; }
-  const s = state.settings, g = state.goals, m = state.meta;
+  // ══ [alpha.162 · W4 ข้อ 12] ★ ยังไม่มีโปรเจกต์ = เปิดได้ "เฉพาะหน้าระดับผู้ใช้" ══
+  // เดิมปฏิเสธทั้งกล่อง → หน้าแรกของโปรแกรมเปลี่ยนภาษา/ธีม/ปุ่มลัดไม่ได้เลยจนกว่าจะสร้างโปรเจกต์
+  // หน้าที่ติดป้ายขอบเขต `project` ถูกซ่อน · กดบันทึกเขียนแค่ไฟล์ตั้งค่าผู้ใช้ ไม่แตะไฟล์ผลงานใด ๆ
+  const projOK = !!state.root;
+  const s = state.settings, g = state.goals || {}, m = state.meta || {};
   const origFont = parseInt(s.uiFontSize, 10) || 0;
   const origFontFamily = s.fontFamily || '';
   const origSpFontFamily = s.spFontFamily || '';
@@ -364,55 +369,21 @@ export function settingsDialog(openTab, opts = {}) {
   ov.appendChild(box); document.body.appendChild(ov);
 
   const q = (id) => box.querySelector(id);
-  // ══ [alpha.140] หัวข้อ "แผงนำทาง" — สร้างจาก JS ไม่ใช่จากเทมเพลตก้อนใหญ่ ══
-  // เหตุผล (ตอนนั้น): เทมเพลตของกล่องนี้เป็นสตริงเดียวยาว 26KB ในไฟล์ภาษา
-  // [alpha.154] โครงย้ายมาอยู่ `settings-template.js` แล้ว (ข้อความเป็นคีย์ `ui.setTpl.*`) —
-  // เพิ่มช่องใหม่แก้ที่เทมเพลตนั้นได้ตรง ๆ หรือประกอบเป็น DOM แบบหัวข้อนี้ก็ได้
+  // ══ [alpha.162 · W3] หน้า "แผงนำทาง" อยู่ในเทมเพลตแล้ว ══
+  // เดิมสร้างเป็น DOM ตอนรัน (มรดกของ .140 ตอนที่เทมเพลตยังเป็นสตริง 26KB ในไฟล์ภาษา)
+  // ผลคือหน้านี้ไม่เคยถูกด่าน `settings-tpl` ตรวจเลย และแทรกตัวเองเข้ารายการด้วย `insertBefore`
+  // ที่ผูกกับตำแหน่งของหัวข้ออื่น · ตอนนี้โครงอยู่ที่เดียวกับหน้าอื่น เหลือแค่เติมค่า + คำอธิบายสัญลักษณ์
   {
-    const navList = box.querySelector('.k-set-nav');
-    const navMain = box.querySelector('.k-set-main');
-    const anchorTab = navList && navList.querySelector('.k-set-tab[data-p="netcol"]');
-    if (navList && navMain) {
-      const tabEl = el('div', 'k-set-tab');
-      tabEl.dataset.p = 'nav';
-      tabEl.dataset.find = t('ui.nav.setFind');
-      tabEl.textContent = t('ui.nav.setTitle');
-      if (anchorTab) navList.insertBefore(tabEl, anchorTab); else navList.append(tabEl);
-
-      const page = el('div', 'k-set-page');
-      page.dataset.p = 'nav';
-      page.append(el('div', 'k-hint', t('ui.nav.setHint')));
-      // แถวตั้งค่าใช้คลาสชุดเดียวกับเทมเพลต (`k-row` + `<label>` ที่มี `.k-hint` ข้างใน)
-      // ไม่งั้นหน้าใหม่หน้าตาคนละเรื่องกับอีกสิบกว่าหน้าในกล่องเดียวกัน
-      const setRow = (labelKey, field, hintKey) => {
-        const row = el('div', 'k-row');
-        const lb = el('label', '', t(labelKey));
-        if (hintKey) lb.append(el('span', 'k-hint', t(hintKey)));
-        row.append(lb, field);
-        page.append(row);
-        return row;
-      };
-      const selMode = el('select'); selMode.id = 'st-navmode';
-      for (const [v, k] of [['scroll', 'ui.nav.setModeScroll'], ['page', 'ui.nav.setModePage']]) {
-        const o = el('option'); o.value = v; o.textContent = t(k); selMode.append(o);
-      }
-      selMode.value = s.navMode === 'page' ? 'page' : 'scroll';
-      setRow('ui.nav.setMode', selMode);
-
-      const inpPer = el('input'); inpPer.id = 'st-navper'; inpPer.type = 'number';
-      inpPer.min = '5'; inpPer.max = '500'; inpPer.step = '5';
-      inpPer.value = String(clampPerPage(s.navPerPage));
-      setRow('ui.nav.setPerPage', inpPer, 'ui.nav.setPerPageHint');
-
-      // คำอธิบายสัญลักษณ์ — ผู้ใช้ถามว่า "ต้องมีอะไรบ้าง" คำตอบอยู่ที่นี่ทั้งชุด
-      const lg = el('div', 'k-set-sub k-full'); lg.textContent = t('ui.nav.legendTitle');
-      page.append(lg);
-      const lgBox = el('div', 'nav-legend');
-      lgBox.append(el('div', 'nav-legend-row', '𝐁  ' + t('ui.nav.legendBold')));
+    const selMode = q('#st-navmode');
+    if (selMode) selMode.value = s.navMode === 'page' ? 'page' : 'scroll';
+    const inpPer = q('#st-navper');
+    if (inpPer) inpPer.value = String(clampPerPage(s.navPerPage));
+    const lgBox = q('#st-nav-legend');
+    if (lgBox) {
+      lgBox.replaceChildren();
+      lgBox.append(el('div', 'nav-legend-row', gi('bold-mark') + '  ' + t('ui.nav.legendBold')));
       for (const f of NAV_FLAG_DEFS) lgBox.append(el('div', 'nav-legend-row', f.mark + '  ' + t(f.key)));
-      lgBox.append(el('div', 'nav-legend-row', '▌  ' + t('ui.nav.legendRow')));
-      page.append(lgBox);
-      navMain.append(page);
+      lgBox.append(el('div', 'nav-legend-row', gi('bar-mark') + '  ' + t('ui.nav.legendRow')));
     }
   }
   // ── [alpha.157] ไม่แสดงหน้า Home ตอนเปิดโปรแกรม (= openLastProject ตัวเดิมของเมนู ไฟล์) ──
@@ -517,7 +488,6 @@ export function settingsDialog(openTab, opts = {}) {
   const autoPagIntv = q('#st-pagintv');
   if (autoPag) autoPag.checked = !!s.spAutoPaginate;
   if (autoPagIntv) autoPagIntv.value = Math.min(60, Math.max(1, parseInt(s.spPaginateInterval, 10) || 30));
-  q('#st-edpt').value = s.edFontPt ?? 12;
   q('#st-sppt').value = s.spFontPt ?? 12;
   q('#st-homethumb').value = s.homeThumb ?? 190;
   // ── [alpha.73 ข้อ 2+3] Story Network: สร้างช่องสี + ช่องปุ่มเมาส์ จากนิยามกลาง ──
@@ -528,18 +498,15 @@ export function settingsDialog(openTab, opts = {}) {
   // และ **คืนช่องติ๊กกลับมา** แทนที่จะให้ที่นี่ไปหาด้วย id (ทั้งส่วนจึงอยู่ในไฟล์เดียว)
   const updChk = buildUpdateFields(box, s);
   // พรีวิวขนาดฟอนต์ทันที (ยกเลิก = คืนค่าเดิม)
-  // [alpha.81r ข้อ 1] ช่องนี้กับ "ขนาด (pt)" ในแท็บ 📖 รูปแบบนิยาย = **ตัวเลขเดียวกัน**
-  // (เดิมเป็นคนละที่เก็บ ตั้งช่องหนึ่งแล้วอีกช่องไม่ขยับ → จอกับไฟล์ที่ส่งออกไม่ตรงกัน)
+  // ══ [alpha.162 · W3] ★ "ขนาดฟอนต์นิยาย (pt)" มีช่องเดียวแล้ว ══
+  // เดิมมีสองช่องที่เป็น **ตัวเลขเดียวกัน** (`#st-edpt` ในแท็บการเขียน กับ `#st-pr-pt` ในแท็บรูปแบบนิยาย)
+  // ต้องซิงก์กันสองทางตลอดเวลา · ผู้ใช้เห็นสองที่แล้วไม่รู้ว่าอันไหนจริง — ตอนนี้เหลือที่เดียว
+  // (แท็บรูปแบบนิยาย = ที่ที่มันอยู่ในบริบทเดียวกับระยะบรรทัด/ย่อหน้า) ส่วนขนาดฟอนต์บทอยู่แท็บรูปแบบบท
   const origEdPt = s.edFontPt ?? 12, origSpPt = s.spFontPt ?? 12;
   const previewPt = () => {
-    const pt = parseFloat(q('#st-edpt').value) || 12;
-    s.edFontPt = pt;
-    s.prose = { ...(s.prose || {}), fontPt: pt };
-    const mirror = q('#st-pr-pt'); if (mirror) mirror.value = String(pt);
     s.spFontPt = parseFloat(q('#st-sppt').value) || 12;
     applyZoomVars(parseInt(q('#st-font').value, 10) || 0);
   };
-  q('#st-edpt').oninput = previewPt;
   q('#st-sppt').oninput = previewPt;
 
   // ════ [alpha.58r บั๊ก 16–24] แท็บ "📖 รูปแบบนิยาย" ════
@@ -578,9 +545,10 @@ export function settingsDialog(openTab, opts = {}) {
   // ไม่ขึ้นเลข · ตอนนี้เขียนลง W.pageNumbers ตัวเดียว แล้วสะท้อนกลับให้ P เพื่อความเข้ากันได้
   // [alpha.97 ข้อ 11] ช่อง "ใส่เลขบนหน้าแรกด้วย" ถูกตัดทิ้งแล้ว — กฎมีข้อเดียว:
   // **หน้าที่ไม่ใช่ฉากไม่มีเลขหน้า** (หน้าปก/หน้ารายชื่อ) นอกนั้นมีเลขทุกหน้ารวมหน้าแรก
+  // [alpha.162 · W3] สวิตช์เลขหน้ามีที่เดียวแล้ว (แท็บ "เลขหน้าและการตัดหน้า")
+  // เดิมมีช่องคู่แฝดในแท็บรูปแบบนิยายที่ต้องซิงก์กันเอง — ตอนนี้แท็บนั้นมีแค่ปุ่มพาไป
   const syncPgNum = () => {
-    const a1 = q('#st-pr-pgnum'), a2 = q('#st-pn-show');
-    if (a1) a1.checked = !!W.pageNumbers.show;
+    const a2 = q('#st-pn-show');
     if (a2) a2.checked = !!W.pageNumbers.show;
   };
   syncPgNum();
@@ -622,9 +590,8 @@ export function settingsDialog(openTab, opts = {}) {
   /** อ่านค่าจากฟอร์ม → P แล้วเห็นผลบนหน้ากระดาษทันที */
   const readProse = () => {
     P.fontPt = parseFloat(q('#st-pr-pt').value) || 12;
-    // ตัวเลขเดียวกับ "ขนาดฟอนต์นิยาย (pt)" ในแท็บ การเขียน — ต้องเดินตามกันทั้งสองทาง
+    // [alpha.162 · W3] ช่องนี้คือช่องเดียวของ "ขนาดตัวอักษรนิยาย" แล้ว — เขียนลง settings ให้ตรงกันเสมอ
     s.edFontPt = P.fontPt;
-    const mirrorEd = q('#st-edpt'); if (mirrorEd) mirrorEd.value = String(P.fontPt);
     P.lineHeight = parseFloat(q('#st-pr-lh').value) || 1.75;
     P.paraSpacing = parseFloat(q('#st-pr-para').value) || 0;
     P.firstLineIndent = parseFloat(q('#st-pr-indent').value) || 0;
@@ -644,7 +611,6 @@ export function settingsDialog(openTab, opts = {}) {
     P.quote.border = q('#st-pr-qb').checked;
     P.quote.indent = parseFloat(q('#st-pr-qind').value) || 0;
     P.quote.color = q('#st-pr-qcolor').value.trim();
-    W.pageNumbers.show = q('#st-pr-pgnum').checked;
     P.pageNumbers = W.pageNumbers.show;
     return P;
   };
@@ -662,8 +628,7 @@ export function settingsDialog(openTab, opts = {}) {
   for (const id of ['#st-pr-pt', '#st-pr-lh', '#st-pr-para', '#st-pr-indent',
                     '#st-pr-indent-h', '#st-pr-tab', '#st-pr-align', '#st-pr-hfont', '#st-pr-hcolor',
                     '#st-pr-hnum', '#st-pr-hnumfmt', '#st-pr-hnumlv',
-                    '#st-pr-qi', '#st-pr-qb', '#st-pr-qind', '#st-pr-qcolor',
-                    '#st-pr-pgnum']) {
+                    '#st-pr-qi', '#st-pr-qb', '#st-pr-qind', '#st-pr-qcolor']) {
     const n = q(id); if (!n) continue;
     n.oninput = previewProse; n.onchange = previewProse;
   }
@@ -830,12 +795,15 @@ export function settingsDialog(openTab, opts = {}) {
   { const i = q('#st-sn-suffix'); i.value = W.sceneNumbers.suffix || '';
     i.oninput = () => { W.sceneNumbers.suffix = i.value; previewPage(); }; }
   // [alpha.127] ขีดเส้นบอกจุดที่ผิดในเอกสาร (สลับได้จากเมนูป้าย ⚠ ด้วย — ที่เดียวกับตัวเลข)
+  // [alpha.162 · W3] ★ ช่องนี้เคย **เขียนค่าจริงทันทีที่ติ๊ก** ต่างจากทุกช่องในกล่องเดียวกัน
+  // → กด "ยกเลิก" แล้วค่านี้ไม่คืน (ผู้ใช้เข้าใจว่ายกเลิกทั้งกล่อง) · ตอนนี้พรีวิวสดเหมือนช่องอื่น
+  // แล้วผูกค่าจริงตอนกดบันทึก · ยกเลิก = คืนค่าเดิมในบล็อก restore ข้างล่าง
+  const origErrMark = s.spErrorMarks !== false;
   { const c = q('#st-sp-errmark');
-    c.checked = s.spErrorMarks !== false;
+    c.checked = origErrMark;
     c.onchange = async () => {
-      s.spErrorMarks = c.checked;
       const { toggleSpErrorMarks } = await import('./app.js');
-      toggleSpErrorMarks(c.checked);
+      toggleSpErrorMarks(c.checked);          // เห็นผลทันทีบนเอกสาร (ยังไม่บันทึก)
     }; }
   chk('#st-ct-auto', () => W.continued.enabled !== false, (v) => { W.continued.enabled = v; });
   // [alpha.125 ข้อ J] ให้ (CONTINUED) ขึ้นได้แม้หน้านั้นยังไม่มีหัวฉาก (ค่าเริ่มต้น = ปิด)
@@ -1174,7 +1142,7 @@ export function settingsDialog(openTab, opts = {}) {
     try {
       const [thTxt, oTxt] = await Promise.all([kapi.langRead('th', state.root || ''), kapi.langRead(code, state.root || '')]);
       const pr = translationProgress(csvToTable(thTxt), csvToTable(oTxt));
-      box.textContent = tf('ui.dlg.langProgress', pr.translated.toLocaleString(), pr.total.toLocaleString(), pr.pct);
+      box.textContent = tf('ui.dlg.langProgress', fmtNum(pr.translated), fmtNum(pr.total), pr.pct);
     } catch { box.textContent = ''; }
   };
   // [alpha.76] รายการภาษา = ผลสแกนไฟล์ `k2_<code>.csv` จริง ๆ ไม่ใช่รายชื่อฮาร์ดโค้ด
@@ -1286,11 +1254,54 @@ export function settingsDialog(openTab, opts = {}) {
     if (main) main.scrollTop = 0;
   };
   box.querySelectorAll('.k-set-tab').forEach((tabEl) => tabEl.onclick = () => gotoTab(tabEl.dataset.p));
+  // ══ [alpha.162 · W3] แท็บ "ผู้ช่วย AI" — ทางเข้าที่หกที่ผู้ใช้หาเจอแน่ ══
+  // เดิมการตั้งค่า AI เข้าได้ห้าทาง (แผงแชท · AI Hub · ปุ่มบนแถบ · เมนูเครื่องมือ · กล่อง error)
+  // แต่ **ไม่มีในกล่องตั้งค่า** ซึ่งเป็นที่แรกที่คนเปิดหา · ที่นี่สรุปว่าตอนนี้ใช้อะไรอยู่ + ปุ่มเปิดกล่องจริง
+  // (ไม่ย้ายทั้งกล่องมา เพราะคีย์/โมเดลมีตัวตรวจ-ทดสอบของตัวเองที่ต้องอยู่ด้วยกัน)
+  {
+    const cur = q('#st-ai-current');
+    const btn = q('#st-ai-open');
+    if (cur) {
+      cur.textContent = t('ui.dlg.aiNotConfigured');
+      (async () => {
+        try {
+          const M = await import('./ai/ai-provider-ui.js');
+          const p2 = await M.currentProvider();       // async — อ่านคีย์จากไฟล์ของเครื่อง
+          if (p2 && p2.name) cur.textContent = p2.name + (p2.model ? ' · ' + p2.model : '');
+        } catch (e) { log('warn', t('ui.dlg.aiReadProviderFail'), e); }
+      })();
+    }
+    if (btn) btn.onclick = async () => {
+      const M = await import('./ai/ai-provider-ui.js');
+      await M.showAISettingsDialog();
+    };
+  }
+  // [alpha.162 · W3] สวิตช์เลขหน้าเหลือที่เดียว — ปุ่มในแท็บรูปแบบนิยายพาไปหาที่นั่น
+  { const g = q('#st-pr-gopagenum'); if (g) g.onclick = () => gotoTab('pagenum'); }
   // [alpha.120 ข้อ 14] จำว่า "เปิดค้างไว้ที่หัวข้อไหน" — กล่องนี้มีสิบกว่าหน้า
   // ผู้ใช้ที่กำลังไล่ปรับหน้าเดียวต้องคลิกหาใหม่ทุกครั้งที่ปิด-เปิด
   const LAST_TAB_KEY = 'k2-settings-tab';
   const rememberTab = (name) => { try { localStorage.setItem(LAST_TAB_KEY, name || ''); } catch {} };
   box.querySelectorAll('.k-set-tab').forEach((tabEl) => tabEl.addEventListener('click', () => rememberTab(tabEl.dataset.p)));
+  if (!projOK) {
+    // หน้าไหนเป็นของผลงาน อ่านจากป้ายขอบเขตบนหน้านั้นเอง (แหล่งความจริงเดียวกับที่เทส W3 ยึด)
+    const projPages = new Set([...box.querySelectorAll('.k-set-page')]
+      .filter((pg) => pg.querySelector('.k-set-scope[data-scope="project"]')).map((pg) => pg.dataset.p));
+    box.querySelectorAll('.k-set-tab').forEach((x) => { if (projPages.has(x.dataset.p)) x.remove(); });
+    // ⚠ หน้า "ซ่อน" ไม่ใช่ "ลบ" — โค้ดทั้งกล่อง (โฟกัสตอนเปิด · อ่านค่าตอนบันทึก) ยัง `q('#st-…')` ช่องของ
+    // หน้าผลงานอยู่ ลบทิ้งแล้วเปิดกล่องพังทันที (e2e [162-W4] จับได้) · การเขียนของผลงานกันไว้ด้วย projOK แล้ว
+    box.querySelectorAll('.k-set-page').forEach((x) => {
+      if (projPages.has(x.dataset.p)) { x.style.display = 'none'; x.dataset.noproj = '1'; }
+    });
+    // หัวกลุ่มที่ไม่เหลือแท็บใต้มันแล้ว → เอาออกด้วย
+    box.querySelectorAll('.k-set-navgrp').forEach((gh) => {
+      const nx = gh.nextElementSibling;
+      if (!nx || !nx.classList.contains('k-set-tab')) gh.remove();
+    });
+    const note = el('div', 'k-hint k-set-noproj', t('ui.dlg.settingsNoProject'));
+    box.querySelector('.k-set-nav')?.prepend(note);
+    if (openTab && projPages.has(openTab)) openTab = 'gen';
+  }
   if (openTab) gotoTab(openTab);      // เปิดตรงแท็บที่ผู้เรียกระบุ (ex. เมนู "ข้อมูลผลงาน")
   else {
     let last = '';
@@ -1353,6 +1364,11 @@ export function settingsDialog(openTab, opts = {}) {
   const close = () => ov.remove();
   const cancel = () => {
     s.edFontPt = origEdPt; s.spFontPt = origSpPt;
+    // [alpha.162 · W3] เส้นขีดจุดผิดของบท — พรีวิวสดแล้วต้องคืนค่าเดิมเหมือนช่องอื่นเมื่อกดยกเลิก
+    if ((s.spErrorMarks !== false) !== origErrMark) {
+      import('./app.js').then((m) => m.toggleSpErrorMarks(origErrMark)).catch(() => {});
+    }
+    s.spErrorMarks = origErrMark;
     s.prose = Object.keys(origProse).length ? origProse : null;   // คืนรูปแบบนิยายที่บันทึกไว้จริง
     applyProseVars(proseFormat());
     applyZoomVars(origFont);
@@ -1469,7 +1485,7 @@ export function settingsDialog(openTab, opts = {}) {
     // ขนาดฟอนต์เป็นพอยต์ + ขนาดการ์ดหน้าแรก
     // ที่เก็บจริงของขนาดฟอนต์นิยาย = settings.prose.fontPt (เขียนทีเดียวตอน readProse ด้านล่าง)
     // สองช่องนี้สะท้อนกันตอนพิมพ์แล้ว จึงอ่านช่องไหนก็ได้ค่าเดียวกัน
-    s.edFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-edpt').value) || 12));
+    s.edFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-pr-pt').value) || 12));
     s.spFontPt = Math.min(48, Math.max(6, parseFloat(q('#st-sppt').value) || 12));
     s.homeThumb = Math.min(400, Math.max(120, parseInt(q('#st-homethumb').value, 10) || 190));
     // [85] หน้ากระดาษ + [84] กฎตัดหน้า + [92] ข้อความ + [81-83] รูปแบบ element
@@ -1487,6 +1503,8 @@ export function settingsDialog(openTab, opts = {}) {
     s.spContinued = { ...W.continued };           // [alpha.83r ข้อ 3]
     s.spLineHeight = W.spLineHeight;              // [alpha.58r บั๊ก 5]
     s.spPageGap = W.spPageGap;
+    // [alpha.162 · W3] เส้นขีดจุดผิด — ผูกค่าตอนกดบันทึก (เดิมเขียนทันทีที่ติ๊ก = ยกเลิกไม่คืน)
+    s.spErrorMarks = q('#st-sp-errmark') ? q('#st-sp-errmark').checked : s.spErrorMarks;
     // [alpha.100 ข้อ 2+4] สีกระดาษ + เส้นบอกระยะขอบ (ระดับผู้ใช้ — ดู globalKeys ด้านล่าง)
     s.paperColor = normalizePaperColor(W.paperColor, PAPER_DEFAULT);
     s.pageGuides = !!W.pageGuides;
@@ -1513,48 +1531,54 @@ export function settingsDialog(openTab, opts = {}) {
       await preloadLangFontUrls();         // ฟอนต์ที่เพิ่งนำเข้าต้องมี URL ก่อน applySettings สร้าง CSS
       // [alpha.120 ข้อ 14] เก็บภาพของ "ค่าก่อนกดบันทึกรอบนี้" ไว้ให้ปุ่มคืนค่าก่อนหน้า
       // (อ่านจากไฟล์บนดิสก์ = ค่าที่บันทึกไว้จริงครั้งล่าสุด ไม่ใช่ค่าที่เพิ่งพิมพ์ในกล่อง)
-      try {
-        const onDisk = await kapi.readJson(await kapi.join(state.root, 'project.khn.json'));
-        m.settingsPrev = { settings: onDisk.settings || {}, goals: onDisk.goals || {} };
-      } catch (e) { log('warn', t('ui.dlg.settingsPrevFail'), e); }
-      await saveProjectMeta();
+      if (projOK) {                        // [alpha.162 · W4 ข้อ 12] ไม่มีโปรเจกต์ = ไม่มีไฟล์ผลงานให้เขียน
+        try {
+          const onDisk = await kapi.readJson(await kapi.join(state.root, 'project.khn.json'));
+          m.settingsPrev = { settings: onDisk.settings || {}, goals: onDisk.goals || {} };
+        } catch (e) { log('warn', t('ui.dlg.settingsPrevFail'), e); }
+        await saveProjectMeta();
+      }
       // [alpha.60 ข้อ 94] บันทึก global settings ลง userData/settings.json
       try {
-        const globalKeys = ['autoSaveMinutes','maxBackups','autoBackup','lineNumbers','fabEnabled','uiFontSize','uiScale',
-          'spellCheck','spellCheckDict','autoMention','recycleDays','paperMode','fontFamily','spFontFamily',
-          'language','autoSync','thesaurus','focusDim','typeSound','typeSoundVolume','typeSoundAlways','typeSoundMode',
-          'homeThumb','smartLearnMin','heavyDocBlocks','mdAlignStyle','shortcuts','showHomeOnStartup',
-          'paperColor','pageGuides',    // [alpha.100 ข้อ 2+4]
-          // [alpha.111] แถบรูปแบบลอย (แยกนิยาย/บท) + ปุ่มลอย FAB — ระดับผู้ใช้เหมือนแถบเครื่องมือ
-          // [alpha.132 ข้อ 9] จานสีตัวอักษร (บันทึกไว้ + ใช้ล่าสุด) — ตามผู้ใช้ไปทุกโปรเจกต์
-          'textColors',
-          // [alpha.135] ค่าอัปเดต — ต้องอยู่ในรายการนี้ ไม่งั้น "รุ่นที่ข้ามไว้"/"ตรวจล่าสุด"
-          // หายทุกครั้งที่กดบันทึกตั้งค่า (ไฟล์นี้ถูก **เขียนทับทั้งก้อน** ไม่ได้ merge)
-          'updateCheck','updateSkip','updateLast','updateLastVersion',
-          // ด้วยเหตุผลเดียวกัน: สวิตช์ "เปิดโปรเจกต์ล่าสุดทันที" (เมนู ไฟล์) เคยหายทุกครั้งที่บันทึกตั้งค่า
-          'openLastProject',
-          // [alpha.137] ธีมสี — ตามผู้ใช้ไปทุกโปรเจกต์ (เดิมเก็บเฉพาะใน project.khn.json)
-          'theme',
-          'toolbar','fmtbar','fab'];
+        // ══ [alpha.162 · W3] ★ "อะไรเป็นค่าระดับผู้ใช้" มีแหล่งความจริงเดียว = `GLOBAL_DEFAULTS` ══
+        //
+        // เดิมที่นี่มีรายชื่อคีย์เขียนมืออีกชุด (40 ชื่อ) คู่ขนานกับตารางใน core.js — และมันเพี้ยนไปแล้วจริง ๆ:
+        //   · `showMarkdownCodes` อยู่ใน GLOBAL_DEFAULTS แต่ **ไม่อยู่ในรายชื่อนี้** → สวิตช์ "ซ่อนรหัส
+        //     มาร์กดาวน์" ไม่เคยถูกเขียนลงไฟล์ตั้งค่าผู้ใช้เลย เปิดโปรเจกต์อื่นแล้วค่ากลับไปเป็นค่าเริ่มต้น
+        //   · `toolbar` อยู่ในรายชื่อนี้แต่ไม่อยู่ในตาราง → ตารางที่ควรเป็นสเปกกลับไม่ครบ (เติมแล้วใน core.js)
+        // ต่อไปนี้เพิ่มคีย์ระดับผู้ใช้ = เพิ่มแถวใน `GLOBAL_DEFAULTS` ที่เดียว (เทส `settings-tpl` บังคับ)
+        // [alpha.162 · W4] ★ ต้อง **merge** กับไฟล์เดิม — `writeGlobalSettings` เขียนทับทั้งไฟล์
+        // ค่าระดับผู้ใช้ที่ถูกเขียนด้วย saveGlobalSetting แต่ไม่อยู่ในตาราง (เช่น `exportName` แม่แบบชื่อไฟล์
+        // ส่งออก) หายทุกครั้งที่กดบันทึกในกล่องนี้ (พิสูจน์ด้วยตรรกะเดียวกันก่อนแก้ · เทส [162-W4])
+        // ผ่านคิวเดียวกับ saveGlobalSetting (อ่าน-รวม-เขียน) — ไม่ชนกับการเขียนที่ค้างคิวอยู่
         const globals = {};
-        for (const k of globalKeys) { if (k in s) globals[k] = s[k]; }
-        await kapi.writeGlobalSettings(globals);
+        for (const k of Object.keys(GLOBAL_DEFAULTS)) { if (k in s) globals[k] = s[k]; }
+        const { mergeGlobalSettings } = await import('./app.js');
+        await mergeGlobalSettings(globals);
       } catch (e) { log('warn', t('ui.common.saveGlobalSettingsNot'), e); }
       applySettings();
       try { updatePageNumberHint(); refreshSpView(); } catch {}
       // [alpha.63r4] สี Story Network ที่เพิ่งตั้ง ต้องเห็นผลทันที ไม่ต้องปิด-เปิดแอป
       try { const { refreshNetwork } = await import('./app.js'); refreshNetwork(); } catch {}
-      state.title = m.title;
-      document.title = m.title + ' — Killian 2';
-      $('#tb-title').textContent = m.title + ' — Killian 2';
+      if (projOK) {
+        state.title = m.title;
+        document.title = m.title + ' — Killian 2';
+        $('#tb-title').textContent = m.title + ' — Killian 2';
+      }
       // แดชบอร์ดเป็นแผงแล้ว (refreshDashboardIfOpen เมื่อมี export)
-    } catch (e) { log('error', t('ui.dlg.saveSettingsFail'), e); }
+    } catch (e) {
+      // [alpha.162 · W4] เดิมล้มเงียบ — ผู้ใช้กดบันทึก กล่องปิด แต่ค่าไม่ได้ลงไฟล์เลย
+      log('error', t('ui.dlg.saveSettingsFail'), e);
+      setStatusError(failText(t('ui.dlg.saveSettingsFail'), e));
+    }
     // ---- บันทึกภาษา ----
     const selLang = q('#st-lang')?.value;
     if (selLang && selLang !== origLang) {
       s.language = selLang;
       await loadLanguage(selLang, state.root);
-      await saveProjectMeta();
+      if (projOK) await saveProjectMeta();
+      // ⚠ ห้าม `writeGlobalSettings({ language })` ตรง ๆ — ตัวนั้นเขียนทับทั้งไฟล์ (ค่าผู้ใช้อื่นหายหมด)
+      else { try { const { saveGlobalSetting } = await import('./app.js'); await saveGlobalSetting('language', selLang); } catch (e) { log('warn', 'global language', e); } }
       // เมนู OS สร้างในฝั่ง main (renderer แตะไม่ได้) → ต้องบอกให้โหลดตารางแล้วสร้างเมนูใหม่
       try { await kapi.langSet(selLang); } catch {}
       // ค่าคงที่ระดับโมดูล (ชื่อสถานะ/ชื่อ element/ป้ายในตารางค่าคงที่) ถูกคำนวณตอนเปิดโปรแกรม
@@ -1654,15 +1678,19 @@ export async function fileVersionDialog(file, titleText, { onRestored = null } =
       };
       const bRes = el('button', 'k-ok', t('dialogs.restore')); bRes.onclick = async () => {
         if (!(await confirmBox(t('panel.confirmRestore'), t('dialogs.restore')))) return;
+        // ══ [alpha.162 · W1-14] ★ งานที่ยังไม่บันทึกต้องลงไฟล์ **ก่อน** ถ่ายภาพ "ก่อนกู้คืน" ══
+        // เดิมบังคับ `openTab.dirty = false` แล้วปิดแท็บแบบทิ้ง — ภาพก่อนกู้คืนถ่ายจาก *ดิสก์*
+        // จึงไม่มีสิ่งที่ผู้ใช้เพิ่งพิมพ์อยู่ในนั้นเลย = ย้อนกลับไม่ได้ทั้งสองทาง (ทวนกฎ alpha.161)
+        // บันทึกไม่ผ่าน/ผู้ใช้ยกเลิก = ไม่กู้คืน
+        if (!(await flushTabForMove(state.tabs.get(file)))) { setStatus(t('ui.app.saveCancelledKeepTab')); return; }
         await snapshotFile(file, t('panel.beforeRestore'));           // เซฟของปัจจุบันไว้ก่อน
         const c = await kapi.readFile(s.path);
         await kapi.writeFile(file, c);
         const openTab = state.tabs.get(file);
         if (onRestored) await onRestored(file, openTab);
         else if (openTab) {                                // ปิดแล้วเปิดใหม่ให้โหลดสด (รองรับทั้งนิยาย/บทหนัง)
-          openTab.dirty = false;
           const title = openTab.title;
-          closeTab(file); openScene(file, title);
+          closeTab(file, { discard: true }); await openScene(file, title);
         }
         setStatus(t('status.versionRestored')); refresh();
       };

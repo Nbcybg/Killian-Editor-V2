@@ -12,7 +12,8 @@ import { startSprint, pauseSprint, resumeSprint, sprintStatus, finishSprint, app
          sprintSummary, clampMinutes } from './sprint-core.js';
 
 // ES module: ค่าที่เปลี่ยนต้องอยู่ใน object (กฎเหล็กข้อ 2)
-const SP = { s: null, timer: null, node: null, base: new Map(), delta: new Map(), wordsAt: 0, words: 0 };
+const SP = { s: null, timer: null, node: null, base: new Map(), delta: new Map(), wordsAt: 0, words: 0,
+             unsaved: false };   // [alpha.162 · W1-16] รอบที่จบแล้วแต่เขียนลงไฟล์ไม่สำเร็จ
 
 function tabWords(tab) {
   try {
@@ -89,21 +90,25 @@ export function beginSprint({ minutes = 25, goal = 0 } = {}) {
 
 /**
  * จบรอบ — save = จดประวัติลงโปรเจกต์ (รอบที่ไม่ถึงนาทีไม่จด)
+ * @param {{save?: boolean, timeUp?: boolean, now?: number}} opts
+ *   `now` = เวลาที่ถือว่าเป็นตอนจบ (เทสส่งเข้ามาเพื่อให้รอบ "ยาวพอจะถูกจด" โดยไม่ต้องรอจริง)
  * @returns {Promise<object|null>} ระเบียนของรอบนี้
  */
-export async function stopSprint({ save = true, timeUp = false } = {}) {
+export async function stopSprint({ save = true, timeUp = false, now = 0 } = {}) {
   if (!SP.s) return null;
   clearInterval(SP.timer); SP.timer = null;
   SP.words = writtenSoFar();
-  const rec = finishSprint(SP.s, SP.words, Date.now());
+  const rec = finishSprint(SP.s, SP.words, now || Date.now());
   SP.s = null;
   renderWidget();
   if (save && state.meta) {
     const before = (state.meta.sprints || []).length;
     state.meta.sprints = appendSprintHistory(state.meta.sprints, rec);
     if (state.meta.sprints.length !== before) {
-      try { await (await import('./app.js')).saveProjectMeta(); }
-      catch (e) { log('warn', t('ui.sprint.saveFail'), e); }
+      // [alpha.162 · W1-16] ★ เขียนไม่สำเร็จ = **ยังมีงานค้าง** — เดิมกลืน error แล้วคืน rec ตามปกติ
+      // ทะเบียนงานค้าง (`save: () => stopSprint(...) !== null`) จึงเข้าใจว่าบันทึกแล้วและปล่อยปิดโปรแกรม
+      try { await (await import('./app.js')).saveProjectMeta(); SP.unsaved = false; }
+      catch (e) { SP.unsaved = true; log('warn', t('ui.sprint.saveFail'), e); setStatus(t('ui.sprint.saveFail')); }
     }
   }
   setStatus((timeUp ? t('ui.sprint.timeUp') + ' ' : '') + tf('ui.sprint.doneStatus', rec.words, rec.actualMinutes, rec.wpm));
@@ -113,8 +118,24 @@ export async function stopSprint({ save = true, timeUp = false } = {}) {
 
 /** ทะเบียนงานค้าง (กฎถาวร alpha.72): รอบที่กำลังจับเวลาอยู่หายตอนปิดโปรแกรม = ต้องขึ้นรายการ */
 export function sprintDirtyList() {
-  if (!SP.s) return [];
-  return [{ key: '::sprint::', title: tf('ui.sprint.running', SP.s.minutes), file: '' }];
+  const out = [];
+  if (SP.s) out.push({ key: '::sprint::', title: tf('ui.sprint.running', SP.s.minutes), file: '' });
+  // [alpha.162 · W1-16] รอบที่จบแล้วแต่ `project.khn.json` เขียนไม่ผ่าน — ยังอยู่แค่ในหน่วยความจำ
+  if (SP.unsaved) out.push({ key: '::sprint-unsaved::', title: t('ui.sprint.saveFail'), file: '' });
+  return out;
+}
+
+/**
+ * [alpha.162 · W1-16] ตัวบันทึกของทะเบียนงานค้าง — **ต้องคืน false เมื่อยังลงไฟล์ไม่ได้จริง**
+ * (จบรอบที่จับเวลาอยู่ + ลองเขียนประวัติที่ค้างซ้ำ)
+ */
+export async function saveSprintDirty() {
+  if (SP.s && (await stopSprint({ save: true })) === null) return false;
+  if (SP.unsaved) {
+    try { await (await import('./app.js')).saveProjectMeta(); SP.unsaved = false; }
+    catch (e) { log('warn', t('ui.sprint.saveFail'), e); }
+  }
+  return !SP.unsaved;
 }
 
 /** กล่องเริ่มสปรินต์ */

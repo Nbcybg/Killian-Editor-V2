@@ -106,11 +106,11 @@ export function mergeBuiltInTemplateMeta(projectTpls, shippedTpls, keys = ['prof
   const shipped = Array.isArray(shippedTpls) ? shippedTpls : [];
   // จับคู่ด้วย id ก่อน (แน่นอนที่สุด) แล้วค่อยถอยไปใช้ entityTypeKey+name
   const byId = new Map(shipped.filter((t) => t.id).map((t) => [t.id, t]));
-  const byName = new Map(shipped.map((t) => [t.entityTypeKey + '' + t.name, t]));
+  const byName = new Map(shipped.map((t) => [t.entityTypeKey + '\u0001' + t.name, t]));
   let changed = false;
   for (const t of out) {
     if (!t || !t.builtIn) continue;
-    const src = byId.get(t.id) || byName.get(t.entityTypeKey + '' + t.name);
+    const src = byId.get(t.id) || byName.get(t.entityTypeKey + '\u0001' + t.name);
     if (!src) continue;
     for (const k of keys) {
       if (src[k] !== undefined && t[k] === undefined) { t[k] = src[k]; changed = true; }

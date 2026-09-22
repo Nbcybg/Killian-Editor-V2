@@ -1,5 +1,7 @@
 // scratchpad.js — แท็บ "📝 สมุดโน้ตด่วน" textarea ไม่บันทึกเป็นไฟล์, export/ย้ายเข้า Memo ได้
 import { t, tf } from './i18n.js';
+import { SCRATCH_SAVE_DELAY_MS } from './timing.js';
+import { gi } from './icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { $, el, state, setStatus, log } from './core.js';
 
 // ══ [alpha.159 · M19] ★ แท็บกับแผงใช้ "ค่าเดียวกัน" ══
@@ -33,7 +35,7 @@ export function setScratchValue(v, from = null, { now = false } = {}) {
   }
   clearTimeout(PAD.timer);
   if (now) flushScratch();
-  else PAD.timer = setTimeout(flushScratch, 3000);
+  else PAD.timer = setTimeout(flushScratch, SCRATCH_SAVE_DELAY_MS);   // [alpha.162 · W6 ข้อ 7]
 }
 try {
   window.addEventListener('beforeunload', flushScratch);
@@ -45,6 +47,18 @@ try {
     for (const view of PAD.views) if (view.ta.isConnected && view.ta.value !== PAD.value) { view.ta.value = PAD.value; view.update(); }
   });
 } catch {}
+
+/**
+ * [alpha.162 · W1-15] ทะเบียนงานค้าง (กฎถาวร alpha.72: "อะไรที่ทิ้ง/อัปเดตตอนปิดโปรแกรม ต้องขึ้น list")
+ *
+ * สมุดโน้ตด่วนเขียนลง localStorage แบบหน่วง 3 วินาที และพึ่ง `beforeunload` อย่างเดียวตอนปิด
+ * — ทางที่ไม่ผ่าน `beforeunload` (โปรแกรมถูกปิดแรง · หน้าต่างพัง) ทำให้สิ่งที่พิมพ์ในสามวินาทีสุดท้ายหาย
+ * และมันไม่เคยอยู่ในทะเบียน จึงไม่มีใครเห็นว่ายังมีงานค้าง · ขึ้นรายการ **เฉพาะตอนมีของค้างจริง**
+ * (ไม่มี timer = เขียนลงเรียบร้อยแล้ว — กล่องบันทึกจะไม่รกด้วยรายการที่ไม่ต้องทำอะไร)
+ */
+export function scratchDirtyList() {
+  return PAD.timer ? [{ key: '::scratchpad::', title: t('ui.common.notebookNoteQuick'), file: '' }] : [];
+}
 
 /** แถบเครื่องมือ + ช่องพิมพ์ — ตัวเดียวที่ทั้งแท็บและแผงใช้ */
 function buildScratch() {
@@ -115,7 +129,7 @@ export async function openScratchpad() {
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', t('ui.notes.notebookNoteQuick')));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
+  const x = el('span', 'tab-x', gi('times')); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const { bar, ta } = buildScratch();
   pane.append(bar, ta);

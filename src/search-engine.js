@@ -23,11 +23,9 @@ let _segTried = false;
 function getSegmenter() {
   if (_segTried) return _segmenter;
   _segTried = true;
-  try {
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-      _segmenter = new Intl.Segmenter('th', { granularity: 'word' });
-    }
-  } catch { _segmenter = null; }
+  // [alpha.162 · W7] ตัวตัดคำกลาง (locale.js) — ICU เลือกพจนานุกรมตามตัวอักษร ผลเท่ากันทุกภาษา
+  //   ดัชนีที่สร้างตอนเป็นภาษาหนึ่งจึงใช้ค้นตอนเปลี่ยนภาษาได้ (unit test ตรึงไว้)
+  _segmenter = wordSegmenter();
   return _segmenter;
 }
 
@@ -51,6 +49,9 @@ function tokenizeFallback(text) {
 }
 
 // ตัดคำหลัก: ใช้ Segmenter ถ้ามี, ไม่งั้น fallback. คืนเฉพาะคำที่เป็นคำจริง (ตัด ช่องว่าง/สัญลักษณ์ทิ้ง)
+import { throwIfCancelled } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
+import { wordSegmenter } from './locale.js';
+
 export function tokenize(text) {
   if (!text) return [];
   const seg = getSegmenter();
@@ -229,7 +230,7 @@ export class SearchIndex {
       const from = Math.max(0, pos - radius);
       const to = Math.min(doc.len, pos + len + radius);
       const snippet = (from > 0 ? '…' : '') + doc.body.slice(from, to).replace(/\n/g, ' ') + (to < doc.len ? '…' : '');
-      matches.push({ line: lineAt(doc.offs, pos), pos, snippet });
+      matches.push({ line: lineAt(doc.offs, pos), pos, len, snippet });   // [alpha.161 · S] len = ความยาว token ที่เจอ
     }
     // คะแนน: ความถี่ + โบนัสถ้าคำอยู่ในชื่อเรื่อง + ปรับด้วยความยาว (สั้นกว่า = เด่นกว่า)
     let score = freq;
@@ -292,6 +293,83 @@ export function parseQuery(query) {
   return parseOr();
 }
 
+// ───────────────────────── [alpha.161 · S] ผลค้นหาที่ "ใช้จริงได้" ─────────────────────────
+
+/**
+ * คำที่ผู้ใช้ต้องการ "เห็น" ในผล — คำ/วลีฝั่งบวกของคิวรี (ไม่เอาคำใต้ NOT · ไม่เอาค่าของ field:)
+ * เรียงยาวก่อนสั้น (ไฮไลต์คำยาวก่อน คำสั้นที่เป็นส่วนของมันจะไม่ถูกตัดกลาง)
+ * @returns {string[]}
+ */
+export function highlightTerms(query) {
+  const out = [];
+  const walk = (n, neg) => {
+    if (!n) return;
+    if (n.type === 'term') { if (!neg && String(n.value || '').trim()) out.push(String(n.value).trim()); return; }
+    if (n.type === 'not') return walk(n.right, !neg);
+    if (n.type === 'and' || n.type === 'or') { walk(n.left, neg); walk(n.right, neg); }
+  };
+  let ast = null;
+  try { ast = parseQuery(query); } catch { ast = null; }
+  walk(ast, false);
+  const seen = new Set();
+  return out.filter((w) => { const k = w.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a, b) => b.length - a.length);
+}
+
+/**
+ * ตัดข้อความเป็นช่วง ๆ พร้อมธงว่าช่วงไหนตรงคำค้น (ไม่สนตัวพิมพ์ · ไม่ซ้อนกัน · คำยาวชนะ)
+ * ผู้เรียกประกอบเป็น text node/`<mark>` เอง — **ไม่มี HTML ออกจากฟังก์ชันนี้** (กฎข้อ 11)
+ * @returns {Array<{text:string, hl:boolean}>}
+ */
+export function splitHighlight(text, terms) {
+  const s = String(text || '');
+  const list = (terms || []).map((x) => String(x || '')).filter(Boolean).sort((a, b) => b.length - a.length);
+  if (!s || !list.length) return s ? [{ text: s, hl: false }] : [];
+  const low = s.toLowerCase();
+  const lows = list.map((x) => x.toLowerCase());
+  const out = [];
+  let i = 0, plain = 0;
+  while (i < s.length) {
+    let hit = 0;
+    for (const w of lows) { if (low.startsWith(w, i)) { hit = w.length; break; } }
+    if (!hit) { i++; continue; }
+    if (i > plain) out.push({ text: s.slice(plain, i), hl: false });
+    out.push({ text: s.slice(i, i + hit), hl: true });
+    i += hit; plain = i;
+  }
+  if (plain < s.length) out.push({ text: s.slice(plain), hl: false });
+  return out;
+}
+
+/**
+ * รายละเอียดของจุดที่เจอ สำหรับ "กระโดดไปตรงนั้น" ในตัวแก้ไข
+ * - term  = คำค้นที่ครอบตำแหน่งนี้ (ถ้าไม่มี = token ที่เจอจริง)
+ * - start = ตำแหน่งอักขระของ term ใน body
+ * - nth   = term นี้เป็นครั้งที่เท่าไรใน body (นับจาก 0 · ไม่สนตัวพิมพ์) — ตัวแก้ไขนับแบบเดียวกันในเอกสาร
+ *           (เลขบรรทัดของ .md ≠ ลำดับบล็อกในตัวแก้ไข: บรรทัดว่าง/คอมเมนต์จัดหน้า/รั้วโค้ดทำให้คลาด)
+ * - line/lineText = บรรทัดใน body (1-based) และข้อความของบรรทัดนั้น
+ */
+export function matchDetail(body, pos, len, terms) {
+  const b = String(body || '');
+  const p = Math.max(0, Math.min(b.length, Number(pos) || 0));
+  const l = Math.max(0, Number(len) || 0);
+  const low = b.toLowerCase();
+  let term = b.slice(p, p + l), start = p;
+  for (const w of (terms || []).map((x) => String(x || '')).filter(Boolean).sort((a, c) => c.length - a.length)) {
+    const wl = w.toLowerCase();
+    // หาคำค้นที่ "ครอบ" ตำแหน่ง token นี้ (token ไทยอาจเป็นแค่ส่วนหนึ่งของคำที่พิมพ์ค้น)
+    let k = low.indexOf(wl, Math.max(0, p - wl.length + 1));
+    if (k >= 0 && k <= p + Math.max(0, l - 1)) { term = b.slice(k, k + w.length); start = k; break; }
+  }
+  const tl = term.toLowerCase();
+  let nth = 0;
+  if (tl) { for (let k = low.indexOf(tl); k >= 0 && k < start; k = low.indexOf(tl, k + 1)) nth++; }
+  const ls = b.lastIndexOf('\n', start - 1) + 1;
+  let le = b.indexOf('\n', start); if (le < 0) le = b.length;
+  const line = b.slice(0, ls).split('\n').length;
+  return { term, start, nth, line, lineText: b.slice(ls, le) };
+}
+
 // แยก token ของคิวรี: field:value, "วลี", คำ, วงเล็บ, ตัวดำเนินการ AND/OR/NOT
 function lexQuery(q) {
   const out = [];
@@ -326,16 +404,66 @@ function difference(a, b) { const o = new Set(a); for (const x of b) o.delete(x)
 // อ่านไฟล์จริงจากโปรเจกต์ผ่าน kapi แล้วสร้าง index — เรียกจาก renderer (app/opencode wire ทีหลัง)
 // แยกจาก core logic เพื่อให้ทดสอบ logic ได้โดยไม่ต้องมี electron
 // parseMd: ฟังก์ชันแปลง .md → { meta, body } (ส่ง parseMdFile จาก md.js เข้ามา)
+/**
+ * [alpha.161 · C3] โฟลเดอร์ชั้นบนของโปรเจกต์ที่ไม่ใช่ "งาน" แต่เป็นสำเนาของงาน — ไม่ค้นเข้าไป
+ * (ฉากที่ลบแล้วอยู่ใน Recycle · ประวัติเวอร์ชันใน Snapshots · ชุดสำรองใน Backups = ผลค้นหาชี้ไฟล์ผี)
+ */
+export const SEARCH_SKIP_DIRS = ['Recycle', 'Snapshots', 'Backups'];
+
+/**
+ * [alpha.162 · W1-1] ดัชนีที่ถืออยู่ (หรือที่กำลังสร้าง) ใช้ตอบคำขอนี้ได้ไหม
+ *
+ * ต้นตอบั๊ก: `global-search.js` เช็ค "สด" ครบทุกช่อง (รุ่น/โปรเจกต์/ขอบเขต) แต่ตอนเจองานสร้าง
+ * ที่กำลังวิ่งอยู่กลับคืนงานนั้นทันทีโดย **ไม่ดูว่ามันเป็นของโปรเจกต์ไหน/รวม .json ไหม**
+ * → สลับโปรเจกต์ระหว่างสร้างดัชนี = ได้ `null` (งานเก่าทิ้งผลตัวเอง) · ขอแบบรวม .json
+ * ระหว่างที่งานแบบไม่รวมวิ่งอยู่ = ได้ดัชนีที่ไม่มีไฟล์ .json แล้วค้นไม่เจอทั้งที่ไฟล์มีอยู่
+ * ทั้งสองกรณีเงียบสนิท (ไม่มี error) — ผู้ใช้เห็นแค่ "ไม่พบผลลัพธ์"
+ *
+ * @param {{root?:string, json?:boolean, stale?:boolean}|null} have ดัชนี/งานที่ถืออยู่
+ * @param {{root?:string, json?:boolean}} want คำขอรอบนี้
+ */
+export function indexMatches(have, want) {
+  if (!have || have.stale) return false;
+  return have.root === (want || {}).root && !!have.json === !!(want || {}).json;
+}
+
+/**
+ * [alpha.161 · C3] ไฟล์นี้เปลี่ยนแล้วดัชนีค้นหาต้องล้างไหม
+ * .md/.json ใต้โปรเจกต์ ที่ไม่ได้อยู่ในโฟลเดอร์สำเนาชั้นบน · การย้าย/ลบส่ง path **ต้นทาง** มา
+ */
+export function searchPathMatters(root, p) {
+  const k = String(p || '').replace(/\\/g, '/');
+  if (!/\.(md|json)$/i.test(k)) return false;
+  const r = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  if (!r || !k.toLowerCase().startsWith(r.toLowerCase() + '/')) return false;
+  const top = k.slice(r.length + 1).split('/')[0].toLowerCase();
+  return !SEARCH_SKIP_DIRS.some((d) => d.toLowerCase() === top);
+}
+
+// [alpha.161 · C3] opts.skipDirs = ชื่อโฟลเดอร์ **ชั้นบนสุดของโปรเจกต์** ที่ไม่ต้องเข้า (ไม่สนตัวพิมพ์)
+//   — ถังขยะ/ประวัติเวอร์ชัน/ชุดสำรองเป็น "สำเนา" ของงาน ถ้านับด้วย ฉากที่ลบแล้วยังโผล่ในผลค้นหา (ไฟล์ผี)
+// [alpha.162 · W5 ข้อ 2] opts.signal = ยกเลิกได้ (โยน cancelledError ระหว่างไฟล์) ·
+//   opts.onProgress(n) = อ่านไปแล้ว n ไฟล์ (ไม่รู้จำนวนทั้งหมดล่วงหน้า — เดินไปนับไป)
 export async function indexProject(root, kapi, parseMd, opts = {}) {
   const docs = [];
-  const walk = async (dir) => {
+  const skip = new Set((opts.skipDirs || []).map((x) => String(x).toLowerCase()));
+  let seen = 0;
+  const tick = () => {
+    throwIfCancelled(opts.signal);
+    seen++;
+    if (typeof opts.onProgress === 'function' && seen % 10 === 0) { try { opts.onProgress(seen); } catch {} }
+  };
+  const walk = async (dir, depth = 0) => {
+    throwIfCancelled(opts.signal);
     for (const name of await kapi.listDirs(dir)) {
+      if (depth === 0 && skip.has(String(name).toLowerCase())) continue;
       const p = await kapi.join(dir, name);
-      await walk(p);
+      await walk(p, depth + 1);
     }
     for (const name of (await kapi.listFiles?.(dir)) || []) {
       const p = await kapi.join(dir, name);
       if (name.endsWith('.md')) {
+        tick();
         try {
           const raw = await kapi.readFile(p);
           const { meta = {}, body = raw } = parseMd ? parseMd(raw) : {};
@@ -343,6 +471,7 @@ export async function indexProject(root, kapi, parseMd, opts = {}) {
                       tags: meta.tags || [], status: meta.status || '', body });
         } catch {}
       } else if (name.endsWith('.json') && opts.includeJson) {
+        tick();
         try {
           const raw = await kapi.readFile(p);
           docs.push({ id: p, path: p, title: name, tags: [], status: '', body: raw });

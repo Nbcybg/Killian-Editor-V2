@@ -21,6 +21,7 @@
 // → unit test รันด้วย node ได้ตรง ๆ
 
 import { t as tt, t } from '../i18n.js';
+import { cmpText } from '../locale.js';
 export const IMAGES_DIR = 'Images';
 export const ALBUMS_JSON = 'albums.json';
 export const ALBUM_META = 'album.json';
@@ -110,7 +111,7 @@ export function sortAlbums(list) {
     if (a.id === ROOT_ALBUM) return -1;
     if (b.id === ROOT_ALBUM) return 1;
     if (a.order !== b.order) return a.order - b.order;
-    return String(a.name).localeCompare(String(b.name), 'th');
+    return cmpText(String(a.name), String(b.name));
   });
 }
 
@@ -346,7 +347,7 @@ export const SORT_MODES = [
 
 export function sortImages(items, mode) {
   const arr = [...items];
-  const byName = (a, b) => String(a.file).localeCompare(String(b.file), 'th');
+  const byName = (a, b) => cmpText(String(a.file), String(b.file));
   switch (mode) {
     case 'name': return arr.sort(byName);
     case 'date': return arr.sort((a, b) => (b.added || 0) - (a.added || 0) || byName(a, b));
@@ -476,7 +477,7 @@ export async function listAlbumFiles(api, root, id) {
   const dir = await albumDir(api, root, id);
   if (!(await api.exists(dir))) return [];
   const files = (await api.listFiles(dir, '')) || [];
-  return files.filter(isImageFile).sort((a, b) => a.localeCompare(b, 'th'));
+  return files.filter(isImageFile).sort((a, b) => cmpText(a, b));
 }
 
 /** รูปในอัลบั้มเดียว (ซิงก์ดิสก์↔album.json ให้อัตโนมัติ แล้วเขียนกลับถ้าเปลี่ยน) */

@@ -208,7 +208,7 @@ export function convertDialog(s, rows, only = null, opts = {}) {
     box.append(prog);
 
     const foot = el('div', 'k-dlg-foot');
-    const cancel = el('button', null, t('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', t('ui.common.cancel'));
     cancel.onclick = () => done(null);
     const go = el('button', 'k-ok', t('ui.starter.cvGo'));
     go.disabled = !list.length;

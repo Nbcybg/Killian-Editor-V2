@@ -118,8 +118,13 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
   return root;
 }
 
+/** [alpha.162 · W4 ข้อ 12] ค่าที่กล่องเลือกเทมเพลตคืนเมื่อเลือก "โปรเจกต์ว่าง" (ต่างจาก null = ยกเลิก) */
+export const BLANK_TEMPLATE = '__blank__';
+
 // Dialog เลือก template
-export async function showTemplateDialog() {
+// [alpha.162 · W4 ข้อ 12] `allowBlank` = มีการ์ด "โปรเจกต์ว่าง" เป็นตัวแรก (ทางของปุ่มโปรเจกต์ใหม่/Ctrl+N
+// — เดิมได้โปรเจกต์ว่างเงียบ ๆ โดยไม่รู้เลยว่ามีเทมเพลตให้เลือก)
+export async function showTemplateDialog({ allowBlank = false } = {}) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
@@ -127,7 +132,9 @@ export async function showTemplateDialog() {
 
     const grid = el('div');
     grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0';
-    for (const [key, tpl] of Object.entries(TEMPLATES)) {
+    const entries = Object.entries(TEMPLATES);
+    if (allowBlank) entries.unshift([BLANK_TEMPLATE, { name: t('ui.project.blankName'), desc: t('ui.project.blankDesc') }]);
+    for (const [key, tpl] of entries) {
       const card = el('div', 'tpl-card');
       card.style.cssText = 'padding:12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s';
       const cName = el('div', null, tpl.name);
@@ -135,6 +142,9 @@ export async function showTemplateDialog() {
       const cDesc = el('div', null, tpl.desc);
       cDesc.style.cssText = 'font-size:12px;color:var(--dim)';
       card.append(cName, cDesc);
+      card.dataset.tpl = key;
+      card.tabIndex = 0;                               // เลือกด้วยคีย์บอร์ดได้ (Tab ไปการ์ด · Enter)
+      card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } };
       card.onclick = () => { ov.remove(); resolve(key); };
       card.onmouseenter = () => card.style.borderColor = 'var(--accent)';
       card.onmouseleave = () => card.style.borderColor = '';
@@ -143,7 +153,7 @@ export async function showTemplateDialog() {
     box.append(grid);
 
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, t('ui.common.cancel'));
+    const cB = el('button', 'k-cancel', t('ui.common.cancel'));   // [162-W4] Esc เดินทางนี้
     cB.onclick = () => { ov.remove(); resolve(null); };
     btns.append(cB);
     box.append(btns);

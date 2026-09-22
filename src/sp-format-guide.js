@@ -129,7 +129,12 @@ export function refreshSceneNumbers(view) {
 // (ห้ามใส่ class ลง DOM ตรง ๆ — DOMObserver ของ ProseMirror ซ่อนกลับหมด)
 // ตำแหน่งมาจาก `checkScreenplay()` ใน app.js ซึ่งผูก `pos` จริงให้ทุกข้อแล้ว
 const errKey = new PMKey('ksperrmark');
-let _errMarks = [];          // [{pos, severity}]
+// ══ [alpha.160 · P1-1] ★ จุดที่ผิดเป็น "ของแต่ละตัวแก้ไข" (ตระกูลเดียวกับ H15/H16 · CONTINUED) ══
+// เดิม `_errMarks` เป็นตัวแปรระดับโมดูลก้อนเดียว — ทุก `spErrorMarkPlugin()` อ่านก้อนเดียวกัน
+// แต่ app.js ตั้งค่าเฉพาะแท็บที่ active → เปิดบทสองแท็บ/แยกจอ แล้วอีกแท็บวาดเส้นเหลือง/แดงของอีกเรื่อง
+// (ตำแหน่งของเอกสาร A ถูกเอาไปขีดบนเอกสาร B) · ตอนนี้ปลั๊กอินหนึ่งตัว = รายการหนึ่งชุด ผูก view ผ่าน view hook
+const EM = { byView: new WeakMap(), cur: null, detached: { list: [] } };   // list = [{pos, severity}]
+const emInst = (view) => (view && EM.byView.get(view)) || EM.cur || EM.detached;
 let _errOn = true;
 
 /**
@@ -152,28 +157,30 @@ export function setSpErrorMarksOn(on) {
 }
 export function isSpErrorMarks() { return _errOn; }
 /** จุดที่ทำเครื่องหมายอยู่ตอนนี้ (เทส/วินิจฉัยใช้) */
-export function spErrorMarks() { return _errMarks.slice(); }
+export function spErrorMarks(view) { return emInst(view).list.slice(); }
 
 /**
  * ตั้งรายการจุดที่ผิด — คืน true เมื่อ "เปลี่ยนจริง" เท่านั้น
  * (บทเรียนเดียวกับ setPageBreaks: ตัวตรวจวิ่งทุก 300ms การ dispatch ทุกครั้งที่ผลเท่าเดิม
  *  ทำให้ ProseMirror วาด DOM ใหม่ฟรี ๆ และไปกวนตำแหน่งเลื่อน/เคอร์เซอร์)
  */
-export function setSpErrorMarks(list) {
+export function setSpErrorMarks(list, view) {
+  const I = emInst(view);
+  if (I !== EM.detached) EM.cur = I;
   const next = (list || [])
     .filter((e) => Number.isFinite(e.pos))
     .map((e) => ({ pos: e.pos, severity: e.severity === 'error' ? 'error' : 'warn' }));
-  const same = next.length === _errMarks.length
-    && next.every((e, i) => e.pos === _errMarks[i].pos && e.severity === _errMarks[i].severity);
-  _errMarks = next;
+  const same = next.length === I.list.length
+    && next.every((e, i) => e.pos === I.list[i].pos && e.severity === I.list[i].severity);
+  I.list = next;
   return !same;
 }
 
-function errDecos(doc) {
-  if (!_errOn || !doc || !_errMarks.length) return DecoSet.empty;
+function errDecos(I, doc) {
+  if (!_errOn || !doc || !I.list.length) return DecoSet.empty;
   // จุดเดียวกันอาจมีหลายข้อ — เอาระดับรุนแรงสุดของตำแหน่งนั้น
   const worst = new Map();
-  for (const m of _errMarks) {
+  for (const m of I.list) {
     if (worst.get(m.pos) !== 'error') worst.set(m.pos, m.severity);
   }
   const out = [];
@@ -186,16 +193,22 @@ function errDecos(doc) {
 }
 
 export function spErrorMarkPlugin() {
+  const I = { list: [] };
   return new PMPlugin({
     key: errKey,
     state: {
-      init: (_c, st) => errDecos(st.doc),
+      init: (_c, st) => errDecos(I, st.doc),
       apply(tr, prev, _o, st) {
         if (!tr.docChanged && !tr.getMeta(errKey)) return prev.map(tr.mapping, tr.doc);
-        return errDecos(st.doc);
+        return errDecos(I, st.doc);
       },
     },
     props: { decorations(state) { return errKey.getState(state); } },
+    view(v) {
+      EM.byView.set(v, I);
+      if (!EM.cur) EM.cur = I;
+      return { destroy() { EM.byView.delete(v); if (EM.cur === I) EM.cur = null; } };
+    },
   });
 }
 export function refreshSpErrorMarks(view) {

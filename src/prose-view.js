@@ -182,6 +182,20 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
         d = document.createElement('div');
         d.className = 'pv-figure';
         d.textContent = gi('frame') + ' ' + (b.alt || t('ui.prose.image'));
+      } else if (type === 'li') {
+        // [alpha.160 · P1-16] ★ ข้อในรายการ — เดิมตกไปสาขาย่อหน้าปกติ = หัวข้อ (•/1.) หาย + ได้ย่อหน้าแรกผิด
+        d = document.createElement('p');
+        d.className = 'pv-li';
+        d.style.marginBottom = f.paraSpacing + 'em';
+        d.style.paddingLeft = '1.5em';
+        d.style.textIndent = '-1.2em';
+        const mark = document.createElement('span');
+        mark.className = 'pv-li-mark';
+        mark.textContent = (b.ordered ? String(b.num || 1) + '.' : '•') + ' ';
+        d.append(mark);
+        const body = document.createElement('span');
+        putProseText(body, b.text, mono);
+        d.append(body);
       } else {
         d = document.createElement('p');
         d.style.textIndent = f.firstLineIndent + 'in';
@@ -192,6 +206,8 @@ export function renderProsePageView(host, pages, fmt, opts = {}) {
         if (!d.textContent) { d.classList.add('pv-blank'); d.append(document.createElement('br')); }
       }
       d.classList.add('pv-block');
+      // [alpha.160 · P1-16] การจัดหน้าของบล็อก (<!--align:x--> · แผนที่ใน frontmatter) — เดิมทางสำรองนี้ไม่ดูเลย
+      if (b.align && b.align !== 'left' && type !== 'hr') d.style.textAlign = b.align;
       if (Number.isFinite(b.pos)) d.dataset.pos = String(b.pos);
       page.append(d);
     }

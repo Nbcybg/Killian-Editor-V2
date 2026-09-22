@@ -2,6 +2,7 @@
 // ประกอบ data → render → interact → ui → props เข้าด้วยกัน + จัดการไฟล์กระดาน
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import {
   PlannerData, CARD_W, CARD_H, uid, TYPE_DEFAULTS, snapTo,
   normTodoItems, toggleTodo, todoRowAt, IMAGE_FITS, parseTodoText, todoToText,
@@ -15,11 +16,12 @@ import {
   createPlannerFmtBar,
 } from './planner-ui.js';
 import { absBox, glyphOf } from './planner-render.js';
-import { setStatus, el, log, formatShortcut } from '../core.js';
+import { setStatus, setStatusError, el, log, formatShortcut } from '../core.js';
 import { popupMenu, ask, confirmBox, choose } from '../ui.js';
 import { projectImageUrl } from '../file-url.js';
 import { fabric } from 'fabric';
 import { isPanelFocused } from '../panels/panel-focus.js';
+import { fmtDate } from '../locale.js';
 
 const COLORS = {
   scene: '#3f3e3a', chapter: '#5f7a9f', entity: '#7a6f9f', note: '#5f8a6f',
@@ -415,7 +417,7 @@ export class PlannerBoard {
       log('info', ttf('ui.planner.exportJsonDone', target), this.data.countStats());
       return target;
     } catch (e) {
-      setStatus(tt('ui.planner.exportJsonFail') + (e.message || e));
+      setStatusError(failText(tt('ui.planner.exportJsonFail'), e));
       return null;
     }
   }
@@ -720,7 +722,7 @@ export class PlannerBoard {
   async newBoard() {
     if (!(await this.confirmDiscard(tt('ui.common.newBoardNew')))) return null;
     const picked = await this._askBoardName(tt('ui.common.nameBoardNew'),
-      tt('ui.common.board2') + (new Date().toLocaleDateString('th-TH')), tt('ui.common.new'));
+      tt('ui.common.board2') + fmtDate(new Date()), tt('ui.common.new'));
     if (!picked) return null;
     const dir = await this.boardsDir();
     try { await kapi.mkdir(dir); } catch {}
@@ -1611,7 +1613,7 @@ export class PlannerBoard {
       const name = await kapi.writeImageData(this.root, _safeName(this.data.getFileBase()) + '.png', url.split(',')[1]);
       setStatus(tt('ui.planner.saveImageBoardDone') + (typeof name === 'string' ? name : 'planner.png'));
       return true;
-    } catch (e) { setStatus(tt('ui.planner.exportPNGCant') + e.message); return false; }
+    } catch (e) { setStatusError(failText(tt('ui.planner.exportPNGCant'), e)); return false; }
   }
 
   _fit() {

@@ -11,6 +11,7 @@ import { t as tt, tf as ttf } from '../i18n.js';
 import { tokenize } from '../search-engine.js';
 import { extractJson, validate, estimateTokens, chunkText, estimateCost, SEVERITY, SEV_RANK } from './ai-core.js';
 import { gi } from '../icons.js';
+import { cmpText, fmtNum } from '../locale.js';
 
 export { SEVERITY, SEV_RANK };
 
@@ -18,6 +19,7 @@ export { SEVERITY, SEV_RANK };
 // แปลตามภาษาหน้าจอเมื่อไหร่ = วิเคราะห์ต้นฉบับภาษาไทยไม่ได้ทันที
 // (เหตุผลเดียวกับ src/tools/thesaurus.js และสรรพนามใน ai-character.js)
 export const TH_STOPWORDS = new Set([
+  /* i18n-skip: คลังคำภาษาไทยสำหรับสแกนต้นฉบับ (ไม่ใช่ข้อความบนจอ) */
   'ที่', 'และ', 'ของ', 'ใน', 'เป็น', 'ไม่', 'ให้', 'มี', 'ได้', 'ว่า', 'จะ', 'การ', 'ความ', 'กับ',
   'แต่', 'ก็', 'มา', 'ไป', 'อยู่', 'แล้ว', 'นี้', 'นั้น', 'เขา', 'เธอ', 'มัน', 'ฉัน', 'ผม', 'คุณ',
   'เรา', 'ต้อง', 'จาก', 'ยัง', 'ถึง', 'เมื่อ', 'อย่าง', 'หนึ่ง', 'คน', 'ทำ', 'ด้วย', 'เพราะ', 'ซึ่ง',
@@ -40,6 +42,7 @@ export const CONFLICT_WORDS = [
 export const ROMANCE_WORDS = [
   'รัก', 'ชอบ', 'คิดถึง', 'กอด', 'จูบ', 'หัวใจ', 'ใจสั่น', 'แก้มแดง', 'เขิน', 'อาย', 'หวง',
   'ห่วง', 'จับมือ', 'สบตา', 'ยิ้ม', 'อบอุ่น', 'คู่', 'แต่งงาน', 'สารภาพ', 'หึง', 'ทน', 'คิด',
+  /* /i18n-skip */
 ];
 // จุดจบประโยคไทย/อังกฤษ (ภาษาไทยไม่มีจุด → ใช้ช่องว่างยาว/ขึ้นบรรทัดเป็นตัวคั่นด้วย)
 const SENT_SPLIT = /[.!?]+[\s"'”)\]]*|\n+|\s{2,}/;
@@ -258,13 +261,13 @@ export function analyzeWords(scenes = [], opts = {}) {
   }
   const rows = [...counts.entries()]
     .map(([word, count]) => ({ word, count, per10k: total ? +(10000 * count / total).toFixed(1) : 0 }))
-    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .sort((a, b) => b.count - a.count || cmpText(a.word, b.word))
     .slice(0, top);
   return {
     rows, total, unique: counts.size,
     stats: [
-      { label: tt('ui.common.word2'), value: total.toLocaleString() },
-      { label: tt('ui.aia.stUniqueWord'), value: counts.size.toLocaleString() },
+      { label: tt('ui.common.word2'), value: fmtNum(total) },
+      { label: tt('ui.aia.stUniqueWord'), value: fmtNum(counts.size) },
       { label: tt('ui.aia.stRichWord'), value: total ? +(100 * counts.size / total).toFixed(1) + '%' : '0%' },
     ],
   };
@@ -314,8 +317,8 @@ export function analyzeLength(scenes = []) {
   return {
     rows, avg, median: med, sd: +sd.toFixed(0), long, short, total,
     stats: [
-      { label: tt('ui.aia.stAvgWordScene'), value: avg.toLocaleString() },
-      { label: tt('ui.aia.stMedian'), value: med.toLocaleString() },
+      { label: tt('ui.aia.stAvgWordScene'), value: fmtNum(avg) },
+      { label: tt('ui.aia.stMedian'), value: fmtNum(med) },
       { label: tt('ui.aia.stTooLong'), value: long.length },
       { label: tt('ui.aia.stReadTime'), value: Math.round(total / WORDS_PER_MIN) + tt('ui.aia.unitMin') },
     ],
@@ -374,7 +377,7 @@ export function analyzeShipping(scenes = [], characters = []) {
   const pairs = new Map();
   for (const p of present) {
     for (let i = 0; i < p.hits.length; i++) for (let j = i + 1; j < p.hits.length; j++) {
-      const [a, b] = [p.hits[i].c.name, p.hits[j].c.name].sort((x, y) => x.localeCompare(y));
+      const [a, b] = [p.hits[i].c.name, p.hits[j].c.name].sort((x, y) => cmpText(x, y));
       const k = a + '|' + b;
       const row = pairs.get(k) || { a, b, scenes: 0, mentions: 0, heat: 0, words: 0, sceneIds: [] };
       row.scenes++;
@@ -394,7 +397,7 @@ export function analyzeShipping(scenes = [], characters = []) {
     rows: rows.slice(0, 30), totalPairs: rows.length,
     stats: [
       { label: tt('ui.aia.stPairFound'), value: rows.length },
-      { label: tt('ui.aia.stTopPair'), value: rows[0] ? rows[0].a + ' × ' + rows[0].b : '—' },
+      { label: tt('ui.aia.stTopPair'), value: rows[0] ? rows[0].a + (' ' + gi('times') + ' ') + rows[0].b : '—' },
       { label: tt('ui.aia.stRomanceWord'), value: present.reduce((a, b) => a + b.heat, 0) },
     ],
   };
@@ -557,7 +560,7 @@ export function analyzeScoreLocal(scenes = [], characters = []) {
     stats: [
       { label: tt('ui.aia.stScoreLocal'), value: total + '/10' },
       { label: tt('ui.common.scene2'), value: scenes.length },
-      { label: tt('ui.common.word2'), value: words.toLocaleString() },
+      { label: tt('ui.common.word2'), value: fmtNum(words) },
     ],
   };
 }
@@ -907,7 +910,7 @@ export function localTable(id, local = {}) {
   if (id === 'words' && L.rows) return [H(tt('ui.aia.csWord'), tt('ui.aia.csCount'), tt('ui.aia.csPer10k')),
     ...L.rows.map((r) => [r.word, r.count, r.per10k])];
   if (id === 'conflict' && L.rows) return [H(tt('ui.aia.csScene'), tt('ui.aia.csChapter'), tt('ui.aia.csWords'), tt('ui.aia.csScore'), tt('ui.aia.csDensity'), tt('ui.aia.csMarkers')),
-    ...L.rows.map((r) => [r.title, r.chapterTitle, r.words, r.score, r.density, r.hits.map((h) => h.word + '×' + h.count).join(' ')])];
+    ...L.rows.map((r) => [r.title, r.chapterTitle, r.words, r.score, r.density, r.hits.map((h) => h.word + gi('times') + h.count).join(' ')])];
   if (id === 'length' && L.rows) return [H(tt('ui.aia.csScene'), tt('ui.aia.csChapter'), tt('ui.aia.csWords'), tt('ui.aia.csMinutes'), tt('ui.aia.csPages')),
     ...L.rows.map((r) => [r.title, r.chapterTitle, r.words, r.minutes, r.pages])];
   if (id === 'repeat' && L.rows) return [H(tt('ui.aia.csWord'), tt('ui.aia.csCount'), tt('ui.aia.csClosest'), tt('ui.aia.csScene'), tt('ui.aia.csChapter')),

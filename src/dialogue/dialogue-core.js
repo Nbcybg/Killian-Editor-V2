@@ -14,6 +14,7 @@
 // ═══ ทำไมต้องบริสุทธิ์ ═══
 // การ "แก้บทพูดแล้วเขียนกลับลงไฟล์" ผิดพลาดไม่ได้เลย — พลาดครั้งเดียวคือเนื้อเรื่องหาย
 // ตัวตัด/ตัวเขียนกลับจึงอยู่ที่นี่ทั้งหมด ทดสอบด้วย node ตรง ๆ ได้ ไม่ต้องเปิดหน้าต่าง
+import { cmpText } from '../locale.js';
 
 // ── เครื่องหมายคำพูดที่รู้จัก ─────────────────────────────────────────
 // เปิด/ปิดเหมือนกัน (") ต้องจับคู่แบบ "ตัวถัดไป" · เปิด/ปิดต่างกัน (“ ”) จับคู่ตรงตัว
@@ -333,7 +334,7 @@ export function speakerStats(rows) {
   }
   return [...m.values()].sort((a, b) => {
     if (!a.speaker !== !b.speaker) return a.speaker ? -1 : 1;
-    return b.count - a.count || a.speaker.localeCompare(b.speaker, 'th');
+    return b.count - a.count || cmpText(a.speaker, b.speaker);
   });
 }
 
@@ -356,7 +357,7 @@ export function groupByScene(rows) {
   const order = [];
   const map = new Map();
   for (const r of (rows || [])) {
-    const key = [r.section || '', r.draft || '', r.chapterId || '', r.sceneId || '', r.path || ''].join('');
+    const key = [r.section || '', r.draft || '', r.chapterId || '', r.sceneId || '', r.path || ''].join('\u0001');
     let g = map.get(key);
     if (!g) {
       g = { key, section: r.section || '', draft: r.draft || '', chapterId: r.chapterId || '',

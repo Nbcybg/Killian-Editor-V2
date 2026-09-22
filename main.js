@@ -3,6 +3,8 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+// [alpha.162 · W6 ข้อ 7] ตัวเลขเวลาชุดเดียวกับ renderer (src/timing.js → build.js แปลงเป็น timing.cjs)
+const TIMING = require('./timing.cjs');
 
 // ─────────────────────────────────────────────────────────────────────
 // [alpha.76] ข้อความในเมนู OS ก็ต้องแปลได้ — main เป็น CommonJS จึง import src/i18n.js ไม่ได้
@@ -212,7 +214,9 @@ const toggles = {
   openLastProject: false, showHomeAlways: false,
   // [alpha.61 ข้อ 4] สวิตช์ตัวพิมพ์ใหญ่/เล็กของบทหนัง (ค่าเริ่มต้น = ธรรมเนียมเดิม)
   spForceCase: true, spAutoCapitalize: true, spAutoCorrectI: true,
-  panels: { 'tree-panel': true, 'props-panel': true, 'outline-panel': true },
+  // [alpha.162 · W2] คีย์เป็น id ของ Panel System ตรง ๆ (เดิมมีชื่อยุคเก่า 'tree-panel' ฯลฯ
+  // ที่ฝั่ง renderer ส่งมาให้แต่ **ไม่มีใครอ่าน** — เมนูอ่านจาก `toggles.panels[p.id]` เท่านั้น)
+  panels: { tree: true, props: true, outline: true },
 };
 // ตัวช่วยสร้างรายการสวิตช์ — ผู้ใช้เห็นชัดว่ากดแล้วเปิด/ปิด ไม่ใช่คำสั่งครั้งเดียว
 const chk = (label, on, fn) => ({ label, type: 'checkbox', checked: !!on, click: fn });
@@ -265,21 +269,21 @@ function buildMenu() {
       { label: tt('ui.menu.exportHub'), click: cmd('export-hub') },
       { type: 'separator' },
       { label: tt('ui.menu.exportWorkFlowSteps'), click: cmd('compile') },
-      { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
-      { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
       { type: 'separator' },
       { label: tt('ui.menu.newProjectTemplate'), click: cmd('new-from-template') },
       { label: tt('ui.menu.importScrivenerScrivI'), click: cmd('import-scrivener') },
       { label: tt('ui.menu.importScreenplayFountainFDX'), click: cmd('import-script') }, // [alpha.60 ข้อ 62-66]
       { label: tt('ui.menu.project'), click: cmd('backup-now') },
       { type: 'separator' },
-      { label: tt('ui.menu.settingsProject'), click: cmd('settings') },
-      { label: tt('ui.menu.dataResultTaskAuthor'), click: cmd('project-setup') },
-      { label: tt('ui.menu.pagePaperGapMargin'), click: cmd('page-setup') },
-      { label: tt('ui.menu.fontLangOther'), click: cmd('lang-fonts') },
-      { label: tt('ui.menu.settingsAI'), click: cmd('ai-settings') },
-      { label: tt('ui.menu.manageStatusScene'), click: cmd('custom-status') },
-      { label: tt('ui.menu.manageTabColorVisual'), click: cmd('visual-tags') },
+      // [alpha.162 · W4] รวมรายการตั้งค่าหกแถวเป็นเมนูย่อยเดียว — เมนูไฟล์เคยยาวจนหา "ปิดแท็บ" ไม่เจอ
+      // (หน้ากระดาษอยู่เมนู รูปแบบ/บท · ตั้งค่า AI อยู่เมนู AI — ไม่ซ้ำที่นี่อีก)
+      { label: tt('ui.menu.settingsGroup'), submenu: [
+        { label: tt('ui.menu.settingsProject'), click: cmd('settings') },
+        { label: tt('ui.menu.dataResultTaskAuthor'), click: cmd('project-setup') },
+        { label: tt('ui.menu.fontLangOther'), click: cmd('lang-fonts') },
+        { label: tt('ui.menu.manageStatusScene'), click: cmd('custom-status') },
+        { label: tt('ui.menu.manageTabColorVisual'), click: cmd('visual-tags') },
+      ] },
       { type: 'separator' },
       { label: tt('ui.menu.closeTabW'), click: cmd('close-tab') },
       { label: tt('ui.menu.closeAllTabW'), click: cmd('close-all-tabs') },
@@ -338,6 +342,114 @@ function buildMenu() {
         { label: tt('ui.menu.rightR'), click: cmd('fmt', 'align', 'right') },
         { label: tt('ui.menu.fullLineJ'), click: cmd('fmt', 'align', 'justify') },
       ] },
+      { type: 'separator' },
+      // [alpha.58r บั๊ก 16–24] รูปแบบของนิยาย (ย่อหน้า/ช่วงบรรทัด/หัวข้อ/ยกคำพูด/ฟอนต์)
+      { label: tt('ui.menu.formatNovelParaRange'), click: cmd('prose-setup') },
+      // [alpha.58r บั๊ก 22] คนเขียนนิยายเห็นแต่เมนู "รูปแบบ" — ปุ่มหน้ากระดาษต้องอยู่ตรงนี้ด้วย
+      { label: tt('ui.menu.pagePaperGapMargin2'), click: cmd('page-setup') },
+      { label: tt('ui.menu.pageChapterG'), click: cmd('goto') },
+      { type: 'separator' },
+      // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก
+      // [alpha.124 ข้อ 36] ป้ายมาจากไฟล์ภาษา (ตารางเดียวกับ CASE_LABELS ใน text-case.js)
+      // เดิมฮาร์ดโค้ดอังกฤษไว้ทั้งเมนูและแถบเครื่องมือ ทั้งที่ตารางภาษาของมันมีอยู่แล้ว
+      // แต่กลายเป็นโค้ดตาย — ผู้ใช้ไทยเห็นแต่ "aLtErNaTe cAsE" โดยไม่รู้ว่ามันทำอะไร
+      { label: tt('ui.menu.imageCaseChangeCase'), submenu: [
+        { label: tt('ui.textCase.sentenceCaseSentenceItem'), click: cmd('text-case', 'SC') },
+        { label: tt('ui.textCase.lowerCaseItemSmall'), click: cmd('text-case', 'lc') },
+        { label: tt('ui.textCase.uPPERCASEItemBig'), click: cmd('text-case', 'UC') },
+        { label: tt('ui.textCase.capitalizeCaseAllWord'), click: cmd('text-case', 'CC') },
+        { label: tt('ui.textCase.aLtErNaTeCAsEToggleItem'), click: cmd('text-case', 'aC') },
+        { label: tt('ui.textCase.titleCaseStyleTitle'), click: cmd('text-case', 'TC') },
+        { label: tt('ui.textCase.iNVERSECASEBackItem'), click: cmd('text-case', 'iC') },
+        { type: 'separator' },
+        { label: tt('ui.menu.textCaseCycleU'), click: cmd('text-case-cycle') },
+      ] },
+      { type: 'separator' },
+      { label: tt('ui.menu.insertImage'), click: cmd('insert-image') },
+      // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` — ทะเบียนอยู่ที่ src/shortcode.js
+      { label: tt('ui.menu.insertShortcode'), click: cmd('insert-shortcode') },
+      { label: tt('ui.menu.insertLine'), click: cmd('fmt', 'hr') },
+      { label: tt('ui.menu.blockCode'), click: cmd('fmt', 'code') },
+    ] },
+    // ---- alpha.57: เมนูเฉพาะงานบทภาพยนตร์ ----
+    { id: 'Script', label: tt('ui.common.chapter'), submenu: [
+      // [alpha.162 · W4] มุมมองหน้ากระดาษหกโหมดเคยอยู่ทั้งที่นี่และในเมนู "รูปแบบ" (ก๊อปกันคนละที่)
+      // → ย้ายไปอยู่เมนู "มุมมอง" ที่เดียว ซึ่งเป็นที่ที่ผู้ใช้มองหาอยู่แล้ว
+      chk(tt('ui.menu.showFormatLineMargin'), toggles.showFormat,
+          cmd('sp-show-format')),
+      { type: 'separator' },
+      // [alpha.61 ข้อ 4] ตัวพิมพ์ใหญ่/เล็ก — บทหนังเคยบังคับหลายจุด ตอนนี้ปิดได้ครบจากที่เดียว
+      { label: tt('ui.menu.caseBigSmall'), submenu: [
+        chk(tt('ui.menu.forcePrintBigFormat'),
+            toggles.spForceCase, cmd('sp-force-case')),
+        chk(tt('ui.menu.editItemFirstSentence'), toggles.spAutoCapitalize,
+            cmd('sp-auto-capitalize')),
+        chk(tt('ui.menu.editIIAuto'), toggles.spAutoCorrectI,
+            cmd('sp-auto-correct-i')),
+        { type: 'separator' },
+        // [alpha.62 บั๊ก 11] ปิดเป็นรายชนิดได้ — เดิมมีแต่สวิตช์ "ปิดทั้งบท" กับตารางรูปแบบที่ซ่อนอยู่
+        // ในกล่องตั้งค่า → ผู้ใช้ที่อยากให้ "ชื่อตัวละคร" ตามที่พิมพ์ แต่หัวฉากยังเป็นตัวใหญ่ ทำไม่ได้เลย
+        { label: tt('ui.menu.forceCaseBigOnly'),
+          submenu: (toggles.spCaps || []).map((c) =>
+            chk(c.label, c.on, cmd('sp-element-caps', c.el))) },
+      ] },
+      // alpha.58 [55][56] — ระบบต่อเนื่อง
+      chk(tt('ui.menu.textContCONTINUEDMORE'), toggles.continueds,
+          cmd('sp-continued')),
+      { type: 'separator' },
+      // alpha.58 [71][72][73] — รายงาน (alpha.136: เทาเมื่อแท็บที่เปิดอยู่ไม่ใช่บท)
+      ...spReportMenuItems(),
+      { type: 'separator' },
+      // alpha.57a — เลขฉาก/เลขหน้า/ส่วนเสริม/SmartType
+      chk(tt('ui.menu.numSceneHeadScene'), toggles.sceneNumbers, cmd('scene-numbers')),
+      chk(tt('ui.menu.pageNumRightTopPaper'), toggles.pageNumbers, cmd('page-numbers')),
+      { label: tt('ui.menu.partNameVO'), click: cmd('sp-extension') },
+      { label: tt('ui.menu.manageSmartTypeDelWord'), click: cmd('smart-manage') },
+      { type: 'separator' },
+      // [alpha.58r บั๊ก 11] goto-page / goto-scene เคยมีแต่ case ใน handleCommand ไม่มีทางกด
+      { label: tt('ui.menu.pageSceneG'), click: cmd('goto') },
+      { label: tt('ui.menu.page'), click: cmd('goto', 'page') },
+      { label: tt('ui.menu.scene'), click: cmd('goto', 'scene') },
+      { label: tt('ui.menu.pageFirst'), click: cmd('goto-page', 1) },
+      { type: 'separator' },
+      { label: tt('ui.menu.checkFindErrorU'), click: cmd('sp-find-error') },
+      { label: tt('ui.menu.checkChapterListError'), click: cmd('sp-check-all') },
+      chk(tt('ui.menu.checkBeforePrintExport'), toggles.checkBeforeExport, cmd('sp-check-toggle')),
+      { type: 'separator' },
+      { label: tt('ui.menu.pageListCharacterCast'), click: cmd('roster') },
+      // alpha.59 [90][91] — หน้าปกหลายหน้า + หัวกระดาษที่ซ้ำทุกหน้า
+      { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
+      { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
+      { label: tt('ui.menu.pagePaperGapMargin'), click: cmd('page-setup') },
+    ] },
+    // [alpha.60 ข้อ 74] เมนู "เครื่องมือ"
+    { id: 'Tools', label: tt('ui.menu.tool'), submenu: [
+      { label: tt('ui.menu.compareChapter'), click: cmd('sp-compare') },
+      { label: tt('ui.menu.checkFindWordDup'), click: cmd('word-history') },
+      // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำในเอกสาร
+      // (และผู้ใช้ที่ไม่เคยคลิกขวาก็ไม่มีทางรู้ว่ามีฟีเจอร์นี้อยู่เลย)
+      { label: tt('ui.menu.thesaurusT'), click: cmd('thesaurus') },
+      // [alpha.156] แทนที่ทั้งโปรเจกต์ · สปรินต์การเขียน
+      { label: tt('ui.menu.projectReplace'), click: cmd('project-replace') },
+      { label: tt('ui.menu.sprint'), click: cmd('sprint') },
+      // [alpha.60r2 ข้อ 13] frontmatter ของ .md = แหล่งความจริงของคุณสมบัติฉาก
+      { label: tt('ui.menu.propsSceneFileMd'),
+        click: cmd('sync-scene-meta') },
+      // [alpha.156] ทะเบียนฉาก ↔ ไฟล์จริง ไม่ตรงกัน (ไฟล์กำพร้า · ใช้ไฟล์ซ้ำ · โฟลเดอร์ผี · หัวไฟล์พัง)
+      { label: tt('ui.menu.projectDoctor'), click: cmd('project-doctor') },
+      { type: 'separator' },
+      // [alpha.60r3 ข้อ 4] ชุดเครื่องมือผู้แปล — ทำงานใน Excel/Sheets แล้วนำเข้ากลับ
+      { label: tt('ui.menu.exportLangCSVKey'), click: cmd('export-language-csv') },
+      { label: tt('ui.menu.importLangCSV'), click: cmd('import-language-csv') },
+    ] },
+    { id: 'View', label: tt('ui.common.view'), submenu: [
+      // [alpha.61 ข้อ 1] หน้าแรก — เปิดเดี๋ยวนี้ + สวิตช์ "แสดงเสมอตอนเริ่มโปรแกรม"
+      { label: tt('ui.menu.pageFirstHome'), click: cmd('home') },
+      chk(tt('ui.menu.showPageFirstAlways'), toggles.showHomeAlways,
+          cmd('toggle-home-always')),
+      { type: 'separator' },
+      // [alpha.162 · W4] ★ ย้ายมาจากเมนู "รูปแบบ" — ซูม · มุมมองหน้ากระดาษ · ธีม · สวิตช์การแสดงผล
+      // เป็นเรื่องของ *มุมมอง* ไม่ใช่ *รูปแบบข้อความ* (เมนูรูปแบบเหลือเฉพาะตัวหนา/หัวข้อ/รายการ/จัดหน้า)
       { label: tt('ui.menu.zoom'), submenu: [
         { label: tt('ui.menu.expand'), click: cmd('zoom', 1) },
         { label: tt('ui.menu.collapse'), click: cmd('zoom', -1) },
@@ -380,128 +492,6 @@ function buildMenu() {
       // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง
       chk(tt('ui.menu.btnFloatCornerRight'), toggles.fabEnabled, cmd('toggle-fab')),
       { type: 'separator' },
-      // [alpha.58r บั๊ก 16–24] รูปแบบของนิยาย (ย่อหน้า/ช่วงบรรทัด/หัวข้อ/ยกคำพูด/ฟอนต์)
-      { label: tt('ui.menu.formatNovelParaRange'), click: cmd('prose-setup') },
-      // [alpha.58r บั๊ก 22] คนเขียนนิยายเห็นแต่เมนู "รูปแบบ" — ปุ่มหน้ากระดาษต้องอยู่ตรงนี้ด้วย
-      { label: tt('ui.menu.pagePaperGapMargin2'), click: cmd('page-setup') },
-      { label: tt('ui.menu.pageChapterG'), click: cmd('goto') },
-      { type: 'separator' },
-      // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก
-      // [alpha.124 ข้อ 36] ป้ายมาจากไฟล์ภาษา (ตารางเดียวกับ CASE_LABELS ใน text-case.js)
-      // เดิมฮาร์ดโค้ดอังกฤษไว้ทั้งเมนูและแถบเครื่องมือ ทั้งที่ตารางภาษาของมันมีอยู่แล้ว
-      // แต่กลายเป็นโค้ดตาย — ผู้ใช้ไทยเห็นแต่ "aLtErNaTe cAsE" โดยไม่รู้ว่ามันทำอะไร
-      { label: tt('ui.menu.imageCaseChangeCase'), submenu: [
-        { label: tt('ui.textCase.sentenceCaseSentenceItem'), click: cmd('text-case', 'SC') },
-        { label: tt('ui.textCase.lowerCaseItemSmall'), click: cmd('text-case', 'lc') },
-        { label: tt('ui.textCase.uPPERCASEItemBig'), click: cmd('text-case', 'UC') },
-        { label: tt('ui.textCase.capitalizeCaseAllWord'), click: cmd('text-case', 'CC') },
-        { label: tt('ui.textCase.aLtErNaTeCAsEToggleItem'), click: cmd('text-case', 'aC') },
-        { label: tt('ui.textCase.titleCaseStyleTitle'), click: cmd('text-case', 'TC') },
-        { label: tt('ui.textCase.iNVERSECASEBackItem'), click: cmd('text-case', 'iC') },
-        { type: 'separator' },
-        { label: tt('ui.menu.textCaseCycleU'), click: cmd('text-case-cycle') },
-      ] },
-      { type: 'separator' },
-      { label: tt('ui.menu.insertImage'), click: cmd('insert-image') },
-      // [alpha.116 ข้อ 8] แทรกโค้ดสั้น `[title]` — ทะเบียนอยู่ที่ src/shortcode.js
-      { label: tt('ui.menu.insertShortcode'), click: cmd('insert-shortcode') },
-      { label: tt('ui.menu.insertLine'), click: cmd('fmt', 'hr') },
-      { label: tt('ui.menu.blockCode'), click: cmd('fmt', 'code') },
-    ] },
-    // ---- alpha.57: เมนูเฉพาะงานบทภาพยนตร์ ----
-    { id: 'Script', label: tt('ui.common.chapter'), submenu: [
-      { label: tt('ui.menu.viewChapter'), submenu: [
-        { label: tt('ui.common.normalPagePaper'), type: 'radio', checked: toggles.spView === 'normal',
-          click: cmd('sp-view', 'normal') },
-        { label: tt('ui.common.arrangePageSeePage'), type: 'radio', checked: toggles.spView === 'layout',
-          click: cmd('sp-view', 'layout') },
-        { label: tt('ui.common.draftTextDraft'), type: 'radio', checked: toggles.spView === 'draft',
-          click: cmd('sp-view', 'draft') },
-        { label: tt('ui.common.pagePairSideBy'), type: 'radio', checked: toggles.spView === 'side',
-          click: cmd('sp-view', 'side') },
-        { label: tt('ui.common.overviewPxChar'), type: 'radio', checked: toggles.spView === 'overview1',
-          click: cmd('sp-view', 'overview1') },
-        { label: tt('ui.common.overviewPxChar2'), type: 'radio', checked: toggles.spView === 'overview4',
-          click: cmd('sp-view', 'overview4') },
-      ] },
-      chk(tt('ui.menu.showFormatLineMargin'), toggles.showFormat,
-          cmd('sp-show-format')),
-      { type: 'separator' },
-      // [alpha.61 ข้อ 4] ตัวพิมพ์ใหญ่/เล็ก — บทหนังเคยบังคับหลายจุด ตอนนี้ปิดได้ครบจากที่เดียว
-      { label: tt('ui.menu.caseBigSmall'), submenu: [
-        chk(tt('ui.menu.forcePrintBigFormat'),
-            toggles.spForceCase, cmd('sp-force-case')),
-        chk(tt('ui.menu.editItemFirstSentence'), toggles.spAutoCapitalize,
-            cmd('sp-auto-capitalize')),
-        chk(tt('ui.menu.editIIAuto'), toggles.spAutoCorrectI,
-            cmd('sp-auto-correct-i')),
-        { type: 'separator' },
-        // [alpha.62 บั๊ก 11] ปิดเป็นรายชนิดได้ — เดิมมีแต่สวิตช์ "ปิดทั้งบท" กับตารางรูปแบบที่ซ่อนอยู่
-        // ในกล่องตั้งค่า → ผู้ใช้ที่อยากให้ "ชื่อตัวละคร" ตามที่พิมพ์ แต่หัวฉากยังเป็นตัวใหญ่ ทำไม่ได้เลย
-        { label: tt('ui.menu.forceCaseBigOnly'),
-          submenu: (toggles.spCaps || []).map((c) =>
-            chk(c.label, c.on, cmd('sp-element-caps', c.el))) },
-        { type: 'separator' },
-        { label: tt('ui.menu.setPrintBigLine'), click: cmd('page-setup') },
-      ] },
-      // alpha.58 [55][56] — ระบบต่อเนื่อง
-      chk(tt('ui.menu.textContCONTINUEDMORE'), toggles.continueds,
-          cmd('sp-continued')),
-      { type: 'separator' },
-      // alpha.58 [71][72][73] — รายงาน (alpha.136: เทาเมื่อแท็บที่เปิดอยู่ไม่ใช่บท)
-      ...spReportMenuItems(),
-      { type: 'separator' },
-      // alpha.57a — เลขฉาก/เลขหน้า/ส่วนเสริม/SmartType
-      chk(tt('ui.menu.numSceneHeadScene'), toggles.sceneNumbers, cmd('scene-numbers')),
-      chk(tt('ui.menu.pageNumRightTopPaper'), toggles.pageNumbers, cmd('page-numbers')),
-      { label: tt('ui.menu.partNameVO'), click: cmd('sp-extension') },
-      { label: tt('ui.menu.manageSmartTypeDelWord'), click: cmd('smart-manage') },
-      { type: 'separator' },
-      // [alpha.58r บั๊ก 11] goto-page / goto-scene เคยมีแต่ case ใน handleCommand ไม่มีทางกด
-      { label: tt('ui.menu.pageSceneG'), click: cmd('goto') },
-      { label: tt('ui.menu.page'), click: cmd('goto', 'page') },
-      { label: tt('ui.menu.scene'), click: cmd('goto', 'scene') },
-      { label: tt('ui.menu.pageFirst'), click: cmd('goto-page', 1) },
-      { type: 'separator' },
-      { label: tt('ui.menu.checkFindErrorU'), click: cmd('sp-find-error') },
-      { label: tt('ui.menu.checkChapterListError'), click: cmd('sp-check-all') },
-      chk(tt('ui.menu.checkBeforePrintExport'), toggles.checkBeforeExport, cmd('sp-check-toggle')),
-      { type: 'separator' },
-      { label: tt('ui.menu.pageListCharacterCast'), click: cmd('roster') },
-      // alpha.59 [90][91] — หน้าปกหลายหน้า + หัวกระดาษที่ซ้ำทุกหน้า
-      { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
-      { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
-      { label: tt('ui.menu.pagePaperGapMargin'), click: cmd('page-setup') },
-      { type: 'separator' },
-      // [alpha.81 ข้อ 9] fdx / rtf / PDF / PDF ลายน้ำ ย้ายเข้าศูนย์รวมการส่งออกหมดแล้ว
-      { label: tt('ui.menu.exportHub'), click: cmd('export-hub') },
-    ] },
-    // [alpha.60 ข้อ 74] เมนู "เครื่องมือ"
-    { id: 'Tools', label: tt('ui.menu.tool'), submenu: [
-      { label: tt('ui.menu.compareChapter'), click: cmd('sp-compare') },
-      { label: tt('ui.menu.checkFindWordDup'), click: cmd('word-history') },
-      // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำในเอกสาร
-      // (และผู้ใช้ที่ไม่เคยคลิกขวาก็ไม่มีทางรู้ว่ามีฟีเจอร์นี้อยู่เลย)
-      { label: tt('ui.menu.thesaurusT'), click: cmd('thesaurus') },
-      // [alpha.156] แทนที่ทั้งโปรเจกต์ · สปรินต์การเขียน
-      { label: tt('ui.menu.projectReplace'), click: cmd('project-replace') },
-      { label: tt('ui.menu.sprint'), click: cmd('sprint') },
-      // [alpha.60r2 ข้อ 13] frontmatter ของ .md = แหล่งความจริงของคุณสมบัติฉาก
-      { label: tt('ui.menu.propsSceneFileMd'),
-        click: cmd('sync-scene-meta') },
-      // [alpha.156] ทะเบียนฉาก ↔ ไฟล์จริง ไม่ตรงกัน (ไฟล์กำพร้า · ใช้ไฟล์ซ้ำ · โฟลเดอร์ผี · หัวไฟล์พัง)
-      { label: tt('ui.menu.projectDoctor'), click: cmd('project-doctor') },
-      { type: 'separator' },
-      // [alpha.60r3 ข้อ 4] ชุดเครื่องมือผู้แปล — ทำงานใน Excel/Sheets แล้วนำเข้ากลับ
-      { label: tt('ui.menu.exportLangCSVKey'), click: cmd('export-language-csv') },
-      { label: tt('ui.menu.importLangCSV'), click: cmd('import-language-csv') },
-    ] },
-    { id: 'View', label: tt('ui.common.view'), submenu: [
-      // [alpha.61 ข้อ 1] หน้าแรก — เปิดเดี๋ยวนี้ + สวิตช์ "แสดงเสมอตอนเริ่มโปรแกรม"
-      { label: tt('ui.menu.pageFirstHome'), click: cmd('home') },
-      chk(tt('ui.menu.showPageFirstAlways'), toggles.showHomeAlways,
-          cmd('toggle-home-always')),
-      { type: 'separator' },
       { label: tt('ui.common.dashboard'), click: cmd('dashboard') },
       { label: tt('ui.menu.manageBookDraftBooks'), click: cmd('books') },
       { label: tt('ui.menu.lineTimeTimeline'), click: cmd('timeline') },
@@ -533,9 +523,10 @@ function buildMenu() {
       { type: 'separator' },
       { label: tt('ui.menu.delElementType'), click: cmd('remove-elements') },
       { label: tt('ui.menu.mapChar'), click: cmd('char-map') },
-      { label: tt('ui.menu.pageListCharacterCast'), click: cmd('roster') },
       { type: 'separator' },
       { label: tt('ui.menu.searchFileQuickO'), click: cmd('quick-open') },
+      // [alpha.161 · K4] แสดงไฟล์ที่เปิดอยู่ในต้นไม้ (Explorer)
+      { label: tt('ui.menu.revealActive'), click: cmd('reveal-active') },
       { label: tt('ui.menu.searchProjectF2'), click: cmd('toggle-panel', 'search') },
       { type: 'separator' },
       { label: tt('ui.menu.panel'), submenu: [
@@ -545,6 +536,7 @@ function buildMenu() {
         // e2e เทียบรายการนี้กับ PANEL_DEFS ทุกรอบ → ลืมเมื่อไหร่เทสแดงทันที
         ...MENU_PANELS.map((p) => (p.sep
           ? { type: 'separator' }
+          : p.head ? { label: tt(p.head), enabled: false }      // [alpha.161 · U8] หัวหมวด
           : chk(typeof p.label === 'function' ? p.label(C, S, A) : p.label,
                 toggles.panels[p.id], cmd('toggle-panel', p.id)))),
         { type: 'separator' },
@@ -580,17 +572,27 @@ function buildMenu() {
       ...(TEST || process.env.KILLIAN_DEV ? [{ role: 'toggleDevTools' }] : []),
     ] },
     { id: 'Help', label: tt('ui.menu.help2'), submenu: [
+      // ══ [alpha.162 · W4] เมนูช่วยเหลือเคยไม่มี "ของพื้นฐาน" เลย ══
+      // คู่มือปุ่มลัดมีคำสั่ง (`cheatsheet` + Ctrl+Alt+/) มาตั้งแต่ .124 แต่ไม่เคยอยู่ในเมนูไหน
+      // — ผู้ใช้ที่ไม่รู้คีย์ลัดจึงไม่มีทางรู้ว่ามีหน้านี้อยู่ · และไม่มีทางเปิดหน้ารีโป/รุ่นที่เผยแพร่เลย
+      { label: tt('ui.menu.cheatsheet'), click: cmd('cheatsheet') },
+      { label: tt('ui.menu.saveChangeChangelog'), click: cmd('changelog') },
+      { type: 'separator' },
       // [alpha.135] ตรวจหาอัปเดตด้วยตัวเอง — ทางเดียวกับสวิตช์ "ตรวจตอนเปิดโปรแกรม" ในตั้งค่า
       { label: tt('ui.menu.checkUpdate'), click: cmd('check-update') },
+      // ที่อยู่ของรีโปมาจาก `update-check.cjs` ที่เดียว (กฎถาวร alpha.135 — ห้ามเขียน URL ซ้ำที่อื่น)
+      { label: tt('ui.menu.openRepo'), click: () => { try { shell.openExternal(UPD.UPDATE_HOME_URL); } catch {} } },
+      { label: tt('ui.menu.openReleases'), click: () => { try { shell.openExternal(UPD.UPDATE_RELEASES_URL); } catch {} } },
       { type: 'separator' },
-      { label: tt('ui.menu.saveChangeChangelog'), click: cmd('changelog') },
-      { label: tt('ui.menu.saveRunAppLog'), click: cmd('show-log') },
-      { type: 'separator' },
-      // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — อยู่ที่เดียวกับ "เกี่ยวกับ" + มีคีย์ลัด
-      { label: tt('ui.menu.consoleDev'), click: cmd('dev-console') },
-      { label: tt('ui.menu.openDevToolsChromium'), click: () => {
-        try { win && win.webContents.toggleDevTools(); } catch {}
-      } },
+      // [alpha.162 · W4] ของนักพัฒนาแยกเป็นเมนูย่อย — ผู้ใช้ทั่วไปไม่ต้องเจอ DevTools ปนกับ "เกี่ยวกับ"
+      { label: tt('ui.menu.developer'), submenu: [
+        { label: tt('ui.menu.saveRunAppLog'), click: cmd('show-log') },
+        // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — มีคีย์ลัดของตัวเอง
+        { label: tt('ui.menu.consoleDev'), click: cmd('dev-console') },
+        { label: tt('ui.menu.openDevToolsChromium'), click: () => {
+          try { win && win.webContents.toggleDevTools(); } catch {}
+        } },
+      ] },
       { type: 'separator' },
       { label: tt('ui.common.killian'), click: cmd('about') },
     ] },
@@ -610,7 +612,6 @@ function buildMenu() {
       { label: tt('ui.menu.newDialogue'), click: cmd('ai-dialogue') },
       { label: tt('ui.menu.checkAlwaysCharacter'), click: cmd('ai-consistency') },
       { label: tt('ui.menu.newWorldWorldbuilding'), click: cmd('ai-world') },
-      { label: tt('ui.menu.storyYoursDialogPrev'), click: cmd('ai-chat-dialog') },
       { type: 'separator' },
       { label: tt('ui.menu.summaryBodyProject'), click: cmd('ai-summary') },
       { label: tt('ui.menu.suggestTitle'), click: cmd('ai-title') },
@@ -639,7 +640,7 @@ function createSplash() {
   splash.loadFile('renderer/splash.html', { query: { v: app.getVersion(), m: tt('ui.splash.start') } });
   splash.once('ready-to-show', () => { try { splash.show(); } catch {} });
   splash.on('closed', () => { splash = null; });
-  splashTimer = setTimeout(() => finishSplash(), 30000);
+  splashTimer = setTimeout(() => finishSplash(), TIMING.SPLASH_MAX_MS);   // [alpha.162 · W6 ข้อ 7]
   return splash;
 }
 function splashSay(msg, pct) {
@@ -862,16 +863,23 @@ ipcMain.handle('history:revert', (e, seq) => {
 // `menu:panelIds` ส่งรายการนี้ให้ renderer → e2e เทียบกับ PANEL_DEFS ทุกรอบ ลืมเมื่อไหร่เทสแดงทันที
 // แผงที่ **จงใจ** ไม่ใส่ ต้องประกาศไว้ใน MENU_PANELS_SKIP พร้อมเหตุผล (ไม่ใช่ปล่อยหายเงียบ ๆ)
 // ─────────────────────────────────────────────────────────────────────
+// [alpha.161 · U8] ★ จัดเป็น 4 หมวด (เขียน · วางแผน · ตรวจ · AI) — รายการเดิมครบทุกตัว (31 แผง) ไม่เพิ่ม/ไม่ลด
+// `head` = หัวหมวด (แถวกดไม่ได้) · `menu:panelIds` กรองทั้ง `sep` และ `head` ออก จึงเทียบกับ PANEL_DEFS ได้เหมือนเดิม
 const MENU_PANELS = [
+  { head: 'ui.menu.panelGroupWrite' },
   // id แผงเป็นชื่อสั้นของ Panel System (tree/outline/props) — ฝั่ง renderer มี alias ให้ชื่อเดิมด้วย
   { id: 'tree', label: tt('ui.menu.projectExplorer') },
   { id: 'outline', label: tt('ui.panel.navigation') },   // [alpha.159 · M24] เดิมฝังอังกฤษ
   { id: 'props', label: tt('ui.common.props') },
-  { id: 'log', label: tt('ui.menu.saveLog') },
-  { id: 'comments', label: tt('ui.common.comment') },
   { id: 'search', label: (C, S) => tt('ui.menu.searchProjectF') },
   { id: 'notes', label: tt('ui.common.notebookNoteQuick') },
+  // [alpha.94] Story Starter
+  { id: 'starter', label: tt('ui.menu.panelStoryStarter') },
+  // [alpha.79] บทพูดทั้งผลงาน · [alpha.82] ห้องซ้อมบท
+  { id: 'dialogue', label: tt('ui.menu.dialoguePanel') },
+  { id: 'dlgb', label: tt('ui.menu.dlgbPanel') },
   { sep: true },
+  { head: 'ui.menu.panelGroupPlan' },
   // บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ
   { id: 'dashboard', label: tt('ui.common.dashboard') },
   { id: 'kanban', label: tt('ui.treeMenu.kanban') },   // [alpha.159 · M24]
@@ -881,39 +889,40 @@ const MENU_PANELS = [
   { id: 'maps', label: tt('ui.common.map') },
   { id: 'gallery', label: (C, S) => tt('ui.menu.libraryImageG') },
   { id: 'gallery-board', label: tt('ui.common.boardMood') },
-  { id: 'ai-hub', label: tt('ui.menu.aiHubPanel') },
-  { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
-  { id: 'ai-chat', label: tt('ui.common.aIAssistantWrite') },
-  // [alpha.94] Story Starter
-  { id: 'starter', label: tt('ui.menu.panelStoryStarter') },
-  { sep: true },
   // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
   { id: 'network', label: tt('ui.menu.storyNetworkGraphRelation') },   // [alpha.159 · M24] เดิมอีโมจิ+อังกฤษฝัง
-  // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ (เดิมมีแต่แท็บในหน้า Wiki)
-  { id: 'backlinks', label: (C, S, A) => tt('ui.menu.backlinksPanelB') },
   { id: 'planner', label: tt('ui.menu.plannerBoardPlanner') },   // [alpha.159 · M24]
   { id: 'floorplan', label: tt('ui.common.graphArea') },
   { id: 'branch', label: tt('ui.common.graphBreakBranch2') },
-  { id: 'player', label: tt('ui.common.trialPlay') },
-  { sep: true },
-  // [alpha.69] สารานุกรม · ประวัติการทำงาน · บันทึกประจำวัน
+  // [alpha.69] สารานุกรม
   { id: 'codex', label: tt('ui.menu.codexCodex') },
+  { sep: true },
+  { head: 'ui.menu.panelGroupReview' },
+  { id: 'comments', label: tt('ui.common.comment') },
+  // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ (เดิมมีแต่แท็บในหน้า Wiki)
+  { id: 'backlinks', label: (C, S, A) => tt('ui.menu.backlinksPanelB') },
+  { id: 'player', label: tt('ui.common.trialPlay') },
+  { id: 'log', label: tt('ui.menu.saveLog') },
+  // [alpha.69] ประวัติการทำงาน · บันทึกประจำวัน
   { id: 'history', label: tt('ui.common.historyRun') },
   { id: 'record', label: tt('ui.common.journal') },
-  { sep: true },
-  // [alpha.79] บทพูดทั้งผลงาน · จัดการปลั๊กอิน
-  { id: 'dialogue', label: tt('ui.menu.dialoguePanel') },
+  // [alpha.79] จัดการปลั๊กอิน
   { id: 'plugins', label: tt('ui.menu.pluginsPanel') },
-  // [alpha.82] ห้องซ้อมบท
-  { id: 'dlgb', label: tt('ui.menu.dlgbPanel') },
+  { sep: true },
+  { head: 'ui.menu.panelGroupAI' },
+  { id: 'ai-hub', label: tt('ui.menu.aiHubPanel') },
+  { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
+  { id: 'ai-chat', label: tt('ui.common.aIAssistantWrite') },
 ];
 /** แผงที่จงใจไม่ใส่ในเมนูนี้ — ต้องมีเหตุผลกำกับเสมอ */
 const MENU_PANELS_SKIP = {
   'planner-props': tt('ui.menu.panelPairPlannerPlanner'),
-  home: tt('ui.menu.pageFirstHasIn'),
+  // [alpha.162 · W2] `home` ถูกถอดออก — ไม่เคยมีในทะเบียนแผง (`PANEL_DEFS`) เลย
+  // หน้าแรกเป็น "กล่อง" (showHomeDialog) ไม่ใช่แผง · ข้อยกเว้นที่ชี้ของที่ไม่มีอยู่จริงคือขยะที่หลอกคนอ่าน
 };
 ipcMain.handle('menu:panelIds', () => ({
-  ids: MENU_PANELS.filter((p) => !p.sep).map((p) => p.id),
+  ids: MENU_PANELS.filter((p) => !p.sep && !p.head).map((p) => p.id),
+  heads: MENU_PANELS.filter((p) => p.head).map((p) => p.head),   // [alpha.161 · U8] ให้ e2e ตรวจหมวด
   skip: Object.keys(MENU_PANELS_SKIP),
 }));
 
@@ -1565,7 +1574,7 @@ H('update:source', () => ({
 H('update:fetch', async () => {
   const headers = { 'Accept': 'application/vnd.github+json', 'User-Agent': 'Killian2/' + app.getVersion() };
   const ac = new AbortController();
-  const timer = setTimeout(() => { try { ac.abort(); } catch {} }, 20000);
+  const timer = setTimeout(() => { try { ac.abort(); } catch {} }, TIMING.UPDATE_FETCH_TIMEOUT_MS);   // [alpha.162 · W6 ข้อ 7]
   try {
     const res = await fetch(UPD.UPDATE_API_URL, { headers, signal: ac.signal });
     if (!res.ok) return { ok: false, status: res.status, error: 'HTTP ' + res.status };
@@ -1731,6 +1740,12 @@ H('menu:toggles', (patch) => {
   Object.assign(toggles, patch, { panels: { ...toggles.panels, ...(patch.panels || {}) } });
   buildMenu();
   return true;
+});
+// [alpha.162 · W4] รายชื่อเมนูบนสุดที่ "มีอยู่จริง" — ให้ฝั่ง renderer/เทสเทียบกับปุ่มบนแถบชื่อได้
+// (เดิมเทสฮาร์ดโค้ดรายชื่อไว้เจ็ดตัว เมนู Tools จึงหายไปจากแถบโดยไม่มีอะไรฟ้องเลย)
+ipcMain.handle('menu:ids', () => {
+  const menu = Menu.getApplicationMenu();
+  return menu ? menu.items.map((i) => i.id).filter(Boolean) : [];
 });
 ipcMain.handle('menu:popup', (e, label, x, y) => {
   const menu = Menu.getApplicationMenu();

@@ -30,6 +30,7 @@
 //
 // และมี **ตัวตัดบรรทัดชุดเดียว** (`wrapLineStrings`) ที่ทั้งจอและ PDF เรียกใช้ —
 // เดิมมีสองชุดที่ "ต้องได้ผลเท่ากันเป๊ะ" แล้วมันไม่เท่ากันจริง (บั๊กบรรทัดเปล่าใน PDF)
+import { wordSegmenter } from './locale.js';
 
 /** พิกเซล CSS ต่อนิ้ว */
 export const DPI = 96;
@@ -210,9 +211,8 @@ let _seg = null, _segTried = false;
 function segmenter() {
   if (_segTried) return _seg;
   _segTried = true;
-  try {
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) _seg = new Intl.Segmenter('th', { granularity: 'word' });
-  } catch { _seg = null; }
+  // [alpha.162 · W7] ตัวตัดคำกลาง (locale.js) — ICU เลือกพจนานุกรมตามตัวอักษร ผลเท่ากันทุกภาษา
+  _seg = wordSegmenter();
   return _seg;
 }
 const BP_CACHE_CAP = 4000;

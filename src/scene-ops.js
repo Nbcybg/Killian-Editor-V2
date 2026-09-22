@@ -9,12 +9,16 @@
 // 3. เขียน frontmatter ของไฟล์ที่เปิดอยู่ = ต้องซิงก์ `meta` ของแท็บ (`syncOpenTabMeta`)
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { buildTree, closeTab, guid, openScene, safeName, saveTab, refreshNetwork,
-         closeTabsUnderPath, syncOpenTabMeta, moveSnapshots } from './app.js';
-import { SCENE_STATUSES, dataLabel, el, setStatus, state, logAction } from './core.js';
+         closeTabsUnderPath, syncOpenTabMeta, moveSnapshots, flushTabForMove, activate } from './app.js';
+import { SCENE_STATUSES, dataLabel, el, log, setStatus, state, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { deleteToTrash } from './recycle.js';
+import { trashPathFor } from './trash-path.js';          // [alpha.162 · W1-4]
 import { ask, confirmBox } from './ui.js';
 import { countWords, dumpMdFile, parseMdFile } from './md.js';
+import { writeMdKeepingComments } from './comments/comment-core.js';   // [alpha.160 · P0-1]
+import { flushTab } from './tab-guard.js';                              // [alpha.161 · D2]
+import { statusChoices } from './status-choices.js';                    // [alpha.160 · P1-11]
 // [alpha.60r2 ข้อ 13] คุณสมบัติหนักของฉากอยู่ใน frontmatter — เขียนผ่านที่นี่ที่เดียว
 import { SCENE_HEAVY_KEYS, writeSceneMeta } from './scene-meta.js';
 // ตาราง "เล่าด้วยภาพ" เป็นไฟล์คู่ข้างฉาก (<ชื่อฉาก>_vis.csv) — ทุกที่ที่ย้าย/ลบ/ทำสำเนาฉาก
@@ -39,15 +43,25 @@ export async function renameScene(dPath, ch, sc) {
 export async function setSceneTitle(dPath, ch, sc, title) {
   if (!title || title === sc.title) return;
   const sf = await kapi.join(dPath, 'scenes.json');
+  const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
+  // ══ [alpha.162 · W1-9] ★ เขียน frontmatter (แหล่งความจริง) ให้ผ่านก่อน แล้วค่อยแก้ดัชนี ══
+  // เดิมแก้ `scenes.json` สำเร็จไปแล้ว จากนั้น `readFile(.md)` ไม่มี try/catch — ไฟล์หาย/อ่านไม่ได้
+  // (ลบนอกโปรแกรม · ที่เก็บคลาวด์ยังไม่ดึงลงมา) = ชื่อในทะเบียนเป็นชื่อใหม่ แต่ในไฟล์เป็นชื่อเก่า
+  // **ตลอดกาล** และ `buildTree()` ท้ายฟังก์ชันไม่ถูกเรียก → หน้าจอไม่ขยับ ผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น
+  try {
+    const { meta, body } = parseMdFile(await kapi.readFile(file));
+    meta.title = title;
+    await writeMdKeepingComments(kapi, file, dumpMdFile(meta, body));   // [alpha.160 · P0-1]
+  } catch (e) {
+    log('warn', ttf('ui.scene.renameFileFail', sc.title || sc.fileName), e);
+    setStatus(ttf('ui.scene.renameFileFail', sc.title || sc.fileName));
+    return false;
+  }
   await mutateJson(kapi, sf, (d) => {
     let hit = false;
     for (const s of rowsOf(d, ch.guid)) if (s.id === sc.id) { s.title = title; hit = true; }
     return hit ? undefined : false;
   });
-  const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
-  const { meta, body } = parseMdFile(await kapi.readFile(file));
-  meta.title = title;
-  await kapi.writeFile(file, dumpMdFile(meta, body));
   const t = state.tabs.get(file);
   if (t) {
     t.title = title;
@@ -112,9 +126,10 @@ export async function chapterProps(dPath, ch) {
   };
 
   const iTitle = mk(tt('ui.scene.nameChapter'), cur.title || '');
-  const statuses = allStatuses();
-  const iStatus = mkSel(tt('ui.common.status'), [['Outline', tt('ui.common.notSet')], ...statuses.map((s) => [s, dataLabel(s)])],
-                        statuses.includes(cur.status) ? cur.status : 'Outline');
+  const stc = statusChoices(allStatuses(), cur.status);   // [alpha.160 · P1-11] ไม่ทับค่าที่ถูกลบจากรายการแล้ว
+  const iStatus = mkSel(tt('ui.common.status'), [['Outline', tt('ui.common.notSet')],
+    ...stc.values.map((s) => [s, s === stc.orphan ? ttf('ui.status.orphanOpt', dataLabel(s)) : dataLabel(s)])],
+                        stc.selected);
   // องก์ (Act) — ตัวเลขโรมันแบบ v1 · เลือก "อื่น ๆ" ไม่ได้ จึงใช้ช่องพิมพ์เพื่อไม่ปิดกั้นโครงเรื่องแบบอื่น
   const iAct = mk(tt('ui.scene.actAct'), cur.act || '');
   iAct.placeholder = tt('ui.scene.iIIIIIName');
@@ -125,7 +140,7 @@ export async function chapterProps(dPath, ch) {
 
   return new Promise((resolve) => {
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, tt('ui.common.cancel'));
+    const cB = el('button', 'k-cancel', tt('ui.common.cancel'));
     const okB = el('button', 'k-ok', tt('ui.common.save'));
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     const close = (v) => { ov.remove(); resolve(v); };
@@ -227,9 +242,9 @@ export async function deleteChapter(dPath, ch) {
   if (!(await confirmBox(ttf('ui.scene.delChapterChapterAll', ch.title)))) return;
   // [alpha.156] ★ ปิดแท็บของฉากในบทนี้ก่อนย้ายโฟลเดอร์ (บันทึกงานค้างลงไฟล์ก่อน — ถังขยะได้ของล่าสุด)
   // เดิมไม่ปิดเลย → บันทึกอัตโนมัติเขียนไฟล์กลับที่เดิม = โฟลเดอร์บทที่ลบไปแล้วเกิดใหม่เป็นโฟลเดอร์ผี
-  await closeTabsUnderPath(dir, { save: true });
-  const dst = await kapi.join(state.root, 'Recycle',
-                              Date.now().toString(36) + '-' + ch.folderName);
+  // [alpha.160 · P0-3] มีแท็บที่บันทึกไม่ผ่าน = ห้ามย้ายโฟลเดอร์ (ไม่งั้นแท็บนั้นชี้ไฟล์ที่ไม่มีแล้ว → โฟลเดอร์ผี)
+  if (!(await closeTabsUnderPath(dir, { save: true })).ok) { setStatus(ttf('ui.app.moveCancelledUnsaved', ch.title)); return; }
+  const dst = await trashPathFor(dir, { dir: true });     // [alpha.162 · W1-4] ชื่อในถังไม่ชนกัน
   const sf = await kapi.join(dPath, 'scenes.json');
   const scenesNow = rowsOf(await kapi.readJson(sf).catch(() => ({})), ch.guid);
   await kapi.move(dir, dst);
@@ -296,7 +311,8 @@ export async function addScene(dPath, ch, preset, opts = {}) {
            chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
     file = await kapi.join(dPath, 'Chapters', ch.folderName, fileName);
     const meta = { title, type: 'scene', format: 'prose', pov: '', tags: [], ...(opts.meta || {}) };
-    await kapi.writeFile(file, dumpMdFile(meta, opts.body || ''));
+    // [alpha.161 · D1] opts.commentsFrom = สร้างจากไฟล์อื่น (วางสำเนา) → เธรดคอมเมนต์ของต้นฉบับตามมาด้วย
+    await writeMdKeepingComments(kapi, file, dumpMdFile(meta, opts.body || ''), opts.commentsFrom || null);
     d.chapters[ch.guid] = [...list, sc];
   });
   logAction('scene', tt('ui.scene.addScene') + title, { file });
@@ -338,9 +354,13 @@ export async function toggleSceneFlag(dPath, ch, sc) {
 export async function duplicateScene(dPath, ch, sc) {
   const sf = await kapi.join(dPath, 'scenes.json');
   // งานค้างของต้นฉบับต้องลงไฟล์ก่อน (สำเนาอ่านจากดิสก์) — ทำ **นอกคิว** เพราะ saveTab แตะ scenes.json เอง
+  // [alpha.161 · D2] เดิมไม่ดูผลบันทึก (false = ผู้ใช้ยกเลิก/ยัง dirty) แล้วทำสำเนาจากฉบับเก่าบนดิสก์ → ยกเลิก
   if (sc && sc.fileName) {
     const openSrc = state.tabs.get(await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName));
-    if (openSrc && openSrc.dirty) await saveTab(openSrc);
+    if (!(await flushTab(openSrc, (t2) => saveTab(t2)))) {
+      setStatus(tf('ui.tree.dupSkipUnsaved', sc.title || sc.fileName));
+      return false;
+    }
   }
   let made = null;
   await mutateJson(kapi, sf, async (d) => {
@@ -356,14 +376,17 @@ export async function duplicateScene(dPath, ch, sc) {
     try { const parsed = parseMdFile(await kapi.readFile(srcFile)); meta = parsed.meta; body = parsed.body; } catch {}
     meta.title = newTitle;
     const nrow = { ...row, id: guid(), title: newTitle, order, fileName, isFavorite: false };
-    await kapi.writeFile(await kapi.join(dPath, 'Chapters', ch.folderName, fileName), dumpMdFile(meta, body));
+    // [alpha.161 · D2] สำเนาพาเธรดคอมเมนต์ของต้นฉบับไปด้วย (เดิม dumpMdFile ตรง ๆ = เธรดหาย)
+    await writeMdKeepingComments(kapi, await kapi.join(dPath, 'Chapters', ch.folderName, fileName),
+                                 dumpMdFile(meta, body), srcFile);
     d.chapters[ch.guid] = [...list, nrow];
     made = { srcName: row.fileName, fileName, newTitle };
   });
-  if (!made) return;
+  if (!made) return false;
   await copyVisSidecar(dPath, ch.folderName, made.srcName, made.fileName);
   await buildTree();
   openScene(await kapi.join(dPath, 'Chapters', ch.folderName, made.fileName), made.newTitle);
+  return true;
 }
 
 export async function moveSceneOrder(dPath, ch, sc, dir) {
@@ -390,7 +413,12 @@ export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
   // (ต้องทำนอก mutateJson — saveTab อัปเดตจำนวนคำใน scenes.json เอง)
   const oldPath = await kapi.join(dPath, 'Chapters', ch.folderName, row0.fileName);
   const openTab = state.tabs.get(oldPath);
-  if (openTab) { if (openTab.dirty) await saveTab(openTab); openTab.dirty = false; closeTab(oldPath, { discard: true }); }
+  const wasActive = !!openTab && state.active === openTab;   // [alpha.160 · P3] เปิดกลับที่ตำแหน่งใหม่
+  // [alpha.160 · P0-2] บันทึกไม่ผ่าน (false/throw) = ยกเลิกการย้าย — เดิมตั้ง dirty=false แล้วปิดทิ้งทุกกรณี
+  if (openTab) {
+    if (!(await flushTabForMove(openTab))) return false;
+    closeTab(oldPath, { discard: true });
+  }
 
   let moved = null;
   await mutateJson(kapi, sf, async (d) => {
@@ -416,6 +444,14 @@ export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
   await moveSnapshots(moved.src, moved.newPath);
   logAction('scene', ttf('ui.scene.movedToChapter', moved.row.title, dstCh.title), { from: moved.src, to: moved.newPath });
   await buildTree();
+  // [alpha.160 · P3] แท็บที่ถูกปิดเพราะพาธเปลี่ยน → เปิดกลับที่ตำแหน่งใหม่ (เดิมหายไปเฉย ๆ ผู้ใช้ต้องไปตามหาเอง)
+  if (openTab) {
+    const cur = !wasActive && state.active ? state.active.file : '';
+    try {
+      await openScene(moved.newPath, null);
+      if (cur && state.tabs.has(cur)) activate(cur);           // ไม่ได้อยู่หน้าสุด = ไม่แย่งโฟกัส
+    } catch { /* เปิดไม่ได้ไม่ทำให้การย้ายล้ม */ }
+  }
   setStatus(tt('ui.scene.move') + moved.row.title + tt('ui.scene.chapter2') + dstCh.title + tt('ui.common.done2'));
 }
 
@@ -443,7 +479,8 @@ export async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
   if (srcCh.guid !== dstCh.guid) {
     const row0 = rowsOf(await kapi.readJson(sf), srcCh.guid).find((x) => x.id === srcId);
     if (!row0) return;
-    await moveSceneToChapter(dPath, srcCh, { id: srcId }, dstCh);
+    // [alpha.160 · P0-2] ย้ายข้ามบทถูกยกเลิก (แท็บบันทึกไม่ผ่าน) = ไม่จัดลำดับต่อ
+    if ((await moveSceneToChapter(dPath, srcCh, { id: srcId }, dstCh)) === false) return false;
     srcCh = dstCh;
   }
   const res = await mutateJson(kapi, sf, (d) => {

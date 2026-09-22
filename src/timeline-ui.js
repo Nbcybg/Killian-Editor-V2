@@ -7,6 +7,7 @@ import { renderFutureNotes, notesForScene } from './session-notes.js';
 import { findScenePath } from './project-scan.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { gi } from './icons.js';
+import { panelEmpty } from './panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 
 /** วาดเส้นเวลาใหม่ถ้าแผงเปิดอยู่ (เรียกหลังเพิ่มโน้ต "ไว้ทำภายหลัง") */
 export function refreshOpenTimeline() {
@@ -65,8 +66,7 @@ export async function renderTimeline(pane) {
   };
 
   if (!items.length) {
-    wrap.append(el('div', 'tl-empty',
-      tt('ui.timeline.notHasEventPress')));
+    wrap.append(panelEmpty(tt('ui.timeline.notHasEventPress')));
     return;
   }
 
@@ -84,8 +84,7 @@ export async function renderTimeline(pane) {
   if (state._tlView === 'gantt') {
     const g = ganttData(items);
     if (!g.rows.length) {
-      wrap.append(el('div', 'tl-empty',
-        tt('ui.timeline.viewGanttMustHas')));
+      wrap.append(panelEmpty(tt('ui.timeline.viewGanttMustHas')));
       return;
     }
     const gb = el('div', 'gantt-board'); wrap.append(gb);

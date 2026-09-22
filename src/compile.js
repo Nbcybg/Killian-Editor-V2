@@ -25,6 +25,7 @@ import { mergeProseFormat, proseExportCss } from './prose-format.js';
 import { stripAlign, stripMentions as mdStripMentions, markerVars,
          mdBlocks, inlineHtml as mdInlineHtml,
          figureClass, figureImgStyle } from './md.js';
+import { fmtNum } from './locale.js';
 
 export const PAGE_BREAK = t('ui.compile.msg');
 
@@ -560,7 +561,7 @@ export function runWorkflow(model0, workflow,
     if (String(model.title || '').trim()) out.push('# ' + model.title, '');
     const au = String(opt('cover', 'author', '') || model.author || '').trim();
     if (au) out.push(au, '');
-    out.push(tf('ui.compile.wordChapterScene', st0.words.toLocaleString(), st0.chapters, st0.scenes), '');
+    out.push(tf('ui.compile.wordChapterScene', fmtNum(st0.words), st0.chapters, st0.scenes), '');
     if (has('page-break')) out.push(PAGE_BREAK, '');
   }
   // [97] หน้ารายชื่อตัวละคร — วางก่อนเนื้อเรื่อง แล้วขึ้นหน้าใหม่
@@ -584,7 +585,7 @@ export function runWorkflow(model0, workflow,
       if (has('scene-heading') && String(s.title || '').trim())
         out.push(fill(opt('scene-heading', 'template', '### {title}'), sn, s.title || '', varCtx), '');
       if (has('scene-meta'))
-        out.push(tf('ui.compile.word', s.status || t('ui.compile.notSpecifyStatus'), (s.words || 0).toLocaleString()), '');
+        out.push(tf('ui.compile.word', s.status || t('ui.compile.notSpecifyStatus'), fmtNum((s.words || 0))), '');
       // บท: ตัดแค่ช่องว่างท้าย (กันซ้อนกับ `''` ที่ push ตามหลัง) — ช่องไฟข้างในเป็นเนื้อหา
       // ══ [alpha.132 ข้อ 1] ★★ ฝั่งนิยายก็เหมือนกัน — เพิ่งรู้ว่ากฎเดิมผิดมาตลอด ══
       // ผู้ใช้: *"pdf ออกมา บรรทัดว่างหาย"*
@@ -601,7 +602,7 @@ export function runWorkflow(model0, workflow,
   if (has('stats')) {
     out.push('---', '', t('ui.compile.summaryStats'), '',
              tf('ui.compile.chapter', st0.chapters), tf('ui.compile.scene', st0.scenes),
-             tf('ui.compile.wordAll', st0.words.toLocaleString()),
+             tf('ui.compile.wordAll', fmtNum(st0.words)),
              tf('ui.compile.timeReadMin', Math.max(1, Math.round(st0.words / 250))), '');
   }
   // `.trim()` ของทั้งเอกสารยังทำทั้งสองโหมด — บรรทัดว่างหัว/ท้ายสุดเป็นเศษจากโครงประกอบ
@@ -646,17 +647,20 @@ export function runWorkflow(model0, workflow,
       } catch (e) { warn.push(t('ui.compile.stepJavaScriptError') + e.message); }
     }
   }
-  if (ext !== 'html' && !markdownOut) {
+  // ══ [alpha.160 · P1-6] ★ `.md` ที่ส่งออกยังเป็น **มาร์กดาวน์** — เดิมคอมเมนต์ด้านล่างเขียนว่า
+  // ".md ยังเก็บไว้" แต่โค้ดแทนตัวคั่นหน้า (PAGE_BREAK ของขั้น "ขึ้นหน้าใหม่") ด้วย `\f` และลบ `<!--align:x-->`
+  // ทุกบรรทัดโดยไม่ดู ext → เปิดไฟล์กลับในโปรแกรม (หรือ Obsidian) ได้อักขระ form-feed กลางไฟล์ + การจัดหน้าหายหมด
+  // ตอนนี้ `.md` = ตัวคั่นหน้าเป็น `<!--pagebreak-->` (ตัวเดียวกับที่ตัวแก้ไขเขียน) · align เก็บไว้ครบ
+  if (ext !== 'html' && !markdownOut && String(ext).toLowerCase() === 'md') {
+    text = text.split(PAGE_BREAK).join('<!--pagebreak-->');
+  } else if (ext !== 'html' && !markdownOut) {
     text = text.split(PAGE_BREAK).join('\f');
     // [alpha.159 · M32] ขึ้นหน้าใหม่ "ด้วยมือ" ในเนื้อฉาก (`<!--pagebreak-->` ที่ตัวแก้ไขเขียน) ก็เป็น
     // รูปแบบ ไม่ใช่ข้อความ — เดิมหลุดเข้า .txt/.rtf/.fdx ทั้งบรรทัด · ไฟล์แบนใช้ \f แทน (ตัวเดียวกับตัวคั่นฉาก)
-    // (.md ยังเก็บไว้ — markdownOut ไม่ผ่านสาขานี้ · KEEP_COMMENT ของ stripComments ปล่อยผ่านมาถึงตรงนี้)
-    // `.md` ที่ส่งออกยังเป็นมาร์กดาวน์ — คอมเมนต์ถูกซ่อนตอนแสดงผลอยู่แล้ว เก็บไว้ให้เปิดกลับได้
-    if (String(ext).toLowerCase() !== 'md') {
-      text = text.replace(/^[ \t]*<!--\s*pagebreak\s*-->[ \t]*$/gim, '\f')
-                 .replace(/<!--\s*pagebreak\s*-->/gi, '\f');
-    }
-    // [alpha.132 . X-1] `.md`/`.txt`/`.rtf` ที่ส่งออกเป็น "ต้นฉบับแบน" ไม่ใช่ไฟล์โปรเจกต์
+    // (.md ไม่ผ่านสาขานี้แล้ว — ดูสาขาบน · KEEP_COMMENT ของ stripComments ปล่อยผ่านมาถึงตรงนี้)
+    text = text.replace(/^[ \t]*<!--\s*pagebreak\s*-->[ \t]*$/gim, '\f')
+               .replace(/<!--\s*pagebreak\s*-->/gi, '\f');
+    // [alpha.132 . X-1] `.txt`/`.rtf`/`.fdx` ที่ส่งออกเป็น "ต้นฉบับแบน" ไม่ใช่ไฟล์โปรเจกต์
     // -> เอาคอมเมนต์รูปแบบออก ไม่งั้นผู้อ่านเห็น align โผล่กลางเรื่อง
     text = text.replace(/<!--\s*align:(?:left|center|right|justify)\s*-->/gi, '');
   }

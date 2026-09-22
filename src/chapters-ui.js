@@ -20,6 +20,7 @@ import { isPanelOpen, showPanel } from './panels/panel-ui.js';
 import { pickImage } from './gallery.js';
 import { openBookReader, bumpBookFlow } from './read-ui.js';
 import { gi } from './icons.js';
+import { fmtNum } from './locale.js';
 
 // เล่มที่กำลังดูอยู่ (จำข้ามการวาดใหม่ — ไม่เขียนลงไฟล์ เป็นสถานะของหน้าจอล้วน)
 const CH_UI = { secPath: '', dPath: '' };
@@ -183,7 +184,7 @@ export async function renderChapterManager(pane) {
     // สถิติ
     const stats = el('div', 'book-stats', '…'); bd.append(stats);
     chapterStats(dPath, ch).then((st) => {
-      stats.textContent = tf('ui.chapters.sceneWord', st.scenes, st.words.toLocaleString());
+      stats.textContent = tf('ui.chapters.sceneWord', st.scenes, fmtNum(st.words));
     });
 
     // ปุ่มจัดการ

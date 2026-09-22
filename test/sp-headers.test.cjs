@@ -172,5 +172,15 @@ check('headerPlainLine หน้าแรก = ว่าง',
     H.headerHtml(2, zero, {}).includes('right:0in'), H.headerHtml(2, zero, {}));
 }
 
+// ── [alpha.160 · P1-9] ${PAGE} ของช่องตัวอย่าง = ของไฟล์จริง (เริ่มตามหน้าเริ่มของเล่ม) ──
+{
+  check('[160-P1-9] ★ เล่มเริ่มหน้า 5: หน้า 1,2,3 ของไฟล์ = 5,6,7',
+        [1, 2, 3].map((n) => H.headerPageNumber(5, n)).join() === '5,6,7');
+  check('[160-P1-9] ไม่ระบุหน้าเริ่ม = เริ่มที่ 1', H.headerPageNumber(undefined, 3) === 3 && H.headerPageNumber(0, 1) === 1);
+  const hdr = { enabled: true };                    // ค่าเริ่มต้น = "${PAGE}." ชิดขวา
+  const txt = (n) => (H.headerStringsFor(n, H.mergeHeaders(hdr), { PAGE: H.headerPageNumber(5, n) })[0] || {}).text;
+  check('[160-P1-9] หัวกระดาษหน้า 2 ของเล่มที่เริ่มหน้า 5 พิมพ์ "6."', txt(2) === '6.', txt(2));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -112,6 +112,120 @@ check('perf: ค้นหาบน 1,000 ไฟล์ < 500ms', searchMs < 500, 
 check('perf: index 1,000 ไฟล์ (ทำครั้งเดียว) < 2s', buildMs < 2000, `build=${buildMs}ms`);
 check('perf: ผลค้นถูกต้องบน 1,000 ไฟล์', totalHits > 0);
 
-console.log(`\nsearch-engine: ${pass} ผ่าน, ${fail} ล้มเหลว  [build ${buildMs}ms · search ${searchMs}ms]`);
-console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
-process.exit(fail === 0 ? 0 : 1);
+// ── [alpha.161 · C3] indexProject: โฟลเดอร์สำเนา (ถังขยะ/ประวัติ/สำรอง) ต้องไม่ถูกนับ ──
+(async () => {
+  const P = (...x) => x.join('/');
+  const tree = {
+    '/r': { dirs: ['Book', 'Recycle', 'snapshots', 'Backups'], files: ['note.md'] },
+    '/r/Book': { dirs: ['Recycle'], files: ['a.md', 'b.json'] },
+    '/r/Book/Recycle': { dirs: [], files: ['inner.md'] },            // ชื่อซ้ำแต่อยู่ลึก = ไม่ใช่ถังขยะของโปรเจกต์
+    '/r/Recycle': { dirs: [], files: ['ghost.md'] },
+    '/r/snapshots': { dirs: [], files: ['old.md'] },
+    '/r/Backups': { dirs: [], files: ['bak.md'] },
+  };
+  const fakeKapi = {
+    listDirs: async (d) => (tree[d] || { dirs: [] }).dirs,
+    listFiles: async (d) => (tree[d] || { files: [] }).files,
+    join: async (...x) => P(...x),
+    readFile: async (f) => 'เนื้อ ' + f.split('/').pop(),
+  };
+  const parse = (raw) => ({ meta: {}, body: raw });
+  const all = await SE.indexProject('/r', fakeKapi, parse, {});
+  check('indexProject: ไม่ระบุ skipDirs = เข้าทุกโฟลเดอร์ (พฤติกรรมเดิม)', all.stats().documents === 6, all.stats().documents);
+  const cut = await SE.indexProject('/r', fakeKapi, parse, { skipDirs: ['Recycle', 'Snapshots', 'Backups'] });
+  const ids = cut.search('เนื้อ').map((r) => r.path).sort();
+  check('★ indexProject: ข้ามถังขยะ/Snapshots/Backups ชั้นบน (ไม่สนตัวพิมพ์)',
+        !ids.some((x) => /\/r\/(Recycle|snapshots|Backups)\//.test(x)), ids.join(','));
+  check('indexProject: โฟลเดอร์ชื่อซ้ำที่อยู่ลึกยังถูกนับ', ids.includes('/r/Book/Recycle/inner.md'), ids.join(','));
+  check('indexProject: ไฟล์งานปกติยังอยู่ครบ', ids.includes('/r/note.md') && ids.includes('/r/Book/a.md') && cut.stats().documents === 3,
+        cut.stats().documents);
+  // [alpha.162 · W5 ข้อ 2] ยกเลิกได้ + ความคืบหน้า
+  {
+    let err = null;
+    try { await SE.indexProject('/r', fakeKapi, parse, { signal: { aborted: true } }); } catch (e) { err = e; }
+    check('★ [162-W5] indexProject: signal ถูกยกเลิก → โยน error ยกเลิก (ไม่ได้ดัชนีครึ่ง ๆ)', !!err && err.k2Cancelled === true, String(err));
+    const sig = { aborted: false };
+    let n = 0;
+    const slowKapi = { ...fakeKapi, readFile: async (f) => { n++; if (n === 2) sig.aborted = true; return 'x ' + f; } };
+    let err2 = null;
+    try { await SE.indexProject('/r', slowKapi, parse, { signal: sig }); } catch (e) { err2 = e; }
+    check('★ [162-W5] indexProject: ยกเลิกกลางทาง = หยุดก่อนอ่านไฟล์ถัดไป', !!err2 && err2.k2Cancelled === true && n === 2, 'อ่านไป ' + n);
+    const big = {};
+    big['/b'] = { dirs: [], files: Array.from({ length: 25 }, (_, i) => 'f' + i + '.md') };
+    const bigKapi = { ...fakeKapi, listDirs: async (d) => (big[d] || { dirs: [] }).dirs, listFiles: async (d) => (big[d] || { files: [] }).files };
+    const seen = [];
+    await SE.indexProject('/b', bigKapi, parse, { onProgress: (k) => seen.push(k) });
+    check('[162-W5] indexProject: บอกจำนวนไฟล์ที่อ่านแล้วทุก 10 ไฟล์', seen.join(',') === '10,20', seen.join(','));
+    let ok = true;
+    try { await SE.indexProject('/b', bigKapi, parse, { onProgress: () => { throw new Error('ui พัง'); } }); } catch { ok = false; }
+    check('[162-W5] ตัวรายงานความคืบหน้าพัง ไม่ทำให้การสร้างดัชนีล้ม', ok);
+  }
+  const withJson = await SE.indexProject('/r', fakeKapi, parse, { includeJson: true, skipDirs: ['Recycle'] });
+  check('indexProject: includeJson + skipDirs ใช้ร่วมกันได้', withJson.stats().documents === 6, withJson.stats().documents);
+
+  // ── searchPathMatters: ตัวตัดสินว่าการเขียน/ย้าย/ลบไฟล์นี้ต้องล้างดัชนีไหม ──
+  const M = SE.searchPathMatters;
+  check('matters: ฉาก .md ใต้โปรเจกต์', M('C:\\p', 'C:\\p\\Book\\Draft\\x\\Chapters\\01\\s.md') === true);
+  check('matters: Wiki .json ใต้โปรเจกต์ (ทับ/ต่างตัวคั่นได้)', M('C:/p/', 'C:\\p\\Bible\\characters\\a.json') === true);
+  check('matters: ไม่สนตัวพิมพ์ของราก (Windows)', M('C:/P', 'c:/p/Memos/m.MD') === true);
+  check('matters: ไฟล์ในถังขยะ/Snapshots/Backups = ไม่ต้องล้าง', !M('/p', '/p/Recycle/x.md') && !M('/p', '/p/snapshots/a__b/1.md') && !M('/p', '/p/Backups/2026/a.json'));
+  check('matters: ไฟล์ที่ไม่ใช่ .md/.json (รูป · csv) = ไม่ต้องล้าง', !M('/p', '/p/Images/a.png') && !M('/p', '/p/x/s_vis.csv'));
+  check('matters: นอกโปรเจกต์ / โปรเจกต์ชื่อขึ้นต้นเหมือนกัน = ไม่ต้องล้าง', !M('/p', '/other/a.md') && !M('/p', '/p2/a.md'));
+  check('matters: ไม่มีราก/ไม่มี path = false', !M('', '/p/a.md') && !M('/p', ''));
+  check('SEARCH_SKIP_DIRS มีครบสามโฟลเดอร์สำเนา', ['Recycle', 'Snapshots', 'Backups'].every((d) => SE.SEARCH_SKIP_DIRS.includes(d)));
+
+  // ── [alpha.161 · S] highlightTerms / splitHighlight / matchDetail ──
+  const HT = SE.highlightTerms;
+  check('highlightTerms: คำเดียว', JSON.stringify(HT('ทอร่า')) === '["ทอร่า"]');
+  check('highlightTerms: AND/OR เอาทุกคำฝั่งบวก เรียงยาวก่อน', JSON.stringify(HT('เค้ก OR ช็อกโกแลต ร้าน')) === '["ช็อกโกแลต","เค้ก","ร้าน"]', JSON.stringify(HT('เค้ก OR ช็อกโกแลต ร้าน')));
+  check('highlightTerms: ไม่เอาคำใต้ NOT', JSON.stringify(HT('เบเกอรี่ NOT ร้าน')) === '["เบเกอรี่"]', JSON.stringify(HT('เบเกอรี่ NOT ร้าน')));
+  check('highlightTerms: ไม่เอาค่าของ field:', JSON.stringify(HT('tags:คาสซี่ ขนม')) === '["ขนม"]', JSON.stringify(HT('tags:คาสซี่ ขนม')));
+  check('highlightTerms: วลีในเครื่องหมายคำพูดเป็นก้อนเดียว', HT('"ร้าน เค้ก"').includes('ร้าน เค้ก'));
+  check('highlightTerms: ซ้ำไม่สนตัวพิมพ์ = ตัวเดียว · ว่าง = []', HT('Cake cake').length === 1 && HT('').length === 0);
+
+  const SH = SE.splitHighlight;
+  const sh1 = SH('ทอร่าไปร้าน ทอร่ากลับ', ['ทอร่า']);
+  check('splitHighlight: ครอบทุกจุดที่เจอ', sh1.filter((x) => x.hl).length === 2 && sh1.map((x) => x.text).join('') === 'ทอร่าไปร้าน ทอร่ากลับ', JSON.stringify(sh1));
+  const sh2 = SH('Cake and CAKE', ['cake']);
+  check('splitHighlight: ไม่สนตัวพิมพ์ + คงตัวพิมพ์เดิม', sh2.filter((x) => x.hl).map((x) => x.text).join(',') === 'Cake,CAKE', JSON.stringify(sh2));
+  const sh3 = SH('ช็อกโกแลตร้อน', ['ช็อก', 'ช็อกโกแลต']);
+  check('splitHighlight: คำยาวชนะคำสั้นที่ซ้อนกัน', sh3[0].hl && sh3[0].text === 'ช็อกโกแลต', JSON.stringify(sh3));
+  check('splitHighlight: ไม่มีคำ = ช่วงเดียวไม่ไฮไลต์', JSON.stringify(SH('abc', [])) === '[{"text":"abc","hl":false}]');
+  check('splitHighlight: ข้อความที่มีแท็ก HTML คืนเป็นตัวอักษรตามจริง (ไม่ตีความ)', SH('<b>x</b>', ['x']).map((x) => x.text).join('') === '<b>x</b>');
+
+  const MD = SE.matchDetail;
+  const body = 'บรรทัดแรก\n\nทอร่าเดินไป\nแล้วทอร่าก็กลับ';
+  const p2 = body.indexOf('ทอร่า', 15);
+  const d2 = MD(body, p2 + 1, 2, ['ทอร่า']);      // token ไทยเป็นแค่ส่วนกลางของคำ
+  check('matchDetail: คืนคำค้นเต็มที่ครอบ token', d2.term === 'ทอร่า' && d2.start === p2, JSON.stringify(d2));
+  check('matchDetail: nth = ครั้งที่เท่าไรใน body (0-based)', d2.nth === 1, d2.nth);
+  check('matchDetail: เลขบรรทัด + ข้อความบรรทัด', d2.line === 4 && d2.lineText === 'แล้วทอร่าก็กลับ', JSON.stringify(d2));
+  const d1 = MD(body, body.indexOf('ทอร่า'), 5, ['ทอร่า']);
+  check('matchDetail: ครั้งแรก nth=0 · บรรทัด 3', d1.nth === 0 && d1.line === 3, JSON.stringify(d1));
+  const d3 = MD('Hello WORLD world', 12, 5, []);
+  check('matchDetail: ไม่มีคำค้น = ใช้ token ที่เจอ · nth ไม่สนตัวพิมพ์', d3.term === 'world' && d3.nth === 1, JSON.stringify(d3));
+  // ═══════════ [alpha.162 · W1-1] indexMatches — ดัชนี/งานที่วิ่งอยู่ ใช้กับคำขอนี้ได้ไหม ═══════════
+  {
+    const IM = SE.indexMatches;
+    const A = { root: 'C:/proj-a', json: false, stale: false };
+    check('W1-1: โปรเจกต์+ขอบเขตตรง และไม่ล้าสมัย = ใช้ได้', IM(A, { root: 'C:/proj-a', json: false }) === true);
+    check('W1-1: ★★ คนละโปรเจกต์ = ใช้ไม่ได้ (สลับโปรเจกต์ระหว่างสร้างดัชนี)',
+          IM(A, { root: 'C:/proj-b', json: false }) === false);
+    check('W1-1: ★★ ขอรวม .json แต่ของที่มีไม่รวม = ใช้ไม่ได้ (เดิมคืนไปแล้วค้นไฟล์ .json ไม่เจอ)',
+          IM(A, { root: 'C:/proj-a', json: true }) === false);
+    check('W1-1: ของที่รวม .json ใช้ตอบคำขอที่ไม่รวมไม่ได้ (ขอบเขตต้องตรงกัน)',
+          IM({ root: 'C:/proj-a', json: true, stale: false }, { root: 'C:/proj-a', json: false }) === false);
+    check('W1-1: ล้าสมัยแล้ว = ใช้ไม่ได้แม้ตรงทุกช่อง',
+          IM({ ...A, stale: true }, { root: 'C:/proj-a', json: false }) === false);
+    check('W1-1: ไม่มีของถืออยู่ = ใช้ไม่ได้', IM(null, { root: 'C:/proj-a', json: false }) === false);
+    check('W1-1: json ที่เป็น undefined เทียบเท่า false', IM({ root: 'C:/p', stale: false }, { root: 'C:/p', json: false }) === true);
+  }
+
+  const idxS = new SearchIndex().build([{ id: 'a', path: 'a.md', title: 'x', body: 'หนึ่ง\nสอง qqz\nqqz สาม' }]);
+  const mS = idxS.search('qqz')[0].matches[0];
+  check('search: match มี len ของ token ที่เจอ', mS.len === 3 && mS.line === 2, JSON.stringify(mS));
+
+  console.log(`\nsearch-engine: ${pass} ผ่าน, ${fail} ล้มเหลว  [build ${buildMs}ms · search ${searchMs}ms]`);
+  console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
+  process.exit(fail === 0 ? 0 : 1);
+})();

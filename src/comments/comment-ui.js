@@ -8,6 +8,7 @@ import { CommentStore, countComments, openComments, reanchorAll, writeMdKeepingC
 import { setCommentAnchors, refreshCommentAnchors } from '../editor.js';
 import { TextSelection } from 'prosemirror-state';
 import { gi } from '../icons.js';
+import { fmtDateTime } from '../locale.js';
 
 // ───────── store (ตัวเดียวทั้งแอป — io = kapi) ─────────
 let _store = null;
@@ -33,9 +34,9 @@ export function resetCommentStore() { _store = null; }
  * ช่องว่างท้ายไฟล์ทิ้ง (ไฟล์ทุกไฟล์จะถูกแก้ท้ายไฟล์ทุกครั้งที่บันทึก แม้ไม่มีคอมเมนต์เลย)
  * @returns {Promise<boolean>} true = ไฟล์นี้มีคอมเมนต์อยู่จริง
  */
-export async function writeKeepingComments(path, fullText) {
+export async function writeKeepingComments(path, fullText, fromPath = null) {
   // [alpha.159] ตรรกะอยู่ใน comment-core (บริสุทธิ์) — ai-actions ใช้ตัวเดียวกันโดยไม่ต้องลาก UI เข้ามา
-  return writeMdKeepingComments(kapi, path, fullText);
+  return writeMdKeepingComments(kapi, path, fullText, fromPath);
 }
 
 // ───────── ไฟล์ฉากที่กำลังโฟกัส ─────────
@@ -99,7 +100,7 @@ export async function selectionAnchor() {
 }
 
 // ───────── วาดแผง ─────────
-const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }); } catch { return ''; } };
+const fmtWhen = (iso) => fmtDateTime(iso, { dateStyle: 'short', timeStyle: 'short' });
 
 /**
  * วาดแผงคอมเมนต์ลง host (`#comments-body`)

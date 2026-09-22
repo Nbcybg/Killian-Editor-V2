@@ -9,6 +9,7 @@
 // ส่วนที่แตะ DOM มีเฉพาะ renderPageView() ซึ่งรับ host element มาจากผู้เรียก
 
 import { t, tf } from './i18n.js';
+import { gi } from './icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { paginate, mergeSpFormat, textWidth, wrapLines, CHARS_PER_INCH, LINE_HEIGHT_IN,
          linesPerPage, pageNumberLabel, lineHeightIn, formatLines,
          clampLineHeight, blockDocPos, isMidBlock, elementIndentIn } from './sp-format.js';
@@ -175,7 +176,7 @@ export function viewScale(mode, containerW, pageW, gap = 20) {
 export function lineEndingType(text, widthIn) {
   return wrapLines(text, widthIn) > 1 ? 'soft' : 'hard';
 }
-export const LINE_MARK = { hard: '¶', soft: '·' };
+export const LINE_MARK = { hard: gi('pilcrow'), soft: '·' };
 
 // ───────── บล็อกจากเอกสาร ProseMirror (ใช้กับทั้ง 57/59/60/78) ─────────
 /**
@@ -363,8 +364,11 @@ export function renderPageView(host, pages, fmt, opts = {}) {
     if (hdrRows && hdrRows.length) {
       const hd = document.createElement('div');
       hd.className = 'sp-hdr';
-      hd.style.cssText = 'position:relative;height:1em;white-space:nowrap;'
-        + 'margin:0 0 ' + Math.max(0, num(opts.headerGapLines, 1)) + 'em 0';
+      // [alpha.160 · P1-16] ความสูงหนึ่งบรรทัด = บรรทัดของบท (`lineHeightIn` = --sp-line-h) ไม่ใช่ `1em`
+      // ตั้งช่วงบรรทัดบท ≠ 1 แล้วหัวกระดาษในตัวอย่างกินที่ไม่เท่ากับที่ linesForBody() หักในไฟล์จริง
+      const lnIn = lineHeightIn(f);
+      hd.style.cssText = 'position:relative;height:' + cssIn(lnIn) + ';line-height:' + cssIn(lnIn) + ';white-space:nowrap;'
+        + 'margin:0 0 ' + cssIn(lnIn * Math.max(0, num(opts.headerGapLines, 1))) + ' 0';
       for (const r of hdrRows) {
         const sp = document.createElement('span');
         const side = r.align === 'right' ? 'right' : r.align === 'center' ? 'center' : 'left';

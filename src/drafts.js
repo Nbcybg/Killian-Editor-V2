@@ -3,6 +3,7 @@ import { t, tf } from './i18n.js';
 import { setStatus, state, logAction } from './core.js';
 import { confirmBox, ask } from './ui.js';
 import { mutateJson } from './json-store.js';   // [alpha.159 · M1] section.json แก้ผ่านคิว
+import { regenDraftIds } from './tree-item-meta.js';   // [alpha.160 · P0-5]
 
 /**
  * รายชื่อร่างในเล่ม
@@ -26,13 +27,20 @@ export async function listDraftsForSection(secPath) {
 
 /**
  * ก๊อบเนื้อหาร่าง (ใช้เมื่อ kapi.copyDir ไม่มี)
+ * [alpha.160 · P0-5] ★ ต้องสร้าง guid ของบท/id ของฉาก **ใหม่** (`regenDraftIds` ตัวเดียวกับทำสำเนาเล่ม)
+ * เดิมก๊อป draft.json/scenes.json ตรง ๆ → สองร่างใช้ id ชุดเดียวกัน = สถานะยุบต้นไม้ · หมุด · คีย์ของแผง
+ * Navigation · ทางเลือกแตกสาย ชี้ข้ามร่างมั่ว · และพาไฟล์คู่ข้างฉาก (`_vis.csv`) ไปด้วย (เดิมก๊อปแค่ .md)
+ * @param {() => string} [newId] ตัวสร้าง id (เทสส่งตัวที่คาดเดาได้เข้ามา)
  */
-async function copyDraftContents(src, dst) {
+export async function copyDraftContents(src, dst, newId = null) {
+  if (!newId) newId = (await import('./app.js')).guid;
   await kapi.mkdir(dst);
-  const df = JSON.parse(await kapi.readFile(await kapi.join(src, 'draft.json')));
+  const df0 = JSON.parse(await kapi.readFile(await kapi.join(src, 'draft.json')));
+  let sf0 = { chapters: {} };
+  try { sf0 = JSON.parse(await kapi.readFile(await kapi.join(src, 'scenes.json'))); } catch {}
+  const { draft: df, scenes: sf } = regenDraftIds(df0, sf0, newId);
   await kapi.writeFile(await kapi.join(dst, 'draft.json'), JSON.stringify(df, null, 2));
-  const sf = await kapi.readFile(await kapi.join(src, 'scenes.json'));
-  await kapi.writeFile(await kapi.join(dst, 'scenes.json'), sf);
+  await kapi.writeFile(await kapi.join(dst, 'scenes.json'), JSON.stringify(sf, null, 2));
   const chSrc = await kapi.join(src, 'Chapters');
   if (!(await kapi.exists(chSrc))) return;
   await kapi.mkdir(await kapi.join(dst, 'Chapters'));
@@ -41,7 +49,8 @@ async function copyDraftContents(src, dst) {
     if (!(await kapi.exists(from))) continue;
     const to = await kapi.join(dst, 'Chapters', ch.folderName);
     await kapi.mkdir(to);
-    for (const f of await kapi.listFiles(from, '.md')) {
+    for (const f of await kapi.listFiles(from, '')) {
+      if (!/\.(md|csv)$/i.test(f)) continue;
       await kapi.writeFile(await kapi.join(to, f), await kapi.readFile(await kapi.join(from, f)));
     }
   }
@@ -86,7 +95,8 @@ export async function deleteDraft(secPath, name) {
   // [alpha.159 · H3] ปิดแท็บของฉากในร่างนี้ก่อนย้าย (บันทึกงานค้างลงไฟล์ก่อน — ถังได้ของล่าสุด)
   // เดิมไม่ปิดเลย → บันทึกอัตโนมัติเขียนกลับที่เดิม = โฟลเดอร์ร่างที่ลบไปแล้วเกิดใหม่เป็นโฟลเดอร์ผี
   const { closeTabsUnderPath } = await import('./app.js');
-  await closeTabsUnderPath(dPath, { save: true });
+  // [alpha.160 · P0-3] มีแท็บที่บันทึกไม่ผ่าน = ไม่ลบ
+  if (!(await closeTabsUnderPath(dPath, { save: true })).ok) { setStatus(tf('ui.app.moveCancelledUnsaved', name)); return false; }
   await kapi.move(dPath, recycle);
   logAction('draft', t('ui.drafts.delDraft') + ': ' + name, { from: dPath, trash: recycle });
   return true;
@@ -100,7 +110,7 @@ export async function renameDraft(secPath, oldName, newName) {
   // [alpha.159 · H3] แท็บที่เปิดค้างใต้ชื่อเดิมต้องปิด (บันทึกก่อน) — ไม่งั้นบันทึกครั้งถัดไปเขียนกลับ
   // ที่ path เก่า = ร่างชื่อเดิม "เด้งกลับมา" · และประวัติเวอร์ชันต้องย้ายตาม (กฎ alpha.156)
   const { closeTabsUnderPath, moveSnapshots } = await import('./app.js');
-  await closeTabsUnderPath(oldPath, { save: true });
+  if (!(await closeTabsUnderPath(oldPath, { save: true })).ok) { setStatus(tf('ui.app.moveCancelledUnsaved', oldName)); return false; }   // [alpha.160 · P0-3]
   await kapi.move(oldPath, newPath);
   await moveSnapshots(oldPath, newPath);
   logAction('draft', tf('ui.drafts.renameDraftTo', oldName, newName), { secPath });

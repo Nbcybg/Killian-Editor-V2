@@ -160,9 +160,10 @@ export function quoteAt(text, start, end) { return String(text || '').slice(star
  * — `writeFile(dumpMdFile(meta, body))` ตรง ๆ = ลบบล็อก `k2-comments` ทิ้งถาวร
  * @returns {Promise<boolean>} true = มีคอมเมนต์ที่ถูกพาไปด้วย
  */
-export async function writeMdKeepingComments(io, path, fullText) {
+export async function writeMdKeepingComments(io, path, fullText, fromPath = null) {
+  // [alpha.160 · P0-1] `fromPath` = ย้าย/คัดลอกไฟล์ (โน้ต↔บท · สำเนาโน้ต) — เธรดมาจากไฟล์ต้นทาง ไม่ใช่ปลายทาง
   let raw = '';
-  try { raw = (await io.readFile(path)) || ''; } catch { raw = ''; }
+  try { raw = (await io.readFile(fromPath || path)) || ''; } catch { raw = ''; }
   const comments = parseComments(raw);
   // ไม่มีคอมเมนต์ = เขียนตัวต่อตัว (ไม่แตะท้ายไฟล์) — พฤติกรรมเดิมของ writeKeepingComments ทุกไบต์
   if (!comments.length) { await io.writeFile(path, fullText); return false; }

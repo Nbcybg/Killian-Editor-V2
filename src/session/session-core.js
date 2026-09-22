@@ -23,7 +23,7 @@ export function newSession(root = '') {
     v: SESSION_VERSION,
     root: String(root || ''),
     ts: 0,
-    tabs: { open: [], active: '', scroll: {}, cursor: {} },
+    tabs: { open: [], active: '', scroll: {}, cursor: {}, pinned: [] },
     panels: { layout: null, homes: null, workspaces: null, hidden: '' },
     split: null,
     ui: {},
@@ -54,6 +54,9 @@ export function migrateSession(raw) {
       if (Array.isArray(v) && v.length === 2 && v.every((n) => Number.isInteger(n) && n >= 0)) s.tabs.cursor[f] = [v[0], v[1]];
     }
   }
+  // [alpha.162 · W4 ข้อ 11] แท็บที่ปักหมุด — ต้องเป็นแท็บที่เปิดอยู่จริงเท่านั้น
+  s.tabs.pinned = Array.isArray(t.pinned)
+    ? [...new Set(t.pinned.filter((x) => typeof x === 'string' && s.tabs.open.includes(x)))] : [];
   // แท็บที่ active ต้องอยู่ในรายการที่เปิดด้วย (ไม่งั้นกู้แล้วชี้ไปไฟล์ที่ไม่ได้เปิด)
   if (s.tabs.active && !s.tabs.open.includes(s.tabs.active)) s.tabs.active = '';
 
@@ -157,6 +160,7 @@ export function pruneTabs(s, existsList) {
   const cursor = {};
   for (const f of x.tabs.open) if (x.tabs.cursor[f]) cursor[f] = x.tabs.cursor[f];
   x.tabs.cursor = cursor;
+  x.tabs.pinned = x.tabs.pinned.filter((f) => keep.has(f));   // [alpha.162 · W4 ข้อ 11]
   if (!x.tabs.open.includes(x.tabs.active)) x.tabs.active = x.tabs.open[0] || '';
   return x;
 }

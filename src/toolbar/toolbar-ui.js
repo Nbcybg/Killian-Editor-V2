@@ -16,7 +16,8 @@ import { t as tt, tf as ttf } from '../i18n.js';
 import { $, el, state, setStatus } from '../core.js';
 import * as TC from './toolbar-config.js';
 import * as FB from './fab-config.js';
-import { gi } from '../icons.js';
+import { gi, icon } from '../icons.js';
+import { popupMenu } from '../ui.js';
 
 /** ปุ่มจริงบนแถบ (หรือ null ถ้าไม่มี) */
 const btn = (id) => document.getElementById(id);
@@ -49,8 +50,15 @@ export const TB_FMT_HOST = '.k-fmtbar:not(.planner-fmtbar)';
 
 export const TB_HOSTS = ['#toolbar', TB_FMT_HOST];
 
-/** แถบที่ `settings.toolbar` (ก้อนรวม) คุม — **ไม่รวมแถบลอย** ตั้งแต่ alpha.111 */
-export const TB_MAIN_HOSTS = ['#toolbar'];
+/**
+ * แถบที่ `settings.toolbar` (ก้อนรวม) คุม — **ไม่รวมแถบลอย** ตั้งแต่ alpha.111
+ *
+ * [alpha.162 · W2] ★ เพิ่ม `.k-side-toggles` — กลุ่ม `layout` (ปุ่มซ่อนแผงทีละฝั่ง) อยู่ใน
+ * `TOOLBAR_GROUPS` มาตั้งแต่ .157 แต่ปุ่มจริงถูกย้ายไปอยู่บน **แถบชื่อหน้าต่าง** (.157r)
+ * ตัวนี้เดินเฉพาะ `#toolbar` การติ๊กเปิด/ปิดในตั้งค่าจึงไม่มีผลเลย — สวิตช์ที่กดแล้วไม่เกิดอะไร
+ * คือสิ่งที่ผู้ใช้แยกไม่ออกจากบั๊ก · (ซ่อนแล้วยังเปิดคืนได้จาก ตั้งค่า → แถบเครื่องมือ)
+ */
+export const TB_MAIN_HOSTS = ['#toolbar', '.k-side-toggles'];
 
 /** ลำดับจริงของลูกในแถบ → `id` ที่ตั้งค่าได้ · `'sep'` · `null` (ของแถบเอง/ปุ่มที่โปรแกรมคุม) */
 function barSeq(bar) {
@@ -89,7 +97,91 @@ export function applyToolbarConfig(cfg) {
     });
   }
   applyFmtbarConfig();
+  scheduleToolbarOverflow();                   // [alpha.161 · K3] จำนวนปุ่มที่เห็นเปลี่ยน = คิดที่ล้นใหม่
   return found;
+}
+
+// ══════════ [alpha.161 · K3] ปุ่ม "»" ท้ายแถบ: ปุ่มที่ล้นหน้าต่าง + ปุ่มที่ผู้ใช้ซ่อนไว้ ══════════
+// เดิมแถบเลื่อนแนวนอนได้ แต่ไม่มีอะไรบอกว่ามีปุ่มเลยขอบขวาออกไป (หน้าต่างแคบ = ปุ่มท้ายแถบ "หายไป")
+// ตอนนี้: ปุ่มที่ล้นถูกย้ายเข้าเมนู "»" (ตัดจากท้ายแถบ · ปุ่มที่โปรแกรมคุมไม่ถูกย้าย — `overflowPlan`)
+// และเมนูเดียวกันรวมปุ่มที่ผู้ใช้ซ่อนไว้ในตั้งค่า (กดใช้ได้ทันทีโดยไม่ต้องไปเปิดคืนก่อน)
+const OVF = { job: 0, list: [], ro: null };
+function overflowButton(bar) {
+  let b = bar.querySelector(':scope > #tb-overflow');
+  if (!b) {
+    b = el('button', 'tb tb-overflow');
+    b.id = 'tb-overflow';
+    b.type = 'button';
+    b.append(icon('more', 18));
+    b.onclick = (e) => { e.stopPropagation(); openToolbarOverflowMenu(b); };
+  }
+  if (bar.lastElementChild !== b) bar.appendChild(b);   // อยู่ท้ายแถบเสมอ (ตัวแทรกเส้นคั่นอาจต่อท้ายทีหลัง)
+  b.title = tt('ui.toolbar.overflowTitle');
+  b.dataset.tip = 'ui.toolbar.overflowTip';
+  return b;
+}
+/** ปุ่มที่ถูกย้ายเข้าเมนู "»" ตอนนี้ (id ตามลำดับบนแถบ) */
+export function toolbarOverflowIds() { return OVF.list.slice(); }
+export function scheduleToolbarOverflow() {
+  if (typeof requestAnimationFrame !== 'function') return;
+  cancelAnimationFrame(OVF.job);
+  OVF.job = requestAnimationFrame(() => { OVF.job = 0; layoutToolbarOverflow(); });
+}
+/** คิดใหม่ว่าปุ่มไหนล้น (เรียกซ้ำได้ · เรียกเองได้จากเทส) */
+export function layoutToolbarOverflow() {
+  const bar = document.querySelector('#toolbar');
+  if (!bar) return [];
+  const ob = overflowButton(bar);
+  if (!OVF.ro && typeof ResizeObserver === 'function') {
+    OVF.ro = new ResizeObserver(() => scheduleToolbarOverflow());
+    OVF.ro.observe(bar);
+  }
+  bar.querySelectorAll(':scope > .tb-ovf').forEach((x) => x.classList.remove('tb-ovf'));
+  const cs = getComputedStyle(bar);
+  const gap = parseFloat(cs.columnGap || cs.gap) || 0;
+  const avail = bar.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)
+              - ob.getBoundingClientRect().width - gap;
+  const kids = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
+  const items = kids.map((k) => ({ id: k.id || '', w: k.getBoundingClientRect().width + gap,
+                                   locked: !k.id || !TC.isConfigurable(k.id) }));
+  const hide = new Set(TC.overflowPlan(items, avail));
+  for (const k of kids) if (k.id && hide.has(k.id)) k.classList.add('tb-ovf');
+  // เส้นคั่นที่เหลือห้อยท้าย/ติดกันหลังย้ายปุ่มออก → ซ่อนตาม
+  const vis = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
+  for (let i = vis.length - 1; i >= 0 && vis[i].classList.contains('sep'); i--) vis[i].classList.add('tb-ovf');
+  OVF.list = [...hide];
+  ob.classList.toggle('has-ovf', OVF.list.length > 0);
+  return OVF.list;
+}
+function btnLabel(b) {
+  return (b.getAttribute('title') || b.getAttribute('aria-label') || b.textContent || b.id || '').split('\n')[0].trim();
+}
+/** รายการในเมนู "»" — ปุ่มที่ล้น · ปุ่มที่ซ่อนไว้ · ปรับแต่งแถบ */
+export function toolbarOverflowItems() {
+  const items = [];
+  const byId = (id) => document.getElementById(id);
+  const mk = (b) => ({ label: btnLabel(b), disabled: b.classList.contains('dis') || b.disabled,
+                        click: () => b.click() });
+  const ovf = OVF.list.map(byId).filter(Boolean);
+  if (ovf.length) {
+    items.push({ label: tt('ui.toolbar.overflowMore'), disabled: true });
+    for (const b of ovf) items.push(mk(b));
+  }
+  const conf = TC.normalizeToolbar(state.settings && state.settings.toolbar);
+  const hid = TC.allButtonIds().filter((id) => conf.hidden[id] && byId(id) && !OVF.list.includes(id)
+    && (byId(id).closest('#toolbar')));
+  if (hid.length) {
+    if (items.length) items.push('-');
+    items.push({ label: tt('ui.toolbar.overflowHidden'), disabled: true });
+    for (const id of hid) items.push(mk(byId(id)));
+  }
+  if (items.length) items.push('-');
+  items.push({ label: tt('ui.tbcfg.customize'), click: () => toolbarDialog() });
+  return items;
+}
+function openToolbarOverflowMenu(btn) {
+  const r = btn.getBoundingClientRect();
+  popupMenu(Math.max(8, r.right - 260), r.bottom + 4, toolbarOverflowItems());
 }
 
 /**

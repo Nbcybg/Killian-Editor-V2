@@ -6,6 +6,7 @@
 // ★ บทเรียนข้อ 12: เทสอ้าง `.wiki-input` / `.wiki-check` "ตามลำดับ" — ช่องใหม่ในไฟล์นี้จึงใช้คลาสของตัวเอง
 //   (`props-act-input` · `props-chapter-select`) ห้ามใช้ `wiki-input` ไม่งั้นทุกเทสที่นับช่องเลื่อนหมด
 import { t, tf } from './i18n.js';
+import { gi } from './icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { el, state, smart, setStatus, log } from './core.js';
 import { mutateJson } from './json-store.js';
 import { parseMdFile } from './md.js';
@@ -116,7 +117,7 @@ export async function buildMentionsBox(host, file) {
       const chip = el('button', 'props-mention-chip');
       chip.type = 'button';
       chip.append(document.createTextNode(it.name));
-      chip.append(el('i', null, '×' + it.count));
+      chip.append(el('i', null, gi('times') + it.count));
       if (it.forms.length > 1) chip.title = it.forms.join(' · ');
       if (it.file) chip.onclick = async () => { const { openEntity } = await import('./wiki-ui.js'); openEntity(it.file); };
       chips.append(chip);

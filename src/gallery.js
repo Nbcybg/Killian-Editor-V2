@@ -10,16 +10,18 @@
 
 import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
+import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { ask, confirmBox, popupMenu, choose, escClose } from './ui.js';
 import { imageLightbox } from './wiki.js';
 import { iconHtml, gi } from './icons.js';
-import { el, setStatus, withBusy } from './core.js';
+import { el, setStatus, setStatusError, withBusy } from './core.js';
 import * as AC from './gallery/album-core.js';
 import * as TG from './gallery/album-tags.js';
 import * as UI from './gallery/usage-index.js';
 import * as IH from './gallery/image-hash.js';
 import { currentAlbum, setCurrentAlbum, onAlbumChange } from './gallery/gallery-bus.js';
 import { dropOnBoard } from './gallery/moodboard-ui.js';
+import { fmtDateTime } from './locale.js';
 
 const { ROOT_ALBUM, ALL_ALBUM, ROOT_ALBUM_NAME } = AC;
 
@@ -243,7 +245,7 @@ export class Gallery {
     board.innerHTML = iconHtml('layout', 13);
     board.title = tt('ui.gallery.openPanelBoardMood');
     board.onclick = () => this.opts.onOpenBoard && this.opts.onOpenBoard();
-    const more = el('button', 'cmp-mini gal2-more', '⋯');
+    const more = el('button', 'cmp-mini gal2-more', gi('more'));
     more.title = tt('ui.gallery.cmdAddFill');
     more.onclick = (e) => this.moreMenu(e);
     btns.append(add, board, refresh, more);
@@ -659,7 +661,7 @@ export class Gallery {
       this.state.album = a.id;
       await this.render();
       setStatus(tt('ui.gallery.newAlbum') + a.id);
-    } catch (err) { setStatus(tt('ui.gallery.newAlbumNotOk') + err.message); }
+    } catch (err) { setStatusError(failText(tt('ui.gallery.newAlbumNotOk'), err)); }
   }
 
   async renameAlbum(id) {
@@ -671,7 +673,7 @@ export class Gallery {
       if (this.state.album === id) this.state.album = r.to;
       await this.render();
       setStatus(tt('ui.gallery.changeNameAlbumDone') + r.to);
-    } catch (err) { setStatus(tt('ui.gallery.changeNameNotOk') + err.message); }
+    } catch (err) { setStatusError(failText(tt('ui.gallery.changeNameNotOk'), err)); }
   }
 
   async moveAlbumTo(id) {
@@ -686,7 +688,7 @@ export class Gallery {
       if (this.state.album === id) this.state.album = r.to;
       await this.render();
       setStatus(tt('ui.gallery.moveAlbumDone') + r.to);
-    } catch (err) { setStatus(tt('ui.gallery.moveNotOk') + err.message); }
+    } catch (err) { setStatusError(failText(tt('ui.gallery.moveNotOk'), err)); }
   }
 
   async deleteAlbum(id) {
@@ -700,7 +702,7 @@ export class Gallery {
       await this.render();
       this.changed();
       setStatus(tt('ui.gallery.moveAlbumTrashDone'));
-    } catch (err) { setStatus(tt('ui.gallery.delNotOk') + err.message); }
+    } catch (err) { setStatusError(failText(tt('ui.gallery.delNotOk'), err)); }
   }
 
   /** อัลบั้มถูกเปลี่ยนชื่อ/ย้าย → ลิงก์ในไฟล์ .md ต้องตามไปด้วย */
@@ -745,7 +747,7 @@ export class Gallery {
           const base64 = btoa(Array.from(buf, (b) => String.fromCharCode(b)).join(''));
           await kapi.writeImageData(dir, f.name, base64);
           n++;
-        } catch (err) { setStatus(tt('ui.gallery.addImageNotOk') + err.message); }
+        } catch (err) { setStatusError(failText(tt('ui.gallery.addImageNotOk'), err)); }
       }
     });
     if (!n) return;
@@ -825,7 +827,7 @@ export class Gallery {
         try {
           const r = await AC.moveImage(kapi, this.root, it.album, dstAlbum, it.file);
           if (r) moved.push(r);
-        } catch (err) { setStatus(tt('ui.gallery.moveNotOk') + err.message); }
+        } catch (err) { setStatusError(failText(tt('ui.gallery.moveNotOk'), err)); }
       }
     });
     if (!moved.length) return;
@@ -869,7 +871,7 @@ export class Gallery {
         const it = this.items.find((x) => x.path === p);
         if (!it) continue;
         try { await AC.deleteImage(kapi, this.root, it.album, it.file); }
-        catch (err) { setStatus(tt('ui.gallery.delNotOk') + err.message); }
+        catch (err) { setStatusError(failText(tt('ui.gallery.delNotOk'), err)); }
       }
     });
     this.state.sel.clear();
@@ -950,10 +952,10 @@ export class Gallery {
       [tt('ui.common.nameFile'), it.file],
       [tt('ui.gallery.album'), it.album === ROOT_ALBUM ? ROOT_ALBUM_NAME : it.album],
       [tt('ui.gallery.library'), 'Images/' + it.path],
-      [tt('ui.gallery.detailed'), dim.w ? `${dim.w} × ${dim.h} px` : '—'],
+      [tt('ui.gallery.detailed'), dim.w ? ttf('ui.common.pxDims', dim.w, dim.h) : '—'],
       [tt('ui.gallery.sizeFile'), AC.formatBytes(st.size)],
-      [tt('ui.gallery.dateAdd'), it.added ? new Date(it.added).toLocaleString('th-TH') : '—'],
-      [tt('ui.gallery.editLatest'), st.mtimeMs ? new Date(st.mtimeMs).toLocaleString('th-TH') : '—'],
+      [tt('ui.gallery.dateAdd'), fmtDateTime(it.added) || '—'],
+      [tt('ui.gallery.editLatest'), fmtDateTime(st.mtimeMs) || '—'],
       [tt('ui.gallery.countTimesUse'), String(it.uses || 0)],
       [tt('ui.common.tag'), (it.tags || []).join(' ') || '—'],
     ];
@@ -1170,7 +1172,7 @@ export function pickImage(root, { album = null } = {}) {
     box.append(body);
     const btns = el('div', 'k-dlg-btns');
     const addB = el('button', null, tt('ui.gallery.addImageNew'));
-    const cancel = el('button', null, tt('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', tt('ui.common.cancel'));
     btns.append(addB, cancel);
     box.append(btns);
     ov.append(box);

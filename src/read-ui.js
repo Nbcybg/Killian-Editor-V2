@@ -23,9 +23,10 @@ import { el, log, setStatus, state, withBusy } from './core.js';
 import { escapeHtml, mdToHtmlBody } from './compile.js';
 import { projectImageUrl } from './file-url.js';
 import { mergeProseFormat, proseExportCss } from './prose-format.js';
+import { liveProseFonts } from './live-fonts.js';   // [alpha.160 · P1-8]
 import { pageNumberLabel } from './sp-format.js';
 import { DPI, measureProseBlocks, renderProseClipPages, sliceProsePages, withMeasureMode,
-         whenImagesReady } from './prose-measure.js';
+         whenImagesReady, afterLateImages } from './prose-measure.js';
 import { XPV_CLASS, XPV_SEL, scopeCss } from './prose-export-view.js';
 import { bookParts, coverPagesOf, isCoverPart, pageIndexOfY, printedPageNumber,
          projectParts, startPageMap } from './book-flow.js';
@@ -33,6 +34,7 @@ import { listSections } from './section-ops.js';
 import { listDraftsForSection } from './drafts.js';
 import { buildDraftModel, proseFormat, spFormat } from './app.js';
 import { gi } from './icons.js';
+import { createEpoch, runFresh } from './epoch-guard.js';   // [alpha.161 · C1]
 
 // ───────────────────────── เก็บเนื้อหาของเล่ม ─────────────────────────
 
@@ -157,7 +159,9 @@ export async function buildBookDoc(books) {
     p.imageUrl = await coverUrl(p.image, b ? b.secPath : state.root);
   }
   const html = parts.map((p, i) => partHtml(p, i === 0)).join('\n');
-  const css = proseExportCss(mergeProseFormat(pf), paper, margins) + '\n' + readerCss(contentH);
+  // [alpha.160 · P1-8] ★ วัดหน้าด้วยฟอนต์ **ตัวเดียวกับจอ** — เดิมไม่ส่งสแตกเลย → ตกไปฟอนต์ตาม proseFormat
+  // (ไม่ใช่ `--ed-font` = withLangFamily(settings.fontFamily…) ที่ตัวแก้ไขใช้) = เลขหน้าไล่ต่อเนื่องเพี้ยน
+  const css = proseExportCss(mergeProseFormat(pf), paper, margins, liveProseFonts()) + '\n' + readerCss(contentH);
   return { html, css, parts, contentH, paper, margins };
 }
 
@@ -174,7 +178,7 @@ const waitImages = (root, ms = 2500) => whenImagesReady(root, ms) || Promise.res
  * โคลนจากมันทีละหน้า — ถอดออกจาก DOM ก่อน = ไม่มีอะไรให้โคลน
  * @returns {Promise<{meas:HTMLElement, styleEl:HTMLElement, pages:Array, parts:Array, dispose:Function}>}
  */
-export async function measureBookDoc(doc) {
+export async function measureBookDoc(doc, opts = {}) {
   const styleEl = document.createElement('style');
   styleEl.textContent = scopeCss(doc.css, XPV_SEL);
   document.head.append(styleEl);
@@ -198,7 +202,8 @@ export async function measureBookDoc(doc) {
       for (let k = 0; k < n && i < kids.length; k++, i++) kids[i].dataset.k2part = String(pi);
     }
   }
-  await waitImages(meas);
+  // [alpha.160] ผู้เรียกเบื้องหลัง (ตัวไล่เลขหน้า) รอรูปได้นานกว่า — ไม่มีใครนั่งรอหน้าจออยู่
+  await waitImages(meas, opts.imgWaitMs || 2500);
 
   let pages = [];
   let blocks = [];
@@ -240,23 +245,50 @@ export async function measureBookDoc(doc) {
 
 // ───────────────────────── แคชสายหน้า (ตัวไล่เลขหน้าใช้) ─────────────────────────
 
-const flowCache = { key: '', ready: false, map: new Map(), busy: null, epoch: 0 };
+// [alpha.160 · P1-12] ★ แคช "ต่อเล่ม" — เดิมเก็บได้เล่มเดียว (`key`/`map` ตัวเดียว) → เปิดฉากของสองเล่มสลับกัน
+// วัดเล่มสองแล้วตารางของเล่มหนึ่งหาย → แท็บเล่มหนึ่งกลับไปขึ้นหน้า 1 แล้วสั่งวัดใหม่ วนแย่งแคชกันไปมา
+const flowCache = { byKey: new Map(), busy: new Map(), stale: new Map(), epoch: createEpoch() };
+// byKey = ผลที่ "สด" (secPath → Map(file → page)) · busy = งานที่กำลังวัด (secPath → Promise)
+// [alpha.161 · C1] stale = ผลที่วัดเสร็จแต่ข้อมูลเปลี่ยนระหว่างวัด — ใช้โชว์ชั่วคราวได้ **แต่ไม่นับว่าพร้อม**
+// (เดิม `epoch` ถูกเขียนแต่ไม่มีใครอ่าน: งานที่เริ่มก่อน bumpBookFlow() แล้วเสร็จทีหลังถูกเก็บถาวร
+//  → บันทึกฉากระหว่างวัด = เลขหน้าของฉากถัด ๆ ไปค้างค่าก่อนบันทึกจนกว่าจะมีอะไรล้างแคชอีกรอบ)
+const FLOW_MAX_ROUNDS = 3;
 
 /**
  * ทิ้งแคชสายหน้า — เรียกเมื่อเนื้อหา/รูปแบบหน้าเปลี่ยน (บันทึกฉาก · เปลี่ยนฟอนต์/ขอบ/ขนาดกระดาษ
- * · ติ๊กปกบท · ย้ายลำดับบท) · **ธง `ready` ไม่ใช่ `map.size`** — เล่มที่ยังไม่มีฉากเลยคืนตาราง
+ * · ติ๊กปกบท · ย้ายลำดับบท) · **"มีคีย์" ไม่ใช่ `map.size`** — เล่มที่ยังไม่มีฉากเลยคืนตาราง
  * ว่างอย่างถูกต้อง ถ้าใช้ขนาดตารางเป็นตัวตัดสิน มันจะไล่คำนวณใหม่ทุกครั้งที่วาดหน้า
  */
 export function bumpBookFlow() {
-  flowCache.key = ''; flowCache.ready = false; flowCache.map = new Map(); flowCache.epoch++;
+  flowCache.byKey = new Map(); flowCache.epoch.bump();
 }
-/** เล่มที่คำนวณสายหน้าไว้แล้ว (คืน '' = ยังไม่ได้คำนวณ) — e2e/ตัวเรียกใช้เช็คได้ */
-export const bookFlowKey = () => (flowCache.ready ? flowCache.key : '');
+/** [alpha.161 · C1] รุ่นของข้อมูลสายหน้า (เทส/วินิจฉัย) */
+export const bookFlowEpoch = () => flowCache.epoch.value;
+/** เล่มนี้คำนวณสายหน้าไว้แล้วหรือยัง — **เฉพาะผลที่สด** (ผลที่ล้าสมัยระหว่างวัด = ยังไม่พร้อม) */
+export const bookFlowReady = (secPath) => flowCache.byKey.has(String(secPath || ''));
+/** เล่มที่คำนวณไว้ล่าสุด (คืน '' = ยังไม่มี) — คงไว้ให้ตัวเรียกเดิม/เทส */
+export const bookFlowKey = () => { const k = [...flowCache.byKey.keys()]; return k.length ? k[k.length - 1] : ''; };
 
-/** เลขหน้าเริ่มต้นของไฟล์ฉาก (จากแคช) — ไม่มีในแคช = null (ผู้เรียกตกกลับไปที่ 1) */
+/** เลขหน้าเริ่มต้นของไฟล์ฉาก (จากแคชที่สดของทุกเล่ม) — ไม่มีในแคช = null (ผู้เรียกตกกลับไปที่ 1) */
 export function cachedStartPage(file) {
-  const v = flowCache.map.get(String(file || ''));
-  return Number.isFinite(v) ? v : null;
+  const f = String(file || '');
+  for (const map of flowCache.byKey.values()) {
+    const v = map.get(f);
+    if (Number.isFinite(v)) return v;
+  }
+  return null;
+}
+/**
+ * [alpha.161 · C1] เลขหน้าจากผลที่ "ล้าสมัยแล้ว" — ใช้โชว์ระหว่างรอวัดใหม่เท่านั้น (ผู้เรียกต้องสั่งวัดใหม่เอง)
+ * @returns {number|null}
+ */
+export function staleStartPage(file) {
+  const f = String(file || '');
+  for (const map of flowCache.stale.values()) {
+    const v = map.get(f);
+    if (Number.isFinite(v)) return v;
+  }
+  return null;
 }
 
 /**
@@ -266,24 +298,34 @@ export function cachedStartPage(file) {
  */
 export async function computeBookFlow(secPath) {
   const key = String(secPath || '');
-  if (flowCache.ready && flowCache.key === key) return flowCache.map;
-  if (flowCache.busy) {
-    try { await flowCache.busy; } catch {}
-    if (flowCache.ready && flowCache.key === key) return flowCache.map;
-  }
-  const job = (async () => {
+  if (flowCache.byKey.has(key)) return flowCache.byKey.get(key);
+  if (flowCache.busy.has(key)) return flowCache.busy.get(key);
+  // [alpha.161 · C1] ★ จับรุ่นข้อมูลก่อนอ่าน · ข้อมูลเปลี่ยนระหว่างวัด = วัดใหม่ทันที (ไม่เกิน FLOW_MAX_ROUNDS รอบ)
+  // ครบเพดานแล้วยังเปลี่ยน → เก็บเป็น "ใช้ชั่วคราว" (stale) **ไม่ใช่ของสด** — bookFlowReady() คืน false
+  // ผู้เรียก (ensureBookFlow) สั่งวัดใหม่แบบหน่วงเวลา + มีเพดาน จึงไม่วนวัดทั้งเล่มรัว ๆ (ปัญหาเดิมของ alpha.160)
+  const measureOnce = async () => {
     const books = await collectBooks(key);
     if (!books.length) return new Map();
     const doc = await buildBookDoc(books);
-    const mz = await measureBookDoc(doc);
-    try { return startPageMap(mz.parts); } finally { mz.dispose(); }
-  })();
-  flowCache.busy = job;
-  try {
-    const map = await job;
-    flowCache.key = key; flowCache.map = map; flowCache.ready = true;
+    // [alpha.160] วัดเบื้องหลัง = รอรูปได้ถึง 20 วินาที (เดิม 2.5 วินาทีแล้ววัดตอนรูปยังสูง 0 → เลขหน้าเลื่อนทั้งเล่ม)
+    const mz = await measureBookDoc(doc, { imgWaitMs: 20000 });
+    let map;
+    try { map = startPageMap(mz.parts); } finally { mz.dispose(); }
+    // จุดพักของ e2e (เหมือน window.__k2conflictChoice) — เทสแก้ไฟล์ "หลังวัดรอบนี้เสร็จ แต่ก่อนเก็บผล" ได้แน่นอน
+    // ไม่ต้องเดาจังหวะ · ไม่ได้ตั้ง = ไม่มีผลใด ๆ
+    if (typeof window !== 'undefined' && typeof window.__k2flowHold === 'function') await window.__k2flowHold();
     return map;
-  } finally { flowCache.busy = null; }
+  };
+  const job = runFresh(flowCache.epoch, measureOnce, { maxRounds: FLOW_MAX_ROUNDS });
+  const busyP = job.then((r) => r.value);
+  busyP.catch(() => {});                                   // ผู้รอเห็น error เอง · กัน unhandled ตอนไม่มีใครรอ
+  flowCache.busy.set(key, busyP);
+  try {
+    const { value: map, fresh } = await job;
+    if (fresh) { flowCache.byKey.set(key, map); flowCache.stale.delete(key); }
+    else flowCache.stale.set(key, map);
+    return map;
+  } finally { flowCache.busy.delete(key); }
 }
 
 // ───────────────────────── โหมดอ่านทั้งเล่ม (โอเวอร์เลย์) ─────────────────────────
@@ -419,9 +461,9 @@ export async function openBookReader(secPath = '', opts = {}) {
     drawSpread();
   });
   colsBtn.title = t('ui.readbook.spreadTo1');       // ตอนนี้สองหน้า → กดแล้วเป็นหน้าเดียว
-  mkBtn('k-rd-zoomout', '−', t('ui.readbook.zoomOut'), () => { RD.zoom = Math.max(0.4, RD.zoom - 0.1); drawSpread(); });
+  mkBtn('k-rd-zoomout', gi('minus'), t('ui.readbook.zoomOut'), () => { RD.zoom = Math.max(0.4, RD.zoom - 0.1); drawSpread(); });
   mkBtn('k-rd-zoomin', '+', t('ui.readbook.zoomIn'), () => { RD.zoom = Math.min(2.5, RD.zoom + 0.1); drawSpread(); });
-  mkBtn('k-rd-fit', '⤢', t('ui.readbook.fit'), () => { RD.zoom = 1; drawSpread(); });
+  mkBtn('k-rd-fit', gi('maximize'), t('ui.readbook.fit'), () => { RD.zoom = 1; drawSpread(); });
   mkBtn('k-rd-close k-danger', gi('close'), t('ui.readbook.close'), () => closeBookReader());
 
   const stage = el('div', 'k-rd-stage sp-pageview');
@@ -486,6 +528,18 @@ export async function openBookReader(secPath = '', opts = {}) {
     ? tf('ui.readbook.titleOf', RD.books[0].title) : t('ui.readbook.title');
   RD.page = 1;
   drawSpread();
+  // [alpha.160] รูปที่มาช้ากว่าเวลารอใน measureBookDoc → วัดทั้งเล่มใหม่เมื่อมาครบ
+  // (เดิมวัดครั้งเดียวตอนรูปยังสูง 0 = หน้าเหลื่อมทั้งเล่มค้างอยู่อย่างนั้นจนกว่าจะปิด-เปิดใหม่)
+  const mz0 = RD.mz;
+  RD.late = afterLateImages(mz0.meas, async () => {
+    if (!RD.ov || RD.mz !== mz0) return;
+    const next = await measureBookDoc(RD.doc);
+    if (!RD.ov || RD.mz !== mz0) { next.dispose(); return; }
+    mz0.dispose();
+    RD.mz = next;
+    RD.page = Math.min(RD.page, pageCount());
+    drawSpread();
+  });
   setStatus(t('ui.readbook.opened'));
   return true;
 }

@@ -499,7 +499,7 @@ export function scenarioDialog(ctx, sc, rows) {
     }
 
     const foot = el('div', 'k-dlg-foot');
-    const cancel = el('button', null, t('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', t('ui.common.cancel'));
     cancel.onclick = () => done(false);
     const ok = el('button', 'k-ok', t('ui.common.msg3'));
     ok.onclick = () => {

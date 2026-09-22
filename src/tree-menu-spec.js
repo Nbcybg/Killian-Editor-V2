@@ -16,7 +16,9 @@ export const TREE_MENU_SPEC = {
     'quickOpen', 'searchProject', 'dashboard', 'kanban', 'journal', '-',
     'play', 'playerHistory', '-',
     'branchPanel', '-',
-    'projectSettings', 'aiSettings', 'reveal',
+    'projectSettings', 'aiSettings', 'reveal', 'copyPath', '-',
+    // [alpha.162 · W4 ข้อ 10] ผู้ใช้ขอเพิ่ม: กาง/พับทั้งหมด · รีเฟรช (เมนูพื้นที่ว่างใช้ชุดนี้)
+    'expandAll', 'collapseAll', 'refresh',
   ],
   // 1. เล่ม
   book: [
@@ -26,7 +28,7 @@ export const TREE_MENU_SPEC = {
     // [alpha.159] ผู้ใช้: "เพิ่ม click ขวาที่เล่ม … cast of character กับ title page ต้องใส่"
     'castOfCharacters', 'titlePage', '-',
     'quickNote', 'viewQuickNotes', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
     'lock', 'backup', 'restore', '-',
     'delete',
@@ -36,7 +38,7 @@ export const TREE_MENU_SPEC = {
     'addChapter', 'bookFromChapter', 'visual', 'rename', 'reorder', '-',
     'addScene', 'copy', 'paste', 'duplicate', 'move', 'star', '-',
     'manageChapters', 'manageScenes', 'searchIn', 'readChapter', 'readBook', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
     'lock', 'backup', 'restore', '-',
     'delete',
@@ -46,7 +48,7 @@ export const TREE_MENU_SPEC = {
     'open', 'addScene', 'addChapter', 'chapterFromScenes', 'rename', 'reorder', 'switchFormat', '-',
     'copy', 'paste', 'duplicate', 'moveUp', 'moveDown', 'move', 'star', '-',
     'quickNote', 'comment', 'readScene', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
     'saveVersion', 'versionHistory', 'compareVersion', '-',
     'splitView', 'toMemo', '-',
@@ -60,7 +62,7 @@ export const TREE_MENU_SPEC = {
     'open', 'addMemo', 'sceneFromMemo', 'rename', '-',
     'copy', 'paste', 'duplicate', 'moveUp', 'moveDown', 'move', 'star', '-',
     'quickNote', 'comment', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
     'saveVersion', 'versionHistory', 'compareVersion', '-',
     'splitView', '-',
@@ -73,7 +75,7 @@ export const TREE_MENU_SPEC = {
   image: [
     'view', 'insert', 'rename', '-',
     'copy', 'paste', 'duplicate', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'delete',
   ],
   // 3. planner (หัวหมวด)
@@ -82,7 +84,7 @@ export const TREE_MENU_SPEC = {
   board: [
     'open', 'addBoard', 'rename', '-',
     'copy', 'paste', 'duplicate', 'star', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
     'lock', '-',
     'delete',
@@ -93,7 +95,7 @@ export const TREE_MENU_SPEC = {
   plan: [
     'open', 'addPlan', 'rename', '-',
     'copy', 'paste', 'duplicate', 'star', '-',
-    'propsPopup', 'propsPanel', 'reveal', '-',
+    'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
     'compare', 'lock', '-',
     'delete',

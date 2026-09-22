@@ -2,8 +2,9 @@
 //   · ส่งออกอัลบั้ม / รูปที่เลือก / เฉพาะรูปที่ถูกใช้จริง → .zip (ไบต์ดิบ ไม่ผ่าน utf-8)
 //   · ส่งออกกระดานอารมณ์เป็นภาพรวมใบเดียว → .png (วาดบน canvas ตามพิกัดบนกระดาน)
 import { t, tf } from '../i18n.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import JSZip from 'jszip';
-import { setStatus, log, setBusy, clearBusy } from '../core.js';
+import { setStatus, setStatusError, log, setBusy, clearBusy } from '../core.js';
 import * as AC from './album-core.js';
 import * as MB from './moodboard.js';
 import { usageOf } from './usage-index.js';
@@ -56,7 +57,7 @@ export async function exportImages(root, items, { name = t('ui.galleryExport.lib
     return true;
   } catch (e) {
     log('error', 'gallery-export failed', e);
-    setStatus(t('ui.galleryExport.exportImageFail') + e.message);
+    setStatusError(failText(t('ui.galleryExport.exportImageFail'), e));
     return false;
   } finally { clearBusy(); }
 }
@@ -114,7 +115,7 @@ export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1
     return true;
   } catch (e) {
     log('error', 'moodboard export failed', e);
-    setStatus(t('ui.galleryExport.exportBoardFail') + e.message);
+    setStatusError(failText(t('ui.galleryExport.exportBoardFail'), e));
     return false;
   } finally { clearBusy(); }
 }

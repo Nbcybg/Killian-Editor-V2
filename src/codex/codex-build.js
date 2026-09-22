@@ -11,6 +11,7 @@
 
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
+import { cmpText } from '../locale.js';
 export const CODEX_VERSION = 1;
 
 /** หมวดมาตรฐาน → ชื่อไทย (หมวดที่ผู้ใช้สร้างเองใช้ชื่อของตัวเอง) */
@@ -209,7 +210,7 @@ export function categoryPage(cat, entities, ctx) {
  */
 export function buildCodexSite(entities, opts = {}) {
   const list = (entities || []).filter((e) => e && e.name)
-    .slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'));
+    .slice().sort((a, b) => cmpText(String(a.name), String(b.name)));
   const pages = assignPages(list);
   const cats = [...new Set(list.map((e) => e.cat))];
   const labels = opts.labels || {};

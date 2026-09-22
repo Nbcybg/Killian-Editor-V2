@@ -8,6 +8,7 @@ import { el } from './core.js';
 import { confirmBox, escClose } from './ui.js';
 import JSZip from 'jszip';
 import { gi } from './icons.js';
+import { errText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 
 // [62-66] ตารางนำเข้าทั้ง 5 รูปแบบ — name/ext ใช้ใน UI · parse รับ content (string|Uint8Array)
 export const SP_IMPORTERS = {
@@ -83,7 +84,7 @@ function importPreviewDialog({ filePath, result, summary, markdown }) {
     bNew.onclick = () => done('new');
     const bRep = el('button', 'k-danger', t('ui.importSp.replaceTab'));
     bRep.onclick = () => done('replace');
-    const bCancel = el('button', null, t('ui.common.cancel'));
+    const bCancel = el('button', 'k-cancel', t('ui.common.cancel'));
     bCancel.onclick = () => done(null);
     btns.append(bCancel, bRep, bNew);
     box.append(btns);
@@ -122,14 +123,14 @@ export async function importScreenplay(filePath, format) {
       content = await kapi.readFile(filePath);
     }
   } catch (e) {
-    return { ok: false, error: t('ui.importSp.readFileNotOk') + e.message };
+    return { ok: false, error: t('ui.importSp.readFileNotOk') + errText(e) };
   }
 
   try {
     const elements = await importer.parse(content);
     return { ok: true, elements, format, importer: importer.name };
   } catch (e) {
-    return { ok: false, error: e.message || String(e) };
+    return { ok: false, error: errText(e) };
   }
 }
 

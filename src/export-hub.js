@@ -20,14 +20,15 @@
 // ส่วนบริสุทธิ์ (ตารางรูปแบบ · การเลือกตัวสร้าง · การรวมค่าที่จำไว้) แยกไว้บนสุด — unit test ได้ตรง ๆ
 
 import { t as tt, tf as ttf } from './i18n.js';
-import { $, el, state, setStatus, log, withBusy } from './core.js';
+import { liveProseFonts, firstRealFont } from './live-fonts.js';   // [alpha.160 · P1-7/P1-10]
+import { $, el, state, setStatus, setStatusError, log, withBusy } from './core.js';
 import { runWorkflow, mdToHtml } from './compile.js';
 import { num } from './num.js';
 import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข่ายรองอักษรไทย
 // ตรรกะล้วน (ตารางรูปแบบ · เลือกตัวสร้าง · ค่าที่จำไว้) อยู่ใน export-formats.js — ทดสอบด้วย node ได้
 import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub, exportPageNumberFmt,
          defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
-import { escClose } from './ui.js';
+import { escClose, toast } from './ui.js';        // toast = [alpha.162 · W5 ข้อ 1]
 import { projectImageUrl } from './file-url.js';
 import { gi } from './icons.js';
 
@@ -39,6 +40,7 @@ import { gi } from './icons.js';
 const projectImg = (src) => projectImageUrl(state.root, src);
 // [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — แถวเดียวกันเป๊ะกับกล่องส่งออก PDF ของบท
 import { exportNameRow } from './export-name-ui.js';
+import { errText, failText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 export { EXPORT_FORMATS, formatDef, docKind, pdfEngine, defaultHubSettings, normalizeHub,
          exportPageNumberFmt, defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
 
@@ -108,23 +110,8 @@ async function compose(A, cfg, model, wf, markdownOut) {
  * ฝัง `@font-face` แบบ `file://` เข้าไปด้วย ไม่งั้นไฟล์ที่ออกไปนอกโปรแกรมหาฟอนต์ไม่เจอ
  * แล้วตัวไทยตกไปฟอนต์สำรองเงียบ ๆ (WYSIWYG พัง)
  */
-/**
- * [alpha.132r3 ข้อ 1] สแตกฟอนต์ที่ **ตัวแก้ไขใช้อยู่จริงตอนนี้**
- *
- * อ่านจากค่าที่คำนวณแล้วของ DOM ไม่ใช่คำนวณใหม่จากการตั้งค่า — ตรงกับที่ตาเห็นเสมอ
- * โดยไม่ต้องไล่ตามว่ามีชั้นไหนมาทับบ้าง (ฟอนต์ตามภาษา · ฟอนต์ตามโปรเจกต์ · ค่าเริ่มต้น)
- * ไม่มีตัวแก้ไขเปิดอยู่ = คืน '' แล้วให้ `proseExportCss` ใช้ของเดิมตามปกติ
- */
-function liveProseFonts() {
-  try {
-    const ed = document.querySelector('.pane.on > .workspace > .ProseMirror')
-            || document.querySelector('.ProseMirror');
-    if (!ed) return {};
-    const body = getComputedStyle(ed).fontFamily || '';
-    const h = ed.querySelector('h1,h2,h3,h4,h5,h6');
-    return { fontStack: body, headingStack: h ? getComputedStyle(h).fontFamily || '' : '' };
-  } catch { return {}; }
-}
+// [alpha.132r3 ข้อ 1] สแตกฟอนต์ที่ **ตัวแก้ไขใช้อยู่จริงตอนนี้** (อ่านค่าที่คำนวณแล้วของ DOM)
+// [alpha.160 · P1-7] ย้ายไป live-fonts.js — เลือกเฉพาะตัวแก้ไข **นิยาย** (เดิมโดนบทภาพยนตร์ + หยิบแผ่นแรกของหน้า)
 
 async function proseHtml(A, text, title, wysiwyg, mono) {
   const spf = A.spFormat();
@@ -310,8 +297,9 @@ async function buildEbookBytes(A, cfg, built) {
     pkg = E.buildEpub(md, { ...common, language: lang, identifier: 'urn:uuid:' + uuid });
   } else {
     const spf = A.spFormat();
-    const stack = String(liveProseFonts().fontStack || '');
-    const font = stack.split(',')[0].replace(/["']/g, '').trim() || 'Tahoma';
+    // [alpha.160 · P1-10] ตัวแรกของสแตกคือวงศ์สังเคราะห์ `K2 Lang` (withLangFamily ใส่นำ) ที่ Word ไม่มี
+    // → Word แทนฟอนต์เอง · ข้ามวงศ์ของโปรแกรม/ตระกูลทั่วไปของ CSS ไปหาชื่อฟอนต์จริงตัวแรก
+    const font = firstRealFont(liveProseFonts().fontStack) || 'Tahoma';
     pkg = E.buildDocx(md, { ...common, font, fontPt: num(A.proseFormat().fontPt, 16),
                             paper: spf.paper, margins: spf.margins,
                             language: lang === 'th' ? 'th-TH' : lang });
@@ -379,7 +367,11 @@ async function buildAll(A, cfg, drafts) {
     out.html = await proseHtml(A, text, model.title, true, cfg.pdf.colorMode !== 'color');
     out.frontHtml = await frontMatterHtml(A, cfg, model, mk.coverUrl || '');
   }
-  if (viaScript) out.blocks = parseScript(r.text);
+  // [alpha.160 · P1-6] RTF/FDX: ตัวขึ้นหน้าใหม่ (form-feed) → องค์ประกอบ "ขึ้นหน้าใหม่" ของบท (`---`)
+  // เดิม `parseScript` เห็นบรรทัด form-feed เป็นบรรทัดว่าง (trim แล้วว่าง) → เส้นขึ้นหน้าหายตั้งแต่ก่อนถึงตัวสร้างไฟล์
+  const scriptSrc = (cfg.format === 'rtf' || cfg.format === 'fdx')
+    ? r.text.replace(/[ \t]*\f[ \t]*/g, '\n\n---\n\n') : r.text;
+  if (viaScript) out.blocks = parseScript(scriptSrc);
   // [alpha.124 ข้อ 26] ช่องตัวอย่างต้องอ่านออก — RTF/FDX เป็น markup ของเครื่อง (`{\\rtf1…`,
   // `<Paragraph Type=…>`) ที่ผู้ใช้อ่านไม่รู้เรื่องเลยว่าเนื้อในถูกไหม · เก็บ "บทฉบับข้อความ"
   // ไว้ต่างหากให้ตัววาดพรีวิวใช้ ส่วน `out.text` ยังเป็นตัวจริงที่เขียนลงไฟล์เหมือนเดิม
@@ -554,7 +546,7 @@ async function renderPreview(host, A, cfg, built) {
         return c ? 'rgb(' + c.map((x) => Math.round(x * 255)).join(',') + ')' : '';
       };
       const { projectHeaders, pdfMeta } = await import('./pdf-ui.js');
-      const { headerStringsFor, linesForBody, mergeHeaders } = await import('./sp-headers.js');
+      const { headerStringsFor, linesForBody, mergeHeaders, headerPageNumber } = await import('./sp-headers.js');
       const hdr5 = mergeHeaders(o5.headers ? projectHeaders() : { enabled: false });
       const meta5 = pdfMeta(built.title);
       const pg5 = pagesOf(built.blocks || [], fmtN, linesForBody(fmtN, hdr5));
@@ -566,7 +558,9 @@ async function renderPreview(host, A, cfg, built) {
                        headerRows: (n) => headerStringsFor(n, hdr5, {
                          TITLE: meta5.title || '', AUTHOR: meta5.author || '',
                          DRAFT: meta5.draft || '', DATE: meta5.date || '',
-                         COPYRIGHT: meta5.copyright || '', PAGES: pg5.count, PAGE: n }),
+                         COPYRIGHT: meta5.copyright || '', PAGES: pg5.count,
+                         // [alpha.160 · P1-9] เดิม `PAGE: n` = ขึ้น 1,2,3 ทั้งที่ไฟล์พิมพ์ตามหน้าเริ่มของเล่ม
+                         PAGE: headerPageNumber(built.startPage || 1, n) }),
                        headerGapLines: hdr5.emptyLinesAfter,
                        watermark: o5.watermark });
       // หน้าปกของบท + หน้ารายชื่อ — รายการเดียวกับที่ไฟล์จริงจะได้
@@ -643,7 +637,9 @@ export async function openExportHub() {
   const saveCfg = async () => {
     if (!state.meta) return;
     state.meta.exportHub = cfg;
-    try { await A.saveProjectMeta(); } catch (e) { log('warn', tt('ui.xhub.saveCfgFail'), e); }
+    // [alpha.162 · W4] ตั้งค่าส่งออกที่บันทึกไม่ผ่าน = รอบหน้าได้ค่าเก่า — ต้องบอก ไม่ใช่ log เฉย ๆ
+    try { await A.saveProjectMeta(); }
+    catch (e) { log('warn', tt('ui.xhub.saveCfgFail'), e); setStatusError(failText(tt('ui.xhub.saveCfgFail'), e)); }
   };
 
   const ov = el('div', 'k-overlay');
@@ -828,7 +824,7 @@ export async function openExportHub() {
       if (gen !== job) return;
       built = null;
       log('error', tt('ui.xhub.buildFail'), e);
-      colPrev.replaceChildren(el('div', 'k-hint', tt('ui.xhub.buildFail') + ' — ' + (e && e.message ? e.message : e)));
+      colPrev.replaceChildren(el('div', 'k-hint', tt('ui.xhub.buildFail') + ' — ' + errText(e)));
     } finally { if (gen === job) busy = false; }
   }
 
@@ -875,10 +871,13 @@ export async function openExportHub() {
       await saveCfg();
       close();
       setStatus(tt('ui.common.exportDone') + done.dest + (done.note ? ' · ' + done.note : ''));
+      // [alpha.162 · W5 ข้อ 1] งานยาวที่ผู้ใช้อาจสลับไปทำอย่างอื่นระหว่างรอ → toast พร้อมทางไปหาไฟล์
+      toast(tt('ui.common.exportDone') + done.dest, { level: 'ok',
+        action: { label: tt('ui.xhub.revealFile'), onClick: () => kapi.revealInOS(done.dest) } });
       log('info', tt('ui.xhub.title'), { format: cfg.format, dest: done.dest, kind: r.kind });
     } catch (e) {
       log('error', tt('ui.xhub.exportFail'), e);
-      setStatus(tt('ui.xhub.exportFail') + ' — ' + (e && e.message ? e.message : e));
+      setStatusError(tt('ui.xhub.exportFail') + ' — ' + errText(e));
     } finally { bGo.disabled = false; }
   };
 

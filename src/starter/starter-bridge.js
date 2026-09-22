@@ -172,7 +172,7 @@ export function bridgeDialog(s, rows) {
     row('maps', tf('ui.starter.brWhere', BRIDGE_MAP), hasWhere);
 
     const foot = el('div', 'k-dlg-foot');
-    const cancel = el('button', null, t('ui.common.cancel'));
+    const cancel = el('button', 'k-cancel', t('ui.common.cancel'));
     cancel.onclick = () => done(null);
     const go = el('button', 'k-ok', t('ui.starter.brGo'));
     go.disabled = !(hasWhen || hasWhere || nSc);

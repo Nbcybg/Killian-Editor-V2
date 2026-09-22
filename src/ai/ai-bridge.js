@@ -9,6 +9,7 @@ import { currentProvider, complete as providerComplete, completeStream as provid
 import { priceKeyOf } from './ai-providers.js';
 import { listScenes, listEntities, syncIo } from '../project-scan.js';
 import { hashText } from '../num.js';
+import { liveBody } from '../tab-bridge.js';   // [alpha.160 · P1-3]
 
 let _client = null;
 let _rag = null;
@@ -124,7 +125,8 @@ export async function collectDocs(root) {
   }
   for (const s of await listScenes(root, { withText: true })) {
     // [alpha.149] เนื้อเรื่องล้วน — frontmatter ไม่ใช่เนื้อหาที่ควรถูกค้นเจอ
-    const body = s.body != null ? s.body : s.text;
+    // [alpha.160 · P1-3] แท็บที่เปิดอยู่ชนะดิสก์ — ดัชนีต้องเห็นสิ่งที่ผู้ใช้เห็น (ลายเซ็นเปลี่ยน = สร้างดัชนีใหม่เอง)
+    const body = liveBody(s.path, s.body != null ? s.body : s.text);
     if (body && body.trim()) {
       docs.push({ id: 'scene:' + s.id, text: body,
                   meta: { kind: 'scene', title: s.title, sceneId: s.id, path: s.path } });
@@ -153,7 +155,11 @@ export async function getRag({ rebuild = false, onProgress = null } = {}) {
   if (!state.root) return null;
   if (_rag && _ragRoot === state.root && !rebuild && !_ragStale) return _rag;
   const client = getAIClient();
-  const docs = await collectDocs(state.root);
+  // [alpha.161 · C2] ล้างธงก่อนอ่านเนื้อหา — invalidate ที่มาระหว่างอ่าน/ฝังเวกเตอร์จะตั้งกลับเป็น true เอง
+  // (เดิมตั้ง false **หลัง** อ่านเสร็จ = ทับการล้างที่เกิดระหว่าง collectDocs → ดัชนีเก่าถูกใช้ต่อ)
+  _ragStale = false;
+  let docs;
+  try { docs = await collectDocs(state.root); } catch (e) { _ragStale = true; throw e; }
   const sig = docsSignature(docs);
   let index = new VectorIndex({});
   const idxPath = await kapi.join(state.root, INDEX_FILE);
@@ -167,7 +173,6 @@ export async function getRag({ rebuild = false, onProgress = null } = {}) {
   }
   _rag = new RagPipeline({ client, index });
   _ragRoot = state.root;
-  _ragStale = false;
   if (!index.size && docs.length) {
     onProgress && onProgress(t('ui.aiBridge.busyNewIndexBody'));
     const res = await _rag.indexDocs(docs);

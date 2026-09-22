@@ -1,7 +1,7 @@
 // Wiki entity editor — โครงข้อมูลเดียวกับ v1 ทุก field (อ่าน-แก้-เขียน ไม่ทำข้อมูลส่วนอื่นหาย)
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { KEditor } from './editor.js';
-import { ask, confirmBox, popupMenu } from './ui.js';
+import { ask, confirmBox, infoBox, popupMenu } from './ui.js';
 import { iconHtml, icon } from './icons.js';
 import { REL_COLOR, REL_LABEL } from './relationship-types.js';
 // [alpha.60r2 ข้อ 12] รูปใน entity มีเมทาดาทาแล้ว (คำบรรยาย/alt/title/ขนาด)
@@ -543,15 +543,18 @@ export class WikiEditor {
     // [alpha.60r2 ข้อ 12] แต่ละใบมีคำบรรยาย/ข้อความแทนรูปของตัวเอง — แก้ในที่ได้เลย
     const imgs = migrateImages(this.e.images);
     if (needsImageMigration(this.e.images)) this.e.images = imgs;   // ไฟล์เก่า (string[]) → ออบเจกต์
-    imgs.forEach(async (meta, i) => {
+    // ══ [alpha.162 · W1-20] ★ ประกอบการ์ดรูปแบบ sync แล้วค่อยเติมทางของไฟล์ทีหลัง ══
+    // เดิมทั้ง callback เป็น `async` และ `grid.appendChild(cell)` อยู่ท้ายสุด → **ลำดับรูปบนจอ
+    // ขึ้นกับว่า IPC ตัวไหนตอบก่อน** ไม่ใช่ลำดับใน `e.images` · และรูปแรกคือรูปโปรไฟล์ (ดาว)
+    // จึงเห็นดาวไปอยู่ผิดใบเป็นครั้งคราว · error ของ `toFileURL` ก็กลายเป็น unhandled rejection
+    imgs.forEach((meta, i) => {
       const name = meta.file;
       const cell = document.createElement('div'); cell.className = 'wiki-img';
       const im = document.createElement('img');
-      const url = await kapi.toFileURL(await kapi.join(this.projectRoot, 'Images', name));
-      im.src = url;
+      let url = '';
       im.alt = imageAlt(meta);
       im.title = (meta.title || meta.caption || '') + (meta.caption || meta.title ? ' — ' : '') + tt('ui.wiki.clickExpand2');
-      im.onclick = () => imageLightbox(url, imageLabel(meta));      // คลิกขยายภาพ
+      im.onclick = () => { if (url) imageLightbox(url, imageLabel(meta)); };      // คลิกขยายภาพ
       im.onerror = () => { im.replaceWith(Object.assign(document.createElement('div'),
         { className: 'wiki-img-miss', innerHTML: iconHtml('error', 14) + ' ' + name })); };
       const del = document.createElement('span'); del.className = 'row-add wiki-img-x';
@@ -598,7 +601,11 @@ export class WikiEditor {
         cap.title = meta.caption || meta.alt;
         cell.append(cap);
       }
-      grid.appendChild(cell);
+      grid.appendChild(cell);                         // ลำดับแน่นอนตั้งแต่ตอนนี้ (ยังไม่รอ IPC)
+      Promise.resolve(kapi.join(this.projectRoot, 'Images', name))
+        .then((p) => kapi.toFileURL(p))
+        .then((u) => { url = u; im.src = u; })
+        .catch(() => { im.dispatchEvent(new Event('error')); });   // ใช้ตัวแสดง "รูปหาย" ตัวเดียวกัน
     });
 
     // ความสัมพันธ์ (sync สองทางตอนบันทึก — เหมือน v1)
@@ -608,7 +615,7 @@ export class WikiEditor {
     addR.innerHTML = iconHtml('plus', 14); addR.title = tt('ui.wiki.addRelation');
     addR.onclick = async () => {
       const others = this.entityTitles().filter((n) => n !== this.e.name);
-      if (!others.length) { alert(tt('ui.wiki.notHasEntityOther')); return; }
+      if (!others.length) { infoBox(tt('ui.wiki.notHasEntityOther')); return; }   // [alpha.162 · W4]
       let target, role, type = '';
       if (this.pickRelation) {
         const res = await this.pickRelation(others, this.e.name);
@@ -648,7 +655,7 @@ export class WikiEditor {
       val.onclick = () => {
         const f = this.fileOfEntity(rel.targetName || rel.target);
         if (f && this.onOpenEntity) this.onOpenEntity(f);
-        else alert(tt('ui.wiki.notFoundPageWiki') + (rel.targetName || rel.target));
+        else infoBox(tt('ui.wiki.notFoundPageWiki') + (rel.targetName || rel.target));   // [alpha.162 · W4]
       };
       const del = document.createElement('span'); del.className = 'row-add';
       del.innerHTML = iconHtml('x', 14); del.title = tt('ui.wiki.delRelationSide');

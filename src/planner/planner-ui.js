@@ -7,6 +7,7 @@
 import { tx, txf } from '../i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t, tf } from '../i18n.js';
 import { el, dataLabel } from '../core.js';
+import { themeColor, PLANNER_NODE_COLORS, PLANNER_EDGE_COLORS, PLANNER_KIND } from '../palette.js';   // [alpha.162 · W6 ข้อ 2]
 const escA = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 import { STATUSES, SHAPES, GRID_STYLES, ICONS } from './planner-data.js';
 import { plannerBarSequence, layoutPlannerBar } from '../toolbar/toolbar-config.js';
@@ -222,7 +223,7 @@ export function createPlannerToolbar(cb) {
 /** ป๊อปอัปตั้งค่ากริด (บั๊ก 6) */
 function _gridPopover(anchor, cb) {
   document.querySelectorAll('.planner-popover').forEach((p) => p.remove());
-  const g = (cb.getGrid && cb.getGrid()) || { show: true, size: 20, snap: false, style: 'dots', opacity: 0.9, color: '#3a3936' };
+  const g = (cb.getGrid && cb.getGrid()) || { show: true, size: 20, snap: false, style: 'dots', opacity: 0.9, color: '' };
   const pop = el('div', 'planner-popover planner-grid-pop');
   pop.innerHTML = ((a) => `
     <div class="planner-pop-title">${tx('ui.planner.grid')}</div>
@@ -240,7 +241,7 @@ function _gridPopover(anchor, cb) {
       <button data-size="10">10</button><button data-size="20">20</button>
       <button data-size="25">25</button><button data-size="50">50</button><button data-size="100">100</button>
     </div>
-  `)([g.show ? ' checked' : '', g.snap ? ' checked' : '', g.size, GRID_STYLES.map((s) => `<option value="${s}"${g.style === s ? ' selected' : ''}>${s === 'dots' ? t('ui.common.dot') : s === 'lines' ? t('ui.planner.line') : t('ui.planner.cross')}</option>`).join(''), g.opacity, g.color || '#3a3936', (cb.getBackground && cb.getBackground()) || '#262624']);
+  `)([g.show ? ' checked' : '', g.snap ? ' checked' : '', g.size, GRID_STYLES.map((s) => `<option value="${s}"${g.style === s ? ' selected' : ''}>${s === 'dots' ? t('ui.common.dot') : s === 'lines' ? t('ui.planner.line') : t('ui.planner.cross')}</option>`).join(''), g.opacity, g.color || themeColor('--hover', '#3a3936'), (cb.getBackground && cb.getBackground()) || themeColor('--canvas', '#262624')]);
   const emit = (p) => cb.onGridChange && cb.onGridChange(p);
   pop.querySelector('#plg-show').onchange = (e) => emit({ show: e.target.checked });
   pop.querySelector('#plg-snap').onchange = (e) => emit({ snap: e.target.checked });
@@ -317,9 +318,9 @@ export function createPlannerStatus() {
 }
 
 // ═══════════ แถบคุณสมบัติลอยเหนือสิ่งที่เลือก (บั๊ก 7 — แบบ Miro) ═══════════
-export const NODE_COLORS = ['#3f3e3a', '#5f7a9f', '#7a6f9f', '#5f8a6f', '#d97757',
-                            '#f2c14e', '#c1666b', '#4a6fa5', '#e8e3d3', '#26241f'];
-export const EDGE_COLORS = ['#d97757', '#faf9f5', '#5f7a9f', '#5f8a6f', '#f2c14e', '#c1666b', '#7a6f9f'];
+// [alpha.162 · W6 ข้อ 2] จานสีย้ายไป palette.js ที่เดียว (planner-props เคยมีชุดเดียวกันซ้ำสองชุด)
+export const NODE_COLORS = PLANNER_NODE_COLORS;
+export const EDGE_COLORS = PLANNER_EDGE_COLORS;
 
 /**
  * แถบเล็ก ๆ ที่โผล่เหนือการ์ด/เส้นที่เลือก — เปลี่ยนสีได้ทันทีโดยไม่ต้องเปิดแผงคุณสมบัติ
@@ -362,7 +363,7 @@ export function createContextBar(cb) {
     }
     const custom = document.createElement('input');
     custom.type = 'color'; custom.className = 'planner-ctx-color';
-    custom.value = /^#[0-9a-f]{6}$/i.test(n.color || '') ? n.color : '#3f3e3a';
+    custom.value = /^#[0-9a-f]{6}$/i.test(n.color || '') ? n.color : PLANNER_NODE_COLORS[0];
     custom.title = t('ui.planner.colorOther');
     custom.oninput = () => cb.onNodeChange && cb.onNodeChange({ color: custom.value });
     sw.appendChild(custom);
@@ -370,7 +371,7 @@ export function createContextBar(cb) {
 
     const tc = document.createElement('input');
     tc.type = 'color'; tc.className = 'planner-ctx-color planner-ctx-textcolor';
-    tc.value = /^#[0-9a-f]{6}$/i.test(n.textColor || '') ? n.textColor : '#faf9f5';
+    tc.value = /^#[0-9a-f]{6}$/i.test(n.textColor || '') ? n.textColor : PLANNER_KIND.fillDefault;
     tc.title = t('ui.planner.colorChar');
     tc.oninput = () => cb.onNodeChange && cb.onNodeChange({ textColor: tc.value });
     bar.append(tc);
@@ -400,7 +401,7 @@ export function createContextBar(cb) {
     }
     const custom = document.createElement('input');
     custom.type = 'color'; custom.className = 'planner-ctx-color';
-    custom.value = /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#d97757';
+    custom.value = /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : PLANNER_EDGE_COLORS[0];
     custom.title = t('ui.planner.colorOther');
     custom.oninput = () => cb.onEdgeChange && cb.onEdgeChange({ color: custom.value });
     sw.appendChild(custom);

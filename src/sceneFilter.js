@@ -126,3 +126,58 @@ export function statusRankOf(statuses) {
   const order = new Map((statuses || []).filter((s) => s && s !== 'Outline').map((s, i) => [s, i]));
   return (s) => (!s || s === 'Outline' || !order.has(s) ? 1e6 : order.get(s));
 }
+
+// ───────── [alpha.161 · P4] ชิปตัวกรอง (สถานะ/แท็ก) ↔ คิวรีในช่องค้นหา ─────────
+// เดิมกดชิปแล้ว `q.value = 'status:… OR status:…'` ทับทั้งช่อง → คำที่ผู้ใช้พิมพ์ค้นไว้หาย
+// ไวยากรณ์ไม่มีวงเล็บ (OR คั่นกลุ่ม · ในกลุ่ม = AND) → "คำ AND (A OR B)" ต้องกระจายเป็น "คำ A OR คำ B"
+const CHIP_FIELD = { status: 'status', 'สถานะ': 'status', tag: 'tag', tags: 'tag', 'แท็ก': 'tag' };
+const splitTokens = (q) => String(q || '').trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+const isOr = (tok) => { const up = tok.toUpperCase(); return up === 'OR' || tok === '|' || up === 'หรือ'; };
+/** โทเคนนี้เป็นเงื่อนไขของชิปไหม (ฝั่งบวกเท่านั้น — `-status:x` ที่ผู้ใช้พิมพ์เองไม่ใช่ของชิป) */
+function chipOf(tok) {
+  const m = /^([^:"-][^:"]*):(.+)$/.exec(tok);
+  const f = m && CHIP_FIELD[m[1].toLowerCase()];
+  return f ? { field: f, value: unquote(m[2]) } : null;
+}
+
+/**
+ * แยกคิวรีเป็น ส่วนที่ผู้ใช้พิมพ์ (ต่อกลุ่ม OR) + ค่าของชิปที่อยู่ในคิวรี
+ * @returns {{free: string[], status: string[], tag: string[]}}
+ */
+export function parseChipQuery(q) {
+  const groups = [[]];
+  const status = [], tag = [];
+  for (const tok of splitTokens(q)) {
+    if (isOr(tok)) { groups.push([]); continue; }
+    const c = chipOf(tok);
+    if (c) { const arr = c.field === 'status' ? status : tag; if (!arr.includes(c.value)) arr.push(c.value); continue; }
+    groups[groups.length - 1].push(tok);
+  }
+  const free = [];
+  for (const g of groups) { const s = g.join(' '); if (s && !free.includes(s)) free.push(s); }
+  return { free, status, tag };
+}
+
+/**
+ * ตั้งค่าของชิปหนึ่งชนิด โดย **ไม่แตะข้อความอื่นในคิวรี** — ไม่เหลือชิปชนิดนั้น = ลบเฉพาะเงื่อนไขนั้น
+ * @param {string} q คิวรีปัจจุบัน · @param {'status'|'tag'} field · @param {string[]} values ค่าที่เลือก (ค่าจริง ไม่แปล)
+ * @returns {string}
+ */
+export function setChipClause(q, field, values) {
+  const cur = parseChipQuery(q);
+  const vals = [...new Set((values || []).map((v) => String(v)).filter(Boolean))];
+  const st = field === 'status' ? vals : cur.status;
+  const tg = field === 'tag' ? vals : cur.tag;
+  const free = cur.free.length ? cur.free : [''];
+  const out = [];
+  for (const f of free) {
+    for (const s of (st.length ? st : [null])) {
+      for (const t of (tg.length ? tg : [null])) {
+        const g = [f, s !== null ? 'status:' + queryValue(s) : '', t !== null ? 'tag:' + queryValue(t) : '']
+          .filter(Boolean).join(' ');
+        if (g && !out.includes(g)) out.push(g);
+      }
+    }
+  }
+  return out.join(' OR ');
+}

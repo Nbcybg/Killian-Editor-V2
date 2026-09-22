@@ -2,8 +2,9 @@
 // [alpha.70] ยกเครื่อง: ซูม · โอเวอร์เลย์ (กริด/เข็มทิศ/มาตราส่วน) · ค้นหาหมุด · เลือกหลายหมุด
 //            · คัดลอก-วางข้ามแผนที่ · เส้นทาง · หมวดแผนที่ · ส่งออก PNG/พิมพ์ · ป้ายจำนวนฉากบนหมุด
 import { tf } from './i18n.js';
+import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { addMapFlow, loadMaps, mapImgURL, mapsState_C, pinDialog, saveMaps } from './app.js';
-import { $, el, state, setStatus, log, t } from './core.js';
+import { $, el, state, setStatus, setStatusError, log, t } from './core.js';
 import { pickImage } from './gallery.js';
 import {
   PIN_KIND, ROUTE_COLORS, breadcrumb, clamp, clampZoom, clonePins, deleteMap, deletePins, deleteRoute,
@@ -17,6 +18,8 @@ import { openEntity } from './wiki-ui.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { collectPlacedScenes } from './floorplan-ui.js';
 import { gi } from './icons.js';
+import { PRINT } from './palette.js';   // [alpha.162 · W6 ข้อ 2] สีภาพส่งออก (พื้นขาวเสมอ)
+import { panelEmpty } from './panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 
 // ── สถานะการดู (ไม่บันทึกลงไฟล์) — อยู่นอก mapsState_C.s เพราะ s ถูกสร้างใหม่ทุกครั้งที่โหลด maps.json
 const view = {
@@ -190,8 +193,7 @@ export async function renderMaps(pane) {
   wrap.append(head);
 
   if (!maps.length) {
-    wrap.append(el('div', 'map-empty',
-      t('ui.maps.notPlannedPressAdd')));
+    wrap.append(panelEmpty(t('ui.maps.notPlannedPressAdd')));
     return;
   }
 
@@ -777,7 +779,7 @@ async function drawMapToCanvas(map) {
   const W = cv.width, H = cv.height;
   const PX = (x) => (x / 100) * W, PY = (y) => (y / 100) * H;
 
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = PRINT.paper; ctx.fillRect(0, 0, W, H);
   if (img) ctx.drawImage(img, 0, 0, W, H);
 
   const ov = mapOverlays(map);
@@ -808,15 +810,15 @@ async function drawMapToCanvas(map) {
     const x = PX(pin.x), y = PY(pin.y), rad = 9 * scale;
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2);
-    ctx.fillStyle = pin.color || (pin.kind === 'portal' ? '#5f9fd9' : pin.kind === 'entity' ? '#d9575e' : '#d9b757');
+    ctx.fillStyle = pin.color || (pin.kind === 'portal' ? PRINT.pinPortal : pin.kind === 'entity' ? PRINT.pinEntity : PRINT.pinDefault);
     ctx.fill();
-    ctx.lineWidth = 2 * scale; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    ctx.lineWidth = 2 * scale; ctx.strokeStyle = PRINT.paper; ctx.stroke();
     if (pin.label) {
       ctx.font = `${fs}px "Sarabun", sans-serif`;
       const tw = ctx.measureText(pin.label).width;
       ctx.fillStyle = 'rgba(255,255,255,.88)';
       ctx.fillRect(x + rad + 3 * scale, y - fs * 0.75, tw + 8 * scale, fs * 1.5);
-      ctx.fillStyle = '#1a1a1a';
+      ctx.fillStyle = PRINT.label;
       ctx.fillText(pin.label, x + rad + 7 * scale, y);
     }
     ctx.restore();
@@ -827,11 +829,11 @@ async function drawMapToCanvas(map) {
     const cx = W - 60 * scale, cy = 60 * scale, rr = 34 * scale;
     ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fill();
-    ctx.lineWidth = 2 * scale; ctx.strokeStyle = '#333'; ctx.stroke();
+    ctx.lineWidth = 2 * scale; ctx.strokeStyle = PRINT.line; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx, cy - rr * 0.72); ctx.lineTo(cx - rr * 0.28, cy + rr * 0.4);
     ctx.lineTo(cx + rr * 0.28, cy + rr * 0.4); ctx.closePath();
-    ctx.fillStyle = '#c0392b'; ctx.fill();
-    ctx.fillStyle = '#222'; ctx.font = `bold ${Math.round(13 * scale)}px sans-serif`;
+    ctx.fillStyle = PRINT.marker; ctx.fill();
+    ctx.fillStyle = PRINT.ink; ctx.font = `bold ${Math.round(13 * scale)}px sans-serif`;
     ctx.textAlign = 'center'; ctx.fillText('N', cx, cy - rr * 0.88);
     ctx.restore();
   }
@@ -840,9 +842,9 @@ async function drawMapToCanvas(map) {
     const bw = W * 0.18, bx = 40 * scale, by = H - 55 * scale, bh = 9 * scale;
     ctx.fillStyle = 'rgba(255,255,255,.85)';
     ctx.fillRect(bx - 6 * scale, by - 6 * scale, bw + 12 * scale, bh + 30 * scale);
-    ctx.fillStyle = '#222'; ctx.fillRect(bx, by, bw, bh);
-    ctx.fillStyle = '#fff'; ctx.fillRect(bx + bw / 4, by + 1, bw / 4, bh - 2);
-    ctx.fillStyle = '#222'; ctx.font = `${Math.round(13 * scale)}px "Sarabun", sans-serif`;
+    ctx.fillStyle = PRINT.ink; ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = PRINT.paper; ctx.fillRect(bx + bw / 4, by + 1, bw / 4, bh - 2);
+    ctx.fillStyle = PRINT.ink; ctx.font = `${Math.round(13 * scale)}px "Sarabun", sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText(ov.scaleLabel || '', bx, by + bh + 12 * scale);
     ctx.restore();
@@ -862,7 +864,7 @@ export async function exportMapPng(map) {
     return true;
   } catch (e) {
     log('error', t('ui.maps.mapsExportPNGNot'), e);
-    setStatus(t('ui.common.exportPNGNotOk') + e.message);
+    setStatusError(failText(t('ui.common.exportPNGNotOk'), e));
     return false;
   }
 }
@@ -882,7 +884,7 @@ export async function printMap(map) {
     return true;
   } catch (e) {
     log('error', t('ui.maps.mapsPrintMapNot'), e);
-    setStatus(t('ui.maps.printMapNotOk') + e.message);
+    setStatusError(failText(t('ui.maps.printMapNotOk'), e));
     return false;
   } finally {
     document.body.classList.remove('map-printing', 'printing');

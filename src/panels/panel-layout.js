@@ -747,13 +747,21 @@ export function tabGroupOf(root, panelId) {
 }
 
 // ปุ่มมาตรฐานบนหัวแผง — UI (panel-ui.js) เอาไปวาด ตรรกะอยู่ที่ PanelManager
+// [alpha.161 · U7] ★ `title` เป็น getter (คำนวณตอนวาด) — เดิมเป็นค่าที่ t() คิดไว้ตอน import
+//   → เปลี่ยนภาษาระหว่างรันแล้วชื่อปุ่มบนหัวแผงค้างภาษาเดิมจนกว่าจะเปิดโปรแกรมใหม่ (บทเรียนข้อ 37)
+//   `tip` = คีย์คำอธิบายบรรทัดที่สองของทูลทิป (data-tip · ระบบทูลทิปเดียวกับแถบเครื่องมือ)
+//   `group` = ปุ่มนี้ยังอยู่บนหัวแผงที่อยู่ "ในกลุ่มแท็บ" ไหม (กลุ่มมีปุ่มปิด/ลอยของตัวเองที่แถบแท็บแล้ว)
+const headBtn = (key, icon, titleKey, action, group) => ({
+  key, icon, titleKey, action, group, tip: 'ui.panelTip.' + key,
+  get title() { return t(titleKey); },
+});
 export const PANEL_BUTTONS = [
   // [alpha.66r3] เมนูแผง (☰) — Progressive Disclosure: คำสั่งลึก ๆ ของแผงอยู่หลังปุ่มนี้
   // เดิมมีแต่คลิกขวาบนหัวแผง ซึ่งไม่มีอะไรบอกว่ามีอยู่
-  { key: 'menu',     icon: gi('menu'), title: t('ui.panelLayout.panel'),   action: 'panelMenu' },
-  { key: 'collapse', icon: gi('caret-down'), title: t('ui.panelLayout.collapseExpand'), action: 'collapsePanel' },
-  { key: 'float',    icon: '⧉', title: t('ui.panelLayout.float'), action: 'toggleFloat' },
-  { key: 'close',    icon: gi('close'), title: t('ui.panelLayout.closePanel'),   action: 'hidePanel' },
+  headBtn('menu', gi('menu'), 'ui.panelLayout.panel', 'panelMenu', true),
+  headBtn('collapse', gi('caret-down'), 'ui.panelLayout.collapseExpand', 'collapsePanel', true),
+  headBtn('float', gi('duplicate'), 'ui.panelLayout.float', 'toggleFloat', false),
+  headBtn('close', gi('close'), 'ui.panelLayout.closePanel', 'hidePanel', false),
 ];
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }

@@ -18,6 +18,7 @@ import { newCastMember } from '../dialogue/builder-core.js';
 import { normalizePrompts, expandMentions, migrateMentions } from '../entity-mention.js';
 import { htmlToPlain } from './starter-html.js';
 import { gi } from '../icons.js';
+import { cmpText } from '../locale.js';
 
 // v1 → v2 = [alpha.122] โหมดพื้นฐาน/ขั้นสูง + ช่องขั้นสูงของตัวละครและของตอน
 // ไฟล์ v1 เปิดได้ทุกตัว: ช่องใหม่ทุกช่องมีค่าเริ่มต้นว่าง และโหมดตกกลับเป็น "พื้นฐาน"
@@ -255,7 +256,7 @@ export function starterReady(s, steps = []) { return missingSteps(s, steps).leng
 
 export function sortStarters(rows) {
   return [...(rows || [])].sort((a, b) => (b.updated || 0) - (a.updated || 0)
-    || String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+    || cmpText(String(a.name || ''), String(b.name || '')));
 }
 
 /** ค้นหาจากชื่อ · แท็ก · เรื่องย่อ · ชื่อตัวละคร */
@@ -420,7 +421,7 @@ export function scenarioStats(sc) {
 
 export function sortScenarios(rows) {
   return [...(rows || [])].sort((a, b) => (a.created || 0) - (b.created || 0)
-    || String(a.title || '').localeCompare(String(b.title || ''), 'th'));
+    || cmpText(String(a.title || ''), String(b.title || '')));
 }
 
 export function searchScenarios(rows, query, { includeArchived = false } = {}) {

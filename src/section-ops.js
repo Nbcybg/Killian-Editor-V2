@@ -202,7 +202,7 @@ export async function sectionProps(secPath, sec) {
 
   return new Promise((resolve) => {
     const btns = el('div', 'k-dlg-btns');
-    const cB = el('button', null, tt('ui.common.cancel'));
+    const cB = el('button', 'k-cancel', tt('ui.common.cancel'));
     const okB = el('button', 'k-ok', tt('ui.common.save'));
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     const close = (v) => { ov.remove(); resolve(v); };
@@ -248,7 +248,8 @@ export async function deleteSection(secPath, sec) {
   // [alpha.156] ★ ต้อง **รอ** ให้บันทึก+ปิดจบก่อนย้ายโฟลเดอร์ — เดิม closeTab() ไม่ await ของแท็บที่ค้าง
   // การบันทึกจึงแข่งกับการย้าย แล้วเขียนไฟล์กลับที่เดิม (โฟลเดอร์ผีไม่มี section.json) ·
   // และ `startsWith(secPath)` ไม่มีตัวคั่น → ลบ "เล่ม1" ไปปิดแท็บของ "เล่ม10" ด้วย
-  await closeTabsUnderPath(secPath, { save: true });
+  // [alpha.160 · P0-3] แท็บที่บันทึกไม่ผ่านยังค้าง = ห้ามย้ายเล่ม
+  if (!(await closeTabsUnderPath(secPath, { save: true })).ok) { setStatus(tf('ui.app.moveCancelledUnsaved', sec.title)); return; }
   const dst = await kapi.join(state.root, 'Recycle',
     Date.now().toString(36) + '-' + (secPath.split(/[\\/]/).pop()));
   await kapi.move(secPath, dst);

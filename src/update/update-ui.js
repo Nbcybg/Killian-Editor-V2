@@ -11,6 +11,7 @@
 import { el, state, log, setStatus, t, tf } from '../core.js';
 import { escClose } from '../ui.js';
 import { decideUpdate, shouldNotify, progressText, UPDATE_GIT_URL } from './update-check.js';
+import { fmtDateTime } from '../locale.js';
 
 /** ค่าอัปเดตระดับผู้ใช้ (อ่านจากไฟล์จริงเสมอ — ตอนบูตยังไม่มี state.settings) */
 async function readCfg() {
@@ -267,7 +268,7 @@ export function buildUpdateFields(box, s) {
   const info = el('div', 'k-upd-set');
   info.append(row2(t('ui.upd.current'), kapi.appVersion || '—'));
   info.append(row2(t('ui.upd.lastCheck'),
-    s.updateLast ? new Date(+s.updateLast).toLocaleString() : t('ui.upd.never')));
+    (s.updateLast && fmtDateTime(+s.updateLast)) || t('ui.upd.never')));
   const src = el('div', 'k-upd-src');
   src.append(el('span', 'k-upd-src-label', t('ui.upd.sourceLabel')));
   const link = el('span', 'k-credit-link k-upd-src-url', UPDATE_GIT_URL);

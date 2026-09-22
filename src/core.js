@@ -197,15 +197,80 @@ for (const lv of ['error', 'warn']) {
 }
 
 // ---- แถบสถานะล่าง ----
-export function setStatus(s) { $('#status').textContent = s; }
+//
+// ══ [alpha.162 · W5 ข้อ 1] ★ ข้อความสถานะมี "อายุ" ══
+// เดิม `setStatus` เขียนทับแล้วค้างตลอดไป — 876 จุดแย่งบรรทัดเดียว ข้อความเก่าเมื่อชั่วโมงก่อน
+// ("ย้ายไปถังขยะแล้ว") ยังนั่งอยู่จนผู้ใช้เข้าใจผิดว่าเพิ่งเกิด · error ก็ถูกข้อความถัดไปลบทิ้งทันที
+// กติกาใหม่ (ไม่ต้องไล่แก้ 876 จุด):
+//   · setStatus(s)         = ข้อมูลทั่วไป → หายเองหลัง STATUS_TTL_MS (ชี้เมาส์ค้างที่แถบ = หยุดนับ)
+//   · setStatusAction(...) = มีลิงก์ให้กดต่อ → อยู่นานกว่า
+//   · setStatusError(s)    = ผิดพลาด → **ค้าง** + สีเตือน จนกว่าจะมีข้อความใหม่
+// ตัวจับเวลาผูกกับเลขลำดับ — ตัวเก่าหมดเวลาไม่ไปลบข้อความที่ใหม่กว่า
+// (ห้ามเดาระดับจากเนื้อข้อความ — ข้อความแปลแล้ว เทียบไม่ได้ · กฎ .128)
+export const STATUS_TTL_MS = 10000;
+export const STATUS_ACTION_TTL_MS = 20000;
+const _st = { seq: 0, timer: null, ttl: 0, hover: false, bound: false };
+function statusIdleText(st) {
+  const k = st && st.dataset && st.dataset.i18n;
+  try { return k ? t(k) : ''; } catch { return ''; }
+}
+function expireStatus(st, my) {
+  _st.timer = null;
+  if (my !== _st.seq) return false;                 // มีข้อความใหม่กว่าแล้ว ไม่ใช่คิวเรา
+  st.textContent = statusIdleText(st);
+  st.classList.remove('k-status-err');
+  delete st.dataset.level;
+  return true;
+}
+function armStatus(st, ttl) {
+  if (_st.timer) { clearTimeout(_st.timer); _st.timer = null; }
+  _st.ttl = ttl;
+  if (!ttl || _st.hover) return;
+  const my = _st.seq;
+  _st.timer = setTimeout(() => expireStatus(st, my), ttl);
+}
+/**
+ * ให้ข้อความปัจจุบัน "หมดอายุตอนนี้" ด้วยทางเดียวกับตัวจับเวลาจริง (เทสใช้ — ไม่ต้องรอ 10 วินาที)
+ * ข้อความที่ค้างโดยตั้งใจ (error · ttl 0) ไม่หาย · คืน true ถ้าล้างจริง
+ */
+export function expireStatusNow() {
+  const st = $('#status');
+  if (!st || !_st.ttl) return false;
+  if (_st.timer) { clearTimeout(_st.timer); _st.timer = null; }
+  return expireStatus(st, _st.seq);
+}
+function bindStatusHover(st) {
+  if (_st.bound) return;
+  _st.bound = true;
+  st.setAttribute('role', 'status');
+  st.setAttribute('aria-live', 'polite');
+  const bar = st.closest('#statusbar') || st;
+  bar.addEventListener('mouseenter', () => { _st.hover = true; if (_st.timer) { clearTimeout(_st.timer); _st.timer = null; } });
+  bar.addEventListener('mouseleave', () => { _st.hover = false; if (_st.ttl) armStatus(st, _st.ttl); });
+}
+function putStatus(s, level, ttl) {
+  const st = $('#status');
+  if (!st) return null;
+  bindStatusHover(st);
+  _st.seq++;
+  st.textContent = s == null ? '' : String(s);
+  st.classList.toggle('k-status-err', level === 'error');
+  st.dataset.level = level;
+  armStatus(st, ttl);
+  return st;
+}
+export function setStatus(s) { putStatus(s, 'info', STATUS_TTL_MS); }
+/** [alpha.162 · W5 ข้อ 1] ข้อความผิดพลาด — ค้างจนกว่าจะมีข้อความใหม่ (ไม่หายเองก่อนผู้ใช้เห็น) */
+export function setStatusError(s) { putStatus(s, 'error', 0); }
+/** อายุของข้อความที่แสดงอยู่ (เทสใช้) — 0 = ค้าง */
+export function statusTtl() { return _st.ttl; }
 /**
  * [alpha.159 · QoL] ข้อความสถานะ + ลิงก์ให้กดทำต่อ (เช่น "ย้ายไปถังขยะแล้ว · เปิดในโฟลเดอร์")
  * ข้อความถัดไปของ setStatus() ล้างลิงก์ทิ้งเอง (textContent) — ไม่มีอะไรค้าง
  */
 export function setStatusAction(s, label, onClick) {
-  const st = $('#status');
+  const st = putStatus(s, 'info', STATUS_ACTION_TTL_MS);
   if (!st) return null;
-  st.textContent = s;
   if (!label || typeof onClick !== 'function') return null;
   const a = document.createElement('button');
   a.type = 'button';
@@ -252,6 +317,60 @@ export async function withBusy(msg, fn) {
   finally { clearBusy(); }
 }
 
+/**
+ * ══ [alpha.162 · W5 ข้อ 2] ★ งานยาวที่ "บอกความคืบหน้า + ยกเลิกได้" ══
+ *
+ * เดิมงานยาวทุกตัว (สร้างดัชนีค้นหา · ประกอบ PDF · บีบ ZIP · ตรวจสุขภาพโปรเจกต์) มีแค่สปินเนอร์
+ * กับข้อความเดียว — ไม่รู้ว่าไปถึงไหน และ **ยกเลิกไม่ได้เลย** (กดผิดโปรเจกต์ใหญ่ต้องนั่งรอจนจบ)
+ * ตัวนี้ต่อยอด setBusy เดิม: ส่ง `{ signal, progress }` ให้งาน · ปุ่มยกเลิกข้างสปินเนอร์ที่แถบสถานะ
+ *   · `progress(done, total?)` → "ข้อความ (3/10)" ทั้งที่แถบสถานะและหน้าจอเปิดโปรแกรม
+ *   · งานเรียก `throwIfCancelled(signal)` ระหว่างรอบ (ดู cancel.js)
+ *   · ผู้ใช้ยกเลิก → แถบสถานะบอก "ยกเลิกแล้ว" แล้ว **โยน error ยกเลิกต่อ** ให้คนเรียกแยกจากพังจริง
+ *     ด้วย `isCancelled(e)` (ห้ามกลืนเงียบ — คนเรียกต้องไม่เข้าใจผิดว่าได้ผลว่าง)
+ * @template T
+ * @param {string} msg · @param {(task:{signal:AbortSignal, progress:(d:number,t?:number)=>void})=>Promise<T>} fn
+ * @param {{name?:string}} [opts] name = ชื่องานแบบคำนามสำหรับข้อความ "ยกเลิกแล้ว — …"
+ * @returns {Promise<T>}
+ */
+const _task = { ctl: null };
+export function busyTaskActive() { return !!_task.ctl; }
+/** กดปุ่มยกเลิกของงานที่วิ่งอยู่ (เทส/คีย์ลัดเรียกได้) — คืน false ถ้าไม่มีงาน */
+export function cancelBusyTask() {
+  if (!_task.ctl) return false;
+  _task.ctl.abort();
+  return true;
+}
+export async function withBusyTask(msg, fn, opts = {}) {
+  const ctl = new AbortController();
+  const prev = _task.ctl;
+  _task.ctl = ctl;
+  const wrap = $('#status-busy');
+  let btn = wrap ? wrap.querySelector('.k-busy-cancel') : null;
+  if (wrap && !btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'k-busy-cancel';
+    btn.onclick = (e) => { e.stopPropagation(); cancelBusyTask(); };
+    wrap.append(btn);
+  }
+  if (btn) { btn.textContent = t('ui.common.cancel'); btn.style.display = ''; }
+  setBusy(msg);
+  const progress = (done, total) => { if (_task.ctl === ctl) setBusy(progressText(msg, done, total)); };
+  try {
+    return await fn({ signal: ctl.signal, progress });
+  } catch (e) {
+    if (isCancelled(e) || ctl.signal.aborted) {
+      setStatus(tf('ui.common.taskCancelled', opts.name || msg));   // name = ชื่องานแบบคำนาม ("ส่งออก PDF")
+      throw isCancelled(e) ? e : cancelledError();
+    }
+    throw e;
+  } finally {
+    if (_task.ctl === ctl) _task.ctl = prev;
+    if (btn && !_task.ctl) btn.style.display = 'none';
+    clearBusy();
+  }
+}
+
 // ---- ค่าตั้งต้น settings/goals (โครงเดียวกับ v1 — เก็บครบใน project.khn.json) ----
 // [alpha.60 ข้อ 94] แยกเป็น 2 ระดับ:
 //   global (user) — เก็บใน %APPDATA%/Killian2/settings.json · ใช้ร่วมกันทุกโปรเจกต์
@@ -277,6 +396,10 @@ export const GLOBAL_DEFAULTS = {
   fab: null,
   // [alpha.111] ปุ่มที่ถูกถอดออกจากแถบรูปแบบลอย แยกตามโหมด { prose:{hidden:{}}, screenplay:{hidden:{}} }
   fmtbar: null,
+  // [alpha.162 · W3] ปุ่มบนแถบเครื่องมือหลักที่ผู้ใช้ซ่อนไว้ — **ระดับผู้ใช้เหมือน fmtbar/fab**
+  // เดิมไม่มีแถวนี้ แต่ dialogs.js เขียนมันลงไฟล์ตั้งค่าผู้ใช้อยู่แล้วด้วยรายชื่อที่เขียนมือ
+  // → ตารางนี้ (แหล่งความจริงของ "อะไรเป็นค่าระดับผู้ใช้") จึงไม่ตรงกับของจริง
+  toolbar: null,
   // [alpha.60r2 ข้อ 10] ธีมของโปรแกรม — Ctrl+Shift+P วนธีม (ดู THEMES ด้านล่าง)
   // (คนละเรื่องกับ paperMode ซึ่งเป็น "หน้าตาของกระดาษ" ไม่ใช่ของ UI)
   // [alpha.137] ค่าเริ่มต้น = 'k2' — จานสีประจำโปรแกรมที่ผู้ใช้กำหนด
@@ -522,7 +645,9 @@ export { LANG_FAMILY, SCRIPT_PRESETS, BUILTIN_FONT_FILES, SYSTEM_THAI_FONTS, def
 import { t as tt, T, t, tf, tm, tKey, lookup as i18nLookup, setTable, fillTable, csvToTable, tableToCsv,
          langInfo, langCatalog, setCatalog, langCodeFromFile, langFileName, fallbackLangName,
          getTable, formatMsg, makeMsgid, LANG_LS_KEY } from './i18n.js';
+import { applyDocLang } from './locale.js';            // [alpha.162 · W7] <html lang dir>
 import { unflatten } from './i18n-csv.js';
+import { progressText, isCancelled, cancelledError } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
 export { T, t, tf, tm, tKey, tableToCsv, csvToTable, langInfo, langCodeFromFile, langFileName, fallbackLangName,
          formatMsg, makeMsgid, LANG_LS_KEY };
 /** รายชื่อภาษาที่สแกนเจอ (อ่านจาก **ชื่อไฟล์** k2_*.csv) */
@@ -532,6 +657,7 @@ export const i18n = { lang: 'en', strings: {}, fallback: null, available: ['en']
 // ตาราง CSV ถูกโหลดไปแล้วแบบ sync ตอน import src/i18n.js — เก็บผลนั้นเข้า i18n ให้โค้ดเดิมเห็นตรงกัน
 if (langInfo.code) {
   i18n.lang = langInfo.code;
+  applyDocLang(i18n.lang);                                // ภาษาที่โหลดแบบ sync ตอนเปิด (ก่อน loadLanguage)
   i18n.available = langCatalog.length ? langCatalog.map((l) => l.code) : [langInfo.code];
   syncNestedStrings();
 }
@@ -588,6 +714,10 @@ export async function scanLanguages(root) {
 // โหลดไฟล์ภาษา: CSV (k2_<code>.csv ทุกชั้น) → ถ้าไม่มีเลยลอง .json แบบเก่า → ท้ายสุด built-in EN
 export async function loadLanguage(lang, root) {
   i18n.lang = lang || 'en';
+  // [alpha.162 · W5 ข้อ 3] `<html lang>` ตามภาษาที่ใช้จริง — เดิมตายตัวเป็น "th" ใน index.html
+  // โปรแกรมอ่านหน้าจออ่านเมนูอังกฤษด้วยเสียงไทย · ตัวตัดคำ/ขึ้นบรรทัดของเบราว์เซอร์ก็เลือกกฎตามค่านี้
+  // [alpha.162 · W7 ข้อ 4] ย้ายไปตั้ง **หลังโหลดเสร็จ** ผ่าน applyDocLang (lang + dir) — เดิมตั้งก่อนโหลด
+  // ไฟล์ภาษาหาย → ตกไปใช้ en แต่ <html lang> ยังค้างเป็นภาษาที่ขอ
   let ok = false;
   try {
     if (typeof kapi !== 'undefined' && kapi.langRead) {
@@ -622,6 +752,7 @@ export async function loadLanguage(lang, root) {
   try { await scanLanguages(root); } catch {}
   if (!i18n.available.length) i18n.available = [i18n.lang];
   try { globalThis.localStorage?.setItem(LANG_LS_KEY, i18n.lang); } catch {}
+  applyDocLang(i18n.lang);
   syncNestedStrings();
   applyDataI18n();
   for (const fn of langHooks) fn();
@@ -713,7 +844,15 @@ export const SHORTCUT_LABELS = {
   'export-hub': 'shortcuts.exportHub', 'compile': 'shortcuts.compile', 'save-all': 'shortcuts.saveAll',
   'split-view': 'shortcuts.splitView', 'kanban': 'shortcuts.kanban',
   'export-blog': 'shortcuts.exportBlog', 'close-all-tabs': 'shortcuts.closeAllTabs',
+  // [alpha.161 · K2/K4] วนแท็บ · แสดงไฟล์ที่เปิดอยู่ในต้นไม้
+  'next-tab': 'ui.shortcuts.nextTab', 'prev-tab': 'ui.shortcuts.prevTab', 'reveal-active': 'ui.shortcuts.revealActive',
   'line-numbers': 'shortcuts.lineNumbers',
+  // [alpha.162 · W4 ข้อ 5] คำสั่งที่มีคีย์ลัดแล้วแต่ไม่เคยมีชื่อ → ไม่โผล่ในหน้า "ปุ่มลัด"
+  // ของหน้าตั้งค่าเลย (รายการนั้นกรองด้วย SHORTCUT_LABELS) = ตั้งใหม่เองไม่ได้ทั้งชุด
+  'replace': 'ui.shortcuts.replace', 'project-replace': 'ui.shortcuts.projectReplace',
+  'project-doctor': 'ui.shortcuts.projectDoctor', 'export-pdf': 'ui.shortcuts.exportPdf',
+  'ai-assistant': 'ui.shortcuts.aiAssistant', 'sprint': 'ui.shortcuts.sprint',
+  'about': 'ui.shortcuts.about', 'reopen-closed-tab': 'ui.shortcuts.reopenClosedTab',
   'delete-line': 'ui.shortcuts.deleteLine',
   'gallery': 'shortcuts.gallery',
   'cheatsheet': 'ui.shortcuts.cheatsheet',
@@ -782,22 +921,28 @@ export const SHORTCUT_LABELS = {
 export const SHORTCUT_CATS = [
   { key: 'file', labelKey: 'ui.shortcuts.catFile',
     ids: ['save', 'save-as', 'save-all', 'new-project', 'open-project', 'print', 'export-hub',
-          'export-blog', 'close-tab', 'close-all-tabs', 'new-from-template', 'compile',
-          'import-scrivener'] },
+          'export-blog', 'close-tab', 'close-all-tabs', 'next-tab', 'prev-tab', 'new-from-template', 'compile',
+          'import-scrivener',
+          // [alpha.162 · W4 ข้อ 5] คำสั่งระดับโปรเจกต์ที่เพิ่งมีคีย์ลัด
+          'export-pdf', 'project-doctor', 'reopen-closed-tab'] },
   { key: 'edit', labelKey: 'ui.shortcuts.catEdit',
     ids: ['editor-undo', 'editor-redo', 'find', 'global-search', 'quick-open', 'goto',
           'goto-page', 'goto-scene', 'select-scene', 'delete-line', 'nbsp', 'insert-image',
-          'thesaurus'] },
+          'thesaurus',
+          // [alpha.162 · W4 ข้อ 5] คีย์ที่เพิ่งเติม — ต้องมีหมวด ไม่งั้นตกไปกอง "อื่น ๆ"
+          'replace', 'project-replace'] },
   { key: 'format', labelKey: 'ui.shortcuts.catFormat',
     ids: ['fmt:bold', 'fmt:italic', 'fmt:underline', 'fmt:strike', 'fmt:heading:1', 'fmt:heading:2',
           'fmt:heading:3', 'fmt:paragraph', 'fmt:ul', 'fmt:ol', 'fmt:clear',
           'fmt:align:left', 'fmt:align:center', 'fmt:align:right', 'fmt:align:justify',
-          'text-case-cycle'] },
+          'text-case-cycle',
+          // [alpha.162 · W4 ข้อ 5] ตัวยก/ตัวห้อยมีคีย์ลัดมาตั้งแต่ alpha.97 แต่ไม่เคยมีหมวด
+          'fmt:sup', 'fmt:sub'] },
   { key: 'script', labelKey: 'ui.shortcuts.catScript',
     ids: ['toggle-format', 'sp-element:parenthetical', 'sp-element:dialogue', 'sp-element:transition',
           'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
   { key: 'view', labelKey: 'ui.shortcuts.catView',
-    ids: ['focus-mode', 'typewriter', 'reading-mode', 'read-book', 'line-numbers',
+    ids: ['focus-mode', 'typewriter', 'reading-mode', 'read-book', 'line-numbers', 'reveal-active',
           'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu',
           'fmtbar-here', 'fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock',
           'zoom:1', 'zoom:-1', 'zoom:0'] },
@@ -817,8 +962,13 @@ export const SHORTCUT_CATS = [
           // [alpha.125 ข้อ G]
           'toggle-panel:backlinks',
           // [alpha.141] จัดการบท
-          'toggle-panel:chapters'] },
-  { key: 'other', labelKey: 'ui.shortcuts.catOther', ids: ['settings', 'dev-console', 'cheatsheet'] },
+          'toggle-panel:chapters',
+          // [alpha.162 · W4 ข้อ 5]
+          'ai-assistant'] },
+  { key: 'other', labelKey: 'ui.shortcuts.catOther',
+    ids: ['settings', 'dev-console', 'cheatsheet',
+          // [alpha.162 · W4 ข้อ 5]
+          'sprint', 'about'] },
 ];
 
 /** หมวดของคีย์ลัดหนึ่งรายการ — ไม่รู้จัก = 'other' */

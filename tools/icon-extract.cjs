@@ -28,15 +28,15 @@ const fs = require('fs');
 const path = require('path');
 const { lexStrings, cookedValue } = require('./js-lex.cjs');
 const { classify, testStart } = require('./i18n-classify.cjs');
-const { iconNameOf } = require('./icon-lexicon.cjs');
+const { iconNameOf, ICON_RANGE_SRC } = require('./icon-lexicon.cjs');
 const { readCsvObjects } = require('./commands-data.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const APPLY = process.argv.includes('--apply');
 
 // อักขระที่ถือว่าเป็นไอคอน (พิกโตแกรม + สัญลักษณ์ที่โปรแกรมใช้แทนรูป)
-const ICONCH = '[\\u{1F300}-\\u{1FAFF}\\u{1F000}-\\u{1F0FF}\\u{1F100}-\\u{1F2FF}\\u{2460}-\\u{24FF}\\u{25A0}-\\u{27BF}'
-             + '\\u{2B00}-\\u{2BFF}\\u{FE0F}\\u{2300}-\\u{23FF}\\u{2190}-\\u{21FF}\\u{2500}-\\u{257F}]';
+// [alpha.162 · W6 ข้อ 1] ช่วงหลักมาจาก icon-lexicon ที่เดียวกับเทส ui-audit + ลูกศร/เส้นตีตาราง (ตัวยกเสนอได้ เทสไม่ฟ้อง)
+const ICONCH = '[' + ICON_RANGE_SRC + '\\u{2190}-\\u{21FF}\\u{2500}-\\u{257F}]';
 const HAS_ICON = new RegExp(ICONCH, 'u');
 const LEAD = new RegExp('^(' + ICONCH + '+)([\\s\\S]*)$', 'u');
 

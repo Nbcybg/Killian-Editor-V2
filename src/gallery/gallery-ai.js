@@ -9,7 +9,8 @@
 //
 // ทุกคำขอไปทาง `sendRequest()` ของ ai-provider-ui เสมอ = ผ่านการตรวจ Allowed Domains จุดเดียว
 import { t as tt, tf as ttf, t, tf } from '../i18n.js';
-import { setStatus, setBusy, clearBusy, log } from '../core.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
+import { setStatus, setStatusError, setBusy, clearBusy, log } from '../core.js';
 import { aiConfigured, callAI } from '../ai-settings.js';
 import * as AC from './album-core.js';
 import * as TG from './album-tags.js';
@@ -124,7 +125,7 @@ export async function aiCaptionImages(root, items, { usage = null, overwrite = f
     setStatus(n ? ttf('ui.galleryAi.aISetCaptionImage', n) : tt('ui.galleryAi.aICantSendCaption'));
   } catch (e) {
     log('error', 'aiCaptionImages failed', e);
-    setStatus(tt('ui.galleryAi.aISetCaptionFail') + e.message);
+    setStatusError(failText(tt('ui.galleryAi.aISetCaptionFail'), e));
   } finally { clearBusy(); }
   return n;
 }
@@ -166,7 +167,7 @@ export async function aiTagImages(root, items, { usage = null, entities = [] } =
     setStatus(n ? ttf('ui.galleryAi.aISuggestTagImage', n) : tt('ui.galleryAi.aICantSendTag'));
   } catch (e) {
     log('error', 'aiTagImages failed', e);
-    setStatus(tt('ui.galleryAi.aISuggestTagFail') + e.message);
+    setStatusError(failText(tt('ui.galleryAi.aISuggestTagFail'), e));
   } finally { clearBusy(); }
   return n;
 }

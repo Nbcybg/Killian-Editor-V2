@@ -10,6 +10,7 @@
 //   - เท่ากันค่อยเทียบข้อความ
 
 import { t } from './i18n.js';
+import { cmpText } from './locale.js';
 export const TIMELINE_VERSION = '1.0';
 
 // สีของ track (เลน) — วนใช้
@@ -38,7 +39,7 @@ export function sortEvents(events) {
     else if (kb !== null) return 1;
     // เท่ากัน/ไม่มีเลขทั้งคู่ → เทียบ order (ลำดับที่ผู้ใช้ลาก) แล้วค่อยข้อความ
     if ((a.order || 0) !== (b.order || 0)) return (a.order || 0) - (b.order || 0);
-    return String(a.when || '').localeCompare(String(b.when || ''), 'th');
+    return cmpText(String(a.when || ''), String(b.when || ''));
   });
 }
 

@@ -1,26 +1,13 @@
 // recycle.js — ถังขยะ: ลบไปถังขยะ / กู้คืน / ล้างถังขยะเก่า (retention)
 // ตรรกะที่ไม่แตะดิสก์ (อายุของของในถัง · ชื่อกันชน) อยู่ใน recycle-core.js ซึ่งมี unit test
 import { t, tf } from './i18n.js';
-import { buildTree, closeTab, guid, refreshNetwork, saveTab } from './app.js';
+import { buildTree, closeTab, guid, refreshNetwork, saveTab, flushTabForMove } from './app.js';
 import { setStatus, smart, state, logAction, setStatusAction } from './core.js';
 import { confirmBox } from './ui.js';
-import { purgeCandidates, originalName, nameCandidate } from './recycle-core.js';
+import { purgeCandidates, originalName } from './recycle-core.js';
 import { mutateJson } from './json-store.js';
-
-/**
- * [alpha.148] ชื่อที่ยังว่างในโฟลเดอร์ปลายทาง
- * การย้ายไฟล์ (`fs:move` = rename) **เขียนทับของที่มีอยู่แบบเงียบ ๆ** — เดิมกู้โน้ต "ไอเดีย.md"
- * กลับมาในวันที่มีโน้ตใหม่ชื่อเดียวกันอยู่แล้ว = โน้ตใหม่หายโดยไม่มีอะไรเตือน
- * @param {{dir?: boolean, taken?: Set<string>}} opts taken = ชื่อที่ถูกจองในข้อมูล (แม้ยังไม่มีบนดิสก์)
- */
-async function freeName(dir, name, opts = {}) {
-  for (let i = 1; i < 500; i++) {
-    const cand = nameCandidate(name, i, opts);
-    if (opts.taken && opts.taken.has(cand)) continue;
-    if (!(await kapi.exists(await kapi.join(dir, cand)))) return cand;
-  }
-  return nameCandidate(name, Date.now(), opts);
-}
+// [alpha.162 · W1-4] ชื่อในถัง/ชื่อที่ว่างอยู่ที่ `trash-path.js` ที่เดียว (ทางลบทุกทางใช้ร่วมกัน)
+import { freeName, trashPathFor } from './trash-path.js';
 
 export async function restoreFromTrash(p, fname) {
   const sidecar = p + '.k2restore.json';
@@ -101,8 +88,13 @@ async function restoreScene(p, info) {
     const title = String(info.folderName || '').replace(/^\d+\s*-\s*/, '') || t('ui.common.chapter');
     ch = { guid: info.chGuid, title, order, status: 'Outline', act: 'I', date: '',
            isFavorite: false, folderName: folder, restoredFromScene: true };
-    draft.chapters.push(ch);
-    await kapi.writeFile(df, JSON.stringify(draft, null, 2));
+    // [alpha.162 · W1-S1] แทรกบทที่สร้างกลับมา **ผ่านคิวของไฟล์** (กฎ alpha.156) — เดิมอ่าน draft.json
+    // ไว้ก่อนแล้วเขียนก้อนนั้นทับทั้งไฟล์ · ระหว่างนั้นงานอื่น (เรียงบท · เพิ่มบท) เขียนไปแล้วก็หาย
+    await mutateJson(kapi, df, (fresh) => {
+      fresh.chapters = fresh.chapters || [];
+      if (fresh.chapters.some((c) => c.guid === info.chGuid)) return false;   // มีคนกู้บทนี้ไปก่อนแล้ว
+      fresh.chapters.push(ch);
+    }, { fallback: { chapters: [] } });
     note = tf('ui.trash.restoredChapterRebuilt', title);
   }
   const chDir = await kapi.join(info.dPath, 'Chapters', ch.folderName);
@@ -193,14 +185,21 @@ async function restoreChapter(p, info) {
 
 export async function deleteToTrash(file, label) {
   if (!(await confirmBox(tf('ui.trash.delMoveTrashProject', label)))) return null;
-  const base = file.split(/[\\/]/).pop();
-  const dst = await kapi.join(state.root, 'Recycle', Date.now().toString(36) + '-' + base);
   // [alpha.156] งานที่ยังไม่บันทึกต้องลงไฟล์ก่อนย้ายลงถัง — เดิมทิ้งเงียบ ๆ แล้วของในถังเป็นฉบับเก่า
   // (ลบแล้วเปลี่ยนใจกู้คืน = ได้เนื้อที่ขาดช่วงท้ายที่เพิ่งพิม)
+  // [alpha.160 · P0-2] เดิม `try { await saveTab() } catch {}` กลืนค่า false (ผู้ใช้กดยกเลิกกล่องชนกับดิสก์)
+  // แล้วย้ายไฟล์ + ปิดแท็บแบบ discard ต่อ = งานที่ยังไม่บันทึกหายถาวร → บันทึกไม่ผ่าน = ไม่ลบ
   const openTab = state.tabs.get(file);
-  if (openTab && openTab.dirty) { try { await saveTab(openTab); } catch {} }
+  if (!(await flushTabForMove(openTab))) return null;
+  // [alpha.162 · W1-4] ★ ปิดแท็บ (ที่สะอาดแล้ว) **ก่อน** ย้าย — ทางเดียวกับ `deleteSceneSilent`
+  // เดิมบังคับ `dirty = false` แล้วปิดแบบทิ้ง ซึ่งทวนกฎ alpha.161: ตัวอักษรที่พิมพ์แทรกระหว่าง
+  // รอเขียนดิสก์ทำให้ dirty กลับมาติดได้ (alpha.148) แล้วการบังคับธงกลืนมันหายไปทั้งท่อน
+  if (openTab && state.tabs.get(file) === openTab) {
+    if (openTab.dirty) { setStatus(tf('ui.tree.delSkipUnsaved', label)); return null; }
+    closeTab(file, { discard: true });
+  }
+  const dst = await trashPathFor(file);      // [alpha.162 · W1-4] ชื่อปลายทางไม่ชนกัน
   await kapi.move(file, dst);
-  if (state.tabs.has(file)) { state.tabs.get(file).dirty = false; closeTab(file, { discard: true }); }
   await buildTree(); smart.loadNames(state.root);
   refreshNetwork();
   // [alpha.128] การลบเป็นสิ่งที่ต้องไล่ย้อนได้ที่สุด แต่เดิมไม่มีร่องรอยในบันทึกเลยสักบรรทัด

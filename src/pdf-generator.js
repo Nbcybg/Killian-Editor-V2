@@ -14,6 +14,7 @@
 // ไฟล์นี้ไม่แตะ DOM/kapi — รับไบต์ฟอนต์เข้ามา คืน Uint8Array ออกไป → เทสด้วย node ได้
 
 import { t as tt, t } from './i18n.js';
+import { throwIfCancelled } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
 import { PDFDocument, StandardFonts, PDFName, PDFHexString, degrees, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 // [alpha.82] ต้องนับความกว้างแบบเดียวกับ wrapLines() เป๊ะ ไม่งั้น PDF กับหน้าจอตัดหน้าคนละที่
@@ -21,7 +22,7 @@ import fontkit from '@pdf-lib/fontkit';
 import { wrapScriptLines } from './sp-format.js';
 import { mergeSpFormat, textWidth, lineHeightIn, paginate, pageNumberLabel,
          elementWidthIn, CHARS_PER_INCH } from './sp-format.js';
-import { mergeHeaders, headerStringsFor, headerLineCount, linesForBody } from './sp-headers.js';
+import { mergeHeaders, headerStringsFor, headerLineCount, linesForBody, headerPageNumber } from './sp-headers.js';
 import { normalizeTitlePages } from './sp-title-pages.js';
 import { num, numClamp } from './num.js';
 
@@ -512,14 +513,23 @@ export async function generatePdf(args = {}) {
     DATE: meta.date || '', COPYRIGHT: meta.copyright || '', PAGES: paged.count,
   };
 
-  paged.pages.forEach((pg, pi) => {
+  // [alpha.162 · W5 ข้อ 2] เดิม `forEach` ซิงก์ทั้งก้อน — บทยาวค้างทั้งหน้าจอ กดยกเลิกก็ไม่มีจังหวะรับคลิก
+  // ตอนนี้พักทุก 5 หน้า: บอกความคืบหน้า + ให้ปุ่มยกเลิกทำงาน (ผลลัพธ์ทุกไบต์เท่าเดิม — ลำดับการวาดไม่เปลี่ยน)
+  const nPages = paged.pages.length;
+  for (let pi = 0; pi < nPages; pi++) {
+    const pg = paged.pages[pi];
+    if (pi && pi % 5 === 0) {
+      throwIfCancelled(args.signal);
+      if (typeof args.onProgress === 'function') { try { args.onProgress(pi, nPages); } catch {} }
+      await new Promise((r) => setTimeout(r, 0));
+    }
     const page = newPage();
     stampWatermark(page);
     const rows = layoutPageLines(pg, fmt);
 
     // [91] หัวกระดาษ
     const hdrRows = headerStringsFor(pg.index, hdr, {
-      ...hdrCtx, PAGE: opts.startPage + pg.index - 1,
+      ...hdrCtx, PAGE: headerPageNumber(opts.startPage, pg.index),   // [alpha.160 · P1-9] ตัวเดียวกับช่องตัวอย่าง
       SCENE: (rows.find((r) => r.block.el === 'scene') || { block: {} }).block.text || '',
     });
     for (const r of hdrRows) {
@@ -609,7 +619,7 @@ export async function generatePdf(args = {}) {
       draw(page, pg.continuedBottom, { x: mgL, y: baseline(bodyLines), size,
                                        boxWidth: tw * PT_PER_IN, align: 'right' });
     }
-  });
+  }
 
   // ── เมทาดาทาของไฟล์ ──
   try {

@@ -1,6 +1,8 @@
 // export-zip.js — ส่งออกโปรเจกต์ทั้งหมดเป็น .zip (รูปภาพต้องไม่เสีย → อ่าน/เขียนเป็นไบต์เท่านั้น)
 import { t, tf } from './i18n.js';
-import { state, setStatus, log, setBusy, clearBusy } from './core.js';
+import { state, setStatus, setStatusError, log, setBusy, clearBusy, withBusyTask } from './core.js';
+import { isCancelled, throwIfCancelled } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
+import { failText } from './err-text.js';
 import JSZip from 'jszip';
 
 const SKIP_DIRS = ['Snapshots', '.k2history', 'Backups', 'Recycle'];
@@ -13,12 +15,15 @@ const BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2
 export async function exportProjectZip() {
   if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return false; }
   // [alpha.62 บั๊ก 10] บอกความคืบหน้าที่แถบล่าง — โปรเจกต์ใหญ่ ๆ ใช้เวลาหลายวินาที
-  setBusy(t('ui.exportZip.busyZIP'));
+  // [alpha.162 · W5 ข้อ 2] สองช่วง (รวบรวมไฟล์ · บีบ+เขียน) ต่างก็ยกเลิกได้ด้วยปุ่มที่แถบสถานะ
+  const name = t('ui.exportZip.taskName');
   try {
     const zip = new JSZip();
     let nFiles = 0;
+    await withBusyTask(t('ui.exportZip.busyZIP'), async ({ signal, progress }) => {
     const addDir = async (dir, prefix = '') => {
       for (const f of await kapi.listFiles(dir, '').catch(() => [])) {
+        throwIfCancelled(signal);
         if (!prefix && ZIP_SKIP_ROOT_FILES.includes(f)) continue;
         const full = await kapi.join(dir, f);
         try {
@@ -29,7 +34,7 @@ export async function exportProjectZip() {
             zip.file(prefix + f, await kapi.readFile(full));
           }
           nFiles++;
-          if (nFiles % 20 === 0) setBusy(tf('ui.exportZip.busyZIPFile', nFiles));
+          if (nFiles % 20 === 0) progress(nFiles);
         } catch (e) { log('warn', t('ui.exportZip.exportZipSkipFile') + full, e); }
       }
       for (const d of await kapi.listDirs(dir).catch(() => [])) {
@@ -38,23 +43,29 @@ export async function exportProjectZip() {
       }
     };
     await addDir(state.root);
+    }, { name });
 
     // เคลียร์ก่อนเปิดกล่องบันทึกเสมอ — ห้ามมีสปินเนอร์หมุนค้างตอนรอผู้ใช้ตอบ (บทเรียนจากบั๊ก 9)
-    clearBusy();
+    // (withBusyTask เคลียร์ให้แล้วตอนจบช่วงแรก)
     const dest = await kapi.saveAsDialog((state.title || 'project') + '.zip');
     if (!dest) return false;
-    setBusy(t('ui.exportZip.busyWriteFileZIP'));
-    const bytes = await zip.generateAsync({ type: 'uint8array' });
-    // ส่งเป็น byte array ผ่าน IPC — ห้ามแปลงเป็น string (utf-8 จะบวมไฟล์เสีย)
-    await kapi.writeBytes(dest, bytes);            // [alpha.148] Uint8Array ตรง ๆ (ไม่ใช่ Array.from ทีละไบต์)
+    await withBusyTask(t('ui.exportZip.busyWriteFileZIP'), async ({ signal, progress }) => {
+      // JSZip บอกเปอร์เซ็นต์ระหว่างบีบ · หยุดกลางทางไม่ได้ แต่ **ยกเลิกแล้วไม่เขียนไฟล์** (ไม่ทิ้ง .zip ครึ่ง ๆ)
+      const bytes = await zip.generateAsync({ type: 'uint8array' }, (m) => progress(Math.round(m.percent), 100));
+      throwIfCancelled(signal);
+      // ส่งเป็น byte array ผ่าน IPC — ห้ามแปลงเป็น string (utf-8 จะบวมไฟล์เสีย)
+      await kapi.writeBytes(dest, bytes);            // [alpha.148] Uint8Array ตรง ๆ (ไม่ใช่ Array.from ทีละไบต์)
+    }, { name });
     setStatus(tf('ui.exportZip.exportZIPDoneFile', nFiles) + dest);
     log('info', 'export-zip: done ' + nFiles + ' files');
     return true;
   } catch (e) {
+    if (isCancelled(e)) return false;              // withBusyTask บอก "ยกเลิกแล้ว" ที่แถบสถานะให้แล้ว
     log('error', 'export-zip failed', e);
-    setStatus(t('ui.exportZip.exportZIPFail') + e.message);
+    // [alpha.162 · W5] เดิม `+ e.message` ดิบ (ENOENT: …) — จุดที่ W4-7 กวาดตก
+    setStatusError(failText(t('ui.exportZip.exportZIPFail'), e));
     return false;
-  } finally { clearBusy(); }
+  }
 }
 
 /**
@@ -118,7 +129,7 @@ export async function importProjectZip(srcZip, dstParent) {
     return dest;
   } catch (e) {
     log('error', 'import-zip failed', e);
-    setStatus(t('ui.exportZip.importZIPFail') + e.message);
+    setStatusError(failText(t('ui.exportZip.importZIPFail'), e));
     return false;
   } finally { clearBusy(); }
 }

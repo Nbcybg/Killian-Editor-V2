@@ -31,8 +31,9 @@ export async function recordDailyWords(totalWords, root = state.root) {
   }
   state.meta.wordHistory = hist;
   try {
-    const { saveProjectMeta } = await import('./app.js');
+    const { saveProjectMeta, updateProgressBar } = await import('./app.js');
     await saveProjectMeta();
+    updateProgressBar();                            // [alpha.162 · W5 ข้อ 5] แถบเป้าอ่านจากประวัตินี้
   } catch {}
   return true;
 }

@@ -6,6 +6,7 @@ import { t, tf } from './i18n.js';
 import { state, setStatus, el, log, SCENE_STATUSES, STATUS_COLORS, DEFAULT_STATUS_COLOR, dataLabel } from './core.js';
 import { ask, confirmBox, escClose } from './ui.js';
 import { gi } from './icons.js';
+import { countStatusUse } from './status-choices.js';   // [alpha.160 · P1-11]
 import { vivid, inkOn } from './color-util.js';
 
 export function getCustomStatuses() {
@@ -192,7 +193,11 @@ export async function manageCustomStatuses() {
       del.title = t('ui.status.delStatus2');
       del.onclick = async (e) => {
         e.stopPropagation();
-        if (await confirmBox(tf('ui.status.delStatus', s), t('ui.common.del'))) { await removeCustomStatus(s); render(); refreshStatusChips(); }
+        // [alpha.160 · P1-11] บอกจำนวนฉากที่ยังใช้สถานะนี้ — ฉากพวกนั้นเก็บค่าเดิมไว้ (แผงคุณสมบัติไม่เขียนทับแล้ว)
+        let inUse = 0;
+        try { const { listScenes } = await import('./project-scan.js'); inUse = countStatusUse(await listScenes(state.root), s); } catch {}
+        const q = inUse ? tf('ui.status.delStatusInUse', s, inUse) : tf('ui.status.delStatus', s);
+        if (await confirmBox(q, t('ui.common.del'))) { await removeCustomStatus(s); render(); refreshStatusChips(); }
       };
       row.append(del);
     }
@@ -221,9 +226,10 @@ export async function manageCustomStatuses() {
   const inB = el('button', null, t('ui.status.import'));
   inB.title = t('ui.status.readSetStatusFile');
   inB.onclick = async () => { await importStatusesFile(); render(); refreshStatusChips(); };
-  const closeB = el('button', null, t('ui.common.close'));
+  const closeB = el('button', 'k-cancel', t('ui.common.close'));
   closeB.onclick = () => ov.remove();
-  btns.append(addB, outB, inB, closeB);
+  // [alpha.162 · W4 ข้อ 9] ปุ่มหลักขวาสุด · ปุ่มเครื่องมือซ้าย (`k-cancel` = ทางที่ Esc เดินด้วย)
+  btns.append(outB, inB, closeB, addB);
   box.append(list, btns);
   ov.append(box);
   document.body.append(ov);

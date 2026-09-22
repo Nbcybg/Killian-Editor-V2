@@ -5,6 +5,8 @@ import { el, setStatus, state } from '../core.js';
 import { AutoLink } from '../world-story/auto-link.js';
 import { listScenes, listEntities } from '../project-scan.js';
 import { gi } from '../icons.js';
+import { panelEmpty, panelTitle } from '../panels/panel-chrome.js';   // [alpha.162 · W2] ของกลางของเนื้อแผง
+import { cmpText } from '../locale.js';
 
 let autoLink = null;   // AutoLink instance
 let building = null;   // Promise ของการสร้างดัชนีที่กำลังวิ่งอยู่
@@ -87,7 +89,7 @@ export function renderBacklinksTab(host, entityPath, onOpenScene) {
   const list = el('div', 'bl-list');
   for (const link of links) {
     const row = el('div', 'bl-row');
-    row.append(el('span', 'bl-count', (link.count || 1) + '× '));
+    row.append(el('span', 'bl-count', (link.count || 1) + (gi('times') + ' ')));
     const name = el('span', 'bl-name', link.title || link.sceneId);
     name.style.cursor = 'pointer';
     name.style.color = 'var(--link)';
@@ -125,7 +127,7 @@ export async function backlinkSummary() {
     };
   });
   // ตัวที่ไม่โผล่เลยขึ้นก่อน — นั่นคือของที่ผู้ใช้ต้องเห็น ไม่ใช่ตัวเอกที่โผล่ทุกฉาก
-  rows.sort((a, b) => a.count - b.count || String(a.name).localeCompare(String(b.name), 'th'));
+  rows.sort((a, b) => a.count - b.count || cmpText(String(a.name), String(b.name)));
   return rows;
 }
 
@@ -138,11 +140,11 @@ export async function renderBacklinksPanel(host, onOpenScene) {
   if (!host) return null;
   host.replaceChildren();
   if (!state.root) {
-    host.append(el('div', 'k-panel-empty', t('ui.common.cantOpenProject')));
+    host.append(panelEmpty(t('ui.common.cantOpenProject')));
     return null;
   }
   const head = el('div', 'bl-panel-head');
-  head.append(el('span', 'k-dlg-title', t('ui.worldAutoLink.panelTitle')));
+  head.append(panelTitle(t('ui.worldAutoLink.panelTitle')));   // [alpha.162 · W2]
   const reB = el('button', 'k-panel-btn', gi('refresh-thin'));
   reB.title = t('ui.worldAutoLink.rebuild');
   head.append(reB);
@@ -177,7 +179,7 @@ export async function renderBacklinksPanel(host, onOpenScene) {
       box.append(h);
       for (const s of r.scenes.slice(0, 8)) {
         const row = el('div', 'bl-row');
-        row.append(el('span', 'bl-count', (s.count || 1) + '× '));
+        row.append(el('span', 'bl-count', (s.count || 1) + (gi('times') + ' ')));
         const nm = el('span', 'bl-name', s.title || s.sceneId);
         nm.onclick = () => onOpenScene && onOpenScene(s.sceneId, s.title);
         row.append(nm);

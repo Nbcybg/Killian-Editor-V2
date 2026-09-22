@@ -38,6 +38,11 @@
   <!-- alpha.57a ข้อ 3: เมนู "บท" มีอยู่ใน main.js ตั้งแต่ .57 แต่แถบชื่อไม่มีปุ่มเปิด
        → ฟีเจอร์ 54/57/59/60/61/78 เข้าไม่ถึงเลย (67/68/70 รอดเพราะอยู่ในเมนู "ไฟล์" ด้วย) -->
   <span class="tb-menu" data-m="Script" data-i18n="menu.script"></span>
+  <!-- [alpha.162 · W4] เมนู "เครื่องมือ" มีใน main.js ตั้งแต่ .60 แต่แถบชื่อไม่มีปุ่มเปิด
+       → เทียบบท · ตรวจคำซ้ำ · คลังคำพ้อง · แทนที่ทั้งโปรเจกต์ · สปรินต์ · ตรวจสุขภาพโปรเจกต์ ·
+       ชุดเครื่องมือผู้แปล เข้าไม่ถึงจากแถบเมนูเลย (บั๊กตระกูลเดียวกับเมนู "บท" ที่ .57a เจอ)
+       และเทสเดิมฮาร์ดโค้ดรายชื่อปุ่มไว้เจ็ดตัว จึงไม่มีใครจับได้ -->
+  <span class="tb-menu" data-m="Tools" data-i18n="menu.tool"></span>
   <span class="tb-menu" data-m="View" data-i18n="menu.view"></span>
   <span class="tb-menu" data-m="Help" data-i18n="menu.help"></span>
   <span class="tb-menu" data-m="AI" data-i18n="menu.ai">AI</span>
@@ -64,10 +69,10 @@
      สร้างโปรเจกต์ใหม่ไปอยู่เมนู ไฟล์"
      → #topbar ถูกลบทิ้งทั้งแถบ · ปุ่มโปรเจกต์มาอยู่หัว #toolbar (ซึ่งเป็นแผง adopt อยู่แล้ว)
      ห้ามใช้ class="sep" คั่นตรงนี้ — setupFloatingFormatBar() ลบ .sep ใน #toolbar ทิ้งทั้งหมด -->
-<div id="toolbar">
+<div id="toolbar" data-i18n-attr="aria-label" data-i18n="ui.toolbar.ariaLabel">
   <button id="open-btn" class="tb tb-txt" data-i18n="app.openProject" data-i18n-title="app.openProject" data-command="open-project"></button>
   <button id="save-all-btn" class="tb tb-txt" style="display:none" data-i18n="ui.html.saveProjBtn" data-i18n-title="ui.html.saveProjBtn" data-command="save-all"></button>
-  <button id="search-all-btn" class="tb tb-txt tb-toggle" data-i18n="ui.html.searchProjBtn" data-i18n-title="ui.html.searchProjBtn" data-command="global-search"></button>
+  <button id="search-all-btn" class="tb tb-txt tb-toggle" data-panel="search" data-i18n="ui.html.searchProjBtn" data-i18n-title="ui.html.searchProjBtn" data-command="global-search"></button>
   <span class="k-topsep"></span>
   <!-- [alpha.138] ปุ่มธีมถูกถอดออกตามคำสั่งผู้ใช้ — ธีมเลือกที่ ตั้งค่า → ทั่วไป → ธีมสี อย่างเดียว -->
   <!-- [alpha.150 ข้อ 1] ย้อนกลับ/ทำซ้ำ — หมวดแรกสุดของแถบรูปแบบลอย ตามที่ผู้ใช้สั่งลำดับมา -->
@@ -149,7 +154,7 @@
   <button id="tb-img" class="tb" data-i18n-title="ui.html.tbImg" data-command="insert-image"></button>
   <!-- [alpha.62 บั๊ก 14] คลังรูปเป็นแผงตั้งแต่ .60r1 แล้ว ปุ่มจึงต้องเป็นสวิตช์เหมือนแผงอื่น
        (เดิม class="tb" + openGallery() = กดกี่ครั้งก็เปิดซ้ำ ปิดไม่ได้เลย) -->
-  <button id="tb-gallery" class="tb tb-toggle" data-i18n-title="ui.html.tbGallery" data-command="gallery"></button>
+  <button id="tb-gallery" class="tb tb-toggle" data-panel="gallery" data-i18n-title="ui.html.tbGallery" data-command="gallery"></button>
   <button id="tb-visual" class="tb" data-i18n-title="ui.html.tbVisual" data-command="ui:tb-visual"></button>
   <!-- [alpha.84 ข้อ 3] สวิตช์ CONTINUED/(MORE)/(cont'd) — เดิมมีแต่ในเมนู "บท" ซึ่งหาไม่เจอ -->
   <button id="tb-sp-cont" class="tb tb-toggle" style="display:none" data-i18n-title="ui.html.tbSpCont" data-command="ui:tb-sp-cont">(∞)</button>
@@ -177,15 +182,17 @@
   <button id="tb-kanban" class="tb tb-toggle" data-i18n-title="ui.html.tbKanban" data-command="toggle-panel:kanban"></button>
   <!-- [alpha.60r ข้อ 4] ปุ่มแดชบอร์ด — toggle แผง dashboard -->
   <button id="tb-dashboard" class="tb tb-toggle" data-i18n-title="ui.html.tbDashboard" data-command="toggle-panel:dashboard"></button>
+  <!-- [alpha.162 · W5 ข้อ 4] ปุ่ม AI ปุ่มเดียว → เมนูของทั้งห้าปุ่มด้านล่าง (ซึ่งซ่อนเป็นค่าเริ่มต้น เปิดคืนได้ที่ ตั้งค่า → แถบเครื่องมือ) -->
+  <button id="tb-ai-group" class="tb" data-i18n-title="ui.html.tbAiGroup" data-command="ai-menu" aria-haspopup="menu"></button>
   <button id="tb-ai" class="tb" data-i18n-title="ui.html.tbAi" data-command="ai-assistant"></button>
   <!-- [alpha.116 ข้อ 3] AI Hub — ประตูเดียวเข้าทุกความสามารถ AI (กดซ้ำ = ปิดแผง) -->
   <button id="tb-ai-hub" class="tb tb-toggle" data-i18n-title="ui.html.tbAiHub" data-command="toggle-panel:ai-hub"></button>
   <!-- [alpha.62 บั๊ก 2] ปุ่มนี้คือสวิตช์ของแผง "AI ผู้ช่วยเขียน" (กดซ้ำ = ปิด) ไม่ใช่กล่องแชทเดิม -->
-  <button id="tb-ai-chat" class="tb tb-toggle" data-i18n-title="ui.html.tbAiChat" data-command="ai-chat-toggle"></button>
+  <button id="tb-ai-chat" class="tb tb-toggle" data-panel="ai-chat" data-i18n-title="ui.html.tbAiChat" data-command="ai-chat-toggle"></button>
   <!-- [alpha.94] Story Starter — สวิตช์แผง (กดซ้ำ = ปิด) -->
-  <button id="tb-starter" class="tb tb-toggle" data-i18n-title="ui.html.tbStarter" data-command="story-starter-toggle"></button>
+  <button id="tb-starter" class="tb tb-toggle" data-panel="starter" data-i18n-title="ui.html.tbStarter" data-command="story-starter-toggle"></button>
   <!-- [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI -->
-  <button id="tb-ai-analyzer" class="tb tb-toggle" data-i18n-title="ui.html.tbAiAnalyzer" data-command="ai-analyzer"></button>
+  <button id="tb-ai-analyzer" class="tb tb-toggle" data-panel="ai-analyzer" data-i18n-title="ui.html.tbAiAnalyzer" data-command="ai-analyzer"></button>
   <!-- [alpha.69] แผงใหม่ 3 ตัว — เป็นสวิตช์เหมือนปุ่มแผงตัวอื่น (กดซ้ำ = ปิด) -->
   <button id="tb-codex" class="tb tb-toggle" data-i18n-title="ui.html.tbCodex" data-command="toggle-panel:codex"></button>
   <button id="tb-history" class="tb tb-toggle" data-i18n-title="ui.html.tbHistory" data-command="toggle-panel:history"></button>
@@ -194,6 +201,8 @@
   <button id="tb-dialogue" class="tb tb-toggle" data-i18n-title="ui.html.tbDialogue" data-command="toggle-panel:dialogue"></button>
   <button id="tb-dlgb" class="tb tb-toggle" data-i18n-title="ui.html.tbDlgb" data-command="toggle-panel:dlgb"></button>
   <button id="tb-plugins" class="tb tb-toggle" data-i18n-title="ui.html.tbPlugins" data-command="toggle-panel:plugins"></button>
+  <!-- [alpha.162 · W5 ข้อ 4] ตั้งค่า — เดิมเข้าได้จากเมนู/ปุ่มลอยเท่านั้น (ปุ่มลอยปิดได้ และไม่ได้เปิดเป็นค่าเริ่มต้นในทุกเครื่อง) -->
+  <button id="tb-settings" class="tb" data-i18n-title="ui.html.tbSettings" data-command="settings"></button>
   <!-- [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบเลย — ต้องเข้าถึงได้จากที่เดียวกับแผงอื่น
        (ซ่อนตัวที่ไม่ใช้ได้ที่ ตั้งค่า → แถบเครื่องมือ) -->
   <button id="tb-timeline" class="tb tb-toggle" data-i18n-title="ui.html.tbTimeline" data-command="toggle-panel:timeline"></button>
@@ -228,7 +237,6 @@
 <!-- ที่พักของเนื้อแผง — panel-renderer "ย้าย" element เหล่านี้เข้า host (ห้ามสร้างใหม่: โค้ดทั้งโปรเจกต์อ้าง id) -->
 <div id="k-panel-src" hidden>
     <div id="tree-panel">
-      <div id="tree-head"><span data-icon="book-content" data-icon-size="16"></span> <span data-i18n="panel.project"></span></div>
       <div id="filter-bar">
         <div id="filter-statuses"></div>
         <div id="filter-archive">
@@ -248,11 +256,9 @@
       <div id="tree"></div>
     </div>
     <div id="props-panel">
-      <div id="props-head" data-i18n="panel.properties"></div>
       <div id="props-body"><div class="dim" data-i18n="panel.selectScene"></div></div>
     </div>
     <div id="outline-panel">
-      <div id="outline-head" data-i18n="panel.navigation">NAVIGATION</div>
       <div id="outline"></div>
     </div>
     <div id="content">
@@ -264,7 +270,6 @@
     <!-- [alpha.125 ข้อ G] "ฉากที่กล่าวถึง" ทั้งโปรเจกต์ — เดิมมีแต่แท็บเล็ก ๆ ในหน้าเอนทิตี้ Wiki -->
     <div id="backlinks-panel"><div id="backlinks-body"></div></div>
     <div id="notes-panel"><div id="notes-body"></div></div>
-    <div id="home-panel"><div id="home-body"></div></div>
     <div id="comments-panel"><div id="comments-body"></div></div>
     <!-- บั๊ก #18: 5 ฟีเจอร์ที่ไม่ใช่ "เอกสาร" ย้ายจากแท็บ (#tabs/#panes) มาเป็นแผงของตัวเอง
          → เลิกแย่งแถบแท็บกับฉาก/บทที่กำลังเขียนอยู่ -->
@@ -289,7 +294,7 @@
     <div id="starter-panel" class="k-featpanel"><div id="starter-body"></div></div>
     <!-- [alpha.62 บั๊ก 16] 3 ฟีเจอร์สุดท้ายที่ยังเป็นแท็บเอกสาร — ย้ายมาเป็นแผงให้ครบชุด
          (เดิมแย่งแถบแท็บกับฉากที่กำลังเขียน และเปิดคู่กับต้นฉบับไม่ได้) -->
-    <div id="net-panel" class="k-featpanel"><div id="net-body"></div></div>
+    <div id="net-panel" class="k-featpanel"><div id="net-body" class="k-pan-canvas"></div></div>
     <div id="planner-panel" class="k-featpanel"><div id="planner-body"></div></div>
     <div id="planner-props-panel" class="k-featpanel"><div id="planner-props-body"></div></div>
     <div id="floor-panel" class="k-featpanel"><div id="floor-body"></div></div>

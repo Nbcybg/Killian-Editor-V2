@@ -3,6 +3,7 @@ import { t, tf } from './i18n.js';
 import { state, setStatus, el } from './core.js';
 import { escClose } from './ui.js';
 import { gi } from './icons.js';
+import { fmtDate, fmtDateTime } from './locale.js';
 
 const NOTES_KEY = 'k2-session-notes';
 
@@ -85,7 +86,7 @@ export function renderFutureNotes(host, { onChanged = null, onOpenScene = null }
     // ข้อความโน้ตมาจากผู้ใช้ → textContent เท่านั้น
     body.append(el('div', 'fn-text', n.text));
     let when = '';
-    try { when = new Date(n.timestamp).toLocaleDateString('th-TH'); } catch { when = ''; }
+    when = fmtDate(n.timestamp);
     body.append(el('div', 'fn-meta', [n.sceneTitle && gi('file') + ' ' + n.sceneTitle, when].filter(Boolean).join(' · ')));
     if (n.sceneId && onOpenScene) {
       body.style.cursor = 'pointer';
@@ -179,7 +180,7 @@ export async function showAllNotes(filter = null) {
       const body = el('div', null, (n.future ? (n.done ? gi('check-circle') + ' ' : gi('pin') + ' ') : '') + n.text.slice(0, 120));
       body.style.fontSize = '12px';
       const sub = el('small', null,
-        [n.sceneTitle, new Date(n.timestamp).toLocaleString('th-TH'),
+        [n.sceneTitle, fmtDateTime(n.timestamp),
          n.future ? (n.done ? t('ui.notes.doDone') : t('ui.notes.do')) : ''].filter(Boolean).join(' · '));
       sub.style.color = 'var(--dim)';
       row.append(body, sub);

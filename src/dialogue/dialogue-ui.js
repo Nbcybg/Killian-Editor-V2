@@ -13,11 +13,13 @@
 //   3. เขียนเสร็จแล้วโหลดแท็บที่เปิดค้างใหม่ ให้หน้าจอกับไฟล์ตรงกันเสมอ
 
 import { t as tt, tf as ttf } from '../i18n.js';
-import { $, el, state, setStatus, log, smart } from '../core.js';
+import { $, el, state, setStatus, setStatusError, log, smart } from '../core.js';
 import { parseMdFile, dumpMdFile } from '../md.js';
 import { listScenes, listEntities } from '../project-scan.js';
 import * as DC from './dialogue-core.js';
 import { gi } from '../icons.js';
+import { panelEmpty } from '../panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
+import { errText } from '../err-text.js';       // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 
 const S = () => (state._dialogue || (state._dialogue = {
   rows: null, names: [], scenes: [],
@@ -116,7 +118,7 @@ async function scanDialogueInner() {
     s.rows = rows;
     s.scenes = sceneList;
   } catch (e) {
-    s.rows = []; s.error = e.message || String(e);
+    s.rows = []; s.error = errText(e);
     log('error', tt('ui.dialogue.errScan'), e);
   } finally { s.scanning = false; }
   return s.rows;
@@ -139,11 +141,11 @@ export async function renderDialoguePanel(host) {
   h.classList.add('k-dlgp');
 
   if (!state.root) {
-    h.append(el('div', 'dim k-dlgp-empty', tt('ui.common.openProjectBefore')));
+    h.append(panelEmpty(tt('ui.common.openProjectBefore')));
     return true;
   }
   if (!s.rows) {
-    h.append(el('div', 'dim k-dlgp-empty', tt('ui.dialogue.scanning')));
+    h.append(panelEmpty(tt('ui.dialogue.scanning')));
     await scanDialogue();
     return renderDialoguePanel(h);
   }
@@ -269,11 +271,10 @@ function buildBar(host) {
 function drawList(body) {
   const s = S();
   body.replaceChildren();
-  if (s.error) { body.append(el('div', 'k-dlgp-empty dim', tt('ui.dialogue.errScan') + ' ' + s.error)); return; }
+  if (s.error) { body.append(panelEmpty(tt('ui.dialogue.errScan') + ' ' + s.error)); return; }
   const rows = visibleRows();
   if (!rows.length) {
-    body.append(el('div', 'k-dlgp-empty dim',
-      (s.rows || []).length ? tt('ui.dialogue.noMatch') : tt('ui.dialogue.noneFound')));
+    body.append(panelEmpty((s.rows || []).length ? tt('ui.dialogue.noMatch') : tt('ui.dialogue.noneFound')));
     return;
   }
   for (const g of DC.groupByScene(rows)) {
@@ -377,7 +378,7 @@ export async function openAt(r) {
   const app = await import('../app.js');
   try {
     await app.openScene(r.path, r.sceneTitle || '');
-  } catch (e) { setStatus(tt('ui.dialogue.errOpen') + ' ' + (e.message || e)); return false; }
+  } catch (e) { setStatusError(tt('ui.dialogue.errOpen') + ' ' + errText(e)); return false; }
   await new Promise((res) => setTimeout(res, 120));
   return selectInEditor(r.text);
 }
@@ -418,7 +419,7 @@ export async function applyEdit(r, next) {
   }
   let raw = '';
   try { raw = await kapi.readFile(r.path); }
-  catch (e) { setStatus(tt('ui.dialogue.errRead') + ' ' + (e.message || e)); return false; }
+  catch (e) { setStatusError(tt('ui.dialogue.errRead') + ' ' + errText(e)); return false; }
   let meta = {}, body = '';
   try { const p = parseMdFile(raw); meta = p.meta || {}; body = p.body || ''; }
   catch { body = raw; }
@@ -429,8 +430,10 @@ export async function applyEdit(r, next) {
     setStatus(tt('ui.dialogue.errStale'));
     return false;
   }
-  try { await kapi.writeFile(r.path, dumpMdFile(meta, out)); }
-  catch (e) { setStatus(tt('ui.dialogue.errWrite') + ' ' + (e.message || e)); return false; }
+  // [alpha.160 · P0-1] parseMdFile ตัดบล็อก k2-comments — ต้องพาเธรดคอมเมนต์กลับลงไฟล์
+  try { const { writeMdKeepingComments } = await import('../comments/comment-core.js');
+        await writeMdKeepingComments(kapi, r.path, dumpMdFile(meta, out)); }
+  catch (e) { setStatusError(tt('ui.dialogue.errWrite') + ' ' + errText(e)); return false; }
 
   // ด่านที่ 3: แท็บที่เปิดค้างต้องเห็นของใหม่
   try { if (tab) await app.reloadTabsFromDisk(r.path); } catch {}
@@ -459,5 +462,5 @@ export async function exportCsv() {
     await kapi.writeFile(p, csv);
     setStatus(tt('ui.dialogue.exported') + ' ' + p);
     return true;
-  } catch (e) { setStatus(tt('ui.dialogue.errWrite') + ' ' + (e.message || e)); return false; }
+  } catch (e) { setStatusError(tt('ui.dialogue.errWrite') + ' ' + errText(e)); return false; }
 }

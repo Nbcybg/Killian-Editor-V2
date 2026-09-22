@@ -3,7 +3,8 @@
 // ตัววินิจฉัยเป็นโมดูลบริสุทธิ์ (project-doctor.js) · ที่นี่: อ่านดิสก์ → ภาพถ่าย → กล่อง → ซ่อม
 // การซ่อมทุกอย่างเขียนผ่าน kapi (มีประวัติการทำงานให้ย้อนกลับ) และ `mutateJson` (ไม่ทับงานอื่น)
 import { t, tf } from './i18n.js';
-import { el, state, setStatus, log, logAction, withBusy } from './core.js';
+import { el, state, setStatus, log, logAction, withBusyTask } from './core.js';
+import { isCancelled, throwIfCancelled } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
 import { confirmBox, escClose } from './ui.js';
 import { parseMdFile, dumpMdFile, repairFrontmatter } from './md.js';
 import { diagnoseDraft, newSceneRow, newChapterEntry, summarize } from './project-doctor.js';
@@ -40,12 +41,17 @@ export function describeIssue(it) {
   }
 }
 
-/** อ่านทุกฉบับร่างของโปรเจกต์ → รายการปัญหา */
-export async function scanProject() {
+/**
+ * อ่านทุกฉบับร่างของโปรเจกต์ → รายการปัญหา
+ * [alpha.162 · W5 ข้อ 2] `signal` = ยกเลิกได้ระหว่างอ่าน · `onProgress(n)` = อ่านไฟล์ฉากไปแล้ว n ไฟล์
+ */
+export async function scanProject({ signal = null, onProgress = null } = {}) {
   if (!state.root) return [];
   const A = await import('./app.js');
   const issues = [];
+  let nRead = 0;
   for (const d of await A.listDrafts()) {
+    throwIfCancelled(signal);
     const readOr = async (name, empty) => {
       const p = await kapi.join(d.dPath, name);
       if (!(await kapi.exists(p))) return empty;          // ฉบับร่างใหม่ที่ยังไม่มีไฟล์ = ว่าง ไม่ใช่ "เสีย"
@@ -62,7 +68,10 @@ export async function scanProject() {
         const files = await kapi.listFiles(dir, '.md').catch(() => []);
         snap.files[f] = files;
         for (const fn of files) {
+          throwIfCancelled(signal);
           try { snap.texts[f + '/' + fn] = await kapi.readFile(await kapi.join(dir, fn)); } catch {}
+          nRead++;
+          if (onProgress && nRead % 10 === 0) { try { onProgress(nRead); } catch {} }
         }
       }
     }
@@ -107,7 +116,10 @@ async function fixOne(it, A, freeSceneFileName) {
       try { text = await kapi.readFile(await kapi.join(chDir, it.folder, it.file)); } catch {}
       const { meta, body } = parseMdFile(text);
       if (row0.title) meta.title = row0.title;
-      await kapi.writeFile(await kapi.join(chDir, it.folder, name), dumpMdFile(meta, body));
+      // [alpha.160 · P0-1] ไฟล์ชื่อใหม่ต้องพาเธรดคอมเมนต์ของไฟล์เดิมไปด้วย
+      const { writeMdKeepingComments } = await import('./comments/comment-core.js');
+      await writeMdKeepingComments(kapi, await kapi.join(chDir, it.folder, name), dumpMdFile(meta, body),
+                                   await kapi.join(chDir, it.folder, it.file));
       const r = await mutateJson(kapi, sf, (d) => {
         const row = (((d.chapters || {})[it.chGuid]) || []).find((x) => x.id === it.rowId);
         if (!row) return false;
@@ -257,7 +269,17 @@ export async function openProjectDoctor() {
   };
   const scan = async () => {
     list.replaceChildren(el('div', 'dim', t('ui.doctor.scanning')));
-    issues = await withBusy(t('ui.doctor.scanning'), () => scanProject());
+    // [alpha.162 · W5 ข้อ 2] โปรเจกต์ใหญ่อ่านทุกฉากทุกฉบับร่าง — บอกจำนวน + ยกเลิกได้
+    try {
+      issues = await withBusyTask(t('ui.doctor.scanning'),
+        ({ signal, progress }) => scanProject({ signal, onProgress: progress }), { name: t('ui.doctor.taskName') });
+    } catch (e) {
+      if (!isCancelled(e)) throw e;
+      issues = [];
+      list.replaceChildren(el('div', 'dim', tf('ui.common.taskCancelled', t('ui.doctor.taskName'))));
+      bFix.disabled = true;
+      return issues;
+    }
     render();
     return issues;
   };

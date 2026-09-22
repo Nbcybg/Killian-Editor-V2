@@ -5,7 +5,8 @@
 // [alpha.125 ข้อ D] import ที่เหลือใช้จริงเท่านั้น — ตัวที่กล่องตั้งค่าเก่าใช้
 // (`$` `el` `withBusy` `escClose` `tf`) ถูกถอดออกพร้อมกล่องนั้น
 import { t } from './i18n.js';
-import { state, setStatus, log } from './core.js';
+import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
+import { state, setStatus, setStatusError, log } from './core.js';
 import { gi } from './icons.js';
 
 const KEY_FILE = 'ai-key.json';
@@ -155,7 +156,7 @@ export async function callAI(prompt, system = '', opts = {}) {
     return text.trim();
   } catch (e) {
     log('error', 'AI call failed', e);
-    setStatus(t('ui.aiSet.connectAICant') + e.message);
+    setStatusError(failText(t('ui.aiSet.connectAICant'), e));
     return null;
   }
 }

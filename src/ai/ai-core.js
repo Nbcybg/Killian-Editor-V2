@@ -3,6 +3,7 @@
 // pure logic: ไม่แตะ DOM/fs/network เอง — ฉีด { http, io, now, sleep } เข้ามาทั้งหมด
 // spec: docs/72-ai-core.md
 import { t as tt, t } from '../i18n.js';
+import { retryBackoff } from '../timing.js';
 import { tokenizeQuery } from '../search-engine.js';   // ตัดคำไทยตัวเดียวกับระบบค้นหา (คืนสตริงคำ)
 
 // ────────────────────────────────────────────────────────────────
@@ -442,7 +443,7 @@ export class AIClient {
 }
 function fail(error, code) { return { ok: false, text: '', error, code, usage: { input: 0, output: 0, total: 0 }, cost: { usd: 0 } }; }
 const retryable = (s) => s === 429 || s === 408 || (s >= 500 && s < 600);
-const backoff = (n) => Math.min(8000, 500 * Math.pow(2, n));
+const backoff = retryBackoff;   // [alpha.162 · W6 ข้อ 7] สูตรเดียวใน timing.js (เดิมคัดลอกสามไฟล์)
 function httpMessage(status) {
   if (status === 401 || status === 403) return tt('ui.ai.aPIKeyNotValid') + status + ')';
   if (status === 429) return tt('ui.ai.callTryNewTimes');

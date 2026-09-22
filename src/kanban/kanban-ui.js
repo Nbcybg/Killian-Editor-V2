@@ -1,5 +1,6 @@
 // kanban-ui.js — กระดาน Kanban แสดงฉากตามสถานะ · ลากการ์ดเปลี่ยนสถานะ (ข้อ 12)
 import { $, el, setStatus, state, t, tf, dataLabel } from '../core.js';
+import { STATUS_UNSET } from '../palette.js';   // [alpha.162 · W6 ข้อ 2] ตัวเดียวกับแดชบอร์ด
 import { KanbanBoard, UNSET } from './kanban-core.js';   // คอลัมน์จัดการผ่านเมธอดของ board (removeColumn)
 import { allStatuses, statusColor, setStatusColor, addCustomStatus, deleteStatus, setStatusOrder,
          manageCustomStatuses, refreshStatusChips } from '../custom-status.js';
@@ -211,7 +212,7 @@ function renderKanban(b) {
       pick.style.background = colHex;
       pick.title = t('ui.status.recolorStatus');
       const inp = el('input', 'kb-col-color-input');
-      inp.type = 'color'; inp.value = normHex(statusColor(col.key)) || '#8f9bb3';
+      inp.type = 'color'; inp.value = normHex(statusColor(col.key)) || STATUS_UNSET;
       inp.onchange = async () => { await setStatusColor(col.key, inp.value); refreshStatusChips(); treeRefresh(); };
       pick.append(inp);
       pick.addEventListener('mousedown', (e) => e.stopPropagation());

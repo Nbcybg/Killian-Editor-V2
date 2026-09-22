@@ -9,6 +9,7 @@
 // ความสูงคิดจากสัดส่วนจริงของไฟล์ (`sizeForAspect`)
 
 import { t, tf } from '../i18n.js';
+import { gi } from '../icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { ask, confirmBox, popupMenu } from '../ui.js';
 import { imageLightbox } from '../wiki.js';
 import { iconHtml } from '../icons.js';
@@ -97,7 +98,7 @@ export class MoodBoard {
       b.onclick = fn;
       return b;
     };
-    const more = mk('⋯', (e) => {
+    const more = mk(gi('more'), (e) => {
       const r = e.currentTarget.getBoundingClientRect();
       popupMenu(r.left, r.bottom + 4, [
         { label: t('ui.galleryMoodboard.arrangeAuto'), click: () => this.tidy() },

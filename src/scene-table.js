@@ -4,6 +4,8 @@ import { $, el, state, setStatus, log } from './core.js';
 import { getVisualTags, renderVisualTagChips } from './visual-tags.js';
 import { statusColor } from './custom-status.js';
 import { gi } from './icons.js';
+import { readSceneMeta } from './scene-meta.js';   // [alpha.160 · P1-14]
+import { cmpText, fmtNum } from './locale.js';
 
 export async function openSceneTable() {
   const key = '::scenetable::';
@@ -16,7 +18,7 @@ export async function openSceneTable() {
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', tt('ui.scene.tableScene2')));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
+  const x = el('span', 'tab-x', gi('times')); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const tab = { file: key, title: tt('ui.scene.tableScene'), pane, tabBtn, dirty: false,
                 editor: null, plain: null, wiki: null, gal: null, dash: true };
@@ -60,7 +62,7 @@ export async function renderSceneTable(pane) {
   await renderBody(wrap, '');
 }
 
-async function loadAllScenes() {
+export async function loadAllScenes() {
   const scenes = [];
   if (!state.root) return scenes;
 
@@ -81,13 +83,19 @@ async function loadAllScenes() {
         const draft = await kapi.readJson(await kapi.join(dPath, 'draft.json')).catch(() => ({}));
         for (const ch of (draft.chapters || [])) {
           for (const sc of (chs[ch.guid] || [])) {
+            // [alpha.160 · P1-14] ★ POV/เรื่องย่อ/แท็ก… (คุณสมบัติหนัก) มาจาก frontmatter ผ่าน readSceneMeta
+            // เดิมกระจาย `row` ของ scenes.json ตรง ๆ = ข้อมูลเก่าหลังแก้ไฟล์ .md นอกโปรแกรม
+            const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
+            let heavy = {};
+            try { heavy = await readSceneMeta(file, sc); } catch { heavy = {}; }
             scenes.push({
               ...sc,
+              ...heavy,
               sectionName: sec.title || secName,
               chapterName: ch.title || '',
               draftPath: dPath,
               chapter: ch,
-              filePath: await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName),
+              filePath: file,
             });
           }
         }
@@ -147,7 +155,7 @@ async function renderBody(wrap, filter) {
       default: va = a.order || 0; vb = b.order || 0; break;
     }
     if (typeof va === 'number') return _sortDir === 'asc' ? va - vb : vb - va;
-    return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return _sortDir === 'asc' ? cmpText(va, vb) : cmpText(vb, va);
   });
 
   // สร้างตาราง
@@ -204,7 +212,7 @@ async function renderBody(wrap, filter) {
 
     // จำนวนคำ
     const tdWords = el('td');
-    tdWords.textContent = sc.wordCount ? sc.wordCount.toLocaleString() : '0';
+    tdWords.textContent = sc.wordCount ? fmtNum(sc.wordCount) : '0';
     tdWords.style.textAlign = 'right';
     row.append(tdWords);
 

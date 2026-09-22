@@ -8,8 +8,10 @@
 // สร้างปลั๊กอินตัวอย่างที่ทำงานได้ทันที · และมีเอกสาร API อยู่ในตัว
 
 import { t as tt, tf as ttf } from '../i18n.js';
-import { $, el, state, setStatus, log } from '../core.js';
+import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
+import { $, el, state, setStatus, setStatusError, log } from '../core.js';
 import * as PC from './plugin-core.js';
+import { panelEmpty } from '../panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 
 const S = () => (state._plugins || (state._plugins = { busy: false, showApi: false }));
 
@@ -35,10 +37,7 @@ export async function renderPluginPanel(host) {
   h.append(body);
 
   if (!list.length) {
-    const empty = el('div', 'k-plug-empty dim');
-    empty.append(el('div', null, tt('ui.plug.emptyTitle')));
-    empty.append(el('div', 'k-plug-empty-hint', tt('ui.plug.emptyHint')));
-    body.append(empty);
+    body.append(panelEmpty(tt('ui.plug.emptyTitle'), { hint: tt('ui.plug.emptyHint') }));
   } else {
     for (const p of list) body.append(cardFor(p, h, app));
   }
@@ -70,7 +69,7 @@ function buildBar(host, counts, app) {
       if (!d) { setStatus(tt('ui.plug.errNoDir')); return; }
       await kapi.mkdir(d);
       await kapi.revealInOS(d);
-    } catch (e) { setStatus(tt('ui.plug.errNoDir') + ' ' + (e.message || e)); }
+    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
   }));
   btns.append(mkBtn(tt('ui.plug.openProjectDir'), tt('ui.plug.openProjectDirHint'), async () => {
     if (!state.root) { setStatus(tt('ui.common.openProjectBefore')); return; }
@@ -78,7 +77,7 @@ function buildBar(host, counts, app) {
       const d = await kapi.join(state.root, 'Plugins');
       await kapi.mkdir(d);
       await kapi.revealInOS(d);
-    } catch (e) { setStatus(tt('ui.plug.errNoDir') + ' ' + (e.message || e)); }
+    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
   }));
   btns.append(mkBtn(tt('ui.plug.install'), tt('ui.plug.installHint'),
                     () => installFlow(host, app)));
@@ -182,7 +181,7 @@ function cardFor(p, host, app) {
   acts.append(mkBtn(tt('ui.plug.openFolder'), '', async () => {
     try {
       await kapi.revealInOS(await kapi.join(await baseDirOf(p), p.folder || p.name));
-    } catch (e) { setStatus(tt('ui.plug.errNoDir') + ' ' + (e.message || e)); }
+    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
   }));
   // ── ถอนการติดตั้ง — ลบโฟลเดอร์จริง จึงต้องถามก่อนเสมอ ──
   const del = mkBtn(tt('ui.plug.uninstall'), tt('ui.plug.uninstallHint'), () => uninstall(p, host, app));
@@ -216,7 +215,7 @@ export async function uninstall(p, host, appMod) {
     return true;
   } catch (e) {
     log('error', tt('ui.plug.errUninstall'), e);
-    setStatus(tt('ui.plug.errUninstall') + ' ' + (e.message || e));
+    setStatusError(failText(tt('ui.plug.errUninstall'), e));
     return false;
   }
 }
@@ -242,7 +241,7 @@ export async function installFlow(host, appMod) {
   setStatus(tt('ui.plug.installFetching'));
   let got = null;
   try { got = await kapi.pluginFetchZip(PI.zipCandidates(src)); }
-  catch (e) { setStatus(tt('ui.plug.errFetch') + ' ' + (e.message || e)); return false; }
+  catch (e) { setStatusError(failText(tt('ui.plug.errFetch'), e)); return false; }
   if (!got || !got.ok) {
     setStatus(got && got.tooBig ? tt('ui.plug.errTooBig')
                                 : ttf('ui.plug.errFetchStatus', (got && got.status) || 0));
@@ -280,7 +279,7 @@ export async function installFlow(host, appMod) {
     return true;
   } catch (e) {
     log('error', tt('ui.plug.errExtract'), e);
-    setStatus(tt('ui.plug.errExtract') + ' ' + (e.message || e));
+    setStatusError(failText(tt('ui.plug.errExtract'), e));
     return false;
   }
 }
@@ -329,7 +328,7 @@ export async function makeSample(host, appMod) {
     return true;
   } catch (e) {
     log('error', tt('ui.plug.errMakeSample'), e);
-    setStatus(tt('ui.plug.errMakeSample') + ' ' + (e.message || e));
+    setStatusError(failText(tt('ui.plug.errMakeSample'), e));
     return false;
   }
 }

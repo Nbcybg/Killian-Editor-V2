@@ -22,6 +22,7 @@
 // ส่วนที่แตะไฟล์มีแค่ listSkillFiles/loadSkills/ensureSkillDir ท้ายไฟล์
 import { t, T, tm } from '../i18n.js';
 import { gi } from '../icons.js';
+import { cmpText } from '../locale.js';
 
 export const SKILL_DIR = 'Skills';
 /** เพดานความยาวรวมของทักษะที่แนบไปกับคำขอหนึ่งครั้ง (กันเผลอแนบทั้งนิยาย) */
@@ -143,6 +144,6 @@ export async function loadSkills(root, io = (typeof kapi !== 'undefined' ? kapi 
         out.push(s);
       } catch { /* ไฟล์เดียวพัง ไม่ควรทำให้ทั้งรายการหาย */ }
     }
-    return out.sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'));
+    return out.sort((a, b) => cmpText(String(a.name), String(b.name)));
   } catch { return []; }
 }

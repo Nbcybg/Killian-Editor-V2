@@ -2,6 +2,7 @@
 import { t, tf } from './i18n.js';
 import { state, setStatus, el, log } from './core.js';
 import { gi } from './icons.js';
+import { fmtDateTime } from './locale.js';
 
 export function getPlayerHistory() {
   if (!state.meta) return [];
@@ -79,7 +80,7 @@ export function renderChoicePanel(host, opts = {}) {
     // ข้อความจากผู้ใช้ → textContent เท่านั้น (innerHTML = ช่องโหว่สคริปต์ฝัง)
     row.append(el('div', 'pc-choice', gi('target') + ' ' + (c.choice || '')));
     let when = '';
-    try { when = new Date(c.timestamp).toLocaleString('th-TH'); } catch { when = c.timestamp || ''; }
+    when = fmtDateTime(c.timestamp) || c.timestamp || '';
     row.append(el('div', 'pc-meta', gi('file') + ` ${c.sceneTitle || '—'} · ${when}`));
     if (onOpenScene && c.sceneId) {
       row.classList.add('pc-clickable');
@@ -111,7 +112,7 @@ export async function showPlayerHistory() {
       const top = el('div', null, gi('target') + ' ' + (c.choice || ''));
       top.style.cssText = 'font-size:13px;color:var(--bright)';
       const sub = el('div', null,
-        gi('file') + ` ${c.sceneTitle || '—'} · ${new Date(c.timestamp).toLocaleString('th-TH')}`);
+        gi('file') + ` ${c.sceneTitle || '—'} · ${fmtDateTime(c.timestamp)}`);
       sub.style.cssText = 'font-size:11px;color:var(--dim)';
       row.append(top, sub);
       list.append(row);

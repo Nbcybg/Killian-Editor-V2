@@ -201,6 +201,20 @@ check('ไม่มีอะไรเลย = ขีด', N.navLocText({}) === '
   check('ตัวช่วยตัดเครื่องหมาย', N.navTightLabel('1. ก ข - ค') === 'กขค', N.navTightLabel('1. ก ข - ค'));
 }
 
+// ── [alpha.161 · S] nthTextPos: ผลค้นหา → ตำแหน่งในเอกสาร ──
+{
+  const mk = (text, start) => ({ text, map: [...text].map((_, i) => start + i) });
+  const blocks = [mk('ทอร่าเดินไป', 1), mk('', 14), mk('แล้ว ทอร่า ก็กลับ ทอร่า', 16)];
+  check('nthTextPos: ครั้งแรก', N.nthTextPos(blocks, 'ทอร่า', 0) === 1);
+  check('nthTextPos: ครั้งที่สอง (บล็อกถัดไป)', N.nthTextPos(blocks, 'ทอร่า', 1) === 16 + 5, N.nthTextPos(blocks, 'ทอร่า', 1));
+  check('nthTextPos: ครั้งที่สามในบล็อกเดียวกัน', N.nthTextPos(blocks, 'ทอร่า', 2) === 16 + 18, N.nthTextPos(blocks, 'ทอร่า', 2));
+  check('nthTextPos: nth เกิน = ครั้งสุดท้าย', N.nthTextPos(blocks, 'ทอร่า', 9) === 16 + 18);
+  check('nthTextPos: ไม่สนตัวพิมพ์', N.nthTextPos([mk('Hello WORLD', 5)], 'world', 0) === 11);
+  check('nthTextPos: ไม่เจอ/คำว่าง = null', N.nthTextPos(blocks, 'ไม่มี', 0) === null && N.nthTextPos(blocks, '', 0) === null);
+  const gap = { text: 'ab￼cd', map: [1, 2, 3, 5, 6] };       // leaf node (รูป/ขึ้นบรรทัด) กิน pos
+  check('nthTextPos: map ข้ามตำแหน่งของ leaf node ได้', N.nthTextPos([gap], 'cd', 0) === 5);
+}
+
 console.log(`\nnav-model: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

@@ -18,6 +18,8 @@ export const LOCKED_BUTTONS = [
   // เป็นทางเข้าหลักของการเปิด/บันทึก/ค้นหาทั้งผลงาน จึงซ่อนไม่ได้
   // (ปุ่มบันทึกโผล่เมื่อมีโปรเจกต์เปิดอยู่เท่านั้น — โปรแกรมคุม display เอง)
   'open-btn', 'save-all-btn', 'search-all-btn',
+  // [alpha.161 · K3] ปุ่ม "»" ท้ายแถบ (ปุ่มที่ล้น/ถูกซ่อน) — โปรแกรมคุมเอง ซ่อนไม่ได้ ไม่ล้นเอง
+  'tb-overflow',
 ];
 
 /**
@@ -60,6 +62,10 @@ export const TOOLBAR_GROUPS = [
   ] },
   { key: 'find', labelKey: 'ui.tbcfg.grpFind', buttons: [
     { id: 'tb-find' },                           // [alpha.150 ข้อ 1] ค้นในเอกสาร
+    // [alpha.161 · K3] ★ เดิมมี 3 ปุ่มที่เปิดการค้นหาทั้งโปรเจกต์ตัวเดียวกัน (search-all-btn · tb-gsearch ·
+    // tb-search-panel) → เหลือสองทางที่ชัดเจน: บนแถบหลัก = search-all-btn (หัวแถบ) · บนแถบรูปแบบลอย = หมวด find
+    // (tb-find ค้นในเอกสาร + tb-gsearch ค้นในโปรเจกต์) · tb-search-panel ซ้ำกับ search-all-btn → ซ่อนเป็นค่าเริ่มต้น
+    // (ผู้ใช้เปิดคืนได้ · อยู่ในเมนู "»" · คำสั่งเดิมยังอยู่ในเมนูระบบครบ)
     { id: 'tb-gsearch' }, { id: 'tb-quickopen' },
   ] },
   { key: 'tabs', labelKey: 'ui.tbcfg.grpTabs', buttons: [
@@ -67,7 +73,8 @@ export const TOOLBAR_GROUPS = [
   ] },
   { key: 'panels', labelKey: 'ui.tbcfg.grpPanels', buttons: [
     { id: 'tb-tree-panel' }, { id: 'tb-outline-panel' }, { id: 'tb-props-panel' },
-    { id: 'tb-search-panel' }, { id: 'tb-note' }, { id: 'tb-panels' },
+    { id: 'tb-search-panel', def: false },       // [alpha.161 · K3] ซ้ำกับ search-all-btn (ดูหมวด find)
+    { id: 'tb-note' }, { id: 'tb-panels' },
     { id: 'tb-kanban' }, { id: 'tb-dashboard' },
     { id: 'tb-dialogue' },                       // [alpha.79] แผงบทพูด
     { id: 'tb-dlgb' },                           // [alpha.82] ห้องซ้อมบท
@@ -81,13 +88,17 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-planner' }, { id: 'tb-branch' }, { id: 'tb-floorplan' }, { id: 'tb-player' },
     { id: 'tb-gallery-board' }, { id: 'tb-backlinks' },
   ] },
+  // [alpha.162 · W5 ข้อ 4] ★ ห้าปุ่ม AI กินที่บนแถบ (25 จาก 43 ปุ่มเป็นสวิตช์แผง) → ปุ่มเดียวเปิดเมนูของทั้งห้า
+  // ตัวเดิมยังอยู่ครบ (id/คำสั่ง/สถานะเปิด-ปิดเหมือนเดิม) แค่ **ซ่อนเป็นค่าเริ่มต้น** — ใครชอบแบบเดิมเปิดคืนได้
   { key: 'ai', labelKey: 'ui.tbcfg.grpAi', buttons: [
-    { id: 'tb-ai-hub' },                         // [alpha.116] AI Hub — ประตูเดียวของทุกความสามารถ AI
-    { id: 'tb-ai' }, { id: 'tb-ai-chat' }, { id: 'tb-ai-analyzer' },
-    { id: 'tb-starter' },                        // [alpha.94] Story Starter
+    { id: 'tb-ai-group' },
+    { id: 'tb-ai-hub', def: false },             // [alpha.116] AI Hub — ประตูเดียวของทุกความสามารถ AI
+    { id: 'tb-ai', def: false }, { id: 'tb-ai-chat', def: false }, { id: 'tb-ai-analyzer', def: false },
+    { id: 'tb-starter', def: false },            // [alpha.94] Story Starter
   ] },
   { key: 'ext', labelKey: 'ui.tbcfg.grpExt', buttons: [
     { id: 'tb-plugins' },                        // [alpha.79] แผงจัดการปลั๊กอิน
+    { id: 'tb-settings' },                       // [alpha.162 · W5 ข้อ 4]
     { id: 'tb-plug' },                           // เมนูคำสั่งที่ปลั๊กอินลงทะเบียนไว้
   ] },
   // [alpha.157] ขวาสุด: ซ่อน/แสดงแผงทีละฝั่ง (ปิดได้ที่ ตั้งค่า → แถบเครื่องมือ เหมือนกลุ่มอื่น)
@@ -95,6 +106,9 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-side-left' }, { id: 'tb-side-top' }, { id: 'tb-side-bottom' }, { id: 'tb-side-right' },
   ] },
 ];
+
+/** [alpha.162 · W5 ข้อ 4] ปุ่มที่รวมอยู่ในเมนูของปุ่ม AI (ลำดับ = ลำดับในเมนู) */
+export const AI_GROUP_IDS = ['tb-ai-hub', 'tb-ai', 'tb-ai-chat', 'tb-ai-analyzer', 'tb-starter'];
 
 /** id ของทุกปุ่มที่ตั้งค่าได้ (เรียงตามลำดับบนแถบ) */
 export function allButtonIds() {
@@ -200,6 +214,28 @@ export function layoutToolbar(seq, visible) {
     if (!out[i]) continue;
     if (pendingSep >= 0) { out[pendingSep] = true; pendingSep = -1; }
     seenButton = true;
+  }
+  return out;
+}
+
+/**
+ * [alpha.161 · K3] ★ แถบเครื่องมือล้นหน้าต่าง — ปุ่มไหนต้องย้ายเข้าเมนู "»"
+ * เดิมแถบเลื่อนแนวนอนได้ (overflow-x) แต่ไม่มีอะไรบอกว่ามีปุ่มอยู่เลยขอบขวา · ตอนนี้ตัดจาก **ท้ายแถบ**
+ * ทีละปุ่มจนพอดี · ปุ่มที่โปรแกรมคุม (locked: ปุ่มโปรเจกต์ · โหมดเอกสาร) ไม่ถูกย้ายเด็ดขาด
+ * @param {Array<{id:string, w:number, locked?:boolean}>} items ลูกของแถบที่มองเห็นอยู่ (ตามลำดับ)
+ * @param {number} avail ความกว้างที่ใช้ได้ (หักปุ่ม "»" แล้ว)
+ * @returns {string[]} id ที่ต้องย้ายเข้าเมนู (เรียงตามลำดับบนแถบ)
+ */
+export function overflowPlan(items, avail) {
+  const list = Array.isArray(items) ? items : [];
+  let total = list.reduce((s, x) => s + Math.max(0, Number(x && x.w) || 0), 0);
+  const lim = Math.max(0, Number(avail) || 0);
+  const out = [];
+  for (let i = list.length - 1; i >= 0 && total > lim; i--) {
+    const x = list[i];
+    if (!x || x.locked || !x.id) continue;
+    out.unshift(x.id);
+    total -= Math.max(0, Number(x.w) || 0);
   }
   return out;
 }

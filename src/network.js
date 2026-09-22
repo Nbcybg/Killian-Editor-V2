@@ -85,14 +85,14 @@ function buildToolbar(pane, cb) {
     toolBtns.push(b);toolRow.appendChild(b);
   }
   const sep2=document.createElement('span');sep2.className='net-tbar-sep';toolRow.appendChild(sep2);
-  const szLbl=document.createElement('span');szLbl.className='net-tbar-lbl';szLbl.textContent='⦿';szLbl.title=tt('ui.net.sizeNode');
+  const szLbl=document.createElement('span');szLbl.className='net-tbar-lbl';szLbl.textContent=gi('node-size');szLbl.title=tt('ui.net.sizeNode');
   const size=document.createElement('input');size.type='range';size.className='net-grid-slider net-size-slider';
   size.min='50';size.max='250';size.value='100';size.title=tt('ui.net.sizeNode3');
   size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title=tt('ui.net.sizeNode2')+size.value+'%';};
   toolRow.append(szLbl,size);
 
   const btns=document.createElement('div');btns.className='net-tbar-actions';
-  [{t:gi('refresh'),ti:tt('ui.common.refresh'),f:cb.refresh},{t:gi('pin'),ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout},{t:gi('frame'),ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'},{t:gi('map'),ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog'},{t:gi('import'),ti:tt('ui.common.export'),f:cb.export},{t:'⤾',ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
+  [{t:gi('refresh'),ti:tt('ui.common.refresh'),f:cb.refresh},{t:gi('pin'),ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout},{t:gi('frame'),ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'},{t:gi('map'),ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},{t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog'},{t:gi('import'),ti:tt('ui.common.export'),f:cb.export},{t:gi('reset-view'),ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'}].forEach(x=>{const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;b.onclick=()=>{if(x.cl==='net-tog'){b.classList.toggle('on');}else if(x.cl==='net-tog on'){b.classList.toggle('on');}x.f();};btns.appendChild(b);});
   bd.append(cr,tr,toolRow,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
   return {bar,btns,toolRow,destroy:()=>bar.remove()};
 }

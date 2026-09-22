@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,274 checks · ALL OK** (alpha.159 รอบตรวจสอบ · macOS dev + packaged) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **9,656 ข้อ · 127 ไฟล์** · ~60 วินาที)
+ปัจจุบัน **5,595 checks · ALL OK** (alpha.160 + งาน 161/162-W1..W7 ที่ยังไม่ bump · Windows dev) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **10,125 ข้อ · 139 ไฟล์** · ~42 วินาที)
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
 เมนูย่อย: `popupMenu` รับ `sub`/`swatch`/`checked` · ฟังก์ชันที่เปิดเมนูเองใช้เป็นเมนูย่อยผ่าน `menuItemsOf(fn)` ·
@@ -71,7 +71,11 @@ xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron .
   **`attachAiFieldButton()` = จุดเดียวที่ทั้งกล่อง (`scene-props.js`) และแผง (`renderPropsPanel`) เรียก**
 - **ai-analyzer-ui.js** (alpha.60r3) — แผง "🧠 AI วิเคราะห์" (**ตัวอย่างหน้าตา** มีป้ายกำกับ ไม่หลอกว่าเป็นผลจริง)
 - **core.js** — `$`, `el`, `state`, `smart`, `log`, `setStatus`, ค่าคงที่ (`DEFAULT_SETTINGS`, `SCENE_STATUSES`, `SCENE_COLORS`, `BUILTIN_CATS`, `CAT_ICON`, `BASE_ED_FS`, ...) — **ทุกโมดูลใหม่ import จากที่นี่**
-- **app.js** (~5,300 บรรทัด) — orchestrator: bootstrap, explorer (buildTree/tree), tabs, toolbar (floatBar), commands, shortcuts, zoom, **selftest ทั้งหมด**
+- **app.js** (~16,000 บรรทัด · alpha.160 — ตัวเลขเดิม "~5,300" ล้าสมัยมาหลายสิบรุ่น ก่อนแยก selftest ไฟล์นี้ยาว ~45,800) — orchestrator: bootstrap, explorer (buildTree/tree), tabs, toolbar (floatBar), commands, shortcuts, zoom
+- **selftest.js** (~30,000 บรรทัด · alpha.160) — e2e ในตัวโปรแกรม `runTest()` **แยกออกจาก app.js แล้ว** ด้วย `tools/split-selftest.cjs`
+  · ชื่อภายในของ app.js ที่เทสใช้ = `export { … }` ท้าย app.js + `import { … } from './app.js'` หัว selftest.js
+  · เทสใหม่ที่อ้างฟังก์ชันภายในตัวใหม่ → เติมทั้งสองที่ (ลืม = build ฟ้อง `No matching export` ไม่พังเงียบ)
+  · เครื่องมือที่เคยหา "บล็อกเทสใน app.js" จากตำแหน่ง `async function runTest(` (`i18n-classify` · `ui-audit`) ถือว่า **ทั้งไฟล์ selftest.js** เป็นโซนเทสแล้ว
 
 ### engine (pure logic — มีอยู่เดิม)
 editor.js · screenplay.js · md.js (⚠️ CommonJS) · smart.js · spell.js · wiki.js · gallery.js · network.js · planner.js · timeline.js · maps.js · compile.js · fountain.js · sceneFilter.js · search.js · ui.js · nav.js
@@ -376,6 +380,182 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 | ตรวจว่า `t` ถูกบังไหม | `test/i18n-shadow-precise.test.cjs` (เดิน AST ระดับสโคป) | เชื่อคำเตือนระดับไฟล์ของ `tools/i18n-shadow.cjs` อย่างเดียว (แจ้งเกินจริง) |
 | e2e ที่ตั้ง `scrollTop` บนตัวแผงใบใหม่ | ตั้ง `style.scrollBehavior='auto'` ก่อน (CSS เป็น smooth = อ่านได้ค่ากลางทาง) | รอเวลาตายตัวแล้วเทียบค่าเป๊ะ |
 | แก้เทสที่วัดตำแหน่งบนจอ | ระวัง "เรขาคณิตบังเอิญ" (tab stop · จุดตัดบรรทัด) ที่ต่างตามเมตริกฟอนต์ของ OS | สรุปว่าโค้ดผิดจากผลบน OS เดียว |
+
+### ⚠️ กฎถาวร (alpha.162 · W7 · ยังไม่ bump รุ่น) — **วันที่ · ตัวเลข · การเรียง ตามภาษาที่ผู้ใช้เลือก**
+
+ที่มา: `th-TH` ตายตัว (เลือกอังกฤษก็ได้ พ.ศ.) · `localeCompare(…, 'th')` · ตัวเลขตามภาษาของ OS · `<html lang>` ค้างเมื่อไฟล์ภาษาหาย
+ประตูกันพลาด: unit `i18n-locale` (49 ข้อ) · `ui-audit` + e2e ชุด `[162-W7]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| แสดงวันที่/เวลา | `fmtDate` / `fmtTime` / `fmtDateTime(v, opts?)` จาก `src/locale.js` — ไทย = พ.ศ. · อื่น ๆ = ค.ศ. · ค่าเสีย = `''` (คนเรียกต่อด้วย `'—'` เอง) | `toLocale*String('th-TH')` · `.toLocaleString()` ตรง ๆ (ได้ภาษาของ OS) · `new Intl.DateTimeFormat('…')` เอง |
+| แสดงตัวเลข | `fmtNum(n)` | `n.toLocaleString()` |
+| เรียงข้อความที่คนอ่าน (ชื่อ · คำ · แท็ก) | `cmpText(a, b)` / `collator(opts)` | `localeCompare(x, 'th')` หรือภาษาตายตัวใด ๆ · `new Intl.Collator('th')` |
+| เรียง id / วันที่ ISO / พาธ | `localeCompare` แบบเดิมได้ (ไม่ใช่ข้อความที่คนอ่าน) | เปลี่ยนเป็น `cmpText` แล้วลำดับขยับตามภาษา (ไฟล์บนดิสก์ต้องเรียงเหมือนกันทุกภาษา) |
+| ตัดคำ | `wordSegmenter()` (ผลเท่ากันทุกภาษา — ICU เลือกพจนานุกรมตามตัวอักษร) | `new Intl.Segmenter('th')` |
+| `<html lang dir>` | `applyDocLang()` หลังโหลดภาษาเสร็จ (loadLanguage ทำให้แล้ว) | ตั้ง `documentElement.lang` เองก่อนโหลด |
+| CSS ทิศทางของ UI | ของใหม่ใช้ `text-align:start/end` · `margin/padding/border-inline-start/end` — ตัวนับของกายภาพห้ามเพิ่ม (text-align ≤ 23 · box ≤ 158) | ใช้ start/end กับ **หน้ากระดาษ/บทภาพยนตร์** (เรขาคณิตของหน้าพิมพ์ ไม่ตามทิศ UI) · ใช้ start/end ในกฎที่มี `direction:rtl` เป็นกลเม็ดตัดหัวข้อความ (จะชิดขวา) |
+| คีย์ภาษาใหม่ | มีคำแปลอังกฤษจริงใน `en` (ด่าน: แถวไทยใน en ≤ 3,879 · ดู `node tools/i18n-en-report.cjs`) | ใส่ไทยซ้ำลง en "ไว้ก่อน" |
+| ข้อความไทยที่เป็นข้อมูล (ไม่ใช่ข้อความบนจอ) | ครอบด้วย `/* i18n-skip: เหตุผล */ … /* /i18n-skip */` ในซอร์ส (วางนอกสตริง/เทมเพลต) · `SKIP_RANGES` **ว่างแล้ว ห้ามเพิ่ม** (ด่าน i18n-locale) | ช่วงเลขบรรทัด (เลื่อนเงียบเมื่อแทรกโค้ด) |
+
+### ⚠️ กฎถาวร (alpha.162 · W6 · ยังไม่ bump รุ่น) — **ไอคอน · สี · ข้อความ · ตัวเลขเวลา มีที่อยู่ที่เดียว**
+
+ที่มา: ไอคอนหลุดด่าน · canvas วาดสีตายตัว (ธีมสว่างได้ผืนมืด) · ตรรกะเทียบกับข้อความที่แปลแล้ว · สูตรเดียวกันคัดลอกหลายไฟล์
+ประตูกันพลาด: unit `timing-palette` · `ui-audit` ชุด `[162-W6]` + e2e ชุด `[162-W6]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| สัญลักษณ์ในปุ่ม/ป้าย (× − § ¶ ⤢ ⟲ …) | เพิ่มแถวใน `icons/glyphs.csv` แล้วใช้ `gi('ชื่อ')` · ตัวที่อยู่ในช่วงแต่เป็นวรรคตอน/ข้อมูลจริง → `NOT_ICON` พร้อมเหตุผลใน `tools/icon-lexicon.cjs` | เขียนตัวอักษรตรงในโค้ด · แก้ช่วงของด่านในเทสแยกจาก `ICON_RANGE_SRC` |
+| สีเปลือกบน canvas/SVG ที่วาดบนจอ | `themeColor('--ตัวแปร', '#ค่าสำรอง')` (palette.js) | hex ตายตัว (ธีมสว่างได้ผืนมืด) · อ่าน `getComputedStyle` เองทุกเฟรม |
+| สีที่มีความหมาย (สถานะ · โน้ต · ชุดกราฟ) และสีงานส่งออก | ค่าที่มีชื่อใน `src/palette.js` (`PLANNER_KIND` · `CHART_SERIES` · `PRINT`) — ไฟล์ส่งออกพื้นขาวเสมอ | จานสีซ้ำในไฟล์ UI · งานส่งออกตามธีมมืด |
+| สีใน style.css | ตัวแปรใน `renderer/themes/*.css` (สีความหมายร่วม: `--st-warn` · `--st-danger` · `--st-danger-alt` · `--brand-navy`) — hex ใน style.css **ห้ามเพิ่ม** (ด่านนับ ≤ 214) | นิยามตัวแปร `--danger` (ชนค่าสำรองของแถบลอย) |
+| ตัดสินใจตามผลตรวจ/ชื่อ | รหัส (`validateProviderIssues` → `code`) · ธงในข้อมูล · ชุดค่าเก่าที่ระบุชัด (`LEGACY_DEFAULT_TITLES`) | `x === t('…')` / `!== t('…')` (ภาษาเปลี่ยน ตรรกะเพี้ยน) |
+| คีย์ที่ประกอบตอนรัน (`tr('x')` → `branch.x`) | `t()` อาร์กิวเมนต์เดียว · คีย์ต้องมีจริงในไฟล์ภาษาทุกไฟล์ (ด่านไล่ให้) | ส่งค่าสำรองเป็นอาร์กิวเมนต์ที่สอง (ไม่มีผล — หลอกคนอ่าน) |
+| ตัวเลขเวลาที่มีความหมาย (เพดานรอ · หน่วงบันทึก) และสูตรลองใหม่ | ค่าคงที่ใน `src/timing.js` · ถอยรอ = `retryBackoff(n)` · main ใช้ `timing.cjs` | ตัวเลขลอยใน `setTimeout` ของ main · คัดลอกสูตร `Math.min(8000, 500 * 2^n)` |
+| ลบคีย์ภาษา | ดู `node tools/i18n-unused.cjs --list` ทีละ namespace แล้วตรวจว่าไม่ถูกประกอบตอนรันจริง | ลบยกชุดตามรายงาน (คีย์จำนวนมากถูกประกอบตอนรัน) · ปล่อยให้จำนวน "ไม่พบเลย" เพิ่ม (ด่าน ≤ 83) |
+
+### ⚠️ กฎถาวร (alpha.162 · W5 · ยังไม่ bump รุ่น) — **ข้อความมีระดับ · งานยาวยกเลิกได้ · คีย์บอร์ดเข้าถึงได้**
+
+ที่มา: รอบ QOL — ข้อความสถานะค้างตลอดไป/error หายทันที · งานยาวยกเลิกไม่ได้ · เมนู/แท็บ/แถบใช้คีย์บอร์ดไม่ได้
+ประตูกันพลาด: unit `cancel` · `search-engine` · `dashboard-stats` · `pdf-generator` · `toolbar-config` · `ui-audit` ชุด `[162-W5]` + e2e ชุด `[162-W5]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ข้อความทั่วไป | `setStatus(s)` (หายเองหลัง `STATUS_TTL_MS`) · มีลิงก์ทำต่อ = `setStatusAction(s, label, fn)` | เขียน `$('#status').textContent` ตรง ๆ (ไม่มีอายุ/ไม่มี live region) |
+| ข้อความผิดพลาด | `setStatusError(failText(what, e))` หรือ `setStatusError(errText(e))` — ค้างจนมีข้อความใหม่ | `setStatus(x + e.message)` (ด่านกวาดทั้งโปรแกรม) · เดาระดับจากเนื้อข้อความ (แปลแล้ว เทียบไม่ได้) |
+| ผลของงานที่โปรแกรมทำเองเงียบ ๆ | `toast(msg, { level, action })` จาก ui.js | เขียนทับแถบสถานะ (ลบข้อความของสิ่งที่ผู้ใช้กำลังทำ) · เงียบทั้งตอนสำเร็จและตอนล้ม |
+| งานยาว (อ่านไฟล์ทั้งโปรเจกต์ · สร้างไฟล์ใหญ่) | `withBusyTask(msg, ({signal, progress}) => …, { name })` + `throwIfCancelled(signal)` ระหว่างรอบ · ลูปซิงก์ยาวต้องพัก (`await setTimeout 0`) | `withBusy` เฉย ๆ ในงานที่เกินไม่กี่วินาที · `forEach` ซิงก์ทั้งก้อน (ปุ่มยกเลิกไม่มีจังหวะทำงาน) |
+| จับ error ของงานที่ยกเลิกได้ | `if (isCancelled(e)) …` (cancel.js) แยกออกก่อน log/บอกพัง | กลืนการยกเลิกเป็นผลว่าง ("ไม่เจอผล") · log การยกเลิกเป็น error |
+| งานที่หยุดกลางทางแล้วทิ้งของครึ่ง ๆ (แตก ZIP ลงโฟลเดอร์ใหม่) | ไม่ให้ยกเลิก หรือยกเลิกได้เฉพาะก่อนเริ่มเขียน | ยกเลิกระหว่างเขียนไฟล์ของผู้ใช้ |
+| แถบแท็บใหม่ | `a11yTabBar(bar, label)` (panel-renderer) | `div` คลิกได้อย่างเดียว |
+| เมนูใหม่ | `popupMenu()` (ได้ role/คีย์บอร์ด/คืนโฟกัสฟรี) · เมนูที่ไม่ใช่ popupMenu ต้องมี role=menu + ↑↓/Enter/Esc เอง | ดึงโฟกัสตอนเปิดเมนูด้วยเมาส์ · ปล่อยลูกศรหลุดไปถึงเอกสารข้างหลัง |
+| แถบปุ่มแนวนอนใหม่ | `rovingToolbar(bar)` + ชื่อแถบผ่าน `data-i18n-attr="aria-label"` | ให้ Tab เดินทีละปุ่มทั้งแถบ |
+| ปุ่มกลุ่มบนแถบ (เช่น AI) | เมนูประกอบจาก **ปุ่มจริง** ที่ซ่อนเป็นค่าเริ่มต้น (`AI_GROUP_IDS` → `b.click()`) | รายการคำสั่งเขียนซ้ำอีกชุดในเมนู |
+| ถามว่าเมนูเปิดอยู่ไหม | `menuOpen()` / `liveMenu()` (หลุดจากหน้า = ปิดแล้ว) | เช็ค `curMenu` ดิบ (เมนูที่ถูกลบด้วยทางอื่นค้างกินคีย์) |
+| ตัวเฝ้า DOM บนของที่เปลี่ยนทุกตัวอักษร (แถบเครื่องมือ · แถบสถานะ) | ทำงานตาม "เหตุการณ์ที่ต้องใช้จริง" (เช่น ตอนกด Tab) | `MutationObserver` + วัดเลย์เอาต์ทุกเฟรม (ช้าทั้งโปรแกรม · เทสอิงเวลาแดงสุ่ม) |
+| ตัวเลข "วันนี้" ทุกที่ | `wordsWrittenToday(getWordHistory())` (นิยามเดียวกับแดชบอร์ด) | นับจากแท็บที่เปิดอยู่ |
+
+### ⚠️ กฎถาวร (alpha.162 · W4 · ยังไม่ bump รุ่น) — **กล่อง · คีย์ลัด · แถวใน Explorer มีทางกลางทางเดียว**
+
+ที่มา: รอบจัด UX — ต้นตอซ้ำกันคือ "ของที่ควรเป็นสัญชาตญาณ" ถูกเขียนเองทีละจุด (87 กล่อง · 10 แถวเมนู Explorer)
+จึงขาดบ้างมีบ้าง · และคีย์ลัดตัวดักกลางแย่งคีย์ของเอกสารโดยไม่มีใครรู้ · ประตูกันพลาด: unit `ui-audit`/`shortcuts`/`tab-order`/`session-core`/`tree-menu` ชุด `[162-W4]` + e2e ชุด `[162-W4]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| กล่องใหม่ (`.k-overlay` + `.k-dialog`) | ปุ่มยกเลิก/ปิดติดคลาส `k-cancel` · ปุ่มหลัก `k-ok` **อยู่ขวาสุด** · role/aria-modal/โฟกัส/Tab วน/Esc/Enter ได้จาก `installDialogA11y()` อัตโนมัติ | ปุ่มยกเลิกไม่มีคลาส (Esc หาทางออกไม่เจอ) · ปุ่มหลักซ้าย · ให้ Esc "ลบกล่องทิ้ง" เอง (กล่องที่ไม่มีทางถอยต้องไม่หายกลางคัน) |
+| คีย์ลัดใหม่ | แถวใน `icons/commands.csv` + ชื่อใน `SHORTCUT_LABELS` + หมวดใน `SHORTCUT_CATS` (ไม่มีชื่อ = ไม่โผล่ในหน้าปุ่มลัด ตั้งใหม่ไม่ได้) · เช็กชนกับ `ctrl+alt`/`shift` ทั้งตาราง | ใส่คีย์ที่ตัวแก้ไขใช้อยู่แล้ว โดยไม่ให้เอกสารเป็นเจ้าของ (`onShortcut` ดักระยะ capture = ยิงก่อนตัวแก้ไขเสมอ) |
+| คำสั่งที่ต้องมีสองปุ่ม | `A / B` ใน CSV + เพิ่มใน `ALIAS_OK` ของ `test/shortcuts.test.cjs` พร้อมเหตุผล (ด่านเช็กว่ามีสองแถวจริง) | ซ่อนของซ้ำจริงไว้ในรายชื่อยกเว้น |
+| คีย์ที่เอกสารบทภาพยนตร์ใช้ | ผ่าน `spOwnsKey()` ใน `onShortcut` — เคอร์เซอร์อยู่ในบท + ตรงกับ `spCycleKeys` → ปล่อยให้เอกสาร | ให้คำสั่งกลางกินคีย์วนธาตุ (ค่าเริ่มต้น Ctrl+Tab เคยยิงไม่ออกเลยตั้งแต่ .61) |
+| แถวใหม่ใน Explorer | ผูกเมนูด้วย `bindTreeMenu(row, kind, ctx)` → แถวพก `_k2row` · ทางอื่นเรียกรายการเดียวกันด้วย `treeRowAction(row, id)` | `row.oncontextmenu = (e) => showTreeMenu(…)` ตรง ๆ (F2/คัดลอกที่อยู่เอื้อมไม่ถึงชนิดนั้น) |
+| แถวปุ่ม/ป้ายในต้นไม้ที่ไม่ใช่เนื้อหา | คลาสของตัวเอง (`add-row k-add-scene-row` · `tree-draft-row`) | คลาส `scene` (ทั้งโปรแกรม+เทสถือว่า `.scene` = แถวที่คลิกเปิดได้) |
+| ปุ่มใหม่บนหน้า Home | มุมหัว (`corner` จาก `buildHomeActions`) | ยัดลงแถบคำสั่งล่าง (ต้องบรรทัดเดียว [62-1] · ลำดับผู้ใช้กำหนด [61-1]) |
+| ของใน `#tabs` ที่ไม่ใช่แท็บ | คลาสของตัวเอง + CSS `order` ให้อยู่ท้าย (`k-tabs-more`) | คลาส `tab` (โค้ด/เทสนับ `#tabs > .tab`) |
+| เขียนไฟล์ตั้งค่าผู้ใช้ | `saveGlobalSetting(key, v)` (ตั้งค่าในหน่วยความจำทันที) หรือ `mergeGlobalSettings(patch)` — คิวเดียว อ่าน-รวม-เขียน ตัวหลังชนะ | `writeGlobalSettings({ …บางคีย์ })` — ตัวนั้น **เขียนทับทั้งไฟล์** (`exportName` เคยหายทุกครั้งที่กดบันทึกตั้งค่า) |
+| กล่องตั้งค่าตอนไม่มีโปรเจกต์ | เปิดได้ · หน้าที่ป้ายขอบเขตเป็น `project` ถูก **ซ่อน** (ห้ามลบ — ช่องยังถูกอ่าน) + ถอดแท็บ · บันทึกเฉพาะไฟล์ผู้ใช้ (`projOK`) | ปฏิเสธทั้งกล่อง · แตะ `state.meta`/ไฟล์ผลงานตอน `state.root` ว่าง |
+
+### ⚠️ กฎถาวร (alpha.162 · W3 · ยังไม่ bump รุ่น) — **ค่าตั้งค่า: ขอบเขตต้องไม่โกหก**
+
+ที่มา: รอบจัดบ้านกล่องตั้งค่า — ต้นตอคือ "รายชื่อคีย์ระดับผู้ใช้" ถูกเขียนมือไว้สองที่ แล้วเพี้ยนจากกัน
+(สวิตช์ `showMarkdownCodes` ไม่เคยถูกเขียนลงไฟล์ตั้งค่าผู้ใช้เลย) · ประตูกันพลาด: unit `settings-tpl` ชุด `[162-W3]` + e2e ชุด `[162-W3]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| "คีย์นี้เป็นค่าระดับผู้ใช้หรือของผลงาน" | เพิ่มแถวใน `GLOBAL_DEFAULTS` หรือ `PROJECT_DEFAULTS` (`src/core.js`) ที่เดียว — ตัวเขียนไฟล์ตั้งค่าผู้ใช้อ่านจาก `Object.keys(GLOBAL_DEFAULTS)` | รายชื่อคีย์เขียนมือใน `dialogs.js` (เพี้ยนจากตารางจริงโดยไม่มีใครรู้) |
+| สวิตช์ค่าระดับผู้ใช้ที่อยู่ในเมนู/แถบ | `saveGlobalSetting(key, v)` **คู่กับ** `saveProjectMetaSoon()` | เขียนลงไฟล์ผลงานอย่างเดียว (เปิดผลงานอื่นแล้วค่าหาย ทั้งที่ UI บอกว่าตามผู้ใช้ไปทุกผลงาน) |
+| หน้าใหม่ในกล่องตั้งค่า | เพิ่มใน `src/settings-template.js` + ป้ายขอบเขต `scope('global')` / `scope('project')` | ประกอบหน้าเป็น DOM ตอนรันใน `dialogs.js` (หลุดด่าน `settings-tpl` ทั้งหน้า) |
+| แถวในหน้า | ทุกแถวในหน้าเดียวกันต้องมีขอบเขตเดียวกับป้ายของหน้า (เทสเทียบชื่อคีย์กับตารางค่าเริ่มต้นจริง) | ยัดแถวของผลงานไว้ในหน้าระดับผู้ใช้ (หรือกลับกัน) แล้วหวังว่าผู้ใช้จะเดาถูก |
+| ค่าหนึ่งค่า = ช่องเดียว | ช่องอยู่ในหน้าที่บริบทตรงที่สุด · ที่อื่นใส่ **ปุ่มพาไป** | ช่องคู่แฝดสองหน้าที่ต้องซิงก์กันเอง (`#st-edpt` ↔ `#st-pr-pt` · `#st-pr-pgnum` ↔ `#st-pn-show`) |
+| ช่องในกล่องตั้งค่า | พรีวิวสดได้ แต่ **ผูกค่าจริงตอนกดบันทึก** · ยกเลิก = คืนค่าเดิมทุกช่อง | `onchange` เขียนค่าจริงทันที (ผู้ใช้กดยกเลิกแล้วค่านั้นไม่คืน) |
+
+### ⚠️ กฎถาวร (alpha.162 · W2 · ยังไม่ bump รุ่น) — **หน้าตาของแผงมาจากของกลางชุดเดียว**
+
+ที่มา: รอบรวมหน้าตาแผง 32 ตัว — ต้นตอซ้ำกันคือ "แผงนี้เคยเป็นแท็บเอกสารเต็มจอ" แล้วถูกยกมาเป็นแผงข้าง
+โดยไม่ได้ลดสเกล/ไม่ได้ใช้ของกลาง · ประตูกันพลาด: unit `ui-audit` ชุด `[162-W2]` + e2e ชุด `[162-W2]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| หัวข้อ/แถบเครื่องมือ/สถานะว่าง **ในเนื้อแผง** | `panelHead()` · `panelTitle()` · `panelBar()` · `panelEmpty()` (`src/panels/panel-chrome.js` · re-export ที่ `panels/panel-ui.js`) | คลาสหัวข้อ/สถานะว่างของแผงตัวเอง · ยืม `.k-dlg-title` (หัวของ *กล่องโต้ตอบ*) มาเป็นหัวข้อในแผง |
+| ขนาด/ระยะของเนื้อแผง | ตัวแปร `--pan-title-fs` · `--pan-sub-fs` · `--pan-page-pad` · `--pan-gap` | `font-size:calc(22px * var(--ui-scale))` ของใครของมัน |
+| ปุ่มบนหัวแผง (รวมที่โมดูลอื่นฝากผ่าน `addPanelButton`) | `makePanelButton({ glyph, title, tip, onPress })` | `el('span', 'k-panel-btn', …)` + `onclick` (ได้ปุ่มที่คีย์บอร์ดกดไม่ได้) |
+| แผงที่เนื้อจัดการพื้นที่เอง (กระดาน · กราฟ · รายการที่เลื่อนเอง) | ธง `flush: true` ใน `PANEL_DEFS` → คลาส `.k-panel-flush` | กฎ CSS `:has(#<id>-body) > .k-panel-body` ของแผงตัวเอง (specificity ของ id ชนะกฎกลางจนพับแผงไม่สุด) |
+| ชื่อแผง | ช่อง `i18n` ช่องเดียว อ่านผ่าน `titleOf()` ตอนวาด | ช่อง `title` ที่เก็บข้อความ (ค้างภาษา · และเคยชี้คีย์ผิดโดยไม่มีใครรู้) |
+| "แผงนี้ฉีกออกหน้าต่างได้ไหม" · ความกว้างต่ำสุด | ธง `tearoff` / ช่อง `minW` ในทะเบียนแผง (`TEAROFF_PANELS` derive จากตารางนี้) | Set/รายชื่อชุดที่สอง |
+| ปุ่มบนแถบที่เป็นสวิตช์ของแผง | `data-command="toggle-panel:<id>"` (หรือ `data-panel="<id>"` เมื่อคำสั่งไม่ใช่ toggle-panel) แล้วปล่อยให้ลูปกลางผูกคลิก/ติดไฟ | `$('#tb-x').onclick = …` + `classList.toggle('on', isPanelOpen('x'))` เขียนมือทีละปุ่ม |
+| ข้อยกเว้นที่ประกาศไว้ (`MENU_PANELS_SKIP`) | ต้องชี้แผงที่มีอยู่จริงใน `PANEL_DEFS` | ปล่อยชื่อที่ไม่มีแผงแล้วค้างไว้ (หลอกคนอ่านว่ามีแผงนั้น) |
+
+### ⚠️ กฎถาวร (alpha.162 · W1 · ยังไม่ bump รุ่น) — **ชื่อในถัง · เปิดแท็บ · อ่านเนื้อแท็บ · แคชที่มีขอบเขต**
+
+ที่มา: รอบไล่บั๊กตรรกะ W1 (20 ข้อที่ถูกชี้ + กวาดเพิ่ม) — ต้นตอซ้ำกันคือ "ประกอบเองหลายที่" กับ
+"ด่านที่เช็คไม่ครบทุกมิติ" · ทุกข้อในตารางนี้มี e2e ชุด `[162-W1-*]` หรือ unit test คุมอยู่
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ชื่อปลายทางในถังขยะ (ทุกทางลบ) | `trashPathFor(file, { dir })` (`src/trash-path.js`) — เวลาประทับไม่ซ้ำ + กันชนกับของบนดิสก์ | `Date.now().toString(36) + '-' + base` (ลบรวดเดียวหลายชิ้น = ชื่อชนกัน แล้ว `move` ทับหายถาวร · ทุกบทมี `scene-01.md`) |
+| เปิดไฟล์เป็นแท็บ | `openOnce(file, fn)` ครอบงานที่มี `await` (openScene · openPlainFile · openEntity) | เช็ค `state.tabs.has()` แล้ว `await readFile` ก่อน `state.tabs.set` (สองคำสั่งพร้อมกัน = pane/ปุ่มแท็บผี) |
+| อ่านเนื้อ .md ของแท็บ | `tabBodyText(tab)` — `null` = แท็บชนิดนั้นไม่มีเนื้อ .md | `t.editor ? … : t.plain.value` (บทภาพยนตร์/หน้า Wiki ไม่มีทั้งคู่ = TypeError) |
+| ดัชนี/แคชที่มี "ขอบเขต" (รวม .json ไหม · โปรเจกต์ไหน) | `indexMatches(have, want)` ใช้ตัดสินทั้งของที่ถืออยู่และ **งานที่กำลังสร้าง** | `if (building) return building` (คนละขอบเขต = ได้ผลผิดแบบเงียบ) |
+| เปิดโปรเจกต์จากปุ่ม/เมนู | `openProjectFromUi(root)` (รายงานเมื่อเปิดไม่ได้ + กันเปิดซ้อน) | `loadProject(p)` แบบไม่ await (มันโยน error ได้) |
+| งานสแกนยาวที่เขียนผลลง instance | สแกนลงกองของรอบตัวเอง + เลขรอบ แล้วคอมมิตครั้งเดียวตอนจบ (`smart.loadNames`) | เคลียร์ของเดิมทิ้งแล้วเติมระหว่างสแกน (สองรอบซ้อน = ผลปนกัน) |
+| ย้ายของระหว่าง "ไฟล์" กับ "ทะเบียน" | ขึ้น/ถอนทะเบียนก่อน แล้วค่อยลบไฟล์ต้นทาง | ลบต้นทางก่อน (ขั้นทะเบียนล้ม = ไฟล์ไม่มีใครชี้ถึง ผู้ใช้มองไม่เห็นทั้งสองที่) |
+| วาดรายการที่ลำดับมีความหมาย | ประกอบ DOM แบบ sync แล้วเติมค่าที่ต้องรอ IPC ทีหลัง | `arr.forEach(async …)` ที่ `appendChild` อยู่หลัง `await` (ลำดับขึ้นกับว่าใครตอบก่อน) |
+
+### ⚠️ กฎถาวร (alpha.161 · ยังไม่ bump รุ่น) — **สำเนาต้องได้ของล่าสุด · แคชมีรุ่น · ทางเดียวของ UX ชุดใหม่**
+
+ที่มา: ชุดพรอมป์ 6 ข้อ (P0 งานหาย · P1 แคชค้าง · ค้นหา · คุณสมบัติ/ตัวกรอง · หัวแผง · QOL) — e2e `[161-D/C/S/P/U/K]`
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| คัดลอก/ทำสำเนา/วาง/memo→ฉาก/บันทึกเป็น (อ่านต้นฉบับจากดิสก์) | `flushTab(tab, saveTab)` ของต้นฉบับ **ก่อนอ่าน** · false = ข้ามรายการนั้นแล้วรายงาน · เขียนด้วย `writeMdKeepingComments(io, dst, text, src)` หรือ `addScene(…, { commentsFrom: src })` | อ่าน body ก่อน `saveTab` · `if (dirty) await saveTab()` แล้วทำต่อโดยไม่ดูผล · `kapi.writeFile(dumpMdFile(…))` ของไฟล์ที่เป็นสำเนา |
+| ลบก่อนย้ายลงถัง (ทีละหลายฉาก) | `flushTab` แล้ว **ปิดแท็บ (ที่สะอาดแล้ว) ก่อน** `kapi.move` · นับ ok/failed ตามจริง | เช็คแค่ `=== false` (saveTab สำเร็จแต่ dirty กลับมาติดได้ — alpha.148) · บังคับ `dirty=false` |
+| ย้าย Wiki entity ข้ามหมวด | `flushTabForMove` → `closeTabsUnderPath(src)` (`.ok`) → move → `moveSnapshots` → `syncOpenTabMeta` | `closeTab(src)` ไม่ discard/ไม่ await (saveThenClose เขียนกลับทางเดิม = ไฟล์ผี) |
+| สำรองรายชิ้น (backup) | งานค้างบันทึกไม่ผ่าน = **ยกเลิก backup** (`e.k2Unsaved`) | กลืนผลแล้วสำรองฉบับเก่า |
+| แคช/ดัชนีที่สร้างจากข้อมูลที่เปลี่ยนได้ (สายหน้า · RAG แชท · ดัชนีค้นหา) | `createEpoch()` + `runFresh(epoch, fn, {maxRounds})` (`src/epoch-guard.js` · unit test) — ตัวล้าง `bump()` · เก็บเป็น "สด" เฉพาะรุ่นไม่เปลี่ยน · ครบเพดาน = ใช้ชั่วคราวแต่คง stale | `stale = false` หลัง await (ทับการล้างที่เกิดระหว่างสร้าง) · วัดใหม่ทันทีแบบไม่มีเพดาน |
+| สายหน้าที่ล้าสมัยระหว่างวัด | `staleStartPage()` โชว์ชั่วคราว · `ensureBookFlow` วัดซ้ำแบบหน่วง (`FLOW_RETRY_MS`/`FLOW_RETRY_MAX`) · e2e ใช้จุดพัก `window.__k2flowHold` | poll หากล่องวัด (วัดเสร็จเร็วกว่ารอบ poll) |
+| ดัชนีค้นหาทั้งโปรเจกต์ล้าสมัย | ล้างผ่าน `watchProjectWrites()` (`kapi.onLocalWrite` → `searchPathMatters`) — ครอบทุกการเขียน/ย้าย/ลบ | ยิง `invalidateSearchIndex()` ใน `buildTree()` · ไล่แปะทีละจุด |
+| ค้นหา: ไฟล์ในถังขยะ/ประวัติ/สำรอง | `indexProject(…, { skipDirs: SEARCH_SKIP_DIRS })` (Recycle · Snapshots · Backups ชั้นบน) | นับสำเนาเป็นผลค้นหา (ฉากที่ลบแล้วยังโผล่) |
+| กระโดดไปจุดที่ค้นเจอ | `matchDetail()` (term/nth) → `gotoSearchMatch(tab, m)` → `nthTextPos` → **`navGotoPos`** · .json/.txt = ช่วงอักขระตรง ๆ | สร้าง `TextSelection` เอง · ใช้เลขบรรทัด .md เป็นลำดับบล็อก |
+| ไฮไลต์คำค้นในสไนป์เพ็ต | `splitHighlight(text, highlightTerms(q))` → `<mark class="k-gsearch-hl">` + text node | `innerHTML` ของข้อความผู้ใช้ |
+| ค้นหาทั้งโปรเจกต์ | ทางเข้าเดียว = แผงค้นหา (`renderSearchPanel`) · ค้นสดหน่วง 250ms · ↑↓/Enter/Esc · `.total` บอกจำนวนก่อนตัด | ฟื้น `openGlobalSearch` (ถอดแล้ว) |
+| แผงคุณสมบัติตามแท็บ | `syncPropsToActive()` (ใน `activate` + ปิดแท็บสุดท้าย) · ค่าหนักอ่าน `readSceneMeta(file,row)` · เขียนแล้ว `syncOpenTabMeta` | อ่าน synopsis/pov/… จาก `scenes.json` · เปิดแผงเองตอนสลับแท็บ (บั๊ก #19) |
+| ชิปตัวกรองสถานะ/แท็ก | `setChipClause(q, 'status'|'tag', values)` / `parseChipQuery` (sceneFilter.js · กระจายคำค้นไปทุกกลุ่ม OR) | `q.value = 'status:… OR …'` ทับทั้งช่อง |
+| ฉาก "เก็บถาวร" ใน Explorer | ตัดสินใน `filterTree` ที่เดียว (`setTreeShowArchived` · ค่าเริ่มต้นซ่อน · ปุ่ม ON = แสดง) · `buildTree` เรียก `filterTree` เสมอ | ซ่อน/แสดงเองนอกตัวกรอง · อ่าน `dataset.filteredHidden` ที่ไม่มีใครตั้ง |
+| เมนูยาว | `.k-menu` มี max-height + เลื่อน · `placeMenu` ตั้ง maxHeight ก่อนวัด | เมนูสูงเกินจอ |
+| ปุ่มควบคุมของระบบแผง | `makePanelButton()` (node · tabindex=0 · Enter/Space · `data-tip` = `ui.panelTip.*` · คีย์ลัดผ่าน `shortcutText`) | `el('span','k-panel-btn', …)` + onclick ตรง ๆ |
+| แผงในกลุ่มแท็บ | หัวแผงมีแค่ ☰/พับ · ปิด = ✕ บนแท็บ · ลอย/ฉีก = เมนู ☰ · ปุ่มปิดของกลุ่มลอย = ปิดทั้งกลุ่ม | ปุ่มปิด/ลอยซ้ำบนหัวแผงในกลุ่ม |
+| ข้อความระดับโมดูลของระบบแผง (`PANEL_BUTTONS` · `BUILTIN_WORKSPACES`) | getter ที่เรียก `t()` ตอนอ่าน | `title: t('…')` ตอน import (ค้างภาษา — บทเรียนข้อ 37) |
+| ซ่อนแผงทีละฝั่ง/ทั้งหมด | ที่พัก `_sideStash` ตัวเดียว (`toggleSpace` = alias) · `resetPanels`/`applyWorkspace` เรียก `resetSideStash()` | ระบบซ่อนชุดที่สอง |
+| ทางกลับของแผงที่ปิด/ซ่อน/ฉีก | ชิป `.k-hidden-chips` ใน `#content` (`hiddenPanelChips` · `restoreHiddenPanel`) | — |
+| สีโซนปล่อยแผง | ตัวแปรธีม (`--accent-hi` แทรก · `--link` รวมกลุ่ม · `color-mix`) | hex ในกฎ `.k-drop-zone` |
+| เมนู มุมมอง → แผง | `MENU_PANELS` มี `{head}` 4 หมวด · `menu:panelIds` กรอง `sep`/`head` | ลบ/เพิ่มแผงเงียบ ๆ |
+| ลำดับแท็บ | `state.tabs` = ลำดับบนแถบ (`reorderTabs`) · ปิด → `neighborAfterClose` · วน → `cycleTab` (`src/tab-order.js` · unit test) | `[...state.tabs.keys()].pop()` |
+| ปุ่มบน `#toolbar` | ต้องอยู่ใน `TOOLBAR_GROUPS`/`LOCKED_BUTTONS` · ล้น = `layoutToolbarOverflow` (ปุ่ม `#tb-overflow` "»") · `overflowPlan` ไม่ย้ายปุ่ม locked | ปล่อยให้แถบเลื่อนแนวนอนโดยไม่มีทางเข้าถึงปุ่มท้าย |
+| Explorer ด้วยคีย์บอร์ด | ตัวดัก keydown ของ `#tree` (↑↓ Home End Enter F2 Shift+F10) · roving tabindex (`treeFocusRow`) · F2 = `treeRenameInline` → `setSceneTitle` | ผูก `document` keydown เอง (กฎข้อ 8) |
+| คำสั่งใหม่ `next-tab` · `prev-tab` · `reveal-active` | ตาราง `icons/commands.csv` + `SHORTCUT_LABELS`/`SHORTCUT_CATS` + `ui.tip.*` | คีย์นอกทะเบียน |
+
+### ⚠️ กฎถาวร (alpha.160) — **ลบ/ย้ายไฟล์ที่เปิดเป็นแท็บ · ข้อมูลที่ต้องไม่หาย**
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ลบ/ย้ายไฟล์ที่อาจเปิดเป็นแท็บ | `if (!(await flushTabForMove(tab))) return;` (app.js → `tab-guard.js`) — คืน false = บันทึกไม่ผ่าน/ผู้ใช้ยกเลิก → **ยกเลิกการลบ/ย้าย** | `try { await saveTab(t) } catch {}` แล้วทำต่อ (กลืนค่า `false`) · ตั้ง `dirty=false` แล้วปิดแบบ discard |
+| ลบ/ย้าย **โฟลเดอร์** (บท/เล่ม/ร่าง) | `if (!(await closeTabsUnderPath(dir)).ok) return;` — คืน `{closed, skipped, ok}` | ทิ้งค่าคืน (เดิมเป็นตัวเลขที่ไม่มีใครอ่าน) |
+| AI ลบของ (entity/book/chapter/scene) | `closeTabsUnder(dir)` ของ `tab-bridge.js` คืน `{ok}` ด้วย · ไม่ ok = `err(...)` | ย้ายลงถังต่อทั้งที่แท็บยังค้าง |
+| ปิดทุกแท็บ | `tabsSafeToClose()` — แท็บที่ติ๊กบันทึกแต่บันทึกไม่ผ่าน **ต้องค้างไว้** | `closeTab(f, {discard:true})` ทุกใบหลังวนบันทึก |
+| เขียน `.md` ใหม่ทั้งไฟล์ (รวม **ย้าย/สำเนา**) | `writeMdKeepingComments(io, dst, text, src?)` — ส่ง `src` เมื่อไฟล์ปลายทางเป็นไฟล์ใหม่ | `kapi.writeFile(dumpMdFile(...))` — `parseMdFile` ตัดบล็อก `k2-comments` ทิ้ง |
+| คัดลอกร่าง/เล่ม | `regenDraftIds()` ทุกครั้ง (guid บท + id ฉาก + ทางเลือกแตกสาย) | ก๊อป `draft.json`/`scenes.json` ตรง ๆ = id ชนกันข้ามร่าง |
+| หาของตามชื่อ (AI) | ระบุตัวกรอง (เล่ม/บท) แล้วหาไม่เจอ = `null` | ข้ามตัวกรองเงียบ ๆ แล้วคืนของชื่อเดียวกันจากที่อื่น |
+| ช่อง "สถานะ" | `statusChoices(allStatuses(), row.status)` — ค่าที่ถูกลบจากรายการแล้วคงไว้เป็นตัวเลือกพิเศษ | `includes(v) ? v : 'Outline'` (เปิดแล้วบันทึก = เขียนทับเงียบ ๆ) |
+| ส่งเนื้อฉากให้ AI (ทุกทาง) | `liveBody(path, diskBody)` ของ `tab-bridge.js` — แท็บชนะดิสก์ | `kapi.readFile` ตรง ๆ (ไม่เห็นงานที่ยังไม่บันทึก) |
+| ระดับการเข้าถึงของแชท (บท/เล่ม) | `scopePrefix()` ของ `ai/ai-scope.js` — resolve ไม่ได้ = `null` = ไม่ส่งเนื้อโปรเจกต์ | prefix `''` แล้ว `if (prefix && …)` = ส่งทั้งโปรเจกต์ |
+| ฟอนต์นิยาย "ที่ใช้อยู่จริง" | `liveProseFonts()` ของ `live-fonts.js` (ตัวแก้ไข **นิยาย** → `--ed-font`) · DOCX ใช้ `firstRealFont()` | `document.querySelector('.ProseMirror')` (หยิบบทภาพยนตร์ได้) · ส่ง `K2 Lang` ให้ Word |
+| สถานะของปลั๊กอินต่อ view | รวม `spErrorMarkPlugin` แล้ว (ตระกูลเดียวกับ H15/H16) · `setSpErrorMarks(list, view)` | ตัวแปรระดับโมดูลก้อนเดียว |
+| งาน/แคชของ "เล่ม" | `Map` ตาม `secPath` (`_flowJobs`, `flowCache.byKey`) | ตัวแปรตัวเดียวที่ guard ก่อนเช็คว่าเป็นเล่มไหน |
+| ข้อความของผู้ใช้/ไฟล์ภาษา + ไอคอน | ไอคอนเป็น node (`icon()`/`catIconEl()`) + `createTextNode(text)` | `innerHTML = iconHtml(...) + ' ' + ชื่อ` |
+| อักขระควบคุมในซอร์ส | escape เสมอ (`'\u0000'`, `/[\u0000-\u0008]/`) — `test/src-hygiene.test.cjs` กวาดทั้ง `src/` | ไบต์ดิบ (git/grep มองไฟล์เป็น binary) |
+
+**บทเรียนเครื่องมือ (Windows · Claude Code)**: heredoc ของ Bash tool **ยุบแบ็กสแลชคู่ (`\\`) เหลือตัวเดียว** — สคริปต์/ไฟล์ที่มีแบ็กสแลช
+(regex `/[\\/]/` · `'C:\\x'` · `'\\n'`) ให้เขียนด้วย Write/Edit tool · Python `open(...,'w')` บน Windows แปลง LF → CRLF
+(ใช้ `newline=''`) · `writeFileSync` อาจเจอ `UNKNOWN` ชั่วคราวจากตัวล็อกไฟล์ — ลองใหม่ได้ ไฟล์ไม่ถูกตัด
+· ห้าม build ระหว่าง e2e · watchdog ต้องหา `STOP` ทั้งไฟล์ (บรรทัด STOP มี stack trace ต่อท้าย `tail` จึงไม่เห็น)
 
 ### ⚠️ กฎถาวร (alpha.155) — **เมนูคลิกขวาของ Explorer: ลำดับอยู่ใน `tree-menu-spec.js` ที่เดียว**
 
@@ -764,7 +944,7 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 
 ## ✅ ทุกฟีเจอร์ใหม่ต้องมี selftest (ห้ามลด check)
 
-selftest อยู่ใน `runTest()` ท้าย app.js — รูปแบบ `check('ชื่อไทย', เงื่อนไข, ข้อมูล debug)`
+selftest อยู่ใน `runTest()` ของ **src/selftest.js** (alpha.160 แยกออกจาก app.js) — รูปแบบ `check('ชื่อไทย', เงื่อนไข, ข้อมูล debug)`
 - เพิ่มฟีเจอร์ = เพิ่ม `check(...)` พิสูจน์ว่ามันทำงานจริง (ไม่ใช่แค่มี element)
 - วาง check ในบริบทที่ state พร้อม (แท็บ/โปรเจกต์เปิดอยู่จริง)
 - `check` ตัวแรกที่ fail จะ `throw` → STOP ทั้งชุด: ดู `/tmp/k2result.txt` หา `FAIL`/`STOP`

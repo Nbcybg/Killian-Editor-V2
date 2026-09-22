@@ -7,6 +7,7 @@
 // ปุ่ม AI ทุกตัวต้องผ่าน `aiBtn`/`askAI` ของ starter-ai.js เท่านั้น (กดหยุดได้ + จด log)
 
 import { el, log, setStatus } from '../core.js';
+import { gi } from '../icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 import { t, tf } from '../i18n.js';
 import { TAG_GROUPS, W_FIELDS } from './starter-steps-def.js';
 import { toggleTag, hasTag, normalizeTags } from './starter-model.js';
@@ -110,7 +111,7 @@ function renderTags(host, ctx) {
     if (!rows.length) { picked.append(el('div', 'st-dim', t('ui.starter.noTagYet'))); return; }
     for (const tg of rows) {
       const c = el('span', 'st-tag on', tg);
-      const x = el('span', 'st-tag-x', '×');
+      const x = el('span', 'st-tag-x', gi('times'));
       x.onclick = () => { s.tags = toggleTag(s.tags, tg); ctx.save(); redrawAll(); };
       c.append(x);
       picked.append(c);

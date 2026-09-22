@@ -25,6 +25,9 @@ export function escapeRtf(s) {
     if (ch === '}') { out += '\\}'; continue; }
     if (ch === '\n') { out += '\\line '; continue; }
     if (ch === '\t') { out += '\\tab '; continue; }
+    // [alpha.160 · P1-6] ตัวขึ้นหน้าใหม่ (\f จากขั้น "ขึ้นหน้าใหม่"/Ctrl+Enter) = \page ของ RTF
+    // เดิมตกเงื่อนไข "อักขระควบคุม" ด้านล่างแล้วถูกทิ้ง → เส้นขึ้นหน้าหายจากไฟล์ RTF ทั้งหมด
+    if (ch === '\f') { out += '\\page '; continue; }
     if (c < 32) continue;                                  // อักขระควบคุมอื่น ๆ ทิ้ง
     if (c < 128) { out += ch; continue; }
     if (c <= 0xFFFF) { out += '\\u' + (c > 32767 ? c - 65536 : c) + '?'; continue; }
@@ -157,6 +160,8 @@ export function generateRtf(blocks, meta = {}, fmt = null, opts = {}) {
   for (const b of blocks || []) {
     if (!b || b.el === 'blank') continue;
     const text = plainText(b.text);
+    // [alpha.160 · P1-6] บรรทัดที่มีแต่ \f = ขึ้นหน้าใหม่ (`'\f'.trim()` = '' → เดิมถูกข้ามทิ้งเงียบ ๆ)
+    if (b.el === 'page-break' || (!text.replace(/\f/g, '').trim() && text.includes('\f'))) { out.push('\\page'); continue; }
     if (!text.trim() && b.el === 'action') continue;
     const { ctrl, caps } = paraCtrl(b.el, f, opts && opts.fontPt);
     out.push(ctrl + ' ' + escapeRtf(caps ? text.toUpperCase() : text) + '\\par');

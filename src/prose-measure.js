@@ -688,6 +688,22 @@ export function whenImagesReady(root, ms = 2500) {
 }
 
 /**
+ * [alpha.160 · P1-16] ★ รูปที่ **ยังไม่มา** หลัง `whenImagesReady` หมดเวลา — เรียก `cb` อีกรอบเมื่อมาครบจริง
+ * เดิม timeout ชนะแล้วจบเลย: รูปใหญ่/ดิสก์ช้าโหลดเสร็จทีหลัง ความสูงเปลี่ยน แต่ไม่มีใครวัดใหม่
+ * → ตัวอย่างส่งออกจัดหน้าเพี้ยนค้างอยู่อย่างนั้น · คืน null = ไม่มีรูปค้าง (ผู้เรียกเก็บกวาดเองได้ทันที)
+ */
+export function afterLateImages(root, cb) {
+  const imgs = root && root.querySelectorAll
+    ? [...root.querySelectorAll('img')].filter((im) => !im.complete)
+    : [];
+  if (!imgs.length) return null;
+  return Promise.all(imgs.map((im) => new Promise((res) => {
+    im.addEventListener('load', res, { once: true });
+    im.addEventListener('error', res, { once: true });
+  }))).then(() => (typeof cb === 'function' ? cb() : undefined));
+}
+
+/**
  * [alpha.82] วาดหน้ากระดาษจาก "สำเนาเนื้อหาจริง แล้วครอบตามช่วง Y ของหน้า"
  *
  * ของเดิม renderProsePageView() สร้างย่อหน้าขึ้นมาใหม่จากผลการเดา — เนื้อหาบนหน้าจึงไม่ตรง

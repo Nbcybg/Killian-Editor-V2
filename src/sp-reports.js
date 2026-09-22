@@ -10,6 +10,7 @@
 import { t, tf } from './i18n.js';
 import { mergeSpFormat, paginate, wrapLines, linesPerPage, formatLines } from './sp-format.js';
 import { SCENE_PREFIX, splitCharacter } from './fountain.js';
+import { cmpText } from './locale.js';
 
 // ───────── ตัวช่วยอ่านหัวฉาก ─────────
 const INT_EXT = [
@@ -159,7 +160,7 @@ export function generateLocationReport(blocks, opts = {}) {
     intExt: [...g.intExt].sort(), characters: g.characters, scenes: g.scenes,
   }));
   // เรียงตามจำนวนฉากมาก→น้อย · เท่ากันเรียงตามชื่อ (ภาษาไทยด้วย localeCompare)
-  out.sort((a, b) => b.sceneCount - a.sceneCount || a.location.localeCompare(b.location, 'th'));
+  out.sort((a, b) => b.sceneCount - a.sceneCount || cmpText(a.location, b.location));
   return { locations: out, totalScenes: scenes.length, totalPages };
 }
 
@@ -208,7 +209,7 @@ export function generateCharacterReport(blocks, opts = {}) {
     firstPage: c.firstPage ?? 0, lastPage: c.lastPage ?? 0,
     avgLines: c.sceneSet.size ? +(c.totalLines / c.sceneSet.size).toFixed(2) : 0,
   }));
-  out.sort((a, b) => b.totalLines - a.totalLines || a.name.localeCompare(b.name, 'th'));
+  out.sort((a, b) => b.totalLines - a.totalLines || cmpText(a.name, b.name));
   const totalLines = out.reduce((s, c) => s + c.totalLines, 0);
   for (const c of out) c.share = totalLines ? +(c.totalLines / totalLines * 100).toFixed(1) : 0;
   return { characters: out, totalScenes: scenes.length, totalPages, totalLines };

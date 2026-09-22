@@ -10,6 +10,7 @@
 
 import { t as tt, t } from '../i18n.js';
 import { normalizeAlbumDoc, setImageMeta } from './album-core.js';
+import { cmpText } from '../locale.js';
 
 export const TAG_KINDS = {
   '#': { key: 'plain',  label: tt('ui.common.msg4'),   icon: 'bookmark' },
@@ -130,7 +131,7 @@ export function getAllTags(items) {
   }
   return [...m.entries()]
     .map(([tag, count]) => ({ tag, kind: tagKind(tag), name: tagName(tag), count }))
-    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'th'));
+    .sort((a, b) => b.count - a.count || cmpText(a.tag, b.tag));
 }
 
 /**

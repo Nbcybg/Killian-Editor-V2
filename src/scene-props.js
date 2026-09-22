@@ -1,9 +1,10 @@
 // scene-props.js — แผงคุณสมบัติฉาก (สถานะ/สี/ปักหมุด/ล็อก/futureNote)
 import { explicitStartPage } from './book-flow.js';
-import { t } from './i18n.js';
-import { buildTree, guid, updatePageNumberHint, refreshSpView } from './app.js';
+import { t, tf } from './i18n.js';
+import { buildTree, guid, syncOpenTabMeta, updatePageNumberHint, refreshSpView } from './app.js';
 import { SCENE_COLORS, SCENE_STATUSES, dataLabel, el, setStatus, state, log } from './core.js';
 import { allStatuses } from './custom-status.js';
+import { statusChoices } from './status-choices.js';   // [alpha.160 · P1-11]
 import * as spell from './spell.js';
 // [alpha.60r2 ข้อ 13] คุณสมบัติฉากอยู่ใน frontmatter ของ .md เป็นหลัก — scenes.json เป็นดัชนี/แคช
 // ทุกทางอ่าน-เขียนผ่าน readSceneMeta/writeSceneMeta ที่เดียว
@@ -79,9 +80,12 @@ export async function sceneProps(dPath, ch, sc) {
   const iPov = mk(t('ui.common.viewPOV'), M.pov);
   const iEmotion = mk(t('ui.common.mood'), M.emotion);
   const iConflict = mk(t('ui.common.conflict'), M.conflict);
+  // [alpha.160 · P1-11] ค่าที่ถูกลบออกจากรายการแล้ว = คงไว้เป็นตัวเลือกพิเศษ (เดิมตกเป็น Outline แล้วถูกบันทึกทับเงียบ ๆ)
+  const stc = statusChoices(allStatuses(), row.status);
   const iStatus = mkSelect(t('ui.common.status'),
-    [['Outline', t('ui.common.notSet')], ...allStatuses().map((s) => [s, dataLabel(s)])],
-    allStatuses().includes(row.status) ? row.status : 'Outline');
+    [['Outline', t('ui.common.notSet')],
+     ...stc.values.map((s) => [s, s === stc.orphan ? tf('ui.status.orphanOpt', dataLabel(s)) : dataLabel(s)])],
+    stc.selected);
   const iColor = mkSelect(t('ui.common.color'),
     [['', t('ui.common.notHas')], ...SCENE_COLORS.map(([n, hex]) => [hex, gi('dot') + ' ' + dataLabel(n)])], row.color || '');
   const iFlag = mkCheck(t('ui.common.pinPin'), row.flag);
@@ -121,7 +125,7 @@ export async function sceneProps(dPath, ch, sc) {
     buildMentionsBox(mHost, file).catch((e) => log('warn', 'mentions', e)); }
 
   const btns = el('div', 'k-dlg-btns');
-  const cB = el('button', null, t('ui.common.cancel'));
+  const cB = el('button', 'k-cancel', t('ui.common.cancel'));
   const okB = el('button', 'k-ok', t('ui.common.save'));
   btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
   cB.onclick = () => ov.remove();
@@ -164,11 +168,9 @@ export async function sceneProps(dPath, ch, sc) {
     // แท็บถือ `meta` ชุดเก่าไว้ พอบันทึกครั้งถัดไป (หรือ autosave) มันจะเขียนทับคุณสมบัติที่เพิ่งตั้ง
     // ทั้งหมด — แผงคุณสมบัติแก้เรื่องนี้ไปแล้วตั้งแต่ alpha.120 ข้อ 6 แต่ **กล่องนี้ยังไม่ได้แก้**
     // (ทางเดียวกันเป๊ะ ต่างแค่ไฟล์) → ซิงก์ให้แท็บรู้ค่าใหม่ทันทีเหมือนกัน
-    const liveTab = state.tabs.get(file);
-    if (liveTab && liveTab.meta) {
-      try { liveTab.meta = parseMdFile(await kapi.readFile(file)).meta; }
-      catch (e) { log('warn', t('ui.props.writeMetaFail'), e); }
-    }
+    // [alpha.162 · W1-11] ใช้ `syncOpenTabMeta()` ตัวกลาง (กฎ alpha.156) — เดิมคัดลอกโค้ดชุดเดียวกัน
+    // มาไว้ตรงนี้ ทำให้ถ้าวันหนึ่งตัวกลางต้องทำอะไรเพิ่ม (เช่นซิงก์ฟิลด์อื่น) จุดนี้จะตกขบวนเงียบ ๆ
+    await syncOpenTabMeta(file);
     await buildTree();                 // สี/สถานะที่เพิ่งตั้งเห็นผลใน tree ทันที
     // เลขหน้าเริ่มต้นเปลี่ยน → แท็บที่เปิดไฟล์นี้อยู่ต้องวาดเลขหน้าใหม่ทันที
     const openTab = state.tabs.get(file);

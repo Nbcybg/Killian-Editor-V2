@@ -320,5 +320,28 @@ function docKinds(doc) {
         leak.map((x) => x.trim().slice(0, 80)).join(' | '));
 }
 
+// ── [alpha.160 · P1-15] จัดหน้าของ "รูป" ต้องรอดการเปิด→บันทึกในตัวแก้ไข (ไฟล์ส่งออกรองรับอยู่แล้ว) ──
+{
+  const src = 'ย่อหน้าแรก' + NL + NL + '<!--align:right-->![ภาพ](Images/a.png)' + NL + NL + 'ท้าย';
+  const doc = MD.mdToDoc(src);
+  const fig = doc.content.find((n) => n.type === 'figure');
+  check('[160-P1-15] ★ mdToDoc: รูปได้ align จากคอมเมนต์นำหน้า', !!fig && fig.attrs.align === 'right', JSON.stringify(fig && fig.attrs));
+  const back = MD.docToMd(doc);
+  check('[160-P1-15] ★★ docToMd: เขียน <!--align:right--> นำหน้ารูปกลับลงไฟล์ (ไป-กลับไม่หาย)',
+        back.includes('<!--align:right-->![ภาพ](Images/a.png)'), JSON.stringify(back));
+  // โหมด frontmatter (ค่าเริ่มต้นของโปรแกรม): แผนที่ align ต้องมีรูปด้วย แล้วโหลดกลับได้
+  const map = MD.collectAlign(doc);
+  const plain = MD.docToMd(doc, { alignComments: false });
+  const again = MD.mdToDoc(plain, MD.alignToString(map));
+  const fig2 = again.content.find((n) => n.type === 'figure');
+  check('[160-P1-15] ★ แผนที่ align ใน frontmatter เก็บ/โหลดรูปได้', Object.values(map).includes('right')
+        && !!fig2 && fig2.attrs.align === 'right', JSON.stringify(map));
+  // ไฟล์ส่งออก (mdBlocks) กับตัวแก้ไข อ่านบรรทัดเดียวกันเป็น align เดียวกัน
+  const blk = MD.mdBlocks(src).find((b) => b.kind === 'figure');
+  check('[160-P1-15] ไฟล์ส่งออกกับตัวแก้ไขเห็น align ของรูปตรงกัน', blk && blk.align === fig.attrs.align);
+  const noAl = MD.docToMd(MD.mdToDoc('![x](y.png)'));
+  check('[160-P1-15] รูปที่ไม่ได้จัดหน้า = ไม่มีคอมเมนต์งอก', noAl === '![x](y.png)', JSON.stringify(noAl));
+}
+
 console.log(NL + 'wysiwyg-parity: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

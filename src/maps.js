@@ -10,6 +10,7 @@
 
 import { t } from './i18n.js';
 import { gi } from './icons.js';
+import { cmpText } from './locale.js';
 export const MAPS_VERSION = '1.1';
 
 export const PIN_COLORS = ['#d9575e', '#5f9fd9', '#6fae6f', '#d9b757', '#a97fd0', '#d97757', '#7fb8b0'];
@@ -38,7 +39,7 @@ export function findMap(maps, id) { return (maps || []).find((m) => m.id === id)
 // เรียงแผนที่ตาม order แล้วชื่อ
 export function sortMaps(maps) {
   return (maps || []).slice().sort((a, b) =>
-    (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name), 'th'));
+    (a.order || 0) - (b.order || 0) || cmpText(String(a.name), String(b.name)));
 }
 
 // สร้าง "เส้นทาง" (breadcrumb) จากแผนที่ราก → แผนที่ปัจจุบัน ตามลิงก์ portal
@@ -154,7 +155,7 @@ export const MAP_UNCATEGORIZED = '';
 export function mapCategories(maps) {
   const set = new Set();
   for (const m of maps || []) set.add(String(m.category || '').trim());
-  const named = [...set].filter(Boolean).sort((a, b) => a.localeCompare(b, 'th'));
+  const named = [...set].filter(Boolean).sort((a, b) => cmpText(a, b));
   return set.has(MAP_UNCATEGORIZED) ? [...named, MAP_UNCATEGORIZED] : named;
 }
 /** จัดกลุ่มแผนที่ตามหมวด (ในกลุ่มเรียงด้วย sortMaps เหมือนเดิม) */

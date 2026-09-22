@@ -142,17 +142,24 @@ export function newProvider(patch = {}) {
 }
 
 /** ตรวจก่อนบันทึก — คืนรายการปัญหาเป็นข้อความไทย (ว่าง = ผ่าน) */
-export function validateProvider(p) {
-  const errs = [];
-  if (!p || !String(p.name || '').trim()) errs.push(t('ui.aiProviders.cantRenameProvider'));
+/**
+ * [alpha.162 · W6 ข้อ 5] ปัญหาของผู้ให้บริการแบบ **มีรหัส** — คนเรียกกรองด้วย `code` ไม่ใช่ด้วยข้อความ
+ * (เดิม UI กรองด้วย `e !== t('…')` = เทียบกับข้อความที่แปลแล้ว · บั๊กแบบเดียวกับ .128)
+ * @returns {Array<{code:'name'|'credName'|'baseUrl'|'baseUrlScheme'|'baseUrlDomain', msg:string}>}
+ */
+export function validateProviderIssues(p) {
+  const out = [];
+  const add = (code, key) => out.push({ code, msg: t(key) });
+  if (!p || !String(p.name || '').trim()) add('name', 'ui.aiProviders.cantRenameProvider');
   const c = (p && p.credential) || {};
-  if (!String(c.name || '').trim()) errs.push(t('ui.aiProviders.cantRenameCredential'));
-  if (!String(c.baseUrl || '').trim()) errs.push(t('ui.common.cantPutBaseURL'));
-  else if (!/^https?:\/\//i.test(String(c.baseUrl).trim())) errs.push(t('ui.aiProviders.baseURLMustHttp'));
-  else if (!isDomainAllowed(c.baseUrl, c.allowedDomains))
-    errs.push(t('ui.aiProviders.baseURLNotList'));
-  return errs;
+  if (!String(c.name || '').trim()) add('credName', 'ui.aiProviders.cantRenameCredential');
+  if (!String(c.baseUrl || '').trim()) add('baseUrl', 'ui.common.cantPutBaseURL');
+  else if (!/^https?:\/\//i.test(String(c.baseUrl).trim())) add('baseUrlScheme', 'ui.aiProviders.baseURLMustHttp');
+  else if (!isDomainAllowed(c.baseUrl, c.allowedDomains)) add('baseUrlDomain', 'ui.aiProviders.baseURLNotList');
+  return out;
 }
+/** ข้อความของปัญหาทั้งหมด (ทางเดิม — คนเรียกที่แค่จะแสดงผล) */
+export function validateProvider(p) { return validateProviderIssues(p).map((e) => e.msg); }
 
 /** ตัดความลับออกก่อนเก็บลง project.khn.json (ไฟล์ที่ตั้งใจให้ก๊อป/แชร์) */
 export function stripSecrets(p) {

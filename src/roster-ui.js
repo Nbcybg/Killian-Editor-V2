@@ -53,7 +53,7 @@ export async function openRoster(secPath, secTitle) {
   const title = t('ui.roster.listCharacter') + (secTitle ? ' — ' + secTitle : '');
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', title));
-  const x = el('span', 'tab-x', '×'); tabBtn.append(x);
+  const x = el('span', 'tab-x', gi('times')); tabBtn.append(x);
   $('#tabs').append(tabBtn);
   const tab = { file: key, title, pane, tabBtn, dirty: false, secPath,
                 editor: null, plain: null, wiki: null, roster: null };

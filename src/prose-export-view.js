@@ -23,7 +23,7 @@
 import { PAPER_SIZES, MARGIN_DEFAULTS } from './sp-format.js';
 import { num } from './num.js';
 import { measureProseBlocks, sliceProsePages, withMeasureMode,
-         renderProseClipPages, whenImagesReady, DPI } from './prose-measure.js';
+         renderProseClipPages, whenImagesReady, afterLateImages, DPI } from './prose-measure.js';
 
 /** คลาสห่อของเอกสารตัวอย่าง — ทุกกฎ CSS ที่ส่งออกถูกจำกัดขอบเขตไว้ใต้ตัวนี้ */
 export const XPV_CLASS = 'k-xpv-doc';
@@ -158,7 +158,12 @@ export function renderExportPagePreview(host, bodyHtml, css, opts = {}) {
     let n = pages.length;
     // กล่องอาจถูกทิ้งไปแล้ว (ผู้ใช้เปลี่ยนตัวเลือกส่งออกระหว่างรอรูป) → ไม่ต้องวาดทับของใหม่
     try { if (box.isConnected) n = paint().length; } catch {}
-    meas.remove();
+    // [alpha.160 · P1-16] ยังมีรูปค้างหลังหมดเวลารอ → วาดซ้ำอีกรอบตอนรูปมาครบ (เดิมเพี้ยนค้าง)
+    const late = afterLateImages(meas, () => {
+      try { if (box.isConnected) paint(); } catch {}
+      meas.remove();
+    });
+    if (!late) meas.remove();
     return n;
   });
   return { box, pageCount: pages.length, ready };

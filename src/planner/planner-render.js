@@ -10,6 +10,7 @@
 //  · บั๊ก 11 หัวลูกศรเลือกได้ทั้งสองปลาย (ไม่มี / ลูกศร / สามเหลี่ยม / วงกลม / ข้าวหลามตัด / ขีด)
 import { t as tt, t } from '../i18n.js';
 import { fabric } from 'fabric';
+import { themeColor, PLANNER_KIND } from '../palette.js';   // [alpha.162 · W6 ข้อ 2] สีเปลือกตามธีม · สีความหมายที่เดียว
 // [alpha.150r] ไอคอนของกระดานถูกวาดลงผืน canvas จึงต้องเป็น "ตัวอักษร" ไม่ใช่ svg —
 // แต่ยังต้องมาจากทะเบียนเดียวกับที่อื่น (กฎ alpha.147) ไม่ใช่อีโมจิที่เขียนไว้ในโค้ด
 import { ICON_GLYPH } from '../generated/commands-data.js';
@@ -43,7 +44,7 @@ export class PlannerRenderer {
       backgroundColor: '',                       // กริดวาดด้วย CSS ใต้ canvas → พื้นต้องโปร่ง
       selection: true,
       selectionColor: 'rgba(217,119,87,0.16)',
-      selectionBorderColor: '#d97757',
+      selectionBorderColor: themeColor('--accent-hi', '#d97757'),
       preserveObjectStacking: true,
       renderOnAddRemove: false,                  // คุมการวาดเอง = ลื่นกว่ามากตอนสร้างหลายชิ้น
       stopContextMenu: true,
@@ -66,8 +67,8 @@ export class PlannerRenderer {
     this._edgeVis = new Map();
     this._anchors = [];                          // port objects (ใช้ซ้ำ)
     this._selectedEdgeId = null;
-    this._grid = { show: true, size: 20, snap: false, style: 'dots', color: '#3a3936', opacity: 0.9 };
-    this._bg = options.backgroundColor || '#262624';
+    this._grid = { show: true, size: 20, snap: false, style: 'dots', color: '', opacity: 0.9 };
+    this._bg = options.backgroundColor || themeColor('--canvas', '#262624');
     this.zoomLevel = 1;
     this._makePorts();
   }
@@ -80,7 +81,7 @@ export class PlannerRenderer {
   }
 
   setBackground(color) {
-    this._bg = color || '#262624';
+    this._bg = color || themeColor('--canvas', '#262624');
     this.updateGridCss();
   }
 
@@ -146,7 +147,7 @@ export class PlannerRenderer {
     let step = g.size * z;
     let mult = 1;
     while (step < 9 && mult < 64) { mult *= 2; step = g.size * mult * z; }
-    const col = g.color || '#3a3936';
+    const col = g.color || themeColor('--hover', '#3a3936');
     const a = Math.max(0, Math.min(1, g.opacity == null ? 0.9 : g.opacity));
     const c = _rgba(col, a);
     let img = '', size = `${step}px ${step}px`;
@@ -195,8 +196,8 @@ export class PlannerRenderer {
       originX: 'left', originY: 'top',
       lockScalingFlip: true,                      // [alpha.154] ลากเลยจุดยึด = กลับด้านการ์ด (วาดใหม่สด ๆ ไม่ได้)
       hasControls: !n.locked, hasBorders: true,
-      borderColor: '#d97757', borderScaleFactor: 1.6,
-      cornerColor: '#d97757', cornerStrokeColor: '#1a1815',
+      borderColor: themeColor('--accent-hi', '#d97757'), borderScaleFactor: 1.6,
+      cornerColor: themeColor('--accent-hi', '#d97757'), cornerStrokeColor: themeColor('--input-bg', '#1a1815'),
       cornerSize: 9, transparentCorners: false, cornerStyle: 'circle',
       lockRotation: true,
       lockMovementX: !!n.locked, lockMovementY: !!n.locked,
@@ -378,7 +379,7 @@ export class PlannerRenderer {
   _cardChildren(n) {
     const W = n.width || CARD_W, H = n.height || CARD_H;
     const d = TYPE_DEFAULTS[n.type] || TYPE_DEFAULTS.scene;
-    const textFill = n.textColor || d.textColor || '#faf9f5';
+    const textFill = n.textColor || d.textColor || themeColor('--bright', '#faf9f5');
     const fs = n.fontSize || d.fontSize || 12.5;
     this._scrollMax = 0;
     this._scrollMaxX = 0;
@@ -404,7 +405,7 @@ export class PlannerRenderer {
     const st = this._stroke(n, 'rgba(255,255,255,0.14)', 0);
     const kids = [new fabric.Rect({
       left: 0, top: 0, width: W, height: H, rx: 4, ry: 4,
-      fill: this._fill(n, '#1f1e1c'), ...st, originX: 'left', originY: 'top',
+      fill: this._fill(n, themeColor('--side', '#1f1e1c')), ...st, originX: 'left', originY: 'top',
     })];
     const im = this.imageFor(n.src, n.id);
     if (!im) {
@@ -455,7 +456,7 @@ export class PlannerRenderer {
     const st = this._stroke(n, 'rgba(255,255,255,0.12)', 1);
     const kids = [new fabric.Rect({
       left: 0, top: 0, width: W, height: H, rx: 8, ry: 8,
-      fill: this._fill(n, '#2f2e2b'), ...st, originX: 'left', originY: 'top',
+      fill: this._fill(n, themeColor('--bar', '#2f2e2b')), ...st, originX: 'left', originY: 'top',
     })];
     kids.push(new fabric.Text(_clip(_withGlyph(ICONS.todo, n.title || tt('ui.planner.todoNew')), 34), {
       left: L.padX, top: 7, fontSize: fs, fill: textFill,
@@ -473,7 +474,7 @@ export class PlannerRenderer {
     if (prog.total) {
       kids.push(new fabric.Rect({
         left: L.padX, top: L.headH - 7, width: (W - L.padX * 2) * (prog.percent / 100), height: L.progH,
-        rx: 2, ry: 2, fill: '#5f8a6f', originX: 'left', originY: 'top',
+        rx: 2, ry: 2, fill: PLANNER_KIND.done, originX: 'left', originY: 'top',
       }));
     }
 
@@ -488,14 +489,14 @@ export class PlannerRenderer {
       const y = i * L.rowH;
       rows.push(new fabric.Rect({
         left: L.padX, top: y + 3, width: L.boxSize, height: L.boxSize, rx: 3, ry: 3,
-        fill: it.done ? '#5f8a6f' : 'rgba(0,0,0,0.25)',
-        stroke: it.done ? '#5f8a6f' : 'rgba(255,255,255,0.35)', strokeWidth: 1,
+        fill: it.done ? PLANNER_KIND.done : 'rgba(0,0,0,0.25)',
+        stroke: it.done ? PLANNER_KIND.done : 'rgba(255,255,255,0.35)', strokeWidth: 1,
         originX: 'left', originY: 'top',
       }));
       if (it.done) {
         rows.push(new fabric.Text(glyphOf('checkmark'), {
           left: L.padX + L.boxSize / 2, top: y + 3 + L.boxSize / 2, fontSize: L.boxSize - 2,
-          fill: '#fff', fontFamily: FONT, originX: 'center', originY: 'center',
+          fill: PLANNER_KIND.onColor, fontFamily: FONT, originX: 'center', originY: 'center',
         }));
       }
       rows.push(new fabric.Text(_clip(it.text || '', 40), {
@@ -529,15 +530,15 @@ export class PlannerRenderer {
   _recordChildren(n, W, H, textFill, fs) {
     const kids = [new fabric.Rect({
       left: 0, top: 0, width: W, height: H, rx: 8, ry: 8,
-      fill: this._fill(n, '#3f3e3a'), ...this._stroke(n, 'rgba(255,255,255,0.12)', 1),
+      fill: this._fill(n, themeColor('--border', '#3f3e3a')), ...this._stroke(n, 'rgba(255,255,255,0.12)', 1),
       originX: 'left', originY: 'top',
     })];
 
     let titleW = W - 20;
     if (n.status) {
-      const c = STATUS_COLOR[n.status] || '#6b6b6b';
+      const c = STATUS_COLOR[n.status] || PLANNER_KIND.statusUnknown;
       const txt = new fabric.Text(n.status, {
-        left: W - 10, top: 9, fontSize: 9, fill: '#fff',
+        left: W - 10, top: 9, fontSize: 9, fill: PLANNER_KIND.onColor,
         fontFamily: FONT, originX: 'right', originY: 'top',
       });
       const pad = 6;
@@ -618,7 +619,7 @@ export class PlannerRenderer {
     const body = n.synopsis || n.title || '';
     const kids = [new fabric.Rect({
       left: 0, top: 0, width: W, height: H, rx: 2, ry: 2,
-      fill: this._fill(n, '#f2c14e'), ...this._stroke(n, 'rgba(0,0,0,0.18)', 1),
+      fill: this._fill(n, PLANNER_KIND.sticky), ...this._stroke(n, 'rgba(0,0,0,0.18)', 1),
       originX: 'left', originY: 'top',
       shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.35)', blur: 8, offsetX: 1, offsetY: 3 }),
     })];
@@ -651,7 +652,7 @@ export class PlannerRenderer {
 
   // ── รูปทรง ──
   _shapeChildren(n, W, H, textFill, fs) {
-    const fill = this._fill(n, '#4a6fa5');
+    const fill = this._fill(n, PLANNER_KIND.note);
     const common = { left: 0, top: 0, originX: 'left', originY: 'top', fill,
                      ...this._stroke(n, 'rgba(255,255,255,0.18)', 1) };
     let shape;
@@ -703,12 +704,12 @@ export class PlannerRenderer {
    * → ย้ายป้ายเข้ามา **ในกรอบ** เป็นแถบหัวเรื่อง: กล่องกลุ่มเท่ากับ W×H พอดีตั้งแต่ต้น ไม่มีอะไรถูกเฉือน
    */
   _frameChildren(n, W, H, textFill, fs) {
-    const col = n.color || '#d97757';
+    const col = n.color || themeColor('--accent-hi', '#d97757');
     const head = Math.min(24, Math.max(16, H * 0.08));
     return [
       new fabric.Rect({
         left: 0, top: 0, width: W, height: H, rx: 6, ry: 6,
-        fill: this._fill(n, '#faf9f5'), ...this._stroke(n, col, 1.5),
+        fill: this._fill(n, PLANNER_KIND.fillDefault), ...this._stroke(n, col, 1.5),
         originX: 'left', originY: 'top',
       }),
       new fabric.Rect({
@@ -724,7 +725,7 @@ export class PlannerRenderer {
 
   // ── คอมเมนต์ ──
   _commentChildren(n, W, H, textFill, fs) {
-    const fill = this._fill(n, '#e8e3d3');
+    const fill = this._fill(n, PLANNER_KIND.paper);
     const kids = [
       new fabric.Path(_bubblePath(W, H), {
         left: 0, top: 0, originX: 'left', originY: 'top',
@@ -737,7 +738,7 @@ export class PlannerRenderer {
       }),
     ];
     const tb = new fabric.Textbox(String(n.synopsis || ''), {
-      left: 10, top: 26, width: W - 22, fontSize: fs, fill: n.textColor || '#26241f',
+      left: 10, top: 26, width: W - 22, fontSize: fs, fill: n.textColor || PLANNER_KIND.inkOnLight,
       fontFamily: FONT, originX: 'left', originY: 'top', textAlign: n.textAlign || 'left',
       editable: false, splitByGrapheme: true, lineHeight: 1.25,
     });
@@ -764,7 +765,7 @@ export class PlannerRenderer {
     const geo = edgeGeometry(boxA, boxB, e);
     const sel = this._selectedEdgeId === e.id;
     const dim = (a.opacity < 1 || b.opacity < 1) ? 0.12 : 1;
-    const col = e.color || '#d97757';
+    const col = e.color || themeColor('--accent-hi', '#d97757');
     const w = e.width || 2;
     // [บั๊ก 65r2-2] เดิมบังคับ strokeDashArray=null ตอนถูกเลือก → กด "ประ/จุด" แล้วไม่เห็นอะไรเปลี่ยน
     const dash = e.style === 'dashed' ? [w * 3, w * 2] : e.style === 'dotted' ? [1, w * 2.2] : null;
@@ -796,7 +797,7 @@ export class PlannerRenderer {
       const m = edgeMidpoint(geo);
       const lb = new fabric.Text(e.label, {
         left: m.x, top: m.y - 4, fontSize: 10, opacity: dim,
-        fill: sel ? '#faf9f5' : 'rgba(255,255,255,0.62)',
+        fill: sel ? themeColor('--bright', '#faf9f5') : 'rgba(255,255,255,0.62)',
         backgroundColor: 'rgba(38,38,36,0.75)',
         fontFamily: FONT, originX: 'center', originY: 'bottom',
         selectable: false, evented: false, objectCaching: false,
@@ -872,7 +873,7 @@ export class PlannerRenderer {
   _makePorts() {
     for (const port of ['top', 'right', 'bottom', 'left']) {
       const dot = new fabric.Circle({
-        left: 0, top: 0, radius: 6.5, fill: '#d97757', stroke: '#faf9f5', strokeWidth: 1.6,
+        left: 0, top: 0, radius: 6.5, fill: themeColor('--accent-hi', '#d97757'), stroke: themeColor('--bright', '#faf9f5'), strokeWidth: 1.6,
         originX: 'center', originY: 'center', selectable: false, evented: false,
         hoverCursor: 'crosshair', visible: false, objectCaching: false,
         shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 4 }),
@@ -885,7 +886,7 @@ export class PlannerRenderer {
     this._endHandles = [];
     for (const end of ['from', 'to']) {
       const h = new fabric.Circle({
-        left: 0, top: 0, radius: 6, fill: '#1a1815', stroke: '#d97757', strokeWidth: 2.4,
+        left: 0, top: 0, radius: 6, fill: themeColor('--input-bg', '#1a1815'), stroke: themeColor('--accent-hi', '#d97757'), strokeWidth: 2.4,
         originX: 'center', originY: 'center', selectable: false, evented: false,
         hoverCursor: 'grab', visible: false, objectCaching: false,
       });
@@ -909,8 +910,8 @@ export class PlannerRenderer {
     this._bendHandles = [];
     for (const h of bendHandles(geo)) {
       const dot = new fabric.Circle({
-        left: h.x, top: h.y, radius: 5.5 / z, fill: '#faf9f5',
-        stroke: '#2b7bb9', strokeWidth: 2 / z,
+        left: h.x, top: h.y, radius: 5.5 / z, fill: themeColor('--bright', '#faf9f5'),
+        stroke: PLANNER_KIND.handle, strokeWidth: 2 / z,
         originX: 'center', originY: 'center', selectable: false, evented: true,
         hoverCursor: h.axis === 'v' ? 'ew-resize' : 'ns-resize', objectCaching: false,
       });

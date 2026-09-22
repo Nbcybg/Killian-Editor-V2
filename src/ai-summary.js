@@ -5,7 +5,9 @@ import { callAI, aiConfigured, getAISettings } from './ai-settings.js';
 import { listEntities } from './project-scan.js';
 import { hashText } from './num.js';
 import { parseMdFile } from './md.js';
+import { liveBody } from './tab-bridge.js';   // [alpha.160 · P1-3]
 import { gi } from './icons.js';
+import { fmtDateTime } from './locale.js';
 
 const SKIP_SECTIONS = ['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research'];
 
@@ -74,9 +76,13 @@ export async function collectProjectText(opts = {}) {
     if (j.secTitle) text += '## ' + j.secTitle + '\n';
     if (j.chTitle && j.chTitle !== lastCh) { text += '### ' + j.chTitle + '\n'; lastCh = j.chTitle; }
     try {
-      const raw = await kapi.readFile(j.file);
+      // [alpha.160 · P1-3] แท็บที่เปิดอยู่ชนะดิสก์ (สรุปต้องตรงกับที่ผู้ใช้เห็น รวมส่วนที่ยังไม่บันทึก)
+      let disk = null;
+      try { disk = parseMdFile(await kapi.readFile(j.file)).body; } catch { disk = null; }
+      const body = liveBody(j.file, disk);
+      if (body == null) continue;                      // ไฟล์หาย/อ่านไม่ได้ และไม่ได้เปิดอยู่ → ข้าม
       // [alpha.149] เนื้อเรื่องล้วน — frontmatter เคยกินโควตา 2,000 ตัวอักษรต่อฉากไปฟรี ๆ
-      text += parseMdFile(raw).body.slice(0, perScene) + '\n\n';
+      text += body.slice(0, perScene) + '\n\n';
       scenes++;
     } catch { /* ไฟล์หาย/อ่านไม่ได้ → ข้าม */ }
     if (text.length > maxChars) break;               // เกินโควตา context แล้ว ไม่ต้องอ่านต่อ
@@ -170,7 +176,7 @@ export async function showAISummary({ force = false } = {}) {
   const box = el('div', 'k-dialog k-wide k-ai-summary');
   box.append(el('div', 'k-dlg-title', tt('ui.aiSum.aISummaryBody2') + state.title));
   if (cached) {
-    const note = el('div', 'dim', tt('ui.aiSum.resultSave') + new Date(cacheDate).toLocaleString('th-TH') +
+    const note = el('div', 'dim', tt('ui.aiSum.resultSave') + fmtDateTime(cacheDate) +
                                   tt('ui.aiSum.bodyNotChangePress'));
     note.style.cssText = 'font-size:11px;margin:-4px 0 6px';
     box.append(note);
@@ -288,7 +294,7 @@ export async function showAITitleSuggestions(currentTitle, callback, opts = {}) 
   const btns = el('div', 'k-dlg-btns');
   const retryB = el('button', null, tt('ui.aiSum.tryNew'));
   retryB.onclick = () => { ov.remove(); showAITitleSuggestions(currentTitle, callback, opts); };
-  const closeB = el('button', null, tt('ui.common.cancel'));
+  const closeB = el('button', 'k-cancel', tt('ui.common.cancel'));
   closeB.onclick = () => ov.remove();
   btns.append(retryB, closeB);
   box.append(btns);

@@ -1,10 +1,11 @@
 // books.js — ตัวจัดการเล่ม/ร่าง (Book Manager): เพิ่ม/แก้/ลบ/เรียงเล่มและร่าง
 import { vivid, inkOn } from './color-util.js';
+import { errText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { t, tf } from './i18n.js';
 import { SECTION_STATUSES, buildTree, openCompileDialog, openFirstSceneOf, resolveImg } from './app.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { addSection, deleteSection, listSections, reorderSections, saveSectionMeta, sectionStats } from './section-ops.js';
-import { $, el, setStatus, state } from './core.js';
+import { $, el, setStatus, setStatusError, state } from './core.js';
 import { pickImage } from './gallery.js';
 import { popupMenu, ask } from './ui.js';
 import { listDraftsForSection, createDraft, deleteDraft, renameDraft, setPrimaryDraft } from './drafts.js';
@@ -12,6 +13,8 @@ import { listDraftsForSection, createDraft, deleteDraft, renameDraft, setPrimary
 import { openBookReader, bumpBookFlow } from './read-ui.js';
 import { openChapterManager, coverHintLine } from './chapters-ui.js';
 import { gi } from './icons.js';
+import { panelEmpty } from './panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
+import { fmtNum } from './locale.js';
 
 // บั๊ก #18: จัดการเล่มเป็นแผง ไม่ใช่แท็บเอกสาร
 export async function openBookManager() {
@@ -106,7 +109,7 @@ export async function renderBookManager(pane) {
         await createDraft(sec.secPath, n, src || null);
         renderDraftList(sec, dst);
         setStatus(t('ui.books.newDraftNew') + n);
-      } catch (e) { setStatus(e.message); }
+      } catch (e) { setStatusError(errText(e)); }
     };
     list.append(addD);
     dst.append(list);
@@ -205,7 +208,7 @@ export async function renderBookManager(pane) {
     // รายการร่าง
     const draftsBox = el('div', 'drafts-box'); bd.append(draftsBox);
     sectionStats(s.secPath).then((st) => {
-      stats.textContent = tf('ui.books.chapterSceneWord', st.chapters, st.scenes, st.words.toLocaleString())
+      stats.textContent = tf('ui.books.chapterSceneWord', st.chapters, st.scenes, fmtNum(st.words))
         + (st.drafts > 1 ? tf('ui.books.draft', st.drafts) : '');
       renderDraftList(s, draftsBox);
     });
@@ -253,5 +256,5 @@ export async function renderBookManager(pane) {
     grid.append(card);
   }
 
-  if (!sections.length) grid.append(el('div', 'books-empty', t('ui.books.notHasBookPress')));
+  if (!sections.length) grid.append(panelEmpty(t('ui.books.notHasBookPress'), { cls: 'books-empty' }));
 }

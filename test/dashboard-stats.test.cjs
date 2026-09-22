@@ -67,6 +67,19 @@ for (const hex of [...Object.values(C.VIVID), ...C.STATUS_PALETTE]) {
 check('tint', C.tint('#ff0000', 0.5) === 'rgba(255, 0, 0, 0.5)');
 check('nextStatusColor: ไม่ซ้ำสีที่ใช้แล้ว', C.nextStatusColor(['#ff4d6d']) === '#ff7a2f');
 
+// ── [alpha.162 · W5 ข้อ 5] คำที่เขียนวันนี้ = นิยามเดียวกับแท่งของแดชบอร์ด ──
+{
+  const h = [{ date: '2026-09-18', words: 1000 }, { date: '2026-09-20', words: 1500 }, { date: '2026-09-21', words: 1800 }];
+  check('★ [162-W5] วันนี้ = ยอดวันนี้ − ยอดวันก่อนหน้าที่จดไว้', D.wordsWrittenToday(h, '2026-09-21') === 300, D.wordsWrittenToday(h, '2026-09-21'));
+  check('★ [162-W5] วันนี้ยังไม่ได้จด = 0 (ไม่ใช่ยอดรวมทั้งโปรเจกต์)', D.wordsWrittenToday(h, '2026-09-22') === 0, D.wordsWrittenToday(h, '2026-09-22'));
+  check('[162-W5] ลบงานไปวันนี้ = 0 (ไม่ติดลบ)', D.wordsWrittenToday([{ date: '2026-09-20', words: 900 }, { date: '2026-09-21', words: 700 }], '2026-09-21') === 0);
+  check('[162-W5] แถวแรกสุดของประวัติ = ไม่นับของที่มีอยู่ก่อนเริ่มจดเป็น "เขียนวันนี้"',
+        D.wordsWrittenToday([{ date: '2026-09-21', words: 50000 }], '2026-09-21') === 0);
+  check('[162-W5] ตรงกับแท่งสุดท้ายของ activitySeries เสมอ',
+        D.wordsWrittenToday(h, '2026-09-21') === D.activitySeries(h, '30d', { today: '2026-09-21' }).days.slice(-1)[0].delta);
+  check('[162-W5] ประวัติพัง/ว่าง ไม่พัง', D.wordsWrittenToday(null, '2026-09-21') === 0 && D.wordsWrittenToday([{ x: 1 }], '2026-09-21') === 0);
+}
+
 console.log(`\ndashboard-stats: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

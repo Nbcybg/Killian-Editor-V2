@@ -126,5 +126,15 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('[159-QoL] เซสชันรุ่นเก่า (ไม่มี cursor) = ว่าง ไม่พัง', JSON.stringify(S.migrateSession({ tabs: { open: [] } }).tabs.cursor) === '{}');
 }
 
+// ══ [alpha.162 · W4 ข้อ 11] แท็บที่ปักหมุดจำในเซสชัน ══
+{
+  check('[162-W4] เซสชันใหม่มีช่องหมุดว่าง', Array.isArray(S.newSession().tabs.pinned) && S.newSession().tabs.pinned.length === 0);
+  const m = S.migrateSession({ tabs: { open: ['a', 'b'], active: 'a', pinned: ['b', 'zz', 3, 'b'] } });
+  check('[162-W4] ★ หมุดต้องเป็นแท็บที่เปิดอยู่ · ค่าเสีย/ซ้ำถูกทิ้ง', JSON.stringify(m.tabs.pinned) === '["b"]', JSON.stringify(m.tabs.pinned));
+  check('[162-W4] เซสชันรุ่นเก่า (ไม่มีช่องหมุด) ไม่พัง', Array.isArray(S.migrateSession({ tabs: ['a'] }).tabs.pinned));
+  const p = S.pruneTabs({ tabs: { open: ['a', 'b'], pinned: ['a', 'b'] } }, ['b']);
+  check('[162-W4] ไฟล์หายจากดิสก์ = หมุดหายตาม', JSON.stringify(p.tabs.pinned) === '["b"]', JSON.stringify(p.tabs.pinned));
+}
+
 console.log(`\nsession-core: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -17,13 +17,16 @@
 //          view:'tree'|'list', zoom, sel, updated }
 
 import { t } from './i18n.js';
+import { cmpText } from './locale.js';
 export const BRANCH_PLAN_VERSION = 3;
 export const BRANCH_PLAN_DIR = 'Branches';
 export const BRANCH_PLAN_EXT = '.json';
 
 /** สถานะของแผน — แนวคิดเดียวกับ "สถานะฉาก" (ผู้ใช้ขอให้คุณสมบัติเหมือนฉาก) */
+/* i18n-skip: PLAN_STATUSES = ค่าที่เก็บในไฟล์แผนของโฟลเดอร์ Branches */
 export const PLAN_STATUSES = ['ร่าง', 'กำลังทำ', 'ใช้จริง', 'สำรอง', 'พับไว้'];
 export const PLAN_DEFAULT_STATUS = 'ร่าง';
+/* /i18n-skip */
 
 /** แผนเปล่า */
 export function newBranchPlan(name) {
@@ -192,7 +195,7 @@ export function planDirty(current, saved) {
 /** เรียงรายการแผน: ชื่อไทย */
 export function sortPlans(list) {
   return (list || []).slice().sort((a, b) =>
-    String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+    cmpText(String(a.name || ''), String(b.name || '')));
 }
 
 /** สรุปสั้น ๆ ไว้โชว์ในรายการ/Explorer */

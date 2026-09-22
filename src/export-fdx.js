@@ -18,7 +18,7 @@ export const FDX_TYPE_MAP = {
   shot: 'Shot',
   'act-break': 'Act Break',
   // [alpha.60r3a] `---` บังคับขึ้นหน้าใหม่ — FD ไม่มีชนิดนี้ ลงเป็น Action ว่าง
-  // (การ "ขึ้นหน้าใหม่" ถูกจัดการไปแล้วตอน paginate ก่อนส่งออก)
+  // [alpha.160 · P1-6] ไม่ลงเป็นย่อหน้า — generateFdx แปลงเป็น StartsNewPage="Yes" ของย่อหน้าถัดไป
   'page-break': 'Action',
   // element ที่ Final Draft ไม่มีตรง ๆ → ลงเป็น Action เพื่อไม่ให้เนื้อหาหาย
   note: 'Action',
@@ -72,16 +72,26 @@ const para = (type, text, indent = '    ', attrs = '') =>
  *        titlePages = หน้าปกที่ผู้ใช้แต่งเอง (ข้อ 90) — ชนะหน้าปกที่สร้างจาก meta
  */
 export function generateFdx(blocks, meta = {}, opts = {}) {
-  const list = (blocks || []).filter((b) => b && b.el !== 'blank' &&
-                                            String(b.text ?? '').trim() !== '');
+  // [alpha.160 · P1-6] ★ ขึ้นหน้าใหม่ (\f) — เดิม `'\f'.trim()` = '' ถูกกรองทิ้ง + XML_BAD ลบ \f อีกชั้น
+  // (M32 เข้าใจว่า \f พอ — ไม่จริง) → Final Draft ใช้ attribute `StartsNewPage="Yes"` บนย่อหน้าถัดไป
+  const isBreak = (b) => b && (b.el === 'page-break' || (b.el !== 'blank' && String(b.text ?? '').includes('\f')
+                         && !String(b.text).replace(/\f/g, '').trim()));
+  const list = [];
+  let newPage = false;
+  for (const b of blocks || []) {
+    if (isBreak(b)) { newPage = list.length > 0; continue; }     // ต้นเรื่องไม่ต้องขึ้นหน้าใหม่
+    if (!b || b.el === 'blank' || String(b.text ?? '').trim() === '') continue;
+    list.push({ b, newPage }); newPage = false;
+  }
   // เลขฉาก: FD เก็บที่ attribute Number ของ Paragraph หัวฉาก
   // ใช้เลขที่บล็อกพกมาก่อน (b.sceneNo) ไม่มีจึงไล่นับเองจาก startScene
   let sceneNo = Math.max(1, Math.round(numOr(opts.startScene, 1)));
-  const body = list.map((b) => {
-    if (b.el !== 'scene') return para(fdxType(b.el), b.text);
+  const body = list.map(({ b, newPage: np }) => {
+    const nb = np ? ' StartsNewPage="Yes"' : '';
+    if (b.el !== 'scene') return para(fdxType(b.el), b.text, '    ', nb);
     const n = b.sceneNo != null && String(b.sceneNo).trim() !== ''
       ? String(b.sceneNo).trim() : String(sceneNo++);
-    return para(fdxType(b.el), b.text, '    ', ` Number="${escapeXml(n)}"`);
+    return para(fdxType(b.el), b.text, '    ', ` Number="${escapeXml(n)}"` + nb);
   }).join('\n');
 
   const title = [];

@@ -196,7 +196,7 @@ function renderLeafTabs(node, sm) {
     btn.dataset.file = id;
     btn.title = id;
     btn.append(el('span', 'k-mtab-title', (t && t.title) || id.split(/[\\/]/).pop()));
-    const x = el('span', 'k-mtab-x', '×');
+    const x = el('span', 'k-mtab-x', gi('times'));
     x.title = tr('split.removeFromPane');
     x.onmousedown = (e) => e.stopPropagation();
     x.onclick = (e) => {

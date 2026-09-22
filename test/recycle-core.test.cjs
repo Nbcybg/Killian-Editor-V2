@@ -72,5 +72,23 @@ const stamp = (ms) => ms.toString(36);
   check('ไฟล์ .json', R.nameCandidate('มานี-abc.json', 2) === 'มานี-abc-2.json');
 }
 
+// ═══════════ [alpha.162 · W1-4] nextStamp — ชื่อในถังห้ามชนกันในมิลลิวินาทีเดียว ═══════════
+{
+  check('เวลาเดินหน้าแล้ว = ใช้เวลาจริง', R.nextStamp(1000, 500) === 1000);
+  check('★★ เวลาเดิม (ลบสองฉากในมิลลิวินาทีเดียว) = เดินหน้า 1 ms', R.nextStamp(1000, 1000) === 1001);
+  check('★ นาฬิกาถอยหลัง (ปรับเวลาเครื่อง) ก็ยังไม่ซ้ำ', R.nextStamp(900, 1000) === 1001);
+  check('ครั้งแรกของรอบ (last=0)', R.nextStamp(1000, 0) === 1000);
+  {
+    // ลบรวดเดียว 5 ชิ้นด้วยนาฬิกาที่ค้างค่าเดียว → ต้องได้ชื่อต่างกันครบทุกชิ้น
+    let last = 0;
+    const names = [];
+    for (let i = 0; i < 5; i++) { last = R.nextStamp(now, last); names.push(last.toString(36) + '-scene-01.md'); }
+    check('★★ ลบ 5 ฉากชื่อเดียวกันในมิลลิวินาทีเดียว = ชื่อในถัง 5 ชื่อไม่ซ้ำกัน',
+          new Set(names).size === 5, names.join(' | '));
+    check('★ ชื่อที่ได้ยังถอดกลับเป็นชื่อเดิมได้ (originalName ไม่พัง)',
+          names.every((n) => R.originalName(n, now + 10) === 'scene-01.md'), names[4]);
+  }
+}
+
 console.log(`\nrecycle-core: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

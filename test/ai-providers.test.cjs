@@ -256,6 +256,18 @@ const check = (name, cond, extra) => {
   check('[เริ่มใหม่] ชื่อที่ผู้ใช้ตั้งเองไม่ถูกล้าง',
         S.clearMessages(S.renameSession(rs, 'บทที่ 3')).title === 'บทที่ 3');
   check('[เริ่มใหม่] ไม่แก้เซสชันเดิม (immutable)', rs.messages.length === 2);
+  // [alpha.160 · P1-4] contextCap ที่เรียนรู้จาก HTTP 400 ต้องรอดการบันทึก→โหลด (loadSessions = newSession(JSON))
+  {
+    const learned = { ...S.newSession({ model: 'small-8k' }), contextCap: 8192 };
+    const back = S.newSession(JSON.parse(S.rawJson(learned)));
+    check('[P1-4] ★ contextCap รอดการบันทึก→เปิดโปรแกรมใหม่', back.contextCap === 8192, back.contextCap);
+    check('[P1-4] ★ ขอบบนที่โหลดกลับยังคุมงบประวัติ (ไม่วน HTTP 400)',
+          S.historyBudget(back) === S.historyBudget(learned)
+          && S.historyBudget(back) < S.historyBudget({ ...back, contextCap: 0 }),
+          S.historyBudget(back) + ' vs ' + S.historyBudget({ ...back, contextCap: 0 }));
+    check('[P1-4] ไฟล์เก่าไม่มีฟิลด์ = 0', S.newSession({}).contextCap === 0 && S.newSession({ contextCap: 'x' }).contextCap === 0);
+    check('[P1-4] เริ่มบทสนทนาใหม่ยังจำขอบบนของโมเดลไว้', S.clearMessages(back).contextCap === 8192, S.clearMessages(back).contextCap);
+  }
 
   // สถิติ
   const u = (i, o, extra = {}) => ({ input: i, output: o, total: i + o, ...extra });
