@@ -13,6 +13,7 @@ import { el, state, setStatus, log } from '../core.js';
 import { gi } from '../icons.js';
 import { TextSelection } from 'prosemirror-state';
 import { listAgents, buildRewritePrompt, cleanRewriteOutput, resolveRange, AROUND_CHARS } from './ai-agents.js';
+import { profileText } from './ai-doctor.js';
 
 const LAST_AGENT_KEY = 'k2-rewrite-agent';
 let _bar = null;           // แถบที่เปิดอยู่ (มีได้ทีละอัน)
@@ -24,6 +25,8 @@ export function closeRewriteBar() {
   b.close();
 }
 export function rewriteBarOpen() { return !!_bar; }
+/** [alpha.164] แท็บเจ้าของแถบที่เปิดอยู่ (null = ไม่มีแถบ) — app.js ปิดแถบเมื่อสลับ/ปิดแท็บนั้น */
+export function rewriteBarTab() { return _bar ? _bar.tab : null; }
 
 /** ป้าย/คำสั่งที่ส่งให้โมเดล (แปลตามภาษาที่ผู้ใช้เลือก) */
 function promptLabels() {
@@ -52,10 +55,10 @@ async function mentionedWiki(text) {
     for (const e of await listEntities(state.root)) {
       const names = [e.name, ...(e.aliases || [])].filter((n) => n && String(n).length >= 2);
       if (!names.some((n) => text.includes(n))) continue;
-      const f = e.entity.fields || {};
-      const summary = Object.entries(f).filter(([, v]) => v && typeof v === 'string')
-        .map(([k, v]) => k + ': ' + v).join(' · ').replace(/\s+/g, ' ');
-      hits.push('- ' + e.name + (summary ? ' — ' + (summary.length > 320 ? summary.slice(0, 320) + '…' : summary) : ''));
+      // [alpha.164] โปรไฟล์ชุดเดียวกับการ์ด Out of character (summary · fields · ช่องที่เพิ่มเอง · แท็ก)
+      // เดิมอ่านแค่ `fields` — ข้อมูลที่ผู้ใช้เพิ่มเองและบทสรุปของตัวละครไม่เคยไปถึงโมเดล
+      const summary = profileText(e.entity || {}, 320);
+      hits.push('- ' + e.name + (summary ? ' — ' + summary : ''));
       if (hits.length >= 8) break;
     }
     return hits.join('\n');
@@ -174,7 +177,9 @@ export function openRewriteBar(tab) {
   // ── ตำแหน่ง: ใต้ข้อความที่เลือก · ล้นจอ = เหนือข้อความ · อยู่ในช่องตัวแก้ไข (ช่องแคบมาก = ในจอ) ──
   function place() {
     if (!bar.isConnected) return;
-    if (view.isDestroyed) { closeRewriteBar(); return; }
+    // [alpha.164] ตัวแก้ไขถูกทำลาย หรือแผงของแท็บถูกซ่อน (สลับแท็บ) = แถบของที่นี่ไม่มีที่ยืนแล้ว
+    // เดิมแถบลอยค้างทับเอกสารอีกฉบับ · ไฮไลต์ไปโผล่มุมจอ · กด "เขียนใหม่" = แทนที่ในแท็บที่มองไม่เห็น
+    if (view.isDestroyed || !view.dom.getClientRects().length) { closeRewriteBar(); return; }
     let a, b;
     try { a = view.coordsAtPos(Math.min(cur.from, view.state.doc.content.size));
           b = view.coordsAtPos(Math.min(cur.to, view.state.doc.content.size)); } catch { return; }
@@ -208,6 +213,7 @@ export function openRewriteBar(tab) {
   document.addEventListener('keydown', onKey, true);
 
   const ctl = {
+    tab,
     close() {
       if (busy && reqId && kapi.httpAbort) { try { kapi.httpAbort(reqId); } catch {} }
       window.removeEventListener('scroll', onScroll, true);

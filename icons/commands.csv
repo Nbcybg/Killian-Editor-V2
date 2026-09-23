@@ -113,6 +113,7 @@ panels-hide-right,panel-hide-right,Ctrl+Shift+]
 read-book,,Ctrl+Alt+Shift+R
 reading-mode,book-open,Ctrl+Shift+H
 reveal-active,target,Ctrl+Shift+1
+onset-toggle,swap,Ctrl+Alt+Shift+O
 split-view,dock-right,Ctrl+Shift+\
 typewriter,edit,Ctrl+Shift+T
 workspace-menu,collection,Ctrl+Shift+Y

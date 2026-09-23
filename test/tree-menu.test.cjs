@@ -27,7 +27,7 @@ const USER_LIST = {
   project: 'addBook renameProject | quickOpen searchProject dashboard kanban journal | play playerHistory | branchPanel | projectSettings aiSettings reveal copyPath | expandAll collapseAll refresh',
   book: 'addBook rename reorder | addChapter duplicate star | manageBooks manageChapters searchIn readBook | castOfCharacters titlePage | quickNote viewQuickNotes | propsPopup propsPanel reveal copyPath | color status pin | lock backup restore | delete',
   chapter: 'addChapter bookFromChapter visual rename reorder | addScene copy paste duplicate move star | manageChapters manageScenes searchIn readChapter readBook | propsPopup propsPanel reveal copyPath | color status pin | lock backup restore | delete',
-  scene: 'open addScene addChapter chapterFromScenes rename reorder switchFormat | copy paste duplicate moveUp moveDown move star | quickNote comment readScene | propsPopup propsPanel reveal copyPath | color status pin | saveVersion versionHistory compareVersion | splitView toMemo | lock backup restore | delete',
+  scene: 'open addScene addChapter chapterFromScenes rename reorder switchFormat | copy paste duplicate moveUp moveDown move star | quickNote comment readScene | propsPopup propsPanel reveal copyPath | color status pin | problem problemToggle problemMenu | saveVersion versionHistory compareVersion | splitView toMemo | lock backup restore | delete',
   memoHead: 'open addMemo | reveal',
   memo: 'open addMemo sceneFromMemo rename | copy paste duplicate moveUp moveDown move star | quickNote comment | propsPopup propsPanel reveal copyPath | color status pin | saveVersion versionHistory compareVersion | splitView | lock backup restore | delete',
   galleryHead: 'openGallery addAlbum importImage moodBoard | reveal',

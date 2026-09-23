@@ -164,13 +164,14 @@ check('score: บอกชัดว่าเป็นชั้นคำนวณ
 }
 
 // ═══════ ทะเบียนการวิเคราะห์ ═══════
-check('ทะเบียน: ครบ 12 ชนิด (11 เดิม + สัดส่วนฉาก alpha.157)', A.ANALYSES.length === 12, A.ANALYSIS_IDS.join());
-check('ทะเบียน: id ไม่ซ้ำ', new Set(A.ANALYSIS_IDS).size === 12);
+check('ทะเบียน: ครบ 17 ชนิด (11 เดิม + สัดส่วนฉาก alpha.157 + ตรวจบท 5 alpha.164)', A.ANALYSES.length === 17, A.ANALYSIS_IDS.join());
+check('ทะเบียน: id ไม่ซ้ำ', new Set(A.ANALYSIS_IDS).size === 17);
 check('ทะเบียน: ทุกใบมีชื่อ/คำอธิบาย/ไอคอน', A.ANALYSES.every((a) => a.title && a.desc && a.icon));
 check('ทะเบียน: ไม่มีคีย์ภาษาหลุดมาเป็นชื่อ', !A.ANALYSES.some((a) => a.title.startsWith('ui.') || a.desc.startsWith('ui.')),
   A.ANALYSES.filter((a) => a.title.startsWith('ui.')).map((a) => a.id).join());
-check('ทะเบียน: ลำดับตรงกับที่ผู้ใช้สั่ง 1–11 แล้วต่อด้วยสัดส่วนฉาก',
-  A.ANALYSIS_IDS.join() === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition');
+check('ทะเบียน: ลำดับตรงกับที่ผู้ใช้สั่ง 1–11 แล้วต่อด้วยสัดส่วนฉาก แล้วตรวจบท 5 หัวข้อ (alpha.164)',
+  A.ANALYSIS_IDS.join() === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition,'
+    + 'dialog,drag,logic,ooc,tone');
 check('ทะเบียน: analysisById หาเจอ/ไม่เจอถูกต้อง', A.analysisById('score').id === 'score' && A.analysisById('มั่ว') === null);
 
 // runLocal ต้องคืน stats ให้ครบทุกชนิด (ไม่มีชนิดไหนที่กดแล้วหน้าจอว่าง)
@@ -237,7 +238,7 @@ check('estimateAnalysis: ให้คะแนนเผื่อคำตอบ�
   A.estimateAnalysis('score', baseAll).output < A.estimateAnalysis('pacing', baseAll).output);
 check('estimateAnalysis: ขอบเขตว่างก็ไม่พัง', A.estimateAnalysis('pacing', {}).total > 0);
 const tot = A.estimateTotal(A.ANALYSIS_IDS, baseAll);
-check('estimateTotal: รวมครบ 12 ชนิด', tot.count === 12 && tot.total > est.total);
+check('estimateTotal: รวมครบ 17 ชนิด', tot.count === 17 && tot.total > est.total);
 check('estimateUsd: ollama ฟรี', A.estimateUsd('ollama', 'llama3', tot) === 0);
 check('estimateUsd: เจ้าที่คิดเงิน > 0', A.estimateUsd('openai', 'gpt-4o-mini', tot) > 0);
 check('estimateUsd: โมเดลแพงกว่า → ราคาสูงกว่า',

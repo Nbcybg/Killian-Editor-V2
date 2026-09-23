@@ -130,7 +130,7 @@ import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
 // [alpha.135] ระบบอัปเดต — ทางเข้าทั้งสามทาง (ตั้งค่า · ตอนเปิดโปรแกรม · เมนูช่วยเหลือ) เรียกตัวเดียวกัน
 import { checkForUpdates, startupUpdateCheck } from './update/update-ui.js';
 import { UPDATE_HOME_URL } from './update/update-check.js';
-import { openRewriteBar, closeRewriteBar } from './ai/ai-rewrite-ui.js';
+import { openRewriteBar, closeRewriteBar, rewriteBarTab } from './ai/ai-rewrite-ui.js';
 import { openBookManager, renderBookManager, refreshBooksIfOpen } from './books.js';
 // [alpha.141] จัดการบท + โหมดอ่านทั้งเล่ม + สายหน้าที่ทั้งเล่มใช้ร่วม (เลขหน้าไล่ต่อเนื่อง)
 import { openChapterManager, renderChapterManager, refreshChaptersIfOpen,
@@ -266,6 +266,10 @@ import { normColor, HILITE_PRESETS } from './text-color.js';
 import { tipContent, tipText } from './tooltip.js';
 // [alpha.155] เมนูคลิกขวาของ Explorer: ลำดับจากตาราง · คำสั่งใหม่จาก tree-actions (เรียกตอน runtime)
 import { buildMenuItems, menuLabelKey, LOCK_BLOCKED, TREE_MENU_SPEC } from './tree-menu-spec.js';
+// [alpha.164] ฉากมีปัญหา (แก้ปัญหาหน้ากองถ่าย) — เทียบฉบับเดิม ⇄ ฉบับแก้ไข
+import { installOnset, applyOnsetToTab, onsetBeforeCommand, toggleOnsetView, markSceneProblem, clearSceneProblem,
+         isProblemScene, loadOnsetIndex, resetOnset, onsetChanged, onsetEditorMenu, onsetMenuItems, onsetViewOf,
+         exitOriginal, revisedDoc } from './onset-ui.js';
 import * as TA from './tree-actions.js';
 import { settingsTemplate, SETTINGS_TEMPLATE_ARGS } from './settings-template.js';   // [alpha.154] e2e
 import { bindPanelFocus, setFocusedPanel, focusedPanel, isPanelFocused,
@@ -2375,7 +2379,8 @@ export async function checkBeforeExport() {
 export function spReportInput(tab) {
   const t2 = tab || state.active;
   if (!t2 || !t2.sp) return null;
-  return { blocks: blocksFromDoc(t2.sp.view.state.doc), fmt: spFormat(),
+  // [alpha.164] รายงานของฉากมีปัญหา = ฉบับแก้ไขเสมอ (ต่อให้จอกำลังโชว์ฉบับเดิม)
+  return { blocks: blocksFromDoc(revisedDoc(t2) || t2.sp.view.state.doc), fmt: spFormat(),
            startPage: currentStartPage(t2), tab: t2 };
 }
 
@@ -2826,6 +2831,7 @@ async function closeProjectIfAny() {
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
   resetAnalyzer();                      // [alpha.89] ฉาก/ตัวละครที่แผงวิเคราะห์แคชไว้เป็นของโปรเจกต์เดิม
+  resetOnset();                         // [alpha.164] ดัชนีฉากมีปัญหาเป็นของโปรเจกต์เดิม
   resetReview(); resetCommentStore(); _cmMigrated.clear(); clearCommentAnchors();
   imgURLBase.clear();
   clearFeaturePanels();                 // บั๊ก #18: เนื้อแผงฟีเจอร์เป็นของโปรเจกต์เดิม ต้องล้าง
@@ -4606,6 +4612,21 @@ function treeMenuItem(kind, id, c, e) {
           (v) => setSceneMeta(dPath, ch, sc, { status: v || 'Outline' }), '', statusColor));
         case 'pin': return free(async () => TA.togglePinItem('scene', sc.id, { title, dRel: await TA.relOf(dPath) }),
           TA.pinned('scene', sc.id));
+        // [alpha.164] ฉากมีปัญหา — ติดธง (ยังไม่ติด) · สลับฉบับ + เมนูย่อย (ติดแล้ว)
+        case 'problem': return isProblemScene(sc.id) ? null : free(() => markSceneProblem({ sc, file }));
+        case 'problemToggle': {
+          if (!isProblemScene(sc.id)) return null;
+          const orig = onsetViewOf(file) === 'original';
+          return { label: tt(orig ? 'ui.onset.toRevised' : 'ui.onset.toOriginal'), cmd: 'onset-toggle',
+                   click: async () => {
+                     await openScene(file, sc.title);
+                     const tb = state.tabs.get(file);
+                     if (tb) { await applyOnsetToTab(tb); toggleOnsetView(tb); }
+                   } };
+        }
+        case 'problemMenu': return isProblemScene(sc.id)
+          ? { label: tt('ui.treeMenu.problemMenu'), sub: () => onsetMenuItems(state.tabs.get(file) || null, { sc }) }
+          : null;
         case 'saveVersion': return free(() => manualSnapshot(dPath, ch, sc));
         case 'versionHistory': return free(() => versionDialog(dPath, ch, sc));
         case 'compareVersion': return free(() => compareVersionsDialog(dPath, ch, sc));
@@ -5015,6 +5036,7 @@ async function _buildTreeInner() {
   const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle', 'Sessions', 'Starters']);
   const sortMode = treeSortMode();                       // [alpha.120 ข้อ 2]
   const snapCounts = await snapshotCounts();             // [alpha.120 ข้อ 17] จำนวนเวอร์ชันต่อไฟล์
+  await loadOnsetIndex().catch(() => {});                // [alpha.164] ป้าย ! ของฉากมีปัญหา
   // [alpha.155] แถวชื่อโปรเจกต์ + ปักหมุด — try ของตัวเอง: พังตรงนี้ห้ามลากต้นไม้ทั้งอันล้ม (บทเรียนข้อ 30)
   try { await buildProjectHead(tree); } catch (e) { log('warn', 'buildProjectHead', e); }
   for (const name of await kapi.listDirs(state.root)) {
@@ -5184,6 +5206,13 @@ async function _buildTreeInner() {
             // ป้ายเล่าเรื่อง (Narrative Markers): ฉากนอกลำดับเวลาหลัก
             if (sc.isFlashback) scEl.append(el('span', 'tree-flash', gi('rewind')));
             else if (sc.isFlashforward) scEl.append(el('span', 'tree-flash', gi('fast-forward')));
+            // [alpha.164] ฉากมีปัญหา — ป้าย ! (ติดธงไว้ เทียบกับฉบับเดิมอยู่)
+            if (isProblemScene(sc.id)) {
+              const pb = el('span', 'tree-onset', '!');
+              pb.title = tt('ui.onset.treeBadge');
+              scEl.append(pb);
+              scEl.classList.add('k-row-onset');
+            }
             // รูป thumbnail (ถ้ามีรูปแรกในฉาก)
             const scPath = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
             if (sc.imageCount || sc.wordCount) {
@@ -8314,7 +8343,7 @@ export async function currentScriptSource() {
   const t2 = state.active;
   if (t2 && t2.sp) {
     return { md: t2.sp.getMarkdown(),
-             blocks: blocksFromDoc(t2.sp.view.state.doc),
+             blocks: blocksFromDoc(revisedDoc(t2) || t2.sp.view.state.doc),   // [alpha.164] ส่งออก = ฉบับแก้ไข
              title: t2.title || state.title };
   }
   const drafts = await listDrafts();
@@ -9730,7 +9759,7 @@ function mountEditor(tab, dir, body) {
     tab.sp = new SPEditor(mount, {
       markdown: body,
       onChange: () => { markDirty(tab); scheduleCount(); scheduleOutline();
-                        scheduleSpSmart(tab); scheduleRepaginate(); },
+                        scheduleSpSmart(tab); scheduleRepaginate(); onsetChanged(tab); },
       // [alpha.60r2 ข้อ 3] Enter = จัดหน้าใหม่ทันที ไม่รอ debounce (เส้นคั่นหน้าไม่กระตุก)
       onKeyDown: (ev) => { repaginateOnEnter(tab, ev); return smart.onKey(ev); },
       onElement: (elName) => setElementBadge(elName),
@@ -9738,7 +9767,7 @@ function mountEditor(tab, dir, body) {
       resolveSrc: (p) => resolveImg(dir, p),                       // รูปในบทหนัง render จริง
       getNames: () => state.settings.autoMention !== false ? smart.names : [],   // ลิงก์ Wiki
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
-      editable: () => !tab.locked,                                 // ล็อก = แก้ไม่ได้
+      editable: () => !tab.locked && !tab._onsetSaved,             // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
     });
     // [alpha.125 ข้อ I] คืนการจัดหน้าที่บันทึกไว้ (ไม่นับเป็นการแก้ไข — ดู applyAlignMap)
     try { tab.sp.applyAlignMap(alignFromString(tab.meta.align)); } catch {}
@@ -9758,7 +9787,7 @@ function mountEditor(tab, dir, body) {
       // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
       alignMap: alignFromString(tab.meta.align),
       alignComments: state.settings.mdAlignStyle === 'comment',
-      onChange: () => { markDirty(tab); scheduleCount(); scheduleOutline();
+      onChange: () => { markDirty(tab); scheduleCount(); scheduleOutline(); onsetChanged(tab);
                         setTimeout(() => smart.check(tab.editor.view), 0); },
       resolveSrc: (p) => resolveImg(dir, p),
       // [alpha.60r2 ข้อ 3] Enter = จัดหน้าใหม่ทันที ไม่รอ debounce
@@ -9766,7 +9795,7 @@ function mountEditor(tab, dir, body) {
       getNames: () => state.settings.autoMention !== false ? smart.names : [],
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
       getChecker: spellChecker,
-      editable: () => !tab.locked,                                 // ล็อก = แก้ไม่ได้
+      editable: () => !tab.locked && !tab._onsetSaved,             // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
     });
     pane.addEventListener('click', () => { refreshToolbar(); smart.hide(); });
     pane.addEventListener('keyup', () => refreshToolbar());
@@ -9796,6 +9825,8 @@ function mountEditor(tab, dir, body) {
   // (เปิดฉากถัดไปแล้วได้มุมมองเดียวกับที่กำลังอ่านอยู่ · หลังจากนั้นต่างคนต่างจำของตัวเอง)
   seedTabView(tab);
   requestAnimationFrame(() => { reapplyTabView(true); centerPage(pane); updatePageNumberHint(); });
+  // [alpha.164] ฉากมีปัญหา — ตัวแก้ไขตัวใหม่ (เปิดฉาก · สลับโหมด) ต้องได้แถบเทียบกลับมาเอง
+  applyOnsetToTab(tab).catch((e) => log('warn', 'onset', e));
 }
 
 // สลับเอกสารระหว่างโหมดนิยาย ↔ บทหนัง (แบบ Fade In) — เนื้อหาเป็น .md ตัวเดียวกัน ต่างแค่ตีความ
@@ -9807,6 +9838,7 @@ async function switchFormat(target) {
   const to = target || (cur === 'prose' ? 'screenplay' : 'prose');
   if (to === cur) return;
 
+  exitOriginal(tab);                     // [alpha.164] กำลังดูฉบับเดิม = แปลงฉบับแก้ไข (ของจริง) เท่านั้น
   const src = tab.editor || tab.sp;
   const was = tab.dirty ? src.getMarkdown() : (tab.body ?? src.getMarkdown());
   const dir = tab.file.replace(/[\\/][^\\/]*$/, '');
@@ -10181,6 +10213,9 @@ export function activate(file) {
     wireTabDrag(t);                                      // [alpha.161 · K2] ลากสลับลำดับในแถบ
   }
   state.active = state.tabs.get(file) || null;
+  // [alpha.164 · บั๊ก] แถบ "Rewrite this" เป็นของแท็บที่เปิดมัน — สลับไปแท็บอื่นแล้วแถบเดิมต้องปิด
+  // (เดิม closeRewriteBar ถูก import ไว้แต่ไม่มีใครเรียก → แถบลอยค้างทับเอกสารอีกฉบับ)
+  if (rewriteBarTab() && rewriteBarTab() !== state.active) closeRewriteBar();
   // จำฉากที่เปิดล่าสุดไว้ — แท็บอย่างผังพื้นที่/ผังแตกสายต้องรู้ว่า "กำลังเขียนฉากไหนอยู่"
   // ทั้งที่ตัวเองเป็นแท็บที่ active (ไม่งั้น sceneCtx() คืน null ทันทีที่สลับมาดูผัง)
   if (file && /\.md$/i.test(file) && /[\\/]Chapters[\\/]/.test(file)) state.lastSceneFile = file;
@@ -10945,6 +10980,7 @@ export function closeTab(file, { discard = false, ask = false } = {}) {
   const t = state.tabs.get(file);
   if (!t) return;
   const done = () => {
+    if (rewriteBarTab() === t) closeRewriteBar();       // [alpha.164 · บั๊ก] แถบ Rewrite ของแท็บนี้ต้องไปด้วย
     t.editor?.destroy(); t.wiki?.destroy(); t.sp?.destroy(); t.gal?.destroy(); t.net?.destroy(); t.planner?.destroy();
     t.pane.remove(); t.tabBtn.remove();
     if (t.floatWin) { t.floatWin.remove(); t.floatWin = null; }
@@ -11040,6 +11076,16 @@ function tabHandleOf(t) {
     close: () => closeTab(t.file, { discard: true }),
   };
 }
+// [alpha.164] ฉากมีปัญหา — ตัวเชื่อม (onset-ui.js ไม่ import app.js วนกลับ)
+installOnset({
+  sceneCtx: (f) => sceneCtx(f), openScene: (f, title) => openScene(f, title), buildTree: () => buildTree(),
+  alignFromString, tabBodyText: (tab) => tabBodyText(tab),
+  afterSwap: (tab) => {
+    if (state.active !== tab) return;
+    scheduleCount(); scheduleOutline(); scheduleRepaginate(); refreshToolbar();
+    try { refreshSpView(); updatePageNumberHint(); } catch {}
+  },
+});
 setTabBridge({
   find(p) {
     const k = pathKey(p);
@@ -11083,11 +11129,12 @@ export async function revertTab(file) {
       resolveSrc: (p) => resolveImg(dir, p),
       getNames: () => state.settings.autoMention !== false ? smart.names : [],
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
-      editable: () => !t.locked,                       // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
+      editable: () => !t.locked && !t._onsetSaved,     // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
     });
     // [alpha.125 ข้อ I] Revert = โหลดจากดิสก์ใหม่ → คืนการจัดหน้าที่บันทึกไว้ด้วย
     try { t.sp.applyAlignMap(alignFromString(t.meta.align)); } catch {}
     t.sp.view.dom.classList.add('on');
+    applyOnsetToTab(t).catch(() => {});      // [alpha.164] ตัวแก้ไขตัวใหม่ = ติดตั้งการเทียบกลับ
   }
   else if (t.wiki) { t.wiki.destroy(); openEntity(t.title); return; }
   else if (t.plain) { t.plain = false; openPlainFile(file, t.title); return; }
@@ -11132,6 +11179,7 @@ export async function removeElementsDialog(opts = {}) {
   /** ลบจริง — แยกออกมาให้เทสเรียกได้ตรง ๆ และให้ทุก error ถูกจับ */
   const doRemove = async (sel) => {
     const tab = state.active;
+    if (tab && tab.locked) { setStatus(gi('lock') + ' ' + TA.lockMessage('scene')); return 0; }   // [alpha.164 · บั๊ก]
     // snapshot เป็นของแถม — ห้ามทำให้การลบล้มเหลว (บั๊กเดิมล้มทั้งคำสั่งเพราะตรงนี้)
     try {
       if (tab) await snapshotFile(tab.file, tt('ui.app.beforeDel') + sel.map((x) => SP_ELEMS[x]?.th || x).join(','));
@@ -13986,11 +14034,23 @@ function restoreInactivePanes() {
 }
 
 // [alpha.72 ข้อ 5] คำสั่งที่ยิงรัวจนกลบ log (พิมพ์/เลื่อน/ซูม) — จดเป็น debug ไม่ใช่ info
+// คำสั่งที่แก้เนื้อของแท็บที่เปิดอยู่ — ฉากล็อกแล้วทำไม่ได้ (ดู handleCommand)
+const LOCK_EDIT_CMDS = new Set(['fmt', 'text-case', 'text-case-cycle', 'editor-undo', 'editor-redo', 'insert-image',
+  'delete-line', 'sp-element', 'nbsp', 'insert-shortcode', 'remove-elements', 'toggle-format', 'set-format', 'sp-extension']);
 const QUIET_CMDS = new Set(['zoom', 'zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
                             'find', 'find-next', 'find-prev']);
 
 export async function handleCommand(ch, ...a) {
+  // [alpha.164] กำลังดูฉบับเดิมของฉากมีปัญหา → คำสั่งที่อ่าน/เขียนเนื้อ (บันทึก · พิมพ์ · ส่งออก …)
+  // ต้องได้ฉบับแก้ไขเสมอ · คำสั่งดูอย่างเดียว (ซูม/สลับแท็บ/สลับฉบับ) ไม่กระทบ
+  if (typeof ch === 'string') { try { onsetBeforeCommand(ch); } catch {} }
   const t = state.active;
+  // [alpha.164 · บั๊ก] ฉากที่ล็อก = คำสั่งที่แก้เนื้อไม่ทำงาน + บอกเหตุผล (เดิมปุ่มจัดรูปแบบ/คีย์ลัดแก้ฉากที่ล็อกได้
+  // เพราะ editable:false ของ ProseMirror กันแค่การพิมพ์ · ตัวแก้ไขเองก็กันซ้ำอีกชั้นที่ edit-guard.js)
+  if (LOCK_EDIT_CMDS.has(ch) && t && t.locked && (t.editor || t.sp)) {
+    setStatus(gi('lock') + ' ' + TA.lockMessage('scene'));
+    return;
+  }
   // จดทุกคำสั่งที่ผู้ใช้สั่ง — ไล่ย้อนได้ว่า "ก่อนพังกดอะไรไป" (เดิม log ไม่มีร่องรอยนี้เลย)
   try {
     log(QUIET_CMDS.has(ch) ? 'debug' : 'info', 'cmd: ' + ch,
@@ -14063,6 +14123,7 @@ export async function handleCommand(ch, ...a) {
     case 'next-tab': cycleTabs(1); break;
     case 'prev-tab': cycleTabs(-1); break;
     case 'reveal-active': revealInTree(t && t.file); break;
+    case 'onset-toggle': toggleOnsetView(t); break;          // [alpha.164] ฉากมีปัญหา: ฉบับเดิม ⇄ ฉบับแก้ไข
     case 'close-all-tabs': closeAllTabs(); break;
     // [95] ในบทหนัง Ctrl+1/2/3 = scene/action/character (คีย์เดียวกับหัวข้อ 1-3 ของนิยาย)
     case 'fmt': {
@@ -14214,8 +14275,15 @@ export async function handleCommand(ch, ...a) {
     case 'import-script': {
       // [alpha.124 ข้อ 29] `mode` มาจากกล่องพรีวิว: 'new' = สร้างฉากใหม่ (ค่าเริ่มต้น)
       // · 'replace' = ทับแท็บปัจจุบัน (ผู้ใช้เลือกเองและเห็นเนื้อที่จะทับแล้ว)
+      // [alpha.164 · บั๊ก] ทับได้เฉพาะแท็บบทภาพยนตร์ที่แก้ได้ — ไม่งั้นไม่มีปุ่ม "ทับแท็บปัจจุบัน"
+      const canReplace = (tb) => !!(tb && tb.sp && !tb.locked);
       const result = await importScreenplayDialog(async (markdown, format, summary, mode) => {
         const t = state.active;
+        if (mode === 'replace' && !canReplace(t)) {
+          // แท็บเปลี่ยนไประหว่างกล่องเปิดอยู่ (ปิด/สลับ/ล็อก) — ไม่ทับอะไร และไม่แอบสร้างฉากใหม่แทน
+          setStatus(gi('warning') + ' ' + tt('ui.app.importReplaceNoTab'));
+          return;
+        }
         if (mode === 'replace' && t && t.sp) {
           // มีแท็บบทเปิดอยู่ → inject เข้า tab ปัจจุบัน
           t.sp.setMarkdown(markdown);
@@ -14260,7 +14328,7 @@ export async function handleCommand(ch, ...a) {
             await confirmBox(tt('ui.app.importNotOkNot'), tt('ui.common.msg3'));
           }
         }
-      });
+      }, { canReplace: canReplace(state.active) });
       break;
     }
     // [alpha.60 ข้อ 74] เปรียบเทียบบท/สคริปต์
@@ -16068,9 +16136,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const rwEd = rwTab && (rwTab.editor || rwTab.sp);
     const canRewrite = inDoc && !!selWord && !!(rwEd && rwEd.view && rwEd.view.dom.contains(e.target)
       && !rwEd.view.state.selection.empty);
-    if (!bad && !hasThes && !canRewrite) return;
+    // [alpha.164] ฉากมีปัญหา — คลิกขวาบนบรรทัดที่มีปัญหา (หรือที่ไหนก็ได้ตอนดูฉบับเดิม)
+    const onsetItems = inDoc ? onsetEditorMenu(rwTab, e.target) : null;
+    if (!bad && !hasThes && !canRewrite && !onsetItems) return;
     e.preventDefault(); e.stopPropagation();
     const items = [];
+    if (onsetItems) { items.push(...onsetItems); if (bad || hasThes || canRewrite) items.push('-'); }
     if (bad) {
       const word = bad.textContent.trim();
       // คำแนะนำ (สูงสุด 6 คำ) — บนสุดของเมนูเสมอ เพราะเป็นสิ่งที่ผู้ใช้ต้องการ 9 ใน 10 ครั้ง
@@ -16136,10 +16207,19 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#find-next').onclick = () => gotoMatch(state.active?.editor?.view, 1);
   $('#find-prev').onclick = () => gotoMatch(state.active?.editor?.view, -1);
   $('#find-close').onclick = closeFind;
-  $('#find-rep1').onclick = () => { replaceCurrent(state.active?.editor?.view, $('#find-r').value);
-                                    markDirty(state.active); doFind(); };
-  $('#find-repall').onclick = () => { const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
-                                      setStatus(tt('ui.app.replace') + n + tt('ui.app.msg2')); markDirty(state.active); doFind(); };
+  // [alpha.164 · บั๊ก] ฉากล็อก = แทนที่ไม่ได้ (บอกเหตุผล) · ไม่ได้แทนที่อะไร = ไม่ทำเครื่องหมายว่าแก้แล้ว
+  const findLocked = () => {
+    const tb = state.active;
+    if (!(tb && tb.editor && tb.editor.view && tb.editor.view.editable === false)) return false;
+    setStatus(gi('lock') + ' ' + (tb.locked ? TA.lockMessage('scene') : tt('ui.onset.nowOriginal')));
+    return true;
+  };
+  $('#find-rep1').onclick = () => { if (findLocked()) return;
+                                    if (replaceCurrent(state.active?.editor?.view, $('#find-r').value)) markDirty(state.active);
+                                    doFind(); };
+  $('#find-repall').onclick = () => { if (findLocked()) return;
+                                      const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
+                                      setStatus(tt('ui.app.replace') + n + tt('ui.app.msg2')); if (n) markDirty(state.active); doFind(); };
   // [alpha.82] ติดตั้งตัววัดความกว้างข้อความ — **ต้องอยู่ก่อนทุกทางแยก**
   // ทุกอย่างที่นับบรรทัด/นับหน้าอ่านผ่านตัวนี้ · เคยวางไว้ใน bootSequence() แล้วพบว่า
   // โหมดเทส (`?k2test`) กับหน้าต่างแผงที่ฉีกออกมา **ไม่เดินผ่าน bootSequence เลย**

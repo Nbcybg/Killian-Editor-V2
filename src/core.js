@@ -845,7 +845,7 @@ export const SHORTCUT_LABELS = {
   'split-view': 'shortcuts.splitView', 'kanban': 'shortcuts.kanban',
   'export-blog': 'shortcuts.exportBlog', 'close-all-tabs': 'shortcuts.closeAllTabs',
   // [alpha.161 · K2/K4] วนแท็บ · แสดงไฟล์ที่เปิดอยู่ในต้นไม้
-  'next-tab': 'ui.shortcuts.nextTab', 'prev-tab': 'ui.shortcuts.prevTab', 'reveal-active': 'ui.shortcuts.revealActive',
+  'next-tab': 'ui.shortcuts.nextTab', 'prev-tab': 'ui.shortcuts.prevTab', 'reveal-active': 'ui.shortcuts.revealActive', 'onset-toggle': 'ui.shortcuts.onsetToggle',
   'line-numbers': 'shortcuts.lineNumbers',
   // [alpha.162 · W4 ข้อ 5] คำสั่งที่มีคีย์ลัดแล้วแต่ไม่เคยมีชื่อ → ไม่โผล่ในหน้า "ปุ่มลัด"
   // ของหน้าตั้งค่าเลย (รายการนั้นกรองด้วย SHORTCUT_LABELS) = ตั้งใหม่เองไม่ได้ทั้งชุด
@@ -942,7 +942,7 @@ export const SHORTCUT_CATS = [
     ids: ['toggle-format', 'sp-element:parenthetical', 'sp-element:dialogue', 'sp-element:transition',
           'sp-element:shot', 'sp-element:act-break', 'sp-element:note', 'sp-find-error'] },
   { key: 'view', labelKey: 'ui.shortcuts.catView',
-    ids: ['focus-mode', 'typewriter', 'reading-mode', 'read-book', 'line-numbers', 'reveal-active',
+    ids: ['focus-mode', 'typewriter', 'reading-mode', 'read-book', 'line-numbers', 'reveal-active', 'onset-toggle',
           'split-view', 'panels-hide-all', 'panels-hide-right', 'panels-hide-left', 'workspace-menu',
           'fmtbar-here', 'fmtbar-opacity', 'fmtbar-align', 'fmtbar-lock',
           'zoom:1', 'zoom:-1', 'zoom:0'] },

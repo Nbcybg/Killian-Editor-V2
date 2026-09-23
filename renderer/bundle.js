@@ -226,8 +226,8 @@
   function getTable() {
     return TABLE;
   }
-  function setCatalog(list) {
-    langCatalog = Array.isArray(list) ? list : [];
+  function setCatalog(list2) {
+    langCatalog = Array.isArray(list2) ? list2 : [];
     return langCatalog;
   }
   function fillTable(table9) {
@@ -3640,10 +3640,10 @@
               while (keep < active.length)
                 top = active.pop()[1];
               while (rendered < node.marks.length) {
-                let add = node.marks[rendered++];
-                let markDOM = this.serializeMark(add, node.isInline, options);
+                let add2 = node.marks[rendered++];
+                let markDOM = this.serializeMark(add2, node.isInline, options);
                 if (markDOM) {
-                  active.push([add, top]);
+                  active.push([add2, top]);
                   top.appendChild(markDOM.dom);
                   top = markDOM.contentDOM || markDOM.dom;
                 }
@@ -5117,11 +5117,11 @@
               this.openFrontierNode(wrap2[i5]);
           let slice3 = this.unplaced, fragment = parent ? parent.content : slice3.content;
           let openStart = slice3.openStart - sliceDepth;
-          let taken = 0, add = [];
+          let taken = 0, add2 = [];
           let { match, type } = this.frontier[frontierDepth];
           if (inject) {
             for (let i5 = 0; i5 < inject.childCount; i5++)
-              add.push(inject.child(i5));
+              add2.push(inject.child(i5));
             match = match.matchFragment(inject);
           }
           let openEndCount = fragment.size + sliceDepth - (slice3.content.size - slice3.openEnd);
@@ -5132,13 +5132,13 @@
             taken++;
             if (taken > 1 || openStart == 0 || next.content.size) {
               match = matches2;
-              add.push(closeNodeStart(next.mark(type.allowedMarks(next.marks)), taken == 1 ? openStart : 0, taken == fragment.childCount ? openEndCount : -1));
+              add2.push(closeNodeStart(next.mark(type.allowedMarks(next.marks)), taken == 1 ? openStart : 0, taken == fragment.childCount ? openEndCount : -1));
             }
           }
           let toEnd = taken == fragment.childCount;
           if (!toEnd)
             openEndCount = -1;
-          this.placed = addToFragment(this.placed, frontierDepth, Fragment.from(add));
+          this.placed = addToFragment(this.placed, frontierDepth, Fragment.from(add2));
           this.frontier[frontierDepth].match = match;
           if (toEnd && openEndCount < 0 && parent && parent.type == this.frontier[this.depth].type && this.frontier.length > 1)
             this.closeFrontierNode();
@@ -5186,8 +5186,8 @@
             this.placed = addToFragment(this.placed, close2.depth, close2.fit);
           $to = close2.move;
           for (let d = close2.depth + 1; d <= $to.depth; d++) {
-            let node = $to.node(d), add = node.type.contentMatch.fillBefore(node.content, true, $to.index(d));
-            this.openFrontierNode(node.type, node.attrs, add);
+            let node = $to.node(d), add2 = node.type.contentMatch.fillBefore(node.content, true, $to.index(d));
+            this.openFrontierNode(node.type, node.attrs, add2);
           }
           return $to;
         }
@@ -5199,9 +5199,9 @@
         }
         closeFrontierNode() {
           let open = this.frontier.pop();
-          let add = open.match.fillBefore(Fragment.empty, true);
-          if (add.childCount)
-            this.placed = addToFragment(this.placed, this.frontier.length, add);
+          let add2 = open.match.fillBefore(Fragment.empty, true);
+          if (add2.childCount)
+            this.placed = addToFragment(this.placed, this.frontier.length, add2);
         }
       };
       AttrStep = class _AttrStep extends Step {
@@ -7821,10 +7821,10 @@
   function stopNativeHorizontalDelete(view2, dir2) {
     if (!(view2.state.selection instanceof TextSelection))
       return true;
-    let { $head, $anchor, empty: empty2 } = view2.state.selection;
+    let { $head, $anchor, empty: empty3 } = view2.state.selection;
     if (!$head.sameParent($anchor))
       return true;
-    if (!empty2)
+    if (!empty3)
       return false;
     if (view2.endOfTextblock(dir2 > 0 ? "forward" : "backward"))
       return true;
@@ -9062,13 +9062,13 @@
   }
   function buildNodeViews(view2) {
     let result = /* @__PURE__ */ Object.create(null);
-    function add(obj) {
+    function add2(obj) {
       for (let prop in obj)
         if (!Object.prototype.hasOwnProperty.call(result, prop))
           result[prop] = obj[prop];
     }
-    view2.someProp("nodeViews", add);
-    view2.someProp("markViews", add);
+    view2.someProp("nodeViews", add2);
+    view2.someProp("markViews", add2);
     return result;
   }
   function changedNodeViews(a, b) {
@@ -12818,8 +12818,8 @@
     let enterAtoms = (options && options.enterInlineAtoms) !== false;
     let dropSpace = !(options && options.includeWhitespace);
     return function(state2, dispatch) {
-      let { empty: empty2, $cursor, ranges } = state2.selection;
-      if (empty2 && !$cursor || !markApplies(state2.doc, ranges, markType, enterAtoms))
+      let { empty: empty3, $cursor, ranges } = state2.selection;
+      if (empty3 && !$cursor || !markApplies(state2.doc, ranges, markType, enterAtoms))
         return false;
       if (dispatch) {
         if ($cursor) {
@@ -12828,13 +12828,13 @@
           else
             dispatch(state2.tr.addStoredMark(markType.create(attrs)));
         } else {
-          let add, tr4 = state2.tr;
+          let add2, tr4 = state2.tr;
           if (!enterAtoms)
             ranges = removeInlineAtoms(ranges);
           if (removeWhenPresent) {
-            add = !ranges.some((r) => state2.doc.rangeHasMark(r.$from.pos, r.$to.pos, markType));
+            add2 = !ranges.some((r) => state2.doc.rangeHasMark(r.$from.pos, r.$to.pos, markType));
           } else {
-            add = !ranges.every((r) => {
+            add2 = !ranges.every((r) => {
               let missing = false;
               tr4.doc.nodesBetween(r.$from.pos, r.$to.pos, (node, pos, parent) => {
                 if (missing)
@@ -12846,7 +12846,7 @@
           }
           for (let i5 = 0; i5 < ranges.length; i5++) {
             let { $from, $to } = ranges[i5];
-            if (!add) {
+            if (!add2) {
               tr4.removeMark($from.pos, $to.pos, markType);
             } else {
               let from2 = $from.pos, to = $to.pos, start = $from.nodeAfter, end = $to.nodeBefore;
@@ -12925,8 +12925,8 @@
         return false;
       };
       selectNodeBackward = (state2, dispatch, view2) => {
-        let { $head, empty: empty2 } = state2.selection, $cut = $head;
-        if (!empty2)
+        let { $head, empty: empty3 } = state2.selection, $cut = $head;
+        if (!empty3)
           return false;
         if ($head.parent.isTextblock) {
           if (view2 ? !view2.endOfTextblock("backward", state2) : $head.parentOffset > 0)
@@ -12969,8 +12969,8 @@
         return false;
       };
       selectNodeForward = (state2, dispatch, view2) => {
-        let { $head, empty: empty2 } = state2.selection, $cut = $head;
-        if (!empty2)
+        let { $head, empty: empty3 } = state2.selection, $cut = $head;
+        if (!empty3)
           return false;
         if ($head.parent.isTextblock) {
           if (view2 ? !view2.endOfTextblock("forward", state2) : $head.parentOffset < $head.parent.content.size)
@@ -13221,20 +13221,20 @@
     return true;
   }
   function liftOutOfList(state2, dispatch, range3) {
-    let tr4 = state2.tr, list = range3.parent;
+    let tr4 = state2.tr, list2 = range3.parent;
     for (let pos = range3.end, i5 = range3.endIndex - 1, e = range3.startIndex; i5 > e; i5--) {
-      pos -= list.child(i5).nodeSize;
+      pos -= list2.child(i5).nodeSize;
       tr4.delete(pos - 1, pos + 1);
     }
     let $start = tr4.doc.resolve(range3.start), item = $start.nodeAfter;
     if (tr4.mapping.map(range3.end) != range3.start + $start.nodeAfter.nodeSize)
       return false;
-    let atStart = range3.startIndex == 0, atEnd = range3.endIndex == list.childCount;
+    let atStart = range3.startIndex == 0, atEnd = range3.endIndex == list2.childCount;
     let parent = $start.node(-1), indexBefore = $start.index(-1);
-    if (!parent.canReplace(indexBefore + (atStart ? 0 : 1), indexBefore + 1, item.content.append(atEnd ? Fragment.empty : Fragment.from(list))))
+    if (!parent.canReplace(indexBefore + (atStart ? 0 : 1), indexBefore + 1, item.content.append(atEnd ? Fragment.empty : Fragment.from(list2))))
       return false;
     let start = $start.pos, end = start + item.nodeSize;
-    tr4.step(new ReplaceAroundStep(start - (atStart ? 1 : 0), end + (atEnd ? 1 : 0), start + 1, end - 1, new Slice((atStart ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))).append(atEnd ? Fragment.empty : Fragment.from(list.copy(Fragment.empty))), atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1));
+    tr4.step(new ReplaceAroundStep(start - (atStart ? 1 : 0), end + (atEnd ? 1 : 0), start + 1, end - 1, new Slice((atStart ? Fragment.empty : Fragment.from(list2.copy(Fragment.empty))).append(atEnd ? Fragment.empty : Fragment.from(list2.copy(Fragment.empty))), atStart ? 0 : 1, atEnd ? 0 : 1), atStart ? 0 : 1));
     dispatch(tr4.scrollIntoView());
     return true;
   }
@@ -13804,7 +13804,7 @@
       var HEX6 = /^#[0-9a-f]{6}$/i;
       var RGB2 = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)$/i;
       var p2 = (n2) => Math.max(0, Math.min(255, n2 | 0)).toString(16).padStart(2, "0");
-      function normColor5(v2) {
+      function normColor6(v2) {
         const s = String(v2 == null ? "" : v2).trim().toLowerCase();
         if (!s) return "";
         const m3 = HEX3.exec(s);
@@ -13831,28 +13831,28 @@
         { hex: "#b5468a", key: "ui.color.pink" }
       ];
       function presetLabelKey2(hex) {
-        const c = normColor5(hex);
+        const c = normColor6(hex);
         const d = COLOR_PRESETS2.find((x) => x.hex === c) || HILITE_PRESETS2.find((x) => x.hex === c);
         return d ? d.key : "";
       }
-      function cleanColorList(list, max2) {
+      function cleanColorList(list2, max2) {
         const out = [];
-        for (const v2 of Array.isArray(list) ? list : []) {
-          const c = normColor5(v2);
+        for (const v2 of Array.isArray(list2) ? list2 : []) {
+          const c = normColor6(v2);
           if (c && !out.includes(c)) out.push(c);
           if (out.length >= max2) break;
         }
         return out;
       }
-      function pushRecent2(list, color, max2 = RECENT_MAX) {
-        const c = normColor5(color);
-        if (!c) return cleanColorList(list, max2);
-        return cleanColorList([c, ...Array.isArray(list) ? list : []], max2);
+      function pushRecent2(list2, color, max2 = RECENT_MAX) {
+        const c = normColor6(color);
+        if (!c) return cleanColorList(list2, max2);
+        return cleanColorList([c, ...Array.isArray(list2) ? list2 : []], max2);
       }
-      function toggleSaved2(list, color, max2 = SAVED_MAX) {
-        const c = normColor5(color);
-        if (!c) return cleanColorList(list, max2);
-        const cur = cleanColorList(list, max2);
+      function toggleSaved2(list2, color, max2 = SAVED_MAX) {
+        const c = normColor6(color);
+        if (!c) return cleanColorList(list2, max2);
+        const cur = cleanColorList(list2, max2);
         return cur.includes(c) ? cur.filter((x) => x !== c) : cleanColorList([...cur, c], max2);
       }
       function normalizeColorStore2(saved) {
@@ -13864,7 +13864,7 @@
       }
       var COLOR_SPAN_RE = /<span style="color:([^"<>]{1,32})">([\s\S]*?)<\/span>/;
       function colorSpanMd(color, inner) {
-        const c = normColor5(color);
+        const c = normColor6(color);
         return c ? `<span style="color:${c}">${inner}</span>` : String(inner == null ? "" : inner);
       }
       var HILITE_PRESETS2 = [
@@ -13878,13 +13878,13 @@
       ];
       var HILITE_SPAN_RE = /<mark style="background:([^"<>]{1,32})">([\s\S]*?)<\/mark>/;
       function hiliteSpanMd(color, inner) {
-        const c = normColor5(color);
+        const c = normColor6(color);
         return c ? `<mark style="background:${c}">${inner}</mark>` : String(inner == null ? "" : inner);
       }
       module.exports = {
         RECENT_MAX,
         SAVED_MAX,
-        normColor: normColor5,
+        normColor: normColor6,
         COLOR_PRESETS: COLOR_PRESETS2,
         presetLabelKey: presetLabelKey2,
         cleanColorList,
@@ -13904,7 +13904,7 @@
   var require_md = __commonJS({
     "src/md.js"(exports, module) {
       var {
-        normColor: normColor5,
+        normColor: normColor6,
         COLOR_SPAN_RE,
         colorSpanMd,
         HILITE_SPAN_RE,
@@ -13988,10 +13988,10 @@
         while (s) {
           let best = null;
           const cm = COLOR_SPAN_RE.exec(s);
-          if (cm && normColor5(cm[1])) best = { m: cm, marks: null, attr: "color", color: normColor5(cm[1]) };
+          if (cm && normColor6(cm[1])) best = { m: cm, marks: null, attr: "color", color: normColor6(cm[1]) };
           const hm = HILITE_SPAN_RE.exec(s);
-          if (hm && normColor5(hm[1]) && (best === null || hm.index < best.m.index)) {
-            best = { m: hm, marks: null, attr: "highlight", color: normColor5(hm[1]) };
+          if (hm && normColor6(hm[1]) && (best === null || hm.index < best.m.index)) {
+            best = { m: hm, marks: null, attr: "highlight", color: normColor6(hm[1]) };
           }
           for (const [rx, marks3] of PATS) {
             const m2 = rx.exec(s);
@@ -14032,7 +14032,7 @@
         const out = [];
         const has2 = (n2) => (seg.marks || []).some((m) => (typeof m === "string" ? m : m.type) === n2);
         const col = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
-        const c = col ? normColor5((col.attrs || {}).color) : "";
+        const c = col ? normColor6((col.attrs || {}).color) : "";
         if (c) out.push("--k-mk-color:" + c);
         if (has2("strong")) out.push("--k-mk-weight:700");
         if (has2("em")) out.push("--k-mk-style:italic");
@@ -14057,10 +14057,10 @@
           const has2 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
           for (const [name5, tag3] of MARK_TAGS) if (has2(name5)) s = `<${tag3}>${s}</${tag3}>`;
           const col = marks2.find((m) => m && typeof m === "object" && m.type === "color");
-          const hex = col ? normColor5((col.attrs || {}).color) : "";
+          const hex = col ? normColor6((col.attrs || {}).color) : "";
           if (hex && !mono) s = `<span style="color:${hex}">${s}</span>`;
           const hl = marks2.find((m) => m && typeof m === "object" && m.type === "highlight");
-          const hhex = hl ? normColor5((hl.attrs || {}).color) : "";
+          const hhex = hl ? normColor6((hl.attrs || {}).color) : "";
           return hhex && !mono ? `<mark style="background:${hhex}">${s}</mark>` : s;
         }).join("");
       }
@@ -14115,8 +14115,8 @@
       }
       function alignFromString2(v2) {
         const out = {};
-        const list = Array.isArray(v2) ? v2 : String(v2 || "").trim().replace(/^\[/, "").replace(/\]$/, "").split(",");
-        for (const part of list) {
+        const list2 = Array.isArray(v2) ? v2 : String(v2 || "").trim().replace(/^\[/, "").replace(/\]$/, "").split(",");
+        for (const part of list2) {
           const m = /^\s*(\d+(?:\.\d+)*)\s*:\s*(left|center|right|justify)\s*$/.exec(String(part));
           if (m && m[2] !== "left") out[m[1]] = m[2];
         }
@@ -14415,8 +14415,8 @@
           const hmk = marks2.find((m) => m.type === "highlight");
           parts[parts.length - 1].push({
             text: n2.text,
-            color: cmk ? normColor5((cmk.attrs || {}).color) : "",
-            hl: hmk ? normColor5((hmk.attrs || {}).color) : "",
+            color: cmk ? normColor6((cmk.attrs || {}).color) : "",
+            hl: hmk ? normColor6((hmk.attrs || {}).color) : "",
             sig: new Set(marks2.map((m) => m.type).filter((t3) => MARKSET.includes(t3)))
           });
         }
@@ -14510,7 +14510,7 @@
         }
         return v2.startsWith("[") && v2.endsWith("]") ? v2.slice(1, -1).split(",").map((x) => x.trim()).filter(Boolean) : v2;
       }
-      function parseMdFile23(text) {
+      function parseMdFile24(text) {
         let meta2 = {}, body = String(text || "").replace(K2_COMMENTS_RE, "");
         text = body;
         if (text.startsWith("---")) {
@@ -14622,7 +14622,7 @@
         mdToDoc: mdToDoc5,
         docToMd: docToMd5,
         mdLineCounts: mdLineCounts2,
-        parseMdFile: parseMdFile23,
+        parseMdFile: parseMdFile24,
         dumpMdFile: dumpMdFile10,
         countWords: countWords10,
         collectAlign: collectAlign2,
@@ -14709,6 +14709,7 @@
     return matches2.indexOf(m) + 1;
   }
   function replaceCurrent(view2, text) {
+    if (!view2 || view2.editable === false) return false;
     const { matches: matches2, query } = searchKey.getState(view2.state);
     const { from: from2, to } = view2.state.selection;
     const hit = matches2.find((m) => m.from === from2 && m.to === to);
@@ -14721,6 +14722,7 @@
     return true;
   }
   function replaceAll(view2, text) {
+    if (!view2 || view2.editable === false) return 0;
     const { matches: matches2 } = searchKey.getState(view2.state);
     if (!matches2.length) return 0;
     let tr4 = view2.state.tr;
@@ -14746,8 +14748,8 @@
     return s;
   }
   function sentenceCase(text) {
-    const lower2 = String(text).toLowerCase();
-    return lower2.replace(
+    const lower3 = String(text).toLowerCase();
+    return lower3.replace(
       /(^|[.!?…]["')\]]?\s+|\n\s*)([^]*?)(?=$|[.!?…]["')\]]?\s+|\n)/g,
       (m, sep, body) => sep + upperFirstLetter(body)
     );
@@ -15445,9 +15447,9 @@
     }
     return out;
   }
-  function hasContentAfter(list, i5) {
-    for (let j = i5 + 1; j < list.length; j++) {
-      const e = list[j] && list[j].el;
+  function hasContentAfter(list2, i5) {
+    for (let j = i5 + 1; j < list2.length; j++) {
+      const e = list2[j] && list2[j].el;
       if (e === "page-break") return false;
       if (e !== "blank") return true;
     }
@@ -15638,10 +15640,10 @@
       used = 0;
       pageSceneStart = curScene;
     };
-    const list = (blocks || []).filter(Boolean);
+    const list2 = (blocks || []).filter(Boolean);
     let prevBlank = false;
-    for (let i5 = 0; i5 < list.length; i5++) {
-      const b = list[i5];
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      const b = list2[i5];
       const c = cfg(b.el);
       if (b.el === "page-break") {
         if (cur.length) pushPage();
@@ -15665,7 +15667,7 @@
       const need = before + body;
       const free = perPage - used;
       const keepN = Math.max(0, Math.round(num(R3.keepSceneWithNext, 0)));
-      if (need <= free && keepN > 0 && cur.length && KEEP_WITH_NEXT.has(b.el) && free - need < keepN && hasContentAfter(list, i5)) {
+      if (need <= free && keepN > 0 && cur.length && KEEP_WITH_NEXT.has(b.el) && free - need < keepN && hasContentAfter(list2, i5)) {
         pushPage();
         i5--;
         continue;
@@ -15698,7 +15700,7 @@
           addBlock({ el: "character", text: lastChar + " " + S11.dialogueContd, lines: 1, contd: true });
           used += 1;
         }
-        list[i5] = {
+        list2[i5] = {
           ...b,
           text: head2.rest,
           split: "tail",
@@ -15723,7 +15725,7 @@
         used += x.lines || 1;
       }
       if (opened && body > perPage - used) {
-        list[i5] = b;
+        list2[i5] = b;
         i5--;
         continue;
       }
@@ -15746,7 +15748,7 @@
           contOut: true
         });
         pushPage();
-        list[i5] = {
+        list2[i5] = {
           ...b,
           text: head2.rest,
           split: "tail",
@@ -16149,18 +16151,18 @@
   function withThaiFallback(stack) {
     const s = String(stack || "").trim();
     const have = new Set(stackFamilies(s));
-    const add = THAI_SAFE_FALLBACKS.filter((f) => !have.has(f.toLowerCase())).map((f) => '"' + f + '"');
-    if (!add.length) return s;
-    return s ? s + ", " + add.join(", ") : add.join(", ");
+    const add2 = THAI_SAFE_FALLBACKS.filter((f) => !have.has(f.toLowerCase())).map((f) => '"' + f + '"');
+    if (!add2.length) return s;
+    return s ? s + ", " + add2.join(", ") : add2.join(", ");
   }
   function upgradeThaiChain(family) {
     const cur = String(family || "").split(",").map((s) => s.trim()).filter(Boolean);
     const same = cur.length === SP_THAI_FALLBACKS_LEGACY.length && cur.every((f, i5) => f.toLowerCase() === SP_THAI_FALLBACKS_LEGACY[i5].toLowerCase());
     return same ? SP_THAI_FALLBACKS.join(", ") : String(family || "");
   }
-  function normalizeLangFonts(list) {
-    if (!Array.isArray(list)) return defaultLangFonts();
-    return list.map((r, i5) => ({
+  function normalizeLangFonts(list2) {
+    if (!Array.isArray(list2)) return defaultLangFonts();
+    return list2.map((r, i5) => ({
       id: String(r?.id || "f" + i5),
       label: String(r?.label || ""),
       range: String(r?.range || ""),
@@ -16178,15 +16180,15 @@
     }));
   }
   function usableCounts(rows) {
-    const list = normalizeLangFonts(rows).filter(isUsable);
+    const list2 = normalizeLangFonts(rows).filter(isUsable);
     return {
-      prose: list.filter((r) => rowAppliesTo(r, "prose")).length,
-      screenplay: list.filter((r) => rowAppliesTo(r, "screenplay")).length,
-      total: list.length
+      prose: list2.filter((r) => rowAppliesTo(r, "prose")).length,
+      screenplay: list2.filter((r) => rowAppliesTo(r, "screenplay")).length,
+      total: list2.length
     };
   }
-  function migrateSpThai(list, spThai) {
-    const rows = normalizeLangFonts(list);
+  function migrateSpThai(list2, spThai) {
+    const rows = normalizeLangFonts(list2);
     if (!spThai || typeof spThai !== "object") return { rows, moved: false };
     const has2 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
     if (has2) return { rows, moved: false };
@@ -16216,16 +16218,16 @@
     return !!css;
   }
   function applyLangFonts(rows, resolveUrl) {
-    const list = normalizeLangFonts(rows).filter(isUsable);
+    const list2 = normalizeLangFonts(rows).filter(isUsable);
     putStyle(
       "k-lang-fonts",
-      buildLangFontCss(list, resolveUrl, { family: LANG_FAMILY, target: "prose" })
+      buildLangFontCss(list2, resolveUrl, { family: LANG_FAMILY, target: "prose" })
     );
     putStyle(
       "k-sp-fonts",
-      buildLangFontCss(list, resolveUrl, { family: SP_FAMILY, target: "screenplay" })
+      buildLangFontCss(list2, resolveUrl, { family: SP_FAMILY, target: "screenplay" })
     );
-    return usableCounts(list);
+    return usableCounts(list2);
   }
   var LANG_FAMILY, SP_FAMILY, FONT_TARGETS, SCRIPT_PRESETS, BUILTIN_FONT_FILES, REMOVED_BUILTIN_FONTS, FONT_FILE_RE, SYSTEM_THAI_FONTS, SAFE_RANGE, clampPct, THAI_SAFE_FALLBACKS, SP_THAI_RANGE, SP_THAI_FALLBACKS, SP_THAI_FALLBACKS_LEGACY, SP_THAI_SIZE;
   var init_lang_fonts = __esm({
@@ -16680,8 +16682,8 @@
     return out;
   }
   function prosePageStarts(pages) {
-    const list = pages && pages.pages || pages || [];
-    return list.map((pg) => {
+    const list2 = pages && pages.pages || pages || [];
+    return list2.map((pg) => {
       const b = (pg.blocks || []).find((x) => Number.isFinite(x && x.pos));
       return b ? b.pos : null;
     });
@@ -16955,12 +16957,12 @@
     function applyPads(dom) {
       if (!dom || !dom.querySelectorAll) return 0;
       const I2 = byDom.get(dom) || cur || detached;
-      const list = I2.list;
+      const list2 = I2.list;
       const els = dom.querySelectorAll("." + cls.split(" ").pop());
-      const byPage = new Map(list.map((b) => [String(b.page || ""), b]));
+      const byPage = new Map(list2.map((b) => [String(b.page || ""), b]));
       let n2 = 0;
       els.forEach((e, i5) => {
-        const it = els.length === list.length ? list[i5] : byPage.get(String(e.dataset && e.dataset.page || ""));
+        const it = els.length === list2.length ? list2[i5] : byPage.get(String(e.dataset && e.dataset.page || ""));
         if (!it) return;
         const pad4 = Number(it.pad);
         e.style.setProperty("--k-pb-pad", (Number.isFinite(pad4) && Math.abs(pad4) > 0.5 ? pad4 : 0) + "px");
@@ -17441,6 +17443,7 @@
         "read-book": "",
         "reading-mode": "book-open",
         "reveal-active": "target",
+        "onset-toggle": "swap",
         "split-view": "dock-right",
         "typewriter": "edit",
         "workspace-menu": "collection",
@@ -17731,6 +17734,7 @@
         ["KeyR", "ctrl+alt", true, "read-book"],
         ["KeyH", true, true, "reading-mode"],
         ["Digit1", true, true, "reveal-active"],
+        ["KeyO", "ctrl+alt", true, "onset-toggle"],
         ["Backslash", true, true, "split-view"],
         ["KeyT", true, true, "typewriter"],
         ["KeyY", true, true, "workspace-menu"],
@@ -17878,7 +17882,7 @@
     const f = fmt2 && fmt2.headings ? fmt2 : mergeProseFormat(fmt2);
     const paper = opts.paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...opts.margins || {} };
-    const list = pages && pages.pages || pages || [];
+    const list2 = pages && pages.pages || pages || [];
     const scale2 = opts.scale ?? 1;
     const gap = opts.gap ?? 20;
     const pw = +paper.width, ph = +paper.height;
@@ -17887,7 +17891,7 @@
     host2.style.setProperty("--sp-pv-scale", String(scale2));
     host2.style.setProperty("--sp-pv-gap", gap + "px");
     const els = [];
-    for (const pg of list) {
+    for (const pg of list2) {
       const slot = document.createElement("div");
       slot.className = "sp-page-slot";
       slot.style.width = pxW + "px";
@@ -18198,13 +18202,13 @@
     return s;
   }
   function blocksToMd(blocks) {
-    const list = Array.from(blocks || []);
-    const guessNames = guessNamesForBlocks(list);
+    const list2 = Array.from(blocks || []);
+    const guessNames = guessNamesForBlocks(list2);
     const lines = [];
     let prevBlank = true, prevType = "action";
-    for (let i5 = 0; i5 < list.length; i5++) {
-      const b = list[i5] || {};
-      const line = lineFor(b.el, b.text || "", prevBlank, prevType, blockIsBlank(list[i5 + 1]), guessNames);
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      const b = list2[i5] || {};
+      const line = lineFor(b.el, b.text || "", prevBlank, prevType, blockIsBlank(list2[i5 + 1]), guessNames);
       lines.push(line);
       if (String(line).trim() === "") prevBlank = true;
       else {
@@ -18531,18 +18535,287 @@
       if (n2 > 0) newNeed.set(k, n2 - 1);
       else remove.push(olds[i5]);
     }
-    const add = [];
+    const add2 = [];
     for (let i5 = 0; i5 < news.length; i5++) {
       const k = newKeys[i5], n2 = oldHave.get(k) || 0;
       if (n2 > 0) oldHave.set(k, n2 - 1);
-      else add.push(news[i5]);
+      else add2.push(news[i5]);
     }
-    return { remove, add };
+    return { remove, add: add2 };
   }
   var _uniq;
   var init_deco_diff = __esm({
     "src/deco-diff.js"() {
       _uniq = 0;
+    }
+  });
+
+  // src/onset-diff.js
+  function normColor2(c) {
+    const s = String(c || "").trim();
+    return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(s) ? s.toLowerCase() : ONSET_DEFAULT_COLOR;
+  }
+  function onsetFileName(sceneId) {
+    return String(sceneId || "scene").replace(/[\\/:*?"<>|\s]+/g, "-").slice(0, 120) + ".json";
+  }
+  function newOnsetRecord(o = {}) {
+    return {
+      v: ONSET_VERSION,
+      sceneId: String(o.sceneId || ""),
+      file: String(o.file || ""),
+      // path สัมพัทธ์จากรากโปรเจกต์ (ไว้ตรวจว่าเป็นฉากเดียวกัน)
+      title: String(o.title || ""),
+      created: o.created || new Date(o.now || Date.now()).toISOString(),
+      format: o.format === "screenplay" ? "screenplay" : "prose",
+      align: typeof o.align === "string" ? o.align : "",
+      color: normColor2(o.color),
+      note: String(o.note || ""),
+      baseline: String(o.baseline ?? "")
+    };
+  }
+  function normalizeOnsetRecord(raw) {
+    const r = raw && typeof raw === "object" ? raw : null;
+    if (!r || !r.sceneId) return null;
+    return newOnsetRecord(r);
+  }
+  function blockKey(type, sub, text) {
+    return String(type || "") + "|" + String(sub ?? "") + "|" + String(text || "").replace(/\s+$/, "");
+  }
+  function matchBlocks(a, b) {
+    const n2 = a.length, m = b.length;
+    const match = new Array(n2).fill(-1);
+    let pre = 0;
+    while (pre < n2 && pre < m && a[pre] === b[pre]) {
+      match[pre] = pre;
+      pre++;
+    }
+    let suf = 0;
+    while (suf < n2 - pre && suf < m - pre && a[n2 - 1 - suf] === b[m - 1 - suf]) {
+      match[n2 - 1 - suf] = m - 1 - suf;
+      suf++;
+    }
+    const A = a.slice(pre, n2 - suf), B = b.slice(pre, m - suf);
+    const la = A.length, lb = B.length;
+    if (!la || !lb) return match;
+    if (la * lb <= DP_LIMIT) {
+      const W = lb + 1;
+      const L2 = new Int32Array((la + 1) * W);
+      for (let i6 = la - 1; i6 >= 0; i6--) {
+        for (let j2 = lb - 1; j2 >= 0; j2--) {
+          L2[i6 * W + j2] = A[i6] === B[j2] ? L2[(i6 + 1) * W + j2 + 1] + 1 : Math.max(L2[(i6 + 1) * W + j2], L2[i6 * W + j2 + 1]);
+        }
+      }
+      let i5 = 0, j = 0;
+      while (i5 < la && j < lb) {
+        if (A[i5] === B[j]) {
+          match[pre + i5] = pre + j;
+          i5++;
+          j++;
+        } else if (L2[(i5 + 1) * W + j] >= L2[i5 * W + j + 1]) i5++;
+        else j++;
+      }
+    } else {
+      const pos = /* @__PURE__ */ new Map();
+      B.forEach((k, j) => {
+        if (!pos.has(k)) pos.set(k, []);
+        pos.get(k).push(j);
+      });
+      let last2 = -1;
+      for (let i5 = 0; i5 < la; i5++) {
+        const list2 = pos.get(A[i5]);
+        if (!list2) continue;
+        const j = list2.find((x) => x > last2);
+        if (j === void 0) continue;
+        match[pre + i5] = pre + j;
+        last2 = j;
+      }
+    }
+    return match;
+  }
+  function diffBlocks(own = [], other = []) {
+    const match = matchBlocks(own, other);
+    const kinds = new Array(own.length).fill("");
+    const gaps = [];
+    const stats = { changed: 0, added: 0, removed: 0, hunks: 0 };
+    let i5 = 0, j = 0;
+    while (i5 < own.length || j < other.length) {
+      const i0 = i5;
+      while (i5 < own.length && match[i5] < 0) i5++;
+      const nextJ = i5 < own.length ? match[i5] : other.length;
+      const onlyOwn = i5 - i0, onlyOther = Math.max(0, nextJ - j);
+      if (onlyOwn || onlyOther) {
+        stats.hunks++;
+        if (onlyOwn && onlyOther) {
+          for (let k = i0; k < i5; k++) kinds[k] = "changed";
+          stats.changed += onlyOwn;
+          if (onlyOther > onlyOwn) stats.removed += onlyOther - onlyOwn;
+        } else if (onlyOwn) {
+          for (let k = i0; k < i5; k++) kinds[k] = "added";
+          stats.added += onlyOwn;
+        } else {
+          gaps.push(i5);
+          stats.removed += onlyOther;
+        }
+      }
+      if (i5 >= own.length) break;
+      j = nextJ + 1;
+      i5++;
+    }
+    return { kinds, gaps, stats };
+  }
+  var ONSET_DIR, ONSET_VERSION, ONSET_DEFAULT_COLOR, ONSET_COLORS, DP_LIMIT;
+  var init_onset_diff = __esm({
+    "src/onset-diff.js"() {
+      ONSET_DIR = "OnSet";
+      ONSET_VERSION = 1;
+      ONSET_DEFAULT_COLOR = "#e5484d";
+      ONSET_COLORS = ["#e5484d", "#f76b15", "#ffc53d", "#30a46c", "#0090ff", "#8e4ec6"];
+      DP_LIMIT = 4e6;
+    }
+  });
+
+  // src/onset-plugin.js
+  function docBlocks(doc3) {
+    const out = [];
+    doc3.descendants((node, pos) => {
+      if (node.isTextblock || node.isBlock && node.isLeaf) {
+        const a = node.attrs || {};
+        const sub = a.el != null ? a.el : a.level != null ? a.level : a.src || "";
+        out.push({ pos, node, key: blockKey(node.type.name, sub, node.textContent) });
+        return false;
+      }
+      return true;
+    });
+    return out;
+  }
+  function bang(kind, side) {
+    const s = document.createElement("span");
+    s.className = "k-onset-bang k-onset-" + kind;
+    s.contentEditable = "false";
+    s.setAttribute("aria-hidden", "true");
+    s.textContent = "!";
+    s.title = t((TIP[side] || TIP.revised)[kind] || TIP.revised.changed);
+    return s;
+  }
+  function build(doc3, cfg) {
+    if (!cfg || !Array.isArray(cfg.other)) return { deco: DecorationSet.empty, info: null };
+    const blocks = docBlocks(doc3);
+    const d = diffBlocks(blocks.map((b) => b.key), cfg.other);
+    const side = cfg.side === "original" ? "original" : "revised";
+    const decos = [];
+    const gapSet = new Set(d.gaps);
+    blocks.forEach((b, i5) => {
+      const kind = d.kinds[i5];
+      const gap = gapSet.has(i5);
+      if (!kind && !gap) return;
+      const cls = "k-onset-line" + (kind ? " k-onset-" + kind : "") + (gap ? " k-onset-gap" : "");
+      decos.push(Decoration.node(b.pos, b.pos + b.node.nodeSize, { class: cls }));
+      const at = b.node.isTextblock ? b.pos + 1 : b.pos;
+      const k = kind || "gap";
+      decos.push(Decoration.widget(at, () => bang(k, side), { side: -1, ignoreSelection: true, key: "onset-" + side + "-" + k }));
+    });
+    if (gapSet.has(blocks.length) && blocks.length) {
+      const b = blocks[blocks.length - 1];
+      decos.push(Decoration.node(b.pos, b.pos + b.node.nodeSize, { class: "k-onset-line k-onset-gap-end" }));
+      if (!d.kinds[blocks.length - 1] && !gapSet.has(blocks.length - 1)) {
+        const at = b.node.isTextblock ? b.pos + 1 : b.pos;
+        decos.push(Decoration.widget(at, () => bang("gap", side), { side: -1, ignoreSelection: true, key: "onset-" + side + "-end" }));
+      }
+    }
+    return { deco: DecorationSet.create(doc3, decos), info: { ...d.stats, side, lines: decos.length } };
+  }
+  function onsetPlugin() {
+    return new Plugin({
+      key: onsetKey,
+      state: {
+        init: () => ({ cfg: null, deco: DecorationSet.empty, info: null }),
+        apply(tr4, prev, _old, st) {
+          const meta2 = tr4.getMeta(onsetKey);
+          if (meta2 !== void 0) {
+            const cfg = meta2 && meta2.cfg ? meta2.cfg : null;
+            return { cfg, ...build(st.doc, cfg) };
+          }
+          if (!prev.cfg) return prev;
+          if (tr4.docChanged) return { cfg: prev.cfg, ...build(st.doc, prev.cfg) };
+          return prev;
+        }
+      },
+      props: {
+        decorations(st) {
+          return onsetKey.getState(st).deco;
+        },
+        attributes(st) {
+          const s = onsetKey.getState(st);
+          return s && s.cfg ? { class: "k-onset-on k-onset-side-" + (s.cfg.side || "revised") } : {};
+        }
+      },
+      // ฉบับเดิมบนจอ = อ่านอย่างเดียว — ปฏิเสธทุกอย่างที่แก้เนื้อ (พิมพ์ · วาง · ค้นแล้วแทนที่ · ปลั๊กอินอื่น)
+      filterTransaction(tr4, st) {
+        if (!tr4.docChanged) return true;
+        const s = onsetKey.getState(st);
+        return !(s && s.cfg && s.cfg.lock);
+      },
+      view(v2) {
+        const want = CFG.get(v2);
+        const have = onsetKey.getState(v2.state);
+        if (want && have && !have.cfg) {
+          Promise.resolve().then(() => {
+            if (CFG.get(v2) === want && !v2.isDestroyed) v2.dispatch(v2.state.tr.setMeta(onsetKey, { cfg: want }));
+          });
+        }
+        return {};
+      }
+    });
+  }
+  function setOnsetCompare(view2, cfg) {
+    if (!view2) return false;
+    if (cfg) CFG.set(view2, cfg);
+    else CFG.delete(view2);
+    if (!onsetKey.getState(view2.state)) return false;
+    view2.dispatch(view2.state.tr.setMeta(onsetKey, { cfg: cfg || null }));
+    return true;
+  }
+  function onsetInfo(view2) {
+    const s = view2 && onsetKey.getState(view2.state);
+    return s && s.info ? s.info : null;
+  }
+  var onsetKey, CFG, docKeys, TIP;
+  var init_onset_plugin = __esm({
+    "src/onset-plugin.js"() {
+      init_dist4();
+      init_dist5();
+      init_i18n();
+      init_onset_diff();
+      onsetKey = new PluginKey("k2onset");
+      CFG = /* @__PURE__ */ new WeakMap();
+      docKeys = (doc3) => docBlocks(doc3).map((b) => b.key);
+      TIP = {
+        revised: { changed: "ui.onset.tip.revised.changed", added: "ui.onset.tip.revised.added", gap: "ui.onset.tip.revised.gap" },
+        original: { changed: "ui.onset.tip.original.changed", added: "ui.onset.tip.original.added", gap: "ui.onset.tip.original.gap" }
+      };
+    }
+  });
+
+  // src/edit-guard.js
+  function guardEditable(ed, names, isEditable) {
+    if (typeof isEditable !== "function") return ed;
+    for (const m of names) {
+      const orig = ed[m];
+      if (typeof orig !== "function") continue;
+      ed[m] = function guarded(...a) {
+        let ok2 = true;
+        try {
+          ok2 = isEditable() !== false;
+        } catch {
+          ok2 = true;
+        }
+        return ok2 ? orig.apply(this, a) : false;
+      };
+    }
+    return ed;
+  }
+  var init_edit_guard = __esm({
+    "src/edit-guard.js"() {
     }
   });
 
@@ -18596,8 +18869,8 @@
   }
   function blockRange(doc3, from2, to) {
     const size = doc3.content.size;
-    const clamp6 = (v2) => Math.max(0, Math.min(v2, size));
-    const f = clamp6(from2), t3 = clamp6(to);
+    const clamp7 = (v2) => Math.max(0, Math.min(v2, size));
+    const f = clamp7(from2), t3 = clamp7(to);
     const $f = doc3.resolve(f), $t = doc3.resolve(t3);
     let a, b;
     if ($f.depth) a = $f.before(1);
@@ -18610,14 +18883,14 @@
       const ch = doc3.childAfter(t3);
       b = ch && ch.node ? ch.offset + ch.node.nodeSize : t3;
     }
-    return { from: clamp6(Math.min(a, b)), to: clamp6(Math.max(a, b)) };
+    return { from: clamp7(Math.min(a, b)), to: clamp7(Math.max(a, b)) };
   }
   function rescanRange(doc3, set, r, scan) {
     const oldIn = set.find(r.from, r.to);
     const next = scan(doc3, r.from, r.to);
-    const { remove, add } = diffByKey(oldIn, next);
-    if (!remove.length && !add.length) return set;
-    return set.remove(remove).add(doc3, add);
+    const { remove, add: add2 } = diffByKey(oldIn, next);
+    if (!remove.length && !add2.length) return set;
+    return set.remove(remove).add(doc3, add2);
   }
   function incrementalDecoState(key2, scan) {
     const full = (doc3) => DecorationSet.create(doc3, scan(doc3, 0, doc3.content.size));
@@ -18937,8 +19210,8 @@
     return true;
   }
   function removeTab(state2, dispatch) {
-    const { $from, empty: empty2 } = state2.selection;
-    if (!empty2 || !$from.parent.inlineContent) return false;
+    const { $from, empty: empty3 } = state2.selection;
+    if (!empty3 || !$from.parent.inlineContent) return false;
     const off3 = $from.parentOffset;
     const start = $from.start();
     if (off3 > 0 && $from.parent.textBetween(off3 - 1, off3) === "	") {
@@ -18974,8 +19247,8 @@
     };
   }
   function rangeAlign(state2) {
-    const { from: from2, to, empty: empty2, $from } = state2.selection;
-    if (empty2) {
+    const { from: from2, to, empty: empty3, $from } = state2.selection;
+    if (empty3) {
       const p = $from.parent;
       return p.type.name === "paragraph" || p.type.name === "heading" ? p.attrs.align || "left" : null;
     }
@@ -18991,8 +19264,8 @@
   function rangeColor(state2, markName2) {
     const mk2 = state2.schema.marks[markName2 || "color"];
     if (!mk2) return "";
-    const { from: from2, to, empty: empty2, $from } = state2.selection;
-    if (empty2) {
+    const { from: from2, to, empty: empty3, $from } = state2.selection;
+    if (empty3) {
       const m = (state2.storedMarks || $from.marks()).find((x) => x.type === mk2);
       return m ? (0, import_text_color2.normColor)(m.attrs.color) : "";
     }
@@ -19019,20 +19292,20 @@
     return 0;
   }
   function exitEmptyListItem(state2, dispatch, view2) {
-    const { $from, empty: empty2 } = state2.selection;
-    if (!empty2 || !listItemDepth(state2)) return false;
+    const { $from, empty: empty3 } = state2.selection;
+    if (!empty3 || !listItemDepth(state2)) return false;
     if ($from.parent.content.size > 0) return false;
     return liftListItem(schema.nodes.list_item)(state2, dispatch, view2);
   }
   function exitListItemAtStart(state2, dispatch, view2) {
-    const { $from, empty: empty2 } = state2.selection;
-    if (!empty2 || !listItemDepth(state2)) return false;
+    const { $from, empty: empty3 } = state2.selection;
+    if (!empty3 || !listItemDepth(state2)) return false;
     if ($from.parentOffset !== 0) return false;
     return liftListItem(schema.nodes.list_item)(state2, dispatch, view2);
   }
   function dropEmptyParaAfterList(state2, dispatch) {
-    const { $from, empty: empty2 } = state2.selection;
-    if (!empty2 || $from.depth !== 1) return false;
+    const { $from, empty: empty3 } = state2.selection;
+    if (!empty3 || $from.depth !== 1) return false;
     const para2 = $from.parent;
     if (para2.type !== schema.nodes.paragraph || para2.content.size > 0) return false;
     const i5 = $from.index(0);
@@ -19224,7 +19497,7 @@
   }
   function listMarkerPlugin() {
     const key2 = new PluginKey("k2-list-marker");
-    const build = (doc3) => {
+    const build2 = (doc3) => {
       const out = [];
       doc3.forEach((node, offset) => {
         if (!/_list$/.test(node.type.name)) return;
@@ -19246,8 +19519,8 @@
     return new Plugin({
       key: key2,
       state: {
-        init: (_2, st) => build(st.doc),
-        apply: (tr4, old) => tr4.docChanged ? build(tr4.doc) : old
+        init: (_2, st) => build2(st.doc),
+        apply: (tr4, old) => tr4.docChanged ? build2(tr4.doc) : old
       },
       props: { decorations(st) {
         return key2.getState(st);
@@ -19409,6 +19682,8 @@
       init_dist4();
       init_dist5();
       init_deco_diff();
+      init_onset_plugin();
+      init_edit_guard();
       mentionKey = new PluginKey("kmention");
       spellKey = new PluginKey("kspell");
       WORD_END = /[\s .,!?;:'"‘’“”()[\]{}<>…—–\-/\\|@#$%^&*+=~`]/;
@@ -19717,6 +19992,15 @@
               if (tr4.docChanged && self2.onChange) self2.onChange();
             }
           });
+          guardEditable(this, [
+            "cmd",
+            "insertLines",
+            "insertImage",
+            "setFigureOpts",
+            "removeFigure",
+            "pressEnter",
+            "pressBackspace"
+          ], editable);
         }
         // ══ [alpha.134] ★ ตัวช่วยกดปุ่ม — ต้องเป็น **คำสั่งตัวเดียวกับที่ผูกไว้กับแป้นจริง** ══
         //
@@ -19742,6 +20026,8 @@
               // [20] เส้นคั่นหน้าของนิยาย
               listMarkerPlugin(),
               // [alpha.132r3] รูปแบบของจุดนำ/หมายเลขข้อ
+              onsetPlugin(),
+              // [alpha.164] ฉากมีปัญหา — แถบสี + ! ของบล็อกที่ต่างจากอีกฉบับ
               // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (fountain/มาร์กดาวน์) — ไม่แตะไฟล์
               markdownCodePlugin(incrementalDecoState),
               buildRules(schema),
@@ -19779,6 +20065,10 @@
             if (n2.type === "figure") n2.attrs.resolved = this.resolveSrc(n2.attrs.src);
           }
           return schema.nodeFromJSON(json);
+        }
+        /** [alpha.164] แปลง markdown เป็น doc ของ schema นี้ (ไม่แตะเอกสารบนจอ) — ใช้เทียบ/แสดงฉบับเดิม */
+        docFromMarkdown(md, alignMap) {
+          return this._docFromMd(md, alignMap);
         }
         // ---------- content ----------
         getMarkdown(opts) {
@@ -19856,8 +20146,8 @@
               const mk2 = name5 === "highlight" ? s.marks.highlight : s.marks.color;
               const val = (0, import_text_color2.normColor)(arg);
               const st = v2.state;
-              const { from: from2, to, empty: empty2 } = st.selection;
-              if (empty2) {
+              const { from: from2, to, empty: empty3 } = st.selection;
+              if (empty3) {
                 const cur = (st.storedMarks || st.selection.$from.marks()).filter((m) => m.type !== mk2);
                 v2.dispatch(st.tr.setStoredMarks(val ? [...cur, mk2.create({ color: val })] : cur));
                 v2.focus();
@@ -20031,8 +20321,8 @@
           const st = this.view.state;
           const out = {};
           for (const [k, mk2] of Object.entries(schema.marks)) {
-            const { from: from2, $from, to, empty: empty2 } = st.selection;
-            out[k] = empty2 ? !!mk2.isInSet(st.storedMarks || $from.marks()) : st.doc.rangeHasMark(from2, to, mk2);
+            const { from: from2, $from, to, empty: empty3 } = st.selection;
+            out[k] = empty3 ? !!mk2.isInSet(st.storedMarks || $from.marks()) : st.doc.rangeHasMark(from2, to, mk2);
           }
           const p = st.selection.$from.parent;
           out.block = p.type.name === "heading" ? "h" + p.attrs.level : p.type.name === "code_block" ? "code" : st.selection.$from.node(-1) && st.selection.$from.node(-1).type.name === "blockquote" ? "quote" : "p";
@@ -20384,7 +20674,7 @@
     return withMeasureMode(() => sliceProsePagesRaw(blocks, contentHeight, totalHeight));
   }
   function sliceProsePagesRaw(blocks, contentHeight, totalHeight) {
-    const list = Array.isArray(blocks) ? blocks.filter(Boolean) : [];
+    const list2 = Array.isArray(blocks) ? blocks.filter(Boolean) : [];
     const ch = Math.max(1, num(contentHeight, 0));
     const starts = [0];
     let pageStart = 0;
@@ -20392,9 +20682,9 @@
       pageStart = y;
       starts.push(y);
     };
-    for (let i5 = 0; i5 < list.length; i5++) {
-      const b = list[i5];
-      const forced = b.breakBefore || i5 > 0 && list[i5 - 1].breakAfter;
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      const b = list2[i5];
+      const forced = b.breakBefore || i5 > 0 && list2[i5 - 1].breakAfter;
       if (forced && b.top > pageStart) newPage(b.top);
       const inkBottom = b.top + b.height - Math.max(0, num(b.spaceAfterPx, 0));
       const tooTall = b.height - Math.max(0, num(b.spaceAfterPx, 0)) > ch;
@@ -20406,14 +20696,14 @@
           continue;
         }
         if (b.top > pageStart && !tooTall) {
-          const prev = i5 > 0 ? list[i5 - 1] : null;
+          const prev = i5 > 0 ? list2[i5 - 1] : null;
           newPage(prev && prev.keepNext && prev.top > pageStart ? prev.top : b.top);
           continue;
         }
         newPage(pageStart + ch);
       }
     }
-    const last2 = list.length ? list[list.length - 1] : null;
+    const last2 = list2.length ? list2[list2.length - 1] : null;
     const end = Math.max(num(totalHeight, last2 ? last2.top + last2.height : 0), pageStart);
     return starts.map((y, i5) => ({ start: y, end: i5 + 1 < starts.length ? starts[i5 + 1] : end }));
   }
@@ -20632,12 +20922,12 @@
   }
   function prosePosAtCut(view2, blocks, y) {
     if (!view2 || !Number.isFinite(y)) return null;
-    const list = blocks || [];
-    for (const b of list) {
+    const list2 = blocks || [];
+    for (const b of list2) {
       if (Math.abs(y - b.top) >= 0.6) continue;
       return posBeforeBlock(view2, b.el);
     }
-    for (const b of list) {
+    for (const b of list2) {
       if (y <= b.top || y > b.top + b.height + 0.6) continue;
       const want = y - b.top;
       for (const ln of b.lines || []) {
@@ -20669,16 +20959,16 @@
   function proseBreakList(view2, blocks, pages, basePage = 1, contentHeight = 0) {
     return withMeasureMode(() => {
       const out = [];
-      const list = pages || [];
+      const list2 = pages || [];
       const ch = num(contentHeight, 0);
-      for (let i5 = 1; i5 < list.length; i5++) {
-        const pos = prosePosAtCut(view2, blocks, list[i5].start);
+      for (let i5 = 1; i5 < list2.length; i5++) {
+        const pos = prosePosAtCut(view2, blocks, list2[i5].start);
         if (!Number.isFinite(pos) || pos <= 0) continue;
-        const used = list[i5].start - list[i5 - 1].start;
+        const used = list2[i5].start - list2[i5 - 1].start;
         let g = 0;
         const bl = blocks || [];
         for (let j = 1; j < bl.length; j++) {
-          if (Math.abs(num(bl[j].top, -1e9) - list[i5].start) < 0.6) {
+          if (Math.abs(num(bl[j].top, -1e9) - list2[i5].start) < 0.6) {
             g = Math.max(0, num(bl[j - 1].spaceAfterPx, 0));
             break;
           }
@@ -20691,11 +20981,11 @@
   }
   function fullPageImages(blocks, pages) {
     const out = /* @__PURE__ */ new Map();
-    const list = pages && pages.pages || pages || [];
+    const list2 = pages && pages.pages || pages || [];
     const full = (blocks || []).filter((b) => b && b.fullPage);
-    if (!full.length || !list.length) return out;
-    for (let i5 = 0; i5 < list.length; i5++) {
-      const start = num(list[i5] && list[i5].start, 0);
+    if (!full.length || !list2.length) return out;
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      const start = num(list2[i5] && list2[i5].start, 0);
       for (const b of full) {
         if (Math.abs(num(b.top, -1e9) - start) > 0.6) continue;
         const im = b.el && b.el.querySelector ? b.el.querySelector("img") : null;
@@ -20732,7 +21022,7 @@
     const pw = num(paper.width, 8.5), ph = num(paper.height, 11);
     const textW = Math.max(0.5, pw - num(m.left, 1.5) - num(m.right, 1));
     const contentH = Math.max(8, (ph - num(m.top, 1) - num(m.bottom, 1)) * DPI3);
-    const list = pages && pages.pages || pages || [];
+    const list2 = pages && pages.pages || pages || [];
     host2.innerHTML = "";
     host2.style.setProperty("--sp-pv-scale", String(scale2));
     host2.style.setProperty("--sp-pv-gap", num(opts.gap, 20) + "px");
@@ -20740,9 +21030,9 @@
     master.removeAttribute("contenteditable");
     master.removeAttribute("id");
     for (const g of master.querySelectorAll("." + GAP_CLASS)) g.remove();
-    const fullMap = opts.blocks ? fullPageImages(opts.blocks, list) : null;
+    const fullMap = opts.blocks ? fullPageImages(opts.blocks, list2) : null;
     const els = [];
-    for (const pg of list) {
+    for (const pg of list2) {
       const slot = document.createElement("div");
       slot.className = "sp-page-slot";
       slot.style.width = pw * DPI3 * scale2 + "px";
@@ -20776,16 +21066,16 @@
         n2.textContent = label;
         page2.append(n2);
       }
-      const clip4 = document.createElement("div");
-      clip4.className = "ed-page-clip";
+      const clip5 = document.createElement("div");
+      clip5.className = "ed-page-clip";
       const sliceH = num(pg.end, NaN) - num(pg.start, 0);
-      clip4.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
+      clip5.style.height = (Number.isFinite(sliceH) && sliceH > 0 ? Math.min(contentH, sliceH) : contentH) + "px";
       const sp = opts.startPos && opts.startPos[els.length];
-      if (Number.isFinite(sp)) clip4.dataset.pos = String(sp);
+      if (Number.isFinite(sp)) clip5.dataset.pos = String(sp);
       const inner = master.cloneNode(true);
       inner.style.cssText = "width:" + textW + "in;max-width:none;padding:0;min-height:0;margin:" + -num(pg.start, 0) + "px 0 0;" + (bleedUrl ? "visibility:hidden;" : "");
-      clip4.append(inner);
-      page2.append(clip4);
+      clip5.append(inner);
+      page2.append(clip5);
       slot.append(page2);
       host2.append(slot);
       els.push(page2);
@@ -20908,7 +21198,7 @@ ${BLOCK_END}
   function replyTo(comments, parentId, { text, author, now = Date.now(), id } = {}) {
     const reply = makeComment({ text, author, now, id });
     let found2 = false;
-    const walk3 = (list) => list.map((c) => {
+    const walk3 = (list2) => list2.map((c) => {
       if (c.id === parentId) {
         found2 = true;
         return { ...c, replies: [...c.replies, reply] };
@@ -20920,7 +21210,7 @@ ${BLOCK_END}
   }
   function resolveComment(comments, id, resolved = true) {
     let found2 = false;
-    const walk3 = (list) => list.map((c) => {
+    const walk3 = (list2) => list2.map((c) => {
       if (c.id === id) {
         found2 = true;
         return { ...c, resolved: !!resolved, resolvedAt: resolved ? (/* @__PURE__ */ new Date()).toISOString() : null };
@@ -20931,7 +21221,7 @@ ${BLOCK_END}
   }
   function editComment(comments, id, text) {
     let found2 = false;
-    const walk3 = (list) => list.map((c) => {
+    const walk3 = (list2) => list2.map((c) => {
       if (c.id === id) {
         found2 = true;
         return { ...c, text: String(text), editedAt: (/* @__PURE__ */ new Date()).toISOString() };
@@ -20942,7 +21232,7 @@ ${BLOCK_END}
   }
   function deleteComment(comments, id) {
     let found2 = false;
-    const walk3 = (list) => list.filter((c) => {
+    const walk3 = (list2) => list2.filter((c) => {
       if (c.id === id) {
         found2 = true;
         return false;
@@ -21091,8 +21381,8 @@ ${BLOCK_END}
         }
         async list(path, { openOnly = false, reanchor: doReanchor = true } = {}) {
           const { body, comments } = await this.read(path);
-          const list = doReanchor ? reanchorAll(body, comments) : comments;
-          return openOnly ? openComments(list) : list;
+          const list2 = doReanchor ? reanchorAll(body, comments) : comments;
+          return openOnly ? openComments(list2) : list2;
         }
         /** Save an edited body while keeping the comments (re-anchored against the new text). */
         async saveBody(path, newBody) {
@@ -21145,8 +21435,8 @@ ${BLOCK_END}
     const out = { ...fromRow };
     for (const k of Object.keys(fromFm)) {
       const v2 = fromFm[k];
-      const empty2 = v2 === "" || Array.isArray(v2) && !v2.length || v2 === false;
-      if (!empty2 || !(k in fromRow)) out[k] = v2;
+      const empty3 = v2 === "" || Array.isArray(v2) && !v2.length || v2 === false;
+      if (!empty3 || !(k in fromRow)) out[k] = v2;
     }
     for (const k of SCENE_HEAVY_KEYS) {
       if (k in out) continue;
@@ -21309,18 +21599,18 @@ ${BLOCK_END}
       height: numOr0(x.height)
     };
   }
-  function migrateImages(list) {
-    if (!Array.isArray(list)) return [];
+  function migrateImages(list2) {
+    if (!Array.isArray(list2)) return [];
     const out = [];
-    for (const x of list) {
+    for (const x of list2) {
       const im = normalizeImage(x);
       if (im) out.push(im);
     }
     return out;
   }
-  function needsImageMigration(list) {
-    if (!Array.isArray(list)) return false;
-    return list.some((x) => typeof x !== "object" || x == null || !("caption" in x));
+  function needsImageMigration(list2) {
+    if (!Array.isArray(list2)) return false;
+    return list2.some((x) => typeof x !== "object" || x == null || !("caption" in x));
   }
   function imageFile(x) {
     const im = normalizeImage(x);
@@ -21336,28 +21626,28 @@ ${BLOCK_END}
     if (!im) return "";
     return im.alt || im.caption || im.file;
   }
-  function setImageMeta(list, i5, patch) {
-    const arr = migrateImages(list);
+  function setImageMeta(list2, i5, patch) {
+    const arr = migrateImages(list2);
     if (i5 < 0 || i5 >= arr.length) return arr;
     const cur = arr[i5];
     const next = normalizeImage({ ...cur, ...patch || {} });
     arr[i5] = next || cur;
     return arr;
   }
-  function makePrimary(list, i5) {
-    const arr = migrateImages(list);
+  function makePrimary(list2, i5) {
+    const arr = migrateImages(list2);
     if (i5 <= 0 || i5 >= arr.length) return arr;
     const [pick2] = arr.splice(i5, 1);
     return [pick2, ...arr];
   }
-  function removeImage(list, i5) {
-    const arr = migrateImages(list);
+  function removeImage(list2, i5) {
+    const arr = migrateImages(list2);
     if (i5 < 0 || i5 >= arr.length) return arr;
     arr.splice(i5, 1);
     return arr;
   }
-  function addImage(list, x) {
-    const arr = migrateImages(list);
+  function addImage(list2, x) {
+    const arr = migrateImages(list2);
     const im = normalizeImage(x);
     if (!im) return arr;
     if (arr.some((a) => a.file === im.file)) return arr;
@@ -21384,9 +21674,9 @@ ${BLOCK_END}
     };
   }
   function entityPortrait(entity) {
-    const list = migrateImages(entity && entity.images);
-    if (!list.length) return null;
-    const im = list[0];
+    const list2 = migrateImages(entity && entity.images);
+    if (!list2.length) return null;
+    const im = list2[0];
     return { file: im.file, alt: imageAlt(im), caption: im.caption || "" };
   }
   function fieldValue(entity, key2) {
@@ -21419,8 +21709,8 @@ ${BLOCK_END}
     if (!words || !value) return "plain";
     const v2 = String(value).toLowerCase();
     for (const tone of Object.keys(words)) {
-      const list = Array.isArray(words[tone]) ? words[tone] : [];
-      if (list.some((w) => w && v2.includes(String(w).toLowerCase()))) return tone;
+      const list2 = Array.isArray(words[tone]) ? words[tone] : [];
+      if (list2.some((w) => w && v2.includes(String(w).toLowerCase()))) return tone;
     }
     return "plain";
   }
@@ -21905,36 +22195,36 @@ ${BLOCK_END}
 
   // src/tab-order.js
   function neighborAfterClose(keys4, closed, active) {
-    const list = Array.isArray(keys4) ? keys4 : [];
-    const rest = list.filter((k) => k !== closed);
+    const list2 = Array.isArray(keys4) ? keys4 : [];
+    const rest = list2.filter((k) => k !== closed);
     if (!rest.length) return null;
     if (active && active !== closed && rest.includes(active)) return active;
-    const i5 = list.indexOf(closed);
+    const i5 = list2.indexOf(closed);
     if (i5 < 0) return rest[rest.length - 1];
-    return list[i5 + 1] !== void 0 ? list[i5 + 1] : list[i5 - 1];
+    return list2[i5 + 1] !== void 0 ? list2[i5 + 1] : list2[i5 - 1];
   }
   function cycleTab(keys4, active, dir2 = 1) {
-    const list = Array.isArray(keys4) ? keys4 : [];
-    if (!list.length) return null;
-    const i5 = list.indexOf(active);
-    if (i5 < 0) return dir2 < 0 ? list[list.length - 1] : list[0];
-    const n2 = list.length;
-    return list[((i5 + (dir2 < 0 ? -1 : 1)) % n2 + n2) % n2];
+    const list2 = Array.isArray(keys4) ? keys4 : [];
+    if (!list2.length) return null;
+    const i5 = list2.indexOf(active);
+    if (i5 < 0) return dir2 < 0 ? list2[list2.length - 1] : list2[0];
+    const n2 = list2.length;
+    return list2[((i5 + (dir2 < 0 ? -1 : 1)) % n2 + n2) % n2];
   }
   function moveTabBefore(keys4, key2, beforeKey) {
-    const list = Array.isArray(keys4) ? keys4.slice() : [];
-    const from2 = list.indexOf(key2);
-    if (from2 < 0 || key2 === beforeKey) return list;
-    list.splice(from2, 1);
-    const to = beforeKey == null ? -1 : list.indexOf(beforeKey);
-    if (to < 0) list.push(key2);
-    else list.splice(to, 0, key2);
-    return list;
+    const list2 = Array.isArray(keys4) ? keys4.slice() : [];
+    const from2 = list2.indexOf(key2);
+    if (from2 < 0 || key2 === beforeKey) return list2;
+    list2.splice(from2, 1);
+    const to = beforeKey == null ? -1 : list2.indexOf(beforeKey);
+    if (to < 0) list2.push(key2);
+    else list2.splice(to, 0, key2);
+    return list2;
   }
   function tabsRightOf(keys4, key2) {
-    const list = Array.isArray(keys4) ? keys4 : [];
-    const i5 = list.indexOf(key2);
-    return i5 < 0 ? [] : list.slice(i5 + 1);
+    const list2 = Array.isArray(keys4) ? keys4 : [];
+    const i5 = list2.indexOf(key2);
+    return i5 < 0 ? [] : list2.slice(i5 + 1);
   }
   function tabPathParts(root, file) {
     const f = String(file || "");
@@ -21949,27 +22239,27 @@ ${BLOCK_END}
     return { rel, book, chapter };
   }
   function pushClosed(stack, file, root, max2 = 20) {
-    const list = (Array.isArray(stack) ? stack : []).filter((x) => !(x && x.file === file && x.root === root));
-    if (!file || String(file).startsWith("::")) return list;
-    list.push({ file, root: root || "" });
-    return list.slice(-Math.max(1, max2));
+    const list2 = (Array.isArray(stack) ? stack : []).filter((x) => !(x && x.file === file && x.root === root));
+    if (!file || String(file).startsWith("::")) return list2;
+    list2.push({ file, root: root || "" });
+    return list2.slice(-Math.max(1, max2));
   }
   function takeReopen(stack, root, openKeys = []) {
-    const list = Array.isArray(stack) ? stack.slice() : [];
+    const list2 = Array.isArray(stack) ? stack.slice() : [];
     const open = new Set(openKeys);
-    for (let i5 = list.length - 1; i5 >= 0; i5--) {
-      const x = list[i5];
+    for (let i5 = list2.length - 1; i5 >= 0; i5--) {
+      const x = list2[i5];
       if (!x || x.root !== (root || "")) continue;
-      list.splice(i5, 1);
+      list2.splice(i5, 1);
       if (open.has(x.file)) continue;
-      return { file: x.file, rest: list };
+      return { file: x.file, rest: list2 };
     }
-    return { file: null, rest: list };
+    return { file: null, rest: list2 };
   }
   function pinnedFirst(keys4, pinned2) {
-    const list = Array.isArray(keys4) ? keys4 : [];
+    const list2 = Array.isArray(keys4) ? keys4 : [];
     const p = new Set(Array.isArray(pinned2) ? pinned2 : [...pinned2 || []]);
-    return [...list.filter((k) => p.has(k)), ...list.filter((k) => !p.has(k))];
+    return [...list2.filter((k) => p.has(k)), ...list2.filter((k) => !p.has(k))];
   }
   function closableOf(files, pinned2) {
     const p = new Set(Array.isArray(pinned2) ? pinned2 : [...pinned2 || []]);
@@ -21982,11 +22272,11 @@ ${BLOCK_END}
 
   // src/status-choices.js
   function statusChoices(all, current2) {
-    const list = Array.isArray(all) ? all.slice() : [];
+    const list2 = Array.isArray(all) ? all.slice() : [];
     const cur = String(current2 || "").trim();
-    if (!cur || cur === "Outline") return { values: list, selected: "Outline", orphan: "" };
-    if (list.includes(cur)) return { values: list, selected: cur, orphan: "" };
-    return { values: [...list, cur], selected: cur, orphan: cur };
+    if (!cur || cur === "Outline") return { values: list2, selected: "Outline", orphan: "" };
+    if (list2.includes(cur)) return { values: list2, selected: cur, orphan: "" };
+    return { values: [...list2, cur], selected: cur, orphan: cur };
   }
   function countStatusUse(rows, label) {
     const l = String(label || "");
@@ -23204,10 +23494,10 @@ ${BLOCK_END}
           return true;
         }
         _toFront(id) {
-          const list = this.floats;
-          const f = list.find((x) => x.panel.id === id || x.id === id || x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === id));
-          if (!f || list[list.length - 1] === f) return;
-          this.store.setFloatsQuiet([...list.filter((x) => x !== f), f]);
+          const list2 = this.floats;
+          const f = list2.find((x) => x.panel.id === id || x.id === id || x.panel.type === "tabs" && (x.panel.children || []).some((c) => c.id === id));
+          if (!f || list2[list2.length - 1] === f) return;
+          this.store.setFloatsQuiet([...list2.filter((x) => x !== f), f]);
         }
         // ---- แท็บ / กลุ่ม ----
         /** Merge panels into a single tab group, anchored at ids[0]. */
@@ -23513,9 +23803,9 @@ ${BLOCK_END}
     }
     ov.addEventListener("keydown", (e) => {
       if (e.key === "Tab") {
-        const list = dlgFocusables(box2);
-        if (list.length < 2) return;
-        const first = list[0], last2 = list[list.length - 1];
+        const list2 = dlgFocusables(box2);
+        if (list2.length < 2) return;
+        const first = list2[0], last2 = list2[list2.length - 1];
         if (!e.shiftKey && document.activeElement === last2) {
           e.preventDefault();
           first.focus();
@@ -23608,9 +23898,9 @@ ${BLOCK_END}
     const ctrls = () => [...bar.querySelectorAll("button, select")].filter((n2) => !n2.disabled && n2.offsetParent !== null && getComputedStyle(n2).visibility !== "hidden");
     let cur = null;
     const settle = () => {
-      const list = ctrls();
-      if (!list.length) return;
-      if (!cur || !list.includes(cur)) cur = list[0];
+      const list2 = ctrls();
+      if (!list2.length) return;
+      if (!cur || !list2.includes(cur)) cur = list2[0];
       for (const n2 of bar.querySelectorAll("button, select")) n2.tabIndex = n2 === cur ? 0 : -1;
     };
     bar.addEventListener("focusin", (e) => {
@@ -23624,12 +23914,12 @@ ${BLOCK_END}
       const a = document.activeElement;
       if (!a || !bar.contains(a) || a.tagName === "SELECT" || a.tagName === "INPUT") return;
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key) || e.ctrlKey || e.altKey || e.metaKey) return;
-      const list = ctrls();
-      const i5 = list.indexOf(a);
-      if (i5 < 0 || !list.length) return;
+      const list2 = ctrls();
+      const i5 = list2.indexOf(a);
+      if (i5 < 0 || !list2.length) return;
       e.preventDefault();
-      const j = e.key === "Home" ? 0 : e.key === "End" ? list.length - 1 : (i5 + (e.key === "ArrowRight" ? 1 : -1) + list.length) % list.length;
-      cur = list[j];
+      const j = e.key === "Home" ? 0 : e.key === "End" ? list2.length - 1 : (i5 + (e.key === "ArrowRight" ? 1 : -1) + list2.length) % list2.length;
+      cur = list2[j];
       settle();
       cur.focus();
     });
@@ -24065,8 +24355,8 @@ ${BLOCK_END}
       const head2 = document.createElement("div");
       head2.className = "k-dlg-title";
       head2.textContent = title2 || tf("ui.ui.hasFileCantSave", files.length);
-      const list = document.createElement("div");
-      list.className = "k-saveall-list";
+      const list2 = document.createElement("div");
+      list2.className = "k-saveall-list";
       const boxes = [];
       for (const f of files) {
         const row3 = document.createElement("label");
@@ -24086,7 +24376,7 @@ ${BLOCK_END}
         pt.title = f.file || "";
         txt.append(nm, pt);
         row3.append(cb, txt);
-        list.append(row3);
+        list2.append(row3);
         boxes.push(cb);
       }
       const btns = document.createElement("div");
@@ -24110,7 +24400,7 @@ ${BLOCK_END}
         c.onchange = sync;
       });
       sync();
-      box2.append(head2, list, btns);
+      box2.append(head2, list2, btns);
       ov.appendChild(box2);
       document.body.appendChild(ov);
       const done2 = (action) => {
@@ -24247,16 +24537,16 @@ ${BLOCK_END}
         // เรียกหลังทุกการพิมพ์: ดูข้อความก่อนเคอร์เซอร์ หาชื่อที่ขึ้นต้นตรงกัน
         // opts.minLen = จำนวนอักษรขั้นต่ำที่เริ่มเดา (บทหนังแบบ Final Draft = 1: พิมพ์ e → EXT.)
         // opts.ci = จับคู่โดยไม่สนตัวพิมพ์เล็กใหญ่ (หัวฉาก/ทรานซิชัน)
-        check(view2, list, opts = {}) {
-          return this._check(view2, list || this.names, opts);
+        check(view2, list2, opts = {}) {
+          return this._check(view2, list2 || this.names, opts);
         }
         _check(view2, NAMES2, opts = {}) {
           const minLen = opts.minLen || 2;
           const ci = !!opts.ci;
           const eq2 = ci ? (a, b) => a.toLowerCase() === b.toLowerCase() : (a, b) => a === b;
           const starts = ci ? (n2, t3) => n2.toLowerCase().startsWith(t3.toLowerCase()) : (n2, t3) => n2.startsWith(t3);
-          const { $from, empty: empty2 } = view2.state.selection;
-          if (!empty2 || !$from.parent.isTextblock) return this.hide();
+          const { $from, empty: empty3 } = view2.state.selection;
+          if (!empty3 || !$from.parent.isTextblock) return this.hide();
           const before = $from.parent.textBetween(
             Math.max(0, $from.parentOffset - 24),
             $from.parentOffset,
@@ -24702,14 +24992,14 @@ ${BLOCK_END}
   function scrollSnapshot(base4) {
     const snap2 = [];
     if (!base4) return snap2;
-    const add = (e) => {
+    const add2 = (e) => {
       const top = e.scrollTop, left = e.scrollLeft;
       if (!top && !left) return;
       const path = elPath(base4, e);
       if (path) snap2.push({ path, top, left });
     };
-    add(base4);
-    for (const e of base4.querySelectorAll("*")) add(e);
+    add2(base4);
+    for (const e of base4.querySelectorAll("*")) add2(e);
     return snap2;
   }
   function keepScroll2(root) {
@@ -25035,11 +25325,11 @@ ${BLOCK_END}
   async function scanLanguages(root) {
     try {
       if (typeof kapi !== "undefined" && kapi.langList) {
-        const list = await kapi.langList(root || "");
-        if (Array.isArray(list) && list.length) {
-          setCatalog(list);
-          i18n.available = list.map((l) => l.code);
-          return list;
+        const list2 = await kapi.langList(root || "");
+        if (Array.isArray(list2) && list2.length) {
+          setCatalog(list2);
+          i18n.available = list2.map((l) => l.code);
+          return list2;
         }
       }
     } catch {
@@ -25527,6 +25817,7 @@ ${BLOCK_END}
         "next-tab": "ui.shortcuts.nextTab",
         "prev-tab": "ui.shortcuts.prevTab",
         "reveal-active": "ui.shortcuts.revealActive",
+        "onset-toggle": "ui.shortcuts.onsetToggle",
         "line-numbers": "shortcuts.lineNumbers",
         // [alpha.162 · W4 ข้อ 5] คำสั่งที่มีคีย์ลัดแล้วแต่ไม่เคยมีชื่อ → ไม่โผล่ในหน้า "ปุ่มลัด"
         // ของหน้าตั้งค่าเลย (รายการนั้นกรองด้วย SHORTCUT_LABELS) = ตั้งใหม่เองไม่ได้ทั้งชุด
@@ -25709,6 +26000,7 @@ ${BLOCK_END}
             "read-book",
             "line-numbers",
             "reveal-active",
+            "onset-toggle",
             "split-view",
             "panels-hide-all",
             "panels-hide-right",
@@ -26156,6 +26448,8 @@ ${BLOCK_END}
         "Research",
         "Analysis",
         // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
+        "OnSet",
+        // [alpha.164] ฉบับเดิมของฉากมีปัญหา (สำเนา ไม่ใช่เนื้อเรื่อง)
         "Sessions",
         "Starters"
       ];
@@ -26192,15 +26486,15 @@ ${BLOCK_END}
   function getHiddenStatuses() {
     return state.meta && Array.isArray(state.meta.hiddenStatuses) ? state.meta.hiddenStatuses : [];
   }
-  function orderStatuses(list, order) {
-    if (!Array.isArray(order) || !order.length) return list.slice();
+  function orderStatuses(list2, order) {
+    if (!Array.isArray(order) || !order.length) return list2.slice();
     const rank = new Map(order.map((k, i5) => [k, i5]));
-    return list.slice().sort((a, b) => (rank.has(a) ? rank.get(a) : 1e6 + list.indexOf(a)) - (rank.has(b) ? rank.get(b) : 1e6 + list.indexOf(b)));
+    return list2.slice().sort((a, b) => (rank.has(a) ? rank.get(a) : 1e6 + list2.indexOf(a)) - (rank.has(b) ? rank.get(b) : 1e6 + list2.indexOf(b)));
   }
   function allStatuses() {
     const hidden = new Set(getHiddenStatuses());
-    const list = [...SCENE_STATUSES.filter((s) => !hidden.has(s)), ...getCustomStatuses()];
-    return orderStatuses(list, state.meta && state.meta.statusOrder);
+    const list2 = [...SCENE_STATUSES.filter((s) => !hidden.has(s)), ...getCustomStatuses()];
+    return orderStatuses(list2, state.meta && state.meta.statusOrder);
   }
   function announce() {
     try {
@@ -26315,7 +26609,7 @@ ${BLOCK_END}
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-status-mgr");
     box2.append(el("div", "k-dlg-title", t("ui.status.manageStatusScene")));
-    const list = el("div", "k-pick-list");
+    const list2 = el("div", "k-pick-list");
     const mkRow = (s, builtIn) => {
       const row3 = el("div", "k-menu-item k-status-row");
       const dot = el("span", "k-status-dot");
@@ -26369,11 +26663,11 @@ ${BLOCK_END}
       return row3;
     };
     const render = () => {
-      list.innerHTML = "";
-      for (const s of SCENE_STATUSES) list.append(mkRow(s, true));
+      list2.innerHTML = "";
+      for (const s of SCENE_STATUSES) list2.append(mkRow(s, true));
       const custom = getCustomStatuses();
-      if (!custom.length) list.append(el("div", "dim", t("ui.status.notHasStatusDefine")));
-      for (const s of custom) list.append(mkRow(s, false));
+      if (!custom.length) list2.append(el("div", "dim", t("ui.status.notHasStatusDefine")));
+      for (const s of custom) list2.append(mkRow(s, false));
     };
     render();
     const btns = el("div", "k-dlg-btns");
@@ -26398,7 +26692,7 @@ ${BLOCK_END}
     const closeB = el("button", "k-cancel", t("ui.common.close"));
     closeB.onclick = () => ov.remove();
     btns.append(outB, inB, closeB, addB);
-    box2.append(list, btns);
+    box2.append(list2, btns);
     ov.append(box2);
     document.body.append(ov);
     ov.onclick = (e) => {
@@ -26629,66 +26923,66 @@ ${BLOCK_END}
     });
     return out.map((a) => a.parent && !seen.has(a.parent) ? { ...a, parent: "" } : a);
   }
-  function sortAlbums(list) {
-    return [...list].sort((a, b) => {
+  function sortAlbums(list2) {
+    return [...list2].sort((a, b) => {
       if (a.id === ROOT_ALBUM) return -1;
       if (b.id === ROOT_ALBUM) return 1;
       if (a.order !== b.order) return a.order - b.order;
       return cmpText(String(a.name), String(b.name));
     });
   }
-  function childrenOf(list, id) {
+  function childrenOf(list2, id) {
     const pid = id === ROOT_ALBUM ? "" : String(id || "");
-    return sortAlbums(list.filter((a) => a.id !== ROOT_ALBUM && (a.parent || "") === pid));
+    return sortAlbums(list2.filter((a) => a.id !== ROOT_ALBUM && (a.parent || "") === pid));
   }
-  function albumTree(list) {
-    const build = (pid) => childrenOf(list, pid).map((a) => ({ ...a, children: build(a.id) }));
-    const root = list.find((a) => a.id === ROOT_ALBUM) || normalizeAlbums([])[0];
-    return [{ ...root, children: [] }, ...build("")];
+  function albumTree(list2) {
+    const build2 = (pid) => childrenOf(list2, pid).map((a) => ({ ...a, children: build2(a.id) }));
+    const root = list2.find((a) => a.id === ROOT_ALBUM) || normalizeAlbums([])[0];
+    return [{ ...root, children: [] }, ...build2("")];
   }
-  function descendantIds(list, id) {
+  function descendantIds(list2, id) {
     if (isRootAlbum(id)) return [];
     const pre = id + "/";
-    return list.filter((a) => a.id !== ROOT_ALBUM && a.id.startsWith(pre)).map((a) => a.id);
+    return list2.filter((a) => a.id !== ROOT_ALBUM && a.id.startsWith(pre)).map((a) => a.id);
   }
-  function albumBreadcrumb(list, id) {
+  function albumBreadcrumb(list2, id) {
     if (isRootAlbum(id)) return [{ id: ROOT_ALBUM, name: ROOT_ALBUM_NAME }];
     const parts = String(id).split("/");
     return parts.map((_2, i5) => {
       const pid = parts.slice(0, i5 + 1).join("/");
-      const a = list.find((x) => x.id === pid);
+      const a = list2.find((x) => x.id === pid);
       return { id: pid, name: a && a.name || parts[i5] };
     });
   }
-  function renameAlbumIn(list, id, newName) {
+  function renameAlbumIn(list2, id, newName) {
     const name5 = sanitizeAlbumName(newName);
-    if (!name5 || isRootAlbum(id)) return { albums: list, from: id, to: id, moves: [], error: t("ui.galleryAlbum.nameNotValid") };
-    const cur = list.find((a) => a.id === id);
-    if (!cur) return { albums: list, from: id, to: id, moves: [], error: t("ui.galleryAlbum.notFoundAlbum") };
+    if (!name5 || isRootAlbum(id)) return { albums: list2, from: id, to: id, moves: [], error: t("ui.galleryAlbum.nameNotValid") };
+    const cur = list2.find((a) => a.id === id);
+    if (!cur) return { albums: list2, from: id, to: id, moves: [], error: t("ui.galleryAlbum.notFoundAlbum") };
     const to = albumId(cur.parent, name5);
-    if (to !== id && list.some((a) => a.id === to)) {
-      return { albums: list, from: id, to, moves: [], error: t("ui.galleryAlbum.hasAlbumName") };
+    if (to !== id && list2.some((a) => a.id === to)) {
+      return { albums: list2, from: id, to, moves: [], error: t("ui.galleryAlbum.hasAlbumName") };
     }
-    return { ...retargetIds(list, id, to), from: id, to };
+    return { ...retargetIds(list2, id, to), from: id, to };
   }
-  function moveAlbumIn(list, id, newParent) {
+  function moveAlbumIn(list2, id, newParent) {
     const np = newParent === ROOT_ALBUM ? "" : String(newParent || "");
-    if (isRootAlbum(id)) return { albums: list, from: id, to: id, moves: [], error: t("ui.galleryAlbum.moveAlbumCant") };
-    if (np === id || descendantIds(list, id).includes(np)) {
-      return { albums: list, from: id, to: id, moves: [], error: t("ui.galleryAlbum.moveInAlbumItem") };
+    if (isRootAlbum(id)) return { albums: list2, from: id, to: id, moves: [], error: t("ui.galleryAlbum.moveAlbumCant") };
+    if (np === id || descendantIds(list2, id).includes(np)) {
+      return { albums: list2, from: id, to: id, moves: [], error: t("ui.galleryAlbum.moveInAlbumItem") };
     }
-    const cur = list.find((a) => a.id === id);
-    if (!cur) return { albums: list, from: id, to: id, moves: [], error: t("ui.galleryAlbum.notFoundAlbum") };
-    if ((cur.parent || "") === np) return { albums: list, from: id, to: id, moves: [] };
+    const cur = list2.find((a) => a.id === id);
+    if (!cur) return { albums: list2, from: id, to: id, moves: [], error: t("ui.galleryAlbum.notFoundAlbum") };
+    if ((cur.parent || "") === np) return { albums: list2, from: id, to: id, moves: [] };
     const to = albumId(np, cur.name);
-    if (list.some((a) => a.id === to)) {
-      return { albums: list, from: id, to, moves: [], error: t("ui.galleryAlbum.toHasAlbumName") };
+    if (list2.some((a) => a.id === to)) {
+      return { albums: list2, from: id, to, moves: [], error: t("ui.galleryAlbum.toHasAlbumName") };
     }
-    return { ...retargetIds(list, id, to), from: id, to };
+    return { ...retargetIds(list2, id, to), from: id, to };
   }
-  function retargetIds(list, from2, to) {
+  function retargetIds(list2, from2, to) {
     const moves = [{ from: from2, to }];
-    const albums = list.map((a) => {
+    const albums = list2.map((a) => {
       if (a.id === from2) {
         return { ...a, id: to, name: albumBaseName(to), parent: parentOf(to) };
       }
@@ -26701,21 +26995,21 @@ ${BLOCK_END}
     });
     return { albums, moves };
   }
-  function removeAlbumIn(list, id) {
-    if (isRootAlbum(id)) return { albums: list, removed: [], error: t("ui.galleryAlbum.delAlbumCant") };
-    const removed = [id, ...descendantIds(list, id)];
-    return { albums: list.filter((a) => !removed.includes(a.id)), removed };
+  function removeAlbumIn(list2, id) {
+    if (isRootAlbum(id)) return { albums: list2, removed: [], error: t("ui.galleryAlbum.delAlbumCant") };
+    const removed = [id, ...descendantIds(list2, id)];
+    return { albums: list2.filter((a) => !removed.includes(a.id)), removed };
   }
-  function reorderAlbums(list, id, toIndex) {
-    const cur = list.find((a) => a.id === id);
-    if (!cur || isRootAlbum(id)) return list;
-    const sibs = childrenOf(list, cur.parent || "");
+  function reorderAlbums(list2, id, toIndex) {
+    const cur = list2.find((a) => a.id === id);
+    if (!cur || isRootAlbum(id)) return list2;
+    const sibs = childrenOf(list2, cur.parent || "");
     const from2 = sibs.findIndex((a) => a.id === id);
-    if (from2 < 0) return list;
+    if (from2 < 0) return list2;
     const arr = [...sibs];
     arr.splice(toIndex < 0 ? 0 : Math.min(toIndex, arr.length - 1), 0, arr.splice(from2, 1)[0]);
     const order = new Map(arr.map((a, i5) => [a.id, i5]));
-    return list.map((a) => order.has(a.id) ? { ...a, order: order.get(a.id) } : a);
+    return list2.map((a) => order.has(a.id) ? { ...a, order: order.get(a.id) } : a);
   }
   function newAlbumDoc(name5) {
     return { version: 1, name: String(name5 || ""), images: {}, moodBoard: [] };
@@ -26953,9 +27247,9 @@ ${BLOCK_END}
     return albumEntries(id, synced);
   }
   async function allImages(api, root, albums) {
-    const list = albums || await listAlbums(api, root);
+    const list2 = albums || await listAlbums(api, root);
     const out = [];
-    for (const a of list) out.push(...await getAlbumImages(api, root, a.id));
+    for (const a of list2) out.push(...await getAlbumImages(api, root, a.id));
     return out;
   }
   async function syncFlatIndex(api, root, entries) {
@@ -27135,8 +27429,8 @@ ${BLOCK_END}
   }
   async function findImagePath(api, root, fileName, albums) {
     const base4 = String(fileName || "").split("/").pop();
-    const list = albums || await listAlbums(api, root);
-    for (const a of list) {
+    const list2 = albums || await listAlbums(api, root);
+    for (const a of list2) {
       const files = await listAlbumFiles(api, root, a.id);
       if (files.includes(base4)) {
         const rel = albumRel(a.id);
@@ -27519,8 +27813,8 @@ ${BLOCK_END}
     if (!s.trim()) return [];
     return s.split(/\n\s*\n/).map((x) => x.trim());
   }
-  function joinSnaps(list) {
-    return (list || []).join(SNAP_SEP);
+  function joinSnaps(list2) {
+    return (list2 || []).join(SNAP_SEP);
   }
   function trigrams(s) {
     const t3 = normText(s);
@@ -27895,6 +28189,7 @@ ${BLOCK_END}
     chapterStats: () => chapterStats,
     deleteChapter: () => deleteChapter,
     deleteScene: () => deleteScene,
+    dragLockOf: () => dragLockOf,
     duplicateScene: () => duplicateScene,
     freeSceneFileName: () => freeSceneFileName,
     listChapters: () => listChapters,
@@ -28207,9 +28502,9 @@ ${BLOCK_END}
     let sc = null, file = "";
     await mutateJson(kapi, sf, async (d) => {
       d.chapters = d.chapters || {};
-      const list = rowsOf(d, ch.guid);
-      const order = nextOrder(list);
-      const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list.map((s) => s.fileName)));
+      const list2 = rowsOf(d, ch.guid);
+      const order = nextOrder(list2);
+      const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list2.map((s) => s.fileName)));
       sc = {
         id: guid(),
         title: title2,
@@ -28224,7 +28519,7 @@ ${BLOCK_END}
       file = await kapi.join(dPath, "Chapters", ch.folderName, fileName);
       const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
       await writeMdKeepingComments(kapi, file, (0, import_md6.dumpMdFile)(meta2, opts.body || ""), opts.commentsFrom || null);
-      d.chapters[ch.guid] = [...list, sc];
+      d.chapters[ch.guid] = [...list2, sc];
     });
     logAction("scene", t("ui.scene.addScene") + title2, { file });
     await buildTree2();
@@ -28269,11 +28564,11 @@ ${BLOCK_END}
     }
     let made = null;
     await mutateJson(kapi, sf, async (d) => {
-      const list = rowsOf(d, ch.guid);
-      const row3 = list.find((x) => x.id === sc.id);
+      const list2 = rowsOf(d, ch.guid);
+      const row3 = list2.find((x) => x.id === sc.id);
       if (!row3) return false;
-      const order = nextOrder(list);
-      const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list.map((s) => s.fileName)));
+      const order = nextOrder(list2);
+      const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list2.map((s) => s.fileName)));
       const newTitle = row3.title + t("ui.common.msg");
       const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
       let meta2 = { title: newTitle, type: "scene", format: "prose", pov: "", tags: [] }, body = "";
@@ -28291,7 +28586,7 @@ ${BLOCK_END}
         (0, import_md6.dumpMdFile)(meta2, body),
         srcFile
       );
-      d.chapters[ch.guid] = [...list, nrow];
+      d.chapters[ch.guid] = [...list2, nrow];
       made = { srcName: row3.fileName, fileName, newTitle };
     });
     if (!made) return false;
@@ -28303,13 +28598,13 @@ ${BLOCK_END}
   async function moveSceneOrder(dPath, ch, sc, dir2) {
     const sf = await kapi.join(dPath, "scenes.json");
     const res = await mutateJson(kapi, sf, (d) => {
-      const list = rowsOf(d, ch.guid).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-      const i5 = list.findIndex((x) => x.id === sc.id);
+      const list2 = rowsOf(d, ch.guid).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      const i5 = list2.findIndex((x) => x.id === sc.id);
       const j = i5 + dir2;
-      if (i5 < 0 || j < 0 || j >= list.length) return false;
-      const oa = list[i5].order || 0, ob = list[j].order || 0;
-      list[i5].order = ob;
-      list[j].order = oa;
+      if (i5 < 0 || j < 0 || j >= list2.length) return false;
+      const oa = list2[i5].order || 0, ob = list2[j].order || 0;
+      list2[i5].order = ob;
+      list2[j].order = oa;
     });
     if (res.changed) await buildTree2();
   }
@@ -28359,20 +28654,51 @@ ${BLOCK_END}
     }
     setStatus(t("ui.scene.move") + moved.row.title + t("ui.scene.chapter2") + dstCh.title + t("ui.common.done2"));
   }
+  async function dragLockOf(dPath, { chGuids = [], sceneId = "", srcGuid = "" } = {}) {
+    const secPath = String(dPath || "").replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, "");
+    try {
+      if (secPath && secPath !== dPath && isLk((await kapi.readJson(await kapi.join(secPath, "section.json"))).locked)) return "book";
+    } catch {
+    }
+    try {
+      const d = await kapi.readJson(await kapi.join(dPath, "draft.json"));
+      if ((d.chapters || []).some((c) => chGuids.includes(c.guid) && isLk(c.locked))) return "chapter";
+    } catch {
+    }
+    if (sceneId) {
+      try {
+        const sd = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
+        const row3 = rowsOf(sd, srcGuid).find((x) => x.id === sceneId);
+        if (row3 && isLk(row3.locked)) return "scene";
+      } catch {
+      }
+    }
+    return "";
+  }
+  function sayLocked(src2) {
+    setStatus(gi("lock") + " " + t(LOCK_MSG[src2] || LOCK_MSG.scene));
+  }
   async function moveChapterBefore(dPath, srcGuid, dstGuid) {
     if (srcGuid === dstGuid) return;
+    {
+      const lk = await dragLockOf(dPath, { chGuids: [srcGuid] });
+      if (lk) {
+        sayLocked(lk);
+        return false;
+      }
+    }
     const df = await kapi.join(dPath, "draft.json");
     const res = await mutateJson(kapi, df, (d) => {
-      const list = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-      const si = list.findIndex((c) => c.guid === srcGuid);
+      const list2 = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      const si = list2.findIndex((c) => c.guid === srcGuid);
       if (si < 0) return false;
-      const [moved] = list.splice(si, 1);
-      const di = dstGuid ? list.findIndex((c) => c.guid === dstGuid) : list.length;
-      list.splice(di < 0 ? list.length : di, 0, moved);
-      list.forEach((c, i5) => {
+      const [moved] = list2.splice(si, 1);
+      const di = dstGuid ? list2.findIndex((c) => c.guid === dstGuid) : list2.length;
+      list2.splice(di < 0 ? list2.length : di, 0, moved);
+      list2.forEach((c, i5) => {
         c.order = i5 + 1;
       });
-      d.chapters = list;
+      d.chapters = list2;
     });
     if (!res.changed) return;
     await buildTree2();
@@ -28380,6 +28706,13 @@ ${BLOCK_END}
   }
   async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
     const sf = await kapi.join(dPath, "scenes.json");
+    {
+      const lk = await dragLockOf(dPath, { chGuids: [srcCh.guid, dstCh.guid], sceneId: srcId, srcGuid: srcCh.guid });
+      if (lk) {
+        sayLocked(lk);
+        return false;
+      }
+    }
     if (srcCh.guid !== dstCh.guid) {
       const row0 = rowsOf(await kapi.readJson(sf), srcCh.guid).find((x) => x.id === srcId);
       if (!row0) return;
@@ -28387,16 +28720,16 @@ ${BLOCK_END}
       srcCh = dstCh;
     }
     const res = await mutateJson(kapi, sf, (d) => {
-      const list = rowsOf(d, dstCh.guid).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-      const si = list.findIndex((x) => x.id === srcId);
+      const list2 = rowsOf(d, dstCh.guid).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      const si = list2.findIndex((x) => x.id === srcId);
       if (si < 0) return false;
-      const [moved] = list.splice(si, 1);
-      const di = dstId ? list.findIndex((x) => x.id === dstId) : list.length;
-      list.splice(di < 0 ? list.length : di, 0, moved);
-      list.forEach((x, i5) => {
+      const [moved] = list2.splice(si, 1);
+      const di = dstId ? list2.findIndex((x) => x.id === dstId) : list2.length;
+      list2.splice(di < 0 ? list2.length : di, 0, moved);
+      list2.forEach((x, i5) => {
         x.order = i5 + 1;
       });
-      d.chapters[dstCh.guid] = list;
+      d.chapters[dstCh.guid] = list2;
     });
     await buildTree2();
     if (res.changed) setStatus(t("ui.scene.reorderSceneNewDone"));
@@ -28457,7 +28790,7 @@ ${BLOCK_END}
       return false;
     }
   }
-  var import_md6, rowsOf, nextOrder;
+  var import_md6, rowsOf, nextOrder, isLk, LOCK_MSG;
   var init_scene_ops = __esm({
     "src/scene-ops.js"() {
       init_i18n();
@@ -28478,7 +28811,9 @@ ${BLOCK_END}
       init_scene_file_name();
       init_scene_file_name();
       rowsOf = (d, guid0) => (d && d.chapters || {})[guid0] || [];
-      nextOrder = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
+      nextOrder = (list2) => Math.max(0, ...(list2 || []).map((x) => x.order || 0)) + 1;
+      isLk = (v2) => v2 === true || v2 === "true";
+      LOCK_MSG = { book: "ui.treeAct.lockedBook", chapter: "ui.treeAct.lockedChapter", scene: "ui.treeAct.lockedItem" };
     }
   });
 
@@ -28843,8 +29178,8 @@ ${BLOCK_END}
     const ins = lead + token + tail;
     return { text: before + ins + after, caret: (before + lead + token).length };
   }
-  function normalizePrompts(list) {
-    const rows = Array.isArray(list) ? list : Object.entries(list && typeof list === "object" ? list : {}).map(([k, v2]) => ({ k, v: v2 }));
+  function normalizePrompts(list2) {
+    const rows = Array.isArray(list2) ? list2 : Object.entries(list2 && typeof list2 === "object" ? list2 : {}).map(([k, v2]) => ({ k, v: v2 }));
     const out = [];
     for (const r of rows) {
       if (!r) continue;
@@ -28855,17 +29190,17 @@ ${BLOCK_END}
     }
     return out;
   }
-  function needsPromptMigration(list) {
-    if (list == null) return false;
-    if (!Array.isArray(list)) return true;
-    return list.some((r) => !r || typeof r !== "object" || typeof r.k !== "string" || typeof r.v !== "string");
+  function needsPromptMigration(list2) {
+    if (list2 == null) return false;
+    if (!Array.isArray(list2)) return true;
+    return list2.some((r) => !r || typeof r !== "object" || typeof r.k !== "string" || typeof r.v !== "string");
   }
-  function nextPromptKey(list) {
-    const n2 = normalizePrompts(list).length;
+  function nextPromptKey(list2) {
+    const n2 = normalizePrompts(list2).length;
     return "Prompt " + (n2 < 26 ? String.fromCharCode(65 + n2) : String(n2 + 1));
   }
-  function promptsText(list, cast = [], opts = {}) {
-    return normalizePrompts(list).filter((r) => r.v.trim()).map((r) => (r.k ? r.k + ": " : "") + expandMentions(r.v.trim(), cast, opts)).join("\n");
+  function promptsText(list2, cast = [], opts = {}) {
+    return normalizePrompts(list2).filter((r) => r.v.trim()).map((r) => (r.k ? r.k + ": " : "") + expandMentions(r.v.trim(), cast, opts)).join("\n");
   }
   var MENTION_RE, MENTION_RE_V1, MENTION_ANY, MENTION_USER, RESERVED_MENTIONS;
   var init_entity_mention = __esm({
@@ -28891,7 +29226,7 @@ ${BLOCK_END}
     if (!entity) return [];
     const seen = /* @__PURE__ */ new Set();
     const out = [];
-    const add = (raw, via) => {
+    const add2 = (raw, via) => {
       const term2 = String(raw || "").trim();
       if (term2.length < MIN_TERM) return;
       const k = norm(term2);
@@ -28899,8 +29234,8 @@ ${BLOCK_END}
       seen.add(k);
       out.push({ term: term2, via });
     };
-    add(entity.name, "name");
-    for (const a of entity.aliases || []) add(a, "alias");
+    add2(entity.name, "name");
+    for (const a of entity.aliases || []) add2(a, "alias");
     return out.sort((a, b) => b.term.length - a.term.length);
   }
   function extractLinks(text, entities) {
@@ -29013,11 +29348,11 @@ ${BLOCK_END}
   function fromBacklinks(obj) {
     const idx4 = emptyIndex();
     for (const eid of Object.keys(obj || {})) {
-      const list = [...new Set(obj[eid] || [])];
-      if (!list.length) continue;
-      idx4.backlinks[eid] = list;
+      const list2 = [...new Set(obj[eid] || [])];
+      if (!list2.length) continue;
+      idx4.backlinks[eid] = list2;
       idx4.hits[eid] = {};
-      for (const sid of list) {
+      for (const sid of list2) {
         idx4.hits[eid][sid] = { count: 1, via: "stored" };
         (idx4.forward[sid] = idx4.forward[sid] || []).push(eid);
       }
@@ -29250,7 +29585,7 @@ ${BLOCK_END}
       host2.append(el("div", "dim", t("ui.worldAutoLink.notHasSceneMention")));
       return;
     }
-    const list = el("div", "bl-list");
+    const list2 = el("div", "bl-list");
     for (const link of links) {
       const row3 = el("div", "bl-row");
       row3.append(el("span", "bl-count", (link.count || 1) + (gi("times") + " ")));
@@ -29263,9 +29598,9 @@ ${BLOCK_END}
       };
       row3.append(name5);
       if (link.via) row3.append(el("span", "bl-via", " (" + link.via + ")"));
-      list.append(row3);
+      list2.append(row3);
     }
-    host2.append(list);
+    host2.append(list2);
   }
   async function backlinkSummary() {
     if (!state.root) return [];
@@ -29306,16 +29641,16 @@ ${BLOCK_END}
     const lab = el("label", "bl-only");
     lab.append(onlyOrphan, document.createTextNode(" " + t("ui.worldAutoLink.onlyOrphan")));
     host2.append(lab);
-    const list = el("div", "bl-panel-list");
+    const list2 = el("div", "bl-panel-list");
     const status = el("div", "dim bl-panel-status");
-    host2.append(list, status);
+    host2.append(list2, status);
     let rows = [];
     const draw3 = () => {
-      list.replaceChildren();
+      list2.replaceChildren();
       const q = filt.value.trim().toLowerCase();
       const show = rows.filter((r) => (!q || r.name.toLowerCase().includes(q)) && (!onlyOrphan.checked || r.count === 0));
       if (!show.length) {
-        list.append(el("div", "dim", t("ui.worldAutoLink.noRows")));
+        list2.append(el("div", "dim", t("ui.worldAutoLink.noRows")));
         return;
       }
       for (const r of show) {
@@ -29337,7 +29672,7 @@ ${BLOCK_END}
           box2.append(row3);
         }
         if (r.scenes.length > 8) box2.append(el("div", "dim bl-more", "\u2026"));
-        list.append(box2);
+        list2.append(box2);
       }
       status.textContent = tf(
         "ui.worldAutoLink.summaryN",
@@ -29346,7 +29681,7 @@ ${BLOCK_END}
       );
     };
     const load = async () => {
-      list.replaceChildren(el("div", "dim", t("ui.worldAutoLink.busyLoadIndexLink")));
+      list2.replaceChildren(el("div", "dim", t("ui.worldAutoLink.busyLoadIndexLink")));
       rows = await backlinkSummary();
       draw3();
     };
@@ -29357,7 +29692,7 @@ ${BLOCK_END}
       await load();
     };
     await load();
-    return { list, filt, onlyOrphan, reload: load, rows: () => rows };
+    return { list: list2, filt, onlyOrphan, reload: load, rows: () => rows };
   }
   function resetAutoLink() {
     autoLink = null;
@@ -29727,9 +30062,9 @@ ${BLOCK_END}
             };
             paintAvatar();
             const setAvatar = (name5) => {
-              const list = addImage(this.e.images, name5);
-              const i5 = list.findIndex((x) => x.file === imageFile(name5));
-              this.e.images = i5 > 0 ? makePrimary(list, i5) : list;
+              const list2 = addImage(this.e.images, name5);
+              const i5 = list2.findIndex((x) => x.file === imageFile(name5));
+              this.e.images = i5 > 0 ? makePrimary(list2, i5) : list2;
               this.markDirty();
               this.render();
             };
@@ -29925,10 +30260,10 @@ ${BLOCK_END}
               this.markDirty();
             }
             if (!prompts.length) {
-              const empty2 = document.createElement("div");
-              empty2.className = "wiki-field-hint";
-              empty2.textContent = t("ui.wiki.promptsHint");
-              wrap2.appendChild(empty2);
+              const empty3 = document.createElement("div");
+              empty3.className = "wiki-field-hint";
+              empty3.textContent = t("ui.wiki.promptsHint");
+              wrap2.appendChild(empty3);
             }
             prompts.forEach((pr, i5) => {
               const box2 = document.createElement("div");
@@ -30671,12 +31006,12 @@ ${BLOCK_END}
     return (items || []).filter((it) => it.hash && it !== target && it.path !== (target && target.path)).map((it) => ({ ...it, score: similarity2(h, it.hash) })).filter((it) => it.score >= min).sort((a, b) => b.score - a.score).slice(0, limit);
   }
   function findDuplicates(items, { min = 0.94 } = {}) {
-    const list = (items || []).filter((i5) => i5.hash);
+    const list2 = (items || []).filter((i5) => i5.hash);
     const out = [];
-    for (let i5 = 0; i5 < list.length; i5++) {
-      for (let j = i5 + 1; j < list.length; j++) {
-        const s = similarity2(list[i5].hash, list[j].hash);
-        if (s >= min) out.push({ a: list[i5], b: list[j], score: s });
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      for (let j = i5 + 1; j < list2.length; j++) {
+        const s = similarity2(list2[i5].hash, list2[j].hash);
+        if (s >= min) out.push({ a: list2[i5], b: list2[j], score: s });
       }
     }
     return out.sort((x, y) => y.score - x.score);
@@ -30790,13 +31125,13 @@ ${BLOCK_END}
       rot: numOr(opts.rot, 0)
     };
   }
-  function normalizeBoard(list) {
-    return (Array.isArray(list) ? list : []).filter((it) => it && it.file).map((it, i5) => newBoardItem(it.file, { ...it, z: numOr(it.z, i5) }));
+  function normalizeBoard(list2) {
+    return (Array.isArray(list2) ? list2 : []).filter((it) => it && it.file).map((it, i5) => newBoardItem(it.file, { ...it, z: numOr(it.z, i5) }));
   }
   function addToBoard(board2, file, opts = {}) {
-    const list = normalizeBoard(board2);
-    const z = list.reduce((m, i5) => Math.max(m, i5.z), -1) + 1;
-    return [...list, newBoardItem(file, { ...opts, z })];
+    const list2 = normalizeBoard(board2);
+    const z = list2.reduce((m, i5) => Math.max(m, i5.z), -1) + 1;
+    return [...list2, newBoardItem(file, { ...opts, z })];
   }
   function addManyToBoard(board2, files, { x = 0, y = 0, size = DEFAULT_SIZE, perRow = 4, gap = 16 } = {}) {
     let out = normalizeBoard(board2);
@@ -30824,33 +31159,33 @@ ${BLOCK_END}
     });
   }
   function moveToFront(board2, id) {
-    const list = normalizeBoard(board2);
-    const top = list.reduce((m, i5) => Math.max(m, i5.z), 0);
-    return list.map((it) => it.id === id ? { ...it, z: top + 1 } : it);
+    const list2 = normalizeBoard(board2);
+    const top = list2.reduce((m, i5) => Math.max(m, i5.z), 0);
+    return list2.map((it) => it.id === id ? { ...it, z: top + 1 } : it);
   }
   function moveToBack(board2, id) {
-    const list = normalizeBoard(board2);
-    const bottom = list.reduce((m, i5) => Math.min(m, i5.z), 0);
-    return list.map((it) => it.id === id ? { ...it, z: bottom - 1 } : it);
+    const list2 = normalizeBoard(board2);
+    const bottom = list2.reduce((m, i5) => Math.min(m, i5.z), 0);
+    return list2.map((it) => it.id === id ? { ...it, z: bottom - 1 } : it);
   }
   function boardOrder(board2) {
     return normalizeBoard(board2).sort((a, b) => a.z - b.z);
   }
   function boardItemAt(board2, x, y) {
-    const list = boardOrder(board2);
-    for (let i5 = list.length - 1; i5 >= 0; i5--) {
-      const it = list[i5];
+    const list2 = boardOrder(board2);
+    for (let i5 = list2.length - 1; i5 >= 0; i5--) {
+      const it = list2[i5];
       if (x >= it.x && x <= it.x + it.w && y >= it.y && y <= it.y + it.h) return it;
     }
     return null;
   }
   function boardBounds(board2) {
-    const list = normalizeBoard(board2);
-    if (!list.length) return { x: 0, y: 0, w: 0, h: 0 };
-    const x1 = Math.min(...list.map((i5) => i5.x));
-    const y1 = Math.min(...list.map((i5) => i5.y));
-    const x2 = Math.max(...list.map((i5) => i5.x + i5.w));
-    const y2 = Math.max(...list.map((i5) => i5.y + i5.h));
+    const list2 = normalizeBoard(board2);
+    if (!list2.length) return { x: 0, y: 0, w: 0, h: 0 };
+    const x1 = Math.min(...list2.map((i5) => i5.x));
+    const y1 = Math.min(...list2.map((i5) => i5.y));
+    const x2 = Math.max(...list2.map((i5) => i5.x + i5.w));
+    const y2 = Math.max(...list2.map((i5) => i5.y + i5.h));
     return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
   }
   function fitScale(bounds, viewW, viewH, pad4 = 40) {
@@ -30913,9 +31248,9 @@ ${BLOCK_END}
     }));
   }
   function boardStats(board2) {
-    const list = normalizeBoard(board2);
-    const b = boardBounds(list);
-    return { count: list.length, files: new Set(list.map((i5) => i5.file)).size, width: b.w, height: b.h };
+    const list2 = normalizeBoard(board2);
+    const b = boardBounds(list2);
+    return { count: list2.length, files: new Set(list2.map((i5) => i5.file)).size, width: b.w, height: b.h };
   }
   var MIN_SIZE, MAX_SIZE, DEFAULT_SIZE, ZOOM_MIN, ZOOM_MAX, GRID, seq2, numOr, clamp2, clampZoom;
   var init_moodboard = __esm({
@@ -32425,7 +32760,7 @@ ${BLOCK_END}
           function M2(e2, t4, r3, n3, i6) {
             this.good_length = e2, this.max_lazy = t4, this.nice_length = r3, this.max_chain = n3, this.func = i6;
           }
-          function H2() {
+          function H3() {
             this.strm = null, this.status = 0, this.pending_buf = null, this.pending_buf_size = 0, this.pending_out = 0, this.pending = 0, this.wrap = 0, this.gzhead = null, this.gzindex = 0, this.method = v2, this.last_flush = -1, this.w_size = 0, this.w_bits = 0, this.w_mask = 0, this.window = null, this.window_size = 0, this.prev = null, this.head = null, this.ins_h = 0, this.hash_size = 0, this.hash_bits = 0, this.hash_mask = 0, this.hash_shift = 0, this.block_start = 0, this.match_length = 0, this.prev_match = 0, this.match_available = 0, this.strstart = 0, this.match_start = 0, this.lookahead = 0, this.prev_length = 0, this.max_chain_length = 0, this.max_lazy_match = 0, this.level = 0, this.strategy = 0, this.good_match = 0, this.nice_match = 0, this.dyn_ltree = new c.Buf16(2 * w), this.dyn_dtree = new c.Buf16(2 * (2 * a + 1)), this.bl_tree = new c.Buf16(2 * (2 * o + 1)), D(this.dyn_ltree), D(this.dyn_dtree), D(this.bl_tree), this.l_desc = null, this.d_desc = null, this.bl_desc = null, this.bl_count = new c.Buf16(k + 1), this.heap = new c.Buf16(2 * s + 1), D(this.heap), this.heap_len = 0, this.heap_max = 0, this.depth = new c.Buf16(2 * s + 1), D(this.depth), this.l_buf = 0, this.lit_bufsize = 0, this.last_lit = 0, this.d_buf = 0, this.opt_len = 0, this.static_len = 0, this.matches = 0, this.insert = 0, this.bi_buf = 0, this.bi_valid = 0;
           }
           function G(e2) {
@@ -32443,7 +32778,7 @@ ${BLOCK_END}
             var a2 = 1;
             if (t4 === g && (t4 = 6), n3 < 0 ? (a2 = 0, n3 = -n3) : 15 < n3 && (a2 = 2, n3 -= 16), i6 < 1 || y < i6 || r3 !== v2 || n3 < 8 || 15 < n3 || t4 < 0 || 9 < t4 || s2 < 0 || b < s2) return R3(e2, _2);
             8 === n3 && (n3 = 9);
-            var o2 = new H2();
+            var o2 = new H3();
             return (e2.state = o2).strm = e2, o2.wrap = a2, o2.gzhead = null, o2.w_bits = n3, o2.w_size = 1 << o2.w_bits, o2.w_mask = o2.w_size - 1, o2.hash_bits = i6 + 7, o2.hash_size = 1 << o2.hash_bits, o2.hash_mask = o2.hash_size - 1, o2.hash_shift = ~~((o2.hash_bits + x - 1) / x), o2.window = new c.Buf8(2 * o2.w_size), o2.head = new c.Buf16(o2.hash_size), o2.prev = new c.Buf16(o2.w_size), o2.lit_bufsize = 1 << i6 + 6, o2.pending_buf_size = 4 * o2.lit_bufsize, o2.pending_buf = new c.Buf8(o2.pending_buf_size), o2.d_buf = 1 * o2.lit_bufsize, o2.l_buf = 3 * o2.lit_bufsize, o2.level = t4, o2.strategy = s2, o2.method = r3, K(e2);
           }
           h = [new M2(0, 0, 0, 0, function(e2, t4) {
@@ -33123,12 +33458,12 @@ ${BLOCK_END}
           function M2(e2) {
             8 < e2.bi_valid ? U(e2, e2.bi_buf) : 0 < e2.bi_valid && (e2.pending_buf[e2.pending++] = e2.bi_buf), e2.bi_buf = 0, e2.bi_valid = 0;
           }
-          function H2(e2, t4, r3, n3) {
+          function H3(e2, t4, r3, n3) {
             var i6 = 2 * t4, s2 = 2 * r3;
             return e2[i6] < e2[s2] || e2[i6] === e2[s2] && n3[t4] <= n3[r3];
           }
           function G(e2, t4, r3) {
-            for (var n3 = e2.heap[r3], i6 = r3 << 1; i6 <= e2.heap_len && (i6 < e2.heap_len && H2(t4, e2.heap[i6 + 1], e2.heap[i6], e2.depth) && i6++, !H2(t4, n3, e2.heap[i6], e2.depth)); ) e2.heap[r3] = e2.heap[i6], r3 = i6, i6 <<= 1;
+            for (var n3 = e2.heap[r3], i6 = r3 << 1; i6 <= e2.heap_len && (i6 < e2.heap_len && H3(t4, e2.heap[i6 + 1], e2.heap[i6], e2.depth) && i6++, !H3(t4, n3, e2.heap[i6], e2.depth)); ) e2.heap[r3] = e2.heap[i6], r3 = i6, i6 <<= 1;
             e2.heap[r3] = n3;
           }
           function K(e2, t4, r3) {
@@ -33319,27 +33654,27 @@ ${BLOCK_END}
     return lines.join("\n");
   }
   async function exportImages(root, items, { name: name5 = t("ui.galleryExport.libraryImage"), usage = null } = {}) {
-    const list = (items || []).filter((i5) => i5 && i5.path);
-    if (!list.length) {
+    const list2 = (items || []).filter((i5) => i5 && i5.path);
+    if (!list2.length) {
       setStatus(t("ui.galleryExport.notHasImageExport"));
       return false;
     }
-    setBusy(tf("ui.galleryExport.busyCollectImageItem", list.length));
+    setBusy(tf("ui.galleryExport.busyCollectImageItem", list2.length));
     try {
       const zip = new import_jszip.default();
       let n2 = 0;
-      for (const it of list) {
+      for (const it of list2) {
         const abs = await kapi.join(root, IMAGES_DIR, ...it.path.split("/"));
         try {
           const bytes2 = await kapi.readBytes(abs);
           zip.file(it.path, new Uint8Array(bytes2));
           n2++;
-          if (n2 % 10 === 0) setBusy(tf("ui.galleryExport.busyCollectImage", n2, list.length));
+          if (n2 % 10 === 0) setBusy(tf("ui.galleryExport.busyCollectImage", n2, list2.length));
         } catch (e) {
           log("warn", t("ui.galleryExport.galleryExportSkipFile") + abs, e);
         }
       }
-      zip.file(t("ui.galleryExport.listImageMd"), manifest(list, usage, name5));
+      zip.file(t("ui.galleryExport.listImageMd"), manifest(list2, usage, name5));
       clearBusy();
       const dest = await kapi.saveAsDialog(safe(name5) + ".zip");
       if (!dest) return false;
@@ -33365,15 +33700,15 @@ ${BLOCK_END}
     const b = boardBounds(items);
     const scale2 = Math.min(1, MAX_EDGE / Math.max(b.w + pad4 * 2, b.h + pad4 * 2));
     const W = Math.max(1, Math.round((b.w + pad4 * 2) * scale2));
-    const H2 = Math.max(1, Math.round((b.h + pad4 * 2) * scale2));
+    const H3 = Math.max(1, Math.round((b.h + pad4 * 2) * scale2));
     setBusy(t("ui.galleryExport.busyDrawBoardMood"));
     try {
       const canvas = document.createElement("canvas");
       canvas.width = W;
-      canvas.height = H2;
+      canvas.height = H3;
       const g = canvas.getContext("2d");
       g.fillStyle = bg;
-      g.fillRect(0, 0, W, H2);
+      g.fillRect(0, 0, W, H3);
       const rel = albumRel(albumId2);
       for (const it of items) {
         const p = String(it.file).includes("/") ? it.file : rel ? rel + "/" + it.file : it.file;
@@ -33401,7 +33736,7 @@ ${BLOCK_END}
       const bytes = new Array(bin.length);
       for (let i5 = 0; i5 < bin.length; i5++) bytes[i5] = bin.charCodeAt(i5);
       await kapi.writeBytes(dest, bytes);
-      setStatus(tf("ui.galleryExport.exportBoardMoodDone", W, H2) + dest);
+      setStatus(tf("ui.galleryExport.exportBoardMoodDone", W, H3) + dest);
       return true;
     } catch (e) {
       log("error", "moodboard export failed", e);
@@ -33525,12 +33860,12 @@ ${BLOCK_END}
         }
         async render() {
           const gen = ++this._gen;
-          const list = await this.albums();
+          const list2 = await this.albums();
           if (gen !== this._gen) return;
           this.host.innerHTML = "";
           const wrap2 = el("div", "gal2 mb2");
           this.host.append(wrap2);
-          wrap2.append(this.buildBar(list));
+          wrap2.append(this.buildBar(list2));
           const board2 = el("div", "gal2-board");
           const canvas = el("div", "gal2-canvas");
           board2.append(canvas);
@@ -33540,11 +33875,11 @@ ${BLOCK_END}
           this.bindBoard(board2);
           await this.drawBoard();
         }
-        buildBar(list) {
+        buildBar(list2) {
           const bar = el("div", "gal2-bar gal2-boardbar");
           const sel = el("select", "wiki-input k-dlg-select gal2-board-sel");
           sel.title = t("ui.galleryMoodboard.boardAlbum");
-          for (const a of list) {
+          for (const a of list2) {
             const o = el("option", null, a.id === ROOT_ALBUM ? ROOT_ALBUM_NAME : a.id);
             o.value = a.id;
             if (a.id === this.albumId) o.selected = true;
@@ -33732,8 +34067,8 @@ ${BLOCK_END}
         }
         /** วางรูปลงกระดาน — ความสูงคิดจากสัดส่วนจริงของไฟล์ (ไม่ครอบตัด ไม่บิด) */
         async add(paths, at) {
-          const list = (paths || []).filter(Boolean);
-          if (!list.length) {
+          const list2 = (paths || []).filter(Boolean);
+          if (!list2.length) {
             setStatus(t("ui.common.pickImageBefore"));
             return 0;
           }
@@ -33741,7 +34076,7 @@ ${BLOCK_END}
           let board2 = d.moodBoard;
           let i5 = 0;
           const base4 = at ? { x: snap(at.x), y: snap(at.y) } : { x: 40, y: 40 };
-          for (const p of list) {
+          for (const p of list2) {
             const nat = await naturalSize(await urlOf(this.root, p));
             const size = sizeForAspect(DEFAULT_SIZE, nat.w, nat.h);
             const rel = albumRel(this.albumId);
@@ -33755,8 +34090,8 @@ ${BLOCK_END}
             i5++;
           }
           await this.saveBoard(board2);
-          setStatus(tf("ui.galleryMoodboard.pasteImageTopBoard", list.length, albumBaseName(this.albumId)));
-          return list.length;
+          setStatus(tf("ui.galleryMoodboard.pasteImageTopBoard", list2.length, albumBaseName(this.albumId)));
+          return list2.length;
         }
         async fixRatio(it) {
           const nat = await naturalSize(await urlOf(this.root, itemPath(this.albumId, it.file)));
@@ -33842,22 +34177,22 @@ ${BLOCK_END}
   }
   function upsertAgent(rows, agent2) {
     const a = newAgent(agent2);
-    const list = (rows || []).slice();
-    const i5 = list.findIndex((x) => x.id === a.id);
-    if (i5 >= 0) list[i5] = a;
-    else list.push(a);
-    return list;
+    const list2 = (rows || []).slice();
+    const i5 = list2.findIndex((x) => x.id === a.id);
+    if (i5 >= 0) list2[i5] = a;
+    else list2.push(a);
+    return list2;
   }
   function removeAgent(rows, id) {
     return (rows || []).filter((x) => x.id !== id);
   }
   function moveAgent(rows, id, dir2) {
-    const list = (rows || []).slice();
-    const i5 = list.findIndex((x) => x.id === id);
+    const list2 = (rows || []).slice();
+    const i5 = list2.findIndex((x) => x.id === id);
     const j = i5 + (dir2 < 0 ? -1 : 1);
-    if (i5 < 0 || j < 0 || j >= list.length) return list;
-    [list[i5], list[j]] = [list[j], list[i5]];
-    return list;
+    if (i5 < 0 || j < 0 || j >= list2.length) return list2;
+    [list2[i5], list2[j]] = [list2[j], list2[i5]];
+    return list2;
   }
   function safeRefFileName(name5) {
     const base4 = String(name5 || "").split(/[\\/]/).pop().replace(/[<>:"|?*\x00-\x1f]/g, "_").trim() || "reference";
@@ -34060,11 +34395,11 @@ ${BLOCK_END}
     return String(text || "").split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean).map((s) => s.replace(/^https?:\/\//, "").replace(/\/.*$/, ""));
   }
   function isDomainAllowed(url, domains) {
-    const list = Array.isArray(domains) ? domains : parseDomains(domains);
-    if (!list.length) return true;
+    const list2 = Array.isArray(domains) ? domains : parseDomains(domains);
+    if (!list2.length) return true;
     const h = hostOf2(url);
     if (!h) return false;
-    return list.some((d) => d.startsWith("*.") ? h.endsWith(d.slice(1)) && h !== d.slice(2) : h === d);
+    return list2.some((d) => d.startsWith("*.") ? h.endsWith(d.slice(1)) && h !== d.slice(2) : h === d);
   }
   function newId2(prefix2 = "p") {
     _seq2++;
@@ -34094,13 +34429,13 @@ ${BLOCK_END}
   }
   function validateProviderIssues(p) {
     const out = [];
-    const add = (code3, key2) => out.push({ code: code3, msg: t(key2) });
-    if (!p || !String(p.name || "").trim()) add("name", "ui.aiProviders.cantRenameProvider");
+    const add2 = (code3, key2) => out.push({ code: code3, msg: t(key2) });
+    if (!p || !String(p.name || "").trim()) add2("name", "ui.aiProviders.cantRenameProvider");
     const c = p && p.credential || {};
-    if (!String(c.name || "").trim()) add("credName", "ui.aiProviders.cantRenameCredential");
-    if (!String(c.baseUrl || "").trim()) add("baseUrl", "ui.common.cantPutBaseURL");
-    else if (!/^https?:\/\//i.test(String(c.baseUrl).trim())) add("baseUrlScheme", "ui.aiProviders.baseURLMustHttp");
-    else if (!isDomainAllowed(c.baseUrl, c.allowedDomains)) add("baseUrlDomain", "ui.aiProviders.baseURLNotList");
+    if (!String(c.name || "").trim()) add2("credName", "ui.aiProviders.cantRenameCredential");
+    if (!String(c.baseUrl || "").trim()) add2("baseUrl", "ui.common.cantPutBaseURL");
+    else if (!/^https?:\/\//i.test(String(c.baseUrl).trim())) add2("baseUrlScheme", "ui.aiProviders.baseURLMustHttp");
+    else if (!isDomainAllowed(c.baseUrl, c.allowedDomains)) add2("baseUrlDomain", "ui.aiProviders.baseURLNotList");
     return out;
   }
   function validateProvider(p) {
@@ -34315,11 +34650,11 @@ ${BLOCK_END}
     return rows.find((p) => p.id === ai.activeProviderId) || rows[0];
   }
   function upsertProvider(rows, provider) {
-    const list = (rows || []).slice();
-    const i5 = list.findIndex((p) => p.id === provider.id);
-    if (i5 === -1) list.push(provider);
-    else list[i5] = provider;
-    return list;
+    const list2 = (rows || []).slice();
+    const i5 = list2.findIndex((p) => p.id === provider.id);
+    if (i5 === -1) list2.push(provider);
+    else list2[i5] = provider;
+    return list2;
   }
   function removeProvider(rows, id) {
     return (rows || []).filter((p) => p.id !== id);
@@ -35363,8 +35698,8 @@ ${BLOCK_END}
   function recordAiUsage({ usage, cost, provider = "", model = "", feature: feature3 = "", session = "" } = {}) {
     if (!state.meta || !usage) return false;
     const ai = aiMeta();
-    const list = ai.usage || [];
-    list.push({
+    const list2 = ai.usage || [];
+    list2.push({
       date: (/* @__PURE__ */ new Date()).toISOString(),
       tokens: usage.total || (usage.input || 0) + (usage.output || 0),
       in: usage.input || 0,
@@ -35375,8 +35710,8 @@ ${BLOCK_END}
       feature: feature3,
       ...session ? { session } : {}
     });
-    if (list.length > 500) list.splice(0, list.length - 500);
-    ai.usage = list;
+    if (list2.length > 500) list2.splice(0, list2.length - 500);
+    ai.usage = list2;
     return true;
   }
   async function currentProvider() {
@@ -35678,12 +36013,12 @@ ${BLOCK_END}
     box2.append(provRow);
     const info = el("div", "ai-prov-info dim");
     box2.append(info);
-    const empty2 = el(
+    const empty3 = el(
       "div",
       "ai-prov-empty dim",
       t("ui.aiProvider.notHasProviderPress")
     );
-    box2.append(empty2);
+    box2.append(empty3);
     const sendRow = el("div", "wiki-row");
     sendRow.append(el("label", null, t("ui.aiProvider.btnSendText")));
     const sendSel = el("select", "wiki-input k-dlg-select ai-send-sel");
@@ -35814,7 +36149,7 @@ ${BLOCK_END}
       const has2 = rows.length > 0;
       provSel.style.display = has2 ? "" : "none";
       editBtn.disabled = delBtn.disabled = !has2;
-      empty2.style.display = has2 ? "none" : "";
+      empty3.style.display = has2 ? "none" : "";
       const cur = rows.find((p) => p.id === provSel.value);
       info.textContent = cur ? tf("ui.aiProvider.baseURLModel", cur.credential.baseUrl || "\u2014", cur.model || t("ui.aiProvider.notPick")) + tf("ui.aiProvider.domainAllow", (cur.credential.allowedDomains || []).join(", ") || t("ui.aiProvider.notRemember")) : "";
     }
@@ -35947,9 +36282,9 @@ ${BLOCK_END}
       const modelMsg = el("span", "ai-model-msg dim");
       modelBtns.append(loadModelsBtn, modelMsg);
       s3.append(modelBtns);
-      function fillModels(list, keep) {
+      function fillModels(list2, keep) {
         modelSel.innerHTML = "";
-        const models = list && list.length ? list : P2.model ? [P2.model] : [];
+        const models = list2 && list2.length ? list2 : P2.model ? [P2.model] : [];
         if (!models.length) {
           const o = el("option", null, t("ui.aiProvider.notHasListPress"));
           o.value = "";
@@ -36382,16 +36717,16 @@ ${BLOCK_END}
       setStatus(gi("fail") + " AI: " + cfg.why);
       return 0;
     }
-    const list = (items || []).filter((i5) => overwrite || !i5.caption || i5.caption === i5.file.replace(/\.[^.]+$/, ""));
-    if (!list.length) {
+    const list2 = (items || []).filter((i5) => overwrite || !i5.caption || i5.caption === i5.file.replace(/\.[^.]+$/, ""));
+    if (!list2.length) {
       setStatus(t("ui.galleryAi.imagePickHasCaption"));
       return 0;
     }
     let n2 = 0;
     try {
-      for (let i5 = 0; i5 < list.length; i5++) {
-        const it = list[i5];
-        setBusy(tf("ui.galleryAi.aIBusySetCaption", i5 + 1, list.length, it.file));
+      for (let i5 = 0; i5 < list2.length; i5++) {
+        const it = list2[i5];
+        setBusy(tf("ui.galleryAi.aIBusySetCaption", i5 + 1, list2.length, it.file));
         const ctx2 = contextOf(it, usage);
         const prompt = tf("ui.galleryAi.setCaptionShortImage", ctx2);
         let text = await visionAsk(prompt, SYS_CAP, await thumbDataUrl(root, it.path));
@@ -36428,14 +36763,14 @@ ${BLOCK_END}
       setStatus(gi("fail") + " AI: " + cfg.why);
       return 0;
     }
-    const list = items || [];
-    if (!list.length) return 0;
+    const list2 = items || [];
+    if (!list2.length) return 0;
     let n2 = 0;
     try {
       const hint = entities.length ? tf("ui.galleryAi.nameHasCodexStory", entities.slice(0, 60).join(", ")) : "";
-      for (let i5 = 0; i5 < list.length; i5++) {
-        const it = list[i5];
-        setBusy(tf("ui.galleryAi.aIBusySuggestTag", i5 + 1, list.length, it.file));
+      for (let i5 = 0; i5 < list2.length; i5++) {
+        const it = list2[i5];
+        setBusy(tf("ui.galleryAi.aIBusySuggestTag", i5 + 1, list2.length, it.file));
         const ctx2 = contextOf(it, usage);
         const prompt = tf("ui.galleryAi.setTagImage", ctx2, hint);
         let text = await visionAsk(prompt, SYS_TAG, await thumbDataUrl(root, it.path));
@@ -36598,12 +36933,12 @@ ${BLOCK_END}
       };
       const drawGrid = async () => {
         grid.innerHTML = "";
-        const list = searchImages(items, search2.value);
-        if (!list.length) {
+        const list2 = searchImages(items, search2.value);
+        if (!list2.length) {
           grid.append(el("div", "dim", items.length ? t("ui.gallery.notHasImageAt") : t("ui.gallery.albumEmpty")));
           return;
         }
-        for (const it of list) {
+        for (const it of list2) {
           const cell = el("div", "gal-cell gal-choice");
           const im = el("img");
           im.src = await fileURL(root, it.path);
@@ -36789,8 +37124,8 @@ ${BLOCK_END}
           stats.textContent = tf("ui.gallery.imageNotUse", st.total, st.unused, st.bytesText);
           stats.title = tf("ui.gallery.albumTagUseDone", st.albums, st.tags, st.used);
           const btns = el("div", "gal2-head-btns");
-          const add = el("button", "k-ok gal2-add", t("ui.gallery.addImage"));
-          add.onclick = () => this.addImages();
+          const add2 = el("button", "k-ok gal2-add", t("ui.gallery.addImage"));
+          add2.onclick = () => this.addImages();
           const refresh = el("button", "cmp-mini gal2-refresh");
           refresh.innerHTML = iconHtml("reset", 13);
           refresh.title = t("ui.gallery.scanNewFileUsage");
@@ -36808,7 +37143,7 @@ ${BLOCK_END}
           const more = el("button", "cmp-mini gal2-more", gi("more"));
           more.title = t("ui.gallery.cmdAddFill");
           more.onclick = (e) => this.moreMenu(e);
-          btns.append(add, board2, refresh, more);
+          btns.append(add2, board2, refresh, more);
           head2.append(tabs2, stats, btns);
           return head2;
         }
@@ -37430,15 +37765,15 @@ ${BLOCK_END}
           this.changed();
         }
         async moveSelection(paths) {
-          const list = paths || [...this.state.sel];
-          if (!list.length) return;
+          const list2 = paths || [...this.state.sel];
+          if (!list2.length) return;
           const opts = [
             { label: ROOT_ALBUM_NAME2, value: ROOT_ALBUM2 },
             ...this.albums.filter((a) => a.id !== ROOT_ALBUM2).map((a) => ({ label: a.id, value: a.id }))
           ];
-          const dst = await choose(tf("ui.gallery.moveImageAlbum", list.length), opts);
+          const dst = await choose(tf("ui.gallery.moveImageAlbum", list2.length), opts);
           if (!dst) return;
-          await this.moveImages(list, dst);
+          await this.moveImages(list2, dst);
         }
         async moveImages(paths, dstAlbum) {
           if (!paths || !paths.length) return;
@@ -37482,16 +37817,16 @@ ${BLOCK_END}
           this.changed();
         }
         async deleteSelection(paths) {
-          const list = paths || [...this.state.sel];
-          if (!list.length) return;
-          const used = list.filter((p) => {
+          const list2 = paths || [...this.state.sel];
+          if (!list2.length) return;
+          const used = list2.filter((p) => {
             const it = this.items.find((x) => x.path === p);
             return it && it.uses > 0;
           }).length;
           const warn = used ? tf("ui.gallery.hasItemUseSource", used) : "";
-          if (!await confirmBox(tf("ui.gallery.delImageMoveTrash", list.length) + warn)) return;
+          if (!await confirmBox(tf("ui.gallery.delImageMoveTrash", list2.length) + warn)) return;
           await withBusy(t("ui.gallery.busyDelImage"), async () => {
-            for (const p of list) {
+            for (const p of list2) {
               const it = this.items.find((x) => x.path === p);
               if (!it) continue;
               try {
@@ -37506,23 +37841,23 @@ ${BLOCK_END}
           await syncFlatIndex(kapi, this.root);
           await this.render();
           this.changed();
-          setStatus(tf("ui.gallery.delImageDoneTrash", list.length));
+          setStatus(tf("ui.gallery.delImageDoneTrash", list2.length));
         }
         async tagSelection(paths) {
-          const list = paths || [...this.state.sel];
-          if (!list.length) {
+          const list2 = paths || [...this.state.sel];
+          if (!list2.length) {
             setStatus(t("ui.common.pickImageBefore"));
             return;
           }
-          const cur = list.length === 1 ? tagsToText((this.items.find((x) => x.path === list[0]) || {}).tags || []) : "";
+          const cur = list2.length === 1 ? tagsToText((this.items.find((x) => x.path === list2[0]) || {}).tags || []) : "";
           const text = await ask(
-            tf("ui.gallery.tagImageFieldEmpty", list.length),
+            tf("ui.gallery.tagImageFieldEmpty", list2.length),
             { value: cur, placeholder: t("ui.gallery.sceneScene"), allowEmpty: true }
           );
           if (text === null) return;
           const tags = parseTags(text);
           const byAlbum = /* @__PURE__ */ new Map();
-          for (const p of list) {
+          for (const p of list2) {
             const it = this.items.find((x) => x.path === p);
             if (!it) continue;
             if (!byAlbum.has(it.album)) byAlbum.set(it.album, []);
@@ -37531,14 +37866,14 @@ ${BLOCK_END}
           for (const [album, files] of byAlbum) {
             let doc3 = await readAlbumDoc(kapi, this.root, album);
             for (const f of files) {
-              doc3 = list.length === 1 ? setTags(doc3, f, tags) : tags.reduce((d, t3) => addTag(d, f, t3), doc3);
+              doc3 = list2.length === 1 ? setTags(doc3, f, tags) : tags.reduce((d, t3) => addTag(d, f, t3), doc3);
             }
             await writeAlbumDoc(kapi, this.root, album, doc3);
           }
           await syncFlatIndex(kapi, this.root);
           await this.render();
           this.changed();
-          setStatus(list.length === 1 ? t("ui.gallery.saveTagDone") : tf("ui.gallery.tagImageDone", list.length));
+          setStatus(list2.length === 1 ? t("ui.gallery.saveTagDone") : tf("ui.gallery.tagImageDone", list2.length));
         }
         async renameTag(tag3) {
           const v2 = await ask(t("ui.gallery.changeNameTag") + tag3, { value: tag3 });
@@ -37623,12 +37958,12 @@ ${BLOCK_END}
         }
         /** เตรียมแฮชของทุกใบ (ครั้งแรกอาจใช้เวลา — ทำใน withBusy) */
         async ensureHashes(items) {
-          const list = items || this.items;
-          for (const it of list) {
+          const list2 = items || this.items;
+          for (const it of list2) {
             if (it.hash) continue;
             it.hash = await hashOf(await fileURL(this.root, it.path));
           }
-          return list;
+          return list2;
         }
         async findSimilar(it) {
           await withBusy(t("ui.gallery.busyCompareImage"), async () => {
@@ -37677,8 +38012,8 @@ ${BLOCK_END}
             const ov = el("div", "k-overlay");
             const box2 = el("div", "k-dialog k-wide gal2-sim");
             box2.append(el("div", "k-dlg-title", tf("ui.gallery.imageDupDupFound", dups.length)));
-            const list = el("div", "gal2-dups");
-            if (!dups.length) list.append(el("div", "dim", t("ui.gallery.notFoundImageDup")));
+            const list2 = el("div", "gal2-dups");
+            if (!dups.length) list2.append(el("div", "dim", t("ui.gallery.notFoundImageDup")));
             for (const d of dups.slice(0, 60)) {
               const row3 = el("div", "gal2-dup-row");
               for (const side of [d.a, d.b]) {
@@ -37686,13 +38021,13 @@ ${BLOCK_END}
                 const im = el("img");
                 im.src = await fileURL(this.root, side.path);
                 c.append(im, el("div", "gal-cap-ro", tf("ui.gallery.useTimes", side.path, side.uses || 0)));
-                list.append(c);
+                list2.append(c);
                 row3.append(c);
               }
               row3.append(el("div", "gal2-dup-score", Math.round(d.score * 100) + "%"));
-              list.append(row3);
+              list2.append(row3);
             }
-            box2.append(list);
+            box2.append(list2);
             const btns = el("div", "k-dlg-btns");
             const ok2 = el("button", "k-ok", t("ui.common.close"));
             ok2.onclick = () => ov.remove();
@@ -37739,12 +38074,12 @@ ${BLOCK_END}
           });
         }
         async exportSelection() {
-          const list = [...this.state.sel];
-          if (!list.length) return;
+          const list2 = [...this.state.sel];
+          if (!list2.length) return;
           const { exportImages: exportImages2 } = await Promise.resolve().then(() => (init_gallery_export(), gallery_export_exports));
           await exportImages2(
             this.root,
-            this.items.filter((i5) => list.includes(i5.path)),
+            this.items.filter((i5) => list2.includes(i5.path)),
             { name: t("ui.gallery.imagePick2"), usage: this.usage }
           );
         }
@@ -37760,13 +38095,13 @@ ${BLOCK_END}
         }
         // ---------- AI ----------
         async aiCaption() {
-          const list = [...this.state.sel];
-          if (!list.length) {
+          const list2 = [...this.state.sel];
+          if (!list2.length) {
             setStatus(t("ui.gallery.pickImageBeforeDone2"));
             return;
           }
           const { aiCaptionImages: aiCaptionImages2 } = await Promise.resolve().then(() => (init_gallery_ai(), gallery_ai_exports));
-          const items = this.items.filter((i5) => list.includes(i5.path));
+          const items = this.items.filter((i5) => list2.includes(i5.path));
           const n2 = await aiCaptionImages2(this.root, items, { usage: this.usage });
           if (n2) {
             await this.render();
@@ -37774,13 +38109,13 @@ ${BLOCK_END}
           }
         }
         async aiTags() {
-          const list = [...this.state.sel];
-          if (!list.length) {
+          const list2 = [...this.state.sel];
+          if (!list2.length) {
             setStatus(t("ui.gallery.pickImageBeforeDone3"));
             return;
           }
           const { aiTagImages: aiTagImages2 } = await Promise.resolve().then(() => (init_gallery_ai(), gallery_ai_exports));
-          const items = this.items.filter((i5) => list.includes(i5.path));
+          const items = this.items.filter((i5) => list2.includes(i5.path));
           const n2 = await aiTagImages2(this.root, items, {
             usage: this.usage,
             entities: this.opts.entityNames ? this.opts.entityNames() : []
@@ -37793,13 +38128,13 @@ ${BLOCK_END}
         // ---------- กระดานอารมณ์ (ย้ายไปเป็นแผงของตัวเองแล้ว — moodboard-ui.js) ----------
         /** วางรูปที่เลือกลงกระดาน แล้วเปิดแผงกระดานให้เห็นผลทันที */
         async addToBoard(paths) {
-          const list = (paths || []).filter(Boolean);
-          if (!list.length) {
+          const list2 = (paths || []).filter(Boolean);
+          if (!list2.length) {
             setStatus(t("ui.gallery.pickImageBeforeDone"));
             return;
           }
           if (this.opts.onOpenBoard) await this.opts.onOpenBoard();
-          await dropOnBoard(this.root, list);
+          await dropOnBoard(this.root, list2);
         }
         // ---------- ระบบแผง ----------
         changed() {
@@ -38383,13 +38718,13 @@ ${BLOCK_END}
     };
   }
   function renderChoicePanel(host2, opts = {}) {
-    const { limit = 8, character = "", title: title2 = t("ui.player.historyDecide"), empty: empty2 = "", onOpenScene = null } = opts;
+    const { limit = 8, character = "", title: title2 = t("ui.player.historyDecide"), empty: empty3 = "", onOpenScene = null } = opts;
     host2.innerHTML = "";
     const rows = character ? choicesByCharacter(character) : getPlayerHistory();
     const st = choiceStats();
     host2.append(el("div", "pc-panel-title", `${title2} (${rows.length})`));
     if (!rows.length) {
-      host2.append(el("div", "dim", empty2 || t("ui.player.notHasDecisionChoice")));
+      host2.append(el("div", "dim", empty3 || t("ui.player.notHasDecisionChoice")));
       return host2;
     }
     if (!character && st.top) {
@@ -38399,7 +38734,7 @@ ${BLOCK_END}
         tf("ui.player.timesScenePickLast", st.total, st.scenes, st.top.choice, st.top.n)
       ));
     }
-    const list = el("div", "pc-list");
+    const list2 = el("div", "pc-list");
     for (const c of [...rows].reverse().slice(0, limit)) {
       const row3 = el("div", "pc-row");
       row3.append(el("div", "pc-choice", gi("target") + " " + (c.choice || "")));
@@ -38410,9 +38745,9 @@ ${BLOCK_END}
         row3.classList.add("pc-clickable");
         row3.onclick = () => onOpenScene(c.sceneId, c.sceneTitle);
       }
-      list.append(row3);
+      list2.append(row3);
     }
-    host2.append(list);
+    host2.append(list2);
     if (rows.length > limit) host2.append(el("div", "dim pc-more", tf("ui.player.list", rows.length - limit)));
     return host2;
   }
@@ -38421,10 +38756,10 @@ ${BLOCK_END}
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog");
     box2.append(el("div", "k-dlg-title", t("ui.player.historyDecide2") + history2.length + t("ui.player.times")));
-    const list = el("div", "k-pick-list");
-    list.style.maxHeight = "50vh";
+    const list2 = el("div", "k-pick-list");
+    list2.style.maxHeight = "50vh";
     if (!history2.length) {
-      list.append(el("div", "dim", t("ui.player.notHasDecision")));
+      list2.append(el("div", "dim", t("ui.player.notHasDecision")));
     } else {
       [...history2].reverse().slice(0, 100).forEach((c) => {
         const row3 = el("div", "k-menu-item");
@@ -38438,10 +38773,10 @@ ${BLOCK_END}
         );
         sub.style.cssText = "font-size:11px;color:var(--dim)";
         row3.append(top, sub);
-        list.append(row3);
+        list2.append(row3);
       });
     }
-    box2.append(list);
+    box2.append(list2);
     const btns = el("div", "k-dlg-btns");
     const exportB = el("button", null, t("ui.player.export"));
     exportB.onclick = async () => {
@@ -39379,11 +39714,11 @@ ${BLOCK_END}
 
   // src/panels/panel-drag.js
   function clampFloat(box2, vw, vh) {
-    const W = vw || window.innerWidth, H2 = vh || window.innerHeight;
+    const W = vw || window.innerWidth, H3 = vh || window.innerHeight;
     const w = Math.max(FLOAT_MIN_W, Math.min(Math.round(box2.w ?? 320), W));
-    const h = Math.max(FLOAT_MIN_H, Math.min(Math.round(box2.h ?? 300), H2));
+    const h = Math.max(FLOAT_MIN_H, Math.min(Math.round(box2.h ?? 300), H3));
     const x = Math.round(Math.min(Math.max(box2.x ?? 80, KEEP_VISIBLE - w), W - KEEP_VISIBLE));
-    const y = Math.round(Math.min(Math.max(box2.y ?? 80, 0), H2 - 28));
+    const y = Math.round(Math.min(Math.max(box2.y ?? 80, 0), H3 - 28));
     return { x, y, w, h };
   }
   function createDropOverlay() {
@@ -39898,26 +40233,26 @@ ${BLOCK_END}
       x.tabIndex = x === cur ? 0 : -1;
     }
     bar.addEventListener("keydown", (e) => {
-      const list = [...bar.querySelectorAll(":scope > .k-tab")];
-      const i5 = list.indexOf(document.activeElement);
+      const list2 = [...bar.querySelectorAll(":scope > .k-tab")];
+      const i5 = list2.indexOf(document.activeElement);
       if (i5 < 0) return;
       const prevK = vertical ? "ArrowUp" : "ArrowLeft";
       const nextK = vertical ? "ArrowDown" : "ArrowRight";
       let j = -1;
-      if (e.key === nextK) j = (i5 + 1) % list.length;
-      else if (e.key === prevK) j = (i5 - 1 + list.length) % list.length;
+      if (e.key === nextK) j = (i5 + 1) % list2.length;
+      else if (e.key === prevK) j = (i5 - 1 + list2.length) % list2.length;
       else if (e.key === "Home") j = 0;
-      else if (e.key === "End") j = list.length - 1;
+      else if (e.key === "End") j = list2.length - 1;
       else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        list[i5].click();
+        list2[i5].click();
         return;
       }
       if (j < 0) return;
       e.preventDefault();
-      list[i5].tabIndex = -1;
-      list[j].tabIndex = 0;
-      list[j].focus();
+      list2[i5].tabIndex = -1;
+      list2[j].tabIndex = 0;
+      list2[j].focus();
     });
     return bar;
   }
@@ -41663,10 +41998,10 @@ ${BLOCK_END}
   }
   function defaultFloatBox(pid) {
     const d = PANEL_DEFS.find((x) => x.id === pid) || {};
-    const W = window.innerWidth || 1200, H2 = window.innerHeight || 800;
+    const W = window.innerWidth || 1200, H3 = window.innerHeight || 800;
     const w = Math.min(d.floatW || Math.max(340, Math.round((d.dockW || 300) * 1.1)), Math.round(W * 0.8));
-    const h = Math.min(d.floatH || 520, Math.round(H2 * 0.8));
-    return { x: Math.round((W - w) / 2), y: Math.round((H2 - h) / 2), w, h };
+    const h = Math.min(d.floatH || 520, Math.round(H3 * 0.8));
+    return { x: Math.round((W - w) / 2), y: Math.round((H3 - h) / 2), w, h };
   }
   function reopenFloat(m, pid, home) {
     for (const mate of home && home.floatWith || []) {
@@ -41878,9 +42213,9 @@ ${BLOCK_END}
   }
   function addPanelButton(id, node) {
     const pid = panelId(id);
-    const list = extras.get(pid) || [];
-    if (!list.includes(node)) list.push(node);
-    extras.set(pid, list);
+    const list2 = extras.get(pid) || [];
+    if (!list2.includes(node)) list2.push(node);
+    extras.set(pid, list2);
     renderPanels(true);
     return node;
   }
@@ -42088,7 +42423,7 @@ ${BLOCK_END}
         mid,
         panel("statusbar", t("ui.panel.barStatus"))
       ], [0, 1, 0]);
-      wsDef = (id, labelKey, build) => ({ id, labelKey, build, get label() {
+      wsDef = (id, labelKey, build2) => ({ id, labelKey, build: build2, get label() {
         return t(labelKey);
       } });
       BUILTIN_WORKSPACES = [
@@ -42310,10 +42645,10 @@ ${BLOCK_END}
   }
   function splitHighlight(text, terms) {
     const s = String(text || "");
-    const list = (terms || []).map((x) => String(x || "")).filter(Boolean).sort((a, b) => b.length - a.length);
-    if (!s || !list.length) return s ? [{ text: s, hl: false }] : [];
+    const list2 = (terms || []).map((x) => String(x || "")).filter(Boolean).sort((a, b) => b.length - a.length);
+    if (!s || !list2.length) return s ? [{ text: s, hl: false }] : [];
     const low = s.toLowerCase();
-    const lows = list.map((x) => x.toLowerCase());
+    const lows = list2.map((x) => x.toLowerCase());
     const out = [];
     let i5 = 0, plain = 0;
     while (i5 < s.length) {
@@ -42631,7 +42966,748 @@ ${BLOCK_END}
           return { id, path: doc3.path, title: doc3.title, status: doc3.status, score: +score.toFixed(4), freq, matches: matches2 };
         }
       };
-      SEARCH_SKIP_DIRS = ["Recycle", "Snapshots", "Backups"];
+      SEARCH_SKIP_DIRS = ["Recycle", "Snapshots", "Backups", "OnSet"];
+    }
+  });
+
+  // src/ai/ai-text.js
+  function plainText(md) {
+    return String(md || "").replace(/<!--[\s\S]*?-->/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/^#{1,6}\s+/gm, "").replace(/[*_`~>]/g, "").replace(/\r/g, "").trim();
+  }
+  function wordsOf(text) {
+    return tokenize2(plainText(text)).map((x) => x.word);
+  }
+  function countWords3(text) {
+    return wordsOf(text).length;
+  }
+  function dialogueRatio(text) {
+    const s = plainText(text);
+    if (!s) return 0;
+    let inside = 0;
+    for (const m of s.matchAll(/[“"„«](.*?)[”"»]/gs)) inside += m[1].length;
+    for (const m of s.matchAll(/^\s*[—–-]\s*(.+)$/gm)) inside += m[1].length;
+    return Math.min(1, inside / s.length);
+  }
+  function splitSentences(text) {
+    return plainText(text).split(SENT_SPLIT).map((x) => x.trim()).filter(Boolean);
+  }
+  function mean(a) {
+    return a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  }
+  function median(a) {
+    if (!a.length) return 0;
+    const s = a.slice().sort((x, y) => x - y);
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function stdev(a) {
+    if (a.length < 2) return 0;
+    const m = mean(a);
+    return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1));
+  }
+  function nameForms(c) {
+    return [c.name, ...c.aliases || []].filter((x) => x && String(x).trim()).map(String);
+  }
+  function countMentions(text, character) {
+    const s = plainText(text);
+    let n2 = 0;
+    for (const form of nameForms(character)) {
+      if (!form) continue;
+      let i5 = 0;
+      while ((i5 = s.indexOf(form, i5)) !== -1) {
+        n2++;
+        i5 += form.length;
+      }
+    }
+    return n2;
+  }
+  var SENT_SPLIT;
+  var init_ai_text = __esm({
+    "src/ai/ai-text.js"() {
+      init_search_engine();
+      SENT_SPLIT = /[.!?]+[\s"'”)\]]*|\n+|\s{2,}/;
+    }
+  });
+
+  // src/ai/ai-doctor.js
+  function markerHits(text, list2) {
+    const s = lower(text);
+    const out = [];
+    for (const w of list2) {
+      const k = lower(w);
+      let n2 = 0, i5 = 0;
+      while ((i5 = s.indexOf(k, i5)) !== -1) {
+        n2++;
+        i5 += k.length;
+      }
+      if (n2) out.push({ word: w, count: n2 });
+    }
+    return out;
+  }
+  function clip2(s, n2 = 140) {
+    const x = String(s || "").replace(/\s+/g, " ").trim();
+    return x.length > n2 ? x.slice(0, n2 - 1) + "\u2026" : x;
+  }
+  function sentenceWith(text, word) {
+    const k = lower(word);
+    return splitSentences(text).find((x) => lower(x).includes(k)) || "";
+  }
+  function speakerOf(text) {
+    try {
+      return String(splitCharacter(String(text || "")).name || "").trim();
+    } catch {
+      return String(text || "").replace(/\(.*\)\s*$/, "").trim();
+    }
+  }
+  function matchCharacter(speaker, characters = []) {
+    const k = lower(speaker).trim();
+    if (!k) return null;
+    return characters.find((c) => nameForms(c).some((f) => lower(f) === k)) || null;
+  }
+  function guessSpeaker(para2, characters) {
+    const outside = para2.replace(/[“"„«][^“”"»]*[”"»]/g, " ");
+    let best = null, at = Infinity;
+    for (const c of characters) {
+      for (const f of nameForms(c)) {
+        const i5 = outside.indexOf(f);
+        if (i5 >= 0 && i5 < at) {
+          at = i5;
+          best = c;
+        }
+      }
+    }
+    return best ? best.name : "";
+  }
+  function extractDialogue(scene = {}, characters = []) {
+    const md = String(scene.text || "");
+    const out = [];
+    if (scene.format === "screenplay") {
+      let speaker = "";
+      for (const b of parseScript(md)) {
+        if (b.el === "character") speaker = speakerOf(b.text);
+        else if (b.el === "dialogue") {
+          if (b.text.trim()) out.push({ speaker, text: b.text.trim() });
+        } else if (b.el === "parenthetical") continue;
+        else speaker = "";
+      }
+      return out;
+    }
+    for (const para2 of plainText(md).split(/\n+/)) {
+      const quotes = [...para2.matchAll(/[“"„«]([^“”"»]{1,2000}?)[”"»]/g)].map((m) => m[1].trim()).filter(Boolean);
+      const dash = /^\s*[—–]\s*(.+)$/.exec(para2);
+      if (dash && !quotes.length) quotes.push(dash[1].trim());
+      if (!quotes.length) continue;
+      const speaker = guessSpeaker(para2, characters);
+      for (const q of quotes) out.push({ speaker, text: q });
+    }
+    return out;
+  }
+  function reasonText(list2, kind = "dialog") {
+    return (list2 || []).map((k) => t(REASON_KEYS[kind === "drag" && k === "long" ? "drag_long" : k] || "")).filter(Boolean).join(", ");
+  }
+  function analyzeDialogue(scenes = [], characters = []) {
+    const rows = [], flagged = [];
+    let total = 0, long = 0, expo = 0, written = 0, voc = 0;
+    for (const s of scenes) {
+      const lines = extractDialogue(s, characters);
+      let sLong = 0, sExpo = 0, sWritten = 0, sVoc = 0;
+      const words = [];
+      for (const ln of lines) {
+        const w = countWords3(ln.text);
+        words.push(w);
+        const reasons = [];
+        if (w >= LONG_LINE_WORDS) {
+          reasons.push("long");
+          sLong++;
+        }
+        if (markerHits(ln.text, EXPOSITION_MARKERS).length) {
+          reasons.push("exposition");
+          sExpo++;
+        }
+        if (markerHits(ln.text, WRITTEN_MARKERS).length) {
+          reasons.push("written");
+          sWritten++;
+        }
+        const addressed = characters.some((c) => lower(c.name) !== lower(ln.speaker) && nameForms(c).some((f) => ln.text.includes(f)));
+        if (addressed) sVoc++;
+        if (reasons.length) flagged.push({
+          sceneId: s.id,
+          title: s.title || s.id,
+          speaker: ln.speaker,
+          quote: clip2(ln.text),
+          reasons
+        });
+      }
+      const vocHeavy = lines.length >= 4 && sVoc / lines.length > 0.5;
+      if (vocHeavy) flagged.push({
+        sceneId: s.id,
+        title: s.title || s.id,
+        speaker: "",
+        quote: tf("ui.aia.dlgVocNote", sVoc, lines.length),
+        reasons: ["vocative"]
+      });
+      total += lines.length;
+      long += sLong;
+      expo += sExpo;
+      written += sWritten;
+      voc += vocHeavy ? 1 : 0;
+      rows.push({
+        id: s.id,
+        title: s.title,
+        lines: lines.length,
+        avgWords: round1(mean(words)),
+        long: sLong,
+        exposition: sExpo,
+        written: sWritten,
+        vocative: sVoc,
+        score: sLong * 2 + sExpo * 3 + sWritten + (vocHeavy ? 2 : 0)
+      });
+    }
+    return {
+      rows,
+      flagged: flagged.slice(0, 60),
+      total,
+      stats: [
+        { label: t("ui.aia.stDlgLines"), value: total },
+        { label: t("ui.aia.stDlgLong"), value: long },
+        { label: t("ui.aia.stDlgExpo"), value: expo },
+        { label: t("ui.aia.stDlgWritten"), value: written },
+        { label: t("ui.aia.stDlgVoc"), value: voc }
+      ]
+    };
+  }
+  function longestNarration(text) {
+    let best = 0, cur = 0;
+    for (const p of plainText(text).split(/\n+/)) {
+      if (!p.trim()) continue;
+      if (dialogueRatio(p) > 0) {
+        cur = 0;
+        continue;
+      }
+      cur += countWords3(p);
+      if (cur > best) best = cur;
+    }
+    return best;
+  }
+  function analyzeDrag(scenes = [], pace = { rows: [], avg: 0, sd: 0 }, conflict = { rows: [] }) {
+    const med = median(scenes.map((s) => countWords3(s.text))) || 1;
+    const sd = Math.max(5, pace.sd || 0);
+    const rows = scenes.map((s, i5) => {
+      const p = pace.rows[i5] || { tempo: pace.avg, words: countWords3(s.text) };
+      const c = conflict.rows[i5] || { score: 0, density: 0 };
+      const words = p.words ?? countWords3(s.text);
+      const narr = longestNarration(s.text);
+      const slow = clamp3((pace.avg - p.tempo) / sd, 0, 2) / 2;
+      const noConf = c.score === 0 ? 1 : c.density < 1 ? 0.5 : 0;
+      const long = clamp3((words - med) / med, 0, 1);
+      const narration = clamp3((narr - 150) / 350, 0, 1);
+      const drag = Math.round(100 * (0.35 * slow + 0.25 * noConf + 0.2 * long + 0.2 * narration));
+      const reasons = [];
+      if (slow >= 0.25) reasons.push("slow");
+      if (noConf === 1) reasons.push("noConflict");
+      if (long >= 0.5) reasons.push("long");
+      if (narration > 0) reasons.push("narration");
+      return {
+        id: s.id,
+        title: s.title,
+        words,
+        tempo: p.tempo,
+        conflict: c.score,
+        narration: narr,
+        drag: words > 60 ? drag : 0,
+        reasons
+      };
+    });
+    const flagged = rows.filter((r) => r.drag >= DRAG_FLAG);
+    const runs = [];
+    let cur = [];
+    for (const r of rows) {
+      if (r.drag >= DRAG_FLAG) cur.push(r);
+      else {
+        if (cur.length >= 2) runs.push(cur);
+        cur = [];
+      }
+    }
+    if (cur.length >= 2) runs.push(cur);
+    return {
+      rows,
+      flagged,
+      runs: runs.map((g) => ({
+        from: g[0].title || g[0].id,
+        to: g[g.length - 1].title || g[g.length - 1].id,
+        count: g.length,
+        sceneId: g[0].id
+      })),
+      stats: [
+        { label: t("ui.aia.stDragScenes"), value: flagged.length + "/" + rows.length },
+        { label: t("ui.aia.stDragRuns"), value: runs.length },
+        { label: t("ui.aia.stDragNarr"), value: Math.max(0, ...rows.map((r) => r.narration)) },
+        { label: t("ui.aia.stDragAvg"), value: round1(mean(rows.map((r) => r.drag))) }
+      ]
+    };
+  }
+  function analyzeLogic(scenes = []) {
+    const n2 = scenes.length;
+    const rows = [];
+    let total = 0, late = 0;
+    scenes.forEach((s, i5) => {
+      const hits = markerHits(plainText(s.text), CONVENIENCE_MARKERS);
+      const c = hitCount(hits);
+      if (!c) return;
+      total += c;
+      const isLate = n2 >= 4 && i5 >= Math.floor(n2 * 0.75);
+      if (isLate) late += c;
+      rows.push({
+        id: s.id,
+        title: s.title,
+        count: c,
+        late: isLate,
+        words: hits.map((h) => h.word),
+        quote: clip2(sentenceWith(plainText(s.text), hits[0].word))
+      });
+    });
+    rows.sort((a, b) => b.late - a.late || b.count - a.count);
+    return {
+      rows,
+      total,
+      late,
+      stats: [
+        { label: t("ui.aia.stLogicHits"), value: total },
+        { label: t("ui.aia.stLogicScenes"), value: rows.length + "/" + n2 },
+        { label: t("ui.aia.stLogicLate"), value: late }
+      ]
+    };
+  }
+  function voiceForms(text) {
+    const s = String(text || "");
+    const pron = {}, part = {};
+    let rest = s;
+    for (const p of [...SELF_PRONOUNS].sort((a, b) => b.length - a.length)) {
+      const parts = rest.split(p);
+      if (parts.length > 1) {
+        pron[p] = parts.length - 1;
+        rest = parts.join(" ");
+      }
+    }
+    const ends = s.split(/[\n.!?…”"'»)\]]+|\s{2,}/);
+    for (const e of ends) {
+      const x = e.trim();
+      for (const p of END_PARTICLES) {
+        if (x.endsWith(p) && !END_PARTICLES.some((q) => q.length > p.length && q.endsWith(p) && x.endsWith(q))) {
+          part[p] = (part[p] || 0) + 1;
+          break;
+        }
+      }
+    }
+    return { pron, part };
+  }
+  function profileText(entity = {}, max2 = 600) {
+    const e = entity || {};
+    const parts = [];
+    if (e.summary) parts.push(String(e.summary));
+    for (const src2 of [e.fields, e.customProperties]) {
+      for (const [k, v2] of Object.entries(src2 || {})) {
+        if (v2 != null && String(v2).trim()) parts.push(k + ": " + String(v2).trim());
+      }
+    }
+    if (Array.isArray(e.tags) && e.tags.length) parts.push("#" + e.tags.join(" #"));
+    for (const sec of Array.isArray(e.sections) ? e.sections : []) {
+      const body = sec && (sec.body || sec.text || sec.content);
+      if (body) parts.push((sec.title ? sec.title + ": " : "") + plainText(String(body)));
+    }
+    return clip2(parts.join(" \xB7 "), max2);
+  }
+  function analyzeOoc(scenes = [], characters = []) {
+    const per = /* @__PURE__ */ new Map();
+    for (const s of scenes) {
+      for (const ln of extractDialogue(s, characters)) {
+        const c = matchCharacter(ln.speaker, characters);
+        if (!c) continue;
+        const v2 = voiceForms(ln.text);
+        if (!per.has(c.name)) per.set(c.name, { c, lines: 0, scenes: /* @__PURE__ */ new Set(), pron: {}, part: {}, byScene: /* @__PURE__ */ new Map() });
+        const P2 = per.get(c.name);
+        P2.lines++;
+        P2.scenes.add(s.id);
+        add(P2.pron, v2.pron);
+        add(P2.part, v2.part);
+        if (!P2.byScene.has(s.id)) P2.byScene.set(s.id, { title: s.title || s.id, pron: {}, part: {}, quotes: [] });
+        const B = P2.byScene.get(s.id);
+        add(B.pron, v2.pron);
+        add(B.part, v2.part);
+        if (Object.keys(v2.pron).length || Object.keys(v2.part).length) B.quotes.push(ln.text);
+      }
+    }
+    const rows = [], outliers = [];
+    for (const [name5, P2] of per) {
+      const habit = (m) => {
+        const tot = Object.values(m).reduce((a, b) => a + b, 0);
+        const top = topOf(m);
+        return top && tot >= OOC_MIN_LINES && top[1] / tot >= OOC_MIN_SHARE ? top[0] : "";
+      };
+      const pron = habit(P2.pron), part = habit(P2.part);
+      let odd = 0;
+      for (const [sid, B] of P2.byScene) {
+        for (const [kind, want, map2] of [["pron", pron, B.pron], ["part", part, B.part]]) {
+          if (!want) continue;
+          const other = Object.keys(map2).filter((f) => f !== want);
+          const otherN = other.reduce((a, f) => a + map2[f], 0);
+          if (otherN && otherN > (map2[want] || 0)) {
+            odd++;
+            const form = other.sort((a, b) => map2[b] - map2[a])[0];
+            outliers.push({
+              name: name5,
+              sceneId: sid,
+              title: B.title,
+              kind,
+              form,
+              expected: want,
+              quote: clip2(B.quotes.find((q) => q.includes(form)) || B.quotes[0] || "")
+            });
+          }
+        }
+      }
+      const entity = P2.c.entity || null;
+      rows.push({
+        name: name5,
+        lines: P2.lines,
+        scenes: P2.scenes.size,
+        pronoun: pron,
+        particle: part,
+        outliers: odd,
+        profile: !!(P2.c.profile || entity && profileText(entity))
+      });
+    }
+    rows.sort((a, b) => b.outliers - a.outliers || b.lines - a.lines);
+    return {
+      rows,
+      outliers,
+      stats: [
+        { label: t("ui.aia.stOocSpeakers"), value: rows.length },
+        { label: t("ui.aia.stOocProfile"), value: rows.filter((r) => r.profile).length + "/" + rows.length },
+        { label: t("ui.aia.stOocOdd"), value: outliers.length }
+      ]
+    };
+  }
+  function toneOf(comedy, drama) {
+    if (comedy >= 1.5 && comedy > drama * 1.5) return "comedy";
+    if (drama >= 1.5 && drama > comedy * 1.5) return "drama";
+    if (comedy >= 1 && drama >= 1) return "mixed";
+    return "neutral";
+  }
+  function adjustFor(tone, target) {
+    if (target === "comedy") return tone === "drama" ? "less-drama" : tone === "neutral" ? "more-comedy" : "";
+    if (target === "drama" || target === "serious") return tone === "comedy" || tone === "mixed" ? "less-comedy" : "";
+    if (target === "dramedy") return "";
+    return "";
+  }
+  function analyzeTone(scenes = [], opts = {}) {
+    let C2 = 0, D = 0, W = 0;
+    const rows = scenes.map((s) => {
+      const text = plainText(s.text);
+      const words = countWords3(text) || 1;
+      const c = hitCount(markerHits(text, COMEDY_MARKERS));
+      const d = hitCount(markerHits(text, DRAMA_MARKERS));
+      C2 += c;
+      D += d;
+      W += words;
+      const comedy = round1(1e3 * c / words), drama = round1(1e3 * d / words);
+      return { id: s.id, title: s.title, words, comedy, drama, tone: toneOf(comedy, drama) };
+    });
+    const overall = toneOf(round1(1e3 * C2 / (W || 1)), round1(1e3 * D / (W || 1)));
+    const want = TONE_TARGETS.includes(opts.toneTarget) ? opts.toneTarget : "auto";
+    const target = want !== "auto" ? want : overall === "mixed" ? "dramedy" : overall === "neutral" ? "" : overall;
+    let off3 = 0, whip = 0;
+    rows.forEach((r, i5) => {
+      r.adjust = target ? adjustFor(r.tone, target) : "";
+      if (r.adjust) off3++;
+      const prev = rows[i5 - 1];
+      r.whiplash = !!(prev && (prev.tone === "comedy" && r.tone === "drama" || prev.tone === "drama" && r.tone === "comedy"));
+      if (r.whiplash) whip++;
+    });
+    return {
+      rows,
+      overall,
+      target: target || "auto",
+      want,
+      stats: [
+        { label: t("ui.aia.stToneOverall"), value: TONE_LABELS[overall] || overall },
+        // แผ่นสถิติแคบ — ป้ายยาว "อัตโนมัติ (ดูจากทั้งเรื่อง)" ขึ้นสามบรรทัด · ใช้ป้ายสั้น
+        { label: t("ui.aia.stToneTarget"), value: target ? TONE_LABELS[target] : t("ui.aia.toneAutoShort") },
+        { label: t("ui.aia.stToneOff"), value: off3 },
+        { label: t("ui.aia.stToneWhip"), value: whip }
+      ]
+    };
+  }
+  function runDoctorLocal(id, scenes = [], characters = [], opts = {}, deps = {}) {
+    switch (id) {
+      case "dialog":
+        return analyzeDialogue(scenes, characters);
+      case "drag":
+        return analyzeDrag(scenes, deps.pacing || { rows: [], avg: 0, sd: 0 }, deps.conflict || { rows: [] });
+      case "logic":
+        return analyzeLogic(scenes);
+      case "ooc":
+        return analyzeOoc(scenes, characters);
+      case "tone":
+        return analyzeTone(scenes, opts);
+      default:
+        return { stats: [] };
+    }
+  }
+  function doctorDigest(id, L2 = {}) {
+    const lines = [];
+    for (const s of L2.stats || []) lines.push(`- ${s.label}: ${s.value}`);
+    const take = (rows, fmt2, n2) => (rows || []).slice(0, n2).forEach((r) => lines.push("- " + fmt2(r)));
+    if (id === "dialog") take(L2.flagged, (r) => tf(
+      "ui.aia.dgDialog",
+      r.title,
+      r.sceneId,
+      r.speaker || "?",
+      reasonText(r.reasons),
+      r.quote
+    ), 30);
+    if (id === "drag") take((L2.rows || []).filter((r) => r.drag >= DRAG_FLAG), (r) => tf(
+      "ui.aia.dgDrag",
+      r.title,
+      r.id,
+      r.drag,
+      r.tempo,
+      r.narration,
+      reasonText(r.reasons, "drag")
+    ), 25);
+    if (id === "logic") take(L2.rows, (r) => tf("ui.aia.dgLogic", r.title, r.id, r.words.join(", "), r.quote), 25);
+    if (id === "ooc") {
+      take(L2.rows, (r) => tf("ui.aia.dgOocChar", r.name, r.lines, r.pronoun || "\u2014", r.particle || "\u2014"), 15);
+      take(L2.outliers, (r) => tf("ui.aia.dgOocOdd", r.name, r.title, r.sceneId, r.form, r.expected, r.quote), 20);
+    }
+    if (id === "tone") take(L2.rows, (r) => tf(
+      "ui.aia.dgTone",
+      r.title,
+      r.id,
+      TONE_LABELS[r.tone],
+      r.comedy,
+      r.drama
+    ) + (r.adjust ? " \u2192 " + ADJUST_LABELS[r.adjust] : "") + (r.whiplash ? " \xB7 " + t("ui.aia.toneWhip") : ""), 40);
+    return lines.join("\n");
+  }
+  function doctorPromptExtras(id, { characters = [], local = {}, opts = {} } = {}) {
+    const lines = [];
+    if (id === "ooc") {
+      const speaking = new Set((local.rows || []).map((r) => r.name));
+      const use = characters.filter((c) => speaking.has(c.name) || !speaking.size).slice(0, 12);
+      const prof = use.map((c) => ({ name: c.name, text: c.profile || profileText(c.entity) })).filter((x) => x.text);
+      if (prof.length) {
+        lines.push(t("ui.aia.pHeadProfiles"));
+        for (const p of prof) lines.push("- " + p.name + ": " + p.text);
+      } else lines.push(t("ui.aia.pNoProfiles"));
+    }
+    if (id === "tone") {
+      const want = TONE_TARGETS.includes(opts.toneTarget) ? opts.toneTarget : "auto";
+      lines.push(t("ui.aia.pToneTarget") + (want === "auto" ? t("ui.aia.pToneAuto") : TONE_LABELS[want]));
+    }
+    return lines;
+  }
+  function doctorTable(id, L2 = {}) {
+    const H3 = (...a) => a;
+    if (id === "dialog" && L2.flagged) return [
+      H3(t("ui.aia.csScene"), t("ui.aia.csSpeaker"), t("ui.aia.csReason"), t("ui.aia.csQuote")),
+      ...L2.flagged.map((r) => [r.title, r.speaker, reasonText(r.reasons), r.quote])
+    ];
+    if (id === "drag" && L2.rows) return [
+      H3(t("ui.aia.csScene"), t("ui.aia.csWords"), t("ui.aia.csTempo"), t("ui.aia.csNarration"), t("ui.aia.csDrag"), t("ui.aia.csReason")),
+      ...L2.rows.map((r) => [r.title, r.words, r.tempo, r.narration, r.drag, reasonText(r.reasons, "drag")])
+    ];
+    if (id === "logic" && L2.rows) return [
+      H3(t("ui.aia.csScene"), t("ui.aia.csCount"), t("ui.aia.csMarkers"), t("ui.aia.csQuote")),
+      ...L2.rows.map((r) => [r.title, r.count, r.words.join(" "), r.quote])
+    ];
+    if (id === "ooc" && L2.rows) {
+      const rows = [H3(t("ui.aia.csCharacter"), t("ui.aia.csLines"), t("ui.aia.csPronoun"), t("ui.aia.csParticle"), t("ui.aia.csOdd"))];
+      for (const r of L2.rows) rows.push([r.name, r.lines, r.pronoun, r.particle, r.outliers]);
+      rows.push([]);
+      rows.push(H3(t("ui.aia.csCharacter"), t("ui.aia.csScene"), t("ui.aia.csExpected"), t("ui.aia.csFound"), t("ui.aia.csQuote")));
+      for (const o of L2.outliers || []) rows.push([o.name, o.title, o.expected, o.form, o.quote]);
+      return rows;
+    }
+    if (id === "tone" && L2.rows) return [
+      H3(t("ui.aia.csScene"), t("ui.aia.csComedy"), t("ui.aia.csDrama"), t("ui.aia.csTone"), t("ui.aia.csAdjust")),
+      ...L2.rows.map((r) => [r.title, r.comedy, r.drama, TONE_LABELS[r.tone] || r.tone, r.adjust ? ADJUST_LABELS[r.adjust] : ""])
+    ];
+    return null;
+  }
+  var DOCTOR_IDS, isDoctor, EXPOSITION_MARKERS, WRITTEN_MARKERS, CONVENIENCE_MARKERS, COMEDY_MARKERS, DRAMA_MARKERS, SELF_PRONOUNS, END_PARTICLES, clamp3, round1, lower, hitCount, LONG_LINE_WORDS, REASON_KEYS, DRAG_FLAG, topOf, add, OOC_MIN_SHARE, OOC_MIN_LINES, TONE_TARGETS, TONE_ADJUST, TONE_LABELS, ADJUST_LABELS, DOCTOR_ANALYSES, DOCTOR_TASK_KEYS;
+  var init_ai_doctor = __esm({
+    "src/ai/ai-doctor.js"() {
+      init_i18n();
+      init_icons();
+      init_fountain();
+      init_ai_text();
+      DOCTOR_IDS = ["dialog", "drag", "logic", "ooc", "tone"];
+      isDoctor = (id) => DOCTOR_IDS.includes(id);
+      EXPOSITION_MARKERS = [
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E23\u0E39\u0E49",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E40\u0E18\u0E2D\u0E23\u0E39\u0E49",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E19\u0E32\u0E22\u0E23\u0E39\u0E49",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E04\u0E38\u0E13\u0E23\u0E39\u0E49",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E41\u0E01\u0E23\u0E39\u0E49",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E40\u0E23\u0E32\u0E23\u0E39\u0E49",
+        "\u0E01\u0E47\u0E23\u0E39\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27\u0E27\u0E48\u0E32",
+        "\u0E01\u0E47\u0E23\u0E39\u0E49 \u0E46 \u0E2D\u0E22\u0E39\u0E48",
+        "\u0E01\u0E47\u0E23\u0E39\u0E49\u0E46\u0E2D\u0E22\u0E39\u0E48",
+        "\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E1A\u0E2D\u0E01\u0E01\u0E47\u0E23\u0E39\u0E49",
+        "\u0E08\u0E33\u0E44\u0E14\u0E49\u0E44\u0E2B\u0E21\u0E27\u0E48\u0E32",
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E1A\u0E2D\u0E01\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27",
+        "as you know",
+        "as you\u2019re aware",
+        "as you're aware",
+        "as we both know",
+        "you already know"
+      ];
+      WRITTEN_MARKERS = [
+        "\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E44\u0E23\u0E01\u0E47\u0E15\u0E32\u0E21",
+        "\u0E14\u0E31\u0E07\u0E19\u0E31\u0E49\u0E19",
+        "\u0E19\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E19\u0E35\u0E49",
+        "\u0E17\u0E31\u0E49\u0E07\u0E19\u0E35\u0E49",
+        "\u0E01\u0E25\u0E48\u0E32\u0E27\u0E04\u0E37\u0E2D",
+        "\u0E2D\u0E19\u0E36\u0E48\u0E07",
+        "\u0E40\u0E19\u0E37\u0E48\u0E2D\u0E07\u0E08\u0E32\u0E01",
+        "\u0E43\u0E19\u0E02\u0E13\u0E30\u0E17\u0E35\u0E48",
+        "\u0E0B\u0E36\u0E48\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48",
+        "\u0E2D\u0E31\u0E19\u0E40\u0E1B\u0E47\u0E19",
+        "\u0E14\u0E49\u0E27\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E19\u0E35\u0E49",
+        "furthermore",
+        "therefore",
+        "moreover",
+        "nevertheless",
+        "consequently",
+        "in addition"
+      ];
+      CONVENIENCE_MARKERS = [
+        "\u0E1A\u0E31\u0E07\u0E40\u0E2D\u0E34\u0E0D",
+        "\u0E42\u0E0A\u0E04\u0E14\u0E35\u0E17\u0E35\u0E48",
+        "\u0E42\u0E0A\u0E04\u0E0A\u0E48\u0E27\u0E22",
+        "\u0E08\u0E39\u0E48 \u0E46",
+        "\u0E08\u0E39\u0E48\u0E46",
+        "\u0E17\u0E31\u0E19\u0E43\u0E14\u0E19\u0E31\u0E49\u0E19",
+        "\u0E1B\u0E32\u0E0F\u0E34\u0E2B\u0E32\u0E23\u0E34\u0E22\u0E4C",
+        "\u0E44\u0E21\u0E48\u0E23\u0E39\u0E49\u0E17\u0E33\u0E44\u0E21",
+        "\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25",
+        "\u0E2D\u0E22\u0E39\u0E48 \u0E46 \u0E01\u0E47",
+        "\u0E2D\u0E22\u0E39\u0E48\u0E46\u0E01\u0E47",
+        "\u0E44\u0E21\u0E48\u0E23\u0E39\u0E49\u0E27\u0E48\u0E32\u0E17\u0E33\u0E44\u0E21",
+        "\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E1F\u0E49\u0E32\u0E25\u0E34\u0E02\u0E34\u0E15",
+        "suddenly",
+        "by chance",
+        "coincidence",
+        "luckily",
+        "out of nowhere",
+        "somehow",
+        "miraculously"
+      ];
+      COMEDY_MARKERS = [
+        "\u0E2B\u0E31\u0E27\u0E40\u0E23\u0E32\u0E30",
+        "\u0E02\u0E33",
+        "\u0E2E\u0E48\u0E32",
+        "555",
+        "\u0E41\u0E0B\u0E27",
+        "\u0E25\u0E49\u0E2D\u0E40\u0E25\u0E35\u0E22\u0E19",
+        "\u0E15\u0E25\u0E01",
+        "\u0E01\u0E27\u0E19\u0E1B\u0E23\u0E30\u0E2A\u0E32\u0E17",
+        "\u0E2B\u0E22\u0E2D\u0E01",
+        "\u0E22\u0E34\u0E49\u0E21\u0E41\u0E2B\u0E49\u0E07",
+        "\u0E40\u0E02\u0E01\u0E2B\u0E31\u0E27",
+        "\u0E02\u0E1A\u0E02\u0E31\u0E19",
+        "\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E21\u0E38\u0E01",
+        "lol",
+        "haha",
+        "laugh",
+        "joke",
+        "grin",
+        "giggle",
+        "chuckle"
+      ];
+      DRAMA_MARKERS = [
+        "\u0E23\u0E49\u0E2D\u0E07\u0E44\u0E2B\u0E49",
+        "\u0E19\u0E49\u0E33\u0E15\u0E32",
+        "\u0E40\u0E08\u0E47\u0E1A\u0E1B\u0E27\u0E14",
+        "\u0E2A\u0E30\u0E2D\u0E37\u0E49\u0E19",
+        "\u0E2A\u0E39\u0E0D\u0E40\u0E2A\u0E35\u0E22",
+        "\u0E40\u0E2A\u0E35\u0E22\u0E43\u0E08",
+        "\u0E42\u0E28\u0E01",
+        "\u0E17\u0E23\u0E21\u0E32\u0E19",
+        "\u0E04\u0E27\u0E32\u0E21\u0E15\u0E32\u0E22",
+        "\u0E40\u0E2A\u0E35\u0E22\u0E0A\u0E35\u0E27\u0E34\u0E15",
+        "\u0E07\u0E32\u0E19\u0E28\u0E1E",
+        "\u0E25\u0E32\u0E01\u0E48\u0E2D\u0E19",
+        "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07",
+        "\u0E41\u0E15\u0E01\u0E2A\u0E25\u0E32\u0E22",
+        "\u0E1B\u0E27\u0E14\u0E23\u0E49\u0E32\u0E27",
+        "cry",
+        "cried",
+        "tears",
+        "grief",
+        "funeral",
+        "sob",
+        "despair",
+        "mourn"
+      ];
+      SELF_PRONOUNS = ["\u0E02\u0E49\u0E32\u0E1E\u0E40\u0E08\u0E49\u0E32", "\u0E01\u0E23\u0E30\u0E1C\u0E21", "\u0E14\u0E34\u0E09\u0E31\u0E19", "\u0E1C\u0E21", "\u0E09\u0E31\u0E19", "\u0E0A\u0E31\u0E49\u0E19", "\u0E02\u0E49\u0E32", "\u0E01\u0E39", "\u0E2B\u0E19\u0E39", "\u0E40\u0E04\u0E49\u0E32", "\u0E2D\u0E31\u0E4A\u0E27", "\u0E40\u0E14\u0E35\u0E4A\u0E22\u0E19"];
+      END_PARTICLES = ["\u0E40\u0E08\u0E49\u0E32\u0E04\u0E48\u0E30", "\u0E02\u0E2D\u0E23\u0E31\u0E1A", "\u0E04\u0E23\u0E31\u0E1A", "\u0E04\u0E48\u0E30", "\u0E04\u0E30", "\u0E2E\u0E30", "\u0E08\u0E49\u0E30", "\u0E08\u0E49\u0E32", "\u0E27\u0E48\u0E30", "\u0E27\u0E30", "\u0E40\u0E27\u0E49\u0E22", "\u0E42\u0E27\u0E49\u0E22", "\u0E22\u0E48\u0E30"];
+      clamp3 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
+      round1 = (v2) => +(Number(v2) || 0).toFixed(1);
+      lower = (s) => String(s || "").toLowerCase();
+      hitCount = (hits) => hits.reduce((a, h) => a + h.count, 0);
+      LONG_LINE_WORDS = 45;
+      REASON_KEYS = {
+        long: "ui.aia.dlgR.long",
+        exposition: "ui.aia.dlgR.exposition",
+        written: "ui.aia.dlgR.written",
+        vocative: "ui.aia.dlgR.vocative",
+        slow: "ui.aia.dragR.slow",
+        noConflict: "ui.aia.dragR.noConflict",
+        drag_long: "ui.aia.dragR.long",
+        narration: "ui.aia.dragR.narration"
+      };
+      DRAG_FLAG = 50;
+      topOf = (m) => Object.entries(m).sort((a, b) => b[1] - a[1])[0] || null;
+      add = (a, b) => {
+        for (const [k, v2] of Object.entries(b)) a[k] = (a[k] || 0) + v2;
+        return a;
+      };
+      OOC_MIN_SHARE = 0.6;
+      OOC_MIN_LINES = 3;
+      TONE_TARGETS = ["auto", "comedy", "drama", "dramedy", "serious"];
+      TONE_ADJUST = ["more-comedy", "less-comedy", "more-drama", "less-drama", "keep"];
+      TONE_LABELS = {
+        comedy: t("ui.aia.toneComedy"),
+        drama: t("ui.aia.toneDrama"),
+        mixed: t("ui.aia.toneMixed"),
+        neutral: t("ui.aia.toneNeutral"),
+        dramedy: t("ui.aia.toneDramedy"),
+        serious: t("ui.aia.toneSerious"),
+        auto: t("ui.aia.toneAuto")
+      };
+      ADJUST_LABELS = {
+        "more-comedy": t("ui.aia.adjMoreComedy"),
+        "less-comedy": t("ui.aia.adjLessComedy"),
+        "more-drama": t("ui.aia.adjMoreDrama"),
+        "less-drama": t("ui.aia.adjLessDrama"),
+        keep: t("ui.aia.adjKeep")
+      };
+      DOCTOR_ANALYSES = [
+        { id: "dialog", icon: gi("chat"), ai: "assist", group: "doctor", title: t("ui.aia.tDialog"), desc: t("ui.aia.dDialog") },
+        { id: "drag", icon: gi("timer-e"), ai: "assist", group: "doctor", title: t("ui.aia.tDrag"), desc: t("ui.aia.dDrag") },
+        { id: "logic", icon: gi("puzzle"), ai: "core", group: "doctor", title: t("ui.aia.tLogic"), desc: t("ui.aia.dLogic") },
+        { id: "ooc", icon: gi("user"), ai: "core", group: "doctor", title: t("ui.aia.tOoc"), desc: t("ui.aia.dOoc"), needsChars: true },
+        { id: "tone", icon: gi("mask"), ai: "assist", group: "doctor", title: t("ui.aia.tTone"), desc: t("ui.aia.dTone") }
+      ];
+      DOCTOR_TASK_KEYS = {
+        dialog: "ui.aia.taskDialog",
+        drag: "ui.aia.taskDrag",
+        logic: "ui.aia.taskLogic",
+        ooc: "ui.aia.taskOoc",
+        tone: "ui.aia.taskTone"
+      };
     }
   });
 
@@ -43040,10 +44116,10 @@ ${h.text}`;
           };
           if (this.meta) {
             this.meta.ai = this.meta.ai || {};
-            const list = this.meta.ai.usage || [];
-            list.push(row3);
-            if (list.length > this.max) list.splice(0, list.length - this.max);
-            this.meta.ai.usage = list;
+            const list2 = this.meta.ai.usage || [];
+            list2.push(row3);
+            if (list2.length > this.max) list2.splice(0, list2.length - this.max);
+            this.meta.ai.usage = list2;
           }
           return row3;
         }
@@ -43294,29 +44370,29 @@ ${h.text}`;
         }
         /** Embeddings. Falls back to the offline local embedder when no remote is usable. */
         async embed(texts, opts = {}) {
-          const list = Array.isArray(texts) ? texts : [texts];
+          const list2 = Array.isArray(texts) ? texts : [texts];
           const s = this.settings();
           const want = opts.provider || (s.embedProvider === "auto" ? s.provider : s.embedProvider);
           const def = PROVIDERS[want];
           const usable = def && def.embed && (!def.needsKey || await this.keyStore.get());
-          if (opts.local || !usable) return { ok: true, vectors: list.map((t3) => localEmbed(t3)), model: "local", local: true };
+          if (opts.local || !usable) return { ok: true, vectors: list2.map((t3) => localEmbed(t3)), model: "local", local: true };
           const model = opts.model || def.defaultEmbedModel;
           const apiKey = def.needsKey ? await this.keyStore.get() : "";
-          const req = def.embed({ baseUrl: this.baseUrl(s), apiKey, model, texts: list });
+          const req = def.embed({ baseUrl: this.baseUrl(s), apiKey, model, texts: list2 });
           try {
             const res = await this.http.fetch(req.url, { method: "POST", headers: req.headers, body: JSON.stringify(req.body) });
-            if (!res || !res.ok) return { ok: true, vectors: list.map((t3) => localEmbed(t3)), model: "local", local: true, fellBack: true };
+            if (!res || !res.ok) return { ok: true, vectors: list2.map((t3) => localEmbed(t3)), model: "local", local: true, fellBack: true };
             const data2 = safeJson(res.body);
             const vectors = data2 && def.parseEmbed(data2) || [];
-            if (!vectors.length) return { ok: true, vectors: list.map((t3) => localEmbed(t3)), model: "local", local: true, fellBack: true };
+            if (!vectors.length) return { ok: true, vectors: list2.map((t3) => localEmbed(t3)), model: "local", local: true, fellBack: true };
             if (this.tracker) {
-              const usage = { input: list.reduce((n2, t3) => n2 + estimateTokens2(t3), 0), output: 0, total: 0 };
+              const usage = { input: list2.reduce((n2, t3) => n2 + estimateTokens2(t3), 0), output: 0, total: 0 };
               usage.total = usage.input;
               this.tracker.record({ provider: want, model, usage, feature: "embed" });
             }
             return { ok: true, vectors, model };
           } catch {
-            return { ok: true, vectors: list.map((t3) => localEmbed(t3)), model: "local", local: true, fellBack: true };
+            return { ok: true, vectors: list2.map((t3) => localEmbed(t3)), model: "local", local: true, fellBack: true };
           }
         }
       };
@@ -43506,58 +44582,8 @@ ${h.text}`;
       text: SCOPE_LABELS[kind] + (name5 ? ": " + name5 : "") + tf("ui.aia.nScene", picked.length)
     };
   }
-  function plainText(md) {
-    return String(md || "").replace(/<!--[\s\S]*?-->/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/^#{1,6}\s+/gm, "").replace(/[*_`~>]/g, "").replace(/\r/g, "").trim();
-  }
-  function wordsOf(text) {
-    return tokenize2(plainText(text)).map((x) => x.word);
-  }
-  function countWords3(text) {
-    return wordsOf(text).length;
-  }
   function isStopword(w) {
     return TH_STOPWORDS.has(w) || EN_STOPWORDS.has(String(w).toLowerCase()) || w.length < 2 || /^\d+$/.test(w);
-  }
-  function dialogueRatio(text) {
-    const s = plainText(text);
-    if (!s) return 0;
-    let inside = 0;
-    for (const m of s.matchAll(/[“"„«](.*?)[”"»]/gs)) inside += m[1].length;
-    for (const m of s.matchAll(/^\s*[—–-]\s*(.+)$/gm)) inside += m[1].length;
-    return Math.min(1, inside / s.length);
-  }
-  function splitSentences(text) {
-    return plainText(text).split(SENT_SPLIT).map((x) => x.trim()).filter(Boolean);
-  }
-  function mean(a) {
-    return a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
-  }
-  function median(a) {
-    if (!a.length) return 0;
-    const s = a.slice().sort((x, y) => x - y);
-    const m = s.length >> 1;
-    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-  }
-  function stdev(a) {
-    if (a.length < 2) return 0;
-    const m = mean(a);
-    return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1));
-  }
-  function nameForms(c) {
-    return [c.name, ...c.aliases || []].filter((x) => x && String(x).trim()).map(String);
-  }
-  function countMentions(text, character) {
-    const s = plainText(text);
-    let n2 = 0;
-    for (const form of nameForms(character)) {
-      if (!form) continue;
-      let i5 = 0;
-      while ((i5 = s.indexOf(form, i5)) !== -1) {
-        n2++;
-        i5 += form.length;
-      }
-    }
-    return n2;
   }
   function analyzePacing(scenes = []) {
     const rows = scenes.map((s) => {
@@ -43566,7 +44592,7 @@ ${h.text}`;
       const dr = dialogueRatio(text);
       const sents = splitSentences(text);
       const avgSent = sents.length ? w / sents.length : 0;
-      const tempo = Math.round(100 * (0.45 * dr + 0.35 * (1 - clamp3((avgSent - 6) / 30, 0, 1)) + 0.2 * (1 - clamp3((w - 300) / 1500, 0, 1))));
+      const tempo = Math.round(100 * (0.45 * dr + 0.35 * (1 - clamp4((avgSent - 6) / 30, 0, 1)) + 0.2 * (1 - clamp4((w - 300) / 1500, 0, 1))));
       return {
         id: s.id,
         title: s.title,
@@ -43574,7 +44600,7 @@ ${h.text}`;
         words: w,
         dialogue: +(dr * 100).toFixed(1),
         avgSentence: +avgSent.toFixed(1),
-        tempo: clamp3(tempo, 0, 100)
+        tempo: clamp4(tempo, 0, 100)
       };
     });
     const temps = rows.map((r) => r.tempo);
@@ -43721,14 +44747,14 @@ ${h.text}`;
         density: words ? +(1e3 * total / words).toFixed(1) : 0
       };
     });
-    const empty2 = rows.filter((r) => r.score === 0 && r.words > 40);
+    const empty3 = rows.filter((r) => r.score === 0 && r.words > 40);
     return {
       rows,
-      empty: empty2,
-      coverage: rows.length ? pct(rows.length - empty2.length, rows.length) : 0,
+      empty: empty3,
+      coverage: rows.length ? pct(rows.length - empty3.length, rows.length) : 0,
       stats: [
-        { label: t("ui.aia.stSceneHasConflict"), value: rows.length - empty2.length + "/" + rows.length },
-        { label: t("ui.aia.stNoConflict"), value: empty2.length },
+        { label: t("ui.aia.stSceneHasConflict"), value: rows.length - empty3.length + "/" + rows.length },
+        { label: t("ui.aia.stNoConflict"), value: empty3.length },
         { label: t("ui.aia.stConflictDensity"), value: +mean(rows.map((r) => r.density)).toFixed(1) }
       ]
     };
@@ -43963,46 +44989,46 @@ ${h.text}`;
     const rep = analyzeRepeats(scenes, { characters });
     const st = analyzeScreentime(scenes, characters);
     const words = len5.total;
-    const balance = st.rows.length > 1 ? 10 - clamp3((st.rows[0].share - 100 / st.rows.length) / 8, 0, 10) : 5;
+    const balance = st.rows.length > 1 ? 10 - clamp4((st.rows[0].share - 100 / st.rows.length) / 8, 0, 10) : 5;
     const criteria = [
       {
         key: "pacing",
         label: t("ui.aia.crPacing"),
-        score: round1(clamp3(10 - Math.abs(pace.avg - 55) / 5, 0, 10)),
+        score: round12(clamp4(10 - Math.abs(pace.avg - 55) / 5, 0, 10)),
         note: tf("ui.aia.crPacingNote", pace.avg, pace.slowRuns.length)
       },
       {
         key: "dialogue",
         label: t("ui.aia.crDialogue"),
-        score: round1(clamp3(10 - Math.abs(mean(pace.rows.map((r) => r.dialogue)) - 35) / 4, 0, 10)),
+        score: round12(clamp4(10 - Math.abs(mean(pace.rows.map((r) => r.dialogue)) - 35) / 4, 0, 10)),
         note: tf("ui.aia.crDialogueNote", +mean(pace.rows.map((r) => r.dialogue)).toFixed(1))
       },
       {
         key: "conflict",
         label: t("ui.aia.crConflict"),
-        score: round1(con.coverage / 10),
+        score: round12(con.coverage / 10),
         note: tf("ui.aia.crConflictNote", con.empty.length)
       },
       {
         key: "consistency",
         label: t("ui.aia.crSceneLen"),
-        score: round1(clamp3(10 - (len5.avg ? 10 * len5.sd / len5.avg : 0), 0, 10)),
+        score: round12(clamp4(10 - (len5.avg ? 10 * len5.sd / len5.avg : 0), 0, 10)),
         note: tf("ui.aia.crSceneLenNote", len5.avg, len5.sd)
       },
       {
         key: "language",
         label: t("ui.aia.crLanguage"),
-        score: round1(clamp3(10 - (words ? 400 * rep.totalFound / words : 0), 0, 10)),
+        score: round12(clamp4(10 - (words ? 400 * rep.totalFound / words : 0), 0, 10)),
         note: tf("ui.aia.crLanguageNote", rep.totalFound)
       },
       {
         key: "cast",
         label: t("ui.aia.crCast"),
-        score: round1(clamp3(balance, 0, 10)),
+        score: round12(clamp4(balance, 0, 10)),
         note: tf("ui.aia.crCastNote", st.rows.length, st.rows[0] ? st.rows[0].share : 0)
       }
     ];
-    const total = round1(mean(criteria.map((c) => c.score)));
+    const total = round12(mean(criteria.map((c) => c.score)));
     return {
       criteria,
       total,
@@ -44014,7 +45040,7 @@ ${h.text}`;
       ]
     };
   }
-  function round1(v2) {
+  function round12(v2) {
     return +(Number(v2) || 0).toFixed(1);
   }
   function analysisById(id) {
@@ -44047,6 +45073,10 @@ ${h.text}`;
       case "composition":
         return analyzeComposition(scenes);
       default:
+        if (isDoctor(id)) {
+          const deps = id === "drag" ? { pacing: analyzePacing(scenes), conflict: analyzeConflict(scenes) } : {};
+          return runDoctorLocal(id, scenes, characters, opts, deps);
+        }
         return { stats: [] };
     }
   }
@@ -44075,6 +45105,7 @@ ${h.text}`;
     };
   }
   function localDigest(id, local = {}) {
+    if (isDoctor(id)) return doctorDigest(id, local);
     const lines = [];
     for (const s of local.stats || []) lines.push(`- ${s.label}: ${s.value}`);
     const takeRows = (rows, fmt2, n2 = 12) => (rows || []).slice(0, n2).forEach((r) => lines.push("- " + fmt2(r)));
@@ -44121,7 +45152,15 @@ ${h.text}`;
     }
     return { blocks: out, tokens: used, truncated: out.length < scenes.length };
   }
-  function buildAnalysisPrompt(id, { scenes = [], local = {}, scope: scope2 = {}, focus = "", budget = 6e3 } = {}) {
+  function buildAnalysisPrompt(id, {
+    scenes = [],
+    local = {},
+    scope: scope2 = {},
+    focus = "",
+    budget = 6e3,
+    characters = [],
+    opts = {}
+  } = {}) {
     const def = analysisById(id);
     const task = t(AI_TASK_KEYS[id] || "");
     const sc = describeScope(scope2, scenes);
@@ -44138,10 +45177,15 @@ ${h.text}`;
       lines.push(digest);
       lines.push("");
     }
+    const extras2 = isDoctor(id) ? doctorPromptExtras(id, { characters, local, opts }) : [];
+    if (extras2.length) {
+      lines.push(...extras2);
+      lines.push("");
+    }
     lines.push(t("ui.aia.pRules"));
     if (focus) lines.push(t("ui.aiPlot.important") + focus);
     lines.push("");
-    lines.push(id === "score" ? t("ui.aia.pFormatScore") : t("ui.aia.pFormatFindings"));
+    lines.push(id === "score" ? t("ui.aia.pFormatScore") : id === "tone" ? t("ui.aia.pFormatTone") : isDoctor(id) ? t("ui.aia.pFormatDoctor") : t("ui.aia.pFormatFindings"));
     lines.push("");
     if (blocks.length) {
       lines.push(t("ui.aia.pHeadScenes") + (truncated ? t("ui.aia.pTruncated") : ""));
@@ -44161,9 +45205,9 @@ ${h.text}`;
     if (id === "score") {
       const data2 = extractJson(raw);
       const arr = data2 && (data2.criteria || data2.scores || data2.items) || data2;
-      const rows2 = validate(arr, SCORE_SCHEMA).map((r) => ({ ...r, score: clamp3(round1(r.score), 0, 10) }));
+      const rows2 = validate(arr, SCORE_SCHEMA).map((r) => ({ ...r, score: clamp4(round12(r.score), 0, 10) }));
       const given = data2 && typeof data2 === "object" && !Array.isArray(data2) && Number(data2.total);
-      const total = isFinite(given) && given > 0 ? clamp3(round1(given), 0, 10) : round1(mean(rows2.map((r) => r.score)));
+      const total = isFinite(given) && given > 0 ? clamp4(round12(given), 0, 10) : round12(mean(rows2.map((r) => r.score)));
       return { kind: "score", rows: rows2, total, summary: data2 && data2.summary || "", raw };
     }
     const valid2 = opts.sceneIds ? new Set(opts.sceneIds) : null;
@@ -44178,13 +45222,21 @@ ${h.text}`;
     const local = runLocal(id, scenes, o.characters || [], o);
     const scope2 = describeScope(o.scope, o.scenes || []);
     if (o.useAI === false || !o.client) return { id, local, ai: null, scope: scope2, scenes: scenes.length };
-    const built = buildAnalysisPrompt(id, { scenes, local, scope: o.scope, focus: o.focus, budget: o.budget || 6e3 });
+    const built = buildAnalysisPrompt(id, {
+      scenes,
+      local,
+      scope: o.scope,
+      focus: o.focus,
+      budget: o.budget || 6e3,
+      characters: o.characters || [],
+      opts: o
+    });
     const res = await o.client.complete({
       prompt: built.prompt,
       system: built.system,
       feature: "analyze:" + id,
       temperature: o.temperature ?? 0.3,
-      maxTokens: o.maxTokens || 1200
+      maxTokens: o.maxTokens || (isDoctor(id) ? 1800 : 1200)
     });
     if (!res || !res.ok) return { id, local, ai: { ok: false, error: res && res.error || t("ui.aia.errAiFail") }, scope: scope2, scenes: scenes.length };
     const parsed = parseAnalysisReply(id, res.text, { sceneIds: built.sceneIds });
@@ -44213,7 +45265,7 @@ ${h.text}`;
     const overhead = estimateTokens2(AI_SYSTEM) + estimateTokens2(t(AI_TASK_KEYS[id] || "")) + 240;
     const digest = Math.min(900, 40 + (base4.scenes || 0) * 14);
     const input = (base4.sceneTokens || 0) + overhead + digest;
-    const output = maxOut || (id === "score" ? 900 : 1200);
+    const output = maxOut || (id === "score" ? 900 : isDoctor(id) ? 1800 : 1200);
     return { id, scenes: base4.scenes || 0, input, output, total: input + output, truncated: !!base4.truncated };
   }
   function estimateTotal(ids = ANALYSIS_IDS, base4 = {}) {
@@ -44296,42 +45348,42 @@ ${h.text}`;
   }
   function localTable(id, local = {}) {
     const L2 = local || {};
-    const H2 = (...a) => a;
+    const H3 = (...a) => a;
     if (id === "pacing" && L2.rows) return [
-      H2(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csDialogue"), t("ui.aia.csAvgSent"), t("ui.aia.csTempo")),
+      H3(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csDialogue"), t("ui.aia.csAvgSent"), t("ui.aia.csTempo")),
       ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.dialogue, r.avgSentence, r.tempo])
     ];
     if (id === "arc" && L2.chars) {
-      const rows = [H2(t("ui.aia.csCharacter"), t("ui.aia.csChapter"), t("ui.aia.csCount"))];
+      const rows = [H3(t("ui.aia.csCharacter"), t("ui.aia.csChapter"), t("ui.aia.csCount"))];
       for (const c of L2.chars) for (const ch of c.perChapter) rows.push([c.name, ch.chapterTitle, ch.count]);
       return rows;
     }
     if (id === "words" && L2.rows) return [
-      H2(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csPer10k")),
+      H3(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csPer10k")),
       ...L2.rows.map((r) => [r.word, r.count, r.per10k])
     ];
     if (id === "conflict" && L2.rows) return [
-      H2(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csScore"), t("ui.aia.csDensity"), t("ui.aia.csMarkers")),
+      H3(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csScore"), t("ui.aia.csDensity"), t("ui.aia.csMarkers")),
       ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.score, r.density, r.hits.map((h) => h.word + gi("times") + h.count).join(" ")])
     ];
     if (id === "length" && L2.rows) return [
-      H2(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csMinutes"), t("ui.aia.csPages")),
+      H3(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csMinutes"), t("ui.aia.csPages")),
       ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.minutes, r.pages])
     ];
     if (id === "repeat" && L2.rows) return [
-      H2(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csClosest"), t("ui.aia.csScene"), t("ui.aia.csChapter")),
+      H3(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csClosest"), t("ui.aia.csScene"), t("ui.aia.csChapter")),
       ...L2.rows.map((r) => [r.word, r.count, r.closest, r.title, r.chapterTitle])
     ];
     if (id === "shipping" && L2.rows) return [
-      H2(t("ui.aia.csSideA"), t("ui.aia.csSideB"), t("ui.aia.csSharedScenes"), t("ui.aia.csMentions"), t("ui.aia.csScore")),
+      H3(t("ui.aia.csSideA"), t("ui.aia.csSideB"), t("ui.aia.csSharedScenes"), t("ui.aia.csMentions"), t("ui.aia.csScore")),
       ...L2.rows.map((r) => [r.a, r.b, r.scenes, r.mentions, r.score])
     ];
     if (id === "screentime" && L2.rows) return [
-      H2(t("ui.aia.csCharacter"), t("ui.common.scene2"), t("ui.aia.csMentions"), t("ui.aia.csWords"), t("ui.aia.csShare")),
+      H3(t("ui.aia.csCharacter"), t("ui.common.scene2"), t("ui.aia.csMentions"), t("ui.aia.csWords"), t("ui.aia.csShare")),
       ...L2.rows.map((r) => [r.name, r.scenes, r.mentions, r.words, r.share])
     ];
     if (id === "composition" && L2.rows) return [
-      H2(
+      H3(
         t("ui.aia.csScene"),
         t("ui.aia.csChapter"),
         COMPOSITION_LABELS.dialogue + " %",
@@ -44342,10 +45394,11 @@ ${h.text}`;
       ...L2.rows.map((r) => [r.title, r.chapterTitle, r.dialogue, r.interiority, r.narration, COMPOSITION_LABELS[r.lean] || ""])
     ];
     if (id === "score" && L2.criteria) return [
-      H2(t("ui.aia.csCriterion"), t("ui.aia.csScore"), t("ui.aia.csNote")),
+      H3(t("ui.aia.csCriterion"), t("ui.aia.csScore"), t("ui.aia.csNote")),
       ...L2.criteria.map((c) => [c.label, c.score, c.note])
     ];
-    if (L2.rows && L2.rows.length) return [H2(t("ui.aia.csTitle"), t("ui.aia.csNote")), ...L2.rows.map((r) => [r.title, r.note || ""])];
+    if (isDoctor(id)) return doctorTable(id, L2);
+    if (L2.rows && L2.rows.length) return [H3(t("ui.aia.csTitle"), t("ui.aia.csNote")), ...L2.rows.map((r) => [r.title, r.note || ""])];
     return null;
   }
   function resultCsv(id, res = {}) {
@@ -44374,8 +45427,15 @@ ${h.text}`;
       rows.push([]);
     } else if (ai && ai.ok && ai.rows && ai.rows.length) {
       rows.push([t("ui.aia.aiHead")]);
-      rows.push([t("ui.aia.csSeverity"), t("ui.aia.csTitle"), t("ui.aia.csDetail"), t("ui.aia.csSuggestion"), t("ui.aia.csScene")]);
-      for (const r of ai.rows) rows.push([r.severityLabel || r.severity, r.title, r.detail, r.suggestion, r.sceneId]);
+      rows.push([
+        t("ui.aia.csSeverity"),
+        t("ui.aia.csTitle"),
+        t("ui.aia.csDetail"),
+        t("ui.aia.csSuggestion"),
+        t("ui.aia.csScene"),
+        t("ui.aia.csQuote")
+      ]);
+      for (const r of ai.rows) rows.push([r.severityLabel || r.severity, r.title, r.detail, r.suggestion, r.sceneId, r.quote || ""]);
       rows.push([]);
     }
     if (ai && ai.ok && ai.usage) {
@@ -44405,11 +45465,12 @@ ${h.text}`;
     }
     return "\uFEFF" + parts.join("\r\n");
   }
-  var TH_STOPWORDS, EN_STOPWORDS, CONFLICT_WORDS, ROMANCE_WORDS, SENT_SPLIT, SCOPE_KINDS, SCOPE_LABELS, clamp3, pct, WORDS_PER_MIN, INTERIOR_WORDS, INTERIOR_WORDS_EN, COMPOSITION_KINDS, nonSpace, pctOf, COMPOSITION_LABELS, ANALYSES, ANALYSIS_IDS, AI_SYSTEM, AI_TASK_KEYS, FINDING_SCHEMA, SCORE_SCHEMA, ANALYSIS_SESSION_VERSION, SESSION_DIR2;
+  var TH_STOPWORDS, EN_STOPWORDS, CONFLICT_WORDS, ROMANCE_WORDS, SCOPE_KINDS, SCOPE_LABELS, clamp4, pct, WORDS_PER_MIN, INTERIOR_WORDS, INTERIOR_WORDS_EN, COMPOSITION_KINDS, nonSpace, pctOf, COMPOSITION_LABELS, ANALYSES, ANALYSIS_IDS, AI_SYSTEM, AI_TASK_KEYS, FINDING_SCHEMA, SCORE_SCHEMA, ANALYSIS_SESSION_VERSION, SESSION_DIR2;
   var init_ai_analyze = __esm({
     "src/ai/ai-analyze.js"() {
       init_i18n();
-      init_search_engine();
+      init_ai_doctor();
+      init_ai_text();
       init_ai_core();
       init_icons();
       init_locale();
@@ -44598,7 +45659,6 @@ ${h.text}`;
         "\u0E04\u0E34\u0E14"
         /* /i18n-skip */
       ];
-      SENT_SPLIT = /[.!?]+[\s"'”)\]]*|\n+|\s{2,}/;
       SCOPE_KINDS = ["project", "book", "chapter", "scene"];
       SCOPE_LABELS = {
         project: t("ui.aia.scopeProject"),
@@ -44606,7 +45666,7 @@ ${h.text}`;
         chapter: t("ui.aia.scopeChapter"),
         scene: t("ui.aia.scopeScene")
       };
-      clamp3 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
+      clamp4 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
       pct = (v2, total) => total ? +(100 * v2 / total).toFixed(1) : 0;
       WORDS_PER_MIN = 220;
       INTERIOR_WORDS = [
@@ -44667,7 +45727,9 @@ ${h.text}`;
         { id: "score", icon: gi("star"), ai: "core", title: t("ui.aia.tScore"), desc: t("ui.aia.dScore") },
         { id: "screentime", icon: gi("film"), ai: "assist", title: t("ui.aia.tScreentime"), desc: t("ui.aia.dScreentime"), needsChars: true },
         // [alpha.157] สัดส่วนฉาก — บทพูด / ภายในใจ / บรรยาย
-        { id: "composition", icon: gi("thought"), ai: "assist", title: t("ui.aia.tComposition"), desc: t("ui.aia.dComposition") }
+        { id: "composition", icon: gi("thought"), ai: "assist", title: t("ui.aia.tComposition"), desc: t("ui.aia.dComposition") },
+        // [alpha.164] 🩺 ตรวจบท 5 หัวข้อ (ai-doctor.js) — บทสนทนา · จังหวะอืด · ปมไม่สมเหตุสมผล · OOC · โทนเรื่อง
+        ...DOCTOR_ANALYSES
       ];
       ANALYSIS_IDS = ANALYSES.map((a) => a.id);
       AI_SYSTEM = t("ui.aia.sysEditor");
@@ -44683,14 +45745,19 @@ ${h.text}`;
         shipping: "ui.aia.taskShipping",
         score: "ui.aia.taskScore",
         screentime: "ui.aia.taskScreentime",
-        composition: "ui.aia.taskComposition"
+        composition: "ui.aia.taskComposition",
+        ...DOCTOR_TASK_KEYS
       };
       FINDING_SCHEMA = {
         title: { required: true, type: "string" },
         detail: { type: "string", default: "" },
         severity: { type: "string", enum: Object.keys(SEVERITY), default: "minor" },
         sceneId: { type: "string", default: "" },
-        suggestion: { type: "string", default: "" }
+        suggestion: { type: "string", default: "" },
+        // [alpha.164] ตรวจบท — ประโยคต้นฉบับที่เป็นปัญหา · ตัวละครที่เกี่ยว · ทิศที่ควรปรับโทน
+        quote: { type: "string", default: "" },
+        character: { type: "string", default: "" },
+        adjust: { type: "string", enum: ["", ...TONE_ADJUST], default: "" }
       };
       SCORE_SCHEMA = {
         label: { required: true, type: "string" },
@@ -45157,7 +46224,7 @@ ${h.text}`;
       host2.append(el("div", "dim", done2.length ? tf("ui.notes.doneDoDoneList", done2.length) : t("ui.notes.notHasNoteStuck")));
       return host2;
     }
-    const list = el("div", "fn-list");
+    const list2 = el("div", "fn-list");
     for (const n2 of [...pending].reverse()) {
       const row3 = el("div", "fn-row");
       const chk = el("input", "fn-chk");
@@ -45185,9 +46252,9 @@ ${h.text}`;
         if (onChanged) onChanged();
       };
       row3.append(chk, body, del2);
-      list.append(row3);
+      list2.append(row3);
     }
-    host2.append(list);
+    host2.append(list2);
     return host2;
   }
   async function quickNote(sceneId, sceneTitle) {
@@ -45260,10 +46327,10 @@ ${h.text}`;
       "k-dlg-title",
       (filter && filter.title ? filter.title + " \u2014 " : "") + t("ui.notes.noteAll") + notes.length + ")"
     ));
-    const list = el("div", "k-pick-list");
-    list.style.maxHeight = "50vh";
+    const list2 = el("div", "k-pick-list");
+    list2.style.maxHeight = "50vh";
     if (!notes.length) {
-      list.append(el("div", "dim", t("ui.notes.notHasNotePress")));
+      list2.append(el("div", "dim", t("ui.notes.notHasNotePress")));
     } else {
       for (const n2 of notes) {
         const row3 = el("div", "k-menu-item");
@@ -45281,10 +46348,10 @@ ${h.text}`;
         );
         sub.style.color = "var(--dim)";
         row3.append(body, sub);
-        list.append(row3);
+        list2.append(row3);
       }
     }
-    box2.append(list);
+    box2.append(list2);
     const btns = el("div", "k-dlg-btns");
     const clearB = el("button", "k-danger", t("ui.common.clear"));
     clearB.onclick = async () => {
@@ -45538,19 +46605,19 @@ ${h.text}`;
     const columns = [];
     for (const key2 of ordered) {
       if (hidden.has(key2)) continue;
-      const list = cards.filter((c) => key2 === UNSET ? !c.status : c.status === key2).sort(byBoardOrder);
-      byStatus[key2] = list.length;
+      const list2 = cards.filter((c) => key2 === UNSET ? !c.status : c.status === key2).sort(byBoardOrder);
+      byStatus[key2] = list2.length;
       const wip = (layout.wip || {})[key2] || 0;
       columns.push({
         key: key2,
         label: key2 === UNSET ? UNSET_LABEL : key2,
-        cards: list.map((c) => {
+        cards: list2.map((c) => {
           const { _seq: _seq7, ...rest } = c;
           return rest;
         }),
-        count: list.length,
+        count: list2.length,
         wip,
-        over: wip > 0 && list.length > wip,
+        over: wip > 0 && list2.length > wip,
         // เกินโควตา WIP → UI ทำสีเตือน
         custom: key2 !== UNSET && !statuses.includes(key2),
         collapsed: collapsed.has(key2)
@@ -45593,8 +46660,8 @@ ${h.text}`;
     const next = clone3(scenes);
     const statuses = new Set(cardsOf(next).map((c) => c.status));
     for (const st of statuses) {
-      const list = cardsOf(next).filter((c) => c.status === st).sort(byBoardOrder);
-      list.forEach((c, i5) => {
+      const list2 = cardsOf(next).filter((c) => c.status === st).sort(byBoardOrder);
+      list2.forEach((c, i5) => {
         const h = findScene(next, c.id);
         if (h) h.row.kbOrder = i5;
       });
@@ -46542,11 +47609,11 @@ ${h.text}`;
       }
       const msBox = el("div", "dash-milestones");
       msBox.append(el("div", "dash-ms-title", gi("flag-checkered") + " " + t("ui.dash.milestones")));
-      const list = el("div", "dash-ms-list");
+      const list2 = el("div", "dash-ms-list");
       if (start) {
         const row3 = el("div", "dash-ms dash-ms-start");
         row3.append(el("span", "dash-ms-dot"), el("b", null, t("ui.dash.msStart")), el("span", "dim", fmtDay(start)));
-        list.append(row3);
+        list2.append(row3);
       }
       for (const m of ms) {
         const row3 = el("div", "dash-ms" + (m.goal ? " dash-ms-goal" : ""));
@@ -46555,7 +47622,7 @@ ${h.text}`;
           el("b", null, (m.goal ? t("ui.dash.msGoal") + " \xB7 " : "") + tf("ui.dash.msWords", fmtNum(m.words))),
           el("span", "dim", fmtDay(m.date))
         );
-        list.append(row3);
+        list2.append(row3);
       }
       const nx = nextMilestone(words, goal);
       if (nx) {
@@ -46565,9 +47632,9 @@ ${h.text}`;
           el("b", null, tf("ui.dash.msWords", fmtNum(nx.words))),
           el("span", "dim", tf("ui.dash.msLeft", fmtNum(nx.left)))
         );
-        list.append(row3);
+        list2.append(row3);
       }
-      msBox.append(list);
+      msBox.append(list2);
       box2.append(msBox);
     };
     draw3();
@@ -46818,9 +47885,9 @@ ${h.text}`;
     return "linux";
   }
   function pickAsset(assets, plat) {
-    const list = (assets || []).filter((a) => a && a.name && isAllowedAssetUrl(a.browser_download_url));
+    const list2 = (assets || []).filter((a) => a && a.name && isAllowedAssetUrl(a.browser_download_url));
     for (const re of ASSET_RULES[platformKey(plat)] || []) {
-      const hit = list.find((a) => re.test(String(a.name)));
+      const hit = list2.find((a) => re.test(String(a.name)));
       if (hit) return hit;
     }
     return null;
@@ -47335,11 +48402,11 @@ ${h.text}`;
     return Math.max(1, Math.ceil(Math.max(0, total) / clampPerPage(perPage)));
   }
   function navSlice(items, page2, perPage) {
-    const list = items || [];
+    const list2 = items || [];
     const per = clampPerPage(perPage);
-    const pages = navPageCount(list.length, per);
+    const pages = navPageCount(list2.length, per);
     const p = Math.max(0, Math.min(pages - 1, parseInt(page2, 10) || 0));
-    return { page: p, pages, rows: list.slice(p * per, p * per + per) };
+    return { page: p, pages, rows: list2.slice(p * per, p * per + per) };
   }
   function navLocText(it) {
     const ln = Number.isFinite(it && it.line) ? it.line + 1 : null;
@@ -47388,20 +48455,20 @@ ${h.text}`;
     return String(v2 || "").replace(/…$/, "").replace(/(^|\s)\d+[.)](?=\s|$)/g, " ").replace(/[.>@=]+/g, " ").replace(/[-–—•*]/g, " ").replace(/\s+/g, "").toLowerCase();
   }
   function navMatchRow(scanned, row3) {
-    const list = scanned || [];
+    const list2 = scanned || [];
     const want = navNormLabel(row3 && row3.label);
     if (!want) return null;
     let seen = 0;
-    const exact = list.find((s) => s.kind === row3.kind && navNormLabel(s.label) === want && seen++ === (row3.ord || 0));
+    const exact = list2.find((s) => s.kind === row3.kind && navNormLabel(s.label) === want && seen++ === (row3.ord || 0));
     if (exact) return exact;
-    const sameText = list.find((s) => navNormLabel(s.label) === want);
+    const sameText = list2.find((s) => navNormLabel(s.label) === want);
     if (sameText) return sameText;
     const tw = navTightLabel(row3.label);
-    const sameTight = list.find((s) => navTightLabel(s.label) === tw);
+    const sameTight = list2.find((s) => navTightLabel(s.label) === tw);
     if (sameTight) return sameTight;
     const head2 = tw.slice(0, 12);
     if (!head2) return null;
-    return list.find((s) => {
+    return list2.find((s) => {
       const st = navTightLabel(s.label);
       return st.startsWith(head2) || tw.startsWith(st.slice(0, 12));
     }) || null;
@@ -47647,10 +48714,10 @@ ${h.text}`;
     presetLabel: () => presetLabel,
     removePreset: () => removePreset
   });
-  function mk(list) {
+  function mk(list2) {
     const out = {};
     PRESET_KEYS.forEach((k, i5) => {
-      if (list[i5]) out[k] = list[i5];
+      if (list2[i5]) out[k] = list2[i5];
     });
     return out;
   }
@@ -47702,9 +48769,9 @@ ${h.text}`;
     return base4 + "-x";
   }
   function addPreset(saved, name5, colors) {
-    const list = normalizePresets(saved);
+    const list2 = normalizePresets(saved);
     const id = newPresetId(name5, saved);
-    return [...list, {
+    return [...list2, {
       id,
       name: String(name5 || id).trim() || id,
       builtIn: false,
@@ -48007,13 +49074,13 @@ ${h.text}`;
     return { total: ids.length, on: ids.filter((id) => !n2.hidden[id]).length };
   }
   function layoutToolbar(seq3, visible) {
-    const list = Array.isArray(seq3) ? seq3 : [];
+    const list2 = Array.isArray(seq3) ? seq3 : [];
     const isSep = (x) => x === "sep";
-    const out = list.map((x) => isSep(x) ? false : !!visible(x));
+    const out = list2.map((x) => isSep(x) ? false : !!visible(x));
     let seenButton = false;
     let pendingSep = -1;
-    for (let i5 = 0; i5 < list.length; i5++) {
-      if (isSep(list[i5])) {
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      if (isSep(list2[i5])) {
         if (seenButton) pendingSep = i5;
         continue;
       }
@@ -48027,12 +49094,12 @@ ${h.text}`;
     return out;
   }
   function overflowPlan(items, avail) {
-    const list = Array.isArray(items) ? items : [];
-    let total = list.reduce((s, x) => s + Math.max(0, Number(x && x.w) || 0), 0);
+    const list2 = Array.isArray(items) ? items : [];
+    let total = list2.reduce((s, x) => s + Math.max(0, Number(x && x.w) || 0), 0);
     const lim = Math.max(0, Number(avail) || 0);
     const out = [];
-    for (let i5 = list.length - 1; i5 >= 0 && total > lim; i5--) {
-      const x = list[i5];
+    for (let i5 = list2.length - 1; i5 >= 0 && total > lim; i5--) {
+      const x = list2[i5];
       if (!x || x.locked || !x.id) continue;
       out.unshift(x.id);
       total -= Math.max(0, Number(x.w) || 0);
@@ -48074,8 +49141,8 @@ ${h.text}`;
     return FMTBAR_IDS.includes(id);
   }
   function fmtSupported(mode, id) {
-    const list = FMT_UNSUPPORTED[mode];
-    return !(list && list.includes(id));
+    const list2 = FMT_UNSUPPORTED[mode];
+    return !(list2 && list2.includes(id));
   }
   function fmtMode(mode) {
     return FMT_MODES.includes(mode) ? mode : "prose";
@@ -48156,7 +49223,7 @@ ${h.text}`;
     return { total: ids.length, on: ids.filter((id) => !n2.hidden[id]).length };
   }
   function layoutFmtbar(seq3, cfg, mode) {
-    const list = Array.isArray(seq3) ? seq3 : [];
+    const list2 = Array.isArray(seq3) ? seq3 : [];
     const m = fmtMode(mode);
     const forced = forcedShown(cfg, m);
     const vis = (id) => {
@@ -48165,10 +49232,10 @@ ${h.text}`;
       return true;
     };
     const show = layoutToolbar(
-      list.map((x) => x == null ? " keep" : x),
+      list2.map((x) => x == null ? " keep" : x),
       (x) => x === " keep" ? true : vis(x)
     );
-    const grey = list.map((x) => x && x !== "sep" ? !fmtSupported(m, x) : false);
+    const grey = list2.map((x) => x && x !== "sep" ? !fmtSupported(m, x) : false);
     return { show, grey };
   }
   function forcedShown(cfg, mode) {
@@ -48472,9 +49539,9 @@ ${h.text}`;
       actions.push(id);
       if (actions.length >= FAB_MAX) break;
     }
-    const list = Array.isArray(src2.actions) ? actions : DEFAULT_FAB_ACTIONS.slice();
+    const list2 = Array.isArray(src2.actions) ? actions : DEFAULT_FAB_ACTIONS.slice();
     const display = FAB_DISPLAYS.includes(src2.display) ? src2.display : "icon";
-    return { actions: list, display };
+    return { actions: list2, display };
   }
   function hasFabAction(cfg, id) {
     return normalizeFab(cfg).actions.includes(id);
@@ -48819,8 +49886,8 @@ ${h.text}`;
     const cfgNow = () => normalizeToolbar(state.settings && state.settings.toolbar);
     const count = el("div", "k-tbcfg-count dim");
     host2.append(count);
-    const list = el("div", "k-tbcfg-list");
-    host2.append(list);
+    const list2 = el("div", "k-tbcfg-list");
+    host2.append(list2);
     const syncCount = () => {
       const c = mainbarCounts(cfgNow());
       count.textContent = tf("ui.tbcfg.count", c.on, c.total);
@@ -48870,11 +49937,11 @@ ${h.text}`;
         row3.append(sw);
         sec.append(row3);
       }
-      list.append(sec);
+      list2.append(sec);
     }
     function redrawRows() {
       const c = cfgNow();
-      list.querySelectorAll(".k-tbcfg-row").forEach((r) => {
+      list2.querySelectorAll(".k-tbcfg-row").forEach((r) => {
         const sw = r.querySelector(".k-tbcfg-sw");
         if (sw) sw.checked = isButtonVisible(c, r.dataset.btn);
       });
@@ -48986,8 +50053,8 @@ ${h.text}`;
     host2.append(tabs2);
     const count = el("div", "k-tbcfg-count dim");
     host2.append(count);
-    const list = el("div", "k-tbcfg-list");
-    host2.append(list);
+    const list2 = el("div", "k-tbcfg-list");
+    host2.append(list2);
     const cfgNow = () => normalizeFmtbar(
       state.settings && state.settings.fmtbar,
       state.settings && state.settings.toolbar
@@ -49003,7 +50070,7 @@ ${h.text}`;
       const ids = groups.flatMap((g) => g.buttons.map((b) => b.id));
       const shownN = ids.filter((id) => onBoard ? !plannerBarHidden(cfgNow(), id) : !fmtbarHidden(cfgNow(), mode, id)).length;
       count.textContent = tf("ui.tbcfg.count", shownN, ids.length);
-      list.replaceChildren();
+      list2.replaceChildren();
       for (const g of groups) {
         const sec = el("div", "k-tbcfg-sec");
         const head2 = el("div", "k-tbcfg-head");
@@ -49041,7 +50108,7 @@ ${h.text}`;
           row3.append(sw);
           sec.append(row3);
         }
-        list.append(sec);
+        list2.append(sec);
       }
     }
     redrawAll();
@@ -49123,8 +50190,8 @@ ${h.text}`;
     host2.append(count);
     const chosen = el("div", "k-fabcfg-chosen");
     host2.append(chosen);
-    const list = el("div", "k-tbcfg-list");
-    host2.append(list);
+    const list2 = el("div", "k-tbcfg-list");
+    host2.append(list2);
     function redrawAll() {
       const cfg = cfgNow();
       for (const d of FAB_DISPLAYS) dispBtns[d].classList.toggle("on", d === cfg.display);
@@ -49147,7 +50214,7 @@ ${h.text}`;
         row3.append(up, dn, rm2);
         chosen.append(row3);
       });
-      list.replaceChildren();
+      list2.replaceChildren();
       const full = !canAddFab(cfg);
       for (const g of FAB_GROUPS) {
         const acts = fabGroupActions(g.key);
@@ -49169,7 +50236,7 @@ ${h.text}`;
           row3.append(sw);
           sec.append(row3);
         }
-        list.append(sec);
+        list2.append(sec);
       }
     }
     redrawAll();
@@ -49430,15 +50497,15 @@ ${h.text}`;
       "k-hist-hint",
       t("ui.histOry.historyNoteOnlyChange") + t("ui.histOry.adjustCountTimesKeep")
     ));
-    const list = el("div", "k-hist-list");
-    h.append(list);
+    const list2 = el("div", "k-hist-list");
+    h.append(list2);
     if (!rows.length) {
-      list.append(panelEmpty(t("ui.histOry.notHasChangeSave")));
+      list2.append(panelEmpty(t("ui.histOry.notHasChangeSave")));
       return true;
     }
     const now = el("div", "k-hist-item k-hist-now");
     now.append(el("span", "k-hist-dot"), el("span", "k-hist-text", t("ui.histOry.now")));
-    list.append(now);
+    list2.append(now);
     for (const r of rows) {
       const it = el("div", "k-hist-item");
       it.dataset.seq = String(r.seq);
@@ -49454,7 +50521,7 @@ ${h.text}`;
       back.title = t("ui.histOry.restoreFileAllFile");
       back.onclick = () => revertTo(r.seq, r.text, h);
       it.append(back);
-      list.append(it);
+      list2.append(it);
     }
     const zero = el("div", "k-hist-item");
     zero.append(el("span", "k-hist-dot"));
@@ -49464,7 +50531,7 @@ ${h.text}`;
     const zback = el("button", "k-hist-back", t("ui.histOry.msg"));
     zback.onclick = () => revertTo(0, t("ui.histOry.beforePageAllKeep"), h);
     zero.append(zback);
-    list.append(zero);
+    list2.append(zero);
     return true;
   }
   async function revertTo(seq3, label, host2) {
@@ -49698,20 +50765,20 @@ ${h.text}`;
   }
   function setupFontPicker(sel, o) {
     sel.innerHTML = "";
-    const add = (value, name5) => {
+    const add2 = (value, name5) => {
       const op = document.createElement("option");
       op.value = value;
       op.textContent = name5;
       sel.appendChild(op);
       return op;
     };
-    for (const b of o.base || []) add(b.value, b.name);
+    for (const b of o.base || []) add2(b.value, b.name);
     for (const f of o.files || []) {
       const fam = projectFontFamily(f);
-      if (fam) add('"' + fam + '", ' + (o.generic || "serif"), fam + t("ui.dlg.project"));
+      if (fam) add2('"' + fam + '", ' + (o.generic || "serif"), fam + t("ui.dlg.project"));
     }
     const ensure = (v2) => {
-      if (v2 && ![...sel.options].some((x) => x.value === v2)) add(v2, firstFamily(v2) + t("ui.dlg.fontFromSystemTag"));
+      if (v2 && ![...sel.options].some((x) => x.value === v2)) add2(v2, firstFamily(v2) + t("ui.dlg.fontFromSystemTag"));
     };
     ensure(o.current || "");
     sel.value = o.current || "";
@@ -49731,7 +50798,7 @@ ${h.text}`;
     }
     const sample = extra.querySelector(".k-font-sample");
     const sysBtn = extra.querySelector(".k-font-sys");
-    const paint = () => {
+    const paint2 = () => {
       sample.style.fontFamily = withThaiFallback(sel.value || o.fallback || "");
     };
     if (!sel._fontPicker) {
@@ -49742,7 +50809,7 @@ ${h.text}`;
         if (fp.onChange) fp.onChange(sel.value);
       });
     }
-    sel._fontPicker.paint = paint;
+    sel._fontPicker.paint = paint2;
     sel._fontPicker.onChange = o.onChange || null;
     sysBtn.onclick = async () => {
       const picked = await pickSystemFont(firstFamily(sel.value));
@@ -49752,13 +50819,13 @@ ${h.text}`;
       sel.value = v2;
       sel.dispatchEvent(new Event("change"));
     };
-    paint();
+    paint2();
     return sel;
   }
   async function pickSystemFont(current2) {
-    let list = [];
+    let list2 = [];
     try {
-      list = await kapi.listFonts() || [];
+      list2 = await kapi.listFonts() || [];
     } catch {
     }
     return new Promise((resolve) => {
@@ -49775,7 +50842,7 @@ ${h.text}`;
       let sel = String(current2 || "");
       const draw3 = () => {
         const qy = search2.value.trim().toLowerCase();
-        const rows = list.filter((f) => !qy || f.toLowerCase().includes(qy)).slice(0, 400);
+        const rows = list2.filter((f) => !qy || f.toLowerCase().includes(qy)).slice(0, 400);
         host2.replaceChildren();
         if (!rows.length) {
           host2.append(el("div", "cmp-empty", t("ui.dlg.notFoundFont")));
@@ -49890,8 +50957,8 @@ ${h.text}`;
       }
     }
     const applySpFont = (v2, rows) => {
-      const list = rows || state.settings.langFonts;
-      const n2 = usableCounts(list);
+      const list2 = rows || state.settings.langFonts;
+      const n2 = usableCounts(list2);
       document.documentElement.style.setProperty(
         "--sp-font",
         withThaiFallback(withSpFamily(v2 || DEFAULT_SCRIPT_FONT, n2.screenplay > 0))
@@ -50876,21 +51943,21 @@ ${h.text}`;
     const fillLangs = async () => {
       const sel = q("#st-lang");
       if (!sel) return;
-      let list = [];
+      let list2 = [];
       try {
-        list = await scanLanguages(state.root);
+        list2 = await scanLanguages(state.root);
       } catch {
       }
-      if (!list.length) list = ["th", "en"].map((c) => ({ code: c, nativeName: fallbackLangName(c) }));
+      if (!list2.length) list2 = ["th", "en"].map((c) => ({ code: c, nativeName: fallbackLangName(c) }));
       sel.innerHTML = "";
-      for (const l of list) {
+      for (const l of list2) {
         const o = document.createElement("option");
         o.value = l.code;
         o.textContent = (l.nativeName || fallbackLangName(l.code)) + (l.name && l.name !== l.nativeName ? " (" + l.name + ")" : "") + " \xB7 " + l.code;
         sel.append(o);
       }
       sel.value = i18n.lang || "th";
-      if (!sel.value && list[0]) sel.value = list[0].code;
+      if (!sel.value && list2[0]) sel.value = list2[0].code;
       if (!sel._progEl) {
         sel._progEl = el("div", "k-hint k-lang-progress");
         sel.insertAdjacentElement("afterend", sel._progEl);
@@ -51546,8 +52613,8 @@ ${h.text}`;
   function newPin(x, y, kind = "note") {
     return {
       id: "pin-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      x: clamp4(x),
-      y: clamp4(y),
+      x: clamp5(x),
+      y: clamp5(y),
       label: "",
       kind,
       entityFile: "",
@@ -51556,7 +52623,7 @@ ${h.text}`;
       note: ""
     };
   }
-  function clamp4(n2) {
+  function clamp5(n2) {
     return Math.max(0, Math.min(100, n2));
   }
   function findMap(maps, id) {
@@ -51658,7 +52725,7 @@ ${h.text}`;
   }
   function movePins(pins, ids, dx, dy) {
     const set = new Set(ids || []);
-    return (pins || []).map((p) => set.has(p.id) ? { ...p, x: clamp4(p.x + (+dx || 0)), y: clamp4(p.y + (+dy || 0)) } : p);
+    return (pins || []).map((p) => set.has(p.id) ? { ...p, x: clamp5(p.x + (+dx || 0)), y: clamp5(p.y + (+dy || 0)) } : p);
   }
   function deletePins(map2, ids) {
     const set = new Set(ids || []);
@@ -51670,7 +52737,7 @@ ${h.text}`;
     const set = new Set(ids || []);
     const seq3 = () => "pin-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     return (pins || []).filter((p) => set.has(p.id)).map((p) => {
-      const c = { ...p, id: seq3(), x: clamp4(p.x + offset), y: clamp4(p.y + offset) };
+      const c = { ...p, id: seq3(), x: clamp5(p.x + offset), y: clamp5(p.y + offset) };
       if (intoMapId && c.kind === "portal" && c.toMap === intoMapId) c.toMap = "";
       return c;
     });
@@ -51950,8 +53017,8 @@ ${h.text}`;
           if (!r.width || !r.height) return;
           bindSceneTo(
             null,
-            clamp4((e.clientX - r.left) / r.width * 100),
-            clamp4((e.clientY - r.top) / r.height * 100)
+            clamp5((e.clientX - r.left) / r.width * 100),
+            clamp5((e.clientY - r.top) / r.height * 100)
           );
         };
       }
@@ -52018,8 +53085,8 @@ ${h.text}`;
         panel2.append(row3);
       });
       if (ctx2) {
-        const add = el("button", "floor-add", t("ui.common.add"));
-        add.onclick = async () => {
+        const add2 = el("button", "floor-add", t("ui.common.add"));
+        add2.onclick = async () => {
           const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
           const v2 = await ask2(label.replace(/^\S+\s/, "") + t("ui.floorplan.addList"), { placeholder: ph });
           if (!v2) return;
@@ -52028,7 +53095,7 @@ ${h.text}`;
           });
           redraw3();
         };
-        panel2.append(add);
+        panel2.append(add2);
       }
     }
     const tl = el("div", "floor-timeline");
@@ -52622,8 +53689,8 @@ ${h.text}`;
         return;
       }
       const r = canvas.getBoundingClientRect();
-      const x = clamp4((e.clientX - r.left) / r.width * 100);
-      const y = clamp4((e.clientY - r.top) / r.height * 100);
+      const x = clamp5((e.clientX - r.left) / r.width * 100);
+      const y = clamp5((e.clientY - r.top) / r.height * 100);
       const pin = newPin(x, y);
       const res = await pinDialog(pin, maps, cur.id);
       if (!res) return;
@@ -52638,16 +53705,16 @@ ${h.text}`;
       const box2 = el("div", "map-rubber");
       canvas.append(box2);
       const x0 = e.clientX, y0 = e.clientY;
-      const paint = (ev) => {
+      const paint2 = (ev) => {
         const l = Math.min(x0, ev.clientX) - r.left, t3 = Math.min(y0, ev.clientY) - r.top;
         box2.style.left = l + "px";
         box2.style.top = t3 + "px";
         box2.style.width = Math.abs(ev.clientX - x0) + "px";
         box2.style.height = Math.abs(ev.clientY - y0) + "px";
       };
-      paint(e);
+      paint2(e);
       const up = (ev) => {
-        window.removeEventListener("pointermove", paint);
+        window.removeEventListener("pointermove", paint2);
         window.removeEventListener("pointerup", up);
         const x1 = (Math.min(x0, ev.clientX) - r.left) / r.width * 100;
         const x2 = (Math.max(x0, ev.clientX) - r.left) / r.width * 100;
@@ -52659,7 +53726,7 @@ ${h.text}`;
         for (const p of cur.pins || []) if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) view.sel.add(p.id);
         redraw3();
       };
-      window.addEventListener("pointermove", paint);
+      window.addEventListener("pointermove", paint2);
       window.addEventListener("pointerup", up);
     };
     stage.addEventListener("wheel", (e) => {
@@ -52770,8 +53837,8 @@ ${h.text}`;
           for (const p of cur.pins || []) {
             const s0 = start.get(p.id);
             if (!s0) continue;
-            p.x = clamp4(s0.x + dx);
-            p.y = clamp4(s0.y + dy);
+            p.x = clamp5(s0.x + dx);
+            p.y = clamp5(s0.y + dy);
             const node = canvas.querySelector(`.map-pin[data-pin="${p.id}"]`);
             if (node) {
               node.style.left = p.x + "%";
@@ -52945,11 +54012,11 @@ ${h.text}`;
     cv.width = Math.round(iw * scale2);
     cv.height = Math.round(ih * scale2);
     const ctx2 = cv.getContext("2d");
-    const W = cv.width, H2 = cv.height;
-    const PX = (x) => x / 100 * W, PY = (y) => y / 100 * H2;
+    const W = cv.width, H3 = cv.height;
+    const PX = (x) => x / 100 * W, PY = (y) => y / 100 * H3;
     ctx2.fillStyle = PRINT.paper;
-    ctx2.fillRect(0, 0, W, H2);
-    if (img) ctx2.drawImage(img, 0, 0, W, H2);
+    ctx2.fillRect(0, 0, W, H3);
+    if (img) ctx2.drawImage(img, 0, 0, W, H3);
     const ov = mapOverlays(map2);
     if (ov.grid) {
       ctx2.save();
@@ -52958,7 +54025,7 @@ ${h.text}`;
       for (const p of gridLines(ov.gridSize)) {
         ctx2.beginPath();
         ctx2.moveTo(PX(p), 0);
-        ctx2.lineTo(PX(p), H2);
+        ctx2.lineTo(PX(p), H3);
         ctx2.stroke();
         ctx2.beginPath();
         ctx2.moveTo(0, PY(p));
@@ -53028,7 +54095,7 @@ ${h.text}`;
     }
     if (ov.scale) {
       ctx2.save();
-      const bw = W * 0.18, bx = 40 * scale2, by = H2 - 55 * scale2, bh = 9 * scale2;
+      const bw = W * 0.18, bx = 40 * scale2, by = H3 - 55 * scale2, bh = 9 * scale2;
       ctx2.fillStyle = "rgba(255,255,255,.85)";
       ctx2.fillRect(bx - 6 * scale2, by - 6 * scale2, bw + 12 * scale2, bh + 30 * scale2);
       ctx2.fillStyle = PRINT.ink;
@@ -54014,9 +55081,9 @@ ${h.text}`;
     clearTimeout(S2.to);
     S2.raf = 0;
     S2.to = 0;
-    const list = [...S2.pending];
+    const list2 = [...S2.pending];
     S2.pending.clear();
-    for (const node of list) {
+    for (const node of list2) {
       if (node.isConnected) upgradeGlyphs(node);
     }
   }
@@ -54139,14 +55206,14 @@ ${h.text}`;
       reached: s.goal ? st.written >= s.goal : null
     };
   }
-  function appendSprintHistory(list, rec) {
-    const arr = Array.isArray(list) ? list.slice() : [];
+  function appendSprintHistory(list2, rec) {
+    const arr = Array.isArray(list2) ? list2.slice() : [];
     if (!rec || !(rec.actualMinutes >= 1)) return arr;
     arr.push(rec);
     return arr.slice(-SPRINT_HISTORY_MAX);
   }
-  function sprintSummary(list) {
-    const arr = Array.isArray(list) ? list : [];
+  function sprintSummary(list2) {
+    const arr = Array.isArray(list2) ? list2 : [];
     let words = 0, mins = 0, best = null;
     for (const r of arr) {
       words += +r.words || 0;
@@ -54497,16 +55564,16 @@ ${h.text}`;
     return (pg && pg.blocks || []).find((x) => Number.isFinite(x && x.pos)) || null;
   }
   function pageStartPositions(pages) {
-    const list = pages && pages.pages || pages || [];
-    return list.map((pg) => {
+    const list2 = pages && pages.pages || pages || [];
+    return list2.map((pg) => {
       const b = pageFirstBlock(pg);
       return b ? blockDocPos(b) : null;
     });
   }
   function pageStartMarks(pages, fmt2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const list = pages && pages.pages || pages || [];
-    return list.map((pg) => {
+    const list2 = pages && pages.pages || pages || [];
+    return list2.map((pg) => {
       const b = pageFirstBlock(pg);
       if (!b) return { pos: null, mid: false, indent: 0 };
       return { pos: blockDocPos(b), mid: isMidBlock(b), indent: elementIndentIn(f, b.el) };
@@ -54543,7 +55610,7 @@ ${h.text}`;
   }
   function renderPageView(host2, pages, fmt2, opts = {}) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const list = pages && pages.pages || pages || [];
+    const list2 = pages && pages.pages || pages || [];
     const scale2 = opts.scale ?? 1;
     const gap = opts.gap ?? 20;
     const pw = +f.paper.width, ph = +f.paper.height;
@@ -54552,7 +55619,7 @@ ${h.text}`;
     host2.style.setProperty("--sp-pv-scale", String(scale2));
     host2.style.setProperty("--sp-pv-gap", gap + "px");
     const els = [];
-    for (const pg of list) {
+    for (const pg of list2) {
       const slot = document.createElement("div");
       slot.className = "sp-page-slot";
       slot.style.width = pxW + "px";
@@ -54794,10 +55861,10 @@ ${h.text}`;
   function spErrorMarks(view2) {
     return emInst(view2).list.slice();
   }
-  function setSpErrorMarks(list, view2) {
+  function setSpErrorMarks(list2, view2) {
     const I2 = emInst(view2);
     if (I2 !== EM.detached) EM.cur = I2;
-    const next = (list || []).filter((e) => Number.isFinite(e.pos)).map((e) => ({ pos: e.pos, severity: e.severity === "error" ? "error" : "warn" }));
+    const next = (list2 || []).filter((e) => Number.isFinite(e.pos)).map((e) => ({ pos: e.pos, severity: e.severity === "error" ? "error" : "warn" }));
     const same = next.length === I2.list.length && next.every((e, i5) => e.pos === I2.list[i5].pos && e.severity === I2.list[i5].severity);
     I2.list = next;
     return !same;
@@ -54843,10 +55910,10 @@ ${h.text}`;
   function refreshSpErrorMarks(view2) {
     if (view2) view2.dispatch(view2.state.tr.setMeta(errKey, true));
   }
-  function setContinueds(list, view2) {
+  function setContinueds(list2, view2) {
     const I2 = ctInst(view2);
     if (I2 !== CT.detached) CT.cur = I2;
-    const next = (list || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
+    const next = (list2 || []).filter((m) => m && Number.isFinite(m.pos) && m.pos > 0 && m.text);
     const sig = ctSigOf(next);
     if (sig === I2.sig) return false;
     I2.sig = sig;
@@ -54991,6 +56058,8 @@ ${h.text}`;
       init_editor();
       init_sp_format_guide();
       init_fountain();
+      init_onset_plugin();
+      init_edit_guard();
       marks = {
         strong: { parseDOM: [{ tag: "strong" }], toDOM: () => ["strong", 0] },
         em: { parseDOM: [{ tag: "em" }], toDOM: () => ["em", 0] },
@@ -55090,9 +56159,9 @@ ${h.text}`;
                     return true;
                   },
                   "Shift-Tab": (st, dispatch) => {
-                    const { $from, empty: empty2 } = st.selection;
+                    const { $from, empty: empty3 } = st.selection;
                     const off3 = $from.parentOffset;
-                    if (empty2 && off3 > 0 && $from.parent.textBetween(off3 - 1, off3) === "	") {
+                    if (empty3 && off3 > 0 && $from.parent.textBetween(off3 - 1, off3) === "	") {
                       if (dispatch) dispatch(st.tr.delete($from.start() + off3 - 1, $from.start() + off3));
                     }
                     return true;
@@ -55128,8 +56197,10 @@ ${h.text}`;
                 // [alpha.57a] เลขฉากสองฝั่งหัวฉาก
                 spContinuedPlugin(),
                 // [alpha.58 · 55–56] (CONTINUED)/CONTINUED:/(MORE)/(cont'd)
-                spErrorMarkPlugin()
+                spErrorMarkPlugin(),
                 // [alpha.124 ข้อ 33] ขีดจุดที่ตัวตรวจบทแจ้งไว้ ให้เห็นในเอกสาร
+                onsetPlugin()
+                // [alpha.164] ฉากมีปัญหา — แถบสี + ! ของบล็อกที่ต่างจากอีกฉบับ
               ]
             }),
             handleKeyDown(view2, ev) {
@@ -55210,9 +56281,26 @@ ${h.text}`;
               if (self2.onElement) self2.onElement(self2.curElement());
             }
           });
+          guardEditable(this, [
+            "cmd",
+            "insertScript",
+            "setExtension",
+            "setElement",
+            "setAlign",
+            "cycle",
+            "switchTo",
+            "insertPageBreak",
+            "enter",
+            "toggleTextList",
+            "insertImage"
+          ], editable);
         }
         refreshMentions() {
           refreshMentions(this.view);
+        }
+        /** [alpha.164] แปลง markdown เป็น doc ของบท (ไม่แตะเอกสารบนจอ) — ใช้เทียบ/แสดงฉบับเดิม */
+        docFromMarkdown(md) {
+          return spDocFromMarkdown(md, this.resolveSrc);
         }
         /** แทนที่เนื้อหาทั้งเอกสารด้วย markdown ใหม่ (เก็บ undo history ไว้) */
         setMarkdown(md) {
@@ -55896,10 +56984,10 @@ ${h.text}`;
         fx += (centerX - a.x) * gravity;
         fy += (centerY - a.y) * gravity;
         fz += (centerZ - (a.z || 0)) * gravity;
-        const clamp6 = 22 * damping;
-        a.x += Math.max(-clamp6, Math.min(clamp6, fx * damping));
-        a.y += Math.max(-clamp6, Math.min(clamp6, fy * damping));
-        a.z = (a.z || 0) + Math.max(-clamp6, Math.min(clamp6, fz * damping));
+        const clamp7 = 22 * damping;
+        a.x += Math.max(-clamp7, Math.min(clamp7, fx * damping));
+        a.y += Math.max(-clamp7, Math.min(clamp7, fy * damping));
+        a.z = (a.z || 0) + Math.max(-clamp7, Math.min(clamp7, fz * damping));
       }
     }
   }
@@ -56546,11 +57634,11 @@ ${h.text}`;
               return;
             }
             const W = Math.max(600, this.pane.clientWidth || 900);
-            const H2 = Math.max(400, this.pane.clientHeight || 600);
+            const H3 = Math.max(400, this.pane.clientHeight || 600);
             const D = this._mode3D ? 400 : 0;
             const pos = loadPositions(this._scope());
             this.nodes = ents.map((e) => ({ ...e, x: 0, y: 0, z: 0 }));
-            seedLayout(this.nodes, pos, { width: W, height: H2, depth: D || 400 });
+            seedLayout(this.nodes, pos, { width: W, height: H3, depth: D || 400 });
             const byName = {};
             for (const n2 of this.nodes) {
               const cur = byName[n2.name];
@@ -56573,7 +57661,7 @@ ${h.text}`;
             const fresh = this.nodes.filter((n2) => n2._fresh);
             if (fresh.length) {
               const frozen = new Set(this.nodes.filter((n2) => !n2._fresh));
-              forceLayout(this.nodes, this.edges, { width: W, height: H2, depth: D || 400, iters: 280, pinned: frozen });
+              forceLayout(this.nodes, this.edges, { width: W, height: H3, depth: D || 400, iters: 280, pinned: frozen });
             }
             savePositions(this.nodes, this._scope());
             this._vfCache = null;
@@ -57409,14 +58497,14 @@ ${h.text}`;
   function validateFit(f) {
     return IMAGE_FITS.includes(f);
   }
-  function normTodoItems(list) {
-    if (!Array.isArray(list)) return [];
-    return list.slice(0, 200).map((it) => typeof it === "string" ? { text: it, done: false } : { text: String(it && it.text || ""), done: !!(it && it.done) });
+  function normTodoItems(list2) {
+    if (!Array.isArray(list2)) return [];
+    return list2.slice(0, 200).map((it) => typeof it === "string" ? { text: it, done: false } : { text: String(it && it.text || ""), done: !!(it && it.done) });
   }
   function todoProgress(items) {
-    const list = normTodoItems(items);
-    const done2 = list.filter((i5) => i5.done).length;
-    return { done: done2, total: list.length, percent: list.length ? Math.round(done2 / list.length * 100) : 0 };
+    const list2 = normTodoItems(items);
+    const done2 = list2.filter((i5) => i5.done).length;
+    return { done: done2, total: list2.length, percent: list2.length ? Math.round(done2 / list2.length * 100) : 0 };
   }
   function parseTodoText(text) {
     return String(text == null ? "" : text).split(/\r?\n/).map((line) => {
@@ -57428,9 +58516,9 @@ ${h.text}`;
     return normTodoItems(items).map((it) => (it.done ? "[x] " : "[ ] ") + it.text).join("\n");
   }
   function toggleTodo(items, i5) {
-    const list = normTodoItems(items);
-    if (i5 < 0 || i5 >= list.length) return list;
-    return list.map((it, k) => k === i5 ? { ...it, done: !it.done } : it);
+    const list2 = normTodoItems(items);
+    if (i5 < 0 || i5 >= list2.length) return list2;
+    return list2.map((it, k) => k === i5 ? { ...it, done: !it.done } : it);
   }
   function todoRowAt(n2, lx, ly) {
     const L2 = TODO_LAYOUT;
@@ -65862,10 +66950,10 @@ ${h.text}`;
              */
             createSVGFontFacesMarkup: function() {
               var markup = "", fontList = {}, obj, fontFamily, style, row3, rowIndex, _char, charIndex, i5, len5, fontPaths = fabric4.fontPaths, objects = [];
-              this._objects.forEach(function add(object) {
+              this._objects.forEach(function add2(object) {
                 objects.push(object);
                 if (object._objects) {
-                  object._objects.forEach(add);
+                  object._objects.forEach(add2);
                 }
               });
               for (i5 = 0, len5 = objects.length; i5 < len5; i5++) {
@@ -72313,8 +73401,8 @@ ${h.text}`;
            */
           fxCenterObjectH: function(object, callbacks) {
             callbacks = callbacks || {};
-            var empty2 = function() {
-            }, onComplete = callbacks.onComplete || empty2, onChange = callbacks.onChange || empty2, _this = this;
+            var empty3 = function() {
+            }, onComplete = callbacks.onComplete || empty3, onChange = callbacks.onChange || empty3, _this = this;
             return fabric4.util.animate({
               target: this,
               startValue: object.left,
@@ -72341,8 +73429,8 @@ ${h.text}`;
            */
           fxCenterObjectV: function(object, callbacks) {
             callbacks = callbacks || {};
-            var empty2 = function() {
-            }, onComplete = callbacks.onComplete || empty2, onChange = callbacks.onChange || empty2, _this = this;
+            var empty3 = function() {
+            }, onComplete = callbacks.onComplete || empty3, onChange = callbacks.onChange || empty3, _this = this;
             return fabric4.util.animate({
               target: this,
               startValue: object.top,
@@ -72369,8 +73457,8 @@ ${h.text}`;
            */
           fxRemove: function(object, callbacks) {
             callbacks = callbacks || {};
-            var empty2 = function() {
-            }, onComplete = callbacks.onComplete || empty2, onChange = callbacks.onChange || empty2, _this = this;
+            var empty3 = function() {
+            }, onComplete = callbacks.onComplete || empty3, onChange = callbacks.onChange || empty3, _this = this;
             return fabric4.util.animate({
               target: this,
               startValue: object.opacity,
@@ -75070,8 +76158,8 @@ ${h.text}`;
            */
           fxStraighten: function(callbacks) {
             callbacks = callbacks || {};
-            var empty2 = function() {
-            }, onComplete = callbacks.onComplete || empty2, onChange = callbacks.onChange || empty2, _this = this;
+            var empty3 = function() {
+            }, onComplete = callbacks.onComplete || empty3, onChange = callbacks.onChange || empty3, _this = this;
             return fabric4.util.animate({
               target: this,
               startValue: this.get("angle"),
@@ -82506,12 +83594,12 @@ ${h.text}`;
     if (kind === "triangle") return s * 0.9;
     return s * 0.62;
   }
-  function _fitImage(im, n2, W, H2) {
+  function _fitImage(im, n2, W, H3) {
     const iw = im.naturalWidth || im.width || 1, ih = im.naturalHeight || im.height || 1;
     const fit = n2.fit || "fit";
     const blur = Math.max(0, Math.min(30, n2.blur || 0));
     const zoom = Math.max(0.1, Math.min(6, n2.scale == null ? 1 : n2.scale));
-    const none2 = { max: { x: 0, y: 0 }, pos: { x: 0, y: 0 }, content: { w: W, h: H2 } };
+    const none2 = { max: { x: 0, y: 0 }, pos: { x: 0, y: 0 }, content: { w: W, h: H3 } };
     if (fit === "tile") {
       const pat = new import_fabric.fabric.Pattern({ source: im, repeat: "repeat" });
       if (zoom !== 1 && import_fabric.fabric.util && import_fabric.fabric.util.qrDecompose) {
@@ -82524,7 +83612,7 @@ ${h.text}`;
         left: 0,
         top: 0,
         width: W,
-        height: H2,
+        height: H3,
         originX: "left",
         originY: "top",
         fill: pat,
@@ -82532,7 +83620,7 @@ ${h.text}`;
         evented: false
       })], ...none2 };
     }
-    const sx2 = W / iw, sy2 = H2 / ih;
+    const sx2 = W / iw, sy2 = H3 / ih;
     let scaleX = sx2, scaleY = sy2;
     if (fit === "fit") {
       const s2 = Math.min(sx2, sy2);
@@ -82544,11 +83632,11 @@ ${h.text}`;
     scaleX *= zoom;
     scaleY *= zoom;
     const cw = iw * scaleX, ch = ih * scaleY;
-    const maxX = Math.max(0, Math.round(cw - W)), maxY = Math.max(0, Math.round(ch - H2));
+    const maxX = Math.max(0, Math.round(cw - W)), maxY = Math.max(0, Math.round(ch - H3));
     const px2 = Math.min(maxX, Math.max(0, Math.round(n2.scrollX || 0)));
     const py2 = Math.min(maxY, Math.max(0, Math.round(n2.scrollY || 0)));
     const left = maxX > 0 ? -px2 : (W - cw) / 2;
-    const top = maxY > 0 ? -py2 : (H2 - ch) / 2;
+    const top = maxY > 0 ? -py2 : (H3 - ch) / 2;
     const img = new import_fabric.fabric.Image(im, {
       left,
       top,
@@ -82569,9 +83657,9 @@ ${h.text}`;
     }
     img.clipPath = new import_fabric.fabric.Rect({
       left: (W / 2 - (left + cw / 2)) / scaleX,
-      top: (H2 / 2 - (top + ch / 2)) / scaleY,
+      top: (H3 / 2 - (top + ch / 2)) / scaleY,
       width: W / scaleX,
-      height: H2 / scaleY,
+      height: H3 / scaleY,
       originX: "center",
       originY: "center"
     });
@@ -82618,13 +83706,13 @@ ${h.text}`;
     });
     return [img];
   }
-  function _strokeInside(o, W, H2) {
+  function _strokeInside(o, W, H3) {
     const sw = o && o.stroke ? Number(o.strokeWidth) || 0 : 0;
     if (!(sw > 0) || (o.left || 0) !== 0 || (o.top || 0) !== 0) return o;
-    if (o.type === "rect") o.set({ width: Math.max(1, W - sw), height: Math.max(1, H2 - sw) });
-    else if (o.type === "ellipse") o.set({ rx: Math.max(0.5, (W - sw) / 2), ry: Math.max(0.5, (H2 - sw) / 2) });
+    if (o.type === "rect") o.set({ width: Math.max(1, W - sw), height: Math.max(1, H3 - sw) });
+    else if (o.type === "ellipse") o.set({ rx: Math.max(0.5, (W - sw) / 2), ry: Math.max(0.5, (H3 - sw) / 2) });
     else if (o.width > 0 && o.height > 0) {
-      o.set({ strokeUniform: true, scaleX: Math.max(0.01, (W - sw) / o.width), scaleY: Math.max(0.01, (H2 - sw) / o.height) });
+      o.set({ strokeUniform: true, scaleX: Math.max(0.01, (W - sw) / o.width), scaleY: Math.max(0.01, (H3 - sw) / o.height) });
     }
     o.setCoords();
     return o;
@@ -82650,24 +83738,24 @@ ${h.text}`;
     const v2 = parseInt(m[1], 16);
     return `rgba(${v2 >> 16 & 255},${v2 >> 8 & 255},${v2 & 255},${a})`;
   }
-  function _starPoints(W, H2) {
+  function _starPoints(W, H3) {
     const pts = [];
-    const cx2 = W / 2, cy2 = H2 / 2, R3 = Math.min(W, H2) / 2, r = R3 * 0.42;
+    const cx2 = W / 2, cy2 = H3 / 2, R3 = Math.min(W, H3) / 2, r = R3 * 0.42;
     for (let i5 = 0; i5 < 10; i5++) {
       const rad = Math.PI / 5 * i5 - Math.PI / 2;
       const rr = i5 % 2 ? r : R3;
-      pts.push({ x: cx2 + Math.cos(rad) * rr * (W / Math.min(W, H2)), y: cy2 + Math.sin(rad) * rr * (H2 / Math.min(W, H2)) });
+      pts.push({ x: cx2 + Math.cos(rad) * rr * (W / Math.min(W, H3)), y: cy2 + Math.sin(rad) * rr * (H3 / Math.min(W, H3)) });
     }
     return pts;
   }
-  function _cylinderPath(W, H2) {
-    const e = Math.min(H2 * 0.16, 22);
-    return `M 0 ${e} A ${W / 2} ${e} 0 0 1 ${W} ${e} L ${W} ${H2 - e} A ${W / 2} ${e} 0 0 1 0 ${H2 - e} Z`;
+  function _cylinderPath(W, H3) {
+    const e = Math.min(H3 * 0.16, 22);
+    return `M 0 ${e} A ${W / 2} ${e} 0 0 1 ${W} ${e} L ${W} ${H3 - e} A ${W / 2} ${e} 0 0 1 0 ${H3 - e} Z`;
   }
-  function _bubblePath(W, H2) {
+  function _bubblePath(W, H3) {
     const r = 10, tail = 14;
-    const h = H2 - tail;
-    return `M ${r} 0 L ${W - r} 0 Q ${W} 0 ${W} ${r} L ${W} ${h - r} Q ${W} ${h} ${W - r} ${h} L ${r + tail + 6} ${h} L ${r + 6} ${H2} L ${r + 8} ${h} L ${r} ${h} Q 0 ${h} 0 ${h - r} L 0 ${r} Q 0 0 ${r} 0 Z`;
+    const h = H3 - tail;
+    return `M ${r} 0 L ${W - r} 0 Q ${W} 0 ${W} ${r} L ${W} ${h - r} Q ${W} ${h} ${W - r} ${h} L ${r + tail + 6} ${h} L ${r + 6} ${H3} L ${r + 8} ${h} L ${r} ${h} Q 0 ${h} 0 ${h - r} L 0 ${r} Q 0 0 ${r} 0 Z`;
   }
   var import_fabric, PORT_GAP, EDGE_HIT_TOL, FONT, LAYER, PlannerRenderer;
   var init_planner_render = __esm({
@@ -82829,16 +83917,16 @@ ${h.text}`;
          * (แก้ตอน alpha.65r: ผู้ใช้ขยาย 180 → ได้ 364 แทน 360)
          * ลูกเก็บพิกัดเทียบ "จุดกึ่งกลางกรอบ" → เลื่อนชดเชยครึ่งหนึ่งของส่วนต่าง ภาพจึงไม่ขยับ
          */
-        _forceBox(group, W, H2, minX = 0, minY = 0) {
+        _forceBox(group, W, H3, minX = 0, minY = 0) {
           const bw = group.width, bh = group.height;
-          if (Math.abs(bw - W) < 0.01 && Math.abs(bh - H2) < 0.01 && Math.abs(minX) < 0.01 && Math.abs(minY) < 0.01) return group;
-          const ddx = minX + (bw - W) / 2, ddy = minY + (bh - H2) / 2;
+          if (Math.abs(bw - W) < 0.01 && Math.abs(bh - H3) < 0.01 && Math.abs(minX) < 0.01 && Math.abs(minY) < 0.01) return group;
+          const ddx = minX + (bw - W) / 2, ddy = minY + (bh - H3) / 2;
           for (const k of group._objects) {
             k.left += ddx;
             k.top += ddy;
             k.setCoords();
           }
-          group.set({ width: W, height: H2 });
+          group.set({ width: W, height: H3 });
           group.dirty = true;
           group.setCoords();
           return group;
@@ -82905,11 +83993,11 @@ ${h.text}`;
           const sx2 = Math.abs(group.scaleX || 1), sy2 = Math.abs(group.scaleY || 1);
           if (Math.abs(sx2 - 1) < 1e-3 && Math.abs(sy2 - 1) < 1e-3) return false;
           const box2 = absBox(group);
-          const W = Math.max(16, Math.round(box2.width)), H2 = Math.max(16, Math.round(box2.height));
-          const kids = this._cardChildren({ ...n2, width: W, height: H2 });
+          const W = Math.max(16, Math.round(box2.width)), H3 = Math.max(16, Math.round(box2.height));
+          const kids = this._cardChildren({ ...n2, width: W, height: H3 });
           const { minX, minY } = _kidsMin(kids);
           const probe = new import_fabric.fabric.Group(kids, { originX: "left", originY: "top" });
-          this._forceBox(probe, W, H2, minX, minY);
+          this._forceBox(probe, W, H3, minX, minY);
           const objs = probe._objects.slice();
           probe._objects = [];
           for (const o of group._objects) o.group = void 0;
@@ -82918,7 +84006,7 @@ ${h.text}`;
             o.group = group;
             if (group.canvas) o.canvas = group.canvas;
           }
-          group.set({ width: W, height: H2, scaleX: 1, scaleY: 1, left: box2.x, top: box2.y });
+          group.set({ width: W, height: H3, scaleX: 1, scaleY: 1, left: box2.x, top: box2.y });
           group.scrollMax = this._scrollMax || 0;
           group.scrollMaxX = this._scrollMaxX || 0;
           group.dirty = true;
@@ -83037,7 +84125,7 @@ ${h.text}`;
           return out;
         }
         _cardChildren(n2) {
-          const W = n2.width || CARD_W, H2 = n2.height || CARD_H;
+          const W = n2.width || CARD_W, H3 = n2.height || CARD_H;
           const d = TYPE_DEFAULTS[n2.type] || TYPE_DEFAULTS.scene;
           const textFill = n2.textColor || d.textColor || themeColor("--bright", "#faf9f5");
           const fs = n2.fontSize || d.fontSize || 12.5;
@@ -83046,40 +84134,40 @@ ${h.text}`;
           let kids;
           switch (n2.type) {
             case "sticky":
-              kids = this._stickyChildren(n2, W, H2, textFill, fs);
+              kids = this._stickyChildren(n2, W, H3, textFill, fs);
               break;
             case "text":
-              kids = this._textChildren(n2, W, H2, textFill, fs);
+              kids = this._textChildren(n2, W, H3, textFill, fs);
               break;
             case "shape":
-              kids = this._shapeChildren(n2, W, H2, textFill, fs);
+              kids = this._shapeChildren(n2, W, H3, textFill, fs);
               break;
             case "frame":
-              kids = this._frameChildren(n2, W, H2, textFill, fs);
+              kids = this._frameChildren(n2, W, H3, textFill, fs);
               break;
             case "comment":
-              kids = this._commentChildren(n2, W, H2, textFill, fs);
+              kids = this._commentChildren(n2, W, H3, textFill, fs);
               break;
             case "image":
-              kids = this._imageChildren(n2, W, H2, textFill, fs);
+              kids = this._imageChildren(n2, W, H3, textFill, fs);
               break;
             case "todo":
-              kids = this._todoChildren(n2, W, H2, textFill, fs);
+              kids = this._todoChildren(n2, W, H3, textFill, fs);
               break;
             default:
-              kids = this._recordChildren(n2, W, H2, textFill, fs);
+              kids = this._recordChildren(n2, W, H3, textFill, fs);
           }
-          if (kids && kids[0]) _strokeInside(kids[0], W, H2);
+          if (kids && kids[0]) _strokeInside(kids[0], W, H3);
           return kids;
         }
         // ── รูปบนกระดาน (ข้อ 6) ──
-        _imageChildren(n2, W, H2, textFill, fs) {
+        _imageChildren(n2, W, H3, textFill, fs) {
           const st = this._stroke(n2, "rgba(255,255,255,0.14)", 0);
           const kids = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
-            height: H2,
+            height: H3,
             rx: 4,
             ry: 4,
             fill: this._fill(n2, themeColor("--side", "#1f1e1c")),
@@ -83091,8 +84179,8 @@ ${h.text}`;
           if (!im) {
             kids.push(new import_fabric.fabric.Text(glyphOf(n2.src ? "hourglass" : "image"), {
               left: W / 2,
-              top: H2 / 2,
-              fontSize: Math.min(40, Math.min(W, H2) * 0.35),
+              top: H3 / 2,
+              fontSize: Math.min(40, Math.min(W, H3) * 0.35),
               fill: "rgba(255,255,255,0.3)",
               fontFamily: FONT,
               originX: "center",
@@ -83101,7 +84189,7 @@ ${h.text}`;
             if (!n2.src) {
               kids.push(new import_fabric.fabric.Text(t("ui.planner.imgPickHint"), {
                 left: W / 2,
-                top: H2 / 2 + 30,
+                top: H3 / 2 + 30,
                 fontSize: Math.max(9, fs),
                 fill: "rgba(255,255,255,0.42)",
                 fontFamily: FONT,
@@ -83111,13 +84199,13 @@ ${h.text}`;
             }
             return kids;
           }
-          const placed = _fitImage(im, n2, W, H2);
+          const placed = _fitImage(im, n2, W, H3);
           kids.push(...placed.objects);
           this._scrollMax = Math.max(this._scrollMax || 0, placed.max.y);
           this._scrollMaxX = Math.max(this._scrollMaxX || 0, placed.max.x);
           if (placed.max.x > 0 || placed.max.y > 0) {
             kids.push(...this._scrollBars(
-              { left: 0, top: 0, width: W, height: H2 },
+              { left: 0, top: 0, width: W, height: H3 },
               placed.pos,
               placed.max,
               placed.content
@@ -83126,7 +84214,7 @@ ${h.text}`;
           if (n2.title) {
             kids.push(new import_fabric.fabric.Text(_clip(n2.title, 40), {
               left: 8,
-              top: H2 - 18,
+              top: H3 - 18,
               fontSize: Math.max(9, fs),
               fill: textFill,
               backgroundColor: "rgba(0,0,0,0.45)",
@@ -83141,7 +84229,7 @@ ${h.text}`;
               left: 0,
               top: 0,
               width: Math.max(1, W - sw),
-              height: Math.max(1, H2 - sw),
+              height: Math.max(1, H3 - sw),
               rx: 4,
               ry: 4,
               fill: "",
@@ -83155,7 +84243,7 @@ ${h.text}`;
           return kids;
         }
         // ── รายการสิ่งที่ต้องทำ (ข้อ 9) ──
-        _todoChildren(n2, W, H2, textFill, fs) {
+        _todoChildren(n2, W, H3, textFill, fs) {
           const L2 = TODO_LAYOUT;
           const items = normTodoItems(n2.items);
           const prog = todoProgress(items);
@@ -83164,7 +84252,7 @@ ${h.text}`;
             left: 0,
             top: 0,
             width: W,
-            height: H2,
+            height: H3,
             rx: 8,
             ry: 8,
             fill: this._fill(n2, themeColor("--bar", "#2f2e2b")),
@@ -83214,7 +84302,7 @@ ${h.text}`;
               originY: "top"
             }));
           }
-          const box2 = { left: 0, top: L2.headH, width: W, height: Math.max(10, H2 - L2.headH - 4) };
+          const box2 = { left: 0, top: L2.headH, width: W, height: Math.max(10, H3 - L2.headH - 4) };
           const contentH = items.length * L2.rowH + 4;
           const max2 = Math.max(0, Math.round(contentH - box2.height));
           const sy2 = Math.min(max2, Math.max(0, Math.round(n2.scrollY || 0)));
@@ -83268,7 +84356,7 @@ ${h.text}`;
               originY: "top"
             }));
           }
-          const list = new import_fabric.fabric.Group(rows, {
+          const list2 = new import_fabric.fabric.Group(rows, {
             left: 0,
             top: box2.top - sy2,
             width: W,
@@ -83278,8 +84366,8 @@ ${h.text}`;
             subTargetCheck: false,
             objectCaching: false
           });
-          const ocx = list.left + W / 2, ocy = list.top + list.height / 2;
-          list.clipPath = new import_fabric.fabric.Rect({
+          const ocx = list2.left + W / 2, ocy = list2.top + list2.height / 2;
+          list2.clipPath = new import_fabric.fabric.Rect({
             left: box2.left + box2.width / 2 - ocx,
             top: box2.top + box2.height / 2 - ocy,
             width: box2.width,
@@ -83287,17 +84375,17 @@ ${h.text}`;
             originX: "center",
             originY: "center"
           });
-          kids.push(list);
+          kids.push(list2);
           if (max2 > 0) kids.push(...this._scrollBar({ ...box2, left: 2, width: W - 4 }, sy2, max2, contentH));
           return kids;
         }
         // ── การ์ดผูกเนื้อเรื่อง (ฉาก/บท/Wiki/โน้ต) ──
-        _recordChildren(n2, W, H2, textFill, fs) {
+        _recordChildren(n2, W, H3, textFill, fs) {
           const kids = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
-            height: H2,
+            height: H3,
             rx: 8,
             ry: 8,
             fill: this._fill(n2, themeColor("--border", "#3f3e3a")),
@@ -83348,7 +84436,7 @@ ${h.text}`;
           let bodyTop = 44;
           if (n2.src) {
             const im = this.imageFor(n2.src, n2.id);
-            const bandH = Math.max(24, Math.round((H2 - 44) * (n2.imageH == null ? 0.45 : n2.imageH)));
+            const bandH = Math.max(24, Math.round((H3 - 44) * (n2.imageH == null ? 0.45 : n2.imageH)));
             const band = { left: 10, top: bodyTop, width: W - 20, height: bandH };
             if (im) {
               for (const o of _fitImageInto(im, n2, band)) kids.push(o);
@@ -83368,7 +84456,7 @@ ${h.text}`;
             bodyTop += bandH + 6;
           }
           if (n2.synopsis) {
-            const room = Math.max(12, H2 - bodyTop - (n2.tags && n2.tags.length ? 28 : 0) - (n2.file ? 16 : 0));
+            const room = Math.max(12, H3 - bodyTop - (n2.tags && n2.tags.length ? 28 : 0) - (n2.file ? 16 : 0));
             const tb2 = new import_fabric.fabric.Textbox(String(n2.synopsis), {
               left: 10,
               top: bodyTop,
@@ -83392,7 +84480,7 @@ ${h.text}`;
               const label = vt ? (vt.icon || glyphOf("dot")) + " " + t3 : "#" + t3;
               const txt = new import_fabric.fabric.Text(label, {
                 left: tx2,
-                top: H2 - 30,
+                top: H3 - 30,
                 fontSize: 9,
                 fill: vt ? vt.color : "rgba(255,255,255,0.4)",
                 fontFamily: FONT,
@@ -83408,7 +84496,7 @@ ${h.text}`;
             const short2 = String(n2.file).split(/[\\/]/).pop() || n2.file;
             kids.push(new import_fabric.fabric.Text(_clip(_withGlyph("paperclip", short2), 26), {
               left: 10,
-              top: H2 - 16,
+              top: H3 - 16,
               fontSize: 9,
               fill: "rgba(255,255,255,0.35)",
               fontFamily: FONT,
@@ -83419,13 +84507,13 @@ ${h.text}`;
           return kids;
         }
         // ── โพสต์อิต ──
-        _stickyChildren(n2, W, H2, textFill, fs) {
+        _stickyChildren(n2, W, H3, textFill, fs) {
           const body = n2.synopsis || n2.title || "";
           const kids = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
-            height: H2,
+            height: H3,
             rx: 2,
             ry: 2,
             fill: this._fill(n2, PLANNER_KIND.sticky),
@@ -83449,16 +84537,16 @@ ${h.text}`;
             textAlign: n2.textAlign || "left"
             // [alpha.151] จัดข้อความในการ์ดได้
           });
-          this._clipInto(kids, tb2, { left: 12, top: 12, width: W - 24, height: Math.max(10, H2 - 24) }, n2);
+          this._clipInto(kids, tb2, { left: 12, top: 12, width: W - 24, height: Math.max(10, H3 - 24) }, n2);
           return kids;
         }
         // ── ข้อความลอย ──
-        _textChildren(n2, W, H2, textFill, fs) {
+        _textChildren(n2, W, H3, textFill, fs) {
           const kids = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
-            height: H2,
+            height: H3,
             fill: this._fill(n2, "transparent"),
             ...this._stroke(n2, "rgba(255,255,255,0.18)", 0),
             originX: "left",
@@ -83478,11 +84566,11 @@ ${h.text}`;
             splitByGrapheme: true,
             lineHeight: 1.25
           });
-          this._clipInto(kids, tb2, { left: 2, top: 2, width: Math.max(20, W - 4), height: Math.max(10, H2 - 4) }, n2);
+          this._clipInto(kids, tb2, { left: 2, top: 2, width: Math.max(20, W - 4), height: Math.max(10, H3 - 4) }, n2);
           return kids;
         }
         // ── รูปทรง ──
-        _shapeChildren(n2, W, H2, textFill, fs) {
+        _shapeChildren(n2, W, H3, textFill, fs) {
           const fill3 = this._fill(n2, PLANNER_KIND.note);
           const common = {
             left: 0,
@@ -83495,39 +84583,39 @@ ${h.text}`;
           let shape;
           switch (n2.shape) {
             case "ellipse":
-              shape = new import_fabric.fabric.Ellipse({ ...common, rx: W / 2, ry: H2 / 2 });
+              shape = new import_fabric.fabric.Ellipse({ ...common, rx: W / 2, ry: H3 / 2 });
               break;
             case "round":
-              shape = new import_fabric.fabric.Rect({ ...common, width: W, height: H2, rx: Math.min(W, H2) * 0.22, ry: Math.min(W, H2) * 0.22 });
+              shape = new import_fabric.fabric.Rect({ ...common, width: W, height: H3, rx: Math.min(W, H3) * 0.22, ry: Math.min(W, H3) * 0.22 });
               break;
             case "diamond":
               shape = new import_fabric.fabric.Polygon(
-                [{ x: W / 2, y: 0 }, { x: W, y: H2 / 2 }, { x: W / 2, y: H2 }, { x: 0, y: H2 / 2 }],
+                [{ x: W / 2, y: 0 }, { x: W, y: H3 / 2 }, { x: W / 2, y: H3 }, { x: 0, y: H3 / 2 }],
                 common
               );
               break;
             case "triangle":
-              shape = new import_fabric.fabric.Polygon([{ x: W / 2, y: 0 }, { x: W, y: H2 }, { x: 0, y: H2 }], common);
+              shape = new import_fabric.fabric.Polygon([{ x: W / 2, y: 0 }, { x: W, y: H3 }, { x: 0, y: H3 }], common);
               break;
             case "star":
-              shape = new import_fabric.fabric.Polygon(_starPoints(W, H2), common);
+              shape = new import_fabric.fabric.Polygon(_starPoints(W, H3), common);
               break;
             case "arrow":
               shape = new import_fabric.fabric.Polygon([
-                { x: 0, y: H2 * 0.3 },
-                { x: W * 0.62, y: H2 * 0.3 },
+                { x: 0, y: H3 * 0.3 },
+                { x: W * 0.62, y: H3 * 0.3 },
                 { x: W * 0.62, y: 0 },
-                { x: W, y: H2 / 2 },
-                { x: W * 0.62, y: H2 },
-                { x: W * 0.62, y: H2 * 0.7 },
-                { x: 0, y: H2 * 0.7 }
+                { x: W, y: H3 / 2 },
+                { x: W * 0.62, y: H3 },
+                { x: W * 0.62, y: H3 * 0.7 },
+                { x: 0, y: H3 * 0.7 }
               ], common);
               break;
             case "cylinder":
-              shape = new import_fabric.fabric.Path(_cylinderPath(W, H2), { ...common });
+              shape = new import_fabric.fabric.Path(_cylinderPath(W, H3), { ...common });
               break;
             default:
-              shape = new import_fabric.fabric.Rect({ ...common, width: W, height: H2, rx: 4, ry: 4 });
+              shape = new import_fabric.fabric.Rect({ ...common, width: W, height: H3, rx: 4, ry: 4 });
           }
           const kids = [shape];
           if (n2.title) {
@@ -83551,7 +84639,7 @@ ${h.text}`;
                 left: 8,
                 top: 6,
                 width: Math.max(20, W - 16),
-                height: Math.max(10, H2 - 12)
+                height: Math.max(10, H3 - 12)
               },
               { ...n2, textVAlign: n2.textVAlign || "middle" }
             );
@@ -83568,15 +84656,15 @@ ${h.text}`;
          * (`objectCaching:true` วาดลงผืนเท่ากับ width/height แล้วเฉือนส่วนเกินทิ้ง) = เห็นสามด้าน
          * → ย้ายป้ายเข้ามา **ในกรอบ** เป็นแถบหัวเรื่อง: กล่องกลุ่มเท่ากับ W×H พอดีตั้งแต่ต้น ไม่มีอะไรถูกเฉือน
          */
-        _frameChildren(n2, W, H2, textFill, fs) {
+        _frameChildren(n2, W, H3, textFill, fs) {
           const col = n2.color || themeColor("--accent-hi", "#d97757");
-          const head2 = Math.min(24, Math.max(16, H2 * 0.08));
+          const head2 = Math.min(24, Math.max(16, H3 * 0.08));
           return [
             new import_fabric.fabric.Rect({
               left: 0,
               top: 0,
               width: W,
-              height: H2,
+              height: H3,
               rx: 6,
               ry: 6,
               fill: this._fill(n2, PLANNER_KIND.fillDefault),
@@ -83606,10 +84694,10 @@ ${h.text}`;
           ];
         }
         // ── คอมเมนต์ ──
-        _commentChildren(n2, W, H2, textFill, fs) {
+        _commentChildren(n2, W, H3, textFill, fs) {
           const fill3 = this._fill(n2, PLANNER_KIND.paper);
           const kids = [
-            new import_fabric.fabric.Path(_bubblePath(W, H2), {
+            new import_fabric.fabric.Path(_bubblePath(W, H3), {
               left: 0,
               top: 0,
               originX: "left",
@@ -83642,7 +84730,7 @@ ${h.text}`;
             splitByGrapheme: true,
             lineHeight: 1.25
           });
-          this._clipInto(kids, tb2, { left: 10, top: 26, width: W - 20, height: Math.max(10, H2 - 26 - 16) }, n2);
+          this._clipInto(kids, tb2, { left: 10, top: 26, width: W - 20, height: Math.max(10, H3 - 26 - 16) }, n2);
           return kids;
         }
         // ═════════════════ เส้นเชื่อม (บั๊ก 9/10/11) ═════════════════
@@ -84121,12 +85209,12 @@ ${h.text}`;
          * แก้: ข้ามถ้าขนาดเท่าเดิม + วาดกลับทันทีในเฟรมเดียวกัน (ไม่รอ requestRenderAll)
          */
         fit(w, h) {
-          const W = Math.max(4, Math.round(w)), H2 = Math.max(4, Math.round(h));
+          const W = Math.max(4, Math.round(w)), H3 = Math.max(4, Math.round(h));
           this.canvas.calcOffset();
-          if (this._lastW === W && this._lastH === H2) return false;
+          if (this._lastW === W && this._lastH === H3) return false;
           this._lastW = W;
-          this._lastH = H2;
-          this.canvas.setDimensions({ width: W, height: H2 });
+          this._lastH = H3;
+          this.canvas.setDimensions({ width: W, height: H3 });
           this.canvas.calcOffset();
           this.updateGridCss();
           this.canvas.renderAll();
@@ -84886,8 +85974,8 @@ ${h.text}`;
         }
         /** ระหว่างลาก — อัปเดตข้อมูลพิกัดให้ตรง เพื่อคำนวณเส้นได้ */
         _syncMovingToData(t3) {
-          const list = t3.type === "activeSelection" ? t3.getObjects() : [t3];
-          for (const o of list) {
+          const list2 = t3.type === "activeSelection" ? t3.getObjects() : [t3];
+          for (const o of list2) {
             if (o.kind === "node") {
               const n2 = this.data.getNode(o.nid);
               if (!n2) continue;
@@ -84915,9 +86003,9 @@ ${h.text}`;
         }
         /** วาดเส้นตามการ์ดที่ขยับ — เฉพาะเส้นที่เกี่ยวข้อง (บั๊ก 2) */
         _liveEdges(t3) {
-          const list = t3.type === "activeSelection" ? t3.getObjects() : [t3];
+          const list2 = t3.type === "activeSelection" ? t3.getObjects() : [t3];
           const ids = [];
-          for (const o of list) {
+          for (const o of list2) {
             if (o.kind === "node") ids.push(o.nid);
             else if (o.kind === "group") {
               const g = this.data.getGroup(o.gid);
@@ -84943,10 +86031,10 @@ ${h.text}`;
         _commitTransform(t3) {
           const g = this.data.getGrid();
           const isMulti = t3.type === "activeSelection";
-          const list = isMulti ? t3.getObjects() : [t3];
+          const list2 = isMulti ? t3.getObjects() : [t3];
           const touched = [];
           const needRebuild = [];
-          for (const o of list) {
+          for (const o of list2) {
             if (o.kind !== "node") continue;
             const n2 = this.data.getNode(o.nid);
             if (!n2) continue;
@@ -84963,7 +86051,7 @@ ${h.text}`;
             touched.push(n2.id);
           }
           if (needRebuild.length) {
-            const keep = isMulti ? list.filter((o) => o.kind === "node").map((o) => o.nid) : null;
+            const keep = isMulti ? list2.filter((o) => o.kind === "node").map((o) => o.nid) : null;
             this.renderer.discardActiveObject();
             for (const id of needRebuild) this.renderer.rebuildNode(this.data.getNode(id));
             for (const id of touched) if (!needRebuild.includes(id)) this.renderer.moveNode(this.data.getNode(id));
@@ -85952,7 +87040,7 @@ ${h.text}`;
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog");
       const t3 = el("div", "k-dlg-title", t("ui.planner.openBoardPlanner"));
-      const list = el("div", "planner-board-list");
+      const list2 = el("div", "planner-board-list");
       for (const b of boards) {
         const row3 = el("div", "planner-board-row" + (b.path === currentPath ? " current" : ""));
         row3.append(
@@ -85964,7 +87052,7 @@ ${h.text}`;
           resolve(b.path);
         };
         row3.ondblclick = row3.onclick;
-        list.appendChild(row3);
+        list2.appendChild(row3);
       }
       const btns = el("div", "k-dlg-btns");
       const cancel = el("button", "k-cancel", t("ui.common.cancel"));
@@ -85973,7 +87061,7 @@ ${h.text}`;
         resolve(null);
       };
       btns.appendChild(cancel);
-      box2.append(t3, list, btns);
+      box2.append(t3, list2, btns);
       ov.appendChild(box2);
       document.body.appendChild(ov);
       ov.onclick = (e) => {
@@ -87147,8 +88235,8 @@ ${h.text}`;
         _selectedNodeIds() {
           const act = this.renderer.getActiveObject();
           if (!act) return [];
-          const list = act.type === "activeSelection" ? act.getObjects() : [act];
-          return list.filter((o) => o.kind === "node").map((o) => o.nid);
+          const list2 = act.type === "activeSelection" ? act.getObjects() : [act];
+          return list2.filter((o) => o.kind === "node").map((o) => o.nid);
         }
         _selectAll() {
           const objs = this.data.getAllNodes().filter((n2) => !n2.locked).map((n2) => this.renderer._nodeVis.get(n2.id)).filter(Boolean);
@@ -87252,25 +88340,25 @@ ${h.text}`;
         }
         /** จัดตำแหน่ง/กระจาย สำหรับหลายชิ้น */
         _align(mode, ids) {
-          const list = (ids || this._selectedNodeIds()).map((i5) => this.data.getNode(i5)).filter(Boolean);
-          if (list.length < 2) {
+          const list2 = (ids || this._selectedNodeIds()).map((i5) => this.data.getNode(i5)).filter(Boolean);
+          if (list2.length < 2) {
             setStatus(t("ui.planner.pickLessItemBefore"));
             return false;
           }
-          const minX = Math.min(...list.map((n2) => n2.x)), maxR = Math.max(...list.map((n2) => n2.x + n2.width));
-          const minY = Math.min(...list.map((n2) => n2.y)), maxB = Math.max(...list.map((n2) => n2.y + n2.height));
-          if (mode === "left") for (const n2 of list) n2.x = minX;
-          else if (mode === "right") for (const n2 of list) n2.x = maxR - n2.width;
+          const minX = Math.min(...list2.map((n2) => n2.x)), maxR = Math.max(...list2.map((n2) => n2.x + n2.width));
+          const minY = Math.min(...list2.map((n2) => n2.y)), maxB = Math.max(...list2.map((n2) => n2.y + n2.height));
+          if (mode === "left") for (const n2 of list2) n2.x = minX;
+          else if (mode === "right") for (const n2 of list2) n2.x = maxR - n2.width;
           else if (mode === "hcenter") {
             const c = (minX + maxR) / 2;
-            for (const n2 of list) n2.x = c - n2.width / 2;
-          } else if (mode === "top") for (const n2 of list) n2.y = minY;
-          else if (mode === "bottom") for (const n2 of list) n2.y = maxB - n2.height;
+            for (const n2 of list2) n2.x = c - n2.width / 2;
+          } else if (mode === "top") for (const n2 of list2) n2.y = minY;
+          else if (mode === "bottom") for (const n2 of list2) n2.y = maxB - n2.height;
           else if (mode === "vcenter") {
             const c = (minY + maxB) / 2;
-            for (const n2 of list) n2.y = c - n2.height / 2;
+            for (const n2 of list2) n2.y = c - n2.height / 2;
           } else if (mode === "distH") {
-            const s = list.slice().sort((a, b) => a.x - b.x);
+            const s = list2.slice().sort((a, b) => a.x - b.x);
             const gap = (maxR - minX - s.reduce((t3, n2) => t3 + n2.width, 0)) / (s.length - 1);
             let x = minX;
             for (const n2 of s) {
@@ -87278,7 +88366,7 @@ ${h.text}`;
               x += n2.width + gap;
             }
           } else if (mode === "distV") {
-            const s = list.slice().sort((a, b) => a.y - b.y);
+            const s = list2.slice().sort((a, b) => a.y - b.y);
             const gap = (maxB - minY - s.reduce((t3, n2) => t3 + n2.height, 0)) / (s.length - 1);
             let y = minY;
             for (const n2 of s) {
@@ -87286,26 +88374,26 @@ ${h.text}`;
               y += n2.height + gap;
             }
           }
-          for (const n2 of list) {
+          for (const n2 of list2) {
             n2.x = Math.round(n2.x);
             n2.y = Math.round(n2.y);
             this.renderer.moveNode(n2);
           }
           this.data.markDirty();
-          this.renderer.updateEdgesFor(this.data.edgesTouching(list.map((n2) => n2.id)));
+          this.renderer.updateEdgesFor(this.data.edgesTouching(list2.map((n2) => n2.id)));
           this.renderer.refresh();
           this._snapshot();
           return true;
         }
         _changeMany(props, ids) {
-          const list = ids || this._selectedNodeIds();
-          for (const id of list) {
+          const list2 = ids || this._selectedNodeIds();
+          for (const id of list2) {
             this.data.updateNode(id, props);
             const n2 = this.data.getNode(id);
             if (n2) this.renderer.rebuildNode(n2);
           }
           this.interaction.syncNodeInteractivity();
-          this.renderer.updateEdgesFor(this.data.edgesTouching(list));
+          this.renderer.updateEdgesFor(this.data.edgesTouching(list2));
           this.renderer.refresh();
           this._snapshot();
           return true;
@@ -87713,8 +88801,8 @@ ${h.text}`;
             setStatus(t("ui.planner.mustHasLessCard"));
             return false;
           }
-          const W = Math.max(600, this.renderer.getWidth()), H2 = Math.max(450, this.renderer.getHeight());
-          const k = Math.min(W, H2) / Math.sqrt(ns.length) * 0.8;
+          const W = Math.max(600, this.renderer.getWidth()), H3 = Math.max(450, this.renderer.getHeight());
+          const k = Math.min(W, H3) / Math.sqrt(ns.length) * 0.8;
           for (let it = 0; it < 140; it++) {
             const F = {};
             for (const n2 of ns) F[n2.id] = { x: 0, y: 0 };
@@ -87742,7 +88830,7 @@ ${h.text}`;
             }
             for (const n2 of ns) {
               n2.x = Math.max(10, Math.min(W * 1.6 - n2.width, n2.x + F[n2.id].x));
-              n2.y = Math.max(10, Math.min(H2 * 1.6 - n2.height, n2.y + F[n2.id].y));
+              n2.y = Math.max(10, Math.min(H3 * 1.6 - n2.height, n2.y + F[n2.id].y));
             }
           }
           const g = this.data.getGrid();
@@ -88003,31 +89091,31 @@ ${h.text}`;
     const isTodo = n2.type === "todo";
     const rows = el("div", "planner-props-body");
     wrap2.appendChild(rows);
-    const add = (label, html) => {
+    const add2 = (label, html) => {
       const row3 = el("div", "planner-props-section");
       row3.innerHTML = (label ? `<label>${label}</label>` : "") + html;
       rows.appendChild(row3);
       return row3;
     };
-    add(isText ? t("ui.common.text") : t("ui.common.name"), `<input class="planner-prop-input" id="plp-title" value="${_esc(n2.title)}">`);
-    add(t("ui.common.type"), `<select class="planner-prop-input" id="plp-type">
+    add2(isText ? t("ui.common.text") : t("ui.common.name"), `<input class="planner-prop-input" id="plp-title" value="${_esc(n2.title)}">`);
+    add2(t("ui.common.type"), `<select class="planner-prop-input" id="plp-type">
       ${NODE_TYPES.map((t3) => `<option value="${t3}"${n2.type === t3 ? " selected" : ""}>${TYPE_LABELS[t3] || t3}</option>`).join("")}
     </select>`);
     if (isShape) {
-      add(t("ui.common.shape"), `<select class="planner-prop-input" id="plp-shape">
+      add2(t("ui.common.shape"), `<select class="planner-prop-input" id="plp-shape">
         ${SHAPES.map((s) => `<option value="${s}"${n2.shape === s ? " selected" : ""}>${SHAPE_LABELS[s] || s}</option>`).join("")}
       </select>`);
     }
     if (isCard) {
-      add(t("ui.common.status"), `<select class="planner-prop-input" id="plp-status">
+      add2(t("ui.common.status"), `<select class="planner-prop-input" id="plp-status">
         ${STATUSES.map((s) => `<option value="${escA2(s)}"${n2.status === s ? " selected" : ""}>${escA2(s ? dataLabel(s) : t("ui.common.notSpecify2"))}</option>`).join("")}
       </select>`);
     }
-    add(
+    add2(
       isNote ? t("ui.plannerProps.body") : t("ui.plannerProps.summaryCollapse"),
       `<textarea class="planner-prop-input" id="plp-synopsis" rows="3" placeholder="${isNote ? t("ui.plannerProps.printText") : t("ui.plannerProps.occurScene")}">${_esc(n2.synopsis)}</textarea>`
     );
-    add(t("ui.common.color"), ((a) => `<div class="planner-prop-2col">
+    add2(t("ui.common.color"), ((a) => `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-color" type="color" value="${a[0]}" title="${tx("ui.planner.colorBg2")}">
       <input class="planner-prop-input" id="plp-textcolor" type="color" value="${a[1]}" title="${tx("ui.setTpl.colorChar")}">
     </div>`)([_color(n2.color, PLANNER_NODE_COLORS[0]), _color(n2.textColor, PLANNER_KIND.fillDefault)]));
@@ -88044,15 +89132,15 @@ ${h.text}`;
       swatch2.appendChild(b);
     }
     rows.appendChild(swatch2);
-    add(
+    add2(
       tf("ui.plannerProps.sizeChar", Math.round(n2.fontSize || 12)),
       `<input class="planner-prop-input" id="plp-fs" type="range" min="8" max="48" step="0.5" value="${n2.fontSize || 12}">`
     );
-    add(t("ui.plannerProps.border"), `<div class="planner-prop-2col">
+    add2(t("ui.plannerProps.border"), `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-bordercolor" type="color" value="${_color(n2.borderColor || n2.color, PLANNER_KIND.borderDefault)}">
       <input class="planner-prop-input" id="plp-borderw" type="number" min="0" max="12" step="0.5" value="${n2.borderWidth == null ? 1 : n2.borderWidth}">
     </div>`);
-    add(
+    add2(
       tf("ui.plannerProps.fillOpacity", Math.round((n2.fillOpacity == null ? 1 : n2.fillOpacity) * 100)),
       `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-fill" type="color" value="${_color(n2.fill || n2.color, PLANNER_KIND.fillDefault)}">
@@ -88060,15 +89148,15 @@ ${h.text}`;
     </div>`
     );
     if (isImage || n2.src) {
-      add(t("ui.plannerProps.imgFile"), ((a) => `<div class="planner-prop-row"><input class="planner-prop-input" id="plp-src" value="${a[0]}"><button class="planner-prop-btn" id="plp-imgpick">${tx("ui.plannerProps.pick")}</button></div>`)([_esc(n2.src || "")]));
-      add(t("ui.plannerProps.imgFit"), `<select class="planner-prop-input" id="plp-fit">
+      add2(t("ui.plannerProps.imgFile"), ((a) => `<div class="planner-prop-row"><input class="planner-prop-input" id="plp-src" value="${a[0]}"><button class="planner-prop-btn" id="plp-imgpick">${tx("ui.plannerProps.pick")}</button></div>`)([_esc(n2.src || "")]));
+      add2(t("ui.plannerProps.imgFit"), `<select class="planner-prop-input" id="plp-fit">
         ${IMAGE_FITS.map((f) => `<option value="${f}"${n2.fit === f ? " selected" : ""}>${FIT_LABELS[f] || f}</option>`).join("")}
       </select>`);
-      add(
+      add2(
         tf("ui.plannerProps.imgBlur", Math.round(n2.blur || 0)),
         `<input class="planner-prop-input" id="plp-blur" type="range" min="0" max="30" step="1" value="${n2.blur || 0}">`
       );
-      add(
+      add2(
         tf("ui.plannerProps.imgScale", Math.round((n2.scale == null ? 1 : n2.scale) * 100)),
         `<input class="planner-prop-input" id="plp-scale" type="range" min="${IMG_SCALE_MIN}" max="${IMG_SCALE_MAX}" step="0.05" value="${n2.scale == null ? 1 : n2.scale}">`
       );
@@ -88081,15 +89169,15 @@ ${h.text}`;
       row3.appendChild(todoBox);
       rows.appendChild(row3);
     }
-    add(t("ui.plannerProps.posXY"), `<div class="planner-prop-2col">
+    add2(t("ui.plannerProps.posXY"), `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-x" type="number" value="${Math.round(n2.x)}">
       <input class="planner-prop-input" id="plp-y" type="number" value="${Math.round(n2.y)}">
     </div>`);
-    add(t("ui.plannerProps.wideHigh"), `<div class="planner-prop-2col">
+    add2(t("ui.plannerProps.wideHigh"), `<div class="planner-prop-2col">
       <input class="planner-prop-input" id="plp-w" type="number" min="16" value="${Math.round(n2.width)}">
       <input class="planner-prop-input" id="plp-h" type="number" min="16" value="${Math.round(n2.height)}">
     </div>`);
-    const fileRow = add(
+    const fileRow = add2(
       t("ui.plannerProps.fileBind"),
       ((a) => `<input class="planner-prop-input" id="plp-file" value="${a[0]}" placeholder="${tx("ui.plannerProps.cantBindFile")}">
      <div class="planner-props-actions" style="margin-top:5px">
@@ -88098,8 +89186,8 @@ ${h.text}`;
      </div>`)([_esc(n2.file || "")])
     );
     initIcons(fileRow);
-    add(t("ui.common.tag"), ((a) => `<input class="planner-prop-input" id="plp-tags" value="${a[0]}" placeholder="${tx("ui.plannerProps.text2")}">`)([_esc((n2.tags || []).join(", "))]));
-    add("", ((a) => `<label class="planner-check"><input type="checkbox" id="plp-lock"${a[0]}> ${tx("ui.plannerProps.lockNotMoveEdit2")}</label>`)([n2.locked ? " checked" : ""]));
+    add2(t("ui.common.tag"), ((a) => `<input class="planner-prop-input" id="plp-tags" value="${a[0]}" placeholder="${tx("ui.plannerProps.text2")}">`)([_esc((n2.tags || []).join(", "))]));
+    add2("", ((a) => `<label class="planner-check"><input type="checkbox" id="plp-lock"${a[0]}> ${tx("ui.plannerProps.lockNotMoveEdit2")}</label>`)([n2.locked ? " checked" : ""]));
     const actions = el("div", "planner-props-actions");
     actions.innerHTML = `
     <button id="plp-link" title="${tx("ui.plannerProps.dragDotColorRound3")}">${tx("ui.plannerProps.linkLine")}</button>
@@ -88117,7 +89205,7 @@ ${h.text}`;
     const conns = ctx2.connections || [];
     if (conns.length) {
       wrap2.appendChild(_head(t("ui.plannerProps.lineNext") + conns.length + ")"));
-      const list = el("div", "planner-conn-list");
+      const list2 = el("div", "planner-conn-list");
       for (const c of conns) {
         const row3 = el("div", "planner-conn-row");
         const name5 = el("span", "planner-conn-name", `${c.dir === "out" ? gi("arrow-right") : gi("arrow-left")} ${c.otherTitle}${c.label ? " \xB7 " + c.label : ""}`);
@@ -88127,9 +89215,9 @@ ${h.text}`;
         del2.title = t("ui.plannerProps.delLine");
         del2.onclick = () => ctx2.onDeleteEdge && ctx2.onDeleteEdge(c.id);
         row3.append(name5, del2);
-        list.appendChild(row3);
+        list2.appendChild(row3);
       }
-      wrap2.appendChild(list);
+      wrap2.appendChild(list2);
     }
     container.appendChild(wrap2);
     const q = (id) => wrap2.querySelector("#" + id);
@@ -88210,25 +89298,25 @@ ${h.text}`;
     wrap2.appendChild(_head(t("ui.plannerProps.lineLink")));
     const rows = el("div", "planner-props-body");
     wrap2.appendChild(rows);
-    const add = (label, html) => {
+    const add2 = (label, html) => {
       const row3 = el("div", "planner-props-section");
       row3.innerHTML = (label ? `<label>${label}</label>` : "") + html;
       rows.appendChild(row3);
       return row3;
     };
     if (ctx2.endpoints) {
-      add(
+      add2(
         t("ui.plannerProps.linkTo"),
         `<div class="planner-edge-ends">${_esc(ctx2.endpoints.from)} <b>\u2192</b> ${_esc(ctx2.endpoints.to)}</div>`
       );
     }
-    add(t("ui.plannerProps.badge"), ((a) => `<input class="planner-prop-input" id="plpe-label" value="${a[0]}" placeholder="${tx("ui.plannerProps.egCont")}">`)([_esc(e.label)]));
-    add(t("ui.common.color"), `<input class="planner-prop-input" id="plpe-color" type="color" value="${_color(e.color, PLANNER_EDGE_COLORS[0])}">`);
-    add(
+    add2(t("ui.plannerProps.badge"), ((a) => `<input class="planner-prop-input" id="plpe-label" value="${a[0]}" placeholder="${tx("ui.plannerProps.egCont")}">`)([_esc(e.label)]));
+    add2(t("ui.common.color"), `<input class="planner-prop-input" id="plpe-color" type="color" value="${_color(e.color, PLANNER_EDGE_COLORS[0])}">`);
+    add2(
       tf("ui.plannerProps.bold", e.width || 2),
       `<input class="planner-prop-input" id="plpe-width" type="range" min="1" max="8" step="1" value="${e.width || 2}">`
     );
-    add(t("ui.common.route"), `<select class="planner-prop-input" id="plpe-routing">
+    add2(t("ui.common.route"), `<select class="planner-prop-input" id="plpe-routing">
       ${EDGE_ROUTINGS.map((r) => `<option value="${r}"${(e.routing || "straight") === r ? " selected" : ""}>${ROUTING_LABELS[r]}</option>`).join("")}
     </select>`);
     const styleRow = el("div", "planner-props-section");
@@ -88246,7 +89334,7 @@ ${h.text}`;
     }
     styleRow.appendChild(styleBtns);
     rows.appendChild(styleRow);
-    add(t("ui.plannerProps.headArrowFromTo"), `<div class="planner-prop-2col">
+    add2(t("ui.plannerProps.headArrowFromTo"), `<div class="planner-prop-2col">
       <select class="planner-prop-input" id="plpe-as">
         ${ARROW_HEADS.map((a) => `<option value="${a}"${(e.arrowStart || "none") === a ? " selected" : ""}>${ARROW_LABELS[a]}</option>`).join("")}
       </select>
@@ -88254,7 +89342,7 @@ ${h.text}`;
         ${ARROW_HEADS.map((a) => `<option value="${a}"${(e.arrowEnd || "arrow") === a ? " selected" : ""}>${ARROW_LABELS[a]}</option>`).join("")}
       </select>
     </div>`);
-    add(t("ui.plannerProps.dotNextFromTo"), `<div class="planner-prop-2col">
+    add2(t("ui.plannerProps.dotNextFromTo"), `<div class="planner-prop-2col">
       <select class="planner-prop-input" id="plpe-fp">
         ${PORT_POSITIONS.map((p) => `<option value="${p}"${e.from.port === p ? " selected" : ""}>${PORT_LABELS[p]}</option>`).join("")}
       </select>
@@ -89174,23 +90262,23 @@ ${h.text}`;
     return b ? blockDocPos(b) : null;
   }
   function lastBlock(page2) {
-    const list = page2 && page2.blocks || [];
-    return list.length ? list[list.length - 1] : null;
+    const list2 = page2 && page2.blocks || [];
+    return list2.length ? list2[list2.length - 1] : null;
   }
   function computeContinueds(pages, fmt2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
     const CT2 = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
-    const list = pages && pages.pages || pages || [];
+    const list2 = pages && pages.pages || pages || [];
     const out = [];
     if (CT2.enabled === false) return out;
-    for (let i5 = 0; i5 < list.length - 1; i5++) {
-      const cur = list[i5], next = list[i5 + 1];
+    for (let i5 = 0; i5 < list2.length - 1; i5++) {
+      const cur = list2[i5], next = list2[i5 + 1];
       const pos = pageAnchor(next);
       if (!Number.isFinite(pos)) continue;
       const nb = firstReal(next);
       const mid = isMidBlock(nb);
       const off3 = mid ? elementIndentIn(f, nb.el) : 0;
-      const add = (type, text) => {
+      const add2 = (type, text) => {
         if (!text) return;
         out.push({
           pos,
@@ -89205,11 +90293,11 @@ ${h.text}`;
       };
       if (CT2.dialogue !== false) {
         const lb = lastBlock(cur);
-        if (lb && lb.more) add("more", lb.text || f.strings.dialogueMore);
+        if (lb && lb.more) add2("more", lb.text || f.strings.dialogueMore);
       }
       if (CT2.dialogue !== false) {
         const fb = (next.blocks || [])[0];
-        if (fb && fb.contd) add("contd", fb.text || "");
+        if (fb && fb.contd) add2("contd", fb.text || "");
       }
     }
     return out;
@@ -89217,8 +90305,8 @@ ${h.text}`;
   function pagesWithContinueds(pages, fmt2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
     const CT2 = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
-    const list = pages && pages.pages || pages || [];
-    return list.map((pg) => {
+    const list2 = pages && pages.pages || pages || [];
+    return list2.map((pg) => {
       const blocks = [];
       if (CT2.enabled !== false && CT2.scene !== false && pg.continuedTop) {
         blocks.push({ el: "continued-top", text: pg.continuedTop, lines: 1 });
@@ -89371,11 +90459,11 @@ ${h.text}`;
   function mdToHtmlBody(md, o = {}) {
     const mono = !!o.mono;
     const out = [];
-    let list = null;
+    let list2 = null;
     const closeList = () => {
-      if (list) {
-        out.push(`</${list}>`);
-        list = null;
+      if (list2) {
+        out.push(`</${list2}>`);
+        list2 = null;
       }
     };
     let quote = false;
@@ -89432,10 +90520,10 @@ ${h.text}`;
       if (b.kind === "li") {
         closeQuote();
         const want = b.ordered ? "ol" : "ul";
-        if (list !== want) {
+        if (list2 !== want) {
           closeList();
           out.push(want === "ol" && b.num > 1 ? `<ol start="${b.num}">` : `<${want}>`);
-          list = want;
+          list2 = want;
         }
         const mv = mono ? "" : (0, import_md13.markerVars)(b.text);
         out.push(`<li${mv ? ` style="${mv}"` : ""}><p${attrOf(al)}>${b.text ? inline(b.text, mono) : "<br>"}</p></li>`);
@@ -89995,18 +91083,18 @@ ${mdToHtmlBody(md, o)}
     return out;
   }
   function printedPageNumber(coverPages, phys) {
-    const list = (coverPages || []).map((x) => Math.round(+x)).filter(Number.isFinite);
+    const list2 = (coverPages || []).map((x) => Math.round(+x)).filter(Number.isFinite);
     const p = Math.max(1, Math.round(+phys || 1));
-    if (list.includes(p)) return 0;
+    if (list2.includes(p)) return 0;
     let skipped = 0;
-    for (const c of list) if (c <= p) skipped++;
+    for (const c of list2) if (c <= p) skipped++;
     return Math.max(1, p - skipped);
   }
   function pageIndexOfY(pages, y) {
-    const list = Array.isArray(pages) ? pages : [];
-    if (!list.length) return 1;
+    const list2 = Array.isArray(pages) ? pages : [];
+    if (!list2.length) return 1;
     const v2 = +y || 0;
-    for (let i5 = list.length - 1; i5 >= 0; i5--) if (v2 >= (+list[i5].start || 0) - 0.5) return i5 + 1;
+    for (let i5 = list2.length - 1; i5 >= 0; i5--) if (v2 >= (+list2[i5].start || 0) - 0.5) return i5 + 1;
     return 1;
   }
   function startPageMap(parts) {
@@ -90025,9 +91113,9 @@ ${mdToHtmlBody(md, o)}
     return Number.isFinite(n2) && n2 > 0 ? n2 : void 0;
   }
   function pageAtPos(breaks, pos, first = 1) {
-    const list = (breaks || []).filter((b) => b && Number.isFinite(b.pos));
-    const page2 = 1 + list.filter((b) => b.pos <= pos).length;
-    const total = list.length + 1;
+    const list2 = (breaks || []).filter((b) => b && Number.isFinite(b.pos));
+    const page2 = 1 + list2.filter((b) => b.pos <= pos).length;
+    const total = list2.length + 1;
     const f = Number.isFinite(+first) && +first > 0 ? Math.round(+first) : 1;
     return { page: page2, total, printed: f + page2 - 1, printedLast: f + total - 1 };
   }
@@ -90537,7 +91625,7 @@ ${mdToHtmlBody(md, o)}
     return Array.isArray(ai.providers) && ai.providers.length > 0;
   }
   function registryClient() {
-    const empty2 = (error2, extra = {}) => ({
+    const empty3 = (error2, extra = {}) => ({
       ok: false,
       text: "",
       error: error2,
@@ -90554,7 +91642,7 @@ ${mdToHtmlBody(md, o)}
       },
       async complete(opts = {}) {
         const p = await currentProvider();
-        if (!p) return empty2(t("ui.aiProvider.cantSettingsProviderAI"));
+        if (!p) return empty3(t("ui.aiProvider.cantSettingsProviderAI"));
         const messages = opts.messages && opts.messages.length ? opts.messages : [{ role: "user", content: opts.prompt || "" }];
         const r = await complete(p, {
           system: opts.system || "",
@@ -90565,7 +91653,7 @@ ${mdToHtmlBody(md, o)}
           reqId: opts.reqId,
           timeoutMs: opts.timeoutMs
         });
-        if (!r.ok) return empty2(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+        if (!r.ok) return empty3(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
         const usage = normUsage(r.usage);
         return {
           ok: true,
@@ -90581,7 +91669,7 @@ ${mdToHtmlBody(md, o)}
       async stream(opts = {}, onChunk = () => {
       }) {
         const p = await currentProvider();
-        if (!p) return empty2(t("ui.aiProvider.cantSettingsProviderAI"));
+        if (!p) return empty3(t("ui.aiProvider.cantSettingsProviderAI"));
         const messages = opts.messages && opts.messages.length ? opts.messages : [{ role: "user", content: opts.prompt || "" }];
         const r = await completeStream(p, {
           system: opts.system || "",
@@ -90594,7 +91682,7 @@ ${mdToHtmlBody(md, o)}
         }, (c) => onChunk(c.delta || "", { partial: c.text }));
         if (!r.ok) {
           const got = r.text || "";
-          return empty2(r.error, {
+          return empty3(r.error, {
             status: r.status,
             aborted: !!r.aborted,
             timedOut: !!r.timedOut,
@@ -90617,8 +91705,8 @@ ${mdToHtmlBody(md, o)}
         };
       },
       async embed(texts, opts = {}) {
-        const list = Array.isArray(texts) ? texts : [texts];
-        return { ok: true, vectors: list.map((x) => localEmbed(x)), model: "local", local: true };
+        const list2 = Array.isArray(texts) ? texts : [texts];
+        return { ok: true, vectors: list2.map((x) => localEmbed(x)), model: "local", local: true };
       }
     };
   }
@@ -90762,6 +91850,135 @@ ${mdToHtmlBody(md, o)}
     }
   });
 
+  // src/ai-doctor-ui.js
+  function quoteRow(h, { title: title2, meta: meta2, quote, sceneId, cls }) {
+    const row3 = el("div", "aia-doc-row" + (cls ? " " + cls : ""));
+    const head2 = el("div", "aia-doc-head");
+    head2.append(el("span", "aia-doc-title", title2 || ""));
+    if (meta2) head2.append(el("span", "aia-doc-meta", meta2));
+    row3.append(head2);
+    if (quote) row3.append(el("div", "aia-doc-quote", quote));
+    if (sceneId) {
+      row3.classList.add("is-link");
+      row3.onclick = () => h.jumpToScene(sceneId);
+    }
+    return row3;
+  }
+  function list(rows, limit = 30) {
+    const wrap2 = el("div", "aia-doc-list");
+    wrap2.append(...rows.slice(0, limit));
+    return wrap2;
+  }
+  function renderDoctorLocal(id, L2, h) {
+    const box2 = el("div", "aia-doc");
+    if (id === "dialog") {
+      if (!L2.flagged || !L2.flagged.length) {
+        box2.append(empty2());
+        return box2;
+      }
+      box2.append(list(L2.flagged.map((f) => quoteRow(h, {
+        title: f.title,
+        meta: (f.speaker ? f.speaker + " \xB7 " : "") + reasonText(f.reasons),
+        quote: f.quote,
+        sceneId: f.sceneId
+      }))));
+    } else if (id === "drag") {
+      box2.append(h.barList(L2.rows.map((r) => ({
+        label: r.title || r.id,
+        value: r.drag,
+        display: r.drag,
+        sceneId: r.id,
+        sub: r.reasons.length ? reasonText(r.reasons, "drag") : "",
+        tone: r.drag >= DRAG_FLAG ? "slow" : ""
+      }))));
+      for (const g of L2.runs || []) {
+        box2.append(quoteRow(h, {
+          title: t("ui.aia.slowRun"),
+          meta: tf("ui.aia.runRange", g.from, g.to, g.count),
+          sceneId: g.sceneId,
+          cls: "aia-doc-warn"
+        }));
+      }
+    } else if (id === "logic") {
+      if (!L2.rows || !L2.rows.length) {
+        box2.append(empty2());
+        return box2;
+      }
+      box2.append(list(L2.rows.map((r) => quoteRow(h, {
+        title: r.title || r.id,
+        meta: r.words.join(", ") + (r.late ? " \xB7 " + t("ui.aia.stLogicLate") : ""),
+        quote: r.quote,
+        sceneId: r.id,
+        cls: r.late ? "aia-doc-warn" : ""
+      }))));
+    } else if (id === "ooc") {
+      if (!L2.rows || !L2.rows.length) {
+        box2.append(empty2());
+        return box2;
+      }
+      const chips = el("div", "aia-chips");
+      for (const r of L2.rows) {
+        const c = el(
+          "span",
+          "aia-chip" + (r.outliers ? " aia-chip-warn" : ""),
+          r.name + " \xB7 " + tf("ui.aia.oocHabit", r.pronoun || "\u2014", r.particle || "\u2014") + (r.profile ? "" : " \xB7 " + t("ui.aia.oocNoProfile"))
+        );
+        chips.append(c);
+      }
+      box2.append(chips);
+      if (L2.outliers && L2.outliers.length) {
+        box2.append(list(L2.outliers.map((o) => quoteRow(h, {
+          title: o.name + " \u2014 " + o.title,
+          meta: tf("ui.aia.oocShift", o.form, o.expected),
+          quote: o.quote,
+          sceneId: o.sceneId,
+          cls: "aia-doc-warn"
+        }))));
+      }
+    } else if (id === "tone") {
+      const wrap2 = el("div", "aia-tone");
+      for (const r of L2.rows) {
+        const row3 = el("div", "aia-tone-row" + (r.adjust ? " is-off" : "") + (r.whiplash ? " is-whip" : ""));
+        row3.append(el("div", "aia-tone-name", r.title || r.id));
+        const bar = el("div", "aia-tone-bar");
+        const c = el("div", "aia-tone-c");
+        c.style.width = Math.min(50, r.comedy * 5) + "%";
+        const d = el("div", "aia-tone-d");
+        d.style.width = Math.min(50, r.drama * 5) + "%";
+        bar.title = TONE_LABELS.comedy + " " + r.comedy + " \xB7 " + TONE_LABELS.drama + " " + r.drama;
+        bar.append(c, el("div", "aia-tone-mid"), d);
+        row3.append(bar);
+        row3.append(el("div", "aia-tone-tag", (TONE_LABELS[r.tone] || r.tone) + (r.adjust ? " " + gi("arrow-right") + " " + ADJUST_LABELS[r.adjust] : "") + (r.whiplash ? " \xB7 " + t("ui.aia.toneWhip") : "")));
+        if (r.id) {
+          row3.classList.add("aia-jump");
+          row3.onclick = () => h.jumpToScene(r.id);
+        }
+        wrap2.append(row3);
+      }
+      box2.append(wrap2);
+    }
+    return box2;
+  }
+  function doctorFindingExtras(r) {
+    const out = [];
+    const chips = el("div", "aia-chips");
+    if (r.character) chips.append(el("span", "aia-chip", gi("user") + " " + r.character));
+    if (r.adjust && ADJUST_LABELS[r.adjust]) chips.append(el("span", "aia-chip aia-chip-adj adj-" + r.adjust, ADJUST_LABELS[r.adjust]));
+    if (chips.childElementCount) out.push(chips);
+    if (r.quote) out.push(el("div", "aia-doc-quote", r.quote));
+    return out;
+  }
+  var empty2;
+  var init_ai_doctor_ui = __esm({
+    "src/ai-doctor-ui.js"() {
+      init_i18n();
+      init_core();
+      init_icons();
+      init_ai_doctor();
+      empty2 = () => el("div", "aia-hint", t("ui.aia.noSignal"));
+    }
+  });
+
   // src/ai-analyzer-ui.js
   var ai_analyzer_ui_exports = {};
   __export(ai_analyzer_ui_exports, {
@@ -90878,6 +92095,8 @@ ${mdToHtmlBody(md, o)}
               pov: hm.pov || "",
               storyDate: hm.storyDate || "",
               status: sc.status || "",
+              // [alpha.164] ตรวจบทอ่านบทพูดของบทภาพยนตร์จากพาร์เซอร์ตัวจริง — ต้องรู้ว่าฉากเป็นโหมดไหน
+              format: (fm && fm.format) === "screenplay" ? "screenplay" : "prose",
               text,
               words: countWords3(text)
             });
@@ -90891,7 +92110,14 @@ ${mdToHtmlBody(md, o)}
     const ents = await listEntities(root).catch(() => []);
     const chars3 = ents.filter((e) => e.cat === "characters");
     const use = chars3.length ? chars3 : ents;
-    return use.map((e) => ({ name: e.name, aliases: e.aliases || [], cat: e.cat, file: e.path }));
+    return use.map((e) => ({
+      name: e.name,
+      aliases: e.aliases || [],
+      cat: e.cat,
+      file: e.path,
+      entity: e.entity || null,
+      profile: profileText(e.entity || {})
+    }));
   }
   async function ensureLoaded(force = false) {
     if (S3.loaded && S3.root === state.root && !force) return;
@@ -91034,6 +92260,10 @@ ${mdToHtmlBody(md, o)}
     const box2 = el("div", "aia-result-local");
     box2.append(statsBar(local.stats));
     const L2 = local;
+    if (isDoctor(id)) {
+      box2.append(renderDoctorLocal(id, L2, { barList, jumpToScene }));
+      return box2;
+    }
     if (id === "pacing") {
       box2.append(barList(L2.rows.map((r) => ({
         label: r.title || r.id,
@@ -91186,6 +92416,7 @@ ${mdToHtmlBody(md, o)}
         li.append(el("span", "aia-sev", r.severityLabel));
         li.append(el("span", "aia-find-title", r.title));
         if (r.detail) li.append(el("div", "aia-find-detail", r.detail));
+        if (isDoctor(id)) li.append(...doctorFindingExtras(r));
         if (r.suggestion) li.append(el("div", "aia-find-fix", gi("arrow-right") + " " + r.suggestion));
         if (r.sceneId) {
           li.classList.add("is-link");
@@ -91229,7 +92460,8 @@ ${mdToHtmlBody(md, o)}
         characters: S3.characters,
         scope: S3.scope,
         client: useAI ? getAIClient() : null,
-        useAI
+        useAI,
+        toneTarget: S3.toneTarget
       });
     } catch (e) {
       log("error", t("ui.aia.errRun"), e);
@@ -91384,7 +92616,7 @@ ${mdToHtmlBody(md, o)}
     box2.append(el("div", "k-dlg-title", t("ui.aia.sessionTitle")));
     const close2 = () => ov.remove();
     if (!rows.length) box2.append(el("div", "aia-hint", t("ui.aia.sessionEmpty")));
-    const list = el("div", "aia-sess-list");
+    const list2 = el("div", "aia-sess-list");
     for (const r of rows) {
       const item = el("div", "aia-sess-item");
       const info = el("div", "aia-sess-info");
@@ -91414,9 +92646,9 @@ ${mdToHtmlBody(md, o)}
         }
       }, "k-danger"));
       item.append(acts);
-      list.append(item);
+      list2.append(item);
     }
-    box2.append(list);
+    box2.append(list2);
     const btns = el("div", "k-dlg-btns");
     const closeBtn = el("button", "k-ok", t("ui.common.close"));
     closeBtn.onclick = close2;
@@ -91558,38 +92790,78 @@ ${mdToHtmlBody(md, o)}
     wrap2.append(opts);
     wrap2.append(usageLine());
     const b = base3();
-    const grid = el("div", "aia-grid");
-    for (const c of ANALYSES) {
-      const card = el("div", "aia-card");
-      card.dataset.card = c.id;
-      card.append(el("div", "aia-card-head", c.icon + " " + c.title));
-      card.append(el("div", "aia-card-desc", c.desc));
-      const chips = [];
-      if (c.ai === "core") chips.push({ label: t("ui.aia.tagNeedAI") });
-      if (S3.useAI) {
-        const e = estimateAnalysis(c.id, b);
-        chips.push({ cls: "aia-chip-est", label: tf(
-          "ui.aia.estTokens",
-          fmtTok(e.total),
-          fmtUsd(estimateUsd(S3.price.provider, S3.price.model, e))
-        ), title: t("ui.aia.estTip") });
+    const groups = [
+      {
+        key: "doctor",
+        head: gi("check-circle") + " " + t("ui.aia.groupDoctor"),
+        desc: t("ui.aia.groupDoctorDesc"),
+        cards: ANALYSES.filter((c) => c.group === "doctor")
+      },
+      {
+        key: "stats",
+        head: gi("chart") + " " + t("ui.aia.groupStats"),
+        desc: "",
+        cards: ANALYSES.filter((c) => c.group !== "doctor")
       }
-      if (chips.length) card.append(chipList(chips));
-      const row3 = el("div", "aia-card-btns");
-      const btn2 = el("button", "aia-run", t("ui.aia.run"));
-      btn2.type = "button";
-      btn2.onclick = () => runAnalysis(c.id);
-      row3.append(btn2);
-      row3.append(miniBtn(gi("download"), t("ui.aia.exportCsvOne"), () => exportResultCsv(c.id)));
-      card.append(row3);
-      const slot = el("div", "aia-result");
-      const prev = S3.results.get(resultKey(c.id));
-      if (prev) paintResult(slot, prev);
-      card.append(slot);
-      grid.append(card);
+    ];
+    for (const g of groups) {
+      const gh = el("div", "aia-group-head");
+      gh.dataset.group = g.key;
+      gh.append(el("div", "aia-group-title", g.head));
+      if (g.desc) gh.append(el("div", "aia-group-desc", g.desc));
+      wrap2.append(gh);
+      const grid = el("div", "aia-grid");
+      grid.dataset.group = g.key;
+      for (const c of g.cards) grid.append(analysisCard(c, b));
+      wrap2.append(grid);
     }
-    wrap2.append(grid);
     return wrap2;
+  }
+  function analysisCard(c, b) {
+    const card = el("div", "aia-card" + (c.group === "doctor" ? " aia-card-doctor" : ""));
+    card.dataset.card = c.id;
+    card.append(el("div", "aia-card-head", c.icon + " " + c.title));
+    card.append(el("div", "aia-card-desc", c.desc));
+    const chips = [];
+    if (c.ai === "core") chips.push({ label: t("ui.aia.tagNeedAI") });
+    if (S3.useAI) {
+      const e = estimateAnalysis(c.id, b);
+      chips.push({ cls: "aia-chip-est", label: tf(
+        "ui.aia.estTokens",
+        fmtTok(e.total),
+        fmtUsd(estimateUsd(S3.price.provider, S3.price.model, e))
+      ), title: t("ui.aia.estTip") });
+    }
+    if (chips.length) card.append(chipList(chips));
+    if (c.id === "tone") {
+      const lab = el("label", "aia-tone-target");
+      lab.append(el("span", null, t("ui.aia.toneTargetLabel")));
+      const sel = el("select", "aia-tone-sel");
+      sel.id = "aia-tone-target";
+      for (const k of TONE_TARGETS) {
+        const o = el("option", null, TONE_LABELS[k] || k);
+        o.value = k;
+        if (k === S3.toneTarget) o.selected = true;
+        sel.append(o);
+      }
+      sel.onchange = () => {
+        S3.toneTarget = sel.value;
+      };
+      lab.append(sel);
+      card.append(lab);
+    }
+    const row3 = el("div", "aia-card-btns");
+    const btn2 = el("button", "aia-run", t("ui.aia.run"));
+    btn2.type = "button";
+    btn2.onclick = () => runAnalysis(c.id);
+    row3.append(btn2);
+    row3.append(miniBtn(gi("download"), t("ui.aia.exportCsvOne"), () => exportResultCsv(c.id)));
+    card.append(row3);
+    const slot = el("div", "aia-result");
+    const prev = S3.results.get(resultKey(c.id));
+    if (prev) paintResult(slot, prev);
+    card.append(slot);
+    return card;
   }
   function usageLine() {
     const line = el("div", "aia-usage");
@@ -91690,6 +92962,8 @@ ${mdToHtmlBody(md, o)}
       init_ai_providers();
       init_ai_analyze();
       init_locale();
+      init_ai_doctor();
+      init_ai_doctor_ui();
       ANALYZER_CARDS = ANALYSES;
       SKIP = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Plugins", "Research", "Backups", "Analysis"];
       S3 = {
@@ -91700,6 +92974,8 @@ ${mdToHtmlBody(md, o)}
         // เอนทิตี้ Wiki ที่ใช้เป็น "ตัวละคร"
         scope: { kind: "project", sectionKey: "", chapterId: "", sceneId: "" },
         useAI: true,
+        toneTarget: "auto",
+        // [alpha.164] โทนที่ผู้เขียนตั้งใจ (การ์ด 🎭 โทนเรื่อง)
         results: /* @__PURE__ */ new Map(),
         // `${id}||${scopeKey}` → ผลลัพธ์ล่าสุด
         saved: /* @__PURE__ */ new Set(),
@@ -92134,7 +93410,7 @@ ${mdToHtmlBody(md, o)}
     meas.style.cssText = "position:fixed;left:-30000px;top:0;visibility:hidden;width:" + textW + "in;max-width:none;margin:0;padding:0;";
     meas.innerHTML = bodyHtml;
     document.body.append(meas);
-    const paint = () => {
+    const paint2 = () => {
       let blocks = [];
       let pages2 = withMeasureMode(() => {
         const origin = meas.getBoundingClientRect().top;
@@ -92162,7 +93438,7 @@ ${mdToHtmlBody(md, o)}
     };
     let pages = [];
     try {
-      pages = paint();
+      pages = paint2();
     } catch (e) {
       meas.remove();
       throw e;
@@ -92175,12 +93451,12 @@ ${mdToHtmlBody(md, o)}
     const ready2 = wait.then(() => {
       let n2 = pages.length;
       try {
-        if (box2.isConnected) n2 = paint().length;
+        if (box2.isConnected) n2 = paint2().length;
       } catch {
       }
       const late = afterLateImages(meas, () => {
         try {
-          if (box2.isConnected) paint();
+          if (box2.isConnected) paint2();
         } catch {
         }
         meas.remove();
@@ -92397,14 +93673,14 @@ ${mdToHtmlBody(md, o)}
       log("warn", t("ui.readbook.measureFail"), e);
     }
     if (!pages.length) pages = [{ start: 0, end: doc3.contentH, index: 1 }];
-    const topOf = /* @__PURE__ */ new Map();
+    const topOf2 = /* @__PURE__ */ new Map();
     for (const b of blocks) {
       const k = b.el && b.el.dataset ? b.el.dataset.k2part : void 0;
-      if (k === void 0 || topOf.has(k)) continue;
-      topOf.set(k, b.top);
+      if (k === void 0 || topOf2.has(k)) continue;
+      topOf2.set(k, b.top);
     }
     const withPhys = doc3.parts.map((p, i5) => {
-      const y = topOf.has(String(i5)) ? topOf.get(String(i5)) : null;
+      const y = topOf2.has(String(i5)) ? topOf2.get(String(i5)) : null;
       return { ...p, page: y === null ? 1 : pageIndexOfY(pages, y) };
     });
     const coverPages = coverPagesOf(withPhys);
@@ -92767,9 +94043,9 @@ ${mdToHtmlBody(md, o)}
     if (isPanelOpen("chapters") && $("#chapters-body")) renderChapterManager($("#chapters-body"));
   }
   async function primaryDraft(secPath) {
-    const list = await listDraftsForSection(secPath);
-    if (!list.length) return "";
-    return (list.find((d) => d.primary) || list[0]).dPath;
+    const list2 = await listDraftsForSection(secPath);
+    if (!list2.length) return "";
+    return (list2.find((d) => d.primary) || list2[0]).dPath;
   }
   function coverHintLine() {
     const f = spFormat();
@@ -93345,6 +94621,9 @@ ${mdToHtmlBody(md, o)}
     _bar = null;
     b.close();
   }
+  function rewriteBarTab() {
+    return _bar ? _bar.tab : null;
+  }
   function promptLabels() {
     return {
       role: t("ui.aiRewrite.pRole"),
@@ -93369,9 +94648,8 @@ ${mdToHtmlBody(md, o)}
       for (const e of await listEntities2(state.root)) {
         const names = [e.name, ...e.aliases || []].filter((n2) => n2 && String(n2).length >= 2);
         if (!names.some((n2) => text.includes(n2))) continue;
-        const f = e.entity.fields || {};
-        const summary = Object.entries(f).filter(([, v2]) => v2 && typeof v2 === "string").map(([k, v2]) => k + ": " + v2).join(" \xB7 ").replace(/\s+/g, " ");
-        hits.push("- " + e.name + (summary ? " \u2014 " + (summary.length > 320 ? summary.slice(0, 320) + "\u2026" : summary) : ""));
+        const summary = profileText(e.entity || {}, 320);
+        hits.push("- " + e.name + (summary ? " \u2014 " + summary : ""));
         if (hits.length >= 8) break;
       }
       return hits.join("\n");
@@ -93495,7 +94773,7 @@ ${mdToHtmlBody(md, o)}
     }
     function place() {
       if (!bar.isConnected) return;
-      if (view2.isDestroyed) {
+      if (view2.isDestroyed || !view2.dom.getClientRects().length) {
         closeRewriteBar();
         return;
       }
@@ -93506,13 +94784,13 @@ ${mdToHtmlBody(md, o)}
       } catch {
         return;
       }
-      const W = window.innerWidth, H2 = window.innerHeight, M2 = 8;
+      const W = window.innerWidth, H3 = window.innerHeight, M2 = 8;
       const pr = paneOf().getBoundingClientRect();
       const inPane = pr.width >= 380;
       bar.style.width = inPane ? Math.min(560, pr.width - 2 * M2) + "px" : "";
       const r = bar.getBoundingClientRect();
       let top = b.bottom + M2;
-      if (top + r.height > H2 - M2) top = Math.max(M2, a.top - r.height - M2);
+      if (top + r.height > H3 - M2) top = Math.max(M2, a.top - r.height - M2);
       const lo = inPane ? pr.left + M2 : M2;
       const hi = inPane ? pr.right - r.width - M2 : W - r.width - M2;
       const left = Math.max(lo, Math.min(Math.min(a.left, b.left), hi));
@@ -93537,6 +94815,7 @@ ${mdToHtmlBody(md, o)}
     }
     document.addEventListener("keydown", onKey, true);
     const ctl = {
+      tab,
       close() {
         if (busy && reqId && kapi.httpAbort) {
           try {
@@ -93712,6 +94991,7 @@ ${mdToHtmlBody(md, o)}
       init_icons();
       init_dist4();
       init_ai_agents();
+      init_ai_doctor();
       LAST_AGENT_KEY = "k2-rewrite-agent";
       _bar = null;
     }
@@ -93844,7 +95124,7 @@ ${mdToHtmlBody(md, o)}
       c.onchange = () => {
         r[key2] = c.checked;
         dirty();
-        paint();
+        paint2();
       };
       w.append(c, document.createTextNode(" " + label));
       if (tip) w.title = tip;
@@ -93875,7 +95155,7 @@ ${mdToHtmlBody(md, o)}
       });
       return d;
     }
-    function paint() {
+    function paint2() {
       page2.innerHTML = "";
       page2.append(ce("roster-title", r.title, (v2) => {
         r.title = v2;
@@ -93894,7 +95174,7 @@ ${mdToHtmlBody(md, o)}
         del2.onclick = () => {
           r.characters.splice(i5, 1);
           dirty();
-          paint();
+          paint2();
         };
         row3.append(name5, el("span", "roster-colon", ":"), detail, del2);
         cast.append(row3);
@@ -93913,11 +95193,11 @@ ${mdToHtmlBody(md, o)}
       if (r.showScene !== false) page2.append(sec("scene", fmt2.strings.sceneTitle));
       if (r.showTime !== false) page2.append(sec("time", fmt2.strings.timeTitle));
     }
-    paint();
+    paint2();
     bAdd.onclick = () => {
       r.characters.push({ name: "", detail: "" });
       dirty();
-      paint();
+      paint2();
     };
     bWiki.onclick = async () => {
       const chars3 = await wikiCharacters();
@@ -93932,7 +95212,7 @@ ${mdToHtmlBody(md, o)}
         added++;
       }
       dirty();
-      paint();
+      paint2();
       setStatus(added ? t("ui.roster.addCharacterWiki") + added + t("ui.roster.person") : t("ui.roster.characterWikiCompleteDone"));
     };
     bCopy.onclick = () => {
@@ -94021,20 +95301,20 @@ ${mdToHtmlBody(md, o)}
   function newTitlePage(strings) {
     return { strings: Array.isArray(strings) ? strings.map((s) => newTitleString(s)) : [] };
   }
-  function normalizeTitlePages(list) {
-    const arr = Array.isArray(list) ? list : list && Array.isArray(list.pages) ? list.pages : [];
+  function normalizeTitlePages(list2) {
+    const arr = Array.isArray(list2) ? list2 : list2 && Array.isArray(list2.pages) ? list2.pages : [];
     return arr.map((p) => newTitlePage(
       (Array.isArray(p?.strings) ? p.strings : []).map((s) => ({
         text: String(s?.text ?? ""),
-        x: clamp5(num(s?.x, 1.5), -2, 40),
-        y: clamp5(num(s?.y, 4.5), -2, 40),
-        size: clamp5(num(s?.size, 12), 4, 96),
+        x: clamp6(num(s?.x, 1.5), -2, 40),
+        y: clamp6(num(s?.y, 4.5), -2, 40),
+        size: clamp6(num(s?.size, 12), 4, 96),
         font: String(s?.font ?? ""),
         bold: s?.bold === true,
         italic: s?.italic === true,
         underline: s?.underline === true,
         align: TITLE_ALIGNS.includes(s?.align) ? s.align : "left",
-        width: clamp5(num(s?.width, 0), 0, 40)
+        width: clamp6(num(s?.width, 0), 0, 40)
       }))
     ));
   }
@@ -94118,8 +95398,8 @@ ${mdToHtmlBody(md, o)}
   }
   function titlePagesHtml(pages, fmt2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const list = normalizeTitlePages(pages);
-    return list.map((p) => `<section class="pg pg-title">${titlePageInnerHtml(p, f)}</section>`).join("\n");
+    const list2 = normalizeTitlePages(pages);
+    return list2.map((p) => `<section class="pg pg-title">${titlePageInnerHtml(p, f)}</section>`).join("\n");
   }
   function titlePagesCss(fmt2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
@@ -94151,7 +95431,7 @@ ${mdToHtmlBody(md, o)}
   function titlePageCount(pages) {
     return normalizeTitlePages(pages).length;
   }
-  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp5, TitlePageEditor, esc3;
+  var TITLE_PAGE_VERSION, TITLE_ALIGNS, clamp6, TitlePageEditor, esc3;
   var init_sp_title_pages = __esm({
     "src/sp-title-pages.js"() {
       init_i18n();
@@ -94159,7 +95439,7 @@ ${mdToHtmlBody(md, o)}
       init_num();
       TITLE_PAGE_VERSION = 1;
       TITLE_ALIGNS = ["left", "center", "right"];
-      clamp5 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
+      clamp6 = (v2, lo, hi) => Math.max(lo, Math.min(hi, v2));
       TitlePageEditor = class {
         constructor(pages) {
           this.pages = normalizeTitlePages(pages);
@@ -94175,7 +95455,7 @@ ${mdToHtmlBody(md, o)}
           return p ? p.strings : [];
         }
         addPage(at) {
-          const i5 = Number.isFinite(+at) ? clamp5(Math.round(+at), 0, this.pages.length) : this.pages.length;
+          const i5 = Number.isFinite(+at) ? clamp6(Math.round(+at), 0, this.pages.length) : this.pages.length;
           this.pages.splice(i5, 0, newTitlePage());
           return i5;
         }
@@ -94198,7 +95478,7 @@ ${mdToHtmlBody(md, o)}
         /** ย้ายหน้า (ลาก/ปุ่มขึ้น-ลง) — คืน index ใหม่ หรือ -1 เมื่อย้ายไม่ได้ */
         movePage(from2, to) {
           if (!this.page(from2)) return -1;
-          const t3 = clamp5(Math.round(+to), 0, this.pages.length - 1);
+          const t3 = clamp6(Math.round(+to), 0, this.pages.length - 1);
           if (t3 === from2) return from2;
           const [p] = this.pages.splice(from2, 1);
           this.pages.splice(t3, 0, p);
@@ -94211,24 +95491,24 @@ ${mdToHtmlBody(md, o)}
           return p.strings.length - 1;
         }
         updateString(pageIdx, strIdx, patch) {
-          const list = this.strings(pageIdx);
-          if (!list[strIdx]) return false;
-          list[strIdx] = normalizeTitlePages([{ strings: [{ ...list[strIdx], ...patch || {} }] }])[0].strings[0];
+          const list2 = this.strings(pageIdx);
+          if (!list2[strIdx]) return false;
+          list2[strIdx] = normalizeTitlePages([{ strings: [{ ...list2[strIdx], ...patch || {} }] }])[0].strings[0];
           return true;
         }
         deleteString(pageIdx, strIdx) {
-          const list = this.strings(pageIdx);
-          if (!list[strIdx]) return false;
-          list.splice(strIdx, 1);
+          const list2 = this.strings(pageIdx);
+          if (!list2[strIdx]) return false;
+          list2.splice(strIdx, 1);
           return true;
         }
         moveString(pageIdx, from2, to) {
-          const list = this.strings(pageIdx);
-          if (!list[from2]) return -1;
-          const t3 = clamp5(Math.round(+to), 0, list.length - 1);
+          const list2 = this.strings(pageIdx);
+          if (!list2[from2]) return -1;
+          const t3 = clamp6(Math.round(+to), 0, list2.length - 1);
           if (t3 === from2) return from2;
-          const [s] = list.splice(from2, 1);
-          list.splice(t3, 0, s);
+          const [s] = list2.splice(from2, 1);
+          list2.splice(t3, 0, s);
           return t3;
         }
         /** สตริงทุกชิ้นของทุกหน้าที่มีข้อความจริง (ใช้ตอนวาด/ส่งออก) */
@@ -103604,7 +104884,7 @@ ${mdToHtmlBody(md, o)}
         if (out.tabs.acTL == null) return [UPNG.toRGBA8.decodeImage(out.data, w, h, out).buffer];
         var frms = [];
         if (out.frames[0].data == null) out.frames[0].data = out.data;
-        var len5 = w * h * 4, img = new Uint8Array(len5), empty2 = new Uint8Array(len5), prev = new Uint8Array(len5);
+        var len5 = w * h * 4, img = new Uint8Array(len5), empty3 = new Uint8Array(len5), prev = new Uint8Array(len5);
         for (var i5 = 0; i5 < out.frames.length; i5++) {
           var frm = out.frames[i5];
           var fx = frm.rect.x, fy = frm.rect.y, fw = frm.rect.width, fh = frm.rect.height;
@@ -103614,7 +104894,7 @@ ${mdToHtmlBody(md, o)}
           else if (frm.blend == 1) UPNG._copyTile(fdata, fw, fh, img, w, h, fx, fy, 1);
           frms.push(img.buffer.slice(0));
           if (frm.dispose == 0) {
-          } else if (frm.dispose == 1) UPNG._copyTile(empty2, fw, fh, img, w, h, fx, fy, 0);
+          } else if (frm.dispose == 1) UPNG._copyTile(empty3, fw, fh, img, w, h, fx, fy, 0);
           else if (frm.dispose == 2) for (var j = 0; j < len5; j++) img[j] = prev[j];
         }
         return frms;
@@ -103852,12 +105132,12 @@ ${mdToHtmlBody(md, o)}
         return out;
       };
       UPNG.inflateRaw = (function() {
-        var H2 = {};
-        H2.H = {};
-        H2.H.N = function(N, W) {
+        var H3 = {};
+        H3.H = {};
+        H3.H.N = function(N, W) {
           var R3 = Uint8Array, i5 = 0, m = 0, J2 = 0, h = 0, Q = 0, X2 = 0, u = 0, w = 0, d = 0, v2, C2;
           if (N[0] == 3 && N[1] == 0) return W ? W : new R3(0);
-          var V2 = H2.H, n2 = V2.b, A = V2.e, l = V2.R, M2 = V2.n, I2 = V2.A, e = V2.Z, b = V2.m, Z = W == null;
+          var V2 = H3.H, n2 = V2.b, A = V2.e, l = V2.R, M2 = V2.n, I2 = V2.A, e = V2.Z, b = V2.m, Z = W == null;
           if (Z) W = new R3(N.length >>> 2 << 3);
           while (i5 == 0) {
             i5 = n2(N, d, 1);
@@ -103866,13 +105146,13 @@ ${mdToHtmlBody(md, o)}
             if (m == 0) {
               if ((d & 7) != 0) d += 8 - (d & 7);
               var D = (d >>> 3) + 4, q = N[D - 4] | N[D - 3] << 8;
-              if (Z) W = H2.H.W(W, w + q);
+              if (Z) W = H3.H.W(W, w + q);
               W.set(new R3(N.buffer, N.byteOffset + D, q), w);
               d = D + q << 3;
               w += q;
               continue;
             }
-            if (Z) W = H2.H.W(W, w + (1 << 17));
+            if (Z) W = H3.H.W(W, w + (1 << 17));
             if (m == 1) {
               v2 = b.J;
               C2 = b.h;
@@ -103940,15 +105220,15 @@ ${mdToHtmlBody(md, o)}
           }
           return W.length == w ? W : W.slice(0, w);
         };
-        H2.H.W = function(N, W) {
+        H3.H.W = function(N, W) {
           var R3 = N.length;
           if (W <= R3) return N;
           var V2 = new Uint8Array(R3 << 1);
           V2.set(N, 0);
           return V2;
         };
-        H2.H.R = function(N, W, R3, V2, n2, A) {
-          var l = H2.H.e, M2 = H2.H.Z, I2 = 0;
+        H3.H.R = function(N, W, R3, V2, n2, A) {
+          var l = H3.H.e, M2 = H3.H.Z, I2 = 0;
           while (I2 < R3) {
             var e = N[M2(V2, n2) & W];
             n2 += e & 15;
@@ -103978,7 +105258,7 @@ ${mdToHtmlBody(md, o)}
           }
           return n2;
         };
-        H2.H.V = function(N, W, R3, V2) {
+        H3.H.V = function(N, W, R3, V2) {
           var n2 = 0, A = 0, l = V2.length >>> 1;
           while (A < R3) {
             var M2 = N[A + W];
@@ -103994,8 +105274,8 @@ ${mdToHtmlBody(md, o)}
           }
           return n2;
         };
-        H2.H.n = function(N, W) {
-          var R3 = H2.H.m, V2 = N.length, n2, A, l, M2, I2, e = R3.j;
+        H3.H.n = function(N, W) {
+          var R3 = H3.H.m, V2 = N.length, n2, A, l, M2, I2, e = R3.j;
           for (var M2 = 0; M2 <= W; M2++) e[M2] = 0;
           for (M2 = 1; M2 < V2; M2 += 2) e[N[M2]]++;
           var b = R3.K;
@@ -104013,8 +105293,8 @@ ${mdToHtmlBody(md, o)}
             }
           }
         };
-        H2.H.A = function(N, W, R3) {
-          var V2 = N.length, n2 = H2.H.m, A = n2.r;
+        H3.H.A = function(N, W, R3) {
+          var V2 = N.length, n2 = H3.H.m, A = n2.r;
           for (var l = 0; l < V2; l += 2) if (N[l + 1] != 0) {
             var M2 = l >> 1, I2 = N[l + 1], e = M2 << 4 | I2, b = W - I2, Z = N[l] << b, m = Z + (1 << b);
             while (Z != m) {
@@ -104024,44 +105304,44 @@ ${mdToHtmlBody(md, o)}
             }
           }
         };
-        H2.H.l = function(N, W) {
-          var R3 = H2.H.m.r, V2 = 15 - W;
+        H3.H.l = function(N, W) {
+          var R3 = H3.H.m.r, V2 = 15 - W;
           for (var n2 = 0; n2 < N.length; n2 += 2) {
             var A = N[n2] << W - N[n2 + 1];
             N[n2] = R3[A] >>> V2;
           }
         };
-        H2.H.M = function(N, W, R3) {
+        H3.H.M = function(N, W, R3) {
           R3 = R3 << (W & 7);
           var V2 = W >>> 3;
           N[V2] |= R3;
           N[V2 + 1] |= R3 >>> 8;
         };
-        H2.H.I = function(N, W, R3) {
+        H3.H.I = function(N, W, R3) {
           R3 = R3 << (W & 7);
           var V2 = W >>> 3;
           N[V2] |= R3;
           N[V2 + 1] |= R3 >>> 8;
           N[V2 + 2] |= R3 >>> 16;
         };
-        H2.H.e = function(N, W, R3) {
+        H3.H.e = function(N, W, R3) {
           return (N[W >>> 3] | N[(W >>> 3) + 1] << 8) >>> (W & 7) & (1 << R3) - 1;
         };
-        H2.H.b = function(N, W, R3) {
+        H3.H.b = function(N, W, R3) {
           return (N[W >>> 3] | N[(W >>> 3) + 1] << 8 | N[(W >>> 3) + 2] << 16) >>> (W & 7) & (1 << R3) - 1;
         };
-        H2.H.Z = function(N, W) {
+        H3.H.Z = function(N, W) {
           return (N[W >>> 3] | N[(W >>> 3) + 1] << 8 | N[(W >>> 3) + 2] << 16) >>> (W & 7);
         };
-        H2.H.i = function(N, W) {
+        H3.H.i = function(N, W) {
           return (N[W >>> 3] | N[(W >>> 3) + 1] << 8 | N[(W >>> 3) + 2] << 16 | N[(W >>> 3) + 3] << 24) >>> (W & 7);
         };
-        H2.H.m = (function() {
+        H3.H.m = (function() {
           var N = Uint16Array, W = Uint32Array;
           return { K: new N(16), j: new N(16), X: [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15], S: [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 999, 999, 999], T: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0, 0], q: new N(32), p: [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 65535, 65535], z: [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 0, 0], c: new W(32), J: new N(512), _: [], h: new N(32), $: [], w: new N(32768), C: [], v: [], d: new N(32768), D: [], u: new N(512), Q: [], r: new N(1 << 15), s: new W(286), Y: new W(30), a: new W(19), t: new W(15e3), k: new N(1 << 16), g: new N(1 << 15) };
         })();
         (function() {
-          var N = H2.H.m, W = 1 << 15;
+          var N = H3.H.m, W = 1 << 15;
           for (var R3 = 0; R3 < W; R3++) {
             var V2 = R3;
             V2 = (V2 & 2863311530) >>> 1 | (V2 & 1431655765) << 1;
@@ -104081,19 +105361,19 @@ ${mdToHtmlBody(md, o)}
           n2(N._, 255 - 143, 9);
           n2(N._, 279 - 255, 7);
           n2(N._, 287 - 279, 8);
-          H2.H.n(N._, 9);
-          H2.H.A(N._, 9, N.J);
-          H2.H.l(N._, 9);
+          H3.H.n(N._, 9);
+          H3.H.A(N._, 9, N.J);
+          H3.H.l(N._, 9);
           n2(N.$, 32, 5);
-          H2.H.n(N.$, 5);
-          H2.H.A(N.$, 5, N.h);
-          H2.H.l(N.$, 5);
+          H3.H.n(N.$, 5);
+          H3.H.A(N.$, 5, N.h);
+          H3.H.l(N.$, 5);
           n2(N.Q, 19, 0);
           n2(N.C, 286, 0);
           n2(N.D, 30, 0);
           n2(N.v, 320, 0);
         })();
-        return H2.H.N;
+        return H3.H.N;
       })();
       UPNG.decode._readInterlace = function(data2, out) {
         var w = out.width, h = out.height;
@@ -109780,13 +111060,13 @@ ${mdToHtmlBody(md, o)}
   });
 
   // node_modules/pdf-lib/es/api/operators.js
-  var clip2, cos, sin, tan, concatTransformationMatrix, translate, scale, rotateRadians, rotateDegrees, skewRadians, setDashPattern, LineCapStyle, setLineCap, LineJoinStyle, setGraphicsState, pushGraphicsState, popGraphicsState, setLineWidth, appendBezierCurve, appendQuadraticCurve, closePath, moveTo, lineTo, stroke, fill2, fillAndStroke, endPath, nextLine, showText, beginText, endText, setFontAndSize, setLineHeight, TextRenderingMode, setTextMatrix, rotateAndSkewTextRadiansAndTranslate, drawObject, setFillingGrayscaleColor, setStrokingGrayscaleColor, setFillingRgbColor, setStrokingRgbColor, setFillingCmykColor, setStrokingCmykColor, beginMarkedContent, endMarkedContent;
+  var clip3, cos, sin, tan, concatTransformationMatrix, translate, scale, rotateRadians, rotateDegrees, skewRadians, setDashPattern, LineCapStyle, setLineCap, LineJoinStyle, setGraphicsState, pushGraphicsState, popGraphicsState, setLineWidth, appendBezierCurve, appendQuadraticCurve, closePath, moveTo, lineTo, stroke, fill2, fillAndStroke, endPath, nextLine, showText, beginText, endText, setFontAndSize, setLineHeight, TextRenderingMode, setTextMatrix, rotateAndSkewTextRadiansAndTranslate, drawObject, setFillingGrayscaleColor, setStrokingGrayscaleColor, setFillingRgbColor, setStrokingRgbColor, setFillingCmykColor, setStrokingCmykColor, beginMarkedContent, endMarkedContent;
   var init_operators = __esm({
     "node_modules/pdf-lib/es/api/operators.js"() {
       init_objects2();
       init_rotations();
       init_core2();
-      clip2 = function() {
+      clip3 = function() {
         return PDFOperator_default.of(PDFOperatorNames_default.ClipNonZero);
       };
       cos = Math.cos;
@@ -110713,7 +111993,7 @@ ${mdToHtmlBody(md, o)}
           lineTo(clipX + clipWidth, clipY + clipHeight),
           lineTo(clipX + clipWidth, clipY),
           closePath(),
-          clip2(),
+          clip3(),
           endPath()
         ];
         var background = drawRectangle({
@@ -110767,7 +112047,7 @@ ${mdToHtmlBody(md, o)}
           lineTo(clipX + clipWidth, clipY + clipHeight),
           lineTo(clipX + clipWidth, clipY),
           closePath(),
-          clip2(),
+          clip3(),
           endPath()
         ];
         var background = drawRectangle({
@@ -115007,9 +116287,9 @@ ${mdToHtmlBody(md, o)}
         PDFPage2.prototype.scaleAnnot = function(annot, x, y) {
           var selectors = ["RD", "CL", "Vertices", "QuadPoints", "L", "Rect"];
           for (var idx4 = 0, len5 = selectors.length; idx4 < len5; idx4++) {
-            var list = annot.lookup(PDFName_default.of(selectors[idx4]));
-            if (list instanceof PDFArray_default)
-              list.scalePDFNumbers(x, y);
+            var list2 = annot.lookup(PDFName_default.of(selectors[idx4]));
+            if (list2 instanceof PDFArray_default)
+              list2.scalePDFNumbers(x, y);
           }
           var inkLists = annot.lookup(PDFName_default.of("InkList"));
           if (inkLists instanceof PDFArray_default) {
@@ -115420,11 +116700,11 @@ ${mdToHtmlBody(md, o)}
     }
     return 0;
   }
-  function spliceOne(list, index) {
-    for (var i5 = index, k = i5 + 1, n2 = list.length; k < n2; i5 += 1, k += 1) {
-      list[i5] = list[k];
+  function spliceOne(list2, index) {
+    for (var i5 = index, k = i5 + 1, n2 = list2.length; k < n2; i5 += 1, k += 1) {
+      list2[i5] = list2[k];
     }
-    list.pop();
+    list2.pop();
   }
   function arrayClone(arr, i5) {
     var copy2 = new Array(i5);
@@ -115916,12 +117196,12 @@ ${mdToHtmlBody(md, o)}
   function log2() {
     console.log("%s - %s", timestamp(), format.apply(null, arguments));
   }
-  function _extend(origin, add) {
-    if (!add || !isObject(add)) return origin;
-    var keys4 = Object.keys(add);
+  function _extend(origin, add2) {
+    if (!add2 || !isObject(add2)) return origin;
+    var keys4 = Object.keys(add2);
     var i5 = keys4.length;
     while (i5--) {
-      origin[keys4[i5]] = add[keys4[i5]];
+      origin[keys4[i5]] = add2[keys4[i5]];
     }
     return origin;
   }
@@ -116158,20 +117438,20 @@ ${mdToHtmlBody(md, o)}
     }
     return ret;
   }
-  function fromListPartial(n2, list, hasStrings) {
+  function fromListPartial(n2, list2, hasStrings) {
     var ret;
-    if (n2 < list.head.data.length) {
-      ret = list.head.data.slice(0, n2);
-      list.head.data = list.head.data.slice(n2);
-    } else if (n2 === list.head.data.length) {
-      ret = list.shift();
+    if (n2 < list2.head.data.length) {
+      ret = list2.head.data.slice(0, n2);
+      list2.head.data = list2.head.data.slice(n2);
+    } else if (n2 === list2.head.data.length) {
+      ret = list2.shift();
     } else {
-      ret = hasStrings ? copyFromBufferString(n2, list) : copyFromBuffer(n2, list);
+      ret = hasStrings ? copyFromBufferString(n2, list2) : copyFromBuffer(n2, list2);
     }
     return ret;
   }
-  function copyFromBufferString(n2, list) {
-    var p = list.head;
+  function copyFromBufferString(n2, list2) {
+    var p = list2.head;
     var c = 1;
     var ret = p.data;
     n2 -= ret.length;
@@ -116184,22 +117464,22 @@ ${mdToHtmlBody(md, o)}
       if (n2 === 0) {
         if (nb === str3.length) {
           ++c;
-          if (p.next) list.head = p.next;
-          else list.head = list.tail = null;
+          if (p.next) list2.head = p.next;
+          else list2.head = list2.tail = null;
         } else {
-          list.head = p;
+          list2.head = p;
           p.data = str3.slice(nb);
         }
         break;
       }
       ++c;
     }
-    list.length -= c;
+    list2.length -= c;
     return ret;
   }
-  function copyFromBuffer(n2, list) {
+  function copyFromBuffer(n2, list2) {
     var ret = buffer_1.allocUnsafe(n2);
-    var p = list.head;
+    var p = list2.head;
     var c = 1;
     p.data.copy(ret);
     n2 -= p.data.length;
@@ -116211,17 +117491,17 @@ ${mdToHtmlBody(md, o)}
       if (n2 === 0) {
         if (nb === buf.length) {
           ++c;
-          if (p.next) list.head = p.next;
-          else list.head = list.tail = null;
+          if (p.next) list2.head = p.next;
+          else list2.head = list2.tail = null;
         } else {
-          list.head = p;
+          list2.head = p;
           p.data = buf.slice(nb);
         }
         break;
       }
       ++c;
     }
-    list.length -= c;
+    list2.length -= c;
     return ret;
   }
   function endReadable(stream2) {
@@ -120748,24 +122028,24 @@ ${mdToHtmlBody(md, o)}
               return false;
           }
         };
-        Buffer3.concat = function concat2(list, length) {
-          if (!Array.isArray(list)) {
+        Buffer3.concat = function concat2(list2, length) {
+          if (!Array.isArray(list2)) {
             throw new TypeError('"list" argument must be an Array of Buffers');
           }
-          if (list.length === 0) {
+          if (list2.length === 0) {
             return Buffer3.alloc(0);
           }
           var i5;
           if (length === void 0) {
             length = 0;
-            for (i5 = 0; i5 < list.length; ++i5) {
-              length += list[i5].length;
+            for (i5 = 0; i5 < list2.length; ++i5) {
+              length += list2[i5].length;
             }
           }
           var buffer2 = Buffer3.allocUnsafe(length);
           var pos = 0;
-          for (i5 = 0; i5 < list.length; ++i5) {
-            var buf = list[i5];
+          for (i5 = 0; i5 < list2.length; ++i5) {
+            var buf = list2[i5];
             if (isInstance(buf, Uint8Array)) {
               buf = Buffer3.from(buf);
             }
@@ -121929,30 +123209,30 @@ ${mdToHtmlBody(md, o)}
         return this;
       };
       EventEmitter.prototype.removeListener = function removeListener(type, listener) {
-        var list, events, position, i5, originalListener;
+        var list2, events, position, i5, originalListener;
         if (typeof listener !== "function") throw new TypeError('"listener" argument must be a function');
         events = this._events;
         if (!events) return this;
-        list = events[type];
-        if (!list) return this;
-        if (list === listener || list.listener && list.listener === listener) {
+        list2 = events[type];
+        if (!list2) return this;
+        if (list2 === listener || list2.listener && list2.listener === listener) {
           if (--this._eventsCount === 0) this._events = new EventHandlers();
           else {
             delete events[type];
-            if (events.removeListener) this.emit("removeListener", type, list.listener || listener);
+            if (events.removeListener) this.emit("removeListener", type, list2.listener || listener);
           }
-        } else if (typeof list !== "function") {
+        } else if (typeof list2 !== "function") {
           position = -1;
-          for (i5 = list.length; i5-- > 0; ) {
-            if (list[i5] === listener || list[i5].listener && list[i5].listener === listener) {
-              originalListener = list[i5].listener;
+          for (i5 = list2.length; i5-- > 0; ) {
+            if (list2[i5] === listener || list2[i5].listener && list2[i5].listener === listener) {
+              originalListener = list2[i5].listener;
               position = i5;
               break;
             }
           }
           if (position < 0) return this;
-          if (list.length === 1) {
-            list[0] = void 0;
+          if (list2.length === 1) {
+            list2[0] = void 0;
             if (--this._eventsCount === 0) {
               this._events = new EventHandlers();
               return this;
@@ -121960,7 +123240,7 @@ ${mdToHtmlBody(md, o)}
               delete events[type];
             }
           } else {
-            spliceOne(list, position);
+            spliceOne(list2, position);
           }
           if (events.removeListener) this.emit("removeListener", type, originalListener || listener);
         }
@@ -140550,7 +141830,7 @@ ${mdToHtmlBody(md, o)}
             }
           }
         };
-        _proto.add = function add(arg, global2) {
+        _proto.add = function add2(arg, global2) {
           if (global2 === void 0) {
             global2 = true;
           }
@@ -148107,13 +149387,13 @@ ${mdToHtmlBody(md, o)}
     return fmt2.margins.left;
   }
   function addOutline(doc3, entries) {
-    const list = (entries || []).filter((e) => e && String(e.title || "").trim());
-    if (!list.length) return 0;
+    const list2 = (entries || []).filter((e) => e && String(e.title || "").trim());
+    if (!list2.length) return 0;
     const ctx2 = doc3.context;
     const pages = doc3.getPages();
     const outlinesRef = ctx2.nextRef();
-    const refs = list.map(() => ctx2.nextRef());
-    list.forEach((e, i5) => {
+    const refs = list2.map(() => ctx2.nextRef());
+    list2.forEach((e, i5) => {
       const p = pages[Math.max(0, Math.min(pages.length - 1, e.pageIndex | 0))];
       const dict = {
         Title: PDFHexString_default.fromText(String(e.title).trim()),
@@ -148137,7 +149417,7 @@ ${mdToHtmlBody(md, o)}
   async function mergeAndNumber(frontParts, bodyBytes, o = {}) {
     const fmt2 = o.fmt && o.fmt.elements ? o.fmt : mergeSpFormat(o.fmt);
     const out = await PDFDocument_default.create();
-    const add = async (src2) => {
+    const add2 = async (src2) => {
       const b = toBytes(src2);
       if (!b || !b.length) return 0;
       const d = await PDFDocument_default.load(b, { ignoreEncryption: true });
@@ -148146,9 +149426,9 @@ ${mdToHtmlBody(md, o)}
       return pages.length;
     };
     let frontCount = 0;
-    for (const part of frontParts || []) frontCount += await add(part);
+    for (const part of frontParts || []) frontCount += await add2(part);
     const bodyStart = out.getPageCount();
-    await add(bodyBytes);
+    await add2(bodyBytes);
     const numFmt = pdfNumberFmt(fmt2, "pageNumbers", o.pageNumbers !== false);
     if (o.pageNumbers !== false && numFmt.pageNumbers && numFmt.pageNumbers.show) {
       const set = await embedFonts(out, o.fonts);
@@ -148318,10 +149598,10 @@ ${mdToHtmlBody(md, o)}
       openAfter: s.openAfter === true
     };
   }
-  function saveNamePreset(list, name5, template) {
+  function saveNamePreset(list2, name5, template) {
     const n2 = String(name5 || "").trim();
     const tpl = String(template || "").trim();
-    const cur = normalizeExportName({ presets: list }).presets;
+    const cur = normalizeExportName({ presets: list2 }).presets;
     if (!n2 || !tpl) return cur;
     const i5 = cur.findIndex((p) => p.name === n2);
     if (i5 >= 0) {
@@ -148331,9 +149611,9 @@ ${mdToHtmlBody(md, o)}
     }
     return cur.length >= NAME_PRESET_MAX ? cur : [...cur, { name: n2, template: tpl }];
   }
-  function deleteNamePreset(list, name5) {
+  function deleteNamePreset(list2, name5) {
     const n2 = String(name5 || "").trim();
-    return normalizeExportName({ presets: list }).presets.filter((p) => p.name !== n2);
+    return normalizeExportName({ presets: list2 }).presets.filter((p) => p.name !== n2);
   }
   var DEFAULT_EXPORT_NAME, NAME_PRESET_MAX, BUILTIN_NAME_PRESETS, BAD_CHARS, RESERVED, NAME_MAX;
   var init_export_name = __esm({
@@ -148564,14 +149844,14 @@ ${mdToHtmlBody(md, o)}
   async function pdfThaiFontCandidates() {
     const rows = normalizeLangFonts(state.settings.langFonts).filter((r) => isUsable(r) && rowAppliesTo(r, "screenplay")).filter((r) => !r.range || /0E00/i.test(normalizeRange(r.range)));
     const out = [];
-    const add = (p) => {
+    const add2 = (p) => {
       if (p && !out.includes(p)) out.push(p);
     };
     for (const r of rows) {
       if (r.file && state.root) {
         try {
           const p = await kapi.join(state.root, "Fonts", r.file);
-          if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) add(p);
+          if (/\.(ttf|otf)$/i.test(r.file) && await kapi.exists(p)) add2(p);
         } catch {
         }
       }
@@ -148579,7 +149859,7 @@ ${mdToHtmlBody(md, o)}
     const fams = [.../* @__PURE__ */ new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS])];
     for (const fam of fams) {
       try {
-        add(await kapi.fontFile([fam]));
+        add2(await kapi.fontFile([fam]));
       } catch {
       }
     }
@@ -148773,7 +150053,7 @@ ${mdToHtmlBody(md, o)}
       colProps.append(el("div", "cmp-sub", t("ui.pdf.textPage")));
       const page2 = ed.page(pageIdx);
       if (!page2) return;
-      const list = el("div", "k-tp-str-list");
+      const list2 = el("div", "k-tp-str-list");
       page2.strings.forEach((s2, i5) => {
         const r = el("div", "k-tp-str-row" + (i5 === strIdx ? " on" : ""));
         r.append(el("span", null, String(s2.text || t("ui.common.empty")).split("\n")[0].slice(0, 24) || t("ui.common.empty")));
@@ -148781,15 +150061,15 @@ ${mdToHtmlBody(md, o)}
           strIdx = i5;
           render();
         };
-        list.append(r);
+        list2.append(r);
       });
-      colProps.append(list);
-      const add = el("button", "cmp-mini", t("ui.pdf.addText"));
-      add.onclick = () => {
+      colProps.append(list2);
+      const add2 = el("button", "cmp-mini", t("ui.pdf.addText"));
+      add2.onclick = () => {
         strIdx = ed.addString(pageIdx, { text: t("ui.pdf.textNew") });
         render();
       };
-      colProps.append(add);
+      colProps.append(add2);
       const s = page2.strings[strIdx];
       if (!s) {
         colProps.append(el("div", "dim", t("ui.pdf.pickTextEditProps")));
@@ -148884,8 +150164,8 @@ ${mdToHtmlBody(md, o)}
     const gap = numInput(hdr.emptyLinesAfter, { min: 0, max: 10, step: 1 });
     box2.append(row(t("ui.pdf.skipLineUnderHead"), gap));
     box2.append(el("div", "cmp-sub", t("ui.pdf.textAllItemLine")));
-    const list = el("div", "k-hdr-list");
-    box2.append(list);
+    const list2 = el("div", "k-hdr-list");
+    box2.append(list2);
     const info = el("div", "dim k-hdr-info");
     const varHint = el(
       "div",
@@ -148894,7 +150174,7 @@ ${mdToHtmlBody(md, o)}
     );
     const rows = hdr.strings.slice();
     const refresh = () => {
-      list.innerHTML = "";
+      list2.innerHTML = "";
       rows.forEach((s, i5) => {
         const r = el("div", "k-hdr-row");
         const tx2 = el("input", "k-dlg-input k-hdr-text");
@@ -148938,14 +150218,14 @@ ${mdToHtmlBody(md, o)}
           refresh();
         };
         r.append(tx2, al, ox, marks2, del2);
-        list.append(r);
+        list2.append(r);
       });
-      const add = el("button", "cmp-mini", t("ui.pdf.addText"));
-      add.onclick = () => {
+      const add2 = el("button", "cmp-mini", t("ui.pdf.addText"));
+      add2.onclick = () => {
         rows.push(newHeaderString({ text: "${PAGE}" }));
         refresh();
       };
-      list.append(add);
+      list2.append(add2);
       preview2();
     };
     const cur = () => ({
@@ -149288,13 +150568,13 @@ ${mdToHtmlBody(md, o)}
     const renderDraftList = async (sec, dst) => {
       dst.innerHTML = "";
       const drafts = await listDraftsForSection(sec.secPath);
-      const list = el("div", "book-drafts");
+      const list2 = el("div", "book-drafts");
       const hdr = el(
         "div",
         "book-drafts-head",
         t("ui.books.draft2") + (drafts.length ? ` (${drafts.length})` : "")
       );
-      list.append(hdr);
+      list2.append(hdr);
       for (const d of drafts) {
         const row3 = el("div", "book-draft-row" + (d.primary ? " draft-primary" : ""));
         const label = el(
@@ -149348,7 +150628,7 @@ ${mdToHtmlBody(md, o)}
           };
           row3.append(delBtn);
         }
-        list.append(row3);
+        list2.append(row3);
       }
       const addD = el("button", "cmp-mini", t("ui.books.newDraftNew2"));
       addD.onclick = async () => {
@@ -149366,8 +150646,8 @@ ${mdToHtmlBody(md, o)}
           setStatusError(errText(e));
         }
       };
-      list.append(addD);
-      dst.append(list);
+      list2.append(addD);
+      dst.append(list2);
     };
     for (const s of sections) {
       const card = el("div", "book-card");
@@ -150043,14 +151323,14 @@ ${mdToHtmlBody(md, o)}
     try {
       const { ok: ok2, broken } = await scanRecentProjects();
       if (!ok2.length && !broken.length) {
-        const empty2 = el("div", "home-empty");
-        empty2.innerHTML = `
+        const empty3 = el("div", "home-empty");
+        empty3.innerHTML = `
         <div class="home-empty-icon" data-icon="book-content" data-icon-size="64"></div>
         <h2>${tx("ui.home.notHasProject")}</h2>
         <p>${tx("ui.home.newProjectFirstYours")}</p>
       `;
-        initIcons(empty2);
-        grid.append(empty2);
+        initIcons(empty3);
+        grid.append(empty3);
         return;
       }
       for (const p of ok2) grid.append(createProjectCard(p));
@@ -150181,13 +151461,13 @@ ${mdToHtmlBody(md, o)}
     const wrap2 = el("div", "home-wrap");
     const head2 = el("div", "home-head");
     head2.append(el("h2", "home-title", "Killian 2"));
-    const list = el("div", "home-grid");
-    const { actions, corner } = buildHomeActions({ grid: list });
+    const list2 = el("div", "home-grid");
+    const { actions, corner } = buildHomeActions({ grid: list2 });
     actions.classList.add("home-actions-bottom");
     head2.append(corner);
-    wrap2.append(head2, list, actions);
+    wrap2.append(head2, list2, actions);
     host2.append(wrap2);
-    await loadPanelProjects(list);
+    await loadPanelProjects(list2);
     return wrap2;
   }
   async function loadPanelProjects(grid, onOpen) {
@@ -150570,8 +151850,8 @@ ${mdToHtmlBody(md, o)}
     while (out.length && out[out.length - 1] === "-") out.pop();
     return out;
   }
-  function moveToPosition(list, index, position) {
-    const arr = [...list || []];
+  function moveToPosition(list2, index, position) {
+    const arr = [...list2 || []];
     if (index < 0 || index >= arr.length) return arr;
     const to = Math.max(0, Math.min(arr.length - 1, Math.round(Number(position) || 1) - 1));
     const [it] = arr.splice(index, 1);
@@ -150715,6 +151995,11 @@ ${mdToHtmlBody(md, o)}
           "color",
           "status",
           "pin",
+          "-",
+          // [alpha.164] ผู้ใช้: "คลิกขวาที่ฉาก เลือกคำสั่ง ฉากมีปัญหา ... การ toggle จะใช้จากคลิกขวาที่ฉาก"
+          "problem",
+          "problemToggle",
+          "problemMenu",
           "-",
           "saveVersion",
           "versionHistory",
@@ -150918,9 +152203,9 @@ ${mdToHtmlBody(md, o)}
   }
   function normalizeChoiceMap(raw) {
     const out = {};
-    for (const [id, list] of Object.entries(raw && typeof raw === "object" ? raw : {})) {
-      if (!Array.isArray(list)) continue;
-      const arr = list.map(normalizeChoice).filter(Boolean);
+    for (const [id, list2] of Object.entries(raw && typeof raw === "object" ? raw : {})) {
+      if (!Array.isArray(list2)) continue;
+      const arr = list2.map(normalizeChoice).filter(Boolean);
       if (arr.length) out[String(id)] = arr;
     }
     return out;
@@ -150940,13 +152225,13 @@ ${mdToHtmlBody(md, o)}
   }
   function planChoicesFor(plan, sceneId) {
     const map2 = plan && plan.choices || {};
-    const list = map2[String(sceneId)];
-    return Array.isArray(list) ? list.map(normalizeChoice).filter(Boolean) : [];
+    const list2 = map2[String(sceneId)];
+    return Array.isArray(list2) ? list2.map(normalizeChoice).filter(Boolean) : [];
   }
-  function setPlanChoices(plan, sceneId, list) {
+  function setPlanChoices(plan, sceneId, list2) {
     if (!plan) return null;
     plan.choices = plan.choices || {};
-    const arr = (list || []).map(normalizeChoice).filter(Boolean);
+    const arr = (list2 || []).map(normalizeChoice).filter(Boolean);
     if (arr.length) plan.choices[String(sceneId)] = arr;
     else delete plan.choices[String(sceneId)];
     return plan;
@@ -151067,8 +152352,8 @@ ${mdToHtmlBody(md, o)}
     });
     return pick2(current2 || newBranchPlan("")) !== pick2(saved);
   }
-  function sortPlans(list) {
-    return (list || []).slice().sort((a, b) => cmpText(String(a.name || ""), String(b.name || "")));
+  function sortPlans(list2) {
+    return (list2 || []).slice().sort((a, b) => cmpText(String(a.name || ""), String(b.name || "")));
   }
   function planSummary(plan) {
     const p = plan || {};
@@ -151219,8 +152504,8 @@ ${mdToHtmlBody(md, o)}
     const adj = new Map([...ids].map((id) => [id, []]));
     for (const e of graph.edges) {
       if (e.dangling || !ids.has(e.from) || !ids.has(e.to)) continue;
-      const list = adj.get(e.from);
-      if (!list.includes(e.to)) list.push(e.to);
+      const list2 = adj.get(e.from);
+      if (!list2.includes(e.to)) list2.push(e.to);
     }
     return adj;
   }
@@ -151230,12 +152515,12 @@ ${mdToHtmlBody(md, o)}
     return deg;
   }
   function refineLayout(placed, edges, opts = {}) {
-    const list = (placed || []).filter((p) => !p.pinned);
-    if (list.length < 2) return placed;
+    const list2 = (placed || []).filter((p) => !p.pinned);
+    if (list2.length < 2) return placed;
     const iters = opts.iters ?? 80;
     const minGap = opts.minGap ?? NODE_H + GAP_Y;
     const byId = new Map((placed || []).map((p) => [p.id, p]));
-    const nb = new Map(list.map((p) => [p.id, []]));
+    const nb = new Map(list2.map((p) => [p.id, []]));
     for (const e of edges || []) {
       if (e.dangling) continue;
       const a = byId.get(e.from), b = byId.get(e.to);
@@ -151244,14 +152529,14 @@ ${mdToHtmlBody(md, o)}
       if (nb.has(b.id)) nb.get(b.id).push(a.id);
     }
     const cols = /* @__PURE__ */ new Map();
-    for (const p of list) {
+    for (const p of list2) {
       const c = cols.get(p.depth) || [];
       c.push(p);
       cols.set(p.depth, c);
     }
     for (let it = 0; it < iters; it++) {
       const damp = 0.55 * (1 - it / iters) + 0.08;
-      for (const p of list) {
+      for (const p of list2) {
         const near2 = nb.get(p.id) || [];
         if (!near2.length) continue;
         let sum2 = 0, n2 = 0;
@@ -151274,8 +152559,8 @@ ${mdToHtmlBody(md, o)}
       }
     }
     let minY = Infinity;
-    for (const p of list) minY = Math.min(minY, p.y);
-    if (Number.isFinite(minY)) for (const p of list) p.y = Math.round(p.y - minY + PAD);
+    for (const p of list2) minY = Math.min(minY, p.y);
+    if (Number.isFinite(minY)) for (const p of list2) p.y = Math.round(p.y - minY + PAD);
     return placed;
   }
   function layoutGraph(graph, opts = {}) {
@@ -151423,10 +152708,10 @@ ${mdToHtmlBody(md, o)}
     return { paths: truncated ? out.slice(0, limit) : out, truncated, limit };
   }
   function validateChoices(scenes) {
-    const list = scenes || [];
-    const ids = new Set(list.map((s) => s && s.id).filter(Boolean));
+    const list2 = scenes || [];
+    const ids = new Set(list2.map((s) => s && s.id).filter(Boolean));
     const out = [];
-    for (const s of list) {
+    for (const s of list2) {
       if (!s) continue;
       (s.choices || []).forEach((c, idx4) => {
         const next = c && c.nextSceneId || "";
@@ -151441,10 +152726,10 @@ ${mdToHtmlBody(md, o)}
     return validateChoices(scenes).filter((d) => d.reason === "missing");
   }
   function highlightPath(graph, selectedId) {
-    const empty2 = { path: [], nodes: /* @__PURE__ */ new Set(), edges: /* @__PURE__ */ new Set() };
-    if (!graph || !selectedId) return empty2;
+    const empty3 = { path: [], nodes: /* @__PURE__ */ new Set(), edges: /* @__PURE__ */ new Set() };
+    if (!graph || !selectedId) return empty3;
     const ids = involvedIds(graph);
-    if (!ids.has(selectedId)) return empty2;
+    if (!ids.has(selectedId)) return empty3;
     const adj = adjacency(graph, ids);
     const deg = indegrees(adj);
     const inOrder = graph.nodes.filter((n2) => ids.has(n2.id)).map((n2) => n2.id);
@@ -151461,7 +152746,7 @@ ${mdToHtmlBody(md, o)}
         queue2.push(to);
       }
     }
-    if (!seen.has(selectedId)) return empty2;
+    if (!seen.has(selectedId)) return empty3;
     const path = [selectedId];
     let cur = selectedId;
     while (prev.has(cur)) {
@@ -151711,9 +152996,9 @@ details>summary::-webkit-details-marker{display:none}
     if (!state.meta) return [];
     return state.meta.playthroughs || [];
   }
-  async function savePlaythroughs(list) {
+  async function savePlaythroughs(list2) {
     if (!state.meta) return false;
-    state.meta.playthroughs = list.slice(-MAX_RUNS);
+    state.meta.playthroughs = list2.slice(-MAX_RUNS);
     try {
       const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       await saveProjectMeta2();
@@ -151725,9 +153010,9 @@ details>summary::-webkit-details-marker{display:none}
   }
   async function persistRun(run3) {
     if (!run3) return false;
-    const list = getPlaythroughs().filter((r) => r.id !== run3.id);
-    list.push(JSON.parse(JSON.stringify(run3)));
-    return savePlaythroughs(list);
+    const list2 = getPlaythroughs().filter((r) => r.id !== run3.id);
+    list2.push(JSON.parse(JSON.stringify(run3)));
+    return savePlaythroughs(list2);
   }
   async function openPlayerMode(startId) {
     const { showPanel: showPanel2 } = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
@@ -151754,10 +153039,10 @@ details>summary::-webkit-details-marker{display:none}
       return { graph: ps.graph, analysis: ps.analysis };
     }
     const scenes = await collectScenes2();
-    const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       try {
-        sc.body = sc.filePath ? parseMdFile23(await kapi.readFile(sc.filePath)).body || "" : "";
+        sc.body = sc.filePath ? parseMdFile24(await kapi.readFile(sc.filePath)).body || "" : "";
       } catch {
         sc.body = "";
       }
@@ -151988,10 +153273,10 @@ details>summary::-webkit-details-marker{display:none}
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog branch-dlg");
     box2.append(el("div", "k-dlg-title", gi("target") + " " + tr("runsTitle") + ` (${runs.length})`));
-    const list = el("div", "k-pick-list");
-    list.style.maxHeight = "50vh";
+    const list2 = el("div", "k-pick-list");
+    list2.style.maxHeight = "50vh";
     if (!runs.length) {
-      list.append(el("div", "dim", tr("noRuns")));
+      list2.append(el("div", "dim", tr("noRuns")));
     }
     for (const r of runs) {
       const row3 = el("div", "k-menu-item player-run-row");
@@ -152014,9 +153299,9 @@ details>summary::-webkit-details-marker{display:none}
         if (host2) renderPlayer(host2);
         else refreshOpenPlayer();
       };
-      list.append(row3);
+      list2.append(row3);
     }
-    box2.append(list);
+    box2.append(list2);
     const btns = el("div", "k-dlg-btns");
     const expB = el("button", null, gi("import") + " " + tr("exportRuns"));
     expB.onclick = async () => {
@@ -152408,8 +153693,8 @@ details>summary::-webkit-details-marker{display:none}
       setStatus(t("ui.branch.openPlanBeforeDone"));
       return false;
     }
-    const list = (await listBranchPlans()).filter((x) => x.path !== planState.path);
-    if (!list.length) {
+    const list2 = (await listBranchPlans()).filter((x) => x.path !== planState.path);
+    if (!list2.length) {
       setStatus(t("ui.branch.plannedNewPlanBefore"));
       return false;
     }
@@ -152420,7 +153705,7 @@ details>summary::-webkit-details-marker{display:none}
     const row3 = E("div", "wiki-row");
     row3.append(E("label", null, t("ui.branch.compare")));
     const sel = E("select", "wiki-input k-dlg-select");
-    for (const x of list) {
+    for (const x of list2) {
       const o = E("option", null, x.name);
       o.value = x.path;
       sel.append(o);
@@ -152528,11 +153813,11 @@ details>summary::-webkit-details-marker{display:none}
     return out;
   }
   async function loadSceneBodies(scenes) {
-    const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       if (typeof sc.body === "string" || !sc.filePath) continue;
       try {
-        sc.body = parseMdFile23(await kapi.readFile(sc.filePath)).body || "";
+        sc.body = parseMdFile24(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         sc.body = "";
       }
@@ -152597,12 +153882,12 @@ details>summary::-webkit-details-marker{display:none}
     const planSel = el("select", "branch-plan-sel");
     planSel.title = t("ui.branch.planGraphOneProject");
     const fillPlans = async () => {
-      const list = await listBranchPlans().catch(() => []);
+      const list2 = await listBranchPlans().catch(() => []);
       planSel.replaceChildren();
       const o0 = el("option", null, t("ui.branch.notUsePlanRemember"));
       o0.value = "";
       planSel.append(o0);
-      for (const p2 of list) {
+      for (const p2 of list2) {
         const o = el("option", null, gi("branch") + " " + p2.name + (planSummary(p2.plan) ? " \xB7 " + planSummary(p2.plan) : ""));
         o.value = p2.path;
         planSel.append(o);
@@ -153156,11 +154441,11 @@ details>summary::-webkit-details-marker{display:none}
     const d = dragChoice;
     dragChoice = null;
     if (!d || !target || d.node.id === target.id) return false;
-    await mutateChoices(d.node, (list) => {
-      list.splice(d.idx, 1);
-      return list;
+    await mutateChoices(d.node, (list2) => {
+      list2.splice(d.idx, 1);
+      return list2;
     });
-    await mutateChoices(target, (list) => [...list, { ...d.choice }]);
+    await mutateChoices(target, (list2) => [...list2, { ...d.choice }]);
     setStatus(`${tr2("movedChoice")} "${d.choice.text}" \u2192 ${target.title}`);
     redraw3();
     return true;
@@ -153199,8 +154484,8 @@ ${tr2("mergeNote")}`,
     const box2 = el("div", "k-dialog branch-dlg");
     box2.append(el("div", "k-dlg-title", gi("heart-broken") + " " + tr2("brokenTitle") + ` (${rows.length})`));
     box2.append(el("div", "dim", tr2("brokenHint")));
-    const list = el("div", "k-pick-list");
-    list.style.maxHeight = "46vh";
+    const list2 = el("div", "k-pick-list");
+    list2.style.maxHeight = "46vh";
     for (const e of rows) {
       const src2 = graph.byId.get(e.from);
       const row3 = el("div", "k-menu-item branch-broken-row");
@@ -153224,9 +154509,9 @@ ${tr2("mergeNote")}`,
         }
       };
       row3.append(fix2, del2);
-      list.append(row3);
+      list2.append(row3);
     }
-    box2.append(list);
+    box2.append(list2);
     const btns = el("div", "k-dlg-btns");
     const close2 = el("button", "k-ok", tr2("close"));
     close2.onclick = () => ov.remove();
@@ -153404,8 +154689,8 @@ ${tr2("mergeNote")}`,
   async function readSceneBody(node) {
     if (!node || !node.filePath) return "";
     try {
-      const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
-      return parseMdFile23(await kapi.readFile(node.filePath)).body || "";
+      const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+      return parseMdFile24(await kapi.readFile(node.filePath)).body || "";
     } catch (e) {
       log("warn", t("ui.branch.branchingReadBodyScene"), e);
       return "";
@@ -153416,7 +154701,7 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("noFile"));
       return false;
     }
-    const { parseMdFile: parseMdFile23, dumpMdFile: dumpMdFile10 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile24, dumpMdFile: dumpMdFile10 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { tabHandle: tabHandle2 } = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
     const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
     const marker = "[" + text + "]";
@@ -153429,7 +154714,7 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("insertedDirty"));
       return true;
     }
-    const { meta: meta2, body } = parseMdFile23(await kapi.readFile(node.filePath));
+    const { meta: meta2, body } = parseMdFile24(await kapi.readFile(node.filePath));
     if (body.includes(marker)) return true;
     await writeMdKeepingComments2(kapi, node.filePath, dumpMdFile10(meta2, append2(body)));
     if (h && h.kind !== "wiki") await h.reloadFromDisk();
@@ -153446,9 +154731,9 @@ ${tr2("mergeNote")}`,
     let body = "";
     if (tab && (tab.editor || tab.sp)) body = (tab.editor || tab.sp).getMarkdown();
     if (!body) {
-      const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
       try {
-        body = parseMdFile23(await kapi.readFile(state.active.file)).body || "";
+        body = parseMdFile24(await kapi.readFile(state.active.file)).body || "";
       } catch {
       }
     }
@@ -153470,14 +154755,14 @@ ${tr2("mergeNote")}`,
     return missing.length;
   }
   async function scanAllScenes(scenes, redraw3) {
-    const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const found2 = [];
     for (const sc of scenes) {
       if (!sc.filePath) continue;
       let body = "";
       try {
-        body = parseMdFile23(await kapi.readFile(sc.filePath)).body || "";
+        body = parseMdFile24(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         continue;
       }
@@ -153499,7 +154784,7 @@ ${preview2}` + (found2.length > 8 ? `
     );
     if (!ok2) return 0;
     for (const f of found2) {
-      await mutateChoices(f.sc, (list) => [...list, ...f.missing.map((x) => ({ text: x, nextSceneId: "" }))]);
+      await mutateChoices(f.sc, (list2) => [...list2, ...f.missing.map((x) => ({ text: x, nextSceneId: "" }))]);
     }
     setStatus(`${tr2("scanDone")} ${total}`);
     redraw3();
@@ -153532,7 +154817,7 @@ ${preview2}` + (found2.length > 8 ? `
         setStatus(tr2("needFromText"));
         return;
       }
-      await mutateChoices(from2, (list) => [...list, { text, nextSceneId: toSel.value || "" }]);
+      await mutateChoices(from2, (list2) => [...list2, { text, nextSceneId: toSel.value || "" }]);
       textInp.value = "";
       bs.sel = from2.id;
       setStatus(tr2("added"));
@@ -153582,12 +154867,12 @@ ${preview2}` + (found2.length > 8 ? `
     box2.append(inp);
     const count = el("div", "dim");
     box2.append(count);
-    const list = el("div", "k-pick-list");
-    list.style.maxHeight = "48vh";
-    box2.append(list);
+    const list2 = el("div", "k-pick-list");
+    list2.style.maxHeight = "48vh";
+    box2.append(list2);
     const draw3 = () => {
       const q = inp.value.trim().toLowerCase();
-      list.replaceChildren();
+      list2.replaceChildren();
       const rows = q ? lines.filter((l) => l.text.toLowerCase().includes(q)) : lines;
       count.textContent = `${rows.length} / ${lines.length} ${tr2("paths")}`;
       for (const l of rows.slice(0, 300)) {
@@ -153600,9 +154885,9 @@ ${preview2}` + (found2.length > 8 ? `
           const { openPlayerMode: openPlayerMode2 } = await Promise.resolve().then(() => (init_player_mode(), player_mode_exports));
           await openPlayerMode2(l.ids[0]);
         };
-        list.append(row3);
+        list2.append(row3);
       }
-      if (rows.length > 300) list.append(el("div", "dim", `\u2026 +${rows.length - 300}`));
+      if (rows.length > 300) list2.append(el("div", "dim", `\u2026 +${rows.length - 300}`));
     };
     let job = null;
     inp.oninput = () => {
@@ -153714,7 +154999,7 @@ ${preview2}` + (found2.length > 8 ? `
           row3.append(el("span", "branch-doc-mark", "[" + txt + "]"));
           const b = el("button", "branch-doc-add", gi("plus") + " " + tr2("docLink"));
           b.onclick = async () => {
-            await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
+            await mutateChoices(node, (list2) => [...list2, { text: txt, nextSceneId: "" }]);
             setStatus(`${tr2("docLinked1")}: ${txt}`);
             redraw3();
           };
@@ -153723,7 +155008,7 @@ ${preview2}` + (found2.length > 8 ? `
         }
         const all = el("button", "k-tpl-add", `${gi("plus")} ${tr2("docLinkAll")} (${missing.length})`);
         all.onclick = async () => {
-          await mutateChoices(node, (list) => [...list, ...missing.map((x) => ({ text: x, nextSceneId: "" }))]);
+          await mutateChoices(node, (list2) => [...list2, ...missing.map((x) => ({ text: x, nextSceneId: "" }))]);
           setStatus(tr2("docLinkedAll"));
           redraw3();
         };
@@ -153777,9 +155062,9 @@ ${preview2}` + (found2.length > 8 ? `
       const commitText = async () => {
         const v2 = tIn.value.trim();
         if (v2 === c.text) return;
-        await mutateChoices(node, (list) => {
-          if (list[idx4]) list[idx4] = { ...list[idx4], text: v2 };
-          return list;
+        await mutateChoices(node, (list2) => {
+          if (list2[idx4]) list2[idx4] = { ...list2[idx4], text: v2 };
+          return list2;
         });
         setStatus(tr2("textEdited"));
         redraw3();
@@ -153799,9 +155084,9 @@ ${preview2}` + (found2.length > 8 ? `
       }
       tSel.value = graph.byId.has(c.nextSceneId) ? c.nextSceneId : "";
       tSel.onchange = async () => {
-        await mutateChoices(node, (list) => {
-          if (list[idx4]) list[idx4] = { ...list[idx4], nextSceneId: tSel.value };
-          return list;
+        await mutateChoices(node, (list2) => {
+          if (list2[idx4]) list2[idx4] = { ...list2[idx4], nextSceneId: tSel.value };
+          return list2;
         });
         setStatus(tr2("targetChanged"));
         redraw3();
@@ -153813,9 +155098,9 @@ ${preview2}` + (found2.length > 8 ? `
         const open = row3.parentNode.querySelector(".branch-colors-pop");
         if (open) open.remove();
         const pop = colorRow(c.color, async (col) => {
-          await mutateChoices(node, (list) => {
-            if (list[idx4]) list[idx4] = { ...list[idx4], color: col };
-            return list;
+          await mutateChoices(node, (list2) => {
+            if (list2[idx4]) list2[idx4] = { ...list2[idx4], color: col };
+            return list2;
           });
           setStatus(col ? tr2("lineColorSet") : tr2("lineColorClear"));
           redraw3();
@@ -153855,7 +155140,7 @@ ${preview2}` + (found2.length > 8 ? `
         { placeholder: tr2("choiceEg"), okLabel: tr2("add") }
       ) || "").trim();
       if (!txt) return;
-      await mutateChoices(node, (list) => [...list, { text: txt, nextSceneId: "" }]);
+      await mutateChoices(node, (list2) => [...list2, { text: txt, nextSceneId: "" }]);
       await insertMarkerIntoScene(node, txt);
       redraw3();
     };
@@ -153952,9 +155237,9 @@ ${preview2}` + (found2.length > 8 ? `
 .bm{fill:${PRINT.inkMuted};font:11px -apple-system,"Segoe UI",Tahoma,"Sarabun",sans-serif}
 `;
       _choiceQueue = Promise.resolve();
-      removeChoice = (node, idx4) => mutateChoices(node, (list) => {
-        list.splice(idx4, 1);
-        return list;
+      removeChoice = (node, idx4) => mutateChoices(node, (list2) => {
+        list2.splice(idx4, 1);
+        return list2;
       });
     }
   });
@@ -154245,10 +155530,10 @@ ${preview2}` + (found2.length > 8 ? `
   async function reorderChapterPrompt(dPath, ch) {
     const df = await kapi.join(dPath, "draft.json");
     const d = await readJson(df, { chapters: [] });
-    const list = sortByOrder(d.chapters);
-    const i5 = list.findIndex((c) => c.guid === ch.guid);
+    const list2 = sortByOrder(d.chapters);
+    const i5 = list2.findIndex((c) => c.guid === ch.guid);
     if (i5 < 0) return false;
-    const v2 = await ask(tf("ui.treeAct.positionAsk", list.length), { value: String(i5 + 1) });
+    const v2 = await ask(tf("ui.treeAct.positionAsk", list2.length), { value: String(i5 + 1) });
     if (v2 === null || v2 === "") return false;
     await mutateJson(kapi, df, (fresh) => {
       const l2 = sortByOrder(fresh.chapters);
@@ -154320,11 +155605,11 @@ ${preview2}` + (found2.length > 8 ? `
       });
     }
     await mutateJson(kapi, ddf, (d) => {
-      const list = sortByOrder(d.chapters);
-      let at2 = afterGuid ? list.findIndex((c) => c.guid === afterGuid) + 1 : list.length;
-      if (at2 <= 0 && afterGuid) at2 = list.length;
-      list.splice(at2, 0, newEntry2);
-      d.chapters = list.map((c, k) => ({ ...c, order: k + 1 }));
+      const list2 = sortByOrder(d.chapters);
+      let at2 = afterGuid ? list2.findIndex((c) => c.guid === afterGuid) + 1 : list2.length;
+      if (at2 <= 0 && afterGuid) at2 = list2.length;
+      list2.splice(at2, 0, newEntry2);
+      d.chapters = list2.map((c, k) => ({ ...c, order: k + 1 }));
     }, { fallback: { chapters: [] } });
     await mutateJson(
       kapi,
@@ -154398,10 +155683,10 @@ ${preview2}` + (found2.length > 8 ? `
   async function reorderScenePrompt(dPath, ch, sc) {
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await readJson(sf, { chapters: {} });
-    const list = sortByOrder((d.chapters || {})[ch.guid]);
-    const i5 = list.findIndex((x) => x.id === sc.id);
+    const list2 = sortByOrder((d.chapters || {})[ch.guid]);
+    const i5 = list2.findIndex((x) => x.id === sc.id);
     if (i5 < 0) return false;
-    const v2 = await ask(tf("ui.treeAct.positionAsk", list.length), { value: String(i5 + 1) });
+    const v2 = await ask(tf("ui.treeAct.positionAsk", list2.length), { value: String(i5 + 1) });
     if (v2 === null || v2 === "") return false;
     await mutateJson(kapi, sf, (fresh) => {
       const l2 = sortByOrder((fresh.chapters || {})[ch.guid]);
@@ -154414,8 +155699,8 @@ ${preview2}` + (found2.length > 8 ? `
     return true;
   }
   async function chapterFromScenes(dPath, ch, items) {
-    const list = (items || []).filter((it) => it && it.sc);
-    const same = list.filter((it) => it.dPath === dPath);
+    const list2 = (items || []).filter((it) => it && it.sc);
+    const same = list2.filter((it) => it.dPath === dPath);
     if (!same.length) return null;
     const name5 = await ask(t("ui.treeAct.chapterFromScenesAsk"), { value: same[0].sc.title || "" });
     if (!name5) return null;
@@ -154431,7 +155716,7 @@ ${preview2}` + (found2.length > 8 ? `
     });
     for (const it of same) await moveSceneToChapter(dPath, it.ch, { id: it.sc.id }, newCh);
     await buildTree2();
-    const skipped = list.length - same.length;
+    const skipped = list2.length - same.length;
     setStatus(tf("ui.treeAct.chapterFromScenesDone", name5, same.length) + (skipped ? " \xB7 " + tf("ui.treeAct.crossDraftSkipped", skipped) : ""));
     return newCh;
   }
@@ -154490,14 +155775,14 @@ ${preview2}` + (found2.length > 8 ? `
     return out.sort((a, b) => (a.order || 1e9) - (b.order || 1e9) || a.f.localeCompare(b.f));
   }
   async function moveMemoStep(file, dir2) {
-    const list = await listMemos();
-    const i5 = list.findIndex((m) => m.p === file);
-    const to = stepIndex(list.length, i5, dir2);
+    const list2 = await listMemos();
+    const i5 = list2.findIndex((m) => m.p === file);
+    const to = stepIndex(list2.length, i5, dir2);
     if (to < 0) {
       setStatus(t("ui.treeAct.memoMovedEdge"));
       return false;
     }
-    const next = moveToPosition(list, i5, to + 1);
+    const next = moveToPosition(list2, i5, to + 1);
     for (let k = 0; k < next.length; k++) {
       if (next[k].order === k + 1) continue;
       const { meta: meta2, body } = await readMemo(next[k].p);
@@ -154523,9 +155808,9 @@ ${preview2}` + (found2.length > 8 ? `
     return dst;
   }
   async function duplicateMemo(file) {
-    const list = await listMemos();
+    const list2 = await listMemos();
     const { meta: meta2 } = await readMemo(file);
-    const title2 = copyName(meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, ""), list.map((m) => m.title));
+    const title2 = copyName(meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, ""), list2.map((m) => m.title));
     const dst = await writeMemoCopy(file, title2);
     if (!dst) return null;
     await buildTree2();
@@ -154578,8 +155863,8 @@ ${preview2}` + (found2.length > 8 ? `
       setStatus(t("ui.treeAct.clipEmpty"));
       return null;
     }
-    const list = await listMemos();
-    const dst = await writeMemoCopy(it.file, copyName(it.title || "memo", list.map((m) => m.title)));
+    const list2 = await listMemos();
+    const dst = await writeMemoCopy(it.file, copyName(it.title || "memo", list2.map((m) => m.title)));
     if (!dst) return null;
     await buildTree2();
     setStatus(tf("ui.treeAct.pasted", it.title || ""));
@@ -154847,15 +156132,15 @@ ${preview2}` + (found2.length > 8 ? `
     return out;
   }
   async function restoreItemMenu(e, kind, ctx2) {
-    const list = await listItemBackups(kind, ctx2);
-    if (!list.length) {
+    const list2 = await listItemBackups(kind, ctx2);
+    if (!list2.length) {
       setStatus(tf("ui.treeAct.noBackups", ctx2.title || ""));
       return;
     }
     popupMenu(e.clientX, e.clientY, [
       { label: t("ui.treeAct.restorePick"), disabled: true },
       "-",
-      ...list.slice(0, 20).map((b) => ({ text: fmtLocal(b.ts), click: () => restoreItem(kind, ctx2, b) }))
+      ...list2.slice(0, 20).map((b) => ({ text: fmtLocal(b.ts), click: () => restoreItem(kind, ctx2, b) }))
     ]);
   }
   async function restoreItem(kind, ctx2, backup) {
@@ -155231,7 +156516,7 @@ ${preview2}` + (found2.length > 8 ? `
       init_tree_item_meta();
       init_locale();
       writeJson2 = (p, v2) => kapi.writeFile(p, JSON.stringify(v2, null, 2));
-      sortByOrder = (list) => (list || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      sortByOrder = (list2) => (list2 || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
       bookStatusOptions = () => SECTION_STATUSES.map(([k, label]) => [k, label]);
       sceneStatusOptions = () => allStatuses().map((s) => [s, dataLabel(s)]);
       planStatusOptions = async () => {
@@ -155291,7 +156576,7 @@ ${preview2}` + (found2.length > 8 ? `
     if (!t3) return null;
     return t3.editor && t3.editor.view || t3.sp && t3.sp.view || null;
   }
-  function syncAnchors(list, activeQuote) {
+  function syncAnchors(list2, activeQuote) {
     const quotes = [];
     const walk3 = (cs) => {
       for (const c of cs) {
@@ -155299,7 +156584,7 @@ ${preview2}` + (found2.length > 8 ? `
         walk3(c.replies || []);
       }
     };
-    walk3(list || []);
+    walk3(list2 || []);
     const v2 = editorView();
     setCommentAnchors(quotes, activeQuote, v2);
     refreshCommentAnchors(v2);
@@ -155370,11 +156655,11 @@ ${preview2}` + (found2.length > 8 ? `
     };
     head2.append(fBtn);
     host2.append(head2);
-    const list = el("div", "k-cm-list");
+    const list2 = el("div", "k-cm-list");
     const shown = filterOpen ? all.filter((c) => !c.resolved) : all;
-    if (!shown.length) list.append(el("div", "dim", filterOpen ? t("cmt.emptyOpen") : t("cmt.emptyAll")));
-    for (const c of shown) list.append(commentCard(c, file, host2, 0));
-    host2.append(list);
+    if (!shown.length) list2.append(el("div", "dim", filterOpen ? t("cmt.emptyOpen") : t("cmt.emptyAll")));
+    for (const c of shown) list2.append(commentCard(c, file, host2, 0));
+    host2.append(list2);
     const sel = await selectionAnchor();
     if (stale2()) return null;
     const foot = el("div", "k-cm-foot");
@@ -155598,10 +156883,10 @@ ${preview2}` + (found2.length > 8 ? `
         if (!await kapi.exists(p)) continue;
         const { body, comments } = await store.read(p);
         const have = new Set(comments.map((c) => c.id));
-        const add = olds.filter((c) => !have.has(c.id));
-        if (add.length) {
-          await store.write(p, body, [...comments, ...add]);
-          n2 += add.length;
+        const add2 = olds.filter((c) => !have.has(c.id));
+        if (add2.length) {
+          await store.write(p, body, [...comments, ...add2]);
+          n2 += add2.length;
         }
         delete row3.comments;
       }
@@ -155671,10 +156956,10 @@ ${preview2}` + (found2.length > 8 ? `
     return out;
   }
   async function runProjectReplace(query, repl, opts = {}, { docs } = {}) {
-    const list = docs || await collectReplaceDocs();
+    const list2 = docs || await collectReplaceDocs();
     const { writeKeepingComments: writeKeepingComments2 } = await Promise.resolve().then(() => (init_comment_ui(), comment_ui_exports));
     let files = 0, count = 0;
-    for (const d of list) {
+    for (const d of list2) {
       if (d.locked) continue;
       const r = replaceAllInText(d.body, query, repl, opts);
       if (!r.count) continue;
@@ -155740,8 +157025,8 @@ ${preview2}` + (found2.length > 8 ? `
     const cRe = mkChk("ui.replace.regex");
     box2.append(optRow);
     const summary = el("div", "k-replace-summary dim");
-    const list = el("div", "k-replace-list");
-    box2.append(summary, list);
+    const list2 = el("div", "k-replace-list");
+    box2.append(summary, list2);
     const btns = el("div", "k-dlg-btns");
     const bPrev = el("button", null, t("ui.replace.preview"));
     const bClose = el("button", "k-cancel", t("ui.common.close"));
@@ -155759,7 +157044,7 @@ ${preview2}` + (found2.length > 8 ? `
     const opts = () => ({ caseSensitive: cCase.checked, wholeWord: cWord.checked, regex: cRe.checked });
     let docs = null, plan = null;
     const preview2 = async () => {
-      list.replaceChildren();
+      list2.replaceChildren();
       if (!buildMatcher(iFind.value, opts())) {
         summary.textContent = t("ui.replace.badQuery");
         plan = null;
@@ -155786,7 +157071,7 @@ ${preview2}` + (found2.length > 8 ? `
           line.append(el("span", "dim", m.before), el("mark", null, m.match), el("span", "dim", m.after));
           row3.append(line);
         }
-        list.append(row3);
+        list2.append(row3);
       }
       bRun.disabled = !plan.total;
       return plan;
@@ -156009,18 +157294,18 @@ ${preview2}` + (found2.length > 8 ? `
     const S11 = { job: 0, timer: 0, hits: [], sel: -1, shownQ: null, busy: false };
     const cards = () => [...results.querySelectorAll(".k-gsearch-hit")];
     const select2 = (i5) => {
-      const list = cards();
-      if (!list.length) {
+      const list2 = cards();
+      if (!list2.length) {
         S11.sel = -1;
         return -1;
       }
-      S11.sel = Math.max(0, Math.min(i5, list.length - 1));
-      list.forEach((c, k) => {
+      S11.sel = Math.max(0, Math.min(i5, list2.length - 1));
+      list2.forEach((c, k) => {
         c.classList.toggle("on", k === S11.sel);
         c.setAttribute("aria-selected", k === S11.sel ? "true" : "false");
       });
       try {
-        list[S11.sel].scrollIntoView({ block: "nearest" });
+        list2[S11.sel].scrollIntoView({ block: "nearest" });
       } catch {
       }
       return S11.sel;
@@ -156754,9 +158039,9 @@ ${preview2}` + (found2.length > 8 ? `
   }
   function buildBar(st) {
     const bar = el("div", "vis-bar");
-    const add = el("button", "vis-btn vis-add", t("ui.vis.addRow"));
-    add.onclick = () => pickLinesDialog(st);
-    bar.append(add);
+    const add2 = el("button", "vis-btn vis-add", t("ui.vis.addRow"));
+    add2.onclick = () => pickLinesDialog(st);
+    bar.append(add2);
     const free = el("button", "vis-btn vis-addfree", t("ui.vis.addFree"));
     free.onclick = async () => {
       insertRow(st.rows, -1, makeRow({}));
@@ -157107,13 +158392,13 @@ ${preview2}` + (found2.length > 8 ? `
       const box2 = el("div", "k-dialog k-wide vis-pick");
       box2.append(el("div", "k-dlg-title", edit ? t("ui.vis.editBind") : t("ui.vis.pickLine")));
       box2.append(el("div", "dim vis-pick-hint", edit ? t("ui.vis.editBindHint") : t("ui.vis.pickLineHint")));
-      const list = el("div", "vis-pick-list");
+      const list2 = el("div", "vis-pick-list");
       const usage = lineUsage(st.rows, st.lines);
       const mine = new Set(edit ? boundIdxs(st.rows[rowIdx], st.lines) : []);
       const pool3 = edit ? st.lines : st.lines.filter((l) => !usage.has(l.i));
       const picked = new Set(mine);
-      if (!st.lines.length) list.append(el("div", "dim", t("ui.vis.noLines")));
-      else if (!pool3.length) list.append(el("div", "dim", t("ui.vis.allUsed")));
+      if (!st.lines.length) list2.append(el("div", "dim", t("ui.vis.noLines")));
+      else if (!pool3.length) list2.append(el("div", "dim", t("ui.vis.allUsed")));
       const showLn = !!(state.settings && state.settings.lineNumbers);
       for (const line of pool3) {
         const r = el("label", "vis-pick-row");
@@ -157130,14 +158415,14 @@ ${preview2}` + (found2.length > 8 ? `
         r.append(el("span", "vis-pick-text", displayText2(line.text)));
         if (usage.has(line.i) && !mine.has(line.i))
           r.append(el("span", "vis-tag vis-tag-used", t("ui.vis.lineUsed")));
-        list.append(r);
+        list2.append(r);
       }
-      box2.append(list);
+      box2.append(list2);
       const btns = el("div", "k-dlg-btns");
       if (pool3.length > 1) {
         const all = el("button", "vis-selall", t("ui.vis.selectAll"));
         all.onclick = () => {
-          list.querySelectorAll("input").forEach((cb, k) => {
+          list2.querySelectorAll("input").forEach((cb, k) => {
             cb.checked = true;
             picked.add(pool3[k].i);
           });
@@ -157476,18 +158761,18 @@ ${preview2}` + (found2.length > 8 ? `
     return isArray2(key2) ? key2.join(".") : key2;
   }
   function get2(obj, path) {
-    const list = [];
+    const list2 = [];
     let arr = false;
     const deepGet = (obj2, path2, index, arrayIndex) => {
       if (!isDefined(obj2)) return;
-      if (!path2[index]) list.push(arrayIndex !== void 0 ? {
+      if (!path2[index]) list2.push(arrayIndex !== void 0 ? {
         v: obj2,
         i: arrayIndex
       } : obj2);
       else {
         const value = obj2[path2[index]];
         if (!isDefined(value)) return;
-        if (index === path2.length - 1 && (isString2(value) || isNumber2(value) || isBoolean2(value) || typeof value === "bigint")) list.push(arrayIndex !== void 0 ? {
+        if (index === path2.length - 1 && (isString2(value) || isNumber2(value) || isBoolean2(value) || typeof value === "bigint")) list2.push(arrayIndex !== void 0 ? {
           v: toString(value),
           i: arrayIndex
         } : toString(value));
@@ -157498,7 +158783,7 @@ ${preview2}` + (found2.length > 8 ? `
       }
     };
     deepGet(obj, isString2(path) ? path.split(".") : path, 0);
-    return arr ? list : list[0];
+    return arr ? list2 : list2[0];
   }
   function isWordSeparator(code3) {
     return code3 >= 9 && code3 <= 13 || code3 === 32 || code3 === 160;
@@ -158985,7 +160270,7 @@ ${preview2}` + (found2.length > 8 ? `
     const box2 = el("div", "k-qo");
     const input = el("input", "k-qo-input");
     input.placeholder = t("ui.quickOpen.printNameFile");
-    const list = el("div", "k-qo-list");
+    const list2 = el("div", "k-qo-list");
     const foot = el("div", "k-qo-foot");
     foot.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;opacity:.75;border-top:1px solid var(--border)";
     const hint = el("span", "k-qo-hint", t("ui.quickOpen.pickEnterOpenEsc"));
@@ -158995,7 +160280,7 @@ ${preview2}` + (found2.length > 8 ? `
     reBtn.title = t("ui.quickOpen.scanFileNew");
     reBtn.style.cssText = "border:none;background:none;cursor:pointer;font-size:13px";
     foot.append(hint, count, reBtn);
-    box2.append(input, list, foot);
+    box2.append(input, list2, foot);
     ov.append(box2);
     document.body.append(ov);
     let allFiles = _cacheRoot === state.root ? _cacheFiles.slice() : [];
@@ -159028,7 +160313,7 @@ ${preview2}` + (found2.length > 8 ? `
     function doFilter() {
       const q = input.value.trim();
       results = q && fuse ? fuse.search(q).map((r) => r.item).slice(0, 20) : allFiles.slice(0, 20);
-      list.innerHTML = "";
+      list2.innerHTML = "";
       selectedIdx = 0;
       results.forEach((f) => {
         const row3 = el("div", "k-qo-row");
@@ -159037,13 +160322,13 @@ ${preview2}` + (found2.length > 8 ? `
         row3.append(el("span", "k-qo-name", f.name));
         row3.append(el("span", "k-qo-rel", f.rel));
         row3.onclick = () => openFile(f);
-        list.append(row3);
+        list2.append(row3);
       });
       count.textContent = tf("ui.quickOpen.file", results.length, allFiles.length);
       highlight(selectedIdx);
     }
     function highlight(idx4) {
-      const rows = [...list.querySelectorAll(".k-qo-row")];
+      const rows = [...list2.querySelectorAll(".k-qo-row")];
       rows.forEach((r, i5) => r.classList.toggle("on", i5 === idx4));
       if (rows[idx4]) rows[idx4].scrollIntoView({ block: "nearest" });
     }
@@ -159882,8 +161167,8 @@ img{max-width:100%}` }
     return TOOLS2.filter((t3) => capAllows(cap, t3.cap));
   }
   function toolsSystemPrompt(cap) {
-    const list = toolsFor(cap);
-    if (!list.length) return "";
+    const list2 = toolsFor(cap);
+    if (!list2.length) return "";
     const example = capAllows(cap, CAP_WRITE) ? t("ui.aiTools.toolSceneWriteArgs") : t("ui.aiTools.toolSceneReadArgs");
     const lines = [
       t("ui.aiTools.cmdYouCmdApp"),
@@ -159902,7 +161187,7 @@ img{max-width:100%}` }
       "",
       t("ui.aiTools.cmdUseNow")
     ];
-    for (const t3 of list) {
+    for (const t3 of list2) {
       const args = [...t3.need.map((a) => a), ...t3.opt.map((a) => a + "?")].join(", ");
       lines.push(`- \`${t3.name}\`(${args}) \u2014 ${t3.desc}${t3.destructive ? t("ui.aiTools.del") : ""}`);
     }
@@ -160216,6 +161501,42 @@ img{max-width:100%}` }
     }
     return rows[0] || null;
   }
+  async function lockOfBookPath(secPath) {
+    try {
+      const sec = await kapi.readJson(await kapi.join(secPath, "section.json"));
+      if (sec && isLockVal(sec.locked)) return "book";
+    } catch {
+    }
+    return "";
+  }
+  async function lockOfDraft(draftPath, chGuid) {
+    const secPath = String(draftPath || "").replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, "");
+    if (secPath && secPath !== draftPath) {
+      const b = await lockOfBookPath(secPath);
+      if (b) return b;
+    }
+    if (chGuid) {
+      try {
+        const d = await kapi.readJson(await kapi.join(draftPath, "draft.json"));
+        const ch = (d && d.chapters || []).find((c) => c.guid === chGuid);
+        if (ch && isLockVal(ch.locked)) return "chapter";
+      } catch {
+      }
+    }
+    return "";
+  }
+  async function sceneLockOf(sc, meta2) {
+    let m = meta2;
+    if (!m) {
+      try {
+        m = await kapi.exists(sc.path) ? (0, import_md22.parseMdFile)(await kapi.readFile(sc.path)).meta : {};
+      } catch {
+        m = {};
+      }
+    }
+    if (isLockVal(m && m.locked) || sc.row && isLockVal(sc.row.locked)) return "scene";
+    return lockOfDraft(sc.draftPath, sc.chapterId);
+  }
   async function findEntityFile(name5) {
     for (const e of await listEntities(state.root).catch(() => [])) {
       if (eq(e.name, name5)) return e;
@@ -160275,7 +161596,7 @@ img{max-width:100%}` }
     } catch {
     }
   }
-  var import_md22, SKIP_DIRS8, guid2, safeName3, EMPTY_SCENES, eq, ok, err, HANDLERS;
+  var import_md22, SKIP_DIRS8, guid2, safeName3, EMPTY_SCENES, eq, isLockVal, LOCK_KEY, lockedErr, ok, err, HANDLERS;
   var init_ai_actions = __esm({
     "src/ai/ai-actions.js"() {
       init_i18n();
@@ -160295,6 +161616,9 @@ img{max-width:100%}` }
       };
       EMPTY_SCENES = () => ({ chapters: {} });
       eq = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+      isLockVal = (v2) => v2 === true || v2 === "true";
+      LOCK_KEY = { scene: "ui.aiActions.lockScene", chapter: "ui.aiActions.lockChapter", book: "ui.aiActions.lockBook" };
+      lockedErr = (name5, src2) => err(tf("ui.aiActions.locked", name5, t(LOCK_KEY[src2] || LOCK_KEY.scene)));
       ok = (message, data2) => ({ ok: true, message, data: data2 });
       err = (error2) => ({ ok: false, error: error2 });
       HANDLERS = {
@@ -160363,9 +161687,9 @@ img{max-width:100%}` }
           if (Array.isArray(a.aliases)) e.aliases = a.aliases;
           if (a.fields && typeof a.fields === "object") e.fields = { ...e.fields || {}, ...a.fields };
           if (a.sections || a.description) {
-            const add = normSections(a.sections, a.description);
+            const add2 = normSections(a.sections, a.description);
             const cur = Array.isArray(e.sections) ? e.sections.slice() : [];
-            for (const s of add) {
+            for (const s of add2) {
               const i5 = cur.findIndex((x) => eq(x.title, s.title));
               if (i5 === -1) cur.push(s);
               else cur[i5] = s;
@@ -160415,6 +161739,7 @@ img{max-width:100%}` }
         async "book.delete"(a) {
           const b = await findBook(a.title);
           if (!b) return err(tf("ui.aiActions.notFoundBook2", a.title));
+          if (await lockOfBookPath(b.path)) return lockedErr(b.title, "book");
           if (!(await closeTabsUnder(b.path)).ok) return err(tf("ui.aiActions.dirOpenUnsaved", b.title));
           const dst = await moveToTrash(b.path, { dir: true });
           await kapi.writeFile(dst + ".k2restore.json", JSON.stringify(
@@ -160427,6 +161752,7 @@ img{max-width:100%}` }
         async "chapter.create"(a) {
           const b = await findBook(a.book);
           if (!b) return err(a.book ? tf("ui.aiActions.notFoundBook2", a.book) : t("ui.aiActions.notHasBookProject"));
+          if (await lockOfBookPath(b.path)) return lockedErr(b.title, "book");
           const df = await kapi.join(b.draftPath, "draft.json");
           let ch = null;
           await mutateJson(kapi, df, (d) => {
@@ -160453,6 +161779,10 @@ img{max-width:100%}` }
           if (!b) return err(t("ui.aiActions.notFoundBook"));
           const c = await findChapter(b, a.title);
           if (!c) return err(tf("ui.aiActions.notFoundChapter", a.title));
+          {
+            const lk = isLockVal(c.ch.locked) ? "chapter" : await lockOfBookPath(b.path);
+            if (lk) return lockedErr(c.ch.title || a.title, lk);
+          }
           await mutateJson(kapi, c.draftFile, (d) => {
             const row3 = (d.chapters || []).find((x) => x.guid === c.ch.guid);
             if (!row3) return false;
@@ -160465,6 +161795,10 @@ img{max-width:100%}` }
           if (!b) return err(t("ui.aiActions.notFoundBook"));
           const c = await findChapter(b, a.title);
           if (!c) return err(tf("ui.aiActions.notFoundChapter", a.title));
+          {
+            const lk = isLockVal(c.ch.locked) ? "chapter" : await lockOfBookPath(b.path);
+            if (lk) return lockedErr(c.ch.title || a.title, lk);
+          }
           const dir2 = await kapi.join(b.draftPath, "Chapters", c.ch.folderName);
           const sf = await kapi.join(b.draftPath, "scenes.json");
           if (await kapi.exists(dir2) && !(await closeTabsUnder(dir2)).ok) return err(tf("ui.aiActions.dirOpenUnsaved", a.title));
@@ -160494,6 +161828,10 @@ img{max-width:100%}` }
           if (!b) return err(a.book ? tf("ui.aiActions.notFoundBook2", a.book) : t("ui.aiActions.notHasBookProject"));
           const c = await findChapter(b, a.chapter);
           if (!c) return err(a.chapter ? tf("ui.aiActions.notFoundChapter", a.chapter) : t("ui.common.bookNotHasChapter"));
+          {
+            const lk = isLockVal(c.ch.locked) ? "chapter" : await lockOfBookPath(b.path);
+            if (lk) return lockedErr(c.ch.title || "", lk);
+          }
           const sf = await kapi.join(b.draftPath, "scenes.json");
           const chDir = await kapi.join(b.draftPath, "Chapters", c.ch.folderName);
           const snap2 = await kapi.readJson(sf).catch(() => EMPTY_SCENES());
@@ -160509,13 +161847,13 @@ img{max-width:100%}` }
           let dup = false;
           await mutateJson(kapi, sf, (d) => {
             d.chapters = d.chapters || {};
-            const list = d.chapters[c.ch.guid] || [];
-            if (list.some((s) => eq(s.title, a.title))) {
+            const list2 = d.chapters[c.ch.guid] || [];
+            if (list2.some((s) => eq(s.title, a.title))) {
               dup = true;
               return false;
             }
-            const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
-            d.chapters[c.ch.guid] = [...list, {
+            const order = Math.max(0, ...list2.map((s) => s.order || 0)) + 1;
+            d.chapters[c.ch.guid] = [...list2, {
               id: guid2(),
               title: String(a.title),
               order,
@@ -160539,12 +161877,14 @@ img{max-width:100%}` }
           if (!sc) return err(tf("ui.aiActions.notFoundSceneNew", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
           const { meta: meta2, body: diskBody } = (0, import_md22.parseMdFile)(raw);
-          const add = String(a.text || "");
+          const lk = await sceneLockOf(sc, meta2);
+          if (lk) return lockedErr(sc.title, lk);
+          const add2 = String(a.text || "");
           const mode = String(a.mode || "append");
           const h = tabHandle(sc.path);
           const live2 = !!(h && h.kind !== "wiki");
           const body = live2 ? h.getText() : diskBody;
-          const next = mode === "replace" ? add : mode === "prepend" ? add + (body ? "\n\n" + body : "") : body ? body.replace(/\s+$/, "") + "\n\n" + add : add;
+          const next = mode === "replace" ? add2 : mode === "prepend" ? add2 + (body ? "\n\n" + body : "") : body ? body.replace(/\s+$/, "") + "\n\n" + add2 : add2;
           const verb = mode === "replace" ? t("ui.common.overwrite") : mode === "prepend" ? t("ui.common.insertPage") : t("ui.aiActions.writeNext");
           const msg = tf("ui.aiActions.sceneDoneMergeChar", verb, sc.title, next.length);
           if (live2 && h.dirty) {
@@ -160558,6 +161898,10 @@ img{max-width:100%}` }
         async "scene.rename"(a) {
           const sc = await findScene2(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
+          {
+            const lk = await sceneLockOf(sc);
+            if (lk) return lockedErr(sc.title, lk);
+          }
           const sf = await kapi.join(sc.draftPath, "scenes.json");
           await mutateJson(kapi, sf, (d) => {
             let hit = false;
@@ -160580,6 +161924,10 @@ img{max-width:100%}` }
         async "scene.delete"(a) {
           const sc = await findScene2(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
+          {
+            const lk = await sceneLockOf(sc);
+            if (lk) return lockedErr(sc.title, lk);
+          }
           const sf = await kapi.join(sc.draftPath, "scenes.json");
           const folderName = sc.path.split(/[\\/]/).slice(-2, -1)[0] || "";
           if (tabHandle(sc.path)) await closeTabsUnder(sc.path);
@@ -160917,8 +162265,8 @@ img{max-width:100%}` }
           return;
         }
         const raw = await kapi.readFile(file);
-        const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
-        parts.push("### " + label + "\n" + parseMdFile23(raw).body);
+        const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+        parts.push("### " + label + "\n" + parseMdFile24(raw).body);
       } catch {
       }
     };
@@ -160950,10 +162298,10 @@ img{max-width:100%}` }
   async function ragSource() {
     const scenes = [];
     const files = await allMdFiles(state.root);
-    const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const f of files) {
       try {
-        const { meta: meta2 = {}, body: diskBody = "" } = parseMdFile23(await kapi.readFile(f));
+        const { meta: meta2 = {}, body: diskBody = "" } = parseMdFile24(await kapi.readFile(f));
         const h = tabHandle(f);
         const body = h && h.kind !== "wiki" ? h.getText() : diskBody;
         if (!String(body).trim()) continue;
@@ -161030,9 +162378,9 @@ img{max-width:100%}` }
     }
     for (const f of files) {
       try {
-        const { parseMdFile: parseMdFile23 } = await Promise.resolve().then(() => __toESM(require_md()));
+        const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
         const raw = await kapi.readFile(f.path);
-        out += "\n\n### " + gi("paperclip") + " " + (f.name || f.path) + "\n" + parseMdFile23(raw).body;
+        out += "\n\n### " + gi("paperclip") + " " + (f.name || f.path) + "\n" + parseMdFile24(raw).body;
       } catch {
       }
     }
@@ -161115,8 +162463,8 @@ img{max-width:100%}` }
     wrap2.append(arch);
     function fill3() {
       rows.innerHTML = "";
-      const list = searchSessions(S4.sessions, S4.query, { includeArchived: S4.showArchived });
-      if (!list.length) {
+      const list2 = searchSessions(S4.sessions, S4.query, { includeArchived: S4.showArchived });
+      if (!list2.length) {
         rows.append(el(
           "div",
           "ai-chat-empty dim",
@@ -161124,7 +162472,7 @@ img{max-width:100%}` }
         ));
         return;
       }
-      for (const s of list) rows.append(sessionRow(s));
+      for (const s of list2) rows.append(sessionRow(s));
       paintRunBadges();
     }
     q.oninput = () => {
@@ -161451,13 +162799,13 @@ img{max-width:100%}` }
         continue;
       }
       if (b.type === "ul" || b.type === "ol") {
-        const list = el(b.type, "ai-md-list");
+        const list2 = el(b.type, "ai-md-list");
         for (const it of b.items) {
           const li = el("li");
           inl(li, it);
-          list.append(li);
+          list2.append(li);
         }
-        box2.append(list);
+        box2.append(list2);
         continue;
       }
       const tag3 = b.type === "h" ? "h" + Math.min(6, Math.max(1, b.level)) : b.type === "quote" ? "blockquote" : "p";
@@ -162503,16 +163851,16 @@ img{max-width:100%}` }
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-ai-titles");
     box2.append(el("div", "k-dlg-title", tf("ui.aiSum.suggestName2", KIND_TH[kind], currentTitle)));
-    const list = el("div", "k-pick-list");
+    const list2 = el("div", "k-pick-list");
     for (const tt of titles) {
       const row3 = el("div", "k-menu-item", gi("book-open") + " " + tt);
       row3.onclick = () => {
         ov.remove();
         callback(tt);
       };
-      list.append(row3);
+      list2.append(row3);
     }
-    box2.append(list);
+    box2.append(list2);
     const past = pastTitlesFor(currentTitle).filter((p) => !titles.includes(p));
     if (past.length) {
       const h = el("div", "dim", t("ui.aiSum.suggestBeforePage"));
@@ -163523,8 +164871,8 @@ img{max-width:100%}` }
       }
       return true;
     }
-    const empty2 = emptyLeafId();
-    if (empty2) sm.moveTab(tabId, empty2, "center");
+    const empty3 = emptyLeafId();
+    if (empty3) sm.moveTab(tabId, empty3, "center");
     else sm.splitWith(tabId, side === "down" ? "bottom" : side);
     syncCompareFile();
     markCompare();
@@ -163935,35 +165283,35 @@ q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();
   function categoryPage(cat, entities, ctx2) {
     const { pages, siteTitle, nav: nav2, labels } = ctx2;
     const label = catLabel3(cat, labels);
-    const list = entities.length ? `<div class="grid">${entities.map((e) => `<a class="card" href="${esc6(pages.get(e.path))}">
+    const list2 = entities.length ? `<div class="grid">${entities.map((e) => `<a class="card" href="${esc6(pages.get(e.path))}">
 <div class="n">${esc6(e.name)}</div><div class="d">${esc6((e.aliases || []).join(" \xB7 "))}</div></a>`).join("")}</div>` : `<p class="empty">${tx("ui.codexBuild.notHasListCat2")}</p>`;
-    return page(label, siteTitle, ((a) => `<article><h1>${a[0]}</h1><p class="d">${txf("ui.codexBuild.list2", a)}</p></article><div class="sec">${a[2]}</div>`)([esc6(label), entities.length, list]), { nav: nav2 });
+    return page(label, siteTitle, ((a) => `<article><h1>${a[0]}</h1><p class="d">${txf("ui.codexBuild.list2", a)}</p></article><div class="sec">${a[2]}</div>`)([esc6(label), entities.length, list2]), { nav: nav2 });
   }
   function buildCodexSite(entities, opts = {}) {
-    const list = (entities || []).filter((e) => e && e.name).slice().sort((a, b) => cmpText(String(a.name), String(b.name)));
-    const pages = assignPages(list);
-    const cats = [...new Set(list.map((e) => e.cat))];
+    const list2 = (entities || []).filter((e) => e && e.name).slice().sort((a, b) => cmpText(String(a.name), String(b.name)));
+    const pages = assignPages(list2);
+    const cats = [...new Set(list2.map((e) => e.cat))];
     const labels = opts.labels || {};
     const nav2 = [
       { href: "index.html", label: t("ui.common.pageFirst") },
       ...cats.map((c) => ({ href: "cat-" + slug(c) + ".html", label: catLabel3(c, labels) }))
     ];
     const ctx2 = { pages, siteTitle: opts.siteTitle || "Codex", nav: nav2, labels, mentions: opts.mentions || {} };
-    const files = [{ name: "index.html", text: indexPage(list, ctx2) }];
+    const files = [{ name: "index.html", text: indexPage(list2, ctx2) }];
     for (const c of cats) {
       files.push({
         name: "cat-" + slug(c) + ".html",
-        text: categoryPage(c, list.filter((e) => e.cat === c), ctx2)
+        text: categoryPage(c, list2.filter((e) => e.cat === c), ctx2)
       });
     }
-    for (const e of list) files.push({ name: pages.get(e.path), text: entityPage(e, ctx2) });
+    for (const e of list2) files.push({ name: pages.get(e.path), text: entityPage(e, ctx2) });
     return files;
   }
   function codexStats(entities) {
-    const list = (entities || []).filter((e) => e && e.name);
+    const list2 = (entities || []).filter((e) => e && e.name);
     const byCat = {};
-    for (const e of list) byCat[e.cat] = (byCat[e.cat] || 0) + 1;
-    return { total: list.length, cats: Object.keys(byCat).length, byCat };
+    for (const e of list2) byCat[e.cat] = (byCat[e.cat] || 0) + 1;
+    return { total: list2.length, cats: Object.keys(byCat).length, byCat };
   }
   var CODEX_VERSION, CAT_TH2, catLabel3, CSS2;
   var init_codex_build = __esm({
@@ -164244,10 +165592,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function migrate4(raw) {
     const d = raw && typeof raw === "object" ? raw : {};
-    const list = Array.isArray(d.entries) ? d.entries : Array.isArray(d) ? d : [];
+    const list2 = Array.isArray(d.entries) ? d.entries : Array.isArray(d) ? d : [];
     const entries = [];
-    for (let i5 = 0; i5 < list.length; i5++) {
-      const e = list[i5];
+    for (let i5 = 0; i5 < list2.length; i5++) {
+      const e = list2[i5];
       if (!e || typeof e !== "object") continue;
       const day = e.day || e.date || "";
       const text = e.text != null ? e.text : e.note || "";
@@ -164292,15 +165640,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }));
   }
   function summarize2(entries) {
-    const list = sortEntries(entries);
-    const days = new Set(list.map((e) => e.day).filter(Boolean));
+    const list2 = sortEntries(entries);
+    const days = new Set(list2.map((e) => e.day).filter(Boolean));
     return {
-      entries: list.length,
+      entries: list2.length,
       days: days.size,
-      words: list.reduce((a, x) => a + (Number(x.words) || 0), 0),
-      minutes: list.reduce((a, x) => a + (Number(x.minutes) || 0), 0),
-      first: list.length ? list[list.length - 1].day : "",
-      last: list.length ? list[0].day : ""
+      words: list2.reduce((a, x) => a + (Number(x.words) || 0), 0),
+      minutes: list2.reduce((a, x) => a + (Number(x.minutes) || 0), 0),
+      first: list2.length ? list2[list2.length - 1].day : "",
+      last: list2.length ? list2[0].day : ""
     };
   }
   function filterEntries(entries, { q = "", from: from2 = "", to = "", mood = "" } = {}) {
@@ -164452,8 +165800,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     mins.placeholder = t("ui.common.min");
     const tags = el("input", "k-rec-tags");
     tags.placeholder = t("ui.recOrd.tagSkip");
-    const add = el("button", "k-rec-add", t("ui.recOrd.save2"));
-    add.onclick = async () => {
+    const add2 = el("button", "k-rec-add", t("ui.recOrd.save2"));
+    add2.onclick = async () => {
       const text = ta.value.trim();
       if (!text) {
         setStatus(t("ui.recOrd.cantWrite"));
@@ -164478,13 +165826,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       drawList3();
     };
     const row22 = el("div", "k-rec-form-row");
-    row22.append(dayIn, mood2, words, mins, tags, add);
+    row22.append(dayIn, mood2, words, mins, tags, add2);
     form.append(ta, row22);
     h.append(form);
     const stats = el("div", "k-rec-stats");
     h.append(stats);
-    const list = el("div", "k-rec-list");
-    h.append(list);
+    const list2 = el("div", "k-rec-list");
+    h.append(list2);
     function drawStats() {
       const sum2 = summarize2(s.data.entries);
       stats.replaceChildren();
@@ -164500,10 +165848,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
     }
     function drawList3() {
-      list.replaceChildren();
+      list2.replaceChildren();
       const rows = filterEntries(s.data.entries, { q: s.q, mood: s.mood });
       if (!rows.length) {
-        list.append(panelEmpty(s.data.entries.length ? t("ui.recOrd.notFoundSaveAt") : t("ui.recOrd.notHasSaveWrite")));
+        list2.append(panelEmpty(s.data.entries.length ? t("ui.recOrd.notFoundSaveAt") : t("ui.recOrd.notHasSaveWrite")));
         return;
       }
       for (const g of groupByDay(rows)) {
@@ -164513,8 +165861,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         if (g.words) meta2.push(fmtNum(g.words) + t("ui.common.word"));
         if (g.minutes) meta2.push(g.minutes + t("ui.recOrd.min"));
         if (meta2.length) head2.append(el("span", "k-rec-day-meta", meta2.join(" \xB7 ")));
-        list.append(head2);
-        for (const e of g.items) list.append(entryCard(e));
+        list2.append(head2);
+        for (const e of g.items) list2.append(entryCard(e));
       }
     }
     function entryCard(e) {
@@ -164649,16 +165997,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     for (const p of failed || []) push(p, !(p && (p.skipped || p.untrusted)), p && p.error);
     return sortPlugins([...byName.values()]);
   }
-  function sortPlugins(list) {
+  function sortPlugins(list2) {
     const rank = { [ST_UNTRUSTED]: -1, [ST_ERR]: 0, [ST_OLD]: 1, [ST_OK]: 2, [ST_OFF]: 3 };
-    return [...list || []].sort((a, b) => {
+    return [...list2 || []].sort((a, b) => {
       const d = (rank[a.status] ?? 9) - (rank[b.status] ?? 9);
       return d || cmpText(String(a.name), String(b.name));
     });
   }
-  function pluginCounts(list) {
+  function pluginCounts(list2) {
     const c = { total: 0, ok: 0, off: 0, err: 0, old: 0, untrusted: 0 };
-    for (const p of list || []) {
+    for (const p of list2 || []) {
       c.total++;
       if (p.status === ST_UNTRUSTED) c.untrusted++;
       else if (p.status === ST_OK) c.ok++;
@@ -164806,8 +166154,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return refs.map((r) => `https://codeload.github.com/${enc(src2.owner)}/${enc(src2.repo)}/zip/refs/heads/${enc(r)}`);
   }
   function pickPluginRoot(paths, sub = "") {
-    const list = (paths || []).map((p) => String(p || "").replace(/\\/g, "/")).filter(Boolean);
-    const manifests = list.filter((p) => p === "plugin.json" || p.endsWith("/plugin.json"));
+    const list2 = (paths || []).map((p) => String(p || "").replace(/\\/g, "/")).filter(Boolean);
+    const manifests = list2.filter((p) => p === "plugin.json" || p.endsWith("/plugin.json"));
     if (!manifests.length) return { ok: false, reason: "ui.plug.errNoManifest" };
     const wanted = String(sub || "").replace(/^\/+|\/+$/g, "");
     const roots = manifests.map((p) => p.slice(0, Math.max(0, p.length - "plugin.json".length)).replace(/\/$/, ""));
@@ -164844,12 +166192,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return /(^|\/)(\.git|\.github|node_modules|__MACOSX)(\/|$)/.test(p) || /(^|\/)\.DS_Store$/.test(p) || /(^|\/)Thumbs\.db$/i.test(p);
   }
   function installSummary(files) {
-    const list = files || [];
-    const bytes = list.reduce((n2, f) => n2 + (f.size || 0), 0);
+    const list2 = files || [];
+    const bytes = list2.reduce((n2, f) => n2 + (f.size || 0), 0);
     return {
-      count: list.length,
+      count: list2.length,
       bytes,
-      hasCode: list.some((f) => /\.(js|mjs|cjs)$/i.test(f.to))
+      hasCode: list2.some((f) => /\.(js|mjs|cjs)$/i.test(f.to))
     };
   }
   var SRC_GITHUB, SRC_ZIP, DEFAULT_REFS, enc, INSTALL_WARN_KEY;
@@ -164874,18 +166222,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     h.replaceChildren();
     h.classList.add("k-plug");
     const info = app.pluginList();
-    const list = mergePluginList(info.loaded, info.failed, {
+    const list2 = mergePluginList(info.loaded, info.failed, {
       appVersion: app.APP_VERSION,
       disabled: (n2) => app.pluginDisabled(n2)
     });
-    const counts = pluginCounts(list);
+    const counts = pluginCounts(list2);
     h.append(buildBar2(h, counts, app));
     const body = el("div", "k-plug-list");
     h.append(body);
-    if (!list.length) {
+    if (!list2.length) {
       body.append(panelEmpty(t("ui.plug.emptyTitle"), { hint: t("ui.plug.emptyHint") }));
     } else {
-      for (const p of list) body.append(cardFor2(p, h, app));
+      for (const p of list2) body.append(cardFor2(p, h, app));
     }
     if (S7().showApi) h.append(apiDoc());
     return true;
@@ -165212,7 +166560,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     WHERE_TURN: () => WHERE_TURN,
     characterFromTag: () => characterFromTag,
     countWords: () => countWords7,
-    extractDialogue: () => extractDialogue,
+    extractDialogue: () => extractDialogue2,
     extractRaw: () => extractRaw,
     filterDialogue: () => filterDialogue,
     findQuotes: () => findQuotes,
@@ -165285,7 +166633,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (!s) return false;
     return /^(#{1,6}\s|@|\(\(|>>|<<|!\s|\/\/\/|=\s|\$\w+\s|---+$|\||\.[^.\s])/.test(s) || /^\s*<!--/.test(s);
   }
-  function extractDialogue(text, opts = {}) {
+  function extractDialogue2(text, opts = {}) {
     const rows = extractRaw(text, opts);
     return opts.guessTurns === false ? rows : guessTurns(rows);
   }
@@ -165380,15 +166728,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return out;
   }
   function guessTurns(rows) {
-    const list = (rows || []).map((r) => ({ ...r }));
+    const list2 = (rows || []).map((r) => ({ ...r }));
     let i5 = 0;
-    while (i5 < list.length) {
+    while (i5 < list2.length) {
       let j = i5;
-      while (j + 1 < list.length && list[j + 1].line - list[j].line <= TURN_GAP) j++;
-      resolveRun(list.slice(i5, j + 1));
+      while (j + 1 < list2.length && list2[j + 1].line - list2[j].line <= TURN_GAP) j++;
+      resolveRun(list2.slice(i5, j + 1));
       i5 = j + 1;
     }
-    return list;
+    return list2;
   }
   function resolveRun(run3) {
     if (run3.some((r) => r.source === SRC_SCRIPT)) return;
@@ -165432,10 +166780,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return lines.join("\n");
   }
   function filterDialogue(rows, f = {}) {
-    const list = Array.isArray(rows) ? rows : [];
+    const list2 = Array.isArray(rows) ? rows : [];
     const sp = f.speakers instanceof Set ? f.speakers : Array.isArray(f.speakers) && f.speakers.length ? new Set(f.speakers) : null;
     const q = String(f.q || "").trim().toLowerCase();
-    return list.filter((r) => {
+    return list2.filter((r) => {
       if (f.section && r.section !== f.section) return false;
       if (f.chapter && r.chapterId !== f.chapter) return false;
       if (f.scene && r.sceneId !== f.scene) return false;
@@ -165632,7 +166980,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           path: sc.path
         });
         const script2 = String(meta2.format || "") === "screenplay";
-        const found2 = extractDialogue(body, { names, script: true });
+        const found2 = extractDialogue2(body, { names, script: true });
         for (const r of found2) {
           rows.push({
             ...r,
@@ -166852,16 +168200,16 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     wrap2.append(arch);
     function drawRows() {
       rows.replaceChildren();
-      const list = searchSessions2(
+      const list2 = searchSessions2(
         S9.sessions.map((r) => r.data),
         S9.query,
         { includeArchived: S9.showArchived }
       );
-      if (!list.length) {
+      if (!list2.length) {
         rows.append(el("div", "dlgb-empty", S9.query ? t("ui.dlgb.noMatch") : t("ui.dlgb.noSession")));
         return;
       }
-      for (const s of list) {
+      for (const s of list2) {
         const file = (S9.sessions.find((r) => r.data === s) || {}).file || "";
         const row3 = el("div", "dlgb-row" + (s.archived ? " archived" : ""));
         const main = el("div", "dlgb-row-main");
@@ -167576,11 +168924,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog k-wide");
     box2.append(el("div", "k-dlg-title", t("ui.dlgb.managePresets")));
-    const list = el("div", "dlgb-preset-list");
-    box2.append(list);
+    const list2 = el("div", "dlgb-preset-list");
+    box2.append(list2);
     function draw3() {
-      list.replaceChildren();
-      if (!S9.presets.length) list.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
+      list2.replaceChildren();
+      if (!S9.presets.length) list2.append(el("div", "dlgb-empty", t("ui.dlgb.noPresetYet")));
       for (const p of S9.presets) {
         const row3 = el("div", "dlgb-preset-row");
         const main = el("div", "dlgb-preset-main");
@@ -167603,7 +168951,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           draw3();
         };
         row3.append(main, bEdit, bDel);
-        list.append(row3);
+        list2.append(row3);
       }
     }
     draw3();
@@ -167648,7 +168996,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       body.append(el("div", "dlgb-sec", tf("ui.dlgb.castCount", (holder.cast || []).length, MAX_CAST)));
       for (const c of holder.cast || []) body.append(castCard(c));
       if ((holder.cast || []).length < MAX_CAST) {
-        const add = el("div", "dlgb-add");
+        const add2 = el("div", "dlgb-add");
         const sel = el("select", "dlgb-full");
         const o0 = el("option", "", t("ui.dlgb.pickFromWiki"));
         o0.value = "";
@@ -167686,8 +169034,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           onSave();
           draw3();
         };
-        add.append(sel, bAdd);
-        body.append(add);
+        add2.append(sel, bAdd);
+        body.append(add2);
         if (!rows.length) body.append(el("div", "dlgb-hint", t("ui.dlgb.noWikiChars")));
       }
       const cast = holder.cast || [];
@@ -168053,12 +169401,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       );
       closeColorPicker();
     };
-    const section = (labelKey, list) => {
+    const section = (labelKey, list2) => {
       const wrap2 = el("div", "k-colorsec");
       wrap2.append(el("div", "k-colorsec-lbl", t(labelKey)));
       const row3 = el("div", "k-colorrow");
-      if (!list.length) row3.append(el("span", "dim k-colorempty", t("ui.color.none")));
-      for (const hex2 of list) {
+      if (!list2.length) row3.append(el("span", "dim k-colorempty", t("ui.color.none")));
+      for (const hex2 of list2) {
         const key2 = (0, import_text_color3.presetLabelKey)(hex2);
         row3.append(swatch(hex2, { current: current2, title: key2 ? t(key2) : hex2, onPick: use }));
       }
@@ -168122,6 +169470,467 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_core();
       import_text_color3 = __toESM(require_text_color());
       curPop = null;
+    }
+  });
+
+  // src/onset-ui.js
+  function installOnset(hooks2) {
+    H2 = hooks2 || {};
+  }
+  function resetOnset() {
+    IDX.root = "";
+    IDX.map = /* @__PURE__ */ new Map();
+    IDX.loaded = false;
+    IDX.loading = null;
+  }
+  async function onsetDir(create2 = false) {
+    if (!state.root) return "";
+    const d = await kapi.join(state.root, ONSET_DIR);
+    if (create2 && !await kapi.exists(d)) await kapi.mkdir(d);
+    return d;
+  }
+  async function loadOnsetIndex(force = false) {
+    if (IDX.loaded && IDX.root === state.root && !force) return IDX.map;
+    if (IDX.loading && IDX.root === state.root && !force) return IDX.loading;
+    IDX.root = state.root || "";
+    const run3 = (async () => {
+      const map2 = /* @__PURE__ */ new Map();
+      const d = await onsetDir();
+      if (d && await kapi.exists(d)) {
+        for (const f of await kapi.listFiles(d, ".json").catch(() => [])) {
+          const p = await kapi.join(d, f);
+          try {
+            const r = normalizeOnsetRecord(await kapi.readJson(p));
+            if (r) map2.set(r.sceneId, { ...r, path: p });
+          } catch (e) {
+            log("warn", t("ui.onset.errRead") + f, e);
+          }
+        }
+      }
+      if (IDX.root === (state.root || "")) {
+        IDX.map = map2;
+        IDX.loaded = true;
+      }
+      IDX.loading = null;
+      return map2;
+    })();
+    IDX.loading = run3;
+    return run3;
+  }
+  function isProblemScene(sceneId) {
+    return !!sceneId && IDX.map.has(sceneId);
+  }
+  function onsetRecordOf(sceneId) {
+    return IDX.map.get(sceneId) || null;
+  }
+  function relOf3(file) {
+    const r = String(state.root || "").replace(/[\\/]+$/, "");
+    const f = String(file || "");
+    return r && f.toLowerCase().startsWith(r.toLowerCase()) ? f.slice(r.length + 1).replace(/\\/g, "/") : f;
+  }
+  async function writeRecord(rec) {
+    const d = await onsetDir(true);
+    const p = rec.path || await kapi.join(d, onsetFileName(rec.sceneId));
+    const { path: _drop, ...data2 } = rec;
+    await kapi.writeFile(p, JSON.stringify(data2, null, 2));
+    IDX.map.set(rec.sceneId, { ...data2, path: p });
+    return p;
+  }
+  async function markSceneProblem(c) {
+    const sc = c && c.sc;
+    if (!sc || !sc.id || !c.file) return false;
+    await loadOnsetIndex();
+    if (IDX.map.has(sc.id)) {
+      setStatus(tf("ui.onset.already", sc.title || ""));
+      return false;
+    }
+    const tab = state.tabs.get(c.file);
+    let body = "", meta2 = {};
+    if (tab && (tab.editor || tab.sp)) {
+      body = H2.tabBodyText ? H2.tabBodyText(tab) : (tab.editor || tab.sp).getMarkdown();
+      meta2 = tab.meta || {};
+    } else {
+      try {
+        const p = (0, import_md26.parseMdFile)(await kapi.readFile(c.file));
+        body = p.body;
+        meta2 = p.meta || {};
+      } catch (e) {
+        log("warn", t("ui.onset.errRead") + c.file, e);
+        setStatus(t("ui.onset.errMark"));
+        return false;
+      }
+    }
+    const rec = newOnsetRecord({
+      sceneId: sc.id,
+      file: relOf3(c.file),
+      title: sc.title || meta2.title || "",
+      format: meta2.format,
+      align: typeof meta2.align === "string" ? meta2.align : "",
+      baseline: body
+    });
+    try {
+      await writeRecord(rec);
+    } catch (e) {
+      log("error", t("ui.onset.errMark"), e);
+      setStatus(t("ui.onset.errMark"));
+      return false;
+    }
+    if (H2.buildTree) await H2.buildTree();
+    if (H2.openScene) await H2.openScene(c.file, sc.title);
+    const open = state.tabs.get(c.file);
+    if (open) await applyOnsetToTab(open);
+    setStatus(gi("warning") + " " + tf("ui.onset.marked", sc.title || ""));
+    return true;
+  }
+  async function clearSceneProblem(c, opts = {}) {
+    const sc = c && c.sc;
+    if (!sc || !sc.id) return false;
+    await loadOnsetIndex();
+    const rec = IDX.map.get(sc.id);
+    if (!rec) return false;
+    if (!opts.force && !await confirmBox(tf("ui.onset.clearAsk", sc.title || rec.title || ""), t("ui.onset.clearBtn"))) return false;
+    for (const tab of state.tabs.values()) {
+      if (tab._onset && tab._onset.id === sc.id) {
+        exitOriginal(tab);
+        detach(tab);
+      }
+    }
+    try {
+      if (rec.path && await kapi.exists(rec.path)) await kapi.remove(rec.path);
+    } catch (e) {
+      log("warn", t("ui.onset.errClear"), e);
+    }
+    IDX.map.delete(sc.id);
+    if (H2.buildTree) await H2.buildTree();
+    setStatus(tf("ui.onset.cleared", sc.title || rec.title || ""));
+    return true;
+  }
+  async function setProblemColor(sceneId, color) {
+    const rec = IDX.map.get(sceneId);
+    if (!rec) return false;
+    rec.color = normColor2(color);
+    await writeRecord(rec);
+    for (const tab of state.tabs.values()) if (tab._onset && tab._onset.id === sceneId) paint(tab);
+    return true;
+  }
+  function edOf(tab) {
+    return tab && (tab.editor || tab.sp);
+  }
+  function parseBaseline(tab, rec) {
+    const ed = edOf(tab);
+    if (tab.editor) return ed.docFromMarkdown(rec.baseline, H2.alignFromString ? H2.alignFromString(rec.align) : void 0);
+    return ed.docFromMarkdown(rec.baseline);
+  }
+  async function sceneIdOf(tab) {
+    if (tab._sceneId !== void 0) return tab._sceneId;
+    let id = "";
+    try {
+      const c = H2.sceneCtx ? await H2.sceneCtx(tab.file) : null;
+      id = c && c.row && c.row.id || "";
+    } catch {
+      id = "";
+    }
+    if (id) tab._sceneId = id;
+    return id;
+  }
+  async function applyOnsetToTab(tab) {
+    if (!tab || !edOf(tab) || !state.root) return false;
+    await loadOnsetIndex();
+    if (!IDX.map.size && !tab._onset) return false;
+    const id = await sceneIdOf(tab);
+    const rec = id ? IDX.map.get(id) : null;
+    if (!rec) {
+      if (tab._onset) {
+        exitOriginal(tab);
+        detach(tab);
+      }
+      return false;
+    }
+    const ed = edOf(tab);
+    if (tab._onsetSaved) return true;
+    let baseKeys;
+    try {
+      baseKeys = docKeys(parseBaseline(tab, rec));
+    } catch (e) {
+      log("warn", t("ui.onset.errRead"), e);
+      return false;
+    }
+    tab._onset = { id, rec, view: "revised", baseKeys, ed };
+    setOnsetCompare(ed.view, { other: baseKeys, side: "revised", lock: false });
+    paint(tab);
+    return true;
+  }
+  function detach(tab) {
+    const ed = edOf(tab);
+    if (ed && ed.view && !ed.view.isDestroyed) setOnsetCompare(ed.view, null);
+    tab._onset = null;
+    paint(tab);
+  }
+  function installProxies(tab, ed, saved) {
+    const shadow = Object.create(ed, { view: { value: { state: saved, dom: ed.view.dom } } });
+    const own = {};
+    for (const m of READS) {
+      if (typeof ed[m] !== "function") continue;
+      own[m] = Object.prototype.hasOwnProperty.call(ed, m) ? ed[m] : void 0;
+      const proto = Object.getPrototypeOf(ed)[m];
+      ed[m] = (...a) => proto.apply(shadow, a);
+    }
+    for (const m of WRITES) {
+      if (typeof ed[m] !== "function" || m === "selectScene") continue;
+      own[m] = Object.prototype.hasOwnProperty.call(ed, m) ? ed[m] : void 0;
+      const prev = own[m] || Object.getPrototypeOf(ed)[m];
+      ed[m] = (...a) => {
+        exitOriginal(tab);
+        return prev.apply(ed, a);
+      };
+    }
+    tab._onsetOwn = own;
+  }
+  function removeProxies(tab, ed) {
+    const own = tab._onsetOwn || {};
+    for (const m of Object.keys(own)) {
+      if (own[m] === void 0) delete ed[m];
+      else ed[m] = own[m];
+    }
+    tab._onsetOwn = null;
+  }
+  function showOriginal(tab = state.active) {
+    if (!tab || !tab._onset || tab._onsetSaved) return false;
+    const ed = edOf(tab);
+    if (!ed || !ed.view || ed !== tab._onset.ed) return false;
+    const v2 = ed.view;
+    const saved = v2.state;
+    let doc3;
+    try {
+      doc3 = parseBaseline(tab, tab._onset.rec);
+    } catch (e) {
+      log("warn", t("ui.onset.errRead"), e);
+      return false;
+    }
+    const revisedKeys = docKeys(saved.doc);
+    tab._onsetSaved = saved;
+    installProxies(tab, ed, saved);
+    v2.updateState(EditorState.create({ doc: doc3, plugins: saved.plugins }));
+    setOnsetCompare(v2, { other: revisedKeys, side: "original", lock: true });
+    tab._onset.view = "original";
+    paint(tab);
+    if (H2.afterSwap) H2.afterSwap(tab);
+    return true;
+  }
+  function exitOriginal(tab = state.active) {
+    if (!tab || !tab._onsetSaved) return false;
+    const ed = edOf(tab);
+    const saved = tab._onsetSaved;
+    tab._onsetSaved = null;
+    if (ed) removeProxies(tab, ed);
+    if (ed && ed.view && !ed.view.isDestroyed) {
+      ed.view.updateState(saved);
+      if (tab._onset) setOnsetCompare(ed.view, { other: tab._onset.baseKeys, side: "revised", lock: false });
+    }
+    if (tab._onset) tab._onset.view = "revised";
+    paint(tab);
+    if (H2.afterSwap) H2.afterSwap(tab);
+    return true;
+  }
+  function toggleOnsetView(tab = state.active, want) {
+    if (!tab || !tab._onset) {
+      setStatus(t("ui.onset.notProblem"));
+      return false;
+    }
+    const to = want || (tab._onset.view === "original" ? "revised" : "original");
+    if (to === tab._onset.view) return true;
+    const ok2 = to === "original" ? showOriginal(tab) : exitOriginal(tab);
+    if (ok2) setStatus(to === "original" ? t("ui.onset.nowOriginal") : t("ui.onset.nowRevised"));
+    return ok2;
+  }
+  function revisedDoc(tab) {
+    const ed = edOf(tab);
+    if (!ed || !ed.view) return null;
+    return tab._onsetSaved ? tab._onsetSaved.doc : ed.view.state.doc;
+  }
+  function onsetViewOf(file) {
+    const tab = state.tabs.get(file);
+    return tab && tab._onset ? tab._onset.view : "";
+  }
+  function onsetBeforeCommand(channel) {
+    if (VIEW_ONLY.has(channel)) return false;
+    let did = false;
+    for (const tab of state.tabs.values()) if (tab._onsetSaved) did = exitOriginal(tab) || did;
+    return did;
+  }
+  function paint(tab) {
+    if (!tab || !tab.pane) return;
+    const on2 = !!tab._onset;
+    tab.pane.classList.toggle("k-onset-pane", on2);
+    tab.pane.classList.toggle("k-onset-orig", on2 && tab._onset.view === "original");
+    if (tab.tabBtn) tab.tabBtn.classList.toggle("k-onset-tab", on2);
+    let bar = tab.pane.querySelector(":scope > .k-onset-bar");
+    if (!on2) {
+      if (bar) bar.remove();
+      tab.pane.style.removeProperty("--k-onset-color");
+      return;
+    }
+    tab.pane.style.setProperty("--k-onset-color", normColor2(tab._onset.rec.color));
+    if (!bar) {
+      bar = el("div", "k-onset-bar");
+      tab.pane.insertBefore(bar, tab.pane.firstChild);
+    }
+    const orig = tab._onset.view === "original";
+    const info = onsetInfo(edOf(tab) && edOf(tab).view) || { hunks: 0 };
+    const chip = el("div", "k-onset-chip" + (orig ? " is-orig" : ""));
+    chip.append(el("span", "k-onset-chip-bang", "!"));
+    chip.append(el("span", "k-onset-chip-text", t("ui.onset.chipTitle") + " \xB7 " + (orig ? t("ui.onset.viewOriginal") : t("ui.onset.viewRevised")) + " \xB7 " + (info.hunks ? tf("ui.onset.nChanges", info.hunks) : t("ui.onset.noChanges"))));
+    const btn2 = el("button", "k-onset-chip-btn", gi("swap") + " " + (orig ? t("ui.onset.toRevised") : t("ui.onset.toOriginal")));
+    btn2.type = "button";
+    btn2.title = t("ui.onset.toggleTip");
+    btn2.onclick = (e) => {
+      e.stopPropagation();
+      toggleOnsetView(tab);
+    };
+    const more = el("button", "k-onset-chip-more", gi("more"));
+    more.type = "button";
+    more.title = t("ui.onset.moreTip");
+    more.onclick = (e) => {
+      e.stopPropagation();
+      const r = more.getBoundingClientRect();
+      popupMenu(r.left, r.bottom + 2, onsetMenuItems(tab));
+    };
+    chip.append(btn2, more);
+    chip.oncontextmenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      popupMenu(e.clientX, e.clientY, onsetMenuItems(tab));
+    };
+    bar.replaceChildren(chip);
+  }
+  function onsetChanged(tab) {
+    if (!tab || !tab._onset) return;
+    clearTimeout(chipTimer);
+    chipTimer = setTimeout(() => paint(tab), 200);
+  }
+  function onsetMenuItems(tab, c = null) {
+    const id = tab && tab._onset && tab._onset.id || c && c.sc && c.sc.id || "";
+    const rec = IDX.map.get(id);
+    if (!rec) return [];
+    const orig = !!(tab && tab._onset && tab._onset.view === "original");
+    const items = [];
+    if (tab && tab._onset) {
+      items.push({
+        label: orig ? t("ui.onset.toRevised") : t("ui.onset.toOriginal"),
+        cmd: "onset-toggle",
+        click: () => toggleOnsetView(tab)
+      });
+    }
+    items.push({ label: t("ui.onset.colorMenu"), sub: () => ONSET_COLORS.map((hex) => ({
+      text: t(COLOR_NAME[hex] || "ui.onset.color.e5484d"),
+      swatch: hex,
+      checked: normColor2(rec.color) === hex,
+      click: () => setProblemColor(id, hex)
+    })) });
+    items.push("-");
+    items.push({
+      label: t("ui.onset.clear"),
+      danger: true,
+      click: () => clearSceneProblem({ sc: { id, title: rec.title } })
+    });
+    return items;
+  }
+  function onsetEditorMenu(tab, target) {
+    if (!tab || !tab._onset) return null;
+    const ed = edOf(tab);
+    if (!ed || !ed.view || !ed.view.dom.contains(target)) return null;
+    const orig = tab._onset.view === "original";
+    const onLine = !!(target.closest && target.closest(".k-onset-line, .k-onset-bang"));
+    if (!orig && !onLine) return null;
+    const v2 = ed.view;
+    const selText = () => {
+      const s = v2.state.selection;
+      return s.empty ? "" : v2.state.doc.textBetween(s.from, s.to, "\n");
+    };
+    const items = [...onsetMenuItems(tab), "-"];
+    items.push({ label: t("ui.common.copy"), disabled: !selText(), click: () => kapi.clipboardWrite(selText()) });
+    if (!orig) {
+      items.push({ label: t("ui.menu.cut"), disabled: !selText(), click: async () => {
+        await kapi.clipboardWrite(selText());
+        v2.dispatch(v2.state.tr.deleteSelection());
+      } });
+      items.push({ label: t("ui.menu.paste"), click: async () => {
+        const txt = await kapi.clipboardRead();
+        if (txt) v2.pasteText(String(txt));
+      } });
+    }
+    return items;
+  }
+  var import_md26, H2, IDX, READS, WRITES, VIEW_ONLY, chipTimer, COLOR_NAME;
+  var init_onset_ui = __esm({
+    "src/onset-ui.js"() {
+      init_i18n();
+      init_core();
+      init_ui();
+      init_icons();
+      init_dist4();
+      import_md26 = __toESM(require_md());
+      init_onset_diff();
+      init_onset_plugin();
+      H2 = {};
+      IDX = { root: "", map: /* @__PURE__ */ new Map(), loaded: false, loading: null };
+      READS = ["getMarkdown", "getAlignMap", "mdLineCounts", "getText"];
+      WRITES = [
+        "setMarkdown",
+        "cmd",
+        "insertImage",
+        "setFigureOpts",
+        "removeFigure",
+        "insertLines",
+        "insertScript",
+        "pasteScript",
+        "setExtension",
+        "setElement",
+        "setAlign",
+        "applyAlignMap",
+        "cycle",
+        "switchTo",
+        "insertPageBreak",
+        "enter",
+        "toggleTextList",
+        "pressEnter",
+        "pressBackspace",
+        "selectScene"
+      ];
+      VIEW_ONLY = /* @__PURE__ */ new Set([
+        "onset-toggle",
+        "zoom",
+        "zoom-in",
+        "zoom-out",
+        "zoom-reset",
+        "ui-scale",
+        "scroll",
+        "find",
+        "find-next",
+        "find-prev",
+        "goto-page",
+        "goto-scene",
+        "next-tab",
+        "prev-tab",
+        "toggle-panel",
+        "show-panel",
+        "reveal-active",
+        "cheatsheet",
+        "settings",
+        "line-numbers",
+        "reading-mode",
+        "focus-mode",
+        "typewriter"
+      ]);
+      chipTimer = null;
+      COLOR_NAME = {
+        "#e5484d": "ui.onset.color.e5484d",
+        "#f76b15": "ui.onset.color.f76b15",
+        "#ffc53d": "ui.onset.color.ffc53d",
+        "#30a46c": "ui.onset.color.30a46c",
+        "#0090ff": "ui.onset.color.0090ff",
+        "#8e4ec6": "ui.onset.color.8e4ec6"
+      };
     }
   });
 
@@ -168533,7 +170342,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function collectImageSrcs(md, { breakMarker = "" } = {}) {
     const out = /* @__PURE__ */ new Set();
-    for (const b of (0, import_md26.mdBlocks)(md, { breakMarker })) {
+    for (const b of (0, import_md27.mdBlocks)(md, { breakMarker })) {
       if (b.kind === "figure" && b.src) out.add(b.src);
       for (const m of String(b.text || "").matchAll(RE_INLINE_IMG)) if (m[2]) out.add(m[2]);
     }
@@ -168586,18 +170395,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function mdToXhtmlSections(md, { breakMarker = "", imgHref = () => "", splitLevel = 2 } = {}) {
     const sections = [];
-    let cur = null, list = null;
+    let cur = null, list2 = null;
     const start = (title2) => {
       cur = { title: title2 || "", parts: [] };
       sections.push(cur);
     };
     const flushList = () => {
-      if (!list) return;
-      cur.parts.push(`<${list.tag}${list.start > 1 ? ` start="${list.start}"` : ""}>${list.items.join("")}</${list.tag}>`);
-      list = null;
+      if (!list2) return;
+      cur.parts.push(`<${list2.tag}${list2.start > 1 ? ` start="${list2.start}"` : ""}>${list2.items.join("")}</${list2.tag}>`);
+      list2 = null;
     };
     const al = (a) => a ? ` style="text-align:${a}"` : "";
-    for (const b of (0, import_md26.mdBlocks)(md, { breakMarker })) {
+    for (const b of (0, import_md27.mdBlocks)(md, { breakMarker })) {
       if (b.kind === "pagebreak") {
         flushList();
         if (cur && cur.parts.length) start("");
@@ -168617,9 +170426,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           break;
         case "li": {
           const tag3 = b.ordered ? "ol" : "ul";
-          if (list && list.tag !== tag3) flushList();
-          if (!list) list = { tag: tag3, start: b.ordered ? b.num || 1 : 1, items: [] };
-          list.items.push(`<li${al(b.align)}>${inlineXhtml(b.text, imgHref)}</li>`);
+          if (list2 && list2.tag !== tag3) flushList();
+          if (!list2) list2 = { tag: tag3, start: b.ordered ? b.num || 1 : 1, items: [] };
+          list2.items.push(`<li${al(b.align)}>${inlineXhtml(b.text, imgHref)}</li>`);
           break;
         }
         case "quote":
@@ -168801,7 +170610,7 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
       body.push(xml);
       paragraphs2++;
     };
-    for (const b of (0, import_md26.mdBlocks)(md, { breakMarker: opts.breakMarker || "" })) {
+    for (const b of (0, import_md27.mdBlocks)(md, { breakMarker: opts.breakMarker || "" })) {
       if (b.kind !== "li") curList = null;
       switch (b.kind) {
         case "pagebreak":
@@ -168904,15 +170713,15 @@ ${[...media.values()].map((m) => `<Relationship Id="${m.rid}" Type="http://schem
     ];
     return { files, paragraphs: paragraphs2, images: media.size };
   }
-  var import_md26, clean, xmlEsc, markName, segsOf, RE_INLINE_IMG, EXT_TYPES, extOf2, X_TAGS, unesc, EPUB_CSS, xhtmlDoc, W_NS, JC, twip;
+  var import_md27, clean, xmlEsc, markName, segsOf, RE_INLINE_IMG, EXT_TYPES, extOf2, X_TAGS, unesc, EPUB_CSS, xhtmlDoc, W_NS, JC, twip;
   var init_export_ebook = __esm({
     "src/export-ebook.js"() {
-      import_md26 = __toESM(require_md());
+      import_md27 = __toESM(require_md());
       init_i18n();
       clean = (s) => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "");
       xmlEsc = (s) => clean(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       markName = (m) => typeof m === "string" ? m : m && m.type;
-      segsOf = (text) => (0, import_md26.parseInline)((0, import_md26.stripMentions)(String(text || ""))).filter((s) => s.text);
+      segsOf = (text) => (0, import_md27.parseInline)((0, import_md27.stripMentions)(String(text || ""))).filter((s) => s.text);
       RE_INLINE_IMG = /!\[([^\]]*)\]\(([^)\s]*)(?:\s+"[^"]*")?\)/g;
       EXT_TYPES = {
         png: "image/png",
@@ -169012,7 +170821,7 @@ ${body}
     return out;
   }
   function plainText2(s) {
-    return (0, import_md27.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2");
+    return (0, import_md28.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2");
   }
   function paraCtrl(el2, fmt2, fontPt) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
@@ -169095,10 +170904,10 @@ ${body}
     }
     return head2 + out.join("\n") + "\n}\n";
   }
-  var import_md27, TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
+  var import_md28, TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
   var init_export_rtf = __esm({
     "src/export-rtf.js"() {
-      import_md27 = __toESM(require_md());
+      import_md28 = __toESM(require_md());
       init_i18n();
       init_sp_format();
       init_sp_title_pages();
@@ -169124,23 +170933,23 @@ ${body}
     return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
   }
   function plainText3(s) {
-    return (0, import_md28.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/\u00A0/g, " ");
+    return (0, import_md29.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/\u00A0/g, " ");
   }
   function generateFdx(blocks, meta2 = {}, opts = {}) {
     const isBreak = (b) => b && (b.el === "page-break" || b.el !== "blank" && String(b.text ?? "").includes("\f") && !String(b.text).replace(/\f/g, "").trim());
-    const list = [];
+    const list2 = [];
     let newPage = false;
     for (const b of blocks || []) {
       if (isBreak(b)) {
-        newPage = list.length > 0;
+        newPage = list2.length > 0;
         continue;
       }
       if (!b || b.el === "blank" || String(b.text ?? "").trim() === "") continue;
-      list.push({ b, newPage });
+      list2.push({ b, newPage });
       newPage = false;
     }
     let sceneNo = Math.max(1, Math.round(numOr4(opts.startScene, 1)));
-    const body = list.map(({ b, newPage: np }) => {
+    const body = list2.map(({ b, newPage: np }) => {
       const nb = np ? ' StartsNewPage="Yes"' : "";
       if (b.el !== "scene") return para(fdxType(b.el), b.text, "    ", nb);
       const n2 = b.sceneNo != null && String(b.sceneNo).trim() !== "" ? String(b.sceneNo).trim() : String(sceneNo++);
@@ -169182,10 +170991,10 @@ ${title2.join("\n")}
 ` : "";
     return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<FinalDraft DocumentType="Script" Template="No" Version="1">\n  <Content>\n' + (body ? body + "\n" : "") + "  </Content>\n" + titlePage + "</FinalDraft>\n";
   }
-  var import_md28, FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
+  var import_md29, FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
   var init_export_fdx = __esm({
     "src/export-fdx.js"() {
-      import_md28 = __toESM(require_md());
+      import_md29 = __toESM(require_md());
       init_i18n();
       FDX_TYPE_MAP = {
         scene: "Scene Heading",
@@ -170474,21 +172283,21 @@ ${pages.join("\n")}
   function profileBlock(p) {
     if (!p) return "";
     const rows = [tf("ui.aiDialogue.name2", p.name) + (p.aliases && p.aliases.length ? tf("ui.aiDialogue.call", p.aliases.join(", ")) : "")];
-    const add = (label, v2) => {
+    const add2 = (label, v2) => {
       if (v2) rows.push(`${label}: ${v2}`);
     };
-    add(t("ui.aiDialogue.chapter"), p.role);
-    add(t("ui.aiDialogue.msg6"), p.age);
-    add(t("ui.aiDialogue.click"), p.personality);
-    add(t("ui.common.howSpeak"), p.speech);
-    add(t("ui.aiDialogue.msg3"), p.background);
-    add(t("ui.common.goal"), p.goal);
-    add(t("ui.aiDialogue.fearDot"), p.fear);
-    add(t("ui.aiDialogue.msg"), p.quirk);
+    add2(t("ui.aiDialogue.chapter"), p.role);
+    add2(t("ui.aiDialogue.msg6"), p.age);
+    add2(t("ui.aiDialogue.click"), p.personality);
+    add2(t("ui.common.howSpeak"), p.speech);
+    add2(t("ui.aiDialogue.msg3"), p.background);
+    add2(t("ui.common.goal"), p.goal);
+    add2(t("ui.aiDialogue.fearDot"), p.fear);
+    add2(t("ui.aiDialogue.msg"), p.quirk);
     if (p.relationships && p.relationships.length) {
       rows.push(t("ui.aiDialogue.relation") + p.relationships.map((r) => `${r.target}${r.role ? " (" + r.role + ")" : ""}`).join(", "));
     }
-    add(t("ui.common.other"), p.notes);
+    add2(t("ui.common.other"), p.notes);
     return rows.join("\n");
   }
   function buildDialoguePrompt(a, b, context2 = {}, opts = {}) {
@@ -172040,10 +173849,10 @@ ${s.body}`).join("\n\n");
   function charReady(c) {
     return !!(c && String(c.name || "").trim());
   }
-  function normalizeTags(list) {
+  function normalizeTags(list2) {
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const raw of list || []) {
+    for (const raw of list2 || []) {
       const v2 = String(raw || "").trim().replace(/\s+/g, " ");
       if (!v2) continue;
       const k = v2.toLowerCase();
@@ -172053,16 +173862,16 @@ ${s.body}`).join("\n\n");
     }
     return out;
   }
-  function toggleTag(list, tag3) {
-    const cur = normalizeTags(list);
+  function toggleTag(list2, tag3) {
+    const cur = normalizeTags(list2);
     const k = String(tag3 || "").trim().toLowerCase();
     if (!k) return cur;
     const hit = cur.find((x) => x.toLowerCase() === k);
     return hit ? cur.filter((x) => x.toLowerCase() !== k) : normalizeTags([...cur, tag3]);
   }
-  function hasTag(list, tag3) {
+  function hasTag(list2, tag3) {
     const k = String(tag3 || "").trim().toLowerCase();
-    return normalizeTags(list).some((x) => x.toLowerCase() === k);
+    return normalizeTags(list2).some((x) => x.toLowerCase() === k);
   }
   function newStarter(patch = {}) {
     return {
@@ -172887,10 +174696,10 @@ ${s.body}`).join("\n\n");
   function looksLikeItem(line) {
     return /^\s*(?:[-*•–—]|\(?\d{1,2}[.)]|\(?[๐-๙]{1,2}[.)])\s+\S/u.test(String(line || ""));
   }
-  function normalizeChoices(list) {
+  function normalizeChoices(list2) {
     const out = [];
     const seen = /* @__PURE__ */ new Set();
-    for (const raw of list || []) {
+    for (const raw of list2 || []) {
       let v2 = String(raw == null ? "" : raw).trim();
       v2 = v2.replace(/^["'“”‘’]+|["'“”‘’]+$/g, "").trim();
       if (!v2 || v2.length > MAX_CHOICE_LEN) continue;
@@ -172965,8 +174774,8 @@ ${s.body}`).join("\n\n");
     const v2 = String(choice || "").replace(/[\[\]]/g, "").trim().slice(0, 80);
     return v2 ? "[" + v2 + "]" : "";
   }
-  function choiceRows(list) {
-    return normalizeChoices(list).map((text) => ({ text, nextSceneId: "" }));
+  function choiceRows(list2) {
+    return normalizeChoices(list2).map((text) => ({ text, nextSceneId: "" }));
   }
   var MAX_CHOICES, MAX_CHOICE_LEN, OPEN_TAG, CLOSE_TAG;
   var init_starter_choices = __esm({
@@ -172988,7 +174797,7 @@ ${s.body}`).join("\n\n");
     castBlock: () => castBlock,
     charDescPrompt: () => charDescPrompt,
     charDialoguePrompt: () => charDialoguePrompt,
-    clip: () => clip3,
+    clip: () => clip4,
     conditionsPrompt: () => conditionsPrompt,
     descPrompt: () => descPrompt,
     gmOpening: () => gmOpening,
@@ -173019,7 +174828,7 @@ ${s.body}`).join("\n\n");
       anyLabel: t("ui.starter.mentionAny")
     };
   }
-  function clip3(text, max2 = 1200) {
+  function clip4(text, max2 = 1200) {
     const s = String(text || "").trim();
     if (s.length <= max2) return s;
     const cut = s.slice(0, max2);
@@ -173039,18 +174848,18 @@ ${s.body}`).join("\n\n");
       const head2 = "- " + c.name + (c.gender ? " (" + genderLabel(c.gender) + ")" : "") + (c.selfPronoun ? " \xB7 " + t("ui.starter.pSelfPronoun") + c.selfPronoun : "");
       lines.push(head2);
       const body = full ? c.persona || c.blurb : c.blurb || c.persona;
-      if (String(body || "").trim()) lines.push("  " + clip3(body, full ? 900 : 200).replace(/\n+/g, " "));
+      if (String(body || "").trim()) lines.push("  " + clip4(body, full ? 900 : 200).replace(/\n+/g, " "));
       if ((c.tags || []).length) lines.push("  " + t("ui.starter.pCharTags") + c.tags.join(", "));
       if (!full) continue;
       const dlg = String(c.dialogue || "").trim();
       if (dlg) {
         lines.push("  " + t("ui.starter.pCharDialogue"));
-        for (const ln of clip3(expandMentions(dlg, all), 900).split(/\r?\n/)) {
+        for (const ln of clip4(expandMentions(dlg, all), 900).split(/\r?\n/)) {
           if (ln.trim()) lines.push("    " + ln.trim());
         }
       }
       const pr = promptsText(c.prompts, all);
-      if (pr) for (const ln of clip3(pr, 900).split(/\r?\n/)) {
+      if (pr) for (const ln of clip4(pr, 900).split(/\r?\n/)) {
         if (ln.trim()) lines.push("  \xB7 " + ln.trim());
       }
     }
@@ -173059,7 +174868,7 @@ ${s.body}`).join("\n\n");
   function wBlock(s) {
     const rows = filledW(s);
     if (!rows.length) return "";
-    return [t("ui.starter.pWHead"), ...rows.map((r) => "- " + r.label + ": " + clip3(r.value, 300))].join("\n");
+    return [t("ui.starter.pWHead"), ...rows.map((r) => "- " + r.label + ": " + clip4(r.value, 300))].join("\n");
   }
   function starterBlock(s, { cast = true, full = true, intro = true } = {}) {
     const out = [];
@@ -173070,7 +174879,7 @@ ${s.body}`).join("\n\n");
       const body = introText(s);
       if (body) {
         out.push(t("ui.starter.pIntroHead"));
-        out.push(clip3(body, 1500));
+        out.push(clip4(body, 1500));
       }
     }
     const w = wBlock(s);
@@ -173086,7 +174895,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pNameTask"),
       tagLine(s),
-      body ? t("ui.starter.pIntroHead") + "\n" + clip3(body, 800) : "",
+      body ? t("ui.starter.pIntroHead") + "\n" + clip4(body, 800) : "",
       t("ui.starter.pNameRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173103,7 +174912,7 @@ ${s.body}`).join("\n\n");
     const who = [
       t("ui.starter.pCharName") + (ch.name || t("ui.starter.pCharNoName")),
       ch.gender ? t("ui.starter.pCharGender") + genderLabel(ch.gender) : "",
-      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip3(ch.persona, 400) : ""
+      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip4(ch.persona, 400) : ""
     ].filter(Boolean).join("\n");
     return [
       t("ui.starter.pCharTask"),
@@ -173117,7 +174926,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pScTask"),
       starterBlock(s, { full: false }),
-      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip3(prev.synopsis || prev.recap || "", 700) : "",
+      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip4(prev.synopsis || prev.recap || "", 700) : "",
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       t("ui.starter.pScRule")
     ].filter(Boolean).join("\n\n");
@@ -173126,7 +174935,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pScNameTask"),
       tagLine(s),
-      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 700) : "",
+      String(sc && sc.synopsis || "").trim() ? clip4(sc.synopsis, 700) : "",
       t("ui.starter.pNameRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173142,7 +174951,7 @@ ${s.body}`).join("\n\n");
     const mc = mentionCtx(s, sc, userChars);
     const ex = (v2, max2) => {
       const body = String(v2 || "").trim();
-      return body ? clip3(expandMentions(body, cast, mc), max2) : "";
+      return body ? clip4(expandMentions(body, cast, mc), max2) : "";
     };
     const desc = ex(sc && sc.desc, 1200);
     const mood = ex(sc && sc.mood, 400);
@@ -173152,14 +174961,14 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pGmRole"),
       starterBlock(s, { full: true }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? t("ui.starter.pScSynopsis") + "\n" + clip3(sc.synopsis, 900) : "",
+      String(sc && sc.synopsis || "").trim() ? t("ui.starter.pScSynopsis") + "\n" + clip4(sc.synopsis, 900) : "",
       // [alpha.122] ช่องขั้นสูงของตอน — GM ต้องรู้ทั้งฉาก เป้าหมาย และ "จบยังไงถึงเรียกว่าสำเร็จ"
       desc ? t("ui.starter.pScDesc") + "\n" + desc : "",
       // [alpha.123] โทน = สำนวนและจังหวะการเล่า · แยกจากคำอธิบายซึ่งเป็นข้อเท็จจริงของฉาก
       mood ? t("ui.starter.pScMood") + "\n" + mood + "\n" + t("ui.starter.pScMoodRule") : "",
       goal ? t("ui.starter.pScGoal") + "\n" + goal : "",
       cond ? t("ui.starter.pScCond") + "\n" + cond + "\n" + t("ui.starter.pScCondRule") : "",
-      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip3(prev.synopsis || "", 600) : "",
+      prev ? t("ui.starter.pScPrev") + (prev.title || "") + "\n" + clip4(prev.synopsis || "", 600) : "",
       owned.length ? tf("ui.starter.pGmUserChars", owned.join(", ")) : "",
       t("ui.starter.pGmRules"),
       lenRule,
@@ -173169,11 +174978,11 @@ ${s.body}`).join("\n\n");
   function gmOpening(s, sc) {
     const own = openerText(sc, s && s.cast || [], mentionCtx(s, sc));
     if (own) {
-      return [t("ui.starter.pGmOpenGiven"), clip3(own, 1500), t("ui.starter.pGmOpenGivenRule")].join("\n\n");
+      return [t("ui.starter.pGmOpenGiven"), clip4(own, 1500), t("ui.starter.pGmOpenGivenRule")].join("\n\n");
     }
     return [
       t("ui.starter.pGmOpenTask"),
-      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 600) : "",
+      String(sc && sc.synopsis || "").trim() ? clip4(sc.synopsis, 600) : "",
       t("ui.starter.pGmOpenRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173185,7 +174994,7 @@ ${s.body}`).join("\n\n");
     return [
       t("ui.starter.pRecapTask"),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      clip3(transcript, 6e3),
+      clip4(transcript, 6e3),
       t("ui.starter.pRecapRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173218,7 +175027,7 @@ ${s.body}`).join("\n\n");
     const who = [
       t("ui.starter.pCharName") + (ch.name || t("ui.starter.pCharNoName")),
       ch.gender ? t("ui.starter.pCharGender") + genderLabel(ch.gender) : "",
-      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip3(ch.persona, 700) : "",
+      String(ch.persona || "").trim() ? t("ui.starter.pCharSoFar") + clip4(ch.persona, 700) : "",
       (ch.tags || []).length ? t("ui.starter.pCharTags") + ch.tags.join(", ") : ""
     ].filter(Boolean).join("\n");
     return [
@@ -173234,8 +175043,8 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pOpenerTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 800) : "",
-      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip3(sc.desc, 800) : "",
+      String(sc && sc.synopsis || "").trim() ? clip4(sc.synopsis, 800) : "",
+      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip4(sc.desc, 800) : "",
       t("ui.starter.pOpenerRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173244,7 +175053,7 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pGoalTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 800) : "",
+      String(sc && sc.synopsis || "").trim() ? clip4(sc.synopsis, 800) : "",
       t("ui.starter.pGoalRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173254,8 +175063,8 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pCondTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.goal || "").trim() ? t("ui.starter.pScGoal") + "\n" + clip3(sc.goal, 400) : "",
-      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 600) : "",
+      String(sc && sc.goal || "").trim() ? t("ui.starter.pScGoal") + "\n" + clip4(sc.goal, 400) : "",
+      String(sc && sc.synopsis || "").trim() ? clip4(sc.synopsis, 600) : "",
       tf(
         "ui.starter.pCondRule",
         mentionToken(sample),
@@ -173269,8 +175078,8 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pMoodTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      String(sc && sc.synopsis || "").trim() ? clip3(sc.synopsis, 700) : "",
-      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip3(sc.desc, 700) : "",
+      String(sc && sc.synopsis || "").trim() ? clip4(sc.synopsis, 700) : "",
+      String(sc && sc.desc || "").trim() ? t("ui.starter.pScDesc") + "\n" + clip4(sc.desc, 700) : "",
       t("ui.starter.pMoodRule")
     ].filter(Boolean).join("\n\n");
   }
@@ -173427,8 +175236,8 @@ ${s.body}`).join("\n\n");
     secs = putSection(secs, SEC_DIALOGUE(), ch && ch.dialogue || "");
     out.sections = secs;
     const have = new Set((e && e.aliases || []).map(normName));
-    const add = (ch && ch.aliases || []).filter((a) => a && !have.has(normName(a)));
-    out.aliases = [...e && e.aliases || [], ...add];
+    const add2 = (ch && ch.aliases || []).filter((a) => a && !have.has(normName(a)));
+    out.aliases = [...e && e.aliases || [], ...add2];
     if (!String(out.shortcode || "").trim() && String(ch && ch.shortcode || "").trim()) {
       out.shortcode = ch.shortcode;
     }
@@ -173573,22 +175382,22 @@ ${s.body}`).join("\n\n");
       }
       const search2 = el("input", "wiki-input");
       search2.placeholder = t("ui.starter.searchName");
-      const list = el("div", "st-pick-list");
+      const list2 = el("div", "st-pick-list");
       const draw3 = () => {
         const q = search2.value.trim().toLowerCase();
-        list.innerHTML = "";
+        list2.innerHTML = "";
         const hit = rows.filter((r) => !q || [r.name, ...r.aliases || []].join(" ").toLowerCase().includes(q));
         for (const r of hit.slice(0, 200)) {
           const b = el("button", "st-pick-item");
           b.append(el("span", "st-pick-name", r.name));
           if ((r.aliases || []).length) b.append(el("span", "st-dim", " \xB7 " + r.aliases.join(", ")));
           b.onclick = () => done2(r.file);
-          list.append(b);
+          list2.append(b);
         }
-        if (!hit.length && rows.length) list.append(el("div", "st-dim", t("ui.starter.noMatch")));
+        if (!hit.length && rows.length) list2.append(el("div", "st-dim", t("ui.starter.noMatch")));
       };
       search2.oninput = draw3;
-      box2.append(search2, list);
+      box2.append(search2, list2);
       const foot = el("div", "k-dlg-foot");
       const cancel = el("button", "k-cancel", t("ui.common.cancel"));
       cancel.onclick = () => done2(null);
@@ -173885,7 +175694,7 @@ ${s.body}`).join("\n\n");
     const norm4 = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
     const skip = new Set((o.exclude || []).map(norm4).filter(Boolean));
     const found2 = /* @__PURE__ */ new Map();
-    const add = (name5, source, rank) => {
+    const add2 = (name5, source, rank) => {
       const key2 = norm4(name5);
       if (!key2 || skip.has(key2)) return;
       const old = found2.get(key2);
@@ -173898,9 +175707,9 @@ ${s.body}`).join("\n\n");
       }
       found2.set(key2, { name: name5, hits: mentionCount(src2, name5), source, rank });
     };
-    for (const n2 of quotedNames(src2)) add(n2, "quote", 0);
-    for (const n2 of markedNames(src2)) add(n2, "marker", 1);
-    for (const n2 of capitalizedNames(src2)) add(n2, "caps", 2);
+    for (const n2 of quotedNames(src2)) add2(n2, "quote", 0);
+    for (const n2 of markedNames(src2)) add2(n2, "marker", 1);
+    for (const n2 of capitalizedNames(src2)) add2(n2, "caps", 2);
     return [...found2.values()].sort((a, b) => a.rank - b.rank || b.hits - a.hits || cmpText(a.name, b.name)).slice(0, limit).map(({ name: name5, hits, source }) => ({ name: name5, hits, source }));
   }
   function sourceLabel(source) {
@@ -174276,7 +176085,7 @@ ${s.body}`).join("\n\n");
         picked.append(c);
       }
     };
-    const add = () => {
+    const add2 = () => {
       const vals = inp.value.split(",").map((x) => x.trim()).filter(Boolean);
       if (!vals.length) return;
       set(normalizeTags([...get3() || [], ...vals]));
@@ -174286,14 +176095,14 @@ ${s.body}`).join("\n\n");
     inp.onkeydown = (e) => {
       if ((e.key === "Enter" || e.key === ",") && !e.isComposing) {
         e.preventDefault();
-        add();
+        add2();
       }
     };
-    inp.onblur = add;
+    inp.onblur = add2;
     const btn2 = el("button", "k-ok", t("ui.starter.tagAdd"));
     btn2.type = "button";
     btn2.onmousedown = (e) => e.preventDefault();
-    btn2.onclick = add;
+    btn2.onclick = add2;
     const own = el("div", "st-tag-own");
     own.append(inp, btn2);
     row3.append(picked, own);
@@ -174305,23 +176114,23 @@ ${s.body}`).join("\n\n");
   function promptFields(get3, set, { cast = [], label = "", hint = "" } = {}) {
     const wrap2 = el("div", "st-prompts");
     const head2 = el("div", "st-sub", label || t("ui.starter.fPrompts"));
-    const add = el("button", "k-ok st-prompt-add", "+ " + t("ui.starter.promptAdd"));
-    add.type = "button";
-    add.onclick = () => {
+    const add2 = el("button", "k-ok st-prompt-add", "+ " + t("ui.starter.promptAdd"));
+    add2.type = "button";
+    add2.onclick = () => {
       const rows = normalizePrompts(get3());
       set([...rows, { k: nextPromptKey(rows), v: "" }]);
       redraw3();
     };
-    head2.append(add);
+    head2.append(add2);
     wrap2.append(head2);
     if (hint) wrap2.append(el("div", "st-hint", hint));
-    const list = el("div", "st-prompt-list");
-    wrap2.append(list);
+    const list2 = el("div", "st-prompt-list");
+    wrap2.append(list2);
     function redraw3() {
-      list.innerHTML = "";
+      list2.innerHTML = "";
       const rows = normalizePrompts(get3());
       if (!rows.length) {
-        list.append(el("div", "st-dim", t("ui.starter.promptEmpty")));
+        list2.append(el("div", "st-dim", t("ui.starter.promptEmpty")));
         return;
       }
       rows.forEach((r, i5) => {
@@ -174366,7 +176175,7 @@ ${s.body}`).join("\n\n");
             set(cur);
           }
         }));
-        list.append(box2);
+        list2.append(box2);
       });
     }
     redraw3();
@@ -174468,8 +176277,8 @@ ${s.body}`).join("\n\n");
     }
     const adv = isAdv(s);
     const bar = el("div", "st-row-btns");
-    const add = el("button", "k-ok", "+ " + t("ui.starter.castAdd"));
-    add.onclick = async () => {
+    const add2 = el("button", "k-ok", "+ " + t("ui.starter.castAdd"));
+    add2.onclick = async () => {
       const ch = newChar({});
       s.cast = upsertChar(s.cast, ch);
       CAST_C.editing = ch.id;
@@ -174496,7 +176305,7 @@ ${s.body}`).join("\n\n");
       setStatus(tf("ui.starter.castPushed", r.saved) + (r.failed ? tf("ui.starter.castPushFail", r.failed) : ""));
       renderCastStep(host2, ctx2);
     };
-    bar.append(add, fromWiki, push);
+    bar.append(add2, fromWiki, push);
     host2.append(bar);
     renderNameHints(host2, ctx2);
     if (!s.cast.length) {
@@ -174980,7 +176789,7 @@ ${s.body}`).join("\n\n");
       for (const g of TAG_GROUPS) {
         const box2 = el("div", "st-tag-group");
         box2.append(el("div", "st-tag-group-label", g.label));
-        const list = el("div", "st-tag-list");
+        const list2 = el("div", "st-tag-list");
         for (const tg of g.tags) {
           const b = el("button", "st-tag" + (hasTag(s.tags, tg) ? " on" : ""), tg);
           b.onclick = () => {
@@ -174988,9 +176797,9 @@ ${s.body}`).join("\n\n");
             ctx2.save();
             redrawAll();
           };
-          list.append(b);
+          list2.append(b);
         }
-        box2.append(list);
+        box2.append(list2);
         groups.append(box2);
       }
     };
@@ -175003,7 +176812,7 @@ ${s.body}`).join("\n\n");
     const own = el("div", "st-tag-own");
     const inp = el("input", "wiki-input");
     inp.placeholder = t("ui.starter.tagOwnPlaceholder");
-    const add = el("button", "k-ok", t("ui.starter.tagAdd"));
+    const add2 = el("button", "k-ok", t("ui.starter.tagAdd"));
     const doAdd = () => {
       const v2 = inp.value.trim();
       if (!v2) return;
@@ -175012,14 +176821,14 @@ ${s.body}`).join("\n\n");
       ctx2.save();
       redrawAll();
     };
-    add.onclick = doAdd;
+    add2.onclick = doAdd;
     inp.onkeydown = (e) => {
       if (e.key === "Enter" && !e.isComposing) {
         e.preventDefault();
         doAdd();
       }
     };
-    own.append(inp, add);
+    own.append(inp, add2);
     host2.append(own);
     host2.append(groups);
     redrawAll();
@@ -175367,7 +177176,7 @@ ${s.body}`).join("\n\n");
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
-      tail ? t("ui.starter.pCvTail") + "\n" + clip3(tail, TAIL_CHARS) : "",
+      tail ? t("ui.starter.pCvTail") + "\n" + clip4(tail, TAIL_CHARS) : "",
       t("ui.starter.pCvSource"),
       chunkText2(chunk, nameOf2),
       t("ui.starter.pCvRuleProse"),
@@ -175473,7 +177282,7 @@ ${s.body}`).join("\n\n");
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
       total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
-      tail ? t("ui.starter.pCvTail") + "\n" + clip3(tail, TAIL_CHARS) : "",
+      tail ? t("ui.starter.pCvTail") + "\n" + clip4(tail, TAIL_CHARS) : "",
       t("ui.starter.pCvSource"),
       chunkText2(chunk, nameOf2),
       t("ui.starter.pCvRuleSp"),
@@ -175529,8 +177338,8 @@ ${s.body}`).join("\n\n");
     if (!rows.length) return false;
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
-    const list = (d.chapters || {})[chGuid] || [];
-    const row3 = list.find((x) => x.id === sceneId);
+    const list2 = (d.chapters || {})[chGuid] || [];
+    const row3 = list2.find((x) => x.id === sceneId);
     if (!row3) return false;
     row3.choices = rows;
     await kapi.writeFile(sf, JSON.stringify(d, null, 2));
@@ -175553,8 +177362,8 @@ ${s.body}`).join("\n\n");
     let tail = "";
     for (let i5 = 0; i5 < chunks.length; i5++) {
       if (onProgress) onProgress(i5, chunks.length);
-      const build = format3 === "screenplay" ? spPrompt : prosePrompt;
-      const prompt = build(
+      const build2 = format3 === "screenplay" ? spPrompt : prosePrompt;
+      const prompt = build2(
         s,
         sc,
         chunks[i5],
@@ -175614,7 +177423,7 @@ ${s.body}`).join("\n\n");
   }
   function convertDialog(s, rows, only = null, opts = {}) {
     return new Promise((resolve) => {
-      const list = only ? [only] : (rows || []).filter((r) => (r.turns || []).length);
+      const list2 = only ? [only] : (rows || []).filter((r) => (r.turns || []).length);
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog k-wide st-cv");
       box2.append(el("div", "k-dlg-title", t("ui.starter.cvTitle")));
@@ -175622,7 +177431,7 @@ ${s.body}`).join("\n\n");
         ov.remove();
         resolve(v2);
       };
-      if (!list.length) {
+      if (!list2.length) {
         box2.append(el("div", "st-empty", t("ui.starter.cvNoPlayed")));
       }
       const fmtRow = el("div", "st-field");
@@ -175643,9 +177452,9 @@ ${s.body}`).join("\n\n");
       box2.append(fmtRow);
       const pickRow = el("div", "st-field");
       pickRow.append(el("label", null, t("ui.starter.cvWhich")));
-      const picked = new Set(list.map((r) => r.id));
+      const picked = new Set(list2.map((r) => r.id));
       const pickBox = el("div", "st-tag-list");
-      for (const r of list) {
+      for (const r of list2) {
         const b = el("button", "st-tag on", r.title || t("ui.starter.scUntitled"));
         b.onclick = () => {
           if (picked.has(r.id)) picked.delete(r.id);
@@ -175664,9 +177473,9 @@ ${s.body}`).join("\n\n");
       const cancel = el("button", "k-cancel", t("ui.common.cancel"));
       cancel.onclick = () => done2(null);
       const go = el("button", "k-ok", t("ui.starter.cvGo"));
-      go.disabled = !list.length;
+      go.disabled = !list2.length;
       go.onclick = async () => {
-        const todo = list.filter((r) => picked.has(r.id));
+        const todo = list2.filter((r) => picked.has(r.id));
         if (!todo.length) {
           setStatus(t("ui.starter.cvPickOne"));
           return;
@@ -175783,12 +177592,12 @@ ${s.body}`).join("\n\n");
     return { added: 1, updated: 0 };
   }
   async function pushScenarios(s, rows) {
-    const list = (rows || []).filter((r) => String(r.title || "").trim());
-    if (!list.length) return { added: 0, updated: 0 };
+    const list2 = (rows || []).filter((r) => String(r.title || "").trim());
+    if (!list2.length) return { added: 0, updated: 0 };
     const data2 = await loadTimeline();
     data2.events = data2.events || [];
     let added = 0, updated = 0;
-    list.forEach((sc, i5) => {
+    list2.forEach((sc, i5) => {
       const key2 = srcKey(s.slug, "sc:" + sc.id);
       const hit = data2.events.find((e) => e.src === key2);
       const desc = (sc.recap || sc.synopsis || "").replace(/\s+/g, " ").slice(0, 300);
@@ -176082,8 +177891,8 @@ ${s.body}`).join("\n\n");
       wrap2.append(acc);
     }
     const bar = el("div", "st-row-btns st-sc-bar");
-    const add = el("button", "k-ok", "+ " + t("ui.starter.scAdd"));
-    add.onclick = async () => {
+    const add2 = el("button", "k-ok", "+ " + t("ui.starter.scAdd"));
+    add2.onclick = async () => {
       const sc = await createScenario(s.slug, { title: nextScenarioTitle(rows) });
       const ok2 = await scenarioDialog(ctx2, sc, rows);
       if (!ok2) {
@@ -176094,7 +177903,7 @@ ${s.body}`).join("\n\n");
       await writeScenario(s.slug, sc);
       ctx2.openChat(sc);
     };
-    bar.append(add);
+    bar.append(add2);
     const search2 = el("input", "wiki-input st-sc-search");
     search2.placeholder = t("ui.starter.scSearch");
     search2.value = SC_C.query;
@@ -176105,13 +177914,13 @@ ${s.body}`).join("\n\n");
     bar.append(search2);
     bar.append(tokenBadge(sumTokens(rows)));
     wrap2.append(bar);
-    const list = el("div", "st-sc-list");
-    wrap2.append(list);
+    const list2 = el("div", "st-sc-list");
+    wrap2.append(list2);
     const drawList3 = async () => {
-      list.innerHTML = "";
+      list2.innerHTML = "";
       const hit = searchScenarios(rows, SC_C.query);
       if (!hit.length) {
-        list.append(el(
+        list2.append(el(
           "div",
           "st-empty",
           rows.length ? t("ui.starter.scNoMatch") : t("ui.starter.scEmpty")
@@ -176179,7 +177988,7 @@ ${s.body}`).join("\n\n");
         };
         btns.append(ed, del2);
         card.append(btns);
-        list.append(card);
+        list2.append(card);
       }
     };
     await drawList3();
@@ -176574,15 +178383,15 @@ ${s.body}`).join("\n\n");
     const drawLog = () => {
       log23.innerHTML = "";
       if (!(sc.turns || []).length) {
-        const empty2 = el("div", "st-empty");
-        empty2.append(el("div", null, t("ui.starter.chatEmpty")));
+        const empty3 = el("div", "st-empty");
+        empty3.append(el("div", null, t("ui.starter.chatEmpty")));
         if (hasOpener(sc)) {
-          empty2.append(el("div", "st-hint", gi("book-open") + " " + t("ui.starter.chatHasOpener")));
+          empty3.append(el("div", "st-hint", gi("book-open") + " " + t("ui.starter.chatHasOpener")));
         }
         const start = el("button", "k-ok", gi("play") + " " + t("ui.starter.chatStart"));
         start.onclick = () => send3("", { opening: true });
-        empty2.append(start);
-        log23.append(empty2);
+        empty3.append(start);
+        log23.append(empty3);
         return;
       }
       for (const turn of sc.turns) {
@@ -177089,9 +178898,9 @@ ${s.body}`).join("\n\n");
     host2.append(wrap2);
     const head2 = el("div", "st-list-head");
     head2.append(el("div", "st-list-title", gi("magic") + " Story Starter"));
-    const add = el("button", "k-ok", "+ " + t("ui.starter.createNew"));
-    add.onclick = () => createFlow();
-    head2.append(add);
+    const add2 = el("button", "k-ok", "+ " + t("ui.starter.createNew"));
+    add2.onclick = () => createFlow();
+    head2.append(add2);
     const imp = el("button", null, gi("import") + " " + t("ui.starter.packImport"));
     imp.title = t("ui.starter.packImportHint");
     imp.onclick = async () => {
@@ -177302,22 +179111,22 @@ ${s.body}`).join("\n\n");
   }
   function localLookup(word, kind = "syn", extra = null) {
     const w = String(word || "").trim();
-    const lower2 = w.toLowerCase();
+    const lower3 = w.toLowerCase();
     const banks = kind === "ant" ? [extra && extra.antonyms, TH_ANTONYMS, EN_ANTONYMS] : [extra && extra.synonyms, TH_SYNONYMS, EN_SYNONYMS];
     const out = [];
     for (const bank of banks) {
       if (!bank) continue;
-      for (const key2 of [w, lower2]) if (bank[key2]) out.push(...bank[key2]);
+      for (const key2 of [w, lower3]) if (bank[key2]) out.push(...bank[key2]);
     }
     if (kind === "syn") {
       for (const bank of [extra && extra.synonyms, TH_SYNONYMS, EN_SYNONYMS]) {
         if (!bank) continue;
-        for (const [key2, list] of Object.entries(bank)) {
-          if (list.includes(w) || list.includes(lower2)) out.push(key2, ...list.filter((x) => x !== w && x !== lower2));
+        for (const [key2, list2] of Object.entries(bank)) {
+          if (list2.includes(w) || list2.includes(lower3)) out.push(key2, ...list2.filter((x) => x !== w && x !== lower3));
         }
       }
     }
-    return uniq(out).filter((x) => x !== w && x !== lower2);
+    return uniq(out).filter((x) => x !== w && x !== lower3);
   }
   function datamuseUrl(word, kind = "syn", max2 = 15) {
     const rel = kind === "ant" ? "rel_ant" : "ml";
@@ -178011,7 +179820,7 @@ ${sc.body || ""}
     importSummary: () => importSummary,
     splitFountainTitlePage: () => splitFountainTitlePage
   });
-  async function importScreenplayDialog(injectFn) {
+  async function importScreenplayDialog(injectFn, opts = {}) {
     const filePath = await kapi.openScreenplayFile();
     if (!filePath) return null;
     const result = await importScreenplay(filePath, null);
@@ -178022,12 +179831,12 @@ ${sc.body || ""}
     const summary = importSummary(result.elements);
     summary.title = result.title || "";
     const markdown = elementsToMarkdown(result.elements);
-    const mode = await importPreviewDialog({ filePath, result, summary, markdown });
+    const mode = await importPreviewDialog({ filePath, result, summary, markdown, canReplace: opts.canReplace !== false });
     if (!mode) return null;
     if (injectFn) await injectFn(markdown, result.format, summary, mode);
     return { markdown, format: result.format, summary, mode };
   }
-  function importPreviewDialog({ filePath, result, summary, markdown }) {
+  function importPreviewDialog({ filePath, result, summary, markdown, canReplace = true }) {
     return new Promise((resolve) => {
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog k-wide imp-sp");
@@ -178063,7 +179872,7 @@ ${sc.body || ""}
       bRep.onclick = () => done2("replace");
       const bCancel = el("button", "k-cancel", t("ui.common.cancel"));
       bCancel.onclick = () => done2(null);
-      btns.append(bCancel, bRep, bNew);
+      btns.append(bCancel, ...canReplace ? [bRep] : [], bNew);
       box2.append(btns);
       ov.append(box2);
       document.body.append(ov);
@@ -178074,11 +179883,11 @@ ${sc.body || ""}
     });
   }
   function detectFormat(filePath) {
-    const lower2 = filePath.toLowerCase();
+    const lower3 = filePath.toLowerCase();
     for (const [key2, imp] of Object.entries(SP_IMPORTERS)) {
-      if (lower2.endsWith(imp.ext)) return key2;
+      if (lower3.endsWith(imp.ext)) return key2;
     }
-    if (lower2.endsWith(".txt")) return "fountain";
+    if (lower3.endsWith(".txt")) return "fountain";
     return null;
   }
   async function importScreenplay(filePath, format3) {
@@ -178594,7 +180403,7 @@ ${sc.body || ""}
     const known2 = toSet2(opts.known);
     const out = [];
     for (const [word, n2] of counts || []) {
-      const key2 = lower(word);
+      const key2 = lower2(word);
       if (ignored2.has(key2)) continue;
       if (pinned2.has(key2)) {
         out.push([word, n2]);
@@ -178613,7 +180422,7 @@ ${sc.body || ""}
     const known2 = toSet2(opts.known);
     const out = [];
     for (const [word, n2] of counts || []) {
-      const key2 = lower(word);
+      const key2 = lower2(word);
       if (ignored2.has(key2) || pinned2.has(key2) || known2.has(key2)) continue;
       if (n2 >= min) continue;
       out.push({ word, count: n2, ok: looksLikeTerm(word) });
@@ -178621,7 +180430,7 @@ ${sc.body || ""}
     out.sort((a, b) => b.count - a.count || cmpText(a.word, b.word));
     return out;
   }
-  var DEFAULT_LEARN_MIN, LEARN_MIN_RANGE, TH_NOT_FIRST, TH_DOUBLE_TONE, TH_DOUBLE_UPPER, EN_CONS_RUN, lower, toSet2;
+  var DEFAULT_LEARN_MIN, LEARN_MIN_RANGE, TH_NOT_FIRST, TH_DOUBLE_TONE, TH_DOUBLE_UPPER, EN_CONS_RUN, lower2, toSet2;
   var init_smart_terms = __esm({
     "src/smart-terms.js"() {
       init_locale();
@@ -178631,8 +180440,8 @@ ${sc.body || ""}
       TH_DOUBLE_TONE = /[่-์]{2,}/;
       TH_DOUBLE_UPPER = /[ัิ-ื]{2,}/;
       EN_CONS_RUN = /[bcdfghjklmnpqrstvwxz]{6,}/i;
-      lower = (s) => String(s ?? "").trim().toLowerCase();
-      toSet2 = (v2) => new Set((Array.isArray(v2) ? v2 : []).map(lower).filter(Boolean));
+      lower2 = (s) => String(s ?? "").trim().toLowerCase();
+      toSet2 = (v2) => new Set((Array.isArray(v2) ? v2 : []).map(lower2).filter(Boolean));
     }
   });
 
@@ -178681,8 +180490,8 @@ ${sc.body || ""}
     const scenes = [];
     let cur = null, curChar = "";
     let seq3 = 0;
-    const list = (blocks || []).filter((b) => b && b.el !== "blank");
-    for (const b of list) {
+    const list2 = (blocks || []).filter((b) => b && b.el !== "blank");
+    for (const b of list2) {
       const page2 = Number.isFinite(b.idx) && pageOf.get(b.idx) || (cur ? cur.page : 1);
       if (b.el === "scene") {
         const h = parseHeading(b.text);
@@ -178981,55 +180790,55 @@ ${sc.body || ""}
     return true;
   }
   function validateScreenplay(blocks, opts = {}) {
-    const list = Array.isArray(blocks) ? blocks : [];
+    const list2 = Array.isArray(blocks) ? blocks : [];
     const L2 = { ...DEFAULT_LIMITS, ...opts.limits || {} };
     const only = Array.isArray(opts.checks) && opts.checks.length ? new Set(opts.checks) : null;
     const errors = [];
-    const add = (type, i5, el2, msg) => {
+    const add2 = (type, i5, el2, msg) => {
       if (only && !only.has(type)) return;
       errors.push({ type, block: i5, el: el2, msg, severity: SP_SEVERITY[type] || "warn" });
     };
     const idx4 = [];
-    for (let i5 = 0; i5 < list.length; i5++) if (meaningful(list[i5])) idx4.push(i5);
+    for (let i5 = 0; i5 < list2.length; i5++) if (meaningful(list2[i5])) idx4.push(i5);
     let sceneSeen = false;
     let warnedNoScene = false;
     for (let k = 0; k < idx4.length; k++) {
       const i5 = idx4[k];
-      const b = list[i5];
+      const b = list2[i5];
       const el2 = b.el;
       const text = String(b.text ?? "").trim();
-      const prev = k > 0 ? list[idx4[k - 1]] : null;
-      const next = k < idx4.length - 1 ? list[idx4[k + 1]] : null;
+      const prev = k > 0 ? list2[idx4[k - 1]] : null;
+      const next = k < idx4.length - 1 ? list2[idx4[k + 1]] : null;
       if (!text && NEED_TEXT.includes(el2)) {
-        add(SP_ERRORS.EMPTY_ELEMENT, i5, el2, tf("ui.spValidator.lineEmpty", elLabel(el2)));
+        add2(SP_ERRORS.EMPTY_ELEMENT, i5, el2, tf("ui.spValidator.lineEmpty", elLabel(el2)));
       }
       if (el2 === "scene") sceneSeen = true;
       else if (!sceneSeen && !warnedNoScene && ["action", "character", "dialogue", "parenthetical"].includes(el2)) {
         warnedNoScene = true;
-        add(SP_ERRORS.MISSING_SCENE_HEADING, i5, el2, t("ui.spValidator.hasBodyChapterBefore"));
+        add2(SP_ERRORS.MISSING_SCENE_HEADING, i5, el2, t("ui.spValidator.hasBodyChapterBefore"));
       }
       if (el2 === "scene" && next && next.el === "scene") {
-        add(SP_ERRORS.DOUBLE_SCENE, i5, el2, tf("ui.spValidator.headSceneTwoNot", text || t("ui.common.empty")));
+        add2(SP_ERRORS.DOUBLE_SCENE, i5, el2, tf("ui.spValidator.headSceneTwoNot", text || t("ui.common.empty")));
       }
       if (el2 === "character" && (!next || !["dialogue", "parenthetical"].includes(next.el))) {
-        add(SP_ERRORS.ORPHAN_CHARACTER, i5, el2, tf("ui.spValidator.characterNotHasDialogue", text));
+        add2(SP_ERRORS.ORPHAN_CHARACTER, i5, el2, tf("ui.spValidator.characterNotHasDialogue", text));
       }
       if (el2 === "dialogue" && (!prev || !["character", "parenthetical", "dialogue"].includes(prev.el))) {
-        add(SP_ERRORS.ORPHAN_DIALOGUE, i5, el2, t("ui.spValidator.dialogueNotNamedCharacter"));
+        add2(SP_ERRORS.ORPHAN_DIALOGUE, i5, el2, t("ui.spValidator.dialogueNotNamedCharacter"));
       }
       if (el2 === "parenthetical" && (!prev || !["character", "dialogue"].includes(prev.el))) {
-        add(SP_ERRORS.ORPHAN_PARENTHETICAL, i5, el2, t("ui.spValidator.cantCharacterDialogue"));
+        add2(SP_ERRORS.ORPHAN_PARENTHETICAL, i5, el2, t("ui.spValidator.cantCharacterDialogue"));
       }
       if (el2 === "parenthetical" && text) {
         const opens = (text.match(/\(/g) || []).length;
         const closes = (text.match(/\)/g) || []).length;
         if (opens !== closes) {
-          add(SP_ERRORS.UNCLOSED_PARENTHETICAL, i5, el2, tf("ui.spValidator.notCompletePair", text));
+          add2(SP_ERRORS.UNCLOSED_PARENTHETICAL, i5, el2, tf("ui.spValidator.notCompletePair", text));
         }
       }
       const lim = L2[el2];
       if (lim && text.length > lim) {
-        add(
+        add2(
           SP_ERRORS.OVERLONG_LINE,
           i5,
           el2,
@@ -179040,9 +180849,9 @@ ${sc.body || ""}
     return errors;
   }
   function errorSummary(errors) {
-    const list = errors || [];
-    const err2 = list.filter((e) => e.severity === "error").length;
-    return { total: list.length, errors: err2, warnings: list.length - err2 };
+    const list2 = errors || [];
+    const err2 = list2.filter((e) => e.severity === "error").length;
+    return { total: list2.length, errors: err2, warnings: list2.length - err2 };
   }
   function summaryText(errors) {
     const s = errorSummary(errors);
@@ -179053,10 +180862,10 @@ ${sc.body || ""}
     return gi("warning-e") + " " + parts.join(" \xB7 ");
   }
   function nextError(errors, afterBlock) {
-    const list = (errors || []).slice().sort((a, b) => a.block - b.block);
-    if (!list.length) return null;
+    const list2 = (errors || []).slice().sort((a, b) => a.block - b.block);
+    if (!list2.length) return null;
     const n2 = Number.isFinite(afterBlock) ? afterBlock : -1;
-    return list.find((e) => e.block > n2) || list[0];
+    return list2.find((e) => e.block > n2) || list2[0];
   }
   var SP_ERRORS, SP_SEVERITY, DEFAULT_LIMITS, NEED_TEXT, TH_EL, elLabel;
   var init_sp_validator = __esm({
@@ -179141,12 +180950,12 @@ ${sc.body || ""}
   }
   function buildWatermarkHtml(pages, fmt2, opts = {}) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const list = pages && pages.pages || pages || [];
+    const list2 = pages && pages.pages || pages || [];
     const wm = { ...DEFAULT_WM, ...opts.wmOptions || {} };
     const wmText = String(opts.watermark || "").trim();
     const tw = textWidth(f.paper, f.margins);
     const ph = +f.paper.height - f.margins.top - f.margins.bottom;
-    const body = list.map((pg) => {
+    const body = list2.map((pg) => {
       const rows = [];
       if (opts.showPageNumbers !== false && pg.index > 1) {
         rows.push(`<div class="pg-num">${pg.index}.</div>`);
@@ -179248,9 +181057,9 @@ ${css}
   function diagnoseDraft(s) {
     const issues = [];
     const dPath = s.dPath;
-    const add = (o) => issues.push({ dPath, label: s.label || "", ...o });
-    if (!s.draft) add({ type: "bad-json", file: "draft.json", fix: null });
-    if (!s.scenes) add({ type: "bad-json", file: "scenes.json", fix: null });
+    const add2 = (o) => issues.push({ dPath, label: s.label || "", ...o });
+    if (!s.draft) add2({ type: "bad-json", file: "draft.json", fix: null });
+    if (!s.scenes) add2({ type: "bad-json", file: "scenes.json", fix: null });
     const chapters = s.draft && Array.isArray(s.draft.chapters) ? s.draft.chapters : [];
     const rowsBy = s.scenes && s.scenes.chapters && typeof s.scenes.chapters === "object" ? s.scenes.chapters : {};
     const folders = new Set(s.folders || []);
@@ -179264,7 +181073,7 @@ ${css}
       const have = filesOf(f);
       const g = strayGroups.find((gg) => !claimed.has(gg) && (rowsBy[gg] || []).every((r) => r.fileName && have.has(r.fileName)));
       if (g) claimed.add(g);
-      add({
+      add2({
         type: "ghost-folder",
         folder: f,
         count: have.size,
@@ -179274,12 +181083,12 @@ ${css}
     }
     for (const g of strayGroups) {
       if (claimed.has(g)) continue;
-      add({ type: "rows-without-chapter", chGuid: g, count: rowsBy[g].length, fix: null });
+      add2({ type: "rows-without-chapter", chGuid: g, count: rowsBy[g].length, fix: null });
     }
     for (const c of chapters) {
       const folderOk = !!c.folderName && folders.has(c.folderName);
       if (c.folderName && !folderOk) {
-        add({ type: "missing-folder", chGuid: c.guid, folder: c.folderName, title: c.title || "", fix: { kind: "mkdir" } });
+        add2({ type: "missing-folder", chGuid: c.guid, folder: c.folderName, title: c.title || "", fix: { kind: "mkdir" } });
       }
       const rows = rowsBy[c.guid] || [];
       const have = filesOf(c.folderName);
@@ -179287,7 +181096,7 @@ ${css}
       for (const r of rows) {
         if (!r || !r.fileName) continue;
         if (seen.has(r.fileName)) {
-          add({
+          add2({
             type: "duplicate-ref",
             chGuid: c.guid,
             folder: c.folderName,
@@ -179301,7 +181110,7 @@ ${css}
         }
         seen.set(r.fileName, r);
         if (!have.has(r.fileName)) {
-          add({
+          add2({
             type: "missing-file",
             chGuid: c.guid,
             folder: c.folderName,
@@ -179316,10 +181125,10 @@ ${css}
         if (seen.has(f)) continue;
         let title2 = "";
         try {
-          title2 = (0, import_md29.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
+          title2 = (0, import_md30.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
         } catch {
         }
-        add({
+        add2({
           type: "orphan-file",
           chGuid: c.guid,
           folder: c.folderName,
@@ -179330,10 +181139,10 @@ ${css}
       }
     }
     for (const [key2, text] of Object.entries(s.texts || {})) {
-      const r = (0, import_md29.repairFrontmatter)(text);
+      const r = (0, import_md30.repairFrontmatter)(text);
       if (!r.changed) continue;
       const i5 = key2.lastIndexOf("/");
-      add({
+      add2({
         type: "frontmatter",
         folder: key2.slice(0, i5),
         file: key2.slice(i5 + 1),
@@ -179377,10 +181186,10 @@ ${css}
     for (const it of issues || []) out[it.type] = (out[it.type] || 0) + 1;
     return out;
   }
-  var import_md29, DOCTOR_TYPES, chapterTitleFromFolder;
+  var import_md30, DOCTOR_TYPES, chapterTitleFromFolder;
   var init_project_doctor = __esm({
     "src/project-doctor.js"() {
-      import_md29 = __toESM(require_md());
+      import_md30 = __toESM(require_md());
       DOCTOR_TYPES = [
         "bad-json",
         "missing-file",
@@ -179435,9 +181244,9 @@ ${css}
     let nRead = 0;
     for (const d of await A.listDrafts()) {
       throwIfCancelled(signal);
-      const readOr = async (name5, empty2) => {
+      const readOr = async (name5, empty3) => {
         const p = await kapi.join(d.dPath, name5);
-        if (!await kapi.exists(p)) return empty2;
+        if (!await kapi.exists(p)) return empty3;
         try {
           return await kapi.readJson(p);
         } catch {
@@ -179492,7 +181301,7 @@ ${css}
         const p = await kapi.join(chDir, it.folder, it.file);
         if (await kapi.exists(p)) return false;
         await kapi.mkdir(await kapi.join(chDir, it.folder));
-        await kapi.writeFile(p, (0, import_md30.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
+        await kapi.writeFile(p, (0, import_md31.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
         return true;
       }
       case "attach-row": {
@@ -179521,13 +181330,13 @@ ${css}
           text = await kapi.readFile(await kapi.join(chDir, it.folder, it.file));
         } catch {
         }
-        const { meta: meta2, body } = (0, import_md30.parseMdFile)(text);
+        const { meta: meta2, body } = (0, import_md31.parseMdFile)(text);
         if (row0.title) meta2.title = row0.title;
         const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
         await writeMdKeepingComments2(
           kapi,
           await kapi.join(chDir, it.folder, name5),
-          (0, import_md30.dumpMdFile)(meta2, body),
+          (0, import_md31.dumpMdFile)(meta2, body),
           await kapi.join(chDir, it.folder, it.file)
         );
         const r = await mutateJson(kapi, sf, (d) => {
@@ -179549,7 +181358,7 @@ ${css}
         const titles = {};
         for (const f of files) {
           try {
-            titles[f] = (0, import_md30.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
+            titles[f] = (0, import_md31.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
           } catch {
           }
         }
@@ -179569,7 +181378,7 @@ ${css}
       }
       case "repair-frontmatter": {
         const p = await kapi.join(chDir, it.folder, it.file);
-        const r = (0, import_md30.repairFrontmatter)(await kapi.readFile(p));
+        const r = (0, import_md31.repairFrontmatter)(await kapi.readFile(p));
         if (!r.changed) return false;
         await kapi.writeFile(p, r.text);
         const h = tabHandle(p);
@@ -179581,11 +181390,11 @@ ${css}
         return false;
     }
   }
-  async function applyDoctorFixes(list) {
+  async function applyDoctorFixes(list2) {
     const A = await Promise.resolve().then(() => (init_app(), app_exports));
     const { freeSceneFileName: freeSceneFileName2 } = await Promise.resolve().then(() => (init_scene_ops(), scene_ops_exports));
     let ok2 = 0, failed = 0;
-    for (const it of list || []) {
+    for (const it of list2 || []) {
       if (!it || !it.fix) continue;
       try {
         if (await fixOne(it, A, freeSceneFileName2)) ok2++;
@@ -179597,7 +181406,7 @@ ${css}
     logAction(
       "doctor",
       tf("ui.doctor.fixedN", ok2, failed),
-      (list || []).map((x) => ({ type: x.type, folder: x.folder || "", file: x.file || "" }))
+      (list2 || []).map((x) => ({ type: x.type, folder: x.folder || "", file: x.file || "" }))
     );
     try {
       await A.buildTree();
@@ -179657,8 +181466,8 @@ ${css}
     box2.append(el("div", "k-dlg-title", t("ui.doctor.title")));
     box2.append(el("div", "k-hint", t("ui.doctor.hint")));
     const summary = el("div", "k-doctor-summary");
-    const list = el("div", "k-doctor-list");
-    box2.append(summary, list);
+    const list2 = el("div", "k-doctor-list");
+    box2.append(summary, list2);
     const btns = el("div", "k-dlg-btns");
     const bScan = el("button", null, t("ui.doctor.rescan"));
     const bClose = el("button", "k-cancel", t("ui.common.close"));
@@ -179676,7 +181485,7 @@ ${css}
     let issues = [];
     let boxes = [];
     const render = () => {
-      list.replaceChildren();
+      list2.replaceChildren();
       boxes = [];
       if (!issues.length) {
         summary.textContent = t("ui.doctor.allGood");
@@ -179698,12 +181507,12 @@ ${css}
         mid.append(el("div", "dim k-doctor-where", where));
         mid.append(el("div", "k-doctor-fix", it.fix ? t(FIX_KEY[it.fix.kind]) : t("ui.doctor.reportOnly")));
         row3.append(c, mid);
-        list.append(row3);
+        list2.append(row3);
       }
       bFix.disabled = !issues.some((x) => x.fix);
     };
     const scan = async () => {
-      list.replaceChildren(el("div", "dim", t("ui.doctor.scanning")));
+      list2.replaceChildren(el("div", "dim", t("ui.doctor.scanning")));
       try {
         issues = await withBusyTask(
           t("ui.doctor.scanning"),
@@ -179713,7 +181522,7 @@ ${css}
       } catch (e) {
         if (!isCancelled(e)) throw e;
         issues = [];
-        list.replaceChildren(el("div", "dim", tf("ui.common.taskCancelled", t("ui.doctor.taskName"))));
+        list2.replaceChildren(el("div", "dim", tf("ui.common.taskCancelled", t("ui.doctor.taskName"))));
         bFix.disabled = true;
         return issues;
       }
@@ -179733,14 +181542,14 @@ ${css}
     await scan();
     return { ov, scan, close: close2, issues: () => issues };
   }
-  var import_md30, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
+  var import_md31, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
   var init_project_doctor_ui = __esm({
     "src/project-doctor-ui.js"() {
       init_i18n();
       init_core();
       init_cancel();
       init_ui();
-      import_md30 = __toESM(require_md());
+      import_md31 = __toESM(require_md());
       init_project_doctor();
       init_json_store();
       init_tab_bridge();
@@ -179763,7 +181572,7 @@ ${css}
         "attach-row": "ui.doctor.fixAttachRow",
         "repair-frontmatter": "ui.doctor.fixRepairFrontmatter"
       };
-      nextOrder2 = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
+      nextOrder2 = (list2) => Math.max(0, ...(list2 || []).map((x) => x.order || 0)) + 1;
       BADGE = { job: null, seq: 0, lastAt: 0, root: "" };
       BADGE_MIN_GAP = 3e4;
     }
@@ -179813,7 +181622,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 800));
       const t3 = state.active;
       check2("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A prose", !!t3?.editor);
-      const orig = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const orig = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2(
         "round-trip \u0E1C\u0E48\u0E32\u0E19 editor \u0E08\u0E23\u0E34\u0E07",
         t3.editor.getMarkdown() === orig,
@@ -179845,13 +181654,13 @@ ${css}
       ));
       t3.editor.cmd("bold");
       await saveTab(t3);
-      const saved = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const saved = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2("\u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E19\u0E32 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C .md \u0E21\u0E35 **\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**", saved.includes("**\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**"), saved);
       t3.editor.cmd("bold");
       await saveTab(t3);
       check2(
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
-        (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       {
         const longBody = Array.from(
@@ -179907,8 +181716,8 @@ ${css}
         await saveTab(t3);
         check2(
           "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
-          (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
-          (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+          (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
         );
         activate(t3.file);
         await new Promise((r) => setTimeout(r, 150));
@@ -179962,7 +181771,7 @@ ${css}
       refreshOutline();
       check2("outline \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01", [...document.querySelectorAll(".ol-item")].some((x) => x.textContent.includes("\u0E15\u0E25\u0E32\u0E14 - \u0E40\u0E22\u0E47\u0E19")));
       activate(t3.file);
-      const fmtOf = async (f) => (0, import_md31.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
+      const fmtOf = async (f) => (0, import_md32.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
       check2("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22", !!t3.editor && !t3.sp && await fmtOf(t3.file) === "prose");
       const answerConvert = async (go, ok2) => {
         const done2 = go();
@@ -179980,7 +181789,7 @@ ${css}
       );
       check2(
         "[87] \u0E15\u0E2D\u0E1A\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-        !!state.active.editor && !state.active.sp && (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        !!state.active.editor && !state.active.sp && (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       await answerConvert(() => switchFormat("screenplay"), true);
       check2(
@@ -179991,7 +181800,7 @@ ${css}
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19 format \u0E25\u0E07 frontmatter (screenplay)",
         await fmtOf(t3.file) === "screenplay"
       );
-      const spDisk87 = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
+      const spDisk87 = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 **\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E01\u0E44\u0E1A\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E43\u0E2B\u0E49\u0E2D\u0E35\u0E01\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E2D\u0E48\u0E32\u0E19",
         !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
@@ -180010,7 +181819,7 @@ ${css}
         !!state.active.editor && !state.active.sp
       );
       check2("frontmatter \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 prose", await fmtOf(t3.file) === "prose");
-      const backDisk87 = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
+      const backDisk87 = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
         backDisk87.body === orig,
@@ -180039,7 +181848,7 @@ ${css}
         t3.editor.setMarkdown(huge);
         await new Promise((r) => setTimeout(r, 500));
         await saveTab(t3);
-        const diskA = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
+        const diskA = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E01\u0E29\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
           diskA.body.includes(huge),
@@ -180047,7 +181856,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("screenplay"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskB = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
+        const diskB = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E1A\u0E25\u0E47\u0E2D\u0E01",
           diskB.body.includes(huge),
@@ -180055,7 +181864,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("prose"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskC = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file));
+        const diskC = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
           diskC.body === diskA.body,
@@ -182702,7 +184511,7 @@ ${css}
             JSON.stringify(bp.currentBranchPlan().live.choices).slice(0, 80)
           );
           const sceneFileBefore = JSON.stringify(await kapi.readJson(await kapi.join(withCh.dPath, "scenes.json")));
-          await bp.mutateChoices(withCh, (list) => [...list, { text: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A", nextSceneId: "" }]);
+          await bp.mutateChoices(withCh, (list2) => [...list2, { text: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A", nextSceneId: "" }]);
           await wait(200);
           check2(
             "[74-5] \u0E41\u0E01\u0E49\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E19 \u2192 \u0E40\u0E01\u0E47\u0E1A\u0E43\u0E19\u0E41\u0E1C\u0E19",
@@ -182719,8 +184528,8 @@ ${css}
             (await kapi.readJson(pathA)).choices[withCh.id].some((c) => c.text === "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A")
           );
           const pathB = await bp.newPlanFromCurrent("\u0E41\u0E1C\u0E19 B");
-          await bp.mutateChoices(withCh, (list) => [
-            ...list.filter((c) => c.text !== "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A"),
+          await bp.mutateChoices(withCh, (list2) => [
+            ...list2.filter((c) => c.text !== "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 A"),
             { text: "\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E19 B", nextSceneId: "" }
           ]);
           await bp.saveBranchPlan(true);
@@ -183398,7 +185207,7 @@ ${css}
       );
       check2(
         "[25] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A frontmatter \u0E44\u0E14\u0E49",
-        (0, import_md31.alignToString)(t3.editor.getAlignMap()) === "0:center"
+        (0, import_md32.alignToString)(t3.editor.getAlignMap()) === "0:center"
       );
       t3.editor.setMarkdown("\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A", { 0: "right" });
       selHead(t3.editor.view);
@@ -184348,7 +186157,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 400));
       const spTab = state.active;
       check2("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 WYSIWYG (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 textarea)", !!spTab.sp && !spTab.plain);
-      const spOrig = (0, import_md31.parseMdFile)(await kapi.readFile(spTab.file)).body;
+      const spOrig = (0, import_md32.parseMdFile)(await kapi.readFile(spTab.file)).body;
       spTab.sp.setMarkdown(spOrig);
       await new Promise((r) => setTimeout(r, 200));
       const spEls = [];
@@ -184534,7 +186343,7 @@ ${css}
       await saveTab(spTab);
       check2(
         "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 v1",
-        (0, import_md31.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
+        (0, import_md32.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
       );
       spTab.sp.setElement("character");
       vsp.dispatch(vsp.state.tr.insertText("\u0E22\u0E31\u0E22\u0E41"));
@@ -185726,10 +187535,10 @@ ${css}
         pb.selectEdge(dEdge.id);
         const hTo2 = pb.renderer._endHandles.find((h) => h.end === "to");
         const hp2 = cli(hTo2.left, hTo2.top);
-        const empty2 = cli(1400, 900);
+        const empty3 = cli(1400, 900);
         dn(hp2.x, hp2.y);
-        mv(empty2.x, empty2.y);
-        up(empty2.x, empty2.y);
+        mv(empty3.x, empty3.y);
+        up(empty3.x, empty3.y);
         check2(
           "[65r2-5] \u0E25\u0E32\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E40\u0E2A\u0E49\u0E19\u0E44\u0E1B\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 = \u0E16\u0E2D\u0E14\u0E1B\u0E25\u0E31\u0E4A\u0E01 (\u0E40\u0E2A\u0E49\u0E19\u0E2B\u0E32\u0E22\u0E44\u0E1B)",
           pb.data.getEdge(dEdge.id) === null && pb.data.getAllEdges().length === 0
@@ -186215,11 +188024,11 @@ ${css}
           const kids = frVis._objects;
           const bottoms = kids.map((k) => k.top + (k.height || 0));
           const tops = kids.map((k) => k.top);
-          const H2 = frVis.height;
+          const H3 = frVis.height;
           check2(
             "[150-8] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E34\u0E49\u0E19\u0E2A\u0E48\u0E27\u0E19\u0E44\u0E2B\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E1F\u0E23\u0E21\u0E25\u0E49\u0E19\u0E40\u0E2B\u0E19\u0E37\u0E2D/\u0E43\u0E15\u0E49\u0E01\u0E25\u0E48\u0E2D\u0E07 (\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22)",
-            Math.min(...tops) >= -H2 / 2 - 1 && Math.max(...bottoms) <= H2 / 2 + 1,
-            `top=${Math.min(...tops).toFixed(1)} bottom=${Math.max(...bottoms).toFixed(1)} H=${H2}`
+            Math.min(...tops) >= -H3 / 2 - 1 && Math.max(...bottoms) <= H3 / 2 + 1,
+            `top=${Math.min(...tops).toFixed(1)} bottom=${Math.max(...bottoms).toFixed(1)} H=${H3}`
           );
         }
         pb150._commitEdit(fr150.id, { fill: "#5f8a6f", fillOpacity: 0.5 });
@@ -187363,8 +189172,8 @@ ${css}
       const mCh1 = mDj.chapters[0];
       const mFile = (await kapi.listFiles(await kapi.join(state.root, "Memos"), ".md"))[0];
       const mPath = await kapi.join(state.root, "Memos", mFile);
-      const mBody = (0, import_md31.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
-      await kapi.writeFile(mPath, (0, import_md31.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+      const mBody = (0, import_md32.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
+      await kapi.writeFile(mPath, (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
       check2("\u0E21\u0E35\u0E42\u0E19\u0E49\u0E15\u0E43\u0E19 Memos \u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", await kapi.exists(mPath));
       await moveMemoToChapter(mPath, dP, mCh1, null);
       const mSj1 = await kapi.readJson(await kapi.join(dP, "scenes.json"));
@@ -187378,7 +189187,7 @@ ${css}
         "\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 + \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 Memos \u0E41\u0E25\u0E49\u0E27",
         await kapi.exists(await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)) && !await kapi.exists(mPath)
       );
-      const mMeta = (0, import_md31.parseMdFile)(await kapi.readFile(
+      const mMeta = (0, import_md32.parseMdFile)(await kapi.readFile(
         await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)
       )).meta;
       check2("\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E21\u0E35 type: memo \u0E43\u0E19 frontmatter", mMeta.type === "memo");
@@ -187521,7 +189330,7 @@ ${css}
         JSON.stringify(scP2.startPage)
       );
       const scP2File = await kapi.join(dPath, "Chapters", chP.folderName, scP2.fileName);
-      const scP2Fm = (0, import_md31.parseMdFile)(await kapi.readFile(scP2File)).meta;
+      const scP2Fm = (0, import_md32.parseMdFile)(await kapi.readFile(scP2File)).meta;
       check2(
         "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C/\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07/\u0E42\u0E19\u0E49\u0E15 \u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E25\u0E07 frontmatter .md",
         scP2Fm.emotion === "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07" && scP2Fm.conflict === "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D" && scP2Fm.note === "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A",
@@ -187544,7 +189353,7 @@ ${css}
         scFb.isFlashback === true && scFb.isFlashforward === false,
         JSON.stringify(scFb)
       );
-      const scFbFm = (0, import_md31.parseMdFile)(await kapi.readFile(
+      const scFbFm = (0, import_md32.parseMdFile)(await kapi.readFile(
         await kapi.join(dPath, "Chapters", chP.folderName, scFb.fileName)
       )).meta;
       check2(
@@ -187714,7 +189523,7 @@ ${css}
         await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj4, null, 2));
         await kapi.writeFile(
           await kapi.join(dPath, "Chapters", chP.folderName, "scene-50.md"),
-          (0, import_md31.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
+          (0, import_md32.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
         );
         await buildTree2();
         await moveSceneOrder(dPath, chP, { id: "scMove" }, -1);
@@ -187809,7 +189618,7 @@ ${css}
         const scLk = await findRow();
         check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 row.locked=true \u0E43\u0E19 scenes.json", scLk && scLk.locked === true);
         const lkFile = await kapi.join(dPath, "Chapters", chP.folderName, scLk.fileName);
-        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md31.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
+        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md32.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
         await openScene(lkFile, scLk.title);
         await new Promise((r) => setTimeout(r, 120));
         check2(
@@ -187831,7 +189640,7 @@ ${css}
         const rev0 = parseInt(t3.editor ? t3.meta.revision || 0 : 0, 10) || 0;
         markDirty(t3);
         await saveTab(t3);
-        const fm = (0, import_md31.parseMdFile)(await kapi.readFile(t3.file)).meta;
+        const fm = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).meta;
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E41\u0E2D\u0E1B\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 (appVersion) \u0E25\u0E07 frontmatter", !!fm.appVersion);
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49 (revision) \u0E02\u0E36\u0E49\u0E19", (parseInt(fm.revision, 10) || 0) >= 1, fm.revision);
         const dRows = lineDiff2("a\nb\nc", "a\nx\nc");
@@ -187853,7 +189662,7 @@ ${css}
         const sjc = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
         const chG = chP.guid;
         const secondFile = await kapi.join(dPath, "Chapters", chP.folderName, "cmp2.md");
-        await kapi.writeFile(secondFile, (0, import_md31.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
+        await kapi.writeFile(secondFile, (0, import_md32.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
         activate(t3.file);
         await openCompareRight(secondFile, "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32");
         await new Promise((r) => setTimeout(r, 150));
@@ -189036,12 +190845,12 @@ ${css}
         );
         check2(
           "parseMdFile \u0E15\u0E31\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01)",
-          !(0, import_md31.parseMdFile)(rawMig).body.includes("k2-comments")
+          !(0, import_md32.parseMdFile)(rawMig).body.includes("k2-comments")
         );
         check2("\u0E22\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0B\u0E49\u0E33", await migrateSceneComments(dPath) === 0);
         const cstore = commentStore();
         const cmRaw = (await cstore.read(cmFile)).body;
-        const cmQuote = ((0, import_md31.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
+        const cmQuote = ((0, import_md32.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
         const cmAt = cmRaw.indexOf(cmQuote);
         check2("\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E40\u0E08\u0E2D (\u0E43\u0E0A\u0E49\u0E1C\u0E39\u0E01\u0E2A\u0E21\u0E2D)", cmAt >= 0, cmQuote);
         const c1 = await cstore.add(cmFile, { start: cmAt, end: cmAt + cmQuote.length }, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -190150,23 +191959,23 @@ ${css}
           Array.isArray(dirs) && dirs.length >= 2 && dirs[0].includes("languages"),
           (dirs || [])[0]
         );
-        const list = await scanLanguages(state.root);
-        const codes = list.map((l) => l.code);
+        const list2 = await scanLanguages(state.root);
+        const codes = list2.map((l) => l.code);
         check2("[76-3] \u0E2A\u0E41\u0E01\u0E19\u0E40\u0E08\u0E2D\u0E17\u0E31\u0E49\u0E07\u0E44\u0E17\u0E22\u0E41\u0E25\u0E30\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29", codes.includes("th") && codes.includes("en"), codes.join(","));
-        check2("[76-4] \u0E41\u0E15\u0E48\u0E25\u0E30\u0E20\u0E32\u0E29\u0E32\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32", list.every((l) => l.nativeName || l.name || l.code));
+        check2("[76-4] \u0E41\u0E15\u0E48\u0E25\u0E30\u0E20\u0E32\u0E29\u0E32\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E41\u0E2A\u0E14\u0E07\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32", list2.every((l) => l.nativeName || l.name || l.code));
         const projLang = await kapi.join(state.root, "languages");
         await kapi.mkdir(projLang);
         const zzFile = await kapi.join(projLang, "k2_zz.csv");
         await kapi.writeFile(zzFile, "key,text\r\nmeta.code,zz\r\nmeta.nativeName,\u0E20\u0E32\u0E29\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A\r\nui.panel.project,ZZPROJECT\r\nui.common.close,ZZCLOSE\r\nui.app.add,ZZ \u0E40\u0E1E\u0E34\u0E48\u0E21 {0}\r\n");
-        const list2 = await scanLanguages(state.root);
+        const list22 = await scanLanguages(state.root);
         check2(
           "[76-5] \u0E27\u0E32\u0E07\u0E44\u0E1F\u0E25\u0E4C k2_zz.csv \u0E41\u0E25\u0E49\u0E27\u0E2A\u0E41\u0E01\u0E19\u0E40\u0E08\u0E2D\u0E20\u0E32\u0E29\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07 build)",
-          list2.some((l) => l.code === "zz"),
-          list2.map((l) => l.code).join(",")
+          list22.some((l) => l.code === "zz"),
+          list22.map((l) => l.code).join(",")
         );
         check2(
           "[76-6] \u0E2D\u0E48\u0E32\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E20\u0E32\u0E29\u0E32\u0E08\u0E32\u0E01\u0E41\u0E16\u0E27 meta.nativeName \u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C",
-          (list2.find((l) => l.code === "zz") || {}).nativeName === "\u0E20\u0E32\u0E29\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A"
+          (list22.find((l) => l.code === "zz") || {}).nativeName === "\u0E20\u0E32\u0E29\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A"
         );
         await loadLanguage("zz", state.root);
         check2("[76-7] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E44\u0E1B\u0E20\u0E32\u0E29\u0E32\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27 t() \u0E43\u0E0A\u0E49\u0E04\u0E33\u0E41\u0E1B\u0E25\u0E08\u0E32\u0E01 CSV", tr3("panel.project") === "ZZPROJECT", tr3("panel.project"));
@@ -191105,7 +192914,7 @@ ${css}
                 );
               }
               const map103 = ed.getAlignMap();
-              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md31.alignToString)(map103));
+              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md32.alignToString)(map103));
               check2(
                 "[103-2] \u2605\u2605 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E40\u0E01\u0E47\u0E1A\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E15\u0E48\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
                 Object.values(map103).includes("right"),
@@ -191986,7 +193795,7 @@ ${css}
           await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sjA, null, 2));
           await kapi.writeFile(
             await kapi.join(dPath, "Chapters", ch3.folderName, "memo-rt.md"),
-            (0, import_md31.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
+            (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
           );
           const dst = await moveRowToMemos(dPath, ch3, memoRow);
           check2("\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B MEMO \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Memos", await kapi.exists(dst), String(dst));
@@ -192053,8 +193862,8 @@ ${css}
           const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
           const scB = (sj4.chapters[ch4.guid] || [])[0];
           const scFile = await kapi.join(dPath, "Chapters", ch4.folderName, scB.fileName);
-          const { meta: bm, body: bb } = (0, import_md31.parseMdFile)(await kapi.readFile(scFile));
-          await kapi.writeFile(scFile, (0, import_md31.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
+          const { meta: bm, body: bb } = (0, import_md32.parseMdFile)(await kapi.readFile(scFile));
+          await kapi.writeFile(scFile, (0, import_md32.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
@@ -197983,8 +199792,8 @@ ${css}
               repaginateFast(T3);
               await until97(() => {
                 const size = T3.editor.view.state.doc.content.size;
-                const list = prosePageBreaks();
-                return list.length > 0 && list.every((b) => b.pos < size) && pm97.querySelectorAll(".ed-page-break").length === list.length;
+                const list2 = prosePageBreaks();
+                return list2.length > 0 && list2.every((b) => b.pos < size) && pm97.querySelectorAll(".ed-page-break").length === list2.length;
               });
               await w97(250);
             };
@@ -198839,8 +200648,8 @@ ${css}
               repaginateFast(T3);
               await until98(() => {
                 const size = T3.editor.view.state.doc.content.size;
-                const list = prosePageBreaks();
-                return list.length > 0 && list.every((b) => b.pos < size) && pm98.querySelectorAll(".ed-page-break").length === list.length;
+                const list2 = prosePageBreaks();
+                return list2.length > 0 && list2.every((b) => b.pos < size) && pm98.querySelectorAll(".ed-page-break").length === list2.length;
               });
               await w98(300);
             };
@@ -199504,17 +201313,17 @@ ${css}
           !!T3.pane.querySelector(".sp-pageview .ed-page .ed-page-clip > .ProseMirror")
         );
         {
-          const clip4 = T3.pane.querySelector(".sp-pageview .ed-page-clip");
+          const clip5 = T3.pane.querySelector(".sp-pageview .ed-page-clip");
           const spf15 = spFormat();
           const want = (spf15.paper.height - spf15.margins.top - spf15.margins.bottom) * 96;
           check2(
             "[83-3] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E27\u0E01\u0E40\u0E2A\u0E21\u0E2D",
-            !!clip4 && parseFloat(clip4.style.height) <= want + 0.5 && parseFloat(clip4.style.height) > 0,
-            (clip4 && clip4.style.height) + " <= " + want
+            !!clip5 && parseFloat(clip5.style.height) <= want + 0.5 && parseFloat(clip5.style.height) > 0,
+            (clip5 && clip5.style.height) + " <= " + want
           );
           check2(
             "[82] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22",
-            !!clip4 && !clip4.querySelector(".ed-page-break")
+            !!clip5 && !clip5.querySelector(".ed-page-break")
           );
           const pg2 = T3.pane.querySelectorAll(".sp-pageview .ed-page")[1];
           const inner2 = pg2 && pg2.querySelector(".ed-page-clip > .ProseMirror");
@@ -200750,13 +202559,13 @@ ${css}
           );
           check2("[r3-5] \u0E21\u0E35 element \u0E40\u0E08\u0E49\u0E32\u0E1A\u0E49\u0E32\u0E19\u0E43\u0E19 index.html", !!$("#ai-analyzer-panel"));
           check2(
-            "[r3-5] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 12 \u0E0A\u0E19\u0E34\u0E14\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E31\u0E48\u0E07",
-            ANALYZER_CARDS.length === 12,
+            "[r3-5] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 17 \u0E0A\u0E19\u0E34\u0E14\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E31\u0E48\u0E07 (12 \u0E40\u0E14\u0E34\u0E21 + \u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17 5 alpha.164)",
+            ANALYZER_CARDS.length === 17,
             ANALYZER_CARDS.map((c) => c.id).join(",")
           );
           check2(
             "[r3-5] \u0E25\u0E33\u0E14\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E2A\u0E40\u0E1B\u0E01 1-11 + \u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19\u0E09\u0E32\u0E01",
-            ANALYZER_CARDS.map((c) => c.id).join(",") === "pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition"
+            ANALYZER_CARDS.map((c) => c.id).join(",") === "pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition,dialog,drag,logic,ooc,tone"
           );
           check2(
             "[r3-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E2B\u0E25\u0E38\u0E14\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E32\u0E23\u0E4C\u0E14",
@@ -200766,11 +202575,11 @@ ${css}
           showPanel("ai-analyzer");
           await renderFeaturePanel("ai-analyzer");
           const aiaHost = $("#ai-analyzer-body");
-          await waitFor(() => aiaHost.querySelectorAll(".aia-card").length === 12);
+          await waitFor(() => aiaHost.querySelectorAll(".aia-card").length === 17);
           check2("[r3-5] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E27\u0E32\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E08\u0E23\u0E34\u0E07", !!aiaHost.querySelector(".aia-wrap"));
           check2(
-            "[r3-5] \u0E27\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 12 \u0E43\u0E1A",
-            aiaHost.querySelectorAll(".aia-card").length === 12,
+            "[r3-5] \u0E27\u0E32\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 17 \u0E43\u0E1A",
+            aiaHost.querySelectorAll(".aia-card").length === 17,
             aiaHost.querySelectorAll(".aia-card").length
           );
           const aiaTxt = aiaHost.textContent;
@@ -200868,6 +202677,41 @@ ${css}
               r && r.error
             );
           }
+          {
+            const heads = [...aiaHost.querySelectorAll(".aia-group-head")].map((x) => x.dataset.group);
+            check2("[164-D1] \u0E41\u0E1C\u0E07\u0E41\u0E1A\u0E48\u0E07\u0E2A\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21 \u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17\u0E02\u0E36\u0E49\u0E19\u0E01\u0E48\u0E2D\u0E19", heads.join() === "doctor,stats", heads.join());
+            const dGrid = aiaHost.querySelector('.aia-grid[data-group="doctor"]');
+            const dIds = dGrid ? [...dGrid.querySelectorAll(".aia-card")].map((c) => c.dataset.card).join() : "";
+            check2("[164-D1] \u0E01\u0E25\u0E38\u0E48\u0E21\u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17\u0E21\u0E35\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E04\u0E23\u0E1A 5 \u0E43\u0E1A\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2A\u0E31\u0E48\u0E07", dIds === "dialog,drag,logic,ooc,tone", dIds);
+            for (const kw of ["\u0E1A\u0E17\u0E2A\u0E19\u0E17\u0E19\u0E32\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E18\u0E23\u0E23\u0E21\u0E0A\u0E32\u0E15\u0E34", "\u0E08\u0E31\u0E07\u0E2B\u0E27\u0E30\u0E2D\u0E37\u0E14", "\u0E1B\u0E21\u0E44\u0E21\u0E48\u0E2A\u0E21\u0E40\u0E2B\u0E15\u0E38\u0E2A\u0E21\u0E1C\u0E25", "Out of character", "\u0E42\u0E17\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07"]) {
+              check2('[164-D1] \u0E01\u0E32\u0E23\u0E4C\u0E14 "' + kw + '" \u0E41\u0E2A\u0E14\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E07', aiaHost.textContent.includes(kw));
+            }
+            const tsel = aiaHost.querySelector("#aia-tone-target");
+            check2("[164-D1] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E17\u0E19\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E42\u0E17\u0E19\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E43\u0E08 5 \u0E41\u0E1A\u0E1A", !!tsel && tsel.options.length === 5, tsel && tsel.options.length);
+            if (tsel) {
+              tsel.value = "drama";
+              tsel.dispatchEvent(new Event("change"));
+            }
+            for (const id of ["dialog", "drag", "logic", "ooc", "tone"]) {
+              const card = aiaHost.querySelector('.aia-card[data-card="' + id + '"]');
+              card.querySelector(".aia-run").click();
+              await waitFor(() => !!card.querySelector(".aia-result .aia-result-local"));
+              const res = card.querySelector(".aia-result");
+              check2('[164-D1] \u0E01\u0E14\u0E27\u0E34\u0E40\u0E04\u0E23\u0E32\u0E30\u0E2B\u0E4C "' + id + '" \u0E41\u0E25\u0E49\u0E27\u0E1C\u0E25\u0E27\u0E32\u0E14\u0E25\u0E07\u0E01\u0E32\u0E23\u0E4C\u0E14', !!res.querySelector(".aia-stats") && res.getBoundingClientRect().height > 0, res.textContent.slice(0, 80));
+              check2(
+                '[164-D1] \u0E1C\u0E25 "' + id + '" \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A',
+                !/ui\.[a-z]+\.[A-Za-z]/.test(res.textContent),
+                (res.textContent.match(/ui\.[a-z]+\.[A-Za-z0-9_.]+/) || [""])[0]
+              );
+            }
+            const toneRes = currentResults().tone;
+            check2(
+              "[164-D1] \u0E42\u0E17\u0E19\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E16\u0E39\u0E01\u0E2A\u0E48\u0E07\u0E40\u0E02\u0E49\u0E32\u0E40\u0E2D\u0E19\u0E08\u0E34\u0E19",
+              !!toneRes && toneRes.local.want === "drama",
+              toneRes && toneRes.local.want
+            );
+            check2("[164-D1] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E42\u0E17\u0E19\u0E27\u0E32\u0E14\u0E41\u0E16\u0E1A\u0E23\u0E32\u0E22\u0E09\u0E32\u0E01", !!aiaHost.querySelector('.aia-card[data-card="tone"] .aia-tone-row'));
+          }
           check2(
             "[r3-5] \u0E1B\u0E38\u0E48\u0E21 toolbar #tb-ai-analyzer \u0E21\u0E35\u0E08\u0E23\u0E34\u0E07\u0E41\u0E25\u0E30\u0E15\u0E34\u0E14 .on \u0E15\u0E2D\u0E19\u0E41\u0E1C\u0E07\u0E40\u0E1B\u0E34\u0E14",
             !!$("#tb-ai-analyzer") && (refreshToolbar(), $("#tb-ai-analyzer").classList.contains("on"))
@@ -200890,7 +202734,7 @@ ${css}
             if (!n2) throw new Error("\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E1B\u0E38\u0E48\u0E21: " + sel);
             n2.click();
           };
-          const settled = async (extra) => waitFor(() => document.querySelectorAll("#ai-analyzer-body .aia-card").length === 12 && !!$("#aia-usage") && (!extra || extra()));
+          const settled = async (extra) => waitFor(() => document.querySelectorAll("#ai-analyzer-body .aia-card").length === 17 && !!$("#aia-usage") && (!extra || extra()));
           showPanel("ai-analyzer");
           await renderFeaturePanel("ai-analyzer");
           await settled();
@@ -200911,7 +202755,7 @@ ${css}
           const uline = $("#aia-usage");
           check2("[89r] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E42\u0E17\u0E40\u0E04\u0E19\u0E1A\u0E19\u0E41\u0E1C\u0E07", !!uline);
           check2(
-            "[89r] \u0E1A\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E01\u0E32\u0E23\u0E01\u0E48\u0E2D\u0E19\u0E43\u0E0A\u0E49 (\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07 12 \u0E0A\u0E19\u0E34\u0E14)",
+            "[89r] \u0E1A\u0E2D\u0E01\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E01\u0E32\u0E23\u0E01\u0E48\u0E2D\u0E19\u0E43\u0E0A\u0E49 (\u0E04\u0E23\u0E1A\u0E17\u0E31\u0E49\u0E07 17 \u0E0A\u0E19\u0E34\u0E14)",
             !!uline.querySelector(".aia-usage-before") && /\d/.test(uline.querySelector(".aia-usage-before").textContent),
             uline.textContent
           );
@@ -200921,7 +202765,7 @@ ${css}
             uline.textContent
           );
           const estChips = document.querySelectorAll("#ai-analyzer-body .aia-chip-est");
-          check2("[89r] \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E42\u0E17\u0E40\u0E04\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07", estChips.length === 12, estChips.length);
+          check2("[89r] \u0E17\u0E38\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E42\u0E17\u0E40\u0E04\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07", estChips.length === 17, estChips.length);
           check2(
             "[89r] \u0E0A\u0E34\u0E1B\u0E1A\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E08\u0E33\u0E19\u0E27\u0E19\u0E42\u0E17\u0E40\u0E04\u0E19\u0E41\u0E25\u0E30\u0E23\u0E32\u0E04\u0E32",
             /\d/.test(estChips[0].textContent) && estChips[0].textContent.includes("$"),
@@ -200947,7 +202791,7 @@ ${css}
             $("#aia-usage").textContent
           );
           await clickWhen("#aia-use-ai");
-          await settled(() => document.querySelectorAll("#ai-analyzer-body .aia-chip-est").length === 12);
+          await settled(() => document.querySelectorAll("#ai-analyzer-body .aia-chip-est").length === 17);
           await runAnalysis("length");
           await runAnalysis("words");
           const sv = await saveSession("\u0E40\u0E17\u0E2A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19");
@@ -202646,8 +204490,37 @@ ${css}
                 document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
                 await w9(30);
                 check2("[RW] Esc \u0E1B\u0E34\u0E14\u0E41\u0E16\u0E1A (\u0E41\u0E25\u0E30\u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E2B\u0E32\u0E22\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22)", !document.querySelector(".k-rewrite-bar") && !document.querySelector(".k-rewrite-hls"));
+                const reSel = () => {
+                  let f = -1;
+                  vRW.state.doc.descendants((n2, pos2) => {
+                    if (f < 0 && n2.isText && n2.text.includes(srcRW)) f = pos2 + n2.text.indexOf(srcRW);
+                  });
+                  if (f > 0) vRW.dispatch(vRW.state.tr.setSelection(TextSelection.create(vRW.state.doc, f, f + srcRW.length)));
+                };
+                const otherRW = [...state.tabs.values()].find((t4) => t4 !== tabRW && t4.pane && (t4.editor || t4.sp));
+                if (otherRW) {
+                  reSel();
+                  openRewriteBar(tabRW);
+                  await w9(40);
+                  check2("[164-BH] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E16\u0E1A Rewrite \u0E44\u0E14\u0E49\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07", !!document.querySelector(".k-rewrite-bar"));
+                  activate(otherRW.file);
+                  await w9(60);
+                  check2(
+                    "[164-BH] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E41\u0E17\u0E47\u0E1A\u0E2D\u0E37\u0E48\u0E19 \u2192 \u0E41\u0E16\u0E1A Rewrite \u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E25\u0E2D\u0E22\u0E04\u0E49\u0E32\u0E07 + \u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E2B\u0E32\u0E22)",
+                    !document.querySelector(".k-rewrite-bar") && !document.querySelector(".k-rewrite-hls")
+                  );
+                  activate(tabRW.file);
+                  await w9(60);
+                }
+                reSel();
+                openRewriteBar(tabRW);
+                await w9(40);
+                const hadBar = !!document.querySelector(".k-rewrite-bar");
+                closeTab(tabRW.file, { discard: true });
+                await w9(40);
+                check2("[164-BH] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A \u2192 \u0E41\u0E16\u0E1A Rewrite \u0E02\u0E2D\u0E07\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E31\u0E49\u0E19\u0E1B\u0E34\u0E14\u0E14\u0E49\u0E27\u0E22", hadBar && !document.querySelector(".k-rewrite-bar"), String(hadBar));
               }
-              closeTab(tabRW.file, { discard: true });
+              if (state.tabs.has(tabRW.file)) closeTab(tabRW.file, { discard: true });
             }
             await rtc9({ tool: "scene.delete", args: { title: titleRW } });
             state.meta.ai.systemPrompt = keepRW.sp;
@@ -206587,8 +208460,8 @@ ${css}
           /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79),
           after79.slice(0, 300)
         );
-        const bodyBefore79 = (0, import_md31.parseMdFile)(before79).body.split("\n");
-        const bodyAfter79 = (0, import_md31.parseMdFile)(after79).body.split("\n");
+        const bodyBefore79 = (0, import_md32.parseMdFile)(before79).body.split("\n");
+        const bodyAfter79 = (0, import_md32.parseMdFile)(after79).body.split("\n");
         check2(
           "[79-2] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           bodyAfter79.length === bodyBefore79.length && bodyAfter79.filter((l, i5) => l !== bodyBefore79[i5]).length === 1,
@@ -208302,7 +210175,7 @@ ${css}
             tX.editor.cmd("align", "right");
             await new Promise((r) => setTimeout(r, 200));
             const mapX = tX.editor.getAlignMap();
-            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md31.alignToString)(mapX));
+            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md32.alignToString)(mapX));
             check2(
               "[132-X1] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
               Object.values(mapX).includes("center") && Object.values(mapX).includes("right"),
@@ -211231,7 +213104,7 @@ ${css}
           let fmF = {};
           for (let i5 = 0; i5 < 30; i5++) {
             try {
-              fmF = (0, import_md31.parseMdFile)(await kapi.readFile(row3.dataset.path)).meta;
+              fmF = (0, import_md32.parseMdFile)(await kapi.readFile(row3.dataset.path)).meta;
             } catch {
               fmF = {};
             }
@@ -211315,7 +213188,7 @@ ${css}
           await buildTree2();
           const row3 = scRows120()[0];
           const f120 = row3.dataset.path;
-          const wantTitle = (0, import_md31.parseMdFile)(await kapi.readFile(f120)).meta.title;
+          const wantTitle = (0, import_md32.parseMdFile)(await kapi.readFile(f120)).meta.title;
           if (state.tabs.has(f120)) {
             state.tabs.get(f120).dirty = false;
             closeTab(f120);
@@ -211701,8 +213574,8 @@ ${css}
             );
             check2(
               "[a124-20] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30",
-              !!ctx124 && ctx124.row.wordCount === (0, import_md31.countWords)(tb2.editor.getMarkdown()),
-              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md31.countWords)(tb2.editor.getMarkdown())
+              !!ctx124 && ctx124.row.wordCount === (0, import_md32.countWords)(tb2.editor.getMarkdown()),
+              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md32.countWords)(tb2.editor.getMarkdown())
             );
             check2(
               '[a124-21] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E25\u0E34\u0E01\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14 Ctrl+S',
@@ -212128,7 +214001,7 @@ ${css}
           if (rvFile) {
             activate(rvFile);
             const rvTab = state.tabs.get(rvFile);
-            const onDisk = (0, import_md31.parseMdFile)(await kapi.readFile(rvFile)).body;
+            const onDisk = (0, import_md32.parseMdFile)(await kapi.readFile(rvFile)).body;
             const MARK = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E08\u0E30\u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01";
             rvTab.sp.setMarkdown(onDisk + "\n\n" + MARK);
             markDirty(rvTab);
@@ -212443,7 +214316,7 @@ ${css}
           activate(fN);
           await w140(200);
         }
-        const diskBody140 = (0, import_md31.parseMdFile)(await kapi.readFile(tN.file)).body || "";
+        const diskBody140 = (0, import_md32.parseMdFile)(await kapi.readFile(tN.file)).body || "";
         tN.editor.setMarkdown(diskBody140);
         await w140(300);
         refreshOutline();
@@ -212464,7 +214337,7 @@ ${css}
           for (const pth of bookPaths) {
             let fm = {};
             try {
-              fm = (0, import_md31.parseMdFile)(await kapi.readFile(pth)).meta || {};
+              fm = (0, import_md32.parseMdFile)(await kapi.readFile(pth)).meta || {};
             } catch {
               continue;
             }
@@ -213069,14 +214942,14 @@ ${css}
           } catch {
           }
           const titled = [...document.querySelectorAll("[data-i18n-title]")].filter((e) => !e.matches(":hover"));
-          const empty2 = titled.filter((e) => {
+          const empty3 = titled.filter((e) => {
             const v4 = (e.getAttribute("title") || "").trim();
             return !v4 || v4 === e.getAttribute("data-i18n-title");
           });
           check2(
             "[154-6] \u2605 index.html \u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27 \u0E41\u0E15\u0E48\u0E17\u0E38\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E22\u0E31\u0E07\u0E44\u0E14\u0E49 tooltip \u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32",
-            titled.length > 50 && empty2.length === 0,
-            empty2.slice(0, 5).map((e) => e.id || e.className).join(",")
+            titled.length > 50 && empty3.length === 0,
+            empty3.slice(0, 5).map((e) => e.id || e.className).join(",")
           );
           const tpl154 = settingsTemplate(new Array(SETTINGS_TEMPLATE_ARGS).fill(""));
           check2("[154-6] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E21\u0E32\u0E22\u0E40\u0E2B\u0E15\u0E38\u0E19\u0E31\u0E01\u0E1E\u0E31\u0E12\u0E19\u0E32 [alpha.x]", !/\[alpha\.\d/.test(tpl154));
@@ -213099,8 +214972,9 @@ ${css}
           node.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }));
           return [...document.querySelectorAll(".k-menu .k-menu-item")];
         };
+        const COND155 = /* @__PURE__ */ new Set(["problemToggle", "problemMenu"]);
         const sameOrder155 = (kind, items) => {
-          const ids = TREE_MENU_SPEC[kind].filter((x) => x !== "-");
+          const ids = TREE_MENU_SPEC[kind].filter((x) => x !== "-" && !COND155.has(x));
           if (ids.length !== items.length) return "\u0E08\u0E33\u0E19\u0E27\u0E19 " + items.length + " \u2260 " + ids.length;
           for (let i5 = 0; i5 < ids.length; i5++) {
             const txt = items[i5].textContent.trim();
@@ -213295,7 +215169,7 @@ ${css}
         });
         await kapi.remove(await kapi.join(dirA, s1.fileName));
         const s3 = await SO.addScene(dPath2, chA, "\u0E09\u0E32\u0E01156\u0E2A\u0E32\u0E21", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21" });
-        const body2 = (0, import_md31.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
+        const body2 = (0, import_md32.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
         check2(
           "[156-1] \u2605\u2605 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E09\u0E32\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E21",
           body2 === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07" && s3.fileName !== s2.fileName,
@@ -213316,7 +215190,7 @@ ${css}
           const syn = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\n---\nnote: \u0E41\u0E17\u0E23\u0E01";
           await writeSceneMeta(f3, { synopsis: syn, pov: "\u0E21\u0E32\u0E19\u0E35" });
           const m3 = await readSceneMeta(f3);
-          const p3 = (0, import_md31.parseMdFile)(await kapi.readFile(f3));
+          const p3 = (0, import_md32.parseMdFile)(await kapi.readFile(f3));
           check2("[156-2] \u2605\u2605 \u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E04\u0E23\u0E1A", m3.synopsis === syn && m3.pov === "\u0E21\u0E32\u0E19\u0E35", JSON.stringify(m3.synopsis));
           check2("[156-2] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E1B\u0E19\u0E40\u0E21\u0E17\u0E32\u0E14\u0E32\u0E17\u0E32", p3.body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21", JSON.stringify(p3.body));
         }
@@ -213384,7 +215258,7 @@ ${css}
           const n2 = await closeTabsUnderPath(dirA, { save: true });
           check2(
             "[156-6] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19",
-            !state.tabs.has(f3) && (0, import_md31.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
+            !state.tabs.has(f3) && (0, import_md32.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
             JSON.stringify(n2)
           );
           check2("[156-6] \u2605 \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2D\u0E37\u0E48\u0E19", state.tabs.has(fB));
@@ -213410,9 +215284,9 @@ ${css}
         {
           await openScene(f4, null);
           const tb2 = state.tabs.get(f4);
-          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md31.parseMdFile)(s).meta);
-          const diskBodyNow = async () => (0, import_md31.parseMdFile)(await kapi.readFile(f4)).body;
-          await kapi.writeFile(f4, (0, import_md31.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
+          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md32.parseMdFile)(s).meta);
+          const diskBodyNow = async () => (0, import_md32.parseMdFile)(await kapi.readFile(f4)).body;
+          await kapi.writeFile(f4, (0, import_md32.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
           tb2.editor.setMarkdown("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A156");
           markDirty(tb2);
           window.__k2conflictChoice = "skip";
@@ -213444,7 +215318,7 @@ ${css}
           const r3 = await saveTab(tb2);
           check2("[156-7] \u2605 \u0E41\u0E01\u0E49\u0E41\u0E04\u0E48\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E43\u0E19\u0E2B\u0E31\u0E27\u0E44\u0E1F\u0E25\u0E4C \u0E44\u0E21\u0E48\u0E16\u0E37\u0E2D\u0E27\u0E48\u0E32\u0E0A\u0E19\u0E01\u0E31\u0E19", r3 !== false && await diskBodyNow() === "\u0E2B\u0E25\u0E31\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34156");
           delete window.__k2conflictChoice;
-          await kapi.writeFile(f4, (0, import_md31.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
+          await kapi.writeFile(f4, (0, import_md32.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
           const n2 = await checkTabsAgainstDisk({ force: true });
           check2(
             "[156-7] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07: \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E14\u0E34\u0E2A\u0E01\u0E4C",
@@ -213455,12 +215329,12 @@ ${css}
         }
         {
           const D = await Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports));
-          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md31.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
+          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md32.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
           await JS.mutateJson(kapi, sf, (d) => {
             d.chapters[chA.guid].push({ id: "dup156", title: "\u0E0B\u0E49\u0E33156", order: 99, fileName: s2.fileName, chapterGuid: chA.guid });
           });
           await kapi.writeFile(f4, "---\ntitle: \u0E09\u0E32\u0E01156\u0E2A\u0E35\u0E48\nsynopsis: \u0E15\u0E49\u0E19\n\u0E01\u0E25\u0E32\u0E07156\n---\n\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156");
-          const mine = (list) => list.filter((x) => x.dPath === dPath2 && x.folder === chA.folderName);
+          const mine = (list2) => list2.filter((x) => x.dPath === dPath2 && x.folder === chA.folderName);
           let is2 = mine(await D.scanProject());
           const kinds = is2.map((x) => x.type);
           check2(
@@ -213525,7 +215399,7 @@ ${css}
           const r = await R3.runProjectReplace("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07", "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", {}, { docs });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14",
-            r.count === 1 && (0, import_md31.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
+            r.count === 1 && (0, import_md32.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
             JSON.stringify(r)
           );
           await openScene(fr, null);
@@ -213537,11 +215411,11 @@ ${css}
           await R3.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156", {}, { docs: docs2 });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07: \u0E41\u0E01\u0E49\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
-            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md31.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
+            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md32.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
           );
           closeTab(fr, { discard: true });
           const r3 = await R3.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E44\u0E21\u0E48\u0E04\u0E27\u0E23\u0E40\u0E01\u0E34\u0E14", {}, { docs: [{ ...docs[0], locked: true, body: "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156" }] });
-          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r3.count === 0 && (0, import_md31.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
+          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r3.count === 0 && (0, import_md32.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
           const ui = await R3.openProjectReplace("");
           check2("[156-10] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !!document.querySelector(".k-replace"));
           ui.close();
@@ -213956,12 +215830,12 @@ ${css}
           const tp = await trashOf(a.fileName);
           check2(
             "[159-H1] \u2605\u2605 \u0E02\u0E2D\u0E07\u0E43\u0E19\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E04\u0E37\u0E2D\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07 (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E22\u0E49\u0E32\u0E22)",
-            !!tp && (0, import_md31.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
+            !!tp && (0, import_md32.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
             tp
           );
           await restoreFromTrash(tp, tp.split(/[\\/]/).pop());
           const back = (await rows159(ch.guid)).find((r) => r.id === a.id);
-          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md31.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
+          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md32.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
           await saveAllTabs(true);
         }
         {
@@ -213969,7 +215843,7 @@ ${css}
           const fc = await kapi.join(dir2, c.fileName);
           await openScene(fc, null);
           const tc = state.tabs.get(fc);
-          await kapi.writeFile(fc, (0, import_md31.dumpMdFile)((0, import_md31.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
+          await kapi.writeFile(fc, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
           tc.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159");
           markDirty(tc);
           window.__k2conflictChoice = "skip";
@@ -213981,7 +215855,7 @@ ${css}
             "[159-H2] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19 (\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0A\u0E19) = \u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07",
             state.tabs.has(fc) && tc.dirty && tc.editor.getMarkdown().includes("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159")
           );
-          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md31.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
+          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md32.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
           window.__k2conflictChoice = "overwrite";
           closeTab(fc, { ask: true });
           await until159(() => [...document.querySelectorAll(".k-dialog button")].some((x) => x.textContent === t("ui.app.closeTabSave")));
@@ -214020,7 +215894,7 @@ ${css}
           const newF = y.f.replace("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159");
           check2(
             "[159-H3] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 + \u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48",
-            !state.tabs.has(y.f) && (0, import_md31.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
+            !state.tabs.has(y.f) && (0, import_md32.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
           );
           await saveAllTabs(true);
           check2("[159-H3] \u2605\u2605 \u0E23\u0E48\u0E32\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A", !await kapi.exists(y.p));
@@ -214044,7 +215918,7 @@ ${css}
             raw1.includes("k2-comments") && raw1.includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"),
             raw1.slice(-160)
           );
-          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md31.parseMdFile)(raw1).body);
+          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md32.parseMdFile)(raw1).body);
           await switchFormat("prose");
           check2("[159-H4] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E22\u0E31\u0E07\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C", (await kapi.readFile(fe)).includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"));
           closeTab(fe, { discard: true });
@@ -214237,7 +216111,7 @@ ${css}
           const srcRow = (await rows159(ch.guid)).find((r) => r.id === m2.id);
           check2(
             "[159-M2] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 (\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14)",
-            (0, import_md31.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
+            (0, import_md32.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
           );
           check2("[159-M2] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32", !!srcRow && srcRow.wordCount >= 5, JSON.stringify(srcRow && srcRow.wordCount));
           const neRows = ne ? await rows159(ne.guid) : [];
@@ -214246,7 +216120,7 @@ ${css}
           const neFile = ne && neRow ? await kapi.join(dPath2, "Chapters", ne.folderName, neRow.fileName) : "";
           check2(
             "[159-M2] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E1A\u0E17\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 + id \u0E43\u0E2B\u0E21\u0E48 + \u0E41\u0E16\u0E27\u0E04\u0E23\u0E1A\u0E40\u0E17\u0E48\u0E32\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07",
-            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md31.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
+            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md32.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
             JSON.stringify([neRows.length, srcRows.length, neRow && neRow.fileName])
           );
           closeTab(fm2, { discard: true });
@@ -214315,7 +216189,7 @@ ${css}
           await SO.setSceneTitle(dPath2, ch, p1, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48");
           check2(
             "[160-P0-1] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 (setSceneTitle) \u2014 \u0E40\u0E18\u0E23\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
-            await hasCmt(f1) && (0, import_md31.parseMdFile)(await kapi.readFile(f1)).meta.title === "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48",
+            await hasCmt(f1) && (0, import_md32.parseMdFile)(await kapi.readFile(f1)).meta.title === "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48",
             (await kapi.readFile(f1)).slice(-120)
           );
           await SO.setSceneMeta(dPath2, ch, { ...p1, title: "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48" }, { synopsis: "\u0E22\u0E48\u0E2D160", pov: "\u0E17\u0E2D\u0E23\u0E48\u0E32" });
@@ -214338,7 +216212,7 @@ ${css}
             const memoDir = await kapi.join(state.root, "Memos");
             await kapi.mkdir(memoDir);
             const mf = await kapi.join(memoDir, "\u0E42\u0E19\u0E49\u0E15\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C160.md");
-            await kapi.writeFile(mf, (0, import_md31.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15160", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15160") + CMT160);
+            await kapi.writeFile(mf, (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15160", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15160") + CMT160);
             await TA.setMemoFields(mf, { flag: true });
             check2("[160-P0-1] \u2605 \u0E41\u0E01\u0E49\u0E18\u0E07\u0E42\u0E19\u0E49\u0E15 (setMemoFields) \u2014 \u0E40\u0E18\u0E23\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48", await hasCmt(mf));
             await kapi.remove(mf);
@@ -214349,7 +216223,7 @@ ${css}
           const t23 = state.tabs.get(f2);
           t23.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07160");
           markDirty(t23);
-          await kapi.writeFile(f2, (0, import_md31.dumpMdFile)((0, import_md31.parseMdFile)(await kapi.readFile(f2)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"));
+          await kapi.writeFile(f2, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(f2)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"));
           window.__k2conflictChoice = "skip";
           try {
             const pDel3 = deleteToTrash(f2, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E44\u0E21\u0E48\u0E25\u0E1A160");
@@ -214428,8 +216302,8 @@ ${css}
           {
             const p14 = await SO.addScene(dPath2, ch, "\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01160", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D" });
             const f14 = await kapi.join(dir2, p14.fileName);
-            const pm2 = (0, import_md31.parseMdFile)(await kapi.readFile(f14));
-            await kapi.writeFile(f14, (0, import_md31.dumpMdFile)({ ...pm2.meta, tags: ["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"], pov: "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E19\u0E2D\u0E01160" }, pm2.body));
+            const pm2 = (0, import_md32.parseMdFile)(await kapi.readFile(f14));
+            await kapi.writeFile(f14, (0, import_md32.dumpMdFile)({ ...pm2.meta, tags: ["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"], pov: "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E19\u0E2D\u0E01160" }, pm2.body));
             const TP = await Promise.resolve().then(() => (init_tag_pane(), tag_pane_exports));
             const counts = await TP.getTagCounts();
             check2("[160-P1-14] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E17\u0E47\u0E01\u0E40\u0E2B\u0E47\u0E19\u0E41\u0E17\u0E47\u0E01\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E43\u0E19 .md \u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21", (counts["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"] || 0) >= 1, JSON.stringify(counts).slice(0, 160));
@@ -214591,7 +216465,7 @@ ${css}
             markDirty(tb2);
             return tb2;
           };
-          const conflict161 = async (f) => kapi.writeFile(f, (0, import_md31.dumpMdFile)((0, import_md31.parseMdFile)(await kapi.readFile(f)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"));
+          const conflict161 = async (f) => kapi.writeFile(f, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(f)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"));
           const byTitle161 = async (prefix2) => (await rows159(ch.guid)).filter((r) => String(r.title).startsWith(prefix2));
           const a1 = await mk161("\u0E27\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07161", "\u0E10\u0E32\u0E19161");
           await withCmt161(a1.file);
@@ -214775,7 +216649,7 @@ ${css}
             const job = RU.computeBookFlow(sec161);
             const saw = await Promise.race([reachedP.then(() => true), w161(15e3).then(() => false)]);
             const longBody = Array.from({ length: 140 }, (_2, i5) => "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E32\u0E27161 " + i5 + " " + "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E31\u0E19\u0E2B\u0E19\u0E49\u0E32 ".repeat(8)).join("\n\n");
-            await kapi.writeFile(g1, (0, import_md31.dumpMdFile)((0, import_md31.parseMdFile)(await kapi.readFile(g1)).meta, longBody));
+            await kapi.writeFile(g1, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(g1)).meta, longBody));
             RU.bumpBookFlow();
             if (release2) release2();
             window.__k2flowHold = null;
@@ -214822,7 +216696,7 @@ ${css}
             CP.invalidateChatRag();
             const e0 = CP.chatRagEpoch();
             const pBuild = CP.collectRelevant("zqnew161", { maxChars: 2e4 });
-            await kapi.writeFile(h2, (0, import_md31.dumpMdFile)((0, import_md31.parseMdFile)(await kapi.readFile(h2)).meta, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 zqlast161 zqlast161"));
+            await kapi.writeFile(h2, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(h2)).meta, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 zqlast161 zqlast161"));
             CP.invalidateChatRag();
             await pBuild;
             check2(
@@ -215041,8 +216915,8 @@ ${css}
           await new Promise((r) => setTimeout(r, 300));
           check2("[161-P1] \u2605 \u0E41\u0E1C\u0E07\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2D\u0E07", !isPanelOpen("props"));
           {
-            const raw = (0, import_md31.parseMdFile)(await kapi.readFile(fA));
-            await kapi.writeFile(fA, (0, import_md31.dumpMdFile)({ ...raw.meta, synopsis: "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161", pov: "\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161" }, raw.body));
+            const raw = (0, import_md32.parseMdFile)(await kapi.readFile(fA));
+            await kapi.writeFile(fA, (0, import_md32.dumpMdFile)({ ...raw.meta, synopsis: "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161", pov: "\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161" }, raw.body));
             showPanel("props-panel");
             activate(fA);
             await until159(() => nameNow() === "\u0E41\u0E1C\u0E07\u0E15\u0E32\u0E21\u0E01161", 5e3);
@@ -215358,7 +217232,7 @@ ${css}
               inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
               check2(
                 "[161-K1] \u2605 Enter \u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 = \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 + frontmatter)",
-                await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48", 5e3) && (0, import_md31.parseMdFile)(await kapi.readFile(fB)).meta.title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48"
+                await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48", 5e3) && (0, import_md32.parseMdFile)(await kapi.readFile(fB)).meta.title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48"
               );
             }
             await until159(() => !!rowOf(fB), 3e3);
@@ -215564,7 +217438,7 @@ ${css}
             );
             check2(
               "[162-W1-4] \u2605\u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E19\u0E16\u0E31\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A)",
-              (0, import_md31.parseMdFile)(await kapi.readFile(t1)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162") && (0, import_md31.parseMdFile)(await kapi.readFile(t23)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162")
+              (0, import_md32.parseMdFile)(await kapi.readFile(t1)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162") && (0, import_md32.parseMdFile)(await kapi.readFile(t23)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162")
             );
             check2(
               "[162-W1-4] \u2605 \u0E43\u0E1A\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
@@ -215744,7 +217618,7 @@ ${css}
             const memoDir = await kapi.join(state.root, "Memos");
             await kapi.mkdir(memoDir);
             const mf = await kapi.join(memoDir, "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162.md");
-            await kapi.writeFile(mf, (0, import_md31.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162"));
+            await kapi.writeFile(mf, (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162"));
             const okm = await moveMemoToChapter(mf, dPath2, ch, null);
             const rowM = (await rows159(ch.guid)).find((r) => r.title === "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162");
             check2(
@@ -215755,7 +217629,7 @@ ${css}
             const back = await moveRowToMemos(dPath2, ch, rowM);
             check2(
               "[162-W1-3] \u2605\u2605 \u0E22\u0E49\u0E32\u0E22\u0E01\u0E25\u0E31\u0E1A\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E19\u0E49\u0E15: \u0E44\u0E1F\u0E25\u0E4C\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E23\u0E1A \xB7 \u0E41\u0E16\u0E27\u0E2B\u0E25\u0E38\u0E14\u0E08\u0E32\u0E01\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19",
-              !!back && await kapi.exists(back) && (0, import_md31.parseMdFile)(await kapi.readFile(back)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162") && !(await rows159(ch.guid)).some((r) => r.id === rowM.id),
+              !!back && await kapi.exists(back) && (0, import_md32.parseMdFile)(await kapi.readFile(back)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162") && !(await rows159(ch.guid)).some((r) => r.id === rowM.id),
               String(back)
             );
             await kapi.remove(back).catch(() => {
@@ -215784,13 +217658,13 @@ ${css}
               const before14 = snaps14.find((s) => s.label === t("panel.beforeRestore"));
               check2(
                 '[162-W1-14] \u2605\u2605 \u0E20\u0E32\u0E1E "\u0E01\u0E48\u0E2D\u0E19\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19" \u0E21\u0E35\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E17\u0E34\u0E49\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46)',
-                !!before14 && (0, import_md31.parseMdFile)(await kapi.readFile(before14.path)).body.includes("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07162"),
+                !!before14 && (0, import_md32.parseMdFile)(await kapi.readFile(before14.path)).body.includes("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07162"),
                 before14 ? (await kapi.readFile(before14.path)).slice(0, 120) : JSON.stringify(snaps14.map((s) => s.label))
               );
               await until159(() => !state.tabs.get(f14) || !state.tabs.get(f14).dirty, 6e3);
               check2(
                 "[162-W1-14] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27",
-                (0, import_md31.parseMdFile)(await kapi.readFile(f14)).body.includes("\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32162")
+                (0, import_md32.parseMdFile)(await kapi.readFile(f14)).body.includes("\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32162")
               );
             }
             document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
@@ -217053,6 +218927,259 @@ ${css}
           await wBH(200);
         }
       }
+      {
+        const wO = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilO = async (fn, ms = 4e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            try {
+              if (await fn()) return true;
+            } catch {
+            }
+            await wO(40);
+          }
+          return false;
+        };
+        const menuItem = (txt) => [...document.querySelectorAll(".k-menu .k-menu-item")].find((x) => x.textContent.includes(txt));
+        const closeMenus = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await buildTree2();
+        await wO(120);
+        let rowO = null, tabO = null;
+        for (const r of [...document.querySelectorAll("#tree .scene[data-path]")].filter((x) => x._k2row && x._k2row.kind === "scene" && /\.md$/i.test(x.dataset.path) && !x._k2row.ctx.lockSrc && !x._k2row.ctx.isMemoRow).slice(0, 8)) {
+          await openScene(r.dataset.path, r._k2row.ctx.title);
+          await wO(150);
+          const tb2 = state.tabs.get(r.dataset.path);
+          if (tb2 && tb2.editor && !tb2.locked) {
+            rowO = r;
+            tabO = tb2;
+            break;
+          }
+        }
+        check2("[164-O] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E40\u0E08\u0E2D\u0E09\u0E32\u0E01\u0E19\u0E34\u0E22\u0E32\u0E22\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49", !!tabO);
+        if (tabO) {
+          const fileO = tabO.file, idO = rowO._k2row.ctx.sc.id;
+          const keepO = tabBodyText(tabO);
+          const ORIG = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\n\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\n\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E32\u0E21\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01";
+          tabO.editor.setMarkdown(ORIG);
+          markDirty(tabO);
+          await saveTab(tabO);
+          await wO(100);
+          await buildTree2();
+          await wO(120);
+          const rowNow = () => [...document.querySelectorAll("#tree .scene[data-path]")].find((x) => samePath(x.dataset.path, fileO));
+          let r1 = rowNow();
+          r1.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 60, clientY: 200 }));
+          await wO(120);
+          const miMark = menuItem(t("ui.treeMenu.problem"));
+          check2(
+            '[164-O] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E35\u0E48\u0E09\u0E32\u0E01 \u2192 \u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 "\u0E09\u0E32\u0E01\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32"',
+            !!miMark,
+            [...document.querySelectorAll(".k-menu .k-menu-item")].map((x) => x.textContent).join(" | ").slice(0, 300)
+          );
+          check2("[164-O] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E18\u0E07 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E2A\u0E25\u0E31\u0E1A\u0E09\u0E1A\u0E31\u0E1A", !menuItem(t("ui.treeMenu.problemMenu") + "\u203A") && !menuItem(t("ui.onset.toOriginal")));
+          if (miMark) miMark.click();
+          else closeMenus();
+          await untilO(() => isProblemScene(idO) && tabO._onset);
+          check2("[164-O] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E21\u0E19\u0E39\u0E41\u0E25\u0E49\u0E27\u0E09\u0E32\u0E01\u0E15\u0E34\u0E14\u0E18\u0E07 + \u0E41\u0E17\u0E47\u0E1A\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E17\u0E35\u0E22\u0E1A", isProblemScene(idO) && !!tabO._onset);
+          const recO = onsetRecordOf(idO);
+          const onDisk = recO && recO.path && await kapi.exists(recO.path) ? await kapi.readJson(recO.path) : null;
+          check2(
+            "[164-O] \u2605 \u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E40\u0E01\u0E47\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1F\u0E25\u0E4C OnSet/<id>.json (\u0E2D\u0E48\u0E32\u0E19/\u0E25\u0E1A\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E44\u0E14\u0E49)",
+            !!onDisk && onDisk.baseline === ORIG && /[\\/]OnSet[\\/]/.test(recO.path),
+            recO && recO.path
+          );
+          const mdAfterMark = (0, import_md32.parseMdFile)(await kapi.readFile(fileO)).body;
+          check2("[164-O] \u0E44\u0E1F\u0E25\u0E4C .md \u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30\u0E15\u0E2D\u0E19\u0E15\u0E34\u0E14\u0E18\u0E07", mdAfterMark === ORIG);
+          await untilO(() => !!rowNow() && !!rowNow().querySelector(".tree-onset"));
+          check2("[164-O] \u2605 \u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19 Explorer \u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22 !", !!rowNow() && !!rowNow().querySelector(".tree-onset"));
+          check2("[164-O] \u0E41\u0E17\u0E47\u0E1A\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22 !", tabO.tabBtn.classList.contains("k-onset-tab"));
+          const chip0 = tabO.pane.querySelector(".k-onset-chip");
+          check2(
+            "[164-O] \u2605 \u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E09\u0E32\u0E01\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 (\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E41\u0E01\u0E49 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49)",
+            !!chip0 && chip0.textContent.includes(t("ui.onset.noChanges")),
+            chip0 && chip0.textContent
+          );
+          check2("[164-O] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E41\u0E01\u0E49 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A", tabO.pane.querySelectorAll(".k-onset-line").length === 0);
+          const v4 = tabO.editor.view;
+          let p2 = -1;
+          v4.state.doc.forEach((n2, pos2, i5) => {
+            if (i5 === 1) p2 = pos2;
+          });
+          const endOf2 = p2 + 1 + "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01".length;
+          v4.dispatch(v4.state.tr.insertText(" (\u0E41\u0E01\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E2D\u0E07)", endOf2));
+          await untilO(() => tabO.pane.querySelectorAll(".k-onset-line").length === 1);
+          const lines = [...tabO.pane.querySelectorAll(".ProseMirror .k-onset-line")];
+          check2(
+            "[164-O] \u2605\u2605 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E02\u0E36\u0E49\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E35 1 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1E\u0E2D\u0E14\u0E35",
+            lines.length === 1 && lines[0].textContent.includes("\u0E41\u0E01\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E2D\u0E07"),
+            lines.map((x) => x.textContent).join(" | ")
+          );
+          const bang2 = tabO.pane.querySelector(".ProseMirror .k-onset-bang");
+          check2("[164-O] \u2605\u2605 \u0E21\u0E35\u0E44\u0E2D\u0E04\u0E2D\u0E19 ! \u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49", !!bang2 && bang2.textContent === "!" && lines[0] && lines[0].contains(bang2));
+          const firstX = (node) => {
+            if (!node) return NaN;
+            const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode: (n2) => n2.parentElement && n2.parentElement.closest(".k-onset-bang") || !n2.textContent.trim() ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+            const tn = w.nextNode();
+            if (!tn) return NaN;
+            const i0 = tn.textContent.search(/\S/);
+            const rg = document.createRange();
+            rg.setStart(tn, i0);
+            rg.setEnd(tn, i0 + 1);
+            return rg.getBoundingClientRect().left;
+          };
+          const plainDom = v4.nodeDOM(0);
+          const xChanged = firstX(lines[0]), xPlain = firstX(plainDom);
+          check2(
+            "[164-O] \u2605 ! \u0E44\u0E21\u0E48\u0E14\u0E31\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D (\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1B\u0E01\u0E15\u0E34)",
+            Math.abs(xChanged - xPlain) < 1.5,
+            xChanged + " vs " + xPlain
+          );
+          const bR = bang2.getBoundingClientRect();
+          check2("[164-O] ! \u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 (\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32\u0E02\u0E2D\u0E07 ! \u2264 \u0E2D\u0E31\u0E01\u0E29\u0E23\u0E15\u0E31\u0E27\u0E41\u0E23\u0E01)", bR.width > 4 && bR.right <= xChanged + 1, bR.right + " vs " + xChanged);
+          const band = getComputedStyle(lines[0]);
+          check2(
+            "[164-O] \u0E41\u0E16\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E41\u0E14\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19 (\u0E1E\u0E37\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E44\u0E21\u0E48\u0E42\u0E1B\u0E23\u0E48\u0E07\u0E43\u0E2A + \u0E40\u0E2A\u0E49\u0E19\u0E0B\u0E49\u0E32\u0E22)",
+            band.backgroundColor !== "rgba(0, 0, 0, 0)" && /inset/.test(band.boxShadow),
+            band.backgroundColor + " / " + band.boxShadow
+          );
+          await wO(260);
+          check2(
+            "[164-O] \u0E0A\u0E34\u0E1B\u0E19\u0E31\u0E1A\u0E08\u0E38\u0E14\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 = 1",
+            tabO.pane.querySelector(".k-onset-chip").textContent.includes(tf("ui.onset.nChanges", 1)),
+            tabO.pane.querySelector(".k-onset-chip").textContent
+          );
+          const revisedMd = tabBodyText(tabO);
+          tabO.pane.querySelector(".k-onset-chip-btn").click();
+          await untilO(() => tabO._onset && tabO._onset.view === "original");
+          check2("[164-O] \u2605\u2605 \u0E01\u0E14\u0E0A\u0E34\u0E1B \u2192 \u0E41\u0E2A\u0E14\u0E07\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", tabO._onset.view === "original" && v4.state.doc.textContent.includes("\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01") && !v4.state.doc.textContent.includes("\u0E41\u0E01\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E2D\u0E07"), v4.state.doc.textContent);
+          check2("[164-O] \u2605 \u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 = \u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 (contenteditable=false)", v4.dom.getAttribute("contenteditable") === "false");
+          const beforeTry = v4.state.doc.textContent;
+          v4.dispatch(v4.state.tr.insertText("X", 2));
+          check2("[164-O] \u2605 \u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E17\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 (\u0E18\u0E38\u0E23\u0E01\u0E23\u0E23\u0E21\u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18)", v4.state.doc.textContent === beforeTry);
+          check2("[164-O] \u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E01\u0E47\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E1A\u0E2D\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E41\u0E01\u0E49", tabO.pane.querySelectorAll(".ProseMirror .k-onset-line").length === 1);
+          check2("[164-O] \u0E0A\u0E34\u0E1B\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", tabO.pane.querySelector(".k-onset-chip").classList.contains("is-orig"));
+          check2(
+            "[164-O] \u2605\u2605 \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 \u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01/AI) \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02",
+            tabBodyText(tabO) === revisedMd,
+            tabBodyText(tabO).slice(0, 80)
+          );
+          await saveTab(tabO);
+          const diskO = (0, import_md32.parseMdFile)(await kapi.readFile(fileO)).body;
+          check2("[164-O] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 = \u0E40\u0E02\u0E35\u0E22\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C", diskO === revisedMd, diskO.slice(0, 80));
+          check2("[164-O] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E0B\u0E39\u0E21\u0E44\u0E21\u0E48\u0E1E\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", onsetBeforeCommand("zoom") === false && tabO._onset.view === "original");
+          await handleCommand("save");
+          check2(
+            "[164-O] \u2605\u2605 \u0E2A\u0E31\u0E48\u0E07\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01/\u0E1E\u0E34\u0E21\u0E1E\u0E4C/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01) \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E2A\u0E21\u0E2D",
+            tabO._onset.view === "revised" && v4.state.doc.textContent.includes("\u0E41\u0E01\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E2D\u0E07")
+          );
+          check2("[164-O] \u0E01\u0E25\u0E31\u0E1A\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02\u0E41\u0E25\u0E49\u0E27\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49\u0E2D\u0E35\u0E01", v4.dom.getAttribute("contenteditable") === "true");
+          await handleCommand("onset-toggle");
+          check2("[164-O] \u2605 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 onset-toggle \u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", tabO._onset.view === "original");
+          await handleCommand("onset-toggle");
+          check2("[164-O] \u2605 \u0E2A\u0E31\u0E48\u0E07\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07 = \u0E01\u0E25\u0E31\u0E1A\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02", tabO._onset.view === "revised");
+          const lineNow = tabO.pane.querySelector(".ProseMirror .k-onset-line");
+          lineNow.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }));
+          await wO(120);
+          const miOrig = menuItem(t("ui.onset.toOriginal"));
+          check2("[164-O] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E1A\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32 \u2192 \u0E40\u0E21\u0E19\u0E39\u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", !!miOrig);
+          check2("[164-O] \u0E40\u0E21\u0E19\u0E39\u0E19\u0E31\u0E49\u0E19\u0E22\u0E31\u0E07\u0E21\u0E35\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01/\u0E15\u0E31\u0E14/\u0E27\u0E32\u0E07 (\u0E41\u0E17\u0E19\u0E40\u0E21\u0E19\u0E39\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A)", !!menuItem(t("ui.common.copy")) && !!menuItem(t("ui.menu.paste")));
+          if (miOrig) miOrig.click();
+          else closeMenus();
+          await untilO(() => tabO._onset.view === "original");
+          check2("[164-O] \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E21\u0E19\u0E39\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 \u2192 \u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", tabO._onset.view === "original");
+          r1 = rowNow();
+          r1.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 60, clientY: 200 }));
+          await wO(120);
+          const miBack = menuItem(t("ui.onset.toRevised"));
+          check2('[164-O] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E35\u0E48\u0E09\u0E32\u0E01 (\u0E01\u0E33\u0E25\u0E31\u0E07\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21) \u2192 \u0E21\u0E35 "\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02"', !!miBack);
+          check2('[164-O] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E15\u0E34\u0E14\u0E18\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 "\u0E09\u0E32\u0E01\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32" \u0E0B\u0E49\u0E33', !menuItem(t("ui.treeMenu.problem")));
+          if (miBack) miBack.click();
+          else closeMenus();
+          await untilO(() => tabO._onset.view === "revised");
+          check2("[164-O] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E21\u0E19\u0E39 Explorer \u2192 \u0E01\u0E25\u0E31\u0E1A\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02", tabO._onset.view === "revised");
+          tabO.editor.cmd("undo");
+          await wO(80);
+          check2(
+            "[164-O] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E21\u0E32\u0E41\u0E25\u0E49\u0E27 undo \u0E22\u0E31\u0E07\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E32\u0E23\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49 \u2192 \u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 = \u0E41\u0E16\u0E1A\u0E2B\u0E32\u0E22\u0E40\u0E2D\u0E07",
+            !v4.state.doc.textContent.includes("\u0E41\u0E01\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E2D\u0E07") && tabO.pane.querySelectorAll(".ProseMirror .k-onset-line").length === 0,
+            v4.state.doc.textContent
+          );
+          tabO.editor.cmd("redo");
+          await wO(80);
+          await setProblemColor(idO, "#0090ff");
+          check2("[164-O] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E35\u0E41\u0E16\u0E1A\u0E44\u0E14\u0E49 (\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23\u0E2A\u0E35\u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07)", tabO.pane.style.getPropertyValue("--k-onset-color") === "#0090ff");
+          const band2 = getComputedStyle(tabO.pane.querySelector(".ProseMirror .k-onset-line")).boxShadow;
+          check2("[164-O] \u0E41\u0E16\u0E1A\u0E43\u0E0A\u0E49\u0E2A\u0E35\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07", /0, 144, 255/.test(band2), band2);
+          document.body.classList.add("printing");
+          const hideBang = getComputedStyle(tabO.pane.querySelector(".k-onset-bang")).display === "none";
+          const hideBand = getComputedStyle(tabO.pane.querySelector(".k-onset-line")).boxShadow === "none";
+          const hideChip = getComputedStyle(tabO.pane.querySelector(".k-onset-bar")).display === "none";
+          document.body.classList.remove("printing");
+          check2("[164-O] \u2605 \u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E41\u0E16\u0E1A/\u0E44\u0E2D\u0E04\u0E2D\u0E19 ! /\u0E0A\u0E34\u0E1B\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19 (\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E2A\u0E30\u0E2D\u0E32\u0E14)", hideBang && hideBand && hideChip, [hideBang, hideBand, hideChip].join());
+          const spTab2 = [...state.tabs.values()].find((x) => x.sp);
+          if (spTab2) check2("[164-O] \u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E21\u0E35\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E09\u0E1A\u0E31\u0E1A", !!onsetKey.getState(spTab2.sp.view.state));
+          tabO.pane.querySelector(".k-onset-chip-more").click();
+          await wO(120);
+          const miClear = menuItem(t("ui.onset.clear"));
+          check2('[164-O] \u0E40\u0E21\u0E19\u0E39\u0E02\u0E2D\u0E07\u0E0A\u0E34\u0E1B\u0E21\u0E35 "\u0E40\u0E25\u0E34\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E32\u0E01\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32"', !!miClear);
+          if (miClear) {
+            miClear.click();
+            await untilO(() => !!document.querySelector(".k-dialog .k-ok"));
+            const okBtn = [...document.querySelectorAll(".k-dialog .k-ok")].pop();
+            check2('[164-O] \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E37\u0E19\u0E22\u0E31\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\u0E27\u0E48\u0E32 "\u0E25\u0E1A" (\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E32\u0E23\u0E40\u0E25\u0E34\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A)', okBtn && okBtn.textContent.includes(t("ui.onset.clearBtn")), okBtn && okBtn.textContent);
+            okBtn && okBtn.click();
+            await untilO(() => !isProblemScene(idO) && !tabO._onset);
+          } else closeMenus();
+          check2("[164-O] \u2605\u2605 \u0E40\u0E25\u0E34\u0E01\u0E15\u0E34\u0E14\u0E18\u0E07\u0E41\u0E25\u0E49\u0E27: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E18\u0E07 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E34\u0E1B", !isProblemScene(idO) && !tabO._onset && !tabO.pane.querySelector(".k-onset-chip") && tabO.pane.querySelectorAll(".k-onset-line").length === 0);
+          check2("[164-O] \u2605 \u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E25\u0E1A", !await kapi.exists(recO.path));
+          check2("[164-O] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02) \u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A", tabBodyText(tabO).includes("\u0E41\u0E01\u0E49\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E2D\u0E07"));
+          await untilO(() => !!rowNow() && !rowNow().querySelector(".tree-onset"));
+          check2("[164-O] \u0E1B\u0E49\u0E32\u0E22 ! \u0E43\u0E19 Explorer \u0E2B\u0E32\u0E22\u0E44\u0E1B", !!rowNow() && !rowNow().querySelector(".tree-onset"));
+          {
+            const vL = tabO.editor.view;
+            tabO.locked = true;
+            vL.dispatch(vL.state.tr);
+            vL.dispatch(vL.state.tr.setSelection(TextSelection.create(vL.state.doc, 1, Math.min(6, vL.state.doc.content.size - 1))));
+            const before = tabBodyText(tabO);
+            const bBold = document.getElementById("tb-bold");
+            if (bBold) bBold.click();
+            await handleCommand("fmt", "italic");
+            await handleCommand("text-case-cycle");
+            const r12 = tabO.editor.cmd("strike");
+            await wO(80);
+            check2(
+              "[164-L] \u2605\u2605 \u0E09\u0E32\u0E01\u0E25\u0E47\u0E2D\u0E01: \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E19\u0E32/\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E40\u0E2D\u0E35\u0E22\u0E07/\u0E23\u0E39\u0E1B\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C/\u0E02\u0E35\u0E14\u0E06\u0E48\u0E32 \u2192 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19",
+              tabBodyText(tabO) === before && r12 === false,
+              tabBodyText(tabO).slice(0, 60)
+            );
+            check2("[164-L] \u0E09\u0E32\u0E01\u0E25\u0E47\u0E2D\u0E01: \u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25\u0E17\u0E35\u0E48\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30", ($("#status") && $("#status").textContent || "").length > 0);
+            tabO.locked = false;
+            vL.dispatch(vL.state.tr);
+            tabO.editor.cmd("bold");
+            await wO(40);
+            check2("[164-L] \u0E1B\u0E25\u0E14\u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E33\u0E07\u0E32\u0E19", tabBodyText(tabO) !== before, tabBodyText(tabO).slice(0, 60));
+          }
+          {
+            const { dPath: dL, ch: chL, sc: scL } = rowO._k2row.ctx;
+            const sfL = await kapi.join(dL, "scenes.json"), dfL = await kapi.join(dL, "draft.json");
+            const sBefore = await kapi.readFile(sfL), d0 = await kapi.readFile(dfL);
+            const djL = JSON.parse(d0);
+            const chRow = (djL.chapters || []).find((c) => c.guid === chL.guid);
+            if (chRow) {
+              chRow.locked = true;
+              await kapi.writeFile(dfL, JSON.stringify(djL, null, 2));
+              check2("[164-L] dragLockOf \u0E40\u0E2B\u0E47\u0E19\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01", await dragLockOf(dL, { chGuids: [chL.guid] }) === "chapter");
+              const rMv = await moveSceneBefore(dL, chL, scL.id, chL, null);
+              check2("[164-L] \u2605 \u0E25\u0E32\u0E01\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1A\u0E17\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01 = \u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A (scenes.json \u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19)", rMv === false && await kapi.readFile(sfL) === sBefore);
+              await kapi.writeFile(dfL, d0);
+              check2("[164-L] \u0E1B\u0E25\u0E14\u0E25\u0E47\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E25\u0E32\u0E01\u0E44\u0E14\u0E49\u0E15\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21", await dragLockOf(dL, { chGuids: [chL.guid], sceneId: scL.id, srcGuid: chL.guid }) === "");
+            }
+          }
+          tabO.editor.setMarkdown(keepO);
+          markDirty(tabO);
+          await saveTab(tabO);
+        }
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -217069,7 +219196,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md31;
+  var import_md32;
   var init_selftest = __esm({
     "src/selftest.js"() {
       init_core();
@@ -217107,6 +219234,9 @@ ${css}
       init_tree_actions();
       init_toolbar_ui();
       init_tree_menu_spec();
+      init_onset_ui();
+      init_ai_rewrite_ui();
+      init_onset_plugin();
       init_sp_title_pages();
       init_ai_chat_panel();
       init_custom_status();
@@ -217116,7 +219246,7 @@ ${css}
       init_section_ops();
       init_session_notes();
       init_album_core();
-      import_md31 = __toESM(require_md());
+      import_md32 = __toESM(require_md());
       init_focus_mode();
       init_visual_tags();
       init_ui();
@@ -218954,11 +221084,11 @@ ${css}
       setStatus(t("ui.app.openSceneBefore"));
       return false;
     }
-    const list = m.prose ? proseHeadings(m.blocks) : scenePositions(m.blocks);
-    const item = list[Math.max(1, Math.round(+n2 || 1)) - 1];
+    const list2 = m.prose ? proseHeadings(m.blocks) : scenePositions(m.blocks);
+    const item = list2[Math.max(1, Math.round(+n2 || 1)) - 1];
     const pos = item ? item.pos : null;
     if (pos == null) {
-      setStatus(tf("ui.app.notHasFileHas", m.prose ? t("ui.app.heading") : t("ui.common.scene2"), n2, list.length));
+      setStatus(tf("ui.app.notHasFileHas", m.prose ? t("ui.app.heading") : t("ui.common.scene2"), n2, list2.length));
       return false;
     }
     (m.prose ? m.tab.editor : m.tab.sp).gotoPos(pos);
@@ -219005,24 +221135,24 @@ ${css}
     const find = el("input", "k-dlg-input k-goto-find");
     find.placeholder = t("ui.app.gotoFindPlaceholder");
     box2.append(find);
-    const list = el("div", "k-goto-list");
+    const list2 = el("div", "k-goto-list");
     const renderList2 = () => {
-      list.replaceChildren();
+      list2.replaceChildren();
       const isScene = sel.value === "scene";
       find.style.display = isScene ? "" : "none";
       if (!isScene) {
-        list.style.display = "none";
+        list2.style.display = "none";
         return;
       }
-      list.style.display = "";
+      list2.style.display = "";
       if (!scenes.length) {
-        list.append(el("div", "cmp-empty", tf("ui.app.fileNotHas", unit)));
+        list2.append(el("div", "cmp-empty", tf("ui.app.fileNotHas", unit)));
         return;
       }
       const q = find.value.trim().toLowerCase();
       const rows = q ? scenes.filter((x) => String(x.n) === q || String(x.text || "").toLowerCase().includes(q)) : scenes;
       if (!rows.length) {
-        list.append(el("div", "cmp-empty", t("ui.app.gotoFindNone")));
+        list2.append(el("div", "cmp-empty", t("ui.app.gotoFindNone")));
         return;
       }
       for (const s of rows) {
@@ -219031,17 +221161,17 @@ ${css}
           ov.remove();
           gotoScene(s.n);
         };
-        list.append(d);
+        list2.append(d);
       }
     };
     find.oninput = renderList2;
     find.onkeydown = (e) => {
       if (e.key !== "Enter") return;
       e.preventDefault();
-      const first = list.querySelector(".k-menu-item");
+      const first = list2.querySelector(".k-menu-item");
       if (first) first.click();
     };
-    box2.append(list);
+    box2.append(list2);
     const go = () => {
       const n2 = parseInt(inp.value, 10) || 1;
       ov.remove();
@@ -219182,8 +221312,8 @@ ${css}
     const box2 = el("div", "k-dialog k-err-dlg");
     box2.append(el("div", "k-dlg-title", t("ui.app.checkScreenplay")));
     box2.append(el("div", "dim", summaryText(errs)));
-    const list = el("div", "k-err-list");
-    if (!errs.length) list.append(el("div", "cmp-empty", t("ui.app.notFoundError")));
+    const list2 = el("div", "k-err-list");
+    if (!errs.length) list2.append(el("div", "cmp-empty", t("ui.app.notFoundError")));
     for (const e of errs.slice().sort((a, b) => a.block - b.block)) {
       const row3 = el("div", "k-err-row " + e.severity);
       row3.append(el("span", "k-err-dot", e.severity === "error" ? gi("forbidden") : gi("warning-e")));
@@ -219194,9 +221324,9 @@ ${css}
         ov.remove();
         if (Number.isFinite(e.pos)) t22.sp.gotoPos(e.pos);
       };
-      list.append(row3);
+      list2.append(row3);
     }
-    box2.append(list);
+    box2.append(list2);
     const btns = el("div", "k-dlg-btns");
     const bRe = el("button", null, t("ui.app.checkNew"));
     bRe.onclick = () => {
@@ -219228,7 +221358,7 @@ ${css}
     const t22 = tab || state.active;
     if (!t22 || !t22.sp) return null;
     return {
-      blocks: blocksFromDoc(t22.sp.view.state.doc),
+      blocks: blocksFromDoc(revisedDoc(t22) || t22.sp.view.state.doc),
       fmt: spFormat(),
       startPage: currentStartPage(t22),
       tab: t22
@@ -219665,6 +221795,7 @@ ${css}
     resetSplitSystem();
     resetKanban();
     resetAnalyzer();
+    resetOnset();
     resetReview();
     resetCommentStore();
     _cmMigrated.clear();
@@ -219858,9 +221989,9 @@ ${css}
     let tr4;
     if (from2 <= 0 && to >= st.doc.content.size) {
       const blockType = st.schema.nodes.paragraph || st.schema.topNodeType.contentMatch.defaultType;
-      const empty2 = blockType && blockType.createAndFill();
-      if (!empty2) return false;
-      tr4 = st.tr.replaceWith(0, st.doc.content.size, empty2);
+      const empty3 = blockType && blockType.createAndFill();
+      if (!empty3) return false;
+      tr4 = st.tr.replaceWith(0, st.doc.content.size, empty3);
     } else {
       tr4 = st.tr.delete(from2, to);
     }
@@ -220154,7 +222285,7 @@ ${css}
     for (const tab of hits) {
       if (!tab.editor && !tab.sp && !tab.plain) continue;
       try {
-        const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(tab.file));
+        const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(tab.file));
         if (body === tab.body) continue;
         tab.meta = meta2;
         tab.body = body;
@@ -220666,8 +222797,8 @@ ${css}
     } catch {
     }
   }
-  function sortSceneRows(list, mode, mtimes) {
-    const out = list.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  function sortSceneRows(list2, mode, mtimes) {
+    const out = list2.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     if (!mode) return out;
     if (mode === "name") return out.sort((a, b) => _thCmp(a.title, b.title));
     if (mode === "words") return out.sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0));
@@ -220793,13 +222924,13 @@ ${css}
     ];
   }
   function treeCopy(items, mode) {
-    const list = items && items.length ? items : treeSelCtx();
-    if (!list.length) {
+    const list2 = items && items.length ? items : treeSelCtx();
+    if (!list2.length) {
       setStatus(t("ui.tree.nothingSelected"));
       return 0;
     }
     treeClip.mode = mode;
-    treeClip.items = list.map((it) => ({
+    treeClip.items = list2.map((it) => ({
       dPath: it.dPath,
       chGuid: it.ch.guid,
       folderName: it.ch.folderName,
@@ -220842,7 +222973,7 @@ ${css}
           }
           let meta2 = {}, body = "";
           try {
-            const parsed = (0, import_md32.parseMdFile)(await kapi.readFile(it.file));
+            const parsed = (0, import_md33.parseMdFile)(await kapi.readFile(it.file));
             meta2 = parsed.meta;
             body = parsed.body;
           } catch {
@@ -220877,14 +223008,14 @@ ${css}
     return n2;
   }
   async function treeDuplicate(items) {
-    const list = items && items.length ? items : treeSelCtx();
-    if (!list.length) {
+    const list2 = items && items.length ? items : treeSelCtx();
+    if (!list2.length) {
       setStatus(t("ui.tree.nothingSelected"));
       return 0;
     }
     let ok2 = 0;
     const failed = [];
-    for (const it of list) {
+    for (const it of list2) {
       try {
         if (await duplicateScene(it.dPath, it.ch, it.sc) === false) failed.push(it.sc?.title || "");
         else ok2++;
@@ -220897,16 +223028,16 @@ ${css}
     return ok2;
   }
   async function treeDeleteSelected(items) {
-    const list = items && items.length ? items : treeSelCtx();
-    if (!list.length) {
+    const list2 = items && items.length ? items : treeSelCtx();
+    if (!list2.length) {
       setStatus(t("ui.tree.nothingSelected"));
       return 0;
     }
-    if (!await confirmBox(tf("ui.tree.confirmDeleteN", list.length), t("ui.app.del"))) return 0;
+    if (!await confirmBox(tf("ui.tree.confirmDeleteN", list2.length), t("ui.app.del"))) return 0;
     let ok2 = 0;
     const failed = [];
     let lastTrash = "";
-    for (const it of list) {
+    for (const it of list2) {
       try {
         lastTrash = await deleteSceneSilent(it.dPath, it.ch, it.sc) || lastTrash;
         ok2++;
@@ -220950,13 +223081,13 @@ ${css}
     return dst;
   }
   async function treeMoveMenu(items) {
-    const list = items && items.length ? items : treeSelCtx();
-    if (!list.length) return 0;
+    const list2 = items && items.length ? items : treeSelCtx();
+    if (!list2.length) return 0;
     const dst = await pickDraftTarget({ title: t("ui.tree.moveToChapter") });
     if (!dst) return 0;
     let skipped = 0, ok2 = 0;
     const failed = [];
-    for (const it of list) {
+    for (const it of list2) {
       if (it.dPath !== dst.dPath) {
         skipped++;
         continue;
@@ -221520,6 +223651,27 @@ ${css}
               async () => togglePinItem("scene", sc.id, { title: title2, dRel: await relOf(dPath) }),
               pinned("scene", sc.id)
             );
+          // [alpha.164] ฉากมีปัญหา — ติดธง (ยังไม่ติด) · สลับฉบับ + เมนูย่อย (ติดแล้ว)
+          case "problem":
+            return isProblemScene(sc.id) ? null : free(() => markSceneProblem({ sc, file }));
+          case "problemToggle": {
+            if (!isProblemScene(sc.id)) return null;
+            const orig = onsetViewOf(file) === "original";
+            return {
+              label: t(orig ? "ui.onset.toRevised" : "ui.onset.toOriginal"),
+              cmd: "onset-toggle",
+              click: async () => {
+                await openScene(file, sc.title);
+                const tb2 = state.tabs.get(file);
+                if (tb2) {
+                  await applyOnsetToTab(tb2);
+                  toggleOnsetView(tb2);
+                }
+              }
+            };
+          }
+          case "problemMenu":
+            return isProblemScene(sc.id) ? { label: t("ui.treeMenu.problemMenu"), sub: () => onsetMenuItems(state.tabs.get(file) || null, { sc }) } : null;
           case "saveVersion":
             return free(() => manualSnapshot(dPath, ch, sc));
           case "versionHistory":
@@ -221871,13 +224023,13 @@ ${css}
       rows = ((await kapi.readJson(await kapi.join(dPath, "scenes.json"))).chapters || {})[ch.guid] || [];
     } catch {
     }
-    const list = rows.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    if (!list.length) {
+    const list2 = rows.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!list2.length) {
       setStatus(t("ui.treeAct.visualNone"));
       return;
     }
     const items = [];
-    for (const r of list) {
+    for (const r of list2) {
       const f = await kapi.join(dPath, "Chapters", ch.folderName, r.fileName);
       const has2 = await hasVis(f);
       items.push({
@@ -222109,6 +224261,8 @@ ${css}
     const skip = /* @__PURE__ */ new Set(["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", ".k2history", "Plugins", "Recycle", "Sessions", "Starters"]);
     const sortMode = treeSortMode();
     const snapCounts = await snapshotCounts();
+    await loadOnsetIndex().catch(() => {
+    });
     try {
       await buildProjectHead(tree);
     } catch (e) {
@@ -222318,6 +224472,12 @@ ${css}
               scEl.append(document.createTextNode(icon2 + sc.title));
               if (sc.isFlashback) scEl.append(el("span", "tree-flash", gi("rewind")));
               else if (sc.isFlashforward) scEl.append(el("span", "tree-flash", gi("fast-forward")));
+              if (isProblemScene(sc.id)) {
+                const pb = el("span", "tree-onset", "!");
+                pb.title = t("ui.onset.treeBadge");
+                scEl.append(pb);
+                scEl.classList.add("k-row-onset");
+              }
               const scPath = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
               if (sc.imageCount || sc.wordCount) {
               }
@@ -222587,7 +224747,7 @@ ${css}
         raw = await kapi.readFile(p);
       } catch {
       }
-      const meta2 = (0, import_md32.parseMdFile)(raw).meta || {};
+      const meta2 = (0, import_md33.parseMdFile)(raw).meta || {};
       memoRows.push({
         f,
         p,
@@ -223044,16 +225204,16 @@ ${css}
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog");
       box2.append(el("div", "k-dlg-title", title2));
-      const list = el("div", "k-pick-list");
+      const list2 = el("div", "k-pick-list");
       for (const it of items) {
         const d = el("div", "k-menu-item", it);
         d.onclick = () => {
           ov.remove();
           resolve(it);
         };
-        list.append(d);
+        list2.append(d);
       }
-      box2.append(list);
+      box2.append(list2);
       const btns = el("div", "k-dlg-btns");
       const c = el("button", "k-cancel", t("ui.common.cancel"));
       c.onclick = () => {
@@ -223567,22 +225727,22 @@ ${css}
     const mt = state.tabs.get(memoPath);
     if (!await flushTabForMove(mt)) return false;
     if (mt) closeTab(memoPath, { discard: true });
-    const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(memoPath));
+    const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(memoPath));
     const title2 = meta2.title || (memoPath.split(/[\\/]/).pop() || "memo").replace(/\.md$/i, "");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
-    const list = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const used = new Set(list.map((x) => x.fileName));
+    const list2 = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const used = new Set(list2.map((x) => x.fileName));
     let n2 = 1, fileName;
     do {
       fileName = "memo-" + String(n2++).padStart(2, "0") + ".md";
     } while (used.has(fileName));
     await writeKeepingComments(
       await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-      (0, import_md32.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body),
+      (0, import_md33.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body),
       memoPath
     );
-    const row3 = { id: guid(), title: title2, order: list.length + 1, fileName, type: "memo" };
+    const row3 = { id: guid(), title: title2, order: list2.length + 1, fileName, type: "memo" };
     await mutateJson(kapi, sf, (fresh) => {
       fresh.chapters = fresh.chapters || {};
       const cur = (fresh.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -223611,8 +225771,8 @@ ${css}
       dst = await kapi.join(memoDir, base4 + (n2 ? "-" + n2 : "") + ".md");
       n2++;
     } while (await kapi.exists(dst));
-    const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(src2));
-    await writeKeepingComments(dst, (0, import_md32.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body), src2);
+    const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(src2));
+    await writeKeepingComments(dst, (0, import_md33.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body), src2);
     const sf = await kapi.join(dPath, "scenes.json");
     await mutateJson(kapi, sf, (d) => {
       d.chapters = d.chapters || {};
@@ -223636,10 +225796,10 @@ ${css}
     if (!row3) return false;
     try {
       const file = await kapi.join(dPath, "Chapters", ch.folderName, row3.fileName);
-      const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
-      await writeKeepingComments(file, (0, import_md32.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md33.dumpMdFile)(meta2, body));
       await syncOpenTabMeta(file);
     } catch {
     }
@@ -223891,9 +226051,9 @@ ${css}
       const t3 = el("div", "k-dlg-title", t("ui.app.bindCardDocProject"));
       const inp = el("input", "k-dlg-input");
       inp.placeholder = t("ui.app.printFilter");
-      const list = el("div", "planner-board-list");
+      const list2 = el("div", "planner-board-list");
       const draw3 = (q) => {
-        list.innerHTML = "";
+        list2.innerHTML = "";
         const ql = (q || "").trim().toLowerCase();
         let n2 = 0;
         for (const it of items) {
@@ -223905,9 +226065,9 @@ ${css}
             ov.remove();
             resolve(it);
           };
-          list.appendChild(row3);
+          list2.appendChild(row3);
         }
-        if (!n2) list.appendChild(el("div", "planner-props-empty", t("ui.app.notFoundDocAt")));
+        if (!n2) list2.appendChild(el("div", "planner-props-empty", t("ui.app.notFoundDocAt")));
       };
       draw3("");
       inp.oninput = () => draw3(inp.value);
@@ -223918,7 +226078,7 @@ ${css}
         resolve(null);
       };
       btns.appendChild(cancel);
-      box2.append(t3, inp, list, btns);
+      box2.append(t3, inp, list2, btns);
       ov.appendChild(box2);
       document.body.appendChild(ov);
       ov.onclick = (e) => {
@@ -224129,13 +226289,13 @@ ${css}
     const boards = await listPlannerBoards();
     const sec = el("div", "sec");
     const head2 = el("div", "sec-title", tf("ui.app.boardPlanner2", boards.length));
-    const add = el("span", "row-add", "+");
-    add.title = t("ui.common.newBoardNew");
-    add.onclick = (e) => {
+    const add2 = el("span", "row-add", "+");
+    add2.title = t("ui.common.newBoardNew");
+    add2.onclick = (e) => {
       e.stopPropagation();
       newPlannerBoard();
     };
-    head2.append(add);
+    head2.append(add2);
     sec.append(head2);
     makeAccordion(head2, sec, "sec:__planner__");
     bindTreeMenu(head2, "plannerHead", { title: "" });
@@ -224176,9 +226336,9 @@ ${css}
       sec.append(it);
     }
     if (!boards.length) {
-      const empty2 = el("div", "scene add-row", t("ui.app.newBoardFirst"));
-      empty2.onclick = () => newPlannerBoard();
-      sec.append(empty2);
+      const empty3 = el("div", "scene add-row", t("ui.app.newBoardFirst"));
+      empty3.onclick = () => newPlannerBoard();
+      sec.append(empty3);
     }
     const note = el("div", "scene planner-filter-note", "");
     note.dataset.nofilter = "1";
@@ -224203,15 +226363,15 @@ ${css}
     const jsonPath = await kapi.join(state.root, "maps.json");
     const sec = el("div", "sec");
     const head2 = el("div", "sec-title", tf("ui.app.map", maps.length));
-    const add = el("span", "row-add", "+");
-    add.title = t("ui.app.addMapNew");
-    add.onclick = async (e) => {
+    const add2 = el("span", "row-add", "+");
+    add2.title = t("ui.app.addMapNew");
+    add2.onclick = async (e) => {
       e.stopPropagation();
       await openMaps();
       await addMapFlow();
       await refreshTreeQueued();
     };
-    head2.append(add);
+    head2.append(add2);
     sec.append(head2);
     makeAccordion(head2, sec, "sec:__maps__");
     head2.oncontextmenu = (e) => {
@@ -224291,13 +226451,13 @@ ${css}
       }
     }
     if (!maps.length) {
-      const empty2 = el("div", "scene add-row", t("ui.app.newMapFirst"));
-      empty2.onclick = async () => {
+      const empty3 = el("div", "scene add-row", t("ui.app.newMapFirst"));
+      empty3.onclick = async () => {
         await openMaps();
         await addMapFlow();
         await refreshTreeQueued();
       };
-      sec.append(empty2);
+      sec.append(empty3);
     }
     tree.append(sec);
     return sec;
@@ -224309,13 +226469,13 @@ ${css}
     const cur = currentBranchPlan2();
     const sec = el("div", "sec");
     const head2 = el("div", "sec-title", tf("ui.app.graphBreakBranch2", plans.length));
-    const add = el("span", "row-add", "+");
-    add.title = t("ui.app.newNewPlan");
-    add.onclick = async (e) => {
+    const add2 = el("span", "row-add", "+");
+    add2.title = t("ui.app.newNewPlan");
+    add2.onclick = async (e) => {
       e.stopPropagation();
       await newBranchPlanFromTree();
     };
-    head2.append(add);
+    head2.append(add2);
     sec.append(head2);
     makeAccordion(head2, sec, "sec:__branchplans__");
     bindTreeMenu(head2, "branchHead", { title: "" });
@@ -224356,10 +226516,10 @@ ${css}
       sec.append(it);
     }
     if (!plans.length) {
-      const empty2 = el("div", "scene add-row", t("ui.app.newPlanFirst"));
-      empty2.onclick = () => add.onclick({ stopPropagation() {
+      const empty3 = el("div", "scene add-row", t("ui.app.newPlanFirst"));
+      empty3.onclick = () => add2.onclick({ stopPropagation() {
       } });
-      sec.append(empty2);
+      sec.append(empty3);
     }
     tree.append(sec);
     return sec;
@@ -224493,7 +226653,7 @@ ${css}
         const abs = await kapi.join(memoDir, f);
         let title2 = f.replace(/\.md$/i, "");
         try {
-          title2 = (0, import_md32.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
+          title2 = (0, import_md33.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
         } catch {
         }
         out.push({
@@ -224519,21 +226679,21 @@ ${css}
       const q = el("input", "k-dlg-input");
       q.placeholder = t("ui.app.printFilter");
       box2.append(q);
-      const list = el("div", "k-pick-list");
+      const list2 = el("div", "k-pick-list");
       const rows = items.map((it) => {
         const d = el("div", "k-menu-item", it.label);
         d.onclick = () => {
           ov.remove();
           resolve(it);
         };
-        list.append(d);
+        list2.append(d);
         return { it, d };
       });
       q.oninput = () => {
         const s = q.value.trim().toLowerCase();
         for (const { it, d } of rows) d.style.display = !s || it.label.toLowerCase().includes(s) ? "" : "none";
       };
-      box2.append(list);
+      box2.append(list2);
       const btns = el("div", "k-dlg-btns");
       const c = el("button", "k-cancel", t("ui.common.cancel"));
       c.onclick = () => {
@@ -225047,10 +227207,10 @@ ${css}
     const row3 = res.changed ? res.result : null;
     const file = await kapi.join(dPath, "Chapters", ch.folderName, (row3 || sc).fileName);
     try {
-      const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
       else delete meta2.locked;
-      await writeKeepingComments(file, (0, import_md32.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md33.dumpMdFile)(meta2, body));
     } catch {
     }
     const openTab = state.tabs.get(file);
@@ -225194,7 +227354,7 @@ ${css}
     if (stale2()) return;
     let vmeta = {};
     try {
-      vmeta = (0, import_md32.parseMdFile)(await kapi.readFile(file0)).meta;
+      vmeta = (0, import_md33.parseMdFile)(await kapi.readFile(file0)).meta;
     } catch {
     }
     if (stale2()) return;
@@ -225397,7 +227557,7 @@ ${css}
       const aiCtx = async () => {
         let mdBody = "";
         try {
-          mdBody = (0, import_md32.parseMdFile)(await kapi.readFile(file0)).body || "";
+          mdBody = (0, import_md33.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
         return { body: mdBody, title: row3.title || "" };
@@ -225467,7 +227627,7 @@ ${css}
     }
   }
   function dumpAlignComments(body, map2) {
-    return (0, import_md32.docToMd)((0, import_md32.mdToDoc)(String(body || ""), map2), { alignComments: true });
+    return (0, import_md33.docToMd)((0, import_md33.mdToDoc)(String(body || ""), map2), { alignComments: true });
   }
   async function buildDraftModel(dPath, title2) {
     let book = "";
@@ -225503,13 +227663,13 @@ ${css}
         const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
         let body = "", meta2 = {};
         try {
-          ({ meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(file)));
+          ({ meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file)));
         } catch {
           continue;
         }
         if (meta2 && meta2.align) {
           try {
-            const map2 = (0, import_md32.alignFromString)(meta2.align);
+            const map2 = (0, import_md33.alignFromString)(meta2.align);
             if (map2 && Object.keys(map2).length) {
               body = dumpAlignComments(body, map2);
             }
@@ -225540,7 +227700,7 @@ ${css}
           // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
           format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
-          words: (0, import_md32.countWords)(body || "")
+          words: (0, import_md33.countWords)(body || "")
         });
       }
       model.chapters.push(c);
@@ -225700,8 +227860,8 @@ ${css}
       };
       extRow.append(selExt);
       right.append(extRow);
-      const list = el("div", "cmp-steps");
-      list.id = "cmp-steps";
+      const list2 = el("div", "cmp-steps");
+      list2.id = "cmp-steps";
       const STAGE_TH = { model: t("ui.common.body"), render: t("ui.app.msg5"), text: t("ui.app.textLast") };
       (w.steps || []).forEach((st, i5) => {
         const d = stepDef(st.key);
@@ -225743,7 +227903,7 @@ ${css}
           };
           rowEl2.append(up, dn);
         }
-        list.append(rowEl2);
+        list2.append(rowEl2);
         for (const f of d.fields || []) {
           const fr = el("div", "cmp-field");
           fr.append(el("label", null, f.label));
@@ -225758,7 +227918,7 @@ ${css}
               await saveProjectMeta();
             };
             fr.append(cb2);
-            list.append(fr);
+            list2.append(fr);
             continue;
           }
           const inp = el(f.type === "code" ? "textarea" : "input", "k-dlg-input");
@@ -225770,10 +227930,10 @@ ${css}
             await saveProjectMeta();
           };
           fr.append(inp);
-          list.append(fr);
+          list2.append(fr);
         }
       });
-      right.append(list);
+      right.append(list2);
     };
     const prev = el("pre", "cmp-preview");
     prev.id = "cmp-preview";
@@ -225871,7 +228031,8 @@ ${css}
     if (t22 && t22.sp) {
       return {
         md: t22.sp.getMarkdown(),
-        blocks: blocksFromDoc(t22.sp.view.state.doc),
+        blocks: blocksFromDoc(revisedDoc(t22) || t22.sp.view.state.doc),
+        // [alpha.164] ส่งออก = ฉบับแก้ไข
         title: t22.title || state.title
       };
     }
@@ -226872,9 +229033,9 @@ ${css}
       for (let ci = 0; ci < chapters.length; ci++) {
         const ch = chapters[ci];
         if (ch.folderName && folder && ch.folderName !== folder) continue;
-        const list = ((scenes.chapters || {})[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-        const si = list.findIndex((s) => s.fileName === fname);
-        if (si >= 0) return { dPath, ch, row: list[si], chapterNo: ci + 1, sceneNo: si + 1 };
+        const list2 = ((scenes.chapters || {})[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+        const si = list2.findIndex((s) => s.fileName === fname);
+        if (si >= 0) return { dPath, ch, row: list2[si], chapterNo: ci + 1, sceneNo: si + 1 };
       }
     } catch (e) {
       log("warn", "sceneCtx failed", e);
@@ -227187,7 +229348,7 @@ ${css}
     await W(await kapi.join(dr, "scenes.json"), { chapters: { [ch.guid]: [sc] } });
     await kapi.writeFile(
       await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-      (0, import_md32.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
+      (0, import_md33.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
     );
     for (const d of [
       "Images",
@@ -227302,11 +229463,11 @@ ${css}
     });
   }
   async function renameMemo(file) {
-    const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file));
     const title2 = await ask(t("ui.app.nameMemoNew"), { value: meta2.title || "" });
     if (!title2) return;
     meta2.title = title2;
-    await writeKeepingComments(file, (0, import_md32.dumpMdFile)(meta2, body));
+    await writeKeepingComments(file, (0, import_md33.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -227366,7 +229527,7 @@ ${css}
     const dir2 = await kapi.join(state.root, "Memos");
     await kapi.mkdir(dir2);
     const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
-    await kapi.writeFile(file, (0, import_md32.dumpMdFile)({ title: title2, type: "memo" }, ""));
+    await kapi.writeFile(file, (0, import_md33.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
   }
@@ -227392,7 +229553,7 @@ ${css}
   async function openSceneNow(file, title2) {
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md32.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md33.parseMdFile)(raw);
     title2 = title2 || meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, "");
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
@@ -227446,6 +229607,7 @@ ${css}
           scheduleOutline();
           scheduleSpSmart(tab);
           scheduleRepaginate();
+          onsetChanged(tab);
         },
         // [alpha.60r2 ข้อ 3] Enter = จัดหน้าใหม่ทันที ไม่รอ debounce (เส้นคั่นหน้าไม่กระตุก)
         onKeyDown: (ev) => {
@@ -227461,11 +229623,11 @@ ${css}
         onMention: (name5) => {
           if (smart.fileOf[name5]) openEntity(smart.fileOf[name5]);
         },
-        editable: () => !tab.locked
-        // ล็อก = แก้ไม่ได้
+        editable: () => !tab.locked && !tab._onsetSaved
+        // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
       });
       try {
-        tab.sp.applyAlignMap((0, import_md32.alignFromString)(tab.meta.align));
+        tab.sp.applyAlignMap((0, import_md33.alignFromString)(tab.meta.align));
       } catch {
       }
       pane.addEventListener("click", () => {
@@ -227479,12 +229641,13 @@ ${css}
         markdown: body,
         // [alpha.58r บั๊ก 25] จัดหน้าย่อหน้าเก็บใน frontmatter (`align: [3:center]`) → .md สะอาด
         // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
-        alignMap: (0, import_md32.alignFromString)(tab.meta.align),
+        alignMap: (0, import_md33.alignFromString)(tab.meta.align),
         alignComments: state.settings.mdAlignStyle === "comment",
         onChange: () => {
           markDirty(tab);
           scheduleCount();
           scheduleOutline();
+          onsetChanged(tab);
           setTimeout(() => smart.check(tab.editor.view), 0);
         },
         resolveSrc: (p) => resolveImg(dir2, p),
@@ -227498,8 +229661,8 @@ ${css}
           if (smart.fileOf[name5]) openEntity(smart.fileOf[name5]);
         },
         getChecker: spellChecker,
-        editable: () => !tab.locked
-        // ล็อก = แก้ไม่ได้
+        editable: () => !tab.locked && !tab._onsetSaved
+        // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
       });
       pane.addEventListener("click", () => {
         refreshToolbar();
@@ -227531,6 +229694,7 @@ ${css}
       centerPage(pane);
       updatePageNumberHint();
     });
+    applyOnsetToTab(tab).catch((e) => log("warn", "onset", e));
   }
   async function switchFormat(target) {
     const tab = state.active;
@@ -227541,6 +229705,7 @@ ${css}
     const cur = (tab.meta.format || "prose") === "screenplay" ? "screenplay" : "prose";
     const to = target || (cur === "prose" ? "screenplay" : "prose");
     if (to === cur) return;
+    exitOriginal(tab);
     const src2 = tab.editor || tab.sp;
     const was = tab.dirty ? src2.getMarkdown() : tab.body ?? src2.getMarkdown();
     const dir2 = tab.file.replace(/[\\/][^\\/]*$/, "");
@@ -227569,10 +229734,10 @@ ${css}
       delete tab.meta.spMap;
       delete tab.meta.spHash;
     }
-    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md32.alignToString)(conv.align) + "]";
+    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md33.alignToString)(conv.align) + "]";
     mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
-    await writeKeepingComments(tab.file, (0, import_md32.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md33.dumpMdFile)(tab.meta, body));
     tab.diskBody = body;
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
@@ -227611,20 +229776,20 @@ ${css}
   function smartIgnoreAdd(word) {
     const w = String(word || "").trim();
     if (!w || !state.meta) return smartIgnoreList();
-    const list = smartIgnoreList();
-    if (!list.some((x) => x.toLowerCase() === w.toLowerCase())) list.push(w);
-    state.meta.smartIgnore = list;
+    const list2 = smartIgnoreList();
+    if (!list2.some((x) => x.toLowerCase() === w.toLowerCase())) list2.push(w);
+    state.meta.smartIgnore = list2;
     state.meta.smartPin = smartPinList().filter((x) => x.trim().toLowerCase() !== w.toLowerCase());
     saveProjectMetaSoon();
-    return list;
+    return list2;
   }
   function smartIgnoreRemove(word) {
     const w = String(word || "").trim().toLowerCase();
     if (!state.meta) return smartIgnoreList();
-    const list = smartIgnoreList().filter((x) => x.trim().toLowerCase() !== w);
-    state.meta.smartIgnore = list;
+    const list2 = smartIgnoreList().filter((x) => x.trim().toLowerCase() !== w);
+    state.meta.smartIgnore = list2;
     saveProjectMetaSoon();
-    return list;
+    return list2;
   }
   function smartPinList() {
     const v2 = state.meta && state.meta.smartPin;
@@ -227633,20 +229798,20 @@ ${css}
   function smartPinAdd(word) {
     const w = String(word || "").trim();
     if (!w || !state.meta) return smartPinList();
-    const list = smartPinList();
-    if (!list.some((x) => x.toLowerCase() === w.toLowerCase())) list.push(w);
-    state.meta.smartPin = list;
+    const list2 = smartPinList();
+    if (!list2.some((x) => x.toLowerCase() === w.toLowerCase())) list2.push(w);
+    state.meta.smartPin = list2;
     state.meta.smartIgnore = smartIgnoreList().filter((x) => x.trim().toLowerCase() !== w.toLowerCase());
     saveProjectMetaSoon();
-    return list;
+    return list2;
   }
   function smartPinRemove(word) {
     const w = String(word || "").trim().toLowerCase();
     if (!state.meta) return smartPinList();
-    const list = smartPinList().filter((x) => x.trim().toLowerCase() !== w);
-    state.meta.smartPin = list;
+    const list2 = smartPinList().filter((x) => x.trim().toLowerCase() !== w);
+    state.meta.smartPin = list2;
     saveProjectMetaSoon();
-    return list;
+    return list2;
   }
   function smartLearnMin() {
     return learnMin(state.settings.smartLearnMin);
@@ -227766,10 +229931,10 @@ ${css}
       const known2 = { chars: smart.byCat?.characters || [], locs: smart.byCat?.locations || [] };
       for (const [title2, key2] of [[t("ui.app.characterChapter"), "chars"], [t("ui.app.placeChapter"), "locs"]]) {
         const opt = { ...base4, known: known2[key2] };
-        const list = learnedTerms(counts[key2], opt);
+        const list2 = learnedTerms(counts[key2], opt);
         body.append(el("div", "k-set-sub", title2));
-        if (!list.length) body.append(el("div", "cmp-empty", t("ui.app.notHas")));
-        for (const w of list) {
+        if (!list2.length) body.append(el("div", "cmp-empty", t("ui.app.notHas")));
+        for (const w of list2) {
           const row3 = el("div", "k-smart-row");
           row3.append(el("span", "k-smart-word", w));
           row3.append(el("span", "dim", " " + gi("times") + " " + (counts[key2].get(w) || 0)));
@@ -227793,9 +229958,9 @@ ${css}
             const row3 = el("div", "k-smart-row k-smart-wait");
             row3.append(el("span", "k-smart-word dim", p.word));
             row3.append(el("span", "dim", " " + gi("times") + " " + p.count + (p.ok ? "" : t("ui.app.pageNotName"))));
-            const add = el("button", null, t("ui.app.remember2"));
-            add.title = t("ui.app.rememberWordFoundTimes");
-            add.onclick = () => {
+            const add2 = el("button", null, t("ui.app.remember2"));
+            add2.title = t("ui.app.rememberWordFoundTimes");
+            add2.onclick = () => {
               smartPinAdd(p.word);
               render();
             };
@@ -227805,7 +229970,7 @@ ${css}
               smartIgnoreAdd(p.word);
               render();
             };
-            row3.append(add, x);
+            row3.append(add2, x);
             body.append(row3);
           }
         }
@@ -227927,6 +230092,7 @@ ${css}
       wireTabDrag(t3);
     }
     state.active = state.tabs.get(file) || null;
+    if (rewriteBarTab() && rewriteBarTab() !== state.active) closeRewriteBar();
     if (file && /\.md$/i.test(file) && /[\\/]Chapters[\\/]/.test(file)) state.lastSceneFile = file;
     if (state.active) {
       (state.active.editor || state.active.sp || state.active.plain)?.focus?.();
@@ -228030,7 +230196,7 @@ ${css}
       if (!tab.file || !/\.md$/i.test(tab.file) || !tab.editor && !tab.sp) continue;
       let disk;
       try {
-        disk = (0, import_md32.parseMdFile)(await kapi.readFile(tab.file)).body;
+        disk = (0, import_md33.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         continue;
       }
@@ -228095,7 +230261,7 @@ ${css}
       const base4 = tab.diskBody !== void 0 ? tab.diskBody : tab.body;
       let diskNow;
       try {
-        diskNow = (0, import_md32.parseMdFile)(await kapi.readFile(tab.file)).body;
+        diskNow = (0, import_md33.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         diskNow = await kapi.exists(tab.file).catch(() => true) ? base4 : null;
       }
@@ -228113,19 +230279,19 @@ ${css}
     }
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
-      const am = (0, import_md32.alignToString)(tab.editor.getAlignMap());
+      const am = (0, import_md33.alignToString)(tab.editor.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     if (tab.sp) {
-      const am = (0, import_md32.alignToString)(tab.sp.getAlignMap());
+      const am = (0, import_md33.alignToString)(tab.sp.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
     tab.meta.appVersion = APP_VERSION;
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
-    await writeKeepingComments(tab.file, (0, import_md32.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md33.dumpMdFile)(tab.meta, body));
     tab.diskBody = body;
     tab._conflictWarned = false;
     tab._diskWarned = false;
@@ -228185,7 +230351,7 @@ ${css}
     try {
       const ctx2 = await sceneCtx(tab.file);
       if (!ctx2 || !ctx2.row || ctx2.row.type === "memo") return;
-      const n2 = (0, import_md32.countWords)(body || "");
+      const n2 = (0, import_md33.countWords)(body || "");
       if ((ctx2.row.wordCount || 0) === n2) return;
       await updateSceneRow(ctx2.dPath, ctx2.row.id, (r) => {
         r.wordCount = n2;
@@ -228473,7 +230639,7 @@ ${css}
           const t3 = state.tabs.get(file);
           if (t3 && (t3.editor || t3.sp)) return (t3.editor || t3.sp).getMarkdown();
         }
-        return (0, import_md32.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
+        return (0, import_md33.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
       } catch {
         return t("ui.app.readCant");
       }
@@ -228535,7 +230701,7 @@ ${css}
     const t22 = state.tabs.get(file);
     if (!t22 || !t22.meta) return false;
     try {
-      t22.meta = (0, import_md32.parseMdFile)(await kapi.readFile(file)).meta;
+      t22.meta = (0, import_md33.parseMdFile)(await kapi.readFile(file)).meta;
     } catch (e) {
       log("warn", t("ui.props.writeMetaFail"), e);
     }
@@ -228633,6 +230799,7 @@ ${css}
     const t3 = state.tabs.get(file);
     if (!t3) return;
     const done2 = () => {
+      if (rewriteBarTab() === t3) closeRewriteBar();
       t3.editor?.destroy();
       t3.wiki?.destroy();
       t3.sp?.destroy();
@@ -228741,12 +230908,12 @@ ${css}
         }
       },
       async reloadFromDisk() {
-        const { meta: meta2, body } = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
+        const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(t3.file));
         t3.meta = meta2;
         t3.body = body;
         t3.diskBody = body;
         if (t3.editor) {
-          t3.editor.setMarkdown(body, (0, import_md32.alignFromString)(meta2.align));
+          t3.editor.setMarkdown(body, (0, import_md33.alignFromString)(meta2.align));
           try {
             refreshMentions(t3.editor.view);
           } catch {
@@ -228754,7 +230921,7 @@ ${css}
         } else {
           t3.sp.setMarkdown(body);
           try {
-            t3.sp.applyAlignMap((0, import_md32.alignFromString)(meta2.align));
+            t3.sp.applyAlignMap((0, import_md33.alignFromString)(meta2.align));
           } catch {
           }
         }
@@ -228779,10 +230946,10 @@ ${css}
     if (!t3) return;
     if (!await confirmBox(t("ui.app.cancelChangeAllTab"), t("ui.common.revertBtn"))) return;
     const content = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md32.parseMdFile)(content);
+    const { meta: meta2, body } = (0, import_md33.parseMdFile)(content);
     t3.diskBody = body;
     if (t3.editor) {
-      t3.editor.setMarkdown(body, (0, import_md32.alignFromString)(meta2.align));
+      t3.editor.setMarkdown(body, (0, import_md33.alignFromString)(meta2.align));
       refreshMentions(t3.editor.view);
     } else if (t3.sp) {
       const dir2 = file.replace(/[\\/][^\\/]*$/, "");
@@ -228811,14 +230978,16 @@ ${css}
         onMention: (name5) => {
           if (smart.fileOf[name5]) openEntity(smart.fileOf[name5]);
         },
-        editable: () => !t3.locked
+        editable: () => !t3.locked && !t3._onsetSaved
         // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
       });
       try {
-        t3.sp.applyAlignMap((0, import_md32.alignFromString)(t3.meta.align));
+        t3.sp.applyAlignMap((0, import_md33.alignFromString)(t3.meta.align));
       } catch {
       }
       t3.sp.view.dom.classList.add("on");
+      applyOnsetToTab(t3).catch(() => {
+      });
     } else if (t3.wiki) {
       t3.wiki.destroy();
       openEntity(t3.title);
@@ -228859,6 +231028,10 @@ ${css}
     }
     const doRemove = async (sel) => {
       const tab = state.active;
+      if (tab && tab.locked) {
+        setStatus(gi("lock") + " " + lockMessage("scene"));
+        return 0;
+      }
       try {
         if (tab) await snapshotFile(tab.file, t("ui.app.beforeDel") + sel.map((x) => SP_ELEMS[x]?.th || x).join(","));
       } catch (e) {
@@ -228902,7 +231075,7 @@ ${css}
     <div class="k-dlg-btns"><button class="k-cancel">${a[0]}</button><button class="k-ok k-danger" disabled>${tx("ui.common.del")}</button></div>`)([t("dialogs.cancel")]);
     ov.append(box2);
     document.body.append(ov);
-    const list = box2.querySelector("#rm-el-list");
+    const list2 = box2.querySelector("#rm-el-list");
     const totalEl = box2.querySelector(".k-dlg-total");
     const okBtn = box2.querySelector(".k-ok");
     const chks = [];
@@ -228921,7 +231094,7 @@ ${css}
       chks.push(cb);
       cb.onchange = syncTotal;
       label.append(cb, el("span", null, tf("ui.app.line", SP_ELEMS[ty]?.th || ty, counts[ty])));
-      list.append(label);
+      list2.append(label);
     }
     syncTotal();
     box2.querySelector("#rm-el-all").onclick = (e) => {
@@ -229032,7 +231205,7 @@ ${css}
     if (!state.tabs.has(key2)) {
       let body = "";
       try {
-        body = (0, import_md32.parseMdFile)(await kapi.readFile(snap2.path)).body;
+        body = (0, import_md33.parseMdFile)(await kapi.readFile(snap2.path)).body;
       } catch {
         body = t("ui.app.readFileVersionCant");
       }
@@ -229782,10 +231955,10 @@ ${css}
     const view2 = t3.editor.view;
     const pm2 = view2.dom;
     if (!pm2.isConnected) return false;
-    const list = prosePageBreaks(view2);
-    if (!list.length) return false;
+    const list2 = prosePageBreaks(view2);
+    if (!list2.length) return false;
     const els = [...pm2.querySelectorAll(".ed-page-break")];
-    if (els.length !== list.length) return false;
+    if (els.length !== list2.length) return false;
     const spf = spFormat();
     const target = (num(spf.paper.height, 11) - num(spf.margins.top, 1) - num(spf.margins.bottom, 1)) * 96;
     if (!(target > 8)) return false;
@@ -229803,8 +231976,8 @@ ${css}
       prev = y;
       prevH = els[i5].getBoundingClientRect().height / z;
       const want = Math.max(paperView146 ? -400 : 0, Math.round((target - used) * 10) / 10);
-      if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
-      list[i5].pad = want;
+      if (Math.abs(want - num(list2[i5].pad, 0)) < 0.5) continue;
+      list2[i5].pad = want;
       changed = true;
     }
     if (!changed) return false;
@@ -229819,10 +231992,10 @@ ${css}
     if (nowMs < _spPadTuneUntil) return false;
     const pm2 = t3.sp.view.dom;
     if (!pm2 || !pm2.isConnected) return false;
-    const list = pageBreaks(t3.sp.view);
-    if (!list.length) return false;
+    const list2 = pageBreaks(t3.sp.view);
+    if (!list2.length) return false;
     const els = [...pm2.querySelectorAll(".sp-page-break")];
-    if (els.length !== list.length) return false;
+    if (els.length !== list2.length) return false;
     const fmt2 = spFormat();
     const target = (num(fmt2.paper.height, 11) - num(fmt2.margins.top, 1) - num(fmt2.margins.bottom, 1)) * 96;
     if (!(target > 8)) return false;
@@ -229839,8 +232012,8 @@ ${css}
       prev = y;
       prevH = els[i5].getBoundingClientRect().height / z;
       const want = Math.max(-400, Math.round((target - used) * 10) / 10);
-      if (Math.abs(want - num(list[i5].pad, 0)) < 0.5) continue;
-      list[i5].pad = want;
+      if (Math.abs(want - num(list2[i5].pad, 0)) < 0.5) continue;
+      list2[i5].pad = want;
       changed = true;
     }
     if (!changed) return false;
@@ -230018,7 +232191,7 @@ ${css}
         return;
       }
       const body = t3.editor ? t3.editor.getMarkdown() : t3.sp ? t3.sp.getText() : t3.plain.value;
-      let txt = tf("ui.app.wordChar", fmtNum((0, import_md32.countWords)(body)), fmtNum(body.length));
+      let txt = tf("ui.app.wordChar", fmtNum((0, import_md33.countWords)(body)), fmtNum(body.length));
       if (t3.sp) {
         txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t3);
         try {
@@ -230630,7 +232803,7 @@ ${css}
       }
       if (!body) {
         try {
-          const f = (0, import_md32.parseMdFile)(await kapi.readFile(r.path));
+          const f = (0, import_md33.parseMdFile)(await kapi.readFile(r.path));
           body = f.body || "";
           fmt2 = fmt2 || f.meta.format || "";
         } catch {
@@ -230709,10 +232882,10 @@ ${css}
     }
     return navGotoItem(t3, hit);
   }
-  function relayOutline(file, title2, items, empty2, sp) {
+  function relayOutline(file, title2, items, empty3, sp) {
     if (PANEL_WIN || !isTornOff("outline")) return false;
     try {
-      kapi.broadcast && kapi.broadcast(outlineMsg(file, title2, items, { empty: empty2, sp }));
+      kapi.broadcast && kapi.broadcast(outlineMsg(file, title2, items, { empty: empty3, sp }));
     } catch {
     }
     return true;
@@ -231335,7 +233508,17 @@ ${css}
     });
   }
   async function handleCommand(ch, ...a) {
+    if (typeof ch === "string") {
+      try {
+        onsetBeforeCommand(ch);
+      } catch {
+      }
+    }
     const t3 = state.active;
+    if (LOCK_EDIT_CMDS.has(ch) && t3 && t3.locked && (t3.editor || t3.sp)) {
+      setStatus(gi("lock") + " " + lockMessage("scene"));
+      return;
+    }
     try {
       log(
         QUIET_CMDS.has(ch) ? "debug" : "info",
@@ -231404,7 +233587,7 @@ ${css}
         const p = await kapi.saveAsDialog((t3.title || t("ui.common.notNamed")) + ".md");
         if (p) {
           const srcMd = t3.file && !String(t3.file).startsWith("::") && /\.md$/i.test(t3.file) ? t3.file : null;
-          await writeKeepingComments(p, (0, import_md32.dumpMdFile)(t3.meta || {}, body), srcMd);
+          await writeKeepingComments(p, (0, import_md33.dumpMdFile)(t3.meta || {}, body), srcMd);
           setStatus(tf("ui.app.saveAsDone", p));
         }
         break;
@@ -231451,6 +233634,10 @@ ${css}
       case "reveal-active":
         revealInTree(t3 && t3.file);
         break;
+      case "onset-toggle":
+        toggleOnsetView(t3);
+        break;
+      // [alpha.164] ฉากมีปัญหา: ฉบับเดิม ⇄ ฉบับแก้ไข
       case "close-all-tabs":
         closeAllTabs();
         break;
@@ -231739,8 +233926,13 @@ ${css}
         break;
       // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ (Fountain · FDX · Celtx · Fade In · Adobe Story)
       case "import-script": {
+        const canReplace = (tb2) => !!(tb2 && tb2.sp && !tb2.locked);
         const result = await importScreenplayDialog(async (markdown, format3, summary, mode) => {
           const t4 = state.active;
+          if (mode === "replace" && !canReplace(t4)) {
+            setStatus(gi("warning") + " " + t("ui.app.importReplaceNoTab"));
+            return;
+          }
           if (mode === "replace" && t4 && t4.sp) {
             t4.sp.setMarkdown(markdown);
             if (t4.editor) t4.editor.setMarkdown(markdown);
@@ -231776,7 +233968,7 @@ ${css}
               await confirmBox(t("ui.app.importNotOkNot"), t("ui.common.msg3"));
             }
           }
-        });
+        }, { canReplace: canReplace(state.active) });
         break;
       }
       // [alpha.60 ข้อ 74] เปรียบเทียบบท/สคริปต์
@@ -233444,11 +235636,11 @@ ${css}
     menu.setAttribute("role", "menu");
     const items = () => [...menu.querySelectorAll(".k-fab-item")];
     const step = (dir2) => {
-      const list = items();
-      if (!list.length) return;
-      const i5 = list.indexOf(document.activeElement);
-      const j = i5 < 0 ? dir2 > 0 ? 0 : list.length - 1 : (i5 + dir2 + list.length) % list.length;
-      list[j].focus();
+      const list2 = items();
+      if (!list2.length) return;
+      const i5 = list2.indexOf(document.activeElement);
+      const j = i5 < 0 ? dir2 > 0 ? 0 : list2.length - 1 : (i5 + dir2 + list2.length) % list2.length;
+      list2[j].focus();
     };
     fab.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -233784,11 +235976,11 @@ ${css}
     );
     const grid = el("div", "k-keys-grid");
     for (const c of SHORTCUT_CATS) {
-      const list = byCat.get(c.key) || [];
-      if (!list.length) continue;
+      const list2 = byCat.get(c.key) || [];
+      if (!list2.length) continue;
       const sec = el("div", "k-keys-sec");
       sec.append(el("div", "k-keys-cat", t(c.labelKey)));
-      for (const r of list) {
+      for (const r of list2) {
         const row3 = el("div", "k-keys-row");
         row3.append(el("span", "k-keys-name", r.label));
         row3.append(el("span", "k-keys-key", r.accel));
@@ -233824,13 +236016,13 @@ ${css}
     });
     searchInp.focus();
   }
-  var import_md32, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _closedTabs, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md33, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _closedTabs, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n_html();
       init_i18n();
       init_editor();
-      import_md32 = __toESM(require_md());
+      import_md33 = __toESM(require_md());
       init_convert();
       init_prose_format();
       init_prose_view();
@@ -233961,6 +236153,7 @@ ${css}
       import_text_color4 = __toESM(require_text_color());
       init_tooltip();
       init_tree_menu_spec();
+      init_onset_ui();
       init_tree_actions();
       init_settings_template();
       init_panel_focus();
@@ -234152,6 +236345,25 @@ ${css}
       _diskCheckAt = 0;
       _branchPlanApi = null;
       _closedTabs = [];
+      installOnset({
+        sceneCtx: (f) => sceneCtx(f),
+        openScene: (f, title2) => openScene(f, title2),
+        buildTree: () => buildTree2(),
+        alignFromString: import_md33.alignFromString,
+        tabBodyText: (tab) => tabBodyText(tab),
+        afterSwap: (tab) => {
+          if (state.active !== tab) return;
+          scheduleCount();
+          scheduleOutline();
+          scheduleRepaginate();
+          refreshToolbar();
+          try {
+            refreshSpView();
+            updatePageNumberHint();
+          } catch {
+          }
+        }
+      });
       setTabBridge({
         find(p) {
           const k = pathKey(p);
@@ -234378,6 +236590,22 @@ ${css}
       setPanelShowHook((pid) => {
         renderFeaturePanel(pid);
       });
+      LOCK_EDIT_CMDS = /* @__PURE__ */ new Set([
+        "fmt",
+        "text-case",
+        "text-case-cycle",
+        "editor-undo",
+        "editor-redo",
+        "insert-image",
+        "delete-line",
+        "sp-element",
+        "nbsp",
+        "insert-shortcode",
+        "remove-elements",
+        "toggle-format",
+        "set-format",
+        "sp-extension"
+      ]);
       QUIET_CMDS = /* @__PURE__ */ new Set([
         "zoom",
         "zoom-in",
@@ -234824,10 +237052,15 @@ ${css}
           const rwTab = state.active;
           const rwEd = rwTab && (rwTab.editor || rwTab.sp);
           const canRewrite = inDoc && !!selWord && !!(rwEd && rwEd.view && rwEd.view.dom.contains(e.target) && !rwEd.view.state.selection.empty);
-          if (!bad && !hasThes && !canRewrite) return;
+          const onsetItems = inDoc ? onsetEditorMenu(rwTab, e.target) : null;
+          if (!bad && !hasThes && !canRewrite && !onsetItems) return;
           e.preventDefault();
           e.stopPropagation();
           const items = [];
+          if (onsetItems) {
+            items.push(...onsetItems);
+            if (bad || hasThes || canRewrite) items.push("-");
+          }
           if (bad) {
             const word = bad.textContent.trim();
             const sugg = spellSuggest(word, 6);
@@ -234890,15 +237123,22 @@ ${css}
         $("#find-next").onclick = () => gotoMatch(state.active?.editor?.view, 1);
         $("#find-prev").onclick = () => gotoMatch(state.active?.editor?.view, -1);
         $("#find-close").onclick = closeFind;
+        const findLocked = () => {
+          const tb2 = state.active;
+          if (!(tb2 && tb2.editor && tb2.editor.view && tb2.editor.view.editable === false)) return false;
+          setStatus(gi("lock") + " " + (tb2.locked ? lockMessage("scene") : t("ui.onset.nowOriginal")));
+          return true;
+        };
         $("#find-rep1").onclick = () => {
-          replaceCurrent(state.active?.editor?.view, $("#find-r").value);
-          markDirty(state.active);
+          if (findLocked()) return;
+          if (replaceCurrent(state.active?.editor?.view, $("#find-r").value)) markDirty(state.active);
           doFind();
         };
         $("#find-repall").onclick = () => {
+          if (findLocked()) return;
           const n2 = replaceAll(state.active?.editor?.view, $("#find-r").value);
           setStatus(t("ui.app.replace") + n2 + t("ui.app.msg2"));
-          markDirty(state.active);
+          if (n2) markDirty(state.active);
           doFind();
         };
         installTextMeasurer();

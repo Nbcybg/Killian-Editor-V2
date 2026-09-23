@@ -121,6 +121,11 @@ ui.ai.worldPrompt,"อธิบายสิ่งที่ต้องการ�
 ui.ai.worldTitle,สร้างโลก
 ui.ai.wReligion,ศาสนา
 ui.ai.youAssistantWriterReply,คุณเป็นผู้ช่วยนักเขียน ตอบคำถามเกี่ยวกับเนื้อหานิยายของผู้ใช้ 
+ui.aia.adjKeep,คงไว้
+ui.aia.adjLessComedy,ลดความตลก
+ui.aia.adjLessDrama,ลดดราม่า
+ui.aia.adjMoreComedy,เพิ่มความตลก
+ui.aia.adjMoreDrama,เพิ่มดราม่า
 ui.aia.aiHead,ความเห็นจาก AI
 ui.aia.aiNoFinding,AI ไม่พบประเด็นที่ควรแจ้ง
 ui.aia.aiOffHint,แสดงเฉพาะผลที่คำนวณเอง (ยังไม่ได้ตั้งค่า AI หรือปิดการใช้ AI ไว้)
@@ -149,11 +154,13 @@ ui.aia.crPacing,จังหวะเรื่อง
 ui.aia.crPacingNote,จังหวะเฉลี่ย {0} · ช่วงอืด {1} ช่วง
 ui.aia.crSceneLen,ความสม่ำเสมอของความยาวฉาก
 ui.aia.crSceneLenNote,เฉลี่ย {0} คำ · เบี่ยงเบน {1} คำ
+ui.aia.csAdjust,ควรปรับ
 ui.aia.csAnalysis,การวิเคราะห์
 ui.aia.csAvgSent,ประโยคเฉลี่ย (คำ)
 ui.aia.csChapter,บท
 ui.aia.csCharacter,ตัวละคร
 ui.aia.csClosest,ห่างกันสั้นสุด (คำ)
+ui.aia.csComedy,ตลก/1k คำ
 ui.aia.csCostUsd,ค่าใช้จ่าย (USD)
 ui.aia.csCount,จำนวนครั้ง
 ui.aia.csCreated,สร้างเมื่อ
@@ -161,12 +168,23 @@ ui.aia.csCriterion,หัวข้อ
 ui.aia.csDensity,ความหนาแน่นต่อพันคำ
 ui.aia.csDetail,รายละเอียด
 ui.aia.csDialogue,บทสนทนา %
+ui.aia.csDrag,ค่าอืด
+ui.aia.csDrama,ดราม่า/1k คำ
+ui.aia.csExpected,ที่ใช้ประจำ
+ui.aia.csFound,ที่พบ
+ui.aia.csLines,บทพูด
 ui.aia.csMarkers,ร่องรอยที่พบ
 ui.aia.csMentions,ถูกเอ่ยถึง
 ui.aia.csMinutes,นาที
+ui.aia.csNarration,บรรยายยาวสุด (คำ)
 ui.aia.csNote,หมายเหตุ
+ui.aia.csOdd,จุดเปลี่ยน
 ui.aia.csPages,หน้า
+ui.aia.csParticle,คำลงท้ายประจำ
 ui.aia.csPer10k,ต่อหมื่นคำ
+ui.aia.csPronoun,สรรพนามประจำ
+ui.aia.csQuote,ข้อความ
+ui.aia.csReason,เหตุผล
 ui.aia.csScene,ฉาก
 ui.aia.csScope,ขอบเขต
 ui.aia.csScore,คะแนน
@@ -176,12 +194,14 @@ ui.aia.csShare,สัดส่วน %
 ui.aia.csSharedScenes,ฉากที่อยู่ร่วมกัน
 ui.aia.csSideA,ตัวละคร A
 ui.aia.csSideB,ตัวละคร B
+ui.aia.csSpeaker,ผู้พูด
 ui.aia.csStat,สถิติ
 ui.aia.csSuggestion,ข้อเสนอแนะ
 ui.aia.csSummary,บทสรุป
 ui.aia.csTempo,จังหวะ
 ui.aia.csTitle,หัวข้อ
 ui.aia.csTokenUsed,โทเคนที่ใช้
+ui.aia.csTone,โทน
 ui.aia.csValue,ค่า
 ui.aia.csvSaved,บันทึก CSV ที่ {0}
 ui.aia.csWord,คำ
@@ -190,26 +210,46 @@ ui.aia.dArc,ตัวละครแต่ละตัวโผล่ถี่�
 ui.aia.dComposition,แต่ละฉากเป็นบทพูด ความคิดในใจ และการบรรยายกี่เปอร์เซ็นต์ และเน้นหนักไปทางไหน
 ui.aia.dConflict,ฉากไหนมีร่องรอยความขัดแย้ง ฉากไหนเรียบจนไม่มีแรงผลัก
 ui.aia.dContinuity,ตรวจว่ารายละเอียดของตัวละครและโลกคงเส้นคงวาตลอดขอบเขตที่เลือก
+ui.aia.dDialog,หาบทพูดที่ยาวเกินจริง ภาษาเขียนหลุดเข้าปากตัวละคร บอกสิ่งที่ทั้งคู่รู้อยู่แล้ว และเรียกชื่อกันถี่เกิน
+ui.aia.dDrag,ให้คะแนนความอืดรายฉากจากจังหวะ ความขัดแย้ง ความยาว และช่วงบรรยายที่ไม่มีบทพูดคั่น
 ui.aia.dgArc,{0}: ถูกเอ่ยถึง {1} ครั้ง ใน {2} ฉาก
 ui.aia.dgArcGap, · หายไปช่วง: {0}
 ui.aia.dgComposition,{0} [{1}] บทพูด={2}% ภายในใจ={3}% บรรยาย={4}% → {5}
 ui.aia.dgConflict,{0} [{1}] ไม่พบร่องรอยความขัดแย้ง
+ui.aia.dgDialog,{0} [{1}] ผู้พูด={2} · {3}: “{4}”
+ui.aia.dgDrag,{0} [{1}] อืด={2} จังหวะ={3} บรรยายยาวสุด={4} คำ · {5}
 ui.aia.dgLength,{0} [{1}] {2} คำ ({3} นาที)
+ui.aia.dgLogic,{0} [{1}] คำที่พบ: {2} · “{3}”
 ui.aia.dgNote,{0} [{1}] {2}
+ui.aia.dgOocChar,{0}: บทพูด {1} ประโยค · สรรพนามประจำ={2} · คำลงท้ายประจำ={3}
+ui.aia.dgOocOdd,{0} ในฉาก {1} [{2}] ใช้ “{3}” แทน “{4}”: “{5}”
 ui.aia.dgPacing,{0} [{1}] จังหวะ={2} บทพูด={3}% {4} คำ
 ui.aia.dgRepeat,“{0}” ×{1} ใน {2} [{3}] ห่างกันสั้นสุด {4} คำ
 ui.aia.dgScore,{0}: {1}/10 — {2}
 ui.aia.dgScreentime,{0}: {1} ฉาก · {2} ครั้ง · {3}%
 ui.aia.dgShipping,{0} × {1}: อยู่ร่วมกัน {2} ฉาก · คะแนน {3}
+ui.aia.dgTone,{0} [{1}] โทน={2} ตลก={3}/1k ดราม่า={4}/1k
 ui.aia.dgWords,{0} ×{1} ({2} ต่อหมื่นคำ)
 ui.aia.dLength,เทียบความยาวฉากกับค่ากลาง พร้อมเวลาอ่านโดยประมาณ
+ui.aia.dlgR.exposition,บอกสิ่งที่รู้กันอยู่แล้ว
+ui.aia.dlgR.long,ยาวเกิน
+ui.aia.dlgR.vocative,เรียกชื่อถี่
+ui.aia.dlgR.written,ภาษาเขียน
+ui.aia.dlgVocNote,เรียกชื่ออีกฝ่าย {0} จาก {1} ประโยคในฉากนี้
+ui.aia.dLogic,หาเหตุการณ์ที่เกิดเพราะบังเอิญ/โชคช่วย การตัดสินใจที่ไม่มีแรงจูงใจ และเหตุ-ผลที่ไม่ต่อกัน
 ui.aia.done,เสร็จแล้ว
+ui.aia.dOoc,เทียบพฤติกรรมและน้ำเสียงของตัวละครกับโปรไฟล์ใน Wiki และกับตัวเองในฉากอื่น (สรรพนาม/คำลงท้ายที่เปลี่ยน)
 ui.aia.dPacing,ดูว่าฉากไหนยืดไป ฉากไหนรวบรัดเกิน — คิดจากสัดส่วนบทพูด ความยาวประโยค และความยาวฉาก
 ui.aia.dPlotHole,หาจุดที่เนื้อเรื่องขัดกันเอง ปมที่เปิดแล้วไม่ปิด และแรงจูงใจที่หายไป
+ui.aia.dragR.long,ยาวกว่าฉากทั่วไป
+ui.aia.dragR.narration,บรรยายยาวไม่มีบทพูดคั่น
+ui.aia.dragR.noConflict,ไม่มีร่องรอยความขัดแย้ง
+ui.aia.dragR.slow,จังหวะช้ากว่าเฉลี่ย
 ui.aia.dRepeat,คำเดียวกันโผล่ซ้ำในระยะใกล้จนอ่านแล้วสะดุด
 ui.aia.dScore,คะแนนสองชั้น: ชั้นจากตัวเลขล้วน และชั้นจากการอ่านของ AI
 ui.aia.dScreentime,ใครกินพื้นที่เล่าเรื่องไปเท่าไร วัดจากฉากที่ปรากฏและจำนวนครั้งที่ถูกเอ่ยถึง
 ui.aia.dShipping,คู่ตัวละครที่อยู่ด้วยกันบ่อยและมีน้ำหนักเชิงรักมากที่สุด
+ui.aia.dTone,ดูว่าฉากไหนหลุดโทนที่ตั้งใจ ควรเพิ่มหรือลดความตลก/ดราม่าตรงไหน และจุดที่อารมณ์สวิงแรงเกิน
 ui.aia.dWords,คำที่ใช้บ่อยที่สุด พร้อมอัตราต่อหมื่นคำ (ตัดคำหยุดและชื่อตัวละครออกแล้ว)
 ui.aia.errAiFail,เรียก AI ไม่สำเร็จ
 ui.aia.errCsv,เขียนไฟล์ CSV ไม่สำเร็จ
@@ -230,21 +270,34 @@ ui.aia.exportCsv,ส่งออก CSV
 ui.aia.exportCsvOne,ส่งออกผลของชนิดนี้เป็น CSV
 ui.aia.exportCsvTip,ส่งออกทุกผลในขอบเขตนี้เป็นไฟล์ CSV (เปิดใน Excel/Sheets ได้)
 ui.aia.fastRun,ช่วงรัว
+ui.aia.groupDoctor,ตรวจบท (Script Doctor)
+ui.aia.groupDoctorDesc,"ตัวเลขชุดนี้คือ ""สัญญาณ"" ให้เปิดดู ไม่ใช่คำตัดสิน — เปิด AI เพื่อให้โมเดลอ่านบริบทจริงแล้วตัดสินต่อ"
+ui.aia.groupStats,วิเคราะห์ภาพรวม
 ui.aia.lead,วิเคราะห์ต้นฉบับ 11 แบบ เลือกขอบเขตได้ทั้งโปรเจกต์ · เฉพาะเล่ม · เฉพาะบท · เฉพาะฉาก ทุกแบบคำนวณเองได้โดยไม่ต้องใช้ AI แล้วให้ AI อ่านต่อถ้าตั้งค่าไว้
 ui.aia.longScene,ความยาวฉาก
 ui.aia.noMarker,ไม่พบร่องรอย
 ui.aia.noProject,ยังไม่ได้เปิดโปรเจกต์
+ui.aia.noSignal,ไม่พบสัญญาณในขอบเขตนี้
 ui.aia.noteCharOnce,โผล่ครั้งเดียวทั้งขอบเขต — ตรวจว่าตั้งใจหรือหลุด
 ui.aia.noteNoPov,ยังไม่ได้ระบุมุมมอง
 ui.aia.nScene, · {0} ฉาก
+ui.aia.oocHabit,ประจำ: {0} · {1}
+ui.aia.oocNoProfile,ไม่มีโปรไฟล์
+ui.aia.oocShift,ใช้ “{0}” แทน “{1}”
 ui.aia.partCurveCharacter,ส่วนโค้งตัวละคร
+ui.aia.pFormatDoctor,"รูปแบบคำตอบ: JSON array ของ {""title"":""หัวข้อสั้น"",""detail"":""อธิบายว่าผิดตรงไหน"",""severity"":""critical|major|minor"",""sceneId"":""id ของฉาก"",""quote"":""ประโยคต้นฉบับที่เป็นปัญหา (สั้น ๆ)"",""character"":""ชื่อตัวละครถ้าเกี่ยว"",""suggestion"":""วิธีแก้ หรือตัวอย่างที่เขียนใหม่""}"
 ui.aia.pFormatFindings,"รูปแบบคำตอบ: JSON array ของ {""title"":""หัวข้อสั้น"",""detail"":""อธิบาย"",""severity"":""critical|major|minor"",""sceneId"":""id ของฉากถ้ามี"",""suggestion"":""ข้อเสนอแนะ""}"
 ui.aia.pFormatScore,"รูปแบบคำตอบ: JSON object {""criteria"":[{""label"":""หัวข้อ"",""score"":0-10,""note"":""เหตุผลสั้น ๆ""}],""total"":0-10,""summary"":""สรุปหนึ่งย่อหน้า""}"
+ui.aia.pFormatTone,"รูปแบบคำตอบ: JSON array ของ {""title"":""หัวข้อสั้น"",""detail"":""หลุดโทนอย่างไร"",""severity"":""critical|major|minor"",""sceneId"":""id ของฉาก"",""adjust"":""more-comedy|less-comedy|more-drama|less-drama|keep"",""quote"":""ประโยคที่เป็นปัญหา (ถ้ามี)"",""suggestion"":""วิธีปรับ""}"
 ui.aia.pHeadNumbers,ตัวเลขที่โปรแกรมนับมาแล้ว (ถือว่าถูกต้อง ห้ามนับใหม่):
+ui.aia.pHeadProfiles,โปรไฟล์ตัวละครจาก Wiki (ถือเป็นนิสัยที่ตั้งไว้):
 ui.aia.pHeadScenes,เนื้อฉาก:
 ui.aia.pHeadScope,ขอบเขตที่วิเคราะห์: 
 ui.aia.pHeadTask,งานที่ต้องทำ: 
+ui.aia.pNoProfiles,(ไม่มีโปรไฟล์ตัวละครใน Wiki — เทียบกับพฤติกรรมของตัวละครเองในฉากอื่นแทน)
 ui.aia.pRules,กฎ: อ้างอิงเฉพาะสิ่งที่ปรากฏในข้อมูลข้างต้นและเนื้อฉากที่แนบมา · ถ้าอ้างถึงฉากใดให้ใส่ sceneId ให้ตรง · เขียนเป็นภาษาไทย กระชับ ตรงประเด็น · ถ้าไม่มีอะไรควรบอก ให้ตอบเป็นรายการว่าง []
+ui.aia.pToneAuto,ไม่ได้ระบุ — ประเมินโทนหลักจากทั้งเรื่องก่อน แล้วยึดเป็นเป้า
+ui.aia.pToneTarget,โทนที่ผู้เขียนตั้งใจ: 
 ui.aia.pTruncated, (แนบมาบางส่วนเพราะยาวเกินงบ)
 ui.aia.reload,โหลดใหม่
 ui.aia.rowLength,{0} คำ · {1} นาที
@@ -285,13 +338,28 @@ ui.aia.stCharOnce,ตัวละครที่โผล่ครั้งเ�
 ui.aia.stCmpLean,เน้นหนักไปทาง
 ui.aia.stConflictDensity,ความหนาแน่นต่อพันคำ
 ui.aia.stDialogueAvg,บทสนทนาเฉลี่ย
+ui.aia.stDlgExpo,บอกสิ่งที่รู้กันอยู่แล้ว
+ui.aia.stDlgLines,บทพูดทั้งหมด
+ui.aia.stDlgLong,บทพูดยาวเกิน
+ui.aia.stDlgVoc,ฉากที่เรียกชื่อกันถี่
+ui.aia.stDlgWritten,ภาษาเขียนในบทพูด
+ui.aia.stDragAvg,ค่าอืดเฉลี่ย
+ui.aia.stDragNarr,บรรยายยาวสุด (คำ)
+ui.aia.stDragRuns,ช่วงอืดติดกัน
+ui.aia.stDragScenes,ฉากเสี่ยงอืด
 ui.aia.stFastRun,ช่วงรัว
 ui.aia.stHasStoryDate,ฉากที่ระบุเวลาในเรื่อง
 ui.aia.stLead,ตัวละครหลัก
 ui.aia.stLeadShare,สัดส่วนของตัวหลัก
+ui.aia.stLogicHits,จุดบังเอิญ/ทางลัด
+ui.aia.stLogicLate,ในช่วงท้ายเรื่อง
+ui.aia.stLogicScenes,ฉากที่พบ
 ui.aia.stMedian,ค่ากลาง
 ui.aia.stNoConflict,ฉากที่ไม่พบร่องรอย
 ui.aia.stNoPov,ฉากที่ไม่ได้ระบุมุมมอง
+ui.aia.stOocOdd,จุดน้ำเสียงเปลี่ยน
+ui.aia.stOocProfile,มีโปรไฟล์ใน Wiki
+ui.aia.stOocSpeakers,ตัวละครที่มีบทพูด
 ui.aia.stPairFound,คู่ที่พบ
 ui.aia.stReadTime,เวลาอ่านทั้งหมด
 ui.aia.stRepeatFound,คำซ้ำที่พบ
@@ -303,6 +371,10 @@ ui.aia.stScoreLocal,คะแนนจากตัวเลข
 ui.aia.stSilentChar,ตัวละครที่ไม่โผล่เลย
 ui.aia.stSlowRun,ช่วงอืด
 ui.aia.stTempoAvg,จังหวะเฉลี่ย
+ui.aia.stToneOff,ฉากที่หลุดโทน
+ui.aia.stToneOverall,โทนรวม
+ui.aia.stToneTarget,โทนที่ตั้งใจ
+ui.aia.stToneWhip,อารมณ์สวิงแรง
 ui.aia.stTooLong,ฉากยาวผิดปกติ
 ui.aia.stTopPair,คู่ที่แรงที่สุด
 ui.aia.stUniqueWord,คำไม่ซ้ำ
@@ -313,22 +385,42 @@ ui.aia.taskArc,ดูการปรากฏตัวของตัวละ�
 ui.aia.taskComposition,อ่านสัดส่วนบทพูด/ภายในใจ/บรรยายรายฉาก แล้วบอกว่าฉากไหนเอียงมากเกินไปจนเสียจังหวะหรืออารมณ์ ฉากไหนควรเพิ่มบทพูดหรือความคิดตัวละคร และสัดส่วนรวมเหมาะกับแนวเรื่องหรือไม่
 ui.aia.taskConflict,ประเมินว่าแต่ละฉากมีความขัดแย้งจริงหรือไม่ ใครต้องการอะไร ใครขวาง และฉากไหนควรเพิ่มแรงเสียดทาน
 ui.aia.taskContinuity,ตรวจว่ารายละเอียดของตัวละครและโลก (ชื่อ ลักษณะ ความสามารถ กฎของโลก) คงเส้นคงวาหรือขัดกันเอง
+ui.aia.taskDialog,อ่านบทพูดในฉากที่แนบมา แล้วชี้จุดที่บทสนทนาไม่เป็นธรรมชาติ: พูดเหมือนอ่านหนังสือ/ใช้ภาษาเขียน · อธิบายสิ่งที่อีกฝ่ายรู้อยู่แล้วเพื่อป้อนข้อมูลให้คนอ่าน · ทุกตัวละครพูดน้ำเสียงเดียวกัน · ตอบตรงเกินไปจนไม่มีนัยแฝง (subtext) · เรียกชื่อกันถี่ · ประโยคยาวเกินกว่าคนจะพูดในจังหวะนั้น ใช้สัญญาณข้างต้นเป็นจุดเริ่ม แต่ตัดสินจากบริบทจริง ยกประโยคต้นฉบับใน quote และเสนอประโยคที่พูดได้เป็นธรรมชาติกว่าใน suggestion
+ui.aia.taskDrag,ประเมินว่าจังหวะการเล่าเรื่องอืดตรงไหน: ฉากที่ไม่มีอะไรเปลี่ยน (สถานการณ์/ความสัมพันธ์/ข้อมูลใหม่) · บรรยายยาวโดยไม่มีแรงขับ · ฉากที่ทำหน้าที่ซ้ำกับฉากก่อน · ช่วงที่คนอ่านเสี่ยงวางหนังสือ ใช้คะแนนอืดข้างต้นเป็นจุดเริ่ม บอกให้ชัดว่าควรตัด รวม ย่อ หรือเพิ่มแรงขัดแย้งตรงไหน และยกบรรทัดที่ตัดได้ใน quote
 ui.aia.taskLength,ดูความยาวฉากแล้วบอกว่าฉากไหนควรหั่น ฉากไหนสั้นจนไม่ทันรู้สึก และจังหวะพักของเล่มพอดีหรือยัง
+ui.aia.taskLogic,ตรวจความสมเหตุสมผลของปมเรื่อง: เหตุการณ์ที่เกิดเพราะบังเอิญ/โชคช่วยแทนการกระทำของตัวละคร · การตัดสินใจที่ไม่มีแรงจูงใจรองรับ · ตัวละครรู้ข้อมูลที่ไม่ควรรู้ · กฎของโลกที่ถูกละเมิด · ผลที่ไม่ได้มาจากเหตุก่อนหน้า · ปมที่คลี่คลายง่ายเกินไป บอกว่าคนอ่านจะติดใจตรงไหน และเสนอการปูเรื่อง (setup) หรือแรงจูงใจที่ทำให้เชื่อได้
+ui.aia.taskOoc,"ตรวจว่าตัวละครหลุดคาแรกเตอร์ (Out of character) ไหม: เทียบคำพูด การกระทำ การตัดสินใจ และน้ำเสียง (สรรพนาม/คำลงท้าย/ระดับภาษา) กับโปรไฟล์ใน Wiki และกับตัวละครเองในฉากอื่น แยกให้ชัดระหว่าง ""หลุดคาแรกเตอร์"" กับ ""พัฒนาการที่มีเหตุผลรองรับ"" ใส่ชื่อตัวละครใน character ยกประโยคใน quote และเสนอวิธีแก้ หรือฉากที่ควรปูเพิ่มเพื่อให้การเปลี่ยนแปลงน่าเชื่อ"
 ui.aia.taskPacing,อ่านตัวเลขจังหวะรายฉากแล้วบอกว่าช่วงไหนหน่วง ช่วงไหนรัวเกินไป และควรตัดหรือขยายตรงไหน
 ui.aia.taskPlotHole,หาจุดที่เนื้อเรื่องขัดแย้งกันเอง ปมที่เปิดแล้วไม่ปิด แรงจูงใจที่หายไป และเวลาที่ไม่ลงรอย
 ui.aia.taskRepeat,ดูรายการคำซ้ำระยะใกล้แล้วบอกว่าจุดไหนน่ารำคาญจริง และเสนอคำแทนที่เข้ากับน้ำเสียงของเรื่อง
 ui.aia.taskScore,ให้คะแนนต้นฉบับตามหัวข้อ (เปิดเรื่อง จังหวะ ตัวละคร บทสนทนา ภาษา ปมและความน่าติดตาม) หัวข้อละ 0-10 พร้อมเหตุผลสั้น ๆ
 ui.aia.taskScreentime,ดูน้ำหนักการปรากฏของตัวละครแล้วบอกว่าการกระจายเหมาะกับเรื่องแบบนี้หรือไม่ ใครควรได้พื้นที่มากขึ้นหรือน้อยลง
 ui.aia.taskShipping,ประเมินเคมีของคู่ตัวละครที่พบ ว่าคู่ไหนมีน้ำหนักจริง คู่ไหนยังขาดฉากที่ทำให้ผู้อ่านเชื่อ
+ui.aia.taskTone,ประเมินโทนของเรื่องเทียบกับโทนที่ตั้งใจ: ฉากไหนตลกเกินจนลดน้ำหนักดราม่า · ฉากไหนหนักเกินจนหลุดจากเรื่องแนวเบา · ช่วงที่อารมณ์สวิงแรงโดยไม่มีฉากพัก · มุกที่ไม่เข้ากับสถานการณ์ ใส่ทิศที่ควรปรับใน adjust (more-comedy / less-comedy / more-drama / less-drama / keep) และบอกวิธีปรับที่ทำได้จริงใน suggestion
 ui.aia.taskWords,ดูคำที่ใช้บ่อยแล้วบอกว่าคำไหนเป็นคำติดปากที่ควรลด และคำไหนสะท้อนแก่นเรื่องจริง ๆ
 ui.aia.tComposition,สัดส่วนฉาก (บทพูด/ภายในใจ/บรรยาย)
 ui.aia.tContinuity,ตรวจความสอดคล้อง
+ui.aia.tDialog,บทสนทนาไม่เป็นธรรมชาติ
+ui.aia.tDrag,จังหวะอืดไหม (Pacing)
+ui.aia.tLogic,ปมไม่สมเหตุสมผล
+ui.aia.toneAuto,อัตโนมัติ (ดูจากทั้งเรื่อง)
+ui.aia.toneAutoShort,ยังไม่ชัด
+ui.aia.toneComedy,ตลก
+ui.aia.toneDrama,ดราม่า
+ui.aia.toneDramedy,ดราเมดี้ (ตลกปนซึ้ง)
+ui.aia.toneMixed,ตลกปนดราม่า
+ui.aia.toneNeutral,กลาง ๆ
+ui.aia.toneSerious,จริงจัง/เข้ม
+ui.aia.toneTargetLabel,โทนที่ตั้งใจ
+ui.aia.toneWhip,สวิงแรงจากฉากก่อน
+ui.aia.tOoc,Out of character
 ui.aia.tPlotHole,ตรวจ Plot Hole
 ui.aia.tRepeat,ตรวจหาคำซ้ำ
 ui.aia.truncated,เนื้อหายาวเกินงบ — AI อ่านได้บางส่วน ลองแคบขอบเขตลงเพื่อผลที่ละเอียดกว่า
 ui.aia.tScore,ให้คะแนน
 ui.aia.tScreentime,Screentime / น้ำหนักตัวละคร
 ui.aia.tShipping,คู่จิ้น / เส้นความสัมพันธ์
+ui.aia.tTone,โทนเรื่อง (ตลก/ดราม่า)
 ui.aia.unitMin, นาที
 ui.aia.unitWord, คำ
 ui.aia.usage,ใช้ไป {0} โทเคน · ประมาณ ${1}
@@ -350,6 +442,10 @@ ui.aiActions.dirOpenUnsaved,ไม่ได้ลบ {0} — มีแท็บ�
 ui.aiActions.editDone,"แก้ ""{0}"" แล้ว"
 ui.aiActions.entityOpenDirty,"หน้า Wiki ""{0}"" เปิดแก้ค้างอยู่และยังไม่บันทึก — บันทึกก่อนแล้วสั่งใหม่"
 ui.aiActions.hasUseEntityUpdate,"มี ""{0}"" อยู่แล้ว — ใช้ entity.update แทน"
+ui.aiActions.lockBook,ล็อกทั้งเล่ม
+ui.aiActions.lockChapter,ล็อกทั้งบท
+ui.aiActions.locked,"""{0}"" ถูกล็อกอยู่ ({1}) — AI แก้ เปลี่ยนชื่อ หรือลบไม่ได้ ต้องปลดล็อกก่อน"
+ui.aiActions.lockScene,ล็อกที่ฉาก
 ui.aiActions.moveBookTrashDone,"ย้ายเล่ม ""{0}"" ไปถังขยะแล้ว"
 ui.aiActions.moveTrashDone,"ย้าย ""{0}"" ไปถังขยะแล้ว"
 ui.aiActions.newBookReadyChapter,"สร้างเล่ม ""{0}"" พร้อมบทแรกแล้ว"
@@ -1437,6 +1533,7 @@ ui.app.imageRemoved,เอารูปออกแล้ว
 ui.app.import,นำเข้า-
 ui.app.importKeyLangAdd,นำเข้า {0} คีย์ · ภาษา {1} · เพิ่ม/แก้ {2}
 ui.app.importNotOkNot,นำเข้าไม่สำเร็จ: ยังไม่มีเล่ม/ฉบับร่างที่ใช้งานอยู่
+ui.app.importReplaceNoTab,ไม่ได้ทับอะไร — แท็บปัจจุบันไม่ใช่บทภาพยนตร์ที่แก้ได้ (ปิด/สลับแท็บ หรือฉากถูกล็อก)
 ui.app.importScreenplay,นำเข้าบทภาพยนตร์ (
 ui.app.insertImage,แทรกรูป: 
 ui.app.insertImageDone,แทรกรูปแล้ว: 
@@ -3921,6 +4018,7 @@ ui.menu.newProjectTemplate,สร้างโปรเจกต์จากเ�
 ui.menu.newWorldWorldbuilding,สร้างโลก (Worldbuilding)…
 ui.menu.noteQuick,โน้ตด่วน…
 ui.menu.numSceneHeadScene,เลขฉาก (ข้างหัวฉากทั้งสองฝั่ง)
+ui.menu.onsetToggle,ฉากมีปัญหา: สลับฉบับเดิม/ฉบับแก้ไข
 ui.menu.openDevToolsChromium,เปิด DevTools ของ Chromium
 ui.menu.openLibraryImageG,เปิดคลังรูป
 ui.menu.openProjectLatestStart,เปิดโปรเจกต์ล่าสุดเมื่อเริ่มโปรแกรม (ข้ามหน้าแรก)
@@ -4171,6 +4269,42 @@ ui.notes.quickNotePh,บันทึกของรอบเขียนนี�
 ui.notes.saveNoteDoDone,บันทึกโน้ตไว้ทำภายหลังแล้ว
 ui.notes.saveNoteDone,บันทึกโน้ตแล้ว
 ui.notes.scratchPh,จดอะไรก็ได้ที่นี่ — ไม่เข้าไปในต้นฉบับ
+ui.onset.already,"""{0}"" เป็นฉากมีปัญหาอยู่แล้ว"
+ui.onset.chipTitle,ฉากมีปัญหา
+ui.onset.clear,เลิกเป็นฉากมีปัญหา…
+ui.onset.clearAsk,"เลิกเป็นฉากมีปัญหา ""{0}""?
+ฉบับเดิมที่เก็บไว้เทียบจะถูกลบ (เนื้อฉากตอนนี้ = ฉบับแก้ไข ไม่ถูกแตะ)"
+ui.onset.clearBtn,เลิกเทียบ
+ui.onset.cleared,"""{0}"" ไม่ใช่ฉากมีปัญหาแล้ว"
+ui.onset.color.0090ff,ฟ้า
+ui.onset.color.30a46c,เขียว
+ui.onset.color.8e4ec6,ม่วง
+ui.onset.color.e5484d,แดง
+ui.onset.color.f76b15,ส้ม
+ui.onset.color.ffc53d,เหลือง
+ui.onset.colorMenu,สีแถบ
+ui.onset.errClear,ลบฉบับเดิมของฉากมีปัญหาไม่สำเร็จ
+ui.onset.errMark,ตั้งเป็นฉากมีปัญหาไม่สำเร็จ
+ui.onset.errRead,อ่านฉบับเดิมของฉากมีปัญหาไม่ได้: 
+ui.onset.marked,"ตั้ง ""{0}"" เป็นฉากมีปัญหาแล้ว — แก้ได้เลย บรรทัดที่เปลี่ยนจะขึ้นแถบสีกับ ! หน้าบรรทัด"
+ui.onset.moreTip,ตัวเลือกฉากมีปัญหา
+ui.onset.nChanges,แก้ {0} จุด
+ui.onset.noChanges,ยังไม่มีจุดที่แก้
+ui.onset.notProblem,"ฉากนี้ไม่ได้ตั้งเป็นฉากมีปัญหา — คลิกขวาที่ฉากใน Explorer แล้วเลือก ""ฉากมีปัญหา"""
+ui.onset.nowOriginal,กำลังดูฉบับเดิม (อ่านอย่างเดียว) — พิมพ์/ส่งออก/บันทึกยังใช้ฉบับแก้ไข
+ui.onset.nowRevised,กลับมาที่ฉบับแก้ไขแล้ว
+ui.onset.tip.original.added,บรรทัดนี้ถูกลบออกในฉบับแก้ไข
+ui.onset.tip.original.changed,บรรทัดนี้ถูกแก้ในฉบับแก้ไข
+ui.onset.tip.original.gap,ฉบับแก้ไขเพิ่มบรรทัดใหม่ตรงนี้
+ui.onset.tip.revised.added,บรรทัดนี้เพิ่มใหม่ (ไม่มีในฉบับเดิม)
+ui.onset.tip.revised.changed,บรรทัดนี้ถูกแก้จากฉบับเดิม
+ui.onset.tip.revised.gap,ตรงนี้มีบรรทัดของฉบับเดิมถูกลบออก
+ui.onset.toggleTip,สลับฉบับเดิม ⇄ ฉบับแก้ไข (พิมพ์/ส่งออกใช้ฉบับแก้ไขเสมอ)
+ui.onset.toOriginal,ดูฉบับเดิม
+ui.onset.toRevised,ดูฉบับแก้ไข
+ui.onset.treeBadge,ฉากมีปัญหา — กำลังเทียบกับฉบับเดิม
+ui.onset.viewOriginal,ฉบับเดิม (อ่านอย่างเดียว)
+ui.onset.viewRevised,ฉบับแก้ไข
 ui.panel.aiAnalyzerTitle,AI วิเคราะห์
 ui.panel.aiChatTitle,AI ผู้ช่วยเขียน
 ui.panel.aiHubTitle,AI Hub
@@ -5566,6 +5700,7 @@ ui.shortcuts.newProject,สร้างโปรเจกต์ใหม่
 ui.shortcuts.newScene,สร้างฉากใหม่
 ui.shortcuts.nextTab,แท็บถัดไป
 ui.shortcuts.numberedList,รายการตัวเลข
+ui.shortcuts.onsetToggle,ฉากมีปัญหา: สลับฉบับเดิม / ฉบับแก้ไข
 ui.shortcuts.openProject,เปิดโปรเจกต์
 ui.shortcuts.panelAiAnalyzer,แผง: AI วิเคราะห์
 ui.shortcuts.panelAiChat,แผงผู้ช่วยเขียน (แชท AI)
@@ -6409,6 +6544,7 @@ ui.tip.new-entity:lore,สร้างหน้าตำนานหรือค
 ui.tip.new-from-template,สร้างโปรเจกต์ใหม่จากเทมเพลตที่วางโครงเรื่องและหมวด Wiki ไว้ให้แล้ว
 ui.tip.new-project,สร้างโปรเจกต์เปล่าในโฟลเดอร์ที่เลือก ไฟล์งานทั้งหมดเป็น .md และ .json ที่เปิดแก้นอกโปรแกรมได้
 ui.tip.next-tab,สลับไปแท็บถัดไปตามลำดับบนแถบแท็บ (ท้ายแถบวนกลับแท็บแรก)
+ui.tip.onset-toggle,"ฉากที่ตั้งเป็น ""ฉากมีปัญหา"": สลับดูฉบับเดิม (อ่านอย่างเดียว) กับฉบับแก้ไข — แถบสี + ! หน้าบรรทัดบอกจุดที่ต่าง · พิมพ์/ส่งออกใช้ฉบับแก้ไขเสมอ"
 ui.tip.open-project,เปิดโฟลเดอร์โปรเจกต์ที่มีอยู่ (โฟลเดอร์ที่มีไฟล์ project.khn.json)
 ui.tip.open-project-path,เปิดโปรเจกต์จากรายการโปรเจกต์ล่าสุด
 ui.tip.page-guides,แสดงเส้นประบอกระยะขอบกระดาษทั้งสี่ด้าน ช่วยดูว่าข้อความจะอยู่ตรงไหนบนหน้าจริง
@@ -6823,6 +6959,9 @@ ui.treeMenu.pin,ปักหมุด
 ui.treeMenu.pinOff,เอาหมุดออก
 ui.treeMenu.play,เล่น
 ui.treeMenu.playerHistory,ประวัติการตัดสินใจ
+ui.treeMenu.problem,ฉากมีปัญหา (เก็บฉบับเดิมไว้เทียบ)
+ui.treeMenu.problemMenu,ฉากมีปัญหา
+ui.treeMenu.problemToggle,สลับฉบับเดิม / ฉบับแก้ไข
 ui.treeMenu.projectSettings,ตั้งค่าโปรเจกต์
 ui.treeMenu.propsPanel,คุณสมบัติ (แผง)
 ui.treeMenu.propsPopup,คุณสมบัติ (หน้าต่าง)…

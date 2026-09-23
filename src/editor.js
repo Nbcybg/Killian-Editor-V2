@@ -27,6 +27,8 @@ import { markdownCodePlugin } from './markdown-code-toggle.js';
 import { Plugin as PMPlugin, PluginKey as PMKey } from 'prosemirror-state';
 import { Decoration as Deco, DecorationSet as DecoSet } from 'prosemirror-view';
 import { diffByKey } from './deco-diff.js';
+import { onsetPlugin } from './onset-plugin.js';   // [alpha.164] ฉากมีปัญหา — เทียบฉบับ
+import { guardEditable } from './edit-guard.js';   // [alpha.164 · บั๊ก] ล็อก = คำสั่งแก้เนื้อไม่ทำงาน
 
 // ══════════ alpha.58 (บั๊ก 4) — decoration แบบ "ทาสีเฉพาะบล็อกที่เปลี่ยน" ══════════
 // อาการ: พิมพ์ในไฟล์ยาว ๆ แล้วโปรแกรมกระตุก
@@ -1256,6 +1258,9 @@ export class KEditor {
         if (tr.docChanged && self.onChange) self.onChange();
       },
     });
+    // [alpha.164 · บั๊ก] ล็อก/ดูฉบับเดิม = ปุ่ม/คีย์ลัด/คำสั่งแก้เนื้อไม่ทำงาน (เดิมแก้ฉากที่ล็อกได้ทั้งแถบเครื่องมือ)
+    guardEditable(this, ['cmd', 'insertLines', 'insertImage', 'setFigureOpts', 'removeFigure',
+                         'pressEnter', 'pressBackspace'], editable);
   }
 
   // ══ [alpha.134] ★ ตัวช่วยกดปุ่ม — ต้องเป็น **คำสั่งตัวเดียวกับที่ผูกไว้กับแป้นจริง** ══
@@ -1276,6 +1281,7 @@ export class KEditor {
         commentAnchorPlugin(),
         prosePageBreakPlugin(),          // [20] เส้นคั่นหน้าของนิยาย
         listMarkerPlugin(),              // [alpha.132r3] รูปแบบของจุดนำ/หมายเลขข้อ
+        onsetPlugin(),                   // [alpha.164] ฉากมีปัญหา — แถบสี + ! ของบล็อกที่ต่างจากอีกฉบับ
         // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (fountain/มาร์กดาวน์) — ไม่แตะไฟล์
         markdownCodePlugin(incrementalDecoState),
         buildRules(schema),
@@ -1315,6 +1321,9 @@ export class KEditor {
     }
     return schema.nodeFromJSON(json);
   }
+
+  /** [alpha.164] แปลง markdown เป็น doc ของ schema นี้ (ไม่แตะเอกสารบนจอ) — ใช้เทียบ/แสดงฉบับเดิม */
+  docFromMarkdown(md, alignMap) { return this._docFromMd(md, alignMap); }
 
   // ---------- content ----------
   getMarkdown(opts) {

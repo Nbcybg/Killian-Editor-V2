@@ -27,6 +27,8 @@ import {
   resultCsv, sessionCsv, COMPOSITION_LABELS,
 } from './ai/ai-analyze.js';
 import { fmtNum } from './locale.js';
+import { isDoctor, TONE_TARGETS, TONE_LABELS, profileText } from './ai/ai-doctor.js';
+import { renderDoctorLocal, doctorFindingExtras } from './ai-doctor-ui.js';
 
 export { ANALYSES, ANALYSIS_IDS };
 /** ชื่อเดิมที่ selftest/โมดูลอื่นเคยอ้าง — ตอนนี้คือทะเบียนตัวจริง ไม่ใช่ mockup แล้ว */
@@ -41,6 +43,7 @@ const S = {
   characters: [],        // เอนทิตี้ Wiki ที่ใช้เป็น "ตัวละคร"
   scope: { kind: 'project', sectionKey: '', chapterId: '', sceneId: '' },
   useAI: true,
+  toneTarget: 'auto',    // [alpha.164] โทนที่ผู้เขียนตั้งใจ (การ์ด 🎭 โทนเรื่อง)
   results: new Map(),    // `${id}||${scopeKey}` → ผลลัพธ์ล่าสุด
   saved: new Set(),      // คีย์ผลที่ถูกบันทึกลงเซสชันแล้ว (ที่เหลือ = งานค้างตามกฎ alpha.72)
   running: new Set(),
@@ -148,6 +151,8 @@ export async function collectScenes(root = state.root) {
             sectionKey: sec.key, sectionTitle: sec.title,
             chapterId: ch.guid, chapterTitle: ch.title || ch.folderName || '',
             pov: hm.pov || '', storyDate: hm.storyDate || '', status: sc.status || '',
+            // [alpha.164] ตรวจบทอ่านบทพูดของบทภาพยนตร์จากพาร์เซอร์ตัวจริง — ต้องรู้ว่าฉากเป็นโหมดไหน
+            format: (fm && fm.format) === 'screenplay' ? 'screenplay' : 'prose',
             text, words: countWords(text),
           });
         }
@@ -162,7 +167,9 @@ export async function collectCharacters(root = state.root) {
   const ents = await listEntities(root).catch(() => []);
   const chars = ents.filter((e) => e.cat === 'characters');
   const use = chars.length ? chars : ents;
-  return use.map((e) => ({ name: e.name, aliases: e.aliases || [], cat: e.cat, file: e.path }));
+  // [alpha.164] โปรไฟล์ติดไปด้วย — การ์ด Out of character ต้องมีนิสัยที่ตั้งไว้ให้โมเดลเทียบ
+  return use.map((e) => ({ name: e.name, aliases: e.aliases || [], cat: e.cat, file: e.path,
+                           entity: e.entity || null, profile: profileText(e.entity || {}) }));
 }
 
 async function ensureLoaded(force = false) {
@@ -304,6 +311,10 @@ function renderLocal(id, local) {
   const box = el('div', 'aia-result-local');
   box.append(statsBar(local.stats));
   const L = local;
+  if (isDoctor(id)) {            // [alpha.164] 🩺 ตรวจบท — ตัววาดแยกไฟล์ (ai-doctor-ui.js)
+    box.append(renderDoctorLocal(id, L, { barList, jumpToScene }));
+    return box;
+  }
   if (id === 'pacing') {
     box.append(barList(L.rows.map((r) => ({
       label: r.title || r.id, value: r.tempo, display: r.tempo,
@@ -412,6 +423,7 @@ function renderAI(id, ai) {
       li.append(el('span', 'aia-sev', r.severityLabel));
       li.append(el('span', 'aia-find-title', r.title));
       if (r.detail) li.append(el('div', 'aia-find-detail', r.detail));
+      if (isDoctor(id)) li.append(...doctorFindingExtras(r));
       if (r.suggestion) li.append(el('div', 'aia-find-fix', gi('arrow-right') + ' ' + r.suggestion));
       if (r.sceneId) { li.classList.add('is-link'); li.onclick = () => jumpToScene(r.sceneId); }
       ul.append(li);
@@ -445,7 +457,7 @@ export async function runAnalysis(id, host) {
   try {
     res = await analyze(id, {
       scenes: S.scenes, characters: S.characters, scope: S.scope,
-      client: useAI ? getAIClient() : null, useAI,
+      client: useAI ? getAIClient() : null, useAI, toneTarget: S.toneTarget,
     });
   } catch (e) {
     log('error', t('ui.aia.errRun'), e);
@@ -735,36 +747,70 @@ export async function renderAIAnalyzerPanel(host) {
   wrap.append(usageLine());
 
   // ---- การ์ดทั้ง 11 ใบ ----
+  // [alpha.164] สองกลุ่ม: 🩺 ตรวจบท (ขึ้นก่อน — ผู้ใช้สั่งมาเป็นงานหลัก) · วิเคราะห์ภาพรวม (12 ใบเดิม)
   const b = base();
-  const grid = el('div', 'aia-grid');
-  for (const c of ANALYSES) {
-    const card = el('div', 'aia-card');
-    card.dataset.card = c.id;
-    card.append(el('div', 'aia-card-head', c.icon + ' ' + c.title));
-    card.append(el('div', 'aia-card-desc', c.desc));
-    const chips = [];
-    if (c.ai === 'core') chips.push({ label: t('ui.aia.tagNeedAI') });
-    if (S.useAI) {
-      const e = estimateAnalysis(c.id, b);
-      chips.push({ cls: 'aia-chip-est', label: tf('ui.aia.estTokens', fmtTok(e.total),
-        fmtUsd(estimateUsd(S.price.provider, S.price.model, e))), title: t('ui.aia.estTip') });
-    }
-    if (chips.length) card.append(chipList(chips));
-    const row = el('div', 'aia-card-btns');
-    const btn = el('button', 'aia-run', t('ui.aia.run'));
-    btn.type = 'button';
-    btn.onclick = () => runAnalysis(c.id);
-    row.append(btn);
-    row.append(miniBtn(gi('download'), t('ui.aia.exportCsvOne'), () => exportResultCsv(c.id)));
-    card.append(row);
-    const slot = el('div', 'aia-result');
-    const prev = S.results.get(resultKey(c.id));
-    if (prev) paintResult(slot, prev);
-    card.append(slot);
-    grid.append(card);
+  const groups = [
+    { key: 'doctor', head: gi('check-circle') + ' ' + t('ui.aia.groupDoctor'), desc: t('ui.aia.groupDoctorDesc'),
+      cards: ANALYSES.filter((c) => c.group === 'doctor') },
+    { key: 'stats', head: gi('chart') + ' ' + t('ui.aia.groupStats'), desc: '',
+      cards: ANALYSES.filter((c) => c.group !== 'doctor') },
+  ];
+  for (const g of groups) {
+    const gh = el('div', 'aia-group-head');
+    gh.dataset.group = g.key;
+    gh.append(el('div', 'aia-group-title', g.head));
+    if (g.desc) gh.append(el('div', 'aia-group-desc', g.desc));
+    wrap.append(gh);
+    const grid = el('div', 'aia-grid');
+    grid.dataset.group = g.key;
+    for (const c of g.cards) grid.append(analysisCard(c, b));
+    wrap.append(grid);
   }
-  wrap.append(grid);
   return wrap;
+}
+
+/** การ์ดหนึ่งใบ (ใช้ทั้งสองกลุ่ม) */
+function analysisCard(c, b) {
+  const card = el('div', 'aia-card' + (c.group === 'doctor' ? ' aia-card-doctor' : ''));
+  card.dataset.card = c.id;
+  card.append(el('div', 'aia-card-head', c.icon + ' ' + c.title));
+  card.append(el('div', 'aia-card-desc', c.desc));
+  const chips = [];
+  if (c.ai === 'core') chips.push({ label: t('ui.aia.tagNeedAI') });
+  if (S.useAI) {
+    const e = estimateAnalysis(c.id, b);
+    chips.push({ cls: 'aia-chip-est', label: tf('ui.aia.estTokens', fmtTok(e.total),
+      fmtUsd(estimateUsd(S.price.provider, S.price.model, e))), title: t('ui.aia.estTip') });
+  }
+  if (chips.length) card.append(chipList(chips));
+  // [alpha.164] โทนเรื่อง: ผู้เขียนบอกโทนที่ตั้งใจได้ (อัตโนมัติ = ถือโทนรวมของเรื่องเป็นเป้า)
+  if (c.id === 'tone') {
+    const lab = el('label', 'aia-tone-target');
+    lab.append(el('span', null, t('ui.aia.toneTargetLabel')));
+    const sel = el('select', 'aia-tone-sel');      // ห้ามใช้ .aia-scope-sel — นั่นคือช่องเลือกขอบเขต (เทสนับอยู่)
+    sel.id = 'aia-tone-target';
+    for (const k of TONE_TARGETS) {
+      const o = el('option', null, TONE_LABELS[k] || k);
+      o.value = k;
+      if (k === S.toneTarget) o.selected = true;
+      sel.append(o);
+    }
+    sel.onchange = () => { S.toneTarget = sel.value; };
+    lab.append(sel);
+    card.append(lab);
+  }
+  const row = el('div', 'aia-card-btns');
+  const btn = el('button', 'aia-run', t('ui.aia.run'));
+  btn.type = 'button';
+  btn.onclick = () => runAnalysis(c.id);
+  row.append(btn);
+  row.append(miniBtn(gi('download'), t('ui.aia.exportCsvOne'), () => exportResultCsv(c.id)));
+  card.append(row);
+  const slot = el('div', 'aia-result');
+  const prev = S.results.get(resultKey(c.id));
+  if (prev) paintResult(slot, prev);
+  card.append(slot);
+  return card;
 }
 
 /** บรรทัด "ก่อนใช้ / หลังใช้" ของโทเคน — id คงที่เพื่ออัปเดตได้โดยไม่ต้องวาดแผงใหม่ */

@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,639 checks · ALL OK** (alpha.163 · macOS Intel) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **10,185 ข้อ · 140 ไฟล์** · ~57 วินาที)
+ปัจจุบัน **5,712 checks · ALL OK** (alpha.164 · macOS Intel) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **10,310 ข้อ · 143 ไฟล์** · ~50 วินาที)
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
 เมนูย่อย: `popupMenu` รับ `sub`/`swatch`/`checked` · ฟังก์ชันที่เปิดเมนูเองใช้เป็นเมนูย่อยผ่าน `menuItemsOf(fn)` ·
@@ -77,6 +77,22 @@ xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron .
 - **ai/ai-rewrite-ui.js** — "Rewrite this" (คลิกขวาที่ข้อความที่เลือก → แถบลอย) · แทนที่ผ่าน `insertText`/`insertLines`/`insertScript`
   · e2e ชุด `[RW]` อ่านคำขอจริงจากเซิร์ฟเวอร์จำลอง (`GET http://127.0.0.1:8931/v1/last`)
 - **ai-analyzer-ui.js** (alpha.60r3) — แผง "🧠 AI วิเคราะห์" (**ตัวอย่างหน้าตา** มีป้ายกำกับ ไม่หลอกว่าเป็นผลจริง)
+- **ai/ai-doctor.js** (alpha.164 · บริสุทธิ์ · unit `ai-doctor`) — การ์ด **🩺 ตรวจบท** 5 ใบของแผงวิเคราะห์:
+  `dialog` บทสนทนาไม่เป็นธรรมชาติ · `drag` จังหวะอืด · `logic` ปมไม่สมเหตุสมผล · `ooc` Out of character · `tone` โทนตลก/ดราม่า
+  · ชั้นคำนวณเองให้แค่ **สัญญาณ** (คลังคำ + สรรพนาม/คำลงท้ายต่อตัวละคร + แถบโทนรายฉาก) — คำตัดสินเป็นของชั้น AI
+  · `extractDialogue()` = บทภาพยนตร์อ่านจาก `parseScript` ตัวจริง (ผู้พูดแม่น) · นิยายเดาผู้พูดจากชื่อนอกเครื่องหมายคำพูด
+  · **ai-analyze.js import ตัวนี้ทางเดียว** — ตัวช่วยนับข้อความย้ายไป `ai/ai-text.js` (ai-analyze ส่งต่อชื่อเดิมให้โค้ดเก่า)
+  · คำตอบ AI ของตรวจบทมีช่องเพิ่ม `quote` · `character` · `adjust` (โทน) · ตัววาดอยู่ `ai-doctor-ui.js`
+  · **ห้ามประกอบคีย์ภาษาจากชิ้นส่วน** (`tt(prefix + k)`) — ตัวตรวจไฟล์ภาษามองไม่เห็น ใช้ตารางคีย์เต็ม (`REASON_KEYS`)
+- **onset-diff.js / onset-plugin.js / onset-ui.js** (alpha.164) — **ฉากมีปัญหา (แก้ปัญหาหน้ากองถ่าย)** = ระบบ *เทียบ* ไม่ใช่กู้คืน
+  · คลิกขวาที่ฉาก → "ฉากมีปัญหา" = เก็บฉบับเดิมที่ `<โปรเจกต์>/OnSet/<sceneId>.json` · **ไฟล์ .md = ฉบับแก้ไขเสมอ**
+  · `onset-plugin` ติดอยู่ในตัวแก้ไขทั้งสองชนิด (เฉยจนกว่าจะสั่ง `setOnsetCompare`) · เทียบทีละบล็อกด้วย LCS (`diffBlocks`)
+    → แถบสี `.k-onset-line` + ! `.k-onset-bang` (กว้างสุทธิ 0 — **ห้ามทำให้กินที่** จัดหน้า/นับบรรทัดจะเพี้ยน)
+  · ดูฉบับเดิม = **สลับ EditorState ในตัวแก้ไขตัวเดิม** (ไม่มีตัวแก้ไขตัวที่สอง) · ระหว่างนั้น `getMarkdown/getAlignMap/getText/
+    mdLineCounts` ถูกครอบให้คืนฉบับแก้ไข · ตัวเขียนทุกตัวกลับฉบับแก้ไขก่อน · ปลั๊กอินปฏิเสธธุรกรรมที่แก้เนื้อ
+  · **ทางใหม่ที่อ่าน `view.state.doc` ตรง ๆ เพื่อส่งออก/รายงาน ต้องใช้ `revisedDoc(tab)`** ไม่งั้นส่งออกขณะดูฉบับเดิมได้ฉบับเดิม
+  · `handleCommand` เรียก `onsetBeforeCommand(ch)` ทุกคำสั่ง (ยกเว้น `VIEW_ONLY`) = พิมพ์/ส่งออก/บันทึก ยึดฉบับแก้ไข
+  · e2e `[164-O]` คลิกขวาจริง · กดชิปจริง · วัดตำแหน่ง ! จริง · unit `onset` (diff + ปลั๊กอินบน EditorState จริง)
 - **core.js** — `$`, `el`, `state`, `smart`, `log`, `setStatus`, ค่าคงที่ (`DEFAULT_SETTINGS`, `SCENE_STATUSES`, `SCENE_COLORS`, `BUILTIN_CATS`, `CAT_ICON`, `BASE_ED_FS`, ...) — **ทุกโมดูลใหม่ import จากที่นี่**
 - **app.js** (~16,000 บรรทัด · alpha.160 — ตัวเลขเดิม "~5,300" ล้าสมัยมาหลายสิบรุ่น ก่อนแยก selftest ไฟล์นี้ยาว ~45,800) — orchestrator: bootstrap, explorer (buildTree/tree), tabs, toolbar (floatBar), commands, shortcuts, zoom
 - **selftest.js** (~30,000 บรรทัด · alpha.160) — e2e ในตัวโปรแกรม `runTest()` **แยกออกจาก app.js แล้ว** ด้วย `tools/split-selftest.cjs`

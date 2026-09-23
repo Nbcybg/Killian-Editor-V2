@@ -527,6 +527,7 @@ function buildMenu() {
       { label: tt('ui.menu.searchFileQuickO'), click: cmd('quick-open') },
       // [alpha.161 · K4] แสดงไฟล์ที่เปิดอยู่ในต้นไม้ (Explorer)
       { label: tt('ui.menu.revealActive'), click: cmd('reveal-active') },
+      { label: tt('ui.menu.onsetToggle'), click: cmd('onset-toggle') },   // [alpha.164] ฉากมีปัญหา
       { label: tt('ui.menu.searchProjectF2'), click: cmd('toggle-panel', 'search') },
       { type: 'separator' },
       { label: tt('ui.menu.panel'), submenu: [

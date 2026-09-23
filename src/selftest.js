@@ -60,6 +60,9 @@ import { T, lookup, t as tt, tf as ttf } from './i18n.js';
 import * as TA from './tree-actions.js';
 import { TB_FMT_HOST, TB_HOSTS, applyFmtbarConfig, applyToolbarConfig, toolbarContextItems, toolbarDialog } from './toolbar/toolbar-ui.js';
 import { TREE_MENU_SPEC, menuLabelKey } from './tree-menu-spec.js';
+import { isProblemScene, onsetRecordOf, setProblemColor, onsetBeforeCommand } from './onset-ui.js';   // [alpha.164]
+import { openRewriteBar as openRewriteBarT } from './ai/ai-rewrite-ui.js';
+import { onsetKey } from './onset-plugin.js';
 import { TitlePageEditor, defaultTitlePages } from './sp-title-pages.js';
 import { _chatState, collectRelevant, collectScope, invalidateChatRag, newChatSession, renderAIChatPanel,
          saveSession } from './ai/ai-chat-panel.js';
@@ -68,7 +71,8 @@ import { addCustomStatus, allStatuses, importStatuses, removeCustomStatus, setSt
 import { addDays, localDay } from './local-date.js';
 import { addEntity, applyWikiCats, deleteWikiCat, duplicateEntity, openEntity, wikiCats } from './wiki-ui.js';
 import { addScene, chapterProps, deleteScene, duplicateScene, moveChapterBefore, moveSceneBefore,
-         moveSceneOrder, moveSceneToChapter, renameScene, saveChapterMeta, setSceneMeta, toggleSceneFlag } from './scene-ops.js';
+         moveSceneOrder, moveSceneToChapter, renameScene, saveChapterMeta, setSceneMeta, toggleSceneFlag,
+         moveSceneBefore as moveSceneBeforeT, dragLockOf } from './scene-ops.js';
 import { addSection, deleteSection, listSections, renameSection, reorderSections, saveSectionMeta,
          sectionProps } from './section-ops.js';
 import { addSessionNote, getSessionNotes, saveSessionNotes, showAllNotes } from './session-notes.js';
@@ -18471,11 +18475,12 @@ export async function runTest(projectPath) {
           check('[r3-5] แผง ai-analyzer อยู่ใน PANEL_DEFS',
                 PANEL_DEFS.some((d) => d.id === 'ai-analyzer'));
           check('[r3-5] มี element เจ้าบ้านใน index.html', !!$('#ai-analyzer-panel'));
-          check('[r3-5] การ์ดครบ 12 ชนิดตามที่ผู้ใช้สั่ง', ANALYZER_CARDS.length === 12,
+          check('[r3-5] การ์ดครบ 17 ชนิดตามที่ผู้ใช้สั่ง (12 เดิม + ตรวจบท 5 alpha.164)', ANALYZER_CARDS.length === 17,
                 ANALYZER_CARDS.map((c) => c.id).join(','));
           check('[r3-5] ลำดับการ์ดตรงกับสเปก 1-11 + สัดส่วนฉาก',
                 ANALYZER_CARDS.map((c) => c.id).join(',')
-                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition');
+                === 'pacing,arc,words,conflict,length,plothole,continuity,repeat,shipping,score,screentime,composition,'
+                  + 'dialog,drag,logic,ooc,tone');
           check('[r3-5] ไม่มีคีย์ภาษาหลุดมาเป็นชื่อการ์ด',
                 !ANALYZER_CARDS.some((c) => c.title.startsWith('ui.') || c.desc.startsWith('ui.')),
                 ANALYZER_CARDS.filter((c) => c.title.startsWith('ui.')).map((c) => c.id).join(','));
@@ -18483,9 +18488,9 @@ export async function runTest(projectPath) {
           await renderFeaturePanel('ai-analyzer');
           const aiaHost = $('#ai-analyzer-body');
           // แผงอ่านไฟล์ทั้งโปรเจกต์แบบ async — ห้ามวัดผลทันทีหลังสั่งวาด (บทเรียน alpha.65r)
-          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 12);
+          await waitFor(() => aiaHost.querySelectorAll('.aia-card').length === 17);
           check('[r3-5] เปิดแผงแล้ววาดเนื้อหาจริง', !!aiaHost.querySelector('.aia-wrap'));
-          check('[r3-5] วาดการ์ดครบ 12 ใบ', aiaHost.querySelectorAll('.aia-card').length === 12,
+          check('[r3-5] วาดการ์ดครบ 17 ใบ', aiaHost.querySelectorAll('.aia-card').length === 17,
                 aiaHost.querySelectorAll('.aia-card').length);
           const aiaTxt = aiaHost.textContent;
           for (const kw of ['จังหวะเรื่อง', 'ส่วนโค้งตัวละคร', 'คำที่ใช้บ่อย', 'ความขัดแย้ง', 'ความยาวฉาก',
@@ -18495,7 +18500,6 @@ export async function runTest(projectPath) {
           check('[r3-5] ไม่มีคีย์ภาษาดิบโผล่บนแผง', !/ui\.[a-z]+\.[A-Za-z]/.test(aiaTxt),
                 (aiaTxt.match(/ui\.[a-z]+\.[A-Za-z0-9_]+/) || [''])[0]);
           check('[r3-5] ไม่มีป้าย "ยังไม่เปิดใช้งาน" แล้ว', !aiaHost.querySelector('.aia-badge'));
-
           // ── แถบขอบเขต 4 ระดับ ──
           const scopeBtns = [...aiaHost.querySelectorAll('.aia-scope-btn')];
           check('[r3-5] มีปุ่มขอบเขต 4 ระดับ', scopeBtns.length === 4,
@@ -18554,6 +18558,36 @@ export async function runTest(projectPath) {
                   !!r && !r.error && Array.isArray(r.local.stats) && r.local.stats.length > 0,
                   r && r.error);
           }
+          // ── [alpha.164] 🩺 ตรวจบท: กลุ่มแยก ขึ้นก่อน · 5 ใบ · มีช่องโทนที่ตั้งใจ ──
+          {
+            const heads = [...aiaHost.querySelectorAll('.aia-group-head')].map((x) => x.dataset.group);
+            check('[164-D1] แผงแบ่งสองกลุ่ม ตรวจบทขึ้นก่อน', heads.join() === 'doctor,stats', heads.join());
+            const dGrid = aiaHost.querySelector('.aia-grid[data-group="doctor"]');
+            const dIds = dGrid ? [...dGrid.querySelectorAll('.aia-card')].map((c) => c.dataset.card).join() : '';
+            check('[164-D1] กลุ่มตรวจบทมีการ์ดครบ 5 ใบตามลำดับที่ผู้ใช้สั่ง', dIds === 'dialog,drag,logic,ooc,tone', dIds);
+            for (const kw of ['บทสนทนาไม่เป็นธรรมชาติ', 'จังหวะอืด', 'ปมไม่สมเหตุสมผล', 'Out of character', 'โทนเรื่อง']) {
+              check('[164-D1] การ์ด "' + kw + '" แสดงบนแผง', aiaHost.textContent.includes(kw));
+            }
+            const tsel = aiaHost.querySelector('#aia-tone-target');
+            check('[164-D1] การ์ดโทนมีช่องเลือกโทนที่ตั้งใจ 5 แบบ', !!tsel && tsel.options.length === 5, tsel && tsel.options.length);
+            // กดปุ่มจริงของการ์ดตรวจบททุกใบ (ชั้นคำนวณเอง — ไม่ยิง API) แล้วต้องมีผลวาดลงการ์ด
+            if (tsel) { tsel.value = 'drama'; tsel.dispatchEvent(new Event('change')); }
+            for (const id of ['dialog', 'drag', 'logic', 'ooc', 'tone']) {
+              const card = aiaHost.querySelector('.aia-card[data-card="' + id + '"]');
+              card.querySelector('.aia-run').click();
+              await waitFor(() => !!card.querySelector('.aia-result .aia-result-local'));
+              const res = card.querySelector('.aia-result');
+              check('[164-D1] กดวิเคราะห์ "' + id + '" แล้วผลวาดลงการ์ด', !!res.querySelector('.aia-stats')
+                    && res.getBoundingClientRect().height > 0, res.textContent.slice(0, 80));
+              check('[164-D1] ผล "' + id + '" ไม่มีคีย์ภาษาดิบ', !/ui\.[a-z]+\.[A-Za-z]/.test(res.textContent),
+                    (res.textContent.match(/ui\.[a-z]+\.[A-Za-z0-9_.]+/) || [''])[0]);
+            }
+            const toneRes = currentResults().tone;
+            check('[164-D1] โทนที่เลือกบนการ์ดถูกส่งเข้าเอนจิน', !!toneRes && toneRes.local.want === 'drama',
+                  toneRes && toneRes.local.want);
+            check('[164-D1] การ์ดโทนวาดแถบรายฉาก', !!aiaHost.querySelector('.aia-card[data-card="tone"] .aia-tone-row'));
+          }
+
           check('[r3-5] ปุ่ม toolbar #tb-ai-analyzer มีจริงและติด .on ตอนแผงเปิด',
                 !!$('#tb-ai-analyzer') && (refreshToolbar(), $('#tb-ai-analyzer').classList.contains('on')));
           hidePanel('ai-analyzer'); refreshToolbar();
@@ -18574,7 +18608,7 @@ export async function runTest(projectPath) {
           };
           // รอจนแผงวาดของรอบใหม่เสร็จ — เงื่อนไข "ไม่มี X" เป็นจริงชั่วคราวระหว่างล้างกับเติม
           const settled = async (extra) => waitFor(() =>
-            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 12
+            document.querySelectorAll('#ai-analyzer-body .aia-card').length === 17
             && !!$('#aia-usage') && (!extra || extra()));
           showPanel('ai-analyzer');
           await renderFeaturePanel('ai-analyzer');
@@ -18597,14 +18631,14 @@ export async function runTest(projectPath) {
           // ── ข้อ 2: บอกโทเคน "ก่อนใช้" และ "หลังใช้" ──
           const uline = $('#aia-usage');
           check('[89r] มีแถบโทเคนบนแผง', !!uline);
-          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 12 ชนิด)',
+          check('[89r] บอกประมาณการก่อนใช้ (ครบทั้ง 17 ชนิด)',
                 !!uline.querySelector('.aia-usage-before')
                 && /\d/.test(uline.querySelector('.aia-usage-before').textContent),
                 uline.textContent);
           check('[89r] บอกยอดที่ใช้ไปแล้ว (ยังไม่ได้เรียก AI → บอกว่ายังไม่ได้เรียก)',
                 !!uline.querySelector('.aia-usage-after'), uline.textContent);
           const estChips = document.querySelectorAll('#ai-analyzer-body .aia-chip-est');
-          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 12, estChips.length);
+          check('[89r] ทุกการ์ดมีชิปประมาณโทเคนของตัวเอง', estChips.length === 17, estChips.length);
           check('[89r] ชิปบอกทั้งจำนวนโทเคนและราคา',
                 /\d/.test(estChips[0].textContent) && estChips[0].textContent.includes('$'),
                 estChips[0].textContent);
@@ -18625,7 +18659,7 @@ export async function runTest(projectPath) {
           check('[89r] ปิด AI แล้วบอกว่าไม่มีค่าใช้จ่าย',
                 $('#aia-usage').textContent.includes('ไม่มีค่าใช้จ่าย'), $('#aia-usage').textContent);
           await clickWhen('#aia-use-ai');
-          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 12);
+          await settled(() => document.querySelectorAll('#ai-analyzer-body .aia-chip-est').length === 17);
 
           // ── ข้อ 1: เซสชันเก็บในโปรเจกต์ ──
           await runAnalysis('length');
@@ -19983,8 +20017,25 @@ export async function runTest(projectPath) {
                 document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
                 await w9(30);
                 check('[RW] Esc ปิดแถบ (และไฮไลต์หายไปด้วย)', !document.querySelector('.k-rewrite-bar') && !document.querySelector('.k-rewrite-hls'));
+                // [alpha.164 · บั๊ก] แถบเป็นของแท็บที่เปิดมัน — สลับ/ปิดแท็บแล้วต้องไม่ลอยค้างทับเอกสารอื่น
+                const reSel = () => { let f = -1; vRW.state.doc.descendants((n, pos) => {
+                  if (f < 0 && n.isText && n.text.includes(srcRW)) f = pos + n.text.indexOf(srcRW); });
+                  if (f > 0) vRW.dispatch(vRW.state.tr.setSelection(PMTextSelection.create(vRW.state.doc, f, f + srcRW.length))); };
+                const otherRW = [...state.tabs.values()].find((t) => t !== tabRW && t.pane && (t.editor || t.sp));
+                if (otherRW) {
+                  reSel(); openRewriteBarT(tabRW); await w9(40);
+                  check('[164-BH] เงื่อนไข: เปิดแถบ Rewrite ได้อีกครั้ง', !!document.querySelector('.k-rewrite-bar'));
+                  activate(otherRW.file); await w9(60);
+                  check('[164-BH] ★★ สลับไปแท็บอื่น → แถบ Rewrite ของแท็บเดิมปิด (ไม่ลอยค้าง + ไฮไลต์หาย)',
+                        !document.querySelector('.k-rewrite-bar') && !document.querySelector('.k-rewrite-hls'));
+                  activate(tabRW.file); await w9(60);
+                }
+                reSel(); openRewriteBarT(tabRW); await w9(40);
+                const hadBar = !!document.querySelector('.k-rewrite-bar');
+                closeTab(tabRW.file, { discard: true }); await w9(40);
+                check('[164-BH] ★ ปิดแท็บ → แถบ Rewrite ของแท็บนั้นปิดด้วย', hadBar && !document.querySelector('.k-rewrite-bar'), String(hadBar));
               }
-              closeTab(tabRW.file, { discard: true });
+              if (state.tabs.has(tabRW.file)) closeTab(tabRW.file, { discard: true });
             }
             await rtc9({ tool: 'scene.delete', args: { title: titleRW } });
             state.meta.ai.systemPrompt = keepRW.sp;
@@ -28902,8 +28953,10 @@ export async function runTest(projectPath) {
           return [...document.querySelectorAll('.k-menu .k-menu-item')];
         };
         // ลำดับบนจอต้องตรงรายการของผู้ใช้ทุกตัว (รายการสลับเปิด/ปิดใช้ชื่อฝั่งไหนก็ได้)
+        // [alpha.164] "สลับฉบับ" กับเมนูย่อยของฉากมีปัญหา โผล่เฉพาะฉากที่ติดธงแล้ว (ฉากทดสอบนี้ยังไม่ติด)
+        const COND155 = new Set(['problemToggle', 'problemMenu']);
         const sameOrder155 = (kind, items) => {
-          const ids = TREE_MENU_SPEC[kind].filter((x) => x !== '-');
+          const ids = TREE_MENU_SPEC[kind].filter((x) => x !== '-' && !COND155.has(x));
           if (ids.length !== items.length) return 'จำนวน ' + items.length + ' ≠ ' + ids.length;
           for (let i = 0; i < ids.length; i++) {
             const txt = items[i].textContent.trim();
@@ -32286,6 +32339,219 @@ export async function runTest(projectPath) {
           const lr = logo ? cBH(getComputedStyle(logo).color, getComputedStyle(document.getElementById('titlebar') || document.body).backgroundColor) : 99;
           check('[BH2-10] ★ ธีมสว่าง: ตัวหนังสือสีเน้น (โลโก้บนแถบชื่อ) คอนทราสต์ ≥ 4.5', lr >= 4.5, lr.toFixed(2));
           toggleTheme(keepTheme); await wBH(200);
+        }
+      }
+
+      // ═══════ [164-O] ฉากมีปัญหา (แก้ปัญหาหน้ากองถ่าย) — เทียบฉบับเดิม ⇄ ฉบับแก้ไข · ผ่านหน้าจอจริง ═══════
+      {
+        const wO = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilO = async (fn, ms = 4000) => { const t0 = Date.now();
+          while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await wO(40); } return false; };
+        const menuItem = (txt) => [...document.querySelectorAll('.k-menu .k-menu-item')].find((x) => x.textContent.includes(txt));
+        const closeMenus = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await buildTree(); await wO(120);
+        // ฉากนิยายที่ไม่ล็อก (เปิดดูทีละแถวจนเจอตัวแก้ไขนิยาย)
+        let rowO = null, tabO = null;
+        for (const r of [...document.querySelectorAll('#tree .scene[data-path]')].filter((x) => x._k2row && x._k2row.kind === 'scene'
+               && /\.md$/i.test(x.dataset.path) && !x._k2row.ctx.lockSrc && !x._k2row.ctx.isMemoRow).slice(0, 8)) {
+          await openScene(r.dataset.path, r._k2row.ctx.title); await wO(150);
+          const tb = state.tabs.get(r.dataset.path);
+          if (tb && tb.editor && !tb.locked) { rowO = r; tabO = tb; break; }
+        }
+        check('[164-O] เงื่อนไข: เจอฉากนิยายที่แก้ได้', !!tabO);
+        if (tabO) {
+          const fileO = tabO.file, idO = rowO._k2row.ctx.sc.id;
+          const keepO = tabBodyText(tabO);
+          const ORIG = 'บรรทัดหนึ่งของฉาก\n\nบรรทัดสองของฉาก\n\nบรรทัดสามของฉาก';
+          tabO.editor.setMarkdown(ORIG); markDirty(tabO); await saveTab(tabO); await wO(100);
+          // 1) คลิกขวาที่แถวฉากจริง → เมนู "ฉากมีปัญหา"
+          await buildTree(); await wO(120);
+          const rowNow = () => [...document.querySelectorAll('#tree .scene[data-path]')].find((x) => samePath(x.dataset.path, fileO));
+          let r1 = rowNow();
+          r1.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 200 }));
+          await wO(120);
+          const miMark = menuItem(tt('ui.treeMenu.problem'));
+          check('[164-O] ★ คลิกขวาที่ฉาก → มีคำสั่ง "ฉากมีปัญหา"', !!miMark,
+                [...document.querySelectorAll('.k-menu .k-menu-item')].map((x) => x.textContent).join(' | ').slice(0, 300));
+          check('[164-O] ฉากที่ยังไม่ติดธง ไม่มีคำสั่งสลับฉบับ', !menuItem(tt('ui.treeMenu.problemMenu') + '›') && !menuItem(tt('ui.onset.toOriginal')));
+          if (miMark) miMark.click(); else closeMenus();
+          await untilO(() => isProblemScene(idO) && tabO._onset);
+          check('[164-O] ★★ เลือกเมนูแล้วฉากติดธง + แท็บเข้าโหมดเทียบ', isProblemScene(idO) && !!tabO._onset);
+          const recO = onsetRecordOf(idO);
+          const onDisk = recO && recO.path && await kapi.exists(recO.path) ? await kapi.readJson(recO.path) : null;
+          check('[164-O] ★ ฉบับเดิมถูกเก็บเป็นไฟล์ OnSet/<id>.json (อ่าน/ลบนอกโปรแกรมได้)',
+                !!onDisk && onDisk.baseline === ORIG && /[\\/]OnSet[\\/]/.test(recO.path), recO && recO.path);
+          const mdAfterMark = parseMdFile(await kapi.readFile(fileO)).body;
+          check('[164-O] ไฟล์ .md ของฉากไม่ถูกแตะตอนติดธง', mdAfterMark === ORIG);
+          await untilO(() => !!rowNow() && !!rowNow().querySelector('.tree-onset'));
+          check('[164-O] ★ แถวฉากใน Explorer มีป้าย !', !!rowNow() && !!rowNow().querySelector('.tree-onset'));
+          check('[164-O] แท็บมีเครื่องหมาย !', tabO.tabBtn.classList.contains('k-onset-tab'));
+          const chip0 = tabO.pane.querySelector('.k-onset-chip');
+          check('[164-O] ★ มีชิปฉากมีปัญหาในตัวแก้ไข (ยังไม่แก้ = ไม่มีจุดที่แก้)', !!chip0 && chip0.textContent.includes(tt('ui.onset.noChanges')),
+                chip0 && chip0.textContent);
+          check('[164-O] ยังไม่แก้ = ไม่มีแถบ', tabO.pane.querySelectorAll('.k-onset-line').length === 0);
+          // 2) แก้บรรทัดที่สองด้วยการพิมพ์จริงผ่านตัวแก้ไข
+          const v = tabO.editor.view;
+          let p2 = -1;
+          v.state.doc.forEach((n, pos, i) => { if (i === 1) p2 = pos; });
+          const endOf2 = p2 + 1 + 'บรรทัดสองของฉาก'.length;
+          v.dispatch(v.state.tr.insertText(' (แก้หน้ากอง)', endOf2));
+          await untilO(() => tabO.pane.querySelectorAll('.k-onset-line').length === 1);
+          const lines = [...tabO.pane.querySelectorAll('.ProseMirror .k-onset-line')];
+          check('[164-O] ★★ บรรทัดที่แก้ขึ้นแถบสี 1 บรรทัดพอดี', lines.length === 1 && lines[0].textContent.includes('แก้หน้ากอง'),
+                lines.map((x) => x.textContent).join(' | '));
+          const bang = tabO.pane.querySelector('.ProseMirror .k-onset-bang');
+          check('[164-O] ★★ มีไอคอน ! หน้าบรรทัดที่แก้', !!bang && bang.textContent === '!' && lines[0] && lines[0].contains(bang));
+          // ! ต้องอยู่ "หน้า" บรรทัด และไม่ดันตัวหนังสือ (ตำแหน่งอักษรตัวแรกเท่าบรรทัดที่ไม่ได้แก้)
+          // อักษรตัวแรกของย่อหน้า (ข้ามตัว ! และช่องว่าง) — ใช้โหนดของย่อหน้าจริง ไม่ใช่ลูกลำดับที่ n ของตัวแก้ไข
+          // (ระหว่างย่อหน้ามี widget เส้นคั่นหน้าแทรกอยู่ได้)
+          const firstX = (node) => {
+            if (!node) return NaN;
+            const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode: (n) =>
+              (n.parentElement && n.parentElement.closest('.k-onset-bang')) || !n.textContent.trim()
+                ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+            const tn = w.nextNode();
+            if (!tn) return NaN;
+            const i0 = tn.textContent.search(/\S/);
+            const rg = document.createRange(); rg.setStart(tn, i0); rg.setEnd(tn, i0 + 1);
+            return rg.getBoundingClientRect().left;
+          };
+          const plainDom = v.nodeDOM(0);
+          const xChanged = firstX(lines[0]), xPlain = firstX(plainDom);
+          check('[164-O] ★ ! ไม่ดันตัวหนังสือ (อักษรแรกของบรรทัดที่แก้ตรงกับบรรทัดปกติ)', Math.abs(xChanged - xPlain) < 1.5,
+                xChanged + ' vs ' + xPlain);
+          const bR = bang.getBoundingClientRect();
+          check('[164-O] ! อยู่หน้าบรรทัด (ขอบขวาของ ! ≤ อักษรตัวแรก)', bR.width > 4 && bR.right <= xChanged + 1, bR.right + ' vs ' + xChanged);
+          const band = getComputedStyle(lines[0]);
+          check('[164-O] แถบเป็นสีแดงเริ่มต้น (พื้นหลังไม่โปร่งใส + เส้นซ้าย)', band.backgroundColor !== 'rgba(0, 0, 0, 0)' && /inset/.test(band.boxShadow),
+                band.backgroundColor + ' / ' + band.boxShadow);
+          await wO(260);
+          check('[164-O] ชิปนับจุดที่แก้ = 1', tabO.pane.querySelector('.k-onset-chip').textContent.includes(ttf('ui.onset.nChanges', 1)),
+                tabO.pane.querySelector('.k-onset-chip').textContent);
+          const revisedMd = tabBodyText(tabO);
+          // 3) กดปุ่มบนชิปจริง → ฉบับเดิม
+          tabO.pane.querySelector('.k-onset-chip-btn').click();
+          await untilO(() => tabO._onset && tabO._onset.view === 'original');
+          check('[164-O] ★★ กดชิป → แสดงฉบับเดิม', tabO._onset.view === 'original' && v.state.doc.textContent.includes('บรรทัดสองของฉาก')
+                && !v.state.doc.textContent.includes('แก้หน้ากอง'), v.state.doc.textContent);
+          check('[164-O] ★ ฉบับเดิม = อ่านอย่างเดียว (contenteditable=false)', v.dom.getAttribute('contenteditable') === 'false');
+          const beforeTry = v.state.doc.textContent;
+          v.dispatch(v.state.tr.insertText('X', 2));
+          check('[164-O] ★ ฉบับเดิมพิมพ์ทับไม่ได้ (ธุรกรรมถูกปฏิเสธ)', v.state.doc.textContent === beforeTry);
+          check('[164-O] ฉบับเดิมก็มีแถบบอกบรรทัดที่ถูกแก้', tabO.pane.querySelectorAll('.ProseMirror .k-onset-line').length === 1);
+          check('[164-O] ชิปบอกว่ากำลังดูฉบับเดิม', tabO.pane.querySelector('.k-onset-chip').classList.contains('is-orig'));
+          check('[164-O] ★★ ระหว่างดูฉบับเดิม ตัวอ่านเนื้อ (บันทึก/ส่งออก/AI) ยังได้ฉบับแก้ไข', tabBodyText(tabO) === revisedMd,
+                tabBodyText(tabO).slice(0, 80));
+          await saveTab(tabO);
+          const diskO = parseMdFile(await kapi.readFile(fileO)).body;
+          check('[164-O] ★★ บันทึกระหว่างดูฉบับเดิม = เขียนฉบับแก้ไขลงไฟล์', diskO === revisedMd, diskO.slice(0, 80));
+          // 4) พิมพ์/ส่งออก = ฉบับแก้ไข: คำสั่งใด ๆ ที่ไม่ใช่ "ดูอย่างเดียว" พาไปฉบับแก้ไขก่อน
+          check('[164-O] คำสั่งซูมไม่พาออกจากฉบับเดิม', onsetBeforeCommand('zoom') === false && tabO._onset.view === 'original');
+          await handleCommand('save');
+          check('[164-O] ★★ สั่งคำสั่งที่อ่านเนื้อ (บันทึก/พิมพ์/ส่งออก) → กลับฉบับแก้ไขก่อนเสมอ',
+                tabO._onset.view === 'revised' && v.state.doc.textContent.includes('แก้หน้ากอง'));
+          check('[164-O] กลับฉบับแก้ไขแล้วแก้ได้อีก', v.dom.getAttribute('contenteditable') === 'true');
+          // 5) คีย์ลัด/คำสั่ง onset-toggle + คลิกขวาในตัวแก้ไขบนบรรทัดที่มีปัญหา
+          await handleCommand('onset-toggle');
+          check('[164-O] ★ คำสั่ง onset-toggle สลับเป็นฉบับเดิม', tabO._onset.view === 'original');
+          await handleCommand('onset-toggle');
+          check('[164-O] ★ สั่งอีกครั้ง = กลับฉบับแก้ไข', tabO._onset.view === 'revised');
+          const lineNow = tabO.pane.querySelector('.ProseMirror .k-onset-line');
+          lineNow.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }));
+          await wO(120);
+          const miOrig = menuItem(tt('ui.onset.toOriginal'));
+          check('[164-O] ★ คลิกขวาบนบรรทัดที่มีปัญหา → เมนูสลับเป็นฉบับเดิม', !!miOrig);
+          check('[164-O] เมนูนั้นยังมีคัดลอก/ตัด/วาง (แทนเมนูของระบบ)', !!menuItem(tt('ui.common.copy')) && !!menuItem(tt('ui.menu.paste')));
+          if (miOrig) miOrig.click(); else closeMenus();
+          await untilO(() => tabO._onset.view === 'original');
+          check('[164-O] เลือกเมนูในตัวแก้ไข → ฉบับเดิม', tabO._onset.view === 'original');
+          // 6) คลิกขวาที่ฉากใน Explorer → สลับฉบับ
+          r1 = rowNow();
+          r1.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 200 }));
+          await wO(120);
+          const miBack = menuItem(tt('ui.onset.toRevised'));
+          check('[164-O] ★ คลิกขวาที่ฉาก (กำลังดูฉบับเดิม) → มี "ดูฉบับแก้ไข"', !!miBack);
+          check('[164-O] ฉากที่ติดธงแล้วไม่มีคำสั่ง "ฉากมีปัญหา" ซ้ำ', !menuItem(tt('ui.treeMenu.problem')));
+          if (miBack) miBack.click(); else closeMenus();
+          await untilO(() => tabO._onset.view === 'revised');
+          check('[164-O] ★ เลือกจากเมนู Explorer → กลับฉบับแก้ไข', tabO._onset.view === 'revised');
+          // 7) ประวัติ undo รอดการสลับไปมา — ย้อนการแก้ = แถบหาย
+          tabO.editor.cmd('undo'); await wO(80);
+          check('[164-O] ★ สลับไปมาแล้ว undo ยังย้อนการแก้ได้ → เหมือนฉบับเดิม = แถบหายเอง',
+                !v.state.doc.textContent.includes('แก้หน้ากอง') && tabO.pane.querySelectorAll('.ProseMirror .k-onset-line').length === 0,
+                v.state.doc.textContent);
+          tabO.editor.cmd('redo'); await wO(80);
+          // 8) สีแถบที่กำหนดเอง
+          await setProblemColor(idO, '#0090ff');
+          check('[164-O] ★ เปลี่ยนสีแถบได้ (ตัวแปรสีของแผง)', tabO.pane.style.getPropertyValue('--k-onset-color') === '#0090ff');
+          const band2 = getComputedStyle(tabO.pane.querySelector('.ProseMirror .k-onset-line')).boxShadow;
+          check('[164-O] แถบใช้สีที่ตั้ง', /0, 144, 255/.test(band2), band2);
+          // 9) พิมพ์ = ไม่มีแถบ/ไอคอน/ชิป
+          document.body.classList.add('printing');
+          const hideBang = getComputedStyle(tabO.pane.querySelector('.k-onset-bang')).display === 'none';
+          const hideBand = getComputedStyle(tabO.pane.querySelector('.k-onset-line')).boxShadow === 'none';
+          const hideChip = getComputedStyle(tabO.pane.querySelector('.k-onset-bar')).display === 'none';
+          document.body.classList.remove('printing');
+          check('[164-O] ★ ตอนพิมพ์ แถบ/ไอคอน ! /ชิปถูกซ่อน (กระดาษสะอาด)', hideBang && hideBand && hideChip, [hideBang, hideBand, hideChip].join());
+          // 10) บทภาพยนตร์มีปลั๊กอินเดียวกัน
+          const spTab = [...state.tabs.values()].find((x) => x.sp);
+          if (spTab) check('[164-O] บทภาพยนตร์มีปลั๊กอินเทียบฉบับ', !!onsetKey.getState(spTab.sp.view.state));
+          // 11) เลิกติดธงผ่านเมนูของชิป → กล่องยืนยัน → ไฟล์ฉบับเดิมหาย · เนื้อฉาก (ฉบับแก้ไข) อยู่ครบ
+          tabO.pane.querySelector('.k-onset-chip-more').click();
+          await wO(120);
+          const miClear = menuItem(tt('ui.onset.clear'));
+          check('[164-O] เมนูของชิปมี "เลิกเป็นฉากมีปัญหา"', !!miClear);
+          if (miClear) {
+            miClear.click();
+            await untilO(() => !!document.querySelector('.k-dialog .k-ok'));
+            const okBtn = [...document.querySelectorAll('.k-dialog .k-ok')].pop();
+            check('[164-O] ปุ่มยืนยันไม่ได้เขียนว่า "ลบ" (เป็นการเลิกเทียบ)', okBtn && okBtn.textContent.includes(tt('ui.onset.clearBtn')), okBtn && okBtn.textContent);
+            okBtn && okBtn.click();
+            await untilO(() => !isProblemScene(idO) && !tabO._onset);
+          } else closeMenus();
+          check('[164-O] ★★ เลิกติดธงแล้ว: ไม่มีธง · ไม่มีแถบ · ไม่มีชิป', !isProblemScene(idO) && !tabO._onset
+                && !tabO.pane.querySelector('.k-onset-chip') && tabO.pane.querySelectorAll('.k-onset-line').length === 0);
+          check('[164-O] ★ ไฟล์ฉบับเดิมถูกลบ', !(await kapi.exists(recO.path)));
+          check('[164-O] ★ เนื้อฉาก (ฉบับแก้ไข) อยู่ครบ', tabBodyText(tabO).includes('แก้หน้ากอง'));
+          await untilO(() => !!rowNow() && !rowNow().querySelector('.tree-onset'));
+          check('[164-O] ป้าย ! ใน Explorer หายไป', !!rowNow() && !rowNow().querySelector('.tree-onset'));
+          // [164-L] ★ ฉากล็อก = ปุ่ม/คำสั่งแก้เนื้อไม่ทำงาน (เดิม editable:false กันแค่การพิมพ์)
+          {
+            const vL = tabO.editor.view;
+            tabO.locked = true; vL.dispatch(vL.state.tr);
+            vL.dispatch(vL.state.tr.setSelection(PMTextSelection.create(vL.state.doc, 1, Math.min(6, vL.state.doc.content.size - 1))));
+            const before = tabBodyText(tabO);
+            const bBold = document.getElementById('tb-bold');
+            if (bBold) bBold.click();
+            await handleCommand('fmt', 'italic');
+            await handleCommand('text-case-cycle');
+            const r1 = tabO.editor.cmd('strike');
+            await wO(80);
+            check('[164-L] ★★ ฉากล็อก: กดปุ่มหนา/คำสั่งเอียง/รูปตัวพิมพ์/ขีดฆ่า → เนื้อไม่เปลี่ยน', tabBodyText(tabO) === before && r1 === false,
+                  tabBodyText(tabO).slice(0, 60));
+            check('[164-L] ฉากล็อก: บอกเหตุผลที่แถบสถานะ', ($('#status') && $('#status').textContent || '').length > 0);
+            tabO.locked = false; vL.dispatch(vL.state.tr);
+            tabO.editor.cmd('bold'); await wO(40);
+            check('[164-L] ปลดล็อกแล้วปุ่มกลับมาทำงาน', tabBodyText(tabO) !== before, tabBodyText(tabO).slice(0, 60));
+          }
+          // [164-L] ★ ลากวางใน Explorer เคารพล็อก (เดิมลากฉากที่ล็อก/เข้าบทที่ล็อกได้ ทั้งที่เมนูกันไว้)
+          {
+            const { dPath: dL, ch: chL, sc: scL } = rowO._k2row.ctx;
+            const sfL = await kapi.join(dL, 'scenes.json'), dfL = await kapi.join(dL, 'draft.json');
+            const sBefore = await kapi.readFile(sfL), d0 = await kapi.readFile(dfL);
+            const djL = JSON.parse(d0);
+            const chRow = (djL.chapters || []).find((c) => c.guid === chL.guid);
+            if (chRow) {
+              chRow.locked = true; await kapi.writeFile(dfL, JSON.stringify(djL, null, 2));
+              check('[164-L] dragLockOf เห็นบทที่ล็อก', (await dragLockOf(dL, { chGuids: [chL.guid] })) === 'chapter');
+              const rMv = await moveSceneBeforeT(dL, chL, scL.id, chL, null);
+              check('[164-L] ★ ลากฉากในบทที่ล็อก = ไม่ขยับ (scenes.json ไม่เปลี่ยน)', rMv === false && (await kapi.readFile(sfL)) === sBefore);
+              await kapi.writeFile(dfL, d0);
+              check('[164-L] ปลดล็อกแล้วลากได้ตามเดิม', (await dragLockOf(dL, { chGuids: [chL.guid], sceneId: scL.id, srcGuid: chL.guid })) === '');
+            }
+          }
+          // คืนเนื้อเดิมของฉาก (เทสอื่นในรอบหน้าไม่ต้องรู้ว่ามีเทสนี้)
+          tabO.editor.setMarkdown(keepO); markDirty(tabO); await saveTab(tabO);
         }
       }
 

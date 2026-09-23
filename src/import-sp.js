@@ -30,7 +30,13 @@ export const SP_IMPORTERS = {
 /**
  * @param {(md:string, format:string, summary:object, mode:'new'|'replace') => any} injectFn
  */
-export async function importScreenplayDialog(injectFn) {
+/**
+ * @param {Function} injectFn  (markdown, format, summary, mode) => Promise
+ * @param {{canReplace?:boolean}} [opts]  [alpha.164] false = ไม่มีแท็บบทที่ทับได้ (ไม่มีแท็บ · แท็บนิยาย · ฉากล็อก)
+ *   → ไม่โชว์ปุ่ม "ทับแท็บปัจจุบัน" (เดิมโชว์เสมอ: กดบนแท็บนิยาย = ได้ฉากใหม่แทนเงียบ ๆ ·
+ *   กดบนฉากที่ล็อก = เนื้อที่ล็อกไว้ถูกเขียนทับ)
+ */
+export async function importScreenplayDialog(injectFn, opts = {}) {
   // ใช้ kapi.openScreenplayFile() — เปิด dialog พร้อมฟิลเตอร์ทุกฟอร์แมตบท
   const filePath = await kapi.openScreenplayFile();
   if (!filePath) return null;
@@ -44,7 +50,7 @@ export async function importScreenplayDialog(injectFn) {
   const summary = importSummary(result.elements);
   summary.title = result.title || '';
   const markdown = elementsToMarkdown(result.elements);
-  const mode = await importPreviewDialog({ filePath, result, summary, markdown });
+  const mode = await importPreviewDialog({ filePath, result, summary, markdown, canReplace: opts.canReplace !== false });
   if (!mode) return null;
 
   if (injectFn) await injectFn(markdown, result.format, summary, mode);
@@ -55,7 +61,7 @@ export async function importScreenplayDialog(injectFn) {
  * กล่องพรีวิวการนำเข้า — เห็นของจริงก่อนตัดสินใจ
  * @returns {Promise<'new'|'replace'|null>} null = ยกเลิก
  */
-function importPreviewDialog({ filePath, result, summary, markdown }) {
+function importPreviewDialog({ filePath, result, summary, markdown, canReplace = true }) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog k-wide imp-sp');
@@ -87,7 +93,7 @@ function importPreviewDialog({ filePath, result, summary, markdown }) {
     bRep.onclick = () => done('replace');
     const bCancel = el('button', 'k-cancel', t('ui.common.cancel'));
     bCancel.onclick = () => done(null);
-    btns.append(bCancel, bRep, bNew);
+    btns.append(bCancel, ...(canReplace ? [bRep] : []), bNew);
     box.append(btns);
     ov.append(box); document.body.append(ov);
     ov.onclick = (e) => { if (e.target === ov) done(null); };
