@@ -11,9 +11,10 @@ body.theme-plum-wine {
   --border:#601d49;
   --fg:#ffebd6;
   --bright:#fff7ef;
-  --dim:#b09394;
+  --dim:#c4aeaf;
   --accent:#ea9d9d;
   --accent-hi:#ffebb8;
+  --accent-ink:#ffebb8;
   --link:#ffc9a8;
   --sel:#601d49;
   --orange:#ffebb8;
@@ -30,7 +31,7 @@ body.theme-plum-wine {
   --tab-bar:#290b22;
   --tab-bg:#4e2641;
   --tab-border:#654055;
-  --tab-fg:#b09394;
+  --tab-fg:#c4aeaf;
   --tab-fg-on:#fff5eb;
   --tab-hover:#461d3a;
   --panel-head:#340e2b;

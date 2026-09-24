@@ -287,7 +287,7 @@ export async function openProjectDoctor() {
   bFix.onclick = async () => {
     const picked = issues.filter((it, i) => it.fix && boxes[i] && boxes[i].checked);
     if (!picked.length) return;
-    if (!(await confirmBox(tf('ui.doctor.confirmFix', picked.length)))) return;
+    if (!(await confirmBox(tf('ui.doctor.confirmFix', picked.length), t('ui.common.fixBtn')))) return;
     bFix.disabled = true;
     const res = await applyDoctorFixes(picked);
     setStatus(tf('ui.doctor.fixedN', res.ok, res.failed));

@@ -42,7 +42,7 @@ export function openQuickOpen() {
   const list = el('div', 'k-qo-list');
   // แถบคำใบ้ท้ายกล่อง (ผู้ใช้ไม่รู้ว่ากดอะไรได้บ้าง) + ปุ่มสแกนใหม่
   const foot = el('div', 'k-qo-foot');
-  foot.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;opacity:.75;border-top:1px solid var(--border)';
+  foot.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;opacity:.75;border-top:1px solid var(--border)';
   const hint = el('span', 'k-qo-hint', t('ui.quickOpen.pickEnterOpenEsc'));
   const count = el('span', 'k-qo-count');
   count.style.cssText = 'margin-left:auto';

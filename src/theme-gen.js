@@ -25,6 +25,7 @@ export const THEME_VARS = [
   ['--dim', 'ตัวหนังสือรอง / คำอธิบาย'],
   ['--accent', 'สีเน้นหลัก (ปุ่มยืนยัน · แท็บที่เลือก)'],
   ['--accent-hi', 'สีเน้นรอง (ไฮไลต์ · ตัวคั่นหน้า)'],
+  ['--accent-ink', 'สีเน้นเมื่อใช้เป็นตัวหนังสือ (อ่านออกบนทุกพื้นของธีม)'],
   ['--link', 'ลิงก์ / ชื่อที่คลิกได้'],
   ['--sel', 'พื้นข้อความที่ถูกเลือก'],
   ['--orange', 'สีเตือนอ่อน / ป้ายสถานะ'],
@@ -57,7 +58,7 @@ export const THEME_VAR_NAMES = THEME_VARS.map(([n]) => n);
 export const THEME_BASE_KEYS = ['bg', 'fg', 'accent', 'accentHi', 'link'];
 
 /** คอนทราสต์ขั้นต่ำของสีที่ถูกใช้เป็นตัวหนังสือบน --bg */
-export const MIN_CONTRAST = { '--fg': 7, '--dim': 3.5, '--accent': 3, '--accent-hi': 3, '--link': 3.5,
+export const MIN_CONTRAST = { '--fg': 7, '--dim': 3.5, '--accent': 3, '--accent-hi': 3, '--accent-ink': 4.5, '--link': 3.5,
                               '--on-accent': 3, '--on-accent-hi': 3, '--tab-fg-on': 4.5 };
 
 const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -139,6 +140,25 @@ export function themeVars(spec) {
     '--on-accent': inkOn(accent),
     '--on-accent-hi': inkOn(accentHi),
   };
+  // ══ ตัวหนังสือต้องอ่านออกบน "ทุกพื้น" ของธีม ไม่ใช่แค่ --bg ══
+  // เดิมดันคอนทราสต์กับ --bg อย่างเดียว (พื้นที่สว่างที่สุดของธีมสว่าง) แต่ตัวหนังสือเดียวกันไปอยู่บน
+  // แถบเครื่องมือ · แผงข้าง · รางแท็บ · รอบกระดาษ ที่เข้มกว่า → วัดจากจอจริงได้ 1.7–3:1 ในธีมสว่างเกือบทุกธีม
+  const surfaces = ['--bg', '--side', '--bar', '--titlebar', '--tab-bar', '--sunken', '--chip', '--hover-soft',
+                    '--panel-head', '--paper-surround'].map((k) => v[k]).filter(Boolean);
+  const onAll = (c, min) => {
+    let x = c;
+    for (let i = 0; i < 24; i++) {
+      const worst = surfaces.reduce((w, b) => (contrast(x, b) < contrast(x, w) ? b : w), surfaces[0]);
+      if (contrast(x, worst) >= min) return x;
+      x = ensureContrast(x, worst, min);
+    }
+    return x;
+  };
+  v['--accent-ink'] = onAll(accentHi, 4.5);
+  v['--orange'] = v['--accent-ink'];                // ป้ายสถานะ/คำพูดยกมา = ตัวหนังสือ
+  v['--link'] = onAll(link, 4.5);
+  v['--dim'] = onAll(dim, 4.5);
+  v['--tab-fg'] = v['--dim'];
   // สีที่ผู้ใช้คุมเองทีละตัว — ชนะค่าที่คำนวณเสมอ (แต่ต้องเป็นตัวแปรที่รู้จัก)
   for (const [k, val] of Object.entries(s.vars || {})) {
     if (THEME_VAR_NAMES.includes(k) && String(val).trim()) v[k] = String(val).trim();

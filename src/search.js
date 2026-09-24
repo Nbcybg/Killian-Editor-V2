@@ -56,7 +56,10 @@ export function gotoMatch(view, dir) {
   return matches.indexOf(m) + 1;
 }
 
+// [alpha.164 · บั๊ก] ฉากล็อก (หรือกำลังดูฉบับเดิมของฉากมีปัญหา) = แทนที่ไม่ได้
+// `editable:false` กันแค่การพิมพ์ — ปุ่ม "แทนที่/แทนที่ทั้งหมด" ยิง dispatch เองจึงเคยแก้ฉากที่ล็อกได้
 export function replaceCurrent(view, text) {
+  if (!view || view.editable === false) return false;
   const { matches, query } = searchKey.getState(view.state);
   const { from, to } = view.state.selection;
   const hit = matches.find((m) => m.from === from && m.to === to);
@@ -67,6 +70,7 @@ export function replaceCurrent(view, text) {
 }
 
 export function replaceAll(view, text) {
+  if (!view || view.editable === false) return 0;
   const { matches } = searchKey.getState(view.state);
   if (!matches.length) return 0;
   let tr = view.state.tr;

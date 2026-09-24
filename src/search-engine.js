@@ -408,7 +408,8 @@ function difference(a, b) { const o = new Set(a); for (const x of b) o.delete(x)
  * [alpha.161 · C3] โฟลเดอร์ชั้นบนของโปรเจกต์ที่ไม่ใช่ "งาน" แต่เป็นสำเนาของงาน — ไม่ค้นเข้าไป
  * (ฉากที่ลบแล้วอยู่ใน Recycle · ประวัติเวอร์ชันใน Snapshots · ชุดสำรองใน Backups = ผลค้นหาชี้ไฟล์ผี)
  */
-export const SEARCH_SKIP_DIRS = ['Recycle', 'Snapshots', 'Backups'];
+// [alpha.164] + OnSet — ฉบับเดิมของฉากมีปัญหาเป็นสำเนา (ค้นเจอ = ผลชี้ไฟล์ .json ไม่ใช่ฉากจริง)
+export const SEARCH_SKIP_DIRS = ['Recycle', 'Snapshots', 'Backups', 'OnSet'];
 
 /**
  * [alpha.162 · W1-1] ดัชนีที่ถืออยู่ (หรือที่กำลังสร้าง) ใช้ตอบคำขอนี้ได้ไหม

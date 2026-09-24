@@ -16,7 +16,7 @@
 //          positions:{[nodeId]:{x,y}}, colors:{[nodeId]:'#hex'},
 //          view:'tree'|'list', zoom, sel, updated }
 
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { cmpText } from './locale.js';
 export const BRANCH_PLAN_VERSION = 3;
 export const BRANCH_PLAN_DIR = 'Branches';
@@ -204,7 +204,7 @@ export function planSummary(plan) {
   const parts = [];
   const ch = normalizeChoiceMap(p.choices);
   const nCh = Object.values(ch).reduce((n, l) => n + l.length, 0);
-  if (nCh) parts.push(nCh + t('ui.branch.choice') + Object.keys(ch).length + t('ui.common.scene'));
+  if (nCh) parts.push(nCh + tf('ui.branch.choiceF', Object.keys(ch).length));
   if (p.status && p.status !== PLAN_DEFAULT_STATUS) parts.push(p.status);
   if ((p.tags || []).length) parts.push('#' + p.tags.join(' #'));
   const n = Object.keys(p.positions || {}).length;

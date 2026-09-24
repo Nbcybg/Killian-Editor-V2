@@ -129,6 +129,49 @@ for (const f of langFiles) {
   }
 }
 
+// ───────── [alpha.164 · A4] คีย์ที่เขียนเป็นสตริงเปล่า ๆ แล้วส่งต่อเป็นตัวแปร ─────────
+// `mk('sceneNumbers', 'ui.xhub.pdfSceneNums')` → `tt(labelKey)` — ตัวกวาด CALL ข้างบนมองไม่เห็น
+// เพราะคีย์ไม่ได้อยู่ในวงเล็บของ t() ตรง ๆ · คีย์นี้ขาดจริงและโชว์เป็นตัวคีย์บนจอกล่องส่งออก
+// (e2e ก็ไม่ฟ้อง: เทียบ `lbls.includes(tt(key))` — tt คืนตัวคีย์ ป้ายก็เป็นตัวคีย์ = เท่ากัน)
+{
+  const lits = new Map();
+  for (const abs of srcFiles) {
+    const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+    const raw = fs.readFileSync(abs, 'utf8');
+    const tstart = testStart(rel, raw);
+    for (const tk of lexStrings(raw)) {
+      if (tk.type === 'tpl' && tk.parts.length > 1) continue;
+      if (tstart !== Infinity && tk.line >= tstart) continue;
+      const v = tk.parts[0];
+      if (/^ui\.[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9_]*$/.test(v) && !lits.has(v)) lits.set(v, rel + ':' + tk.line);
+    }
+  }
+  check('[164-A4] กวาดเจอคีย์ที่เป็นสตริงเปล่า ๆ', lits.size > 3000, lits.size);
+  for (const f of langFiles) {
+    const missing = [...lits.keys()].filter((k) => !(k in tables[f]));
+    check(`[164-A4] ${f}: คีย์ที่ส่งต่อเป็นตัวแปรมีครบ (ขาด 0)`, missing.length === 0,
+          missing.length + ' ขาด: ' + missing.slice(0, 4).join(' · ') + (missing[0] ? '  (ที่ ' + lits.get(missing[0]) + ')' : ''));
+  }
+}
+
+// ───────── [alpha.164 · B1–B2] โน้ตนักพัฒนา / มาร์กดาวน์ดิบ ห้ามหลุดขึ้นจอ ─────────
+// เจอบนหน้าตั้งค่า: `[บั๊ก 14]` · `[60r2 ข้อ 9]` · `[85]` · `[81][82][83]` · `(network-theme.js)` = เลขข้อจาก
+// CHANGELOG ติดมากับข้อความ · `**ชื่อไฟล์**` / `` `k2_xx.csv` `` = คำใบ้ลง HTML ผ่าน tx() ซึ่งไม่ตีความมาร์กดาวน์
+{
+  const DEV_TAG = /\[\d{1,3}(r\d*)?( ข้อ \d+)?\]|\[บั๊ก|\[\d{1,3}[–-]\d{1,3}\]|\([a-z-]+\.(js|cjs)\)/;
+  // คำสั่งถึง AI (prompt) ใช้มาร์กดาวน์เป็นภาษาของมันเอง — ไม่ใช่ข้อความบนจอ
+  const PROMPT_KEY = /^ui\.(ai|aia|aiAgent|aiAssistant|aiCharacter|aiPlot|aiTools|aiDoctor|aiRewrite|aiWorld|aiSummary|aiDialogue|aiConsistency|aiTitle|aiChat|aiChatPanel|starter|aiStarter|aiPrompt)[A-Za-z]*\./;
+  const MD_RAW = /\*\*[^*\n]+\*\*|`[^`\n]+`/;
+  for (const f of langFiles) {
+    const dev = Object.entries(tables[f]).filter(([k, v]) => k.startsWith('ui.') && DEV_TAG.test(v));
+    check(`[164-B1] ${f}: ไม่มีเลขข้อของนักพัฒนาในข้อความ`, dev.length === 0,
+          dev.slice(0, 3).map(([k, v]) => k + '=' + String(v).slice(0, 30)).join(' · '));
+    const md = Object.entries(tables[f]).filter(([k, v]) => k.startsWith('ui.') && !PROMPT_KEY.test(k) && MD_RAW.test(v));
+    check(`[164-B2] ${f}: ไม่มีมาร์กดาวน์ดิบในข้อความบนจอ`, md.length === 0,
+          md.length + ': ' + md.slice(0, 4).map(([k]) => k).join(' · '));
+  }
+}
+
 // ───────── ไฟล์ภาษาทุกไฟล์ต้องมีชุดคีย์เหมือนกัน ─────────
 const base = langFiles[0];
 for (const f of langFiles.slice(1)) {

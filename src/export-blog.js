@@ -182,7 +182,7 @@ async function optionsDialog() {
       const r = mkRow(label);
       const c = el('input'); c.type = 'checkbox'; c.checked = val;
       r.append(c);
-      if (hint) { const h = el('div', 'dim', hint); h.style.cssText = 'font-size:11px;margin:-4px 0 6px'; box.append(h); }
+      if (hint) { const h = el('div', 'dim', hint); h.style.cssText = 'font-size:12px;margin:-4px 0 6px'; box.append(h); }
       return c;
     };
     const chCh = mkChk(t('ui.exportBlog.putNameChapterH2'), o.chapterHeads);

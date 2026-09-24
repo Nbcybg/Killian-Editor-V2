@@ -1,7 +1,7 @@
 // tag-pane.js — แท็บ "แท็ก" แสดงรายการแท็กทั้งหมด + จำนวน + กรอง + tag cloud
 import { buildTagTree, sortedTagEntries } from './tag-tree.js';
 import { gi } from './icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import { activate, closeTab } from './app.js';
 import { readSceneMeta } from './scene-meta.js';   // [alpha.160 · P1-14] แหล่งความจริงเดียวของคุณสมบัติฉาก
@@ -233,5 +233,5 @@ export async function filterByTag(tag) {
     searchInput.value = 'tag:' + tag;
     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  setStatus(t('ui.tags.filterTag') + tag + t('ui.tags.explorerShowOnlyScene'));
+  setStatus(tf('ui.tags.filterTagF', tag));
 }

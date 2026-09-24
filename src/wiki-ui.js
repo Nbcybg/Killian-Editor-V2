@@ -1,5 +1,5 @@
 // wiki-ui.js — Wiki: หมวด (สร้าง/แก้/ลบ) + เอนทิตี้ (เพิ่ม/เปิด/ทำสำเนา)
-import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
+import { tx, txf, hx } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, openOnce, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
 // บทเรียน 68: ไฟล์นี้มี `for (const t of state.tabs.values())` อยู่แล้ว → import เป็น `tr` เสมอ
@@ -36,7 +36,7 @@ export async function newWikiCat() {
   await saveProjectMeta(); applyWikiCats();
   await kapi.mkdir(await kapi.join(await wikiRoot(), key));
   await buildTree();
-  setStatus(tt('ui.wiki.newCat') + res.label + tt('ui.common.done2'));
+  setStatus(ttf('ui.wiki.newCatF', res.label));
   return key;
 }
 
@@ -176,7 +176,7 @@ async function openEntityNow(file) {
       applyTemplate(entity, newTp);
       tab.wiki.labels = fieldLabels(entity.templateId);
       tab.wiki.markDirty();
-      setStatus(tt('ui.wiki.changeTemplate2') + (newTp.name || newTp.id) + tt('ui.wiki.doneDataPrev'));
+      setStatus(ttf('ui.wiki.changeTemplate2F', (newTp.name || newTp.id)));
       return true;
     },
     onSaved: (e2) => {
@@ -266,7 +266,7 @@ async function openEntityNow(file) {
       if (!sec) { sec = el('div', 'wiki-tagged-imgs'); wrap.append(sec); }
       sec.innerHTML = '';
       const head = el('div', 'wiki-bl-head');
-      head.innerHTML = iconHtml('image', 14) + tt('ui.wiki.imageLibraryTag') + ent.name + ` (${hits.length})`;
+      head.innerHTML = iconHtml('image', 14) + tx('ui.wiki.imageLibraryTag') + hx(ent.name) + ` (${hits.length})`;
       sec.append(head);
       const row = el('div', 'wiki-tagged-row');
       for (const it of hits) {
@@ -359,7 +359,7 @@ export async function fillFieldWithAI(req) {
 
   const cur = String(value || '').trim();
   if (cur && cur !== next) {
-    const ok = await confirmBox(ttf('ui.wiki.aiReplaceAsk', label) + String.fromCharCode(10, 10) + next);
+    const ok = await confirmBox(ttf('ui.wiki.aiReplaceAsk', label) + String.fromCharCode(10, 10) + next, tt('ui.common.replaceBtn'));
     if (!ok) { setStatus(tt('ui.wiki.aiKept')); return null; }
   }
   setStatus(ttf('ui.wiki.aiFilled', label));

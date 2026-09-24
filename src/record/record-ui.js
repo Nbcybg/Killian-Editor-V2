@@ -4,7 +4,7 @@
 // ต่างจากสมุดโน้ตด่วนตรงที่ตัวนี้ **ผูกกับวันที่ + เก็บเป็นไฟล์ของโปรเจกต์** จึงเอาไปทำสรุปได้จริง
 //
 // ตรรกะ/ตัวเขียน CSV อยู่ใน record-data.js (บริสุทธิ์ · มี unit test) — ไฟล์นี้มีแต่เรื่องหน้าจอ
-import { t as tt, t } from '../i18n.js';
+import { t as tt, t, tf as ttf } from '../i18n.js';
 import { $, el, state, setStatus, log } from '../core.js';
 import * as RD from './record-data.js';
 import { gi } from '../icons.js';
@@ -178,8 +178,8 @@ export async function renderRecordPanel(host) {
     const dest = await kapi.saveAsDialog(name);
     if (!dest) return;
     await kapi.writeFile(dest, RD.toCsv(rows));
-    setStatus(tt('ui.recOrd.exportCSVDone') + rows.length + tt('ui.recOrd.list') + dest);
-    log('info', tt('ui.recOrd.recordExportCSV') + rows.length + tt('ui.common.list'));
+    setStatus(ttf('ui.recOrd.exportCSVDoneF', rows.length, dest));
+    log('info', ttf('ui.recOrd.recordExportCSVF', rows.length));
   }
 
   drawStats(); drawList();

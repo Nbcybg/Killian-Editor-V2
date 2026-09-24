@@ -207,6 +207,9 @@ async function readRecentProject(root) {
       return { root, broken: true, reason: t('ui.home.brokenNoMeta') };
     const meta = await kapi.readJson(metaFile);
     let totalScenes = 0, totalChapters = 0, totalWords = 0;
+    // [alpha.164 ข้อ A8] โปรเจกต์ที่ยังไม่เคยเปิดในรุ่นที่นับคำ (ไม่มี wcBuilt) + ฉากไม่มี wordCount
+    // = ยังไม่รู้จำนวนคำ → การ์ดต้องบอก "—" ไม่ใช่ "0" (เปิดครั้งแรกแล้วโปรแกรมนับให้เอง)
+    let wordsUnknown = false;
     let lastModified = meta.created || '';
     for (const secName of await kapi.listDirs(root).catch(() => [])) {
       const secPath = await kapi.join(root, secName);
@@ -227,6 +230,7 @@ async function readRecentProject(root) {
             if (sc.type === 'memo') continue;
             totalScenes++;
             totalWords += sc.wordCount || 0;
+            if (sc.wordCount == null && !meta.wcBuilt) wordsUnknown = true;
             if (sc.modified && sc.modified > lastModified) lastModified = sc.modified;
           }
         }
@@ -237,7 +241,7 @@ async function readRecentProject(root) {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
     return { root, title: meta.title || root.replace(/^.*[\\/]/, ''),
              author: meta.author || '', cover: meta.cover || '',
-             totalScenes, totalChapters, totalWords, dateStr, lastModified,
+             totalScenes, totalChapters, totalWords, wordsUnknown, dateStr, lastModified,
              settings: meta.settings || {}, goals: meta.goals || {} };
   } catch (e) {
     log('warn', t('ui.home.homeReadProjectFail') + root, e);
@@ -344,7 +348,7 @@ export function createProjectCard(project, onOpen) {
   const statItems = [
     { icon: gi('file'), label: t('ui.common.scene2'), val: project.totalScenes },
     { icon: gi('folder'), label: t('ui.common.chapter'), val: project.totalChapters },
-    { icon: gi('note'), label: t('ui.common.word2'), val: fmtNum(project.totalWords) },
+    { icon: gi('note'), label: t('ui.common.word2'), val: project.wordsUnknown ? '—' : fmtNum(project.totalWords) },
   ];
   for (const s of statItems) {
     const si = el('span', 'home-stat');

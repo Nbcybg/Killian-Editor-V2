@@ -149,16 +149,21 @@ export function mapBinder(binder, opts = {}) {
       if (SCRIV_FOLDER.has(it.type) || (it.children && it.children.length)) {
         const ch = { title: it.title || t('ui.common.notNamed'), scenes: [] };
         chapters.push(ch);
+        if (!chapter) loose = null;       // เอกสารลอยที่ตามหลังบทนี้ = ช่วงใหม่ (คงลำดับเรื่องเดิม)
         visit(it.children || [], ch);
         if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);   // โฟลเดอร์ที่มีเนื้อหาเองด้วย
       } else if (SCRIV_TEXT.has(it.type)) {
-        if (!chapter) { loose = loose || { title: opts.looseTitle || t('ui.impOrtScrivener.notHasChapter'), scenes: [] }; pushScene(loose, it); }
+        // ลงบท "(ไม่มีบท)" ณ ตำแหน่งที่เจอ — เดิมรวมทุกฉากลอยแล้วยกไปไว้ **หน้าสุด** (unshift)
+        // ฉากที่อยู่ท้ายต้นฉบับใน Scrivener จึงกลายเป็นฉากแรกของเรื่องหลังนำเข้า
+        if (!chapter) {
+          if (!loose) { loose = { title: opts.looseTitle || t('ui.impOrtScrivener.notHasChapter'), scenes: [] }; chapters.push(loose); }
+          pushScene(loose, it);
+        }
         else pushScene(chapter, it);
       }
     }
   };
   visit(roots, null);
-  if (loose) chapters.unshift(loose);
   const kept = chapters.filter((c) => c.scenes.length);
   return {
     sections: [{ title: opts.sectionTitle || t('ui.common.bookOne'), chapters: kept }],

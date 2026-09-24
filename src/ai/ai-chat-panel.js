@@ -538,7 +538,7 @@ function renderMessages(body, s) {
   body.innerHTML = '';
   if (!(s.messages || []).length && !isRunning(s.id)) {
     body.append(el('div', 'ai-chat-empty dim',
-      tt('ui.aiChatPanel.startMode') + modeDef(s.mode).label + tt('ui.aiChatPanel.seeData') + scopeLabel(s.scope)
+      ttf('ui.aiChatPanel.startModeF', modeDef(s.mode).label, scopeLabel(s.scope))
       + (s._draft ? tt('ui.aiChatPanel.sessionSaveSendText') : '')));
   }
   for (const m of s.messages || []) body.append(msgNode(m, s.view, s));
@@ -985,7 +985,7 @@ async function skillMenu(ev, s, btn) {
   _skills = await loadSkills(state.root);
   const on = new Set(live(s).skills || []);
   const items = _skills.map((k) => ({
-    label: (on.has(k.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + k.name
+    text: (on.has(k.id) ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + k.name
            + (k.description ? ' — ' + k.description : '')
            + ttf('ui.aiChatPanel.char', String(k.chars)),
     click: async () => {
@@ -1254,7 +1254,7 @@ async function runAssistant(sid, prov, { query = '', continueOf = '', sendBtn = 
       cur = patchMessage(cur, replyId, { calls });
       await commitSess(cur);                        // เก็บคำตอบก่อนลงมือทำ — คำสั่งพังกลางทาง คำตอบไม่หาย
       if (S.run) {
-        S.run.label = tt('ui.aiChatPanel.busyAct') + calls.length + tt('ui.aiChatPanel.cmd');
+        S.run.label = ttf('ui.aiChatPanel.busyActF', calls.length);
         S.run.text = ''; S.run.thinking = '';
       }
       repaint();
@@ -1403,7 +1403,7 @@ export async function restartSession(s, { confirm = true } = {}) {
   const target = live(s) || S.cur;
   if (!target) return null;
   if (confirm && (target.messages || []).length
-      && !(await confirmBox(ttf('ui.aiChatPanel.restartClearDialogueText', (target.messages || []).length, target.title)))) {
+      && !(await confirmBox(ttf('ui.aiChatPanel.restartClearDialogueText', (target.messages || []).length, target.title), tt('ui.common.clear')))) {
     return null;
   }
   S.cur = clearMessages(target);

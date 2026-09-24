@@ -22,7 +22,7 @@
 import { tf } from './i18n.js';
 import { themeColor, PRINT } from './palette.js';   // [alpha.162 · W6 ข้อ 2]
 import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
-import { $, el, state, setStatus, setStatusError, log, t, SCENE_COLORS } from './core.js';
+import { $, el, state, setStatus, setStatusError, log, t, SCENE_COLORS, dataLabel } from './core.js';
 // [alpha.73 ข้อ 5] หลายแผนต่อหนึ่งโปรเจกต์ — ตรรกะแผนอยู่ใน branch-plans.js (บริสุทธิ์ · มี unit test)
 import { BRANCH_PLAN_DIR, newBranchPlan, normalizeBranchPlan, planFromState, planDirty,
          planNameFromFile, safePlanName, sortPlans, uniquePlanName, planSummary,
@@ -160,7 +160,7 @@ export async function openBranchPlan(path) {
       const rel = relKey(await kapi.relative(state.root, path));
       planState.locked = !!getItemMeta(normalizeExplorer(state.meta && state.meta.explorer), rel).locked;
     } catch { planState.locked = false; }
-    setStatus(t('ui.branch.openPlan') + plan.name + t('ui.common.done'));
+    setStatus(tf('ui.branch.openPlanF', plan.name));
     log('info', t('ui.branch.branchOpenPlan') + plan.name, path);
     return true;
   } catch (e) { log('error', t('ui.branch.branchOpenPlanNot'), e); setStatus(t('ui.branch.openPlanNotOk')); return false; }
@@ -178,7 +178,7 @@ export async function saveBranchPlan(silent) {
   await kapi.writeFile(planState.path, JSON.stringify(plan, null, 2));
   planState.live = plan;
   planState.saved = JSON.parse(JSON.stringify(plan));
-  if (!silent) setStatus(t('ui.branch.savePlan2') + plan.name + t('ui.common.done'));
+  if (!silent) setStatus(tf('ui.branch.savePlan2F', plan.name));
   try { const m = await import('./app.js'); m.markBranchPlanRow && m.markBranchPlanRow(); } catch {}
   return true;
 }
@@ -197,7 +197,7 @@ export async function saveBranchPlanAs(name) {
   await kapi.writeFile(path, JSON.stringify(plan, null, 2));
   planState.path = path; planState.name = finalName;
   planState.live = plan; planState.saved = JSON.parse(JSON.stringify(plan));
-  setStatus(t('ui.branch.savePlan') + finalName + t('ui.common.done'));
+  setStatus(tf('ui.branch.savePlanF', finalName));
   return path;
 }
 /** ปิดแผน กลับไปโหมด "ไม่มีแผน" (ตำแหน่งการ์ดกลับไปใช้ localStorage) */
@@ -262,7 +262,7 @@ export async function planPropsDialog() {
     const rSt = E('div', 'wiki-row'); rSt.append(E('label', null, t('ui.common.status')));
     const iStatus = E('select', 'wiki-input k-dlg-select');
     for (const st of PLAN_STATUSES) {
-      const o = E('option', null, st); o.value = st;
+      const o = E('option', null, dataLabel(st)); o.value = st;   // [alpha.164 ข้อ B5] ค่าในไฟล์เป็นไทย · ป้ายตามภาษา UI
       if (st === (L.status || PLAN_DEFAULT_STATUS)) o.selected = true;
       iStatus.append(o);
     }
@@ -1136,7 +1136,7 @@ export async function checkDanglingOnOpen() {
     const names = [...new Set(bad.map((b) => b.sceneTitle))].slice(0, 3).join(', ');
     setStatus(gi('heart-broken') + ` ${bad.length} ${tr('warnBroken')} (${names}` +
               `${bad.length > 3 ? '…' : ''}) — ${tr('openBranchToFix')}`);
-    log('warn', t('ui.branch.branchingFoundChoicePoint') + bad.length + t('ui.common.list'),
+    log('warn', tf('ui.branch.branchingFoundChoicePointF', bad.length),
         bad.slice(0, 10));
     return bad.length;
   } catch (e) { log('warn', t('ui.branch.branchingCheckChoiceAct'), e); return 0; }

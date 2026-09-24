@@ -12,7 +12,7 @@ import { migrateImages, imageFile, imageAlt, imageLabel, setImageMeta,
 import { profileData, statusTone } from './wiki-profile.js';
 import { CAT_ICON } from './core.js';
 // [alpha.122] โค้ดสั้น `{[ชื่อ]}` + ช่อง Prompt — โมดูลบริสุทธิ์ ใช้ร่วมกับ Story Starter
-import { normalizePrompts, nextPromptKey, needsPromptMigration } from './entity-mention.js';
+import { normalizePrompts, nextPromptKey, needsPromptMigration, mentionToken } from './entity-mention.js';
 
 export const CAT_TH = { characters: tt('ui.common.character'), locations: tt('ui.common.place'),
                         items: tt('ui.common.thing'), lore: tt('ui.common.legend') };
@@ -399,8 +399,10 @@ export class WikiEditor {
     const codeHint = document.createElement('div');
     codeHint.className = 'wiki-field-hint';
     const syncCode = () => {
+      // [alpha.164 ข้อ A6] เดิมโชว์ `{[ชื่อ]}` = รูปแบบเก่าของ alpha.122 (ตอนนี้ใช้แค่แปลงไฟล์เก่า)
+      // ของจริงคือ `{{ชื่อ}}` — สร้างจาก mentionToken() ตัวเดียวกับที่ตัวจับโค้ดสั้นใช้
       codeHint.textContent = ttf('ui.wiki.shortcodePreview',
-        '{[' + (String(iCode.value || '').trim() || this.e.name || '?') + ']}');
+        mentionToken(String(iCode.value || '').trim() || this.e.name || '?'));
     };
     syncCode();
     rCode.appendChild(codeHint);

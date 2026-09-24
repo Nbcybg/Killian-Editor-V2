@@ -26,6 +26,7 @@ import { pagesOf, pageStartPositions } from './sp-view.js';
 // [alpha.132 ข้อ 6] แถว "ชื่อไฟล์ส่งออก" — ตัวเดียวกับที่ศูนย์ส่งออกใช้
 import { exportNameRow } from './export-name-ui.js';
 import { gi } from './icons.js';
+import { elemLabel } from './elem-label.js';   // [alpha.164 ข้อ B5] ชื่อชนิด element ตามภาษา UI
 import { errText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 
 // ───────── ที่เก็บข้อมูล ─────────
@@ -351,7 +352,7 @@ export async function openTitlePageDialog() {
   const bSave = el('button', 'k-ok', tt('ui.common.save'));
   bSave.onclick = async () => {
     await saveTitlePages(ed.pages);
-    setStatus(tt('ui.pdf.saveCoverDone') + ed.count + tt('ui.pdf.page'));
+    setStatus(ttf('ui.pdf.saveCoverDoneF', ed.count));
     log('info', tt('ui.pdf.saveCover'), { pages: ed.count });
     ov.remove();
   };
@@ -508,7 +509,7 @@ export async function pdfExportDialog() {
   const cHdr = checkbox(saved.headers !== false && hdr.enabled);
   cHdr.disabled = !hdr.enabled;
   box.append(row(tt('ui.pdf.headPaperAllPage'), cHdr,
-    hdr.enabled ? tt('ui.pdf.msg') + headerLineCount(hdr) + tt('ui.pdf.linePage2') : tt('ui.pdf.closeChapterHeadPaper')));
+    hdr.enabled ? ttf('ui.pdf.msgF', headerLineCount(hdr)) : tt('ui.pdf.closeChapterHeadPaper')));
 
   box.append(el('div', 'cmp-sub', tt('ui.pdf.notPrintElement')));
   const omitWrap = el('div', 'k-pdf-omit');
@@ -517,7 +518,7 @@ export async function pdfExportDialog() {
     const c = checkbox(saved.omit.includes(k));
     omitBoxes[k] = c;
     const w = el('label', 'k-pdf-omit-item');
-    w.append(c, el('span', null, (SP_ELEMS[k] && SP_ELEMS[k].th) || k));
+    w.append(c, el('span', null, elemLabel(k)));
     omitWrap.append(w);
   }
   box.append(omitWrap);

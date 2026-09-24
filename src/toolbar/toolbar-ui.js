@@ -160,7 +160,7 @@ function btnLabel(b) {
 export function toolbarOverflowItems() {
   const items = [];
   const byId = (id) => document.getElementById(id);
-  const mk = (b) => ({ label: btnLabel(b), disabled: b.classList.contains('dis') || b.disabled,
+  const mk = (b) => ({ text: btnLabel(b), disabled: b.classList.contains('dis') || b.disabled,
                         click: () => b.click() });
   const ovf = OVF.list.map(byId).filter(Boolean);
   if (ovf.length) {
@@ -203,6 +203,20 @@ export function applyToolbarGroupSeps() {
   const bar = document.querySelector('#toolbar');
   if (!bar) return 0;
   bar.querySelectorAll('.tb-gsep').forEach((n) => n.remove());
+  // [alpha.164 ข้อ E3] ★ เรียงปุ่มตามลำดับของ TOOLBAR_GROUPS ก่อนแทรกเส้นคั่น
+  // เดิมใช้ลำดับใน index.html ตรง ๆ ซึ่งสลับกลุ่มไปมา (ปุ่ม AI แทรกกลางกลุ่มแผง · ตั้งค่า/ปลั๊กอินอยู่ก่อน
+  // กลุ่มเครื่องมือเล่าเรื่อง) → เส้นคั่นโผล่ถี่ และ "ตั้งค่า" ไปค้างอยู่กลางแถบ
+  // ลำดับกลุ่มในหน้าตั้งค่า → แถบเครื่องมือ จึงเป็นลำดับจริงบนแถบด้วย (แหล่งความจริงเดียว)
+  {
+    const rank = new Map();
+    TC.TOOLBAR_GROUPS.forEach((g, gi) => g.buttons.forEach((b, bi) => rank.set(b.id, gi * 1000 + bi)));
+    const kids = [...bar.children].filter((k) => k.id && rank.has(k.id));
+    const sorted = [...kids].sort((x, y) => rank.get(x.id) - rank.get(y.id));
+    if (kids.length && sorted.some((k, i) => k !== kids[i])) {
+      const anchor = kids[kids.length - 1].nextSibling;
+      for (const k of sorted) bar.insertBefore(k, anchor);
+    }
+  }
   let prev = '', n = 0;
   for (const kid of [...bar.children]) {
     if (!kid.id) continue;                       // เส้นคั่นแถบโปรเจกต์ / ที่จับ — ไม่ใช่ปุ่ม

@@ -16,6 +16,10 @@
 // เส้นบอกระยะขอบ (ของผู้ใช้) · ผู้ใช้จึงเดาไม่ได้เลยว่าค่าไหนจะตามไปโปรเจกต์อื่น
 // ตอนนี้: จัด 5 หมวดตาม **งานที่จะทำ** · ย้ายแถวให้ทุกหน้ามีขอบเขตเดียว · แล้วติดป้ายบอกขอบเขต
 // ไว้หัวหน้าทุกหน้า (`data-scope` = แหล่งความจริงที่เทสเทียบกับ GLOBAL_DEFAULTS/PROJECT_DEFAULTS)
+// [alpha.164 ข้อ C] จัดหน้าอีกรอบ (ขอบเขตแต่ละหน้าคงเดิมทุกช่อง):
+//   ทั่วไป = ธีม · การเปิดโปรแกรม (ตัวเลือกเดียวแทนสวิตช์สองตัวที่ขัดกัน) · การ์ดหน้าแรก · ขนาดเปลือก (สองช่องอยู่ด้วยกัน)
+//   บันทึกและสำรอง = หน้าใหม่ (บันทึกอัตโนมัติ · เวอร์ชัน · ถังขยะ ที่เคยปนอยู่หน้าทั่วไป/การเขียน)
+//   สวิตช์ FAB → หน้าปุ่มลอย · ปุ่มบทหนัง → กลุ่มแถบและปุ่ม · ช่วงบรรทัด/ปรับหน้าอัตโนมัติของบท → หน้ารูปแบบบท
 import { tx } from './i18n-html.js';
 import { gi } from './icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
 
@@ -40,21 +44,22 @@ export function settingsTemplate(a = []) {
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="cog" data-icon-size="14"></span> ${tx('ui.setTpl.grpGeneral')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpGeneralSub')}</span></div>
     <div class="k-set-tab on" data-p="gen" data-find="${tx('ui.setTpl.nameAuthorSaveAutoFind')}">${a[1]}</div>
     <div class="k-set-tab" data-p="write" data-find="${tx('ui.setTpl.writeFontSizeCheckFind')}">${a[2]}</div>
+    <div class="k-set-tab" data-p="save" data-find="${tx('ui.setTpl.tabSaveFind')}">${tx('ui.setTpl.tabSave')}</div>
     <div class="k-set-tab" data-p="lang" data-find="${tx('ui.setTpl.langLanguageCsvFind')}">${a[4]}</div>
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="layout" data-icon-size="14"></span> ${tx('ui.setTpl.grpBars')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpBarsSub')}</span></div>
     <div class="k-set-tab" data-p="toolbar" data-find="${tx('ui.setTpl.barToolBtnBtnFind')}">${tx('ui.setTpl.barTool')}</div>
     <div class="k-set-tab" data-p="fmtbar" data-find="${tx('ui.setTpl.barFormatFloatBtnFind')}">${tx('ui.setTpl.barFormatFloat')}</div>
     <div class="k-set-tab" data-p="fab" data-find="${tx('ui.setTpl.btnFloatFabCmdFind')}">${tx('ui.setTpl.btnFloatFAB')}</div>
     <div class="k-set-tab" data-p="keys" data-find="${tx('ui.setTpl.btnKeyShortcutFind')}">${a[5]}</div>
+    <div class="k-set-tab" data-p="sp" data-find="${tx('ui.setTpl.btnChapterFilmTabFind')}">${tx('ui.setTpl.btnChapterFilm')}</div>
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="brain" data-icon-size="14"></span> ${tx('ui.setTpl.grpAuto')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpAutoSub')}</span></div>
     <div class="k-set-tab" data-p="ai" data-find="${tx('ui.setTpl.tabAiFind')}">${tx('ui.setTpl.tabAi')}</div>
     <div class="k-set-tab" data-p="auto" data-find="${tx('ui.setTpl.autoCountPageUpdateFind')}">${a[3]}</div>
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="file" data-icon-size="14"></span> ${tx('ui.setTpl.grpDoc')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpDocSub')}</span></div>
     <div class="k-set-tab" data-p="page" data-find="${tx('ui.setTpl.pagePaperSizeGapFind')}">${tx('ui.setTpl.pagePaper')}</div>
-    <div class="k-set-tab" data-p="pagenum" data-find="${tx('ui.setTpl.tabPageNumFind')}">${tx('ui.setTpl.tabPageNum')}</div>
     <div class="k-set-tab" data-p="prose" data-find="${tx('ui.setTpl.formatNovelParaRangeFind')}">${tx('ui.setTpl.formatNovel')}</div>
     <div class="k-set-tab" data-p="spfmt" data-find="${tx('ui.setTpl.formatChapterElementWideFind')}">${tx('ui.setTpl.formatChapter')}</div>
-    <div class="k-set-tab" data-p="sp" data-find="${tx('ui.setTpl.btnChapterFilmTabFind')}">${tx('ui.setTpl.btnChapterFilm')}</div>
+    <div class="k-set-tab" data-p="pagenum" data-find="${tx('ui.setTpl.tabPageNumFind')}">${tx('ui.setTpl.tabPageNum')}</div>
     <div class="k-set-tab" data-p="fonts" data-find="${tx('ui.setTpl.fontLangRangeCharFind')}">${tx('ui.setTpl.fontLang')}</div>
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="folder" data-icon-size="14"></span> ${tx('ui.setTpl.grpProject')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpProjectSub')}</span></div>
     <div class="k-set-tab" data-p="setup" data-find="${tx('ui.setTpl.dataResultTaskAuthorFind')}">${tx('ui.setTpl.dataResultTask')}</div>
@@ -69,6 +74,7 @@ export function settingsTemplate(a = []) {
 
     <div class="k-set-page" data-p="fab">
       ${scope('global')}
+      <div class="k-row"><label>${tx('ui.setTpl.btnFloatCornerRight')}<span class="k-hint">${tx('ui.setTpl.r2ItemCloseDone')}</span></label><input type="checkbox" id="st-fab"></div>
       <div id="st-fab-host"></div>
     </div>
 
@@ -81,27 +87,30 @@ export function settingsTemplate(a = []) {
     <div class="k-set-page k-set-2col on" data-p="gen">
       ${scope('global')}
       <div class="k-row"><label>${tx('ui.setTpl.themeColor')}<span class="k-hint">${tx('ui.setTpl.colorAppBarPanel')}</span></label><select id="st-theme" class="k-dlg-select" style="width:100%"></select></div>
-      <div class="k-row"><label>${tx('ui.setTpl.skipHome')}<span class="k-hint">${tx('ui.setTpl.skipHomeHint')}</span></label><input type="checkbox" id="st-skip-home"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.startup')}<span class="k-hint">${tx('ui.setTpl.startupHint')}</span></label><select id="st-startup" class="k-dlg-select" style="width:100%">
+        <option value="home">${tx('ui.setTpl.startupHome')}</option><option value="last">${tx('ui.setTpl.startupLast')}</option><option value="lastHome">${tx('ui.setTpl.startupLastHome')}</option></select></div>
+      <div class="k-row"><label>${tx('ui.setTpl.sizeCardPageFirst')}<span class="k-hint">${tx('ui.setTpl.wideCardTopPage')}</span></label><input type="number" id="st-homethumb" class="k-narrow" min="120" max="400" step="10"></div>
+      <div class="k-set-sub k-full">${tx('ui.setTpl.subShellSize')}</div>
+      <div class="k-row"><label>${a[31]}<span class="k-hint">${a[32]}</span></label><input type="range" id="st-uiscale" min="0.75" max="2" step="0.05"><span id="st-uiscale-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx('ui.setTpl.sizeCharUI')}<span class="k-hint">${tx('ui.setTpl.adjustDefaultPxHas')}</span></label><input type="number" id="st-font" min="-6" max="16" step="1"></div>
+    </div>
+    <div class="k-set-page k-set-2col" data-p="save">
+      ${scope('global')}
       <div class="k-row"><label>${a[8]}<span class="k-hint">${a[9]}</span></label><input type="number" id="st-auto" min="0" max="120"></div>
       <div class="k-row"><label>${a[10]}</label><input type="checkbox" id="st-backup"></div>
       <div class="k-row"><label>${a[11]}<span class="k-hint">${a[12]}</span></label><input type="number" id="st-maxbak" min="1" max="200"></div>
-      <div class="k-set-sub k-full">${tx('ui.setTpl.actOpenProject')}</div>
-      <div class="k-row"><label>${tx('ui.setTpl.showPageFirstOpen')}<span class="k-hint">${tx('ui.setTpl.closeOpenProjectLatest')}</span></label><input type="checkbox" id="st-showhome"></div>
+      <div class="k-row"><label>${a[27]}<span class="k-hint">${a[28]}</span></label><input type="number" id="st-recycle" min="0" max="3650"></div>
+      <div class="k-hint k-full" style="margin-top:8px">${tx('ui.setTpl.saveHistNote')}</div>
     </div>
     <div class="k-set-page k-set-2col" data-p="write">
       ${scope('global')}
       <div class="k-row"><label>${a[15]}<span class="k-hint">${a[16]}</span></label><div class="k-font-field"><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${a[17]}<span class="k-hint">${a[18]}</span></label><div class="k-font-field"><select id="st-spfontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
-      <div class="k-row"><label>${tx('ui.setTpl.sizeCharUI')}<span class="k-hint">${tx('ui.setTpl.adjustDefaultPxHas')}</span></label><input type="number" id="st-font" min="-6" max="16" step="1"></div>
-      <div class="k-row"><label>${tx('ui.setTpl.sizeCardPageFirst')}<span class="k-hint">${tx('ui.setTpl.wideCardTopPage')}</span></label><input type="number" id="st-homethumb" class="k-narrow" min="120" max="400" step="10"></div>
       <div class="k-row"><label>${a[19]}<span class="k-hint">${a[20]}</span></label><input type="checkbox" id="st-ln"></div>
-      <div class="k-row"><label>${tx('ui.setTpl.btnFloatCornerRight')}<span class="k-hint">${tx('ui.setTpl.r2ItemCloseDone')}</span></label><input type="checkbox" id="st-fab"></div>
       <div class="k-row"><label>${a[21]}<span class="k-hint">${a[22]}</span></label><input type="checkbox" id="st-spell"></div>
       <div class="k-row"><label>${a[23]}<span class="k-hint">${a[24]}</span></label><input type="checkbox" id="st-spelldict"></div>
       <div class="k-row"><label>${a[25]}<span class="k-hint">${a[26]}</span></label><input type="checkbox" id="st-mention"></div>
-      <div class="k-row"><label>${a[27]}<span class="k-hint">${a[28]}</span></label><input type="number" id="st-recycle" min="0" max="3650"></div>
       <div class="k-row"><label>${a[29]}<span class="k-hint">${a[30]}</span></label><input type="range" id="st-fmdim" min="0.05" max="0.8" step="0.05"><span id="st-fmdim-lbl" class="k-hint"></span></div>
-      <div class="k-row"><label>${a[31]}<span class="k-hint">${a[32]}</span></label><input type="range" id="st-uiscale" min="0.75" max="2" step="0.05"><span id="st-uiscale-lbl" class="k-hint"></span></div>
       <div class="k-set-sub k-full">${tx('ui.setTpl.colorPaper')}</div>
       <div class="k-hint k-full" style="margin-bottom:8px">${tx('ui.setTpl.colorPaperTopScreen')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.reset')}</label><select id="st-paper-color" class="k-dlg-select"></select></div>
@@ -118,7 +127,7 @@ export function settingsTemplate(a = []) {
       <div class="k-hint" style="margin-bottom:10px">${tx('ui.setTpl.aiIntro')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.aiCurrent')}</label><span id="st-ai-current" class="k-hint"></span></div>
       <div class="k-dlg-btns" style="justify-content:flex-start; margin-top:12px">
-        <button id="st-ai-open" class="cmp-mini">${tx('ui.setTpl.aiOpen')}</button>
+        <button id="st-ai-open" class="k-ok">${tx('ui.setTpl.aiOpen')}</button>
       </div>
     </div>
     <div class="k-set-page" data-p="auto">
@@ -171,11 +180,7 @@ export function settingsTemplate(a = []) {
         <div class="k-row"><label>${tx('ui.setTpl.leftLeft')}</label><input type="number" id="st-mg-left" class="k-narrow" min="0" max="5" step="0.05"></div>
         <div class="k-row"><label>${tx('ui.setTpl.rightRight')}</label><input type="number" id="st-mg-right" class="k-narrow" min="0" max="5" step="0.05"></div>
       </div>
-      <div class="k-row"><label>${tx('ui.setTpl.rangeLineScreenplay')}<span class="k-hint">${tx('ui.setTpl.defaultLineInchChange')}</span></label><input type="number" id="st-splh" class="k-narrow" min="0.8" max="2.5" step="0.05"></div>
       <div class="k-row"><label>${tx('ui.setTpl.fieldEmptyBetweenPage')}</label><input type="number" id="st-sppagegap" class="k-narrow" min="8" max="120" step="2"></div>
-      <div class="k-set-sub k-full">${tx('ui.setTpl.adjustPageNewAuto')}</div>
-      <div class="k-row"><label>${tx('ui.setTpl.wordCountPageNew')}<span class="k-hint">${tx('ui.setTpl.runRangeTimeSet')}</span></label><input type="checkbox" id="st-autopag"></div>
-      <div class="k-row"><label>${tx('ui.setTpl.printMin')}<span class="k-hint">${tx('ui.setTpl.minBeforeWordPage')}</span></label><input type="number" id="st-pagintv" min="1" max="60" step="1" class="k-narrow"></div>
       <div class="k-hint k-full" id="st-page-info" style="margin-top:8px"></div>
     </div>
     <div class="k-set-page k-set-2col" data-p="pagenum">
@@ -253,6 +258,10 @@ export function settingsTemplate(a = []) {
       ${scope('project')}
       <div class="k-hint" style="margin-bottom:10px">${tx('ui.setTpl.gapMarginPaperWide')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.sizeFontScreenplayPt')}<span class="k-hint">${tx('ui.setTpl.defaultChapterPtAll')}</span></label><input type="number" id="st-sppt" class="k-narrow" min="6" max="48" step="0.5"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.rangeLineScreenplay')}<span class="k-hint">${tx('ui.setTpl.defaultLineInchChange')}</span></label><input type="number" id="st-splh" class="k-narrow" min="0.8" max="2.5" step="0.05"></div>
+      <div class="k-set-sub">${tx('ui.setTpl.adjustPageNewAuto')}</div>
+      <div class="k-row"><label>${tx('ui.setTpl.wordCountPageNew')}<span class="k-hint">${tx('ui.setTpl.runRangeTimeSet')}</span></label><input type="checkbox" id="st-autopag"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.printMin')}<span class="k-hint">${tx('ui.setTpl.minBeforeWordPage')}</span></label><input type="number" id="st-pagintv" min="1" max="60" step="1" class="k-narrow"></div>
       <div class="k-spfmt-scroll">
         <table class="k-spfmt-tbl" id="st-spfmt">
           <thead><tr>
@@ -299,7 +308,7 @@ export function settingsTemplate(a = []) {
         <select id="st-lang"></select>
       </div>
       <div class="k-hint" style="margin-top:10px">${a[37]}</div>
-      <div id="st-lang-dirs" class="k-hint" style="margin-top:6px; opacity:.7; font-size:11px"></div>
+      <div id="st-lang-dirs" class="k-hint" style="margin-top:6px; opacity:.7; font-size:12px"></div>
       <div class="k-dlg-btns" style="justify-content:flex-start; margin-top:12px">
         <button id="st-lang-export" class="cmp-mini">${a[38]}</button>
         <button id="st-lang-folder" class="cmp-mini">${a[39]}</button>

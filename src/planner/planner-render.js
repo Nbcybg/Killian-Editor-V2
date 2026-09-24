@@ -20,6 +20,7 @@ import {
   edgeGeometry, edgePathString, edgeMidpoint, edgeAngles, trimGeometry,
   sampleGeometry, distanceToPolyline, bendHandles,
   TODO_LAYOUT, normTodoItems, todoProgress,
+  DEFAULT_BG, DEFAULT_GRID, isThemeBg, isThemeGridColor,
 } from './planner-data.js';
 
 export const PORT_GAP = 20;          // ระยะที่ port ยื่นออกนอกขอบการ์ด (บั๊ก 9) — พ้นปุ่มปรับขนาดกลางขอบ
@@ -68,7 +69,11 @@ export class PlannerRenderer {
     this._anchors = [];                          // port objects (ใช้ซ้ำ)
     this._selectedEdgeId = null;
     this._grid = { show: true, size: 20, snap: false, style: 'dots', color: '', opacity: 0.9 };
-    this._bg = options.backgroundColor || themeColor('--canvas', '#262624');
+    this._bgRaw = options.backgroundColor || '';
+    this._bg = isThemeBg(this._bgRaw) ? themeColor('--canvas', DEFAULT_BG) : this._bgRaw;
+    // [alpha.164 ข้อ A2] เปลี่ยนธีมระหว่างเปิดกระดาน = พื้น/กริดที่เป็นค่าเริ่มต้นเปลี่ยนตามทันที
+    this._onTheme = () => { try { this.setBackground(this._bgRaw); } catch {} };
+    if (typeof window !== 'undefined') window.addEventListener('k2-theme', this._onTheme);
     this.zoomLevel = 1;
     this._makePorts();
   }
@@ -81,7 +86,8 @@ export class PlannerRenderer {
   }
 
   setBackground(color) {
-    this._bg = color || themeColor('--canvas', '#262624');
+    this._bgRaw = color || '';
+    this._bg = isThemeBg(color) ? themeColor('--canvas', DEFAULT_BG) : color;
     this.updateGridCss();
   }
 
@@ -147,7 +153,7 @@ export class PlannerRenderer {
     let step = g.size * z;
     let mult = 1;
     while (step < 9 && mult < 64) { mult *= 2; step = g.size * mult * z; }
-    const col = g.color || themeColor('--hover', '#3a3936');
+    const col = isThemeGridColor(g.color) ? themeColor('--hover', DEFAULT_GRID.color) : g.color;
     const a = Math.max(0, Math.min(1, g.opacity == null ? 0.9 : g.opacity));
     const c = _rgba(col, a);
     let img = '', size = `${step}px ${step}px`;
@@ -1165,6 +1171,7 @@ export class PlannerRenderer {
   refresh() { this.canvas.requestRenderAll(); }
 
   dispose() {
+    if (typeof window !== 'undefined') window.removeEventListener('k2-theme', this._onTheme);
     this.hidePorts();
     try { this.canvas.dispose(); } catch {}
   }

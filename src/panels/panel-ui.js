@@ -80,22 +80,22 @@ export const PANEL_DEFS = [
 
   // ── วางแผน (บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ) ──
   { id: 'dashboard', i18n: 'panel.dashboardTitle', adopt: '#dash-panel',     defaultSide: 'left', minW: 620, dockW: 640, tearoff: true },
-  { id: 'kanban',    i18n: 'panel.kanbanTitle',    adopt: '#kanban-panel',   defaultSide: 'left', minW: 800, dockW: 640, tearoff: true },
+  { id: 'kanban',    i18n: 'panel.kanbanTitle',    adopt: '#kanban-panel',   defaultSide: 'left', minW: 800, dockW: 640, tearoff: true, floatFrac: 0.8 },
   { id: 'books',     i18n: 'panel.booksTitle',     adopt: '#books-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true },
   // [alpha.141] จัดการบท — ปกบท (รูป/ข้อความ) · ติ๊กใช้ปก · ลำดับบท · สถิติ
   { id: 'chapters',  i18n: 'ui.chapters.title',    adopt: '#chapters-panel', defaultSide: 'left', minW: 400, dockW: 640 },
-  { id: 'timeline',  i18n: 'panel.timelineTitle',  adopt: '#tl-panel',       defaultSide: 'left', minW: 620, dockW: 640, tearoff: true },
-  { id: 'maps',      i18n: 'panel.mapsTitle',      adopt: '#maps-panel',     defaultSide: 'left', minW: 400, dockW: 640, tearoff: true },
+  { id: 'timeline',  i18n: 'panel.timelineTitle',  adopt: '#tl-panel',       defaultSide: 'left', minW: 620, dockW: 640, tearoff: true, floatFrac: 0.8 },
+  { id: 'maps',      i18n: 'panel.mapsTitle',      adopt: '#maps-panel',     defaultSide: 'left', minW: 400, dockW: 640, tearoff: true, floatFrac: 0.8 },
   // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
   { id: 'gallery',   i18n: 'panel.galleryTitle',   adopt: '#gal-panel',      defaultSide: 'left', minW: 600, dockW: 640, tearoff: true },
   // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
-  { id: 'gallery-board', i18n: 'panel.galleryBoardTitle', adopt: '#galboard-panel', defaultSide: 'right', minW: 400, dockW: 640, flush: true },
-  { id: 'network',   i18n: 'ui.panel.networkTitle', adopt: '#net-panel',      defaultSide: 'left', minW: 400, dockW: 640, flush: true, tearoff: true },
-  { id: 'planner',   i18n: 'ui.panel.plannerTitle', adopt: '#planner-panel',  defaultSide: 'left', minW: 800, dockW: 640, flush: true, tearoff: true },
+  { id: 'gallery-board', i18n: 'panel.galleryBoardTitle', adopt: '#galboard-panel', defaultSide: 'right', minW: 400, dockW: 640, flush: true, floatFrac: 0.8 },
+  { id: 'network',   i18n: 'ui.panel.networkTitle', adopt: '#net-panel',      defaultSide: 'left', minW: 400, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
+  { id: 'planner',   i18n: 'ui.panel.plannerTitle', adopt: '#planner-panel',  defaultSide: 'left', minW: 800, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   { id: 'planner-props', i18n: 'ui.panel.propsPlanner', adopt: '#planner-props-panel', defaultSide: 'right', minW: 240 },
-  { id: 'floorplan', i18n: 'ui.common.graphArea',   adopt: '#floor-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true },
+  { id: 'floorplan', i18n: 'ui.common.graphArea',   adopt: '#floor-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true, floatFrac: 0.8 },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
-  { id: 'branch',    i18n: 'panel.branchTitle',     adopt: '#branch-panel',   defaultSide: 'left', minW: 700, dockW: 640, flush: true, tearoff: true },
+  { id: 'branch',    i18n: 'panel.branchTitle',     adopt: '#branch-panel',   defaultSide: 'left', minW: 700, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   // [alpha.69] สารานุกรม
   { id: 'codex',     i18n: 'panel.codexTitle',      adopt: '#codex-panel',    defaultSide: 'left', minW: 320, dockW: 680, flush: true, tearoff: true },
 
@@ -171,7 +171,7 @@ export async function tearOffPanel(id) {
     ok = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || '', ...box });
   } catch (e) { log('warn', t('ui.panel.panelOutWindowNot') + pid, e); }
   if (!ok) { tornOff.delete(pid); showPanel(pid); return false; }
-  setStatus(t('ui.panel.tornOff') + (d ? titleOf(d) : pid) + t('ui.panel.tornOff2'));
+  setStatus(tf('ui.panel.tornOffF', (d ? titleOf(d) : pid)));
   return true;
 }
 /** ยกหน้าต่างแผงที่เปิดอยู่แล้วขึ้นมาหน้าสุด (tearOff ตัวเดิมทำหน้าที่นี้ให้เมื่อ id ซ้ำ) */
@@ -326,7 +326,7 @@ export function defaultLayout() {
   return PL.dock('col', [
     PL.panel('toolbar', t('ui.panel.barTool')),
     PL.dock('row', [
-      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('outline', 'Navigation')], 0),
+      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('outline', t('ui.panel.navigation'))], 0),
       PL.panel('docs', t('ui.panel.doc')),
     ], [0.24, 0.76]),
     PL.panel('statusbar', t('ui.panel.barStatus')),
@@ -351,12 +351,12 @@ export const BUILTIN_WORKSPACES = [
     build: () => wsFrame(wsRow(PL.panel('tree', t('ui.common.project')), PL.panel('docs', t('ui.panel.doc')), null, [0.18, 0.82])) },
   { id: 'planning', labelKey: 'ui.panel.plannerOutlineStoryProps', get label() { return t(this.labelKey); },
     build: () => wsFrame(wsRow(
-      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('kanban', 'Kanban'), PL.panel('timeline', t('ui.common.lineTime'))], 0),
+      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('kanban', t('ui.panel.kanbanTitle')), PL.panel('timeline', t('ui.common.lineTime'))], 0),
       PL.panel('docs', t('ui.panel.doc')),
       PL.panel('props', t('ui.common.props')), [0.26, 0.52, 0.22])) },
   { id: 'review', labelKey: 'ui.panel.checkEditCommentNote', get label() { return t(this.labelKey); },
     build: () => wsFrame(wsRow(
-      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('outline', 'Navigation')], 1),
+      PL.tabs([PL.panel('tree', t('ui.common.project')), PL.panel('outline', t('ui.panel.navigation'))], 1),
       PL.panel('docs', t('ui.panel.doc')),
       PL.tabs([PL.panel('comments', t('ui.common.comment')), PL.panel('notes', t('ui.common.notebookNoteQuick'))], 0), [0.20, 0.56, 0.24])) },
 ];
@@ -876,6 +876,30 @@ function renderHiddenChips() {
     b.onclick = (e) => { e.stopPropagation(); restoreHiddenPanel(c.id); };
     bar.append(b);
   }
+  dodgeHiddenChips(bar);            // วัดทันที (getBoundingClientRect บังคับ layout เอง · rAF หยุดตอนหน้าต่างถูกบัง)
+}
+
+/**
+ * ชิปอยู่มุมล่างขวาของพื้นที่เขียน — ที่เดียวกับแถบจัดรูปแบบลอย (ค่าเริ่มต้น) และปุ่ม FAB
+ * เดิมวาดทับทั้งสองอย่างจนกดปุ่มจัดรูปแบบแถวล่างไม่ได้ · ตอนนี้ซ้อนกันเมื่อไหร่ = ยกแถวชิปขึ้นเหนือสิ่งที่ขวาง
+ */
+export function dodgeHiddenChips(bar = document.querySelector('#content > .k-hidden-chips')) {
+  if (!bar || !bar.isConnected) return 0;
+  bar.style.bottom = '';
+  const docs = bar.parentElement.getBoundingClientRect();
+  const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+  const blockers = [...document.querySelectorAll('#content .k-fmtbar:not(.planner-fmtbar), #k-fab')]
+    .filter((n) => n.offsetParent !== null || getComputedStyle(n).position === 'fixed')
+    .map((n) => n.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+  let lift = 0;
+  for (let i = 0; i < 3; i++) {                     // ยกแล้วอาจไปชนอีกตัว — วนไม่เกินจำนวนสิ่งกีดขวาง
+    const r = bar.getBoundingClientRect();
+    const b = blockers.filter((x) => hit(r, x));
+    if (!b.length) break;
+    lift = Math.max(lift, docs.bottom - Math.min(...b.map((x) => x.top)) + 6);
+    bar.style.bottom = lift + 'px';
+  }
+  return lift;
 }
 
 // [alpha.60r2 ข้อ 8] เดิมจดตำแหน่งเดิมของแผง ("home") เฉพาะตอน "ปิดแผง"
@@ -1171,9 +1195,21 @@ function applyRatio(pid, ratio) {
 export function defaultFloatBox(pid) {
   const d = PANEL_DEFS.find((x) => x.id === pid) || {};
   const W = window.innerWidth || 1200, H = window.innerHeight || 800;
-  const w = Math.min(d.floatW || Math.max(340, Math.round((d.dockW || 300) * 1.1)), Math.round(W * 0.8));
-  const h = Math.min(d.floatH || 520, Math.round(H * 0.8));
-  return { x: Math.round((W - w) / 2), y: Math.round((H - h) / 2), w, h };
+  // [alpha.164 ข้อ F1] แผงผืนวาด (กระดาน · ผัง · แผนที่ · เส้นเวลา …) ประกาศ `floatFrac` = สัดส่วนของหน้าต่าง
+  // เดิมทุกแผงได้ dockW×1.1 × 520px (~700×520) — กระดานวางแผนลอยมาแคบกว่า minW ของตัวเองด้วยซ้ำ
+  // และทุกแผงเปิดตรงกลางจอพอดี = ซ้อนทับกันเป๊ะ มองไม่ออกว่ามีกี่ใบ
+  const frac = Number(d.floatFrac) > 0 ? Math.min(0.9, Number(d.floatFrac)) : 0;
+  let w = d.floatW || (frac ? Math.round(W * frac) : Math.max(340, Math.round((d.dockW || 300) * 1.1)));
+  let h = d.floatH || (frac ? Math.round(H * frac) : 520);
+  w = Math.min(Math.max(w, d.minW || 0), Math.round(W * 0.9));
+  h = Math.min(h, Math.round(H * (frac ? 0.9 : 0.8)));
+  // เยื้องตามจำนวนแผงลอยที่เปิดอยู่แล้ว (ขั้นละ 28px · วนทุก 6 ใบ) — ใบใหม่ไม่ทับใบเดิมมิด
+  let n = 0;
+  try { n = document.querySelectorAll('.k-float-panel').length % 6; } catch {}
+  const off = n * 28;
+  const x = Math.max(8, Math.min(W - w - 8, Math.round((W - w) / 2) + off));
+  const y = Math.max(8, Math.min(H - h - 8, Math.round((H - h) / 2) + off));
+  return { x, y, w, h };
 }
 
 /**
@@ -1189,9 +1225,22 @@ function reopenFloat(m, pid, home) {
   return m.floatPanel(pid, (home && home.float) || defaultFloatBox(pid));
 }
 
+/**
+ * แผงที่ไม่มีในทะเบียน = ห้ามเปิด — เดิมคำสั่ง `toggle-panel`/`show-panel` ที่ไม่ส่งชื่อมา
+ * (อยู่ในทะเบียนคำสั่ง: ผูกคีย์ลัดเองได้ · ปลั๊กอินเรียกได้) สร้าง **แผงลอยผีชื่อ "undefined"**
+ * ไม่มีหัว ไม่มีเนื้อ ค้างกลางจอ
+ */
+function unknownPanel(m, pid) {
+  if (pid && m.registry.has(pid)) return false;
+  if (pid && !m.registry.size) return false;       // ทะเบียนยังไม่ถูกเติม (ช่วงบูต) — อย่าขวาง
+  log('warn', 'panel: unknown panel id', { id: pid });
+  return true;
+}
+
 export function showPanel(id, opts = {}) {
   const m = getPanelManager();
   const pid = panelId(id);
+  if (unknownPanel(m, pid)) return false;
   // [alpha.67] แผงนี้ถูกฉีกไปอยู่หน้าต่างแยกแล้ว — "เปิดแผง" ต้องแปลว่า **ยกหน้าต่างนั้นขึ้นมา**
   // ไม่ใช่วาดใบที่สองในหน้าต่างนี้ (จะได้แผงเดียวกันสองใบที่ไม่รู้จักกัน)
   // ยกเว้นตอนคืนแผงกลับจริง ๆ (onTearOffClosed) ซึ่งลบออกจาก tornOff ไปก่อนแล้ว
@@ -1263,6 +1312,7 @@ export function setPanelCloseGuard(id, fn) {
 export function togglePanel(id, opts) {
   const m = getPanelManager();
   const pid = panelId(id);
+  if (unknownPanel(m, pid)) return false;
   // [alpha.67] อยู่ในหน้าต่างแยก = เปิดอยู่ → กดสวิตช์ซ้ำ แปลว่า "เอากลับมา/ปิดหน้าต่างนั้น"
   if (tornOff.has(pid)) { recallPanel(pid); return true; }
   if (m.isOpen(pid)) return hidePanel(pid);
@@ -1420,7 +1470,7 @@ export function addPanelButton(id, node) {
 export function workspaceMenuItems() {
   const items = [{ label: t('ui.panel.wsPick'), disabled: true }];
   for (const w of listWorkspaces()) {
-    items.push({ label: (w.builtIn ? gi('window-restore') + ' ' : gi('window-max') + ' ') + w.label, click: () => applyWorkspace(w.name) });
+    items.push({ text: (w.builtIn ? gi('window-restore') + ' ' : gi('window-max') + ' ') + w.label, click: () => applyWorkspace(w.name) });
   }
   items.push('-');
   items.push({ label: t('ui.panel.wsSave'),

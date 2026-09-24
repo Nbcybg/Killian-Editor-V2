@@ -701,6 +701,8 @@ export async function openExportHub() {
     return r;
   };
 
+  // [alpha.164 ข้อ A5] ชนิดที่ "ตามไฟล์ต้นทาง" ตัดสินได้จริง (รู้หลังสร้างตัวอย่างรอบแรก) — ตัวเลือกเฉพาะบทต้องดูค่านี้
+  let autoKind = null;
   function renderOptions() {
     colOpt.replaceChildren();
     const def = formatDef(cfg.format);
@@ -740,7 +742,7 @@ export async function openExportHub() {
       const o = el('option', null, tt(k)); o.value = v; selKind.append(o);
     }
     selKind.value = cfg.kind;
-    selKind.onchange = () => { cfg.kind = selKind.value; saveCfg(); refresh(); };
+    selKind.onchange = () => { cfg.kind = selKind.value; saveCfg(); renderOptions(); refresh(); };
     colOpt.append(selKind);
 
     // เวิร์กโฟลว์เนื้อหา
@@ -769,7 +771,9 @@ export async function openExportHub() {
       mk('headers', 'ui.xhub.pdfHeaders');
       mk('pageNumbers', 'ui.xhub.pdfNums');
       // [alpha.132 ข้อ 3] เลขฉากเป็นของบทภาพยนตร์เท่านั้น — บังคับชนิดเป็นนิยายแล้วซ่อนไป
-      if (cfg.kind !== 'prose') mk('sceneNumbers', 'ui.xhub.pdfSceneNums');
+      // [alpha.164 ข้อ A5] "ตามไฟล์ต้นทาง" ที่ตัดสินได้เป็นนิยาย ก็ต้องซ่อนด้วย (เดิมเช็คแค่ค่าที่บังคับ)
+      const kindNow = cfg.kind === 'auto' ? autoKind : cfg.kind;
+      if (kindNow !== 'prose') mk('sceneNumbers', 'ui.xhub.pdfSceneNums');
       colOpt.append(el('div', 'k-hint', tt('ui.xhub.pdfFrontNoNum')));
       // [alpha.132 ข้อ 4] ขาวดำ (ธรรมเนียมบทถ่ายทำ) / สี (ฉบับอ่านเอง)
       const selCol = el('select', 'k-dlg-select'); selCol.id = 'xhub-color';
@@ -818,6 +822,7 @@ export async function openExportHub() {
       const r = await buildAll(A, cfg, drafts);
       if (gen !== job) return;                       // มีรอบใหม่แซงแล้ว — ทิ้งผลรอบนี้
       built = r;
+      if (cfg.kind === 'auto' && r && r.kind !== autoKind) { autoKind = r.kind; renderOptions(); }
       warnLbl.textContent = r && r.warnings.length ? r.warnings.join(' · ') : '';
       await renderPreview(colPrev, A, cfg, r);
     } catch (e) {

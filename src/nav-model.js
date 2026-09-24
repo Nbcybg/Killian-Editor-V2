@@ -51,15 +51,17 @@ export const NAV_GROUP_ICON = {
 // ชุดนี้คือคำตอบว่า "ต้องมีอะไรบ้าง" — ทุกตัวอ่านจากข้อมูลที่โปรเจกต์มีอยู่จริง
 // (ไม่มีตัวไหนต้องให้ผู้ใช้มากรอกเพิ่ม ยกเว้น `star`/`color` ที่เป็นของผู้ใช้เอง)
 /** @type {Array<{id:string, mark:string, key:string}>} */
+// [alpha.164 ข้อ E5] `icon` = ไอคอน SVG ชุดเดียวกับทั้งแอป (แถวในแผง + คำอธิบายในตั้งค่า)
+// `mark` = อักขระสำรองสำหรับที่ที่วาดได้แค่ข้อความ
 export const NAV_FLAG_DEFS = [
-  { id: 'choice',  mark: gi('subdirectory-right'), key: 'ui.nav.flagChoice' },   // ตัวหนา + จำนวนทางเลือก
-  { id: 'star',    mark: gi('star-filled'), key: 'ui.nav.flagStar' },
-  { id: 'color',   mark: '▌', key: 'ui.nav.flagColor' },
-  { id: 'todo',    mark: gi('warning'), key: 'ui.nav.flagTodo' },
-  { id: 'empty',   mark: gi('circle-open'), key: 'ui.nav.flagEmpty' },
-  { id: 'locked',  mark: gi('lock'), key: 'ui.nav.flagLocked' },
-  { id: 'comment', mark: gi('chat'), key: 'ui.nav.flagComment' },
-  { id: 'break',   mark: gi('page-break'), key: 'ui.nav.flagBreak' },
+  { id: 'choice',  icon: 'subdirectory-right', mark: gi('subdirectory-right'), key: 'ui.nav.flagChoice' },   // ตัวหนา + จำนวนทางเลือก
+  { id: 'star',    icon: 'star-filled', mark: gi('star-filled'), key: 'ui.nav.flagStar' },
+  { id: 'color',   icon: '', mark: '▌', key: 'ui.nav.flagColor' },
+  { id: 'todo',    icon: 'warning', mark: gi('warning'), key: 'ui.nav.flagTodo' },
+  { id: 'empty',   icon: 'circle-open', mark: gi('circle-open'), key: 'ui.nav.flagEmpty' },
+  { id: 'locked',  icon: 'lock', mark: gi('lock'), key: 'ui.nav.flagLocked' },
+  { id: 'comment', icon: 'chat', mark: gi('chat'), key: 'ui.nav.flagComment' },
+  { id: 'break',   icon: 'page-break', mark: gi('page-break'), key: 'ui.nav.flagBreak' },
 ];
 export const NAV_FLAG_IDS = NAV_FLAG_DEFS.map((f) => f.id);
 

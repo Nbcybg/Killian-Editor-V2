@@ -1,7 +1,7 @@
 // ai-assistant.js — ผู้ช่วยเขียนด้วย AI (ข้อ 72 · ส่วน API ที่ UI เรียก)
 // ตรรกะสร้าง prompt แยกเป็น pure function ทั้งหมด → เทสได้ว่าคำสั่งครบโดยไม่ต้องยิง API จริง
 // spec: docs/72-ai-core.md
-import { t as tt, t } from '../i18n.js';
+import { t as tt, t, tf as ttf } from '../i18n.js';
 import { buildContext, estimateTokens } from './ai-core.js';
 
 // ───────── โทนที่รองรับ (ข้อความไทยล้วน — UI เอาไปทำเมนูได้เลย) ─────────
@@ -51,7 +51,7 @@ export function buildPrompt(task, opts = {}) {
       if (instruction) lines.push(tt('ui.aiAssistant.itemDefineAddFill') + instruction);
       break;
     case 'changeTone':
-      lines.push(tt('ui.aiAssistant.changeToneTextStyle') + (t ? t.label : tone) + tt('ui.aiAssistant.bodyOrderEventPrev'));
+      lines.push(ttf('ui.aiAssistant.changeToneTextStyleF', (t ? t.label : tone)));
       break;
     case 'continue':
       lines.push(tt('ui.aiAssistant.writeNextTextCont'));

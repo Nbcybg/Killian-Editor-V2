@@ -3,7 +3,7 @@ import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { eventDialog, loadTimeline, openRef, openScene, saveTimeline, sceneEventsFromProject } from './app.js';
 import { $, el, state } from './core.js';
 import { findClashes, ganttBar, ganttData, ganttTicks, groupByTrack, mergeTimeline, newEvent, sortEvents, trackNames } from './timeline.js';
-import { renderFutureNotes, notesForScene } from './session-notes.js';
+import { renderFutureNotes, notesForScene, getFutureNotes } from './session-notes.js';
 import { findScenePath } from './project-scan.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
 import { gi } from './icons.js';
@@ -48,7 +48,8 @@ export async function renderTimeline(pane) {
       if (hit && (await kapi.exists(hit.path))) openScene(hit.path, hit.title || title);
     },
   });
-  wrap.append(fn);
+  // [alpha.164 ข้อ F6] ไม่มีโน้ตค้าง = ไม่ต้องกินที่บนหัวเส้นเวลา (เดิมโชว์กล่องว่าง "ไว้ทำภายหลัง (0)" ทุกครั้ง)
+  if (getFutureNotes().length) wrap.append(fn);
 
   const data = await loadTimeline();
   const sceneEvs = await sceneEventsFromProject();

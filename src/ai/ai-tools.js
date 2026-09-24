@@ -161,7 +161,7 @@ export function validateCall(call, cap) {
   const def = toolByName(call.tool);
   if (!def) return { ok: false, error: tt('ui.aiTools.notKnownCmd') + call.tool + '"' };
   if (!capAllows(cap, def.cap)) {
-    return { ok: false, error: tt('ui.aiTools.modeCurrentNotAllow') + call.tool + tt('ui.aiTools.toggleModeDialogPrint') };
+    return { ok: false, error: ttf('ui.aiTools.modeCurrentNotAllowF', call.tool) };
   }
   const miss = def.need.filter((k) => {
     const v = call.args[k];

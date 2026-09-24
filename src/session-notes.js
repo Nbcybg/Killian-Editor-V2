@@ -126,7 +126,7 @@ export async function quickNote(sceneId, sceneTitle) {
     recent.append(el('div', 'dim', t('ui.notes.latest')));
     for (const n of notes) {
       const r = el('div', 'k-menu-item');
-      r.style.cssText = 'font-size:11px;cursor:pointer';
+      r.style.cssText = 'font-size:12px;cursor:pointer';
       r.textContent = n.text.slice(0, 80) + ' — ' + (n.sceneTitle || '');
       r.onclick = () => { ta.value = n.text; };
       recent.append(r);

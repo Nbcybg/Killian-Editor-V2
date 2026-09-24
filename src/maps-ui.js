@@ -384,7 +384,7 @@ export async function renderMaps(pane) {
 
   const toolHint = (MAP_TOOLS.find((x) => x.id === view.tool) || MAP_TOOLS[0]).hint;
   const hint = el('div', 'map-hint',
-    t('ui.maps.clickEmptyPinPin') + toolHint + t('ui.maps.ctrlClickPickItem'));
+    tf('ui.maps.clickEmptyPinPinF', toolHint));
   wrap.append(hint);
 
   // ── แถบทำงานกับหมุดหลายตัว (ข้อ 6) ──

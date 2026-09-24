@@ -122,7 +122,7 @@ export async function renderFloorPlan(pane, mapId) {
   if (ctx && cur) {
     const pinB = el('button', 'floor-pinbtn' + (fs.picking ? ' on' : ''),
                     fs.picking ? t('ui.floorplan.cancelPin') : t('ui.floorplan.pinPosScene2'));
-    pinB.title = t('ui.floorplan.clickBtnDoneClick') + (ctx.row.title || '') + t('ui.floorplan.occurAt');
+    pinB.title = tf('ui.floorplan.clickBtnDoneClickF', (ctx.row.title || ''));
     pinB.onclick = () => { fs.picking = !fs.picking; redraw(); };
     titleRow.append(pinB);
     if (ctx.row.mapId) {
@@ -213,7 +213,7 @@ export async function renderFloorPlan(pane, mapId) {
         else { delete r.pinId; r.pinX = +x.toFixed(1); r.pinY = +y.toFixed(1); }
       });
       fs.picking = false;
-      setStatus(t('ui.floorplan.pinPosScene') + (ctx.row.title || '') + t('ui.floorplan.topMap') + (cur.name || '') + t('ui.floorplan.done'));
+      setStatus(tf('ui.floorplan.pinPosSceneF', (ctx.row.title || ''), (cur.name || '')));
       redraw();
     }
   } else {

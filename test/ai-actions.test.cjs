@@ -172,6 +172,45 @@ seed();
     ck('อ่านฉากที่ไม่มี = ไม่สำเร็จ ไม่ใช่ throw', bad.ok === false && !!bad.error);
   }
 
+  // ───────── [alpha.164 · บั๊ก] ล็อก = AI แก้/เปลี่ยนชื่อ/ลบไม่ได้ (กติกาเดียวกับทางคลิก) ─────────
+  {
+    const mdPath = [...FS.keys()].find((k) => k.endsWith('.md'));
+    const orig = FS.get(mdPath);
+    // ล็อกที่ฉาก (frontmatter)
+    FS.set(mdPath, orig.replace(/^---\n/, '---\nlocked: true\n'));
+    const w = await run('scene.write', { title: 'ฉากแรก', text: 'AI ทับ', mode: 'replace' });
+    ck('[164-L] ★★ ฉากล็อก → scene.write ไม่สำเร็จ', w.ok === false && /ล็อก/.test(w.error || ''), JSON.stringify(w));
+    ck('[164-L] ★ เนื้อที่ล็อกไว้ไม่ถูกแตะ', !FS.get(mdPath).includes('AI ทับ'));
+    const rn = await run('scene.rename', { title: 'ฉากแรก', newTitle: 'ชื่อใหม่' });
+    ck('[164-L] ฉากล็อก → เปลี่ยนชื่อไม่ได้', rn.ok === false);
+    const dl = await run('scene.delete', { title: 'ฉากแรก' });
+    ck('[164-L] ฉากล็อก → ลบไม่ได้ (ไฟล์ยังอยู่)', dl.ok === false && FS.has(mdPath));
+    FS.set(mdPath, orig);
+    // ล็อกทั้งบท (draft.json)
+    const df = ROOT + '/เล่ม 1/Draft/default/draft.json';
+    const d0 = FS.get(df);
+    const dj = JSON.parse(d0); dj.chapters[0].locked = true; FS.set(df, JSON.stringify(dj));
+    const w2 = await run('scene.write', { title: 'ฉากแรก', text: 'AI ทับบท' });
+    ck('[164-L] ★ บทล็อก = ฉากข้างในล็อก → เขียนไม่ได้', w2.ok === false && !FS.get(mdPath).includes('AI ทับบท'), JSON.stringify(w2));
+    const nc = await run('scene.create', { chapter: dj.chapters[0].title, title: 'ฉากใหม่ในบทล็อก', text: 'x' });
+    ck('[164-L] บทล็อก → สร้างฉากใหม่ในบทนั้นไม่ได้', nc.ok === false, JSON.stringify(nc));
+    const cr = await run('chapter.rename', { title: dj.chapters[0].title, newTitle: 'บทใหม่' });
+    ck('[164-L] บทล็อก → เปลี่ยนชื่อบทไม่ได้', cr.ok === false);
+    FS.set(df, d0);
+    // ล็อกทั้งเล่ม (section.json)
+    const sfp = ROOT + '/เล่ม 1/section.json';
+    const s0 = FS.get(sfp);
+    FS.set(sfp, JSON.stringify({ ...JSON.parse(s0 || '{}'), locked: true }));
+    const w3 = await run('scene.write', { title: 'ฉากแรก', text: 'AI ทับเล่ม' });
+    ck('[164-L] ★ เล่มล็อก = ทุกฉากล็อก → เขียนไม่ได้', w3.ok === false && !FS.get(mdPath).includes('AI ทับเล่ม'), JSON.stringify(w3));
+    const bd = await run('book.delete', { title: JSON.parse(s0 || '{}').title || 'เล่ม 1' });
+    ck('[164-L] เล่มล็อก → ลบเล่มไม่ได้', bd.ok === false && FS.has(mdPath), JSON.stringify(bd));
+    FS.set(sfp, s0);
+    const ok2 = await run('scene.write', { title: 'ฉากแรก', text: 'ปลดล็อกแล้วเขียนได้' });
+    ck('[164-L] ปลดล็อกแล้ว AI เขียนได้ตามเดิม', ok2.ok === true && FS.get(mdPath).includes('ปลดล็อกแล้วเขียนได้'), JSON.stringify(ok2));
+    FS.set(mdPath, orig);
+  }
+
   // ───────── เอนทิตี้ ─────────
   {
     const r = await run('entity.create', { name: 'ทอร่า', cat: 'characters', description: 'คนทำขนม' });

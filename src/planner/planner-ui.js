@@ -9,7 +9,7 @@ import { t, tf } from '../i18n.js';
 import { el, dataLabel } from '../core.js';
 import { themeColor, PLANNER_NODE_COLORS, PLANNER_EDGE_COLORS, PLANNER_KIND } from '../palette.js';   // [alpha.162 · W6 ข้อ 2]
 const escA = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-import { STATUSES, SHAPES, GRID_STYLES, ICONS } from './planner-data.js';
+import { STATUSES, SHAPES, GRID_STYLES, ICONS, isThemeBg, isThemeGridColor } from './planner-data.js';
 import { plannerBarSequence, layoutPlannerBar } from '../toolbar/toolbar-config.js';
 import { initIcons, icon as iconEl, iconHtml, gi } from '../icons.js';
 import { ICON_GLYPH } from '../generated/commands-data.js';
@@ -241,7 +241,7 @@ function _gridPopover(anchor, cb) {
       <button data-size="10">10</button><button data-size="20">20</button>
       <button data-size="25">25</button><button data-size="50">50</button><button data-size="100">100</button>
     </div>
-  `)([g.show ? ' checked' : '', g.snap ? ' checked' : '', g.size, GRID_STYLES.map((s) => `<option value="${s}"${g.style === s ? ' selected' : ''}>${s === 'dots' ? t('ui.common.dot') : s === 'lines' ? t('ui.planner.line') : t('ui.planner.cross')}</option>`).join(''), g.opacity, g.color || themeColor('--hover', '#3a3936'), (cb.getBackground && cb.getBackground()) || themeColor('--canvas', '#262624')]);
+  `)([g.show ? ' checked' : '', g.snap ? ' checked' : '', g.size, GRID_STYLES.map((s) => `<option value="${s}"${g.style === s ? ' selected' : ''}>${s === 'dots' ? t('ui.common.dot') : s === 'lines' ? t('ui.planner.line') : t('ui.planner.cross')}</option>`).join(''), g.opacity, isThemeGridColor(g.color) ? themeColor('--hover', '#3a3936') : g.color, ((b) => (isThemeBg(b) ? themeColor('--canvas', '#262624') : b))(cb.getBackground && cb.getBackground())]);
   const emit = (p) => cb.onGridChange && cb.onGridChange(p);
   pop.querySelector('#plg-show').onchange = (e) => emit({ show: e.target.checked });
   pop.querySelector('#plg-snap').onchange = (e) => emit({ snap: e.target.checked });

@@ -146,7 +146,7 @@ export async function renderCodexPanel(host) {
       await kapi.mkdir(out);
       for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);
       setStatus(tf('ui.codex.exportWebCodexDone', files.length, out));
-      log('info', t('ui.codex.codexExportWeb') + files.length + t('ui.codex.page') + out);
+      log('info', tf('ui.codex.codexExportWebF', files.length, out));
       try { await kapi.revealInOS(await kapi.join(out, 'index.html')); } catch {}
     } catch (e) {
       log('error', t('ui.codex.codexExportNotOk'), e);

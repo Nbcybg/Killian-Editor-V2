@@ -6,7 +6,7 @@
 //
 // prompt ต่อยอดจาก `buildPrompt('summarize')` ใน ai/ai-assistant.js (โทน/ความยาว/บริบทเดียวกับ
 // AI ผู้ช่วยเขียน) แล้วเติมข้อกำหนดเฉพาะของช่องนั้นต่อท้าย — ไม่แตกสาย prompt เป็นคนละระบบ
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { buildPrompt } from './ai/ai-assistant.js';
 import { callAI } from './ai-settings.js';
 import { el, setStatus, t as tr } from './core.js';
@@ -133,8 +133,8 @@ export async function generateSceneField(field, body, title, onResult) {
   // ไม่งั้นผู้ใช้เห็นแค่ "ไม่ขึ้นข้อความ" แล้วไม่รู้จะไปแก้ตรงไหน
   if (raw === null) return '';
   const out = cleanResult(raw, field);
-  if (!out) { setStatus(t('ui.aiSyn.aICantSend') + def.label + t('ui.aiSyn.back')); return ''; }
+  if (!out) { setStatus(tf('ui.aiSyn.aICantSendF', def.label)); return ''; }
   if (onResult) onResult(out);
-  setStatus(t('ui.aiSyn.fill') + def.label + t('ui.aiSyn.aIDone'));
+  setStatus(tf('ui.aiSyn.fillF', def.label));
   return out;
 }

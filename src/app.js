@@ -1,5 +1,5 @@
 ﻿// Killian 2 renderer — explorer + tabs + toolbar + statusbar
-import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
+import { tx, txf, hx } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, T, tf, setShortcutResolver, lookup } from './i18n.js';
 import { KEditor } from './editor.js';
 import { parseMdFile, dumpMdFile, countWords, alignToString, alignFromString,
@@ -129,6 +129,8 @@ import { wikiCats, applyWikiCats, newWikiCat, editWikiCat, deleteWikiCat, addEnt
 import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
 // [alpha.135] ระบบอัปเดต — ทางเข้าทั้งสามทาง (ตั้งค่า · ตอนเปิดโปรแกรม · เมนูช่วยเหลือ) เรียกตัวเดียวกัน
 import { checkForUpdates, startupUpdateCheck } from './update/update-ui.js';
+import { UPDATE_HOME_URL } from './update/update-check.js';
+import { openRewriteBar, closeRewriteBar, rewriteBarTab } from './ai/ai-rewrite-ui.js';
 import { openBookManager, renderBookManager, refreshBooksIfOpen } from './books.js';
 // [alpha.141] จัดการบท + โหมดอ่านทั้งเล่ม + สายหน้าที่ทั้งเล่มใช้ร่วม (เลขหน้าไล่ต่อเนื่อง)
 import { openChapterManager, renderChapterManager, refreshChaptersIfOpen,
@@ -195,7 +197,7 @@ import * as PL from './panels/panel-layout.js';
 import { inGroupHandle, snapToEdges, clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panels/panel-drag.js';
 // [alpha.60r2 ข้อ 7] รายชื่อกล่องที่เลื่อนได้ — selftest ตรวจว่าครอบคลุมครบ
 import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
-import { PANEL_DEFS as PANEL_DEFS_147, panelIcon } from './panels/panel-ui.js';   // [alpha.147] e2e ไอคอนแผงจากทะเบียน
+import { PANEL_DEFS as PANEL_DEFS_147, panelIcon, dodgeHiddenChips } from './panels/panel-ui.js';   // [alpha.147] e2e ไอคอนแผงจากทะเบียน
 // [alpha.73 ข้อ 6] ความกว้างต่ำสุดของเนื้อแผง (ค่าเริ่มต้น) — ค่าจริงต่อแผงอยู่ที่ `minW` ใน PANEL_DEFS
 import { PANEL_MIN_W_DEFAULT } from './panels/panel-renderer.js';
 // [alpha.73 ข้อ 2-4] นิยามสี/การควบคุม/กล้องของ Story Network
@@ -264,6 +266,10 @@ import { normColor, HILITE_PRESETS } from './text-color.js';
 import { tipContent, tipText } from './tooltip.js';
 // [alpha.155] เมนูคลิกขวาของ Explorer: ลำดับจากตาราง · คำสั่งใหม่จาก tree-actions (เรียกตอน runtime)
 import { buildMenuItems, menuLabelKey, LOCK_BLOCKED, TREE_MENU_SPEC } from './tree-menu-spec.js';
+// [alpha.164] ฉากมีปัญหา (แก้ปัญหาหน้ากองถ่าย) — เทียบฉบับเดิม ⇄ ฉบับแก้ไข
+import { installOnset, applyOnsetToTab, onsetBeforeCommand, toggleOnsetView, markSceneProblem, clearSceneProblem,
+         isProblemScene, loadOnsetIndex, resetOnset, onsetChanged, onsetEditorMenu, onsetMenuItems, onsetViewOf,
+         exitOriginal, revisedDoc } from './onset-ui.js';
 import * as TA from './tree-actions.js';
 import { settingsTemplate, SETTINGS_TEMPLATE_ARGS } from './settings-template.js';   // [alpha.154] e2e
 import { bindPanelFocus, setFocusedPanel, focusedPanel, isPanelFocused,
@@ -298,6 +304,7 @@ import { importScreenplayDialog, importSummary, elementsToMarkdown } from './imp
 import { showComparisonDialog, compareScripts } from './sp-compare.js';
 import { resetAI, getAIClient, ragContext } from './ai/ai-bridge.js';
 import { icon, initIcons, iconHtml, iconLabel, hasIcon, commandIcon, isRegisteredCommand, gi } from './icons.js';
+import { elemLabel } from './elem-label.js';   // [alpha.164 ข้อ B5] ชื่อชนิด element ตามภาษา UI
 // [97] หน้ารายชื่อตัวละคร (Cast of Characters) — หน้าเดี่ยวประจำเล่ม
 import { openRosterFlow, openRoster, renderRoster, saveRosterTab, isRosterTab,
          loadRoster, saveRoster, rosterTextFor } from './roster-ui.js';
@@ -2373,7 +2380,8 @@ export async function checkBeforeExport() {
 export function spReportInput(tab) {
   const t2 = tab || state.active;
   if (!t2 || !t2.sp) return null;
-  return { blocks: blocksFromDoc(t2.sp.view.state.doc), fmt: spFormat(),
+  // [alpha.164] รายงานของฉากมีปัญหา = ฉบับแก้ไขเสมอ (ต่อให้จอกำลังโชว์ฉบับเดิม)
+  return { blocks: blocksFromDoc(revisedDoc(t2) || t2.sp.view.state.doc), fmt: spFormat(),
            startPage: currentStartPage(t2), tab: t2 };
 }
 
@@ -2824,6 +2832,7 @@ async function closeProjectIfAny() {
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
   resetAnalyzer();                      // [alpha.89] ฉาก/ตัวละครที่แผงวิเคราะห์แคชไว้เป็นของโปรเจกต์เดิม
+  resetOnset();                         // [alpha.164] ดัชนีฉากมีปัญหาเป็นของโปรเจกต์เดิม
   resetReview(); resetCommentStore(); _cmMigrated.clear(); clearCommentAnchors();
   imgURLBase.clear();
   clearFeaturePanels();                 // บั๊ก #18: เนื้อแผงฟีเจอร์เป็นของโปรเจกต์เดิม ต้องล้าง
@@ -3013,7 +3022,7 @@ export function toggleElementCaps(elName, on) {
   applySettings();
   saveProjectMetaSoon();
   syncMenuToggles();
-  setStatus((SP_ELEMS[elName]?.th || elName) + ': ' + (v ? tt('ui.app.forceCaseBig') : tt('ui.app.print')));
+  setStatus(elemLabel(elName) + ': ' + (v ? tt('ui.app.forceCaseBig') : tt('ui.app.print')));
   return v;
 }
 export function toggleSpCase(key, on) {
@@ -3198,7 +3207,7 @@ export function handleSyncMessage(msg) {
   if (msg.kind === 'panelwin-ready' && !PANEL_WIN) {
     state._panelWinHealth = msg;                 // เทส/การไล่ปัญหาอ่านจากตรงนี้
     if (!msg.hasStatus || !msg.drawn) {
-      log('warn', tt('ui.app.panelWindowPanel') + msg.id + tt('ui.app.reportImageNormal'), msg);
+      log('warn', ttf('ui.app.panelWindowPanelF', msg.id), msg);
     }
     return true;
   }
@@ -3245,7 +3254,7 @@ const SCENE_PANEL_DRAW = {
 export function drawPanel(id) {
   const pid = panelId(id);
   const f = SCENE_PANEL_DRAW[pid];
-  return f ? Promise.resolve().then(f).catch((e) => log('error', tt('ui.app.drawPanel') + pid + tt('ui.app.fail'), e))
+  return f ? Promise.resolve().then(f).catch((e) => log('error', ttf('ui.app.drawPanelF', pid), e))
            : renderFeaturePanel(pid);
 }
 /** วาดแผงของหน้าต่างนี้ใหม่ (หน้าต่างแผงเท่านั้น — มีแผงเดียว) */
@@ -3719,7 +3728,7 @@ function renderScopeChip() {
     chip = el('div', 'tree-scope'); chip.id = 'tree-scope';
     const tree = $('#tree'); if (tree && tree.parentNode) tree.parentNode.insertBefore(chip, tree);
   }
-  chip.innerHTML = iconHtml('search', 14) + tt('ui.app.searchOnly') + treeScope.label + '  ';
+  chip.innerHTML = iconHtml('search', 14) + tx('ui.app.searchOnly') + hx(treeScope.label) + '  ';
   const x = el('span', 'tree-scope-x', gi('close'));
   x.title = tt('ui.app.cancelMargin');
   x.onclick = () => setTreeScope(null);
@@ -4604,6 +4613,21 @@ function treeMenuItem(kind, id, c, e) {
           (v) => setSceneMeta(dPath, ch, sc, { status: v || 'Outline' }), '', statusColor));
         case 'pin': return free(async () => TA.togglePinItem('scene', sc.id, { title, dRel: await TA.relOf(dPath) }),
           TA.pinned('scene', sc.id));
+        // [alpha.164] ฉากมีปัญหา — ติดธง (ยังไม่ติด) · สลับฉบับ + เมนูย่อย (ติดแล้ว)
+        case 'problem': return isProblemScene(sc.id) ? null : free(() => markSceneProblem({ sc, file }));
+        case 'problemToggle': {
+          if (!isProblemScene(sc.id)) return null;
+          const orig = onsetViewOf(file) === 'original';
+          return { label: tt(orig ? 'ui.onset.toRevised' : 'ui.onset.toOriginal'), cmd: 'onset-toggle',
+                   click: async () => {
+                     await openScene(file, sc.title);
+                     const tb = state.tabs.get(file);
+                     if (tb) { await applyOnsetToTab(tb); toggleOnsetView(tb); }
+                   } };
+        }
+        case 'problemMenu': return isProblemScene(sc.id)
+          ? { label: tt('ui.treeMenu.problemMenu'), sub: () => onsetMenuItems(state.tabs.get(file) || null, { sc }) }
+          : null;
         case 'saveVersion': return free(() => manualSnapshot(dPath, ch, sc));
         case 'versionHistory': return free(() => versionDialog(dPath, ch, sc));
         case 'compareVersion': return free(() => compareVersionsDialog(dPath, ch, sc));
@@ -5013,6 +5037,7 @@ async function _buildTreeInner() {
   const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Research', 'Snapshots', '.k2history', 'Plugins', 'Recycle', 'Sessions', 'Starters']);
   const sortMode = treeSortMode();                       // [alpha.120 ข้อ 2]
   const snapCounts = await snapshotCounts();             // [alpha.120 ข้อ 17] จำนวนเวอร์ชันต่อไฟล์
+  await loadOnsetIndex().catch(() => {});                // [alpha.164] ป้าย ! ของฉากมีปัญหา
   // [alpha.155] แถวชื่อโปรเจกต์ + ปักหมุด — try ของตัวเอง: พังตรงนี้ห้ามลากต้นไม้ทั้งอันล้ม (บทเรียนข้อ 30)
   try { await buildProjectHead(tree); } catch (e) { log('warn', 'buildProjectHead', e); }
   for (const name of await kapi.listDirs(state.root)) {
@@ -5182,6 +5207,13 @@ async function _buildTreeInner() {
             // ป้ายเล่าเรื่อง (Narrative Markers): ฉากนอกลำดับเวลาหลัก
             if (sc.isFlashback) scEl.append(el('span', 'tree-flash', gi('rewind')));
             else if (sc.isFlashforward) scEl.append(el('span', 'tree-flash', gi('fast-forward')));
+            // [alpha.164] ฉากมีปัญหา — ป้าย ! (ติดธงไว้ เทียบกับฉบับเดิมอยู่)
+            if (isProblemScene(sc.id)) {
+              const pb = el('span', 'tree-onset', '!');
+              pb.title = tt('ui.onset.treeBadge');
+              scEl.append(pb);
+              scEl.classList.add('k-row-onset');
+            }
             // รูป thumbnail (ถ้ามีรูปแรกในฉาก)
             const scPath = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
             if (sc.imageCount || sc.wordCount) {
@@ -5361,7 +5393,7 @@ async function _buildTreeInner() {
   // ---- Memo (โฟลเดอร์ Memos/ ของโปรเจกต์ — เข้ากับ v1) ----
   const memoDir = await kapi.join(state.root, 'Memos');
   const mSec = el('div', 'sec');
-  const mHead = el('div', 'sec-title', gi('note') + ' MEMO');
+  const mHead = el('div', 'sec-title', gi('note') + ' ' + tt('ui.tree.secMemo'));   // [alpha.164 ข้อ B8] เดิม 'MEMO' ตัวใหญ่ฮาร์ดโค้ด
   const addM = el('span', 'row-add', '+'); addM.title = tt('ui.app.newMemoNew');
   addM.onclick = () => addMemo();
   mHead.append(addM); mSec.append(mHead);
@@ -5529,7 +5561,7 @@ async function _buildTreeInner() {
   // ---- Research (โฟลเดอร์ Research/ — เก็บ PDF, ภาพ, ลิงก์, .md งานวิจัย) ----
   const resDir = await kapi.join(state.root, 'Research');
   const rSec = el('div', 'sec');
-  const rHead = el('div', 'sec-title', gi('books') + ' RESEARCH');
+  const rHead = el('div', 'sec-title', gi('books') + ' ' + tt('ui.tree.secResearch'));
   rSec.append(rHead);
   makeAccordion(rHead, rSec, 'sec:__research__');
   if (await kapi.exists(resDir)) {
@@ -5586,17 +5618,16 @@ async function _buildTreeInner() {
     };
     rSec.append(addR);
   } else {
-    // Empty state
-    const es = el('div', 'scene empty-state-row');
-    es.append(el('span', 'dim', tt('ui.app.notHasFileTask')));
-    const createB = el('button', 'k-ok empty-state-btn', tt('ui.app.newFolderResearch'));
+    // [alpha.164 ข้อ F5] สถานะว่างหน้าตาเดียวกับหมวดอื่น ("+ สร้างกระดานแรก…" · "+ สร้างแผนที่แรก…")
+    // เดิมเป็นตัวเอียงจาง + ปุ่มส้มก้อนใหญ่กลางต้นไม้ — เด่นกว่าทุกอย่างใน Explorer ทั้งที่ว่างเปล่า
+    const createB = el('div', 'scene add-row', tt('ui.app.newFolderResearch'));
+    createB.title = tt('ui.app.notHasFileTask');
     createB.onclick = async () => {
       await kapi.mkdir(resDir);
       setStatus(tt('ui.app.newFolderResearchDone'));
       await buildTree();
     };
-    es.append(createB);
-    rSec.append(es);
+    rSec.append(createB);
   }
   tree.append(rSec);
 
@@ -5610,7 +5641,7 @@ async function _buildTreeInner() {
     return w;                                  // ยังไม่มี = จะถูกสร้างเมื่อเพิ่มของจริง
   };
   const wSec = el('div', 'sec');
-  const wHead = el('div', 'sec-title', gi('book-open') + ' WIKI');
+  const wHead = el('div', 'sec-title', gi('book-open') + ' ' + tt('ui.tree.secWiki'));
   wSec.append(wHead);
   makeAccordion(wHead, wSec, 'sec:__wiki__');
   const tplRow = el('div', 'scene', tt('ui.app.templateManage'));
@@ -6385,7 +6416,7 @@ function floatTab(file) {
   win.addEventListener('mousedown', () => bringFloatFront(win));
 
   t.tabBtn.classList.add('floated');
-  setStatus(tt('ui.app.split') + t.title + tt('ui.app.windowFloatDoneClick'));
+  setStatus(ttf('ui.app.splitF', t.title));
   setTimeout(() => refitTab(t), 60);
   return win;
 }
@@ -6401,7 +6432,7 @@ function dockTab(file) {
   syncSplitPanes();          // ผนึกคืน → ช่องที่เคยว่างต้องรับ pane กลับ
   activate(file);
   setTimeout(() => refitTab(t), 60);
-  setStatus(tt('ui.app.restore') + t.title + tt('ui.app.tabDone'));
+  setStatus(ttf('ui.app.restoreF', t.title));
   return true;
 }
 
@@ -6812,7 +6843,7 @@ export async function newPlannerBoard(nameArg) {
   await refreshTreeQueued();
   await openPlanner(p);
   await refreshTreeQueued();
-  setStatus(tt('ui.common.newBoard') + p.split(/[\\/]/).pop().replace(/\.json$/i, '') + tt('ui.common.done'));
+  setStatus(ttf('ui.common.newBoardF', p.split(/[\\/]/).pop().replace(/\.json$/i, '')));
   return p;
 }
 
@@ -6828,7 +6859,7 @@ async function renamePlannerBoard(b) {
   await kapi.move(b.path, dst);
   if (wasOpen) await plannerInst.openBoard(dst);
   await refreshTreeQueued();
-  setStatus(tt('ui.app.changeName') + safeBoardName(v) + tt('ui.common.done'));
+  setStatus(ttf('ui.app.changeNameF', safeBoardName(v)));
   return dst;
 }
 
@@ -7049,7 +7080,7 @@ async function setMapCategoryFromTree(mapId) {
   await saveMaps(d);
   if (mapsState_C.s) { mapsState_C.s.data = d; await renderMaps($('#maps-body')); }
   await refreshTreeQueued();
-  setStatus(m.category ? tt('ui.app.moveCat') + m.category + tt('ui.common.done') : tt('ui.app.exitCatDone'));
+  setStatus(m.category ? ttf('ui.app.moveCatF', m.category) : tt('ui.app.exitCatDone'));
 }
 async function deleteMapFromTree(mapId, name) {
   if (!(await confirmBox(ttf('ui.common.delMap', name || ''), tt('ui.common.del')))) return;
@@ -7467,7 +7498,7 @@ export function syncMenuToggles() {
       // [alpha.62 บั๊ก 11] ติ๊กรายชนิดใน เมนูบท → 🔠 ตัวพิมพ์ใหญ่/เล็ก → บังคับตัวพิมพ์ใหญ่เฉพาะชนิด
       spCaps: (() => {
         const f = spFormat();
-        return CAPS_ELEMENTS.map((k) => ({ el: k, label: SP_ELEMS[k]?.th || k, on: elementCaps(f, k) }));
+        return CAPS_ELEMENTS.map((k) => ({ el: k, label: elemLabel(k), on: elementCaps(f, k) }));
       })(),
       panels: ps,                                  // [alpha.162 · W2] id จริงชุดเดียว (ชื่อยุคเก่าไม่มีใครอ่าน)
       // [alpha.147] คีย์ลัดที่ผู้ใช้ตั้งเอง → main ใช้เติม accelerator ของเมนูระบบให้ตรงกับของจริง
@@ -7518,6 +7549,8 @@ export function applyTheme() {
   // ถอดคลาสของทุกธีมก่อนเสมอ แล้วค่อยใส่ของธีมปัจจุบัน (เพิ่มธีมใหม่ = ไม่ต้องมาแก้ตรงนี้)
   for (const id of THEMES) document.body.classList.toggle('theme-' + id, id === th);
   clearThemeColorCache();                  // [alpha.162 · W6 ข้อ 2] ผืนวาด (กระดาน · ผังแตกสาย) อ่านสีธีมใหม่
+  // [alpha.164 ข้อ A1–A2] ผืนวาดที่เปิดค้างอยู่ (ผังความสัมพันธ์ · กระดานวางแผน) ฟังแล้ววาดสีธีมใหม่เอง
+  try { window.dispatchEvent(new CustomEvent('k2-theme', { detail: th })); } catch {}
   return th;
 }
 /** ตั้งธีม — ส่งชื่อธีมมาก็ตั้งตรง ๆ · ไม่ส่ง = วนไปตัวถัดไปใน THEMES (เมนู มุมมอง ใช้แบบส่งชื่อ) */
@@ -7738,7 +7771,7 @@ async function renderPropsPanel() {
   if (stale()) return;
   const verRow = el('div', 'props-ver');
   verRow.append(el('div', 'props-ver-line',
-    tt('ui.app.versionEdit') + (vmeta.appVersion || '—') + tt('ui.app.roundEdit') + (vmeta.revision || '0')));
+    ttf('ui.app.versionEditF', (vmeta.appVersion || '—'), (vmeta.revision || '0'))));
   const verBtns = el('div', 'props-ver-btns');
   const bHist = el('button', null, tt('ui.app.history')); bHist.onclick = () => versionDialog(dPath, ch, sc);
   const bCmp = el('button', null, tt('ui.app.compareVersion2')); bCmp.onclick = () => compareVersionsDialog(dPath, ch, sc);
@@ -8312,7 +8345,7 @@ export async function currentScriptSource() {
   const t2 = state.active;
   if (t2 && t2.sp) {
     return { md: t2.sp.getMarkdown(),
-             blocks: blocksFromDoc(t2.sp.view.state.doc),
+             blocks: blocksFromDoc(revisedDoc(t2) || t2.sp.view.state.doc),   // [alpha.164] ส่งออก = ฉบับแก้ไข
              title: t2.title || state.title };
   }
   const drafts = await listDrafts();
@@ -8705,7 +8738,7 @@ async function loadPlugins() {
         const manifest = got ? JSON.parse(got.manifest)
           : await kapi.readJson(await kapi.join(dir, name, 'plugin.json'));
         if (manifest.minAppVersion && !versionAtLeast(APP_VERSION, manifest.minAppVersion)) {
-          plugins.failed.push({ name, origin, error: tt('ui.app.mustUseKillian') + manifest.minAppVersion + tt('ui.app.up') });
+          plugins.failed.push({ name, origin, error: ttf('ui.app.mustUseKillianF', manifest.minAppVersion) });
           continue;
         }
         if (got && got.codeErr) throw got.codeErr;
@@ -8722,7 +8755,7 @@ async function loadPlugins() {
         plugins.failed.push({ name, origin, folder: name, error: e.message });
         // พังตอนโหลด = ปิดไว้ก่อน กันเปิดโปรแกรมไม่ขึ้นรอบหน้า (ผู้ใช้เปิดกลับได้จากกล่องจัดการ)
         setPluginDisabled(name, true);
-        log('error', tt('ui.app.plugin2') + name + tt('ui.app.close'), e);
+        log('error', ttf('ui.app.plugin2F', name), e);
       }
     }
   }
@@ -9286,7 +9319,15 @@ export async function importLanguageCsv(srcPath) {
       else if (/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(c)) cols.push([i, c.split('-')[0] + (c.includes('-') ? '-' + c.split('-')[1].toUpperCase() : '')]);
     }
   }
-  if (!cols.length) cols.push([1, i18n.lang || 'th']);
+  // ไม่มีหัวตาราง = ไฟล์แบบที่โปรแกรมแจกเอง (`meta.code,en` · `ui.x,…`) — ภาษาอยู่ในแถว meta.code
+  // เดิมข้ามแถวนั้นแล้วถือว่าเป็น "ภาษาที่ใช้อยู่" → นำเข้า k2_en.csv ตอนหน้าจอเป็นไทย = คำอังกฤษทับภาษาไทยทั้งไฟล์
+  if (!cols.length) {
+    const mc = rows.find((r) => String(r[0] == null ? '' : r[0]).trim() === 'meta.code');
+    const code = mc ? String(mc[1] == null ? '' : mc[1]).trim() : '';
+    const norm = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code)
+      ? code.split('-')[0].toLowerCase() + (code.includes('-') ? '-' + code.split('-')[1].toUpperCase() : '') : '';
+    cols.push([1, norm || i18n.lang || 'th']);
+  }
   const body = hasHead ? rows.slice(1) : rows;
   const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
   const dir = await kapi.join(state.root, 'languages');
@@ -9720,7 +9761,7 @@ function mountEditor(tab, dir, body) {
     tab.sp = new SPEditor(mount, {
       markdown: body,
       onChange: () => { markDirty(tab); scheduleCount(); scheduleOutline();
-                        scheduleSpSmart(tab); scheduleRepaginate(); },
+                        scheduleSpSmart(tab); scheduleRepaginate(); onsetChanged(tab); },
       // [alpha.60r2 ข้อ 3] Enter = จัดหน้าใหม่ทันที ไม่รอ debounce (เส้นคั่นหน้าไม่กระตุก)
       onKeyDown: (ev) => { repaginateOnEnter(tab, ev); return smart.onKey(ev); },
       onElement: (elName) => setElementBadge(elName),
@@ -9728,7 +9769,7 @@ function mountEditor(tab, dir, body) {
       resolveSrc: (p) => resolveImg(dir, p),                       // รูปในบทหนัง render จริง
       getNames: () => state.settings.autoMention !== false ? smart.names : [],   // ลิงก์ Wiki
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
-      editable: () => !tab.locked,                                 // ล็อก = แก้ไม่ได้
+      editable: () => !tab.locked && !tab._onsetSaved,             // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
     });
     // [alpha.125 ข้อ I] คืนการจัดหน้าที่บันทึกไว้ (ไม่นับเป็นการแก้ไข — ดู applyAlignMap)
     try { tab.sp.applyAlignMap(alignFromString(tab.meta.align)); } catch {}
@@ -9748,7 +9789,7 @@ function mountEditor(tab, dir, body) {
       // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
       alignMap: alignFromString(tab.meta.align),
       alignComments: state.settings.mdAlignStyle === 'comment',
-      onChange: () => { markDirty(tab); scheduleCount(); scheduleOutline();
+      onChange: () => { markDirty(tab); scheduleCount(); scheduleOutline(); onsetChanged(tab);
                         setTimeout(() => smart.check(tab.editor.view), 0); },
       resolveSrc: (p) => resolveImg(dir, p),
       // [alpha.60r2 ข้อ 3] Enter = จัดหน้าใหม่ทันที ไม่รอ debounce
@@ -9756,7 +9797,7 @@ function mountEditor(tab, dir, body) {
       getNames: () => state.settings.autoMention !== false ? smart.names : [],
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
       getChecker: spellChecker,
-      editable: () => !tab.locked,                                 // ล็อก = แก้ไม่ได้
+      editable: () => !tab.locked && !tab._onsetSaved,             // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
     });
     pane.addEventListener('click', () => { refreshToolbar(); smart.hide(); });
     pane.addEventListener('keyup', () => refreshToolbar());
@@ -9786,6 +9827,8 @@ function mountEditor(tab, dir, body) {
   // (เปิดฉากถัดไปแล้วได้มุมมองเดียวกับที่กำลังอ่านอยู่ · หลังจากนั้นต่างคนต่างจำของตัวเอง)
   seedTabView(tab);
   requestAnimationFrame(() => { reapplyTabView(true); centerPage(pane); updatePageNumberHint(); });
+  // [alpha.164] ฉากมีปัญหา — ตัวแก้ไขตัวใหม่ (เปิดฉาก · สลับโหมด) ต้องได้แถบเทียบกลับมาเอง
+  applyOnsetToTab(tab).catch((e) => log('warn', 'onset', e));
 }
 
 // สลับเอกสารระหว่างโหมดนิยาย ↔ บทหนัง (แบบ Fade In) — เนื้อหาเป็น .md ตัวเดียวกัน ต่างแค่ตีความ
@@ -9797,6 +9840,7 @@ async function switchFormat(target) {
   const to = target || (cur === 'prose' ? 'screenplay' : 'prose');
   if (to === cur) return;
 
+  exitOriginal(tab);                     // [alpha.164] กำลังดูฉบับเดิม = แปลงฉบับแก้ไข (ของจริง) เท่านั้น
   const src = tab.editor || tab.sp;
   const was = tab.dirty ? src.getMarkdown() : (tab.body ?? src.getMarkdown());
   const dir = tab.file.replace(/[\\/][^\\/]*$/, '');
@@ -9809,7 +9853,7 @@ async function switchFormat(target) {
     const lost = lossReport(was, to);
     if (lost.length) {
       const what = lost.slice(0, 4)
-        .map((x) => ttf('ui.app.convertLostItem', kindLabel(x.from), kindLabel(x.to), x.n)).join(' · ');
+        .map((x) => ttf('ui.app.convertLostItem', elemLabel(x.from), elemLabel(x.to), x.n)).join(' · ');
       const more = lost.length > 4 ? ttf('ui.app.convertLostMore', lost.length - 4) : '';
       if (!(await confirmBox(ttf('ui.app.convertLoss', what + more), tt('ui.app.convertGo')))) return;
     }
@@ -10122,13 +10166,13 @@ function setElementBadge(elName) {
   const b = $('#elem-badge');
   if (!b) return;
   if (!SP_ELEMS[elName]) { b.textContent = ''; b.classList.remove('elem-pick'); b.onclick = null; return; }
-  b.innerHTML = iconHtml('film', 14) + ' ' + SP_ELEMS[elName].th + ' ' + gi('caret-down');
+  b.innerHTML = iconHtml('film', 14) + ' ' + elemLabel(elName) + ' ' + gi('caret-down');
   b.title = tt('ui.app.clickPickFormatCtrl');
   b.classList.add('elem-pick');
   b.onclick = (e) => {
     const t = state.active; if (!t?.sp) return;
     popupMenu(e.clientX, e.clientY, TAB_CYCLE.map((el) => ({
-      label: (el === t.sp.curElement() ? gi('dot') + ' ' : '   ') + SP_ELEMS[el].th,
+      label: (el === t.sp.curElement() ? gi('dot') + ' ' : '   ') + elemLabel(el),
       click: () => { t.sp.setElement(el); t.sp.view.focus(); setElementBadge(el); },
     })));
   };
@@ -10171,6 +10215,9 @@ export function activate(file) {
     wireTabDrag(t);                                      // [alpha.161 · K2] ลากสลับลำดับในแถบ
   }
   state.active = state.tabs.get(file) || null;
+  // [alpha.164 · บั๊ก] แถบ "Rewrite this" เป็นของแท็บที่เปิดมัน — สลับไปแท็บอื่นแล้วแถบเดิมต้องปิด
+  // (เดิม closeRewriteBar ถูก import ไว้แต่ไม่มีใครเรียก → แถบลอยค้างทับเอกสารอีกฉบับ)
+  if (rewriteBarTab() && rewriteBarTab() !== state.active) closeRewriteBar();
   // จำฉากที่เปิดล่าสุดไว้ — แท็บอย่างผังพื้นที่/ผังแตกสายต้องรู้ว่า "กำลังเขียนฉากไหนอยู่"
   // ทั้งที่ตัวเองเป็นแท็บที่ active (ไม่งั้น sceneCtx() คืน null ทันทีที่สลับมาดูผัง)
   if (file && /\.md$/i.test(file) && /[\\/]Chapters[\\/]/.test(file)) state.lastSceneFile = file;
@@ -10693,7 +10740,8 @@ export async function snapshotFile(file, label = '') {
 
 // ตัดเวอร์ชันอัตโนมัติเก่าให้เหลือไม่เกิน maxBackups (เวอร์ชันที่ตั้งชื่อ = ไม่ถูกตัด)
 async function pruneSnapshots(file) {
-  const max = Math.max(1, parseInt(state.settings.maxBackups, 10) || 10);
+  // [alpha.164 ข้อ A12] กฎ 20 — `parseInt(x) || 10` ตีค่า 0 เป็นเท็จ (แก้ไฟล์เองเป็น 0 แล้วได้ 10) · 0 = เก็บ 1 อันพอ
+  const max = Math.max(1, Math.floor(num(state.settings.maxBackups, 10)));
   const unlabeled = (await listSnapshots(file)).filter((s) => !s.label);
   for (const s of unlabeled.slice(max)) { try { await kapi.remove(s.path); } catch {} }
 }
@@ -10935,6 +10983,7 @@ export function closeTab(file, { discard = false, ask = false } = {}) {
   const t = state.tabs.get(file);
   if (!t) return;
   const done = () => {
+    if (rewriteBarTab() === t) closeRewriteBar();       // [alpha.164 · บั๊ก] แถบ Rewrite ของแท็บนี้ต้องไปด้วย
     t.editor?.destroy(); t.wiki?.destroy(); t.sp?.destroy(); t.gal?.destroy(); t.net?.destroy(); t.planner?.destroy();
     t.pane.remove(); t.tabBtn.remove();
     if (t.floatWin) { t.floatWin.remove(); t.floatWin = null; }
@@ -11030,6 +11079,16 @@ function tabHandleOf(t) {
     close: () => closeTab(t.file, { discard: true }),
   };
 }
+// [alpha.164] ฉากมีปัญหา — ตัวเชื่อม (onset-ui.js ไม่ import app.js วนกลับ)
+installOnset({
+  sceneCtx: (f) => sceneCtx(f), openScene: (f, title) => openScene(f, title), buildTree: () => buildTree(),
+  alignFromString, tabBodyText: (tab) => tabBodyText(tab),
+  afterSwap: (tab) => {
+    if (state.active !== tab) return;
+    scheduleCount(); scheduleOutline(); scheduleRepaginate(); refreshToolbar();
+    try { refreshSpView(); updatePageNumberHint(); } catch {}
+  },
+});
 setTabBridge({
   find(p) {
     const k = pathKey(p);
@@ -11047,7 +11106,7 @@ setTabBridge({
 export async function revertTab(file) {
   const t = state.tabs.get(file);
   if (!t) return;
-  if (!(await confirmBox(tt('ui.app.cancelChangeAllTab'), 'Revert'))) return;
+  if (!(await confirmBox(tt('ui.app.cancelChangeAllTab'), tt('ui.common.revertBtn')))) return;
   const content = await kapi.readFile(file);
   const { meta, body } = parseMdFile(content);
   t.diskBody = body;                             // [alpha.156] ย้อนกลับ = เนื้อบนดิสก์คือฐานใหม่
@@ -11073,11 +11132,12 @@ export async function revertTab(file) {
       resolveSrc: (p) => resolveImg(dir, p),
       getNames: () => state.settings.autoMention !== false ? smart.names : [],
       onMention: (name) => { if (smart.fileOf[name]) openEntity(smart.fileOf[name]); },
-      editable: () => !t.locked,                       // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
+      editable: () => !t.locked && !t._onsetSaved,     // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
     });
     // [alpha.125 ข้อ I] Revert = โหลดจากดิสก์ใหม่ → คืนการจัดหน้าที่บันทึกไว้ด้วย
     try { t.sp.applyAlignMap(alignFromString(t.meta.align)); } catch {}
     t.sp.view.dom.classList.add('on');
+    applyOnsetToTab(t).catch(() => {});      // [alpha.164] ตัวแก้ไขตัวใหม่ = ติดตั้งการเทียบกลับ
   }
   else if (t.wiki) { t.wiki.destroy(); openEntity(t.title); return; }
   else if (t.plain) { t.plain = false; openPlainFile(file, t.title); return; }
@@ -11122,9 +11182,10 @@ export async function removeElementsDialog(opts = {}) {
   /** ลบจริง — แยกออกมาให้เทสเรียกได้ตรง ๆ และให้ทุก error ถูกจับ */
   const doRemove = async (sel) => {
     const tab = state.active;
+    if (tab && tab.locked) { setStatus(gi('lock') + ' ' + TA.lockMessage('scene')); return 0; }   // [alpha.164 · บั๊ก]
     // snapshot เป็นของแถม — ห้ามทำให้การลบล้มเหลว (บั๊กเดิมล้มทั้งคำสั่งเพราะตรงนี้)
     try {
-      if (tab) await snapshotFile(tab.file, tt('ui.app.beforeDel') + sel.map((x) => SP_ELEMS[x]?.th || x).join(','));
+      if (tab) await snapshotFile(tab.file, tt('ui.app.beforeDel') + sel.map((x) => elemLabel(x)).join(','));
     } catch (e) { log('warn', tt('ui.app.removeElementsKeepVersion'), e); }
     if (!sp.view || sp.view.isDestroyed) { setStatus(tt('ui.app.itemEditCloseDone')); return 0; }
     const view = sp.view;
@@ -11175,7 +11236,7 @@ export async function removeElementsDialog(opts = {}) {
     label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer';
     const cb = el('input'); cb.type = 'checkbox'; cb.value = ty; chks.push(cb);
     cb.onchange = syncTotal;
-    label.append(cb, el('span', null, ttf('ui.app.line', SP_ELEMS[ty]?.th || ty, counts[ty])));
+    label.append(cb, el('span', null, ttf('ui.app.line', elemLabel(ty), counts[ty])));
     list.append(label);
   }
   syncTotal();
@@ -11189,7 +11250,7 @@ export async function removeElementsDialog(opts = {}) {
       const sel = chks.filter((c) => c.checked).map((c) => c.value);
       if (!sel.length) return;
       const n = sel.reduce((s, k) => s + (counts[k] || 0), 0);
-      const names = sel.map((k) => SP_ELEMS[k]?.th || k).join(', ');
+      const names = sel.map((k) => elemLabel(k)).join(', ');
       if (!(await confirmBox(ttf('ui.app.delAllLine2', names, n), tt('ui.common.del')))) return;
       ov.remove();
       await doRemove(sel);
@@ -11327,7 +11388,7 @@ function bindTabStripMenus() {
     e.stopPropagation();
     const r = more.getBoundingClientRect();
     popupMenu(r.left, r.bottom, [...state.tabs.entries()].map(([f, t]) => ({
-      label: (t.dirty ? gi('dot') + ' ' : '') + (t.title || f),
+      text: (t.dirty ? gi('dot') + ' ' : '') + (t.title || f),
       checked: state.active && state.active.file === f,
       click: () => { activate(f); try { t.tabBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch {} },
     })));
@@ -13070,14 +13131,22 @@ function outlineItemEl(it, onJump) {
   d.classList.toggle('nav-colored', !!it.color);
   const loc = el('span', 'nav-col-loc', navLocText(it));
   const txt = el('span', 'nav-col-text');
-  if (it.star) txt.append(el('span', 'nav-mk', gi('star-filled')));
+  if (it.star) { const s = el('span', 'nav-mk nav-mk-star'); s.append(icon('star-filled', 13)); txt.append(s); }   // [alpha.164 ข้อ E5]
   txt.append(el('span', 'nav-label', it.label || tt('ui.common.empty')));
   for (const f of flags) {
     if (f === 'star' || f === 'color' || f === 'choice') continue;
     const def = NAV_FLAG_DEFS.find((x) => x.id === f);
-    if (def) { const s = el('span', 'nav-mk nav-mk-' + f, def.mark); s.title = tt(def.key); txt.append(s); }
+    if (def) {
+      const s = el('span', 'nav-mk nav-mk-' + f);
+      if (def.icon) s.append(icon(def.icon, 13)); else s.textContent = def.mark;
+      s.title = tt(def.key); txt.append(s);
+    }
   }
-  if (it.choices > 0) { const s = el('span', 'nav-mk nav-mk-choice', gi('subdirectory-right') + it.choices); s.title = tt('ui.nav.flagChoice'); txt.append(s); }
+  if (it.choices > 0) {
+    const s = el('span', 'nav-mk nav-mk-choice');
+    s.append(icon('subdirectory-right', 13), document.createTextNode(String(it.choices)));
+    s.title = tt('ui.nav.flagChoice'); txt.append(s);
+  }
   d.append(loc, txt);
   d.title = (it.label || '') + (it.status ? ' — ' + dataLabel(it.status) : '');
   d.onclick = onJump;
@@ -13786,7 +13855,8 @@ export function aboutDialog(opts = {}) {
     bCredits.setAttribute('aria-pressed', on ? 'true' : 'false');
   };
   const bCredits = navBtn(tt('ui.about.credits'), () => setCredits(!right.classList.contains('show-credits')));
-  navBtn('GitHub', () => { try { kapi.openExternal('https://github.com/JabCrossHook/Killian_Editor'); } catch {} });
+  // ลิงก์รีโปมาจากที่เดียวกับระบบอัปเดต (กฎถาวร alpha.135) — เดิมฝังรีโปเก่าไว้ตรงนี้
+  navBtn('GitHub', () => { try { kapi.openExternal(UPDATE_HOME_URL); } catch {} });
   navBtn(tt('ui.about.dataFolder'), () => { try { kapi.revealInOS(state.root || ''); } catch {} }).disabled = !state.root;
   const close = navBtn(tt('ui.common.close'), () => ov.remove(), 'k-about-link-pill');
   close.classList.add('k-ok');     // ปุ่มปิดหลักของกล่อง (ปุ่มเดิมก็เป็น .k-ok)
@@ -13910,7 +13980,7 @@ export function renderFeaturePanel(id) {
       // เก็บเป็นตัวนับให้ e2e ยืนยันได้ว่า "จบรอบแล้วต้องไม่มีแผงไหนวาดพังเลย"
       state._panelDrawErrors = (state._panelDrawErrors || 0) + 1;
       state._panelDrawLastErr = pid + ': ' + (e && e.message ? e.message : String(e));
-      log('error', tt('ui.app.drawPanel') + pid + tt('ui.app.fail'), e);
+      log('error', ttf('ui.app.drawPanelF2', pid), e);
     })
     .finally(() => _featInFlight.delete(pid))
     .then(() => { try { backScroll(); } catch {} return true; });
@@ -13975,11 +14045,23 @@ function restoreInactivePanes() {
 }
 
 // [alpha.72 ข้อ 5] คำสั่งที่ยิงรัวจนกลบ log (พิมพ์/เลื่อน/ซูม) — จดเป็น debug ไม่ใช่ info
+// คำสั่งที่แก้เนื้อของแท็บที่เปิดอยู่ — ฉากล็อกแล้วทำไม่ได้ (ดู handleCommand)
+const LOCK_EDIT_CMDS = new Set(['fmt', 'text-case', 'text-case-cycle', 'editor-undo', 'editor-redo', 'insert-image',
+  'delete-line', 'sp-element', 'nbsp', 'insert-shortcode', 'remove-elements', 'toggle-format', 'set-format', 'sp-extension']);
 const QUIET_CMDS = new Set(['zoom', 'zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
                             'find', 'find-next', 'find-prev']);
 
 export async function handleCommand(ch, ...a) {
+  // [alpha.164] กำลังดูฉบับเดิมของฉากมีปัญหา → คำสั่งที่อ่าน/เขียนเนื้อ (บันทึก · พิมพ์ · ส่งออก …)
+  // ต้องได้ฉบับแก้ไขเสมอ · คำสั่งดูอย่างเดียว (ซูม/สลับแท็บ/สลับฉบับ) ไม่กระทบ
+  if (typeof ch === 'string') { try { onsetBeforeCommand(ch); } catch {} }
   const t = state.active;
+  // [alpha.164 · บั๊ก] ฉากที่ล็อก = คำสั่งที่แก้เนื้อไม่ทำงาน + บอกเหตุผล (เดิมปุ่มจัดรูปแบบ/คีย์ลัดแก้ฉากที่ล็อกได้
+  // เพราะ editable:false ของ ProseMirror กันแค่การพิมพ์ · ตัวแก้ไขเองก็กันซ้ำอีกชั้นที่ edit-guard.js)
+  if (LOCK_EDIT_CMDS.has(ch) && t && t.locked && (t.editor || t.sp)) {
+    setStatus(gi('lock') + ' ' + TA.lockMessage('scene'));
+    return;
+  }
   // จดทุกคำสั่งที่ผู้ใช้สั่ง — ไล่ย้อนได้ว่า "ก่อนพังกดอะไรไป" (เดิม log ไม่มีร่องรอยนี้เลย)
   try {
     log(QUIET_CMDS.has(ch) ? 'debug' : 'info', 'cmd: ' + ch,
@@ -14052,6 +14134,7 @@ export async function handleCommand(ch, ...a) {
     case 'next-tab': cycleTabs(1); break;
     case 'prev-tab': cycleTabs(-1); break;
     case 'reveal-active': revealInTree(t && t.file); break;
+    case 'onset-toggle': toggleOnsetView(t); break;          // [alpha.164] ฉากมีปัญหา: ฉบับเดิม ⇄ ฉบับแก้ไข
     case 'close-all-tabs': closeAllTabs(); break;
     // [95] ในบทหนัง Ctrl+1/2/3 = scene/action/character (คีย์เดียวกับหัวข้อ 1-3 ของนิยาย)
     case 'fmt': {
@@ -14203,20 +14286,30 @@ export async function handleCommand(ch, ...a) {
     case 'import-script': {
       // [alpha.124 ข้อ 29] `mode` มาจากกล่องพรีวิว: 'new' = สร้างฉากใหม่ (ค่าเริ่มต้น)
       // · 'replace' = ทับแท็บปัจจุบัน (ผู้ใช้เลือกเองและเห็นเนื้อที่จะทับแล้ว)
+      // [alpha.164 · บั๊ก] ทับได้เฉพาะแท็บบทภาพยนตร์ที่แก้ได้ — ไม่งั้นไม่มีปุ่ม "ทับแท็บปัจจุบัน"
+      const canReplace = (tb) => !!(tb && tb.sp && !tb.locked);
       const result = await importScreenplayDialog(async (markdown, format, summary, mode) => {
         const t = state.active;
+        if (mode === 'replace' && !canReplace(t)) {
+          // แท็บเปลี่ยนไประหว่างกล่องเปิดอยู่ (ปิด/สลับ/ล็อก) — ไม่ทับอะไร และไม่แอบสร้างฉากใหม่แทน
+          setStatus(gi('warning') + ' ' + tt('ui.app.importReplaceNoTab'));
+          return;
+        }
         if (mode === 'replace' && t && t.sp) {
           // มีแท็บบทเปิดอยู่ → inject เข้า tab ปัจจุบัน
           t.sp.setMarkdown(markdown);
           if (t.editor) t.editor.setMarkdown(markdown);
           markDirty(t);
-          setStatus(tt('ui.app.importScreenplay') + format + tt('ui.app.done') + summary.scenes + tt('ui.app.scene') + summary.characters + tt('ui.app.character'));
+          setStatus(ttf('ui.app.importScreenplayF', format, summary.scenes, summary.characters));
         } else {
           // ยังไม่มีแท็บบท → สร้างแท็บฉากใหม่ในบทปัจจุบัน
-          const sec = state.active?.meta;
+          // ฉบับร่าง/บทของฉากที่เปิดอยู่ — เดิมอ่าน `state.active.meta.section/.draft` ซึ่ง **ไม่มีอยู่จริง**
+          // (meta = frontmatter ของไฟล์) → kapi.join(root, undefined, 'Draft', undefined) โยนทุกครั้งที่มีฉากเปิดอยู่
+          // = "สร้างเป็นฉากใหม่" ไม่เคยทำงานเลยในกรณีปกติที่สุด
+          const cur = await sceneCtx();
           // [alpha.124 ข้อ 29] ไม่มีแท็บฉากเปิดอยู่ ก็ยังนำเข้าได้ — ถามว่าจะลงฉบับร่างไหน
           // (เดิมตันตรงนี้: ต้องเปิดฉากอะไรสักฉากก่อนถึงจะนำเข้าบทได้ ซึ่งไม่มีเหตุผลเลย)
-          let dPath = sec ? await kapi.join(state.root, sec.section, 'Draft', sec.draft) : null;
+          let dPath = cur ? cur.dPath : null;
           if (!dPath) {
             const ds = await listDrafts();
             if (ds.length === 1) dPath = ds[0].dPath;
@@ -14232,19 +14325,21 @@ export async function handleCommand(ch, ...a) {
             // (ถึงจะมีจริงก็ยังพังต่อ: `activate()` ไม่คืนแท็บ → `tab?.sp` เป็น undefined เสมอ)
             // ตัวจริงคือ `addScene(dPath, ch, title, {meta, body})` ซึ่งต้องมี "บท" ปลายทางด้วย
             const dj = await kapi.readJson(await kapi.join(dPath, 'draft.json')).catch(() => ({}));
-            const ch = (dj.chapters || [])[0] || await addChapter(dPath, tt('ui.app.import') + format);
+            const ch = (cur && cur.dPath === dPath && cur.ch)
+              || (dj.chapters || [])[0] || await addChapter(dPath, tt('ui.app.import') + format);
             if (!ch) return;                            // ยกเลิกกล่องตั้งชื่อบท = ไม่นำเข้า
             const row = await addScene(dPath, ch,
-              tt('ui.app.import') + format + '-' + Date.now().toString(36),
+              // ชื่อจากหน้าปกของไฟล์ (Fountain `Title:`) ก่อน · ไม่มีค่อยตั้งชื่อตามรูปแบบไฟล์
+              (summary && summary.title) || (tt('ui.app.import') + format + '-' + Date.now().toString(36)),
               { meta: { format: 'screenplay' }, body: markdown, silent: true });
             if (!row) return;
             await openScene(row.path, row.title);       // เขียนลงไฟล์ไปแล้ว → เปิดมาก็ไม่ค้างสถานะยังไม่บันทึก
-            setStatus(tt('ui.app.importScreenplay') + format + tt('ui.app.newSceneNew') + summary.scenes + tt('ui.app.scene') + summary.characters + tt('ui.app.character'));
+            setStatus(ttf('ui.app.importScreenplayF2', format, summary.scenes, summary.characters));
           } else {
             await confirmBox(tt('ui.app.importNotOkNot'), tt('ui.common.msg3'));
           }
         }
-      });
+      }, { canReplace: canReplace(state.active) });
       break;
     }
     // [alpha.60 ข้อ 74] เปรียบเทียบบท/สคริปต์
@@ -14484,8 +14579,9 @@ export async function handleCommand(ch, ...a) {
     case 'prose-indent': toggleProseIndent(a[0]); break;
     case 'sp-report': openSpReport(a[0] || 'location'); break;
     case 'goto': gotoDialog(a[0]); break;
-    case 'goto-page': gotoPage(a[0]); break;
-    case 'goto-scene': gotoScene(a[0]); break;
+    // ไม่มีเลข (คีย์ลัด Ctrl+Shift+. ส่งมาเปล่า ๆ) = ถามเลขก่อน — เดิมกระโดดหน้า 1 เงียบ ๆ + "ไปที่หน้า  จาก N หน้า"
+    case 'goto-page': if (a[0] == null || a[0] === '') gotoDialog('page'); else gotoPage(a[0]); break;
+    case 'goto-scene': if (a[0] == null || a[0] === '') gotoDialog('scene'); else gotoScene(a[0]); break;
     case 'sp-find-error': findNextSpError(); break;
     case 'sp-check-all': showErrorList(); break;
     case 'sp-check-toggle':
@@ -14834,6 +14930,7 @@ function makeDraggable(elm, handle, opts = {}) {
   };
   const up = () => {
     dragging = false; elm.classList.remove('k-dragging');
+    try { dodgeHiddenChips(); } catch {}          // แถบลอยย้ายไปทับชิปแผงที่ซ่อน → ยกชิปหลบ
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', up);
     if (key) saveUiLayout(key, { left: parseInt(elm.style.left, 10) || 0,
@@ -14903,8 +15000,10 @@ export function tb(id, cmd, arg) { $(id).onclick = () => {
 //
 // เรียกทุกครั้งที่หน้าต่างเปลี่ยนขนาด (รวมย่อ/ขยาย/คืนขนาด) — หนีบเข้ากรอบแล้ว
 // **บันทึกทับค่าที่จำไว้** ไม่งั้นรอบหน้าเปิดโปรแกรมมาก็ยังชี้ไปนอกจอเหมือนเดิม
+let _fmtHostH = 0;          // [alpha.164 ข้อ E4] ความสูงของ #content รอบก่อน (ใช้ตัดสินว่าแถบชิดล่างไหม)
 export function keepFloatingUiInView() {
   let moved = 0;
+  try { dodgeHiddenChips(); } catch {}
   // แถบรูปแบบลอย — ลอยอยู่ใน #content
   const host = $('#content');
   if (floatBar && host && floatBar.style.display !== 'none') {
@@ -14913,6 +15012,24 @@ export function keepFloatingUiInView() {
     if (r.width && hr.width) {
       const cur = { left: parseInt(floatBar.style.left, 10) || 0,
                     top: parseInt(floatBar.style.top, 10) || 0 };
+      // [alpha.164 ข้อ E4] ★ แถบที่ "ชิดขอบล่าง" ต้องตามขอบล่างไปเมื่อพื้นที่สูงขึ้น/เตี้ยลง
+      // ตำแหน่งตั้งต้นถูกคำนวณตอนเลย์เอาต์ยังไม่นิ่ง (#content ยังเตี้ย) → พื้นที่ขยายทีหลัง
+      // แถบเลยค้างอยู่กลางตัวแก้ไข ทับเนื้อหา (เห็นบนจอ 1440p ตั้งแต่เปิดโปรแกรมครั้งแรก)
+      // กติกา: ก่อนเปลี่ยนขนาด ขอบล่างของแถบห่างขอบล่างพื้นที่ ≤ 48px = ถือว่าชิดล่าง → รักษาระยะนั้นไว้
+      floatBar.classList.toggle('k-fmtbar-narrow', hr.width < 620);   // [alpha.164 ข้อ F2]
+      const prevH = _fmtHostH; _fmtHostH = hr.height;
+      if (prevH && Math.abs(prevH - hr.height) > 1 && fmtbarState().align !== 'top') {
+        const gap = prevH - (cur.top + r.height);
+        if (gap >= -4 && gap <= 48) {
+          const top = Math.round(hr.height - r.height - Math.max(0, gap));
+          if (top !== cur.top) {
+            cur.top = top;
+            floatBar.style.top = top + 'px'; floatBar.style.bottom = 'auto';
+            saveUiLayout('fmtbar', { top });
+            moved++;
+          }
+        }
+      }
       // [alpha.119] หนีบเข้า **ส่วนที่มองเห็นได้จริง** ของ `#content` ไม่ใช่ทั้งก้อน —
       // ตอนออกจากเต็มจอ/โหมดโฟกัส host อาจสูงเลยขอบล่างหน้าต่างไปชั่วขณะ
       // [alpha.151 ข้อ 5] แถบใหญ่กว่าที่ว่างใน #content เมื่อไหร่ (แผงกระดานเปิดอยู่)
@@ -15019,7 +15136,7 @@ export function insertShortcodeMenu(ev) {
     for (const sc of rows) {
       // โค้ดที่ต้องมีเป้าหมาย (`[wiki:ชื่อ]`) แทรกโครงให้ก่อน แล้วผู้ใช้พิมพ์ชื่อต่อได้เลย
       const text = sc.group === 'wiki' ? '[' + sc.name + ':]' : '[' + sc.name + ']';
-      items.push({ label: text + '  ·  ' + shortcodeLabel(sc.name),
+      items.push({ text: text + '  ·  ' + shortcodeLabel(sc.name),
                    click: () => insertShortcodeText(text) });
     }
   }
@@ -15126,7 +15243,7 @@ export async function openResolvedShortcodeMenu(ev, targetEl) {
     if (items.length) items.push('-');
     for (const sc of rows) {
       if (sc.needsArg) {
-        items.push({ label: '[' + sc.name + ':…]  ·  ' + shortcodeLabel(sc.name),
+        items.push({ text: '[' + sc.name + ':…]  ·  ' + shortcodeLabel(sc.name),
           click: async () => {
             const arg = await ask(shortcodeLabel(sc.name));
             if (!arg) return;
@@ -15137,7 +15254,7 @@ export async function openResolvedShortcodeMenu(ev, targetEl) {
       }
       let v = ''; try { v = sc.get(ctx, { arg: '', opts: {} }); } catch { v = ''; }
       const preview = String(v || '').trim() ? '  →  ' + String(v).slice(0, 24) : '';
-      items.push({ label: shortcodeLabel(sc.name) + preview, click: () => insertTextAtField(targetEl, v) });
+      items.push({ text: shortcodeLabel(sc.name) + preview, click: () => insertTextAtField(targetEl, v) });
     }
   }
   const x = ev && Number.isFinite(ev.clientX) ? ev.clientX : Math.round(window.innerWidth / 2);
@@ -15228,6 +15345,11 @@ function setupFloatingFormatBar() {
   // [alpha.117] ดับเบิลคลิกหูจับ = **รีเซ็ตทั้งชุด** ไม่ใช่แค่ตำแหน่ง —
   // ทางออกเดียวที่จำง่ายเวลาแถบจางจนแทบมองไม่เห็นหรือถูกล็อกค้างไว้
   handle.addEventListener('dblclick', () => resetFmtbarAll());
+  // [alpha.164 ข้อ F2] โหมดแถวเดียว (พื้นที่แคบ): ล้อเมาส์แนวตั้ง = เลื่อนแถบแนวนอน
+  bar.addEventListener('wheel', (e) => {
+    if (!bar.classList.contains('k-fmtbar-narrow') || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    bar.scrollLeft += e.deltaY; e.preventDefault();
+  }, { passive: false });
   applyFmtbarState();
   applyFmtbarConfig();
   syncFloatBarVisible();
@@ -15748,7 +15870,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (wasCapped) {
         toggleElementCaps(spEl, false);
         setStatus(ttf('ui.app.changeImageCaseUnset', CASE_SHORT[mode]) +
-                  ttf('ui.app.doneOpenBackChapter', SP_ELEMS[spEl]?.th || spEl));
+                  ttf('ui.app.doneOpenBackChapter', elemLabel(spEl)));
       } else setStatus(tt('ui.app.changeImageCase') + CASE_SHORT[mode]);
     } else setStatus(tt('ui.app.pickTextBeforeDone'));
     refreshToolbar();
@@ -16044,9 +16166,17 @@ window.addEventListener('DOMContentLoaded', () => {
     const sel = window.getSelection();
     const selWord = (sel?.toString() || '').trim();
     const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
-    if (!bad && !hasThes) return;
+    // "Rewrite this" — เลือกข้อความในเอกสารที่เปิดอยู่ (ยาวเท่าไหร่ก็ได้) → ให้ AI เขียนช่วงนั้นใหม่
+    const rwTab = state.active;
+    const rwEd = rwTab && (rwTab.editor || rwTab.sp);
+    const canRewrite = inDoc && !!selWord && !!(rwEd && rwEd.view && rwEd.view.dom.contains(e.target)
+      && !rwEd.view.state.selection.empty);
+    // [alpha.164] ฉากมีปัญหา — คลิกขวาบนบรรทัดที่มีปัญหา (หรือที่ไหนก็ได้ตอนดูฉบับเดิม)
+    const onsetItems = inDoc ? onsetEditorMenu(rwTab, e.target) : null;
+    if (!bad && !hasThes && !canRewrite && !onsetItems) return;
     e.preventDefault(); e.stopPropagation();
     const items = [];
+    if (onsetItems) { items.push(...onsetItems); if (bad || hasThes || canRewrite) items.push('-'); }
     if (bad) {
       const word = bad.textContent.trim();
       // คำแนะนำ (สูงสุด 6 คำ) — บนสุดของเมนูเสมอ เพราะเป็นสิ่งที่ผู้ใช้ต้องการ 9 ใน 10 ครั้ง
@@ -16073,6 +16203,10 @@ window.addEventListener('DOMContentLoaded', () => {
       items.push({ text: ttf('ui.app.thesaurusWordOpposite', selWord), click: () => {
         showThesaurusPopup(selWord, e.clientX, e.clientY);
       } });
+    }
+    if (canRewrite) {
+      if (items.length && !hasThes) items.push('-');
+      items.push({ text: gi('pen') + ' ' + tt('ui.aiRewrite.menu'), click: () => { openRewriteBar(rwTab); } });
     }
     popupMenu(e.clientX, e.clientY, items);
   }, true);
@@ -16108,10 +16242,19 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#find-next').onclick = () => gotoMatch(state.active?.editor?.view, 1);
   $('#find-prev').onclick = () => gotoMatch(state.active?.editor?.view, -1);
   $('#find-close').onclick = closeFind;
-  $('#find-rep1').onclick = () => { replaceCurrent(state.active?.editor?.view, $('#find-r').value);
-                                    markDirty(state.active); doFind(); };
-  $('#find-repall').onclick = () => { const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
-                                      setStatus(tt('ui.app.replace') + n + tt('ui.app.msg2')); markDirty(state.active); doFind(); };
+  // [alpha.164 · บั๊ก] ฉากล็อก = แทนที่ไม่ได้ (บอกเหตุผล) · ไม่ได้แทนที่อะไร = ไม่ทำเครื่องหมายว่าแก้แล้ว
+  const findLocked = () => {
+    const tb = state.active;
+    if (!(tb && tb.editor && tb.editor.view && tb.editor.view.editable === false)) return false;
+    setStatus(gi('lock') + ' ' + (tb.locked ? TA.lockMessage('scene') : tt('ui.onset.nowOriginal')));
+    return true;
+  };
+  $('#find-rep1').onclick = () => { if (findLocked()) return;
+                                    if (replaceCurrent(state.active?.editor?.view, $('#find-r').value)) markDirty(state.active);
+                                    doFind(); };
+  $('#find-repall').onclick = () => { if (findLocked()) return;
+                                      const n = replaceAll(state.active?.editor?.view, $('#find-r').value);
+                                      setStatus(ttf('ui.app.replaceF', n)); if (n) markDirty(state.active); doFind(); };
   // [alpha.82] ติดตั้งตัววัดความกว้างข้อความ — **ต้องอยู่ก่อนทุกทางแยก**
   // ทุกอย่างที่นับบรรทัด/นับหน้าอ่านผ่านตัวนี้ · เคยวางไว้ใน bootSequence() แล้วพบว่า
   // โหมดเทส (`?k2test`) กับหน้าต่างแผงที่ฉีกออกมา **ไม่เดินผ่าน bootSequence เลย**

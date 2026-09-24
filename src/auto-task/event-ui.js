@@ -57,7 +57,7 @@ export function getTaskEngine() {
     engine = new AutoTaskEngine({
       meta: state.meta,
       onLog: (entry) => log('info', 'auto-task: ' + entry.type, entry),
-      onError: (e, type) => log('error', t('ui.task.jobFailed') + type + t('ui.task.failedSuffix'), { error: e && e.message }),
+      onError: (e, type) => log('error', tf('ui.task.jobFailedF', type), { error: e && e.message }),
     });
     installDefaultRules(engine);
     // งานจริงที่ทำได้ตอนนี้: เปลี่ยนชื่อเอนทิตี้ → ไล่แก้ทุกไฟล์

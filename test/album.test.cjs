@@ -262,6 +262,11 @@ fs.writeFileSync(path.join(IMG, 'images.json'),
   const name = await A.addImageFile(api, ROOT, 'ตัวละคร/เอกราช', src);
   check('addImageFile ก๊อปไฟล์เข้าอัลบั้ม', name === 'ext-ref.png' &&
     fs.existsSync(path.join(IMG, 'ตัวละคร', 'เอกราช', 'ext-ref.png')));
+  // เลือกไฟล์ที่อยู่ในอัลบั้มเดียวกันอยู่แล้ว → ใช้ไฟล์เดิม ไม่ได้สำเนาซ้ำ ext-ref-1.png
+  const again = await A.addImageFile(api, ROOT, 'ตัวละคร/เอกราช', path.join(IMG, 'ตัวละคร', 'เอกราช', 'ext-ref.png'));
+  check('★ addImageFile ไฟล์ที่อยู่ในอัลบั้มนั้นแล้ว = ไม่ก๊อปซ้ำ',
+    again === 'ext-ref.png' && !fs.existsSync(path.join(IMG, 'ตัวละคร', 'เอกราช', 'ext-ref-1.png')),
+    again + ' · ' + fs.readdirSync(path.join(IMG, 'ตัวละคร', 'เอกราช')).join(','));
   const imgs = await A.getAlbumImages(api, ROOT, 'ตัวละคร/เอกราช');
   check('getAlbumImages เห็นรูปที่เพิ่ง copy', imgs.length === 1 && imgs[0].file === 'ext-ref.png');
   check('getAlbumImages ให้ path พร้อมใช้', imgs[0].path === 'ตัวละคร/เอกราช/ext-ref.png');

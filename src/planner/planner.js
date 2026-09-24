@@ -686,7 +686,7 @@ export class PlannerBoard {
     log('info', ttf('ui.planner.plannerSave', this.data.getName(), ok ? tt('ui.common.ok') : tt('ui.common.fail')) +
         (wasNew ? tt('ui.planner.fileNewRefreshExplorer') : ''), { path: this.data.getPath() });
     if (ok && wasNew && this._svc.onBoardsChanged) this._svc.onBoardsChanged();
-    if (ok && !silent) setStatus(tt('ui.planner.saveBoard2') + this.data.getName() + tt('ui.common.done'));
+    if (ok && !silent) setStatus(ttf('ui.planner.saveBoard2F', this.data.getName()));
     else if (!ok) setStatus(tt('ui.planner.saveBoardNotOk'));
     return ok;
   }
@@ -738,7 +738,7 @@ export class PlannerBoard {
     await this.data.save();
     this._syncDirty();
     if (this._svc.onBoardsChanged) this._svc.onBoardsChanged();
-    setStatus(tt('ui.common.newBoard') + this.data.getName() + tt('ui.common.done'));
+    setStatus(ttf('ui.common.newBoardF2', this.data.getName()));
     return p;
   }
 
@@ -798,7 +798,7 @@ export class PlannerBoard {
       this.toolbar.setBoardName(this.data.getName());
       this._syncDirty();
       if (this._svc.onBoardsChanged) this._svc.onBoardsChanged();
-      setStatus(tt('ui.planner.save') + this.data.getName() + tt('ui.common.done'));
+      setStatus(ttf('ui.planner.saveF', this.data.getName()));
     } else setStatus(tt('ui.planner.saveNotOk'));
     return ok;
   }

@@ -228,7 +228,7 @@ async function renderBody(wrap, filter) {
 
     // แท็ก — แท็กที่ตรงกับ Visual Tag จะแสดงเป็นชิปสี ที่เหลือเป็นข้อความ
     const tdTags = el('td');
-    tdTags.style.fontSize = '11px';
+    tdTags.style.fontSize = '12px';
     const vNames = new Set(getVisualTags().map((v) => v.name));
     const plain = (sc.tags || []).filter((t) => !vNames.has(t));
     if ((sc.tags || []).some((t) => vNames.has(t))) tdTags.append(renderVisualTagChips(sc.tags));

@@ -14,12 +14,13 @@
   .bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .shade { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 45%, rgba(30,18,80,0) 0%, rgba(21,12,54,.55) 75%); }
   .center { position:absolute; left:0; right:0; top:44%; transform:translateY(-50%); text-align:center; }
-  .logo { max-width:62%; max-height:120px; display:block; margin:0 auto; filter:drop-shadow(0 4px 18px rgba(0,0,0,.35)); }
-  .ver { margin-top:10px; font-size:12px; letter-spacing:.5px; color:rgba(255,255,255,.72); }
+  /* [alpha.164 ข้อ H1] ทุกขนาดอิงความกว้างหน้าต่าง (vw) — หน้าต่างโตตามจอแล้ว ตัวหนังสือ/โลโก้ต้องโตตาม */
+  .logo { max-width:62%; max-height:34vh; display:block; margin:0 auto; filter:drop-shadow(0 4px 18px rgba(0,0,0,.35)); }
+  .ver { margin-top:1.6vw; font-size:clamp(12px, 1.9vw, 20px); letter-spacing:.5px; color:rgba(255,255,255,.72); }
   .foot { position:absolute; left:0; right:0; bottom:0; }
-  .msg { padding:0 10px 6px; font-size:12px; color:rgba(255,255,255,.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  .msg { padding:0 1.8vw 1.1vw; font-size:clamp(13px, 2vw, 22px); color:rgba(255,255,255,.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     text-shadow:0 1px 2px rgba(0,0,0,.5); }
-  .track { height:5px; background:rgba(255,255,255,.14); }
+  .track { height:clamp(5px, .8vw, 9px); background:rgba(255,255,255,.14); }
   .fill { height:100%; width:0; background:linear-gradient(90deg, #ff6640, #ffc55c); transition:width .25s ease-out; }
 </style>
 </head>
@@ -40,6 +41,7 @@
   (function () {
     var q = new URLSearchParams(location.search);
     document.getElementById('ver').textContent = q.get('v') ? 'v ' + q.get('v') : '';
+    if (q.get('l')) document.documentElement.lang = q.get('l');   // [alpha.164 ข้อ H1] ภาษาตามโปรแกรม (เดิม lang="th" ตายตัว)
     document.getElementById('msg').textContent = q.get('m') || '';
     var best = 0;
     window.__splash = function (msg, pct) {

@@ -63,6 +63,8 @@ import { spFormatGuidePlugin, spPageBreakPlugin, spSceneNumberPlugin, spContinue
          refreshFormatGuide, refreshPageBreaks, refreshSceneNumbers,
          refreshContinueds } from './sp-format-guide.js';
 import { IMG_RE } from './fountain.js';
+import { onsetPlugin } from './onset-plugin.js';   // [alpha.164] ฉากมีปัญหา — เทียบฉบับ
+import { guardEditable } from './edit-guard.js';   // [alpha.164 · บั๊ก] ล็อก = คำสั่งแก้เนื้อไม่ทำงาน
 function inlineContent(text) {
   const doc = mdToDoc(text);
   const p = (doc.content || [])[0] || {};
@@ -149,6 +151,7 @@ export class SPEditor {
           spSceneNumberPlugin(),      // [alpha.57a] เลขฉากสองฝั่งหัวฉาก
           spContinuedPlugin(),        // [alpha.58 · 55–56] (CONTINUED)/CONTINUED:/(MORE)/(cont'd)
           spErrorMarkPlugin(),        // [alpha.124 ข้อ 33] ขีดจุดที่ตัวตรวจบทแจ้งไว้ ให้เห็นในเอกสาร
+          onsetPlugin(),              // [alpha.164] ฉากมีปัญหา — แถบสี + ! ของบล็อกที่ต่างจากอีกฉบับ
         ],
       }),
       handleKeyDown(view, ev) {
@@ -234,8 +237,14 @@ export class SPEditor {
         if (self.onElement) self.onElement(self.curElement());
       },
     });
+    // [alpha.164 · บั๊ก] ล็อก/ดูฉบับเดิม = ปุ่ม/คีย์ลัด/คำสั่งแก้เนื้อไม่ทำงาน (เดิมเปลี่ยน element/จัดรูปแบบฉากที่ล็อกได้)
+    guardEditable(this, ['cmd', 'insertScript', 'setExtension', 'setElement', 'setAlign', 'cycle', 'switchTo',
+                         'insertPageBreak', 'enter', 'toggleTextList', 'insertImage'], editable);
   }
   refreshMentions() { refreshMentions(this.view); }
+
+  /** [alpha.164] แปลง markdown เป็น doc ของบท (ไม่แตะเอกสารบนจอ) — ใช้เทียบ/แสดงฉบับเดิม */
+  docFromMarkdown(md) { return spDocFromMarkdown(md, this.resolveSrc); }
 
   /** แทนที่เนื้อหาทั้งเอกสารด้วย markdown ใหม่ (เก็บ undo history ไว้) */
   setMarkdown(md) {

@@ -98,7 +98,7 @@ export async function showPlayerHistory() {
   const history = getPlayerHistory();
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
-  box.append(el('div', 'k-dlg-title', t('ui.player.historyDecide2') + history.length + t('ui.player.times')));
+  box.append(el('div', 'k-dlg-title', tf('ui.player.historyDecide2F', history.length)));
 
   const list = el('div', 'k-pick-list');
   list.style.maxHeight = '50vh';
@@ -113,7 +113,7 @@ export async function showPlayerHistory() {
       top.style.cssText = 'font-size:13px;color:var(--bright)';
       const sub = el('div', null,
         gi('file') + ` ${c.sceneTitle || '—'} · ${fmtDateTime(c.timestamp)}`);
-      sub.style.cssText = 'font-size:11px;color:var(--dim)';
+      sub.style.cssText = 'font-size:12px;color:var(--dim)';
       row.append(top, sub);
       list.append(row);
     });

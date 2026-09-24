@@ -41,7 +41,8 @@ import { setAutoSync, isAutoSyncOn } from './auto-task/event-ui.js';
 import { applyFocusDim } from './focus-mode.js';
 // [alpha.135] ส่วน "อัปเดตโปรแกรม" ในแท็บ อัตโนมัติ — สร้างด้วยโค้ด (ปุ่ม/ค่าจริง ไม่ใช่ HTML ตายตัว)
 import { buildUpdateFields } from './update/update-ui.js';
-import { iconHtml, initIcons, gi } from './icons.js';
+import { iconHtml, initIcons, gi, icon } from './icons.js';
+import { elemLabel } from './elem-label.js';   // [alpha.164 ข้อ B5] ชื่อชนิด element ตามภาษา UI
 // [alpha.140] หัวข้อ "แผงนำทาง" ในตั้งค่าโปรเจกต์ — กติกาแบ่งหน้า/คำอธิบายสัญลักษณ์อยู่ที่นี่ที่เดียว
 import { clampPerPage, NAV_FLAG_DEFS } from './nav-model.js';
 // [alpha.73 ข้อ 2+3] นิยามสี/การควบคุมของ Story Network อยู่ที่เดียว — กล่องตั้งค่าสร้างช่องจากมัน
@@ -382,12 +383,25 @@ export function settingsDialog(openTab, opts = {}) {
     if (lgBox) {
       lgBox.replaceChildren();
       lgBox.append(el('div', 'nav-legend-row', gi('bold-mark') + '  ' + t('ui.nav.legendBold')));
-      for (const f of NAV_FLAG_DEFS) lgBox.append(el('div', 'nav-legend-row', f.mark + '  ' + t(f.key)));
+      // [alpha.164 ข้อ E5] ไอคอน SVG ตัวเดียวกับที่แถวในแผงใช้ (เดิมเป็นอีโมจิ 🔒💬⚠)
+      for (const f of NAV_FLAG_DEFS) {
+        const row = el('div', 'nav-legend-row');
+        if (f.icon) row.append(icon(f.icon, 14)); else row.append(document.createTextNode(f.mark));
+        row.append(document.createTextNode('  ' + t(f.key)));
+        lgBox.append(row);
+      }
       lgBox.append(el('div', 'nav-legend-row', gi('bar-mark') + '  ' + t('ui.nav.legendRow')));
     }
   }
-  // ── [alpha.157] ไม่แสดงหน้า Home ตอนเปิดโปรแกรม (= openLastProject ตัวเดิมของเมนู ไฟล์) ──
-  if (q('#st-skip-home')) q('#st-skip-home').checked = s.openLastProject === true;
+  // ── [alpha.164 ข้อ C2] "เมื่อเปิดโปรแกรม" ตัวเลือกเดียว ──
+  // เดิมมีสวิตช์สองตัวในหน้านี้ ("ไม่แสดงหน้า Home" + "แสดงหน้าแรกเมื่อเปิดโปรเจกต์") ติ๊กพร้อมกันได้
+  // และขัดกันเอง · ความจริงมีแค่สามแบบ (ตรงกับ startupPlan() ใน app.js):
+  //   home     = openLastProject ปิด → หน้าแรกเสมอ
+  //   last     = เปิดโปรเจกต์ล่าสุดทันที ไม่มีหน้าแรก
+  //   lastHome = เปิดโปรเจกต์ล่าสุด แล้วแสดงหน้าแรกทับ (showHomeOnStartup)
+  if (q('#st-startup')) {
+    q('#st-startup').value = s.openLastProject !== true ? 'home' : (s.showHomeOnStartup === true ? 'lastHome' : 'last');
+  }
   // ── [alpha.137] ธีมสี (แท็บ "ทั่วไป") ──
   // ช่องอยู่ในเทมเพลตเหมือนช่องอื่นทุกช่อง · **รายชื่อธีมมาจาก `THEMES` ที่เดียว**
   // (เพิ่มธีมใหม่ = แก้ core.js + style.css + คีย์ป้ายใน CSV เท่านั้น ไม่ต้องแตะกล่องนี้)
@@ -448,9 +462,6 @@ export function settingsDialog(openTab, opts = {}) {
   q('#st-title').value = m.title || '';
   q('#st-author').value = m.author || '';
   q('#st-auto').value = s.autoSaveMinutes ?? 5;
-  // [alpha.60r ข้อ 1] แสดงหน้าแรกเมื่อเปิดโปรเจกต์
-  const showHome = q('#st-showhome');
-  if (showHome) showHome.checked = s.showHomeOnStartup !== false;
   q('#st-backup').checked = s.autoBackup !== false;
   q('#st-maxbak').value = s.maxBackups ?? 10;
   // [alpha.69] ประวัติการทำงาน
@@ -843,7 +854,7 @@ export function settingsDialog(openTab, opts = {}) {
     fmtBody.innerHTML = '';
     for (const k of SP_ELEMENT_KEYS) {
       const row = el('tr');
-      row.append(el('td', '', (SP_ELEMS[k] && SP_ELEMS[k].th) || k));
+      row.append(el('td', '', elemLabel(k)));
       const numCell = (field, step, min, max) => {
         const td = el('td');
         const i = el('input'); i.type = 'number'; i.step = String(step);
@@ -948,14 +959,14 @@ export function settingsDialog(openTab, opts = {}) {
     tbody.innerHTML = '';
     for (const k of cycleKeys) {
       const row = el('tr');
-      const label = (SP_ELEMS[k] && SP_ELEMS[k].th) || k;
+      const label = elemLabel(k);
       row.append(el('td', '', label));
       for (const dir of ['enter', 'tab', 'shiftTab']) {
         const sel = el('select');
         for (const opt of cycleOpts) {
           const o = el('option');
           o.value = opt;
-          o.textContent = (SP_ELEMS[opt] && SP_ELEMS[opt].th) || opt;
+          o.textContent = elemLabel(opt);
           if (workSpCycle[k][dir] === opt) o.selected = true;
           sel.append(o);
         }
@@ -1123,7 +1134,7 @@ export function settingsDialog(openTab, opts = {}) {
                          builtin: '', file: name, family: '', system: false,
                          size: 100, ascent: 0, descent: 0, enabled: true });
       renderFonts();
-      setStatus(t('ui.dlg.importFont') + name + t('ui.dlg.donePickRangeChar'));
+      setStatus(tf('ui.dlg.importFontF', name));
     } catch (e) { log('error', t('ui.dlg.importFontFail'), e); setStatus(t('ui.dlg.importFontNotOk')); }
   };
   (async () => {
@@ -1443,9 +1454,6 @@ export function settingsDialog(openTab, opts = {}) {
     m.title = q('#st-title').value.trim() || m.title;
     m.author = q('#st-author').value.trim();
     s.autoSaveMinutes = num('#st-auto', 5);
-    // [alpha.60r ข้อ 1] แสดงหน้าแรกเมื่อเปิดโปรเจกต์
-    const showHomeEl = q('#st-showhome');
-    if (showHomeEl) s.showHomeOnStartup = showHomeEl.checked;
     s.autoBackup = q('#st-backup').checked;
     s.maxBackups = Math.max(1, num('#st-maxbak', 10));
     // [alpha.69] ประวัติการทำงาน — หนีบช่วงด้วยตัวเดียวกับที่ main ใช้ (ไม่คัดลอกกฎมาไว้สองที่)
@@ -1468,7 +1476,11 @@ export function settingsDialog(openTab, opts = {}) {
     s.uiScale = Math.min(2, Math.max(0.75, parseFloat(q('#st-uiscale').value) || 1));
     // [alpha.137] ธีมสี — พรีวิวไว้แล้ว ตรงนี้แค่ยืนยันค่าลง settings ที่จะถูกบันทึก
     if (q('#st-theme') && THEMES.includes(q('#st-theme').value)) s.theme = q('#st-theme').value;
-    if (q('#st-skip-home')) s.openLastProject = !!q('#st-skip-home').checked;
+    if (q('#st-startup')) {                       // [alpha.164 ข้อ C2] ตัวเลือกเดียว → สองค่าเดิม
+      const v = q('#st-startup').value;
+      s.openLastProject = v !== 'home';
+      s.showHomeOnStartup = v === 'lastHome';
+    }
     s.shortcuts = workKeys;
     // Auto-sync (เก็บลง settings ด้วย — ไม่งั้นเปิดโปรแกรมใหม่แล้วกลับไปปิด)
     s.autoSync = q('#st-autosync').checked;

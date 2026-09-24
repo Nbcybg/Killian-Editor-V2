@@ -11,12 +11,13 @@ body.theme-tropical {
   --border:#f2c98f;
   --fg:#2d3a2e;
   --bright:#171d17;
-  --dim:#818672;
+  --dim:#5a5e50;
   --accent:#d9661a;
   --accent-hi:#1198a0;
-  --link:#138a5a;
+  --accent-ink:#0b6368;
+  --link:#0e6844;
   --sel:#b8f0d0;
-  --orange:#1198a0;
+  --orange:#0b6368;
   --curline:#f8f2d2;
   --hover:#e4e0c2;
   --hover-soft:#f2eece;
@@ -30,7 +31,7 @@ body.theme-tropical {
   --tab-bar:#eae6c7;
   --tab-bg:#fffef5;
   --tab-border:#f2c98f;
-  --tab-fg:#818672;
+  --tab-fg:#5a5e50;
   --tab-fg-on:#2d3a2e;
   --tab-hover:#f2eece;
   --panel-head:#f2eece;

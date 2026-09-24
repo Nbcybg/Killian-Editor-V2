@@ -69,7 +69,13 @@ export const PORT_POSITIONS = ['top', 'right', 'bottom', 'left', 'auto'];
 
 export const GRID_STYLES = ['dots', 'lines', 'cross'];
 export const DEFAULT_GRID = { show: true, size: 20, snap: false, style: 'dots', color: '#3a3936', opacity: 0.9 };
+export const isThemeGridColor = (c) => !c || String(c).toLowerCase() === DEFAULT_GRID.color;
 export const DEFAULT_BG = '#262624';
+/**
+ * [alpha.164 ข้อ A2] สีพื้น/สีกริดที่ยังเป็น "ค่าเริ่มต้น" = **ตามธีมของโปรแกรม** (`--canvas` / `--hover`)
+ * ค่าเริ่มต้นเดิมถูกเขียนลงทุกกระดาน → ธีมม่วง/ธีมสว่างก็ได้พื้นเทาอุ่นตลอด · ค่าที่ผู้ใช้เลือกเองยังได้สีนั้นเป๊ะ
+ */
+export const isThemeBg = (c) => !c || String(c).toLowerCase() === DEFAULT_BG;
 /** [alpha.150] รูปพื้นหลังกระดาน — `src` ว่าง = ไม่มีรูป (ใช้สีพื้นอย่างเดียว) */
 export const DEFAULT_BG_IMAGE = { src: '', fit: 'fill', blur: 0, opacity: 1 };
 

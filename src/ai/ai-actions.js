@@ -115,6 +115,36 @@ async function findScene({ title, book, chapter }) {
   return rows[0] || null;
 }
 
+// ══ [alpha.164 · บั๊ก] ล็อก (ฉาก/บท/เล่ม) = AI เขียน/เปลี่ยนชื่อ/ลบไม่ได้ ══
+// ทางคลิกกันไว้ครบตั้งแต่ alpha.155 (LOCK_BLOCKED) แต่เครื่องมือของแชท AI เดินอ้อม —
+// สั่ง "เขียนทับฉาก X" แล้วเนื้อที่ผู้ใช้ล็อกไว้ถูกแทนทั้งก้อน · กติกาเดียวกับทางคลิก: เล่ม/บทล็อก = ทุกฉากข้างในล็อก
+const isLockVal = (v) => v === true || v === 'true';
+const LOCK_KEY = { scene: 'ui.aiActions.lockScene', chapter: 'ui.aiActions.lockChapter', book: 'ui.aiActions.lockBook' };
+async function lockOfBookPath(secPath) {
+  try { const sec = await kapi.readJson(await kapi.join(secPath, 'section.json')); if (sec && isLockVal(sec.locked)) return 'book'; }
+  catch { /* อ่านไม่ได้ = ถือว่าไม่ล็อก (เหมือนต้นไม้) */ }
+  return '';
+}
+async function lockOfDraft(draftPath, chGuid) {
+  const secPath = String(draftPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
+  if (secPath && secPath !== draftPath) { const b = await lockOfBookPath(secPath); if (b) return b; }
+  if (chGuid) {
+    try {
+      const d = await kapi.readJson(await kapi.join(draftPath, 'draft.json'));
+      const ch = ((d && d.chapters) || []).find((c) => c.guid === chGuid);
+      if (ch && isLockVal(ch.locked)) return 'chapter';
+    } catch { /* ไม่มี draft.json = ไม่ล็อก */ }
+  }
+  return '';
+}
+async function sceneLockOf(sc, meta) {
+  let m = meta;
+  if (!m) { try { m = (await kapi.exists(sc.path)) ? parseMdFile(await kapi.readFile(sc.path)).meta : {}; } catch { m = {}; } }
+  if (isLockVal(m && m.locked) || (sc.row && isLockVal(sc.row.locked))) return 'scene';
+  return lockOfDraft(sc.draftPath, sc.chapterId);
+}
+const lockedErr = (name, src) => err(tf('ui.aiActions.locked', name, t(LOCK_KEY[src] || LOCK_KEY.scene)));
+
 async function findEntityFile(name) {
   for (const e of await listEntities(state.root).catch(() => [])) {
     if (eq(e.name, name)) return e;
@@ -249,6 +279,7 @@ const HANDLERS = {
   async 'book.delete'(a) {
     const b = await findBook(a.title);
     if (!b) return err(tf('ui.aiActions.notFoundBook2', a.title));
+    if (await lockOfBookPath(b.path)) return lockedErr(b.title, 'book');
     // [alpha.149] แท็บของฉากในเล่มที่ย้ายไปถังขยะต้องไม่ค้าง · [alpha.159] บันทึกก่อน + รอจนปิดเสร็จ
     if (!(await closeTabsUnder(b.path)).ok) return err(tf('ui.aiActions.dirOpenUnsaved', b.title));   // [alpha.160 · P0-3]
     const dst = await moveToTrash(b.path, { dir: true });
@@ -260,6 +291,7 @@ const HANDLERS = {
   async 'chapter.create'(a) {
     const b = await findBook(a.book);
     if (!b) return err(a.book ? tf('ui.aiActions.notFoundBook2', a.book) : t('ui.aiActions.notHasBookProject'));
+    if (await lockOfBookPath(b.path)) return lockedErr(b.title, 'book');
     const df = await kapi.join(b.draftPath, 'draft.json');
     let ch = null;
     await mutateJson(kapi, df, (d) => {
@@ -279,6 +311,7 @@ const HANDLERS = {
     if (!b) return err(t('ui.aiActions.notFoundBook'));
     const c = await findChapter(b, a.title);
     if (!c) return err(tf('ui.aiActions.notFoundChapter', a.title));
+    { const lk = isLockVal(c.ch.locked) ? 'chapter' : await lockOfBookPath(b.path); if (lk) return lockedErr(c.ch.title || a.title, lk); }
     await mutateJson(kapi, c.draftFile, (d) => {
       const row = (d.chapters || []).find((x) => x.guid === c.ch.guid);
       if (!row) return false;
@@ -292,6 +325,7 @@ const HANDLERS = {
     if (!b) return err(t('ui.aiActions.notFoundBook'));
     const c = await findChapter(b, a.title);
     if (!c) return err(tf('ui.aiActions.notFoundChapter', a.title));
+    { const lk = isLockVal(c.ch.locked) ? 'chapter' : await lockOfBookPath(b.path); if (lk) return lockedErr(c.ch.title || a.title, lk); }
     const dir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
     const sf = await kapi.join(b.draftPath, 'scenes.json');
     // [alpha.159 · H5] ปิดแท็บ (บันทึกงานค้างก่อน) **ก่อน** อ่านรายชื่อฉาก — บันทึกฉากอัปเดตแถวใน scenes.json
@@ -320,6 +354,7 @@ const HANDLERS = {
     if (!b) return err(a.book ? tf('ui.aiActions.notFoundBook2', a.book) : t('ui.aiActions.notHasBookProject'));
     const c = await findChapter(b, a.chapter);
     if (!c) return err(a.chapter ? tf('ui.aiActions.notFoundChapter', a.chapter) : t('ui.common.bookNotHasChapter'));
+    { const lk = isLockVal(c.ch.locked) ? 'chapter' : await lockOfBookPath(b.path); if (lk) return lockedErr(c.ch.title || '', lk); }
     const sf = await kapi.join(b.draftPath, 'scenes.json');
     const chDir = await kapi.join(b.draftPath, 'Chapters', c.ch.folderName);
     // [alpha.159 · M3/H5] ชื่อไฟล์ผ่าน freeSceneFileName (ตัวเดียวกับทางคลิก — กันทั้งไฟล์บนดิสก์
@@ -351,6 +386,8 @@ const HANDLERS = {
     if (!sc) return err(tf('ui.aiActions.notFoundSceneNew', a.title));
     const raw = (await kapi.exists(sc.path)) ? await kapi.readFile(sc.path) : '';
     const { meta, body: diskBody } = parseMdFile(raw);
+    const lk = await sceneLockOf(sc, meta);
+    if (lk) return lockedErr(sc.title, lk);
     const add = String(a.text || '');
     const mode = String(a.mode || 'append');
     const h = tabHandle(sc.path);
@@ -377,6 +414,7 @@ const HANDLERS = {
   async 'scene.rename'(a) {
     const sc = await findScene(a);
     if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
+    { const lk = await sceneLockOf(sc); if (lk) return lockedErr(sc.title, lk); }
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
     await mutateJson(kapi, sf, (d) => {
       let hit = false;
@@ -399,6 +437,7 @@ const HANDLERS = {
   async 'scene.delete'(a) {
     const sc = await findScene(a);
     if (!sc) return err(tf('ui.aiActions.notFoundScene', a.title));
+    { const lk = await sceneLockOf(sc); if (lk) return lockedErr(sc.title, lk); }
     const sf = await kapi.join(sc.draftPath, 'scenes.json');
     const folderName = (sc.path.split(/[\\/]/).slice(-2, -1)[0]) || '';
     // [alpha.149] ไม่งั้นบันทึกแท็บค้าง = ไฟล์ฉากที่ลบไปแล้วเกิดใหม่

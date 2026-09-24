@@ -7,12 +7,13 @@ body.theme-powerpoint {
   --border:#d2d0ce;
   --fg:#252423;
   --bright:#131212;
-  --dim:#7c7c7b;
+  --dim:#5d5d5c;
   --accent:#c43e1c;
   --accent-hi:#ed6c47;
-  --link:#b7472a;
+  --accent-ink:#8e412b;
+  --link:#9c3c24;
   --sel:#fcd9cc;
-  --orange:#ed6c47;
+  --orange:#8e412b;
   --curline:#f7f7f7;
   --hover:#e3e3e2;
   --hover-soft:#f2f2f2;
@@ -26,7 +27,7 @@ body.theme-powerpoint {
   --tab-bar:#e9e9e9;
   --tab-bg:#ffffff;
   --tab-border:#d2d0ce;
-  --tab-fg:#7c7c7b;
+  --tab-fg:#5d5d5c;
   --tab-fg-on:#252423;
   --tab-hover:#f2f2f2;
   --panel-head:#f2f2f2;

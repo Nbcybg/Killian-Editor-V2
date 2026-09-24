@@ -67,7 +67,7 @@ export async function renderDashboard(pane) {
   const vCh = card(t('ui.common.chapter')), vSc = card(t('ui.common.scene2')), vW = card(t('ui.dash.wordAll'));
   // [alpha.157] ผู้ใช้: "เพิ่มในสถิติ คือ เวลาอ่านรวม ลงไปในสถิติใหญ่"
   const vRead = card(t('ui.dash.readTime'));
-  const vE = card('Wiki entities');
+  const vE = card(t('ui.dash.wikiEntities'));   // [alpha.164 ข้อ B4] เดิมเป็นอังกฤษฮาร์ดโค้ด
   let nCh = 0, nSc = 0, words = 0;
   const sceneRows = [];
   const sceneStatuses = [];       // สถานะของทุกฉาก (สรุปตามคอลัมน์ Kanban)

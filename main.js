@@ -254,9 +254,8 @@ function buildMenu() {
       { label: tt('ui.menu.newProjectNewN'), click: cmd('new-project') },
       { label: tt('ui.menu.openProjectO'), click: cmd('open-project') },
       { label: tt('ui.menu.projectLatest'), submenu: recents.length ? recents : [{ label: tt('ui.common.empty'), enabled: false }] },
-      // [alpha.61 ข้อ 1] เปิดโปรเจกต์ล่าสุดทันทีเมื่อเริ่มโปรแกรม (ข้ามหน้าแรก)
-      chk(tt('ui.menu.openProjectLatestStart'), toggles.openLastProject,
-          cmd('toggle-open-last')),
+      // [alpha.164 ข้อ D] สวิตช์ "เปิดโปรเจกต์ล่าสุด"/"แสดงหน้าแรกเสมอ" เคยอยู่สองเมนู + สองช่องในตั้งค่า
+      // (ขัดกันได้) → เหลือที่เดียว: ตั้งค่า → ทั่วไป → "เมื่อเปิดโปรแกรม" (คำสั่ง toggle-* ยังอยู่ให้คีย์ลัด/ปลั๊กอิน)
       { type: 'separator' },
       { label: tt('ui.menu.saveS'), click: cmd('save') },
       { label: tt('ui.menu.saveAllS'), click: cmd('save-all') },
@@ -306,12 +305,11 @@ function buildMenu() {
       { role: 'selectAll', label: tt('ui.menu.pickAllA') },
       { type: 'separator' },
       { label: tt('ui.menu.searchF'), click: cmd('find') },
+      { label: tt('ui.menu.pageChapterG'), click: cmd('goto') },   // [alpha.164 ข้อ D] เดิมอยู่เมนูรูปแบบ
       { type: 'separator' },
       { label: tt('ui.menu.noteQuick'), click: cmd('quick-note') },
       { label: tt('ui.menu.viewNoteAll'), click: cmd('all-notes') },
       { label: tt('ui.menu.commentScenePanel'), click: cmd('comments') },
-      { type: 'separator' },
-      { label: tt('ui.menu.historyDecide'), click: cmd('player-history') },
     ] },
     { id: 'Format', label: tt('ui.menu.format2'), submenu: [
       { label: tt('ui.menu.modeDoc'), submenu: [
@@ -347,7 +345,6 @@ function buildMenu() {
       { label: tt('ui.menu.formatNovelParaRange'), click: cmd('prose-setup') },
       // [alpha.58r บั๊ก 22] คนเขียนนิยายเห็นแต่เมนู "รูปแบบ" — ปุ่มหน้ากระดาษต้องอยู่ตรงนี้ด้วย
       { label: tt('ui.menu.pagePaperGapMargin2'), click: cmd('page-setup') },
-      { label: tt('ui.menu.pageChapterG'), click: cmd('goto') },
       { type: 'separator' },
       // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ของช่วงที่เลือก
       // [alpha.124 ข้อ 36] ป้ายมาจากไฟล์ภาษา (ตารางเดียวกับ CASE_LABELS ใน text-case.js)
@@ -370,6 +367,7 @@ function buildMenu() {
       { label: tt('ui.menu.insertShortcode'), click: cmd('insert-shortcode') },
       { label: tt('ui.menu.insertLine'), click: cmd('fmt', 'hr') },
       { label: tt('ui.menu.blockCode'), click: cmd('fmt', 'code') },
+      { label: tt('ui.menu.mapChar'), click: cmd('char-map') },   // [alpha.164 ข้อ D] เดิมอยู่เมนูมุมมอง
     ] },
     // ---- alpha.57: เมนูเฉพาะงานบทภาพยนตร์ ----
     { id: 'Script', label: tt('ui.common.chapter'), submenu: [
@@ -405,6 +403,7 @@ function buildMenu() {
       chk(tt('ui.menu.pageNumRightTopPaper'), toggles.pageNumbers, cmd('page-numbers')),
       { label: tt('ui.menu.partNameVO'), click: cmd('sp-extension') },
       { label: tt('ui.menu.manageSmartTypeDelWord'), click: cmd('smart-manage') },
+      { label: tt('ui.menu.delElementType'), click: cmd('remove-elements') },   // [alpha.164 ข้อ D] เดิมอยู่เมนูมุมมอง
       { type: 'separator' },
       // [alpha.58r บั๊ก 11] goto-page / goto-scene เคยมีแต่ case ใน handleCommand ไม่มีทางกด
       { label: tt('ui.menu.pageSceneG'), click: cmd('goto') },
@@ -420,7 +419,7 @@ function buildMenu() {
       // alpha.59 [90][91] — หน้าปกหลายหน้า + หัวกระดาษที่ซ้ำทุกหน้า
       { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
       { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
-      { label: tt('ui.menu.pagePaperGapMargin'), click: cmd('page-setup') },
+      { label: tt('ui.menu.pagePaperGapMargin2'), click: cmd('page-setup') },   // [alpha.164 ข้อ D] ป้ายเดียวกับเมนูรูปแบบ (คำสั่งเดียวกัน)
     ] },
     // [alpha.60 ข้อ 74] เมนู "เครื่องมือ"
     { id: 'Tools', label: tt('ui.menu.tool'), submenu: [
@@ -438,6 +437,10 @@ function buildMenu() {
       // [alpha.156] ทะเบียนฉาก ↔ ไฟล์จริง ไม่ตรงกัน (ไฟล์กำพร้า · ใช้ไฟล์ซ้ำ · โฟลเดอร์ผี · หัวไฟล์พัง)
       { label: tt('ui.menu.projectDoctor'), click: cmd('project-doctor') },
       { type: 'separator' },
+      // [alpha.164 ข้อ D] สองคำสั่งนี้ "ทำงานกับเนื้อฉาก" ไม่ใช่มุมมอง — เดิมอยู่เมนูมุมมอง
+      { label: tt('ui.menu.newChoiceTextScene'), click: cmd('branch-sync') },
+      { label: tt('ui.menu.onsetToggle'), click: cmd('onset-toggle') },   // [alpha.164] ฉากมีปัญหา
+      { type: 'separator' },
       // [alpha.60r3 ข้อ 4] ชุดเครื่องมือผู้แปล — ทำงานใน Excel/Sheets แล้วนำเข้ากลับ
       { label: tt('ui.menu.exportLangCSVKey'), click: cmd('export-language-csv') },
       { label: tt('ui.menu.importLangCSV'), click: cmd('import-language-csv') },
@@ -445,8 +448,6 @@ function buildMenu() {
     { id: 'View', label: tt('ui.common.view'), submenu: [
       // [alpha.61 ข้อ 1] หน้าแรก — เปิดเดี๋ยวนี้ + สวิตช์ "แสดงเสมอตอนเริ่มโปรแกรม"
       { label: tt('ui.menu.pageFirstHome'), click: cmd('home') },
-      chk(tt('ui.menu.showPageFirstAlways'), toggles.showHomeAlways,
-          cmd('toggle-home-always')),
       { type: 'separator' },
       // [alpha.162 · W4] ★ ย้ายมาจากเมนู "รูปแบบ" — ซูม · มุมมองหน้ากระดาษ · ธีม · สวิตช์การแสดงผล
       // เป็นเรื่องของ *มุมมอง* ไม่ใช่ *รูปแบบข้อความ* (เมนูรูปแบบเหลือเฉพาะตัวหนา/หัวข้อ/รายการ/จัดหน้า)
@@ -492,15 +493,24 @@ function buildMenu() {
       // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง
       chk(tt('ui.menu.btnFloatCornerRight'), toggles.fabEnabled, cmd('toggle-fab')),
       { type: 'separator' },
-      { label: tt('ui.common.dashboard'), click: cmd('dashboard') },
-      { label: tt('ui.menu.manageBookDraftBooks'), click: cmd('books') },
-      { label: tt('ui.menu.lineTimeTimeline'), click: cmd('timeline') },
-      { label: tt('ui.menu.mapMaps'), click: cmd('maps') },
-      { label: tt('ui.menu.storyNetworkGraphRelation'), click: cmd('network') },
-      { label: tt('ui.menu.plannerBoardPlanner'), click: cmd('planner') },
-      { label: tt('ui.menu.kanbanBoardStatus'), click: cmd('kanban') },
-      // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI (ตัวอย่างหน้าตา)
-      { label: tt('ui.menu.aIAnalyzePaceStory'), click: cmd('ai-analyzer') },
+      // [alpha.164 ข้อ D] เมนูมุมมองเคยยาว ~60 รายการ — เครื่องมือเล่าเรื่องรวมเป็นเมนูย่อยเดียว
+      { label: tt('ui.menu.storyTools'), submenu: [
+        { label: tt('ui.common.dashboard'), click: cmd('dashboard') },
+        { label: tt('ui.menu.manageBookDraftBooks'), click: cmd('books') },
+        { label: tt('ui.menu.lineTimeTimeline'), click: cmd('timeline') },
+        { label: tt('ui.menu.mapMaps'), click: cmd('maps') },
+        { label: tt('ui.menu.graphAreaFloorPlan'), click: cmd('floorplan') },
+        { label: tt('ui.menu.storyNetworkGraphRelation'), click: cmd('network') },
+        { label: tt('ui.menu.plannerBoardPlanner'), click: cmd('planner') },
+        { label: tt('ui.menu.kanbanBoardStatus'), click: cmd('kanban') },
+        { type: 'separator' },
+        { label: tt('ui.menu.graphStoryBreakBranch'), click: cmd('branching') },
+        { label: tt('ui.menu.trialPlayStoryBreak'), click: cmd('player-mode') },
+        { label: tt('ui.menu.historyDecide'), click: cmd('player-history') },
+        { type: 'separator' },
+        // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI
+        { label: tt('ui.menu.aIAnalyzePaceStory'), click: cmd('ai-analyzer') },
+      ] },
       // [alpha.63] คลังรูปเป็นระบบอัลบั้มแล้ว — คำสั่งย่อยต้องมีทางกดจริง (บทเรียน 14b/46)
       { label: tt('ui.menu.libraryImageGalleryG'), submenu: [
         { label: tt('ui.menu.openLibraryImageG'), click: cmd('gallery') },
@@ -515,14 +525,7 @@ function buildMenu() {
         chk(tt('ui.menu.splitTopBottom'), toggles.splitView === 'down', cmd('split-view', 'down')),
         { label: tt('ui.menu.cancelSplitPageScreen'), enabled: !!toggles.splitView, click: cmd('split-close') },
       ] },
-      { label: tt('ui.menu.graphStoryBreakBranch'), click: cmd('branching') },
-      { label: tt('ui.menu.trialPlayStoryBreak'), click: cmd('player-mode') },
-      { label: tt('ui.menu.newChoiceTextScene'), click: cmd('branch-sync') },
-      { label: tt('ui.menu.graphAreaFloorPlan'), click: cmd('floorplan') },
       { label: tt('ui.common.notebookNoteQuick'), click: cmd('toggle-panel', 'notes') },
-      { type: 'separator' },
-      { label: tt('ui.menu.delElementType'), click: cmd('remove-elements') },
-      { label: tt('ui.menu.mapChar'), click: cmd('char-map') },
       { type: 'separator' },
       { label: tt('ui.menu.searchFileQuickO'), click: cmd('quick-open') },
       // [alpha.161 · K4] แสดงไฟล์ที่เปิดอยู่ในต้นไม้ (Explorer)
@@ -632,12 +635,20 @@ let splashTimer = null;
 const USE_SPLASH = !TEST && process.env.KILLIAN_NO_SPLASH !== '1';
 function createSplash() {
   if (!USE_SPLASH) return null;
+  // [alpha.164 ข้อ H1] ขนาดตามจอ — เดิมตายตัว 560×340 = เหลือ ~22% ของความกว้างบนจอ 2560 (ตัวหนังสือ 12px)
+  // ~36% ของพื้นที่ทำงาน (ขั้นต่ำ 720 · สูงสุด 1100) สัดส่วน 5:3 · หน้า splash ขยายตัวหนังสือตามความกว้างเอง (vw)
+  let spW = 720;
+  try {
+    const wa = require('electron').screen.getPrimaryDisplay().workAreaSize;
+    spW = Math.max(720, Math.min(1100, Math.round(wa.width * 0.36), Math.round(wa.width * 0.9)));
+  } catch {}
+  const spH = Math.round(spW * 0.6);
   splash = new BrowserWindow({
-    width: 560, height: 340, frame: false, resizable: false, maximizable: false, minimizable: false,
+    width: spW, height: spH, frame: false, resizable: false, maximizable: false, minimizable: false,
     fullscreenable: false, center: true, show: false, backgroundColor: '#1e1250', skipTaskbar: false,
     title: 'Killian 2', webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
-  splash.loadFile('renderer/splash.html', { query: { v: app.getVersion(), m: tt('ui.splash.start') } });
+  splash.loadFile('renderer/splash.html', { query: { v: app.getVersion(), m: tt('ui.splash.start'), l: LANG_CODE || 'th' } });
   splash.once('ready-to-show', () => { try { splash.show(); } catch {} });
   splash.on('closed', () => { splash = null; });
   splashTimer = setTimeout(() => finishSplash(), TIMING.SPLASH_MAX_MS);   // [alpha.162 · W6 ข้อ 7]
@@ -952,8 +963,10 @@ H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8')));
 H('fs:exists', (p) => fs.existsSync(p));
 // [alpha.148] `._ชื่อ.json` ของ macOS (ก๊อปผ่านไดรฟ์นอก/ซิป) เคยโผล่เป็นแถวผีทุกหมวด — กรองที่ด่านเดียวนี้
 // แทนการไล่แปะ 31 จุดเรียก (จุดใหม่ที่เพิ่มทีหลังได้ไปด้วยฟรี)
-H('fs:listDirs', (p) => fs.readdirSync(p, { withFileTypes: true })
-  .filter((d) => d.isDirectory() && !isJunkName(d.name)).map((d) => d.name));
+// โฟลเดอร์ไม่มี = [] เหมือน fs:listFiles (เดิมโยน ENOENT — ผู้เรียกทุกจุดจับแล้วใช้ [] อยู่ดี
+// แต่ Electron พ่น stack "Error occurred in handler" ลง log ทุกครั้ง เช่นโปรเจกต์ที่ยังไม่มี Images/)
+H('fs:listDirs', (p) => fs.existsSync(p) ? fs.readdirSync(p, { withFileTypes: true })
+  .filter((d) => d.isDirectory() && !isJunkName(d.name)).map((d) => d.name) : []);
 H('fs:listFiles', (p, ext) => fs.existsSync(p) ? fs.readdirSync(p, { withFileTypes: true })
   .filter((d) => d.isFile() && !isJunkName(d.name) && (!ext || d.name.endsWith(ext))).map((d) => d.name) : []);
 H('fs:mkdir', (p) => { fs.mkdirSync(p, { recursive: true }); return true; });
@@ -1876,6 +1889,8 @@ ipcMain.handle('http:stream', async (e, url, options, id) => {
   } finally {
     clearTimeout(timer);
     if (reqId) httpInflight.delete(reqId);
+    // สัญญาณ "ส่งบรรทัดครบแล้ว" — ช่องเดียวกับบรรทัด จึงมาถึงหลังบรรทัดสุดท้ายเสมอ (ดู preload httpStream)
+    try { if (sender && !sender.isDestroyed()) sender.send(ch + ':end'); } catch {}
   }
 });
 // [alpha.115] เซิร์ฟเวอร์ SSE จำลอง — ไว้ให้ e2e พิสูจน์ว่า "สตรีมคำตอบ AI" ทำงานจริง

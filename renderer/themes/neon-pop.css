@@ -11,9 +11,10 @@ body.theme-neon-pop {
   --border:#5003c0;
   --fg:#f4ecff;
   --bright:#fbf7ff;
-  --dim:#9d8fb3;
+  --dim:#a295b7;
   --accent:#ff467a;
   --accent-hi:#ffd51e;
+  --accent-ink:#ffd51e;
   --link:#f07cf0;
   --sel:#5003c0;
   --orange:#ffd51e;
@@ -30,7 +31,7 @@ body.theme-neon-pop {
   --tab-bar:#12022e;
   --tab-bg:#301a55;
   --tab-border:#4a366c;
-  --tab-fg:#9d8fb3;
+  --tab-fg:#a295b7;
   --tab-fg-on:#faf6ff;
   --tab-hover:#27114d;
   --panel-head:#17033b;

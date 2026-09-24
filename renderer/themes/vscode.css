@@ -7,9 +7,10 @@ body.theme-vscode {
   --border:#2b2b2b;
   --fg:#cccccc;
   --bright:#ebebeb;
-  --dim:#878787;
+  --dim:#9f9f9f;
   --accent:#0078d4;
   --accent-hi:#4daafc;
+  --accent-ink:#4daafc;
   --link:#4daafc;
   --sel:#264f78;
   --orange:#4daafc;
@@ -26,7 +27,7 @@ body.theme-vscode {
   --tab-bar:#161616;
   --tab-bg:#303030;
   --tab-border:#454545;
-  --tab-fg:#878787;
+  --tab-fg:#9f9f9f;
   --tab-fg-on:#e6e6e6;
   --tab-hover:#292929;
   --panel-head:#1c1c1c;

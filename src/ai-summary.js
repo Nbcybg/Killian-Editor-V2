@@ -178,7 +178,7 @@ export async function showAISummary({ force = false } = {}) {
   if (cached) {
     const note = el('div', 'dim', tt('ui.aiSum.resultSave') + fmtDateTime(cacheDate) +
                                   tt('ui.aiSum.bodyNotChangePress'));
-    note.style.cssText = 'font-size:11px;margin:-4px 0 6px';
+    note.style.cssText = 'font-size:12px;margin:-4px 0 6px';
     box.append(note);
   }
 
@@ -279,7 +279,7 @@ export async function showAITitleSuggestions(currentTitle, callback, opts = {}) 
   const past = pastTitlesFor(currentTitle).filter((p) => !titles.includes(p));
   if (past.length) {
     const h = el('div', 'dim', tt('ui.aiSum.suggestBeforePage'));
-    h.style.cssText = 'margin:8px 0 2px;font-size:11px';
+    h.style.cssText = 'margin:8px 0 2px;font-size:12px';
     box.append(h);
     const pl = el('div', 'k-pick-list k-ai-past');
     pl.style.cssText = 'max-height:120px;overflow-y:auto';

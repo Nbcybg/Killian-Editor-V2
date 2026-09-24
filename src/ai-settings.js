@@ -4,10 +4,11 @@
 //  2) API key ไม่เก็บใน project.khn.json (ไฟล์ที่ตั้งใจให้ก๊อป/แชร์) → เก็บแยกที่ <root>/ai-key.json
 // [alpha.125 ข้อ D] import ที่เหลือใช้จริงเท่านั้น — ตัวที่กล่องตั้งค่าเก่าใช้
 // (`$` `el` `withBusy` `escClose` `tf`) ถูกถอดออกพร้อมกล่องนั้น
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { failText } from './err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { state, setStatus, setStatusError, log } from './core.js';
 import { gi } from './icons.js';
+import { withUserSystem } from './ai/ai-agents.js';
 
 const KEY_FILE = 'ai-key.json';
 let _keyCache = null;       // { apiKey } — อ่านครั้งเดียวต่อโปรเจกต์
@@ -65,7 +66,7 @@ export async function aiConfigured() {
     const { currentProvider } = await import('./ai/ai-provider-ui.js');
     const p = await currentProvider();
     if (!p) return { ok: false, why: t('ui.aiSet.cantPickProviderAI') };
-    if (!p.model) return { ok: false, why: t('ui.aiSet.provider') + p.name + t('ui.aiSet.cantPickModelFile') };
+    if (!p.model) return { ok: false, why: tf('ui.aiSet.noModelFor', p.name) };
     return { ok: true, why: '' };
   }
   if ((ai.provider || 'openai') === 'ollama') return { ok: true, why: '' };
@@ -81,6 +82,9 @@ export async function aiConfigured() {
 export async function callAI(prompt, system = '', opts = {}) {
   const ai = getAISettings();
   const t0 = Date.now();
+  // System prompt ของผู้ใช้ — ทางทะเบียนใหม่ใส่ให้ใน complete() อยู่แล้ว (กันซ้ำด้วย startsWith)
+  // ทางเก่าข้างล่างยิงเอง จึงต้องใส่ตรงนี้
+  system = withUserSystem(system, ai);
   // [alpha.61 ข้อ 2] ถ้าผู้ใช้ตั้ง "ผู้ให้บริการที่เพิ่มเอง" ไว้ ให้ใช้ตัวนั้นก่อนเสมอ
   // ฟีเจอร์ AI เดิมทุกตัว (สรุปเรื่อง · แนะนำชื่อ · ผู้ช่วยเขียน) จึงวิ่งผ่านทะเบียนใหม่ได้
   // โดยไม่ต้องแก้ทีละไฟล์ — ค่าที่ตั้งแบบเก่ายังใช้ได้ถ้ายังไม่ได้เพิ่มเจ้าใหม่

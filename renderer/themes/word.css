@@ -7,12 +7,13 @@ body.theme-word {
   --border:#d2d0ce;
   --fg:#252423;
   --bright:#131212;
-  --dim:#7c7c7b;
+  --dim:#5d5d5c;
   --accent:#185abd;
   --accent-hi:#2b7cd3;
+  --accent-ink:#205d9e;
   --link:#185abd;
   --sel:#c7e0f4;
-  --orange:#2b7cd3;
+  --orange:#205d9e;
   --curline:#f7f7f7;
   --hover:#e3e3e2;
   --hover-soft:#f2f2f2;
@@ -26,7 +27,7 @@ body.theme-word {
   --tab-bar:#e9e9e9;
   --tab-bg:#ffffff;
   --tab-border:#d2d0ce;
-  --tab-fg:#7c7c7b;
+  --tab-fg:#5d5d5c;
   --tab-fg-on:#252423;
   --tab-hover:#f2f2f2;
   --panel-head:#f2f2f2;

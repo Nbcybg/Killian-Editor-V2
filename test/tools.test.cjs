@@ -115,6 +115,17 @@ check('cache: อยู่ข้ามรอบ (localStorage)', new TH.Thesauru
   check('scriv: โฟลเดอร์ → บท, เอกสาร → ฉาก', mapped.counts.chapters === 2 && mapped.counts.scenes === 3, JSON.stringify(mapped.counts));
   check('scriv: เอกสารนอกโฟลเดอร์ไปอยู่บท "(ไม่มีบท)"', mapped.sections[0].chapters.some((c) => c.title === '(ไม่มีบท)'));
   check('scriv: ข้าม Research (นอก Draft)', !JSON.stringify(mapped).includes('Research'));
+  // ลำดับเรื่องต้องคงเดิม: ฉากลอยที่อยู่ "หลัง" บทที่หนึ่งใน binder ต้องอยู่หลังบทนั้นด้วย (เดิมถูกยกไปหน้าสุด)
+  check('scriv: ★ ฉากนอกโฟลเดอร์คงตำแหน่งเดิมในลำดับเรื่อง',
+        mapped.sections[0].chapters.map((c) => c.title).join('|') === 'บทที่หนึ่ง|(ไม่มีบท)',
+        mapped.sections[0].chapters.map((c) => c.title).join('|'));
+  const order2 = SC.mapBinder(SC.parseBinder('<Binder><BinderItem UUID="D" Type="DraftFolder"><Title>Draft</Title><Children>'
+    + '<BinderItem UUID="a" Type="Text"><Title>ก</Title></BinderItem>'
+    + '<BinderItem UUID="F" Type="Folder"><Title>บท</Title><Children><BinderItem UUID="b" Type="Text"><Title>ข</Title></BinderItem></Children></BinderItem>'
+    + '<BinderItem UUID="c" Type="Text"><Title>ค</Title></BinderItem></Children></BinderItem></Binder>'), {});
+  check('scriv: ★ ฉากลอยก่อนและหลังบท → แยกเป็นสองช่วงตามลำดับ (ก · บท(ข) · ค)',
+        order2.sections[0].chapters.map((c) => c.scenes.map((x) => x.title).join('')).join('|') === 'ก|ข|ค',
+        JSON.stringify(order2.sections[0].chapters.map((c) => [c.title, c.scenes.map((x) => x.title)])));
   mapped = SC.mapBinder(binder, { onlyCompiled: true });
   check('scriv: onlyCompiled ตัดเอกสารที่ไม่ติ๊ก compile', mapped.counts.scenes === 2);
 

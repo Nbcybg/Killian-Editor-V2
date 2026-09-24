@@ -140,7 +140,7 @@ export async function openProjectReplace(initial = '') {
     if (!plan) await preview();
     if (!plan || !plan.total) return { files: 0, count: 0 };
     const nFiles = plan.files.filter((f) => !f.locked).length;
-    if (ask && !(await confirmBox(tf('ui.replace.confirm', plan.total, nFiles)))) return null;
+    if (ask && !(await confirmBox(tf('ui.replace.confirm', plan.total, nFiles), t('ui.common.replaceBtn')))) return null;
     bRun.disabled = true;
     const res = await withBusy(t('ui.replace.scanning'), () => runProjectReplace(iFind.value, iWith.value, opts(), { docs }));
     setStatus(tf('ui.replace.done', res.count, res.files));

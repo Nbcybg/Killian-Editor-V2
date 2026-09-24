@@ -8,12 +8,15 @@
 // ไฟล์นี้ **บริสุทธิ์ 100%** — ไม่แตะ DOM / fs / network เลย (unit test: test/ai-analyze.test.cjs)
 // การอ่านไฟล์จริง + วาดหน้าจออยู่ที่ src/ai-analyzer-ui.js
 import { t as tt, tf as ttf } from '../i18n.js';
-import { tokenize } from '../search-engine.js';
+import { DOCTOR_ANALYSES, DOCTOR_TASK_KEYS, isDoctor, runDoctorLocal, doctorDigest, doctorPromptExtras,
+         doctorTable, TONE_ADJUST } from './ai-doctor.js';
+import { plainText, wordsOf, countWords, dialogueRatio, splitSentences, mean, median, stdev, nameForms, countMentions } from './ai-text.js';
 import { extractJson, validate, estimateTokens, chunkText, estimateCost, SEVERITY, SEV_RANK } from './ai-core.js';
 import { gi } from '../icons.js';
 import { cmpText, fmtNum } from '../locale.js';
 
 export { SEVERITY, SEV_RANK };
+export { plainText, wordsOf, countWords, dialogueRatio, splitSentences, mean, median, stdev, countMentions };
 
 // ═══════════════ คลังคำภาษาไทย (ข้อมูลภาษา ไม่ใช่ข้อความ UI — ห้ามแปล) ═══════════════
 // แปลตามภาษาหน้าจอเมื่อไหร่ = วิเคราะห์ต้นฉบับภาษาไทยไม่ได้ทันที
@@ -44,8 +47,6 @@ export const ROMANCE_WORDS = [
   'ห่วง', 'จับมือ', 'สบตา', 'ยิ้ม', 'อบอุ่น', 'คู่', 'แต่งงาน', 'สารภาพ', 'หึง', 'ทน', 'คิด',
   /* /i18n-skip */
 ];
-// จุดจบประโยคไทย/อังกฤษ (ภาษาไทยไม่มีจุด → ใช้ช่องว่างยาว/ขึ้นบรรทัดเป็นตัวคั่นด้วย)
-const SENT_SPLIT = /[.!?]+[\s"'”)\]]*|\n+|\s{2,}/;
 
 // ═══════════════ ขอบเขตการวิเคราะห์ ═══════════════
 export const SCOPE_KINDS = ['project', 'book', 'chapter', 'scene'];
@@ -83,73 +84,16 @@ export function describeScope(scope = {}, scenes = []) {
 }
 
 // ═══════════════ เครื่องมือนับข้อความ ═══════════════
-/** ถอดมาร์กดาวน์/คอมเมนต์ออกให้เหลือข้อความที่ผู้อ่านเห็นจริง */
-export function plainText(md) {
-  return String(md || '')
-    .replace(/<!--[\s\S]*?-->/g, ' ')          // คอมเมนต์ align/meta ของ md.js
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')     // รูป
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')   // ลิงก์ → เหลือข้อความ
-    .replace(/^#{1,6}\s+/gm, '')               // หัวข้อ
-    .replace(/[*_`~>]/g, '')
-    .replace(/\r/g, '')
-    .trim();
-}
-
-/** คำจริง (ตัดคำไทยด้วยตัวเดียวกับระบบค้นหา) */
-export function wordsOf(text) {
-  return tokenize(plainText(text)).map((x) => x.word);
-}
-export function countWords(text) { return wordsOf(text).length; }
 
 export function isStopword(w) {
   return TH_STOPWORDS.has(w) || EN_STOPWORDS.has(String(w).toLowerCase())
     || w.length < 2 || /^\d+$/.test(w);
 }
 
-/** สัดส่วนบทสนทนา 0–1 (อักขระในเครื่องหมายคำพูด ÷ อักขระทั้งหมด) */
-export function dialogueRatio(text) {
-  const s = plainText(text);
-  if (!s) return 0;
-  let inside = 0;
-  for (const m of s.matchAll(/[“"„«](.*?)[”"»]/gs)) inside += m[1].length;
-  for (const m of s.matchAll(/^\s*[—–-]\s*(.+)$/gm)) inside += m[1].length;   // บทพูดแบบขีดนำ
-  return Math.min(1, inside / s.length);
-}
 
-export function splitSentences(text) {
-  return plainText(text).split(SENT_SPLIT).map((x) => x.trim()).filter(Boolean);
-}
-
-export function mean(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0; }
-export function median(a) {
-  if (!a.length) return 0;
-  const s = a.slice().sort((x, y) => x - y);
-  const m = s.length >> 1;
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-}
-export function stdev(a) {
-  if (a.length < 2) return 0;
-  const m = mean(a);
-  return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1));
-}
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const pct = (v, total) => (total ? +(100 * v / total).toFixed(1) : 0);
 
-/** ชื่อ+ฉายาของตัวละครทุกตัว → ตารางค้นหา */
-function nameForms(c) {
-  return [c.name, ...(c.aliases || [])].filter((x) => x && String(x).trim()).map(String);
-}
-/** นับจำนวนครั้งที่ชื่อ (หรือฉายา) โผล่ในข้อความ */
-export function countMentions(text, character) {
-  const s = plainText(text);
-  let n = 0;
-  for (const form of nameForms(character)) {
-    if (!form) continue;
-    let i = 0;
-    while ((i = s.indexOf(form, i)) !== -1) { n++; i += form.length; }
-  }
-  return n;
-}
 
 // ═══════════════ 1) จังหวะเรื่อง ═══════════════
 /**
@@ -582,6 +526,8 @@ export const ANALYSES = [
   { id: 'screentime', icon: gi('film'), ai: 'assist', title: tt('ui.aia.tScreentime'),        desc: tt('ui.aia.dScreentime'), needsChars: true },
   // [alpha.157] สัดส่วนฉาก — บทพูด / ภายในใจ / บรรยาย
   { id: 'composition', icon: gi('thought'), ai: 'assist', title: tt('ui.aia.tComposition'),   desc: tt('ui.aia.dComposition') },
+  // [alpha.164] 🩺 ตรวจบท 5 หัวข้อ (ai-doctor.js) — บทสนทนา · จังหวะอืด · ปมไม่สมเหตุสมผล · OOC · โทนเรื่อง
+  ...DOCTOR_ANALYSES,
 ];
 export const ANALYSIS_IDS = ANALYSES.map((a) => a.id);
 export function analysisById(id) { return ANALYSES.find((a) => a.id === id) || null; }
@@ -604,7 +550,12 @@ export function runLocal(id, scenes = [], characters = [], opts = {}) {
     case 'plothole':   return localPlotSummary(scenes);
     case 'continuity': return localContinuity(scenes, characters);
     case 'composition': return analyzeComposition(scenes);
-    default:           return { stats: [] };
+    default:
+      if (isDoctor(id)) {
+        const deps = id === 'drag' ? { pacing: analyzePacing(scenes), conflict: analyzeConflict(scenes) } : {};
+        return runDoctorLocal(id, scenes, characters, opts, deps);
+      }
+      return { stats: [] };
   }
 }
 
@@ -644,10 +595,12 @@ export const AI_TASK_KEYS = {
   continuity: 'ui.aia.taskContinuity', repeat: 'ui.aia.taskRepeat', shipping: 'ui.aia.taskShipping',
   score: 'ui.aia.taskScore', screentime: 'ui.aia.taskScreentime',
   composition: 'ui.aia.taskComposition',
+  ...DOCTOR_TASK_KEYS,
 };
 
 /** ย่อผลชั้นคำนวณเองให้เป็นข้อความสั้น ๆ ป้อนโมเดล (ไม่ให้โมเดลนับเลขเอง) */
 export function localDigest(id, local = {}) {
+  if (isDoctor(id)) return doctorDigest(id, local);
   const lines = [];
   for (const s of (local.stats || [])) lines.push(`- ${s.label}: ${s.value}`);
   const takeRows = (rows, fmt, n = 12) => (rows || []).slice(0, n).forEach((r) => lines.push('- ' + fmt(r)));
@@ -695,7 +648,8 @@ export function sceneBlocks(scenes = [], budget = 6000) {
  * ประกอบ prompt ของการวิเคราะห์ชนิดหนึ่ง — บริสุทธิ์ ไม่ยิงเน็ต
  * @returns {{system, prompt, tokens, sceneIds, truncated}}
  */
-export function buildAnalysisPrompt(id, { scenes = [], local = {}, scope = {}, focus = '', budget = 6000 } = {}) {
+export function buildAnalysisPrompt(id, { scenes = [], local = {}, scope = {}, focus = '', budget = 6000,
+                                          characters = [], opts = {} } = {}) {
   const def = analysisById(id);
   const task = tt(AI_TASK_KEYS[id] || '');
   const sc = describeScope(scope, scenes);
@@ -712,10 +666,15 @@ export function buildAnalysisPrompt(id, { scenes = [], local = {}, scope = {}, f
     lines.push(digest);
     lines.push('');
   }
+  // [alpha.164] ตรวจบท: โปรไฟล์ตัวละคร (OOC) · โทนที่ผู้เขียนตั้งใจ (โทนเรื่อง)
+  const extras = isDoctor(id) ? doctorPromptExtras(id, { characters, local, opts }) : [];
+  if (extras.length) { lines.push(...extras); lines.push(''); }
   lines.push(tt('ui.aia.pRules'));
   if (focus) lines.push(tt('ui.aiPlot.important') + focus);
   lines.push('');
-  lines.push(id === 'score' ? tt('ui.aia.pFormatScore') : tt('ui.aia.pFormatFindings'));
+  lines.push(id === 'score' ? tt('ui.aia.pFormatScore')
+    : id === 'tone' ? tt('ui.aia.pFormatTone')
+    : isDoctor(id) ? tt('ui.aia.pFormatDoctor') : tt('ui.aia.pFormatFindings'));
   lines.push('');
   if (blocks.length) {
     lines.push(tt('ui.aia.pHeadScenes') + (truncated ? tt('ui.aia.pTruncated') : ''));
@@ -732,6 +691,10 @@ const FINDING_SCHEMA = {
   severity: { type: 'string', enum: Object.keys(SEVERITY), default: 'minor' },
   sceneId: { type: 'string', default: '' },
   suggestion: { type: 'string', default: '' },
+  // [alpha.164] ตรวจบท — ประโยคต้นฉบับที่เป็นปัญหา · ตัวละครที่เกี่ยว · ทิศที่ควรปรับโทน
+  quote: { type: 'string', default: '' },
+  character: { type: 'string', default: '' },
+  adjust: { type: 'string', enum: ['', ...TONE_ADJUST], default: '' },
 };
 const SCORE_SCHEMA = {
   label: { required: true, type: 'string' },
@@ -777,10 +740,11 @@ export async function analyze(id, o = {}) {
   const local = runLocal(id, scenes, o.characters || [], o);
   const scope = describeScope(o.scope, o.scenes || []);
   if (o.useAI === false || !o.client) return { id, local, ai: null, scope, scenes: scenes.length };
-  const built = buildAnalysisPrompt(id, { scenes, local, scope: o.scope, focus: o.focus, budget: o.budget || 6000 });
+  const built = buildAnalysisPrompt(id, { scenes, local, scope: o.scope, focus: o.focus, budget: o.budget || 6000,
+                                          characters: o.characters || [], opts: o });
   const res = await o.client.complete({
     prompt: built.prompt, system: built.system, feature: 'analyze:' + id,
-    temperature: o.temperature ?? 0.3, maxTokens: o.maxTokens || 1200,
+    temperature: o.temperature ?? 0.3, maxTokens: o.maxTokens || (isDoctor(id) ? 1800 : 1200),
   });
   if (!res || !res.ok) return { id, local, ai: { ok: false, error: (res && res.error) || tt('ui.aia.errAiFail') }, scope, scenes: scenes.length };
   const parsed = parseAnalysisReply(id, res.text, { sceneIds: built.sceneIds });
@@ -806,7 +770,7 @@ export function estimateAnalysis(id, base = {}, maxOut = 0) {
   const overhead = estimateTokens(AI_SYSTEM) + estimateTokens(tt(AI_TASK_KEYS[id] || '')) + 240;
   const digest = Math.min(900, 40 + (base.scenes || 0) * 14);   // ~14 โทเคนต่อฉากในสรุปตัวเลข
   const input = (base.sceneTokens || 0) + overhead + digest;
-  const output = maxOut || (id === 'score' ? 900 : 1200);
+  const output = maxOut || (id === 'score' ? 900 : isDoctor(id) ? 1800 : 1200);
   return { id, scenes: base.scenes || 0, input, output, total: input + output, truncated: !!base.truncated };
 }
 
@@ -924,6 +888,7 @@ export function localTable(id, local = {}) {
     ...L.rows.map((r) => [r.title, r.chapterTitle, r.dialogue, r.interiority, r.narration, COMPOSITION_LABELS[r.lean] || ''])];
   if (id === 'score' && L.criteria) return [H(tt('ui.aia.csCriterion'), tt('ui.aia.csScore'), tt('ui.aia.csNote')),
     ...L.criteria.map((c) => [c.label, c.score, c.note])];
+  if (isDoctor(id)) return doctorTable(id, L);
   if (L.rows && L.rows.length) return [H(tt('ui.aia.csTitle'), tt('ui.aia.csNote')), ...L.rows.map((r) => [r.title, r.note || ''])];
   return null;
 }
@@ -952,8 +917,9 @@ export function resultCsv(id, res = {}) {
     rows.push([]);
   } else if (ai && ai.ok && ai.rows && ai.rows.length) {
     rows.push([tt('ui.aia.aiHead')]);
-    rows.push([tt('ui.aia.csSeverity'), tt('ui.aia.csTitle'), tt('ui.aia.csDetail'), tt('ui.aia.csSuggestion'), tt('ui.aia.csScene')]);
-    for (const r of ai.rows) rows.push([r.severityLabel || r.severity, r.title, r.detail, r.suggestion, r.sceneId]);
+    rows.push([tt('ui.aia.csSeverity'), tt('ui.aia.csTitle'), tt('ui.aia.csDetail'), tt('ui.aia.csSuggestion'), tt('ui.aia.csScene'),
+               tt('ui.aia.csQuote')]);
+    for (const r of ai.rows) rows.push([r.severityLabel || r.severity, r.title, r.detail, r.suggestion, r.sceneId, r.quote || '']);
     rows.push([]);
   }
   if (ai && ai.ok && ai.usage) {

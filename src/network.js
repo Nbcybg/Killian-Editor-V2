@@ -14,7 +14,9 @@ const CAT_ARR = ['characters','locations','items','lore','scene','chapter','book
 // (เทส network-theme.test.cjs คอยกวาดไฟล์นี้หาเลข hex ที่หลุดมา)
 export function cssVar(name, fallback) {
   try {
-    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    // [alpha.164 ข้อ A1] ธีมตั้งตัวแปรไว้ที่ `body.theme-*` ไม่ใช่ `<html>` — อ่านจาก <html> ได้ค่าของธีมพื้นฐาน
+    // (สีเทาอุ่นของธีมพื้นฐาน) ทุกธีม · ต้องอ่านจาก body แบบเดียวกับ themeColor() ใน palette.js
+    const v = getComputedStyle(document.body || document.documentElement).getPropertyValue(name).trim();
     return v || fallback;
   } catch { return fallback; }
 }
@@ -169,6 +171,8 @@ export class StoryNetwork {
     this.title='Story Network'; this.dirty=false;
     this.nodes=[];this.edges=[];this.drag=null;
     this._scale=1;this._cx=0;this._cy=0;
+    // [alpha.164 ข้อ A9] กล้องยังไม่เคยถูกผู้ใช้ขยับ = จัดให้เห็นโหนดทั้งหมดเอง (ดู _fitView)
+    this._camTouched=false;
     this._hoverNode=null;
     this._catFilter=new Set(CAT_ARR.slice(0,4));
     this._typeFilter=new Set([...REL_TYPES.map(t=>t.key),'co-occur','scene-link','ent-scene']);
@@ -194,6 +198,9 @@ export class StoryNetwork {
 
     this._resize=()=>{this._fit();this.draw();};
     window.addEventListener('resize',this._resize);
+    // [alpha.164 ข้อ A1] เปลี่ยนธีมระหว่างเปิดผังค้างไว้ = อ่านสีใหม่ทันที (ไม่ต้องปิด-เปิดแผง)
+    this._onTheme=()=>{try{this.readColors();this.draw();}catch{}};
+    window.addEventListener('k2-theme',this._onTheme);
     if(typeof ResizeObserver!=='undefined'){
       this._ro=new ResizeObserver(()=>{try{this._fit();this.draw();this._updateMinimap();}catch{}});
       this._ro.observe(pane);
@@ -216,7 +223,7 @@ export class StoryNetwork {
       setGridPx(v){self._gridPx=v;self.draw();},
       setGridAlpha(v){self._gridAlpha=v;self.draw();},
       export(){self.draw();const d=self.canvas.toDataURL('image/png');const a=document.createElement('a');a.download='story-network.png';a.href=d;document.body.appendChild(a);a.click();document.body.removeChild(a);},
-      reset(){self._scale=1;self._cx=0;self._cy=0;self._rx=0.4;self._ry=-0.3;self.draw();if(self._showMinimap)self._updateMinimap();},
+      reset(){self._rx=0.4;self._ry=-0.3;self._camTouched=false;self._fitView();self.draw();if(self._showMinimap)self._updateMinimap();},
     });
 
     this._mm = buildMinimap(pane); this._mm.style.display = 'none';
@@ -299,7 +306,7 @@ export class StoryNetwork {
       // บันทึกทุกครั้ง — ตำแหน่งของทุกโหนดต้องอยู่ถาวร ไม่ใช่เฉพาะตัวที่ลาก
       savePositions(this.nodes,this._scope());
       this._vfCache=null;
-      this._fit();this.draw();this._updateMinimap();
+      this._fit();if(!this._camTouched)this._fitView();this.draw();this._updateMinimap();
     }catch(e){console.error('SN refresh error:',e?.message||e);}
   }
 
@@ -393,7 +400,29 @@ export class StoryNetwork {
     const r=this.pane.getBoundingClientRect();
     const w=Math.round(r.width),h=Math.round(r.height);
     if(w<2||h<2)return;
-    if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
+    if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;if(!this._camTouched)this._fitView();}
+  }
+
+  /**
+   * [alpha.164 ข้อ A9] ★ จัดกล้องให้เห็นโหนดทั้งหมด
+   * ตัวจัดผัง (seedLayout/forceLayout) วางโหนดรอบจุด (0,0) แต่กล้องเริ่มที่ (0,0) = **มุมซ้ายบนของผืนวาด**
+   * → โหนดสามในสี่ตกนอกจอ · แถบสถานะบอก "4 โหนด 2 เส้น" แต่จอว่างเปล่า (ปุ่มรีเซ็ตมุมมองก็พากลับไปที่เดิม)
+   * @returns {boolean} true = จัดแล้ว
+   */
+  _fitView(){
+    const w=this.canvas.width,h=this.canvas.height;
+    if(!w||!h||!this.nodes.length)return false;
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const n of this.nodes){
+      const p=this._mode3D?project3D(n.x,n.y,n.z||0,this._rx,this._ry):n;
+      if(!Number.isFinite(p.x)||!Number.isFinite(p.y))continue;
+      x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);
+    }
+    if(!Number.isFinite(x0))return false;
+    const pad=90;
+    const s=Math.max(0.15,Math.min(1.4,(w-pad*2)/Math.max(1,x1-x0),(h-pad*2)/Math.max(1,y1-y0)));
+    this._scale=s;this._cx=w/2-((x0+x1)/2)*s;this._cy=h/2-((y0+y1)/2)*s;
+    return true;
   }
 
   draw() {
@@ -421,7 +450,8 @@ export class StoryNetwork {
       for(let y=-ext;y<=ext;y+=this._gridPx){c.moveTo(-ext,y);c.lineTo(ext,y);}
       c.stroke();c.globalAlpha=1;
     }
-    c.font='11px "Segoe UI","Leelawadee UI",sans-serif';
+    // [alpha.164 ข้อ A9] ชื่อโหนดอ่านออกเสมอ — ตัวหนังสือถูกย่อตาม scale ของกล้อง (ซูม 69% = 7.6px บนจอ)
+    c.font=Math.round(Math.max(11,13/(this._scale||1)))+'px "Segoe UI","Leelawadee UI",sans-serif';
 
     const at=this._typeFilter.size===REL_TYPES.length+3;
     const {q,m,visible}=this._visFilter();
@@ -465,7 +495,8 @@ export class StoryNetwork {
       c.beginPath();c.moveTo(px(e.a),py(e.a));c.lineTo(px(e.b),py(e.b));c.stroke();c.setLineDash([]);c.shadowBlur=0;
       if(e.role&&alpha>0.3){
         const mx=(px(e.a)+px(e.b))/2,my=(py(e.a)+py(e.b))/2;
-        drawEdgeLabel(c,e.role,mx,my-10,isHover?11:9);
+        const ls=Math.max(1,1/(this._scale||1));   // [alpha.164 ข้อ A9] ป้ายเส้นไม่หดตามซูมออกจนอ่านไม่ได้
+        drawEdgeLabel(c,e.role,mx,my-10*ls,(isHover?12:11)*ls);
       }
       c.globalAlpha=1;
     }
@@ -558,7 +589,7 @@ export class StoryNetwork {
     const axes=[['X',ax.x,THEME.node.characters],['Y',ax.y,THEME.node.items]];
     if(ax.z)axes.push(['Z',ax.z,THEME.node.locations]);
     c.save();
-    c.globalAlpha=0.85;c.lineWidth=1.6;c.font='9px sans-serif';
+    c.globalAlpha=0.85;c.lineWidth=1.6;c.font='11px sans-serif';
     c.textAlign='center';c.textBaseline='middle';
     for(const [name,v,col] of axes){
       const ex=ox+v.x*len, ey=oy+v.y*len;
@@ -677,7 +708,7 @@ export class StoryNetwork {
       this._rx=Math.max(-Math.PI/2.2,Math.min(Math.PI/2.2,this._rx));
       this.draw();if(this._showMinimap)this._updateMinimap();return;
     }
-    if(this.pan){this._cx=this.pan.cx+(e.clientX-this.pan.sx);this._cy=this.pan.cy+(e.clientY-this.pan.sy);if(Math.abs(e.clientX-this.pan.sx)+Math.abs(e.clientY-this.pan.sy)>3)this.pan.moved=true;this.draw();if(this._showMinimap)this._updateMinimap();return;}
+    if(this.pan){this._camTouched=true;this._cx=this.pan.cx+(e.clientX-this.pan.sx);this._cy=this.pan.cy+(e.clientY-this.pan.sy);if(Math.abs(e.clientX-this.pan.sx)+Math.abs(e.clientY-this.pan.sy)>3)this.pan.moved=true;this.draw();if(this._showMinimap)this._updateMinimap();return;}
     if(!this.drag){const{node}=this._hit(e);if(this._hoverNode!==node){this._hoverNode=node;this.draw();}this.canvas.style.cursor=node?'pointer':'grab';return;}
     const{x}=this._hit(e);this.drag.node.x=x+this.drag.ox;this.drag.node.y=(e.clientY-this.canvas.getBoundingClientRect().top-this._cy)/this._scale+this.drag.oy;this.drag.moved=true;this.draw();if(this._showMinimap)this._updateMinimap();}
 
@@ -752,7 +783,7 @@ export class StoryNetwork {
     const f=e.deltaY<0?1.1:0.9;
     const cam=zoomAtCenter({scale:this._scale,cx:this._cx,cy:this._cy},
                            this.canvas.width,this.canvas.height,this._scale*f);
-    this._scale=cam.scale;this._cx=cam.cx;this._cy=cam.cy;
+    this._scale=cam.scale;this._cx=cam.cx;this._cy=cam.cy;this._camTouched=true;
     this.draw();if(this._showMinimap)this._updateMinimap();
   }
 
@@ -825,7 +856,7 @@ export class StoryNetwork {
         addItem(tt('ui.net.unsetPinNode'),()=>{this.unpin(node);this.draw();});
       }
     }else{
-      addItem(tt('ui.net.resetView'),()=>{this._scale=1;this._cx=0;this._cy=0;this._rx=0.4;this._ry=-0.3;this.draw();});
+      addItem(tt('ui.net.resetView'),()=>{this._rx=0.4;this._ry=-0.3;this._camTouched=false;this._fitView();this.draw();});
       addItem(tt('ui.common.refresh2'),()=>this.refresh());
       addItem(tt('ui.net.unsetPinAllNode2'),()=>this.relayout());
     }
@@ -840,6 +871,7 @@ export class StoryNetwork {
     if(this._ctxMenus){for(const m of this._ctxMenus)try{m.remove();}catch{}this._ctxMenus=[];}
     if(this._rafId)cancelAnimationFrame(this._rafId);
     window.removeEventListener('resize',this._resize);
+    window.removeEventListener('k2-theme',this._onTheme);
     document.removeEventListener('mouseup',this._upDoc);
     if(this._ro)this._ro.disconnect();
     if(this._tb)this._tb.destroy();

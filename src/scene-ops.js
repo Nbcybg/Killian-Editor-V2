@@ -452,11 +452,38 @@ export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
       if (cur && state.tabs.has(cur)) activate(cur);           // ไม่ได้อยู่หน้าสุด = ไม่แย่งโฟกัส
     } catch { /* เปิดไม่ได้ไม่ทำให้การย้ายล้ม */ }
   }
-  setStatus(tt('ui.scene.move') + moved.row.title + tt('ui.scene.chapter2') + dstCh.title + tt('ui.common.done2'));
+  setStatus(ttf('ui.scene.moveF', moved.row.title, dstCh.title));
 }
+
+// ══ [alpha.164 · บั๊ก] ลากวางใน Explorer ต้องเคารพล็อกเหมือนเมนู ══
+// เมนูกัน "เลื่อน/ย้าย/เปลี่ยนลำดับ" ของที่ล็อกไว้ตั้งแต่ alpha.155 (LOCK_BLOCKED) แต่การลากเดินอ้อม —
+// ลากฉากที่ล็อกไปบทอื่นได้ · ลากฉากเข้าบทที่ล็อกได้ · ลากสลับบทในเล่มที่ล็อกได้
+const isLk = (v) => v === true || v === 'true';
+const LOCK_MSG = { book: 'ui.treeAct.lockedBook', chapter: 'ui.treeAct.lockedChapter', scene: 'ui.treeAct.lockedItem' };
+/** ล็อกที่ขวางการลาก: เล่มของร่างนี้ · บทต้นทาง/ปลายทาง · ตัวฉากเอง ('' = ลากได้) */
+export async function dragLockOf(dPath, { chGuids = [], sceneId = '', srcGuid = '' } = {}) {
+  const secPath = String(dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
+  try {
+    if (secPath && secPath !== dPath && isLk((await kapi.readJson(await kapi.join(secPath, 'section.json'))).locked)) return 'book';
+  } catch { /* ไม่มี section.json = ไม่ล็อก */ }
+  try {
+    const d = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+    if ((d.chapters || []).some((c) => chGuids.includes(c.guid) && isLk(c.locked))) return 'chapter';
+  } catch { /* ไม่มี draft.json */ }
+  if (sceneId) {
+    try {
+      const sd = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+      const row = rowsOf(sd, srcGuid).find((x) => x.id === sceneId);
+      if (row && isLk(row.locked)) return 'scene';
+    } catch { /* ไม่มี scenes.json */ }
+  }
+  return '';
+}
+function sayLocked(src) { setStatus(gi('lock') + ' ' + t(LOCK_MSG[src] || LOCK_MSG.scene)); }
 
 export async function moveChapterBefore(dPath, srcGuid, dstGuid) {
   if (srcGuid === dstGuid) return;
+  { const lk = await dragLockOf(dPath, { chGuids: [srcGuid] }); if (lk) { sayLocked(lk); return false; } }
   const df = await kapi.join(dPath, 'draft.json');
   const res = await mutateJson(kapi, df, (d) => {
     const list = (d.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -475,6 +502,10 @@ export async function moveChapterBefore(dPath, srcGuid, dstGuid) {
 
 export async function moveSceneBefore(dPath, srcCh, srcId, dstCh, dstId) {
   const sf = await kapi.join(dPath, 'scenes.json');
+  {
+    const lk = await dragLockOf(dPath, { chGuids: [srcCh.guid, dstCh.guid], sceneId: srcId, srcGuid: srcCh.guid });
+    if (lk) { sayLocked(lk); return false; }
+  }
   // ข้ามบท → ย้ายไฟล์ก่อน (moveSceneToChapter) แล้วค่อยจัดตำแหน่ง
   if (srcCh.guid !== dstCh.guid) {
     const row0 = rowsOf(await kapi.readJson(sf), srcCh.guid).find((x) => x.id === srcId);
@@ -518,7 +549,7 @@ export async function renumberChapters(dPath) {
     }
   });
   await buildTree();
-  setStatus(tt('ui.scene.orderChapterSceneNew') + guids.length + tt('ui.scene.chapter'));
+  setStatus(ttf('ui.scene.orderChapterSceneNewF', guids.length));
 }
 
 // ───────── ไฟล์คู่ของ "เล่าด้วยภาพ" ─────────

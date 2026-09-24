@@ -9,7 +9,7 @@
 //   · Scene / Time — หัวข้อกลางหน้า ขีดเส้นใต้ เว้น 1 บรรทัด แล้วคำอธิบายชิดซ้าย
 //     ระหว่างสองหัวข้อเว้น 2 บรรทัด · ทั้งสองหัวข้อเลือกเอา/ไม่เอาได้
 //   · หน้านี้ไม่มีเลขหน้า
-import { t } from './i18n.js';
+import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log, normalizeRoster, newRoster, rosterToText, mergeSpFormat } from './core.js';
 import { activate, closeTab, pickFromList } from './app.js';
 import { listSections } from './section-ops.js';
@@ -169,7 +169,7 @@ export async function renderRoster(tab) {
     let added = 0;
     for (const c of chars) if (c.name && !have.has(c.name.trim())) { r.characters.push(c); added++; }
     dirty(); paint();
-    setStatus(added ? t('ui.roster.addCharacterWiki') + added + t('ui.roster.person') : t('ui.roster.characterWikiCompleteDone'));
+    setStatus(added ? tf('ui.roster.addCharacterWikiF', added) : t('ui.roster.characterWikiCompleteDone'));
   };
   bCopy.onclick = () => {
     const txt = rosterToText(r, fmt);

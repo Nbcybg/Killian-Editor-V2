@@ -172,7 +172,7 @@ check('perf: ผลค้นถูกต้องบน 1,000 ไฟล์', tot
   check('matters: ไฟล์ที่ไม่ใช่ .md/.json (รูป · csv) = ไม่ต้องล้าง', !M('/p', '/p/Images/a.png') && !M('/p', '/p/x/s_vis.csv'));
   check('matters: นอกโปรเจกต์ / โปรเจกต์ชื่อขึ้นต้นเหมือนกัน = ไม่ต้องล้าง', !M('/p', '/other/a.md') && !M('/p', '/p2/a.md'));
   check('matters: ไม่มีราก/ไม่มี path = false', !M('', '/p/a.md') && !M('/p', ''));
-  check('SEARCH_SKIP_DIRS มีครบสามโฟลเดอร์สำเนา', ['Recycle', 'Snapshots', 'Backups'].every((d) => SE.SEARCH_SKIP_DIRS.includes(d)));
+  check('SEARCH_SKIP_DIRS มีครบโฟลเดอร์สำเนา (+ OnSet alpha.164)', ['Recycle', 'Snapshots', 'Backups', 'OnSet'].every((d) => SE.SEARCH_SKIP_DIRS.includes(d)));
 
   // ── [alpha.161 · S] highlightTerms / splitHighlight / matchDetail ──
   const HT = SE.highlightTerms;

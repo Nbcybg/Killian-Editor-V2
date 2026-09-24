@@ -50,6 +50,8 @@ export const TREE_MENU_SPEC = {
     'quickNote', 'comment', 'readScene', '-',
     'propsPopup', 'propsPanel', 'reveal', 'copyPath', '-',
     'color', 'status', 'pin', '-',
+    // [alpha.164] ผู้ใช้: "คลิกขวาที่ฉาก เลือกคำสั่ง ฉากมีปัญหา ... การ toggle จะใช้จากคลิกขวาที่ฉาก"
+    'problem', 'problemToggle', 'problemMenu', '-',
     'saveVersion', 'versionHistory', 'compareVersion', '-',
     'splitView', 'toMemo', '-',
     'lock', 'backup', 'restore', '-',

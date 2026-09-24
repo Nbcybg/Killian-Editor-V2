@@ -7,12 +7,13 @@ body.theme-opencode {
   --border:#2a2a2a;
   --fg:#eeeeee;
   --bright:#f8f8f8;
-  --dim:#939393;
+  --dim:#a3a3a3;
   --accent:#fab283;
   --accent-hi:#9d7cd8;
-  --link:#5c9cf5;
+  --accent-ink:#b196e0;
+  --link:#6ca6f6;
   --sel:#3a2a20;
-  --orange:#9d7cd8;
+  --orange:#b196e0;
   --curline:#131313;
   --hover:#282828;
   --hover-soft:#181818;
@@ -26,7 +27,7 @@ body.theme-opencode {
   --tab-bar:#070707;
   --tab-bg:#212121;
   --tab-border:#3c3c3c;
-  --tab-fg:#939393;
+  --tab-fg:#a3a3a3;
   --tab-fg-on:#f7f7f7;
   --tab-hover:#181818;
   --panel-head:#090909;

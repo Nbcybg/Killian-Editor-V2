@@ -82,12 +82,8 @@ export const TOOLBAR_GROUPS = [
     // [alpha.80] แผงที่มีมานานแต่ไม่เคยมีปุ่มบนแถบ
     { id: 'tb-comments' }, { id: 'tb-notes-panel' }, { id: 'tb-log' },
   ] },
-  { key: 'story', labelKey: 'ui.tbcfg.grpStory', buttons: [
-    { id: 'tb-timeline' }, { id: 'tb-maps' }, { id: 'tb-books' }, { id: 'tb-chapters' },
-    { id: 'tb-network' },
-    { id: 'tb-planner' }, { id: 'tb-branch' }, { id: 'tb-floorplan' }, { id: 'tb-player' },
-    { id: 'tb-gallery-board' }, { id: 'tb-backlinks' },
-  ] },
+  // [alpha.164 ข้อ E3] ลำดับกลุ่มนี้ = ลำดับจริงบนแถบ (applyToolbarGroupSeps เรียงตามนี้) — AI อยู่ก่อนเครื่องมือเล่าเรื่อง
+  // (ท้ายแถบถูกพับเข้าเมนู "»" ก่อนเมื่อหน้าต่างแคบ) · ตั้งค่า/ปลั๊กอินอยู่ท้ายสุด
   // [alpha.162 · W5 ข้อ 4] ★ ห้าปุ่ม AI กินที่บนแถบ (25 จาก 43 ปุ่มเป็นสวิตช์แผง) → ปุ่มเดียวเปิดเมนูของทั้งห้า
   // ตัวเดิมยังอยู่ครบ (id/คำสั่ง/สถานะเปิด-ปิดเหมือนเดิม) แค่ **ซ่อนเป็นค่าเริ่มต้น** — ใครชอบแบบเดิมเปิดคืนได้
   { key: 'ai', labelKey: 'ui.tbcfg.grpAi', buttons: [
@@ -95,6 +91,12 @@ export const TOOLBAR_GROUPS = [
     { id: 'tb-ai-hub', def: false },             // [alpha.116] AI Hub — ประตูเดียวของทุกความสามารถ AI
     { id: 'tb-ai', def: false }, { id: 'tb-ai-chat', def: false }, { id: 'tb-ai-analyzer', def: false },
     { id: 'tb-starter', def: false },            // [alpha.94] Story Starter
+  ] },
+  { key: 'story', labelKey: 'ui.tbcfg.grpStory', buttons: [
+    { id: 'tb-timeline' }, { id: 'tb-maps' }, { id: 'tb-books' }, { id: 'tb-chapters' },
+    { id: 'tb-network' },
+    { id: 'tb-planner' }, { id: 'tb-branch' }, { id: 'tb-floorplan' }, { id: 'tb-player' },
+    { id: 'tb-gallery-board' }, { id: 'tb-backlinks' },
   ] },
   { key: 'ext', labelKey: 'ui.tbcfg.grpExt', buttons: [
     { id: 'tb-plugins' },                        // [alpha.79] แผงจัดการปลั๊กอิน
@@ -401,7 +403,8 @@ export function isFmtbarButton(id) { return FMTBAR_IDS.includes(id); }
 export const FMT_UNSUPPORTED = {
   // [alpha.132 ข้อ 9] สีตัวอักษรเป็นของนิยายเท่านั้น — บทเก็บเป็น fountain ล้วน
   // ใส่สีลงไปจะพังการอ่านกลับ (กฎเดียวกับที่ align ของบทเป็น session-only)
-  screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote', 'tb-color'],
+  // [alpha.164 ข้อ E4] H2/H3/H4 ไม่มีความหมายในบท (SPEditor ไม่มีคำสั่ง heading — กดแล้วไม่เกิดอะไร)
+  screenplay: ['tb-style', 'tb-sup', 'tb-sub', 'tb-quote', 'tb-color', 'tb-h2', 'tb-h3', 'tb-h4'],
   // `tb-sp-ext` ไม่ต้องใส่: โปรแกรมซ่อนมันเองเมื่อไม่ใช่บท (refreshToolbar) จึงไม่มีอะไรให้ทำเป็นสีเทา
   prose: ['tb-sp-elem', 'tb-sp-cont'],
   // [alpha.151] `all` = Wiki / แดชบอร์ด / หน้าแรก — ใช้เอนจินเดียวกับนิยาย
