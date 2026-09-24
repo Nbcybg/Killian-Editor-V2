@@ -144,6 +144,13 @@ export class WikiEditor {
       b.className = 'row-add wiki-ai-btn';
       b.innerHTML = iconHtml('brain', 14);
       b.title = tt('ui.wiki.aiFillTip');
+      // [alpha.164 · I3] ปุ่มไอคอนล้วน → ต้องมีชื่อให้โปรแกรมอ่านจอ + กดด้วยคีย์บอร์ดได้
+      b.setAttribute('role', 'button');
+      b.tabIndex = 0;
+      b.setAttribute('aria-label', ttf('ui.wiki.aiFillLabel', label));
+      b.onkeydown = (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); b.click(); }
+      };
       b.onclick = async (ev) => {
         ev.stopPropagation();
         if (b.classList.contains('busy')) return;      // กันกดรัวแล้วยิงซ้อน
@@ -349,7 +356,8 @@ export class WikiEditor {
       // บรรทัดรอง (เทมเพลตบอกว่าใช้ field ไหน — ตัวละคร=บทบาท · สถานที่/สิ่งของ=ประเภท · ตำนาน=หมวด)
       if (P.subtitle) {
         const rl = document.createElement('div'); rl.className = 'wiki-prof-role';
-        rl.innerHTML = iconHtml('brain', 14) + ' ' + P.subtitle;
+        // [alpha.164 · I3] ค่าจากช่องของผู้ใช้ → text node (เดิมต่อลง innerHTML ตรง ๆ = กฎข้อ 11)
+        rl.append(icon('brain', 14), document.createTextNode(' ' + P.subtitle));
         rl.title = P.subtitleLabel;
         info.appendChild(rl);
       }

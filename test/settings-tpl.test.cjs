@@ -22,19 +22,32 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
 const out = path.join(os.tmpdir(), '_settings_tpl154.cjs');
 esbuild.buildSync({ entryPoints: [path.join(ROOT, 'src/settings-template.js')], outfile: out, format: 'cjs', bundle: true, logLevel: 'silent' });
 const M = require(out);
-const N = M.SETTINGS_TEMPLATE_ARGS;
-const tpl = M.settingsTemplate(Array.from({ length: N }, (_, i) => '{' + i + '}'));
+const tpl = M.settingsTemplate();
 const modSrc = fs.readFileSync(path.join(ROOT, 'src/settings-template.js'), 'utf8');
 const dlg = fs.readFileSync(path.join(ROOT, 'src', 'dialogs.js'), 'utf8');
 
-// ───────── ค่าที่แทรก: โค้ดส่งกี่ค่า เทมเพลตต้องใช้ครบเท่านั้น ─────────
+// ───────── [alpha.164 · I4] ★ ไม่มีค่าแทรกตามตำแหน่งแล้ว — เทมเพลตเรียก tx() เองทุกช่อง ─────────
+// เดิม dialogs.js ส่งอาร์เรย์ 44 ช่อง (`a[0]..a[43]`) — สลับลำดับช่องเดียว ป้ายทั้งกล่องเลื่อนผิดช่องเงียบ ๆ
 {
-  const call = dlg.match(/settingsTemplate\(\[([\s\S]*?)\]\)/);
-  check('dialogs.js เรียก settingsTemplate([...])', !!call);
+  check('★ [164-I4] dialogs.js เรียก settingsTemplate() แบบไม่ส่งอาร์เรย์', /settingsTemplate\(\)/.test(dlg) &&
+        !/settingsTemplate\(\[/.test(dlg));
   check('dialogs.js ไม่อ่านเทมเพลตจากไฟล์ภาษาแล้ว', !dlg.includes('alphaItemLevelUser'));
-  const slots = new Set([...tpl.matchAll(/\{(\d+)\}/g)].map((m) => +m[1]));
-  const miss = []; for (let i = 0; i < N; i++) if (!slots.has(i)) miss.push(i);
-  check(`ที่แทรกค่า {0}..{${N - 1}} ครบ`, N >= 44 && miss.length === 0, miss.join(','));
+  check('★ [164-I4] เทมเพลตไม่อ้างค่าแทรกตามตำแหน่ง (a[n]) อีก',
+        !/\$\{a\[\d+\]\}/.test(modSrc) && !/settingsTemplate\(a\b/.test(modSrc));
+  check('★ [164-I4] ไม่มีค่าคงที่จำนวนช่อง (SETTINGS_TEMPLATE_ARGS) ค้าง', !('SETTINGS_TEMPLATE_ARGS' in M));
+  // ทุกคีย์ที่เทมเพลตเรียก (รวมคีย์เก่านอก ui.setTpl.* ที่เคยมาทางอาร์เรย์) ต้องมีในไฟล์ภาษาทุกไฟล์
+  const allKeys = [...new Set([...modSrc.matchAll(/\btx\('([\w.:-]+)'\)/g)].map((m) => m[1]))];
+  check('เทมเพลตเรียกคีย์ด้วย tx() อย่างน้อย 190 คีย์', allKeys.length >= 190, allKeys.length);
+  const langDir0 = path.join(ROOT, 'languages');
+  for (const f of fs.readdirSync(langDir0).filter((x) => /^k2_.+\.csv$/.test(x))) {
+    const tbl = lexCsv(fs.readFileSync(path.join(langDir0, f), 'utf8'));
+    const miss = allKeys.filter((k) => !tbl[k]);
+    check(`${f}: ★ [164-I4] ทุกคีย์ที่เทมเพลตเรียกมีข้อความ`, miss.length === 0, miss.slice(0, 5).join(' · '));
+  }
+  // ป้ายจากคีย์เดิมยังอยู่ครบ (หัวกล่อง · แท็บ · ปุ่มยกเลิก/บันทึก)
+  for (const k of ['ui.settings.title', 'ui.settings.general', 'ui.settings.shortcuts', 'ui.dialogs.cancel', 'ui.dialogs.save']) {
+    check(`★ [164-I4] เทมเพลตยังใช้ ${k}`, allKeys.includes(k));
+  }
 }
 
 // ───────── โครง ─────────

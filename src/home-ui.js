@@ -280,6 +280,48 @@ export function createBrokenCard(row, onChanged) {
   return card;
 }
 
+// ══ [alpha.164 · งาน 7] ทางลัดในที่ว่างของหน้าแรก ══
+// โปรเจกต์น้อย (ผู้ใช้ใหม่) = การ์ดหนึ่งสองใบกับที่ว่างเกือบทั้งกล่อง — กล่องต้องสูงเท่าเดิม (e2e #1 · 0.56a #1)
+// จึงไม่หดกล่อง แต่ใช้ที่ว่างนั้นโชว์คำสั่งที่คนเริ่มใหม่ต้องหา (ตารางคีย์เต็ม ห้ามประกอบคีย์จากชิ้นส่วน)
+/** จำนวนโปรเจกต์ที่ยังถือว่า "น้อย" (มากกว่านี้ รายการเต็มที่ว่างแล้ว ไม่ต้องมีทางลัด) */
+export const HOME_QUICK_MAX = 4;
+const HOME_QUICK = [
+  { cmd: 'new-from-template', label: 'ui.home.quickTemplate', tip: 'ui.tip.new-from-template', icon: 'star' },
+  { cmd: 'import-scrivener', label: 'ui.home.quickScrivener', tip: 'ui.tip.import-scrivener', icon: 'download' },
+  { cmd: 'cheatsheet', label: 'ui.home.quickShortcuts', tip: 'ui.tip.cheatsheet', icon: 'keyboard' },
+  { cmd: 'changelog', label: 'ui.home.quickChangelog', tip: 'ui.tip.changelog', icon: 'history' },
+];
+/** @param {Function} [onClose] ปิดหน้าแรกก่อนสั่ง (กล่องหน้าแรกอยู่เหนือกล่องอื่น — ไม่ปิด = กล่องใหม่ถูกบัง) */
+export function buildHomeQuick(onClose) {
+  const box = el('div', 'home-quick');
+  box.append(el('div', 'home-quick-title', t('ui.home.quickTitle')));
+  const row = el('div', 'home-quick-row');
+  for (const q of HOME_QUICK) {
+    const b = el('button', 'home-quick-btn');
+    b.dataset.cmd = q.cmd;
+    b.title = t(q.tip);
+    const ic = el('span', 'home-quick-ic');
+    ic.dataset.icon = q.icon; ic.dataset.iconSize = '18';
+    b.append(ic, el('span', 'home-quick-label', t(q.label)), el('span', 'home-quick-tip', t(q.tip)));
+    b.onclick = async () => {
+      onClose?.();
+      const { handleCommand } = await import('./app.js');
+      await handleCommand(q.cmd);
+    };
+    row.append(b);
+  }
+  box.append(row);
+  initIcons(box);
+  return box;
+}
+/** ติด/ถอดทางลัดตามจำนวนโปรเจกต์ — วางต่อจากตารางการ์ด (ในกล่องหน้าแรก = ในกรอบที่เลื่อนได้) */
+function syncHomeQuick(grid, count, onClose) {
+  const old = grid.parentElement && grid.parentElement.querySelector(':scope > .home-quick');
+  if (old) old.remove();
+  if (count > HOME_QUICK_MAX || !grid.parentElement) return;
+  grid.after(buildHomeQuick(onClose));
+}
+
 /** วาดหน้าแรก/แผงหน้าแรกใหม่ทุกใบที่เปิดค้างอยู่ (ใช้หลังลบรายการที่พัง) */
 export function refreshHomePanels() {
   for (const grid of document.querySelectorAll('.home-grid')) {
@@ -303,11 +345,13 @@ async function loadProjects(grid) {
       `;
       initIcons(empty);
       grid.append(empty);
+      syncHomeQuick(grid, 0, () => closeTab('::home::'));
       return;
     }
     for (const p of ok) grid.append(createProjectCard(p));
     // [alpha.124 ข้อ 19] รายการที่เปิดไม่ได้ต่อท้าย — เห็นว่ามีอยู่ และเอาออกได้
     for (const b of broken) grid.append(createBrokenCard(b, refreshHomePanels));
+    syncHomeQuick(grid, ok.length + broken.length, () => closeTab('::home::'));
   } catch (e) {
     log('error', t('ui.home.homeLoadProjectFail'), e);
     grid.append(el('div', 'home-empty', t('ui.home.occurErrorLoadProject')));
@@ -488,11 +532,13 @@ async function loadPanelProjects(grid, onOpen) {
       const emptyBox = el('div', 'home-empty');
       emptyBox.append(el('p', null, t('ui.home.notHasProject')));
       grid.append(emptyBox);
+      syncHomeQuick(grid, 0, onOpen);
       return;
     }
     // ใช้การ์ดชุดเดียวกับหน้า Home (.home-card) — มีสไตล์จริงและสลับมุมมองการ์ด/รายการได้
     for (const p of ok) grid.append(createProjectCard(p, onOpen));
     for (const b of broken) grid.append(createBrokenCard(b, refreshHomePanels));
+    syncHomeQuick(grid, ok.length + broken.length, onOpen);
   } catch (e) {
     log('error', t('ui.home.homePanelLoadFail'), e);
     grid.append(el('div', 'home-empty', t('ui.home.occurErrorLoadProject')));

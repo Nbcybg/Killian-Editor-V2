@@ -53,7 +53,7 @@ import { PRESETS, STEP_DEFS, cloneWorkflow, mdToHtml, mdToHtmlBody, runWorkflow,
 import { SCENE_HEAVY_KEYS, readSceneMeta, writeSceneMeta } from './scene-meta.js';
 import { SCENE_PANELS, isSceneFile, samePath } from './panels/panel-sync.js';
 import * as SESS from './session/session-core.js';
-import { SETTINGS_TEMPLATE_ARGS, settingsTemplate } from './settings-template.js';
+import { settingsTemplate } from './settings-template.js';
 import { SHORTCODES, SHORTCODE_GROUPS, expandShortcodes, shortcodeLabel } from './shortcode.js';
 import { SP_ERRORS } from './sp-validator.js';
 import { T, lookup, t as tt, tf as ttf } from './i18n.js';
@@ -5091,17 +5091,32 @@ export async function runTest(projectPath) {
         pb.interaction.setTool(tool);
         // [alpha.157r] ตำแหน่งต้องอยู่ในผืนผ้าใบที่มองเห็น — แถบแท็บทรงเม็ดสูงขึ้น ผืนผ้าใบในเลย์เอาต์เทสเตี้ยลง
         // (เดิมลากถึงแถวที่ 720 ของกระดาน ซึ่งเลยขอบล่างไปแล้ว → วัตถุถูกตัดความสูงตามขอบ)
+        // [alpha.164 · งาน 6] แผงเอกสารมีขั้นต่ำ 420px แล้ว → แผงกระดานข้าง ๆ หดได้ (ในเลย์เอาต์เทสเหลือ ~290px)
+        // พิกัด 1200 ของกระดาน (ที่ว่าง ไม่มีการ์ดเดิม) หลุดขอบขวาของผืนผ้าใบ → **เลื่อนมุมมอง** ให้จุดนั้นอยู่ในจอ
+        // (ไม่ย้ายจุดไปทับการ์ดที่มีอยู่ — ลากเริ่มบนการ์ดเดิม = ลากการ์ด ไม่ใช่สร้างใหม่)
         const bx = 1200, by = tool === 'sticky' ? 40 : tool === 'text' ? 180 : 260;
+        {
+          const vt5 = pb.renderer.canvas.viewportTransform;
+          const cw5 = cvEl.getBoundingClientRect().width;
+          if (bx * vt5[0] + vt5[4] + w * vt5[0] > cw5 - 8) {
+            pb.renderer.canvas.setViewportTransform([vt5[0], 0, 0, vt5[3], cw5 * 0.2 - bx * vt5[0], vt5[5]]);
+            pb.renderer.canvas.calcOffset();
+          }
+        }
         const p1 = toClient(bx, by), p2 = toClient(bx + w, by + h);
         rawDown(p1.x, p1.y); rawMove(p2.x, p2.y); rawUp(p2.x, p2.y);
         await waitMs(40);
-        const pre157 = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
+        // [alpha.164 · งาน 6] ความคลาดเคลื่อนต้องคิดตามซูม — หนึ่งพิกเซลบนจอ = 1/ซูม หน่วยกระดาน
+        // (ผืนผ้าใบแคบ → ซูมพอดีจอ 0.3 → พิกเซลเดียว = 3.3 หน่วย · เกณฑ์ตายตัว ±3 จึงพลาดที่ 1196.8)
+        const z5 = pb.renderer.canvas.viewportTransform[0] || 1;
+        const tolXY = Math.max(3, 1.2 / z5), tolWH = Math.max(4, 2.4 / z5);
+        const pre157 = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= tolXY);
         const preH157 = pre157 ? Math.round(pre157.height) : -1;
         pb.interaction.closeEditor();
-        const made = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= 3);
+        const made = pb.data.getAllNodes().find((n) => n.type === tool && Math.abs(n.x - bx) <= tolXY);
         const cvR = cvEl.getBoundingClientRect();
         check(`[65r-5] ลากกำหนดขนาดแล้วค่อยสร้าง "${tool}" ได้ตามที่ลาก`,
-              !!made && Math.abs(made.width - w) <= 4 && Math.abs(made.height - h) <= 4,
+              !!made && Math.abs(made.width - w) <= tolWH && Math.abs(made.height - h) <= tolWH,
               made ? `${Math.round(made.width)}x${Math.round(made.height)} ขอ ${w}x${h} · ก่อนปิดตัวแก้ไข h=${preH157} · cv=${Math.round(cvEl.getBoundingClientRect().height)} off=${JSON.stringify(pb.renderer.canvas._offset)} p1=${Math.round(p1.y)} p2=${Math.round(p2.y)}`
                    : `ไม่เกิดวัตถุ · canvas=${Math.round(cvR.width)}x${Math.round(cvR.height)}`
                      + ` vt=${pb.renderer.canvas.viewportTransform.map((v) => Math.round(v * 100) / 100).join(',')}`
@@ -5696,6 +5711,24 @@ export async function runTest(projectPath) {
       check('[65r5] คืนความสูงปกติ → แถบกรอง/สถานะกลับมา',
             !plannerInst.pane.classList.contains('planner-compact') &&
             getComputedStyle(plannerInst.filterBar).display !== 'none');
+      {
+        // [alpha.164 · งาน 7] แผงเตี้ยระดับกลาง → แถบกรองย้ายไปต่อท้ายแถวแถบคำสั่ง (ยังใช้ได้ · ประหยัดหนึ่งแถว)
+        const PLmod = await import('./planner/planner.js');
+        const strip7 = plannerInst.toolbar.querySelector('.planner-toolbar-strip');
+        plannerInst.pane.style.flex = '0 0 320px';
+        plannerInst._fit();
+        check('[164-7] ★ แผงเตี้ย (190–' + PLmod.PLANNER_INLINE_FILTER_H + 'px) → แถบกรองอยู่ในแถวแถบคำสั่ง ไม่กินแถวของตัวเอง',
+              plannerInst.filterBar.parentElement === strip7 && getComputedStyle(plannerInst.filterBar).display !== 'none' &&
+              !!plannerInst.filterBar.querySelector('#pl-f-text'),
+              plannerInst.filterBar.parentElement && plannerInst.filterBar.parentElement.className);
+        plannerInst.pane.style.flex = '0 0 700px';
+        plannerInst._fit();
+        check('[164-7] ★ แผงสูงพอ → แถบกรองกลับมาเป็นแถวของตัวเองใต้แถบคำสั่ง',
+              plannerInst.filterBar.parentElement === plannerInst.pane &&
+              plannerInst.filterBar.previousElementSibling === plannerInst.toolbar);
+        plannerInst.pane.style.flex = '';
+        plannerInst._fit();
+      }
       // แผงบันทึกก็เคยติดปัญหาเดียวกัน (มีกฎ :has(#log-body))
       showPanel('log'); await waitMs2(100);
       getPanelManager().collapsePanel('log', true); await waitMs2(120);
@@ -7317,6 +7350,17 @@ export async function runTest(projectPath) {
     check('แท็บปุ่มลัดแสดงรายการคำสั่ง',
           document.querySelectorAll('.k-key-row').length >= 15,
           document.querySelectorAll('.k-key-row').length);
+    {
+      // [alpha.164 · I1] หน้าปุ่มลัดในตั้งค่าจัดหมวดตาม SHORTCUT_CATS + คำสั่งสองปุ่มเป็นแถวเดียว
+      const cats = [...document.querySelectorAll('#st-keys .k-key-cat')].map((x) => x.textContent);
+      check('[164-I1] ★ ตั้งค่า → ปุ่มลัด จัดเป็นหมวด (ชื่อหมวดชุดเดียวกับหน้าสรุป)',
+            cats.length >= 6 && cats.every((c) => SHORTCUT_CATS.some((sc) => tt(sc.labelKey) === c)), cats.join(' · '));
+      const rid = [...document.querySelectorAll('#st-keys .k-key-row')].map((r) => r.dataset.id);
+      const dup = rid.filter((x, i) => rid.indexOf(x) !== i);
+      check('[164-I1] ★ ตั้งค่า → ปุ่มลัด: คำสั่งสองปุ่มเป็นแถวเดียว', dup.length === 0 && rid.includes('next-tab'), dup.join(' · '));
+      const ntr = document.querySelector('#st-keys .k-key-row[data-id="next-tab"] .k-key-accel');
+      check('[164-I1] ★ แถวคำสั่งสองปุ่มโชว์ทั้งสองปุ่ม', !!ntr && / \/ /.test(ntr.textContent), ntr && ntr.textContent);
+    }
     document.querySelector('.k-key-row .k-key-btn').click();     // "แก้" ปุ่มแรก
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ', ctrlKey: true, shiftKey: true, bubbles: true }));
     await new Promise((r) => setTimeout(r, 40));
@@ -14590,6 +14634,24 @@ export async function runTest(projectPath) {
           check('#12 สลับรายการ ↔ การ์ด แล้วขนาดการ์ดกลับมาเท่าเดิม (fixed)',
                 Math.abs(h1 - h2c) < 1 && hList !== h1, `${h1} / ${hList} / ${h2c}`);
         }
+        {
+          // [alpha.164 · งาน 7] โปรเจกต์น้อย → ทางลัดในที่ว่าง (ในกรอบที่เลื่อนได้ · กล่องสูงเท่าเดิม)
+          const HUq = await import('./home-ui.js');
+          const nCards = grid.querySelectorAll('.home-card').length;
+          const quick = ovHome.querySelector('.home-dlg-scroll > .home-quick');
+          check('[164-7] ★ หน้าแรกโปรเจกต์น้อย → มีทางลัดในที่ว่าง (ใต้การ์ด ในกรอบเลื่อน)',
+                nCards > HUq.HOME_QUICK_MAX ? !quick : (!!quick && quick.querySelectorAll('.home-quick-btn').length >= 3),
+                nCards + ' การ์ด · ' + (quick ? quick.querySelectorAll('.home-quick-btn').length : 0) + ' ปุ่ม');
+          if (quick) {
+            check('[164-7] ปุ่มทางลัดมีชื่อ + คำอธิบายจากไฟล์ภาษา (ไม่ใช่คีย์ดิบ)',
+                  [...quick.querySelectorAll('.home-quick-btn')].every((b) => b.title && !/^ui\./.test(b.textContent) && !/^ui\./.test(b.title)));
+            const dlgH = ovHome.querySelector('.k-home-dlg').getBoundingClientRect().height;
+            quick.remove();
+            const dlgH2 = ovHome.querySelector('.k-home-dlg').getBoundingClientRect().height;
+            check('[164-7] ★ ทางลัดไม่ทำให้กล่องหน้าแรกสูงขึ้น (กล่องขนาดคงที่ · e2e #1)',
+                  Math.abs(dlgH - dlgH2) < 1, dlgH + ' / ' + dlgH2);
+          }
+        }
         ovHome.remove();
         S.homeThumb = 190; applySettings();
       }
@@ -17712,6 +17774,14 @@ export async function runTest(projectPath) {
                   fits ? rp.left >= rw.left - 2 : (overL > 4 && overR > 4),
                   `fits=${fits} left=${rp.left.toFixed(1)} pane=${rw.left.toFixed(1)} ` +
                   `overL=${overL.toFixed(1)} overR=${overR.toFixed(1)}`);
+            // [alpha.164 · งาน 6] แผงแคบกว่ากระดาษ → ต้นบรรทัด (ขอบซ้ายของคอลัมน์ข้อความ) ต้องอยู่ในแผงเสมอ
+            // เดิมจัดกลาง "กระดาษ" ซึ่งขอบซ้ายกว้างกว่าขอบขวา → ต้นบรรทัดหลุดซ้ายก่อน ผู้ใช้เห็นแต่กลางประโยค
+            const cs60 = getComputedStyle(pm60);
+            const k60 = rp.width / (parseFloat(cs60.width) || rp.width);
+            const textL = rp.left + (parseFloat(cs60.paddingLeft) || 0) * k60;
+            check(`[164-6] ★ ซูม ${Math.round(pageScale * 100)}%: ต้นบรรทัดอยู่ในแผงเอกสาร (ไม่หลุดขอบซ้าย)`,
+                  textL >= rw.left - 1 && textL < rw.left + pane60.clientWidth,
+                  `textL=${textL.toFixed(1)} pane=[${rw.left.toFixed(1)}, ${(rw.left + pane60.clientWidth).toFixed(1)}]`);
           }
         }
         check('[60r2-1] min-width เป็นหน่วย px ไม่ใช่ % แล้ว', ws60.style.minWidth.endsWith('px'),
@@ -19955,17 +20025,23 @@ export async function runTest(projectPath) {
               check('[RW] เตรียมฉาก + หาข้อความที่จะเลือก', fromRW > 0);
               // [alpha.164 ข้อ F1] แผงผืนวาดเปิดครั้งแรกใหญ่ ~80% ของหน้าต่าง — ถ้าเทสก่อนหน้าทิ้งแผงลอยไว้
               // มันจะบังข้อความที่คลิกขวา (ผู้ใช้จริงก็ต้องย้าย/ปิดแผงก่อนคลิกเอกสารเช่นกัน) → ปิดแผงลอยก่อน
-              // + แผงข้างที่เทส [149] เปิดทิ้งไว้ (แชท AI 596px + คุณสมบัติ) บีบแผงเอกสารเหลือ ~260px บนหน้าต่าง 1440
-              //   จนข้อความที่จะคลิกหลุดขอบซ้าย ไปโดนที่จับปรับขนาดแผงแทน — ซ่อนชั่วคราว แล้วคืนหลังเทสเมนู
+              // [alpha.164 · งาน 6] เดิมซ่อนแผงข้าง (แชท AI 596px + คุณสมบัติ) ชั่วคราวด้วย เพราะมันบีบแผงเอกสาร
+              //   เหลือ ~260px จนข้อความหลุดขอบซ้าย · ตอนนี้แผงเอกสารมีขั้นต่ำ (MIN_CANVAS_PX) + กระดาษที่กว้างกว่า
+              //   แผงโชว์ต้นบรรทัด → **ไม่ซ่อนแผงข้างแล้ว** เทสต้องเขียวทั้งที่แผงข้างเปิดค้างอยู่
               const PUIrw = await import('./panels/panel-ui.js');
-              const reopenRW = [];
               for (const fp of [...document.querySelectorAll('.k-float-panel .k-panel[data-panel-id]')]) {
                 try { PUIrw.hidePanel(fp.dataset.panelId, true); } catch {}
               }
-              for (const pid of ['ai-chat', 'props']) {
-                if (PUIrw.isPanelOpen(pid)) { try { PUIrw.hidePanel(pid, true); reopenRW.push(pid); } catch {} }
-              }
               await w9(200);
+              {
+                const PLrw = await import('./panels/panel-layout.js');
+                const dRW = document.querySelector('#app-root .k-panel[data-panel-id="docs"]');
+                const dw = dRW ? Math.round(dRW.getBoundingClientRect().width) : 0;
+                const sides = [...document.querySelectorAll('#app-root .k-panel[data-panel-id]')]
+                  .filter((x) => x.offsetWidth && x.dataset.panelId !== 'docs').map((x) => x.dataset.panelId);
+                check('[164-6] ★ แผงเอกสารไม่ถูกแผงข้างบีบต่ำกว่าขั้นต่ำ (ไม่ซ่อนแผงข้างแล้ว)',
+                      dw >= PLrw.MIN_CANVAS_PX - 2 || innerWidth < PLrw.MIN_CANVAS_PX + 300, dw + 'px · แผงข้าง: ' + sides.join(','));
+              }
               vRW.dispatch(vRW.state.tr.setSelection(PMTextSelection.create(vRW.state.doc, fromRW, fromRW + srcRW.length)));
               vRW.focus();
               const dsel = window.getSelection();
@@ -20041,9 +20117,6 @@ export async function runTest(projectPath) {
                 document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
                 await w9(30);
                 check('[RW] Esc ปิดแถบ (และไฮไลต์หายไปด้วย)', !document.querySelector('.k-rewrite-bar') && !document.querySelector('.k-rewrite-hls'));
-                // คืนแผงข้างที่ซ่อนไว้ตอนต้นบล็อก (หลังเทสตำแหน่งแถบ/ไฮไลต์จบแล้ว — ไม่งั้นเลย์เอาต์ขยับกลางคัน)
-                for (const pid of reopenRW) { try { PUIrw.showPanel(pid); } catch {} }
-                if (reopenRW.length) await w9(150);
                 // [alpha.164 · บั๊ก] แถบเป็นของแท็บที่เปิดมัน — สลับ/ปิดแท็บแล้วต้องไม่ลอยค้างทับเอกสารอื่น
                 const reSel = () => { let f = -1; vRW.state.doc.descendants((n, pos) => {
                   if (f < 0 && n.isText && n.text.includes(srcRW)) f = pos + n.text.indexOf(srcRW); });
@@ -23678,8 +23751,29 @@ export async function runTest(projectPath) {
         const kdlg = [...document.querySelectorAll('.k-dialog.k-keys-dlg')].pop();
         check('[79-6] เปิดหน้าปุ่มลัดทั้งหมดได้', !!kdlg);
         const kRows = kdlg.querySelectorAll('.k-keys-row');
+        // [alpha.164 · I1] คำสั่งที่มีสองปุ่มรวมเป็นแถวเดียวแล้ว → เทียบกับจำนวน "คำสั่ง" ไม่ใช่จำนวนแถวในตาราง
+        const ids6 = new Set(rows6.map((r) => r.id));
         check('[79-6] หน้าปุ่มลัดแสดงครบเกือบทั้งตาราง (ไม่ใช่แค่ 26 รายการที่พิมพ์มือ)',
-              kRows.length >= rows6.length, kRows.length + ' / ' + rows6.length);
+              kRows.length >= ids6.size, kRows.length + ' / ' + ids6.size);
+        {
+          const idRows = [...kRows].filter((r) => r.dataset.id);
+          const dupIds = idRows.map((r) => r.dataset.id).filter((x, i, a) => a.indexOf(x) !== i);
+          check('[164-I1] ★ หน้าสรุปปุ่มลัด: หนึ่งคำสั่ง = หนึ่งแถว (ไม่มีแถวชื่อซ้ำ)', dupIds.length === 0, dupIds.join(' · '));
+          const nt = idRows.find((r) => r.dataset.id === 'next-tab');
+          check('[164-I1] ★ คำสั่งสองปุ่มโชว์ทั้งสองปุ่มในแถวเดียว (Ctrl+Tab / Ctrl+PageDown)',
+                !!nt && / \/ /.test(nt.querySelector('.k-keys-key').textContent), nt && nt.textContent);
+          const cols = getComputedStyle(kdlg.querySelector('.k-keys-grid')).gridTemplateColumns.split(' ').length;
+          check('[164-I1] ★ กล่องกว้างตามจอ — หน้าต่างกว้าง ≥ 1400 ได้ 3 คอลัมน์',
+                innerWidth < 1400 || cols >= 3, cols + ' คอลัมน์ · กล่อง ' + Math.round(kdlg.getBoundingClientRect().width) + 'px');
+          // [alpha.164 · I2] Ctrl+Tab สองหน้าที่ — ต้องบอกทั้งสองฝั่ง
+          check('[164-I2] ★ แถวสลับแท็บมีหมายเหตุว่าในบทภาพยนตร์ปุ่มแรกวนชนิด element',
+                !!nt && !!nt.querySelector('.k-keys-note') && nt.querySelector('.k-keys-note').textContent === tt('ui.shortcuts.tabKeyNote'),
+                nt && nt.textContent);
+          const spn = idRows.find((r) => r.dataset.id === 'sp-cycle-next');
+          check('[164-I2] ★ แถววนชนิด element โชว์คีย์ที่ผูกจริง (ไม่ใช่ "Tab" ตายตัว) + หมายเหตุ',
+                !!spn && spn.querySelector('.k-keys-key').textContent === spKeyLabel(spCycleKeys(state.settings).tab) &&
+                !!spn.querySelector('.k-keys-note'), spn && spn.textContent);
+        }
         check('[79-6] ไม่มีบรรทัดไหนโชว์ตัวคีย์ภาษาดิบ',
               ![...kRows].some((r) => /ui\.|shortcuts\./.test(r.textContent)),
               [...kRows].filter((r) => /ui\.|shortcuts\./.test(r.textContent))
@@ -26894,6 +26988,22 @@ export async function runTest(projectPath) {
                   btns.length >= 2 && btns.length >= Math.min(inputs.length, 2),
                   btns.length + ' ปุ่ม / ' + inputs.length + ' ช่อง');
             check('[116-9] ปุ่ม AI มองเห็นได้จริง (ไม่ใช่แค่มีใน DOM)', visible116(btns[0]));
+            // [alpha.164 · I3] ปุ่มไอคอนล้วน: ชื่อสำหรับโปรแกรมอ่านจอ + กดด้วยคีย์บอร์ดได้
+            check('[164-I3] ★ ปุ่มสมองมี aria-label จากไฟล์ภาษา + role/tabindex',
+                  !!btns[0] && btns[0].getAttribute('role') === 'button' && btns[0].tabIndex === 0 &&
+                  /\S/.test(btns[0].getAttribute('aria-label') || '') &&
+                  !/^ui\./.test(btns[0].getAttribute('aria-label')), btns[0] && btns[0].getAttribute('aria-label'));
+            {
+              // คำใบ้โค้ดสั้นต้องอยู่ "ใต้" ช่อง และไม่ล้นขอบการ์ด
+              const hint = wtab && wtab.pane.querySelector('.wiki-row > .wiki-field-hint');
+              const row = hint && hint.parentElement;
+              const inp = row && row.querySelector('.wiki-input');
+              const hr = hint && hint.getBoundingClientRect(), rr = row && row.getBoundingClientRect(),
+                    ir = inp && inp.getBoundingClientRect();
+              check('[164-I3] ★ คำใบ้โค้ดสั้นอยู่ใต้ช่องกรอก ไม่ล้นขอบ',
+                    !!hr && hr.top >= ir.bottom - 1 && hr.right <= rr.right + 1 && hint.scrollWidth <= hint.clientWidth + 1,
+                    hr && JSON.stringify({ hint: [hr.left, hr.top, hr.right].map(Math.round), inpBottom: Math.round(ir.bottom), rowRight: Math.round(rr.right) }));
+            }
             closeTab(wf);
           }
         }
@@ -28204,7 +28314,7 @@ export async function runTest(projectPath) {
         {
           // [alpha.154] เทมเพลตกล่องตั้งค่าย้ายจากไฟล์ภาษามาอยู่ settings-template.js → วัดจากผลที่วาดจริง
           check('[a125-34] ★ มีช่องสวิตช์ในเทมเพลตกล่องตั้งค่า',
-                settingsTemplate(new Array(SETTINGS_TEMPLATE_ARGS).fill('')).includes('st-ct-nohead'));
+                settingsTemplate().includes('st-ct-nohead'));
           const cur = { ...CONTINUED_DEFAULTS, ...(state.settings.spContinued || {}) };
           check('[a125-35] ★ ค่าเริ่มต้นปิดไว้ (พฤติกรรมเดิมไม่เปลี่ยน)', cur.noHeading !== true,
                 JSON.stringify(cur.noHeading));
@@ -28963,7 +29073,7 @@ export async function runTest(projectPath) {
           });
           check('[154-6] ★ index.html ไม่มีข้อความสำรองแล้ว แต่ทุกปุ่มยังได้ tooltip จากไฟล์ภาษา',
                 titled.length > 50 && empty.length === 0, empty.slice(0, 5).map((e) => e.id || e.className).join(','));
-          const tpl154 = settingsTemplate(new Array(SETTINGS_TEMPLATE_ARGS).fill(''));
+          const tpl154 = settingsTemplate();
           check('[154-6] ข้อความในกล่องตั้งค่าไม่มีหมายเหตุนักพัฒนา [alpha.x]', !/\[alpha\.\d/.test(tpl154));
           check('[154-7] ★ โครง HTML ของกล่องตั้งค่าไม่อยู่ในไฟล์ภาษาแล้ว',
                 lookup('ui.dlg.alphaItemLevelUser') === undefined && tpl154.includes('id="st-theme"'));

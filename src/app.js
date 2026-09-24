@@ -271,7 +271,6 @@ import { installOnset, applyOnsetToTab, onsetBeforeCommand, toggleOnsetView, mar
          isProblemScene, loadOnsetIndex, resetOnset, onsetChanged, onsetEditorMenu, onsetMenuItems, onsetViewOf,
          exitOriginal, revisedDoc } from './onset-ui.js';
 import * as TA from './tree-actions.js';
-import { settingsTemplate, SETTINGS_TEMPLATE_ARGS } from './settings-template.js';   // [alpha.154] e2e
 import { bindPanelFocus, setFocusedPanel, focusedPanel, isPanelFocused,
          setPanelOwnsKeys, focusedPanelOwnsKeys } from './panels/panel-focus.js';
 import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS,
@@ -1210,7 +1209,41 @@ export function zoomFitWidth(pane) {
 export function centerPage(pane) {
   const p = pane || (state.active && state.active.pane);
   if (!p || !p.scrollWidth) return;
-  p.scrollLeft = Math.max(0, (p.scrollWidth - p.clientWidth) / 2);
+  const maxX = Math.max(0, p.scrollWidth - p.clientWidth);
+  const mid = maxX / 2;
+  const col = maxX > 0 ? textColumnX(p) : null;
+  p.scrollLeft = col ? pageScrollTarget(maxX, p.clientWidth, col.l, col.r) : mid;
+}
+/**
+ * [alpha.164 · งาน 6] ตำแหน่งเลื่อนแนวนอนเมื่อแผงเอกสาร "แคบกว่ากระดาษ"
+ * จัดกระดาษกึ่งกลาง = ล้นทั้งสองข้างเท่ากัน · แต่ถ้าแผงแคบจนการจัดกลางตัด **คอลัมน์ข้อความ**
+ * (ขอบซ้ายกระดาษกว้างกว่าขอบขวา → ต้นบรรทัดหลุดซ้ายก่อน) ผู้ใช้เห็นแต่กลางประโยค
+ * กติกา: จัดกลางกระดาษได้ถ้ายังเห็นข้อความครบ · ไม่งั้นจัดกลาง "คอลัมน์ข้อความ" ·
+ * คอลัมน์กว้างกว่าแผง = โชว์ต้นบรรทัด (อ่านจากซ้ายไปขวาแล้วเลื่อนต่อ)
+ * @param {number} maxX  ระยะเลื่อนได้สูงสุด · @param {number} cw ความกว้างที่เห็น
+ * @param {number} l @param {number} r  ขอบคอลัมน์ข้อความในพิกัดเนื้อหา (scrollLeft = 0)
+ */
+export function pageScrollTarget(maxX, cw, l, r) {
+  const clamp = (x) => Math.max(0, Math.min(maxX, x));
+  const mid = clamp(maxX / 2);
+  if (!(r > l)) return mid;
+  if (l >= mid - 1 && r <= mid + cw + 1) return mid;           // จัดกลางกระดาษแล้วเห็นข้อความครบ
+  const tw = r - l;
+  if (tw <= cw) return clamp(l - (cw - tw) / 2);                // จัดกลางคอลัมน์ข้อความ
+  return clamp(l - Math.min(24, (cw - 0) * 0.05));              // ข้อความกว้างกว่าแผง → ต้นบรรทัด
+}
+/** ขอบคอลัมน์ข้อความ (ขอบกระดาษ + ระยะขอบซ้าย/ขวา) ในพิกัดเนื้อหาของ pane — null = หาไม่ได้ */
+function textColumnX(p) {
+  const pm = p.querySelector(':scope > .workspace > .ProseMirror');
+  if (!pm) return null;
+  const pr = pm.getBoundingClientRect(), hr = p.getBoundingClientRect();
+  const cs = getComputedStyle(pm);
+  const cssW = parseFloat(cs.width) || 0;
+  if (!(pr.width > 0) || !(cssW > 0)) return null;
+  // ค่าที่คำนวณได้กับกรอบบนจออยู่คนละหน่วยเมื่อมี CSS zoom → แปลงด้วยอัตราส่วนความกว้างของกล่องเดียวกัน
+  const k = pr.width / cssW;
+  const x0 = pr.left - hr.left - p.clientLeft + p.scrollLeft;
+  return { l: x0 + (parseFloat(cs.paddingLeft) || 0) * k, r: x0 + pr.width - (parseFloat(cs.paddingRight) || 0) * k };
 }
 /**
  * [alpha.66r5] จัดหน้ากระดาษกลับกึ่งกลางหลังพื้นที่เปลี่ยนขนาด (เข้า/ออกโหมดโฟกัส · โหมดอ่าน)
@@ -14830,6 +14863,28 @@ export function allShortcutRows() {
   });
 }
 
+/**
+ * [alpha.164 · I1] แถวของหน้าสรุปปุ่มลัด — **หนึ่งคำสั่ง = หนึ่งแถว**
+ * คำสั่งที่ตั้งใจมีสองปุ่ม (`A / B` ใน icons/commands.csv) เคยขึ้นสองแถวชื่อเดียวกัน
+ * ตอนนี้รวมเป็น "Ctrl+Tab / Ctrl+PageDown" · ลำดับยึดแถวแรกของคำสั่งนั้นในตาราง
+ */
+export function shortcutSheetRows(rows) {
+  const out = new Map();
+  for (const r of (rows || allShortcutRows())) {
+    const cur = out.get(r.id);
+    if (!cur) { out.set(r.id, { ...r, accels: [r.accel] }); continue; }
+    if (!cur.accels.includes(r.accel)) cur.accels.push(r.accel);
+  }
+  return [...out.values()].map((r) => ({ ...r, accel: r.accels.join(' / ') }));
+}
+
+/** [alpha.164 · I2] ปุ่มนี้ (ของตัววนชนิด element) ตรงกับคีย์สลับแท็บตัวใดตัวหนึ่งไหม */
+function sharesTabKey(b) {
+  if (!b || !b.code) return false;
+  return effectiveShortcuts().some((s) => (s[3] === 'next-tab' || s[3] === 'prev-tab') &&
+    s[0] === b.code && !!s[1] === !!b.ctrl && !!s[2] === !!b.shift && needsAlt(s[1]) === !!b.alt);
+}
+
 /** คีย์ลัดที่ชนกัน (ปุ่มเดียวกันเป๊ะ) — คืนแผนที่ accel → รายการ id ที่ชน */
 export function shortcutClashes(rows) {
   const m = new Map();
@@ -16929,7 +16984,7 @@ function showShortcutsDialog() {
   // ของเดิมพิมพ์ id ไว้เอง 5 หมวด รวม 26 รายการ ขณะที่ตารางจริงมีเกือบ 80 —
   // คีย์ลัดที่เพิ่มทีหลังจึงไม่เคยโผล่ในหน้านี้เลย (และไม่มีใครรู้ตัว)
   // ตอนนี้กวาดจาก effectiveShortcuts() → เห็นค่าที่ผู้ใช้ตั้งเองด้วย และไม่มีทางตกหล่น
-  const rows = allShortcutRows();
+  const rows = shortcutSheetRows();
   const byCat = new Map(SHORTCUT_CATS.map((c) => [c.key, []]));
   for (const r of rows) (byCat.get(shortcutCat(r.id)) || byCat.get('other')).push(r);
   // คีย์ลัดที่ไม่ได้อยู่ในตาราง (ดักแยกในโค้ด) — ต้องขึ้นหน้านี้ด้วย ไม่งั้นผู้ใช้ไม่มีทางรู้
@@ -16939,11 +16994,24 @@ function showShortcutsDialog() {
     { label: tt('ui.status.zoomReset'), accel: formatShortcut('Digit0', true, true) },
     { label: tt('ui.shortcuts.zoomWheel'), accel: 'Ctrl + ' + tt('ui.shortcuts.wheel') },
   );
+  // [alpha.164 · I2] ปุ่มวนชนิด element อ่านจากค่าที่ผูกจริง (`spCycleKeys`) — เดิมพิมพ์ "Tab" ตายตัว
+  // ทั้งที่ค่าเริ่มต้นคือ Ctrl+Tab ซึ่งเป็นคีย์เดียวกับสลับแท็บ → บอกทั้งสองฝั่งว่าคีย์นี้มีสองหน้าที่
+  const spK = spCycleKeys(state.settings);
+  const spOn = state.settings?.spCycleEnabled !== false;
+  if (spOn) byCat.get('script').push(
+    { id: 'sp-cycle-next', label: tt('ui.shortcuts.spNextElem'), accel: spKeyLabel(spK.tab),
+      note: sharesTabKey(spK.tab) ? tt('ui.shortcuts.spCycleNote') : '' },
+    { id: 'sp-cycle-prev', label: tt('ui.shortcuts.spPrevElem'), accel: spKeyLabel(spK.shiftTab),
+      note: sharesTabKey(spK.shiftTab) ? tt('ui.shortcuts.spCycleNote') : '' },
+  );
   byCat.get('script').push(
-    { label: tt('ui.shortcuts.spNextElem'), accel: 'Tab' },
-    { label: tt('ui.shortcuts.spPrevElem'), accel: 'Shift+Tab' },
     { label: tt('ui.shortcuts.spSwitchElem'), accel: 'Ctrl+↑ / Ctrl+↓' },
   );
+  if (spOn) for (const r of byCat.get('file') || []) {
+    if ((r.id === 'next-tab' && sharesTabKey(spK.tab)) || (r.id === 'prev-tab' && sharesTabKey(spK.shiftTab))) {
+      r.note = tt('ui.shortcuts.tabKeyNote');
+    }
+  }
 
   const grid = el('div', 'k-keys-grid');
   for (const c of SHORTCUT_CATS) {
@@ -16953,7 +17021,10 @@ function showShortcutsDialog() {
     sec.append(el('div', 'k-keys-cat', tt(c.labelKey)));
     for (const r of list) {
       const row = el('div', 'k-keys-row');
-      row.append(el('span', 'k-keys-name', r.label));
+      if (r.id) row.dataset.id = r.id;
+      const name = el('span', 'k-keys-name', r.label);
+      if (r.note) { name.append(el('span', 'k-keys-note', r.note)); row.title = r.note; }
+      row.append(name);
       row.append(el('span', 'k-keys-key', r.accel));
       sec.append(row);
     }

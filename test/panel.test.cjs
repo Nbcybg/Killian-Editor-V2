@@ -645,8 +645,13 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
   check('[66r5] nodeById หาโหนดเจอทั้ง panel และ dock',
         PL.nodeById(tree5, 'tree').id === 'tree' && PL.nodeById(tree5, inner.id).type === 'dock');
   check('[66r5] nodeById ไม่มี → null', PL.nodeById(tree5, 'ไม่มีจริง') === null);
-  check('[66r5] มีค่าขั้นต่ำของพื้นที่ทำงาน (สเปกผู้ใช้ 200–300)',
-        PL.MIN_CANVAS_PX >= 200 && PL.MIN_CANVAS_PX <= 300, String(PL.MIN_CANVAS_PX));
+  // [alpha.164 · งาน 6] ผู้ใช้สั่งให้พื้นที่เขียนมีขั้นต่ำ ~420 (เดิมสเปก 200–300 บีบจนข้อความหลุดขอบ)
+  check('[66r5] มีค่าขั้นต่ำของพื้นที่ทำงาน (สเปกผู้ใช้ ~420 · alpha.164)',
+        PL.MIN_CANVAS_PX >= 400 && PL.MIN_CANVAS_PX <= 460, String(PL.MIN_CANVAS_PX));
+  // CSS ตาข่ายต้องใช้ค่าเดียวกับตัวลาก ไม่งั้นลากได้แคบกว่าที่ CSS ยอม (หรือกลับกัน)
+  const css66 = require('fs').readFileSync(require('path').join(__dirname, '..', 'renderer/style.css'), 'utf8');
+  const cssMin = (css66.match(/\.k-dock\[data-dir="row"\] > \.k-flex-child \{ min-width:(\d+)px/) || [])[1];
+  check('★ [164-6] CSS min-width ของพื้นที่ทำงานเท่ากับ MIN_CANVAS_PX', +cssMin === PL.MIN_CANVAS_PX, cssMin + ' / ' + PL.MIN_CANVAS_PX);
   check('[66r5] ขั้นต่ำของแผงข้างเล็กกว่าขั้นต่ำของพื้นที่ทำงาน', PL.MIN_PANEL_PX < PL.MIN_CANVAS_PX);
 }
 

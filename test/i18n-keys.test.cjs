@@ -260,6 +260,7 @@ check('คีย์ทุกตัวอยู่ในรูป ui.<module>.<na
 const HTML_IN_TEXT_OK = new Set([
   'ui.aiCharacter.sceneIdAspectSeverityCritical',   // ตัวอย่าง JSON ในคำสั่ง AI: "sceneId":"<id ฉาก>"
   'ui.aiPlot.descriptionExplainProblemThai',        // ตัวอย่าง JSON ในคำสั่ง AI: "<id ของฉาก>"
+  'ui.aiPlot.typeSeverityCriticalMajor',            // [alpha.164 · L-1] ตัวอย่าง JSON: "<type from the list above>" (ฉบับอังกฤษ)
   'ui.starter.pDescRule',                           // บอก AI ว่าให้ตอบด้วยแท็ก <p> <b> <i> <br> เท่านั้น
 ]);
 const HTML_TAG = /<\/?[a-zA-Z][a-zA-Z0-9-]*(\s[^<>]*)?\/?>/;

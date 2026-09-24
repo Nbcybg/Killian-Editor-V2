@@ -947,7 +947,7 @@ ui.aiProvider.foundModel,พบ {0} โมเดล
 ui.aiProvider.historyTokens,งบประวัติแชท (token)
 ui.aiProvider.historyTokensHint,"0 = อัตโนมัติ (60% ของขีดจำกัดโมเดล · ไม่รู้ขีดจำกัด = 32,000)"
 ui.aiProvider.keepSplitFolderProject,เก็บแยกที่ {0} ในโฟลเดอร์โปรเจกต์ — ไม่อยู่ใน project.khn.json ที่แชร์กัน
-ui.aiProvider.lineNewExampleCom,คั่นด้วยคอมมาหรือขึ้นบรรทัดใหม่ · รองรับ *.example.com · เว้นว่าง = ไม่จำกัด
+ui.aiProvider.lineNewExampleCom,คั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่ · รองรับ *.example.com · เว้นว่าง = ไม่จำกัด
 ui.aiProvider.nameCredential,ชื่อ Credential
 ui.aiProvider.nameProvider,ชื่อผู้ให้บริการ
 ui.aiProvider.nameSeeDropdownEg,"ชื่อที่จะเห็นใน dropdown เช่น ""OpenAI ที่ทำงาน"" หรือ ""Ollama เครื่องตัวเอง"""
@@ -2664,7 +2664,7 @@ ui.common.story,เรื่อง
 ui.common.summary,สรุป
 ui.common.synopsis,เรื่องย่อ
 ui.common.tag,แท็ก
-ui.common.tag2,"แท็ก (คั่น , )"
+ui.common.tag2,แท็ก (คั่นด้วยจุลภาค)
 ui.common.tag3,แท็ก: 
 ui.common.taskCancelled,ยกเลิกแล้ว — {0}
 ui.common.text,ข้อความ
@@ -3573,7 +3573,7 @@ ui.galleryMoodboard.top,ขึ้นบนสุด
 ui.galleryUsageIndex.msg, +อีก {0}
 ui.galleryUsageIndex.useDone,ใช้แล้ว
 ui.histOry.addImage,เพิ่มรูป
-ui.histOry.adjustCountTimesKeep,· ปรับจำนวนครั้งที่เก็บได้ที่ ตั้งค่า → ทั่วไป
+ui.histOry.adjustCountTimesKeep,· ปรับจำนวนครั้งที่เก็บได้ที่ ตั้งค่า → ข้อมูลผลงาน
 ui.histOry.beforePageAllKeep,ก่อนหน้าทั้งหมดที่เก็บไว้
 ui.histOry.change,เปลี่ยนแปลง
 ui.histOry.clearHistory,ล้างประวัติ
@@ -3630,6 +3630,11 @@ ui.home.openProject,เปิดโปรเจกต์
 ui.home.openProjectBeforeExport,เปิดโปรเจกต์ก่อน จึงจะส่งออกเป็น .zip ได้
 ui.home.pageFirst,หน้าแรก
 ui.home.pathCopied,คัดลอกที่อยู่แล้ว
+ui.home.quickChangelog,มีอะไรใหม่
+ui.home.quickScrivener,นำเข้าจาก Scrivener
+ui.home.quickShortcuts,ปุ่มลัดทั้งหมด
+ui.home.quickTemplate,สร้างจากเทมเพลต
+ui.home.quickTitle,เริ่มต้นอย่างรวดเร็ว
 ui.home.quitApp,ออกจากโปรแกรม
 ui.home.quitAppHint,ปิด Killian 2 (ถามก่อนถ้ามีงานที่ยังไม่บันทึก)
 ui.home.revealInOS,เปิดโฟลเดอร์นี้ในตัวจัดการไฟล์
@@ -4896,7 +4901,7 @@ ui.plannerProps.star,ดาว
 ui.plannerProps.sticky,โพสต์อิต
 ui.plannerProps.summaryCollapse,สรุปย่อ
 ui.plannerProps.text,ข้อความ
-ui.plannerProps.text2,"คั่นด้วย ,"
+ui.plannerProps.text2,คั่นด้วยจุลภาค
 ui.plannerProps.todo,รายการ
 ui.plannerProps.todoAdd,เพิ่มข้อ
 ui.plannerProps.todoDel,ลบข้อนี้
@@ -5763,6 +5768,7 @@ ui.shortcuts.saveAs,บันทึกเป็น…
 ui.shortcuts.selectScene,เลือกทั้งฉาก
 ui.shortcuts.settings,ตั้งค่าโปรเจกต์
 ui.shortcuts.spActBreak,บทหนัง: ตอน
+ui.shortcuts.spCycleNote,เฉพาะตอนพิมพ์ในบทภาพยนตร์ — ที่อื่นคีย์เดียวกันนี้ใช้สลับแท็บ
 ui.shortcuts.spDialogue,บทหนัง: บทพูด
 ui.shortcuts.splitView,แยกหน้าจอ
 ui.shortcuts.spNextElem,บทหนัง: element ถัดไป
@@ -5776,6 +5782,7 @@ ui.shortcuts.spTransition,บทหนัง: ทรานซิชัน
 ui.shortcuts.strikethrough,ขีดฆ่า
 ui.shortcuts.subscript,ตัวห้อย
 ui.shortcuts.superscript,ตัวยก
+ui.shortcuts.tabKeyNote,ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกใช้วนชนิด element แทน — ใช้ปุ่มที่สองสลับแท็บ
 ui.shortcuts.textCaseCycle,วนรูปตัวพิมพ์
 ui.shortcuts.thesaurus,คลังคำพ้อง/คำตรงข้าม
 ui.shortcuts.toggleFormat,สลับโหมดเอกสาร
@@ -5998,7 +6005,7 @@ ui.starter.draftProgress,ร่าง — กรอกแล้ว {0}/{1} ข�
 ui.starter.drawFail,วาดหน้าไม่สำเร็จ — ดูรายละเอียดใน บันทึกการทำงาน
 ui.starter.editStarter,แก้ไขข้อมูลเรื่อง
 ui.starter.fAliases,ชื่อรอง
-ui.starter.fAliasesPlaceholder,คั่นด้วยเครื่องหมายจุลภาค
+ui.starter.fAliasesPlaceholder,คั่นด้วยจุลภาค
 ui.starter.fAuthor,ผู้แต่ง
 ui.starter.fAuthorPlaceholder,ชื่อคนเขียน หรือนามปากกา
 ui.starter.fBanner,แบนเนอร์ (แนวนอน)
@@ -6553,7 +6560,7 @@ ui.tip.new-entity:locations,สร้างหน้าสถานที่ใ�
 ui.tip.new-entity:lore,สร้างหน้าตำนานหรือความรู้ของโลกในเรื่องใน Wiki เช่น ประวัติศาสตร์ ศาสนา หรือกฎของเวทมนตร์
 ui.tip.new-from-template,สร้างโปรเจกต์ใหม่จากเทมเพลตที่วางโครงเรื่องและหมวด Wiki ไว้ให้แล้ว
 ui.tip.new-project,สร้างโปรเจกต์เปล่าในโฟลเดอร์ที่เลือก ไฟล์งานทั้งหมดเป็น .md และ .json ที่เปิดแก้นอกโปรแกรมได้
-ui.tip.next-tab,สลับไปแท็บถัดไปตามลำดับบนแถบแท็บ (ท้ายแถบวนกลับแท็บแรก)
+ui.tip.next-tab,สลับไปแท็บถัดไปตามลำดับบนแถบแท็บ (ท้ายแถบวนกลับแท็บแรก) · ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกของคำสั่งนี้ใช้วนชนิด element แทน (ตั้งได้ที่ ตั้งค่า → ปุ่มบทหนัง)
 ui.tip.onset-toggle,"ฉากที่ตั้งเป็น ""ฉากมีปัญหา"": สลับดูฉบับเดิม (อ่านอย่างเดียว) กับฉบับแก้ไข — แถบสี + ! หน้าบรรทัดบอกจุดที่ต่าง · พิมพ์/ส่งออกใช้ฉบับแก้ไขเสมอ"
 ui.tip.open-project,เปิดโฟลเดอร์โปรเจกต์ที่มีอยู่ (โฟลเดอร์ที่มีไฟล์ project.khn.json)
 ui.tip.open-project-path,เปิดโปรเจกต์จากรายการโปรเจกต์ล่าสุด
@@ -6615,7 +6622,7 @@ ui.tip.plNew,เริ่มกระดานเปล่าใบใหม่ 
 ui.tip.plOpen,สลับไปกระดานใบอื่นในโปรเจกต์นี้ ถ้ากระดานปัจจุบันยังไม่บันทึกจะถามก่อน
 ui.tip.plPng,ส่งออกกระดานเป็นรูป PNG ความละเอียดสองเท่า ครอบเฉพาะบริเวณที่มีของจริง
 ui.tip.plugin:k2test:hello,คำสั่งตัวอย่างของปลั๊กอินทดสอบ ใช้ยืนยันว่าระบบปลั๊กอินลงทะเบียนคำสั่งได้
-ui.tip.prev-tab,สลับไปแท็บก่อนหน้าตามลำดับบนแถบแท็บ (แท็บแรกวนไปแท็บท้าย)
+ui.tip.prev-tab,สลับไปแท็บก่อนหน้าตามลำดับบนแถบแท็บ (แท็บแรกวนไปแท็บท้าย) · ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกของคำสั่งนี้ใช้วนชนิด element แทน (ตั้งได้ที่ ตั้งค่า → ปุ่มบทหนัง)
 ui.tip.print,พิมพ์เอกสารที่เปิดอยู่ตามรูปแบบหน้ากระดาษที่ตั้งไว้ ถ้าเปิดการตรวจก่อนพิมพ์ไว้จะตรวจบทก่อน
 ui.tip.project-doctor,ตรวจว่าทะเบียนฉากตรงกับไฟล์จริง หาไฟล์กำพร้า ฉากที่ใช้ไฟล์ซ้ำกัน โฟลเดอร์ผี และหัวไฟล์ที่พัง แล้วซ่อมให้
 ui.tip.project-replace,แทนที่คำในเนื้อฉากและโน้ตทุกไฟล์ของโปรเจกต์ในครั้งเดียว ดูตัวอย่างก่อน และข้ามฉากที่ล็อกไว้
@@ -6721,7 +6728,7 @@ ui.tip.toggle-panel:docs,พื้นที่เขียนหลัก — �
 ui.tip.toggle-panel:floorplan,"ฉากนี้เกิดที่ไหน — แผนที่ + หมุด ""คุณอยู่ที่นี่"" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่"
 ui.tip.toggle-panel:gallery,รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki
 ui.tip.toggle-panel:gallery-board,ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์
-ui.tip.toggle-panel:history,ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ทั่วไป (ค่าเริ่มต้น 32)
+ui.tip.toggle-panel:history,ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ข้อมูลผลงาน (ค่าเริ่มต้น 32)
 ui.tip.toggle-panel:kanban,กระดานฉากเรียงตามสถานะ — ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะฉากนั้นทันที
 ui.tip.toggle-panel:log,บันทึกการทำงานของโปรแกรม — ใช้ตอนหาสาเหตุเมื่อมีอะไรไม่เป็นอย่างที่คาด
 ui.tip.toggle-panel:maps,แผนที่ของโลกในเรื่อง — ปักหมุดบนรูป เชื่อมหมุดเข้ากับฉาก/สถานที่ · หมุดประตูพาลงไปแผนที่ย่อยได้
@@ -6888,7 +6895,7 @@ ui.treeAct.fFlag,ติดดาว
 ui.treeAct.fLocked,ล็อก (แก้ไม่ได้)
 ui.treeAct.fNote,โน้ต
 ui.treeAct.fStatus,สถานะ
-ui.treeAct.fTags,"แท็ก (คั่นด้วย ,)"
+ui.treeAct.fTags,แท็ก (คั่นด้วยจุลภาค)
 ui.treeAct.fTitle,ชื่อ
 ui.treeAct.lockedBook,เล่มนี้ถูกล็อกอยู่ — ปลดล็อกที่เล่มก่อน
 ui.treeAct.lockedChapter,บทนี้ถูกล็อกอยู่ — ปลดล็อกที่บทก่อน
@@ -7111,6 +7118,7 @@ ui.wiki.addRelation,เพิ่มความสัมพันธ์
 ui.wiki.aiCtxDesc,คำบรรยาย
 ui.wiki.aiEmpty,AI ตอบกลับมาว่าง — ไม่ได้แก้อะไร
 ui.wiki.aiFailed,เรียก AI ไม่สำเร็จ
+ui.wiki.aiFillLabel,ให้ AI เติมช่อง {0}
 ui.wiki.aiFilled,เติมช่อง {0} แล้ว
 ui.wiki.aiFillTip,ให้ AI เติมช่องนี้ให้ (คลิกเดียว)
 ui.wiki.aiKept,เก็บข้อความเดิมไว้
@@ -7167,7 +7175,7 @@ ui.wiki.msg,{0} เป็นอะไรกับ {1}
 ui.wiki.nameFieldDataNew,ชื่อช่องข้อมูลใหม่
 ui.wiki.nameHeadingNew,ชื่อหัวข้อใหม่
 ui.wiki.nameNew,ชื่อใหม่
-ui.wiki.nameOther,"ชื่ออื่น (คั่นด้วย , )"
+ui.wiki.nameOther,ชื่ออื่น (คั่นด้วยจุลภาค)
 ui.wiki.newCatF,สร้างหมวด “{0}” แล้ว
 ui.wiki.newCatNew,สร้างหมวดใหม่
 ui.wiki.notFoundPageWiki,ยังไม่พบหน้า Wiki ของ 

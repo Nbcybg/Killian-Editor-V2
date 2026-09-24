@@ -23,6 +23,9 @@ import { fabric } from 'fabric';
 import { isPanelFocused } from '../panels/panel-focus.js';
 import { fmtDate } from '../locale.js';
 
+/** [alpha.164 · งาน 7] แผงเตี้ยกว่านี้ (แต่ยังไม่ถึงขั้น compact) = แถบกรองไปต่อท้ายแถวแถบคำสั่ง */
+export const PLANNER_INLINE_FILTER_H = 460;
+
 const COLORS = {
   scene: '#3f3e3a', chapter: '#5f7a9f', entity: '#7a6f9f', note: '#5f8a6f',
   sticky: '#f2c14e', text: 'transparent', shape: '#4a6fa5', frame: '#d97757', comment: '#e8e3d3',
@@ -1616,12 +1619,31 @@ export class PlannerBoard {
     } catch (e) { setStatusError(failText(tt('ui.planner.exportPNGCant'), e)); return false; }
   }
 
+  /** [alpha.164 · งาน 7] แถบกรอง: แถวของตัวเอง (ปกติ) ↔ ต่อท้ายแถวแถบคำสั่ง (แผงเตี้ย) */
+  _placeFilterBar(inline) {
+    const fb = this.filterBar;
+    const strip = this.toolbar && this.toolbar.querySelector('.planner-toolbar-strip');
+    if (!fb || !strip) return;
+    const isIn = fb.parentElement === strip;
+    if (inline && !isIn) {
+      strip.appendChild(fb);
+      fb.classList.add('planner-filter-inline');
+    } else if (!inline && isIn) {
+      fb.classList.remove('planner-filter-inline');
+      this.toolbar.after(fb);
+    } else return;
+    this.toolbar.syncArrows && this.toolbar.syncArrows();
+  }
+
   _fit() {
     // แผงเตี้ยมาก ๆ ให้ยุบแถบรอง ๆ ทิ้งก่อน เหลือแถบเครื่องมือกับกระดาน (บั๊ก 65r5 "ย่อไม่สุด")
     const paneH = this.pane.clientHeight;
     if (paneH) {
       this.pane.classList.toggle('planner-compact', paneH < 190);
       this.pane.classList.toggle('planner-mini', paneH < 120);
+      // [alpha.164 · งาน 7] แผงเตี้ยระดับกลาง: แถบคำสั่ง + แถบกรอง + แถบรูปแบบลอย กินหัวกระดาน ~120px
+      // → ย้ายแถบกรองเข้าไปต่อท้ายแถวแถบคำสั่ง (แถวนั้นเลื่อนแนวนอนได้อยู่แล้ว) — กรองยังใช้ได้ ไม่หายไปไหน
+      this._placeFilterBar(paneH >= 190 && paneH < PLANNER_INLINE_FILTER_H);
     }
     const r = this.stage.getBoundingClientRect();
     if (!r.width || !r.height) {

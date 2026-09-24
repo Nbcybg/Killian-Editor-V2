@@ -13,6 +13,7 @@ import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
 import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, setStatusError, state, i18n, loadLanguage, scanLanguages, languageCatalog,
          DEFAULT_SETTINGS, DEFAULT_GOALS, GLOBAL_DEFAULTS, THEMES, THEME_LABEL_KEYS,
          fallbackLangName, langFileName, csvToTable, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
+         SHORTCUT_CATS, shortcutCat,
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
          PAPER_SIZES, MARGIN_DEFAULTS, SP_ELEMENT_KEYS, SP_ELEMENT_CONFIG, SP_ELEMENT_STYLES,
          PAGE_BREAK_RULES, SP_STRINGS, mergeSpFormat, linesPerPage, formatLines,
@@ -365,7 +366,7 @@ export function settingsDialog(openTab, opts = {}) {
 
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-settings');
-  box.innerHTML = settingsTemplate([t('settings.title'), t('settings.general'), t('settings.writing'), t('settings.automation'), t('settings.language'), t('settings.shortcuts'), t('settings.projectName'), t('settings.author'), t('settings.autoSaveMinutes'), t('settings.autoSaveHint'), t('settings.autoBackup'), t('settings.maxBackups'), t('settings.maxBackupsHint'), t('settings.dailyGoal'), t('settings.projectGoal'), t('settings.fontFamily'), t('settings.fontFamilyHint'), t('settings.spFontFamily'), t('settings.spFontFamilyHint'), t('settings.lineNumbers'), t('settings.lineNumbersHint'), t('settings.spellCheck'), t('settings.spellCheckHint'), t('settings.spellCheckDict'), t('settings.spellCheckDictHint'), t('settings.autoMention'), t('settings.autoMentionHint'), t('settings.recycleDays'), t('settings.recycleDaysHint'), t('settings.focusDim'), t('settings.focusDimHint'), t('ui.settings.uiScale'), t('ui.settings.uiScaleHint'), iconHtml('cloud-lightning', 14), t('settings.autoSync'), t('settings.autoSyncHint'), t('settings.languageSelect'), t('ui.dlg.langReadNameFile'), t('ui.dlg.exportFileCSV'), t('ui.dlg.openFolderLang'), t('ui.dlg.loadFileLangNew2'), t('settings.shortcutsHint'), t('dialogs.cancel'), t('dialogs.save')]);
+  box.innerHTML = settingsTemplate();
   initIcons(box);   // [alpha.147] ไอคอนหัวกลุ่มเมนูตั้งค่าเป็น data-icon ในเทมเพลต (ไม่ใช่อีโมจิในข้อความแล้ว)
   ov.appendChild(box); document.body.appendChild(ov);
 
@@ -1216,23 +1217,46 @@ export function settingsDialog(openTab, opts = {}) {
   // ---- ปุ่มลัด: ทำงานบนสำเนา (workKeys) จนกดบันทึก ----
   const workKeys = JSON.parse(JSON.stringify(s.shortcuts || {}));
   const keyOf = (id, def) => workKeys[id] || def;         // def = {code,ctrl,shift} จากค่าเริ่มต้น
+  let seenKeys = {};
   function renderShortcuts() {
     const host = q('#st-keys'); host.innerHTML = '';
     // ตรวจซ้ำ: นับ accel ที่ชนกัน
-    const seen = {};
-    const rows = SHORTCUTS.filter((sc) => SHORTCUT_LABELS[shortcutId(sc)]).map((sc) => {
+    const seen = seenKeys = {};
+    // [alpha.164 · I1] คำสั่งที่ตั้งใจมีสองปุ่ม (Ctrl+Tab / Ctrl+PageDown) = **แถวเดียว** —
+    // เดิมขึ้นสองแถวชื่อซ้ำกัน และแก้แถวไหนก็ทับทั้งคู่ (ค่าที่ตั้งเองผูกกับ id ไม่ใช่กับแถว)
+    const byId = new Map();
+    for (const sc of SHORTCUTS) {
       const id = shortcutId(sc);
+      if (!SHORTCUT_LABELS[id]) continue;
       const def = { code: sc[0], ctrl: sc[1], shift: sc[2] };
-      const cur = keyOf(id, def);
-      const key = `${cur.code}|${cur.ctrl}|${cur.shift}`;
-      seen[key] = (seen[key] || 0) + 1;
-      return { id, def, cur, key };
-    });
+      if (byId.has(id)) { if (!workKeys[id]) byId.get(id).defs.push(def); continue; }
+      byId.set(id, { id, defs: [def], cur: keyOf(id, def) });
+    }
+    const rows = [...byId.values()];
     for (const r of rows) {
+      const keys = workKeys[r.id] ? [r.cur] : r.defs;
+      r.keys = keys.map((k) => `${k.code}|${k.ctrl}|${k.shift}`);
+      for (const k of r.keys) seen[k] = (seen[k] || 0) + 1;
+    }
+    // [alpha.164 · I1] จัดหมวดตาม SHORTCUT_CATS (ตัวเดียวกับหน้าสรุปปุ่มลัด) — เดิมเป็นรายการยาวก้อนเดียวร้อยกว่าแถว
+    const byCat = new Map(SHORTCUT_CATS.map((c) => [c.key, []]));
+    for (const r of rows) (byCat.get(shortcutCat(r.id)) || byCat.get('other')).push(r);
+    for (const c of SHORTCUT_CATS) {
+      const list = byCat.get(c.key) || [];
+      if (!list.length) continue;
+      host.append(el('div', 'k-key-cat', t(c.labelKey)));
+      for (const r of list) renderKeyRow(r);
+    }
+  }
+  function renderKeyRow(r) {
+    const host = q('#st-keys');
+    {
       const row = el('div', 'k-key-row');
-      row.append(el('span', 'k-key-label', t(SHORTCUT_LABELS[r.id], r.id)));
-      const accel = el('span', 'k-key-accel' + (seen[r.key] > 1 ? ' dup' : ''),
-        accelText(r.cur.code, r.cur.ctrl, r.cur.shift));
+      row.dataset.id = r.id;
+      row.append(el('span', 'k-key-label', t(SHORTCUT_LABELS[r.id])));
+      const shown = workKeys[r.id] ? [r.cur] : r.defs;
+      const accel = el('span', 'k-key-accel' + (r.keys.some((k) => seenKeys[k] > 1) ? ' dup' : ''),
+        shown.map((k) => accelText(k.code, k.ctrl, k.shift)).join(' / '));
       row.append(accel);
       const edit = el('button', 'k-key-btn', t('dialogs.edit'));
       const reset = el('button', 'k-key-btn', gi('rotate-left'));

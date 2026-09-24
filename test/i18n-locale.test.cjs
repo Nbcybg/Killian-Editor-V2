@@ -155,7 +155,11 @@ check('★ app.js: _thCmp ตามภาษาที่เลือก', /const
 // ไฟล์อังกฤษห้ามถอย
 {
   const r = require('../tools/i18n-en-report.cjs').report();
-  check('★★ แถวที่ยังเป็นไทยใน k2_en.csv ไม่เพิ่ม (≤ 3,879 · คีย์ใหม่ต้องมีคำแปลอังกฤษจริง)', r.thai <= 3879, r.thai);
+  // [alpha.164 · L-1] แปลครบแล้ว — เหลือ 3 แถวที่ "ตั้งใจเป็นไทย" (ตัวอย่างฟอนต์ไทย 2 · ตัวแปรหัวกระดาษชื่อไทย 1)
+  const INTENTIONAL_THAI = ['ui.dlg.fontSampleText', 'ui.dlg.iNTNightSceneOne', 'ui.pdf.printNameEgPage'];
+  check('★★ แถวที่ยังเป็นไทยใน k2_en.csv ไม่เพิ่ม (≤ 3 · คีย์ใหม่ต้องมีคำแปลอังกฤษจริง)', r.thai <= 3, r.thai);
+  check('★ [164-L1] แถวไทยที่เหลือใน k2_en.csv เป็นของที่ตั้งใจเท่านั้น',
+    r.thaiKeys.every((k) => INTENTIONAL_THAI.includes(k)), r.thaiKeys.filter((k) => !INTENTIONAL_THAI.includes(k)).join(' · '));
   check('รายงานแยก namespace ได้ (ใช้วางแผนรอบแปล)', r.byNs.length > 50 && r.byNs.every((x) => x.thai <= x.total));
 }
 
