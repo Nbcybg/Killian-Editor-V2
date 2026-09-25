@@ -17,8 +17,17 @@ description: Build, maintain, extend, and debug Killian 2 (คิเลียน
 **เช็คก่อนว่ากำลังทำงานที่ไหน — สองโหมดนี้คนละเรื่องกัน**
 
 ### A) เครื่องผู้ใช้จริง (Claude Code บน Windows) ← โหมดที่ใช้บ่อยที่สุดตอนนี้
-รีโป: `C:\Users\noobc\Desktop\Killian2` · git remote `github.com/JabCrossHook/Killian_Editor` (branch `master`)
+รีโป: `C:\Users\noobc\Desktop\Killian2` · git remote **`github.com/Nbcybg/Killian-Editor-V2`** ·
+กิ่งทำงาน `alpha-134-wysiwyg` · **กิ่ง `main` = ที่มาของการอัปเดต** (ตัวตรวจอัปเดตอ่าน `package.json` บน HEAD — ไม่มี GitHub Release)
 มี `node_modules` + electron ครบแล้ว — แก้แล้ว build แล้วรันได้เลย ไม่ต้องขอ zip
+
+**ขึ้นรุ่นใหม่ (ผู้ใช้สั่ง "bump + update github")**: (1) **สำรอง main ก่อนเสมอ** —
+`git push origin <sha ของ origin/main>:refs/heads/backup/main-YYYY-MM-DD-<tag>` (2) แก้ `package.json` version
+(3) CHANGELOG: หัว `## alpha.X` บนสุดต้องตรง package.json (unit `changelog-sync` ตรวจ) + README หัวรุ่นเดียวกัน
+(4) `node build.js` (ก๊อป CHANGELOG เข้า renderer/) (5) commit (ท้ายข้อความมี Co-Authored-By) → push กิ่งทำงาน + `HEAD:main`
+(6) ยืนยัน `curl https://raw.githubusercontent.com/Nbcybg/Killian-Editor-V2/main/package.json` (7) `npm run dist`
+· **ห้าม bump ซ้ำเลขเดิม** — `main` เป็นเลขนั้นอยู่แล้ว ตัวตรวจอัปเดตจะไม่เสนอ · dmg ของ mac ต้อง build บนเครื่อง mac
+· Git Bash ไม่มี `gh` (ใช้ curl API)
 
 ```bash
 node build.js            # esbuild → renderer/bundle.js  (ต้องเห็น "bundle OK")
@@ -162,18 +171,23 @@ grep -c PASS /tmp/k2result.txt; tail -1 /tmp/k2result.txt # ต้องลง�
 grep -E "FAIL|STOP" /tmp/k2result.txt | head -3
 ```
 
-**สูตรบน Windows (โหมด A) — ใช้บ่อยสุดตอนนี้ · รอบละ ~2.5 นาที:**
+**สูตรบน Windows (โหมด A) — ใช้บ่อยสุดตอนนี้ · รอบละ ~10 นาที (dev) / ~12 นาที (ตัวแพ็ก) · ALL OK 5,841 (alpha.165):**
 ```bash
-taskkill //F //IM electron.exe >/dev/null 2>&1
-node build.js 2>&1 | tail -1 && rm -f "C:/tmp/k2result.txt" \
-  && rm -rf "C:/Users/noobc/AppData/Local/Temp/k2proj" \
-  && node test/fixture.js /tmp/k2proj >/dev/null 2>&1 \
-  && KILLIAN_TEST=1 KILLIAN_TEST_PROJECT="C:/Users/noobc/AppData/Local/Temp/k2proj" \
-     ./node_modules/.bin/electron . > "C:/tmp/k2elec.log" 2>&1 &
-sleep 118; grep -m1 "^FAIL" "C:/tmp/k2result.txt"; echo "pass=$(grep -c '^PASS' C:/tmp/k2result.txt)"
+# ปิด electron ที่ค้างก่อน (PowerShell กรองด้วย CommandLine — ห้ามฆ่า Claude/ตัวเอง):
+#   Get-CimInstance Win32_Process | ? { $_.Name -eq 'electron.exe' -and $_.CommandLine -like '*Killian2*' } | % { Stop-Process -Id $_.ProcessId -Force }
+node build.js 2>&1 | tail -1 && rm -f C:/tmp/k2result.txt && rm -rf C:/tmp/k2proj C:/tmp/k2ud \
+  && node test/fixture.js C:/tmp/k2proj >/dev/null 2>&1 && mkdir -p C:/tmp/k2ud \
+  && (KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=C:/tmp/k2proj KILLIAN_USERDATA=C:/tmp/k2ud \
+      ./node_modules/electron/dist/electron.exe . --disable-backgrounding-occluded-windows --disable-renderer-backgrounding \
+      > C:/tmp/k2elec.log 2>&1 &)
 ```
-แล้ววนรอจนกว่า `tail -1` = `ALL OK` (ปกติ ~2.5 นาที · หน้าต่างโผล่บนจอผู้ใช้จริง ปิดด้วย taskkill เมื่อจบ)
-**ยืนยันตัว packaged ด้วย**: รัน `"./dist/win-unpacked/Killian 2.exe"` ด้วย env เดียวกัน → ต้อง ALL OK เท่ากัน
+- `node_modules/.bin/electron` ที่ sync มาจาก mac ใช้ไม่ได้ (`bad interpreter`) → **`electron.exe` ตรง ๆ**
+- รอผลด้วย **Monitor** (until-loop: `tail -1` = ALL OK **หรือ** มีบรรทัด `^(STOP|FAIL)`) — foreground `sleep` ถูกบล็อก
+- **ตัวแพ็ก**: `"./dist/win-unpacked/Killian 2.exe" --user-data-dir="C:/tmp/k2userdata"` + env เดียวกัน (userData ของตัวแพ็ก = ของผู้ใช้จริง ห้ามใช้ร่วม)
+- **ห้าม `node build.js` / `npm run dist` / แก้ CSV ระหว่าง e2e** (หน้าต่างแผงที่ฉีกออกโหลด bundle ใหม่กลางรอบ) · แก้ `main.js` ได้ (โหลดไปแล้ว)
+- ห้ามรัน `npm run test:unit` พร้อม e2e (แย่ง CPU → เทสภาพแดงสุ่ม) · e2e จบแล้ว **หน้าต่างยังค้าง** → ปิดก่อนรอบใหม่ ไม่งั้น `rm -rf C:/tmp/k2ud` = EBUSY แล้วรอบใหม่ไม่เริ่ม
+- `npm run dist` เจอ `EBUSY … win-unpacked\Killian 2.exe` (ไม่มีโปรเซสค้าง = ตัวสแกนไวรัส) → `rm -rf dist/win-unpacked` แล้วสั่งใหม่
+- จำนวนเทสแกว่ง ±2 ระหว่างรอบได้ (เทสเดิมที่มีเงื่อนไขตามจังหวะ) — เทียบ dev กับตัวแพ็กด้วย `diff` รายชื่อ PASS ไม่ใช่แค่ตัวเลข
 
 - `kapi.testShot('/tmp/x.png')` = สกรีนช็อต (บน Windows ออกที่ `C:\tmp\`) — **Read tool อ่านรูปได้ตรง ๆ บนเครื่องจริง**
   (บนแซนด์บ็อกซ์ที่ view คืน `[image]` ว่าง ให้ใช้ PIL pixel-check crop แทน)
@@ -435,7 +449,10 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.134** · e2e 4,442 ข้อ ALL OK ทั้ง dev และตัว packaged · unit 92 ไฟล์ · 5,740 ข้อ)
+## เวอร์ชัน (ล่าสุด **alpha.165** · e2e 5,841 ข้อ ALL OK ทั้ง dev และตัว packaged · unit 147 ไฟล์ · 10,490 ข้อ)
+
+> .135–.165 ไม่ได้จดทีละรุ่นที่นี่ — ดู `CHANGELOG.md` (ละเอียด) + `AGENTS.md` (กฎถาวรเป็นตารางต่อรุ่น "ทำแบบนี้ / ห้าม")
+> · **อ่าน AGENTS.md ส่วน "กฎถาวร" ของรุ่นล่าสุดก่อนเริ่มงานทุกครั้ง** — ตัวนั้นทันสมัยกว่าสกิลนี้เสมอ
 
 .13–.22 (v1→v2 พื้นฐาน): snapshot, line numbers, spellcheck ไทย+Chromium, ปุ่มลัดตั้งเอง, mac build, บทหนัง Ctrl+arrow, relationship sync, floating format bar, sidebar resize, SmartType Final Draft, wiki gallery/lightbox, explorer search+tags, panel docking, tree float+snap
 .24 batch 8 (drag-move explorer, panel snap, split compare, version tracking, scene lock, screenplay Final Draft look, screenplay images, wiki links) · .25–.27 **Planner board** (fabric.js) · .28 **floating windows** · .29 memo-in-chapter + scoped search
@@ -602,6 +619,46 @@ Campaign/D&D mode · code signing จริง (ตอนนี้ self-sign) ·
 ส่วน MS Word ต่อท้ายข้อสุดท้าย · ยังไม่แก้เพราะผู้ใช้ไม่ได้ขอ (ถ้าเจอบ่นเมื่อไหร่ = จุดนี้)
 
 **นิสัยผู้ใช้ (Top)**: พูด "เริ่มเลย"/"continue"/"ทำต่อ"/"เอาให้จบ" = ให้ลงมือทำเลย **อย่าถามย้ำ scope** (เคยโดนบ่น "เช็คอะไรละ"). ชอบทำหลายฟีเจอร์รวดเดียวแล้วแก้บั๊กทีเดียว. ส่งสกรีนช็อตบั๊ก = pixel-verify คือเทสจริง. มักจบ session ด้วย "update skill"
+· สั่ง "**bug hunt อีก N รอบ**" หลังแก้เสร็จเป็นประจำ = ลองบนแอปจริง (CDP) + อ่าน diff ทีละไฟล์ แล้วรายงานเป็นตาราง "เจอ/แก้"
+· ของที่ผู้ใช้สั่งเอาออกแล้ว **ห้ามนำกลับมาเอง** (ชิปแผงมุมพื้นที่เขียน: สั่งเอาออก .50 แล้วกลับมา .161 → โดนบ่นซ้ำ .165)
+· ให้ขั้นตอนทำซ้ำมา (เช่น "เลื่อนล่างสุด → ปิดแผง → เปิดใหม่") = **ทำตามนั้นเป๊ะบนแอปจริงก่อน** อย่าเดาทางอื่นแล้วสรุปว่าทำซ้ำไม่ได้
+
+---
+
+## ไล่บั๊กบนแอปจริงด้วย CDP (~1 นาที · ใช้ก่อนแก้ทุกบั๊ก UI)
+```bash
+T=$(cygpath -m "$TEMP")/k2cdp; rm -rf "$T/proj" "$T/ud"; mkdir -p "$T/ud"
+node test/fixture.js "$T/proj" >/dev/null 2>&1
+printf '["%s"]' "$T/proj" > "$T/ud/recent.json"            # ทางแบบ C:/… (cygpath -m)
+printf '{"openLastProject":true,"showHomeOnStartup":false,"language":"th"}' > "$T/ud/settings.json"
+(KILLIAN_NO_SPLASH=1 ./node_modules/electron/dist/electron.exe . --user-data-dir="$T/ud" --remote-debugging-port=9333 \
+   --disable-backgrounding-occluded-windows --disable-renderer-backgrounding > "$T/elec.log" 2>&1 &)
+```
+- สคริปต์ probe (`_k2cdp.cjs` · fetch `http://127.0.0.1:9333/json` → WebSocket → `Runtime.evaluate` awaitPromise/returnByValue ·
+  `Emulation.setDeviceMetricsOverride` ขนาดจอ · `Page.captureScreenshot`) **ต้องอยู่ในรีโป** (require esbuild จาก %TEMP% หาไม่เจอ) — **ลบก่อนจบงาน**
+- `includeCommandLineAPI:true` = ใช้ `getEventListeners(el)` ได้ (หาปุ่มที่ไม่มีตัวรับคลิก)
+- โมดูลของแอปเข้าไม่ถึงจาก probe — ขับด้วย DOM (คลิกปุ่ม `[data-command]` · dispatch `keydown` ด้วย `e.code`)
+- `location.reload()` โหลด bundle ใหม่ได้ **แต่ตารางภาษาอยู่ที่ main** — เพิ่มคีย์ภาษาแล้วต้องปิด-เปิดแอปใหม่ (ไม่งั้นเห็นตัวคีย์)
+- ตัวกวาดที่ใช้บ่อย: สีเทาบนจอ (computed bg/fg/border ที่ R≈G≈B นอกกระดาษ) · ช่องที่ถูกตัด (`scrollWidth > clientWidth`) ·
+  ทูลทิป/ป้ายที่ยังเป็นคีย์ (`/^ui\./`) · ตำแหน่งเลื่อนทีละเฟรม (rAF) หลังเปิด/ปิดแผง
+- ปิดเฉพาะตัว probe: PowerShell กรอง CommandLine `*9333*`/`*k2cdp*` (ห้าม `taskkill /IM electron.exe` — โดน e2e ด้วย)
+
+### บทเรียน alpha.164–.165 (รอบ UX ที่ผู้ใช้รายงาน)
+- **ทูลทิปทะลุแผง**: `document.elementsFromPoint` คืน **ทุกชั้น** — ใช้หาเจ้าของทูลทิปต้องรับเฉพาะของที่อยู่ใน `e.target`
+- **"สีเทาของธีมเก่า"** = ไม่เคยตั้ง `color-scheme` → ช่องติ๊ก/ตัวเลข/select/ตัวเลือกสีเป็นของเบราว์เซอร์ทุกธีม ·
+  ตัวแปรธีมอยู่ที่ `body.theme-*` → ค่าที่อ้างตัวแปรธีมต้องตั้งที่ `body` ไม่ใช่ `:root` (ที่ `:root` ได้ค่าสำรองของ base.css)
+- **เมนูคลิกขวาในเอกสาร**: renderer `preventDefault` = เมนูของ main ไม่ขึ้นเลย → ต้องเป็นเจ้าของทั้งเมนู (ตัด/คัดลอก/วาง ผ่าน IPC `edit:role` → `webContents.cut()`) ·
+  สำเนา `.ProseMirror` (โหมดอ่าน/หน้ากระดาษ) ไม่มี `pmViewDesc` = ไม่ใช่ตัวแก้ไข
+- **ตำแหน่งเลื่อนไปบนสุดแล้วไหลลง**: ตัววาดล้างเนื้อก่อน await (ความสูงยุบ → ถูกหนีบเป็น 0) + `scroll-behavior:smooth` บนเนื้อแผง
+- **ขั้นต่ำของแผงหายเงียบ**: กฎ `#id{min-width:0}` ชนะตัวแปร `--panel-min-w` · แผง `flush` ตอนผนึกเคย `overflow:hidden` (ตัดขอบ ไม่มีแถบเลื่อน)
+- **ตัวลากทุกตัวต้องมี Esc** (`escCancelDrag` · ถอดตัวเองเมื่อ mouseup/blur ไม่งั้นกลืน Esc ครั้งถัดไป) · ปุ่ม "ปิด" ที่เป็นทางออกเดียว = `k-ok k-cancel`
+- **`data-command` ให้แค่ไอคอน/ทูลทิป ไม่ผูกคลิก** — ปุ่มใหม่นอกแถบเครื่องมือต้องผูก onclick เอง
+- **log**: บรรทัดในไฟล์ต้องหนีแบ็กสแลชก่อน `\n` (ที่อยู่ Windows `\noobc`) · ห้ามจดลิงก์เต็ม (คีย์ AI ใน `?key=`) · `ipcMain.handle` ครอบด้วย `H()` ที่จดรหัส error
+- **เทส e2e ที่พลาดเองในรอบนี้** (โค้ดไม่ผิด): รอ "มีแถว" ทั้งที่แถวเก่ามีอยู่แล้ว (ต้องรอสัญญาณที่เกิดหลังงานจริง) ·
+  ค้นใน log store ที่จำกัด 2,000 ระเบียน (ของเก่าถูกตัด → ทำเหตุการณ์ใหม่แล้วดู seq หลังจุดนั้น) ·
+  คืนแผงด้วย `dockPanel(id,'left')` ไม่มีจุดยึด (ไปเกาะข้างแถบเครื่องมือ → จำ/คืนเลย์เอาต์ทั้งชุดแทน) ·
+  คำจาก `textBetween` ≠ `getSelection().toString()` (Chromium ขยายให้ครบกลุ่มอักษรไทย)
+- **heredoc ของ Bash tool ยุบ `\\`** — ข้อความ/สคริปต์ที่มีแบ็กสแลช (regex, `'\n'` ใน JS) เขียนด้วย Write แล้วรันด้วย node
 
 ---
 
