@@ -16080,7 +16080,7 @@ function placeTipAt(x, y) {
 }
 function hideTip() {
   clearTimeout(_tipJob);
-  if (_tipHost && _tipSaved) { _tipHost.setAttribute('title', _tipSaved); }
+  if (_tipHost && _tipSaved) { _tipHost.setAttribute('title', _tipSaved); delete _tipHost.dataset.tipHeld; }
   _tipHost = null; _tipSaved = ''; _tipKt = null;
   if (_tipEl) _tipEl.classList.remove('on');
 }
@@ -16116,6 +16116,7 @@ function showTip(host, text) {
   hideTip();
   _tipHost = host; _tipSaved = text;
   host.removeAttribute('title');
+  host.dataset.tipHeld = text;   // [alpha.167] ฝากค่าไว้ — โค้ด/เทสที่อ่าน title ระหว่างทูลทิปโชว์อยู่ยังรู้ว่าปุ่มนี้มีคำอธิบาย
   const box = tipBox();
   fillTip(box, host, text);
   box.classList.add('on');
@@ -16134,6 +16135,7 @@ export function KTooltip(trigger, text, opts = {}) {
 let _tipHeld = null;
 function releaseHeldTitle() {
   if (_tipHeld && !_tipHeld.host.getAttribute('title')) _tipHeld.host.setAttribute('title', _tipHeld.text);
+  if (_tipHeld) delete _tipHeld.host.dataset.tipHeld;
   _tipHeld = null;
 }
 function setupHoverTips() {
@@ -16148,6 +16150,7 @@ function setupHoverTips() {
       if (held && held.getAttribute('title')) {
         releaseHeldTitle();
         _tipHeld = { host: held, text: held.getAttribute('title') };
+        held.dataset.tipHeld = _tipHeld.text;
         held.removeAttribute('title');
       }
       return;
@@ -16174,6 +16177,7 @@ function setupHoverTips() {
     hideTip();
     _tipHost = host; _tipSaved = text; _tipKt = host;
     host.removeAttribute('title');
+    host.dataset.tipHeld = text;   // [alpha.167] ดู showTip()
     const box = tipBox();
     fillTip(box, host, text);          // [alpha.150] หัวเรื่อง + คำอธิบาย (ถ้ามี)
     box.classList.add('on');

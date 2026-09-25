@@ -20,11 +20,13 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,902 checks · ALL OK** (alpha.166 รอบ 2 · macOS · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **10,605 ข้อ · 148 ไฟล์** · ~55 วินาที · alpha.166)
+ปัจจุบัน **5,971 checks · ALL OK** (alpha.167 · Linux/xvfb · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **10,738 ข้อ · 152 ไฟล์** · ~65 วินาที · alpha.167)
 **[alpha.167 · Linux/คอนเทนเนอร์]** ใช้ `--use-angle=swiftshader --enable-unsafe-swiftshader` แทน `--disable-gpu` (เทส `[166-M]` ต้องมี WebGL) ·
 ไม่มีฟอนต์ Segoe UI = เทสวัดความกว้าง `[164-R2-1]` แดง → ตั้ง `~/.config/fontconfig/fonts.conf` ให้ `Segoe UI`/`system-ui` ชี้ `Liberation Sans` ·
-`KILLIAN_USERDATA=/tmp/k2ud` แยกข้อมูลผู้ใช้ทุกรอบ
+`KILLIAN_USERDATA=/tmp/k2ud` แยกข้อมูลผู้ใช้ทุกรอบ · รอบเต็ม ~25 นาที ·
+เทสที่ปรับตามสภาพเครื่อง **เฉพาะเครื่องแบบนั้น** (เกณฑ์ Windows/macOS เท่าเดิม): `[98-8]` เพดาน ×2 เมื่อ WebGL เป็นซอฟต์แวร์ ·
+`[62-1]` ยอมพับหนึ่งครั้งบน Linux · `[a96-1]` ใช้เซิร์ฟเวอร์จำลองตอบช้าเมื่อหลุมดำ 10.255.255.1 ตอบทันที
 **[รอบต่อ 4 · Windows] `node_modules/.bin/electron` ที่ sync มาจาก mac ใช้ไม่ได้ (`bad interpreter`)** — รัน `./node_modules/electron/dist/electron.exe .` ตรง ๆ
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·

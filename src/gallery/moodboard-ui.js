@@ -182,20 +182,28 @@ export class MoodBoard {
 
   async drawBoard() {
     const gen = this._gen;
+    // [alpha.167 · บั๊ก] วาดซ้อนกันสองรอบ (วางสองชิ้นติดกัน) = ทั้งคู่ล้างผืนแล้วเติมข้าม await → ชิ้นซ้ำ
+    // → ประกอบนอกจอ แล้วสลับเข้าเฉพาะรอบล่าสุด
+    const seq = this._drawSeq = (this._drawSeq || 0) + 1;
     const canvas = this._canvas;
     if (!canvas) return;
     const d = await this.doc();
-    if (gen !== this._gen) return;
+    if (gen !== this._gen || seq !== this._drawSeq) return;
     const board = MB.normalizeBoard(d.moodBoard);
-    canvas.innerHTML = '';
-    this.applyTransform();
+    const frag = document.createDocumentFragment();
     if (!board.length) {
-      canvas.append(el('div', 'gal2-board-hint',
+      frag.append(el('div', 'gal2-board-hint',
         t('ui.galleryMoodboard.boardEmptyOpenPanel') +
         t('ui.galleryMoodboard.pickImageLibraryDone')));
-      return;
+    } else {
+      for (const it of MB.boardOrder(board)) {
+        const node = await this.itemEl(it);
+        if (gen !== this._gen || seq !== this._drawSeq) return;
+        frag.append(node);
+      }
     }
-    for (const it of MB.boardOrder(board)) canvas.append(await this.itemEl(it));
+    canvas.replaceChildren(frag);
+    this.applyTransform();
   }
 
   async itemEl(it) {

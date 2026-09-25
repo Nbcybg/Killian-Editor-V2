@@ -213,7 +213,7 @@ function renderTabs(node, pm, opts, depth) {
     tab.appendChild(iconSpan(md.icon, 'k-tab-icon'));
     tab.appendChild(el('span', 'k-tab-title', md.title || child.title || child.id));
     if (!strip) addTabClose(tab, child.id, md, pm);
-    tab.title = md.title || child.title || child.id;
+    tab.title = (md.title || child.title || child.id) + (md.desc ? '\n' + md.desc : '');
     tab.onclick = () => {
       if (strip) { toggleStrip(node.id, pm, false); pm.activatePanel(child.id); return; }
       pm.activatePanel(child.id);
@@ -330,7 +330,10 @@ export function panelWindowHead({ title, icon: ic }) {
 function buildHead(node, pm, opts, md, floating) {
   const head = el('div', 'k-panel-head');
   head.appendChild(iconSpan(md.icon, 'k-panel-head-icon'));
-  head.appendChild(el('span', 'k-panel-head-title', md.title || node.title || node.id));
+  const ttl = el('span', 'k-panel-head-title', md.title || node.title || node.id);
+  // [alpha.167] ผู้ใช้: "ทุก panel ต้องมี hover tooltip" — ชี้ชื่อแผง = บอกว่าแผงนี้ทำอะไร (คำอธิบายแถวเดียวกับปุ่มเปิดแผง)
+  if (md.desc) ttl.title = md.desc;
+  head.appendChild(ttl);
 
   // ปุ่มเสริมที่โมดูลอื่นฝากไว้ (🔄 รีเฟรช, 🔍 ค้นหา, ¶ beats) — element เดิมถูกใช้ซ้ำทุกรอบ render
   const ctrls = el('span', 'k-panel-ctrls');
@@ -569,7 +572,7 @@ function renderFloatGroup(f, pm, opts, container) {
     tab.appendChild(iconSpan(md.icon, 'k-tab-icon'));
     tab.appendChild(el('span', 'k-tab-title', md.title || child.title || child.id));
     addTabClose(tab, child.id, md, pm);
-    tab.title = md.title || child.title || child.id;
+    tab.title = (md.title || child.title || child.id) + (md.desc ? '\n' + md.desc : '');
     tab.onclick = () => {
       const next = pm.floats.map((x) => (x.id === f.id
         ? { ...x, panel: { ...x.panel, active: i } } : x));

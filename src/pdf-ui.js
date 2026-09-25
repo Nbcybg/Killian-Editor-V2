@@ -88,6 +88,9 @@ async function fontStamp(dir, files) {
  *        → ลูกโซ่ไทยมาตรฐานของเครื่อง (Thonburi / Leelawadee UI / TH Sarabun New / Sarabun / Tahoma)
  * @returns {Promise<string>} ที่อยู่ไฟล์ ('' = ไม่เจอ → PDF ตกไปฟอนต์มาตรฐาน ไทยพิมพ์ไม่ออก)
  */
+/** ฟอนต์ไทยที่มากับ Linux (แพ็กเกจ fonts-tlwg-* / fonts-noto-thai) — ลองหลังลูกโซ่หลัก */
+const PDF_THAI_LINUX = ['Noto Sans Thai', 'Noto Serif Thai', 'Garuda', 'Loma', 'Waree', 'Norasi', 'Kinnari',
+  'Laksaman', 'Sawasdee', 'Umpush', 'Purisa', 'TlwgTypo'];
 export async function pdfThaiFontPath() {
   return (await pdfThaiFontCandidates())[0] || '';
 }
@@ -110,7 +113,9 @@ export async function pdfThaiFontCandidates() {
       } catch {}
     }
   }
-  const fams = [...new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS])];
+  // [alpha.167 · บั๊ก] Linux ไม่มีฟอนต์ไทยชุด mac/Windows เลยสักตัว → PDF บทได้ไทยเป็นช่องว่างทั้งไฟล์
+  // ต่อท้ายด้วยฟอนต์ไทยมาตรฐานของ Linux (TLWG · Noto) — เฉพาะทางหาไฟล์ของ PDF (สแตก CSS/การย้ายค่าเดิมไม่แตะ)
+  const fams = [...new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS, ...PDF_THAI_LINUX])];
   // ถามทีละวงศ์ — ตัวที่เจอก่อนอาจฝังไม่ได้ (.ttc / AAT) ต้องมีตัวถัดไปให้ลอง
   for (const fam of fams) { try { add(await kapi.fontFile([fam])); } catch {} }
   return out;

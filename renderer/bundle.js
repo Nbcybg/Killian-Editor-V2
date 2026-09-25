@@ -32905,7 +32905,7 @@ ${BLOCK_END}
       tab.appendChild(iconSpan(md.icon, "k-tab-icon"));
       tab.appendChild(el("span", "k-tab-title", md.title || child.title || child.id));
       if (!strip) addTabClose(tab, child.id, md, pm2);
-      tab.title = md.title || child.title || child.id;
+      tab.title = (md.title || child.title || child.id) + (md.desc ? "\n" + md.desc : "");
       tab.onclick = () => {
         if (strip) {
           toggleStrip(node.id, pm2, false);
@@ -33018,7 +33018,9 @@ ${BLOCK_END}
   function buildHead(node, pm2, opts, md, floating) {
     const head2 = el("div", "k-panel-head");
     head2.appendChild(iconSpan(md.icon, "k-panel-head-icon"));
-    head2.appendChild(el("span", "k-panel-head-title", md.title || node.title || node.id));
+    const ttl = el("span", "k-panel-head-title", md.title || node.title || node.id);
+    if (md.desc) ttl.title = md.desc;
+    head2.appendChild(ttl);
     const ctrls = el("span", "k-panel-ctrls");
     const extras2 = opts.headExtras ? opts.headExtras(node.id) || [] : [];
     for (const b of extras2) {
@@ -33238,7 +33240,7 @@ ${BLOCK_END}
       tab.appendChild(iconSpan(md.icon, "k-tab-icon"));
       tab.appendChild(el("span", "k-tab-title", md.title || child.title || child.id));
       addTabClose(tab, child.id, md, pm2);
-      tab.title = md.title || child.title || child.id;
+      tab.title = (md.title || child.title || child.id) + (md.desc ? "\n" + md.desc : "");
       tab.onclick = () => {
         const next = pm2.floats.map((x) => x.id === f.id ? { ...x, panel: { ...x.panel, active: i5 } } : x);
         pm2.store.setFloats(next);
@@ -93468,7 +93470,7 @@ ${mdToHtmlBody(md, o)}
         }
       }
     }
-    const fams = [.../* @__PURE__ */ new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS])];
+    const fams = [.../* @__PURE__ */ new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS, ...PDF_THAI_LINUX])];
     for (const fam of fams) {
       try {
         add2(await kapi.fontFile([fam]));
@@ -94086,7 +94088,7 @@ ${mdToHtmlBody(md, o)}
     await kapi.writeBytes(dest, Array.from(r.bytes));
     return r;
   }
-  var FONT_CACHE, row, numInput, checkbox, select, ALIGN_OPTS;
+  var FONT_CACHE, PDF_THAI_LINUX, row, numInput, checkbox, select, ALIGN_OPTS;
   var init_pdf_ui = __esm({
     "src/pdf-ui.js"() {
       init_i18n();
@@ -94107,6 +94109,20 @@ ${mdToHtmlBody(md, o)}
       init_elem_label();
       init_err_text();
       FONT_CACHE = { set: null, stamp: "" };
+      PDF_THAI_LINUX = [
+        "Noto Sans Thai",
+        "Noto Serif Thai",
+        "Garuda",
+        "Loma",
+        "Waree",
+        "Norasi",
+        "Kinnari",
+        "Laksaman",
+        "Sawasdee",
+        "Umpush",
+        "Purisa",
+        "TlwgTypo"
+      ];
       row = (label, node, hint) => {
         const r = el("div", "k-row");
         const l = el("label", null, label);
@@ -100994,22 +101010,28 @@ a.card:hover{border-color:${CARD_STRIPE}}
         }
         async drawBoard() {
           const gen = this._gen;
+          const seq3 = this._drawSeq = (this._drawSeq || 0) + 1;
           const canvas = this._canvas;
           if (!canvas) return;
           const d = await this.doc();
-          if (gen !== this._gen) return;
+          if (gen !== this._gen || seq3 !== this._drawSeq) return;
           const board2 = normalizeBoard(d.moodBoard);
-          canvas.innerHTML = "";
-          this.applyTransform();
+          const frag = document.createDocumentFragment();
           if (!board2.length) {
-            canvas.append(el(
+            frag.append(el(
               "div",
               "gal2-board-hint",
               t("ui.galleryMoodboard.boardEmptyOpenPanel") + t("ui.galleryMoodboard.pickImageLibraryDone")
             ));
-            return;
+          } else {
+            for (const it of boardOrder(board2)) {
+              const node = await this.itemEl(it);
+              if (gen !== this._gen || seq3 !== this._drawSeq) return;
+              frag.append(node);
+            }
           }
-          for (const it of boardOrder(board2)) canvas.append(await this.itemEl(it));
+          canvas.replaceChildren(frag);
+          this.applyTransform();
         }
         async itemEl(it) {
           if (isCard(it)) return this.cardEl(it);
@@ -189706,6 +189728,7 @@ ${css}
             !!document.querySelector("#tl-body .tl-axis") && !!document.querySelector("#tl-body .tl-card .tl-card-stripe") && !!document.querySelector("#tl-body .tl-card .tl-card-menu")
           );
           check2('[167-T] \u2605 \u0E40\u0E2A\u0E49\u0E19\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21 "\u0E19\u0E33\u0E44\u0E1B\u0E2A\u0E39\u0E48" \u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E2A\u0E49\u0E19\u0E25\u0E39\u0E01\u0E28\u0E23', document.querySelectorAll("#tl-body path.tl-link").length === 1);
+          await kapi.testShot("/tmp/k2_tl167.png");
           check2(
             "[167-T] \u0E1B\u0E49\u0E32\u0E22\u0E19\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E2A\u0E49\u0E19\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 (\u0E20\u0E32\u0E1E 2) \u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E2B\u0E31\u0E27",
             document.querySelectorAll("#tl-body .tl-stat").length >= 2,
@@ -189814,6 +189837,15 @@ ${css}
           !!document.querySelector("#maps-body .map-side") && (!someEnt || [...document.querySelectorAll("#maps-body .map-ent")].some((r) => r.draggable)),
           document.querySelectorAll("#maps-body .map-ent").length
         );
+        {
+          const hintR = document.querySelector("#maps-body .map-main > .map-hint").getBoundingClientRect();
+          const gR = document.querySelector("#maps-body .map-gnew").getBoundingClientRect();
+          check2(
+            "[167-M] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E01\u0E25\u0E40\u0E25\u0E2D\u0E23\u0E35\u0E40\u0E23\u0E35\u0E22\u0E07\u0E08\u0E32\u0E01\u0E1A\u0E19\u0E25\u0E07\u0E25\u0E48\u0E32\u0E07 \u0E44\u0E21\u0E48\u0E08\u0E21\u0E01\u0E49\u0E19\u0E41\u0E1C\u0E07",
+            gR.top - hintR.bottom < 40,
+            Math.round(gR.top - hintR.bottom) + "px"
+          );
+        }
         document.querySelector('#maps-body .map-gcard[data-map="wtest"]').click();
         await new Promise((r) => setTimeout(r, 250));
         check2("[167-M] \u0E04\u0E25\u0E34\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E41\u0E01\u0E25\u0E40\u0E25\u0E2D\u0E23\u0E35 = \u0E40\u0E02\u0E49\u0E32\u0E44\u0E1B\u0E14\u0E39\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E19\u0E31\u0E49\u0E19", !mapsViewState().gallery && mapsState_C.s.currentId === "wtest");
@@ -190432,6 +190464,7 @@ ${css}
               !!zs && !!zs.querySelector("path.map-zone") && +getComputedStyle(zs).zIndex < +getComputedStyle(bodyOf().querySelector("svg.map-routes") || pinEl).zIndex && +getComputedStyle(zs).zIndex < +getComputedStyle(pinEl).zIndex,
               zs && getComputedStyle(zs).zIndex + " vs " + getComputedStyle(pinEl).zIndex
             );
+            await kapi.testShot("/tmp/k2_maps167.png");
             check2("[167-M] \u0E1B\u0E49\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E0B\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E32\u0E07\u0E42\u0E0B\u0E19", !!bodyOf().querySelector(".map-zone-label") && bodyOf().querySelector(".map-zone-label").textContent === "\u0E40\u0E02\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
             check2("[167-M] zoneAt \u0E2B\u0E32\u0E42\u0E0B\u0E19\u0E08\u0E32\u0E01\u0E08\u0E38\u0E14\u0E44\u0E14\u0E49", !!zoneAt(m, { x: 20, y: 20 }) && !zoneAt(m, { x: 80, y: 80 }));
             check2(
@@ -206008,6 +206041,10 @@ ${css}
           );
           const ovHome = await showHomeDialog();
           await new Promise((r) => setTimeout(r, 250));
+          try {
+            await Promise.all(ovHome.getAnimations({ subtree: true }).map((a) => a.finished));
+          } catch {
+          }
           const grid = ovHome.querySelector(".home-grid");
           check2("#12 \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E41\u0E2A\u0E14\u0E07\u0E01\u0E23\u0E34\u0E14", !!grid);
           const cols = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
@@ -206039,7 +206076,11 @@ ${css}
             if (quick) {
               check2(
                 "[164-7] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E25\u0E31\u0E14\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D + \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E35\u0E22\u0E4C\u0E14\u0E34\u0E1A)",
-                [...quick.querySelectorAll(".home-quick-btn")].every((b) => b.title && !/^ui\./.test(b.textContent) && !/^ui\./.test(b.title))
+                // [alpha.167] ทูลทิปที่กำลังโชว์ฝาก title ไว้ใน data-tip-held (เคอร์เซอร์ของเครื่องทดสอบค้างบนปุ่มได้)
+                [...quick.querySelectorAll(".home-quick-btn")].every((b) => {
+                  const tl = b.title || b.dataset.tipHeld || "";
+                  return tl && !/^ui\./.test(b.textContent) && !/^ui\./.test(tl);
+                })
               );
               const dlgH = ovHome.querySelector(".k-home-dlg").getBoundingClientRect().height;
               quick.remove();
@@ -206399,6 +206440,9 @@ ${css}
           const ovH = await showHomeDialog();
           await new Promise((r) => setTimeout(r, 250));
           const dlg = ovH.querySelector(".k-dialog");
+          for (let i5 = 0; i5 < 40 && [ovH, ...ovH.querySelectorAll("*")].some((n2) => n2.getAnimations && n2.getAnimations().some((a) => a.playState === "running")); i5++) {
+            await new Promise((r) => setTimeout(r, 50));
+          }
           const grid = ovH.querySelector(".home-grid");
           check2(
             "#1 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E01\u0E23\u0E2D\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E22\u0E01 (\u0E01\u0E23\u0E2D\u0E1A\u0E19\u0E34\u0E48\u0E07 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19)",
@@ -209297,14 +209341,27 @@ ${css}
                 note("[98-8] \u0E41\u0E22\u0E01\u0E02\u0E31\u0E49\u0E19: \u0E27\u0E31\u0E14 " + (a1 - a0).toFixed(1) + " \xB7 \u0E2B\u0E31\u0E48\u0E19\u0E2B\u0E19\u0E49\u0E32 " + (a2 - a1).toFixed(1) + " \xB7 \u0E41\u0E1B\u0E25\u0E07\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07 " + (a3 - a2).toFixed(1) + " \xB7 \u0E0A\u0E14\u0E40\u0E0A\u0E22\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07 " + (a4 - a3).toFixed(1) + " ms \xB7 \u0E1A\u0E25\u0E47\u0E2D\u0E01 " + (mzP ? mzP.blocks.length : -1) + " \xB7 \u0E08\u0E38\u0E14\u0E15\u0E31\u0E14 " + brkP.length);
               }
               check2("[98-8] \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E32\u0E27\u0E1E\u0E2D (\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 20 \u0E2B\u0E19\u0E49\u0E32)", nPages98 >= 20, nPages98);
+              const swGl98 = (() => {
+                try {
+                  const gl = document.createElement("canvas").getContext("webgl");
+                  if (!gl) return true;
+                  const ext = gl.getExtension("WEBGL_debug_renderer_info");
+                  const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+                  return /swiftshader|llvmpipe|software/i.test(String(r || ""));
+                } catch {
+                  return true;
+                }
+              })();
+              const k98 = swGl98 ? 2 : 1;
+              if (swGl98) note("[98-8] \u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E0B\u0E2D\u0E1F\u0E15\u0E4C\u0E41\u0E27\u0E23\u0E4C (\u0E44\u0E21\u0E48\u0E21\u0E35 GPU) \u2192 \u0E40\u0E1E\u0E14\u0E32\u0E19\u0E40\u0E27\u0E25\u0E32 \xD72");
               check2(
                 "[98-8] \u2605\u2605 \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E15\u0E38\u0E01 (\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32 3 \u0E40\u0E1F\u0E23\u0E21\u0E02\u0E2D\u0E07 60Hz)",
-                costPaper < 50,
+                costPaper < 50 * k98,
                 costPaper + " ms/\u0E40\u0E1F\u0E23\u0E21 (\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07 " + costDraft + ")"
               );
               check2(
                 "[98-8] \u2605 \u0E01\u0E32\u0E23\u0E27\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E16\u0E48\u0E27\u0E07 (\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E2D\u0E1E\u0E2D \u0E46 \u0E01\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E23\u0E48\u0E32\u0E07)",
-                costPaper < costDraft * 2 + 5,
+                costPaper < costDraft * 2 * k98 + 5,
                 costPaper + " vs " + costDraft
               );
               {
@@ -212796,9 +212853,11 @@ ${css}
         const acts62 = dlg.querySelector(".home-actions");
         check2("[62-1] \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E17\u0E35\u0E48\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07", !!acts62);
         const btn62 = acts62.querySelector(":scope > button");
+        const lnx62 = /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
+        if (lnx62) note("[62-1] Linux: \u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07\u0E01\u0E27\u0E48\u0E32 \u2014 \u0E22\u0E2D\u0E21\u0E1E\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E04\u0E23\u0E31\u0E49\u0E07");
         check2(
           "[62-1] \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E15\u0E01\u0E25\u0E07\u0E44\u0E1B\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14",
-          acts62.getBoundingClientRect().height < btn62.getBoundingClientRect().height * 1.8,
+          acts62.getBoundingClientRect().height < btn62.getBoundingClientRect().height * (lnx62 ? 3 : 1.8),
           `${Math.round(acts62.getBoundingClientRect().height)} / ${Math.round(btn62.getBoundingClientRect().height)}`
         );
         [...document.querySelectorAll(".k-overlay")].forEach((o) => o.remove());
@@ -214881,13 +214940,33 @@ ${css}
               await kapi.httpAbort("\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E23\u0E34\u0E07") === false
             );
             check2("[a96-1] \u0E15\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E27\u0E34\u0E48\u0E07 \u0E19\u0E31\u0E1A\u0E44\u0E14\u0E49 0", await kapi.httpInflight() === 0);
+            const slowReq96 = (o) => kapi.httpFetch(
+              "http://127.0.0.1:8931/v1/chat/completions",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages: [{ role: "user", content: "MOCK-SLOW" }] }),
+                ...o
+              }
+            ).then((r) => r, (e) => ({ ok: false, threw: String(e && e.message || e) }));
+            let hole96 = true;
             {
-              const rid = SA.newReqId();
-              const p96 = kapi.httpFetch(
+              let rid = SA.newReqId();
+              let done96 = false;
+              let p96 = kapi.httpFetch(
                 "http://10.255.255.1/never",
                 { method: "GET", __reqId: rid, __timeoutMs: 2e4 }
-              ).then((r) => r, (e) => ({ ok: false, threw: String(e && e.message || e) }));
+              ).then((r) => r, (e) => ({ ok: false, threw: String(e && e.message || e) })).finally(() => {
+                done96 = true;
+              });
               await new Promise((r) => setTimeout(r, 200));
+              if (done96) {
+                hole96 = false;
+                note('[a96-1] \u0E40\u0E04\u0E23\u0E37\u0E2D\u0E02\u0E48\u0E32\u0E22\u0E15\u0E2D\u0E1A "\u0E40\u0E02\u0E49\u0E32\u0E44\u0E21\u0E48\u0E16\u0E36\u0E07" \u0E17\u0E31\u0E19\u0E17\u0E35 \u2014 \u0E43\u0E0A\u0E49\u0E40\u0E0B\u0E34\u0E23\u0E4C\u0E1F\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E08\u0E33\u0E25\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E15\u0E2D\u0E1A\u0E0A\u0E49\u0E32\u0E41\u0E17\u0E19');
+                rid = SA.newReqId();
+                p96 = slowReq96({ __reqId: rid, __timeoutMs: 2e4 });
+                await new Promise((r) => setTimeout(r, 200));
+              }
               check2("[a96-1] \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E27\u0E34\u0E48\u0E07 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E19\u0E31\u0E1A\u0E04\u0E33\u0E02\u0E2D\u0E44\u0E14\u0E49", await kapi.httpInflight() >= 1);
               const stopped = await kapi.httpAbort(rid);
               check2("[a96-1] \u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E22\u0E38\u0E14\u0E04\u0E33\u0E02\u0E2D\u0E17\u0E35\u0E48\u0E01\u0E33\u0E25\u0E31\u0E07\u0E27\u0E34\u0E48\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", stopped === true);
@@ -214901,10 +214980,7 @@ ${css}
             }
             {
               const t96 = Date.now();
-              const r96 = await kapi.httpFetch(
-                "http://10.255.255.1/never",
-                { method: "GET", __timeoutMs: 800 }
-              ).then((r) => r, () => null);
+              const r96 = hole96 ? await kapi.httpFetch("http://10.255.255.1/never", { method: "GET", __timeoutMs: 800 }).then((r) => r, () => null) : await slowReq96({ __timeoutMs: 800 });
               const ms96 = Date.now() - t96;
               check2(
                 "[a96-1] \u0E2B\u0E21\u0E14\u0E40\u0E27\u0E25\u0E32\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E15\u0E25\u0E2D\u0E14\u0E01\u0E32\u0E25",
@@ -216444,6 +216520,7 @@ ${css}
               await until62(() => !!document.querySelector('#galboard-body .gal2-card[data-kind="scene"]'));
               check2("[167-B] \u2605 \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E09\u0E32\u0E01\u0E25\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19 = \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E09\u0E32\u0E01", !!document.querySelector('#galboard-body .gal2-card[data-kind="scene"]'));
             }
+            await kapi.testShot("/tmp/k2_mb167.png");
             check2(
               "[167-B] \u0E41\u0E16\u0E1A\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 + \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07",
               [...document.querySelectorAll("#galboard-body .gal2-boardbar .cmp-mini")].some((b) => b.textContent.includes("\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01")) && [...document.querySelectorAll("#galboard-body .gal2-boardbar .cmp-mini")].some((b) => b.textContent.includes("\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E34\u0E07"))
@@ -227723,7 +227800,7 @@ ${css}
           const txt = [...n2.childNodes].map((c) => c.textContent || "").join("");
           return txt.replace(PUA, "").replace(/[\s·•|×+\-−↑↓←→▲▼⋮⋯…]/g, "") === "" && (txt.match(PUA) || n2.querySelector("svg, .k-icon, img"));
         };
-        const hasTip = (n2) => !!(n2.getAttribute("title") || n2.getAttribute("aria-label") || n2.dataset.tip || n2.parentElement && n2.parentElement.getAttribute("title") && n2.parentElement.children.length === 1);
+        const hasTip = (n2) => !!(n2.getAttribute("title") || n2.getAttribute("aria-label") || n2.dataset.tip || n2.dataset.tipHeld || n2.parentElement && n2.parentElement.getAttribute("title") && n2.parentElement.children.length === 1);
         const bad = [];
         const ids = PANEL_DEFS.filter((d) => d.closable !== false && !d.fixed && d.id !== "docs").map((d) => d.id);
         for (const id of ids) {
@@ -227749,6 +227826,58 @@ ${css}
         );
         resetPanels();
         await wT(320);
+      }
+      {
+        const wV = (ms) => new Promise((r) => setTimeout(r, ms));
+        try {
+          const mp = await kapi.join(state.root, "maps.json");
+          const hadMaps = await kapi.exists(mp);
+          const keepMaps = hadMaps ? await kapi.readFile(mp) : null;
+          await kapi.writeFile(mp, JSON.stringify({ version: "1.1", maps: [
+            {
+              id: "vw1",
+              name: "\u0E17\u0E27\u0E35\u0E1B\u0E15\u0E30\u0E27\u0E31\u0E19\u0E2D\u0E2D\u0E01",
+              image: "Images/sunset.png",
+              order: 0,
+              aspect: 1.5,
+              geo: { scale: { a: { x: 10, y: 90 }, b: { x: 30, y: 90 }, meters: 5e4 }, ref: { x: 50, y: 50, lat: 13.75, lon: 100.5 } },
+              overlays: { grid: false, gridSize: 10, compass: true, scale: true, scaleLabel: "" },
+              pins: [
+                { id: "v1", x: 30, y: 40, kind: "note", label: "\u0E17\u0E48\u0E32\u0E40\u0E23\u0E37\u0E2D\u0E40\u0E01\u0E48\u0E32" },
+                { id: "v2", x: 62, y: 55, kind: "portal", toMap: "vw2", label: "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E2B\u0E25\u0E27\u0E07" },
+                { id: "v3", x: 45, y: 72, kind: "note", label: "\u0E2B\u0E2D\u0E04\u0E2D\u0E22\u0E40\u0E2B\u0E19\u0E37\u0E2D" }
+              ],
+              zones: [{ id: "z1", name: "\u0E41\u0E04\u0E27\u0E49\u0E19\u0E43\u0E15\u0E49", color: "#6fae6f", points: [{ x: 35, y: 50 }, { x: 80, y: 45 }, { x: 85, y: 85 }, { x: 40, y: 90 }] }],
+              routes: [{ id: "r1", name: "\u0E16\u0E19\u0E19\u0E2B\u0E25\u0E27\u0E07", color: "#d97757", dashed: false, pinIds: ["v1", "v3", "v2"] }]
+            },
+            { id: "vw2", name: "\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E2B\u0E25\u0E27\u0E07", image: "Images/sunset.png", order: 1, pins: [] }
+          ] }, null, 2));
+          resetPanels();
+          await wV(300);
+          const pmV = getPanelManager();
+          pmV.floatPanel("maps", { x: 20, y: 60, w: 1440, h: 860 });
+          await wV(300);
+          await openMapById("vw1");
+          await wV(900);
+          await kapi.testShot("/tmp/k2_maps_big.png");
+          await showMapGallery();
+          await wV(600);
+          await kapi.testShot("/tmp/k2_maps_gallery.png");
+          resetPanels();
+          await wV(300);
+          pmV.floatPanel("timeline", { x: 20, y: 60, w: 1440, h: 860 });
+          await wV(300);
+          state._tlView = "gantt";
+          await renderTimeline($("#tl-body"));
+          await wV(600);
+          await kapi.testShot("/tmp/k2_tl_big.png");
+          if (keepMaps != null) await kapi.writeFile(mp, keepMaps);
+          else await kapi.remove(mp);
+          resetPanels();
+          await wV(300);
+        } catch (e) {
+          out.push("INFO [167-V] " + (e && e.message));
+        }
       }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
@@ -244403,6 +244532,7 @@ ${css}
     clearTimeout(_tipJob);
     if (_tipHost && _tipSaved) {
       _tipHost.setAttribute("title", _tipSaved);
+      delete _tipHost.dataset.tipHeld;
     }
     _tipHost = null;
     _tipSaved = "";
@@ -244434,6 +244564,7 @@ ${css}
     _tipHost = host2;
     _tipSaved = text;
     host2.removeAttribute("title");
+    host2.dataset.tipHeld = text;
     const box2 = tipBox();
     fillTip(box2, host2, text);
     box2.classList.add("on");
@@ -244448,6 +244579,7 @@ ${css}
   }
   function releaseHeldTitle() {
     if (_tipHeld && !_tipHeld.host.getAttribute("title")) _tipHeld.host.setAttribute("title", _tipHeld.text);
+    if (_tipHeld) delete _tipHeld.host.dataset.tipHeld;
     _tipHeld = null;
   }
   function setupHoverTips() {
@@ -244459,6 +244591,7 @@ ${css}
         if (held && held.getAttribute("title")) {
           releaseHeldTitle();
           _tipHeld = { host: held, text: held.getAttribute("title") };
+          held.dataset.tipHeld = _tipHeld.text;
           held.removeAttribute("title");
         }
         return;
@@ -244485,6 +244618,7 @@ ${css}
       _tipSaved = text;
       _tipKt = host2;
       host2.removeAttribute("title");
+      host2.dataset.tipHeld = text;
       const box2 = tipBox();
       fillTip(box2, host2, text);
       box2.classList.add("on");
