@@ -279,6 +279,13 @@ export function buildNetSide(pane, net) {
       scn.append(row(tt('ui.netScene.imageOpacity'), slider(0, 1, 0.05, bg.imageOpacity, (v) => updBg({ imageOpacity: v }))));
     }
     scn.append(row(tt('ui.netScene.dim'), slider(0, 0.9, 0.05, bg.dim, (v) => updBg({ dim: v }))));
+    // [alpha.167] ฉากหลังของโหมด 3D: skybox รอบกล้อง (ค่าเริ่มต้น) หรือแผ่นบนระนาบแบบเดิม
+    if (bg.kind !== 'solid') {
+      scn.append(row(tt('ui.netScene.sky3d'), select([
+        { value: 'sky', label: tt('ui.netScene.sky3dSky') }, { value: 'plane', label: tt('ui.netScene.sky3dPlane') },
+      ], bg.sky3d, (v) => { updBg({ sky3d: v }); renderScene(); })));
+      if (bg.kind === 'image' && bg.sky3d === 'sky') scn.append(el('div', 'net-side-note', tt('ui.netScene.panoHint')));
+    }
     // กริด
     scn.append(el('div', 'net-side-sub', tt('ui.netScene.grid')));
     scn.append(row(tt('ui.netScene.gridStyle'), select(NET_GRID_STYLES.map((g) => ({ value: g.id, label: tt(g.lk) })), S.grid.style,

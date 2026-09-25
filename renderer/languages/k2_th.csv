@@ -2181,6 +2181,7 @@ ui.branch.needTreeView,เปิดมุมมองผังก่อนจึ
 ui.branch.newChoiceNewReady,สร้างทางเลือกใหม่ พร้อมแทรก [ข้อความ] ลงท้ายฉากให้ด้วย
 ui.branch.newNewPlanStartLayout,สร้างแผนใหม่ (เริ่มจากการจัดวางเปล่า)
 ui.branch.noChoice,ฉากนี้ยังไม่มีทางเลือก — เป็นตอนจบสายหนึ่ง
+ui.branch.noChoicesYet,ยังไม่มีทางเลือก
 ui.branch.nodeHelp,คลิก = เลือก · ลาก = ย้ายตำแหน่ง · ดับเบิลคลิก = เปิดฉาก
 ui.branch.noDup,ไม่มีทางเลือกซ้ำให้รวม
 ui.branch.noFile,ฉากนี้ยังไม่มีไฟล์
@@ -3808,19 +3809,35 @@ ui.importSp.xMLNotValid,XML ไม่ถูกต้อง:
 ui.kanban.add,+ เพิ่มคอลัมน์
 ui.kanban.addStatus,เพิ่มสถานะ
 ui.kanban.addStatusHint,เพิ่มคอลัมน์ = เพิ่มสถานะฉากของทั้งโปรเจกต์ (เห็นใน Explorer ทันที)
+ui.kanban.colCollapse,พับคอลัมน์
+ui.kanban.colColor,เปลี่ยนสีสถานะ…
+ui.kanban.colExpand,กางคอลัมน์
+ui.kanban.colMenu,ตัวเลือกคอลัมน์
 ui.kanban.deleteColumn,ลบคอลัมน์
 ui.kanban.deleteMove,"ลบสถานะ ""{0}""? ฉาก {1} ฉากในคอลัมน์นี้จะย้ายไป ""{2}"""
 ui.kanban.draftPick,เลือกฉบับร่างที่จะแสดงบนกระดาน
+ui.kanban.empty,ลากการ์ดมาวางที่นี่
 ui.kanban.hiddenBuiltin, (ซ่อนจากกระดานอยู่)
+ui.kanban.locked,ฉากนี้ล็อกอยู่
 ui.kanban.manageStatus,จัดการสถานะ
 ui.kanban.moveScenesFirst,ย้ายฉากออกจากคอลัมน์นี้ก่อน
 ui.kanban.newColumn,ชื่อคอลัมน์ใหม่
 ui.kanban.newColumnHint,เช่น รอรีวิว
 ui.kanban.newDraftBeforeUse,สร้างฉบับร่างก่อนจึงจะใช้ Kanban ได้
+ui.kanban.noMatch,ไม่มีฉากที่ตรงกับคำค้น
+ui.kanban.openHint,ดับเบิลคลิกหรือกด Enter เพื่อเปิดฉาก · ลากเพื่อย้ายสถานะ
 ui.kanban.restoreStatus,แสดงคืน
 ui.kanban.sceneNotFound,ไม่พบไฟล์ฉาก: 
+ui.kanban.search,ค้นหาฉาก แท็ก ผู้เล่า…
+ui.kanban.sortBoard,ลำดับบนกระดาน
+ui.kanban.sortBy,เรียงการ์ด
+ui.kanban.sortTitle,ชื่อฉาก
+ui.kanban.sortWords,ยาวที่สุดก่อน
 ui.kanban.statusExists,มีสถานะชื่อนี้อยู่แล้ว
+ui.kanban.totalScenes,{0} ฉาก
 ui.kanban.unset,ยังไม่กำหนด
+ui.kanban.words,{0} คำ
+ui.kanban.wordsBar,ความยาวของฉากเทียบกับฉากที่ยาวที่สุดบนกระดาน
 ui.layoutSplit.fieldEmpty,ช่องว่าง
 ui.layoutSplit.leftRight,ซ้าย-ขวา
 ui.layoutSplit.topBottom,บน-ล่าง
@@ -4213,7 +4230,6 @@ ui.net.dragBgScrollWheel,ลากพื้น=เลื่อน · ล้อ=�
 ui.net.dragNodeMovePos,ลากโหนดเพื่อย้ายตำแหน่ง
 ui.net.dragViewD,ลาก{0} = หมุนมุมมอง 3D
 ui.net.findDisk,หาในดิสก์
-ui.net.hide,ซ่อน
 ui.net.hollowGrid,โปร่งใส grid: 
 ui.net.hollowGrid2,โปร่งใส grid: 12%
 ui.net.itemFilmNameNode,ตัวหนังสือชื่อโหนด
@@ -4305,7 +4321,11 @@ ui.netScene.imageScale,ขนาดรูป
 ui.netScene.imageScreen,เต็มจอ (อยู่กับที่)
 ui.netScene.imageWorld,ติดกับผัง (เลื่อน/ซูม/เอียงตาม)
 ui.netScene.modelFiles,โมเดล 3 มิติ
+ui.netScene.panoHint,โหมด 3D ใช้รูปเป็นพาโนรามา 360° รอบกล้อง — รูปสัดส่วน 2:1 จะต่อกันพอดีรอบวง
 ui.netScene.reset,คืนฉากหลังเริ่มต้น
+ui.netScene.sky3d,ฉากหลังในโหมด 3D
+ui.netScene.sky3dPlane,แผ่นบนพื้น (แบบเดิม)
+ui.netScene.sky3dSky,Skybox รอบกล้อง
 ui.netScene.stars,ความหนาแน่นของดาว
 ui.netUi.appearsIn,ปรากฏในฉาก
 ui.netUi.bgCenterHere,วางกึ่งกลางรูปตรงนี้
@@ -4330,6 +4350,8 @@ ui.netUi.layoutCategory,จัดกลุ่มตามหมวด
 ui.netUi.layoutForce,จัดใหม่อัตโนมัติ (แรงผลัก/ดึง)
 ui.netUi.layoutRadial,วงรอบโหนดที่เลือก
 ui.netUi.layoutStory,เรียงตามลำดับเรื่อง (ฉากเป็นแกนเวลา)
+ui.netUi.legendTitle,สัญลักษณ์
+ui.netUi.legendToggle,คลิกเพื่อซ่อน/แสดงหมวดนี้บนผัง
 ui.netUi.link,ผูกความสัมพันธ์
 ui.netUi.linkFrom,ผูกความสัมพันธ์จากโหนดนี้ (ลากไปวางบนอีกโหนด)
 ui.netUi.model,โมเดล 3 มิติแทนโหนด
@@ -4352,6 +4374,11 @@ ui.netUi.pathPickHint,คลิกโหนดปลายทางเพื่�
 ui.netUi.pathSteps,เส้นทาง {0} ขั้น
 ui.netUi.pathViaScenes,ไม่มีความสัมพันธ์ที่ตั้งไว้เชื่อมกันโดยตรง — เส้นทางนี้ผ่านฉากที่ปรากฏร่วมกัน
 ui.netUi.perspBtn,มุมมองระยะ (3D) — ของไกลเล็กลง
+ui.netUi.popBtn,ตัวกรองและการแสดงผล
+ui.netUi.popCats,หมวด
+ui.netUi.popMore,อื่น ๆ
+ui.netUi.popTypes,ประเภทเส้น
+ui.netUi.popView,การแสดงผล
 ui.netUi.relations,ความสัมพันธ์
 ui.netUi.relFail,ผูกความสัมพันธ์ไม่สำเร็จ
 ui.netUi.sceneBtn,ฉากหลังและโมเดล

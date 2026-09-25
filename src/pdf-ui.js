@@ -82,6 +82,9 @@ async function fontStamp(dir, files) {
   return parts.join('|');
 }
 
+/** [alpha.167] ฟอนต์ไทยที่มากับ Linux (ชุด TLWG · Noto) — ใช้เมื่อหาฟอนต์ในลูกโซ่ปกติไม่เจอสักตัว */
+const PDF_THAI_LAST_RESORT = ['Sarabun', 'Noto Sans Thai', 'Noto Serif Thai', 'Loma', 'Garuda', 'Norasi', 'Kinnari', 'Laksaman', 'TlwgTypo'];
+
 /**
  * [alpha.159] ไฟล์ฟอนต์ไทยที่จะฝังลง PDF ของบท — ไม่มีฟอนต์ไทยฝังมากับโปรแกรมแล้ว
  * ลำดับ: แถว "ฟอนต์ตามภาษา" ของบท (ไฟล์ใน Fonts/ ของโปรเจกต์ → ชื่อฟอนต์ของเครื่อง)
@@ -113,6 +116,9 @@ export async function pdfThaiFontCandidates() {
   const fams = [...new Set([...rows.flatMap((r) => familyList(r)), ...SP_THAI_FALLBACKS])];
   // ถามทีละวงศ์ — ตัวที่เจอก่อนอาจฝังไม่ได้ (.ttc / AAT) ต้องมีตัวถัดไปให้ลอง
   for (const fam of fams) { try { add(await kapi.fontFile([fam])); } catch {} }
+  // [alpha.167 · bug hunt] ทางสุดท้ายของไฟล์ PDF เท่านั้น (ไม่แตะลูกโซ่ฟอนต์บนจอ/ค่าในโปรเจกต์):
+  // เครื่อง Linux ไม่มี Thonburi/Leelawadee/Sarabun/Tahoma เลย → เดิมหาไม่เจอสักตัว ไทยทั้งไฟล์เป็น ??????
+  if (!out.length) for (const fam of PDF_THAI_LAST_RESORT) { try { add(await kapi.fontFile([fam])); } catch {} }
   return out;
 }
 

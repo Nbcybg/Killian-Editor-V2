@@ -47447,6 +47447,8 @@ ${h.text}`;
           pov: r.pov || "",
           fileName: r.fileName || "",
           locked: !!r.locked,
+          words: Number(r.wordCount) > 0 ? Number(r.wordCount) : 0,
+          flag: !!(r.isFavorite || r.flag),
           _seq: seq3++
         });
       }
@@ -47902,6 +47904,16 @@ ${h.text}`;
     window.addEventListener("k2-statuses-changed", () => scheduleSync(false));
     return true;
   }
+  function initialOf(name5) {
+    const s = String(name5 || "").trim().replace(/^[\u0E40-\u0E44]+/, "");
+    const m = s.match(/[\p{L}\p{N}]/u);
+    return m ? m[0].toUpperCase() : "?";
+  }
+  function hueOf(name5) {
+    let h = 0;
+    for (const ch of String(name5 || "")) h = h * 31 + ch.codePointAt(0) >>> 0;
+    return CHART_SERIES[h % CHART_SERIES.length];
+  }
   function renderKanban(b) {
     if (!uiPane) return;
     bindKanbanSync();
@@ -47915,29 +47927,53 @@ ${h.text}`;
       const cards = c.querySelector(".kb-cards");
       if (cards && cards.scrollTop) keepY.set(c.dataset.status, cards.scrollTop);
     }
+    const hadFocus = document.activeElement && document.activeElement.classList.contains("kb-search");
     uiPane.innerHTML = "";
     const wrap2 = el("div", "kb-wrap");
     const head2 = el("div", "kb-head");
-    head2.append(el("span", "kb-title", gi("clipboard") + " Kanban \u2014 " + data2.total + t("ui.common.scene")));
-    const addBtn = el("button", "kb-add-col", gi("plus-plain") + " " + t("ui.kanban.addStatus"));
-    addBtn.title = t("ui.kanban.addStatusHint");
-    addBtn.onclick = async () => {
-      const name5 = await ask(t("ui.kanban.newColumn"), { placeholder: t("ui.kanban.newColumnHint") });
-      if (!name5) return;
-      const used = allStatuses().map((s) => statusColor(s));
-      if (!await addCustomStatus(name5, nextStatusColor(used))) {
-        setStatus(t("ui.kanban.statusExists"));
-        return;
-      }
-      renderKanban(b);
-      treeRefresh();
+    const titleBox = el("div", "kb-titlebox");
+    titleBox.append(el("span", "kb-title", "Kanban"), el("span", "kb-total", tf("ui.kanban.totalScenes", data2.total)));
+    head2.append(titleBox);
+    const tools = el("div", "kb-tools");
+    const searchBox = el("label", "kb-searchbox");
+    searchBox.append(el("span", "kb-search-ico", gi("search")));
+    const search2 = el("input", "kb-search");
+    search2.type = "search";
+    search2.placeholder = t("ui.kanban.search");
+    search2.value = VIEW.q;
+    search2.setAttribute("aria-label", t("ui.kanban.search"));
+    let sJob = null;
+    search2.oninput = () => {
+      clearTimeout(sJob);
+      sJob = setTimeout(() => {
+        VIEW.q = search2.value.trim();
+        renderKanban(b);
+      }, 160);
     };
-    const mgrBtn = el("button", "kb-manage", gi("cog") + " " + t("ui.kanban.manageStatus"));
-    mgrBtn.onclick = () => manageCustomStatuses();
-    head2.append(addBtn, mgrBtn);
+    search2.onkeydown = (e) => {
+      if (e.key === "Escape" && search2.value) {
+        e.stopPropagation();
+        search2.value = "";
+        VIEW.q = "";
+        renderKanban(b);
+      }
+    };
+    searchBox.append(search2);
+    const sortSel = el("select", "k-dlg-select kb-sort");
+    sortSel.title = t("ui.kanban.sortBy");
+    sortSel.setAttribute("aria-label", t("ui.kanban.sortBy"));
+    for (const [v2, k] of SORTS) {
+      const o = el("option", null, t(k));
+      o.value = v2;
+      sortSel.append(o);
+    }
+    sortSel.value = VIEW.sort;
+    sortSel.onchange = () => {
+      VIEW.sort = sortSel.value;
+      renderKanban(b);
+    };
     const draftSel = el("select", "k-dlg-select kb-draft");
     draftSel.title = t("ui.kanban.draftPick");
-    head2.append(draftSel);
     const fillDrafts = (ds) => {
       draftSel.replaceChildren();
       for (const d of ds) {
@@ -47956,32 +47992,60 @@ ${h.text}`;
     }).catch(() => {
     });
     draftSel.onchange = () => setKanbanDraft(draftSel.value);
+    const mgrBtn = el("button", "kb-manage", gi("cog"));
+    mgrBtn.title = t("ui.kanban.manageStatus");
+    mgrBtn.setAttribute("aria-label", t("ui.kanban.manageStatus"));
+    mgrBtn.onclick = () => manageCustomStatuses();
+    const addBtn = el("button", "kb-add-col", gi("plus-plain") + " " + t("ui.kanban.addStatus"));
+    addBtn.title = t("ui.kanban.addStatusHint");
+    addBtn.onclick = async () => {
+      const name5 = await ask(t("ui.kanban.newColumn"), { placeholder: t("ui.kanban.newColumnHint") });
+      if (!name5) return;
+      const used = allStatuses().map((s) => statusColor(s));
+      if (!await addCustomStatus(name5, nextStatusColor(used))) {
+        setStatus(t("ui.kanban.statusExists"));
+        return;
+      }
+      renderKanban(b);
+      treeRefresh();
+    };
+    tools.append(searchBox, sortSel, draftSel, mgrBtn, addBtn);
+    head2.append(tools);
     wrap2.append(head2);
+    const q2 = VIEW.q.toLowerCase();
+    const match = (card) => !q2 || [card.title, card.synopsis, card.pov, SYNC.chapters.get(card.chapterId), ...card.tags || []].some((x) => String(x || "").toLowerCase().includes(q2));
+    const maxWords = Math.max(1, ...data2.columns.flatMap((c) => c.cards.map((x) => x.words || 0)));
+    const reorderable = VIEW.sort === "board" && !q2;
     const cols = el("div", "kb-cols");
     for (const col of data2.columns) {
       const isStatus = col.key !== UNSET;
       const colHex = isStatus ? vivid(statusColor(col.key)) : "";
-      const colEl = el("div", "kb-col" + (col.over ? " kb-over" : "") + (col.custom ? " kb-custom" : "") + (col.collapsed ? " kb-collapsed" : ""));
+      const colEl = el("div", "kb-col" + (col.over ? " kb-over" : "") + (col.custom ? " kb-custom" : "") + (col.collapsed ? " kb-collapsed" : "") + (isStatus ? "" : " kb-col-unset"));
       colEl.dataset.status = col.key;
-      if (colHex) colEl.style.setProperty("--kb-col", colHex);
+      colEl.style.setProperty("--kb-col", colHex || STATUS_UNSET);
+      const shown = col.cards.filter(match);
+      if (VIEW.sort === "title") shown.sort((x, y) => cmpText(x.title, y.title));
+      else if (VIEW.sort === "words") shown.sort((x, y) => (y.words || 0) - (x.words || 0));
       const colHead = el("div", "kb-col-head");
-      if (colHex) {
-        colHead.style.background = colHex;
-        colHead.style.color = inkOn(colHex);
-      }
-      const toggleBtn2 = el("span", "kb-col-toggle", col.collapsed ? gi("play") : gi("triangle-down"));
-      toggleBtn2.onclick = async () => {
+      const toggleCol2 = async () => {
         b.store.layout = { ...b.store.layout, collapsed: col.collapsed ? b.store.layout.collapsed.filter((k) => k !== col.key) : [...b.store.layout.collapsed || [], col.key] };
         b.store.save();
         renderKanban(b);
       };
+      const toggleBtn2 = el("button", "kb-col-toggle", col.collapsed ? gi("play") : gi("triangle-down"));
+      toggleBtn2.title = t(col.collapsed ? "ui.kanban.colExpand" : "ui.kanban.colCollapse");
+      toggleBtn2.setAttribute("aria-label", toggleBtn2.title);
+      toggleBtn2.onclick = (e) => {
+        e.stopPropagation();
+        toggleCol2();
+      };
+      const dot2 = el("span", "kb-col-dot");
       const colTitle = el("span", "kb-col-title");
       colTitle.textContent = (col.over ? gi("warning") + " " : "") + (isStatus ? dataLabel(col.label) : t("ui.kanban.unset"));
-      const colCount = el("span", "kb-col-count", String(col.count));
-      colHead.append(toggleBtn2, colTitle, colCount);
+      const colCount = el("span", "kb-col-count", q2 && shown.length !== col.count ? shown.length + "/" + col.count : String(col.count));
+      colHead.append(toggleBtn2, dot2, colTitle, colCount);
       if (isStatus) {
         const pick2 = el("label", "kb-col-color");
-        pick2.style.background = colHex;
         pick2.title = t("ui.status.recolorStatus");
         const inp = el("input", "kb-col-color-input");
         inp.type = "color";
@@ -47993,10 +48057,9 @@ ${h.text}`;
         };
         pick2.append(inp);
         pick2.addEventListener("mousedown", (e) => e.stopPropagation());
-        const delBtn = el("span", "kb-col-del", gi("close"));
-        delBtn.title = t("ui.kanban.deleteColumn");
-        delBtn.onclick = async (e) => {
-          e.stopPropagation();
+        dot2.replaceWith(pick2);
+        pick2.prepend(dot2);
+        const delCol = async () => {
           const others = allStatuses().filter((s) => s !== col.key);
           if (col.count) {
             if (!await confirmBox(tf("ui.kanban.deleteMove", dataLabel(col.key), col.count, others[0] ? dataLabel(others[0]) : t("ui.kanban.unset")), t("ui.common.del"))) return;
@@ -48010,7 +48073,26 @@ ${h.text}`;
           renderKanban(b);
           treeRefresh();
         };
-        colHead.append(pick2, delBtn);
+        const delBtn = el("span", "kb-col-del", gi("close"));
+        delBtn.title = t("ui.kanban.deleteColumn");
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          delCol();
+        };
+        const more = el("button", "kb-col-more", gi("more"));
+        more.title = t("ui.kanban.colMenu");
+        more.setAttribute("aria-label", t("ui.kanban.colMenu"));
+        more.onclick = (e) => {
+          e.stopPropagation();
+          const r = more.getBoundingClientRect();
+          popupMenu(r.left, r.bottom + 4, [
+            { text: t("ui.kanban.colColor"), swatch: colHex, click: () => inp.click() },
+            { text: t(col.collapsed ? "ui.kanban.colExpand" : "ui.kanban.colCollapse"), click: toggleCol2 },
+            "-",
+            { text: t("ui.kanban.deleteColumn"), danger: true, click: delCol }
+          ]);
+        };
+        colHead.append(delBtn, more);
         colHead.draggable = true;
         colHead.ondragstart = (e) => {
           e.dataTransfer.setData("text/k2-kb-col", col.key);
@@ -48022,44 +48104,10 @@ ${h.text}`;
       colEl.append(colHead);
       if (!col.collapsed) {
         const cardList = el("div", "kb-cards");
-        for (const card of col.cards) {
-          const cardEl = el("div", "kb-card");
-          cardEl.draggable = true;
-          cardEl.dataset.sceneId = card.id;
-          const stripe = vivid(card.color) || colHex;
-          if (stripe) {
-            cardEl.style.setProperty("--kb-card", stripe);
-            cardEl.classList.add("kb-card-colored");
-          }
-          cardEl.append(el("div", "kb-card-title", null));
-          cardEl.lastChild.textContent = card.title;
-          const chTitle = SYNC.chapters.get(card.chapterId);
-          if (chTitle || card.pov) {
-            const meta2 = el("div", "kb-card-meta");
-            meta2.textContent = [chTitle, card.pov].filter(Boolean).join(" \xB7 ");
-            cardEl.append(meta2);
-          }
-          cardEl.ondblclick = async () => {
-            if (!board) return;
-            const folders = await chapterFolders(board.draftPath);
-            const p = await scenePath(board.draftPath, card.chapterId, card, folders);
-            if (card.fileName && await kapi.exists(p)) {
-              const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-              openScene2(p, card.title);
-              return;
-            }
-            setStatus(t("ui.kanban.sceneNotFound") + card.title);
-          };
-          cardEl.ondragstart = (e) => {
-            e.dataTransfer.setData("text/plain", card.id);
-            e.dataTransfer.effectAllowed = "move";
-            cardEl.classList.add("kb-dragging");
-          };
-          cardEl.ondragend = () => cardEl.classList.remove("kb-dragging");
-          cardList.append(cardEl);
-        }
+        for (const card of shown) cardList.append(cardEl(card, colHex, maxWords));
+        if (!shown.length) cardList.append(el("div", "kb-empty", t(q2 && col.count ? "ui.kanban.noMatch" : "ui.kanban.empty")));
         colEl.append(cardList);
-        const dropIndex = (clientY) => {
+        const visibleIndex = (clientY) => {
           const cards = [...cardList.querySelectorAll(".kb-card:not(.kb-dragging)")];
           for (let i5 = 0; i5 < cards.length; i5++) {
             const r = cards[i5].getBoundingClientRect();
@@ -48067,6 +48115,7 @@ ${h.text}`;
           }
           return cards.length;
         };
+        const dropIndex = (clientY) => reorderable ? visibleIndex(clientY) : col.cards.length;
         const showMarker = (idx4) => {
           let mk2 = cardList.querySelector(".kb-drop-mark");
           if (!mk2) {
@@ -48081,7 +48130,7 @@ ${h.text}`;
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";
           colEl.classList.add("kb-drag-over");
-          if (!isColDrag(e)) showMarker(dropIndex(e.clientY));
+          if (!isColDrag(e)) showMarker(reorderable ? visibleIndex(e.clientY) : Infinity);
         };
         colEl.ondragleave = (e) => {
           if (colEl.contains(e.relatedTarget)) return;
@@ -48119,6 +48168,92 @@ ${h.text}`;
       const cards = c && c.querySelector(".kb-cards");
       if (cards) cards.scrollTop = y;
     }
+    if (hadFocus) {
+      search2.focus();
+      search2.setSelectionRange(search2.value.length, search2.value.length);
+    }
+  }
+  function cardEl(card, colHex, maxWords) {
+    const cardEl2 = el("div", "kb-card");
+    cardEl2.draggable = true;
+    cardEl2.tabIndex = 0;
+    cardEl2.dataset.sceneId = card.id;
+    cardEl2.title = t("ui.kanban.openHint");
+    const stripe = vivid(card.color) || colHex;
+    if (stripe) {
+      cardEl2.style.setProperty("--kb-card", stripe);
+      cardEl2.classList.add("kb-card-colored");
+    }
+    const tags = (card.tags || []).filter(Boolean);
+    if (tags.length || card.flag || card.locked) {
+      const top = el("div", "kb-card-top");
+      for (const tg of tags.slice(0, 2)) top.append(el("span", "kb-tag", tg));
+      if (tags.length > 2) top.append(el("span", "kb-tag kb-tag-more", "+" + (tags.length - 2)));
+      const marks2 = el("span", "kb-card-marks");
+      if (card.flag) {
+        const f = el("span", "kb-flag", gi("star"));
+        marks2.append(f);
+      }
+      if (card.locked) {
+        const l = el("span", "kb-lock", gi("lock"));
+        l.title = t("ui.kanban.locked");
+        marks2.append(l);
+      }
+      top.append(marks2);
+      cardEl2.append(top);
+    }
+    const title2 = el("div", "kb-card-title");
+    title2.textContent = card.title;
+    cardEl2.append(title2);
+    if (card.synopsis) cardEl2.append(el("div", "kb-card-syn", card.synopsis));
+    if (card.words) {
+      const prog = el("div", "kb-card-len");
+      prog.title = t("ui.kanban.wordsBar");
+      const bar = el("div", "kb-len-bar");
+      const fill3 = el("i", "kb-len-fill");
+      fill3.style.width = Math.max(4, Math.round(card.words / maxWords * 100)) + "%";
+      bar.append(fill3);
+      prog.append(bar, el("span", "kb-len-num", tf("ui.kanban.words", fmtNum(card.words))));
+      cardEl2.append(prog);
+    }
+    const chTitle = SYNC.chapters.get(card.chapterId);
+    if (chTitle || card.pov) {
+      const meta2 = el("div", "kb-card-meta");
+      if (card.pov) {
+        const who = el("span", "kb-pov");
+        const av = el("span", "kb-avatar", initialOf(card.pov));
+        av.style.setProperty("--av", hueOf(card.pov));
+        who.append(av, el("span", "kb-pov-name", card.pov));
+        meta2.append(who);
+      }
+      if (chTitle) meta2.append(el("span", "kb-chapter", gi("folder") + " " + chTitle));
+      cardEl2.append(meta2);
+    }
+    const open = async () => {
+      if (!board) return;
+      const folders = await chapterFolders(board.draftPath);
+      const p = await scenePath(board.draftPath, card.chapterId, card, folders);
+      if (card.fileName && await kapi.exists(p)) {
+        const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        openScene2(p, card.title);
+        return;
+      }
+      setStatus(t("ui.kanban.sceneNotFound") + card.title);
+    };
+    cardEl2.ondblclick = open;
+    cardEl2.onkeydown = (e) => {
+      if (e.key === "Enter" && e.target === cardEl2) {
+        e.preventDefault();
+        open();
+      }
+    };
+    cardEl2.ondragstart = (e) => {
+      e.dataTransfer.setData("text/plain", card.id);
+      e.dataTransfer.effectAllowed = "move";
+      cardEl2.classList.add("kb-dragging");
+    };
+    cardEl2.ondragend = () => cardEl2.classList.remove("kb-dragging");
+    return cardEl2;
   }
   async function dropColumn(e, targetKey, b) {
     if (!isColDrag(e)) return false;
@@ -48148,7 +48283,7 @@ ${h.text}`;
     uiPane = null;
     _draftsCache = null;
   }
-  var board, KB, _draftsCache, kbKey, uiPane, SYNC, isColDrag;
+  var board, KB, _draftsCache, kbKey, uiPane, SYNC, VIEW, SORTS, isColDrag;
   var init_kanban_ui = __esm({
     "src/kanban/kanban-ui.js"() {
       init_core();
@@ -48158,6 +48293,7 @@ ${h.text}`;
       init_color_util();
       init_project_scan();
       init_ui();
+      init_locale();
       init_panel_ui();
       init_icons();
       board = null;
@@ -48166,6 +48302,8 @@ ${h.text}`;
       kbKey = () => "k2-kanban-draft:" + state.root;
       uiPane = null;
       SYNC = { bound: false, job: null, chapters: /* @__PURE__ */ new Map() };
+      VIEW = { q: "", sort: "board" };
+      SORTS = [["board", "ui.kanban.sortBoard"], ["title", "ui.kanban.sortTitle"], ["words", "ui.kanban.sortWords"]];
       isColDrag = (e) => [...e.dataTransfer && e.dataTransfer.types || []].includes("text/k2-kb-col");
     }
   });
@@ -58329,7 +58467,9 @@ ${h.text}`;
         imageY: num4(b.imageY, 0, -1e6, 1e6),
         imageOpacity: num4(b.imageOpacity, 1, 0, 1),
         stars: num4(b.stars, 1, 0, 3),
-        dim: num4(b.dim, 0, 0, 0.9)
+        dim: num4(b.dim, 0, 0, 0.9),
+        // [alpha.167] โหมด 3D: 'sky' = ฉากหลังเป็น skybox รอบกล้อง (ค่าเริ่มต้น) · 'plane' = แผ่นบนระนาบแบบ alpha.166
+        sky3d: b.sky3d === "plane" ? "plane" : "sky"
       },
       grid: {
         style,
@@ -58353,6 +58493,14 @@ ${h.text}`;
   function gridColorOf(scene, themeGrid) {
     const s = normalizeNetScene(scene);
     return s.grid.color || PRESET_GRID_COLOR[s.bg.kind] || themeGrid;
+  }
+  function isLightBg(scene, themeBg) {
+    const s = normalizeNetScene(scene);
+    const c = s.bg.kind === "theme" || s.bg.kind === "image" ? themeBg : s.bg.c1;
+    if (!HEX.test(String(c || ""))) return false;
+    const n2 = parseInt(String(c).slice(1), 16);
+    const lum = (0.2126 * (n2 >> 16 & 255) + 0.7152 * (n2 >> 8 & 255) + 0.0722 * (n2 & 255)) / 255;
+    return lum > 0.6;
   }
   function seededRandom(seed) {
     let a = seed >>> 0 || 1;
@@ -58457,6 +58605,144 @@ ${h.text}`;
         if (!s || s.startsWith("/") || /^[a-z]:/i.test(s) || s.split("/").includes("..")) return "";
         return s;
       };
+    }
+  });
+
+  // src/network-sky.js
+  function skyFocal(w, h) {
+    return 0.9 * Math.max(w || 1, h || 1);
+  }
+  function skyDir(X2, Y, w, h, rot, f) {
+    const fp = f || skyFocal(w, h);
+    const v2 = { x: (X2 - w / 2) / fp, y: (Y - h / 2) / fp, z: 1 };
+    const d = unrot3(v2, rot ? rot.rx : 0, rot ? rot.ry : 0);
+    const L2 = Math.hypot(d.x, d.y, d.z) || 1;
+    return { x: d.x / L2, y: d.y / L2, z: d.z / L2 };
+  }
+  function skyProject(d, w, h, rot, f) {
+    const fp = f || skyFocal(w, h);
+    const v2 = rot3(d, rot ? rot.rx : 0, rot ? rot.ry : 0);
+    if (v2.z <= 1e-3) return null;
+    return { x: w / 2 + fp * v2.x / v2.z, y: h / 2 + fp * v2.y / v2.z };
+  }
+  function equirectUV(d) {
+    const lon = Math.atan2(d.x, d.z);
+    const lat = Math.asin(Math.max(-1, Math.min(1, -d.y)));
+    return { u: 0.5 + lon / (2 * Math.PI), v: 0.5 - lat / Math.PI };
+  }
+  function skyElevation(d) {
+    return -d.y;
+  }
+  function skyStars(density = 1, seed = 17) {
+    const rnd = seededRandom(seed);
+    const n2 = Math.round(1600 * Math.max(0, Math.min(3, density)));
+    const out = [];
+    for (let i5 = 0; i5 < n2; i5++) {
+      const z = rnd() * 2 - 1, t3 = rnd() * Math.PI * 2, s = Math.sqrt(1 - z * z);
+      const big = rnd();
+      out.push({
+        x: s * Math.cos(t3),
+        y: z,
+        z: s * Math.sin(t3),
+        r: big > 0.985 ? 1.6 + rnd() * 1.2 : big > 0.9 ? 0.9 + rnd() * 0.5 : 0.45 + rnd() * 0.4,
+        a: 0.3 + rnd() * 0.7,
+        tint: rnd()
+      });
+    }
+    return out;
+  }
+  function shade(c, k) {
+    return k >= 0 ? mix(c, [255, 255, 255], k) : mix(c, [0, 0, 0], -k);
+  }
+  function nebulaBlobs(seed = 5) {
+    const rnd = seededRandom(seed);
+    const out = [];
+    for (let i5 = 0; i5 < 7; i5++) {
+      const z = rnd() * 1.6 - 0.8, t3 = rnd() * Math.PI * 2, s = Math.sqrt(1 - z * z);
+      out.push({ x: s * Math.cos(t3), y: z, z: s * Math.sin(t3), w: 0.14 + rnd() * 0.3, k: 0.45 + rnd() * 0.55, alt: rnd() < 0.3 });
+    }
+    return out;
+  }
+  function domeShader(bg, themeBg) {
+    const base4 = hex3(themeBg, [20, 20, 28]);
+    const c1 = hex3(bg.c1, base4), c2 = hex3(bg.c2, c1);
+    switch (bg.kind) {
+      case "space": {
+        const blobs = nebulaBlobs(5);
+        const alt = [c2[2] * 0.8, c2[0] * 0.5 + 40, c2[1] * 0.7 + 60].map((x) => Math.min(255, x));
+        return (d) => {
+          let col = c1.slice();
+          const bd = d.x * BAND.x + d.y * BAND.y + d.z * BAND.z;
+          const band = Math.exp(-(bd * bd) / 0.02) * 0.34;
+          col = mix(col, shade(c2, 0.35), band);
+          for (const b of blobs) {
+            const dot2 = d.x * b.x + d.y * b.y + d.z * b.z;
+            const g = Math.exp(-(1 - dot2) / b.w) * b.k * 0.85;
+            if (g > 4e-3) col = mix(col, b.alt ? alt : c2, clamp01(g));
+          }
+          return col;
+        };
+      }
+      case "solid":
+        return () => c1;
+      case "theme": {
+        const top = shade(base4, 0.07), bot = shade(base4, -0.25), hz = shade(base4, 0.16);
+        return (d) => {
+          const e = skyElevation(d);
+          return e >= 0 ? mix(hz, top, Math.pow(e, 0.6)) : mix(hz, bot, Math.pow(-e, 0.5));
+        };
+      }
+      case "blueprint": {
+        const line = shade(c1, 0.35);
+        return (d) => {
+          const e = skyElevation(d);
+          let col = mix(c2, c1, clamp01(0.5 + e * 0.8));
+          const { u, v: v2 } = equirectUV(d);
+          const gu = Math.abs(u * 36 % 1 - 0.5), gv = Math.abs(v2 * 18 % 1 - 0.5);
+          const L2 = Math.max(clamp01((gu - 0.44) * 12), clamp01((gv - 0.44) * 12));
+          if (L2 > 0) col = mix(col, line, L2 * 0.55 * (1 - Math.abs(e) * 0.6));
+          return col;
+        };
+      }
+      case "wargame": {
+        const sky = shade(c1, -0.55), haze = shade(c1, 0.25), ground = c2;
+        return (d) => {
+          const e = skyElevation(d);
+          return e >= 0 ? mix(haze, sky, Math.pow(e, 0.55)) : mix(haze, ground, Math.pow(-e, 0.35));
+        };
+      }
+      case "parchment": {
+        return (d) => {
+          const e = Math.abs(skyElevation(d));
+          return mix(c1, c2, Math.pow(e, 0.8));
+        };
+      }
+      case "gradient":
+      case "image":
+      default:
+        return (d) => {
+          const e = skyElevation(d);
+          return mix(c2, c1, clamp01(0.5 + e * 0.9));
+        };
+    }
+  }
+  var hex3, mix, clamp01, BAND;
+  var init_network_sky = __esm({
+    "src/network-sky.js"() {
+      init_network_camera();
+      init_network_scene();
+      hex3 = (h, d) => {
+        const s = String(h || "");
+        if (!/^#[0-9a-f]{6}$/i.test(s)) return d;
+        const n2 = parseInt(s.slice(1), 16);
+        return [n2 >> 16 & 255, n2 >> 8 & 255, n2 & 255];
+      };
+      mix = (a, b, t3) => [a[0] + (b[0] - a[0]) * t3, a[1] + (b[1] - a[1]) * t3, a[2] + (b[2] - a[2]) * t3];
+      clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+      BAND = (() => {
+        const L2 = Math.hypot(0.35, 1, 0.2);
+        return { x: 0.35 / L2, y: 1 / L2, z: 0.2 / L2 };
+      })();
     }
   });
 
@@ -58665,12 +58951,109 @@ ${h.text}`;
     }
     c.restore();
   }
+  function panoPixels(img) {
+    if (_pano.has(img)) return _pano.get(img);
+    let out = null;
+    try {
+      const W = Math.min(2048, img.naturalWidth), H3 = Math.max(1, Math.round(W * img.naturalHeight / img.naturalWidth));
+      const cv = document.createElement("canvas");
+      cv.width = W;
+      cv.height = H3;
+      const c = cv.getContext("2d", { willReadFrequently: true });
+      c.drawImage(img, 0, 0, W, H3);
+      out = { w: W, h: H3, data: c.getImageData(0, 0, W, H3).data };
+    } catch {
+      out = null;
+    }
+    _pano.set(img, out);
+    return out;
+  }
+  function drawSky(c, w, h, rot, bg, themeBg, image) {
+    const f = skyFocal(w, h);
+    const pano = bg.kind === "image" && image && image.naturalWidth ? panoPixels(image) : null;
+    const step = pano ? 2 : 4;
+    const lw = Math.ceil(w / step) + 1, lh = Math.ceil(h / step) + 1;
+    if (!SKY.cv) SKY.cv = document.createElement("canvas");
+    if (SKY.cv.width !== lw || SKY.cv.height !== lh) {
+      SKY.cv.width = lw;
+      SKY.cv.height = lh;
+      SKY.px = null;
+    }
+    const sc = SKY.cv.getContext("2d");
+    if (!SKY.px) SKY.px = sc.createImageData(lw, lh);
+    const D = SKY.px.data;
+    const shader = domeShader(bg, themeBg);
+    let o = 0;
+    for (let j = 0; j < lh; j++) {
+      for (let i5 = 0; i5 < lw; i5++, o += 4) {
+        const d = skyDir(i5 * step, j * step, w, h, rot, f);
+        let r, g, b;
+        if (pano) {
+          const uv = equirectUV(d);
+          const x = Math.min(pano.w - 1, Math.max(0, uv.u * pano.w | 0)), y = Math.min(pano.h - 1, Math.max(0, uv.v * pano.h | 0));
+          const k = (y * pano.w + x) * 4;
+          r = pano.data[k];
+          g = pano.data[k + 1];
+          b = pano.data[k + 2];
+        } else {
+          const col = shader(d);
+          r = col[0];
+          g = col[1];
+          b = col[2];
+        }
+        D[o] = r;
+        D[o + 1] = g;
+        D[o + 2] = b;
+        D[o + 3] = 255;
+      }
+    }
+    sc.putImageData(SKY.px, 0, 0);
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = "high";
+    c.drawImage(SKY.cv, 0, 0, lw * step, lh * step);
+    if (bg.kind === "space" && bg.stars > 0) {
+      const key2 = String(bg.stars);
+      if (SKY.starKey !== key2) {
+        SKY.stars = skyStars(bg.stars);
+        SKY.starKey = key2;
+      }
+      for (const s of SKY.stars) {
+        const p = skyProject(s, w, h, rot, f);
+        if (!p || p.x < -4 || p.y < -4 || p.x > w + 4 || p.y > h + 4) continue;
+        const warm = s.tint > 0.85, cool = s.tint < 0.2;
+        const col = warm ? "255,226,190" : cool ? "190,210,255" : "255,255,255";
+        if (s.r > 1.5) {
+          const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, s.r * 5);
+          g.addColorStop(0, `rgba(${col},${s.a * 0.45})`);
+          g.addColorStop(1, `rgba(${col},0)`);
+          c.fillStyle = g;
+          c.beginPath();
+          c.arc(p.x, p.y, s.r * 5, 0, Math.PI * 2);
+          c.fill();
+        }
+        c.fillStyle = `rgba(${col},${s.a})`;
+        if (s.r < 0.8) c.fillRect(p.x - 0.5, p.y - 0.5, 1.1, 1.1);
+        else {
+          c.beginPath();
+          c.arc(p.x, p.y, s.r, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+    }
+    c.restore();
+  }
   function drawNetBackground(c, w, h, pj, sceneCfg, theme, extra = {}) {
     const sc = normalizeNetScene(sceneCfg);
     const bg = sc.bg;
     c.save();
     c.setTransform(1, 0, 0, 1, 0, 0);
-    if (bg.kind === "solid") {
+    const sky = bg.sky3d === "sky" && bg.kind !== "solid" ? Math.max(0, Math.min(1, +extra.sky || 0)) : 0;
+    const rot = pj.rot || { rx: 0, ry: 0 };
+    if (sky >= 1) {
+      drawSky(c, w, h, rot, bg, theme.bg, extra.image);
+    } else if (bg.kind === "solid") {
       c.fillStyle = bg.c1 || theme.bg;
       c.fillRect(0, 0, w, h);
     } else if (bg.kind === "gradient" || bg.kind === "blueprint") {
@@ -58717,8 +59100,8 @@ ${h.text}`;
       c.fillRect(0, 0, w, h);
     }
     const pr = visiblePlaneRect(pj, w, h);
-    if (bg.kind === "wargame") drawTerrain(c, pj, pr, bg);
-    if (bg.kind === "image" && extra.image && extra.image.naturalWidth) {
+    if (sky < 1 && bg.kind === "wargame") drawTerrain(c, pj, pr, bg);
+    if (sky < 1 && bg.kind === "image" && extra.image && extra.image.naturalWidth) {
       const img = extra.image;
       c.globalAlpha = bg.imageOpacity;
       if (bg.imageMode === "screen") {
@@ -58729,6 +59112,11 @@ ${h.text}`;
       c.globalAlpha = 1;
     }
     c.setTransform(1, 0, 0, 1, 0, 0);
+    if (sky > 0 && sky < 1) {
+      c.globalAlpha = sky;
+      drawSky(c, w, h, rot, bg, theme.bg, extra.image);
+      c.globalAlpha = 1;
+    }
     if (bg.dim > 0) {
       c.fillStyle = `rgba(0,0,0,${bg.dim})`;
       c.fillRect(0, 0, w, h);
@@ -58779,13 +59167,16 @@ ${h.text}`;
     c.drawImage(_cache3.cv, 0, 0);
     c.restore();
   }
-  var _tiles, TILE, _gridCv, _cache3;
+  var _tiles, TILE, _gridCv, SKY, _pano, _cache3;
   var init_network_bg = __esm({
     "src/network-bg.js"() {
       init_network_scene();
+      init_network_sky();
       _tiles = /* @__PURE__ */ new Map();
       TILE = 512;
       _gridCv = null;
+      SKY = { cv: null, px: null, stars: null, starKey: "" };
+      _pano = /* @__PURE__ */ new WeakMap();
       _cache3 = { key: "", cv: null };
     }
   });
@@ -59220,6 +59611,16 @@ ${h.text}`;
         scn.append(row(t("ui.netScene.imageOpacity"), slider(0, 1, 0.05, bg.imageOpacity, (v2) => updBg({ imageOpacity: v2 }))));
       }
       scn.append(row(t("ui.netScene.dim"), slider(0, 0.9, 0.05, bg.dim, (v2) => updBg({ dim: v2 }))));
+      if (bg.kind !== "solid") {
+        scn.append(row(t("ui.netScene.sky3d"), select([
+          { value: "sky", label: t("ui.netScene.sky3dSky") },
+          { value: "plane", label: t("ui.netScene.sky3dPlane") }
+        ], bg.sky3d, (v2) => {
+          updBg({ sky3d: v2 });
+          renderScene();
+        })));
+        if (bg.kind === "image" && bg.sky3d === "sky") scn.append(el("div", "net-side-note", t("ui.netScene.panoHint")));
+      }
       scn.append(el("div", "net-side-sub", t("ui.netScene.grid")));
       scn.append(row(t("ui.netScene.gridStyle"), select(
         NET_GRID_STYLES.map((g) => ({ value: g.id, label: t(g.lk) })),
@@ -59410,6 +59811,17 @@ ${h.text}`;
     const b = parseInt(h.substring(4, 6), 16) || 0;
     return `rgba(${r},${g},${b},${alpha})`;
   }
+  function shadeHex(hex2, k, alpha = 1) {
+    const h = String(hex2 || "").replace("#", "");
+    const c = [0, 2, 4].map((i5) => parseInt(h.substring(i5, i5 + 2), 16) || 0);
+    const t3 = k >= 0 ? 255 : 0, a = Math.abs(k);
+    const [r, g, b] = c.map((v2) => Math.round(v2 + (t3 - v2) * a));
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  function qpt(a, ctl, b, t3) {
+    const u = 1 - t3;
+    return { x: u * u * a.x + 2 * u * t3 * ctl.x + t3 * t3 * b.x, y: u * u * a.y + 2 * u * t3 * ctl.y + t3 * t3 * b.y };
+  }
   function toggleBtn(cls, title2, onToggle) {
     const b = document.createElement("button");
     b.className = cls;
@@ -59425,23 +59837,24 @@ ${h.text}`;
     return b;
   }
   function buildToolbar(pane, cb) {
-    const bar = document.createElement("div");
-    bar.className = "net-toolbar";
-    const tg = document.createElement("button");
-    tg.className = "net-tbar-toggle";
-    tg.textContent = gi("triangle-down");
-    tg.title = t("ui.net.hide");
-    const bd = document.createElement("div");
-    bd.className = "net-tbar-body";
-    let col = false;
-    tg.onclick = () => {
-      col = !col;
-      bd.style.display = col ? "none" : "";
-      tg.textContent = col ? gi("play") : gi("triangle-down");
+    const mk2 = (tag3, cls, text) => {
+      const e = document.createElement(tag3);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
     };
+    const bar = mk2("div", "net-toolbar");
+    const bd = mk2("div", "net-tbar-body");
+    const pop = mk2("div", "net-tbar-pop");
+    pop.hidden = true;
     const ca = new Set(CAT_ARR.slice(0, 4)), tf2 = /* @__PURE__ */ new Set([...REL_TYPES.map((t3) => t3.key), "co-occur", "scene-link", "ent-scene"]);
-    const cr = document.createElement("div");
-    cr.className = "net-tbar-row";
+    const sep = () => mk2("span", "net-tbar-sep");
+    const section = (titleKey, ...kids) => {
+      const s = mk2("div", "net-pop-sec");
+      s.append(mk2("div", "net-pop-title", t(titleKey)), ...kids);
+      return s;
+    };
+    const cr = mk2("div", "net-tbar-row net-tbar-cats");
     for (const x of netColorDefsOf("nodes").filter((d) => CAT_ARR.slice(0, 4).includes(d.id))) {
       const b = toggleBtn("net-tcat", x.label, (on2) => {
         if (on2) ca.add(x.id);
@@ -59452,8 +59865,7 @@ ${h.text}`;
       b.textContent = x.label;
       cr.appendChild(b);
     }
-    const tr4 = document.createElement("div");
-    tr4.className = "net-tbar-row net-tbar-types";
+    const tr4 = mk2("div", "net-tbar-row net-tbar-types");
     const typeBtn = (key2, title2, extra) => {
       const b = toggleBtn("net-ttype" + (extra ? " " + extra : ""), title2, (on2) => {
         if (on2) tf2.add(key2);
@@ -59461,17 +59873,144 @@ ${h.text}`;
         cb.filter(ca, tf2);
       });
       b.dataset.type = key2;
+      b.append(mk2("i", "net-ttype-dot"), mk2("span", "net-ttype-name", title2));
       tr4.appendChild(b);
     };
     REL_TYPES.forEach((t3) => typeBtn(t3.key, t3.label));
     typeBtn("co-occur", t("ui.net.appear"), "net-ttype-co");
     typeBtn("scene-link", t("ui.net.linkScene"), "net-ttype-sc");
     typeBtn("ent-scene", t("ui.net.scene2"), "net-ttype-es");
-    const sw = document.createElement("div");
-    sw.className = "net-tbar-search";
-    const si = document.createElement("input");
+    const lblBtn = mk2("button", "net-tbar-btn net-tog on net-lbl-btn", gi("font"));
+    lblBtn.title = t("ui.net.showItemFilmName");
+    lblBtn.onclick = () => {
+      lblBtn.classList.toggle("on");
+      cb.toggleLabels();
+    };
+    const szLbl = mk2("span", "net-tbar-lbl", gi("node-size"));
+    szLbl.title = t("ui.net.sizeNode");
+    const size = mk2("input", "net-grid-slider net-size-slider");
+    size.type = "range";
+    size.min = "50";
+    size.max = "250";
+    size.value = "100";
+    size.title = t("ui.net.sizeNode3");
+    size.oninput = () => {
+      cb.setNodeScale(Number(size.value) / 100);
+      size.title = t("ui.net.sizeNode2") + size.value + "%";
+    };
+    const gridBtn = mk2("button", "net-tbar-btn net-tog on", gi("ruler"));
+    gridBtn.title = t("ui.net.showGrid");
+    const gridSize = mk2("input", "net-grid-slider net-grid-px");
+    gridSize.type = "range";
+    gridSize.min = "20";
+    gridSize.max = "200";
+    gridSize.value = String(cb.gridPx());
+    gridSize.title = t("ui.net.sizeGridPx");
+    gridBtn.onclick = () => {
+      cb.toggleGrid();
+      gridBtn.classList.toggle("on");
+    };
+    gridSize.oninput = () => {
+      cb.setGridPx(Number(gridSize.value));
+      gridSize.title = t("ui.net.sizeGrid") + gridSize.value + "px";
+    };
+    const gridAlpha = mk2("input", "net-grid-slider net-grid-alpha");
+    gridAlpha.type = "range";
+    gridAlpha.min = "1";
+    gridAlpha.max = "100";
+    gridAlpha.value = String(Math.round(cb.gridAlpha() * 100));
+    gridAlpha.title = t("ui.net.hollowGrid2");
+    gridAlpha.oninput = () => {
+      cb.setGridAlpha(Number(gridAlpha.value) / 100);
+      gridAlpha.title = t("ui.net.hollowGrid") + gridAlpha.value + "%";
+    };
+    const viewRow = mk2("div", "net-tbar-row net-tbar-view");
+    const gridRow = mk2("div", "net-tbar-row");
+    gridRow.append(gridBtn, gridSize, gridAlpha);
+    const btn3 = (x) => {
+      const b = mk2("button", "net-tbar-btn" + (x.cl ? " " + x.cl : ""), x.t);
+      b.title = x.ti;
+      b.setAttribute("aria-label", x.ti);
+      if (x.id) b.dataset.act = x.id;
+      b.onclick = () => {
+        if (x.cl === "net-tog" || x.cl === "net-tog on") b.classList.toggle("on");
+        x.f();
+      };
+      return b;
+    };
+    viewRow.append(
+      lblBtn,
+      btn3({ t: gi("edge-label"), ti: t("ui.netUi.edgeLabelsBtn"), f: cb.cycleEdgeLabels, id: "labels" }),
+      btn3({ t: gi("frame"), ti: t("ui.net.showImageCollapse"), f: cb.toggleImages, cl: "net-tog on" }),
+      btn3({ t: gi("map"), ti: "Minimap", f: cb.toggleMinimap, cl: "net-tog" }),
+      sep(),
+      szLbl,
+      size
+    );
+    const actRow = mk2("div", "net-tbar-row net-tbar-acts2");
+    actRow.append(
+      btn3({ t: gi("refresh"), ti: t("ui.common.refresh"), f: cb.refresh }),
+      btn3({ t: gi("pin"), ti: t("ui.net.unsetPinAllNode"), f: cb.relayout }),
+      btn3({ t: gi("import"), ti: t("ui.common.export"), f: cb.export })
+    );
+    pop.append(
+      section("ui.netUi.popCats", cr),
+      section("ui.netUi.popTypes", tr4),
+      section("ui.netUi.popView", viewRow, gridRow),
+      section("ui.netUi.popMore", actRow)
+    );
+    const toolRow = mk2("div", "net-tbar-row net-tbar-tools");
+    const toolBtns = [];
+    for (const x of NET_TOOLS) {
+      const b = mk2("button", "net-tbar-btn net-tool-btn" + (x.id === "open" ? " on" : ""), gi(x.icon));
+      b.dataset.tool = x.id;
+      b.title = x.label + " \u2014 " + x.hint;
+      b.setAttribute("aria-label", x.label);
+      b.onclick = () => cb.setTool(x.id);
+      toolBtns.push(b);
+      toolRow.appendChild(b);
+    }
+    const btns = mk2("div", "net-tbar-actions");
+    const filt = mk2("button", "net-tbar-btn net-tbar-filter", gi("filter"));
+    filt.title = t("ui.netUi.popBtn");
+    filt.setAttribute("aria-label", t("ui.netUi.popBtn"));
+    filt.setAttribute("aria-expanded", "false");
+    const setPop = (open) => {
+      pop.hidden = !open;
+      filt.classList.toggle("on", open);
+      filt.setAttribute("aria-expanded", String(open));
+    };
+    filt.onclick = (e) => {
+      e.stopPropagation();
+      setPop(pop.hidden);
+    };
+    const offDoc = (e) => {
+      if (!pop.hidden && !pop.contains(e.target) && e.target !== filt) setPop(false);
+    };
+    document.addEventListener("mousedown", offDoc, true);
+    pop.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setPop(false);
+        filt.focus();
+      }
+    });
+    btns.append(
+      btn3({ t: "3D", ti: t("ui.net.toggleDD"), f: cb.toggle3D, cl: "net-tog", id: "3d" }),
+      btn3({ t: gi("perspective"), ti: t("ui.netUi.perspBtn"), f: cb.togglePersp, cl: "net-tog", id: "persp" }),
+      sep(),
+      btn3({ t: gi("net-layout"), ti: t("ui.netUi.layoutBtn"), f: cb.layoutMenu, id: "layout" }),
+      btn3({ t: gi("story-line"), ti: t("ui.netUi.storyBtn"), f: cb.toggleStory, cl: "net-tog", id: "story" }),
+      btn3({ t: gi("bulb"), ti: t("ui.netUi.insights"), f: cb.toggleInsights, cl: "net-tog", id: "insights" }),
+      btn3({ t: gi("image"), ti: t("ui.netUi.sceneBtn"), f: cb.toggleScene, cl: "net-tog", id: "scene" }),
+      sep(),
+      filt,
+      btn3({ t: gi("reset-view"), ti: t("ui.net.reset"), f: cb.reset, cl: "net-reset" })
+    );
+    const sw = mk2("div", "net-tbar-search");
+    sw.append(mk2("span", "net-tbar-search-ico", gi("search")));
+    const si = mk2("input", "net-tbar-input");
     si.type = "text";
-    si.className = "net-tbar-input";
     si.placeholder = t("ui.net.search");
     let tm2;
     si.oninput = () => {
@@ -59486,117 +60025,13 @@ ${h.text}`;
       }
     };
     sw.appendChild(si);
-    const gridRow = document.createElement("div");
-    gridRow.className = "net-tbar-row";
-    const gridBtn = document.createElement("button");
-    gridBtn.className = "net-tbar-btn net-tog on";
-    gridBtn.textContent = gi("ruler");
-    gridBtn.title = t("ui.net.showGrid");
-    const gridSize = document.createElement("input");
-    gridSize.type = "range";
-    gridSize.className = "net-grid-slider net-grid-px";
-    gridSize.min = "20";
-    gridSize.max = "200";
-    gridSize.value = String(cb.gridPx());
-    gridSize.title = t("ui.net.sizeGridPx");
-    gridBtn.onclick = () => {
-      cb.toggleGrid();
-      gridBtn.classList.toggle("on");
-    };
-    gridSize.oninput = () => {
-      cb.setGridPx(Number(gridSize.value));
-      gridSize.title = t("ui.net.sizeGrid") + gridSize.value + "px";
-    };
-    const gridAlpha = document.createElement("input");
-    gridAlpha.type = "range";
-    gridAlpha.className = "net-grid-slider net-grid-alpha";
-    gridAlpha.min = "1";
-    gridAlpha.max = "100";
-    gridAlpha.value = String(Math.round(cb.gridAlpha() * 100));
-    gridAlpha.title = t("ui.net.hollowGrid2");
-    gridAlpha.oninput = () => {
-      cb.setGridAlpha(Number(gridAlpha.value) / 100);
-      gridAlpha.title = t("ui.net.hollowGrid") + gridAlpha.value + "%";
-    };
-    gridRow.append(gridBtn, gridSize, gridAlpha);
-    const toolRow = document.createElement("div");
-    toolRow.className = "net-tbar-row net-tbar-tools";
-    const lblBtn = document.createElement("button");
-    lblBtn.className = "net-tbar-btn net-tog on net-lbl-btn";
-    lblBtn.textContent = gi("font");
-    lblBtn.title = t("ui.net.showItemFilmName");
-    lblBtn.onclick = () => {
-      lblBtn.classList.toggle("on");
-      cb.toggleLabels();
-    };
-    toolRow.appendChild(lblBtn);
-    const sep = document.createElement("span");
-    sep.className = "net-tbar-sep";
-    toolRow.appendChild(sep);
-    const toolBtns = [];
-    for (const x of NET_TOOLS) {
-      const b = document.createElement("button");
-      b.className = "net-tbar-btn net-tool-btn" + (x.id === "open" ? " on" : "");
-      b.dataset.tool = x.id;
-      b.textContent = gi(x.icon);
-      b.title = x.label + " \u2014 " + x.hint;
-      b.setAttribute("aria-label", x.label);
-      b.onclick = () => cb.setTool(x.id);
-      toolBtns.push(b);
-      toolRow.appendChild(b);
-    }
-    const sep2 = document.createElement("span");
-    sep2.className = "net-tbar-sep";
-    toolRow.appendChild(sep2);
-    const szLbl = document.createElement("span");
-    szLbl.className = "net-tbar-lbl";
-    szLbl.textContent = gi("node-size");
-    szLbl.title = t("ui.net.sizeNode");
-    const size = document.createElement("input");
-    size.type = "range";
-    size.className = "net-grid-slider net-size-slider";
-    size.min = "50";
-    size.max = "250";
-    size.value = "100";
-    size.title = t("ui.net.sizeNode3");
-    size.oninput = () => {
-      cb.setNodeScale(Number(size.value) / 100);
-      size.title = t("ui.net.sizeNode2") + size.value + "%";
-    };
-    toolRow.append(szLbl, size);
-    const btns = document.createElement("div");
-    btns.className = "net-tbar-actions";
-    const acts = [
-      { t: gi("refresh"), ti: t("ui.common.refresh"), f: cb.refresh },
-      { t: gi("pin"), ti: t("ui.net.unsetPinAllNode"), f: cb.relayout },
-      { t: gi("frame"), ti: t("ui.net.showImageCollapse"), f: cb.toggleImages, cl: "net-tog on" },
-      { t: gi("map"), ti: "Minimap", f: cb.toggleMinimap, cl: "net-tog" },
-      { t: "3D", ti: t("ui.net.toggleDD"), f: cb.toggle3D, cl: "net-tog", id: "3d" },
-      { t: gi("bulb"), ti: t("ui.netUi.insights"), f: cb.toggleInsights, cl: "net-tog", id: "insights" },
-      { t: gi("story-line"), ti: t("ui.netUi.storyBtn"), f: cb.toggleStory, cl: "net-tog", id: "story" },
-      { t: gi("net-layout"), ti: t("ui.netUi.layoutBtn"), f: cb.layoutMenu, id: "layout" },
-      { t: gi("edge-label"), ti: t("ui.netUi.edgeLabelsBtn"), f: cb.cycleEdgeLabels, id: "labels" },
-      { t: gi("perspective"), ti: t("ui.netUi.perspBtn"), f: cb.togglePersp, cl: "net-tog", id: "persp" },
-      { t: gi("image"), ti: t("ui.netUi.sceneBtn"), f: cb.toggleScene, cl: "net-tog", id: "scene" },
-      { t: gi("import"), ti: t("ui.common.export"), f: cb.export },
-      { t: gi("reset-view"), ti: t("ui.net.reset"), f: cb.reset, cl: "net-reset" }
-    ];
-    for (const x of acts) {
-      const b = document.createElement("button");
-      b.className = "net-tbar-btn" + (x.cl ? " " + x.cl : "");
-      b.textContent = x.t;
-      b.title = x.ti;
-      if (x.id) b.dataset.act = x.id;
-      b.onclick = () => {
-        if (x.cl === "net-tog" || x.cl === "net-tog on") b.classList.toggle("on");
-        x.f();
-      };
-      btns.appendChild(b);
-    }
-    bd.append(cr, tr4, toolRow, gridRow, sw, btns);
-    bar.append(tg, bd);
+    bd.append(toolRow, sep(), btns, sw);
+    bar.append(bd, pop);
     pane.appendChild(bar);
-    return { bar, btns, toolRow, toolBtns, destroy: () => bar.remove() };
+    return { bar, btns: bar, toolRow, toolBtns, pop, setPop, destroy: () => {
+      document.removeEventListener("mousedown", offDoc, true);
+      bar.remove();
+    } };
   }
   function roundRect(c, x, y, w, h, r) {
     c.beginPath();
@@ -59611,30 +60046,50 @@ ${h.text}`;
     c.quadraticCurveTo(x, y, x + r, y);
     c.closePath();
   }
-  function drawLabelBox(c, text, cx2, cy2, fontSize) {
-    c.font = fontSize + 'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
-    const m = c.measureText(text);
-    const tw = m.width + 12, th = fontSize + 10;
-    c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.86);
-    roundRect(c, cx2 - tw / 2, cy2 - th / 2, tw, th, 6);
+  function drawNodeLabel(c, text, x, cy2, fontSize, badge, strong, col) {
+    c.font = (strong ? "600 " : "") + fontSize + 'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
+    c.textAlign = "left";
+    c.textBaseline = "middle";
+    c.save();
+    c.lineJoin = "round";
+    c.lineWidth = fontSize * 0.32;
+    c.strokeStyle = hexToRgba(THEME.canvas.labelBg, 0.75);
+    c.strokeText(text, x, cy2);
+    c.fillStyle = THEME.canvas.label;
+    c.fillText(text, x, cy2);
+    c.restore();
+    if (!badge) return;
+    const tw = c.measureText(text).width;
+    const bf = fontSize * 0.74;
+    c.font = "600 " + bf + 'px "Segoe UI","Leelawadee UI",sans-serif';
+    const bw = c.measureText(badge).width + bf * 1.1, bh = bf * 1.55;
+    const bx = x + tw + fontSize * 0.45;
+    c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.85);
+    roundRect(c, bx, cy2 - bh / 2, bw, bh, bh / 2);
     c.fill();
+    c.strokeStyle = hexToRgba(col, 0.75);
+    c.lineWidth = bf / 9;
+    c.stroke();
     c.fillStyle = THEME.canvas.label;
     c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.fillText(text, cx2, cy2 + 1);
-    return { w: tw + 4, h: th + 4 };
+    c.fillText(badge, bx + bw / 2, cy2 + bf * 0.05);
   }
-  function drawEdgeLabel(c, text, x, y, fontSize) {
+  function drawEdgeLabel(c, text, x, y, fontSize, ring) {
     c.font = fontSize + 'px "Segoe UI","Leelawadee UI",sans-serif';
     const m = c.measureText(text);
-    const tw = m.width + 10, th = fontSize + 8;
-    c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.88);
-    roundRect(c, x - tw / 2, y - th / 2, tw, th, 4);
+    const tw = m.width + fontSize * 1.1, th = fontSize * 1.75;
+    c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.82);
+    roundRect(c, x - tw / 2, y - th / 2, tw, th, th / 2);
     c.fill();
+    if (ring) {
+      c.strokeStyle = hexToRgba(ring, 0.8);
+      c.lineWidth = fontSize / 10;
+      c.stroke();
+    }
     c.fillStyle = THEME.canvas.label;
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillText(text, x, y + 1);
+    c.fillText(text, x, y + fontSize * 0.06);
   }
   function buildMinimap(pane) {
     const mc = document.createElement("canvas");
@@ -59643,6 +60098,55 @@ ${h.text}`;
     mc.height = 120;
     pane.appendChild(mc);
     return mc;
+  }
+  function buildLegend(pane, bar) {
+    const box2 = document.createElement("div");
+    box2.className = "net-legend";
+    const head2 = document.createElement("div");
+    head2.className = "net-legend-title";
+    head2.textContent = t("ui.netUi.legendTitle");
+    const list3 = document.createElement("div");
+    list3.className = "net-legend-list";
+    box2.append(head2, list3);
+    pane.appendChild(box2);
+    let last2 = "";
+    const rows = /* @__PURE__ */ new Map();
+    for (const d of netColorDefsOf("nodes").filter((x) => ["characters", "locations", "items", "lore", "scene", "chapter"].includes(x.id))) {
+      const r = document.createElement("button");
+      r.className = "net-legend-row";
+      r.dataset.cat = d.id;
+      const dot2 = document.createElement("i");
+      dot2.className = "net-legend-dot";
+      const name5 = document.createElement("span");
+      name5.className = "net-legend-name";
+      name5.textContent = d.label;
+      const cnt = document.createElement("span");
+      cnt.className = "net-legend-count";
+      cnt.textContent = "0";
+      r.append(dot2, name5, cnt);
+      const chip = bar.querySelector(`.net-tcat[data-cat="${d.id}"]`);
+      if (chip) {
+        r.title = t("ui.netUi.legendToggle");
+        r.onclick = () => chip.click();
+      } else r.disabled = true;
+      list3.append(r);
+      rows.set(d.id, { r, dot: dot2, cnt, chip });
+    }
+    return {
+      box: box2,
+      update(counts, colors) {
+        const sig = JSON.stringify(counts) + JSON.stringify(colors) + [...rows.values()].map((x) => x.chip ? x.chip.classList.contains("on") : 1).join();
+        if (sig === last2) return;
+        last2 = sig;
+        for (const [id, x] of rows) {
+          const n2 = counts[id] || 0;
+          x.r.hidden = !n2 && !x.chip;
+          x.cnt.textContent = String(n2);
+          x.dot.style.setProperty("--dot", colors[id] || "");
+          x.r.classList.toggle("off", !!x.chip && !x.chip.classList.contains("on"));
+        }
+      }
+    };
   }
   function buildStatusBar(pane) {
     const sb = document.createElement("div");
@@ -59967,6 +60471,7 @@ ${h.text}`;
           this._mm = buildMinimap(pane);
           this._mm.style.display = "none";
           this._sb = buildStatusBar(pane);
+          this._legend = buildLegend(pane, this._tb.bar);
           this._tip = buildTipBar(pane);
           this._side = buildNetSide(pane, this);
           this._storyBar = buildStoryBar(pane, this);
@@ -60182,7 +60687,30 @@ ${h.text}`;
           if (this._bgImg.rel !== rel) {
             this._bgImg = { rel, img: null, loading: true };
             const mine = this._bgImg;
-            Promise.resolve(this.assetUrl ? this.assetUrl(rel) : "").then((url) => {
+            if (this._bgBlobUrl) {
+              try {
+                URL.revokeObjectURL(this._bgBlobUrl);
+              } catch {
+              }
+              this._bgBlobUrl = "";
+            }
+            const viaBytes = async () => {
+              const abs = this.assetPath ? this.assetPath(rel) : "";
+              const k = globalThis.kapi;
+              if (!abs || !k || !k.readBytes) return "";
+              const bytes = await k.readBytes(abs);
+              if (!bytes) return "";
+              const ext = String(rel).split(".").pop().toLowerCase();
+              const mime = { jpg: "image/jpeg", jpeg: "image/jpeg", svg: "image/svg+xml" }[ext] || "image/" + ext;
+              const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+              if (this._bgImg !== mine) {
+                URL.revokeObjectURL(url);
+                return "";
+              }
+              this._bgBlobUrl = url;
+              return url;
+            };
+            viaBytes().catch(() => "").then((u) => u || (this.assetUrl ? this.assetUrl(rel) : "")).then((url) => {
               if (!url || this._bgImg !== mine) return;
               const img = new Image();
               img.onload = () => {
@@ -60281,6 +60809,8 @@ ${h.text}`;
             }
             savePositions(this.nodes, this._scope());
             this._deg = degreeMap(this.nodes, this.edges);
+            this._degMax = 0;
+            this._scCount = null;
             this._sel = selKey ? this.nodes.find((n2) => nodeKey(n2) === selKey) || null : null;
             if (!this._sel) {
               this._focusHops = 0;
@@ -60391,9 +60921,10 @@ ${h.text}`;
         _fitView() {
           const w = this.canvas.width, h = this.canvas.height;
           if (!w || !h || !this.nodes.length) return false;
-          const f = fitCam(this.nodes, w, h, this._rot());
+          const top = h > 300 ? 56 : 0, bottom = h > 300 ? 30 : 0;
+          const f = fitCam(this.nodes, w, h - top - bottom, this._rot(), { pad: Math.min(90, Math.max(40, w * 0.06)) });
           if (!f) return false;
-          this._cam = { ...this._cam, ...f };
+          this._cam = panCam({ ...this._cam, ...f }, 0, (top - bottom) / 2, this._rot());
           return true;
         }
         /** รัศมีของโหนดบนผัง (หน่วยโลก) — ตัววาดกับตัวจับคลิกใช้ค่าเดียวกัน */
@@ -60404,7 +60935,34 @@ ${h.text}`;
           let r = Math.max(baseR, Math.min(28 * ns, baseR + degree * 0.6 * ns));
           const m = this._showImages ? this.modelOf(n2) : null;
           if (m && modelState(m.abs) !== "error") r *= 1.9 * m.scale;
+          const s = this._cam.scale || 1;
+          if (s < 1) {
+            const imp = this._importance(n2);
+            const minPx = (isStruct(n2) ? 5 : 7 + imp * 13) * ns;
+            if (r * s < minPx) r = minPx / s;
+          }
           return r;
+        }
+        /** ความสำคัญ 0..1 ของโหนด (จำนวนเส้นเทียบกับตัวที่เส้นเยอะสุด · รากที่สอง = ตัวกลาง ๆ ไม่จมหาย) */
+        _importance(n2) {
+          if (!this._degMax) {
+            let m = 1;
+            for (const v2 of this._deg.values()) if (v2 > m) m = v2;
+            this._degMax = m;
+          }
+          return Math.sqrt((this._deg.get(n2) || 0) / this._degMax);
+        }
+        /** จำนวนฉากที่เอนทิตีปรากฏ (เส้น "กล่าวถึงในฉาก") — ตัวเลขเล็ก ๆ ข้างป้ายชื่อ */
+        _sceneCount(n2) {
+          if (!this._scCount) {
+            const m = /* @__PURE__ */ new Map();
+            for (const e of this.edges) if (e.type === "ent-scene") {
+              const ent = isStruct(e.a) ? e.b : e.a;
+              m.set(ent, (m.get(ent) || 0) + 1);
+            }
+            this._scCount = m;
+          }
+          return this._scCount.get(n2) || 0;
         }
         /** โหนด/เส้นที่ "เด่น" ตอนนี้ (เส้นทาง > โฟกัส > ทั้งหมด) — null = ทุกตัวเด่นเท่ากัน */
         _emphasis() {
@@ -60430,6 +60988,7 @@ ${h.text}`;
           c.clearRect(0, 0, w, h);
           const img = this._bgImage();
           const cam = this._cam;
+          const sky = this._standK();
           const bgKey = [
             w,
             h,
@@ -60440,6 +60999,7 @@ ${h.text}`;
             rot.rx,
             rot.ry,
             pj.persp,
+            sky,
             this._bg,
             this._grid,
             this._showGrid,
@@ -60447,7 +61007,7 @@ ${h.text}`;
             JSON.stringify(this._scene.bg),
             JSON.stringify(this._scene.grid)
           ].join("|");
-          drawNetBackgroundCached(c, w, h, pj, this._scene, { bg: this._bg, grid: this._grid }, { image: img, showGrid: this._showGrid, cam }, bgKey);
+          drawNetBackgroundCached(c, w, h, pj, this._scene, { bg: this._bg, grid: this._grid }, { image: img, showGrid: this._showGrid, cam, sky }, bgKey);
           c.save();
           c.translate(off3.cx, off3.cy);
           c.scale(s, s);
@@ -60480,6 +61040,11 @@ ${h.text}`;
           const is3 = this._cam.mode3D || !!this._rotAnim;
           const sortedEdges = is3 ? [...this.edges].sort((a, b) => P2(b.a).z + P2(b.b).z - (P2(a.a).z + P2(a.b).z)) : this.edges;
           const focusEnds = new Set([this._hoverNode, this._sel].filter(Boolean));
+          const dark = !isLightBg(this._scene, this._bg);
+          const px2 = 1 / (s || 1);
+          const sortedNodes = is3 ? [...visNodes].sort((a, b) => P2(b).z - P2(a).z) : visNodes;
+          const labelOk = this._placeLabels(c, sortedNodes, P2, s, ls, prog);
+          const edgeLbls = [];
           for (const e of sortedEdges) {
             const aVis = visSet.has(e.a), bVis = visSet.has(e.b);
             if (!aVis && !bVis) continue;
@@ -60488,37 +61053,71 @@ ${h.text}`;
             let alpha = at || this._typeFilter.has(e.type) ? 1 : 0.08;
             const color = this._edgeCol[e.type] || THEME.canvas.grid;
             let lw = 2;
+            const rel = isRelationEdge(e);
             if (e.type === "co-occur") {
-              lw = 1.2;
-              if (alpha === 1) alpha = 0.5;
-              c.setLineDash([4, 3]);
+              lw = 1.1;
+              if (alpha === 1) alpha = 0.4;
+              c.setLineDash([4 * px2, 3 * px2]);
             } else if (e.type === "scene-link") {
-              lw = 1.6;
-              if (alpha === 1) alpha = 0.7;
-              c.setLineDash([3, 4]);
+              lw = 1.2;
+              if (alpha === 1) alpha = 0.45;
+              c.setLineDash([3 * px2, 4 * px2]);
             } else if (e.type === "ent-scene") {
-              lw = 1.4;
-              if (alpha === 1) alpha = 0.55;
-              c.setLineDash([5, 4, 2, 4]);
+              lw = 1;
+              if (alpha === 1) alpha = 0.35;
+              c.setLineDash([5 * px2, 4 * px2, 2 * px2, 4 * px2]);
             } else c.setLineDash([]);
             const isHover = this._hoverNode && (e.a === this._hoverNode || e.b === this._hoverNode);
             const onPath = this._path && emph && emph.edges.has(e);
             if (emph && !emph.edges.has(e)) alpha *= 0.08;
             const ghost = prog && !prog.edges.has(e);
             if (ghost) alpha *= 0.05;
-            if ((isHover || onPath) && !ghost) {
-              lw = onPath ? 4 : 3.2;
+            const hot = (isHover || onPath) && !ghost;
+            if (hot) {
+              lw = onPath ? 3.4 : 2.6;
               alpha = 1;
-              c.shadowColor = hexToRgba(color, 0.55);
-              c.shadowBlur = 10;
             }
-            lw *= Math.sqrt((pa.f + pb.f) / 2);
+            lw *= Math.sqrt((pa.f + pb.f) / 2) * Math.max(px2, 1 / Math.max(1, s * 1.4));
+            const ctl = rel ? { x: (pa.x + pb.x) / 2 - (pb.y - pa.y) * 0.08, y: (pa.y + pb.y) / 2 + (pb.x - pa.x) * 0.08 } : null;
+            if (rel && alpha > 0.05) {
+              const ra = this._nodeR(e.a) * Math.min(1.6, pa.f), rb = this._nodeR(e.b) * Math.min(1.6, pb.f);
+              const wa = ra * (hot ? 0.5 : 0.34), wb = rb * (hot ? 0.5 : 0.34);
+              const N = 14, L2 = [], R2 = [];
+              for (let i5 = 0; i5 <= N; i5++) {
+                const t3 = i5 / N, p = qpt(pa, ctl, pb, t3), q3 = qpt(pa, ctl, pb, Math.min(1, t3 + 0.02)), q0 = qpt(pa, ctl, pb, Math.max(0, t3 - 0.02));
+                const dx = q3.x - q0.x, dy = q3.y - q0.y, dl = Math.hypot(dx, dy) || 1;
+                const wv = (wa * (1 - t3) + wb * t3) * (0.35 + 0.65 * Math.pow(Math.abs(t3 - 0.5) * 2, 1.6));
+                L2.push({ x: p.x - dy / dl * wv, y: p.y + dx / dl * wv });
+                R2.push({ x: p.x + dy / dl * wv, y: p.y - dx / dl * wv });
+              }
+              const g = c.createLinearGradient(pa.x, pa.y, pb.x, pb.y);
+              const ca = this._catCol[e.a.cat] || color, cb = this._catCol[e.b.cat] || color;
+              g.addColorStop(0, hexToRgba(ca, 0.55));
+              g.addColorStop(0.5, hexToRgba(color, 0.28));
+              g.addColorStop(1, hexToRgba(cb, 0.55));
+              c.save();
+              if (dark) c.globalCompositeOperation = "lighter";
+              c.globalAlpha = alpha * (hot ? 1 : 0.8);
+              c.fillStyle = g;
+              c.beginPath();
+              c.moveTo(L2[0].x, L2[0].y);
+              for (const p of L2) c.lineTo(p.x, p.y);
+              for (let i5 = R2.length - 1; i5 >= 0; i5--) c.lineTo(R2[i5].x, R2[i5].y);
+              c.closePath();
+              c.fill();
+              c.restore();
+            }
             c.globalAlpha = alpha;
-            c.strokeStyle = color;
-            c.lineWidth = lw;
+            c.strokeStyle = rel ? shadeHex(color, dark ? 0.35 : -0.1, hot ? 1 : 0.85) : color;
+            c.lineWidth = rel ? Math.max(lw * 0.55, 0.8 * px2) : lw;
+            if (hot) {
+              c.shadowColor = hexToRgba(color, 0.7);
+              c.shadowBlur = 12;
+            }
             c.beginPath();
             c.moveTo(pa.x, pa.y);
-            c.lineTo(pb.x, pb.y);
+            if (ctl) c.quadraticCurveTo(ctl.x, ctl.y, pb.x, pb.y);
+            else c.lineTo(pb.x, pb.y);
             c.stroke();
             c.setLineDash([]);
             c.shadowBlur = 0;
@@ -60527,9 +61126,24 @@ ${h.text}`;
             const touching = focusEnds.has(e.a) || focusEnds.has(e.b);
             const want = mode === "all" || touching || mode === "rel" && isRelationEdge(e);
             if (lbl && want && alpha > 0.3) {
-              drawEdgeLabel(c, lbl, (pa.x + pb.x) / 2, (pa.y + pb.y) / 2 - 10 * ls, (isHover ? 12 : 11) * ls);
+              const mid = ctl ? qpt(pa, ctl, pb, 0.5) : { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 };
+              edgeLbls.push({ lbl, mid, fs: (isHover ? 11.5 : 10.5) * ls, ring: hot ? color : "", alpha, pri: hot ? 1e6 : touching ? 1e5 : rel ? 10 : 0 });
             }
             c.globalAlpha = 1;
+          }
+          if (edgeLbls.length) {
+            edgeLbls.sort((a, b) => b.pri - a.pri);
+            const taken = labelOk.boxes || [];
+            for (const L2 of edgeLbls) {
+              c.font = L2.fs + 'px "Segoe UI","Leelawadee UI",sans-serif';
+              const bw = (c.measureText(L2.lbl).width + L2.fs * 1.1) * s, bh = L2.fs * 1.75 * s;
+              const b = { x0: L2.mid.x * s - bw / 2, x1: L2.mid.x * s + bw / 2, y0: L2.mid.y * s - bh / 2, y1: L2.mid.y * s + bh / 2 };
+              if (this._declutter && L2.pri < 1e5 && taken.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0)) continue;
+              taken.push(b);
+              c.globalAlpha = L2.alpha;
+              drawEdgeLabel(c, L2.lbl, L2.mid.x, L2.mid.y, L2.fs, L2.ring);
+              c.globalAlpha = 1;
+            }
           }
           if (this._linkDrag) {
             const pa = P2(this._linkDrag.from);
@@ -60544,9 +61158,7 @@ ${h.text}`;
             c.stroke();
             c.restore();
           }
-          const sortedNodes = is3 ? [...visNodes].sort((a, b) => P2(b).z - P2(a).z) : visNodes;
           const dpr = window.devicePixelRatio || 1;
-          const labelOk = this._placeLabels(c, sortedNodes, P2, s, ls, prog);
           for (const n2 of sortedNodes) {
             const pp = P2(n2);
             if (pp.behind) continue;
@@ -60556,19 +61168,24 @@ ${h.text}`;
             const struct = isStruct(n2);
             const ghost = prog && !prog.nodes.has(n2);
             const faded = emph && !emph.nodes.has(n2) || ghost;
-            let r = this._nodeR(n2) * Math.min(2, pp.f);
+            let r = this._nodeR(n2) * Math.min(1.6, pp.f);
             if (isHov) r += 4;
             const nx = pp.x, ny = pp.y;
             const col = this._catCol[n2.cat] || THEME.edge["ent-scene"];
             if (faded) c.globalAlpha = ghost ? 0.08 : 0.14;
-            if (isHov && !faded) {
-              c.beginPath();
-              c.arc(nx, ny, r + 12, 0, Math.PI * 2);
-              const glow = c.createRadialGradient(nx, ny, r, nx, ny, r + 14);
-              glow.addColorStop(0, hexToRgba(col, 0.45));
+            const imp = this._importance(n2);
+            if (!faded && (dark || isHov)) {
+              const gr = r * (isHov ? 2.6 : 1.9 + imp * 1.6);
+              const glow = c.createRadialGradient(nx, ny, r * 0.6, nx, ny, gr);
+              glow.addColorStop(0, hexToRgba(col, isHov ? 0.55 : 0.22 + imp * 0.3));
               glow.addColorStop(1, hexToRgba(col, 0));
+              c.save();
+              if (dark) c.globalCompositeOperation = "lighter";
               c.fillStyle = glow;
+              c.beginPath();
+              c.arc(nx, ny, gr, 0, Math.PI * 2);
               c.fill();
+              c.restore();
             }
             const mdl = this._showImages && !struct ? this.modelOf(n2) : null;
             const spr = mdl ? modelSprite(mdl.abs, { rx: rot.rx, ry: rot.ry, yaw: (mdl.yaw || 0) * Math.PI / 180, stand: this._standK(), px: r * 2 * s * dpr, color: col }) : null;
@@ -60582,27 +61199,31 @@ ${h.text}`;
               c.restore();
               c.drawImage(spr, nx - r, ny - r, r * 2, r * 2);
             } else {
-              if (isHov) {
-                c.shadowColor = hexToRgba(col, 0.6);
-                c.shadowBlur = 14;
-              }
               const hasImg = this._showImages && n2.image && n2._img && !struct;
               if (vt) {
                 c.beginPath();
                 c.fillStyle = vt.color;
-                c.arc(nx, ny, r + 3.5, 0, Math.PI * 2);
+                c.arc(nx, ny, r + 3.5 * Math.max(px2, Math.min(1, r / 14)), 0, Math.PI * 2);
                 c.fill();
               }
               if (struct) {
-                const sw2 = r * 1.6, sh2 = r * 1.4;
-                c.fillStyle = col;
-                c.fillRect(nx - sw2 / 2, ny - sh2 / 2, sw2, sh2);
-                c.strokeStyle = isHov ? THEME.canvas.hover : THEME.canvas.border;
-                c.lineWidth = isHov ? 3 : 2;
-                c.strokeRect(nx - sw2 / 2, ny - sh2 / 2, sw2, sh2);
+                const sw2 = r * 1.7, sh2 = r * 1.3;
+                const g = c.createLinearGradient(nx, ny - sh2 / 2, nx, ny + sh2 / 2);
+                g.addColorStop(0, shadeHex(col, 0.25));
+                g.addColorStop(1, shadeHex(col, -0.25));
+                c.fillStyle = g;
+                roundRect(c, nx - sw2 / 2, ny - sh2 / 2, sw2, sh2, Math.min(sw2, sh2) * 0.28);
+                c.fill();
+                c.strokeStyle = isHov ? THEME.canvas.hover : hexToRgba(THEME.canvas.label, 0.28);
+                c.lineWidth = (isHov ? 2 : 1) * px2;
+                c.stroke();
               } else {
+                const sg = c.createRadialGradient(nx - r * 0.35, ny - r * 0.4, r * 0.08, nx, ny, r);
+                sg.addColorStop(0, shadeHex(col, 0.6));
+                sg.addColorStop(0.5, shadeHex(col, 0));
+                sg.addColorStop(1, shadeHex(col, -0.45));
                 c.beginPath();
-                c.fillStyle = col;
+                c.fillStyle = hasImg ? col : sg;
                 c.arc(nx, ny, r, 0, Math.PI * 2);
                 c.fill();
                 if (hasImg) {
@@ -60618,14 +61239,31 @@ ${h.text}`;
                 }
                 c.beginPath();
                 c.arc(nx, ny, r, 0, Math.PI * 2);
-                c.strokeStyle = hasImg ? col : isHov ? THEME.canvas.hover : THEME.canvas.border;
-                c.lineWidth = hasImg ? 3 : isHov ? 3 : 2;
+                if (hasImg) {
+                  c.strokeStyle = col;
+                  c.lineWidth = Math.max(3, 2.5 * px2);
+                } else {
+                  c.strokeStyle = isHov ? THEME.canvas.hover : hexToRgba(THEME.canvas.label, dark ? 0.35 : 0.5);
+                  c.lineWidth = (isHov ? 2 : 1) * px2;
+                }
                 c.stroke();
                 if (hasImg && isHov) {
                   c.beginPath();
-                  c.arc(nx, ny, r + 2, 0, Math.PI * 2);
+                  c.arc(nx, ny, r + 2 * px2, 0, Math.PI * 2);
                   c.strokeStyle = THEME.canvas.hover;
-                  c.lineWidth = 2;
+                  c.lineWidth = 2 * px2;
+                  c.stroke();
+                }
+                if (imp > 0.55 && !faded) {
+                  c.beginPath();
+                  c.arc(nx, ny, r * 1.38, 0, Math.PI * 2);
+                  c.strokeStyle = hexToRgba(THEME.canvas.label, 0.22 + imp * 0.2);
+                  c.lineWidth = 1.2 * px2;
+                  c.stroke();
+                  c.beginPath();
+                  c.arc(nx, ny, r * 1.38, -Math.PI * 0.85, -Math.PI * 0.35);
+                  c.strokeStyle = hexToRgba(col, 0.9);
+                  c.lineWidth = 2 * px2;
                   c.stroke();
                 }
               }
@@ -60633,37 +61271,37 @@ ${h.text}`;
             }
             if (isSel) {
               c.beginPath();
-              c.arc(nx, ny, r + 7, 0, Math.PI * 2);
-              c.lineWidth = 3.2 * ls;
+              c.arc(nx, ny, r + 6 * ls, 0, Math.PI * 2);
+              c.lineWidth = 2.6 * ls;
               c.strokeStyle = THEME.canvas.hover;
               c.stroke();
               c.beginPath();
-              c.arc(nx, ny, r + 10.5, 0, Math.PI * 2);
-              c.lineWidth = 1.6 * ls;
+              c.arc(nx, ny, r + 9.5 * ls, 0, Math.PI * 2);
+              c.lineWidth = 1.4 * ls;
               c.strokeStyle = col;
               c.stroke();
             }
             if (prog && !ghost && (n2 === prog.current || prog.fresh.has(n2))) {
               c.beginPath();
-              c.arc(nx, ny, r + 6, 0, Math.PI * 2);
-              c.lineWidth = 2.6 * ls;
+              c.arc(nx, ny, r + 5 * ls, 0, Math.PI * 2);
+              c.lineWidth = 2.4 * ls;
               c.strokeStyle = THEME.edge.ally;
-              c.setLineDash(n2 === prog.current ? [] : [4, 3]);
+              c.setLineDash(n2 === prog.current ? [] : [4 * ls, 3 * ls]);
               c.stroke();
               c.setLineDash([]);
             }
             if (q2 && m.has(n2) && !this._rafId) {
               c.beginPath();
               c.strokeStyle = THEME.edge.ally;
-              c.lineWidth = 3;
+              c.lineWidth = 2.6 * ls;
               c.globalAlpha = 0.5 + Math.sin(performance.now() * 5e-3) * 0.5;
-              c.arc(nx, ny, r + 6, 0, Math.PI * 2);
+              c.arc(nx, ny, r + 5 * ls, 0, Math.PI * 2);
               c.stroke();
               c.globalAlpha = faded ? 0.14 : 1;
             }
             if (labelOk.has(n2)) {
               const lb = labelOk.get(n2);
-              drawLabelBox(c, lb.text, nx, ny + r + (12 + 4) * ls * Math.min(1.2, Math.max(0.8, pp.f)), lb.fs);
+              drawNodeLabel(c, lb.text, nx + r + lb.gap, ny, lb.fs, lb.badge, lb.strong, col);
             }
             c.globalAlpha = 1;
           }
@@ -60691,24 +61329,35 @@ ${h.text}`;
             if (!this._showLabels && !isHov && !isSel) continue;
             if (prog && !prog.nodes.has(n2) && !isHov && !isSel) continue;
             const vt = tagStyle(n2);
-            const text = (vt && vt.icon ? vt.icon + " " : "") + (n2.name.length > 20 ? n2.name.slice(0, 19) + "\u2026" : n2.name);
-            const fs = (isHov || isSel ? 12 : 10.5) * ls * Math.min(1.25, Math.max(0.8, pp.f));
-            const pri = (isHov || isSel ? 1e6 : 0) + (prog && (n2 === prog.current || prog.fresh.has(n2)) ? 1e5 : 0) + (this._deg.get(n2) || 0) * 10 + (isStruct(n2) ? 0 : 5) - pp.z * 1e-3;
-            cand.push({ n: n2, text, fs, pri, pp });
+            const text = (vt && vt.icon ? vt.icon + " " : "") + (n2.name.length > 22 ? n2.name.slice(0, 21) + "\u2026" : n2.name);
+            const imp = this._importance(n2);
+            const strong = isHov || isSel || imp > 0.55;
+            const fs = (isHov || isSel ? 12.5 : isStruct(n2) ? 10 : 10.5 + imp * 2) * ls * Math.min(1.25, Math.max(0.8, pp.f));
+            const pri = (isHov || isSel ? 1e6 : 0) + (prog && (n2 === prog.current || prog.fresh.has(n2)) ? 1e5 : 0) + (this._deg.get(n2) || 0) * 10 + (isStruct(n2) ? 0 : 1e3) - pp.z * 1e-3;
+            const badge = isStruct(n2) ? "" : this._sceneCount(n2) ? String(this._sceneCount(n2)) : "";
+            cand.push({ n: n2, text, fs, pri, pp, strong, badge });
           }
           cand.sort((a, b) => b.pri - a.pri);
           const boxes = [];
+          for (const n2 of nodes) {
+            const pp = P2(n2);
+            if (pp.behind) continue;
+            const r = this._nodeR(n2) * Math.min(1.6, pp.f) * s;
+            boxes.push({ x0: pp.x * s - r, x1: pp.x * s + r, y0: pp.y * s - r, y1: pp.y * s + r, node: n2 });
+          }
           for (const k of cand) {
-            c.font = k.fs + 'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
-            const wW = (c.measureText(k.text).width + 12) * s, hW = (k.fs + 10) * s;
-            const r = this._nodeR(k.n) * Math.min(2, k.pp.f);
-            const cx2 = k.pp.x * s, cy2 = (k.pp.y + r + 16 * ls) * s;
-            const b = { x0: cx2 - wW / 2, x1: cx2 + wW / 2, y0: cy2 - hW / 2, y1: cy2 + hW / 2 };
-            const hit = this._declutter && k.pri < 1e5 && boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+            c.font = (k.strong ? "600 " : "") + k.fs + 'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
+            const gap = 7 * ls;
+            const wW = (c.measureText(k.text).width + (k.badge ? k.fs * 2.4 : 0) + 4 * ls) * s, hW = k.fs * 1.35 * s;
+            const r = this._nodeR(k.n) * Math.min(1.6, k.pp.f);
+            const x0 = (k.pp.x + r + gap) * s, cy2 = k.pp.y * s;
+            const b = { x0, x1: x0 + wW, y0: cy2 - hW / 2, y1: cy2 + hW / 2 };
+            const hit = this._declutter && k.pri < 1e5 && boxes.some((o) => o.node !== k.n && b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
             if (hit) continue;
             boxes.push(b);
-            out.set(k.n, { text: k.text, fs: k.fs });
+            out.set(k.n, { text: k.text, fs: k.fs, gap, badge: k.badge, strong: k.strong });
           }
+          out.boxes = boxes;
           return out;
         }
         /**
@@ -60754,6 +61403,14 @@ ${h.text}`;
          * (เดิม Z = ค่าเฉลี่ยความลึกของทุกโหนด ซึ่งไม่ใช่ค่าของกล้อง — หมุน/เลื่อนแล้วไม่เปลี่ยนเลย)
          */
         _updateStatus() {
+          if (this._legend) {
+            const cnt = {};
+            for (const n2 of this.nodes) {
+              const k = n2.cat === "section" || n2.cat === "book" ? "chapter" : n2.cat;
+              cnt[k] = (cnt[k] || 0) + 1;
+            }
+            this._legend.update(cnt, this._catCol || {});
+          }
           if (!this._sb) return;
           const structN = this.nodes.filter((n2) => !WIKI_CATS2.has(n2.cat)).length;
           const st = structN ? tf("ui.net.sceneChapter", structN) : "";
@@ -60828,7 +61485,7 @@ ${h.text}`;
             const p = pj.view(n2);
             if (p.behind) continue;
             const d = (p.x - sx2) ** 2 + (p.y - sy2) ** 2;
-            const rr = Math.max(20 * Math.min(2, p.f), this._nodeR(n2) * Math.min(2, p.f) + 2);
+            const rr = Math.max(10 / s, this._nodeR(n2) * Math.min(1.6, p.f) + 4 / s);
             if (d > rr * rr) continue;
             if (p.z < bestZ - 1e-6 || Math.abs(p.z - bestZ) < 1e-6 && d < bestD) {
               best = n2;
@@ -61210,7 +61867,9 @@ ${h.text}`;
          * [alpha.73 ข้อ 4] ซูมยึด "จุดกึ่งกลางจอ" · [alpha.166] = จุดโฟกัสของกล้อง (สเกลเปลี่ยนอย่างเดียว)
          */
         _zoom(e) {
-          const f = e.deltaY < 0 ? 1.1 : 0.9;
+          const dy = Number.isFinite(e.deltaY) ? e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1) : 0;
+          if (!dy) return;
+          const f = Math.exp(-Math.max(-300, Math.min(300, dy)) * 15e-4);
           this._flyAnim = null;
           this._cam.scale = clampScale(this._cam.scale * f);
           this._touchCam();
@@ -61333,10 +61992,18 @@ ${h.text}`;
           document.removeEventListener("mouseup", this._upDoc);
           if (this._ro) this._ro.disconnect();
           if (this._tb) this._tb.destroy();
+          if (this._legend) this._legend.box.remove();
           if (this._side) this._side.destroy();
           if (this._storyTimer) clearInterval(this._storyTimer);
           if (this._storyBar) this._storyBar.destroy();
           onModelReady(null);
+          if (this._bgBlobUrl) {
+            try {
+              URL.revokeObjectURL(this._bgBlobUrl);
+            } catch {
+            }
+            this._bgBlobUrl = "";
+          }
           try {
             localStorage.setItem(scopedKey(CAM_PREFIX, this._scope()), JSON.stringify(serializeCam(this._cam)));
           } catch {
@@ -108797,28 +109464,28 @@ ${mdToHtmlBody(md, o)}
             var tlim = forbidPrev || alwaysBlend || j == 1 || frms[j - 2].dispose != 0 ? 1 : 2, tstp = 0, tarea = 1e9;
             for (var it = 0; it < tlim; it++) {
               var pimg = new Uint8Array(bufs[j - 1 - it]), p32 = new Uint32Array(bufs[j - 1 - it]);
-              var mix = w, miy = h, max2 = -1, may = -1;
+              var mix2 = w, miy = h, max2 = -1, may = -1;
               for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
                 var i5 = y * w + x;
                 if (cimg32[i5] != p32[i5]) {
-                  if (x < mix) mix = x;
+                  if (x < mix2) mix2 = x;
                   if (x > max2) max2 = x;
                   if (y < miy) miy = y;
                   if (y > may) may = y;
                 }
               }
-              if (max2 == -1) mix = miy = max2 = may = 0;
+              if (max2 == -1) mix2 = miy = max2 = may = 0;
               if (evenCrd) {
-                if ((mix & 1) == 1) mix--;
+                if ((mix2 & 1) == 1) mix2--;
                 if ((miy & 1) == 1) miy--;
               }
-              var sarea = (max2 - mix + 1) * (may - miy + 1);
+              var sarea = (max2 - mix2 + 1) * (may - miy + 1);
               if (sarea < tarea) {
                 tarea = sarea;
                 tstp = it;
-                nx = mix;
+                nx = mix2;
                 ny = miy;
-                nw = max2 - mix + 1;
+                nw = max2 - mix2 + 1;
                 nh = may - miy + 1;
               }
             }
@@ -108855,24 +109522,24 @@ ${mdToHtmlBody(md, o)}
         var U8 = Uint8Array, U32 = Uint32Array;
         var pimg = new U8(bufs[i5 - 1]), pimg32 = new U32(bufs[i5 - 1]), nimg = i5 + 1 < bufs.length ? new U8(bufs[i5 + 1]) : null;
         var cimg = new U8(bufs[i5]), cimg32 = new U32(cimg.buffer);
-        var mix = w, miy = h, max2 = -1, may = -1;
+        var mix2 = w, miy = h, max2 = -1, may = -1;
         for (var y = 0; y < r.height; y++) for (var x = 0; x < r.width; x++) {
           var cx2 = r.x + x, cy2 = r.y + y;
           var j = cy2 * w + cx2, cc = cimg32[j];
           if (cc == 0 || frms[i5 - 1].dispose == 0 && pimg32[j] == cc && (nimg == null || nimg[j * 4 + 3] != 0)) {
           } else {
-            if (cx2 < mix) mix = cx2;
+            if (cx2 < mix2) mix2 = cx2;
             if (cx2 > max2) max2 = cx2;
             if (cy2 < miy) miy = cy2;
             if (cy2 > may) may = cy2;
           }
         }
-        if (max2 == -1) mix = miy = max2 = may = 0;
+        if (max2 == -1) mix2 = miy = max2 = may = 0;
         if (evenCrd) {
-          if ((mix & 1) == 1) mix--;
+          if ((mix2 & 1) == 1) mix2--;
           if ((miy & 1) == 1) miy--;
         }
-        r = { x: mix, y: miy, width: max2 - mix + 1, height: may - miy + 1 };
+        r = { x: mix2, y: miy, width: max2 - mix2 + 1, height: may - miy + 1 };
         var fr = frms[i5];
         fr.rect = r;
         fr.blend = 1;
@@ -152792,6 +153459,12 @@ ${mdToHtmlBody(md, o)}
       } catch {
       }
     }
+    if (!out.length) for (const fam of PDF_THAI_LAST_RESORT) {
+      try {
+        add2(await kapi.fontFile([fam]));
+      } catch {
+      }
+    }
     return out;
   }
   async function pdfFontBytes() {
@@ -153403,7 +154076,7 @@ ${mdToHtmlBody(md, o)}
     await kapi.writeBytes(dest, Array.from(r.bytes));
     return r;
   }
-  var FONT_CACHE, row3, numInput, checkbox, select2, ALIGN_OPTS;
+  var FONT_CACHE, PDF_THAI_LAST_RESORT, row3, numInput, checkbox, select2, ALIGN_OPTS;
   var init_pdf_ui = __esm({
     "src/pdf-ui.js"() {
       init_i18n();
@@ -153424,6 +154097,7 @@ ${mdToHtmlBody(md, o)}
       init_elem_label();
       init_err_text();
       FONT_CACHE = { set: null, stamp: "" };
+      PDF_THAI_LAST_RESORT = ["Sarabun", "Noto Sans Thai", "Noto Serif Thai", "Loma", "Garuda", "Norasi", "Kinnari", "Laksaman", "TlwgTypo"];
       row3 = (label, node, hint) => {
         const r = el("div", "k-row");
         const l = el("label", null, label);
@@ -155368,14 +156042,20 @@ ${mdToHtmlBody(md, o)}
   // src/branch-graph.js
   var branch_graph_exports = {};
   __export(branch_graph_exports, {
+    CHOICE_ROWS: () => CHOICE_ROWS,
+    CHOICE_ROW_H: () => CHOICE_ROW_H,
+    CHOICE_Y0: () => CHOICE_Y0,
     GAP_X: () => GAP_X,
     GAP_Y: () => GAP_Y,
     NODE_H: () => NODE_H,
     NODE_W: () => NODE_W,
     PAD: () => PAD,
+    PORT_IN_Y: () => PORT_IN_Y,
     analyzeGraph: () => analyzeGraph,
     bodyExcerpt: () => bodyExcerpt,
     buildGraph: () => buildGraph,
+    choicePortY: () => choicePortY,
+    choiceRowOf: () => choiceRowOf,
     countDuplicateChoices: () => countDuplicateChoices,
     danglingChoices: () => danglingChoices,
     diffChoiceMarkers: () => diffChoiceMarkers,
@@ -155398,6 +156078,15 @@ ${mdToHtmlBody(md, o)}
     scanChoiceMarkers: () => scanChoiceMarkers,
     validateChoices: () => validateChoices
   });
+  function choiceRowOf(idx4, count) {
+    const n2 = Math.max(0, count | 0);
+    if (n2 <= CHOICE_ROWS) return Math.max(0, Math.min(idx4 | 0, CHOICE_ROWS - 1));
+    return Math.min(idx4 | 0, CHOICE_ROWS - 1);
+  }
+  function choicePortY(idx4, count) {
+    if (!count) return NODE_H / 2;
+    return CHOICE_Y0 + choiceRowOf(idx4, count) * CHOICE_ROW_H + CHOICE_ROW_H / 2;
+  }
   function scanChoiceMarkers(text) {
     const out = [];
     if (!text) return out;
@@ -155913,16 +156602,20 @@ ${inner}
 ${body || '<p class="open">' + esc5(L2.empty || t("ui.common.notHasSceneHas")) + "</p>"}
 </body></html>`;
   }
-  var NODE_W, NODE_H, GAP_X, GAP_Y, PAD, MARKER_SRC, edgeKey2, esc5, TREE_CSS;
+  var NODE_W, NODE_H, GAP_X, GAP_Y, PAD, PORT_IN_Y, CHOICE_Y0, CHOICE_ROW_H, CHOICE_ROWS, MARKER_SRC, edgeKey2, esc5, TREE_CSS;
   var init_branch_graph = __esm({
     "src/branch-graph.js"() {
       init_i18n();
       init_icons();
-      NODE_W = 208;
-      NODE_H = 68;
-      GAP_X = 108;
-      GAP_Y = 26;
+      NODE_W = 232;
+      NODE_H = 116;
+      GAP_X = 116;
+      GAP_Y = 30;
       PAD = 30;
+      PORT_IN_Y = 17;
+      CHOICE_Y0 = 58;
+      CHOICE_ROW_H = 18;
+      CHOICE_ROWS = 3;
       MARKER_SRC = /(!?)\[([^\[\]\n]{1,80})\](\()?/;
       edgeKey2 = (from2, to) => from2 + "\0" + to;
       esc5 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -156820,13 +157513,13 @@ details>summary::-webkit-details-marker{display:none}
     showPanel2("branch", { targetId: "docs", side: "left", forceMove: true });
     setStatus(tr2("splitDone"));
   }
-  function edgeGeom(a, b) {
-    const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2;
-    const x2 = b.x, y2 = b.y + NODE_H / 2;
+  function edgeGeom(a, b, idx4 = 0) {
+    const x1 = a.x + NODE_W, y1 = a.y + choicePortY(idx4, (a.choices || []).length);
+    const x2 = b.x, y2 = b.y + PORT_IN_Y;
     const back = x2 <= x1;
     const cx2 = back ? Math.max(40, GAP_X) : Math.max(28, (x2 - x1) / 2);
-    const c1x = x1 + cx2, c1y = back ? y1 + NODE_H : y1;
-    const c2x = x2 - cx2, c2y = back ? y2 + NODE_H : y2;
+    const c1x = x1 + cx2, c1y = back ? a.y + NODE_H + 40 : y1;
+    const c2x = x2 - cx2, c2y = back ? b.y + NODE_H + 40 : y2;
     const d = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
     const mx = (x1 + 3 * c1x + 3 * c2x + x2) / 8;
     const my = (y1 + 3 * c1y + 3 * c2y + y2) / 8;
@@ -157128,7 +157821,7 @@ details>summary::-webkit-details-marker{display:none}
         }
         return id;
       };
-      const edgeCol = themeColor("--dim", "#98958b"), edgeHot = themeColor("--accent-hi", "#d97757");
+      const edgeCol = themeColor("--accent-hi", "#d97757"), edgeHot = themeColor("--bright", "#faf9f5");
       markerFor(edgeCol);
       markerFor(edgeHot);
       svg.append(defs);
@@ -157136,7 +157829,7 @@ details>summary::-webkit-details-marker{display:none}
         if (e.dangling) continue;
         const a = layout.byId.get(e.from), b = layout.byId.get(e.to);
         if (!a || !b) continue;
-        const g = edgeGeom(a, b);
+        const g = edgeGeom(a, b, e.idx);
         const onPath = hi.edges.has(edgeKey2(e.from, e.to));
         const hot = bs.sel === e.from || bs.sel === e.to;
         const color = e.color || (onPath || hot ? edgeHot : edgeCol);
@@ -157206,7 +157899,7 @@ details>summary::-webkit-details-marker{display:none}
           if (p.e.from !== id && p.e.to !== id) continue;
           const a = layout.byId.get(p.e.from), b = layout.byId.get(p.e.to);
           if (!a || !b) continue;
-          p.geom = edgeGeom(a, b);
+          p.geom = edgeGeom(a, b, p.e.idx);
           p.path.setAttribute("d", p.geom.d);
         }
         placeLabels(true);
@@ -157228,11 +157921,36 @@ details>summary::-webkit-details-marker{display:none}
           box2.classList.add("bn-tinted");
         }
         const icon2 = rootSet.has(n2.id) ? gi("play") + " " : endSet.has(n2.id) ? gi("flag-checkered") + " " : gi("file") + " ";
-        box2.append(el("div", "branch-node-name", icon2 + n2.title));
+        const headEl = el("div", "branch-node-head");
+        headEl.append(el("div", "branch-node-name", icon2 + n2.title));
+        box2.append(headEl);
+        box2.append(el("span", "branch-port branch-port-in"));
         const meta2 = el("div", "branch-node-meta");
         meta2.append(el("span", "branch-node-ch", n2.chapterName || "\u2014"));
         if (n2.choices.length) meta2.append(el("span", "branch-node-count", gi("subdirectory-right") + " " + n2.choices.length));
         box2.append(meta2);
+        const rowsEl = el("div", "branch-node-rows");
+        const over = n2.choices.length > CHOICE_ROWS;
+        const showN = over ? CHOICE_ROWS - 1 : n2.choices.length;
+        n2.choices.slice(0, showN).forEach((c) => {
+          const r = el("div", "branch-node-row" + (c.nextSceneId && graph.byId.has(c.nextSceneId) ? "" : " open"));
+          r.append(el("span", "branch-node-row-text", c.text || tr2("sumChoices")));
+          const port = el("span", "branch-port branch-port-out");
+          if (c.color) port.style.setProperty("--port", c.color);
+          r.append(port);
+          rowsEl.append(r);
+        });
+        if (over) {
+          const r = el("div", "branch-node-row branch-node-more");
+          r.append(el("span", "branch-node-row-text", "+" + (n2.choices.length - showN)), el("span", "branch-port branch-port-out"));
+          rowsEl.append(r);
+        }
+        if (!n2.choices.length) rowsEl.append(el(
+          "div",
+          "branch-node-row branch-node-none",
+          endSet.has(n2.id) ? gi("flag-checkered") + " " + tr2("roleEndFull") : tr2("noChoicesYet")
+        ));
+        box2.append(rowsEl);
         box2.title = [
           n2.title,
           n2.chapterName ? tr2("chapterOf") + n2.chapterName : "",
@@ -157674,7 +158392,7 @@ ${tr2("mergeNote")}`,
     if (!node || !node.filePath) return "";
     try {
       const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
-      return parseMdFile24(await kapi.readFile(node.filePath)).body || "";
+      return liveBody(node.filePath, parseMdFile24(await kapi.readFile(node.filePath)).body || "");
     } catch (e) {
       log("warn", t("ui.branch.branchingReadBodyScene"), e);
       return "";
@@ -157705,7 +158423,7 @@ ${tr2("mergeNote")}`,
     return true;
   }
   async function syncChoicesFromScene() {
-    const { sceneCtx: sceneCtx2, updateSceneRow: updateSceneRow2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const { sceneCtx: sceneCtx2 } = await Promise.resolve().then(() => (init_app(), app_exports));
     const ctx2 = await sceneCtx2();
     if (!ctx2) {
       setStatus(tr2("needScene"));
@@ -157726,14 +158444,17 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("noMarker"));
       return 0;
     }
-    const { missing } = diffChoiceMarkers(markers, ctx2.row.choices || []);
+    const current2 = inBranchPlan() ? planChoicesFor(planState.live, ctx2.row.id) : ctx2.row.choices || [];
+    const { missing } = diffChoiceMarkers(markers, current2);
     if (!missing.length) {
       setStatus(tr2("allLinked") + markers.length + ")");
       return 0;
     }
-    await updateSceneRow2(ctx2.dPath, ctx2.row.id, (r) => {
-      r.choices = [...r.choices || [], ...missing.map((t22) => ({ text: t22, nextSceneId: "" }))];
-    });
+    const ok2 = await mutateChoices(
+      { dPath: ctx2.dPath, id: ctx2.row.id },
+      (list3) => [...list3, ...missing.map((t22) => ({ text: t22, nextSceneId: "" }))]
+    );
+    if (ok2 === false) return 0;
     setStatus(tr2("addedFromText") + missing.length + tr2("addedFromTextTail"));
     refreshOpenBranchTab();
     return missing.length;
@@ -157750,6 +158471,7 @@ ${tr2("mergeNote")}`,
       } catch {
         continue;
       }
+      body = liveBody(sc.filePath, body);
       const { missing } = diffChoiceMarkers(scanChoiceMarkers(body), sc.choices || []);
       if (missing.length) found2.push({ sc, missing });
     }
@@ -158172,6 +158894,7 @@ ${preview2}` + (found2.length > 8 ? `
       init_branch_plans();
       init_branch_graph();
       init_icons();
+      init_tab_bridge();
       SVG_NS = "http://www.w3.org/2000/svg";
       svgEl = (tag3, attrs = {}) => {
         const e = document.createElementNS(SVG_NS, tag3);
@@ -172403,8 +173126,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const store = colorStore();
     const pop = el("div", "k-menu k-colorpop");
     curPop = pop;
-    const use = async (hex3) => {
-      const c = (0, import_text_color3.normColor)(hex3);
+    const use = async (hex4) => {
+      const c = (0, import_text_color3.normColor)(hex4);
       apply4(c);
       if (c) await saveColorStore(
         { ...colorStore(), recent: (0, import_text_color3.pushRecent)(colorStore().recent, c) },
@@ -172417,9 +173140,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       wrap2.append(el("div", "k-colorsec-lbl", t(labelKey)));
       const row4 = el("div", "k-colorrow");
       if (!list3.length) row4.append(el("span", "dim k-colorempty", t("ui.color.none")));
-      for (const hex3 of list3) {
-        const key2 = (0, import_text_color3.presetLabelKey)(hex3);
-        row4.append(swatch(hex3, { current: current2, title: key2 ? t(key2) : hex3, onPick: use }));
+      for (const hex4 of list3) {
+        const key2 = (0, import_text_color3.presetLabelKey)(hex4);
+        row4.append(swatch(hex4, { current: current2, title: key2 ? t(key2) : hex4, onPick: use }));
       }
       wrap2.append(row4);
       return wrap2;
@@ -187448,9 +188171,21 @@ ${css}
           const card = document.querySelector("#net-body .net-scene");
           check2('[166-B] \u2605 \u0E1B\u0E38\u0E48\u0E21 "\u0E09\u0E32\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E41\u0E25\u0E30\u0E42\u0E21\u0E40\u0E14\u0E25" \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E43\u0E19\u0E1C\u0E31\u0E07', !!card && !card.hidden && scBtn.classList.contains("on"));
           const kindSel = card.querySelector("select");
+          const bgAt = (() => {
+            const pts = n2.nodes.map((x) => n2.screenOf(x));
+            let best = { x: W - 30, y: Math.round(H3 / 2) }, bestD = -1;
+            for (let gx = 20; gx < W - 10; gx += 37) for (let gy = 60; gy < H3 - 60; gy += 29) {
+              const d = Math.min(...pts.map((p) => Math.hypot(p.x - gx, p.y - gy)), 1e9);
+              if (d > bestD) {
+                bestD = d;
+                best = { x: gx, y: gy };
+              }
+            }
+            return best;
+          })();
           const bgPx = () => {
             n2.draw();
-            const d = n2.canvas.getContext("2d").getImageData(W - 30, Math.round(H3 / 2), 1, 1).data;
+            const d = n2.canvas.getContext("2d").getImageData(bgAt.x, bgAt.y, 1, 1).data;
             return d[0] + "," + d[1] + "," + d[2];
           };
           const pxTheme = bgPx();
@@ -202296,7 +203031,18 @@ ${css}
           check2("#12 \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E1B\u0E47\u0E19 4 \u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C", cols === 4, String(cols));
           const card1 = grid.querySelector(".home-card");
           if (card1) {
-            const h12 = card1.getBoundingClientRect().height;
+            try {
+              await document.fonts.ready;
+            } catch {
+            }
+            for (let i5 = 0; i5 < 40 && [...grid.querySelectorAll("img")].some((im) => !im.complete); i5++) await new Promise((r) => setTimeout(r, 50));
+            let h12 = card1.getBoundingClientRect().height;
+            for (let i5 = 0; i5 < 20; i5++) {
+              await new Promise((r) => requestAnimationFrame(() => r()));
+              const hh = card1.getBoundingClientRect().height;
+              if (Math.abs(hh - h12) < 0.5) break;
+              h12 = hh;
+            }
             grid.classList.add("list");
             await new Promise((r) => setTimeout(r, 60));
             const hList = card1.getBoundingClientRect().height;
@@ -202319,6 +203065,7 @@ ${css}
               nCards + " \u0E01\u0E32\u0E23\u0E4C\u0E14 \xB7 " + (quick ? quick.querySelectorAll(".home-quick-btn").length : 0) + " \u0E1B\u0E38\u0E48\u0E21"
             );
             if (quick) {
+              hideTip();
               check2(
                 "[164-7] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E32\u0E07\u0E25\u0E31\u0E14\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D + \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E35\u0E22\u0E4C\u0E14\u0E34\u0E1A)",
                 [...quick.querySelectorAll(".home-quick-btn")].every((b) => b.title && !/^ui\./.test(b.textContent) && !/^ui\./.test(b.title))
@@ -202681,6 +203428,11 @@ ${css}
           const ovH = await showHomeDialog();
           await new Promise((r) => setTimeout(r, 250));
           const dlg = ovH.querySelector(".k-dialog");
+          try {
+            await Promise.all(dlg.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {
+            })));
+          } catch {
+          }
           const grid = ovH.querySelector(".home-grid");
           check2(
             "#1 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E21\u0E35\u0E01\u0E23\u0E2D\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E22\u0E01 (\u0E01\u0E23\u0E2D\u0E1A\u0E19\u0E34\u0E48\u0E07 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19)",
@@ -220113,10 +220865,11 @@ ${css}
           await until157(() => !!colOf("\u0E17\u0E14\u0E2A\u0E2D\u0E1A157")) && CS.allStatuses().length === before157 + 1 && sceneStatusOptions().some(([v4]) => v4 === "\u0E17\u0E14\u0E2A\u0E2D\u0E1A157")
         );
         const head157 = colOf("\u0E17\u0E14\u0E2A\u0E2D\u0E1A157") && colOf("\u0E17\u0E14\u0E2A\u0E2D\u0E1A157").querySelector(".kb-col-head");
+        const dot157 = head157 && head157.querySelector(".kb-col-dot");
         check2(
-          "[157-1] \u0E2B\u0E31\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E40\u0E15\u0E47\u0E21\u0E41\u0E16\u0E1A + \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01",
-          !!head157 && getComputedStyle(head157).backgroundColor === "rgb(255, 95, 184)" && CU.contrast("#ff5fb8", CU.inkOn("#ff5fb8")) >= 4.5,
-          head157 && getComputedStyle(head157).backgroundColor
+          "[157-1] \u0E2B\u0E31\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E21\u0E35\u0E08\u0E38\u0E14\u0E2A\u0E35\u0E02\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30 + \u0E1E\u0E37\u0E49\u0E19\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E22\u0E49\u0E2D\u0E21\u0E2A\u0E35\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
+          !!dot157 && getComputedStyle(dot157).backgroundColor === "rgb(255, 95, 184)" && getComputedStyle(colOf("\u0E17\u0E14\u0E2A\u0E2D\u0E1A157")).getPropertyValue("--kb-col").trim() === "#ff5fb8" && CU.contrast("#ff5fb8", CU.inkOn("#ff5fb8")) >= 4.5,
+          dot157 && getComputedStyle(dot157).backgroundColor
         );
         await (await Promise.resolve().then(() => (init_kanban_ui(), kanban_ui_exports))).setKanbanDraft(d157.dPath);
         await until157(() => !!document.querySelector(`#kanban-body .kb-card[data-scene-id="${sc157.id}"]`));
@@ -241699,6 +242452,7 @@ ${css}
         globalThis.__k2testing = true;
         return runTest(p);
       };
+      if (location.search.includes("k2test")) window.__k2dev = { loadProject, handleCommand, state, resetPanels };
       window.k2PageDoctor = k2PageDoctor;
       window.k2Net = () => netInst;
       window.__k2menu = null;

@@ -1,12 +1,13 @@
 // kanban-ui.js — กระดาน Kanban แสดงฉากตามสถานะ · ลากการ์ดเปลี่ยนสถานะ (ข้อ 12)
 import { $, el, setStatus, state, t, tf, dataLabel } from '../core.js';
-import { STATUS_UNSET } from '../palette.js';   // [alpha.162 · W6 ข้อ 2] ตัวเดียวกับแดชบอร์ด
+import { STATUS_UNSET, CHART_SERIES } from '../palette.js';   // [alpha.162 · W6 ข้อ 2] ตัวเดียวกับแดชบอร์ด
 import { KanbanBoard, UNSET } from './kanban-core.js';   // คอลัมน์จัดการผ่านเมธอดของ board (removeColumn)
 import { allStatuses, statusColor, setStatusColor, addCustomStatus, deleteStatus, setStatusOrder,
          manageCustomStatuses, refreshStatusChips } from '../custom-status.js';
-import { vivid, inkOn, normHex, nextStatusColor } from '../color-util.js';
+import { vivid, normHex, nextStatusColor } from '../color-util.js';
 import { chapterFolders, scenePath, syncIo } from '../project-scan.js';
-import { ask, confirmBox } from '../ui.js';
+import { ask, confirmBox, popupMenu } from '../ui.js';
+import { cmpText, fmtNum } from '../locale.js';
 import { showPanel, isPanelOpen } from '../panels/panel-ui.js';
 import { gi } from '../icons.js';
 
@@ -140,6 +141,23 @@ export function bindKanbanSync() {
   return true;
 }
 
+// [alpha.167] ค้นหา/เรียงบนกระดาน — สภาพของหน้าต่างนี้ (ไม่ลงไฟล์ · เปิดใหม่เริ่มที่ลำดับบนกระดาน)
+const VIEW = { q: '', sort: 'board' };
+const SORTS = [['board', 'ui.kanban.sortBoard'], ['title', 'ui.kanban.sortTitle'], ['words', 'ui.kanban.sortWords']];
+
+/** ตัวอักษรแรกของชื่อ — ข้ามสระหน้าของไทย (เ แ โ ใ ไ) ไม่งั้น "ไคลี่" ได้วงกลมตัว "ไ" */
+function initialOf(name) {
+  const s = String(name || '').trim().replace(/^[\u0E40-\u0E44]+/, '');
+  const m = s.match(/[\p{L}\p{N}]/u);
+  return m ? m[0].toUpperCase() : '?';
+}
+/** สีประจำชื่อ (คงที่ต่อชื่อ) — จากชุดสีกราฟกลาง */
+function hueOf(name) {
+  let h = 0;
+  for (const ch of String(name || '')) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return CHART_SERIES[h % CHART_SERIES.length];
+}
+
 function renderKanban(b) {
   if (!uiPane) return;
   bindKanbanSync();
@@ -156,30 +174,34 @@ function renderKanban(b) {
     const cards = c.querySelector('.kb-cards');
     if (cards && cards.scrollTop) keepY.set(c.dataset.status, cards.scrollTop);
   }
+  const hadFocus = document.activeElement && document.activeElement.classList.contains('kb-search');
   uiPane.innerHTML = '';
   const wrap = el('div', 'kb-wrap');
 
-  // หัวกระดาน
+  // ── หัวกระดาน: ชื่อ + จำนวน · ค้นหา · เรียง · ร่าง · เพิ่มสถานะ · จัดการ ──
+  // [alpha.167] ผู้ใช้: "karban มันควรจะเป็นแบบรูปที่ 2" — แถบเครื่องมือเดียว ปุ่มหลักขวาสุด
   const head = el('div', 'kb-head');
-  head.append(el('span', 'kb-title', gi('clipboard') + ' Kanban — ' + data.total + t('ui.common.scene')));
-  const addBtn = el('button', 'kb-add-col', gi('plus-plain') + ' ' + t('ui.kanban.addStatus'));
-  addBtn.title = t('ui.kanban.addStatusHint');
-  addBtn.onclick = async () => {
-    // window.prompt() เป็น no-op ใน Electron — ต้องใช้กล่องของโปรแกรมเอง
-    const name = await ask(t('ui.kanban.newColumn'), { placeholder: t('ui.kanban.newColumnHint') });
-    if (!name) return;
-    const used = allStatuses().map((s) => statusColor(s));
-    if (!(await addCustomStatus(name, nextStatusColor(used)))) { setStatus(t('ui.kanban.statusExists')); return; }
-    renderKanban(b);
-    treeRefresh();
-  };
-  const mgrBtn = el('button', 'kb-manage', gi('cog') + ' ' + t('ui.kanban.manageStatus'));
-  mgrBtn.onclick = () => manageCustomStatuses();
-  head.append(addBtn, mgrBtn);
+  const titleBox = el('div', 'kb-titlebox');
+  titleBox.append(el('span', 'kb-title', 'Kanban'), el('span', 'kb-total', tf('ui.kanban.totalScenes', data.total)));
+  head.append(titleBox);
+  const tools = el('div', 'kb-tools');
+  const searchBox = el('label', 'kb-searchbox');
+  searchBox.append(el('span', 'kb-search-ico', gi('search')));
+  const search = el('input', 'kb-search');
+  search.type = 'search'; search.placeholder = t('ui.kanban.search'); search.value = VIEW.q;
+  search.setAttribute('aria-label', t('ui.kanban.search'));
+  let sJob = null;
+  search.oninput = () => { clearTimeout(sJob); sJob = setTimeout(() => { VIEW.q = search.value.trim(); renderKanban(b); }, 160); };
+  search.onkeydown = (e) => { if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; VIEW.q = ''; renderKanban(b); } };
+  searchBox.append(search);
+  const sortSel = el('select', 'k-dlg-select kb-sort');
+  sortSel.title = t('ui.kanban.sortBy'); sortSel.setAttribute('aria-label', t('ui.kanban.sortBy'));
+  for (const [v, k] of SORTS) { const o = el('option', null, t(k)); o.value = v; sortSel.append(o); }
+  sortSel.value = VIEW.sort;
+  sortSel.onchange = () => { VIEW.sort = sortSel.value; renderKanban(b); };
   // [alpha.124 ข้อ 42] ตัวเลือกฉบับร่าง — เติมรายการแบบ async หลังวาดหัวเสร็จ (ไม่หน่วงกระดาน)
   const draftSel = el('select', 'k-dlg-select kb-draft');
   draftSel.title = t('ui.kanban.draftPick');
-  head.append(draftSel);
   // [alpha.165] ★ ต้นตอ "dropdown กระพริบมุมขวาบน" ตอนย้ายการ์ด: ช่องนี้เกิดใหม่ว่าง ๆ และ **มองเห็น** ทุกรอบวาด
   // จนรายชื่อร่าง (async) กลับมาแล้วถึงถูกซ่อน (โปรเจกต์ร่างเดียว) → วาดจากรายการที่จำไว้ทันที แล้วค่อยเติมของสด
   const fillDrafts = (ds) => {
@@ -194,48 +216,74 @@ function renderKanban(b) {
     if (draftSel.isConnected) fillDrafts(ds);
   }).catch(() => {});
   draftSel.onchange = () => setKanbanDraft(draftSel.value);
+  const mgrBtn = el('button', 'kb-manage', gi('cog'));
+  mgrBtn.title = t('ui.kanban.manageStatus'); mgrBtn.setAttribute('aria-label', t('ui.kanban.manageStatus'));
+  mgrBtn.onclick = () => manageCustomStatuses();
+  const addBtn = el('button', 'kb-add-col', gi('plus-plain') + ' ' + t('ui.kanban.addStatus'));
+  addBtn.title = t('ui.kanban.addStatusHint');
+  addBtn.onclick = async () => {
+    // window.prompt() เป็น no-op ใน Electron — ต้องใช้กล่องของโปรแกรมเอง
+    const name = await ask(t('ui.kanban.newColumn'), { placeholder: t('ui.kanban.newColumnHint') });
+    if (!name) return;
+    const used = allStatuses().map((s) => statusColor(s));
+    if (!(await addCustomStatus(name, nextStatusColor(used)))) { setStatus(t('ui.kanban.statusExists')); return; }
+    renderKanban(b);
+    treeRefresh();
+  };
+  tools.append(searchBox, sortSel, draftSel, mgrBtn, addBtn);
+  head.append(tools);
   wrap.append(head);
+
+  // ค้นหา: ชื่อฉาก · เรื่องย่อ · ผู้เล่า · แท็ก · ชื่อบท (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
+  const q = VIEW.q.toLowerCase();
+  const match = (card) => !q || [card.title, card.synopsis, card.pov, SYNC.chapters.get(card.chapterId), ...(card.tags || [])]
+    .some((x) => String(x || '').toLowerCase().includes(q));
+  const maxWords = Math.max(1, ...data.columns.flatMap((c) => c.cards.map((x) => x.words || 0)));
+  const reorderable = VIEW.sort === 'board' && !q;
 
   const cols = el('div', 'kb-cols');
   for (const col of data.columns) {
     const isStatus = col.key !== UNSET;
     const colHex = isStatus ? vivid(statusColor(col.key)) : '';
     const colEl = el('div', 'kb-col' + (col.over ? ' kb-over' : '') + (col.custom ? ' kb-custom' : '')
-      + (col.collapsed ? ' kb-collapsed' : ''));
+      + (col.collapsed ? ' kb-collapsed' : '') + (isStatus ? '' : ' kb-col-unset'));
     colEl.dataset.status = col.key;
-    if (colHex) colEl.style.setProperty('--kb-col', colHex);
+    colEl.style.setProperty('--kb-col', colHex || STATUS_UNSET);
+    const shown = col.cards.filter(match);
+    if (VIEW.sort === 'title') shown.sort((x, y) => cmpText(x.title, y.title));
+    else if (VIEW.sort === 'words') shown.sort((x, y) => (y.words || 0) - (x.words || 0));
 
-    // หัวคอลัมน์ = แถบสีเต็มแถบ (สีเดียวกับชิปสถานะใน Explorer)
+    // หัวคอลัมน์: จุดสีสถานะ · ชื่อ · จำนวน · ⋯ (สีเดียวกับชิปสถานะใน Explorer — จุด + พื้นคอลัมน์อ่อน ๆ)
     const colHead = el('div', 'kb-col-head');
-    if (colHex) { colHead.style.background = colHex; colHead.style.color = inkOn(colHex); }
-    const toggleBtn = el('span', 'kb-col-toggle', col.collapsed ? gi('play') : gi('triangle-down'));
-    toggleBtn.onclick = async () => {
+    const toggleCol = async () => {
       b.store.layout = { ...b.store.layout, collapsed: col.collapsed
         ? b.store.layout.collapsed.filter((k) => k !== col.key)
         : [...(b.store.layout.collapsed || []), col.key] };
       b.store.save();
       renderKanban(b);
     };
+    const toggleBtn = el('button', 'kb-col-toggle', col.collapsed ? gi('play') : gi('triangle-down'));
+    toggleBtn.title = t(col.collapsed ? 'ui.kanban.colExpand' : 'ui.kanban.colCollapse');
+    toggleBtn.setAttribute('aria-label', toggleBtn.title);
+    toggleBtn.onclick = (e) => { e.stopPropagation(); toggleCol(); };
+    const dot = el('span', 'kb-col-dot');
     const colTitle = el('span', 'kb-col-title');
     colTitle.textContent = (col.over ? gi('warning') + ' ' : '') + (isStatus ? dataLabel(col.label) : t('ui.kanban.unset'));
-    const colCount = el('span', 'kb-col-count', String(col.count));
-    colHead.append(toggleBtn, colTitle, colCount);
+    const colCount = el('span', 'kb-col-count', q && shown.length !== col.count ? shown.length + '/' + col.count : String(col.count));
+    colHead.append(toggleBtn, dot, colTitle, colCount);
 
     if (isStatus) {
-      // เปลี่ยนสีสถานะจากหัวคอลัมน์ — Explorer เปลี่ยนตามทันที
-      // จุดสีที่เห็นเป็นกล่องธรรมดา · ช่องเลือกสีจริงโปร่งใสวางทับ (ช่อง color ของ Chromium จัดหน้าตายาก)
+      // เปลี่ยนสีสถานะ — Explorer เปลี่ยนตามทันที · ช่องเลือกสีจริงซ่อนอยู่ในหัว เปิดจากเมนู ⋯ หรือคลิกจุดสี
       const pick = el('label', 'kb-col-color');
-      pick.style.background = colHex;
       pick.title = t('ui.status.recolorStatus');
       const inp = el('input', 'kb-col-color-input');
       inp.type = 'color'; inp.value = normHex(statusColor(col.key)) || STATUS_UNSET;
       inp.onchange = async () => { await setStatusColor(col.key, inp.value); refreshStatusChips(); treeRefresh(); };
       pick.append(inp);
       pick.addEventListener('mousedown', (e) => e.stopPropagation());
-      const delBtn = el('span', 'kb-col-del', gi('close'));
-      delBtn.title = t('ui.kanban.deleteColumn');
-      delBtn.onclick = async (e) => {
-        e.stopPropagation();
+      dot.replaceWith(pick);
+      pick.prepend(dot);
+      const delCol = async () => {
         const others = allStatuses().filter((s) => s !== col.key);
         if (col.count) {
           if (!(await confirmBox(tf('ui.kanban.deleteMove', dataLabel(col.key), col.count, others[0] ? dataLabel(others[0]) : t('ui.kanban.unset')), t('ui.common.del')))) return;
@@ -246,7 +294,22 @@ function renderKanban(b) {
         renderKanban(b);
         treeRefresh();
       };
-      colHead.append(pick, delBtn);
+      const delBtn = el('span', 'kb-col-del', gi('close'));   // ทางลัดเดิม (e2e + ผู้ใช้เดิม) — โผล่ตอนชี้หัวคอลัมน์
+      delBtn.title = t('ui.kanban.deleteColumn');
+      delBtn.onclick = (e) => { e.stopPropagation(); delCol(); };
+      const more = el('button', 'kb-col-more', gi('more'));
+      more.title = t('ui.kanban.colMenu'); more.setAttribute('aria-label', t('ui.kanban.colMenu'));
+      more.onclick = (e) => {
+        e.stopPropagation();
+        const r = more.getBoundingClientRect();
+        popupMenu(r.left, r.bottom + 4, [
+          { text: t('ui.kanban.colColor'), swatch: colHex, click: () => inp.click() },
+          { text: t(col.collapsed ? 'ui.kanban.colExpand' : 'ui.kanban.colCollapse'), click: toggleCol },
+          '-',
+          { text: t('ui.kanban.deleteColumn'), danger: true, click: delCol },
+        ]);
+      };
+      colHead.append(delBtn, more);
       // ลากหัวคอลัมน์เพื่อสลับลำดับสถานะ (ลำดับเดียวกับเมนูสถานะของ Explorer)
       colHead.draggable = true;
       colHead.ondragstart = (e) => {
@@ -260,48 +323,13 @@ function renderKanban(b) {
 
     if (!col.collapsed) {
       const cardList = el('div', 'kb-cards');
-      for (const card of col.cards) {
-        const cardEl = el('div', 'kb-card');
-        cardEl.draggable = true;
-        cardEl.dataset.sceneId = card.id;
-        // แถบสีเต็มแถบ: สีป้ายของฉาก → ไม่มีก็ใช้สีสถานะ
-        const stripe = vivid(card.color) || colHex;
-        if (stripe) { cardEl.style.setProperty('--kb-card', stripe); cardEl.classList.add('kb-card-colored'); }
-        cardEl.append(el('div', 'kb-card-title', null));
-        cardEl.lastChild.textContent = card.title;
-        const chTitle = SYNC.chapters.get(card.chapterId);
-        if (chTitle || card.pov) {
-          const meta = el('div', 'kb-card-meta');
-          meta.textContent = [chTitle, card.pov].filter(Boolean).join(' · ');
-          cardEl.append(meta);
-        }
-
-        // ดับเบิลคลิกเปิดฉาก
-        cardEl.ondblclick = async () => {
-          if (!board) return;
-          // ต้องใช้ folderName ของบทนั้น — ชื่อไฟล์ (scene-01.md) ซ้ำกันได้หลายบท
-          const folders = await chapterFolders(board.draftPath);
-          const p = await scenePath(board.draftPath, card.chapterId, card, folders);
-          if (card.fileName && await kapi.exists(p)) {
-            const { openScene } = await import('../app.js');
-            openScene(p, card.title);
-            return;
-          }
-          setStatus(t('ui.kanban.sceneNotFound') + card.title);
-        };
-
-        cardEl.ondragstart = (e) => {
-          e.dataTransfer.setData('text/plain', card.id);
-          e.dataTransfer.effectAllowed = 'move';
-          cardEl.classList.add('kb-dragging');
-        };
-        cardEl.ondragend = () => cardEl.classList.remove('kb-dragging');
-        cardList.append(cardEl);
-      }
+      for (const card of shown) cardList.append(cardEl(card, colHex, maxWords));
+      if (!shown.length) cardList.append(el('div', 'kb-empty', t(q && col.count ? 'ui.kanban.noMatch' : 'ui.kanban.empty')));
       colEl.append(cardList);
 
-      /** ตำแหน่งที่จะแทรก จากตำแหน่งเมาส์แนวตั้ง (เทียบกับกึ่งกลางการ์ดแต่ละใบ) */
-      const dropIndex = (clientY) => {
+      /** ตำแหน่งที่จะแทรก (ในรายการเต็มของคอลัมน์) จากตำแหน่งเมาส์แนวตั้ง
+       *  [alpha.167] กรอง/เรียงอยู่ = การ์ดที่เห็นไม่ใช่ลำดับจริง → วางท้ายคอลัมน์ (ไม่เดาตำแหน่งผิด) */
+      const visibleIndex = (clientY) => {
         const cards = [...cardList.querySelectorAll('.kb-card:not(.kb-dragging)')];
         for (let i = 0; i < cards.length; i++) {
           const r = cards[i].getBoundingClientRect();
@@ -309,6 +337,7 @@ function renderKanban(b) {
         }
         return cards.length;
       };
+      const dropIndex = (clientY) => (reorderable ? visibleIndex(clientY) : col.cards.length);
       const showMarker = (idx) => {
         let mk = cardList.querySelector('.kb-drop-mark');
         if (!mk) { mk = el('div', 'kb-drop-mark'); }
@@ -321,7 +350,7 @@ function renderKanban(b) {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         colEl.classList.add('kb-drag-over');
-        if (!isColDrag(e)) showMarker(dropIndex(e.clientY));
+        if (!isColDrag(e)) showMarker(reorderable ? visibleIndex(e.clientY) : Infinity);
       };
       colEl.ondragleave = (e) => {
         if (colEl.contains(e.relatedTarget)) return;
@@ -354,6 +383,81 @@ function renderKanban(b) {
     const cards = c && c.querySelector('.kb-cards');
     if (cards) cards.scrollTop = y;
   }
+  if (hadFocus) { search.focus(); search.setSelectionRange(search.value.length, search.value.length); }
+}
+
+/** การ์ดหนึ่งใบ: แท็ก · ชื่อ · เรื่องย่อ · ความยาว · ผู้เล่า + บท */
+function cardEl(card, colHex, maxWords) {
+  const cardEl = el('div', 'kb-card');
+  cardEl.draggable = true;
+  cardEl.tabIndex = 0;
+  cardEl.dataset.sceneId = card.id;
+  cardEl.title = t('ui.kanban.openHint');
+  // แถบสีซ้าย: สีป้ายของฉาก → ไม่มีก็ใช้สีสถานะ
+  const stripe = vivid(card.color) || colHex;
+  if (stripe) { cardEl.style.setProperty('--kb-card', stripe); cardEl.classList.add('kb-card-colored'); }
+  // แท็ก (สูงสุดสองอัน) + ธง/ล็อก
+  const tags = (card.tags || []).filter(Boolean);
+  if (tags.length || card.flag || card.locked) {
+    const top = el('div', 'kb-card-top');
+    for (const tg of tags.slice(0, 2)) top.append(el('span', 'kb-tag', tg));
+    if (tags.length > 2) top.append(el('span', 'kb-tag kb-tag-more', '+' + (tags.length - 2)));
+    const marks = el('span', 'kb-card-marks');
+    if (card.flag) { const f = el('span', 'kb-flag', gi('star')); marks.append(f); }
+    if (card.locked) { const l = el('span', 'kb-lock', gi('lock')); l.title = t('ui.kanban.locked'); marks.append(l); }
+    top.append(marks);
+    cardEl.append(top);
+  }
+  const title = el('div', 'kb-card-title');
+  title.textContent = card.title;
+  cardEl.append(title);
+  if (card.synopsis) cardEl.append(el('div', 'kb-card-syn', card.synopsis));
+  // ความยาว: แถบเทียบกับฉากที่ยาวที่สุดบนกระดาน (ไม่ใช่ "ความคืบหน้า" — ฉากไม่มีเป้าหมายคำของตัวเอง)
+  if (card.words) {
+    const prog = el('div', 'kb-card-len');
+    prog.title = t('ui.kanban.wordsBar');
+    const bar = el('div', 'kb-len-bar'); const fill = el('i', 'kb-len-fill');
+    fill.style.width = Math.max(4, Math.round(card.words / maxWords * 100)) + '%';
+    bar.append(fill);
+    prog.append(bar, el('span', 'kb-len-num', tf('ui.kanban.words', fmtNum(card.words))));
+    cardEl.append(prog);
+  }
+  const chTitle = SYNC.chapters.get(card.chapterId);
+  if (chTitle || card.pov) {
+    const meta = el('div', 'kb-card-meta');
+    if (card.pov) {
+      const who = el('span', 'kb-pov');
+      const av = el('span', 'kb-avatar', initialOf(card.pov));
+      av.style.setProperty('--av', hueOf(card.pov));
+      who.append(av, el('span', 'kb-pov-name', card.pov));
+      meta.append(who);
+    }
+    if (chTitle) meta.append(el('span', 'kb-chapter', gi('folder') + ' ' + chTitle));
+    cardEl.append(meta);
+  }
+
+  const open = async () => {
+    if (!board) return;
+    // ต้องใช้ folderName ของบทนั้น — ชื่อไฟล์ (scene-01.md) ซ้ำกันได้หลายบท
+    const folders = await chapterFolders(board.draftPath);
+    const p = await scenePath(board.draftPath, card.chapterId, card, folders);
+    if (card.fileName && await kapi.exists(p)) {
+      const { openScene } = await import('../app.js');
+      openScene(p, card.title);
+      return;
+    }
+    setStatus(t('ui.kanban.sceneNotFound') + card.title);
+  };
+  // ดับเบิลคลิก / Enter เปิดฉาก
+  cardEl.ondblclick = open;
+  cardEl.onkeydown = (e) => { if (e.key === 'Enter' && e.target === cardEl) { e.preventDefault(); open(); } };
+  cardEl.ondragstart = (e) => {
+    e.dataTransfer.setData('text/plain', card.id);
+    e.dataTransfer.effectAllowed = 'move';
+    cardEl.classList.add('kb-dragging');
+  };
+  cardEl.ondragend = () => cardEl.classList.remove('kb-dragging');
+  return cardEl;
 }
 
 const isColDrag = (e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes('text/k2-kb-col');

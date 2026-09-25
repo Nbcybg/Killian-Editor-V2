@@ -13885,6 +13885,8 @@ function stopLogAutoRefresh() {
   if (_logTimer) { clearInterval(_logTimer); _logTimer = null; }
 }
 window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
+// เครื่องมือถ่ายภาพหน้าจอของนักพัฒนา (tools/shot.cjs) — มีเฉพาะโหมดเทส (`?k2test`)
+if (location.search.includes('k2test')) window.__k2dev = { loadProject, handleCommand, state, resetPanels };
 // [alpha.108] เครื่องมือวินิจฉัยหน้ากระดาษ — เปิด DevTools แล้วพิมพ์ `k2PageDoctor()`
 // (ไม่มี UI ไม่มีข้อความให้แปล · ใช้ตอนอาการเกิดบนเอกสารจริงของผู้ใช้ที่เครื่องพัฒนาจำลองไม่ได้)
 window.k2PageDoctor = k2PageDoctor;

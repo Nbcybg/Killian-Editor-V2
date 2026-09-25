@@ -1186,22 +1186,30 @@ function scanSystemFonts() {
   if (_sysFonts) return;
   const seen = new Set();
   _sysFontFiles = new Map();
-  for (const dir of FONT_DIRS) {
-    if (!dir) continue;
-    let names = [];
-    try { names = fs.readdirSync(dir); } catch { continue; }
-    for (const n of names) {
-      if (!FONT_EXT.test(n)) continue;
-      const full = path.join(dir, n);
-      for (const fam of fontFamiliesOf(full)) {
-        if (fam.length > 64) continue;
-        seen.add(fam);
-        // pdf-lib ฝังได้แค่ไฟล์เดี่ยว (ttc = หลายฟอนต์ในไฟล์เดียว ใช้ไม่ได้)
-        if (/\.(ttf|otf)$/i.test(n)) {
-          const k = fam.toLowerCase();
-          if (!_sysFontFiles.has(k)) _sysFontFiles.set(k, []);
-          _sysFontFiles.get(k).push(full);
-        }
+  // [alpha.167 · bug hunt] เดินลงโฟลเดอร์ย่อยด้วย — เดิมอ่านแค่ชั้นบนสุด:
+  //   Linux เก็บฟอนต์ใน /usr/share/fonts/truetype/<วงศ์>/ = ได้รายชื่อว่างทั้งเครื่อง ·
+  //   macOS ฟอนต์ระบบจำนวนมากอยู่ /System/Library/Fonts/Supplemental/ = หายไปจากตัวเลือก/ฝัง PDF ไม่ได้
+  const files = [];
+  const walk = (dir, depth) => {
+    let ents = [];
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (depth < 4) walk(full, depth + 1); }
+      else if (FONT_EXT.test(e.name)) files.push(full);
+    }
+  };
+  for (const dir of FONT_DIRS) if (dir) walk(dir, 0);
+  for (const full of files) {
+    const n = path.basename(full);
+    for (const fam of fontFamiliesOf(full)) {
+      if (fam.length > 64) continue;
+      seen.add(fam);
+      // pdf-lib ฝังได้แค่ไฟล์เดี่ยว (ttc = หลายฟอนต์ในไฟล์เดียว ใช้ไม่ได้)
+      if (/\.(ttf|otf)$/i.test(n)) {
+        const k = fam.toLowerCase();
+        if (!_sysFontFiles.has(k)) _sysFontFiles.set(k, []);
+        _sysFontFiles.get(k).push(full);
       }
     }
   }
@@ -2370,7 +2378,8 @@ app.whenReady().then(() => {
   createSplash();
   createWindow();
   splashSay(tt('ui.splash.window'), 4);
-  if (TEST) {
+  // KILLIAN_TEST_NORUN=1 = โหมดเทสแต่ไม่รัน e2e (tools/shot.cjs ขับหน้าต่างเองผ่าน window.__k2dev)
+  if (TEST && process.env.KILLIAN_TEST_NORUN !== '1') {
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {
         const p = JSON.stringify(process.env.KILLIAN_TEST_PROJECT || '');

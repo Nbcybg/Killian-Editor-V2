@@ -6,6 +6,7 @@
 // · 2D = มองตรงลงมา เหมือนเดิมทุกพิกเซล
 // [รอบ 2] วาดในพิกัดจอ (เส้นตรงยังเป็นเส้นตรงแม้มีมุมมองระยะ) + แคชทั้งผืน — ชี้เมาส์/ไฮไลต์โหนดไม่ต้องวาดพื้นใหม่
 import { normalizeNetScene, starField, hexCenters, hexCorners, gridColorOf, seededRandom } from './network-scene.js';
+import { skyFocal, skyDir, skyProject, equirectUV, skyStars, domeShader } from './network-sky.js';
 
 const _tiles = new Map();               // ดาวแต่ละชั้น (แผ่นกระเบื้องที่วาดไว้แล้ว)
 const TILE = 512;
@@ -199,6 +200,84 @@ function drawPlaneImage(c, pj, img, bg) {
   c.restore();
 }
 
+// ═══════════════ [alpha.167] skybox — ฉากหลังของโหมด 3D ═══════════════
+// ทุกพิกเซล = ทิศทางหนึ่งในโลก (network-sky.js) → ฟ้าหมุนตามมุมกล้อง แต่ไม่เลื่อนตามแพน/ซูม
+// โดม (สีไล่ · เนบิวลา · พาโนรามา) คำนวณที่ความละเอียดต่ำแล้วขยายแบบนุ่ม (สีฟ้าไม่มีรายละเอียดคม)
+// ดาววาดทีละดวงที่ความละเอียดเต็ม (จุดคม ไม่เบลอ)
+const SKY = { cv: null, px: null, stars: null, starKey: '' };
+const _pano = new WeakMap();          // รูป → {w,h,data} (อ่านพิกเซลครั้งเดียวต่อรูป)
+
+function panoPixels(img) {
+  if (_pano.has(img)) return _pano.get(img);
+  let out = null;
+  try {
+    const W = Math.min(2048, img.naturalWidth), H = Math.max(1, Math.round(W * img.naturalHeight / img.naturalWidth));
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d', { willReadFrequently: true });
+    c.drawImage(img, 0, 0, W, H);
+    out = { w: W, h: H, data: c.getImageData(0, 0, W, H).data };
+  } catch { out = null; }        // รูปข้ามต้นทาง (อ่านพิกเซลไม่ได้) → ใช้โดมสีไล่แทน
+  _pano.set(img, out);
+  return out;
+}
+
+/**
+ * วาด skybox เต็มผืน
+ * @param {{rx:number,ry:number}} rot  มุมกล้องของเฟรมนี้
+ * @param {object} bg  ค่าฉากหลังที่ normalize แล้ว
+ */
+export function drawSky(c, w, h, rot, bg, themeBg, image) {
+  const f = skyFocal(w, h);
+  const pano = bg.kind === 'image' && image && image.naturalWidth ? panoPixels(image) : null;
+  const step = pano ? 2 : 4;
+  const lw = Math.ceil(w / step) + 1, lh = Math.ceil(h / step) + 1;
+  if (!SKY.cv) SKY.cv = document.createElement('canvas');
+  if (SKY.cv.width !== lw || SKY.cv.height !== lh) { SKY.cv.width = lw; SKY.cv.height = lh; SKY.px = null; }
+  const sc = SKY.cv.getContext('2d');
+  if (!SKY.px) SKY.px = sc.createImageData(lw, lh);
+  const D = SKY.px.data;
+  const shader = domeShader(bg, themeBg);
+  let o = 0;
+  for (let j = 0; j < lh; j++) {
+    for (let i = 0; i < lw; i++, o += 4) {
+      const d = skyDir(i * step, j * step, w, h, rot, f);
+      let r, g, b;
+      if (pano) {
+        const uv = equirectUV(d);
+        const x = Math.min(pano.w - 1, Math.max(0, (uv.u * pano.w) | 0)), y = Math.min(pano.h - 1, Math.max(0, (uv.v * pano.h) | 0));
+        const k = (y * pano.w + x) * 4;
+        r = pano.data[k]; g = pano.data[k + 1]; b = pano.data[k + 2];
+      } else { const col = shader(d); r = col[0]; g = col[1]; b = col[2]; }
+      D[o] = r; D[o + 1] = g; D[o + 2] = b; D[o + 3] = 255;
+    }
+  }
+  sc.putImageData(SKY.px, 0, 0);
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(SKY.cv, 0, 0, lw * step, lh * step);
+  // ดาว — เฉพาะอวกาศ
+  if (bg.kind === 'space' && bg.stars > 0) {
+    const key = String(bg.stars);
+    if (SKY.starKey !== key) { SKY.stars = skyStars(bg.stars); SKY.starKey = key; }
+    for (const s of SKY.stars) {
+      const p = skyProject(s, w, h, rot, f);
+      if (!p || p.x < -4 || p.y < -4 || p.x > w + 4 || p.y > h + 4) continue;
+      const warm = s.tint > 0.85, cool = s.tint < 0.2;
+      const col = warm ? '255,226,190' : cool ? '190,210,255' : '255,255,255';
+      if (s.r > 1.5) {
+        const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, s.r * 5);
+        g.addColorStop(0, `rgba(${col},${s.a * 0.45})`); g.addColorStop(1, `rgba(${col},0)`);
+        c.fillStyle = g; c.beginPath(); c.arc(p.x, p.y, s.r * 5, 0, Math.PI * 2); c.fill();
+      }
+      c.fillStyle = `rgba(${col},${s.a})`;
+      if (s.r < 0.8) c.fillRect(p.x - 0.5, p.y - 0.5, 1.1, 1.1);
+      else { c.beginPath(); c.arc(p.x, p.y, s.r, 0, Math.PI * 2); c.fill(); }
+    }
+  }
+  c.restore();
+}
+
 /**
  * วาดฉากหลังทั้งหมด (พื้น + ของบนระนาบ + กริด) — เรียกก่อนวาดเส้น/โหนด
  * @param {CanvasRenderingContext2D} c
@@ -212,8 +291,13 @@ export function drawNetBackground(c, w, h, pj, sceneCfg, theme, extra = {}) {
   const bg = sc.bg;
   c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
-  // ── พื้น ──
-  if (bg.kind === 'solid') { c.fillStyle = bg.c1 || theme.bg; c.fillRect(0, 0, w, h); }
+  // [alpha.167] โหมด 3D = skybox (sky = 0..1 ไล่ตามภาพเคลื่อนไหวตอนสลับโหมด — 2D ค่อย ๆ จางเป็นฟ้า)
+  // ชนิดสีเดียวไม่มีอะไรให้หมุน → วาดแบบเดิม · ผู้ใช้เลือก 'plane' = แผ่นบนระนาบแบบ alpha.166
+  const sky = bg.sky3d === 'sky' && bg.kind !== 'solid' ? Math.max(0, Math.min(1, +extra.sky || 0)) : 0;
+  const rot = pj.rot || { rx: 0, ry: 0 };
+  if (sky >= 1) {
+    drawSky(c, w, h, rot, bg, theme.bg, extra.image);
+  } else if (bg.kind === 'solid') { c.fillStyle = bg.c1 || theme.bg; c.fillRect(0, 0, w, h); }
   else if (bg.kind === 'gradient' || bg.kind === 'blueprint') {
     const g = c.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, bg.c1 || theme.bg); g.addColorStop(1, bg.c2 || bg.c1 || theme.bg);
@@ -250,9 +334,9 @@ export function drawNetBackground(c, w, h, pj, sceneCfg, theme, extra = {}) {
     c.fillStyle = theme.bg; c.fillRect(0, 0, w, h);
   }
   const pr = visiblePlaneRect(pj, w, h);
-  // ── ของบนระนาบ ──
-  if (bg.kind === 'wargame') drawTerrain(c, pj, pr, bg);
-  if (bg.kind === 'image' && extra.image && extra.image.naturalWidth) {
+  // ── ของบนระนาบ (แผ่น) — โหมด skybox เต็มตัวไม่มีแผ่น ──
+  if (sky < 1 && bg.kind === 'wargame') drawTerrain(c, pj, pr, bg);
+  if (sky < 1 && bg.kind === 'image' && extra.image && extra.image.naturalWidth) {
     const img = extra.image;
     c.globalAlpha = bg.imageOpacity;
     if (bg.imageMode === 'screen') {
@@ -263,6 +347,7 @@ export function drawNetBackground(c, w, h, pj, sceneCfg, theme, extra = {}) {
     c.globalAlpha = 1;
   }
   c.setTransform(1, 0, 0, 1, 0, 0);
+  if (sky > 0 && sky < 1) { c.globalAlpha = sky; drawSky(c, w, h, rot, bg, theme.bg, extra.image); c.globalAlpha = 1; }
   if (bg.dim > 0) { c.fillStyle = `rgba(0,0,0,${bg.dim})`; c.fillRect(0, 0, w, h); }
   // ── กริด ──
   // วาดลงแผ่นแยกก่อน แล้วค่อย ๆ จางออกตามระยะ (มุมกล้องต่ำ/มุมมองระยะ = กริดถูกจำกัดรอบกลางจอ — ขอบตัดตรงดูเป็นกำแพง)

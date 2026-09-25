@@ -2181,6 +2181,7 @@ ui.branch.needTreeView,Switch to Map view first to export an image
 ui.branch.newChoiceNewReady,Create a new choice and insert [text] at the end of the scene too
 ui.branch.newNewPlanStartLayout,Create a new plan (starting from a blank layout)
 ui.branch.noChoice,This scene has no choices — it is one of the endings
+ui.branch.noChoicesYet,No choices yet
 ui.branch.nodeHelp,Click = select · Drag = move · Double-click = open scene
 ui.branch.noDup,No duplicate choices to merge
 ui.branch.noFile,This scene has no file yet
@@ -3808,19 +3809,35 @@ ui.importSp.xMLNotValid,Invalid XML:
 ui.kanban.add,+ Add column
 ui.kanban.addStatus,Add status
 ui.kanban.addStatusHint,A new column is a new scene status for the whole project (shows in the Explorer right away)
+ui.kanban.colCollapse,Collapse column
+ui.kanban.colColor,Change status color…
+ui.kanban.colExpand,Expand column
+ui.kanban.colMenu,Column options
 ui.kanban.deleteColumn,Delete column
 ui.kanban.deleteMove,"Delete status ""{0}""? The {1} {1|scene|scenes} in this column {1|moves|move} to ""{2}"""
 ui.kanban.draftPick,Choose which draft the board shows
+ui.kanban.empty,Drop cards here
 ui.kanban.hiddenBuiltin, (hidden from the board)
+ui.kanban.locked,This scene is locked
 ui.kanban.manageStatus,Manage statuses
 ui.kanban.moveScenesFirst,Move the scenes out of this column first
 ui.kanban.newColumn,New column name
 ui.kanban.newColumnHint,e.g. Needs review
 ui.kanban.newDraftBeforeUse,Create a draft first to use Kanban
+ui.kanban.noMatch,No scenes match the search
+ui.kanban.openHint,Double-click or press Enter to open · drag to change status
 ui.kanban.restoreStatus,Show again
 ui.kanban.sceneNotFound,Scene file not found: 
+ui.kanban.search,"Search scenes, tags, POV…"
+ui.kanban.sortBoard,Board order
+ui.kanban.sortBy,Sort cards
+ui.kanban.sortTitle,Scene title
+ui.kanban.sortWords,Longest first
 ui.kanban.statusExists,A status with this name already exists
+ui.kanban.totalScenes,{0} {0|scene|scenes}
 ui.kanban.unset,Not set
+ui.kanban.words,{0} {0|word|words}
+ui.kanban.wordsBar,Scene length compared with the longest scene on the board
 ui.layoutSplit.fieldEmpty,Empty slot
 ui.layoutSplit.leftRight,Left-right
 ui.layoutSplit.topBottom,Top-bottom
@@ -4213,7 +4230,6 @@ ui.net.dragBgScrollWheel,Drag background = pan · wheel = zoom · drag node = mo
 ui.net.dragNodeMovePos,Drag a node to move it
 ui.net.dragViewD,Drag with {0} = rotate the 3D view
 ui.net.findDisk,Find on disk
-ui.net.hide,Hide
 ui.net.hollowGrid,Grid opacity: 
 ui.net.hollowGrid2,Grid opacity: 12%
 ui.net.itemFilmNameNode,Node name text
@@ -4305,7 +4321,11 @@ ui.netScene.imageScale,Image size
 ui.netScene.imageScreen,Fill screen (fixed)
 ui.netScene.imageWorld,"Pinned to graph (pans, zooms, tilts)"
 ui.netScene.modelFiles,3D models
+ui.netScene.panoHint,In 3D the image wraps around the camera as a 360° panorama — a 2:1 image joins seamlessly.
 ui.netScene.reset,Reset background
+ui.netScene.sky3d,3D backdrop
+ui.netScene.sky3dPlane,Flat sheet (classic)
+ui.netScene.sky3dSky,Skybox around camera
 ui.netScene.stars,Star density
 ui.netUi.appearsIn,Appears in
 ui.netUi.bgCenterHere,Center image here
@@ -4330,6 +4350,8 @@ ui.netUi.layoutCategory,Group by category
 ui.netUi.layoutForce,Auto layout (force-directed)
 ui.netUi.layoutRadial,Rings around the selected node
 ui.netUi.layoutStory,Story order (scenes as a time axis)
+ui.netUi.legendTitle,Legend
+ui.netUi.legendToggle,Click to hide/show this category
 ui.netUi.link,Link
 ui.netUi.linkFrom,Link from this node (drag onto another node)
 ui.netUi.model,3D model for this node
@@ -4352,6 +4374,11 @@ ui.netUi.pathPickHint,Click the target node to find a path · Esc to cancel
 ui.netUi.pathSteps,Path: {0} {0|step|steps}
 ui.netUi.pathViaScenes,No relationships link them directly — this path goes through shared scenes
 ui.netUi.perspBtn,Perspective (3D) — far things look smaller
+ui.netUi.popBtn,Filters and display
+ui.netUi.popCats,Categories
+ui.netUi.popMore,More
+ui.netUi.popTypes,Link types
+ui.netUi.popView,Display
 ui.netUi.relations,Relationships
 ui.netUi.relFail,Couldn't create the relationship
 ui.netUi.sceneBtn,Background & models

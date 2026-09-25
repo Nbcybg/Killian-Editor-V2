@@ -36,7 +36,8 @@ export function cardsOf(scenes) {
         id: r.id, title: r.title || t('ui.common.notNamed'), chapterId,
         status: (r.status && r.status !== 'Outline') ? r.status : '', kbOrder: r.kbOrder, order: r.order ?? 0,
         color: r.color || '', tags: r.tags || [], synopsis: r.synopsis || '',
-        pov: r.pov || '', fileName: r.fileName || '', locked: !!r.locked, _seq: seq++,
+        pov: r.pov || '', fileName: r.fileName || '', locked: !!r.locked,
+        words: Number(r.wordCount) > 0 ? Number(r.wordCount) : 0, flag: !!(r.isFavorite || r.flag), _seq: seq++,
       });
     }
   }

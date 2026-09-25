@@ -13,7 +13,7 @@ import { popupMenu } from './ui.js';
 import { rot3, normalizeCam, serializeCam, camOffset, panCam, makeProjector, fitCam, viewDepth,
          lerpCam, clampScale, clampRx, CAM_DEFAULT_ANGLES } from './network-camera.js';
 import { egoSet, shortestPath, degreeMap, isRelationEdge, storyProgress, sceneOrder, coOccurPairs } from './network-insights.js';
-import { normalizeNetScene, modelKeyOf } from './network-scene.js';
+import { normalizeNetScene, modelKeyOf, isLightBg } from './network-scene.js';
 import { drawNetBackgroundCached } from './network-bg.js';
 import { modelSprite, onModelReady, modelState } from './network-models.js';
 import { buildNetSide, buildStoryBar } from './network-inspector.js';
@@ -51,6 +51,16 @@ export const NET_TOOLS = [
 function tagStyle(n) { for(const t of n.tags||[]){const v=visualTagFor(t);if(v)return v;} return null; }
 function isStruct(n){return n.cat==='scene'||n.cat==='chapter'||n.cat==='book'||n.cat==='section';}
 function hexToRgba(hex, alpha){const h=String(hex||'').replace('#','');const r=parseInt(h.substring(0,2),16)||0;const g=parseInt(h.substring(2,4),16)||0;const b=parseInt(h.substring(4,6),16)||0;return`rgba(${r},${g},${b},${alpha})`;}
+/** [alpha.167] สีเดิมที่สว่างขึ้น (k > 0 เข้าหาขาว) หรือมืดลง (k < 0 เข้าหาดำ) — แสงเงาของโหนดทรงกลม */
+function shadeHex(hex, k, alpha=1){
+  const h=String(hex||'').replace('#','');
+  const c=[0,2,4].map(i=>parseInt(h.substring(i,i+2),16)||0);
+  const t=k>=0?255:0, a=Math.abs(k);
+  const [r,g,b]=c.map(v=>Math.round(v+(t-v)*a));
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+/** จุดบนเส้นโค้งกำลังสอง a → ctl → b ที่ t */
+function qpt(a,ctl,b,t){const u=1-t;return{x:u*u*a.x+2*u*t*ctl.x+t*t*b.x,y:u*u*a.y+2*u*t*ctl.y+t*t*b.y};}
 
 // ── toolbar ──
 function toggleBtn(cls, title, onToggle) {
@@ -59,87 +69,115 @@ function toggleBtn(cls, title, onToggle) {
   b.onclick = () => { const a = b.dataset.active === '1'; b.dataset.active = a ? '0' : '1'; b.classList.toggle('on', !a); onToggle(!a); };
   return b;
 }
+/**
+ * [alpha.167] แถบเครื่องมือของผัง = แคปซูลลอยกลางบน + ป๊อปโอเวอร์ "ตัวกรองและการแสดงผล"
+ * ผู้ใช้: *"ในแต่ละ panel มันจัดเรียงแบบโบราณไปหน่อย"* — เดิมเป็นกล่องทึบมุมซ้ายบนที่อัดทุกปุ่ม/สไลเดอร์ไว้หกแถว
+ * ทับผังเกือบหนึ่งในสี่ · ตอนนี้: สิ่งที่ใช้บ่อย (เครื่องมือ · 2D/3D · จัดผัง · เรื่อง · ข้อสังเกต · ฉากหลัง · ค้นหา)
+ * อยู่บนแคปซูลแถวเดียว · ของที่ตั้งครั้งเดียวแล้วจบ (หมวด · ประเภทเส้น · กริด · ขนาดโหนด · ส่งออก) อยู่ในป๊อปโอเวอร์
+ * คลาส/`data-act`/`data-tool` เดิมทุกตัวยังอยู่ (ทางอื่น + e2e อ้างถึง)
+ */
 function buildToolbar(pane, cb) {
-  const bar=document.createElement('div');bar.className='net-toolbar';
-  const tg=document.createElement('button');tg.className='net-tbar-toggle';tg.textContent=gi('triangle-down');tg.title=tt('ui.net.hide');
-  const bd=document.createElement('div');bd.className='net-tbar-body';let col=false;
-  tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.textContent=col?gi('play'):gi('triangle-down');};
+  const mk=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;};
+  const bar=mk('div','net-toolbar');
+  const bd=mk('div','net-tbar-body');                         // แคปซูลหลัก
+  const pop=mk('div','net-tbar-pop');pop.hidden=true;         // ป๊อปโอเวอร์ตัวกรอง/การแสดงผล
   const ca=new Set(CAT_ARR.slice(0,4)),tf=new Set([...REL_TYPES.map(t=>t.key),'co-occur','scene-link','ent-scene']);
-  const cr=document.createElement('div');cr.className='net-tbar-row';
+  const sep=()=>mk('span','net-tbar-sep');
+  const section=(titleKey,...kids)=>{const s=mk('div','net-pop-sec');s.append(mk('div','net-pop-title',tt(titleKey)),...kids);return s;};
+
+  // ── ป๊อปโอเวอร์: หมวด ──
+  const cr=mk('div','net-tbar-row net-tbar-cats');
   // ชิปหมวด: ชื่อ/คีย์มาจาก network-theme.js · สีถูกทาทีหลังโดย _paintToolbarColors()
   for (const x of netColorDefsOf('nodes').filter(d=>CAT_ARR.slice(0,4).includes(d.id))) {
     const b = toggleBtn('net-tcat', x.label, (on) => { if (on) ca.add(x.id); else ca.delete(x.id); cb.filter(ca, tf); });
     b.dataset.cat = x.id; b.textContent = x.label; cr.appendChild(b);
   }
-  const tr=document.createElement('div');tr.className='net-tbar-row net-tbar-types';
+  // ── ป๊อปโอเวอร์: ประเภทเส้น (เดิมเป็นจุดสีไม่มีชื่อ — ต้องชี้ทีละจุดถึงรู้ว่าคืออะไร) ──
+  const tr=mk('div','net-tbar-row net-tbar-types');
   const typeBtn = (key, title, extra) => {
     const b = toggleBtn('net-ttype' + (extra ? ' ' + extra : ''), title, (on) => { if (on) tf.add(key); else tf.delete(key); cb.filter(ca, tf); });
-    b.dataset.type = key; tr.appendChild(b);
+    b.dataset.type = key; b.append(mk('i','net-ttype-dot'),mk('span','net-ttype-name',title)); tr.appendChild(b);
   };
   REL_TYPES.forEach(t => typeBtn(t.key, t.label));
   typeBtn('co-occur', tt('ui.net.appear'), 'net-ttype-co');
   typeBtn('scene-link', tt('ui.net.linkScene'), 'net-ttype-sc');
   typeBtn('ent-scene', tt('ui.net.scene2'), 'net-ttype-es');
-  const sw=document.createElement('div');sw.className='net-tbar-search';
-  const si=document.createElement('input');si.type='text';si.className='net-tbar-input';si.placeholder=tt('ui.net.search');
-  // [รอบ 2] Enter = บินไปหาผลแรก + เลือกไว้ (เดิมแค่กรองซ้ำ — ผังใหญ่หาโหนดที่เจอไม่เจอ)
-  let tm;si.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>cb.search(si.value.trim()),200);};si.onkeydown=e=>{if(e.key==='Enter'){clearTimeout(tm);cb.search(si.value.trim());cb.searchGo(si.value.trim(),e.shiftKey);}};sw.appendChild(si);
-  const gridRow=document.createElement('div');gridRow.className='net-tbar-row';
-  const gridBtn=document.createElement('button');gridBtn.className='net-tbar-btn net-tog on';gridBtn.textContent=gi('ruler');gridBtn.title=tt('ui.net.showGrid');
-  const gridSize=document.createElement('input');gridSize.type='range';gridSize.className='net-grid-slider net-grid-px';gridSize.min='20';gridSize.max='200';gridSize.value=String(cb.gridPx());gridSize.title=tt('ui.net.sizeGridPx');
+  // ── ป๊อปโอเวอร์: การแสดงผล ──
+  const lblBtn=mk('button','net-tbar-btn net-tog on net-lbl-btn',gi('font'));lblBtn.title=tt('ui.net.showItemFilmName');
+  lblBtn.onclick=()=>{lblBtn.classList.toggle('on');cb.toggleLabels();};
+  const szLbl=mk('span','net-tbar-lbl',gi('node-size'));szLbl.title=tt('ui.net.sizeNode');
+  const size=mk('input','net-grid-slider net-size-slider');size.type='range';
+  size.min='50';size.max='250';size.value='100';size.title=tt('ui.net.sizeNode3');
+  size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title=tt('ui.net.sizeNode2')+size.value+'%';};
+  const gridBtn=mk('button','net-tbar-btn net-tog on',gi('ruler'));gridBtn.title=tt('ui.net.showGrid');
+  const gridSize=mk('input','net-grid-slider net-grid-px');gridSize.type='range';gridSize.min='20';gridSize.max='200';gridSize.value=String(cb.gridPx());gridSize.title=tt('ui.net.sizeGridPx');
   gridBtn.onclick=()=>{cb.toggleGrid();gridBtn.classList.toggle('on');};
   gridSize.oninput=()=>{cb.setGridPx(Number(gridSize.value));gridSize.title=tt('ui.net.sizeGrid')+gridSize.value+'px';};
-  const gridAlpha=document.createElement('input');gridAlpha.type='range';gridAlpha.className='net-grid-slider net-grid-alpha';gridAlpha.min='1';gridAlpha.max='100';gridAlpha.value=String(Math.round(cb.gridAlpha()*100));gridAlpha.title=tt('ui.net.hollowGrid2');
+  const gridAlpha=mk('input','net-grid-slider net-grid-alpha');gridAlpha.type='range';gridAlpha.min='1';gridAlpha.max='100';gridAlpha.value=String(Math.round(cb.gridAlpha()*100));gridAlpha.title=tt('ui.net.hollowGrid2');
   gridAlpha.oninput=()=>{cb.setGridAlpha(Number(gridAlpha.value)/100);gridAlpha.title=tt('ui.net.hollowGrid')+gridAlpha.value+'%';};
+  const viewRow=mk('div','net-tbar-row net-tbar-view');
+  const gridRow=mk('div','net-tbar-row');
   gridRow.append(gridBtn,gridSize,gridAlpha);
-  // ── [alpha.71 ข้อ 3] แถวเครื่องมือ: แสดงตัวหนังสือ · เปิด/แก้ไข/ย้าย (+ ตรวจดู/ผูกความสัมพันธ์) · ขยาย-ย่อโหนด ──
-  const toolRow=document.createElement('div');toolRow.className='net-tbar-row net-tbar-tools';
-  const lblBtn=document.createElement('button');
-  lblBtn.className='net-tbar-btn net-tog on net-lbl-btn';lblBtn.textContent=gi('font');lblBtn.title=tt('ui.net.showItemFilmName');
-  lblBtn.onclick=()=>{lblBtn.classList.toggle('on');cb.toggleLabels();};
-  toolRow.appendChild(lblBtn);
-  const sep=document.createElement('span');sep.className='net-tbar-sep';toolRow.appendChild(sep);
+
+  const btn=(x)=>{
+    const b=mk('button','net-tbar-btn'+(x.cl?' '+x.cl:''),x.t);b.title=x.ti;b.setAttribute('aria-label',x.ti);
+    if (x.id) b.dataset.act = x.id;
+    // ปุ่มสลับ: สภาพ "ติด" ถูกตั้งโดยตัวผังเอง (syncToolbar) ไม่ใช่กลับค่าเอาเองตอนกด — กดจากทางอื่น (เมนู · ค่าที่จำไว้) ต้องตรงกัน
+    b.onclick=()=>{ if(x.cl==='net-tog'||x.cl==='net-tog on') b.classList.toggle('on'); x.f(); };
+    return b;
+  };
+  viewRow.append(lblBtn,
+    btn({t:gi('edge-label'),ti:tt('ui.netUi.edgeLabelsBtn'),f:cb.cycleEdgeLabels,id:'labels'}),
+    btn({t:gi('frame'),ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'}),
+    btn({t:gi('map'),ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'}),
+    sep(),szLbl,size);
+  const actRow=mk('div','net-tbar-row net-tbar-acts2');
+  actRow.append(
+    btn({t:gi('refresh'),ti:tt('ui.common.refresh'),f:cb.refresh}),
+    btn({t:gi('pin'),ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout}),
+    btn({t:gi('import'),ti:tt('ui.common.export'),f:cb.export}));
+  pop.append(section('ui.netUi.popCats',cr),section('ui.netUi.popTypes',tr),
+    section('ui.netUi.popView',viewRow,gridRow),section('ui.netUi.popMore',actRow));
+
+  // ── แคปซูลหลัก ──
+  const toolRow=mk('div','net-tbar-row net-tbar-tools');
   const toolBtns=[];
   for(const x of NET_TOOLS){
-    const b=document.createElement('button');
-    b.className='net-tbar-btn net-tool-btn'+(x.id==='open'?' on':'');
-    b.dataset.tool=x.id;b.textContent=gi(x.icon);b.title=x.label+' — '+x.hint;
+    const b=mk('button','net-tbar-btn net-tool-btn'+(x.id==='open'?' on':''),gi(x.icon));
+    b.dataset.tool=x.id;b.title=x.label+' — '+x.hint;
     b.setAttribute('aria-label', x.label);
     b.onclick=()=>cb.setTool(x.id);
     toolBtns.push(b);toolRow.appendChild(b);
   }
-  const sep2=document.createElement('span');sep2.className='net-tbar-sep';toolRow.appendChild(sep2);
-  const szLbl=document.createElement('span');szLbl.className='net-tbar-lbl';szLbl.textContent=gi('node-size');szLbl.title=tt('ui.net.sizeNode');
-  const size=document.createElement('input');size.type='range';size.className='net-grid-slider net-size-slider';
-  size.min='50';size.max='250';size.value='100';size.title=tt('ui.net.sizeNode3');
-  size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title=tt('ui.net.sizeNode2')+size.value+'%';};
-  toolRow.append(szLbl,size);
-
-  const btns=document.createElement('div');btns.className='net-tbar-actions';
-  const acts=[
-    {t:gi('refresh'),ti:tt('ui.common.refresh'),f:cb.refresh},
-    {t:gi('pin'),ti:tt('ui.net.unsetPinAllNode'),f:cb.relayout},
-    {t:gi('frame'),ti:tt('ui.net.showImageCollapse'),f:cb.toggleImages,cl:'net-tog on'},
-    {t:gi('map'),ti:'Minimap',f:cb.toggleMinimap,cl:'net-tog'},
-    {t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog',id:'3d'},
-    {t:gi('bulb'),ti:tt('ui.netUi.insights'),f:cb.toggleInsights,cl:'net-tog',id:'insights'},
-    {t:gi('story-line'),ti:tt('ui.netUi.storyBtn'),f:cb.toggleStory,cl:'net-tog',id:'story'},
-    {t:gi('net-layout'),ti:tt('ui.netUi.layoutBtn'),f:cb.layoutMenu,id:'layout'},
-    {t:gi('edge-label'),ti:tt('ui.netUi.edgeLabelsBtn'),f:cb.cycleEdgeLabels,id:'labels'},
-    {t:gi('perspective'),ti:tt('ui.netUi.perspBtn'),f:cb.togglePersp,cl:'net-tog',id:'persp'},
-    {t:gi('image'),ti:tt('ui.netUi.sceneBtn'),f:cb.toggleScene,cl:'net-tog',id:'scene'},
-    {t:gi('import'),ti:tt('ui.common.export'),f:cb.export},
-    {t:gi('reset-view'),ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'},
-  ];
-  for (const x of acts) {
-    const b=document.createElement('button');b.className='net-tbar-btn'+(x.cl?' '+x.cl:'');b.textContent=x.t;b.title=x.ti;
-    if (x.id) b.dataset.act = x.id;
-    // ปุ่มสลับ: สภาพ "ติด" ถูกตั้งโดยตัวผังเอง (syncToolbar) ไม่ใช่กลับค่าเอาเองตอนกด — กดจากทางอื่น (เมนู · ค่าที่จำไว้) ต้องตรงกัน
-    b.onclick=()=>{ if(x.cl==='net-tog'||x.cl==='net-tog on') b.classList.toggle('on'); x.f(); };
-    btns.appendChild(b);
-  }
-  bd.append(cr,tr,toolRow,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
-  return {bar,btns,toolRow,toolBtns,destroy:()=>bar.remove()};
+  const btns=mk('div','net-tbar-actions');
+  const filt=mk('button','net-tbar-btn net-tbar-filter',gi('filter'));
+  filt.title=tt('ui.netUi.popBtn');filt.setAttribute('aria-label',tt('ui.netUi.popBtn'));filt.setAttribute('aria-expanded','false');
+  const setPop=(open)=>{pop.hidden=!open;filt.classList.toggle('on',open);filt.setAttribute('aria-expanded',String(open));};
+  filt.onclick=(e)=>{e.stopPropagation();setPop(pop.hidden);};
+  // คลิกนอกป๊อปโอเวอร์ = ปิด (ผังยังรับคลิกนั้นตามปกติ)
+  const offDoc=(e)=>{ if(!pop.hidden&&!pop.contains(e.target)&&e.target!==filt)setPop(false); };
+  document.addEventListener('mousedown',offDoc,true);
+  pop.addEventListener('keydown',(e)=>{if(e.key==='Escape'){e.stopPropagation();setPop(false);filt.focus();}});
+  btns.append(
+    btn({t:'3D',ti:tt('ui.net.toggleDD'),f:cb.toggle3D,cl:'net-tog',id:'3d'}),
+    btn({t:gi('perspective'),ti:tt('ui.netUi.perspBtn'),f:cb.togglePersp,cl:'net-tog',id:'persp'}),
+    sep(),
+    btn({t:gi('net-layout'),ti:tt('ui.netUi.layoutBtn'),f:cb.layoutMenu,id:'layout'}),
+    btn({t:gi('story-line'),ti:tt('ui.netUi.storyBtn'),f:cb.toggleStory,cl:'net-tog',id:'story'}),
+    btn({t:gi('bulb'),ti:tt('ui.netUi.insights'),f:cb.toggleInsights,cl:'net-tog',id:'insights'}),
+    btn({t:gi('image'),ti:tt('ui.netUi.sceneBtn'),f:cb.toggleScene,cl:'net-tog',id:'scene'}),
+    sep(),
+    filt,
+    btn({t:gi('reset-view'),ti:tt('ui.net.reset'),f:cb.reset,cl:'net-reset'}));
+  const sw=mk('div','net-tbar-search');
+  sw.append(mk('span','net-tbar-search-ico',gi('search')));
+  const si=mk('input','net-tbar-input');si.type='text';si.placeholder=tt('ui.net.search');
+  // [รอบ 2] Enter = บินไปหาผลแรก + เลือกไว้ (เดิมแค่กรองซ้ำ — ผังใหญ่หาโหนดที่เจอไม่เจอ)
+  let tm;si.oninput=()=>{clearTimeout(tm);tm=setTimeout(()=>cb.search(si.value.trim()),200);};si.onkeydown=e=>{if(e.key==='Enter'){clearTimeout(tm);cb.search(si.value.trim());cb.searchGo(si.value.trim(),e.shiftKey);}};sw.appendChild(si);
+  bd.append(toolRow,sep(),btns,sw);
+  bar.append(bd,pop);pane.appendChild(bar);
+  // btns = ราก (ทุก [data-act] อยู่ข้างใน ทั้งบนแคปซูลและในป๊อปโอเวอร์)
+  return {bar,btns:bar,toolRow,toolBtns,pop,setPop,destroy:()=>{document.removeEventListener('mousedown',offDoc,true);bar.remove();}};
 }
 
 // ═════ draw rounded rect with dark background ═════
@@ -150,28 +188,85 @@ function roundRect(c, x, y, w, h, r) {
   c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
   c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
 }
-function drawLabelBox(c, text, cx, cy, fontSize) {
-  c.font = fontSize + 'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
-  const m = c.measureText(text);
-  const tw = m.width + 12, th = fontSize + 10;
-  c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.86);
-  roundRect(c, cx - tw / 2, cy - th / 2, tw, th, 6); c.fill();
-  c.fillStyle = THEME.canvas.label; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText(text, cx, cy + 1);
-  return { w: tw + 4, h: th + 4 };
+/**
+ * [alpha.167] ป้ายชื่อโหนด — ชิดขวาของโหนด ไม่มีกล่องทึบ (เงาเรืองสีพื้นรอบตัวอักษรพอให้อ่านบนทุกฉากหลัง)
+ * + แคปซูลตัวเลขเล็ก ๆ (จำนวนฉากที่ปรากฏ) ต่อท้าย · ตัวสำคัญ = ตัวหนา
+ */
+function drawNodeLabel(c, text, x, cy, fontSize, badge, strong, col) {
+  c.font = (strong ? '600 ' : '') + fontSize + 'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  // ขอบตัวอักษรสีพื้น (คม ไม่ใช่เงาเบลอที่กลายเป็นคราบรอบป้าย) → อ่านได้แม้ทับเส้นสว่าง
+  c.save();
+  c.lineJoin = 'round'; c.lineWidth = fontSize * 0.32; c.strokeStyle = hexToRgba(THEME.canvas.labelBg, 0.75);
+  c.strokeText(text, x, cy);
+  c.fillStyle = THEME.canvas.label;
+  c.fillText(text, x, cy);
+  c.restore();
+  if (!badge) return;
+  const tw = c.measureText(text).width;
+  const bf = fontSize * 0.74;
+  c.font = '600 ' + bf + 'px "Segoe UI","Leelawadee UI",sans-serif';
+  const bw = c.measureText(badge).width + bf * 1.1, bh = bf * 1.55;
+  const bx = x + tw + fontSize * 0.45;
+  c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.85);
+  roundRect(c, bx, cy - bh / 2, bw, bh, bh / 2); c.fill();
+  c.strokeStyle = hexToRgba(col, 0.75); c.lineWidth = bf / 9; c.stroke();
+  c.fillStyle = THEME.canvas.label; c.textAlign = 'center';
+  c.fillText(badge, bx + bw / 2, cy + bf * 0.05);
 }
-function drawEdgeLabel(c, text, x, y, fontSize) {
+/** ป้ายเส้น = แคปซูลเล็ก ๆ กลางเส้น (ขอบสีของเส้นเมื่อชี้อยู่) */
+function drawEdgeLabel(c, text, x, y, fontSize, ring) {
   c.font = fontSize + 'px "Segoe UI","Leelawadee UI",sans-serif';
-  const m = c.measureText(text); const tw = m.width + 10, th = fontSize + 8;
-  c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.88);
-  roundRect(c, x - tw / 2, y - th / 2, tw, th, 4); c.fill();
+  const m = c.measureText(text); const tw = m.width + fontSize * 1.1, th = fontSize * 1.75;
+  c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.82);
+  roundRect(c, x - tw / 2, y - th / 2, tw, th, th / 2); c.fill();
+  if (ring) { c.strokeStyle = hexToRgba(ring, 0.8); c.lineWidth = fontSize / 10; c.stroke(); }
   c.fillStyle = THEME.canvas.label; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText(text, x, y + 1);
+  c.fillText(text, x, y + fontSize * 0.06);
 }
 
 function buildMinimap(pane) {
   const mc = document.createElement('canvas'); mc.className = 'net-minimap'; mc.width = 160; mc.height = 120;
   pane.appendChild(mc); return mc;
+}
+/**
+ * [alpha.167] การ์ดสัญลักษณ์มุมซ้ายล่าง — สีของแต่ละหมวด + จำนวนที่เห็นอยู่ · คลิกแถว = ซ่อน/แสดงหมวดนั้น
+ * (ชิปหมวดในป๊อปโอเวอร์เป็นตัวจริง — การ์ดนี้แค่กดแทน สภาพจึงตรงกันเสมอ)
+ */
+function buildLegend(pane, bar) {
+  const box = document.createElement('div'); box.className = 'net-legend';
+  const head = document.createElement('div'); head.className = 'net-legend-title'; head.textContent = tt('ui.netUi.legendTitle');
+  const list = document.createElement('div'); list.className = 'net-legend-list';
+  box.append(head, list);
+  pane.appendChild(box);
+  let last = '';
+  const rows = new Map();
+  for (const d of netColorDefsOf('nodes').filter((x) => ['characters', 'locations', 'items', 'lore', 'scene', 'chapter'].includes(x.id))) {
+    const r = document.createElement('button'); r.className = 'net-legend-row'; r.dataset.cat = d.id;
+    const dot = document.createElement('i'); dot.className = 'net-legend-dot';
+    const name = document.createElement('span'); name.className = 'net-legend-name'; name.textContent = d.label;
+    const cnt = document.createElement('span'); cnt.className = 'net-legend-count'; cnt.textContent = '0';
+    r.append(dot, name, cnt);
+    const chip = bar.querySelector(`.net-tcat[data-cat="${d.id}"]`);
+    if (chip) { r.title = tt('ui.netUi.legendToggle'); r.onclick = () => chip.click(); }
+    else r.disabled = true;
+    list.append(r); rows.set(d.id, { r, dot, cnt, chip });
+  }
+  return {
+    box,
+    update(counts, colors) {
+      const sig = JSON.stringify(counts) + JSON.stringify(colors) + [...rows.values()].map((x) => x.chip ? x.chip.classList.contains('on') : 1).join();
+      if (sig === last) return;
+      last = sig;
+      for (const [id, x] of rows) {
+        const n = counts[id] || 0;
+        x.r.hidden = !n && !x.chip;
+        x.cnt.textContent = String(n);
+        x.dot.style.setProperty('--dot', colors[id] || '');
+        x.r.classList.toggle('off', !!x.chip && !x.chip.classList.contains('on'));
+      }
+    },
+  };
 }
 function buildStatusBar(pane) {
   const sb = document.createElement('div'); sb.className = 'net-status';
@@ -296,6 +391,7 @@ export class StoryNetwork {
 
     this._mm = buildMinimap(pane); this._mm.style.display = 'none';
     this._sb = buildStatusBar(pane);
+    this._legend = buildLegend(pane, this._tb.bar);
     this._tip = buildTipBar(pane);
     this._side = buildNetSide(pane, this);
     this._storyBar = buildStoryBar(pane, this);
@@ -469,7 +565,23 @@ export class StoryNetwork {
     if(this._bgImg.rel!==rel){
       this._bgImg={ rel, img:null, loading:true };
       const mine=this._bgImg;
-      Promise.resolve(this.assetUrl ? this.assetUrl(rel) : '').then((url)=>{
+      if(this._bgBlobUrl){ try{URL.revokeObjectURL(this._bgBlobUrl);}catch{} this._bgBlobUrl=''; }
+      // [alpha.167] โหลดผ่านไบต์ → blob: (ต้นทางเดียวกับหน้า) — รูป file:// ทำให้ผืนวาด "เปื้อน":
+      // skybox อ่านพิกเซลของพาโนรามาไม่ได้ และปุ่มส่งออก PNG (toDataURL) โยน SecurityError เงียบ ๆ
+      const viaBytes=async()=>{
+        const abs=this.assetPath?this.assetPath(rel):'';
+        const k=globalThis.kapi;
+        if(!abs||!k||!k.readBytes)return '';
+        const bytes=await k.readBytes(abs);
+        if(!bytes)return '';
+        const ext=String(rel).split('.').pop().toLowerCase();
+        const mime={jpg:'image/jpeg',jpeg:'image/jpeg',svg:'image/svg+xml'}[ext]||('image/'+ext);
+        const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
+        if(this._bgImg!==mine){ URL.revokeObjectURL(url); return ''; }
+        this._bgBlobUrl=url;
+        return url;
+      };
+      viaBytes().catch(()=>'').then((u)=>u||(this.assetUrl ? this.assetUrl(rel) : '')).then((url)=>{
         if(!url||this._bgImg!==mine)return;
         const img=new Image();
         img.onload=()=>{ if(this._bgImg===mine){ mine.img=img; mine.loading=false; this.draw(); } };
@@ -543,7 +655,7 @@ export class StoryNetwork {
         forceLayout(this.nodes,this.edges,{width:W,height:H,depth:400,iters:280,pinned:frozen});
       }
       savePositions(this.nodes,this._scope());
-      this._deg=degreeMap(this.nodes,this.edges);
+      this._deg=degreeMap(this.nodes,this.edges);this._degMax=0;this._scCount=null;
       this._sel=selKey?this.nodes.find(n=>nodeKey(n)===selKey)||null:null;
       if(!this._sel){this._focusHops=0;}
       this._path=null;
@@ -637,9 +749,11 @@ export class StoryNetwork {
   _fitView(){
     const w=this.canvas.width,h=this.canvas.height;
     if(!w||!h||!this.nodes.length)return false;
-    const f=fitCam(this.nodes,w,h,this._rot());
+    // [alpha.167] เว้นที่ให้แคปซูลเครื่องมือด้านบน + บรรทัดคำแนะนำด้านล่าง (เดิมโหนดแถวบนสุดจมใต้แถบ)
+    const top=h>300?56:0, bottom=h>300?30:0;
+    const f=fitCam(this.nodes,w,h-top-bottom,this._rot(),{pad:Math.min(90,Math.max(40,w*0.06))});
     if(!f)return false;
-    this._cam={...this._cam,...f};
+    this._cam=panCam({...this._cam,...f},0,(top-bottom)/2,this._rot());
     return true;
   }
 
@@ -651,7 +765,29 @@ export class StoryNetwork {
     let r=Math.max(baseR,Math.min(28*ns,baseR+degree*0.6*ns));
     const m=this._showImages?this.modelOf(n):null;
     if(m&&modelState(m.abs)!=='error')r*=1.9*m.scale;
+    // [alpha.167] ซูมออกแล้วโหนดเหลือจุด 2 พิกเซล (ผังจริงพอดีจอที่ซูม ~15%) — ขนาดบนจอมีขั้นต่ำตามความสำคัญ
+    // (ตัวเชื่อมเยอะ = ใหญ่กว่า เหมือนศูนย์กลางของเครือข่าย) · ซูม 100% ขึ้นไปเท่าเดิมทุกพิกเซล
+    const s=this._cam.scale||1;
+    if(s<1){
+      const imp=this._importance(n);
+      const minPx=(isStruct(n)?5:7+imp*13)*ns;
+      if(r*s<minPx)r=minPx/s;
+    }
     return r;
+  }
+  /** ความสำคัญ 0..1 ของโหนด (จำนวนเส้นเทียบกับตัวที่เส้นเยอะสุด · รากที่สอง = ตัวกลาง ๆ ไม่จมหาย) */
+  _importance(n){
+    if(!this._degMax){ let m=1; for(const v of this._deg.values())if(v>m)m=v; this._degMax=m; }
+    return Math.sqrt((this._deg.get(n)||0)/this._degMax);
+  }
+  /** จำนวนฉากที่เอนทิตีปรากฏ (เส้น "กล่าวถึงในฉาก") — ตัวเลขเล็ก ๆ ข้างป้ายชื่อ */
+  _sceneCount(n){
+    if(!this._scCount){
+      const m=new Map();
+      for(const e of this.edges)if(e.type==='ent-scene'){const ent=isStruct(e.a)?e.b:e.a;m.set(ent,(m.get(ent)||0)+1);}
+      this._scCount=m;
+    }
+    return this._scCount.get(n)||0;
   }
 
   /** โหนด/เส้นที่ "เด่น" ตอนนี้ (เส้นทาง > โฟกัส > ทั้งหมด) — null = ทุกตัวเด่นเท่ากัน */
@@ -681,9 +817,10 @@ export class StoryNetwork {
     // [รอบ 2] แคชทั้งผืน — วาดใหม่เฉพาะตอนกล้อง/ค่าฉากหลังเปลี่ยน (ชี้เมาส์ไม่ต้องวาดกริดหกเหลี่ยมพันช่องใหม่)
     const img=this._bgImage();
     const cam=this._cam;
-    const bgKey=[w,h,cam.tx,cam.ty,cam.tz,s,rot.rx,rot.ry,pj.persp,this._bg,this._grid,this._showGrid,img?img.src:'',
+    const sky=this._standK();                     // [alpha.167] 0 = 2D · 1 = 3D (skybox) · ระหว่างสลับ = จางเข้าหากัน
+    const bgKey=[w,h,cam.tx,cam.ty,cam.tz,s,rot.rx,rot.ry,pj.persp,sky,this._bg,this._grid,this._showGrid,img?img.src:'',
                  JSON.stringify(this._scene.bg),JSON.stringify(this._scene.grid)].join('|');
-    drawNetBackgroundCached(c,w,h,pj,this._scene,{bg:this._bg,grid:this._grid},{image:img,showGrid:this._showGrid,cam},bgKey);
+    drawNetBackgroundCached(c,w,h,pj,this._scene,{bg:this._bg,grid:this._grid},{image:img,showGrid:this._showGrid,cam,sky},bgKey);
     c.save();
     c.translate(off.cx,off.cy);c.scale(s,s);
 
@@ -714,6 +851,14 @@ export class StoryNetwork {
       ?[...this.edges].sort((a,b)=>((P(b.a).z+P(b.b).z)-(P(a.a).z+P(a.b).z)))
       :this.edges;
     const focusEnds=new Set([this._hoverNode,this._sel].filter(Boolean));
+    // [alpha.167] พื้นมืด = แสงบวกกัน (เส้น/โหนดเรืองแสงแบบผังเครือข่ายสมัยใหม่) · พื้นสว่าง = วาดทับธรรมดา
+    const dark=!isLightBg(this._scene,this._bg);
+    const px=1/(s||1);                              // หนึ่งพิกเซลบนจอ ในหน่วยโลก
+
+    // [alpha.167] ป้ายชื่อโหนดจัดวางก่อน — ป้ายเส้นต้องหลบทั้งโหนดและป้ายชื่อ (เดิม "ลูกน้อง" ทับชื่อ "ลูน่า")
+    const sortedNodes=is3?[...visNodes].sort((a,b)=>P(b).z-P(a).z):visNodes;
+    const labelOk=this._placeLabels(c,sortedNodes,P,s,ls,prog);
+    const edgeLbls=[];
 
     // edges
     for(const e of sortedEdges){
@@ -723,19 +868,46 @@ export class StoryNetwork {
       if(pa.behind||pb.behind)continue;
       let alpha=at||this._typeFilter.has(e.type)?1:0.08;
       const color=this._edgeCol[e.type]||THEME.canvas.grid;let lw=2.0;
-      if(e.type==='co-occur'){lw=1.2;if(alpha===1)alpha=0.5;c.setLineDash([4,3]);}
-      else if(e.type==='scene-link'){lw=1.6;if(alpha===1)alpha=0.7;c.setLineDash([3,4]);}
-      else if(e.type==='ent-scene'){lw=1.4;if(alpha===1)alpha=0.55;c.setLineDash([5,4,2,4]);}
+      const rel=isRelationEdge(e);
+      if(e.type==='co-occur'){lw=1.1;if(alpha===1)alpha=0.4;c.setLineDash([4*px,3*px]);}
+      else if(e.type==='scene-link'){lw=1.2;if(alpha===1)alpha=0.45;c.setLineDash([3*px,4*px]);}
+      else if(e.type==='ent-scene'){lw=1;if(alpha===1)alpha=0.35;c.setLineDash([5*px,4*px,2*px,4*px]);}
       else c.setLineDash([]);
       const isHover=this._hoverNode&&(e.a===this._hoverNode||e.b===this._hoverNode);
       const onPath=this._path&&emph&&emph.edges.has(e);
       if(emph&&!emph.edges.has(e))alpha*=0.08;
       const ghost=prog&&!prog.edges.has(e);
       if(ghost)alpha*=0.05;
-      if((isHover||onPath)&&!ghost){lw=onPath?4:3.2;alpha=1;c.shadowColor=hexToRgba(color,0.55);c.shadowBlur=10;}
-      lw*=Math.sqrt((pa.f+pb.f)/2);
-      c.globalAlpha=alpha;c.strokeStyle=color;c.lineWidth=lw;
-      c.beginPath();c.moveTo(pa.x,pa.y);c.lineTo(pb.x,pb.y);c.stroke();c.setLineDash([]);c.shadowBlur=0;
+      const hot=(isHover||onPath)&&!ghost;
+      if(hot){lw=onPath?3.4:2.6;alpha=1;}
+      lw*=Math.sqrt((pa.f+pb.f)/2)*Math.max(px,1/Math.max(1,s*1.4));
+      // ความสัมพันธ์ที่ผู้เขียนตั้ง = เส้นโค้งนุ่ม ๆ + ลำแสงเรียวจากโหนดใหญ่ไปโหนดเล็ก · เส้นที่ผังสร้างเอง = เส้นตรงบาง
+      const ctl=rel?{x:(pa.x+pb.x)/2-(pb.y-pa.y)*0.08,y:(pa.y+pb.y)/2+(pb.x-pa.x)*0.08}:null;
+      if(rel&&alpha>0.05){
+        const ra=this._nodeR(e.a)*Math.min(1.6,pa.f), rb=this._nodeR(e.b)*Math.min(1.6,pb.f);
+        const wa=ra*(hot?0.5:0.34), wb=rb*(hot?0.5:0.34);
+        const N=14, L=[], R=[];
+        for(let i=0;i<=N;i++){
+          const t=i/N, p=qpt(pa,ctl,pb,t), q=qpt(pa,ctl,pb,Math.min(1,t+0.02)), q0=qpt(pa,ctl,pb,Math.max(0,t-0.02));
+          const dx=q.x-q0.x, dy=q.y-q0.y, dl=Math.hypot(dx,dy)||1;
+          // เรียวตรงกลาง (เหมือนลำแสงที่พุ่งออกจากทั้งสองโหนด) ไม่ใช่ท่อกว้างเท่ากันตลอด
+          const wv=(wa*(1-t)+wb*t)*(0.35+0.65*Math.pow(Math.abs(t-0.5)*2,1.6));
+          L.push({x:p.x-dy/dl*wv,y:p.y+dx/dl*wv}); R.push({x:p.x+dy/dl*wv,y:p.y-dx/dl*wv});
+        }
+        const g=c.createLinearGradient(pa.x,pa.y,pb.x,pb.y);
+        const ca=this._catCol[e.a.cat]||color, cb=this._catCol[e.b.cat]||color;
+        g.addColorStop(0,hexToRgba(ca,0.55));g.addColorStop(0.5,hexToRgba(color,0.28));g.addColorStop(1,hexToRgba(cb,0.55));
+        c.save();
+        if(dark)c.globalCompositeOperation='lighter';
+        c.globalAlpha=alpha*(hot?1:0.8);c.fillStyle=g;
+        c.beginPath();c.moveTo(L[0].x,L[0].y);for(const p of L)c.lineTo(p.x,p.y);for(let i=R.length-1;i>=0;i--)c.lineTo(R[i].x,R[i].y);c.closePath();c.fill();
+        c.restore();
+      }
+      c.globalAlpha=alpha;c.strokeStyle=rel?shadeHex(color,dark?0.35:-0.1,hot?1:0.85):color;c.lineWidth=rel?Math.max(lw*0.55,0.8*px):lw;
+      if(hot){c.shadowColor=hexToRgba(color,0.7);c.shadowBlur=12;}
+      c.beginPath();c.moveTo(pa.x,pa.y);
+      if(ctl)c.quadraticCurveTo(ctl.x,ctl.y,pb.x,pb.y);else c.lineTo(pb.x,pb.y);
+      c.stroke();c.setLineDash([]);c.shadowBlur=0;
       // [รอบ 2] ป้ายเส้นรกเต็มจอในผังใหญ่ ("กล่าวถึง/อยู่ใน" ทุกเส้น) — ค่าเริ่มต้นโชว์เฉพาะความสัมพันธ์ที่ผู้เขียนตั้ง
       // เส้นของโหนดที่ชี้/เลือกอยู่โชว์เสมอ · ทั้งหมด/ซ่อน สลับได้ที่ปุ่มบนแถบ
       const lbl=this._edgeLabel(e);
@@ -743,9 +915,24 @@ export class StoryNetwork {
       const touching=focusEnds.has(e.a)||focusEnds.has(e.b);
       const want=mode==='all'||touching||(mode==='rel'&&isRelationEdge(e));
       if(lbl&&want&&alpha>0.3){
-        drawEdgeLabel(c,lbl,(pa.x+pb.x)/2,(pa.y+pb.y)/2-10*ls,(isHover?12:11)*ls);
+        const mid=ctl?qpt(pa,ctl,pb,0.5):{x:(pa.x+pb.x)/2,y:(pa.y+pb.y)/2};
+        edgeLbls.push({lbl,mid,fs:(isHover?11.5:10.5)*ls,ring:hot?color:'',alpha,pri:hot?1e6:touching?1e5:rel?10:0});
       }
       c.globalAlpha=1;
+    }
+
+    // ป้ายเส้น: วางตามความสำคัญ ข้ามตัวที่ทับโหนด/ป้ายชื่อ/ป้ายเส้นที่วางแล้ว (ชี้/เลือกอยู่ = วางเสมอ)
+    if(edgeLbls.length){
+      edgeLbls.sort((a,b)=>b.pri-a.pri);
+      const taken=labelOk.boxes||[];
+      for(const L of edgeLbls){
+        c.font=L.fs+'px "Segoe UI","Leelawadee UI",sans-serif';
+        const bw=(c.measureText(L.lbl).width+L.fs*1.1)*s, bh=L.fs*1.75*s;
+        const b={x0:L.mid.x*s-bw/2,x1:L.mid.x*s+bw/2,y0:L.mid.y*s-bh/2,y1:L.mid.y*s+bh/2};
+        if(this._declutter&&L.pri<1e5&&taken.some((o)=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0))continue;
+        taken.push(b);
+        c.globalAlpha=L.alpha;drawEdgeLabel(c,L.lbl,L.mid.x,L.mid.y,L.fs,L.ring);c.globalAlpha=1;
+      }
     }
 
     // [alpha.166] ลากผูกความสัมพันธ์: เส้นประจากโหนดต้นทางถึงเมาส์
@@ -755,9 +942,7 @@ export class StoryNetwork {
       c.beginPath();c.moveTo(pa.x,pa.y);c.lineTo(this._linkDrag.x,this._linkDrag.y);c.stroke();c.restore();
     }
 
-    const sortedNodes=is3?[...visNodes].sort((a,b)=>P(b).z-P(a).z):visNodes;
     const dpr=window.devicePixelRatio||1;
-    const labelOk=this._placeLabels(c,sortedNodes,P,s,ls,prog);
 
     for(const n of sortedNodes){
       const pp=P(n);
@@ -768,18 +953,20 @@ export class StoryNetwork {
       const struct=isStruct(n);
       const ghost=prog&&!prog.nodes.has(n);
       const faded=(emph&&!emph.nodes.has(n))||ghost;
-      let r=this._nodeR(n)*Math.min(2,pp.f);          // มุมมองระยะ: ของใกล้ใหญ่ขึ้นได้ไม่เกิน 2 เท่า (อ่านป้ายรอบ ๆ ได้)
+      let r=this._nodeR(n)*Math.min(1.6,pp.f);          // มุมมองระยะ: ของใกล้ใหญ่ขึ้นได้ไม่เกิน 2 เท่า (อ่านป้ายรอบ ๆ ได้)
       if(isHov)r+=4;
       const nx=pp.x, ny=pp.y;
       const col=this._catCol[n.cat]||THEME.edge['ent-scene'];
       if(faded)c.globalAlpha=ghost?0.08:0.14;
 
-      // glow on hover — use node's own category color
-      if(isHov&&!faded){
-        c.beginPath();c.arc(nx,ny,r+12,0,Math.PI*2);
-        const glow=c.createRadialGradient(nx,ny,r,nx,ny,r+14);
-        glow.addColorStop(0,hexToRgba(col,0.45));glow.addColorStop(1,hexToRgba(col,0));
-        c.fillStyle=glow;c.fill();
+      // [alpha.167] รัศมีเรืองแสง — ตัวสำคัญ (เส้นเยอะ) ฟุ้งกว้างกว่า · ชี้เมาส์ = สว่างขึ้น
+      const imp=this._importance(n);
+      if(!faded&&(dark||isHov)){
+        const gr=r*(isHov?2.6:1.9+imp*1.6);
+        const glow=c.createRadialGradient(nx,ny,r*0.6,nx,ny,gr);
+        glow.addColorStop(0,hexToRgba(col,isHov?0.55:0.22+imp*0.3));glow.addColorStop(1,hexToRgba(col,0));
+        c.save();if(dark)c.globalCompositeOperation='lighter';
+        c.fillStyle=glow;c.beginPath();c.arc(nx,ny,gr,0,Math.PI*2);c.fill();c.restore();
       }
       // [alpha.166] โมเดล 3 มิติแทนวงกลม (หมุนตามกล้องจริง) — ยังไม่พร้อม = วาดวงกลมไปก่อน
       const mdl=this._showImages&&!struct?this.modelOf(n):null;
@@ -790,16 +977,21 @@ export class StoryNetwork {
         c.beginPath();c.ellipse(nx,ny+r*0.82,r*0.62,r*0.16,0,0,Math.PI*2);c.fill();c.restore();
         c.drawImage(spr,nx-r,ny-r,r*2,r*2);
       }else{
-        if(isHov){c.shadowColor=hexToRgba(col,0.6);c.shadowBlur=14;}
         const hasImg=this._showImages&&n.image&&n._img&&!struct;
-        if(vt){c.beginPath();c.fillStyle=vt.color;c.arc(nx,ny,r+3.5,0,Math.PI*2);c.fill();}
+        if(vt){c.beginPath();c.fillStyle=vt.color;c.arc(nx,ny,r+3.5*Math.max(px,Math.min(1,r/14)),0,Math.PI*2);c.fill();}
         if(struct){
-          const sw2=r*1.6,sh2=r*1.4;
-          c.fillStyle=col;c.fillRect(nx-sw2/2,ny-sh2/2,sw2,sh2);
-          c.strokeStyle=isHov?THEME.canvas.hover:THEME.canvas.border;
-          c.lineWidth=isHov?3:2;c.strokeRect(nx-sw2/2,ny-sh2/2,sw2,sh2);
+          // ฉาก/บท/เล่ม = แผ่นมุมมน (แยกจากตัวละคร/สถานที่ที่เป็นทรงกลมได้ด้วยตา)
+          const sw2=r*1.7,sh2=r*1.3;
+          const g=c.createLinearGradient(nx,ny-sh2/2,nx,ny+sh2/2);
+          g.addColorStop(0,shadeHex(col,0.25));g.addColorStop(1,shadeHex(col,-0.25));
+          c.fillStyle=g;roundRect(c,nx-sw2/2,ny-sh2/2,sw2,sh2,Math.min(sw2,sh2)*0.28);c.fill();
+          c.strokeStyle=isHov?THEME.canvas.hover:hexToRgba(THEME.canvas.label,0.28);
+          c.lineWidth=(isHov?2:1)*px;c.stroke();
         }else{
-          c.beginPath();c.fillStyle=col;c.arc(nx,ny,r,0,Math.PI*2);c.fill();
+          // ทรงกลมมันวาว: จุดสะท้อนแสงมุมซ้ายบน → สีหมวด → ขอบเข้ม
+          const sg=c.createRadialGradient(nx-r*0.35,ny-r*0.4,r*0.08,nx,ny,r);
+          sg.addColorStop(0,shadeHex(col,0.6));sg.addColorStop(0.5,shadeHex(col,0));sg.addColorStop(1,shadeHex(col,-0.45));
+          c.beginPath();c.fillStyle=hasImg?col:sg;c.arc(nx,ny,r,0,Math.PI*2);c.fill();
           if(hasImg){
             const iw=n._img.naturalWidth||1, ih=n._img.naturalHeight||1;
             const side=Math.min(iw,ih);
@@ -809,33 +1001,42 @@ export class StoryNetwork {
             c.restore();
           }
           c.beginPath();c.arc(nx,ny,r,0,Math.PI*2);
-          c.strokeStyle=hasImg?col:(isHov?THEME.canvas.hover:THEME.canvas.border);
-          c.lineWidth=hasImg?3:(isHov?3:2);c.stroke();
-          if(hasImg&&isHov){c.beginPath();c.arc(nx,ny,r+2,0,Math.PI*2);
-            c.strokeStyle=THEME.canvas.hover;c.lineWidth=2;c.stroke();}
+          if(hasImg){c.strokeStyle=col;c.lineWidth=Math.max(3,2.5*px);}
+          else{c.strokeStyle=isHov?THEME.canvas.hover:hexToRgba(THEME.canvas.label,dark?0.35:0.5);c.lineWidth=(isHov?2:1)*px;}
+          c.stroke();
+          if(hasImg&&isHov){c.beginPath();c.arc(nx,ny,r+2*px,0,Math.PI*2);
+            c.strokeStyle=THEME.canvas.hover;c.lineWidth=2*px;c.stroke();}
+          // ตัวศูนย์กลางของเครือข่าย = วงแหวนแก้วรอบนอก (แบบโหนดหลักในผังนโยบาย/วงโคจร)
+          if(imp>0.55&&!faded){
+            c.beginPath();c.arc(nx,ny,r*1.38,0,Math.PI*2);
+            c.strokeStyle=hexToRgba(THEME.canvas.label,0.22+imp*0.2);c.lineWidth=1.2*px;c.stroke();
+            c.beginPath();c.arc(nx,ny,r*1.38,-Math.PI*0.85,-Math.PI*0.35);
+            c.strokeStyle=hexToRgba(col,0.9);c.lineWidth=2*px;c.stroke();
+          }
         }
         c.shadowBlur=0;
       }
       // [alpha.166] โหนดที่เลือก = วงแหวนสองชั้น (เห็นได้ทั้งบนพื้นมืดและพื้นสว่าง)
       if(isSel){
-        c.beginPath();c.arc(nx,ny,r+7,0,Math.PI*2);c.lineWidth=3.2*ls;c.strokeStyle=THEME.canvas.hover;c.stroke();
-        c.beginPath();c.arc(nx,ny,r+10.5,0,Math.PI*2);c.lineWidth=1.6*ls;c.strokeStyle=col;c.stroke();
+        c.beginPath();c.arc(nx,ny,r+6*ls,0,Math.PI*2);c.lineWidth=2.6*ls;c.strokeStyle=THEME.canvas.hover;c.stroke();
+        c.beginPath();c.arc(nx,ny,r+9.5*ls,0,Math.PI*2);c.lineWidth=1.4*ls;c.strokeStyle=col;c.stroke();
       }
       // [รอบ 2] ไทม์ไลน์เรื่อง: ฉากปัจจุบัน + ตัวที่เพิ่งปรากฏครั้งแรกในฉากนี้ = วงแหวนสีเน้น
       if(prog&&!ghost&&(n===prog.current||prog.fresh.has(n))){
-        c.beginPath();c.arc(nx,ny,r+6,0,Math.PI*2);c.lineWidth=2.6*ls;c.strokeStyle=THEME.edge.ally;
-        c.setLineDash(n===prog.current?[]:[4,3]);c.stroke();c.setLineDash([]);
+        c.beginPath();c.arc(nx,ny,r+5*ls,0,Math.PI*2);c.lineWidth=2.4*ls;c.strokeStyle=THEME.edge.ally;
+        c.setLineDash(n===prog.current?[]:[4*ls,3*ls]);c.stroke();c.setLineDash([]);
       }
 
       if(q&&m.has(n)&&!this._rafId){
-        c.beginPath();c.strokeStyle=THEME.edge.ally;c.lineWidth=3;c.globalAlpha=0.5+Math.sin(performance.now()*0.005)*0.5;
-        c.arc(nx,ny,r+6,0,Math.PI*2);c.stroke();c.globalAlpha=faded?0.14:1;
+        c.beginPath();c.strokeStyle=THEME.edge.ally;c.lineWidth=2.6*ls;c.globalAlpha=0.5+Math.sin(performance.now()*0.005)*0.5;
+        c.arc(nx,ny,r+5*ls,0,Math.PI*2);c.stroke();c.globalAlpha=faded?0.14:1;
       }
 
       // ป้ายชื่อ — ปิดได้ด้วยปุ่ม · [รอบ 2] ป้ายที่ทับกันถูกหลบ (ตัวสำคัญก่อน) · ชี้เมาส์/เลือกอยู่โชว์เสมอ
+      // [alpha.167] ป้ายอยู่ขวาของโหนด (ไม่มีกล่องทึบ — เงาเรืองรอบตัวอักษรพอให้อ่านบนทุกพื้น) + ตัวเลขฉากที่ปรากฏ
       if(labelOk.has(n)){
         const lb=labelOk.get(n);
-        drawLabelBox(c,lb.text,nx,ny+r+(12+4)*ls*Math.min(1.2,Math.max(0.8,pp.f)),lb.fs);
+        drawNodeLabel(c,lb.text,nx+r+lb.gap,ny,lb.fs,lb.badge,lb.strong,col);
       }
       c.globalAlpha=1;
     }
@@ -861,24 +1062,32 @@ export class StoryNetwork {
       if(!this._showLabels&&!isHov&&!isSel)continue;
       if(prog&&!prog.nodes.has(n)&&!isHov&&!isSel)continue;      // ยังไม่เกิดในเรื่อง = ไม่มีป้าย
       const vt=tagStyle(n);
-      const text=(vt&&vt.icon?vt.icon+' ':'')+(n.name.length>20?n.name.slice(0,19)+'…':n.name);
-      const fs=(isHov||isSel?12:10.5)*ls*Math.min(1.25,Math.max(0.8,pp.f));
-      const pri=(isHov||isSel?1e6:0)+(prog&&(n===prog.current||prog.fresh.has(n))?1e5:0)+(this._deg.get(n)||0)*10+(isStruct(n)?0:5)-pp.z*0.001;
-      cand.push({n,text,fs,pri,pp});
+      const text=(vt&&vt.icon?vt.icon+' ':'')+(n.name.length>22?n.name.slice(0,21)+'…':n.name);
+      const imp=this._importance(n);
+      const strong=isHov||isSel||imp>0.55;
+      const fs=(isHov||isSel?12.5:isStruct(n)?10:10.5+imp*2)*ls*Math.min(1.25,Math.max(0.8,pp.f));
+      const pri=(isHov||isSel?1e6:0)+(prog&&(n===prog.current||prog.fresh.has(n))?1e5:0)+(this._deg.get(n)||0)*10+(isStruct(n)?0:1000)-pp.z*0.001;
+      const badge=isStruct(n)?'':(this._sceneCount(n)?String(this._sceneCount(n)):'');
+      cand.push({n,text,fs,pri,pp,strong,badge});
     }
     cand.sort((a,b)=>b.pri-a.pri);
     const boxes=[];
+    // โหนดเองก็เป็นสิ่งกีดขวาง — ป้ายห้ามทับวงกลมของโหนดอื่น
+    for(const n of nodes){ const pp=P(n); if(pp.behind)continue; const r=this._nodeR(n)*Math.min(1.6,pp.f)*s;
+      boxes.push({x0:pp.x*s-r,x1:pp.x*s+r,y0:pp.y*s-r,y1:pp.y*s+r,node:n}); }
     for(const k of cand){
-      c.font=k.fs+'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
-      const wW=(c.measureText(k.text).width+12)*s, hW=(k.fs+10)*s;          // กรอบบนจอ (พิกเซล)
-      const r=this._nodeR(k.n)*Math.min(2,k.pp.f);
-      const cx=k.pp.x*s, cy=(k.pp.y+r+16*ls)*s;
-      const b={x0:cx-wW/2,x1:cx+wW/2,y0:cy-hW/2,y1:cy+hW/2};
-      const hit=this._declutter&&k.pri<1e5&&boxes.some((o)=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0);
+      c.font=(k.strong?'600 ':'')+k.fs+'px "K2 Icons","Segoe UI","Leelawadee UI",sans-serif';
+      const gap=7*ls;
+      const wW=(c.measureText(k.text).width+(k.badge?k.fs*2.4:0)+4*ls)*s, hW=k.fs*1.35*s;          // กรอบบนจอ (พิกเซล)
+      const r=this._nodeR(k.n)*Math.min(1.6,k.pp.f);
+      const x0=(k.pp.x+r+gap)*s, cy=k.pp.y*s;
+      const b={x0,x1:x0+wW,y0:cy-hW/2,y1:cy+hW/2};
+      const hit=this._declutter&&k.pri<1e5&&boxes.some((o)=>o.node!==k.n&&b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0);
       if(hit)continue;
       boxes.push(b);
-      out.set(k.n,{text:k.text,fs:k.fs});
+      out.set(k.n,{text:k.text,fs:k.fs,gap,badge:k.badge,strong:k.strong});
     }
+    out.boxes=boxes;
     return out;
   }
 
@@ -914,6 +1123,11 @@ export class StoryNetwork {
    * (เดิม Z = ค่าเฉลี่ยความลึกของทุกโหนด ซึ่งไม่ใช่ค่าของกล้อง — หมุน/เลื่อนแล้วไม่เปลี่ยนเลย)
    */
   _updateStatus() {
+    if(this._legend){
+      const cnt={};
+      for(const n of this.nodes){const k=n.cat==='section'||n.cat==='book'?'chapter':n.cat;cnt[k]=(cnt[k]||0)+1;}
+      this._legend.update(cnt,this._catCol||{});
+    }
     if(!this._sb)return;
     const structN=this.nodes.filter(n=>!WIKI_CATS.has(n.cat)).length;
     const st=structN?ttf('ui.net.sceneChapter', structN):'';
@@ -976,7 +1190,8 @@ export class StoryNetwork {
       const p=pj.view(n);
       if(p.behind)continue;
       const d=(p.x-sx)**2+(p.y-sy)**2;
-      const rr=Math.max(20*Math.min(2,p.f),this._nodeR(n)*Math.min(2,p.f)+2);
+      // [alpha.167 · bug hunt] เป้าคลิกคิดเป็นพิกเซลบนจอ — เดิม 20 หน่วยโลก = 3 พิกเซลตอนซูมพอดีจอ (~15%) จนแทบคลิกโหนดไม่โดน
+      const rr=Math.max(10/s,this._nodeR(n)*Math.min(1.6,p.f)+4/s);
       if(d>rr*rr)continue;
       // ซ้อนกัน: 3D เลือกตัวที่อยู่หน้าสุด (ความลึกน้อยสุด) · 2D เลือกตัวที่ใกล้เมาส์สุด
       if(p.z<bestZ-1e-6||(Math.abs(p.z-bestZ)<1e-6&&d<bestD)){best=n;bestZ=p.z;bestD=d;}
@@ -1247,7 +1462,11 @@ export class StoryNetwork {
    * [alpha.73 ข้อ 4] ซูมยึด "จุดกึ่งกลางจอ" · [alpha.166] = จุดโฟกัสของกล้อง (สเกลเปลี่ยนอย่างเดียว)
    */
   _zoom(e){
-    const f=e.deltaY<0?1.1:0.9;
+    // [alpha.167 · bug hunt] เดิมซูมทีละ 10% ต่ออีเวนต์ — ทัชแพด/Magic Mouse ยิงอีเวนต์เล็ก ๆ หลายสิบครั้งต่อการปัด
+    // ผังจึงพุ่งเข้า/ออกสุดทางในทีเดียว · ตอนนี้ตามระยะที่เลื่อนจริง (ล้อเมาส์หนึ่งคลิก ≈ 100 → ~14% เท่าเดิมโดยประมาณ)
+    const dy=Number.isFinite(e.deltaY)?e.deltaY*(e.deltaMode===1?33:e.deltaMode===2?400:1):0;
+    if(!dy)return;
+    const f=Math.exp(-Math.max(-300,Math.min(300,dy))*0.0015);
     this._flyAnim=null;
     this._cam.scale=clampScale(this._cam.scale*f);
     this._touchCam();
@@ -1327,10 +1546,12 @@ export class StoryNetwork {
     document.removeEventListener('mouseup',this._upDoc);
     if(this._ro)this._ro.disconnect();
     if(this._tb)this._tb.destroy();
+    if(this._legend)this._legend.box.remove();
     if(this._side)this._side.destroy();
     if(this._storyTimer)clearInterval(this._storyTimer);
     if(this._storyBar)this._storyBar.destroy();
     onModelReady(null);
+    if(this._bgBlobUrl){try{URL.revokeObjectURL(this._bgBlobUrl);}catch{}this._bgBlobUrl='';}
     try{localStorage.setItem(scopedKey(CAM_PREFIX,this._scope()),JSON.stringify(serializeCam(this._cam)));}catch{}
     savePositions(this.nodes,this._scope());
   }

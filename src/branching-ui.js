@@ -29,7 +29,7 @@ import { BRANCH_PLAN_DIR, newBranchPlan, normalizeBranchPlan, planFromState, pla
          PLAN_STATUSES, PLAN_DEFAULT_STATUS, applyPlanChoices, planChoicesFor, setPlanChoices,
          snapshotChoices, comparePlans, compareSummary } from './branch-plans.js';
 import {
-  NODE_W, NODE_H, GAP_X, PAD,
+  NODE_W, NODE_H, GAP_X, PAD, PORT_IN_Y, CHOICE_ROWS, choicePortY,
   buildGraph, layoutGraph, analyzeGraph, graphSummary, enumeratePathsInfo,
   scanChoiceMarkers, diffChoiceMarkers,
   highlightPath, edgeKey, filterNodes, expandWithNeighbors,
@@ -37,6 +37,7 @@ import {
   graphToOutline, graphToJson, graphToHtmlTree, danglingChoices,
 } from './branch-graph.js';
 import { gi, plainIcons } from './icons.js';
+import { liveBody } from './tab-bridge.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs = {}) => {
@@ -449,13 +450,14 @@ async function openSceneFromGraph(node, split) {
  * ของเดิมวางป้ายที่กึ่งกลางระหว่างหัว-ท้าย ซึ่งไม่ใช่จุดบนเส้นเมื่อเส้นโค้ง
  * (ยิ่งเส้นย้อนกลับที่อ้อมลงล่าง ป้ายยิ่งลอยห่างจากเส้นจนไม่รู้ว่าเป็นของเส้นไหน)
  */
-function edgeGeom(a, b) {
-  const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2;
-  const x2 = b.x, y2 = b.y + NODE_H / 2;
+function edgeGeom(a, b, idx = 0) {
+  // [alpha.167] เส้นออกจาก "ขั้ว" ของแถวทางเลือกนั้น (ขวาของการ์ด) → ขั้วเข้าที่หัวการ์ดปลายทาง (ซ้าย)
+  const x1 = a.x + NODE_W, y1 = a.y + choicePortY(idx, (a.choices || []).length);
+  const x2 = b.x, y2 = b.y + PORT_IN_Y;
   const back = x2 <= x1;                       // ไปฉากที่อยู่ซ้ายกว่า = วงวนซ้ำ → อ้อมด้านล่าง
   const cx = back ? Math.max(40, GAP_X) : Math.max(28, (x2 - x1) / 2);
-  const c1x = x1 + cx, c1y = back ? y1 + NODE_H : y1;
-  const c2x = x2 - cx, c2y = back ? y2 + NODE_H : y2;
+  const c1x = x1 + cx, c1y = back ? a.y + NODE_H + 40 : y1;
+  const c2x = x2 - cx, c2y = back ? b.y + NODE_H + 40 : y2;
   const d = `M ${x1} ${y1} C ${c1x} ${c1y} ${c2x} ${c2y} ${x2} ${y2}`;
   // จุดบนเส้นโค้งที่ t=0.5 → (P0 + 3·C1 + 3·C2 + P3) / 8
   const mx = (x1 + 3 * c1x + 3 * c2x + x2) / 8;
@@ -766,7 +768,8 @@ export async function renderBranchingTree(pane, opts = {}) {
       return id;
     };
     // [alpha.162 · W6 ข้อ 2] สีเส้นบนจอตามธีม (เดิมเลข hex ตายตัว = ธีมสว่างยังได้เส้นสีของธีมมืด)
-    const edgeCol = themeColor('--dim', '#98958b'), edgeHot = themeColor('--accent-hi', '#d97757');
+    // [alpha.167] สายไฟแบบโปรแกรมเล่าเรื่องแบบโหนด: สีเน้นของธีมทั้งเส้น · เส้นที่เกี่ยวกับฉากที่เลือก = สว่างสุด
+    const edgeCol = themeColor('--accent-hi', '#d97757'), edgeHot = themeColor('--bright', '#faf9f5');
     markerFor(edgeCol); markerFor(edgeHot);
     svg.append(defs);
 
@@ -774,7 +777,7 @@ export async function renderBranchingTree(pane, opts = {}) {
       if (e.dangling) continue;
       const a = layout.byId.get(e.from), b = layout.byId.get(e.to);
       if (!a || !b) continue;
-      const g = edgeGeom(a, b);
+      const g = edgeGeom(a, b, e.idx);
       const onPath = hi.edges.has(edgeKey(e.from, e.to));
       const hot = bs.sel === e.from || bs.sel === e.to;
       const color = e.color || (onPath || hot ? edgeHot : edgeCol);
@@ -838,7 +841,7 @@ export async function renderBranchingTree(pane, opts = {}) {
         if (p.e.from !== id && p.e.to !== id) continue;
         const a = layout.byId.get(p.e.from), b = layout.byId.get(p.e.to);
         if (!a || !b) continue;
-        p.geom = edgeGeom(a, b);
+        p.geom = edgeGeom(a, b, p.e.idx);
         p.path.setAttribute('d', p.geom.d);
       }
       placeLabels(true);
@@ -858,12 +861,35 @@ export async function renderBranchingTree(pane, opts = {}) {
       box.style.cssText = `left:${n.x}px;top:${n.y}px;width:${NODE_W}px;height:${NODE_H}px`;
       if (n.color) { box.style.borderLeftColor = n.color; box.style.setProperty('--bn-tint', n.color); box.classList.add('bn-tinted'); }
 
+      // [alpha.167] การ์ดแบบโหนด: แถบหัว (ไอคอนบทบาท + ชื่อ) · บท · แถวทางเลือกพร้อมขั้วออกของแต่ละแถว
       const icon = rootSet.has(n.id) ? gi('play') + ' ' : endSet.has(n.id) ? gi('flag-checkered') + ' ' : gi('file') + ' ';
-      box.append(el('div', 'branch-node-name', icon + n.title));
+      const headEl = el('div', 'branch-node-head');
+      headEl.append(el('div', 'branch-node-name', icon + n.title));
+      box.append(headEl);
+      box.append(el('span', 'branch-port branch-port-in'));
       const meta = el('div', 'branch-node-meta');
       meta.append(el('span', 'branch-node-ch', n.chapterName || '—'));
       if (n.choices.length) meta.append(el('span', 'branch-node-count', (gi('subdirectory-right') + ' ') + n.choices.length));
       box.append(meta);
+      const rowsEl = el('div', 'branch-node-rows');
+      const over = n.choices.length > CHOICE_ROWS;
+      const showN = over ? CHOICE_ROWS - 1 : n.choices.length;
+      n.choices.slice(0, showN).forEach((c) => {
+        const r = el('div', 'branch-node-row' + (c.nextSceneId && graph.byId.has(c.nextSceneId) ? '' : ' open'));
+        r.append(el('span', 'branch-node-row-text', c.text || tr('sumChoices')));
+        const port = el('span', 'branch-port branch-port-out');
+        if (c.color) port.style.setProperty('--port', c.color);
+        r.append(port);
+        rowsEl.append(r);
+      });
+      if (over) {
+        const r = el('div', 'branch-node-row branch-node-more');
+        r.append(el('span', 'branch-node-row-text', '+' + (n.choices.length - showN)), el('span', 'branch-port branch-port-out'));
+        rowsEl.append(r);
+      }
+      if (!n.choices.length) rowsEl.append(el('div', 'branch-node-row branch-node-none',
+        endSet.has(n.id) ? gi('flag-checkered') + ' ' + tr('roleEndFull') : tr('noChoicesYet')));
+      box.append(rowsEl);
 
       box.title = [
         n.title,
@@ -1315,7 +1341,7 @@ async function readSceneBody(node) {
   if (!node || !node.filePath) return '';
   try {
     const { parseMdFile } = await import('./md.js');
-    return parseMdFile(await kapi.readFile(node.filePath)).body || '';
+    return liveBody(node.filePath, parseMdFile(await kapi.readFile(node.filePath)).body || '');
   } catch (e) { log('warn', t('ui.branch.branchingReadBodyScene'), e); return ''; }
 }
 
@@ -1351,7 +1377,7 @@ export async function insertMarkerIntoScene(node, text) {
  * เรียกได้จากเมนู/คีย์ลัด ระหว่างเขียนฉากอยู่ ไม่ต้องเปิดหน้าผังก่อน
  */
 export async function syncChoicesFromScene() {
-  const { sceneCtx, updateSceneRow } = await import('./app.js');
+  const { sceneCtx } = await import('./app.js');
   const ctx = await sceneCtx();
   if (!ctx) { setStatus(tr('needScene')); return 0; }
   const tab = state.tabs.get(state.active?.file);
@@ -1367,11 +1393,15 @@ export async function syncChoicesFromScene() {
     setStatus(tr('noMarker'));
     return 0;
   }
-  const { missing } = diffChoiceMarkers(markers, ctx.row.choices || []);
+  // [alpha.167 · bug hunt] เทียบกับ "ทางเลือกที่ใช้อยู่จริง" แล้วเขียนผ่าน mutateChoices ตัวเดียวกับผัง
+  // เดิม: เทียบกับ scenes.json แล้วเขียน scenes.json ตรง ๆ เสมอ — เปิดแผนแตกสายอยู่ = ทางเลือกไปลงผิดที่
+  // (ผังที่เห็นเป็นของแผน) และไม่ผ่านคิวของ mutateChoices (กดรัว ๆ แล้วการแก้ก่อนหน้าหายได้)
+  const current = inBranchPlan() ? planChoicesFor(planState.live, ctx.row.id) : (ctx.row.choices || []);
+  const { missing } = diffChoiceMarkers(markers, current);
   if (!missing.length) { setStatus(tr('allLinked') + markers.length + ')'); return 0; }
-  await updateSceneRow(ctx.dPath, ctx.row.id, (r) => {
-    r.choices = [...(r.choices || []), ...missing.map((t2) => ({ text: t2, nextSceneId: '' }))];
-  });
+  const ok = await mutateChoices({ dPath: ctx.dPath, id: ctx.row.id },
+    (list) => [...list, ...missing.map((t2) => ({ text: t2, nextSceneId: '' }))]);
+  if (ok === false) return 0;
   setStatus(tr('addedFromText') + missing.length +
             tr('addedFromTextTail'));
   refreshOpenBranchTab();
@@ -1387,6 +1417,7 @@ async function scanAllScenes(scenes, redraw) {
     if (!sc.filePath) continue;
     let body = '';
     try { body = parseMdFile(await kapi.readFile(sc.filePath)).body || ''; } catch { continue; }
+    body = liveBody(sc.filePath, body);          // [alpha.167] ฉากที่เปิดค้างการแก้ = ใช้เนื้อในแท็บ (เพิ่งพิมพ์ [..] ยังไม่บันทึก)
     const { missing } = diffChoiceMarkers(scanChoiceMarkers(body), sc.choices || []);
     if (missing.length) found.push({ sc, missing });
   }

@@ -77,6 +77,8 @@ export function normalizeNetScene(saved) {
       imageOpacity: num(b.imageOpacity, 1, 0, 1),
       stars: num(b.stars, 1, 0, 3),
       dim: num(b.dim, 0, 0, 0.9),
+      // [alpha.167] โหมด 3D: 'sky' = ฉากหลังเป็น skybox รอบกล้อง (ค่าเริ่มต้น) · 'plane' = แผ่นบนระนาบแบบ alpha.166
+      sky3d: b.sky3d === 'plane' ? 'plane' : 'sky',
     },
     grid: {
       style,

@@ -21,6 +21,7 @@ xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron .
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
 ปัจจุบัน **5,902 checks · ALL OK** (alpha.166 รอบ 2 · macOS · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
+**[alpha.167] Linux/xvfb = 5,895 ALL OK** ด้วย `--use-angle=swiftshader --enable-unsafe-swiftshader` (ไม่ใช่ `--disable-gpu` — WebGL ของ `[166-M]` ไม่ขึ้น) · แซนด์บ็อกซ์บนคลาวด์ทำ `[98-8]` (เพดานเฟรม) กับ `[a96-1]` (IP ส่วนตัวที่ค้าง — พร็อกซีตอบ 403) ไม่ได้ · unit ~10,990 ข้อ · 149 ไฟล์
 (unit `npm run test:unit` = **10,605 ข้อ · 148 ไฟล์** · ~55 วินาที · alpha.166)
 **[รอบต่อ 4 · Windows] `node_modules/.bin/electron` ที่ sync มาจาก mac ใช้ไม่ได้ (`bad interpreter`)** — รัน `./node_modules/electron/dist/electron.exe .` ตรง ๆ
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
@@ -389,6 +390,20 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 
 ประตูกันพลาด: unit `json-store` · `frontmatter` · `disk-conflict` · `project-doctor` + e2e `[156-1…7]`
 เครื่องมือกู้ของที่พังไปแล้ว: **เครื่องมือ → ตรวจสุขภาพโปรเจกต์** (`project-doctor.js` / `project-doctor-ui.js`)
+
+### ⚠️ กฎถาวร (alpha.167) — **skybox · ของลอยบนผืนงานใช้ภาษาภาพเดียวกัน · ภาพหน้าจอจริงก่อนเชื่อว่าสวย**
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ฉากหลังโหมด 3D ของผัง | skybox: พิกเซล → ทิศทาง (`skyDir`/`skyProject`/`equirectUV`/`domeShader` ใน `src/network-sky.js` บริสุทธิ์) · ตัววาด `drawSky` (network-bg.js) · `extra.sky` = `_standK()` (จางตอนสลับโหมด) · ค่า `bg.sky3d` ('sky' ค่าเริ่มต้น · 'plane' = แผ่นแบบ alpha.166) | ผูกฟ้ากับแพน/ซูม (ฟ้าอยู่ไกลไม่สิ้นสุด — ขยับตามมุมเท่านั้น) · คำนวณโดมที่ความละเอียดเต็ม (ใช้ตารางหยาบแล้วขยายนุ่ม) |
+| รูปที่ผังต้องอ่านพิกเซล/ส่งออก | โหลดเป็น `blob:` จากไบต์ (`kapi.readBytes`) + `revokeObjectURL` ตอนเปลี่ยน/ทำลาย | `<img src="file://…">` บนผืนวาดที่ต้อง `toDataURL`/`getImageData` (ผืน "เปื้อน" = SecurityError เงียบ) |
+| ของลอยบนผืนงาน (แคปซูลเครื่องมือ · ป๊อปโอเวอร์ · การ์ดสัญลักษณ์ · คอลัมน์/การ์ด Kanban · การ์ดผังแตกสาย) | ตัวแปร `--k-float-bg/-border/-inset/-shadow` · `--k-radius-lg/-md` (อยู่ที่ `body` เพราะธีมตั้งที่ `body.theme-*`) | สีพื้น/เงาของใครของมัน · ตั้งตัวแปรที่ `:root` (ไม่ตามธีม) |
+| ขนาดโหนดของผังตอนซูมออก | `_nodeR` มีขั้นต่ำเป็นพิกเซลตามความสำคัญ (`_importance`) — ซูม ≥ 100% เท่าเดิมทุกพิกเซล (e2e `[72-1]` วัดขอบวง) · เป้าคลิกคิดเป็นพิกเซล | รัศมี/เป้าคลิกเป็นหน่วยโลกล้วน (ซูม 15% = จุด 2px คลิกไม่โดน) |
+| ป้ายบนผัง | วางป้ายชื่อก่อน (`_placeLabels` คืน `boxes`) แล้วป้ายเส้นหลบทั้งโหนด/ป้ายชื่อ · เอนทิตี Wiki ได้ที่ก่อนฉาก/บท | วาดป้ายเส้นระหว่างวนเส้น (ทับชื่อโหนด) |
+| การ์ดผังแตกสาย | ขนาด/ตำแหน่งขั้วจาก `branch-graph.js` (`NODE_W/NODE_H/PORT_IN_Y/choicePortY`) — `edgeGeom(a, b, idx)` ออกจากขั้วของแถวทางเลือกนั้น | เลขพิกเซลของขั้วใน CSS/JS ที่ไม่อ่านจากค่าคงที่ชุดนี้ |
+| Kanban กรอง/เรียงอยู่ | ลากการ์ด = วางท้ายคอลัมน์ (ลำดับที่เห็นไม่ใช่ลำดับจริง) | ใช้ดัชนีของการ์ดที่มองเห็นเป็นตำแหน่งใน `moveCard` |
+| ตรวจหน้าตา UI | `node tools/demo-project.cjs /tmp/k2demo` แล้ว `xvfb-run node tools/shot.cjs /tmp/k2demo <โฟลเดอร์> <สคริปต์>` (Playwright ต้องหาได้ — `NODE_PATH=$(npm root -g)`) | สรุปว่าสวยจากโค้ด/เทสตรรกะ (บทเรียน alpha.143: ปัญหาหน้าตาจับได้จากภาพเท่านั้น) |
+| e2e บน Linux ที่ไม่มี GPU | `--use-angle=swiftshader --enable-unsafe-swiftshader` แทน `--disable-gpu` (ไม่งั้น `[166-M]` สร้าง WebGL ไม่ได้) | — |
 
 ### ⚠️ กฎถาวร (alpha.166) — **ไอคอน Nerd Fonts · Story Network กล้องเดียว · แถบสถานะนิ่ง · ธีมก่อนเฟรมแรก**
 

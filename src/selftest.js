@@ -2658,7 +2658,17 @@ export async function runTest(projectPath) {
         const card = document.querySelector('#net-body .net-scene');
         check('[166-B] ★ ปุ่ม "ฉากหลังและโมเดล" เปิดการ์ดตั้งค่าในผัง', !!card && !card.hidden && scBtn.classList.contains('on'));
         const kindSel = card.querySelector('select');
-        const bgPx = () => { n.draw(); const d = n.canvas.getContext('2d').getImageData(W - 30, Math.round(H / 2), 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; };
+        // [alpha.167] จุดวัดต้องเป็น "พื้น" จริง — โหนดมีขนาดขั้นต่ำบนจอ + รัศมีเรืองแสงแล้ว จุดตายตัว (W−30, H/2) บังเอิญโดนโหนดได้
+        const bgAt = (() => {
+          const pts = n.nodes.map((x) => n.screenOf(x));
+          let best = { x: W - 30, y: Math.round(H / 2) }, bestD = -1;
+          for (let gx = 20; gx < W - 10; gx += 37) for (let gy = 60; gy < H - 60; gy += 29) {
+            const d = Math.min(...pts.map((p) => Math.hypot(p.x - gx, p.y - gy)), 1e9);
+            if (d > bestD) { bestD = d; best = { x: gx, y: gy }; }
+          }
+          return best;
+        })();
+        const bgPx = () => { n.draw(); const d = n.canvas.getContext('2d').getImageData(bgAt.x, bgAt.y, 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; };
         const pxTheme = bgPx();
         kindSel.value = 'space'; kindSel.dispatchEvent(new Event('change')); await w166(80);
         check('[166-B] ★★ เลือก "อวกาศ" → ฉากหลังเปลี่ยนจริง (วัดสีพิกเซล)', n._scene.bg.kind === 'space' && bgPx() !== pxTheme, pxTheme + ' → ' + bgPx());
@@ -15649,7 +15659,17 @@ export async function runTest(projectPath) {
         check('#12 หน้าแรกเป็น 4 คอลัมน์', cols === 4, String(cols));
         const card1 = grid.querySelector('.home-card');
         if (card1) {
-          const h1 = card1.getBoundingClientRect().height;
+          // [alpha.167] วัดครั้งแรกหลังฟอนต์/รูปปกโหลดเสร็จ — เครื่องที่ฟอนต์ไทยมาช้า (Linux · fallback) ความสูงการ์ด
+          // เปลี่ยนระหว่างวัดครั้งแรกกับครั้งหลังเอง ไม่ใช่เพราะสลับโหมด (กฎข้อ 36: รอเงื่อนไขจริง ไม่ใช่เวลาตายตัว)
+          try { await document.fonts.ready; } catch {}
+          for (let i = 0; i < 40 && [...grid.querySelectorAll('img')].some((im) => !im.complete); i++) await new Promise((r) => setTimeout(r, 50));
+          let h1 = card1.getBoundingClientRect().height;
+          for (let i = 0; i < 20; i++) {
+            await new Promise((r) => requestAnimationFrame(() => r()));
+            const hh = card1.getBoundingClientRect().height;
+            if (Math.abs(hh - h1) < 0.5) break;
+            h1 = hh;
+          }
           grid.classList.add('list');
           await new Promise((r) => setTimeout(r, 60));
           const hList = card1.getBoundingClientRect().height;
@@ -15668,6 +15688,7 @@ export async function runTest(projectPath) {
                 nCards > HUq.HOME_QUICK_MAX ? !quick : (!!quick && quick.querySelectorAll('.home-quick-btn').length >= 3),
                 nCards + ' การ์ด · ' + (quick ? quick.querySelectorAll('.home-quick-btn').length : 0) + ' ปุ่ม');
           if (quick) {
+            hideTip();              // [alpha.88] เมาส์ค้างบนปุ่ม = title ถูกถอดชั่วคราว — คืนก่อนอ่าน
             check('[164-7] ปุ่มทางลัดมีชื่อ + คำอธิบายจากไฟล์ภาษา (ไม่ใช่คีย์ดิบ)',
                   [...quick.querySelectorAll('.home-quick-btn')].every((b) => b.title && !/^ui\./.test(b.textContent) && !/^ui\./.test(b.title)));
             const dlgH = ovHome.querySelector('.k-home-dlg').getBoundingClientRect().height;
@@ -15934,6 +15955,8 @@ export async function runTest(projectPath) {
         const ovH = await showHomeDialog();
         await new Promise((r) => setTimeout(r, 250));
         const dlg = ovH.querySelector('.k-dialog');
+        // [alpha.167] กล่องมีภาพเคลื่อนไหวตอนเปิด (ขยายจาก 0.92) — เครื่องช้า 250ms ยังไม่จบ → วัดได้ขนาดกลางทาง
+        try { await Promise.all(dlg.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))); } catch {}
         const grid = ovH.querySelector('.home-grid');
         check('#1 กล่องหน้าแรกมีกรอบเลื่อนแยก (กรอบนิ่ง เนื้อในเลื่อน)',
               !!ovH.querySelector('.home-dlg-scroll') && dlg.classList.contains('k-home-dlg'));
@@ -30736,9 +30759,12 @@ export async function runTest(projectPath) {
               await until157(() => !!colOf('ทดสอบ157')) && CS.allStatuses().length === before157 + 1
               && TA.sceneStatusOptions().some(([v]) => v === 'ทดสอบ157'));
         const head157 = colOf('ทดสอบ157') && colOf('ทดสอบ157').querySelector('.kb-col-head');
-        check('[157-1] หัวคอลัมน์เป็นสีเต็มแถบ + ตัวอักษรอ่านออก',
-              !!head157 && getComputedStyle(head157).backgroundColor === 'rgb(255, 95, 184)'
-              && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, head157 && getComputedStyle(head157).backgroundColor);
+        // [alpha.167] ผู้ใช้: หัวสีทึบเต็มแถบ "แข็งเกินไป" → จุดสีสถานะที่หัว + พื้นคอลัมน์ย้อมสีเดียวกันอ่อน ๆ (สียังซิงก์กับ Explorer)
+        const dot157 = head157 && head157.querySelector('.kb-col-dot');
+        check('[157-1] หัวคอลัมน์มีจุดสีของสถานะ + พื้นคอลัมน์ย้อมสีเดียวกัน',
+              !!dot157 && getComputedStyle(dot157).backgroundColor === 'rgb(255, 95, 184)'
+              && getComputedStyle(colOf('ทดสอบ157')).getPropertyValue('--kb-col').trim() === '#ff5fb8'
+              && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, dot157 && getComputedStyle(dot157).backgroundColor);
         // ลากการ์ดลงคอลัมน์ใหม่ (ส่งอีเวนต์ drop จริง) → ต้นไม้ได้ชิปสถานะสีเต็ม
         // กระดานจำฉบับร่างที่เทสก่อนหน้าเลือกไว้ — เลือกฉบับร่างของฉากที่ใช้ทดสอบให้ชัด
         await (await import('./kanban/kanban-ui.js')).setKanbanDraft(d157.dPath);
