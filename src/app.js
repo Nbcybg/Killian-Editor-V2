@@ -28,7 +28,7 @@ import { readSceneMeta, writeSceneMeta, SCENE_HEAVY_KEYS } from './scene-meta.js
 import { marginPreset, matchMarginPreset } from './margin-presets.js';
 import { migrateImages, setImageMeta } from './wiki-images.js';
 import { entityPortrait, mergeBuiltInTemplateMeta } from './wiki-profile.js';
-import { LEVELS, LEVEL_META, filterLogs, shortTime, exportText } from './log-core.js';
+import { LEVELS, LEVEL_META, filterLogs, shortTime, exportText, parseLogLine } from './log-core.js';
 // [alpha.72 ข้อ 4] กฎ: อะไรที่ทิ้ง/อัปเดตตอนปิดโปรแกรม ต้องขึ้น list ทุกครั้ง
 import { dirtyRegistry, registerDirtySource } from './dirty-registry.js';
 import { wordsWrittenToday } from './dashboard-stats.js';   // [alpha.162 · W5 ข้อ 5]
@@ -43,6 +43,7 @@ import { LAYOUT_VERSION as PANEL_LAYOUT_VERSION,
 import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from 'prosemirror-state';
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
 import { ask, confirmBox, infoBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider, installDialogA11y, rovingToolbar } from './ui.js';
+import { escCancelDrag } from './drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก
 import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
 import { startGlyphUpgrade } from './glyph-upgrade.js';
 import { mutateJson } from './json-store.js';   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
@@ -100,7 +101,7 @@ import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, log
          setBusy, clearBusy, busyMsg, withBusy,
          PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
          keepScroll,                      // [alpha.66r2] จำ-คืนตำแหน่งเลื่อนตอนรื้อ DOM สร้างใหม่
-         THEMES, THEME_LABEL_KEYS, THEME_ALIAS } from './core.js';   // [alpha.137] ทะเบียนธีมของโปรแกรม
+         THEMES, THEME_MODES, THEME_LABEL_KEYS, THEME_ALIAS } from './core.js';   // [alpha.137] ทะเบียนธีมของโปรแกรม
 import { sceneProps } from './scene-props.js';
 // [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนเรื่องย่อ/POV/อารมณ์/ความขัดแย้ง
 import { attachAiFieldButton, generateSceneSynopsis, fieldPrompt, cleanResult,
@@ -350,7 +351,8 @@ import { runTest } from './selftest.js';   // [alpha.160] e2e แยกไฟล
 
 // นามแฝงของ t() — ใช้ในฟังก์ชันที่มีตัวแปรท้องถิ่นชื่อ t (ex. runTest: const t = state.active)
 const tr = t;
-import { cmpText, fmtNum, fmtTime } from './locale.js';
+import { cmpText, fmtNum, fmtTime, fmtDate, fmtDateTime } from './locale.js';
+import { installStatusToggles, syncStatusToggles } from './status-toggles.js';   // [alpha.165]
 
 // ---------------- (ย้ายไป core.js แล้ว: $, el, state, smart, log, setStatus, ค่าตั้งต้น) ----------------
 let pageScale = 1;       // อัตราซูมหน้ากระดาษ (0.5–2.5) — reassign ได้จึงคงไว้ที่นี่ (ES module import เป็น read-only)
@@ -373,6 +375,8 @@ async function loadSettings(meta) {
 export function applySettings() {
   applyZoomVars();
   applyUIScale();
+  // [alpha.165] ช่องสวิตช์บนแถบสถานะต้องตามค่าที่เพิ่งบันทึกจากกล่องตั้งค่า (bug hunt: ติ๊กเลขบรรทัดในตั้งค่าแล้วปุ่มไม่ติดไฟ)
+  try { syncStatusToggles(); } catch {}
   // [alpha.78] กฎการอ่านบท (ผู้ใช้ตั้งเอง) → ส่งให้ fountain.js ก่อนอย่างอื่นเสมอ
   // ทุกอย่างที่พาร์สบทหลังจากนี้ (ตัวแก้ไข/แบ่งหน้า/ส่งออก) ต้องใช้กฎชุดเดียวกัน
   setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
@@ -1180,11 +1184,13 @@ function setPageScale(z) {
     pageScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(z * 100) / 100));
     applyZoomVars();
   });
+  _userScale = pageScale;
   setStatus(t('status.zoom') + ': ' + Math.round(pageScale * 100) + '%' + ' (Ctrl+Shift+0 = ' + t('status.zoomReset') + ')');
 }
 function resetPageScale() {
   if (pageScale === 1) return;
   keepZoomCenter(() => { pageScale = 1; applyZoomVars(); });
+  _userScale = pageScale;
   setStatus(t('status.zoomReset'));
 }
 /**
@@ -1195,15 +1201,78 @@ function resetPageScale() {
  */
 export function zoomFitWidth(pane) {
   const p = pane || (state.active && state.active.pane);
+  const z = fitScaleOf(p);
+  keepZoomCenter(() => { pageScale = z; applyZoomVars(); });
+  _userScale = pageScale;
+  setStatus(tt('ui.app.zoomFitWide') + Math.round(z * 100) + '%');
+  return z;
+}
+/** อัตราซูมที่ทำให้หน้ากระดาษพอดีความกว้างของ pane (ตัวคำนวณเดียวของ zoomFitWidth + ตัวอัตโนมัติ) */
+function fitScaleOf(p) {
   const fmt = spFormat();
   const pageW = (+fmt.paper.width || 8.5) * 96;
   // เผื่อขอบซ้าย-ขวาไว้เล็กน้อย + ที่ว่างของแถบเลื่อนแนวตั้ง
   const avail = Math.max(200, (p ? p.clientWidth : window.innerWidth) - 48);
-  const z = Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(avail / pageW * 100) / 100));
-  keepZoomCenter(() => { pageScale = z; applyZoomVars(); });
-  setStatus(tt('ui.app.zoomFitWide') + Math.round(z * 100) + '%');
-  return z;
+  return Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(avail / pageW * 100) / 100));
 }
+
+// ══ [alpha.164 · รอบต่อ 2 · งาน 3] ซูมพอดีความกว้างอัตโนมัติ (ค่าระดับผู้ใช้ `autoFitWidth` · ปิดเป็นค่าเริ่มต้น) ══
+// แผงเอกสารแคบกว่ากระดาษ → ย่อให้พอดี (ตัวคำนวณเดียวกับ "พอดีความกว้าง") · แผงกว้างขึ้น → ขยายกลับ
+// **แต่ไม่เกินซูมที่ผู้ใช้ตั้งเองล่าสุด** (`_userScale`) — ตัวอัตโนมัติมีหน้าที่ "ไม่ให้กระดาษล้น" เท่านั้น
+// ไม่ใช่ไปขยายกระดาษของคนที่ตั้งใจใช้ 80% · โหมดเทสปิดเสมอ (เทสอื่นวัดตำแหน่งที่ซูม 100%)
+// ยกเว้นเทสของฟีเจอร์นี้เองที่ตั้ง `globalThis.__k2autoFitTest`
+let _userScale = null;
+export function autoFitWidthOn() {
+  if (!(state.settings && state.settings.autoFitWidth)) return false;
+  if (sessionOff() && !globalThis.__k2autoFitTest) return false;
+  return true;
+}
+/** @returns {boolean} true = เปลี่ยนซูมจริง */
+export function autoFitWidth(pane) {
+  if (!autoFitWidthOn()) return false;
+  const p = pane || (state.active && state.active.pane);
+  if (!p || !p.clientWidth || !p.isConnected) return false;
+  if (_userScale == null) _userScale = pageScale;
+  const want = Math.min(_userScale, fitScaleOf(p));
+  if (Math.abs(want - pageScale) < 0.01) return false;
+  keepZoomCenter(() => { pageScale = want; applyZoomVars(); });
+  return true;
+}
+/** ปิดสวิตช์ = คืนซูมที่ผู้ใช้ตั้งไว้ (ไม่ค้างที่ค่าที่ตัวอัตโนมัติย่อไว้) */
+export function autoFitWidthRestore() {
+  if (_userScale == null || Math.abs(_userScale - pageScale) < 0.01) return;
+  const z = _userScale;
+  keepZoomCenter(() => { pageScale = z; applyZoomVars(); });
+}
+/**
+ * [alpha.164 · รอบต่อ 3 · งาน 3] สวิตช์ "ซูมพอดีความกว้างอัตโนมัติ" — ทางกลางของทุกทางเข้า
+ * (เมนู มุมมอง → ซูม · คลิกขวาที่ป้ายซูมบนแถบสถานะ · คำสั่ง `auto-fit-width`)
+ * ค่าระดับผู้ใช้ → `saveGlobalSetting` คู่กับ `saveProjectMetaSoon` (กฎ W3) · กล่องตั้งค่าบันทึกเอง ส่ง `save:false`
+ * @param {boolean} [on]  ไม่ส่ง = สลับ
+ */
+export function setAutoFitWidth(on, { save = true, was = !!state.settings.autoFitWidth } = {}) {
+  const v = on === undefined ? !was : !!on;
+  state.settings.autoFitWidth = v;
+  if (save) { saveGlobalSetting('autoFitWidth', v); saveProjectMetaSoon(); }
+  if (v !== was) { if (v) autoFitWidth(); else autoFitWidthRestore(); }
+  syncMenuToggles();
+  if (save) setStatus(tt(v ? 'ui.app.autoFitWidthOn' : 'ui.app.autoFitWidthOff'));
+  return v;
+}
+/** เมนูคลิกขวาที่ป้ายซูม (แถบสถานะ) — คำสั่งซูมชุดเดียวกับเมนู มุมมอง → ซูม */
+function zoomLabelMenu(e) {
+  e.preventDefault();
+  popupMenu(e.clientX, e.clientY, [
+    { text: tt('ui.menu.expand'), cmd: 'zoom:1', click: () => handleCommand('zoom', 1) },
+    { text: tt('ui.menu.collapse'), cmd: 'zoom:-1', click: () => handleCommand('zoom', -1) },
+    { text: tt('ui.menu.resetZoom'), cmd: 'zoom:0', click: () => handleCommand('zoom', 0) },
+    { text: tt('ui.menu.fitWidePagePaper'), cmd: 'zoom:fit', click: () => handleCommand('zoom', 'fit') },
+    '-',
+    { text: tt('ui.setTpl.autoFitWidth'), checked: !!state.settings.autoFitWidth,
+      click: () => handleCommand('auto-fit-width') },
+  ]);
+}
+export function currentPageScale() { return pageScale; }
 
 /** เลื่อนหน้ากระดาษให้อยู่กึ่งกลางแนวนอน (บั๊ก #7 — มุมมองเริ่มต้นตอนเปิด/สร้างฉาก) */
 export function centerPage(pane) {
@@ -1281,6 +1350,7 @@ function recenterOnPaneResize() {
   if (!w) return;
   if (Math.abs(w - _lastPaneW) < 20) { _lastPaneW = w; return; }
   _lastPaneW = w;
+  autoFitWidth(p);                              // [alpha.164 · รอบต่อ 2 · งาน 3]
   recenterPageSoon(p);
 }
 
@@ -1791,6 +1861,7 @@ window.addEventListener('resize', () => {
   scheduleLineGutter();
   clearTimeout(_spViewJob);
   _spViewJob = setTimeout(refreshSpView, 150);
+  autoFitWidth();                               // [alpha.164 · รอบต่อ 2 · งาน 3] (ปิดอยู่ = ไม่ทำอะไร)
   // [alpha.116 ข้อ 5] ย่อ/ขยายหน้าต่าง → ของลอยต้องยังอยู่ในจอ **และบันทึกทับค่าที่จำไว้**
   keepFloatingUiInView();
   // [alpha.126] ย่อ/ขยายหน้าต่างก็ทำให้เกิดช่องว่างค้างได้เหมือนการลากที่จับ (แผงที่ตรึงเป็น px
@@ -2387,7 +2458,7 @@ export function showErrorList() {
   const btns = el('div', 'k-dlg-btns');
   const bRe = el('button', null, tt('ui.app.checkNew'));
   bRe.onclick = () => { ov.remove(); showErrorList(); };
-  const bOk = el('button', 'k-ok', tt('ui.common.close')); bOk.onclick = () => ov.remove();
+  const bOk = el('button', 'k-ok k-cancel', tt('ui.common.close')); bOk.onclick = () => ov.remove();
   btns.append(bRe, bOk); box.append(btns);
   ov.append(box); document.body.append(ov);
   ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
@@ -2557,7 +2628,7 @@ export function openSpReport(kind = 'location') {
     await kapi.writeFile(p, spReportText(kind, data));
     setStatus(tt('ui.app.saveReportDone') + p);
   };
-  const bOk = el('button', 'k-ok', tt('ui.common.close')); bOk.onclick = () => ov.remove();
+  const bOk = el('button', 'k-ok k-cancel', tt('ui.common.close')); bOk.onclick = () => ov.remove();
   btns.append(bCopy, bSave, bOk); box.append(btns);
   ov.append(box); document.body.append(ov);
   ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
@@ -2633,7 +2704,7 @@ function showSourceView() {
   const btns = el('div', 'k-dlg-btns');
   const cp = el('button', null, tt('ui.common.copyAll'));
   const ap = el('button', null, tt('ui.app.mdApply'));
-  const cl = el('button', 'k-ok', tt('ui.common.close'));
+  const cl = el('button', 'k-ok k-cancel', tt('ui.common.close'));
   cp.onclick = () => { ta.select(); document.execCommand('copy'); setStatus(t('status.copied')); };
   ap.onclick = () => {
     if (ta.value === md) { setStatus(tt('ui.app.mdNoChange')); return; }
@@ -3155,6 +3226,11 @@ export async function bootSequence() {
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
   syncMenuToggles();
   splashProgress(tt('ui.splash.language'), 18);
+  // [alpha.164 · รอบต่อ 2] ภาษาเป็นค่าระดับผู้ใช้ — ต้องตรงกับไฟล์ตั้งค่าผู้ใช้ **ก่อน** หน้าแรก/โปรเจกต์โผล่
+  // (ตัวโหลดแบบ sync อ่านจาก localStorage ซึ่งหายได้ · ถ้ายังไม่ตรงก็โหลดใหม่ที่นี่)
+  if (g && g.language && g.language !== i18n.lang) {
+    try { await loadLanguage(g.language); } catch (e) { log('warn', 'boot language', e); }
+  }
   try { await (document.fonts && document.fonts.ready); } catch {}
   // [alpha.135] **ตรวจอัปเดตก่อนเข้าโปรแกรม** — ก่อนเปิดโปรเจกต์/หน้าแรก ตามที่ผู้ใช้สั่ง
   // ยังไม่มีอะไรค้างในหน่วยความจำตอนนี้ กด "แทนที่แล้วเปิดใหม่" จึงไม่มีงานหาย
@@ -3583,7 +3659,10 @@ export async function captureSession() {
   } catch {}
   s.ui = {
     ls: lsAll,
-    zoom: pageScale,
+    // [alpha.164 · รอบต่อ 5] ซูมที่ "ผู้ใช้ตั้ง" ไม่ใช่ค่าที่ตัวซูมพอดีความกว้างอัตโนมัติย่อไว้ชั่วคราว —
+    // เดิมเก็บ pageScale (เช่น 0.7 ตอนหน้าต่างแคบ) แล้วตอนกู้ setPageScale ตั้งเป็น _userScale
+    // = ขยายหน้าต่างทีหลังก็ไม่มีวันกลับไป 100% ที่ผู้ใช้ตั้งไว้
+    zoom: _userScale != null ? _userScale : pageScale,
     paper: true,
     reading: document.body.classList.contains('reading-mode'),
     focus: document.body.classList.contains('focus-mode'),
@@ -3711,7 +3790,7 @@ export async function restoreSessionTabs(s) {
     try { activate(pruned.tabs.active); } catch {}
   }
   if (s.ui && Number.isFinite(+s.ui.zoom) && +s.ui.zoom > 0) {
-    try { setPageScale(+s.ui.zoom); } catch {}
+    try { setPageScale(+s.ui.zoom); autoFitWidth(); } catch {}   // [รอบต่อ 5] ซูมของผู้ใช้ → ย่อให้พอดีแผงตอนนี้ (ถ้าเปิดสวิตช์)
   }
   // [alpha.93 ข้อ 4] ★ ตำแหน่งเลื่อนจอถูก **เก็บมาตลอดแต่ไม่เคยถูกเอากลับมาใช้เลย**
   // (และค่าที่เก็บก็เป็น 0 เสมอเพราะอ่านผิดตัว — ดู captureSession) → เปิดโปรเจกต์แล้ว
@@ -4883,7 +4962,7 @@ async function importImageToLibrary() {
 async function newBranchPlanFromTree() {
   const { listBranchPlans, saveBranchPlanAs } = await import('./branching-ui.js');
   const plans = await listBranchPlans();
-  const v = await ask(tt('ui.common.nameNewPlan'), { value: tt('ui.common.map2') + (plans.length + 1) });
+  const v = await ask(tt('ui.common.nameNewPlan'), { value: tt('ui.common.map2') + (plans.length + 1), okLabel: tt('ui.common.new') });
   if (!v) return null;
   const p = await saveBranchPlanAs(v);
   await refreshTreeQueued();
@@ -6435,7 +6514,13 @@ function floatTab(file) {
       win.style.height = Math.max(180, r.height + ev.clientY - sy) + 'px';
       refitTab(t);
     };
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+    const w0 = win.style.width, h0 = win.style.height;
+    // [alpha.165] Esc = ยกเลิกการย่อ/ขยาย คืนขนาดเดิม
+    const offEsc = escCancelDrag(() => {
+      document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+      win.style.width = w0; win.style.height = h0; refitTab(t);
+    });
+    const up = () => { offEsc(); document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
                        saveFloatWinBox(file, win); };      // [alpha.116 ข้อ 5] จำขนาดด้วย ไม่ใช่แค่ตำแหน่ง
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   });
@@ -6940,8 +7025,10 @@ async function buildPlannerSection(tree) {
     it.title = b.path + (isCur ? (curDirty ? tt('ui.app.busyOpenNotSave') : tt('ui.app.busyOpen')) : '');
     it.onclick = () => openPlanner(b.path);
     // [alpha.155] เมนูของไฟล์กระดานตามรายการของผู้ใช้ (tree-menu-spec.js → board)
-    it.oncontextmenu = (ev) => showTreeMenu(ev, 'board', { path: b.path, b, meta: bMeta, rel: bRel, title: b.name,
-                                                          lockSrc: bMeta.locked ? 'item' : '' });
+    // [alpha.164 · รอบต่อ 4] ผ่าน bindTreeMenu (กฎ W4) — เดิมผูก oncontextmenu ตรง ๆ แถวจึงไม่มี `_k2row`
+    // = F2 · Shift+F10 · treeRowAction เอื้อมไม่ถึงแถวกระดานเลย
+    bindTreeMenu(it, 'board', { path: b.path, b, meta: bMeta, rel: bRel, title: b.name,
+                                lockSrc: bMeta.locked ? 'item' : '' });
     sec.append(it);
   }
   if (!boards.length) {
@@ -7062,8 +7149,9 @@ async function buildBranchPlanSection(tree) {
     it.title = p.path + String.fromCharCode(10) + planSummary(p.plan);
     it.onclick = async () => { await openBranchPlan(p.path); await openBranchingTree(); await refreshTreeQueued(); };
     // [alpha.155] เมนูของไฟล์แผนตามรายการของผู้ใช้ (tree-menu-spec.js → plan)
-    it.oncontextmenu = (ev) => showTreeMenu(ev, 'plan', { path: p.path, p, meta: pMeta, rel: pRel, title: p.name,
-                                                         lockSrc: pMeta.locked ? 'item' : '' });
+    // [alpha.164 · รอบต่อ 4] ผ่าน bindTreeMenu (กฎ W4) — เหตุผลเดียวกับแถวกระดาน
+    bindTreeMenu(it, 'plan', { path: p.path, p, meta: pMeta, rel: pRel, title: p.name,
+                               lockSrc: pMeta.locked ? 'item' : '' });
     sec.append(it);
   }
   if (!plans.length) {
@@ -7521,6 +7609,7 @@ export function syncMenuToggles() {
       continueds: spContinuedOn(),                  // alpha.58 · 55–56
       typeSound: !!state.settings.typeSound,
       markdownCodes: showMarkdownCodes(),            // [60r3 ข้อ 6]
+      autoFitWidth: !!state.settings.autoFitWidth,  // [alpha.164 · รอบต่อ 3] เมนู มุมมอง → ซูม
       // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — เมนูไฟล์ / เมนูมุมมอง
       openLastProject: state.settings.openLastProject === true,
       showHomeAlways: state.settings.showHomeOnStartup === true,
@@ -7581,6 +7670,10 @@ export function applyTheme() {
   if (state.settings.theme !== th) state.settings.theme = th;
   // ถอดคลาสของทุกธีมก่อนเสมอ แล้วค่อยใส่ของธีมปัจจุบัน (เพิ่มธีมใหม่ = ไม่ต้องมาแก้ตรงนี้)
   for (const id of THEMES) document.body.classList.toggle('theme-' + id, id === th);
+  // [alpha.165] ★ ผู้ใช้: "theme สีเดิมที่เป็นสีเทายังอยู่" — ไม่เคยตั้ง color-scheme เลย
+  //   ช่องติ๊ก · ช่องตัวเลข · ตัวเลือกสี · รายการของ <select> · แถบเลื่อนดั้งเดิม จึงวาดเป็นเทา/ขาวของเบราว์เซอร์ทุกธีม
+  //   ตั้งตามโหมดของธีม (THEME_MODES จาก themes.json) ที่ <html> — ส่วนควบคุมดั้งเดิมทั้งหน้าตามธีม
+  try { document.documentElement.style.colorScheme = THEME_MODES[th] === 'light' ? 'light' : 'dark'; } catch {}
   clearThemeColorCache();                  // [alpha.162 · W6 ข้อ 2] ผืนวาด (กระดาน · ผังแตกสาย) อ่านสีธีมใหม่
   // [alpha.164 ข้อ A1–A2] ผืนวาดที่เปิดค้างอยู่ (ผังความสัมพันธ์ · กระดานวางแผน) ฟังแล้ววาดสีธีมใหม่เอง
   try { window.dispatchEvent(new CustomEvent('k2-theme', { detail: th })); } catch {}
@@ -9735,7 +9828,12 @@ export function openOnce(file, fn) {
   const k = pathKey(file);
   const cur = OPENING_C.m.get(k);
   if (cur) return cur;                       // กำลังเปิดอยู่ — รอใบเดียวกัน ไม่เปิดซ้ำ
-  const p = (async () => { try { return await fn(); } finally { OPENING_C.m.delete(k); } })();
+  // [alpha.165] จดว่าเปิดไฟล์ไหน (สำเร็จ/ล้ม + รหัส) — ผู้ใช้: "log ต้องบอกว่าเปิดตัวไหน ตัวไหนทำงาน"
+  const p = (async () => {
+    try { const r = await fn(); log('info', 'tab: open', file); return r; }
+    catch (e) { log('error', 'tab: open failed', { file, code: e && e.code, error: e && e.message }); throw e; }
+    finally { OPENING_C.m.delete(k); }
+  })();
   OPENING_C.m.set(k, p);
   return p;
 }
@@ -9859,7 +9957,7 @@ function mountEditor(tab, dir, body) {
   // [alpha.110] มุมมองเป็นของแท็บแล้ว → แท็บใหม่ "รับมรดก" ค่าเริ่มต้นล่าสุดครั้งเดียวตอนเปิด
   // (เปิดฉากถัดไปแล้วได้มุมมองเดียวกับที่กำลังอ่านอยู่ · หลังจากนั้นต่างคนต่างจำของตัวเอง)
   seedTabView(tab);
-  requestAnimationFrame(() => { reapplyTabView(true); centerPage(pane); updatePageNumberHint(); });
+  requestAnimationFrame(() => { autoFitWidth(pane); reapplyTabView(true); centerPage(pane); updatePageNumberHint(); });
   // [alpha.164] ฉากมีปัญหา — ตัวแก้ไขตัวใหม่ (เปิดฉาก · สลับโหมด) ต้องได้แถบเทียบกลับมาเอง
   applyOnsetToTab(tab).catch((e) => log('warn', 'onset', e));
 }
@@ -10181,7 +10279,7 @@ export function smartTypeDialog() {
   render();
   box.append(body);
   const btns = el('div', 'k-dlg-btns');
-  const ok = el('button', 'k-ok', tt('ui.common.close'));
+  const ok = el('button', 'k-ok k-cancel', tt('ui.common.close'));
   ok.onclick = () => { ov.remove(); if (tab && tab.sp) spSmartCheck(tab); };
   btns.append(ok); box.append(btns);
   ov.append(box); document.body.append(ov);
@@ -10475,7 +10573,11 @@ export async function saveTab(tab, opts = {}) {
   tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
   // คอมเมนต์เก็บอยู่ท้ายไฟล์เดียวกัน — เขียนทับตรง ๆ = คอมเมนต์หาย
   // (ไม่มีคอมเมนต์ = เขียนตัวต่อตัวเหมือนเดิม ไม่แตะท้ายไฟล์)
-  await writeKeepingComments(tab.file, dumpMdFile(tab.meta, body));
+  // [alpha.165] ผลของการบันทึกลง log ทุกครั้ง (สำเร็จ/ล้ม + รหัส) — เดิมจดแค่ "เริ่มบันทึก" แล้วเงียบ
+  const tSave = performance.now();
+  try { await writeKeepingComments(tab.file, dumpMdFile(tab.meta, body)); }
+  catch (e) { log('error', 'save: write failed', { file: tab.file, code: e && e.code, error: e && e.message }); throw e; }
+  log('info', 'save: done', { file: tab.file, chars: body.length, ms: Math.round(performance.now() - tSave) });
   tab.diskBody = body;                         // [alpha.156] ฐานของการตรวจ "แก้นอกโปรแกรม" รอบถัดไป
   tab._conflictWarned = false; tab._diskWarned = false;
   // [alpha.148] ★ มีการพิมพ์เข้ามา **ระหว่างรอเขียนดิสก์** (บันทึกอัตโนมัติมักยิงตอนกำลังพิมพ์)
@@ -10852,7 +10954,7 @@ async function compareFileVersionsDialog(file, titleText) {
   head.append(el('span', 'k-cmp-lbl', tt('ui.app.left')), selL, el('span', 'k-cmp-lbl', tt('ui.app.right')), selR);
   box.append(head);
   const grid = el('div', 'k-cmp-grid'); box.append(grid);
-  const foot = el('div', 'k-dlg-btns'); const closeB = el('button', null, tt('ui.common.close'));
+  const foot = el('div', 'k-dlg-btns'); const closeB = el('button', 'k-cancel', tt('ui.common.close'));   // [alpha.164 · รอบต่อ 4] กฎ W4
   foot.append(closeB); box.append(foot);
   ov.append(box); document.body.append(ov);
   closeB.onclick = () => ov.remove();
@@ -11016,6 +11118,7 @@ export function closeTab(file, { discard = false, ask = false } = {}) {
   const t = state.tabs.get(file);
   if (!t) return;
   const done = () => {
+    log('info', 'tab: close', file);                     // [alpha.165] จดการปิดแท็บ (คู่กับ tab: open)
     if (rewriteBarTab() === t) closeRewriteBar();       // [alpha.164 · บั๊ก] แถบ Rewrite ของแท็บนี้ต้องไปด้วย
     t.editor?.destroy(); t.wiki?.destroy(); t.sp?.destroy(); t.gal?.destroy(); t.net?.destroy(); t.planner?.destroy();
     t.pane.remove(); t.tabBtn.remove();
@@ -11745,6 +11848,7 @@ function imageMenu(ed, pos, x, y) {
 }
 
 function refreshToolbar() {
+  try { syncStatusToggles(); } catch {}            // [alpha.165] ช่อง "อะไรเปิด/ปิดอยู่" บนแถบสถานะ
   const ed = state.active?.editor;
   const sp = state.active?.sp;
   const wkEd = state.active?.wiki?.secEditors?.find(({k}) => k?.view?.hasFocus())?.k
@@ -13534,11 +13638,14 @@ export function logAtBottom(body) {
 const logView = { levels: new Set(['error', 'warn', 'info']), source: '', q: '', open: new Set() };
 let _logSeq = -1;                    // seq ล่าสุดที่วาดไปแล้ว — กันวาดซ้ำทั้งแผงทุก 2 วินาที
 
+// [alpha.165] ดูย้อนหลัง: day = '' = เซสชันนี้ (สด · จากหน่วยความจำ) · 'YYYY-MM-DD' = ไฟล์ของวันนั้น (อ่านอย่างเดียว)
+const LOG_DAY = { day: '', recs: [] };
 async function renderLogPanel(force) {
   const body = $('#log-body'); if (!body) return;
   const host = body.parentElement;
   if (host && !host.querySelector('.k-log-bar')) buildLogBar(host, body);
-  const recs = logStore.all();
+  if (LOG_DAY.day && !force) return;                 // ไฟล์ของวันก่อน ๆ ไม่เปลี่ยน — ไม่วาดใหม่ตาม log สด
+  const recs = LOG_DAY.day ? LOG_DAY.recs : logStore.all();
   if (!force && _logSeq === logStore.lastSeq() && body.dataset.f === logKey()) return;
   _logSeq = logStore.lastSeq(); body.dataset.f = logKey();
   const stick = logAtBottom(body);
@@ -13549,14 +13656,14 @@ async function renderLogPanel(force) {
   if (!shown.length) {
     body.append(el('div', 'dim', recs.length
       ? tt('ui.app.notHasLineAt2')
-      : tt('ui.app.notHasSave')));
+      : (LOG_DAY.day ? tt('ui.log.dayEmpty') : tt('ui.app.notHasSave'))));
   }
   for (const r of shown) body.append(logRow(r));
   syncLogBar(host, recs);
   body.scrollTop = stick ? body.scrollHeight : keepTop;
   updateLogFollowBadge(body, stick);
 }
-function logKey() { return [...logView.levels].sort().join(',') + '|' + logView.source + '|' + logView.q; }
+function logKey() { return [...logView.levels].sort().join(',') + '|' + logView.source + '|' + logView.q + '|' + LOG_DAY.day; }
 
 function logRow(r) {
   const row = el('div', 'k-log-row k-log-' + r.level);
@@ -13602,26 +13709,80 @@ function buildLogBar(host, body) {
   const q = el('input', 'k-log-q'); q.type = 'search'; q.placeholder = tt('ui.app.searchSave');
   q.oninput = () => { logView.q = q.value; renderLogPanel(true); };
   bar.append(q);
-  const clr = el('button', 'k-log-btn', tt('ui.common.clear2'));
+  const clr = el('button', 'k-log-btn k-log-clear', tt('ui.common.clear2'));
   clr.title = tt('ui.app.clearSaveShowFile');
   clr.onclick = () => { logStore.clear(); LOG_BUF.length = 0; logView.open.clear(); renderLogPanel(true); };
   bar.append(clr);
   host.insertBefore(bar, body);
+  host.insertBefore(buildLogDayBar(), body);
   // มีของใหม่เข้ามา → วาดทันที ไม่ต้องรอ timer
   onLog(() => { if (isPanelOpen('log')) renderLogPanel(); });
+}
+
+/**
+ * [alpha.165] ผู้ใช้: "log ยังไม่มีตัวชี้ไปยัง folder ที่เก็บ log เลย จะดูย้อนหลังยังไง"
+ * แถวที่สองของแผงบันทึก: เลือกวัน (เซสชันนี้ = สด · วันก่อน ๆ = อ่านไฟล์) · ที่อยู่โฟลเดอร์ · ปุ่มเปิดโฟลเดอร์ (มีป้ายข้อความ)
+ */
+function buildLogDayBar() {
+  const bar = el('div', 'k-log-bar k-log-daybar');
+  const sel = el('select', 'k-log-day');
+  sel.title = tt('ui.log.dayPick');
+  const fill = async () => {
+    const keep = LOG_DAY.day;
+    let days = [];
+    try { days = (kapi.logList ? await kapi.logList() : []) || []; } catch {}
+    sel.replaceChildren();
+    const o0 = el('option', null, tt('ui.log.daySession')); o0.value = ''; sel.append(o0);
+    for (const d of days) {
+      const o = el('option', null, ttf('ui.log.dayOption', fmtDate(d.day + 'T12:00:00'), Math.max(1, Math.round((d.size || 0) / 1024))));
+      o.value = d.day; sel.append(o);
+    }
+    sel.value = keep;
+  };
+  sel.onfocus = () => { fill(); };                       // มีไฟล์วันใหม่ระหว่างเปิดแผง — เติมรายการสดทุกครั้งที่กดเลือก
+  sel.onchange = async () => {
+    const day = sel.value;
+    LOG_DAY.day = day; LOG_DAY.recs = [];
+    if (day) {
+      let txt = '';
+      try { txt = (kapi.logReadDay ? await kapi.logReadDay(day, 5000) : '') || ''; } catch {}
+      let seq = 0;
+      LOG_DAY.recs = txt.split('\n').map((l) => parseLogLine(l, ++seq)).filter(Boolean);
+    }
+    logView.open.clear();
+    const panel = bar.parentElement;
+    if (panel) panel.classList.toggle('k-log-past', !!day);
+    const clr = panel && panel.querySelector('.k-log-clear');
+    if (clr) clr.disabled = !!day;                       // ล้างได้เฉพาะบันทึกของเซสชันนี้ (ไฟล์ไม่ถูกแตะ)
+    note.textContent = day ? ttf('ui.log.dayReadonly', fmtDate(day + 'T12:00:00')) : '';
+    renderLogPanel(true);
+  };
+  const lbl = el('span', 'k-log-dir-lbl', tt('ui.log.folderLabel'));
+  const dir = el('span', 'k-log-dir');
+  dir.title = tt('ui.log.folderTip');
+  const bdi = document.createElement('bdi'); bdi.dir = 'ltr'; dir.append(bdi);
+  if (kapi.logDir) kapi.logDir().then((p) => { bdi.textContent = p || ''; dir.title = tt('ui.log.folderTip') + '\n' + (p || ''); }).catch(() => {});
+  const open = el('button', 'k-log-btn k-log-open', tt('ui.app.openFolderLog'));
+  open.title = tt('ui.panelTip.logReveal');
+  open.onclick = () => { if (kapi.logOpenDir) kapi.logOpenDir(); else if (kapi.logReveal) kapi.logReveal(); };
+  const note = el('span', 'k-log-daynote');
+  bar.append(sel, lbl, dir, open, note);
+  fill();
+  return bar;
 }
 
 function syncLogBar(host, recs) {
   if (!host) return;
   const bar = host.querySelector('.k-log-bar'); if (!bar) return;
-  const c = logStore.counts();
+  // [alpha.165] ดูไฟล์ของวันก่อน = นับ/รายชื่อที่มาจากไฟล์นั้น ไม่ใช่ของเซสชันนี้
+  const c = LOG_DAY.day ? recs.reduce((a, r) => { a[r.level] = (a[r.level] || 0) + 1; return a; }, {}) : logStore.counts();
   for (const b of bar.querySelectorAll('.k-log-chip')) {
     const lv = b.dataset.lv;
     b.textContent = LEVEL_META[lv].icon + ' ' + LEVEL_META[lv].label + (c[lv] ? ' ' + c[lv] : '');
     b.classList.toggle('k-log-chip-hot', lv === 'error' && c.error > 0);
   }
   const sel = bar.querySelector('.k-log-src-sel');
-  const srcs = logStore.sources();
+  const srcs = LOG_DAY.day ? [...new Set(recs.map((r) => r.source).filter(Boolean))].sort() : logStore.sources();
   if (sel.dataset.list !== srcs.join()) {
     sel.dataset.list = srcs.join();
     sel.replaceChildren();
@@ -14004,6 +14165,10 @@ export function renderFeaturePanel(id) {
   // จึงจำ-คืนตำแหน่งเลื่อนที่นี่ทีเดียว แทนที่จะไปไล่แก้ตัววาดทีละไฟล์แล้วลืมบางตัว
   const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
   const backScroll = keepScroll(() => document.querySelector(sel));
+  // [alpha.165] ★ ผู้ใช้: "เลื่อนลงล่างสุด ปิดแผงแล้วเปิดใหม่ = เสี้ยววินาทีไปบนสุดแล้วเลื่อนลงมา" (จัดการเล่ม · จัดการบท)
+  //   คืนตำแหน่งข้างบนเกิด "หลังวาดเสร็จ" — ระหว่างที่ตัววาดล้างเนื้อแล้วรออ่านไฟล์ ความสูงเนื้อยุบ
+  //   เบราว์เซอร์หนีบตำแหน่งเลื่อนเป็น 0 ให้เห็นอยู่หลายเฟรม · ตรึงความสูงของเนื้อไว้ระหว่างวาด = ไม่มีวันถูกหนีบ
+  const heightLocks = lockScrollContentHeights(document.querySelector(sel));
   const p = Promise.resolve().then(f)
     .catch((e) => {
       // ══ [alpha.100] ★ ตาข่ายจับ "error เงียบ" ของตัววาดแผง ══
@@ -14016,9 +14181,32 @@ export function renderFeaturePanel(id) {
       log('error', ttf('ui.app.drawPanelF2', pid), e);
     })
     .finally(() => _featInFlight.delete(pid))
-    .then(() => { try { backScroll(); } catch {} return true; });
+    .then(() => { try { backScroll(); } catch {} releaseHeightLocks(heightLocks); return true; });
   _featInFlight.set(pid, p);
   return p;
+}
+/**
+ * [alpha.165] ตรึง min-height ของลูกตรงของทุกกล่องที่ถูกเลื่อนอยู่ (ตัวลูกตรงไม่ถูกตัววาดแทนที่ —
+ * ตัววาดล้างเนื้อข้างในมัน) → ระหว่างวาด scrollHeight ไม่ยุบ ตำแหน่งเลื่อนจึงไม่ถูกหนีบเป็น 0
+ * กล่องที่อยู่บนสุดอยู่แล้ว = ไม่แตะ (ไม่มีอะไรให้รักษา)
+ */
+function lockScrollContentHeights(root) {
+  const locks = [];
+  if (!root) return locks;
+  for (const e of [root, ...root.querySelectorAll('*')]) {
+    if (!e.scrollTop) continue;
+    for (const c of e.children) {
+      locks.push([c, c.style.minHeight]);
+      c.style.minHeight = c.offsetHeight + 'px';
+    }
+  }
+  return locks;
+}
+function releaseHeightLocks(locks) {
+  if (!locks.length) return;
+  // ปล่อยหลังตัวคืนตำแหน่ง (keepScroll) ได้ลองรอบแรก ๆ แล้ว · ส่วนที่วาดตามมาแบบไม่ await (รายการร่างในเล่ม)
+  // ยังมีเวลาเติม · ปล่อยแล้วถ้าเนื้อจริงสั้นลง เบราว์เซอร์หนีบให้เองตามปกติ (ถูกต้อง)
+  setTimeout(() => { for (const [c, v] of locks) c.style.minHeight = v; }, 350);
 }
 // ทุกทางเข้าที่ทำให้แผงเปิด (เมนู · ถาดแผงที่ปิดไว้ · คำสั่ง) วิ่งผ่าน showPanel → hook นี้
 setPanelShowHook((pid) => { renderFeaturePanel(pid); });
@@ -14083,6 +14271,54 @@ const LOCK_EDIT_CMDS = new Set(['fmt', 'text-case', 'text-case-cycle', 'editor-u
   'delete-line', 'sp-element', 'nbsp', 'insert-shortcode', 'remove-elements', 'toggle-format', 'set-format', 'sp-extension']);
 const QUIET_CMDS = new Set(['zoom', 'zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
                             'find', 'find-next', 'find-prev']);
+
+// ═══ [alpha.165] รายการมาตรฐานของเมนูคลิกขวาในเอกสาร ═══
+// ชุดเดียวกับเมนู context-menu ของ main.js (ตัวนั้นเหลือไว้ให้ช่องกรอกนอกเอกสาร)
+// ตัด/คัดลอก/วาง ผ่าน webContents ตัวจริง (`kapi.editRole`) = เท่ากับกดแป้น · คืนโฟกัสให้ตัวแก้ไขก่อนเสมอ
+function docEditable(target) {
+  const pm = target && target.closest && target.closest('.ProseMirror');
+  return !!pm && pm.getAttribute('contenteditable') === 'true';
+}
+function editRoleItem(pm, label, role, code, enabled) {
+  return { text: label, accel: formatShortcut(code, true), disabled: !enabled, click: async () => {
+    // คลิกแถวเมนูดึงโฟกัสออกจากตัวแก้ไข → คืนก่อน (view.focus() วาง selection กลับทันที ·
+    // ตัวแก้ไขอื่นที่ไม่ใช่แท็บหลัก เช่นแยกจอ ใช้ dom.focus() แล้วรอ ProseMirror วาง selection คืน ~20ms)
+    const ed = state.active && (state.active.editor || state.active.sp);
+    if (ed && ed.view && ed.view.dom === pm) ed.view.focus();
+    else if (pm && pm.isConnected) { pm.focus(); await new Promise((r) => setTimeout(r, 40)); }
+    kapi.editRole(role);
+  } };
+}
+function editorStdMenuItems(target, hasSel) {
+  const pm = target && target.closest && target.closest('.ProseMirror');
+  const canEdit = docEditable(target);
+  return [
+    editRoleItem(pm, tt('ui.menu.cut'), 'cut', 'KeyX', hasSel && canEdit),
+    editRoleItem(pm, tt('ui.common.copy'), 'copy', 'KeyC', hasSel),
+    editRoleItem(pm, tt('ui.menu.paste'), 'paste', 'KeyV', canEdit),
+    editRoleItem(pm, tt('ui.menu.pickAll'), 'selectAll', 'KeyA', true),
+  ];
+}
+function editorFmtMenuItems(target) {
+  const canEdit = docEditable(target);
+  const c = (label, id, ...args) => ({ text: label, cmd: [id, ...args].join(':'), disabled: !canEdit && id !== 'find' && id !== 'save',
+                                       click: () => handleCommand(id, ...args) });
+  return [
+    c(tt('ui.menu.itemBoldB'), 'fmt', 'bold'),
+    c(tt('ui.menu.itemI'), 'fmt', 'italic'),
+    c(tt('ui.menu.dashLineUnderU'), 'fmt', 'underline'),
+    c(tt('ui.menu.dashX'), 'fmt', 'strike'),
+    c(tt('ui.menu.clearFormatSpace'), 'fmt', 'clear'),
+    '-',
+    c(tt('ui.menu.doZ'), 'editor-undo'),
+    c(tt('ui.menu.repeatY'), 'editor-redo'),
+    '-',
+    c(tt('ui.menu.insertImage'), 'insert-image'),
+    c(tt('ui.menu.searchF'), 'find'),
+    '-',
+    c(tt('ui.menu.saveS'), 'save'),
+  ];
+}
 
 export async function handleCommand(ch, ...a) {
   // [alpha.164] กำลังดูฉบับเดิมของฉากมีปัญหา → คำสั่งที่อ่าน/เขียนเนื้อ (บันทึก · พิมพ์ · ส่งออก …)
@@ -14447,6 +14683,7 @@ export async function handleCommand(ch, ...a) {
       else if (a[0] === 0) resetPageScale();
       else bumpPageScale(a[0]);
       break;
+    case 'auto-fit-width': setAutoFitWidth(); break;   // [alpha.164 · รอบต่อ 3 · งาน 3]
     case 'ui-scale': bumpUIScale(a[0]); break;
     // [alpha.81 ข้อ 9] ทางส่งออกทั้งหมดรวมอยู่ในกล่องเดียว — เมนู ไฟล์ → ส่งออก… (Ctrl+Shift+E)
     case 'export-hub': await openExportHub(); break;
@@ -14940,7 +15177,7 @@ function makeDraggable(elm, handle, opts = {}) {
     if (opts.resizable && pos.width) { elm.style.width = pos.width + 'px'; elm.style.height = pos.height + 'px'; }
   }
   if (saved && saved.hidden) elm.style.display = 'none';
-  let sx, sy, ox, oy, dragging = false, lastE = null;
+  let sx, sy, ox, oy, dragging = false, lastE = null, offEsc = () => {};
   const down = (e) => {
     if (e.button !== 0 || !elm) return;
     // [alpha.117] ล็อกแล้วต้องลากไม่ได้จริง — กันที่ต้นทาง ไม่ใช่ไปคืนตำแหน่งทีหลัง
@@ -14951,6 +15188,14 @@ function makeDraggable(elm, handle, opts = {}) {
     const host = op ? op.getBoundingClientRect() : { left: 0, top: 0 };
     ox = r.left - host.left; oy = r.top - host.top;
     elm.classList.add('k-dragging');
+    // [alpha.165] Esc ระหว่างลาก = คืนตำแหน่งเดิม (ไม่จดลงเลย์เอาต์)
+    const st0 = { left: elm.style.left, top: elm.style.top, right: elm.style.right, bottom: elm.style.bottom };
+    offEsc = escCancelDrag(() => {
+      dragging = false; elm.classList.remove('k-dragging');
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      Object.assign(elm.style, st0);
+    });
     document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', up);
     e.preventDefault();
@@ -14984,6 +15229,7 @@ function makeDraggable(elm, handle, opts = {}) {
     opts.onMove && opts.onMove(e);
   };
   const up = () => {
+    offEsc();
     dragging = false; elm.classList.remove('k-dragging');
     try { dodgeHiddenChips(); } catch {}          // แถบลอยย้ายไปทับชิปแผงที่ซ่อน → ยกชิปหลบ
     document.removeEventListener('mousemove', move);
@@ -15792,12 +16038,18 @@ function setupHoverTips() {
     }
     let host = e.target instanceof Element ? e.target.closest('[title]') : null;
     // [alpha.60r ข้อ 7] ทำงานกับปุ่มที่ disabled (pointer-events:none) — elementFromPoint ยังหาสิ่งที่อยู่ใต้เมาส์ได้
-    if (!host && e.target instanceof Element) {
+    // [alpha.165] ★ ผู้ใช้: "hover tooltip เวลา panel ซ้อนกัน ชอบทะลุ panel ด้านบนออกมา"
+    //   `elementsFromPoint` คืน **ทุกชั้น** ที่จุดนั้น รวมปุ่มของแผงที่ถูกแผงลอยทับอยู่ข้างใต้ → ทูลทิปของแผงล่างโผล่
+    //   ทางสำรองนี้มีไว้ให้ปุ่มที่กดไม่ได้ซึ่งเป็น "ลูก" ของสิ่งที่อยู่ใต้เมาส์เท่านั้น → รับเฉพาะของที่อยู่ข้างใน e.target
+    //   (เจอของชั้นอื่นเมื่อไหร่ = หยุด · ห้ามเดินทะลุลงไปชั้นล่าง)
+    if (!host && e.target instanceof Element && e.target !== document.body && e.target !== document.documentElement) {
       const els = document.elementsFromPoint(e.clientX, e.clientY);
       for (const el of els) {
         if (el === _tipEl) continue;
+        if (el === e.target) break;                    // ถึงตัวที่รับเมาส์แล้ว = ข้างล่างนี้คือชั้นอื่น
+        if (!e.target.contains(el)) break;
         const tt = el.closest?.('[title]');
-        if (tt) { host = tt; break; }
+        if (tt && e.target.contains(tt)) { host = tt; break; }
       }
     }
     if (!host || host === _tipHost) return;
@@ -15844,8 +16096,11 @@ window.addEventListener('DOMContentLoaded', () => {
   try { rovingToolbar($('#toolbar')); } catch (e) { log('warn', 'toolbar roving', e); }
   // ---- ลงทะเบียนฮุกให้ toolbar+UI อัปเดตเมื่อเปลี่ยนภาษา ----
   onLanguageChanged(applyToolbarShortcutTitles);
-  // ---- โหลดภาษาเริ่มต้น (ไทย) แล้วค่อยเปิดโปรเจกต์ ----
-  loadLanguage(DEFAULT_SETTINGS.language).then(() => {
+  // ---- โหลดภาษาเริ่มต้น แล้วค่อยเปิดโปรเจกต์ ----
+  // [alpha.164 · รอบต่อ 2] ★ เดิมโหลด `DEFAULT_SETTINGS.language` (= ไทย) ตายตัว ทับภาษาที่ตัวโหลดแบบ sync
+  // เลือกไว้แล้ว → ผู้ใช้ที่ตั้งอังกฤษแต่เปิดมาเจอหน้าแรก (ยังไม่มีโปรเจกต์) ได้ UI ไทยทั้งหน้า
+  // ภาษาของผู้ใช้กลับมาเฉพาะตอนเปิดโปรเจกต์ · ตอนนี้ใช้ภาษาที่โหลดอยู่แล้ว (`i18n.lang`)
+  loadLanguage(i18n.lang || DEFAULT_SETTINGS.language).then(() => {
     applyDataI18n();
     initIcons();
     applyToolbarShortcutTitles();
@@ -16088,6 +16343,10 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#zoom-in').onclick = () => bumpPageScale(1);
   $('#zoom-out').onclick = () => bumpPageScale(-1);
   $('#zoom-reset').onclick = () => resetPageScale();
+  $('#zoom-ctl').oncontextmenu = zoomLabelMenu;     // [alpha.164 · รอบต่อ 3] สวิตช์ซูมพอดีความกว้างอัตโนมัติ
+  installStatusToggles((cmd) => handleCommand(cmd)); // [alpha.165] ช่องสวิตช์บนแถบสถานะ
+  // [alpha.165] ปุ่มหน้าแรกท้ายแถบสถานะ — `data-command` ให้แค่ไอคอน/ทูลทิป ไม่ผูกคลิกให้ (bug hunt: กดแล้วเงียบ)
+  $('#status-home').onclick = () => handleCommand('home');
   $('#tree-search').oninput = (e) => filterTree(e.target.value);
   setupTreeInteractions();          // [alpha.120 ข้อ 11+16] คีย์ลัด + เมนูคลิกขวาพื้นที่ว่าง
 
@@ -16120,7 +16379,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // ปุ่มรีเฟรชบนหัวแผงโปรเจกต์ = อ่านโฟลเดอร์ใหม่ (ข้อ 11)
   // จำเป็นเพราะไฟล์ถูกแก้จากนอกโปรแกรมได้ (Explorer/Finder) แล้วต้นไม้ไม่รู้
   const refreshBtn = makePanelButton({
-    cls: 'k-tree-refresh-btn', glyph: gi('refresh'), title: tt('ui.app.refreshReadFileFolder'),
+    cls: 'k-tree-refresh-btn', glyph: gi('refresh'), titleKey: 'ui.app.refreshReadFileFolder',
     tip: 'ui.panelTip.treeRefresh',
     onPress: async () => {
       if (!state.root) { setStatus(tt('ui.common.cantOpenProject')); return; }
@@ -16141,7 +16400,7 @@ window.addEventListener('DOMContentLoaded', () => {
     searchBtn.classList.toggle('on', on); localStorage.setItem('k2-tree-search', on ? '1' : '0');
     if (on) $('#tree-search').focus(); };
   const searchBtn = makePanelButton({
-    cls: 'k-tree-search-btn', glyph: gi('search'), title: tt('ui.app.openCloseFieldSearch'),
+    cls: 'k-tree-search-btn', glyph: gi('search'), titleKey: 'ui.app.openCloseFieldSearch',
     tip: 'ui.panelTip.treeSearch',
     onPress: () => applySearchVis($('#tree-search').classList.contains('k-search-off')),
   });
@@ -16150,7 +16409,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ปุ่ม ¶ บนหัวแผง Navigation = โชว์/ซ่อนย่อหน้า (beat)
   const beatBtn = makePanelButton({
-    glyph: gi('pilcrow'), title: tt('ui.app.showHideParaNavigation'), tip: 'ui.panelTip.navBeats',
+    glyph: gi('pilcrow'), titleKey: 'ui.app.showHideParaNavigation', tip: 'ui.panelTip.navBeats',
     onPress: () => setNavBeats(!navShowBeats),
   });
   beatBtn.id = 'nav-beats-btn';
@@ -16158,7 +16417,7 @@ window.addEventListener('DOMContentLoaded', () => {
   addPanelButton('outline', beatBtn);
   // [alpha.126] ปุ่มหนังสือ = สลับระหว่าง "ฉากที่เปิดอยู่" กับ "ทั้งเล่ม"
   const bookBtn = makePanelButton({
-    glyph: gi('books'), title: tt('ui.app.navWholeBookHint'), tip: 'ui.panelTip.navBook',
+    glyph: gi('books'), titleKey: 'ui.app.navWholeBookHint', tip: 'ui.panelTip.navBook',
     onPress: () => setNavWholeBook(!navWholeBook),
   });
   bookBtn.id = 'nav-book-btn';
@@ -16167,16 +16426,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ปุ่มแผงบันทึก (Log): รีเฟรช · เปิดโฟลเดอร์ · คัดลอก
   addPanelButton('log', makePanelButton({
-    glyph: gi('refresh-thin'), title: tt('ui.common.refresh'), tip: 'ui.panelTip.logRefresh',
+    glyph: gi('refresh-thin'), titleKey: 'ui.common.refresh', tip: 'ui.panelTip.logRefresh',
     onPress: () => renderLogPanel(),
   }));
   addPanelButton('log', makePanelButton({
-    glyph: gi('folder'), title: tt('ui.app.openFolderLog'), tip: 'ui.panelTip.logReveal',
+    glyph: gi('folder'), titleKey: 'ui.app.openFolderLog', tip: 'ui.panelTip.logReveal',
     onPress: () => { kapi.logReveal && kapi.logReveal(); },
   }));
   // [alpha.72 ข้อ 5] คัดลอก "เฉพาะที่กรองอยู่" — ส่งให้คนช่วยดูบั๊กได้ตรงจุด ไม่ต้องส่งทั้งกอง
   addPanelButton('log', makePanelButton({
-    glyph: gi('clipboard'), title: tt('ui.common.copy'), tip: 'ui.panelTip.logCopy',
+    glyph: gi('clipboard'), titleKey: 'ui.common.copy', tip: 'ui.panelTip.logCopy',
     onPress: () => {
       const txt = exportText(filterLogs(logStore.all(), logView));
       navigator.clipboard.writeText(txt || tt('ui.app.notHasLineAt'))
@@ -16217,7 +16476,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // ⚠ ขอบเขต: เมนูนี้เป็นของ "คำในเอกสาร" เท่านั้น — คลิกขวาที่อื่น (ต้นไม้ · แผง · ช่องกรอก)
     // ต้องปล่อยให้เมนูของที่นั้นทำงานตามเดิม เพราะตัวนี้ดักแบบ capture แล้ว stopPropagation
     // (ถ้าไม่จำกัด จะไปกลืนเมนูคลิกขวาของทั้งโปรแกรมทันทีที่มีข้อความถูกเลือกค้างอยู่)
-    const inDoc = !!(e.target.closest && e.target.closest('.ProseMirror'));
+    // [alpha.165] ต้องเป็นตัวแก้ไขจริง (มี view ผูกอยู่ — ProseMirror ติด `pmViewDesc` ที่ dom ของ view)
+    //   สำเนา DOM ในโหมดอ่านทั้งเล่ม/มุมมองหน้ากระดาษ/ช่องตัวอย่างก็มีคลาส .ProseMirror แต่ไม่ใช่เอกสารที่แก้ได้
+    //   → ปล่อยให้เมนูปกติของที่นั้น (ของ main: คัดลอก) ทำงาน ไม่งั้นได้เมนูตัวหนา/วาง ที่ไปยิงใส่แท็บอื่น
+    const pmEl = e.target.closest && e.target.closest('.ProseMirror');
+    const inDoc = !!(pmEl && pmEl.pmViewDesc);
     const sel = window.getSelection();
     const selWord = (sel?.toString() || '').trim();
     const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
@@ -16228,10 +16491,13 @@ window.addEventListener('DOMContentLoaded', () => {
       && !rwEd.view.state.selection.empty);
     // [alpha.164] ฉากมีปัญหา — คลิกขวาบนบรรทัดที่มีปัญหา (หรือที่ไหนก็ได้ตอนดูฉบับเดิม)
     const onsetItems = inDoc ? onsetEditorMenu(rwTab, e.target) : null;
-    if (!bad && !hasThes && !canRewrite && !onsetItems) return;
+    // [alpha.165] ★ เมนูในเอกสารเป็นของ renderer "ทั้งเมนู" เสมอ — เดิมขึ้นเมนูนี้เฉพาะตอนมีคำพ้อง/Rewrite/คำผิด
+    //   แล้ว preventDefault ทำให้เมนูมาตรฐานของ main (ตัด · คัดลอก · วาง · ตัวหนา …) ไม่ขึ้นเลย
+    //   = เลือกข้อความแล้วคลิกขวา "ตัด/คัดลอกไม่ได้" · ตอนนี้รวมเป็นเมนูเดียว ของมาตรฐานมาครบทุกครั้ง
+    if (!inDoc) return;
     e.preventDefault(); e.stopPropagation();
     const items = [];
-    if (onsetItems) { items.push(...onsetItems); if (bad || hasThes || canRewrite) items.push('-'); }
+    if (onsetItems) { items.push(...onsetItems); items.push('-'); }
     if (bad) {
       const word = bad.textContent.trim();
       // คำแนะนำ (สูงสุด 6 คำ) — บนสุดของเมนูเสมอ เพราะเป็นสิ่งที่ผู้ใช้ต้องการ 9 ใน 10 ครั้ง
@@ -16252,17 +16518,19 @@ window.addEventListener('DOMContentLoaded', () => {
         spellIgnoreOnce(word);
         setStatus(ttf('ui.app.spellIgnoredOnce', word));
       } });
+      items.push('-');
     }
+    items.push(...editorStdMenuItems(e.target, !!selWord));
+    if (hasThes || canRewrite) items.push('-');
     if (hasThes) {
-      if (items.length) items.push('-');
       items.push({ text: ttf('ui.app.thesaurusWordOpposite', selWord), click: () => {
         showThesaurusPopup(selWord, e.clientX, e.clientY);
       } });
     }
     if (canRewrite) {
-      if (items.length && !hasThes) items.push('-');
       items.push({ text: gi('pen') + ' ' + tt('ui.aiRewrite.menu'), click: () => { openRewriteBar(rwTab); } });
     }
+    items.push('-', ...editorFmtMenuItems(e.target));
     popupMenu(e.clientX, e.clientY, items);
   }, true);
 
@@ -16869,17 +17137,22 @@ export function updateSaveStatus() {
   const saveEl = $('#status-save');
   if (!saveEl) return;
   saveEl.replaceChildren();
+  saveEl.title = tt('ui.sb.saveTip');               // [alpha.165] ทูลทิปบอกความหมายเสมอ (ไม่ว่าสภาพไหน)
   if (!tab) { saveEl.style.color = ''; return; }
   if (tab.dirty) {
     saveEl.textContent = tt('ui.app.notSave');
     saveEl.style.color = 'var(--orange)';
+    saveEl.title = tt('ui.sb.unsaved');
     return;
   }
   const mod = tab.meta?.modified || '';
   saveEl.append(icon('save', 12));
   if (mod) {
     const d = new Date(mod);
-    if (!isNaN(d)) saveEl.append(' ' + fmtTime(d, { hour: '2-digit', minute: '2-digit' }));
+    if (!isNaN(d)) {
+      saveEl.append(' ' + fmtTime(d, { hour: '2-digit', minute: '2-digit' }));
+      saveEl.title = ttf('ui.sb.savedAt', fmtDateTime(d));
+    }
   }
   saveEl.style.color = '';
 }
@@ -17042,7 +17315,7 @@ function showShortcutsDialog() {
       r.style.display = q ? (r.textContent.toLowerCase().includes(q) ? '' : 'none') : '';
     });
   };
-  const closeB = el('button', 'k-ok', t('dialogs.close'));
+  const closeB = el('button', 'k-ok k-cancel', t('dialogs.close'));
   btns.append(searchInp, closeB);
   box.append(btns);
   ov.append(box);

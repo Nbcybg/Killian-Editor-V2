@@ -132,7 +132,7 @@ export async function showPlayerHistory() {
     if (state.meta) { state.meta.playerHistory = []; const { saveProjectMeta } = await import('./app.js'); await saveProjectMeta(); }
     ov.remove(); setStatus(t('ui.player.clearHistoryDecideDone'));
   };
-  const closeB = el('button', 'k-ok', t('ui.common.close'));
+  const closeB = el('button', 'k-ok k-cancel', t('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(exportB, clearB, closeB);
   box.append(btns);

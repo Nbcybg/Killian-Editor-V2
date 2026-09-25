@@ -367,7 +367,7 @@ export function showPlaythroughsDialog(graph, host) {
     setStatus(tr('cleared'));
     refreshOpenPlayer();
   };
-  const close = el('button', 'k-ok', tr('close'));
+  const close = el('button', 'k-ok k-cancel', tr('close'));
   close.onclick = () => ov.remove();
   btns.append(expB, clearB, close);
   box.append(btns);

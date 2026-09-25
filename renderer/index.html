@@ -310,34 +310,42 @@
     <div id="dlgb-panel" class="k-featpanel"><div id="dlgb-body"></div></div>
     <div id="plugins-panel" class="k-featpanel"><div id="plugins-body"></div></div>
 </div>
-<div id="statusbar"><span id="status" data-i18n="app.ready"></span>
-  <!-- [alpha.62 บั๊ก 9+10] "กำลังทำอะไรอยู่" — แทนหน้าจอ loading เต็มจอที่เคยทับกล่องบันทึก
-       จนคลิกไม่ได้ (ต้อง force quit) · ตัวนี้ไม่บล็อกการคลิกอะไรเลย -->
-  <span id="status-busy" style="display:none"><span class="k-busy-spin"></span><span id="status-busy-text"></span></span>
-  <!-- [alpha.137] ตรงกลางแถบสถานะ = คำใบ้ + แถบความคืบหน้า (ย้ายมาจาก #topbar ที่ถูกลบ)
-       #status-center ถูกเขียนด้วย textContent → ห้ามวางแถบไว้ "ข้างใน" มัน -->
-  <div id="status-mid"><span id="status-center"></span>
-    <div id="prog-wrap"><div id="prog-bar"><div id="prog-fill"></div></div></div>
+<!-- [alpha.165] ผู้ใช้: "status bar ไม่เป็นระเบียบ · ไม่ lock column · ไม่มี tooltip · ต้องแบ่ง
+     พร้อม | อะไร on/off อยู่ | progressbar | status | zoom | home button"
+     แต่ละช่อง = .k-sb-seg (เส้นคั่นซ้าย · ความกว้างของตัวเอง) · ช่องข้อความเป็นช่องเดียวที่ยืด (ข้อความยาวสั้นไม่ดันช่องอื่น) -->
+<div id="statusbar">
+  <div id="sb-msg" class="k-sb-seg" data-i18n-title="ui.sb.msgTip"><span id="status" data-i18n="app.ready"></span>
+    <!-- [alpha.62 บั๊ก 9+10] "กำลังทำอะไรอยู่" — แทนหน้าจอ loading เต็มจอที่เคยทับกล่องบันทึก
+         จนคลิกไม่ได้ (ต้อง force quit) · ตัวนี้ไม่บล็อกการคลิกอะไรเลย -->
+    <span id="status-busy" style="display:none"><span class="k-busy-spin"></span><span id="status-busy-text"></span></span>
+    <!-- คำใบ้ตอนชี้ (เช่น Ctrl+คลิกเปิด Wiki) — เขียนด้วย textContent -->
+    <span id="status-center"></span>
   </div>
-  <div id="status-right">
-    <span id="wc"></span>
+  <!-- [alpha.165] สวิตช์ที่เปิด/ปิดอยู่ — ปุ่มถูกสร้างตอนรันจาก STATUS_TOGGLES (src/status-toggles.js) -->
+  <div id="status-toggles" class="k-sb-seg" role="group" data-i18n-attr="aria-label" data-i18n="ui.sb.togglesLabel"></div>
+  <div id="status-mid" class="k-sb-seg">
+    <div id="prog-wrap" data-i18n-title="ui.sb.progTip"><div id="prog-bar"><div id="prog-fill"></div></div></div>
+  </div>
+  <div id="status-right" class="k-sb-seg">
+    <span id="wc" data-i18n-title="ui.sb.wcTip"></span>
     <!-- [alpha.159 · QoL] หน้า N / M ตรงเคอร์เซอร์ (ว่าง = เอกสารหน้าเดียว/ไม่ใช่ตัวแก้ไข) -->
-    <span id="status-page"></span>
+    <span id="status-page" data-i18n-title="ui.sb.pageTip"></span>
     <!-- [54] จำนวนข้อผิดพลาดในบท — คลิกเพื่อไปข้อถัดไป -->
     <span id="sp-errors"></span>
     <!-- [alpha.159 · QoL] จำนวนปัญหาของโปรเจกต์ (ตรวจสุขภาพ) — ว่าง = ซ่อน · คลิกเปิดกล่องตรวจสุขภาพ -->
     <span id="status-doctor"></span>
-    <span id="status-mode"></span>
-    <span id="status-save"></span>
-    <span id="status-scenes"></span>
-    <div id="zoom-ctl" data-i18n-title="ui.html.zoomCtl">
-      <button id="zoom-out" data-i18n-title="ui.html.zoomOut" data-command="zoom:-1"></button>
-      <input type="range" id="zoom-slider" min="50" max="250" step="5" value="100">
-      <button id="zoom-in" data-i18n-title="ui.html.zoomIn" data-command="zoom:1"></button>
-      <span id="zoom-label">100%</span>
-      <button id="zoom-reset" data-i18n-title="ui.html.zoomReset" data-command="zoom:0"></button>
-    </div>
+    <span id="status-mode" data-i18n-title="ui.sb.modeTip"></span>
+    <span id="status-save" data-i18n-title="ui.sb.saveTip"></span>
+    <span id="status-scenes" data-i18n-title="ui.sb.scenesTip"></span>
   </div>
+  <div id="zoom-ctl" class="k-sb-seg" data-i18n-title="ui.html.zoomCtl">
+    <button id="zoom-out" data-i18n-title="ui.html.zoomOut" data-command="zoom:-1"></button>
+    <input type="range" id="zoom-slider" min="50" max="250" step="5" value="100">
+    <button id="zoom-in" data-i18n-title="ui.html.zoomIn" data-command="zoom:1"></button>
+    <span id="zoom-label">100%</span>
+    <button id="zoom-reset" data-i18n-title="ui.html.zoomReset" data-command="zoom:0"></button>
+  </div>
+  <button id="status-home" class="k-sb-seg" data-command="home" data-i18n-title="ui.sb.home"></button>
 </div>
 <!-- FAB -->
 <div id="k-fab" data-i18n-attr="title" data-i18n="panel.fab">

@@ -66,7 +66,9 @@ export async function sceneProps(dPath, ch, sc) {
   // [alpha.57a ข้อ 2] เลขหน้าเริ่มต้นของไฟล์ฉากนี้ — เลขหน้าบนกระดาษนับต่อจากค่านี้
   const iStartPage = mk(t('ui.scene.pageNumStartScreenplay'), row.startPage || '');
   iStartPage.type = 'number'; iStartPage.min = '1';
-  iStartPage.placeholder = t('ui.scene.useOpenPageNumSettings');
+  // [alpha.164 · รอบต่อ 3] คำอธิบายยาวล้นช่อง (อังกฤษตัดครึ่ง) → ช่องโชว์แค่ตัวอย่าง "1" · คำอธิบายเต็มเป็น tooltip
+  iStartPage.placeholder = '1';
+  iStartPage.title = t('ui.scene.useOpenPageNumSettings');
   // ══ [alpha.141] ★ "ไล่เลขหน้าต่อเนื่อง" — เลขหน้าไล่ต่อจากฉาก/บทก่อนหน้าในเล่มเดียวกัน ══
   // ลำดับของฉากและบทมีอยู่แล้วใน draft.json/scenes.json · หน้าปกบทที่ติ๊กไว้ก็ถูกนับเป็นหน้าด้วย
   // (คิดที่ book-flow.js ที่เดียว แล้วโหมดอ่านทั้งเล่มกับหน้ากระดาษใช้คำตอบเดียวกัน)

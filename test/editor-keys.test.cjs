@@ -124,8 +124,9 @@ function endOfText(doc, text) {
   const s4 = run(ED.BACKSPACE_CMD, s3);
   check('★★ กดซ้ำแล้วไม่มีคำสั่งไหนแทรกแซง (เบราว์เซอร์ลบตัวอักษรตามปกติ) — วงวนขาดจริง',
         s4 === null, s4 ? 'มีคำสั่งรับงาน: ' + s4.doc.childCount + ' บล็อก' : 'ไม่รับงาน (ถูกต้อง)');
-  // ย่อหน้าที่ **มีข้อความ** ต้องไม่ถูกกฎใหม่เหมารวมไปด้วย — ยังใช้พฤติกรรมมาตรฐานของ
-  // prosemirror (`joinBackward` ยกมันขึ้นเป็น "ข้อใหม่" ของรายการ) เหมือนก่อนแก้ทุกประการ
+  // ย่อหน้าที่ **มีข้อความ** ต้องไม่ถูกกฎ "ทิ้งย่อหน้าว่าง" เหมารวมไปด้วย
+  // [alpha.164 · รอบต่อ 2] เดิมตกไปใช้ `joinBackward` (ยกขึ้นเป็น "ข้อใหม่" ของรายการ = โผล่จุดนำ)
+  // ตอนนี้ **ต่อข้อความเข้าท้ายข้อสุดท้าย** แบบ Word/Google Docs (`joinParaIntoListEnd`) — ข้อความไม่หายสักตัว
   const withText = stateOf(['- ข้อหนึ่ง', 'ย่อหน้าตามหลัง'].join(NL));
   let at = -1;
   withText.doc.descendants((n, pos) => {
@@ -133,11 +134,44 @@ function endOfText(doc, text) {
   });
   const s5 = run(ED.BACKSPACE_CMD, withText.apply(
     withText.tr.setSelection(TextSelection.create(withText.doc, at))));
-  check('★ ย่อหน้าที่มีข้อความไม่ถูกกฎใหม่เหมารวม (ยังได้พฤติกรรมมาตรฐานเดิม)',
-        !!s5 && s5.doc.childCount === 1 && s5.doc.child(0).childCount === 2
-          && s5.doc.child(0).lastChild.textContent === 'ย่อหน้าตามหลัง',
+  check('★ ย่อหน้าที่มีข้อความไม่ถูกกฎใหม่เหมารวม (ข้อความต่อท้ายข้อสุดท้าย ไม่หาย ไม่เกิดข้อใหม่)',
+        !!s5 && s5.doc.childCount === 1 && s5.doc.child(0).childCount === 1
+          && s5.doc.child(0).lastChild.textContent === 'ข้อหนึ่งย่อหน้าตามหลัง',
         s5 ? s5.doc.childCount + ' บล็อก · ' + s5.doc.child(0).childCount + ' ข้อ · "'
              + s5.doc.child(0).lastChild.textContent + '"' : 'ไม่รับงาน');
+  check('★ เคอร์เซอร์อยู่ตรงรอยต่อ (ต่อพิมพ์/กด Backspace อีกครั้งได้ตามคาด)',
+        !!s5 && s5.selection.empty && s5.selection.$from.parentOffset === 'ข้อหนึ่ง'.length,
+        s5 && s5.selection.$from.parentOffset);
+  // ★ จอต้องตรงกับไฟล์ — บันทึกแล้วเปิดใหม่ต้องได้โครงเดิม (ของเดิมที่ prosemirror ย้ายย่อหน้าเข้าไป
+  //   เป็นย่อหน้าที่สองในข้อ เขียน .md ไม่เยื้อง → เปิดใหม่กลายเป็นย่อหน้าหลังรายการ)
+  if (s5) {
+    const md5 = MD.docToMd(s5.doc.toJSON());
+    const back = ED.schema.nodeFromJSON(MD.mdToDoc(md5));
+    check('★ ผลลัพธ์บันทึก → เปิดใหม่ได้โครงเดียวกับบนจอ', back.eq(s5.doc), JSON.stringify(md5));
+  }
+  // รายการตัวเลข + มาร์กตัวอักษรไปด้วย
+  {
+    const o = stateOf(['1. หนึ่ง', '2. สอง', '**หนา**ต่อ'].join(NL));
+    let at2 = -1;
+    o.doc.descendants((n, pos) => { if (n.isTextblock && n.textContent === 'หนาต่อ' && at2 < 0) at2 = pos + 1; });
+    const s7 = run(ED.BACKSPACE_CMD, o.apply(o.tr.setSelection(TextSelection.create(o.doc, at2))));
+    const li = s7 && s7.doc.child(0).lastChild;
+    check('รายการตัวเลข: ต่อท้ายข้อสุดท้าย · ข้ออื่นไม่ถูกแตะ',
+          !!s7 && s7.doc.childCount === 1 && s7.doc.child(0).childCount === 2 && li.textContent === 'สองหนาต่อ',
+          li && li.textContent);
+    let bold = false;
+    if (li) li.descendants((n) => { if (n.isText && n.text === 'หนา' && n.marks.some((m) => m.type.name === 'strong')) bold = true; });
+    check('มาร์กตัวหนาของข้อความที่ย้ายมาอยู่ครบ', bold);
+  }
+  // Backspace กลางย่อหน้า (ไม่ใช่ต้นบรรทัด) ต้องไม่โดนกฎนี้
+  {
+    const m = stateOf(['- ข้อ', 'ย่อหน้า'].join(NL));
+    let at3 = -1;
+    m.doc.descendants((n, pos) => { if (n.isTextblock && n.textContent === 'ย่อหน้า' && at3 < 0) at3 = pos + 3; });
+    const s8 = run(ED.BACKSPACE_CMD, m.apply(m.tr.setSelection(TextSelection.create(m.doc, at3))));
+    check('Backspace กลางย่อหน้าไม่ถูกดักโดยกฎต่อท้ายรายการ', s8 === null || s8.doc.childCount === 2,
+          s8 ? s8.doc.childCount + ' บล็อก' : 'ไม่รับงาน');
+  }
   // ย่อหน้าว่างที่ **ไม่ได้** ต่อท้ายรายการต้องไม่โดนกฎใหม่ (ยุบตามปกติ)
   const plain = stateOf(['ย่อหน้าหนึ่ง', ''].join(NL));
   const s6 = run(ED.BACKSPACE_CMD, plain);

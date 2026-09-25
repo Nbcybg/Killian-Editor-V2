@@ -102,6 +102,56 @@ function imgLine(alt, src, opts) {
   const title = imgOptsToTitle(opts);
   return '![' + (alt || '') + '](' + (src || '') + (title ? ' "' + title + '"' : '') + ')';
 }
+
+// ══ [alpha.164 · IMG-IN-A] ★ รูปกลางย่อหน้า `abc ![](x.png) def` ══
+//
+// เดิมตัวแก้ไขโชว์เป็นข้อความดิบ แต่ไฟล์ที่ส่งออกเห็นเป็นรูป (จอ ≠ ไฟล์ — กฎถาวรข้อ 5)
+// · regex ตัวนี้คือ **ที่เดียว** ที่รู้จักรูปในบรรทัด — `parseInline()` ใช้แข่ง "ซ้ายสุดชนะ"
+//   กับเครื่องหมายอื่น แล้วทุกตัวที่กินผลของ parseInline ได้รูปไปพร้อมกัน
+// · บรรทัดที่เป็นรูปล้วน (`RE_IMG`) ยังเป็น `figure` ระดับบล็อกเหมือนเดิม — ตัวอ่านบล็อกตัดสินก่อนถึงตรงนี้
+// · ความสูงเป็น **หน่วยบรรทัด** (`h=2` ในชื่อกำกับ · 1–3 · ค่าเริ่มต้น 1) ไม่ใช่พิกเซล
+//   → ตัวจัดหน้าไม่ต้องรอรูปโหลดเพื่อรู้ความสูง
+const RE_INLINE_IMG = /!\[([^\]\n]*)\]\(([^)\n]+)\)/;
+const RE_INLINE_IMG_ALL = /^!\[([^\]\n]*)\]\(([^)\n]+)\)$/;
+const INLINE_IMG_HMAX = 3;
+/** ชื่อกำกับ → ความสูงเป็นจำนวนบรรทัด (1–3) */
+function inlineImgH(title) {
+  for (const tok of String(title || '').trim().split(/\s+/)) {
+    const m = /^h=(\d+(?:\.\d+)?)$/i.exec(tok);
+    if (m) return Math.min(INLINE_IMG_HMAX, Math.max(1, Math.round(parseFloat(m[1]))));
+  }
+  return 1;
+}
+/** ผลแมตช์ของ RE_INLINE_IMG → ข้อมูลรูป (`md` = ข้อความดิบ ใช้เขียนกลับให้ไฟล์ไม่เปลี่ยนสักไบต์) */
+function inlineImgOf(m) {
+  const tg = splitImgTarget(m[2]);
+  return { src: tg.src, alt: m[1], h: inlineImgH(tg.title), md: m[0] };
+}
+/**
+ * แอตทริบิวต์ของโหนดรูปในบรรทัด → มาร์กดาวน์
+ * ค่ายังตรงกับข้อความดิบเดิม = คืนข้อความเดิมทั้งดุ้น (ชื่อกำกับอื่น ๆ วรรค ฯลฯ อยู่ครบ)
+ */
+function inlineImgMd(a) {
+  const x = a || {};
+  const h = Math.min(INLINE_IMG_HMAX, Math.max(1, Math.round(+x.h) || 1));
+  const alt = x.alt || '';
+  const src = x.src || '';
+  const m = x.md ? RE_INLINE_IMG_ALL.exec(x.md) : null;
+  if (m) {
+    const o = inlineImgOf(m);
+    if (o.src === src && o.alt === alt && o.h === h) return x.md;
+  }
+  return '![' + alt + '](' + src + (h > 1 ? ' "h=' + h + '"' : '') + ')';
+}
+/**
+ * เนื้อ inline ที่มีโหนดรูป → เปลี่ยนรูปกลับเป็นข้อความดิบ (มาร์กเดิมติดไปด้วย)
+ * สำหรับ schema ที่ไม่มีโหนด `image` (บทภาพยนตร์) — ไม่งั้น nodeFromJSON โยน error ทั้งไฟล์
+ */
+function inlineImagesAsText(content) {
+  return (content || []).map((n) => (n && n.type === 'image'
+    ? { type: 'text', text: inlineImgMd(n.attrs), ...(n.marks ? { marks: n.marks } : {}) }
+    : n));
+}
 // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด (schema เดิมไม่มี node สองตัวนี้เลย)
 const RE_HR = /^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/;
 const RE_FENCE = /^\s{0,3}(`{3,}|~{3,})\s*([\w+-]*)\s*$/;
@@ -129,6 +179,10 @@ function parseInline(s, base = []) {
     if (hm && normColor(hm[1]) && (best === null || hm.index < best.m.index)) {
       best = { m: hm, marks: null, attr: 'highlight', color: normColor(hm[1]) };
     }
+    // [alpha.164 · IMG-IN-A] รูปในบรรทัด — แข่งตำแหน่งกติกาเดียวกัน · ข้างในไม่ถูกพาร์สต่อ
+    // (`_` / `*` ในชื่อไฟล์เคยถูกอ่านเป็นขีดเส้นใต้/เอียง แล้วรูปหักกลางในไฟล์ที่ส่งออก)
+    const im = RE_INLINE_IMG.exec(s);
+    if (im && (best === null || im.index < best.m.index)) best = { m: im, marks: null, attr: 'image', color: null };
     for (const [rx, marks] of PATS) {
       const m = rx.exec(s);
       if (m && (best === null || m.index < best.m.index)) best = { m, marks, attr: null, color: null };
@@ -136,6 +190,12 @@ function parseInline(s, base = []) {
     if (!best) { segs.push({ text: s, marks: base }); break; }
     const { m, marks, attr, color } = best;
     if (m.index) segs.push({ text: s.slice(0, m.index), marks: base });
+    if (attr === 'image') {
+      // `text` = ข้อความดิบของรูป — ตัวที่กินแต่ข้อความ (ถอดเหลือคำบรรยาย · นับคำ · HTML) ทำงานเหมือนเดิม
+      segs.push({ text: m[0], marks: base, image: inlineImgOf(m) });
+      s = s.slice(m.index + m[0].length);
+      continue;
+    }
     const next = attr
       ? [...base.filter((x) => typeof x === 'string' || x.type !== attr),
          { type: attr, attrs: { color } }]
@@ -185,6 +245,9 @@ function inlinePlainText(text) {
 function inlineDisplayText(text) {
   return stripMentions(parseInline(String(text == null ? '' : text))
     .map((seg) => {
+      // [alpha.164 · IMG-IN-B] รูปในบรรทัดไม่ใช่ตัวอักษร — ตรงกับ `textContent` ของเอกสาร
+      // (`proseBlocksFromDoc`) · เดิมช่องตัวอย่างสำรองโชว์ `![…](…)` เป็นตัวหนังสือกลางหน้า
+      if (seg.image) return '';
       const c = (seg.marks || []).find((m) => m && typeof m === 'object' && m.type === 'color');
       const h = (seg.marks || []).find((m) => m && typeof m === 'object' && m.type === 'highlight');
       const inner = c ? colorSpanMd((c.attrs || {}).color, seg.text) : seg.text;
@@ -244,14 +307,18 @@ const MARK_TAGS = [['strong', 'strong'], ['em', 'em'], ['underline', 'u'],
  */
 function inlineHtml(text, opts) {
   const mono = !!(opts && opts.mono);
+  // [alpha.164 · IMG-IN-B] ตัวแปลงที่อยู่รูปของผู้เรียก (ตัวเดียวกับที่ `figure` ใช้ใน mdToHtmlBody)
+  // — เดิมรูปในบรรทัดไม่ผ่านตัวนี้ = ไฟล์ HTML/PDF ที่ถูกวางที่อื่นได้รูปแตก
+  const imgSrc = opts && typeof opts.imgSrc === 'function' ? opts.imgSrc : (u) => u;
   return parseInline(stripMentions(text))
     .map((seg) => {
-      let s = HTML_ESC(seg.text)
-        // รูปในบรรทัด (`![คำบรรยาย](path)`) — ทำหลัง escape เสมอ ไม่งั้น HTML ที่ผู้เขียน
-        // พิมพ์เองหลุดเข้าไฟล์ได้ · แอตทริบิวต์ยัง escape อยู่จากขั้นบน
-        // [alpha.159 · H6] ★ `"` ต้องถูก escape ด้วย — HTML_ESC ไม่แตะเครื่องหมายคำพูด
-        // เดิม `![a" onerror="…](x)` = แทรกแอตทริบิวต์/ตัวจัดการอีเวนต์ลงไฟล์ HTML/PDF ที่ส่งออกได้
-        .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${ATTR_Q(a)}" src="${ATTR_Q(u)}">`);
+      // [alpha.164 · IMG-IN-B] รูปในบรรทัด = แท็กเดียวกับ `toDOM` ของโหนด `image` ในตัวแก้ไข
+      // (คลาส + ความสูงเป็นหน่วยบรรทัด — กฎคู่แฝดใน `proseExportCss`)
+      // ★ ค่าทุกตัว escape ทั้ง `<>&` และ `"'` (H6 — `![a" onerror="…](x)`)
+      let s = seg.image
+        ? `<img class="k-inline-img" alt="${ATTR_Q(HTML_ESC(seg.image.alt))}"`
+          + ` src="${ATTR_Q(HTML_ESC(imgSrc(seg.image.src)))}" style="--k-img-h:${seg.image.h}">`
+        : HTML_ESC(seg.text);
       if (!s) return '';
       const marks = seg.marks || [];
       const has = (n) => marks.some((m) => (typeof m === 'string' ? m : m.type) === n);
@@ -270,12 +337,17 @@ function inlineHtml(text, opts) {
 function inlineNodes(text) {
   return parseInline(text)
     .filter((x) => x.text)
-    .map((x) => ({
-      type: 'text', text: x.text,
+    .map((x) => {
       // มาร์กเป็นได้ทั้งชื่อเปล่า ๆ (ตัวหนา/เอียง/…) และก้อนที่มีแอตทริบิวต์ (สี)
-      ...(x.marks.length
-        ? { marks: x.marks.map((t) => (typeof t === 'string' ? { type: t } : t)) } : {}),
-    }));
+      const mk = x.marks.length
+        ? { marks: x.marks.map((t) => (typeof t === 'string' ? { type: t } : t)) } : {};
+      // [alpha.164 · IMG-IN-A] รูปในบรรทัด = โหนด inline `image` (ตัวแก้ไขเติม `resolved` เอง)
+      if (x.image) {
+        const { src, alt, h, md } = x.image;
+        return { type: 'image', attrs: { src, alt, h, md }, ...mk };
+      }
+      return { type: 'text', text: x.text, ...mk };
+    });
 }
 
 function para(text) {
@@ -655,12 +727,14 @@ function inlineToMd(content) {
   const parts = [[]];
   for (const n of content || []) {
     if (n.type === 'hard_break') { parts.push([]); continue; }
-    if (n.type !== 'text') continue;
+    // [alpha.164 · IMG-IN-A] รูปในบรรทัดเป็น "run" หนึ่งก้อนที่ข้อความคือมาร์กดาวน์ของรูป
+    // → เครื่องหมายรอบข้าง (ตัวหนา/สี) ห่อมันได้ตามกติกาเดิมทุกอย่าง
+    if (n.type !== 'text' && n.type !== 'image') continue;
     const marks = n.marks || [];
     const cmk = marks.find((m) => m.type === 'color');
     const hmk = marks.find((m) => m.type === 'highlight');
     parts[parts.length - 1].push({
-      text: n.text,
+      text: n.type === 'image' ? inlineImgMd(n.attrs) : n.text,
       color: cmk ? normColor((cmk.attrs || {}).color) : '',
       hl: hmk ? normColor((hmk.attrs || {}).color) : '',
       sig: new Set(marks.map((m) => m.type).filter((t) => MARKSET.includes(t))),
@@ -910,6 +984,8 @@ module.exports = { mdToDoc, docToMd, mdLineCounts, parseMdFile, dumpMdFile, coun
                    // [alpha.142 ข้อ 6] ตัวเลือกของรูป (เต็มหน้า/ความกว้าง %/ขอบมน) — ไวยากรณ์อยู่ที่นี่ที่เดียว
                    splitImgTarget, parseImgOpts, imgOptsToTitle, imgLine,
                    figureClass, figureImgStyle,
+                   // [alpha.164 · IMG-IN-A] รูปกลางย่อหน้า (โหนด inline `image`)
+                   RE_INLINE_IMG, inlineImgH, inlineImgMd, inlineImagesAsText, INLINE_IMG_HMAX,
                    // [alpha.133 · Y-1+Y-2] สคีมาบล็อก + ตัวแปลง inline ตัวเดียวของทั้งโปรแกรม
                    // (ตัวแก้ไข · ไฟล์ที่ส่งออก · ช่องตัวอย่าง อ่านจากสองตัวนี้เท่านั้น)
                    mdBlocks, inlineHtml,

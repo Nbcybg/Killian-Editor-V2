@@ -176,9 +176,10 @@ function t(key) {
 function formatMsg(tpl, vals) {
   const s = withShortcutTokens(String(tpl));
   if (!vals || !vals.length) return s.replace(/\{\{|\}\}/g, (m) => m[0]);
-  return s.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+  return s.replace(/\{\{|\}\}|\{(\d+)(?:\|([^|{}]*)\|([^{}]*))?\}/g, (m, d, one, many) => {
     if (m === "{{" || m === "}}") return m[0];
     const v = vals[+d];
+    if (one !== void 0) return Math.abs(Number(String(v).replace(/[^\d.-]/g, ""))) === 1 ? one : many;
     return v == null ? "" : String(v);
   });
 }

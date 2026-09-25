@@ -104,6 +104,7 @@ export function settingsTemplate() {
       <div class="k-row"><label>${tx('ui.settings.fontFamily')}<span class="k-hint">${tx('ui.settings.fontFamilyHint')}</span></label><div class="k-font-field"><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${tx('ui.settings.spFontFamily')}<span class="k-hint">${tx('ui.settings.spFontFamilyHint')}</span></label><div class="k-font-field"><select id="st-spfontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${tx('ui.settings.lineNumbers')}<span class="k-hint">${tx('ui.settings.lineNumbersHint')}</span></label><input type="checkbox" id="st-ln"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.autoFitWidth')}<span class="k-hint">${tx('ui.setTpl.autoFitWidthHint')}</span></label><input type="checkbox" id="st-autofit"></div>
       <div class="k-row"><label>${tx('ui.settings.spellCheck')}<span class="k-hint">${tx('ui.settings.spellCheckHint')}</span></label><input type="checkbox" id="st-spell"></div>
       <div class="k-row"><label>${tx('ui.settings.spellCheckDict')}<span class="k-hint">${tx('ui.settings.spellCheckDictHint')}</span></label><input type="checkbox" id="st-spelldict"></div>
       <div class="k-row"><label>${tx('ui.settings.autoMention')}<span class="k-hint">${tx('ui.settings.autoMentionHint')}</span></label><input type="checkbox" id="st-mention"></div>

@@ -36,6 +36,7 @@ import { CONTINUED_DEFAULTS } from './sp-continued.js';
 import { CUT_FAIL, measureProseLayout, proseBreakList, resetCutFail, sliceProsePages, withMeasureMode,
          zoomFactorOf } from './prose-measure.js';
 import { EXPORT_FORMATS, exportPageNumberFmt, openExportHub } from './export-hub.js';
+import { pickImage } from './gallery.js';   // [alpha.164 · รอบต่อ 3] ด่านอังกฤษ: กล่องเลือกรูป
 import { FLOAT_MIN_H, FLOAT_MIN_W, clampFloat, inGroupHandle, snapToEdges } from './panels/panel-drag.js';
 import { HEADER_VARS, headerLineCount, headerStringsFor, linesForBody, mergeHeaders, resolveHeaderVars } from './sp-headers.js';
 import { MAPS_VERSION, addPinToRoute, breadcrumb, deletePins, findMap, gridLines, mapOverlays, mapRoutes,
@@ -176,6 +177,7 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
          openCompileDialog, openDevConsole, openFind, openFirstSceneOf, openGallery, openNetwork,
          openPlainFile, openPlanner, openPropsPanel, openScene, openSpReport, openTemplateManager,
          pageScale, pickDraftTarget, plannerInst, pluginDisabled, pluginList, plugins,
+         autoFitWidth, autoFitWidthOn, autoFitWidthRestore, currentPageScale, setAutoFitWidth, treeRowAction,
          preloadLangFontUrls, proseFormat, proseFormatSettings, proseIndentOn, proseLayoutEpoch,
          proseMeasured, prosePageModel, refreshAllMentions, refreshAllSpell, refreshLineGutter,
          refreshOutline, refreshSpView, refreshToolbar, refreshTreeQueued, relationDialog, reloadPlugins,
@@ -1136,6 +1138,50 @@ export async function runTest(projectPath) {
         await saveTab(tabI);
         await wait142(150);
         check('[142-6] บันทึกคืนสภาพเดิมแล้ว (ไม่ทิ้งงานค้างให้เทสถัดไป)', !tabI.dirty);
+      }
+
+      // ---- [alpha.164 · IMG-IN-A] รูปกลางย่อหน้า = รูปจริงในตัวแก้ไข (เดิมเป็นข้อความดิบ) ----
+      {
+        const tabJ = state.active;
+        const edJ = tabJ && tabJ.editor;
+        check('[IMG-IN-A] มีตัวแก้ไขนิยายเปิดอยู่', !!edJ);
+        const bodyJ = edJ.getMarkdown();
+        const SRCJ = '../../../../../Images/sunset.png';
+        const mdJ = 'บรรทัดธรรมดา\n\n'
+          + 'ก่อน ![ในบรรทัด](' + SRCJ + ') หลัง\n\n'
+          + '![บล็อก](' + SRCJ + ')\n\n'
+          + '**หนา ![สูงสองบรรทัด](' + SRCJ + ' "h=2") ต่อ**';
+        edJ.setMarkdown(mdJ);
+        await wait142(150);
+        const ins = [...tabJ.pane.querySelectorAll('.ProseMirror img.k-inline-img')];
+        check('[IMG-IN-A] ★★ รูปกลางบรรทัดเป็น <img> จริงในตัวแก้ไข (สองใบ)', ins.length === 2, ins.length);
+        check('[IMG-IN-A] รูปทั้งบรรทัดยังเป็น figure ระดับบล็อก',
+              tabJ.pane.querySelectorAll('.ProseMirror figure').length === 1);
+        check('[IMG-IN-A] ไม่เหลือไวยากรณ์ดิบบนจอ',
+              !/!\[/.test(tabJ.pane.querySelector('.ProseMirror').textContent));
+        for (let i = 0; i < 60 && ins[0] && !(ins[0].complete && ins[0].naturalWidth); i++) await wait142(50);
+        check('[IMG-IN-A] ★ ที่อยู่รูปถูกแปลงเป็นที่อยู่จริง (รูปโหลดขึ้น)',
+              !!ins[0] && ins[0].naturalWidth > 0, ins[0] && ins[0].getAttribute('src'));
+        const ps = [...tabJ.pane.querySelectorAll('.ProseMirror > p')];
+        const hPlain = ps[0] ? ps[0].getBoundingClientRect().height : 0;
+        const hImg1 = ps[1] ? ps[1].getBoundingClientRect().height : -1;
+        check('[IMG-IN-A] ★ รูปสูงหนึ่งบรรทัดไม่ทำให้บรรทัดสูงขึ้น (ตัวจัดหน้านับบรรทัดได้ตรง)',
+              Math.abs(hImg1 - hPlain) <= 1.5, hPlain.toFixed(1) + ' vs ' + hImg1.toFixed(1));
+        const r1 = ins[0] ? ins[0].getBoundingClientRect().height : 0;
+        const r2 = ins[1] ? ins[1].getBoundingClientRect().height : 0;
+        check('[IMG-IN-A] ★ h=2 สูงสองเท่าของ h=1 (ความสูงเป็นหน่วยบรรทัด)',
+              r1 > 4 && Math.abs(r2 - 2 * r1) <= 2, r1.toFixed(1) + ' / ' + r2.toFixed(1));
+        check('[IMG-IN-A] รูปในตัวหนาอยู่ใต้ <strong>', !!(ins[1] && ins[1].closest('strong')));
+        check('[IMG-IN-A] ★★ ไป-กลับไม่เปลี่ยนสักไบต์ (getMarkdown = ข้อความเดิม)',
+              edJ.getMarkdown() === mdJ, JSON.stringify(edJ.getMarkdown()));
+        check('[IMG-IN-A] รูปไม่ให้ลาก (ลากเลือกข้อความข้ามรูปได้)',
+              !!ins[0] && ins[0].getAttribute('draggable') === 'false');
+        edJ.setMarkdown(bodyJ);
+        await wait142(120);
+        await saveTab(tabJ);
+        await wait142(150);
+        check('[IMG-IN-A] คืนเนื้อหาเดิม + บันทึกแล้ว', !tabJ.dirty
+              && !tabJ.pane.querySelector('.ProseMirror img.k-inline-img'));
       }
     }
 
@@ -5729,6 +5775,40 @@ export async function runTest(projectPath) {
         plannerInst.pane.style.flex = '';
         plannerInst._fit();
       }
+      {
+        // [alpha.164 · รอบต่อ 2 · งาน 5] แถบรูปแบบลอยของกระดาน: แผงแคบ → อยู่ในเวที · ขวาของราง · เลื่อนแนวนอนได้
+        // วัดจากกรอบจริงบนจอ (ไม่ใช่ค่าที่ตั้งไว้) · เดิมวางครั้งเดียวตอนสร้าง แล้วล้นขอบขวาเวทีเมื่อแผงแคบลง
+        const bar5 = plannerInst.stage.querySelector('.planner-fmtbar');
+        check('[164-R2-5] กระดานมีแถบรูปแบบลอย', !!bar5);
+        if (bar5) {
+          const measure = () => {
+            const st = plannerInst.stage.getBoundingClientRect(), b = bar5.getBoundingClientRect();
+            const rl = plannerInst.rail.getBoundingClientRect();
+            return { st, b, rl, scroll: bar5.scrollWidth > bar5.clientWidth + 1 };
+          };
+          plannerInst.pane.style.maxWidth = '380px';
+          let m5 = null;
+          for (let i = 0; i < 30; i++) {           // ResizeObserver → rAF → จัดใหม่ (poll ตามกฎ 18)
+            await waitMs2(40);
+            m5 = measure();
+            if (m5.st.width < 400 && m5.b.right <= m5.st.right + 1) break;
+          }
+          check('[164-R2-5] ★ แผงแคบ: แถบรูปแบบไม่ล้นขอบขวาเวที (ปุ่มท้ายไม่ถูกตัด)',
+                m5.b.right <= m5.st.right + 1, `bar ${Math.round(m5.b.left)}–${Math.round(m5.b.right)} · stage ${Math.round(m5.st.left)}–${Math.round(m5.st.right)}`);
+          check('[164-R2-5] ★ แผงแคบ: แถบรูปแบบไม่ทับรางเครื่องมือ',
+                m5.b.left >= m5.rl.right - 0.5, `bar.left ${Math.round(m5.b.left)} · rail.right ${Math.round(m5.rl.right)}`);
+          check('[164-R2-5] ★ แผงแคบ: ปุ่มที่ไม่พอที่ = เลื่อนแนวนอนในแถบได้', m5.scroll,
+                `sw ${bar5.scrollWidth} · cw ${bar5.clientWidth}`);
+          plannerInst.pane.style.maxWidth = '';
+          for (let i = 0; i < 30; i++) {
+            await waitMs2(40);
+            m5 = measure();
+            if (m5.st.width > 400 && !m5.scroll) break;
+          }
+          check('[164-R2-5] คืนความกว้าง → แถบกลับไม่ต้องเลื่อน (ขยายตามเวที)',
+                m5.st.width < 900 || !m5.scroll, `stage ${Math.round(m5.st.width)} · sw ${bar5.scrollWidth} cw ${bar5.clientWidth}`);
+        }
+      }
       // แผงบันทึกก็เคยติดปัญหาเดียวกัน (มีกฎ :has(#log-body))
       showPanel('log'); await waitMs2(100);
       getPanelManager().collapsePanel('log', true); await waitMs2(120);
@@ -7979,8 +8059,305 @@ export async function runTest(projectPath) {
       check('[137-2] ★ แถบความคืบหน้าอยู่กลางแถบสถานะล่างแล้ว',
             !!$('#prog-wrap') && $('#prog-wrap').closest('#statusbar') === $('#statusbar'));
       check('progress bar มี fill element', !!$('#prog-fill'));
+      {
+        // [alpha.164 · รอบต่อ 5] ข้อความสถานะยาว → แถบเป้าหมายวันนี้ต้องไม่ล้นมาขีดทับข้อความ
+        setStatus('ข้อความสถานะที่ยาวมาก '.repeat(12));
+        await new Promise((r) => setTimeout(r, 60));
+        const sr = $('#status').getBoundingClientRect();
+        const pr = $('#prog-wrap').getBoundingClientRect();
+        const mr = $('#status-mid').getBoundingClientRect();
+        const clipped = getComputedStyle($('#status-mid')).overflow === 'hidden';
+        const visL = clipped ? Math.max(pr.left, mr.left) : pr.left;
+        const visR = clipped ? Math.min(pr.right, mr.right) : pr.right;
+        check('[164-R5] ★ ข้อความสถานะยาว: แถบเป้าหมายวันนี้ไม่ทับข้อความ',
+              visR - visL <= 0 || visL >= sr.right - 1,
+              `status ${Math.round(sr.left)}–${Math.round(sr.right)} · แถบที่มองเห็น ${Math.round(visL)}–${Math.round(visR)}`);
+        setStatus('');
+      }
       const saveBtn = $('#save-all-btn');
       check('ปุ่มบันทึกทั้งหมดแสดงเมื่อมีโปรเจกต์', saveBtn && saveBtn.style.display !== 'none');
+    }
+
+    // ---- [alpha.165] รอบ UX: เมนูคลิกขวาในเอกสาร · Kanban · ลอย↔ผนึก · Esc ยกเลิกการลาก ----
+    {
+      const w165 = (ms) => new Promise((r) => setTimeout(r, ms));
+      // (1) เลือกข้อความแล้วคลิกขวา = เมนูเดียวที่มีทั้ง ตัด/คัดลอก/วาง + คำพ้อง + Rewrite
+      const t165 = [...state.tabs.values()].find((x) => x.editor && x.editor.view && x.editor.view.dom.isConnected
+                                                  && x.editor.view.state.doc.textContent.length > 8);
+      check('[165-P1] เงื่อนไข: มีแท็บนิยายที่มีข้อความเปิดอยู่', !!t165);
+      if (t165) {
+        activate(t165.file); await w165(150);
+        const v = t165.editor.view;
+        let from = -1;
+        v.state.doc.descendants((n, pos) => { if (from < 0 && n.isText && n.text.length > 6) from = pos; return from < 0; });
+        v.dispatch(v.state.tr.setSelection(PMTextSelection.create(v.state.doc, from, from + 4)));
+        v.focus(); await w165(80);
+        const dom = v.domAtPos(from + 1).node;
+        const tgt = dom.nodeType === 3 ? dom.parentElement : dom;
+        const rc = tgt.getBoundingClientRect();
+        closeMenu();
+        tgt.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rc.left + 2, clientY: rc.top + 2 }));
+        await w165(120);
+        const m = [...document.querySelectorAll('.k-menu')].pop();
+        const labels = m ? [...m.querySelectorAll('.k-menu-item')].map((x) => (x.querySelector('.k-menu-text') || x).textContent) : [];
+        const has = (k) => labels.includes(tt(k));
+        check('[165-P1] ★★ เลือกข้อความแล้วคลิกขวา: มี ตัด · คัดลอก · วาง · เลือกทั้งหมด',
+              has('ui.menu.cut') && has('ui.common.copy') && has('ui.menu.paste') && has('ui.menu.pickAll'), labels.join(' | '));
+        // คำจาก selection ของ DOM (ตัวเดียวกับที่แอปอ่าน) — Chromium ขยายช่วงให้ครบกลุ่มอักษร ("บทที" → "บทที่")
+        const selWord = (window.getSelection().toString() || '').trim();
+        check('[165-P1] ★★ เมนูเดียวกันมีคำพ้อง/คำตรงข้าม และ Rewrite this',
+              labels.some((l) => l.includes(tt('ui.aiRewrite.menu'))) && labels.includes(ttf('ui.app.thesaurusWordOpposite', selWord)),
+              selWord + ' :: ' + labels.join(' | '));
+        const cutRow = m && [...m.querySelectorAll('.k-menu-item')].find((x) => (x.querySelector('.k-menu-text') || x).textContent === tt('ui.menu.cut'));
+        check('[165-P1] ตัด/คัดลอกกดได้เมื่อมีข้อความที่เลือก (ไม่เทา)', !!cutRow && cutRow.getAttribute('aria-disabled') !== 'true');
+        check('[165-P1] ปุ่มลัดของ ตัด แสดงชิดขวา', !!(cutRow && cutRow.querySelector('.k-menu-accel')));
+        closeMenu();
+        v.dispatch(v.state.tr.setSelection(PMTextSelection.create(v.state.doc, from)));
+        await w165(60);
+        tgt.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rc.left + 2, clientY: rc.top + 2 }));
+        await w165(120);
+        const m2 = [...document.querySelectorAll('.k-menu')].pop();
+        const l2 = m2 ? [...m2.querySelectorAll('.k-menu-item')].map((x) => (x.querySelector('.k-menu-text') || x).textContent) : [];
+        check('[165-P1] ไม่ได้เลือกอะไร: ยังได้เมนูมาตรฐาน (วาง · ตัวหนา) — ไม่มี Rewrite',
+              l2.includes(tt('ui.menu.paste')) && l2.includes(tt('ui.menu.itemBoldB')) && !l2.some((l) => l.includes(tt('ui.aiRewrite.menu'))), l2.join(' | '));
+        closeMenu();
+      }
+
+      // (1b) รอบ bug hunt: ป๊อปอัปคำพ้อง / ตัวเลือกสี ปิดด้วย Esc ได้ (เดิมปิดได้แค่คลิกนอก)
+      {
+        await showThesaurusPopup('สวย', 200, 200);
+        await w165(80);
+        const popT = document.querySelector('.k-thes-popup');
+        check('[165-E2] เงื่อนไข: ป๊อปอัปคำพ้องเปิดได้ (คำในคลังในตัว)', !!popT);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await w165(40);
+        check('[165-E2] ★ Esc ปิดป๊อปอัปคำพ้อง', !document.querySelector('.k-thes-popup'));
+        openColorPicker(null, '', () => {}, false);
+        await w165(60);
+        check('[165-E2] เงื่อนไข: ตัวเลือกสีเปิดได้', !!document.querySelector('.k-colorpop'));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await w165(40);
+        check('[165-E2] ★ Esc ปิดตัวเลือกสี', !document.querySelector('.k-colorpop'));
+        closeColorPicker();
+      }
+
+      // (2) Kanban: กระดานสูงเต็มแผง (แถบเลื่อนแนวนอนอยู่ขอบล่าง) · ย้ายการ์ดแล้วช่องเลือกร่างไม่กระพริบ
+      const kbWasOpen = isPanelOpen('kanban');
+      if (!kbWasOpen) { togglePanel('kanban'); await w165(500); }
+      const kbBody = document.querySelector('[data-panel-id="kanban"] .k-panel-body');
+      const kbCols = kbBody && kbBody.querySelector('.kb-cols');
+      await (async () => { for (let i = 0; i < 40 && !(kbBody && kbBody.querySelector('.kb-cols')); i++) await w165(50); })();
+      const kc = kbBody && kbBody.querySelector('.kb-cols');
+      if (kc) {
+        const br = kbBody.getBoundingClientRect(), cr = kc.getBoundingClientRect();
+        check('[165-P2] ★★ Kanban: แถวคอลัมน์ยืดถึงขอบล่างแผง (แถบเลื่อนแนวนอนไม่ลอยกลางแผง)',
+              br.bottom - cr.bottom <= 40, `body ${Math.round(br.top)}–${Math.round(br.bottom)} · cols ${Math.round(cr.top)}–${Math.round(cr.bottom)}`);
+        const sel = kbBody.querySelector('.kb-draft');
+        const before = sel ? sel.style.display : '?';
+        // วาดใหม่ (ทางเดียวกับหลังย้ายการ์ด) แล้วเฝ้าทุกสภาพระหว่างนั้น — เดิมช่องเลือกเกิดใหม่ "มองเห็น + ว่าง"
+        // ค้างอยู่ข้าม await จนรายชื่อร่างกลับมา (= กระพริบมุมขวาบน) · ตัวเฝ้า DOM เห็นสภาพที่ค้างข้าม task เท่านั้น
+        const seen = [];
+        const mo = new MutationObserver(() => {
+          const d = kbBody.querySelector('.kb-draft');
+          if (d) seen.push(d.style.display);
+        });
+        mo.observe(kbBody, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+        window.dispatchEvent(new CustomEvent('k2-statuses-changed'));
+        await w165(700);
+        mo.disconnect();
+        check('[165-P2] ★ วาดกระดานใหม่ (หลังย้ายการ์ด): ช่องเลือกร่างไม่เคยโผล่ในสภาพที่ต่างจากเดิม (ไม่กระพริบ)',
+              seen.length > 0 && seen.every((x) => x === before), `ก่อน "${before}" · ระหว่างวาด ${JSON.stringify(seen)}`);
+      } else check('[165-P2] Kanban วาดกระดานได้', false, kbCols ? 'cols' : 'no-cols');
+      if (!kbWasOpen) { togglePanel('kanban'); await w165(200); }
+
+      // (3) ลอย → ลาก → ผนึก → ลอยอีกครั้ง = ที่เดิม · (4) Esc ระหว่างลาก = ยกเลิก
+      const prWas = isPanelOpen('props');
+      if (!prWas) { togglePanel('props'); await w165(400); }
+      const F = () => document.querySelector('.k-float-panel[data-panel-id="props"]');
+      const D = () => document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+      const hb = (k) => (F() || D()) && (F() || D()).querySelector('.k-panel-btn-' + k);
+      const wasFloat = !!F();
+      if (!F() && hb('float')) { hb('float').click(); await w165(350); }
+      if (F()) {
+        const dragF = async (dx, dy, esc) => {
+          const head = F().querySelector('.k-panel-head');
+          const hr = head.getBoundingClientRect();
+          const sx = hr.right - 90, sy = hr.top + 8;
+          head.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: sx, clientY: sy }));
+          for (let i = 1; i <= 5; i++) document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: sx + dx * i / 5, clientY: sy + dy * i / 5 }));
+          await w165(40);
+          if (esc) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: sx + dx, clientY: sy + dy }));
+          await w165(300);
+        };
+        const pos = () => { const r = F().getBoundingClientRect(); return Math.round(r.left) + ',' + Math.round(r.top); };
+        await dragF(-60, 50, false);
+        const moved = pos();
+        await dragF(150, 90, true);
+        check('[165-P9] ★★ Esc ระหว่างลากแผงลอย = ยกเลิก (แผงอยู่ที่เดิม)', pos() === moved, `${moved} → ${pos()}`);
+        hb('float').click(); await w165(350);
+        check('[165-P3] เงื่อนไข: ผนึกแล้ว', !F() && !!D());
+        hb('float').click(); await w165(350);
+        check('[165-P3] ★★ ลอยอีกครั้ง = ตำแหน่งเดิมก่อนผนึก', !!F() && pos() === moved, `${moved} → ${F() ? pos() : 'ไม่ลอย'}`);
+        if (!wasFloat && F()) { hb('float').click(); await w165(300); }
+      } else check('[165-P3] แผงคุณสมบัติลอยได้', false);
+      if (!prWas) { togglePanel('props'); await w165(200); }
+
+      // ── [alpha.165 · ชุด UI ที่สอง] ทูลทิปทะลุแผง · log ละเอียด+ดูย้อนหลัง · ธีมเทา · แถบสถานะ · ตัวเลื่อน ──
+      {
+        // (T1) ทูลทิปของแผงข้างล่างต้องไม่ทะลุแผงลอยที่ทับอยู่
+        const under = [...document.querySelectorAll('#app-root .k-panel[data-panel-id="tree"] [title]')]
+          .find((e2) => e2.getBoundingClientRect().width > 10);
+        const notesWas = isPanelOpen('notes');
+        if (!notesWas) { togglePanel('notes'); await w165(500); }
+        const fpN = document.querySelector('.k-float-panel[data-panel-id="notes"]');
+        if (under && fpN) {
+          const ur = under.getBoundingClientRect();
+          const keepCss = fpN.style.cssText;
+          fpN.style.left = (ur.left - 40) + 'px'; fpN.style.top = (ur.top - 60) + 'px';
+          fpN.style.width = '300px'; fpN.style.height = '300px';
+          await w165(120);
+          const x = ur.left + ur.width / 2, y = ur.top + ur.height / 2;
+          const topEl = document.elementFromPoint(x, y);
+          const coveredTitle = under.getAttribute('title');
+          topEl.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: x, clientY: y }));
+          await w165(80);
+          const tipEl = document.getElementById('k-tip');
+          const leaked = !!tipEl && tipEl.classList.contains('on') && tipEl.textContent.includes(coveredTitle || '\u0000');
+          check('[165-T1] เงื่อนไข: แผงลอยทับปุ่มที่มีทูลทิปอยู่จริง', !!topEl.closest('.k-float-panel') && !under.contains(topEl));
+          check('[165-T1] ★★ ชี้ที่ว่างบนแผงลอย: ทูลทิปของปุ่มในแผงข้างล่างไม่ทะลุขึ้นมา', !leaked, tipEl && tipEl.textContent);
+          topEl.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+          fpN.style.cssText = keepCss;
+        } else check('[165-T1] เงื่อนไข: มีปุ่มมี title ในแผงโปรเจกต์ + แผงโน้ตลอยได้', false, String(!!under) + '/' + String(!!fpN));
+        if (!notesWas) { togglePanel('notes'); await w165(250); }
+
+        // (L) log ละเอียด: เปิด/ปิดแผง · เปิดแท็บ · บันทึก ถูกจดพร้อมผล · แผงบันทึกมีที่อยู่โฟลเดอร์ + ดูย้อนหลังได้
+        // ดูเฉพาะระเบียนที่เกิดหลังจุดนี้ (ที่เก็บจำกัด 2,000 ระเบียน — ของเก่าอาจถูกตัดทิ้งไปแล้ว)
+        const seq0 = logStore.lastSeq();
+        const logHas = (re, from = seq0) => logStore.all().some((r) => r.seq > from && re.test((r.source ? r.source + ': ' : '') + r.msg));
+        togglePanel('notes'); await w165(350); togglePanel('notes'); await w165(350);
+        check('[165-L] ★ เปิด/ปิดแผงถูกจด (panel: open/close notes)', logHas(/panel: open notes/) && logHas(/panel: close notes/));
+        const rowF = [...document.querySelectorAll('#tree .scene[data-path]')].map((r) => r.dataset.path)
+          .find((f) => /\.md$/i.test(f) && !state.tabs.has(f));
+        if (rowF) {
+          await openScene(rowF); await w165(300);
+          check('[165-L] ★ เปิดแท็บถูกจด (tab: open)', logHas(/^tab: open$/));
+          await closeTab(rowF); await w165(200);
+          check('[165-L] ปิดแท็บถูกจด (tab: close)', logHas(/^tab: close$/));
+        } else check('[165-L] เงื่อนไข: มีฉากที่ยังไม่เปิดให้ลองเปิด', false);
+        const tS = [...state.tabs.values()].find((x) => x.editor && x.editor.view);
+        const seqS = logStore.lastSeq();
+        if (tS) { markDirty(tS); await saveTab(tS); }
+        check('[165-L] ★ บันทึกถูกจดพร้อมผล (save: done)', logHas(/^save: done$/, seqS));
+        const logWas = isPanelOpen('log');
+        if (!logWas) { togglePanel('log'); await w165(400); }
+        const lp = () => document.querySelector('.k-float-panel[data-panel-id="log"], #app-root .k-panel[data-panel-id="log"]');
+        for (let i = 0; i < 40 && !(lp() && lp().querySelector('.k-log-daybar')); i++) await w165(50);
+        const lpE = lp();
+        const daySel = lpE && lpE.querySelector('.k-log-day');
+        const dirTxt = lpE && lpE.querySelector('.k-log-dir');
+        for (let i = 0; i < 40 && !(dirTxt && dirTxt.textContent.trim()); i++) await w165(50);
+        check('[165-L] ★★ แผงบันทึกบอกที่อยู่โฟลเดอร์ log + ปุ่มเปิดโฟลเดอร์ที่มีป้ายข้อความ',
+              !!dirTxt && /logs$/i.test(dirTxt.textContent.trim()) && !!lpE.querySelector('.k-log-open') && lpE.querySelector('.k-log-open').textContent.trim().length > 2,
+              dirTxt && dirTxt.textContent);
+        if (daySel) {
+          daySel.dispatchEvent(new Event('focus'));
+          for (let i = 0; i < 40 && daySel.options.length < 2; i++) await w165(50);
+          check('[165-L] ★ รายการวันมีไฟล์ของวันนี้ (ดูย้อนหลังได้)', daySel.options.length >= 2, daySel.options.length);
+          if (daySel.options.length >= 2) {
+            daySel.value = daySel.options[1].value; daySel.dispatchEvent(new Event('change'));
+            // แถวของเซสชันสดมีอยู่แล้วก่อนเลือก — รอ "ป้ายอ่านอย่างเดียว" (ตั้งหลังอ่านไฟล์เสร็จ) ไม่ใช่รอแถว
+            for (let i = 0; i < 60 && !lpE.querySelector('.k-log-daynote').textContent.trim(); i++) await w165(50);
+            await w165(100);
+            check('[165-L] ★ เลือกวันแล้วอ่านบรรทัดจากไฟล์ได้ + ป้ายบอกว่าอ่านอย่างเดียว',
+                  lpE.querySelectorAll('#log-body .k-log-row').length > 0 && !!lpE.querySelector('.k-log-daynote').textContent.trim());
+            daySel.value = ''; daySel.dispatchEvent(new Event('change')); await w165(100);
+            check('[165-L] กลับเซสชันนี้ได้ (ป้ายอ่านอย่างเดียวหาย)', !lpE.querySelector('.k-log-daynote').textContent.trim());
+          }
+        } else check('[165-L] แผงบันทึกมีตัวเลือกวัน', false);
+        if (!logWas) { togglePanel('log'); await w165(200); }
+
+        // (C) ธีม: ส่วนควบคุมดั้งเดิมตามโหมดธีม (เดิมไม่เคยตั้ง = เทา/ขาวของเบราว์เซอร์ทุกธีม)
+        const th0 = state.settings.theme;
+        check('[165-C] ★★ ธีมมืด = color-scheme dark (ช่องติ๊ก/ตัวเลข/รายการ select ตามธีม)',
+              getComputedStyle(document.documentElement).colorScheme === 'dark', getComputedStyle(document.documentElement).colorScheme);
+        state.settings.theme = 'k2-light'; applyTheme();
+        check('[165-C] ★ ธีมสว่าง = color-scheme light', getComputedStyle(document.documentElement).colorScheme === 'light');
+        state.settings.theme = th0; applyTheme();
+
+        // (S) แถบสถานะ: คอลัมน์ตามลำดับที่ผู้ใช้กำหนด · ทุกช่องมีทูลทิป · สวิตช์บอกเปิด/ปิด · ปุ่มหน้าแรก
+        const segIds = [...document.querySelectorAll('#statusbar > .k-sb-seg')].map((e2) => e2.id);
+        check('[165-S] ★★ แถบสถานะเรียง พร้อม | สวิตช์ | ความคืบหน้า | สถานะ | ซูม | หน้าแรก',
+              JSON.stringify(segIds) === JSON.stringify(['sb-msg', 'status-toggles', 'status-mid', 'status-right', 'zoom-ctl', 'status-home']),
+              JSON.stringify(segIds));
+        const noTip = ['sb-msg', 'prog-wrap', 'wc', 'status-page', 'status-mode', 'status-save', 'status-scenes', 'zoom-ctl', 'status-home']
+          .filter((id) => { const e2 = document.getElementById(id); return !e2 || !(e2.getAttribute('title') || '').trim() || /^ui\./.test(e2.getAttribute('title')); });
+        check('[165-S] ★ ทุกช่องของแถบสถานะมีทูลทิปบอกว่าคืออะไร (ข้อความจริง ไม่ใช่คีย์)', noTip.length === 0, noTip.join(','));
+        const tgs = [...document.querySelectorAll('#status-toggles .k-sb-toggle')];
+        check('[165-S] ★ ช่องสวิตช์มีปุ่มครบ + บอกเปิด/ปิดในทูลทิปและ aria-pressed',
+              tgs.length >= 6 && tgs.every((b) => b.title && b.hasAttribute('aria-pressed')), tgs.map((b) => b.title).join(' | '));
+        const lnB = document.querySelector('#status-toggles [data-toggle="line-numbers"]');
+        const ln0 = !!state.settings.lineNumbers;
+        lnB.click(); await w165(500);
+        check('[165-S] ★ กดสวิตช์เลขบรรทัดบนแถบสถานะ = สลับค่าจริง + ปุ่มติดไฟตาม',
+              !!state.settings.lineNumbers === !ln0 && lnB.classList.contains('on') === !ln0, String(state.settings.lineNumbers));
+        lnB.click(); await w165(500);
+        check('[165-S] กดอีกครั้ง = กลับค่าเดิม', !!state.settings.lineNumbers === ln0);
+        // bug hunt: data-command ให้แค่ไอคอน/ทูลทิป — ปุ่มเคยกดแล้วเงียบ → กดจริงแล้วต้องเปิดหน้าแรก
+        document.getElementById('status-home').click();
+        for (let i = 0; i < 40 && !document.querySelector('.k-overlay .k-home-dlg'); i++) await w165(50);
+        check('[165-S] ★★ กดปุ่มหน้าแรกท้ายแถบสถานะ = เปิดหน้าแรกจริง', !!document.querySelector('.k-overlay .k-home-dlg'));
+        { const hc = document.querySelector('.k-overlay .k-home-dlg');
+          const ovH = hc && hc.closest('.k-overlay');
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          for (let i = 0; i < 40 && ovH && ovH.isConnected; i++) await w165(50);
+          if (ovH && ovH.isConnected) ovH.remove(); }
+        // bug hunt: ติ๊กในกล่องตั้งค่าแล้วบันทึก → สวิตช์บนแถบต้องตาม (applySettings ซิงก์ให้)
+        const ln1 = !!state.settings.lineNumbers;
+        state.settings.lineNumbers = !ln1; applySettings();
+        check('[165-S] ★ ค่าเปลี่ยนจากกล่องตั้งค่า (applySettings) = สวิตช์บนแถบตามทันที',
+              lnB.classList.contains('on') === !ln1);
+        state.settings.lineNumbers = ln1; applySettings();
+        const sbR = document.getElementById('statusbar');
+        check('[165-S] แถบสถานะยังบรรทัดเดียว ไม่ล้นแนวนอน', sbR.offsetHeight < 40 && sbR.scrollWidth <= sbR.clientWidth + 1,
+              sbR.offsetHeight + ' · ' + sbR.scrollWidth + '/' + sbR.clientWidth);
+      }
+
+      // (5) ขั้นตอนของผู้ใช้: เลื่อนลงล่างสุด → ปิดแผง → เปิดใหม่ = ต้องอยู่ที่เดิมตั้งแต่เฟรมแรก (ไม่ไปบนสุดแล้วไหลลงมา)
+      //     แดชบอร์ด (วาดใหม่นอกจอ) · จัดการเล่ม/จัดการบท (ล้างเนื้อแล้วรออ่านไฟล์ → ตรึงความสูงระหว่างวาด)
+      const pm165 = getPanelManager();
+      // จำเลย์เอาต์ทั้งชุดไว้คืนตอนจบ (ผนึกกลับด้วย dockPanel ไม่มีจุดยึด = ไปเกาะข้างแถบเครื่องมือ → [137-4] แดง)
+      const lay165 = JSON.stringify({ r: pm165.store.root, f: pm165.store.floats });
+      for (const pid of ['dashboard', 'books', 'chapters']) {
+        if (!isPanelOpen(pid)) { showPanel(pid); await w165(700); }
+        if (!pm165.isFloating(pid)) { pm165.floatPanel(pid, { x: 120, y: 90, w: 520, h: 240 }); await w165(400); }
+        pm165.moveFloat(pid, { x: 120, y: 90, w: 520, h: 240 });   // เตี้ย ๆ ให้มีที่เลื่อนแน่นอน
+        await w165(500);
+        const body = () => document.querySelector(`.k-float-panel[data-panel-id="${pid}"] .k-panel-body`);
+        const b0 = body();
+        if (!b0 || b0.scrollHeight <= b0.clientHeight + 20) {
+          check(`[165-P6] เงื่อนไข: แผง ${pid} มีเนื้อให้เลื่อน`, false, b0 ? `${b0.scrollHeight}/${b0.clientHeight}` : 'ไม่เจอแผง');
+          continue;
+        }
+        b0.style.scrollBehavior = 'auto';
+        b0.scrollTop = b0.scrollHeight;
+        b0.dispatchEvent(new Event('scroll'));
+        await w165(400);
+        const want = b0.scrollTop;
+        hidePanel(pid); await w165(400);
+        showPanel(pid);
+        const seen = [];
+        const t0 = performance.now();
+        await new Promise((done) => {
+          const f = () => { const b = body(); if (b) seen.push(b.scrollTop);
+                            if (performance.now() - t0 < 900) requestAnimationFrame(f); else done(); };
+          requestAnimationFrame(f);
+        });
+        check(`[165-P6] ★★ ${pid}: เลื่อนล่างสุด → ปิด → เปิดใหม่ = อยู่ที่เดิมตั้งแต่เฟรมแรก (ไม่ไปบนสุดแล้วไหลลง)`,
+              seen.length > 0 && seen.every((v) => Math.abs(v - want) <= 3),
+              `ต้องการ ${want} · ที่เห็นทีละเฟรม ${JSON.stringify([...new Set(seen)].slice(0, 8))}`);
+      }
+      { const L = JSON.parse(lay165); pm165.store.floats = L.f; pm165.store.update(L.r); renderPanels(true); await w165(300); }
     }
 
     // ---- [alpha.137] แถบโปรเจกต์ + แถบเครื่องมือ = บรรทัดเดียว ----
@@ -8656,9 +9033,10 @@ export async function runTest(projectPath) {
         check('[r-2] เนื้อผังสูงเต็มแผง (ไม่เหลือช่องว่างท้ายแผง)',
               bh > 0 && Math.abs(sh - bh) <= 2, `${Math.round(sh)} / ${Math.round(bh)}`);
         const pbody = bodyEl.closest('.k-panel-body');
-        check('[r-2] .k-panel-body ของแผงผังถูกถอด padding/overflow ออกแล้ว',
+        // [alpha.165] แนวตั้งยังเป็นของเนื้อผัง (hidden) · แนวนอน = auto (แคบกว่า minW ต้องมีแถบเลื่อน — ผู้ใช้สั่ง)
+        check('[r-2] .k-panel-body ของแผงผังถูกถอด padding ออก · แนวตั้งไม่เลื่อนเอง · แนวนอนเลื่อนได้เมื่อแคบกว่าขั้นต่ำ',
               !!pbody && getComputedStyle(pbody).paddingTop === '0px'
-              && getComputedStyle(pbody).overflow === 'hidden',
+              && getComputedStyle(pbody).overflowY === 'hidden' && getComputedStyle(pbody).overflowX === 'auto',
               pbody && getComputedStyle(pbody).paddingTop + '/' + getComputedStyle(pbody).overflow);
         // [r-3] ผังต้องเลื่อนแนวตั้งได้เอง
         const vp = bodyEl.querySelector('.branch-viewport');
@@ -9303,7 +9681,381 @@ export async function runTest(projectPath) {
             LC7.fmtDate(d7).includes('2026') && !LC7.fmtDateTime(d7).includes('2569'), LC7.fmtDateTime(d7));
       check('[162-W7] ★ เลือกอังกฤษ → ตัวเลขมีตัวคั่นหลักพันแบบอังกฤษ', LC7.fmtNum(1234567) === '1,234,567', LC7.fmtNum(1234567));
       check('[162-W7] ★ เลือกอังกฤษ → เรียงอักษรละตินก่อนไทย', LC7.cmpText('apple', 'กา') < 0);
+      // ══ [alpha.164 · รอบต่อ 2 · งาน 1] ด่านวัดล้นจริงในโหมดอังกฤษ (อังกฤษยาวกว่าไทย) ══
+      // ตรวจบนแอปจริงแล้วเจอ: ช่องเลือกในตั้งค่าตัดกลางคำ · ปุ่มหัวแผงจัดการบทพับ 3 บรรทัด ·
+      // tooltip ปุ่มหัวแผงค้างไทย · ชนิดความสัมพันธ์เป็นไทยตายตัว → ด่านนี้วัดกรอบจริง ไม่ใช่แค่ดูคีย์
+      {
+        const THr = /[\u0E00-\u0E7F]/;
+        const okThai = new Set(['ui.dlg.fontSampleText', 'ui.dlg.iNTNightSceneOne', 'ui.pdf.printNameEgPage'].map((k) => tt(k)));
+        const cv = document.createElement('canvas').getContext('2d');
+        const visible = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+        settingsDialog();
+        await new Promise((r) => setTimeout(r, 120));
+        const selBad = [], thaiBad = [], ovBad = [];
+        for (const tab of [...document.querySelectorAll('.k-dialog .k-set-tab')]) {
+          tab.click();
+          await new Promise((r) => setTimeout(r, 30));
+          const page = document.querySelector('.k-dialog .k-set-page.on');
+          if (!page) continue;
+          // ช่องเลือก: ตัวเลือกที่เลือกอยู่ต้องแสดงครบ (ไม่ถูกตัดกลางคำ)
+          for (const sel of page.querySelectorAll('.k-row > select.k-dlg-select, .k-row span > select.k-dlg-select')) {
+            if (!visible(sel)) continue;
+            const o = sel.options[sel.selectedIndex]; if (!o || !o.text) continue;
+            const cs = getComputedStyle(sel);
+            cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+            const need = cv.measureText(o.text).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 14;
+            const w = sel.getBoundingClientRect().width;
+            // เพดาน 70% ของแถวเป็นความตั้งใจ (ตัวเลือกยาวมาก ๆ ยอมตัด) — ด่านจับเฉพาะช่องที่แคบกว่าเพดาน
+            const cap = sel.closest('.k-row').getBoundingClientRect().width * 0.70;
+            if (need > w + 1 && w < cap - 2) selBad.push(tab.dataset.p + ':' + (sel.id || '?') + ' ' + Math.round(w) + '<' + Math.round(need));
+          }
+          // ไทยค้างในโหมดอังกฤษ (ข้อความบนจอ ไม่นับช่องกรอก/ตัวเลือก/ตัวอย่างฟอนต์ที่ตั้งใจ)
+          const tw = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+          for (let n; (n = tw.nextNode());) {
+            const v = n.nodeValue.trim(); const e = n.parentElement;
+            if (!v || !THr.test(v) || !e || !visible(e) || e.closest('option, select, textarea, [contenteditable]')) continue;
+            if ([...okThai].some((x) => x && v.includes(x.trim().slice(0, 12)))) continue;
+            thaiBad.push(tab.dataset.p + ': ' + v.slice(0, 30));
+          }
+          for (const e of page.querySelectorAll('[title], [aria-label]')) {
+            const v = e.getAttribute('title') || e.getAttribute('aria-label');
+            if (visible(e) && THr.test(v)) thaiBad.push(tab.dataset.p + ' @title: ' + v.slice(0, 30));
+          }
+          // ปุ่ม/ป้ายล้นแนวนอนทั้งที่ไม่ได้ตั้งให้เลื่อน/ตัดด้วย …
+          for (const e of page.querySelectorAll('button, label, .k-tbcfg-icon')) {
+            // นับเฉพาะของที่มีข้อความของตัวเองและกว้างจริง (label ห่อช่องติ๊กที่กว้าง 1px ไม่ใช่ข้อความล้น)
+            const own = [...e.childNodes].some((c) => c.nodeType === 3 && c.nodeValue.trim()) || e.classList.contains('k-tbcfg-icon');
+            if (!own || !visible(e) || e.clientWidth < 12 || e.scrollWidth <= e.clientWidth + 1) continue;
+            const cs = getComputedStyle(e);
+            if (/(auto|scroll)/.test(cs.overflowX) || cs.textOverflow === 'ellipsis') continue;
+            ovBad.push(tab.dataset.p + ':' + e.className + ' ' + e.scrollWidth + '>' + e.clientWidth);
+          }
+        }
+        check('[164-R2-1] ★★ อังกฤษ: ช่องเลือกในตั้งค่าทุกหน้าแสดงตัวเลือกครบ (ไม่ตัดกลางคำ)', selBad.length === 0, selBad.slice(0, 5).join(' | '));
+        check('[164-R2-1] ★★ อังกฤษ: ไม่มีไทยค้างบนหน้าตั้งค่าทุกหน้า', thaiBad.length === 0, thaiBad.slice(0, 5).join(' | '));
+        check('[164-R2-1] ★ อังกฤษ: ไม่มีปุ่ม/ป้ายล้นแนวนอนในตั้งค่า (รวมไอคอนแถวแถบรูปแบบ)', ovBad.length === 0, ovBad.slice(0, 5).join(' | '));
+        document.querySelector('.k-dialog .k-cancel')?.click();
+        await new Promise((r) => setTimeout(r, 80));
+        // ปุ่มที่โมดูลอื่นฝากไว้บนหัวแผง — tooltip ต้องตามภาษา (เดิมแปลครั้งเดียวตอนบูต)
+        const rb = document.querySelector('.k-panel[data-panel-id="tree"] .k-tree-refresh-btn');
+        check('[164-R2-1] ★ tooltip ปุ่มรีเฟรชบนหัวแผงโปรเจกต์ตามภาษา',
+              !!rb && rb.title === tt('ui.app.refreshReadFileFolder') && !THr.test(rb.title), rb && rb.title);
+        // ชนิดความสัมพันธ์ (กล่องผูก · ปุ่มกรองผัง · ป้ายบนการ์ด Wiki อ่านจากตารางนี้)
+        check('[164-R2-1] ★ ชนิดความสัมพันธ์เป็นอังกฤษ', REL_TYPES.every((x) => x.label && !THr.test(x.label)),
+              REL_TYPES.map((x) => x.label).join(','));
+        // แผงจัดการบท: ปุ่มหัวแผงต้องไม่พับหลายบรรทัดเมื่อแผงแคบ
+        showPanel('chapters');
+        let chHead = null;
+        for (let i = 0; i < 40 && !chHead; i++) { await new Promise((r) => setTimeout(r, 50)); chHead = document.querySelector('.chapters-wrap .books-head'); }
+        check('[164-R2-1] เปิดแผงจัดการบทได้', !!chHead);
+        if (chHead) {
+          const panel = chHead.closest('.k-float-panel, .k-panel');
+          const oldW = panel.style.width; panel.style.width = '560px';
+          await new Promise((r) => setTimeout(r, 120));
+          const wrapped = [...chHead.querySelectorAll(':scope > button')].filter((b) => {
+            const cs = getComputedStyle(b); const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.3;
+            const h = b.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+            return h > lh * 1.5;
+          }).map((b) => b.textContent.trim());
+          check('[164-R2-1] ★ อังกฤษ + แผงแคบ: ปุ่มหัวแผงจัดการบทไม่พับหลายบรรทัด', wrapped.length === 0, wrapped.join(' | '));
+          panel.style.width = oldW;
+        }
+        hidePanel('chapters');
+        await new Promise((r) => setTimeout(r, 60));
+
+        // ══ [alpha.164 · รอบต่อ 3 · งาน 1] ขยายด่าน: เมนูคลิกขวา Explorer · กล่องคุณสมบัติฉาก/ผูกความสัมพันธ์/
+        //    เลือกรูป · ตัวเลือก PDF ในศูนย์ส่งออก · กล่องตั้งค่าในหน้าต่างแคบ (ตรวจด้วย CDP บนแอปจริงแล้วเจอทุกข้อด้านล่าง) ══
+        const sleep3 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const phOver = (root) => [...root.querySelectorAll('input[placeholder]')].filter((e) => {
+          if (e.value || !visible(e)) return false;
+          const cs = getComputedStyle(e); cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+          return cv.measureText(e.placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) > e.clientWidth + 1;
+        }).map((e) => '"' + e.placeholder.slice(0, 30) + '" ' + e.clientWidth + 'px');
+        // ป้าย/ปุ่ม/คำอธิบาย (ข้อความของตัวเองเท่านั้น — ชื่อฉาก/ชื่อ Wiki เป็นข้อมูล ไม่นับ)
+        const dlgBad = (root, tag, ignore = null) => {   // ignore = selector ของข้อมูลผู้ใช้ (ชื่อไฟล์ ฯลฯ)
+          const b = [];
+          for (const e of root.querySelectorAll('label, button, .k-hint')) {
+            const own = [...e.childNodes].filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join('').trim();
+            if (!own || !visible(e)) continue;
+            if (THr.test(own)) b.push(tag + ' ไทย: ' + own.slice(0, 30));
+            const cs = getComputedStyle(e);
+            if (e.clientWidth >= 12 && e.scrollWidth > e.clientWidth + 1 && !/(auto|scroll)/.test(cs.overflowX) &&
+                cs.textOverflow !== 'ellipsis') b.push(tag + ' ล้น: ' + own.slice(0, 30));
+          }
+          for (const e of root.querySelectorAll('[title], [placeholder]')) {
+            const v = e.getAttribute('title') || e.getAttribute('placeholder');
+            if (ignore && e.closest(ignore)) continue;
+            if (visible(e) && THr.test(v)) b.push(tag + ' ไทย@: ' + v.slice(0, 30));
+          }
+          b.push(...phOver(root).map((x) => tag + ' placeholder ล้น: ' + x));
+          // `.wiki-input{flex:1}` ในคอลัมน์ flex = ช่องบรรทัดเดียวยืดสูง (กล่องเลือกรูปเคยสูง 130px)
+          for (const e of root.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color])')) {
+            if (visible(e) && e.offsetHeight > 60) b.push(tag + ' ช่องบรรทัดเดียวสูง ' + e.offsetHeight + 'px: ' + e.className);
+          }
+          const d = root.getBoundingClientRect();
+          if (d.bottom > innerHeight + 1 || d.right > innerWidth + 1) b.push(tag + ' ตกขอบจอ');
+          return b;
+        };
+        const topDlg = async (sel = '.k-overlay .k-dialog') => {
+          for (let i = 0; i < 40; i++) { const d = [...document.querySelectorAll(sel)].pop(); if (d) return d; await sleep3(50); }
+          return null;
+        };
+        // (1) เมนูคลิกขวาทุกชนิดแถวที่มีในต้นไม้
+        const rowsByKind = new Map();
+        for (const e of document.querySelectorAll('#tree *')) if (e._k2row && !rowsByKind.has(e._k2row.kind)) rowsByKind.set(e._k2row.kind, e);
+        const menuBad = [];
+        for (const [kind, row] of rowsByKind) {
+          closeMenu();
+          row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 80 }));
+          await sleep3(60);
+          const m = [...document.querySelectorAll('.k-menu')].filter((x) => !x.classList.contains('k-submenu')).pop();
+          if (!m) { menuBad.push(kind + ': ไม่มีเมนู'); continue; }
+          for (const it of m.querySelectorAll(':scope > .k-menu-item')) {
+            const tx = it.querySelector('.k-menu-text') || it;
+            const v = it.textContent.trim();
+            if (THr.test(v)) menuBad.push(kind + ' ไทย: ' + v.slice(0, 30));
+            if (tx.scrollWidth > tx.clientWidth + 1) menuBad.push(kind + ' ล้น: ' + v.slice(0, 30));
+          }
+          const mr = m.getBoundingClientRect();
+          if (mr.right > innerWidth + 1 || mr.bottom > innerHeight + 1) menuBad.push(kind + ' ตกขอบจอ');
+        }
+        closeMenu();
+        check('[164-R3-1] ★★ อังกฤษ: เมนูคลิกขวาทุกชนิดแถวใน Explorer ไม่มีไทยค้าง/ข้อความล้น/ตกจอ',
+              rowsByKind.size >= 6 && menuBad.length === 0, [...rowsByKind.keys()].join(',') + ' :: ' + menuBad.slice(0, 5).join(' | '));
+        // เมนูลูกที่ว่าง (ยังไม่มีสำรอง · ไม่มีปลายทางให้ย้าย) เคยกดแล้วเงียบ
+        popupMenu(100, 100, [{ text: 'x', sub: () => [] }]);
+        const hs3 = [...document.querySelectorAll('.k-menu')].pop().querySelector('.k-menu-has-sub');
+        hs3.click(); await sleep3(80);
+        const sm3 = [...document.querySelectorAll('.k-submenu')].pop();
+        check('[164-R3-1] ★ เมนูลูกที่ไม่มีรายการโชว์แถว "(ว่าง)" สีเทา แทนความเงียบ',
+              !!sm3 && sm3.textContent.includes(tt('ui.common.empty')) && !!sm3.querySelector('[aria-disabled="true"]'));
+        closeMenu();
+        // (2) กล่องคุณสมบัติฉาก (คลิกขวา → คุณสมบัติ (หน้าต่าง))
+        const scRow3 = rowsByKind.get('scene');
+        check('[164-R3-1] มีแถวฉากให้เปิดกล่องคุณสมบัติ', !!scRow3);
+        if (scRow3) {
+          treeRowAction(scRow3, 'propsPopup');
+          const pd = await topDlg();
+          check('[164-R3-1] เปิดกล่องคุณสมบัติฉากได้', !!pd);
+          if (pd) {
+            const bad = dlgBad(pd, 'props');
+            check('[164-R3-1] ★★ อังกฤษ: กล่องคุณสมบัติฉากไม่มีไทยค้าง · placeholder ไม่ล้นช่อง', bad.length === 0, bad.slice(0, 5).join(' | '));
+            const ta = pd.querySelector('textarea.wiki-input');
+            check('[164-R3-1] ★ ช่องหลายบรรทัดในกล่องคุณสมบัติใช้ฟอนต์เดียวกับกล่อง (เดิมเป็น monospace)',
+                  !!ta && getComputedStyle(ta).fontFamily === getComputedStyle(pd).fontFamily, ta && getComputedStyle(ta).fontFamily);
+            pd.querySelector('.k-cancel')?.click();
+            await sleep3(120);
+          }
+        }
+        // (3) กล่องผูกความสัมพันธ์ (ชื่อเป็นอังกฤษ — ป้าย "X is … of Y" มีชื่อจริงปนอยู่)
+        const relP = relationDialog(['Detective Somchai', 'Madam Lin'], 'Captain Arun');
+        const rd = await topDlg();
+        check('[164-R3-1] เปิดกล่องผูกความสัมพันธ์ได้', !!rd);
+        if (rd) {
+          const bad = dlgBad(rd, 'rel');
+          check('[164-R3-1] ★★ อังกฤษ: กล่องผูกความสัมพันธ์ไม่มีไทยค้าง · placeholder ไม่ล้น', bad.length === 0, bad.slice(0, 5).join(' | '));
+          rd.querySelector('.k-cancel')?.click();
+        }
+        await relP; await sleep3(80);
+        // (4) กล่องเลือกรูป (แทรกรูป)
+        const imgP = pickImage(state.root);
+        const gd = await topDlg('.k-overlay .k-dialog.gal2-pick');
+        check('[164-R3-1] เปิดกล่องเลือกรูปได้', !!gd);
+        if (gd) {
+          await sleep3(150);
+          const bad = dlgBad(gd, 'pick', '.gal-grid');   // ชื่อไฟล์รูปเป็นข้อมูล
+          const q3 = gd.querySelector('.gal2-search');
+          check('[164-R3-1] ★★ กล่องเลือกรูป: ช่องค้นหาสูงบรรทัดเดียว (เดิมยืด 130px) · ไม่มีไทยค้าง', bad.length === 0 && !!q3 && q3.offsetHeight < 60,
+                (q3 && q3.offsetHeight) + ' :: ' + bad.slice(0, 5).join(' | '));
+          gd.querySelector('.k-cancel')?.click();
+        }
+        await imgP; await sleep3(80);
+        // (5) ศูนย์ส่งออก → PDF: ตัวเลือก + ปุ่มส่งออกต้องเห็นโดยไม่ต้องเลื่อนกล่อง (ทั้งจอปกติและเตี้ย)
+        const hub3 = await openExportHub();
+        const xb = document.querySelector('.k-xhub');
+        check('[164-R3-1] เปิดศูนย์ส่งออกได้', !!hub3 && !!xb);
+        if (hub3 && xb) {
+          await hub3.setFormat('pdf');
+          await sleep3(200);
+          const opt = xb.querySelector('.xhub-options');
+          const bad = dlgBad(opt, 'pdf').filter((x) => !/ตกขอบจอ/.test(x));
+          check('[164-R3-1] ★★ อังกฤษ: ตัวเลือก PDF ไม่มีไทยค้าง/ข้อความล้น', bad.length === 0, bad.slice(0, 5).join(' | '));
+          const hint = opt.querySelector(':scope > .k-hint');
+          const lab = opt.querySelector('label');
+          check('[164-R3-1] ★ คำอธิบายในตัวเลือกตัวเล็กกว่าป้าย (เดิมใหญ่กว่า อ่านเป็นก้อนเดียวกับป้ายถัดไป)',
+                !!hint && !!lab && parseFloat(getComputedStyle(hint).fontSize) < parseFloat(getComputedStyle(lab).fontSize),
+                hint && getComputedStyle(hint).fontSize + ' vs ' + (lab && getComputedStyle(lab).fontSize));
+          const okIn = () => {
+            const ok = xb.querySelector('.k-dlg-btns .k-ok'); const r = ok && ok.getBoundingClientRect(); const d = xb.getBoundingClientRect();
+            return !!r && r.bottom <= d.bottom + 1 && xb.scrollHeight <= xb.clientHeight + 1;
+          };
+          check('[164-R3-1] ★★ ปุ่มส่งออกอยู่ในกล่อง ไม่ต้องเลื่อน (เดิมตกขอบล่างที่ 1440×900)', okIn(),
+                xb.scrollHeight + '/' + xb.clientHeight);
+          xb.style.maxHeight = '614px';                     // = 88vh ของหน้าต่าง 1024×700
+          await sleep3(120);
+          check('[164-R3-1] ★ หน้าต่างเตี้ย (1024×700): ปุ่มส่งออกยังอยู่ในกล่อง ตัวกลางเป็นฝ่ายหด', okIn(),
+                xb.scrollHeight + '/' + xb.clientHeight + ' body=' + xb.querySelector('.xhub-body').offsetHeight);
+          xb.style.maxHeight = '';
+          xb.querySelector('.k-cancel')?.click();
+          await sleep3(150);
+        }
+        // (6) กล่องตั้งค่าในหน้าต่างแคบ (1024 → กล่อง 963px): สองคอลัมน์ต้องยุบเป็นคอลัมน์เดียวตามพื้นที่เนื้อ
+        settingsDialog();
+        const sd = await topDlg('.k-overlay .k-dialog.k-settings');
+        check('[164-R3-1] เปิดกล่องตั้งค่าได้', !!sd);
+        if (sd) {
+          sd.style.width = '963px'; sd.style.maxWidth = '963px';
+          await sleep3(120);
+          const narrowBad = [];
+          for (const tab of [...sd.querySelectorAll('.k-set-tab')]) {
+            tab.click(); await sleep3(30);
+            const page = sd.querySelector('.k-set-page.on'); if (!page) continue;
+            for (const sel of page.querySelectorAll('.k-row > select.k-dlg-select, .k-row span > select.k-dlg-select')) {
+              if (!visible(sel)) continue;
+              const o = sel.options[sel.selectedIndex]; if (!o || !o.text) continue;
+              const cs = getComputedStyle(sel); cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+              const need = cv.measureText(o.text).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 14;
+              const w = sel.getBoundingClientRect().width;
+              const cap = sel.closest('.k-row').getBoundingClientRect().width * 0.70;
+              if (need > w + 1 && w < cap - 2) narrowBad.push(tab.dataset.p + ':' + (sel.id || '?') + ' ' + Math.round(w) + '<' + Math.round(need));
+            }
+            for (const lab of page.querySelectorAll('.k-row > label')) {
+              if (!visible(lab)) continue;
+              const lh = parseFloat(getComputedStyle(lab).lineHeight) || 18;
+              if (lab.offsetHeight > lh * 5.5) narrowBad.push(tab.dataset.p + ' ป้ายพับ ' + Math.round(lab.offsetHeight / lh) + ' บรรทัด: ' + lab.textContent.trim().slice(0, 20));
+            }
+            narrowBad.push(...phOver(page).map((x) => tab.dataset.p + ' placeholder ล้น: ' + x));
+          }
+          check('[164-R3-1] ★★ อังกฤษ + หน้าต่างแคบ: ตั้งค่าทุกหน้า ช่องเลือกไม่ตัดคำ · ป้ายไม่ถูกบีบพับ · placeholder ไม่ล้น',
+                narrowBad.length === 0, narrowBad.slice(0, 5).join(' | '));
+          sd.querySelector('.k-cancel')?.click();
+          await sleep3(120);
+        }
+
+        // ══ [alpha.164 · รอบต่อ 4] ส่วนที่ด่านรอบสามเอื้อมไม่ถึง (ตรวจด้วย CDP ที่ 1024×700 แล้วเจอทุกข้อ) ══
+        // (7) แถวกระดาน/แผน — เดิมผูกเมนูเอง ไม่มี `_k2row` → ด่าน (1) มองไม่เห็นสองชนิดนี้เลย
+        {
+          // ★ จำสภาพ "ก่อนสร้าง" — saveBranchPlanAs ทำให้แผนใหม่เป็นแผนปัจจุบันด้วย (เทสผังแตกสายถัดไปพังเพราะค้างโหมดแผน)
+          const bpm4 = await import('./branching-ui.js');
+          const planBefore4 = (bpm4.currentBranchPlan() || {}).path || null;
+          const liveBefore4 = bpm4.inBranchPlan();
+          let made4 = false, planMade4 = null;
+          if (!document.querySelector('#tree [data-planner]')) { await newPlannerBoard('Board EN'); made4 = true; }
+          if (!document.querySelector('#tree [data-branch-plan]')) { planMade4 = await bpm4.saveBranchPlanAs('Plan EN'); made4 = true; }
+          if (made4) await buildTree();
+          const bRow = document.querySelector('#tree [data-planner]');
+          let pRow = document.querySelector('#tree [data-branch-plan]');
+          check('[164-R4] ★★ แถวกระดาน/แผนผูกเมนูผ่าน bindTreeMenu (พก _k2row · F2/Shift+F10 เอื้อมถึง)',
+                !!(bRow && bRow._k2row && bRow._k2row.kind === 'board' && pRow && pRow._k2row && pRow._k2row.kind === 'plan'));
+          const mBad4 = [];
+          for (const row of [bRow, pRow].filter(Boolean)) {
+            closeMenu();
+            row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 80 }));
+            await sleep3(60);
+            const m = [...document.querySelectorAll('.k-menu')].filter((x) => !x.classList.contains('k-submenu')).pop();
+            if (!m) { mBad4.push(row._k2row.kind + ': ไม่มีเมนู'); continue; }
+            for (const it of m.querySelectorAll(':scope > .k-menu-item')) {
+              const v = it.textContent.trim(); const tx = it.querySelector('.k-menu-text') || it;
+              if (THr.test(v)) mBad4.push(row._k2row.kind + ' ไทย: ' + v.slice(0, 30));
+              if (tx.scrollWidth > tx.clientWidth + 1) mBad4.push(row._k2row.kind + ' ล้น: ' + v.slice(0, 30));
+            }
+          }
+          closeMenu();
+          check('[164-R4] ★★ อังกฤษ: เมนูคลิกขวาแถวกระดาน/แผน ไม่มีไทยค้าง/ข้อความล้น', mBad4.length === 0, mBad4.join(' | '));
+          // กล่องคุณสมบัติของแผน: ชื่อสีเคยเป็นไทย ("● แดง") · placeholder ยาวล้นช่อง · ปุ่มยกเลิกไม่มี k-cancel
+          // ★ คุณสมบัติของแผน "เปิดแผนนั้นก่อน" (planPropsDialog ทำงานกับแผนปัจจุบัน) — ต้องคืนสภาพหลังตรวจ
+          //   ไม่งั้นเทสผังแตกสายถัดไปทำงานในโหมดแผน (ทางเลือกอ่าน/เขียนที่แผน ไม่ใช่ scenes.json)
+          // มีแผนเปิดอยู่แล้ว = ตรวจกล่องของแผนนั้นเลย (ไม่สลับแผน = ไม่แตะสภาพของเทสถัดไป)
+          const curRow4 = planBefore4 && [...document.querySelectorAll('#tree [data-branch-plan]')]
+            .find((r) => r.dataset.branchPlan === planBefore4);
+          if (curRow4) pRow = curRow4;
+          if (pRow) {
+            treeRowAction(pRow, 'propsPopup');
+            const pd4 = await topDlg();
+            check('[164-R4] เปิดกล่องคุณสมบัติแผนได้', !!pd4);
+            if (pd4) {
+              const bad = dlgBad(pd4, 'planProps');
+              const thOpt = [...pd4.querySelectorAll('option')].filter((o) => THr.test(o.text)).map((o) => o.text);
+              check('[164-R4] ★★ อังกฤษ: กล่องคุณสมบัติแผน — ชื่อสี/สถานะไม่เป็นไทย · placeholder ไม่ล้น',
+                    bad.length === 0 && thOpt.length === 0, bad.concat(thOpt).slice(0, 5).join(' | '));
+              check('[164-R4] ★ กล่องคุณสมบัติแผน: ปุ่มยกเลิกติด k-cancel (Esc เดินถึง)', !!pd4.querySelector('.k-dlg-btns .k-cancel'));
+              pd4.querySelector('.k-cancel')?.click();
+              await sleep3(120);
+            }
+            await sleep3(150);
+            const planNow4 = (bpm4.currentBranchPlan() || {}).path || null;
+            if (planNow4 !== planBefore4) {
+              if (planBefore4) await bpm4.openBranchPlan(planBefore4); else bpm4.closeBranchPlan();
+            }
+            // แผนที่ด่านนี้สร้างเอง → ลบทิ้ง (ปิดแผนแล้วจึงลบได้ปลอดภัย · กระดานเปิดค้างในแผงวางแผน จึงปล่อยไว้)
+            if (typeof planMade4 === 'string') { try { await kapi.remove(planMade4); } catch {} }
+            await refreshTreeQueued();
+            check('[164-R4] คืนสภาพแผนแตกสายเดิมหลังตรวจกล่อง',
+                  ((bpm4.currentBranchPlan() || {}).path || null) === planBefore4 && bpm4.inBranchPlan() === liveBefore4,
+                  planBefore4 + ' → ' + (bpm4.currentBranchPlan() || {}).path + ' live ' + liveBefore4 + '→' + bpm4.inBranchPlan());
+          }
+          if (bRow) {
+            treeRowAction(bRow, 'propsPopup');
+            const bd4 = await topDlg();
+            if (bd4) {
+              const bad = dlgBad(bd4, 'boardProps');
+              check('[164-R4] อังกฤษ: กล่องคุณสมบัติกระดานไม่มีไทยค้าง/ล้น', bad.length === 0, bad.slice(0, 5).join(' | '));
+              bd4.querySelector('.k-cancel')?.click();
+              await sleep3(120);
+            }
+          }
+        }
+        // (8) หน้า Wiki ในช่องแคบ: ปุ่ม AI ข้างช่อง "Name" เคยหล่นไปบรรทัดของตัวเองใต้ป้าย
+        {
+          const wf4 = smart.fileOf['ยัยแมวเก้าชีวิต'];
+          if (wf4) {
+            await openEntity(wf4);
+            await sleep3(300);
+            const wt4 = state.tabs.get(wf4);
+            const wrap4 = wt4 && wt4.pane.querySelector('.wiki-wrap');
+            const aiRows = wrap4 ? [...wrap4.querySelectorAll('.wiki-row')].filter((r) => r.querySelector(':scope > .wiki-ai-btn')) : [];
+            check('[164-R4] หน้า Wiki มีแถวที่มีปุ่ม AI ให้ตรวจ', aiRows.length > 0, aiRows.length);
+            const off4 = [];
+            if (wrap4) {
+              for (let w = 260; w <= 820; w += 40) {
+                wrap4.style.width = w + 'px'; wrap4.style.maxWidth = w + 'px';
+                await sleep3(20);
+                for (const r of aiRows) {
+                  const a = r.querySelector(':scope > .wiki-ai-btn').getBoundingClientRect();
+                  const i = r.querySelector(':scope > .wiki-input').getBoundingClientRect();
+                  if (Math.abs((a.top + a.height / 2) - (i.top + i.height / 2)) > 4) off4.push(w + 'px:' + r.querySelector('label').textContent.slice(0, 12));
+                }
+              }
+              wrap4.style.width = ''; wrap4.style.maxWidth = '';
+            }
+            check('[164-R4] ★★ หน้า Wiki ทุกความกว้าง 260–820px: ปุ่ม AI อยู่บรรทัดเดียวกับช่องกรอก (เดิมหล่นใต้ป้าย)',
+                  off4.length === 0, off4.slice(0, 5).join(' | '));
+            closeTab(wf4);
+          }
+        }
+        // (9) แผงแชท AI ที่ความกว้างขั้นต่ำ: placeholder ช่องค้นหาเซสชันเคยยาวทั้งประโยคล้นช่อง
+        {
+          showPanel('ai-chat');
+          let cp4 = null;
+          for (let i = 0; i < 40 && !cp4; i++) { await sleep3(50); cp4 = document.querySelector('.ai-chat-search'); }
+          check('[164-R4] เปิดแผงแชท AI ได้', !!cp4);
+          if (cp4) {
+            const panel = cp4.closest('.k-float-panel, .k-panel');
+            const oldW = panel.style.width; panel.style.width = '320px';
+            await sleep3(120);
+            const ph = phOver(panel);
+            check('[164-R4] ★ อังกฤษ + แผงแชทกว้าง 320px: placeholder ค้นหาเซสชันไม่ล้นช่อง · คำอธิบายเต็มอยู่ใน tooltip',
+                  ph.length === 0 && !!cp4.title && !THr.test(cp4.title), ph.join(' | '));
+            panel.style.width = oldW;
+          }
+          hidePanel('ai-chat');
+          await sleep3(60);
+        }
+      }
       await loadLanguage('th', state.root);
+      // [alpha.164 · รอบต่อ 4] ต้นไม้ที่ถูกวาดใหม่ระหว่างเป็นอังกฤษ (ด่าน [164-R4] สร้างกระดาน/แผนเมื่อยังไม่มี)
+      // ต้องวาดกลับเป็นไทย — เทสถัดไปหาหมวดด้วยป้ายไทย (โปรแกรมจริงรีสตาร์ทเมื่อเปลี่ยนภาษา)
+      await buildTree();
       check('[162-W7] ★★ กลับเป็นไทย → <html lang="th"> · วันที่เป็น พ.ศ. · เรียงไทยก่อนละติน',
             document.documentElement.lang === 'th' && LC7.fmtDate(d7).includes('2569') && LC7.cmpText('apple', 'กา') > 0,
             document.documentElement.lang + ' · ' + LC7.fmtDate(d7));
@@ -11048,7 +11800,8 @@ export async function runTest(projectPath) {
               !!document.querySelector('.branch-doc'));
         check('แผงบอกว่าทางเลือกผูกกับข้อความในฉากแล้ว',
               !!document.querySelector('.branch-doc-ok'),
-              document.querySelector('.branch-doc-body')?.textContent?.slice(0, 90));
+              document.querySelector('.branch-doc-body')?.textContent?.slice(0, 90)
+              + ' · plan=' + JSON.stringify(((await import('./branching-ui.js')).currentBranchPlan() || {}).path || null));
         check('ผังมีปุ่มสแกนทั้งโปรเจกต์',
               [...document.querySelectorAll('.branch-zbtn')].some((b) => b.textContent === '🔎'));
         // เขียนคิว: ยิงพร้อมกัน 3 ครั้งต้องได้ครบ 3 (เดิมทับกันจนหาย)
@@ -17723,6 +18476,106 @@ export async function runTest(projectPath) {
       resetPageScale();
       await new Promise((r) => setTimeout(r, 120));
 
+      // ════════ [alpha.164 · รอบต่อ 2 · งาน 3] ซูมพอดีความกว้างอัตโนมัติ (ค่าระดับผู้ใช้ · ปิดเป็นค่าเริ่มต้น) ════════
+      {
+        const tR = state.active, pR = tR && tR.pane;
+        const pmR = pR && pR.querySelector(':scope > .workspace > .ProseMirror');
+        check('[164-R2-3] เตรียมสภาพ: แท็บเอกสารเปิดอยู่ (แผงมีความกว้าง)', !!pmR && pR.clientWidth > 100,
+              pR && pR.clientWidth);
+        if (pmR) {
+          const was = state.settings.autoFitWidth;
+          check('[164-R2-3] ค่าเริ่มต้นปิด (GLOBAL_DEFAULTS)', DEFAULT_SETTINGS.autoFitWidth === false);
+          state.settings.autoFitWidth = false;
+          check('[164-R2-3] ปิดอยู่ = ไม่แตะซูม', autoFitWidth(pR) === false && currentPageScale() === 1);
+          state.settings.autoFitWidth = true;
+          check('[164-R2-3] ★ โหมดเทสปิดเสมอแม้ติ๊กไว้ (เทสอื่นวัดที่ซูม 100%)', autoFitWidthOn() === false);
+          globalThis.__k2autoFitTest = true;
+          setPageScale(1);
+          pR.style.maxWidth = '420px';
+          await new Promise((r) => setTimeout(r, 150));
+          autoFitWidth(pR);
+          await new Promise((r) => setTimeout(r, 150));
+          const z1 = currentPageScale();
+          const w1 = pmR.getBoundingClientRect().width;
+          check('[164-R2-3] ★ แผงแคบกว่ากระดาษ → ย่อจนกระดาษพอดีแผง (ไม่ต้องเลื่อนแนวนอน)',
+                z1 < 1 && w1 <= pR.clientWidth + 2, `ซูม ${z1} · กระดาษ ${Math.round(w1)} · แผง ${pR.clientWidth}`);
+          check('[164-R2-3] ป้ายซูมบนแถบสถานะตรงกับค่าจริง',
+                ($('#zoom-label')?.textContent || '').includes(String(Math.round(z1 * 100))), $('#zoom-label')?.textContent);
+          pR.style.maxWidth = '';
+          await new Promise((r) => setTimeout(r, 150));
+          autoFitWidth(pR);
+          const z2 = currentPageScale();
+          check('[164-R2-3] ★ แผงกว้างขึ้น → ขยายกลับ แต่ไม่เกินซูมที่ผู้ใช้ตั้งเอง (100%)', z2 > z1 && z2 <= 1, `${z1} → ${z2}`);
+          setPageScale(0.7);
+          pR.style.maxWidth = '';
+          autoFitWidth(pR);
+          check('[164-R2-3] ★ ผู้ใช้ตั้ง 70% เองในแผงกว้าง → ตัวอัตโนมัติไม่ขยายทับ', currentPageScale() === 0.7, currentPageScale());
+          pR.style.maxWidth = '420px';
+          await new Promise((r) => setTimeout(r, 150));
+          autoFitWidth(pR);
+          const z3 = currentPageScale();
+          // [รอบต่อ 5] เซสชันต้องจำ "ซูมของผู้ใช้" ไม่ใช่ค่าที่ถูกย่อชั่วคราว (ไม่งั้นเปิดใหม่แล้วขยายกลับไม่ได้อีกเลย)
+          const snapR5 = await captureSession();
+          check('[164-R5] ★ เซสชันเก็บซูมที่ผู้ใช้ตั้ง (70%) ไม่ใช่ค่าที่ตัวอัตโนมัติย่อไว้',
+                z3 < 0.7 && snapR5 && snapR5.ui && snapR5.ui.zoom === 0.7, `ย่ออยู่ ${z3} · เก็บ ${snapR5 && snapR5.ui && snapR5.ui.zoom}`);
+          pR.style.maxWidth = '';
+          await new Promise((r) => setTimeout(r, 150));
+          state.settings.autoFitWidth = false;
+          autoFitWidthRestore();
+          check('[164-R2-3] ปิดสวิตช์ → คืนซูมที่ผู้ใช้ตั้งไว้ (70%) ไม่ค้างที่ค่าที่ย่อ', z3 < 0.7 && currentPageScale() === 0.7,
+                `${z3} → ${currentPageScale()}`);
+          state.settings.autoFitWidth = was;
+          delete globalThis.__k2autoFitTest;
+          resetPageScale();
+          await new Promise((r) => setTimeout(r, 120));
+
+          // ══ [alpha.164 · รอบต่อ 3 · งาน 3] ทางเข้าที่สอง: เมนู มุมมอง → ซูม + คลิกขวาที่ป้ายซูม — กดของจริง ══
+          const poll = async (fn, n = 60) => { for (let i = 0; i < n && !(await fn()); i++) await new Promise((r) => setTimeout(r, 50)); return fn(); };
+          const gOf = async () => ((await kapi.readGlobalSettings()) || {}).autoFitWidth;
+          globalThis.__k2autoFitTest = true;
+          state.settings.autoFitWidth = false;
+          syncMenuToggles();
+          await new Promise((r) => setTimeout(r, 150));
+          pR.style.maxWidth = '420px';
+          await new Promise((r) => setTimeout(r, 150));
+          const [ms0] = await kapi.menuItemState(['view-auto-fit-width']);
+          check('[164-R3-3] เมนู มุมมอง → ซูม มีสวิตช์ซูมพอดีความกว้างอัตโนมัติ (ยังไม่ติ๊ก)', ms0.exists && !ms0.checked, JSON.stringify(ms0));
+          const mc = await kapi.menuTestClick('view-auto-fit-width');
+          check('[164-R3-3] กดเมนูจริงได้', mc && mc.ok, JSON.stringify(mc));
+          await poll(() => state.settings.autoFitWidth === true);
+          check('[164-R3-3] ★ กดเมนู → เปิดสวิตช์', state.settings.autoFitWidth === true);
+          check('[164-R3-3] ★ กดเมนู → แผงแคบย่อทันที (ไม่ต้องรอปรับขนาด)', currentPageScale() < 1, currentPageScale());
+          check('[164-R3-3] ★ กดเมนู → เขียนลงไฟล์ตั้งค่าผู้ใช้ (กฎ W3)', (await poll(async () => (await gOf()) === true)) === true);
+          const ms1 = await poll(async () => { const [x] = await kapi.menuItemState(['view-auto-fit-width']); return x.checked && x; });
+          check('[164-R3-3] เมนูติ๊กตามค่าจริงหลังกด', !!ms1);
+          // คลิกขวาที่ป้ายซูมบนแถบสถานะ
+          const zl = document.querySelector('#zoom-label');
+          const zr = zl.getBoundingClientRect();
+          zl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: zr.left + 4, clientY: zr.top + 4 }));
+          await new Promise((r) => setTimeout(r, 60));
+          const zm = [...document.querySelectorAll('.k-menu')].pop();
+          const zit = zm && [...zm.querySelectorAll('.k-menu-item[role="menuitemcheckbox"]')]
+            .find((x) => x.textContent.includes(tt('ui.setTpl.autoFitWidth')));
+          check('[164-R3-3] ★ คลิกขวาป้ายซูม → เมนูมีสวิตช์ (ติ๊กอยู่)', !!zit && zit.getAttribute('aria-checked') === 'true',
+                zm && zm.textContent.slice(0, 120));
+          check('[164-R3-3] เมนูป้ายซูมมีคำสั่งซูมครบ (ขยาย/ย่อ/รีเซ็ต/พอดีความกว้าง)',
+                !!zm && ['ui.menu.expand', 'ui.menu.collapse', 'ui.menu.resetZoom', 'ui.menu.fitWidePagePaper']
+                  .every((k) => zm.textContent.includes(tt(k))));
+          zit && zit.click();
+          await poll(() => state.settings.autoFitWidth === false);
+          check('[164-R3-3] ★ กดในเมนูป้ายซูม → ปิดสวิตช์ + คืนซูมที่ผู้ใช้ตั้ง (100%)',
+                state.settings.autoFitWidth === false && currentPageScale() === 1, currentPageScale());
+          check('[164-R3-3] ★ ปิดแล้วเขียนลงไฟล์ตั้งค่าผู้ใช้', (await poll(async () => (await gOf()) === false)) === true);
+          pR.style.maxWidth = '';
+          state.settings.autoFitWidth = was;
+          saveGlobalSetting('autoFitWidth', !!was);
+          syncMenuToggles();
+          delete globalThis.__k2autoFitTest;
+          resetPageScale();
+          await new Promise((r) => setTimeout(r, 120));
+        }
+      }
+
       // ════════════════ alpha.60r2 · รอบแก้ 13 ข้อ ════════════════
       {
         // แท็บนิยายต้อง active จริง ๆ ก่อน — แผงที่ซ่อนอยู่มี clientWidth = 0 วัดอะไรไม่ได้เลย
@@ -21496,6 +22349,17 @@ export async function runTest(projectPath) {
             const modeBtns = [...document.querySelectorAll('#starter-body .st-mode-btn')];
             check('[a122] หัว wizard มีปุ่มสองโหมด', modeBtns.length === 2,
                   modeBtns.map((b) => b.dataset.mode).join(','));
+            {
+              // [alpha.164 · รอบต่อ 4] แผงแคบ (1024×700 = ~390px): หัว wizard ขึ้นแถวใหม่ได้ · ปุ่มกลับไม่พับกลางป้าย
+              const wh = document.querySelector('#starter-body .st-wz-head');
+              const bk = document.querySelector('#starter-body .st-back');
+              check('[164-R4] ★ หัว wizard ขึ้นแถวใหม่ได้ + ปุ่มกลับไม่พับกลางป้าย',
+                    !!wh && getComputedStyle(wh).flexWrap === 'wrap' && !!bk && getComputedStyle(bk).whiteSpace === 'nowrap');
+              const spn = document.getElementById('starter-panel');
+              const minW = spn ? parseFloat(getComputedStyle(spn).minWidth) : 999;
+              check('[164-R4] ★ แผง Story Starter ขั้นต่ำ ≤ 390px (หน้าต่าง 1024 เหลือให้ ~390 · เดิม 460 = ตัดขอบทุกขั้น)',
+                    minW <= 390, minW);
+            }
             check('[a122] ค่าเริ่มต้นคือพื้นฐาน (ของเก่าทั้งหมดเป็น basic)',
                   (await SS.readStarter(st94.slug)).mode === SM.MODE_BASIC);
             modeBtns.find((b) => b.dataset.mode === 'adv').click(); await wait62(350);
@@ -21725,6 +22589,19 @@ export async function runTest(projectPath) {
               check('[a123] การ์ดโปรเจกต์แสดงที่อยู่บนดิสก์',
                     !!pathEl && pathEl.textContent === state.root, pathEl && pathEl.textContent);
               check('[a123] hover เห็นที่อยู่เต็ม', pathEl && pathEl.title === state.root);
+              // [alpha.164 · รอบต่อ 3] "/" นำหน้าต้องอยู่หน้า (เดิมกล rtl ย้ายไปท้าย: "/tmp/x" แสดงเป็น "tmp/x/")
+              document.body.append(card);
+              const bdi3 = pathEl && pathEl.querySelector('bdi');
+              const rg3 = document.createRange();
+              if (bdi3) { rg3.setStart(bdi3.firstChild, 0); rg3.setEnd(bdi3.firstChild, 1); }
+              const r0 = bdi3 && rg3.getBoundingClientRect(), rAll = bdi3 && bdi3.getBoundingClientRect();
+              check('[164-R3-5] ★ ที่อยู่บนการ์ด: อักขระแรกของทางอยู่ซ้ายสุดของข้อความ (ไม่ถูกย้ายไปท้าย)',
+                    !!bdi3 && bdi3.dir === 'ltr' && Math.abs(r0.left - rAll.left) < 2, r0 && (r0.left + ' vs ' + rAll.left));
+              const stats3 = [...card.querySelectorAll('.home-stat')];
+              check('[164-R3-5] ★ สถิติการ์ด = ไอคอน + ตัวเลข · ป้ายเต็มใน tooltip',
+                    stats3.length === 3 && stats3.every((x) => x.querySelector('svg, span') && /^\d+$|^—$/.test(x.textContent.trim()) && x.title.includes(':')),
+                    stats3.map((x) => x.textContent + '|' + x.title).join(' ; '));
+              card.remove();
               check('[a123] มีปุ่มเปิดโฟลเดอร์ + คัดลอกที่อยู่',
                     card.querySelectorAll('.home-card-pathbtn').length === 2);
             }
@@ -30922,17 +31799,19 @@ export async function runTest(projectPath) {
           headBtn('close').click(); await wU(250);
           const chip = () => document.querySelector('#content .k-hidden-chips .k-hidden-chip[data-panel-id="props"]');
           check('[161-U1] ★ คลิกปุ่มปิด → แผงปิด', !isPanelOpen('props'));
-          check('[161-U4] ★★ แผงที่เพิ่งปิดมีชิปทางกลับในมุมพื้นที่เขียน (ชื่อเป็นข้อความ ไม่ผ่าน innerHTML)',
-                !!chip() && chip().dataset.kind === 'closed' && chip().textContent.includes(tt((PUx.PANEL_DEFS.find((d) => d.id === 'props') || {}).i18n)),
-                chip() && chip().outerHTML.slice(0, 160));
-          chip().click(); await wU(300);
-          check('[161-U4] ★ คลิกชิป → แผงกลับมา และชิปหายไป', isPanelOpen('props') && !chip());
-          // ── ฉีกไปหน้าต่างแยก ด้วยปุ่มบนหัว → ชิปแบบ "ฉีก" → เรียกกลับ ──
+          // [alpha.165] ผู้ใช้สั่งเอาชิปมุมพื้นที่เขียนออก — ปิดแผงแล้วต้องไม่มีแถบอะไรโผล่ (รายการยังอ่านได้)
+          check('[165-P5] ★★ ปิดแผงแล้วไม่มีแถบชิปโผล่มุมพื้นที่เขียน', !document.querySelector('.k-hidden-chips'),
+                (document.querySelector('.k-hidden-chips') || {}).outerHTML);
+          check('[161-U4] รายการ "เพิ่งปิด" ยังจดไว้ (hiddenPanelChips)', PUx.hiddenPanelChips().some((c) => c.id === 'props' && c.kind === 'closed'));
+          PUx.restoreHiddenPanel('props'); await wU(300);
+          check('[161-U4] ★ restoreHiddenPanel → แผงกลับมา', isPanelOpen('props') && !chip());
+          // ── ฉีกไปหน้าต่างแยก ด้วยปุ่มบนหัว → เรียกกลับ ──
           if (canTearOff('props') && headBtn('tearoff')) {
             headBtn('tearoff').click();
             const torn = await until159(() => isTornOff('props') && !isPanelOpen('props'), 8000);
             check('[161-U1] ★ คลิกปุ่มฉีกบนหัว → แผงย้ายไปหน้าต่างแยก', torn);
-            check('[161-U4] แผงที่ฉีกออกไปมีชิปแบบ "หน้าต่างแยก"', !!chip() && chip().dataset.kind === 'torn');
+            check('[161-U4] แผงที่ฉีกออกไปอยู่ในรายการแบบ "หน้าต่างแยก" (ไม่มีชิปบนจอ)',
+                  PUx.hiddenPanelChips().some((c) => c.id === 'props' && c.kind === 'torn') && !chip());
             await recallPanel('props');
             check('[161-U4] เรียกกลับแล้วแผงคืนที่เดิม', await until159(() => !isTornOff('props') && isPanelOpen('props'), 10000));
           } else check('[161-U1] แผงคุณสมบัติฉีกได้ (มีปุ่มบนหัว)', false, String(canTearOff('props')));

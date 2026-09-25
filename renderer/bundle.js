@@ -258,9 +258,10 @@
   function formatMsg(tpl, vals) {
     const s = withShortcutTokens(String(tpl));
     if (!vals || !vals.length) return s.replace(/\{\{|\}\}/g, (m) => m[0]);
-    return s.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+    return s.replace(/\{\{|\}\}|\{(\d+)(?:\|([^|{}]*)\|([^{}]*))?\}/g, (m, d, one, many) => {
       if (m === "{{" || m === "}}") return m[0];
       const v2 = vals[+d];
+      if (one !== void 0) return Math.abs(Number(String(v2).replace(/[^\d.-]/g, ""))) === 1 ? one : many;
       return v2 == null ? "" : String(v2);
     });
   }
@@ -362,7 +363,17 @@
     return String(s == null ? "" : s).replace(/[&<>"]/g, (c) => MAP[c]);
   }
   function hf(tpl, a = []) {
-    return String(tpl == null ? "" : tpl).split(/\{(\d+)\}/).map((p, i5) => i5 % 2 ? String(a[+p] == null ? "" : a[+p]) : hx(p)).join("");
+    const s = String(tpl == null ? "" : tpl);
+    const re = /\{(\d+)(?:\|([^|{}]*)\|([^{}]*))?\}/g;
+    let out = "", last2 = 0, m;
+    while (m = re.exec(s)) {
+      out += hx(s.slice(last2, m.index));
+      const v2 = a[+m[1]];
+      if (m[2] !== void 0) out += hx(Math.abs(Number(String(v2).replace(/[^\d.-]/g, ""))) === 1 ? m[2] : m[3]);
+      else out += String(v2 == null ? "" : v2);
+      last2 = re.lastIndex;
+    }
+    return out + hx(s.slice(last2));
   }
   function tx(key2) {
     return hx(t(key2));
@@ -3688,9 +3699,9 @@
         /**
         @internal
         */
-        serializeMark(mark, inline2, options = {}) {
+        serializeMark(mark, inline, options = {}) {
           let toDOM = this.marks[mark.type.name];
-          return toDOM && renderSpec(doc(options), toDOM(mark, inline2), null, mark.attrs);
+          return toDOM && renderSpec(doc(options), toDOM(mark, inline), null, mark.attrs);
         }
         static renderSpec(doc3, structure, xmlNS = null, blockArraysIn) {
           if (typeof structure == "string")
@@ -9613,11 +9624,11 @@
           this.mark = mark;
           this.spec = spec;
         }
-        static create(parent, mark, inline2, view2) {
+        static create(parent, mark, inline, view2) {
           let custom = view2.nodeViews[mark.type.name];
-          let spec = custom && custom(mark, view2, inline2);
+          let spec = custom && custom(mark, view2, inline);
           if (!spec || !spec.dom)
-            spec = DOMSerializer.renderSpec(document, mark.type.spec.toDOM(mark, inline2), null, mark.attrs);
+            spec = DOMSerializer.renderSpec(document, mark.type.spec.toDOM(mark, inline), null, mark.attrs);
           return new _MarkViewDesc(parent, mark, spec.dom, spec.contentDOM || spec.dom, spec);
         }
         parseRule() {
@@ -9747,19 +9758,19 @@
         // separate step, syncs the DOM inside `this.contentDOM` to
         // `this.children`.
         updateChildren(view2, pos) {
-          let inline2 = this.node.inlineContent, off3 = pos;
+          let inline = this.node.inlineContent, off3 = pos;
           let composition = view2.composing ? this.localCompositionInfo(view2, pos) : null;
           let localComposition = composition && composition.pos > -1 ? composition : null;
           let compositionInChild = composition && composition.pos < 0;
           let updater = new ViewTreeUpdater(this, localComposition && localComposition.node, view2);
           iterDeco(this.node, this.innerDeco, (widget, i5, insideNode) => {
             if (widget.spec.marks)
-              updater.syncToMarks(widget.spec.marks, inline2, view2, i5);
+              updater.syncToMarks(widget.spec.marks, inline, view2, i5);
             else if (widget.type.side >= 0 && !insideNode)
-              updater.syncToMarks(i5 == this.node.childCount ? Mark.none : this.node.child(i5).marks, inline2, view2, i5);
+              updater.syncToMarks(i5 == this.node.childCount ? Mark.none : this.node.child(i5).marks, inline, view2, i5);
             updater.placeWidget(widget, view2, off3);
           }, (child, outerDeco, innerDeco, i5) => {
-            updater.syncToMarks(child.marks, inline2, view2, i5);
+            updater.syncToMarks(child.marks, inline, view2, i5);
             let compIndex;
             if (updater.findNodeMatch(child, outerDeco, innerDeco, i5)) ;
             else if (compositionInChild && view2.state.selection.from > off3 && view2.state.selection.to < off3 + child.nodeSize && (compIndex = updater.findIndexWithChild(composition.node)) > -1 && updater.updateNodeAt(child, outerDeco, innerDeco, compIndex, view2)) ;
@@ -9769,7 +9780,7 @@
             }
             off3 += child.nodeSize;
           });
-          updater.syncToMarks([], inline2, view2, 0);
+          updater.syncToMarks([], inline, view2, 0);
           if (this.node.isTextblock)
             updater.addTextblockHacks();
           updater.destroyRest();
@@ -10008,7 +10019,7 @@
         }
         // Sync the current stack of mark descs with the given array of
         // marks, reusing existing mark descs when possible.
-        syncToMarks(marks2, inline2, view2, parentIndex) {
+        syncToMarks(marks2, inline, view2, parentIndex) {
           let keep = 0, depth = this.stack.length >> 1;
           let maxKeep = Math.min(depth, marks2.length);
           while (keep < maxKeep && (keep == depth - 1 ? this.top : this.stack[keep + 1 << 1]).matchesMark(marks2[keep]) && marks2[keep].type.spec.spanning !== false)
@@ -10047,7 +10058,7 @@
               }
               this.top = this.top.children[this.index];
             } else {
-              let markDesc = MarkViewDesc.create(this.top, marks2[depth], inline2, view2);
+              let markDesc = MarkViewDesc.create(this.top, marks2[depth], inline, view2);
               this.top.children.splice(this.index, 0, markDesc);
               this.top = markDesc;
               this.changed = true;
@@ -13976,6 +13987,35 @@
         const title2 = imgOptsToTitle(opts);
         return "![" + (alt || "") + "](" + (src2 || "") + (title2 ? ' "' + title2 + '"' : "") + ")";
       }
+      var RE_INLINE_IMG2 = /!\[([^\]\n]*)\]\(([^)\n]+)\)/;
+      var RE_INLINE_IMG_ALL = /^!\[([^\]\n]*)\]\(([^)\n]+)\)$/;
+      var INLINE_IMG_HMAX2 = 3;
+      function inlineImgH(title2) {
+        for (const tok of String(title2 || "").trim().split(/\s+/)) {
+          const m = /^h=(\d+(?:\.\d+)?)$/i.exec(tok);
+          if (m) return Math.min(INLINE_IMG_HMAX2, Math.max(1, Math.round(parseFloat(m[1]))));
+        }
+        return 1;
+      }
+      function inlineImgOf(m) {
+        const tg = splitImgTarget(m[2]);
+        return { src: tg.src, alt: m[1], h: inlineImgH(tg.title), md: m[0] };
+      }
+      function inlineImgMd2(a) {
+        const x = a || {};
+        const h = Math.min(INLINE_IMG_HMAX2, Math.max(1, Math.round(+x.h) || 1));
+        const alt = x.alt || "";
+        const src2 = x.src || "";
+        const m = x.md ? RE_INLINE_IMG_ALL.exec(x.md) : null;
+        if (m) {
+          const o = inlineImgOf(m);
+          if (o.src === src2 && o.alt === alt && o.h === h) return x.md;
+        }
+        return "![" + alt + "](" + src2 + (h > 1 ? ' "h=' + h + '"' : "") + ")";
+      }
+      function inlineImagesAsText2(content) {
+        return (content || []).map((n2) => n2 && n2.type === "image" ? { type: "text", text: inlineImgMd2(n2.attrs), ...n2.marks ? { marks: n2.marks } : {} } : n2);
+      }
       var RE_HR = /^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/;
       var RE_FENCE = /^\s{0,3}(`{3,}|~{3,})\s*([\w+-]*)\s*$/;
       var RE_PAGEBREAK = /^\s*<!--\s*pagebreak\s*-->\s*$/i;
@@ -13993,6 +14033,8 @@
           if (hm && normColor6(hm[1]) && (best === null || hm.index < best.m.index)) {
             best = { m: hm, marks: null, attr: "highlight", color: normColor6(hm[1]) };
           }
+          const im = RE_INLINE_IMG2.exec(s);
+          if (im && (best === null || im.index < best.m.index)) best = { m: im, marks: null, attr: "image", color: null };
           for (const [rx, marks3] of PATS) {
             const m2 = rx.exec(s);
             if (m2 && (best === null || m2.index < best.m.index)) best = { m: m2, marks: marks3, attr: null, color: null };
@@ -14003,6 +14045,11 @@
           }
           const { m, marks: marks2, attr, color } = best;
           if (m.index) segs.push({ text: s.slice(0, m.index), marks: base4 });
+          if (attr === "image") {
+            segs.push({ text: m[0], marks: base4, image: inlineImgOf(m) });
+            s = s.slice(m.index + m[0].length);
+            continue;
+          }
           const next = attr ? [
             ...base4.filter((x) => typeof x === "string" || x.type !== attr),
             { type: attr, attrs: { color } }
@@ -14020,6 +14067,7 @@
       }
       function inlineDisplayText2(text) {
         return stripMentions3(parseInline2(String(text == null ? "" : text)).map((seg) => {
+          if (seg.image) return "";
           const c = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
           const h = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "highlight");
           const inner = c ? colorSpanMd((c.attrs || {}).color, seg.text) : seg.text;
@@ -14050,8 +14098,9 @@
       ];
       function inlineHtml(text, opts) {
         const mono = !!(opts && opts.mono);
+        const imgSrc = opts && typeof opts.imgSrc === "function" ? opts.imgSrc : (u) => u;
         return parseInline2(stripMentions3(text)).map((seg) => {
-          let s = HTML_ESC(seg.text).replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (m, a, u) => `<img alt="${ATTR_Q(a)}" src="${ATTR_Q(u)}">`);
+          let s = seg.image ? `<img class="k-inline-img" alt="${ATTR_Q(HTML_ESC(seg.image.alt))}" src="${ATTR_Q(HTML_ESC(imgSrc(seg.image.src)))}" style="--k-img-h:${seg.image.h}">` : HTML_ESC(seg.text);
           if (!s) return "";
           const marks2 = seg.marks || [];
           const has2 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
@@ -14065,12 +14114,14 @@
         }).join("");
       }
       function inlineNodes(text) {
-        return parseInline2(text).filter((x) => x.text).map((x) => ({
-          type: "text",
-          text: x.text,
-          // มาร์กเป็นได้ทั้งชื่อเปล่า ๆ (ตัวหนา/เอียง/…) และก้อนที่มีแอตทริบิวต์ (สี)
-          ...x.marks.length ? { marks: x.marks.map((t3) => typeof t3 === "string" ? { type: t3 } : t3) } : {}
-        }));
+        return parseInline2(text).filter((x) => x.text).map((x) => {
+          const mk2 = x.marks.length ? { marks: x.marks.map((t3) => typeof t3 === "string" ? { type: t3 } : t3) } : {};
+          if (x.image) {
+            const { src: src2, alt, h, md } = x.image;
+            return { type: "image", attrs: { src: src2, alt, h, md }, ...mk2 };
+          }
+          return { type: "text", text: x.text, ...mk2 };
+        });
       }
       function para2(text) {
         const content = inlineNodes(text);
@@ -14409,12 +14460,12 @@
             parts.push([]);
             continue;
           }
-          if (n2.type !== "text") continue;
+          if (n2.type !== "text" && n2.type !== "image") continue;
           const marks2 = n2.marks || [];
           const cmk = marks2.find((m) => m.type === "color");
           const hmk = marks2.find((m) => m.type === "highlight");
           parts[parts.length - 1].push({
-            text: n2.text,
+            text: n2.type === "image" ? inlineImgMd2(n2.attrs) : n2.text,
             color: cmk ? normColor6((cmk.attrs || {}).color) : "",
             hl: hmk ? normColor6((hmk.attrs || {}).color) : "",
             sig: new Set(marks2.map((m) => m.type).filter((t3) => MARKSET.includes(t3)))
@@ -14643,6 +14694,12 @@
         imgLine: imgLine2,
         figureClass: figureClass3,
         figureImgStyle: figureImgStyle3,
+        // [alpha.164 · IMG-IN-A] รูปกลางย่อหน้า (โหนด inline `image`)
+        RE_INLINE_IMG: RE_INLINE_IMG2,
+        inlineImgH,
+        inlineImgMd: inlineImgMd2,
+        inlineImagesAsText: inlineImagesAsText2,
+        INLINE_IMG_HMAX: INLINE_IMG_HMAX2,
         // [alpha.133 · Y-1+Y-2] สคีมาบล็อก + ตัวแปลง inline ตัวเดียวของทั้งโปรแกรม
         // (ตัวแก้ไข · ไฟล์ที่ส่งออก · ช่องตัวอย่าง อ่านจากสองตัวนี้เท่านั้น)
         mdBlocks: mdBlocks4,
@@ -16475,6 +16532,7 @@
     out.push("img{max-width:100%}");
     out.push("figure{margin:1em 0;text-align:center}");
     out.push("figure img{max-width:100%;max-height:480px;border-radius:8px}");
+    out.push("img.k-inline-img{height:calc(var(--k-img-h, 1) * 1lh);width:auto;max-width:100%;vertical-align:bottom;border-radius:2px}");
     {
       const bh = Math.max(0.5, (+p.height || 11) - (+m.top || 0) - (+m.bottom || 0));
       const pw = +p.width || 8.5, ph = +p.height || 11;
@@ -16878,11 +16936,11 @@
       for (const b of I2.list) {
         if (b.pos > max2) continue;
         const mid = isInline2(doc3, b.pos);
-        const inline2 = mid && !asBlock;
+        const inline = mid && !asBlock;
         const inBlock = mid && asBlock;
         out.push(Decoration.widget(b.pos, () => {
-          const d = document.createElement(inline2 ? "span" : "div");
-          d.className = cls + (inline2 ? " k-pb-inline" : inBlock ? " k-pb-in-block" : "");
+          const d = document.createElement(inline ? "span" : "div");
+          d.className = cls + (inline ? " k-pb-inline" : inBlock ? " k-pb-in-block" : "");
           d.dataset.page = String(b.page || "");
           if (inBlock && Number.isFinite(b.ind)) d.style.setProperty("--k-pb-ind", b.ind + "in");
           if (Number.isFinite(b.pad) && Math.abs(b.pad) > 0.5) d.style.setProperty("--k-pb-pad", b.pad + "px");
@@ -16909,7 +16967,7 @@
           return d;
         }, {
           side: -1,
-          key: decoKey2 + b.page + (inline2 ? "i" : inBlock ? "b" : "") + "-" + (b.ind ?? "") + "-" + numOf(b.page) + "-" + (b.contTop || "") + "-" + (b.contBottom || "")
+          key: decoKey2 + b.page + (inline ? "i" : inBlock ? "b" : "") + "-" + (b.ind ?? "") + "-" + numOf(b.page) + "-" + (b.contTop || "") + "-" + (b.contBottom || "")
         }));
       }
       return DecorationSet.create(doc3, out);
@@ -17364,6 +17422,7 @@
         "goto-scene": "",
         "insert-image": "image-add",
         "nbsp": "",
+        "project-replace": "search",
         "quick-open": "file-search",
         "replace": "search",
         "select-scene": "",
@@ -17374,6 +17433,7 @@
         "compile": "",
         "export-blog": "",
         "export-hub": "book-content",
+        "export-pdf": "",
         "import-scrivener": "",
         "new-from-template": "star",
         "new-project": "",
@@ -17381,6 +17441,7 @@
         "open-project": "folder",
         "prev-tab": "",
         "print": "",
+        "project-doctor": "checklist",
         "reopen-closed-tab": "undo",
         "save": "",
         "save-all": "save",
@@ -17398,12 +17459,17 @@
         "fmt:ol": "list-ol",
         "fmt:paragraph": "",
         "fmt:strike": "strikethrough",
+        "fmt:sub": "subscript",
+        "fmt:sup": "superscript",
         "fmt:ul": "list-ul",
         "fmt:underline": "underline",
         "text-case-cycle": "",
+        "about": "",
         "cheatsheet": "",
         "dev-console": "wrench",
         "settings": "cog",
+        "sprint": "timer",
+        "ai-assistant": "bot",
         "gallery": "image",
         "kanban": "kanban",
         "toggle-panel:ai-analyzer": "brain",
@@ -17452,23 +17518,21 @@
         "fmtbar-opacity": "",
         "focus-mode": "expand",
         "line-numbers": "list-ol",
+        "onset-toggle": "swap",
         "panels-hide-all": "panel-hide-all",
         "panels-hide-left": "panel-hide-left",
         "panels-hide-right": "panel-hide-right",
         "read-book": "",
         "reading-mode": "book-open",
         "reveal-active": "target",
-        "onset-toggle": "swap",
         "split-view": "dock-right",
         "typewriter": "edit",
         "workspace-menu": "collection",
+        "zoom:-1": "minus",
         "zoom:0": "reset",
         "zoom:1": "plus",
-        "zoom:-1": "minus",
         "scratchpad": "note",
-        "about": "",
         "ai-analyzer": "brain",
-        "ai-assistant": "bot",
         "ai-chat": "",
         "ai-chat-dialog": "",
         "ai-chat-new": "plus",
@@ -17482,12 +17546,13 @@
         "ai-title": "",
         "ai-world": "",
         "all-notes": "",
+        "auto-fit-width": "",
         "auto-sync": "",
         "auto-sync:false": "",
         "auto-sync:true": "",
         "books": "",
-        "branching": "branch",
         "branch-sync": "",
+        "branching": "branch",
         "changelog": "",
         "chapters": "chapters",
         "char-map": "font",
@@ -17501,7 +17566,6 @@
         "export-json": "",
         "export-language-csv": "globe",
         "export-panel-layout": "export",
-        "export-pdf": "",
         "export-pdf-builtin": "",
         "export-rtf": "",
         "export-watermark": "",
@@ -17512,15 +17576,13 @@
         "fmt:heading:4": "",
         "fmt:hr": "",
         "fmt:quote": "",
-        "fmt:sub": "subscript",
-        "fmt:sup": "superscript",
         "gallery-board": "palette",
         "gallery-dups": "search",
         "gallery-export-used": "export",
         "gallery-new-album": "",
         "gallery-unused": "broom",
-        "goto:page": "",
         "goto-page:1": "skip-previous",
+        "goto:page": "",
         "goto:scene": "",
         "home": "home",
         "import-language-csv": "globe",
@@ -17536,19 +17598,17 @@
         "page-headers": "page-header",
         "page-numbers": "",
         "page-setup": "ruler",
+        "panel-system": "frame",
         "panels-side-bottom": "panel-bottom",
         "panels-side-left": "panel-left",
         "panels-side-right": "panel-right",
         "panels-side-top": "panel-top",
-        "panel-system": "frame",
         "planner": "",
         "planner-align": "",
         "planner-valign": "",
         "player-history": "",
         "player-mode": "play",
         "plugin:k2test:hello": "",
-        "project-doctor": "checklist",
-        "project-replace": "search",
         "project-setup": "film",
         "prose-indent": "",
         "prose-setup": "book-open",
@@ -17573,15 +17633,10 @@
         "sp-element-caps": "",
         "sp-extension": "character-extension",
         "sp-force-case": "",
-        "split-add": "",
-        "split-close": "",
-        "split-view:down": "",
-        "split-view:right": "",
         "sp-report": "",
         "sp-report:character": "group",
         "sp-report:chart": "chart",
         "sp-report:location": "map",
-        "sprint": "timer",
         "sp-show-format": "",
         "sp-thai-font": "",
         "sp-view": "",
@@ -17591,6 +17646,10 @@
         "sp-view:overview1": "",
         "sp-view:overview4": "",
         "sp-view:side": "",
+        "split-add": "",
+        "split-close": "",
+        "split-view:down": "",
+        "split-view:right": "",
         "story-starter": "",
         "story-starter-toggle": "book-open",
         "sync-scene-meta": "refresh",
@@ -17612,16 +17671,16 @@
         "toggle-theme": "",
         "toolbar-config": "",
         "type-sound": "volume",
+        "ui-scale": "",
+        "ui-scale:-1": "",
+        "ui-scale:0": "",
+        "ui-scale:1": "",
         "ui:filter-archive-toggle": "archive",
         "ui:find-close": "",
         "ui:find-next": "",
         "ui:find-prev": "",
         "ui:find-rep1": "",
         "ui:find-repall": "",
-        "ui-scale": "",
-        "ui-scale:0": "",
-        "ui-scale:1": "",
-        "ui-scale:-1": "",
         "ui:tb-case": "text-case",
         "ui:tb-color": "",
         "ui:tb-highlight": "highlight",
@@ -17656,6 +17715,7 @@
         ["Comma", true, true, "goto-scene"],
         ["KeyI", true, true, "insert-image"],
         ["Space", true, true, "nbsp"],
+        ["KeyH", "ctrl+alt", true, "project-replace"],
         ["KeyO", true, true, "quick-open"],
         ["KeyH", true, false, "replace"],
         ["KeyA", true, true, "select-scene"],
@@ -17665,6 +17725,7 @@
         ["KeyX", "ctrl+alt", false, "compile"],
         ["KeyB", true, true, "export-blog"],
         ["KeyE", true, true, "export-hub"],
+        ["KeyP", "ctrl+alt", true, "export-pdf"],
         ["KeyI", "ctrl+alt", true, "import-scrivener"],
         ["KeyN", true, true, "new-from-template"],
         ["KeyN", true, false, "new-project"],
@@ -17674,6 +17735,7 @@
         ["Tab", true, true, "prev-tab"],
         ["PageUp", true, false, "prev-tab"],
         ["KeyP", true, false, "print"],
+        ["KeyD", "ctrl+alt", true, "project-doctor"],
         ["KeyZ", "ctrl+alt", true, "reopen-closed-tab"],
         ["KeyS", true, false, "save"],
         ["KeyS", "ctrl+alt", false, "save-all"],
@@ -17692,12 +17754,17 @@
         ["Digit7", true, true, "fmt", "ol"],
         ["Digit0", true, false, "fmt", "paragraph"],
         ["KeyX", true, true, "fmt", "strike"],
+        ["Minus", "ctrl+alt", false, "fmt", "sub"],
+        ["Equal", "ctrl+alt", false, "fmt", "sup"],
         ["Digit8", true, true, "fmt", "ul"],
         ["KeyU", true, false, "fmt", "underline"],
         ["KeyU", "ctrl+alt", false, "text-case-cycle"],
+        ["Slash", "ctrl+alt", true, "about"],
         ["Slash", "ctrl+alt", false, "cheatsheet"],
         ["Backquote", true, true, "dev-console"],
         ["Comma", true, false, "settings"],
+        ["KeyS", "ctrl+alt", true, "sprint"],
+        ["KeyA", "ctrl+alt", true, "ai-assistant"],
         ["KeyG", true, true, "gallery"],
         ["KeyK", true, false, "kanban"],
         ["KeyA", "ctrl+alt", false, "toggle-panel", "ai-analyzer"],
@@ -17743,27 +17810,19 @@
         ["Quote", true, true, "fmtbar-opacity"],
         ["KeyD", true, true, "focus-mode"],
         ["KeyR", "ctrl+alt", false, "line-numbers"],
+        ["KeyO", "ctrl+alt", true, "onset-toggle"],
         ["Backslash", true, false, "panels-hide-all"],
         ["BracketLeft", true, true, "panels-hide-left"],
         ["BracketRight", true, true, "panels-hide-right"],
         ["KeyR", "ctrl+alt", true, "read-book"],
         ["KeyH", true, true, "reading-mode"],
         ["Digit1", true, true, "reveal-active"],
-        ["KeyO", "ctrl+alt", true, "onset-toggle"],
         ["Backslash", true, true, "split-view"],
         ["KeyT", true, true, "typewriter"],
         ["KeyY", true, true, "workspace-menu"],
-        ["Digit0", true, true, "zoom", 0],
-        ["Equal", true, false, "zoom", 1],
         ["Minus", true, false, "zoom", -1],
-        ["Slash", "ctrl+alt", true, "about"],
-        ["KeyA", "ctrl+alt", true, "ai-assistant"],
-        ["KeyP", "ctrl+alt", true, "export-pdf"],
-        ["Minus", "ctrl+alt", false, "fmt", "sub"],
-        ["Equal", "ctrl+alt", false, "fmt", "sup"],
-        ["KeyD", "ctrl+alt", true, "project-doctor"],
-        ["KeyH", "ctrl+alt", true, "project-replace"],
-        ["KeyS", "ctrl+alt", true, "sprint"]
+        ["Digit0", true, true, "zoom", 0],
+        ["Equal", true, false, "zoom", 1]
       ];
     }
   });
@@ -19353,6 +19412,30 @@
       }, view2);
     };
   }
+  function joinParaIntoListEnd(state2, dispatch) {
+    const { $from, empty: empty3 } = state2.selection;
+    if (!empty3 || $from.depth !== 1 || $from.parentOffset !== 0) return false;
+    const para2 = $from.parent;
+    if (para2.type !== schema.nodes.paragraph || para2.content.size === 0) return false;
+    const i5 = $from.index(0);
+    if (i5 === 0) return false;
+    const prev = state2.doc.child(i5 - 1);
+    if (prev.type !== schema.nodes.bullet_list && prev.type !== schema.nodes.ordered_list) return false;
+    const paraStart = $from.before(1);
+    let n2 = prev, p = paraStart - prev.nodeSize;
+    while (!n2.isTextblock) {
+      if (!n2.lastChild) return false;
+      p = p + n2.nodeSize - 1 - n2.lastChild.nodeSize;
+      n2 = n2.lastChild;
+    }
+    const joinAt = p + n2.nodeSize - 1;
+    if (dispatch) {
+      const tr4 = state2.tr.delete(paraStart, paraStart + para2.nodeSize).insert(joinAt, para2.content);
+      tr4.setSelection(TextSelection.create(tr4.doc, joinAt));
+      dispatch(tr4.scrollIntoView());
+    }
+    return true;
+  }
   function seq(state2) {
     let st = state2;
     const steps = [];
@@ -19830,6 +19913,43 @@
             parseDOM: [{ tag: "br" }],
             toDOM: () => ["br"]
           },
+          // [alpha.164 · IMG-IN-A] ★ รูปกลางย่อหน้า `abc ![](x.png) def` — atom แบบ inline
+          // ความสูงเป็น **หน่วยบรรทัด** (`h` 1–3 · CSS `--k-img-h` × `1lh`) ไม่ใช่พิกเซล: ตัวจัดหน้ารู้ความสูง
+          // โดยไม่ต้องรอรูปโหลด · `draggable:false` ด้วยเหตุผลเดียวกับ figure (ลากเลือกข้อความข้ามรูปได้)
+          // · `md` = ข้อความดิบในไฟล์ เขียนกลับทั้งดุ้นเมื่อค่าไม่เปลี่ยน (`inlineImgMd`) — ไฟล์เก่าไม่เปลี่ยนสักไบต์
+          image: {
+            group: "inline",
+            inline: true,
+            atom: true,
+            draggable: false,
+            selectable: true,
+            attrs: {
+              src: {},
+              alt: { default: "" },
+              h: { default: 1 },
+              md: { default: "" },
+              resolved: { default: "" }
+            },
+            parseDOM: [{ tag: "img.k-inline-img[data-src]", getAttrs: (d) => ({
+              src: d.getAttribute("data-src") || "",
+              alt: d.getAttribute("alt") || "",
+              h: Math.min(import_md2.INLINE_IMG_HMAX, Math.max(1, +d.getAttribute("data-h") || 1)),
+              md: d.getAttribute("data-md") || "",
+              // วางจากตัวแก้ไขเอง = ที่อยู่ที่แสดงอยู่แล้ว (ไม่งั้นรูปแตกจนกว่าจะเปิดไฟล์ใหม่)
+              resolved: d.getAttribute("src") || ""
+            }) }],
+            toDOM: (n2) => ["img", {
+              class: "k-inline-img",
+              "data-src": n2.attrs.src,
+              "data-md": n2.attrs.md,
+              "data-h": String(n2.attrs.h || 1),
+              src: n2.attrs.resolved || n2.attrs.src,
+              alt: n2.attrs.alt,
+              title: n2.attrs.alt || "",
+              style: "--k-img-h:" + (n2.attrs.h || 1),
+              draggable: "false"
+            }]
+          },
           // [alpha.61 ข้อ 3] Ctrl+Enter = ขึ้นหน้าใหม่ด้วยมือ (เส้นบังคับ · ไม่ใช่เส้นคั่นหน้าอัตโนมัติ)
           page_break: {
             group: "block",
@@ -19939,6 +20059,7 @@
       BACKSPACE_CMD = chainCommands(
         exitListItemAtStart,
         dropEmptyParaAfterList,
+        joinParaIntoListEnd,
         baseKeymap.Backspace
       );
       isList = (n2) => /_list$/.test(n2.type.name);
@@ -20076,9 +20197,13 @@
         }
         _docFromMd(md, alignMap) {
           const json = (0, import_md2.mdToDoc)(md, alignMap);
-          for (const n2 of json.content) {
-            if (n2.type === "figure") n2.attrs.resolved = this.resolveSrc(n2.attrs.src);
-          }
+          const walk3 = (list2) => {
+            for (const n2 of list2 || []) {
+              if (n2.type === "figure" || n2.type === "image") n2.attrs.resolved = this.resolveSrc(n2.attrs.src);
+              else if (n2.content) walk3(n2.content);
+            }
+          };
+          walk3(json.content);
           return schema.nodeFromJSON(json);
         }
         /** [alpha.164] แปลง markdown เป็น doc ของ schema นี้ (ไม่แตะเอกสารบนจอ) — ใช้เทียบ/แสดงฉบับเดิม */
@@ -20610,7 +20735,7 @@
       flip = (o) => Object.fromEntries(Object.entries(o).map(([k, v2]) => [v2, k]));
       PROSE_KIND = flip(PROSE_CODE);
       SP_KIND = flip(SP_CODE);
-      textOf = (n2) => (n2.content || []).filter((x) => x.type === "text").map((x) => x.text).join("");
+      textOf = (n2) => (n2.content || []).map((x) => x.type === "text" ? x.text : x.type === "image" ? (0, import_md3.inlineImgMd)(x.attrs) : "").join("");
       allMark = (n2, mark) => {
         const segs = (n2.content || []).filter((x) => x.type === "text" && x.text.trim());
         return segs.length > 0 && segs.every((x) => (x.marks || []).some((k) => k.type === mark));
@@ -21744,9 +21869,18 @@ ${BLOCK_END}
     if (!/^[\p{L}\p{M}\p{N}._\-/]+( [\p{L}\p{M}\p{N}._\-/]+)?$/u.test(head2)) return { source: "", msg: s };
     return { source: head2, msg: s.slice(i5 + 1).trim() };
   }
+  function errCodePrefix(e) {
+    if (!e || typeof e !== "object") return "";
+    const bits3 = [];
+    if (e.code !== void 0 && e.code !== null && e.code !== "") bits3.push(String(e.code));
+    if (Number.isFinite(e.errno)) bits3.push("errno=" + e.errno);
+    if (e.syscall) bits3.push("syscall=" + e.syscall);
+    if (e.path) bits3.push("path=" + e.path);
+    return bits3.length ? "[" + bits3.join(" ") + "] " : "";
+  }
   function detailText(extra) {
     if (extra === void 0 || extra === null) return "";
-    if (extra instanceof Error) return extra.stack || extra.name + ": " + extra.message;
+    if (extra instanceof Error) return errCodePrefix(extra) + (extra.stack || extra.name + ": " + extra.message);
     if (typeof extra === "string") return extra;
     try {
       return JSON.stringify(extra, replacer(), 2);
@@ -21757,7 +21891,7 @@ ${BLOCK_END}
   function replacer() {
     const seen = /* @__PURE__ */ new WeakSet();
     return (k, v2) => {
-      if (v2 instanceof Error) return { name: v2.name, message: v2.message, stack: v2.stack };
+      if (v2 instanceof Error) return { name: v2.name, code: v2.code, message: v2.message, stack: v2.stack };
       if (typeof v2 === "object" && v2 !== null) {
         if (seen.has(v2)) return t("ui.log.dup");
         seen.add(v2);
@@ -21768,8 +21902,28 @@ ${BLOCK_END}
   }
   function formatLine(rec) {
     let line = `[${rec.ts}] ${rec.level.toUpperCase()} ` + (rec.source ? rec.source + ": " : "") + rec.msg;
-    if (rec.detail) line += " | " + rec.detail.replace(/\n/g, "\\n");
+    if (rec.detail) line += " | " + escDetail(rec.detail);
     return line;
+  }
+  function parseLogLine(line, seq3 = 0) {
+    const s = String(line == null ? "" : line).replace(/\r$/, "");
+    if (!s.trim()) return null;
+    const m = s.match(/^\[([^\]]+)\] (ERROR|WARN|INFO|DEBUG) (.*)$/);
+    if (!m) return { seq: seq3, ts: "", level: "info", source: "", msg: s, detail: "", count: 1 };
+    let rest = m[3], detail = "";
+    const cut = rest.indexOf(" | ");
+    if (cut >= 0) {
+      detail = unescDetail(rest.slice(cut + 3));
+      rest = rest.slice(0, cut);
+    }
+    const { source, msg } = splitSource(rest);
+    return { seq: seq3, ts: m[1], level: normLevel(m[2].toLowerCase()), source, msg, detail, count: 1 };
+  }
+  function escDetail(s) {
+    return String(s).replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n");
+  }
+  function unescDetail(s) {
+    return String(s).replace(/\\(\\|n)/g, (m, c) => c === "n" ? "\n" : "\\");
   }
   function shortTime(ts) {
     const m = String(ts || "").match(/T(\d{2}:\d{2}:\d{2})/);
@@ -22651,12 +22805,22 @@ ${BLOCK_END}
     if (!node) return null;
     const w = Number(node.fW) > 0 ? Number(node.fW) : 0;
     const h = Number(node.fH) > 0 ? Number(node.fH) : 0;
-    return w > 0 || h > 0 ? { w, h } : null;
+    if (!(w > 0 || h > 0)) return null;
+    const box2 = { w, h };
+    if (Number.isFinite(Number(node.fX)) && Number.isFinite(Number(node.fY)) && node.fX !== void 0 && node.fY !== void 0) {
+      box2.x = Number(node.fX);
+      box2.y = Number(node.fY);
+    }
+    return box2;
   }
-  function setNodeFloatBox(node, w, h) {
+  function setNodeFloatBox(node, w, h, x, y) {
     if (!node) return node;
     if (w > 0) node.fW = Math.round(w);
     if (h > 0) node.fH = Math.round(h);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      node.fX = Math.round(x);
+      node.fY = Math.round(y);
+    }
     return node;
   }
   function nodeById(root, id) {
@@ -23402,8 +23566,20 @@ ${BLOCK_END}
           const w = saved.w || box2.w || df.w || 360;
           const defH = df.h || 520;
           const h = saved.h || (box2.h ? opts.fromDock ? Math.min(box2.h, defH) : box2.h : defH);
-          setNodeFloatBox(node, w, h);
-          const f = makeFloat(node, box2.x ?? 80, box2.y ?? 80, w, h);
+          let x = box2.x ?? 80, y = box2.y ?? 80;
+          if (opts.recall && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+            x = saved.x;
+            y = saved.y;
+          }
+          if (typeof opts.clamp === "function") {
+            const c = opts.clamp({ x, y, w, h });
+            if (c && Number.isFinite(c.x) && Number.isFinite(c.y)) {
+              x = c.x;
+              y = c.y;
+            }
+          }
+          setNodeFloatBox(node, w, h, x, y);
+          const f = makeFloat(node, x, y, w, h);
           this.store.setFloats([...this.floats, f]);
           return true;
         }
@@ -23460,7 +23636,7 @@ ${BLOCK_END}
           const next = this.floats.map((f) => {
             if (f.id !== floatId) return f;
             const merged = { ...f, ...pick(box2, ["x", "y", "w", "h"]) };
-            merged.panel = setNodeFloatBox({ ...f.panel }, merged.w, merged.h);
+            merged.panel = setNodeFloatBox({ ...f.panel }, merged.w, merged.h, merged.x, merged.y);
             return merged;
           });
           this.store.setFloats(next);
@@ -23479,7 +23655,7 @@ ${BLOCK_END}
           const next = this.floats.map((f) => {
             if (f.panel.id !== id) return f;
             const merged = { ...f, ...pick(box2, ["x", "y", "w", "h"]) };
-            merged.panel = setNodeFloatBox({ ...f.panel }, merged.w, merged.h);
+            merged.panel = setNodeFloatBox({ ...f.panel }, merged.w, merged.h, merged.x, merged.y);
             return merged;
           });
           this.store.setFloats(next);
@@ -24056,7 +24232,7 @@ ${BLOCK_END}
         continue;
       }
       const d = document.createElement("div");
-      d.className = "k-menu-item" + (it.danger ? " k-danger" : "") + (it.disabled ? " k-menu-label" : "") + (it.sub ? " k-menu-has-sub" : "") + (it.checked ? " k-menu-checked" : "");
+      d.className = "k-menu-item" + (it.danger ? " k-danger" : "") + (it.disabled ? " k-menu-label" : "") + (it.disabled && it.click ? " k-menu-disabled" : "") + (it.sub ? " k-menu-has-sub" : "") + (it.checked ? " k-menu-checked" : "");
       d.setAttribute("role", it.checked !== void 0 ? "menuitemcheckbox" : "menuitem");
       if (it.checked !== void 0) d.setAttribute("aria-checked", it.checked ? "true" : "false");
       if (it.disabled) d.setAttribute("aria-disabled", "true");
@@ -24144,10 +24320,8 @@ ${BLOCK_END}
       items = null;
     }
     if (row3._subToken !== token || !row3.isConnected || !row3.classList.contains("k-menu-open")) return;
-    if (!items || !items.length) {
-      row3.classList.remove("k-menu-open");
-      return;
-    }
+    if (!items || !items.length) items = [{ text: t("ui.common.empty"), disabled: true, click: () => {
+    } }];
     const sm = buildMenuEl(items, depth + 1);
     sm._owner = row3;
     document.body.appendChild(sm);
@@ -24364,7 +24538,10 @@ ${BLOCK_END}
         nm.textContent = f.title || f.key;
         const pt = document.createElement("div");
         pt.className = "k-saveall-path";
-        pt.textContent = f.file || "";
+        const bdi = document.createElement("bdi");
+        bdi.dir = "ltr";
+        bdi.textContent = f.file || "";
+        pt.append(bdi);
         pt.title = f.file || "";
         txt.append(nm, pt);
         row3.append(cb, txt);
@@ -24446,6 +24623,45 @@ ${BLOCK_END}
       _capture = null;
       _captureChain = Promise.resolve();
       _hideTip = null;
+    }
+  });
+
+  // src/drag-cancel.js
+  function escCancelDrag(onCancel) {
+    let on2 = true;
+    _active++;
+    const off3 = () => {
+      if (!on2) return;
+      on2 = false;
+      _active = Math.max(0, _active - 1);
+      window.removeEventListener("keydown", key2, true);
+      window.removeEventListener("mouseup", off3, true);
+      window.removeEventListener("blur", off3);
+    };
+    function key2(e) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      off3();
+      try {
+        onCancel();
+      } catch (err2) {
+        try {
+          console.error("[drag-cancel]", err2);
+        } catch {
+        }
+      }
+    }
+    window.addEventListener("keydown", key2, true);
+    window.addEventListener("mouseup", off3, true);
+    window.addEventListener("blur", off3);
+    return off3;
+  }
+  var _active;
+  var init_drag_cancel = __esm({
+    "src/drag-cancel.js"() {
+      _active = 0;
     }
   });
 
@@ -24740,24 +24956,29 @@ ${BLOCK_END}
     if (r && map2 && map2[r]) return map2[r];
     return categorizeRole(r);
   }
-  var REL_TYPES, REL_COLOR, REL_ICON, REL_LABEL;
+  var relType, REL_TYPES, REL_COLOR, REL_ICON, REL_LABEL;
   var init_relationship_types = __esm({
     "src/relationship-types.js"() {
+      init_i18n();
+      relType = (key2, labelKey, color, icon2) => ({ key: key2, labelKey, color, icon: icon2, get label() {
+        return t(labelKey);
+      } });
       REL_TYPES = [
         // icon = ชื่อไอคอนใน icons.js (ต้องมีจริง ไม่งั้นวาดออกมาเป็น svg ว่าง)
-        { key: "family", label: "\u0E04\u0E23\u0E2D\u0E1A\u0E04\u0E23\u0E31\u0E27", color: "#e06c75", icon: "home" },
-        { key: "romantic", label: "\u0E04\u0E19\u0E23\u0E31\u0E01", color: "#e06ca0", icon: "star" },
-        { key: "ally", label: "\u0E1E\u0E31\u0E19\u0E18\u0E21\u0E34\u0E15\u0E23", color: "#61afef", icon: "user" },
-        { key: "rival", label: "\u0E04\u0E39\u0E48\u0E41\u0E02\u0E48\u0E07", color: "#e5c07b", icon: "cloud-lightning" },
-        { key: "enemy", label: "\u0E28\u0E31\u0E15\u0E23\u0E39", color: "#be5046", icon: "x" },
-        { key: "mentor", label: "\u0E1C\u0E39\u0E49\u0E2A\u0E2D\u0E19/\u0E2D\u0E32\u0E08\u0E32\u0E23\u0E22\u0E4C", color: "#98c379", icon: "book" },
-        { key: "acquaintance", label: "\u0E23\u0E39\u0E49\u0E08\u0E31\u0E01", color: "#abb2bf", icon: "chat" },
-        { key: "neutral", label: "\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E25\u0E32\u0E07", color: "#5c6370", icon: "minus" },
-        { key: "custom", label: "\u0E2D\u0E37\u0E48\u0E19 \u0E46", color: "#c678dd", icon: "bookmark" }
+        relType("family", "ui.relType.family", "#e06c75", "home"),
+        relType("romantic", "ui.relType.romantic", "#e06ca0", "star"),
+        relType("ally", "ui.relType.ally", "#61afef", "user"),
+        relType("rival", "ui.relType.rival", "#e5c07b", "cloud-lightning"),
+        relType("enemy", "ui.relType.enemy", "#be5046", "x"),
+        relType("mentor", "ui.relType.mentor", "#98c379", "book"),
+        relType("acquaintance", "ui.relType.acquaintance", "#abb2bf", "chat"),
+        relType("neutral", "ui.relType.neutral", "#5c6370", "minus"),
+        relType("custom", "ui.relType.custom", "#c678dd", "bookmark")
       ];
-      REL_COLOR = Object.fromEntries(REL_TYPES.map((t3) => [t3.key, t3.color]));
-      REL_ICON = Object.fromEntries(REL_TYPES.map((t3) => [t3.key, t3.icon]));
-      REL_LABEL = Object.fromEntries(REL_TYPES.map((t3) => [t3.key, t3.label]));
+      REL_COLOR = Object.fromEntries(REL_TYPES.map((x) => [x.key, x.color]));
+      REL_ICON = Object.fromEntries(REL_TYPES.map((x) => [x.key, x.icon]));
+      REL_LABEL = {};
+      for (const x of REL_TYPES) Object.defineProperty(REL_LABEL, x.key, { get: () => x.label, enumerable: true });
     }
   });
 
@@ -25047,10 +25268,10 @@ ${BLOCK_END}
         requestAnimationFrame(put);
       } catch {
       }
-      for (const ms of [0, 30, 60, 120, 250]) setTimeout(put, ms);
+      for (const ms of [0, 30, 60, 120, 250, 450, 700, 1e3]) setTimeout(put, ms);
       setTimeout(() => {
         for (const j of jobs) if (j.el) j.el.style.scrollBehavior = j.prev || "";
-      }, 300);
+      }, 1050);
       return jobs.length;
     };
   }
@@ -25099,7 +25320,14 @@ ${BLOCK_END}
     st.textContent = statusIdleText(st);
     st.classList.remove("k-status-err");
     delete st.dataset.level;
+    statusTitle(st);
     return true;
+  }
+  function statusTitle(st) {
+    const txt = (st.textContent || "").trim();
+    if (txt) st.setAttribute("title", txt);
+    else st.removeAttribute("title");
+    st.dataset.tip = "ui.sb.msgTip";
   }
   function armStatus(st, ttl) {
     if (_st.timer) {
@@ -25146,6 +25374,7 @@ ${BLOCK_END}
     st.textContent = s == null ? "" : String(s);
     st.classList.toggle("k-status-err", level === "error");
     st.dataset.level = level;
+    statusTitle(st);
     armStatus(st, ttl);
     return st;
   }
@@ -25542,6 +25771,8 @@ ${BLOCK_END}
         maxBackups: 10,
         autoBackup: true,
         lineNumbers: false,
+        // [alpha.164 · รอบต่อ 2 · งาน 3] แผงเอกสารแคบกว่ากระดาษ → ซูมพอดีความกว้างเอง (ปิดเป็นค่าเริ่มต้น)
+        autoFitWidth: false,
         // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง — ปิดได้ (บางคนบอกว่ามันบังงาน)
         fabEnabled: true,
         // [alpha.111] คำสั่งบนปุ่มลอย (สูงสุด 4) + รูปแบบการแสดง · null = ใช้ชุดเริ่มต้นใน fab-config.js
@@ -36528,18 +36759,18 @@ ${BLOCK_END}
     _keyCache = null;
   }
   async function aiConfigured() {
-    if (!state.root) return { ok: false, why: t("ui.common.cantOpenProject") };
+    if (!state.root) return { ok: false, code: "noProject", why: t("ui.common.cantOpenProject") };
     const ai = getAISettings();
     if (Array.isArray(ai.providers) && ai.providers.length) {
       const { currentProvider: currentProvider2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
       const p = await currentProvider2();
-      if (!p) return { ok: false, why: t("ui.aiSet.cantPickProviderAI") };
-      if (!p.model) return { ok: false, why: tf("ui.aiSet.noModelFor", p.name) };
+      if (!p) return { ok: false, code: "noProvider", why: t("ui.aiSet.cantPickProviderAI") };
+      if (!p.model) return { ok: false, code: "noModel", why: tf("ui.aiSet.noModelFor", p.name) };
       return { ok: true, why: "" };
     }
     if ((ai.provider || "openai") === "ollama") return { ok: true, why: "" };
     if (await loadApiKey()) return { ok: true, why: "" };
-    return { ok: false, why: t("ui.aiSet.settingsAIFileSettings") };
+    return { ok: false, code: "noKey", why: t("ui.aiSet.settingsAIFileSettings") };
   }
   async function callAI(prompt, system = "", opts = {}) {
     const ai = getAISettings();
@@ -37953,7 +38184,7 @@ ${BLOCK_END}
             box2.append(u);
           }
           const btns = el("div", "k-dlg-btns");
-          const ok2 = el("button", "k-ok", t("ui.common.close"));
+          const ok2 = el("button", "k-ok k-cancel", t("ui.common.close"));
           ok2.onclick = () => ov.remove();
           btns.append(ok2);
           box2.append(btns);
@@ -38001,7 +38232,7 @@ ${BLOCK_END}
           }
           box2.append(grid);
           const btns = el("div", "k-dlg-btns");
-          const ok2 = el("button", "k-ok", t("ui.common.close"));
+          const ok2 = el("button", "k-ok k-cancel", t("ui.common.close"));
           ok2.onclick = () => ov.remove();
           btns.append(ok2);
           box2.append(btns);
@@ -38036,7 +38267,7 @@ ${BLOCK_END}
             }
             box2.append(list2);
             const btns = el("div", "k-dlg-btns");
-            const ok2 = el("button", "k-ok", t("ui.common.close"));
+            const ok2 = el("button", "k-ok k-cancel", t("ui.common.close"));
             ok2.onclick = () => ov.remove();
             btns.append(ok2);
             box2.append(btns);
@@ -38801,7 +39032,7 @@ ${BLOCK_END}
       ov.remove();
       setStatus(t("ui.player.clearHistoryDecideDone"));
     };
-    const closeB = el("button", "k-ok", t("ui.common.close"));
+    const closeB = el("button", "k-ok k-cancel", t("ui.common.close"));
     closeB.onclick = () => ov.remove();
     btns.append(exportB, clearB, closeB);
     box2.append(btns);
@@ -39008,6 +39239,7 @@ ${BLOCK_END}
       <div class="k-row"><label>${tx("ui.settings.fontFamily")}<span class="k-hint">${tx("ui.settings.fontFamilyHint")}</span></label><div class="k-font-field"><select id="st-fontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${tx("ui.settings.spFontFamily")}<span class="k-hint">${tx("ui.settings.spFontFamilyHint")}</span></label><div class="k-font-field"><select id="st-spfontfamily" class="k-dlg-select" style="width:100%"></select></div></div>
       <div class="k-row"><label>${tx("ui.settings.lineNumbers")}<span class="k-hint">${tx("ui.settings.lineNumbersHint")}</span></label><input type="checkbox" id="st-ln"></div>
+      <div class="k-row"><label>${tx("ui.setTpl.autoFitWidth")}<span class="k-hint">${tx("ui.setTpl.autoFitWidthHint")}</span></label><input type="checkbox" id="st-autofit"></div>
       <div class="k-row"><label>${tx("ui.settings.spellCheck")}<span class="k-hint">${tx("ui.settings.spellCheckHint")}</span></label><input type="checkbox" id="st-spell"></div>
       <div class="k-row"><label>${tx("ui.settings.spellCheckDict")}<span class="k-hint">${tx("ui.settings.spellCheckDictHint")}</span></label><input type="checkbox" id="st-spelldict"></div>
       <div class="k-row"><label>${tx("ui.settings.autoMention")}<span class="k-hint">${tx("ui.settings.autoMentionHint")}</span></label><input type="checkbox" id="st-mention"></div>
@@ -39879,12 +40111,17 @@ ${BLOCK_END}
         else ov.hide();
       }
     };
-    const up = (ev) => {
+    const cleanup = () => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
+      offEsc();
       ov.hide();
       if (ghost) ghost.remove();
       document.body.classList.remove("k-panel-dragging");
+    };
+    const offEsc = escCancelDrag(cleanup);
+    const up = (ev) => {
+      cleanup();
       if (!moved) return;
       const ux = ev.clientX || ev.clientY ? ev.clientX : lastX;
       const uy = ev.clientX || ev.clientY ? ev.clientY : lastY;
@@ -40028,11 +40265,20 @@ ${BLOCK_END}
         if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
         else ov.hide();
       };
-      const up = () => {
+      const cleanup = () => {
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
+        offEsc();
         ov.hide();
         popup.classList.remove("k-float-snapped");
+      };
+      const offEsc = escCancelDrag(() => {
+        cleanup();
+        popup.style.left = x0 + "px";
+        popup.style.top = y0 + "px";
+      });
+      const up = () => {
+        cleanup();
         if (!moved) return;
         if (!popup.isConnected) return;
         if (hit && applyDrop(pm2, panelId2, hit, ctx2)) return;
@@ -40056,6 +40302,7 @@ ${BLOCK_END}
   var init_panel_drag = __esm({
     "src/panels/panel-drag.js"() {
       init_panel_layout();
+      init_drag_cancel();
       DRAG_MIN = 8;
       SNAP_PX = 10;
       FLOAT_MIN_W = 200;
@@ -40381,12 +40628,15 @@ ${BLOCK_END}
     b.tabIndex = 0;
     if (o.act) b.dataset.act = o.act;
     if (o.tip) b.dataset.tip = o.tip;
-    const sc = o.sc ? shortcutText(o.sc) : "";
-    const title2 = String(o.title || "") + (sc ? " (" + sc + ")" : "");
-    if (title2) {
-      b.title = title2;
-      b.setAttribute("aria-label", title2);
-    }
+    b._k2title = () => {
+      const sc = o.sc ? shortcutText(o.sc) : "";
+      const title2 = String(o.titleKey ? t(o.titleKey) : o.title || "") + (sc ? " (" + sc + ")" : "");
+      if (title2) {
+        b.title = title2;
+        b.setAttribute("aria-label", title2);
+      }
+    };
+    b._k2title();
     b.onclick = (e) => {
       e.stopPropagation();
       o.onPress(e);
@@ -40424,6 +40674,7 @@ ${BLOCK_END}
           b.click();
         });
       }
+      if (b && typeof b._k2title === "function") b._k2title();
       ctrls.appendChild(b);
     }
     head2.appendChild(ctrls);
@@ -40469,7 +40720,7 @@ ${BLOCK_END}
           pm2.floatPanel(
             node.id,
             clampFloat({ x: r.left, y: r.top, w: r.width, h: r.height }),
-            { fromDock: true }
+            { fromDock: true, recall: true, clamp: (b3) => clampFloat(b3) }
           );
         }
       };
@@ -40501,7 +40752,11 @@ ${BLOCK_END}
             pm2.dockPanel(node.id, def.defaultSide || "left", a);
             return;
           }
-          pm2.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
+          pm2.floatPanel(
+            node.id,
+            clampFloat({ x: 90, y: 90, w: 340, h: 320 }),
+            { recall: true, clamp: (b) => clampFloat(b) }
+          );
         }
       });
     }
@@ -40722,6 +40977,16 @@ ${BLOCK_END}
       const growSum = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
       let ratio = base4 / total;
       let pxPrev = base4, pxNext = baseNext;
+      const flex0 = [prev.style.flex, prev.style.flexGrow, next.style.flex, next.style.flexGrow];
+      const offEsc = escCancelDrag(() => {
+        document.body.classList.remove("k-resizing");
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        prev.style.flex = flex0[0];
+        if (!flex0[0]) prev.style.flexGrow = flex0[1];
+        next.style.flex = flex0[2];
+        if (!flex0[2]) next.style.flexGrow = flex0[3];
+      });
       document.body.classList.add("k-resizing");
       const flexEl = h.parentElement && h.parentElement.querySelector(":scope > .k-flex-child");
       const flexR = flexEl ? flexEl.getBoundingClientRect() : null;
@@ -40747,6 +41012,7 @@ ${BLOCK_END}
         next.style.flexGrow = String(growSum * (1 - ratio));
       };
       const up = () => {
+        offEsc();
         document.body.classList.remove("k-resizing");
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
@@ -40794,6 +41060,7 @@ ${BLOCK_END}
       e.preventDefault();
       e.stopPropagation();
       const w0 = box2.offsetWidth, h0 = box2.offsetHeight, x0 = e.clientX, y0 = e.clientY;
+      const sw0 = box2.style.width, sh0 = box2.style.height;
       const move = (ev) => {
         const c = clampFloat({
           x: box2.offsetLeft,
@@ -40804,9 +41071,18 @@ ${BLOCK_END}
         box2.style.width = Math.max(FLOAT_MIN_W, Math.min(c.w, window.innerWidth - box2.offsetLeft)) + "px";
         box2.style.height = Math.max(FLOAT_MIN_H, Math.min(c.h, window.innerHeight - box2.offsetTop)) + "px";
       };
-      const up = () => {
+      const stop = () => {
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
+        offEsc();
+      };
+      const offEsc = escCancelDrag(() => {
+        stop();
+        box2.style.width = sw0;
+        box2.style.height = sh0;
+      });
+      const up = () => {
+        stop();
         if (!box2.isConnected) return;
         const c = clampFloat({
           x: box2.offsetLeft,
@@ -40844,6 +41120,7 @@ ${BLOCK_END}
       init_panel_layout();
       init_panel_drag();
       init_panel_focus();
+      init_drag_cancel();
       fixedPanel = (opts) => (id) => !!metaOf(opts, id).fixed;
       PANEL_MIN_W_DEFAULT = 200;
     }
@@ -41674,6 +41951,10 @@ ${BLOCK_END}
     const openNow = new Set(PANEL_DEFS.filter((d) => d.closable !== false && m.isOpen(d.id)).map((d) => d.id));
     const stash = stashedIds();
     if (_lastOpen) {
+      for (const id of openNow) if (!_lastOpen.has(id)) log("info", "panel: open " + id);
+      for (const id of _lastOpen) if (!openNow.has(id)) log("info", "panel: close " + id + (tornOff.has(id) ? " (tear-off)" : stash.has(id) ? " (hidden side)" : ""));
+    }
+    if (_lastOpen) {
       for (const id of _lastOpen) {
         if (openNow.has(id) || stash.has(id) || tornOff.has(id)) continue;
         const i5 = _recentClosed.indexOf(id);
@@ -41725,6 +42006,10 @@ ${BLOCK_END}
   }
   function renderHiddenChips() {
     const h = host();
+    if (!HIDDEN_CHIPS_ON) {
+      document.querySelectorAll(".k-hidden-chips").forEach((n2) => n2.remove());
+      return;
+    }
     if (!h || PANEL_WIN) return;
     const docs = document.getElementById("content");
     document.querySelectorAll(".k-hidden-chips").forEach((n2) => {
@@ -42127,6 +42412,8 @@ ${BLOCK_END}
       n2.pxH = d.dockH || 220;
       delete n2.fW;
       delete n2.fH;
+      delete n2.fX;
+      delete n2.fY;
     });
     return next;
   }
@@ -42346,7 +42633,7 @@ ${BLOCK_END}
     } catch {
     }
   }
-  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, TEAROFF_PANELS, tornOff, _syncBound, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, wsDef, BUILTIN_WORKSPACES, SIDES, SIDES_ALL, _sideStash, SIDE_BAR, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, _scrollWatch, GAP_TOL, _gapLogged, HIDDEN_CHIPS_MAX, _recentClosed, _lastOpen, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
+  var HOST_ID, SRC_ID, ALIAS, panelId, PANEL_DEFS, TEAROFF_PANELS, tornOff, _syncBound, pm, started, lastSig, adopted, extras, meta, wsRow, wsFrame, wsDef, BUILTIN_WORKSPACES, SIDES, SIDES_ALL, _sideStash, SIDE_BAR, _fixingDocs, SCROLLABLES, SCROLL_ANCHOR, scrollMemo, _scrollWatch, GAP_TOL, _gapLogged, HIDDEN_CHIPS_MAX, _recentClosed, _lastOpen, HIDDEN_CHIPS_ON, _rememberJob, _onLayoutChange, lastSide, onShowHook, HOME_KEY, homes;
   var init_panel_ui = __esm({
     "src/panels/panel-ui.js"() {
       init_i18n();
@@ -42385,7 +42672,9 @@ ${BLOCK_END}
         { id: "search", i18n: "ui.panel.search", adopt: "#search-panel", defaultSide: "left", minW: 280, dockW: 360, tearoff: true },
         { id: "notes", i18n: "ui.common.notebookNoteQuick", adopt: "#notes-panel", defaultSide: "right", minW: 220, tearoff: true },
         // [alpha.94] Story Starter — สร้างเรื่องทีละขั้น แล้วเล่นเป็นตอน ๆ กับ Game Master
-        { id: "starter", i18n: "panel.starterTitle", adopt: "#starter-panel", defaultSide: "left", minW: 460, dockW: 680, tearoff: true },
+        // [alpha.164 · รอบต่อ 4] minW 460 → 360: หน้าต่าง 1024 (ต้นไม้ + พื้นที่เขียนขั้นต่ำ 420) เหลือให้แผงนี้ ~390px
+        //   เนื้อจึงถูกตัดขอบขวาทุกขั้น · ตรวจแล้วทุกขั้นของตัวสร้าง (พื้นฐาน/ขั้นสูง) พอดีที่ 364px
+        { id: "starter", i18n: "panel.starterTitle", adopt: "#starter-panel", defaultSide: "left", minW: 360, dockW: 680, tearoff: true },
         // [alpha.79] บทพูดทั้งผลงาน (กวาดจากไฟล์ทั้งโปรเจกต์)
         { id: "dialogue", i18n: "panel.dialogueTitle", adopt: "#dialogue-panel", defaultSide: "left", minW: 460, dockW: 620, tearoff: true },
         // [alpha.82] ห้องซ้อมบท — คนละตัวกับ "บทพูดทั้งผลงาน" ข้างบน (ตัวนั้นรวบรวมของที่เขียนไปแล้ว
@@ -42393,7 +42682,8 @@ ${BLOCK_END}
         { id: "dlgb", i18n: "panel.dlgbTitle", adopt: "#dlgb-panel", defaultSide: "right", minW: 420, dockW: 620 },
         // ── วางแผน (บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ) ──
         { id: "dashboard", i18n: "panel.dashboardTitle", adopt: "#dash-panel", defaultSide: "left", minW: 620, dockW: 640, tearoff: true },
-        { id: "kanban", i18n: "panel.kanbanTitle", adopt: "#kanban-panel", defaultSide: "left", minW: 800, dockW: 640, tearoff: true, floatFrac: 0.8 },
+        { id: "kanban", i18n: "panel.kanbanTitle", adopt: "#kanban-panel", defaultSide: "left", minW: 800, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
+        // [alpha.165] flush = กระดานสูงเต็มแผง → แถบเลื่อนแนวนอนของคอลัมน์อยู่ขอบล่างแผง (เดิมกระดานสูงตามเนื้อ แถบไปลอยกลางแผง)
         { id: "books", i18n: "panel.booksTitle", adopt: "#books-panel", defaultSide: "left", minW: 400, dockW: 640, tearoff: true },
         // [alpha.141] จัดการบท — ปกบท (รูป/ข้อความ) · ติ๊กใช้ปก · ลำดับบท · สถิติ
         { id: "chapters", i18n: "ui.chapters.title", adopt: "#chapters-panel", defaultSide: "left", minW: 400, dockW: 640 },
@@ -42512,6 +42802,7 @@ ${BLOCK_END}
       HIDDEN_CHIPS_MAX = 6;
       _recentClosed = [];
       _lastOpen = null;
+      HIDDEN_CHIPS_ON = false;
       _rememberJob = null;
       _onLayoutChange = null;
       lastSide = /* @__PURE__ */ new Map();
@@ -46327,9 +46618,9 @@ ${h.text}`;
         }
       }
     };
-    const closeB = el("button", null, t("ui.common.close"));
+    const closeB = el("button", "k-cancel", t("ui.common.close"));
     closeB.onclick = () => ov.remove();
-    btns.append(saveB, closeB);
+    btns.append(closeB, saveB);
     box2.append(btns);
     ov.append(box2);
     document.body.append(ov);
@@ -46383,7 +46674,7 @@ ${h.text}`;
       ov.remove();
       setStatus(t("ui.notes.clearNoteAllDone"));
     };
-    const closeB = el("button", "k-ok", t("ui.common.close"));
+    const closeB = el("button", "k-ok k-cancel", t("ui.common.close"));
     closeB.onclick = () => ov.remove();
     btns.append(clearB, closeB);
     box2.append(btns);
@@ -47049,6 +47340,13 @@ ${h.text}`;
     b.statuses = allStatuses();
     b.store.layout = { ...b.store.layout, order: [UNSET, ...b.statuses], hidden: [] };
     const data2 = b.data();
+    const oldCols = uiPane.querySelector(".kb-cols");
+    const keepX = oldCols ? oldCols.scrollLeft : 0;
+    const keepY = /* @__PURE__ */ new Map();
+    for (const c of uiPane.querySelectorAll(".kb-col[data-status]")) {
+      const cards = c.querySelector(".kb-cards");
+      if (cards && cards.scrollTop) keepY.set(c.dataset.status, cards.scrollTop);
+    }
     uiPane.innerHTML = "";
     const wrap2 = el("div", "kb-wrap");
     const head2 = el("div", "kb-head");
@@ -47072,8 +47370,7 @@ ${h.text}`;
     const draftSel = el("select", "k-dlg-select kb-draft");
     draftSel.title = t("ui.kanban.draftPick");
     head2.append(draftSel);
-    kanbanDrafts().then((ds) => {
-      if (!draftSel.isConnected) return;
+    const fillDrafts = (ds) => {
       draftSel.replaceChildren();
       for (const d of ds) {
         const o = el("option", null, d.label);
@@ -47082,6 +47379,12 @@ ${h.text}`;
       }
       draftSel.value = KB.draftPath;
       draftSel.style.display = ds.length > 1 ? "" : "none";
+    };
+    if (_draftsCache) fillDrafts(_draftsCache);
+    else draftSel.style.display = "none";
+    kanbanDrafts().then((ds) => {
+      _draftsCache = ds;
+      if (draftSel.isConnected) fillDrafts(ds);
     }).catch(() => {
     });
     draftSel.onchange = () => setKanbanDraft(draftSel.value);
@@ -47242,6 +47545,12 @@ ${h.text}`;
     }
     wrap2.append(cols);
     uiPane.append(wrap2);
+    if (keepX) cols.scrollLeft = keepX;
+    for (const [k, y] of keepY) {
+      const c = [...cols.querySelectorAll(".kb-col[data-status]")].find((x) => x.dataset.status === k);
+      const cards = c && c.querySelector(".kb-cards");
+      if (cards) cards.scrollTop = y;
+    }
   }
   async function dropColumn(e, targetKey, b) {
     if (!isColDrag(e)) return false;
@@ -47269,8 +47578,9 @@ ${h.text}`;
   function resetKanban() {
     board = null;
     uiPane = null;
+    _draftsCache = null;
   }
-  var board, KB, kbKey, uiPane, SYNC, isColDrag;
+  var board, KB, _draftsCache, kbKey, uiPane, SYNC, isColDrag;
   var init_kanban_ui = __esm({
     "src/kanban/kanban-ui.js"() {
       init_core();
@@ -47284,6 +47594,7 @@ ${h.text}`;
       init_icons();
       board = null;
       KB = { draftPath: "" };
+      _draftsCache = null;
       kbKey = () => "k2-kanban-draft:" + state.root;
       uiPane = null;
       SYNC = { bound: false, job: null, chapters: /* @__PURE__ */ new Map() };
@@ -47311,9 +47622,12 @@ ${h.text}`;
     const root = state.root;
     if (!root) return false;
     const stale2 = () => state.root !== root;
-    pane.innerHTML = "";
     const wrap2 = el("div", "dash-wrap");
-    pane.append(wrap2);
+    const firstPaint = !pane.querySelector(":scope > .dash-wrap");
+    if (firstPaint) {
+      pane.innerHTML = "";
+      pane.append(wrap2);
+    }
     wrap2.append(el("div", "dash-title", state.title));
     const cards = el("div", "dash-cards");
     wrap2.append(cards);
@@ -47324,7 +47638,7 @@ ${h.text}`;
       cards.append(c);
       return v2;
     };
-    const vCh = card(t("ui.common.chapter")), vSc = card(t("ui.common.scene2")), vW = card(t("ui.dash.wordAll"));
+    const vCh = card(t("ui.dash.statChapters")), vSc = card(t("ui.dash.statScenes")), vW = card(t("ui.dash.wordAll"));
     const vRead = card(t("ui.dash.readTime"));
     const vE = card(t("ui.dash.wikiEntities"));
     let nCh = 0, nSc = 0, words = 0;
@@ -47554,7 +47868,24 @@ ${h.text}`;
     } catch (e) {
       centHost.append(el("div", "dim", t("ui.dash.loadPartHubNot")));
     }
+    if (stale2()) return false;
+    if (!firstPaint) swapKeepScroll(pane, wrap2);
     return true;
+  }
+  function swapKeepScroll(pane, fresh) {
+    const keep = [];
+    for (let e = pane; e && e !== document.body; e = e.parentElement) {
+      if (e.scrollTop || e.scrollLeft) keep.push([e, e.scrollTop, e.scrollLeft]);
+      if (e.classList && (e.classList.contains("k-panel") || e.classList.contains("k-float-panel"))) break;
+    }
+    pane.replaceChildren(fresh);
+    for (const [e, top, left] of keep) {
+      const sb = e.style.scrollBehavior;
+      e.style.scrollBehavior = "auto";
+      e.scrollTop = top;
+      e.scrollLeft = left;
+      e.style.scrollBehavior = sb;
+    }
   }
   function activityRange() {
     try {
@@ -47674,7 +48005,7 @@ ${h.text}`;
     head2.append(open);
     panel2.append(head2);
     const rows = statusBreakdown(sceneStatuses, allStatuses(), "");
-    const colorOf = (r) => r.unset ? STATUS_UNSET : vivid(statusColor(r.key));
+    const colorOf = (r) => r.unset ? themeColor("--dim", STATUS_UNSET) : vivid(statusColor(r.key));
     const labelOf3 = (r) => r.unset ? t("ui.kanban.unset") : dataLabel(r.key);
     const strip = el("div", "dash-kb-strip");
     for (const r of rows) {
@@ -48104,7 +48435,7 @@ ${h.text}`;
       box2.append(el("div", null, msg));
       if (src2) box2.append(sourceLine(src2));
       const btns = el("div", "k-dlg-btns");
-      const ok2 = el("button", "k-ok", t("ui.common.close"));
+      const ok2 = el("button", "k-ok k-cancel", t("ui.common.close"));
       const done2 = () => {
         ov.remove();
         resolve();
@@ -48718,59 +49049,67 @@ ${h.text}`;
     });
     return { x: proj(1, 0, 0), y: proj(0, 1, 0), z: proj(0, 0, 1) };
   }
-  var NET_COLOR_GROUPS, NODE_DEFS, LINK_DEFS, CANVAS_DEFS, EDGE_DEFS, NET_COLOR_DEFS, MOUSE_BUTTONS, DEFAULT_NET_CONTROLS;
+  var NET_COLOR_GROUPS, NODE_DEFS, LINK_DEFS, CANVAS_DEFS, EDGE_DEFS, withLabel, NET_COLOR_DEFS, MOUSE_BUTTONS, DEFAULT_NET_CONTROLS;
   var init_network_theme = __esm({
     "src/network-theme.js"() {
       init_i18n();
       init_relationship_types();
       NET_COLOR_GROUPS = [
-        { group: "nodes", label: t("ui.net.colorNodeCat") },
-        { group: "edges", label: t("ui.net.colorLineTypeRelation") },
-        { group: "links", label: t("ui.net.colorLineLinkOther") },
-        { group: "canvas", label: t("ui.net.bgGraphItemFilm") }
+        { group: "nodes", lk: "ui.net.colorNodeCat" },
+        { group: "edges", lk: "ui.net.colorLineTypeRelation" },
+        { group: "links", lk: "ui.net.colorLineLinkOther" },
+        { group: "canvas", lk: "ui.net.bgGraphItemFilm" }
       ];
       NODE_DEFS = [
-        { key: "nc-char", id: "characters", label: t("ui.common.character"), def: "#d97757" },
-        { key: "nc-loca", id: "locations", label: t("ui.common.place"), def: "#7aa8d8" },
-        { key: "nc-item", id: "items", label: t("ui.common.thing"), def: "#6fae8a" },
-        { key: "nc-lore", id: "lore", label: t("ui.common.legend"), def: "#b58fc9" },
-        { key: "nc-scen", id: "scene", label: t("ui.common.scene2"), def: "#e8c95c" },
-        { key: "nc-chap", id: "chapter", label: t("ui.common.chapter"), def: "#c08a5e" },
+        { key: "nc-char", id: "characters", lk: "ui.common.character", def: "#d97757" },
+        { key: "nc-loca", id: "locations", lk: "ui.common.place", def: "#7aa8d8" },
+        { key: "nc-item", id: "items", lk: "ui.common.thing", def: "#6fae8a" },
+        { key: "nc-lore", id: "lore", lk: "ui.common.legend", def: "#b58fc9" },
+        { key: "nc-scen", id: "scene", lk: "ui.common.scene2", def: "#e8c95c" },
+        { key: "nc-chap", id: "chapter", lk: "ui.common.chapter", def: "#c08a5e" },
         // [alpha.73 ข้อ 3] เดิม book กับ section ใช้ช่องเดียวกัน (nc-sect) — แยกให้ตั้งได้จริงทั้งคู่
-        { key: "nc-book", id: "book", label: t("ui.common.book"), def: "#a8d870" },
-        { key: "nc-sect", id: "section", label: t("ui.net.actPart"), def: "#8ec8c8" }
+        { key: "nc-book", id: "book", lk: "ui.common.book", def: "#a8d870" },
+        { key: "nc-sect", id: "section", lk: "ui.net.actPart", def: "#8ec8c8" }
       ];
       LINK_DEFS = [
-        { key: "ne-sl", id: "scene-link", label: t("ui.net.linkBetweenScene"), def: "#5caf8a" },
-        { key: "ne-co", id: "co-occur", label: t("ui.net.appearScene"), def: "#8a8885" },
-        { key: "ne-es", id: "ent-scene", label: t("ui.net.scene"), def: "#d9955f" }
+        { key: "ne-sl", id: "scene-link", lk: "ui.net.linkBetweenScene", def: "#5caf8a" },
+        { key: "ne-co", id: "co-occur", lk: "ui.net.appearScene", def: "#8a8885" },
+        { key: "ne-es", id: "ent-scene", lk: "ui.net.scene", def: "#d9955f" }
       ];
       CANVAS_DEFS = [
-        { key: "nb-bg", id: "bg", label: t("ui.net.bgGraph"), def: "#1a1a18", cssVar: "--bg" },
-        { key: "nb-grid", id: "grid", label: t("ui.net.lineGrid"), def: "#3a3a36", cssVar: "--border" },
-        { key: "nb-label", id: "label", label: t("ui.net.itemFilmNameNode"), def: "#faf9f5", cssVar: "--bright" },
-        { key: "nb-labelbg", id: "labelBg", label: t("ui.net.bgLabelNode"), def: "#1f1e1c", cssVar: "--side" },
-        { key: "nb-border", id: "border", label: t("ui.net.marginNode"), def: "#1f1e1c" },
-        { key: "nb-hover", id: "hover", label: t("ui.net.marginNodeActPoint"), def: "#faf9f5" },
-        { key: "nb-axis", id: "axis", label: t("ui.net.xYZ"), def: "#8a8885", cssVar: "--dim" }
+        { key: "nb-bg", id: "bg", lk: "ui.net.bgGraph", def: "#1a1a18", cssVar: "--bg" },
+        { key: "nb-grid", id: "grid", lk: "ui.net.lineGrid", def: "#3a3a36", cssVar: "--border" },
+        { key: "nb-label", id: "label", lk: "ui.net.itemFilmNameNode", def: "#faf9f5", cssVar: "--bright" },
+        { key: "nb-labelbg", id: "labelBg", lk: "ui.net.bgLabelNode", def: "#1f1e1c", cssVar: "--side" },
+        { key: "nb-border", id: "border", lk: "ui.net.marginNode", def: "#1f1e1c" },
+        { key: "nb-hover", id: "hover", lk: "ui.net.marginNodeActPoint", def: "#faf9f5" },
+        { key: "nb-axis", id: "axis", lk: "ui.net.xYZ", def: "#8a8885", cssVar: "--dim" }
       ];
-      EDGE_DEFS = REL_TYPES.map((t3) => ({
-        key: "ne-rt-" + t3.key,
-        id: t3.key,
-        label: t3.label,
-        def: t3.color
+      EDGE_DEFS = REL_TYPES.map((r) => ({
+        key: "ne-rt-" + r.key,
+        id: r.key,
+        rel: r,
+        def: r.color
       }));
+      withLabel = (d) => Object.defineProperty(
+        d,
+        "label",
+        { get() {
+          return d.rel ? d.rel.label : t(d.lk);
+        }, enumerable: true }
+      );
+      NET_COLOR_GROUPS.forEach(withLabel);
       NET_COLOR_DEFS = [
-        ...NODE_DEFS.map((d) => ({ ...d, group: "nodes", target: "node" })),
-        ...EDGE_DEFS.map((d) => ({ ...d, group: "edges", target: "edge" })),
-        ...LINK_DEFS.map((d) => ({ ...d, group: "links", target: "edge" })),
-        ...CANVAS_DEFS.map((d) => ({ ...d, group: "canvas", target: "canvas" }))
+        ...NODE_DEFS.map((d) => withLabel(Object.assign(d, { group: "nodes", target: "node" }))),
+        ...EDGE_DEFS.map((d) => withLabel(Object.assign(d, { group: "edges", target: "edge" }))),
+        ...LINK_DEFS.map((d) => withLabel(Object.assign(d, { group: "links", target: "edge" }))),
+        ...CANVAS_DEFS.map((d) => withLabel(Object.assign(d, { group: "canvas", target: "canvas" })))
       ];
       MOUSE_BUTTONS = [
-        { value: "middle", btn: 1, label: t("ui.net.btnCenterWheel") },
-        { value: "right", btn: 2, label: t("ui.net.clickRight") },
-        { value: "left", btn: 0, label: t("ui.net.clickLeft") }
-      ];
+        { value: "middle", btn: 1, lk: "ui.net.btnCenterWheel" },
+        { value: "right", btn: 2, lk: "ui.net.clickRight" },
+        { value: "left", btn: 0, lk: "ui.net.clickLeft" }
+      ].map(withLabel);
       DEFAULT_NET_CONTROLS = { orbitButton: "middle", panButton: "left" };
     }
   });
@@ -50014,7 +50353,8 @@ ${h.text}`;
         row3.dataset.btn = b.id;
         const ic = el("span", "k-tbcfg-icon");
         const src2 = btn(b.id);
-        if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
+        if (src2 && src2.tagName === "SELECT") ic.append(icon("text-box", 14));
+        else if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
         else if (src2 && src2.dataset && src2.dataset.icon) ic.textContent = gi("dot");
         else ic.textContent = gi("dot");
         const name5 = el("span", "k-tbcfg-name", labelOf2(b.id));
@@ -50087,7 +50427,7 @@ ${h.text}`;
     box2.append(inner);
     buildToolbarList(inner);
     const btns = el("div", "k-dlg-btns");
-    const ok2 = el("button", "k-ok", t("ui.common.close"));
+    const ok2 = el("button", "k-ok k-cancel", t("ui.common.close"));
     ok2.onclick = close2;
     btns.append(ok2);
     box2.append(btns);
@@ -50183,7 +50523,8 @@ ${h.text}`;
           row3.dataset.btn = b.id;
           const ic = el("span", "k-tbcfg-icon");
           const src2 = btn(b.id);
-          if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
+          if (src2 && src2.tagName === "SELECT") ic.append(icon("text-box", 14));
+          else if (src2 && src2.firstElementChild) ic.innerHTML = src2.innerHTML;
           else ic.textContent = gi("dot");
           row3.append(ic, el("span", "k-tbcfg-name", labelOf2(b.id)));
           const sw = el("input", "k-tbcfg-sw");
@@ -51104,6 +51445,7 @@ ${h.text}`;
     q("#st-proj").value = g.projectWords ?? 5e4;
     q("#st-font").value = origFont;
     q("#st-ln").checked = !!s.lineNumbers;
+    if (q("#st-autofit")) q("#st-autofit").checked = !!s.autoFitWidth;
     q("#st-fab").checked = s.fabEnabled !== false;
     q("#st-spell").checked = s.spellCheck !== false;
     q("#st-spelldict").checked = s.spellCheckDict !== false;
@@ -52410,6 +52752,13 @@ ${h.text}`;
       s.fontFamily = q("#st-fontfamily")?.value || "";
       s.spFontFamily = q("#st-spfontfamily")?.value || "";
       s.lineNumbers = q("#st-ln").checked;
+      if (q("#st-autofit")) {
+        const was = !!s.autoFitWidth;
+        s.autoFitWidth = q("#st-autofit").checked;
+        const v2 = s.autoFitWidth;
+        Promise.resolve().then(() => (init_app(), app_exports)).then((m2) => m2.setAutoFitWidth(v2, { save: false, was })).catch(() => {
+        });
+      }
       s.fabEnabled = q("#st-fab").checked;
       s.spellCheck = q("#st-spell").checked;
       s.spellCheckDict = q("#st-spelldict").checked;
@@ -52678,7 +53027,7 @@ ${h.text}`;
     const ttl = el("div", "k-dlg-title", t("panel.changelogTitle"));
     const body = el("pre", "k-changelog", md);
     const btns = el("div", "k-dlg-btns");
-    const ok2 = el("button", "k-ok", t("dialogs.close"));
+    const ok2 = el("button", "k-ok k-cancel", t("dialogs.close"));
     ok2.onclick = () => ov.remove();
     btns.append(ok2);
     box2.append(ttl, body, btns);
@@ -56139,7 +56488,9 @@ ${h.text}`;
   function inlineContent(text) {
     const doc3 = (0, import_md12.mdToDoc)(text);
     const p = (doc3.content || [])[0] || {};
-    return (p.type === "paragraph" ? p.content : null) || (text ? [{ type: "text", text }] : []);
+    const content = p.type === "paragraph" ? p.content : null;
+    if (content) return (0, import_md12.inlineImagesAsText)(content);
+    return text ? [{ type: "text", text }] : [];
   }
   function inlineToMd(content) {
     return (0, import_md12.docToMd)({ type: "doc", content: [{ type: "paragraph", content }] });
@@ -56164,6 +56515,17 @@ ${h.text}`;
     if (!blocks.length) blocks.push({ type: "sp", attrs: { el: "scene" } });
     return spSchema.nodeFromJSON({ type: "doc", content: blocks });
   }
+  function spDocToMarkdown(doc3) {
+    const nodes = [];
+    doc3.forEach((node) => {
+      nodes.push(node);
+    });
+    const asBlock = (node) => node.type.name === "spimage" ? { el: "image", text: node.attrs.md || `![${node.attrs.alt || ""}](${node.attrs.src || ""})` } : {
+      el: node.attrs.el,
+      text: node.attrs.el === "raw" ? node.textContent : inlineToMd(node.toJSON().content || [])
+    };
+    return blocksToMd(nodes.map(asBlock));
+  }
   var import_md12, marks, spSchema, SP_BULLET_RE, SP_NUMBER_RE, SP_ANY_LIST_RE, SPEditor;
   var init_screenplay = __esm({
     "src/screenplay.js"() {
@@ -56187,7 +56549,16 @@ ${h.text}`;
         strong: { parseDOM: [{ tag: "strong" }], toDOM: () => ["strong", 0] },
         em: { parseDOM: [{ tag: "em" }], toDOM: () => ["em", 0] },
         underline: { parseDOM: [{ tag: "u" }], toDOM: () => ["u", 0] },
-        strike: { parseDOM: [{ tag: "s" }], toDOM: () => ["s", 0] }
+        strike: { parseDOM: [{ tag: "s" }], toDOM: () => ["s", 0] },
+        // [alpha.164 · บั๊ก] ★ มาร์กที่ `mdToDoc()` ให้ได้ต้องมีครบ — เดิมมีแค่สี่ตัวข้างบน
+        // บรรทัดที่มี `~…~` (ตัวห้อย · คนไทยพิมพ์ "ค่ะ~ … นะ~" บ่อย) · `^…^` · สแปนสี/สีเน้น
+        // → `nodeFromJSON` โยน "There is no mark type sub" = **เปิดไฟล์บทไม่ได้ทั้งไฟล์**
+        // สเปกยืมจากสคีมานิยายตัวเดียวกัน (กฎถาวรข้อ 5 — หน้าตาเหมือนกันโดยโครงสร้าง)
+        // · ตัวเขียนไฟล์ (`inlineToMd` → md.js) รู้จักทุกตัวอยู่แล้ว จึงไป-กลับได้ครบ
+        sup: schema.spec.marks.get("sup"),
+        sub: schema.spec.marks.get("sub"),
+        color: schema.spec.marks.get("color"),
+        highlight: schema.spec.marks.get("highlight")
       };
       spSchema = new Schema({
         nodes: {
@@ -56837,15 +57208,7 @@ ${h.text}`;
           return true;
         }
         getMarkdown() {
-          const nodes = [];
-          this.view.state.doc.forEach((node) => {
-            nodes.push(node);
-          });
-          const asBlock = (node) => node.type.name === "spimage" ? { el: "image", text: node.attrs.md || `![${node.attrs.alt || ""}](${node.attrs.src || ""})` } : {
-            el: node.attrs.el,
-            text: node.attrs.el === "raw" ? node.textContent : inlineToMd(node.toJSON().content || [])
-          };
-          return blocksToMd(nodes.map(asBlock));
+          return spDocToMarkdown(this.view.state.doc);
         }
         // แทรกรูปในบทหนัง (เรียกจาก insertImage ของ app.js)
         insertImage(src2, alt, md) {
@@ -86387,6 +86750,12 @@ ${h.text}`;
             return;
           }
           if (e.key === "Escape") {
+            const pops = document.querySelectorAll(".planner-popover");
+            if (pops.length) {
+              e.preventDefault();
+              pops.forEach((p) => p.remove());
+              return;
+            }
             if (this._cb.isFullscreen && this._cb.isFullscreen()) {
               this._cb.onFullscreen && this._cb.onFullscreen(false);
               return;
@@ -87438,6 +87807,7 @@ ${h.text}`;
             this._fitRaf = requestAnimationFrame(() => {
               this._fitRaf = null;
               this._fit();
+              if (this._placeFmtBar) this._placeFmtBar();
             });
           });
           this._resizeObserver.observe(this.pane);
@@ -87515,12 +87885,21 @@ ${h.text}`;
         _makeBarDraggable(bar) {
           const KEY4 = "k2-planner-fmtbar";
           const grip = bar.querySelector(".k-fmtbar-grip");
+          const GAP = 6;
+          const railRight = () => {
+            const r = this.rail;
+            return r && r.offsetWidth ? r.offsetLeft + r.offsetWidth + GAP : GAP;
+          };
           const place = (x, y) => {
             const host2 = this.stage.getBoundingClientRect();
+            if (!host2.width) return;
+            const minL = railRight();
+            bar.style.maxWidth = Math.max(120, Math.floor(host2.width - minL - GAP)) + "px";
             const w = bar.offsetWidth || 300, h = bar.offsetHeight || 34;
-            bar.style.left = Math.round(Math.max(4, Math.min(host2.width - w - 4, x))) + "px";
+            bar.style.left = Math.round(Math.max(minL, Math.min(host2.width - w - GAP, x))) + "px";
             bar.style.top = Math.round(Math.max(4, Math.min(host2.height - h - 4, y))) + "px";
           };
+          this._placeFmtBar = () => place(parseInt(bar.style.left, 10) || 0, parseInt(bar.style.top, 10) || 8);
           let saved = null;
           try {
             saved = JSON.parse(localStorage.getItem(KEY4) || "null");
@@ -89058,15 +89437,15 @@ ${h.text}`;
           }
         }
         /** [alpha.164 · งาน 7] แถบกรอง: แถวของตัวเอง (ปกติ) ↔ ต่อท้ายแถวแถบคำสั่ง (แผงเตี้ย) */
-        _placeFilterBar(inline2) {
+        _placeFilterBar(inline) {
           const fb = this.filterBar;
           const strip = this.toolbar && this.toolbar.querySelector(".planner-toolbar-strip");
           if (!fb || !strip) return;
           const isIn = fb.parentElement === strip;
-          if (inline2 && !isIn) {
+          if (inline && !isIn) {
             strip.appendChild(fb);
             fb.classList.add("planner-filter-inline");
-          } else if (!inline2 && isIn) {
+          } else if (!inline && isIn) {
             fb.classList.remove("planner-filter-inline");
             this.toolbar.after(fb);
           } else return;
@@ -90655,6 +91034,7 @@ ${h.text}`;
   }
   function mdToHtmlBody(md, o = {}) {
     const mono = !!o.mono;
+    const inline = (s, mn) => (0, import_md13.inlineHtml)(s, { mono: mn, imgSrc: o.imgSrc });
     const out = [];
     let list2 = null;
     const closeList = () => {
@@ -90994,7 +91374,7 @@ ${mdToHtmlBody(md, o)}
     }
     return { text, ext, stats: st0, warnings: warn };
   }
-  var import_md13, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, esc, escAttr2, inline, escapeHtml2, fill;
+  var import_md13, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, esc, escAttr2, escapeHtml2, fill;
   var init_compile = __esm({
     "src/compile.js"() {
       init_i18n();
@@ -91184,7 +91564,6 @@ ${mdToHtmlBody(md, o)}
       KEEP_COMMENT = /^<!--\s*(?:align:(?:left|center|right|justify)|pagebreak)\s*-->$/i;
       esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       escAttr2 = (s) => esc(s == null ? "" : s).replace(/"/g, "&quot;");
-      inline = (s, mono) => (0, import_md13.inlineHtml)(s, { mono });
       escapeHtml2 = esc;
       fill = (tpl, n2, title2, ctx2 = {}) => {
         let s = String(tpl == null ? "" : tpl).replace(/\{n\}/g, n2).replace(/\{title\}/g, title2);
@@ -91574,24 +91953,40 @@ ${mdToHtmlBody(md, o)}
       init_icons();
       AI_SCENE_FIELDS = {
         synopsis: {
-          label: t("ui.common.synopsis"),
+          get label() {
+            return t("ui.common.synopsis");
+          },
           length: "short",
-          rule: t("ui.aiSyn.writeSynopsisSceneSentence") + t("ui.aiSyn.sendBackOnlyItem")
+          get rule() {
+            return t("ui.aiSyn.writeSynopsisSceneSentence") + t("ui.aiSyn.sendBackOnlyItem");
+          }
         },
         pov: {
-          label: t("ui.common.viewPOV"),
+          get label() {
+            return t("ui.common.viewPOV");
+          },
           length: "short",
-          rule: t("ui.aiSyn.replyNameViewMain") + t("ui.aiSyn.viewStoryRoundReply")
+          get rule() {
+            return t("ui.aiSyn.replyNameViewMain") + t("ui.aiSyn.viewStoryRoundReply");
+          }
         },
         emotion: {
-          label: t("ui.common.mood"),
+          get label() {
+            return t("ui.common.mood");
+          },
           length: "short",
-          rule: t("ui.aiSyn.replyMoodMainScene")
+          get rule() {
+            return t("ui.aiSyn.replyMoodMainScene");
+          }
         },
         conflict: {
-          label: t("ui.common.conflict"),
+          get label() {
+            return t("ui.common.conflict");
+          },
           length: "short",
-          rule: t("ui.aiSyn.replyConflictMainScene")
+          get rule() {
+            return t("ui.aiSyn.replyConflictMainScene");
+          }
         }
       };
       AI_SCENE_FIELD_KEYS = Object.keys(AI_SCENE_FIELDS);
@@ -91651,7 +92046,8 @@ ${mdToHtmlBody(md, o)}
     const iStartPage = mk2(t("ui.scene.pageNumStartScreenplay"), row3.startPage || "");
     iStartPage.type = "number";
     iStartPage.min = "1";
-    iStartPage.placeholder = t("ui.scene.useOpenPageNumSettings");
+    iStartPage.placeholder = "1";
+    iStartPage.title = t("ui.scene.useOpenPageNumSettings");
     const flowRow = el("div", "wiki-row");
     flowRow.append(el("label", null, t("ui.scene.pageFlowContinue")));
     const iFlow = el("input", "wiki-flowchk");
@@ -92847,7 +93243,7 @@ ${mdToHtmlBody(md, o)}
     }
     box2.append(list2);
     const btns = el("div", "k-dlg-btns");
-    const closeBtn = el("button", "k-ok", t("ui.common.close"));
+    const closeBtn = el("button", "k-ok k-cancel", t("ui.common.close"));
     closeBtn.onclick = close2;
     btns.append(closeBtn);
     box2.append(btns);
@@ -92955,9 +93351,10 @@ ${mdToHtmlBody(md, o)}
     wrap2.append(scopeBar(h));
     const picked = filterScope(S3.scenes, S3.scope);
     wrap2.append(statsBar([
-      { label: t("ui.common.book"), value: new Set(picked.map((s) => s.sectionKey)).size },
-      { label: t("ui.common.chapter"), value: new Set(picked.map((s) => s.chapterId)).size },
-      { label: t("ui.common.scene2"), value: picked.length },
+      // [alpha.164 · รอบต่อ 2] ป้ายใต้ตัวเลขเป็นพหูพจน์ ("2 Scenes") ชุดเดียวกับแดชบอร์ด
+      { label: t("ui.dash.statBooks"), value: new Set(picked.map((s) => s.sectionKey)).size },
+      { label: t("ui.dash.statChapters"), value: new Set(picked.map((s) => s.chapterId)).size },
+      { label: t("ui.dash.statScenes"), value: picked.length },
       { label: t("ui.common.word2"), value: fmtNum(picked.reduce((a, s) => a + s.words, 0)) },
       { label: t("ui.aia.wiki"), value: S3.characters.length }
     ]));
@@ -95003,14 +95400,14 @@ ${mdToHtmlBody(md, o)}
     const onResize = () => place();
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);
-    function onKey(e) {
+    function onKey2(e) {
       if (e.key === "Escape" && _bar === ctl) {
         e.stopPropagation();
         e.preventDefault();
         closeRewriteBar();
       }
     }
-    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("keydown", onKey2, true);
     const ctl = {
       tab,
       close() {
@@ -95022,7 +95419,7 @@ ${mdToHtmlBody(md, o)}
         }
         window.removeEventListener("scroll", onScroll, true);
         window.removeEventListener("resize", onResize);
-        document.removeEventListener("keydown", onKey, true);
+        document.removeEventListener("keydown", onKey2, true);
         bar.remove();
         hl.remove();
         try {
@@ -151596,20 +151993,24 @@ ${mdToHtmlBody(md, o)}
     body.append(title2);
     const stats = el("div", "home-card-stats");
     const statItems = [
-      { icon: gi("file"), label: t("ui.common.scene2"), val: project.totalScenes },
-      { icon: gi("folder"), label: t("ui.common.chapter"), val: project.totalChapters },
-      { icon: gi("note"), label: t("ui.common.word2"), val: project.wordsUnknown ? "\u2014" : fmtNum(project.totalWords) }
+      { icon: "file", label: t("ui.dash.statScenes"), val: fmtNum(project.totalScenes || 0) },
+      { icon: "folder", label: t("ui.dash.statChapters"), val: fmtNum(project.totalChapters || 0) },
+      { icon: "note", label: t("ui.common.word2"), val: project.wordsUnknown ? "\u2014" : fmtNum(project.totalWords) }
     ];
     for (const s of statItems) {
       const si = el("span", "home-stat");
-      si.textContent = s.icon + " " + s.label + ": " + s.val;
+      si.append(icon(s.icon, 13), document.createTextNode(String(s.val)));
+      si.title = s.label + ": " + s.val;
+      si.setAttribute("aria-label", si.title);
       stats.append(si);
     }
     body.append(stats);
     const date = el("div", "home-card-date", t("ui.home.editLatest") + project.dateStr);
     body.append(date);
     const pathRow = el("div", "home-card-path");
-    const pathTxt = el("span", "home-card-pathtxt", project.root);
+    const pathTxt = el("span", "home-card-pathtxt");
+    pathTxt.append(el("bdi", null, project.root));
+    pathTxt.lastChild.dir = "ltr";
     pathTxt.title = project.root;
     pathRow.append(pathTxt);
     const reveal = el("button", "home-card-pathbtn", gi("folder-open"));
@@ -151738,8 +152139,12 @@ ${mdToHtmlBody(md, o)}
       init_dialogs();
       init_locale();
       HOME_VIEWS = [
-        { id: "card", icon: gi("grid"), label: t("ui.home.card") },
-        { id: "list", icon: gi("menu"), label: t("ui.common.list2") }
+        { id: "card", icon: gi("grid"), get label() {
+          return t("ui.home.card");
+        } },
+        { id: "list", icon: gi("menu"), get label() {
+          return t("ui.common.list2");
+        } }
       ];
       HOME_QUICK_MAX = 4;
       HOME_QUICK = [
@@ -153560,7 +153965,7 @@ details>summary::-webkit-details-marker{display:none}
       setStatus(tr("cleared"));
       refreshOpenPlayer();
     };
-    const close2 = el("button", "k-ok", tr("close"));
+    const close2 = el("button", "k-ok k-cancel", tr("close"));
     close2.onclick = () => ov.remove();
     btns.append(expB, clearB, close2);
     box2.append(btns);
@@ -153874,11 +154279,11 @@ details>summary::-webkit-details-marker{display:none}
       rC.append(E("label", null, t("ui.common.color")));
       const iColor = E("select", "wiki-input k-dlg-select");
       {
-        const none2 = E("option", null, t("ui.common.notHas"));
+        const none2 = E("option", null, t("ui.treeAct.clearColor"));
         none2.value = "";
         iColor.append(none2);
         for (const [n2, hex] of SCENE_COLORS) {
-          const o = E("option", null, gi("dot") + " " + n2);
+          const o = E("option", null, gi("dot") + " " + dataLabel(n2));
           o.value = hex;
           if (hex === L2.color) o.selected = true;
           iColor.append(o);
@@ -153888,12 +154293,13 @@ details>summary::-webkit-details-marker{display:none}
       box2.append(rC);
       const iTags = mk2(t("ui.common.tag2"), (L2.tags || []).join(", "));
       const iBook = mk2(t("ui.branch.bookSkipEmpty"), L2.book);
-      iBook.placeholder = t("ui.branch.egBookOneUse");
+      iBook.placeholder = t("ui.branch.egBookShort");
+      iBook.title = t("ui.branch.egBookOneUse");
       const iNote = mk2(t("ui.common.note"), L2.note, "textarea");
       const info = E("div", "dim", planSummary(L2));
       box2.append(info);
       const btns = E("div", "k-dlg-btns");
-      const cB = E("button", null, t("ui.common.cancel"));
+      const cB = E("button", "k-cancel", t("ui.common.cancel"));
       const okB = E("button", "k-ok", t("ui.common.save"));
       btns.append(cB, okB);
       box2.append(btns);
@@ -153979,7 +154385,7 @@ details>summary::-webkit-details-marker{display:none}
     };
     sel.onchange = draw3;
     const btns = E("div", "k-dlg-btns");
-    const cB = E("button", "k-ok", t("ui.common.close"));
+    const cB = E("button", "k-ok k-cancel", t("ui.common.close"));
     btns.append(cB);
     box2.append(btns);
     ov.append(box2);
@@ -154159,7 +154565,7 @@ details>summary::-webkit-details-marker{display:none}
     bSaveAs.title = t("ui.branch.saveNewPlanCoverLayout");
     bSaveAs.onclick = async () => {
       const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const v2 = await ask2(t("ui.common.nameNewPlan"), { value: (planState.name || t("ui.branch.plan")) + t("ui.common.msg2") });
+      const v2 = await ask2(t("ui.common.nameNewPlan"), { value: (planState.name || t("ui.branch.plan")) + t("ui.common.msg2"), okLabel: t("ui.common.save") });
       if (!v2) return;
       await saveBranchPlanAs(v2);
       await fillPlans();
@@ -154171,7 +154577,7 @@ details>summary::-webkit-details-marker{display:none}
     bNew.title = t("ui.branch.newNewPlanStartLayout");
     bNew.onclick = async () => {
       const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const v2 = await ask2(t("ui.common.nameNewPlan"), { value: t("ui.common.map2") + ((await listBranchPlans()).length + 1) });
+      const v2 = await ask2(t("ui.common.nameNewPlan"), { value: t("ui.common.map2") + ((await listBranchPlans()).length + 1), okLabel: t("ui.common.new") });
       if (!v2) return;
       await newPlanFromCurrent(v2);
       await fillPlans();
@@ -154756,7 +155162,7 @@ ${tr2("mergeNote")}`,
     }
     box2.append(list2);
     const btns = el("div", "k-dlg-btns");
-    const close2 = el("button", "k-ok", tr2("close"));
+    const close2 = el("button", "k-ok k-cancel", tr2("close"));
     close2.onclick = () => ov.remove();
     btns.append(close2);
     box2.append(btns);
@@ -155084,7 +155490,7 @@ ${preview2}` + (found2.length > 8 ? `
       return dot;
     };
     mk2("", tr2("colorNone"), "branch-color-none").textContent = gi("empty-set");
-    for (const [name5, hex] of SCENE_COLORS) mk2(hex, name5);
+    for (const [name5, hex] of SCENE_COLORS) mk2(hex, dataLabel(name5));
     return row3;
   }
   function showAllPathsDialog(graph, startId) {
@@ -155148,7 +155554,7 @@ ${preview2}` + (found2.length > 8 ? `
         setStatus(tr2("copyFail"));
       }
     };
-    const close2 = el("button", "k-ok", tr2("close"));
+    const close2 = el("button", "k-ok k-cancel", tr2("close"));
     close2.onclick = () => ov.remove();
     btns.append(copyB, close2);
     box2.append(btns);
@@ -158087,7 +158493,7 @@ ${preview2}` + (found2.length > 8 ? `
     };
     stage.onclick = (e) => go(e.clientX < window.innerWidth / 2 ? -1 : 1);
     boxWrap.onclick = () => go(1);
-    const onKey = (e) => {
+    const onKey2 = (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
         return closeVisPlayer();
@@ -158115,8 +158521,8 @@ ${preview2}` + (found2.length > 8 ? `
         return toggleText();
       }
     };
-    document.addEventListener("keydown", onKey, true);
-    _cur = { ov, onKey, at: () => i5, go, draw: draw3, toggleText, isHidden: () => hidden };
+    document.addEventListener("keydown", onKey2, true);
+    _cur = { ov, onKey: onKey2, at: () => i5, go, draw: draw3, toggleText, isHidden: () => hidden };
     ov.focus();
     draw3();
     return _cur;
@@ -160998,7 +161404,7 @@ ${a[3]}<p style="color:#999;font-size:12px;margin-top:40px">${tx("ui.exportBlog.
     fr.srcdoc = html;
     box2.append(fr);
     const btns = el("div", "k-dlg-btns");
-    const ok2 = el("button", "k-ok", t("dialogs.close"));
+    const ok2 = el("button", "k-ok k-cancel", t("dialogs.close"));
     ok2.onclick = () => ov.remove();
     btns.append(ok2);
     box2.append(btns);
@@ -162680,7 +163086,8 @@ img{max-width:100%}` }
     const bar = el("div", "ai-chat-listbar");
     const q = el("input", "ai-chat-search");
     q.type = "search";
-    q.placeholder = t("ui.aiChatPanel.searchSessionNameText");
+    q.placeholder = t("ui.dlgb.searchPh");
+    q.title = t("ui.aiChatPanel.searchSessionNameText");
     q.value = S4.query;
     const addBtn = el("button", "k-ok ai-chat-new", t("ui.aiChatPanel.sessionNew"));
     bar.append(q, addBtn);
@@ -164040,7 +164447,7 @@ img{max-width:100%}` }
       await kapi.writeFile(dest, "# " + state.title + t("ui.aiSum.summary") + result);
       setStatus(t("ui.aiSum.exportSummaryDone"));
     };
-    const closeB = el("button", "k-ok", t("ui.common.close"));
+    const closeB = el("button", "k-ok k-cancel", t("ui.common.close"));
     closeB.onclick = () => ov.remove();
     btns.append(againB, exportB, closeB);
     box2.append(btns);
@@ -164967,7 +165374,17 @@ img{max-width:100%}` }
         prev.style.flexGrow = String(sum2 * ratio);
         next.style.flexGrow = String(sum2 * (1 - ratio));
       };
+      const g0 = [prev.style.flexGrow, next.style.flexGrow];
+      const offEsc = escCancelDrag(() => {
+        h.classList.remove("k-dragging");
+        document.body.classList.remove("k-resizing");
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        prev.style.flexGrow = g0[0];
+        next.style.flexGrow = g0[1];
+      });
       const up = () => {
+        offEsc();
         h.classList.remove("k-dragging");
         document.body.classList.remove("k-resizing");
         document.removeEventListener("mousemove", move);
@@ -165162,7 +165579,15 @@ img{max-width:100%}` }
           ov.show(zoneRect2(hit.rect, hit.zone), hit.zone);
         } else ov.hide();
       };
+      const offEsc = escCancelDrag(() => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        ov.hide();
+        ghost?.remove();
+        document.body.classList.remove("k-panel-dragging");
+      });
       const up = (ev) => {
+        offEsc();
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
         ov.hide();
@@ -165276,6 +165701,7 @@ img{max-width:100%}` }
       init_core();
       init_split_layout();
       init_icons();
+      init_drag_cancel();
       ROOT_ID = "split-root";
       hooks = { activate: null, onRender: null, closeTab: null };
       mgr = null;
@@ -169430,7 +169856,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     draw3();
     const btns = el("div", "k-dlg-btns");
-    const bClose = el("button", "k-ok", t("ui.common.close"));
+    const bClose = el("button", "k-ok k-cancel", t("ui.common.close"));
     bClose.onclick = () => {
       ov.remove();
       if (S9.view === "session") drawSession();
@@ -169607,6 +170033,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       curPop = null;
       document.removeEventListener("mousedown", onDoc2);
     }
+    document.removeEventListener("keydown", onKey, true);
+  }
+  function onKey(e) {
+    if (e.key !== "Escape" || !curPop) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeColorPicker();
   }
   function onDoc2(e) {
     if (curPop && !curPop.contains(e.target)) closeColorPicker();
@@ -169704,6 +170137,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     pop.style.left = Math.max(8, Math.min(a.left, innerWidth - r.width - 8)) + "px";
     pop.style.top = Math.max(8, Math.min(a.bottom + 4, innerHeight - r.height - 8)) + "px";
     setTimeout(() => document.addEventListener("mousedown", onDoc2), 0);
+    document.addEventListener("keydown", onKey, true);
     return pop;
   }
   var import_text_color3, curPop;
@@ -177425,7 +177859,7 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pCvTask"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
+      total > 1 ? tf("ui.starter.pCvPart", part, total) : "",
       tail ? t("ui.starter.pCvTail") + "\n" + clip4(tail, TAIL_CHARS) : "",
       t("ui.starter.pCvSource"),
       chunkText2(chunk, nameOf2),
@@ -177531,7 +177965,7 @@ ${s.body}`).join("\n\n");
       t("ui.starter.pCvTaskSp"),
       starterBlock(s, { full: false }),
       sc && sc.title ? t("ui.starter.pScTitle") + sc.title : "",
-      total > 1 ? t("ui.starter.pCvPart").replace("{0}", String(part)).replace("{1}", String(total)) : "",
+      total > 1 ? tf("ui.starter.pCvPart", part, total) : "",
       tail ? t("ui.starter.pCvTail") + "\n" + clip4(tail, TAIL_CHARS) : "",
       t("ui.starter.pCvSource"),
       chunkText2(chunk, nameOf2),
@@ -179241,7 +179675,7 @@ ${s.body}`).join("\n\n");
     const gate = await aiConfigured();
     if (!gate.ok) {
       const yes = await confirmBox(
-        t("ui.starter.needAI") + "\n\n" + gate.why,
+        t("ui.starter.needAI") + (gate.code === "noKey" ? "" : "\n\n" + gate.why),
         t("ui.starter.goAISettings")
       );
       if (!yes) return;
@@ -179625,6 +180059,26 @@ ${s.body}`).join("\n\n");
     const old = document.querySelector(".k-thes-popup");
     if (old) old.remove();
     const pop = el("div", "k-thes-popup");
+    const shut = () => {
+      pop.remove();
+      document.removeEventListener("keydown", onKey2, true);
+      document.removeEventListener("click", outside);
+    };
+    const onKey2 = (e) => {
+      if (e.key !== "Escape" || !pop.isConnected) return;
+      e.preventDefault();
+      e.stopPropagation();
+      shut();
+    };
+    const copyWord = async (w) => {
+      try {
+        await kapi.clipboardWrite(w);
+        setStatus(t("ui.thes.copied") + w);
+      } catch (e) {
+        log("warn", "thesaurus: copy failed", e);
+      }
+      shut();
+    };
     pop.style.left = Math.min(x, window.innerWidth - 220) + "px";
     pop.style.top = Math.min(y, window.innerHeight - 300) + "px";
     if (syns.length) {
@@ -179632,9 +180086,7 @@ ${s.body}`).join("\n\n");
       for (const s of syns.slice(0, 15)) {
         const item = el("div", "k-thes-item", s);
         item.onclick = () => {
-          navigator.clipboard.writeText(s);
-          setStatus(t("ui.thes.copied") + s);
-          pop.remove();
+          copyWord(s);
         };
         pop.append(item);
       }
@@ -179644,23 +180096,19 @@ ${s.body}`).join("\n\n");
       for (const a of ants.slice(0, 15)) {
         const item = el("div", "k-thes-item", a);
         item.onclick = () => {
-          navigator.clipboard.writeText(a);
-          setStatus(t("ui.thes.copied") + a);
-          pop.remove();
+          copyWord(a);
         };
         pop.append(item);
       }
     }
     const close2 = el("div", "k-thes-close", gi("close"));
-    close2.onclick = () => pop.remove();
+    close2.onclick = () => shut();
     pop.append(close2);
     document.body.append(pop);
-    const outside = (e) => {
-      if (!pop.contains(e.target)) {
-        pop.remove();
-        document.removeEventListener("click", outside);
-      }
-    };
+    document.addEventListener("keydown", onKey2, true);
+    function outside(e) {
+      if (!pop.contains(e.target)) shut();
+    }
     setTimeout(() => document.addEventListener("click", outside), 0);
   }
   async function initThesaurus() {
@@ -182880,6 +183328,62 @@ ${css}
           await saveTab(tabI);
           await wait142(150);
           check2("[142-6] \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E40\u0E14\u0E34\u0E21\u0E41\u0E25\u0E49\u0E27 (\u0E44\u0E21\u0E48\u0E17\u0E34\u0E49\u0E07\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E43\u0E2B\u0E49\u0E40\u0E17\u0E2A\u0E16\u0E31\u0E14\u0E44\u0E1B)", !tabI.dirty);
+        }
+        {
+          const tabJ = state.active;
+          const edJ = tabJ && tabJ.editor;
+          check2("[IMG-IN-A] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48", !!edJ);
+          const bodyJ = edJ.getMarkdown();
+          const SRCJ = "../../../../../Images/sunset.png";
+          const mdJ = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32\n\n\u0E01\u0E48\u0E2D\u0E19 ![\u0E43\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14](" + SRCJ + ") \u0E2B\u0E25\u0E31\u0E07\n\n![\u0E1A\u0E25\u0E47\u0E2D\u0E01](" + SRCJ + ")\n\n**\u0E2B\u0E19\u0E32 ![\u0E2A\u0E39\u0E07\u0E2A\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14](" + SRCJ + ' "h=2") \u0E15\u0E48\u0E2D**';
+          edJ.setMarkdown(mdJ);
+          await wait142(150);
+          const ins = [...tabJ.pane.querySelectorAll(".ProseMirror img.k-inline-img")];
+          check2("[IMG-IN-A] \u2605\u2605 \u0E23\u0E39\u0E1B\u0E01\u0E25\u0E32\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E1B\u0E47\u0E19 <img> \u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 (\u0E2A\u0E2D\u0E07\u0E43\u0E1A)", ins.length === 2, ins.length);
+          check2(
+            "[IMG-IN-A] \u0E23\u0E39\u0E1B\u0E17\u0E31\u0E49\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19 figure \u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1A\u0E25\u0E47\u0E2D\u0E01",
+            tabJ.pane.querySelectorAll(".ProseMirror figure").length === 1
+          );
+          check2(
+            "[IMG-IN-A] \u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E14\u0E34\u0E1A\u0E1A\u0E19\u0E08\u0E2D",
+            !/!\[/.test(tabJ.pane.querySelector(".ProseMirror").textContent)
+          );
+          for (let i5 = 0; i5 < 60 && ins[0] && !(ins[0].complete && ins[0].naturalWidth); i5++) await wait142(50);
+          check2(
+            "[IMG-IN-A] \u2605 \u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E23\u0E39\u0E1B\u0E16\u0E39\u0E01\u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07 (\u0E23\u0E39\u0E1B\u0E42\u0E2B\u0E25\u0E14\u0E02\u0E36\u0E49\u0E19)",
+            !!ins[0] && ins[0].naturalWidth > 0,
+            ins[0] && ins[0].getAttribute("src")
+          );
+          const ps = [...tabJ.pane.querySelectorAll(".ProseMirror > p")];
+          const hPlain = ps[0] ? ps[0].getBoundingClientRect().height : 0;
+          const hImg1 = ps[1] ? ps[1].getBoundingClientRect().height : -1;
+          check2(
+            "[IMG-IN-A] \u2605 \u0E23\u0E39\u0E1B\u0E2A\u0E39\u0E07\u0E2B\u0E19\u0E36\u0E48\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E21\u0E48\u0E17\u0E33\u0E43\u0E2B\u0E49\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E39\u0E07\u0E02\u0E36\u0E49\u0E19 (\u0E15\u0E31\u0E27\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E31\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E14\u0E49\u0E15\u0E23\u0E07)",
+            Math.abs(hImg1 - hPlain) <= 1.5,
+            hPlain.toFixed(1) + " vs " + hImg1.toFixed(1)
+          );
+          const r1 = ins[0] ? ins[0].getBoundingClientRect().height : 0;
+          const r22 = ins[1] ? ins[1].getBoundingClientRect().height : 0;
+          check2(
+            "[IMG-IN-A] \u2605 h=2 \u0E2A\u0E39\u0E07\u0E2A\u0E2D\u0E07\u0E40\u0E17\u0E48\u0E32\u0E02\u0E2D\u0E07 h=1 (\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E39\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14)",
+            r1 > 4 && Math.abs(r22 - 2 * r1) <= 2,
+            r1.toFixed(1) + " / " + r22.toFixed(1)
+          );
+          check2("[IMG-IN-A] \u0E23\u0E39\u0E1B\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E15\u0E49 <strong>", !!(ins[1] && ins[1].closest("strong")));
+          check2(
+            "[IMG-IN-A] \u2605\u2605 \u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E31\u0E01\u0E44\u0E1A\u0E15\u0E4C (getMarkdown = \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21)",
+            edJ.getMarkdown() === mdJ,
+            JSON.stringify(edJ.getMarkdown())
+          );
+          check2(
+            "[IMG-IN-A] \u0E23\u0E39\u0E1B\u0E44\u0E21\u0E48\u0E43\u0E2B\u0E49\u0E25\u0E32\u0E01 (\u0E25\u0E32\u0E01\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E02\u0E49\u0E32\u0E21\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49)",
+            !!ins[0] && ins[0].getAttribute("draggable") === "false"
+          );
+          edJ.setMarkdown(bodyJ);
+          await wait142(120);
+          await saveTab(tabJ);
+          await wait142(150);
+          check2("[IMG-IN-A] \u0E04\u0E37\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27", !tabJ.dirty && !tabJ.pane.querySelector(".ProseMirror img.k-inline-img"));
         }
       }
       {
@@ -188247,6 +188751,50 @@ ${css}
           plannerInst.pane.style.flex = "";
           plannerInst._fit();
         }
+        {
+          const bar5 = plannerInst.stage.querySelector(".planner-fmtbar");
+          check2("[164-R2-5] \u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E25\u0E2D\u0E22", !!bar5);
+          if (bar5) {
+            const measure2 = () => {
+              const st = plannerInst.stage.getBoundingClientRect(), b = bar5.getBoundingClientRect();
+              const rl = plannerInst.rail.getBoundingClientRect();
+              return { st, b, rl, scroll: bar5.scrollWidth > bar5.clientWidth + 1 };
+            };
+            plannerInst.pane.style.maxWidth = "380px";
+            let m5 = null;
+            for (let i5 = 0; i5 < 30; i5++) {
+              await waitMs2(40);
+              m5 = measure2();
+              if (m5.st.width < 400 && m5.b.right <= m5.st.right + 1) break;
+            }
+            check2(
+              "[164-R2-5] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A: \u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32\u0E40\u0E27\u0E17\u0E35 (\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E49\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14)",
+              m5.b.right <= m5.st.right + 1,
+              `bar ${Math.round(m5.b.left)}\u2013${Math.round(m5.b.right)} \xB7 stage ${Math.round(m5.st.left)}\u2013${Math.round(m5.st.right)}`
+            );
+            check2(
+              "[164-R2-5] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A: \u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E23\u0E32\u0E07\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D",
+              m5.b.left >= m5.rl.right - 0.5,
+              `bar.left ${Math.round(m5.b.left)} \xB7 rail.right ${Math.round(m5.rl.right)}`
+            );
+            check2(
+              "[164-R2-5] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A: \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E1E\u0E2D\u0E17\u0E35\u0E48 = \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E43\u0E19\u0E41\u0E16\u0E1A\u0E44\u0E14\u0E49",
+              m5.scroll,
+              `sw ${bar5.scrollWidth} \xB7 cw ${bar5.clientWidth}`
+            );
+            plannerInst.pane.style.maxWidth = "";
+            for (let i5 = 0; i5 < 30; i5++) {
+              await waitMs2(40);
+              m5 = measure2();
+              if (m5.st.width > 400 && !m5.scroll) break;
+            }
+            check2(
+              "[164-R2-5] \u0E04\u0E37\u0E19\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 \u2192 \u0E41\u0E16\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19 (\u0E02\u0E22\u0E32\u0E22\u0E15\u0E32\u0E21\u0E40\u0E27\u0E17\u0E35)",
+              m5.st.width < 900 || !m5.scroll,
+              `stage ${Math.round(m5.st.width)} \xB7 sw ${bar5.scrollWidth} cw ${bar5.clientWidth}`
+            );
+          }
+        }
         showPanel("log");
         await waitMs2(100);
         getPanelManager().collapsePanel("log", true);
@@ -190740,8 +191288,393 @@ ${css}
           !!$("#prog-wrap") && $("#prog-wrap").closest("#statusbar") === $("#statusbar")
         );
         check2("progress bar \u0E21\u0E35 fill element", !!$("#prog-fill"));
+        {
+          setStatus("\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E17\u0E35\u0E48\u0E22\u0E32\u0E27\u0E21\u0E32\u0E01 ".repeat(12));
+          await new Promise((r) => setTimeout(r, 60));
+          const sr = $("#status").getBoundingClientRect();
+          const pr = $("#prog-wrap").getBoundingClientRect();
+          const mr = $("#status-mid").getBoundingClientRect();
+          const clipped = getComputedStyle($("#status-mid")).overflow === "hidden";
+          const visL = clipped ? Math.max(pr.left, mr.left) : pr.left;
+          const visR = clipped ? Math.min(pr.right, mr.right) : pr.right;
+          check2(
+            "[164-R5] \u2605 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E32\u0E27: \u0E41\u0E16\u0E1A\u0E40\u0E1B\u0E49\u0E32\u0E2B\u0E21\u0E32\u0E22\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21",
+            visR - visL <= 0 || visL >= sr.right - 1,
+            `status ${Math.round(sr.left)}\u2013${Math.round(sr.right)} \xB7 \u0E41\u0E16\u0E1A\u0E17\u0E35\u0E48\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19 ${Math.round(visL)}\u2013${Math.round(visR)}`
+          );
+          setStatus("");
+        }
         const saveBtn = $("#save-all-btn");
         check2("\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E41\u0E2A\u0E14\u0E07\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E21\u0E35\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", saveBtn && saveBtn.style.display !== "none");
+      }
+      {
+        const w165 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const t165 = [...state.tabs.values()].find((x) => x.editor && x.editor.view && x.editor.view.dom.isConnected && x.editor.view.state.doc.textContent.length > 8);
+        check2("[165-P1] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E17\u0E35\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48", !!t165);
+        if (t165) {
+          activate(t165.file);
+          await w165(150);
+          const v4 = t165.editor.view;
+          let from2 = -1;
+          v4.state.doc.descendants((n2, pos2) => {
+            if (from2 < 0 && n2.isText && n2.text.length > 6) from2 = pos2;
+            return from2 < 0;
+          });
+          v4.dispatch(v4.state.tr.setSelection(TextSelection.create(v4.state.doc, from2, from2 + 4)));
+          v4.focus();
+          await w165(80);
+          const dom = v4.domAtPos(from2 + 1).node;
+          const tgt = dom.nodeType === 3 ? dom.parentElement : dom;
+          const rc = tgt.getBoundingClientRect();
+          closeMenu();
+          tgt.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rc.left + 2, clientY: rc.top + 2 }));
+          await w165(120);
+          const m = [...document.querySelectorAll(".k-menu")].pop();
+          const labels = m ? [...m.querySelectorAll(".k-menu-item")].map((x) => (x.querySelector(".k-menu-text") || x).textContent) : [];
+          const has2 = (k) => labels.includes(t(k));
+          check2(
+            "[165-P1] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32: \u0E21\u0E35 \u0E15\u0E31\u0E14 \xB7 \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 \xB7 \u0E27\u0E32\u0E07 \xB7 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",
+            has2("ui.menu.cut") && has2("ui.common.copy") && has2("ui.menu.paste") && has2("ui.menu.pickAll"),
+            labels.join(" | ")
+          );
+          const selWord = (window.getSelection().toString() || "").trim();
+          check2(
+            "[165-P1] \u2605\u2605 \u0E40\u0E21\u0E19\u0E39\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E21\u0E35\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07/\u0E04\u0E33\u0E15\u0E23\u0E07\u0E02\u0E49\u0E32\u0E21 \u0E41\u0E25\u0E30 Rewrite this",
+            labels.some((l) => l.includes(t("ui.aiRewrite.menu"))) && labels.includes(tf("ui.app.thesaurusWordOpposite", selWord)),
+            selWord + " :: " + labels.join(" | ")
+          );
+          const cutRow = m && [...m.querySelectorAll(".k-menu-item")].find((x) => (x.querySelector(".k-menu-text") || x).textContent === t("ui.menu.cut"));
+          check2("[165-P1] \u0E15\u0E31\u0E14/\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E01\u0E14\u0E44\u0E14\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E44\u0E21\u0E48\u0E40\u0E17\u0E32)", !!cutRow && cutRow.getAttribute("aria-disabled") !== "true");
+          check2("[165-P1] \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E31\u0E14\u0E02\u0E2D\u0E07 \u0E15\u0E31\u0E14 \u0E41\u0E2A\u0E14\u0E07\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32", !!(cutRow && cutRow.querySelector(".k-menu-accel")));
+          closeMenu();
+          v4.dispatch(v4.state.tr.setSelection(TextSelection.create(v4.state.doc, from2)));
+          await w165(60);
+          tgt.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rc.left + 2, clientY: rc.top + 2 }));
+          await w165(120);
+          const m2 = [...document.querySelectorAll(".k-menu")].pop();
+          const l2 = m2 ? [...m2.querySelectorAll(".k-menu-item")].map((x) => (x.querySelector(".k-menu-text") || x).textContent) : [];
+          check2(
+            "[165-P1] \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E30\u0E44\u0E23: \u0E22\u0E31\u0E07\u0E44\u0E14\u0E49\u0E40\u0E21\u0E19\u0E39\u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19 (\u0E27\u0E32\u0E07 \xB7 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32) \u2014 \u0E44\u0E21\u0E48\u0E21\u0E35 Rewrite",
+            l2.includes(t("ui.menu.paste")) && l2.includes(t("ui.menu.itemBoldB")) && !l2.some((l) => l.includes(t("ui.aiRewrite.menu"))),
+            l2.join(" | ")
+          );
+          closeMenu();
+        }
+        {
+          await showThesaurusPopup("\u0E2A\u0E27\u0E22", 200, 200);
+          await w165(80);
+          const popT = document.querySelector(".k-thes-popup");
+          check2("[165-E2] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E1B\u0E4A\u0E2D\u0E1B\u0E2D\u0E31\u0E1B\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49 (\u0E04\u0E33\u0E43\u0E19\u0E04\u0E25\u0E31\u0E07\u0E43\u0E19\u0E15\u0E31\u0E27)", !!popT);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+          await w165(40);
+          check2("[165-E2] \u2605 Esc \u0E1B\u0E34\u0E14\u0E1B\u0E4A\u0E2D\u0E1B\u0E2D\u0E31\u0E1B\u0E04\u0E33\u0E1E\u0E49\u0E2D\u0E07", !document.querySelector(".k-thes-popup"));
+          openColorPicker(null, "", () => {
+          }, false);
+          await w165(60);
+          check2("[165-E2] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !!document.querySelector(".k-colorpop"));
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+          await w165(40);
+          check2("[165-E2] \u2605 Esc \u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2A\u0E35", !document.querySelector(".k-colorpop"));
+          closeColorPicker();
+        }
+        const kbWasOpen = isPanelOpen("kanban");
+        if (!kbWasOpen) {
+          togglePanel("kanban");
+          await w165(500);
+        }
+        const kbBody = document.querySelector('[data-panel-id="kanban"] .k-panel-body');
+        const kbCols = kbBody && kbBody.querySelector(".kb-cols");
+        await (async () => {
+          for (let i5 = 0; i5 < 40 && !(kbBody && kbBody.querySelector(".kb-cols")); i5++) await w165(50);
+        })();
+        const kc = kbBody && kbBody.querySelector(".kb-cols");
+        if (kc) {
+          const br = kbBody.getBoundingClientRect(), cr = kc.getBoundingClientRect();
+          check2(
+            "[165-P2] \u2605\u2605 Kanban: \u0E41\u0E16\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E22\u0E37\u0E14\u0E16\u0E36\u0E07\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E41\u0E1C\u0E07 (\u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E25\u0E2D\u0E22\u0E01\u0E25\u0E32\u0E07\u0E41\u0E1C\u0E07)",
+            br.bottom - cr.bottom <= 40,
+            `body ${Math.round(br.top)}\u2013${Math.round(br.bottom)} \xB7 cols ${Math.round(cr.top)}\u2013${Math.round(cr.bottom)}`
+          );
+          const sel = kbBody.querySelector(".kb-draft");
+          const before = sel ? sel.style.display : "?";
+          const seen = [];
+          const mo = new MutationObserver(() => {
+            const d = kbBody.querySelector(".kb-draft");
+            if (d) seen.push(d.style.display);
+          });
+          mo.observe(kbBody, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+          window.dispatchEvent(new CustomEvent("k2-statuses-changed"));
+          await w165(700);
+          mo.disconnect();
+          check2(
+            "[165-P2] \u2605 \u0E27\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E43\u0E2B\u0E21\u0E48 (\u0E2B\u0E25\u0E31\u0E07\u0E22\u0E49\u0E32\u0E22\u0E01\u0E32\u0E23\u0E4C\u0E14): \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E17\u0E35\u0E48\u0E15\u0E48\u0E32\u0E07\u0E08\u0E32\u0E01\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E1E\u0E23\u0E34\u0E1A)",
+            seen.length > 0 && seen.every((x) => x === before),
+            `\u0E01\u0E48\u0E2D\u0E19 "${before}" \xB7 \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14 ${JSON.stringify(seen)}`
+          );
+        } else check2("[165-P2] Kanban \u0E27\u0E32\u0E14\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E44\u0E14\u0E49", false, kbCols ? "cols" : "no-cols");
+        if (!kbWasOpen) {
+          togglePanel("kanban");
+          await w165(200);
+        }
+        const prWas = isPanelOpen("props");
+        if (!prWas) {
+          togglePanel("props");
+          await w165(400);
+        }
+        const F = () => document.querySelector('.k-float-panel[data-panel-id="props"]');
+        const D = () => document.querySelector('#app-root .k-panel[data-panel-id="props"]');
+        const hb = (k) => (F() || D()) && (F() || D()).querySelector(".k-panel-btn-" + k);
+        const wasFloat = !!F();
+        if (!F() && hb("float")) {
+          hb("float").click();
+          await w165(350);
+        }
+        if (F()) {
+          const dragF = async (dx, dy, esc8) => {
+            const head2 = F().querySelector(".k-panel-head");
+            const hr = head2.getBoundingClientRect();
+            const sx2 = hr.right - 90, sy2 = hr.top + 8;
+            head2.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0, clientX: sx2, clientY: sy2 }));
+            for (let i5 = 1; i5 <= 5; i5++) document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: sx2 + dx * i5 / 5, clientY: sy2 + dy * i5 / 5 }));
+            await w165(40);
+            if (esc8) window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+            document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: sx2 + dx, clientY: sy2 + dy }));
+            await w165(300);
+          };
+          const pos2 = () => {
+            const r = F().getBoundingClientRect();
+            return Math.round(r.left) + "," + Math.round(r.top);
+          };
+          await dragF(-60, 50, false);
+          const moved = pos2();
+          await dragF(150, 90, true);
+          check2("[165-P9] \u2605\u2605 Esc \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E25\u0E32\u0E01\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22 = \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 (\u0E41\u0E1C\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21)", pos2() === moved, `${moved} \u2192 ${pos2()}`);
+          hb("float").click();
+          await w165(350);
+          check2("[165-P3] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E1C\u0E19\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27", !F() && !!D());
+          hb("float").click();
+          await w165(350);
+          check2("[165-P3] \u2605\u2605 \u0E25\u0E2D\u0E22\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07 = \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E14\u0E34\u0E21\u0E01\u0E48\u0E2D\u0E19\u0E1C\u0E19\u0E36\u0E01", !!F() && pos2() === moved, `${moved} \u2192 ${F() ? pos2() : "\u0E44\u0E21\u0E48\u0E25\u0E2D\u0E22"}`);
+          if (!wasFloat && F()) {
+            hb("float").click();
+            await w165(300);
+          }
+        } else check2("[165-P3] \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49", false);
+        if (!prWas) {
+          togglePanel("props");
+          await w165(200);
+        }
+        {
+          const under = [...document.querySelectorAll('#app-root .k-panel[data-panel-id="tree"] [title]')].find((e22) => e22.getBoundingClientRect().width > 10);
+          const notesWas = isPanelOpen("notes");
+          if (!notesWas) {
+            togglePanel("notes");
+            await w165(500);
+          }
+          const fpN = document.querySelector('.k-float-panel[data-panel-id="notes"]');
+          if (under && fpN) {
+            const ur = under.getBoundingClientRect();
+            const keepCss = fpN.style.cssText;
+            fpN.style.left = ur.left - 40 + "px";
+            fpN.style.top = ur.top - 60 + "px";
+            fpN.style.width = "300px";
+            fpN.style.height = "300px";
+            await w165(120);
+            const x = ur.left + ur.width / 2, y = ur.top + ur.height / 2;
+            const topEl = document.elementFromPoint(x, y);
+            const coveredTitle = under.getAttribute("title");
+            topEl.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, clientX: x, clientY: y }));
+            await w165(80);
+            const tipEl = document.getElementById("k-tip");
+            const leaked = !!tipEl && tipEl.classList.contains("on") && tipEl.textContent.includes(coveredTitle || "\0");
+            check2("[165-T1] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22\u0E17\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E21\u0E35\u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E08\u0E23\u0E34\u0E07", !!topEl.closest(".k-float-panel") && !under.contains(topEl));
+            check2("[165-T1] \u2605\u2605 \u0E0A\u0E35\u0E49\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22: \u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E02\u0E2D\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E02\u0E49\u0E32\u0E07\u0E25\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E17\u0E30\u0E25\u0E38\u0E02\u0E36\u0E49\u0E19\u0E21\u0E32", !leaked, tipEl && tipEl.textContent);
+            topEl.dispatchEvent(new MouseEvent("mouseout", { bubbles: true, relatedTarget: document.body }));
+            fpN.style.cssText = keepCss;
+          } else check2("[165-T1] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E21\u0E35 title \u0E43\u0E19\u0E41\u0E1C\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C + \u0E41\u0E1C\u0E07\u0E42\u0E19\u0E49\u0E15\u0E25\u0E2D\u0E22\u0E44\u0E14\u0E49", false, String(!!under) + "/" + String(!!fpN));
+          if (!notesWas) {
+            togglePanel("notes");
+            await w165(250);
+          }
+          const seq0 = logStore.lastSeq();
+          const logHas = (re, from2 = seq0) => logStore.all().some((r) => r.seq > from2 && re.test((r.source ? r.source + ": " : "") + r.msg));
+          togglePanel("notes");
+          await w165(350);
+          togglePanel("notes");
+          await w165(350);
+          check2("[165-L] \u2605 \u0E40\u0E1B\u0E34\u0E14/\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E16\u0E39\u0E01\u0E08\u0E14 (panel: open/close notes)", logHas(/panel: open notes/) && logHas(/panel: close notes/));
+          const rowF = [...document.querySelectorAll("#tree .scene[data-path]")].map((r) => r.dataset.path).find((f) => /\.md$/i.test(f) && !state.tabs.has(f));
+          if (rowF) {
+            await openScene(rowF);
+            await w165(300);
+            check2("[165-L] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E16\u0E39\u0E01\u0E08\u0E14 (tab: open)", logHas(/^tab: open$/));
+            await closeTab(rowF);
+            await w165(200);
+            check2("[165-L] \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E16\u0E39\u0E01\u0E08\u0E14 (tab: close)", logHas(/^tab: close$/));
+          } else check2("[165-L] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E49\u0E25\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14", false);
+          const tS = [...state.tabs.values()].find((x) => x.editor && x.editor.view);
+          const seqS = logStore.lastSeq();
+          if (tS) {
+            markDirty(tS);
+            await saveTab(tS);
+          }
+          check2("[165-L] \u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E16\u0E39\u0E01\u0E08\u0E14\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E1C\u0E25 (save: done)", logHas(/^save: done$/, seqS));
+          const logWas = isPanelOpen("log");
+          if (!logWas) {
+            togglePanel("log");
+            await w165(400);
+          }
+          const lp = () => document.querySelector('.k-float-panel[data-panel-id="log"], #app-root .k-panel[data-panel-id="log"]');
+          for (let i5 = 0; i5 < 40 && !(lp() && lp().querySelector(".k-log-daybar")); i5++) await w165(50);
+          const lpE = lp();
+          const daySel = lpE && lpE.querySelector(".k-log-day");
+          const dirTxt = lpE && lpE.querySelector(".k-log-dir");
+          for (let i5 = 0; i5 < 40 && !(dirTxt && dirTxt.textContent.trim()); i5++) await w165(50);
+          check2(
+            "[165-L] \u2605\u2605 \u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C log + \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E17\u0E35\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21",
+            !!dirTxt && /logs$/i.test(dirTxt.textContent.trim()) && !!lpE.querySelector(".k-log-open") && lpE.querySelector(".k-log-open").textContent.trim().length > 2,
+            dirTxt && dirTxt.textContent
+          );
+          if (daySel) {
+            daySel.dispatchEvent(new Event("focus"));
+            for (let i5 = 0; i5 < 40 && daySel.options.length < 2; i5++) await w165(50);
+            check2("[165-L] \u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E27\u0E31\u0E19\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 (\u0E14\u0E39\u0E22\u0E49\u0E2D\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E44\u0E14\u0E49)", daySel.options.length >= 2, daySel.options.length);
+            if (daySel.options.length >= 2) {
+              daySel.value = daySel.options[1].value;
+              daySel.dispatchEvent(new Event("change"));
+              for (let i5 = 0; i5 < 60 && !lpE.querySelector(".k-log-daynote").textContent.trim(); i5++) await w165(50);
+              await w165(100);
+              check2(
+                "[165-L] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E27\u0E31\u0E19\u0E41\u0E25\u0E49\u0E27\u0E2D\u0E48\u0E32\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E14\u0E49 + \u0E1B\u0E49\u0E32\u0E22\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27",
+                lpE.querySelectorAll("#log-body .k-log-row").length > 0 && !!lpE.querySelector(".k-log-daynote").textContent.trim()
+              );
+              daySel.value = "";
+              daySel.dispatchEvent(new Event("change"));
+              await w165(100);
+              check2("[165-L] \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49 (\u0E1B\u0E49\u0E32\u0E22\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E2B\u0E32\u0E22)", !lpE.querySelector(".k-log-daynote").textContent.trim());
+            }
+          } else check2("[165-L] \u0E41\u0E1C\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E21\u0E35\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E27\u0E31\u0E19", false);
+          if (!logWas) {
+            togglePanel("log");
+            await w165(200);
+          }
+          const th0 = state.settings.theme;
+          check2(
+            "[165-C] \u2605\u2605 \u0E18\u0E35\u0E21\u0E21\u0E37\u0E14 = color-scheme dark (\u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E34\u0E4A\u0E01/\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02/\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 select \u0E15\u0E32\u0E21\u0E18\u0E35\u0E21)",
+            getComputedStyle(document.documentElement).colorScheme === "dark",
+            getComputedStyle(document.documentElement).colorScheme
+          );
+          state.settings.theme = "k2-light";
+          applyTheme();
+          check2("[165-C] \u2605 \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07 = color-scheme light", getComputedStyle(document.documentElement).colorScheme === "light");
+          state.settings.theme = th0;
+          applyTheme();
+          const segIds = [...document.querySelectorAll("#statusbar > .k-sb-seg")].map((e22) => e22.id);
+          check2(
+            "[165-S] \u2605\u2605 \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E23\u0E35\u0E22\u0E07 \u0E1E\u0E23\u0E49\u0E2D\u0E21 | \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C | \u0E04\u0E27\u0E32\u0E21\u0E04\u0E37\u0E1A\u0E2B\u0E19\u0E49\u0E32 | \u0E2A\u0E16\u0E32\u0E19\u0E30 | \u0E0B\u0E39\u0E21 | \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01",
+            JSON.stringify(segIds) === JSON.stringify(["sb-msg", "status-toggles", "status-mid", "status-right", "zoom-ctl", "status-home"]),
+            JSON.stringify(segIds)
+          );
+          const noTip = ["sb-msg", "prog-wrap", "wc", "status-page", "status-mode", "status-save", "status-scenes", "zoom-ctl", "status-home"].filter((id) => {
+            const e22 = document.getElementById(id);
+            return !e22 || !(e22.getAttribute("title") || "").trim() || /^ui\./.test(e22.getAttribute("title"));
+          });
+          check2("[165-S] \u2605 \u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E21\u0E35\u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E04\u0E37\u0E2D\u0E2D\u0E30\u0E44\u0E23 (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E35\u0E22\u0E4C)", noTip.length === 0, noTip.join(","));
+          const tgs = [...document.querySelectorAll("#status-toggles .k-sb-toggle")];
+          check2(
+            "[165-S] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E04\u0E23\u0E1A + \u0E1A\u0E2D\u0E01\u0E40\u0E1B\u0E34\u0E14/\u0E1B\u0E34\u0E14\u0E43\u0E19\u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E41\u0E25\u0E30 aria-pressed",
+            tgs.length >= 6 && tgs.every((b) => b.title && b.hasAttribute("aria-pressed")),
+            tgs.map((b) => b.title).join(" | ")
+          );
+          const lnB = document.querySelector('#status-toggles [data-toggle="line-numbers"]');
+          const ln0 = !!state.settings.lineNumbers;
+          lnB.click();
+          await w165(500);
+          check2(
+            "[165-S] \u2605 \u0E01\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E25\u0E02\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 = \u0E2A\u0E25\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07 + \u0E1B\u0E38\u0E48\u0E21\u0E15\u0E34\u0E14\u0E44\u0E1F\u0E15\u0E32\u0E21",
+            !!state.settings.lineNumbers === !ln0 && lnB.classList.contains("on") === !ln0,
+            String(state.settings.lineNumbers)
+          );
+          lnB.click();
+          await w165(500);
+          check2("[165-S] \u0E01\u0E14\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07 = \u0E01\u0E25\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21", !!state.settings.lineNumbers === ln0);
+          document.getElementById("status-home").click();
+          for (let i5 = 0; i5 < 40 && !document.querySelector(".k-overlay .k-home-dlg"); i5++) await w165(50);
+          check2("[165-S] \u2605\u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E17\u0E49\u0E32\u0E22\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 = \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E08\u0E23\u0E34\u0E07", !!document.querySelector(".k-overlay .k-home-dlg"));
+          {
+            const hc = document.querySelector(".k-overlay .k-home-dlg");
+            const ovH = hc && hc.closest(".k-overlay");
+            document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+            for (let i5 = 0; i5 < 40 && ovH && ovH.isConnected; i5++) await w165(50);
+            if (ovH && ovH.isConnected) ovH.remove();
+          }
+          const ln1 = !!state.settings.lineNumbers;
+          state.settings.lineNumbers = !ln1;
+          applySettings();
+          check2(
+            "[165-S] \u2605 \u0E04\u0E48\u0E32\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E32\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 (applySettings) = \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35",
+            lnB.classList.contains("on") === !ln1
+          );
+          state.settings.lineNumbers = ln1;
+          applySettings();
+          const sbR = document.getElementById("statusbar");
+          check2(
+            "[165-S] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E22\u0E31\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19",
+            sbR.offsetHeight < 40 && sbR.scrollWidth <= sbR.clientWidth + 1,
+            sbR.offsetHeight + " \xB7 " + sbR.scrollWidth + "/" + sbR.clientWidth
+          );
+        }
+        const pm165 = getPanelManager();
+        const lay165 = JSON.stringify({ r: pm165.store.root, f: pm165.store.floats });
+        for (const pid of ["dashboard", "books", "chapters"]) {
+          if (!isPanelOpen(pid)) {
+            showPanel(pid);
+            await w165(700);
+          }
+          if (!pm165.isFloating(pid)) {
+            pm165.floatPanel(pid, { x: 120, y: 90, w: 520, h: 240 });
+            await w165(400);
+          }
+          pm165.moveFloat(pid, { x: 120, y: 90, w: 520, h: 240 });
+          await w165(500);
+          const body = () => document.querySelector(`.k-float-panel[data-panel-id="${pid}"] .k-panel-body`);
+          const b0 = body();
+          if (!b0 || b0.scrollHeight <= b0.clientHeight + 20) {
+            check2(`[165-P6] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E41\u0E1C\u0E07 ${pid} \u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19`, false, b0 ? `${b0.scrollHeight}/${b0.clientHeight}` : "\u0E44\u0E21\u0E48\u0E40\u0E08\u0E2D\u0E41\u0E1C\u0E07");
+            continue;
+          }
+          b0.style.scrollBehavior = "auto";
+          b0.scrollTop = b0.scrollHeight;
+          b0.dispatchEvent(new Event("scroll"));
+          await w165(400);
+          const want = b0.scrollTop;
+          hidePanel(pid);
+          await w165(400);
+          showPanel(pid);
+          const seen = [];
+          const t0 = performance.now();
+          await new Promise((done2) => {
+            const f = () => {
+              const b = body();
+              if (b) seen.push(b.scrollTop);
+              if (performance.now() - t0 < 900) requestAnimationFrame(f);
+              else done2();
+            };
+            requestAnimationFrame(f);
+          });
+          check2(
+            `[165-P6] \u2605\u2605 ${pid}: \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E25\u0E48\u0E32\u0E07\u0E2A\u0E38\u0E14 \u2192 \u0E1B\u0E34\u0E14 \u2192 \u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48 = \u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21\u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48\u0E40\u0E1F\u0E23\u0E21\u0E41\u0E23\u0E01 (\u0E44\u0E21\u0E48\u0E44\u0E1B\u0E1A\u0E19\u0E2A\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E44\u0E2B\u0E25\u0E25\u0E07)`,
+            seen.length > 0 && seen.every((v4) => Math.abs(v4 - want) <= 3),
+            `\u0E15\u0E49\u0E2D\u0E07\u0E01\u0E32\u0E23 ${want} \xB7 \u0E17\u0E35\u0E48\u0E40\u0E2B\u0E47\u0E19\u0E17\u0E35\u0E25\u0E30\u0E40\u0E1F\u0E23\u0E21 ${JSON.stringify([...new Set(seen)].slice(0, 8))}`
+          );
+        }
+        {
+          const L2 = JSON.parse(lay165);
+          pm165.store.floats = L2.f;
+          pm165.store.update(L2.r);
+          renderPanels(true);
+          await w165(300);
+        }
       }
       {
         check2("[137-4] \u2605\u2605 #topbar \u0E16\u0E39\u0E01\u0E25\u0E1A\u0E17\u0E34\u0E49\u0E07\u0E17\u0E31\u0E49\u0E07\u0E41\u0E16\u0E1A\u0E41\u0E25\u0E49\u0E27", !$("#topbar"));
@@ -191495,8 +192428,8 @@ ${css}
           );
           const pbody = bodyEl.closest(".k-panel-body");
           check2(
-            "[r-2] .k-panel-body \u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14 padding/overflow \u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27",
-            !!pbody && getComputedStyle(pbody).paddingTop === "0px" && getComputedStyle(pbody).overflow === "hidden",
+            "[r-2] .k-panel-body \u0E02\u0E2D\u0E07\u0E41\u0E1C\u0E07\u0E1C\u0E31\u0E07\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14 padding \u0E2D\u0E2D\u0E01 \xB7 \u0E41\u0E19\u0E27\u0E15\u0E31\u0E49\u0E07\u0E44\u0E21\u0E48\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E2D\u0E07 \xB7 \u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E14\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E41\u0E04\u0E1A\u0E01\u0E27\u0E48\u0E32\u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33",
+            !!pbody && getComputedStyle(pbody).paddingTop === "0px" && getComputedStyle(pbody).overflowY === "hidden" && getComputedStyle(pbody).overflowX === "auto",
             pbody && getComputedStyle(pbody).paddingTop + "/" + getComputedStyle(pbody).overflow
           );
           const vp = bodyEl.querySelector(".branch-viewport");
@@ -192223,7 +193156,434 @@ ${css}
         );
         check2("[162-W7] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 \u2192 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E21\u0E35\u0E15\u0E31\u0E27\u0E04\u0E31\u0E48\u0E19\u0E2B\u0E25\u0E31\u0E01\u0E1E\u0E31\u0E19\u0E41\u0E1A\u0E1A\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29", LC7.fmtNum(1234567) === "1,234,567", LC7.fmtNum(1234567));
         check2("[162-W7] \u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 \u2192 \u0E40\u0E23\u0E35\u0E22\u0E07\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E25\u0E30\u0E15\u0E34\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E44\u0E17\u0E22", LC7.cmpText("apple", "\u0E01\u0E32") < 0);
+        {
+          const THr = /[\u0E00-\u0E7F]/;
+          const okThai = new Set(["ui.dlg.fontSampleText", "ui.dlg.iNTNightSceneOne", "ui.pdf.printNameEgPage"].map((k) => t(k)));
+          const cv = document.createElement("canvas").getContext("2d");
+          const visible = (e) => {
+            const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden";
+          };
+          settingsDialog();
+          await new Promise((r) => setTimeout(r, 120));
+          const selBad = [], thaiBad = [], ovBad = [];
+          for (const tab of [...document.querySelectorAll(".k-dialog .k-set-tab")]) {
+            tab.click();
+            await new Promise((r) => setTimeout(r, 30));
+            const page2 = document.querySelector(".k-dialog .k-set-page.on");
+            if (!page2) continue;
+            for (const sel of page2.querySelectorAll(".k-row > select.k-dlg-select, .k-row span > select.k-dlg-select")) {
+              if (!visible(sel)) continue;
+              const o = sel.options[sel.selectedIndex];
+              if (!o || !o.text) continue;
+              const cs = getComputedStyle(sel);
+              cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+              const need = cv.measureText(o.text).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 14;
+              const w = sel.getBoundingClientRect().width;
+              const cap = sel.closest(".k-row").getBoundingClientRect().width * 0.7;
+              if (need > w + 1 && w < cap - 2) selBad.push(tab.dataset.p + ":" + (sel.id || "?") + " " + Math.round(w) + "<" + Math.round(need));
+            }
+            const tw = document.createTreeWalker(page2, NodeFilter.SHOW_TEXT);
+            for (let n2; n2 = tw.nextNode(); ) {
+              const v4 = n2.nodeValue.trim();
+              const e = n2.parentElement;
+              if (!v4 || !THr.test(v4) || !e || !visible(e) || e.closest("option, select, textarea, [contenteditable]")) continue;
+              if ([...okThai].some((x) => x && v4.includes(x.trim().slice(0, 12)))) continue;
+              thaiBad.push(tab.dataset.p + ": " + v4.slice(0, 30));
+            }
+            for (const e of page2.querySelectorAll("[title], [aria-label]")) {
+              const v4 = e.getAttribute("title") || e.getAttribute("aria-label");
+              if (visible(e) && THr.test(v4)) thaiBad.push(tab.dataset.p + " @title: " + v4.slice(0, 30));
+            }
+            for (const e of page2.querySelectorAll("button, label, .k-tbcfg-icon")) {
+              const own = [...e.childNodes].some((c) => c.nodeType === 3 && c.nodeValue.trim()) || e.classList.contains("k-tbcfg-icon");
+              if (!own || !visible(e) || e.clientWidth < 12 || e.scrollWidth <= e.clientWidth + 1) continue;
+              const cs = getComputedStyle(e);
+              if (/(auto|scroll)/.test(cs.overflowX) || cs.textOverflow === "ellipsis") continue;
+              ovBad.push(tab.dataset.p + ":" + e.className + " " + e.scrollWidth + ">" + e.clientWidth);
+            }
+          }
+          check2("[164-R2-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E04\u0E23\u0E1A (\u0E44\u0E21\u0E48\u0E15\u0E31\u0E14\u0E01\u0E25\u0E32\u0E07\u0E04\u0E33)", selBad.length === 0, selBad.slice(0, 5).join(" | "));
+          check2("[164-R2-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32", thaiBad.length === 0, thaiBad.slice(0, 5).join(" | "));
+          check2("[164-R2-1] \u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21/\u0E1B\u0E49\u0E32\u0E22\u0E25\u0E49\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19\u0E43\u0E19\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 (\u0E23\u0E27\u0E21\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E41\u0E16\u0E27\u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A)", ovBad.length === 0, ovBad.slice(0, 5).join(" | "));
+          document.querySelector(".k-dialog .k-cancel")?.click();
+          await new Promise((r) => setTimeout(r, 80));
+          const rb = document.querySelector('.k-panel[data-panel-id="tree"] .k-tree-refresh-btn');
+          check2(
+            "[164-R2-1] \u2605 tooltip \u0E1B\u0E38\u0E48\u0E21\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32",
+            !!rb && rb.title === t("ui.app.refreshReadFileFolder") && !THr.test(rb.title),
+            rb && rb.title
+          );
+          check2(
+            "[164-R2-1] \u2605 \u0E0A\u0E19\u0E34\u0E14\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29",
+            REL_TYPES.every((x) => x.label && !THr.test(x.label)),
+            REL_TYPES.map((x) => x.label).join(",")
+          );
+          showPanel("chapters");
+          let chHead = null;
+          for (let i5 = 0; i5 < 40 && !chHead; i5++) {
+            await new Promise((r) => setTimeout(r, 50));
+            chHead = document.querySelector(".chapters-wrap .books-head");
+          }
+          check2("[164-R2-1] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E1A\u0E17\u0E44\u0E14\u0E49", !!chHead);
+          if (chHead) {
+            const panel2 = chHead.closest(".k-float-panel, .k-panel");
+            const oldW = panel2.style.width;
+            panel2.style.width = "560px";
+            await new Promise((r) => setTimeout(r, 120));
+            const wrapped = [...chHead.querySelectorAll(":scope > button")].filter((b) => {
+              const cs = getComputedStyle(b);
+              const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.3;
+              const h = b.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+              return h > lh * 1.5;
+            }).map((b) => b.textContent.trim());
+            check2("[164-R2-1] \u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 + \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A: \u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E1A\u0E17\u0E44\u0E21\u0E48\u0E1E\u0E31\u0E1A\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14", wrapped.length === 0, wrapped.join(" | "));
+            panel2.style.width = oldW;
+          }
+          hidePanel("chapters");
+          await new Promise((r) => setTimeout(r, 60));
+          const sleep3 = (ms) => new Promise((r) => setTimeout(r, ms));
+          const phOver = (root) => [...root.querySelectorAll("input[placeholder]")].filter((e) => {
+            if (e.value || !visible(e)) return false;
+            const cs = getComputedStyle(e);
+            cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+            return cv.measureText(e.placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) > e.clientWidth + 1;
+          }).map((e) => '"' + e.placeholder.slice(0, 30) + '" ' + e.clientWidth + "px");
+          const dlgBad = (root, tag3, ignore = null) => {
+            const b = [];
+            for (const e of root.querySelectorAll("label, button, .k-hint")) {
+              const own = [...e.childNodes].filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join("").trim();
+              if (!own || !visible(e)) continue;
+              if (THr.test(own)) b.push(tag3 + " \u0E44\u0E17\u0E22: " + own.slice(0, 30));
+              const cs = getComputedStyle(e);
+              if (e.clientWidth >= 12 && e.scrollWidth > e.clientWidth + 1 && !/(auto|scroll)/.test(cs.overflowX) && cs.textOverflow !== "ellipsis") b.push(tag3 + " \u0E25\u0E49\u0E19: " + own.slice(0, 30));
+            }
+            for (const e of root.querySelectorAll("[title], [placeholder]")) {
+              const v4 = e.getAttribute("title") || e.getAttribute("placeholder");
+              if (ignore && e.closest(ignore)) continue;
+              if (visible(e) && THr.test(v4)) b.push(tag3 + " \u0E44\u0E17\u0E22@: " + v4.slice(0, 30));
+            }
+            b.push(...phOver(root).map((x) => tag3 + " placeholder \u0E25\u0E49\u0E19: " + x));
+            for (const e of root.querySelectorAll("input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color])")) {
+              if (visible(e) && e.offsetHeight > 60) b.push(tag3 + " \u0E0A\u0E48\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E2A\u0E39\u0E07 " + e.offsetHeight + "px: " + e.className);
+            }
+            const d = root.getBoundingClientRect();
+            if (d.bottom > innerHeight + 1 || d.right > innerWidth + 1) b.push(tag3 + " \u0E15\u0E01\u0E02\u0E2D\u0E1A\u0E08\u0E2D");
+            return b;
+          };
+          const topDlg = async (sel = ".k-overlay .k-dialog") => {
+            for (let i5 = 0; i5 < 40; i5++) {
+              const d = [...document.querySelectorAll(sel)].pop();
+              if (d) return d;
+              await sleep3(50);
+            }
+            return null;
+          };
+          const rowsByKind = /* @__PURE__ */ new Map();
+          for (const e of document.querySelectorAll("#tree *")) if (e._k2row && !rowsByKind.has(e._k2row.kind)) rowsByKind.set(e._k2row.kind, e);
+          const menuBad = [];
+          for (const [kind, row3] of rowsByKind) {
+            closeMenu();
+            row3.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 60, clientY: 80 }));
+            await sleep3(60);
+            const m = [...document.querySelectorAll(".k-menu")].filter((x) => !x.classList.contains("k-submenu")).pop();
+            if (!m) {
+              menuBad.push(kind + ": \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E21\u0E19\u0E39");
+              continue;
+            }
+            for (const it of m.querySelectorAll(":scope > .k-menu-item")) {
+              const tx2 = it.querySelector(".k-menu-text") || it;
+              const v4 = it.textContent.trim();
+              if (THr.test(v4)) menuBad.push(kind + " \u0E44\u0E17\u0E22: " + v4.slice(0, 30));
+              if (tx2.scrollWidth > tx2.clientWidth + 1) menuBad.push(kind + " \u0E25\u0E49\u0E19: " + v4.slice(0, 30));
+            }
+            const mr = m.getBoundingClientRect();
+            if (mr.right > innerWidth + 1 || mr.bottom > innerHeight + 1) menuBad.push(kind + " \u0E15\u0E01\u0E02\u0E2D\u0E1A\u0E08\u0E2D");
+          }
+          closeMenu();
+          check2(
+            "[164-R3-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E40\u0E21\u0E19\u0E39\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E41\u0E16\u0E27\u0E43\u0E19 Explorer \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07/\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E49\u0E19/\u0E15\u0E01\u0E08\u0E2D",
+            rowsByKind.size >= 6 && menuBad.length === 0,
+            [...rowsByKind.keys()].join(",") + " :: " + menuBad.slice(0, 5).join(" | ")
+          );
+          popupMenu(100, 100, [{ text: "x", sub: () => [] }]);
+          const hs3 = [...document.querySelectorAll(".k-menu")].pop().querySelector(".k-menu-has-sub");
+          hs3.click();
+          await sleep3(80);
+          const sm3 = [...document.querySelectorAll(".k-submenu")].pop();
+          check2(
+            '[164-R3-1] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E25\u0E39\u0E01\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E42\u0E0A\u0E27\u0E4C\u0E41\u0E16\u0E27 "(\u0E27\u0E48\u0E32\u0E07)" \u0E2A\u0E35\u0E40\u0E17\u0E32 \u0E41\u0E17\u0E19\u0E04\u0E27\u0E32\u0E21\u0E40\u0E07\u0E35\u0E22\u0E1A',
+            !!sm3 && sm3.textContent.includes(t("ui.common.empty")) && !!sm3.querySelector('[aria-disabled="true"]')
+          );
+          closeMenu();
+          const scRow3 = rowsByKind.get("scene");
+          check2("[164-R3-1] \u0E21\u0E35\u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34", !!scRow3);
+          if (scRow3) {
+            treeRowAction(scRow3, "propsPopup");
+            const pd = await topDlg();
+            check2("[164-R3-1] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49", !!pd);
+            if (pd) {
+              const bad = dlgBad(pd, "props");
+              check2("[164-R3-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07 \xB7 placeholder \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E0A\u0E48\u0E2D\u0E07", bad.length === 0, bad.slice(0, 5).join(" | "));
+              const ta2 = pd.querySelector("textarea.wiki-input");
+              check2(
+                "[164-R3-1] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E43\u0E0A\u0E49\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E47\u0E19 monospace)",
+                !!ta2 && getComputedStyle(ta2).fontFamily === getComputedStyle(pd).fontFamily,
+                ta2 && getComputedStyle(ta2).fontFamily
+              );
+              pd.querySelector(".k-cancel")?.click();
+              await sleep3(120);
+            }
+          }
+          const relP = relationDialog(["Detective Somchai", "Madam Lin"], "Captain Arun");
+          const rd = await topDlg();
+          check2("[164-R3-1] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1C\u0E39\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E44\u0E14\u0E49", !!rd);
+          if (rd) {
+            const bad = dlgBad(rd, "rel");
+            check2("[164-R3-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1C\u0E39\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E31\u0E21\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07 \xB7 placeholder \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19", bad.length === 0, bad.slice(0, 5).join(" | "));
+            rd.querySelector(".k-cancel")?.click();
+          }
+          await relP;
+          await sleep3(80);
+          const imgP = pickImage(state.root);
+          const gd = await topDlg(".k-overlay .k-dialog.gal2-pick");
+          check2("[164-R3-1] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E39\u0E1B\u0E44\u0E14\u0E49", !!gd);
+          if (gd) {
+            await sleep3(150);
+            const bad = dlgBad(gd, "pick", ".gal-grid");
+            const q3 = gd.querySelector(".gal2-search");
+            check2(
+              "[164-R3-1] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E39\u0E1B: \u0E0A\u0E48\u0E2D\u0E07\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E2A\u0E39\u0E07\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 (\u0E40\u0E14\u0E34\u0E21\u0E22\u0E37\u0E14 130px) \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07",
+              bad.length === 0 && !!q3 && q3.offsetHeight < 60,
+              (q3 && q3.offsetHeight) + " :: " + bad.slice(0, 5).join(" | ")
+            );
+            gd.querySelector(".k-cancel")?.click();
+          }
+          await imgP;
+          await sleep3(80);
+          const hub3 = await openExportHub();
+          const xb = document.querySelector(".k-xhub");
+          check2("[164-R3-1] \u0E40\u0E1B\u0E34\u0E14\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E14\u0E49", !!hub3 && !!xb);
+          if (hub3 && xb) {
+            await hub3.setFormat("pdf");
+            await sleep3(200);
+            const opt = xb.querySelector(".xhub-options");
+            const bad = dlgBad(opt, "pdf").filter((x) => !/ตกขอบจอ/.test(x));
+            check2("[164-R3-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 PDF \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07/\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E49\u0E19", bad.length === 0, bad.slice(0, 5).join(" | "));
+            const hint = opt.querySelector(":scope > .k-hint");
+            const lab = opt.querySelector("label");
+            check2(
+              "[164-R3-1] \u2605 \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E43\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E40\u0E25\u0E47\u0E01\u0E01\u0E27\u0E48\u0E32\u0E1B\u0E49\u0E32\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E43\u0E2B\u0E0D\u0E48\u0E01\u0E27\u0E48\u0E32 \u0E2D\u0E48\u0E32\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E49\u0E2D\u0E19\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E1B\u0E49\u0E32\u0E22\u0E16\u0E31\u0E14\u0E44\u0E1B)",
+              !!hint && !!lab && parseFloat(getComputedStyle(hint).fontSize) < parseFloat(getComputedStyle(lab).fontSize),
+              hint && getComputedStyle(hint).fontSize + " vs " + (lab && getComputedStyle(lab).fontSize)
+            );
+            const okIn = () => {
+              const ok2 = xb.querySelector(".k-dlg-btns .k-ok");
+              const r = ok2 && ok2.getBoundingClientRect();
+              const d = xb.getBoundingClientRect();
+              return !!r && r.bottom <= d.bottom + 1 && xb.scrollHeight <= xb.clientHeight + 1;
+            };
+            check2(
+              "[164-R3-1] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19 (\u0E40\u0E14\u0E34\u0E21\u0E15\u0E01\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48 1440\xD7900)",
+              okIn(),
+              xb.scrollHeight + "/" + xb.clientHeight
+            );
+            xb.style.maxHeight = "614px";
+            await sleep3(120);
+            check2(
+              "[164-R3-1] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E40\u0E15\u0E35\u0E49\u0E22 (1024\xD7700): \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 \u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1D\u0E48\u0E32\u0E22\u0E2B\u0E14",
+              okIn(),
+              xb.scrollHeight + "/" + xb.clientHeight + " body=" + xb.querySelector(".xhub-body").offsetHeight
+            );
+            xb.style.maxHeight = "";
+            xb.querySelector(".k-cancel")?.click();
+            await sleep3(150);
+          }
+          settingsDialog();
+          const sd = await topDlg(".k-overlay .k-dialog.k-settings");
+          check2("[164-R3-1] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E44\u0E14\u0E49", !!sd);
+          if (sd) {
+            sd.style.width = "963px";
+            sd.style.maxWidth = "963px";
+            await sleep3(120);
+            const narrowBad = [];
+            for (const tab of [...sd.querySelectorAll(".k-set-tab")]) {
+              tab.click();
+              await sleep3(30);
+              const page2 = sd.querySelector(".k-set-page.on");
+              if (!page2) continue;
+              for (const sel of page2.querySelectorAll(".k-row > select.k-dlg-select, .k-row span > select.k-dlg-select")) {
+                if (!visible(sel)) continue;
+                const o = sel.options[sel.selectedIndex];
+                if (!o || !o.text) continue;
+                const cs = getComputedStyle(sel);
+                cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+                const need = cv.measureText(o.text).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 14;
+                const w = sel.getBoundingClientRect().width;
+                const cap = sel.closest(".k-row").getBoundingClientRect().width * 0.7;
+                if (need > w + 1 && w < cap - 2) narrowBad.push(tab.dataset.p + ":" + (sel.id || "?") + " " + Math.round(w) + "<" + Math.round(need));
+              }
+              for (const lab of page2.querySelectorAll(".k-row > label")) {
+                if (!visible(lab)) continue;
+                const lh = parseFloat(getComputedStyle(lab).lineHeight) || 18;
+                if (lab.offsetHeight > lh * 5.5) narrowBad.push(tab.dataset.p + " \u0E1B\u0E49\u0E32\u0E22\u0E1E\u0E31\u0E1A " + Math.round(lab.offsetHeight / lh) + " \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14: " + lab.textContent.trim().slice(0, 20));
+              }
+              narrowBad.push(...phOver(page2).map((x) => tab.dataset.p + " placeholder \u0E25\u0E49\u0E19: " + x));
+            }
+            check2(
+              "[164-R3-1] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 + \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E04\u0E1A: \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E17\u0E38\u0E01\u0E2B\u0E19\u0E49\u0E32 \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E15\u0E31\u0E14\u0E04\u0E33 \xB7 \u0E1B\u0E49\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E1E\u0E31\u0E1A \xB7 placeholder \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19",
+              narrowBad.length === 0,
+              narrowBad.slice(0, 5).join(" | ")
+            );
+            sd.querySelector(".k-cancel")?.click();
+            await sleep3(120);
+          }
+          {
+            const bpm4 = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
+            const planBefore4 = (bpm4.currentBranchPlan() || {}).path || null;
+            const liveBefore4 = bpm4.inBranchPlan();
+            let made4 = false, planMade4 = null;
+            if (!document.querySelector("#tree [data-planner]")) {
+              await newPlannerBoard("Board EN");
+              made4 = true;
+            }
+            if (!document.querySelector("#tree [data-branch-plan]")) {
+              planMade4 = await bpm4.saveBranchPlanAs("Plan EN");
+              made4 = true;
+            }
+            if (made4) await buildTree2();
+            const bRow = document.querySelector("#tree [data-planner]");
+            let pRow = document.querySelector("#tree [data-branch-plan]");
+            check2(
+              "[164-R4] \u2605\u2605 \u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19/\u0E41\u0E1C\u0E19\u0E1C\u0E39\u0E01\u0E40\u0E21\u0E19\u0E39\u0E1C\u0E48\u0E32\u0E19 bindTreeMenu (\u0E1E\u0E01 _k2row \xB7 F2/Shift+F10 \u0E40\u0E2D\u0E37\u0E49\u0E2D\u0E21\u0E16\u0E36\u0E07)",
+              !!(bRow && bRow._k2row && bRow._k2row.kind === "board" && pRow && pRow._k2row && pRow._k2row.kind === "plan")
+            );
+            const mBad4 = [];
+            for (const row3 of [bRow, pRow].filter(Boolean)) {
+              closeMenu();
+              row3.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 60, clientY: 80 }));
+              await sleep3(60);
+              const m = [...document.querySelectorAll(".k-menu")].filter((x) => !x.classList.contains("k-submenu")).pop();
+              if (!m) {
+                mBad4.push(row3._k2row.kind + ": \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E21\u0E19\u0E39");
+                continue;
+              }
+              for (const it of m.querySelectorAll(":scope > .k-menu-item")) {
+                const v4 = it.textContent.trim();
+                const tx2 = it.querySelector(".k-menu-text") || it;
+                if (THr.test(v4)) mBad4.push(row3._k2row.kind + " \u0E44\u0E17\u0E22: " + v4.slice(0, 30));
+                if (tx2.scrollWidth > tx2.clientWidth + 1) mBad4.push(row3._k2row.kind + " \u0E25\u0E49\u0E19: " + v4.slice(0, 30));
+              }
+            }
+            closeMenu();
+            check2("[164-R4] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E40\u0E21\u0E19\u0E39\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E41\u0E16\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19/\u0E41\u0E1C\u0E19 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07/\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E49\u0E19", mBad4.length === 0, mBad4.join(" | "));
+            const curRow4 = planBefore4 && [...document.querySelectorAll("#tree [data-branch-plan]")].find((r) => r.dataset.branchPlan === planBefore4);
+            if (curRow4) pRow = curRow4;
+            if (pRow) {
+              treeRowAction(pRow, "propsPopup");
+              const pd4 = await topDlg();
+              check2("[164-R4] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19\u0E44\u0E14\u0E49", !!pd4);
+              if (pd4) {
+                const bad = dlgBad(pd4, "planProps");
+                const thOpt = [...pd4.querySelectorAll("option")].filter((o) => THr.test(o.text)).map((o) => o.text);
+                check2(
+                  "[164-R4] \u2605\u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19 \u2014 \u0E0A\u0E37\u0E48\u0E2D\u0E2A\u0E35/\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E17\u0E22 \xB7 placeholder \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19",
+                  bad.length === 0 && thOpt.length === 0,
+                  bad.concat(thOpt).slice(0, 5).join(" | ")
+                );
+                check2("[164-R4] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E41\u0E1C\u0E19: \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E15\u0E34\u0E14 k-cancel (Esc \u0E40\u0E14\u0E34\u0E19\u0E16\u0E36\u0E07)", !!pd4.querySelector(".k-dlg-btns .k-cancel"));
+                pd4.querySelector(".k-cancel")?.click();
+                await sleep3(120);
+              }
+              await sleep3(150);
+              const planNow4 = (bpm4.currentBranchPlan() || {}).path || null;
+              if (planNow4 !== planBefore4) {
+                if (planBefore4) await bpm4.openBranchPlan(planBefore4);
+                else bpm4.closeBranchPlan();
+              }
+              if (typeof planMade4 === "string") {
+                try {
+                  await kapi.remove(planMade4);
+                } catch {
+                }
+              }
+              await refreshTreeQueued();
+              check2(
+                "[164-R4] \u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E41\u0E1C\u0E19\u0E41\u0E15\u0E01\u0E2A\u0E32\u0E22\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E25\u0E31\u0E07\u0E15\u0E23\u0E27\u0E08\u0E01\u0E25\u0E48\u0E2D\u0E07",
+                ((bpm4.currentBranchPlan() || {}).path || null) === planBefore4 && bpm4.inBranchPlan() === liveBefore4,
+                planBefore4 + " \u2192 " + (bpm4.currentBranchPlan() || {}).path + " live " + liveBefore4 + "\u2192" + bpm4.inBranchPlan()
+              );
+            }
+            if (bRow) {
+              treeRowAction(bRow, "propsPopup");
+              const bd4 = await topDlg();
+              if (bd4) {
+                const bad = dlgBad(bd4, "boardProps");
+                check2("[164-R4] \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E17\u0E22\u0E04\u0E49\u0E32\u0E07/\u0E25\u0E49\u0E19", bad.length === 0, bad.slice(0, 5).join(" | "));
+                bd4.querySelector(".k-cancel")?.click();
+                await sleep3(120);
+              }
+            }
+          }
+          {
+            const wf4 = smart.fileOf["\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15"];
+            if (wf4) {
+              await openEntity(wf4);
+              await sleep3(300);
+              const wt4 = state.tabs.get(wf4);
+              const wrap4 = wt4 && wt4.pane.querySelector(".wiki-wrap");
+              const aiRows = wrap4 ? [...wrap4.querySelectorAll(".wiki-row")].filter((r) => r.querySelector(":scope > .wiki-ai-btn")) : [];
+              check2("[164-R4] \u0E2B\u0E19\u0E49\u0E32 Wiki \u0E21\u0E35\u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 AI \u0E43\u0E2B\u0E49\u0E15\u0E23\u0E27\u0E08", aiRows.length > 0, aiRows.length);
+              const off4 = [];
+              if (wrap4) {
+                for (let w = 260; w <= 820; w += 40) {
+                  wrap4.style.width = w + "px";
+                  wrap4.style.maxWidth = w + "px";
+                  await sleep3(20);
+                  for (const r of aiRows) {
+                    const a = r.querySelector(":scope > .wiki-ai-btn").getBoundingClientRect();
+                    const i5 = r.querySelector(":scope > .wiki-input").getBoundingClientRect();
+                    if (Math.abs(a.top + a.height / 2 - (i5.top + i5.height / 2)) > 4) off4.push(w + "px:" + r.querySelector("label").textContent.slice(0, 12));
+                  }
+                }
+                wrap4.style.width = "";
+                wrap4.style.maxWidth = "";
+              }
+              check2(
+                "[164-R4] \u2605\u2605 \u0E2B\u0E19\u0E49\u0E32 Wiki \u0E17\u0E38\u0E01\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07 260\u2013820px: \u0E1B\u0E38\u0E48\u0E21 AI \u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E01 (\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E25\u0E48\u0E19\u0E43\u0E15\u0E49\u0E1B\u0E49\u0E32\u0E22)",
+                off4.length === 0,
+                off4.slice(0, 5).join(" | ")
+              );
+              closeTab(wf4);
+            }
+          }
+          {
+            showPanel("ai-chat");
+            let cp4 = null;
+            for (let i5 = 0; i5 < 40 && !cp4; i5++) {
+              await sleep3(50);
+              cp4 = document.querySelector(".ai-chat-search");
+            }
+            check2("[164-R4] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E0A\u0E17 AI \u0E44\u0E14\u0E49", !!cp4);
+            if (cp4) {
+              const panel2 = cp4.closest(".k-float-panel, .k-panel");
+              const oldW = panel2.style.width;
+              panel2.style.width = "320px";
+              await sleep3(120);
+              const ph = phOver(panel2);
+              check2(
+                "[164-R4] \u2605 \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 + \u0E41\u0E1C\u0E07\u0E41\u0E0A\u0E17\u0E01\u0E27\u0E49\u0E32\u0E07 320px: placeholder \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E0A\u0E48\u0E2D\u0E07 \xB7 \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E40\u0E15\u0E47\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 tooltip",
+                ph.length === 0 && !!cp4.title && !THr.test(cp4.title),
+                ph.join(" | ")
+              );
+              panel2.style.width = oldW;
+            }
+            hidePanel("ai-chat");
+            await sleep3(60);
+          }
+        }
         await loadLanguage("th", state.root);
+        await buildTree2();
         check2(
           '[162-W7] \u2605\u2605 \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E17\u0E22 \u2192 <html lang="th"> \xB7 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E47\u0E19 \u0E1E.\u0E28. \xB7 \u0E40\u0E23\u0E35\u0E22\u0E07\u0E44\u0E17\u0E22\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E30\u0E15\u0E34\u0E19',
           document.documentElement.lang === "th" && LC7.fmtDate(d7).includes("2569") && LC7.cmpText("apple", "\u0E01\u0E32") > 0,
@@ -194184,7 +195544,7 @@ ${css}
           check2(
             "\u0E41\u0E1C\u0E07\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19\u0E09\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27",
             !!document.querySelector(".branch-doc-ok"),
-            document.querySelector(".branch-doc-body")?.textContent?.slice(0, 90)
+            document.querySelector(".branch-doc-body")?.textContent?.slice(0, 90) + " \xB7 plan=" + JSON.stringify(((await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports))).currentBranchPlan() || {}).path || null)
           );
           check2(
             "\u0E1C\u0E31\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E41\u0E01\u0E19\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
@@ -201856,6 +203216,127 @@ ${css}
         resetPageScale();
         await new Promise((r) => setTimeout(r, 120));
         {
+          const tR = state.active, pR = tR && tR.pane;
+          const pmR2 = pR && pR.querySelector(":scope > .workspace > .ProseMirror");
+          check2(
+            "[164-R2-3] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21\u0E2A\u0E20\u0E32\u0E1E: \u0E41\u0E17\u0E47\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 (\u0E41\u0E1C\u0E07\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07)",
+            !!pmR2 && pR.clientWidth > 100,
+            pR && pR.clientWidth
+          );
+          if (pmR2) {
+            const was = state.settings.autoFitWidth;
+            check2("[164-R2-3] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E1B\u0E34\u0E14 (GLOBAL_DEFAULTS)", DEFAULT_SETTINGS.autoFitWidth === false);
+            state.settings.autoFitWidth = false;
+            check2("[164-R2-3] \u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 = \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E0B\u0E39\u0E21", autoFitWidth(pR) === false && currentPageScale() === 1);
+            state.settings.autoFitWidth = true;
+            check2("[164-R2-3] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E17\u0E2A\u0E1B\u0E34\u0E14\u0E40\u0E2A\u0E21\u0E2D\u0E41\u0E21\u0E49\u0E15\u0E34\u0E4A\u0E01\u0E44\u0E27\u0E49 (\u0E40\u0E17\u0E2A\u0E2D\u0E37\u0E48\u0E19\u0E27\u0E31\u0E14\u0E17\u0E35\u0E48\u0E0B\u0E39\u0E21 100%)", autoFitWidthOn() === false);
+            globalThis.__k2autoFitTest = true;
+            setPageScale(1);
+            pR.style.maxWidth = "420px";
+            await new Promise((r) => setTimeout(r, 150));
+            autoFitWidth(pR);
+            await new Promise((r) => setTimeout(r, 150));
+            const z1 = currentPageScale();
+            const w1 = pmR2.getBoundingClientRect().width;
+            check2(
+              "[164-R2-3] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A\u0E01\u0E27\u0E48\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 \u2192 \u0E22\u0E48\u0E2D\u0E08\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E1E\u0E2D\u0E14\u0E35\u0E41\u0E1C\u0E07 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19)",
+              z1 < 1 && w1 <= pR.clientWidth + 2,
+              `\u0E0B\u0E39\u0E21 ${z1} \xB7 \u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 ${Math.round(w1)} \xB7 \u0E41\u0E1C\u0E07 ${pR.clientWidth}`
+            );
+            check2(
+              "[164-R2-3] \u0E1B\u0E49\u0E32\u0E22\u0E0B\u0E39\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07",
+              ($("#zoom-label")?.textContent || "").includes(String(Math.round(z1 * 100))),
+              $("#zoom-label")?.textContent
+            );
+            pR.style.maxWidth = "";
+            await new Promise((r) => setTimeout(r, 150));
+            autoFitWidth(pR);
+            const z2 = currentPageScale();
+            check2("[164-R2-3] \u2605 \u0E41\u0E1C\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E36\u0E49\u0E19 \u2192 \u0E02\u0E22\u0E32\u0E22\u0E01\u0E25\u0E31\u0E1A \u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E19\u0E0B\u0E39\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07\u0E40\u0E2D\u0E07 (100%)", z2 > z1 && z2 <= 1, `${z1} \u2192 ${z2}`);
+            setPageScale(0.7);
+            pR.style.maxWidth = "";
+            autoFitWidth(pR);
+            check2("[164-R2-3] \u2605 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07 70% \u0E40\u0E2D\u0E07\u0E43\u0E19\u0E41\u0E1C\u0E07\u0E01\u0E27\u0E49\u0E32\u0E07 \u2192 \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E44\u0E21\u0E48\u0E02\u0E22\u0E32\u0E22\u0E17\u0E31\u0E1A", currentPageScale() === 0.7, currentPageScale());
+            pR.style.maxWidth = "420px";
+            await new Promise((r) => setTimeout(r, 150));
+            autoFitWidth(pR);
+            const z3 = currentPageScale();
+            const snapR5 = await captureSession();
+            check2(
+              "[164-R5] \u2605 \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E40\u0E01\u0E47\u0E1A\u0E0B\u0E39\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07 (70%) \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E22\u0E48\u0E2D\u0E44\u0E27\u0E49",
+              z3 < 0.7 && snapR5 && snapR5.ui && snapR5.ui.zoom === 0.7,
+              `\u0E22\u0E48\u0E2D\u0E2D\u0E22\u0E39\u0E48 ${z3} \xB7 \u0E40\u0E01\u0E47\u0E1A ${snapR5 && snapR5.ui && snapR5.ui.zoom}`
+            );
+            pR.style.maxWidth = "";
+            await new Promise((r) => setTimeout(r, 150));
+            state.settings.autoFitWidth = false;
+            autoFitWidthRestore();
+            check2(
+              "[164-R2-3] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C \u2192 \u0E04\u0E37\u0E19\u0E0B\u0E39\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07\u0E44\u0E27\u0E49 (70%) \u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E22\u0E48\u0E2D",
+              z3 < 0.7 && currentPageScale() === 0.7,
+              `${z3} \u2192 ${currentPageScale()}`
+            );
+            state.settings.autoFitWidth = was;
+            delete globalThis.__k2autoFitTest;
+            resetPageScale();
+            await new Promise((r) => setTimeout(r, 120));
+            const poll = async (fn, n2 = 60) => {
+              for (let i5 = 0; i5 < n2 && !await fn(); i5++) await new Promise((r) => setTimeout(r, 50));
+              return fn();
+            };
+            const gOf = async () => (await kapi.readGlobalSettings() || {}).autoFitWidth;
+            globalThis.__k2autoFitTest = true;
+            state.settings.autoFitWidth = false;
+            syncMenuToggles();
+            await new Promise((r) => setTimeout(r, 150));
+            pR.style.maxWidth = "420px";
+            await new Promise((r) => setTimeout(r, 150));
+            const [ms0] = await kapi.menuItemState(["view-auto-fit-width"]);
+            check2("[164-R3-3] \u0E40\u0E21\u0E19\u0E39 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 \u2192 \u0E0B\u0E39\u0E21 \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E0B\u0E39\u0E21\u0E1E\u0E2D\u0E14\u0E35\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E34\u0E4A\u0E01)", ms0.exists && !ms0.checked, JSON.stringify(ms0));
+            const mc = await kapi.menuTestClick("view-auto-fit-width");
+            check2("[164-R3-3] \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39\u0E08\u0E23\u0E34\u0E07\u0E44\u0E14\u0E49", mc && mc.ok, JSON.stringify(mc));
+            await poll(() => state.settings.autoFitWidth === true);
+            check2("[164-R3-3] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u2192 \u0E40\u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C", state.settings.autoFitWidth === true);
+            check2("[164-R3-3] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u2192 \u0E41\u0E1C\u0E07\u0E41\u0E04\u0E1A\u0E22\u0E48\u0E2D\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E2D\u0E1B\u0E23\u0E31\u0E1A\u0E02\u0E19\u0E32\u0E14)", currentPageScale() < 1, currentPageScale());
+            check2("[164-R3-3] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u2192 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 (\u0E01\u0E0E W3)", await poll(async () => await gOf() === true) === true);
+            const ms1 = await poll(async () => {
+              const [x] = await kapi.menuItemState(["view-auto-fit-width"]);
+              return x.checked && x;
+            });
+            check2("[164-R3-3] \u0E40\u0E21\u0E19\u0E39\u0E15\u0E34\u0E4A\u0E01\u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14", !!ms1);
+            const zl = document.querySelector("#zoom-label");
+            const zr = zl.getBoundingClientRect();
+            zl.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: zr.left + 4, clientY: zr.top + 4 }));
+            await new Promise((r) => setTimeout(r, 60));
+            const zm = [...document.querySelectorAll(".k-menu")].pop();
+            const zit = zm && [...zm.querySelectorAll('.k-menu-item[role="menuitemcheckbox"]')].find((x) => x.textContent.includes(t("ui.setTpl.autoFitWidth")));
+            check2(
+              "[164-R3-3] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32\u0E1B\u0E49\u0E32\u0E22\u0E0B\u0E39\u0E21 \u2192 \u0E40\u0E21\u0E19\u0E39\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C (\u0E15\u0E34\u0E4A\u0E01\u0E2D\u0E22\u0E39\u0E48)",
+              !!zit && zit.getAttribute("aria-checked") === "true",
+              zm && zm.textContent.slice(0, 120)
+            );
+            check2(
+              "[164-R3-3] \u0E40\u0E21\u0E19\u0E39\u0E1B\u0E49\u0E32\u0E22\u0E0B\u0E39\u0E21\u0E21\u0E35\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E0B\u0E39\u0E21\u0E04\u0E23\u0E1A (\u0E02\u0E22\u0E32\u0E22/\u0E22\u0E48\u0E2D/\u0E23\u0E35\u0E40\u0E0B\u0E47\u0E15/\u0E1E\u0E2D\u0E14\u0E35\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07)",
+              !!zm && ["ui.menu.expand", "ui.menu.collapse", "ui.menu.resetZoom", "ui.menu.fitWidePagePaper"].every((k) => zm.textContent.includes(t(k)))
+            );
+            zit && zit.click();
+            await poll(() => state.settings.autoFitWidth === false);
+            check2(
+              "[164-R3-3] \u2605 \u0E01\u0E14\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E1B\u0E49\u0E32\u0E22\u0E0B\u0E39\u0E21 \u2192 \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C + \u0E04\u0E37\u0E19\u0E0B\u0E39\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E15\u0E31\u0E49\u0E07 (100%)",
+              state.settings.autoFitWidth === false && currentPageScale() === 1,
+              currentPageScale()
+            );
+            check2("[164-R3-3] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49", await poll(async () => await gOf() === false) === true);
+            pR.style.maxWidth = "";
+            state.settings.autoFitWidth = was;
+            saveGlobalSetting("autoFitWidth", !!was);
+            syncMenuToggles();
+            delete globalThis.__k2autoFitTest;
+            resetPageScale();
+            await new Promise((r) => setTimeout(r, 120));
+          }
+        }
+        {
           {
             const sc60 = document.querySelector("#tree .scene:not(.add-row)");
             if (sc60) {
@@ -206494,6 +207975,21 @@ ${css}
               modeBtns.length === 2,
               modeBtns.map((b) => b.dataset.mode).join(",")
             );
+            {
+              const wh = document.querySelector("#starter-body .st-wz-head");
+              const bk = document.querySelector("#starter-body .st-back");
+              check2(
+                "[164-R4] \u2605 \u0E2B\u0E31\u0E27 wizard \u0E02\u0E36\u0E49\u0E19\u0E41\u0E16\u0E27\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49 + \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E1E\u0E31\u0E1A\u0E01\u0E25\u0E32\u0E07\u0E1B\u0E49\u0E32\u0E22",
+                !!wh && getComputedStyle(wh).flexWrap === "wrap" && !!bk && getComputedStyle(bk).whiteSpace === "nowrap"
+              );
+              const spn = document.getElementById("starter-panel");
+              const minW = spn ? parseFloat(getComputedStyle(spn).minWidth) : 999;
+              check2(
+                "[164-R4] \u2605 \u0E41\u0E1C\u0E07 Story Starter \u0E02\u0E31\u0E49\u0E19\u0E15\u0E48\u0E33 \u2264 390px (\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 1024 \u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E43\u0E2B\u0E49 ~390 \xB7 \u0E40\u0E14\u0E34\u0E21 460 = \u0E15\u0E31\u0E14\u0E02\u0E2D\u0E1A\u0E17\u0E38\u0E01\u0E02\u0E31\u0E49\u0E19)",
+                minW <= 390,
+                minW
+              );
+            }
             check2(
               "[a122] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E04\u0E37\u0E2D\u0E1E\u0E37\u0E49\u0E19\u0E10\u0E32\u0E19 (\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E40\u0E1B\u0E47\u0E19 basic)",
               (await SS.readStarter(st94.slug)).mode === SM.MODE_BASIC
@@ -206772,6 +208268,26 @@ ${css}
                 pathEl && pathEl.textContent
               );
               check2("[a123] hover \u0E40\u0E2B\u0E47\u0E19\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E15\u0E47\u0E21", pathEl && pathEl.title === state.root);
+              document.body.append(card);
+              const bdi3 = pathEl && pathEl.querySelector("bdi");
+              const rg3 = document.createRange();
+              if (bdi3) {
+                rg3.setStart(bdi3.firstChild, 0);
+                rg3.setEnd(bdi3.firstChild, 1);
+              }
+              const r0 = bdi3 && rg3.getBoundingClientRect(), rAll = bdi3 && bdi3.getBoundingClientRect();
+              check2(
+                "[164-R3-5] \u2605 \u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14: \u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E17\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E0B\u0E49\u0E32\u0E22\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E17\u0E49\u0E32\u0E22)",
+                !!bdi3 && bdi3.dir === "ltr" && Math.abs(r0.left - rAll.left) < 2,
+                r0 && r0.left + " vs " + rAll.left
+              );
+              const stats3 = [...card.querySelectorAll(".home-stat")];
+              check2(
+                "[164-R3-5] \u2605 \u0E2A\u0E16\u0E34\u0E15\u0E34\u0E01\u0E32\u0E23\u0E4C\u0E14 = \u0E44\u0E2D\u0E04\u0E2D\u0E19 + \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 \xB7 \u0E1B\u0E49\u0E32\u0E22\u0E40\u0E15\u0E47\u0E21\u0E43\u0E19 tooltip",
+                stats3.length === 3 && stats3.every((x) => x.querySelector("svg, span") && /^\d+$|^—$/.test(x.textContent.trim()) && x.title.includes(":")),
+                stats3.map((x) => x.textContent + "|" + x.title).join(" ; ")
+              );
+              card.remove();
               check2(
                 "[a123] \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C + \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48",
                 card.querySelectorAll(".home-card-pathbtn").length === 2
@@ -217483,18 +218999,22 @@ ${css}
           const chip = () => document.querySelector('#content .k-hidden-chips .k-hidden-chip[data-panel-id="props"]');
           check2("[161-U1] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14 \u2192 \u0E41\u0E1C\u0E07\u0E1B\u0E34\u0E14", !isPanelOpen("props"));
           check2(
-            "[161-U4] \u2605\u2605 \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E1B\u0E34\u0E14\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E17\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E43\u0E19\u0E21\u0E38\u0E21\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19 (\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 \u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19 innerHTML)",
-            !!chip() && chip().dataset.kind === "closed" && chip().textContent.includes(t((PUx.PANEL_DEFS.find((d) => d.id === "props") || {}).i18n)),
-            chip() && chip().outerHTML.slice(0, 160)
+            "[165-P5] \u2605\u2605 \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E0A\u0E34\u0E1B\u0E42\u0E1C\u0E25\u0E48\u0E21\u0E38\u0E21\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19",
+            !document.querySelector(".k-hidden-chips"),
+            (document.querySelector(".k-hidden-chips") || {}).outerHTML
           );
-          chip().click();
+          check2('[161-U4] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 "\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E1B\u0E34\u0E14" \u0E22\u0E31\u0E07\u0E08\u0E14\u0E44\u0E27\u0E49 (hiddenPanelChips)', PUx.hiddenPanelChips().some((c) => c.id === "props" && c.kind === "closed"));
+          PUx.restoreHiddenPanel("props");
           await wU(300);
-          check2("[161-U4] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E0A\u0E34\u0E1B \u2192 \u0E41\u0E1C\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32 \u0E41\u0E25\u0E30\u0E0A\u0E34\u0E1B\u0E2B\u0E32\u0E22\u0E44\u0E1B", isPanelOpen("props") && !chip());
+          check2("[161-U4] \u2605 restoreHiddenPanel \u2192 \u0E41\u0E1C\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32", isPanelOpen("props") && !chip());
           if (canTearOff("props") && headBtn2("tearoff")) {
             headBtn2("tearoff").click();
             const torn = await until159(() => isTornOff("props") && !isPanelOpen("props"), 8e3);
             check2("[161-U1] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E09\u0E35\u0E01\u0E1A\u0E19\u0E2B\u0E31\u0E27 \u2192 \u0E41\u0E1C\u0E07\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01", torn);
-            check2('[161-U4] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E41\u0E1A\u0E1A "\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01"', !!chip() && chip().dataset.kind === "torn");
+            check2(
+              '[161-U4] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E09\u0E35\u0E01\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E1A\u0E1A "\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E41\u0E22\u0E01" (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E34\u0E1B\u0E1A\u0E19\u0E08\u0E2D)',
+              PUx.hiddenPanelChips().some((c) => c.id === "props" && c.kind === "torn") && !chip()
+            );
             await recallPanel("props");
             check2("[161-U4] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E04\u0E37\u0E19\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21", await until159(() => !isTornOff("props") && isPanelOpen("props"), 1e4));
           } else check2("[161-U1] \u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E09\u0E35\u0E01\u0E44\u0E14\u0E49 (\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E2B\u0E31\u0E27)", false, String(canTearOff("props")));
@@ -219632,6 +221152,7 @@ ${css}
       init_sp_continued();
       init_prose_measure();
       init_export_hub();
+      init_gallery();
       init_panel_drag();
       init_sp_headers();
       init_maps();
@@ -219741,6 +221262,67 @@ ${css}
     }
   });
 
+  // src/status-toggles.js
+  function installStatusToggles(run3) {
+    _run = run3;
+    const host2 = document.getElementById("status-toggles");
+    if (!host2 || host2.dataset.ready) return false;
+    host2.dataset.ready = "1";
+    for (const d of STATUS_TOGGLES) {
+      const b = el("button", "k-sb-toggle");
+      b.type = "button";
+      b.dataset.toggle = d.id;
+      b.append(icon(d.icon, 13));
+      b.onclick = () => {
+        if (!_run) return;
+        _run(d.cmd || "settings");
+        setTimeout(syncStatusToggles, 50);
+        setTimeout(syncStatusToggles, 400);
+      };
+      host2.append(b);
+    }
+    syncStatusToggles();
+    return true;
+  }
+  function syncStatusToggles() {
+    const host2 = document.getElementById("status-toggles");
+    if (!host2) return 0;
+    let n2 = 0;
+    for (const d of STATUS_TOGGLES) {
+      const b = host2.querySelector(`[data-toggle="${d.id}"]`);
+      if (!b) continue;
+      let on2 = false;
+      try {
+        on2 = !!(state.settings && d.on());
+      } catch {
+      }
+      b.classList.toggle("on", on2);
+      b.setAttribute("aria-pressed", on2 ? "true" : "false");
+      const title2 = tf(on2 ? "ui.sb.stateOn" : "ui.sb.stateOff", t(d.label));
+      if (b.getAttribute("title") !== title2) b.setAttribute("title", title2);
+      b.dataset.tip = d.cmd ? "ui.sb.tipToggle" : "ui.sb.tipSettings";
+      n2++;
+    }
+    return n2;
+  }
+  var STATUS_TOGGLES, _run;
+  var init_status_toggles = __esm({
+    "src/status-toggles.js"() {
+      init_core();
+      init_icons();
+      init_typewriter();
+      STATUS_TOGGLES = [
+        { id: "autosave", label: "ui.sb.autosave", icon: "save", on: () => (Number(state.settings.autoSaveMinutes) || 0) > 0 },
+        { id: "spell", label: "ui.sb.spell", icon: "check", on: () => state.settings.spellCheckDict !== false },
+        { id: "line-numbers", label: "ui.sb.lineNumbers", icon: "list-ol", cmd: "line-numbers", on: () => !!state.settings.lineNumbers },
+        { id: "typewriter", label: "ui.sb.typewriter", icon: "edit", cmd: "typewriter", on: () => !!isTypewriter() },
+        { id: "auto-fit", label: "ui.sb.autoFit", icon: "expand", cmd: "auto-fit-width", on: () => !!state.settings.autoFitWidth },
+        { id: "md-codes", label: "ui.sb.mdCodes", icon: "code-alt", cmd: "markdown-codes", on: () => state.settings.showMarkdownCodes !== false }
+      ];
+      _run = null;
+    }
+  });
+
   // src/app.js
   var app_exports = {};
   __export(app_exports, {
@@ -219780,6 +221362,9 @@ ${css}
     applyUIScale: () => applyUIScale,
     applyZoomVars: () => applyZoomVars,
     auditPlannerRows: () => auditPlannerRows,
+    autoFitWidth: () => autoFitWidth,
+    autoFitWidthOn: () => autoFitWidthOn,
+    autoFitWidthRestore: () => autoFitWidthRestore,
     bindMainWindowSync: () => bindMainWindowSync,
     bindTabStripMenus: () => bindTabStripMenus,
     bindToolbarContextMenu: () => bindToolbarContextMenu,
@@ -219822,6 +221407,7 @@ ${css}
     computeProjectStats: () => computeProjectStats,
     confirmQuit: () => confirmQuit,
     createProjectAt: () => createProjectAt,
+    currentPageScale: () => currentPageScale,
     currentScriptSource: () => currentScriptSource,
     currentSpView: () => currentSpView,
     currentStartPage: () => currentStartPage,
@@ -220040,6 +221626,7 @@ ${css}
     sectionPathOfFile: () => sectionPathOfFile,
     seedTabView: () => seedTabView,
     setAllTreeCollapsed: () => setAllTreeCollapsed,
+    setAutoFitWidth: () => setAutoFitWidth,
     setElementBadge: () => setElementBadge,
     setFmtbarAlign: () => setFmtbarAlign,
     setFmtbarOpacity: () => setFmtbarOpacity,
@@ -220190,6 +221777,10 @@ ${css}
   function applySettings() {
     applyZoomVars();
     applyUIScale();
+    try {
+      syncStatusToggles();
+    } catch {
+    }
     setSpRules({ dialogueContinues: state.settings.spDialogueContinues === true });
     const spFmt = applyPageVars();
     setFormatGuide(!!state.settings.spShowFormat, spFmt);
@@ -220842,6 +222433,7 @@ ${css}
       pageScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(z * 100) / 100));
       applyZoomVars();
     });
+    _userScale = pageScale;
     setStatus(t("status.zoom") + ": " + Math.round(pageScale * 100) + "% (Ctrl+Shift+0 = " + t("status.zoomReset") + ")");
   }
   function resetPageScale() {
@@ -220850,20 +222442,84 @@ ${css}
       pageScale = 1;
       applyZoomVars();
     });
+    _userScale = pageScale;
     setStatus(t("status.zoomReset"));
   }
   function zoomFitWidth(pane) {
     const p = pane || state.active && state.active.pane;
-    const fmt2 = spFormat();
-    const pageW = (+fmt2.paper.width || 8.5) * 96;
-    const avail = Math.max(200, (p ? p.clientWidth : window.innerWidth) - 48);
-    const z = Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(avail / pageW * 100) / 100));
+    const z = fitScaleOf(p);
     keepZoomCenter(() => {
       pageScale = z;
       applyZoomVars();
     });
+    _userScale = pageScale;
     setStatus(t("ui.app.zoomFitWide") + Math.round(z * 100) + "%");
     return z;
+  }
+  function fitScaleOf(p) {
+    const fmt2 = spFormat();
+    const pageW = (+fmt2.paper.width || 8.5) * 96;
+    const avail = Math.max(200, (p ? p.clientWidth : window.innerWidth) - 48);
+    return Math.max(SCALE_MIN, Math.min(SCALE_MAX, Math.round(avail / pageW * 100) / 100));
+  }
+  function autoFitWidthOn() {
+    if (!(state.settings && state.settings.autoFitWidth)) return false;
+    if (sessionOff() && !globalThis.__k2autoFitTest) return false;
+    return true;
+  }
+  function autoFitWidth(pane) {
+    if (!autoFitWidthOn()) return false;
+    const p = pane || state.active && state.active.pane;
+    if (!p || !p.clientWidth || !p.isConnected) return false;
+    if (_userScale == null) _userScale = pageScale;
+    const want = Math.min(_userScale, fitScaleOf(p));
+    if (Math.abs(want - pageScale) < 0.01) return false;
+    keepZoomCenter(() => {
+      pageScale = want;
+      applyZoomVars();
+    });
+    return true;
+  }
+  function autoFitWidthRestore() {
+    if (_userScale == null || Math.abs(_userScale - pageScale) < 0.01) return;
+    const z = _userScale;
+    keepZoomCenter(() => {
+      pageScale = z;
+      applyZoomVars();
+    });
+  }
+  function setAutoFitWidth(on2, { save = true, was = !!state.settings.autoFitWidth } = {}) {
+    const v2 = on2 === void 0 ? !was : !!on2;
+    state.settings.autoFitWidth = v2;
+    if (save) {
+      saveGlobalSetting("autoFitWidth", v2);
+      saveProjectMetaSoon();
+    }
+    if (v2 !== was) {
+      if (v2) autoFitWidth();
+      else autoFitWidthRestore();
+    }
+    syncMenuToggles();
+    if (save) setStatus(t(v2 ? "ui.app.autoFitWidthOn" : "ui.app.autoFitWidthOff"));
+    return v2;
+  }
+  function zoomLabelMenu(e) {
+    e.preventDefault();
+    popupMenu(e.clientX, e.clientY, [
+      { text: t("ui.menu.expand"), cmd: "zoom:1", click: () => handleCommand("zoom", 1) },
+      { text: t("ui.menu.collapse"), cmd: "zoom:-1", click: () => handleCommand("zoom", -1) },
+      { text: t("ui.menu.resetZoom"), cmd: "zoom:0", click: () => handleCommand("zoom", 0) },
+      { text: t("ui.menu.fitWidePagePaper"), cmd: "zoom:fit", click: () => handleCommand("zoom", "fit") },
+      "-",
+      {
+        text: t("ui.setTpl.autoFitWidth"),
+        checked: !!state.settings.autoFitWidth,
+        click: () => handleCommand("auto-fit-width")
+      }
+    ]);
+  }
+  function currentPageScale() {
+    return pageScale;
   }
   function centerPage(pane) {
     const p = pane || state.active && state.active.pane;
@@ -220912,6 +222568,7 @@ ${css}
       return;
     }
     _lastPaneW = w;
+    autoFitWidth(p);
     recenterPageSoon(p);
   }
   function viewOfTab(tab) {
@@ -221779,7 +223436,7 @@ ${css}
       ov.remove();
       showErrorList();
     };
-    const bOk = el("button", "k-ok", t("ui.common.close"));
+    const bOk = el("button", "k-ok k-cancel", t("ui.common.close"));
     bOk.onclick = () => ov.remove();
     btns.append(bRe, bOk);
     box2.append(btns);
@@ -221961,7 +223618,7 @@ ${css}
       await kapi.writeFile(p, spReportText(kind, data2));
       setStatus(t("ui.app.saveReportDone") + p);
     };
-    const bOk = el("button", "k-ok", t("ui.common.close"));
+    const bOk = el("button", "k-ok k-cancel", t("ui.common.close"));
     bOk.onclick = () => ov.remove();
     btns.append(bCopy, bSave, bOk);
     box2.append(btns);
@@ -222031,7 +223688,7 @@ ${css}
     const btns = el("div", "k-dlg-btns");
     const cp = el("button", null, t("ui.common.copyAll"));
     const ap = el("button", null, t("ui.app.mdApply"));
-    const cl = el("button", "k-ok", t("ui.common.close"));
+    const cl = el("button", "k-ok k-cancel", t("ui.common.close"));
     cp.onclick = () => {
       ta.select();
       document.execCommand("copy");
@@ -222493,6 +224150,13 @@ ${css}
     state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
     syncMenuToggles();
     splashProgress(t("ui.splash.language"), 18);
+    if (g && g.language && g.language !== i18n.lang) {
+      try {
+        await loadLanguage(g.language);
+      } catch (e) {
+        log("warn", "boot language", e);
+      }
+    }
     try {
       await (document.fonts && document.fonts.ready);
     } catch {
@@ -222889,7 +224553,10 @@ ${css}
     }
     s.ui = {
       ls: lsAll,
-      zoom: pageScale,
+      // [alpha.164 · รอบต่อ 5] ซูมที่ "ผู้ใช้ตั้ง" ไม่ใช่ค่าที่ตัวซูมพอดีความกว้างอัตโนมัติย่อไว้ชั่วคราว —
+      // เดิมเก็บ pageScale (เช่น 0.7 ตอนหน้าต่างแคบ) แล้วตอนกู้ setPageScale ตั้งเป็น _userScale
+      // = ขยายหน้าต่างทีหลังก็ไม่มีวันกลับไป 100% ที่ผู้ใช้ตั้งไว้
+      zoom: _userScale != null ? _userScale : pageScale,
       paper: true,
       reading: document.body.classList.contains("reading-mode"),
       focus: document.body.classList.contains("focus-mode")
@@ -223024,6 +224691,7 @@ ${css}
     if (s.ui && Number.isFinite(+s.ui.zoom) && +s.ui.zoom > 0) {
       try {
         setPageScale(+s.ui.zoom);
+        autoFitWidth();
       } catch {
       }
     }
@@ -224498,7 +226166,7 @@ ${css}
   async function newBranchPlanFromTree() {
     const { listBranchPlans: listBranchPlans2, saveBranchPlanAs: saveBranchPlanAs2 } = await Promise.resolve().then(() => (init_branching_ui(), branching_ui_exports));
     const plans = await listBranchPlans2();
-    const v2 = await ask(t("ui.common.nameNewPlan"), { value: t("ui.common.map2") + (plans.length + 1) });
+    const v2 = await ask(t("ui.common.nameNewPlan"), { value: t("ui.common.map2") + (plans.length + 1), okLabel: t("ui.common.new") });
     if (!v2) return null;
     const p = await saveBranchPlanAs2(v2);
     await refreshTreeQueued();
@@ -226317,7 +227985,16 @@ ${css}
         win.style.height = Math.max(180, r.height + ev.clientY - sy2) + "px";
         refitTab(t3);
       };
+      const w0 = win.style.width, h0 = win.style.height;
+      const offEsc = escCancelDrag(() => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        win.style.width = w0;
+        win.style.height = h0;
+        refitTab(t3);
+      });
       const up = () => {
+        offEsc();
         document.removeEventListener("mousemove", move);
         document.removeEventListener("mouseup", up);
         saveFloatWinBox(file, win);
@@ -226769,7 +228446,7 @@ ${css}
       it.dataset.search = b.name;
       it.title = b.path + (isCur ? curDirty ? t("ui.app.busyOpenNotSave") : t("ui.app.busyOpen") : "");
       it.onclick = () => openPlanner(b.path);
-      it.oncontextmenu = (ev) => showTreeMenu(ev, "board", {
+      bindTreeMenu(it, "board", {
         path: b.path,
         b,
         meta: bMeta,
@@ -226949,7 +228626,7 @@ ${css}
         await openBranchingTree();
         await refreshTreeQueued();
       };
-      it.oncontextmenu = (ev) => showTreeMenu(ev, "plan", {
+      bindTreeMenu(it, "plan", {
         path: p.path,
         p,
         meta: pMeta,
@@ -227550,6 +229227,8 @@ ${css}
         typeSound: !!state.settings.typeSound,
         markdownCodes: showMarkdownCodes(),
         // [60r3 ข้อ 6]
+        autoFitWidth: !!state.settings.autoFitWidth,
+        // [alpha.164 · รอบต่อ 3] เมนู มุมมอง → ซูม
         // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — เมนูไฟล์ / เมนูมุมมอง
         openLastProject: state.settings.openLastProject === true,
         showHomeAlways: state.settings.showHomeOnStartup === true,
@@ -227587,6 +229266,10 @@ ${css}
     const th = currentTheme();
     if (state.settings.theme !== th) state.settings.theme = th;
     for (const id of THEMES) document.body.classList.toggle("theme-" + id, id === th);
+    try {
+      document.documentElement.style.colorScheme = THEME_MODES[th] === "light" ? "light" : "dark";
+    } catch {
+    }
     clearThemeColorCache();
     try {
       window.dispatchEvent(new CustomEvent("k2-theme", { detail: th }));
@@ -229985,7 +231668,12 @@ ${css}
     if (cur) return cur;
     const p = (async () => {
       try {
-        return await fn();
+        const r = await fn();
+        log("info", "tab: open", file);
+        return r;
+      } catch (e) {
+        log("error", "tab: open failed", { file, code: e && e.code, error: e && e.message });
+        throw e;
       } finally {
         OPENING_C.m.delete(k);
       }
@@ -230138,6 +231826,7 @@ ${css}
     }
     seedTabView(tab);
     requestAnimationFrame(() => {
+      autoFitWidth(pane);
       reapplyTabView(true);
       centerPage(pane);
       updatePageNumberHint();
@@ -230461,7 +232150,7 @@ ${css}
     render();
     box2.append(body);
     const btns = el("div", "k-dlg-btns");
-    const ok2 = el("button", "k-ok", t("ui.common.close"));
+    const ok2 = el("button", "k-ok k-cancel", t("ui.common.close"));
     ok2.onclick = () => {
       ov.remove();
       if (tab && tab.sp) spSmartCheck(tab);
@@ -230739,7 +232428,14 @@ ${css}
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
     tab.meta.appVersion = APP_VERSION;
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
-    await writeKeepingComments(tab.file, (0, import_md33.dumpMdFile)(tab.meta, body));
+    const tSave = performance.now();
+    try {
+      await writeKeepingComments(tab.file, (0, import_md33.dumpMdFile)(tab.meta, body));
+    } catch (e) {
+      log("error", "save: write failed", { file: tab.file, code: e && e.code, error: e && e.message });
+      throw e;
+    }
+    log("info", "save: done", { file: tab.file, chars: body.length, ms: Math.round(performance.now() - tSave) });
     tab.diskBody = body;
     tab._conflictWarned = false;
     tab._diskWarned = false;
@@ -231113,7 +232809,7 @@ ${css}
     const grid = el("div", "k-cmp-grid");
     box2.append(grid);
     const foot = el("div", "k-dlg-btns");
-    const closeB = el("button", null, t("ui.common.close"));
+    const closeB = el("button", "k-cancel", t("ui.common.close"));
     foot.append(closeB);
     box2.append(foot);
     ov.append(box2);
@@ -231247,6 +232943,7 @@ ${css}
     const t3 = state.tabs.get(file);
     if (!t3) return;
     const done2 = () => {
+      log("info", "tab: close", file);
       if (rewriteBarTab() === t3) closeRewriteBar();
       t3.editor?.destroy();
       t3.wiki?.destroy();
@@ -232030,6 +233727,10 @@ ${css}
     popupMenu(x, y, items);
   }
   function refreshToolbar() {
+    try {
+      syncStatusToggles();
+    } catch {
+    }
     const ed = state.active?.editor;
     const sp = state.active?.sp;
     const wkEd = state.active?.wiki?.secEditors?.find(({ k }) => k?.view?.hasFocus())?.k || state.active?.wiki?.secEditors?.[0]?.k;
@@ -233448,7 +235149,8 @@ ${css}
     if (!body) return;
     const host2 = body.parentElement;
     if (host2 && !host2.querySelector(".k-log-bar")) buildLogBar(host2, body);
-    const recs = logStore.all();
+    if (LOG_DAY.day && !force) return;
+    const recs = LOG_DAY.day ? LOG_DAY.recs : logStore.all();
     if (!force && _logSeq === logStore.lastSeq() && body.dataset.f === logKey()) return;
     _logSeq = logStore.lastSeq();
     body.dataset.f = logKey();
@@ -233458,7 +235160,7 @@ ${css}
     body.replaceChildren();
     body.classList.add("k-log-list");
     if (!shown.length) {
-      body.append(el("div", "dim", recs.length ? t("ui.app.notHasLineAt2") : t("ui.app.notHasSave")));
+      body.append(el("div", "dim", recs.length ? t("ui.app.notHasLineAt2") : LOG_DAY.day ? t("ui.log.dayEmpty") : t("ui.app.notHasSave")));
     }
     for (const r of shown) body.append(logRow(r));
     syncLogBar(host2, recs);
@@ -233466,7 +235168,7 @@ ${css}
     updateLogFollowBadge(body, stick);
   }
   function logKey() {
-    return [...logView.levels].sort().join(",") + "|" + logView.source + "|" + logView.q;
+    return [...logView.levels].sort().join(",") + "|" + logView.source + "|" + logView.q + "|" + LOG_DAY.day;
   }
   function logRow(r) {
     const row3 = el("div", "k-log-row k-log-" + r.level);
@@ -233524,7 +235226,7 @@ ${css}
       renderLogPanel(true);
     };
     bar.append(q);
-    const clr = el("button", "k-log-btn", t("ui.common.clear2"));
+    const clr = el("button", "k-log-btn k-log-clear", t("ui.common.clear2"));
     clr.title = t("ui.app.clearSaveShowFile");
     clr.onclick = () => {
       logStore.clear();
@@ -233534,22 +235236,94 @@ ${css}
     };
     bar.append(clr);
     host2.insertBefore(bar, body);
+    host2.insertBefore(buildLogDayBar(), body);
     onLog(() => {
       if (isPanelOpen("log")) renderLogPanel();
     });
+  }
+  function buildLogDayBar() {
+    const bar = el("div", "k-log-bar k-log-daybar");
+    const sel = el("select", "k-log-day");
+    sel.title = t("ui.log.dayPick");
+    const fill3 = async () => {
+      const keep = LOG_DAY.day;
+      let days = [];
+      try {
+        days = (kapi.logList ? await kapi.logList() : []) || [];
+      } catch {
+      }
+      sel.replaceChildren();
+      const o0 = el("option", null, t("ui.log.daySession"));
+      o0.value = "";
+      sel.append(o0);
+      for (const d of days) {
+        const o = el("option", null, tf("ui.log.dayOption", fmtDate(d.day + "T12:00:00"), Math.max(1, Math.round((d.size || 0) / 1024))));
+        o.value = d.day;
+        sel.append(o);
+      }
+      sel.value = keep;
+    };
+    sel.onfocus = () => {
+      fill3();
+    };
+    sel.onchange = async () => {
+      const day = sel.value;
+      LOG_DAY.day = day;
+      LOG_DAY.recs = [];
+      if (day) {
+        let txt = "";
+        try {
+          txt = (kapi.logReadDay ? await kapi.logReadDay(day, 5e3) : "") || "";
+        } catch {
+        }
+        let seq3 = 0;
+        LOG_DAY.recs = txt.split("\n").map((l) => parseLogLine(l, ++seq3)).filter(Boolean);
+      }
+      logView.open.clear();
+      const panel2 = bar.parentElement;
+      if (panel2) panel2.classList.toggle("k-log-past", !!day);
+      const clr = panel2 && panel2.querySelector(".k-log-clear");
+      if (clr) clr.disabled = !!day;
+      note.textContent = day ? tf("ui.log.dayReadonly", fmtDate(day + "T12:00:00")) : "";
+      renderLogPanel(true);
+    };
+    const lbl = el("span", "k-log-dir-lbl", t("ui.log.folderLabel"));
+    const dir2 = el("span", "k-log-dir");
+    dir2.title = t("ui.log.folderTip");
+    const bdi = document.createElement("bdi");
+    bdi.dir = "ltr";
+    dir2.append(bdi);
+    if (kapi.logDir) kapi.logDir().then((p) => {
+      bdi.textContent = p || "";
+      dir2.title = t("ui.log.folderTip") + "\n" + (p || "");
+    }).catch(() => {
+    });
+    const open = el("button", "k-log-btn k-log-open", t("ui.app.openFolderLog"));
+    open.title = t("ui.panelTip.logReveal");
+    open.onclick = () => {
+      if (kapi.logOpenDir) kapi.logOpenDir();
+      else if (kapi.logReveal) kapi.logReveal();
+    };
+    const note = el("span", "k-log-daynote");
+    bar.append(sel, lbl, dir2, open, note);
+    fill3();
+    return bar;
   }
   function syncLogBar(host2, recs) {
     if (!host2) return;
     const bar = host2.querySelector(".k-log-bar");
     if (!bar) return;
-    const c = logStore.counts();
+    const c = LOG_DAY.day ? recs.reduce((a, r) => {
+      a[r.level] = (a[r.level] || 0) + 1;
+      return a;
+    }, {}) : logStore.counts();
     for (const b of bar.querySelectorAll(".k-log-chip")) {
       const lv = b.dataset.lv;
       b.textContent = LEVEL_META[lv].icon + " " + LEVEL_META[lv].label + (c[lv] ? " " + c[lv] : "");
       b.classList.toggle("k-log-chip-hot", lv === "error" && c.error > 0);
     }
     const sel = bar.querySelector(".k-log-src-sel");
-    const srcs = logStore.sources();
+    const srcs = LOG_DAY.day ? [...new Set(recs.map((r) => r.source).filter(Boolean))].sort() : logStore.sources();
     if (sel.dataset.list !== srcs.join()) {
       sel.dataset.list = srcs.join();
       sel.replaceChildren();
@@ -233881,6 +235655,7 @@ ${css}
     if (_featInFlight.has(pid)) return _featInFlight.get(pid);
     const sel = `#app-root .k-panel[data-panel-id="${pid}"], .k-float-panel[data-panel-id="${pid}"]`;
     const backScroll = keepScroll2(() => document.querySelector(sel));
+    const heightLocks = lockScrollContentHeights(document.querySelector(sel));
     const p = Promise.resolve().then(f).catch((e) => {
       state._panelDrawErrors = (state._panelDrawErrors || 0) + 1;
       state._panelDrawLastErr = pid + ": " + (e && e.message ? e.message : String(e));
@@ -233890,10 +235665,29 @@ ${css}
         backScroll();
       } catch {
       }
+      releaseHeightLocks(heightLocks);
       return true;
     });
     _featInFlight.set(pid, p);
     return p;
+  }
+  function lockScrollContentHeights(root) {
+    const locks = [];
+    if (!root) return locks;
+    for (const e of [root, ...root.querySelectorAll("*")]) {
+      if (!e.scrollTop) continue;
+      for (const c of e.children) {
+        locks.push([c, c.style.minHeight]);
+        c.style.minHeight = c.offsetHeight + "px";
+      }
+    }
+    return locks;
+  }
+  function releaseHeightLocks(locks) {
+    if (!locks.length) return;
+    setTimeout(() => {
+      for (const [c, v2] of locks) c.style.minHeight = v2;
+    }, 350);
   }
   function clearFeaturePanels() {
     for (const sel of [
@@ -233961,6 +235755,55 @@ ${css}
       p.style.display = p.dataset.k2hide;
       delete p.dataset.k2hide;
     });
+  }
+  function docEditable(target) {
+    const pm2 = target && target.closest && target.closest(".ProseMirror");
+    return !!pm2 && pm2.getAttribute("contenteditable") === "true";
+  }
+  function editRoleItem(pm2, label, role, code3, enabled) {
+    return { text: label, accel: formatShortcut(code3, true), disabled: !enabled, click: async () => {
+      const ed = state.active && (state.active.editor || state.active.sp);
+      if (ed && ed.view && ed.view.dom === pm2) ed.view.focus();
+      else if (pm2 && pm2.isConnected) {
+        pm2.focus();
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      kapi.editRole(role);
+    } };
+  }
+  function editorStdMenuItems(target, hasSel) {
+    const pm2 = target && target.closest && target.closest(".ProseMirror");
+    const canEdit = docEditable(target);
+    return [
+      editRoleItem(pm2, t("ui.menu.cut"), "cut", "KeyX", hasSel && canEdit),
+      editRoleItem(pm2, t("ui.common.copy"), "copy", "KeyC", hasSel),
+      editRoleItem(pm2, t("ui.menu.paste"), "paste", "KeyV", canEdit),
+      editRoleItem(pm2, t("ui.menu.pickAll"), "selectAll", "KeyA", true)
+    ];
+  }
+  function editorFmtMenuItems(target) {
+    const canEdit = docEditable(target);
+    const c = (label, id, ...args) => ({
+      text: label,
+      cmd: [id, ...args].join(":"),
+      disabled: !canEdit && id !== "find" && id !== "save",
+      click: () => handleCommand(id, ...args)
+    });
+    return [
+      c(t("ui.menu.itemBoldB"), "fmt", "bold"),
+      c(t("ui.menu.itemI"), "fmt", "italic"),
+      c(t("ui.menu.dashLineUnderU"), "fmt", "underline"),
+      c(t("ui.menu.dashX"), "fmt", "strike"),
+      c(t("ui.menu.clearFormatSpace"), "fmt", "clear"),
+      "-",
+      c(t("ui.menu.doZ"), "editor-undo"),
+      c(t("ui.menu.repeatY"), "editor-redo"),
+      "-",
+      c(t("ui.menu.insertImage"), "insert-image"),
+      c(t("ui.menu.searchF"), "find"),
+      "-",
+      c(t("ui.menu.saveS"), "save")
+    ];
   }
   async function handleCommand(ch, ...a) {
     if (typeof ch === "string") {
@@ -234548,6 +236391,10 @@ ${css}
         else if (a[0] === 0) resetPageScale();
         else bumpPageScale(a[0]);
         break;
+      case "auto-fit-width":
+        setAutoFitWidth();
+        break;
+      // [alpha.164 · รอบต่อ 3 · งาน 3]
       case "ui-scale":
         bumpUIScale(a[0]);
         break;
@@ -235078,7 +236925,8 @@ ${css}
       }
     }
     if (saved && saved.hidden) elm.style.display = "none";
-    let sx2, sy2, ox, oy, dragging = false, lastE = null;
+    let sx2, sy2, ox, oy, dragging = false, lastE = null, offEsc = () => {
+    };
     const down = (e) => {
       if (e.button !== 0 || !elm) return;
       if (opts.locked && opts.locked()) return;
@@ -235091,6 +236939,14 @@ ${css}
       ox = r.left - host2.left;
       oy = r.top - host2.top;
       elm.classList.add("k-dragging");
+      const st0 = { left: elm.style.left, top: elm.style.top, right: elm.style.right, bottom: elm.style.bottom };
+      offEsc = escCancelDrag(() => {
+        dragging = false;
+        elm.classList.remove("k-dragging");
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        Object.assign(elm.style, st0);
+      });
       document.addEventListener("mousemove", move);
       document.addEventListener("mouseup", up);
       e.preventDefault();
@@ -235124,6 +236980,7 @@ ${css}
       opts.onMove && opts.onMove(e);
     };
     const up = () => {
+      offEsc();
       dragging = false;
       elm.classList.remove("k-dragging");
       try {
@@ -235808,12 +237665,14 @@ ${css}
         return;
       }
       let host2 = e.target instanceof Element ? e.target.closest("[title]") : null;
-      if (!host2 && e.target instanceof Element) {
+      if (!host2 && e.target instanceof Element && e.target !== document.body && e.target !== document.documentElement) {
         const els = document.elementsFromPoint(e.clientX, e.clientY);
         for (const el2 of els) {
           if (el2 === _tipEl) continue;
+          if (el2 === e.target) break;
+          if (!e.target.contains(el2)) break;
           const tt = el2.closest?.("[title]");
-          if (tt) {
+          if (tt && e.target.contains(tt)) {
             host2 = tt;
             break;
           }
@@ -236350,6 +238209,7 @@ ${css}
     const saveEl = $("#status-save");
     if (!saveEl) return;
     saveEl.replaceChildren();
+    saveEl.title = t("ui.sb.saveTip");
     if (!tab) {
       saveEl.style.color = "";
       return;
@@ -236357,13 +238217,17 @@ ${css}
     if (tab.dirty) {
       saveEl.textContent = t("ui.app.notSave");
       saveEl.style.color = "var(--orange)";
+      saveEl.title = t("ui.sb.unsaved");
       return;
     }
     const mod = tab.meta?.modified || "";
     saveEl.append(icon("save", 12));
     if (mod) {
       const d = new Date(mod);
-      if (!isNaN(d)) saveEl.append(" " + fmtTime(d, { hour: "2-digit", minute: "2-digit" }));
+      if (!isNaN(d)) {
+        saveEl.append(" " + fmtTime(d, { hour: "2-digit", minute: "2-digit" }));
+        saveEl.title = tf("ui.sb.savedAt", fmtDateTime(d));
+      }
     }
     saveEl.style.color = "";
   }
@@ -236516,7 +238380,7 @@ ${css}
         r.style.display = q ? r.textContent.toLowerCase().includes(q) ? "" : "none" : "";
       });
     };
-    const closeB = el("button", "k-ok", t("dialogs.close"));
+    const closeB = el("button", "k-ok k-cancel", t("dialogs.close"));
     btns.append(searchInp, closeB);
     box2.append(btns);
     ov.append(box2);
@@ -236533,7 +238397,7 @@ ${css}
     });
     searchInp.focus();
   }
-  var import_md33, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _closedTabs, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _fmtHostH, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md33, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _userScale, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _treeJob, _healAt, _plannerRowObs, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _closedTabs, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, LOG_DAY, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _fmtHostH, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n_html();
@@ -236560,6 +238424,7 @@ ${css}
       init_dist4();
       init_search();
       init_ui();
+      init_drag_cancel();
       init_scene_props_extra();
       init_glyph_upgrade();
       init_json_store();
@@ -236707,6 +238572,7 @@ ${css}
       init_sp_headers();
       init_selftest();
       init_locale();
+      init_status_toggles();
       tr3 = t;
       pageScale = 1;
       autosaveTimer = null;
@@ -236718,6 +238584,7 @@ ${css}
       _projectFontFiles = [];
       projectFontFiles = () => [..._projectFontFiles];
       _typeSoundBound = false;
+      _userScale = null;
       _lastPaneW = 0;
       spViewMode = "normal";
       _mzCache = null;
@@ -236732,6 +238599,7 @@ ${css}
         scheduleLineGutter();
         clearTimeout(_spViewJob);
         _spViewJob = setTimeout(refreshSpView, 150);
+        autoFitWidth();
         keepFloatingUiInView();
         clearTimeout(_gapJob);
         _gapJob = setTimeout(() => {
@@ -236995,6 +238863,7 @@ ${css}
       LOG_STICK_PX = 24;
       logView = { levels: /* @__PURE__ */ new Set(["error", "warn", "info"]), source: "", q: "", open: /* @__PURE__ */ new Set() };
       _logSeq = -1;
+      LOG_DAY = { day: "", recs: [] };
       _logTimer = null;
       window.__k2test = (p) => {
         globalThis.__k2testing = true;
@@ -237219,7 +239088,7 @@ ${css}
           log("warn", "toolbar roving", e);
         }
         onLanguageChanged(applyToolbarShortcutTitles);
-        loadLanguage(DEFAULT_SETTINGS.language).then(() => {
+        loadLanguage(i18n.lang || DEFAULT_SETTINGS.language).then(() => {
           applyDataI18n();
           initIcons();
           applyToolbarShortcutTitles();
@@ -237451,6 +239320,9 @@ ${css}
         $("#zoom-in").onclick = () => bumpPageScale(1);
         $("#zoom-out").onclick = () => bumpPageScale(-1);
         $("#zoom-reset").onclick = () => resetPageScale();
+        $("#zoom-ctl").oncontextmenu = zoomLabelMenu;
+        installStatusToggles((cmd) => handleCommand(cmd));
+        $("#status-home").onclick = () => handleCommand("home");
         $("#tree-search").oninput = (e) => filterTree(e.target.value);
         setupTreeInteractions();
         setupFloatingFormatBar();
@@ -237473,7 +239345,7 @@ ${css}
         const refreshBtn = makePanelButton({
           cls: "k-tree-refresh-btn",
           glyph: gi("refresh"),
-          title: t("ui.app.refreshReadFileFolder"),
+          titleKey: "ui.app.refreshReadFileFolder",
           tip: "ui.panelTip.treeRefresh",
           onPress: async () => {
             if (!state.root) {
@@ -237502,7 +239374,7 @@ ${css}
         const searchBtn = makePanelButton({
           cls: "k-tree-search-btn",
           glyph: gi("search"),
-          title: t("ui.app.openCloseFieldSearch"),
+          titleKey: "ui.app.openCloseFieldSearch",
           tip: "ui.panelTip.treeSearch",
           onPress: () => applySearchVis($("#tree-search").classList.contains("k-search-off"))
         });
@@ -237510,7 +239382,7 @@ ${css}
         applySearchVis((localStorage.getItem("k2-tree-search") ?? "1") === "1");
         const beatBtn = makePanelButton({
           glyph: gi("pilcrow"),
-          title: t("ui.app.showHideParaNavigation"),
+          titleKey: "ui.app.showHideParaNavigation",
           tip: "ui.panelTip.navBeats",
           onPress: () => setNavBeats(!navShowBeats)
         });
@@ -237519,7 +239391,7 @@ ${css}
         addPanelButton("outline", beatBtn);
         const bookBtn = makePanelButton({
           glyph: gi("books"),
-          title: t("ui.app.navWholeBookHint"),
+          titleKey: "ui.app.navWholeBookHint",
           tip: "ui.panelTip.navBook",
           onPress: () => setNavWholeBook(!navWholeBook)
         });
@@ -237528,13 +239400,13 @@ ${css}
         addPanelButton("outline", bookBtn);
         addPanelButton("log", makePanelButton({
           glyph: gi("refresh-thin"),
-          title: t("ui.common.refresh"),
+          titleKey: "ui.common.refresh",
           tip: "ui.panelTip.logRefresh",
           onPress: () => renderLogPanel()
         }));
         addPanelButton("log", makePanelButton({
           glyph: gi("folder"),
-          title: t("ui.app.openFolderLog"),
+          titleKey: "ui.app.openFolderLog",
           tip: "ui.panelTip.logReveal",
           onPress: () => {
             kapi.logReveal && kapi.logReveal();
@@ -237542,7 +239414,7 @@ ${css}
         }));
         addPanelButton("log", makePanelButton({
           glyph: gi("clipboard"),
-          title: t("ui.common.copy"),
+          titleKey: "ui.common.copy",
           tip: "ui.panelTip.logCopy",
           onPress: () => {
             const txt = exportText(filterLogs(logStore.all(), logView));
@@ -237563,7 +239435,8 @@ ${css}
             }
           }
           const bad = e.target.closest && e.target.closest(".k-spell-bad");
-          const inDoc = !!(e.target.closest && e.target.closest(".ProseMirror"));
+          const pmEl = e.target.closest && e.target.closest(".ProseMirror");
+          const inDoc = !!(pmEl && pmEl.pmViewDesc);
           const sel = window.getSelection();
           const selWord = (sel?.toString() || "").trim();
           const hasThes = inDoc && selWord.length >= 2 && selWord.length <= 40;
@@ -237571,13 +239444,13 @@ ${css}
           const rwEd = rwTab && (rwTab.editor || rwTab.sp);
           const canRewrite = inDoc && !!selWord && !!(rwEd && rwEd.view && rwEd.view.dom.contains(e.target) && !rwEd.view.state.selection.empty);
           const onsetItems = inDoc ? onsetEditorMenu(rwTab, e.target) : null;
-          if (!bad && !hasThes && !canRewrite && !onsetItems) return;
+          if (!inDoc) return;
           e.preventDefault();
           e.stopPropagation();
           const items = [];
           if (onsetItems) {
             items.push(...onsetItems);
-            if (bad || hasThes || canRewrite) items.push("-");
+            items.push("-");
           }
           if (bad) {
             const word = bad.textContent.trim();
@@ -237598,19 +239471,21 @@ ${css}
               spellIgnoreOnce(word);
               setStatus(tf("ui.app.spellIgnoredOnce", word));
             } });
+            items.push("-");
           }
+          items.push(...editorStdMenuItems(e.target, !!selWord));
+          if (hasThes || canRewrite) items.push("-");
           if (hasThes) {
-            if (items.length) items.push("-");
             items.push({ text: tf("ui.app.thesaurusWordOpposite", selWord), click: () => {
               showThesaurusPopup(selWord, e.clientX, e.clientY);
             } });
           }
           if (canRewrite) {
-            if (items.length && !hasThes) items.push("-");
             items.push({ text: gi("pen") + " " + t("ui.aiRewrite.menu"), click: () => {
               openRewriteBar(rwTab);
             } });
           }
+          items.push("-", ...editorFmtMenuItems(e.target));
           popupMenu(e.clientX, e.clientY, items);
         }, true);
         document.addEventListener("paste", async (e) => {

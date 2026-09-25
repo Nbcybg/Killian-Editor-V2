@@ -20,6 +20,13 @@ let curPop = null;
 /** ปิดป๊อปอัปสีที่เปิดค้างอยู่ (ถ้ามี) */
 export function closeColorPicker() {
   if (curPop) { curPop.remove(); curPop = null; document.removeEventListener('mousedown', onDoc); }
+  document.removeEventListener('keydown', onKey, true);
+}
+// [alpha.165] Esc = ปิดป๊อปอัป (ไม่ใช้สี) — เดิมปิดได้แค่คลิกนอก · ดักระยะ capture เพื่อไม่ให้ Esc ไหลไปปิดกล่อง/โหมดข้างหลัง
+function onKey(e) {
+  if (e.key !== 'Escape' || !curPop) return;
+  e.preventDefault(); e.stopPropagation();
+  closeColorPicker();
 }
 function onDoc(e) {
   // คลิกนอกป๊อปอัป = ปิด · แต่ตัว `<input type="color">` เปิดหน้าต่างเลือกสีของระบบ
@@ -142,5 +149,6 @@ export function openColorPicker(anchor, current, apply, saveGlobal, opts) {
   pop.style.left = Math.max(8, Math.min(a.left, innerWidth - r.width - 8)) + 'px';
   pop.style.top = Math.max(8, Math.min(a.bottom + 4, innerHeight - r.height - 8)) + 'px';
   setTimeout(() => document.addEventListener('mousedown', onDoc), 0);
+  document.addEventListener('keydown', onKey, true);
   return pop;
 }

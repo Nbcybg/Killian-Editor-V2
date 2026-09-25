@@ -19,6 +19,7 @@ import { t as tt, t } from '../i18n.js';
 import { $, el, setStatus, state, t as tr } from '../core.js';   // บทเรียน 25: ในไฟล์นี้ตัวแปร t = แท็บ → i18n ใช้ชื่อ tr
 import * as SL from '../layout/split-layout.js';
 import { gi } from '../icons.js';
+import { escCancelDrag } from '../drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก
 
 const ROOT_ID = 'split-root';
 
@@ -261,7 +262,17 @@ function splitHandle(node, index, sm) {
       prev.style.flexGrow = String(sum * ratio);
       next.style.flexGrow = String(sum * (1 - ratio));
     };
+    // [alpha.165] Esc = ยกเลิกการลากเส้นแบ่งจอ คืนสัดส่วนเดิม
+    const g0 = [prev.style.flexGrow, next.style.flexGrow];
+    const offEsc = escCancelDrag(() => {
+      h.classList.remove('k-dragging');
+      document.body.classList.remove('k-resizing');
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      prev.style.flexGrow = g0[0]; next.style.flexGrow = g0[1];
+    });
     const up = () => {
+      offEsc();
       h.classList.remove('k-dragging');
       document.body.classList.remove('k-resizing');
       document.removeEventListener('mousemove', move);
@@ -458,7 +469,15 @@ export function makeTabSplitDraggable(strip) {
       hit = hitPane(ev.clientX, ev.clientY);
       if (hit) { ov.show(zoneRect(hit.rect, hit.zone), hit.zone); } else ov.hide();
     };
+    // [alpha.165] Esc = ยกเลิกการลากแท็บ (แท็บอยู่ช่องเดิม)
+    const offEsc = escCancelDrag(() => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      ov.hide(); ghost?.remove();
+      document.body.classList.remove('k-panel-dragging');
+    });
     const up = (ev) => {
+      offEsc();
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
       ov.hide(); ghost?.remove();

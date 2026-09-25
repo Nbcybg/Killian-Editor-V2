@@ -14,7 +14,7 @@ import { inputRules, wrappingInputRule, textblockTypeInputRule,
 import { dropCursor } from 'prosemirror-dropcursor';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { mdToDoc, docToMd, mdLineCounts, collectAlign,
-         figureClass, figureImgStyle, imgLine } from './md.js';
+         figureClass, figureImgStyle, imgLine, INLINE_IMG_HMAX } from './md.js';
 import { searchPlugin } from './search.js';
 // [alpha.60r2 ข้อ 2] สลับรูปตัวพิมพ์ (โมดูลบริสุทธิ์ — ไม่ import prosemirror)
 import { caseTransform } from './text-case.js';
@@ -460,6 +460,25 @@ export const schema = new Schema({
     // [alpha.61 ข้อ 3] Shift+Enter = ขึ้นบรรทัดในย่อหน้าเดิม (ไม่กินระบบย่อหน้าของนิยาย)
     hard_break: { group: 'inline', inline: true, selectable: false,
                   parseDOM: [{ tag: 'br' }], toDOM: () => ['br'] },
+    // [alpha.164 · IMG-IN-A] ★ รูปกลางย่อหน้า `abc ![](x.png) def` — atom แบบ inline
+    // ความสูงเป็น **หน่วยบรรทัด** (`h` 1–3 · CSS `--k-img-h` × `1lh`) ไม่ใช่พิกเซล: ตัวจัดหน้ารู้ความสูง
+    // โดยไม่ต้องรอรูปโหลด · `draggable:false` ด้วยเหตุผลเดียวกับ figure (ลากเลือกข้อความข้ามรูปได้)
+    // · `md` = ข้อความดิบในไฟล์ เขียนกลับทั้งดุ้นเมื่อค่าไม่เปลี่ยน (`inlineImgMd`) — ไฟล์เก่าไม่เปลี่ยนสักไบต์
+    image: { group: 'inline', inline: true, atom: true, draggable: false, selectable: true,
+             attrs: { src: {}, alt: { default: '' }, h: { default: 1 }, md: { default: '' },
+                      resolved: { default: '' } },
+             parseDOM: [{ tag: 'img.k-inline-img[data-src]', getAttrs: (d) => ({
+               src: d.getAttribute('data-src') || '', alt: d.getAttribute('alt') || '',
+               h: Math.min(INLINE_IMG_HMAX, Math.max(1, +d.getAttribute('data-h') || 1)),
+               md: d.getAttribute('data-md') || '',
+               // วางจากตัวแก้ไขเอง = ที่อยู่ที่แสดงอยู่แล้ว (ไม่งั้นรูปแตกจนกว่าจะเปิดไฟล์ใหม่)
+               resolved: d.getAttribute('src') || '' }) }],
+             toDOM: (n) => ['img', { class: 'k-inline-img', 'data-src': n.attrs.src,
+                                     'data-md': n.attrs.md, 'data-h': String(n.attrs.h || 1),
+                                     src: n.attrs.resolved || n.attrs.src,
+                                     alt: n.attrs.alt, title: n.attrs.alt || '',
+                                     style: '--k-img-h:' + (n.attrs.h || 1),
+                                     draggable: 'false' }] },
     // [alpha.61 ข้อ 3] Ctrl+Enter = ขึ้นหน้าใหม่ด้วยมือ (เส้นบังคับ · ไม่ใช่เส้นคั่นหน้าอัตโนมัติ)
     page_break: { group: 'block', atom: true, selectable: true,
                   parseDOM: [{ tag: 'div.k-manual-page-break' }],
@@ -840,8 +859,43 @@ export const ENTER_CMD = keepAlignOnEnter(chainCommands(
  * [alpha.134 ข้อ 3] ย่อหน้าว่างท้ายรายการ = ลบทิ้ง ไม่ใช่ถูกดูดกลับเข้ารายการ (ต้นตอของวงวน)
  * แล้วค่อยตกไปพฤติกรรมมาตรฐาน (ลบตัวอักษร/ยุบบล็อก) ตามปกติ
  */
+/**
+ * ══ [alpha.164 · รอบต่อ 2] ย่อหน้าที่ "มีข้อความ" ต่อท้ายรายการ + Backspace ที่ต้นย่อหน้า ══
+ *
+ * เดิมปล่อยให้ `joinBackward` ของ prosemirror ทำ → มันย้ายย่อหน้าทั้งก้อนเข้าไปเป็น
+ * **ย่อหน้าที่สองในข้อสุดท้าย** (ไม่มีจุดนำ เยื้องตามรายการ) · แต่ .md เขียนย่อหน้านั้นไม่เยื้อง
+ * (`- two` ⏎ `after`) → เปิดไฟล์ใหม่กลายเป็นย่อหน้าธรรมดาหลังรายการ = **จอไม่ตรงกับไฟล์**
+ * กติกาใหม่ (เหมือน Word / Google Docs): ต่อข้อความเข้าท้ายบรรทัดสุดท้ายของรายการ
+ * (ลงลึกถึงรายการซ้อน) เคอร์เซอร์อยู่ตรงรอยต่อ · มาร์กตัวอักษรไปด้วยครบ
+ */
+function joinParaIntoListEnd(state, dispatch) {
+  const { $from, empty } = state.selection;
+  if (!empty || $from.depth !== 1 || $from.parentOffset !== 0) return false;
+  const para = $from.parent;
+  if (para.type !== schema.nodes.paragraph || para.content.size === 0) return false;
+  const i = $from.index(0);
+  if (i === 0) return false;
+  const prev = state.doc.child(i - 1);
+  if (prev.type !== schema.nodes.bullet_list && prev.type !== schema.nodes.ordered_list) return false;
+  const paraStart = $from.before(1);
+  // ไต่ลง "ลูกคนสุดท้าย" จนเจอบล็อกข้อความ (ข้อสุดท้าย → รายการซ้อน → …)
+  let n = prev, p = paraStart - prev.nodeSize;
+  while (!n.isTextblock) {
+    if (!n.lastChild) return false;
+    p = p + n.nodeSize - 1 - n.lastChild.nodeSize;
+    n = n.lastChild;
+  }
+  const joinAt = p + n.nodeSize - 1;                         // ท้ายเนื้อของบล็อกข้อความนั้น
+  if (dispatch) {
+    const tr = state.tr.delete(paraStart, paraStart + para.nodeSize).insert(joinAt, para.content);
+    tr.setSelection(TextSelection.create(tr.doc, joinAt));
+    dispatch(tr.scrollIntoView());
+  }
+  return true;
+}
+
 export const BACKSPACE_CMD = chainCommands(
-  exitListItemAtStart, dropEmptyParaAfterList, baseKeymap.Backspace);
+  exitListItemAtStart, dropEmptyParaAfterList, joinParaIntoListEnd, baseKeymap.Backspace);
 
 /** ตัวรันคำสั่งต่อกันบน state ชั่วคราว — เก็บ step ไว้รวมเป็นธุรกรรมเดียวตอนจบ */
 function seq(state) {
@@ -1316,9 +1370,14 @@ export class KEditor {
 
   _docFromMd(md, alignMap) {
     const json = mdToDoc(md, alignMap);
-    for (const n of json.content) {
-      if (n.type === 'figure') n.attrs.resolved = this.resolveSrc(n.attrs.src);
-    }
+    // [alpha.164 · IMG-IN-A] รูปในบรรทัดอยู่ลึกได้ (ในรายการ · คำพูดยกมา) → เดินทั้งต้นไม้
+    const walk = (list) => {
+      for (const n of list || []) {
+        if (n.type === 'figure' || n.type === 'image') n.attrs.resolved = this.resolveSrc(n.attrs.src);
+        else if (n.content) walk(n.content);
+      }
+    };
+    walk(json.content);
     return schema.nodeFromJSON(json);
   }
 

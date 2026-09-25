@@ -12,25 +12,24 @@ import { callAI } from './ai-settings.js';
 import { el, setStatus, t as tr } from './core.js';
 import { gi } from './icons.js';
 
-/** ช่องที่กดปุ่ม ✨ ได้ · label = ข้อความบนสถานะ · rule = ข้อกำหนดที่ต่อท้าย prompt */
+/** ช่องที่กดปุ่ม ✨ ได้ · label = ข้อความบนสถานะ · rule = ข้อกำหนดที่ต่อท้าย prompt
+ *  [alpha.164 · รอบต่อ 3] getter — เดิม `t()` ตอน import = tooltip ปุ่ม ✨ ค้างภาษาตอนบูต (ด่าน [164-R3-1] จับได้) */
 export const AI_SCENE_FIELDS = {
   synopsis: {
-    label: t('ui.common.synopsis'), length: 'short',
-    rule: t('ui.aiSyn.writeSynopsisSceneSentence')
-        + t('ui.aiSyn.sendBackOnlyItem'),
+    get label() { return t('ui.common.synopsis'); }, length: 'short',
+    get rule() { return t('ui.aiSyn.writeSynopsisSceneSentence') + t('ui.aiSyn.sendBackOnlyItem'); },
   },
   pov: {
-    label: t('ui.common.viewPOV'), length: 'short',
-    rule: t('ui.aiSyn.replyNameViewMain')
-        + t('ui.aiSyn.viewStoryRoundReply'),
+    get label() { return t('ui.common.viewPOV'); }, length: 'short',
+    get rule() { return t('ui.aiSyn.replyNameViewMain') + t('ui.aiSyn.viewStoryRoundReply'); },
   },
   emotion: {
-    label: t('ui.common.mood'), length: 'short',
-    rule: t('ui.aiSyn.replyMoodMainScene'),
+    get label() { return t('ui.common.mood'); }, length: 'short',
+    get rule() { return t('ui.aiSyn.replyMoodMainScene'); },
   },
   conflict: {
-    label: t('ui.common.conflict'), length: 'short',
-    rule: t('ui.aiSyn.replyConflictMainScene'),
+    get label() { return t('ui.common.conflict'); }, length: 'short',
+    get rule() { return t('ui.aiSyn.replyConflictMainScene'); },
   },
 };
 

@@ -269,20 +269,24 @@ export async function planPropsDialog() {
     rSt.append(iStatus); box.append(rSt);
     const rC = E('div', 'wiki-row'); rC.append(E('label', null, t('ui.common.color')));
     const iColor = E('select', 'wiki-input k-dlg-select');
-    { const none = E('option', null, t('ui.common.notHas')); none.value = ''; iColor.append(none);
-      for (const [n2, hex] of SCENE_COLORS) { const o = E('option', null, gi('dot') + ' ' + n2); o.value = hex;
+    // [alpha.164 · รอบต่อ 4] ชื่อสีเป็นข้อมูลไทย → ป้ายตามภาษาด้วย dataLabel (เดิมโชว์ "● แดง" ในหน้าจออังกฤษ)
+    // · "ไม่มีสี" ใช้คำเดียวกับกล่องคุณสมบัติของกระดาน/ฉาก (ui.treeAct.clearColor)
+    { const none = E('option', null, t('ui.treeAct.clearColor')); none.value = ''; iColor.append(none);
+      for (const [n2, hex] of SCENE_COLORS) { const o = E('option', null, gi('dot') + ' ' + dataLabel(n2)); o.value = hex;
         if (hex === L.color) o.selected = true; iColor.append(o); } }
     rC.append(iColor); box.append(rC);
     const iTags = mk(t('ui.common.tag2'), (L.tags || []).join(', '));
     const iBook = mk(t('ui.branch.bookSkipEmpty'), L.book);
-    iBook.placeholder = t('ui.branch.egBookOneUse');
+    // [alpha.164 · รอบต่อ 4] คำอธิบายยาวล้นช่อง (อังกฤษ) → placeholder สั้น · คำอธิบายเต็มอยู่ใน tooltip
+    iBook.placeholder = t('ui.branch.egBookShort');
+    iBook.title = t('ui.branch.egBookOneUse');
     const iNote = mk(t('ui.common.note'), L.note, 'textarea');
 
     const info = E('div', 'dim', planSummary(L));
     box.append(info);
 
     const btns = E('div', 'k-dlg-btns');
-    const cB = E('button', null, t('ui.common.cancel'));
+    const cB = E('button', 'k-cancel', t('ui.common.cancel'));   // [alpha.164 · รอบต่อ 4] Esc เดินถึง (กฎ W4)
     const okB = E('button', 'k-ok', t('ui.common.save'));
     btns.append(cB, okB); box.append(btns); ov.append(box); document.body.append(ov);
     cB.onclick = () => { ov.remove(); resolve(false); };
@@ -333,7 +337,7 @@ export async function comparePlanDialog() {
   };
   sel.onchange = draw;
   const btns = E('div', 'k-dlg-btns');
-  const cB = E('button', 'k-ok', t('ui.common.close'));
+  const cB = E('button', 'k-ok k-cancel', t('ui.common.close'));
   btns.append(cB); box.append(btns); ov.append(box); document.body.append(ov);
   cB.onclick = () => ov.remove();
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
@@ -540,7 +544,7 @@ export async function renderBranchingTree(pane, opts = {}) {
   bSaveAs.title = t('ui.branch.saveNewPlanCoverLayout');
   bSaveAs.onclick = async () => {
     const { ask } = await import('./ui.js');
-    const v = await ask(t('ui.common.nameNewPlan'), { value: (planState.name || t('ui.branch.plan')) + t('ui.common.msg2') });
+    const v = await ask(t('ui.common.nameNewPlan'), { value: (planState.name || t('ui.branch.plan')) + t('ui.common.msg2'), okLabel: t('ui.common.save') });
     if (!v) return;
     await saveBranchPlanAs(v); await fillPlans(); planSel.value = planState.path || '';
     const { refreshTreeQueued } = await import('./app.js');
@@ -550,7 +554,7 @@ export async function renderBranchingTree(pane, opts = {}) {
   bNew.title = t('ui.branch.newNewPlanStartLayout');
   bNew.onclick = async () => {
     const { ask } = await import('./ui.js');
-    const v = await ask(t('ui.common.nameNewPlan'), { value: t('ui.common.map2') + ((await listBranchPlans()).length + 1) });
+    const v = await ask(t('ui.common.nameNewPlan'), { value: t('ui.common.map2') + ((await listBranchPlans()).length + 1), okLabel: t('ui.common.new') });
     if (!v) return;
     // แผนใหม่ถ่ายทางเลือกปัจจุบันมาเป็นจุดตั้งต้น — จะได้เริ่มแก้ต่อได้เลย ไม่ใช่ผังว่างเปล่า
     await newPlanFromCurrent(v);
@@ -1116,7 +1120,7 @@ function showBrokenDialog(graph, analysis, bs, redraw, redrawUi = redraw) {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const close = el('button', 'k-ok', tr('close'));
+  const close = el('button', 'k-ok k-cancel', tr('close'));
   close.onclick = () => ov.remove();
   btns.append(close); box.append(btns);
   ov.append(box); document.body.append(ov);
@@ -1450,7 +1454,7 @@ function colorRow(current, onPick) {
     return dot;
   };
   mk('', tr('colorNone'), 'branch-color-none').textContent = gi('empty-set');
-  for (const [name, hex] of SCENE_COLORS) mk(hex, name);
+  for (const [name, hex] of SCENE_COLORS) mk(hex, dataLabel(name));   // [alpha.164 · รอบต่อ 4] tooltip ตามภาษา
   return row;
 }
 
@@ -1507,7 +1511,7 @@ function showAllPathsDialog(graph, startId) {
     try { await navigator.clipboard.writeText(lines.map((l) => l.text).join('\n')); setStatus(tr('copied')); }
     catch { setStatus(tr('copyFail')); }
   };
-  const close = el('button', 'k-ok', tr('close'));
+  const close = el('button', 'k-ok k-cancel', tr('close'));
   close.onclick = () => ov.remove();
   btns.append(copyB, close); box.append(btns);
   ov.append(box); document.body.append(ov);

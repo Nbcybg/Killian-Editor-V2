@@ -386,7 +386,9 @@ function listView() {
   const bar = el('div', 'ai-chat-listbar');
   const q = el('input', 'ai-chat-search');
   q.type = 'search';
-  q.placeholder = tt('ui.aiChatPanel.searchSessionNameText');
+  // [alpha.164 · รอบต่อ 4] คำอธิบายเต็มล้นช่องในแผงแคบ → placeholder สั้น (คำเดียวกับตัวสร้างบทสนทนา) · เต็มใน tooltip
+  q.placeholder = tt('ui.dlgb.searchPh');
+  q.title = tt('ui.aiChatPanel.searchSessionNameText');
   q.value = S.query;
   const addBtn = el('button', 'k-ok ai-chat-new', tt('ui.aiChatPanel.sessionNew'));
   bar.append(q, addBtn);

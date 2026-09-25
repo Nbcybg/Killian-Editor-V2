@@ -22,7 +22,7 @@
 
 import { SP_ELEMS, parseScript, blocksToMd } from './fountain.js';
 import { hashText } from './num.js';
-import { mdToDoc, docToMd } from './md.js';
+import { mdToDoc, docToMd, inlineImgMd } from './md.js';
 
 // ───────── ชนิดบล็อกฝั่งนิยาย (คู่ขนานกับ SP_ELEMS ของบท) ─────────
 // ป้ายไทยเป็น **ข้อมูล** แบบเดียวกับ SP_ELEMS — ใช้บอกผู้ใช้ว่าอะไรจะกลายเป็นอะไร
@@ -125,7 +125,11 @@ export function rleDecode(s) {
 }
 
 // ───────── ฝั่งนิยาย: doc → บล็อกทีละบรรทัด ─────────
-const textOf = (n) => (n.content || []).filter((x) => x.type === 'text').map((x) => x.text).join('');
+// [alpha.164 · รอบต่อ 5] รูปในบรรทัด (โหนด `image`) นับเป็นเนื้อด้วยข้อความดิบของมัน —
+// เดิมกรองเฉพาะ text → บรรทัด `![](a) ![](b)` ถูกตัดสินเป็น "บรรทัดว่าง" แล้วรูปหายตอนแปลงเป็นบท
+const textOf = (n) => (n.content || [])
+  .map((x) => (x.type === 'text' ? x.text : x.type === 'image' ? inlineImgMd(x.attrs) : ''))
+  .join('');
 /** ทุกช่วงข้อความที่ไม่ว่างมีมาร์กนี้ครบ = ทั้งย่อหน้าเป็นตัวหนา/เอียง (ไม่ใช่แค่บางคำ) */
 const allMark = (n, mark) => {
   const segs = (n.content || []).filter((x) => x.type === 'text' && x.text.trim());

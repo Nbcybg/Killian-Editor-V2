@@ -984,7 +984,7 @@ async function castEditor(holder, onSave) {
 
   draw();
   const btns = el('div', 'k-dlg-btns');
-  const bClose = el('button', 'k-ok', t('ui.common.close'));
+  const bClose = el('button', 'k-ok k-cancel', t('ui.common.close'));
   bClose.onclick = () => { ov.remove(); if (S.view === 'session') drawSession(); };
   btns.append(bClose);
   box.append(btns);

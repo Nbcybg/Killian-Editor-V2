@@ -37,6 +37,15 @@ export async function showThesaurusPopup(word, x, y) {
   if (old) old.remove();
 
   const pop = el('div', 'k-thes-popup');
+  // [alpha.165] คัดลอกผ่าน main (`kapi.clipboardWrite`) — `navigator.clipboard` ในหน้าต่างไร้ขอบล้มเงียบได้
+  //   (เหตุผลเดียวกับ preload: "คลิปบอร์ดผ่าน main — เชื่อถือได้กว่า") · Esc = ปิดป๊อปอัป
+  const shut = () => { pop.remove(); document.removeEventListener('keydown', onKey, true); document.removeEventListener('click', outside); };
+  const onKey = (e) => { if (e.key !== 'Escape' || !pop.isConnected) return; e.preventDefault(); e.stopPropagation(); shut(); };
+  const copyWord = async (w) => {
+    try { await kapi.clipboardWrite(w); setStatus(t('ui.thes.copied') + w); }
+    catch (e) { log('warn', 'thesaurus: copy failed', e); }
+    shut();
+  };
   pop.style.left = Math.min(x, window.innerWidth - 220) + 'px';
   pop.style.top = Math.min(y, window.innerHeight - 300) + 'px';
 
@@ -44,7 +53,7 @@ export async function showThesaurusPopup(word, x, y) {
     pop.append(el('div', 'k-thes-head', t('ui.toolsThesaurus.thesaurusSynonyms')));
     for (const s of syns.slice(0, 15)) {
       const item = el('div', 'k-thes-item', s);
-      item.onclick = () => { navigator.clipboard.writeText(s); setStatus(t('ui.thes.copied') + s); pop.remove(); };
+      item.onclick = () => { copyWord(s); };
       pop.append(item);
     }
   }
@@ -52,17 +61,18 @@ export async function showThesaurusPopup(word, x, y) {
     pop.append(el('div', 'k-thes-head', t('ui.toolsThesaurus.wordOppositeAntonyms')));
     for (const a of ants.slice(0, 15)) {
       const item = el('div', 'k-thes-item', a);
-      item.onclick = () => { navigator.clipboard.writeText(a); setStatus(t('ui.thes.copied') + a); pop.remove(); };
+      item.onclick = () => { copyWord(a); };
       pop.append(item);
     }
   }
   const close = el('div', 'k-thes-close', gi('close'));
-  close.onclick = () => pop.remove();
+  close.onclick = () => shut();
   pop.append(close);
   document.body.append(pop);
+  document.addEventListener('keydown', onKey, true);
 
   // คลิกนอก popup → ปิด
-  const outside = (e) => { if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener('click', outside); } };
+  function outside(e) { if (!pop.contains(e.target)) shut(); }
   setTimeout(() => document.addEventListener('click', outside), 0);
 }
 

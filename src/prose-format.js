@@ -394,6 +394,10 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
   // [alpha.133 · Y-1] รูปทั้งบรรทัด = `<figure>` เหมือนโหนดของตัวแก้ไข (กฎคู่กับ style.css)
   out.push('figure{margin:1em 0;text-align:center}');
   out.push('figure img{max-width:100%;max-height:480px;border-radius:8px}');
+  // [alpha.164 · IMG-IN-B] รูปกลางย่อหน้า — กฎคู่แฝดของ `.ProseMirror img.k-inline-img` ใน style.css
+  // (สูงเป็นจำนวนบรรทัด · ชิดล่างกล่องบรรทัด → h=1 ไม่ดันบรรทัดให้สูงขึ้น ตัวตัดหน้าได้ผลเท่าจอ)
+  out.push('img.k-inline-img{height:calc(var(--k-img-h, 1) * 1lh);width:auto;max-width:100%;'
+           + 'vertical-align:bottom;border-radius:2px}');
   // ══ [alpha.142 ข้อ 6] ★ รูปที่ปรับขนาด/เต็มหน้า — **กฎคู่แฝด** ของ `.ProseMirror figure.*`
   // ใน style.css (กฎถาวรข้อ 5: เขียนฝั่งหนึ่งต้องเขียนอีกฝั่งในคอมมิตเดียวกัน)
   // ฝั่งไฟล์รู้ขนาดกระดาษจริงอยู่แล้ว จึงใส่อัตราส่วนเป็นตัวเลขตรง ๆ ไม่ต้องพึ่งตัวแปร CSS

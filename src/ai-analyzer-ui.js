@@ -620,7 +620,7 @@ async function sessionDialog(host) {
   }
   box.append(list);
   const btns = el('div', 'k-dlg-btns');
-  const closeBtn = el('button', 'k-ok', t('ui.common.close'));
+  const closeBtn = el('button', 'k-ok k-cancel', t('ui.common.close'));
   closeBtn.onclick = close;
   btns.append(closeBtn);
   box.append(btns);
@@ -722,9 +722,10 @@ export async function renderAIAnalyzerPanel(host) {
   // ---- สถิติของขอบเขตที่เลือก ----
   const picked = filterScope(S.scenes, S.scope);
   wrap.append(statsBar([
-    { label: t('ui.common.book'), value: new Set(picked.map((s) => s.sectionKey)).size },
-    { label: t('ui.common.chapter'), value: new Set(picked.map((s) => s.chapterId)).size },
-    { label: t('ui.common.scene2'), value: picked.length },
+    // [alpha.164 · รอบต่อ 2] ป้ายใต้ตัวเลขเป็นพหูพจน์ ("2 Scenes") ชุดเดียวกับแดชบอร์ด
+    { label: t('ui.dash.statBooks'), value: new Set(picked.map((s) => s.sectionKey)).size },
+    { label: t('ui.dash.statChapters'), value: new Set(picked.map((s) => s.chapterId)).size },
+    { label: t('ui.dash.statScenes'), value: picked.length },
     { label: t('ui.common.word2'), value: fmtNum(picked.reduce((a, s) => a + s.words, 0)) },
     { label: t('ui.aia.wiki'), value: S.characters.length },
   ]));

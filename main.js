@@ -24,10 +24,17 @@ function t(key) {
   const s = (typeof v === 'string' && v !== '') ? v : String(key);
   return withSc(s.replace(/\{\{|\}\}/g, (m) => m[0]));      // คลาย {{ }} เหมือนฝั่ง renderer
 }
+// [alpha.164 · รอบต่อ 2] `{0|page|pages}` = รูปพหูพจน์ (กติกาเดียวกับ formatMsg ของ renderer)
+const fillSlots = (tpl, vals) => tpl.replace(/\{\{|\}\}|\{(\d+)(?:\|([^|{}]*)\|([^{}]*))?\}/g, (m, d, one, many) => {
+  if (m === '{{' || m === '}}') return m[0];
+  const v = vals[+d];
+  if (one !== undefined) return Math.abs(Number(String(v).replace(/[^\d.-]/g, ''))) === 1 ? one : many;
+  return v == null ? '' : String(v);
+});
 function tf(key, ...vals) {
   const tpl = t(key);
   if (!vals.length) return tpl.replace(/\{\{|\}\}/g, (m) => m[0]);
-  return tpl.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => (m === '{{' || m === '}}') ? m[0] : (vals[+d] == null ? '' : String(vals[+d])));
+  return fillSlots(tpl, vals);
 }
 // นามแฝงกันชน — main มีตัวแปรท้องถิ่นชื่อ t อยู่ด้วย (ดู tools/i18n-shadow.cjs)
 const tt = t, ttf = tf;
@@ -37,7 +44,7 @@ function T(strings, ...vals) {
   else { id = ''; for (let i = 0; i < strings.length; i++) { id += strings[i]; if (i < strings.length - 1) id += '{' + i + '}'; } }
   const tpl = LANG_TABLE[id] || id;
   if (!vals.length) return tpl.replace(/\{\{|\}\}/g, (m) => m[0]);
-  return tpl.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => (m === '{{' || m === '}}') ? m[0] : (vals[+d] == null ? '' : String(vals[+d])));
+  return fillSlots(tpl, vals);
 }
 /** โหลดตารางคำแปลของ main (เรียกซ้ำได้ — renderer สั่งตอนผู้ใช้เปลี่ยนภาษา แล้วสร้างเมนูใหม่) */
 function loadLangTable(code) {
@@ -210,6 +217,7 @@ const toggles = {
   continueds: true,
   // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด — ค่าเริ่มต้น "เปิด" (ตรงกับ DEFAULT_SETTINGS)
   markdownCodes: true,
+  autoFitWidth: false,                  // [alpha.164 · รอบต่อ 3] ซูมพอดีความกว้างอัตโนมัติ (ค่าระดับผู้ใช้)
   // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — ทั้งคู่ปิดเป็นค่าเริ่มต้น = เข้าหน้าแรกก่อน
   openLastProject: false, showHomeAlways: false,
   // [alpha.61 ข้อ 4] สวิตช์ตัวพิมพ์ใหญ่/เล็กของบทหนัง (ค่าเริ่มต้น = ธรรมเนียมเดิม)
@@ -436,6 +444,9 @@ function buildMenu() {
         click: cmd('sync-scene-meta') },
       // [alpha.156] ทะเบียนฉาก ↔ ไฟล์จริง ไม่ตรงกัน (ไฟล์กำพร้า · ใช้ไฟล์ซ้ำ · โฟลเดอร์ผี · หัวไฟล์พัง)
       { label: tt('ui.menu.projectDoctor'), click: cmd('project-doctor') },
+      // [alpha.164 · รอบต่อ 2] เสียงพิมพ์ดีดเป็น "เสียง" ไม่ใช่มุมมอง — ผู้ใช้สั่งย้ายออกจากเมนูมุมมอง
+      // (อยู่ติดกับ "โหมดเครื่องพิมพ์ดีด" จนคนเข้าใจว่าเป็นสวิตช์คู่กัน) · ค่าละเอียดยังอยู่ ตั้งค่า → ตัวแก้ไข
+      chk(tt('ui.menu.soundTypewriterPrint'), toggles.typeSound, cmd('type-sound')),
       { type: 'separator' },
       // [alpha.164 ข้อ D] สองคำสั่งนี้ "ทำงานกับเนื้อฉาก" ไม่ใช่มุมมอง — เดิมอยู่เมนูมุมมอง
       { label: tt('ui.menu.newChoiceTextScene'), click: cmd('branch-sync') },
@@ -457,6 +468,9 @@ function buildMenu() {
         { label: tt('ui.menu.resetZoom'), click: cmd('zoom', 0) },
         // alpha.58 (บั๊ก 3) — กระดาษ 8.5 นิ้วจริงกว้างกว่าพื้นที่ทำงาน โปรแกรมบทอื่นเปิดมาที่ fit width
         { label: tt('ui.menu.fitWidePagePaper'), click: cmd('zoom', 'fit') },
+        // [alpha.164 · รอบต่อ 3] ทางเข้าที่สองของสวิตช์ในตั้งค่า → ตัวแก้ไข (อีกทาง: คลิกขวาที่ป้ายซูมบนแถบสถานะ)
+        { type: 'separator' },
+        { id: 'view-auto-fit-width', ...chk(tt('ui.setTpl.autoFitWidth'), toggles.autoFitWidth, cmd('auto-fit-width')) },
       ] },
       // [alpha.58r บั๊ก 15] มุมมองหน้ากระดาษใช้ได้กับนิยายด้วย — เดิมอยู่แต่ในเมนู "บท"
       { label: tt('ui.menu.viewPagePaper'), submenu: [
@@ -561,7 +575,6 @@ function buildMenu() {
       chk(tt('ui.menu.modeReadFullScreen'), toggles.readingMode, cmd('reading-mode')),
       chk(tt('ui.menu.modeFocusD'), toggles.focusMode, cmd('focus-mode')),
       chk(tt('ui.menu.modeTypewriterT'), toggles.typewriter, cmd('typewriter')),
-      chk(tt('ui.menu.soundTypewriterPrint'), toggles.typeSound, cmd('type-sound')),
       { type: 'separator' },
       // ห้ามใช้ role:'zoomIn'/'zoomOut'/'resetZoom' ของ Electron — เป็น zoom ระดับ webContents
       // ทั้งหน้าต่าง จะซ้อนทับกับซูมหน้ากระดาษ (--page-scale) และขนาด UI (--ui-scale) จนเพี้ยน
@@ -691,6 +704,11 @@ function createWindow() {
   win.on('close', (e) => {
     if (!forceQuit) { e.preventDefault(); send('confirm-quit'); }
   });
+  // [alpha.165] หน้าต่างค้าง/โหลดไม่ขึ้น/preload พัง — เดิมไม่มีร่องรอยใน log เลย
+  win.on('unresponsive', () => logMain('error', 'window unresponsive (renderer hung)'));
+  win.on('responsive', () => logMain('info', 'window responsive again'));
+  win.webContents.on('did-fail-load', (e, code, desc, url) => logMain('error', 'load failed [' + code + ' ' + desc + ']', url));
+  win.webContents.on('preload-error', (e, p, err) => logMain('error', 'preload error', err));
   win.loadFile('renderer/index.html', TEST ? { search: 'k2test=1' } : {});
   if (TEST) win.webContents.on('console-message', (e, lv, msg, line, src) => {
     try { fs.appendFileSync('/tmp/k2console.txt', `${lv} ${src}:${line} ${msg}\n`); } catch {}
@@ -948,13 +966,74 @@ ipcMain.handle('menu:itemState', (e, ids) => {
   return want.map((id) => {
     const it = menu && menu.getMenuItemById(id);
     return it ? { id, exists: true, enabled: !!it.enabled, visible: !!it.visible, label: it.label,
+                  checked: !!it.checked,   // [alpha.164 · รอบต่อ 3]
                   accelerator: it.accelerator || '' }   // [alpha.147]
               : { id, exists: false, enabled: false, visible: false, label: '', accelerator: '' };
   });
 });
 
+/**
+ * [alpha.164 · รอบต่อ 3] e2e "กดเมนูจริง" — คลิกรายการในเมนูตัวจริงที่ติดอยู่ตาม id (โหมดเทสเท่านั้น)
+ * คืนสถานะ checked ก่อนกด เพื่อให้เทสเทียบว่าเมนูติ๊กตรงกับค่าจริงด้วย
+ */
+ipcMain.handle('menu:testClick', (e, id) => {
+  if (!TEST) return { ok: false };
+  const it = Menu.getApplicationMenu() && Menu.getApplicationMenu().getMenuItemById(id);
+  if (!it) return { ok: false };
+  const was = !!it.checked;
+  it.click();
+  return { ok: true, checkedBefore: was };
+});
+
 // ---------------- IPC: filesystem (ผ่าน main เท่านั้น — renderer ไม่แตะ fs ตรง) ----------------
-const H = (name, fn) => ipcMain.handle(name, (e, ...a) => fn(...a));
+// [alpha.165] ผู้ใช้: "log ต้องเก็บละเอียด ทั้ง error code ทั้งการผิดพลาดของ software"
+//   ทุกคำสั่ง IPC ที่ล้ม (อ่าน/เขียนไฟล์ไม่ได้ · สิทธิ์ · ดิสก์เต็ม) ถูกจดพร้อมรหัส (ENOENT/EACCES/ENOSPC/EBUSY…)
+//   แล้วโยนต่อตามเดิม (renderer ยังได้ error เหมือนก่อนทุกประการ)
+const H = (name, fn) => ipcMain.handle(name, (e, ...a) => {
+  try {
+    const r = fn(...a);
+    if (r && typeof r.then === 'function') return r.catch((err) => { ipcFail(name, err, a); throw err; });
+    return r;
+  } catch (err) { ipcFail(name, err, a); throw err; }
+});
+// ช่องที่ "ไม่มีไฟล์" เป็นเรื่องปกติ (ถามก่อนว่ามีไหม · ไฟล์ตั้งค่าที่ยังไม่เคยสร้าง) — จดระดับ debug ไม่ให้ท่วม
+const IPC_ENOENT_QUIET = /^fs:(readFile|readJson|readBytes|stat|mtime|listFiles|listDirs|listAll)$/;
+function ipcFail(name, err, args) {
+  const code = err && err.code ? String(err.code) : '';
+  const quiet = code === 'ENOENT' && IPC_ENOENT_QUIET.test(name);
+  // อาร์กิวเมนต์: เฉพาะตัวแรกที่เป็นข้อความสั้น ๆ (มักเป็นที่อยู่ไฟล์) — ห้ามจดเนื้อไฟล์/คีย์ลับ
+  let a0 = args && typeof args[0] === 'string' && !/key|secret|token/i.test(name) ? args[0].slice(0, 200) : '';
+  // ลิงก์เว็บ: ตัดส่วน query ทิ้งเสมอ — ผู้ให้บริการ AI บางรายใส่คีย์ไว้ใน ?key=… (ห้ามหลุดลงไฟล์ log)
+  if (/^https?:\/\//i.test(a0)) a0 = a0.replace(/[?#].*$/, '');
+  const msg = String(err && err.message ? err.message : err)
+    .replace(/([?&](?:key|api[_-]?key|token|access[_-]?token|secret)=)[^&\s'"]+/gi, '$1***');
+  logMain(quiet ? 'debug' : 'warn', 'ipc ' + name + ' failed' + (code ? ' [' + code + ']' : ''),
+          (a0 ? a0 + ' · ' : '') + msg);
+}
+/** จดลงไฟล์ log เดียวกับ renderer (ที่มา `main`) — รูปแบบเดียวกับ log-core.formatLine */
+function logMain(level, msg, extra) {
+  try {
+    let d = '';
+    if (extra instanceof Error) {
+      const bits = [extra.code, Number.isFinite(extra.errno) ? 'errno=' + extra.errno : '', extra.syscall ? 'syscall=' + extra.syscall : '']
+        .filter(Boolean);
+      d = (bits.length ? '[' + bits.join(' ') + '] ' : '') + (extra.stack || extra.message);
+    } else if (extra !== undefined && extra !== null) {
+      d = typeof extra === 'string' ? extra : JSON.stringify(extra);
+    }
+    const line = '[' + new Date().toISOString() + '] ' + String(level).toUpperCase() + ' main: ' + msg
+      + (d ? ' | ' + String(d).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n') : '');   // ตัวเดียวกับ log-core.escDetail
+    fs.appendFileSync(logFile(), line + '\n');
+  } catch {}
+}
+// ความผิดพลาดของตัวโปรแกรมเอง (ฝั่ง main) — Monitor = จดอย่างเดียว ไม่เปลี่ยนพฤติกรรมเดิมของ Electron
+process.on('uncaughtExceptionMonitor', (err, origin) => logMain('error', 'uncaught exception (' + origin + ')', err));
+process.on('unhandledRejection', (reason) => logMain('error', 'unhandled promise rejection', reason instanceof Error ? reason : String(reason)));
+app.on('render-process-gone', (e, wc, d) => logMain('error', 'renderer process gone [' + (d && d.reason) + ' exitCode=' + (d && d.exitCode) + ']',
+                                                    wc && !wc.isDestroyed() ? wc.getURL() : ''));
+app.on('child-process-gone', (e, d) => logMain('error', 'child process gone [' + (d && d.type) + ' ' + (d && d.reason) + ' exitCode=' + (d && d.exitCode) + ']',
+                                                d && d.name ? d.name : ''));
+app.on('will-quit', () => logMain('info', 'quit'));
 // [alpha.148] เขียนแบบ atomic (ไฟล์ชั่วคราว → rename) + กรองไฟล์ขยะของระบบ — เหตุผลเต็มอยู่หัว fs-safe.cjs
 const { isJunkName, writeFileAtomic } = require('./fs-safe.cjs');
 H('fs:readFile', (p) => fs.readFileSync(p, 'utf-8'));
@@ -1290,6 +1369,14 @@ H('clipboard:write', (text) => {
   catch { return false; }
 });
 H('clipboard:read', () => { try { return require('electron').clipboard.readText(); } catch { return ''; } });
+// [alpha.165] ตัด/คัดลอก/วาง/เลือกทั้งหมด จากเมนูคลิกขวาของ renderer — ใช้คำสั่งของ webContents ตัวจริง
+// (เท่ากับกดแป้น: วางรูป/HTML ผ่าน paste handler ของตัวแก้ไขได้ครบ) · เมนูในเอกสารเป็นของ renderer ทั้งเมนู
+// เพราะเมนูของเอกสาร (คำพ้อง · Rewrite · คำผิด) ต้อง preventDefault = เมนูของ main ด้านบนไม่ขึ้น
+const EDIT_ROLES = new Set(['cut', 'copy', 'paste', 'selectAll']);
+ipcMain.handle('edit:role', (e, role) => {
+  if (!EDIT_ROLES.has(role)) return false;
+  try { e.sender[role](); return true; } catch { return false; }
+});
 H('dialog:openProject', async () => {
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
   return r.canceled ? null : r.filePaths[0];
@@ -2020,6 +2107,29 @@ H('log:read', (maxLines) => {
 H('app:dir', () => __dirname);
 H('log:path', () => { try { return logFile(); } catch { return ''; } });
 H('log:reveal', () => { try { require('electron').shell.showItemInFolder(logFile()); return true; } catch { return false; } });
+// [alpha.165] ดูย้อนหลังได้: รายชื่อไฟล์ log ทุกวัน (ใหม่ → เก่า) · อ่านไฟล์ของวันที่เลือก · ที่อยู่โฟลเดอร์ · เปิดโฟลเดอร์
+const LOG_NAME_RE = /^app-(\d{4}-\d{2}-\d{2})\.log$/;
+H('log:list', () => {
+  try {
+    return fs.readdirSync(logDir()).map((n) => {
+      const m = n.match(LOG_NAME_RE);
+      if (!m) return null;
+      let size = 0;
+      try { size = fs.statSync(path.join(logDir(), n)).size; } catch {}
+      return { day: m[1], size };
+    }).filter(Boolean).sort((a, b) => (a.day < b.day ? 1 : -1));
+  } catch { return []; }
+});
+H('log:readDay', (day, maxLines) => {
+  // วันที่ต้องอยู่ในรูป YYYY-MM-DD เท่านั้น (ห้ามส่งที่อยู่อื่นมาอ่านไฟล์นอกโฟลเดอร์ log)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return '';
+  try {
+    const lines = fs.readFileSync(path.join(logDir(), 'app-' + day + '.log'), 'utf-8').split('\n').filter(Boolean);
+    return lines.slice(-(Math.min(Math.max(maxLines | 0, 100), 20000) || 5000)).join('\n');
+  } catch { return ''; }
+});
+H('log:dir', () => { try { return logDir(); } catch { return ''; } });
+H('log:openDir', () => { try { require('electron').shell.openPath(logDir()); return true; } catch { return false; } });
 // เปิดลิงก์ในเบราว์เซอร์ของเครื่อง (กล่อง "เกี่ยวกับ" ใช้ลิงก์เครดิต) — จำกัดเฉพาะ http/https
 H('shell:openExternal', (url) => {
   try { if (/^https?:\/\//i.test(String(url))) { shell.openExternal(String(url)); return true; } } catch {}
@@ -2105,6 +2215,9 @@ function langRead(code, root) {
 function langPrefFile() { try { return path.join(app.getPath('userData'), 'lang.txt'); } catch { return ''; } }
 function lastLangCode() {
   try { const c = fs.readFileSync(langPrefFile(), 'utf-8').trim(); if (c) return c; } catch {}
+  // [alpha.164 · รอบต่อ 2] ยังไม่มีไฟล์จำภาษา (userData ใหม่/ย้ายเครื่องมาแค่ settings.json) → ดูภาษาในตั้งค่าผู้ใช้
+  // ก่อนตกเป็นไทย · ไม่งั้นค่าคงที่ระดับโมดูลทุกตัวถูกแปลเป็นไทยตอน import แล้วค้างจนเปิดโปรแกรมใหม่
+  try { const g = JSON.parse(fs.readFileSync(globalSettingsPath(), 'utf-8')); if (g && g.language) return String(g.language); } catch {}
   return 'th';
 }
 function saveLangCode(code) {
@@ -2225,6 +2338,9 @@ ipcMain.handle('panel:fileChanged', (e, p) => {
 });
 
 app.whenReady().then(() => {
+  // [alpha.165] หัวของแต่ละรอบการเปิดโปรแกรม — รุ่น/แพลตฟอร์ม ช่วยตอบว่า log ช่วงนี้มาจากตัวไหน
+  logMain('info', 'start v' + app.getVersion() + ' · electron ' + process.versions.electron + ' · ' + process.platform + ' ' + process.arch
+          + (app.isPackaged ? ' · packaged' : ' · dev') + (TEST ? ' · test' : ''));
   // โหลดตารางคำแปลก่อนสร้างหน้าต่าง/เมนู — เมนู OS ถูกสร้างครั้งเดียวตอนเปิด
   try { loadLangTable(lastLangCode()); } catch {}
   if (TEST) startMockSse();            // [alpha.115] เซิร์ฟเวอร์ SSE จำลองสำหรับเทสสตรีม

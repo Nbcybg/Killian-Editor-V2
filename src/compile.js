@@ -265,6 +265,8 @@ const inline = (s, mono) => mdInlineHtml(s, { mono });
 // แปลง Markdown → ชิ้นส่วน HTML (ไม่มี <html>/<head>) — ใช้ซ้ำได้ทั้ง compile และ export-blog
 export function mdToHtmlBody(md, o = {}) {
   const mono = !!o.mono;
+  // [alpha.164 · IMG-IN-B] รูปกลางย่อหน้าต้องผ่านตัวแปลงที่อยู่รูปตัวเดียวกับ figure (`o.imgSrc`)
+  const inline = (s, mn) => mdInlineHtml(s, { mono: mn, imgSrc: o.imgSrc });
   const out = []; let list = null;
   const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
   let quote = false;

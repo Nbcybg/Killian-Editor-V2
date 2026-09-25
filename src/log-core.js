@@ -43,10 +43,22 @@ export function splitSource(msg) {
   return { source: head, msg: s.slice(i + 1).trim() };
 }
 
+/** `[ENOENT errno=-2 syscall=open path=…] ` จากฟิลด์มาตรฐานของ error ของ node/Electron (ไม่มี = '') */
+export function errCodePrefix(e) {
+  if (!e || typeof e !== 'object') return '';
+  const bits = [];
+  if (e.code !== undefined && e.code !== null && e.code !== '') bits.push(String(e.code));
+  if (Number.isFinite(e.errno)) bits.push('errno=' + e.errno);
+  if (e.syscall) bits.push('syscall=' + e.syscall);
+  if (e.path) bits.push('path=' + e.path);
+  return bits.length ? '[' + bits.join(' ') + '] ' : '';
+}
+
 /** แปลง extra ให้เป็นข้อความอ่านออก (Error → stack · object → JSON · อื่น → String) */
 export function detailText(extra) {
   if (extra === undefined || extra === null) return '';
-  if (extra instanceof Error) return extra.stack || (extra.name + ': ' + extra.message);
+  // [alpha.165] รหัสข้อผิดพลาด (ENOENT · EACCES · EBUSY …) ขึ้นหน้าเสมอ — ผู้ใช้: "ต้องเก็บ error code ด้วย"
+  if (extra instanceof Error) return errCodePrefix(extra) + (extra.stack || (extra.name + ': ' + extra.message));
   if (typeof extra === 'string') return extra;
   try { return JSON.stringify(extra, replacer(), 2); }
   catch { return String(extra); }
@@ -54,7 +66,7 @@ export function detailText(extra) {
 function replacer() {
   const seen = new WeakSet();
   return (k, v) => {
-    if (v instanceof Error) return { name: v.name, message: v.message, stack: v.stack };
+    if (v instanceof Error) return { name: v.name, code: v.code, message: v.message, stack: v.stack };
     if (typeof v === 'object' && v !== null) {
       if (seen.has(v)) return t('ui.log.dup');
       seen.add(v);
@@ -68,8 +80,38 @@ function replacer() {
 export function formatLine(rec) {
   let line = `[${rec.ts}] ${rec.level.toUpperCase()} `
            + (rec.source ? rec.source + ': ' : '') + rec.msg;
-  if (rec.detail) line += ' | ' + rec.detail.replace(/\n/g, '\\n');
+  // [alpha.165] หนีแบ็กสแลชก่อนขึ้นบรรทัด — ที่อยู่บน Windows (`C:\Users\noobc`) มี `\n` อยู่ในตัว
+  //   ถ้าไม่หนี ตอนอ่านไฟล์กลับ (parseLogLine) มันกลายเป็นขึ้นบรรทัดกลางที่อยู่
+  if (rec.detail) line += ' | ' + escDetail(rec.detail);
   return line;
+}
+
+/**
+ * [alpha.165] อ่านบรรทัดในไฟล์ log กลับเป็นระเบียน (ตัวกลับของ `formatLine`) — ใช้ดูไฟล์ของวันก่อน ๆ ในแผงบันทึก
+ * `[ts] LEVEL [ที่มา: ]ข้อความ[ | รายละเอียด]` · บรรทัดที่ไม่ตรงรูปแบบ (ไฟล์เก่า/ถูกแก้มือ) = ระเบียน info ทั้งบรรทัด
+ * @returns {{seq,ts,level,source,msg,detail,count}|null} บรรทัดว่าง = null
+ */
+export function parseLogLine(line, seq = 0) {
+  const s = String(line == null ? '' : line).replace(/\r$/, '');
+  if (!s.trim()) return null;
+  const m = s.match(/^\[([^\]]+)\] (ERROR|WARN|INFO|DEBUG) (.*)$/);
+  if (!m) return { seq, ts: '', level: 'info', source: '', msg: s, detail: '', count: 1 };
+  let rest = m[3], detail = '';
+  const cut = rest.indexOf(' | ');
+  if (cut >= 0) { detail = unescDetail(rest.slice(cut + 3)); rest = rest.slice(0, cut); }
+  const { source, msg } = splitSource(rest);
+  return { seq, ts: m[1], level: normLevel(m[2].toLowerCase()), source, msg, detail, count: 1 };
+}
+/** รายละเอียดหนึ่งบรรทัดในไฟล์: `\` → `\\` แล้วขึ้นบรรทัด → `\n` (ตัวกลับคือ unescDetail) */
+export function escDetail(s) { return String(s).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n'); }
+/** ตัวกลับของ escDetail — เดินทีละตัว (`\\n` = แบ็กสแลช + n ไม่ใช่ขึ้นบรรทัด) */
+export function unescDetail(s) {
+  return String(s).replace(/\\(\\|n)/g, (m, c) => (c === 'n' ? '\n' : '\\'));
+}
+/** ชื่อไฟล์ log ของวัน (`app-YYYY-MM-DD.log`) → วัน · ไม่ใช่ไฟล์ log = '' */
+export function logFileDay(name) {
+  const m = String(name || '').match(/^app-(\d{4}-\d{2}-\d{2})\.log$/);
+  return m ? m[1] : '';
 }
 
 /** เวลาแบบสั้นสำหรับแสดงบนแผง (HH:MM:SS) — ไม่พึ่ง locale ของเครื่อง */

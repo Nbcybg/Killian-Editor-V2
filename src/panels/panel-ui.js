@@ -71,7 +71,9 @@ export const PANEL_DEFS = [
   { id: 'search',   i18n: 'ui.panel.search',  adopt: '#search-panel',  defaultSide: 'left',  minW: 280, dockW: 360, tearoff: true },
   { id: 'notes',    i18n: 'ui.common.notebookNoteQuick', adopt: '#notes-panel', defaultSide: 'right', minW: 220, tearoff: true },
   // [alpha.94] Story Starter — สร้างเรื่องทีละขั้น แล้วเล่นเป็นตอน ๆ กับ Game Master
-  { id: 'starter',  i18n: 'panel.starterTitle',  adopt: '#starter-panel',  defaultSide: 'left', minW: 460, dockW: 680, tearoff: true },
+  // [alpha.164 · รอบต่อ 4] minW 460 → 360: หน้าต่าง 1024 (ต้นไม้ + พื้นที่เขียนขั้นต่ำ 420) เหลือให้แผงนี้ ~390px
+  //   เนื้อจึงถูกตัดขอบขวาทุกขั้น · ตรวจแล้วทุกขั้นของตัวสร้าง (พื้นฐาน/ขั้นสูง) พอดีที่ 364px
+  { id: 'starter',  i18n: 'panel.starterTitle',  adopt: '#starter-panel',  defaultSide: 'left', minW: 360, dockW: 680, tearoff: true },
   // [alpha.79] บทพูดทั้งผลงาน (กวาดจากไฟล์ทั้งโปรเจกต์)
   { id: 'dialogue', i18n: 'panel.dialogueTitle', adopt: '#dialogue-panel', defaultSide: 'left', minW: 460, dockW: 620, tearoff: true },
   // [alpha.82] ห้องซ้อมบท — คนละตัวกับ "บทพูดทั้งผลงาน" ข้างบน (ตัวนั้นรวบรวมของที่เขียนไปแล้ว
@@ -80,7 +82,8 @@ export const PANEL_DEFS = [
 
   // ── วางแผน (บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ) ──
   { id: 'dashboard', i18n: 'panel.dashboardTitle', adopt: '#dash-panel',     defaultSide: 'left', minW: 620, dockW: 640, tearoff: true },
-  { id: 'kanban',    i18n: 'panel.kanbanTitle',    adopt: '#kanban-panel',   defaultSide: 'left', minW: 800, dockW: 640, tearoff: true, floatFrac: 0.8 },
+  { id: 'kanban',    i18n: 'panel.kanbanTitle',    adopt: '#kanban-panel',   defaultSide: 'left', minW: 800, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
+  // [alpha.165] flush = กระดานสูงเต็มแผง → แถบเลื่อนแนวนอนของคอลัมน์อยู่ขอบล่างแผง (เดิมกระดานสูงตามเนื้อ แถบไปลอยกลางแผง)
   { id: 'books',     i18n: 'panel.booksTitle',     adopt: '#books-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true },
   // [alpha.141] จัดการบท — ปกบท (รูป/ข้อความ) · ติ๊กใช้ปก · ลำดับบท · สถิติ
   { id: 'chapters',  i18n: 'ui.chapters.title',    adopt: '#chapters-panel', defaultSide: 'left', minW: 400, dockW: 640 },
@@ -812,6 +815,12 @@ function trackClosedPanels() {
   const m = getPanelManager();
   const openNow = new Set(PANEL_DEFS.filter((d) => d.closable !== false && m.isOpen(d.id)).map((d) => d.id));
   const stash = stashedIds();
+  // [alpha.165] ผู้ใช้: "log ต้องบอกว่าเปิดตัวไหน" — ตรงนี้เห็นทุกทางที่แผงเปิด/ปิด (ปุ่ม · เมนู · คีย์ลัด · เวิร์กสเปซ · AI)
+  //   รอบวาดแรกหลังบูตไม่จด (ไม่ใช่การกระทำ แค่กู้เลย์เอาต์)
+  if (_lastOpen) {
+    for (const id of openNow) if (!_lastOpen.has(id)) log('info', 'panel: open ' + id);
+    for (const id of _lastOpen) if (!openNow.has(id)) log('info', 'panel: close ' + id + (tornOff.has(id) ? ' (tear-off)' : stash.has(id) ? ' (hidden side)' : ''));
+  }
   if (_lastOpen) {
     for (const id of _lastOpen) {
       if (openNow.has(id) || stash.has(id) || tornOff.has(id)) continue;
@@ -847,8 +856,13 @@ export function restoreHiddenPanel(id) {
   if (onShowHook) { try { onShowHook(pid); } catch {} }
   return true;
 }
+// [alpha.165] ★ ผู้ใช้สั่งเอาออก (ซ้ำรอบสอง — alpha.50 เคยเลิก chip มุมจอไปแล้ว แล้ว .161 นำกลับมาเอง)
+//   "ปิด panel แล้วมีแถบเล็ก ๆ มุมขวาล่าง บอกแล้วให้เอาออก" · ทางกลับของแผงคือปุ่มบนแถบ · เมนู มุมมอง → แผง · คีย์ลัด
+//   ห้ามวาดอะไรลอยทับพื้นที่เขียนเพื่อบอกแผงที่ปิดอีก · ตัวรายการ (hiddenPanelChips) ยังอยู่ให้เมนู/เทสอ่าน
+const HIDDEN_CHIPS_ON = false;
 function renderHiddenChips() {
   const h = host();
+  if (!HIDDEN_CHIPS_ON) { document.querySelectorAll('.k-hidden-chips').forEach((n) => n.remove()); return; }
   if (!h || PANEL_WIN) return;
   // วางใน #content (พื้นที่เขียน · position:relative อยู่แล้ว) — ลอยมุมล่างขวา ไม่กินความสูงของเอกสาร
   const docs = document.getElementById('content');
@@ -1337,6 +1351,7 @@ function stampDefaultSizes(root) {
     n.pxW = d.dockW || 300;
     n.pxH = d.dockH || 220;
     delete n.fW; delete n.fH;           // ขนาดโหมดลอยกลับไปใช้ค่าอ้างอิงเช่นกัน
+    delete n.fX; delete n.fY;           // [alpha.165] ตำแหน่งโหมดลอยด้วย
   });
   return next;
 }

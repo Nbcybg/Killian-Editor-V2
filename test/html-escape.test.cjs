@@ -24,10 +24,10 @@ const hasEventAttr = (html) => [...String(html).matchAll(/<img\b([^>]*)>/g)]
   .some((m) => /\son[a-z]+\s*=/i.test(m[1].replace(/"[^"]*"/g, '""')));
 const evil = 'ก่อน ![a" onerror="alert(1)](x" onload="y) หลัง';
 const h1 = MD.inlineHtml(evil);
-check('★ inlineHtml: รูปในบรรทัดไม่มีแอตทริบิวต์เกิน alt/src', imgAttrs(h1).every((a) => a.join() === 'alt,src'), h1);
+check('★ inlineHtml: รูปในบรรทัดไม่มีแอตทริบิวต์เกิน class/alt/src/style (IMG-IN-B)', imgAttrs(h1).every((a) => a.join() === 'class,alt,src,style'), h1);
 check('★ inlineHtml: ไม่มี onerror/onload เป็นแอตทริบิวต์', !hasEventAttr(h1), h1);
 check('inlineHtml: ข้อความยังอยู่ครบ (escape ไม่ใช่ลบ)', h1.includes('&quot;') && h1.includes('ก่อน') && h1.includes('หลัง'), h1);
-check('รูปธรรมดายังได้ <img> ปกติ', /<img alt="ภาพ" src="images\/a.png">/.test(MD.inlineHtml('![ภาพ](images/a.png)')),
+check('รูปธรรมดายังได้ <img> ปกติ', /<img class="k-inline-img" alt="ภาพ" src="images\/a.png" style="--k-img-h:1">/.test(MD.inlineHtml('![ภาพ](images/a.png)')),
       MD.inlineHtml('![ภาพ](images/a.png)'));
 check("single quote ก็ถูก escape", !MD.inlineHtml("![x' onerror='1](y)").includes("x' onerror"));
 

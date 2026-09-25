@@ -20,10 +20,18 @@ export function hx(s) {
 
 /** แทน {0},{1}… ด้วยค่าที่ส่งมา (ไม่ escape) — ส่วนที่เหลือของข้อความ escape */
 export function hf(tpl, a = []) {
-  return String(tpl == null ? '' : tpl)
-    .split(/\{(\d+)\}/)
-    .map((p, i) => (i % 2 ? String(a[+p] == null ? '' : a[+p]) : hx(p)))
-    .join('');
+  // [alpha.164 · รอบต่อ 2] รู้จักรูปพหูพจน์ `{0|page|pages}` เหมือน formatMsg (คำนั้นมาจากไฟล์ภาษา → escape)
+  const s = String(tpl == null ? '' : tpl);
+  const re = /\{(\d+)(?:\|([^|{}]*)\|([^{}]*))?\}/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(s))) {
+    out += hx(s.slice(last, m.index));
+    const v = a[+m[1]];
+    if (m[2] !== undefined) out += hx(Math.abs(Number(String(v).replace(/[^\d.-]/g, ''))) === 1 ? m[2] : m[3]);
+    else out += String(v == null ? '' : v);
+    last = re.lastIndex;
+  }
+  return out + hx(s.slice(last));
 }
 
 /** ข้อความของคีย์ (escape แล้ว) */

@@ -1,7 +1,7 @@
 // dashboard.js — แดชบอร์ดโปรเจกต์ (สถิติ/analytics/ฉากปักหมุด/ไปต่อจากที่ค้าง)
 // แยกจาก app.js — feature นี้เป็นจุดที่ feature ใหม่ (แก้แดชบอร์ด, กราฟ, theme) จะมาต่อยอด
 import { t, tf } from './i18n.js';
-import { CHART_SERIES, STATUS_UNSET } from './palette.js';   // [alpha.162 · W6 ข้อ 2]
+import { CHART_SERIES, STATUS_UNSET, themeColor } from './palette.js';   // [alpha.162 · W6 ข้อ 2]
 import { $, state, el, dataLabel, log } from './core.js';
 import { allStatuses, statusColor } from './custom-status.js';
 import { vivid, inkOn } from './color-util.js';
@@ -53,9 +53,14 @@ export async function renderDashboard(pane) {
   const root = state.root;
   if (!root) return false;                  // ยังไม่มีโปรเจกต์ = ไม่มีอะไรให้วาด (ไม่ใช่ข้อผิดพลาด)
   const stale = () => state.root !== root;  // โปรเจกต์ถูกปิด/สลับระหว่างวาด
-  pane.innerHTML = '';
+  // [alpha.165] ★ ผู้ใช้: "เลื่อนแดชบอร์ดลงล่างสุด ปิดแผงแล้วเปิดใหม่ = เสี้ยววินาทีไปบนสุดแล้วเลื่อนลงมา"
+  //   ต้นตอ: เปิดแผงทีไรวาดใหม่ โดย **ล้างเนื้อเดิมก่อน** แล้วค่อยรออ่านไฟล์ทั้งโปรเจกต์ (await หลายสิบจุด)
+  //   → แผงว่างอยู่ช่วงหนึ่ง ตำแหน่งเลื่อนถูกหนีบเป็น 0 แล้วค่อยถูกคืนตอนเนื้อกลับมา (= กระโดด/ไหล)
+  //   แก้: มีเนื้อเดิมอยู่แล้ว = ประกอบฉบับใหม่นอกจอ แล้วสลับทีเดียวตอนเสร็จพร้อมตำแหน่งเลื่อนเดิม
+  //   (ครั้งแรกที่ยังว่าง = วางทันทีให้เห็นตัวเลขไหลเข้ามาเหมือนเดิม) · โปรเจกต์เปลี่ยนกลางทาง = ไม่แตะของเดิม
   const wrap = el('div', 'dash-wrap');
-  pane.append(wrap);
+  const firstPaint = !pane.querySelector(':scope > .dash-wrap');
+  if (firstPaint) { pane.innerHTML = ''; pane.append(wrap); }
   wrap.append(el('div', 'dash-title', state.title));
   const cards = el('div', 'dash-cards'); wrap.append(cards);
   const card = (label) => {
@@ -64,7 +69,7 @@ export async function renderDashboard(pane) {
     c.append(v, el('div', 'dash-label', label));
     cards.append(c); return v;
   };
-  const vCh = card(t('ui.common.chapter')), vSc = card(t('ui.common.scene2')), vW = card(t('ui.dash.wordAll'));
+  const vCh = card(t('ui.dash.statChapters')), vSc = card(t('ui.dash.statScenes')), vW = card(t('ui.dash.wordAll'));
   // [alpha.157] ผู้ใช้: "เพิ่มในสถิติ คือ เวลาอ่านรวม ลงไปในสถิติใหญ่"
   const vRead = card(t('ui.dash.readTime'));
   const vE = card(t('ui.dash.wikiEntities'));   // [alpha.164 ข้อ B4] เดิมเป็นอังกฤษฮาร์ดโค้ด
@@ -291,7 +296,25 @@ export async function renderDashboard(pane) {
   } catch (e) {
     centHost.append(el('div', 'dim', t('ui.dash.loadPartHubNot')));
   }
+  if (stale()) return false;
+  if (!firstPaint) swapKeepScroll(pane, wrap);
   return true;
+}
+
+/** [alpha.165] แทนเนื้อทั้งก้อนโดยคงตำแหน่งเลื่อนของทุกกล่องเหนือ pane (ถึงตัวแผง) ไว้ในเฟรมเดียวกัน */
+function swapKeepScroll(pane, fresh) {
+  const keep = [];
+  for (let e = pane; e && e !== document.body; e = e.parentElement) {
+    if (e.scrollTop || e.scrollLeft) keep.push([e, e.scrollTop, e.scrollLeft]);
+    if (e.classList && (e.classList.contains('k-panel') || e.classList.contains('k-float-panel'))) break;
+  }
+  pane.replaceChildren(fresh);
+  for (const [e, top, left] of keep) {
+    const sb = e.style.scrollBehavior;
+    e.style.scrollBehavior = 'auto';
+    e.scrollTop = top; e.scrollLeft = left;
+    e.style.scrollBehavior = sb;
+  }
 }
 
 
@@ -402,7 +425,8 @@ export function buildKanbanSummary(sceneStatuses, total) {
   head.append(open);
   panel.append(head);
   const rows = statusBreakdown(sceneStatuses, allStatuses(), '');
-  const colorOf = (r) => (r.unset ? STATUS_UNSET : vivid(statusColor(r.key)));
+  // [alpha.165] "ยังไม่กำหนด" ไม่ใช่สถานะ (ไม่มีสีของผู้ใช้) → ใช้สีจางของธีม · เดิมเทาอมฟ้าตายตัวทุกธีม (ผู้ใช้: เทาของธีมเก่ายังอยู่)
+  const colorOf = (r) => (r.unset ? themeColor('--dim', STATUS_UNSET) : vivid(statusColor(r.key)));
   const labelOf = (r) => (r.unset ? t('ui.kanban.unset') : dataLabel(r.key));
   const strip = el('div', 'dash-kb-strip');
   for (const r of rows) {

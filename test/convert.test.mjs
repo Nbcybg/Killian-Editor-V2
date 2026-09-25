@@ -202,5 +202,15 @@ check('spMap ที่ผิดคำศัพท์ (ตัวพิมพ์�
 check('spMap ที่ยาวไม่ตรงจำนวนบล็อกถูกปฏิเสธ',
       convertBody(toSp.body, 'prose', { spMap: 'S2', spHash: 'x' }).mode === 'table');
 
+// ───────── [alpha.164 · รอบต่อ 5] รูปในบรรทัด (โหนด image) ต้องไม่ถูกนับเป็นบรรทัดว่าง ─────────
+{
+  const src = 'ย่อหน้าแรก\n\n![](a.png) ![](b.png)\n\nก่อน ![x](c.png "h=2") หลัง';
+  const sp = convertBody(src, 'screenplay', {}).body;
+  check('แปลงเป็นบท: บรรทัดที่มีแต่รูปในบรรทัดไม่หาย', sp.includes('![](a.png) ![](b.png)'), JSON.stringify(sp));
+  check('แปลงเป็นบท: รูปกลางย่อหน้า + ชื่อกำกับอยู่ครบ', sp.includes('![x](c.png "h=2")'), JSON.stringify(sp));
+  check('บรรทัดรูปล้วนไม่ถูกจัดเป็น blank',
+        proseBlocks('![](a.png) ![](b.png)')[0].kind !== 'blank', JSON.stringify(proseBlocks('![](a.png) ![](b.png)')));
+}
+
 console.log(`\nconvert: ${pass} ผ่าน · ${fail} ไม่ผ่าน`);
 if (fail) process.exit(1);

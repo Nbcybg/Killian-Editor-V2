@@ -259,7 +259,9 @@ async function renderList(host) {
 async function createFlow() {
   const gate = await aiConfigured();
   if (!gate.ok) {
-    const yes = await confirmBox(t('ui.starter.needAI') + '\n\n' + gate.why,
+    // [alpha.164 · รอบต่อ 5] ยังไม่มีคีย์ = เหตุผล "ตั้งค่า AI ก่อน…" ซ้ำกับหัวข้อ (และปุ่มพาไปตั้งค่าอยู่แล้ว)
+    // → ต่อท้ายเฉพาะเหตุผลที่บอกอะไรเพิ่ม (ยังไม่เลือกผู้ให้บริการ · ยังไม่มีโมเดล) · ตัดสินด้วยรหัส ไม่เทียบข้อความ
+    const yes = await confirmBox(t('ui.starter.needAI') + (gate.code === 'noKey' ? '' : '\n\n' + gate.why),
                                  t('ui.starter.goAISettings'));
     if (!yes) return;
     const { showAISettingsDialog } = await import('../ai/ai-provider-ui.js');

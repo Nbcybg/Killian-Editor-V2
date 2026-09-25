@@ -124,5 +124,39 @@ check('ทุกระดับมีไอคอน+ชื่อไทย', L.L
   check('exportText ว่างไม่พัง', L.exportText(null) === '' && L.exportText([]) === '');
 }
 
+// ── [alpha.165] ผู้ใช้: "log ต้องเก็บละเอียด ทั้ง error code … และดูย้อนหลังได้" ──
+{
+  const e = new Error('open failed');
+  e.code = 'ENOENT'; e.errno = -2; e.syscall = 'open'; e.path = 'C:/x/scene-01.md';
+  const d = L.detailText(e);
+  check('[165-L] ★ รายละเอียดของ error ขึ้นต้นด้วยรหัส (code errno syscall path)',
+        d.startsWith('[ENOENT errno=-2 syscall=open path=C:/x/scene-01.md] '), d.slice(0, 80));
+  check('[165-L] error ที่ไม่มีรหัส = ไม่มีวงเล็บนำหน้า', !L.detailText(new Error('x')).startsWith('['));
+  check('[165-L] error ใน object ก็พารหัสไปด้วย', L.detailText({ err: e }).includes('"code": "ENOENT"'));
+
+  // ไป-กลับ: formatLine → parseLogLine ได้ระเบียนเดิม (รวมรายละเอียดหลายบรรทัด)
+  const s2 = L.createLogStore(50);
+  const rec = s2.push('warn', 'save: เขียนไม่สำเร็จ', 'บรรทัด 1\nบรรทัด 2', '2026-09-25T10:20:30.000Z');
+  const back = L.parseLogLine(L.formatLine(rec), 7);
+  check('[165-L] ★ parseLogLine อ่านบรรทัดที่ formatLine เขียนกลับได้ครบ',
+        back && back.ts === rec.ts && back.level === 'warn' && back.source === 'save'
+        && back.msg === rec.msg && back.detail === 'บรรทัด 1\nบรรทัด 2' && back.seq === 7, JSON.stringify(back));
+  check('[165-L] บรรทัด CRLF (ไฟล์บน Windows) อ่านได้', L.parseLogLine(L.formatLine(rec) + '\r').detail === 'บรรทัด 2'.replace('บรรทัด 2', 'บรรทัด 1\nบรรทัด 2'));
+  check('[165-L] บรรทัดว่าง = null', L.parseLogLine('') === null && L.parseLogLine('   ') === null);
+  // ที่อยู่บน Windows มี `\n` ในตัว (C:\Users\noobc) — ต้องไม่กลายเป็นขึ้นบรรทัดตอนอ่านไฟล์กลับ (เจอบนแอปจริง)
+  const winPath = 'C:\\Users\\noobc\\AppData\\new\\scene-01.md';
+  const r3 = s2.push('info', 'tab: open', winPath + '\nบรรทัดสอง', '2026-09-25T10:20:31.000Z');
+  const line3 = L.formatLine(r3);
+  check('[165-L] ★ บรรทัดในไฟล์เป็นบรรทัดเดียวเสมอ', !line3.includes('\n'), line3);
+  const back3 = L.parseLogLine(line3);
+  check('[165-L] ★★ ที่อยู่ Windows ไป-กลับครบทุกแบ็กสแลช (\\noobc ไม่กลายเป็นขึ้นบรรทัด)',
+        back3 && back3.detail === winPath + '\nบรรทัดสอง', JSON.stringify(back3 && back3.detail));
+  check('[165-L] escDetail/unescDetail กลับกันพอดี', L.unescDetail(L.escDetail('a\\nb\\\\c\nd')) === 'a\\nb\\\\c\nd');
+  const odd = L.parseLogLine('ข้อความแปลก ๆ ที่ไม่มีหัว');
+  check('[165-L] บรรทัดไม่ตรงรูปแบบ = info ทั้งบรรทัด (ไม่ทิ้ง)', odd && odd.level === 'info' && odd.msg.includes('แปลก'));
+  check('[165-L] logFileDay อ่านวันจากชื่อไฟล์', L.logFileDay('app-2026-09-25.log') === '2026-09-25'
+        && L.logFileDay('app-2026-9-25.log') === '' && L.logFileDay('../x.log') === '' && L.logFileDay(null) === '');
+}
+
 console.log(`log-core: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

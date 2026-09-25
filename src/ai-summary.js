@@ -198,7 +198,7 @@ export async function showAISummary({ force = false } = {}) {
     await kapi.writeFile(dest, '# ' + state.title + tt('ui.aiSum.summary') + result);
     setStatus(tt('ui.aiSum.exportSummaryDone'));
   };
-  const closeB = el('button', 'k-ok', tt('ui.common.close'));
+  const closeB = el('button', 'k-ok k-cancel', tt('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(againB, exportB, closeB);
   box.append(btns);

@@ -164,9 +164,12 @@ export function tf(key, ...vals) {
 export function formatMsg(tpl, vals) {
   const s = withShortcutTokens(String(tpl));
   if (!vals || !vals.length) return s.replace(/\{\{|\}\}/g, (m) => m[0]);
-  return s.replace(/\{\{|\}\}|\{(\d+)\}/g, (m, d) => {
+  return s.replace(/\{\{|\}\}|\{(\d+)(?:\|([^|{}]*)\|([^{}]*))?\}/g, (m, d, one, many) => {
     if (m === '{{' || m === '}}') return m[0];
     const v = vals[+d];
+    // [alpha.164 · รอบต่อ 2] รูปพหูพจน์ `{0|page|pages}` = คำอย่างเดียว (ตัวเลขยังเขียนเป็น `{0}` แยก)
+    // ไทยไม่ต้องใช้ · อังกฤษเคยได้ "1 pages" / "used 1 times" · 1 (หรือ −1) = รูปเอกพจน์
+    if (one !== undefined) return Math.abs(Number(String(v).replace(/[^\d.-]/g, ''))) === 1 ? one : many;
     return v == null ? '' : String(v);
   });
 }

@@ -19,6 +19,15 @@ const marks = {
   em: { parseDOM: [{ tag: 'em' }], toDOM: () => ['em', 0] },
   underline: { parseDOM: [{ tag: 'u' }], toDOM: () => ['u', 0] },
   strike: { parseDOM: [{ tag: 's' }], toDOM: () => ['s', 0] },
+  // [alpha.164 · บั๊ก] ★ มาร์กที่ `mdToDoc()` ให้ได้ต้องมีครบ — เดิมมีแค่สี่ตัวข้างบน
+  // บรรทัดที่มี `~…~` (ตัวห้อย · คนไทยพิมพ์ "ค่ะ~ … นะ~" บ่อย) · `^…^` · สแปนสี/สีเน้น
+  // → `nodeFromJSON` โยน "There is no mark type sub" = **เปิดไฟล์บทไม่ได้ทั้งไฟล์**
+  // สเปกยืมจากสคีมานิยายตัวเดียวกัน (กฎถาวรข้อ 5 — หน้าตาเหมือนกันโดยโครงสร้าง)
+  // · ตัวเขียนไฟล์ (`inlineToMd` → md.js) รู้จักทุกตัวอยู่แล้ว จึงไป-กลับได้ครบ
+  sup: proseSchema.spec.marks.get('sup'),
+  sub: proseSchema.spec.marks.get('sub'),
+  color: proseSchema.spec.marks.get('color'),
+  highlight: proseSchema.spec.marks.get('highlight'),
 };
 
 export const spSchema = new Schema({
@@ -54,9 +63,9 @@ export const spSchema = new Schema({
 });
 
 // inline **หนา** ฯลฯ — ชุดเดียวกับ md.js (import ตรงจะวนกันเอง จึงรับผ่านพารามิเตอร์)
-import { mdToDoc, docToMd } from './md.js';
+import { mdToDoc, docToMd, inlineImagesAsText } from './md.js';
 import { spellPlugin, mentionPlugin, refreshMentions, focusLinePlugin, commentAnchorPlugin,
-         keepScroll, HOME_END_KEYS } from './editor.js';
+         keepScroll, HOME_END_KEYS, schema as proseSchema } from './editor.js';
 // [61] แสดงรูปแบบ + [57] เส้นคั่นหน้าในตัวแก้ไข
 import { spFormatGuidePlugin, spPageBreakPlugin, spSceneNumberPlugin, spContinuedPlugin,
          spErrorMarkPlugin,
@@ -68,7 +77,11 @@ import { guardEditable } from './edit-guard.js';   // [alpha.164 · บั๊ก
 function inlineContent(text) {
   const doc = mdToDoc(text);
   const p = (doc.content || [])[0] || {};
-  return (p.type === 'paragraph' ? p.content : null) || (text ? [{ type: 'text', text }] : []);
+  // [alpha.164 · IMG-IN-A] บทภาพยนตร์ไม่มีรูปกลางบรรทัด (spSchema ไม่มีโหนด `image`) →
+  // คืนเป็นข้อความดิบตามเดิม ไม่งั้น nodeFromJSON โยน error แล้วเปิดไฟล์บทไม่ได้ทั้งไฟล์
+  const content = (p.type === 'paragraph' ? p.content : null);
+  if (content) return inlineImagesAsText(content);
+  return text ? [{ type: 'text', text }] : [];
 }
 function inlineToMd(content) {
   return docToMd({ type: 'doc', content: [{ type: 'paragraph', content }] });
@@ -92,6 +105,21 @@ export function spDocFromMarkdown(markdown, resolveSrc = (p) => p) {
   });
   if (!blocks.length) blocks.push({ type: 'sp', attrs: { el: 'scene' } });
   return spSchema.nodeFromJSON({ type: 'doc', content: blocks });
+}
+
+/**
+ * doc ของ spSchema → markdown ของบท (ตัวเดียวกับ `SPEditor.getMarkdown()` · แยกออกมาให้เทสไป-กลับได้)
+ * [alpha.87] ลูปประกอบบรรทัดอยู่ที่ blocksToMd() ใน fountain.js ที่เดียว
+ * (convert.js ต้องใช้ตัวเดียวกัน — สองชุดที่ตัดสิน prevBlank/guessNames ต่างกัน = ไฟล์เพี้ยน)
+ */
+export function spDocToMarkdown(doc) {
+  const nodes = [];
+  doc.forEach((node) => { nodes.push(node); });
+  const asBlock = (node) => node.type.name === 'spimage'
+    ? { el: 'image', text: node.attrs.md || `![${node.attrs.alt || ''}](${node.attrs.src || ''})` }
+    : { el: node.attrs.el,
+        text: node.attrs.el === 'raw' ? node.textContent : inlineToMd(node.toJSON().content || []) };
+  return blocksToMd(nodes.map(asBlock));
 }
 
 /** คำนำหน้าของ "รายการ" ในบทภาพยนตร์ — เก็บลงไฟล์เป็นตัวอักษรธรรมดา (ดูคอมเมนต์ใน toggleTextList) */
@@ -704,17 +732,7 @@ export class SPEditor {
     return true;
   }
 
-  getMarkdown() {
-    // [alpha.87] ลูปประกอบบรรทัดย้ายไปอยู่ที่ blocksToMd() ใน fountain.js ที่เดียว
-    // (convert.js ต้องใช้ตัวเดียวกัน — สองชุดที่ตัดสิน prevBlank/guessNames ต่างกัน = ไฟล์เพี้ยน)
-    const nodes = [];
-    this.view.state.doc.forEach((node) => { nodes.push(node); });
-    const asBlock = (node) => node.type.name === 'spimage'
-      ? { el: 'image', text: node.attrs.md || `![${node.attrs.alt || ''}](${node.attrs.src || ''})` }
-      : { el: node.attrs.el,
-          text: node.attrs.el === 'raw' ? node.textContent : inlineToMd(node.toJSON().content || []) };
-    return blocksToMd(nodes.map(asBlock));
-  }
+  getMarkdown() { return spDocToMarkdown(this.view.state.doc); }
 
   // แทรกรูปในบทหนัง (เรียกจาก insertImage ของ app.js)
   insertImage(src, alt, md) {

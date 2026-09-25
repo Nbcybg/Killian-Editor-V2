@@ -121,13 +121,6 @@ ui.ai.worldPrompt,"อธิบายสิ่งที่ต้องการ�
 ui.ai.worldTitle,สร้างโลก
 ui.ai.wReligion,ศาสนา
 ui.ai.youAssistantWriterReply,คุณเป็นผู้ช่วยนักเขียน ตอบคำถามเกี่ยวกับเนื้อหานิยายของผู้ใช้ 
-ui.aiAssistant.changeToneTextStyleF,"เปลี่ยนโทนของข้อความต่อไปนี้ให้เป็นแบบ ""{0}"" โดยคงเนื้อหาและลำดับเหตุการณ์เดิม"
-ui.aiChatPanel.busyActF,กำลังลงมือทำ {0} คำสั่ง…
-ui.aiChatPanel.startModeF,"เริ่มคุยได้เลย — โหมด ""{0}"" · เห็นข้อมูล: {1}"
-ui.aiSet.noModelFor,"ผู้ให้บริการ ""{0}"" ยังไม่ได้เลือกโมเดล (เมนู AI → ตั้งค่า AI)"
-ui.aiSyn.aICantSendF,AI ไม่ได้ส่ง{0}กลับมา
-ui.aiSyn.fillF,เติม{0}จาก AI แล้ว
-ui.aiTools.modeCurrentNotAllowF,"โหมดปัจจุบันไม่อนุญาตให้ใช้ ""{0}"" — สลับโหมดที่กล่องพิมพ์ก่อน"
 ui.aia.adjKeep,คงไว้
 ui.aia.adjLessComedy,ลดความตลก
 ui.aia.adjLessDrama,ลดดราม่า
@@ -511,6 +504,7 @@ ui.aiAssistant.addDetailSceneTouch,เพิ่มรายละเอียด
 ui.aiAssistant.ambiencePressUseImage,บรรยากาศหม่น กดดัน ใช้ภาพพจน์หนักแน่น
 ui.aiAssistant.betweenCharacter,อ่อนโยน เน้นความรู้สึกระหว่างตัวละคร
 ui.aiAssistant.cantSettingsAIClient,ยังไม่ได้ตั้งค่า AI client
+ui.aiAssistant.changeToneTextStyleF,"เปลี่ยนโทนของข้อความต่อไปนี้ให้เป็นแบบ ""{0}"" โดยคงเนื้อหาและลำดับเหตุการณ์เดิม"
 ui.aiAssistant.characterThingItem,ตัวละคร/สิ่งของที่เกี่ยวข้อง:
 ui.aiAssistant.concise,กระชับ
 ui.aiAssistant.context,"### บริบท
@@ -619,6 +613,7 @@ ui.aiChatPanel.assistant,ผู้ช่วย
 ui.aiChatPanel.assistantFileMdFolder,ทักษะของผู้ช่วย (ไฟล์ .md ในโฟลเดอร์ Skills/ ของโปรเจกต์)
 ui.aiChatPanel.backListSession,กลับไปรายการเซสชัน
 ui.aiChatPanel.btnSendSetFile,ปุ่มส่งตั้งได้ที่ เมนู AI → ตั้งค่า AI
+ui.aiChatPanel.busyActF,กำลังลงมือทำ {0} คำสั่ง…
 ui.aiChatPanel.busyContinue,กำลังเขียนต่อ…
 ui.aiChatPanel.busyRunPressBack,กำลังทำงาน: {0} · {1} วิ — กดเพื่อกลับไปดู
 ui.aiChatPanel.busyThink,กำลังคิด…
@@ -724,6 +719,7 @@ ui.aiChatPanel.showSessionArrangeKeep, แสดงเซสชันที่�
 ui.aiChatPanel.showTextJSON,{{ }} แสดงข้อความดิบ (JSON)
 ui.aiChatPanel.staleSaveRebased,บันทึกทับด้วยข้อมูลเก่า — ยกข้อความล่าสุดมาแทนให้แล้ว
 ui.aiChatPanel.startDialogueNewDone,เริ่มบทสนทนาใหม่แล้ว (เก็บโหมด/โมเดล/ไฟล์แนบไว้)
+ui.aiChatPanel.startModeF,"เริ่มคุยได้เลย — โหมด ""{0}"" · เห็นข้อมูล: {1}"
 ui.aiChatPanel.statusError,คำตอบล่าสุดเกิดข้อผิดพลาด
 ui.aiChatPanel.statusIdle,พร้อม
 ui.aiChatPanel.statusRunning,กำลังคิด…
@@ -1062,6 +1058,7 @@ ui.aiSet.cantPickProviderAI,ยังไม่ได้เลือกผู้�
 ui.aiSet.cantSettingsAIFile,ยังไม่ได้ตั้งค่า AI — เมนู AI → ตั้งค่า AI
 ui.aiSet.connectAICant,เชื่อมต่อ AI ไม่ได้: 
 ui.aiSet.fileKeepKeyPart,ไฟล์นี้เก็บคีย์ส่วนตัว — อย่าแชร์/อย่าใส่ใน zip ที่ส่งต่อ
+ui.aiSet.noModelFor,"ผู้ให้บริการ ""{0}"" ยังไม่ได้เลือกโมเดล (เมนู AI → ตั้งค่า AI)"
 ui.aiSet.settingsAIFileSettings,ตั้งค่า AI ก่อนที่ เมนู AI → ตั้งค่า AI
 ui.aiSkills.authorDefineYouDo,ทักษะที่ผู้เขียนกำหนดให้คุณ (ทำตามอย่างเคร่งครัด · สำคัญกว่าคำแนะนำทั่วไปข้างบน):
 ui.aiSkills.forbidSummaryActEnd,ห้ามสรุปตอนจบให้ ถ้าผู้เขียนไม่ได้ขอ
@@ -1109,9 +1106,11 @@ ui.aiSum.tryNew,ลองใหม่
 ui.aiSum.useResultSummarySave,ใช้ผลสรุปที่บันทึกไว้ (เนื้อหายังไม่เปลี่ยน)
 ui.aiSum.youWriterChapterHelp,คุณเป็นนักเขียนบทมืออาชีพ ช่วยคิดชื่อภาษาไทย
 ui.aiSum.youWriterHelpSummary,คุณเป็นนักเขียนมืออาชีพ ช่วยสรุปเนื้อหานิยาย
+ui.aiSyn.aICantSendF,AI ไม่ได้ส่ง{0}กลับมา
 ui.aiSyn.busyAIWrite,กำลังให้ AI เขียน
 ui.aiSyn.cutFile,"
 …(ตัดท้ายไฟล์)"
+ui.aiSyn.fillF,เติม{0}จาก AI แล้ว
 ui.aiSyn.replyConflictMainScene,"ตอบเป็น ""ความขัดแย้งหลักของฉาก"" 1 ประโยคสั้น ๆ (ใครขัดกับใคร/อะไร) ห้ามอธิบายเพิ่ม"
 ui.aiSyn.replyMoodMainScene,"ตอบเป็น ""อารมณ์หลักของฉาก"" 1–3 คำ (เช่น ตึงเครียด · เศร้า · อบอุ่น) ห้ามอธิบายเพิ่ม"
 ui.aiSyn.replyNameViewMain,"ตอบเป็น ""ชื่อตัวละครที่เป็นมุมมองหลักของฉากนี้"" เท่านั้น (ชื่อเดียว ไม่เกิน 40 ตัวอักษร) "
@@ -1144,6 +1143,7 @@ ui.aiTools.editData,"แก้ข้อมูล ""{0}"""
 ui.aiTools.editHasSendOnly,แก้ไขเอนทิตี้ที่มีอยู่ (ส่งเฉพาะฟิลด์ที่จะแก้)
 ui.aiTools.forbidPutCommentText,- ห้ามใส่คอมเมนต์หรือข้อความอื่นในบล็อก `k2` — ต้องเป็น JSON ล้วน
 ui.aiTools.missingArg,ขาดอาร์กิวเมนต์: 
+ui.aiTools.modeCurrentNotAllowF,"โหมดปัจจุบันไม่อนุญาตให้ใช้ ""{0}"" — สลับโหมดที่กล่องพิมพ์ก่อน"
 ui.aiTools.msg,ไอเทม
 ui.aiTools.needAppActPrint,เมื่อต้องการให้โปรแกรมลงมือทำจริง ให้พิมพ์บล็อกโค้ดภาษา `k2` ที่มี JSON ข้างใน แบบนี้:
 ui.aiTools.new,"สร้าง{0} ""{1}"""
@@ -1274,6 +1274,8 @@ ui.app.allLine,เหมือนกันทุกบรรทัด
 ui.app.app,ฐานของโปรแกรม
 ui.app.appWriteNovelScreenplay,โปรแกรมเขียนนิยาย/บทภาพยนตร์ — Electron + ProseMirror
 ui.app.auto,— อัตโนมัติ —
+ui.app.autoFitWidthOff,ปิดซูมพอดีความกว้างอัตโนมัติ — กลับไปใช้ซูมที่ตั้งไว้เอง
+ui.app.autoFitWidthOn,เปิดซูมพอดีความกว้างอัตโนมัติ
 ui.app.autosaveFail,บันทึกอัตโนมัติไม่สำเร็จ: 
 ui.app.autosaveRunN,บันทึกอัตโนมัติสำเร็จ {0} จาก {1} ไฟล์
 ui.app.back,กลับไปฟอร์ม
@@ -2110,6 +2112,7 @@ ui.branch.edit,ไปแก้
 ui.branch.editTextChoiceDone,แก้ข้อความทางเลือกแล้ว
 ui.branch.eg,เช่น ไปตลาด
 ui.branch.egBookOneUse,เช่น เล่มหนึ่ง — ใช้เมื่อแต่ละเล่มมีทางเลือกคนละชุด
+ui.branch.egBookShort,เช่น เล่มหนึ่ง
 ui.branch.emptyGraph,ยังไม่มีฉากที่มีทางเลือก
 ui.branch.emptyHint,"ยังไม่มีฉากที่มีทางเลือก — เพิ่มได้ที่แถบ ""เพิ่มทางเลือก"" ด้านบน แล้วผังจะขึ้นทันที"
 ui.branch.expandGraph,ขยายผัง
@@ -2774,6 +2777,9 @@ ui.dash.readM,{0} นาที
 ui.dash.readTime,เวลาอ่านรวม
 ui.dash.saveTaskDoneGraph,บันทึกงานสัก 2 วันแล้วกราฟคำรายวันจะขึ้นที่นี่
 ui.dash.scenePinPin,ฉากปักหมุด ({0})
+ui.dash.statBooks,เล่ม
+ui.dash.statChapters,บท
+ui.dash.statScenes,ฉาก
 ui.dash.topWordHint,"""{0}"" ใช้ {1} ครั้ง ({2} ต่อหมื่นคำ)"
 ui.dash.topWords,คำที่ใช้บ่อย
 ui.dash.topWordsNote,จาก {0} คำ · คำไม่ซ้ำ {1} คำ · ไม่นับคำเชื่อมและชื่อตัวละคร
@@ -3160,12 +3166,12 @@ ui.elem.outline1,โครง 1
 ui.elem.outline2,โครง 2
 ui.elem.outline3,โครง 3
 ui.elem.p,ย่อหน้า
-ui.elem.pBold,ย่อหน้าหนา
-ui.elem.pItalic,ย่อหน้าเอียง
-ui.elem.pRight,ย่อหน้าชิดขวา
 ui.elem.pageBreak,ขึ้นหน้าใหม่
 ui.elem.pagebreakProse,ขึ้นหน้าใหม่
 ui.elem.parenthetical,วงเล็บ
+ui.elem.pBold,ย่อหน้าหนา
+ui.elem.pItalic,ย่อหน้าเอียง
+ui.elem.pRight,ย่อหน้าชิดขวา
 ui.elem.quote,ยกคำพูด
 ui.elem.raw,อื่น ๆ
 ui.elem.scene,หัวฉาก
@@ -3819,9 +3825,16 @@ ui.layoutSplit.fieldEmpty,ช่องว่าง
 ui.layoutSplit.leftRight,ซ้าย-ขวา
 ui.layoutSplit.topBottom,บน-ล่าง
 ui.locations,ที่
+ui.log.dayEmpty,ไฟล์ของวันนี้ว่างหรืออ่านไม่ได้
+ui.log.dayOption,{0} · {1} KB
+ui.log.dayPick,ดูบันทึกย้อนหลัง — เลือกไฟล์ของวันที่ต้องการ
+ui.log.dayReadonly,กำลังดูไฟล์ของวันที่ {0} (อ่านอย่างเดียว)
+ui.log.daySession,เซสชันนี้ (สด)
 ui.log.dup,[วนซ้ำ]
 ui.log.dupTimes,  (ซ้ำ {0} ครั้ง)
 ui.log.error,ผิดพลาด
+ui.log.folderLabel,เก็บที่
+ui.log.folderTip,โฟลเดอร์ที่เก็บไฟล์บันทึก (หนึ่งไฟล์ต่อวัน)
 ui.log.msg,เตือน
 ui.logline.compassHead,เข็มทิศเรื่อง (Logline ที่ผู้เขียนตั้งไว้ — ใช้ตรวจว่าเนื้อหาไม่หลุดแกนเรื่อง)
 ui.logline.compassRule,คำแนะนำ/ข้อความที่เขียนต้องสอดคล้องกับเข็มทิศนี้ ถ้าเนื้อหาเริ่มหลุดจากเป้าหมาย อุปสรรค หรือเดิมพัน ให้บอกผู้เขียนสั้น ๆ
@@ -5171,6 +5184,15 @@ ui.recOrd.tagSkip,แท็ก (เว้นวรรค)
 ui.recOrd.timeNote,เวลาที่จด
 ui.recOrd.tired,😴 ล้า
 ui.recOrd.wordMerge,คำรวม
+ui.relType.acquaintance,รู้จัก
+ui.relType.ally,พันธมิตร
+ui.relType.custom,อื่น ๆ
+ui.relType.enemy,ศัตรู
+ui.relType.family,ครอบครัว
+ui.relType.mentor,ผู้สอน/อาจารย์
+ui.relType.neutral,เป็นกลาง
+ui.relType.rival,คู่แข่ง
+ui.relType.romantic,คนรัก
 ui.replace.badQuery,คำค้นว่าง หรือนิพจน์ปกติไม่ถูกต้อง
 ui.replace.caseSensitive,ตรงตัวพิมพ์เล็ก/ใหญ่
 ui.replace.confirm,แทนที่ {0} ตำแหน่งใน {1} ไฟล์หรือไม่ ย้อนกลับได้จากแผงประวัติการทำงาน
@@ -5210,6 +5232,27 @@ ui.roster.readPageListCharacter,อ่านหน้ารายชื่อต
 ui.roster.savePageListCharacter,บันทึกหน้ารายชื่อตัวละครแล้ว
 ui.roster.showHeadingScene,แสดงหัวข้อ Scene
 ui.roster.showHeadingTime,แสดงหัวข้อ Time
+ui.sb.autoFit,ซูมพอดีความกว้างอัตโนมัติ
+ui.sb.autosave,บันทึกอัตโนมัติ
+ui.sb.home,หน้าแรก
+ui.sb.lineNumbers,เลขบรรทัด
+ui.sb.mdCodes,แสดงรหัสมาร์กดาวน์
+ui.sb.modeTip,ชนิดของเอกสารที่เปิดอยู่ (นิยาย/บทภาพยนตร์)
+ui.sb.msgTip,ข้อความสถานะ — ผลของสิ่งที่เพิ่งทำ (ข้อผิดพลาดค้างไว้จนมีข้อความใหม่)
+ui.sb.pageTip,หน้าที่เคอร์เซอร์อยู่ / จำนวนหน้าทั้งหมด
+ui.sb.progTip,ความคืบหน้าเป้าหมายการเขียนวันนี้
+ui.sb.savedAt,บันทึกล่าสุด {0}
+ui.sb.saveTip,สถานะการบันทึกของเอกสารที่เปิดอยู่
+ui.sb.scenesTip,จำนวนฉากทั้งโปรเจกต์
+ui.sb.spell,ตรวจคำผิด
+ui.sb.stateOff,{0}: ปิดอยู่
+ui.sb.stateOn,{0}: เปิดอยู่
+ui.sb.tipSettings,คลิกเพื่อเปิดหน้าตั้งค่า
+ui.sb.tipToggle,คลิกเพื่อสลับเปิด/ปิด
+ui.sb.togglesLabel,สวิตช์ที่เปิด/ปิดอยู่
+ui.sb.typewriter,โหมดพิมพ์ดีด
+ui.sb.unsaved,ยังไม่ได้บันทึก — กด {sc:save} เพื่อบันทึก
+ui.sb.wcTip,จำนวนคำ · อักขระ · หน้า ของเอกสารที่เปิดอยู่
 ui.scene.actAct,องก์ (Act)
 ui.scene.addChapter,เพิ่มบท: 
 ui.scene.addScene,เพิ่มฉาก 
@@ -5223,8 +5266,8 @@ ui.scene.egPage,"เช่น 2026-09-01 หรือ ""สัปดาห์ห
 ui.scene.filterSearchNameTag,กรอง — ค้นชื่อ/แท็ก/สถานะ/เรื่องย่อ
 ui.scene.futureNoteWriter,Future Note (หมายเหตุนักเขียน)
 ui.scene.iIIIIIName,I · II · III · หรือชื่อองก์ที่ตั้งเอง
-ui.scene.moveF,ย้าย “{0}” ไปบท “{1}” แล้ว
 ui.scene.movedToChapter,ย้ายฉาก {0} ไปบท {1}
+ui.scene.moveF,ย้าย “{0}” ไปบท “{1}” แล้ว
 ui.scene.nameChapter,ชื่อบท
 ui.scene.nameChapterNew,ชื่อบทใหม่
 ui.scene.nameSceneNew,ชื่อฉากใหม่
@@ -5308,15 +5351,6 @@ ui.session.restoredTabs,เปิดไฟล์ที่ค้างไว้ {
 ui.session.tooOld,สถานะที่บันทึกไว้เก่าเกินไป — เริ่มใหม่
 ui.session.warnSave,บันทึกสถานะล่าสุดไม่สำเร็จ
 ui.session.warnTabs,จำรายการแท็บที่เปิดอยู่ไม่ได้
-ui.setTpl.saveHistNote,"ประวัติการทำงาน (ย้อนกลับไปจุดไหนก็ได้) ตั้งแยกต่อผลงาน ที่หน้า ""ข้อมูลผลงาน"""
-ui.setTpl.startup,เมื่อเปิดโปรแกรม
-ui.setTpl.startupHint,ไม่มีโปรเจกต์ล่าสุด = แสดงหน้าแรกเสมอ
-ui.setTpl.startupHome,แสดงหน้าแรก (Home)
-ui.setTpl.startupLast,เปิดโปรเจกต์ล่าสุดทันที
-ui.setTpl.startupLastHome,เปิดโปรเจกต์ล่าสุด แล้วแสดงหน้าแรกทับ
-ui.setTpl.subShellSize,ขนาดของเปลือกโปรแกรม
-ui.setTpl.tabSave,บันทึกและสำรอง
-ui.setTpl.tabSaveFind,บันทึก อัตโนมัติ สำรอง เวอร์ชัน ถังขยะ backup autosave recycle
 ui.settings.author,ผู้เขียน
 ui.settings.autoBackup,สำรองเวอร์ชันอัตโนมัติเมื่อบันทึก
 ui.settings.automation,อัตโนมัติ
@@ -5378,6 +5412,8 @@ ui.setTpl.arrangePageStart,จัดหน้าเริ่มต้น
 ui.setTpl.author,ผู้เขียน
 ui.setTpl.author2,อีเมลผู้เขียน
 ui.setTpl.autoCountPageUpdateFind,อัตโนมัติ ซิงค์ จำนวนหน้า อัปเดต update เวอร์ชัน รุ่นใหม่ github
+ui.setTpl.autoFitWidth,ซูมพอดีความกว้างอัตโนมัติ
+ui.setTpl.autoFitWidthHint,แผงเอกสารแคบกว่ากระดาษเมื่อไหร่ ย่อหน้ากระดาษให้พอดีเอง · กว้างขึ้นแล้วขยายกลับ ไม่เกินซูมที่ตั้งไว้เอง
 ui.setTpl.barFormatFloat,แถบรูปแบบลอย
 ui.setTpl.barFormatFloatBtnFind,แถบรูปแบบ ลอย ปุ่ม B I U ถอดปุ่ม นิยาย หนัง format bar
 ui.setTpl.barTool,แถบเครื่องมือ
@@ -5538,6 +5574,7 @@ ui.setTpl.rightGapMarginPaper,ขวา: ระยะจากขอบกระ
 ui.setTpl.rightRight,ขวา (Right)
 ui.setTpl.ruleCutPageWidow,กฎการตัดหน้า (widow / orphan)
 ui.setTpl.runRangeTimeSet,ทำงานหลังจากหยุดพักตามช่วงเวลาที่ตั้ง · ใช้กับบทภาพยนตร์เท่านั้น
+ui.setTpl.saveHistNote,"ประวัติการทำงาน (ย้อนกลับไปจุดไหนก็ได้) ตั้งแยกต่อผลงาน ที่หน้า ""ข้อมูลผลงาน"""
 ui.setTpl.scopeGlobal,ค่านี้ตามผู้ใช้ไปทุกผลงาน
 ui.setTpl.scopeProject,ค่านี้เก็บในผลงานนี้เท่านั้น
 ui.setTpl.screenplayBy,เขียนบทโดย (Screenplay By)
@@ -5560,15 +5597,23 @@ ui.setTpl.skipBeforeEm,เว้นก่อน (em)
 ui.setTpl.skipEm,เว้นหลัง (em)
 ui.setTpl.soundTypewriter,เสียงเครื่องพิมพ์ดีด
 ui.setTpl.sourceSendPrintSkip,ต้นฉบับส่งสำนักพิมพ์ (เว้นบรรทัดคู่)
+ui.setTpl.startup,เมื่อเปิดโปรแกรม
+ui.setTpl.startupHint,ไม่มีโปรเจกต์ล่าสุด = แสดงหน้าแรกเสมอ
+ui.setTpl.startupHome,แสดงหน้าแรก (Home)
+ui.setTpl.startupLast,เปิดโปรเจกต์ล่าสุดทันที
+ui.setTpl.startupLastHome,เปิดโปรเจกต์ล่าสุด แล้วแสดงหน้าแรกทับ
 ui.setTpl.storyNetwork,ผังความสัมพันธ์
 ui.setTpl.storyNetworkColorBtnFind,story network สี ปุ่มเมาส์ ผัง
 ui.setTpl.subGoals,เป้าหมายจำนวนคำ
+ui.setTpl.subShellSize,ขนาดของเปลือกโปรแกรม
 ui.setTpl.tab,Tab →
 ui.setTpl.tabAi,ผู้ช่วย AI
 ui.setTpl.tabAiFind,ai ผู้ช่วย ผู้ให้บริการ คีย์ โมเดล
 ui.setTpl.tableFontApp,ตารางเดียวคุมฟอนต์ทั้งโปรแกรม:
 ui.setTpl.tabPageNum,เลขฉาก · เลขหน้า (บท)
 ui.setTpl.tabPageNumFind,เลขหน้า เลขฉาก continued ตัดหน้า ข้อความเริ่มต้น
+ui.setTpl.tabSave,บันทึกและสำรอง
+ui.setTpl.tabSaveFind,บันทึก อัตโนมัติ สำรอง เวอร์ชัน ถังขยะ backup autosave recycle
 ui.setTpl.tabUnitCm,ซม.
 ui.setTpl.tabUnitIn,นิ้ว
 ui.setTpl.tabUnitSpace,ช่องว่าง
@@ -6458,6 +6503,7 @@ ui.tip.ai-summary,ให้ AI สรุปเนื้อหาของทั�
 ui.tip.ai-title,ให้ AI เสนอชื่อเรื่องจากเนื้อหา เลือกแล้วตั้งเป็นชื่อโปรเจกต์ได้ทันที
 ui.tip.ai-world,ให้ AI ช่วยสร้างรายละเอียดโลกของเรื่อง เช่น ภูมิศาสตร์ วัฒนธรรม และประวัติ แล้วบันทึกเป็นหน้า Wiki ได้
 ui.tip.all-notes,รวมโน้ตด่วนของทุกฉากไว้ในรายการเดียว คลิกเพื่อไปยังฉากนั้น
+ui.tip.auto-fit-width,เปิด/ปิดการย่อหน้ากระดาษให้พอดีแผงเอกสารเองเมื่อแผงแคบกว่ากระดาษ แล้วขยายกลับเมื่อแผงกว้างขึ้น (ไม่เกินซูมที่ตั้งไว้เอง)
 ui.tip.auto-sync,เปิดหรือปิดระบบงานอัตโนมัติที่คอยอัปเดตข้อมูลของโปรเจกต์ให้เองระหว่างทำงาน
 ui.tip.auto-sync:false,ปิดระบบงานอัตโนมัติที่คอยอัปเดตข้อมูลของโปรเจกต์ระหว่างทำงาน
 ui.tip.auto-sync:true,เปิดระบบงานอัตโนมัติที่คอยอัปเดตข้อมูลของโปรเจกต์ให้เองระหว่างทำงาน
@@ -7118,8 +7164,8 @@ ui.wiki.addRelation,เพิ่มความสัมพันธ์
 ui.wiki.aiCtxDesc,คำบรรยาย
 ui.wiki.aiEmpty,AI ตอบกลับมาว่าง — ไม่ได้แก้อะไร
 ui.wiki.aiFailed,เรียก AI ไม่สำเร็จ
-ui.wiki.aiFillLabel,ให้ AI เติมช่อง {0}
 ui.wiki.aiFilled,เติมช่อง {0} แล้ว
+ui.wiki.aiFillLabel,ให้ AI เติมช่อง {0}
 ui.wiki.aiFillTip,ให้ AI เติมช่องนี้ให้ (คลิกเดียว)
 ui.wiki.aiKept,เก็บข้อความเดิมไว้
 ui.wiki.aiNoProvider,ยังไม่ได้เลือกผู้ให้บริการ AI

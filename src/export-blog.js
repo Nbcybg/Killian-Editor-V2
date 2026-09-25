@@ -235,7 +235,7 @@ function showBlogPreview({ html, nScenes, skipped }) {
   fr.srcdoc = html;
   box.append(fr);
   const btns = el('div', 'k-dlg-btns');
-  const ok = el('button', 'k-ok', t('dialogs.close'));
+  const ok = el('button', 'k-ok k-cancel', t('dialogs.close'));
   ok.onclick = () => ov.remove();
   btns.append(ok); box.append(btns);
   ov.append(box); document.body.append(ov);

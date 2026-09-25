@@ -146,9 +146,10 @@ export async function quickNote(sceneId, sceneTitle) {
       try { const { refreshOpenTimeline } = await import('./timeline-ui.js'); refreshOpenTimeline(); } catch {}
     }
   };
-  const closeB = el('button', null, t('ui.common.close'));
+  // [alpha.164 · รอบต่อ 4] กฎ W4: ปุ่มปิดติด k-cancel (Esc เดินถึง) · ปุ่มหลักขวาสุด
+  const closeB = el('button', 'k-cancel', t('ui.common.close'));
   closeB.onclick = () => ov.remove();
-  btns.append(saveB, closeB);
+  btns.append(closeB, saveB);
   box.append(btns);
   ov.append(box);
   document.body.append(ov);
@@ -195,7 +196,7 @@ export async function showAllNotes(filter = null) {
     if (!(await confirmBox(tf('ui.notes.clearNoteAllList', notes.length), t('ui.common.clear')))) return;
     await saveSessionNotes([]); ov.remove(); setStatus(t('ui.notes.clearNoteAllDone'));
   };
-  const closeB = el('button', 'k-ok', t('ui.common.close'));
+  const closeB = el('button', 'k-ok k-cancel', t('ui.common.close'));
   closeB.onclick = () => ov.remove();
   btns.append(clearB, closeB);
   box.append(btns);

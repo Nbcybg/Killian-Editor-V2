@@ -17,6 +17,7 @@ import * as PL from './panel-layout.js';
 import { makePanelDraggable, makeTabDraggable, makeFloatDraggable, createDropOverlay,
          clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panel-drag.js';
 import { applyPanelFocus } from './panel-focus.js';
+import { escCancelDrag } from '../drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก/ย่อขยาย
 
 export { createDropOverlay };
 
@@ -296,9 +297,14 @@ export function makePanelButton(o) {
   b.tabIndex = 0;
   if (o.act) b.dataset.act = o.act;
   if (o.tip) b.dataset.tip = o.tip;
-  const sc = o.sc ? shortcutText(o.sc) : '';
-  const title = String(o.title || '') + (sc ? ' (' + sc + ')' : '');
-  if (title) { b.title = title; b.setAttribute('aria-label', title); }
+  // [alpha.164 · รอบต่อ 2] `titleKey` = แปลใหม่ทุกครั้งที่หัวแผงถูกวาด — ปุ่มที่โมดูลอื่นฝากไว้ถูกสร้าง
+  // ตอนบูต (ก่อนไฟล์ภาษาโหลดเสร็จ) แล้ว element เดิมถูกใช้ซ้ำทุกรอบ render → `title: t(…)` ค้างเป็นไทยในโหมดอังกฤษ
+  b._k2title = () => {
+    const sc = o.sc ? shortcutText(o.sc) : '';
+    const title = String(o.titleKey ? t(o.titleKey) : (o.title || '')) + (sc ? ' (' + sc + ')' : '');
+    if (title) { b.title = title; b.setAttribute('aria-label', title); }
+  };
+  b._k2title();
   b.onclick = (e) => { e.stopPropagation(); o.onPress(e); };
   b.onkeydown = (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -340,6 +346,7 @@ function buildHead(node, pm, opts, md, floating) {
         e.preventDefault(); e.stopPropagation(); b.click();
       });
     }
+    if (b && typeof b._k2title === 'function') b._k2title();
     ctrls.appendChild(b);
   }
   head.appendChild(ctrls);
@@ -378,8 +385,9 @@ function buildHead(node, pm, opts, md, floating) {
         const host = e.target.closest('.k-panel');
         const r = host ? host.getBoundingClientRect() : { left: 90, top: 90, width: 320, height: 300 };
         // [66r12] กล่องนี้คือ "ขนาดตอนผนึก" — ความสูงของแผงข้างคือเต็มคอลัมน์ ต้องให้ store หนีบให้
+        // [alpha.165] recall = กลับไปที่ที่ลอยอยู่ครั้งล่าสุด (ผนึก → ลอยอีกครั้ง ไม่กระโดดไปที่ช่องผนึก)
         pm.floatPanel(node.id, clampFloat({ x: r.left, y: r.top, w: r.width, h: r.height }),
-                      { fromDock: true });
+                      { fromDock: true, recall: true, clamp: (b) => clampFloat(b) });
       }
     };
     btns.appendChild(btn);
@@ -411,7 +419,8 @@ export function headMenuItems(node, pm, opts, md, floating) {
     items.push({ label: floating ? t('ui.panelRenderer.backInWindow') : t('ui.panelRenderer.floatPanelOut'),
       click: () => {
         if (floating) { const a = pm.isDocked('docs') ? 'docs' : undefined; pm.dockPanel(node.id, def.defaultSide || 'left', a); return; }
-        pm.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }));
+        pm.floatPanel(node.id, clampFloat({ x: 90, y: 90, w: 340, h: 320 }),
+                      { recall: true, clamp: (b) => clampFloat(b) });
       } });
   }
   // [alpha.67] ทางเข้าที่สองของ tear-off (ปุ่ม 🖥 อาจถูกบีบหายเมื่อหัวแผงแคบ)
@@ -648,6 +657,15 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
     const growSum = (parseFloat(prev.style.flexGrow) || 1) + (parseFloat(next.style.flexGrow) || 1);
     let ratio = base / total;
     let pxPrev = base, pxNext = baseNext;
+    // [alpha.165] Esc = ยกเลิกการลากเส้นแบ่ง คืน flex ของสองฝั่งตามก่อนลาก (store ยังไม่ถูกแตะ)
+    const flex0 = [prev.style.flex, prev.style.flexGrow, next.style.flex, next.style.flexGrow];
+    const offEsc = escCancelDrag(() => {
+      document.body.classList.remove('k-resizing');
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      prev.style.flex = flex0[0]; if (!flex0[0]) prev.style.flexGrow = flex0[1];
+      next.style.flex = flex0[2]; if (!flex0[2]) next.style.flexGrow = flex0[3];
+    });
     document.body.classList.add('k-resizing');
     // [alpha.66r5] พื้นที่ที่ "ตัวยืด" มีอยู่ตอนเริ่มลาก — ใช้คำนวณเพดานการลาก
     // กฎ: ผู้ที่ยอมเสียพื้นที่ให้การลากมีแค่ตัวยืดตรงกลางเท่านั้น · แผงอีกฝั่งห้ามถูกเบียดเด็ดขาด
@@ -678,6 +696,7 @@ export function createResizeHandle(dockId, index, dir, pm, nextIndex) {
       next.style.flexGrow = String(growSum * (1 - ratio));
     };
     const up = () => {
+      offEsc();
       document.body.classList.remove('k-resizing');
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
@@ -739,15 +758,22 @@ export function makeResizable(box, grip, onEnd) {
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
     const w0 = box.offsetWidth, h0 = box.offsetHeight, x0 = e.clientX, y0 = e.clientY;
+    const sw0 = box.style.width, sh0 = box.style.height;
     const move = (ev) => {
       const c = clampFloat({ x: box.offsetLeft, y: box.offsetTop,
                              w: w0 + ev.clientX - x0, h: h0 + ev.clientY - y0 });
       box.style.width = Math.max(FLOAT_MIN_W, Math.min(c.w, window.innerWidth - box.offsetLeft)) + 'px';
       box.style.height = Math.max(FLOAT_MIN_H, Math.min(c.h, window.innerHeight - box.offsetTop)) + 'px';
     };
-    const up = () => {
+    const stop = () => {
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
+      offEsc();
+    };
+    // [alpha.165] Esc = ยกเลิกการย่อ/ขยาย คืนขนาดเดิม
+    const offEsc = escCancelDrag(() => { stop(); box.style.width = sw0; box.style.height = sh0; });
+    const up = () => {
+      stop();
       if (!box.isConnected) return;      // ถูก re-render ถอดออกกลางคัน → offset* = 0 อย่าบันทึกทับ
       const c = clampFloat({ x: box.offsetLeft, y: box.offsetTop,
                              w: box.offsetWidth, h: box.offsetHeight });

@@ -451,8 +451,16 @@ export class PanelManager {
     // (แผงที่ผนึกอยู่ล่างสูง 260 ก็ยังได้ 260 เหมือนเดิม — ไม่ไปรีเซ็ตของที่พอดีอยู่แล้ว)
     const defH = df.h || 520;
     const h = saved.h || (box.h ? (opts.fromDock ? Math.min(box.h, defH) : box.h) : defH);
-    PL.setNodeFloatBox(node, w, h);
-    const f = PL.makeFloat(node, box.x ?? 80, box.y ?? 80, w, h);
+    // [alpha.165] opts.recall = กดปุ่ม/เมนู "ลอย" (ไม่ใช่ลากไปปล่อย) → กลับไปตำแหน่งที่ลอยอยู่ครั้งล่าสุด
+    // (ลากไปปล่อย = ตำแหน่งเมาส์ชนะเสมอ) · opts.clamp = ตัวหนีบให้อยู่ในจอ (UI ส่งมา — store ไม่รู้ขนาดหน้าต่าง)
+    let x = box.x ?? 80, y = box.y ?? 80;
+    if (opts.recall && Number.isFinite(saved.x) && Number.isFinite(saved.y)) { x = saved.x; y = saved.y; }
+    if (typeof opts.clamp === 'function') {
+      const c = opts.clamp({ x, y, w, h });
+      if (c && Number.isFinite(c.x) && Number.isFinite(c.y)) { x = c.x; y = c.y; }
+    }
+    PL.setNodeFloatBox(node, w, h, x, y);
+    const f = PL.makeFloat(node, x, y, w, h);
     this.store.setFloats([...this.floats, f]);
     return true;
   }
@@ -506,7 +514,7 @@ export class PanelManager {
     const next = this.floats.map((f) => {
       if (f.id !== floatId) return f;
       const merged = { ...f, ...pick(box, ['x', 'y', 'w', 'h']) };
-      merged.panel = PL.setNodeFloatBox({ ...f.panel }, merged.w, merged.h);
+      merged.panel = PL.setNodeFloatBox({ ...f.panel }, merged.w, merged.h, merged.x, merged.y);
       return merged;
     });
     this.store.setFloats(next);
@@ -526,7 +534,7 @@ export class PanelManager {
     const next = this.floats.map((f) => {
       if (f.panel.id !== id) return f;
       const merged = { ...f, ...pick(box, ['x', 'y', 'w', 'h']) };
-      merged.panel = PL.setNodeFloatBox({ ...f.panel }, merged.w, merged.h);
+      merged.panel = PL.setNodeFloatBox({ ...f.panel }, merged.w, merged.h, merged.x, merged.y);
       return merged;
     });
     this.store.setFloats(next);

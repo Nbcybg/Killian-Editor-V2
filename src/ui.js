@@ -348,7 +348,10 @@ function buildMenuEl(items, depth) {
     }
     const d = document.createElement('div');
     // disabled = แถวหัวข้อ/คำอธิบาย (ไม่มี click) — ถ้าไม่กัน onclick จะเรียก it.click() ที่ไม่มีจริงแล้ว throw
+    // [alpha.165] รายการคำสั่งที่ "ตอนนี้กดไม่ได้" (มี click แต่ disabled — ตัด/วาง ตอนไม่ได้เลือก · ฉากล็อก) ≠ แถวหัวข้อ
+    //   ยังเป็น k-menu-label (กดไม่ได้ · เทสเดิมอ้าง) + k-menu-disabled = ตัวเท่าเดิม สีจาง แบบเมนูของระบบ
     d.className = 'k-menu-item' + (it.danger ? ' k-danger' : '') + (it.disabled ? ' k-menu-label' : '')
+      + (it.disabled && it.click ? ' k-menu-disabled' : '')
       + (it.sub ? ' k-menu-has-sub' : '') + (it.checked ? ' k-menu-checked' : '');
     // [alpha.162 · W5 ข้อ 3] ความหมายของแถวสำหรับโปรแกรมอ่านหน้าจอ + โฟกัสได้ด้วยคีย์บอร์ด (tabindex -1 = ลูกศรเท่านั้น)
     d.setAttribute('role', it.checked !== undefined ? 'menuitemcheckbox' : 'menuitem');
@@ -428,7 +431,9 @@ async function openSub(row, it, depth) {
   try { items = await it.sub(); } catch { items = null; }
   // ระหว่างรอ ผู้ใช้อาจย้ายไปชี้แถวอื่น/ปิดเมนูไปแล้ว
   if (row._subToken !== token || !row.isConnected || !row.classList.contains('k-menu-open')) return;
-  if (!items || !items.length) { row.classList.remove('k-menu-open'); return; }
+  // [alpha.164 · รอบต่อ 3] เมนูลูกที่ไม่มีรายการ (ยังไม่มีสำรอง · ไม่มีปลายทางให้ย้าย) เคย "เงียบ" —
+  // กดแล้วไม่มีอะไรเกิดขึ้นจนดูเหมือนเมนูพัง → โชว์แถวเทา "(ว่าง)" แทน
+  if (!items || !items.length) items = [{ text: tt('ui.common.empty'), disabled: true, click: () => {} }];
   const sm = buildMenuEl(items, depth + 1);
   sm._owner = row;
   document.body.appendChild(sm);
@@ -620,7 +625,9 @@ export function saveAllDialog(files, {
       const nm = document.createElement('div'); nm.className = 'k-saveall-name';
       nm.textContent = f.title || f.key;
       const pt = document.createElement('div'); pt.className = 'k-saveall-path';
-      pt.textContent = f.file || '';
+      // [alpha.164 · รอบต่อ 3] isolate LTR — กล rtl (ตัดหัว) เคยย้าย "/" นำหน้าไปไว้ท้ายทาง
+      const bdi = document.createElement('bdi'); bdi.dir = 'ltr'; bdi.textContent = f.file || '';
+      pt.append(bdi);
       pt.title = f.file || '';
       txt.append(nm, pt);
       row.append(cb, txt); list.append(row);

@@ -445,12 +445,19 @@ export function nodeFloatBox(node) {
   if (!node) return null;
   const w = Number(node.fW) > 0 ? Number(node.fW) : 0;
   const h = Number(node.fH) > 0 ? Number(node.fH) : 0;
-  return (w > 0 || h > 0) ? { w, h } : null;
+  if (!(w > 0 || h > 0)) return null;
+  const box = { w, h };
+  // [alpha.165] ตำแหน่งตอนลอยล่าสุด — ผนึกแล้วกด ⧉ อีกครั้งต้องกลับไปที่เดิม ไม่ใช่ที่ช่องผนึก
+  if (Number.isFinite(Number(node.fX)) && Number.isFinite(Number(node.fY)) && node.fX !== undefined && node.fY !== undefined) {
+    box.x = Number(node.fX); box.y = Number(node.fY);
+  }
+  return box;
 }
-export function setNodeFloatBox(node, w, h) {
+export function setNodeFloatBox(node, w, h, x, y) {
   if (!node) return node;
   if (w > 0) node.fW = Math.round(w);
   if (h > 0) node.fH = Math.round(h);
+  if (Number.isFinite(x) && Number.isFinite(y)) { node.fX = Math.round(x); node.fY = Math.round(y); }
   return node;
 }
 

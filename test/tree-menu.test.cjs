@@ -158,5 +158,21 @@ check('ชื่อสำเนาแรก', M.uniqueCopyName('เล่ม', [
   check('โฟลเดอร์ชุดสำรองปลอดภัยต่อชื่อไฟล์', M.itemBackupDir('memo', 'a/b:c') === 'Backups/Items/memo/a_b_c');
 }
 
+// ───────── [alpha.164 · รอบต่อ 4] ทุกแถวที่ใช้เมนูตามสเปก ต้องผูกผ่าน bindTreeMenu (กฎ W4) ─────────
+// แถวกระดาน/แผนเคยเรียก showTreeMenu ตรง ๆ จาก oncontextmenu → ไม่มี `_k2row` → F2/Shift+F10 เอื้อมไม่ถึง
+{
+  const app = fs.readFileSync(path.join(ROOT, 'src', 'app.js'), 'utf8');
+  const calls = [...app.matchAll(/showTreeMenu\(/g)].map((m) => app.slice(0, m.index).split('\n').length);
+  const defLine = app.slice(0, app.indexOf('export function showTreeMenu(')).split('\n').length;
+  const bindStart = app.indexOf('export function bindTreeMenu(');
+  const bindLine = app.slice(0, bindStart).split('\n').length;
+  const stray = calls.filter((ln) => ln !== defLine && !(ln > bindLine && ln < bindLine + 10));
+  check('[164-R4] showTreeMenu ถูกเรียกจาก bindTreeMenu ที่เดียว (แถวทุกชนิดพก _k2row)', stray.length === 0,
+    'บรรทัด ' + stray.join(', '));
+  for (const k of ['board', 'plan', 'plannerHead', 'branchHead']) {
+    check(`[164-R4] แถวชนิด ${k} ผูกด้วย bindTreeMenu`, new RegExp(`bindTreeMenu\\([^,]+, '${k}'`).test(app));
+  }
+}
+
 console.log(`\ntree-menu: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

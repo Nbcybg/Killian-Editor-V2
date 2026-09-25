@@ -1,21 +1,29 @@
 // relationship-types.js — ประเภทความสัมพันธ์: ally/enemy/family/rival/romantic/mentor/acquaintance/neutral/custom
 // โมดูลบริสุทธิ์ (ไม่แตะ DOM/kapi) → เทสด้วย node ได้ตรง ๆ
+import { t } from './i18n.js';
+
+// [alpha.164 · รอบต่อ 2] ชื่อประเภทเป็น "ข้อความบนจอ" ไม่ใช่ข้อมูล — ไฟล์ Wiki เก็บแค่ `key`
+// เดิมเขียนไทยตายตัวไว้ใน `label` จึงโผล่เป็นไทยทั้งในกล่องผูกความสัมพันธ์ · ปุ่มกรองของ Story Network ·
+// ป้ายบนการ์ด Wiki และหน้าตั้งค่าสีผัง แม้ผู้ใช้เลือกอังกฤษ → `label` เป็น getter อ่านไฟล์ภาษาทุกครั้ง
+// คีย์ภาษาเต็มทุกตัว (ห้ามประกอบจากชิ้นส่วน — ตัวตรวจไฟล์ภาษามองไม่เห็น)
+const relType = (key, labelKey, color, icon) => ({ key, labelKey, color, icon, get label() { return t(labelKey); } });
 export const REL_TYPES = [
   // icon = ชื่อไอคอนใน icons.js (ต้องมีจริง ไม่งั้นวาดออกมาเป็น svg ว่าง)
-  { key: 'family',       label: 'ครอบครัว',       color: '#e06c75', icon: 'home' },
-  { key: 'romantic',     label: 'คนรัก',          color: '#e06ca0', icon: 'star' },
-  { key: 'ally',         label: 'พันธมิตร',       color: '#61afef', icon: 'user' },
-  { key: 'rival',        label: 'คู่แข่ง',         color: '#e5c07b', icon: 'cloud-lightning' },
-  { key: 'enemy',        label: 'ศัตรู',           color: '#be5046', icon: 'x' },
-  { key: 'mentor',       label: 'ผู้สอน/อาจารย์',  color: '#98c379', icon: 'book' },
-  { key: 'acquaintance', label: 'รู้จัก',          color: '#abb2bf', icon: 'chat' },
-  { key: 'neutral',      label: 'เป็นกลาง',       color: '#5c6370', icon: 'minus' },
-  { key: 'custom',       label: 'อื่น ๆ',          color: '#c678dd', icon: 'bookmark' },
+  relType('family', 'ui.relType.family',       '#e06c75', 'home'),
+  relType('romantic', 'ui.relType.romantic',     '#e06ca0', 'star'),
+  relType('ally', 'ui.relType.ally',         '#61afef', 'user'),
+  relType('rival', 'ui.relType.rival',        '#e5c07b', 'cloud-lightning'),
+  relType('enemy', 'ui.relType.enemy',        '#be5046', 'x'),
+  relType('mentor', 'ui.relType.mentor',       '#98c379', 'book'),
+  relType('acquaintance', 'ui.relType.acquaintance', '#abb2bf', 'chat'),
+  relType('neutral', 'ui.relType.neutral',      '#5c6370', 'minus'),
+  relType('custom', 'ui.relType.custom',       '#c678dd', 'bookmark'),
 ];
 
-export const REL_COLOR = Object.fromEntries(REL_TYPES.map((t) => [t.key, t.color]));
-export const REL_ICON = Object.fromEntries(REL_TYPES.map((t) => [t.key, t.icon]));
-export const REL_LABEL = Object.fromEntries(REL_TYPES.map((t) => [t.key, t.label]));
+export const REL_COLOR = Object.fromEntries(REL_TYPES.map((x) => [x.key, x.color]));
+export const REL_ICON = Object.fromEntries(REL_TYPES.map((x) => [x.key, x.icon]));
+export const REL_LABEL = {};
+for (const x of REL_TYPES) Object.defineProperty(REL_LABEL, x.key, { get: () => x.label, enumerable: true });
 
 // เดาประเภทจากบทบาท (ไทย + อังกฤษ) — ใช้เป็นค่าเริ่มต้นในกล่องผูกความสัมพันธ์ + สีเส้นใน Story Network
 export function categorizeRole(role) {

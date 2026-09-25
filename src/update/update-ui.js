@@ -82,7 +82,7 @@ function messageDialog(title, msg, src) {
     box.append(el('div', null, msg));
     if (src) box.append(sourceLine(src));
     const btns = el('div', 'k-dlg-btns');
-    const ok = el('button', 'k-ok', t('ui.common.close'));
+    const ok = el('button', 'k-ok k-cancel', t('ui.common.close'));
     const done = () => { ov.remove(); resolve(); };
     ok.onclick = done;
     btns.append(ok);

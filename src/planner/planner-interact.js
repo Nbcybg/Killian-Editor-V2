@@ -884,6 +884,9 @@ export class PlannerInteraction {
     // (ไม่งั้นกด Esc แล้วเลิกเลือกเฉย ๆ แต่ยังติดเต็มจอ = ออกไม่ได้นอกจากหาปุ่มเจอ)
     if (e.code === 'F11') { e.preventDefault(); this._cb.onFullscreen && this._cb.onFullscreen(); return; }
     if (e.key === 'Escape') {
+      // [alpha.165] ป๊อปอัปของแถบกระดาน (เลือกรูปทรง · กริด) เปิดอยู่ = Esc ปิดมันก่อน (เดิมปิดได้แค่คลิกนอก)
+      const pops = document.querySelectorAll('.planner-popover');
+      if (pops.length) { e.preventDefault(); pops.forEach((p) => p.remove()); return; }
       if (this._cb.isFullscreen && this._cb.isFullscreen()) { this._cb.onFullscreen && this._cb.onFullscreen(false); return; }
       this.cancelDragConnect(); if (this._cb.onDeselect) this._cb.onDeselect(); return;
     }

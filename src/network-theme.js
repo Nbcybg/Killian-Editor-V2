@@ -22,52 +22,57 @@ import { REL_TYPES } from './relationship-types.js';
  *   def    ค่าเริ่มต้น · cssVar = ถ้าไม่ได้ตั้งเอง ให้ตามธีมของโปรแกรม
  */
 export const NET_COLOR_GROUPS = [
-  { group: 'nodes',  label: tt('ui.net.colorNodeCat') },
-  { group: 'edges',  label: tt('ui.net.colorLineTypeRelation') },
-  { group: 'links',  label: tt('ui.net.colorLineLinkOther') },
-  { group: 'canvas', label: tt('ui.net.bgGraphItemFilm') },
+  { group: 'nodes',  lk: 'ui.net.colorNodeCat' },
+  { group: 'edges',  lk: 'ui.net.colorLineTypeRelation' },
+  { group: 'links',  lk: 'ui.net.colorLineLinkOther' },
+  { group: 'canvas', lk: 'ui.net.bgGraphItemFilm' },
 ];
 
 const NODE_DEFS = [
-  { key: 'nc-char', id: 'characters', label: tt('ui.common.character'),      def: '#d97757' },
-  { key: 'nc-loca', id: 'locations',  label: tt('ui.common.place'),      def: '#7aa8d8' },
-  { key: 'nc-item', id: 'items',      label: tt('ui.common.thing'),       def: '#6fae8a' },
-  { key: 'nc-lore', id: 'lore',       label: tt('ui.common.legend'),        def: '#b58fc9' },
-  { key: 'nc-scen', id: 'scene',      label: tt('ui.common.scene2'),          def: '#e8c95c' },
-  { key: 'nc-chap', id: 'chapter',    label: tt('ui.common.chapter'),           def: '#c08a5e' },
+  { key: 'nc-char', id: 'characters', lk: 'ui.common.character',      def: '#d97757' },
+  { key: 'nc-loca', id: 'locations',  lk: 'ui.common.place',      def: '#7aa8d8' },
+  { key: 'nc-item', id: 'items',      lk: 'ui.common.thing',       def: '#6fae8a' },
+  { key: 'nc-lore', id: 'lore',       lk: 'ui.common.legend',        def: '#b58fc9' },
+  { key: 'nc-scen', id: 'scene',      lk: 'ui.common.scene2',          def: '#e8c95c' },
+  { key: 'nc-chap', id: 'chapter',    lk: 'ui.common.chapter',           def: '#c08a5e' },
   // [alpha.73 ข้อ 3] เดิม book กับ section ใช้ช่องเดียวกัน (nc-sect) — แยกให้ตั้งได้จริงทั้งคู่
-  { key: 'nc-book', id: 'book',       label: tt('ui.common.book'),          def: '#a8d870' },
-  { key: 'nc-sect', id: 'section',    label: tt('ui.net.actPart'),      def: '#8ec8c8' },
+  { key: 'nc-book', id: 'book',       lk: 'ui.common.book',          def: '#a8d870' },
+  { key: 'nc-sect', id: 'section',    lk: 'ui.net.actPart',      def: '#8ec8c8' },
 ];
 
 // เส้นเชื่อมพิเศษที่ไม่ได้มาจาก REL_TYPES
 const LINK_DEFS = [
-  { key: 'ne-sl', id: 'scene-link', label: tt('ui.net.linkBetweenScene'),   def: '#5caf8a' },
-  { key: 'ne-co', id: 'co-occur',   label: tt('ui.net.appearScene'),   def: '#8a8885' },
-  { key: 'ne-es', id: 'ent-scene',  label: tt('ui.net.scene'),    def: '#d9955f' },
+  { key: 'ne-sl', id: 'scene-link', lk: 'ui.net.linkBetweenScene',   def: '#5caf8a' },
+  { key: 'ne-co', id: 'co-occur',   lk: 'ui.net.appearScene',   def: '#8a8885' },
+  { key: 'ne-es', id: 'ent-scene',  lk: 'ui.net.scene',    def: '#d9955f' },
 ];
 
 // สีของผืนผ้าใบ — ยังไม่ได้ตั้งเอง = ตามธีมของโปรแกรม (cssVar) · อ่านธีมไม่ได้ค่อยใช้ def
 const CANVAS_DEFS = [
-  { key: 'nb-bg',      id: 'bg',      label: tt('ui.net.bgGraph'),        def: '#1a1a18', cssVar: '--bg' },
-  { key: 'nb-grid',    id: 'grid',    label: tt('ui.net.lineGrid'),          def: '#3a3a36', cssVar: '--border' },
-  { key: 'nb-label',   id: 'label',   label: tt('ui.net.itemFilmNameNode'), def: '#faf9f5', cssVar: '--bright' },
-  { key: 'nb-labelbg', id: 'labelBg', label: tt('ui.net.bgLabelNode'),   def: '#1f1e1c', cssVar: '--side' },
-  { key: 'nb-border',  id: 'border',  label: tt('ui.net.marginNode'),          def: '#1f1e1c' },
-  { key: 'nb-hover',   id: 'hover',   label: tt('ui.net.marginNodeActPoint'),     def: '#faf9f5' },
-  { key: 'nb-axis',    id: 'axis',    label: tt('ui.net.xYZ'), def: '#8a8885', cssVar: '--dim' },
+  { key: 'nb-bg',      id: 'bg',      lk: 'ui.net.bgGraph',        def: '#1a1a18', cssVar: '--bg' },
+  { key: 'nb-grid',    id: 'grid',    lk: 'ui.net.lineGrid',          def: '#3a3a36', cssVar: '--border' },
+  { key: 'nb-label',   id: 'label',   lk: 'ui.net.itemFilmNameNode', def: '#faf9f5', cssVar: '--bright' },
+  { key: 'nb-labelbg', id: 'labelBg', lk: 'ui.net.bgLabelNode',   def: '#1f1e1c', cssVar: '--side' },
+  { key: 'nb-border',  id: 'border',  lk: 'ui.net.marginNode',          def: '#1f1e1c' },
+  { key: 'nb-hover',   id: 'hover',   lk: 'ui.net.marginNodeActPoint',     def: '#faf9f5' },
+  { key: 'nb-axis',    id: 'axis',    lk: 'ui.net.xYZ', def: '#8a8885', cssVar: '--dim' },
 ];
 
 /** สีเส้นตามประเภทความสัมพันธ์ — สร้างจาก REL_TYPES ไม่ต้องเขียนซ้ำ */
-const EDGE_DEFS = REL_TYPES.map((t) => ({
-  key: 'ne-rt-' + t.key, id: t.key, label: t.label, def: t.color,
+const EDGE_DEFS = REL_TYPES.map((r) => ({
+  key: 'ne-rt-' + r.key, id: r.key, rel: r, def: r.color,
 }));
 
+// [alpha.164 · รอบต่อ 2] ชื่อช่องแปลตอน "อ่าน" ไม่ใช่ตอน import (บทเรียนข้อ 37 — ค่าคงที่ระดับโมดูลค้างภาษา)
+// `Object.assign` ลงวัตถุเดิม (ไม่ใช่ `{...d}`) เพราะการกระจายจะเรียก getter ครั้งเดียวแล้วแช่ค่าไว้
+const withLabel = (d) => Object.defineProperty(d, 'label',
+  { get() { return d.rel ? d.rel.label : tt(d.lk); }, enumerable: true });
+NET_COLOR_GROUPS.forEach(withLabel);
 export const NET_COLOR_DEFS = [
-  ...NODE_DEFS.map((d) => ({ ...d, group: 'nodes', target: 'node' })),
-  ...EDGE_DEFS.map((d) => ({ ...d, group: 'edges', target: 'edge' })),
-  ...LINK_DEFS.map((d) => ({ ...d, group: 'links', target: 'edge' })),
-  ...CANVAS_DEFS.map((d) => ({ ...d, group: 'canvas', target: 'canvas' })),
+  ...NODE_DEFS.map((d) => withLabel(Object.assign(d, { group: 'nodes', target: 'node' }))),
+  ...EDGE_DEFS.map((d) => withLabel(Object.assign(d, { group: 'edges', target: 'edge' }))),
+  ...LINK_DEFS.map((d) => withLabel(Object.assign(d, { group: 'links', target: 'edge' }))),
+  ...CANVAS_DEFS.map((d) => withLabel(Object.assign(d, { group: 'canvas', target: 'canvas' }))),
 ];
 
 /** นิยามในกลุ่มหนึ่ง — กล่องตั้งค่าใช้สร้างช่องสีเอง ไม่ต้องเขียน HTML มือ */
@@ -126,10 +131,10 @@ export function needsNetColorMigration(saved) {
 // ห้ามฮาร์ดโค้ดปุ่มเมาส์ — ต้องตั้งได้ในตั้งค่าโปรเจกต์ และคำอธิบายใต้ผังต้องตรงกับที่ตั้งไว้เสมอ
 
 export const MOUSE_BUTTONS = [
-  { value: 'middle', btn: 1, label: tt('ui.net.btnCenterWheel') },
-  { value: 'right',  btn: 2, label: tt('ui.net.clickRight') },
-  { value: 'left',   btn: 0, label: tt('ui.net.clickLeft') },
-];
+  { value: 'middle', btn: 1, lk: 'ui.net.btnCenterWheel' },
+  { value: 'right',  btn: 2, lk: 'ui.net.clickRight' },
+  { value: 'left',   btn: 0, lk: 'ui.net.clickLeft' },
+].map(withLabel);
 export function buttonLabel(v) {
   const m = MOUSE_BUTTONS.find((x) => x.value === v);
   return m ? m.label : v;

@@ -56,22 +56,22 @@ export function clearKeyCache() { _keyCache = null; }
  * ผลคือผู้ใช้ที่ตั้งค่าครบแล้วยังโดนบล็อกด้วย "ตั้งค่า AI ที่ ไฟล์ → ตั้งค่า AI ก่อน"
  * (ฟีเจอร์ที่โดน: แนะนำชื่อด้วย AI · สรุปเรื่อง · ผู้ช่วยเขียน · ตรวจพล็อต · สร้างบทสนทนา ฯลฯ)
  *
- * @returns {Promise<{ok:boolean, why:string}>} why = เหตุผลที่ยังใช้ไม่ได้ ('' เมื่อ ok)
+ * @returns {Promise<{ok:boolean, why:string, code?:string}>} code = 'noProject'|'noProvider'|'noModel'|'noKey' (ตัดสินด้วยรหัส ห้ามเทียบข้อความ) · why = เหตุผลที่ยังใช้ไม่ได้ ('' เมื่อ ok)
  */
 export async function aiConfigured() {
-  if (!state.root) return { ok: false, why: t('ui.common.cantOpenProject') };
+  if (!state.root) return { ok: false, code: 'noProject', why: t('ui.common.cantOpenProject') };
   const ai = getAISettings();
   // ทะเบียนใหม่ (alpha.61) มาก่อนเสมอ
   if (Array.isArray(ai.providers) && ai.providers.length) {
     const { currentProvider } = await import('./ai/ai-provider-ui.js');
     const p = await currentProvider();
-    if (!p) return { ok: false, why: t('ui.aiSet.cantPickProviderAI') };
-    if (!p.model) return { ok: false, why: tf('ui.aiSet.noModelFor', p.name) };
+    if (!p) return { ok: false, code: 'noProvider', why: t('ui.aiSet.cantPickProviderAI') };
+    if (!p.model) return { ok: false, code: 'noModel', why: tf('ui.aiSet.noModelFor', p.name) };
     return { ok: true, why: '' };
   }
   if ((ai.provider || 'openai') === 'ollama') return { ok: true, why: '' };
   if (await loadApiKey()) return { ok: true, why: '' };
-  return { ok: false, why: t('ui.aiSet.settingsAIFileSettings') };
+  return { ok: false, code: 'noKey', why: t('ui.aiSet.settingsAIFileSettings') };
 }
 
 // ---- เรียก AI (ผ่าน main process) ----

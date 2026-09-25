@@ -102,6 +102,7 @@ contextBridge.exposeInMainWorld('kapi', {
   testShot: call('test:shot'), testShotTearOff: call('test:shotTearOff'), revealInOS: call('shell:reveal'),
   // [alpha.62 บั๊ก 3] คลิปบอร์ดผ่าน main — เชื่อถือได้กว่า navigator.clipboard ในหน้าต่างไร้ขอบ
   clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'),
+  editRole: call('edit:role'),               // [alpha.165] cut/copy/paste/selectAll ของเมนูคลิกขวาในเอกสาร
   winMin: call('win:minimize'), winMax: call('win:maximize'), winClose: call('win:close'),
   quitNow: call('win:quitNow'), menuPopup: call('menu:popup'), menuIds: call('menu:ids'),
   // [alpha.157] splash → หน้าต่างหลัก (ขยายเต็มจอ) · ข้อความ/เปอร์เซ็นต์ของสิ่งที่กำลังโหลด
@@ -113,6 +114,7 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.136] สถานะ (enabled/visible) ของรายการเมนูตาม id — อ่านจากเมนูตัวจริง
   // มีไว้ให้ e2e ตรวจว่ารายการที่ใช้ไม่ได้ตอนนี้ถูกทำเป็นสีเทาจริง
   menuItemState: call('menu:itemState'),
+  menuTestClick: call('menu:testClick'),      // [alpha.164 · รอบต่อ 3] e2e กดเมนู native จริง (โหมดเทส)
   httpFetch: call('http:fetch'),
   httpAbort: call('http:abort'),        // [alpha.96] ยกเลิกคำขอ AI ที่กำลังวิ่ง
   httpInflight: call('http:inflight'),
@@ -139,6 +141,8 @@ contextBridge.exposeInMainWorld('kapi', {
     }, 2000);
   }),
   logWrite: call('log:write'), logRead: call('log:read'), logPath: call('log:path'), logReveal: call('log:reveal'),
+  // [alpha.165] ดู log ย้อนหลัง: รายชื่อไฟล์ทุกวัน · อ่านวันที่เลือก · ที่อยู่โฟลเดอร์ · เปิดโฟลเดอร์
+  logList: call('log:list'), logReadDay: call('log:readDay'), logDir: call('log:dir'), logOpenDir: call('log:openDir'),
   onMenu: (cb) => ipcRenderer.on('menu', (e, ch, ...a) => cb(ch, ...a)),
   // ---- [alpha.67] Tear-off: แผงเป็นหน้าต่าง OS จริง (หลายจอ) ----
   tearOff: call('panel:tearOff'),                 // {id,title,root,x,y,w,h} → เปิดหน้าต่างแผง

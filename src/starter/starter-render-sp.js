@@ -10,7 +10,7 @@
 //
 // ไม่แตะ DOM/fs/network → unit test ได้ตรง ๆ
 
-import { t } from '../i18n.js';
+import { t, tf } from '../i18n.js';
 import { SCENE_PREFIX, TRANSITIONS } from '../fountain.js';
 import { starterBlock, clip } from './starter-prompt.js';
 import { chunkText, TAIL_CHARS } from './starter-render-prose.js';
@@ -95,7 +95,7 @@ export function spPrompt(s, sc, chunk, { part = 1, total = 1, tail = '', nameOf 
     t('ui.starter.pCvTaskSp'),
     starterBlock(s, { full: false }),
     (sc && sc.title) ? t('ui.starter.pScTitle') + sc.title : '',
-    total > 1 ? t('ui.starter.pCvPart').replace('{0}', String(part)).replace('{1}', String(total)) : '',
+    total > 1 ? tf('ui.starter.pCvPart', part, total) : '',
     tail ? t('ui.starter.pCvTail') + '\n' + clip(tail, TAIL_CHARS) : '',
     t('ui.starter.pCvSource'),
     chunkText(chunk, nameOf),

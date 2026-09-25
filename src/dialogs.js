@@ -472,6 +472,7 @@ export function settingsDialog(openTab, opts = {}) {
   q('#st-proj').value = g.projectWords ?? 50000;
   q('#st-font').value = origFont;
   q('#st-ln').checked = !!s.lineNumbers;
+  if (q('#st-autofit')) q('#st-autofit').checked = !!s.autoFitWidth;   // [alpha.164 · รอบต่อ 2 · งาน 3]
   q('#st-fab').checked = s.fabEnabled !== false;      // [60r2 ข้อ 9]
   q('#st-spell').checked = s.spellCheck !== false;
   q('#st-spelldict').checked = s.spellCheckDict !== false;
@@ -1490,6 +1491,14 @@ export function settingsDialog(openTab, opts = {}) {
     s.fontFamily = q('#st-fontfamily')?.value || '';
     s.spFontFamily = q('#st-spfontfamily')?.value || '';
     s.lineNumbers = q('#st-ln').checked;
+    // [alpha.164 · รอบต่อ 2 · งาน 3] ซูมพอดีความกว้างอัตโนมัติ — เปิด = จัดทันที · ปิด = คืนซูมที่ผู้ใช้ตั้งเอง
+    if (q('#st-autofit')) {
+      // [รอบต่อ 3] ทางกลาง setAutoFitWidth (เมนู/คลิกขวาป้ายซูมใช้ตัวเดียวกัน) · กล่องนี้บันทึกไฟล์ตั้งค่าเอง
+      const was = !!s.autoFitWidth;
+      s.autoFitWidth = q('#st-autofit').checked;
+      const v = s.autoFitWidth;
+      import('./app.js').then((m) => m.setAutoFitWidth(v, { save: false, was })).catch(() => {});
+    }
     s.fabEnabled = q('#st-fab').checked;               // [60r2 ข้อ 9]
     s.spellCheck = q('#st-spell').checked;
     s.spellCheckDict = q('#st-spelldict').checked;
@@ -1749,7 +1758,7 @@ export async function showChangelog() {
   const ttl = el('div', 'k-dlg-title', t('panel.changelogTitle'));
   const body = el('pre', 'k-changelog', md);
   const btns = el('div', 'k-dlg-btns');
-  const ok = el('button', 'k-ok', t('dialogs.close'));
+  const ok = el('button', 'k-ok k-cancel', t('dialogs.close'));
   ok.onclick = () => ov.remove();
   btns.append(ok); box.append(ttl, body, btns); ov.append(box);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };

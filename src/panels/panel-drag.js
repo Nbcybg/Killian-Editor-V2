@@ -2,6 +2,7 @@
 // ไม่ import panel-renderer.js (กัน circular) — renderer เป็นฝ่าย import ไฟล์นี้
 // ตรรกะโซนมาจาก panel-layout.snapZone ล้วน · การเปลี่ยนโครงสร้างสั่งผ่าน PanelManager เท่านั้น
 import * as PL from './panel-layout.js';
+import { escCancelDrag } from '../drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก
 
 // px ที่ต้องขยับก่อนถือว่า "ลาก" (ไม่งั้นนับเป็นคลิก)
 // บั๊ก #19: 4px น้อยเกินไป — คลิกหัวแผงแล้วมือขยับนิดเดียวก็กลายเป็นลาก → แผงเด้งไป dock/ลอยเอง
@@ -194,12 +195,18 @@ function startPanelDrag(e, panelId, pm, ctx = {}) {
     }
   };
 
-  const up = (ev) => {
+  const cleanup = () => {
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', up);
+    offEsc();
     ov.hide();
     if (ghost) ghost.remove();
     document.body.classList.remove('k-panel-dragging');
+  };
+  // [alpha.165] Esc ระหว่างลาก = ยกเลิก แผงอยู่ที่เดิม (ไม่ผนึก ไม่ลอย ไม่รวมแท็บ)
+  const offEsc = escCancelDrag(cleanup);
+  const up = (ev) => {
+    cleanup();
     if (!moved) return;                              // คลิกเฉย ๆ → ปล่อยให้ onclick ทำงาน
     const ux = (ev.clientX || ev.clientY) ? ev.clientX : lastX;   // กัน mouseup ที่ให้พิกัด 0,0
     const uy = (ev.clientX || ev.clientY) ? ev.clientY : lastY;
@@ -355,11 +362,20 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
       else ov.hide();
     };
-    const up = () => {
+    const cleanup = () => {
       document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
+      offEsc();
       ov.hide();
       popup.classList.remove('k-float-snapped');
+    };
+    // [alpha.165] Esc = ยกเลิก: กล่องกลับที่เดิม ไม่ผนึก (store ยังไม่ถูกแตะระหว่างลาก — คืนแค่ DOM)
+    const offEsc = escCancelDrag(() => {
+      cleanup();
+      popup.style.left = x0 + 'px'; popup.style.top = y0 + 'px';
+    });
+    const up = () => {
+      cleanup();
       if (!moved) return;
       // ถ้ามีอะไร re-render แผงระหว่างลาก popup จะหลุดจากหน้า → offset* เป็น 0 หมด
       // เขียนต่อ = แผงเด้งไปมุมซ้ายบน ปล่อยผ่านดีกว่า (บั๊ก: คลิกค้างแล้วแผงรีเซ็ต)

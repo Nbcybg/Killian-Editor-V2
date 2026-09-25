@@ -5,15 +5,16 @@ import { $, el, state, setStatus, log, t as tr } from './core.js';
 import { activate, closeTab, loadProject, newProject } from './app.js';
 // [alpha.60r3 ข้อ 9] ปุ่มส่งออก/นำเข้าโปรเจกต์บนหน้าแรก
 import { exportProjectZip, importProjectZip } from './export-zip.js';
-import { initIcons, gi } from './icons.js';
+import { initIcons, gi, icon } from './icons.js';
 import { fileUrlFromPath } from './file-url.js';
 import { settingsDialog } from './dialogs.js';
 import { fmtDate, fmtNum } from './locale.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
+// [alpha.164 · รอบต่อ 3] ป้ายเป็น getter — เดิม `t()` ตอน import = ค้างภาษาที่โหลดตอนบูต (กฎรอบต่อ 2)
 export const HOME_VIEWS = [
-  { id: 'card', icon: gi('grid'), label: t('ui.home.card') },
-  { id: 'list', icon: gi('menu'), label: t('ui.common.list2') },
+  { id: 'card', icon: gi('grid'), get label() { return t('ui.home.card'); } },
+  { id: 'list', icon: gi('menu'), get label() { return t('ui.common.list2'); } },
 ];
 /** โหมดที่ผู้ใช้เลือกไว้ล่าสุด (localStorage) — ค่าที่อ่านไม่รู้จักถือเป็น 'card' */
 export function homeView() {
@@ -389,14 +390,18 @@ export function createProjectCard(project, onOpen) {
   
   // สถิติ
   const stats = el('div', 'home-card-stats');
+  // [alpha.164 · รอบต่อ 3 · งาน 5] ไอคอน + ตัวเลข (ป้ายเต็มอยู่ใน tooltip/aria-label) — อังกฤษ
+  // "Scene: 2 · Chapter: 1 · Words: 50" พับสองบรรทัดบนการ์ดกว้าง 190px · ไอคอนสื่อความหมายได้ทุกภาษา
   const statItems = [
-    { icon: gi('file'), label: t('ui.common.scene2'), val: project.totalScenes },
-    { icon: gi('folder'), label: t('ui.common.chapter'), val: project.totalChapters },
-    { icon: gi('note'), label: t('ui.common.word2'), val: project.wordsUnknown ? '—' : fmtNum(project.totalWords) },
+    { icon: 'file', label: t('ui.dash.statScenes'), val: fmtNum(project.totalScenes || 0) },
+    { icon: 'folder', label: t('ui.dash.statChapters'), val: fmtNum(project.totalChapters || 0) },
+    { icon: 'note', label: t('ui.common.word2'), val: project.wordsUnknown ? '—' : fmtNum(project.totalWords) },
   ];
   for (const s of statItems) {
     const si = el('span', 'home-stat');
-    si.textContent = s.icon + ' ' + s.label + ': ' + s.val;
+    si.append(icon(s.icon, 13), document.createTextNode(String(s.val)));
+    si.title = s.label + ': ' + s.val;
+    si.setAttribute('aria-label', si.title);
     stats.append(si);
   }
   body.append(stats);
@@ -413,7 +418,10 @@ export function createProjectCard(project, onOpen) {
   // แยกไม่ออกว่าอันไหนคืออันที่กำลังเขียนอยู่ · ที่อยู่เต็มอยู่ใน `title` (hover เห็นครบ)
   // ส่วนบนการ์ดตัดหัวด้วย CSS `direction:rtl` ให้เห็น **ท้ายทาง** ซึ่งเป็นส่วนที่ต่างกัน
   const pathRow = el('div', 'home-card-path');
-  const pathTxt = el('span', 'home-card-pathtxt', project.root);
+  // [alpha.164 · รอบต่อ 3] ข้อความทางอยู่ใน isolate LTR — ไม่งั้นกล `direction:rtl` ย้าย "/" นำหน้าไปไว้ท้าย ("tmp/k2en/")
+  const pathTxt = el('span', 'home-card-pathtxt');
+  pathTxt.append(el('bdi', null, project.root));
+  pathTxt.lastChild.dir = 'ltr';
   pathTxt.title = project.root;
   pathRow.append(pathTxt);
   const reveal = el('button', 'home-card-pathbtn', gi('folder-open'));

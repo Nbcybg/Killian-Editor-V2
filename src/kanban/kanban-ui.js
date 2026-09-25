@@ -15,6 +15,7 @@ let board = null;   // KanbanBoard instance
 // [alpha.124 ข้อ 42] ฉบับร่างที่กระดานกำลังแสดง — จำต่อโปรเจกต์
 // (ES module: ค่าที่ reassign ข้ามฟังก์ชันเก็บใน object — กฎเหล็กข้อ 2)
 const KB = { draftPath: '' };
+let _draftsCache = null;   // [alpha.165] รายชื่อร่างรอบล่าสุด — วาดช่องเลือกได้ทันทีไม่ต้องรอ async (กันกระพริบ)
 const kbKey = () => 'k2-kanban-draft:' + state.root;
 function savedDraft() { try { return localStorage.getItem(kbKey()) || ''; } catch { return ''; } }
 function saveDraft(p) { try { localStorage.setItem(kbKey(), p || ''); } catch {} }
@@ -146,6 +147,15 @@ function renderKanban(b) {
   // ลำดับคอลัมน์มาจากโปรเจกต์ ไม่ใช่ localStorage (ที่เหลือใน layout = พับ/ WIP ของเครื่องนี้)
   b.store.layout = { ...b.store.layout, order: [UNSET, ...b.statuses], hidden: [] };   // ยังไม่กำหนดอยู่ซ้ายสุด
   const data = b.data();
+  // [alpha.165] วาดใหม่ทั้งกระดานทุกครั้งที่ย้ายการ์ด → จำตำแหน่งเลื่อนไว้คืน (แนวนอนของแถวคอลัมน์ ·
+  // แนวตั้งของแต่ละคอลัมน์ตามชื่อสถานะ) · เดิมกระโดดกลับซ้ายสุด/บนสุดทุกครั้ง
+  const oldCols = uiPane.querySelector('.kb-cols');
+  const keepX = oldCols ? oldCols.scrollLeft : 0;
+  const keepY = new Map();
+  for (const c of uiPane.querySelectorAll('.kb-col[data-status]')) {
+    const cards = c.querySelector('.kb-cards');
+    if (cards && cards.scrollTop) keepY.set(c.dataset.status, cards.scrollTop);
+  }
   uiPane.innerHTML = '';
   const wrap = el('div', 'kb-wrap');
 
@@ -170,12 +180,18 @@ function renderKanban(b) {
   const draftSel = el('select', 'k-dlg-select kb-draft');
   draftSel.title = t('ui.kanban.draftPick');
   head.append(draftSel);
-  kanbanDrafts().then((ds) => {
-    if (!draftSel.isConnected) return;
+  // [alpha.165] ★ ต้นตอ "dropdown กระพริบมุมขวาบน" ตอนย้ายการ์ด: ช่องนี้เกิดใหม่ว่าง ๆ และ **มองเห็น** ทุกรอบวาด
+  // จนรายชื่อร่าง (async) กลับมาแล้วถึงถูกซ่อน (โปรเจกต์ร่างเดียว) → วาดจากรายการที่จำไว้ทันที แล้วค่อยเติมของสด
+  const fillDrafts = (ds) => {
     draftSel.replaceChildren();
     for (const d of ds) { const o = el('option', null, d.label); o.value = d.dPath; draftSel.append(o); }
     draftSel.value = KB.draftPath;
     draftSel.style.display = ds.length > 1 ? '' : 'none';   // เล่มเดียว = ไม่ต้องรกหัวกระดาน
+  };
+  if (_draftsCache) fillDrafts(_draftsCache); else draftSel.style.display = 'none';
+  kanbanDrafts().then((ds) => {
+    _draftsCache = ds;
+    if (draftSel.isConnected) fillDrafts(ds);
   }).catch(() => {});
   draftSel.onchange = () => setKanbanDraft(draftSel.value);
   wrap.append(head);
@@ -332,6 +348,12 @@ function renderKanban(b) {
   }
   wrap.append(cols);
   uiPane.append(wrap);
+  if (keepX) cols.scrollLeft = keepX;
+  for (const [k, y] of keepY) {
+    const c = [...cols.querySelectorAll('.kb-col[data-status]')].find((x) => x.dataset.status === k);
+    const cards = c && c.querySelector('.kb-cards');
+    if (cards) cards.scrollTop = y;
+  }
 }
 
 const isColDrag = (e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes('text/k2-kb-col');
@@ -364,4 +386,4 @@ function refreshKanbanUI() {
 }
 
 // โหลดซ้ำเมื่อเปลี่ยนโปรเจกต์
-export function resetKanban() { board = null; uiPane = null; }
+export function resetKanban() { board = null; uiPane = null; _draftsCache = null; }

@@ -166,7 +166,10 @@ export class PlannerBoard {
     // [บั๊ก 1] ResizeObserver ยิงหลายสิบครั้งต่อวินาทีตอนลากขอบแผง — รวบให้เหลือเฟรมละครั้ง
     this._resizeObserver = new ResizeObserver(() => {
       if (this._fitRaf) return;
-      this._fitRaf = requestAnimationFrame(() => { this._fitRaf = null; this._fit(); });
+      this._fitRaf = requestAnimationFrame(() => {
+        this._fitRaf = null; this._fit();
+        if (this._placeFmtBar) this._placeFmtBar();   // [alpha.164 · รอบต่อ 2] แถบรูปแบบตามขนาดเวที
+      });
     });
     this._resizeObserver.observe(this.pane);
     // [alpha.151 ข้อ 8] เฝ้า "เวที" ด้วย ไม่ใช่แค่แผง — _fit วัดขนาดจากเวที แต่เดิมเฝ้าแค่แผง
@@ -237,12 +240,25 @@ export class PlannerBoard {
   _makeBarDraggable(bar) {
     const KEY = 'k2-planner-fmtbar';
     const grip = bar.querySelector('.k-fmtbar-grip');
+    // ══ [alpha.164 · รอบต่อ 2] แถบต้องอยู่ "ในเวที และขวาของรางเครื่องมือ" เสมอ ══
+    // เดิมวางครั้งเดียวตอนสร้าง แล้วไม่มีใครจัดใหม่เมื่อแผงแคบลง → แถบกว้าง 940px ล้นขอบขวาเวที
+    // (ถูก overflow:hidden ตัดปุ่มท้าย) · และ max-width ของ CSS คิดจากเวทีทั้งผืน จึงทับรางซ้ายมือได้
+    // ตอนนี้: ความกว้างสูงสุด = เวที − ราง (เกินนั้นเลื่อนแนวนอนในแถบเอง) · ตำแหน่งถูกหนีบใหม่ทุกครั้งที่เวทีเปลี่ยนขนาด
+    const GAP = 6;
+    const railRight = () => {
+      const r = this.rail;
+      return r && r.offsetWidth ? r.offsetLeft + r.offsetWidth + GAP : GAP;
+    };
     const place = (x, y) => {
       const host = this.stage.getBoundingClientRect();
+      if (!host.width) return;
+      const minL = railRight();
+      bar.style.maxWidth = Math.max(120, Math.floor(host.width - minL - GAP)) + 'px';
       const w = bar.offsetWidth || 300, h = bar.offsetHeight || 34;
-      bar.style.left = Math.round(Math.max(4, Math.min(host.width - w - 4, x))) + 'px';
+      bar.style.left = Math.round(Math.max(minL, Math.min(host.width - w - GAP, x))) + 'px';
       bar.style.top = Math.round(Math.max(4, Math.min(host.height - h - 4, y))) + 'px';
     };
+    this._placeFmtBar = () => place(parseInt(bar.style.left, 10) || 0, parseInt(bar.style.top, 10) || 8);
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
     // ค่าเริ่มต้น: ขอบบน กึ่งกลาง — ไม่ทับรางเครื่องมือที่อยู่ซ้ายมือ

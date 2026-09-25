@@ -1316,6 +1316,29 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
   check('[159-M15] ทุก id ที่คืนมามีตัวลงทะเบียน (วาดได้จริง)', ids.every((id) => pmG.registered().includes(id)), ids.join());
 }
 
+// ── [alpha.165] ผนึกแล้วลอยอีกครั้ง = กลับไปที่ที่ลอยอยู่ครั้งล่าสุด (ไม่ใช่ที่ช่องผนึก) ──
+{
+  const { pm: pmF } = mkMgr();
+  for (const id of ['a', 'b']) pmF.registerPanel(id, { title: id });
+  pmF.showPanel('a'); pmF.dockPanel('b', 'right', 'a');
+  pmF.floatPanel('b', { x: 10, y: 10, w: 300, h: 200 }, { fromDock: true });
+  pmF.moveFloat('b', { x: 420, y: 260 });                     // ผู้ใช้ลากไปวาง
+  pmF.dockPanel('b', 'right', 'a');                           // ผนึก
+  check('[165-P3] ผนึกแล้ว', pmF.isDocked('b') && !pmF.isFloating('b'));
+  pmF.floatPanel('b', { x: 700, y: 30, w: 300, h: 900 }, { fromDock: true, recall: true });   // ปุ่ม ⧉ ส่งกล่องช่องผนึกมา
+  const fb = pmF.floats.find((f) => f.panel.id === 'b');
+  check('[165-P3] ★ ลอยอีกครั้งด้วยปุ่ม → ตำแหน่งเดิมที่ลากไว้ (420,260)', fb && fb.x === 420 && fb.y === 260, fb && [fb.x, fb.y].join());
+  check('[165-P3] ขนาดโหมดลอยยังเป็นของเดิม (300×200)', fb && fb.w === 300 && fb.h === 200, fb && [fb.w, fb.h].join());
+  pmF.dockPanel('b', 'right', 'a');
+  pmF.floatPanel('b', { x: 55, y: 66, w: 300, h: 200 }, { fromDock: true });            // ลากไปปล่อย (ไม่ recall)
+  const fd = pmF.floats.find((f) => f.panel.id === 'b');
+  check('[165-P3] ลากไปปล่อย = ตำแหน่งเมาส์ชนะ (ไม่ดึงที่เดิมกลับ)', fd && fd.x === 55 && fd.y === 66, fd && [fd.x, fd.y].join());
+  pmF.dockPanel('b', 'right', 'a');
+  pmF.floatPanel('b', {}, { recall: true, clamp: (bx) => ({ ...bx, x: Math.min(bx.x, 20), y: Math.min(bx.y, 20) }) });
+  const fc = pmF.floats.find((f) => f.panel.id === 'b');
+  check('[165-P3] ตัวหนีบของ UI ใช้กับตำแหน่งที่จำไว้ (หน้าต่างเล็กลง = ไม่หลุดจอ)', fc && fc.x === 20 && fc.y === 20, fc && [fc.x, fc.y].join());
+}
+
 console.log(`\npanel: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

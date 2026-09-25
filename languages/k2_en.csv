@@ -43,14 +43,14 @@ ui.ai.evidenceLabel,Evidence:
 ui.ai.extraHint,Extra instructions (optional)
 ui.ai.fileKeepKeyPart,This file holds your private key — do not share it or include it in a zip you pass on
 ui.ai.formatLabel,Format: 
-ui.ai.foundDotCheckRound,Found {0} issues · {1} passes checked
-ui.ai.foundDotSceneAppear,Found {0} issues in {1} scenes where they appear
+ui.ai.foundDotCheckRound,Found {0} {0|issue|issues} · {1} {1|pass|passes} checked
+ui.ai.foundDotSceneAppear,Found {0} {0|issue|issues} in {1} {1|scene|scenes} where they appear
 ui.ai.freeform,Freeform
 ui.ai.general,General
 ui.ai.generating,AI is writing...
 ui.ai.genSynopsis,Let AI write it
 ui.ai.greeting,"Hi! Ask me anything about your story, e.g."
-ui.ai.hasRoundCallAI,{0} AI calls failed
+ui.ai.hasRoundCallAI,{0} AI {0|call|calls} failed
 ui.ai.important,Major
 ui.ai.inputLabel,Text to process
 ui.ai.insert,Insert
@@ -121,13 +121,6 @@ ui.ai.worldPrompt,"Describe what to build (e.g. ""a magic system that costs bloo
 ui.ai.worldTitle,World builder
 ui.ai.wReligion,Religion
 ui.ai.youAssistantWriterReply,You are a writing assistant. Answer questions about the user's story. 
-ui.aiAssistant.changeToneTextStyleF,"Change the tone of the following text to ""{0}"" while keeping the content and the order of events"
-ui.aiChatPanel.busyActF,Carrying out {0} commands…
-ui.aiChatPanel.startModeF,"Start chatting — mode ""{0}"" · can see: {1}"
-ui.aiSet.noModelFor,"Provider ""{0}"" has no model selected (menu AI → AI settings)"
-ui.aiSyn.aICantSendF,The AI did not send back {0}
-ui.aiSyn.fillF,Filled in {0} from the AI
-ui.aiTools.modeCurrentNotAllowF,"The current mode does not allow ""{0}"" — switch modes in the input box first"
 ui.aia.adjKeep,Keep
 ui.aia.adjLessComedy,Less comedy
 ui.aia.adjLessDrama,Less drama
@@ -140,27 +133,27 @@ ui.aia.aiSettings,AI settings
 ui.aia.aiSettingsTip,Open the AI provider settings without going through the settings menu
 ui.aia.analyzePaceStory,Story pacing analysis
 ui.aia.arcGap,Absent
-ui.aia.arcHead,{0} — {1} mentions across {2} scenes
+ui.aia.arcHead,{0} — {1} mentions across {2} {2|scene|scenes}
 ui.aia.busy,Analysing…
 ui.aia.cmpBalanced,Balanced
 ui.aia.cmpDialogue,Dialogue
 ui.aia.cmpInteriority,Interiority
-ui.aia.cmpLeanN,leads in {0} scene(s)
+ui.aia.cmpLeanN,leads in {0} {0|scene|scenes}
 ui.aia.cmpNarration,Narration
 ui.aia.cmpOverall,Overall
 ui.aia.confirmDelSession,Delete session “{0}”?
 ui.aia.crCast,Cast balance
-ui.aia.crCastNote,{0} characters · lead takes {1}%
+ui.aia.crCastNote,{0} {0|character|characters} · lead takes {1}%
 ui.aia.crConflict,Conflict
-ui.aia.crConflictNote,{0} scenes show no conflict markers
+ui.aia.crConflictNote,{0} {0|scene|scenes} show no conflict markers
 ui.aia.crDialogue,Dialogue balance
 ui.aia.crDialogueNote,Dialogue averages {0}% of scene text
 ui.aia.crLanguage,Prose cleanliness
-ui.aia.crLanguageNote,{0} close repeats found
+ui.aia.crLanguageNote,{0} close {0|repeat|repeats} found
 ui.aia.crPacing,Pacing
-ui.aia.crPacingNote,Avg tempo {0} · {1} slow runs
+ui.aia.crPacingNote,Avg tempo {0} · {1} slow {1|run|runs}
 ui.aia.crSceneLen,Scene-length consistency
-ui.aia.crSceneLenNote,Mean {0} words · sd {1}
+ui.aia.crSceneLenNote,Mean {0} {0|word|words} · sd {1}
 ui.aia.csAdjust,Adjust
 ui.aia.csAnalysis,Analysis
 ui.aia.csAvgSent,Avg sentence (words)
@@ -219,22 +212,22 @@ ui.aia.dConflict,Which scenes carry conflict and which are flat.
 ui.aia.dContinuity,Whether character and world details stay consistent across the chosen scope.
 ui.aia.dDialog,"Finds speeches that run too long, written language in characters' mouths, as-you-know exposition and constant name-calling."
 ui.aia.dDrag,"Scores drag per scene from tempo, conflict, length and long unbroken narration."
-ui.aia.dgArc,{0}: mentioned {1} times across {2} scenes
+ui.aia.dgArc,{0}: mentioned {1} {1|time|times} across {2} {2|scene|scenes}
 ui.aia.dgArcGap, · absent: {0}
 ui.aia.dgComposition,{0} [{1}] dialogue={2}% interiority={3}% narration={4}% → {5}
 ui.aia.dgConflict,{0} [{1}] no conflict marker found
 ui.aia.dgDialog,{0} [{1}] speaker={2} · {3}: “{4}”
-ui.aia.dgDrag,{0} [{1}] drag={2} tempo={3} longest narration={4} words · {5}
-ui.aia.dgLength,{0} [{1}] {2} words ({3} min)
+ui.aia.dgDrag,{0} [{1}] drag={2} tempo={3} longest narration={4} {4|word|words} · {5}
+ui.aia.dgLength,{0} [{1}] {2} {2|word|words} ({3} min)
 ui.aia.dgLogic,{0} [{1}] markers: {2} · “{3}”
 ui.aia.dgNote,{0} [{1}] {2}
-ui.aia.dgOocChar,{0}: {1} lines · usual pronoun={2} · usual particle={3}
+ui.aia.dgOocChar,{0}: {1} {1|line|lines} · usual pronoun={2} · usual particle={3}
 ui.aia.dgOocOdd,{0} in {1} [{2}] uses “{3}” instead of “{4}”: “{5}”
-ui.aia.dgPacing,{0} [{1}] tempo={2} dialogue={3}% {4} words
-ui.aia.dgRepeat,"“{0}” ×{1} in {2} [{3}], closest {4} words apart"
+ui.aia.dgPacing,{0} [{1}] tempo={2} dialogue={3}% {4} {4|word|words}
+ui.aia.dgRepeat,"“{0}” ×{1} in {2} [{3}], closest {4} {4|word|words} apart"
 ui.aia.dgScore,{0}: {1}/10 — {2}
-ui.aia.dgScreentime,{0}: {1} scenes · {2} mentions · {3}%
-ui.aia.dgShipping,{0} × {1}: {2} shared scenes · score {3}
+ui.aia.dgScreentime,{0}: {1} {1|scene|scenes} · {2} {2|mention|mentions} · {3}%
+ui.aia.dgShipping,{0} × {1}: {2} shared {2|scene|scenes} · score {3}
 ui.aia.dgTone,{0} [{1}] tone={2} comedy={3}/1k drama={4}/1k
 ui.aia.dgWords,{0} ×{1} ({2} per 10k)
 ui.aia.dLength,"Scene length against the median, with estimated reading time."
@@ -242,7 +235,7 @@ ui.aia.dlgR.exposition,as-you-know
 ui.aia.dlgR.long,too long
 ui.aia.dlgR.vocative,name-calling
 ui.aia.dlgR.written,written style
-ui.aia.dlgVocNote,Names the other person in {0} of {1} lines in this scene
+ui.aia.dlgVocNote,Names the other person in {0} of {1} {1|line|lines} in this scene
 ui.aia.dLogic,"Finds events driven by coincidence or luck, decisions without motivation, and cause-and-effect that doesn't connect."
 ui.aia.done,done
 ui.aia.dOoc,Compares each character's behaviour and voice with their Wiki profile and with themselves in other scenes (shifts in pronouns and particles).
@@ -269,10 +262,10 @@ ui.aia.errSessionDel,Could not delete the session
 ui.aia.errSessionRead,Could not read session file: 
 ui.aia.errSessionSave,Could not save the session
 ui.aia.errUnknownKind,Unknown analysis type
-ui.aia.estAll,All 11 kinds ≈ {0} tokens · {1}
+ui.aia.estAll,All 11 kinds ≈ {0} {0|token|tokens} · {1}
 ui.aia.estOff,AI is off — nothing will be charged
 ui.aia.estTip,Estimate before calling the AI — scene text + instructions + reply cap
-ui.aia.estTokens,≈ {0} tokens · {1}
+ui.aia.estTokens,≈ {0} {0|token|tokens} · {1}
 ui.aia.exportCsv,Export CSV
 ui.aia.exportCsvOne,Export this analysis as CSV
 ui.aia.exportCsvTip,Export every result in this scope as CSV (opens in Excel/Sheets)
@@ -287,7 +280,7 @@ ui.aia.noProject,No project open
 ui.aia.noSignal,No signals in this scope
 ui.aia.noteCharOnce,Appears once in the whole scope — deliberate or dropped?
 ui.aia.noteNoPov,No POV set
-ui.aia.nScene, · {0} scenes
+ui.aia.nScene, · {0} {0|scene|scenes}
 ui.aia.oocHabit,usual: {0} · {1}
 ui.aia.oocNoProfile,no profile
 ui.aia.oocShift,uses “{0}” instead of “{1}”
@@ -307,11 +300,11 @@ ui.aia.pToneAuto,"not specified — first judge the main tone from the whole sto
 ui.aia.pToneTarget,Intended tone: 
 ui.aia.pTruncated, (partial — over the token budget)
 ui.aia.reload,Reload
-ui.aia.rowLength,{0} words · {1} min
-ui.aia.rowPacing,{0} words · {1}% dialogue · {2} words/sentence
-ui.aia.rowRepeat,{0} · closest {1} words apart
-ui.aia.rowScreentime,{0} scenes · {1} mentions
-ui.aia.rowShip,{0} shared scenes · {1} mentions
+ui.aia.rowLength,{0} {0|word|words} · {1} min
+ui.aia.rowPacing,{0} {0|word|words} · {1}% dialogue · {2} {2|word|words}/sentence
+ui.aia.rowRepeat,{0} · closest {1} {1|word|words} apart
+ui.aia.rowScreentime,{0} {0|scene|scenes} · {1} {1|mention|mentions}
+ui.aia.rowShip,{0} shared {0|scene|scenes} · {1} {1|mention|mentions}
 ui.aia.run,Analyze
 ui.aia.runAll,Run all
 ui.aia.runRange,{0} → {1} · {2} in a row
@@ -322,11 +315,11 @@ ui.aia.scopeScene,This scene
 ui.aia.scoreAiHead,AI score
 ui.aia.scoreLocalHead,Metric score
 ui.aia.sessionAuto,Analysis of {0}
-ui.aia.sessionCost,{0} tokens · ${1}
+ui.aia.sessionCost,{0} {0|token|tokens} · ${1}
 ui.aia.sessionCurrent,Open session: {0}
 ui.aia.sessionDeleted,Deleted session “{0}”
 ui.aia.sessionEmpty,No sessions saved in this project yet
-ui.aia.sessionKinds,{0} kinds
+ui.aia.sessionKinds,{0} {0|kind|kinds}
 ui.aia.sessionList,Sessions
 ui.aia.sessionListTip,Open a session saved in this project
 ui.aia.sessionOpen,Open
@@ -430,10 +423,10 @@ ui.aia.tShipping,Shipping / love interest
 ui.aia.tTone,Tone (comedy/drama)
 ui.aia.unitMin, min
 ui.aia.unitWord, words
-ui.aia.usage,{0} tokens · about ${1}
+ui.aia.usage,{0} {0|token|tokens} · about ${1}
 ui.aia.useAI,Use AI
 ui.aia.usedNone,No AI calls in this scope yet
-ui.aia.usedSoFar,Used {0} calls · {1} tokens · {2}
+ui.aia.usedSoFar,Used {0} {0|call|calls} · {1} {1|token|tokens} · {2}
 ui.aia.wiki,Wiki entities
 ui.aia.wordUse,Frequent words
 ui.aiActions.addChapterDone,"Added chapter ""{0}"" to ""{1}"""
@@ -443,7 +436,7 @@ ui.aiActions.bookHasChapter,"This book already has a chapter ""{0}"""
 ui.aiActions.changeNameChapterDone,"Renamed the chapter to ""{0}"" (the folder keeps its old name, so links in the manuscript don't break)"
 ui.aiActions.changeNameSceneDone,"Renamed the scene to ""{0}"""
 ui.aiActions.chapterHasScene,"This chapter already has a scene ""{0}"""
-ui.aiActions.delChapterSceneTrash,"Moved chapter ""{0}"" ({1} scenes) to the trash"
+ui.aiActions.delChapterSceneTrash,"Moved chapter ""{0}"" ({1} {1|scene|scenes}) to the trash"
 ui.aiActions.delSceneTrashDone,"Moved scene ""{0}"" to the trash"
 ui.aiActions.dirOpenUnsaved,Did not delete {0} — it has open tabs that could not be saved
 ui.aiActions.editDone,"Edited ""{0}"""
@@ -471,7 +464,7 @@ ui.aiActions.outsideProject,This name points outside the project — nothing was
 ui.aiActions.readDone,"Read ""{0}"""
 ui.aiActions.readSceneDone,"Read scene ""{0}"""
 ui.aiActions.readStructureDone,Read the structure
-ui.aiActions.sceneDoneMergeChar,"{0} scene ""{1}"" ({2} characters in total)"
+ui.aiActions.sceneDoneMergeChar,"{0} scene ""{1}"" ({2} {2|character|characters} in total)"
 ui.aiActions.sceneOpenUnsaved,Did not delete {0} — the scene has unsaved changes that could not be saved
 ui.aiActions.writeNext,Continue writing
 ui.aiAgent.add,Add agent
@@ -495,10 +488,10 @@ ui.aiAgent.noRefs,No references yet
 ui.aiAgent.persona,"Persona — writing style, theme, tone, sources, rules"
 ui.aiAgent.personaHint,"Write it like a brief for a writer — the clearer, the better the result"
 ui.aiAgent.personaPh,"Style: vivid, mix short and long sentences\nTheme: redemption\nTone: dark, tense\nSources: classic fantasy novels\nRules: never change events · keep the original pronouns"
-ui.aiAgent.refCount,{0} reference(s)
+ui.aiAgent.refCount,{0} {0|reference|references}
 ui.aiAgent.refNamePh,Reference name (optional)
 ui.aiAgent.refs,References — writing style or ideas
-ui.aiAgent.refsHint,Sent to the AI as examples/ideas whenever this agent is used (up to {0} characters in total — top first) · .txt files outside the project are copied into References/
+ui.aiAgent.refsHint,Sent to the AI as examples/ideas whenever this agent is used (up to {0} {0|character|characters} in total — top first) · .txt files outside the project are copied into References/
 ui.aiAgent.refTextPh,"Paste a sample passage, a paragraph you like, or ideas for the AI to follow…"
 ui.aiAgent.removeRef,Remove this reference
 ui.aiAgent.sysPrompt,System prompt (sent before every AI request)
@@ -511,6 +504,7 @@ ui.aiAssistant.addDetailSceneTouch,"Add detail to the scene, the senses and the 
 ui.aiAssistant.ambiencePressUseImage,"Bleak, oppressive atmosphere with strong imagery"
 ui.aiAssistant.betweenCharacter,"Gentle, focused on the feelings between characters"
 ui.aiAssistant.cantSettingsAIClient,The AI client is not set up yet
+ui.aiAssistant.changeToneTextStyleF,"Change the tone of the following text to ""{0}"" while keeping the content and the order of events"
 ui.aiAssistant.characterThingItem,Related characters/items:
 ui.aiAssistant.concise,Concise
 ui.aiAssistant.context,"### Context
@@ -598,7 +592,7 @@ ui.aiChat.wordAskNotFound,"### Question
 
 (No reference material found in the project — if you cannot answer, say so plainly)"
 ui.aiChat.youAssistantKnownWorld,You are an assistant who knows this writer's world and story well. 
-ui.aiChatPanel.actCmdOk,Carried out {0} commands — {1}/{2} succeeded
+ui.aiChatPanel.actCmdOk,Carried out {0} {0|command|commands} — {1}/{2} succeeded
 ui.aiChatPanel.addFileInContext,Add files to this session's context
 ui.aiChatPanel.aIAct,"The AI wants to carry out:
 
@@ -619,6 +613,7 @@ ui.aiChatPanel.assistant,Assistant
 ui.aiChatPanel.assistantFileMdFolder,Assistant skills (.md files in the project's Skills/ folder)
 ui.aiChatPanel.backListSession,Back to the session list
 ui.aiChatPanel.btnSendSetFile,The send key can be changed in menu AI → AI settings
+ui.aiChatPanel.busyActF,Carrying out {0} {0|command|commands}…
 ui.aiChatPanel.busyContinue,Continuing…
 ui.aiChatPanel.busyRunPressBack,Working: {0} · {1}s — click to go back
 ui.aiChatPanel.busyThink,Thinking…
@@ -629,7 +624,7 @@ ui.aiChatPanel.callAINotOk,The AI call failed
 ui.aiChatPanel.cancelSet,Cancel the whole batch
 ui.aiChatPanel.cantSettingsProviderAI,No AI provider set up yet — menu AI → AI settings
 ui.aiChatPanel.changeName,Rename
-ui.aiChatPanel.char,  ({0} characters)
+ui.aiChatPanel.char,  ({0} {0|character|characters})
 ui.aiChatPanel.clickViewDetail,— click to see details —
 ui.aiChatPanel.closeAsk,Stop asking
 ui.aiChatPanel.closeAskBeforeDel,"Stop asking before deleting?
@@ -638,7 +633,7 @@ The AI will be able to delete books/chapters/scenes/entities immediately without
 "
 ui.aiChatPanel.closeBackSession,Close — back to the session
 ui.aiChatPanel.cmdAct,Commands carried out (
-ui.aiChatPanel.contextCapLearned,This model accepts about {0} tokens of context — history will be trimmed to fit next time; you can send again
+ui.aiChatPanel.contextCapLearned,This model accepts about {0} {0|token|tokens} of context — history will be trimmed to fit next time; you can send again
 ui.aiChatPanel.continueBtn,Continue
 ui.aiChatPanel.continuePrompt,"Continue your previous reply exactly where it stopped. Do not repeat what you already wrote, do not start over, do not add explanations."
 ui.aiChatPanel.continueTip,Ask the AI to keep writing from where this reply stopped
@@ -668,7 +663,7 @@ ui.aiChatPanel.export,Output tokens
 ui.aiChatPanel.fileMdOneFile,Skills live in {0}/ — one .md file = one skill
 ui.aiChatPanel.helpWriteNewEdit,"Co-write — can actually create/edit books, chapters, scenes and entities (cannot delete)
 "
-ui.aiChatPanel.historyTrimmed,- {0} older messages trimmed to fit the model budget -
+ui.aiChatPanel.historyTrimmed,- {0} older {0|message|messages} trimmed to fit the model budget -
 ui.aiChatPanel.ideaModel,Model's reasoning
 ui.aiChatPanel.import,Input tokens
 ui.aiChatPanel.insertShortcode,Insert shortcode (resolved immediately)
@@ -683,7 +678,7 @@ ui.aiChatPanel.modelSessionValueSet,This session's model — overrides the value
 ui.aiChatPanel.modeRun,"Working mode
 "
 ui.aiChatPanel.msg,Cost: 
-ui.aiChatPanel.msg2,{0} skills: {1}
+ui.aiChatPanel.msg2,{0} {0|skill|skills}: {1}
 ui.aiChatPanel.nameSession,Session name
 ui.aiChatPanel.newFolderFileSample,Create skills folder + sample file
 ui.aiChatPanel.not,Unknown
@@ -707,10 +702,10 @@ ui.aiChatPanel.ragRetrieveFail,Could not retrieve relevant content for the AI
 ui.aiChatPanel.readNotOk,Could not read skills
 ui.aiChatPanel.restartClearDialogue,Start over (clear the conversation)
 ui.aiChatPanel.restartClearDialogueSession,Start over — clear this session's conversation (keeps mode/model/attachments)
-ui.aiChatPanel.restartClearDialogueText,"Start over — clear the {0} messages of ""{1}""?"
+ui.aiChatPanel.restartClearDialogueText,"Start over — clear the {0} {0|message|messages} of ""{1}""?"
 ui.aiChatPanel.resultCmdSendBack,Command results sent back to the model
 ui.aiChatPanel.resultSendBackModel,Results sent back to the model
-ui.aiChatPanel.roundNotEndPrint,"Stopped after {0} rounds to avoid an endless loop — type ""continue"" if it isn't finished"
+ui.aiChatPanel.roundNotEndPrint,"Stopped after {0} {0|round|rounds} to avoid an endless loop — type ""continue"" if it isn't finished"
 ui.aiChatPanel.sceneOpen,Open scene
 ui.aiChatPanel.searchSessionNameText,Search sessions (name or message text)…
 ui.aiChatPanel.send,Send
@@ -724,6 +719,7 @@ ui.aiChatPanel.showSessionArrangeKeep, Show archived sessions
 ui.aiChatPanel.showTextJSON,{{ }} Show raw text (JSON)
 ui.aiChatPanel.staleSaveRebased,Stale save detected - rebased onto the latest messages
 ui.aiChatPanel.startDialogueNewDone,Started a new conversation (mode/model/attachments kept)
+ui.aiChatPanel.startModeF,"Start chatting — mode ""{0}"" · can see: {1}"
 ui.aiChatPanel.statusError,The last reply failed
 ui.aiChatPanel.statusIdle,Ready
 ui.aiChatPanel.statusRunning,Thinking…
@@ -743,7 +739,7 @@ ui.aiChatPanel.usage2,Usage:
 ui.aiChatPanel.uSD,Cost (USD)
 ui.aiChatPanel.use,Tokens used
 ui.aiChatPanel.use2,Tokens used: 
-ui.aiChatPanel.useItemChar,Using {0} skills ({1} characters)
+ui.aiChatPanel.useItemChar,Using {0} {0|skill|skills} ({1} {1|character|characters})
 ui.aiChatPanel.userNotAllow,The user declined
 ui.aiChatPanel.useTaskLatest,Last used
 ui.aiChatPanel.useTime, · took {0} s
@@ -788,7 +784,7 @@ ui.aiDialogue.thingEachNeedDialogue,What each side wants from this conversation:
 ui.aiDialogue.time,Time: 
 ui.aiDialogue.toneMerge,Overall tone: 
 ui.aiDialogue.useFormatScreenplayStyle,Use only this screenplay format (always start a new line):
-ui.aiDialogue.writeDialogueBetweenCharacter,"Write a conversation between the following 2 characters, about {0} exchanges long"
+ui.aiDialogue.writeDialogueBetweenCharacter,"Write a conversation between the following 2 characters, about {0} {0|exchange|exchanges} long"
 ui.aiDialogue.writeEditDialogueWord,"Write it as prose: dialogue in quotation marks ""…"" alternating with brief narration of who speaks and what they do"
 ui.aiDialogue.youWriterScreenplayThai,You are a professional screenwriter. Write dialogue that sounds like real people talking. 
 ui.aiError.addMaxRetriesParameters,Increase Max Retries in Parameters so it backs off and retries automatically
@@ -934,7 +930,7 @@ ui.aiProvider.busyNextTryNew,Contacting {0}… (retry {1})
 ui.aiProvider.busyTest,Testing…
 ui.aiProvider.cantPickModel,No model selected yet
 ui.aiProvider.cantSettingsProviderAI,No AI provider set up yet (menu AI → AI settings)
-ui.aiProvider.connectOkFoundModel,Connected — found {0} models
+ui.aiProvider.connectOkFoundModel,Connected — found {0} {0|model|models}
 ui.aiProvider.delProvider,"Delete provider ""{0}""?"
 ui.aiProvider.delProvider2,Delete this provider
 ui.aiProvider.domainAllow,Allowed domains: {0}
@@ -943,7 +939,7 @@ ui.aiProvider.edit,Edit
 ui.aiProvider.editProvider,Edit provider
 ui.aiProvider.fetchListModel,⟳ Fetch model list
 ui.aiProvider.fileKeepKeyPart,This file holds the private key of each Credential — do not share it or put it in a zip you pass on
-ui.aiProvider.foundModel,Found {0} models
+ui.aiProvider.foundModel,Found {0} {0|model|models}
 ui.aiProvider.historyTokens,Chat history budget (tokens)
 ui.aiProvider.historyTokensHint,"0 = automatic (60% of the model limit; 32,000 when unknown)"
 ui.aiProvider.keepSplitFolderProject,Stored separately at {0} in the project folder — not in the shared project.khn.json
@@ -967,7 +963,7 @@ ui.aiProvider.secParams,Parameters
 ui.aiProvider.skSkipEmptyNot,"sk-… (can be left empty if the server needs no key, e.g. Ollama)"
 ui.aiProvider.testConnect,Test connection
 ui.aiProvider.toReplyBackDone,"The endpoint replied, but the reply has no model list"
-ui.aiProvider.useDoneTokensTimes,Used {0} tokens · {1} calls · about ${2}
+ui.aiProvider.useDoneTokensTimes,Used {0} {0|token|tokens} · {1} {1|call|calls} · about ${2}
 ui.aiProvider.xHeaderValueLine,X-Header: value  (one pair per line)
 ui.aiProviders.baseURLMustHttp,Base URL must start with http:// or https://
 ui.aiProviders.baseURLNotList,Base URL is not in the Allowed HTTP Request Domains list
@@ -1062,6 +1058,7 @@ ui.aiSet.cantPickProviderAI,No AI provider selected (menu AI → AI settings)
 ui.aiSet.cantSettingsAIFile,AI is not set up — menu AI → AI settings
 ui.aiSet.connectAICant,Cannot connect to the AI: 
 ui.aiSet.fileKeepKeyPart,This file holds your private key — do not share it or put it in a zip you pass on
+ui.aiSet.noModelFor,"Provider ""{0}"" has no model selected (menu AI → AI settings)"
 ui.aiSet.settingsAIFileSettings,Set up AI first: menu AI → AI settings
 ui.aiSkills.authorDefineYouDo,Skills the author set for you (follow strictly · they override the general guidance above):
 ui.aiSkills.forbidSummaryActEnd,Don't wrap up the ending unless the author asks
@@ -1075,7 +1072,7 @@ ui.aiSum.aISummaryBody2,AI summary —
 ui.aiSum.aiSummaryReadWiki,ai-summary: cannot read the Wiki
 ui.aiSum.bodyNotChangePress," (content unchanged — press ""Summarise again"" if you want the AI to rethink)"
 ui.aiSum.busyReadBodyProject,Reading the project content…
-ui.aiSum.busySendAISummary,Sending to the AI to summarise ({0} scenes · {1} Wiki entries)…
+ui.aiSum.busySendAISummary,Sending to the AI to summarise ({0} {0|scene|scenes} · {1} Wiki {1|entry|entries})…
 ui.aiSum.busySendAIThink,Asking the AI for names…
 ui.aiSum.busyStart,Starting…
 ui.aiSum.callAINewUse,Call the AI again (uses more tokens)
@@ -1109,9 +1106,11 @@ ui.aiSum.tryNew,Try again
 ui.aiSum.useResultSummarySave,Use the saved summary (content unchanged)
 ui.aiSum.youWriterChapterHelp,You are a professional writer. Help come up with names
 ui.aiSum.youWriterHelpSummary,You are a professional writer. Help summarise the novel
+ui.aiSyn.aICantSendF,The AI did not send back {0}
 ui.aiSyn.busyAIWrite,Asking the AI to write
 ui.aiSyn.cutFile,"
 …(end of file cut)"
+ui.aiSyn.fillF,Filled in {0} from the AI
 ui.aiSyn.replyConflictMainScene,"Answer with ""the scene's main conflict"" in 1 short sentence (who is at odds with whom/what). No further explanation."
 ui.aiSyn.replyMoodMainScene,"Answer with ""the scene's main mood"" in 1–3 words (e.g. tense · sad · warm). No further explanation."
 ui.aiSyn.replyNameViewMain,"Answer only with ""the name of the character whose point of view leads this scene"" (one name, at most 40 characters) "
@@ -1144,6 +1143,7 @@ ui.aiTools.editData,"Edit the data of ""{0}"""
 ui.aiTools.editHasSendOnly,Edit an existing entity (send only the fields to change)
 ui.aiTools.forbidPutCommentText,- Do not put comments or any other text in a `k2` block — it must be pure JSON
 ui.aiTools.missingArg,Missing argument: 
+ui.aiTools.modeCurrentNotAllowF,"The current mode does not allow ""{0}"" — switch modes in the input box first"
 ui.aiTools.msg,Item
 ui.aiTools.needAppActPrint,"When you want the app to actually do something, write a `k2` code block containing JSON, like this:"
 ui.aiTools.new,"Create {0} ""{1}"""
@@ -1162,7 +1162,7 @@ ui.aiTools.readDataWikiCharacter,Read an entity's data in the Wiki (character/lo
 ui.aiTools.readScene,"Read scene ""{0}""{1}"
 ui.aiTools.resultAllCmdSend,- The results of every command are sent back to you in the next message; carry on from those results
 ui.aiTools.resultCmdCmd,Results of the commands issued:
-ui.aiTools.sceneChar,"{0} scene ""{1}""{2} ({3} characters)"
+ui.aiTools.sceneChar,"{0} scene ""{1}""{2} ({3} {3|character|characters})"
 ui.aiTools.toolSceneReadArgs,"{{""tool"":""scene.read"",""args"":{{""title"":""First scene""}}}}"
 ui.aiTools.toolSceneWriteArgs,"{{""tool"":""scene.write"",""args"":{{""title"":""First scene"",""mode"":""append"",""text"":""Text to add…""}}}}"
 ui.aiTools.viewStructureProject,View the project structure
@@ -1274,8 +1274,10 @@ ui.app.allLine,Same on every line
 ui.app.app,App default
 ui.app.appWriteNovelScreenplay,Novel/screenplay writing app — Electron + ProseMirror
 ui.app.auto,— Automatic —
+ui.app.autoFitWidthOff,Auto-fit page width is off — back to the zoom you set
+ui.app.autoFitWidthOn,Auto-fit page width is on
 ui.app.autosaveFail,Auto-save failed: 
-ui.app.autosaveRunN,Auto-saved {0} of {1} files
+ui.app.autosaveRunN,Auto-saved {0} of {1} {1|file|files}
 ui.app.back,Back to the form
 ui.app.backSceneNormalDone,"""{0}"" is a normal scene again"
 ui.app.backVersionLatestSave,Go back to the last saved version
@@ -1285,7 +1287,7 @@ ui.app.bind,Linked to
 ui.app.bindCardDocProject,Link the card to a document in the project
 ui.app.bindRelation,Link a relationship
 ui.app.block, blocks
-ui.app.boardItemHideItem,{0} boards are hidden by the filter — clear the search box to see them all
+ui.app.boardItemHideItem,{0} {0|board is|boards are} hidden by the filter — clear the search box to see them all
 ui.app.boardPlanner,Planning boards
 ui.app.boardPlanner2,Planning boards ({0})
 ui.app.boardPlannerPlannerGraph,Planning boards (Planner) and floor plans
@@ -1343,9 +1345,9 @@ ui.app.chapterFilm2, Screenplay ▾
 ui.app.chapterFirstNotHas,The first chapter has no scenes yet
 ui.app.chapterHeading,Chapter/heading
 ui.app.chapterNotHasElement,This script has no elements with content to delete
-ui.app.chapterPageFilePerson,"Script “{0}” · {1} pages — one file per person, each with a different watermark"
+ui.app.chapterPageFilePerson,"Script “{0}” · {1} {1|page|pages} — one file per person, each with a different watermark"
 ui.app.characterChapter,Characters in this script
-ui.app.characterLineDialoguePage,{0} characters · {1} lines of dialogue · {2} pages
+ui.app.characterLineDialoguePage,{0} {0|character|characters} · {1} {1|line|lines} of dialogue · {2} {2|page|pages}
 ui.app.checkChapterBeforeExport,Check the script before export: off
 ui.app.checkChapterBeforeExport2,Check the script before export: on
 ui.app.checkChapterNotOk,Script check failed
@@ -1362,10 +1364,10 @@ ui.app.clickViewDetail,Click to see details
 ui.app.clickViewImageFull,"
 Click = view full image · drag into a scene to insert the image"
 ui.app.close2,Turned off after a crash
-ui.app.closeAllDirtyAsk,{0} tabs have unsaved changes
-ui.app.closeAllKeptUnsaved,Closed {0} tab(s) · kept {1} tab(s) that could not be saved
-ui.app.closeAppHasList,Close the app — {0} items are unsaved
-ui.app.closeAppPendingList,Closing the app · {0} pending items
+ui.app.closeAllDirtyAsk,{0} {0|tab has|tabs have} unsaved changes
+ui.app.closeAllKeptUnsaved,Closed {0} {0|tab|tabs} · kept {1} {1|tab|tabs} that could not be saved
+ui.app.closeAppHasList,Close the app — {0} {0|item|items} are unsaved
+ui.app.closeAppPendingList,Closing the app · {0} pending {0|item|items}
 ui.app.closeNotSave,Close without saving
 ui.app.closePrint,Off (printed exactly as it is)
 ui.app.closeTab,Close this tab
@@ -1381,12 +1383,12 @@ ui.app.consoleDev,Developer console
 ui.app.convertGo,Convert
 ui.app.convertLoss,Switching modes will change some block types irreversibly — {0} · Convert anyway?
 ui.app.convertLostItem,{0} → {1} ({2})
-ui.app.convertLostMore, and {0} more types
+ui.app.convertLostMore, and {0} more {0|type|types}
 ui.app.copyReportDone,Report copied
 ui.app.copyReportNotOk,Could not copy the report
 ui.app.copyResult,Copy results
 ui.app.copyResultConsoleDone,Console output copied
-ui.app.copySaveDoneLine,Log copied ({0} lines matching the filter)
+ui.app.copySaveDoneLine,Log copied ({0} {0|line|lines} matching the filter)
 ui.app.corner,Tilt (degrees)
 ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,Could not read the book cover image
@@ -1397,11 +1399,11 @@ ui.app.dataSystem,System info
 ui.app.date,Day 3 · Year 1024 · Morning
 ui.app.default,Default
 ui.app.del,Delete permanently
-ui.app.delAllLine,All {0} lines will be deleted
-ui.app.delAllLine2,Delete all {0} ({1} lines)?
+ui.app.delAllLine,All {0} {0|line|lines} will be deleted
+ui.app.delAllLine2,Delete all {0} ({1} {1|line|lines})?
 ui.app.delCat, Delete category
 ui.app.delDone,Permanently deleted: 
-ui.app.delElementDoneCancel,Deleted {0} elements (undo with {sc:editor-undo})
+ui.app.delElementDoneCancel,Deleted {0} {0|element|elements} (undo with {sc:editor-undo})
 ui.app.delElementNotOk,Could not delete the elements: 
 ui.app.delElementType,Delete elements by type
 ui.app.delFolder,Delete folder
@@ -1426,10 +1428,10 @@ ui.app.diskConflictOverwrite,Overwrite with this tab's text
 ui.app.diskConflictRecreate,Recreate the file
 ui.app.diskConflictReload,Use the version on disk (discard tab edits)
 ui.app.diskDeletedAsk,"""{0}"" was deleted or moved outside the app. Recreate it in its old place with this tab's text?"
-ui.app.diskReloadedN,Reloaded {0} tabs changed outside the app
+ui.app.diskReloadedN,Reloaded {0} {0|tab|tabs} changed outside the app
 ui.app.dlgbSource,Rehearsal Room
 ui.app.doItemSet,Build installer/portable
-ui.app.doneDoneFile,Done — {0} files
+ui.app.doneDoneFile,Done — {0} {0|file|files}
 ui.app.doneOpenBackChapter,"Applied ""{0}"" (turn it back on at Script → Upper/lower case)"
 ui.app.draft,Draft
 ui.app.draftNotHasChapter,This draft has no chapters yet — create a chapter first
@@ -1449,7 +1451,7 @@ ui.app.editJSON2,{{ }} Edit as JSON
 ui.app.editPin,Edit pin
 ui.app.editTemplate,Edit template
 ui.app.eg,e.g. The Demon of Bangkok
-ui.app.eg2,e.g. Father / Friend / Enemy
+ui.app.eg2,e.g. Father / Friend
 ui.app.eg3,e.g. War breaks out
 ui.app.egBeforeEditAct,e.g. Before rewriting the ending
 ui.app.egDate,e.g. Year 1024 · Day 3
@@ -1470,9 +1472,9 @@ ui.app.exportFontCssFail,Could not embed fonts into the export
 ui.app.exportImportProjectZip,Export/import the project as .zip
 ui.app.exportMergeDone,Exported combined: 
 ui.app.exportNext,Export anyway
-ui.app.exportPDFDonePage,Exported PDF ({0} pages): 
+ui.app.exportPDFDonePage,Exported PDF ({0} {0|page|pages}): 
 ui.app.exportPDFWatermarkPerson,Export per-person watermarked PDFs
-ui.app.exportTableWordDone,Exported the translation table ({0} keys): 
+ui.app.exportTableWordDone,Exported the translation table ({0} {0|key|keys}): 
 ui.app.exportWorkFlow,Export with a workflow
 ui.app.file,File extension
 ui.app.fileLangK2Csv,Language files (k2_*.csv)
@@ -1487,11 +1489,11 @@ ui.app.fontScreenplayPosView,Screenplay font (Thai) — tone-mark positions adap
 ui.app.fontScreenplayQuoteUnquote,Screenplay font (Latin) — Quote-Unquote Apps
 ui.app.forceCaseBig,Force upper case
 ui.app.forcePrintBigFormat,Force upper case per the standard script format
-ui.app.foundErrorChapterEg,"Found {0} errors in the script (e.g. “{1}”)
+ui.app.foundErrorChapterEg,"Found {0} {0|error|errors} in the script (e.g. “{1}”)
 Export anyway?"
-ui.app.foundSceneMention,Found {0} scenes that mention “{1}”
+ui.app.foundSceneMention,Found {0} {0|scene|scenes} that mention “{1}”
 ui.app.goalFromSaves,counted from word history (updates after saving)
-ui.app.goalWord,Today's goal: {0} / {1} words ({2}%)
+ui.app.goalWord,Today's goal: {0} / {1} {1|word|words} ({2}%)
 ui.app.gotoFindNone,No matches
 ui.app.gotoFindPlaceholder,"Type a scene, chapter or page number…"
 ui.app.graphBreakBranch,Branching plans
@@ -1504,7 +1506,7 @@ ui.app.hasBoardName2,A board with this name already exists
 ui.app.hasChapterOverrides,Has chapter overrides
 ui.app.hasFileNameCat,A file with this name already exists in the target category
 ui.app.hasImage,Has images
-ui.app.hasPendingFileCtrl,{0} files pending ({sc:save-all} to save all)
+ui.app.hasPendingFileCtrl,{0} {0|file|files} pending ({sc:save-all} to save all)
 ui.app.hasProjectOpenReplace,This project already exists — opening it instead
 ui.app.hasRelation,Has relationships
 ui.app.heading,Heading
@@ -1521,18 +1523,18 @@ ui.app.icon,Icon (emoji)
 ui.app.image,Image: 
 ui.app.imageRemoved,Image removed
 ui.app.import,Import-
-ui.app.importKeyLangAdd,Imported {0} keys · language {1} · added/changed {2}
+ui.app.importKeyLangAdd,Imported {0} {0|key|keys} · language {1} · added/changed {2}
 ui.app.importNotOkNot,Import failed: there is no active book/draft yet
 ui.app.importReplaceNoTab,"Nothing replaced — the current tab isn't an editable screenplay (it was closed/switched, or the scene is locked)"
-ui.app.importScreenplayF,"Screenplay import ({0}) done: {1} scenes, {2} characters"
-ui.app.importScreenplayF2,"Screenplay import ({0}) — created new scenes: {1} scenes, {2} characters"
+ui.app.importScreenplayF,"Screenplay import ({0}) done: {1} {1|scene|scenes}, {2} {2|character|characters}"
+ui.app.importScreenplayF2,"Screenplay import ({0}) — created new scenes: {1} {1|scene|scenes}, {2} {2|character|characters}"
 ui.app.insertImage,Insert image: 
 ui.app.insertImageDone,Image inserted: 
 ui.app.insertImageNotOk,Could not insert the image: 
 ui.app.item,Desktop app runtime
 ui.app.itemEditCloseDone,The editor has been closed — open the scene again and retry
 ui.app.itemEditTextNovel,Text editor (novels + screenplays)
-ui.app.itemItem, Next item ({0} items)
+ui.app.itemItem, Next item ({0} {0|item|items})
 ui.app.itemReplace,Replacement: 
 ui.app.jSONCheckFormatBefore, — plain JSON (format checked before writing)
 ui.app.jSONFormatNotSave,"Invalid JSON, not saved: "
@@ -1545,8 +1547,8 @@ ui.app.label2,Label (Thai)
 ui.app.left,Left:
 ui.app.libraryImage,Image library ({0})
 ui.app.libraryImage2,Image library
-ui.app.line,{0} ({1} lines)
-ui.app.line2,{0} lines differ
+ui.app.line,{0} ({1} {1|line|lines})
+ui.app.line2,{0} {0|line|lines} differ
 ui.app.lineLatest,Follow the latest line
 ui.app.lineStory,Track/storyline
 ui.app.lineTime,Timeline
@@ -1554,7 +1556,7 @@ ui.app.link,Entity link
 ui.app.list,Recipients
 ui.app.listWordEnglishFolder,Thai/English word lists in renderer/assets · add your own at Plugins/dictionaries
 ui.app.loading,Loading...
-ui.app.loadPluginItem,Loaded {0} plugins
+ui.app.loadPluginItem,Loaded {0} {0|plugin|plugins}
 ui.app.lockEditCant, Locked (read-only)
 ui.app.lockEditCant2,Locked (read-only)
 ui.app.lockScene, Lock this scene
@@ -1588,7 +1590,7 @@ ui.app.mood,Mood:
 ui.app.moveCancelledUnsaved,Cancelled — {0} has unsaved changes that could not be saved
 ui.app.moveCatF,"Moved to category ""{0}"""
 ui.app.moveCatNewDone,Moved to the new category
-ui.app.moveCommentPrevList,Moved {0} existing comments into the scene file
+ui.app.moveCommentPrevList,Moved {0} existing {0|comment|comments} into the scene file
 ui.app.moveCommentPrevNot,Could not move the existing comments
 ui.app.moveNoteBackIn,Move the note back into which chapter
 ui.app.moveNoteInChapter,"Moved note ""{0}"" into chapter ""{1}"" (it won't be included in exports)"
@@ -1678,7 +1680,7 @@ ui.app.notHasImageLibrary,No images in the library yet
 ui.app.notHasLineAt,(no lines match the filter)
 ui.app.notHasLineAt2,No lines match the filter — try another level or clear the search
 ui.app.notHasList,No recipients yet
-ui.app.notHasPageFile,There is no page {0} (this file has {1} pages)
+ui.app.notHasPageFile,There is no page {0} (this file has {1} {1|page|pages})
 ui.app.notHasPart,— No extras —
 ui.app.notHasPendingSave,Nothing pending to save
 ui.app.notHasPressDup,"(none yet — press ""Duplicate"" on a preset)"
@@ -1694,7 +1696,7 @@ ui.app.notOpen,(not opened)
 ui.app.notOutDone,Staying
 ui.app.notPick,None
 ui.app.notRememberEditChapter,"No longer remembering ""{0}"" (change this at Script → Manage SmartType)"
-ui.app.notRememberFoundNot,"Not remembered yet (seen fewer than {0} times) — press ""Remember"" to remember it now"
+ui.app.notRememberFoundNot,"Not remembered yet (seen fewer than {0} {0|time|times}) — press ""Remember"" to remember it now"
 ui.app.notSave,Unsaved
 ui.app.notSet,(not set)
 ui.app.notSource,Source licence unknown
@@ -1744,7 +1746,7 @@ ui.app.openSceneViewNavigation,(open a scene to see Navigation)
 ui.app.orderItemNumNot,Order (number — optional)
 ui.app.out, to exit
 ui.app.outNotSave,Exit without saving
-ui.app.page, · {0} pages
+ui.app.page, · {0} {0|page|pages}
 ui.app.pageAtCursor,Page {0} / {1}
 ui.app.pageChapterNotOk,Could not count the script's pages
 ui.app.pageGuidesOff,Page guides off
@@ -1774,13 +1776,13 @@ ui.app.pickTextBeforeDone,"Select some text first, then change the case"
 ui.app.pickTypeElementNeed,Choose the element type to remove entirely from the script
 ui.app.pinPin,Pin
 ui.app.placeChapter,Locations in this script
-ui.app.placeScenePage,{0} locations · {1} scenes · {2} pages
+ui.app.placeScenePage,{0} {0|location|locations} · {1} {1|scene|scenes} · {2} {2|page|pages}
 ui.app.plannedName,A plan with this name already exists
 ui.app.plannerOpenPanelDup,planner: panel reopened — recalculating canvas coordinates
 ui.app.plannerTreeCheckImage,planner/tree health ({0}): category={1} rows={2} 
 ui.app.plannerTreeFindRow,planner/tree: cannot find the row of the open board
 ui.app.plannerTreeItemFilter,"planner/tree: the Explorer filter hid row ""{0}"""
-ui.app.plannerTreeNewCat,planner/tree: built the board category with {0} boards
+ui.app.plannerTreeNewCat,planner/tree: built the board category with {0} {0|board|boards}
 ui.app.plannerTreeRowBoard,planner/tree: a board row was removed from the DOM
 ui.app.plannerTreeRowChange,"planner/tree: row ""{0}"" changed {1}"
 ui.app.plannerTreeStartView,planner/tree: started watching board rows in the Explorer
@@ -1788,7 +1790,7 @@ ui.app.plugin,Plugins
 ui.app.plugin2F,Plugin {0} crashed — disabled for now
 ui.app.plugin3,Plugin: 
 ui.app.pluginPathMarginProject,plugin: path outside the project: 
-ui.app.portal,{0} entities · {1} portals · {2} notes
+ui.app.portal,{0} {0|entity|entities} · {1} {1|portal|portals} · {2} {2|note|notes}
 ui.app.portalMap,Portal to a map
 ui.app.press, — press 
 ui.app.print,Printed exactly as it is
@@ -1800,10 +1802,10 @@ ui.app.printNoTab,No document open to print
 ui.app.printSent,Sent to the printer
 ui.app.project,Project
 ui.app.projectOpenProjectNot,project: failed to open the project: 
-ui.app.projectPrevHasTab,The previous project has {0} unsaved tabs
+ui.app.projectPrevHasTab,The previous project has {0} unsaved {0|tab|tabs}
 ui.app.propsNewRowPos,props: cannot create the map-position row
 ui.app.propsSceneAtFile,The scene properties already match the .md file
-ui.app.propsSceneFileMd,Synced the scene properties from the .md file ({0} values)
+ui.app.propsSceneFileMd,Synced the scene properties from the .md file ({0} {0|value|values})
 ui.app.proseIndentOff,Auto first-line indent: off
 ui.app.proseIndentOn,Auto first-line indent: on ({0} in)
 ui.app.quitSaveBeforeClose,quit: failed to save before closing: 
@@ -1818,9 +1820,9 @@ ui.app.recentBrokenKeep,Keep it
 ui.app.recentBrokenRemove,Remove from recents
 ui.app.recentBrokenRemoved,Removed the missing project from recents
 ui.app.recoverRestore,Restore
-ui.app.recoverRestoreTab,Restore {0} tabs
+ui.app.recoverRestoreTab,Restore {0} {0|tab|tabs}
 ui.app.reduceData,Data fields
-ui.app.reducePart,{0} fields · {1} sections
+ui.app.reducePart,{0} {0|field|fields} · {1} {1|section|sections}
 ui.app.ref,References
 ui.app.refDocNote,+ Reference a document/note…
 ui.app.refOut,Remove this reference
@@ -1837,7 +1839,7 @@ ui.app.removeElementsFail,remove-elements failed
 ui.app.removeElementsKeepVersion,remove-elements: failed to keep a version before deleting (continuing)
 ui.app.repeat,Duplicate
 ui.app.repeatTemplateDone,Template duplicated
-ui.app.replaceF,Replaced {0} occurrences
+ui.app.replaceF,Replaced {0} {0|occurrence|occurrences}
 ui.app.report,Character report
 ui.app.report2,Character report
 ui.app.reportPlace,Location report
@@ -1853,22 +1855,22 @@ ui.app.right,Right:
 ui.app.save,Save
 ui.app.saveAll,Save All
 ui.app.saveAllDoneClose,Save all and close
-ui.app.saveAllDoneList,Saved everything ({0} items)
+ui.app.saveAllDoneList,Saved everything ({0} {0|item|items})
 ui.app.saveAllSaveNotOk,saveAll: save failed: 
 ui.app.saveAsDone,Saved as: {0}
 ui.app.saveAsUnsupported,This tab can't be saved as an .md file
 ui.app.saveAuto,Autosave
 ui.app.saveBeforeCloseFail,Couldn't save before closing: 
 ui.app.saveCancelledKeepTab,Not saved — the tab stays open
-ui.app.saveCompleteListDone,"Saved all {0} items, closing the app"
+ui.app.saveCompleteListDone,"Saved all {0} {0|item|items}, closing the app"
 ui.app.saved,Saved
 ui.app.saveDone,Saved: 
 ui.app.saveDoneOut,Save and exit
 ui.app.saveFail,Couldn't save: 
 ui.app.saveFile,Save as file…
 ui.app.saveLatestLog,Latest log
-ui.app.saveList,Saving {0}/{1} items
-ui.app.saveNotOkList,Failed to save {0} items — the app stays open (see the log panel for details)
+ui.app.saveList,Saving {0}/{1} {1|item|items}
+ui.app.saveNotOkList,Failed to save {0} {0|item|items} — the app stays open (see the log panel for details)
 ui.app.saveOpenTabsNotOk,Failed to save openTabs
 ui.app.saveReportDone,Report saved: 
 ui.app.saveSettingsFail,Couldn't save the setting to the project file
@@ -1878,8 +1880,8 @@ ui.app.saveVersionDone,Version saved
 ui.app.scene2,(scene)
 ui.app.scene3,Scene 
 ui.app.sceneFirst,First scene
-ui.app.sceneMention2,{0} scenes mention “{1}”
-ui.app.scenePage,  {0} · {1} scenes · ~{2} pages
+ui.app.sceneMention2,{0} {0|scene|scenes} mention “{1}”
+ui.app.scenePage,  {0} · {1} {1|scene|scenes} · ~{2} {2|page|pages}
 ui.app.scroll,Scroll down
 ui.app.searchOnly, Search only in: 
 ui.app.searchOnlyChapter,Search only in chapter: 
@@ -1958,10 +1960,10 @@ ui.app.viewListAll, View the full list…
 ui.app.viewSample,Preview
 ui.app.webMoreElectron,Web engine + runtime bundled with Electron
 ui.app.windowPanelCantChapter,Panel window: did not receive the project path
-ui.app.wordChar,{0} words · {1} characters
+ui.app.wordChar,{0} {0|word|words} · {1} {1|character|characters}
 ui.app.wordCmdNotRemember,Words you told it not to remember ({0})
 ui.app.wordCmdRemember,Words you told it to remember ({0})
-ui.app.wordCountRebuilt,Recounted words in {0} scenes
+ui.app.wordCountRebuilt,Recounted words in {0} {0|scene|scenes}
 ui.app.wordCountSyncFail,Could not sync the word count with the file
 ui.app.wordKeepThingPrint,"These words were collected from ""what you typed in this script"" — press the cross after a word to stop remembering it"
 ui.app.wordPageNameFile,File name prefix
@@ -1969,7 +1971,7 @@ ui.app.workFlowMine,My workflows
 ui.app.writeCode,Wrote code
 ui.app.writeOutStyleCode,"Wrote/designed almost all of the code, via Claude Code"
 ui.app.zoomFitWide,Zoom to fit width: 
-ui.autoTaskEvent.autoSyncUpdateName,auto-sync: updated names in {0} files
+ui.autoTaskEvent.autoSyncUpdateName,auto-sync: updated names in {0} {0|file|files}
 ui.autoTaskEvent.autoTaskAutoSync,auto-task: auto-sync off
 ui.autoTaskEvent.autoTaskAutoSync2,auto-task: auto-sync on
 ui.autoTaskEvent.autoTaskFileNot,auto-task: did not get through all files
@@ -1977,20 +1979,20 @@ ui.autoTaskEvent.renameAsk,"Rename ""{0}"" to ""{1}"" everywhere it is reference
 ui.autoTaskEvent.renameGo,Rename everywhere
 ui.autoTaskEvent.renameNoHit,Nothing referenced the old name
 ui.autoTaskEvent.renameSkipped,Renamed the event only
-ui.autoTaskEventQueue.file,{0} → {1} ({2} files)
+ui.autoTaskEventQueue.file,{0} → {1} ({2} {2|file|files})
 ui.autoTaskEventQueue.notHasHandlerTask,No handler for this kind of task
 ui.autoTaskEventQueue.notHasMustEdit,Nothing to change
 ui.backup.backupSkipFile,backup: skipped file 
-ui.backup.projectDoneFile,Project backed up: {0} ({1} files)
+ui.backup.projectDoneFile,Project backed up: {0} ({1} {1|file|files})
 ui.backup.projectFail,Project backup failed
 ui.books.addBook,+ Add book
 ui.books.bookAllProject,All books in the project
 ui.books.changeNameBookDone,Book renamed
 ui.books.changeNameDraft,Rename draft
-ui.books.chapterSceneWord,{0} chapters · {1} scenes · {2} words
+ui.books.chapterSceneWord,{0} {0|chapter|chapters} · {1} {1|scene|scenes} · {2} {2|word|words}
 ui.books.coverOut,Remove cover
 ui.books.delDraft,Delete this draft
-ui.books.draft, · {0} drafts
+ui.books.draft, · {0} {0|draft|drafts}
 ui.books.draft2,Draft
 ui.books.egDraft,e.g. draft-2
 ui.books.export,Export
@@ -2034,7 +2036,7 @@ ui.branch.bindTextDone,Linked to the text
 ui.branch.bookSkipEmpty,Book/group (optional)
 ui.branch.branchingCheckChoiceAct,branching: failed to check choices when opening the project
 ui.branch.branchingExportPNGNot,branching: PNG export failed
-ui.branch.branchingFoundChoicePointF,branching: found {0} choices pointing to scenes that no longer exist
+ui.branch.branchingFoundChoicePointF,branching: found {0} {0|choice|choices} pointing to scenes that no longer exist
 ui.branch.branchingReadBodyScene,branching: failed to read the scene text
 ui.branch.branchingReadSceneNot,branching: failed to read the scene
 ui.branch.branchOpenPlan,branch: opened plan 
@@ -2055,7 +2057,7 @@ ui.branch.choice2,Choices:
 ui.branch.choiceBodyScene,Choices in the scene text
 ui.branch.choiceCount,Choices: 
 ui.branch.choiceEg,e.g. go to market
-ui.branch.choiceF, choices / {0} scenes
+ui.branch.choiceF, choices / {0} {0|scene|scenes}
 ui.branch.choiceNotHasText,Is a choice but has no text in the scene
 ui.branch.choiceNotSpecifyTo,This choice has no target yet
 ui.branch.choiceNotSpecifyTo2,Choice has no target yet
@@ -2110,6 +2112,7 @@ ui.branch.edit,Go edit
 ui.branch.editTextChoiceDone,Choice text edited
 ui.branch.eg,e.g. Go to the market
 ui.branch.egBookOneUse,e.g. Book One — use when each book has its own set of choices
+ui.branch.egBookShort,e.g. Book One
 ui.branch.emptyGraph,No scenes with choices yet
 ui.branch.emptyHint,"No scenes with choices yet — add one in the ""Add choice"" bar above and the map appears instantly"
 ui.branch.expandGraph,Expand chart
@@ -2190,7 +2193,7 @@ ui.branch.notHasChoiceDup,No duplicate choices to merge
 ui.branch.notHasSceneGraph,No scenes on the chart yet — add a choice to a scene first
 ui.branch.notHasSceneHas,"No scenes with choices yet — add one with the ""Add choice"" bar above and the chart appears right away"
 ui.branch.notSpecify,— Not set —
-ui.branch.notUsePlanRemember,— No plan (remembered on this machine) —
+ui.branch.notUsePlanRemember,— No plan (this device) —
 ui.branch.openBranchToFix,open the Branching Map to fix
 ui.branch.openEnd,no target yet
 ui.branch.openEndDash,— not set —
@@ -2314,12 +2317,12 @@ ui.central.busyNewIndexLink,Building the link index…
 ui.central.cantWrite,You haven't written today yet!
 ui.central.centralizeNewIndexNot,centralize: failed to build the index
 ui.central.fresh,● Fresh
-ui.central.mentionTimesClickOpenScene,Mentioned {0} times — click to open the scene
+ui.central.mentionTimesClickOpenScene,Mentioned {0} {0|time|times} — click to open the scene
 ui.central.newIndexNotOk,"Failed to build the index — press ""Rebuild index"""
 ui.central.notHasBacklinksPrint,No backlinks yet — type a character/location name in a scene for it to appear here
 ui.central.notMention,Not mentioned anywhere yet
-ui.central.scene, ← {0} scenes: 
-ui.central.sceneCantSetStatus,{0} scenes have no status yet
+ui.central.scene, ← {0} {0|scene|scenes}: 
+ui.central.sceneCantSetStatus,{0} {0|scene|scenes} have no status yet
 ui.central.stats,Statistics
 ui.central.thingMustUpdate,Needs updating
 ui.chapters.addChapter,+ Add chapter
@@ -2327,7 +2330,7 @@ ui.chapters.coverClear,Remove cover image
 ui.chapters.coverHint,Tick Use chapter cover and the cover counts as a real page both when reading the whole book and when numbering pages
 ui.chapters.coverOffDone,Chapter cover off
 ui.chapters.coverOnDone,Chapter cover on — counts as one page
-ui.chapters.coverPick,Pick cover image
+ui.chapters.coverPick,Choose cover
 ui.chapters.coverSetDone,Chapter cover set
 ui.chapters.coverTextPh,Text on the chapter cover (instead of or alongside the image)
 ui.chapters.empty,This book has no chapters yet
@@ -2339,7 +2342,7 @@ ui.chapters.open,Open
 ui.chapters.props,Properties
 ui.chapters.renameDone,Chapter renamed
 ui.chapters.renumber,Renumber chapters
-ui.chapters.sceneWord,{0} scenes · {1} words
+ui.chapters.sceneWord,{0} {0|scene|scenes} · {1} {1|word|words}
 ui.chapters.sizeHint,"Recommended cover image {0} × {1} px ({2} dpi) · ratio {3} : 1 — the full paper sheet of the selected book size ({4} × {5} in), because a cover with Use full-page image bleeds to the paper edge (anything past the ratio is cropped)"
 ui.chapters.title,Chapter Manager
 ui.chapters.useCover,Use chapter cover
@@ -2381,21 +2384,21 @@ ui.cmt.resolved,Comment resolved
 ui.cmtComment.add,Add
 ui.cmtComment.bind,Linked to: “
 ui.cmtComment.insertShortcode,Insert shortcode (resolved immediately)
-ui.cmtComment.listNotClose,{0} items · {1} still open
-ui.cmtComment.moveCommentPrevScenes,Moved {0} existing comments from scenes.json → .md
+ui.cmtComment.listNotClose,{0} {0|item|items} · {1} still open
+ui.cmtComment.moveCommentPrevScenes,Moved {0} existing {0|comment|comments} from scenes.json → .md
 ui.cmtComment.reply,Reply
-ui.cmtComment.replyBack,{0} replies
+ui.cmtComment.replyBack,{0} {0|reply|replies}
 ui.cmtComment.scrollToAnchorPickRangeCant,scrollToAnchor: cannot select the range
 ui.cmtComment.selectionAnchorReadFileCant,selectionAnchor: cannot read the file
 ui.codex.allCat,All categories
 ui.codex.busyNewWebCodex,Building the encyclopedia website…
 ui.codex.busyRead,Reading entities…
 ui.codex.codexExportNotOk,codex: export failed
-ui.codex.codexExportWebF,codex: exported website {0} pages → {1}
+ui.codex.codexExportWebF,codex: exported website {0} {0|page|pages} → {1}
 ui.codex.codexReadIndexMention,codex: cannot read the mentions index
 ui.codex.exportNotOk,Export failed: 
 ui.codex.exportWeb,Export as website
-ui.codex.exportWebCodexDone,"Exported the encyclopedia website, {0} pages → {1}"
+ui.codex.exportWebCodexDone,"Exported the encyclopedia website, {0} {0|page|pages} → {1}"
 ui.codex.newWebCodexStyle,"Build a Fandom/Wikia-style encyclopedia website (works offline, no internet needed)"
 ui.codex.notFoundListAt,(no entries match the search)
 ui.codex.notHasDesc,(no description yet)
@@ -2404,14 +2407,14 @@ ui.codex.notHasWikiNew,(no entities in the Wiki yet — create them from the pro
 ui.codex.openPageWiki,Open Wiki page
 ui.codex.openPageWikiNot,Could not open the Wiki page
 ui.codex.openProjectBeforeHas,Open a project first to get an encyclopedia
-ui.codex.searchCodexList,Search the encyclopedia… ({0} entries)
+ui.codex.searchCodexList,Search the encyclopedia… ({0} {0|entry|entries})
 ui.codexBuild.appearScene2,Appears in scenes
 ui.codexBuild.item,Related to
 ui.codexBuild.knownName2,Also known as: {0}
-ui.codexBuild.list2,{1} entries
+ui.codexBuild.list2,{1} {1|entry|entries}
 ui.codexBuild.newKillianCodex2,Made with Killian 2 · Codex
 ui.codexBuild.notHasListCat2,(no entries in this category yet)
-ui.codexBuild.searchCodexList,Search the encyclopedia… ({0} entries)
+ui.codexBuild.searchCodexList,Search the encyclopedia… ({0} {0|entry|entries})
 ui.color.blue,Blue
 ui.color.brown,Brown
 ui.color.clear,Clear colour
@@ -2673,7 +2676,7 @@ ui.common.thingSee,What is seen
 ui.common.timeStoryLineTime,Story time (timeline)
 ui.common.title,Title
 ui.common.toggle,⇄ Flip direction
-ui.common.tokensN,{0} tokens
+ui.common.tokensN,{0} {0|token|tokens}
 ui.common.trialPlay,Play-test
 ui.common.type,Type
 ui.common.undoBtn,Undo
@@ -2683,7 +2686,7 @@ ui.common.version,Version
 ui.common.view,View
 ui.common.view2,View: 
 ui.common.viewImageFull,View full image
-ui.common.viewPage,View: {0} · {1} pages
+ui.common.viewPage,View: {0} · {1} {1|page|pages}
 ui.common.viewPOV,Point of view (POV)
 ui.common.word, words
 ui.common.word2,Words
@@ -2736,30 +2739,30 @@ ui.compile.timeReadMin,- Estimated reading time: {0} min
 ui.compile.typeCutOut,Types to remove (comma-separated: 
 ui.compile.useSynopsisReplaceBody,Use the synopsis instead of the scene text
 ui.compile.webHTML,Web (HTML)
-ui.compile.word,_[{0} · {1} words]_
+ui.compile.word,_[{0} · {1} {1|word|words}]_
 ui.compile.wordAll,- Total words: {0}
-ui.compile.wordChapterScene,{0} words · {1} chapters · {2} scenes
+ui.compile.wordChapterScene,{0} {0|word|words} · {1} {1|chapter|chapters} · {2} {2|scene|scenes}
 ui.compile.workFlowNew,New workflow
 ui.compile.writeDoneCheckDone,"Finished, Checked"
 ui.core.notFoundLangUse2,"Language ""{{0}}"" not found — using English instead"
 ui.core.notHasText2,(no text)
 ui.core.resourceLoadNotOk2,resource: failed to load <
 ui.dash.activity,Writing activity
-ui.dash.actSummary,{0} words added · wrote on {1} of {2} days · best day {3}
-ui.dash.avgWordChapterTime,Average {0} words/chapter · total reading time ~{1} min
+ui.dash.actSummary,{0} {0|word|words} added · wrote on {1} of {2} {2|day|days} · best day {3}
+ui.dash.avgWordChapterTime,Average {0} {0|word|words}/chapter · total reading time ~{1} min
 ui.dash.entitiesFail,Could not read Wiki data — showing the rest of the dashboard
-ui.dash.goalWord,Goal: {0} / {1} words ({2}%)
-ui.dash.imageAlbumTagArea,{0} images · {1} albums · {2} tags · total size {3}
+ui.dash.goalWord,Goal: {0} / {1} {1|word|words} ({2}%)
+ui.dash.imageAlbumTagArea,{0} {0|image|images} · {1} {1|album|albums} · {2} {2|tag|tags} · total size {3}
 ui.dash.kanbanStatus,Scene status (Kanban)
 ui.dash.libraryImage,Image library
 ui.dash.loadPartHubNot,Failed to load the hub section
 ui.dash.longEachChapterWord,Length of each chapter (words)
-ui.dash.milestoneHit,Reached {0} words
+ui.dash.milestoneHit,Reached {0} {0|word|words}
 ui.dash.milestones,Milestones
 ui.dash.msGoal,Goal
-ui.dash.msLeft,{0} words to go
+ui.dash.msLeft,{0} {0|word|words} to go
 ui.dash.msStart,Project started
-ui.dash.msWords,{0} words
+ui.dash.msWords,{0} {0|word|words}
 ui.dash.nextStuck,Pick up where you left off
 ui.dash.notSetStatus,No status yet
 ui.dash.notStartWriteNext,Writing streak not started yet
@@ -2768,21 +2771,24 @@ ui.dash.openLibraryImage,Open the image library
 ui.dash.pageStatusScene,Progress by scene status
 ui.dash.projectStart,Project started {0}
 ui.dash.rangeAll,All
-ui.dash.readHint,Based on an average reading speed of {0} words/min
+ui.dash.readHint,Based on an average reading speed of {0} {0|word|words}/min
 ui.dash.readHM,{0} h {1} min
 ui.dash.readM,{0} min
 ui.dash.readTime,Total reading time
 ui.dash.saveTaskDoneGraph,Save your work for a couple of days and the daily word chart will appear here
 ui.dash.scenePinPin,Pinned scenes ({0})
-ui.dash.topWordHint,"""{0}"" used {1} times ({2} per 10k words)"
+ui.dash.statBooks,Books
+ui.dash.statChapters,Chapters
+ui.dash.statScenes,Scenes
+ui.dash.topWordHint,"""{0}"" — {1}× ({2} per 10k words)"
 ui.dash.topWords,Most used words
-ui.dash.topWordsNote,Out of {0} words · {1} unique · connectors and character names excluded
+ui.dash.topWordsNote,Out of {0} {0|word|words} · {1} unique · connectors and character names excluded
 ui.dash.useSourceDone,Used in the manuscript
 ui.dash.viewAllExport,View all / Export…
 ui.dash.wikiCat,Wiki by category
 ui.dash.wikiEntities,Wiki entities
-ui.dash.word,{0}: +{1} words
-ui.dash.wordAddNextLast,Words added per day · last {0} days
+ui.dash.word,{0}: +{1} {1|word|words}
+ui.dash.wordAddNextLast,Words added per day · last {0} {0|day|days}
 ui.dash.wordAll,Total words
 ui.dash.writeNext,{0}-day writing streak
 ui.data.cBlue,Blue
@@ -2820,14 +2826,14 @@ ui.dialogue.allBooks,All books
 ui.dialogue.allChapters,All chapters
 ui.dialogue.allScenes,All scenes
 ui.dialogue.allSources,All formats
-ui.dialogue.chipHint,{0} lines · about {1} words
+ui.dialogue.chipHint,{0} {0|line|lines} · about {1} {1|word|words}
 ui.dialogue.colBook,Book
 ui.dialogue.colChapter,Chapter
 ui.dialogue.colLine,Line
 ui.dialogue.colScene,Scene
 ui.dialogue.colSpeaker,Speaker
 ui.dialogue.colText,Dialogue
-ui.dialogue.count,Showing {0} of {1} lines
+ui.dialogue.count,Showing {0} of {1} {1|line|lines}
 ui.dialogue.errDirty,This file has unsaved changes — save it first
 ui.dialogue.errOpen,Could not open the scene
 ui.dialogue.errRead,Could not read the file
@@ -2865,11 +2871,11 @@ ui.dirty.saveNotOk,Save failed
 ui.dlg.aiNotConfigured,Not set up yet
 ui.dlg.aiReadProviderFail,Couldn't read the AI provider details
 ui.dlg.areaPrint,Print area {0} × 
-ui.dlg.bodyStory,Follows the story
+ui.dlg.bodyStory,As body text
 ui.dlg.cantDefineRowUse,"No rows defined yet — fonts follow the values on the ""Writing"" tab"
 ui.dlg.change,Change
 ui.dlg.changeLangDoneStart,Language changed — restart the app so every part switches over?
-ui.dlg.charLine,≈ {0} characters/line (approx.)
+ui.dlg.charLine,≈ {0} {0|character|characters}/line (approx.)
 ui.dlg.compareRight,Compare on the right
 ui.dlg.defineRange,Custom range…
 ui.dlg.descUnderGraph,The caption under the chart will be: 
@@ -2877,9 +2883,9 @@ ui.dlg.egTHSarabunNew,e.g. TH Sarabun New
 ui.dlg.elementPrevEnter,Go to the next element
 ui.dlg.exportFileCSV,Export translation file (CSV)
 ui.dlg.exportTableLangLang,"Export the translation table for which language (language code, e.g. en, ja)"
-ui.dlg.exportTableRow,"Exported the translation table, {0} rows → {1}"
+ui.dlg.exportTableRow,"Exported the translation table, {0} {0|row|rows} → {1}"
 ui.dlg.fontDefaultProse,Default — Garamond
-ui.dlg.fontDefaultSp,Default — Courier Prime (screenplay standard)
+ui.dlg.fontDefaultSp,Default — Courier Prime (script)
 ui.dlg.fontFromMachine,From this computer
 ui.dlg.fontFromMachineHint,Pick from the fonts installed on this computer
 ui.dlg.fontFromSystemTag, (system)
@@ -2898,10 +2904,10 @@ ui.dlg.importFontFail,Font import failed
 ui.dlg.importFontNotOk,Could not import the font
 ui.dlg.inch,{0} in · 
 ui.dlg.iNTNightSceneOne,INT. ห้องนอน — กลางคืน / ที่นี่คือฉากที่หนึ่ง ABC 123
-ui.dlg.langProgress,Translated {0} of {1} strings ({2}%)
+ui.dlg.langProgress,Translated {0} of {1} {1|string|strings} ({2}%)
 ui.dlg.langReadNameFile,Languages are read from the file name in the languages folder — drop in another k2_xx.csv (e.g. k2_ja.csv) and restart; no installation needed
-ui.dlg.linePage,{0} lines/page
-ui.dlg.linePage2,≈ {0} lines/page · 
+ui.dlg.linePage,{0} {0|line|lines}/page
+ui.dlg.linePage2,≈ {0} {0|line|lines}/page · 
 ui.dlg.loadFileLangNew,Language files reloaded
 ui.dlg.loadFileLangNew2,Reload language files
 ui.dlg.notFoundFont,No matching font
@@ -2927,12 +2933,12 @@ ui.dlg.settingsRevert,Revert to previous
 ui.dlg.settingsRevertAsk,Revert settings to the set saved before the last save?
 ui.dlg.settingsReverted,Settings reverted
 ui.dlg.settingsRevertHint,Go back to the values saved before the latest save
-ui.dlg.theme,Follow the theme
+ui.dlg.theme,Theme
 ui.dlg.togglePagePrevTab,Cycle element type forward
 ui.dlg.toggleUndoPrevShift,Cycle element type backward
-ui.dlg.useFontPrintName,— Use a font installed on this machine (type the name) —
+ui.dlg.useFontPrintName,— Installed font (type its name) —
 ui.dlg.useRow,Use this row
-ui.dlg.useRowSampleEnglish,Using {0} row(s) — preview:
+ui.dlg.useRowSampleEnglish,Using {0} {0|row|rows} — preview:
 ui.dlg.warnToolbarPage,Could not build the toolbar settings page
 ui.dlgb.actDelete,Delete this line
 ui.dlgb.actEdit,Edit text
@@ -2941,12 +2947,12 @@ ui.dlgb.actReroll,Regenerate this line
 ui.dlgb.addPreset,+ New cast
 ui.dlgb.addToCast,Add to cast
 ui.dlgb.backToList,Back to session list
-ui.dlgb.badge,{0} lines · {1} tokens
-ui.dlgb.badgeTip,{0} calls · in {1} · out {2} · {3}s total
+ui.dlgb.badge,{0} {0|line|lines} · {1} {1|token|tokens}
+ui.dlgb.badgeTip,{0} {0|call|calls} · in {1} · out {2} · {3}s total
 ui.dlgb.blurbPh,One-line blurb — this is all the other characters get to see
 ui.dlgb.blurbTip,"The other characters in the room see only this line, never this character's full sheet"
 ui.dlgb.castCount,Characters in this cast ({0}/{1})
-ui.dlgb.castFull,At most {0} characters
+ui.dlgb.castFull,At most {0} {0|character|characters}
 ui.dlgb.castTitle,Cast: {0}
 ui.dlgb.confirmClear,Clear every line in this session?
 ui.dlgb.confirmDelete,"Delete the session ""{0}""?"
@@ -3004,7 +3010,7 @@ ui.dlgb.noProvider,No AI provider configured
 ui.dlgb.noSession,"No sessions yet — press ""New session"" to start"
 ui.dlgb.nothingToInsert,There is nothing to insert yet
 ui.dlgb.noWikiChars,"No Wiki characters yet — create them in the Wiki, then come back"
-ui.dlgb.nTurns,{0} lines
+ui.dlgb.nTurns,{0} {0|line|lines}
 ui.dlgb.openProjectFirst,Open a project first
 ui.dlgb.overrideTitle,Model and parameters for this character
 ui.dlgb.parenLabel,Parentheticals
@@ -3047,7 +3053,7 @@ ui.dlgb.wikiNotFound,That character was not found in the Wiki
 ui.dlgBuilder.aiPick,Let AI choose
 ui.dlgBuilder.batchFormat,"Format: a line with @CharacterName, then the dialogue on the next line, with a blank line between speakers. No scene headings, no action lines."
 ui.dlgBuilder.batchSystem,You are a screenwriter. Write natural dialogue that matches each character's personality.
-ui.dlgBuilder.batchWrite,Continue this conversation for another {0} lines
+ui.dlgBuilder.batchWrite,Continue this conversation for another {0} {0|line|lines}
 ui.dlgBuilder.cueMonologue,You are alone now and no one can hear you — speak your thoughts aloud to yourself.
 ui.dlgBuilder.cueYourTurn,Your turn — speak to {0}
 ui.dlgBuilder.everyone,everyone
@@ -3101,8 +3107,8 @@ ui.dlgBuilder.selfMono,monologue
 ui.dlgBuilder.unknownName,Unknown
 ui.dlgBuilder.untitled,Untitled
 ui.doctor.allGood,No problems found — the index matches every file
-ui.doctor.badgeTip,"{0} project problems found (missing files · duplicate rows · broken headers, etc.) — click to review and fix"
-ui.doctor.confirmFix,Repair the {0} selected issues?
+ui.doctor.badgeTip,"{0} project {0|problem|problems} found (missing files · duplicate rows · broken headers, etc.) — click to review and fix"
+ui.doctor.confirmFix,Repair the {0} selected {0|issue|issues}?
 ui.doctor.fixAttachRow,Attach it as a scene in this chapter
 ui.doctor.fixCreateFile,Create an empty file
 ui.doctor.fixedN,Repaired {0} · failed {1}
@@ -3116,17 +3122,17 @@ ui.doctor.hint,Checks that the chapter and scene index (draft.json · scenes.jso
 ui.doctor.reportOnly,Can't be repaired automatically — fix it by hand
 ui.doctor.rescan,Check again
 ui.doctor.scanning,Checking the project…
-ui.doctor.summary,{0} issues found
+ui.doctor.summary,{0} {0|issue|issues} found
 ui.doctor.taskName,project check
 ui.doctor.tBadJson,Can't read {0} (invalid JSON)
 ui.doctor.tDuplicateRef,"Scenes ""{0}"" and ""{1}"" share the same file ({2})"
 ui.doctor.tFrontmatter,The header of {0} is broken — recoverable: {1}
-ui.doctor.tGhostFolder,"Folder ""{0}"" ({1} files) isn't in the chapter list"
+ui.doctor.tGhostFolder,"Folder ""{0}"" ({1} {1|file|files}) isn't in the chapter list"
 ui.doctor.title,Project health check
 ui.doctor.tMissingFile,"Scene ""{0}"" points to {1}, which doesn't exist"
 ui.doctor.tMissingFolder,"Chapter ""{0}"" has no folder {1}"
 ui.doctor.tOrphanFile,"File {0} (""{1}"") isn't used by any scene"
-ui.doctor.tRowsWithoutChapter,{0} scenes in the index belong to no chapter
+ui.doctor.tRowsWithoutChapter,{0} {0|scene|scenes} in the index belong to no chapter
 ui.drafts.delCantDraftMain,Cannot delete — this is the main draft
 ui.drafts.delDraft,Delete draft
 ui.drafts.delDraftDraft,Delete the whole draft “{0}”?
@@ -3160,12 +3166,12 @@ ui.elem.outline1,Outline 1
 ui.elem.outline2,Outline 2
 ui.elem.outline3,Outline 3
 ui.elem.p,Paragraph
-ui.elem.pBold,Bold paragraph
-ui.elem.pItalic,Italic paragraph
-ui.elem.pRight,Right-aligned paragraph
 ui.elem.pageBreak,Page break
 ui.elem.pagebreakProse,Page break
 ui.elem.parenthetical,Parenthetical
+ui.elem.pBold,Bold paragraph
+ui.elem.pItalic,Italic paragraph
+ui.elem.pRight,Right-aligned paragraph
 ui.elem.quote,Block quote
 ui.elem.raw,Other
 ui.elem.scene,Scene heading
@@ -3196,16 +3202,16 @@ ui.exportBlog.darkReadNight,Dark (night reading)
 ui.exportBlog.exportBlogImageCant,export-blog: cannot embed image 
 ui.exportBlog.exportBlogSkipScene,export-blog: skipped scene 
 ui.exportBlog.exportHTMLBlock,Export as HTML for a blog
-ui.exportBlog.exportHTMLBlockDone,Exported HTML for a blog ({0} scenes{1}): 
+ui.exportBlog.exportHTMLBlockDone,Exported HTML for a blog ({0} {0|scene|scenes}{1}): 
 ui.exportBlog.exportHTMLFail,HTML export failed
 ui.exportBlog.exportKillian2,Exported from Killian 2
 ui.exportBlog.fileBigMorePaste,"The file gets much larger, but images show wherever you paste it — no separate upload needed"
-ui.exportBlog.imageFile, · {0} images embedded
+ui.exportBlog.imageFile, · {0} {0|image|images} embedded
 ui.exportBlog.imageFileBase64,Embed images in the file (base64)
 ui.exportBlog.mediumCard,Medium (cream card)
 ui.exportBlog.notHasFrame,Plain (no frame)
 ui.exportBlog.preview,Preview
-ui.exportBlog.previewMeta,{0} scenes will be exported
+ui.exportBlog.previewMeta,{0} {0|scene|scenes} will be exported
 ui.exportBlog.previewTitle,Blog export preview
 ui.exportBlog.putNameChapterH2,Include chapter titles (H2)
 ui.exportBlog.putNameSceneH3,Include scene titles (H3)
@@ -3216,21 +3222,21 @@ ui.exportBlog.theme,Theme
 ui.exportFdx.write,"Written by
 "
 ui.exportRtf.write,Written by
-ui.exportZip.breakFileDoneFile,Extracted ({0} files) but found no project.khn.json — this is not a Killian project
+ui.exportZip.breakFileDoneFile,Extracted ({0} {0|file|files}) but found no project.khn.json — this is not a Killian project
 ui.exportZip.busyBreakFileZIP,Extracting the ZIP…
 ui.exportZip.busyBreakFileZIP2,Extracting the ZIP… ({0}/{1})
 ui.exportZip.busyCollectJSON,Collecting JSON…
 ui.exportZip.busyWriteFileJSON,Writing the JSON file…
 ui.exportZip.busyWriteFileZIP,Compressing and writing the ZIP…
 ui.exportZip.busyZIP,Packing the ZIP…
-ui.exportZip.busyZIPFile,Packing the ZIP… ({0} files)
+ui.exportZip.busyZIPFile,Packing the ZIP… ({0} {0|file|files})
 ui.exportZip.exportJSONDone,Exported JSON: 
 ui.exportZip.exportJSONFail,JSON export failed
-ui.exportZip.exportZIPDoneFile,Exported ZIP ({0} files): 
+ui.exportZip.exportZIPDoneFile,Exported ZIP ({0} {0|file|files}): 
 ui.exportZip.exportZIPFail,ZIP export failed: 
 ui.exportZip.exportZipSkipFile,export-zip: skipped file 
 ui.exportZip.fileZIPEmpty,This ZIP file is empty
-ui.exportZip.importProjectDoneFile,Project imported ({0} files): 
+ui.exportZip.importProjectDoneFile,Project imported ({0} {0|file|files}): 
 ui.exportZip.importZIPFail,ZIP import failed: 
 ui.exportZip.importZipNotHas,import-zip: no project.khn.json at 
 ui.exportZip.taskName,ZIP export
@@ -3257,7 +3263,7 @@ ui.fab.actSettings,Settings
 ui.fab.actSnapshot,Back up now
 ui.fab.actTemplate,New from template
 ui.fab.actTimeline,Timeline
-ui.fab.count,{0} of {1} commands selected
+ui.fab.count,{0} of {1} {1|command|commands} selected
 ui.fab.ctxConfig,Configure commands…
 ui.fab.ctxHide,Hide floating button
 ui.fab.ctxMoveHint,Hold right button and drag to move
@@ -3271,7 +3277,7 @@ ui.fab.grpCreate,Create
 ui.fab.grpFile,File
 ui.fab.grpView,Views & panels
 ui.fab.grpWrite,While writing
-ui.fab.hint,"Pick up to {0} commands to show on the floating button — changes apply instantly. To move the button itself, hold the right mouse button and drag."
+ui.fab.hint,"Pick up to {0} {0|command|commands} to show on the floating button — changes apply instantly. To move the button itself, hold the right mouse button and drag."
 ui.fab.needProject,Open a project first.
 ui.fab.posReset,Floating button moved back to the corner
 ui.fab.posSaved,Floating button position saved
@@ -3300,8 +3306,8 @@ ui.floorplan.notPlannedNewView,No maps yet — create one at View → Maps
 ui.floorplan.pin,Pin: 
 ui.floorplan.pinPosScene2,Pin this scene's location
 ui.floorplan.pinPosSceneF,"Pinned scene ""{0}"" on map {1}"
-ui.floorplan.pinScene,{0} · {1} pins · {2} scenes
-ui.floorplan.scene, · {0} scenes
+ui.floorplan.pinScene,{0} · {1} {1|pin|pins} · {2} {2|scene|scenes}
+ui.floorplan.scene, · {0} {0|scene|scenes}
 ui.floorplan.sceneCurrent,Current scene
 ui.floorplan.sceneExitMap,Remove this scene from the map
 ui.floorplan.sceneOpen,Open scene
@@ -3363,7 +3369,7 @@ ui.fonts.thonburiMacNoFloat,Thonburi (macOS · non-floating tone marks)
 ui.fonts.tHSarabunNew,TH Sarabun New (Thai government)
 ui.gallery.addImage,+ Add images…
 ui.gallery.addImageDone,Images added: 
-ui.gallery.addImageItemIn,Add {0} images to album {1}
+ui.gallery.addImageItemIn,Add {0} {0|image|images} to album {1}
 ui.gallery.addImageNew,+ Add new images…
 ui.gallery.addImageNotOk,Could not add the images: 
 ui.gallery.aISetCaptionImage,AI: caption the selected images
@@ -3395,9 +3401,9 @@ ui.gallery.dataImage,Image info
 ui.gallery.dataImage2,Image info
 ui.gallery.dateAdd,Date added
 ui.gallery.delAlbumMoveTrash,Delete album (move to the trash)
-ui.gallery.delAlbumReadyImage,Delete album “{0}” along with its {1} images? (moved to the trash)
-ui.gallery.delImageDoneTrash,Deleted {0} images (in the trash)
-ui.gallery.delImageMoveTrash,Delete {0} images? (moved to the trash)
+ui.gallery.delAlbumReadyImage,Delete album “{0}” along with its {1} {1|image|images}? (moved to the trash)
+ui.gallery.delImageDoneTrash,Deleted {0} {0|image|images} (in the trash)
+ui.gallery.delImageMoveTrash,Delete {0} {0|image|images}? (moved to the trash)
 ui.gallery.delNotOk,Delete failed: 
 ui.gallery.detachOut,Remove
 ui.gallery.detachTagDone,Tag removed
@@ -3416,15 +3422,15 @@ ui.gallery.filterUsageSource,Filter by actual use in the manuscript
 ui.gallery.findImageTiredLift,Find similar images
 ui.gallery.fullImage,Whole image
 ui.gallery.hasImageUseSource,"
-{0} images are used in the manuscript"
+{0} {0|image is|images are} used in the manuscript"
 ui.gallery.hasItemUseSource,"
-{0} are still used in the manuscript"
+{0} {0|item is|items are} still used in the manuscript"
 ui.gallery.imageAll,All images
 ui.gallery.imageCollapseSizeWrap,Same-size thumbnails (cropped to fill the frame)
-ui.gallery.imageDupDupFound,Duplicate/near-duplicate images — found {0} pairs
-ui.gallery.imageMoveItemUse,"{0} of the moved images are used in {1} files
+ui.gallery.imageDupDupFound,Duplicate/near-duplicate images — found {0} {0|pair|pairs}
+ui.gallery.imageMoveItemUse,"{0} of the moved images are used in {1} {1|file|files}
 Update the links in those files to the new location?"
-ui.gallery.imageNotUse,{0} images · {1} unused · {2}
+ui.gallery.imageNotUse,{0} {0|image|images} · {1} unused · {2}
 ui.gallery.imagePick, selected images
 ui.gallery.imagePick2,Selected images
 ui.gallery.imageTiredLift,Images similar to 
@@ -3440,10 +3446,10 @@ ui.gallery.moveAlbum3,Move to album…
 ui.gallery.moveAlbumDone,Album moved: 
 ui.gallery.moveAlbumF,"Move album ""{0}"" under"
 ui.gallery.moveAlbumTrashDone,Album moved to the trash
-ui.gallery.moveImageAlbum,Move {0} images to which album
-ui.gallery.moveImageDone,Moved {0} images
-ui.gallery.moveImageDoneNot,Moved {0} images (links in the manuscript not updated)
-ui.gallery.moveImageUpdateLink,Moved {0} images · updated links in {1} files
+ui.gallery.moveImageAlbum,Move {0} {0|image|images} to which album
+ui.gallery.moveImageDone,Moved {0} {0|image|images}
+ui.gallery.moveImageDoneNot,Moved {0} {0|image|images} (links in the manuscript not updated)
+ui.gallery.moveImageUpdateLink,Moved {0} {0|image|images} · updated links in {1} {1|file|files}
 ui.gallery.moveNotOk,Move failed: 
 ui.gallery.moveUnder,Move under…
 ui.gallery.msg,Sort by
@@ -3464,7 +3470,7 @@ ui.gallery.notHasTagClick,(no tags yet — right-click an image to tag it)
 ui.gallery.openImageCant,Cannot open the image
 ui.gallery.openPanelBoardMood,"Open the mood board panel (dock it alongside, then drag images from the grid onto it)"
 ui.gallery.pasteTopBoardMood,Place on the mood board
-ui.gallery.pickImage,{0} images selected
+ui.gallery.pickImage,{0} {0|image|images} selected
 ui.gallery.pickImageBeforeDone,"Select images first, then place them on the board"
 ui.gallery.pickImageBeforeDone2,"Select images first, then ask the AI to caption them"
 ui.gallery.pickImageBeforeDone3,"Select images first, then ask the AI to suggest tags"
@@ -3482,23 +3488,23 @@ ui.gallery.seeImageRatioNot,"Show the whole image at its real proportions, uncro
 ui.gallery.showOnlyImageNot,Show only unused images
 ui.gallery.sizeFile,File size
 ui.gallery.tag,Tag
-ui.gallery.tagImageDone,Tagged {0} images
-ui.gallery.tagImageFieldEmpty,Tags for {0} images (space-separated · @ = Wiki entity · ~ = scene)
+ui.gallery.tagImageDone,Tagged {0} {0|image|images}
+ui.gallery.tagImageFieldEmpty,Tags for {0} {0|image|images} (space-separated · @ = Wiki entity · ~ = scene)
 ui.gallery.toggleFilter,Toggle the filter condition
 ui.gallery.under, (under {0})
-ui.gallery.updateLinkImageFile,Updated image links in {0} files
+ui.gallery.updateLinkImageFile,Updated image links in {0} {0|file|files}
 ui.gallery.use,Used 
 ui.gallery.use2,Used in
 ui.gallery.useTimes,"{0}
-used {1} times"
+used {1}×"
 ui.galleryAi.aIBusySetCaption,AI is captioning… ({0}/{1}) {2}
 ui.galleryAi.aIBusySuggestTag,AI is suggesting tags… ({0}/{1}) {2}
 ui.galleryAi.aICantSendCaption,The AI did not send back a caption
 ui.galleryAi.aICantSendTag,The AI did not send back any tags
 ui.galleryAi.aISetCaptionFail,AI captioning failed: 
-ui.galleryAi.aISetCaptionImage,AI captioned {0} images
+ui.galleryAi.aISetCaptionImage,AI captioned {0} {0|image|images}
 ui.galleryAi.aISuggestTagFail,AI tag suggestion failed: 
-ui.galleryAi.aISuggestTagImage,AI suggested tags for {0} images
+ui.galleryAi.aISuggestTagImage,AI suggested tags for {0} {0|image|images}
 ui.galleryAi.album,In album: {0}
 ui.galleryAi.captionCurrent,Current caption: {0}
 ui.galleryAi.forbidExplainAddReply,Do not explain anything — answer only with the line of tags
@@ -3540,7 +3546,7 @@ ui.galleryAlbum.toHasAlbumName,The destination already has an album with this na
 ui.galleryExport.album,Album: {0}
 ui.galleryExport.boardEmptyNotHas,The board is empty — nothing to export
 ui.galleryExport.busyCollectImage,Collecting images… ({0}/{1})
-ui.galleryExport.busyCollectImageItem,Collecting {0} images…
+ui.galleryExport.busyCollectImageItem,Collecting {0} {0|image|images}…
 ui.galleryExport.busyDrawBoardMood,Drawing the mood board…
 ui.galleryExport.busyWriteFile,Compressing and writing the file…
 ui.galleryExport.busyWriteFileImage,Writing the image file…
@@ -3548,9 +3554,9 @@ ui.galleryExport.caption,Caption: {0}
 ui.galleryExport.exportBoardFail,Board export failed: 
 ui.galleryExport.exportBoardMoodDone,Exported the mood board ({0}×{1}): 
 ui.galleryExport.exportImageFail,Image export failed: 
-ui.galleryExport.exportImageItemDone,Exported {0} images: 
+ui.galleryExport.exportImageItemDone,Exported {0} {0|image|images}: 
 ui.galleryExport.galleryExportSkipFile,gallery-export: skipped file 
-ui.galleryExport.imageAllItem,{0} images in total
+ui.galleryExport.imageAllItem,{0} {0|image|images} in total
 ui.galleryExport.libraryImage,Image library
 ui.galleryExport.listImageMd,image-list.md
 ui.galleryExport.notHasImageExport,No images to export
@@ -3567,7 +3573,7 @@ ui.galleryMoodboard.clearBoardNotDel,Clear the board (files not deleted)
 ui.galleryMoodboard.cmdAddFillBoard,More board commands
 ui.galleryMoodboard.exitBoardNotDel,Remove from the board (file not deleted)
 ui.galleryMoodboard.exportBoardImage,Export the board as an image…
-ui.galleryMoodboard.pasteImageTopBoard,"Placed {0} images on board ""{1}"""
+ui.galleryMoodboard.pasteImageTopBoard,"Placed {0} {0|image|images} on board ""{1}"""
 ui.galleryMoodboard.pickImageLibraryDone,"(or select images in the library and press ""Place on the board"")"
 ui.galleryMoodboard.top,Bring to front
 ui.galleryUsageIndex.msg, +{0} more
@@ -3580,7 +3586,7 @@ ui.histOry.clearHistory,Clear history
 ui.histOry.clearHistoryAllFile,Clear the whole history? (your work files are not touched — you only lose the ability to go back)
 ui.histOry.clearHistoryDone,History cleared
 ui.histOry.copyIn,Copied in
-ui.histOry.doFileFile,"This will undo {0} actions and touch {1} files
+ui.histOry.doFileFile,"This will undo {0} {0|action|actions} and touch {1} {1|file|files}
 "
 ui.histOry.dot,Already at this point
 ui.histOry.file, files
@@ -3596,11 +3602,11 @@ ui.histOry.now,Now
 ui.histOry.openProjectBeforeHas,Open a project first to have a history
 ui.histOry.restoreFileAllFile,"Return every file to its state ""after this action"""
 ui.histOry.settingsNotebookHistoryNot,Failed to set up the history log
-ui.histOry.times,{0}/{1} times
+ui.histOry.times,{0}/{1} {1|time|times}
 ui.histOry.undo,"Go back to ""{0}""?
 
 "
-ui.histOry.undoDoneRestoreFile,Went back — restored {0} files · deleted {1} files
+ui.histOry.undoDoneRestoreFile,Went back — restored {0} {0|file|files} · deleted {1} {1|file|files}
 ui.histOry.undoFail,Going back failed: 
 ui.histOry.undoNotOkPart,Going back partly failed (see the log panel for details)
 ui.home.appWriteNovelScreenplay,Portable novel + screenplay writing app
@@ -3770,11 +3776,11 @@ ui.imp.overwrite,The destination folder already has a project — overwrite?
 ui.imp.projectName,Project name: 
 ui.imp.scenes,   ·  Scenes: 
 ui.imp.untitled,(untitled)
-ui.imp.warnPrefixF,Warnings: {0} item(s) (see Log)
+ui.imp.warnPrefixF,Warnings: {0} {0|item|items} (see Log)
 ui.imp.working,Importing…
 ui.impOrt.busyReadProjectScrivener,Reading the Scrivener project…
-ui.impOrt.importDoneFile,"Import finished, {0} files → {1}"
-ui.impOrt.importFile,Importing {0}/{1} files…
+ui.impOrt.importDoneFile,"Import finished, {0} {0|file|files} → {1}"
+ui.impOrt.importFile,Importing {0}/{1} {1|file|files}…
 ui.impOrt.pickFolderToDone,"
 
 Choose the destination folder and import now?"
@@ -3803,7 +3809,7 @@ ui.kanban.add,+ Add column
 ui.kanban.addStatus,Add status
 ui.kanban.addStatusHint,A new column is a new scene status for the whole project (shows in the Explorer right away)
 ui.kanban.deleteColumn,Delete column
-ui.kanban.deleteMove,"Delete status ""{0}""? The {1} scene(s) in this column move to ""{2}"""
+ui.kanban.deleteMove,"Delete status ""{0}""? The {1} {1|scene|scenes} in this column {1|moves|move} to ""{2}"""
 ui.kanban.draftPick,Choose which draft the board shows
 ui.kanban.hiddenBuiltin, (hidden from the board)
 ui.kanban.manageStatus,Manage statuses
@@ -3819,9 +3825,16 @@ ui.layoutSplit.fieldEmpty,Empty slot
 ui.layoutSplit.leftRight,Left-right
 ui.layoutSplit.topBottom,Top-bottom
 ui.locations,locations
+ui.log.dayEmpty,That day's log file is empty or can't be read
+ui.log.dayOption,{0} · {1} KB
+ui.log.dayPick,Review past logs — pick a day's log file
+ui.log.dayReadonly,Viewing the log file of {0} (read-only)
+ui.log.daySession,This session (live)
 ui.log.dup,[loop]
-ui.log.dupTimes,  (repeated {0} times)
+ui.log.dupTimes,  (repeated {0} {0|time|times})
 ui.log.error,Error
+ui.log.folderLabel,Stored in
+ui.log.folderTip,The folder that holds the log files (one file per day)
 ui.log.msg,Warning
 ui.logline.compassHead,Story compass (the author's logline — use it to keep the story on its spine)
 ui.logline.compassRule,"Keep suggestions and prose consistent with this compass. If the content drifts from the goal, obstacle or stakes, briefly tell the author."
@@ -3842,7 +3855,7 @@ ui.logline.title,Logline
 ui.logline.why,AI uses this as a compass so the story stays on track
 ui.maps.addMap,+ Add map
 ui.maps.backSizeFitFrame,Back to fit-to-frame size (100%)
-ui.maps.busyNextRouteClick,Extending route “{0}” — click the pins in travel order ({1} points)
+ui.maps.busyNextRouteClick,Extending route “{0}” — click the pins in travel order ({1} {1|point|points})
 ui.maps.cancelPick,Deselect
 ui.maps.cantPickPin,No pin selected yet
 ui.maps.catEgWorldCurrent,Category (e.g. Present world)
@@ -3855,21 +3868,21 @@ ui.maps.clickPinOpenLink,Click a pin = follow its link (portal/Wiki page) · edi
 ui.maps.collapsePin,Smaller pins
 ui.maps.compass,Compass
 ui.maps.copy,⧉ Copy
-ui.maps.copyPinDoneOpen,"Copied {0} pins — open the destination map and press ""Paste"""
+ui.maps.copyPinDoneOpen,"Copied {0} {0|pin|pins} — open the destination map and press ""Paste"""
 ui.maps.copyPinPickDone,Copy the selected pins to paste onto another map
 ui.maps.countFieldGridNext,Grid cells per side
 ui.maps.delMap,Delete map
 ui.maps.delPick,Delete selected
-ui.maps.delPinDone,Deleted {0} pins
-ui.maps.delPinPickItem,Delete the {0} selected pins?
+ui.maps.delPinDone,Deleted {0} {0|pin|pins}
+ui.maps.delPinPickItem,Delete the {0} selected {0|pin|pins}?
 ui.maps.delRoutePin,Delete route (pins stay)
 ui.maps.delRoutePinNot,Delete route “{0}”? (pins are not deleted)
 ui.maps.done,Done
-ui.maps.dotGap,{0} points · distance ~{1}
+ui.maps.dotGap,{0} {0|point|points} · distance ~{1}
 ui.maps.dotLatest,Undo last point
 ui.maps.dragPinMoveMode,"Drag pins to move them (other modes can't drag, to avoid accidental moves)"
 ui.maps.expandPin,Larger pins
-ui.maps.foundPinTopMap,"""{0}"" — found {1} pins on this map"
+ui.maps.foundPinTopMap,"""{0}"" — found {1} {1|pin|pins} on this map"
 ui.maps.gapBarEg,"Distance of the bar, e.g. 100 km"
 ui.maps.lineLineSolid,Dashed / solid line
 ui.maps.mapBindDelDone,(the linked map has been deleted)
@@ -3885,15 +3898,15 @@ ui.maps.notHasImagePress,"No image yet — press ""Change image"""
 ui.maps.notPlaced,Not placed yet
 ui.maps.notPlannedPressAdd,"No maps yet — press ""＋ Add map"" and choose an image from the image library as the map (e.g. a world/city map or a room plan)"
 ui.maps.part,Scale
-ui.maps.pastePin,Paste {0} pins
+ui.maps.pastePin,Paste {0} {0|pin|pins}
 ui.maps.pastePinCopyMap,Paste the copied pins onto this map
-ui.maps.pastePinDone,"Pasted {0} pins onto ""{1}"""
-ui.maps.pickPin,{0} pins selected
+ui.maps.pastePinDone,"Pasted {0} {0|pin|pins} onto ""{1}"""
+ui.maps.pickPin,{0} {0|pin|pins} selected
 ui.maps.pin, · manually pinned coordinates
 ui.maps.placeIt,Place it
 ui.maps.placeItHint,"Open the Floor Plan panel and click ""Place this scene"""
 ui.maps.portalMapOther,Portal to another map
-ui.maps.portalSceneBindMap,{0} entities · {1} portals · {2} notes · {3} scenes linked to this map
+ui.maps.portalSceneBindMap,{0} {0|entity|entities} · {1} {1|portal|portals} · {2} {2|note|notes} · {3} {3|scene|scenes} linked to this map
 ui.maps.pos,Entity position
 ui.maps.pressBtnEditTop," · press ""Edit"" on the toolbar to edit this pin"
 ui.maps.print,Print
@@ -3907,7 +3920,7 @@ ui.maps.routeNew,New route
 ui.maps.routeNew2,+ New route
 ui.maps.saveMapLibraryImage,Saved the map to the image library: 
 ui.maps.saveMapReadyPin,Save the map with its pins/routes as an image in the image library
-ui.maps.scenePin, ({0} scenes pinned manually)
+ui.maps.scenePin, ({0} {0|scene|scenes} pinned manually)
 ui.maps.scenePinCantBind,"
 (scenes pinned manually, not linked to a pin)"
 ui.maps.sceneWhere,Location on map
@@ -4123,7 +4136,7 @@ ui.menu.tableCSV,CSV table
 ui.menu.textCaseCycleU,Cycle letter case
 ui.menu.textContCONTINUEDMORE,Continuation text (CONTINUED · MORE · cont'd)
 ui.menu.textNormal,Normal text
-ui.menu.theme,Color theme
+ui.menu.theme,Colour theme
 ui.menu.thesaurusT,Thesaurus…
 ui.menu.toggleModeNovelChapter,Switch mode novel ↔ screenplay
 ui.menu.tool,Tools
@@ -4161,7 +4174,7 @@ ui.nav.noMatch,Nothing matches the filter
 ui.nav.onlyStar,Starred only
 ui.nav.pageAbbr,p.
 ui.nav.pageOf,Page {0}/{1}
-ui.nav.rowCount,{0} rows
+ui.nav.rowCount,{0} {0|row|rows}
 ui.nav.searchPh,Search the outline…
 ui.nav.setFind,navigation outline paging filter marks legend
 ui.nav.setHint,Choose whether the navigation panel is one long scrolling list or is split into pages.
@@ -4205,7 +4218,7 @@ ui.net.hide,Hide
 ui.net.hollowGrid,Grid opacity: 
 ui.net.hollowGrid2,Grid opacity: 12%
 ui.net.itemFilmNameNode,Node name text
-ui.net.line,⦿ {0}{1} · {2} lines · 
+ui.net.line,⦿ {0}{1} · {2} {2|line|lines} · 
 ui.net.lineGrid,Grid lines
 ui.net.linkBetweenScene,Links between scenes
 ui.net.linkScene,Scene links
@@ -4238,7 +4251,7 @@ ui.net.reset,Reset
 ui.net.resetView,Reset view
 ui.net.scene,Entity ↔ scene
 ui.net.scene2,Entity↔scene
-ui.net.sceneChapter, (+{0} scenes/chapters)
+ui.net.sceneChapter, (+{0} {0|scene|scenes}/chapters)
 ui.net.search,Search…
 ui.net.shiftClickNodeResult,Shift+click a node = push the surrounding nodes away
 ui.net.showGrid,Show grid
@@ -4264,7 +4277,7 @@ ui.netPreset.rainbow,Rainbow
 ui.netPreset.xrite,X-Rite
 ui.notes.backStuck,Put back as pending
 ui.notes.clearNoteAllDone,All notes cleared
-ui.notes.clearNoteAllList,Clear all notes ({0} items)?
+ui.notes.clearNoteAllList,Clear all notes ({0} {0|item|items})?
 ui.notes.clearNotebookNoteDone,Notebook cleared
 ui.notes.delNote,Delete this note
 ui.notes.delNoteDone,Note deleted
@@ -4275,7 +4288,7 @@ ui.notes.doneDoDoneList,All cleared ({0} done)
 ui.notes.doNoteDone,Mark this note done
 ui.notes.doShowTopPage, To do later (shown on the timeline page)
 ui.notes.latest,Latest:
-ui.notes.lineWordChar,{0} lines · {1} words · {2} characters
+ui.notes.lineWordChar,{0} {0|line|lines} · {1} {1|word|words} · {2} {2|character|characters}
 ui.notes.moveInMemo,Move into Memo
 ui.notes.moveInMemoDone,Moved into Memo: 
 ui.notes.nameNoteMemo,Note name (Memo)
@@ -4308,7 +4321,7 @@ ui.onset.errMark,Couldn't mark this as a problem scene
 ui.onset.errRead,Couldn't read the problem scene's original: 
 ui.onset.marked,"""{0}"" is now a problem scene — edit away; changed lines get a colour band and a ! in the margin"
 ui.onset.moreTip,Problem scene options
-ui.onset.nChanges,{0} changes
+ui.onset.nChanges,{0} {0|change|changes}
 ui.onset.noChanges,No changes yet
 ui.onset.notProblem,"This scene isn't a problem scene — right-click it in the Explorer and choose ""Problem scene"""
 ui.onset.nowOriginal,Showing the original (read-only) — print/export/save still use the revised version
@@ -4348,7 +4361,7 @@ ui.panel.commentsTitle,Comments
 ui.panel.confirmDelete,Delete this version permanently?
 ui.panel.confirmRestore,Restore this version over the current one?
 ui.panel.dashboardTitle,Dashboard
-ui.panel.desc_props,"Properties of the selected scene - synopsis, POV, emotion, conflict, status, color, tags. Saves automatically as you type."
+ui.panel.desc_props,"Properties of the selected scene - synopsis, POV, emotion, conflict, status, colour, tags. Saves automatically as you type."
 ui.panel.desc_tree,"The table of contents of the whole work - book, chapter, scene, plus Wiki, gallery and trash. Drag to reorder. The search box filters by title, tag and status."
 ui.panel.dialogueTitle,Dialogue
 ui.panel.dlgbTitle,Rehearsal Room
@@ -4449,7 +4462,7 @@ ui.panelLayout.collapseExpand,Collapse/expand
 ui.panelLayout.float,Float/dock
 ui.panelLayout.panel,Panel menu
 ui.panelRenderer.backInWindow,⊡ Dock back into the window
-ui.panelRenderer.closeGroupN,Close the whole group ({0} panels)
+ui.panelRenderer.closeGroupN,Close the whole group ({0} {0|panel|panels})
 ui.panelRenderer.closePanelOpen,Close the open panel
 ui.panelRenderer.closePanelOpenBack,Close panel (reopen at View → Panels)
 ui.panelRenderer.closeThisPanel,Close {0}
@@ -4494,7 +4507,7 @@ ui.pdf.areaPrint,0 = the rest of the print area
 ui.pdf.busyNew,Creating…
 ui.pdf.cantSetCoverChapter,No title page set yet — Script menu → Title Pages
 ui.pdf.caseBig,Upper case
-ui.pdf.chapterPage,Script “{0}” · {1} pages — 
+ui.pdf.chapterPage,Script “{0}” · {1} {1|page|pages} — 
 ui.pdf.chapterPageFirstNot,Script convention: none on the first page
 ui.pdf.clickTextPaperEdit,Click text on the page to edit it · dashed box = print area
 ui.pdf.closeChapterHeadPaper,Still off — Script menu → Page Headers
@@ -4513,7 +4526,7 @@ ui.pdf.delCoverPage,Delete title page no.
 ui.pdf.delItem,Delete this piece
 ui.pdf.delPage,Delete page
 ui.pdf.delText,Delete this text
-ui.pdf.doneDonePageToc,Done — {0} pages · {1} table-of-contents entries
+ui.pdf.doneDonePageToc,Done — {0} {0|page|pages} · {1} table-of-contents {1|entry|entries}
 ui.pdf.draftTwo,Second draft
 ui.pdf.drawFrameRoundNote,Draw a box around notes that still print
 ui.pdf.dupPage,Duplicate this page after it
@@ -4532,13 +4545,13 @@ ui.pdf.item2,Italic
 ui.pdf.item3,Variables: 
 ui.pdf.itemBold,Bold
 ui.pdf.killianKillian,Killian 2
-ui.pdf.linePage,   · takes {0} lines/page
+ui.pdf.linePage,   · takes {0} {0|line|lines}/page
 ui.pdf.marginPaperLeftTop,Measured from the left/top paper edge
 ui.pdf.msg2,U
 ui.pdf.msg3,B
 ui.pdf.msg4,I
 ui.pdf.msg5,AA
-ui.pdf.msgF,Takes {0} lines/page
+ui.pdf.msgF,Takes {0} {0|line|lines}/page
 ui.pdf.needWatermarkPersonFile,"For several files each watermarked per person, use ""Export per-person watermarked PDFs"""
 ui.pdf.newDataResultTask,Build from project info (title/author/contact/copyright)
 ui.pdf.newPDF,Create PDF…
@@ -4565,7 +4578,7 @@ ui.pdf.readFileFontPDF,Could not read the font files for the PDF
 ui.pdf.routeWritePDFPdf,"This route writes the PDF itself with pdf-lib, so it can add a table of contents, reopen at the same page and embed Thai fonts "
 ui.pdf.samplePage,Page 2 preview → 
 ui.pdf.saveCover,Save title page
-ui.pdf.saveCoverDoneF,Title page saved — {0} pages
+ui.pdf.saveCoverDoneF,Title page saved — {0} {0|page|pages}
 ui.pdf.sceneAppReadPDF,Jump by scene in PDF readers
 ui.pdf.sceneNumbersOnly,Print scene numbers
 ui.pdf.scrollPage,Previous page
@@ -4637,7 +4650,7 @@ ui.planner.cylinder,Cylinder
 ui.planner.decide,Decision
 ui.planner.delDel,Delete (Del)
 ui.planner.delDone,Deleted
-ui.planner.delItemDone,Deleted {0} pieces
+ui.planner.delItemDone,Deleted {0} {0|piece|pieces}
 ui.planner.delLine,Delete line
 ui.planner.delLineDel,Delete line (Del)
 ui.planner.delLineLinkDone,Connector deleted
@@ -4670,7 +4683,7 @@ ui.planner.fullScreen,Full screen
 ui.planner.grid,Grid
 ui.planner.group,Group
 ui.planner.group2,Ungroup
-ui.planner.groupCard,"Grouped ""{0}"" ({1} cards)"
+ui.planner.groupCard,"Grouped ""{0}"" ({1} {1|card|cards})"
 ui.planner.groupNew,New group
 ui.planner.groupPick,Group the selection
 ui.planner.groupScGoto,Group ({sc:goto})
@@ -4679,7 +4692,7 @@ ui.planner.hideGrid,Hide grid
 ui.planner.howPaste,Placement
 ui.planner.imageBg,Background image
 ui.planner.imgBigger,Enlarge image 125%
-ui.planner.imgInCardDone,Image added to {0} card(s)
+ui.planner.imgInCardDone,Image added to {0} {0|card|cards}
 ui.planner.imgPick,Choose image…
 ui.planner.imgPickHint,Right-click the card → Choose image
 ui.planner.imgScaleReset,Reset image size to fit (100%)
@@ -4706,7 +4719,7 @@ ui.planner.moveLineDone,Line end moved
 ui.planner.mustHasLessCard,At least 2 cards are needed
 ui.planner.noteNew,New note
 ui.planner.notHasBoardProject,"No boards in the project yet — press ""New"" to create one"
-ui.planner.objectLineGroup,{0} objects · {1} lines · {2} groups
+ui.planner.objectLineGroup,{0} {0|object|objects} · {1} {1|line|lines} · {2} {2|group|groups}
 ui.planner.openBoard,"Opened board """
 ui.planner.openBoardOther,Open another board
 ui.planner.openBoardPlanner,Open a planning board
@@ -4744,7 +4757,7 @@ ui.planner.reorderDone,Reordered
 ui.planner.repeat,Redo
 ui.planner.repeatCantDone,Nothing left to redo
 ui.planner.repeatCtrlD,Duplicate (Ctrl+D)
-ui.planner.repeatItemDone,Duplicated {0} pieces
+ui.planner.repeatItemDone,Duplicated {0} {0|piece|pieces}
 ui.planner.repeatScEditorRedo,Redo ({sc:editor-redo})
 ui.planner.sample,Sample
 ui.planner.saveBefore,Save first
@@ -4769,7 +4782,7 @@ ui.planner.sendBottomLastCtrl2,Send to back
 ui.planner.settingsGrid,Grid settings
 ui.planner.shape,Shape here
 ui.planner.shapeS,Shape (S) — 
-ui.planner.showCard,Showing {0}/{1} cards
+ui.planner.showCard,Showing {0}/{1} {1|card|cards}
 ui.planner.showGrid,Show grid
 ui.planner.size,Size
 ui.planner.star,Star
@@ -4886,7 +4899,7 @@ ui.plannerProps.object,Object
 ui.plannerProps.occurScene,What happens in this scene
 ui.plannerProps.openBoard,Open the planner
 ui.plannerProps.pick,Choose…
-ui.plannerProps.pickItem,{0} pieces selected
+ui.plannerProps.pickItem,{0} {0|piece|pieces} selected
 ui.plannerProps.pickProject2,Choose from project
 ui.plannerProps.posXY,Position X / Y
 ui.plannerProps.printText,Type text…
@@ -4945,7 +4958,7 @@ ui.player.exportRuns,Export
 ui.player.goneScene,missing scene
 ui.player.history,History
 ui.player.historyDecide,Decision history
-ui.player.historyDecide2F,Decision history ({0} times)
+ui.player.historyDecide2F,Decision history ({0} {0|time|times})
 ui.player.historyHint,Every play-through so far
 ui.player.jumpBack,click to jump back here
 ui.player.list,+ {0} more
@@ -4981,7 +4994,7 @@ ui.player.startPlayScene,Start playing from which scene
 ui.player.step,Step
 ui.player.step2,Step
 ui.player.theEnd,This path ends here
-ui.player.timesScenePickLast,{0} times · {1} scenes · most chosen: “{2}” ({3}×)
+ui.player.timesScenePickLast,{0} {0|time|times} · {1} {1|scene|scenes} · most chosen: “{2}” ({3}×)
 ui.player.undo,Go back
 ui.player.viewTopGraph,See on the chart
 ui.player.walked,Walked through
@@ -5034,8 +5047,8 @@ ui.plug.errTooBig,File too large (over 25MB)
 ui.plug.errUninstall,Could not uninstall
 ui.plug.install,Install from link
 ui.plug.installAsk,"GitHub link (or user/repo, or a .zip URL)"
-ui.plug.installConfirm,"Install into folder ""{0}"" — {1} files"
-ui.plug.installed,Installed {0} ({1} files)
+ui.plug.installConfirm,"Install into folder ""{0}"" — {1} {1|file|files}"
+ui.plug.installed,Installed {0} ({1} {1|file|files})
 ui.plug.installFetching,Downloading plugin…
 ui.plug.installHint,Paste a GitHub link and the app installs it for you
 ui.plug.installOverwrite,"Folder ""{0}"" already exists — overwrite?"
@@ -5072,7 +5085,7 @@ ui.plug.uninstallAsk,"Uninstall ""{0}"" — deletes its folder"
 ui.plug.uninstalled,Uninstalled {0}
 ui.plug.uninstallHint,Delete this plugin's folder
 ui.plug.untrustedHint,"This plugin came with the project and is not allowed to run yet. Plugins can read, write and delete any file on this computer — only allow projects you trust."
-ui.plug.untrustedStatus,This project has {0} plugin(s) that are not allowed to run yet — review them in the Plugins panel
+ui.plug.untrustedStatus,This project has {0} {0|plugin that is|plugins that are} not allowed to run yet — review them in the Plugins panel
 ui.plugin.failed,Plugin crashed - disabled for now
 ui.project.act,Act 1
 ui.project.act2,Act 2
@@ -5111,7 +5124,7 @@ ui.props.sceneName,Scene name
 ui.props.writeMetaFail,Could not write scene properties to the file
 ui.prose.image,Image
 ui.quickOpen.busyScan,Scanning…
-ui.quickOpen.file,{0}/{1} files
+ui.quickOpen.file,{0}/{1} {1|file|files}
 ui.quickOpen.pickEnterOpenEsc,↑↓ select · Enter open · Esc close · Ctrl+R rescan
 ui.quickOpen.printNameFile,Type a file name…
 ui.quickOpen.scanFileNew,Rescan files
@@ -5151,7 +5164,7 @@ ui.recOrd.delSaveDone,Entry deleted
 ui.recOrd.do,What did you do today…
 ui.recOrd.editSaveDone,Entry edited
 ui.recOrd.exportCSV,Export CSV
-ui.recOrd.exportCSVDoneF,Exported CSV ({0} entries): {1}
+ui.recOrd.exportCSVDoneF,Exported CSV ({0} {0|entry|entries}): {1}
 ui.recOrd.flowing,😄 Flowing
 ui.recOrd.min, min
 ui.recOrd.minMerge,Total minutes
@@ -5162,7 +5175,7 @@ ui.recOrd.notFoundSaveAt,(no entries match the search)
 ui.recOrd.notHasSaveExport,No entries to export
 ui.recOrd.notHasSaveWrite,(no entries yet — write in the box above and press Save)
 ui.recOrd.openProjectBeforeNote,Open a project first to keep a journal
-ui.recOrd.recordExportCSVF,"record: exported CSV, {0} entries"
+ui.recOrd.recordExportCSVF,"record: exported CSV, {0} {0|entry|entries}"
 ui.recOrd.save,Save
 ui.recOrd.save2,Save
 ui.recOrd.searchSaveTextTag,Search the journal… (text · tags · date)
@@ -5171,30 +5184,39 @@ ui.recOrd.tagSkip,Tags (space-separated)
 ui.recOrd.timeNote,Time recorded
 ui.recOrd.tired,😴 Tired
 ui.recOrd.wordMerge,Total words
+ui.relType.acquaintance,Acquaintance
+ui.relType.ally,Ally
+ui.relType.custom,Other
+ui.relType.enemy,Enemy
+ui.relType.family,Family
+ui.relType.mentor,Mentor
+ui.relType.neutral,Neutral
+ui.relType.rival,Rival
+ui.relType.romantic,Romantic
 ui.replace.badQuery,The search text is empty or the regular expression is invalid
 ui.replace.caseSensitive,Match case
-ui.replace.confirm,Replace {0} matches in {1} files? You can revert from the History panel.
-ui.replace.done,Replaced {0} matches in {1} files
-ui.replace.doneLog,"Replaced {0} matches in {1} files: ""{2}"" with ""{3}"""
+ui.replace.confirm,Replace {0} {0|match|matches} in {1} {1|file|files}? You can revert from the History panel.
+ui.replace.done,Replaced {0} {0|match|matches} in {1} {1|file|files}
+ui.replace.doneLog,"Replaced {0} {0|match|matches} in {1} {1|file|files}: ""{2}"" with ""{3}"""
 ui.replace.fileFail,Couldn't replace in file: 
 ui.replace.find,Find
 ui.replace.findPh,Text to find
 ui.replace.hint,"Only scene and note text (.md) is changed — not file headers, Wiki data or comments · scenes with unsaved edits change in their tab and aren't written until you save"
 ui.replace.lockedBadge,Locked
-ui.replace.lockedSkip,{0} matches in locked scenes skipped
+ui.replace.lockedSkip,{0} {0|match|matches} in locked scenes skipped
 ui.replace.none,No matches in scene text
 ui.replace.openBtn,Replace…
 ui.replace.preview,Preview
 ui.replace.regex,Regular expression
 ui.replace.run,Replace all
 ui.replace.scanning,Searching the project…
-ui.replace.summary,{0} matches in {1} files
+ui.replace.summary,{0} {0|match|matches} in {1} {1|file|files}
 ui.replace.title,Find and replace in project
 ui.replace.wholeWord,Whole word (Latin script only)
 ui.replace.with,Replace with
 ui.replace.withPh,New text (leave empty to delete)
 ui.roster.addCharacter,+ Add character
-ui.roster.addCharacterWikiF,Added {0} characters from the Wiki
+ui.roster.addCharacterWikiF,Added {0} {0|character|characters} from the Wiki
 ui.roster.characterWikiCompleteDone,All characters from the Wiki are already here
 ui.roster.closeSkipPageAct,Off = skip this page when printing and exporting
 ui.roster.copyPageListCharacter,Copied the cast page
@@ -5210,6 +5232,27 @@ ui.roster.readPageListCharacter,Failed to read the cast page
 ui.roster.savePageListCharacter,Cast page saved
 ui.roster.showHeadingScene,Show the Scene heading
 ui.roster.showHeadingTime,Show the Time heading
+ui.sb.autoFit,Auto fit to width
+ui.sb.autosave,Auto-save
+ui.sb.home,Home
+ui.sb.lineNumbers,Line numbers
+ui.sb.mdCodes,Show Markdown codes
+ui.sb.modeTip,Type of the open document (novel/screenplay)
+ui.sb.msgTip,Status message — the result of what just happened (errors stay until the next message)
+ui.sb.pageTip,Page at the cursor / total pages
+ui.sb.progTip,Progress toward today's writing goal
+ui.sb.savedAt,Last saved {0}
+ui.sb.saveTip,Save state of the open document
+ui.sb.scenesTip,Number of scenes in the whole project
+ui.sb.spell,Spell check
+ui.sb.stateOff,{0}: off
+ui.sb.stateOn,{0}: on
+ui.sb.tipSettings,Click to open Settings
+ui.sb.tipToggle,Click to switch on or off
+ui.sb.togglesLabel,Switches (on/off)
+ui.sb.typewriter,Typewriter mode
+ui.sb.unsaved,Not saved yet — press {sc:save} to save
+ui.sb.wcTip,Words · characters · pages of the open document
 ui.scene.actAct,Act
 ui.scene.addChapter,Add chapter: 
 ui.scene.addScene,Added scene 
@@ -5218,13 +5261,13 @@ ui.scene.dateDefineSend,Date / due
 ui.scene.delChapter2,Deleted chapter {0}
 ui.scene.delChapterChapterAll,"Delete the whole chapter ""{0}""? (every scene moves to the trash)"
 ui.scene.delScene2,Deleted scene {0}
-ui.scene.egDate,e.g. Day 3 · Year 1024 · Monday morning
+ui.scene.egDate,e.g. Day 3 · Year 1024 · morning
 ui.scene.egPage,"e.g. 2026-09-01 or ""next week"""
 ui.scene.filterSearchNameTag,Filter — search name/tags/status/synopsis
 ui.scene.futureNoteWriter,Future Note (writer's note)
 ui.scene.iIIIIIName,I · II · III · or your own act name
-ui.scene.moveF,Moved “{0}” to chapter “{1}”
 ui.scene.movedToChapter,Moved scene {0} to chapter {1}
+ui.scene.moveF,Moved “{0}” to chapter “{1}”
 ui.scene.nameChapter,Chapter name
 ui.scene.nameChapterNew,New chapter name
 ui.scene.nameSceneNew,New scene name
@@ -5232,10 +5275,10 @@ ui.scene.noteChapter,Chapter notes
 ui.scene.noteWriterShowOnly,"Notes for the writer — shown only here and in the Planner, not in the normal scene"
 ui.scene.notFoundChapterDraft,This chapter isn't in draft.json
 ui.scene.notHasSceneProject,No scenes in the project yet
-ui.scene.orderChapterSceneNewF,Renumbered chapters + scenes ({0} chapters)
+ui.scene.orderChapterSceneNewF,Renumbered chapters + scenes ({0} {0|chapter|chapters})
 ui.scene.pageFlowContinue,Continue page numbers
 ui.scene.pageFlowHint,Page numbers continue from the previous scenes and chapters in the same book (chapter covers that are on count as pages)
-ui.scene.pageNumStartScreenplay,Starting page number (screenplay)
+ui.scene.pageNumStartScreenplay,First page no. (screenplay)
 ui.scene.pinOut,Unpinned: 
 ui.scene.pinPin,Pinned: 
 ui.scene.propsChapter,Chapter properties — 
@@ -5246,7 +5289,7 @@ ui.scene.reorderChapterNewDone,Chapters reordered
 ui.scene.reorderSceneNewDone,Scenes reordered
 ui.scene.savePropsChapterDone,Chapter properties saved: 
 ui.scene.savePropsSceneDone,Scene properties saved
-ui.scene.scene,{0} / {1} scenes
+ui.scene.scene,{0} / {1} {1|scene|scenes}
 ui.scene.sceneTableLoadScene,scene-table: failed to load scenes
 ui.scene.tableScanning,Scanning all scenes in the project…
 ui.scene.tableScene,Scene table
@@ -5256,11 +5299,11 @@ ui.scene.useOpenPageNumSettings,"1 — used when ""Page numbers"" is on in the p
 ui.scenes,scenes
 ui.search.busyIndex,Building search index
 ui.search.busySearch,Searching…
-ui.search.foundFile,Found {0} files
-ui.search.foundShowN,Found {0} files · showing {1}
+ui.search.foundFile,Found {0} {0|file|files}
+ui.search.foundShowN,Found {0} {0|file|files} · showing {1}
 ui.search.globalSearchSearchFail,global-search: search failed
 ui.search.indexCancelled,Indexing cancelled — search again when ready
-ui.search.indexedN,{0} files indexed
+ui.search.indexedN,{0} {0|file|files} indexed
 ui.search.indexName,search indexing
 ui.search.lineNo,Line 
 ui.search.mdSceneNoteMemo,.md (scenes/notes/Memos)
@@ -5303,20 +5346,11 @@ ui.sensory.smell,Smell
 ui.sensory.taste,Taste
 ui.sensory.thingHear,Sound
 ui.sensory.touch,Touch
-ui.session.restored,Session restored ({0} tabs)
-ui.session.restoredTabs,Reopened {0} files
+ui.session.restored,Session restored ({0} {0|tab|tabs})
+ui.session.restoredTabs,Reopened {0} {0|file|files}
 ui.session.tooOld,Saved session is too old — starting fresh
 ui.session.warnSave,Could not save session state
 ui.session.warnTabs,Could not record open tabs
-ui.setTpl.saveHistNote,"Work history (undo to any point) is set per project on the ""Project info"" page"
-ui.setTpl.startup,When the app starts
-ui.setTpl.startupHint,No recent project = Home is always shown
-ui.setTpl.startupHome,Show Home
-ui.setTpl.startupLast,Open the last project right away
-ui.setTpl.startupLastHome,"Open the last project, with Home on top"
-ui.setTpl.subShellSize,App shell size
-ui.setTpl.tabSave,Saving & backups
-ui.setTpl.tabSaveFind,save auto backup version recycle trash
 ui.settings.author,Author
 ui.settings.autoBackup,Auto-backup versions on save
 ui.settings.automation,Automation
@@ -5378,6 +5412,8 @@ ui.setTpl.arrangePageStart,Default alignment
 ui.setTpl.author,Author
 ui.setTpl.author2,Author email
 ui.setTpl.autoCountPageUpdateFind,automation sync pagination update version release github
+ui.setTpl.autoFitWidth,Auto-fit page width
+ui.setTpl.autoFitWidthHint,"When the document panel is narrower than the page, shrink the page to fit · widen it again and the zoom comes back, never above the zoom you set yourself"
 ui.setTpl.barFormatFloat,Format bar
 ui.setTpl.barFormatFloatBtnFind,format bar floating buttons B I U remove button novel screenplay
 ui.setTpl.barTool,Toolbar
@@ -5405,7 +5441,7 @@ ui.setTpl.closeEnterLineNew,Off = Enter starts a new line of the same type · ot
 ui.setTpl.closeNoteHistory,Turn off history recording
 ui.setTpl.closePageNumNot,Off = the page whose real number is 1 shows no number (some writers' convention) · title/cast pages are never counted
 ui.setTpl.closePutCONTINUEDOnly,When off = (CONTINUED) only on pages that start after a scene heading (shooting-script convention)
-ui.setTpl.colorAppBarPanel,Colors of the app shell (bars · panels · dialogs) — never touches the page or exported files
+ui.setTpl.colorAppBarPanel,Colours of the app shell (bars · panels · dialogs) — never touches the page or exported files
 ui.setTpl.colorChar,Text colour
 ui.setTpl.colorHeading,Heading colour
 ui.setTpl.colorMarginLineColor,"The sheet edge, dashed lines and ink colours are worked out automatically"
@@ -5538,6 +5574,7 @@ ui.setTpl.rightGapMarginPaper,Right: distance from the right paper edge (inches)
 ui.setTpl.rightRight,Right
 ui.setTpl.ruleCutPageWidow,Page-break rules (widow / orphan)
 ui.setTpl.runRangeTimeSet,Runs after a pause of the set length · screenplays only
+ui.setTpl.saveHistNote,"Work history (undo to any point) is set per project on the ""Project info"" page"
 ui.setTpl.scopeGlobal,These settings follow you to every project
 ui.setTpl.scopeProject,These settings are stored in this project only
 ui.setTpl.screenplayBy,Screenplay By
@@ -5560,15 +5597,23 @@ ui.setTpl.skipBeforeEm,Space before (em)
 ui.setTpl.skipEm,Space after (em)
 ui.setTpl.soundTypewriter,Typewriter sound
 ui.setTpl.sourceSendPrintSkip,Manuscript for publishers (double-spaced)
+ui.setTpl.startup,When the app starts
+ui.setTpl.startupHint,No recent project = Home is always shown
+ui.setTpl.startupHome,Show Home
+ui.setTpl.startupLast,Open the last project right away
+ui.setTpl.startupLastHome,"Open the last project, with Home on top"
 ui.setTpl.storyNetwork,Story Network
 ui.setTpl.storyNetworkColorBtnFind,story network colours mouse buttons chart
 ui.setTpl.subGoals,Word count goals
+ui.setTpl.subShellSize,App shell size
 ui.setTpl.tab,Tab →
 ui.setTpl.tabAi,AI assistant
 ui.setTpl.tabAiFind,ai assistant provider key model
 ui.setTpl.tableFontApp,One table controls fonts for the whole app:
 ui.setTpl.tabPageNum,Scene & page numbers (script)
 ui.setTpl.tabPageNumFind,page number scene number continued page break default text
+ui.setTpl.tabSave,Saving & backups
+ui.setTpl.tabSaveFind,save auto backup version recycle trash
 ui.setTpl.tabUnitCm,cm
 ui.setTpl.tabUnitIn,in
 ui.setTpl.tabUnitSpace,spaces
@@ -5580,7 +5625,7 @@ ui.setTpl.text3,Italic
 ui.setTpl.text4,"Indent"""
 ui.setTpl.text5,Mouse controls
 ui.setTpl.textDefault,Standard wording
-ui.setTpl.themeColor,Color theme
+ui.setTpl.themeColor,Colour theme
 ui.setTpl.timePrint,Sound the whole time you type
 ui.setTpl.topScreen,On screen
 ui.setTpl.topTop,Top
@@ -5603,7 +5648,7 @@ ui.shortcode.dchapterflag,Whether the chapter is marked important
 ui.shortcode.dchapterno,Chapter number within the book
 ui.shortcode.dchapterstatus,Chapter status
 ui.shortcode.dchars,Character count of the scene
-ui.shortcode.dcolor,Scene color
+ui.shortcode.dcolor,Scene colour
 ui.shortcode.dcommentcount,Number of comments on this file
 ui.shortcode.dconflict,Scene conflict
 ui.shortcode.ddailygoal,Daily word-count goal
@@ -5846,23 +5891,23 @@ ui.split.openedEmpty,"Empty pane opened — drag a tab header into it, or click 
 ui.split.removeFromPane,Remove from this pane (the tab stays open)
 ui.split.statusPrefix,Split view: 
 ui.spReports.beforeHeadSceneFirst,(before the first scene heading)
-ui.spReports.graphDialoguePage,Dialogue chart — {0} pages
+ui.spReports.graphDialoguePage,Dialogue chart — {0} {0|page|pages}
 ui.spReports.mergeStoryActionDialogue,Whole story: action {0}% · dialogue {1}% · 
 ui.spReports.name,Character names
 ui.spReports.nameOther,Character names {0}% · other {1}%
 ui.spReports.notSpecifyPlace,(no location)
 ui.spReports.pageDialogueAction,Page {0} {1} dialogue {2}% · action {3}%
 ui.spReports.ratio,{0}{1}{2}{3}{4}Ratio
-ui.spReports.reportPersonLineDialogue,Character report — {0} characters · {1} lines of dialogue
-ui.spReports.reportPlacePlaceScene,Location report — {0} locations · {1} scenes · {2} pages
+ui.spReports.reportPersonLineDialogue,Character report — {0} {0|character|characters} · {1} {1|line|lines} of dialogue
+ui.spReports.reportPlacePlaceScene,Location report — {0} {0|location|locations} · {1} {1|scene|scenes} · {2} {2|page|pages}
 ui.spReports.scenePage,   Scene {0} page {1} {2}
-ui.spReports.scenePage2,{0}  [{1}]  {2} scenes · ~{3} pages
+ui.spReports.scenePage2,{0}  [{1}]  {2} {2|scene|scenes} · ~{3} {3|page|pages}
 ui.sprint.alreadyRunning,A sprint is already running
 ui.sprint.dirtyLabel,Writing sprint
-ui.sprint.doneStatus,Sprint finished: {0} words in {1} min ({2} words/min)
+ui.sprint.doneStatus,Sprint finished: {0} {0|word|words} in {1} min ({2} {2|word|words}/min)
 ui.sprint.goal,Goal (words · 0 = none)
 ui.sprint.hint,"Only words added during the sprint are counted, across all tabs — opening another scene mid-sprint doesn't count its existing text"
-ui.sprint.history,So far: {0} sprints · {1} words · {2} words/min on average
+ui.sprint.history,So far: {0} {0|sprint|sprints} · {1} {1|word|words} · {2} {2|word|words}/min on average
 ui.sprint.minutes,Duration (minutes)
 ui.sprint.noHistory,No sprints recorded in this project yet
 ui.sprint.pause,Pause
@@ -5873,9 +5918,9 @@ ui.sprint.start,Start
 ui.sprint.stop,Finish
 ui.sprint.timeUp,Time's up!
 ui.sprint.title,Writing sprint
-ui.sprint.wpm,{0} words/min
-ui.sprint.written,{0} words
-ui.sprint.writtenGoal,{0} / {1} words
+ui.sprint.wpm,{0} {0|word|words}/min
+ui.sprint.written,{0} {0|word|words}
+ui.sprint.writtenGoal,{0} / {1} {1|word|words}
 ui.spTitlePages.chapter,Written by
 ui.spTitlePages.new,Based on 
 ui.spTitlePages.notNamedStory,Untitled
@@ -5883,13 +5928,13 @@ ui.spValidator.act,Act
 ui.spValidator.cantCharacterDialogue,Orphan parenthetical — not after a character/dialogue
 ui.spValidator.characterNotHasDialogue,Character “{0}” is not followed by dialogue
 ui.spValidator.dialogueNotNamedCharacter,Orphan dialogue — no character name before it
-ui.spValidator.error,{0} errors
+ui.spValidator.error,{0} {0|error|errors}
 ui.spValidator.hasBodyChapterBefore,There is script content before the first scene heading — start with a scene heading (INT./EXT.) first
 ui.spValidator.headScene,Scene heading
 ui.spValidator.headSceneTwoNot,Two scene headings in a row — “{0}” has no scene content
-ui.spValidator.itemView,{0} things to check
+ui.spValidator.itemView,{0} {0|thing|things} to check
 ui.spValidator.lineEmpty,{0}: empty line
-ui.spValidator.longChar,{0} too long ({1}/{2} characters)
+ui.spValidator.longChar,{0} too long ({1}/{2} {2|character|characters})
 ui.spValidator.msg,Transition
 ui.spValidator.msg2,Parenthetical
 ui.spValidator.notCompletePair,Unbalanced parentheses: {0}
@@ -5922,11 +5967,11 @@ ui.starter.backToScenarios,Back to the episode list
 ui.starter.bannerSizeHint,"The banner spans the full width of the story page — landscape, about 3:1"
 ui.starter.brBtn,Send to timeline/maps
 ui.starter.brBtnHint,"Turn the story's ""when"" and ""where"" into events and pins"
-ui.starter.brDone,{0} timeline items · {1} map pins
+ui.starter.brDone,{0} timeline {0|item|items} · {1} map {1|pin|pins}
 ui.starter.brGo,Send
 ui.starter.brHint,Pressing again updates what's there instead of duplicating it
 ui.starter.brNothing,No data yet
-ui.starter.brScenarios,Create events from every episode ({0} episodes)
+ui.starter.brScenarios,Create events from every episode ({0} {0|episode|episodes})
 ui.starter.brTitle,Send to the timeline and maps
 ui.starter.brWhen,"Create timeline events from ""when"" (track {0})"
 ui.starter.brWhere,"Pin on the map from ""where"" (map {0})"
@@ -5942,7 +5987,7 @@ ui.starter.castNoDesc,No description yet
 ui.starter.castNoName,Not named yet
 ui.starter.castPushAll,Save the whole cast to the Wiki
 ui.starter.castPushAllHint,Create/update every character in this project's Wiki
-ui.starter.castPushed,Saved {0} characters to the Wiki
+ui.starter.castPushed,Saved {0} {0|character|characters} to the Wiki
 ui.starter.castPushFail, · {0} failed
 ui.starter.charLinkedFromWiki,"Linked ""{0}"" to the wiki"
 ui.starter.charSavedWiki,Saved to the Wiki
@@ -5974,7 +6019,7 @@ ui.starter.createNew,Create a new story
 ui.starter.cvAgainHint,"You can convert again — new scenes are appended, nothing is overwritten"
 ui.starter.cvBtn,Convert to manuscript
 ui.starter.cvBtnHint,Turn the played episodes into real scenes in the Story Starter book
-ui.starter.cvDone,Converted {0} scenes into book {1}
+ui.starter.cvDone,Converted {0} {0|scene|scenes} into book {1}
 ui.starter.cvFail,Conversion failed
 ui.starter.cvForkHead,## Branch point
 ui.starter.cvFormat,Write it as
@@ -5986,9 +6031,9 @@ ui.starter.cvNoPlayed,No episodes have been played yet — chat with the narrato
 ui.starter.cvNoScene,Could not create the scene
 ui.starter.cvNothing,This episode has no conversation to convert yet
 ui.starter.cvOne,Convert this episode to manuscript
-ui.starter.cvOpenAsk,"Created {0} scenes in ""{1}"". Open it now?"
+ui.starter.cvOpenAsk,"Created {0} {0|scene|scenes} in ""{1}"". Open it now?"
 ui.starter.cvOpenNow,Open now
-ui.starter.cvPartial,Converted {0} of {1} parts — what succeeded has been kept
+ui.starter.cvPartial,Converted {0} of {1} {1|part|parts} — what succeeded has been kept
 ui.starter.cvPickOne,Pick at least one episode
 ui.starter.cvProse,Novel
 ui.starter.cvSp,Screenplay
@@ -6001,7 +6046,7 @@ ui.starter.cvWorkingChunk,Converting “{0}” ({1}/{2}) — part {3}/{4}
 ui.starter.delAsk,Delete the whole story “{0}” (including all characters and episodes)? It will go to the trash
 ui.starter.delDone,Story moved to the trash
 ui.starter.descHead,Story description
-ui.starter.draftProgress,Draft — {0}/{1} steps filled in
+ui.starter.draftProgress,Draft — {0}/{1} {1|step|steps} filled in
 ui.starter.drawFail,Could not draw the page — see details in the activity log
 ui.starter.editStarter,Edit story info
 ui.starter.fAliases,Other names
@@ -6092,7 +6137,7 @@ ui.starter.moreFields,More (other names · pronoun · short card)
 ui.starter.nameFromCaps,A capitalised English word
 ui.starter.nameFromMarker,Follows a name marker in the synopsis
 ui.starter.nameFromQuote,Appears in quotation marks in the synopsis
-ui.starter.nameHintHits, · mentioned {0} times
+ui.starter.nameHintHits, · mentioned {0} {0|time|times}
 ui.starter.nameHintLabel,Names found in your synopsis —
 ui.starter.needAI,Set up AI first to create a story
 ui.starter.needCharName,Name the character first
@@ -6115,7 +6160,7 @@ ui.starter.packDone,Exported:
 ui.starter.packExport,Export as a .zip file (to move to another project/share)
 ui.starter.packFail,Could not create the .zip file
 ui.starter.packImport,Import .zip
-ui.starter.packImported,Imported “{0}” ({1} files)
+ui.starter.packImported,Imported “{0}” ({1} {1|file|files})
 ui.starter.packImportHint,Open a .zip file exported from Story Starter
 ui.starter.packNoDir,This story's folder was not found
 ui.starter.packNotStarter,This file isn't a Story Starter (no starter.json inside)
@@ -6228,7 +6273,7 @@ ui.starter.rtUnderline,Underline
 ui.starter.rtUndo,Undo
 ui.starter.saveFail,Save failed
 ui.starter.scAdd,New episode
-ui.starter.scAdvBadge,{0} advanced fields set
+ui.starter.scAdvBadge,{0} advanced {0|field|fields} set
 ui.starter.scAdvHead,Advanced settings
 ui.starter.scAdvHint,These fields go straight to the AI - use {0} for anyone and {1} for the player
 ui.starter.scAfter,Continues from 
@@ -6238,12 +6283,12 @@ ui.starter.scCondPlaceholder,"One per line, e.g. {0} must not use real names · 
 ui.starter.scContinue,Continue playing
 ui.starter.scDefaultTitle,Episode {0}
 ui.starter.scDelAsk,Delete episode “{0}”?
-ui.starter.scDelPlayedAsk,Delete episode “{0}”? {1} turns have been played and will all be lost
+ui.starter.scDelPlayedAsk,Delete episode “{0}”? {1} {1|turn has|turns have} been played and will all be lost
 ui.starter.scDesc,Scene description
 ui.starter.scDescPlaceholder,"Where, when, and who is there (you can reference with {0})"
 ui.starter.scDlgTitle,Episode settings
 ui.starter.scEmpty,No episodes yet — press “New episode” to start playing
-ui.starter.scExported, · converted {0} times
+ui.starter.scExported, · converted {0} {0|time|times}
 ui.starter.scGoal,Scene goal
 ui.starter.scGoalPlaceholder,Where this scene must take the story (you can reference with {0})
 ui.starter.scMood,Mood and tone
@@ -6266,7 +6311,7 @@ ui.starter.scPrevMissing,(the previous episode has been deleted)
 ui.starter.scPrevNone,"— Start fresh, not continuing from any episode —"
 ui.starter.scSearch,Search episodes
 ui.starter.scStart,Start playing
-ui.starter.scStats,{0} turns · {1} words
+ui.starter.scStats,{0} {0|turn|turns} · {1} {1|word|words}
 ui.starter.scSynopsis,Episode synopsis
 ui.starter.scSynopsisPlaceholder,What will happen in this episode
 ui.starter.scThumb,Scene thumbnail
@@ -6297,7 +6342,7 @@ ui.starter.tagOwnPlaceholder,"Type your own tag, then press Enter"
 ui.starter.tagPicked,Chosen tags
 ui.starter.today,Today
 ui.starter.tokDetail,Sent {0} · received {1}
-ui.starter.tokLine,{0} tokens
+ui.starter.tokLine,{0} {0|token|tokens}
 ui.starter.tokNone,No tokens used yet
 ui.starter.trGm,Narrator
 ui.starter.trPlayer,Player
@@ -6325,13 +6370,13 @@ ui.status.default,  (standard)
 ui.status.delStatus,"Delete status ""{0}""?"
 ui.status.delStatus2,Delete this status
 ui.status.delStatusDone,Status deleted: 
-ui.status.delStatusInUse,"Delete status ""{0}""? — {1} scene(s) still use it (they keep the value until you change it)"
+ui.status.delStatusInUse,"Delete status ""{0}""? — {1} {1|scene still uses|scenes still use} it (they keep the value until you change it)"
 ui.status.egEditSendDone,"e.g. Needs revision, Submitted"
 ui.status.export,Export…
 ui.status.exportSetStatusDone,Exported the status set: 
 ui.status.import,Import…
 ui.status.importFileStatusNot,Could not import the status file (not valid JSON)
-ui.status.importStatusNewList,Imported {0} new statuses
+ui.status.importStatusNewList,Imported {0} new {0|status|statuses}
 ui.status.loading,Loading...
 ui.status.manageStatusScene,Manage scene statuses
 ui.status.nameStatusNew,New status name
@@ -6378,7 +6423,7 @@ ui.tags.tagPaneReadTag,tag-pane: failed to read tags
 ui.task.jobFailedF,auto-task: job {0} failed
 ui.tbcfg.allOff,All off
 ui.tbcfg.allOn,All on
-ui.tbcfg.count,{0} of {1} buttons shown
+ui.tbcfg.count,{0} of {1} {1|button|buttons} shown
 ui.tbcfg.customize,Customize toolbar…
 ui.tbcfg.grpAi,AI
 ui.tbcfg.grpAlign,Alignment
@@ -6433,9 +6478,9 @@ ui.thes.thesaurusSearchNotOk,thesaurus: search failed
 ui.timeline.addEvent,+ Add event
 ui.timeline.card,Cards
 ui.timeline.clickOpenScene,Click to open this scene
-ui.timeline.eventNotHasTime,+ {0} more events without a numeric time (see the card view)
-ui.timeline.hasDotEventTime,{0} places where events share the same time (highlighted orange) — check whether that's intended
-ui.timeline.hasDotTimeAt,{0} places with the same time (highlighted orange)
+ui.timeline.eventNotHasTime,+ {0} more {0|event|events} without a numeric time (see the card view)
+ui.timeline.hasDotEventTime,{0} {0|place|places} where events share the same time (highlighted orange) — check whether that's intended
+ui.timeline.hasDotTimeAt,{0} {0|place|places} with the same time (highlighted orange)
 ui.timeline.lineTime,Timeline
 ui.timeline.note, notes
 ui.timeline.notHasEventPress,"No events yet — press ""＋ Add event"" or set a scene's ""Story time"" in its scene properties"
@@ -6458,6 +6503,7 @@ ui.tip.ai-summary,Has AI summarise the whole project — for a refresher or a st
 ui.tip.ai-title,Has AI suggest titles from your content; pick one to set it as the project title.
 ui.tip.ai-world,"Has AI build out your story world — geography, culture, history — and save the result as Wiki pages."
 ui.tip.all-notes,Lists the quick notes from every scene in one place; click one to go to its scene.
+ui.tip.auto-fit-width,"Turns automatic fitting on or off: the page shrinks to fit when the document panel is narrower than the page, and grows back when it widens (never above the zoom you set yourself)."
 ui.tip.auto-sync,Turns the automatic tasks that keep project data up to date while you work on or off.
 ui.tip.auto-sync:false,Turns off the automatic tasks that keep project data up to date.
 ui.tip.auto-sync:true,Turns on the automatic tasks that keep project data up to date while you work.
@@ -6813,12 +6859,12 @@ ui.toolbar.strike,Strikethrough
 ui.toolbar.underline,Underline
 ui.toolsThesaurus.thesaurusSynonyms,Synonyms
 ui.toolsThesaurus.wordOppositeAntonyms,Antonyms
-ui.trash.clearTrashAutoList,Auto-emptied {0} items from the trash (older than {1} days)
+ui.trash.clearTrashAutoList,Auto-emptied {0} {0|item|items} from the trash (older than {1} {1|day|days})
 ui.trash.delMoveTrashProject,"Delete “{0}”? (moved to the project's trash, can be restored)"
 ui.trash.moveTrash,Moved to the trash: 
-ui.trash.purgeAsk,Permanently delete {0} items that have been in the bin over {1} days?
+ui.trash.purgeAsk,Permanently delete {0} {0|item|items} that have been in the bin over {1} {1|day|days}?
 ui.trash.purgeGo,Delete permanently
-ui.trash.purgeKept,Kept {0} items in the bin
+ui.trash.purgeKept,Kept {0} {0|item|items} in the bin
 ui.trash.recoverRestoreAlbumDone,Album restored
 ui.trash.recoverRestoreBookDone,Book restored
 ui.trash.recoverRestoreDone,Restored
@@ -6828,13 +6874,13 @@ ui.trash.restoredRenamed,"Restored — the original name was taken, saved as “
 ui.trash.revealInFolder,Show in folder
 ui.tree.addSceneHere,+ Scene
 ui.tree.clipEmpty,Nothing has been copied yet
-ui.tree.confirmDeleteN,Move the {0} selected items to the trash?
-ui.tree.confirmEmptyTrash,Permanently delete all {0} items in the trash? This cannot be undone.
-ui.tree.copiedN,Copied {0} items
+ui.tree.confirmDeleteN,Move the {0} selected {0|item|items} to the trash?
+ui.tree.confirmEmptyTrash,Permanently delete all {0} {0|item|items} in the trash? This cannot be undone.
+ui.tree.copiedN,Copied {0} {0|item|items}
 ui.tree.copy,Copy
 ui.tree.cut,Cut
-ui.tree.cutN,Cut {0} items
-ui.tree.deletedN,Deleted {0} items
+ui.tree.cutN,Cut {0} {0|item|items}
+ui.tree.deletedN,Deleted {0} {0|item|items}
 ui.tree.deleteSelected,Delete selected
 ui.tree.delFail,Delete failed
 ui.tree.delSkipUnsaved,Did not delete {0} — unsaved changes could not be saved
@@ -6842,17 +6888,17 @@ ui.tree.draftLabel,Draft
 ui.tree.draftPickHint,Choose which draft the project tree shows
 ui.tree.draftSwitched,"Switched to draft ""{0}"""
 ui.tree.duplicate,Duplicate
-ui.tree.duplicatedN,Duplicated {0} items
+ui.tree.duplicatedN,Duplicated {0} {0|item|items}
 ui.tree.duplicateFail,Could not duplicate
 ui.tree.dupSkipUnsaved,Did not duplicate {0} — unsaved changes in the original could not be saved
-ui.tree.emptiedTrash,Emptied {0} items from the trash
+ui.tree.emptiedTrash,Emptied {0} {0|item|items} from the trash
 ui.tree.emptyTrashN,Empty trash ({0})
 ui.tree.failedN,{0} failed
-ui.tree.movedN,Moved {0} items to {1}
+ui.tree.movedN,Moved {0} {0|item|items} to {1}
 ui.tree.moveFail,Could not move
 ui.tree.moveToChapter,Move to chapter…
 ui.tree.nothingSelected,Nothing selected
-ui.tree.pastedN,Pasted {0} items into {1}
+ui.tree.pastedN,Pasted {0} {0|item|items} into {1}
 ui.tree.pasteFail,Paste failed
 ui.tree.pasteWhere,Paste into which chapter
 ui.tree.pickChapterFirst,Pick a destination chapter first
@@ -6862,11 +6908,11 @@ ui.tree.secMemo,Memos
 ui.tree.secResearch,Research
 ui.tree.secWiki,Wiki
 ui.tree.selectedCount,{0} selected
-ui.tree.skipCrossDraft,Skipped {0} items (cannot move across drafts)
+ui.tree.skipCrossDraft,Skipped {0} {0|item|items} (cannot move across drafts)
 ui.tree.snapCountFail,Could not count versions
 ui.tree.trashEmptyAlready,The trash is already empty
 ui.tree.trashSettings,Auto-empty schedule (project settings)
-ui.tree.versionCount,{0} versions kept
+ui.tree.versionCount,{0} {0|version|versions} kept
 ui.treeAct.backNormalScene,Back to a normal scene
 ui.treeAct.backupCancelledUnsaved,Backup of {0} cancelled — there are unsaved changes that could not be saved
 ui.treeAct.backupDone,Backed up “{0}”
@@ -6875,21 +6921,21 @@ ui.treeAct.boardLocked,This board is locked — unlock it in the Explorer before
 ui.treeAct.bookFromChapterAsk,New book name
 ui.treeAct.bookFromChapterDone,Created book “{0}” from this chapter
 ui.treeAct.chapterFromScenesAsk,New chapter name
-ui.treeAct.chapterFromScenesDone,Created chapter “{0}” from {1} scene(s)
-ui.treeAct.clearColor,No color
+ui.treeAct.chapterFromScenesDone,Created chapter “{0}” from {1} {1|scene|scenes}
+ui.treeAct.clearColor,No colour
 ui.treeAct.clearStatus,No status
 ui.treeAct.clipEmpty,Nothing copied that can be pasted here
 ui.treeAct.copied,Copied “{0}” — right-click where you want it and choose Paste
 ui.treeAct.copyCancelledUnsaved,Copy cancelled — {0} has unsaved changes that could not be saved
 ui.treeAct.copySuffix,(copy)
-ui.treeAct.crossDraftSkipped,skipped {0} scene(s) from another draft
+ui.treeAct.crossDraftSkipped,skipped {0} {0|scene|scenes} from another draft
 ui.treeAct.duplicated,Duplicated “{0}”
 ui.treeAct.duplicatedBook,Book duplicated as “{0}”
 ui.treeAct.duplicatedChapter,Chapter duplicated as “{0}”
 ui.treeAct.fAct,Act
 ui.treeAct.fBlurb,Blurb
 ui.treeAct.fCaption,Caption
-ui.treeAct.fColor,Color
+ui.treeAct.fColor,Colour
 ui.treeAct.fDate,Date
 ui.treeAct.fFlag,Starred
 ui.treeAct.fLocked,Locked (read-only)
@@ -6916,7 +6962,7 @@ ui.treeAct.pinsHead,Pinned ({0})
 ui.treeAct.planLocked,This plan is locked — unlock it in the Explorer before editing
 ui.treeAct.positionAsk,Position (1–{0})
 ui.treeAct.propsTitle,Properties — {0}
-ui.treeAct.renamedImage,Renamed image to “{0}” · updated links in {1} file(s)
+ui.treeAct.renamedImage,Renamed image to “{0}” · updated links in {1} {1|file|files}
 ui.treeAct.renamedProject,Project renamed to “{0}”
 ui.treeAct.renameImageAsk,New image file name
 ui.treeAct.renameProjectAsk,Project name
@@ -6947,14 +6993,14 @@ ui.treeMenu.branchPanel,Branch map
 ui.treeMenu.castOfCharacters,Cast of Characters
 ui.treeMenu.chapterFromScenes,New chapter from selected scenes
 ui.treeMenu.collapseAll,Collapse all
-ui.treeMenu.color,Color
+ui.treeMenu.color,Colour
 ui.treeMenu.comment,Comments
 ui.treeMenu.compare,Compare with another plan…
 ui.treeMenu.compareVersion,Compare versions…
 ui.treeMenu.copy,Copy
 ui.treeMenu.copyPath,Copy path
 ui.treeMenu.dashboard,Dashboard
-ui.treeMenu.delete,Delete (move to trash)
+ui.treeMenu.delete,Delete (move to the trash)
 ui.treeMenu.duplicate,Duplicate
 ui.treeMenu.expandAll,Expand all
 ui.treeMenu.importImage,Import image…
@@ -7012,7 +7058,7 @@ ui.treeMenu.versionHistory,Version history…
 ui.treeMenu.view,View
 ui.treeMenu.viewQuickNotes,View quick notes
 ui.treeMenu.visual,Visual telling
-ui.ui.hasFileCantSave,{0} files are unsaved
+ui.ui.hasFileCantSave,{0} {0|file|files} are unsaved
 ui.ui.notSave,Don't save
 ui.ui.savePick,Save selected ({0})
 ui.upd.autoHint,"Off = no internet access at startup · You can still check with the button below, or from the Help menu"
@@ -7061,8 +7107,8 @@ ui.vis.addRow,Add from scene lines
 ui.vis.addSelected,Add selected
 ui.vis.allLost,Every bound line was deleted from the scene
 ui.vis.allUsed,Every line is already in the table
-ui.vis.boundN,{0} lines bound
-ui.vis.changedCount,{0} row(s) whose source line changed
+ui.vis.boundN,{0} {0|line|lines} bound
+ui.vis.changedCount,{0} {0|row|rows} whose source line changed
 ui.vis.clearImage,Remove image
 ui.vis.close,Close
 ui.vis.colAction,action
@@ -7096,7 +7142,7 @@ ui.vis.pickLineHint,Tick the lines you want to illustrate — multiple allowed
 ui.vis.prev,Previous
 ui.vis.remarkPh,Remark…
 ui.vis.reveal,Show file in folder
-ui.vis.rowNum,{0} rows
+ui.vis.rowNum,{0} {0|row|rows}
 ui.vis.saved,Visual telling table saved
 ui.vis.selectAll,Select all
 ui.vis.statusChanged,The source line changed — click to update the text
@@ -7118,8 +7164,8 @@ ui.wiki.addRelation,Add relationship
 ui.wiki.aiCtxDesc,Description
 ui.wiki.aiEmpty,AI came back empty — nothing changed
 ui.wiki.aiFailed,The AI call failed
-ui.wiki.aiFillLabel,Let AI fill {0}
 ui.wiki.aiFilled,Filled {0}
+ui.wiki.aiFillLabel,Let AI fill {0}
 ui.wiki.aiFillTip,Let AI fill this field (one click)
 ui.wiki.aiKept,Kept the original text
 ui.wiki.aiNoProvider,No AI provider selected yet
@@ -7147,7 +7193,7 @@ ui.wiki.dataAdd,Your own data
 ui.wiki.dataPrevAddOnly,Existing data is kept; only fields missing from the new template are added
 ui.wiki.dataTemplate,Data (from the template)
 ui.wiki.decision,Decisions involving 
-ui.wiki.delCantHasList,Cannot delete — this category still has {0} items
+ui.wiki.delCantHasList,Cannot delete — this category still has {0} {0|item|items}
 ui.wiki.delCat,Delete category
 ui.wiki.delCat2,Delete category “{0}”?
 ui.wiki.delCatDone,Category deleted
@@ -7197,7 +7243,7 @@ ui.wiki.saveVersionRename,Save this version (you can name it)
 ui.wiki.secTitlePh,Section title
 ui.wiki.setImagePortraitCircle,Set as portrait (the circle at the top)
 ui.wiki.shortcode,Shortcode
-ui.wiki.shortcodePlaceholder,Leave empty to use the entity name
+ui.wiki.shortcodePlaceholder,Blank = entity name
 ui.wiki.shortcodePreview,Type {0} anywhere to reference this entity
 ui.wiki.tags,Tags
 ui.wiki.tagsPlaceholder,Comma-separated
@@ -7207,14 +7253,14 @@ ui.wiki.viewRecoverRestoreVersion,View/restore older versions of this page
 ui.words,words
 ui.worldAutoLink.busyLoadIndexLink,(loading the link index…)
 ui.worldAutoLink.filterPlaceholder,Filter by name…
-ui.worldAutoLink.inNScenes,in {0} scenes
+ui.worldAutoLink.inNScenes,in {0} {0|scene|scenes}
 ui.worldAutoLink.noRows,Nothing matches
 ui.worldAutoLink.notHasSceneMention,(no scenes mention this entity yet)
 ui.worldAutoLink.onlyOrphan,Only ones never mentioned
 ui.worldAutoLink.panelTitle,Mentions
 ui.worldAutoLink.rebuild,Rebuild the index
 ui.worldAutoLink.sceneGone,That scene no longer exists
-ui.worldAutoLink.summaryN,{0} entries · {1} never mentioned
+ui.worldAutoLink.summaryN,{0} {0|entry|entries} · {1} never mentioned
 ui.worldAutoLink.zero,never mentioned
 ui.xhub.autoKind,Detected from the source files: {0}
 ui.xhub.buildFail,Could not build the output
@@ -7222,10 +7268,10 @@ ui.xhub.building,Building preview…
 ui.xhub.content,Content
 ui.xhub.docKind,Document type
 ui.xhub.docxHint,"Uses the same paper size, margins and font as the screen · headings use Word's Heading styles (so Word can build a table of contents)"
-ui.xhub.doneDocx,{0} paragraphs · {1} images embedded
-ui.xhub.doneEpub,{0} chapters · {1} images embedded
-ui.xhub.donePdf,{0} pages · {1} bookmarks
-ui.xhub.donePdfPages,{0} pages ({1} unnumbered front pages)
+ui.xhub.doneDocx,{0} {0|paragraph|paragraphs} · {1} {1|image|images} embedded
+ui.xhub.doneEpub,{0} {0|chapter|chapters} · {1} {1|image|images} embedded
+ui.xhub.donePdf,{0} {0|page|pages} · {1} {1|bookmark|bookmarks}
+ui.xhub.donePdfPages,{0} {0|page|pages} ({1} unnumbered front pages)
 ui.xhub.ebookImgFail,Couldn't read an image for the e-book/Word file: 
 ui.xhub.editSteps,Edit steps…
 ui.xhub.epubHint,The book is split at level 1–2 headings and page breaks · headings become the table of contents · images whose file can't be found keep only their caption

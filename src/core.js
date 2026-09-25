@@ -109,8 +109,10 @@ export function restoreScrollSnap(root, snap) {
     put();
     // rAF ไม่ยิงเมื่อหน้าต่างถูกบัง (บทเรียน 14i-2) → มี timer สำรองเสมอ
     try { requestAnimationFrame(put); } catch {}
-    for (const ms of [0, 30, 60, 120, 250]) setTimeout(put, ms);
-    setTimeout(() => { for (const j of jobs) if (j.el) j.el.style.scrollBehavior = j.prev || ''; }, 300);
+    // [alpha.165] เผื่อถึง 1 วินาที — แผงที่วาดเนื้อใหม่แบบ async ตอนเปิด (อ่านไฟล์ก่อน) เนื้อยังไม่มา
+    // ในรอบแรก ๆ แล้วค่าถูกหนีบเป็น 0 · หยุดเองทันทีที่ผู้ใช้เลื่อน (เงื่อนไข j.done ข้างบน)
+    for (const ms of [0, 30, 60, 120, 250, 450, 700, 1000]) setTimeout(put, ms);
+    setTimeout(() => { for (const j of jobs) if (j.el) j.el.style.scrollBehavior = j.prev || ''; }, 1050);
     return jobs.length;
   };
 }
@@ -220,7 +222,17 @@ function expireStatus(st, my) {
   st.textContent = statusIdleText(st);
   st.classList.remove('k-status-err');
   delete st.dataset.level;
+  statusTitle(st);
   return true;
+}
+/**
+ * [alpha.165] ทูลทิปของช่องข้อความ = ข้อความเต็ม (ช่องแคบ = ถูกตัดด้วย …) + คำอธิบายว่าช่องนี้คืออะไร
+ * ผู้ใช้: "status bar … ไม่โชว์ hover tooltip ว่าตรงนี้คืออะไร"
+ */
+function statusTitle(st) {
+  const txt = (st.textContent || '').trim();
+  if (txt) st.setAttribute('title', txt); else st.removeAttribute('title');
+  st.dataset.tip = 'ui.sb.msgTip';
 }
 function armStatus(st, ttl) {
   if (_st.timer) { clearTimeout(_st.timer); _st.timer = null; }
@@ -256,6 +268,7 @@ function putStatus(s, level, ttl) {
   st.textContent = s == null ? '' : String(s);
   st.classList.toggle('k-status-err', level === 'error');
   st.dataset.level = level;
+  statusTitle(st);
   armStatus(st, ttl);
   return st;
 }
@@ -390,6 +403,8 @@ export const THEME_ALIAS = { dark: 'k2', light: 'k2-light' };
 
 export const GLOBAL_DEFAULTS = {
   autoSaveMinutes: 5, maxBackups: 10, autoBackup: true, lineNumbers: false,
+  // [alpha.164 · รอบต่อ 2 · งาน 3] แผงเอกสารแคบกว่ากระดาษ → ซูมพอดีความกว้างเอง (ปิดเป็นค่าเริ่มต้น)
+  autoFitWidth: false,
   // [alpha.60r2 ข้อ 9] ปุ่มลอยมุมขวาล่าง — ปิดได้ (บางคนบอกว่ามันบังงาน)
   fabEnabled: true,
   // [alpha.111] คำสั่งบนปุ่มลอย (สูงสุด 4) + รูปแบบการแสดง · null = ใช้ชุดเริ่มต้นใน fab-config.js

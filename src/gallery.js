@@ -981,7 +981,7 @@ export class Gallery {
       box.append(u);
     }
     const btns = el('div', 'k-dlg-btns');
-    const ok = el('button', 'k-ok', tt('ui.common.close'));
+    const ok = el('button', 'k-ok k-cancel', tt('ui.common.close'));
     ok.onclick = () => ov.remove();
     btns.append(ok); box.append(btns);
     ov.append(box); document.body.append(ov);
@@ -1024,7 +1024,7 @@ export class Gallery {
     }
     box.append(grid);
     const btns = el('div', 'k-dlg-btns');
-    const ok = el('button', 'k-ok', tt('ui.common.close')); ok.onclick = () => ov.remove();
+    const ok = el('button', 'k-ok k-cancel', tt('ui.common.close')); ok.onclick = () => ov.remove();
     btns.append(ok); box.append(btns);
     ov.append(box); document.body.append(ov);
     ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
@@ -1054,7 +1054,7 @@ export class Gallery {
       }
       box.append(list);
       const btns = el('div', 'k-dlg-btns');
-      const ok = el('button', 'k-ok', tt('ui.common.close')); ok.onclick = () => ov.remove();
+      const ok = el('button', 'k-ok k-cancel', tt('ui.common.close')); ok.onclick = () => ov.remove();
       btns.append(ok); box.append(btns);
       ov.append(box); document.body.append(ov);
       ov.onclick = (e) => { if (e.target === ov) ov.remove(); };

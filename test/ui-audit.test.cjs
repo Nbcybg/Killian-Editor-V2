@@ -458,6 +458,49 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   ck('[162-W2] titleOf อ่านคีย์ภาษาตรง ๆ (ไม่มีค่าสำรองที่ทำให้คีย์ผิดไม่ถูกจับ)',
      /function titleOf\(d\) \{ return t\(d\.i18n\); \}/.test(pu));
 
+  // [alpha.165] ★ ทุกแผงมีความกว้างขั้นต่ำ "ก่อนมีแถบเลื่อน" (ผู้ใช้: ห้ามบีบจนตัดบรรทัด)
+  //   (1) แผงที่ปิดได้ทุกตัวประกาศ minW · (2) CSS ห้ามตั้ง min-width:0 ให้ตัวเนื้อแผง (#adopt) —
+  //   กฎ id ชนะ `.k-panel-body > *{min-width:var(--panel-min-w)}` แล้วขั้นต่ำหายเงียบ (ต้นไม้ · นำทาง ·
+  //   คุณสมบัติ · บันทึก · กระดานวางแผน เคยเป็นแบบนั้น = ไม่มีแถบเลื่อน บีบจนข้อความพับ)
+  const noMinW = defLines.filter((l) => !/closable: false/.test(l) && !/\bminW: \d+/.test(l))
+    .map((l) => (l.match(/id: '([^']+)'/) || [])[1]);
+  ck('★★ [165-P8] ทุกแผงที่ปิดได้ประกาศ minW', noMinW.length === 0, noMinW.join(','));
+  {
+    const cssRaw = fs.readFileSync(path.join(ROOT, 'renderer/style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const adopts = defLines.filter((l) => !/closable: false/.test(l))
+      .map((l) => (l.match(/adopt: '#([\w-]+)'/) || [])[1]).filter(Boolean);
+    const zeroed = [];
+    for (const m of cssRaw.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      if (!/(^|;)\s*min-width\s*:\s*0(px)?\s*(;|$|!)/.test(m[2])) continue;
+      for (const sel of m[1].split(',').map((s) => s.trim())) {
+        const hit = adopts.find((id) => sel === '#' + id);
+        if (hit) zeroed.push(hit);
+      }
+    }
+    ck('★★ [165-P8] CSS ไม่ลบขั้นต่ำของแผง (ไม่มี #<เนื้อแผง>{min-width:0})', zeroed.length === 0, zeroed.join(','));
+    const flushRule = (cssRaw.match(/\.k-panel-body\.k-panel-flush\s*\{([^}]*)\}/) || [])[1] || '';
+    ck('★★ [165-P4] แผง flush ที่ผนึกอยู่ยังเลื่อนแนวนอนได้ (ไม่ overflow:hidden ทั้งสองแกน)',
+       /overflow-x\s*:\s*auto/.test(flushRule) && !/(^|;)\s*overflow\s*:\s*hidden/.test(flushRule), flushRule);
+    ck('★ [165-P6] เนื้อแผงไม่เลื่อนแบบลื่น (คืนตำแหน่งเลื่อนต้องกระโดดทันที ไม่ไหลจากบนสุด)',
+       !/[^{}]*\.k-panel-body[^{}]*\{[^}]*scroll-behavior\s*:\s*smooth/.test(cssRaw));
+    ck('★ [165-P5] ไม่มีแถบชิปแผงที่ซ่อนมุมพื้นที่เขียน (ผู้ใช้สั่งเอาออก)', /const HIDDEN_CHIPS_ON = false;/.test(pu));
+    // [alpha.165 · ชุดสอง] ตัวเลื่อนเล็กลง · ส่วนควบคุมดั้งเดิมตามธีม · แถบสถานะเป็นคอลัมน์ตามลำดับของผู้ใช้ · ทูลทิปไม่ทะลุแผง
+    const thumb = (cssRaw.match(/input\[type="range"\]::-webkit-slider-thumb\s*\{([^}]*)\}/) || [])[1] || '';
+    const tw = parseFloat((thumb.match(/width:\s*([\d.]+)px/) || [])[1]);
+    ck('★★ [165-K] ปุ่มจับของตัวเลื่อน (range) ≤ 12px (ผู้ใช้: knob ใหญ่ไป)', tw > 0 && tw <= 12, thumb);
+    const appSrc = fs.readFileSync(path.join(ROOT, 'src/app.js'), 'utf8');
+    ck('★★ [165-C] applyTheme ตั้ง color-scheme ตามโหมดธีม (ส่วนควบคุมดั้งเดิมไม่เป็นเทาของเบราว์เซอร์)',
+       /documentElement\.style\.colorScheme = THEME_MODES\[th\]/.test(appSrc));
+    ck('★ [165-C] accent-color อยู่ที่ body (ตัวแปรธีมอยู่ที่ body.theme-*)', /(^|\n)body \{ accent-color:var\(--accent-hi\); \}/.test(cssRaw));
+    ck('★★ [165-T1] ทูลทิปสำรอง (elementsFromPoint) รับเฉพาะของที่อยู่ใน e.target — ไม่ทะลุลงแผงข้างล่าง',
+       /if \(!e\.target\.contains\(el\)\) break;/.test(appSrc));
+    const html = fs.readFileSync(path.join(ROOT, 'renderer/index.html'), 'utf8');
+    const sb = html.slice(html.indexOf('<div id="statusbar">'), html.indexOf('<!-- FAB -->'));
+    const order = [...sb.matchAll(/id="([\w-]+)" class="k-sb-seg/g)].map((m) => m[1]);
+    ck('★★ [165-S] แถบสถานะเรียง พร้อม | สวิตช์ | ความคืบหน้า | สถานะ | ซูม | หน้าแรก',
+       JSON.stringify(order) === JSON.stringify(['sb-msg', 'status-toggles', 'status-mid', 'status-right', 'zoom-ctl', 'status-home']), order.join(','));
+  }
+
   // ปุ่มบนหัวแผงต้องมาจาก makePanelButton ตัวเดียว (กฎถาวร alpha.161 · U2)
   const srcFiles = [];
   (function walk(dir) {
@@ -549,6 +592,24 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
                    'src/starter/starter-scenario.js', 'src/starter/starter-wiki.js']) {
     ck('★ [162-W4] ปุ่มยกเลิกของกล่องมีคลาส k-cancel (Esc เดินได้): ' + path.basename(f),
        !/el\('button', null, t\('ui\.common\.cancel'\)\)/.test(noCmt(rd(f))));
+  }
+  // [alpha.164 · รอบต่อ 4] ขยายด่านเดียวกันให้กวาดทั้ง src/ — กล่องคุณสมบัติแผนแตกสาย · เทียบเวอร์ชัน ·
+  // บันทึกระหว่างเขียน หลุดด่านสี่ไฟล์ข้างบนมาตลอด (ชื่อฟังก์ชันสร้าง element ต่างกัน: E()/el() · t()/tt())
+  {
+    const RE_BARE = /\b(?:E|el)\('button', (?:null|''|""), t{1,2}\('ui\.common\.(?:cancel|close)'\)\)/;
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((x) =>
+      x.isDirectory() ? walk(path.join(d, x.name)) : (/\.js$/.test(x.name) ? [path.join(d, x.name)] : []));
+    const bare = walk(path.join(ROOT, 'src')).filter((f) => !/selftest\.js$/.test(f))
+      .filter((f) => RE_BARE.test(noCmt(fs.readFileSync(f, 'utf8'))))
+      .map((f) => path.relative(ROOT, f));
+    ck('★★ [164-R4] ทั้ง src/: ปุ่มยกเลิก/ปิดของกล่องติดคลาส k-cancel เสมอ (Esc เดินถึง)', bare.length === 0, bare.join(', '));
+    // [alpha.165] ปุ่ม "ปิด" ที่เป็นทางออกเดียวของกล่องแต่ติดแค่ k-ok = Esc ไปไม่ถึง (21 กล่อง: คลังรูป · สรุป AI ·
+    // โหมดเล่น · ส่งออกบล็อก …) → ต้องเป็น 'k-ok k-cancel' (Enter และ Esc ปิดได้ทั้งคู่)
+    const RE_OKCLOSE = /\b(?:E|el)\('button', 'k-ok', (?:t|tt|tr)\('(?:ui\.common\.close|dialogs\.close|close)'\)\)/;
+    const okOnly = walk(path.join(ROOT, 'src')).filter((f) => !/selftest\.js$/.test(f))
+      .filter((f) => RE_OKCLOSE.test(noCmt(fs.readFileSync(f, 'utf8'))))
+      .map((f) => path.relative(ROOT, f));
+    ck('★★ [165-E] ทั้ง src/: ปุ่ม "ปิด" ของกล่องติด k-cancel ด้วย (Esc ปิดได้)', okOnly.length === 0, okOnly.join(', '));
   }
   // ข้อ 5 — เอกสารบทเป็นเจ้าของคีย์วนธาตุ
   ck('★★ [162-W4] onShortcut ถามเอกสารบทก่อนยิง next-tab/prev-tab', /if \(spOwnsKey\(e, ch\)\) return;/.test(app));

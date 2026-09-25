@@ -326,7 +326,8 @@ export function buildToolbarList(host, opts = {}) {
       const ic = el('span', 'k-tbcfg-icon');
       const src = btn(b.id);
       // ก๊อปไอคอนของปุ่มจริงมาโชว์ (ปุ่มที่ยังไม่มีในหน้าจอ = โชว์จุด)
-      if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
+      if (src && src.tagName === 'SELECT') ic.append(icon('text-box', 14));   // ดูหมายเหตุในหน้าแถบรูปแบบ
+      else if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
       else if (src && src.dataset && src.dataset.icon) ic.textContent = gi('dot');
       else ic.textContent = gi('dot');
       const name = el('span', 'k-tbcfg-name', labelOf(b.id));
@@ -411,7 +412,7 @@ export function toolbarDialog() {
   buildToolbarList(inner);
 
   const btns = el('div', 'k-dlg-btns');
-  const ok = el('button', 'k-ok', tt('ui.common.close'));
+  const ok = el('button', 'k-ok k-cancel', tt('ui.common.close'));
   ok.onclick = close;
   btns.append(ok);
   box.append(btns);
@@ -516,7 +517,10 @@ export function buildFmtbarList(host, opts = {}) {
         row.dataset.btn = b.id;
         const ic = el('span', 'k-tbcfg-icon');
         const src = btn(b.id);
-        if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
+        // [alpha.164 · รอบต่อ 2] ช่องเลือก "รูปแบบข้อความ" (tb-style) เป็น <select> — ก๊อป innerHTML มา
+        // ได้ <option> ทั้งชุดเป็นข้อความล้นทับชื่อแถว ("Body Text Heading 1 …") → ใช้ไอคอนแทน
+        if (src && src.tagName === 'SELECT') ic.append(icon('text-box', 14));
+        else if (src && src.firstElementChild) ic.innerHTML = src.innerHTML;
         else ic.textContent = gi('dot');
         row.append(ic, el('span', 'k-tbcfg-name', labelOf(b.id)));
         const sw = el('input', 'k-tbcfg-sw');
