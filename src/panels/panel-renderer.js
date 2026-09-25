@@ -515,22 +515,39 @@ export function renderFloatPanel(f, pm, opts, container) {
   // ยกขึ้นบนสุดด้วยการย้าย DOM ไม่ใช่ re-render — re-render ระหว่าง mousedown จะถอด pop
   // ที่ drag/resize กำลังอ้างถึงออกจากหน้า แล้ว offsetLeft/Width กลายเป็น 0 ตอนปล่อยเมาส์
   pop.addEventListener('mousedown', () => {
-    const par = pop.parentNode;
-    if (par) {
-      // ยกเหนือ "แผงลอยตัวอื่น" เท่านั้น — ไม่แซง dialog/เมนูที่ต่อท้ายอยู่ใน container เดียวกัน
-      let sib = pop.nextElementSibling, lastFloat = null;
-      while (sib) {
-        if (sib.classList && sib.classList.contains('k-float-panel')) lastFloat = sib;
-        sib = sib.nextElementSibling;
-      }
-      if (lastFloat) par.insertBefore(pop, lastFloat.nextSibling);
-    }
+    raiseFloat(pop);
     if (typeof pm._toFront === 'function') pm._toFront(p.id);
   }, true);
   (container || document.body).appendChild(pop);
   return pop;
 }
 
+
+// ───────── [alpha.167 · บั๊ก Explorer เด้งขึ้นบนสุด] ยกแผงลอยขึ้นบนด้วย z-index ไม่ใช่ย้าย DOM ─────────
+// เดิมย้ายโหนดไปท้ายพี่น้อง (`insertBefore`) — การถอดโหนดออกจากหน้าแล้วใส่คืน **ล้างตำแหน่งเลื่อน
+// ของทุกกล่องข้างใน** (scrollTop กลายเป็น 0) · อาการที่ผู้ใช้เจอ: Explorer ลอย → ไปคลิกแผงอื่น →
+// กลับมาคลิก Explorer = ต้นไม้เด้งไปบรรทัดบนสุด (และโฟกัสในช่องกรอกของแผงหลุดด้วย)
+// ช่วง z ต้องอยู่ใต้ FAB (76) กับกล่องโต้ตอบ (80) เสมอ — ใช้ 66..75 · เกินสิบใบ = ใบล่าง ๆ เสมอกัน
+// (ลำดับ DOM ตัดสินต่อ ซึ่งยังถูกต้องเพราะตอนวาดใหม่ระบบต่อท้ายตามลำดับ z ของสโตร์)
+export const FLOAT_Z_BASE = 66, FLOAT_Z_TOP = 75;
+/** ลำดับจากล่างขึ้นบนของแผงลอยใน container เดียวกัน (z ที่ตั้งไว้ก่อน แล้วลำดับ DOM) */
+export function floatStack(par) {
+  const list = [...(par ? par.children : [])].filter((n) => n.classList && n.classList.contains('k-float-panel'));
+  return list.map((n, i) => ({ n, i, z: +n.style.zIndex || FLOAT_Z_BASE }))
+    .sort((a, b) => (a.z - b.z) || (a.i - b.i)).map((x) => x.n);
+}
+export function raiseFloat(pop) {
+  const par = pop && pop.parentNode;
+  if (!par) return false;
+  const stack = floatStack(par).filter((n) => n !== pop);
+  stack.push(pop);
+  const span = FLOAT_Z_TOP - FLOAT_Z_BASE;
+  stack.forEach((n, i) => {
+    const z = Math.max(FLOAT_Z_BASE, FLOAT_Z_TOP - (stack.length - 1 - i));
+    n.style.zIndex = String(Math.min(FLOAT_Z_BASE + span, z));
+  });
+  return true;
+}
 
 /** [alpha.66r7] กล่องลอยที่มีหลายแผงเป็นแท็บ — ลากทั้งกล่องไปผนึกได้ · ลากแท็บออกได้ทีละใบ */
 function renderFloatGroup(f, pm, opts, container) {
@@ -602,15 +619,7 @@ function renderFloatGroup(f, pm, opts, container) {
   // [alpha.66r10] กลุ่มลอยไม่เคยมีตัวยกขึ้นบนสุด — คลิกแล้วมันจมอยู่ใต้กล่องลอยใบอื่นตลอด
   // (ย้าย DOM เอง ไม่ re-render — re-render กลาง mousedown จะทำให้ตัวที่กำลังลากหลุดหน้า)
   pop.addEventListener('mousedown', () => {
-    const par = pop.parentNode;
-    if (par) {
-      let sib = pop.nextElementSibling, lastFloat = null;
-      while (sib) {
-        if (sib.classList && sib.classList.contains('k-float-panel')) lastFloat = sib;
-        sib = sib.nextElementSibling;
-      }
-      if (lastFloat) par.insertBefore(pop, lastFloat.nextSibling);
-    }
+    raiseFloat(pop);
     if (typeof pm._toFront === 'function') pm._toFront(f.id);
   }, true);
   (container || document.body).appendChild(pop);

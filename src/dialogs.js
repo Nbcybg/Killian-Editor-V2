@@ -1109,6 +1109,7 @@ export function settingsDialog(openTab, opts = {}) {
       const up = el('button', 'k-key-btn', gi('arrow-up')); up.title = t('ui.common.scroll');
       up.onclick = () => { if (i > 0) { const [x] = W.langFonts.splice(i, 1); W.langFonts.splice(i - 1, 0, x); renderFonts(); previewFonts(); } };
       const del = el('button', 'k-danger-btn', gi('close'));
+      del.title = t('ui.common.removeRowTip');
       del.onclick = () => { W.langFonts.splice(i, 1); renderFonts(); previewFonts(); };
       r.append(up, del);
       fontsHost.append(r);

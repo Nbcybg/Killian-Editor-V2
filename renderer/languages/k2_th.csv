@@ -2630,6 +2630,7 @@ ui.common.provider,ผู้ให้บริการ
 ui.common.pxDims,{0} × {1} พิกเซล
 ui.common.refresh,รีเฟรช
 ui.common.refresh2,รีเฟรช
+ui.common.removeRowTip,เอาแถวนี้ออก
 ui.common.renameNew,ตั้งชื่อใหม่
 ui.common.renameVersionSkipEmpty,ตั้งชื่อเวอร์ชัน (เว้นว่างได้)
 ui.common.repeat,⧉ ทำซ้ำ
@@ -3139,6 +3140,15 @@ ui.drafts.delDraftDraft,ลบร่าง “{0}” ทั้งร่าง ?
 ui.drafts.hasDraftNameDone,มีร่างชื่อนี้แล้ว
 ui.drafts.notFoundDraftFrom,ไม่พบร่างต้นทาง
 ui.drafts.renameDraftTo,"เปลี่ยนชื่อฉบับร่าง ""{0}"" เป็น ""{1}"""
+ui.drop.chapterEmpty,บทนี้ยังไม่มีฉาก
+ui.drop.hintCard,วางลงกระดาน = การ์ด
+ui.drop.hintFocus,วาง = ไปที่โหนดนี้
+ui.drop.hintInsertName,วาง = แทรกชื่อลงเอกสาร
+ui.drop.hintMap,วางลงแผนที่ = ปักหมุด
+ui.drop.hintOpen,วาง = เปิด
+ui.drop.hintText,วาง = ใส่ชื่อลงช่องนี้
+ui.drop.hintTimeline,วางบนการ์ด = อ้างอิง · ที่ว่าง = เหตุการณ์ใหม่
+ui.drop.opened,เปิด {0}
 ui.editor.ctrlClickOpenWiki,Ctrl+คลิก เปิดใน Wiki
 ui.editor.hasCommentBindText,มีคอมเมนต์ผูกกับข้อความนี้
 ui.editor.pageBreak,ขึ้นหน้าใหม่
@@ -3552,6 +3562,7 @@ ui.galleryExport.busyWriteFile,กำลังบีบอัดและเข�
 ui.galleryExport.busyWriteFileImage,กำลังเขียนไฟล์ภาพ…
 ui.galleryExport.caption,คำบรรยาย: {0}
 ui.galleryExport.exportBoardFail,ส่งออกกระดานล้มเหลว: 
+ui.galleryExport.exportBoardHtmlDone,ส่งออกกระดานเป็น HTML แล้ว: {0}
 ui.galleryExport.exportBoardMoodDone,ส่งออกกระดานอารมณ์แล้ว ({0}×{1}): 
 ui.galleryExport.exportImageFail,ส่งออกรูปล้มเหลว: 
 ui.galleryExport.exportImageItemDone,ส่งออกรูป {0} ใบแล้ว: 
@@ -3561,6 +3572,8 @@ ui.galleryExport.libraryImage,คลังรูป
 ui.galleryExport.listImageMd,รายการรูป.md
 ui.galleryExport.notHasImageExport,ไม่มีรูปให้ส่งออก
 ui.galleryExport.tag,แท็ก: {0}
+ui.galleryMoodboard.addRef,อ้างอิง
+ui.galleryMoodboard.addRefTip,เพิ่มการ์ดอ้างอิง (ลิงก์เว็บ/ข้อความ) — ลากลิงก์จากเบราว์เซอร์มาวางก็ได้
 ui.galleryMoodboard.adjustAllItemAt,ปรับทุกชิ้นให้ตรงสัดส่วนรูปแล้ว
 ui.galleryMoodboard.adjustAllItemAt2,ปรับทุกชิ้นให้ตรงสัดส่วนรูป
 ui.galleryMoodboard.adjustAtRatioImage,ปรับให้ตรงสัดส่วนรูป
@@ -3568,13 +3581,39 @@ ui.galleryMoodboard.arrangeAuto,จัดเรียงอัตโนมัต
 ui.galleryMoodboard.boardAlbum,กระดานของอัลบั้มไหน
 ui.galleryMoodboard.boardEmptyOpenPanel,"กระดานยังว่าง — เปิดแผง ""คลังรูปภาพ"" ไว้ข้าง ๆ แล้วลากรูปมาวางตรงนี้ได้เลย "
 ui.galleryMoodboard.bottomLast,ลงล่างสุด
+ui.galleryMoodboard.cardChapter,บท
+ui.galleryMoodboard.cardEdit,แก้การ์ด…
+ui.galleryMoodboard.cardEntity,หน้า Wiki
+ui.galleryMoodboard.cardMemo,โน้ต
+ui.galleryMoodboard.cardMissing,ไม่พบไฟล์ของการ์ดนี้แล้ว (ถูกย้ายหรือลบ)
+ui.galleryMoodboard.cardOpen,เปิด
+ui.galleryMoodboard.cardRef,อ้างอิง
+ui.galleryMoodboard.cardRemove,เอาออกจากกระดาน
+ui.galleryMoodboard.cardsAdded,วางการ์ดลงกระดาน {0} ใบ
+ui.galleryMoodboard.cardScene,ฉาก
+ui.galleryMoodboard.cardTip,ดับเบิลคลิก = เปิด · ลาก = ย้าย · มุมขวาล่าง = ปรับขนาด
 ui.galleryMoodboard.clearBoardMoodAlbum,ล้างกระดานอารมณ์ของอัลบั้มนี้? (ไม่ลบไฟล์รูป)
 ui.galleryMoodboard.clearBoardNotDel,ล้างกระดาน (ไม่ลบไฟล์)
 ui.galleryMoodboard.cmdAddFillBoard,คำสั่งเพิ่มเติมของกระดาน
+ui.galleryMoodboard.dropFail,วางลงกระดาน
 ui.galleryMoodboard.exitBoardNotDel,เอาออกจากกระดาน (ไม่ลบไฟล์)
+ui.galleryMoodboard.export,ส่งออก
 ui.galleryMoodboard.exportBoardImage,ส่งออกกระดานเป็นภาพ…
+ui.galleryMoodboard.exportHtml,หน้าเว็บ HTML (รูปฝังในไฟล์ · ลิงก์กดได้)
+ui.galleryMoodboard.exportPng,รูปภาพ PNG
+ui.galleryMoodboard.exportTip,ส่งออกกระดานทั้งหมดเป็นรูป PNG หรือหน้าเว็บ HTML
+ui.galleryMoodboard.fitTip,ซูมให้เห็นทุกชิ้นบนกระดาน
+ui.galleryMoodboard.imageOutside,รูปนี้อยู่นอกคลังรูปของโปรเจกต์ — นำเข้าคลังรูปก่อน
 ui.galleryMoodboard.pasteImageTopBoard,"วาง {0} รูปบนกระดาน ""{1}"" แล้ว"
 ui.galleryMoodboard.pickImageLibraryDone,"(หรือเลือกรูปในคลังแล้วกด ""วางบนกระดาน"")"
+ui.galleryMoodboard.refEdit,แก้การ์ดอ้างอิง
+ui.galleryMoodboard.refNew,การ์ดอ้างอิงใหม่
+ui.galleryMoodboard.refText,ข้อความ
+ui.galleryMoodboard.refTextPh,บันทึก/คำพูด/รายละเอียดที่อยากจำ
+ui.galleryMoodboard.refTitle,ชื่อ
+ui.galleryMoodboard.refTitlePh,เช่น เครื่องแต่งกายยุคอยุธยา
+ui.galleryMoodboard.refUrl,ลิงก์
+ui.galleryMoodboard.refUrlPh,https://… (ไม่ใส่ก็ได้)
 ui.galleryMoodboard.top,ขึ้นบนสุด
 ui.galleryUsageIndex.msg, +อีก {0}
 ui.galleryUsageIndex.useDone,ใช้แล้ว
@@ -3854,25 +3893,34 @@ ui.logline.stakes,เดิมพัน (Stakes)
 ui.logline.title,Logline
 ui.logline.why,AI ใช้เป็นเข็มทิศ ช่วยให้เนื้อเรื่องไม่หลุดแกน
 ui.maps.addMap,+ เพิ่มแผนที่
+ui.maps.allMaps,แผนที่ทั้งหมด
+ui.maps.allMapsTip,กลับหน้ารวมแผนที่ (แกลเลอรี)
 ui.maps.backSizeFitFrame,กลับไปขนาดพอดีกรอบ (100%)
 ui.maps.busyNextRouteClick,กำลังต่อเส้นทาง “{0}” — คลิกหมุดตามลำดับที่เดินทาง ({1} จุด)
 ui.maps.cancelPick,ยกเลิกการเลือก
+ui.maps.cancelPickTip,เลิกเลือกหมุดทั้งหมด
 ui.maps.cantPickPin,ยังไม่ได้เลือกหมุด
 ui.maps.catEgWorldCurrent,หมวด (เช่น โลกปัจจุบัน)
 ui.maps.catMapSkipEmpty,หมวดแผนที่ — เว้นว่างได้
 ui.maps.changeImage,เปลี่ยนรูป
+ui.maps.changeImageTip,เปลี่ยนรูปของแผนที่นี้ (เลือกจากคลังรูป)
 ui.maps.changeNameRoute,เปลี่ยนชื่อเส้นทาง
-ui.maps.clickEmptyPinPinF,คลิกที่ว่าง = ปักหมุด · {0} · Ctrl+คลิก = เลือกหลายตัว · Shift+ลาก = เลือกเป็นกรอบ · Ctrl+ล้อ = ซูม
+ui.maps.clickEmptyPinPinF,ลาก = เลื่อนแผนที่ · ล้อ = ซูม · ดับเบิลคลิก = ปักหมุด · {0} · Ctrl+คลิกหมุด = กระโดด (ประตู/หน้า Wiki) · Shift+ลาก = เลือกเป็นกรอบ · ลากตัวละครจากแถบซ้ายมาวางได้
 ui.maps.clickPinOpenDialog,คลิกหมุด = เปิดกล่องแก้ไขหมุด
 ui.maps.clickPinOpenLink,คลิกหมุด = เปิดลิงก์ของหมุด (ประตู/หน้า Wiki) · ไม่แก้ไขอะไร
 ui.maps.collapsePin,ย่อหมุด
 ui.maps.compass,เข็มทิศ
+ui.maps.compassTip,แสดง/ซ่อนเข็มทิศ (หมุนตามทิศเหนือที่ตั้งไว้)
 ui.maps.copy,⧉ คัดลอก
 ui.maps.copyPinDoneOpen,"คัดลอก {0} หมุดแล้ว — เปิดแผนที่ปลายทางแล้วกด ""วาง"""
 ui.maps.copyPinPickDone,คัดลอกหมุดที่เลือก แล้วไปวางบนแผนที่อื่นได้
 ui.maps.countFieldGridNext,จำนวนช่องกริดต่อด้าน
+ui.maps.ctxAddPin,ปักหมุดตรงนี้
+ui.maps.ctxCopyCoords,คัดลอกพิกัด
 ui.maps.delMap,ลบแผนที่
+ui.maps.delMapTip,ลบแผนที่นี้ (ไฟล์รูปไม่ถูกลบ)
 ui.maps.delPick,ลบที่เลือก
+ui.maps.delPickTip,ลบหมุดที่เลือกทั้งหมด
 ui.maps.delPinDone,ลบ {0} หมุดแล้ว
 ui.maps.delPinPickItem,ลบหมุดที่เลือก {0} ตัว ?
 ui.maps.delRoutePin,ลบเส้นทาง (หมุดยังอยู่)
@@ -3880,19 +3928,92 @@ ui.maps.delRoutePinNot,ลบเส้นทาง “{0}” ? (หมุดไ�
 ui.maps.done,เสร็จ
 ui.maps.dotGap,{0} จุด · ระยะ ~{1}
 ui.maps.dotLatest,ถอยจุดล่าสุด
+ui.maps.dotLatestTip,ถอยจุดล่าสุดออก
 ui.maps.dragPinMoveMode,ลากหมุดเพื่อย้าย (โหมดอื่นลากไม่ได้ กันเลื่อนโดนโดยไม่ตั้งใจ)
+ui.maps.dropImageFromGallery,ลากรูปจากคลังรูปมาวางเพื่อสร้างแผนที่
+ui.maps.dropPortalDone,"ใส่ประตูไป ""{0}"" แล้ว — Ctrl+คลิกประตูเพื่อเข้าไป"
+ui.maps.dropReplaceImage,แผนที่นี้มีรูปอยู่แล้ว — เปลี่ยนเป็นรูปที่วาง?
+ui.maps.dropSceneDone,"ผูกฉาก ""{0}"" กับแผนที่ ""{1}"" แล้ว"
+ui.maps.dropSelfMap,วางแผนที่ลงบนตัวเองไม่ได้
+ui.maps.entDragHint,ลากชื่อไปวางบนแผนที่เพื่อปักหมุด (หรือคลิกขวา → วางกลางแผนที่)
+ui.maps.entGoPins,ไปที่หมุดบนแผนที่
+ui.maps.entMoved,"ย้ายหมุดของ ""{0}"" แล้ว"
+ui.maps.entNotPlacedAny,ยังไม่ได้ปักบนแผนที่ไหน — เปิดแผนที่แล้วลากชื่อไปวาง
+ui.maps.entOpenWiki,เปิดหน้า Wiki
+ui.maps.entPlaceCenter,ปักกลางแผนที่
+ui.maps.entPlaced,อยู่บนแผนที่นี้
+ui.maps.entPlacedStatus,"ปักหมุด ""{0}"" แล้ว"
+ui.maps.entRowTip,ลากไปวางบนแผนที่ = ปักหมุด · คลิก = ไปที่หมุด · ดับเบิลคลิก/Ctrl+คลิก = เปิดหน้า Wiki · คลิกขวา = วาดโซน
+ui.maps.entRowTipGallery,คลิก = ไปแผนที่ที่ปักไว้ · ดับเบิลคลิก = เปิดหน้า Wiki
+ui.maps.entZoned,มีโซน
 ui.maps.expandPin,ขยายหมุด
 ui.maps.foundPinTopMap,"""{0}"" — เจอ {1} หมุดบนแผนที่นี้"
+ui.maps.galleryCardTip,คลิกเพื่อเข้าไปดูแผนที่ · ลากไปวางบนแผนที่อื่น = ประตูไปแผนที่นี้
+ui.maps.galleryHint,เลือกแผนที่เพื่อเข้าไปดู — ลากตัวละคร/สถานที่จากแถบซ้ายไปวางบนแผนที่ได้
+ui.maps.galleryNew,สร้างแผนที่ใหม่
+ui.maps.galleryNewTip,สร้างแผนที่จากรูปในคลังรูป (ลากรูปมาวางที่การ์ดนี้ก็ได้)
+ui.maps.galleryOpen,เปิดแผนที่
 ui.maps.gapBarEg,ระยะของแถบ เช่น 100 กม.
+ui.maps.geoAskLatLon,"ละติจูด, ลองจิจูด ของจุดนี้"
+ui.maps.geoAskLatLonPh,"เช่น 13.7563, 100.5018"
+ui.maps.geoAskMeters,"ระยะจริงระหว่างสองจุด (ใส่หน่วยได้: m, km, ไมล์)"
+ui.maps.geoAskMetersPh,เช่น 100 หรือ 5 km
+ui.maps.geoBadLatLon,"พิกัดไม่ถูกต้อง — พิมพ์ละติจูด, ลองจิจูด เช่น 13.75, 100.50"
+ui.maps.geoBadNumber,ระยะต้องเป็นตัวเลขมากกว่า 0
+ui.maps.geoBtn,พิกัด/มาตราส่วน
+ui.maps.geoBtnTip,ตั้งมาตราส่วนและพิกัดจริง — แล้วแผนที่จะบอกระยะทาง เวลาเดินทาง พื้นที่ และละติจูด/ลองจิจูดได้
+ui.maps.geoBtnTipDone,ตั้งพิกัดครบแล้ว — คลิกเพื่อแก้
+ui.maps.geoClear,ล้างพิกัด
+ui.maps.geoClearQ,ล้างมาตราส่วนและพิกัดของแผนที่นี้?
+ui.maps.geoClearTip,ลบมาตราส่วนและจุดอ้างอิงทั้งหมด
+ui.maps.geoIntro,สองขั้น: (1) บอกระยะจริงของเส้นหนึ่งเส้นบนภาพ — ถ้าภาพมีแถบสเกล (0 · 50 · 100 ม.) ให้จิ้มหัว-ท้ายของแถบ ถ้าไม่มีให้จิ้มสองจุดที่รู้ระยะ (2) จิ้มจุดหนึ่งแล้วบอกละติจูด/ลองจิจูดของมัน
+ui.maps.geojson,GeoJSON
+ui.maps.geojsonDone,ส่งออก GeoJSON แล้ว: {0}
+ui.maps.geojsonTip,ส่งออกหมุด/โซน/เส้นทางเป็น GeoJSON (ใช้กับโปรแกรมแผนที่อื่นได้เมื่อตั้งพิกัดแล้ว)
+ui.maps.geoNorthDesc,องศาที่ทิศเหนือเอียงจากด้านบนของภาพ (ตามเข็มนาฬิกา · 0 = เหนืออยู่บน)
+ui.maps.geoNorthTip,ทิศเหนือเอียงกี่องศา
+ui.maps.geoOutside,พิกัดนี้อยู่นอกภาพแผนที่
+ui.maps.geoPickA,จิ้มจุดเริ่มของมาตราส่วน (เช่น เลข 0 บนแถบสเกล) — Esc = ยกเลิก
+ui.maps.geoPickB,จิ้มจุดปลายของมาตราส่วน (เช่น เลข 100 ม.) — Esc = ยกเลิก
+ui.maps.geoPickRef,จิ้มจุดอ้างอิง
+ui.maps.geoPickRefHint,จิ้มจุดที่รู้ละติจูด/ลองจิจูด (คลิกหมุดก็ได้) — Esc = ยกเลิก
+ui.maps.geoPickRefTip,เลือกจุดบนแผนที่แล้วใส่ละติจูด/ลองจิจูด
+ui.maps.geoPickScale,จิ้มแถบสเกล
+ui.maps.geoPickScaleTip,จิ้มสองจุดบนแผนที่ แล้วบอกระยะจริงระหว่างมัน
+ui.maps.geoPinByCoord,ปักหมุดตามพิกัด
+ui.maps.geoPinByCoordBtn,ใส่ละติจูด/ลองจิจูด…
+ui.maps.geoPinByCoordTip,พิมพ์ละติจูด/ลองจิจูด แล้วปักหมุดตรงนั้นให้
+ui.maps.geoRedo,ตั้งใหม่
+ui.maps.geoRefDesc,ยังไม่มีจุดอ้างอิง — ต้องตั้งมาตราส่วนก่อน
+ui.maps.geoRefSaved,บันทึกจุดอ้างอิงพิกัดแล้ว
+ui.maps.geoScaleDesc,ยังไม่ได้ตั้ง — ระยะทางบนแผนที่นี้ยังเป็นแค่ % ของภาพ
+ui.maps.geoScaleNow,เส้นอ้างอิงยาว {0}
+ui.maps.geoScaleSaved,บันทึกมาตราส่วนแล้ว — ระยะทางบนแผนที่เป็นหน่วยจริงแล้ว
+ui.maps.geoStepNorth,ทิศเหนือ
+ui.maps.geoStepRef,จุดอ้างอิงละติจูด/ลองจิจูด
+ui.maps.geoStepScale,มาตราส่วน
+ui.maps.geoTitle,พิกัดจริงของแผนที่
+ui.maps.gridTip,แสดง/ซ่อนตารางกริด
+ui.maps.journey,เส้นทางเรื่อง
+ui.maps.journeyTip,ลากเส้นผ่านตำแหน่งของฉากตามลำดับเวลาในเรื่อง — เห็นว่าตัวละครต้องเดินทางไกลแค่ไหน
+ui.maps.journeyTotal,รวม {0} · {1}
+ui.maps.legFrom,"จาก ""{0}"": {1} · {2}"
 ui.maps.lineLineSolid,เส้นประ / เส้นทึบ
 ui.maps.mapBindDelDone,(แผนที่ที่ผูกไว้ถูกลบไปแล้ว)
 ui.maps.mapsExportPNGNot,maps: ส่งออก PNG ไม่สำเร็จ
 ui.maps.mapsPrintMapNot,maps: พิมพ์แผนที่ไม่สำเร็จ
 ui.maps.mapsReadImagePortrait,maps: อ่านรูปประจำตัวของเอนทิตี้ไม่ได้
 ui.maps.mapsReadScenePin,maps: อ่านฉากที่ปักหมุดไม่ได้
+ui.maps.measure,วัดระยะ
+ui.maps.measureFromPin,วัดระยะจากหมุดนี้
+ui.maps.measureNeedScale,ตั้งมาตราส่วนก่อนถึงจะรู้ระยะจริง
+ui.maps.measureStart,วัดระยะจากตรงนี้
+ui.maps.measureTip,คลิกทีละจุดเพื่อวัดระยะทางและเวลาเดินทาง (Esc = จบ)
+ui.maps.measuring,วัดระยะ: {0} จุด · {1}
 ui.maps.modeMovePosDrag,โหมดย้ายตำแหน่ง — ลากหมุดเพื่อย้าย
 ui.maps.nameRoute,ชื่อเส้นทาง
 ui.maps.nextDot,ต่อจุด
+ui.maps.nextDotTip,คลิกหมุดบนแผนที่เพื่อต่อเส้นทางนี้
 ui.maps.notFoundMapScene,ไม่พบแผนที่ที่ฉากนี้ผูกไว้ (อาจถูกลบไปแล้ว)
 ui.maps.notHasImagePress,"ยังไม่มีรูป — กด ""เปลี่ยนรูป"""
 ui.maps.notPlaced,ยังไม่ได้ปักตำแหน่ง
@@ -3903,14 +4024,18 @@ ui.maps.pastePinCopyMap,วางหมุดที่คัดลอกไว�
 ui.maps.pastePinDone,"วาง {0} หมุดลง ""{1}"" แล้ว"
 ui.maps.pickPin,เลือก {0} หมุด
 ui.maps.pin, · พิกัดที่ปักเอง
+ui.maps.pinEdit,แก้หมุด…
 ui.maps.placeIt,ไปปักตำแหน่ง
 ui.maps.placeItHint,"เปิดแผงผังพื้นที่ แล้วกด ""ปักตำแหน่งฉากนี้"""
+ui.maps.portalEnter,เข้าไปในแผนที่ย่อย
 ui.maps.portalMapOther,ประตูไปแผนที่อื่น
 ui.maps.portalSceneBindMap,{0} เอนทิตี้ · {1} ประตู · {2} หมายเหตุ · {3} ฉากผูกกับแผนที่นี้
+ui.maps.portalTip,"ประตูไป ""{0}"" — Ctrl+คลิกเพื่อเข้าไป"
 ui.maps.pos,ตำแหน่งเอนทิตี้
 ui.maps.pressBtnEditTop," · กดปุ่ม ""แก้ไข"" บนแถบเครื่องมือเพื่อแก้หมุดนี้"
 ui.maps.print,พิมพ์
 ui.maps.printMapNotOk,พิมพ์แผนที่ไม่สำเร็จ: 
+ui.maps.printTip,พิมพ์แผนที่พร้อมหมุด/โซน/เส้นทาง
 ui.maps.recolorLine,เปลี่ยนสีเส้น
 ui.maps.route,เส้นทางที่ 
 ui.maps.route2,เส้นทาง
@@ -3918,8 +4043,10 @@ ui.maps.route3,เส้นทาง ({0})
 ui.maps.routeDragLineLink,"เส้นทาง = ลากเส้นเชื่อมหมุดตามลำดับ ใช้เล่าการเดินทางของตัวละคร — กด ""＋ เส้นทางใหม่"" แล้วคลิกหมุดทีละจุด"
 ui.maps.routeNew,เส้นทางใหม่
 ui.maps.routeNew2,+ เส้นทางใหม่
+ui.maps.routeNewTip,สร้างเส้นทางใหม่ แล้วคลิกหมุดเพื่อต่อจุด
 ui.maps.saveMapLibraryImage,บันทึกแผนที่ลงคลังรูปแล้ว: 
 ui.maps.saveMapReadyPin,บันทึกแผนที่พร้อมหมุด/เส้นทางเป็นรูปลงคลังรูป
+ui.maps.scaleTip,แสดง/ซ่อนแถบมาตราส่วน (ตั้งพิกัดแล้ว = บอกระยะจริงเอง)
 ui.maps.scenePin, ({0} ฉากปักพิกัดเอง)
 ui.maps.scenePinCantBind,"
 (ฉากที่ปักพิกัดไว้เอง ไม่ได้ผูกกับหมุด)"
@@ -3931,12 +4058,50 @@ ui.maps.showHideRouteBetween,แสดง/ซ่อนเส้นทางร�
 ui.maps.showItemFilm,แสดงตัวหนังสือ
 ui.maps.showOnMap,ดูบนแผนที่
 ui.maps.showOnMapHint,เปิดแผงแผนที่แล้วเลื่อนไปที่ตำแหน่งของฉากนี้
+ui.maps.sideChildTip,เข้าไปในแผนที่ย่อยนี้
+ui.maps.sideEntities,ตัวละคร · สถานที่
+ui.maps.sideHide,ซ่อนแถบซ้าย
+ui.maps.sideNoEntities,ยังไม่มีหน้า Wiki — สร้างตัวละคร/สถานที่ใน Explorer ก่อน
+ui.maps.sideParentTip,ขึ้นไปแผนที่แม่
+ui.maps.sideScenes,ฉากบนแผนที่นี้ ({0})
+ui.maps.sideSearchPh,ค้นชื่อ…
+ui.maps.sideShow,แสดงแถบซ้าย
+ui.maps.sideSubMaps,แผนที่ย่อย
+ui.maps.sideZones,โซน
 ui.maps.sizePin,ขนาดหมุด
 ui.maps.tableGrid,ตารางกริด
 ui.maps.textUnderBarPart,ข้อความใต้แถบมาตราส่วน
+ui.maps.timeDH,{0} วัน {1} ชม.
+ui.maps.timeHM,{0} ชม. {1} นาที
+ui.maps.timeM,{0} นาที
 ui.maps.topImage,ทิศเหนืออยู่ด้านบนของภาพ
-ui.maps.zoomInCtrlWheel,ซูมเข้า (Ctrl+ล้อ)
-ui.maps.zoomOutCtrlWheel,ซูมออก (Ctrl+ล้อ)
+ui.maps.travelCar,รถยนต์
+ui.maps.travelCart,เกวียน
+ui.maps.travelHorse,ม้า
+ui.maps.travelShip,เรือ
+ui.maps.travelWalk,เดินเท้า
+ui.maps.unitKm,{0} กม.
+ui.maps.unitKm2,{0} ตร.กม.
+ui.maps.unitM,{0} ม.
+ui.maps.unitM2,{0} ตร.ม.
+ui.maps.zone,โซน
+ui.maps.zoneDelete,ลบโซน
+ui.maps.zoneDeleteQ,"ลบโซน ""{0}"" ?"
+ui.maps.zoneDone,"สร้างโซน ""{0}"" แล้ว"
+ui.maps.zoneDraw,วาดโซน (แบ่งพื้นที่)
+ui.maps.zoneDrawHere,วาดโซนใหม่
+ui.maps.zoneDrawHint,คลิกทีละจุดรอบพื้นที่ · ดับเบิลคลิก/Enter = เสร็จ · Backspace = ถอยจุด · Esc = ยกเลิก
+ui.maps.zoneDrawing,"กำลังวาดโซน ""{0}"" · {1} จุด"
+ui.maps.zoneEditPts,แก้จุดของโซน
+ui.maps.zoneName,ชื่อโซน
+ui.maps.zoneNeed3,โซนต้องมีอย่างน้อย 3 จุด
+ui.maps.zoneRecolor,เปลี่ยนสีโซน
+ui.maps.zoneRename,เปลี่ยนชื่อโซน
+ui.maps.zoneTip,วาดโซน (พื้นที่) เป็นรูปหลายเหลี่ยม — อยู่ชั้นล่างสุดใต้หมุด
+ui.maps.zoneVertexTip,ลากเพื่อย้ายจุด · คลิกขวา = ลบจุด
+ui.maps.zoomInCtrlWheel,ซูมเข้า (ล้อเมาส์)
+ui.maps.zoomOutCtrlWheel,ซูมออก (ล้อเมาส์)
+ui.maps.zoomSliderTip,ระดับซูม (ล้อเมาส์ก็ได้)
 ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)
 ui.menu.aiHubPanel,AI Hub
@@ -3993,10 +4158,21 @@ ui.menu.expandUI,ขยาย UI
 ui.menu.exportHub,ส่งออก…
 ui.menu.exportLangCSVKey,ส่งออกภาษาเป็น CSV (key · ไทย · อังกฤษ)…
 ui.menu.exportLayoutPanelJSON,ส่งออกการจัดวางแผง (JSON)…
+ui.menu.exportProjectZip,ทั้งโปรเจกต์เป็น ZIP…
+ui.menu.exportTop,ส่งออก
 ui.menu.exportWorkFlowSteps,ปรับขั้นตอนเวิร์กโฟลว์ส่งออก…
 ui.menu.file,ไฟล์
 ui.menu.file2,ไฟล์
 ui.menu.fitWidePagePaper,พอดีความกว้างหน้ากระดาษ
+ui.menu.fmtCsv,ตาราง CSV
+ui.menu.fmtGeojson,GeoJSON (พิกัดจริง)
+ui.menu.fmtHtml,หน้าเว็บ HTML
+ui.menu.fmtJson,JSON
+ui.menu.fmtMd,Markdown
+ui.menu.fmtPng,รูปภาพ PNG
+ui.menu.fmtPrint,พิมพ์…
+ui.menu.fmtSvg,รูปเวกเตอร์ SVG
+ui.menu.fmtZip,ZIP (รูปที่ใช้จริง)
 ui.menu.fontLangOther,ฟอนต์ตามภาษา (ไทย/ละติน/อื่น ๆ)…
 ui.menu.forceCaseBigOnly,บังคับตัวพิมพ์ใหญ่เฉพาะชนิด
 ui.menu.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน)
@@ -4550,11 +4726,22 @@ ui.panel.wsPick,เวิร์กสเปซ — สลับชุดกา�
 ui.panel.wsSave,+ บันทึกการจัดวางตอนนี้เป็นเวิร์กสเปซ…
 ui.panel.wsSaved,บันทึกเวิร์กสเปซแล้ว: 
 ui.panelExport.areaWriteWidePx,พื้นที่เขียนกว้างแค่ {0}px (ขั้นต่ำที่ตั้งไว้ {1}px)
+ui.panelExport.colBook,เล่ม
+ui.panelExport.colChapter,บท
+ui.panelExport.colScene,ฉาก
+ui.panelExport.colStatus,สถานะ
+ui.panelExport.colStoryDate,เวลาในเรื่อง
+ui.panelExport.colWords,จำนวนคำ
 ui.panelExport.dock,{0} {1} ใน dock {2} 
 ui.panelExport.dockAreaWritePanel,dock {0} แบ่ง 50/50 กับพื้นที่เขียน — แผงที่เพิ่งผนึกกินครึ่งหน้าต่าง
 ui.panelExport.dockModeRatioHas,dock {0} ({1}) อยู่ในโหมดสัดส่วน ทั้งที่มีพื้นที่เขียนอยู่ข้างใน — 
+ui.panelExport.done,ส่งออกแล้ว: {0}
+ui.panelExport.fail,ส่งออกจากแผง
 ui.panelExport.field,ช่องแบ่ง
 ui.panelExport.groupTab,กลุ่มแท็บ
+ui.panelExport.needBranch,เปิดผังแตกสายไม่สำเร็จ — ยังไม่มีทางเลือกในเรื่อง
+ui.panelExport.needPlanner,เปิดกระดานวางแผนก่อน (ยังไม่มีกระดานที่ใช้งานอยู่)
+ui.panelExport.noMap,ยังไม่มีแผนที่ให้ส่งออก
 ui.panelExport.notHasSizeUse,ไม่มีขนาดให้ใช้เลย (ทั้งของตัวเองและของแผงข้างใน) — ก้อนนี้จะถูกเกลี่ยตามสัดส่วนใหม่ทุกครั้งที่โครงเปลี่ยน
 ui.panelExport.panelWidePxLow,แผง {0} กว้างแค่ {1}px (ขั้นต่ำ {2}px) — เนื้อแผงถูกบีบจนแทบไม่เหลือที่
 ui.panelExport.valueSizeKeepNot,ค่าขนาดที่เก็บไว้ในลูกยังไม่ถูกใช้ · แผงข้างจะถูกเกลี่ยใหม่ทุกครั้งที่เปิด/ผนึกแผงอื่น
@@ -6577,17 +6764,65 @@ ui.thes.notFound,"ไม่พบคำพ้อง/คำตรงข้าม�
 ui.thes.selectWordFirst,เลือกคำที่อยากหาคำพ้องก่อน
 ui.thes.thesaurusSearchNotOk,thesaurus: ค้นไม่สำเร็จ
 ui.timeline.addEvent,+ เพิ่มเหตุการณ์
-ui.timeline.card,การ์ด
+ui.timeline.addEventTip,เพิ่มเหตุการณ์ใหม่ (ดับเบิลคลิกที่ว่างบนบอร์ดก็ได้)
+ui.timeline.backLinks,มีเส้นเชื่อม {0} เส้นที่ย้อนเวลา (เส้นประแดง) — ต้นเหตุเกิดหลังผล ตรวจว่าตั้งใจไหม
+ui.timeline.boardHint,"ลากการ์ด = เลื่อนเวลา · ลากขอบ = ยืดช่วง · ลากจุดขวาการ์ด = เชื่อม ""นำไปสู่"" · Ctrl+คลิก = เปิด · Ctrl+ล้อ = ซูม · ลากตัวละคร/ฉากจาก Explorer มาวางได้"
+ui.timeline.boardLabel,บอร์ดเส้นเวลา
+ui.timeline.cardMenu,คำสั่งของการ์ดนี้
+ui.timeline.clickEditEvent,คลิกเพื่อแก้เหตุการณ์
 ui.timeline.clickOpenScene,คลิกเปิดฉากนี้
-ui.timeline.eventNotHasTime,+ อีก {0} เหตุการณ์ไม่มีเวลาเป็นตัวเลข (ดูในมุมมองการ์ด)
+ui.timeline.colDesc,รายละเอียด
+ui.timeline.colKind,ชนิด
+ui.timeline.colRefs,อ้างอิง
+ui.timeline.colTitle,ชื่อ
+ui.timeline.colTrack,เส้นเรื่อง
+ui.timeline.colWhen,เวลาเริ่ม
+ui.timeline.colWhenEnd,เวลาจบ
+ui.timeline.delEventQ,"ลบเหตุการณ์ ""{0}"" ?"
+ui.timeline.dropSceneNoRef,การ์ดฉากรับอ้างอิงไม่ได้ — วางบนการ์ดเหตุการณ์ หรือที่ว่างเพื่อสร้างเหตุการณ์ใหม่
+ui.timeline.editEvent,แก้เหตุการณ์
+ui.timeline.export,ส่งออก
+ui.timeline.exportCsv,ตาราง CSV (Excel)
+ui.timeline.exportDone,ส่งออกเส้นเวลาแล้ว: {0}
+ui.timeline.exportEmpty,เส้นเวลายังว่าง — ไม่มีอะไรให้ส่งออก
+ui.timeline.exportHtml,หน้าเว็บ HTML (เปิดในเบราว์เซอร์)
+ui.timeline.exportMd,Markdown (ข้อความ)
+ui.timeline.exportPng,รูปภาพ PNG
+ui.timeline.exportTip,ส่งออกเส้นเวลาเป็นรูป / HTML / Markdown / CSV
+ui.timeline.handleEnd,ลากเพื่อเปลี่ยนเวลาจบ
+ui.timeline.handleStart,ลากเพื่อเปลี่ยนเวลาเริ่ม
 ui.timeline.hasDotEventTime,มี {0} จุดที่เหตุการณ์เวลาตรงกัน (ไฮไลต์สีส้ม) — ตรวจว่าตั้งใจหรือไม่
-ui.timeline.hasDotTimeAt,มี {0} จุดที่เวลาตรงกัน (ไฮไลต์สีส้ม)
 ui.timeline.lineTime,เส้นเวลา
+ui.timeline.linkAdded,เชื่อมเหตุการณ์แล้ว
+ui.timeline.linkCancel,ยกเลิกการเชื่อม
+ui.timeline.linkDotTip,ลากไปวางบนการ์ดอื่น = เหตุการณ์นี้นำไปสู่อันนั้น
+ui.timeline.linkExists,สองการ์ดนี้เชื่อมกันอยู่แล้ว
+ui.timeline.linkFromHere,เชื่อมไปยังการ์ดอื่น…
+ui.timeline.linkPickHint,"คลิกการ์ดที่ ""{0}"" นำไปสู่ (Esc = ยกเลิก)"
+ui.timeline.linksHead,เส้นเชื่อม
 ui.timeline.note, โน้ต
 ui.timeline.notHasEventPress,"ยังไม่มีเหตุการณ์ — กด ""＋ เพิ่มเหตุการณ์"" หรือไปตั้ง ""เวลาในเรื่อง"" ให้ฉากในคุณสมบัติฉาก"
+ui.timeline.nowLine,ฉากที่เปิดอยู่: {0}
 ui.timeline.open,เปิด: 
-ui.timeline.sceneSetTimeStory,"ฉากที่ตั้ง ""เวลาในเรื่อง"" จะขึ้นบนเส้นเวลาอัตโนมัติ"
+ui.timeline.openScene,เปิดฉาก
+ui.timeline.refAdded,"อ้างอิง {0} ในเหตุการณ์ ""{1}"" แล้ว"
+ui.timeline.refsMenu,เปิดสิ่งที่อ้างอิง
+ui.timeline.sceneTimeFail,ตั้งเวลาของฉากไม่สำเร็จ
+ui.timeline.trackHide,"ซ่อนเส้นเรื่อง ""{0}"""
+ui.timeline.trackShow,"แสดงเส้นเรื่อง ""{0}"""
+ui.timeline.undated,ยังไม่ระบุเวลา
+ui.timeline.undatedChipTip,ลากขึ้นบอร์ดเพื่อตั้งเวลา · ดับเบิลคลิก = แก้
+ui.timeline.undatedTray,ยังไม่ระบุเวลา ({0})
+ui.timeline.unlink,ลบเส้นเชื่อม
+ui.timeline.unlinkThis,ลบเส้นเชื่อมนี้
+ui.timeline.viewBoard,บอร์ด
+ui.timeline.viewBoardTip,บอร์ดแนวนอน — การ์ดยาวตามช่วงเวลา ลากเลื่อน/ยืด/เชื่อมได้
 ui.timeline.viewGanttMustHas,"มุมมอง Gantt ต้องมีเหตุการณ์ที่ระบุเวลาเป็นตัวเลข (เช่น ""ปีที่ 1024"") — ยังไม่มีเลย"
+ui.timeline.viewList,รายการ
+ui.timeline.viewListTip,รายการแนวตั้งเรียงตามเวลา
+ui.timeline.zoomFit,พอดีกับกรอบ
+ui.timeline.zoomIn,ขยาย (Ctrl+ล้อ)
+ui.timeline.zoomOut,ย่อ (Ctrl+ล้อ)
 ui.tip.about,ดูรุ่นของโปรแกรม เครดิต และสัญญาอนุญาตของส่วนประกอบที่ใช้
 ui.tip.ai-analyzer,เปิดแผงวิเคราะห์ต้นฉบับด้วย AI เช่น จังหวะเรื่อง เส้นโค้งตัวละคร และคำที่ใช้ซ้ำ
 ui.tip.ai-assistant,ให้ AI ช่วยขยาย สรุป หรือเขียนใหม่ข้อความที่เลือก แล้วเลือกเองว่าจะใช้ผลลัพธ์ไหม
@@ -6637,6 +6872,7 @@ ui.tip.export-fdx,ส่งออกบทภาพยนตร์เป็น�
 ui.tip.export-hub,รวมทุกทางส่งออกไว้ในกล่องเดียว เลือกปลายทาง ตั้งค่า แล้วดูตัวอย่างก่อนเซฟไฟล์
 ui.tip.export-json,ส่งออกข้อมูลโปรเจกต์ทั้งหมดเป็นไฟล์ JSON ไฟล์เดียว ไว้สำรองหรือส่งต่อให้เครื่องมืออื่น
 ui.tip.export-language-csv,ส่งออกข้อความของโปรแกรมเป็นตาราง CSV (คีย์ · ไทย · อังกฤษ) ให้ผู้แปลแก้ในโปรแกรมตารางคำนวณ
+ui.tip.export-panel,ส่งออกเนื้อหาของแผง (เส้นเวลา · แผนที่ · กระดาน · ผัง ฯลฯ) ในรูปแบบที่เลือก
 ui.tip.export-panel-layout,บันทึกการจัดวางแผงตอนนี้เป็นไฟล์ JSON ไว้อ้างอิงหรือแนบตอนรายงานปัญหาเรื่องแผง
 ui.tip.export-pdf,เปิดศูนย์รวมการส่งออกเพื่อทำไฟล์ PDF พร้อมดูตัวอย่างก่อนเซฟ
 ui.tip.export-pdf-builtin,ส่งออก PDF ด้วยตัวสร้าง PDF ในโปรแกรมโดยตรง ไม่ผ่านศูนย์รวมการส่งออก

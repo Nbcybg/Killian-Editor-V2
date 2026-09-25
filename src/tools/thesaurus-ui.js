@@ -66,6 +66,7 @@ export async function showThesaurusPopup(word, x, y) {
     }
   }
   const close = el('div', 'k-thes-close', gi('close'));
+  close.title = t('ui.common.close');
   close.onclick = () => shut();
   pop.append(close);
   document.body.append(pop);

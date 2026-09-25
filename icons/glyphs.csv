@@ -38,6 +38,7 @@ briefcase,nf-md-briefcase_outline,
 broom,nf-md-broom,🧹
 bulb,nf-md-lightbulb_outline,💡
 camera,nf-md-camera_outline,📷
+card,nf-md-card_text_outline,▭
 caret-down,nf-md-menu_down,▾
 chapters,nf-md-book_multiple_outline,
 character-extension,nf-md-account_star_outline,
@@ -71,6 +72,7 @@ compare,nf-md-compare_horizontal,⇋
 compass,nf-md-compass_outline,🧭
 conflict,nf-md-sword_cross,⚔
 crosshair,nf-md-crosshairs_gps,
+crosshairs,nf-md-crosshairs_gps,⌖
 crystal-ball,nf-md-crystal_ball,🔮
 cursor-arrow,nf-md-cursor_default_outline,⬉
 desktop,nf-md-monitor,🖥
@@ -85,8 +87,10 @@ dot,,●
 dot-red,nf-md-checkbox_blank_circle,🔴
 dot-white,nf-md-checkbox_blank_circle_outline,⚪
 dot-yellow,nf-md-checkbox_blank_circle,🟡
+dots-vertical,nf-md-dots_vertical,⋮
 download,nf-md-download,⤓
 duplicate,nf-md-content_duplicate,⧉
+earth,nf-md-earth,◍
 edge-label,nf-md-tag_text_outline,
 edit,nf-md-pencil_outline,
 empty-set,nf-md-null,∅
@@ -144,6 +148,7 @@ info,nf-md-information_outline,ℹ
 italic,nf-md-format_italic,
 kanban,nf-md-view_column_outline,
 keyboard,nf-md-keyboard_outline,⌨
+layers,nf-md-layers_outline,▤
 layout,nf-md-view_dashboard_outline,
 leaf,nf-md-leaf,🌱
 line-curve,nf-md-vector_curve,⌒
@@ -165,7 +170,9 @@ log,nf-md-script_text_outline,📜
 magic,nf-md-auto_fix,✨
 magnet,nf-md-magnet,🧲
 map,nf-md-map_outline,🗺
+map-distance,nf-md-map_marker_distance,↔
 map-pin,nf-md-map_marker_outline,📍
+map-plus,nf-md-map_plus,+
 mask,nf-md-drama_masks,🎭
 maximize,nf-md-window_maximize,⤢
 mention,nf-md-at,
@@ -284,6 +291,7 @@ sync,nf-md-sync,⟳
 tab-close,nf-md-close_box_outline,✕
 tabs-x,nf-md-close_box_multiple_outline,
 tag,nf-md-tag_outline,🏷
+tape-measure,nf-md-tape_measure,📏
 target,nf-md-target,🎯
 text-box,nf-md-text_box_outline,🅃
 text-case,nf-md-format_letter_case,🔠
@@ -303,6 +311,7 @@ triangle-up,nf-md-menu_up,▲
 underline,nf-md-format_underline,
 undo,nf-md-undo,↶
 user,nf-md-account_outline,👤
+vector-polygon,nf-md-vector_polygon,⬠
 volume,nf-md-volume_high,🔊
 warning,nf-md-alert_outline,⚠
 warning-e,nf-md-alert_outline,⚠️

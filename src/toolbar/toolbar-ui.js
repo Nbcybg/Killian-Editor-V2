@@ -648,12 +648,15 @@ export function buildFabList(host) {
       row.append(el('span', 'k-fabcfg-num', String(i + 1)));
       row.append(el('span', 'k-tbcfg-name', tt(a.labelKey)));
       const up = el('button', 'k-tbcfg-mini', gi('arrow-up'));
+      up.title = tt('ui.vis.up');
       up.disabled = i === 0;
       up.onclick = () => save(FB.moveFabAction(cfgNow(), id, -1));
       const dn = el('button', 'k-tbcfg-mini', gi('arrow-down'));
+      dn.title = tt('ui.vis.down');
       dn.disabled = i === cfg.actions.length - 1;
       dn.onclick = () => save(FB.moveFabAction(cfgNow(), id, 1));
       const rm = el('button', 'k-tbcfg-mini', gi('close'));
+      rm.title = tt('ui.common.removeRowTip');
       rm.onclick = () => save(FB.toggleFabAction(cfgNow(), id, false));
       row.append(up, dn, rm);
       chosen.append(row);

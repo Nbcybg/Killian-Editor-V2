@@ -270,12 +270,7 @@ function buildMenu() {
       { label: tt('ui.menu.save'), click: cmd('save-as') },
       { type: 'separator' },
       { label: tt('ui.menu.printP'), click: cmd('print') },
-      // [alpha.81 ข้อ 9] เดิมเมนูนี้มีทางส่งออก 9 ทางแยกกัน ผู้ใช้ต้องเดาเองว่าทางไหนให้ผลอะไร
-      // ตอนนี้เหลือทางเดียว = "ศูนย์รวมการส่งออก" (เลือกรูปแบบ · ตั้งค่า · เห็นตัวอย่างก่อนบันทึก)
-      // ทางเดิมทั้งหมดยังอยู่ครบในกล่องนั้น ไม่มีความสามารถไหนหายไป
-      { label: tt('ui.menu.exportHub'), click: cmd('export-hub') },
-      { type: 'separator' },
-      { label: tt('ui.menu.exportWorkFlowSteps'), click: cmd('compile') },
+      // [alpha.167] ทางส่งออกทั้งหมดย้ายไปเมนู "ส่งออก" ระดับบนสุด (ผู้ใช้: "ทำเป็น export หัวข้อ ไปเลย")
       { type: 'separator' },
       { label: tt('ui.menu.newProjectTemplate'), click: cmd('new-from-template') },
       { label: tt('ui.menu.importScrivenerScrivI'), click: cmd('import-scrivener') },
@@ -428,6 +423,19 @@ function buildMenu() {
       { label: tt('ui.menu.coverTitlePages'), click: cmd('title-pages') },
       { label: tt('ui.menu.headPaperAllPage'), click: cmd('page-headers') },
       { label: tt('ui.menu.pagePaperGapMargin2'), click: cmd('page-setup') },   // [alpha.164 ข้อ D] ป้ายเดียวกับเมนูรูปแบบ (คำสั่งเดียวกัน)
+    ] },
+    // [alpha.167] เมนู "ส่งออก" — เอกสาร (ศูนย์รวมการส่งออก · เวิร์กโฟลว์) + ทุกแผงที่ส่งออกได้ + ของระดับโปรเจกต์
+    // (ศูนย์รวมการส่งออกยังเป็นทางเดียวของ "เอกสาร" ตามกฎ alpha.81 — ที่นี่แค่รวมทุกทางไว้หัวข้อเดียว)
+    { id: 'Export', label: tt('ui.menu.exportTop'), submenu: [
+      { label: tt('ui.menu.exportHub'), click: cmd('export-hub') },
+      { label: tt('ui.menu.exportWorkFlowSteps'), click: cmd('compile') },
+      { type: 'separator' },
+      ...PANEL_EXPORTS_MENU.map((e) => ({ label: panelMenuLabel(e.panel), submenu: e.fmts.map((f) => ({
+        label: tt(EXPORT_FMT_KEYS[f]), click: cmd('export-panel', e.panel, f) })) })),
+      { type: 'separator' },
+      { label: tt('ui.menu.exportProjectZip'), click: cmd('export-zip') },
+      { label: tt('ui.menu.exportLayoutPanelJSON'), click: cmd('export-panel-layout') },
+      { label: tt('ui.menu.exportLangCSVKey'), click: cmd('export-language-csv') },
     ] },
     // [alpha.60 ข้อ 74] เมนู "เครื่องมือ"
     { id: 'Tools', label: tt('ui.menu.tool'), submenu: [
@@ -943,6 +951,30 @@ const MENU_PANELS = [
   { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
   { id: 'ai-chat', label: tt('ui.common.aIAssistantWrite') },
 ];
+/**
+ * [alpha.167] เมนู "ส่งออก" ของแผง — คู่แฝดของ `PANEL_EXPORTS` ใน src/panel-exports.js
+ * (main.js เป็น CommonJS import โมดูล renderer ไม่ได้) · unit `panel-exports` ตรวจว่าสองตารางตรงกันทุกแถว
+ */
+const PANEL_EXPORTS_MENU = [
+  { panel: 'timeline',      fmts: ['png', 'html', 'md', 'csv'] },
+  { panel: 'maps',          fmts: ['png', 'geojson', 'print'] },
+  { panel: 'gallery-board', fmts: ['png', 'html'] },
+  { panel: 'network',       fmts: ['png'] },
+  { panel: 'planner',       fmts: ['png'] },
+  { panel: 'branch',        fmts: ['html', 'md', 'json', 'svg', 'png'] },
+  { panel: 'kanban',        fmts: ['csv'] },
+  { panel: 'gallery',       fmts: ['zip'] },
+  { panel: 'ai-analyzer',   fmts: ['csv'] },
+];
+const EXPORT_FMT_KEYS = {
+  png: 'ui.menu.fmtPng', html: 'ui.menu.fmtHtml', md: 'ui.menu.fmtMd', csv: 'ui.menu.fmtCsv', geojson: 'ui.menu.fmtGeojson',
+  print: 'ui.menu.fmtPrint', json: 'ui.menu.fmtJson', svg: 'ui.menu.fmtSvg', zip: 'ui.menu.fmtZip',
+};
+function panelMenuLabel(id) {
+  const p = MENU_PANELS.find((x) => x.id === id);
+  const l = p && p.label;
+  return typeof l === 'function' ? l() : (l || id);
+}
 /** แผงที่จงใจไม่ใส่ในเมนูนี้ — ต้องมีเหตุผลกำกับเสมอ */
 const MENU_PANELS_SKIP = {
   'planner-props': tt('ui.menu.panelPairPlannerPlanner'),
@@ -1186,22 +1218,28 @@ function scanSystemFonts() {
   if (_sysFonts) return;
   const seen = new Set();
   _sysFontFiles = new Map();
-  for (const dir of FONT_DIRS) {
-    if (!dir) continue;
-    let names = [];
-    try { names = fs.readdirSync(dir); } catch { continue; }
-    for (const n of names) {
-      if (!FONT_EXT.test(n)) continue;
-      const full = path.join(dir, n);
-      for (const fam of fontFamiliesOf(full)) {
-        if (fam.length > 64) continue;
-        seen.add(fam);
-        // pdf-lib ฝังได้แค่ไฟล์เดี่ยว (ttc = หลายฟอนต์ในไฟล์เดียว ใช้ไม่ได้)
-        if (/\.(ttf|otf)$/i.test(n)) {
-          const k = fam.toLowerCase();
-          if (!_sysFontFiles.has(k)) _sysFontFiles.set(k, []);
-          _sysFontFiles.get(k).push(full);
-        }
+  // [alpha.167 · บั๊ก] ไล่ลงโฟลเดอร์ย่อยด้วย — Linux เก็บฟอนต์เป็นชั้น (/usr/share/fonts/truetype/<ผู้ผลิต>/…)
+  // และ macOS/Windows ก็มีโฟลเดอร์ย่อยได้ · เดิมอ่านชั้นเดียว = รายชื่อฟอนต์ว่างทั้งเครื่องบน Linux
+  const files = [];
+  const walk = (dir, depth) => {
+    let ents = [];
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (depth < 5) walk(full, depth + 1); }
+      else if (FONT_EXT.test(e.name)) files.push([full, e.name]);
+    }
+  };
+  for (const dir of FONT_DIRS) if (dir) walk(dir, 0);
+  for (const [full, n] of files) {
+    for (const fam of fontFamiliesOf(full)) {
+      if (fam.length > 64) continue;
+      seen.add(fam);
+      // pdf-lib ฝังได้แค่ไฟล์เดี่ยว (ttc = หลายฟอนต์ในไฟล์เดียว ใช้ไม่ได้)
+      if (/\.(ttf|otf)$/i.test(n)) {
+        const k = fam.toLowerCase();
+        if (!_sysFontFiles.has(k)) _sysFontFiles.set(k, []);
+        _sysFontFiles.get(k).push(full);
       }
     }
   }

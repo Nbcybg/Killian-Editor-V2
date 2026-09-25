@@ -37,10 +37,12 @@ import { CUT_FAIL, measureProseLayout, proseBreakList, resetCutFail, sliceProseP
          zoomFactorOf } from './prose-measure.js';
 import { EXPORT_FORMATS, exportPageNumberFmt, openExportHub } from './export-hub.js';
 import { pickImage } from './gallery.js';   // [alpha.164 · รอบต่อ 3] ด่านอังกฤษ: กล่องเลือกรูป
-import { FLOAT_MIN_H, FLOAT_MIN_W, clampFloat, inGroupHandle, snapToEdges } from './panels/panel-drag.js';
+import { FLOAT_MIN_H, FLOAT_MIN_W, clampFloat, inGroupHandle, snapToEdges, detectSnapTarget } from './panels/panel-drag.js';
+import { dropIntent, dropTipText } from './panel-drop.js';
+import { exportPanel, PANEL_EXPORTS } from './panel-exports.js';
 import { HEADER_VARS, headerLineCount, headerStringsFor, linesForBody, mergeHeaders, resolveHeaderVars } from './sp-headers.js';
 import { MAPS_VERSION, addPinToRoute, breadcrumb, deletePins, findMap, gridLines, mapOverlays, mapRoutes,
-         movePins, newMap, newPin, newRoute, pinStats, rootMaps, scenePinCounts } from './maps.js';
+         movePins, newMap, newPin, newRoute, pinStats, rootMaps, scenePinCounts, newZone as mNewZone, zoneAt as mZoneAt } from './maps.js';
 import { MD_HIDE_CLASS, prefixLen as mdPrefixLen, suffixLen as mdSuffixLen } from './markdown-code-toggle.js';
 import { NAV_FLAG_DEFS } from './nav-model.js';
 import { NET_COLOR_DEFS, axisVectors, viewCenter } from './network-theme.js';
@@ -108,7 +110,8 @@ import { deleteToTrash, listPurgeable, purgeRecycle, restoreFromTrash } from './
 import { dirtyRegistry } from './dirty-registry.js';
 import { entityPortrait } from './wiki-profile.js';
 import { escapeRtf, generateRtf } from './export-rtf.js';
-import { exportMapPng, openMaps, renderMaps, renderMapsPanel, resetMapsView, sceneMapLocation } from './maps-ui.js';
+import { exportMapPng, openMaps, renderMaps, renderMapsPanel, resetMapsView, sceneMapLocation,
+         enterMap, showMapGallery, mapsViewState, dropOnMap, openGeoPanel, parseDistance, parseLatLon, mapGeoJson, exportMapGeoJson } from './maps-ui.js';
 import { findScenePath, listEntities, listScenes } from './project-scan.js';
 import { fmtbarSequence, isConfigurable as tbConfigurable } from './toolbar/toolbar-config.js';
 import { focusedPanel, isPanelFocused, setFocusedPanel } from './panels/panel-focus.js';
@@ -139,7 +142,7 @@ import { openPlayerMode } from './player-mode.js';
 import { openQuickOpen, quickOpenCache } from './quick-open.js';
 import { openSceneTable } from './scene-table.js';
 import { openTagPane } from './tag-pane.js';
-import { openTimeline, renderTimeline } from './timeline-ui.js';
+import { openTimeline, renderTimeline, exportTimeline } from './timeline-ui.js';
 import { pathKey } from './tab-bridge.js';
 import { prosePageBreaks, prosePagesOf, refreshProsePageBreaks, renderProsePageView, setProsePageBreaks } from './prose-view.js';
 import { renderPluginPanel } from './plugins/plugin-panel.js';
@@ -1658,6 +1661,73 @@ export async function runTest(projectPath) {
               .some((b) => parseFloat(b.style.width) > 5),
             [...document.querySelectorAll('#tl-body .gantt-bar')].map((b) => b.style.width).join(','));
       await kapi.testShot('/tmp/k2_gantt.png');
+      // ── [alpha.167] บอร์ดแบบภาพอ้างอิง 1 · รายการแบบภาพ 2 · ลากเลื่อนเวลา · เส้นเชื่อม · ส่งออก ──
+      {
+        const w167 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const tl0 = await loadTimeline();
+        const keepEvents = JSON.parse(JSON.stringify(tl0.events));
+        tl0.links = [{ from: 'ev-t2', to: 'ev-t1' }];
+        await saveTimeline(tl0);
+        state._tlView = 'gantt'; state._tlPpu = 0;
+        await renderTimeline($('#tl-body')); await w167(250);
+        check('[167-T] ★ บอร์ด: แกนเวลาติดขอบบน + การ์ดมีแถบสีซ้าย + ปุ่ม ⋮',
+              !!document.querySelector('#tl-body .tl-axis') && !!document.querySelector('#tl-body .tl-card .tl-card-stripe') &&
+              !!document.querySelector('#tl-body .tl-card .tl-card-menu'));
+        check('[167-T] ★ เส้นเชื่อม "นำไปสู่" วาดเป็นเส้นลูกศร', document.querySelectorAll('#tl-body path.tl-link').length === 1);
+        check('[167-T] ป้ายนับตามเส้นเรื่อง (ภาพ 2) อยู่บนหัว', document.querySelectorAll('#tl-body .tl-stat').length >= 2,
+              document.querySelectorAll('#tl-body .tl-stat').length);
+        check('[167-T] การ์ดที่มีช่วงเวลากว้างกว่าการ์ดจุดเดียว',
+              parseFloat(document.querySelector('#tl-body .tl-card[data-key="ev-t1"]').style.width) >= 190);
+        check('[167-T] ปุ่มส่งออกอยู่บนหัวเส้นเวลา', !!document.querySelector('#tl-body .tl-export-btn'));
+        // ลากการ์ดไปทางขวา = เลื่อนเวลา (ข้อความเวลาคงรูปแบบที่ผู้ใช้พิมพ์)
+        {
+          const card = document.querySelector('#tl-body .tl-card[data-key="ev-t1"] .tl-card-main');
+          const r = card.getBoundingClientRect();
+          const x = r.left + 20, y = r.top + 10;
+          card.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: x, clientY: y, bubbles: true }));
+          window.dispatchEvent(new PointerEvent('pointermove', { clientX: x + 60, clientY: y, bubbles: true }));
+          window.dispatchEvent(new PointerEvent('pointermove', { clientX: x + 220, clientY: y, bubbles: true }));
+          window.dispatchEvent(new PointerEvent('pointerup', { clientX: x + 220, clientY: y, bubbles: true }));
+          await w167(500);
+          const ev = (await loadTimeline()).events.find((e) => e.id === 'ev-t1');
+          check('[167-T] ★ ลากการ์ดบนบอร์ด = เลื่อนเวลา (ทั้งเริ่มและจบ คงคำ "ปีที่")',
+                ev.when !== 'ปีที่ 1024' && /^ปีที่ \d+$/.test(ev.when) && ev.whenEnd !== 'ปีที่ 1030' &&
+                (parseFloat(ev.whenEnd.replace(/\D+/g, '')) - parseFloat(ev.when.replace(/\D+/g, ''))) === 6,
+                ev.when + ' → ' + ev.whenEnd);
+        }
+        // ซ่อนเส้นเรื่องด้วยป้ายนับ
+        {
+          const st = [...document.querySelectorAll('#tl-body .tl-stat')].find((b) => b.textContent.includes('เส้นหลัก'));
+          st.click(); await w167(250);
+          check('[167-T] คลิกป้ายเส้นเรื่อง = ซ่อนเส้นนั้นจากบอร์ด', !document.querySelector('#tl-body .tl-card[data-key="ev-t1"]'));
+          [...document.querySelectorAll('#tl-body .tl-stat')].find((b) => b.textContent.includes('เส้นหลัก')).click(); await w167(250);
+          check('[167-T] คลิกอีกครั้ง = แสดงกลับ', !!document.querySelector('#tl-body .tl-card[data-key="ev-t1"]'));
+        }
+        // มุมมองรายการ (ภาพ 2)
+        state._tlView = 'cards'; await renderTimeline($('#tl-body')); await w167(200);
+        check('[167-T] ★ มุมมองรายการ: รางแนวตั้ง + ป้ายช่วงเวลา + ชิปเวลา/เส้นเรื่อง',
+              !!document.querySelector('#tl-body .tl-list') && document.querySelectorAll('#tl-body .tl-era').length >= 2 &&
+              !!document.querySelector('#tl-body .tl-row .tl-chip-track'));
+        // ส่งออก 4 แบบ
+        for (const fmt of ['md', 'csv', 'html', 'png']) {
+          const outp = await kapi.join(state.root, 'k2test-timeline.' + fmt);
+          const got = await exportTimeline(fmt, outp);
+          const ok = !!got && await kapi.exists(outp);
+          let extra = '';
+          if (ok && fmt !== 'png') extra = await kapi.readFile(outp);
+          const pngOk = fmt !== 'png' || (ok && (await kapi.readBytes(outp)).length > 2000);
+          check('[167-T] ★ ส่งออกเส้นเวลาเป็น ' + fmt.toUpperCase() + ' ได้',
+                ok && pngOk && (fmt === 'png' || extra.includes('สงครามปะทุ')), fmt + ' ' + String(extra).slice(0, 80));
+          if (fmt === 'md' && ok) check('[167-T] Markdown มีเส้นเชื่อม "ก่อตั้ง → สงคราม"', extra.includes('ก่อตั้งอาณาจักร → สงครามปะทุ'));
+          if (fmt === 'csv' && ok) check('[167-T] CSV มี BOM (Excel อ่านไทยออก)', extra.charCodeAt(0) === 0xFEFF || (await kapi.readBytes(outp))[0] === 0xEF);
+          if (ok) await kapi.remove(outp);
+        }
+        // คืนสภาพ
+        const tl9 = await loadTimeline();
+        tl9.events = keepEvents; delete tl9.links;
+        await saveTimeline(tl9);
+        state._tlView = 'gantt';
+      }
       state._tlView = 'cards';
       closeTab('::timeline::');
 
@@ -1689,8 +1759,21 @@ export async function runTest(projectPath) {
       check('นับหมุดแยกชนิดถูก (portal + entity)', wst.portal === 1 && wst.entity === (someEnt ? 1 : 0));
 
       // เปิดแท็บแผนที่
+      resetMapsView();
       await openMaps();
       await new Promise((r) => setTimeout(r, 250));
+      // [alpha.167] หน้าแรกของแผง = แกลเลอรีแผนที่ (ภาพอ้างอิง 3) → เลือกการ์ดแล้วค่อยเข้าไปดู
+      check('[167-M] ★ เปิดแผงแผนที่ครั้งแรก = แกลเลอรี (การ์ดแผนที่ + การ์ดสร้างใหม่)',
+            mapsViewState().gallery && document.querySelectorAll('#maps-body .map-gcard[data-map]').length === 2 &&
+            !!document.querySelector('#maps-body .map-gnew'),
+            document.querySelectorAll('#maps-body .map-gcard').length);
+      check('[167-M] แถบซ้ายของแผนที่มีรายชื่อตัวละคร/สถานที่ (ลากลงแผนที่ได้)',
+            !!document.querySelector('#maps-body .map-side') &&
+            (!someEnt || [...document.querySelectorAll('#maps-body .map-ent')].some((r) => r.draggable)),
+            document.querySelectorAll('#maps-body .map-ent').length);
+      document.querySelector('#maps-body .map-gcard[data-map="wtest"]').click();
+      await new Promise((r) => setTimeout(r, 250));
+      check('[167-M] คลิกการ์ดแกลเลอรี = เข้าไปดูแผนที่นั้น', !mapsViewState().gallery && mapsState_C.s.currentId === 'wtest');
       check('แท็บแผนที่เปิด + มี chip เลือกแผนที่',
             isPanelOpen('maps') && document.querySelectorAll('#maps-body .map-chip').length === 2);
       check('มีหมุดวาดบนแผนที่ (portal + entity)',
@@ -1733,6 +1816,7 @@ export async function runTest(projectPath) {
       }
 
       await openMaps(); await wait(300);
+      await enterMap('m70a'); await wait(150);
       const S70 = mapsState_C.s;
       check('[70] แผงแผนที่เปิดที่แผนที่แรก', isPanelOpen('maps') && S70.currentId === 'm70a', S70.currentId);
 
@@ -1753,12 +1837,17 @@ export async function runTest(projectPath) {
               bodyOf().querySelector('.map-canvas').style.width);
         // Ctrl+ล้อ = ซูม (ล้อเปล่าต้องไม่ซูม ไม่งั้นเลื่อนดูแผนที่ไม่ได้)
         const stage = bodyOf().querySelector('.map-stage');
+        // [alpha.167] ควบคุมแบบเกม (ผู้ใช้ขอ): ล้อเปล่า = ซูม · Shift+ล้อ = เลื่อนแนวนอน · ลากที่ว่าง = เลื่อนภาพ
         stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
         await wait(20);
-        check('[70-3] ล้อเปล่า = เลื่อนดู ไม่ซูม', bodyOf().querySelector('.map-canvas').style.width === '125%');
+        check('[70-3→167] ล้อเปล่าลง = ซูมออกหนึ่งขั้น (แบบแผนที่ในเกม)', bodyOf().querySelector('.map-canvas').style.width === '100%',
+              bodyOf().querySelector('.map-canvas').style.width);
+        stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, shiftKey: true, bubbles: true, cancelable: true }));
+        await wait(20);
+        check('[167-M] Shift+ล้อ = ไม่ซูม (เลื่อนแนวนอน)', bodyOf().querySelector('.map-canvas').style.width === '100%');
         stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, ctrlKey: true, bubbles: true, cancelable: true }));
         await wait(20);
-        check('[70-3] Ctrl+ล้อลง = ซูมออกหนึ่งขั้น', bodyOf().querySelector('.map-canvas').style.width === '100%',
+        check('[70-3] Ctrl+ล้อลง = ซูมออกหนึ่งขั้น', bodyOf().querySelector('.map-canvas').style.width === '75%',
               bodyOf().querySelector('.map-canvas').style.width);
         const fit = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes('พอดีจอ'));
         fit.click(); await wait(30);
@@ -2162,6 +2251,118 @@ export async function runTest(projectPath) {
         check('[71-2] หมุดที่ไม่ใช่เอนทิตี้ยังใช้ไอคอนเดิม',
               !!bodyOf().querySelector('.map-pin[data-pin="pA"] .map-pin-icon') &&
               !bodyOf().querySelector('.map-pin[data-pin="pA"] .map-pin-portrait'));
+
+        // ── [alpha.167] แผนที่: พิกัดจริง · โซนชั้นล่างสุด · หยิบใส่ · Ctrl+คลิกกระโดด · GeoJSON · แกลเลอรี ──
+        {
+          const m = findMap(mapsState_C.s.data.maps, 'm70a');
+          m.aspect = 2;
+          m.geo = { scale: { a: { x: 10, y: 50 }, b: { x: 20, y: 50 }, meters: 100 }, ref: { x: 10, y: 50, lat: 13.75, lon: 100.5 } };
+          m.overlays = { ...m.overlays, scale: true };
+          m.zones = [mNewZone([{ x: 5, y: 5 }, { x: 40, y: 5 }, { x: 40, y: 40 }, { x: 5, y: 40 }], { name: 'เขตทดสอบ', color: '#6fae6f' })];
+          await saveMaps(mapsState_C.s.data);
+          await renderMaps(bodyOf()); await wait(300);
+          check('[167-M] ★ ตั้งพิกัดครบแล้ว → ปุ่ม "พิกัด/มาตราส่วน" ติดไฟ', !!bodyOf().querySelector('.map-geo-btn.on'));
+          const sh = bodyOf().querySelector('.map-scalehud .map-scalebar-lbl');
+          check('[167-M] ★ แถบมาตราส่วนบอกระยะจริง (ไม่ใช่ข้อความตกแต่ง)', !!sh && /\d/.test(sh.textContent) && /(ม\.|กม\.)/.test(sh.textContent), sh && sh.textContent);
+          const rrow = bodyOf().querySelector('.map-route-row .map-route-meta');
+          check('[167-M] ★ รายการเส้นทางบอกระยะจริง + เวลาเดินเท้า', !!rrow && /(ม\.|กม\.)/.test(rrow.textContent) && rrow.textContent.includes('เดินเท้า'), rrow && rrow.textContent);
+          {
+            const cv = bodyOf().querySelector('.map-canvas');
+            const r = cv.getBoundingClientRect();
+            cv.dispatchEvent(new PointerEvent('pointermove', { clientX: r.left + r.width * 0.2, clientY: r.top + r.height * 0.2, bubbles: true }));
+            await wait(30);
+            const ro = bodyOf().querySelector('.map-readout');
+            check('[167-M] ★ เลื่อนเมาส์บนแผนที่ = เห็นละติจูด/ลองจิจูด + ชื่อโซนใต้เคอร์เซอร์',
+                  !!ro && /° N, .*° E/.test(ro.textContent) && ro.textContent.includes('เขตทดสอบ'), ro && ro.textContent);
+          }
+          const zs = bodyOf().querySelector('svg.map-zones');
+          const pinEl = bodyOf().querySelector('.map-pin');
+          check('[167-M] ★ โซนวาดเป็น vector (SVG) และอยู่ชั้นล่างสุด — ใต้เส้นทางและหมุด',
+                !!zs && !!zs.querySelector('path.map-zone') &&
+                +getComputedStyle(zs).zIndex < +getComputedStyle(bodyOf().querySelector('svg.map-routes') || pinEl).zIndex &&
+                +getComputedStyle(zs).zIndex < +getComputedStyle(pinEl).zIndex,
+                zs && getComputedStyle(zs).zIndex + ' vs ' + getComputedStyle(pinEl).zIndex);
+          check('[167-M] ป้ายชื่อโซนอยู่กลางโซน', !!bodyOf().querySelector('.map-zone-label') && bodyOf().querySelector('.map-zone-label').textContent === 'เขตทดสอบ');
+          check('[167-M] zoneAt หาโซนจากจุดได้', !!mZoneAt(m, { x: 20, y: 20 }) && !mZoneAt(m, { x: 80, y: 80 }));
+          check('[167-M] แถบซ้ายมีรายการโซนพร้อมพื้นที่จริง',
+                [...bodyOf().querySelectorAll('.map-side-zone')].some((r) => r.textContent.includes('เขตทดสอบ') && /ตร\./.test(r.textContent)));
+          // ── หยิบใส่: ตัวละคร = ย้ายหมุดเดิม (ไม่ซ้ำ) · แผนที่ = ประตู · แผนที่ตัวเอง = ปฏิเสธ ──
+          const nPins = m.pins.length;
+          await dropOnMap(m, { kind: 'entity', items: [{ path: catFile, title: 'ยัยแมว' }] }, { x: 70, y: 70 });
+          await wait(200);
+          const mm = findMap(mapsState_C.s.data.maps, 'm70a');
+          const pe = mm.pins.find((p) => p.entityFile === catFile);
+          check('[167-M] ★ หยิบตัวละครที่ปักอยู่แล้วใส่แผนที่ = ย้ายหมุดเดิม (ไม่เกิดหมุดซ้ำ)', mm.pins.length === nPins && pe && pe.x === 70 && pe.y === 70,
+                mm.pins.length + ' ' + (pe && pe.x));
+          await dropOnMap(mm, { kind: 'map', items: [{ id: 'm70b', title: 'เมืองใต้' }] }, { x: 40, y: 60 });
+          await wait(200);
+          const mm2 = findMap(mapsState_C.s.data.maps, 'm70a');
+          const portals = mm2.pins.filter((p) => p.kind === 'portal' && p.toMap === 'm70b');
+          check('[167-M] ★ หยิบแผนที่ใส่แผนที่ = ประตูไปแผนที่ย่อย (มีอยู่แล้ว = ย้ายตำแหน่ง)', portals.length === 1 && portals[0].x === 40, JSON.stringify(portals.map((p) => [p.x, p.y])));
+          check('[167-M] หยิบแผนที่ใส่ตัวเอง = ปฏิเสธ', (await dropOnMap(mm2, { kind: 'map', items: [{ id: 'm70a' }] }, { x: 1, y: 1 })) === false);
+          {
+            const saved = await loadMaps();
+            check('[167-M] ผลของการหยิบใส่ถูกบันทึกลง maps.json', findMap(saved.maps, 'm70a').pins.some((p) => p.entityFile === catFile && p.x === 70));
+          }
+          // Ctrl+คลิกประตู = กระโดดเข้าแผนที่ย่อย (ทางสากลเหมือน Ctrl+คลิกในตัวแก้ไข)
+          const pNode = bodyOf().querySelector(`.map-pin[data-pin="${portals[0].id}"]`);
+          check('[167-M] ประตูไปแผนที่ย่อยมี tooltip บอกปลายทาง', !!pNode && pNode.title.includes('เมืองใต้'), pNode && pNode.title);
+          pNode.dispatchEvent(new MouseEvent('click', { ctrlKey: true, bubbles: true }));
+          await wait(250);
+          check('[167-M] ★ Ctrl+คลิกประตู = เข้าไปแผนที่ย่อย', mapsState_C.s.currentId === 'm70b', mapsState_C.s.currentId);
+          check('[167-M] แผนที่ย่อยมีลิงก์ขึ้นไปแผนที่แม่ในแถบซ้าย',
+                [...bodyOf().querySelectorAll('.map-side-link')].some((r) => r.textContent.includes('แผ่นดินเก่า')));
+          await enterMap('m70a'); await wait(200);
+          // ตัวแปลงข้อความ
+          check('[167-M] parseDistance รับหน่วย', parseDistance('5 km') === 5000 && parseDistance('300') === 300 && parseDistance('2 กม.') === 2000 && parseDistance('x') === null);
+          check('[167-M] parseLatLon', JSON.stringify(parseLatLon('13.7, 100.5')) === '{"lat":13.7,"lon":100.5}' && parseLatLon('91, 0') === null);
+          // GeoJSON
+          const gj = mapGeoJson(findMap(mapsState_C.s.data.maps, 'm70a'));
+          check('[167-M] ★ GeoJSON: หมุด/โซน/เส้นทางเป็นพิกัดจริง (ลองจิจูด ≈ 100.5)',
+                gj.type === 'FeatureCollection' && gj.features.some((f) => f.geometry.type === 'Polygon') &&
+                gj.features.some((f) => f.geometry.type === 'LineString') &&
+                gj.features.filter((f) => f.geometry.type === 'Point').every((f) => Math.abs(f.geometry.coordinates[0] - 100.5) < 0.1),
+                JSON.stringify(gj.features[0]));
+          const gjPath = await kapi.join(state.root, 'k2test-map.geojson');
+          await exportMapGeoJson(findMap(mapsState_C.s.data.maps, 'm70a'), gjPath);
+          check('[167-M] ส่งออก GeoJSON เป็นไฟล์ได้', await kapi.exists(gjPath) && JSON.parse(await kapi.readFile(gjPath)).features.length >= 4);
+          await kapi.remove(gjPath);
+          // หน้าตั้งพิกัด
+          const pop = openGeoPanel(findMap(mapsState_C.s.data.maps, 'm70a'));
+          await wait(150);
+          check('[167-M] หน้าตั้งพิกัดมี 3 ขั้น (มาตราส่วน · ละติจูด/ลองจิจูด · ทิศเหนือ) + ปักหมุดตามพิกัด',
+                pop.isConnected && pop.querySelectorAll('.map-geo-step').length === 4 && pop.querySelectorAll('.map-geo-step.done').length === 2,
+                pop.querySelectorAll('.map-geo-step').length);
+          check('[167-M] ขณะเปิดหน้าตั้งพิกัด เห็นจุด A/B ของมาตราส่วนบนแผนที่', bodyOf().querySelectorAll('.map-geo-mark').length === 3);
+          pop.querySelector('.map-geo-foot .k-ok').click(); await wait(150);
+          check('[167-M] ปิดหน้าตั้งพิกัดได้', !document.querySelector('.map-geo-pop'));
+          // เครื่องมือวัดระยะ/โซนอยู่บนแถบลอยของแผนที่ ไม่ปนกับโหมด 3 แบบเดิม
+          check('[167-M] แถบลอยมีเครื่องมือวัดระยะ + วาดโซน', bodyOf().querySelectorAll('.map-tools3 .map-tool-x').length === 2);
+          bodyOf().querySelector('.map-tool-x[data-x="measure"]').click(); await wait(150);
+          {
+            const cv = bodyOf().querySelector('.map-canvas'); const r = cv.getBoundingClientRect();
+            cv.dispatchEvent(new MouseEvent('click', { clientX: r.left + r.width * 0.1, clientY: r.top + r.height * 0.5, bubbles: true }));
+            await wait(150);
+            const cv2 = bodyOf().querySelector('.map-canvas'); const r2 = cv2.getBoundingClientRect();
+            cv2.dispatchEvent(new MouseEvent('click', { clientX: r2.left + r2.width * 0.3, clientY: r2.top + r2.height * 0.5, bubbles: true }));
+            await wait(150);
+            const mb = bodyOf().querySelector('.map-modebar');
+            // จุดคลิกถูกปัดเป็นพิกเซล — ยอมคลาด ±5 ม.
+            const mm = mb && (mb.textContent.match(/(\d+) ม\./) || [])[1];
+            check('[167-M] ★ วัดระยะสองจุด = ระยะจริง (20% กว้าง ≈ 200 ม.) + เวลาเดินทาง',
+                  mapsViewState().measure === 2 && !!mm && Math.abs(+mm - 200) <= 5 && mb.textContent.includes('เดินเท้า'), mb && mb.textContent);
+          }
+          bodyOf().querySelector('.map-modebar .k-ok').click(); await wait(150);
+          // กลับแกลเลอรีแล้วเข้าใหม่
+          await showMapGallery(); await wait(200);
+          check('[167-M] ปุ่ม "แผนที่ทั้งหมด" = กลับแกลเลอรี · การ์ดบอกว่าตั้งพิกัดแล้ว',
+                mapsViewState().gallery && !!bodyOf().querySelector('.map-gcard[data-map="m70a"] .map-gbadge-geo'));
+          await enterMap('m70a'); await wait(200);
+          // คืนสภาพ
+          const mz = findMap(mapsState_C.s.data.maps, 'm70a');
+          delete mz.geo; mz.zones = []; mz.overlays = { ...mz.overlays, scale: false };
+          await saveMaps(mapsState_C.s.data); await renderMaps(bodyOf()); await wait(150);
+        }
 
         // Story Network — เดิม preload ตั้ง img.src แล้วคืนทันที (วาดก่อนรูปมา) + image ว่างอยู่แล้ว
         await openNetwork(); await wait(900);
@@ -24315,6 +24516,54 @@ export async function runTest(projectPath) {
           check('[63-9] เอาออกจากกระดานแล้วไฟล์รูปยังอยู่',
                 bdoc63c.moodBoard.length === 0 &&
                 (await kapi.exists(await kapi.join(imagesDir63, 'ทดสอบ', 'sunset.png'))));
+          // ── [alpha.167] การ์ด (ตัวละคร · ลิงก์ · ฉาก) · หยิบใส่จริงผ่าน DragEvent · ส่งออก PNG/HTML ──
+          {
+            const entF = await kapi.join(state.root, 'Wiki', 'characters', 'cat.json');
+            await mb63.dropPayload({ kind: 'entity', items: [{ path: entF, title: 'ยัยแมว', cat: 'characters' }] }, { x: 0, y: 0 });
+            await mb63.dropPayload({ kind: 'url', items: [{ url: 'https://example.com/ref', title: 'ภาพอ้างอิง' }] }, { x: 300, y: 0 });
+            await until62(() => document.querySelectorAll('#galboard-body .gal2-card').length === 2);
+            check('[167-B] ★ หยิบตัวละคร + ลิงก์ใส่กระดาน = การ์ด 2 ใบ', document.querySelectorAll('#galboard-body .gal2-card').length === 2,
+                  document.querySelectorAll('#galboard-body .gal2-card').length);
+            const d167 = await AC63.readAlbumDoc(kapi, state.root, 'ทดสอบ');
+            const ec = d167.moodBoard.find((x) => x.kind === 'entity');
+            check('[167-B] การ์ดเก็บทางสัมพัทธ์กับโปรเจกต์ (ย้ายโปรเจกต์ได้)', !!ec && ec.path === 'Wiki/characters/cat.json', ec && ec.path);
+            await mb63.dropPayload({ kind: 'entity', items: [{ path: entF, title: 'ยัยแมว' }] }, { x: 500, y: 200 });
+            const d167b = await AC63.readAlbumDoc(kapi, state.root, 'ทดสอบ');
+            check('[167-B] หยิบตัวละครเดิมซ้ำ = ย้ายการ์ดเดิม (ไม่ซ้ำ)',
+                  d167b.moodBoard.filter((x) => x.kind === 'entity').length === 1 && d167b.moodBoard.find((x) => x.kind === 'entity').x === 500);
+            await until62(() => !!document.querySelector('#galboard-body .gal2-card[data-kind="ref"]'));
+            check('[167-B] การ์ดลิงก์บอกโฮสต์ของลิงก์', (document.querySelector('#galboard-body .gal2-card[data-kind="ref"]').textContent || '').includes('example.com'));
+            // หยิบใส่จริง: DragEvent + DataTransfer (ทางเดียวกับที่ผู้ใช้ลากฉากจาก Explorer)
+            {
+              const brd = document.querySelector('#galboard-body .gal2-board');
+              const dt = new DataTransfer();
+              dt.setData('text/k2-scene', JSON.stringify({ file: await kapi.join(state.root, 'Memos', 'dnd-test.md'), title: 'ฉากลาก' }));
+              dt.setData('text/plain', 'ฉากลาก');
+              const r = brd.getBoundingClientRect();
+              const ov = new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 60, clientY: r.top + 60 });
+              brd.dispatchEvent(ov);
+              check('[167-B] ลากของโปรแกรมผ่านกระดาน = กระดานรับ (dragover ถูก preventDefault + ไฮไลต์)', ov.defaultPrevented && brd.classList.contains('drop'));
+              brd.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 60, clientY: r.top + 60 }));
+              await until62(() => !!document.querySelector('#galboard-body .gal2-card[data-kind="scene"]'));
+              check('[167-B] ★ ปล่อยฉากลงกระดาน = การ์ดฉาก', !!document.querySelector('#galboard-body .gal2-card[data-kind="scene"]'));
+            }
+            check('[167-B] แถบกระดานมีปุ่มส่งออก + ปุ่มการ์ดอ้างอิง',
+                  [...document.querySelectorAll('#galboard-body .gal2-boardbar .cmp-mini')].some((b) => b.textContent.includes('ส่งออก')) &&
+                  [...document.querySelectorAll('#galboard-body .gal2-boardbar .cmp-mini')].some((b) => b.textContent.includes('อ้างอิง')));
+            await mb63.add(['ทดสอบ/sunset.png']);
+            const pngP = await kapi.join(state.root, 'k2test-mb.png');
+            const htmlP = await kapi.join(state.root, 'k2test-mb.html');
+            check('[167-B] ★ ส่งออกกระดาน (รูป + การ์ด) เป็น PNG', (await mb63.exportBoard(pngP)) === true && (await kapi.readBytes(pngP)).length > 1000);
+            check('[167-B] ★ ส่งออกกระดานเป็น HTML ไฟล์เดียว', (await mb63.exportHtml(htmlP)) === true);
+            {
+              const h = await kapi.readFile(htmlP);
+              check('[167-B] HTML ฝังรูป + การ์ดลิงก์กดได้ + ชื่อตัวละคร',
+                    h.includes('data:image/png;base64,') && h.includes('<a class="card" href="https://example.com/ref"') && h.includes('ยัยแมว'),
+                    h.length);
+            }
+            await kapi.remove(pngP); await kapi.remove(htmlP);
+            await mb63.saveBoard([]);
+          }
           hidePanel('gallery-board');
           check('[63-9] ปิดแผงกระดานได้', !isPanelOpen('gallery-board'));
         }
@@ -33867,6 +34116,151 @@ export async function runTest(projectPath) {
           // คืนเนื้อเดิมของฉาก (เทสอื่นในรอบหน้าไม่ต้องรู้ว่ามีเทสนี้)
           tabO.editor.setMarkdown(keepO); markDirty(tabO); await saveTab(tabO);
         }
+      }
+
+      // ══ [alpha.167] Explorer ลอย: กลับมาคลิกแล้วต้องไม่เด้งขึ้นบนสุด · ย้ายแล้วต้องไม่ดีดกลับ · หยิบใส่ระดับแผง ══
+      {
+        const w7 = (ms) => new Promise((r) => setTimeout(r, ms));
+        resetPanels(); await w7(320);
+        const pm7 = getPanelManager();
+        pm7.floatPanel('tree', { x: 120, y: 120, w: 300, h: 200 }); await w7(380);
+        pm7.floatPanel('notes', { x: 520, y: 140, w: 300, h: 240 }); await w7(380);
+        const treePop = () => document.querySelector('.k-float-panel[data-panel-id="tree"]') || ($('#tree') && $('#tree').closest('.k-float-panel'));
+        const notesPop = () => document.querySelector('.k-float-panel[data-panel-id="notes"]') || ($('#notes-body') && $('#notes-body').closest('.k-float-panel'));
+        check('[167-X] เตรียม: Explorer กับโน้ตด่วนลอยอยู่ทั้งคู่', !!treePop() && !!notesPop());
+        const tp = treePop();
+        const scroller = [$('#tree'), tp.querySelector('.k-panel-body'), ...tp.querySelectorAll('*')]
+          .find((n) => n && n.scrollHeight > n.clientHeight + 30 && /(auto|scroll)/.test(getComputedStyle(n).overflowY));
+        check('[167-X] เตรียม: ต้นไม้ยาวกว่ากล่อง (เลื่อนได้)', !!scroller);
+        if (scroller) {
+          scroller.style.scrollBehavior = 'auto';
+          scroller.scrollTop = 60; await w7(60);
+          const before = scroller.scrollTop;
+          notesPop().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+          await w7(80);
+          const row = tp.querySelector('#tree .sec-title, #tree .scene') || scroller;
+          row.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+          await w7(80);
+          check('[167-X] ★★ คลิกแผงลอยอื่นแล้วกลับมาคลิก Explorer = ตำแหน่งเลื่อนเดิม (ไม่เด้งขึ้นบนสุด)',
+                before > 0 && scroller.isConnected && scroller.scrollTop === before, before + ' → ' + scroller.scrollTop);
+          check('[167-X] แผงที่คลิกล่าสุดขึ้นบนสุดด้วย z-index (ไม่ย้าย DOM)',
+                +treePop().style.zIndex > +notesPop().style.zIndex && +treePop().style.zIndex < 76,
+                treePop().style.zIndex + ' vs ' + notesPop().style.zIndex);
+        }
+        // ── ย้ายแผงลอยโดยจับที่ชื่อ แล้วปล่อยกลางแผงอื่น = แค่ย้าย (เดิมผนึกกลับเข้า dock = "ดีดกลับ") ──
+        {
+          const t0 = treePop().getBoundingClientRect();
+          const title = treePop().querySelector('.k-panel-head-title');
+          const tr = title.getBoundingClientRect();
+          const sx = tr.left + Math.min(20, tr.width / 2), sy = tr.top + tr.height / 2;
+          // ปลายทาง = กลางเนื้อของแผงเอกสาร/แผงผนึกใบใดก็ได้ (ไม่ใช่หัวแผง ไม่ใช่ขอบจอ)
+          const dx = 260, dy = 160;
+          title.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: sx, clientY: sy }));
+          document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: sx + 30, clientY: sy + 20 }));
+          document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: sx + dx, clientY: sy + dy }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: sx + dx, clientY: sy + dy }));
+          await w7(360);
+          check('[167-X] ★★ ลากแผงลอย (จับชื่อ) ไปปล่อยกลางพื้นที่ทำงาน = ย้ายที่ ไม่ผนึกกลับ',
+                pm7.isFloating('tree') && !!treePop(), 'floating=' + pm7.isFloating('tree'));
+          const p1 = treePop().getBoundingClientRect();
+          check('[167-X] ตำแหน่งใหม่ตามที่ปล่อย', Math.abs(p1.left - (t0.left + dx)) <= 14 && Math.abs(p1.top - (t0.top + dy)) <= 14,
+                `${Math.round(t0.left)},${Math.round(t0.top)} → ${Math.round(p1.left)},${Math.round(p1.top)}`);
+          showPanel('search', { prefer: 'float' }); await w7(380);          // วาดแผงใหม่ทั้งชุด
+          const p2 = treePop().getBoundingClientRect();
+          check('[167-X] ★ วาดใหม่แล้วยังอยู่ที่ใหม่ (ไม่ดีดกลับ)', Math.abs(p2.left - p1.left) <= 2 && Math.abs(p2.top - p1.top) <= 2,
+                `${Math.round(p1.left)},${Math.round(p1.top)} → ${Math.round(p2.left)},${Math.round(p2.top)}`);
+          // โหมด strict: กลางแผงผนึก = ไม่ใช่เป้า · หัวแผง = รวมเป็นแท็บได้
+          const host = document.getElementById('app-root');
+          const dockedPanel = [...host.querySelectorAll('.k-panel[data-panel-id]')].find((e) => !e.closest('.k-float-panel')
+            && e.offsetParent !== null && e.dataset.panelId !== 'docs' && e.getBoundingClientRect().height > 150 && e.querySelector(':scope > .k-panel-head'));
+          if (dockedPanel) {
+            const r = dockedPanel.getBoundingClientRect();
+            const mid = detectSnapTarget(r.left + r.width / 2, r.top + r.height / 2, host, 'tree', { strict: true });
+            check('[167-X] strict: ปล่อยกลางเนื้อแผงผนึก = ไม่ผนึก', !mid || mid.kind === 'edge', JSON.stringify(mid && { k: mid.kind, z: mid.zone }));
+            const hr = dockedPanel.querySelector(':scope > .k-panel-head').getBoundingClientRect();
+            const onHead = detectSnapTarget(hr.left + hr.width / 2, hr.top + hr.height / 2, host, 'tree', { strict: true });
+            check('[167-X] strict: ปล่อยบนหัวแผง = ยังผนึก/รวมได้', !!onHead && onHead.targetId === dockedPanel.dataset.panelId,
+                  JSON.stringify(onHead && { k: onHead.kind, t: onHead.targetId }));
+            const loose = detectSnapTarget(r.left + r.width / 2, r.top + r.height / 2, host, 'tree');
+            check('[167-X] แผงที่ผนึกอยู่ (ไม่ strict) ยังใช้โซนเดิม', !!loose);
+          }
+        }
+        // ── หยิบใส่ระดับแผง: ตัวกลางตัดสินว่าแผงไหนรับอะไร ──
+        check('[167-D] Explorer ไม่รับผ่านตัวกลาง (มีการลากภายในของตัวเอง)', dropIntent('tree', ['scene'], document.body) === null);
+        check('[167-D] แผนที่/กระดาน/เส้นเวลา = ตัวรับของแผงเอง', dropIntent('maps', ['entity'], document.body).mode === 'own' &&
+              dropIntent('gallery-board', ['url'], document.body).mode === 'own' && dropIntent('timeline', ['memo'], document.body).mode === 'own');
+        {
+          const ta = document.createElement('textarea'); document.body.append(ta);
+          check('[167-D] ช่องพิมพ์ = วางชื่อ (ของเบราว์เซอร์)', dropIntent('notes', ['entity'], ta).mode === 'text');
+          ta.remove();
+        }
+        check('[167-D] แผงอื่น ๆ (เช่น แดชบอร์ด) = เปิดของที่วาง', dropIntent('dashboard', ['scene'], document.body).mode === 'open');
+        {
+          const host = notesPop() || document.body;
+          const target = host.querySelector('.k-panel-head') || host;
+          const dt = new DataTransfer();
+          dt.setData('text/k2-scene', JSON.stringify({ file: '/nope.md', title: 'x' }));
+          const ev = new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: 300, clientY: 300 });
+          target.dispatchEvent(ev);
+          check('[167-D] ★ ลากฉากผ่านแผงใดก็ได้ → มีป้ายบอกผลข้างเคอร์เซอร์', dropTipText().length > 0, dropTipText());
+          document.dispatchEvent(new DragEvent('dragend', { bubbles: true }));
+          check('[167-D] ปล่อย/เลิกลากแล้วป้ายหาย', dropTipText() === '');
+        }
+        resetPanels(); await w7(320);
+      }
+
+      // ══ [alpha.167] เมนู ส่งออก → แผง → รูปแบบ (ทางกลาง exportPanel) ══
+      {
+        const kp = await kapi.join(state.root, 'k2test-kanban.csv');
+        const got = await exportPanel('kanban', 'csv', kp);
+        const txt = got ? await kapi.readFile(kp) : '';
+        check('[167-E] ★ ส่งออก Kanban เป็น CSV (ฉากทุกเล่ม + สถานะ)', !!got && txt.split(/\r?\n/).filter(Boolean).length >= 3 && txt.includes('สถานะ'),
+              txt.slice(0, 120));
+        if (got) await kapi.remove(kp);
+        const tp = await kapi.join(state.root, 'k2test-tl.md');
+        const tl = await loadTimeline();
+        const keep = JSON.parse(JSON.stringify(tl));
+        tl.events = [...(tl.events || []), { id: 'ev-167e', title: 'เหตุการณ์ส่งออก', when: 'ปีที่ 5', track: '' }];
+        await saveTimeline(tl);
+        const got2 = await exportPanel('timeline', 'md', tp);
+        check('[167-E] ส่งออกเส้นเวลาผ่านเมนูส่งออก (ทางเดียวกับปุ่มบนแผง)', !!got2 && (await kapi.readFile(tp)).includes('เหตุการณ์ส่งออก'));
+        if (got2) await kapi.remove(tp);
+        await saveTimeline(keep);
+        check('[167-E] รูปแบบที่แผงไม่มี = ไม่ทำอะไร (ไม่เปิดกล่องบันทึก)', (await exportPanel('kanban', 'png')) === null);
+        check('[167-E] ตาราง PANEL_EXPORTS ครอบแผงหลักที่ผู้ใช้ขอ (เส้นเวลา · แผนที่ · กระดานอารมณ์)',
+              ['timeline', 'maps', 'gallery-board'].every((id) => PANEL_EXPORTS.some((e) => e.panel === id)));
+      }
+
+      // ══ [alpha.167] ★ ทุกแผงต้องมี hover tooltip — ปุ่มไอคอนล้วน (ไม่มีข้อความให้อ่าน) ต้องมี title/aria-label ══
+      // ผู้ใช้: "ทุก panel ต้องมี hover tootip แล้วนะ ยังขาดหลายตัว" — เปิดทีละแผงจริงแล้วกวาด DOM ที่วาดออกมา
+      {
+        const wT = (ms) => new Promise((r) => setTimeout(r, ms));
+        const PUA = /[\uE000-\uF8FF]|[\uDB80-\uDBFF][\uDC00-\uDFFF]/g;   // อักขระไอคอน (K2 Icons = Private Use)
+        const iconOnly = (n) => {
+          const txt = [...n.childNodes].map((c) => c.textContent || '').join('');
+          return txt.replace(PUA, '').replace(/[\s·•|×+\-−↑↓←→▲▼⋮⋯…]/g, '') === '' && (txt.match(PUA) || n.querySelector('svg, .k-icon, img'));
+        };
+        const hasTip = (n) => !!(n.getAttribute('title') || n.getAttribute('aria-label') || n.dataset.tip
+          || (n.parentElement && n.parentElement.getAttribute('title') && n.parentElement.children.length === 1));
+        const bad = [];
+        const ids = PANEL_DEFS.filter((d) => d.closable !== false && !d.fixed && d.id !== 'docs').map((d) => d.id);
+        for (const id of ids) {
+          try { showPanel(id); } catch { continue; }
+          await wT(id === 'network' || id === 'planner' || id === 'dashboard' ? 900 : 450);
+          const hosts = [...document.querySelectorAll(`.k-panel[data-panel-id="${id}"], .k-float-panel[data-panel-id="${id}"]`)];
+          for (const h of hosts) {
+            for (const n of h.querySelectorAll('button, [role="button"], .cmp-mini, .k-panel-btn')) {
+              if (!n.getClientRects().length || n.offsetParent === null) continue;
+              if (!iconOnly(n) || hasTip(n)) continue;
+              bad.push(id + ':' + (n.className || n.tagName).toString().slice(0, 40));
+            }
+          }
+        }
+        check('[167-P] ★★ ทุกแผง: ปุ่มไอคอนล้วนมี tooltip ครบ (hover แล้วรู้ว่าทำอะไร)', bad.length === 0,
+              [...new Set(bad)].slice(0, 30).join(' | '));
+        resetPanels(); await wT(320);
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

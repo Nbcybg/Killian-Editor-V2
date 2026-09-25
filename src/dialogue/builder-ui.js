@@ -301,6 +301,7 @@ function drawSession() {
   eye.title = S.showThinking ? t('ui.dlgb.viewThinking') : t('ui.dlgb.viewNormal');
   eye.onclick = () => { S.showThinking = !S.showThinking; drawSession(); };
   const more = el('button', 'dlgb-more', gi('more'));
+  more.title = t('ui.gallery.cmdAddFill');
   more.onclick = (e) => sessionHeadMenu(e);
   head.append(back, title, el('div', 'dlgb-head-right'));
   head.lastChild.append(badge, eye, more);

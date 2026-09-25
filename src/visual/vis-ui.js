@@ -307,9 +307,9 @@ async function cardFor(st, i, res, cols, names) {
   const L = COL_LABEL();
   const head = el('div', 'vis-card-head');
   head.append(el('span', 'vis-card-no', String(st.rows[i].no)));
-  const up = el('button', 'vis-mini vis-up', gi('triangle-up')); up.disabled = i === 0;
+  const up = el('button', 'vis-mini vis-up', gi('triangle-up')); up.title = t('ui.vis.up'); up.disabled = i === 0;
   up.onclick = async () => { VC.moveRow(st.rows, i, -1); await saveRows(st, true); await redraw(st); };
-  const dn = el('button', 'vis-mini vis-down', gi('triangle-down')); dn.disabled = i === st.rows.length - 1;
+  const dn = el('button', 'vis-mini vis-down', gi('triangle-down')); dn.title = t('ui.vis.down'); dn.disabled = i === st.rows.length - 1;
   dn.onclick = async () => { VC.moveRow(st.rows, i, 1); await saveRows(st, true); await redraw(st); };
   const del = el('button', 'vis-mini vis-mini-del', gi('close')); del.title = t('ui.vis.delRow');
   del.onclick = async () => {

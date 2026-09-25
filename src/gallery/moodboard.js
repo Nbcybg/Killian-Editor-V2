@@ -19,24 +19,67 @@ export function boardItemId() {
 const numOr = (v, d) => (Number.isFinite(+v) ? +v : d);
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+// [alpha.167] ชนิดของชิ้นบนกระดาน — รูป (แบบเดิม) หรือ "การ์ด" ของสิ่งอื่นในโปรเจกต์
+//   image  : รูปจากคลังรูป (file)
+//   entity : หน้า Wiki (path) · scene/memo : เอกสาร (path) · chapter : บท (draftDir+guid)
+//   ref    : อ้างอิงอิสระ — ลิงก์เว็บ (url) และ/หรือข้อความ (text)
+// ผู้ใช้: "mood board ใส่ได้ทั้ง entities และ รูปภาพ และ referance ... ถ้าเป็น entities หรือ referance ให้ใส่เป็น card"
+export const CARD_KINDS = ['entity', 'scene', 'memo', 'chapter', 'ref'];
+export const CARD_W = 240, CARD_H = 96, REF_H = 128;
+
 export function newBoardItem(file, opts = {}) {
-  return {
+  const kind = CARD_KINDS.includes(opts.kind) ? opts.kind : 'image';
+  const it = {
     id: opts.id || boardItemId(),
     file: String(file || ''),
     x: numOr(opts.x, 0),
     y: numOr(opts.y, 0),
-    w: clamp(numOr(opts.w, DEFAULT_SIZE), MIN_SIZE, MAX_SIZE),
-    h: clamp(numOr(opts.h, DEFAULT_SIZE), MIN_SIZE, MAX_SIZE),
+    w: clamp(numOr(opts.w, kind === 'image' ? DEFAULT_SIZE : CARD_W), MIN_SIZE, MAX_SIZE),
+    h: clamp(numOr(opts.h, kind === 'image' ? DEFAULT_SIZE : kind === 'ref' ? REF_H : CARD_H), MIN_SIZE, MAX_SIZE),
     z: numOr(opts.z, 0),
     rot: numOr(opts.rot, 0),
   };
+  if (kind !== 'image') {
+    // การ์ดเก็บแค่ช่องที่มีค่า (ไฟล์เก่าของกระดานรูปล้วนไม่ต้องบวมขึ้น)
+    it.kind = kind;
+    for (const k of ['path', 'title', 'url', 'text', 'cat', 'color', 'draftDir', 'guid']) {
+      if (opts[k] != null && String(opts[k]) !== '') it[k] = String(opts[k]);
+    }
+  }
+  return it;
 }
 
-/** รับของเก่า/ของที่ผู้ใช้แก้เอง → รายการที่ใช้วาดได้เสมอ (ทิ้งรายการที่ไม่มี file) */
+/** การ์ดนี้ใช้ได้ไหม (มีอะไรให้แสดง/ให้เปิด) */
+export function isCard(it) { return !!(it && CARD_KINDS.includes(it.kind)); }
+function usable(it) {
+  if (!it) return false;
+  if (isCard(it)) return !!(it.path || it.url || it.title || it.text || it.guid);
+  return !!it.file;
+}
+
+/** รับของเก่า/ของที่ผู้ใช้แก้เอง → รายการที่ใช้วาดได้เสมอ (ทิ้งรายการที่ไม่มีอะไรเลย) */
 export function normalizeBoard(list) {
   return (Array.isArray(list) ? list : [])
-    .filter((it) => it && it.file)
+    .filter(usable)
     .map((it, i) => newBoardItem(it.file, { ...it, z: numOr(it.z, i) }));
+}
+
+/** วางการ์ดลงกระดาน (บนสุด) */
+export function addCardToBoard(board, kind, opts = {}) {
+  const list = normalizeBoard(board);
+  const z = list.reduce((m, i) => Math.max(m, i.z), -1) + 1;
+  return [...list, newBoardItem('', { ...opts, kind, z })];
+}
+
+/** การ์ดของสิ่งเดียวกันซ้ำไหม (ลากตัวละครเดิมมาวางซ้ำ = ย้ายการ์ดเดิม ไม่สร้างใหม่) */
+export function findCard(board, kind, key) {
+  return normalizeBoard(board).find((it) => it.kind === kind && key && (it.path === key || it.url === key || it.guid === key)) || null;
+}
+
+/** โฮสต์ของลิงก์ (บรรทัดรองของการ์ดอ้างอิง) */
+export function urlHost(u) {
+  const m = String(u || '').match(/^[a-z]+:\/\/([^/?#]+)/i);
+  return m ? m[1].replace(/^www\./, '') : '';
 }
 
 export function addToBoard(board, file, opts = {}) {
@@ -189,13 +232,15 @@ export function tidyBoard(board, { size = DEFAULT_SIZE, perRow = 4, gap = 16, x 
     ...it,
     x: x + (i % perRow) * (size + gap),
     y: y + Math.floor(i / perRow) * (size + gap),
-    w: size,
-    h: size,
+    // การ์ดคงขนาดของตัวเอง (ยืดเป็นจัตุรัสแล้วอ่านไม่ออก) · รูปเข้าช่องตารางตามเดิม
+    w: isCard(it) ? Math.min(it.w, size) : size,
+    h: isCard(it) ? Math.min(it.h, size) : size,
   }));
 }
 
 export function boardStats(board) {
   const list = normalizeBoard(board);
   const b = boardBounds(list);
-  return { count: list.length, files: new Set(list.map((i) => i.file)).size, width: b.w, height: b.h };
+  return { count: list.length, files: new Set(list.filter((i) => !isCard(i)).map((i) => i.file)).size,
+           cards: list.filter(isCard).length, width: b.w, height: b.h };
 }

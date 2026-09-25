@@ -266,7 +266,270 @@ export function migrateMaps(data) {
     m.routes = Array.isArray(m.routes) ? m.routes : [];
     if (typeof m.category !== 'string') m.category = '';
     m.overlays = mapOverlays(m);
+    // [alpha.167] โซน/พิกัดเป็นของใหม่ — ไฟล์เก่าไม่มี = อาร์เรย์ว่าง (geo ไม่ต้องเติม: ไม่มี = ยังไม่ตั้งค่า)
+    m.zones = Array.isArray(m.zones) ? m.zones : [];
   }
   d.version = MAPS_VERSION;
   return d;
+}
+
+// ═══════════════════ [alpha.167] พิกัดจริง · มาตราส่วน · โซน · แผนที่ย่อย ═══════════════════
+//
+// ผู้ใช้: "map ต้องมี ลัติจูด ลองติจูด ... ให้ผู้ใช้จิ้มไปที่ scale เช่น 0 50 100 เมตร ในกรณีที่แผนที่มี scale แล้ว
+//          ถ้าไม่มีก็ให้ผู้ใช้ปักเองว่า 0 - 50 เมตร อยู่ตรงไหน แล้วค่อยปัก latitude ลงไป คราวนี้ระบบก็รู้เรื่องแล้ว"
+//
+// map.geo = { scale: { a:{x,y}, b:{x,y}, meters }, ref: { x, y, lat, lon }, north: 0 }  (x,y เป็น % ของภาพ)
+// map.zones = [{ id, name, entityFile, color, points:[{x,y}] }]  — วาดอยู่ชั้นล่างสุด (ใต้เส้นทาง/หมุด)
+// map.aspect = กว้าง/สูง ของไฟล์รูป (จดไว้ตอนโหลดรูปครั้งแรก — % แกนตั้งกับแกนนอนยาวไม่เท่ากัน)
+//
+// หน่วยภายใน "u" = % ของความกว้างภาพ ทั้งสองแกน (แกนตั้ง: y% ÷ aspect) → ระยะ/พื้นที่ถูกต้องทุกสัดส่วนภาพ
+const M_PER_DEG = 111320;
+const aspOf = (map, aspect) => {
+  const a = Number(aspect != null ? aspect : map && map.aspect);
+  return Number.isFinite(a) && a > 0 ? a : 1;
+};
+/** จุด (%) → หน่วย u */
+export function toUnits(p, aspect = 1) { return { x: +p.x || 0, y: (+p.y || 0) / (aspect || 1) }; }
+export function geoOf(map) {
+  const g = (map && map.geo) || {};
+  const pt = (v) => (v && Number.isFinite(+v.x) && Number.isFinite(+v.y) ? { x: +v.x, y: +v.y } : null);
+  const sc = g.scale || {};
+  const a = pt(sc.a), b = pt(sc.b), meters = Number(sc.meters);
+  const r = g.ref || {};
+  const ref = pt(r) && Number.isFinite(+r.lat) && Number.isFinite(+r.lon) ? { x: +r.x, y: +r.y, lat: +r.lat, lon: +r.lon } : null;
+  return {
+    scale: a && b && meters > 0 && (a.x !== b.x || a.y !== b.y) ? { a, b, meters } : null,
+    ref,
+    north: Number.isFinite(+g.north) ? +g.north : 0,
+  };
+}
+/** แผนที่นี้ตั้งค่าไปถึงไหนแล้ว — ใช้บอกขั้นถัดไปในหน้าตั้งค่าพิกัด */
+export function geoReady(map) { const g = geoOf(map); return { scale: !!g.scale, ref: !!g.ref, full: !!(g.scale && g.ref) }; }
+/** เมตรต่อหน่วย u — null เมื่อยังไม่ได้ตั้งมาตราส่วน */
+export function metersPerUnit(map, aspect) {
+  const g = geoOf(map);
+  if (!g.scale) return null;
+  const A = aspOf(map, aspect);
+  const a = toUnits(g.scale.a, A), b = toUnits(g.scale.b, A);
+  const d = Math.hypot(b.x - a.x, b.y - a.y);
+  return d > 0 ? g.scale.meters / d : null;
+}
+/** ระยะจริง (เมตร) ระหว่างสองจุด (%) · ยังไม่ตั้งมาตราส่วน = null */
+export function distMeters(map, p, q, aspect) {
+  const mpu = metersPerUnit(map, aspect);
+  if (mpu == null || !p || !q) return null;
+  const A = aspOf(map, aspect);
+  const a = toUnits(p, A), b = toUnits(q, A);
+  return Math.hypot(b.x - a.x, b.y - a.y) * mpu;
+}
+/** ระยะรวมของเส้นหลายจุด (เมตร) */
+export function pathMeters(map, pts, aspect) {
+  let sum = 0;
+  for (let i = 1; i < (pts || []).length; i++) {
+    const d = distMeters(map, pts[i - 1], pts[i], aspect);
+    if (d == null) return null;
+    sum += d;
+  }
+  return sum;
+}
+/** จุด (%) → ละติจูด/ลองจิจูด (ประมาณแบบระนาบ — แม่นพอสำหรับแผนที่ระดับเมือง/ภูมิภาค) */
+export function toLatLon(map, p, aspect) {
+  const g = geoOf(map);
+  const mpu = metersPerUnit(map, aspect);
+  if (!g.ref || mpu == null || !p) return null;
+  const A = aspOf(map, aspect);
+  const a = toUnits(p, A), r = toUnits(g.ref, A);
+  let east = (a.x - r.x) * mpu, south = (a.y - r.y) * mpu;
+  if (g.north) {                       // ภาพไม่ได้หันทิศเหนือขึ้นบน — หมุนกลับเป็นแกนภูมิศาสตร์
+    const th = (g.north * Math.PI) / 180, c = Math.cos(th), s = Math.sin(th);
+    const e2 = east * c - south * s, s2 = east * s + south * c;
+    east = e2; south = s2;
+  }
+  const lat = g.ref.lat - south / M_PER_DEG;
+  const lon = g.ref.lon + east / (M_PER_DEG * Math.cos((g.ref.lat * Math.PI) / 180) || 1);
+  return { lat, lon };
+}
+/** ละติจูด/ลองจิจูด → จุด (%) — ใช้ "ปักหมุดตามพิกัด" · กลับด้านของ toLatLon */
+export function fromLatLon(map, lat, lon, aspect) {
+  const g = geoOf(map);
+  const mpu = metersPerUnit(map, aspect);
+  if (!g.ref || mpu == null || !Number.isFinite(+lat) || !Number.isFinite(+lon)) return null;
+  const A = aspOf(map, aspect);
+  let south = (g.ref.lat - lat) * M_PER_DEG;
+  let east = (lon - g.ref.lon) * M_PER_DEG * Math.cos((g.ref.lat * Math.PI) / 180);
+  if (g.north) {
+    const th = (-g.north * Math.PI) / 180, c = Math.cos(th), s = Math.sin(th);
+    const e2 = east * c - south * s, s2 = east * s + south * c;
+    east = e2; south = s2;
+  }
+  const r = toUnits(g.ref, A);
+  return { x: r.x + east / mpu, y: (r.y + south / mpu) * A };
+}
+/** ระยะที่อ่านง่าย → { value, unit:'m'|'km' } (UI แปลหน่วยเอง) */
+export function niceDistance(m) {
+  if (m == null || !Number.isFinite(m)) return null;
+  if (m < 1000) return { value: Math.round(m), unit: 'm' };
+  return { value: m < 10000 ? +(m / 1000).toFixed(2) : +(m / 1000).toFixed(1), unit: 'km' };
+}
+/** "13.75630° N, 100.50180° E" — ทิศเป็นตัวอักษรสากล (ไม่ต้องแปล เหมือนเลขพิกัดบน GPS) */
+export function formatLatLon(ll, digits = 5) {
+  if (!ll) return '';
+  const f = (v, pos, neg) => Math.abs(v).toFixed(digits) + '° ' + (v >= 0 ? pos : neg);
+  return f(ll.lat, 'N', 'S') + ', ' + f(ll.lon, 'E', 'W');
+}
+/** ความเร็วเดินทางตั้งต้น (กม./ชม.) — ชื่อพาหนะแปลตอนวาด */
+export const TRAVEL_MODES = [
+  { id: 'walk', kmh: 5 }, { id: 'horse', kmh: 12 }, { id: 'cart', kmh: 6 },
+  { id: 'ship', kmh: 15 }, { id: 'car', kmh: 60 },
+];
+/** ชั่วโมงที่ใช้เดินทาง */
+export function travelHours(meters, kmh) {
+  if (meters == null || !(kmh > 0)) return null;
+  return meters / 1000 / kmh;
+}
+/** ชั่วโมง → { d, h, m } */
+export function splitHours(hours) {
+  if (hours == null || !Number.isFinite(hours)) return null;
+  const totalMin = Math.round(hours * 60);
+  return { d: Math.floor(totalMin / 1440), h: Math.floor((totalMin % 1440) / 60), m: totalMin % 60 };
+}
+/** ความยาวแถบมาตราส่วนที่สวย (1-2-5 × 10ⁿ เมตร) ให้กว้างราว targetU หน่วย */
+export function niceScaleBar(mpu, targetU = 18) {
+  if (!(mpu > 0)) return null;
+  const raw = mpu * targetU, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / mag;
+  const meters = (n >= 5 ? 5 : n >= 2 ? 2 : 1) * mag;
+  return { meters, units: meters / mpu };
+}
+
+// ---------- โซน (พื้นที่ของเอนทิตี้ — polygon) ----------
+export const ZONE_COLORS = ['#5f9fd9', '#6fae6f', '#d9b757', '#d97757', '#a97fd0', '#7fb8b0', '#d9575e'];
+export function newZone(points, o = {}) {
+  return { id: 'zn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+           name: o.name || '', entityFile: o.entityFile || '', color: o.color || ZONE_COLORS[0],
+           points: (points || []).map((p) => ({ x: clamp(+p.x), y: clamp(+p.y) })) };
+}
+export function mapZones(map) {
+  return (map && Array.isArray(map.zones) ? map.zones : []).filter((z) => z && Array.isArray(z.points) && z.points.length >= 3);
+}
+export function deleteZone(map, id) { map.zones = (map.zones || []).filter((z) => z.id !== id); return map; }
+/** จุดอยู่ในโซนไหม (ray casting) */
+export function pointInPolygon(p, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i], b = pts[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / ((b.y - a.y) || 1e-12) + a.x) inside = !inside;
+  }
+  return inside;
+}
+/** โซนบนสุดที่จุดนี้ตกอยู่ (โซนเล็กชนะ — วาดทีหลัง = อยู่บน) */
+export function zoneAt(map, p) {
+  const zs = mapZones(map);
+  for (let i = zs.length - 1; i >= 0; i--) if (pointInPolygon(p, zs[i].points)) return zs[i];
+  return null;
+}
+/** พื้นที่ในหน่วย u² (shoelace) */
+export function polygonAreaU(pts, aspect = 1) {
+  let s = 0;
+  const q = (pts || []).map((p) => toUnits(p, aspect));
+  for (let i = 0, j = q.length - 1; i < q.length; j = i++) s += (q[j].x + q[i].x) * (q[j].y - q[i].y);
+  return Math.abs(s) / 2;
+}
+/** พื้นที่จริง (ตร.ม.) · ยังไม่ตั้งมาตราส่วน = null */
+export function zoneAreaM2(map, zone, aspect) {
+  const mpu = metersPerUnit(map, aspect);
+  if (mpu == null || !zone) return null;
+  return polygonAreaU(zone.points, aspOf(map, aspect)) * mpu * mpu;
+}
+/** จุดกึ่งกลางสำหรับวางป้ายชื่อ (centroid ของ polygon · พื้นที่ 0 = ค่าเฉลี่ย) */
+export function polygonCentroid(pts) {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const f = pts[j].x * pts[i].y - pts[i].x * pts[j].y;
+    a += f; cx += (pts[j].x + pts[i].x) * f; cy += (pts[j].y + pts[i].y) * f;
+  }
+  if (Math.abs(a) < 1e-9) {
+    const n = pts.length || 1;
+    return { x: pts.reduce((s, p) => s + p.x, 0) / n, y: pts.reduce((s, p) => s + p.y, 0) / n };
+  }
+  return { x: cx / (3 * a), y: cy / (3 * a) };
+}
+/** path ของ SVG แบบปิด (viewBox 0–100) */
+export function zonePath(pts) {
+  if (!pts || pts.length < 2) return '';
+  return pts.map((p, i) => (i ? 'L' : 'M') + (+p.x).toFixed(2) + ',' + (+p.y).toFixed(2)).join(' ') + ' Z';
+}
+/** m² → { value, unit:'m2'|'km2' } */
+export function niceArea(m2) {
+  if (m2 == null || !Number.isFinite(m2)) return null;
+  if (m2 < 1e6) return { value: Math.round(m2), unit: 'm2' };
+  return { value: +(m2 / 1e6).toFixed(m2 < 1e7 ? 2 : 1), unit: 'km2' };
+}
+
+// ---------- แผนที่ย่อย (แผนที่ซ้อนแผนที่) ----------
+/** แผนที่ที่แผนที่นี้มีประตูชี้ไป (ลูก) */
+export function childMaps(maps, id) {
+  const m = findMap(maps, id);
+  if (!m) return [];
+  const ids = new Set((m.pins || []).filter((p) => p.kind === 'portal' && p.toMap).map((p) => p.toMap));
+  return sortMaps((maps || []).filter((x) => ids.has(x.id)));
+}
+/** แผนที่แม่ (ใบแรกที่มีประตูมาหา) */
+export function parentMap(maps, id) {
+  for (const m of maps || []) if ((m.pins || []).some((p) => p.kind === 'portal' && p.toMap === id)) return m;
+  return null;
+}
+/** หมุดประตูใหม่ไปแผนที่ปลายทาง (หยิบแผนที่ใส่แผนที่) — ไม่ยอมให้ชี้ตัวเอง */
+export function portalPin(x, y, toMap, label) {
+  const p = newPin(x, y, 'portal');
+  p.toMap = toMap || '';
+  p.label = label || '';
+  return p;
+}
+/** หมุดเอนทิตี้ใหม่ (หยิบตัวละคร/สถานที่ใส่แผนที่) */
+export function entityPin(x, y, entityFile, label) {
+  const p = newPin(x, y, 'entity');
+  p.entityFile = entityFile || '';
+  p.label = label || '';
+  return p;
+}
+/** หมุดของเอนทิตี้นี้บนแผนที่ใบไหนบ้าง — [{map, pin}] */
+export function pinsOfEntity(maps, entityFile) {
+  const out = [];
+  for (const m of maps || []) for (const p of m.pins || []) if (p.kind === 'entity' && p.entityFile === entityFile) out.push({ map: m, pin: p });
+  return out;
+}
+
+// ---------- เส้นทางของเรื่อง (ฉากเรียงตามเวลาในเรื่อง → ระยะที่ตัวละครต้องเดินทาง) ----------
+/** จุดของฉากบนแผนที่นี้ (หมุดที่ผูก หรือพิกัดลอย) · null = ไม่มีตำแหน่ง */
+export function scenePoint(map, s) {
+  if (!map || !s || s.mapId !== map.id) return null;
+  const pin = s.pinId ? (map.pins || []).find((p) => p.id === s.pinId) : null;
+  if (pin) return { x: pin.x, y: pin.y };
+  if (Number.isFinite(+s.pinX) && Number.isFinite(+s.pinY) && s.pinX !== '' && s.pinX != null) return { x: +s.pinX, y: +s.pinY };
+  return null;
+}
+/**
+ * ลำดับการเดินทางของเรื่องบนแผนที่นี้ — ฉากเรียงตาม "เวลาในเรื่อง" (ตัวเลขก่อน) แล้วตามลำดับในเล่ม
+ * @param orderKey (s) → ตัวเลขเรียงของฉาก (ผู้เรียกส่งตัวถอดเลขเวลาในเรื่องมา)
+ * @returns { stops:[{scene, pt}], legs:[{from, to, meters}], total }
+ */
+export function storyJourney(map, scenes, orderKey, aspect) {
+  const here = (scenes || []).map((s, i) => ({ s, i, pt: scenePoint(map, s) })).filter((x) => x.pt);
+  here.sort((a, b) => {
+    const ka = orderKey ? orderKey(a.s) : null, kb = orderKey ? orderKey(b.s) : null;
+    if (ka != null && kb != null && ka !== kb) return ka - kb;
+    if (ka != null && kb == null) return -1;
+    if (ka == null && kb != null) return 1;
+    return a.i - b.i;
+  });
+  const stops = here.map((x) => ({ scene: x.s, pt: x.pt }));
+  const legs = [];
+  let total = 0, known = true;
+  for (let i = 1; i < stops.length; i++) {
+    const m = distMeters(map, stops[i - 1].pt, stops[i].pt, aspect);
+    if (m == null) known = false; else total += m;
+    legs.push({ from: stops[i - 1].scene, to: stops[i].scene, meters: m });
+  }
+  return { stops, legs, total: known ? total : null };
 }

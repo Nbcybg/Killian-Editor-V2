@@ -2630,6 +2630,7 @@ ui.common.provider,Provider
 ui.common.pxDims,{0} × {1} px
 ui.common.refresh,Refresh
 ui.common.refresh2,Refresh
+ui.common.removeRowTip,Remove this row
 ui.common.renameNew,Rename
 ui.common.renameVersionSkipEmpty,Version name (optional)
 ui.common.repeat,⧉ Duplicate
@@ -3139,6 +3140,15 @@ ui.drafts.delDraftDraft,Delete the whole draft “{0}”?
 ui.drafts.hasDraftNameDone,A draft with this name already exists
 ui.drafts.notFoundDraftFrom,Source draft not found
 ui.drafts.renameDraftTo,"Renamed draft ""{0}"" to ""{1}"""
+ui.drop.chapterEmpty,This chapter has no scenes yet
+ui.drop.hintCard,Drop on the board = card
+ui.drop.hintFocus,Drop = go to this node
+ui.drop.hintInsertName,Drop = insert the name into the document
+ui.drop.hintMap,Drop on the map = place a pin
+ui.drop.hintOpen,Drop = open
+ui.drop.hintText,Drop = insert the name here
+ui.drop.hintTimeline,On a card = reference · on empty space = new event
+ui.drop.opened,Opened {0}
 ui.editor.ctrlClickOpenWiki,Ctrl+click to open in the Wiki
 ui.editor.hasCommentBindText,This text has a comment attached
 ui.editor.pageBreak,Page break
@@ -3552,6 +3562,7 @@ ui.galleryExport.busyWriteFile,Compressing and writing the file…
 ui.galleryExport.busyWriteFileImage,Writing the image file…
 ui.galleryExport.caption,Caption: {0}
 ui.galleryExport.exportBoardFail,Board export failed: 
+ui.galleryExport.exportBoardHtmlDone,Board exported as HTML: {0}
 ui.galleryExport.exportBoardMoodDone,Exported the mood board ({0}×{1}): 
 ui.galleryExport.exportImageFail,Image export failed: 
 ui.galleryExport.exportImageItemDone,Exported {0} {0|image|images}: 
@@ -3561,6 +3572,8 @@ ui.galleryExport.libraryImage,Image library
 ui.galleryExport.listImageMd,image-list.md
 ui.galleryExport.notHasImageExport,No images to export
 ui.galleryExport.tag,Tags: {0}
+ui.galleryMoodboard.addRef,Reference
+ui.galleryMoodboard.addRefTip,Add a reference card (web link/text) — or drop a link from your browser
 ui.galleryMoodboard.adjustAllItemAt,Fitted every piece to its image's proportions
 ui.galleryMoodboard.adjustAllItemAt2,Fit every piece to its image's proportions
 ui.galleryMoodboard.adjustAtRatioImage,Fit to the image's proportions
@@ -3568,13 +3581,39 @@ ui.galleryMoodboard.arrangeAuto,Arrange automatically
 ui.galleryMoodboard.boardAlbum,Board of which album
 ui.galleryMoodboard.boardEmptyOpenPanel,The board is empty — open the Image library panel alongside and drag pictures here 
 ui.galleryMoodboard.bottomLast,Send to back
+ui.galleryMoodboard.cardChapter,Chapter
+ui.galleryMoodboard.cardEdit,Edit card…
+ui.galleryMoodboard.cardEntity,Wiki page
+ui.galleryMoodboard.cardMemo,Note
+ui.galleryMoodboard.cardMissing,This card's file is gone (moved or deleted)
+ui.galleryMoodboard.cardOpen,Open
+ui.galleryMoodboard.cardRef,Reference
+ui.galleryMoodboard.cardRemove,Remove from the board
+ui.galleryMoodboard.cardsAdded,Placed {0} {0|card|cards} on the board
+ui.galleryMoodboard.cardScene,Scene
+ui.galleryMoodboard.cardTip,Double-click = open · drag = move · bottom-right corner = resize
 ui.galleryMoodboard.clearBoardMoodAlbum,Clear this album's mood board? (image files are not deleted)
 ui.galleryMoodboard.clearBoardNotDel,Clear the board (files not deleted)
 ui.galleryMoodboard.cmdAddFillBoard,More board commands
+ui.galleryMoodboard.dropFail,Drop onto the board
 ui.galleryMoodboard.exitBoardNotDel,Remove from the board (file not deleted)
+ui.galleryMoodboard.export,Export
 ui.galleryMoodboard.exportBoardImage,Export the board as an image…
+ui.galleryMoodboard.exportHtml,HTML page (images embedded · links clickable)
+ui.galleryMoodboard.exportPng,PNG image
+ui.galleryMoodboard.exportTip,Export the whole board as a PNG image or an HTML page
+ui.galleryMoodboard.fitTip,Zoom to show every item on the board
+ui.galleryMoodboard.imageOutside,That image is outside the project's gallery — import it first
 ui.galleryMoodboard.pasteImageTopBoard,"Placed {0} {0|image|images} on board ""{1}"""
 ui.galleryMoodboard.pickImageLibraryDone,"(or select images in the library and press ""Place on the board"")"
+ui.galleryMoodboard.refEdit,Edit reference card
+ui.galleryMoodboard.refNew,New reference card
+ui.galleryMoodboard.refText,Text
+ui.galleryMoodboard.refTextPh,"A note, quote or detail to remember"
+ui.galleryMoodboard.refTitle,Title
+ui.galleryMoodboard.refTitlePh,e.g. Victorian costume
+ui.galleryMoodboard.refUrl,Link
+ui.galleryMoodboard.refUrlPh,https://… (optional)
 ui.galleryMoodboard.top,Bring to front
 ui.galleryUsageIndex.msg, +{0} more
 ui.galleryUsageIndex.useDone,Used
@@ -3854,25 +3893,34 @@ ui.logline.stakes,Stakes
 ui.logline.title,Logline
 ui.logline.why,AI uses this as a compass so the story stays on track
 ui.maps.addMap,+ Add map
+ui.maps.allMaps,All maps
+ui.maps.allMapsTip,Back to the map gallery
 ui.maps.backSizeFitFrame,Back to fit-to-frame size (100%)
 ui.maps.busyNextRouteClick,Extending route “{0}” — click the pins in travel order ({1} {1|point|points})
 ui.maps.cancelPick,Deselect
+ui.maps.cancelPickTip,Deselect all pins
 ui.maps.cantPickPin,No pin selected yet
 ui.maps.catEgWorldCurrent,Category (e.g. Present world)
 ui.maps.catMapSkipEmpty,Map category — optional
 ui.maps.changeImage,Change image
+ui.maps.changeImageTip,Change this map's image (pick from the gallery)
 ui.maps.changeNameRoute,Rename route
-ui.maps.clickEmptyPinPinF,Click empty space = drop a pin · {0} · Ctrl+click = select several · Shift+drag = box select · Ctrl+wheel = zoom
+ui.maps.clickEmptyPinPinF,Drag = pan · wheel = zoom · double-click = drop a pin · {0} · Ctrl+click a pin = jump (portal/Wiki page) · Shift+drag = box select · drag characters in from the left bar
 ui.maps.clickPinOpenDialog,Click a pin = open the pin editor
 ui.maps.clickPinOpenLink,Click a pin = follow its link (portal/Wiki page) · edits nothing
 ui.maps.collapsePin,Smaller pins
 ui.maps.compass,Compass
+ui.maps.compassTip,Show/hide the compass (follows the north you set)
 ui.maps.copy,⧉ Copy
 ui.maps.copyPinDoneOpen,"Copied {0} {0|pin|pins} — open the destination map and press ""Paste"""
 ui.maps.copyPinPickDone,Copy the selected pins to paste onto another map
 ui.maps.countFieldGridNext,Grid cells per side
+ui.maps.ctxAddPin,Place a pin here
+ui.maps.ctxCopyCoords,Copy coordinates
 ui.maps.delMap,Delete map
+ui.maps.delMapTip,Delete this map (the image file is kept)
 ui.maps.delPick,Delete selected
+ui.maps.delPickTip,Delete all selected pins
 ui.maps.delPinDone,Deleted {0} {0|pin|pins}
 ui.maps.delPinPickItem,Delete the {0} selected {0|pin|pins}?
 ui.maps.delRoutePin,Delete route (pins stay)
@@ -3880,19 +3928,92 @@ ui.maps.delRoutePinNot,Delete route “{0}”? (pins are not deleted)
 ui.maps.done,Done
 ui.maps.dotGap,{0} {0|point|points} · distance ~{1}
 ui.maps.dotLatest,Undo last point
+ui.maps.dotLatestTip,Remove the last point
 ui.maps.dragPinMoveMode,"Drag pins to move them (other modes can't drag, to avoid accidental moves)"
+ui.maps.dropImageFromGallery,Drag an image from the gallery here to create a map
+ui.maps.dropPortalDone,"Added a portal to ""{0}"" — Ctrl+click it to go in"
+ui.maps.dropReplaceImage,This map already has an image — replace it with the dropped one?
+ui.maps.dropSceneDone,"Scene ""{0}"" is now placed on ""{1}"""
+ui.maps.dropSelfMap,A map can't contain itself
+ui.maps.entDragHint,Drag the name onto the map to pin it (or right-click → place at the center)
+ui.maps.entGoPins,Go to its pins
+ui.maps.entMoved,"Moved the pin of ""{0}"""
+ui.maps.entNotPlacedAny,Not on any map yet — open a map and drag the name onto it
+ui.maps.entOpenWiki,Open the Wiki page
+ui.maps.entPlaceCenter,Place at the map center
+ui.maps.entPlaced,On this map
+ui.maps.entPlacedStatus,"Pinned ""{0}"""
+ui.maps.entRowTip,Drag onto the map = pin · click = go to its pin · double-click/Ctrl+click = open Wiki · right-click = draw a zone
+ui.maps.entRowTipGallery,Click = go to the map it's on · double-click = open Wiki
+ui.maps.entZoned,Has a zone
 ui.maps.expandPin,Larger pins
 ui.maps.foundPinTopMap,"""{0}"" — found {1} {1|pin|pins} on this map"
+ui.maps.galleryCardTip,Click to open the map · drag onto another map = portal to this one
+ui.maps.galleryHint,Pick a map to open it — drag characters/places from the left bar onto a map
+ui.maps.galleryNew,New map
+ui.maps.galleryNewTip,Create a map from a gallery image (or drop an image on this card)
+ui.maps.galleryOpen,Open map
 ui.maps.gapBarEg,"Distance of the bar, e.g. 100 km"
+ui.maps.geoAskLatLon,"Latitude, longitude of this point"
+ui.maps.geoAskLatLonPh,"e.g. 51.5074, -0.1278"
+ui.maps.geoAskMeters,"Real distance between the two points (units allowed: m, km, mi)"
+ui.maps.geoAskMetersPh,e.g. 100 or 5 km
+ui.maps.geoBadLatLon,"Invalid coordinates — type latitude, longitude, e.g. 13.75, 100.50"
+ui.maps.geoBadNumber,The distance must be a number above 0
+ui.maps.geoBtn,Coordinates/scale
+ui.maps.geoBtnTip,"Set the scale and real coordinates — the map can then show distances, travel times, areas and lat/long"
+ui.maps.geoBtnTipDone,Georeferenced — click to edit
+ui.maps.geoClear,Clear
+ui.maps.geoClearQ,Clear this map's scale and coordinates?
+ui.maps.geoClearTip,Remove the scale and reference point
+ui.maps.geoIntro,"Two steps: (1) tell the real length of one line on the image — if it has a scale bar (0 · 50 · 100 m) click both ends of it, otherwise click two points you know the distance between; (2) click a point and give its latitude/longitude"
+ui.maps.geojson,GeoJSON
+ui.maps.geojsonDone,GeoJSON exported: {0}
+ui.maps.geojsonTip,Export pins/zones/routes as GeoJSON (usable in other map tools once georeferenced)
+ui.maps.geoNorthDesc,Degrees north is rotated from the top of the image (clockwise · 0 = north is up)
+ui.maps.geoNorthTip,North rotation in degrees
+ui.maps.geoOutside,Those coordinates are outside the map image
+ui.maps.geoPickA,Click the start of the scale (e.g. the 0 on the scale bar) — Esc = cancel
+ui.maps.geoPickB,Click the end of the scale (e.g. the 100 m mark) — Esc = cancel
+ui.maps.geoPickRef,Pick the reference point
+ui.maps.geoPickRefHint,Click a point whose latitude/longitude you know (a pin works too) — Esc = cancel
+ui.maps.geoPickRefTip,"Pick a point on the map, then enter its latitude/longitude"
+ui.maps.geoPickScale,Pick the scale
+ui.maps.geoPickScaleTip,"Click two points on the map, then give the real distance between them"
+ui.maps.geoPinByCoord,Pin by coordinates
+ui.maps.geoPinByCoordBtn,Enter lat/long…
+ui.maps.geoPinByCoordTip,Type a latitude/longitude and drop a pin there
+ui.maps.geoRedo,Redo
+ui.maps.geoRefDesc,No reference point yet — set the scale first
+ui.maps.geoRefSaved,Reference point saved
+ui.maps.geoScaleDesc,Not set — distances on this map are only % of the image
+ui.maps.geoScaleNow,Reference line is {0}
+ui.maps.geoScaleSaved,Scale saved — map distances are now real units
+ui.maps.geoStepNorth,North
+ui.maps.geoStepRef,Latitude/longitude reference
+ui.maps.geoStepScale,Scale
+ui.maps.geoTitle,Map coordinates
+ui.maps.gridTip,Show/hide the grid
+ui.maps.journey,Story path
+ui.maps.journeyTip,Draw a path through scene locations in story-time order — see how far characters travel
+ui.maps.journeyTotal,Total {0} · {1}
+ui.maps.legFrom,"From ""{0}"": {1} · {2}"
 ui.maps.lineLineSolid,Dashed / solid line
 ui.maps.mapBindDelDone,(the linked map has been deleted)
 ui.maps.mapsExportPNGNot,maps: PNG export failed
 ui.maps.mapsPrintMapNot,maps: map printing failed
 ui.maps.mapsReadImagePortrait,maps: cannot read the entity's portrait
 ui.maps.mapsReadScenePin,maps: cannot read the pinned scenes
+ui.maps.measure,Measure
+ui.maps.measureFromPin,Measure from this pin
+ui.maps.measureNeedScale,Set the scale to get real distances
+ui.maps.measureStart,Measure from here
+ui.maps.measureTip,Click point by point to measure distance and travel time (Esc = done)
+ui.maps.measuring,Measuring: {0} {0|point|points} · {1}
 ui.maps.modeMovePosDrag,Move mode — drag pins to move them
 ui.maps.nameRoute,Route name
 ui.maps.nextDot,Add points
+ui.maps.nextDotTip,Click pins on the map to extend this route
 ui.maps.notFoundMapScene,The map this scene is linked to was not found (it may have been deleted)
 ui.maps.notHasImagePress,"No image yet — press ""Change image"""
 ui.maps.notPlaced,Not placed yet
@@ -3903,14 +4024,18 @@ ui.maps.pastePinCopyMap,Paste the copied pins onto this map
 ui.maps.pastePinDone,"Pasted {0} {0|pin|pins} onto ""{1}"""
 ui.maps.pickPin,{0} {0|pin|pins} selected
 ui.maps.pin, · manually pinned coordinates
+ui.maps.pinEdit,Edit pin…
 ui.maps.placeIt,Place it
 ui.maps.placeItHint,"Open the Floor Plan panel and click ""Place this scene"""
+ui.maps.portalEnter,Enter the sub-map
 ui.maps.portalMapOther,Portal to another map
 ui.maps.portalSceneBindMap,{0} {0|entity|entities} · {1} {1|portal|portals} · {2} {2|note|notes} · {3} {3|scene|scenes} linked to this map
+ui.maps.portalTip,"Portal to ""{0}"" — Ctrl+click to go in"
 ui.maps.pos,Entity position
 ui.maps.pressBtnEditTop," · press ""Edit"" on the toolbar to edit this pin"
 ui.maps.print,Print
 ui.maps.printMapNotOk,Map printing failed: 
+ui.maps.printTip,"Print the map with pins, zones and routes"
 ui.maps.recolorLine,Change line colour
 ui.maps.route,Route 
 ui.maps.route2,Routes
@@ -3918,8 +4043,10 @@ ui.maps.route3,Routes ({0})
 ui.maps.routeDragLineLink,"Route = a line joining pins in order, to tell a character's journey — press ""＋ New route"" then click the pins one by one"
 ui.maps.routeNew,New route
 ui.maps.routeNew2,+ New route
+ui.maps.routeNewTip,"Create a route, then click pins to add points"
 ui.maps.saveMapLibraryImage,Saved the map to the image library: 
 ui.maps.saveMapReadyPin,Save the map with its pins/routes as an image in the image library
+ui.maps.scaleTip,Show/hide the scale bar (once georeferenced it shows real distance)
 ui.maps.scenePin, ({0} {0|scene|scenes} pinned manually)
 ui.maps.scenePinCantBind,"
 (scenes pinned manually, not linked to a pin)"
@@ -3931,12 +4058,50 @@ ui.maps.showHideRouteBetween,Show/hide routes between pins
 ui.maps.showItemFilm,Show text
 ui.maps.showOnMap,Show on map
 ui.maps.showOnMapHint,Open the Maps panel and scroll to this scene's location
+ui.maps.sideChildTip,Open this sub-map
+ui.maps.sideEntities,Characters · places
+ui.maps.sideHide,Hide the side bar
+ui.maps.sideNoEntities,No Wiki pages yet — create characters/places in the Explorer
+ui.maps.sideParentTip,Up to the parent map
+ui.maps.sideScenes,Scenes on this map ({0})
+ui.maps.sideSearchPh,Search names…
+ui.maps.sideShow,Show the side bar
+ui.maps.sideSubMaps,Sub-maps
+ui.maps.sideZones,Zones
 ui.maps.sizePin,Pin size
 ui.maps.tableGrid,Grid
 ui.maps.textUnderBarPart,Text under the scale bar
+ui.maps.timeDH,{0}d {1}h
+ui.maps.timeHM,{0}h {1}m
+ui.maps.timeM,{0} min
 ui.maps.topImage,North is at the top of the image
-ui.maps.zoomInCtrlWheel,Zoom in (Ctrl+wheel)
-ui.maps.zoomOutCtrlWheel,Zoom out (Ctrl+wheel)
+ui.maps.travelCar,Car
+ui.maps.travelCart,Cart
+ui.maps.travelHorse,Horse
+ui.maps.travelShip,Ship
+ui.maps.travelWalk,On foot
+ui.maps.unitKm,{0} km
+ui.maps.unitKm2,{0} km²
+ui.maps.unitM,{0} m
+ui.maps.unitM2,{0} m²
+ui.maps.zone,Zone
+ui.maps.zoneDelete,Delete zone
+ui.maps.zoneDeleteQ,"Delete the zone ""{0}""?"
+ui.maps.zoneDone,"Created the zone ""{0}"""
+ui.maps.zoneDraw,Draw a zone (area)
+ui.maps.zoneDrawHere,Draw a new zone
+ui.maps.zoneDrawHint,Click around the area point by point · double-click/Enter = done · Backspace = undo point · Esc = cancel
+ui.maps.zoneDrawing,"Drawing zone ""{0}"" · {1} {1|point|points}"
+ui.maps.zoneEditPts,Edit zone points
+ui.maps.zoneName,Zone name
+ui.maps.zoneNeed3,A zone needs at least 3 points
+ui.maps.zoneRecolor,Change zone color
+ui.maps.zoneRename,Rename zone
+ui.maps.zoneTip,Draw a polygon zone (area) — it sits on the bottom layer under pins
+ui.maps.zoneVertexTip,Drag to move the point · right-click = delete it
+ui.maps.zoomInCtrlWheel,Zoom in (mouse wheel)
+ui.maps.zoomOutCtrlWheel,Zoom out (mouse wheel)
+ui.maps.zoomSliderTip,Zoom level (the mouse wheel works too)
 ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,AI analysis (pacing · characters · repeated words)
 ui.menu.aiHubPanel,AI Hub
@@ -3993,10 +4158,21 @@ ui.menu.expandUI,Enlarge UI
 ui.menu.exportHub,Export…
 ui.menu.exportLangCSVKey,Export language as CSV (key · Thai · English)…
 ui.menu.exportLayoutPanelJSON,Export panel layout (JSON)…
+ui.menu.exportProjectZip,Whole project as ZIP…
+ui.menu.exportTop,Export
 ui.menu.exportWorkFlowSteps,Edit export workflow steps…
 ui.menu.file,File
 ui.menu.file2,File
 ui.menu.fitWidePagePaper,Fit to page width
+ui.menu.fmtCsv,CSV table
+ui.menu.fmtGeojson,GeoJSON (real coordinates)
+ui.menu.fmtHtml,HTML page
+ui.menu.fmtJson,JSON
+ui.menu.fmtMd,Markdown
+ui.menu.fmtPng,PNG image
+ui.menu.fmtPrint,Print…
+ui.menu.fmtSvg,SVG vector image
+ui.menu.fmtZip,ZIP (images in use)
 ui.menu.fontLangOther,Fonts by language (Thai/Latin/other)…
 ui.menu.forceCaseBigOnly,Force upper case for specific types
 ui.menu.forcePrintBigFormat,Force upper case per the standard script format (scene headings · character names · transitions)
@@ -4550,11 +4726,22 @@ ui.panel.wsPick,Workspace — switch panel layout set
 ui.panel.wsSave,+ Save current layout as workspace…
 ui.panel.wsSaved,Workspace saved: 
 ui.panelExport.areaWriteWidePx,The writing area is only {0}px wide (minimum set to {1}px)
+ui.panelExport.colBook,Book
+ui.panelExport.colChapter,Chapter
+ui.panelExport.colScene,Scene
+ui.panelExport.colStatus,Status
+ui.panelExport.colStoryDate,Story time
+ui.panelExport.colWords,Words
 ui.panelExport.dock,{0} {1} in dock {2} 
 ui.panelExport.dockAreaWritePanel,dock {0} splits 50/50 with the writing area — the newly docked panel takes half the window
 ui.panelExport.dockModeRatioHas,dock {0} ({1}) is in proportional mode even though it contains the writing area — 
+ui.panelExport.done,Exported: {0}
+ui.panelExport.fail,Panel export
 ui.panelExport.field,splitter
 ui.panelExport.groupTab,tab group
+ui.panelExport.needBranch,Couldn't open the branch graph — the story has no choices yet
+ui.panelExport.needPlanner,Open a planner board first (none is active)
+ui.panelExport.noMap,There is no map to export yet
 ui.panelExport.notHasSizeUse,Has no size to use (neither its own nor its panels') — this block is redistributed proportionally every time the structure changes
 ui.panelExport.panelWidePxLow,Panel {0} is only {1}px wide (minimum {2}px) — its content is squeezed with almost no room
 ui.panelExport.valueSizeKeepNot,The sizes stored in its children aren't used yet · side panels are redistributed every time another panel is opened/docked
@@ -6577,17 +6764,65 @@ ui.thes.notFound,"No synonyms/antonyms for """
 ui.thes.selectWordFirst,Select a word first
 ui.thes.thesaurusSearchNotOk,thesaurus: search failed
 ui.timeline.addEvent,+ Add event
-ui.timeline.card,Cards
+ui.timeline.addEventTip,Add a new event (or double-click empty space on the board)
+ui.timeline.backLinks,{0} {0|link goes|links go} backwards in time (red dashes) — the cause happens after the effect; check it's intended
+ui.timeline.boardHint,"Drag a card = move in time · drag an edge = stretch · drag the dot on its right = ""leads to"" link · Ctrl+click = open · Ctrl+wheel = zoom · drop characters/scenes from the Explorer"
+ui.timeline.boardLabel,Timeline board
+ui.timeline.cardMenu,Card actions
+ui.timeline.clickEditEvent,Click to edit the event
 ui.timeline.clickOpenScene,Click to open this scene
-ui.timeline.eventNotHasTime,+ {0} more {0|event|events} without a numeric time (see the card view)
+ui.timeline.colDesc,Description
+ui.timeline.colKind,Kind
+ui.timeline.colRefs,References
+ui.timeline.colTitle,Title
+ui.timeline.colTrack,Track
+ui.timeline.colWhen,Start
+ui.timeline.colWhenEnd,End
+ui.timeline.delEventQ,"Delete the event ""{0}""?"
+ui.timeline.dropSceneNoRef,"Scene cards can't take references — drop on an event card, or on empty space to create an event"
+ui.timeline.editEvent,Edit event
+ui.timeline.export,Export
+ui.timeline.exportCsv,CSV table (Excel)
+ui.timeline.exportDone,Timeline exported: {0}
+ui.timeline.exportEmpty,The timeline is empty — nothing to export
+ui.timeline.exportHtml,HTML page (opens in a browser)
+ui.timeline.exportMd,Markdown (text)
+ui.timeline.exportPng,PNG image
+ui.timeline.exportTip,Export the timeline as an image / HTML / Markdown / CSV
+ui.timeline.handleEnd,Drag to change the end time
+ui.timeline.handleStart,Drag to change the start time
 ui.timeline.hasDotEventTime,{0} {0|place|places} where events share the same time (highlighted orange) — check whether that's intended
-ui.timeline.hasDotTimeAt,{0} {0|place|places} with the same time (highlighted orange)
 ui.timeline.lineTime,Timeline
+ui.timeline.linkAdded,Events linked
+ui.timeline.linkCancel,Linking cancelled
+ui.timeline.linkDotTip,Drag onto another card = this event leads to that one
+ui.timeline.linkExists,These two cards are already linked
+ui.timeline.linkFromHere,Link to another card…
+ui.timeline.linkPickHint,"Click the card that ""{0}"" leads to (Esc = cancel)"
+ui.timeline.linksHead,Links
 ui.timeline.note, notes
 ui.timeline.notHasEventPress,"No events yet — press ""＋ Add event"" or set a scene's ""Story time"" in its scene properties"
+ui.timeline.nowLine,Open scene: {0}
 ui.timeline.open,Open: 
-ui.timeline.sceneSetTimeStory,"Scenes with a ""Story time"" appear on the timeline automatically"
+ui.timeline.openScene,Open scene
+ui.timeline.refAdded,"Added {0} as a reference of ""{1}"""
+ui.timeline.refsMenu,Open a reference
+ui.timeline.sceneTimeFail,Couldn't set the scene's time
+ui.timeline.trackHide,"Hide the ""{0}"" track"
+ui.timeline.trackShow,"Show the ""{0}"" track"
+ui.timeline.undated,No time set
+ui.timeline.undatedChipTip,Drag onto the board to set its time · double-click = edit
+ui.timeline.undatedTray,No time yet ({0})
+ui.timeline.unlink,Remove a link
+ui.timeline.unlinkThis,Remove this link
+ui.timeline.viewBoard,Board
+ui.timeline.viewBoardTip,"Horizontal board — cards span their time range; drag to move, stretch and link"
 ui.timeline.viewGanttMustHas,"The Gantt view needs events with a numeric time (e.g. ""Year 1024"") — there are none yet"
+ui.timeline.viewList,List
+ui.timeline.viewListTip,Vertical list in time order
+ui.timeline.zoomFit,Fit to frame
+ui.timeline.zoomIn,Zoom in (Ctrl+wheel)
+ui.timeline.zoomOut,Zoom out (Ctrl+wheel)
 ui.tip.about,"Shows the app version, credits, and the licences of the components it uses."
 ui.tip.ai-analyzer,"Opens the AI analysis panel — pacing, character arcs, repeated words and more."
 ui.tip.ai-assistant,"Lets AI expand, summarise or rewrite the selected text; you decide whether to use the result."
@@ -6637,6 +6872,7 @@ ui.tip.export-fdx,Exports the screenplay as a Final Draft (.fdx) file to continu
 ui.tip.export-hub,"Every way to export in one dialog: pick a destination, adjust the settings, and preview before saving."
 ui.tip.export-json,Exports all project data as one JSON file — for backup or for other tools.
 ui.tip.export-language-csv,Exports the app’s text as a CSV table (key · Thai · English) so translators can work in a spreadsheet.
+ui.tip.export-panel,"Export a panel's content (timeline · map · boards · graphs, etc.) in the chosen format"
 ui.tip.export-panel-layout,"Saves the current panel layout as a JSON file, to keep as a reference or attach to a panel bug report."
 ui.tip.export-pdf,"Opens the export hub to make a PDF, with a preview before you save."
 ui.tip.export-pdf-builtin,"Exports a PDF directly with the built-in PDF generator, bypassing the export hub."

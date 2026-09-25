@@ -34,6 +34,7 @@ const THAI_FONT_PATH = [
   path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'LeelawUI.ttf'),
   path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'tahoma.ttf'),
   '/usr/share/fonts/truetype/tlwg/Garuda.ttf', '/usr/share/fonts/truetype/tlwg/Loma.ttf',
+  '/usr/share/fonts/truetype/freefont/FreeSerif.ttf',   // [alpha.167] Linux ที่ไม่มี tlwg แบบ TTF (FreeSerif มีอักษรไทย)
   '/Library/Fonts/Sathu.ttf',
   // macOS: ฟอนต์ไทยของระบบอยู่ใน Supplemental (Sathu/Ayuthaya เป็น AAT morx ที่ fontkit วนไม่จบตอนเจอ ำ → ใช้ Tahoma)
   '/System/Library/Fonts/Supplemental/Tahoma.ttf',

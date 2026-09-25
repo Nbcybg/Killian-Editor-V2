@@ -1506,7 +1506,7 @@ export function workspaceMenuItems() {
       click: () => {
         const r = $('#tb-panels') ? $('#tb-panels').getBoundingClientRect() : { left: 40, bottom: 60 };
         popupMenu(r.left, r.bottom + 4, mine.map((w) => ({
-          label: gi('trash') + ' ' + w.label,
+          text: gi('trash') + ' ' + w.label,   // [alpha.167 · บั๊ก] ชื่อที่ผู้ใช้ตั้ง = ข้อความ (label ของ popupMenu เป็น HTML)
           click: async () => {
             if (!(await confirmBox(t('ui.panel.wsDelAsk') + w.label + '” ?'))) return;
             deleteWorkspace(w.name);

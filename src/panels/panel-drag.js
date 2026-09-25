@@ -94,8 +94,16 @@ const box = (r) => ({ x: r.left, y: r.top, w: r.width, h: r.height });
  * ในข้อ 3–4 เลือก "ใบที่เล็กที่สุด" ที่ครอบจุดนั้น = ใบในสุดของต้นไม้
  * @returns {{targetId, zone, rect, kind, tabIndex?}|null}
  */
-export function detectSnapTarget(mx, my, host, excludeId) {
+/**
+ * @param opts.strict [alpha.167] โหมดของ "แผงลอยที่กำลังถูกย้าย" — ผนึกเฉพาะเมื่อเล็งชัดเจน:
+ *   หัวแผง/แถบแท็บ · ขอบพื้นที่ทำงาน · แถบขอบแคบ ๆ ของแผง (≤ STRICT_EDGE_PX) · รวมเป็นแท็บต้องเล็งที่ "หัวแผง" เท่านั้น
+ *   ที่มา: ผู้ใช้ "ย้ายตำแหน่ง panel มันจะดีดกลับ" — เดิมโซนของแผงกินทั้งกรอบ (ขอบ 25% + กลาง) ลากแผงลอย
+ *   ผ่านพื้นที่ทำงานแล้วปล่อยตรงไหนก็ผนึกกลับเข้า dock ทั้งที่ผู้ใช้แค่อยากย้ายที่
+ */
+export const STRICT_EDGE_PX = 36;
+export function detectSnapTarget(mx, my, host, excludeId, opts = {}) {
   if (!host) return null;
+  const strict = !!opts.strict;
   // (0) [alpha.66r7] หัว/แถบแท็บของ "กล่องลอย" — ปล่อยตรงนี้ = รวมเข้ากลุ่มลอยนั้น
   for (const fp of document.querySelectorAll('.k-float-panel[data-float-id]')) {
     if (fp.dataset.panelId === excludeId) continue;
@@ -129,8 +137,15 @@ export function detectSnapTarget(mx, my, host, excludeId) {
     const r = e.getBoundingClientRect();
     if (!r.width || !r.height) continue;
     const rect = box(r);
-    const zone = PL.snapZone(mx, my, rect);
+    const edgeFrac = strict ? Math.min(0.25, STRICT_EDGE_PX / Math.max(1, Math.min(r.width, r.height))) : 0.25;
+    const zone = PL.snapZone(mx, my, rect, edgeFrac);
     if (!zone) continue;
+    if (strict && zone === 'center') {
+      // รวมเป็นแท็บ = ต้องเล็งที่หัวของแผงนั้นเท่านั้น (กลางเนื้อแผง = แค่ย้ายแผงลอยผ่าน)
+      const hd = e.querySelector(':scope > .k-panel-head');
+      const hr = hd && hd.getBoundingClientRect();
+      if (!hr || !hr.width || mx < hr.left || mx > hr.right || my < hr.top || my > hr.bottom) continue;
+    }
     // ห้ามรวมเป็นแท็บกับ "แผงเอกสาร" — จะบังพื้นที่เขียนทั้งหมด (ปล่อยกลางแผงเอกสาร = ไม่ทำอะไร)
     if (zone === 'center' && e.dataset.panelId === 'docs') continue;
     const area = r.width * r.height;
@@ -358,7 +373,8 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       popup.style.left = s.x + 'px';
       popup.style.top = s.y + 'px';
       popup.classList.toggle('k-float-snapped', s.snapped);
-      hit = canDock ? detectSnapTarget(ev.clientX, ev.clientY, host, panelId) : null;
+      // [alpha.167] Ctrl/⌘ ค้าง = ย้ายอย่างเดียว ไม่ผนึก · ไม่กด = ผนึกเฉพาะเป้าที่เล็งชัด (strict)
+      hit = canDock && !(ev.ctrlKey || ev.metaKey) ? detectSnapTarget(ev.clientX, ev.clientY, host, panelId, { strict: true }) : null;
       if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
       else ov.hide();
     };
@@ -374,9 +390,10 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       cleanup();
       popup.style.left = x0 + 'px'; popup.style.top = y0 + 'px';
     });
-    const up = () => {
+    const up = (ev) => {
       cleanup();
       if (!moved) return;
+      if (ev && (ev.ctrlKey || ev.metaKey)) hit = null;       // [alpha.167] Ctrl ตอนปล่อย = ไม่ผนึก
       // ถ้ามีอะไร re-render แผงระหว่างลาก popup จะหลุดจากหน้า → offset* เป็น 0 หมด
       // เขียนต่อ = แผงเด้งไปมุมซ้ายบน ปล่อยผ่านดีกว่า (บั๊ก: คลิกค้างแล้วแผงรีเซ็ต)
       if (!popup.isConnected) return;

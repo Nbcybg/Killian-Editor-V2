@@ -119,7 +119,7 @@ import { setMarkdownCodes, markdownCodesOn, refreshMarkdownCodes,
 // เผื่อโปรเจกต์เก่าที่ยังมี languages/*.json แต่ app.js ไม่ได้เรียกแล้ว)
 import { parseCsv } from './i18n-csv.js';
 import { openMaps, renderMaps, renderMapsPanel, focusMapPin, exportMapPng, resetMapsView,
-         buildShowOnMapRow, sceneMapLocation } from './maps-ui.js';
+         buildShowOnMapRow, sceneMapLocation, enterMap, openMapById } from './maps-ui.js';
 import { openTimeline, renderTimeline } from './timeline-ui.js';
 import { renameSection, deleteSection, addSection, listSections, sectionStats, saveSectionMeta, reorderSections, sectionProps } from './section-ops.js';
 import { renameScene, deleteScene, addScene, setSceneMeta, toggleSceneFlag, duplicateScene, moveSceneOrder, moveSceneToChapter, moveSceneBefore, renameChapter, deleteChapter, addChapter, moveChapterBefore,
@@ -194,6 +194,9 @@ import { markReviewStale, onReviewShown, resetReview } from './dash-review.js';
 // ---- Part 1+2 integrations ----
 import { openKanban, resetKanban, renderKanbanPanel } from './kanban/kanban-ui.js';
 import * as PL from './panels/panel-layout.js';
+import { installPanelDrop } from './panel-drop.js';
+import { exportPanel } from './panel-exports.js';
+import { setDrag } from './drop-kit.js';
 import { inGroupHandle, snapToEdges, clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panels/panel-drag.js';
 // [alpha.60r2 ข้อ 7] รายชื่อกล่องที่เลื่อนได้ — selftest ตรวจว่าครอบคลุมครบ
 import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
@@ -5273,8 +5276,8 @@ async function _buildTreeInner() {
           // บทลากสลับลำดับได้ (แบบ Windows Explorer) — ลากหัวบท
           chHead.draggable = true;
           chHead.addEventListener('dragstart', (e) => {
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/k2-chapter', JSON.stringify({ draftDir: dPath, guid: ch.guid }));
+            e.dataTransfer.effectAllowed = 'copyMove';
+            setDrag(e.dataTransfer, 'chapter', { draftDir: dPath, guid: ch.guid, title: ch.title || '' });
             e.stopPropagation(); chHead.classList.add('sc-dragging');
           });
           chHead.addEventListener('dragend', () => chHead.classList.remove('sc-dragging'));
@@ -5400,8 +5403,8 @@ async function _buildTreeInner() {
             // ลากย้ายฉากแบบ Windows Explorer: วางบนหัวบท = ต่อท้ายบท · วางบนฉาก = แทรกก่อนฉากนั้น
             scEl.draggable = true;
             scEl.addEventListener('dragstart', (e) => {
-              e.dataTransfer.effectAllowed = 'move';
-              e.dataTransfer.setData('text/k2-scene', JSON.stringify({ draftDir: dPath, chGuid: ch.guid, id: sc.id,
+              e.dataTransfer.effectAllowed = 'copyMove';
+              setDrag(e.dataTransfer, 'scene', ({ draftDir: dPath, chGuid: ch.guid, id: sc.id,
                                                                        file: scEl.dataset.path, title: sc.title }));
               e.stopPropagation(); scEl.classList.add('sc-dragging');
             });
@@ -5571,7 +5574,7 @@ async function _buildTreeInner() {
     it.draggable = true;                                   // ลาก memo ไปวางบนกระดาน Planner ได้
     it.addEventListener('dragstart', (e) => {
       e.dataTransfer.effectAllowed = 'copyMove';
-      e.dataTransfer.setData('text/k2-memo', JSON.stringify({ path: p, file: p, title }));
+      setDrag(e.dataTransfer, 'memo', { path: p, file: p, title });   // [alpha.167] + text/plain (หยิบใส่)
       it.classList.add('sc-dragging');
     });
     it.addEventListener('dragend', () => it.classList.remove('sc-dragging'));
@@ -5839,8 +5842,8 @@ async function _buildTreeInner() {
         it.onclick = () => openEntity(p);
         it.draggable = true;                              // ลากย้ายข้ามหมวดได้
         it.addEventListener('dragstart', (e) => {
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/k2-entity', JSON.stringify({ path: p, file: p, title: name }));
+          e.dataTransfer.effectAllowed = 'copyMove';
+          setDrag(e.dataTransfer, 'entity', { path: p, file: p, title: name, cat });   // [alpha.167] + text/plain = ชื่อ (ลงตัวแก้ไข = แทรกชื่อ)
           it.classList.add('sc-dragging');
         });
         it.addEventListener('dragend', () => it.classList.remove('sc-dragging'));
@@ -6150,7 +6153,11 @@ export function catEditDialog(init, title) {
 }
 
 // ---------------- entity index (สำหรับ network / relationships) ----------------
-export async function loadAllEntities() {
+/**
+ * @param o.entitiesOnly [alpha.167] หน้า Wiki อย่างเดียว (ไม่ไล่ฉาก/บท/เล่ม) — แถบซ้ายของแผนที่ · กระดานอารมณ์
+ *   ใช้แค่รายชื่อตัวละคร/สถานที่ · ของเดิมอ่าน scenes.json + frontmatter ทุกฉากทุกครั้ง = แผงช้าตามขนาดโปรเจกต์
+ */
+export async function loadAllEntities(o = {}) {
   const out = [];
   const scan = async (wikiDir) => {
     if (!(await kapi.exists(wikiDir))) return;
@@ -6177,6 +6184,7 @@ export async function loadAllEntities() {
     await scan(await kapi.join(state.root, sec, 'Wiki'));
     await scan(await kapi.join(state.root, sec, 'Bible'));
   }
+  if (o.entitiesOnly) return out;
   // add scene/chapter/section structural nodes
   try {
     const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots', '.k2history','Plugins','Recycle','Sessions','Starters','.git','Models']);
@@ -6668,6 +6676,8 @@ export function activePlanner() {
 window.k2ActivePlanner = activePlanner;
 // [alpha.152 ข้อ 5] เริ่มติดตามว่าผู้ใช้กำลัง "เลือกแผงไหนอยู่" — แผงที่มีคีย์ลัดถามจากที่นี่
 try { bindPanelFocus(); } catch {}
+// [alpha.167] หยิบใส่: ทุกแผงรับของที่ลากมา (ตัวกลาง — แผงที่มีตัวรับเองชนะเสมอ)
+try { installPanelDrop(); } catch {}
 // [alpha.152 ข้อ 4] กระดานมีประวัติย้อนกลับของตัวเอง → ตอนถูกเลือกอยู่ Ctrl+Z เป็นของกระดาน
 try { setPanelOwnsKeys('planner', true); } catch {}
 export async function renderPlannerPanel(boardPath) {
@@ -7154,6 +7164,12 @@ async function buildMapsSection(tree) {
                   ttf('ui.app.portal', st.entity, st.portal, st.note),
                   m.image ? tt('ui.app.image') + m.image : tt('ui.app.notHasImage')].filter(Boolean).join('\n');
       it.onclick = () => openMapFromTree(m.id);
+      // [alpha.167] หยิบใส่: ลากแผนที่ไปวางบนแผนที่อื่น = ประตูไปแผนที่ย่อย (แผนที่ซ้อนแผนที่)
+      it.draggable = true;
+      it.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'copy';
+        setDrag(e.dataTransfer, 'map', { id: m.id, name: m.name || '' });
+      });
       it.oncontextmenu = (ev) => { ev.preventDefault(); popupMenu(ev.clientX, ev.clientY, [
         { label: tt('ui.app.openMap'), click: () => openMapFromTree(m.id) },
         { label: tt('ui.app.addMap'),                                             // [alpha.120 ข้อ 10]
@@ -7239,8 +7255,8 @@ export function markBranchPlanRow() {
 
 /** เปิดแผงแผนที่แล้วสลับไปแผนที่ที่คลิกจาก Explorer */
 async function openMapFromTree(mapId) {
-  await openMaps();
-  if (mapsState_C.s) { mapsState_C.s.currentId = mapId; await renderMaps($('#maps-body')); }
+  // [alpha.167] แผงเริ่มที่แกลเลอรี — คลิกแถวแผนที่ = เข้าไปดูใบนั้นเลย (วาดรอบเดียว ไม่แวบหน้ารวม)
+  await openMapById(mapId);
 }
 async function renameMapFromTree(mapId) {
   const d = await loadMaps();
@@ -7378,7 +7394,28 @@ export async function openRef(ref) {
   if (!ref || !ref.path || !state.root) return;
   const abs = await kapi.join(state.root, ...ref.path.split('/'));
   if (!(await kapi.exists(abs))) { setStatus(tt('ui.app.notFoundFileRef') + ref.path); return; }
+  // [alpha.167] อ้างอิงตัวละคร/สถานที่ (หยิบใส่การ์ดเส้นเวลา) = เปิดหน้า Wiki ไม่ใช่เปิดเป็นฉาก
+  if (ref.kind === 'entity') { openEntity(abs); return; }
   openScene(abs, ref.title || ref.path.split('/').pop());
+}
+
+/**
+ * [alpha.167] ตั้ง "เวลาในเรื่อง" ของฉากจากเส้นเวลา (ลากการ์ดฉากบนบอร์ด)
+ * frontmatter = แหล่งความจริง (writeSceneMeta) → ดัชนี scenes.json (updateSceneRow) → แท็บที่เปิดอยู่ (syncOpenTabMeta)
+ * @param it  รายการบนเส้นเวลา ({ id:'sc:<dPath>:<sceneId>', file })
+ */
+export async function setSceneStoryDate(it, when) {
+  if (!it || !it.file) return false;
+  const id = String(it.id || '');
+  const cut = id.lastIndexOf(':');
+  const dPath = id.startsWith('sc:') && cut > 3 ? id.slice(3, cut) : '';
+  const sceneId = cut >= 0 ? id.slice(cut + 1) : '';
+  if (!dPath || !sceneId) return false;
+  if (!(await writeSceneMeta(it.file, { storyDate: when }))) return false;
+  await updateSceneRow(dPath, sceneId, (row) => { row.storyDate = when; });
+  await syncOpenTabMeta(it.file);
+  logAction('timeline', 'scene storyDate', { from: it.title || '', to: when });
+  return true;
 }
 
 // ---------------- เส้นเวลา (Timeline) ----------------
@@ -7459,7 +7496,7 @@ export function eventDialog(ev, knownTracks, canDelete = false) {
       if (!refs.length) refList.append(el('span', 'dim', tt('ui.app.cantRef')));
       refs.forEach((r, i) => {
         const chip = el('span', 'k-ev-ref');
-        chip.append(el('span', null, (r.kind === 'memo' ? gi('note') + ' ' : gi('file') + ' ') + r.title));
+        chip.append(el('span', null, (r.kind === 'memo' ? gi('note') + ' ' : r.kind === 'entity' ? gi('user') + ' ' : gi('file') + ' ') + r.title));
         const x = el('span', 'k-ev-ref-x', gi('close')); x.title = tt('ui.app.refOut');
         x.onclick = () => { refs.splice(i, 1); paintRefs(); };
         chip.append(x);
@@ -7529,7 +7566,7 @@ export async function addMapFlow() {
   mapsState_C.s.data.maps.push(m);
   mapsState_C.s.currentId = m.id;
   await saveMaps(mapsState_C.s.data);
-  renderMaps($('#maps-body'));                 // บั๊ก #18: แผนที่อยู่ในแผง ไม่ใช่แท็บแล้ว
+  await enterMap(m.id);                        // [alpha.167] สร้างแล้วเข้าไปดูใบใหม่เลย (แผงเริ่มที่แกลเลอรี)
 }
 
 // กล่องแก้หมุด — คืน pin object, 'DELETE', หรือ null
@@ -9243,6 +9280,7 @@ function templateEditModal(tp) {
     for (const ft of FIELD_TYPES) { const o = el('option', null, ft); o.value = ft; sT.append(o); }
     sT.value = FIELD_TYPES.includes(f.type) ? f.type : 'String';
     const del = el('button', 'k-tpl-del', gi('close')); del.onclick = () => r.remove();
+    del.title = tt('ui.common.removeRowTip');
     r._get = () => ({ key: iK.value.trim(), label: iL.value.trim(), type: sT.value, defaultValue: f.defaultValue || '' });
     r.append(iK, iL, sT, del); fieldsWrap.append(r);
   };
@@ -9258,6 +9296,7 @@ function templateEditModal(tp) {
     const iT = el('input', 'k-dlg-input'); iT.type = 'text'; iT.placeholder = tt('ui.app.namePart'); iT.value = s.title || '';
     iT.style.flex = '1';
     const del = el('button', 'k-tpl-del', gi('close')); del.onclick = () => r.remove();
+    del.title = tt('ui.common.removeRowTip');
     r._get = () => ({ title: iT.value.trim(), defaultContent: s.defaultContent || '' });
     r.append(iT, del); secWrap.append(r);
   };
@@ -14622,6 +14661,8 @@ export async function handleCommand(ch, ...a) {
     case 'scratchpad': showPanel('notes'); renderFeaturePanel('notes'); syncMenuToggles(); break;
     case 'export-blog': exportBlogHTML(); break;
     case 'export-zip': exportProjectZip(); break;
+    // [alpha.167] เมนู ส่งออก → <แผง> → <รูปแบบ> (ตาราง PANEL_EXPORTS ใน panel-exports.js)
+    case 'export-panel': await exportPanel(a[0], a[1]); break;
     case 'export-json': exportProjectJson(); break;
     case 'backup-now': autoBackupNow(); break;
     case 'new-from-template': newProjectFromTemplate(); break;

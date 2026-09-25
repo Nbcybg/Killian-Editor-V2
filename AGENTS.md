@@ -22,6 +22,9 @@ xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron .
 ```
 ปัจจุบัน **5,902 checks · ALL OK** (alpha.166 รอบ 2 · macOS · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
 (unit `npm run test:unit` = **10,605 ข้อ · 148 ไฟล์** · ~55 วินาที · alpha.166)
+**[alpha.167 · Linux/คอนเทนเนอร์]** ใช้ `--use-angle=swiftshader --enable-unsafe-swiftshader` แทน `--disable-gpu` (เทส `[166-M]` ต้องมี WebGL) ·
+ไม่มีฟอนต์ Segoe UI = เทสวัดความกว้าง `[164-R2-1]` แดง → ตั้ง `~/.config/fontconfig/fonts.conf` ให้ `Segoe UI`/`system-ui` ชี้ `Liberation Sans` ·
+`KILLIAN_USERDATA=/tmp/k2ud` แยกข้อมูลผู้ใช้ทุกรอบ
 **[รอบต่อ 4 · Windows] `node_modules/.bin/electron` ที่ sync มาจาก mac ใช้ไม่ได้ (`bad interpreter`)** — รัน `./node_modules/electron/dist/electron.exe .` ตรง ๆ
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
@@ -389,6 +392,23 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 
 ประตูกันพลาด: unit `json-store` · `frontmatter` · `disk-conflict` · `project-doctor` + e2e `[156-1…7]`
 เครื่องมือกู้ของที่พังไปแล้ว: **เครื่องมือ → ตรวจสุขภาพโปรเจกต์** (`project-doctor.js` / `project-doctor-ui.js`)
+
+### ⚠️ กฎถาวร (alpha.167) — **หยิบใส่ · ส่งออกจากแผง · แผนที่พิกัดจริง · แผงลอย**
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ของที่ลากได้ใหม่ (แหล่ง) | `setDrag(e.dataTransfer, kind, item)` (`src/drop-kit.js`) — ใส่ `text/plain` = ชื่อให้เอง · `effectAllowed` ต้องมี `copy` (`copyMove`) | `setData('text/k2-…', …)` เอง · `effectAllowed = 'move'` เฉย ๆ (ปลายทางที่ `dropEffect='copy'` = ปล่อยไม่ได้เงียบ ๆ) |
+| ปลายทางรับของใหม่ | `bindDropTarget(el, { accept, onDrop })` → ได้ `{kind, items}` รูปเดียวทุกชนิด · แผงที่มีตัวรับเองต้องขึ้นทะเบียนใน `OWN` ของ `src/panel-drop.js` (ป้ายข้างเคอร์เซอร์) | อ่าน `dataTransfer.getData()` เองแยกชนิด · แผงที่ไม่รับอะไรเลย (ตัวกลางเปิดของให้อยู่แล้ว — ลากภายในของตัวเองต้องเข้า `SKIP`) |
+| ฉาก/โน้ตที่ปล่อยลงตัวแก้ไข | ตัวกลางดักระยะ capture แล้ว "เปิด" · เอนทิตี้ = ProseMirror แทรกชื่อจาก `text/plain` | ให้ ProseMirror แทรกชื่อฉากลงเนื้อเรื่อง |
+| ส่งออกจากแผง | แถวใน `PANEL_EXPORTS` (`src/panel-exports.js`) **คู่กับ** `PANEL_EXPORTS_MENU` (main.js) — unit `panel-exports` ตรวจว่าตรงกัน · ตัวส่งออกของแผงรับ `outPath` (เทสไม่เปิดกล่องบันทึก) | ทางส่งออกเส้นที่สองนอกตัวของแผง · `<a download>` |
+| เมนู "ส่งออก" ระดับบนสุด | ศูนย์รวมการส่งออก + เวิร์กโฟลว์ + ทุกแผง + ของระดับโปรเจกต์ อยู่ที่นี่ที่เดียว | ใส่ทางส่งออกกลับไปในเมนูไฟล์ |
+| ยกแผงลอยขึ้นบนสุด | `raiseFloat(pop)` (z-index 66–75) | ย้าย DOM (`insertBefore`) — ล้าง scrollTop ของทุกกล่องข้างใน (Explorer เด้งขึ้นบนสุด) |
+| ลากแผงลอย | ผนึกเฉพาะเป้าชัด (`detectSnapTarget(…, { strict:true })`: หัวแผง · แถบแท็บ · ขอบพื้นที่ทำงาน · แถบขอบแคบ ≤ 36px) · Ctrl ค้าง = ย้ายอย่างเดียว | โซนกลางแผงกว้าง 25% ตอนย้ายแผงลอย (ปล่อยตรงไหนก็ผนึกกลับ = "ดีดกลับ") |
+| พิกัด/ระยะบนแผนที่ | `geoOf` · `metersPerUnit` · `distMeters` · `toLatLon`/`fromLatLon` (maps.js · หน่วยภายใน = % ความกว้าง ทั้งสองแกน ใช้ `map.aspect`) | คิดระยะจาก % ตรง ๆ (แกนตั้งยาวไม่เท่าแกนนอน) |
+| โซนของแผนที่ | `map.zones` วาดเป็น SVG ชั้นล่างสุด (`.map-zones` z-index 1 < เส้นทาง 3 < หมุด 4) | วาดโซนทับหมุด |
+| เปิดแผนที่ใบหนึ่งจากที่อื่น | `openMapById(id)` / `focusMapPin(...)` (ตั้ง `view.wantId` ก่อนวาด — ตัววาดที่วิ่งซ้อนเลือกใบนี้) | `openMaps()` แล้วค่อยตั้ง `currentId` (วาดสองรอบ · รอบที่เสร็จทีหลังทับกลับ) |
+| รายชื่อเอนทิตี้อย่างเดียว | `loadAllEntities({ entitiesOnly: true })` | `loadAllEntities()` เต็ม (อ่านทุกฉาก — ช้าตามขนาดโปรเจกต์) |
+| label ของ `popupMenu` ที่มีข้อความผู้ใช้ | `text:` (หรือ escape เอง) | `label:` + ชื่อที่ผู้ใช้ตั้ง (label เป็น HTML) |
 
 ### ⚠️ กฎถาวร (alpha.166) — **ไอคอน Nerd Fonts · Story Network กล้องเดียว · แถบสถานะนิ่ง · ธีมก่อนเฟรมแรก**
 
