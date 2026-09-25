@@ -97,7 +97,7 @@ import { closeColorPicker, openColorPicker } from './color-picker.js';
 import { closeSplit, createSplit, getSplitManager, isSplit, splitDir, paneCount as splitPaneCount,
          toggleSplit } from './layout/split-ui.js';
 import { collectProjectText, hashText, pastTitlesFor, rememberTitles, summaryCacheState } from './ai-summary.js';
-import { commandIcon, gi, isRegisteredCommand } from './icons.js';
+import { commandIcon, gi, gt, isRegisteredCommand } from './icons.js';
 import { commentAnchors, decoSignature, refreshCommentAnchors, refreshMentions, refreshSpell } from './editor.js';
 import { commentStore, migrateSceneComments, renderCommentPanel, scrollToAnchor } from './comments/comment-ui.js';
 import { commonPrefix, safeRel } from './export-zip.js';
@@ -1745,7 +1745,7 @@ export async function runTest(projectPath) {
         check('[70-3] ค่าเริ่มต้น 100% และผืนแผนที่กว้าง 100%',
               bodyOf().querySelector('.map-zoom-label').textContent === '100%' && cv.style.width === '100%',
               cv.style.width);
-        const zin = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes('➕'));
+        const zin = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes(gi('plus-thick')));
         zin.click(); await wait(30);
         check('[70-3] กดซูมเข้า → ผืนแผนที่กว้างขึ้นตามขั้น (ไม่ต้องวาดใหม่ทั้งแผง)',
               bodyOf().querySelector('.map-canvas').style.width === '125%' &&
@@ -2045,7 +2045,7 @@ export async function runTest(projectPath) {
         const rows = [...document.querySelectorAll('#tree .map-row')];
         check('[70-11] มีแถวแผนที่ครบทุกใบ', rows.length === 2, rows.length);
         check('[70-11] แถวโชว์จำนวนหมุด/เส้นทาง',
-              (rows.find((r) => r.textContent.includes('แผ่นดินเก่า')).textContent || '').includes('3📍'),
+              (rows.find((r) => r.textContent.includes('แผ่นดินเก่า')).textContent || '').includes('3' + gi('map-pin')),
               rows.map((r) => r.textContent).join(' | '));
         check('[70-11] แถวจัดกลุ่มตามหมวดที่ตั้งไว้',
               document.querySelectorAll('#tree .map-row-cat').length === 2);
@@ -2064,7 +2064,7 @@ export async function runTest(projectPath) {
         mapsState_C.s.currentId = 'm70a';
         await renderMaps(bodyOf()); await wait(200);
         const stage = bodyOf().querySelector('.map-stage');
-        const zin = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes('➕'));
+        const zin = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes(gi('plus-thick')));
         // กรอบแผงในเทสอาจแคบมากจนไม่มีอะไรให้เลื่อน — เช็คเฉพาะตอนที่เลื่อนได้จริง
         zin.click(); await wait(60); zin.click(); await wait(60);
         const canScroll = stage.scrollWidth - stage.clientWidth > 4;
@@ -2123,7 +2123,7 @@ export async function runTest(projectPath) {
         // ขนาดหมุด: ขยายแล้วต้องบันทึกลงไฟล์
         bodyOf().querySelector('.map-tool-btn[data-tool="open"]').click();
         await wait(150);
-        [...bodyOf().querySelectorAll('.map-tools3 .cmp-mini')].find((b) => b.textContent === '➕').click();
+        [...bodyOf().querySelectorAll('.map-tools3 .cmp-mini')].find((b) => b.textContent === gi('plus-thick')).click();
         await wait(250);
         check('[71-3] ปุ่มขยายหมุด → ขนาดเพิ่มขึ้นและบันทึกลง maps.json',
               findMap((await loadMaps()).maps, 'm70a').pinScale > 1,
@@ -2175,7 +2175,8 @@ export async function runTest(projectPath) {
         // ── [alpha.71 ข้อ 3] เครื่องมือของ Story Network ──
         check('[71-3] Story Network มีปุ่มแสดงตัวหนังสือ + 3 โหมด + สไลเดอร์ขนาดโหนด',
               !!document.querySelector('#net-body .net-lbl-btn') &&
-              document.querySelectorAll('#net-body .net-tool-btn').length === 3 &&
+              // [alpha.166] เครื่องมือเพิ่มเป็น 5 (+ ตรวจดู · ผูกความสัมพันธ์)
+              document.querySelectorAll('#net-body .net-tool-btn').length === 5 &&
               !!document.querySelector('#net-body .net-size-slider'),
               document.querySelectorAll('#net-body .net-tool-btn').length);
         check('[71-3] Story Network โหมดเริ่มต้น = เปิด/ดู', netInst._tool === 'open');
@@ -2599,6 +2600,256 @@ export async function runTest(projectPath) {
         check('[73-4] axisVectors: 3D ได้แกน Z มาด้วย', !!axisVectors(0.4, -0.3, true).z);
       }
 
+      // ══ [alpha.166] Story Network: กล้องจุดโฟกัสเดียว · ฉากหลัง · แผงข้าง · ผูกความสัมพันธ์ · โมเดล 3 มิติ ══
+      // ผู้ใช้: "สลับเป็น 2d 3d แล้ว กล้องไม่อิงค่า หรือไม่ sync อะไรเลย" · "graph เหมือนเครื่องประดับ" ·
+      //         "ใส่ background ... อวกาศ หรือแผนที่ wargame ... นำเข้า 3d model ได้ วางแทน node"
+      {
+        const w166 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const n = netInst;
+        check('[166-N] เตรียมสภาพ: ผังเปิดอยู่และมีโหนด', !!n && n.nodes.length >= 2, n && n.nodes.length);
+        const W = n.canvas.width, H = n.canvas.height;
+        const rc = () => n.canvas.getBoundingClientRect();
+        const key = (p) => Math.round(p.x) + ',' + Math.round(p.y);
+        const allScr = () => n.nodes.map((x) => key(n.screenOf(x))).join('|');
+        const T = () => ({ x: n._cam.tx, y: n._cam.ty, z: n._cam.tz });
+        n.toggle3D(false); await w166(500); n.resetView(); n.draw();
+        const s2d = allScr(), t0 = key(T());
+        n.toggle3D(true); await w166(550);
+        check('[166-N] ★★ เข้า 3D: จุดโฟกัสอยู่กลางจอ (หมุนรอบสิ่งที่ดูอยู่ ไม่ใช่รอบจุด 0,0,0)',
+              key(n.screenOf(T())) === key({ x: W / 2, y: H / 2 }) && n._mode3D, key(n.screenOf(T())) + ' vs ' + W / 2 + ',' + H / 2);
+        check('[166-N] ★ เข้า 3D แล้ว X/Y ของจุดโฟกัสไม่เปลี่ยน', Math.round(n._cam.tx) + ',' + Math.round(n._cam.ty) === t0.split(',').slice(0, 2).join(','));
+        check('[166-N] ปุ่ม 3D ติดไฟตามสภาพจริง', !!document.querySelector('#net-body [data-act="3d"].on'));
+        // หมุนด้วยเมาส์จริง (ปุ่มกลาง) → มุมเปลี่ยน · จุดโฟกัสยังกลางจอ
+        const rx0 = n._cam.rx, ry0 = n._cam.ry;
+        n.canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1, clientX: rc().left + W / 2, clientY: rc().top + H / 2 }));
+        n.canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: rc().left + W / 2 + 60, clientY: rc().top + H / 2 + 30 }));
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 1 }));
+        check('[166-N] ★ หมุนกล้องด้วยเมาส์แล้วมุมเปลี่ยนจริง', n._cam.rx !== rx0 && n._cam.ry !== ry0);
+        check('[166-N] ★★ หมุนแล้วจุดโฟกัสยังอยู่กลางจอ', key(n.screenOf(T())) === key({ x: W / 2, y: H / 2 }));
+        n.draw();
+        check('[166-N] ★ แถบสถานะบอก X/Y/Z ของกล้องจริง (ไม่ใช่ค่าเฉลี่ยความลึกของโหนด)',
+              n._sb.textContent.includes('X ' + Math.round(n._cam.tx)) && n._sb.textContent.includes('Z ' + Math.round(n._cam.tz)), n._sb.textContent);
+        // ลากโหนดตอน 3D → โหนดตามเมาส์บนจอพอดี
+        // บินไปหาโหนดก่อน (หมุนกล้องแล้วโหนดอาจอยู่นอกจอ) — โหนดจะอยู่กลางจอพอดี
+        const dn = n.nodes[0];
+        n.flyTo(dn, { minScale: 1 }); await w166(550);
+        if (dn) {
+          n.setTool('move');
+          const p0 = n.screenOf(dn);
+          n.canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: rc().left + p0.x, clientY: rc().top + p0.y }));
+          n.canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: rc().left + p0.x + 40, clientY: rc().top + p0.y + 25 }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }));
+          const p1 = n.screenOf(dn);
+          check('[166-N] ★★ ลากโหนดตอน 3D = โหนดตามเมาส์ (เดิมวิ่งผิดทิศ)', Math.abs(p1.x - p0.x - 40) < 1.5 && Math.abs(p1.y - p0.y - 25) < 1.5,
+                key(p0) + ' → ' + key(p1));
+          n.setTool('open');
+        } else check('[166-N] ลากโหนดตอน 3D — ไม่มีโหนดในจอให้ลอง', false);
+        n.toggle3D(false); await w166(550);
+        n.resetView(); n.draw();
+        const s2dB = allScr();
+        n.toggle3D(true); await w166(550); n.toggle3D(false); await w166(550);
+        check('[166-N] ★★ 2D → 3D → 2D ได้ภาพเดิมทุกโหนด (กล้อง sync กันจริง)', allScr() === s2dB, (s2dB + ' → ' + allScr()).slice(0, 180));
+        check('[166-N] ★ กล้องถูกจำต่อโปรเจกต์ (localStorage k2-net-cam)', Object.keys(localStorage).some((k) => k.startsWith('k2-net-cam:')));
+        void s2d;
+
+        // ── ฉากหลัง: เลือกจากแผงจริง ──
+        const scBtn = document.querySelector('#net-body [data-act="scene"]');
+        scBtn.click(); await w166(120);
+        const card = document.querySelector('#net-body .net-scene');
+        check('[166-B] ★ ปุ่ม "ฉากหลังและโมเดล" เปิดการ์ดตั้งค่าในผัง', !!card && !card.hidden && scBtn.classList.contains('on'));
+        const kindSel = card.querySelector('select');
+        const bgPx = () => { n.draw(); const d = n.canvas.getContext('2d').getImageData(W - 30, Math.round(H / 2), 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; };
+        const pxTheme = bgPx();
+        kindSel.value = 'space'; kindSel.dispatchEvent(new Event('change')); await w166(80);
+        check('[166-B] ★★ เลือก "อวกาศ" → ฉากหลังเปลี่ยนจริง (วัดสีพิกเซล)', n._scene.bg.kind === 'space' && bgPx() !== pxTheme, pxTheme + ' → ' + bgPx());
+        const kindSel2 = document.querySelector('#net-body .net-scene select');
+        kindSel2.value = 'wargame'; kindSel2.dispatchEvent(new Event('change')); await w166(80);
+        check('[166-B] ★ เลือก "แผนที่เกมสงคราม" → กริดหกเหลี่ยม + สีของพรีเซ็ต', n._scene.grid.style === 'hex' && n._scene.bg.kind === 'wargame');
+        await w166(600);
+        check('[166-B] ★ ค่าฉากหลังลงค่าของผลงาน (settings.netScene)', state.settings.netScene && state.settings.netScene.bg.kind === 'wargame');
+        await saveProjectMeta();
+        const pj = await kapi.readJson(await kapi.join(state.root, 'project.khn.json'));
+        check('[166-B] ★ บันทึกลง project.khn.json แล้ว (เปิดใหม่ยังเป็นแผนที่เดิม)', pj.settings && pj.settings.netScene && pj.settings.netScene.bg.kind === 'wargame');
+        const resetB = [...document.querySelectorAll('#net-body .net-scene .net-side-btn')].pop();
+        resetB.click(); await w166(80);
+        check('[166-B] คืนฉากหลังเริ่มต้นได้ (ตามธีม)', n._scene.bg.kind === 'theme' && bgPx() === pxTheme, bgPx() + ' vs ' + pxTheme);
+        scBtn.click(); await w166(80);
+        check('[166-B] กดปุ่มอีกครั้ง = ปิดการ์ด', document.querySelector('#net-body .net-scene').hidden);
+
+        // ── ตรวจดู: คลิกโหนด = แผงข้างบอกข้อมูล (ไม่เปิดแท็บ) ──
+        const ent = n.nodes.find((x) => ['characters', 'locations', 'items', 'lore'].includes(x.cat));
+        if (ent) {
+          document.querySelector('#net-body .net-tool-btn[data-tool="inspect"]').click();
+          n.flyTo(ent, { minScale: 1 }); await w166(600);
+          const tabsBefore = state.tabs.size;
+          const pe = n.screenOf(ent);
+          n.canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: rc().left + pe.x, clientY: rc().top + pe.y }));
+          n.canvas.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: rc().left + pe.x, clientY: rc().top + pe.y }));
+          document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: rc().left + pe.x, clientY: rc().top + pe.y }));
+          await w166(120);
+          const info = document.querySelector('#net-body .net-info');
+          check('[166-I] ★★ เครื่องมือ "ตรวจดู": คลิกโหนด = เลือก + การ์ดข้อมูลขึ้น', n._sel === ent && !!info && !info.hidden && info.textContent.includes(ent.name), n._sel && n._sel.name);
+          check('[166-I] ★ ตรวจดูไม่เปิดแท็บใหม่', state.tabs.size === tabsBefore);
+          const f1 = [...info.querySelectorAll('.net-side-btn')].find((b) => b.textContent === tt('ui.netUi.focus1s'));
+          f1.click(); await w166(60);
+          check('[166-I] ★ ปุ่มโฟกัส 1 ชั้น = เน้นเฉพาะเครือข่ายรอบตัว', n._focusHops === 1 && !!n._emphasis());
+          n.canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          check('[166-I] Esc = ปิดโฟกัสทีละชั้น (ยังเลือกอยู่)', n._focusHops === 0 && n._sel === ent);
+          n.canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          check('[166-I] Esc อีกครั้ง = เลิกเลือก + การ์ดหาย', n._sel === null && document.querySelector('#net-body .net-info').hidden);
+          n.setTool('open');
+        } else check('[166-I] ตรวจดู — ไม่มีเอนทิตี้ในผัง', false);
+
+        // ── ข้อสังเกตของเรื่อง ──
+        const insB = document.querySelector('#net-body [data-act="insights"]');
+        insB.click(); await w166(80);
+        const ins = document.querySelector('#net-body .net-insights');
+        check('[166-I] ★ การ์ด "ข้อสังเกตของเรื่อง" ขึ้น + มีหัวข้อศูนย์กลาง/คู่ที่ควรผูก/ตัวที่ลอย',
+              !!ins && !ins.hidden && ins.textContent.includes(tt('ui.netUi.hubs')) && ins.textContent.includes(tt('ui.netUi.isolated')));
+        insB.click(); await w166(60);
+
+        // ── ผูกความสัมพันธ์จากผัง (กล่องเดียวกับหน้า Wiki · ฝั่งตรงข้ามได้บทบาทกลับด้าน) ──
+        {
+          const dir166 = await kapi.join(state.root, 'Wiki', 'characters');
+          await kapi.mkdir(dir166);
+          const fA = await kapi.join(dir166, 'k2test166a.json'), fB = await kapi.join(dir166, 'k2test166b.json');
+          await kapi.writeFile(fA, JSON.stringify({ name: 'ทดสอบพ่อ166', relationships: [] }, null, 2));
+          await kapi.writeFile(fB, JSON.stringify({ name: 'ทดสอบลูก166', relationships: [] }, null, 2));
+          await n.refresh(); await w166(300);
+          const a = n.nodes.find((x) => x.name === 'ทดสอบพ่อ166'), b = n.nodes.find((x) => x.name === 'ทดสอบลูก166');
+          check('[166-L] เตรียมสภาพ: สองเอนทิตี้ใหม่อยู่ในผัง', !!a && !!b);
+          if (a && b) {
+            document.querySelector('#net-body .net-tool-btn[data-tool="link"]').click();
+            n.flyTo(a, { minScale: 1 }); await w166(600);
+            // วาง b ไว้ข้าง a บนจอ แล้วลากจริงด้วยเมาส์
+            const pa = n.screenOf(a);
+            const d = n.nodes.filter((x) => x !== a && x !== b);
+            b.x = a.x + 120; b.y = a.y; b.z = a.z;
+            void d;
+            const pb = n.screenOf(b);
+            n.canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: rc().left + pa.x, clientY: rc().top + pa.y }));
+            n.canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: rc().left + pb.x, clientY: rc().top + pb.y }));
+            check('[166-L] ★ ลากอยู่ = เส้นประไปหาโหนดปลายทาง + ชี้โหนดเป้าหมาย', !!n._linkDrag && n._linkDrag.over === b);
+            document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: rc().left + pb.x, clientY: rc().top + pb.y }));
+            let dlg = null;
+            for (let i = 0; i < 40 && !(dlg = [...document.querySelectorAll('.k-overlay .k-dialog')].pop()); i++) await w166(50);
+            check('[166-L] ★★ ปล่อยบนโหนดอีกตัว = กล่องผูกความสัมพันธ์ขึ้น (ตัวเดียวกับหน้า Wiki)', !!dlg && dlg.textContent.includes('ทดสอบลูก166'));
+            if (dlg) {
+              const inR = [...dlg.querySelectorAll('input.wiki-input')].find((x) => x.getAttribute('list') === 'k-roles');
+              inR.value = 'พ่อ'; inR.dispatchEvent(new Event('input'));
+              dlg.querySelector('.k-ok').click();
+              for (let i = 0; i < 40; i++) { const ja = await kapi.readJson(fA); if ((ja.relationships || []).length) break; await w166(60); }
+              const ja = await kapi.readJson(fA), jb = await kapi.readJson(fB);
+              const ra = (ja.relationships || [])[0], rb = (jb.relationships || [])[0];
+              check('[166-L] ★★ ผูกแล้วเขียนลงไฟล์ Wiki ทั้งสองฝั่ง', !!ra && ra.targetName === 'ทดสอบลูก166' && !!rb && rb.targetName === 'ทดสอบพ่อ166',
+                    JSON.stringify([ra, rb]));
+              check('[166-L] ★ ฝั่งตรงข้ามได้บทบาทกลับด้าน (ไม่ใช่ "พ่อ" ทั้งสองฝั่ง)', !!rb && rb.role && rb.role !== 'พ่อ' && ra.role === 'พ่อ', rb && rb.role);
+              check('[166-L] ประเภทถูกเดาจากบทบาท (ครอบครัว)', ra && ra.type === 'family' && rb && rb.type === 'family');
+              for (let i = 0; i < 40 && !n.edges.some((e2) => (e2.a.name === 'ทดสอบพ่อ166' || e2.b.name === 'ทดสอบพ่อ166') && e2.type === 'family'); i++) await w166(80);
+              check('[166-L] ★ ผังเห็นเส้นใหม่ทันที (รีเฟรชเอง)', n.edges.some((e2) => (e2.a.name === 'ทดสอบพ่อ166' || e2.b.name === 'ทดสอบพ่อ166') && e2.type === 'family'));
+            }
+            n.setTool('open');
+          }
+          // ── โมเดล 3 มิติแทนโหนด (OBJ ที่เขียนเอง — ไม่ต้องมีไฟล์ภายนอก) ──
+          {
+            const mdir = await kapi.join(state.root, 'Models');
+            await kapi.mkdir(mdir);
+            const pts = [], faces = [], N = 12, prof = [[0, 0], [0.5, 0], [0.3, 0.5], [0.15, 1]];
+            for (const [r, y] of prof) for (let i = 0; i < N; i++) { const t2 = (i / N) * Math.PI * 2; pts.push(`v ${(r * Math.cos(t2)).toFixed(3)} ${y} ${(r * Math.sin(t2)).toFixed(3)}`); }
+            for (let j = 0; j < prof.length - 1; j++) for (let i = 0; i < N; i++) faces.push(`f ${j * N + i + 1} ${(j + 1) * N + i + 1} ${(j + 1) * N + (i + 1) % N + 1} ${j * N + (i + 1) % N + 1}`);
+            await kapi.writeFile(await kapi.join(mdir, 'k2test166.obj'), pts.concat(faces).join('\n'));
+            const a2 = n.nodes.find((x) => x.name === 'ทดสอบพ่อ166') || ent;
+            n.updateScene({ models: { byNode: { [a2.cat + '/' + a2.name]: { file: 'Models/k2test166.obj', scale: 1, yaw: 0 } }, byCat: {} } });
+            n.draw();
+            const NM = await import('./network-models.js');
+            const m = n.modelOf(a2);
+            for (let i = 0; i < 80 && m && NM.modelState(m.abs) !== 'ready' && NM.modelState(m.abs) !== 'error'; i++) await w166(100);
+            check('[166-M] ★★ โหลดโมเดล 3 มิติของโหนดได้ (three.js โหลดแยกเมื่อใช้)', !!m && NM.modelState(m.abs) === 'ready' && !!window.K2Net3D,
+                  m ? NM.modelState(m.abs) + ' ' + NM.modelError(m.abs) : 'no model');
+            const spr = m && NM.modelSprite(m.abs, { rx: 0.4, ry: -0.3, px: 128 });
+            let opaque = 0;
+            if (spr) { const d2 = spr.getContext('2d').getImageData(0, 0, spr.width, spr.height).data; for (let i = 3; i < d2.length; i += 4) if (d2[i] > 0) opaque++; }
+            check('[166-M] ★ โมเดลถูกวาดเป็นภาพจริง (มีพิกเซลทึบ)', opaque > 200, opaque);
+            const spr2 = m && NM.modelSprite(m.abs, { rx: 1.2, ry: 1.5, px: 128 });
+            check('[166-M] ★ หมุนกล้อง = โมเดลหมุนตาม (ภาพต่างมุมไม่ใช่ภาพเดียวกัน)', !!spr2 && spr2 !== spr);
+            n.updateScene({ models: { byNode: {}, byCat: {} } });
+            await kapi.remove(await kapi.join(mdir, 'k2test166.obj'));
+          }
+          await kapi.remove(fA); await kapi.remove(fB);
+          await n.refresh(); await w166(200);
+        }
+      }
+
+      // ══ [alpha.166 · รอบ 2] ไทม์ไลน์เรื่อง · จัดผัง · ป้ายเส้น · มุมมองระยะ · ค้นหาแล้วบินไป ══
+      {
+        const w2 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const n = netInst;
+        const rc = () => n.canvas.getBoundingClientRect();
+        const scs = n.nodes.filter((x) => x.cat === 'scene');
+        check('[166-R2] เตรียมสภาพ: ผังมีฉากอย่างน้อย 2 ฉาก + ลำดับเรื่อง (seq)', scs.length >= 2 && scs.every((x) => Number.isFinite(x.seq)), scs.map((x) => x.seq).join());
+        n.toggle3D(false); await w2(500);
+        // ── ไทม์ไลน์เรื่อง: ปุ่มจริง → แถบใต้ผัง ──
+        const stB = document.querySelector('#net-body [data-act="story"]');
+        stB.click(); await w2(80);
+        const bar = document.querySelector('#net-body .net-story');
+        check('[166-R2] ★ ปุ่ม "ไทม์ไลน์เรื่อง" เปิดแถบใต้ผัง + ปุ่มติดไฟ', !!bar && !bar.hidden && stB.classList.contains('on') && !!n._story);
+        const ord = [...scs].sort((a, b) => a.seq - b.seq);
+        const range = bar.querySelector('.net-story-range');
+        range.value = '1'; range.dispatchEvent(new Event('input')); await w2(60);
+        const pr = n._progress();
+        check('[166-R2] ★★ เลื่อนถึงฉากแรก: ฉากแรกเกิดแล้ว · ฉากถัดไปยังเป็นเงา', pr.nodes.has(ord[0]) && !pr.nodes.has(ord[1]) && pr.current === ord[0],
+              JSON.stringify({ upTo: n._story && n._story.upTo, ord: ord.slice(0, 3).map((x) => x.name + ':' + x.seq), cur: pr.current && pr.current.name,
+                               seen: [...pr.nodes].slice(0, 8).map((x) => x.cat + ':' + x.name) }));
+        check('[166-R2] ป้ายบอกฉากที่เท่าไร/ทั้งหมด', bar.querySelector('.net-story-label').textContent.includes('1/' + scs.length), bar.querySelector('.net-story-label').textContent);
+        n.flyTo(ord[1], { minScale: 1 }); await w2(550);
+        const p1 = n.screenOf(ord[1]);
+        const h1 = n._hit({ clientX: rc().left + p1.x, clientY: rc().top + p1.y });
+        check('[166-R2] ★ ของที่ยังไม่เกิดในเรื่องคลิกไม่ได้ (คลิกทะลุเงา)', h1.node !== ord[1]);
+        n.canvas.focus();
+        n.canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+        check('[166-R2] ★ ปุ่มลูกศรขวาในผัง = ฉากถัดไป', n._story.upTo === 2 && n._progress().nodes.has(ord[1]));
+        bar.querySelector('.net-story-play').click(); await w2(50);
+        check('[166-R2] ปุ่มเล่นอัตโนมัติ = เล่น (ปุ่มเปลี่ยนเป็นหยุด)', n.isStoryPlaying() && bar.querySelector('.net-story-play').classList.contains('on'));
+        n.playStory(false);
+        [...bar.querySelectorAll('.net-story-btn')].pop().click(); await w2(60);
+        check('[166-R2] ★ ปิดแถบ = ผังกลับมาครบ (ไม่มีเงา)', !n._story && bar.hidden && n._progress() === null && !stB.classList.contains('on'));
+        // ── จัดผังตามลำดับเรื่อง ผ่านเมนูจริง ──
+        document.querySelector('#net-body [data-act="layout"]').click(); await w2(80);
+        const mItem = [...document.querySelectorAll('.k-menu .k-menu-item')].find((x) => x.textContent === tt('ui.netUi.layoutStory'));
+        check('[166-R2] เมนูจัดผังมีตัวเลือก "ตามลำดับเรื่อง"', !!mItem);
+        if (mItem) mItem.click();
+        for (let i = 0; i < 40 && n._layoutAnim; i++) await w2(50);
+        check('[166-R2] ★★ จัดตามลำดับเรื่อง: ฉากเรียงซ้ายไปขวาตามลำดับจริง + ปักหมุดไว้', ord.every((x, i) => i === 0 || x.x > ord[i - 1].x) && ord.every((x) => x._pinned), ord.map((x) => Math.round(x.x)).join());
+        // ── ป้ายบนเส้น: วนสามโหมด ──
+        const lbB = document.querySelector('#net-body [data-act="labels"]');
+        const m0 = n._edgeLabels;
+        lbB.click(); const m1 = n._edgeLabels; lbB.click(); const m2 = n._edgeLabels; lbB.click();
+        check('[166-R2] ★ ปุ่มป้ายบนเส้นวน ความสัมพันธ์ → ทุกเส้น → เฉพาะที่ชี้ → กลับ', m0 === 'rel' && m1 === 'all' && m2 === 'none' && n._edgeLabels === 'rel' && lbB.title.includes(tt('ui.netUi.edgeLabelsRel')));
+        // ── มุมมองระยะ ──
+        const psB = document.querySelector('#net-body [data-act="persp"]');
+        check('[166-R2] 2D: ปุ่มมุมมองระยะกดไม่ได้ (มีผลเฉพาะ 3D)', psB.disabled === true);
+        n.toggle3D(true); await w2(550);
+        check('[166-R2] 3D: ปุ่มมุมมองระยะกดได้ + เปิดเป็นค่าเริ่มต้น', psB.disabled === false && psB.classList.contains('on') && n._perspK() === 1);
+        const pj = n._pj();
+        const fs = n.nodes.map((x) => pj.view(x).f);
+        check('[166-R2] ★ มุมมองระยะ: โหนดที่ความลึกต่างกันได้ขนาดต่างกันจริง', Math.max(...fs) - Math.min(...fs) > 0.01 || n.nodes.every((x) => Math.abs((x.z || 0) - n._cam.tz) < 1), fs.map((x) => x.toFixed(2)).join());
+        const Tc = n.screenOf({ x: n._cam.tx, y: n._cam.ty, z: n._cam.tz });
+        check('[166-R2] ★ มีมุมมองระยะแล้วจุดโฟกัสยังอยู่กลางจอ', Math.abs(Tc.x - n.canvas.width / 2) < 0.5 && Math.abs(Tc.y - n.canvas.height / 2) < 0.5);
+        psB.click(); await w2(40);
+        check('[166-R2] ปิดมุมมองระยะ = กลับเป็นแบบขนาน', n._perspK() === 0 && !psB.classList.contains('on'));
+        psB.click(); n.toggle3D(false); await w2(550);
+        // ── ค้นหา + Enter = บินไปหา + เลือก ──
+        const tgt = ord[ord.length - 1];
+        const si = document.querySelector('#net-body .net-tbar-input');
+        si.value = tgt.name; si.dispatchEvent(new Event('input'));
+        si.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        await w2(600);
+        const pt = n.screenOf(tgt);
+        check('[166-R2] ★ ค้นหาแล้ว Enter = เลือกผลแรก + กล้องบินไปอยู่กลางจอ', n._sel === tgt && Math.abs(pt.x - n.canvas.width / 2) < 2 && Math.abs(pt.y - n.canvas.height / 2) < 2, n._sel && n._sel.name);
+        si.value = ''; si.dispatchEvent(new Event('input')); await w2(260);
+        n.select(null);
+      }
+
       // ── ข้อ 5: หลายแผนของผังแตกสาย ──
       {
         const bp = await import('./branching-ui.js');
@@ -2734,7 +2985,7 @@ export async function runTest(projectPath) {
         check('[74-K1] แก้กระดานแล้ว **ข้อความแถวไม่ถูกเขียนทับ** (ที่เดียวที่เคยรื้อเนื้อแถว)',
               prow2.textContent === textBefore, `"${textBefore}" → "${prow2.textContent}"`);
         check('[74-K1] ไม่มีสัญลักษณ์ ▶ / ● บนแถวอีกแล้ว',
-              !prow2.textContent.includes('▶') && !prow2.textContent.includes('●'), prow2.textContent);
+              !prow2.textContent.includes(gi('play')) && !prow2.textContent.includes('●'), prow2.textContent);
         check('[74-K1] สถานะบอกด้วย class (ตัวหนา/สี) แทน',
               prow2.classList.contains('k-row-open') && prow2.classList.contains('k-row-unsaved'),
               prow2.className);
@@ -4133,6 +4384,8 @@ export async function runTest(projectPath) {
     await new Promise((r) => setTimeout(r, 400));
     check('[21] คลังรูปเปิดเป็นแผง (ไม่ใช่แท็บเอกสาร)',
           isPanelOpen('gallery') && !state.tabs.has('::gallery::'));
+    // [alpha.166] รอเงื่อนไขจริง (กฎข้อ 18) — รอตายตัว 400ms แดงสุ่มตอนเครื่องหนัก (แผงอ่านรูป/ดัชนีแบบ async)
+    for (let i = 0; i < 60 && !document.querySelectorAll('#gal-body .gal2-cell').length; i++) await new Promise((r) => setTimeout(r, 50));
     check('[21] แผงคลังรูปเห็นรูปจริง',
           document.querySelectorAll('#gal-body .gal2-cell').length >= 1,
           document.querySelectorAll('#gal-body .gal2-cell').length);
@@ -5661,7 +5914,7 @@ export async function runTest(projectPath) {
       const otherRow = [...document.querySelectorAll('#tree .scene[data-planner]')]
         .find((r) => r.dataset.planner !== plannerInst.data.getPath());
       check('[65r7] อัปเดตสถานะแล้วแถวกระดานใบอื่นไม่ถูกแตะ (ยังเป็น 📋 สถานะปกติ)',
-            !otherRow || (otherRow.textContent.startsWith('📋') && !otherRow.textContent.includes('●') &&
+            !otherRow || (otherRow.textContent.startsWith(gi('clipboard')) && !otherRow.textContent.includes('●') &&
                           !otherRow.classList.contains('k-row-unsaved') &&
                           !otherRow.classList.contains('k-row-open')),
             otherRow ? otherRow.textContent : '(มีกระดานใบเดียว)');
@@ -6885,7 +7138,7 @@ export async function runTest(projectPath) {
     check('ไฟล์ที่ย้ายเข้าบทยังมี type: memo ใน frontmatter', mMeta.type === 'memo');
     const mRowEl = [...document.querySelectorAll('.scene')].find((x) => x.textContent.includes('โน้ตทดสอบย้าย'));
     check('Explorer แสดงโน้ตในบทด้วยไอคอน 📝 + คลาส sc-memo',
-          !!mRowEl && mRowEl.classList.contains('sc-memo') && mRowEl.textContent.includes('📝'));
+          !!mRowEl && mRowEl.classList.contains('sc-memo') && mRowEl.textContent.includes(gi('note')));
 
     const mCompiled = await compileDraftText(dP, 'เล่มทดสอบ');
     check('ส่งออกฉบับร่าง "ไม่" รวมเนื้อหาของโน้ต',
@@ -7045,8 +7298,8 @@ export async function runTest(projectPath) {
     // [alpha.149] รอ "เงื่อนไขจริง" แบบเดียวกับเคสเอาป้ายออกข้างล่าง (ต้นไม้วาดใหม่แบบ async)
     // เดิมรอตายตัว 200ms → แดงรอบที่เครื่องหนัก ทั้งที่ scenes.json/frontmatter ถูกต้องแล้ว
     const hasFlash = (g) => [...document.querySelectorAll('.scene .tree-flash')].some((s) => s.textContent === g);
-    for (let i = 0; i < 40 && !hasFlash('⏪'); i++) await new Promise((r) => setTimeout(r, 50));
-    check('Explorer แสดงป้าย ⏪ ข้างชื่อฉากย้อนอดีต', hasFlash('⏪'));
+    for (let i = 0; i < 40 && !hasFlash(gi('rewind')); i++) await new Promise((r) => setTimeout(r, 50));
+    check('Explorer แสดงป้าย ⏪ ข้างชื่อฉากย้อนอดีต', hasFlash(gi('rewind')));
     // ติ๊กทั้งสองพร้อมกัน → ต้องเหลือ "ย้อนอดีต" ตัวเดียว (ห้าม true พร้อมกัน)
     sceneProps(dPath, chP, scP);
     await new Promise((r) => setTimeout(r, 100));
@@ -7073,8 +7326,8 @@ export async function runTest(projectPath) {
     const scFf = await readSc0();
     check('ติ๊กล่วงหน้าอย่างเดียว → isFlashforward = true',
           scFf.isFlashforward === true && scFf.isFlashback === false, JSON.stringify(scFf));
-    for (let i = 0; i < 40 && !hasFlash('⏩'); i++) await new Promise((r) => setTimeout(r, 50));
-    check('Explorer แสดงป้าย ⏩ ข้างชื่อฉากล่วงหน้า', hasFlash('⏩'));
+    for (let i = 0; i < 40 && !hasFlash(gi('fast-forward')); i++) await new Promise((r) => setTimeout(r, 50));
+    check('Explorer แสดงป้าย ⏩ ข้างชื่อฉากล่วงหน้า', hasFlash(gi('fast-forward')));
     sceneProps(dPath, chP, scP);
     await new Promise((r) => setTimeout(r, 100));
     {
@@ -7212,7 +7465,7 @@ export async function runTest(projectPath) {
     const scFlag = (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters[chP.guid][0];
     check('ปักหมุดฉาก → flag=true ใน scenes.json', scFlag.flag === true, JSON.stringify(scFlag.flag));
     check('ฉากปักหมุดแสดง ⭐ ในต้นไม้',
-          [...document.querySelectorAll('.scene')].some((s) => s.textContent.includes('⭐')));
+          [...document.querySelectorAll('.scene')].some((s) => s.textContent.includes(gi('star'))));
     await toggleSceneFlag(dPath, chP, { id: scP.id, flag: true, title: scP.title });   // สลับกลับ
     check('เอาหมุดออก → flag=false',
           (await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters[chP.guid][0].flag === false);
@@ -7281,7 +7534,7 @@ export async function runTest(projectPath) {
       check('เปิดฉากที่ล็อก → editor แก้ไม่ได้ (editable=false)',
             state.active.locked === true && state.active.editor.view.editable === false);
       check('ฉากที่ล็อกแสดง 🔒 ในต้นไม้',
-            [...document.querySelectorAll('.scene')].some((s) => s.textContent.includes('🔒')));
+            [...document.querySelectorAll('.scene')].some((s) => s.textContent.includes(gi('lock'))));
       await setSceneLock(dPath, chP, scP, false);
       await new Promise((r) => setTimeout(r, 80));
       check('ปลดล็อก → editor กลับแก้ได้', state.active.editor.view.editable === true);
@@ -7676,7 +7929,8 @@ export async function runTest(projectPath) {
     await new Promise((r) => setTimeout(r, 30));
     document.querySelector('.k-tpl-edit input.k-dlg-input').value = 'สถานที่ทดสอบ (แก้แล้ว)';
     document.querySelector('.k-tpl-edit .k-dlg-btns .k-ok').click();
-    await new Promise((r) => setTimeout(r, 80));
+    // [alpha.166] รอไฟล์ถูกเขียนจริง (กฎข้อ 18) — 80ms ตายตัวแดงสุ่มตอนดิสก์ช้า
+    for (let i = 0; i < 60 && !JSON.parse(await kapi.readFile(tplFile)).templates.some((x) => x.name === 'สถานที่ทดสอบ (แก้แล้ว)'); i++) await new Promise((r) => setTimeout(r, 50));
     const tdoc2 = JSON.parse(await kapi.readFile(tplFile));
     check('แก้ชื่อเทมเพลตแล้วบันทึกถูก',
           tdoc2.templates.some((x) => x.id === created.id && x.name === 'สถานที่ทดสอบ (แก้แล้ว)') &&
@@ -8317,6 +8571,24 @@ export async function runTest(projectPath) {
         state.settings.lineNumbers = !ln1; applySettings();
         check('[165-S] ★ ค่าเปลี่ยนจากกล่องตั้งค่า (applySettings) = สวิตช์บนแถบตามทันที',
               lnB.classList.contains('on') === !ln1);
+        // [alpha.166] ผู้ใช้: "status bar ที่มันขยับทุก ๆ ครั้ง" — ช่องขวากว้างตามข้อความ (บันทึกแล้ว ↔ ยังไม่บันทึก) ดันช่องอื่น
+        {
+          const tS = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+          check('[166-S] เตรียมสภาพ: มีแท็บนิยายเปิดอยู่', !!tS);
+          if (tS) {
+            activate(tS.file); await w165(300);
+            if (tS.dirty) { await saveTab(tS); await w165(200); }
+            const lefts = () => [...document.querySelectorAll('#statusbar > .k-sb-seg')].map((e2) => Math.round(e2.getBoundingClientRect().left)).join(',');
+            const L0 = lefts();
+            const v = tS.editor.view; const p166 = v.state.selection.from;
+            v.dispatch(v.state.tr.insertText('ก', p166)); await w165(400);
+            const L1 = lefts();
+            check('[166-S] ★★ พิมพ์ตัวแรก (บันทึกแล้ว → ยังไม่บันทึก) ช่องบนแถบสถานะไม่ขยับ', tS.dirty && L1 === L0, L0 + ' → ' + L1);
+            v.dispatch(v.state.tr.delete(p166, p166 + 1));
+            await saveTab(tS); await w165(400);
+            check('[166-S] ★ บันทึกแล้ว (ยังไม่บันทึก → เวลาบันทึก) ช่องไม่ขยับ', !tS.dirty && lefts() === L0, L0 + ' → ' + lefts());
+          }
+        }
         state.settings.lineNumbers = ln1; applySettings();
         const sbR = document.getElementById('statusbar');
         check('[165-S] แถบสถานะยังบรรทัดเดียว ไม่ล้นแนวนอน', sbR.offsetHeight < 40 && sbR.scrollWidth <= sbR.clientWidth + 1,
@@ -8945,7 +9217,7 @@ export async function runTest(projectPath) {
             document.querySelectorAll('.branch-edit-row').length === 2,
             String(document.querySelectorAll('.branch-edit-row').length));
       check('inspector มีปุ่มเปิดฉากคู่กับผัง (Split View)',
-            [...document.querySelectorAll('.branch-side-acts button')].some((b) => b.textContent.includes('⊞')));
+            [...document.querySelectorAll('.branch-side-acts button')].some((b) => b.textContent.includes(gi('split-grid'))));
       await kapi.testShot('/tmp/k2_branch.png');
 
       // ── [alpha.66] ยกเครื่องระบบแตกสาย: ตรวจของใหม่ทีละข้อ ──
@@ -9078,7 +9350,7 @@ export async function runTest(projectPath) {
               vp2 && String(vp2.scrollLeft));
         // [r-5] "เปิดคู่กับผัง" = แยกจอจริง — ผังต้องผนึกอยู่ข้างแผงเอกสาร ไม่ใช่ซ้อนเป็นแท็บ
         const splitB = [...document.querySelectorAll('.branch-side-acts button')]
-          .find((b) => b.textContent.includes('⊞'));
+          .find((b) => b.textContent.includes(gi('split-grid')));
         splitB.click();
         await new Promise((r) => setTimeout(r, 700));
         check('[r-5] เปิดคู่กับผัง: แผงผังยังเปิดอยู่', isPanelOpen('branch'));
@@ -9254,7 +9526,7 @@ export async function runTest(projectPath) {
               (document.querySelector('.player-title') || {}).textContent);
         check('ข้อ 9: ย้อนกลับสุดแล้วปุ่มถูกปิด', document.querySelector('.player-back').disabled);
         const histB66 = [...document.querySelectorAll('.player-foot .player-btn')]
-          .find((b) => b.textContent.includes('🎯'));
+          .find((b) => b.textContent.includes(gi('target')));
         histB66.click();
         await new Promise((r) => setTimeout(r, 250));
         check('ข้อ 9: เปิดกล่องประวัติรอบการเล่นได้',
@@ -9338,7 +9610,7 @@ export async function runTest(projectPath) {
             [...document.querySelectorAll('.floor-item-text')].some((d) => d.textContent === 'รอยเลือดบนพื้น')
             && !!document.querySelector('.floor-item-del'));
       check('การ์ดเส้นเวลาติดป้ายจำนวนเบาะแส',
-            [...document.querySelectorAll('.floor-tl-badges')].some((d) => d.textContent.includes('👁1')),
+            [...document.querySelectorAll('.floor-tl-badges')].some((d) => d.textContent.includes(gi('eye') + '1')),
             [...document.querySelectorAll('.floor-tl-badges')].map((d) => d.textContent).join('|'));
       await kapi.testShot('/tmp/k2_floorplan.png');
 
@@ -11803,7 +12075,7 @@ export async function runTest(projectPath) {
               document.querySelector('.branch-doc-body')?.textContent?.slice(0, 90)
               + ' · plan=' + JSON.stringify(((await import('./branching-ui.js')).currentBranchPlan() || {}).path || null));
         check('ผังมีปุ่มสแกนทั้งโปรเจกต์',
-              [...document.querySelectorAll('.branch-zbtn')].some((b) => b.textContent === '🔎'));
+              [...document.querySelectorAll('.branch-zbtn')].some((b) => b.textContent === gi('search-plus')));
         // เขียนคิว: ยิงพร้อมกัน 3 ครั้งต้องได้ครบ 3 (เดิมทับกันจนหาย)
         const bnode = { dPath, id: scB.id };
         await Promise.all([
@@ -21818,7 +22090,7 @@ export async function runTest(projectPath) {
         // ทางกลับที่ผู้ใช้เห็นจริง (ถาด #k-min-tray เลิกใช้ตั้งแต่ alpha.50) = เมนู มุมมอง → แผง
         const tlItem = panelMenuItems().find((it) => it.label.includes('เส้นเวลา'));
         check('[67] เมนูแผงบอกว่าอยู่หน้าต่างแยก (ไม่ใช่ ☐ เหมือนถูกปิด)',
-              !!tlItem && tlItem.label.includes('🖥') && tlItem.label.includes('หน้าต่างแยก'),
+              !!tlItem && tlItem.label.includes(gi('desktop')) && tlItem.label.includes('หน้าต่างแยก'),
               tlItem ? tlItem.label : 'ไม่มีรายการ');
         // หน้าต่างลูกวาดเนื้อจริงไหม — renderer นี้มองไม่เห็นข้างในหน้าต่างนั้น (คนละ context)
         // จึงให้ main ถ่ายรูปมาให้ แล้วตรวจว่าไม่ใช่ไฟล์เปล่า/หน้าขาว
@@ -21833,6 +22105,13 @@ export async function runTest(projectPath) {
         check('[67] แผงในหน้าต่างลูกวาดเนื้อจริง ไม่ใช่กล่องเปล่า', !!hz && hz.drawn === true);
         check('[67] หน้าต่างลูกไม่ได้ลบของที่โค้ดอ้างด้วย id ทิ้ง (#status/#toolbar/#panes)',
               !!hz && hz.hasStatus && hz.hasToolbar && hz.hasPanes, JSON.stringify(hz));
+        {
+          // [alpha.166] ผู้ใช้: "ฉีก panel ดู จะมีสีธีมเก่าอยู่เสี้ยววินาที" — หน้าต่างลูกต้องได้ธีมตั้งแต่ก่อนบูต
+          const mainTheme = ([...document.body.classList].find((c) => c.startsWith('theme-')) || '').slice(6);
+          check('[166-T] ★ หน้าต่างแผงที่ฉีกทาธีมเดียวกับหน้าต่างหลักตั้งแต่ก่อนเฟรมแรก (theme-boot)',
+                !!hz && !!mainTheme && hz.bootTheme === mainTheme, (hz && hz.bootTheme) + ' / ' + mainTheme);
+          check('[166-T] applyTheme จำธีมไว้ให้หน้าต่างถัดไป (localStorage)', localStorage.getItem('k2-boot-theme') === mainTheme);
+        }
 
         // เรียก showPanel ซ้ำต้องไม่วาดใบที่สองในหน้าต่างนี้
         showPanel('timeline'); await wait62(320);
@@ -23734,7 +24013,7 @@ export async function runTest(projectPath) {
               getComputedStyle(badge).cursor === 'pointer', getComputedStyle(badge).cursor);
         if (spTab17) {
           updateErrorBadge();
-          check('[62-17] ป้ายมีเครื่องหมายว่ากดแล้วมีเมนู (▾)', /▾/.test(badge.textContent), badge.textContent);
+          check('[62-17] ป้ายมีเครื่องหมายว่ากดแล้วมีเมนู (▾)', badge.textContent.includes(gi('caret-down')), badge.textContent);
           const n17 = spErrorMenu(200, 200);
           check('[62-17] คลิกป้ายแล้วได้เมนูคำสั่งจริง (ไม่ใช่แค่แจ้งเตือน)',
                 n17 > 0 && !!document.querySelector('.k-menu'), String(n17));
@@ -27799,7 +28078,7 @@ export async function runTest(projectPath) {
                   && bar117.style.left + '|' + bar117.style.top === beforeLock);
             const menuLocked117 = openMenu117();
             check('[117] ★ เมนูมีเครื่องหมายบอกว่าล็อกอยู่จริง',
-                  !!menuLocked117 && menuLocked117.textContent.includes('✓'),
+                  !!menuLocked117 && menuLocked117.textContent.includes(gi('checkmark')),
                   menuLocked117 ? menuLocked117.textContent : '');
             closeMenus117();
 
@@ -28236,7 +28515,7 @@ export async function runTest(projectPath) {
         // ---- ข้อ 13: ถังขยะ ----
         {
           const tHead = [...document.querySelectorAll('#tree .sec-title')]
-            .find((h) => h.oncontextmenu && /♻|ถังขยะ|Trash|Recycle/i.test(h.textContent));
+            .find((h) => h.oncontextmenu && (h.textContent.includes(gi('recycle')) || /ถังขยะ|Trash|Recycle/i.test(h.textContent)));
           check('[120-13] หาหัวข้อถังขยะเจอ', !!tHead, tHead ? tHead.textContent : 'ไม่พบ');
           if (tHead) {
             const txt = menuOf120(tHead);
@@ -30673,26 +30952,28 @@ export async function runTest(projectPath) {
         }
         // ── 4) อีโมจิสีในหน้าจอกลายเป็นไอคอนเส้น · textContent เดิมไม่เปลี่ยน · ไม่แตะตัวแก้ไข ──
         {
-          const GU = await import('./glyph-upgrade.js');
+          // [alpha.166] ตัววางไอคอนเส้นทับอีโมจิ (glyph-upgrade) ถูกถอด — gi() คืนอักขระของฟอนต์ไอคอน Nerd Fonts เอง
+          //   เทสเดิม [157r-4] (อีโมจิสีในปุ่ม → ไอคอนเส้นชุดเดียวกัน) เปลี่ยนเป็นพิสูจน์ว่าไอคอนในข้อความวาดด้วยฟอนต์ K2 Icons จริง
+          try { await document.fonts.load('16px "K2 Icons"', gi('save')); } catch {}
           const probe = el('button', 'k-probe157', gi('save') + ' ' + 'บันทึก');
           document.body.append(probe);
           await w157(80);
-          check('[157r-4] ★ อีโมจิในปุ่มถูกวางไอคอนเส้นทับ (อัตโนมัติ)', !!probe.querySelector('.k-gl svg'));
-          check('[157r-4] ★ textContent ยังเป็นข้อความเดิมทุกไบต์', probe.textContent === gi('save') + ' บันทึก', probe.textContent);
-          const glyphBox = probe.querySelector('.k-gl-t').getBoundingClientRect();
-          check('[157r-4] อักขระเดิมถูกซ่อน (ไม่กินที่)', glyphBox.width <= 1 && glyphBox.height <= 1);
-          probe.textContent = gi('refresh') + ' ใหม่';
-          await w157(80);
-          check('[157r-4] เขียนข้อความใหม่ทับ = แปลงให้อีกรอบเอง', !!probe.querySelector('.k-gl svg') && probe.textContent === gi('refresh') + ' ใหม่');
-          probe.remove();
-          const tab157 = [...state.tabs.values()].find((x) => x.editor || x.sp);
-          if (tab157) {
-            const pm157 = (tab157.editor || tab157.sp).view.dom;
-            const before = pm157.querySelectorAll('.k-gl').length;
-            GU.upgradeGlyphs(pm157);
-            check('[157r-4] ★ ไม่แตะเนื้อหาในตัวแก้ไข (อีโมจิของนักเขียน)', pm157.querySelectorAll('.k-gl').length === before);
+          const cp166 = gi('save').codePointAt(0);
+          check('[166-F] ★ gi() คืนอักขระของฟอนต์ไอคอน (Private Use) ไม่ใช่อีโมจิสี', cp166 >= 0xF0000, cp166.toString(16));
+          check('[166-F] ★ ฟอนต์ K2 Icons โหลดแล้วและมีรูปของไอคอนนี้', document.fonts.check('16px "K2 Icons"', gi('save')));
+          check('[166-F] ★ textContent ยังเป็นข้อความเดิมทุกไบต์ (ไม่มีตัววางทับ)', probe.textContent === gi('save') + ' บันทึก' && !probe.querySelector('.k-gl'), probe.textContent);
+          {
+            // วัดจริง: ไอคอนกว้าง ≈ 1em (Nerd Font Mono) — ถ้าตกไปฟอนต์ระบบจะได้กล่อง/ความกว้างอื่น
+            const cv = document.createElement('canvas').getContext('2d');
+            cv.font = '40px "K2 Icons"'; const wIc = cv.measureText(gi('save')).width;
+            cv.font = '40px monospace'; const wMono = cv.measureText(gi('save')).width;
+            // size-adjust 86% ของ @font-face (ย่อให้เท่าไอคอนกริด 24 มาตรฐาน) → กว้าง 0.86em
+            check('[166-F] ★ อักขระไอคอนวาดด้วยฟอนต์ไอคอนจริง (กว้าง 0.86em ต่างจากฟอนต์สำรอง)', Math.abs(wIc - 40 * 0.86) < 1.5 && Math.abs(wIc - wMono) > 0.5, wIc + ' / ' + wMono);
           }
-          check('[157r-4] ทั้งหน้าจอมีไอคอนที่ถูกแปลงแล้ว', GU.glyphUpgradeCount() > 0, GU.glyphUpgradeCount());
+          probe.remove();
+          check('[166-F] ไอคอนประจำคำสั่ง (svg) มาจากฟอนต์เดียวกัน (viewBox ของ Nerd Font)',
+                !!document.querySelector('#toolbar svg[data-k-icon]') &&
+                [...document.querySelectorAll('#toolbar svg[data-k-icon]')].every((x) => /^-\d+ -\d+ \d+ \d+$/.test(x.getAttribute('viewBox') || '')));
         }
         // ── 3) กล่องเกี่ยวกับ: ลิงก์เครดิตสลับแผ่นเครดิต · Esc ปิด ──
         {
@@ -32526,8 +32807,13 @@ export async function runTest(projectPath) {
           {
             const before = !!state.settings.lineNumbers;
             await handleCommand('line-numbers');
-            await w3(120);
-            const g3 = await kapi.readGlobalSettings().catch(() => null);
+            // [alpha.166] รอไฟล์ตั้งค่าผู้ใช้ถูกเขียนจริง (กฎข้อ 18) — 120ms ตายตัวแดงสุ่มตอนเครื่องหนัก
+            let g3 = null;
+            for (let i = 0; i < 60; i++) {
+              g3 = await kapi.readGlobalSettings().catch(() => null);
+              if (g3 && !!g3.lineNumbers === !before) break;
+              await w3(50);
+            }
             check('[162-W3] ★★ สลับเลขบรรทัดจากเมนู → เขียนลงไฟล์ตั้งค่าผู้ใช้ (ตามไปทุกผลงาน)',
                   !!g3 && !!g3.lineNumbers === !!state.settings.lineNumbers && !!state.settings.lineNumbers !== before,
                   JSON.stringify({ file: g3 && g3.lineNumbers, mem: state.settings.lineNumbers, before }));
@@ -33202,11 +33488,12 @@ export async function runTest(projectPath) {
             const TM6 = await import('./timing.js');
             const AP6 = await import('./ai/ai-providers.js');
             // ข้อ 1 — ไอคอนที่ย้ายเข้าทะเบียนให้ตัวเดิมเป๊ะ
+            // [alpha.166] ไอคอนเปลี่ยนเป็นชุด Nerd Fonts — "ตัวเดิม" = ตัวอักษรล้วนในทะเบียน (gt) · ตัวเชิงข้อความ (× §) ยังเป็นตัวเดิมบนจอ
             check('[162-W6] ★★ ไอคอนที่ย้ายเข้าทะเบียนได้ตัวเดิม (× − § ¶ « » ⤢ ⟲ ⊡)',
-                  gi('times') === '×' && gi('minus') === '−' && gi('section-mark') === '§'
-                  && gi('pilcrow') === '¶' && gi('strip-collapse') === '«' && gi('strip-expand') === '»'
-                  && gi('maximize') === '⤢' && gi('rotate-ccw') === '⟲' && gi('dock-window') === '⊡',
-                  [gi('times'), gi('minus'), gi('maximize')].join(' '));
+                  gi('times') === '×' && gt('minus') === '−' && gi('section-mark') === '§'
+                  && gt('pilcrow') === '¶' && gt('strip-collapse') === '«' && gt('strip-expand') === '»'
+                  && gt('maximize') === '⤢' && gt('rotate-ccw') === '⟲' && gt('dock-window') === '⊡',
+                  [gi('times'), gt('minus'), gt('maximize')].join(' '));
             // ข้อ 2 — ผืนวาดตามธีมจริง · เปลี่ยนธีมแล้วสีตาม (ไม่ค้างแคช)
             const th0 = state.settings.theme;
             const cssVar = (v) => getComputedStyle(document.body).getPropertyValue(v).trim();

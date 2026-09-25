@@ -70,8 +70,27 @@ const ids = new Set(rows.map((r) => r.command_id));
 {
   const svgDir = path.join(ROOT, 'icons/svg');
   const files = fs.readdirSync(svgDir).filter((f) => f.endsWith('.svg'));
-  check('มีไฟล์ svg อย่างน้อย 60 ไฟล์', files.length >= 60, files.length);
-  check('svg ทุกไฟล์อ่านได้', Object.keys(data.ICON_SVG).length === files.length);
+  // [alpha.166] ไอคอนทั้งชุดมาจาก Nerd Fonts (glyphs.csv ช่อง nf) — icons/svg/ เหลือไว้สำหรับไฟล์ทับของผู้ใช้เท่านั้น
+  const csvRows = CD.readCsvObjects(path.join(ROOT, 'icons/glyphs.csv'));
+  const nfRows = csvRows.filter((r) => r.nf);
+  check('★ [166] ไอคอนส่วนใหญ่มาจาก Nerd Fonts (≥ 280 ชื่อ)', nfRows.length >= 280, nfRows.length);
+  check('★ [166] ทุกชื่อที่มี nf ได้รูป svg จากฟอนต์ (icon()/iconHtml() คม ๆ)', nfRows.every((r) => data.ICON_SVG[r.name]),
+        nfRows.filter((r) => !data.ICON_SVG[r.name]).map((r) => r.name).join(','));
+  check('★ [166] ทุกชื่อที่มี nf ได้อักขระของฟอนต์ไอคอน (Private Use)', nfRows.every((r) => { const c = (data.ICON_GLYPH[r.name] || '').codePointAt(0) || 0; return (c >= 0xE000 && c <= 0xF8FF) || c >= 0xF0000; }));
+  check('[166] ชื่อ nf เขียนแบบ cheat sheet ของ nerdfonts.com (nf-<ชุด>-<ชื่อ>)', nfRows.every((r) => /^nf-[a-z]+-[a-z0-9_]+$/.test(r.nf)),
+        nfRows.filter((r) => !/^nf-[a-z]+-[a-z0-9_]+$/.test(r.nf)).map((r) => r.nf).join(','));
+  check('[166] ICON_TEXT = ช่อง glyph (ตัวอักษรล้วนสำหรับไฟล์ส่งออก)', csvRows.filter((r) => r.glyph).every((r) => data.ICON_TEXT[r.name] === r.glyph));
+  check('[166] ฟอนต์ไอคอน + สัญญาอนุญาตอยู่ใน renderer/assets/fonts', fs.existsSync(path.join(ROOT, 'renderer/assets/fonts/k2-icons.ttf'))
+        && /MIT License/.test(fs.readFileSync(path.join(ROOT, 'renderer/assets/fonts/k2-icons-LICENSE.txt'), 'utf8')));
+  check('[166] ชื่อ nf ที่ไม่มีจริง = build ล้มพร้อมบอกแถว (ไม่เงียบ)', (() => {
+    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'k2nf-'));
+    fs.mkdirSync(path.join(tmp, 'icons', 'nerdfont'), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, 'icons/nerdfont/glyphnames.json'), path.join(tmp, 'icons/nerdfont/glyphnames.json'));
+    fs.writeFileSync(path.join(tmp, 'icons', 'glyphs.csv'), 'name,nf,glyph\nzz,nf-md-no_such_icon_xyz,\n');
+    const r = CD.buildCommandsData(tmp);
+    return r.errors.some((e) => e.includes('zz') && e.includes('nf-md-no_such_icon_xyz'));
+  })());
+  check('svg ทุกไฟล์ (ไฟล์ทับของผู้ใช้) อ่านได้', files.every((f) => data.ICON_SVG[f.slice(0, -4)]));
   check('ชื่อไฟล์ svg เป็นตัวเล็ก-ขีด (ใช้เป็นชื่อไอคอนใน CSV)', files.every((f) => /^[a-z0-9-]+\.svg$/.test(f)), files.filter((f) => !/^[a-z0-9-]+\.svg$/.test(f)).join(','));
   const evil = CD.parseSvg('<?xml version="1.0"?><svg width="16" height="16" onload="alert(1)"><script>x()</script><title>t</title><path d="M0 0" onclick="y()"/></svg>');
   check('parseSvg ถอด <script> / on* / <title>', !/script|onload|onclick|<title/i.test(evil.inner + JSON.stringify(evil.attrs)), JSON.stringify(evil));
@@ -207,7 +226,7 @@ const ids = new Set(rows.map((r) => r.command_id));
   const csv = fs.readFileSync(path.join(__dirname, '..', 'icons', 'commands.csv'), 'utf8');
   const side = ['left', 'top', 'bottom', 'right'].filter((sd) => !new RegExp('^panels-side-' + sd + ',panel-' + sd + ',', 'm').test(csv));
   check('[159-M25] ปุ่มซ่อนแผงทั้งสี่ฝั่งมีไอคอนในทะเบียน + ไฟล์ svg', side.length === 0
-        && ['left', 'top', 'bottom', 'right'].every((sd) => fs.existsSync(path.join(__dirname, '..', 'icons', 'svg', 'panel-' + sd + '.svg'))),
+        && ['left', 'top', 'bottom', 'right'].every((sd) => !!data.ICON_SVG['panel-' + sd]),   // [alpha.166] รูปมาจากฟอนต์ (ไฟล์ svg ไม่บังคับแล้ว)
         side.join(','));
 }
 

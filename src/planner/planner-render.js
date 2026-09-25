@@ -25,7 +25,7 @@ import {
 
 export const PORT_GAP = 20;          // ระยะที่ port ยื่นออกนอกขอบการ์ด (บั๊ก 9) — พ้นปุ่มปรับขนาดกลางขอบ
 export const EDGE_HIT_TOL = 9;       // ระยะ (พิกเซลบนจอ) ที่ถือว่าคลิกโดนเส้น (บั๊ก 10 · 65r3-3)
-const FONT = '"Segoe UI", "Leelawadee UI", sans-serif';
+const FONT = '"Segoe UI", "Leelawadee UI", sans-serif, "K2 Icons"';   // [alpha.166] อักขระไอคอน (glyphOf) วาดด้วยฟอนต์ไอคอน
 
 /** ชื่อไอคอนในทะเบียน → ตัวอักษรที่วาดลง canvas ได้ ('' = ไม่มีในทะเบียน) */
 export function glyphOf(name) { return (name && ICON_GLYPH[name]) || ''; }

@@ -17,7 +17,7 @@ export const LEVELS = ['error', 'warn', 'info', 'debug'];
 export const LEVEL_META = {
   error: { icon: gi('forbidden'), label: t('ui.log.error'), rank: 0 },
   warn:  { icon: gi('warning'), label: t('ui.log.msg'),   rank: 1 },
-  info:  { icon: 'ℹ', label: t('ui.common.msg4'),  rank: 2 },
+  info:  { icon: gi('info'), label: t('ui.common.msg4'),  rank: 2 },   // [alpha.166] ไอคอนจากทะเบียน (เดิม ℹ ตายตัว)
   debug: { icon: '·', label: t('ui.common.detailed'), rank: 3 },
 };
 

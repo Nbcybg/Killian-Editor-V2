@@ -95,6 +95,37 @@ function parseSvg(text) {
 }
 
 // ───────── ประกอบ ─────────
+// ─── [alpha.166] Nerd Fonts ───
+const NERD_FONT = ['renderer', 'assets', 'fonts', 'k2-icons.ttf'];   // Symbols Nerd Font Mono (ไอคอนเต็มช่อง 1em)
+const ICON_SCALE = 0.86;                  // ต้องเท่ากับ size-adjust ของ @font-face "K2 Icons" ใน style.css
+const _nerd = { names: null, font: null, fontRoot: '' };
+function loadNerdNames(root) {
+  if (_nerd.names) return _nerd.names;
+  const f = path.join(root, 'icons', 'nerdfont', 'glyphnames.json');
+  _nerd.names = fs.existsSync(f) ? (JSON.parse(fs.readFileSync(f, 'utf8')).glyphs || {}) : {};
+  return _nerd.names;
+}
+function loadNerdFont(root) {
+  if (_nerd.fontRoot === root) return _nerd.font;
+  _nerd.fontRoot = root; _nerd.font = null;
+  const f = path.join(root, ...NERD_FONT);
+  try { if (fs.existsSync(f)) _nerd.font = require('@pdf-lib/fontkit').create(fs.readFileSync(f)); } catch { _nerd.font = null; }
+  return _nerd.font;
+}
+/** รูปเส้นทางของอักขระหนึ่งตัวในฟอนต์ → { attrs, inner } (พิกัดฟอนต์ y ชี้ขึ้น → พลิกด้วย transform) */
+function nerdSvg(font, cp) {
+  const g = font.glyphForCodePoint(cp);
+  if (!g || !g.id) return null;
+  const d = g.path.toSVG();
+  if (!d) return null;
+  const em = font.unitsPerEm, asc = font.ascent;
+  const r = (v) => Math.round(v);
+  // ระยะเผื่อรอบรูป — ฟอนต์ Mono ขยายรูปจนชนขอบ · ย่อกลับ 86% (คู่กับ size-adjust ของ @font-face "K2 Icons")
+  const pad = em * (1 / ICON_SCALE - 1) / 2;
+  return { attrs: { viewBox: `${r(-pad)} ${r(-asc - pad)} ${r(em + 2 * pad)} ${r(em + 2 * pad)}` },
+           inner: `<path transform="scale(1,-1)" d="${d.replace(/(\d+\.\d{1,})/g, (m) => String(Math.round(+m * 10) / 10))}"/>` };
+}
+
 function buildCommandsData(root = ROOT) {
   const errors = [], warnings = [];
   const svgDir = path.join(root, 'icons', 'svg');
@@ -106,8 +137,30 @@ function buildCommandsData(root = ROOT) {
       catch (e) { errors.push(`icons/svg/${f}: ${e.message}`); }
     }
   }
-  const ICON_GLYPH = {};
-  for (const r of readCsvObjects(path.join(root, 'icons', 'glyphs.csv'))) if (r.name && r.glyph) ICON_GLYPH[r.name] = r.glyph;
+  // [alpha.166] ★ ไอคอนชุดเดียวทั้งโปรแกรม = Nerd Fonts (ผู้ใช้: "icon ทันสมัย มืออาชีพ ลองไปดึงจาก nerdfonts.com")
+  //   glyphs.csv: name,nf,glyph — nf = ชื่อจาก cheat sheet ของ nerdfonts.com (เช่น nf-md-book_open_outline)
+  //   · ICON_GLYPH[name] = ตัวอักษรที่วาดบนจอ (nf → อักขระ PUA ของฟอนต์ "K2 Icons" · ไม่มี nf = ตัวอักษรในช่อง glyph)
+  //   · ICON_TEXT[name]  = ตัวอักษรล้วนในช่อง glyph — ใช้กับข้อความที่ออกนอกหน้าจอ (ไฟล์ส่งออก · ข้อความถึง AI)
+  //   · ICON_SVG[name]   = รูปเส้นทางจากฟอนต์เดียวกัน (icon()/iconHtml()/data-icon ได้ svg คม ๆ) — ไฟล์ใน icons/svg/ ทับได้
+  const ICON_GLYPH = {}, ICON_TEXT = {};
+  const nfNames = loadNerdNames(root);
+  const nfFont = loadNerdFont(root);
+  for (const r of readCsvObjects(path.join(root, 'icons', 'glyphs.csv'))) {
+    if (!r.name) continue;
+    if (r.glyph) ICON_TEXT[r.name] = r.glyph;
+    if (r.nf) {
+      const key = r.nf.replace(/^nf-/, '');
+      const code = nfNames[key];
+      if (!code) { errors.push(`icons/glyphs.csv: ${r.name}: ไม่รู้จัก "${r.nf}" (ดูชื่อที่ https://www.nerdfonts.com/cheat-sheet)`); continue; }
+      const cp = parseInt(code, 16);
+      ICON_GLYPH[r.name] = String.fromCodePoint(cp);
+      if (!ICON_SVG[r.name] && nfFont) {
+        const svg = nerdSvg(nfFont, cp);
+        if (svg) ICON_SVG[r.name] = svg;
+        else warnings.push(`icons/glyphs.csv: ${r.name}: ฟอนต์ไม่มีรูปของ ${r.nf}`);
+      }
+    } else if (r.glyph) ICON_GLYPH[r.name] = r.glyph;
+  }
 
   const COMMAND_ICON = {};
   const SHORTCUT_ROWS = [];
@@ -133,7 +186,7 @@ function buildCommandsData(root = ROOT) {
       }
     }
   }
-  return { ICON_SVG, ICON_GLYPH, COMMAND_ICON, SHORTCUT_ROWS, errors, warnings };
+  return { ICON_SVG, ICON_GLYPH, ICON_TEXT, COMMAND_ICON, SHORTCUT_ROWS, errors, warnings };
 }
 
 function moduleText(d) {
@@ -148,8 +201,11 @@ function moduleText(d) {
     ...Object.entries(d.ICON_SVG).map(([k, v]) => `  ${JSON.stringify(k)}: ${j(v)},`),
     '};',
     '',
-    '/** ชื่อไอคอนที่ยังไม่มีไฟล์ svg → ตัวอักษรสำรอง (icons/glyphs.csv) */',
+    '/** ชื่อไอคอน → ตัวอักษรบนจอ (อักขระของฟอนต์ K2 Icons = Nerd Fonts · หรือตัวอักษรล้วน) — icons/glyphs.csv */',
     `export const ICON_GLYPH = ${JSON.stringify(d.ICON_GLYPH, null, 2)};`,
+    '',
+    '/** ชื่อไอคอน → ตัวอักษรล้วน (ข้อความที่ออกนอกจอ: ไฟล์ส่งออก · ข้อความถึง AI) — ช่อง glyph ของ icons/glyphs.csv */',
+    `export const ICON_TEXT = ${JSON.stringify(d.ICON_TEXT, null, 2)};`,
     '',
     '/** คำสั่ง → ชื่อไอคอน (คำสั่งที่ช่อง icon ว่างไม่อยู่ในตารางนี้ = ไม่มีไอคอน) */',
     `export const COMMAND_ICON = ${JSON.stringify(d.COMMAND_ICON, null, 2)};`,

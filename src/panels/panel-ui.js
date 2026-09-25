@@ -171,7 +171,11 @@ export async function tearOffPanel(id) {
   renderPanels(true);
   let ok = false;
   try {
-    ok = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || '', ...box });
+    // [alpha.166] ธีม + สีพื้นของหน้าต่างหลักไปกับหน้าต่างลูก — ทาตั้งแต่เฟรมแรก (เดิมแวบเป็นเทาของธีมเก่า)
+    const theme = [...document.body.classList].find((c) => c.startsWith('theme-'))?.slice(6) || '';
+    let bg = '';
+    try { bg = getComputedStyle(document.body).getPropertyValue('--bg').trim(); } catch {}
+    ok = await window.kapi.tearOff({ id: pid, title: d ? titleOf(d) : pid, root: state.root || '', theme, bg, ...box });
   } catch (e) { log('warn', t('ui.panel.panelOutWindowNot') + pid, e); }
   if (!ok) { tornOff.delete(pid); showPanel(pid); return false; }
   setStatus(tf('ui.panel.tornOffF', (d ? titleOf(d) : pid)));

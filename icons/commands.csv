@@ -26,7 +26,7 @@ select-scene,,Ctrl+Shift+A
 thesaurus,,Ctrl+Alt+Shift+T
 backup-now,archive,
 close-all-tabs,tabs-x,Ctrl+Shift+W
-close-tab,x,Ctrl+W
+close-tab,tab-close,Ctrl+W
 compile,,Ctrl+Alt+X
 export-blog,,Ctrl+Shift+B
 export-hub,book-content,Ctrl+Shift+E
@@ -125,9 +125,9 @@ reveal-active,target,Ctrl+Shift+1
 split-view,dock-right,Ctrl+Shift+\
 typewriter,edit,Ctrl+Shift+T
 workspace-menu,collection,Ctrl+Shift+Y
-zoom:-1,minus,Ctrl+-
+zoom:-1,zoom-out,Ctrl+-
 zoom:0,reset,Ctrl+Shift+0
-zoom:1,plus,Ctrl+=
+zoom:1,zoom-in,Ctrl+=
 scratchpad,note,
 ai-analyzer,brain,
 ai-chat,,

@@ -227,7 +227,7 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   const SKIP_KIND = new Set(['test', 'data-range', 'skip-file', 'compare', 'data-call',
                              'console', 'already', 'tagged', 'obj-key', 'prop']);
   // [alpha.157r] glyph-icons.js = ตาราง "อีโมจิ → ไอคอนเส้น" (อักขระเป็นกุญแจของตาราง ไม่ใช่ไอคอนที่วาดออกจอ)
-  const SKIP_FILES = new Set(['src/visual-tags.js', 'src/icons.js', 'src/glyph-icons.js']);
+  const SKIP_FILES = new Set(['src/visual-tags.js', 'src/icons.js']);   // [alpha.166] glyph-icons.js ถูกถอด
 
   const walk = (dir, out = []) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -490,7 +490,9 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
     ck('★★ [165-K] ปุ่มจับของตัวเลื่อน (range) ≤ 12px (ผู้ใช้: knob ใหญ่ไป)', tw > 0 && tw <= 12, thumb);
     const appSrc = fs.readFileSync(path.join(ROOT, 'src/app.js'), 'utf8');
     ck('★★ [165-C] applyTheme ตั้ง color-scheme ตามโหมดธีม (ส่วนควบคุมดั้งเดิมไม่เป็นเทาของเบราว์เซอร์)',
-       /documentElement\.style\.colorScheme = THEME_MODES\[th\]/.test(appSrc));
+       /documentElement\.style\.colorScheme = THEME_MODES\[th\]/.test(appSrc)
+       // [alpha.166] ค่าโหมดถูกเก็บในตัวแปรก่อน (ใช้ซ้ำกับ theme-boot.js ที่ทาธีมก่อนเฟรมแรก)
+       || /const mode = THEME_MODES\[th\][^\n]*\n[\s\S]{0,120}documentElement\.style\.colorScheme = mode/.test(appSrc));
     ck('★ [165-C] accent-color อยู่ที่ body (ตัวแปรธีมอยู่ที่ body.theme-*)', /(^|\n)body \{ accent-color:var\(--accent-hi\); \}/.test(cssRaw));
     ck('★★ [165-T1] ทูลทิปสำรอง (elementsFromPoint) รับเฉพาะของที่อยู่ใน e.target — ไม่ทะลุลงแผงข้างล่าง',
        /if \(!e\.target\.contains\(el\)\) break;/.test(appSrc));

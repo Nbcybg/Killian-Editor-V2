@@ -12,7 +12,7 @@ import { DOCTOR_ANALYSES, DOCTOR_TASK_KEYS, isDoctor, runDoctorLocal, doctorDige
          doctorTable, TONE_ADJUST } from './ai-doctor.js';
 import { plainText, wordsOf, countWords, dialogueRatio, splitSentences, mean, median, stdev, nameForms, countMentions } from './ai-text.js';
 import { extractJson, validate, estimateTokens, chunkText, estimateCost, SEVERITY, SEV_RANK } from './ai-core.js';
-import { gi } from '../icons.js';
+import { gi, gt } from '../icons.js';
 import { cmpText, fmtNum } from '../locale.js';
 
 export { SEVERITY, SEV_RANK };
@@ -606,7 +606,7 @@ export function localDigest(id, local = {}) {
   const takeRows = (rows, fmt, n = 12) => (rows || []).slice(0, n).forEach((r) => lines.push('- ' + fmt(r)));
   if (id === 'pacing') takeRows(local.rows, (r) => ttf('ui.aia.dgPacing', r.title, r.id, r.tempo, r.dialogue, r.words), 20);
   if (id === 'arc') takeRows(local.chars, (c) => ttf('ui.aia.dgArc', c.name, c.total, c.scenes)
-    + (c.gaps.length ? ttf('ui.aia.dgArcGap', c.gaps.map((g) => g.from + gi('arrow-right') + g.to).join(', ')) : ''));
+    + (c.gaps.length ? ttf('ui.aia.dgArcGap', c.gaps.map((g) => g.from + gt('arrow-right') + g.to).join(', ')) : ''));
   if (id === 'words') takeRows(local.rows, (r) => ttf('ui.aia.dgWords', r.word, r.count, r.per10k), 30);
   if (id === 'conflict') takeRows(local.empty, (r) => ttf('ui.aia.dgConflict', r.title, r.id), 20);
   if (id === 'length') takeRows(local.rows, (r) => ttf('ui.aia.dgLength', r.title, r.id, r.words, r.minutes), 25);

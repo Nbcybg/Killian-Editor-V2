@@ -692,7 +692,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1000, minHeight: 640,
     show: !USE_SPLASH,                               // [alpha.157] มี splash = แสดงเมื่อบูตเสร็จ (ขยายเต็มจอ)
-    backgroundColor: '#1e1250',
+    backgroundColor: userThemeBg(),                  // [alpha.166] พื้นตามธีมที่ผู้ใช้เลือก (เดิมกรมท่าตายตัว — ธีมสว่างแวบม่วง)
     frame: false,                                   // หน้าต่าง custom เต็มรูปแบบ
     webPreferences: { preload: path.join(__dirname, 'preload.js'),
                       contextIsolation: true, nodeIntegration: false,
@@ -1393,6 +1393,8 @@ const SAVE_FILTERS = {
   json: { name: 'JSON', extensions: ['json'] },
   txt: { name: tt('ui.common.text'), extensions: ['txt'] },
   zip: { name: 'ZIP', extensions: ['zip'] },
+  // [alpha.166] โมเดล 3 มิติแทนโหนดใน Story Network
+  model3d: { name: tt('ui.netScene.modelFiles'), extensions: ['glb', 'gltf', 'obj', 'stl'] },
   // [alpha.66 ข้อ 10] ส่งออกผังแตกสายเป็นรูป
   svg: { name: tt('ui.menu.imageSVG'), extensions: ['svg'] },
   png: { name: tt('ui.menu.imagePNG'), extensions: ['png'] },
@@ -2259,6 +2261,25 @@ ipcMain.on('lang:sync', (e, want) => {
 // ─────────────────────────────────────────────────────────────────────
 const tearOffs = new Map();                       // panelId → BrowserWindow
 
+/**
+ * [alpha.166] สีพื้น (--bg) ของธีม — อ่านจากไฟล์ธีมเอง (renderer/themes/<id>.css) ไม่ใช่ค่าตายตัว
+ * ใช้เป็น backgroundColor ของหน้าต่าง (สีที่ OS ทาก่อนหน้าเว็บวาดเสร็จ) · หาไม่เจอ = กรมท่าของ K2
+ */
+function themeBg(id) {
+  const tid = /^[a-z0-9-]+$/.test(String(id || '')) ? String(id) : 'k2';
+  try {
+    const css = fs.readFileSync(path.join(__dirname, 'renderer', 'themes', tid + '.css'), 'utf8');
+    const m = css.match(/--bg:\s*(#[0-9a-f]{6})\b/i);
+    if (m) return m[1];
+  } catch {}
+  return '#1e1250';
+}
+/** [alpha.166] สีพื้นของธีมในตั้งค่าผู้ใช้ (settings.json ของ userData) */
+function userThemeBg() {
+  try { const g = JSON.parse(fs.readFileSync(globalSettingsPath(), 'utf-8')); return themeBg(g && g.theme); } catch {}
+  return themeBg('k2');
+}
+
 function tearOffWin(id) {
   const w = tearOffs.get(id);
   return w && !w.isDestroyed() ? w : null;
@@ -2284,7 +2305,8 @@ ipcMain.handle('panel:tearOff', (e, opts = {}) => {
     y: Number.isInteger(opts.y) ? opts.y : undefined,
     minWidth: 320, minHeight: 200,
     title: String(opts.title || id) + ' — Killian 2',
-    backgroundColor: '#262624',
+    // [alpha.166] พื้นหน้าต่าง = --bg ของธีมที่หน้าต่างหลักใช้อยู่ (เดิม #262624 ตายตัว = เทาของธีมรุ่นแรกแวบก่อนวาด)
+    backgroundColor: /^#[0-9a-f]{6}$/i.test(String(opts.bg || '')) ? String(opts.bg) : themeBg(opts.theme),
     // ต่างจากหน้าต่างหลัก: ใช้ขอบหน้าต่างของ OS จริง — ผู้ใช้ลากข้ามจอ/สแนปด้วยท่ามาตรฐานได้เลย
     frame: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'),
@@ -2293,6 +2315,7 @@ ipcMain.handle('panel:tearOff', (e, opts = {}) => {
   });
   tearOffs.set(id, w);
   const q = new URLSearchParams({ panelwin: id, root: String(opts.root || '') });
+  if (/^[a-z0-9-]+$/.test(String(opts.theme || ''))) q.set('theme', String(opts.theme));   // theme-boot.js ทาก่อนเฟรมแรก
   if (TEST) q.set('k2test', '1');
   w.loadFile('renderer/index.html', { search: q.toString() });
   w.on('closed', () => {

@@ -31,7 +31,7 @@ import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.j
 // [alpha.149] ดัชนีของผู้ช่วยเขียน · ไอคอนสถานะ · แท็บที่เปิดอยู่ · ราคาตามเจ้าจริง
 import { invalidateRag } from './ai-bridge.js';
 import { createEpoch, runFresh } from '../epoch-guard.js';   // [alpha.161 · C2]
-import { icon, gi } from '../icons.js';
+import { icon, gi, gt } from '../icons.js';
 import { tabHandle } from '../tab-bridge.js';
 import { scopePrefix, underPrefix } from './ai-scope.js';   // [alpha.160 · P1-2]
 import { priceKeyOf } from './ai-providers.js';
@@ -323,7 +323,7 @@ export async function collectRelevant(query, { maxChars = 24000, files = [] } = 
     try {
       const { parseMdFile } = await import('../md.js');
       const raw = await kapi.readFile(f.path);
-      out += '\n\n### ' + gi('paperclip') + ' ' + (f.name || f.path) + '\n' + parseMdFile(raw).body;
+      out += '\n\n### ' + gt('paperclip') + ' ' + (f.name || f.path) + '\n' + parseMdFile(raw).body;
     } catch {}
   }
   return out.length > maxChars ? out.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : out;

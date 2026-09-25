@@ -4196,7 +4196,6 @@ ui.net.bgGraphItemFilm,พื้นผัง / ตัวหนังสือ
 ui.net.bgLabelNode,พื้นป้ายชื่อโหนด
 ui.net.btnCenterWheel,ปุ่มกลาง (ล้อ)
 ui.net.busyLoad,กำลังโหลด…
-ui.net.cat,หมวด: 
 ui.net.changeName,เปลี่ยนชื่อ…
 ui.net.changeNameChapter,เปลี่ยนชื่อบท…
 ui.net.clickLeft,คลิกซ้าย
@@ -4245,7 +4244,6 @@ ui.net.presetLabel,ชุดสีสำเร็จรูป
 ui.net.presetSave,บันทึกเป็นชุดใหม่
 ui.net.presetSaveAsk,ตั้งชื่อชุดสีของคุณ
 ui.net.presetSaved,"บันทึกชุดสี ""{0}"" แล้ว"
-ui.net.relation,ความสัมพันธ์ (
 ui.net.repeat,ทำซ้ำ
 ui.net.reset,รีเซ็ต
 ui.net.resetView,รีเซ็ตมุมมอง
@@ -4262,7 +4260,6 @@ ui.net.sizeGridPx,ขนาด grid: 60px
 ui.net.sizeNode,ขนาดโหนด
 ui.net.sizeNode2,ขนาดโหนด: 
 ui.net.sizeNode3,ขนาดโหนด: 100%
-ui.net.tag,แท็ก: 
 ui.net.toggleDD,สลับ 2D/3D
 ui.net.unsetPinAllNode,ปลดหมุดทุกโหนด แล้วจัดผังใหม่
 ui.net.unsetPinAllNode2,ปลดหมุดทุกโหนด แล้วจัดผังใหม่
@@ -4275,6 +4272,110 @@ ui.netPreset.default,ค่าเดิมของโปรแกรม
 ui.netPreset.flower,ดอกไม้ (Flower)
 ui.netPreset.rainbow,สีรุ้ง (Rainbow)
 ui.netPreset.xrite,แผ่นเทียบสี (X-Rite)
+ui.netScene.bg,ฉากหลัง
+ui.netScene.bgBlueprint,พิมพ์เขียว
+ui.netScene.bgGradient,ไล่สี
+ui.netScene.bgImage,รูปของฉัน
+ui.netScene.bgParchment,กระดาษแผนที่เก่า
+ui.netScene.bgSolid,สีพื้น
+ui.netScene.bgSpace,อวกาศ
+ui.netScene.bgTheme,ตามธีม
+ui.netScene.bgWargame,แผนที่เกมสงคราม
+ui.netScene.catModelHint,ทุกโหนดในหมวดนี้ใช้โมเดลนี้ (โหนดที่ตั้งโมเดลของตัวเองไว้จะใช้ของตัวเอง)
+ui.netScene.catModels,โมเดล 3 มิติประจำหมวด
+ui.netScene.color1,สีหลัก
+ui.netScene.color2,สีรอง
+ui.netScene.colors,สี
+ui.netScene.dim,หรี่ฉากหลัง
+ui.netScene.grid,กริด
+ui.netScene.gridColor,สีกริด
+ui.netScene.gridColorAuto,อัตโนมัติ
+ui.netScene.gridDots,จุด
+ui.netScene.gridHex,หกเหลี่ยม
+ui.netScene.gridNone,ไม่มี
+ui.netScene.gridSquare,ตาราง
+ui.netScene.gridStyle,แบบกริด
+ui.netScene.image,รูป
+ui.netScene.imageCenterHint,"คลิกขวาที่ผังตรงไหนก็ได้ แล้วเลือก ""วางกึ่งกลางรูปตรงนี้"" เพื่อจัดแผนที่ให้ตรงกับโหนด"
+ui.netScene.imageChange,เปลี่ยนรูป…
+ui.netScene.imageMode,การวาง
+ui.netScene.imageOpacity,ความทึบของรูป
+ui.netScene.imagePick,เลือกรูป…
+ui.netScene.imageScale,ขนาดรูป
+ui.netScene.imageScreen,เต็มจอ (อยู่กับที่)
+ui.netScene.imageWorld,ติดกับผัง (เลื่อน/ซูม/เอียงตาม)
+ui.netScene.modelFiles,โมเดล 3 มิติ
+ui.netScene.reset,คืนฉากหลังเริ่มต้น
+ui.netScene.stars,ความหนาแน่นของดาว
+ui.netUi.appearsIn,ปรากฏในฉาก
+ui.netUi.bgCenterHere,วางกึ่งกลางรูปตรงนี้
+ui.netUi.castOfScene,ใครอยู่ในฉากนี้
+ui.netUi.coScenes,{0} ฉาก
+ui.netUi.countTitle,{0} ({1})
+ui.netUi.edgeLabelsAll,ทุกเส้น
+ui.netUi.edgeLabelsBtn,ป้ายบนเส้น
+ui.netUi.edgeLabelsNone,เฉพาะโหนดที่ชี้/เลือก
+ui.netUi.edgeLabelsRel,เฉพาะความสัมพันธ์
+ui.netUi.focus1,โฟกัสเครือข่ายรอบตัว (1 ชั้น)
+ui.netUi.focus1s,โฟกัส 1
+ui.netUi.focus2,โฟกัสเครือข่ายรอบตัว (2 ชั้น)
+ui.netUi.focus2s,โฟกัส 2
+ui.netUi.hubMeta,ความสัมพันธ์ {0} · {1} ฉาก
+ui.netUi.hubs,ศูนย์กลางของเรื่อง
+ui.netUi.insights,ข้อสังเกตของเรื่อง
+ui.netUi.isolated,ยังไม่มีความสัมพันธ์กับใคร
+ui.netUi.isolatedNone,ทุกรายการมีความสัมพันธ์แล้ว
+ui.netUi.layoutBtn,จัดผัง
+ui.netUi.layoutCategory,จัดกลุ่มตามหมวด
+ui.netUi.layoutForce,จัดใหม่อัตโนมัติ (แรงผลัก/ดึง)
+ui.netUi.layoutRadial,วงรอบโหนดที่เลือก
+ui.netUi.layoutStory,เรียงตามลำดับเรื่อง (ฉากเป็นแกนเวลา)
+ui.netUi.link,ผูกความสัมพันธ์
+ui.netUi.linkFrom,ผูกความสัมพันธ์จากโหนดนี้ (ลากไปวางบนอีกโหนด)
+ui.netUi.model,โมเดล 3 มิติแทนโหนด
+ui.netUi.modelChange,เปลี่ยนโมเดล…
+ui.netUi.modelErr,เปิดโมเดลไม่ได้: {0}
+ui.netUi.modelFromCat,ใช้โมเดลประจำหมวด
+ui.netUi.modelHint,รองรับ .glb .gltf .obj .stl — ไฟล์ถูกก๊อปเข้าโฟลเดอร์ Models ของผลงาน
+ui.netUi.modelLoading,กำลังโหลดโมเดล…
+ui.netUi.modelPick,เลือกโมเดล…
+ui.netUi.modelRemove,เอาโมเดลออก
+ui.netUi.modelScale,ขนาด
+ui.netUi.modelYaw,หันหน้า
+ui.netUi.more,และอีก {0}
+ui.netUi.noneYet,ยังไม่มีข้อมูลพอ
+ui.netUi.openPage,เปิดหน้า
+ui.netUi.path,หาเส้นทาง
+ui.netUi.pathFrom,หาเส้นทางไปหา… (คลิกโหนดปลายทาง)
+ui.netUi.pathNone,ไม่มีเส้นทางเชื่อม {0} กับ {1}
+ui.netUi.pathPickHint,คลิกโหนดปลายทางเพื่อหาเส้นทาง · Esc = ยกเลิก
+ui.netUi.pathSteps,เส้นทาง {0} ขั้น
+ui.netUi.pathViaScenes,ไม่มีความสัมพันธ์ที่ตั้งไว้เชื่อมกันโดยตรง — เส้นทางนี้ผ่านฉากที่ปรากฏร่วมกัน
+ui.netUi.perspBtn,มุมมองระยะ (3D) — ของไกลเล็กลง
+ui.netUi.relations,ความสัมพันธ์
+ui.netUi.relFail,ผูกความสัมพันธ์ไม่สำเร็จ
+ui.netUi.sceneBtn,ฉากหลังและโมเดล
+ui.netUi.stats,ความสัมพันธ์ {0} · ปรากฏ {1} ฉาก
+ui.netUi.statsScene,เอ่ยถึง {0} รายการ
+ui.netUi.storyAt,ฉาก {0}/{1} · {2}
+ui.netUi.storyBtn,ไทม์ไลน์เรื่อง — ผังโตตามลำดับฉาก
+ui.netUi.storyFirst,กลับจุดเริ่มเรื่อง
+ui.netUi.storyNew,เข้าเรื่องใหม่ {0}
+ui.netUi.storyNext,ฉากถัดไป
+ui.netUi.storyPause,หยุดเล่น
+ui.netUi.storyPlay,เล่นอัตโนมัติ
+ui.netUi.storyPrev,ฉากก่อนหน้า
+ui.netUi.storyStart,จุดเริ่มเรื่อง — {0} ฉาก
+ui.netUi.suggest,เจอกันบ่อยแต่ยังไม่ผูกความสัมพันธ์
+ui.netUi.suggestLink,ผูกความสัมพันธ์ของคู่นี้
+ui.netUi.suggestNone,ไม่มีคู่ที่ควรผูกเพิ่ม
+ui.netUi.suggestTip,ปรากฏร่วมกัน {0} ฉาก — คลิกเพื่อดูบนผัง
+ui.netUi.toolInspect,ตรวจดู
+ui.netUi.toolInspectHint,คลิกโหนดเพื่อดูข้อมูล ความสัมพันธ์ และฉากที่ปรากฏ โดยไม่เปิดหน้า
+ui.netUi.toolLink,ผูกความสัมพันธ์
+ui.netUi.toolLinkHint,ลากจากโหนดหนึ่งไปวางบนอีกโหนดเพื่อผูกความสัมพันธ์
+ui.netUi.unmentioned,ยังไม่ถูกเอ่ยถึงในฉากไหน
+ui.netUi.unmentionedNone,ทุกรายการถูกเอ่ยถึงแล้ว
 ui.notes.backStuck,เอากลับมาเป็นค้างอยู่
 ui.notes.clearNoteAllDone,ล้างโน้ตทั้งหมดแล้ว
 ui.notes.clearNoteAllList,ล้างโน้ตทั้งหมด ({0} รายการ)?

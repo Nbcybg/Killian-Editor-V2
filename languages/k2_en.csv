@@ -4196,7 +4196,6 @@ ui.net.bgGraphItemFilm,Chart background / text
 ui.net.bgLabelNode,Node label background
 ui.net.btnCenterWheel,Middle button (wheel)
 ui.net.busyLoad,Loading…
-ui.net.cat,Category: 
 ui.net.changeName,Rename…
 ui.net.changeNameChapter,Rename chapter…
 ui.net.clickLeft,Left click
@@ -4218,7 +4217,7 @@ ui.net.hide,Hide
 ui.net.hollowGrid,Grid opacity: 
 ui.net.hollowGrid2,Grid opacity: 12%
 ui.net.itemFilmNameNode,Node name text
-ui.net.line,⦿ {0}{1} · {2} {2|line|lines} · 
+ui.net.line,⦿ {0}{1} · {2} {2|link|links} · 
 ui.net.lineGrid,Grid lines
 ui.net.linkBetweenScene,Links between scenes
 ui.net.linkScene,Scene links
@@ -4245,7 +4244,6 @@ ui.net.presetLabel,Colour preset
 ui.net.presetSave,Save as new set
 ui.net.presetSaveAsk,Name your colour set
 ui.net.presetSaved,"Saved colour set ""{0}"""
-ui.net.relation,Relationships (
 ui.net.repeat,Redo
 ui.net.reset,Reset
 ui.net.resetView,Reset view
@@ -4262,7 +4260,6 @@ ui.net.sizeGridPx,Grid size: 60px
 ui.net.sizeNode,Node size
 ui.net.sizeNode2,Node size: 
 ui.net.sizeNode3,Node size: 100%
-ui.net.tag,Tags: 
 ui.net.toggleDD,Switch 2D/3D
 ui.net.unsetPinAllNode,Unpin every node and re-arrange the chart
 ui.net.unsetPinAllNode2,Unpin every node and re-arrange the chart
@@ -4275,6 +4272,110 @@ ui.netPreset.default,Default
 ui.netPreset.flower,Flower
 ui.netPreset.rainbow,Rainbow
 ui.netPreset.xrite,X-Rite
+ui.netScene.bg,Background
+ui.netScene.bgBlueprint,Blueprint
+ui.netScene.bgGradient,Gradient
+ui.netScene.bgImage,My image
+ui.netScene.bgParchment,Old parchment
+ui.netScene.bgSolid,Solid color
+ui.netScene.bgSpace,Deep space
+ui.netScene.bgTheme,Theme
+ui.netScene.bgWargame,Wargame map
+ui.netScene.catModelHint,Every node in this category uses this model (nodes with their own model keep theirs)
+ui.netScene.catModels,3D model per category
+ui.netScene.color1,Main color
+ui.netScene.color2,Second color
+ui.netScene.colors,Colors
+ui.netScene.dim,Dim background
+ui.netScene.grid,Grid
+ui.netScene.gridColor,Grid color
+ui.netScene.gridColorAuto,Auto
+ui.netScene.gridDots,Dots
+ui.netScene.gridHex,Hex
+ui.netScene.gridNone,None
+ui.netScene.gridSquare,Square
+ui.netScene.gridStyle,Grid style
+ui.netScene.image,Image
+ui.netScene.imageCenterHint,"Right-click anywhere on the graph and choose ""Center image here"" to line the map up with your nodes"
+ui.netScene.imageChange,Change image…
+ui.netScene.imageMode,Placement
+ui.netScene.imageOpacity,Image opacity
+ui.netScene.imagePick,Choose image…
+ui.netScene.imageScale,Image size
+ui.netScene.imageScreen,Fill screen (fixed)
+ui.netScene.imageWorld,"Pinned to graph (pans, zooms, tilts)"
+ui.netScene.modelFiles,3D models
+ui.netScene.reset,Reset background
+ui.netScene.stars,Star density
+ui.netUi.appearsIn,Appears in
+ui.netUi.bgCenterHere,Center image here
+ui.netUi.castOfScene,In this scene
+ui.netUi.coScenes,{0} {0|scene|scenes}
+ui.netUi.countTitle,{0} ({1})
+ui.netUi.edgeLabelsAll,All edges
+ui.netUi.edgeLabelsBtn,Edge labels
+ui.netUi.edgeLabelsNone,Hovered/selected only
+ui.netUi.edgeLabelsRel,Relationships only
+ui.netUi.focus1,Focus on neighbors (1 step)
+ui.netUi.focus1s,Focus 1
+ui.netUi.focus2,Focus on neighbors (2 steps)
+ui.netUi.focus2s,Focus 2
+ui.netUi.hubMeta,{0} {0|link|links} · {1} {1|scene|scenes}
+ui.netUi.hubs,Story hubs
+ui.netUi.insights,Story insights
+ui.netUi.isolated,No relationships yet
+ui.netUi.isolatedNone,Everyone is connected
+ui.netUi.layoutBtn,Arrange graph
+ui.netUi.layoutCategory,Group by category
+ui.netUi.layoutForce,Auto layout (force-directed)
+ui.netUi.layoutRadial,Rings around the selected node
+ui.netUi.layoutStory,Story order (scenes as a time axis)
+ui.netUi.link,Link
+ui.netUi.linkFrom,Link from this node (drag onto another node)
+ui.netUi.model,3D model for this node
+ui.netUi.modelChange,Change model…
+ui.netUi.modelErr,Couldn't load the model: {0}
+ui.netUi.modelFromCat,category model
+ui.netUi.modelHint,Supports .glb .gltf .obj .stl — the file is copied into the project's Models folder
+ui.netUi.modelLoading,Loading model…
+ui.netUi.modelPick,Choose model…
+ui.netUi.modelRemove,Remove model
+ui.netUi.modelScale,Size
+ui.netUi.modelYaw,Facing
+ui.netUi.more,and {0} more
+ui.netUi.noneYet,Not enough data yet
+ui.netUi.openPage,Open page
+ui.netUi.path,Find path
+ui.netUi.pathFrom,Find path to… (click the target node)
+ui.netUi.pathNone,Nothing connects {0} and {1}
+ui.netUi.pathPickHint,Click the target node to find a path · Esc to cancel
+ui.netUi.pathSteps,Path: {0} {0|step|steps}
+ui.netUi.pathViaScenes,No relationships link them directly — this path goes through shared scenes
+ui.netUi.perspBtn,Perspective (3D) — far things look smaller
+ui.netUi.relations,Relationships
+ui.netUi.relFail,Couldn't create the relationship
+ui.netUi.sceneBtn,Background & models
+ui.netUi.stats,{0} {0|relationship|relationships} · in {1} {1|scene|scenes}
+ui.netUi.statsScene,Mentions {0} {0|entry|entries}
+ui.netUi.storyAt,Scene {0}/{1} · {2}
+ui.netUi.storyBtn,Story timeline — watch the graph grow scene by scene
+ui.netUi.storyFirst,Back to the start
+ui.netUi.storyNew,{0} new
+ui.netUi.storyNext,Next scene
+ui.netUi.storyPause,Pause
+ui.netUi.storyPlay,Play
+ui.netUi.storyPrev,Previous scene
+ui.netUi.storyStart,Start of the story — {0} {0|scene|scenes}
+ui.netUi.suggest,"Often together, not yet related"
+ui.netUi.suggestLink,Create a relationship for this pair
+ui.netUi.suggestNone,No missing pairs
+ui.netUi.suggestTip,Together in {0} {0|scene|scenes} — click to see them on the graph
+ui.netUi.toolInspect,Inspect
+ui.netUi.toolInspectHint,"Click a node to see its details, relationships and scenes without opening its page"
+ui.netUi.toolLink,Link
+ui.netUi.toolLinkHint,Drag from one node onto another to create a relationship
+ui.netUi.unmentioned,Not mentioned in any scene
+ui.netUi.unmentionedNone,Everything is mentioned somewhere
 ui.notes.backStuck,Put back as pending
 ui.notes.clearNoteAllDone,All notes cleared
 ui.notes.clearNoteAllList,Clear all notes ({0} {0|item|items})?

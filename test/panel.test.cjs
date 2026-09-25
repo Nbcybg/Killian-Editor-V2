@@ -127,7 +127,8 @@ check('detachPanel คืน node + ต้นไม้ที่เหลือ',
 check('removePanel ราก → null', PL.removePanel(PL.panel('SOLO'), 'SOLO') === null);
 check('splitTab panel เดี่ยว → ไม่พัง', PL.splitTab(PL.panel('X'), 'X', 'right').root.id === 'X');
 // [66r3] เพิ่มปุ่มเมนูแผง ☰ นำหน้า (Progressive Disclosure — คำสั่งลึกอยู่หลังปุ่มนี้)
-check('PANEL_BUTTONS มี ☰ ▾ ⧉ ✕', PL.PANEL_BUTTONS.map((b) => b.icon).join('') === '☰▾⧉✕',
+// [alpha.166] ไอคอนเป็นอักขระของฟอนต์ Nerd Fonts — เทียบกับทะเบียนแทนอักขระที่พิมพ์ไว้
+check('PANEL_BUTTONS มี ☰ ▾ ⧉ ✕', PL.PANEL_BUTTONS.map((b) => b.icon).join('') === ['menu', 'caret-down', 'duplicate', 'close'].map(require('./_icons.cjs').gi).join(''),
       PL.PANEL_BUTTONS.map((b) => b.icon).join(''));
 
 // ── PanelManager: registerPanel / showPanel / dockPanel / floatPanel / groupPanels ──

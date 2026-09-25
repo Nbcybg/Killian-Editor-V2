@@ -15,6 +15,15 @@
   src:url("assets/fonts/CourierPrime-Italic.ttf") format("truetype"); }
 @font-face { font-family:"Courier Prime"; font-weight:700; font-style:italic; font-display:swap;
   src:url("assets/fonts/CourierPrime-BoldItalic.ttf") format("truetype"); }
+/* ---------- [alpha.166] ไอคอน — Nerd Fonts "Symbols Nerd Font Mono" (MIT · ดู assets/fonts/k2-icons-LICENSE.txt) ----------
+   ผู้ใช้: "icon ทั้ง app เน้นความทันสมัย และมืออาชีพ ลองไปดึงจาก nerdfonts.com" · ทุกไอคอนเต็มช่อง 1em
+   unicode-range = เฉพาะ Private Use Area → ใส่ไว้ในทุกสแตกได้โดยไม่แตะตัวอักษรไทย/ละตินเลย */
+@font-face { font-family:"K2 Icons"; font-weight:100 900; font-style:normal; font-display:block;
+  src:url("assets/fonts/k2-icons.ttf") format("truetype"); unicode-range:U+E000-F8FF, U+F0000-FFFFD;
+  /* Nerd Font Mono ขยายรูปจนชนขอบช่อง 1em (ตัดระยะเผื่อของชุดต้นทางทิ้ง) → ย่อกลับ ให้เท่าไอคอนกริด 24 มาตรฐาน
+     ค่าเดียวกับ ICON_PAD ของ tools/commands-data.cjs (รูป svg) — ไอคอนในข้อความกับไอคอนบนปุ่มขนาดเท่ากัน */
+  size-adjust:86%; }
+.k-icon-glyph { font-family:"K2 Icons", var(--thai-net); font-style:normal; font-weight:normal; }
 /* [alpha.159] ฟอนต์ไทยตระกูล Courier (CourierThaiMono/Prop) ถูกลบออกจากโปรแกรมแล้ว
    ผู้ใช้: "พวก font ที่ติดลิขสิทธิ์ และพวกที่ใช้ไม่ได้อย่าง courier thai mono … ลบออกไปเลย"
    ฝังมากับโปรแกรมเหลือ Courier Prime (OFL) ตัวเดียว · ฟอนต์อื่นดึงจากเครื่องหรือโฟลเดอร์ Fonts/ ของโปรเจกต์ */
@@ -31,7 +40,9 @@
      → เอกสาร/แผงเดียวกันจึง "ลอยบ้างไม่ลอยบ้าง" ตามว่าชิ้นนั้นเป็นช่องโมโนสเปซหรือไม่
      กติกา: **ห้ามมี font stack ไหนในไฟล์นี้ที่ปล่อยให้ไทยตกไปถึงตัวเลือกของเบราว์เซอร์**
      (ด่านถาวร: test/thai-font-net.test.cjs อ่านไฟล์นี้แล้วฟ้องแถวที่ลืม) */
-  --thai-net:"Thonburi","Leelawadee UI","TH Sarabun New","Sarabun","Noto Sans Thai";
+  --thai-net:"Thonburi","Leelawadee UI","TH Sarabun New","Sarabun","Noto Sans Thai","K2 Icons";
+  /* [alpha.166] "K2 Icons" (Nerd Fonts) ต่อท้ายตาข่ายเดียวกัน → อักขระไอคอนของ gi() วาดได้ในทุกสแตก
+     (ฟอนต์นี้ประกาศ unicode-range เฉพาะช่วง Private Use — ไม่มีทางทับตัวอักษรจริงของผู้ใช้) */
   /* [alpha.157] ตัวแปรสีทั้งหมดย้ายไป renderer/themes/ (base.css = ค่าสำรอง · k2.css · k2-light.css) */
 
   /* ══ [alpha.146] ★ สเกลรูปทรงของเปลือกโปรแกรม — มุมโค้งมีแค่ห้าขั้น ══
@@ -1862,16 +1873,93 @@ body.printing .k-onset-line { background:none !important; box-shadow:none !impor
 .net-tbar-btn.net-tog.on { border-color:var(--accent); color:var(--accent-ink, var(--accent-hi)); }
 .net-grid-slider { width:60px; height:14px; cursor:pointer; accent-color:var(--accent); }
 /* minimap */
-.net-minimap { position:absolute; right:6px; top:6px; z-index:3; border-radius:6px;
+.net-minimap { position:absolute; right:8px; bottom:52px; z-index:3; border-radius:6px;   /* [alpha.166] มุมขวาล่าง — มุมขวาบนเป็นของแผงข้าง */
   border:1px solid var(--border); box-shadow:0 2px 8px rgba(0,0,0,.4); pointer-events:none; }
-/* status bar */
+/* status bar · [alpha.166] เดิม rgba(26,26,24) = เทาของธีมรุ่นแรก ค้างอยู่ทุกธีม */
 .net-status { position:absolute; right:8px; bottom:26px; z-index:3; pointer-events:none;
-  background:rgba(26,26,24,.88); color:var(--dim); font-size:calc(10px*var(--ui-scale,1));
-  padding:2px 8px; border-radius:4px; border:1px solid var(--border); }
+  background:color-mix(in srgb, var(--side) 88%, transparent); color:var(--dim); font-size:calc(10px*var(--ui-scale,1));
+  padding:2px 8px; border-radius:4px; border:1px solid var(--border); font-variant-numeric:tabular-nums; }
 /* tip bar */
 .net-tip { position:absolute; left:0; right:0; bottom:0; z-index:3; pointer-events:none;
-  background:rgba(26,26,24,.88); color:var(--dim); font-size:calc(11px*var(--ui-scale,1));
+  background:color-mix(in srgb, var(--side) 88%, transparent); color:var(--dim); font-size:calc(11px*var(--ui-scale,1));
   padding:4px 10px; text-align:center; border-top:1px solid var(--border); }
+.net-canvas.net-link-mode { cursor:crosshair; }
+.net-canvas:focus-visible { outline:2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset:-2px; }
+/* ── [alpha.166] แผงข้างในผัง: โหนดที่เลือก · ข้อสังเกตของเรื่อง · ฉากหลังและโมเดล ── */
+.net-side { position:absolute; right:8px; top:8px; bottom:56px; z-index:5; width:min(290px, calc(100% - 24px));
+  display:flex; flex-direction:column; gap:6px; pointer-events:none; }
+.net-side.empty { display:none; }
+.net-card { pointer-events:auto; background:color-mix(in srgb, var(--side) 94%, transparent); border:1px solid var(--border);
+  border-radius:10px; padding:8px 10px 10px; box-shadow:0 6px 18px rgba(0,0,0,.28); overflow:auto; min-height:0;
+  flex:0 1 auto; color:var(--fg); font-size:calc(11.5px*var(--ui-scale,1)); }
+.net-card[hidden] { display:none; }
+.net-card-head { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.net-card-title { flex:1; min-width:0; display:flex; align-items:center; gap:6px; font-weight:600; color:var(--bright);
+  font-size:calc(12.5px*var(--ui-scale,1)); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.net-info-name { overflow:hidden; text-overflow:ellipsis; }
+.net-card-x { background:none; border:none; color:var(--dim); cursor:pointer; padding:2px 4px; border-radius:4px; line-height:1; }
+.net-card-x:hover { color:var(--bright); background:var(--hover); }
+.net-dot { width:9px; height:9px; border-radius:50%; background:var(--dot); flex:none; box-shadow:0 0 0 1px color-mix(in srgb, var(--dot) 40%, transparent); }
+.net-info-cat { color:var(--dim); font-size:calc(10.5px*var(--ui-scale,1)); margin:-2px 0 4px 15px; }
+.net-info-desc { color:var(--muted-strong, var(--fg)); line-height:1.45; margin:2px 0 6px; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.net-info-stats { color:var(--dim); margin-bottom:6px; font-variant-numeric:tabular-nums; }
+.net-side-acts { display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 6px; }
+.net-side-btn { background:var(--bar); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:3px 8px;
+  font-size:calc(10.5px*var(--ui-scale,1)); cursor:pointer; line-height:1.3; }
+.net-side-btn:hover { border-color:var(--accent); color:var(--bright); }
+.net-side-btn.on { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 22%, var(--bar)); color:var(--bright); }
+.net-side-btn.net-side-primary { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.net-side-btn.net-side-danger:hover { border-color:var(--st-danger, var(--accent)); color:var(--st-danger, var(--bright)); }
+.net-side-btn.net-side-mini { padding:1px 6px; }
+.net-side-sub { color:var(--dim); font-size:calc(10px*var(--ui-scale,1)); text-transform:uppercase; letter-spacing:.04em; margin:8px 0 3px; }
+.net-side-note { color:var(--dim); font-size:calc(10.5px*var(--ui-scale,1)); line-height:1.4; margin:2px 0 4px; }
+.net-side-err { color:var(--st-danger, var(--orange)); font-size:calc(10.5px*var(--ui-scale,1)); margin:2px 0 4px; }
+.net-side-more { color:var(--dim); font-size:calc(10px*var(--ui-scale,1)); padding:2px 6px; }
+.net-side-list { display:flex; flex-direction:column; gap:1px; }
+.net-item { display:flex; align-items:center; gap:6px; width:100%; text-align:start; background:none; border:none; color:var(--fg);
+  padding:3px 6px; border-radius:5px; cursor:pointer; font-size:calc(11px*var(--ui-scale,1)); min-width:0; }
+.net-item:hover { background:var(--hover-soft, var(--hover)); color:var(--bright); }
+.net-item-name { flex:1 1 auto; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.net-item-meta { flex:none; color:var(--dim); font-size:calc(10px*var(--ui-scale,1)); max-width:45%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.net-item-ico { flex:none; width:14px; text-align:center; color:var(--dim); }
+.net-suggest { cursor:default; }
+.net-item-link { flex:1; min-width:0; background:none; border:none; color:inherit; text-align:start; cursor:pointer; padding:0;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font:inherit; }
+.net-item-link:hover { color:var(--link); text-decoration:underline; }
+.net-path { border-top:1px solid var(--border); margin-top:6px; padding-top:4px; }
+.net-path-chain { display:flex; flex-wrap:wrap; align-items:center; gap:3px; }
+.net-path-edge { color:var(--dim); font-size:calc(9.5px*var(--ui-scale,1)); }
+.net-path-edge::before { content:"— "; }
+.net-path-edge::after { content:" →"; }
+.net-side-btn.net-chip { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:1px 8px 1px 5px; }
+.net-side-row { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:4px 8px; margin:3px 0; }
+.net-side-row > .net-dot { grid-column:1; }
+.net-side-row:has(> .net-dot) { grid-template-columns:auto auto minmax(0,1fr); }
+.net-side-lbl { color:var(--dim); font-size:calc(10.5px*var(--ui-scale,1)); white-space:nowrap; }
+.net-side-select { background:var(--input-bg, var(--bar)); color:var(--fg); border:1px solid var(--border); border-radius:6px;
+  padding:2px 6px; font-size:calc(11px*var(--ui-scale,1)); min-width:0; width:100%; }
+.net-side-range { width:100%; min-width:0; accent-color:var(--accent); }
+.net-side-color { width:30px; height:20px; padding:0; border:1px solid var(--border); border-radius:5px; background:none; cursor:pointer; }
+.net-side-inline { display:flex; align-items:center; gap:6px; min-width:0; flex-wrap:wrap; }
+.net-side-file { max-width:150px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--muted-strong, var(--fg)); }
+.net-model { border-top:1px solid var(--border); margin-top:6px; }
+/* [alpha.166 · รอบ 2] แถบไทม์ไลน์เรื่อง (ใต้ผัง · เหนือแถบคำอธิบาย) */
+.net-story { position:absolute; left:8px; bottom:30px; z-index:5; display:flex; align-items:center; gap:4px;
+  width:min(620px, calc(100% - 24px)); padding:5px 8px; border-radius:10px; border:1px solid var(--border);
+  background:color-mix(in srgb, var(--side) 94%, transparent); box-shadow:0 6px 18px rgba(0,0,0,.28); }
+.net-story[hidden] { display:none; }
+.net-story-btn { flex:none; background:var(--bar); color:var(--fg); border:1px solid var(--border); border-radius:6px;
+  width:26px; height:24px; padding:0; cursor:pointer; line-height:1; }
+.net-story-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--bright); }
+.net-story-btn:disabled { opacity:.4; cursor:default; }
+.net-story-btn.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.net-story-range { flex:1 1 120px; min-width:60px; accent-color:var(--accent); }
+.net-story-label { flex:0 1 auto; min-width:0; max-width:45%; color:var(--muted-strong, var(--fg)); font-size:calc(11px*var(--ui-scale,1));
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
+.net-tbar-btn:disabled { opacity:.4; cursor:default; }
+.net-story-on > .net-status { bottom:68px; }
+.net-story-on > .net-minimap { bottom:94px; }
+.net-story-on > .net-side { bottom:96px; }   /* แผงข้างไม่ทับแถบสถานะของผังที่ขยับขึ้นหลบแถบไทม์ไลน์ */
 /* ---------- Dashboard ---------- */
 /* [alpha.164 ข้อ F4] แดชบอร์ดปรับตาม "ความกว้างของแผง" ไม่ใช่หน้าต่าง — แผงแคบ 580px ได้การ์ด 4+1 ใบ (ใบสุดท้ายกำพร้า)
    และกราฟสองคอลัมน์ถูกบีบ · แผงกว้างเต็มจอกลับถูกจำกัดไว้ 860px เหลือขอบว่างครึ่งจอ */
@@ -6905,17 +6993,7 @@ body.k-home-only .k-overlay.k-home-startup .k-home-dlg { box-shadow:0 30px 80px 
 .k-about-right .k-credit-what, .k-about-right .k-credit-lic { color:#cfc6ea; }
 .k-about-right .k-credit-lic { border-color:rgba(255,255,255,.25); }
 
-/* ── [alpha.157r] ไอคอนเส้นที่วางแทนอีโมจิสี (glyph-upgrade.js) ── */
-.k-gl { display:inline-flex; align-items:center; justify-content:center; width:1.05em; height:1.05em;
-  vertical-align:-0.16em; line-height:1; flex:0 0 auto; }
-.k-gl svg { width:100%; height:100%; display:block; }
-/* อักขระเดิมคงไว้ใน DOM (textContent ไม่เปลี่ยน) แต่ไม่กินที่ — ห้ามใช้ position:absolute
-   (กล่อง absolute ที่ไม่มีบรรพบุรุษจัดตำแหน่ง ไปรบกวนการวัดตำแหน่งของผืนผ้าใบกระดาน · e2e [65r-5]) */
-.k-gl-t { display:inline-block; width:0; height:0; overflow:hidden; font-size:0; line-height:0; vertical-align:top; pointer-events:none; }
-.k-gl-gold { color:var(--accent-ink, var(--accent-hi)); }
-.k-gl-ok { color:#2ecc71; }
-.k-gl-bad { color:#ff5c6c; }
-.k-gl-warn { color:#ffb020; }
+/* [alpha.166] ไอคอนเส้นที่วางทับอีโมจิ (glyph-upgrade.js · .k-gl) ถูกถอด — gi() คืนอักขระของฟอนต์ไอคอน K2 Icons เองแล้ว */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    [alpha.157r] ข้อ 4 — ให้ทุกแผง "เป็นเนื้อเดียวกัน"
@@ -6959,11 +7037,9 @@ body.k-home-only .k-overlay.k-home-startup .k-home-dlg { box-shadow:0 30px 80px 
   border-radius:var(--ctl-r); background:var(--bar); color:var(--muted-strong); border:1px solid var(--border);
 }
 .branch-zbtn:hover, .gal2-head-btns > button:not(.k-ok):hover { color:var(--bright); border-color:var(--tab-border); background:var(--hover-soft); }
-.branch-zbtn .k-gl, .gal2-head-btns .k-gl { width:16px; height:16px; }
 .branch-zlabel { min-width:44px; text-align:center; color:var(--muted-strong); font-variant-numeric:tabular-nums; }
 .branch-plan-sel { height:var(--ctl-h); border-radius:var(--ctl-r); }
 .branch-tools, .branch-find { gap:6px; }
-.branch-title .k-gl { color:var(--accent-ink, var(--accent-hi)); margin-right:4px; }
 
 /* ── ปุ่มหลัก (ส้ม) ในแผง: สูงเท่าปุ่มอื่น ── */
 :is(.branch-shell, .gal2, .tl-wrap, .kb-wrap, .dash-wrap) .k-ok { min-height:var(--ctl-h); border-radius:var(--ctl-r); padding:0 14px; font-weight:600;

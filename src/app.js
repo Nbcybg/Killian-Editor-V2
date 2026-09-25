@@ -45,7 +45,6 @@ import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
 import { ask, confirmBox, infoBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider, installDialogA11y, rovingToolbar } from './ui.js';
 import { escCancelDrag } from './drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก
 import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
-import { startGlyphUpgrade } from './glyph-upgrade.js';
 import { mutateJson } from './json-store.js';   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
 import { diskConflict, focusAction } from './disk-conflict.js';   // [alpha.156] ไฟล์ถูกแก้นอกโปรแกรม
 import { sprintDirtyList, saveSprintDirty } from './sprint-ui.js';     // [alpha.156] ทะเบียนงานค้าง
@@ -353,6 +352,7 @@ import { runTest } from './selftest.js';   // [alpha.160] e2e แยกไฟล
 const tr = t;
 import { cmpText, fmtNum, fmtTime, fmtDate, fmtDateTime } from './locale.js';
 import { installStatusToggles, syncStatusToggles } from './status-toggles.js';   // [alpha.165]
+import { installStatusBarLock, resetStatusBarLock, reserveStatusWidth } from './statusbar-lock.js';   // [alpha.166]
 
 // ---------------- (ย้ายไป core.js แล้ว: $, el, state, smart, log, setStatus, ค่าตั้งต้น) ----------------
 let pageScale = 1;       // อัตราซูมหน้ากระดาษ (0.5–2.5) — reassign ได้จึงคงไว้ที่นี่ (ES module import เป็น read-only)
@@ -3339,6 +3339,13 @@ export function handleSyncMessage(msg) {
     return true;
   }
   if (msg.kind === 'goto-outline' && !PANEL_WIN) { gotoOutlineItem(msg); return true; }
+  // [alpha.166] หน้าต่างหลักเปลี่ยนธีม → หน้าต่างแผงเปลี่ยนตามทันที
+  if (msg.kind === 'theme' && PANEL_WIN && msg.id) {
+    state.settings.theme = String(msg.id);
+    applyTheme();
+    try { drawPanelWindow(); } catch {}        // ผืนวาด (ผัง/กระดาน) อ่านสีธีมใหม่
+    return true;
+  }
   return false;
 }
 
@@ -3511,6 +3518,8 @@ export function reportPanelWindowHealth() {
     kind: 'panelwin-ready', id: PANEL_WIN,
     // ของสำคัญที่โค้ดทั้งโปรเจกต์อ้างด้วย id ต้องยังอยู่ใน DOM (ซ่อนได้ แต่ห้ามหาย)
     hasStatus: !!document.getElementById('status'),
+    // [alpha.166] ธีมที่ theme-boot.js ทาก่อนเฟรมแรก (ว่าง = เฟรมแรกเป็นเทาของธีมรุ่นแรก)
+    bootTheme: window.__k2bootTheme || '',
     hasToolbar: !!document.getElementById('toolbar'),
     hasPanes: !!document.getElementById('panes'),
     drawn: !!(bodyEl && bodyEl.children.length),      // แผงวาดเนื้อออกมาจริง ไม่ใช่กล่องเปล่า
@@ -6170,11 +6179,20 @@ export async function loadAllEntities() {
   }
   // add scene/chapter/section structural nodes
   try {
-    const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots', '.k2history','Plugins','Recycle','Sessions','Starters','.git']);
+    const skip = new Set(['Wiki','Bible','Images','Memos','Research','Snapshots', '.k2history','Plugins','Recycle','Sessions','Starters','.git','Models']);
+    // [alpha.166 · รอบ 2] ไทม์ไลน์เรื่องของผังต้องรู้ลำดับฉากจริง — เล่ม → บท → ฉาก ตามช่อง order (ไม่ใช่ลำดับโฟลเดอร์บนดิสก์)
+    let seq = 0;
+    const secs = [];
     for (const sec of await kapi.listDirs(state.root)) {
       if (skip.has(sec)) continue;
       const secPath = await kapi.join(state.root, sec);
-      if (!(await kapi.exists(await kapi.join(secPath, 'section.json')))) continue;
+      const sj = await kapi.join(secPath, 'section.json');
+      if (!(await kapi.exists(sj))) continue;
+      let so = 0; try { so = +((await kapi.readJson(sj)).order) || 0; } catch {}
+      secs.push({ sec, secPath, so });
+    }
+    secs.sort((a, b) => a.so - b.so);
+    for (const { sec, secPath } of secs) {
       const draftRoot = await kapi.join(secPath, 'Draft');
       if (!(await kapi.exists(draftRoot))) continue;
       const dns = await kapi.listDirs(draftRoot);
@@ -6183,7 +6201,7 @@ export async function loadAllEntities() {
       const draftPath = await kapi.join(dPath, 'draft.json');
       if (!(await kapi.exists(draftPath))) continue;
       const draft = await kapi.readJson(draftPath);
-      const chs = draft.chapters||[];
+      const chs = (draft.chapters||[]).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
       for (const ch of chs) {
         const chTitle = ch.title || '';
         if (chTitle) {
@@ -6196,13 +6214,14 @@ export async function loadAllEntities() {
         if (await kapi.exists(scenesPath)) {
           try {
             const scenes = await kapi.readJson(scenesPath);
-            const rows = (scenes.chapters||{})[ch.guid] || [];
+            const rows = ((scenes.chapters||{})[ch.guid] || []).filter((r) => r.type !== 'memo')
+              .sort((a, b) => (a.order || 0) - (b.order || 0));
             for (const r of rows) {
               const sfName = r.fileName||r.file||'';
               const sfPath = sfName ? await kapi.join(dPath, 'Chapters', ch.folderName||'', sfName) : '';
               out.push({ name: r.title||sfName.replace(/\.md$/,''), cat: 'scene', file: sfPath,
                          tags:[], relationships:[], image:'', desc:r.synopsis||'',
-                         chapterId: chTitle, ch, sid: r.id, dPath });
+                         chapterId: chTitle, ch, sid: r.id, dPath, seq: ++seq });
             }
           } catch {}
         }
@@ -6220,6 +6239,60 @@ export async function loadAllEntities() {
 // ---------------- Story Network ----------------
 // [alpha.62 บั๊ก 16] เดิมเป็นแท็บเอกสาร `::network::` — แย่งแถบแท็บกับฉากที่กำลังเขียน
 // และเปิดคู่กับต้นฉบับไม่ได้ · ตอนนี้เป็นแผงเต็มตัว (dock/tab/float ได้เหมือนแผงอื่น)
+/**
+ * [alpha.166] เพิ่มความสัมพันธ์ในไฟล์ Wiki หนึ่งไฟล์ — แท็บของไฟล์นั้นเปิดค้างและยังไม่บันทึก = เติมลงแท็บแทน
+ * (เขียนดิสก์ทับตอนแท็บค้าง = บันทึกครั้งถัดไปของแท็บลบความสัมพันธ์ใหม่ทิ้ง · กฎ alpha.156)
+ * @returns {Promise<boolean>} true = เพิ่มจริง (false = มีอยู่แล้ว)
+ */
+async function addEntityRelation(file, rel) {
+  const same = (r) => (r.targetName || r.target) === rel.targetName;
+  const t = state.tabs.get(file);
+  if (t && t.wiki && t.wiki.dirty) {
+    const rs = (t.wiki.e.relationships = t.wiki.e.relationships || []);
+    if (rs.some(same)) return false;
+    rs.push(rel); t.wiki.render(); t.wiki.markDirty();
+    return true;
+  }
+  const r = await mutateJson(kapi, file, (d) => {
+    d.relationships = Array.isArray(d.relationships) ? d.relationships : [];
+    if (d.relationships.some(same)) return false;
+    d.relationships.push(rel);
+  });
+  if (r.changed && t && t.wiki) await t.wiki.reloadIfExists();
+  return r.changed;
+}
+
+/** [alpha.166] ผูกความสัมพันธ์ a → b จากผัง (กล่องเดียวกับหน้า Wiki · ฝั่ง b ได้บทบาทกลับด้าน) */
+export async function createEntityRelation(a, b) {
+  if (!a || !b || !a.file || !b.file || a === b) return false;
+  await warmInverse();
+  const res = await relationDialog([b.name], a.name);
+  if (!res) return false;
+  const role = res.role, type = res.type || categorizeWith(INV_C.cat, role);
+  const inv = (INV_C.m && INV_C.m[role]) || role;
+  try {
+    const x = await addEntityRelation(a.file, { targetName: b.name, role, type });
+    const y = await addEntityRelation(b.file, { targetName: a.name, role: inv, type });
+    logAction('network', 'relation', { from: a.file, to: b.file });
+    setStatus(ttf('ui.app.newRelationBetween', role, a.name, b.name));
+    return x || y;
+  } catch (e) { setStatusError(failText(tt('ui.netUi.relFail'), e)); return false; }
+}
+
+/**
+ * [alpha.166] นำเข้ารูปฉากหลัง/โมเดล 3 มิติของผัง — ก๊อปเข้าโปรเจกต์ (Images/ · Models/) แล้วคืนทางสัมพัทธ์
+ * (ทางเต็มของเครื่องห้ามลงไฟล์ผลงาน — ย้ายโฟลเดอร์/เปิดอีกเครื่องแล้วต้องยังเจอ)
+ */
+async function importNetAsset(kind) {
+  if (!state.root) return '';
+  const src = kind === 'model' ? await kapi.openFileDialog('model3d') : await kapi.openImageDialog();
+  if (!src) return '';
+  const dirName = kind === 'model' ? 'Models' : 'Images';
+  const name = await kapi.copyInto(src, await kapi.join(state.root, dirName));
+  logAction('network', 'import ' + kind, { from: src, to: dirName + '/' + name });
+  return dirName + '/' + name;
+}
+
 export let netInst = null;
 export async function renderNetworkPanel() {
   const host = $('#net-body');
@@ -6249,31 +6322,20 @@ export async function renderNetworkPanel() {
       },
       onOpen: (n) => openEntity(n.file),
       onOpenScene: (file) => openScene(file, null),
-      onCreateRel: async (a, b, type, label) => {
-        // สร้างความสัมพันธ์ระหว่าง a และ b
-        try {
-          if (!a.file || !b.file) return;
-          // อ่านไฟล์ของทั้งสองฝั่ง
-          let ea = await kapi.readJson(a.file).catch(() => null);
-          let eb = await kapi.readJson(b.file).catch(() => null);
-          if (!ea || !eb) return;
-          if (!Array.isArray(ea.relationships)) ea.relationships = [];
-          if (!Array.isArray(eb.relationships)) eb.relationships = [];
-          // เช็คว่ามีอยู่แล้วหรือไม่
-          const existsA = ea.relationships.some(r => (r.targetName||r.target||'') === b.name);
-          const existsB = eb.relationships.some(r => (r.targetName||r.target||'') === a.name);
-          // preload ไม่มี kapi.writeJson — ของเดิมเรียกอยู่จึง throw ทุกครั้งที่ลากสร้างความสัมพันธ์
-          if (!existsA) {
-            ea.relationships.push({ targetName: b.name, target: b.file, role: label, type });
-            await kapi.writeFile(a.file, JSON.stringify(ea, null, 2));
-          }
-          if (!existsB) {
-            eb.relationships.push({ targetName: a.name, target: a.file, role: label, type });
-            await kapi.writeFile(b.file, JSON.stringify(eb, null, 2));
-          }
-          setStatus(ttf('ui.app.newRelationBetween', label, a.name, b.name));
-        } catch(e) { console.error('onCreateRel failed:', e); }
+      // [alpha.166] ลากจากโหนดหนึ่งไปอีกโหนด (เครื่องมือ "ผูกความสัมพันธ์") → กล่องผูกความสัมพันธ์ตัวเดียวกับหน้า Wiki
+      // (บทบาทฝั่งตรงข้ามอัตโนมัติจาก inverse_roles · เดาประเภทจากบทบาท) — เดิม onCreateRel ถูกส่งมาแต่ผังไม่เคยเรียก
+      // และเขียนบทบาทเดียวกันทั้งสองฝั่ง ("พ่อ" ↔ "พ่อ")
+      onCreateRel: (a, b) => createEntityRelation(a, b),
+      // [alpha.166] ฉากหลัง/โมเดลของผังเป็นค่าของผลงาน (project.khn.json → settings.netScene)
+      onSceneChange: (scene) => { state.settings.netScene = scene; saveProjectMetaSoon(); },
+      // ทางสัมพัทธ์ของโปรเจกต์ (Images/x.png · Models/x.glb) → ทางเต็ม / URL
+      assetPath: (rel) => {
+        if (!rel || !state.root) return '';
+        const sep = state.root.includes('\\') ? '\\' : '/';
+        return state.root.replace(/[\\/]+$/, '') + sep + String(rel).split('/').join(sep);
       },
+      assetUrl: async (rel) => (rel && state.root ? kapi.toFileURL(await kapi.join(state.root, rel)) : ''),
+      importAsset: (kind) => importNetAsset(kind),
       onReveal: (file) => { try { kapi.revealInOS(file); } catch {} },
       // structural node ops — เอามาจาก explorer โดยตรง
       onDeleteStruct: async (node) => {
@@ -7673,7 +7735,12 @@ export function applyTheme() {
   // [alpha.165] ★ ผู้ใช้: "theme สีเดิมที่เป็นสีเทายังอยู่" — ไม่เคยตั้ง color-scheme เลย
   //   ช่องติ๊ก · ช่องตัวเลข · ตัวเลือกสี · รายการของ <select> · แถบเลื่อนดั้งเดิม จึงวาดเป็นเทา/ขาวของเบราว์เซอร์ทุกธีม
   //   ตั้งตามโหมดของธีม (THEME_MODES จาก themes.json) ที่ <html> — ส่วนควบคุมดั้งเดิมทั้งหน้าตามธีม
-  try { document.documentElement.style.colorScheme = THEME_MODES[th] === 'light' ? 'light' : 'dark'; } catch {}
+  const mode = THEME_MODES[th] === 'light' ? 'light' : 'dark';
+  try { document.documentElement.style.colorScheme = mode; } catch {}
+  // [alpha.166] จำธีมไว้ให้ renderer/theme-boot.js ทาก่อนเฟรมแรกของหน้าต่างถัดไป (หน้าต่างแผงที่ฉีก · บูตรอบหน้า)
+  try { localStorage.setItem('k2-boot-theme', th); localStorage.setItem('k2-boot-mode', mode); } catch {}
+  // [alpha.166] หน้าต่างแผงที่ฉีกออกไปต้องเปลี่ยนธีมตาม (เดิมค้างธีมตอนฉีกจนกว่าจะปิด-เปิดใหม่)
+  if (!PANEL_WIN) { try { kapi.broadcast && kapi.broadcast({ kind: 'theme', id: th }); } catch {} }
   clearThemeColorCache();                  // [alpha.162 · W6 ข้อ 2] ผืนวาด (กระดาน · ผังแตกสาย) อ่านสีธีมใหม่
   // [alpha.164 ข้อ A1–A2] ผืนวาดที่เปิดค้างอยู่ (ผังความสัมพันธ์ · กระดานวางแผน) ฟังแล้ววาดสีธีมใหม่เอง
   try { window.dispatchEvent(new CustomEvent('k2-theme', { detail: th })); } catch {}
@@ -9319,7 +9386,10 @@ async function openPlainFileNow(file, title) {
 // ฉากปัจจุบัน (คอมเมนต์ / โน้ตด่วน / ผังพื้นที่ / [alpha.121] โค้ดสั้นแบบ live ใน liveShortcodeContext)
 // chapterNo/sceneNo = ลำดับที่ 1-based ตาม `order` — คำนวณที่นี่ทีเดียวเพราะข้อมูลอยู่ในมืออยู่แล้ว
 export async function sceneCtx(file) {
-  const t = file ? { file } : state.active;
+  const t0 = file ? { file } : state.active;
+  // [alpha.166 · bug hunt] แท็บเทียม (เช่น ตัวแก้ไขภาพ `::vis::<ไฟล์ฉาก>`) มีคำนำหน้าที่ไม่ใช่ทางไฟล์ — เดิมเอาไปอ่าน
+  // `::vis::…/scenes.json` ตรง ๆ จน ENOENT (log เตือนทุกครั้งที่สลับแท็บ) · ถอดคำนำหน้าออกแล้วใช้ไฟล์ฉากจริง
+  const t = t0 && t0.file ? { file: String(t0.file).replace(/^::[a-z0-9-]+::/i, '') } : t0;
   if (!t || !t.file || !/\.md$/i.test(t.file) || !/[\\/]Chapters[\\/]/.test(t.file)) return null;
   const dPath = t.file.replace(/[\\/]Chapters[\\/].*$/, '');
   try {
@@ -10367,6 +10437,8 @@ export function activate(file) {
   // ผู้ใช้: *"ช่องมุมมองไม่ sync กับฉากที่เปิดอยู่ ในกรณีสลับ tab หรือ split"*
   // ทำหลัง `syncActiveSplit` เสมอ — คลาส `.on` ของแต่ละแผง (ใครมองเห็นบ้าง) เพิ่งนิ่งตรงนี้
   reapplyTabView();
+  // [alpha.166] ชนิดแท็บเปลี่ยน = ชุดข้อมูลบนแถบสถานะเปลี่ยนทั้งชุด → ปลดความกว้างที่จำไว้ (สลับแท็บชนิดเดิม = คงไว้)
+  { const a = state.active; resetStatusBarLock(!a ? 'none' : a.sp ? 'sp' : a.editor ? 'prose' : a.plain ? 'plain' : 'other'); }
   setElementBadge(state.active?.sp ? state.active.sp.curElement() : null);
   smart.hide();
   // บั๊ก #7: มุมมองเริ่มต้นของทุกแท็บ = หน้ากระดาษอยู่กึ่งกลางแนวนอน เริ่มที่บนสุด
@@ -13816,6 +13888,8 @@ window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
 // [alpha.108] เครื่องมือวินิจฉัยหน้ากระดาษ — เปิด DevTools แล้วพิมพ์ `k2PageDoctor()`
 // (ไม่มี UI ไม่มีข้อความให้แปล · ใช้ตอนอาการเกิดบนเอกสารจริงของผู้ใช้ที่เครื่องพัฒนาจำลองไม่ได้)
 window.k2PageDoctor = k2PageDoctor;
+// [alpha.166] ไล่ปัญหากล้อง/ฉากหลังของผังความสัมพันธ์จาก DevTools: `k2Net()._cam`
+window.k2Net = () => netInst;
 window.__k2menu = null;
 
 // ═════════ [alpha.58r ข้อ 4] คอนโซลนักพัฒนา ═════════
@@ -13836,6 +13910,7 @@ function devApi() {
            : t && t.editor ? proseBlocksFromDoc(t.editor.view.state.doc) : []; },
     cssVar: (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
     cmd: (ch, ...a) => handleCommand(ch, ...a),
+    net: () => netInst,                         // [alpha.166] ผังความสัมพันธ์ (กล้อง · ฉากหลัง · โมเดล)
     version: APP_VERSION,
   };
 }
@@ -16088,8 +16163,9 @@ function setupHoverTips() {
 // (ความกว้างแถบข้างปรับด้วยที่จับของ dock ใน Panel System แล้ว — .k-resize-handle)
 
 window.addEventListener('DOMContentLoaded', () => {
-  // [alpha.157r] อีโมจิสีในหน้าจอ → ไอคอนเส้นชุดเดียวกัน (ดู glyph-icons.js)
-  try { startGlyphUpgrade(document.body); } catch (e) { log('warn', 'glyph upgrade', e); }
+  // [alpha.166] ตัววางไอคอนเส้นทับอีโมจิ (glyph-upgrade · MutationObserver ทั้งหน้า) ถูกถอด —
+  // gi() คืนอักขระของฟอนต์ไอคอน (Nerd Fonts) เองแล้ว · โหลดฟอนต์ไว้ก่อน ผืนวาด (canvas) จะได้ไม่วาดเป็นกล่อง
+  try { document.fonts && document.fonts.load('16px "K2 Icons"', gi('save')); } catch {}
   // [alpha.162 · W4 ข้อ 9] มาตรฐานของกล่องทุกใบ (Esc · Enter · โฟกัส · role) — ดู ui.js
   try { installDialogA11y(); } catch (e) { log('warn', 'dialog a11y', e); }
   // [alpha.162 · W5 ข้อ 3] แถบเครื่องมือหลัก = จุดหยุด Tab เดียว · ←→ เดินในแถบ (ชื่อแถบมาจาก data-i18n-attr)
@@ -16345,6 +16421,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#zoom-reset').onclick = () => resetPageScale();
   $('#zoom-ctl').oncontextmenu = zoomLabelMenu;     // [alpha.164 · รอบต่อ 3] สวิตช์ซูมพอดีความกว้างอัตโนมัติ
   installStatusToggles((cmd) => handleCommand(cmd)); // [alpha.165] ช่องสวิตช์บนแถบสถานะ
+  installStatusBarLock();                             // [alpha.166] ช่องขวาของแถบสถานะกว้างได้ ห้ามหด (ไม่ขยับไปมา)
   // [alpha.165] ปุ่มหน้าแรกท้ายแถบสถานะ — `data-command` ให้แค่ไอคอน/ทูลทิป ไม่ผูกคลิกให้ (bug hunt: กดแล้วเงียบ)
   $('#status-home').onclick = () => handleCommand('home');
   $('#tree-search').oninput = (e) => filterTree(e.target.value);
@@ -17136,6 +17213,8 @@ export function updateSaveStatus() {
   }
   const saveEl = $('#status-save');
   if (!saveEl) return;
+  // [alpha.166] จองที่ของสภาพที่ยาวที่สุด ("ยังไม่บันทึก") ไว้เสมอ — บันทึกแล้ว ↔ ยังไม่บันทึก สลับกันไม่ดันช่องอื่น
+  if (tab) reserveStatusWidth(saveEl, [tt('ui.app.notSave'), '00:00 00'], 16);
   saveEl.replaceChildren();
   saveEl.title = tt('ui.sb.saveTip');               // [alpha.165] ทูลทิปบอกความหมายเสมอ (ไม่ว่าสภาพไหน)
   if (!tab) { saveEl.style.color = ''; return; }

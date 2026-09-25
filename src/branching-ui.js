@@ -36,7 +36,7 @@ import {
   mergeDuplicateChoices, countDuplicateChoices,
   graphToOutline, graphToJson, graphToHtmlTree, danglingChoices,
 } from './branch-graph.js';
-import { gi } from './icons.js';
+import { gi, plainIcons } from './icons.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs = {}) => {
@@ -1224,9 +1224,10 @@ function buildStandaloneSvg(pane) {
     out.append(svgEl('path', { d: `M ${x + 2} ${y + 6} L ${x + 2} ${y + NODE_H - 6}`,
                                class: 'bx-accent', stroke: accent, fill: 'none' }));
     const name = svgEl('text', { x: x + 12, y: y + 24, class: 'bt' });
-    name.textContent = shortText((box.querySelector('.branch-node-name') || {}).textContent || '', 24);
+    // [alpha.166] ไฟล์ svg/png ไม่มีฟอนต์ไอคอน — อักขระไอคอนบนจอต้องกลายเป็นตัวอักษรล้วนก่อน (ไม่งั้นเป็นกล่อง)
+    name.textContent = shortText(plainIcons((box.querySelector('.branch-node-name') || {}).textContent || ''), 24);
     const meta = svgEl('text', { x: x + 12, y: y + 44, class: 'bm' });
-    meta.textContent = shortText((box.querySelector('.branch-node-meta') || {}).textContent || '', 28);
+    meta.textContent = shortText(plainIcons((box.querySelector('.branch-node-meta') || {}).textContent || ''), 28);
     out.append(name, meta);
   }
   return { svg: out, w, h };

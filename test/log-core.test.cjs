@@ -117,7 +117,7 @@ check('ทุกระดับมีไอคอน+ชื่อไทย', L.L
   check('shortTime ตัดเหลือ HH:MM:SS', L.shortTime(TS) === '10:20:30', L.shortTime(TS));
   check('shortTime ค่าพังไม่ throw', typeof L.shortTime('') === 'string' && typeof L.shortTime(null) === 'string');
   check('summarize บอกยอดเฉพาะระดับที่มีจริง',
-        L.summarize({ error: 2, warn: 0, info: 5 }) === '⛔ 2 · ℹ 5', L.summarize({ error: 2, warn: 0, info: 5 }));
+        L.summarize({ error: 2, warn: 0, info: 5 }) === require('./_icons.cjs').gi('forbidden') + ' 2 · ' + require('./_icons.cjs').gi('info') + ' 5', L.summarize({ error: 2, warn: 0, info: 5 }));
   check('summarize ไม่มีอะไรเลย → ว่าง', L.summarize({}) === '' && L.summarize(null) === '');
   s.push('warn', 'a: ซ้ำ', undefined, TS); s.push('warn', 'a: ซ้ำ', undefined, TS);
   check('exportText บอกจำนวนครั้งที่ซ้ำ', L.exportText(s.all()).includes('ซ้ำ 2 ครั้ง'), L.exportText(s.all()));

@@ -60,10 +60,11 @@ check('ทักษะที่ใช้ไม่ได้ถูกนับเ�
   K.buildSkillsPrompt([{ id: 'x', body: '  ' }]).skipped.join(',') === 'x');
 
 // ── ป้ายบนปุ่ม ──
-check('ป้ายบอกเปิดกี่ตัวจากทั้งหมด', K.skillsLabel([a, b, c], ['tone']) === '🧩 1/3',
+const { gi } = require('./_icons.cjs');   // [alpha.166] ไอคอน = อักขระของฟอนต์ Nerd Fonts
+check('ป้ายบอกเปิดกี่ตัวจากทั้งหมด', K.skillsLabel([a, b, c], ['tone']) === gi('puzzle') + ' 1/3',
   K.skillsLabel([a, b, c], ['tone']));
-check('ไม่ได้เปิดเลย = 0/N', K.skillsLabel([a, b], []) === '🧩 0/2');
-check('id ที่ไม่มีจริงไม่ถูกนับ', K.skillsLabel([a], ['ไม่มี']) === '🧩 0/1');
+check('ไม่ได้เปิดเลย = 0/N', K.skillsLabel([a, b], []) === gi('puzzle') + ' 0/2');
+check('id ที่ไม่มีจริงไม่ถูกนับ', K.skillsLabel([a], ['ไม่มี']) === gi('puzzle') + ' 0/1');
 
 // ── ไฟล์ตัวอย่าง ──
 const starter = K.starterSkillMd();

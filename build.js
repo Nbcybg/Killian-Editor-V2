@@ -59,6 +59,13 @@ Promise.all([
     format: 'iife', platform: 'browser', target: 'chrome120',
     minify: false, sourcemap: false,
   }),
+  // [alpha.166] three.js + ตัวอ่านโมเดล = บันเดิลแยก โหลดเมื่อผู้ใช้ใส่โมเดล 3 มิติให้โหนดครั้งแรก (bundle.js หลักไม่บวม)
+  esbuild.build({
+    entryPoints: ['src/net3d/model-render.js'],
+    bundle: true, outfile: 'renderer/net3d.js',
+    format: 'iife', platform: 'browser', target: 'chrome120',
+    minify: true, sourcemap: false, legalComments: 'eof',   // three.js = MIT → เก็บประกาศลิขสิทธิ์ไว้ท้ายไฟล์
+  }),
   ...CJS_MODULES.map(([src, out]) => esbuild.build({
     entryPoints: [src], bundle: true, outfile: out,
     format: 'cjs', platform: 'node', target: 'node20', minify: false, sourcemap: false,

@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,841 checks · ALL OK** (alpha.165 · Windows · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ · รอบต่อ 3 บน macOS = 5,783) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **10,490 ข้อ · 147 ไฟล์** · ~60 วินาที)
+ปัจจุบัน **5,902 checks · ALL OK** (alpha.166 รอบ 2 · macOS · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **10,605 ข้อ · 148 ไฟล์** · ~55 วินาที · alpha.166)
 **[รอบต่อ 4 · Windows] `node_modules/.bin/electron` ที่ sync มาจาก mac ใช้ไม่ได้ (`bad interpreter`)** — รัน `./node_modules/electron/dist/electron.exe .` ตรง ๆ
 **[alpha.157]** `KILLIAN_USERDATA=<dir>` = แยกโฟลเดอร์ข้อมูลผู้ใช้ (เทส/พัฒนาไม่แตะเลย์เอาต์จริง) · `KILLIAN_NO_SPLASH=1` ·
 ตัวแปรสีอยู่ `renderer/themes/*.css` (style.css ห้ามมี hex ของเปลือกโปรแกรม · ตัวอักษรบนพื้น accent ใช้ `--on-accent`/`--on-accent-hi`) ·
@@ -389,6 +389,24 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 
 ประตูกันพลาด: unit `json-store` · `frontmatter` · `disk-conflict` · `project-doctor` + e2e `[156-1…7]`
 เครื่องมือกู้ของที่พังไปแล้ว: **เครื่องมือ → ตรวจสุขภาพโปรเจกต์** (`project-doctor.js` / `project-doctor-ui.js`)
+
+### ⚠️ กฎถาวร (alpha.166) — **ไอคอน Nerd Fonts · Story Network กล้องเดียว · แถบสถานะนิ่ง · ธีมก่อนเฟรมแรก**
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| ไอคอนใหม่ / เปลี่ยนไอคอน | แถวใน `icons/glyphs.csv` = `name,nf,glyph` · `nf` = ชื่อจาก https://www.nerdfonts.com/cheat-sheet (`nf-md-…`) · `glyph` = ตัวอักษรล้วน (ไฟล์ส่งออก) · `node build.js` สร้างทั้ง svg และอักขระของฟอนต์ `K2 Icons` | ไฟล์ svg จากชุดอื่น (ปนสไตล์) · อีโมจิ · ชื่อ nf ผิด (build ล้มพร้อมบอกแถว) |
+| ไอคอนในข้อความที่ **ออกนอกโปรแกรม** (ไฟล์ส่งออก · ข้อความถึง AI · svg/png ที่ส่งออก) | `gt('ชื่อ')` หรือ `plainIcons(ข้อความจากจอ)` (icons.js) | `gi()` — อักขระ Private Use เป็นกล่องทันทีที่ออกนอกโปรแกรม |
+| ผืนวาด (canvas · fabric) ที่วาดอักขระไอคอน | ใส่ `"K2 Icons"` ในสแตกฟอนต์ (`ICON_FONT`) | สแตกที่ไม่มีฟอนต์ไอคอน |
+| สแตกฟอนต์ใหม่ใน style.css | ลงท้าย `var(--thai-net)` (มี `"K2 Icons"` อยู่ในนั้นแล้ว) · `size-adjust` ของฟอนต์ = `ICON_SCALE` ของ tools/commands-data.cjs | แก้ค่าที่เดียว (ไอคอนในข้อความกับบนปุ่มขนาดไม่เท่ากัน) |
+| เทสที่เทียบข้อความบนจอที่มีไอคอน | `includes(gi('ชื่อ'))` | พิมพ์อักขระ/อีโมจิลงเทส (เปลี่ยนชุดไอคอนแล้วเทสแดงทั้งชุด — alpha.166 แก้ไป 20 จุด) |
+| กล้องของ Story Network | `this._cam` = `{tx,ty,tz,scale,rx,ry,mode3D}` (network-camera.js) · ฉายด้วย `rot3` + `_rot()` (มุมที่ใช้จริง/กำลังหมุน) · จุดบนจอ `screenOf(p)` | เก็บกล้องเป็นระยะเลื่อนพิกเซล · หมุนรอบ (0,0,0) · `project3D` แยกของตัวเอง (`_cx/_cy/_scale` เป็น getter/setter ของกล้องตัวเดียว ไว้ให้โค้ด/เทสเดิม) |
+| ตรรกะของผังใหม่ (โฟกัส · เส้นทาง · ข้อสังเกต · ฉากหลัง · โมเดล) | โมดูลบริสุทธิ์ `network-insights.js` / `network-scene.js` + unit test · UI = `network-inspector.js` · วาดพื้น = `network-bg.js` | ตรรกะก้อนใหม่ใน network.js |
+| ค่าฉากหลัง/โมเดลของผัง | `net.updateScene(patch)` (บันทึกหน่วง 400ms → `settings.netScene` ของผลงาน) · ทางไฟล์ = สัมพัทธ์ในโปรเจกต์ (`Images/…` `Models/…`) | ทางเต็มของเครื่อง · `../` |
+| three.js | บันเดิลแยก `renderer/net3d.js` (build.js) โหลดผ่าน `loadNet3D()` เมื่อใช้ · อยู่ devDependencies | `import 'three'` ใน src ที่เข้า bundle หลัก |
+| ช่องบนแถบสถานะที่ข้อความยาว/สั้นสลับกัน | อยู่ใน `#status-right` (ล็อก "กว้างได้ ห้ามหด" อัตโนมัติ — statusbar-lock.js) · สภาพที่รู้ล่วงหน้าใช้ `reserveStatusWidth(el, [ข้อความยาวสุด])` | ปล่อยความกว้างตามข้อความ (ช่องอื่นเลื่อนทุกครั้งที่สถานะเปลี่ยน) |
+| ตำแหน่งบนจอของผัง (วาด · คลิก · ลาก · พื้น) | `this._pj()` (makeProjector: มุมมองระยะ `view(p).f` · `proj` · `planeAt` · `deltaToWorld(dx,dy,f)`) | คำนวณ rot3/camOffset เองแยกทาง (มุมมองระยะเปิดอยู่ = ตำแหน่งคลาดกับที่วาด) |
+| ของที่ผังวาดตามลำดับเรื่อง | `sceneOrder` / `storyProgress` (network-insights.js) · โหนดฉากมี `seq` จาก loadAllEntities (เล่ม→บท→ฉาก ตาม order) | ใช้ลำดับโฟลเดอร์/ลำดับใน scenes.json ดิบ |
+| หน้าต่างใหม่ (BrowserWindow) | `backgroundColor: themeBg(ธีม)` + ส่ง `?theme=` ให้ `theme-boot.js` · เปลี่ยนธีม = broadcast `{kind:'theme'}` | สีพื้นตายตัว (แวบสีธีมเก่า) |
 
 ### ⚠️ กฎถาวร (alpha.164 · รอบต่อ) — ปุ่มลัด · เทมเพลตตั้งค่า · พื้นที่เขียน · ภาษาอังกฤษ
 

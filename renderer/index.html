@@ -30,6 +30,8 @@
 <!-- themes:end -->
 </head>
 <body>
+<!-- [alpha.166] ธีมก่อนเฟรมแรก (ไม่มีสีธีมเก่าแวบตอนเปิดหน้าต่าง/ฉีกแผง) -->
+<script src="theme-boot.js"></script>
 <div id="titlebar">
   <span id="tb-logo">K2</span>
   <span class="tb-menu" data-m="File" data-i18n="menu.file"></span>
@@ -339,11 +341,11 @@
     <span id="status-scenes" data-i18n-title="ui.sb.scenesTip"></span>
   </div>
   <div id="zoom-ctl" class="k-sb-seg" data-i18n-title="ui.html.zoomCtl">
-    <button id="zoom-out" data-i18n-title="ui.html.zoomOut" data-command="zoom:-1"></button>
+    <button id="zoom-out" data-i18n-title="ui.html.zoomOut" data-command="zoom:-1" data-icon-size="15"></button>
     <input type="range" id="zoom-slider" min="50" max="250" step="5" value="100">
-    <button id="zoom-in" data-i18n-title="ui.html.zoomIn" data-command="zoom:1"></button>
+    <button id="zoom-in" data-i18n-title="ui.html.zoomIn" data-command="zoom:1" data-icon-size="15"></button>
     <span id="zoom-label">100%</span>
-    <button id="zoom-reset" data-i18n-title="ui.html.zoomReset" data-command="zoom:0"></button>
+    <button id="zoom-reset" data-i18n-title="ui.html.zoomReset" data-command="zoom:0" data-icon-size="15"></button>
   </div>
   <button id="status-home" class="k-sb-seg" data-command="home" data-i18n-title="ui.sb.home"></button>
 </div>
