@@ -11,6 +11,7 @@
 
 import { t } from './i18n.js';
 import { cmpText } from './locale.js';
+import { safeCssColor } from './palette.js';   // [alpha.167 · รอบต่อ] สีจากไฟล์ผู้ใช้ก่อนลง style="…"
 export const TIMELINE_VERSION = '1.0';
 
 // สีของ track (เลน) — วนใช้
@@ -357,12 +358,12 @@ export function timelineHtml(items, links, L = {}) {
     const rows = tr.items.map((it) => { const s = eventSpan(it); const x = X(s.start); return { id: linkKey(it), x, w: Math.max(170, X(s.end) - x) }; });
     const pk = packRows(rows);
     const nRows = Math.max(1, ...[...pk.values()].map((v) => v + 1));
-    lanes.push(`<div class="lane" style="top:${y}px;height:${nRows * 64 + 16}px"><span class="ln"><i style="background:${esc(tr.color)}"></i>${esc(tr.name)}</span></div>`);
+    lanes.push(`<div class="lane" style="top:${y}px;height:${nRows * 64 + 16}px"><span class="ln"><i style="background:${safeCssColor(tr.color)}"></i>${esc(tr.name)}</span></div>`);
     for (const r of rows) {
       const it = tr.items.find((x) => linkKey(x) === r.id);
       const top = y + 12 + pk.get(r.id) * 64;
       pos.set(r.id, { x1: r.x + r.w, x0: r.x, y: top + 26 });
-      cards.push(`<div class="card" style="left:${r.x}px;top:${top}px;width:${r.w}px;border-color:${esc(it.color || tr.color)}">`
+      cards.push(`<div class="card" style="left:${r.x}px;top:${top}px;width:${r.w}px;border-color:${safeCssColor(it.color || tr.color)}">`
         + `<b>${esc(it.title)}</b><small>${esc(it.when)}${it.whenEnd ? ' → ' + esc(it.whenEnd) : ''}</small></div>`);
     }
     y += nRows * 64 + 22;

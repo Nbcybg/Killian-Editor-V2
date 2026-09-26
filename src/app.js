@@ -72,7 +72,7 @@ import { STEP_DEFS, PRESETS, stepDef, mkStep, newWorkflow, cloneWorkflow, runWor
          mdToHtmlBody, mdToHtml } from './compile.js';
 import { TIMELINE_VERSION, mergeTimeline, groupByTrack, trackNames, newEvent, findClashes, sortEvents, ganttData, ganttBar, ganttTicks, normalizeRefs } from './timeline.js';
 import { MAPS_VERSION, PIN_COLORS, PIN_KIND, newMap, newPin, clamp, findMap, sortMaps, breadcrumb, rootMaps, pinStats, deleteMap,
-         migrateMaps, mapCategories, groupMaps, mapOverlays, toggleOverlay, gridLines, clampZoom, zoomStep,
+         migrateMaps, rebaseEntityFiles, mapCategories, groupMaps, mapOverlays, toggleOverlay, gridLines, clampZoom, zoomStep,
          filterPins, matchPin, movePins, deletePins, clonePins, newRoute, routePoints, routePath, routeLength,
          addPinToRoute, deleteRoute, mapRoutes, scenePinCounts, scenesForMap, MAP_ZOOM_MIN, MAP_ZOOM_MAX } from './maps.js';
 import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, logAction, logStore, onLog, setStatus, setStatusError, setStatusAction,
@@ -196,7 +196,7 @@ import { openKanban, resetKanban, renderKanbanPanel } from './kanban/kanban-ui.j
 import * as PL from './panels/panel-layout.js';
 import { installPanelDrop } from './panel-drop.js';
 import { exportPanel } from './panel-exports.js';
-import { setDrag } from './drop-kit.js';
+import { setDrag, bindDropTarget } from './drop-kit.js';
 import { inGroupHandle, snapToEdges, clampFloat, FLOAT_MIN_W, FLOAT_MIN_H } from './panels/panel-drag.js';
 // [alpha.60r2 ข้อ 7] รายชื่อกล่องที่เลื่อนได้ — selftest ตรวจว่าครอบคลุมครบ
 import { SCROLLABLES as PANEL_SCROLLABLES } from './panels/panel-ui.js';
@@ -5194,8 +5194,10 @@ async function _buildTreeInner() {
     if (!sec.locked) {
       secTitle.draggable = true;
       secTitle.addEventListener('dragstart', (e) => {
-        e.dataTransfer.effectAllowed = 'move';
+        // [alpha.167 · รอบต่อ · บั๊ก] 'move' อย่างเดียว = ปลายทางหยิบใส่ที่รับแบบ copy (กระดานอารมณ์) ปล่อยไม่ได้เงียบ ๆ
+        e.dataTransfer.effectAllowed = 'copyMove';
         e.dataTransfer.setData('text/k2-book', secPath);
+        e.dataTransfer.setData('text/plain', sec.title || name);   // ชื่อเล่มให้ปลายทาง (การ์ด · ช่องข้อความ)
         e.stopPropagation(); secTitle.classList.add('sc-dragging');
       });
       secTitle.addEventListener('dragend', () => secTitle.classList.remove('sc-dragging'));
@@ -6389,6 +6391,23 @@ export async function renderNetworkPanel() {
     log('error', 'StoryNetwork constructor failed', e);
     return false;
   }
+  // [alpha.167 · รอบต่อ · บั๊ก] หยิบตัวละครจาก Explorer ใส่ผัง = เลือก + บินไปหาโหนดนั้น
+  // (ตัวกลางหยิบใส่โชว์ป้าย "โฟกัสบนผัง" มาตั้งแต่รอบแรก แต่ผังไม่มีตัวรับ = ปล่อยแล้วเงียบ)
+  if (!host._k2drop) {
+    host._k2drop = true;
+    bindDropTarget(host, {
+      accept: ['entity'],
+      onDrop: (payload) => {
+        const it = payload.items[0] || {};
+        const nodes = (netInst && netInst.nodes) || [];
+        const n = nodes.find((x) => x.file && it.path && x.file === it.path)
+               || nodes.find((x) => x.name && it.title && x.name === it.title);
+        if (!n) { setStatus(tf('ui.drop.netNotFound', it.title || '')); return false; }
+        netInst.select(n); netInst.flyTo(n, { minScale: 1 });
+        return true;
+      },
+    });
+  }
   setTimeout(() => { try { netInst._fit(); netInst.refresh(); } catch {} }, 60);
   return true;
 }
@@ -7543,8 +7562,21 @@ export async function loadMaps() {
   const p = await kapi.join(state.root, 'maps.json');
   if (!(await kapi.exists(p))) return { version: MAPS_VERSION, maps: [] };
   // [alpha.70] migrateMaps เติมคีย์ที่เพิ่มทีหลัง (category/routes/overlays) ให้ไฟล์เวอร์ชัน 1.0
-  try { return migrateMaps(await kapi.readJson(p)); }
+  let data;
+  try { data = migrateMaps(await kapi.readJson(p)); }
   catch { return { version: MAPS_VERSION, maps: [] }; }
+  // [alpha.167 · รอบต่อ · บั๊ก] หมุด/โซนของเอนทิตี้เก็บทางเต็มของเครื่อง — เปิดจากโฟลเดอร์/เครื่องอื่นแล้วชี้ผิดที่
+  // → ตรวจแบบถูกก่อน (ทุกทางอยู่ใต้โปรเจกต์นี้ = จบ) ค่อยอ่านรายชื่อเอนทิตี้มาเทียบชื่อไฟล์
+  try {
+    const rootN = String(state.root).replace(/\\/g, '/').replace(/\/+$/, '') + '/';
+    const off = (data.maps || []).some((m) => [...(m.pins || []), ...(m.zones || [])]
+      .some((o) => o && o.entityFile && !String(o.entityFile).replace(/\\/g, '/').startsWith(rootN)));
+    if (off) {
+      const n = rebaseEntityFiles(data, await listEntities(state.root));
+      if (n) log('info', 'maps: rebased entity paths', n);
+    }
+  } catch (e) { log('warn', 'maps: rebase entity paths failed', e); }
+  return data;
 }
 export async function saveMaps(data) {
   data.version = MAPS_VERSION;
@@ -11721,7 +11753,7 @@ function wireTabDrag(t2) {
   b.draggable = true;
   b.addEventListener('dragstart', (e) => {
     if (!b.parentNode || b.parentNode.id !== 'tabs') { e.preventDefault(); return; }
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = 'copyMove';   // [alpha.167 · รอบต่อ] ปลายทางหยิบใส่ (ตัวแก้ไข = สลับไปแท็บนั้น) รับแบบ copy
     e.dataTransfer.setData('text/k2-tab', t2.file);
     b.classList.add('k-tab-dragging');
   });

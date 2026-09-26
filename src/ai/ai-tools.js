@@ -25,44 +25,50 @@ export const CAP_FULL = 'full';     // ทำได้ทุกอย่าง�
 export const TOOLS = [
   // ── อ่าน ──
   { name: 'project.tree', cap: CAP_READ, need: [], opt: [],
-    desc: tt('ui.aiTools.viewStructureProjectBook') },
+    dk: 'ui.aiTools.viewStructureProjectBook' },
   { name: 'scene.read', cap: CAP_READ, need: ['title'], opt: ['book', 'chapter'],
-    desc: tt('ui.aiTools.readBodyScene') },
+    dk: 'ui.aiTools.readBodyScene' },
   { name: 'entity.read', cap: CAP_READ, need: ['name'], opt: [],
-    desc: tt('ui.aiTools.readDataWikiCharacter') },
+    dk: 'ui.aiTools.readDataWikiCharacter' },
+  // [alpha.167 · รอบต่อ] ตำแหน่งบนแผนที่ — "ใครอยู่ใกล้ใคร" · ระยะจริง/เวลาเดินทางเมื่อตั้งมาตราส่วนแล้ว
+  { name: 'map.where', cap: CAP_READ, need: [], opt: ['name'],
+    dk: 'ui.aiTools.mapWhere' },
 
   // ── เอนทิตี้ใน Wiki ──
   { name: 'entity.create', cap: CAP_WRITE, need: ['cat', 'name'], opt: ['description', 'fields', 'aliases', 'sections'],
-    desc: tt('ui.aiTools.newNewCatCharacters') },
+    dk: 'ui.aiTools.newNewCatCharacters' },
   { name: 'entity.update', cap: CAP_WRITE, need: ['name'], opt: ['newName', 'description', 'fields', 'aliases', 'sections'],
-    desc: tt('ui.aiTools.editHasSendOnly') },
+    dk: 'ui.aiTools.editHasSendOnly' },
   { name: 'entity.delete', cap: CAP_FULL, need: ['name'], opt: [], destructive: true,
-    desc: tt('ui.aiTools.delMoveTrashRecover') },
+    dk: 'ui.aiTools.delMoveTrashRecover' },
 
   // ── เล่ม (book/section) ──
   { name: 'book.create', cap: CAP_WRITE, need: ['title'], opt: [],
-    desc: tt('ui.aiTools.newBookNewHas') },
+    dk: 'ui.aiTools.newBookNewHas' },
   { name: 'book.delete', cap: CAP_FULL, need: ['title'], opt: [], destructive: true,
-    desc: tt('ui.aiTools.delBookBookMove') },
+    dk: 'ui.aiTools.delBookBookMove' },
 
   // ── บท ──
   { name: 'chapter.create', cap: CAP_WRITE, need: ['title'], opt: ['book'],
-    desc: tt('ui.aiTools.addChapterNewBook') },
+    dk: 'ui.aiTools.addChapterNewBook' },
   { name: 'chapter.rename', cap: CAP_WRITE, need: ['title', 'newTitle'], opt: ['book'],
-    desc: tt('ui.aiTools.changeNameChapter') },
+    dk: 'ui.aiTools.changeNameChapter' },
   { name: 'chapter.delete', cap: CAP_FULL, need: ['title'], opt: ['book'], destructive: true,
-    desc: tt('ui.aiTools.delChapterChapterAll') },
+    dk: 'ui.aiTools.delChapterChapterAll' },
 
   // ── ฉาก ──
   { name: 'scene.create', cap: CAP_WRITE, need: ['title'], opt: ['book', 'chapter', 'text', 'synopsis'],
-    desc: tt('ui.aiTools.newSceneNewChapter') },
+    dk: 'ui.aiTools.newSceneNewChapter' },
   { name: 'scene.write', cap: CAP_WRITE, need: ['title', 'text'], opt: ['book', 'chapter', 'mode'],
-    desc: tt('ui.aiTools.writeBodySceneMode') },
+    dk: 'ui.aiTools.writeBodySceneMode' },
   { name: 'scene.rename', cap: CAP_WRITE, need: ['title', 'newTitle'], opt: ['book', 'chapter'],
-    desc: tt('ui.aiTools.changeNameScene') },
+    dk: 'ui.aiTools.changeNameScene' },
   { name: 'scene.delete', cap: CAP_FULL, need: ['title'], opt: ['book', 'chapter'], destructive: true,
-    desc: tt('ui.aiTools.delSceneMoveTrash') },
+    dk: 'ui.aiTools.delSceneMoveTrash' },
 ];
+// [alpha.167 · รอบต่อ · บั๊ก] คำอธิบายเคยเป็น `tt(…)` ตอน import = แช่ภาษาตอนบูต (ไฟล์ภาษายังโหลดไม่เสร็จ/สลับภาษาทีหลัง)
+// → เก็บคีย์ (`dk`) แล้วแปลตอนอ่าน (กฎถาวร alpha.164 รอบต่อ 2)
+for (const x of TOOLS) Object.defineProperty(x, 'desc', { get() { return tt(x.dk); }, enumerable: true });
 
 export function toolByName(name) { return TOOLS.find((t) => t.name === name) || null; }
 
@@ -180,6 +186,7 @@ export function describeCall(call) {
     case 'project.tree':    return tt('ui.aiTools.viewStructureProject');
     case 'scene.read':      return ttf('ui.aiTools.readScene', a.title, at);
     case 'entity.read':     return ttf('ui.aiTools.readData', a.name);
+    case 'map.where':       return a.name ? ttf('ui.aiTools.mapWhereOne', a.name) : tt('ui.aiTools.mapWhereAll');
     case 'entity.create':   return ttf('ui.aiTools.new', catLabel(a.cat), a.name);
     case 'entity.update':   return ttf('ui.aiTools.editData', a.name) + (a.newName ? ` → "${a.newName}"` : '');
     case 'entity.delete':   return ttf('ui.aiTools.delTrash', a.name);

@@ -84,7 +84,9 @@ function readKind(dt, kind) {
   }
   if (kind === 'book' || kind === 'tab') {
     const p = j && typeof j === 'object' ? (j.path || j.file) : raw;
-    return { kind, items: p ? [{ path: String(p), title: (j && j.title) || baseName(p) }] : [] };
+    // ทางเปล่า (รูปแบบเดิมของ Explorer) — ชื่อที่คนอ่านมากับ text/plain ถ้ามี
+    const plain = String(dt.getData('text/plain') || '').trim();
+    return { kind, items: p ? [{ path: String(p), title: (j && j.title) || plain || baseName(p) }] : [] };
   }
   if (kind === 'map') {
     return { kind, items: j && j.id ? [{ id: j.id, title: j.name || j.title || '' }] : [] };

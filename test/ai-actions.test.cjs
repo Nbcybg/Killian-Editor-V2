@@ -238,6 +238,24 @@ seed();
     ck('อ่านเอนทิตี้กลับมาได้', rd.ok === true && rd.data && rd.data.name === 'ทอร่า');
     const miss = await run('entity.read', { name: 'ไม่มีคนนี้' });
     ck('อ่านเอนทิตี้ที่ไม่มี = ไม่สำเร็จ', miss.ok === false);
+
+    // [alpha.167 · รอบต่อ] map.where — ตำแหน่งบนแผนที่ (หมุดเก็บทางเต็มของเครื่องเก่า = ย้ายโปรเจกต์มาแล้ว)
+    const none = await run('map.where', { name: 'ทอร่า' });
+    ck('[map.where] ยังไม่มี maps.json = ไม่สำเร็จพร้อมเหตุผล', none.ok === false && !!none.error, JSON.stringify(none));
+    const ef2 = [...FS.keys()].find((k) => k.includes('/Wiki/characters/'));
+    const oldPath = 'D:/เครื่องเก่า/โปรเจกต์/Wiki/characters/' + ef2.split('/').pop();
+    await fakeKapi.writeFile(ROOT + '/maps.json', JSON.stringify({ version: '1.1', maps: [{
+      id: 'w', name: 'โลก', aspect: 1, geo: { scale: { a: { x: 0, y: 50 }, b: { x: 10, y: 50 }, meters: 1000 } },
+      pins: [{ id: 'a', kind: 'entity', entityFile: oldPath, label: '', x: 10, y: 50 },
+             { id: 'b', kind: 'note', label: 'บ่อน้ำ', x: 13, y: 50 }] }] }));
+    const w1 = await run('map.where', { name: 'ทอร่า' });
+    ck('[map.where] ★ หาเจอแม้ย้ายโปรเจกต์ (จับชื่อไฟล์) + ระยะจริง', w1.ok === true && /บ่อน้ำ: 300 ม\./.test(String(w1.data)), JSON.stringify(w1));
+    const w2 = await run('map.where', {});
+    ck('[map.where] ไม่ใส่ชื่อ = สรุปทุกแผนที่', w2.ok === true && String(w2.data).includes('"โลก"'), JSON.stringify(w2));
+    const w3 = await run('map.where', { name: 'ไม่มีใคร' });
+    ck('[map.where] ชื่อที่ไม่ได้ปัก = ไม่สำเร็จพร้อมบอก', w3.ok === false && String(w3.error).includes('ไม่มีใคร'), JSON.stringify(w3));
+    ck('[map.where] เป็นคำสั่งอ่านอย่างเดียว (ไม่รีเฟรช UI)', A.touchesProject([w1]) === false);
+    FS.delete(ROOT + '/maps.json');
   }
 
   // ───────── โครงสร้างทั้งโปรเจกต์ ─────────

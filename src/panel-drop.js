@@ -114,6 +114,9 @@ export function installPanelDrop() {
   // ชั้น 3 (ตัวแก้ไข): ฉาก/โน้ต/บท ที่ปล่อยลงเอกสาร = เปิด — ต้องแย่งก่อน ProseMirror (ระยะ capture)
   // ไม่งั้น ProseMirror แทรกชื่อฉาก (text/plain) ลงไปในเนื้อเรื่อง
   document.addEventListener('drop', (e) => {
+    // [alpha.167 · รอบต่อ · บั๊ก] ซ่อนป้ายระยะ capture — ตัวรับของแผง `stopPropagation()` แล้วตัวซ่อนระยะ bubble ไม่เคยทำงาน
+    // (ป้ายค้างบนจอจนกว่าจะมี dragend · การลากจากนอกโปรแกรมไม่มี dragend ให้เลย)
+    hideTip();
     const pm = e.target && e.target.closest && e.target.closest('.ProseMirror');
     if (!pm) return;
     const ks = dragKinds(e.dataTransfer);

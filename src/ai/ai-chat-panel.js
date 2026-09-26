@@ -166,9 +166,20 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
   let scope = session.scope || DEFAULT_SCOPE;
   if (scope === 'none' || !state.root) return '';
   // [alpha.125 ข้อ B] ★ "เฉพาะส่วนที่เกี่ยวข้อง" — ส่งต่อให้สาย RAG (ดูหมายเหตุใน SCOPES)
+  // [alpha.167 · รอบต่อ] ★ ตำแหน่งบนแผนที่ ("ใครอยู่ใกล้ใคร") — จองงบไว้ก่อน ไม่ให้ถูกตัดทิ้งท้ายบริบท
+  // ระดับ "ฉากนี้" ไม่แนบ (ผู้ใช้เลือกให้เห็นแค่ฉากเดียว) · ไม่มีหมุด = ''
+  let mapCtx = '';
+  if (scope !== 'scene') {
+    try {
+      const { mapContextText } = await import('../map-ai.js');
+      mapCtx = await mapContextText(state.root, { maxChars: Math.min(3000, Math.floor(maxChars / 4)) });
+    } catch (e) { log('warn', 'ai-chat: map context failed', e); }
+  }
+  const withMap = (txt) => (mapCtx ? (txt ? txt + '\n\n' : '') + mapCtx : txt);
+  const budget = Math.max(0, maxChars - (mapCtx ? mapCtx.length + 2 : 0));
   if (scope === 'relevant') {
-    const rel = await collectRelevant(query, { maxChars, files: session.files || [] });
-    if (rel) return rel;
+    const rel = await collectRelevant(query, { maxChars: budget, files: session.files || [] });
+    if (rel) return withMap(rel);
     // สร้างดัชนีไม่ได้ (ยังไม่มีโปรเจกต์ · ไฟล์อ่านไม่ได้ · ยังไม่ได้พิมพ์คำถาม)
     // → **ตกกลับไประดับ "ทั้งโปรเจกต์" แทนการส่งบริบทเปล่า** ซึ่งจะทำให้โมเดลตอบมั่ว
     scope = 'project';
@@ -203,13 +214,13 @@ export async function collectScope(session, { maxChars = 24000, query = '' } = {
     for (const f of files) {
       if (!underPrefix(f, prefix)) continue;
       await push(f, f.slice(state.root.length + 1));
-      if (parts.join('\n').length > maxChars) break;
+      if (parts.join('\n').length > budget) break;
     }
   }
   // แนบไฟล์ที่ผู้ใช้เพิ่มเองด้วย 📎 (นอกเหนือจาก scope)
   for (const f of session.files || []) await push(f.path, gi('paperclip') + ' ' + (f.name || f.path));
   const text = parts.join('\n\n');
-  return text.length > maxChars ? text.slice(0, maxChars) + tt('ui.aiChatPanel.cutLong') : text;
+  return withMap(text.length > budget ? text.slice(0, budget) + tt('ui.aiChatPanel.cutLong') : text);
 }
 // ═══════════ [alpha.125 ข้อ B] ★ ต่อสาย RAG ของสเปกข้อ 79 เข้าแผงแชทจริง ═══════════
 //

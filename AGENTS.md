@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **5,971 checks · ALL OK** (alpha.167 · Linux/xvfb · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **10,738 ข้อ · 152 ไฟล์** · ~65 วินาที · alpha.167)
+ปัจจุบัน **5,984 checks · ALL OK** (alpha.167 รอบต่อ · Linux/xvfb · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **10,790 ข้อ · 153 ไฟล์** · ~100 วินาที · alpha.167 รอบต่อ)
 **[alpha.167 · Linux/คอนเทนเนอร์]** ใช้ `--use-angle=swiftshader --enable-unsafe-swiftshader` แทน `--disable-gpu` (เทส `[166-M]` ต้องมี WebGL) ·
 ไม่มีฟอนต์ Segoe UI = เทสวัดความกว้าง `[164-R2-1]` แดง → ตั้ง `~/.config/fontconfig/fonts.conf` ให้ `Segoe UI`/`system-ui` ชี้ `Liberation Sans` ·
 `KILLIAN_USERDATA=/tmp/k2ud` แยกข้อมูลผู้ใช้ทุกรอบ · รอบเต็ม ~25 นาที ·
@@ -411,6 +411,12 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 | เปิดแผนที่ใบหนึ่งจากที่อื่น | `openMapById(id)` / `focusMapPin(...)` (ตั้ง `view.wantId` ก่อนวาด — ตัววาดที่วิ่งซ้อนเลือกใบนี้) | `openMaps()` แล้วค่อยตั้ง `currentId` (วาดสองรอบ · รอบที่เสร็จทีหลังทับกลับ) |
 | รายชื่อเอนทิตี้อย่างเดียว | `loadAllEntities({ entitiesOnly: true })` | `loadAllEntities()` เต็ม (อ่านทุกฉาก — ช้าตามขนาดโปรเจกต์) |
 | label ของ `popupMenu` ที่มีข้อความผู้ใช้ | `text:` (หรือ escape เอง) | `label:` + ชื่อที่ผู้ใช้ตั้ง (label เป็น HTML) |
+| [รอบต่อ] ตำแหน่งบนแผนที่ให้ AI | คำสั่ง `map.where` + `mapContextText()` (`src/map-ai.js`) · ตรรกะ `mapDigest`/`whereIs` (maps.js) · ถ้อยคำระยะ/พื้นที่/เวลาเดินทาง `map-text.js` ที่เดียว (แผงแผนที่ใช้ตัวเดียวกัน) | ข้อความระยะ/เวลาเดินทางชุดที่สอง · ส่ง `gi()` ไปหา AI |
+| [รอบต่อ] ทางไฟล์เอนทิตี้ที่เก็บในไฟล์ของโปรเจกต์ (หมุด/โซน) | อ่านผ่าน `loadMaps()` (ชี้กลับด้วย `rebaseEntityFiles` เมื่อย้ายเครื่อง) · ชื่อที่โชว์ = ชื่อปัจจุบันใน Wiki (`entityNamer`) | เชื่อ `pin.entityFile`/`pin.label` ดิบ |
+| [รอบต่อ] ตัวลากใหม่ (pointer/mouse) | `escCancelDrag` คืนสภาพก่อนลาก + ไม่บันทึก · คลิกไม่ขยับ = ไม่เขียนไฟล์ | ตัวลากที่ Esc ไม่ทำอะไร (รอบแรกของ .167 ลืมทุกตัว) |
+| [รอบต่อ] แหล่งลากที่มีปลายทางภายใน (เล่ม · แท็บ) | `effectAllowed = 'copyMove'` + `text/plain` = ชื่อ | `'move'` อย่างเดียว (ปลายทางหยิบใส่ปล่อยไม่ได้เงียบ ๆ) |
+| [รอบต่อ] สีจากไฟล์ผู้ใช้ลง `style` ของไฟล์ HTML ที่ส่งออก | `safeCssColor()` (palette.js) | `esc(color)` อย่างเดียว (กันแค่เครื่องหมายคำพูด ไม่กัน `;…`) |
+| [รอบต่อ] แผงใน `OWN` ของ panel-drop.js | ต้องมีตัวรับจริงของชนิดที่ประกาศ (e2e ปล่อยจริง) | ประกาศชนิดที่แผงรับไม่ได้ (ป้ายโกหก — Story Network/รูปบนแผนที่เคยเป็น) |
 
 ### ⚠️ กฎถาวร (alpha.166) — **ไอคอน Nerd Fonts · Story Network กล้องเดียว · แถบสถานะนิ่ง · ธีมก่อนเฟรมแรก**
 

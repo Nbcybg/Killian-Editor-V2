@@ -7274,6 +7274,7 @@ body { accent-color:var(--accent-hi); }
 .tl-card.sel { background:linear-gradient(100deg, color-mix(in srgb, var(--tl-c) 55%, var(--side)), color-mix(in srgb, var(--accent) 45%, var(--side)) 60%, color-mix(in srgb, var(--accent-hi) 55%, var(--side)));
   border-color:transparent; box-shadow:0 6px 22px color-mix(in srgb, var(--tl-c) 40%, transparent); z-index:5; }
 .tl-card.tl-event-scene { border-style:dashed; }
+.tl-card.tl-card-follow { border-inline-start-style:dashed; }   /* [alpha.167 · รอบต่อ] ต้นการ์ดอยู่พ้นขอบซ้าย — ข้อความไหลตามมา */
 .tl-card.tl-clash { box-shadow:0 0 0 2px var(--st-warn); }
 .tl-card-stripe { flex:none; width:4px; align-self:stretch; margin:12px 0; margin-inline-start:12px; border-radius:3px; background:var(--tl-c); }
 .tl-card-main { flex:1 1 auto; min-width:0; }

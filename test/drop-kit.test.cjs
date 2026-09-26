@@ -38,6 +38,8 @@ check('hasDrag ตามที่ปลายทางรับ', D.hasDrag(fake
   check('รูปจากคลังรูปหลายใบ', gal.kind === 'gallery' && gal.items.length === 2 && gal.items[1].title === '2.jpg');
   const book = D.readDrop(fakeDT({ 'text/k2-book': '/p/Book1' }));
   check('เล่ม (ทางเปล่า ไม่ใช่ JSON)', book.kind === 'book' && book.items[0].path === '/p/Book1' && book.items[0].title === 'Book1');
+  const book2 = D.readDrop(fakeDT({ 'text/k2-book': '/p/Book1', 'text/plain': 'เล่มหนึ่ง' }));
+  check('เล่ม: ชื่อที่คนอ่านมากับ text/plain', book2.items[0].title === 'เล่มหนึ่ง' && book2.items[0].path === '/p/Book1');
   const ch = D.readDrop(fakeDT({ 'text/k2-chapter': JSON.stringify({ draftDir: '/d', guid: 'g1' }) }));
   check('บท (ไม่มี path ก็ยังเป็นของชิ้นหนึ่ง)', ch.kind === 'chapter' && ch.items[0].guid === 'g1');
   const map = D.readDrop(fakeDT({ 'text/k2-map': JSON.stringify({ id: 'm1', name: 'โลก' }) }));

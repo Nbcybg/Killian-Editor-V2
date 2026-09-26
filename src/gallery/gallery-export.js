@@ -8,6 +8,7 @@ import { setStatus, setStatusError, log, setBusy, clearBusy } from '../core.js';
 import * as AC from './album-core.js';
 import * as MB from './moodboard.js';
 import { usageOf } from './usage-index.js';
+import { safeCssColor } from '../palette.js';   // [alpha.167 · รอบต่อ] สีจากไฟล์ผู้ใช้ก่อนลง style
 
 const safe = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, '_');
 
@@ -176,7 +177,7 @@ export async function exportMoodBoardHtml(root, albumId, board, { pad = 40, outP
       const pos = `left:${Math.round(it.x - b.x + pad)}px;top:${Math.round(it.y - b.y + pad)}px;width:${Math.round(it.w)}px;height:${Math.round(it.h)}px;z-index:${100 + (it.z | 0)}`;
       if (MB.isCard(it)) {
         const inner = `<b>${escH(it.title || it.url || '')}</b><small>${escH(cardSub(it))}</small>${it.text ? `<p>${escH(it.text)}</p>` : ''}`;
-        const style = pos + (it.color ? `;--c:${escH(it.color)}` : '');
+        const style = pos + (it.color ? `;--c:${safeCssColor(it.color)}` : '');
         parts.push(it.url && /^https?:\/\//i.test(it.url)
           ? `<a class="card" href="${escH(it.url)}" style="${style}">${inner}</a>`
           : `<div class="card" style="${style}">${inner}</div>`);

@@ -446,11 +446,14 @@ ui.aiActions.lockBook,its book is locked
 ui.aiActions.lockChapter,its chapter is locked
 ui.aiActions.locked,"""{0}"" is locked ({1}) — the AI can't edit, rename or delete it until it's unlocked"
 ui.aiActions.lockScene,the scene is locked
+ui.aiActions.mapDigestDone,Read every map position
+ui.aiActions.mapWhereDone,"Read where ""{0}"" is"
 ui.aiActions.moveBookTrashDone,"Moved book ""{0}"" to the trash"
 ui.aiActions.moveTrashDone,"Moved ""{0}"" to the trash"
 ui.aiActions.newBookReadyChapter,"Created book ""{0}"" with a first chapter"
 ui.aiActions.newCatDone,"Created ""{0}"" in category {1}"
 ui.aiActions.newSceneDone,"Created scene ""{0}"" in ""{1} › {2}"""
+ui.aiActions.noMapPins,This project has no pins or zones on any map yet
 ui.aiActions.notFound,"Entity ""{0}"" not found"
 ui.aiActions.notFoundBook,Book not found
 ui.aiActions.notFoundBook2,"Book ""{0}"" not found"
@@ -1142,6 +1145,9 @@ ui.aiTools.delTrash,"Move ""{0}"" to the trash"
 ui.aiTools.editData,"Edit the data of ""{0}"""
 ui.aiTools.editHasSendOnly,Edit an existing entity (send only the fields to change)
 ui.aiTools.forbidPutCommentText,- Do not put comments or any other text in a `k2` block — it must be pure JSON
+ui.aiTools.mapWhere,"See where a character/place is on the maps, who is nearby, how far apart and how long the trip takes (no name = summary of every map)"
+ui.aiTools.mapWhereAll,Summarize every map position
+ui.aiTools.mapWhereOne,"Look up where ""{0}"" is on the maps"
 ui.aiTools.missingArg,Missing argument: 
 ui.aiTools.modeCurrentNotAllowF,"The current mode does not allow ""{0}"" — switch modes in the input box first"
 ui.aiTools.msg,Item
@@ -3148,6 +3154,7 @@ ui.drop.hintMap,Drop on the map = place a pin
 ui.drop.hintOpen,Drop = open
 ui.drop.hintText,Drop = insert the name here
 ui.drop.hintTimeline,On a card = reference · on empty space = new event
+ui.drop.netNotFound,"""{0}"" is not on the graph (a filter may be hiding it)"
 ui.drop.opened,Opened {0}
 ui.editor.ctrlClickOpenWiki,Ctrl+click to open in the Wiki
 ui.editor.hasCommentBindText,This text has a comment attached
@@ -3892,6 +3899,20 @@ ui.logline.saved,Logline saved
 ui.logline.stakes,Stakes
 ui.logline.title,Logline
 ui.logline.why,AI uses this as a compass so the story stays on track
+ui.mapAi.aroundHead,Around it (nearest first):
+ui.mapAi.cut,(The rest was cut for length — use the map.where command to ask about one name)
+ui.mapAi.head,## Map positions (from the author's Maps panel)
+ui.mapAi.inZone,in {0}
+ui.mapAi.isOn,"""{0}"" is on map ""{1}"""
+ui.mapAi.map,"### Map ""{0}"""
+ui.mapAi.mapIn,"### Map ""{0}"" (inside map ""{1}"")"
+ui.mapAi.nearHead,Closest neighbours:
+ui.mapAi.noScale,(No scale set yet — distances are relative and only tell which is nearer or farther)
+ui.mapAi.notOnMap,"""{0}"" is not pinned or zoned on any map yet"
+ui.mapAi.relDist,relative distance {0}
+ui.mapAi.zoneArea,Zone area: {0}
+ui.mapAi.zoneOn,"""{0}"" is a zone on map ""{1}"""
+ui.mapAi.zones,Zones: {0}
 ui.maps.addMap,+ Add map
 ui.maps.allMaps,All maps
 ui.maps.allMapsTip,Back to the map gallery
@@ -3930,7 +3951,7 @@ ui.maps.dotGap,{0} {0|point|points} · distance ~{1}
 ui.maps.dotLatest,Undo last point
 ui.maps.dotLatestTip,Remove the last point
 ui.maps.dragPinMoveMode,"Drag pins to move them (other modes can't drag, to avoid accidental moves)"
-ui.maps.dropImageFromGallery,Drag an image from the gallery here to create a map
+ui.maps.dropImageFromGallery,Only images in the project's gallery (the Images folder) can be used — drag one from the gallery or the Explorer's images
 ui.maps.dropPortalDone,"Added a portal to ""{0}"" — Ctrl+click it to go in"
 ui.maps.dropReplaceImage,This map already has an image — replace it with the dropped one?
 ui.maps.dropSceneDone,"Scene ""{0}"" is now placed on ""{1}"""

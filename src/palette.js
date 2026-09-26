@@ -63,3 +63,9 @@ export function themeColor(name, fallback) {
 }
 /** ล้างแคชสีธีม — เรียกทุกครั้งที่เปลี่ยนธีม */
 export function clearThemeColorCache() { _cache.clear(); }
+
+// [alpha.167 · รอบต่อ · บั๊ก] สีจากไฟล์ของผู้ใช้ที่จะลงใน style="…" ของไฟล์ส่งออก (เส้นเวลา · กระดานอารมณ์) — escape กันแค่เครื่องหมายคำพูด
+// ไม่กัน `red;background:url(…)` → รับเฉพาะรูปสีที่ถูกต้อง นอกนั้นใช้สีตั้งต้น
+export const safeCssColor = (c, d = '#888888') =>
+  (/^#[0-9a-f]{3,8}$/i.test(String(c || '').trim()) || /^(rgb|hsl)a?\([\d\s.,%]+\)$/i.test(String(c || '').trim()))
+    ? String(c).trim() : d;

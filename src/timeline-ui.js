@@ -25,6 +25,7 @@ import { gi } from './icons.js';
 import { panelEmpty } from './panels/panel-chrome.js';
 import { popupMenu, confirmBox } from './ui.js';
 import { bindDropTarget } from './drop-kit.js';
+import { escCancelDrag } from './drag-cancel.js';   // [alpha.167 · รอบต่อ] Esc ยกเลิกการลาก
 import { failText } from './err-text.js';
 import { PRINT } from './palette.js';
 
@@ -557,7 +558,12 @@ function renderBoard(ctx, zoomBox, keepScroll) {
         const ghost = el('div', 'tl-ghost', chip.textContent); document.body.append(ghost);
         const mv = (ev) => { ghost.style.left = (ev.clientX + 10) + 'px'; ghost.style.top = (ev.clientY + 8) + 'px'; };
         mv(e);
+        // [alpha.167 · รอบต่อ] Esc = ยกเลิกการลาก (กฎถาวร alpha.164 รอบต่อ 6)
+        const offEsc = escCancelDrag(() => {
+          window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); ghost.remove();
+        });
         const up = async (ev) => {
+          offEsc();
           window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
           ghost.remove();
           const r = body.getBoundingClientRect();
@@ -572,12 +578,41 @@ function renderBoard(ctx, zoomBox, keepScroll) {
   }
   wrap.append(el('div', 'tl-hint', t('ui.timeline.boardHint')));
 
+  // [alpha.167 · รอบต่อ] การ์ดที่ต้นการ์ดเลื่อนพ้นขอบซ้าย: ชื่อ/เวลาไหลตามมาให้อ่านได้ (แบบแถบ Gantt ทั่วไป)
+  // CSS sticky ใช้ไม่ได้ (ข้อความกินเต็มการ์ด = ไม่มีที่ให้เลื่อน) · transform ก็ไม่ได้ (ทับรูปตัวละคร/ปุ่ม ⋮)
+  // → เติมระยะซ้ายของการ์ดเท่าส่วนที่พ้นจอ: แถบสี+ข้อความขยับตาม ข้อความหดเอง (ตัด …) ไม่ทับส่วนท้าย
+  // เรขาคณิตอ่านครั้งเดียวหลังการ์ดอยู่ในหน้า (รอบ rAF แรก) · ตอนเลื่อนแค่คำนวณ + แตะเฉพาะการ์ดที่ค่าเปลี่ยน
+  let cardsGeo = null;
+  const geo = () => cardsGeo || (cardsGeo = [...body.querySelectorAll('.tl-card')].map((c) => {
+    const main = c.querySelector('.tl-card-main'), stripe = c.querySelector('.tl-card-stripe');
+    const tail = [...c.children].filter((n) => n !== main && n !== stripe && !n.classList.contains('tl-link-dot')
+      && !n.classList.contains('tl-handle')).reduce((w, n) => w + n.offsetWidth, 0);
+    return { c, x: parseFloat(c.style.left) || 0, w: parseFloat(c.style.width) || 0, tail, off: 0 };
+  }));
+  const followCards = () => {
+    if (!body.isConnected) return;
+    const sl = board.scrollLeft - body.offsetLeft;
+    for (const g of geo()) {
+      if (g.c.classList.contains('dragging')) continue;
+      const off = Math.round(Math.max(0, Math.min(sl + 8 - g.x, g.w - g.tail - 120)));
+      if (off === g.off) continue;
+      g.off = off;
+      g.c.style.paddingLeft = off ? off + 'px' : '';
+      g.c.classList.toggle('tl-card-follow', off > 0);
+    }
+  };
+  let followRaf = 0;
+  board.addEventListener('scroll', () => {
+    if (!followRaf) followRaf = requestAnimationFrame(() => { followRaf = 0; followCards(); });
+  }, { passive: true });
+
   // คืนตำแหน่งเลื่อน (หรือยึดจุดใต้เมาส์หลังซูม)
   requestAnimationFrame(() => {
     const a = state._tlAnchor;
     if (a && a.min === min) { board.scrollLeft = Math.max(0, X(a.v) - a.px); state._tlAnchor = null; if (keepScroll) board.scrollTop = keepScroll.t; }
     else if (keepScroll) { board.scrollLeft = keepScroll.l; board.scrollTop = keepScroll.t; }
     else if (cur) board.scrollLeft = Math.max(0, X(eventSpan(cur).start) - board.clientWidth / 2);
+    followCards();
   });
 }
 
@@ -663,7 +698,15 @@ function bindCardDrag(ctx, card, it, g) {
       }
       card.dataset.drag = (nStart === nEnd ? String(nStart) : nStart + ' → ' + nEnd);
     };
+    // Esc = คืนการ์ดที่เดิม ไม่บันทึกอะไร
+    const offEsc = escCancelDrag(() => {
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      card.classList.remove('dragging');
+      card.style.left = left0 + 'px'; card.style.width = w0 + 'px';
+      delete card.dataset.drag;
+    });
     const up = async () => {
+      offEsc();
       window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
       card.classList.remove('dragging');
       if (!moved) return;
@@ -688,7 +731,11 @@ function linkDrag(ctx, card, it, e) {
     const r = br();
     p.setAttribute('d', `M${a.x},${a.y} L${ev.clientX - r.left},${ev.clientY - r.top}`);
   };
+  const offEsc = escCancelDrag(() => {
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); p.remove();
+  });
   const up = (ev) => {
+    offEsc();
     window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
     p.remove();
     const hit = document.elementFromPoint(ev.clientX, ev.clientY);

@@ -1695,6 +1695,50 @@ export async function runTest(projectPath) {
                 ev.when !== 'ปีที่ 1024' && /^ปีที่ \d+$/.test(ev.when) && ev.whenEnd !== 'ปีที่ 1030' &&
                 (parseFloat(ev.whenEnd.replace(/\D+/g, '')) - parseFloat(ev.when.replace(/\D+/g, ''))) === 6,
                 ev.when + ' → ' + ev.whenEnd);
+          // [alpha.167 · รอบต่อ] Esc ระหว่างลาก = การ์ดกลับที่เดิม ไม่บันทึก (กฎถาวร alpha.164 รอบต่อ 6)
+          const before = JSON.stringify((await loadTimeline()).events.find((e) => e.id === 'ev-t1'));
+          const cardN = document.querySelector('#tl-body .tl-card[data-key="ev-t1"]');
+          const left0 = cardN.style.left;
+          const m2 = cardN.querySelector('.tl-card-main').getBoundingClientRect();
+          cardN.querySelector('.tl-card-main').dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: m2.left + 20, clientY: m2.top + 10, bubbles: true }));
+          window.dispatchEvent(new PointerEvent('pointermove', { clientX: m2.left + 200, clientY: m2.top + 10, bubbles: true }));
+          const movedLeft = cardN.style.left;
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          window.dispatchEvent(new PointerEvent('pointerup', { clientX: m2.left + 200, clientY: m2.top + 10, bubbles: true }));
+          await w167(400);
+          check('[167-T] ★ Esc ระหว่างลากการ์ด = กลับที่เดิม ไม่บันทึก',
+                movedLeft !== left0 && cardN.style.left === left0 && !cardN.classList.contains('dragging') &&
+                JSON.stringify((await loadTimeline()).events.find((e) => e.id === 'ev-t1')) === before,
+                left0 + ' / ' + movedLeft + ' / ' + cardN.style.left);
+          // [alpha.167 · รอบต่อ] เลื่อนบอร์ดจนต้นการ์ดพ้นขอบซ้าย → ชื่อการ์ดยังอยู่ในจอ ไม่ถูกตัด
+          {
+            // ซูมเข้า 4 ขั้น (บอร์ดพอดีจอ = แทบไม่มีที่ให้เลื่อน) — จบแล้วกดพอดีจอคืน
+            const zBtn = (k) => [...document.querySelectorAll('#tl-body .tl-zoom button')].find((b) => b.title === tt(k));
+            for (let i = 0; i < 4; i++) { zBtn('ui.timeline.zoomIn').click(); await w167(300); }
+            const bd = document.querySelector('#tl-body .tl-board2');
+            // การ์ดที่กว้างที่สุดในบรรดาที่บอร์ดเลื่อนให้ต้นการ์ดพ้นขอบซ้ายได้จริง
+            // (การ์ดท้ายเส้นเวลา = บอร์ดเลื่อนไปไม่ถึง · การ์ดจุดเดียวกว้างขั้นต่ำ = ข้อความแทบไม่มีที่ให้ขยับ)
+            const maxSl = bd.scrollWidth - bd.clientWidth;
+            const cd = [...document.querySelectorAll('#tl-body .tl-card')]
+              .filter((c) => parseFloat(c.style.left) + 40 <= maxSl)
+              .sort((a, b) => parseFloat(b.style.width) - parseFloat(a.style.width))[0];
+            bd.style.scrollBehavior = 'auto';
+            const sl0 = bd.scrollLeft;
+            const want = parseFloat(cd.style.left) + 40;
+            bd.scrollLeft = want;
+            bd.dispatchEvent(new Event('scroll'));
+            await w167(150);
+            check('[167-T] (เงื่อนไขเทส) บอร์ดเลื่อนจนต้นการ์ดพ้นขอบซ้ายได้จริง', Math.abs(bd.scrollLeft - want) < 2 && parseFloat(cd.style.width) > 200,
+                  bd.scrollLeft + ' / ' + want + ' · w ' + cd.style.width);
+            const tr = cd.querySelector('.tl-ev-title').getBoundingClientRect(), br2 = bd.getBoundingClientRect();
+            check('[167-T] ★ ต้นการ์ดพ้นขอบซ้าย = ชื่อไหลตามมาอยู่ในจอ (ไม่ถูกตัด)',
+                  cd.classList.contains('tl-card-follow') && tr.left >= br2.left - 1 && tr.width > 20,
+                  Math.round(tr.left) + ' vs ' + Math.round(br2.left) + ' · pad ' + cd.style.paddingLeft);
+            bd.scrollLeft = 0; bd.dispatchEvent(new Event('scroll')); await w167(150);
+            check('[167-T] เลื่อนกลับ = การ์ดกลับเป็นปกติ', !cd.classList.contains('tl-card-follow') && !cd.style.paddingLeft);
+            bd.scrollLeft = sl0;
+            zBtn('ui.timeline.zoomFit').click(); await w167(200);
+          }
         }
         // ซ่อนเส้นเรื่องด้วยป้ายนับ
         {
@@ -2309,9 +2353,63 @@ export async function runTest(projectPath) {
           const portals = mm2.pins.filter((p) => p.kind === 'portal' && p.toMap === 'm70b');
           check('[167-M] ★ หยิบแผนที่ใส่แผนที่ = ประตูไปแผนที่ย่อย (มีอยู่แล้ว = ย้ายตำแหน่ง)', portals.length === 1 && portals[0].x === 40, JSON.stringify(portals.map((p) => [p.x, p.y])));
           check('[167-M] หยิบแผนที่ใส่ตัวเอง = ปฏิเสธ', (await dropOnMap(mm2, { kind: 'map', items: [{ id: 'm70a' }] }, { x: 1, y: 1 })) === false);
+          // [alpha.167 · รอบต่อ] รูปจาก Explorer ที่อยู่นอกคลังรูป = ปฏิเสธพร้อมบอก (ไม่เปลี่ยนรูปแผนที่)
+          {
+            const img0 = mm2.image;
+            const outside = await kapi.join(state.root, '..', 'elsewhere.png');
+            check('[167-M] รูปนอกคลังรูปของโปรเจกต์ = ไม่ใช้เป็นรูปแผนที่',
+                  (await dropOnMap(mm2, { kind: 'image', items: [{ path: outside, title: 'elsewhere.png' }] }, { x: 1, y: 1 })) === false && mm2.image === img0);
+          }
           {
             const saved = await loadMaps();
             check('[167-M] ผลของการหยิบใส่ถูกบันทึกลง maps.json', findMap(saved.maps, 'm70a').pins.some((p) => p.entityFile === catFile && p.x === 70));
+          }
+          // [alpha.167 · รอบต่อ] ★ ตำแหน่งบนแผนที่ → AI: คำสั่ง map.where (ทางจริงของ runToolCall) + ส่วนบริบทของแชท
+          {
+            const { runToolCall } = await import('./ai/ai-actions.js');
+            const wr = await runToolCall({ tool: 'map.where', args: { name: 'ยัยแมวเก้าชีวิต' } });
+            check('[167-M] ★ AI ถาม map.where ได้ตำแหน่งจริง (แผนที่ · เขต · ระยะจริง)',
+                  wr.ok === true && String(wr.data).includes('แผ่นดินเก่า') && /(ม\.|กม\.)/.test(String(wr.data)),
+                  JSON.stringify(wr).slice(0, 300));
+            const { collectScope } = await import('./ai/ai-chat-panel.js');
+            const ctxP = await collectScope({ scope: 'project', files: [] }, { maxChars: 8000 });
+            check('[167-M] ★ บริบทแชท (ทั้งโปรเจกต์) มีส่วน "ตำแหน่งบนแผนที่" และไม่ถูกตัดทิ้งท้าย',
+                  ctxP.includes('ตำแหน่งบนแผนที่') && ctxP.includes('ยัยแมวเก้าชีวิต') && ctxP.length <= 8000 + 200, ctxP.length);
+            const ctxS = await collectScope({ scope: 'scene', files: [] }, { maxChars: 4000 });
+            check('[167-M] บริบทระดับ "ฉากนี้" ไม่แนบแผนที่', !ctxS.includes('ตำแหน่งบนแผนที่'));
+          }
+          // [alpha.167 · รอบต่อ · บั๊ก] เปิดโปรเจกต์จากเครื่องอื่น: หมุดเก็บทางเต็มของเครื่องเก่า → loadMaps() ชี้กลับไฟล์ในโปรเจกต์นี้
+          {
+            const mp = await kapi.join(state.root, 'maps.json');
+            const bak = await kapi.readFile(mp);
+            const raw = JSON.parse(bak);
+            const pin0 = raw.maps.find((x) => x.id === 'm70a').pins.find((p) => p.kind === 'entity' && p.entityFile === catFile);
+            pin0.entityFile = 'D:\\เครื่องเก่า\\โปรเจกต์\\Wiki\\characters\\cat.json';
+            await kapi.writeFile(mp, JSON.stringify(raw));
+            const re = await loadMaps();
+            const pin1 = findMap(re.maps, 'm70a').pins.find((p) => p.id === pin0.id);
+            check('[167-M] ★ หมุดที่เก็บทางของเครื่องอื่น ชี้กลับไฟล์เอนทิตี้ของโปรเจกต์นี้', pin1 && pin1.entityFile === catFile,
+                  pin1 && pin1.entityFile);
+            await kapi.writeFile(mp, bak);
+          }
+          // [alpha.167 · รอบต่อ] Esc ระหว่างลากหมุด = หมุดกลับที่เดิม ไม่บันทึก
+          {
+            bodyOf().querySelector('.map-tool-btn[data-tool="move"]').click(); await wait(250);
+            const mz = findMap(mapsState_C.s.data.maps, 'm70a');
+            const cp = mz.pins.find((p) => p.entityFile === catFile);
+            const node = bodyOf().querySelector(`.map-pin[data-pin="${cp.id}"]`);
+            const nr = node.getBoundingClientRect();
+            const bx = nr.left + nr.width / 2, by = nr.top + nr.height / 2;
+            node.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: bx, clientY: by, bubbles: true }));
+            window.dispatchEvent(new PointerEvent('pointermove', { clientX: bx + 80, clientY: by + 40, bubbles: true }));
+            const midX = cp.x;
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+            window.dispatchEvent(new PointerEvent('pointerup', { clientX: bx + 80, clientY: by + 40, bubbles: true }));
+            await wait(300);
+            const saved2 = findMap((await loadMaps()).maps, 'm70a').pins.find((p) => p.id === cp.id);
+            check('[167-M] ★ Esc ระหว่างลากหมุด = กลับที่เดิม ไม่บันทึก', midX !== 70 && cp.x === 70 && cp.y === 70 &&
+                  saved2.x === 70 && node.style.left === '70%', midX + ' / ' + cp.x + ' / ' + saved2.x + ' / ' + node.style.left);
+            bodyOf().querySelector('.map-tool-btn[data-tool="open"]').click(); await wait(250);
           }
           // Ctrl+คลิกประตู = กระโดดเข้าแผนที่ย่อย (ทางสากลเหมือน Ctrl+คลิกในตัวแก้ไข)
           const pNode = bodyOf().querySelector(`.map-pin[data-pin="${portals[0].id}"]`);
@@ -33340,7 +33438,8 @@ export async function runTest(projectPath) {
             check('[162-W4] ปุ่ม "แท็บทั้งหมด" มีอยู่ และไม่ใช่ .tab', !!more && !more.classList.contains('tab'));
             const keepW = strip.style.width, keepMax = strip.style.maxWidth;
             strip.style.width = '140px'; strip.style.maxWidth = '140px';
-            await w4(150);
+            // [alpha.167 · รอบต่อ] รอเงื่อนไขจริงพร้อมเพดาน (กฎข้อ 18) — ตัวเฝ้าขนาดยิงช้าบนเครื่องที่วาดด้วย CPU
+            for (let i = 0; i < 20 && !(more && more.classList.contains('on')); i++) await w4(100);
             check('[162-W4] ★★ แท็บล้นแถบ → ปุ่มแท็บทั้งหมดโผล่', !!more && more.classList.contains('on'),
                   JSON.stringify({ sw: strip.scrollWidth, cw: strip.clientWidth }));
             more && more.click();
@@ -34260,6 +34359,26 @@ export async function runTest(projectPath) {
           check('[167-D] ★ ลากฉากผ่านแผงใดก็ได้ → มีป้ายบอกผลข้างเคอร์เซอร์', dropTipText().length > 0, dropTipText());
           document.dispatchEvent(new DragEvent('dragend', { bubbles: true }));
           check('[167-D] ปล่อย/เลิกลากแล้วป้ายหาย', dropTipText() === '');
+        }
+        // [alpha.167 · รอบต่อ · บั๊ก] หยิบตัวละครใส่ Story Network = เลือก + บินไปหา (เดิมป้ายบอกว่าได้ แต่ผังไม่มีตัวรับ)
+        {
+          showPanel('network');
+          for (let i = 0; i < 60 && !(netInst && netInst.nodes && netInst.nodes.length); i++) await w7(100);
+          const nh = document.querySelector('#net-body');
+          const cat = netInst && netInst.nodes.find((n) => n.name === 'ยัยแมวเก้าชีวิต');
+          check('[167-D] (เงื่อนไขเทส) ผังมีโหนดยัยแมวเก้าชีวิต', !!nh && !!cat, netInst && netInst.nodes.length);
+          netInst.select(null);
+          const dt = new DataTransfer();
+          dt.setData('text/k2-entity', JSON.stringify({ path: cat.file, title: cat.name }));
+          const r = nh.getBoundingClientRect();
+          nh.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 50, clientY: r.top + 50 }));
+          nh.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 50, clientY: r.top + 50 }));
+          await w7(300);
+          check('[167-D] ปล่อยลงแผงที่มีตัวรับเองแล้ว ป้ายข้างเคอร์เซอร์หาย (ไม่ค้างบนจอ)', dropTipText() === '', dropTipText());
+          // เทียบด้วยไฟล์ — ผังโหลดโหนดใหม่ได้ระหว่างทาง (วัตถุคนละตัว ของชิ้นเดียวกัน)
+          check('[167-D] ★ หยิบตัวละครใส่ Story Network = โหนดนั้นถูกเลือก', !!netInst._sel && netInst._sel.file === cat.file,
+                netInst._sel && netInst._sel.name);
+          netInst.select(null);
         }
         resetPanels(); await w7(320);
       }

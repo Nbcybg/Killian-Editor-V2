@@ -22822,6 +22822,7 @@ ${BLOCK_END}
     PRINT: () => PRINT,
     STATUS_UNSET: () => STATUS_UNSET,
     clearThemeColorCache: () => clearThemeColorCache,
+    safeCssColor: () => safeCssColor,
     themeColor: () => themeColor
   });
   function themeColor(name5, fallback) {
@@ -22841,7 +22842,7 @@ ${BLOCK_END}
   function clearThemeColorCache() {
     _cache2.clear();
   }
-  var PLANNER_NODE_COLORS, PLANNER_EDGE_COLORS, PLANNER_KIND, PRINT, CHART_SERIES, STATUS_UNSET, _cache2;
+  var PLANNER_NODE_COLORS, PLANNER_EDGE_COLORS, PLANNER_KIND, PRINT, CHART_SERIES, STATUS_UNSET, _cache2, safeCssColor;
   var init_palette = __esm({
     "src/palette.js"() {
       PLANNER_NODE_COLORS = [
@@ -22898,6 +22899,7 @@ ${BLOCK_END}
       CHART_SERIES = ["#3b9bff", "#2ecc71", "#ffc42e", "#ff7a2f", "#a66bff", "#ff4d6d", "#1abc9c"];
       STATUS_UNSET = "#8f9bb3";
       _cache2 = /* @__PURE__ */ new Map();
+      safeCssColor = (c, d = "#888888") => /^#[0-9a-f]{3,8}$/i.test(String(c || "").trim()) || /^(rgb|hsl)a?\([\d\s.,%]+\)$/i.test(String(c || "").trim()) ? String(c).trim() : d;
     }
   });
 
@@ -31953,7 +31955,8 @@ ${BLOCK_END}
     }
     if (kind === "book" || kind === "tab") {
       const p = j && typeof j === "object" ? j.path || j.file : raw;
-      return { kind, items: p ? [{ path: String(p), title: j && j.title || baseName(p) }] : [] };
+      const plain = String(dt.getData("text/plain") || "").trim();
+      return { kind, items: p ? [{ path: String(p), title: j && j.title || plain || baseName(p) }] : [] };
     }
     if (kind === "map") {
       return { kind, items: j && j.id ? [{ id: j.id, title: j.name || j.title || "" }] : [] };
@@ -35271,7 +35274,7 @@ ${BLOCK_END}
     const head2 = el("div", "k-logline-head");
     head2.append(el("span", "k-logline-title", t("ui.logline.title")), el("span", "k-hint", t("ui.logline.why")));
     box2.append(head2);
-    const inputs = {};
+    const inputs2 = {};
     LOGLINE_KEYS.forEach((k, i5) => {
       const row4 = el("div", (opts.rowClass || "k-logline-row") + " ll-" + k);
       const lab = el("label", null);
@@ -35284,17 +35287,17 @@ ${BLOCK_END}
       if (opts.onChange) {
         ta.addEventListener("blur", () => opts.onChange(read3(), k));
       }
-      inputs[k] = ta;
+      inputs2[k] = ta;
       row4.append(lab, ta);
       box2.append(row4);
     });
     const read3 = () => {
       const out = {};
-      for (const k of LOGLINE_KEYS) out[k] = inputs[k].value.trim();
+      for (const k of LOGLINE_KEYS) out[k] = inputs2[k].value.trim();
       return out;
     };
     host2.append(box2);
-    return { read: read3, inputs, box: box2 };
+    return { read: read3, inputs: inputs2, box: box2 };
   }
   async function activeSectionPath() {
     const f = state.active && (state.active.file || state.active.path);
@@ -94495,6 +94498,7 @@ ${mdToHtmlBody(md, o)}
     deleteRoute: () => deleteRoute,
     deleteZone: () => deleteZone,
     distMeters: () => distMeters,
+    entityNamer: () => entityNamer,
     entityPin: () => entityPin,
     filterPins: () => filterPins,
     findMap: () => findMap,
@@ -94505,6 +94509,7 @@ ${mdToHtmlBody(md, o)}
     gridLines: () => gridLines,
     groupMaps: () => groupMaps,
     mapCategories: () => mapCategories,
+    mapDigest: () => mapDigest,
     mapOverlays: () => mapOverlays,
     mapRoutes: () => mapRoutes,
     mapZones: () => mapZones,
@@ -94527,6 +94532,7 @@ ${mdToHtmlBody(md, o)}
     polygonAreaU: () => polygonAreaU,
     polygonCentroid: () => polygonCentroid,
     portalPin: () => portalPin,
+    rebaseEntityFiles: () => rebaseEntityFiles,
     rootMaps: () => rootMaps,
     routeLength: () => routeLength,
     routePath: () => routePath,
@@ -94541,6 +94547,7 @@ ${mdToHtmlBody(md, o)}
     toUnits: () => toUnits,
     toggleOverlay: () => toggleOverlay,
     travelHours: () => travelHours,
+    whereIs: () => whereIs,
     zoneAreaM2: () => zoneAreaM2,
     zoneAt: () => zoneAt,
     zonePath: () => zonePath,
@@ -94949,6 +94956,110 @@ ${mdToHtmlBody(md, o)}
     for (const m of maps || []) for (const p of m.pins || []) if (p.kind === "entity" && p.entityFile === entityFile) out.push({ map: m, pin: p });
     return out;
   }
+  function mapDigest(maps, { nameOf: nameOf2 = () => "", nearPerPlace = 1 } = {}) {
+    const out = [];
+    for (const m of sortMaps(maps || [])) {
+      const zoneName = (z) => z && (z.name || nameOf2(z.entityFile) || "") || "";
+      const places = [];
+      for (const p of m.pins || []) {
+        const name5 = String((p.kind === "entity" ? nameOf2(p.entityFile) : "") || p.label || (p.kind === "portal" ? (findMap(maps, p.toMap) || {}).name || "" : "") || "").trim();
+        if (!name5) continue;
+        const pt = { x: +p.x || 0, y: +p.y || 0 };
+        places.push({
+          name: name5,
+          kind: p.kind || "note",
+          entityFile: p.entityFile || "",
+          pt,
+          latlon: toLatLon(m, pt),
+          zone: zoneName(zoneAt(m, pt))
+        });
+      }
+      const zones = mapZones(m).map((z) => ({ name: zoneName(z), entityFile: z.entityFile || "", areaM2: zoneAreaM2(m, z) })).filter((z) => z.name);
+      const A = aspOf(m);
+      const rel = (a, b) => {
+        const p = toUnits(a.pt, A), r = toUnits(b.pt, A);
+        return Math.hypot(r.x - p.x, r.y - p.y);
+      };
+      const seen = /* @__PURE__ */ new Set(), near2 = [];
+      places.forEach((a, i5) => {
+        const others = places.map((b, j) => ({ b, j, d: rel(a, b) })).filter((x) => x.j !== i5).sort((x, y) => x.d - y.d);
+        for (const o of others.slice(0, nearPerPlace)) {
+          const key2 = Math.min(i5, o.j) + ":" + Math.max(i5, o.j);
+          if (seen.has(key2)) continue;
+          seen.add(key2);
+          near2.push({ a: a.name, b: o.b.name, meters: distMeters(m, a.pt, o.b.pt), rel: +o.d.toFixed(2) });
+        }
+      });
+      near2.sort((x, y) => x.rel - y.rel);
+      if (!places.length && !zones.length) continue;
+      const par = parentMap(maps, m.id);
+      const gr = geoReady(m);
+      out.push({
+        id: m.id,
+        name: m.name || "",
+        parent: par ? par.name || "" : "",
+        scaled: gr.scale,
+        geo: gr.full,
+        places,
+        zones,
+        near: near2
+      });
+    }
+    return out;
+  }
+  function entityNamer(entities) {
+    const byPath = /* @__PURE__ */ new Map(), byBase = /* @__PURE__ */ new Map();
+    for (const e of entities || []) {
+      if (!e || !e.path) continue;
+      byPath.set(normP(e.path), e.name || "");
+      byBase.set(baseP(e.path), e.name || "");
+    }
+    return (file) => file ? byPath.get(normP(file)) || byBase.get(baseP(file)) || "" : "";
+  }
+  function rebaseEntityFiles(data2, entities) {
+    const known2 = /* @__PURE__ */ new Map(), byBase = /* @__PURE__ */ new Map();
+    for (const e of entities || []) {
+      if (!e || !e.path) continue;
+      known2.set(normP(e.path), e.path);
+      const b = baseP(e.path);
+      byBase.set(b, byBase.has(b) ? null : e.path);
+    }
+    let n2 = 0;
+    const fix2 = (o) => {
+      if (!o || !o.entityFile || known2.has(normP(o.entityFile))) return;
+      const to = byBase.get(baseP(o.entityFile));
+      if (to) {
+        o.entityFile = to;
+        n2++;
+      }
+    };
+    for (const m of data2 && data2.maps || []) {
+      for (const p of m.pins || []) if (p.kind === "entity") fix2(p);
+      for (const z of m.zones || []) fix2(z);
+    }
+    return n2;
+  }
+  function whereIs(maps, name5, { nameOf: nameOf2 = () => "", k = 5 } = {}) {
+    const q2 = String(name5 || "").trim().toLowerCase();
+    if (!q2) return [];
+    const out = [];
+    for (const d of mapDigest(maps, { nameOf: nameOf2 })) {
+      const m = findMap(maps, d.id);
+      const A = aspOf(m);
+      const rel = (a, b) => {
+        const p = toUnits(a, A), r = toUnits(b, A);
+        return Math.hypot(r.x - p.x, r.y - p.y);
+      };
+      const own = d.zones.find((z) => z.name.toLowerCase() === q2) || null;
+      const me = d.places.filter((p) => p.name.toLowerCase() === q2);
+      for (const p of me) {
+        const around = d.places.filter((o) => o !== p).map((o) => ({ name: o.name, meters: distMeters(m, p.pt, o.pt), rel: +rel(p.pt, o.pt).toFixed(2) })).sort((x, y) => x.rel - y.rel).slice(0, k);
+        out.push({ map: d.name, place: p, zone: own, around });
+      }
+      if (!me.length && own) out.push({ map: d.name, place: null, zone: own, around: [] });
+    }
+    return out;
+  }
   function scenePoint(map2, s) {
     if (!map2 || !s || s.mapId !== map2.id) return null;
     const pin = s.pinId ? (map2.pins || []).find((p) => p.id === s.pinId) : null;
@@ -94976,7 +95087,7 @@ ${mdToHtmlBody(md, o)}
     }
     return { stops, legs, total: known2 ? total : null };
   }
-  var MAPS_VERSION, PIN_COLORS, PIN_KIND, MAP_ZOOM_MIN, MAP_ZOOM_MAX, MAP_ZOOM_STEP, DEFAULT_OVERLAYS, MAP_UNCATEGORIZED, ROUTE_COLORS, M_PER_DEG, aspOf, TRAVEL_MODES, ZONE_COLORS;
+  var MAPS_VERSION, PIN_COLORS, PIN_KIND, MAP_ZOOM_MIN, MAP_ZOOM_MAX, MAP_ZOOM_STEP, DEFAULT_OVERLAYS, MAP_UNCATEGORIZED, ROUTE_COLORS, M_PER_DEG, aspOf, TRAVEL_MODES, ZONE_COLORS, normP, baseP;
   var init_maps = __esm({
     "src/maps.js"() {
       init_i18n();
@@ -95008,6 +95119,8 @@ ${mdToHtmlBody(md, o)}
         { id: "car", kmh: 60 }
       ];
       ZONE_COLORS = ["#5f9fd9", "#6fae6f", "#d9b757", "#d97757", "#a97fd0", "#7fb8b0", "#d9575e"];
+      normP = (p) => String(p || "").replace(/\\/g, "/");
+      baseP = (p) => normP(p).split("/").pop();
     }
   });
 
@@ -95309,12 +95422,12 @@ ${mdToHtmlBody(md, o)}
       });
       const pk = packRows(rows);
       const nRows = Math.max(1, ...[...pk.values()].map((v2) => v2 + 1));
-      lanes.push(`<div class="lane" style="top:${y}px;height:${nRows * 64 + 16}px"><span class="ln"><i style="background:${esc5(tr4.color)}"></i>${esc5(tr4.name)}</span></div>`);
+      lanes.push(`<div class="lane" style="top:${y}px;height:${nRows * 64 + 16}px"><span class="ln"><i style="background:${safeCssColor(tr4.color)}"></i>${esc5(tr4.name)}</span></div>`);
       for (const r of rows) {
         const it = tr4.items.find((x) => linkKey(x) === r.id);
         const top = y + 12 + pk.get(r.id) * 64;
         pos.set(r.id, { x1: r.x + r.w, x0: r.x, y: top + 26 });
-        cards.push(`<div class="card" style="left:${r.x}px;top:${top}px;width:${r.w}px;border-color:${esc5(it.color || tr4.color)}"><b>${esc5(it.title)}</b><small>${esc5(it.when)}${it.whenEnd ? " \u2192 " + esc5(it.whenEnd) : ""}</small></div>`);
+        cards.push(`<div class="card" style="left:${r.x}px;top:${top}px;width:${r.w}px;border-color:${safeCssColor(it.color || tr4.color)}"><b>${esc5(it.title)}</b><small>${esc5(it.when)}${it.whenEnd ? " \u2192 " + esc5(it.whenEnd) : ""}</small></div>`);
       }
       y += nRows * 64 + 22;
     }
@@ -95345,6 +95458,7 @@ ${cards.join("")}</div>${und}</body></html>`;
     "src/timeline.js"() {
       init_i18n();
       init_locale();
+      init_palette();
       TIMELINE_VERSION = "1.0";
       TRACK_COLORS = ["#5f9fd9", "#6fae6f", "#d9b757", "#d97757", "#a97fd0", "#d9575e", "#7fb8b0", "#c98a5f"];
       csvCell2 = (v2) => {
@@ -95671,6 +95785,88 @@ ${cards.join("")}</div>${und}</body></html>`;
         ["sounds", t("ui.floorplan.thingHear"), t("ui.floorplan.egSoundLayerTop")],
         ["discoveries", t("ui.floorplan.thingFound"), t("ui.floorplan.eg")]
       ];
+    }
+  });
+
+  // src/map-text.js
+  function distText(d) {
+    if (!d) return "";
+    return tf(d.unit === "km" ? "ui.maps.unitKm" : "ui.maps.unitM", d.value);
+  }
+  function areaText(a) {
+    if (!a) return "";
+    return tf(a.unit === "km2" ? "ui.maps.unitKm2" : "ui.maps.unitM2", a.value);
+  }
+  function hoursText(h) {
+    const s = splitHours(h);
+    if (!s) return "";
+    if (s.d) return tf("ui.maps.timeDH", s.d, s.h);
+    if (s.h) return tf("ui.maps.timeHM", s.h, s.m);
+    return tf("ui.maps.timeM", Math.max(1, s.m));
+  }
+  function travelText(meters, all = false) {
+    const modes = all ? TRAVEL_MODES : TRAVEL_MODES.slice(0, 1);
+    return modes.map((m) => t(MODE_KEYS[m.id]) + " " + hoursText(travelHours(meters, m.kmh))).join(" \xB7 ");
+  }
+  function gapText(meters, rel) {
+    if (meters != null) return distText(niceDistance(meters)) + " (" + travelText(meters) + ")";
+    return tf("ui.mapAi.relDist", rel);
+  }
+  function placeLine(p) {
+    const bits3 = [p.name];
+    if (p.zone && p.zone !== p.name) bits3.push(tf("ui.mapAi.inZone", p.zone));
+    if (p.latlon) bits3.push(formatLatLon(p.latlon, 4));
+    return "- " + bits3.join(" \xB7 ");
+  }
+  function mapDigestText(digest, { maxChars = 3e3, maxNear = 12 } = {}) {
+    if (!digest || !digest.length) return "";
+    const lines = [t("ui.mapAi.head")];
+    for (const m of digest) {
+      lines.push("", m.parent ? tf("ui.mapAi.mapIn", m.name, m.parent) : tf("ui.mapAi.map", m.name));
+      if (!m.scaled) lines.push(t("ui.mapAi.noScale"));
+      for (const p of m.places) lines.push(placeLine(p));
+      const zs = m.zones.map((z) => z.name + (z.areaM2 != null ? " (" + areaText(niceArea(z.areaM2)) + ")" : ""));
+      if (zs.length) lines.push(tf("ui.mapAi.zones", zs.join(", ")));
+      if (m.near.length) {
+        lines.push(t("ui.mapAi.nearHead"));
+        for (const n2 of m.near.slice(0, maxNear)) lines.push("- " + n2.a + " \u2014 " + n2.b + ": " + gapText(n2.meters, n2.rel));
+      }
+    }
+    let out = "";
+    for (const l of lines) {
+      if ((out + l + "\n").length > maxChars) {
+        out += t("ui.mapAi.cut") + "\n";
+        break;
+      }
+      out += l + "\n";
+    }
+    return out.trimEnd();
+  }
+  function whereText(name5, rows) {
+    if (!rows || !rows.length) return tf("ui.mapAi.notOnMap", name5);
+    const lines = [];
+    for (const r of rows) {
+      if (r.place) {
+        lines.push(tf("ui.mapAi.isOn", r.place.name, r.map));
+        lines.push(placeLine(r.place));
+      } else {
+        lines.push(tf("ui.mapAi.zoneOn", r.zone.name, r.map));
+      }
+      if (r.zone && r.zone.areaM2 != null) lines.push(tf("ui.mapAi.zoneArea", areaText(niceArea(r.zone.areaM2))));
+      if (r.around.length) {
+        lines.push(t("ui.mapAi.aroundHead"));
+        for (const a of r.around) lines.push("- " + a.name + ": " + gapText(a.meters, a.rel));
+      }
+      lines.push("");
+    }
+    return lines.join("\n").trim();
+  }
+  var MODE_KEYS;
+  var init_map_text = __esm({
+    "src/map-text.js"() {
+      init_i18n();
+      init_maps();
+      MODE_KEYS = { walk: "ui.maps.travelWalk", horse: "ui.maps.travelHorse", cart: "ui.maps.travelCart", ship: "ui.maps.travelShip", car: "ui.maps.travelCar" };
     }
   });
 
@@ -96196,11 +96392,19 @@ ${cards.join("")}</div>${und}</body></html>`;
       }
     }
   }
+  async function droppedImageRel(payload) {
+    const it = payload && payload.items[0];
+    if (!it || !it.path) return null;
+    if (payload.kind === "gallery") return "Images/" + it.path;
+    if (payload.kind !== "image") return null;
+    const rel = String(await kapi.relative(await kapi.join(state.root, "Images"), it.path)).replace(/\\/g, "/");
+    return rel && !rel.startsWith("..") && !/^[a-z]:/i.test(rel) && !rel.startsWith("/") ? "Images/" + rel : null;
+  }
   async function newMapFromImage(payload) {
     const it = payload.items[0];
     if (!it) return;
     const S10 = mapsState_C.s;
-    const rel = payload.kind === "gallery" ? "Images/" + it.path : null;
+    const rel = await droppedImageRel(payload);
     if (!rel) {
       setStatus(t("ui.maps.dropImageFromGallery"));
       return;
@@ -96684,7 +96888,16 @@ ${cards.join("")}</div>${und}</body></html>`;
           stage.scrollLeft = l0 - (ev.clientX - sx2);
           stage.scrollTop = t0 - (ev.clientY - sy2);
         };
+        const offEsc2 = escCancelDrag(() => {
+          window.removeEventListener("pointermove", mv);
+          window.removeEventListener("pointerup", up2);
+          stage.classList.remove("panning");
+          stage.scrollLeft = l0;
+          stage.scrollTop = t0;
+          if (moved) suppressClick = true;
+        });
         const up2 = () => {
+          offEsc2();
           window.removeEventListener("pointermove", mv);
           window.removeEventListener("pointerup", up2);
           stage.classList.remove("panning");
@@ -96709,7 +96922,14 @@ ${cards.join("")}</div>${und}</body></html>`;
         box2.style.height = Math.abs(ev.clientY - y0) + "px";
       };
       paint2(e);
+      const offEsc = escCancelDrag(() => {
+        window.removeEventListener("pointermove", paint2);
+        window.removeEventListener("pointerup", up);
+        box2.remove();
+        suppressClick = true;
+      });
       const up = (ev) => {
+        offEsc();
         window.removeEventListener("pointermove", paint2);
         window.removeEventListener("pointerup", up);
         const x1 = (Math.min(x0, ev.clientX) - r.left) / r.width * 100;
@@ -96726,8 +96946,10 @@ ${cards.join("")}</div>${und}</body></html>`;
       window.addEventListener("pointerup", up);
     };
     const portraits = await loadPortraits();
+    const entNames = new Map((await loadEntities()).map((e) => [e.file, e.name]));
     const pinScale = pinScaleOf(cur);
     for (const pin of cur.pins || []) {
+      const shown2 = pin.kind === "entity" && entNames.get(pin.entityFile) || pin.label || "";
       const selected = view.sel.has(pin.id);
       const el2 = el("div", "map-pin map-pin-" + pin.kind + (selected ? " sel" : ""));
       el2.dataset.pin = pin.id;
@@ -96742,7 +96964,7 @@ ${cards.join("")}</div>${und}</body></html>`;
         const av = el("span", "map-pin-portrait");
         const im = el("img");
         im.src = mapImgURL("Images/" + portraitFile);
-        im.alt = pin.label || "";
+        im.alt = shown2;
         im.draggable = false;
         im.onerror = () => {
           av.replaceWith(el("span", "map-pin-icon", PIN_KIND.entity.icon));
@@ -96764,12 +96986,12 @@ ${cards.join("")}</div>${und}</body></html>`;
         badge.append(el("span", "map-pin-icon", (PIN_KIND[pin.kind] || PIN_KIND.note).icon));
       }
       el2.append(badge);
-      if (pin.label && view.showLabels) el2.append(el("span", "map-pin-label", pin.label));
+      if (shown2 && view.showLabels) el2.append(el("span", "map-pin-label", shown2));
       const scHere = hereScenes.filter((s) => s.pinId === pin.id);
       if (scHere.length) el2.append(el("span", "map-pin-count", String(scHere.length)));
       const ll = toLatLon(cur, pin);
       el2.title = [
-        pin.label || (PIN_KIND[pin.kind] || {}).label || "",
+        shown2 || (PIN_KIND[pin.kind] || {}).label || "",
         pin.note,
         ll ? formatLatLon(ll) : "",
         child ? tf("ui.maps.portalTip", child.name) : "",
@@ -96887,7 +97109,25 @@ ${cards.join("")}</div>${und}</body></html>`;
             }
           }
         };
+        const offEsc = escCancelDrag(() => {
+          window.removeEventListener("pointermove", mv);
+          window.removeEventListener("pointerup", up);
+          el2.classList.remove("dragging");
+          for (const p of cur.pins || []) {
+            const s0 = start.get(p.id);
+            if (!s0) continue;
+            p.x = s0.x;
+            p.y = s0.y;
+            const node = canvas.querySelector(`.map-pin[data-pin="${p.id}"]`);
+            if (node) {
+              node.style.left = p.x + "%";
+              node.style.top = p.y + "%";
+            }
+          }
+          if (moved) suppressClick = true;
+        });
         const up = async () => {
+          offEsc();
           window.removeEventListener("pointermove", mv);
           window.removeEventListener("pointerup", up);
           el2.classList.remove("dragging");
@@ -96960,6 +97200,7 @@ ${cards.join("")}</div>${und}</body></html>`;
     }, { passive: false });
     stage.tabIndex = 0;
     stage.addEventListener("keydown", async (e) => {
+      if (e.target !== stage && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
       const step = 60;
       if (view.zoneDraw) {
         if (e.key === "Enter") {
@@ -97006,7 +97247,7 @@ ${cards.join("")}</div>${und}</body></html>`;
       }
     });
     bindDropTarget(stage, {
-      accept: ["entity", "map", "scene", "memo", "gallery"],
+      accept: ["entity", "map", "scene", "memo", "gallery", "image"],
       onDrop: async (payload, e) => {
         const r = canvas.getBoundingClientRect();
         const pt = { x: clamp4((e.clientX - r.left) / r.width * 100), y: clamp4((e.clientY - r.top) / r.height * 100) };
@@ -97373,9 +97614,14 @@ ${cards.join("")}</div>${und}</body></html>`;
       refresh();
       return true;
     }
-    if (payload.kind === "gallery") {
+    if (payload.kind === "gallery" || payload.kind === "image") {
+      const rel = await droppedImageRel(payload);
+      if (!rel) {
+        setStatus(t("ui.maps.dropImageFromGallery"));
+        return false;
+      }
       if (cur.image && !await confirmBox(t("ui.maps.dropReplaceImage"), t("ui.maps.changeImage"))) return false;
-      cur.image = "Images/" + it.path;
+      cur.image = rel;
       delete cur.aspect;
       await saveMaps(S10.data);
       refresh();
@@ -97461,18 +97707,32 @@ ${cards.join("")}</div>${und}</body></html>`;
       e.stopPropagation();
       e.preventDefault();
       const r = canvas.getBoundingClientRect();
-      const mv = (ev) => {
-        z.points[i5] = { x: clamp4((ev.clientX - r.left) / r.width * 100), y: clamp4((ev.clientY - r.top) / r.height * 100) };
-        v2.style.left = z.points[i5].x + "%";
-        v2.style.top = z.points[i5].y + "%";
+      const p0 = { ...z.points[i5] };
+      let moved = false;
+      const put = (pt) => {
+        z.points[i5] = pt;
+        v2.style.left = pt.x + "%";
+        v2.style.top = pt.y + "%";
         const path = canvas.querySelector(`.map-zone[data-zone="${z.id}"]`);
         if (path) path.setAttribute("d", zonePath(z.points));
       };
-      const up = async () => {
+      const mv = (ev) => {
+        moved = true;
+        put({ x: clamp4((ev.clientX - r.left) / r.width * 100), y: clamp4((ev.clientY - r.top) / r.height * 100) });
+      };
+      const offEsc = escCancelDrag(() => {
         window.removeEventListener("pointermove", mv);
         window.removeEventListener("pointerup", up);
-        await save();
-        redraw3();
+        put(p0);
+      });
+      const up = async () => {
+        offEsc();
+        window.removeEventListener("pointermove", mv);
+        window.removeEventListener("pointerup", up);
+        if (moved) {
+          await save();
+          redraw3();
+        }
       };
       window.addEventListener("pointermove", mv);
       window.addEventListener("pointerup", up);
@@ -97643,25 +97903,6 @@ ${cards.join("")}</div>${und}</body></html>`;
     const lat = parseFloat(m[1]), lon = parseFloat(m[2]);
     if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
     return { lat, lon };
-  }
-  function distText(d) {
-    if (!d) return "";
-    return tf(d.unit === "km" ? "ui.maps.unitKm" : "ui.maps.unitM", d.value);
-  }
-  function areaText(a) {
-    if (!a) return "";
-    return tf(a.unit === "km2" ? "ui.maps.unitKm2" : "ui.maps.unitM2", a.value);
-  }
-  function hoursText(h) {
-    const s = splitHours(h);
-    if (!s) return "";
-    if (s.d) return tf("ui.maps.timeDH", s.d, s.h);
-    if (s.h) return tf("ui.maps.timeHM", s.h, s.m);
-    return tf("ui.maps.timeM", Math.max(1, s.m));
-  }
-  function travelText(meters, all = false) {
-    const modes = all ? TRAVEL_MODES : TRAVEL_MODES.slice(0, 1);
-    return modes.map((m) => t(MODE_KEYS[m.id]) + " " + hoursText(travelHours(meters, m.kmh))).join(" \xB7 ");
   }
   function applyPinFilter(wrap2) {
     const S10 = mapsState_C.s;
@@ -97917,7 +98158,7 @@ ${cards.join("")}</div>${und}</body></html>`;
       return null;
     }
   }
-  var view, scenesCache, portraitCache, entityCache, MAP_TOOLS, PIN_SCALE_MIN, PIN_SCALE_MAX, PIN_SCALE_STEP, MODE_KEYS, escHtml;
+  var view, scenesCache, portraitCache, entityCache, toolDef, MAP_TOOLS, PIN_SCALE_MIN, PIN_SCALE_MAX, PIN_SCALE_STEP, escHtml;
   var init_maps_ui = __esm({
     "src/maps-ui.js"() {
       init_i18n();
@@ -97934,7 +98175,9 @@ ${cards.join("")}</div>${und}</body></html>`;
       init_palette();
       init_panel_chrome();
       init_drop_kit();
+      init_drag_cancel();
       init_timeline();
+      init_map_text();
       view = {
         zoom: 1,
         sel: /* @__PURE__ */ new Set(),
@@ -97977,15 +98220,26 @@ ${cards.join("")}</div>${und}</body></html>`;
       scenesCache = null;
       portraitCache = null;
       entityCache = null;
+      toolDef = (id, iconName, labelKey, hintKey) => ({
+        id,
+        get icon() {
+          return gi(iconName);
+        },
+        get label() {
+          return t(labelKey);
+        },
+        get hint() {
+          return t(hintKey);
+        }
+      });
       MAP_TOOLS = [
-        { id: "open", icon: gi("pointer"), label: t("ui.common.openView"), hint: t("ui.maps.clickPinOpenLink") },
-        { id: "edit", icon: gi("pencil-thin"), label: t("ui.common.edit"), hint: t("ui.maps.clickPinOpenDialog") },
-        { id: "move", icon: gi("move"), label: t("ui.common.movePos"), hint: t("ui.maps.dragPinMoveMode") }
+        toolDef("open", "pointer", "ui.common.openView", "ui.maps.clickPinOpenLink"),
+        toolDef("edit", "pencil-thin", "ui.common.edit", "ui.maps.clickPinOpenDialog"),
+        toolDef("move", "move", "ui.common.movePos", "ui.maps.dragPinMoveMode")
       ];
       PIN_SCALE_MIN = 0.6;
       PIN_SCALE_MAX = 3;
       PIN_SCALE_STEP = 0.2;
-      MODE_KEYS = { walk: "ui.maps.travelWalk", horse: "ui.maps.travelHorse", cart: "ui.maps.travelCart", ship: "ui.maps.travelShip", car: "ui.maps.travelCar" };
       escHtml = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
     }
   });
@@ -98096,6 +98350,7 @@ ${cards.join("")}</div>${und}</body></html>`;
     _bound2 = true;
     let lastKinds = [];
     document.addEventListener("drop", (e) => {
+      hideTip();
       const pm2 = e.target && e.target.closest && e.target.closest(".ProseMirror");
       if (!pm2) return;
       const ks = dragKinds(e.dataTransfer);
@@ -100720,7 +100975,7 @@ ${cards.join("")}</div>${und}</body></html>`;
         const pos = `left:${Math.round(it.x - b.x + pad4)}px;top:${Math.round(it.y - b.y + pad4)}px;width:${Math.round(it.w)}px;height:${Math.round(it.h)}px;z-index:${100 + (it.z | 0)}`;
         if (isCard(it)) {
           const inner = `<b>${escH(it.title || it.url || "")}</b><small>${escH(cardSub(it))}</small>${it.text ? `<p>${escH(it.text)}</p>` : ""}`;
-          const style = pos + (it.color ? `;--c:${escH(it.color)}` : "");
+          const style = pos + (it.color ? `;--c:${safeCssColor(it.color)}` : "");
           parts.push(it.url && /^https?:\/\//i.test(it.url) ? `<a class="card" href="${escH(it.url)}" style="${style}">${inner}</a>` : `<div class="card" style="${style}">${inner}</div>`);
           continue;
         }
@@ -100776,6 +101031,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       init_album_core();
       init_moodboard();
       init_usage_index();
+      init_palette();
       safe = (s) => String(s || "").replace(/[\\/:*?"<>|]/g, "_");
       MAX_EDGE = 4e3;
       CARD_BG = "#262a31";
@@ -100867,6 +101123,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       init_icons();
       init_core();
       init_drop_kit();
+      init_drag_cancel();
       init_err_text();
       init_album_core();
       init_moodboard();
@@ -100966,6 +101223,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
           }, { passive: false });
           board2.addEventListener("mousedown", (e) => {
             if (e.target !== board2 && e.target !== this._canvas) return;
+            if (e.button !== 0 && e.button !== 1) return;
             const s = { x: e.clientX, y: e.clientY, panX: this.view.panX, panY: this.view.panY };
             board2.classList.add("panning");
             const mv = (ev) => {
@@ -100973,7 +101231,16 @@ a.card:hover{border-color:${CARD_STRIPE}}
               this.view.panY = s.panY + (ev.clientY - s.y);
               this.applyTransform();
             };
+            const offEsc = escCancelDrag(() => {
+              board2.classList.remove("panning");
+              document.removeEventListener("mousemove", mv);
+              document.removeEventListener("mouseup", up);
+              this.view.panX = s.panX;
+              this.view.panY = s.panY;
+              this.applyTransform();
+            });
             const up = () => {
+              offEsc();
               board2.classList.remove("panning");
               document.removeEventListener("mousemove", mv);
               document.removeEventListener("mouseup", up);
@@ -101162,7 +101429,16 @@ a.card:hover{border-color:${CARD_STRIPE}}
               node.style.left = it.x + "px";
               node.style.top = it.y + "px";
             };
+            const offEsc = escCancelDrag(() => {
+              document.removeEventListener("mousemove", mv);
+              document.removeEventListener("mouseup", up);
+              it.x = s0.ox;
+              it.y = s0.oy;
+              node.style.left = it.x + "px";
+              node.style.top = it.y + "px";
+            });
             const up = async () => {
+              offEsc();
               document.removeEventListener("mousemove", mv);
               document.removeEventListener("mouseup", up);
               if (moved) await commit({ x: it.x, y: it.y });
@@ -101175,7 +101451,9 @@ a.card:hover{border-color:${CARD_STRIPE}}
             e.preventDefault();
             const z = this.view.zoom;
             const s0 = { x: e.clientX, y: e.clientY, w: it.w, h: it.h };
+            let moved = false;
             const mv = (ev) => {
+              moved = true;
               const keep = keepRatioDefault ? !ev.altKey : ev.altKey;
               const r = resizeItem(it, s0.w + (ev.clientX - s0.x) / z, s0.h + (ev.clientY - s0.y) / z, { keepRatio: keep });
               it.w = r.w;
@@ -101183,10 +101461,19 @@ a.card:hover{border-color:${CARD_STRIPE}}
               node.style.width = it.w + "px";
               node.style.height = it.h + "px";
             };
-            const up = async () => {
+            const offEsc = escCancelDrag(() => {
               document.removeEventListener("mousemove", mv);
               document.removeEventListener("mouseup", up);
-              await commit({ w: it.w, h: it.h });
+              it.w = s0.w;
+              it.h = s0.h;
+              node.style.width = it.w + "px";
+              node.style.height = it.h + "px";
+            });
+            const up = async () => {
+              offEsc();
+              document.removeEventListener("mousemove", mv);
+              document.removeEventListener("mouseup", up);
+              if (moved) await commit({ w: it.w, h: it.h });
             };
             document.addEventListener("mousemove", mv);
             document.addEventListener("mouseup", up);
@@ -101246,7 +101533,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
             const opts = { x: base4.x + n2 * 24, y: base4.y + n2 * 24, title: it.title || "" };
             if (kind === "ref") {
               if (it.url) opts.url = it.url;
-              else opts.text = it.path || "";
+              else if (payload.kind !== "book") opts.text = it.path || "";
             } else if (kind === "chapter") {
               opts.draftDir = it.draftDir;
               opts.guid = it.guid;
@@ -103403,7 +103690,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       fillModels(P2.models, P2.model);
       const s4 = sec(4, t("ui.aiProvider.secParams"));
       const grid = el("div", "ai-param-grid");
-      const inputs = {};
+      const inputs2 = {};
       for (const d of PARAM_DEFS) {
         const cell = el("div", "ai-param");
         cell.append(el("label", null, d.label + (d.th ? " \u2014 " + d.th : "")));
@@ -103431,7 +103718,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
           node.placeholder = d.def === null ? t("ui.aiProvider.notSendValue") : String(d.def);
         }
         node.dataset.param = d.key;
-        inputs[d.key] = node;
+        inputs2[d.key] = node;
         cell.append(node);
         if (d.hint) cell.append(el("div", "ai-hint dim", d.hint));
         if (d.type === "kv") cell.classList.add("ai-param-wide");
@@ -103441,7 +103728,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       function readParams() {
         const raw = {};
         for (const d of PARAM_DEFS) {
-          const node = inputs[d.key];
+          const node = inputs2[d.key];
           if (d.type === "kv") {
             const o = {};
             for (const line of String(node.value || "").split("\n")) {
@@ -110621,7 +110908,13 @@ ${h.text}`;
             ghost.style.top = ev.clientY + 8 + "px";
           };
           mv(e);
+          const offEsc = escCancelDrag(() => {
+            window.removeEventListener("pointermove", mv);
+            window.removeEventListener("pointerup", up);
+            ghost.remove();
+          });
           const up = async (ev) => {
+            offEsc();
             window.removeEventListener("pointermove", mv);
             window.removeEventListener("pointerup", up);
             ghost.remove();
@@ -110637,6 +110930,31 @@ ${h.text}`;
       wrap2.append(tray);
     }
     wrap2.append(el("div", "tl-hint", t("ui.timeline.boardHint")));
+    let cardsGeo = null;
+    const geo = () => cardsGeo || (cardsGeo = [...body.querySelectorAll(".tl-card")].map((c) => {
+      const main = c.querySelector(".tl-card-main"), stripe = c.querySelector(".tl-card-stripe");
+      const tail = [...c.children].filter((n2) => n2 !== main && n2 !== stripe && !n2.classList.contains("tl-link-dot") && !n2.classList.contains("tl-handle")).reduce((w, n2) => w + n2.offsetWidth, 0);
+      return { c, x: parseFloat(c.style.left) || 0, w: parseFloat(c.style.width) || 0, tail, off: 0 };
+    }));
+    const followCards = () => {
+      if (!body.isConnected) return;
+      const sl = board2.scrollLeft - body.offsetLeft;
+      for (const g of geo()) {
+        if (g.c.classList.contains("dragging")) continue;
+        const off3 = Math.round(Math.max(0, Math.min(sl + 8 - g.x, g.w - g.tail - 120)));
+        if (off3 === g.off) continue;
+        g.off = off3;
+        g.c.style.paddingLeft = off3 ? off3 + "px" : "";
+        g.c.classList.toggle("tl-card-follow", off3 > 0);
+      }
+    };
+    let followRaf = 0;
+    board2.addEventListener("scroll", () => {
+      if (!followRaf) followRaf = requestAnimationFrame(() => {
+        followRaf = 0;
+        followCards();
+      });
+    }, { passive: true });
     requestAnimationFrame(() => {
       const a = state._tlAnchor;
       if (a && a.min === min) {
@@ -110647,6 +110965,7 @@ ${h.text}`;
         board2.scrollLeft = keepScroll3.l;
         board2.scrollTop = keepScroll3.t;
       } else if (cur) board2.scrollLeft = Math.max(0, X2(eventSpan(cur).start) - board2.clientWidth / 2);
+      followCards();
     });
   }
   function buildCard(ctx2, it, laneColor) {
@@ -110750,7 +111069,16 @@ ${h.text}`;
         }
         card.dataset.drag = nStart === nEnd ? String(nStart) : nStart + " \u2192 " + nEnd;
       };
+      const offEsc = escCancelDrag(() => {
+        window.removeEventListener("pointermove", mv);
+        window.removeEventListener("pointerup", up);
+        card.classList.remove("dragging");
+        card.style.left = left0 + "px";
+        card.style.width = w0 + "px";
+        delete card.dataset.drag;
+      });
       const up = async () => {
+        offEsc();
         window.removeEventListener("pointermove", mv);
         window.removeEventListener("pointerup", up);
         card.classList.remove("dragging");
@@ -110776,7 +111104,13 @@ ${h.text}`;
       const r = br();
       p.setAttribute("d", `M${a.x},${a.y} L${ev.clientX - r.left},${ev.clientY - r.top}`);
     };
+    const offEsc = escCancelDrag(() => {
+      window.removeEventListener("pointermove", mv);
+      window.removeEventListener("pointerup", up);
+      p.remove();
+    });
     const up = (ev) => {
+      offEsc();
       window.removeEventListener("pointermove", mv);
       window.removeEventListener("pointerup", up);
       p.remove();
@@ -111038,6 +111372,7 @@ ${h.text}`;
       init_panel_chrome();
       init_ui();
       init_drop_kit();
+      init_drag_cancel();
       init_err_text();
       init_palette();
       CARD_H2 = 58;
@@ -162680,14 +163015,14 @@ ${preview2}` + (found2.length > 8 ? `
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog");
     box2.append(el("div", "k-dlg-title", tf("ui.treeAct.propsTitle", ctx2.title || "")));
-    const inputs = [];
+    const inputs2 = [];
     for (const def of defs) {
       const r = el("div", "wiki-row");
       r.append(el("label", null, def.label));
       const inp = fieldInput(def, vals[def.key]);
       r.append(inp);
       box2.append(r);
-      inputs.push([def, inp]);
+      inputs2.push([def, inp]);
     }
     return new Promise((resolve) => {
       const btns = el("div", "k-dlg-btns");
@@ -162708,7 +163043,7 @@ ${preview2}` + (found2.length > 8 ? `
       escClose(ov, () => close2(false));
       okB.onclick = async () => {
         const patch = {};
-        for (const [def, inp] of inputs) {
+        for (const [def, inp] of inputs2) {
           const v2 = valueOf(def, inp);
           if (v2 !== vals[def.key]) patch[def.key] = v2;
         }
@@ -167550,6 +167885,8 @@ img{max-width:100%}` }
         return tf("ui.aiTools.readScene", a.title, at);
       case "entity.read":
         return tf("ui.aiTools.readData", a.name);
+      case "map.where":
+        return a.name ? tf("ui.aiTools.mapWhereOne", a.name) : t("ui.aiTools.mapWhereAll");
       case "entity.create":
         return tf("ui.aiTools.new", catLabel3(a.cat), a.name);
       case "entity.update":
@@ -167609,21 +167946,29 @@ img{max-width:100%}` }
           cap: CAP_READ,
           need: [],
           opt: [],
-          desc: t("ui.aiTools.viewStructureProjectBook")
+          dk: "ui.aiTools.viewStructureProjectBook"
         },
         {
           name: "scene.read",
           cap: CAP_READ,
           need: ["title"],
           opt: ["book", "chapter"],
-          desc: t("ui.aiTools.readBodyScene")
+          dk: "ui.aiTools.readBodyScene"
         },
         {
           name: "entity.read",
           cap: CAP_READ,
           need: ["name"],
           opt: [],
-          desc: t("ui.aiTools.readDataWikiCharacter")
+          dk: "ui.aiTools.readDataWikiCharacter"
+        },
+        // [alpha.167 · รอบต่อ] ตำแหน่งบนแผนที่ — "ใครอยู่ใกล้ใคร" · ระยะจริง/เวลาเดินทางเมื่อตั้งมาตราส่วนแล้ว
+        {
+          name: "map.where",
+          cap: CAP_READ,
+          need: [],
+          opt: ["name"],
+          dk: "ui.aiTools.mapWhere"
         },
         // ── เอนทิตี้ใน Wiki ──
         {
@@ -167631,14 +167976,14 @@ img{max-width:100%}` }
           cap: CAP_WRITE,
           need: ["cat", "name"],
           opt: ["description", "fields", "aliases", "sections"],
-          desc: t("ui.aiTools.newNewCatCharacters")
+          dk: "ui.aiTools.newNewCatCharacters"
         },
         {
           name: "entity.update",
           cap: CAP_WRITE,
           need: ["name"],
           opt: ["newName", "description", "fields", "aliases", "sections"],
-          desc: t("ui.aiTools.editHasSendOnly")
+          dk: "ui.aiTools.editHasSendOnly"
         },
         {
           name: "entity.delete",
@@ -167646,7 +167991,7 @@ img{max-width:100%}` }
           need: ["name"],
           opt: [],
           destructive: true,
-          desc: t("ui.aiTools.delMoveTrashRecover")
+          dk: "ui.aiTools.delMoveTrashRecover"
         },
         // ── เล่ม (book/section) ──
         {
@@ -167654,7 +167999,7 @@ img{max-width:100%}` }
           cap: CAP_WRITE,
           need: ["title"],
           opt: [],
-          desc: t("ui.aiTools.newBookNewHas")
+          dk: "ui.aiTools.newBookNewHas"
         },
         {
           name: "book.delete",
@@ -167662,7 +168007,7 @@ img{max-width:100%}` }
           need: ["title"],
           opt: [],
           destructive: true,
-          desc: t("ui.aiTools.delBookBookMove")
+          dk: "ui.aiTools.delBookBookMove"
         },
         // ── บท ──
         {
@@ -167670,14 +168015,14 @@ img{max-width:100%}` }
           cap: CAP_WRITE,
           need: ["title"],
           opt: ["book"],
-          desc: t("ui.aiTools.addChapterNewBook")
+          dk: "ui.aiTools.addChapterNewBook"
         },
         {
           name: "chapter.rename",
           cap: CAP_WRITE,
           need: ["title", "newTitle"],
           opt: ["book"],
-          desc: t("ui.aiTools.changeNameChapter")
+          dk: "ui.aiTools.changeNameChapter"
         },
         {
           name: "chapter.delete",
@@ -167685,7 +168030,7 @@ img{max-width:100%}` }
           need: ["title"],
           opt: ["book"],
           destructive: true,
-          desc: t("ui.aiTools.delChapterChapterAll")
+          dk: "ui.aiTools.delChapterChapterAll"
         },
         // ── ฉาก ──
         {
@@ -167693,21 +168038,21 @@ img{max-width:100%}` }
           cap: CAP_WRITE,
           need: ["title"],
           opt: ["book", "chapter", "text", "synopsis"],
-          desc: t("ui.aiTools.newSceneNewChapter")
+          dk: "ui.aiTools.newSceneNewChapter"
         },
         {
           name: "scene.write",
           cap: CAP_WRITE,
           need: ["title", "text"],
           opt: ["book", "chapter", "mode"],
-          desc: t("ui.aiTools.writeBodySceneMode")
+          dk: "ui.aiTools.writeBodySceneMode"
         },
         {
           name: "scene.rename",
           cap: CAP_WRITE,
           need: ["title", "newTitle"],
           opt: ["book", "chapter"],
-          desc: t("ui.aiTools.changeNameScene")
+          dk: "ui.aiTools.changeNameScene"
         },
         {
           name: "scene.delete",
@@ -167715,11 +168060,58 @@ img{max-width:100%}` }
           need: ["title"],
           opt: ["book", "chapter"],
           destructive: true,
-          desc: t("ui.aiTools.delSceneMoveTrash")
+          dk: "ui.aiTools.delSceneMoveTrash"
         }
       ];
+      for (const x of TOOLS2) Object.defineProperty(x, "desc", { get() {
+        return t(x.dk);
+      }, enumerable: true });
       CAP_RANK = { [CAP_READ]: 0, [CAP_WRITE]: 1, [CAP_FULL]: 2 };
       FENCE_RE = /```(k2|json)\s*\n([\s\S]*?)```/g;
+    }
+  });
+
+  // src/map-ai.js
+  var map_ai_exports = {};
+  __export(map_ai_exports, {
+    mapContextText: () => mapContextText,
+    mapWhereText: () => mapWhereText
+  });
+  async function inputs(root) {
+    if (!root) return null;
+    let data2 = null;
+    try {
+      const p = await kapi.join(root, "maps.json");
+      if (!await kapi.exists(p)) return null;
+      data2 = migrateMaps(await kapi.readJson(p));
+    } catch {
+      return null;
+    }
+    const maps = data2 && data2.maps || [];
+    if (!maps.length) return null;
+    const nameOf2 = entityNamer(await listEntities(root).catch(() => []));
+    return { maps, nameOf: nameOf2 };
+  }
+  async function mapContextText(root, { maxChars = 3e3 } = {}) {
+    const inp = await inputs(root);
+    if (!inp) return "";
+    return mapDigestText(mapDigest(inp.maps, { nameOf: inp.nameOf }), { maxChars });
+  }
+  async function mapWhereText(root, name5, { maxChars = 6e3 } = {}) {
+    const inp = await inputs(root);
+    if (!inp) return { found: false, text: "" };
+    if (!String(name5 || "").trim()) {
+      const text = mapDigestText(mapDigest(inp.maps, { nameOf: inp.nameOf, nearPerPlace: 2 }), { maxChars });
+      return { found: !!text, text };
+    }
+    const rows = whereIs(inp.maps, name5, { nameOf: inp.nameOf });
+    return { found: rows.length > 0, text: whereText(String(name5).trim(), rows) };
+  }
+  var init_map_ai = __esm({
+    "src/map-ai.js"() {
+      init_maps();
+      init_map_text();
+      init_project_scan();
     }
   });
 
@@ -167870,7 +168262,7 @@ img{max-width:100%}` }
     }
   }
   function touchesProject(results) {
-    return (results || []).some((r) => r.ok && !/^(project\.tree|scene\.read|entity\.read)$/.test(r.tool));
+    return (results || []).some((r) => r.ok && !/^(project\.tree|scene\.read|entity\.read|map\.where)$/.test(r.tool));
   }
   async function refreshAfterActions() {
     try {
@@ -167948,6 +168340,15 @@ img{max-width:100%}` }
           const e = await findEntityFile(a.name);
           if (!e) return err(tf("ui.aiActions.notFound", a.name));
           return ok(tf("ui.aiActions.readDone", e.name), e.entity);
+        },
+        // [alpha.167 · รอบต่อ] ตำแหน่งบนแผนที่ · ไม่ใส่ชื่อ = สรุปทุกแผนที่ (ใกล้กันที่สุดสองคู่ต่อที่)
+        async "map.where"(a) {
+          const { mapWhereText: mapWhereText2 } = await Promise.resolve().then(() => (init_map_ai(), map_ai_exports));
+          const name5 = String(a && a.name || "").trim();
+          const r = await mapWhereText2(state.root, name5);
+          if (!r.text) return err(t("ui.aiActions.noMapPins"));
+          if (name5 && !r.found) return err(r.text);
+          return ok(name5 ? tf("ui.aiActions.mapWhereDone", name5) : t("ui.aiActions.mapDigestDone"), r.text);
         },
         async "entity.create"(a) {
           if (await findEntityFile(a.name)) return err(tf("ui.aiActions.hasUseEntityUpdate", a.name));
@@ -168545,9 +168946,20 @@ img{max-width:100%}` }
   async function collectScope(session, { maxChars = 24e3, query = "" } = {}) {
     let scope2 = session.scope || DEFAULT_SCOPE;
     if (scope2 === "none" || !state.root) return "";
+    let mapCtx = "";
+    if (scope2 !== "scene") {
+      try {
+        const { mapContextText: mapContextText2 } = await Promise.resolve().then(() => (init_map_ai(), map_ai_exports));
+        mapCtx = await mapContextText2(state.root, { maxChars: Math.min(3e3, Math.floor(maxChars / 4)) });
+      } catch (e) {
+        log("warn", "ai-chat: map context failed", e);
+      }
+    }
+    const withMap = (txt) => mapCtx ? (txt ? txt + "\n\n" : "") + mapCtx : txt;
+    const budget = Math.max(0, maxChars - (mapCtx ? mapCtx.length + 2 : 0));
     if (scope2 === "relevant") {
-      const rel = await collectRelevant(query, { maxChars, files: session.files || [] });
-      if (rel) return rel;
+      const rel = await collectRelevant(query, { maxChars: budget, files: session.files || [] });
+      if (rel) return withMap(rel);
       scope2 = "project";
     }
     const parts = [];
@@ -168573,12 +168985,12 @@ img{max-width:100%}` }
       for (const f of files) {
         if (!underPrefix(f, prefix2)) continue;
         await push(f, f.slice(state.root.length + 1));
-        if (parts.join("\n").length > maxChars) break;
+        if (parts.join("\n").length > budget) break;
       }
     }
     for (const f of session.files || []) await push(f.path, gi("paperclip") + " " + (f.name || f.path));
     const text = parts.join("\n\n");
-    return text.length > maxChars ? text.slice(0, maxChars) + t("ui.aiChatPanel.cutLong") : text;
+    return withMap(text.length > budget ? text.slice(0, budget) + t("ui.aiChatPanel.cutLong") : text);
   }
   function chatRagStale(set) {
     if (set !== void 0) RAG.stale = !!set;
@@ -178013,10 +178425,10 @@ ${pages.join("\n")}
           liveProseFonts()
         ) + (mono ? [" ", "body,body *{color:#000 !important}", "img{filter:grayscale(1)}"].join(String.fromCharCode(10)) : "");
         const { pageNumberLabel: pageNumberLabel2 } = await Promise.resolve().then(() => (init_sp_format(), sp_format_exports));
-        const baseP = exportPageNumberFmt(fmt2);
+        const baseP2 = exportPageNumberFmt(fmt2);
         const numFmtP = {
-          ...baseP,
-          pageNumbers: { ...baseP.pageNumbers, show: cfg.pdf.pageNumbers !== false }
+          ...baseP2,
+          pageNumbers: { ...baseP2.pageNumbers, show: cfg.pdf.pageNumbers !== false }
         };
         const r6 = renderExportPagePreview2(host2, mdToHtmlBody2(built.text, { mono, imgSrc: projectImg }), css, {
           paper: fmt2.paper,
@@ -189754,6 +190166,55 @@ ${css}
               ev.when !== "\u0E1B\u0E35\u0E17\u0E35\u0E48 1024" && /^ปีที่ \d+$/.test(ev.when) && ev.whenEnd !== "\u0E1B\u0E35\u0E17\u0E35\u0E48 1030" && parseFloat(ev.whenEnd.replace(/\D+/g, "")) - parseFloat(ev.when.replace(/\D+/g, "")) === 6,
               ev.when + " \u2192 " + ev.whenEnd
             );
+            const before = JSON.stringify((await loadTimeline()).events.find((e) => e.id === "ev-t1"));
+            const cardN = document.querySelector('#tl-body .tl-card[data-key="ev-t1"]');
+            const left0 = cardN.style.left;
+            const m2 = cardN.querySelector(".tl-card-main").getBoundingClientRect();
+            cardN.querySelector(".tl-card-main").dispatchEvent(new PointerEvent("pointerdown", { button: 0, clientX: m2.left + 20, clientY: m2.top + 10, bubbles: true }));
+            window.dispatchEvent(new PointerEvent("pointermove", { clientX: m2.left + 200, clientY: m2.top + 10, bubbles: true }));
+            const movedLeft = cardN.style.left;
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+            window.dispatchEvent(new PointerEvent("pointerup", { clientX: m2.left + 200, clientY: m2.top + 10, bubbles: true }));
+            await w167(400);
+            check2(
+              "[167-T] \u2605 Esc \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E25\u0E32\u0E01\u0E01\u0E32\u0E23\u0E4C\u0E14 = \u0E01\u0E25\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 \u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01",
+              movedLeft !== left0 && cardN.style.left === left0 && !cardN.classList.contains("dragging") && JSON.stringify((await loadTimeline()).events.find((e) => e.id === "ev-t1")) === before,
+              left0 + " / " + movedLeft + " / " + cardN.style.left
+            );
+            {
+              const zBtn = (k) => [...document.querySelectorAll("#tl-body .tl-zoom button")].find((b) => b.title === t(k));
+              for (let i5 = 0; i5 < 4; i5++) {
+                zBtn("ui.timeline.zoomIn").click();
+                await w167(300);
+              }
+              const bd = document.querySelector("#tl-body .tl-board2");
+              const maxSl = bd.scrollWidth - bd.clientWidth;
+              const cd = [...document.querySelectorAll("#tl-body .tl-card")].filter((c) => parseFloat(c.style.left) + 40 <= maxSl).sort((a, b) => parseFloat(b.style.width) - parseFloat(a.style.width))[0];
+              bd.style.scrollBehavior = "auto";
+              const sl0 = bd.scrollLeft;
+              const want = parseFloat(cd.style.left) + 40;
+              bd.scrollLeft = want;
+              bd.dispatchEvent(new Event("scroll"));
+              await w167(150);
+              check2(
+                "[167-T] (\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E40\u0E17\u0E2A) \u0E1A\u0E2D\u0E23\u0E4C\u0E14\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E08\u0E19\u0E15\u0E49\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E1E\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
+                Math.abs(bd.scrollLeft - want) < 2 && parseFloat(cd.style.width) > 200,
+                bd.scrollLeft + " / " + want + " \xB7 w " + cd.style.width
+              );
+              const tr4 = cd.querySelector(".tl-ev-title").getBoundingClientRect(), br2 = bd.getBoundingClientRect();
+              check2(
+                "[167-T] \u2605 \u0E15\u0E49\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E1E\u0E49\u0E19\u0E02\u0E2D\u0E1A\u0E0B\u0E49\u0E32\u0E22 = \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E2B\u0E25\u0E15\u0E32\u0E21\u0E21\u0E32\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14)",
+                cd.classList.contains("tl-card-follow") && tr4.left >= br2.left - 1 && tr4.width > 20,
+                Math.round(tr4.left) + " vs " + Math.round(br2.left) + " \xB7 pad " + cd.style.paddingLeft
+              );
+              bd.scrollLeft = 0;
+              bd.dispatchEvent(new Event("scroll"));
+              await w167(150);
+              check2("[167-T] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A = \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E01\u0E15\u0E34", !cd.classList.contains("tl-card-follow") && !cd.style.paddingLeft);
+              bd.scrollLeft = sl0;
+              zBtn("ui.timeline.zoomFit").click();
+              await w167(200);
+            }
           }
           {
             const st = [...document.querySelectorAll("#tl-body .tl-stat")].find((b) => b.textContent.includes("\u0E40\u0E2A\u0E49\u0E19\u0E2B\u0E25\u0E31\u0E01"));
@@ -190488,8 +190949,69 @@ ${css}
             check2("[167-M] \u2605 \u0E2B\u0E22\u0E34\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2A\u0E48\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 = \u0E1B\u0E23\u0E30\u0E15\u0E39\u0E44\u0E1B\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E22\u0E48\u0E2D\u0E22 (\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E49\u0E27 = \u0E22\u0E49\u0E32\u0E22\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07)", portals.length === 1 && portals[0].x === 40, JSON.stringify(portals.map((p) => [p.x, p.y])));
             check2("[167-M] \u0E2B\u0E22\u0E34\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E43\u0E2A\u0E48\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 = \u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18", await dropOnMap(mm2, { kind: "map", items: [{ id: "m70a" }] }, { x: 1, y: 1 }) === false);
             {
+              const img0 = mm2.image;
+              const outside = await kapi.join(state.root, "..", "elsewhere.png");
+              check2(
+                "[167-M] \u0E23\u0E39\u0E1B\u0E19\u0E2D\u0E01\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C = \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E49\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E39\u0E1B\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48",
+                await dropOnMap(mm2, { kind: "image", items: [{ path: outside, title: "elsewhere.png" }] }, { x: 1, y: 1 }) === false && mm2.image === img0
+              );
+            }
+            {
               const saved2 = await loadMaps();
               check2("[167-M] \u0E1C\u0E25\u0E02\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E2B\u0E22\u0E34\u0E1A\u0E43\u0E2A\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E25\u0E07 maps.json", findMap(saved2.maps, "m70a").pins.some((p) => p.entityFile === catFile2 && p.x === 70));
+            }
+            {
+              const { runToolCall: runToolCall2 } = await Promise.resolve().then(() => (init_ai_actions(), ai_actions_exports));
+              const wr = await runToolCall2({ tool: "map.where", args: { name: "\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15" } });
+              check2(
+                "[167-M] \u2605 AI \u0E16\u0E32\u0E21 map.where \u0E44\u0E14\u0E49\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E08\u0E23\u0E34\u0E07 (\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 \xB7 \u0E40\u0E02\u0E15 \xB7 \u0E23\u0E30\u0E22\u0E30\u0E08\u0E23\u0E34\u0E07)",
+                wr.ok === true && String(wr.data).includes("\u0E41\u0E1C\u0E48\u0E19\u0E14\u0E34\u0E19\u0E40\u0E01\u0E48\u0E32") && /(ม\.|กม\.)/.test(String(wr.data)),
+                JSON.stringify(wr).slice(0, 300)
+              );
+              const { collectScope: collectScope2 } = await Promise.resolve().then(() => (init_ai_chat_panel(), ai_chat_panel_exports));
+              const ctxP = await collectScope2({ scope: "project", files: [] }, { maxChars: 8e3 });
+              check2(
+                '[167-M] \u2605 \u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E41\u0E0A\u0E17 (\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C) \u0E21\u0E35\u0E2A\u0E48\u0E27\u0E19 "\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48" \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E17\u0E34\u0E49\u0E07\u0E17\u0E49\u0E32\u0E22',
+                ctxP.includes("\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48") && ctxP.includes("\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15") && ctxP.length <= 8e3 + 200,
+                ctxP.length
+              );
+              const ctxS = await collectScope2({ scope: "scene", files: [] }, { maxChars: 4e3 });
+              check2('[167-M] \u0E1A\u0E23\u0E34\u0E1A\u0E17\u0E23\u0E30\u0E14\u0E31\u0E1A "\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49" \u0E44\u0E21\u0E48\u0E41\u0E19\u0E1A\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48', !ctxS.includes("\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E1A\u0E19\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48"));
+            }
+            {
+              const mp = await kapi.join(state.root, "maps.json");
+              const bak = await kapi.readFile(mp);
+              const raw = JSON.parse(bak);
+              const pin0 = raw.maps.find((x) => x.id === "m70a").pins.find((p) => p.kind === "entity" && p.entityFile === catFile2);
+              pin0.entityFile = "D:\\\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32\\\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\\Wiki\\characters\\cat.json";
+              await kapi.writeFile(mp, JSON.stringify(raw));
+              const re = await loadMaps();
+              const pin1 = findMap(re.maps, "m70a").pins.find((p) => p.id === pin0.id);
+              check2(
+                "[167-M] \u2605 \u0E2B\u0E21\u0E38\u0E14\u0E17\u0E35\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E17\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2D\u0E37\u0E48\u0E19 \u0E0A\u0E35\u0E49\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E35\u0E49",
+                pin1 && pin1.entityFile === catFile2,
+                pin1 && pin1.entityFile
+              );
+              await kapi.writeFile(mp, bak);
+            }
+            {
+              bodyOf().querySelector('.map-tool-btn[data-tool="move"]').click();
+              await wait2(250);
+              const mz2 = findMap(mapsState_C.s.data.maps, "m70a");
+              const cp = mz2.pins.find((p) => p.entityFile === catFile2);
+              const node = bodyOf().querySelector(`.map-pin[data-pin="${cp.id}"]`);
+              const nr = node.getBoundingClientRect();
+              const bx = nr.left + nr.width / 2, by = nr.top + nr.height / 2;
+              node.dispatchEvent(new PointerEvent("pointerdown", { button: 0, clientX: bx, clientY: by, bubbles: true }));
+              window.dispatchEvent(new PointerEvent("pointermove", { clientX: bx + 80, clientY: by + 40, bubbles: true }));
+              const midX = cp.x;
+              window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+              window.dispatchEvent(new PointerEvent("pointerup", { clientX: bx + 80, clientY: by + 40, bubbles: true }));
+              await wait2(300);
+              const saved2 = findMap((await loadMaps()).maps, "m70a").pins.find((p) => p.id === cp.id);
+              check2("[167-M] \u2605 Esc \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E25\u0E32\u0E01\u0E2B\u0E21\u0E38\u0E14 = \u0E01\u0E25\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 \u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01", midX !== 70 && cp.x === 70 && cp.y === 70 && saved2.x === 70 && node.style.left === "70%", midX + " / " + cp.x + " / " + saved2.x + " / " + node.style.left);
+              bodyOf().querySelector('.map-tool-btn[data-tool="open"]').click();
+              await wait2(250);
             }
             const pNode = bodyOf().querySelector(`.map-pin[data-pin="${portals[0].id}"]`);
             check2("[167-M] \u0E1B\u0E23\u0E30\u0E15\u0E39\u0E44\u0E1B\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E22\u0E48\u0E2D\u0E22\u0E21\u0E35 tooltip \u0E1A\u0E2D\u0E01\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07", !!pNode && pNode.title.includes("\u0E40\u0E21\u0E37\u0E2D\u0E07\u0E43\u0E15\u0E49"), pNode && pNode.title);
@@ -220973,11 +221495,11 @@ ${css}
             await wait116(400);
             const wtab2 = state.tabs.get(wf2);
             const btns = wtab2 ? wtab2.pane.querySelectorAll(".wiki-ai-btn") : [];
-            const inputs = wtab2 ? wtab2.pane.querySelectorAll(".wiki-input") : [];
+            const inputs2 = wtab2 ? wtab2.pane.querySelectorAll(".wiki-input") : [];
             check2(
               "[116-9] \u2605 \u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E43\u0E19 Wiki \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21 AI \u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07",
-              btns.length >= 2 && btns.length >= Math.min(inputs.length, 2),
-              btns.length + " \u0E1B\u0E38\u0E48\u0E21 / " + inputs.length + " \u0E0A\u0E48\u0E2D\u0E07"
+              btns.length >= 2 && btns.length >= Math.min(inputs2.length, 2),
+              btns.length + " \u0E1B\u0E38\u0E48\u0E21 / " + inputs2.length + " \u0E0A\u0E48\u0E2D\u0E07"
             );
             check2("[116-9] \u0E1B\u0E38\u0E48\u0E21 AI \u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48\u0E21\u0E35\u0E43\u0E19 DOM)", visible116(btns[0]));
             check2(
@@ -225388,11 +225910,11 @@ ${css}
               await until159(() => [...document.querySelectorAll("#props-body textarea.wiki-input")].some((x) => x.value === "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"), 5e3);
               return [...document.querySelectorAll("#props-body textarea.wiki-input")].map((x) => x.value);
             })();
-            const inputs = [...document.querySelectorAll("#props-body input.wiki-input")].map((x) => x.value);
+            const inputs2 = [...document.querySelectorAll("#props-body input.wiki-input")].map((x) => x.value);
             check2(
               "[161-P2] \u2605\u2605 \u0E41\u0E01\u0E49 frontmatter \u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2192 \u0E41\u0E1C\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E43\u0E2B\u0E21\u0E48 (\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D/POV \u0E08\u0E32\u0E01 .md \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 scenes.json)",
-              synT.includes("\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161") && inputs.includes("\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161"),
-              JSON.stringify({ synT: synT.slice(0, 2), inputs: inputs.slice(0, 5) })
+              synT.includes("\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161") && inputs2.includes("\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161"),
+              JSON.stringify({ synT: synT.slice(0, 2), inputs: inputs2.slice(0, 5) })
             );
             const SM = await Promise.resolve().then(() => (init_scene_meta(), scene_meta_exports));
             const m = await SM.readSceneMeta(fA, (await rows159(ch.guid)).find((r) => r.id === pA.id));
@@ -226645,7 +227167,7 @@ ${css}
             const keepW = strip.style.width, keepMax = strip.style.maxWidth;
             strip.style.width = "140px";
             strip.style.maxWidth = "140px";
-            await w4(150);
+            for (let i5 = 0; i5 < 20 && !(more && more.classList.contains("on")); i5++) await w4(100);
             check2(
               "[162-W4] \u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E25\u0E49\u0E19\u0E41\u0E16\u0E1A \u2192 \u0E1B\u0E38\u0E48\u0E21\u0E41\u0E17\u0E47\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E42\u0E1C\u0E25\u0E48",
               !!more && more.classList.contains("on"),
@@ -227764,6 +228286,27 @@ ${css}
           check2("[167-D] \u2605 \u0E25\u0E32\u0E01\u0E09\u0E32\u0E01\u0E1C\u0E48\u0E32\u0E19\u0E41\u0E1C\u0E07\u0E43\u0E14\u0E01\u0E47\u0E44\u0E14\u0E49 \u2192 \u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E1A\u0E2D\u0E01\u0E1C\u0E25\u0E02\u0E49\u0E32\u0E07\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C", dropTipText().length > 0, dropTipText());
           document.dispatchEvent(new DragEvent("dragend", { bubbles: true }));
           check2("[167-D] \u0E1B\u0E25\u0E48\u0E2D\u0E22/\u0E40\u0E25\u0E34\u0E01\u0E25\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E1B\u0E49\u0E32\u0E22\u0E2B\u0E32\u0E22", dropTipText() === "");
+        }
+        {
+          showPanel("network");
+          for (let i5 = 0; i5 < 60 && !(netInst && netInst.nodes && netInst.nodes.length); i5++) await w7(100);
+          const nh = document.querySelector("#net-body");
+          const cat = netInst && netInst.nodes.find((n2) => n2.name === "\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15");
+          check2("[167-D] (\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02\u0E40\u0E17\u0E2A) \u0E1C\u0E31\u0E07\u0E21\u0E35\u0E42\u0E2B\u0E19\u0E14\u0E22\u0E31\u0E22\u0E41\u0E21\u0E27\u0E40\u0E01\u0E49\u0E32\u0E0A\u0E35\u0E27\u0E34\u0E15", !!nh && !!cat, netInst && netInst.nodes.length);
+          netInst.select(null);
+          const dt = new DataTransfer();
+          dt.setData("text/k2-entity", JSON.stringify({ path: cat.file, title: cat.name }));
+          const r = nh.getBoundingClientRect();
+          nh.dispatchEvent(new DragEvent("dragover", { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 50, clientY: r.top + 50 }));
+          nh.dispatchEvent(new DragEvent("drop", { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 50, clientY: r.top + 50 }));
+          await w7(300);
+          check2("[167-D] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E25\u0E07\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27 \u0E1B\u0E49\u0E32\u0E22\u0E02\u0E49\u0E32\u0E07\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2B\u0E32\u0E22 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E1A\u0E19\u0E08\u0E2D)", dropTipText() === "", dropTipText());
+          check2(
+            "[167-D] \u2605 \u0E2B\u0E22\u0E34\u0E1A\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E43\u0E2A\u0E48 Story Network = \u0E42\u0E2B\u0E19\u0E14\u0E19\u0E31\u0E49\u0E19\u0E16\u0E39\u0E01\u0E40\u0E25\u0E37\u0E2D\u0E01",
+            !!netInst._sel && netInst._sel.file === cat.file,
+            netInst._sel && netInst._sel.name
+          );
+          netInst.select(null);
         }
         resetPanels();
         await w7(320);
@@ -233245,8 +233788,9 @@ ${css}
       if (!sec.locked) {
         secTitle.draggable = true;
         secTitle.addEventListener("dragstart", (e) => {
-          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.effectAllowed = "copyMove";
           e.dataTransfer.setData("text/k2-book", secPath);
+          e.dataTransfer.setData("text/plain", sec.title || name5);
           e.stopPropagation();
           secTitle.classList.add("sc-dragging");
         });
@@ -234682,6 +235226,24 @@ ${css}
       log("error", "StoryNetwork constructor failed", e);
       return false;
     }
+    if (!host2._k2drop) {
+      host2._k2drop = true;
+      bindDropTarget(host2, {
+        accept: ["entity"],
+        onDrop: (payload) => {
+          const it = payload.items[0] || {};
+          const nodes = netInst && netInst.nodes || [];
+          const n2 = nodes.find((x) => x.file && it.path && x.file === it.path) || nodes.find((x) => x.name && it.title && x.name === it.title);
+          if (!n2) {
+            setStatus(tf("ui.drop.netNotFound", it.title || ""));
+            return false;
+          }
+          netInst.select(n2);
+          netInst.flyTo(n2, { minScale: 1 });
+          return true;
+        }
+      });
+    }
     setTimeout(() => {
       try {
         netInst._fit();
@@ -235911,11 +236473,23 @@ ${css}
   async function loadMaps() {
     const p = await kapi.join(state.root, "maps.json");
     if (!await kapi.exists(p)) return { version: MAPS_VERSION, maps: [] };
+    let data2;
     try {
-      return migrateMaps(await kapi.readJson(p));
+      data2 = migrateMaps(await kapi.readJson(p));
     } catch {
       return { version: MAPS_VERSION, maps: [] };
     }
+    try {
+      const rootN = String(state.root).replace(/\\/g, "/").replace(/\/+$/, "") + "/";
+      const off3 = (data2.maps || []).some((m) => [...m.pins || [], ...m.zones || []].some((o) => o && o.entityFile && !String(o.entityFile).replace(/\\/g, "/").startsWith(rootN)));
+      if (off3) {
+        const n2 = rebaseEntityFiles(data2, await listEntities(state.root));
+        if (n2) log("info", "maps: rebased entity paths", n2);
+      }
+    } catch (e) {
+      log("warn", "maps: rebase entity paths failed", e);
+    }
+    return data2;
   }
   async function saveMaps(data2) {
     data2.version = MAPS_VERSION;
@@ -240434,7 +241008,7 @@ ${css}
         e.preventDefault();
         return;
       }
-      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.effectAllowed = "copyMove";
       e.dataTransfer.setData("text/k2-tab", t22.file);
       b.classList.add("k-tab-dragging");
     });

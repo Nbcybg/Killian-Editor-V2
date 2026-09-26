@@ -204,6 +204,16 @@ const HANDLERS = {
     return ok(tf('ui.aiActions.readDone', e.name), e.entity);
   },
 
+  // [alpha.167 · รอบต่อ] ตำแหน่งบนแผนที่ · ไม่ใส่ชื่อ = สรุปทุกแผนที่ (ใกล้กันที่สุดสองคู่ต่อที่)
+  async 'map.where'(a) {
+    const { mapWhereText } = await import('../map-ai.js');
+    const name = String((a && a.name) || '').trim();
+    const r = await mapWhereText(state.root, name);
+    if (!r.text) return err(t('ui.aiActions.noMapPins'));
+    if (name && !r.found) return err(r.text);
+    return ok(name ? tf('ui.aiActions.mapWhereDone', name) : t('ui.aiActions.mapDigestDone'), r.text);
+  },
+
   async 'entity.create'(a) {
     if (await findEntityFile(a.name)) return err(tf('ui.aiActions.hasUseEntityUpdate', a.name));
     const cat = safeCat(a.cat);
@@ -497,7 +507,7 @@ export async function runToolCall(call) {
 
 /** คำสั่งชุดนี้แตะไฟล์จริงไหม — ถ้าใช่ต้องรีเฟรช explorer/wiki/network หลังทำเสร็จ */
 export function touchesProject(results) {
-  return (results || []).some((r) => r.ok && !/^(project\.tree|scene\.read|entity\.read)$/.test(r.tool));
+  return (results || []).some((r) => r.ok && !/^(project\.tree|scene\.read|entity\.read|map\.where)$/.test(r.tool));
 }
 
 /** รีเฟรช UI หลัง AI แก้ไฟล์ — import แบบ dynamic กัน circular กับ app.js */

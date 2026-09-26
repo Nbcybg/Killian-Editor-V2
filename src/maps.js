@@ -500,6 +500,123 @@ export function pinsOfEntity(maps, entityFile) {
   return out;
 }
 
+// ---------- [alpha.167 · รอบต่อ] สรุปตำแหน่งให้ AI ("ใครอยู่ใกล้ใคร") ----------
+/**
+ * ย่อแผนที่ทุกใบเป็นข้อมูลที่ AI ใช้ตอบคำถามเชิงพื้นที่ได้ — บริสุทธิ์ (ผู้เรียกแปลงเป็นข้อความเอง)
+ * @param nameOf (entityFile) → ชื่อเอนทิตี้ (หมุด/โซนที่ไม่ได้ตั้งป้ายเอง)
+ * @returns [{ id, name, parent, scaled, geo, places:[{name, kind, entityFile, pt, latlon, zone}],
+ *             zones:[{name, entityFile, areaM2}], near:[{a, b, meters, rel}] }]
+ *   near = คู่ "เพื่อนบ้านที่ใกล้ที่สุด" ของแต่ละที่ (ไม่ซ้ำคู่) · meters = null เมื่อยังไม่ตั้งมาตราส่วน
+ *   (rel = ระยะในหน่วยของภาพ — ยังเทียบกันเองได้ว่าใครใกล้กว่า)
+ */
+export function mapDigest(maps, { nameOf = () => '', nearPerPlace = 1 } = {}) {
+  const out = [];
+  for (const m of sortMaps(maps || [])) {
+    const zoneName = (z) => (z && (z.name || nameOf(z.entityFile) || '')) || '';
+    const places = [];
+    for (const p of m.pins || []) {
+      // หมุดเอนทิตี้: ชื่อปัจจุบันใน Wiki ชนะป้าย (ป้ายคือชื่อ ณ ตอนปัก — เปลี่ยนชื่อทีหลังแล้วค้าง)
+      const name = String((p.kind === 'entity' ? nameOf(p.entityFile) : '') || p.label ||
+        (p.kind === 'portal' ? ((findMap(maps, p.toMap) || {}).name || '') : '') || '').trim();
+      if (!name) continue;
+      const pt = { x: +p.x || 0, y: +p.y || 0 };
+      places.push({ name, kind: p.kind || 'note', entityFile: p.entityFile || '', pt,
+                    latlon: toLatLon(m, pt), zone: zoneName(zoneAt(m, pt)) });
+    }
+    const zones = mapZones(m).map((z) => ({ name: zoneName(z), entityFile: z.entityFile || '', areaM2: zoneAreaM2(m, z) }))
+      .filter((z) => z.name);
+    const A = aspOf(m);
+    const rel = (a, b) => { const p = toUnits(a.pt, A), r = toUnits(b.pt, A); return Math.hypot(r.x - p.x, r.y - p.y); };
+    const seen = new Set(), near = [];
+    places.forEach((a, i) => {
+      const others = places.map((b, j) => ({ b, j, d: rel(a, b) })).filter((x) => x.j !== i).sort((x, y) => x.d - y.d);
+      for (const o of others.slice(0, nearPerPlace)) {
+        const key = Math.min(i, o.j) + ':' + Math.max(i, o.j);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        near.push({ a: a.name, b: o.b.name, meters: distMeters(m, a.pt, o.b.pt), rel: +o.d.toFixed(2) });
+      }
+    });
+    near.sort((x, y) => x.rel - y.rel);
+    if (!places.length && !zones.length) continue;
+    const par = parentMap(maps, m.id);
+    const gr = geoReady(m);
+    out.push({ id: m.id, name: m.name || '', parent: par ? par.name || '' : '', scaled: gr.scale, geo: gr.full,
+               places, zones, near });
+  }
+  return out;
+}
+const normP = (p) => String(p || '').replace(/\\/g, '/');
+const baseP = (p) => normP(p).split('/').pop();
+
+/**
+ * ตัวแปลง "ไฟล์เอนทิตี้ → ชื่อ" · หมุดเก็บทางเต็มของเครื่อง (รูปแบบเดิมตั้งแต่ alpha.37)
+ * → ย้ายโฟลเดอร์โปรเจกต์แล้วทางเต็มไม่ตรง ตกไปจับด้วยชื่อไฟล์ (ชื่อไฟล์เอนทิตี้มี id ต่อท้าย ไม่ชนกัน)
+ */
+export function entityNamer(entities) {
+  const byPath = new Map(), byBase = new Map();
+  for (const e of entities || []) {
+    if (!e || !e.path) continue;
+    byPath.set(normP(e.path), e.name || '');
+    byBase.set(baseP(e.path), e.name || '');
+  }
+  return (file) => (file ? byPath.get(normP(file)) || byBase.get(baseP(file)) || '' : '');
+}
+
+/**
+ * [alpha.167 · รอบต่อ · บั๊ก] หมุด/โซนเก็บ "ทางเต็มของเครื่อง" ของไฟล์เอนทิตี้ (รูปแบบเดิมตั้งแต่ alpha.37)
+ * → เปิดโปรเจกต์จากโฟลเดอร์/เครื่องอื่น (ซิงก์ Windows ↔ Mac) แล้วหมุดเปิดหน้า Wiki ไม่ได้ · แถบซ้ายไม่รู้ว่าปักแล้ว
+ *   (ลากใส่อีกรอบ = หมุดซ้ำ) · รูปประจำตัวหาย
+ * ตัวนี้เทียบกับรายชื่อเอนทิตี้ของโปรเจกต์ที่เปิดอยู่ แล้วเปลี่ยนทางที่ไม่ตรงเป็นไฟล์ชื่อเดียวกันในโปรเจกต์นี้
+ * (ชื่อไฟล์เอนทิตี้มี id ต่อท้าย ไม่ชนกัน) · แก้ในหน่วยความจำ — บันทึกครั้งถัดไปได้ทางที่ถูก
+ * @param entities [{ path }] · คืนจำนวนที่เปลี่ยน
+ */
+export function rebaseEntityFiles(data, entities) {
+  const known = new Map(), byBase = new Map();
+  for (const e of entities || []) {
+    if (!e || !e.path) continue;
+    known.set(normP(e.path), e.path);
+    const b = baseP(e.path);
+    byBase.set(b, byBase.has(b) ? null : e.path);          // ชื่อไฟล์ซ้ำสองที่ = ไม่เดา
+  }
+  let n = 0;
+  const fix = (o) => {
+    if (!o || !o.entityFile || known.has(normP(o.entityFile))) return;
+    const to = byBase.get(baseP(o.entityFile));
+    if (to) { o.entityFile = to; n++; }
+  };
+  for (const m of (data && data.maps) || []) {
+    for (const p of m.pins || []) if (p.kind === 'entity') fix(p);
+    for (const z of m.zones || []) fix(z);
+  }
+  return n;
+}
+/**
+ * ชื่อหนึ่งอยู่ตรงไหนบ้าง (หมุด/เอนทิตี้/โซน · ไม่สนตัวพิมพ์) + ที่ใกล้ที่สุด k ที่รอบตัว
+ * @returns [{ map, place|null, zone|null, around:[{name, meters, rel}] }]
+ *   zone = โซนที่ชื่อนี้เป็นเจ้าของ (ถ้ามี) · place.zone = โซนที่หมุดนี้ตกอยู่
+ */
+export function whereIs(maps, name, { nameOf = () => '', k = 5 } = {}) {
+  const q = String(name || '').trim().toLowerCase();
+  if (!q) return [];
+  const out = [];
+  for (const d of mapDigest(maps, { nameOf })) {
+    const m = findMap(maps, d.id);
+    const A = aspOf(m);
+    const rel = (a, b) => { const p = toUnits(a, A), r = toUnits(b, A); return Math.hypot(r.x - p.x, r.y - p.y); };
+    const own = d.zones.find((z) => z.name.toLowerCase() === q) || null;
+    const me = d.places.filter((p) => p.name.toLowerCase() === q);
+    for (const p of me) {
+      const around = d.places.filter((o) => o !== p)
+        .map((o) => ({ name: o.name, meters: distMeters(m, p.pt, o.pt), rel: +rel(p.pt, o.pt).toFixed(2) }))
+        .sort((x, y) => x.rel - y.rel).slice(0, k);
+      out.push({ map: d.name, place: p, zone: own, around });
+    }
+    if (!me.length && own) out.push({ map: d.name, place: null, zone: own, around: [] });
+  }
+  return out;
+}
+
 // ---------- เส้นทางของเรื่อง (ฉากเรียงตามเวลาในเรื่อง → ระยะที่ตัวละครต้องเดินทาง) ----------
 /** จุดของฉากบนแผนที่นี้ (หมุดที่ผูก หรือพิกัดลอย) · null = ไม่มีตำแหน่ง */
 export function scenePoint(map, s) {

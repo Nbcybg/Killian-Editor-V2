@@ -446,11 +446,14 @@ ui.aiActions.lockBook,ล็อกทั้งเล่ม
 ui.aiActions.lockChapter,ล็อกทั้งบท
 ui.aiActions.locked,"""{0}"" ถูกล็อกอยู่ ({1}) — AI แก้ เปลี่ยนชื่อ หรือลบไม่ได้ ต้องปลดล็อกก่อน"
 ui.aiActions.lockScene,ล็อกที่ฉาก
+ui.aiActions.mapDigestDone,อ่านตำแหน่งบนแผนที่ทั้งหมดแล้ว
+ui.aiActions.mapWhereDone,"อ่านตำแหน่งของ ""{0}"" แล้ว"
 ui.aiActions.moveBookTrashDone,"ย้ายเล่ม ""{0}"" ไปถังขยะแล้ว"
 ui.aiActions.moveTrashDone,"ย้าย ""{0}"" ไปถังขยะแล้ว"
 ui.aiActions.newBookReadyChapter,"สร้างเล่ม ""{0}"" พร้อมบทแรกแล้ว"
 ui.aiActions.newCatDone,"สร้าง ""{0}"" ในหมวด {1} แล้ว"
 ui.aiActions.newSceneDone,"สร้างฉาก ""{0}"" ใน ""{1} › {2}"" แล้ว"
+ui.aiActions.noMapPins,โปรเจกต์นี้ยังไม่มีหมุดหรือเขตบนแผนที่
 ui.aiActions.notFound,"ไม่พบเอนทิตี้ ""{0}"""
 ui.aiActions.notFoundBook,ไม่พบเล่ม
 ui.aiActions.notFoundBook2,"ไม่พบเล่ม ""{0}"""
@@ -1142,6 +1145,9 @@ ui.aiTools.delTrash,"ลบ ""{0}"" ไปถังขยะ"
 ui.aiTools.editData,"แก้ข้อมูล ""{0}"""
 ui.aiTools.editHasSendOnly,แก้ไขเอนทิตี้ที่มีอยู่ (ส่งเฉพาะฟิลด์ที่จะแก้)
 ui.aiTools.forbidPutCommentText,- ห้ามใส่คอมเมนต์หรือข้อความอื่นในบล็อก `k2` — ต้องเป็น JSON ล้วน
+ui.aiTools.mapWhere,ดูว่าตัวละคร/สถานที่อยู่ตรงไหนบนแผนที่ ใกล้ใคร ห่างกันเท่าไร และเดินทางนานแค่ไหน (ไม่ใส่ name = สรุปทุกแผนที่)
+ui.aiTools.mapWhereAll,สรุปตำแหน่งบนแผนที่ทั้งหมด
+ui.aiTools.mapWhereOne,"ดูตำแหน่งของ ""{0}"" บนแผนที่"
 ui.aiTools.missingArg,ขาดอาร์กิวเมนต์: 
 ui.aiTools.modeCurrentNotAllowF,"โหมดปัจจุบันไม่อนุญาตให้ใช้ ""{0}"" — สลับโหมดที่กล่องพิมพ์ก่อน"
 ui.aiTools.msg,ไอเทม
@@ -3148,6 +3154,7 @@ ui.drop.hintMap,วางลงแผนที่ = ปักหมุด
 ui.drop.hintOpen,วาง = เปิด
 ui.drop.hintText,วาง = ใส่ชื่อลงช่องนี้
 ui.drop.hintTimeline,วางบนการ์ด = อ้างอิง · ที่ว่าง = เหตุการณ์ใหม่
+ui.drop.netNotFound,"ไม่พบ ""{0}"" บนผัง (อาจถูกตัวกรองซ่อนอยู่)"
 ui.drop.opened,เปิด {0}
 ui.editor.ctrlClickOpenWiki,Ctrl+คลิก เปิดใน Wiki
 ui.editor.hasCommentBindText,มีคอมเมนต์ผูกกับข้อความนี้
@@ -3892,6 +3899,20 @@ ui.logline.saved,บันทึก Logline แล้ว
 ui.logline.stakes,เดิมพัน (Stakes)
 ui.logline.title,Logline
 ui.logline.why,AI ใช้เป็นเข็มทิศ ช่วยให้เนื้อเรื่องไม่หลุดแกน
+ui.mapAi.aroundHead,รอบตัว (ใกล้ไปไกล):
+ui.mapAi.cut,(ตัดส่วนที่เหลือเพราะยาวเกิน — ใช้คำสั่ง map.where ถามทีละชื่อได้)
+ui.mapAi.head,## ตำแหน่งบนแผนที่ (จากแผง แผนที่ ของผู้เขียน)
+ui.mapAi.inZone,ในเขต {0}
+ui.mapAi.isOn,"""{0}"" อยู่บนแผนที่ ""{1}"""
+ui.mapAi.map,"### แผนที่ ""{0}"""
+ui.mapAi.mapIn,"### แผนที่ ""{0}"" (อยู่ในแผนที่ ""{1}"")"
+ui.mapAi.nearHead,ที่ที่อยู่ใกล้กันที่สุด:
+ui.mapAi.noScale,(ยังไม่ได้ตั้งมาตราส่วน — ระยะเป็นค่าสัมพัทธ์ ใช้เทียบได้แค่ว่าใครใกล้หรือไกลกว่า)
+ui.mapAi.notOnMap,"""{0}"" ยังไม่ถูกปักหรือวาดเขตไว้บนแผนที่ใบไหนเลย"
+ui.mapAi.relDist,ระยะสัมพัทธ์ {0}
+ui.mapAi.zoneArea,พื้นที่ของเขต: {0}
+ui.mapAi.zoneOn,"""{0}"" เป็นเขตบนแผนที่ ""{1}"""
+ui.mapAi.zones,เขต: {0}
 ui.maps.addMap,+ เพิ่มแผนที่
 ui.maps.allMaps,แผนที่ทั้งหมด
 ui.maps.allMapsTip,กลับหน้ารวมแผนที่ (แกลเลอรี)
@@ -3930,7 +3951,7 @@ ui.maps.dotGap,{0} จุด · ระยะ ~{1}
 ui.maps.dotLatest,ถอยจุดล่าสุด
 ui.maps.dotLatestTip,ถอยจุดล่าสุดออก
 ui.maps.dragPinMoveMode,ลากหมุดเพื่อย้าย (โหมดอื่นลากไม่ได้ กันเลื่อนโดนโดยไม่ตั้งใจ)
-ui.maps.dropImageFromGallery,ลากรูปจากคลังรูปมาวางเพื่อสร้างแผนที่
+ui.maps.dropImageFromGallery,ใช้ได้เฉพาะรูปในคลังรูปของโปรเจกต์ (โฟลเดอร์ Images) — ลากจากคลังรูปหรือส่วนรูปใน Explorer
 ui.maps.dropPortalDone,"ใส่ประตูไป ""{0}"" แล้ว — Ctrl+คลิกประตูเพื่อเข้าไป"
 ui.maps.dropReplaceImage,แผนที่นี้มีรูปอยู่แล้ว — เปลี่ยนเป็นรูปที่วาง?
 ui.maps.dropSceneDone,"ผูกฉาก ""{0}"" กับแผนที่ ""{1}"" แล้ว"

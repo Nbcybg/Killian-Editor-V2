@@ -81,5 +81,14 @@ check('boardTicks: มีขีดอย่างน้อยสองขีด'
   check('normalizeRefs รับชนิด entity', TL.normalizeRefs([{ kind: 'entity', path: 'a.json' }])[0].kind === 'entity');
 }
 
+// [alpha.167 · รอบต่อ] สีจากไฟล์ผู้ใช้ห้ามฉีด CSS ลง style="…" ของไฟล์ส่งออก
+{
+  const evil = [{ id: 'x', kind: 'event', title: 'x', when: 'ปีที่ 1', color: 'red;background:url(https://evil.test/a.png)' }];
+  const h = TL.timelineHtml(evil, [], {});
+  check('HTML ส่งออก: สีที่ไม่ใช่รูปสีถูกแทนด้วยสีตั้งต้น', !h.includes('evil.test') && h.includes('#888888'));
+  const ok = TL.timelineHtml([{ ...evil[0], color: '#5f9fd9' }], [], {});
+  check('HTML ส่งออก: สีถูกต้องผ่าน', ok.includes('#5f9fd9'));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

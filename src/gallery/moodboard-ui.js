@@ -18,6 +18,7 @@ import { imageLightbox } from '../wiki.js';
 import { iconHtml } from '../icons.js';
 import { el, setStatus, setStatusError, log, state } from '../core.js';
 import { bindDropTarget } from '../drop-kit.js';
+import { escCancelDrag } from '../drag-cancel.js';   // [alpha.167 · รอบต่อ] Esc ยกเลิกการลาก
 import { failText } from '../err-text.js';
 import * as AC from './album-core.js';
 import * as MB from './moodboard.js';
@@ -137,6 +138,7 @@ export class MoodBoard {
 
     board.addEventListener('mousedown', (e) => {
       if (e.target !== board && e.target !== this._canvas) return;
+      if (e.button !== 0 && e.button !== 1) return;          // [alpha.167 · รอบต่อ] คลิกขวาไม่ใช่การเลื่อนผืน
       const s = { x: e.clientX, y: e.clientY, panX: this.view.panX, panY: this.view.panY };
       board.classList.add('panning');
       const mv = (ev) => {
@@ -144,7 +146,14 @@ export class MoodBoard {
         this.view.panY = s.panY + (ev.clientY - s.y);
         this.applyTransform();
       };
+      // Esc ระหว่างลาก = คืนที่เดิม (กฎถาวร alpha.164 รอบต่อ 6 · ทุกตัวลากในไฟล์นี้)
+      const offEsc = escCancelDrag(() => {
+        board.classList.remove('panning');
+        document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+        this.view.panX = s.panX; this.view.panY = s.panY; this.applyTransform();
+      });
       const up = () => {
+        offEsc();
         board.classList.remove('panning');
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
       };
@@ -330,7 +339,12 @@ export class MoodBoard {
         it.y = MB.snap(s0.oy + (ev.clientY - s0.y) / z);
         node.style.left = it.x + 'px'; node.style.top = it.y + 'px';
       };
+      const offEsc = escCancelDrag(() => {
+        document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+        it.x = s0.ox; it.y = s0.oy; node.style.left = it.x + 'px'; node.style.top = it.y + 'px';
+      });
       const up = async () => {
+        offEsc();
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
         if (moved) await commit({ x: it.x, y: it.y });
       };
@@ -341,15 +355,22 @@ export class MoodBoard {
       e.stopPropagation(); e.preventDefault();
       const z = this.view.zoom;
       const s0 = { x: e.clientX, y: e.clientY, w: it.w, h: it.h };
+      let moved = false;
       const mv = (ev) => {
+        moved = true;
         const keep = keepRatioDefault ? !ev.altKey : ev.altKey;
         const r = MB.resizeItem(it, s0.w + (ev.clientX - s0.x) / z, s0.h + (ev.clientY - s0.y) / z, { keepRatio: keep });
         it.w = r.w; it.h = r.h;
         node.style.width = it.w + 'px'; node.style.height = it.h + 'px';
       };
-      const up = async () => {
+      const offEsc = escCancelDrag(() => {
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-        await commit({ w: it.w, h: it.h });
+        it.w = s0.w; it.h = s0.h; node.style.width = it.w + 'px'; node.style.height = it.h + 'px';
+      });
+      const up = async () => {
+        offEsc();
+        document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+        if (moved) await commit({ w: it.w, h: it.h });        // คลิกที่จับเฉย ๆ ไม่ต้องเขียนไฟล์
       };
       document.addEventListener('mousemove', mv);
       document.addEventListener('mouseup', up);
@@ -397,7 +418,8 @@ export class MoodBoard {
     for (const it of payload.items) {
       const kind = payload.kind === 'url' ? 'ref' : payload.kind === 'book' ? 'ref' : payload.kind;
       const opts = { x: base.x + n * 24, y: base.y + n * 24, title: it.title || '' };
-      if (kind === 'ref') { if (it.url) opts.url = it.url; else opts.text = it.path || ''; }
+      // [alpha.167 · รอบต่อ · บั๊ก] เล่ม = การ์ดชื่อเล่ม · เดิมใส่ทางเต็มของโฟลเดอร์ลงข้อความการ์ด (โชว์บนกระดาน + ผิดที่ทันทีที่ย้ายเครื่อง)
+      if (kind === 'ref') { if (it.url) opts.url = it.url; else if (payload.kind !== 'book') opts.text = it.path || ''; }
       else if (kind === 'chapter') { opts.draftDir = it.draftDir; opts.guid = it.guid; }
       else {
         opts.path = (await kapi.relative(this.root, it.path)).replace(/\\/g, '/');
