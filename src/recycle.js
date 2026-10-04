@@ -23,6 +23,16 @@ export async function restoreFromTrash(p, fname) {
       setStatus(info.kind === 'album' ? t('ui.trash.recoverRestoreAlbumDone') : t('ui.trash.recoverRestoreImageDone'));
       return;
     }
+    // [alpha.168] ผังพื้นที่ — กลับเข้า FloorPlans/ (ไม่งั้นตกทาง .json ข้างล่างแล้วกลายเป็นหน้า Wiki)
+    if (info.kind === 'floorplan') {
+      const { restorePlanFile } = await import('./floorplan/fp-store.js');
+      const name = await restorePlanFile(p, info);
+      await kapi.remove(sidecar);
+      logAction('recycle', t('ui.trash.recoverRestoreDone'), { from: p, name });
+      try { (await import('./floorplan-ui.js')).refreshOpenFloorPlan(); } catch {}
+      setStatus(t('ui.fp.restored'));
+      return;
+    }
     if (info.kind === 'section') {
       const folder = await freeName(info.root, info.folderName, { dir: true });
       await kapi.move(p, await kapi.join(info.root, folder));

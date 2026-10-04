@@ -8,6 +8,7 @@ import { CommentStore, countComments, openComments, reanchorAll, writeMdKeepingC
 import { setCommentAnchors, refreshCommentAnchors } from '../editor.js';
 import { TextSelection } from 'prosemirror-state';
 import { gi } from '../icons.js';
+import { panelEmpty } from '../panels/panel-chrome.js';
 import { fmtDateTime } from '../locale.js';
 
 // ───────── store (ตัวเดียวทั้งแอป — io = kapi) ─────────
@@ -115,7 +116,7 @@ export async function renderCommentPanel(host) {
   const stale = () => gen !== _cmGen || activeFile() !== file;
   host.innerHTML = '';
   if (!file) {
-    host.append(el('div', 'dim', tr('cmt.needScene')));
+    host.append(panelEmpty(tr('cmt.needScene'), { icon: 'chat' }));
     lastList = [];
     clearCommentAnchors();
     return null;
@@ -126,7 +127,7 @@ export async function renderCommentPanel(host) {
   try { all = await store.list(file); }
   catch (e) {
     if (stale()) return null;
-    log('error', tr('cmt.readFailLog'), e); host.append(el('div', 'dim', tr('cmt.readFail'))); return null;
+    log('error', tr('cmt.readFailLog'), e); host.append(panelEmpty(tr('cmt.readFail'), { icon: 'warning' })); return null;
   }
   if (stale()) return null;              // สลับฉากไปแล้วระหว่างอ่านไฟล์ — รอบใหม่กำลังวาดของจริงอยู่
   host.innerHTML = '';                   // ล้างซ้ำ: รอบก่อนหน้าอาจเพิ่งใส่ของค้างไว้
@@ -145,7 +146,7 @@ export async function renderCommentPanel(host) {
 
   const list = el('div', 'k-cm-list');
   const shown = filterOpen ? all.filter((c) => !c.resolved) : all;
-  if (!shown.length) list.append(el('div', 'dim', filterOpen ? tr('cmt.emptyOpen') : tr('cmt.emptyAll')));
+  if (!shown.length) list.append(panelEmpty(filterOpen ? tr('cmt.emptyOpen') : tr('cmt.emptyAll'), { icon: 'chat' }));
   for (const c of shown) list.append(commentCard(c, file, host, 0));
   host.append(list);
 

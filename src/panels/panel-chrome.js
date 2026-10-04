@@ -65,7 +65,8 @@ export function panelEmpty(text, o = {}) {
     ic.append(iconNode(o.icon, 22));
     box.append(ic);
   }
-  box.append(el('div', 'k-pan-empty-text', String(text ?? '')));
+  // [alpha.168] ข้อความสถานะว่างหลายตัวในไฟล์ภาษาครอบวงเล็บไว้ (ใช้ในบรรทัดได้) — กลางแผงไม่ต้องมีวงเล็บ
+  box.append(el('div', 'k-pan-empty-text', String(text ?? '').trim().replace(/^\(([\s\S]*)\)$/, '$1')));
   if (o.hint) box.append(el('div', 'k-pan-empty-hint', o.hint));
   if (o.action && typeof o.onAction === 'function') {
     const b = el('button', 'k-ok k-pan-empty-btn', o.action);

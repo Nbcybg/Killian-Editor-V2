@@ -64,7 +64,7 @@ function loadLangTable(code) {
 }
 /** พาร์ส CSV (สเปกเดียวกับ src/i18n-csv.js — รับ quoted field ที่มี , " และขึ้นบรรทัดข้างใน) */
 function parseCsvRows(text) {
-  const s = String(text || '').replace(/^﻿/g, '').replace(/﻿/g, '');
+  const s = String(text || '').replace(/^\uFEFF/g, '').replace(/﻿/g, '');
   const rows = []; let row = [], cell = '', inQ = false, i = 0;
   const endCell = () => { row.push(cell); cell = ''; };
   const endRow = () => { endCell(); rows.push(row); row = []; };
@@ -599,6 +599,8 @@ function buildMenu() {
       // ══ [alpha.162 · W4] เมนูช่วยเหลือเคยไม่มี "ของพื้นฐาน" เลย ══
       // คู่มือปุ่มลัดมีคำสั่ง (`cheatsheet` + Ctrl+Alt+/) มาตั้งแต่ .124 แต่ไม่เคยอยู่ในเมนูไหน
       // — ผู้ใช้ที่ไม่รู้คีย์ลัดจึงไม่มีทางรู้ว่ามีหน้านี้อยู่ · และไม่มีทางเปิดหน้ารีโป/รุ่นที่เผยแพร่เลย
+      // [alpha.168 · bug hunt] ภาพรวมการใช้งานหน้าเดียว — ผู้ใช้ใหม่ไม่มีอะไรบอกเลยว่าโปรแกรมทำงานยังไง
+      { label: tt('ui.menu.quickStart'), click: cmd('quick-start') },
       { label: tt('ui.menu.cheatsheet'), click: cmd('cheatsheet') },
       { label: tt('ui.menu.saveChangeChangelog'), click: cmd('changelog') },
       { type: 'separator' },
@@ -696,6 +698,34 @@ function finishSplash() {
   return true;
 }
 
+/**
+ * [alpha.168 · bug hunt] หน้าต่างของแอปห้ามถูกพาออกจากหน้าโปรแกรม — ลิงก์ในเนื้อหา (Wiki · แชท AI · ปลั๊กอิน · changelog)
+ * ที่ถูกคลิกตรง ๆ เดิมพาทั้งหน้าต่างไปเว็บนั้นได้ (งานที่ยังไม่บันทึกหาย · หน้าเว็บได้ `kapi` ทั้งชุด)
+ * · นำทางออกนอกไฟล์ของแอป = ยกเลิก · ลิงก์ http(s) = เปิดในเบราว์เซอร์ของเครื่อง · window.open = ไม่อนุญาต
+ */
+function isAppUrl(url) {
+  try {
+    const u = new URL(String(url));
+    if (u.protocol !== 'file:') return false;
+    // [alpha.168 · bug hunt 2] เทียบจาก "ทางไฟล์จริง" (fileURLToPath) — เดิมเทียบ pathname ซึ่งไม่มีชื่อเครื่องของทางแบบ UNC
+    // (ไดรฟ์เครือข่าย) → โปรแกรมที่รันจากไดรฟ์เครือข่ายถูกกันการโหลดหน้าตัวเองใหม่ (เริ่มใหม่หลังเปลี่ยนภาษา/อัปเดต)
+    const norm = (s) => path.resolve(String(s)).split('\\').join('/').toLowerCase();
+    return norm(require('url').fileURLToPath(u)).startsWith(norm(path.join(__dirname, 'renderer')) + '/');
+  } catch { return false; }
+}
+function guardNavigation(wc) {
+  wc.on('will-navigate', (e, url) => {
+    if (isAppUrl(url)) return;
+    e.preventDefault();
+    logMain('warn', 'navigation blocked', String(url).split('?')[0]);
+    try { if (/^https?:\/\//i.test(String(url))) shell.openExternal(String(url)); } catch {}
+  });
+  wc.setWindowOpenHandler(({ url }) => {
+    try { if (/^https?:\/\//i.test(String(url))) shell.openExternal(String(url)); } catch {}
+    return { action: 'deny' };
+  });
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1000, minHeight: 640,
@@ -718,9 +748,11 @@ function createWindow() {
   win.webContents.on('did-fail-load', (e, code, desc, url) => logMain('error', 'load failed [' + code + ' ' + desc + ']', url));
   win.webContents.on('preload-error', (e, p, err) => logMain('error', 'preload error', err));
   win.loadFile('renderer/index.html', TEST ? { search: 'k2test=1' } : {});
-  if (TEST) win.webContents.on('console-message', (e, lv, msg, line, src) => {
-    try { fs.appendFileSync('/tmp/k2console.txt', `${lv} ${src}:${line} ${msg}\n`); } catch {}
+  // [alpha.168] ลายเซ็นแบบวัตถุเดียว (แบบหลายอาร์กิวเมนต์ถูก Electron ประกาศเลิกใช้)
+  if (TEST) win.webContents.on('console-message', (e) => {
+    try { fs.appendFileSync('/tmp/k2console.txt', `${e.level} ${e.sourceId}:${e.lineNumber} ${e.message}\n`); } catch {}
   });
+  guardNavigation(win.webContents);
   // คลิกขวา = เมนูมาตรฐาน word processor (role = ใช้ได้ทุกภาษาแป้นพิมพ์)
   win.webContents.on('context-menu', (e, params) => {
     const ef = params.editFlags || {};
@@ -905,51 +937,51 @@ ipcMain.handle('history:revert', (e, seq) => {
 const MENU_PANELS = [
   { head: 'ui.menu.panelGroupWrite' },
   // id แผงเป็นชื่อสั้นของ Panel System (tree/outline/props) — ฝั่ง renderer มี alias ให้ชื่อเดิมด้วย
-  { id: 'tree', label: tt('ui.menu.projectExplorer') },
-  { id: 'outline', label: tt('ui.panel.navigation') },   // [alpha.159 · M24] เดิมฝังอังกฤษ
-  { id: 'props', label: tt('ui.common.props') },
+  { id: 'tree', label: () => tt('ui.menu.projectExplorer') },
+  { id: 'outline', label: () => tt('ui.panel.navigation') },   // [alpha.159 · M24] เดิมฝังอังกฤษ
+  { id: 'props', label: () => tt('ui.common.props') },
   { id: 'search', label: (C, S) => tt('ui.menu.searchProjectF') },
-  { id: 'notes', label: tt('ui.common.notebookNoteQuick') },
+  { id: 'notes', label: () => tt('ui.common.notebookNoteQuick') },
   // [alpha.94] Story Starter
-  { id: 'starter', label: tt('ui.menu.panelStoryStarter') },
+  { id: 'starter', label: () => tt('ui.menu.panelStoryStarter') },
   // [alpha.79] บทพูดทั้งผลงาน · [alpha.82] ห้องซ้อมบท
-  { id: 'dialogue', label: tt('ui.menu.dialoguePanel') },
-  { id: 'dlgb', label: tt('ui.menu.dlgbPanel') },
+  { id: 'dialogue', label: () => tt('ui.menu.dialoguePanel') },
+  { id: 'dlgb', label: () => tt('ui.menu.dlgbPanel') },
   { sep: true },
   { head: 'ui.menu.panelGroupPlan' },
   // บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ
-  { id: 'dashboard', label: tt('ui.common.dashboard') },
-  { id: 'kanban', label: tt('ui.treeMenu.kanban') },   // [alpha.159 · M24]
-  { id: 'books', label: tt('ui.common.manageBook') },
-  { id: 'chapters', label: tt('ui.chapters.title') },
-  { id: 'timeline', label: tt('ui.common.lineTime') },
-  { id: 'maps', label: tt('ui.common.map') },
+  { id: 'dashboard', label: () => tt('ui.common.dashboard') },
+  { id: 'kanban', label: () => tt('ui.treeMenu.kanban') },   // [alpha.159 · M24]
+  { id: 'books', label: () => tt('ui.common.manageBook') },
+  { id: 'chapters', label: () => tt('ui.chapters.title') },
+  { id: 'timeline', label: () => tt('ui.common.lineTime') },
+  { id: 'maps', label: () => tt('ui.common.map') },
   { id: 'gallery', label: (C, S) => tt('ui.menu.libraryImageG') },
-  { id: 'gallery-board', label: tt('ui.common.boardMood') },
+  { id: 'gallery-board', label: () => tt('ui.common.boardMood') },
   // [alpha.62 บั๊ก 16 · alpha.66 ข้อ 1+9] สามตัวนี้เป็นแผงมานานแล้ว แต่เพิ่งได้เข้าเมนูรอบ .69
-  { id: 'network', label: tt('ui.menu.storyNetworkGraphRelation') },   // [alpha.159 · M24] เดิมอีโมจิ+อังกฤษฝัง
-  { id: 'planner', label: tt('ui.menu.plannerBoardPlanner') },   // [alpha.159 · M24]
-  { id: 'floorplan', label: tt('ui.common.graphArea') },
-  { id: 'branch', label: tt('ui.common.graphBreakBranch2') },
+  { id: 'network', label: () => tt('ui.menu.storyNetworkGraphRelation') },   // [alpha.159 · M24] เดิมอีโมจิ+อังกฤษฝัง
+  { id: 'planner', label: () => tt('ui.menu.plannerBoardPlanner') },   // [alpha.159 · M24]
+  { id: 'floorplan', label: () => tt('ui.common.graphArea') },
+  { id: 'branch', label: () => tt('ui.common.graphBreakBranch2') },
   // [alpha.69] สารานุกรม
-  { id: 'codex', label: tt('ui.menu.codexCodex') },
+  { id: 'codex', label: () => tt('ui.menu.codexCodex') },
   { sep: true },
   { head: 'ui.menu.panelGroupReview' },
-  { id: 'comments', label: tt('ui.common.comment') },
+  { id: 'comments', label: () => tt('ui.common.comment') },
   // [alpha.125 ข้อ G] ฉากที่กล่าวถึงเอนทิตี้ — ทั้งโปรเจกต์ (เดิมมีแต่แท็บในหน้า Wiki)
   { id: 'backlinks', label: (C, S, A) => tt('ui.menu.backlinksPanelB') },
-  { id: 'player', label: tt('ui.common.trialPlay') },
-  { id: 'log', label: tt('ui.menu.saveLog') },
+  { id: 'player', label: () => tt('ui.common.trialPlay') },
+  { id: 'log', label: () => tt('ui.menu.saveLog') },
   // [alpha.69] ประวัติการทำงาน · บันทึกประจำวัน
-  { id: 'history', label: tt('ui.common.historyRun') },
-  { id: 'record', label: tt('ui.common.journal') },
+  { id: 'history', label: () => tt('ui.common.historyRun') },
+  { id: 'record', label: () => tt('ui.common.journal') },
   // [alpha.79] จัดการปลั๊กอิน
-  { id: 'plugins', label: tt('ui.menu.pluginsPanel') },
+  { id: 'plugins', label: () => tt('ui.menu.pluginsPanel') },
   { sep: true },
   { head: 'ui.menu.panelGroupAI' },
-  { id: 'ai-hub', label: tt('ui.menu.aiHubPanel') },
-  { id: 'ai-analyzer', label: tt('ui.common.aIAnalyze') },
-  { id: 'ai-chat', label: tt('ui.common.aIAssistantWrite') },
+  { id: 'ai-hub', label: () => tt('ui.menu.aiHubPanel') },
+  { id: 'ai-analyzer', label: () => tt('ui.common.aIAnalyze') },
+  { id: 'ai-chat', label: () => tt('ui.common.aIAssistantWrite') },
 ];
 /**
  * [alpha.167] เมนู "ส่งออก" ของแผง — คู่แฝดของ `PANEL_EXPORTS` ใน src/panel-exports.js
@@ -965,6 +997,7 @@ const PANEL_EXPORTS_MENU = [
   { panel: 'kanban',        fmts: ['csv'] },
   { panel: 'gallery',       fmts: ['zip'] },
   { panel: 'ai-analyzer',   fmts: ['csv'] },
+  { panel: 'floorplan',     fmts: ['png', 'csv', 'md'] },
 ];
 const EXPORT_FMT_KEYS = {
   png: 'ui.menu.fmtPng', html: 'ui.menu.fmtHtml', md: 'ui.menu.fmtMd', csv: 'ui.menu.fmtCsv', geojson: 'ui.menu.fmtGeojson',
@@ -977,7 +1010,7 @@ function panelMenuLabel(id) {
 }
 /** แผงที่จงใจไม่ใส่ในเมนูนี้ — ต้องมีเหตุผลกำกับเสมอ */
 const MENU_PANELS_SKIP = {
-  'planner-props': tt('ui.menu.panelPairPlannerPlanner'),
+  'planner-props': 'ui.menu.panelPairPlannerPlanner',
   // [alpha.162 · W2] `home` ถูกถอดออก — ไม่เคยมีในทะเบียนแผง (`PANEL_DEFS`) เลย
   // หน้าแรกเป็น "กล่อง" (showHomeDialog) ไม่ใช่แผง · ข้อยกเว้นที่ชี้ของที่ไม่มีอยู่จริงคือขยะที่หลอกคนอ่าน
 };
@@ -1002,6 +1035,24 @@ ipcMain.handle('menu:itemState', (e, ids) => {
                   accelerator: it.accelerator || '' }   // [alpha.147]
               : { id, exists: false, enabled: false, visible: false, label: '', accelerator: '' };
   });
+});
+
+/**
+ * [alpha.168 · bug hunt 2] ป้ายของทุกรายการในเมนูตัวจริง (พร้อมทางเดิน) — e2e ใช้จับ "คีย์ภาษาดิบบนเมนู"
+ * ที่มา: ป้ายใน MENU_PANELS ถูกแปลตอนโหลดไฟล์นี้ (ก่อน loadLangTable) → เมนู มุมมอง → แผง และเมนู ส่งออก
+ * โชว์ `ui.menu.projectExplorer` ฯลฯ มาตั้งแต่ alpha.77 โดยไม่มีเทสไหนเห็น (เมนู native เป็นจุดบอดของ e2e)
+ */
+ipcMain.handle('menu:labels', () => {
+  const out = [];
+  const walk = (items, path) => { for (const it of items || []) {
+    if (it.type === 'separator') continue;
+    const p = path ? path + ' > ' + it.label : it.label;
+    out.push(p);
+    if (it.submenu) walk(it.submenu.items, p);
+  } };
+  const menu = Menu.getApplicationMenu();
+  walk(menu ? menu.items : [], '');
+  return out;
 });
 
 /**
@@ -1070,7 +1121,9 @@ app.on('will-quit', () => logMain('info', 'quit'));
 const { isJunkName, writeFileAtomic } = require('./fs-safe.cjs');
 H('fs:readFile', (p) => fs.readFileSync(p, 'utf-8'));
 H('fs:writeFile', (p, data) => withHistory('write', [p], () => writeFileAtomic(p, data, 'utf-8')));
-H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8')));
+// [alpha.168 · bug hunt] ตัด BOM ก่อน parse — ไฟล์ที่ผู้ใช้แก้นอกโปรแกรมแล้วบันทึกเป็น "UTF-8 with BOM" (Notepad)
+// เดิม JSON.parse โยน error → ผู้เรียกบางตัวถือว่า "ไฟล์ว่าง" แล้วเขียนทับของเดิมทั้งไฟล์ (maps.json · timeline.json)
+H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8').replace(/^\uFEFF/, '')));
 H('fs:exists', (p) => fs.existsSync(p));
 // [alpha.148] `._ชื่อ.json` ของ macOS (ก๊อปผ่านไดรฟ์นอก/ซิป) เคยโผล่เป็นแถวผีทุกหมวด — กรองที่ด่านเดียวนี้
 // แทนการไล่แปะ 31 จุดเรียก (จุดใหม่ที่เพิ่มทีหลังได้ไปด้วยฟรี)
@@ -1425,41 +1478,47 @@ H('dialog:openImage', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 // ฟิลเตอร์ตามนามสกุลของชื่อไฟล์ที่เสนอ — เดิมบังคับ Markdown ทุกกรณี (ส่งออก HTML/JSON แล้วได้ .md)
+// [alpha.168 · bug hunt 2] ชื่อชนิดไฟล์ที่ต้องแปลเป็น getter — ตารางนี้ถูกสร้างตอนโหลดไฟล์ (ก่อน loadLangTable)
+// เดิม `name: tt(…)` ตรง ๆ = กล่องบันทึก/เปิดไฟล์ของระบบโชว์คีย์ดิบ ("ui.menu.imagePNG (*.png)") · ใช้ผ่าน saveFilter() เสมอ
 const SAVE_FILTERS = {
   md: { name: 'Markdown', extensions: ['md'] },
   html: { name: 'HTML', extensions: ['html', 'htm'] },
   json: { name: 'JSON', extensions: ['json'] },
-  txt: { name: tt('ui.common.text'), extensions: ['txt'] },
+  txt: { get name() { return tt('ui.common.text'); }, extensions: ['txt'] },
   zip: { name: 'ZIP', extensions: ['zip'] },
   // [alpha.166] โมเดล 3 มิติแทนโหนดใน Story Network
-  model3d: { name: tt('ui.netScene.modelFiles'), extensions: ['glb', 'gltf', 'obj', 'stl'] },
+  model3d: { get name() { return tt('ui.netScene.modelFiles'); }, extensions: ['glb', 'gltf', 'obj', 'stl'] },
+  // [alpha.168] ฉากหลัง 3D ของ Story Network — HDRI (.hdr) หรือรูปพาโนรามา 2:1
+  hdri: { get name() { return tt('ui.netScene.hdriFiles'); }, extensions: ['hdr', 'jpg', 'jpeg', 'png', 'webp'] },
   // [alpha.66 ข้อ 10] ส่งออกผังแตกสายเป็นรูป
-  svg: { name: tt('ui.menu.imageSVG'), extensions: ['svg'] },
-  png: { name: tt('ui.menu.imagePNG'), extensions: ['png'] },
+  svg: { get name() { return tt('ui.menu.imageSVG'); }, extensions: ['svg'] },
+  png: { get name() { return tt('ui.menu.imagePNG'); }, extensions: ['png'] },
   // [alpha.60r3 ข้อ 4] ตารางคำแปลสำหรับผู้แปล (Excel / Google Sheets)
-  csv: { name: tt('ui.menu.tableCSV'), extensions: ['csv'] },
+  csv: { get name() { return tt('ui.menu.tableCSV'); }, extensions: ['csv'] },
   fdx: { name: 'Final Draft', extensions: ['fdx'] },
   rtf: { name: 'Rich Text', extensions: ['rtf'] },
   // [alpha.156] อีบุ๊ก + Word (ไม่มีสองแถวนี้ = กล่องบันทึกตกไปใช้ตัวกรอง .md)
   epub: { name: 'EPUB', extensions: ['epub'] },
   docx: { name: 'Microsoft Word', extensions: ['docx'] },
   // alpha.57a — นำเข้าไฟล์ฟอนต์เข้าโปรเจกต์ (ฟอนต์ตามภาษา)
-  font: { name: tt('ui.common.font'), extensions: ['ttf', 'otf', 'woff', 'woff2', 'ttc'] },
+  font: { get name() { return tt('ui.common.font'); }, extensions: ['ttf', 'otf', 'woff', 'woff2', 'ttc'] },
   // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ
   fountain: { name: 'Fountain', extensions: ['fountain', 'txt'] },
   celtx: { name: 'Celtx', extensions: ['celtx'] },
   astx: { name: 'Adobe Story', extensions: ['astx'] },
   fadein: { name: 'Fade In Pro', extensions: ['fadein'] },
 };
+/** ตัวกรองของกล่องไฟล์ (วัตถุธรรมดา · ชื่อแปล ณ ตอนเปิดกล่อง) */
+function saveFilter(f) { return { name: f.name, extensions: f.extensions.slice() }; }
 H('dialog:saveAs', async (defName, kind) => {
   const ext = String(defName || '').split('.').pop().toLowerCase();
-  const f = SAVE_FILTERS[kind] || SAVE_FILTERS[ext] || SAVE_FILTERS.md;
+  const f = saveFilter(SAVE_FILTERS[kind] || SAVE_FILTERS[ext] || SAVE_FILTERS.md);
   const r = await dialog.showSaveDialog(win, { defaultPath: defName,
     filters: [f, { name: tt('ui.menu.allFile'), extensions: ['*'] }] });
   return r.canceled ? null : r.filePath;
 });
 H('dialog:openFile', async (kind) => {
-  const f = SAVE_FILTERS[kind] || SAVE_FILTERS.json;
+  const f = saveFilter(SAVE_FILTERS[kind] || SAVE_FILTERS.json);
   const r = await dialog.showOpenDialog(win, { properties: ['openFile'],
     filters: [f, { name: tt('ui.menu.allFile'), extensions: ['*'] }] });
   return r.canceled ? null : r.filePaths[0];
@@ -1479,11 +1538,57 @@ function globalSettingsPath() {
   return path.join(app.getPath('userData'), 'settings.json');
 }
 H('settings:readGlobal', () => {
+  const p = globalSettingsPath();
   try {
-    const p = globalSettingsPath();
-    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8'));
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8').replace(/^\uFEFF/, ''));
     return {};
-  } catch { return {}; }
+  } catch (e) {
+    // [alpha.168 · bug hunt] ไฟล์ตั้งค่าอ่านไม่ออก = เก็บสำเนาไว้ก่อน (การบันทึกตั้งค่าครั้งถัดไปจะเขียนทับด้วยค่าตั้งต้น)
+    try {
+      const bad = p.replace(/\.json$/, '') + '.unreadable.json';
+      if (!fs.existsSync(bad)) fs.copyFileSync(p, bad);
+      logMain('error', 'global settings unreadable — copy kept', bad);
+    } catch {}
+    return {};
+  }
+});
+
+// ══ [alpha.168 · bug hunt] ผู้ให้บริการ AI "ของฉัน" — เก็บในโฟลเดอร์ข้อมูลผู้ใช้ ใช้ได้ทุกโปรเจกต์ ══
+// เดิมผู้ให้บริการ + คีย์ผูกกับโปรเจกต์ล้วน ๆ (project.khn.json + ai-key.json) → โปรเจกต์ใหม่ทุกใบต้องกรอกใหม่หมด
+// ที่นี่เก็บสำเนาที่ผู้ใช้สั่งบันทึกเอง: รายชื่อผู้ให้บริการ (ไม่มีคีย์) + คีย์ที่เข้ารหัสด้วยที่เก็บความลับของ OS
+// (DPAPI / Keychain / libsecret ผ่าน safeStorage) · เครื่องที่เข้ารหัสไม่ได้ = ไม่เก็บคีย์ (ผู้ใช้กรอกคีย์เองตอนนำเข้า)
+function aiDefaultsPath() { return path.join(app.getPath('userData'), 'ai-defaults.json'); }
+H('aiDefaults:load', () => {
+  try {
+    const p = aiDefaultsPath();
+    if (!fs.existsSync(p)) return null;
+    const j = JSON.parse(fs.readFileSync(p, 'utf-8').replace(/^\uFEFF/, ''));
+    let keys = {};
+    if (j && j.keysEnc) {
+      try {
+        const { safeStorage } = require('electron');
+        if (safeStorage.isEncryptionAvailable()) keys = JSON.parse(safeStorage.decryptString(Buffer.from(String(j.keysEnc), 'base64'))) || {};
+      } catch (e) { logMain('warn', 'ai defaults: cannot decrypt keys', e); keys = {}; }
+    }
+    return { providers: Array.isArray(j && j.providers) ? j.providers : [], activeProviderId: String((j && j.activeProviderId) || ''),
+             keys, savedAt: String((j && j.savedAt) || ''), hasKeys: !!(j && j.keysEnc) };
+  } catch (e) { logMain('warn', 'ai defaults: read failed', e); return null; }
+});
+H('aiDefaults:save', (data) => {
+  const d = data && typeof data === 'object' ? data : {};
+  const out = { version: 1, savedAt: new Date().toISOString(),
+                providers: Array.isArray(d.providers) ? d.providers : [], activeProviderId: String(d.activeProviderId || '') };
+  let keysSaved = false;
+  try {
+    const { safeStorage } = require('electron');
+    const keys = d.keys && typeof d.keys === 'object' ? d.keys : {};
+    if (Object.keys(keys).length && safeStorage.isEncryptionAvailable()) {
+      out.keysEnc = safeStorage.encryptString(JSON.stringify(keys)).toString('base64');
+      keysSaved = true;
+    }
+  } catch (e) { logMain('warn', 'ai defaults: cannot encrypt keys', e); }
+  writeFileAtomic(aiDefaultsPath(), JSON.stringify(out, null, 2));
+  return { ok: true, providers: out.providers.length, keysSaved };
 });
 // [alpha.60r3 ข้อ 7] ปลั๊กอินระดับผู้ใช้ — %APPDATA%/Killian2/Plugins/ (ใช้ได้ทุกโปรเจกต์)
 // คืน "path" ให้ renderer เดินต่อด้วย fs:* ที่มีอยู่แล้ว — ไม่ต้องเพิ่ม API อ่านไฟล์ชุดที่สอง
@@ -2052,6 +2157,13 @@ function startMockSse() {
             })();
           };
           const mode = (s) => last.includes(s);
+          // [alpha.168] prompt ของผังพื้นที่: ตอบ JSON {image, video} ทีละก้อน (เครื่องหมายอยู่ในโน้ตของจังหวะ)
+          if (mode('MOCK-FPPROMPT')) {
+            res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+            const body = '```json\n' + JSON.stringify({ image: 'MOCK still: medium shot, warm key light from frame right',
+                                                         video: 'MOCK video: slow dolly in as the subject turns' }) + '\n```';
+            return drip([body.slice(0, 30), body.slice(30, 90), body.slice(90)], 40, 'stop');
+          }
           if (mode('MOCK-IDLE') || mode('MOCK-SLOW') || mode('MOCK-ERR') || mode('MOCK-TRUNC') || mode('MOCK-TOOL')
               || (users.some((u) => u.includes('MOCK-TRUNC')) && !mode('MOCK-TRUNC'))) {
             res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -2352,6 +2464,7 @@ ipcMain.handle('panel:tearOff', (e, opts = {}) => {
                       backgroundThrottling: false },
   });
   tearOffs.set(id, w);
+  guardNavigation(w.webContents);
   const q = new URLSearchParams({ panelwin: id, root: String(opts.root || '') });
   if (/^[a-z0-9-]+$/.test(String(opts.theme || ''))) q.set('theme', String(opts.theme));   // theme-boot.js ทาก่อนเฟรมแรก
   if (TEST) q.set('k2test', '1');
@@ -2398,7 +2511,18 @@ ipcMain.handle('panel:fileChanged', (e, p) => {
   return true;
 });
 
-app.whenReady().then(() => {
+/**
+ * [alpha.168 · bug hunt] เปิดได้ทีละตัวต่อโฟลเดอร์ข้อมูลผู้ใช้ — สองตัวบน userData เดียวกันเขียน settings.json ·
+ * เซสชัน · เลย์เอาต์ทับกัน และเปิดโปรเจกต์เดียวกันสองหน้าต่าง = บันทึกทับงานของอีกหน้าต่าง
+ * เปิดซ้ำ = ยกหน้าต่างเดิมขึ้นมา · โหมดเทสไม่ล็อก (รอบเทสซ้อนกันได้) · `KILLIAN_MULTI=1` = ปิดการล็อก (นักพัฒนา)
+ */
+const SINGLE = TEST || process.env.KILLIAN_MULTI === '1' ? true : app.requestSingleInstanceLock();
+if (!SINGLE) app.quit();
+else app.on('second-instance', () => {
+  try { if (win && !win.isDestroyed()) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } } catch {}
+});
+
+if (SINGLE) app.whenReady().then(() => {
   // [alpha.165] หัวของแต่ละรอบการเปิดโปรแกรม — รุ่น/แพลตฟอร์ม ช่วยตอบว่า log ช่วงนี้มาจากตัวไหน
   logMain('info', 'start v' + app.getVersion() + ' · electron ' + process.versions.electron + ' · ' + process.platform + ' ' + process.arch
           + (app.isPackaged ? ' · packaged' : ' · dev') + (TEST ? ' · test' : ''));

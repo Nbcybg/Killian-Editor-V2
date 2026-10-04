@@ -32,6 +32,7 @@ import { runToolCall, touchesProject, refreshAfterActions } from './ai-actions.j
 import { invalidateRag } from './ai-bridge.js';
 import { createEpoch, runFresh } from '../epoch-guard.js';   // [alpha.161 · C2]
 import { icon, gi, gt } from '../icons.js';
+import { panelEmpty } from '../panels/panel-chrome.js';
 import { tabHandle } from '../tab-bridge.js';
 import { scopePrefix, underPrefix } from './ai-scope.js';   // [alpha.160 · P1-2]
 import { priceKeyOf } from './ai-providers.js';
@@ -425,14 +426,15 @@ function listView() {
   cb.type = 'checkbox';
   cb.checked = S.showArchived;
   arch.append(cb, document.createTextNode(tt('ui.aiChatPanel.showSessionArrangeKeep')));
+  arch.hidden = !S.sessions.some((s) => s && s.archived);   // [alpha.168] ไม่มีของที่จัดเก็บ = ไม่ต้องมีสวิตช์
   wrap.append(arch);
 
   function fill() {
     rows.innerHTML = '';
     const list = searchSessions(S.sessions, S.query, { includeArchived: S.showArchived });
     if (!list.length) {
-      rows.append(el('div', 'ai-chat-empty dim',
-        S.query ? tt('ui.aiChatPanel.notFoundSessionAt') : tt('ui.aiChatPanel.notHasSessionPress')));
+      rows.append(panelEmpty(S.query ? tt('ui.aiChatPanel.notFoundSessionAt') : tt('ui.aiChatPanel.notHasSessionPress'),
+        { icon: 'chat', cls: 'ai-chat-empty' }));
       return;
     }
     for (const s of list) rows.append(sessionRow(s));

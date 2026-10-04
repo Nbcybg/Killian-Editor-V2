@@ -21,7 +21,8 @@ export const SCENE_FREE_PANELS = new Set(['player', 'ai-analyzer']);
  * แผงที่ **เขียนไฟล์ของฉากที่หน้าต่างหลักเปิดค้างอยู่** — เฉพาะพวกนี้ที่ต้องล็อกอ่านอย่างเดียว
  * ตอนหน้าต่างหลักยังไม่บันทึก (Navigation อ่านอย่างเดียวอยู่แล้ว · AI ผู้ช่วยเขียนเขียนลง Sessions/)
  */
-export const SCENE_WRITE_PANELS = new Set(['props', 'comments', 'floorplan']);
+// [alpha.168] ผังพื้นที่แบบใหม่ไม่เขียนไฟล์ฉากแล้ว (เก็บใน FloorPlans/) — ไม่ต้องล็อกตามแท็บของหน้าต่างหลัก
+export const SCENE_WRITE_PANELS = new Set(['props', 'comments']);
 export function writesScene(id) { return SCENE_WRITE_PANELS.has(id); }
 
 /** แผงที่รอบ alpha.68 เปิดให้ฉีกออกเป็นหน้าต่างเพิ่มจาก .67 */

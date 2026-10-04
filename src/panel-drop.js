@@ -21,6 +21,10 @@ const OWN = {
   timeline:        { kinds: ['entity', 'scene', 'memo'], hint: 'ui.drop.hintTimeline' },
   planner:         { kinds: ['scene', 'entity', 'memo', 'chapter'], hint: 'ui.drop.hintCard' },
   network:         { kinds: ['entity'], hint: 'ui.drop.hintFocus' },
+  // [alpha.168] ผังแตกสาย: ฉาก = วางลงผัง / ปล่อยบนการ์ด = ทางเลือกใหม่
+  branch:          { kinds: ['scene'], hint: 'ui.drop.hintBranch' },
+  // [alpha.168] ผังพื้นที่: เอนทิตี้ = วางลงผังตรงจุดที่ปล่อย
+  floorplan:       { kinds: ['entity'], hint: 'ui.drop.hintFloorplan' },
 };
 /** แผงที่ "ไม่รับ" (มีการลากภายในของตัวเอง — ตัวกลางห้ามยุ่ง) */
 const SKIP = new Set(['tree', 'toolbar', 'statusbar', 'kanban', 'gallery', 'books', 'chapters']);

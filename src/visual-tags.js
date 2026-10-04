@@ -101,6 +101,10 @@ export function renderAllTagChips(tags, onClick) {
 }
 
 // Dialog จัดการ visual tags
+// [alpha.168 · bug hunt 2] ชื่อรูปทรงที่แสดง — ค่าในไฟล์ยังเป็น circle/square/tag (ข้อมูล ไม่แปล)
+const SHAPE_KEYS = { circle: 'ui.tags.shapeCircle', square: 'ui.tags.shapeSquare', tag: 'ui.tags.shapeTag' };
+const shapeLabel = (s) => (SHAPE_KEYS[s] ? tt(SHAPE_KEYS[s]) : String(s || ''));
+
 export async function manageVisualTags() {
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
@@ -116,7 +120,7 @@ export async function manageVisualTags() {
       card.style.cssText = `padding:10px;background:${t.color}18;border:1px solid ${t.color}40;border-radius:8px;font-size:13px;position:relative`;
       // ชื่อแท็กมาจากผู้ใช้ → textContent เท่านั้น
       card.append(el('div', null, (t.icon || '🔖') + ' ' + t.name));
-      const sub = el('small', null, t.shape || 'tag');
+      const sub = el('small', null, shapeLabel(t.shape || 'tag'));
       sub.style.color = 'var(--dim)';
       card.append(sub);
       const del = el('span', 'vt-del', '✕');
@@ -131,11 +135,13 @@ export async function manageVisualTags() {
   box.append(grid);
 
   const addRow = el('div', 'k-row'); addRow.style.cssText = 'gap:6px';
-  const nameInp = el('input', 'k-dlg-input'); nameInp.placeholder = tt('ui.tags.nameTag'); nameInp.style.flex = '1';
-  const iconInp = el('input', 'k-dlg-input'); iconInp.placeholder = '⚔'; iconInp.style.width = '48px';
-  const colorInp = el('input', 'k-dlg-input'); colorInp.type = 'color'; colorInp.style.width = '40px';
+  // [alpha.168 · bug hunt 2] เดิม select กว้าง 100% (.k-dlg-select) บีบช่องชื่อเหลือ ~25px — พิมพ์ชื่อแท็กแทบไม่ได้
+  const nameInp = el('input', 'k-dlg-input'); nameInp.placeholder = tt('ui.tags.nameTag'); nameInp.style.cssText = 'flex:1 1 140px;min-width:120px;width:auto';
+  const iconInp = el('input', 'k-dlg-input'); iconInp.placeholder = '⚔'; iconInp.style.cssText = 'flex:none;width:48px;text-align:center'; iconInp.title = tt('ui.fab.dispIcon');
+  const colorInp = el('input', 'k-dlg-input'); colorInp.type = 'color'; colorInp.value = '#d97757'; colorInp.style.cssText = 'flex:none;width:44px;padding:2px'; colorInp.title = tt('ui.common.color');
   const shapeSel = el('select', 'k-dlg-select');
-  ['circle', 'square', 'tag'].forEach((s) => { const o = el('option', null, s); o.value = s; shapeSel.append(o); });
+  shapeSel.style.cssText = 'flex:none;width:auto';
+  ['circle', 'square', 'tag'].forEach((s) => { const o = el('option', null, shapeLabel(s)); o.value = s; shapeSel.append(o); });
   addRow.append(nameInp, iconInp, colorInp, shapeSel);
   box.append(addRow);
 

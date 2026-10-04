@@ -208,7 +208,9 @@ function renderKanban(b) {
     // หัวคอลัมน์ = แถบสีเต็มแถบ (สีเดียวกับชิปสถานะใน Explorer)
     const colHead = el('div', 'kb-col-head');
     if (colHex) { colHead.style.background = colHex; colHead.style.color = inkOn(colHex); }
-    const toggleBtn = el('span', 'kb-col-toggle', col.collapsed ? gi('play') : gi('triangle-down'));
+    const toggleBtn = el('button', 'kb-col-toggle', col.collapsed ? gi('play') : gi('triangle-down'));
+    toggleBtn.type = 'button';
+    toggleBtn.title = col.collapsed ? t('ui.menu.expand') : t('ui.common.collapse');
     toggleBtn.onclick = async () => {
       b.store.layout = { ...b.store.layout, collapsed: col.collapsed
         ? b.store.layout.collapsed.filter((k) => k !== col.key)
@@ -232,7 +234,8 @@ function renderKanban(b) {
       inp.onchange = async () => { await setStatusColor(col.key, inp.value); refreshStatusChips(); treeRefresh(); };
       pick.append(inp);
       pick.addEventListener('mousedown', (e) => e.stopPropagation());
-      const delBtn = el('span', 'kb-col-del', gi('close'));
+      const delBtn = el('button', 'kb-col-del', gi('close'));
+      delBtn.type = 'button';
       delBtn.title = t('ui.kanban.deleteColumn');
       delBtn.onclick = async (e) => {
         e.stopPropagation();
@@ -260,6 +263,7 @@ function renderKanban(b) {
 
     if (!col.collapsed) {
       const cardList = el('div', 'kb-cards');
+      cardList.dataset.empty = t('ui.kanban.dropHere');   // [alpha.168] คอลัมน์ว่างบอกว่าวางได้ (CSS :empty)
       for (const card of col.cards) {
         const cardEl = el('div', 'kb-card');
         cardEl.draggable = true;
@@ -291,8 +295,10 @@ function renderKanban(b) {
         };
 
         cardEl.ondragstart = (e) => {
-          e.dataTransfer.setData('text/plain', card.id);
-          e.dataTransfer.effectAllowed = 'move';
+          // [alpha.168] id อยู่ในชนิดของกระดานเอง · text/plain = ชื่อฉาก (ปล่อยลงช่องข้อความ/ปลายทางอื่นไม่ได้เลข id)
+          e.dataTransfer.setData('text/k2-kb-card', card.id);
+          e.dataTransfer.setData('text/plain', card.title || '');
+          e.dataTransfer.effectAllowed = 'copyMove';
           cardEl.classList.add('kb-dragging');
         };
         cardEl.ondragend = () => cardEl.classList.remove('kb-dragging');
@@ -334,7 +340,7 @@ function renderKanban(b) {
         clearMarker();
         if (await dropColumn(e, col.key, b)) return;
         const idx = dropIndex(e.clientY);
-        const sceneId = e.dataTransfer.getData('text/plain');
+        const sceneId = e.dataTransfer.getData('text/k2-kb-card') || e.dataTransfer.getData('text/plain');
         if (!sceneId) return;
         await b.moveCard(sceneId, col.key, idx);
         renderKanban(b);

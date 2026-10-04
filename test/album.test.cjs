@@ -154,6 +154,48 @@ check('isImageFile รู้จักนามสกุลรูป',
     check('syncAlbumDoc ตัดชิ้นกระดานที่ไฟล์ในอัลบั้มนี้หายไป',
       !withBoard.moodBoard.some((i) => i.file === 'หายไปแล้ว.png') && withBoard.moodBoard.length === 2);
   }
+  // [alpha.168 · บั๊ก] การ์ดไม่มีไฟล์รูป — เดิมถูกตัดทิ้งทุกครั้งที่คลังรูปซิงก์ (เปิดคลังรูป = การ์ดบนกระดานหายหมด)
+  {
+    const withCards = A.syncAlbumDoc(
+      { images: { 'a.png': {} },
+        moodBoard: [{ id: 'x', file: 'a.png' }, { id: 'c1', kind: 'entity', path: 'Wiki/characters/cat.json', title: 'แมว' },
+                    { id: 'c2', kind: 'note', text: 'จำไว้' }, { id: 'c3', kind: 'group', title: 'ฝ่ายหนึ่ง' }] },
+      ['a.png']);
+    check('[168] syncAlbumDoc เก็บการ์ด (ตัวละคร · โน้ต · กลุ่ม) ไว้ ไม่ตัดทิ้งเพราะไม่มีไฟล์รูป',
+      ['c1', 'c2', 'c3'].every((id) => withCards.moodBoard.some((i) => i.id === id)), withCards.moodBoard.map((i) => i.id).join());
+    const nb = A.normalizeAlbumDoc({ moodBoardBg: { color: '#112233', image: 'bg/sky.png', blur: 99, dim: 0.5 } });
+    check('[168] ฉากหลังของกระดานรอดการ normalize (สี · รูป · เบลอถูกหนีบ)', nb.moodBoardBg && nb.moodBoardBg.color === '#112233' &&
+      nb.moodBoardBg.image === 'bg/sky.png' && nb.moodBoardBg.blur === 40 && nb.moodBoardBg.dim === 0.5, JSON.stringify(nb.moodBoardBg));
+    check('[168] ไฟล์เก่าไม่มีฉากหลัง = ไม่เติมคีย์ (ไฟล์ไม่บวม)', !('moodBoardBg' in A.normalizeAlbumDoc({})));
+    check('[168] ฉากหลัง: ทางรูปที่ออกนอกโปรเจกต์ถูกปฏิเสธ', M.normalizeBoardBg({ image: '../x.png' }).image === '' && M.normalizeBoardBg({ image: 'C:/x.png' }).image === '');
+  }
+  // [alpha.168] ชนิดใหม่ · เลื่อนชั้นทีละหนึ่ง · กลุ่ม · วางกึ่งกลางเคอร์เซอร์ · ทำสำเนา
+  {
+    let b = [];
+    b = M.addCardToBoard(b, 'note', { x: 0, y: 0, text: 'โน้ต' });
+    b = M.addCardToBoard(b, 'palette', { x: 0, y: 200, colors: ['#ff0000', 'xx', '#00ff00'] });
+    b = M.addCardToBoard(b, 'group', { x: -20, y: -20, w: 400, h: 400, title: 'กลุ่ม' });
+    const pal = b.find((i) => i.kind === 'palette');
+    check('[168] แถบสีเก็บเฉพาะสีที่ถูกรูปแบบ', pal.colors.join() === '#ff0000,#00ff00');
+    check('[168] โน้ตใช้ขนาดตั้งต้นของชนิด', b[0].w === M.KIND_SIZE.note[0] && b[0].h === M.KIND_SIZE.note[1]);
+    const grp = b.find((i) => i.kind === 'group');
+    check('[168] itemsInGroup: เจอของที่อยู่ในกรอบทั้งชิ้น', M.itemsInGroup(b, grp).length === 2);
+    const order0 = M.boardOrder(b).map((i) => i.kind).join();
+    const b2 = M.stepLayer(b, b[0].id, 1);
+    const order1 = M.boardOrder(b2).map((i) => i.kind).join();
+    check('[168] stepLayer ขึ้นหนึ่งชั้น = สลับกับชิ้นถัดไป', order0 === 'note,palette,group' && order1 === 'palette,note,group', order0 + ' → ' + order1);
+    check('[168] stepLayer ชิ้นบนสุดขึ้นอีก = ไม่ขยับ', M.boardOrder(M.stepLayer(b, grp.id, 1)).map((i) => i.kind).join() === order0);
+    const c = M.centeredAt(100, 100, 40, 20);
+    check('[168] centeredAt: กึ่งกลางชิ้นตรงจุดที่ปล่อย', c.x === 80 && c.y === 90);
+    const d = M.duplicateItems(b, [b[0].id]);
+    check('[168] duplicateItems: id ใหม่ · เยื้อง · อยู่บนสุด', d.length === 4 && d[3].id !== b[0].id && d[3].x === b[0].x + 24 &&
+      d[3].z === Math.max(...d.map((i) => i.z)) && d[3].text === 'โน้ต');
+    const mv = M.moveItems(b, [b[0].id, pal.id], 10, -5);
+    check('[168] moveItems: เลื่อนเฉพาะที่เลือก', mv[0].x === 10 && mv[0].y === -5 && mv.find((i) => i.kind === 'group').x === -20);
+    check('[168] กลุ่มว่าง (ไม่มีชื่อ) ยังอยู่หลัง normalize', M.normalizeBoard([{ id: 'g', kind: 'group' }]).length === 1);
+    check('[168] แถบสีที่ไม่มีสีเลย = ทิ้ง', M.normalizeBoard([{ id: 'p', kind: 'palette', colors: [] }]).length === 0);
+    check('[168] คำบรรยายใต้รูปเก็บลงชิ้นรูป', M.newBoardItem('a.png', { caption: 'ป่าโบราณ' }).caption === 'ป่าโบราณ');
+  }
 
   const withMeta = A.setImageMeta(s, 'a.png', { caption: 'ใหม่' });
   check('setImageMeta ไม่แก้ของเดิม (immutable)', s.images['a.png'].caption === 'A' && withMeta.images['a.png'].caption === 'ใหม่');

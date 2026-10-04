@@ -934,6 +934,17 @@ ui.aiProvider.busyTest,กำลังทดสอบ…
 ui.aiProvider.cantPickModel,ยังไม่ได้เลือกโมเดล
 ui.aiProvider.cantSettingsProviderAI,ยังไม่ได้ตั้งค่าผู้ให้บริการ AI (เมนู AI → ตั้งค่า AI)
 ui.aiProvider.connectOkFoundModel,เชื่อมต่อสำเร็จ — พบ {0} โมเดล
+ui.aiProvider.defaultsFail,บันทึกชุดผู้ให้บริการไว้ในเครื่องไม่สำเร็จ
+ui.aiProvider.defaultsHave,ในเครื่องนี้มี {0} ราย
+ui.aiProvider.defaultsImport,ใช้ผู้ให้บริการของฉัน
+ui.aiProvider.defaultsImported,เพิ่มผู้ให้บริการ {0} ราย — กดบันทึกเพื่อใช้กับโปรเจกต์นี้
+ui.aiProvider.defaultsImportTip,นำผู้ให้บริการที่บันทึกไว้ในเครื่องนี้มาใช้กับโปรเจกต์นี้ (เพิ่มเฉพาะตัวที่ยังไม่มี)
+ui.aiProvider.defaultsNone,ยังไม่มีชุดที่บันทึกไว้ในเครื่องนี้
+ui.aiProvider.defaultsNothingNew,โปรเจกต์นี้มีผู้ให้บริการชุดนั้นครบแล้ว
+ui.aiProvider.defaultsSave,บันทึกเป็นของฉัน
+ui.aiProvider.defaultsSaved,บันทึกผู้ให้บริการ {0} รายไว้ในเครื่องนี้แล้ว (พร้อมคีย์ที่เข้ารหัส)
+ui.aiProvider.defaultsSavedNoKeys,บันทึกผู้ให้บริการ {0} รายไว้ในเครื่องนี้แล้ว — เครื่องนี้เข้ารหัสคีย์ไม่ได้ จึงไม่ได้เก็บคีย์
+ui.aiProvider.defaultsSaveTip,เก็บผู้ให้บริการชุดนี้ไว้ในเครื่อง เพื่อใช้กับโปรเจกต์อื่นโดยไม่ต้องกรอกใหม่ (คีย์เข้ารหัสด้วยที่เก็บความลับของระบบ)
 ui.aiProvider.delProvider,"ลบผู้ให้บริการ ""{0}"" ?"
 ui.aiProvider.delProvider2,ลบผู้ให้บริการนี้
 ui.aiProvider.domainAllow,โดเมนที่อนุญาต: {0}
@@ -1398,6 +1409,8 @@ ui.app.copySaveDoneLine,คัดลอกบันทึกแล้ว ({0} �
 ui.app.corner,มุมเอียง (องศา)
 ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,อ่านรูปปกของเล่มไม่ได้
+ui.app.creditIcons,ชุดไอคอนของโปรแกรม (ฟอนต์ K2 Icons)
+ui.app.creditThree,ผัง Story Network แบบ 3 มิติ (โมเดล · ฉากหลัง)
 ui.app.ctrlEnter,รัน (Ctrl+Enter)
 ui.app.currentTopDisk,ปัจจุบัน (บนดิสก์)
 ui.app.data,ข้อมูล
@@ -1436,6 +1449,12 @@ ui.app.diskConflictReload,ใช้ฉบับบนดิสก์ (ทิ้�
 ui.app.diskDeletedAsk,"ไฟล์ ""{0}"" ถูกลบหรือย้ายออกไปนอกโปรแกรม จะสร้างไฟล์ใหม่ที่เดิมด้วยเนื้อในแท็บนี้หรือไม่"
 ui.app.diskReloadedN,โหลดใหม่ {0} แท็บ เพราะไฟล์ถูกแก้นอกโปรแกรม
 ui.app.dlgbSource,ห้องซ้อมบท
+ui.app.docsEmptyDashboard,เปิดแดชบอร์ด
+ui.app.docsEmptyGuide,เริ่มต้นใช้งาน
+ui.app.docsEmptyNoProject,ยังไม่ได้เปิดโปรเจกต์
+ui.app.docsEmptyNoProjectHint,สร้างโปรเจกต์ใหม่ หรือเปิดโปรเจกต์ที่มีอยู่ เพื่อเริ่มเขียน
+ui.app.docsEmptyNoTab,ยังไม่ได้เปิดเอกสาร
+ui.app.docsEmptyNoTabHint,คลิกฉากในแผงโปรเจกต์ทางซ้ายเพื่อเริ่มเขียน
 ui.app.doItemSet,ทำตัวติดตั้ง/พกพา
 ui.app.doneDoneFile,เสร็จแล้ว {0} ไฟล์
 ui.app.doneOpenBackChapter,"""{0}"" ให้แล้ว (เปิดกลับได้ที่ บท → ตัวพิมพ์ใหญ่/เล็ก)"
@@ -1544,6 +1563,9 @@ ui.app.itemItem, ไปข้อถัดไป ({0} ข้อ)
 ui.app.itemReplace,ตัวแทน: 
 ui.app.jSONCheckFormatBefore, — JSON ล้วน (ตรวจรูปแบบก่อนเขียน)
 ui.app.jSONFormatNotSave,JSON ผิดรูปแบบ ยังไม่บันทึก: 
+ui.app.jsonNoWrite,ไม่ได้บันทึก {0} — ไฟล์เดิมอ่านไม่ได้และยังไม่มีสำเนา (ซ่อมหรือย้ายไฟล์นั้นก่อน)
+ui.app.jsonUnreadable,อ่านไฟล์ {0} ไม่ได้ (ไฟล์เสีย) — เก็บสำเนาของเดิมไว้ที่ {1} แล้ว แผงนี้เริ่มจากของว่าง
+ui.app.jsonUnreadableNoBackup,อ่านไฟล์ {0} ไม่ได้ และเก็บสำเนาไม่ได้ — จะไม่บันทึกทับไฟล์นี้จนกว่าจะอ่านได้
 ui.app.keyEnglish,key (อังกฤษ)
 ui.app.keyPlugin,คีย์ลัดปลั๊กอินพัง: 
 ui.app.killianEditor,คิเลียน อีดิเตอร์ 
@@ -1737,6 +1759,7 @@ ui.app.openProject,เปิดโปรเจกต์…
 ui.app.openProject2,เปิดโปรเจกต์: 
 ui.app.openProjectBeforeImport,เปิดโปรเจกต์ก่อน จึงจะนำเข้าคำแปลได้
 ui.app.openProjectDoneMs,เปิดโปรเจกต์เสร็จใน {0}ms
+ui.app.openProjectFailed,เปิดโปรเจกต์ไม่ได้: {0} — {1}
 ui.app.openSceneBefore,เปิดฉากก่อน
 ui.app.openSceneBeforeChangeImage,เปิดฉากก่อนจึงจะเปลี่ยนรูปตัวพิมพ์ได้
 ui.app.openSceneBeforePage,เปิดฉากก่อนจึงจะไปยังหน้าได้
@@ -1998,7 +2021,6 @@ ui.books.changeNameDraft,เปลี่ยนชื่อร่าง
 ui.books.chapterSceneWord,{0} บท · {1} ฉาก · {2} คำ
 ui.books.coverOut,เอาปกออก
 ui.books.delDraft,ลบร่างนี้
-ui.books.draft, · {0} ฉบับร่าง
 ui.books.draft2,ฉบับร่าง
 ui.books.egDraft,เช่น draft-2
 ui.books.export,ส่งออก
@@ -2112,6 +2134,9 @@ ui.branch.dragBarPasteTop,ลากแถบ ⠿ ไปวางบนการ�
 ui.branch.dragChoice,ลากไปวางบนฉากอื่นเพื่อย้ายทางเลือกนี้
 ui.branch.dragHint,ลากแถบ ⠿ ไปวางบนการ์ดฉากอื่น = ย้ายทางเลือกไปฉากนั้น
 ui.branch.dragPasteTopScene,ลากไปวางบนฉากอื่นเพื่อย้ายทางเลือกนี้
+ui.branch.dropLinked,"เพิ่มทางเลือก {0} ทางจาก ""{1}"" แล้ว — แก้ข้อความได้ที่แผงขวา"
+ui.branch.dropNotScene,ลากได้เฉพาะฉากในโปรเจกต์นี้
+ui.branch.dropPlaced,วางฉากลงผัง {0} ฉาก — ลากจุดขวาการ์ดไปการ์ดอื่นเพื่อสร้างทางเลือก
 ui.branch.dup,วนซ้ำ
 ui.branch.dup2,อยู่ในวงวนซ้ำ
 ui.branch.edit,ไปแก้
@@ -2119,6 +2144,7 @@ ui.branch.editTextChoiceDone,แก้ข้อความทางเลือ
 ui.branch.eg,เช่น ไปตลาด
 ui.branch.egBookOneUse,เช่น เล่มหนึ่ง — ใช้เมื่อแต่ละเล่มมีทางเลือกคนละชุด
 ui.branch.egBookShort,เช่น เล่มหนึ่ง
+ui.branch.emptyDropHint,ลากฉากจาก Explorer มาวางที่นี่ได้เลย แล้วลากจุดขวาการ์ดไปอีกการ์ด = ทางเลือก
 ui.branch.emptyGraph,ยังไม่มีฉากที่มีทางเลือก
 ui.branch.emptyHint,"ยังไม่มีฉากที่มีทางเลือก — เพิ่มได้ที่แถบ ""เพิ่มทางเลือก"" ด้านบน แล้วผังจะขึ้นทันที"
 ui.branch.expandGraph,ขยายผัง
@@ -2237,6 +2263,7 @@ ui.branch.playHint,ทดลองเล่น — อ่านเรื่อ�
 ui.branch.pngFail,ส่งออก PNG ไม่สำเร็จ: 
 ui.branch.pNGImageGraphSend,PNG (ภาพผัง — ส่งในแชต/สไลด์)
 ui.branch.pngSaved,บันทึกรูปผังลงคลังรูปแล้ว: 
+ui.branch.portTip,ลากจุดนี้ไปปล่อยบนการ์ดฉากอื่น = ทางเลือกใหม่
 ui.branch.printOnlySceneAt,พิมพ์เพื่อเน้นเฉพาะฉากที่ตรง — ที่เหลือจะจางลง
 ui.branch.printTextSceneAt,พิมพ์ [ข้อความ] ในฉากตรงจุดที่เรื่องแตกสาย เช่น [ไปตลาด] แล้วกดผูกที่นี่
 ui.branch.propsPlan,คุณสมบัติแผน — 
@@ -2396,7 +2423,6 @@ ui.cmtComment.reply,ตอบ
 ui.cmtComment.replyBack,{0} การตอบกลับ
 ui.cmtComment.scrollToAnchorPickRangeCant,scrollToAnchor: เลือกช่วงไม่ได้
 ui.cmtComment.selectionAnchorReadFileCant,selectionAnchor: อ่านไฟล์ไม่ได้
-ui.codex.allCat,ทุกหมวด
 ui.codex.busyNewWebCodex,กำลังสร้างเว็บสารานุกรม…
 ui.codex.busyRead,กำลังอ่านเอนทิตี้…
 ui.codex.codexExportNotOk,codex: ส่งออกไม่สำเร็จ
@@ -2405,6 +2431,8 @@ ui.codex.codexReadIndexMention,codex: อ่านดัชนีการกล
 ui.codex.exportNotOk,ส่งออกไม่สำเร็จ: 
 ui.codex.exportWeb,ส่งออกเป็นเว็บ
 ui.codex.exportWebCodexDone,ส่งออกเว็บสารานุกรมแล้ว {0} หน้า → {1}
+ui.codex.navListTip,รายชื่อในหมวดนี้
+ui.codex.navMaps,แผนที่
 ui.codex.newWebCodexStyle,สร้างเว็บสารานุกรมแบบ Fandom/Wikia (เปิดออฟไลน์ได้ ไม่ต้องต่อเน็ต)
 ui.codex.notFoundListAt,(ไม่พบรายการที่ตรงกับที่ค้น)
 ui.codex.notHasDesc,(ยังไม่มีคำอธิบาย)
@@ -2414,6 +2442,8 @@ ui.codex.openPageWiki,เปิดหน้า Wiki
 ui.codex.openPageWikiNot,เปิดหน้า Wiki ไม่สำเร็จ
 ui.codex.openProjectBeforeHas,เปิดโปรเจกต์ก่อนจึงจะมีสารานุกรม
 ui.codex.searchCodexList,ค้นในสารานุกรม… ({0} รายการ)
+ui.codex.searchIn,ค้นหาใน {0}…
+ui.codex.tileTip,คลิก = ดูบนภาพใหญ่ · ดับเบิลคลิก = เปิดหน้า Wiki
 ui.codexBuild.appearScene2,ปรากฏในฉาก
 ui.codexBuild.item,เกี่ยวข้องกับ
 ui.codexBuild.knownName2,หรือรู้จักในชื่อ: {0}
@@ -3147,7 +3177,9 @@ ui.drafts.hasDraftNameDone,มีร่างชื่อนี้แล้ว
 ui.drafts.notFoundDraftFrom,ไม่พบร่างต้นทาง
 ui.drafts.renameDraftTo,"เปลี่ยนชื่อฉบับร่าง ""{0}"" เป็น ""{1}"""
 ui.drop.chapterEmpty,บทนี้ยังไม่มีฉาก
+ui.drop.hintBranch,วางลงผัง / ปล่อยบนการ์ด = ทางเลือกใหม่
 ui.drop.hintCard,วางลงกระดาน = การ์ด
+ui.drop.hintFloorplan,วางลงผังพื้นที่
 ui.drop.hintFocus,วาง = ไปที่โหนดนี้
 ui.drop.hintInsertName,วาง = แทรกชื่อลงเอกสาร
 ui.drop.hintMap,วางลงแผนที่ = ปักหมุด
@@ -3238,6 +3270,7 @@ ui.exportBlog.skippedN,ข้าม {0} ฉาก
 ui.exportBlog.theme,ธีม
 ui.exportFdx.write,"เขียนโดย
 "
+ui.exportImg.showInFolder,เปิดโฟลเดอร์
 ui.exportRtf.write,เขียนโดย
 ui.exportZip.breakFileDoneFile,แตกไฟล์แล้ว ({0} ไฟล์) แต่ไม่พบ project.khn.json — ไม่ใช่โปรเจกต์ Killian
 ui.exportZip.busyBreakFileZIP,กำลังแตกไฟล์ ZIP…
@@ -3299,38 +3332,6 @@ ui.fab.needProject,เปิดผลงานก่อนจึงจะสร�
 ui.fab.posReset,คืนปุ่มลอยกลับมุมขวาล่างแล้ว
 ui.fab.posSaved,จำตำแหน่งปุ่มลอยแล้ว
 ui.filterCommands,กรองคำสั่ง…
-ui.floorplan.addList, — เพิ่มรายการ
-ui.floorplan.cancelPin,ยกเลิกการปัก
-ui.floorplan.cantOpenScene,ยังไม่ได้เปิดฉาก
-ui.floorplan.cantPinPosPress,"ยังไม่ได้ปักตำแหน่ง — กด ""ปักตำแหน่งฉากนี้"""
-ui.floorplan.clearPos,ล้างตำแหน่ง
-ui.floorplan.clearPosSceneDone,ล้างตำแหน่งของฉากแล้ว
-ui.floorplan.clickBtnDoneClickF,"คลิกปุ่มนี้แล้วคลิกบนแผนที่ เพื่อบอกว่าฉาก ""{0}"" เกิดตรงไหน"
-ui.floorplan.clickOpenScene,"
-คลิกเพื่อเปิดฉาก"
-ui.floorplan.clickTopMapTop,คลิกบนแผนที่ (หรือบนหมุด) เพื่อกำหนดตำแหน่งของฉากนี้
-ui.floorplan.delList,ลบรายการนี้
-ui.floorplan.eg,เช่น กุญแจสนิม
-ui.floorplan.egSoundLayerTop,เช่น เสียงฝีเท้าชั้นบน
-ui.floorplan.egTopBg,เช่น รอยเลือดบนพื้น
-ui.floorplan.floorplanLoadMapsJson,floorplan: โหลด maps.json ไม่ได้
-ui.floorplan.floorplanReadSceneCant,floorplan: อ่านฉากไม่ได้
-ui.floorplan.lineTimePlace,เส้นเวลาของสถานที่นี้
-ui.floorplan.mapNotHasImage,แผนที่นี้ยังไม่มีรูป — ใส่รูปได้ที่หน้า แผนที่ (Maps)
-ui.floorplan.notHasSceneBind,"ยังไม่มีฉากผูกกับแผนที่นี้ — เปิดฉากแล้วกด ""ปักตำแหน่งฉากนี้"""
-ui.floorplan.notPlanned,ยังไม่มีแผนที่
-ui.floorplan.notPlannedNewView,ยังไม่มีแผนที่ — สร้างได้ที่ มุมมอง → แผนที่ (Maps)
-ui.floorplan.pin,หมุด: 
-ui.floorplan.pinPosScene2,ปักตำแหน่งฉากนี้
-ui.floorplan.pinPosSceneF,"ปักตำแหน่งฉาก ""{0}"" บนแผนที่ {1} แล้ว"
-ui.floorplan.pinScene,{0} · {1} หมุด · {2} ฉาก
-ui.floorplan.scene, · {0} ฉาก
-ui.floorplan.sceneCurrent,ฉากปัจจุบัน
-ui.floorplan.sceneExitMap,เอาฉากนี้ออกจากแผนที่
-ui.floorplan.sceneOpen,ฉากที่เปิดอยู่
-ui.floorplan.thingFound,สิ่งที่พบ
-ui.floorplan.thingHear,สิ่งที่ได้ยิน
-ui.floorplan.you,คุณอยู่ที่นี่: 
 ui.fmtbar.fadeSet,แถบรูปแบบ: ความจาง {0}%
 ui.fmtbar.locked,ล็อกแถบรูปแบบแล้ว — ลากไม่ได้จนกว่าจะปลดล็อก
 ui.fmtbar.lockedBlocked,แถบถูกล็อกอยู่ จึงไม่ย้ายให้
@@ -3384,6 +3385,265 @@ ui.fonts.msg3,อาหรับ
 ui.fonts.msg4,เทวนาครี
 ui.fonts.thonburiMacNoFloat,Thonburi (macOS · วรรณยุกต์ไม่ลอย)
 ui.fonts.tHSarabunNew,TH Sarabun New (ราชการไทย)
+ui.fp.aiCharacters,ข้อมูลตัวละคร (ใช้บรรยายหน้าตา):
+ui.fp.aiExcerpt,บทภาพยนตร์ช่วงนี้ (บรรทัดที่ขึ้นต้นด้วย >> คือช่วงเวลาของจังหวะนี้):
+ui.fp.aiFacts,ข้อมูลช็อต (คำนวณจากผังมุมบนของผู้กำกับ):
+ui.fp.aiPrevious,prompt ภาพนิ่งของจังหวะก่อนหน้า (รักษาความต่อเนื่องของฉาก ตัวละคร แสง):
+ui.fp.aiSceneInfo,ข้อมูลฉาก:
+ui.fp.aiStyle,สไตล์ภาพที่ผู้กำกับกำหนด (ใช้กับทุกจังหวะให้ต่อเนื่องกัน):
+ui.fp.aiSystem,"คุณคือผู้กำกับภาพและนักวาดสตอรีบอร์ดที่เขียน prompt ให้โมเดลสร้างภาพและวิดีโอ คุณจะได้ข้อมูลช็อตที่คำนวณจากผังมุมบนของผู้กำกับ (บอดี้กล้อง เลนส์ มุมรับภาพ ความสูง มุมกล้อง อุปกรณ์ยึดกล้อง ใครอยู่ในภาพพร้อมระยะ ตำแหน่งในเฟรม และทิศที่หัน ไฟพร้อมทิศทางและอุณหภูมิสี ของประกอบฉาก และสิ่งที่เปลี่ยนก่อนจังหวะถัดไป) พร้อมบทภาพยนตร์ช่วงนั้น เขียน prompt ภาษาอังกฤษสองชิ้น: ""image"" = ภาพนิ่งหนึ่งเฟรมของช่วงเวลานี้สำหรับโมเดล text-to-image บรรยายตัวแบบและการกระทำ การจัดองค์ประกอบและตำแหน่งในเฟรม ขนาดภาพ มุมและความสูงกล้อง ลักษณะของเลนส์ (ความรู้สึกของระยะโฟกัส ระยะชัด) ทิศ คุณภาพ และสีของแสง ฉาก อารมณ์ ยุคสมัย · ""video"" = ช็อตยาว 4–8 วินาทีสำหรับโมเดล text-to-video ที่เริ่มจากเฟรมนี้ บรรยายการเคลื่อนไหวของตัวแบบ การเคลื่อนกล้อง (ใช้ moveToNextBeat) และความต่อเนื่องของแสง ทำตามข้อมูลช็อตอย่างเคร่งครัด: เห็นเฉพาะตัวแบบที่ระบุ คงตำแหน่งในเฟรมและทิศที่หัน คนที่อยู่ใน offscreen ห้ามปรากฏ บรรยายตัวละครด้วยหน้าตาจากข้อมูลตัวละครแทนชื่อ (ใส่ชื่อในวงเล็บได้) ห้ามแต่งชื่อยี่ห้อหรือตัวหนังสือบนจอขึ้นเอง ตอบเป็น JSON อย่างเดียว: {""image"": ""..."", ""video"": ""...""}"
+ui.fp.angDutch,เอียง (dutch)
+ui.fp.angEye,ระดับสายตา
+ui.fp.angGround,ระดับพื้น
+ui.fp.angHigh,มุมสูง
+ui.fp.angLow,มุมต่ำ
+ui.fp.angOverhead,มุมบนลงล่าง
+ui.fp.beat,จังหวะ {0}
+ui.fp.beatAdd,เพิ่มจังหวะต่อจากนี้
+ui.fp.beatDel,ลบจังหวะนี้
+ui.fp.beatLeft,เลื่อนไปก่อนหน้า
+ui.fp.beatNext,จังหวะถัดไป
+ui.fp.beatNote,โน้ต
+ui.fp.beatNotePh,เช่น Tora เดินจากประตูมาที่เคาน์เตอร์
+ui.fp.beatPrev,จังหวะก่อนหน้า
+ui.fp.beatRight,เลื่อนไปทีหลัง
+ui.fp.beats,จังหวะ
+ui.fp.bgFromMap,ใช้รูปจากแผนที่
+ui.fp.bgImage,รูปพื้นหลังจากคลังรูป…
+ui.fp.bgOpacity,ความทึบรูปพื้นหลัง
+ui.fp.bgRemove,เอารูปพื้นหลังออก
+ui.fp.bgRot,หมุนรูปพื้นหลัง (องศา)
+ui.fp.bgW,รูปพื้นหลังกว้าง (ม.)
+ui.fp.bgX,รูปพื้นหลัง X (ม.)
+ui.fp.bgY,รูปพื้นหลัง Y (ม.)
+ui.fp.bindCurrent,ผูกกับฉากที่เปิดอยู่ ({0})
+ui.fp.bindScene,ผูกกับฉาก…
+ui.fp.camName,กล้อง {0}
+ui.fp.camOfBeat,กล้องที่ใช้
+ui.fp.colAngle,มุมกล้อง
+ui.fp.colBeat,จังหวะ
+ui.fp.colBody,บอดี้
+ui.fp.colCamera,กล้อง
+ui.fp.colFov,มุมรับภาพ
+ui.fp.colHeight,ความสูงกล้อง
+ui.fp.colInFrame,ในภาพ
+ui.fp.colLens,เลนส์
+ui.fp.colLights,ไฟ
+ui.fp.colMove,การเคลื่อนกล้อง
+ui.fp.colNote,โน้ต
+ui.fp.colRef,ช่วงในบท
+ui.fp.colShot,ขนาดภาพ
+ui.fp.colSupport,การตั้งกล้อง
+ui.fp.copySuffix, (สำเนา)
+ui.fp.counts,ตัวละคร/ของ {0} · กล้อง {1} · ไฟ {2} · จังหวะ {3}
+ui.fp.create,สร้างผังพื้นที่
+ui.fp.created,"สร้างผัง ""{0}"" แล้ว"
+ui.fp.defaultName,ผัง {0}
+ui.fp.defaultNameScene,ผัง — {0}
+ui.fp.delete,ลบผังนี้…
+ui.fp.deleted,ย้ายผังลงถังขยะแล้ว
+ui.fp.deleteQ,"ย้ายผัง ""{0}"" ลงถังขยะ?"
+ui.fp.diffFull,เต็ม
+ui.fp.diffGrid,กริดคลอธ
+ui.fp.diffHalf,1/2
+ui.fp.diffNone,ไม่มี
+ui.fp.diffQuarter,1/4
+ui.fp.duplicate,ทำสำเนาผัง
+ui.fp.emptyHint,ผังมุมบนของกองถ่าย — วางตัวละครจาก Wiki ตั้งกล้อง จัดไฟ แล้วไล่จังหวะตามบท
+ui.fp.emptyTitle,ยังไม่มีผังพื้นที่
+ui.fp.entityMissing,หาหน้า Wiki ของชิ้นนี้ไม่เจอ (ถูกลบหรือย้ายไปแล้ว)
+ui.fp.exportCsv,ส่งออก shot list (CSV)
+ui.fp.exportFail,ส่งออกภาพผังไม่สำเร็จ
+ui.fp.exportMd,ส่งออก shot list (Markdown)
+ui.fp.exportPng,ส่งออกจังหวะนี้เป็น PNG
+ui.fp.fAngle,มุมกล้อง
+ui.fp.fBack,ส่งลงล่างสุด
+ui.fp.fBeam,มุมลำแสง (องศา)
+ui.fp.fBody,บอดี้กล้อง
+ui.fp.fCct,อุณหภูมิสี (K)
+ui.fp.fColor,สี
+ui.fp.fCustom,ตั้งเอง
+ui.fp.fDiffusion,ผ้ากรองแสง
+ui.fp.fDup,ทำสำเนา
+ui.fp.fFacing,หันไปทาง (องศา)
+ui.fp.fFill,สีพื้น
+ui.fp.fFovOut,มุมรับภาพ {0}° · เทียบฟูลเฟรม {1}mm
+ui.fp.fFront,ยกขึ้นบนสุด
+ui.fp.fGel,เจล
+ui.fp.fGelColor,สีเจล
+ui.fp.fH,ลึก (ม.)
+ui.fp.fHeight,ความสูง (ม.)
+ui.fp.fHiddenHere,ไม่อยู่ในจังหวะนี้ (ออกจากฉาก)
+ui.fp.fInFrame,ในภาพ
+ui.fp.fIntensity,ความแรง (%)
+ui.fp.fit,พอดีจอ
+ui.fp.fLabel,ชื่อ
+ui.fp.fLength,ความยาว {0} ม.
+ui.fp.fLens,เลนส์ (มม.)
+ui.fp.fLightKind,ชนิดไฟ
+ui.fp.fNobody,ไม่มีใครอยู่ในภาพ
+ui.fp.fNoTrack,ไม่ติดราง
+ui.fp.fOpacity,ความทึบ
+ui.fp.fOpenWiki,เปิดหน้า Wiki
+ui.fp.fRange,ระยะ (ม.)
+ui.fp.fResetKey,ใช้ตำแหน่งของจังหวะก่อนหน้า
+ui.fp.fSensorW,ความกว้างเซนเซอร์ (มม.)
+ui.fp.fSightFov,มุมมอง (องศา)
+ui.fp.fSightOn,แสดงระยะสายตา
+ui.fp.fSightRange,ระยะสายตา (ม.)
+ui.fp.fSize,ขนาด (ม.)
+ui.fp.fStroke,สีเส้น
+ui.fp.fSupport,การตั้งกล้อง
+ui.fp.fText,ข้อความ
+ui.fp.fTextH,ความสูงตัวอักษร (ม.)
+ui.fp.fThick,ความหนา (ม.)
+ui.fp.fTrack,อยู่บนราง
+ui.fp.fUseInBeat,ใช้กล้องนี้ในจังหวะนี้
+ui.fp.fW,กว้าง (ม.)
+ui.fp.fWatts,กำลัง (วัตต์)
+ui.fp.fX,X (ม.)
+ui.fp.fY,Y (ม.)
+ui.fp.gelColor,สีเอง
+ui.fp.gelCtbFull,CTB เต็ม
+ui.fp.gelCtbHalf,CTB 1/2
+ui.fp.gelCtbQuarter,CTB 1/4
+ui.fp.gelCtoFull,CTO เต็ม
+ui.fp.gelCtoHalf,CTO 1/2
+ui.fp.gelCtoQuarter,CTO 1/4
+ui.fp.gelMinusGreen,Minus Green
+ui.fp.gelNone,ไม่มี
+ui.fp.gelPlusGreen,Plus Green
+ui.fp.gridSize,ช่องกริด (ม.)
+ui.fp.hideHere,ไม่อยู่ในจังหวะนี้ (ออกจากฉาก)
+ui.fp.hintPlace,คลิกบนผังเพื่อวาง · Shift ค้าง = วางต่อหลายชิ้น · Esc ยกเลิก
+ui.fp.hintPoly,คลิกทีละจุด · ดับเบิลคลิกหรือ Enter = จบ · Backspace = ลบจุดล่าสุด · Esc ยกเลิก
+ui.fp.ltBounce,แผ่นสะท้อน (bounce)
+ui.fp.ltChinaBall,ไชน่าบอล
+ui.fp.ltCob,LED COB + รีเฟล็กเตอร์
+ui.fp.ltFresnel,เฟรสเนล
+ui.fp.ltHmi,HMI
+ui.fp.ltLedPanel,แผง LED
+ui.fp.ltPractical,ไฟในฉาก (practical)
+ui.fp.ltSoftbox,ซอฟต์บ็อกซ์
+ui.fp.ltSpot,สปอต/โปรไฟล์
+ui.fp.ltSun,แดด/หน้าต่าง
+ui.fp.ltTube,หลอดแท่ง LED
+ui.fp.menu,เมนูผัง
+ui.fp.meterUnit,ม.
+ui.fp.movesN,ขยับ {0} ชิ้นจากจังหวะก่อน
+ui.fp.newPlan,ผังใหม่
+ui.fp.newPlanQ,ชื่อผังพื้นที่ใหม่
+ui.fp.noEntities,ยังไม่มีตัวละคร/ของใน Wiki
+ui.fp.otherPlans,ผังอื่น
+ui.fp.pickLineSearch,ค้นหาในฉาก
+ui.fp.pickLineTitle,"เลือกบรรทัดจาก ""{0}"""
+ui.fp.pickSceneSearch,ค้นหาฉาก
+ui.fp.pickSceneTitle,เลือกฉากให้ผังนี้
+ui.fp.planPick,เลือกผัง
+ui.fp.planSettings,ผังนี้
+ui.fp.play,เล่นตั้งแต่จังหวะนี้
+ui.fp.poseIn,ตำแหน่งในจังหวะ {0}
+ui.fp.promptBadReply,AI ไม่ได้ตอบเป็นรูปแบบที่อ่านได้
+ui.fp.promptCopied,คัดลอก prompt แล้ว
+ui.fp.promptCopy,คัดลอก prompt
+ui.fp.promptDone,AI เขียน prompt แล้ว {0} จังหวะ
+ui.fp.promptDonePart,AI เขียน prompt แล้ว {0} จังหวะ · ไม่สำเร็จ {1}
+ui.fp.promptEmpty,ยังไม่มี — กดให้ AI เขียน หรือพิมพ์เอง
+ui.fp.promptFail,เขียน prompt ไม่สำเร็จ: {0}
+ui.fp.promptGen,ให้ AI เขียน prompt จังหวะนี้
+ui.fp.promptGenAll,ให้ AI เขียน prompt ทุกจังหวะ
+ui.fp.promptGenHint,AI อ่านบรรทัดของฉาก + ข้อมูลช็อตจากผัง (กล้อง เลนส์ ใครอยู่ตรงไหนในภาพ ไฟ) แล้วเขียน prompt ภาษาอังกฤษทั้งภาพนิ่งและวิดีโอ
+ui.fp.promptImage,ภาพนิ่ง
+ui.fp.promptNeedAi,ยังไม่ได้ตั้งค่า AI
+ui.fp.promptNeedCam,วางกล้องก่อน แล้วค่อยให้ AI เขียน prompt (prompt อิงจากกล้องของจังหวะนั้น)
+ui.fp.promptOpenAi,ตั้งค่า AI
+ui.fp.promptSec,Prompt สำหรับ AI สร้างภาพ/วิดีโอ
+ui.fp.promptStale,ผังเปลี่ยนไปหลังสร้าง prompt นี้ — ให้ AI เขียนใหม่ได้
+ui.fp.promptStop,หยุด
+ui.fp.promptStopped,หยุดแล้ว — เขียนเสร็จ {0} จังหวะ
+ui.fp.promptStyle,สไตล์ภาพของทั้งผัง
+ui.fp.promptStylePh,"เช่น 35mm film, anamorphic, teal and orange, 1990s Bangkok"
+ui.fp.promptVideo,วิดีโอ
+ui.fp.promptWorking,AI กำลังเขียน prompt…
+ui.fp.promptWorkingN,AI กำลังเขียน prompt {0}/{1} (จังหวะ {2})…
+ui.fp.redo,ทำซ้ำ
+ui.fp.refClear,ล้างข้อความอ้างอิง
+ui.fp.refGo,ไปที่บรรทัดนี้ในฉาก
+ui.fp.refMenu,จังหวะนี้คือช่วงไหนของหนัง — เลือกบรรทัดจากฉาก หรือพิมพ์เอง
+ui.fp.refNeedScene,ผูกผังนี้กับฉากก่อน แล้วค่อยเลือกบรรทัด
+ui.fp.refNone,ยังไม่ได้บอกว่าช่วงไหนของหนัง
+ui.fp.refPick,เลือกบรรทัดจากฉาก…
+ui.fp.refType,พิมพ์เอง…
+ui.fp.refTypePh,เช่น ทอร่าเปิดประตูเข้ามา
+ui.fp.refTypeQ,จังหวะนี้คือช่วงไหนของหนัง
+ui.fp.removed,"ลบ ""{0}"" แล้ว"
+ui.fp.rename,เปลี่ยนชื่อ…
+ui.fp.renameQ,ชื่อผัง
+ui.fp.restored,กู้คืนผังพื้นที่แล้ว
+ui.fp.saveFailStay,บันทึกผังที่เปิดอยู่ไม่สำเร็จ — ยังอยู่ที่ผังเดิมเพื่อไม่ให้งานหาย ลองอีกครั้ง
+ui.fp.sceneEmpty,ฉากนี้ยังไม่มีเนื้อหา
+ui.fp.sceneMissing,หาฉากที่ผูกไว้ไม่เจอ (ถูกลบหรือย้าย?)
+ui.fp.sceneOfHint,ฉากของผังนี้ — คลิกเพื่อเปิดฉาก
+ui.fp.sceneRow,ผังพื้นที่
+ui.fp.sceneRowBeats,{0} จังหวะ — คลิกเพื่อเปิด
+ui.fp.sceneRowNew,สร้างผังของฉากนี้
+ui.fp.sceneRowNone,ยังไม่มีผังของฉากนี้
+ui.fp.shotCu,ใกล้ (CU)
+ui.fp.shotEcu,ใกล้มาก (ECU)
+ui.fp.shotEws,ไกลมาก (EWS)
+ui.fp.shotFs,เต็มตัว (FS)
+ui.fp.shotInsert,อินเสิร์ต
+ui.fp.shotMcu,ใกล้ปานกลาง (MCU)
+ui.fp.shotMs,ครึ่งตัว (MS)
+ui.fp.shotOts,ข้ามไหล่ (OTS)
+ui.fp.shotPov,มุมมองตัวละคร (POV)
+ui.fp.shotSize,ขนาดภาพ
+ui.fp.shotWs,ไกล (WS)
+ui.fp.showHere,อยู่ในจังหวะนี้
+ui.fp.shpArrow,ลูกศร
+ui.fp.shpDoor,ประตู
+ui.fp.shpEllipse,วงกลม/วงรี
+ui.fp.shpFlag,แฟล็กบังแสง
+ui.fp.shpLine,เส้น
+ui.fp.shpRect,สี่เหลี่ยม
+ui.fp.shpRounded,สี่เหลี่ยมมุมมน
+ui.fp.shpStairs,บันได
+ui.fp.shpText,ข้อความ
+ui.fp.shpTriangle,สามเหลี่ยม
+ui.fp.shpWall,ผนัง
+ui.fp.shpWindow,หน้าต่าง
+ui.fp.stop,หยุด
+ui.fp.supCar,ติดรถ
+ui.fp.supCrane,เครน
+ui.fp.supDolly,ดอลลี่ (บนราง)
+ui.fp.supDrone,โดรน
+ui.fp.supGimbal,กิมบอล
+ui.fp.supHandheld,ถือด้วยมือ
+ui.fp.supHighhat,ไฮแฮต (ติดพื้น)
+ui.fp.supJib,จิ๊บ (jib)
+ui.fp.supMonopod,ขาเดียว (monopod)
+ui.fp.supShoulder,แบกบ่า
+ui.fp.supSlider,สไลเดอร์
+ui.fp.supSteadicam,สเตดิแคม
+ui.fp.supTripod,ขาตั้งสามขา
+ui.fp.thisScene,ผังของฉากนี้
+ui.fp.toggleGrid,กริด
+ui.fp.togglePaths,แสดงเส้นการเคลื่อนที่จากจังหวะก่อน
+ui.fp.toggleSight,แสดงระยะสายตาของตัวละคร
+ui.fp.toolCamera,วางกล้อง
+ui.fp.toolEntity,เพิ่มตัวละคร/ของจาก Wiki (หรือลากจาก Explorer มาวาง)
+ui.fp.toolLight,วางไฟ
+ui.fp.toolSelect,เลือก/ย้าย (ลากพื้นว่าง = เลื่อนผัง · ล้อเมาส์ = ซูม)
+ui.fp.toolShape,รูปทรง — ผนัง ประตู หน้าต่าง โต๊ะ บันได ข้อความ
+ui.fp.toolTrack,วางราง dolly/slider
+ui.fp.typeCamera,กล้อง
+ui.fp.typeEntity,ตัวละคร/ของ
+ui.fp.typeLight,ไฟ
+ui.fp.typeShape,รูปทรง
+ui.fp.typeTrack,ราง
+ui.fp.unbindScene,เลิกผูกฉาก
+ui.fp.undo,ย้อนกลับ
+ui.fp.undoAct,เลิกทำ
 ui.gallery.addImage,+ เพิ่มรูป…
 ui.gallery.addImageDone,เพิ่มรูปแล้ว: 
 ui.gallery.addImageItemIn,เพิ่มรูป {0} ใบเข้าอัลบั้ม {1}
@@ -3579,15 +3839,34 @@ ui.galleryExport.libraryImage,คลังรูป
 ui.galleryExport.listImageMd,รายการรูป.md
 ui.galleryExport.notHasImageExport,ไม่มีรูปให้ส่งออก
 ui.galleryExport.tag,แท็ก: {0}
+ui.galleryMoodboard.add,เพิ่ม
+ui.galleryMoodboard.addGroup,กรอบกลุ่ม
+ui.galleryMoodboard.addImage,รูปจากคลังรูป…
+ui.galleryMoodboard.addNote,โน้ต
+ui.galleryMoodboard.addPalette,แถบสี
 ui.galleryMoodboard.addRef,อ้างอิง
 ui.galleryMoodboard.addRefTip,เพิ่มการ์ดอ้างอิง (ลิงก์เว็บ/ข้อความ) — ลากลิงก์จากเบราว์เซอร์มาวางก็ได้
+ui.galleryMoodboard.addTip,เพิ่มโน้ต · แถบสี · กรอบกลุ่ม · อ้างอิง · รูป (หรือดับเบิลคลิก/คลิกขวาที่ว่าง)
 ui.galleryMoodboard.adjustAllItemAt,ปรับทุกชิ้นให้ตรงสัดส่วนรูปแล้ว
 ui.galleryMoodboard.adjustAllItemAt2,ปรับทุกชิ้นให้ตรงสัดส่วนรูป
 ui.galleryMoodboard.adjustAtRatioImage,ปรับให้ตรงสัดส่วนรูป
 ui.galleryMoodboard.arrangeAuto,จัดเรียงอัตโนมัติ
+ui.galleryMoodboard.bg,ฉากหลัง
+ui.galleryMoodboard.bgBlur,เบลอ
+ui.galleryMoodboard.bgColor,สีพื้น
+ui.galleryMoodboard.bgDim,หรี่
+ui.galleryMoodboard.bgImage,รูป
+ui.galleryMoodboard.bgImageChange,เปลี่ยนรูป…
+ui.galleryMoodboard.bgImagePick,เลือกรูป…
+ui.galleryMoodboard.bgImageRemove,เอารูปฉากหลังออก
+ui.galleryMoodboard.bgTheme,ตามธีม
+ui.galleryMoodboard.bgThemeTip,กลับไปใช้สีพื้นตามธีมของโปรแกรม
+ui.galleryMoodboard.bgTip,ฉากหลังของกระดาน — สี · รูป · เบลอ · หรี่
 ui.galleryMoodboard.boardAlbum,กระดานของอัลบั้มไหน
-ui.galleryMoodboard.boardEmptyOpenPanel,"กระดานยังว่าง — เปิดแผง ""คลังรูปภาพ"" ไว้ข้าง ๆ แล้วลากรูปมาวางตรงนี้ได้เลย "
+ui.galleryMoodboard.boardEmptyOpenPanel,"เปิดแผง ""คลังรูปภาพ"" ไว้ข้าง ๆ แล้วลากรูป ฉาก หรือตัวละครมาวางตรงนี้ · ดับเบิลคลิกที่ว่าง = โน้ต · คลิกขวา = เพิ่มอื่น ๆ "
 ui.galleryMoodboard.bottomLast,ลงล่างสุด
+ui.galleryMoodboard.caption,คำบรรยายใต้รูป…
+ui.galleryMoodboard.captionPh,เช่น ป่าเอลเดอเฟลอร์
 ui.galleryMoodboard.cardChapter,บท
 ui.galleryMoodboard.cardEdit,แก้การ์ด…
 ui.galleryMoodboard.cardEntity,หน้า Wiki
@@ -3603,16 +3882,27 @@ ui.galleryMoodboard.clearBoardMoodAlbum,ล้างกระดานอาร�
 ui.galleryMoodboard.clearBoardNotDel,ล้างกระดาน (ไม่ลบไฟล์)
 ui.galleryMoodboard.cmdAddFillBoard,คำสั่งเพิ่มเติมของกระดาน
 ui.galleryMoodboard.dropFail,วางลงกระดาน
+ui.galleryMoodboard.duplicate,ทำสำเนา
+ui.galleryMoodboard.emptyTitle,กระดานยังว่าง
 ui.galleryMoodboard.exitBoardNotDel,เอาออกจากกระดาน (ไม่ลบไฟล์)
 ui.galleryMoodboard.export,ส่งออก
-ui.galleryMoodboard.exportBoardImage,ส่งออกกระดานเป็นภาพ…
 ui.galleryMoodboard.exportHtml,หน้าเว็บ HTML (รูปฝังในไฟล์ · ลิงก์กดได้)
 ui.galleryMoodboard.exportPng,รูปภาพ PNG
 ui.galleryMoodboard.exportTip,ส่งออกกระดานทั้งหมดเป็นรูป PNG หรือหน้าเว็บ HTML
 ui.galleryMoodboard.fitTip,ซูมให้เห็นทุกชิ้นบนกระดาน
+ui.galleryMoodboard.groupName,ชื่อกลุ่ม
+ui.galleryMoodboard.groupUntitled,กลุ่มใหม่
 ui.galleryMoodboard.imageOutside,รูปนี้อยู่นอกคลังรูปของโปรเจกต์ — นำเข้าคลังรูปก่อน
+ui.galleryMoodboard.layerDown,ลงหนึ่งชั้น
+ui.galleryMoodboard.layerUp,ขึ้นหนึ่งชั้น
+ui.galleryMoodboard.noteColor,สีโน้ต
+ui.galleryMoodboard.noteEdit,แก้ข้อความ
+ui.galleryMoodboard.paletteCopied,คัดลอกสี {0} แล้ว
+ui.galleryMoodboard.paletteCopy,ดับเบิลคลิก = คัดลอกรหัสสี
+ui.galleryMoodboard.paletteEdit,แก้สีในแถบ (รหัสสีคั่นด้วยจุลภาค)
 ui.galleryMoodboard.pasteImageTopBoard,"วาง {0} รูปบนกระดาน ""{1}"" แล้ว"
 ui.galleryMoodboard.pickImageLibraryDone,"(หรือเลือกรูปในคลังแล้วกด ""วางบนกระดาน"")"
+ui.galleryMoodboard.redoNone,ไม่มีอะไรให้ทำซ้ำ
 ui.galleryMoodboard.refEdit,แก้การ์ดอ้างอิง
 ui.galleryMoodboard.refNew,การ์ดอ้างอิงใหม่
 ui.galleryMoodboard.refText,ข้อความ
@@ -3621,9 +3911,30 @@ ui.galleryMoodboard.refTitle,ชื่อ
 ui.galleryMoodboard.refTitlePh,เช่น เครื่องแต่งกายยุคอยุธยา
 ui.galleryMoodboard.refUrl,ลิงก์
 ui.galleryMoodboard.refUrlPh,https://… (ไม่ใส่ก็ได้)
+ui.galleryMoodboard.removedN,เอาออกจากกระดาน {0} ชิ้น
+ui.galleryMoodboard.selCount,เลือก {0}
 ui.galleryMoodboard.top,ขึ้นบนสุด
+ui.galleryMoodboard.undoNone,ไม่มีอะไรให้ย้อนกลับ
 ui.galleryUsageIndex.msg, +อีก {0}
 ui.galleryUsageIndex.useDone,ใช้แล้ว
+ui.guide.intro,เจ็ดเรื่องที่ควรรู้ก่อนเริ่มเขียน
+ui.guide.newProject,สร้างโปรเจกต์ใหม่
+ui.guide.s1Text,ทุกอย่างเก็บเป็นไฟล์ Markdown (.md) กับ JSON ในโฟลเดอร์เดียว เปิดดูหรือแก้นอกโปรแกรมได้ สำรองด้วยการก๊อปโฟลเดอร์ หรือส่งออกเป็น ZIP จากหน้าแรก
+ui.guide.s1Title,โปรเจกต์คือโฟลเดอร์
+ui.guide.s2Text,แผงโปรเจกต์ทางซ้ายคือโครงเรื่อง คลิกฉากเพื่อเปิดเขียน คลิกขวาเพื่อเพิ่ม ย้าย เปลี่ยนชื่อ หรือลบ (ของที่ลบไปอยู่ในถังขยะ กู้คืนได้)
+ui.guide.s2Title,เล่ม · บท · ฉาก
+ui.guide.s3Text,แต่ละฉากเลือกได้ว่าเป็นนิยายหรือบทภาพยนตร์ สลับได้ที่แถบรูปแบบ งานถูกบันทึกอัตโนมัติและเก็บประวัติเวอร์ชันให้ย้อนดูได้
+ui.guide.s3Title,นิยายหรือบทภาพยนตร์
+ui.guide.s4Text,เก็บตัวละคร สถานที่ สิ่งของ และตำนานไว้ใน Wiki พิมพ์ชื่อในฉากแล้วโปรแกรมลิงก์ให้เอง ดูความสัมพันธ์ทั้งหมดได้ที่ Story Network
+ui.guide.s4Title,Wiki ของโลกในเรื่อง
+ui.guide.s5Text,เมนู มุมมอง → แผง มี Kanban เส้นเวลา แผนที่ กระดานวางแผน ผังพื้นที่ และอื่น ๆ ลากหัวแผงเพื่อผนึก ลอย หรือฉีกเป็นหน้าต่างแยกได้
+ui.guide.s5Title,แผงเครื่องมือ
+ui.guide.s6Text,เมนู ส่งออก → ศูนย์รวมการส่งออก เลือกรูปแบบ ตั้งค่า และเห็นตัวอย่างก่อนบันทึกไฟล์ แผงอย่างเส้นเวลาหรือแผนที่ส่งออกเป็นรูปหรือตารางได้จากเมนูเดียวกัน
+ui.guide.s6Title,ส่งออก
+ui.guide.s7Text,ช่วยเหลือ → ปุ่มลัดทั้งหมด แสดงปุ่มลัดตามที่ตั้งไว้จริง และเปลี่ยนได้ในตั้งค่า รวมถึงธีม ภาษา และฟอนต์
+ui.guide.s7Title,ปุ่มลัดและตั้งค่า
+ui.guide.shortcuts,ดูปุ่มลัดทั้งหมด
+ui.guide.title,เริ่มต้นใช้งาน Killian 2
 ui.histOry.addImage,เพิ่มรูป
 ui.histOry.adjustCountTimesKeep,· ปรับจำนวนครั้งที่เก็บได้ที่ ตั้งค่า → ข้อมูลผลงาน
 ui.histOry.beforePageAllKeep,ก่อนหน้าทั้งหมดที่เก็บไว้
@@ -3857,6 +4168,7 @@ ui.kanban.addStatusHint,เพิ่มคอลัมน์ = เพิ่ม�
 ui.kanban.deleteColumn,ลบคอลัมน์
 ui.kanban.deleteMove,"ลบสถานะ ""{0}""? ฉาก {1} ฉากในคอลัมน์นี้จะย้ายไป ""{2}"""
 ui.kanban.draftPick,เลือกฉบับร่างที่จะแสดงบนกระดาน
+ui.kanban.dropHere,ลากการ์ดมาวางที่นี่
 ui.kanban.hiddenBuiltin, (ซ่อนจากกระดานอยู่)
 ui.kanban.manageStatus,จัดการสถานะ
 ui.kanban.moveScenesFirst,ย้ายฉากออกจากคอลัมน์นี้ก่อน
@@ -3870,6 +4182,42 @@ ui.kanban.unset,ยังไม่กำหนด
 ui.layoutSplit.fieldEmpty,ช่องว่าง
 ui.layoutSplit.leftRight,ซ้าย-ขวา
 ui.layoutSplit.topBottom,บน-ล่าง
+ui.lib.cardTip,คลิก = รายละเอียด · ดับเบิลคลิก = เปิด · ลาก = เรียงลำดับ
+ui.lib.chapterCover,หน้าปกบท
+ui.lib.coverOff,ไม่มีปก
+ui.lib.coverOn,มีปก
+ui.lib.dirTip,สลับทิศการเรียง
+ui.lib.metaCover,หน้าปกเล่ม
+ui.lib.metaFolder,โฟลเดอร์
+ui.lib.metaOrder,ลำดับ
+ui.lib.metaUpdated,แก้ล่าสุด
+ui.lib.moveDown,เลื่อนลงหนึ่งลำดับ
+ui.lib.moveUp,เลื่อนขึ้นหนึ่งลำดับ
+ui.lib.noMatch,ไม่พบรายการที่ตรง
+ui.lib.pickBookTip,เล่มที่จะจัดการบท
+ui.lib.pickOne,เลือกการ์ดเพื่อดูรายละเอียด
+ui.lib.renameTip,แก้ชื่อได้ที่นี่เลย
+ui.lib.renumberTip,ตั้งชื่อบทเป็นเลขตามลำดับใหม่ทั้งเล่ม
+ui.lib.reorderHintBooks,คลิกการ์ด = ดูรายละเอียด · ดับเบิลคลิก = เปิดเล่ม · ลากการ์ด = เรียงลำดับเล่ม
+ui.lib.reorderHintChapters,คลิกการ์ด = ดูรายละเอียด · ดับเบิลคลิก = เปิดบท · ลากการ์ด = เรียงลำดับบท
+ui.lib.reorderNeedOrder,"ลากเรียงได้เมื่อเรียงตาม ""ลำดับเรื่อง"" และไม่ได้กรอง/ค้นหาอยู่"
+ui.lib.reorderOffHint,"กำลังเรียงตาม ""{0}"" — ลากเรียงได้เมื่อกลับไปเรียงตามลำดับเรื่อง"
+ui.lib.searchBooksPh,ค้นหาเล่ม (ชื่อ · คำโปรย)
+ui.lib.searchChaptersPh,ค้นหาบท
+ui.lib.searchPh,ค้นหา…
+ui.lib.sort_order,ลำดับเรื่อง
+ui.lib.sort_status,สถานะ
+ui.lib.sort_title,ชื่อ
+ui.lib.sort_updated,แก้ล่าสุด
+ui.lib.sort_words,จำนวนคำ
+ui.lib.sortTip,เรียงตาม
+ui.lib.statChapters,บท
+ui.lib.statNo,บทที่
+ui.lib.statScenes,ฉาก
+ui.lib.statusTip,คลิกเพื่อเปลี่ยนสถานะ
+ui.lib.statWords,คำ
+ui.lib.viewGrid,มุมมองปก
+ui.lib.viewList,มุมมองรายการ
 ui.locations,ที่
 ui.log.dayEmpty,ไฟล์ของวันนี้ว่างหรืออ่านไม่ได้
 ui.log.dayOption,{0} · {1} KB
@@ -3916,7 +4264,27 @@ ui.mapAi.zones,เขต: {0}
 ui.maps.addMap,+ เพิ่มแผนที่
 ui.maps.allMaps,แผนที่ทั้งหมด
 ui.maps.allMapsTip,กลับหน้ารวมแผนที่ (แกลเลอรี)
-ui.maps.backSizeFitFrame,กลับไปขนาดพอดีกรอบ (100%)
+ui.maps.bgBtn,รูปพื้นหลัง
+ui.maps.bgBtnTip,ปรับรูปพื้นหลัง: ขนาด · สัดส่วน · ความทึบ · หมุน · เอียง · พลิก · เฉือน (หมุดและโซนไม่ขยับตาม)
+ui.maps.bgCtx,ปรับรูปพื้นหลัง…
+ui.maps.bgDrag,ลากย้ายรูป
+ui.maps.bgDragTip,เปิดไว้ = ลากบนแผนที่เพื่อย้ายรูป · ปิด = ลากเพื่อเลื่อนแผนที่ตามปกติ
+ui.maps.bgFlipH,พลิกแนวนอน
+ui.maps.bgFlipV,พลิกแนวตั้ง
+ui.maps.bgIntro,รูปเป็นของตกแต่ง ปรับได้อิสระ — หมุด โซน กริด และพิกัดจริงยึดกรอบของแผนที่ ไม่ขยับตามรูป
+ui.maps.bgOpacity,ความทึบ
+ui.maps.bgPitch,เอียงหน้า-หลัง (pitch)
+ui.maps.bgPosX,ตำแหน่ง X
+ui.maps.bgPosY,ตำแหน่ง Y
+ui.maps.bgRatio,สัดส่วนความสูง
+ui.maps.bgReset,คืนค่าเดิมทั้งหมด
+ui.maps.bgResetOne,ดับเบิลคลิก = คืนค่าเดิมของช่องนี้
+ui.maps.bgRotate,หมุน
+ui.maps.bgScale,ขนาด
+ui.maps.bgSkewX,เฉือนแนวนอน
+ui.maps.bgSkewY,เฉือนแนวตั้ง
+ui.maps.bgTitle,รูปพื้นหลัง
+ui.maps.bgYaw,เอียงซ้าย-ขวา (yaw)
 ui.maps.busyNextRouteClick,กำลังต่อเส้นทาง “{0}” — คลิกหมุดตามลำดับที่เดินทาง ({1} จุด)
 ui.maps.cancelPick,ยกเลิกการเลือก
 ui.maps.cancelPickTip,เลิกเลือกหมุดทั้งหมด
@@ -3924,11 +4292,8 @@ ui.maps.cantPickPin,ยังไม่ได้เลือกหมุด
 ui.maps.catEgWorldCurrent,หมวด (เช่น โลกปัจจุบัน)
 ui.maps.catMapSkipEmpty,หมวดแผนที่ — เว้นว่างได้
 ui.maps.changeImage,เปลี่ยนรูป
-ui.maps.changeImageTip,เปลี่ยนรูปของแผนที่นี้ (เลือกจากคลังรูป)
 ui.maps.changeNameRoute,เปลี่ยนชื่อเส้นทาง
-ui.maps.clickEmptyPinPinF,ลาก = เลื่อนแผนที่ · ล้อ = ซูม · ดับเบิลคลิก = ปักหมุด · {0} · Ctrl+คลิกหมุด = กระโดด (ประตู/หน้า Wiki) · Shift+ลาก = เลือกเป็นกรอบ · ลากตัวละครจากแถบซ้ายมาวางได้
 ui.maps.clickPinOpenDialog,คลิกหมุด = เปิดกล่องแก้ไขหมุด
-ui.maps.clickPinOpenLink,คลิกหมุด = เปิดลิงก์ของหมุด (ประตู/หน้า Wiki) · ไม่แก้ไขอะไร
 ui.maps.collapsePin,ย่อหมุด
 ui.maps.compass,เข็มทิศ
 ui.maps.compassTip,แสดง/ซ่อนเข็มทิศ (หมุนตามทิศเหนือที่ตั้งไว้)
@@ -3936,10 +4301,25 @@ ui.maps.copy,⧉ คัดลอก
 ui.maps.copyPinDoneOpen,"คัดลอก {0} หมุดแล้ว — เปิดแผนที่ปลายทางแล้วกด ""วาง"""
 ui.maps.copyPinPickDone,คัดลอกหมุดที่เลือก แล้วไปวางบนแผนที่อื่นได้
 ui.maps.countFieldGridNext,จำนวนช่องกริดต่อด้าน
-ui.maps.ctxAddPin,ปักหมุดตรงนี้
+ui.maps.ctxColor,สีหมุด
 ui.maps.ctxCopyCoords,คัดลอกพิกัด
+ui.maps.ctxImageChange,เปลี่ยนรูปย่อของหมุด
+ui.maps.ctxImagePick,ตั้งรูปย่อของหมุด (จากคลังรูป)
+ui.maps.ctxImageRemove,เอารูปย่อที่ตั้งเองออก (กลับไปใช้รูปประจำตัว)
+ui.maps.ctxImageView,ดูรูปขนาดเต็ม
+ui.maps.ctxLabelToggle,แสดง/ซ่อนป้ายชื่อของหมุดนี้
+ui.maps.ctxLayers,ลำดับชั้น
+ui.maps.ctxLinkEntity,ลิงก์กับตัวละคร/สถานที่ (หมุดโน้ตจะกลายเป็นหมุดเอนทิตี้)
+ui.maps.ctxLinkMap,แผนที่ปลายทาง
+ui.maps.ctxNoLink,— ไม่ลิงก์ —
+ui.maps.ctxPin,หมุด
+ui.maps.ctxPinNamePh,ชื่อหมุด
+ui.maps.ctxPinNote,หมุดโน้ต…
+ui.maps.ctxPinPortal,ประตูไปแผนที่
+ui.maps.ctxSize,ขนาดหมุด (S · M · L · XL)
+ui.maps.ctxText,ตัวหนังสือ
 ui.maps.delMap,ลบแผนที่
-ui.maps.delMapTip,ลบแผนที่นี้ (ไฟล์รูปไม่ถูกลบ)
+ui.maps.delMapDone,"ลบแผนที่ ""{0}"" แล้ว"
 ui.maps.delPick,ลบที่เลือก
 ui.maps.delPickTip,ลบหมุดที่เลือกทั้งหมด
 ui.maps.delPinDone,ลบ {0} หมุดแล้ว
@@ -3968,6 +4348,11 @@ ui.maps.entRowTip,ลากไปวางบนแผนที่ = ปัก�
 ui.maps.entRowTipGallery,คลิก = ไปแผนที่ที่ปักไว้ · ดับเบิลคลิก = เปิดหน้า Wiki
 ui.maps.entZoned,มีโซน
 ui.maps.expandPin,ขยายหมุด
+ui.maps.exportMenuTip,ส่งออกแผนที่ (PNG · GeoJSON · พิมพ์)
+ui.maps.exportPngAs,PNG… (เลือกที่เก็บ)
+ui.maps.exportPngLib,PNG ลงคลังรูปของโปรเจกต์
+ui.maps.fitAll,พอดีจอ (เห็นทุกอย่างบนแผนที่)
+ui.maps.fitAllTip,พอดีจอ — เห็นทุกอย่างบนแผนที่ (ปุ่ม 0)
 ui.maps.foundPinTopMap,"""{0}"" — เจอ {1} หมุดบนแผนที่นี้"
 ui.maps.galleryCardTip,คลิกเพื่อเข้าไปดูแผนที่ · ลากไปวางบนแผนที่อื่น = ประตูไปแผนที่นี้
 ui.maps.galleryHint,เลือกแผนที่เพื่อเข้าไปดู — ลากตัวละคร/สถานที่จากแถบซ้ายไปวางบนแผนที่ได้
@@ -3990,7 +4375,6 @@ ui.maps.geoClearTip,ลบมาตราส่วนและจุดอ้า
 ui.maps.geoIntro,สองขั้น: (1) บอกระยะจริงของเส้นหนึ่งเส้นบนภาพ — ถ้าภาพมีแถบสเกล (0 · 50 · 100 ม.) ให้จิ้มหัว-ท้ายของแถบ ถ้าไม่มีให้จิ้มสองจุดที่รู้ระยะ (2) จิ้มจุดหนึ่งแล้วบอกละติจูด/ลองจิจูดของมัน
 ui.maps.geojson,GeoJSON
 ui.maps.geojsonDone,ส่งออก GeoJSON แล้ว: {0}
-ui.maps.geojsonTip,ส่งออกหมุด/โซน/เส้นทางเป็น GeoJSON (ใช้กับโปรแกรมแผนที่อื่นได้เมื่อตั้งพิกัดแล้ว)
 ui.maps.geoNorthDesc,องศาที่ทิศเหนือเอียงจากด้านบนของภาพ (ตามเข็มนาฬิกา · 0 = เหนืออยู่บน)
 ui.maps.geoNorthTip,ทิศเหนือเอียงกี่องศา
 ui.maps.geoOutside,พิกัดนี้อยู่นอกภาพแผนที่
@@ -4015,9 +4399,14 @@ ui.maps.geoStepRef,จุดอ้างอิงละติจูด/ลอง
 ui.maps.geoStepScale,มาตราส่วน
 ui.maps.geoTitle,พิกัดจริงของแผนที่
 ui.maps.gridTip,แสดง/ซ่อนตารางกริด
+ui.maps.hint168,ลากที่ว่าง = เลื่อน · ล้อ = ซูม · คลิกขวา = หมุด/โซน/ตัวหนังสือ · คลิกของบนแผนที่ = เลือก · ลากหมุด = ย้าย · ดับเบิลคลิก = เปิดลิงก์
 ui.maps.journey,เส้นทางเรื่อง
 ui.maps.journeyTip,ลากเส้นผ่านตำแหน่งของฉากตามลำดับเวลาในเรื่อง — เห็นว่าตัวละครต้องเดินทางไกลแค่ไหน
 ui.maps.journeyTotal,รวม {0} · {1}
+ui.maps.layerBottom,ลงล่างสุด
+ui.maps.layerDown,ลงหนึ่งชั้น
+ui.maps.layerTop,ขึ้นบนสุด
+ui.maps.layerUp,ขึ้นหนึ่งชั้น
 ui.maps.legFrom,"จาก ""{0}"": {1} · {2}"
 ui.maps.lineLineSolid,เส้นประ / เส้นทึบ
 ui.maps.mapBindDelDone,(แผนที่ที่ผูกไว้ถูกลบไปแล้ว)
@@ -4032,51 +4421,55 @@ ui.maps.measureStart,วัดระยะจากตรงนี้
 ui.maps.measureTip,คลิกทีละจุดเพื่อวัดระยะทางและเวลาเดินทาง (Esc = จบ)
 ui.maps.measuring,วัดระยะ: {0} จุด · {1}
 ui.maps.modeMovePosDrag,โหมดย้ายตำแหน่ง — ลากหมุดเพื่อย้าย
+ui.maps.moreTip,ตัวเลือกแผนที่
 ui.maps.nameRoute,ชื่อเส้นทาง
+ui.maps.newMapBlank,ผืนเปล่า
+ui.maps.newMapHow,เริ่มแผนที่ใหม่แบบไหน — แผนที่ไม่มีขอบ ใช้ได้ทั้งแบบมีรูปพื้นหลังและผืนเปล่า (ใส่รูปทีหลังได้)
+ui.maps.newMapImage,เลือกรูปพื้นหลัง…
 ui.maps.nextDot,ต่อจุด
 ui.maps.nextDotTip,คลิกหมุดบนแผนที่เพื่อต่อเส้นทางนี้
 ui.maps.notFoundMapScene,ไม่พบแผนที่ที่ฉากนี้ผูกไว้ (อาจถูกลบไปแล้ว)
-ui.maps.notHasImagePress,"ยังไม่มีรูป — กด ""เปลี่ยนรูป"""
 ui.maps.notPlaced,ยังไม่ได้ปักตำแหน่ง
-ui.maps.notPlannedPressAdd,"ยังไม่มีแผนที่ — กด ""＋ เพิ่มแผนที่"" แล้วเลือกรูปจากคลังรูปเป็นแผนที่ (เช่น แผนที่โลก/เมือง/ผังห้อง)"
+ui.maps.notPlannedPressAdd,"ยังไม่มีแผนที่ — กด ""เพิ่มแผนที่"" เริ่มจากผืนเปล่าหรือรูปพื้นหลัง (แผนที่โลก/เมือง/ผังห้อง) ก็ได้"
 ui.maps.part,มาตราส่วน
 ui.maps.pastePin,วาง {0} หมุด
 ui.maps.pastePinCopyMap,วางหมุดที่คัดลอกไว้ลงแผนที่นี้
 ui.maps.pastePinDone,"วาง {0} หมุดลง ""{1}"" แล้ว"
+ui.maps.pattern_cross,ตาราง
+ui.maps.pattern_dots,จุด
+ui.maps.pattern_hatch,เส้นเฉียง
+ui.maps.pattern_none,ไม่มี
 ui.maps.pickPin,เลือก {0} หมุด
 ui.maps.pin, · พิกัดที่ปักเอง
 ui.maps.pinEdit,แก้หมุด…
 ui.maps.placeIt,ไปปักตำแหน่ง
-ui.maps.placeItHint,"เปิดแผงผังพื้นที่ แล้วกด ""ปักตำแหน่งฉากนี้"""
+ui.maps.placeItHint,ลากฉากจาก Explorer มาวางบนแผนที่ (หรือบนหมุด) เพื่อบอกว่าฉากนี้เกิดที่ไหน
 ui.maps.portalEnter,เข้าไปในแผนที่ย่อย
 ui.maps.portalMapOther,ประตูไปแผนที่อื่น
 ui.maps.portalSceneBindMap,{0} เอนทิตี้ · {1} ประตู · {2} หมายเหตุ · {3} ฉากผูกกับแผนที่นี้
 ui.maps.portalTip,"ประตูไป ""{0}"" — Ctrl+คลิกเพื่อเข้าไป"
 ui.maps.pos,ตำแหน่งเอนทิตี้
-ui.maps.pressBtnEditTop," · กดปุ่ม ""แก้ไข"" บนแถบเครื่องมือเพื่อแก้หมุดนี้"
 ui.maps.print,พิมพ์
 ui.maps.printMapNotOk,พิมพ์แผนที่ไม่สำเร็จ: 
-ui.maps.printTip,พิมพ์แผนที่พร้อมหมุด/โซน/เส้นทาง
 ui.maps.recolorLine,เปลี่ยนสีเส้น
+ui.maps.removeImage,เอารูปพื้นหลังออก
 ui.maps.route,เส้นทางที่ 
-ui.maps.route2,เส้นทาง
 ui.maps.route3,เส้นทาง ({0})
 ui.maps.routeDragLineLink,"เส้นทาง = ลากเส้นเชื่อมหมุดตามลำดับ ใช้เล่าการเดินทางของตัวละคร — กด ""＋ เส้นทางใหม่"" แล้วคลิกหมุดทีละจุด"
 ui.maps.routeNew,เส้นทางใหม่
 ui.maps.routeNew2,+ เส้นทางใหม่
 ui.maps.routeNewTip,สร้างเส้นทางใหม่ แล้วคลิกหมุดเพื่อต่อจุด
 ui.maps.saveMapLibraryImage,บันทึกแผนที่ลงคลังรูปแล้ว: 
-ui.maps.saveMapReadyPin,บันทึกแผนที่พร้อมหมุด/เส้นทางเป็นรูปลงคลังรูป
 ui.maps.scaleTip,แสดง/ซ่อนแถบมาตราส่วน (ตั้งพิกัดแล้ว = บอกระยะจริงเอง)
 ui.maps.scenePin, ({0} ฉากปักพิกัดเอง)
 ui.maps.scenePinCantBind,"
 (ฉากที่ปักพิกัดไว้เอง ไม่ได้ผูกกับหมุด)"
 ui.maps.sceneWhere,ตำแหน่งบนแผนที่
 ui.maps.searchPinName,ค้นหาหมุด (ชื่อ/หมายเหตุ)
+ui.maps.setCategory,ตั้งหมวดแผนที่…
 ui.maps.setGapField,(ตั้งระยะได้ที่ช่องข้างปุ่มไม้บรรทัด)
 ui.maps.showHideLabelUnder,แสดง/ซ่อนป้ายชื่อใต้หมุด
 ui.maps.showHideRouteBetween,แสดง/ซ่อนเส้นทางระหว่างหมุด
-ui.maps.showItemFilm,แสดงตัวหนังสือ
 ui.maps.showOnMap,ดูบนแผนที่
 ui.maps.showOnMapHint,เปิดแผงแผนที่แล้วเลื่อนไปที่ตำแหน่งของฉากนี้
 ui.maps.sideChildTip,เข้าไปในแผนที่ย่อยนี้
@@ -4091,10 +4484,16 @@ ui.maps.sideSubMaps,แผนที่ย่อย
 ui.maps.sideZones,โซน
 ui.maps.sizePin,ขนาดหมุด
 ui.maps.tableGrid,ตารางกริด
+ui.maps.textAsk,ข้อความบนแผนที่
+ui.maps.textAskPh,เช่น เกาะแฮร์โรว์
+ui.maps.textClickHint,คลิกบนแผนที่ตรงที่จะวางตัวหนังสือ
+ui.maps.textLabel,ตัวหนังสือบนแผนที่
 ui.maps.textUnderBarPart,ข้อความใต้แถบมาตราส่วน
 ui.maps.timeDH,{0} วัน {1} ชม.
 ui.maps.timeHM,{0} ชม. {1} นาที
 ui.maps.timeM,{0} นาที
+ui.maps.toolSelect,เลือก
+ui.maps.toolSelectHint,คลิก = เลือก (มีแถบเครื่องมือลอย) · ลาก = ย้าย · คลิกซ้ำ/ดับเบิลคลิก = เปิดลิงก์
 ui.maps.topImage,ทิศเหนืออยู่ด้านบนของภาพ
 ui.maps.travelCar,รถยนต์
 ui.maps.travelCart,เกวียน
@@ -4105,24 +4504,38 @@ ui.maps.unitKm,{0} กม.
 ui.maps.unitKm2,{0} ตร.กม.
 ui.maps.unitM,{0} ม.
 ui.maps.unitM2,{0} ตร.ม.
+ui.maps.wikiBlock,แผนที่
+ui.maps.wikiNoMaps,ยังไม่มีแผนที่ในโปรเจกต์นี้
+ui.maps.wikiNotPlaced,ยังไม่ได้ปักบนแผนที่ใบไหน — เลือกแผนที่แล้วปักได้เลย
+ui.maps.wikiOpenMaps,เปิดแผงแผนที่
+ui.maps.wikiOpenPanel,เปิดในแผงแผนที่
+ui.maps.wikiPlaceHere,ปักลงแผนที่นี้
 ui.maps.zone,โซน
+ui.maps.zoneCenter,เลื่อนกล้องมาที่โซนนี้
+ui.maps.zoneCloseTip,คลิกจุดแรก = ปิดโซน
 ui.maps.zoneDelete,ลบโซน
 ui.maps.zoneDeleteQ,"ลบโซน ""{0}"" ?"
 ui.maps.zoneDone,"สร้างโซน ""{0}"" แล้ว"
 ui.maps.zoneDraw,วาดโซน (แบ่งพื้นที่)
-ui.maps.zoneDrawHere,วาดโซนใหม่
 ui.maps.zoneDrawHint,คลิกทีละจุดรอบพื้นที่ · ดับเบิลคลิก/Enter = เสร็จ · Backspace = ถอยจุด · Esc = ยกเลิก
 ui.maps.zoneDrawing,"กำลังวาดโซน ""{0}"" · {1} จุด"
-ui.maps.zoneEditPts,แก้จุดของโซน
+ui.maps.zoneFill,สีพื้น
+ui.maps.zoneLinkTip,ลิงก์โซนกับตัวละคร/สถานที่ (Ctrl+คลิกโซน = เปิดหน้า Wiki)
+ui.maps.zoneMidTip,คลิก = เพิ่มจุดยอดตรงนี้
 ui.maps.zoneName,ชื่อโซน
+ui.maps.zoneNamePh,ชื่อโซน…
 ui.maps.zoneNeed3,โซนต้องมีอย่างน้อย 3 จุด
+ui.maps.zoneOpacity,ความทึบ
+ui.maps.zonePattern,ลาย
+ui.maps.zonePinsIn,{0} หมุดในเขต
 ui.maps.zoneRecolor,เปลี่ยนสีโซน
 ui.maps.zoneRename,เปลี่ยนชื่อโซน
+ui.maps.zoneSelect,เลือกโซน (แก้ชื่อ · สี · ลิงก์)
+ui.maps.zoneStyle,สีพื้น · ความทึบ · ลาย
 ui.maps.zoneTip,วาดโซน (พื้นที่) เป็นรูปหลายเหลี่ยม — อยู่ชั้นล่างสุดใต้หมุด
 ui.maps.zoneVertexTip,ลากเพื่อย้ายจุด · คลิกขวา = ลบจุด
 ui.maps.zoomInCtrlWheel,ซูมเข้า (ล้อเมาส์)
 ui.maps.zoomOutCtrlWheel,ซูมออก (ล้อเมาส์)
-ui.maps.zoomSliderTip,ระดับซูม (ล้อเมาส์ก็ได้)
 ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)
 ui.menu.aiHubPanel,AI Hub
@@ -4139,7 +4552,7 @@ ui.menu.cancelSplitPageScreen,ยกเลิกแยกหน้าจอ
 ui.menu.caseBigSmall,ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ)
 ui.menu.centerK,กึ่งกลาง
 ui.menu.chapterFilm,บทหนัง
-ui.menu.cheatsheet,คู่มือปุ่มลัด…
+ui.menu.cheatsheet,ปุ่มลัดทั้งหมด…
 ui.menu.checkAlwaysCharacter,ตรวจสอบความสม่ำเสมอของตัวละคร…
 ui.menu.checkBeforePrintExport,ตรวจก่อนพิมพ์/ส่งออก
 ui.menu.checkChapterListError,ตรวจทั้งบท (รายการข้อผิดพลาด)…
@@ -4176,7 +4589,7 @@ ui.menu.editItemFirstSentence,แก้ตัวแรกของประโ�
 ui.menu.exitApp,ออกจากโปรแกรม
 ui.menu.expand,ขยาย
 ui.menu.expandUI,ขยาย UI
-ui.menu.exportHub,ส่งออก…
+ui.menu.exportHub,ศูนย์รวมการส่งออก…
 ui.menu.exportLangCSVKey,ส่งออกภาษาเป็น CSV (key · ไทย · อังกฤษ)…
 ui.menu.exportLayoutPanelJSON,ส่งออกการจัดวางแผง (JSON)…
 ui.menu.exportProjectZip,ทั้งโปรเจกต์เป็น ZIP…
@@ -4289,6 +4702,7 @@ ui.menu.projectExplorer,โปรเจกต์ (Explorer)
 ui.menu.projectLatest,โปรเจกต์ล่าสุด
 ui.menu.projectReplace,ค้นหาและแทนที่ทั้งโปรเจกต์
 ui.menu.propsSceneFileMd,ซิงก์คุณสมบัติฉากจากไฟล์ .md (แก้ไฟล์นอกโปรแกรมแล้วใช้)
+ui.menu.quickStart,เริ่มต้นใช้งาน
 ui.menu.repeatY,ทำซ้ำ
 ui.menu.reportCharacterReport,รายงานตัวละคร (Character Report)…
 ui.menu.reportPlaceLocationReport,รายงานสถานที่ (Location Report)…
@@ -4409,8 +4823,8 @@ ui.net.dragAreaEmptyScroll,ลาก{0}พื้นที่ว่าง = เ�
 ui.net.dragBgScrollWheel,ลากพื้น=เลื่อน · ล้อ=ซูม · ลากโหนด=ย้าย · Shift+คลิก=ผลัก · ดับเบิลคลิก=เปิด · คลิกขวา=เมนู
 ui.net.dragNodeMovePos,ลากโหนดเพื่อย้ายตำแหน่ง
 ui.net.dragViewD,ลาก{0} = หมุนมุมมอง 3D
+ui.net.filtersTip,แสดง/ซ่อนตัวกรองและการแสดงผล (หมวด · ชนิดความสัมพันธ์ · ขนาดโหนด · กริด)
 ui.net.findDisk,หาในดิสก์
-ui.net.hide,ซ่อน
 ui.net.hollowGrid,โปร่งใส grid: 
 ui.net.hollowGrid2,โปร่งใส grid: 12%
 ui.net.itemFilmNameNode,ตัวหนังสือชื่อโหนด
@@ -4492,9 +4906,14 @@ ui.netScene.gridHex,หกเหลี่ยม
 ui.netScene.gridNone,ไม่มี
 ui.netScene.gridSquare,ตาราง
 ui.netScene.gridStyle,แบบกริด
+ui.netScene.hdriFiles,ภาพ HDRI
+ui.netScene.hdriHint,ไฟล์ .hdr หรือรูปพาโนรามาสัดส่วน 2:1 — เป็นท้องฟ้ารอบตัวที่หมุนตามกล้อง 3D
+ui.netScene.hdriPick,เลือก HDRI
 ui.netScene.image,รูป
+ui.netScene.image3dNote,โหมด 3D: รูปพาโนรามา 2:1 หรือไฟล์ .hdr = ท้องฟ้ารอบตัว · รูปอื่น = ติดจอ (ไม่วางเป็นแผ่นบนพื้น)
 ui.netScene.imageCenterHint,"คลิกขวาที่ผังตรงไหนก็ได้ แล้วเลือก ""วางกึ่งกลางรูปตรงนี้"" เพื่อจัดแผนที่ให้ตรงกับโหนด"
 ui.netScene.imageChange,เปลี่ยนรูป…
+ui.netScene.imageHdri,ท้องฟ้ารอบตัว (HDRI)
 ui.netScene.imageMode,การวาง
 ui.netScene.imageOpacity,ความทึบของรูป
 ui.netScene.imagePick,เลือกรูป…
@@ -4787,7 +5206,7 @@ ui.panelRenderer.panel,▸ คลี่แผง
 ui.panelRenderer.panel2,▾ พับแผง
 ui.panelRenderer.tabsLabel,แท็บของกลุ่มแผง
 ui.panelRenderer.whatIsThis2,นี่คืออะไร —
-ui.panelTip.close,ปิดแผงนี้ — เปิดคืนได้จากชิปมุมล่างขวาของพื้นที่เขียน หรือเมนู มุมมอง → แผง
+ui.panelTip.close,ปิดแผงนี้ — เปิดคืนได้จากปุ่มของแผงบนแถบเครื่องมือ หรือเมนู มุมมอง → แผง
 ui.panelTip.collapse,พับแผงให้เหลือแต่หัว (กดอีกครั้งเพื่อคลี่)
 ui.panelTip.float,ยกแผงออกมาลอยเหนือพื้นที่เขียน หรือผนึกแผงที่ลอยอยู่กลับเข้าที่
 ui.panelTip.groupClose,ปิดทุกแผงในกลุ่มลอยนี้พร้อมกัน
@@ -4911,12 +5330,10 @@ ui.planner.alignTextDone,จัดข้อความในการ์ดแ�
 ui.planner.allStatus,ทุกสถานะ
 ui.planner.allType,ทุกประเภท
 ui.planner.appear,ปรากฏใน
-ui.planner.arrange,จัดเรียง
 ui.planner.arrangeAutoDone,จัดเรียงอัตโนมัติแล้ว
 ui.planner.arrow,ลูกศร
 ui.planner.badgeLineLink,ป้ายกำกับเส้นเชื่อม
 ui.planner.bgBoard,พื้นกระดาน
-ui.planner.bgBoard2,พื้นกระดาน
 ui.planner.bgBoardColorImage,พื้นกระดาน — สี · รูป · ความจาง
 ui.planner.bgNone,ยังไม่ได้เลือกรูป
 ui.planner.bindFileProject,ผูกไฟล์จากโปรเจกต์…
@@ -5009,7 +5426,6 @@ ui.planner.imgScaleSet,ขนาดรูป {0}%
 ui.planner.imgSmaller,ย่อรูป 80%
 ui.planner.insertImageHere,แทรกรูปตรงนี้…
 ui.planner.itemFoundStoryNormal,ตัวเอกตื่นมาเจอเรื่องผิดปกติ
-ui.planner.jSON,JSON
 ui.planner.knotStory,อย่าลืมปมเรื่องกุญแจ
 ui.planner.liftOneLayer,↑ ยกขึ้นหนึ่งชั้น
 ui.planner.liftOneLayerCtrl,ยกขึ้นหนึ่งชั้น
@@ -5026,6 +5442,8 @@ ui.planner.lock,ล็อก
 ui.planner.lockNotMove,ล็อกไม่ให้ย้าย
 ui.planner.moveLineDone,ย้ายปลายเส้นแล้ว
 ui.planner.mustHasLessCard,ต้องมีอย่างน้อย 2 การ์ด
+ui.planner.newBlank,กระดานเปล่า
+ui.planner.newSample,กระดานตัวอย่าง (ไฟล์ใหม่)
 ui.planner.noteNew,โน้ตใหม่
 ui.planner.notHasBoardProject,"ยังไม่มีกระดานในโปรเจกต์ — กด ""ใหม่"" เพื่อสร้าง"
 ui.planner.objectLineGroup,{0} วัตถุ · {1} เส้น · {2} กลุ่ม
@@ -5056,7 +5474,6 @@ ui.planner.pNG,PNG
 ui.planner.pointPosExplorer,ชี้ตำแหน่งใน Explorer
 ui.planner.pointPosFileExplorer,ชี้ตำแหน่งไฟล์ใน Explorer
 ui.planner.propsAll,คุณสมบัติทั้งหมด
-ui.planner.putSample,ใส่ตัวอย่าง
 ui.planner.putSampleDonePress,"ใส่ตัวอย่างแล้ว — กด ""บันทึก"" ถ้าจะเก็บไว้"
 ui.planner.px,px
 ui.planner.rect,สี่เหลี่ยม
@@ -5068,7 +5485,7 @@ ui.planner.repeatCantDone,ทำซ้ำไม่ได้แล้ว
 ui.planner.repeatCtrlD,ทำซ้ำ (Ctrl+D)
 ui.planner.repeatItemDone,ทำซ้ำ {0} ชิ้นแล้ว
 ui.planner.repeatScEditorRedo,ทำซ้ำ ({sc:editor-redo})
-ui.planner.sample,ตัวอย่าง
+ui.planner.sampleBoardName,ตัวอย่าง 
 ui.planner.saveBefore,บันทึกก่อน
 ui.planner.saveBoard,บันทึกกระดาน
 ui.planner.saveBoard2F,"บันทึกกระดาน ""{0}"" แล้ว"
@@ -5076,7 +5493,6 @@ ui.planner.saveBoardName,บันทึกเป็นกระดานชื�
 ui.planner.saveBoardNotOk,บันทึกกระดานไม่สำเร็จ
 ui.planner.saveF,"บันทึกเป็น ""{0}"" แล้ว"
 ui.planner.saveFileNew,บันทึกเป็นไฟล์ใหม่
-ui.planner.saveImageBoardDone,บันทึกรูปกระดานแล้ว: 
 ui.planner.saveNotOk,บันทึกเป็นไม่สำเร็จ
 ui.planner.saveScSave,บันทึก ({sc:save})
 ui.planner.scene,ฉากปะทะ
@@ -5365,6 +5781,7 @@ ui.plug.installWarn,ปลั๊กอินรันโค้ดได้เต
 ui.plug.makeSample,สร้างตัวอย่าง
 ui.plug.makeSampleHint,สร้างปลั๊กอินที่ทำงานได้จริงให้ดูเป็นแบบ — เปิดไฟล์ไปแก้ต่อได้เลย
 ui.plug.minVer,ต้องใช้รุ่นอย่างน้อย
+ui.plug.moreTip,ตัวเลือกปลั๊กอินเพิ่มเติม
 ui.plug.needNewer,ต้องใช้โปรแกรมรุ่น {0} ขึ้นไป (ตอนนี้ {1})
 ui.plug.openFolder,เปิดโฟลเดอร์
 ui.plug.openProjectDir,โฟลเดอร์ของผลงาน
@@ -5409,8 +5826,8 @@ ui.project.group,กลุ่ม/ฝ่าย
 ui.project.hasProject,มีโปรเจกต์นี้อยู่แล้ว
 ui.project.investigateBack,สืบสวน/ลึกลับ
 ui.project.investigation,การสืบสวน
-ui.project.newProjectTemplate,สร้างโปรเจกต์จาก template
-ui.project.newProjectTemplateDone,สร้างโปรเจกต์จาก template แล้ว: 
+ui.project.newProjectTemplate,สร้างโปรเจกต์จากเทมเพลต
+ui.project.newProjectTemplateDone,สร้างโปรเจกต์จากเทมเพลตแล้ว: 
 ui.project.novelFantasyWorldbuilding,"นิยายแฟนตาซี — worldbuilding, เผ่าพันธุ์, เวทมนตร์"
 ui.project.novelInvestigateCharacterSuspect,"นิยายสืบสวน — ตัวละคร suspects, clues, timeline"
 ui.project.readCant,อ่านเอนทิตี้ไม่ได้: 
@@ -6723,6 +7140,9 @@ ui.tags.list,รายการ
 ui.tags.manageVisualTags,จัดการ Visual Tags
 ui.tags.nameTag,ชื่อแท็ก
 ui.tags.notHasTagPut,ยังไม่มีแท็ก — ใส่แท็กในคุณสมบัติฉากหรือ Wiki
+ui.tags.shapeCircle,วงกลม
+ui.tags.shapeSquare,สี่เหลี่ยม
+ui.tags.shapeTag,ป้าย
 ui.tags.tag, แท็ก
 ui.tags.tag2,แท็ก: {0} ({1})
 ui.tags.tag3,เมฆแท็ก
@@ -6901,7 +7321,7 @@ ui.tip.export-rtf,ส่งออกบทภาพยนตร์เป็น�
 ui.tip.export-watermark,ตั้งลายน้ำที่จะพิมพ์ทับทุกหน้าของไฟล์ที่ส่งออก เช่น ชื่อผู้รับ หรือคำว่า ฉบับร่าง
 ui.tip.export-zip,บีบอัดทั้งโฟลเดอร์โปรเจกต์เป็นไฟล์ ZIP ไฟล์เดียว สำหรับสำรองหรือส่งให้คนอื่น
 ui.tip.find,ค้นหาและแทนที่ภายในเอกสารที่เปิดอยู่ตอนนี้เท่านั้น
-ui.tip.floorplan,เปิดผังพื้นที่ของฉากที่เปิดอยู่ ปักหมุดว่าฉากนี้เกิดที่ไหนบนแผนที่
+ui.tip.floorplan,เปิดผังพื้นที่ — ผังกองถ่ายมุมบน: วางตัวละคร ตั้งกล้อง/เลนส์ จัดไฟ แล้วไล่จังหวะตามบรรทัดของฉาก
 ui.tip.fmt,คำสั่งจัดรูปแบบข้อความ เช่น ตัวหนา หัวข้อ หรือรายการ ปุ่มแต่ละปุ่มระบุว่าจะจัดแบบไหน
 ui.tip.fmt:align:center,จัดข้อความกึ่งกลางบรรทัด เหมาะกับชื่อเรื่อง คำอุทิศ และบทกวีสั้น ๆ ไม่เหมาะกับเนื้อความยาว
 ui.tip.fmt:align:justify,ยืดข้อความให้เต็มบรรทัดทั้งซ้ายและขวา ได้ขอบตรงสวยแบบหนังสือ แต่อาจเกิดช่องว่างกว้างในบรรทัดที่มีคำยาว
@@ -7035,6 +7455,7 @@ ui.tip.prose-indent,เปิดหรือปิดการย่อหน้
 ui.tip.prose-setup,ตั้งรูปแบบนิยาย เช่น การย่อหน้า ช่วงบรรทัด และหน้าตาหัวข้อ มีผลทั้งบนจอและในไฟล์ที่ส่งออก
 ui.tip.quick-note,จดความคิดที่เพิ่งผุดขึ้นไว้ก่อนโดยไม่ต้องออกจากฉากที่กำลังเขียน โน้ตทั้งหมดรวมอยู่ในแผงสมุดโน้ต
 ui.tip.quick-open,ค้นหาไฟล์ในโปรเจกต์ด้วยการพิมพ์บางส่วนของชื่อ แล้วเปิดได้ทันทีโดยไม่ต้องไล่หาในต้นไม้
+ui.tip.quick-start,แนะนำการใช้งานเบื้องต้น: โปรเจกต์ การเขียน Wiki แผง และการส่งออก
 ui.tip.read-book,อ่านทั้งเล่มต่อกันเป็นเอกสารเดียวแบบอ่านอย่างเดียว เหมาะกับการอ่านทวนภาพรวม
 ui.tip.reading-mode,เข้าโหมดอ่านเต็มจอ ซ่อนแถบเครื่องมือและแผงทั้งหมด เหลือแต่หน้ากระดาษ
 ui.tip.remove-elements,ลบบรรทัดทุกบรรทัดของ element ที่เลือกออกจากบทในครั้งเดียว เช่น ลบโน้ตทั้งหมดก่อนส่งบท ย้อนกลับได้
@@ -7129,7 +7550,7 @@ ui.tip.toggle-panel:dashboard,ภาพรวมความคืบหน้�
 ui.tip.toggle-panel:dialogue,รวมบทพูดทั้งผลงาน — กรองตามเล่ม/บท/ฉาก/ตัวละคร คลิกกระโดดไป แก้ได้ทันที
 ui.tip.toggle-panel:dlgb,ให้ AI สวมบทตัวละครจาก Wiki คุยกันทีละเทิร์น แล้วหยิบบรรทัดที่ชอบไปใส่บทที่เคอร์เซอร์ — เปิดตอนคิดบทพูดไม่ออก
 ui.tip.toggle-panel:docs,พื้นที่เขียนหลัก — แท็บทุกใบที่เปิดอยู่ ทั้งฉาก บทภาพยนตร์ และหน้า Wiki (ปิดไม่ได้)
-ui.tip.toggle-panel:floorplan,"ฉากนี้เกิดที่ไหน — แผนที่ + หมุด ""คุณอยู่ที่นี่"" + เส้นเวลาของสถานที่นั้น + สิ่งที่เห็น/ได้ยิน/พบ ของฉากที่เปิดอยู่"
+ui.tip.toggle-panel:floorplan,ผังกองถ่ายมุมบน (แบบ Shot Designer) — ตัวละครจาก Wiki พร้อมทิศที่หันและระยะสายตา · กล้อง (บอดี้/เลนส์/ขาตั้ง/ราง) · ไฟ · รูปทรง · จังหวะที่อ้างอิงบรรทัดของฉาก
 ui.tip.toggle-panel:gallery,รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki
 ui.tip.toggle-panel:gallery-board,ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์
 ui.tip.toggle-panel:history,ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ข้อมูลผลงาน (ค่าเริ่มต้น 32)

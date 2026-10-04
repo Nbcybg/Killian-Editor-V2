@@ -308,3 +308,70 @@ export function defaultBarPos(bar, host, pad = 16) {
   const top = Math.round(Math.max(pad, hh - bh - pad));
   return { left, top };
 }
+
+// ══════════ [alpha.168 · bug hunt] แถบพับได้ไม่เกินสองแถว · แถบที่ชิดล่างต้องชิดล่างต่อเมื่อความสูงของมันเองเปลี่ยน ══════════
+//
+// 1) หน้าต่างเล็กสุด (1000×640) พื้นที่เอกสารกว้าง ~640px → แถบพับเป็น 4 แถว กินราวหนึ่งในสามของพื้นที่เขียน
+//    เกณฑ์ "แถวเดียวเลื่อนแนวนอน" เดิมดูแค่ความกว้าง < 620px · ตอนนี้ดูจำนวนแถวที่ต้องใช้จริงด้วย (เกินสองแถว = แถวเดียว)
+// 2) แถบจำตำแหน่งเป็น "ระยะจากขอบบน" → พอแถบเตี้ยลงเอง (พื้นที่กว้างขึ้น พับน้อยแถวลง) ขอบล่างของแถบลอยขึ้น
+//    เหลือช่องว่างใต้แถบที่ข้อความโผล่มา = แถบดูเหมือนทับกลางเนื้อหา · ต้องรักษา "ระยะจากขอบล่าง" แทน
+export const BAR_NARROW_W = 620;
+export const BAR_MAX_ROWS = 2;
+
+/** จำนวนแถวที่ต้องใช้เมื่อวางชิ้นกว้าง `widths` ต่อกันแบบพับได้ ในพื้นที่กว้าง `avail` (เว้น `gap` ระหว่างชิ้น) */
+export function barRowsNeeded(widths, gap, avail) {
+  const g = Math.max(0, Number(gap) || 0);
+  const a = Number(avail) || 0;
+  const list = (widths || []).map((w) => Math.max(0, Number(w) || 0)).filter((w) => w > 0);
+  if (!list.length) return 0;
+  if (!(a > 0)) return list.length;
+  let rows = 1, used = 0;
+  for (const w of list) {
+    if (used === 0) { used = w; continue; }
+    if (used + g + w > a + 0.5) { rows++; used = w; } else used += g + w;
+  }
+  return rows;
+}
+
+/** แถบควรเป็นโหมดแถวเดียว (เลื่อนแนวนอน) ไหม — พื้นที่แคบกว่าเกณฑ์ หรือพับแล้วเกินจำนวนแถวที่ยอมได้ */
+export function barShouldNarrow(hostW, widths, gap, chrome = 0) {
+  const hw = Number(hostW) || 0;
+  if (hw < BAR_NARROW_W) return true;
+  return barRowsNeeded(widths, gap, hw - 16 - Math.max(0, Number(chrome) || 0)) > BAR_MAX_ROWS;
+}
+
+/**
+ * ตำแหน่งบนใหม่ของแถบที่ "ชิดขอบล่าง" เมื่อพื้นที่ (hostH) หรือความสูงของแถบเอง (barH) เปลี่ยน
+ * ชิดล่าง = ก่อนเปลี่ยน ขอบล่างของแถบห่างขอบล่างพื้นที่ไม่เกิน `slack` · ไม่ชิดล่าง/ไม่มีอะไรเปลี่ยน = null
+ */
+export function bottomAnchorTop(top, barH, prevBarH, hostH, prevHostH, slack = 48) {
+  const t = Number(top) || 0;
+  if (!(prevHostH > 0) || !(prevBarH > 0) || !(hostH > 0) || !(barH > 0)) return null;
+  if (Math.abs(prevHostH - hostH) <= 1 && Math.abs(prevBarH - barH) <= 1) return null;
+  const gapWas = prevHostH - (t + prevBarH);
+  if (gapWas < -4 || gapWas > slack) return null;
+  const next = Math.round(hostH - barH - Math.max(0, gapWas));
+  return next === t ? null : next;
+}
+
+/**
+ * [alpha.168 · bug hunt 2] ปุ่มลอย (+) ที่อยู่ตำแหน่งตั้งต้น (มุมขวาล่าง) ต้องไม่ทับปุ่มของแถบรูปแบบ
+ * ที่ผนึกชิดล่าง — เดิมทับปุ่มไฮไลต์ (1440 กว้าง) และลูกศรของช่องเลือกสไตล์ (หน้าต่างเล็กสุด) ตั้งแต่เปิดโปรแกรม
+ * คืน `bottom` ใหม่ (px จากขอบล่างหน้าต่าง) เมื่อต้องยกปุ่มขึ้นเหนือแถบ · `null` = อยู่ที่เดิมได้
+ * @param {{left:number,top:number,right:number,bottom:number}} fab  กรอบของปุ่ม ณ ตำแหน่งตั้งต้น
+ * @param {{left:number,top:number,right:number,bottom:number}|null} bar  กรอบของแถบรูปแบบ (null = ไม่แสดง)
+ */
+export function fabDodgeBottom(fab, bar, winH, gap = 10) {
+  if (!fab || !bar || !(winH > 0)) return null;
+  const w = bar.right - bar.left, h = bar.bottom - bar.top;
+  if (!(w > 0) || !(h > 0)) return null;
+  const pad = 4;
+  const hit = fab.left < bar.right + pad && fab.right > bar.left - pad
+           && fab.top < bar.bottom + pad && fab.bottom > bar.top - pad;
+  if (!hit) return null;
+  const fabH = fab.bottom - fab.top;
+  const bottom = Math.round(winH - bar.top + gap);
+  // แถบสูงจนยกแล้วปุ่มหลุดขอบบนของพื้นที่ทำงาน = ไม่ยก (ปล่อยทับดีกว่าหาย)
+  if (bottom + fabH > winH - 120) return null;
+  return bottom;
+}

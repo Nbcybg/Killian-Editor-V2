@@ -445,6 +445,41 @@ export function upsertProvider(rows, provider) {
   if (i === -1) list.push(provider); else list[i] = provider;
   return list;
 }
+/**
+ * [alpha.168 · bug hunt] ผู้ให้บริการ "ของฉัน" (เก็บในเครื่อง ใช้ได้ทุกโปรเจกต์)
+ * เดิมผู้ให้บริการ + คีย์ผูกกับโปรเจกต์ → โปรเจกต์ใหม่ทุกใบต้องกรอกใหม่ทั้งหมด
+ * `packDefaults` = ของที่จะเก็บ: รายการผู้ให้บริการ **ไม่มีคีย์** + ตารางคีย์แยก (ชั้นบนเข้ารหัสก่อนเขียน)
+ */
+export function packDefaults(rows, keys = {}, activeId = '') {
+  const list = (rows || []).filter(Boolean);
+  const outKeys = {};
+  for (const p of list) {
+    const c = p.credential || {};
+    const k = c.apiKey || keys[c.id] || '';
+    if (c.id && k) outKeys[c.id] = k;
+  }
+  return { providers: list.map(stripSecrets), keys: outKeys, activeProviderId: list.some((p) => p.id === activeId) ? activeId : ((list[0] && list[0].id) || '') };
+}
+/**
+ * รวมผู้ให้บริการจากชุด "ของฉัน" เข้ากับของโปรเจกต์ — ตัวที่มีอยู่แล้ว (id เดียวกัน) ไม่ถูกทับ
+ * (ผู้ใช้อาจตั้งรุ่นโมเดล/พารามิเตอร์ของโปรเจกต์นี้ไว้ต่างจากค่าเริ่มต้น)
+ * @returns {{rows:Array, keys:Object, added:number}} rows = รายการใหม่ (มี apiKey ในตัวที่เพิ่ม) · keys = คีย์ที่ต้องเขียนเพิ่ม
+ */
+export function mergeDefaults(rows, defaults) {
+  const list = (rows || []).slice();
+  const have = new Set(list.map((p) => p.id));
+  const d = defaults || {};
+  const keys = {};
+  let added = 0;
+  for (const raw of Array.isArray(d.providers) ? d.providers : []) {
+    if (!raw || !raw.id || have.has(raw.id)) continue;
+    const p = withSecrets(newProvider(raw), d.keys || {});
+    list.push(p); have.add(p.id); added++;
+    const c = p.credential || {};
+    if (c.id && c.apiKey) keys[c.id] = c.apiKey;
+  }
+  return { rows: list, keys, added };
+}
 export function removeProvider(rows, id) {
   return (rows || []).filter((p) => p.id !== id);
 }

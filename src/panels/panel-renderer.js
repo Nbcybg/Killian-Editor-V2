@@ -246,7 +246,9 @@ function renderTabs(node, pm, opts, depth) {
 // [alpha.157] แท็บทรงเม็ดมีปุ่มปิดในตัว (ภาพอ้างอิงของผู้ใช้) — แผงที่ปิดไม่ได้ (เอกสาร ฯลฯ) ไม่มีปุ่ม
 function addTabClose(tab, id, md, pm) {
   if (md.closable === false) return;
-  const x = el('span', 'k-tab-x', gi('close'));
+  // [alpha.168] svg ไม่ใช่อักขระฟอนต์ — อักขระที่ถูกจัดตอนสร้างแท็บบางจังหวะค้างเป็นกล่อง (tofu) บน Windows
+  const x = el('span', 'k-tab-x');
+  x.innerHTML = iconHtml('close', 12);
   // [alpha.161 · U3] ชื่อบอกชัดว่าปิด "แผงนี้" (ต่างจากปุ่มปิดทั้งกลุ่มบนแถบกลุ่มลอย)
   x.title = tf('ui.panelRenderer.closeThisPanel', md.title || id);
   x.dataset.tip = 'ui.panelTip.tabClose';

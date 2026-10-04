@@ -88,6 +88,7 @@ contextBridge.exposeInMainWorld('kapi', {
     return () => ipcRenderer.removeListener('update:progress', h);
   },
   readGlobalSettings: call('settings:readGlobal'),    // [alpha.60 ข้อ 94] อ่าน global settings จาก userData
+  aiDefaultsLoad: call('aiDefaults:load'), aiDefaultsSave: call('aiDefaults:save'),   // [alpha.168] ผู้ให้บริการ AI ของฉัน (userData · คีย์เข้ารหัสด้วย safeStorage)
   writeGlobalSettings: call('settings:writeGlobal'),  // [alpha.60 ข้อ 94] เขียน global settings ไป userData
   print: call('win:print'), printToPdf: call('win:printToPdf'),
   pdfFromHtml: call('pdf:fromHtml'),         // [70] สร้าง PDF จาก HTML (หน้าต่างซ่อน)
@@ -114,6 +115,7 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.136] สถานะ (enabled/visible) ของรายการเมนูตาม id — อ่านจากเมนูตัวจริง
   // มีไว้ให้ e2e ตรวจว่ารายการที่ใช้ไม่ได้ตอนนี้ถูกทำเป็นสีเทาจริง
   menuItemState: call('menu:itemState'),
+  menuLabels: call('menu:labels'),            // [alpha.168 · bug hunt 2] ป้ายทุกรายการของเมนูตัวจริง (จับคีย์ภาษาดิบ)
   menuTestClick: call('menu:testClick'),      // [alpha.164 · รอบต่อ 3] e2e กดเมนู native จริง (โหมดเทส)
   httpFetch: call('http:fetch'),
   httpAbort: call('http:abort'),        // [alpha.96] ยกเลิกคำขอ AI ที่กำลังวิ่ง

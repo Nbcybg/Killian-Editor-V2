@@ -37,6 +37,8 @@ import {
   graphToOutline, graphToJson, graphToHtmlTree, danglingChoices,
 } from './branch-graph.js';
 import { gi, plainIcons } from './icons.js';
+import { bindDropTarget } from './drop-kit.js';          // [alpha.168] ลากฉากจาก Explorer ลงผัง
+import { escCancelDrag } from './drag-cancel.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs = {}) => {
@@ -100,8 +102,11 @@ function saveNodePositions(pos) {
   try { localStorage.setItem(posKey(), JSON.stringify(pos)); } catch { /* quota */ }
 }
 function clearNodePositions() {
-  if (planState.path && planState.live) { planState.live.positions = {}; markPlanDirty(); return; }
-  try { localStorage.removeItem(posKey()); } catch { /* ignore */ }
+  // [alpha.168] จัดผังใหม่ = ล้างตำแหน่งที่ลากเอง แต่ "ฉากที่ลากมาวางบนผัง" ยังอยู่ในผัง (จัดตำแหน่งอัตโนมัติ)
+  const keep = {};
+  for (const [id, p] of Object.entries(loadNodePositions())) if (p && p.placed) keep[id] = { placed: true };
+  if (planState.path && planState.live) { planState.live.positions = keep; markPlanDirty(); return; }
+  try { if (Object.keys(keep).length) localStorage.setItem(posKey(), JSON.stringify(keep)); else localStorage.removeItem(posKey()); } catch { /* ignore */ }
 }
 // ══ [alpha.155] ล็อกแผน (เมนูคลิกขวาใน Explorer) — แผนที่ล็อกดูได้ แต่แก้/บันทึกไม่ได้ ══
 // ค่าล็อกเก็บใน project.khn.json → explorer.items (ไม่ใช่ในไฟล์แผน — ไฟล์แผนเป็นของ "เนื้อหา")
@@ -497,6 +502,8 @@ export async function renderBranchingTree(pane, opts = {}) {
 
   const graph = buildGraph(scenes);
   const positions = loadNodePositions();
+  // [alpha.168] ฉากที่ลากมาวางบนผังเอง (ยังไม่มีทางเลือก) อยู่ในผังด้วย
+  for (const n of graph.nodes) if (positions[n.id] && positions[n.id].placed) n.placed = true;
   const layout = layoutGraph(graph, { positions });
   const analysis = analyzeGraph(graph);
   // แก้ข้อมูล → อ่านใหม่ · แค่เปลี่ยนมุมมอง → ใช้ของเดิม (ไม่กระพริบ ไม่แตะดิสก์)
@@ -571,7 +578,8 @@ export async function renderBranchingTree(pane, opts = {}) {
   bCmp.onclick = () => comparePlanDialog();
   planWrap.append(bSave, bSaveAs, bNew, bProps, bCmp);
   if (planState.path && isBranchPlanDirty()) planWrap.append(el('span', 'branch-plan-dirty', gi('dot')));
-  tools.append(planWrap);
+  // [alpha.168] หัวแผงสองแถวที่ตั้งใจ: แถวบน = ชื่อ · แผน · มุมมอง · แผงข้าง | แถวล่าง = ค้นหา · เครื่องมือของผัง
+  titleRow.append(planWrap);
   fillPlans();
 
   const viewTog = el('div', 'branch-viewtog');
@@ -580,7 +588,7 @@ export async function renderBranchingTree(pane, opts = {}) {
   bTree.onclick = () => { bs.view = 'tree'; redrawUi(); };
   bList.onclick = () => { bs.view = 'list'; redrawUi(); };
   viewTog.append(bTree, bList);
-  tools.append(viewTog);
+  titleRow.append(viewTog);
 
   // ---- ช่องค้นหา (ข้อ 17) ----
   const findWrap = el('div', 'branch-find');
@@ -603,12 +611,12 @@ export async function renderBranchingTree(pane, opts = {}) {
   findWrap.append(findInp);
   const findCount = el('span', 'branch-find-count');
   findWrap.append(findCount);
-  tools.append(findWrap);
+  tools.append(findWrap, el('span', 'branch-sp'));
 
   if (bs.view === 'tree') {
     const zOut = el('button', 'branch-zbtn', gi('minus')); zOut.title = tr('zoomOut');
     const zLbl = el('span', 'branch-zlabel', Math.round(bs.zoom * 100) + '%');
-    const zIn = el('button', 'branch-zbtn', '+'); zIn.title = tr('zoomIn');
+    const zIn = el('button', 'branch-zbtn', gi('plus')); zIn.title = tr('zoomIn');
     const zFit = el('button', 'branch-zbtn', gi('maximize')); zFit.title = tr('zoomFit');
     zOut.onclick = () => { bs.zoom = Math.max(ZOOM_MIN, +(bs.zoom - 0.15).toFixed(2)); redrawUi(); };
     zIn.onclick = () => { bs.zoom = Math.min(ZOOM_MAX, +(bs.zoom + 0.15).toFixed(2)); redrawUi(); };
@@ -644,6 +652,7 @@ export async function renderBranchingTree(pane, opts = {}) {
   const expB = el('button', 'branch-zbtn branch-export', gi('export'));
   expB.title = tr('exportHint');
   expB.onclick = (ev) => openExportMenu(ev, graph, analysis, pane);
+  _expCtx = { graph, analysis, pane };          // เมนูระบบ ส่งออก → ผังแตกสาย ใช้ผังที่วาดอยู่ชุดเดียวกัน
   tools.append(expB);
 
   // ---- รวมทางเลือกซ้ำ (ข้อ 16) ----
@@ -669,10 +678,9 @@ export async function renderBranchingTree(pane, opts = {}) {
   const sideTog = el('button', 'branch-zbtn', bs.sideOpen ? gi('play') : gi('chevron-left'));
   sideTog.title = bs.sideOpen ? tr('hideSide') : tr('showSide');
   sideTog.onclick = () => { bs.sideOpen = !bs.sideOpen; redrawUi(); };
-  tools.append(sideTog);
+  titleRow.append(sideTog);
 
-  titleRow.append(tools);
-  head.append(titleRow);
+  head.append(titleRow, tools);
   head.append(el('div', 'branch-stats', graphSummary(analysis, summaryLabels())));
   wrap.append(head);
 
@@ -701,8 +709,9 @@ export async function renderBranchingTree(pane, opts = {}) {
   if (scenes.length) wrap.append(buildAdder(graph, bs, redraw));
 
   if (!analysis.total) {
-    wrap.append(el('div', 'branch-empty dim',
-      tr('emptyHint')));
+    const emp = el('div', 'branch-empty dim');
+    emp.append(el('div', null, tr('emptyHint')), el('div', 'branch-empty-drop', gi('hand') + ' ' + tr('emptyDropHint')));
+    wrap.append(emp);
   }
 
   // ───────── มุมมองผัง (SVG เส้น + กล่อง HTML) ─────────
@@ -878,6 +887,11 @@ export async function renderBranchingTree(pane, opts = {}) {
 
       box.ondblclick = () => openSceneFromGraph(n, false);
       makeNodeDraggable(box, n, layout, bs, { redrawEdgesOf, canvas, viewport, sizeCanvas, redraw: redrawUi });
+      // [alpha.168] จุดเชื่อมขวาการ์ด: ลากไปปล่อยบนการ์ดอื่น = ทางเลือกใหม่ (แบบกระดาน/ผังทั่วไป)
+      const port = el('span', 'bn-port');
+      port.title = tr('portTip');
+      port.addEventListener('mousedown', (ev) => startConnect(ev, n, { svg, canvas, bs, graph, redraw }));
+      box.append(port);
 
       // ---- ปลายทางของการลากทางเลือกข้ามฉาก (ข้อ 16) ----
       box.addEventListener('dragover', (ev) => {
@@ -949,6 +963,44 @@ export async function renderBranchingTree(pane, opts = {}) {
 
   main.append(wrap);
   shell.append(main);
+
+  // ───────── [alpha.168] หยิบใส่: ฉากจาก Explorer ─────────
+  //   ปล่อยบนที่ว่าง = วางฉากนั้นลงผัง (ตรงเคอร์เซอร์) · ปล่อยบนการ์ดฉาก = ทางเลือกใหม่ การ์ดนั้น → ฉากที่ลากมา
+  bindDropTarget(main, {
+    accept: ['scene'],
+    hoverClass: 'bn-drop-hot',
+    onDrop: async (payload, e) => {
+      if (planLockBlocked && planLockBlocked()) return false;
+      const hitBox = e.target && e.target.closest ? e.target.closest('.branch-node, .branch-card') : null;
+      const from = hitBox ? graph.byId.get(hitBox.dataset.id) : null;
+      const cv = main.querySelector('.branch-canvas');
+      const pos = loadNodePositions();
+      let placed = 0, linked = 0;
+      for (const it of payload.items) {
+        const node = sceneNodeFor(graph, it);
+        if (!node) continue;
+        if (from && from.id !== node.id) {
+          await mutateChoices(from, (list) => [...list, { text: node.title, nextSceneId: node.id }]);
+          linked++;
+          continue;
+        }
+        let x = 40 + placed * 28, y = 40 + placed * 28;
+        if (cv) {
+          const r = cv.getBoundingClientRect(), z = bs.zoom || 1;
+          x = (e.clientX - r.left) / z - NODE_W / 2 + placed * 28;
+          y = (e.clientY - r.top) / z - NODE_H / 2 + placed * 28;
+        }
+        pos[node.id] = { x: Math.max(0, Math.round(x)), y: Math.max(0, Math.round(y)), placed: true };
+        placed++;
+      }
+      if (placed) saveNodePositions(pos);
+      if (linked) { bs.sel = from.id; setStatus(tf('ui.branch.dropLinked', linked, from.title)); }
+      else if (placed) setStatus(tf('ui.branch.dropPlaced', placed));
+      else { setStatus(tr('dropNotScene')); return false; }
+      redraw();
+      return true;
+    },
+  });
 
   // ───────── แผงขวา: inspector ของฉากที่เลือก ─────────
   if (bs.sideOpen) shell.append(buildInspector(graph, layout, analysis, bs, redraw, redrawUi));
@@ -1035,7 +1087,7 @@ function makeNodeDraggable(box, n, layout, bs, ctx) {
       box.classList.remove('bn-dragging');
       if (start && start.moved) {
         const pos = loadNodePositions();
-        pos[n.id] = { x: n.x, y: n.y };
+        pos[n.id] = { ...(pos[n.id] || {}), x: n.x, y: n.y };   // [alpha.168] คงธง placed (ฉากที่ลากมาวางเอง)
         saveNodePositions(pos);
         box.classList.add('bn-pinned');
         box._noClick = true;              // เบราว์เซอร์ยิง click ต่อท้ายการลาก — อย่าให้นับเป็นการเลือก
@@ -1052,6 +1104,56 @@ function makeNodeDraggable(box, n, layout, bs, ctx) {
     bs.sel = n.id;
     ctx.redraw();
   };
+}
+
+// ───────── [alpha.168] ลากจากจุดเชื่อม = ทางเลือกใหม่ ─────────
+function startConnect(ev, n, ctx) {
+  if (ev.button !== 0) return;
+  ev.stopPropagation(); ev.preventDefault();
+  if (planLockBlocked()) return;
+  const { svg, canvas, bs, graph, redraw } = ctx;
+  const z = bs.zoom || 1;
+  const sx = n.x + NODE_W, sy = n.y + NODE_H / 2;
+  const tmp = svgEl('path', { class: 'branch-edge-draft', fill: 'none' });
+  svg.append(tmp);
+  let over = null;
+  const hover = (box) => { if (over === box) return; if (over) over.classList.remove('bn-drop'); over = box; if (over) over.classList.add('bn-drop'); };
+  const mv = (e2) => {
+    const r = canvas.getBoundingClientRect();
+    const x = (e2.clientX - r.left) / z, y = (e2.clientY - r.top) / z;
+    const dx = Math.max(40, Math.abs(x - sx) / 2);
+    tmp.setAttribute('d', `M${sx},${sy} C${sx + dx},${sy} ${x - dx},${y} ${x},${y}`);
+    const hit = document.elementFromPoint(e2.clientX, e2.clientY);
+    const box = hit && hit.closest ? hit.closest('.branch-node') : null;
+    hover(box && box.dataset.id !== n.id ? box : null);
+  };
+  const cleanup = () => {
+    document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+    tmp.remove(); hover(null); canvas.classList.remove('bn-connecting');
+  };
+  const offEsc = escCancelDrag(cleanup);
+  const up = async (e2) => {
+    offEsc();
+    const hit = document.elementFromPoint(e2.clientX, e2.clientY);
+    const box = hit && hit.closest ? hit.closest('.branch-node') : null;
+    cleanup();
+    const to = box ? graph.byId.get(box.dataset.id) : null;
+    if (!to || to.id === n.id) return;
+    await mutateChoices(n, (list) => [...list, { text: to.title, nextSceneId: to.id }]);
+    bs.sel = n.id;
+    setStatus(tf('ui.branch.dropLinked', 1, n.title));
+    redraw();
+  };
+  canvas.classList.add('bn-connecting');
+  document.addEventListener('mousemove', mv);
+  document.addEventListener('mouseup', up);
+}
+/** ฉากที่หยิบมา → โหนดในผัง (จับ id ก่อน · ไม่มี id = จับทางไฟล์) */
+function sceneNodeFor(graph, it) {
+  if (it.id && graph.byId.has(it.id)) return graph.byId.get(it.id);
+  const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
+  const f = norm(it.path || it.file);
+  return f ? graph.nodes.find((x) => norm(x.filePath) === f) || null : null;
 }
 
 // ───────── (ข้อ 16) ลากทางเลือกจากฉากหนึ่งไปอีกฉาก ─────────
@@ -1147,6 +1249,22 @@ export async function checkDanglingOnOpen() {
 }
 
 // ───────── (ข้อ 7+10) ส่งออก ─────────
+/**
+ * [alpha.168 · bug hunt] ส่งออกตามรูปแบบโดยตรง (เมนูระบบ ส่งออก → ผังแตกสาย → <รูปแบบ>)
+ * เดิมทั้งห้ารายการในเมนูระบบทำอย่างเดียวกัน = เปิดเมนูของแผงให้เลือกซ้ำอีกรอบ
+ * @returns ผลของตัวส่งออก · null = แผงยังไม่ได้วาดผัง
+ */
+let _expCtx = null;
+export async function exportBranchFmt(fmt, outPath) {
+  const c = _expCtx;
+  if (!c || !c.pane || !c.pane.isConnected) return null;
+  if (fmt === 'html') return exportBranchHtml(c.graph, c.analysis, outPath);
+  if (fmt === 'md') return exportBranchMarkdown(c.graph, c.analysis, outPath);
+  if (fmt === 'json') return exportBranchJson(c.graph, c.analysis, outPath);
+  if (fmt === 'svg') return exportBranchSvg(c.pane, outPath);
+  if (fmt === 'png') return exportBranchPng(c.pane, outPath);
+  return null;
+}
 function openExportMenu(ev, graph, analysis, pane) {
   const at = ev.currentTarget.getBoundingClientRect();
   import('./ui.js').then(({ popupMenu }) => {
@@ -1164,27 +1282,27 @@ function openExportMenu(ev, graph, analysis, pane) {
 const projTitle = () => state.title || 'branching';
 const safeName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, '-').slice(0, 60) || 'branching';
 
-async function exportBranchHtml(graph, analysis) {
+async function exportBranchHtml(graph, analysis, outPath) {
   await loadSceneBodies(graph.nodes);                       // เนื้อย่อต้องมีของจริง
   const html = graphToHtmlTree(graph, { analysis, title: projTitle(), labels: exportLabels() });
-  const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.html', 'html');
+  const dest = outPath || await kapi.saveAsDialog(safeName(projTitle()) + '-branching.html', 'html');
   if (!dest) return false;
   await kapi.writeFile(dest, html);
   setStatus(tr('expDone') + dest);
   return true;
 }
-async function exportBranchMarkdown(graph, analysis) {
+async function exportBranchMarkdown(graph, analysis, outPath) {
   const md = graphToOutline(graph, { analysis, title: projTitle(), labels: exportLabels() });
-  const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.md', 'md');
+  const dest = outPath || await kapi.saveAsDialog(safeName(projTitle()) + '-branching.md', 'md');
   if (!dest) return false;
   await kapi.writeFile(dest, md);
   setStatus(tr('expDone') + dest);
   return true;
 }
-async function exportBranchJson(graph, analysis) {
+async function exportBranchJson(graph, analysis, outPath) {
   await loadSceneBodies(graph.nodes);
   const j = graphToJson(graph, { analysis, title: projTitle(), now: new Date().toISOString() });
-  const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.json', 'json');
+  const dest = outPath || await kapi.saveAsDialog(safeName(projTitle()) + '-branching.json', 'json');
   if (!dest) return false;
   await kapi.writeFile(dest, JSON.stringify(j, null, 2));
   setStatus(tr('expDone') + dest);
@@ -1233,18 +1351,18 @@ function buildStandaloneSvg(pane) {
   return { svg: out, w, h };
 }
 
-async function exportBranchSvg(pane) {
+async function exportBranchSvg(pane, outPath) {
   const built = buildStandaloneSvg(pane);
   if (!built) { setStatus(tr('needTreeView')); return false; }
   const text = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(built.svg);
-  const dest = await kapi.saveAsDialog(safeName(projTitle()) + '-branching.svg', 'svg');
+  const dest = outPath || await kapi.saveAsDialog(safeName(projTitle()) + '-branching.svg', 'svg');
   if (!dest) return false;
   await kapi.writeFile(dest, text);
   setStatus(tr('expDone') + dest);
   return true;
 }
 
-async function exportBranchPng(pane) {
+async function exportBranchPng(pane, outPath) {
   const built = buildStandaloneSvg(pane);
   if (!built) { setStatus(tr('needTreeView')); return false; }
   try {
@@ -1259,11 +1377,9 @@ async function exportBranchPng(pane) {
     const ctx = cv.getContext('2d');
     ctx.scale(scale, scale);
     ctx.drawImage(img, 0, 0);
-    const b64 = cv.toDataURL('image/png').split(',')[1];
-    const dir = await kapi.join(state.root, 'Images');
-    const name = await kapi.writeImageData(dir, safeName(projTitle()) + '-branching.png', b64);
-    setStatus(gi('camera') + ' ' + tr('pngSaved') + (typeof name === 'string' ? name : 'branching.png'));
-    return true;
+    // [alpha.168 · bug hunt] ผ่านกล่องบันทึก + ลิงก์เปิดโฟลเดอร์ (กฎ alpha.167 รอบต่อ 2) — เดิมเขียนเงียบ ๆ ลงคลังรูป
+    const { saveCanvasPng } = await import('./export-image.js');
+    return !!(await saveCanvasPng(cv, safeName(projTitle()) + '-branching.png', outPath));
   } catch (e) {
     log('error', t('ui.branch.branchingExportPNGNot'), e);
     setStatusError(failText(tr('pngFail'), e));

@@ -70,7 +70,7 @@ const MAX_EDGE = 4000;
  * ส่งออกกระดานอารมณ์เป็น .png ใบเดียว
  * วาดตามพิกัดจริงบนกระดาน (ไม่ขึ้นกับซูม/แพนที่ผู้ใช้ดูอยู่)
  */
-export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1b1d21', outPath = null } = {}) {
+export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1b1d21', outPath = null, bgCfg = null, portraits = null } = {}) {
   const items = MB.boardOrder(board);
   if (!items.length) { setStatus(t('ui.galleryExport.boardEmptyNotHas')); return false; }
   const b = MB.boardBounds(items);
@@ -82,12 +82,29 @@ export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const g = canvas.getContext('2d');
-    g.fillStyle = bg;
+    // [alpha.168] ฉากหลังของกระดาน (สี · รูปเบลอ · หรี่) — ไฟล์ออกมาหน้าตาเดียวกับบนจอ
+    const bgN = MB.normalizeBoardBg(bgCfg);
+    g.fillStyle = bgN.color || bg;
     g.fillRect(0, 0, W, H);
+    if (bgN.image) {
+      const im = await loadImage(await kapi.toFileURL(await kapi.join(root, AC.IMAGES_DIR, ...bgN.image.split('/'))));
+      if (im) {
+        const k = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+        g.save(); if (bgN.blur) g.filter = `blur(${bgN.blur}px)`;
+        g.drawImage(im, (W - im.naturalWidth * k) / 2, (H - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k);
+        g.restore();
+        g.fillStyle = `rgba(0,0,0,${bgN.dim})`; g.fillRect(0, 0, W, H);
+      }
+    }
     const rel = AC.albumRel(albumId);
     for (const it of items) {
       // [alpha.167] การ์ด (ตัวละคร/ฉาก/อ้างอิง) วาดเป็นกล่องแถบสี + ชื่อ + บรรทัดรอง — หน้าตาเดียวกับบนจอ
-      if (MB.isCard(it)) { drawCard(g, it, (it.x - b.x + pad) * scale, (it.y - b.y + pad) * scale, scale); continue; }
+      const ox = (it.x - b.x + pad) * scale, oy = (it.y - b.y + pad) * scale;
+      if (it.kind === 'group') { drawGroup(g, it, ox, oy, scale); continue; }
+      if (it.kind === 'note') { drawNote(g, it, ox, oy, scale); continue; }
+      if (it.kind === 'palette') { drawPalette(g, it, ox, oy, scale); continue; }
+      if (it.kind === 'entity') { await drawEntity(g, it, ox, oy, scale, root, portraits); continue; }
+      if (MB.isCard(it)) { drawCard(g, it, ox, oy, scale); continue; }
       // ชิ้นที่เป็น path (มี '/') = รูปข้ามอัลบั้ม — ใช้ตามที่เก็บไว้เลย
       const p = String(it.file).includes('/') ? it.file : (rel ? rel + '/' + it.file : it.file);
       const abs = await kapi.join(root, AC.IMAGES_DIR, ...p.split('/'));
@@ -99,9 +116,18 @@ export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1
         im.src = url;
       });
       if (!img) continue;
-      const x = (it.x - b.x + pad) * scale;
-      const y = (it.y - b.y + pad) * scale;
-      g.drawImage(img, x, y, it.w * scale, it.h * scale);
+      // รูปไม่ครอบตัด (contain) เหมือนบนจอ
+      const k = Math.min((it.w * scale) / img.naturalWidth, (it.h * scale) / img.naturalHeight);
+      const dw = img.naturalWidth * k, dh = img.naturalHeight * k;
+      g.drawImage(img, ox + (it.w * scale - dw) / 2, oy + (it.h * scale - dh) / 2, dw, dh);
+      if (it.caption) {
+        g.save(); g.font = `600 ${Math.round(12 * scale)}px "Sarabun", sans-serif`;
+        const tw = g.measureText(it.caption).width;
+        rrect(g, ox + 8 * scale, oy + it.h * scale - 30 * scale, tw + 16 * scale, 22 * scale, 6 * scale);
+        g.fillStyle = 'rgba(0,0,0,.72)'; g.fill();
+        g.fillStyle = CARD_INK; g.textBaseline = 'middle'; g.fillText(it.caption, ox + 16 * scale, oy + it.h * scale - 19 * scale);
+        g.restore();
+      }
     }
     clearBusy();
     const base = safe(albumId === AC.ROOT_ALBUM ? 'moodboard' : AC.albumBaseName(albumId)) + '-moodboard.png';
@@ -124,8 +150,84 @@ export async function exportMoodBoard(root, albumId, board, { pad = 40, bg = '#1
 }
 
 
+// ═══════════ [alpha.168] ชิ้นชนิดใหม่ของกระดาน (กลุ่ม · โน้ต · แถบสี · การ์ดรูปตัวละคร) ═══════════
+function loadImage(src) {
+  return new Promise((res) => { if (!src) return res(null); const im = new Image(); im.onload = () => res(im.naturalWidth ? im : null); im.onerror = () => res(null); im.src = src; });
+}
+function rrect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function drawGroup(g, it, x, y, s) {
+  g.save();
+  rrect(g, x, y, it.w * s, it.h * s, 14 * s);
+  g.fillStyle = 'rgba(255,255,255,.06)'; g.fill();
+  g.lineWidth = Math.max(1, s); g.strokeStyle = 'rgba(255,255,255,.22)'; g.stroke();
+  const title = it.title || '';
+  if (title) {
+    g.font = `700 ${Math.round(12.5 * s)}px "Sarabun", sans-serif`;
+    const tw = g.measureText(title).width;
+    rrect(g, x + 10 * s, y - 11 * s, tw + 18 * s, 22 * s, 6 * s);
+    g.fillStyle = 'rgba(12,12,16,.88)'; g.fill();
+    g.fillStyle = CARD_INK; g.textBaseline = 'middle'; g.fillText(title, x + 19 * s, y);
+  }
+  g.restore();
+}
+function drawNote(g, it, x, y, s) {
+  g.save();
+  rrect(g, x, y, it.w * s, it.h * s, 8 * s);
+  g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 8 * s; g.shadowOffsetY = 3 * s;
+  g.fillStyle = it.color || NOTE_BG; g.fill();
+  g.shadowColor = 'transparent';
+  g.fillStyle = NOTE_INK; g.textBaseline = 'top';
+  g.font = `${Math.round(13 * s)}px "Sarabun", sans-serif`;
+  let ly = y + 12 * s;
+  if (it.title) { g.font = `700 ${Math.round(13.5 * s)}px "Sarabun", sans-serif`; g.fillText(it.title, x + 12 * s, ly); ly += 20 * s; g.font = `${Math.round(13 * s)}px "Sarabun", sans-serif`; }
+  for (const para of String(it.text || '').split('\n')) {
+    let line = '';
+    for (const wd of para.split(/(\s+)/)) {
+      const test = line + wd;
+      if (g.measureText(test).width > it.w * s - 24 * s && line) { g.fillText(line, x + 12 * s, ly); ly += 18 * s; line = wd.trimStart(); }
+      else line = test;
+      if (ly > y + it.h * s - 18 * s) break;
+    }
+    if (line && ly <= y + it.h * s - 18 * s) { g.fillText(line, x + 12 * s, ly); ly += 18 * s; }
+  }
+  g.restore();
+}
+function drawPalette(g, it, x, y, s) {
+  const cs = it.colors || [];
+  if (!cs.length) return;
+  g.save();
+  rrect(g, x, y, it.w * s, it.h * s, 8 * s); g.clip();
+  const w = (it.w * s) / cs.length;
+  cs.forEach((c, i) => { g.fillStyle = c; g.fillRect(x + i * w, y, w + 1, it.h * s); });
+  g.restore();
+}
+async function drawEntity(g, it, x, y, s, root, portraits) {
+  const w = it.w * s, h = it.h * s, capH = Math.min(h * 0.3, 46 * s);
+  const info = portraits && portraits.get ? portraits.get(it.path) : null;
+  g.save();
+  rrect(g, x, y, w, h, 10 * s); g.fillStyle = CARD_BG; g.fill();
+  g.save(); rrect(g, x, y, w, h, 10 * s); g.clip();
+  const im = info && info.image ? await loadImage(await kapi.toFileURL(await kapi.join(root, AC.IMAGES_DIR, ...String(info.image).split('/')))) : null;
+  if (im) {
+    const k = Math.max(w / im.naturalWidth, (h - capH) / im.naturalHeight);
+    g.drawImage(im, x + (w - im.naturalWidth * k) / 2, y + (h - capH - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k);
+  }
+  g.fillStyle = 'rgba(10,10,14,.92)'; g.fillRect(x, y + h - capH, w, capH);
+  g.restore();
+  g.lineWidth = Math.max(1, s); g.strokeStyle = CARD_EDGE; rrect(g, x, y, w, h, 10 * s); g.stroke();
+  g.fillStyle = CARD_INK; g.textBaseline = 'middle';
+  g.font = `700 ${Math.round(12.5 * s)}px "Sarabun", sans-serif`;
+  g.fillText((info && info.name) || it.title || '', x + 10 * s, y + h - capH / 2);
+  g.restore();
+}
+
 // ═══════════ [alpha.167] การ์ดบนกระดาน + ส่งออก HTML ═══════════
 const CARD_BG = '#262a31', CARD_EDGE = '#3a404a', CARD_INK = '#f1f1f1', CARD_DIM = '#a4a9b3', CARD_STRIPE = '#ffc55c';
+const NOTE_BG = '#f2c14e', NOTE_INK = '#1d1b16';
 const CARD_SUB = { entity: 'ui.galleryMoodboard.cardEntity', scene: 'ui.galleryMoodboard.cardScene', memo: 'ui.galleryMoodboard.cardMemo',
                    chapter: 'ui.galleryMoodboard.cardChapter', ref: 'ui.galleryMoodboard.cardRef' };
 function cardSub(it) { return it.kind === 'ref' && it.url ? MB.urlHost(it.url) : t(CARD_SUB[it.kind] || CARD_SUB.ref); }
@@ -164,7 +266,7 @@ const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'im
  * ส่งออกกระดานเป็นหน้า HTML ไฟล์เดียว — รูปฝังเป็น data URL (ส่งต่อได้โดยไม่ต้องแนบโฟลเดอร์รูป)
  * การ์ดลิงก์เป็น <a> กดได้จริง · ข้อความผู้ใช้ผ่าน escape ทุกตัว
  */
-export async function exportMoodBoardHtml(root, albumId, board, { pad = 40, outPath = null } = {}) {
+export async function exportMoodBoardHtml(root, albumId, board, { pad = 40, outPath = null, bg = null, portraits = null } = {}) {
   const items = MB.boardOrder(board);
   if (!items.length) { setStatus(t('ui.galleryExport.boardEmptyNotHas')); return false; }
   const b = MB.boardBounds(items);
@@ -175,8 +277,13 @@ export async function exportMoodBoardHtml(root, albumId, board, { pad = 40, outP
     const parts = [];
     for (const it of items) {
       const pos = `left:${Math.round(it.x - b.x + pad)}px;top:${Math.round(it.y - b.y + pad)}px;width:${Math.round(it.w)}px;height:${Math.round(it.h)}px;z-index:${100 + (it.z | 0)}`;
+      if (it.kind === 'group') { parts.push(`<div class="grp" style="${pos}"><span>${escH(it.title || '')}</span></div>`); continue; }
+      if (it.kind === 'note') { parts.push(`<div class="note" style="${pos};background:${safeCssColor(it.color || NOTE_BG)}">${it.title ? `<b>${escH(it.title)}</b>` : ''}${escH(it.text || '')}</div>`); continue; }
+      if (it.kind === 'palette') { parts.push(`<div class="pal" style="${pos}">${(it.colors || []).map((c) => `<i style="background:${safeCssColor(c)}" title="${escH(c)}"></i>`).join('')}</div>`); continue; }
       if (MB.isCard(it)) {
-        const inner = `<b>${escH(it.title || it.url || '')}</b><small>${escH(cardSub(it))}</small>${it.text ? `<p>${escH(it.text)}</p>` : ''}`;
+        const info = it.kind === 'entity' && portraits && portraits.get ? portraits.get(it.path) : null;
+        const name = (info && info.name) || it.title || it.url || '';
+        const inner = `<b>${escH(name)}</b><small>${escH(cardSub(it))}</small>${it.text ? `<p>${escH(it.text)}</p>` : ''}`;
         const style = pos + (it.color ? `;--c:${safeCssColor(it.color)}` : '');
         parts.push(it.url && /^https?:\/\//i.test(it.url)
           ? `<a class="card" href="${escH(it.url)}" style="${style}">${inner}</a>`
@@ -197,7 +304,12 @@ export async function exportMoodBoardHtml(root, albumId, board, { pad = 40, outP
     }
     const title = AC.albumBaseName(albumId) || 'moodboard';
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escH(title)}</title><style>
-body{margin:0;background:#1b1d21;font-family:"Sarabun","Noto Sans Thai",sans-serif}
+body{margin:0;background:${safeCssColor(MB.normalizeBoardBg(bg).color || '#1b1d21')};font-family:"Sarabun","Noto Sans Thai",sans-serif}
+.grp{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);border-radius:14px}
+.grp span{position:absolute;left:10px;top:-11px;background:rgba(12,12,16,.88);color:${CARD_INK};font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:6px}
+.note{padding:12px;border-radius:8px;color:${NOTE_INK};font-size:13px;white-space:pre-wrap;overflow:hidden;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.note b{display:block;margin-bottom:4px}
+.pal{display:flex;border-radius:8px;overflow:hidden}.pal i{flex:1}
 .board{position:relative;width:${W}px;height:${H}px;margin:24px auto}
 .board>*{position:absolute;box-sizing:border-box}
 img{object-fit:contain}

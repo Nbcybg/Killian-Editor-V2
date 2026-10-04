@@ -2,28 +2,31 @@
 //
 // ทำไมแยกออกมาจากแท็บในคลังรูป: กระดานต้องรับ **การลากรูปมาวาง** แต่ตอนเป็นแท็บ
 // ตารางรูปกับกระดานอยู่คนละแท็บ → ลากจากตารางไปกระดานไม่ได้เลยแม้แต่ทางเดียว
-// และพื้นที่ที่เหลือหลังหัวแผง+แถบเครื่องมือก็แคบเกินกว่าจะจัดวางอะไรได้จริง
-// → ตอนนี้เป็นแผงเต็มตัว: เปิดคู่กับตาราง (ผนึกคนละฝั่ง/ลอย/เต็มจอ) แล้วลากข้ามได้ตามปกติ
 //
 // [alpha.167] กระดานรับ "การ์ด" ด้วย — ตัวละคร/สถานที่ (Wiki) · ฉาก · โน้ต · บท · อ้างอิง (ลิงก์/ข้อความ)
-//   หยิบใส่ได้จากทุกที่ (Explorer · แถบซ้ายของแผนที่ · ลิงก์จากเบราว์เซอร์) · ส่งออก PNG/HTML จากปุ่มบนแถบ
 //
-// รูปบนกระดาน **ไม่ถูกครอบตัด** — `object-fit:contain` เสมอ และตอนวางครั้งแรก
-// ความสูงคิดจากสัดส่วนจริงของไฟล์ (`sizeForAspect`)
+// [alpha.168] ยกเครื่องตามภาพกระดานอ้างอิงของผู้ใช้ — "drag and drop มันไม่วางตรง cursor · entities มีรูปแล้ว
+//   ยังไม่โชว์เป็น card · card ชอบดีดออกเวลาปรับขนาด · ปรับ background ได้ · ย้าย card ทับบน ทับล่าง · ของเราโคตร basic"
+//   ต้นตอ "ดีด/วางมั่ว": กฎ `.k-card{position:relative}` อยู่หลัง `.gal2-bitem{position:absolute}` ในไฟล์ CSS
+//     → การ์ดถูกจัดวางแบบไหลต่อกัน (left/top กลายเป็นระยะเยื้องจากตำแหน่งไหล) ปรับขนาดใบหนึ่ง = ใบอื่นถูกดันไปด้วย
+//   ต้นตอ "การ์ดหาย": `syncAlbumDoc` ตัดชิ้นที่ไม่มีไฟล์รูปทิ้ง = การ์ดทุกใบ (แก้ใน album-core)
+//   ของใหม่: วางตรงเคอร์เซอร์ (กึ่งกลาง) · การ์ดตัวละครเป็นรูปใหญ่ + ชื่อใต้รูป · โน้ต · แถบสี · กรอบกลุ่มมีหัวข้อ ·
+//   เลือก (คลิก/Shift/ลากกรอบ) + แถบลอยเลื่อนชั้น/ทำสำเนา/เอาออก · ฉากหลัง (สี · รูป · เบลอ · หรี่) · ล้อ = ซูม
+//
+// รูปบนกระดาน **ไม่ถูกครอบตัด** — `object-fit:contain` เสมอ และตอนวางครั้งแรกความสูงคิดจากสัดส่วนจริงของไฟล์
 
 import { t, tf } from '../i18n.js';
-import { gi } from '../icons.js';   // [alpha.162 · W6 ข้อ 1] ไอคอนจากทะเบียน
-import { ask, confirmBox, popupMenu } from '../ui.js';
+import { gi } from '../icons.js';
+import { ask, confirmBox, popupMenu, toast } from '../ui.js';
 import { imageLightbox } from '../wiki.js';
-import { iconHtml } from '../icons.js';
-import { el, setStatus, setStatusError, log, state } from '../core.js';
+import { el, setStatus, setStatusError, log } from '../core.js';
 import { bindDropTarget } from '../drop-kit.js';
-import { escCancelDrag } from '../drag-cancel.js';   // [alpha.167 · รอบต่อ] Esc ยกเลิกการลาก
+import { escCancelDrag } from '../drag-cancel.js';
 import { failText } from '../err-text.js';
+import { pickImage } from '../gallery.js';
 import * as AC from './album-core.js';
 import * as MB from './moodboard.js';
-import { boardAlbum, currentAlbum, setCurrentAlbum, onAlbumChange, onBoardChange, notifyBoardChanged } from './gallery-bus.js';
-
+import { boardAlbum, setCurrentAlbum, onAlbumChange, onBoardChange, notifyBoardChanged } from './gallery-bus.js';
 
 /** path ของชิ้นบนกระดาน — เก็บได้ทั้ง "ชื่อไฟล์ในอัลบั้มนี้" (แบบเดิม) และ "path ข้ามอัลบั้ม" */
 export function itemPath(albumId, file) {
@@ -49,7 +52,9 @@ function naturalSize(url) {
   });
 }
 
-const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const PALETTE_DEFAULT = ['#1e1250', '#452f5e', '#ff6640', '#ffc55c', '#f4efe2'];
+const UNDO_MAX = 60;
+const NOTE_COLORS = ['#f2c14e', '#9fd3c7', '#f4a6a6', '#b8c1ec', '#e8e8e8'];
 
 export class MoodBoard {
   constructor(host, root, opts = {}) {
@@ -58,9 +63,12 @@ export class MoodBoard {
     this.opts = opts;
     this.view = { zoom: 1, panX: 40, panY: 40 };
     this.albumId = boardAlbum();
+    this.sel = new Set();
+    // [alpha.168 · bug hunt] ประวัติย้อนกลับของกระดาน — เดิมย้าย/ย่อขยาย/จัดเรียง/ล้างกระดาน ย้อนไม่ได้เลย
+    this._undo = []; this._redo = [];
     this._gen = 0;
     this._off = [
-      onAlbumChange(() => { this.albumId = boardAlbum(); this.render(); }),
+      onAlbumChange(() => { this.albumId = boardAlbum(); this.sel.clear(); this.render(); }),
       onBoardChange((id) => { if (id === this.albumId) this.drawBoard(); }),
     ];
     this.render();
@@ -79,11 +87,16 @@ export class MoodBoard {
     this.host.append(wrap);
     wrap.append(this.buildBar(list));
     const board = el('div', 'gal2-board');
+    const bg = el('div', 'gal2-board-bg');
     const canvas = el('div', 'gal2-canvas');
-    board.append(canvas);
+    const selbar = el('div', 'gal2-selbar');
+    board.append(bg, canvas, selbar);
+    board.tabIndex = 0;
     wrap.append(board);
     this._board = board;
+    this._bg = bg;
     this._canvas = canvas;
+    this._selbar = selbar;
     this.bindBoard(board);
     await this.drawBoard();
   }
@@ -99,23 +112,20 @@ export class MoodBoard {
       sel.append(o);
     }
     sel.onchange = () => { setCurrentAlbum(sel.value, 'board'); };
-    const mk = (label, fn, title) => {
-      const b = el('button', 'cmp-mini', label);
+    const mk = (label, fn, title, cls = '') => {
+      const b = el('button', 'cmp-mini' + (cls ? ' ' + cls : ''), label);
       if (title) b.title = title;
       b.onclick = fn;
       return b;
     };
-    const more = mk(gi('more'), (e) => {
+    const center = () => { const r = this._board ? this._board.getBoundingClientRect() : { width: 600, height: 400 };
+      return MB.toBoard(this.view, r.width / 2, r.height / 2); };
+    const addB = mk(gi('plus') + ' ' + t('ui.galleryMoodboard.add'), (e) => {
       const r = e.currentTarget.getBoundingClientRect();
-      popupMenu(r.left, r.bottom + 4, [
-        { label: t('ui.galleryMoodboard.arrangeAuto'), click: () => this.tidy() },
-        { label: t('ui.galleryMoodboard.adjustAllItemAt2'), click: () => this.fixAllRatios() },
-        { label: t('ui.galleryMoodboard.exportBoardImage'), click: () => this.exportBoard() },
-        '-',
-        { label: t('ui.galleryMoodboard.clearBoardNotDel'), danger: true, click: () => this.clear() },
-      ]);
-    }, t('ui.galleryMoodboard.cmdAddFillBoard'));
+      popupMenu(r.left, r.bottom + 4, this.addMenuItems(center()));
+    }, t('ui.galleryMoodboard.addTip'), 'mb-add');
     const refB = mk(gi('bookmark') + ' ' + t('ui.galleryMoodboard.addRef'), () => this.addRefDialog(), t('ui.galleryMoodboard.addRefTip'));
+    const bgB = mk(gi('palette') + ' ' + t('ui.galleryMoodboard.bg'), (e) => this.bgPopover(e.currentTarget), t('ui.galleryMoodboard.bgTip'), 'mb-bg-btn');
     const expB = mk(gi('download') + ' ' + t('ui.galleryMoodboard.export'), (e) => {
       const r = e.currentTarget.getBoundingClientRect();
       popupMenu(r.left, r.bottom + 4, [
@@ -123,30 +133,59 @@ export class MoodBoard {
         { label: t('ui.galleryMoodboard.exportHtml'), click: () => this.exportHtml() },
       ]);
     }, t('ui.galleryMoodboard.exportTip'));
-    bar.append(sel, mk(t('ui.common.fitScreen'), () => this.fit(), t('ui.galleryMoodboard.fitTip')), refB, expB, more);
+    const more = mk(gi('more'), (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      popupMenu(r.left, r.bottom + 4, [
+        { label: t('ui.galleryMoodboard.arrangeAuto'), click: () => this.tidy() },
+        { label: t('ui.galleryMoodboard.adjustAllItemAt2'), click: () => this.fixAllRatios() },
+        '-',
+        { label: t('ui.galleryMoodboard.clearBoardNotDel'), danger: true, click: () => this.clear() },
+      ]);
+    }, t('ui.galleryMoodboard.cmdAddFillBoard'));
+    const fitB = mk(gi('fit-screen'), () => this.fit(), t('ui.galleryMoodboard.fitTip'));
+    fitB.setAttribute('aria-label', t('ui.common.fitScreen'));
+    bar.append(sel, addB, refB, el('span', 'gal2-bar-sp'), bgB, fitB, expB, more);
     return bar;
   }
 
+  /** รายการ "เพิ่ม" (ใช้ทั้งปุ่มบนแถบและคลิกขวาที่ว่าง) */
+  addMenuItems(at) {
+    return [
+      { label: gi('note') + ' ' + t('ui.galleryMoodboard.addNote'), click: () => this.addKind('note', at) },
+      { label: gi('palette') + ' ' + t('ui.galleryMoodboard.addPalette'), click: () => this.addKind('palette', at) },
+      { label: gi('frame') + ' ' + t('ui.galleryMoodboard.addGroup'), click: () => this.addKind('group', at) },
+      { label: gi('bookmark') + ' ' + t('ui.galleryMoodboard.addRef'), click: () => this.addRefDialog(null, at) },
+      { label: gi('image') + ' ' + t('ui.galleryMoodboard.addImage'), click: async () => {
+        const it = await pickImage(this.root); if (it) await this.add([it.file], at, { center: true }); } },
+    ];
+  }
+
+  // ═══════════ มุมมอง · ลาก · หยิบใส่ ═══════════
   bindBoard(board) {
+    // ล้อ = ซูมยึดเคอร์เซอร์ (แบบแผนที่/กระดานวางแผน) · Shift+ล้อ = เลื่อนแนวนอน
     board.addEventListener('wheel', (e) => {
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) return;
       e.preventDefault();
+      if (e.shiftKey) { this.view.panX -= e.deltaY || e.deltaX; this.applyTransform(); return; }
       const r = board.getBoundingClientRect();
-      this.view = MB.zoomAt(this.view, e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - r.left, e.clientY - r.top);
+      this.view = MB.zoomAt(this.view, e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - r.left, e.clientY - r.top);
       this.applyTransform();
     }, { passive: false });
 
+    // ลากที่ว่าง = เลื่อนกระดาน · Shift+ลาก = ลากกรอบเลือก · คลิกที่ว่าง = ยกเลิกการเลือก
     board.addEventListener('mousedown', (e) => {
-      if (e.target !== board && e.target !== this._canvas) return;
-      if (e.button !== 0 && e.button !== 1) return;          // [alpha.167 · รอบต่อ] คลิกขวาไม่ใช่การเลื่อนผืน
+      if (e.target !== board && e.target !== this._canvas && e.target !== this._bg) return;
+      if (e.button !== 0 && e.button !== 1) return;
+      board.focus({ preventScroll: true });
+      if (e.button === 0 && e.shiftKey) return this.rubberSelect(e);
       const s = { x: e.clientX, y: e.clientY, panX: this.view.panX, panY: this.view.panY };
-      board.classList.add('panning');
+      let moved = false;
       const mv = (ev) => {
+        if (!moved && Math.abs(ev.clientX - s.x) + Math.abs(ev.clientY - s.y) < 3) return;
+        moved = true; board.classList.add('panning');
         this.view.panX = s.panX + (ev.clientX - s.x);
         this.view.panY = s.panY + (ev.clientY - s.y);
         this.applyTransform();
       };
-      // Esc ระหว่างลาก = คืนที่เดิม (กฎถาวร alpha.164 รอบต่อ 6 · ทุกตัวลากในไฟล์นี้)
       const offEsc = escCancelDrag(() => {
         board.classList.remove('panning');
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
@@ -156,54 +195,202 @@ export class MoodBoard {
         offEsc();
         board.classList.remove('panning');
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+        if (!moved && this.sel.size) { this.sel.clear(); this.paintSelection(); }
       };
       document.addEventListener('mousemove', mv);
       document.addEventListener('mouseup', up);
     });
+    // ดับเบิลคลิกที่ว่าง = โน้ตใหม่ตรงนั้น · คลิกขวาที่ว่าง = เมนูเพิ่มของ
+    board.addEventListener('dblclick', (e) => {
+      if (e.target !== board && e.target !== this._canvas && e.target !== this._bg) return;
+      const r = board.getBoundingClientRect();
+      this.addKind('note', MB.toBoard(this.view, e.clientX - r.left, e.clientY - r.top));
+    });
+    board.addEventListener('contextmenu', (e) => {
+      if (e.target !== board && e.target !== this._canvas && e.target !== this._bg) return;
+      e.preventDefault();
+      const r = board.getBoundingClientRect();
+      const at = MB.toBoard(this.view, e.clientX - r.left, e.clientY - r.top);
+      popupMenu(e.clientX, e.clientY, [...this.addMenuItems(at), '-',
+        { label: t('ui.galleryMoodboard.bg'), click: () => this.bgPopover(this._board.parentElement.querySelector('.mb-bg-btn')) },
+        { label: t('ui.common.fitScreen'), click: () => this.fit() }]);
+    });
+    // คีย์บอร์ด: Delete = เอาออกจากกระดาน · Esc = ยกเลิกการเลือก · Ctrl+D = ทำสำเนา · ] [ = เลื่อนชั้น
+    board.addEventListener('keydown', async (e) => {
+      if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      // [alpha.168] ย้อนกลับ/ทำซ้ำ — ปุ่มกายภาพ (e.code) · แผงนี้เป็นเจ้าของ Ctrl+Z ตอนถูกเลือก (setPanelOwnsKeys)
+      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.code === 'KeyY')) {
+        e.preventDefault(); e.stopPropagation();
+        const redo = e.code === 'KeyY' || e.shiftKey;
+        if (!(await this.stepHistory(redo ? 1 : -1))) setStatus(t(redo ? 'ui.galleryMoodboard.redoNone' : 'ui.galleryMoodboard.undoNone'));
+        return;
+      }
+      if (!this.sel.size) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); await this.removeSel(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.sel.clear(); this.paintSelection(); }
+      else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyD') { e.preventDefault(); await this.duplicateSel(); }
+      else if (e.code === 'BracketRight') { e.preventDefault(); await this.layer(e.shiftKey ? 'front' : 1); }
+      else if (e.code === 'BracketLeft') { e.preventDefault(); await this.layer(e.shiftKey ? 'back' : -1); }
+    });
 
-    // หยิบใส่ (alpha.167): รูปจากคลังรูป = รูป · ตัวละคร/ฉาก/โน้ต/บท = การ์ด · ลิงก์จากเบราว์เซอร์ = การ์ดอ้างอิง
-    // (เดิมรับเฉพาะรูปจากคลังรูป — ลากของอย่างอื่นมาแล้วเงียบ)
+    // หยิบใส่: รูปจากคลังรูป = รูป · ตัวละคร/ฉาก/โน้ต/บท = การ์ด · ลิงก์จากเบราว์เซอร์ = การ์ดอ้างอิง — วางตรงเคอร์เซอร์
     bindDropTarget(board, {
       accept: ['gallery', 'image', 'entity', 'scene', 'memo', 'chapter', 'url', 'book'],
       hoverClass: 'drop',
       onDrop: async (payload, e) => {
         const r = board.getBoundingClientRect();
         const at = MB.toBoard(this.view, e.clientX - r.left, e.clientY - r.top);
-        await this.dropPayload(payload, at);
+        await this.dropPayload(payload, at, { center: true });
       },
       onError: (err) => { log('error', 'moodboard: drop failed', err); setStatusError(failText(t('ui.galleryMoodboard.dropFail'), err)); },
     });
+  }
+
+  rubberSelect(e) {
+    const board = this._board, r = board.getBoundingClientRect();
+    const box = el('div', 'gal2-rubber');
+    board.append(box);
+    const x0 = e.clientX, y0 = e.clientY;
+    const paint = (ev) => {
+      box.style.left = (Math.min(x0, ev.clientX) - r.left) + 'px'; box.style.top = (Math.min(y0, ev.clientY) - r.top) + 'px';
+      box.style.width = Math.abs(ev.clientX - x0) + 'px'; box.style.height = Math.abs(ev.clientY - y0) + 'px';
+    };
+    paint(e);
+    const done = async (ev, cancel) => {
+      document.removeEventListener('mousemove', paint); document.removeEventListener('mouseup', upH);
+      box.remove();
+      if (cancel || !ev) return;
+      const a = MB.toBoard(this.view, Math.min(x0, ev.clientX) - r.left, Math.min(y0, ev.clientY) - r.top);
+      const b = MB.toBoard(this.view, Math.max(x0, ev.clientX) - r.left, Math.max(y0, ev.clientY) - r.top);
+      for (const it of this._items || []) if (it.x < b.x && it.x + it.w > a.x && it.y < b.y && it.y + it.h > a.y && it.kind !== 'group') this.sel.add(it.id);
+      this.paintSelection();
+    };
+    const offEsc = escCancelDrag(() => done(null, true));
+    const upH = (ev) => { offEsc(); done(ev, false); };
+    document.addEventListener('mousemove', paint); document.addEventListener('mouseup', upH);
   }
 
   applyTransform() {
     if (!this._canvas) return;
     const v = this.view;
     this._canvas.style.transform = `translate(${v.panX}px, ${v.panY}px) scale(${v.zoom})`;
+    this._canvas.style.setProperty('--mbz', String(v.zoom));
+    this.placeSelbar();
   }
 
   async doc() { return AC.readAlbumDoc(kapi, this.root, this.albumId); }
 
-  async saveBoard(board) {
+  /** @param o.noHistory ไม่จดประวัติ (ใช้ตอนย้อนกลับ/ทำซ้ำเอง) */
+  async saveBoard(board, o = {}) {
     const d = await this.doc();
-    await AC.writeAlbumDoc(kapi, this.root, this.albumId, { ...d, moodBoard: MB.normalizeBoard(board) });
+    const next = MB.normalizeBoard(board);
+    if (!o.noHistory) {
+      const was = JSON.stringify(MB.normalizeBoard(d.moodBoard)), now = JSON.stringify(next);
+      if (was !== now) {
+        this._undo.push({ album: this.albumId, board: was });
+        if (this._undo.length > UNDO_MAX) this._undo.shift();
+        this._redo = [];
+      }
+    }
+    await AC.writeAlbumDoc(kapi, this.root, this.albumId, { ...d, moodBoard: next });
     notifyBoardChanged(this.albumId);
   }
+  /** ย้อนกลับ/ทำซ้ำการแก้กระดานของอัลบั้มนี้ (ประวัติของอัลบั้มอื่นถูกข้าม) → true = มีอะไรให้ย้อน */
+  async stepHistory(dir) {
+    const from = dir < 0 ? this._undo : this._redo, to = dir < 0 ? this._redo : this._undo;
+    let h = null;
+    while (from.length) { const x = from.pop(); if (x.album === this.albumId) { h = x; break; } }
+    if (!h) return false;
+    to.push({ album: this.albumId, board: JSON.stringify(MB.normalizeBoard((await this.doc()).moodBoard)) });
+    this.sel.clear();
+    await this.saveBoard(JSON.parse(h.board), { noHistory: true });
+    return true;
+  }
 
+  // ═══════════ ฉากหลัง ═══════════
+  paintBg(bgRaw) {
+    const bg = MB.normalizeBoardBg(bgRaw);
+    const host = this._bg, board = this._board;
+    if (!host) return;
+    board.classList.toggle('gal2-board-custom', !!(bg.color || bg.image));
+    board.style.setProperty('--mb-bg', bg.color || '');
+    if (bg.image) {
+      urlOf(this.root, bg.image).then((u) => {
+        host.style.backgroundImage = `url("${String(u).replace(/"/g, '%22')}")`;
+      }).catch(() => {});
+      host.style.filter = bg.blur ? `blur(${bg.blur}px)` : '';
+      host.style.inset = bg.blur ? (-Math.ceil(bg.blur * 2.5)) + 'px' : '0';
+      host.style.setProperty('--mb-dim', String(bg.dim));
+      host.classList.add('on');
+    } else { host.style.backgroundImage = 'none'; host.style.filter = ''; host.classList.remove('on'); }
+  }
+  async saveBg(patch) {
+    const d = await this.doc();
+    const next = MB.normalizeBoardBg({ ...(d.moodBoardBg || {}), ...patch });
+    await AC.writeAlbumDoc(kapi, this.root, this.albumId, { ...d, moodBoardBg: next });
+    this.paintBg(next);
+    return next;
+  }
+  async bgPopover(anchor) {
+    const old = document.querySelector('.mb-bg-pop');
+    if (old) { old.remove(); return; }
+    const d = await this.doc();
+    const bg = MB.normalizeBoardBg(d.moodBoardBg);
+    const pop = el('div', 'mb-bg-pop k-hud-pop');
+    const row = (label, ...kids) => { const r = el('label', 'mb-bg-row'); r.append(el('span', null, label), ...kids); pop.append(r); return r; };
+    const col = el('input', 'mb-bg-color'); col.type = 'color'; col.value = bg.color || '#1b1d21';
+    col.oninput = () => this.paintBg({ ...bg, color: col.value });
+    col.onchange = async () => { bg.color = col.value; await this.saveBg({ color: col.value }); };
+    const colReset = el('button', 'cmp-mini', t('ui.galleryMoodboard.bgTheme'));
+    colReset.title = t('ui.galleryMoodboard.bgThemeTip');
+    colReset.onclick = async (e) => { e.preventDefault(); bg.color = ''; await this.saveBg({ color: '' }); };
+    row(t('ui.galleryMoodboard.bgColor'), col, colReset);
+    const imgB = el('button', 'cmp-mini', bg.image ? t('ui.galleryMoodboard.bgImageChange') : t('ui.galleryMoodboard.bgImagePick'));
+    imgB.onclick = async (e) => { e.preventDefault(); const it = await pickImage(this.root); if (!it) return;
+      bg.image = it.file; await this.saveBg({ image: it.file }); imgB.textContent = t('ui.galleryMoodboard.bgImageChange'); };
+    const imgX = el('button', 'cmp-mini', gi('x'));
+    imgX.title = t('ui.galleryMoodboard.bgImageRemove');
+    imgX.onclick = async (e) => { e.preventDefault(); bg.image = ''; await this.saveBg({ image: '' }); };
+    row(t('ui.galleryMoodboard.bgImage'), imgB, imgX);
+    const blur = el('input', 'mb-bg-blur'); blur.type = 'range'; blur.min = '0'; blur.max = '40'; blur.value = String(bg.blur);
+    blur.oninput = () => this.paintBg({ ...bg, blur: +blur.value });
+    blur.onchange = async () => { bg.blur = +blur.value; await this.saveBg({ blur: bg.blur }); };
+    row(t('ui.galleryMoodboard.bgBlur'), blur);
+    const dim = el('input', 'mb-bg-dim'); dim.type = 'range'; dim.min = '0'; dim.max = '90'; dim.value = String(Math.round(bg.dim * 100));
+    dim.oninput = () => this.paintBg({ ...bg, dim: +dim.value / 100 });
+    dim.onchange = async () => { bg.dim = +dim.value / 100; await this.saveBg({ dim: bg.dim }); };
+    row(t('ui.galleryMoodboard.bgDim'), dim);
+    document.body.append(pop);
+    const r = anchor ? anchor.getBoundingClientRect() : { left: 200, bottom: 200 };
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - 290, r.left)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+    const off = (ev) => { if (!pop.contains(ev.target) && ev.target !== anchor) { pop.remove(); document.removeEventListener('mousedown', off, true); } };
+    setTimeout(() => document.addEventListener('mousedown', off, true), 0);
+    return pop;
+  }
+
+  // ═══════════ วาด ═══════════
   async drawBoard() {
     const gen = this._gen;
-    // [alpha.167 · บั๊ก] วาดซ้อนกันสองรอบ (วางสองชิ้นติดกัน) = ทั้งคู่ล้างผืนแล้วเติมข้าม await → ชิ้นซ้ำ
-    // → ประกอบนอกจอ แล้วสลับเข้าเฉพาะรอบล่าสุด
+    // วาดซ้อนกันสองรอบ (วางสองชิ้นติดกัน) = ประกอบนอกจอ แล้วสลับเข้าเฉพาะรอบล่าสุด
     const seq = this._drawSeq = (this._drawSeq || 0) + 1;
     const canvas = this._canvas;
     if (!canvas) return;
     const d = await this.doc();
     if (gen !== this._gen || seq !== this._drawSeq) return;
+    this.paintBg(d.moodBoardBg);
     const board = MB.normalizeBoard(d.moodBoard);
+    this._items = board;
+    for (const id of [...this.sel]) if (!board.some((it) => it.id === id)) this.sel.delete(id);
     const frag = document.createDocumentFragment();
+    // [alpha.168] คำแนะนำตอนกระดานว่างอยู่บน "จอ" (ตัวกระดาน) ไม่ใช่บนผืนที่ซูม/เลื่อน — ผืนกว้าง 0 ทำให้ข้อความถูกบีบเป็นคอลัมน์แคบ
+    if (this._board) this._board.querySelectorAll(':scope > .gal2-board-hint').forEach((h) => h.remove());
     if (!board.length) {
-      frag.append(el('div', 'gal2-board-hint',
-        t('ui.galleryMoodboard.boardEmptyOpenPanel') +
-        t('ui.galleryMoodboard.pickImageLibraryDone')));
+      const hint = el('div', 'gal2-board-hint');
+      hint.append(el('div', 'gal2-hint-ic', gi('image-add')),
+        el('b', null, t('ui.galleryMoodboard.emptyTitle')),
+        el('div', null, t('ui.galleryMoodboard.boardEmptyOpenPanel') + t('ui.galleryMoodboard.pickImageLibraryDone')));
+      (this._board || canvas).append(hint);
     } else {
       for (const it of MB.boardOrder(board)) {
         const node = await this.itemEl(it);
@@ -213,45 +400,43 @@ export class MoodBoard {
     }
     canvas.replaceChildren(frag);
     this.applyTransform();
+    this.paintSelection();
+  }
+
+  /** กรอบ + ที่จับของชิ้น (ใช้ร่วมทุกชนิด) */
+  shell(it, cls) {
+    const node = el('div', 'gal2-bitem ' + cls);
+    node.dataset.id = it.id;
+    if (it.kind) node.dataset.kind = it.kind;
+    node.style.left = it.x + 'px'; node.style.top = it.y + 'px';
+    node.style.width = it.w + 'px'; node.style.height = it.h + 'px';
+    node.style.zIndex = String(100 + it.z);
+    return node;
   }
 
   async itemEl(it) {
     if (MB.isCard(it)) return this.cardEl(it);
-    const node = el('div', 'gal2-bitem');
-    node.style.left = it.x + 'px';
-    node.style.top = it.y + 'px';
-    node.style.width = it.w + 'px';
-    node.style.height = it.h + 'px';
-    node.style.zIndex = String(100 + it.z);
-    node.dataset.id = it.id;
+    const node = this.shell(it, 'gal2-img');
     const im = el('img');
     im.src = await urlOf(this.root, itemPath(this.albumId, it.file));
     im.draggable = false;
     im.alt = it.file;
-    node.append(im, el('span', 'gal2-bresize'));
-    const grip = node.querySelector('.gal2-bresize');
-
-    // ลากย้าย/ปรับขนาด — ตัวเดียวกับการ์ด (รูปคงสัดส่วนเป็นค่าเริ่มต้น · Alt = ยืดอิสระ)
-    this.bindMove(node, it, grip, true);
-
-    node.ondblclick = () => imageLightbox(im.src, it.file);
-    node.oncontextmenu = (e) => {
-      e.preventDefault();
-      popupMenu(e.clientX, e.clientY, [
-        { label: '<b>' + escHtml(it.file) + '</b>', disabled: true },   // [alpha.167 · บั๊ก] ชื่อไฟล์ของผู้ใช้ลง HTML ต้อง escape (กฎข้อ 11)
-        { label: t('ui.common.viewImageFull'), click: () => imageLightbox(im.src, it.file) },
-        { label: t('ui.galleryMoodboard.adjustAtRatioImage'), click: () => this.fixRatio(it) },
-        { label: t('ui.galleryMoodboard.top'), click: async () => this.saveBoard(MB.moveToFront((await this.doc()).moodBoard, it.id)) },
-        { label: t('ui.galleryMoodboard.bottomLast'), click: async () => this.saveBoard(MB.moveToBack((await this.doc()).moodBoard, it.id)) },
-        '-',
-        { label: t('ui.galleryMoodboard.exitBoardNotDel'), click: async () =>
-          this.saveBoard(MB.removeFromBoard((await this.doc()).moodBoard, it.id)) },
-      ]);
-    };
+    node.append(im);
+    if (it.caption) node.append(el('span', 'gal2-caption', it.caption));
+    node.append(el('span', 'gal2-bresize'));
+    this.bindMove(node, it, node.querySelector('.gal2-bresize'), true);
+    node.ondblclick = () => imageLightbox(im.src, it.caption || it.file);
+    node.oncontextmenu = (e) => this.itemMenu(e, it, [
+      { label: t('ui.common.viewImageFull'), click: () => imageLightbox(im.src, it.file) },
+      { label: t('ui.galleryMoodboard.caption'), click: async () => {
+        const v = await ask(t('ui.galleryMoodboard.caption'), { value: it.caption || '', placeholder: t('ui.galleryMoodboard.captionPh') });
+        if (v == null) return; await this.patch(it.id, { caption: String(v).trim() }); } },
+      { label: t('ui.galleryMoodboard.adjustAtRatioImage'), click: () => this.fixRatio(it) },
+    ], it.file);
     return node;
   }
 
-  // ═══════════ [alpha.167] การ์ด ═══════════
+  // ═══════════ การ์ด ═══════════
   /** รูปประจำตัวของหน้า Wiki (อ่านครั้งเดียวต่อรอบวาด) */
   async portraits() {
     if (this._port && this._portGen === this._gen) return this._port;
@@ -269,30 +454,18 @@ export class MoodBoard {
   }
 
   async cardEl(it) {
-    const node = el('div', 'gal2-bitem gal2-card k-card');
-    node.dataset.id = it.id;
-    node.dataset.kind = it.kind;
-    node.style.left = it.x + 'px'; node.style.top = it.y + 'px';
-    node.style.width = it.w + 'px'; node.style.height = it.h + 'px';
-    node.style.zIndex = String(100 + it.z);
-    const ICON = { entity: 'user', scene: 'file', memo: 'note', chapter: 'book', ref: it.url ? 'link' : 'bookmark' };
+    if (it.kind === 'group') return this.groupEl(it);
+    if (it.kind === 'note') return this.noteEl(it);
+    if (it.kind === 'palette') return this.paletteEl(it);
+    if (it.kind === 'entity') return this.entityEl(it);
+    const node = this.shell(it, 'gal2-card k-card');
+    const ICON = { scene: 'file', memo: 'note', chapter: 'book', ref: it.url ? 'link' : 'bookmark' };
     const av = el('span', 'k-card-av');
-    let sub = '';
-    if (it.kind === 'entity') {
-      const info = (await this.portraits()).get(it.path);
-      if (info && info.image) {
-        const im = el('img'); im.draggable = false; im.alt = '';
-        im.src = await kapi.toFileURL(await kapi.join(this.root, AC.IMAGES_DIR, ...String(info.image).split('/')));
-        av.append(im);
-      } else av.textContent = gi(ICON.entity);
-      try { const { catLabel } = await import('../app.js'); sub = catLabel((info && info.cat) || it.cat || ''); } catch { sub = it.cat || ''; }
-    } else {
-      av.textContent = gi(ICON[it.kind] || 'bookmark');
-      sub = it.kind === 'ref' ? (MB.urlHost(it.url) || t('ui.galleryMoodboard.cardRef'))
-          : it.kind === 'memo' ? t('ui.galleryMoodboard.cardMemo')
-          : it.kind === 'chapter' ? t('ui.galleryMoodboard.cardChapter')
-          : t('ui.galleryMoodboard.cardScene');
-    }
+    av.textContent = gi(ICON[it.kind] || 'bookmark');
+    const sub = it.kind === 'ref' ? (MB.urlHost(it.url) || t('ui.galleryMoodboard.cardRef'))
+        : it.kind === 'memo' ? t('ui.galleryMoodboard.cardMemo')
+        : it.kind === 'chapter' ? t('ui.galleryMoodboard.cardChapter')
+        : t('ui.galleryMoodboard.cardScene');
     const main = el('div', 'k-card-main');
     main.append(el('div', 'k-card-title', it.title || it.url || t('ui.common.notNamed')));
     main.append(el('div', 'k-card-sub', sub));
@@ -300,53 +473,245 @@ export class MoodBoard {
     node.append(av, main, el('span', 'gal2-bresize'));
     if (it.color) node.style.setProperty('--k-c', it.color);
     node.title = [it.title, it.url, it.text].filter(Boolean).join('\n') + '\n' + t('ui.galleryMoodboard.cardTip');
-    const grip = node.querySelector('.gal2-bresize');
-    this.bindMove(node, it, grip, false);
+    this.bindMove(node, it, node.querySelector('.gal2-bresize'), false);
     node.ondblclick = () => this.openCard(it);
-    node.oncontextmenu = (e) => {
-      e.preventDefault();
-      popupMenu(e.clientX, e.clientY, [
-        { label: '<b>' + escHtml(it.title || it.url || '') + '</b>', disabled: true },
-        { label: t('ui.galleryMoodboard.cardOpen'), click: () => this.openCard(it) },
-        it.kind === 'ref' ? { label: t('ui.galleryMoodboard.cardEdit'), click: () => this.addRefDialog(it) } : null,
-        { label: t('ui.galleryMoodboard.top'), click: async () => this.saveBoard(MB.moveToFront((await this.doc()).moodBoard, it.id)) },
-        { label: t('ui.galleryMoodboard.bottomLast'), click: async () => this.saveBoard(MB.moveToBack((await this.doc()).moodBoard, it.id)) },
-        '-',
-        { label: t('ui.galleryMoodboard.cardRemove'), click: async () =>
-          this.saveBoard(MB.removeFromBoard((await this.doc()).moodBoard, it.id)) },
-      ].filter(Boolean));
-    };
+    node.oncontextmenu = (e) => this.itemMenu(e, it, [
+      { label: t('ui.galleryMoodboard.cardOpen'), click: () => this.openCard(it) },
+      it.kind === 'ref' ? { label: t('ui.galleryMoodboard.cardEdit'), click: () => this.addRefDialog(it) } : null,
+    ], it.title || it.url || '');
     return node;
   }
 
-  /** ลากย้าย/ปรับขนาดชิ้น (ใช้ทั้งรูปและการ์ด) — แก้ style สด บันทึกครั้งเดียวตอนปล่อย */
-  bindMove(node, it, grip, keepRatioDefault) {
-    const commit = async (patch) => {
-      const d = await this.doc();
-      await this.saveBoard(MB.updateBoardItem(d.moodBoard, it.id, patch));
+  /** ตัวละคร/สถานที่ = การ์ดรูปใหญ่ + ชื่อใต้รูป (แบบภาพกระดานอ้างอิง) · ไม่มีรูป = ไอคอนหมวดตัวใหญ่ */
+  async entityEl(it) {
+    const node = this.shell(it, 'gal2-card gal2-ent');
+    const info = (await this.portraits()).get(it.path);
+    const pic = el('div', 'gal2-ent-pic');
+    if (info && info.image) {
+      const im = el('img'); im.draggable = false; im.alt = '';
+      im.src = await kapi.toFileURL(await kapi.join(this.root, AC.IMAGES_DIR, ...String(info.image).split('/')));
+      pic.append(im);
+    } else pic.append(el('span', 'gal2-ent-ic', gi(it.cat === 'locations' || (info && info.cat === 'locations') ? 'map-pin' : 'user')));
+    let sub = '';
+    try { const { catLabel } = await import('../app.js'); sub = catLabel((info && info.cat) || it.cat || ''); } catch { sub = it.cat || ''; }
+    const cap = el('div', 'gal2-ent-cap');
+    cap.append(el('div', 'gal2-ent-name', (info && info.name) || it.title || t('ui.common.notNamed')), el('div', 'gal2-ent-sub', sub));
+    node.append(pic, cap, el('span', 'gal2-bresize'));
+    node.title = ((info && info.name) || it.title || '') + '\n' + t('ui.galleryMoodboard.cardTip');
+    this.bindMove(node, it, node.querySelector('.gal2-bresize'), false);
+    node.ondblclick = () => this.openCard(it);
+    node.oncontextmenu = (e) => this.itemMenu(e, it, [
+      { label: t('ui.galleryMoodboard.cardOpen'), click: () => this.openCard(it) },
+    ], (info && info.name) || it.title || '');
+    return node;
+  }
+
+  noteEl(it) {
+    const node = this.shell(it, 'gal2-card gal2-note');
+    node.style.setProperty('--note', it.color || NOTE_COLORS[0]);
+    if (it.title) node.append(el('div', 'gal2-note-title', it.title));
+    const body = el('div', 'gal2-note-text', it.text || '');
+    node.append(body, el('span', 'gal2-bresize'));
+    this.bindMove(node, it, node.querySelector('.gal2-bresize'), false);
+    // ดับเบิลคลิก = แก้ข้อความในที่ (ไม่เด้งกล่อง)
+    node.ondblclick = (e) => { e.stopPropagation(); this.editNote(node, it); };
+    node.oncontextmenu = (e) => this.itemMenu(e, it, [
+      { label: t('ui.galleryMoodboard.noteEdit'), click: () => this.editNote(node, it) },
+      { label: t('ui.galleryMoodboard.noteColor'), sub: () => NOTE_COLORS.map((c) => ({ text: c, swatch: c, click: () => this.patch(it.id, { color: c }) })) },
+    ], (it.text || '').slice(0, 30));
+    return node;
+  }
+  editNote(node, it) {
+    const body = node.querySelector('.gal2-note-text');
+    if (!body || node.querySelector('textarea')) return;
+    const ta = el('textarea', 'gal2-note-edit');
+    ta.value = it.text || '';
+    body.replaceWith(ta);
+    ta.focus();
+    const done = async (keep) => {
+      if (!ta.isConnected) return;
+      const v = ta.value;
+      if (keep && v !== (it.text || '')) await this.patch(it.id, { text: v });
+      else this.drawBoard();
     };
+    ta.onblur = () => done(true);
+    ta.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') { e.preventDefault(); ta.onblur = null; done(false); }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ta.blur(); }
+    };
+    ta.onmousedown = (e) => e.stopPropagation();
+  }
+
+  paletteEl(it) {
+    const node = this.shell(it, 'gal2-card gal2-palette');
+    const row = el('div', 'gal2-pal-row');
+    for (const c of it.colors || []) {
+      const sw = el('span', 'gal2-pal-sw');
+      sw.style.background = c;
+      sw.title = c + ' — ' + t('ui.galleryMoodboard.paletteCopy');
+      sw.ondblclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(c).catch(() => {}); setStatus(tf('ui.galleryMoodboard.paletteCopied', c)); };
+      row.append(sw);
+    }
+    node.append(row, el('span', 'gal2-bresize'));
+    this.bindMove(node, it, node.querySelector('.gal2-bresize'), false);
+    node.oncontextmenu = (e) => this.itemMenu(e, it, [
+      { label: t('ui.galleryMoodboard.paletteEdit'), click: async () => {
+        const v = await ask(t('ui.galleryMoodboard.paletteEdit'), { value: (it.colors || []).join(', '), placeholder: '#1e1250, #ff6640' });
+        if (v == null) return;
+        const colors = String(v).split(/[\s,]+/).filter((c) => /^#[0-9a-f]{6}$/i.test(c));
+        if (colors.length) await this.patch(it.id, { colors }); } },
+    ], t('ui.galleryMoodboard.addPalette'));
+    return node;
+  }
+
+  groupEl(it) {
+    const node = this.shell(it, 'gal2-card gal2-group');
+    if (it.color) node.style.setProperty('--grp', it.color);
+    const head = el('div', 'gal2-group-title', it.title || t('ui.galleryMoodboard.groupUntitled'));
+    node.append(head, el('span', 'gal2-bresize'));
+    this.bindMove(node, it, node.querySelector('.gal2-bresize'), false);
+    head.ondblclick = async (e) => {
+      e.stopPropagation();
+      const v = await ask(t('ui.galleryMoodboard.groupName'), { value: it.title || '' });
+      if (v != null) await this.patch(it.id, { title: String(v).trim() });
+    };
+    node.oncontextmenu = (e) => this.itemMenu(e, it, [
+      { label: t('ui.galleryMoodboard.groupName'), click: () => head.ondblclick(new MouseEvent('dblclick')) },
+    ], it.title || t('ui.galleryMoodboard.groupUntitled'));
+    return node;
+  }
+
+  /** เมนูคลิกขวาของชิ้น: รายการเฉพาะชนิด + ลำดับชั้น + ทำสำเนา + เอาออก */
+  itemMenu(e, it, extra, head) {
+    e.preventDefault(); e.stopPropagation();
+    if (!this.sel.has(it.id)) { this.sel = new Set([it.id]); this.paintSelection(); }
+    popupMenu(e.clientX, e.clientY, [
+      head ? { text: head, disabled: true } : null,
+      ...(extra || []).filter(Boolean),
+      '-',
+      { label: t('ui.galleryMoodboard.top'), click: () => this.layer('front') },
+      { label: t('ui.galleryMoodboard.layerUp'), click: () => this.layer(1) },
+      { label: t('ui.galleryMoodboard.layerDown'), click: () => this.layer(-1) },
+      { label: t('ui.galleryMoodboard.bottomLast'), click: () => this.layer('back') },
+      { label: t('ui.galleryMoodboard.duplicate'), click: () => this.duplicateSel() },
+      '-',
+      { label: MB.isCard(it) ? t('ui.galleryMoodboard.cardRemove') : t('ui.galleryMoodboard.exitBoardNotDel'), click: () => this.removeSel() },
+    ].filter(Boolean));
+  }
+
+  // ═══════════ เลือก · แถบลอย ═══════════
+  paintSelection() {
+    if (!this._canvas) return;
+    for (const n of this._canvas.querySelectorAll('.gal2-bitem')) n.classList.toggle('sel', this.sel.has(n.dataset.id));
+    const bar = this._selbar;
+    if (!bar) return;
+    bar.replaceChildren();
+    if (!this.sel.size) { bar.classList.remove('on'); return; }
+    const b = (icon, tip, fn, cls = '') => { const x = el('button', 'cmp-mini gal2-sb' + (cls ? ' ' + cls : ''), gi(icon)); x.title = tip;
+      x.setAttribute('aria-label', tip); x.onmousedown = (e) => e.stopPropagation(); x.onclick = fn; return x; };
+    bar.append(el('span', 'gal2-sb-n', tf('ui.galleryMoodboard.selCount', this.sel.size)),
+      b('arrange-bring-to-front', t('ui.galleryMoodboard.top'), () => this.layer('front')),
+      b('arrow-up', t('ui.galleryMoodboard.layerUp'), () => this.layer(1)),
+      b('arrow-down', t('ui.galleryMoodboard.layerDown'), () => this.layer(-1)),
+      b('arrange-send-to-back', t('ui.galleryMoodboard.bottomLast'), () => this.layer('back')),
+      b('duplicate', t('ui.galleryMoodboard.duplicate'), () => this.duplicateSel()),
+      b('trash', t('ui.galleryMoodboard.exitBoardNotDel'), () => this.removeSel(), 'k-danger'));
+    bar.classList.add('on');
+    this.placeSelbar();
+  }
+  placeSelbar() {
+    const bar = this._selbar;
+    if (!bar || !bar.classList.contains('on') || !this._board) return;
+    const nodes = [...this._canvas.querySelectorAll('.gal2-bitem.sel')];
+    if (!nodes.length) return;
+    const br = this._board.getBoundingClientRect();
+    let l = Infinity, tp = Infinity, rr = -Infinity;
+    for (const n of nodes) { const r = n.getBoundingClientRect(); l = Math.min(l, r.left); tp = Math.min(tp, r.top); rr = Math.max(rr, r.right); }
+    const w = bar.offsetWidth || 240;
+    let x = (l + rr) / 2 - br.left - w / 2, y = tp - br.top - (bar.offsetHeight || 34) - 10;
+    x = Math.max(6, Math.min(br.width - w - 6, x));
+    if (y < 6) y = 6;
+    bar.style.left = x + 'px'; bar.style.top = y + 'px';
+  }
+  async layer(dir) {
+    let board = (await this.doc()).moodBoard;
+    for (const id of this.sel) {
+      if (dir === 'front') board = MB.moveToFront(board, id);
+      else if (dir === 'back') board = MB.moveToBack(board, id);
+      else board = MB.stepLayer(board, id, dir);
+    }
+    await this.saveBoard(board);
+  }
+  async duplicateSel() {
+    const before = new Set(MB.normalizeBoard((await this.doc()).moodBoard).map((x) => x.id));
+    const board = MB.duplicateItems((await this.doc()).moodBoard, [...this.sel]);
+    this.sel = new Set(board.filter((x) => !before.has(x.id)).map((x) => x.id));
+    await this.saveBoard(board);
+  }
+  async removeSel() {
+    const before = (await this.doc()).moodBoard;
+    let board = before;
+    const n = this.sel.size;
+    for (const id of this.sel) board = MB.removeFromBoard(board, id);
+    this.sel.clear();
+    await this.saveBoard(board);
+    // [alpha.168] ลบด้วยปุ่ม Delete ไม่มีกล่องยืนยัน → ให้ย้อนกลับได้จากข้อความแจ้ง (คืนกระดานก่อนลบทั้งชุด)
+    if (n) toast(tf('ui.galleryMoodboard.removedN', n), { action: { label: t('ui.common.undoBtn'), onClick: () => this.saveBoard(before) } });
+  }
+  async patch(id, p) {
+    const d = await this.doc();
+    await this.saveBoard(MB.updateBoardItem(d.moodBoard, id, p));
+  }
+
+  /**
+   * ลากย้าย/ปรับขนาดชิ้น (ใช้ทุกชนิด) — แก้ style สด บันทึกครั้งเดียวตอนปล่อย
+   * คลิก = เลือก · Shift+คลิก = เลือกเพิ่ม · ลากชิ้นที่เลือกอยู่ = ย้ายทั้งชุด · ลากกรอบกลุ่ม = ของข้างในตามไป
+   */
+  bindMove(node, it, grip, keepRatioDefault) {
     node.addEventListener('mousedown', (e) => {
       if (e.target === grip || e.button !== 0) return;
+      if (e.target.closest && e.target.closest('textarea')) return;
       e.stopPropagation();
-      // [alpha.167] Ctrl+คลิก = กระโดดไปของที่การ์ดชี้ (ทางสากลเดียวกับตัวแก้ไข/แผนที่/เส้นเวลา)
-      if ((e.ctrlKey || e.metaKey) && MB.isCard(it)) { e.preventDefault(); this.openCard(it); return; }
+      this._board && this._board.focus({ preventScroll: true });
+      // Ctrl+คลิก = กระโดดไปของที่การ์ดชี้ (ทางสากลเดียวกับตัวแก้ไข/แผนที่/เส้นเวลา)
+      if ((e.ctrlKey || e.metaKey) && MB.isCard(it) && !['note', 'palette', 'group'].includes(it.kind)) { e.preventDefault(); this.openCard(it); return; }
+      if (e.shiftKey) { if (this.sel.has(it.id)) this.sel.delete(it.id); else this.sel.add(it.id); this.paintSelection(); return; }
+      if (!this.sel.has(it.id)) { this.sel = new Set([it.id]); this.paintSelection(); }
       const z = this.view.zoom;
-      const s0 = { x: e.clientX, y: e.clientY, ox: it.x, oy: it.y };
-      let moved = false;
+      // ชุดที่ลาก = ที่เลือก + ของข้างในกลุ่มที่เลือก
+      const ids = new Set(this.sel);
+      for (const g of (this._items || []).filter((x) => ids.has(x.id) && x.kind === 'group')) for (const inner of MB.itemsInGroup(this._items, g)) ids.add(inner.id);
+      const start = new Map((this._items || []).filter((x) => ids.has(x.id)).map((x) => [x.id, { x: x.x, y: x.y }]));
+      const s0 = { x: e.clientX, y: e.clientY };
+      let moved = false, dx = 0, dy = 0;
+      const put = () => {
+        for (const [id, p] of start) {
+          const n = this._canvas.querySelector(`.gal2-bitem[data-id="${id}"]`);
+          if (n) { n.style.left = (p.x + dx) + 'px'; n.style.top = (p.y + dy) + 'px'; }
+        }
+        this.placeSelbar();
+      };
       const mv = (ev) => {
-        moved = true;
-        it.x = MB.snap(s0.ox + (ev.clientX - s0.x) / z);
-        it.y = MB.snap(s0.oy + (ev.clientY - s0.y) / z);
-        node.style.left = it.x + 'px'; node.style.top = it.y + 'px';
+        if (!moved && Math.abs(ev.clientX - s0.x) + Math.abs(ev.clientY - s0.y) < 3) return;
+        moved = true; node.classList.add('dragging');
+        const p0 = start.get(it.id) || { x: it.x, y: it.y };
+        dx = MB.snap(p0.x + (ev.clientX - s0.x) / z) - p0.x;
+        dy = MB.snap(p0.y + (ev.clientY - s0.y) / z) - p0.y;
+        put();
       };
       const offEsc = escCancelDrag(() => {
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-        it.x = s0.ox; it.y = s0.oy; node.style.left = it.x + 'px'; node.style.top = it.y + 'px';
+        node.classList.remove('dragging'); dx = 0; dy = 0; put();
       });
       const up = async () => {
         offEsc();
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-        if (moved) await commit({ x: it.x, y: it.y });
+        node.classList.remove('dragging');
+        if (moved && (dx || dy)) {
+          const d = await this.doc();
+          await this.saveBoard(MB.moveItems(d.moodBoard, [...start.keys()], dx, dy));
+        }
       };
       document.addEventListener('mousemove', mv);
       document.addEventListener('mouseup', up);
@@ -355,22 +720,24 @@ export class MoodBoard {
       e.stopPropagation(); e.preventDefault();
       const z = this.view.zoom;
       const s0 = { x: e.clientX, y: e.clientY, w: it.w, h: it.h };
-      let moved = false;
+      const ratio = it.w > 0 ? it.h / it.w : 1;
+      let moved = false, w = it.w, h = it.h;
       const mv = (ev) => {
         moved = true;
         const keep = keepRatioDefault ? !ev.altKey : ev.altKey;
-        const r = MB.resizeItem(it, s0.w + (ev.clientX - s0.x) / z, s0.h + (ev.clientY - s0.y) / z, { keepRatio: keep });
-        it.w = r.w; it.h = r.h;
-        node.style.width = it.w + 'px'; node.style.height = it.h + 'px';
+        w = MB.clamp(s0.w + (ev.clientX - s0.x) / z, MB.MIN_SIZE, MB.MAX_SIZE);
+        h = keep ? MB.clamp(w * ratio, MB.MIN_SIZE, MB.MAX_SIZE) : MB.clamp(s0.h + (ev.clientY - s0.y) / z, MB.MIN_SIZE, MB.MAX_SIZE);
+        node.style.width = w + 'px'; node.style.height = h + 'px';
+        this.placeSelbar();
       };
       const offEsc = escCancelDrag(() => {
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-        it.w = s0.w; it.h = s0.h; node.style.width = it.w + 'px'; node.style.height = it.h + 'px';
+        node.style.width = s0.w + 'px'; node.style.height = s0.h + 'px';
       });
       const up = async () => {
         offEsc();
         document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-        if (moved) await commit({ w: it.w, h: it.h });        // คลิกที่จับเฉย ๆ ไม่ต้องเขียนไฟล์
+        if (moved) await this.patch(it.id, { w: Math.round(w), h: Math.round(h) });   // คลิกที่จับเฉย ๆ ไม่ต้องเขียนไฟล์
       };
       document.addEventListener('mousemove', mv);
       document.addEventListener('mouseup', up);
@@ -397,11 +764,32 @@ export class MoodBoard {
     return true;
   }
 
-  /** ของที่หยิบใส่กระดาน → รูป/การ์ด · คืนจำนวนชิ้นที่วาง (ส่งออกให้เทสเรียกตรงได้) */
-  async dropPayload(payload, at) {
+  /** เพิ่มชิ้นชนิดใหม่ (โน้ต · แถบสี · กลุ่ม) กึ่งกลางที่จุด at */
+  async addKind(kind, at) {
+    const [w, h] = MB.KIND_SIZE[kind] || [MB.CARD_W, MB.CARD_H];
+    const p = at ? MB.centeredAt(at.x, at.y, w, h) : { x: 40, y: 40 };
+    let board = (await this.doc()).moodBoard;
+    const opts = { ...p, w, h };
+    if (kind === 'palette') opts.colors = PALETTE_DEFAULT;
+    if (kind === 'note') opts.color = NOTE_COLORS[0];
+    if (kind === 'group') opts.title = t('ui.galleryMoodboard.groupUntitled');
+    board = MB.addCardToBoard(board, kind, opts);
+    const added = board[board.length - 1];
+    if (kind === 'group') board = MB.moveToBack(board, added.id);        // กรอบกลุ่มอยู่ใต้ของอื่นเสมอ
+    this.sel = new Set([added.id]);
+    await this.saveBoard(board);
+    if (kind === 'note') setTimeout(() => { const n = this._canvas && this._canvas.querySelector(`.gal2-bitem[data-id="${added.id}"]`); if (n) this.editNote(n, added); }, 60);
+    return added;
+  }
+
+  /**
+   * ของที่หยิบใส่กระดาน → รูป/การ์ด · คืนจำนวนชิ้นที่วาง (ส่งออกให้เทสเรียกตรงได้)
+   * [alpha.168] { center:true } = กึ่งกลางชิ้นแรกอยู่ตรงจุดที่ปล่อย (ผู้ใช้: "มันไม่วางตรง cursor")
+   */
+  async dropPayload(payload, at, { center = false } = {}) {
     if (!payload || !payload.items.length) return 0;
     const base = at ? { x: MB.snap(at.x), y: MB.snap(at.y) } : { x: 40, y: 40 };
-    if (payload.kind === 'gallery') return this.add(payload.items.map((i) => i.path), base);
+    if (payload.kind === 'gallery') return this.add(payload.items.map((i) => i.path), base, { center });
     if (payload.kind === 'image') {
       // รูปจาก Explorer (ทางเต็ม) → ทางใน Images/
       const imgRoot = await kapi.join(this.root, AC.IMAGES_DIR);
@@ -411,14 +799,16 @@ export class MoodBoard {
         if (rel && !rel.startsWith('..')) rels.push(rel);
       }
       if (!rels.length) { setStatus(t('ui.galleryMoodboard.imageOutside')); return 0; }
-      return this.add(rels, base);
+      return this.add(rels, base, { center });
     }
     let board = (await this.doc()).moodBoard;
     let n = 0;
     for (const it of payload.items) {
       const kind = payload.kind === 'url' ? 'ref' : payload.kind === 'book' ? 'ref' : payload.kind;
-      const opts = { x: base.x + n * 24, y: base.y + n * 24, title: it.title || '' };
-      // [alpha.167 · รอบต่อ · บั๊ก] เล่ม = การ์ดชื่อเล่ม · เดิมใส่ทางเต็มของโฟลเดอร์ลงข้อความการ์ด (โชว์บนกระดาน + ผิดที่ทันทีที่ย้ายเครื่อง)
+      const [w, h] = MB.KIND_SIZE[kind] || [MB.CARD_W, MB.CARD_H];
+      const p0 = center ? MB.centeredAt(base.x, base.y, w, h) : base;
+      const opts = { x: p0.x + n * 24, y: p0.y + n * 24, title: it.title || '' };
+      // เล่ม = การ์ดชื่อเล่ม (ไม่ใส่ทางเต็มของโฟลเดอร์ลงข้อความการ์ด)
       if (kind === 'ref') { if (it.url) opts.url = it.url; else if (payload.kind !== 'book') opts.text = it.path || ''; }
       else if (kind === 'chapter') { opts.draftDir = it.draftDir; opts.guid = it.guid; }
       else {
@@ -437,7 +827,7 @@ export class MoodBoard {
   }
 
   /** กล่องเพิ่ม/แก้การ์ดอ้างอิง (ชื่อ · ลิงก์ · ข้อความ) */
-  addRefDialog(it = null) {
+  addRefDialog(it = null, at = null) {
     return new Promise((resolve) => {
       const ov = el('div', 'k-overlay');
       const box = el('div', 'k-dialog');
@@ -463,8 +853,9 @@ export class MoodBoard {
         if (it) board = MB.updateBoardItem(board, it.id, { title, url, text });
         else {
           const r = this._board ? this._board.getBoundingClientRect() : { width: 600, height: 400 };
-          const at = MB.toBoard(this.view, r.width / 2 - MB.CARD_W / 2, r.height / 2 - MB.REF_H / 2);
-          board = MB.addCardToBoard(board, 'ref', { x: MB.snap(at.x), y: MB.snap(at.y), title, url, text });
+          const c0 = at || MB.toBoard(this.view, r.width / 2, r.height / 2);
+          const p = MB.centeredAt(c0.x, c0.y, MB.CARD_W, MB.REF_H);
+          board = MB.addCardToBoard(board, 'ref', { x: p.x, y: p.y, title, url, text });
         }
         await this.saveBoard(board);
         close(true);
@@ -477,28 +868,33 @@ export class MoodBoard {
   async exportHtml(outPath) {
     const { exportMoodBoardHtml } = await import('./gallery-export.js');
     const d = await this.doc();
-    return exportMoodBoardHtml(this.root, this.albumId, d.moodBoard, { outPath });
+    return exportMoodBoardHtml(this.root, this.albumId, d.moodBoard, { outPath, bg: d.moodBoardBg, portraits: await this.portraits() });
   }
 
-  /** วางรูปลงกระดาน — ความสูงคิดจากสัดส่วนจริงของไฟล์ (ไม่ครอบตัด ไม่บิด) */
-  async add(paths, at) {
+  /**
+   * วางรูปลงกระดาน — ความสูงคิดจากสัดส่วนจริงของไฟล์ (ไม่ครอบตัด ไม่บิด)
+   * [alpha.168] { center:true } = รูปแรกกึ่งกลางอยู่ที่จุด at (วางตรงเคอร์เซอร์) · รูปถัดไปเยื้องทีละ 24
+   */
+  async add(paths, at, { center = false } = {}) {
     const list = (paths || []).filter(Boolean);
     if (!list.length) { setStatus(t('ui.common.pickImageBefore')); return 0; }
     const d = await this.doc();
     let board = d.moodBoard;
     let i = 0;
     const base = at ? { x: MB.snap(at.x), y: MB.snap(at.y) } : { x: 40, y: 40 };
+    const added = [];
     for (const p of list) {
       const nat = await naturalSize(await urlOf(this.root, p));
       const size = MB.sizeForAspect(MB.DEFAULT_SIZE, nat.w, nat.h);
       // เก็บเป็นชื่อไฟล์เปล่าเมื่ออยู่ในอัลบั้มเดียวกับกระดาน (รูปแบบเดิม) · ข้ามอัลบั้มเก็บ path เต็ม
       const rel = AC.albumRel(this.albumId);
-      const file = rel && p.startsWith(rel + '/') ? p.slice(rel.length + 1) : (rel ? p : p);
-      board = MB.addToBoard(board, file, {
-        x: base.x + (i % 4) * 24, y: base.y + (i % 4) * 24, w: size.w, h: size.h,
-      });
+      const file = rel && p.startsWith(rel + '/') ? p.slice(rel.length + 1) : p;
+      const p0 = center ? MB.centeredAt(base.x, base.y, size.w, size.h) : base;
+      board = MB.addToBoard(board, file, { x: p0.x + i * 24, y: p0.y + i * 24, w: size.w, h: size.h });
+      added.push(board[board.length - 1].id);
       i++;
     }
+    this.sel = new Set(added);
     await this.saveBoard(board);
     setStatus(tf('ui.galleryMoodboard.pasteImageTopBoard', list.length, AC.albumBaseName(this.albumId)));
     return list.length;
@@ -507,8 +903,7 @@ export class MoodBoard {
   async fixRatio(it) {
     const nat = await naturalSize(await urlOf(this.root, itemPath(this.albumId, it.file)));
     const size = MB.sizeForAspect(it.w, nat.w, nat.h);
-    const d = await this.doc();
-    await this.saveBoard(MB.updateBoardItem(d.moodBoard, it.id, { w: size.w, h: size.h }));
+    await this.patch(it.id, { w: size.w, h: size.h });
   }
 
   async fixAllRatios() {
@@ -531,6 +926,7 @@ export class MoodBoard {
 
   async clear() {
     if (!(await confirmBox(t('ui.galleryMoodboard.clearBoardMoodAlbum'), t('ui.common.clear')))) return;
+    this.sel.clear();
     await this.saveBoard([]);
   }
 
@@ -544,7 +940,7 @@ export class MoodBoard {
   async exportBoard(outPath) {
     const { exportMoodBoard } = await import('./gallery-export.js');
     const d = await this.doc();
-    return exportMoodBoard(this.root, this.albumId, d.moodBoard, { outPath });
+    return exportMoodBoard(this.root, this.albumId, d.moodBoard, { outPath, bgCfg: d.moodBoardBg, portraits: await this.portraits() });
   }
 }
 

@@ -1632,7 +1632,10 @@ export function settingsDialog(openTab, opts = {}) {
       // (โหมดเทสไม่ถาม — กล่องยืนยันจะค้างรอคลิกตลอดกาล ดูกับดักเทสข้อ 1)
       const inTest = location.search.includes('k2test') || !!globalThis.__k2testing;
       if (!inTest && await confirmBox(t('ui.dlg.changeLangDoneStart'), t('ui.common.restart'))) {
-        setTimeout(() => location.reload(), 150);
+        // [alpha.168] เริ่มใหม่ = ปิดโปรแกรม → ผ่านรายการงานค้างชุดเดียวกับตอนกดออก (กฎถาวร alpha.72/.135)
+        //   เดิม location.reload() ตรง ๆ — แท็บที่ยังไม่บันทึก/กระดานวางแผนค้าง หายเงียบ
+        const { confirmQuit } = await import('./app.js');
+        await confirmQuit({ quit: () => setTimeout(() => location.reload(), 150) });
       }
     }
     // [alpha.69] จำนวนครั้งที่เก็บ/สวิตช์ปิด มีผลกับ **main** (คนจดประวัติ) ไม่ใช่ renderer

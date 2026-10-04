@@ -934,6 +934,17 @@ ui.aiProvider.busyTest,Testing…
 ui.aiProvider.cantPickModel,No model selected yet
 ui.aiProvider.cantSettingsProviderAI,No AI provider set up yet (menu AI → AI settings)
 ui.aiProvider.connectOkFoundModel,Connected — found {0} {0|model|models}
+ui.aiProvider.defaultsFail,Could not save the providers on this computer
+ui.aiProvider.defaultsHave,{0} saved on this computer
+ui.aiProvider.defaultsImport,Use my providers
+ui.aiProvider.defaultsImported,Added {0} {0|provider|providers} — press Save to use them in this project
+ui.aiProvider.defaultsImportTip,Add the providers saved on this computer to this project (only the ones it does not have yet)
+ui.aiProvider.defaultsNone,Nothing saved on this computer yet
+ui.aiProvider.defaultsNothingNew,This project already has all of those providers
+ui.aiProvider.defaultsSave,Save as mine
+ui.aiProvider.defaultsSaved,Saved {0} {0|provider|providers} on this computer (with encrypted keys)
+ui.aiProvider.defaultsSavedNoKeys,Saved {0} {0|provider|providers} on this computer — keys were not stored because this computer cannot encrypt them
+ui.aiProvider.defaultsSaveTip,Keep these providers on this computer for use in other projects without re-entering them (keys are encrypted with the system secret store)
 ui.aiProvider.delProvider,"Delete provider ""{0}""?"
 ui.aiProvider.delProvider2,Delete this provider
 ui.aiProvider.domainAllow,Allowed domains: {0}
@@ -1398,6 +1409,8 @@ ui.app.copySaveDoneLine,Log copied ({0} {0|line|lines} matching the filter)
 ui.app.corner,Tilt (degrees)
 ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,Could not read the book cover image
+ui.app.creditIcons,The app's icon set (K2 Icons font)
+ui.app.creditThree,3D Story Network (models · backdrops)
 ui.app.ctrlEnter,Run (Ctrl+Enter)
 ui.app.currentTopDisk,Current (on disk)
 ui.app.data,Data
@@ -1436,6 +1449,12 @@ ui.app.diskConflictReload,Use the version on disk (discard tab edits)
 ui.app.diskDeletedAsk,"""{0}"" was deleted or moved outside the app. Recreate it in its old place with this tab's text?"
 ui.app.diskReloadedN,Reloaded {0} {0|tab|tabs} changed outside the app
 ui.app.dlgbSource,Rehearsal Room
+ui.app.docsEmptyDashboard,Open Dashboard
+ui.app.docsEmptyGuide,Getting Started
+ui.app.docsEmptyNoProject,No project open
+ui.app.docsEmptyNoProjectHint,Create a new project or open an existing one to start writing
+ui.app.docsEmptyNoTab,No document open
+ui.app.docsEmptyNoTabHint,Click a scene in the Project panel on the left to start writing
 ui.app.doItemSet,Build installer/portable
 ui.app.doneDoneFile,Done — {0} {0|file|files}
 ui.app.doneOpenBackChapter,"Applied ""{0}"" (turn it back on at Script → Upper/lower case)"
@@ -1544,6 +1563,9 @@ ui.app.itemItem, Next item ({0} {0|item|items})
 ui.app.itemReplace,Replacement: 
 ui.app.jSONCheckFormatBefore, — plain JSON (format checked before writing)
 ui.app.jSONFormatNotSave,"Invalid JSON, not saved: "
+ui.app.jsonNoWrite,{0} was not saved — the existing file is unreadable and has no backup (repair or move it first)
+ui.app.jsonUnreadable,Could not read {0} (the file is damaged) — the original was kept as {1}; this panel starts empty
+ui.app.jsonUnreadableNoBackup,Could not read {0} and could not keep a copy — nothing will be saved over it until it can be read
 ui.app.keyEnglish,key (English)
 ui.app.keyPlugin,Plugin shortcut broken: 
 ui.app.killianEditor,Killian Editor 
@@ -1737,6 +1759,7 @@ ui.app.openProject,Open Project...
 ui.app.openProject2,Opened project: 
 ui.app.openProjectBeforeImport,Open a project first to import translations
 ui.app.openProjectDoneMs,Project opened in {0}ms
+ui.app.openProjectFailed,Could not open the project: {0} — {1}
 ui.app.openSceneBefore,Open a scene first
 ui.app.openSceneBeforeChangeImage,Open a scene first to change the case
 ui.app.openSceneBeforePage,Open a scene first to go to a page
@@ -1998,7 +2021,6 @@ ui.books.changeNameDraft,Rename draft
 ui.books.chapterSceneWord,{0} {0|chapter|chapters} · {1} {1|scene|scenes} · {2} {2|word|words}
 ui.books.coverOut,Remove cover
 ui.books.delDraft,Delete this draft
-ui.books.draft, · {0} {0|draft|drafts}
 ui.books.draft2,Draft
 ui.books.egDraft,e.g. draft-2
 ui.books.export,Export
@@ -2112,6 +2134,9 @@ ui.branch.dragBarPasteTop,Drag the ⠿ handle onto another scene card = move the
 ui.branch.dragChoice,Drag onto another scene to move this choice
 ui.branch.dragHint,Drag the ⠿ handle onto another scene card to move the choice there
 ui.branch.dragPasteTopScene,Drag onto another scene to move this choice
+ui.branch.dropLinked,"Added {0} {0|choice|choices} from ""{1}"" — edit the text in the right panel"
+ui.branch.dropNotScene,Only scenes from this project can be dropped here
+ui.branch.dropPlaced,Placed {0} {0|scene|scenes} on the graph — drag a card's right dot onto another card to add a choice
 ui.branch.dup,Loop
 ui.branch.dup2,Inside a loop
 ui.branch.edit,Go edit
@@ -2119,6 +2144,7 @@ ui.branch.editTextChoiceDone,Choice text edited
 ui.branch.eg,e.g. Go to the market
 ui.branch.egBookOneUse,e.g. Book One — use when each book has its own set of choices
 ui.branch.egBookShort,e.g. Book One
+ui.branch.emptyDropHint,"Drag scenes from the Explorer here, then drag a card's right dot onto another card to make a choice"
 ui.branch.emptyGraph,No scenes with choices yet
 ui.branch.emptyHint,"No scenes with choices yet — add one in the ""Add choice"" bar above and the map appears instantly"
 ui.branch.expandGraph,Expand chart
@@ -2237,6 +2263,7 @@ ui.branch.playHint,Play test — read the story and click through the choices
 ui.branch.pngFail,PNG export failed: 
 ui.branch.pNGImageGraphSend,PNG (chart image — for chats/slides)
 ui.branch.pngSaved,Map image saved to the gallery: 
+ui.branch.portTip,Drag this point onto another scene card to add a choice
 ui.branch.printOnlySceneAt,Type to highlight only the matching scenes — the rest fade out
 ui.branch.printTextSceneAt,"Type [text] in the scene where the story branches, e.g. [Go to the market], then press Link here"
 ui.branch.propsPlan,Plan properties — 
@@ -2396,7 +2423,6 @@ ui.cmtComment.reply,Reply
 ui.cmtComment.replyBack,{0} {0|reply|replies}
 ui.cmtComment.scrollToAnchorPickRangeCant,scrollToAnchor: cannot select the range
 ui.cmtComment.selectionAnchorReadFileCant,selectionAnchor: cannot read the file
-ui.codex.allCat,All categories
 ui.codex.busyNewWebCodex,Building the encyclopedia website…
 ui.codex.busyRead,Reading entities…
 ui.codex.codexExportNotOk,codex: export failed
@@ -2405,6 +2431,8 @@ ui.codex.codexReadIndexMention,codex: cannot read the mentions index
 ui.codex.exportNotOk,Export failed: 
 ui.codex.exportWeb,Export as website
 ui.codex.exportWebCodexDone,"Exported the encyclopedia website, {0} {0|page|pages} → {1}"
+ui.codex.navListTip,List of this category
+ui.codex.navMaps,Maps
 ui.codex.newWebCodexStyle,"Build a Fandom/Wikia-style encyclopedia website (works offline, no internet needed)"
 ui.codex.notFoundListAt,(no entries match the search)
 ui.codex.notHasDesc,(no description yet)
@@ -2414,6 +2442,8 @@ ui.codex.openPageWiki,Open Wiki page
 ui.codex.openPageWikiNot,Could not open the Wiki page
 ui.codex.openProjectBeforeHas,Open a project first to get an encyclopedia
 ui.codex.searchCodexList,Search the encyclopedia… ({0} {0|entry|entries})
+ui.codex.searchIn,Search {0}…
+ui.codex.tileTip,Click = show in the big view · double-click = open the Wiki page
 ui.codexBuild.appearScene2,Appears in scenes
 ui.codexBuild.item,Related to
 ui.codexBuild.knownName2,Also known as: {0}
@@ -3147,7 +3177,9 @@ ui.drafts.hasDraftNameDone,A draft with this name already exists
 ui.drafts.notFoundDraftFrom,Source draft not found
 ui.drafts.renameDraftTo,"Renamed draft ""{0}"" to ""{1}"""
 ui.drop.chapterEmpty,This chapter has no scenes yet
+ui.drop.hintBranch,Place on graph / drop on a card = new choice
 ui.drop.hintCard,Drop on the board = card
+ui.drop.hintFloorplan,Drop onto the floor plan
 ui.drop.hintFocus,Drop = go to this node
 ui.drop.hintInsertName,Drop = insert the name into the document
 ui.drop.hintMap,Drop on the map = place a pin
@@ -3238,6 +3270,7 @@ ui.exportBlog.skippedN,{0} skipped
 ui.exportBlog.theme,Theme
 ui.exportFdx.write,"Written by
 "
+ui.exportImg.showInFolder,Show in folder
 ui.exportRtf.write,Written by
 ui.exportZip.breakFileDoneFile,Extracted ({0} {0|file|files}) but found no project.khn.json — this is not a Killian project
 ui.exportZip.busyBreakFileZIP,Extracting the ZIP…
@@ -3299,38 +3332,6 @@ ui.fab.needProject,Open a project first.
 ui.fab.posReset,Floating button moved back to the corner
 ui.fab.posSaved,Floating button position saved
 ui.filterCommands,Filter commands...
-ui.floorplan.addList, — add an item
-ui.floorplan.cancelPin,Cancel pinning
-ui.floorplan.cantOpenScene,No scene open yet
-ui.floorplan.cantPinPosPress,"Not pinned yet — press ""Pin this scene's location"""
-ui.floorplan.clearPos,Clear location
-ui.floorplan.clearPosSceneDone,Scene location cleared
-ui.floorplan.clickBtnDoneClickF,"Click this button, then click on the map to say where scene ""{0}"" takes place"
-ui.floorplan.clickOpenScene,"
-Click to open the scene"
-ui.floorplan.clickTopMapTop,Click on the map (or on a pin) to set this scene's location
-ui.floorplan.delList,Delete this item
-ui.floorplan.eg,e.g. a rusty key
-ui.floorplan.egSoundLayerTop,e.g. footsteps upstairs
-ui.floorplan.egTopBg,e.g. bloodstains on the floor
-ui.floorplan.floorplanLoadMapsJson,floorplan: cannot load maps.json
-ui.floorplan.floorplanReadSceneCant,floorplan: cannot read the scenes
-ui.floorplan.lineTimePlace,Timeline of this location
-ui.floorplan.mapNotHasImage,This map has no image yet — add one on the Maps page
-ui.floorplan.notHasSceneBind,"No scenes are linked to this map yet — open a scene and press ""Pin this scene's location"""
-ui.floorplan.notPlanned,No maps yet
-ui.floorplan.notPlannedNewView,No maps yet — create one at View → Maps
-ui.floorplan.pin,Pin: 
-ui.floorplan.pinPosScene2,Pin this scene's location
-ui.floorplan.pinPosSceneF,"Pinned scene ""{0}"" on map {1}"
-ui.floorplan.pinScene,{0} · {1} {1|pin|pins} · {2} {2|scene|scenes}
-ui.floorplan.scene, · {0} {0|scene|scenes}
-ui.floorplan.sceneCurrent,Current scene
-ui.floorplan.sceneExitMap,Remove this scene from the map
-ui.floorplan.sceneOpen,Open scene
-ui.floorplan.thingFound,What's found
-ui.floorplan.thingHear,What's heard
-ui.floorplan.you,You are here: 
 ui.fmtbar.fadeSet,Format bar opacity: {0}%
 ui.fmtbar.locked,Format bar locked — it will not move until you unlock it
 ui.fmtbar.lockedBlocked,"The bar is locked, so it was not moved"
@@ -3384,6 +3385,265 @@ ui.fonts.msg3,Arabic
 ui.fonts.msg4,Devanagari
 ui.fonts.thonburiMacNoFloat,Thonburi (macOS · non-floating tone marks)
 ui.fonts.tHSarabunNew,TH Sarabun New (Thai government)
+ui.fp.aiCharacters,CHARACTER NOTES (use them to describe appearance):
+ui.fp.aiExcerpt,SCREENPLAY EXCERPT (the line starting with >> is this beat's moment):
+ui.fp.aiFacts,SHOT FACTS (computed from the director's top-down floor plan):
+ui.fp.aiPrevious,"PREVIOUS BEAT'S STILL PROMPT (keep set, characters and light continuous):"
+ui.fp.aiSceneInfo,SCENE INFO:
+ui.fp.aiStyle,DIRECTOR'S VISUAL STYLE (apply to every beat for continuity):
+ui.fp.aiSystem,"You are a cinematographer and storyboard artist who writes prompts for generative image and video models. You receive SHOT FACTS computed from the director's top-down floor plan (camera body, lens, field of view, height, camera angle, rig, who is in frame with distance, frame position and facing, lights with direction and color temperature, set pieces, and what changes before the next beat) plus the screenplay excerpt. Write two prompts in English: ""image"" = one still frame of this exact moment for a text-to-image model — subject and action, composition and frame positions, shot size, camera angle and height, lens look (focal-length feel, depth of field), light direction, quality and color, setting, mood, era; ""video"" = a 4–8 second shot for a text-to-video model starting from this frame — subject movement, camera movement (use moveToNextBeat) and lighting continuity. Follow the shot facts strictly: only the listed subjects are visible, keep their frame positions and facing, and people listed as offscreen must not appear. Describe characters by appearance from the character notes instead of by name (a name may follow in parentheses). Don't invent brand names or on-screen text. Reply with JSON only: {""image"": ""..."", ""video"": ""...""}"
+ui.fp.angDutch,Dutch angle
+ui.fp.angEye,Eye level
+ui.fp.angGround,Ground level
+ui.fp.angHigh,High angle
+ui.fp.angLow,Low angle
+ui.fp.angOverhead,Overhead
+ui.fp.beat,Beat {0}
+ui.fp.beatAdd,Add a beat after this one
+ui.fp.beatDel,Delete this beat
+ui.fp.beatLeft,Move earlier
+ui.fp.beatNext,Next beat
+ui.fp.beatNote,Note
+ui.fp.beatNotePh,e.g. Tora walks from the door to the counter
+ui.fp.beatPrev,Previous beat
+ui.fp.beatRight,Move later
+ui.fp.beats,Beats
+ui.fp.bgFromMap,Use a map's image
+ui.fp.bgImage,Background image from the gallery…
+ui.fp.bgOpacity,Background opacity
+ui.fp.bgRemove,Remove background image
+ui.fp.bgRot,Background rotation (degrees)
+ui.fp.bgW,Background width (m)
+ui.fp.bgX,Background X (m)
+ui.fp.bgY,Background Y (m)
+ui.fp.bindCurrent,Link to the open scene ({0})
+ui.fp.bindScene,Link to a scene…
+ui.fp.camName,Camera {0}
+ui.fp.camOfBeat,Camera in use
+ui.fp.colAngle,Angle
+ui.fp.colBeat,Beat
+ui.fp.colBody,Body
+ui.fp.colCamera,Camera
+ui.fp.colFov,Field of view
+ui.fp.colHeight,Camera height
+ui.fp.colInFrame,In frame
+ui.fp.colLens,Lens
+ui.fp.colLights,Lights
+ui.fp.colMove,Camera move
+ui.fp.colNote,Note
+ui.fp.colRef,Script moment
+ui.fp.colShot,Shot size
+ui.fp.colSupport,Support
+ui.fp.copySuffix, (copy)
+ui.fp.counts,{0} {0|character/item|characters/items} · {1} {1|camera|cameras} · {2} {2|light|lights} · {3} {3|beat|beats}
+ui.fp.create,Create floor plan
+ui.fp.created,"Created ""{0}"""
+ui.fp.defaultName,Plan {0}
+ui.fp.defaultNameScene,Plan — {0}
+ui.fp.delete,Delete this plan…
+ui.fp.deleted,Floor plan moved to the trash
+ui.fp.deleteQ,"Move ""{0}"" to the trash?"
+ui.fp.diffFull,Full
+ui.fp.diffGrid,Grid cloth
+ui.fp.diffHalf,1/2
+ui.fp.diffNone,None
+ui.fp.diffQuarter,1/4
+ui.fp.duplicate,Duplicate plan
+ui.fp.emptyHint,"A top-down set plan — place characters from the Wiki, set up cameras and lights, then block the beats of the script"
+ui.fp.emptyTitle,No floor plans yet
+ui.fp.entityMissing,The Wiki page for this item was not found (deleted or moved)
+ui.fp.exportCsv,Export shot list (CSV)
+ui.fp.exportFail,Couldn't export the floor plan image
+ui.fp.exportMd,Export shot list (Markdown)
+ui.fp.exportPng,Export this beat as PNG
+ui.fp.fAngle,Camera angle
+ui.fp.fBack,Send to back
+ui.fp.fBeam,Beam angle (degrees)
+ui.fp.fBody,Camera body
+ui.fp.fCct,Color temperature (K)
+ui.fp.fColor,Color
+ui.fp.fCustom,Custom
+ui.fp.fDiffusion,Diffusion
+ui.fp.fDup,Duplicate
+ui.fp.fFacing,Facing (degrees)
+ui.fp.fFill,Fill
+ui.fp.fFovOut,Field of view {0}° · full-frame equivalent {1}mm
+ui.fp.fFront,Bring to front
+ui.fp.fGel,Gel
+ui.fp.fGelColor,Gel color
+ui.fp.fH,Depth (m)
+ui.fp.fHeight,Height (m)
+ui.fp.fHiddenHere,Not in this beat (off set)
+ui.fp.fInFrame,In frame
+ui.fp.fIntensity,Intensity (%)
+ui.fp.fit,Fit to view
+ui.fp.fLabel,Name
+ui.fp.fLength,Length {0} m
+ui.fp.fLens,Lens (mm)
+ui.fp.fLightKind,Light type
+ui.fp.fNobody,Nobody in frame
+ui.fp.fNoTrack,No track
+ui.fp.fOpacity,Opacity
+ui.fp.fOpenWiki,Open Wiki page
+ui.fp.fRange,Distance (m)
+ui.fp.fResetKey,Use the previous beat's position
+ui.fp.fSensorW,Sensor width (mm)
+ui.fp.fSightFov,Field of view (degrees)
+ui.fp.fSightOn,Show sight line
+ui.fp.fSightRange,Sight distance (m)
+ui.fp.fSize,Size (m)
+ui.fp.fStroke,Line color
+ui.fp.fSupport,Support
+ui.fp.fText,Text
+ui.fp.fTextH,Text height (m)
+ui.fp.fThick,Thickness (m)
+ui.fp.fTrack,On track
+ui.fp.fUseInBeat,Use this camera in this beat
+ui.fp.fW,Width (m)
+ui.fp.fWatts,Power (watts)
+ui.fp.fX,X (m)
+ui.fp.fY,Y (m)
+ui.fp.gelColor,Custom color
+ui.fp.gelCtbFull,Full CTB
+ui.fp.gelCtbHalf,CTB 1/2
+ui.fp.gelCtbQuarter,CTB 1/4
+ui.fp.gelCtoFull,Full CTO
+ui.fp.gelCtoHalf,CTO 1/2
+ui.fp.gelCtoQuarter,CTO 1/4
+ui.fp.gelMinusGreen,Minus green
+ui.fp.gelNone,None
+ui.fp.gelPlusGreen,Plus green
+ui.fp.gridSize,Grid cell (m)
+ui.fp.hideHere,Not in this beat (exits)
+ui.fp.hintPlace,Click on the plan to place · hold Shift to keep placing · Esc to cancel
+ui.fp.hintPoly,Click point by point · double-click or Enter to finish · Backspace removes the last point · Esc to cancel
+ui.fp.ltBounce,Bounce board
+ui.fp.ltChinaBall,China ball
+ui.fp.ltCob,COB LED + reflector
+ui.fp.ltFresnel,Fresnel
+ui.fp.ltHmi,HMI
+ui.fp.ltLedPanel,LED panel
+ui.fp.ltPractical,Practical
+ui.fp.ltSoftbox,Softbox
+ui.fp.ltSpot,Spot/profile
+ui.fp.ltSun,Sun/window
+ui.fp.ltTube,LED tube
+ui.fp.menu,Plan menu
+ui.fp.meterUnit,m
+ui.fp.movesN,{0} {0|thing moves|things move} from the previous beat
+ui.fp.newPlan,New floor plan
+ui.fp.newPlanQ,Name of the new floor plan
+ui.fp.noEntities,There are no characters or items in the Wiki yet
+ui.fp.otherPlans,Other plans
+ui.fp.pickLineSearch,Search the scene
+ui.fp.pickLineTitle,"Pick a line from ""{0}"""
+ui.fp.pickSceneSearch,Search scenes
+ui.fp.pickSceneTitle,Choose a scene for this plan
+ui.fp.planPick,Choose a floor plan
+ui.fp.planSettings,This plan
+ui.fp.play,Play from this beat
+ui.fp.poseIn,Position in beat {0}
+ui.fp.promptBadReply,The AI reply wasn't in a readable format
+ui.fp.promptCopied,Prompt copied
+ui.fp.promptCopy,Copy prompt
+ui.fp.promptDone,AI wrote prompts for {0} {0|beat|beats}
+ui.fp.promptDonePart,AI wrote prompts for {0} {0|beat|beats} · {1} failed
+ui.fp.promptEmpty,Empty — have AI write it or type your own
+ui.fp.promptFail,Couldn't write prompts: {0}
+ui.fp.promptGen,Write prompts for this beat
+ui.fp.promptGenAll,Write prompts for every beat
+ui.fp.promptGenHint,"AI reads the scene's lines plus the shot data from the plan (camera, lens, who is where in frame, lights) and writes English prompts for both a still and a video"
+ui.fp.promptImage,Still image
+ui.fp.promptNeedAi,AI isn't set up yet
+ui.fp.promptNeedCam,Place a camera first — prompts are based on the beat's camera
+ui.fp.promptOpenAi,AI settings
+ui.fp.promptSec,Prompts for AI image/video
+ui.fp.promptStale,The plan changed after these prompts were written — you can have AI rewrite them
+ui.fp.promptStop,Stop
+ui.fp.promptStopped,Stopped — {0} {0|beat|beats} done
+ui.fp.promptStyle,Visual style for the whole plan
+ui.fp.promptStylePh,"e.g. 35mm film, anamorphic, teal and orange, 1990s Bangkok"
+ui.fp.promptVideo,Video
+ui.fp.promptWorking,AI is writing prompts…
+ui.fp.promptWorkingN,AI is writing prompts {0}/{1} (beat {2})…
+ui.fp.redo,Redo
+ui.fp.refClear,Clear reference
+ui.fp.refGo,Go to this line in the scene
+ui.fp.refMenu,Which moment of the film this is — pick a line from the scene or type it
+ui.fp.refNeedScene,"Link this plan to a scene first, then pick a line"
+ui.fp.refNone,Not yet tied to a moment in the film
+ui.fp.refPick,Pick a line from the scene…
+ui.fp.refType,Type it…
+ui.fp.refTypePh,e.g. Tora opens the door
+ui.fp.refTypeQ,Which moment of the film is this beat?
+ui.fp.removed,"Deleted ""{0}"""
+ui.fp.rename,Rename…
+ui.fp.renameQ,Plan name
+ui.fp.restored,Floor plan restored
+ui.fp.saveFailStay,Could not save the open plan — staying on it so nothing is lost. Try again
+ui.fp.sceneEmpty,This scene has no text yet
+ui.fp.sceneMissing,Couldn't find the linked scene (deleted or moved?)
+ui.fp.sceneOfHint,This plan's scene — click to open it
+ui.fp.sceneRow,Floor plans
+ui.fp.sceneRowBeats,{0} {0|beat|beats} — click to open
+ui.fp.sceneRowNew,New plan for this scene
+ui.fp.sceneRowNone,No floor plan for this scene yet
+ui.fp.shotCu,Close-up (CU)
+ui.fp.shotEcu,Extreme close-up (ECU)
+ui.fp.shotEws,Extreme wide (EWS)
+ui.fp.shotFs,Full shot (FS)
+ui.fp.shotInsert,Insert
+ui.fp.shotMcu,Medium close-up (MCU)
+ui.fp.shotMs,Medium (MS)
+ui.fp.shotOts,Over the shoulder (OTS)
+ui.fp.shotPov,Point of view (POV)
+ui.fp.shotSize,Shot size
+ui.fp.shotWs,Wide (WS)
+ui.fp.showHere,Present in this beat
+ui.fp.shpArrow,Arrow
+ui.fp.shpDoor,Door
+ui.fp.shpEllipse,Circle/ellipse
+ui.fp.shpFlag,Flag (negative fill)
+ui.fp.shpLine,Line
+ui.fp.shpRect,Rectangle
+ui.fp.shpRounded,Rounded rectangle
+ui.fp.shpStairs,Stairs
+ui.fp.shpText,Text
+ui.fp.shpTriangle,Triangle
+ui.fp.shpWall,Wall
+ui.fp.shpWindow,Window
+ui.fp.stop,Stop
+ui.fp.supCar,Car mount
+ui.fp.supCrane,Crane
+ui.fp.supDolly,Dolly (on track)
+ui.fp.supDrone,Drone
+ui.fp.supGimbal,Gimbal
+ui.fp.supHandheld,Handheld
+ui.fp.supHighhat,High hat (low mount)
+ui.fp.supJib,Jib
+ui.fp.supMonopod,Monopod
+ui.fp.supShoulder,Shoulder rig
+ui.fp.supSlider,Slider
+ui.fp.supSteadicam,Steadicam
+ui.fp.supTripod,Tripod
+ui.fp.thisScene,Plans for this scene
+ui.fp.toggleGrid,Grid
+ui.fp.togglePaths,Show movement from the previous beat
+ui.fp.toggleSight,Show characters' sight lines
+ui.fp.toolCamera,Place a camera
+ui.fp.toolEntity,Add a character/item from the Wiki (or drag one in from the Explorer)
+ui.fp.toolLight,Place a light
+ui.fp.toolSelect,Select/move (drag empty space to pan · wheel to zoom)
+ui.fp.toolShape,"Shapes — walls, doors, windows, tables, stairs, text"
+ui.fp.toolTrack,Lay a dolly/slider track
+ui.fp.typeCamera,Camera
+ui.fp.typeEntity,Character/item
+ui.fp.typeLight,Light
+ui.fp.typeShape,Shape
+ui.fp.typeTrack,Track
+ui.fp.unbindScene,Unlink scene
+ui.fp.undo,Undo
+ui.fp.undoAct,Undo
 ui.gallery.addImage,+ Add images…
 ui.gallery.addImageDone,Images added: 
 ui.gallery.addImageItemIn,Add {0} {0|image|images} to album {1}
@@ -3579,15 +3839,34 @@ ui.galleryExport.libraryImage,Image library
 ui.galleryExport.listImageMd,image-list.md
 ui.galleryExport.notHasImageExport,No images to export
 ui.galleryExport.tag,Tags: {0}
+ui.galleryMoodboard.add,Add
+ui.galleryMoodboard.addGroup,Group frame
+ui.galleryMoodboard.addImage,Image from library…
+ui.galleryMoodboard.addNote,Note
+ui.galleryMoodboard.addPalette,Color palette
 ui.galleryMoodboard.addRef,Reference
 ui.galleryMoodboard.addRefTip,Add a reference card (web link/text) — or drop a link from your browser
+ui.galleryMoodboard.addTip,Add a note · color palette · group frame · reference · image (or double-click / right-click empty space)
 ui.galleryMoodboard.adjustAllItemAt,Fitted every piece to its image's proportions
 ui.galleryMoodboard.adjustAllItemAt2,Fit every piece to its image's proportions
 ui.galleryMoodboard.adjustAtRatioImage,Fit to the image's proportions
 ui.galleryMoodboard.arrangeAuto,Arrange automatically
+ui.galleryMoodboard.bg,Background
+ui.galleryMoodboard.bgBlur,Blur
+ui.galleryMoodboard.bgColor,Color
+ui.galleryMoodboard.bgDim,Dim
+ui.galleryMoodboard.bgImage,Image
+ui.galleryMoodboard.bgImageChange,Change image…
+ui.galleryMoodboard.bgImagePick,Pick image…
+ui.galleryMoodboard.bgImageRemove,Remove background image
+ui.galleryMoodboard.bgTheme,Theme
+ui.galleryMoodboard.bgThemeTip,Use the app theme color again
+ui.galleryMoodboard.bgTip,Board background — color · image · blur · dim
 ui.galleryMoodboard.boardAlbum,Board of which album
-ui.galleryMoodboard.boardEmptyOpenPanel,The board is empty — open the Image library panel alongside and drag pictures here 
+ui.galleryMoodboard.boardEmptyOpenPanel,"Open the Image library alongside and drag pictures, scenes or characters here · double-click empty space = note · right-click = more "
 ui.galleryMoodboard.bottomLast,Send to back
+ui.galleryMoodboard.caption,Caption…
+ui.galleryMoodboard.captionPh,e.g. Eldefleur forest
 ui.galleryMoodboard.cardChapter,Chapter
 ui.galleryMoodboard.cardEdit,Edit card…
 ui.galleryMoodboard.cardEntity,Wiki page
@@ -3603,16 +3882,27 @@ ui.galleryMoodboard.clearBoardMoodAlbum,Clear this album's mood board? (image fi
 ui.galleryMoodboard.clearBoardNotDel,Clear the board (files not deleted)
 ui.galleryMoodboard.cmdAddFillBoard,More board commands
 ui.galleryMoodboard.dropFail,Drop onto the board
+ui.galleryMoodboard.duplicate,Duplicate
+ui.galleryMoodboard.emptyTitle,The board is empty
 ui.galleryMoodboard.exitBoardNotDel,Remove from the board (file not deleted)
 ui.galleryMoodboard.export,Export
-ui.galleryMoodboard.exportBoardImage,Export the board as an image…
 ui.galleryMoodboard.exportHtml,HTML page (images embedded · links clickable)
 ui.galleryMoodboard.exportPng,PNG image
 ui.galleryMoodboard.exportTip,Export the whole board as a PNG image or an HTML page
 ui.galleryMoodboard.fitTip,Zoom to show every item on the board
+ui.galleryMoodboard.groupName,Group name
+ui.galleryMoodboard.groupUntitled,New group
 ui.galleryMoodboard.imageOutside,That image is outside the project's gallery — import it first
+ui.galleryMoodboard.layerDown,Send backward
+ui.galleryMoodboard.layerUp,Bring forward
+ui.galleryMoodboard.noteColor,Note color
+ui.galleryMoodboard.noteEdit,Edit text
+ui.galleryMoodboard.paletteCopied,Copied color {0}
+ui.galleryMoodboard.paletteCopy,Double-click to copy the color code
+ui.galleryMoodboard.paletteEdit,Edit palette colors (comma-separated hex codes)
 ui.galleryMoodboard.pasteImageTopBoard,"Placed {0} {0|image|images} on board ""{1}"""
 ui.galleryMoodboard.pickImageLibraryDone,"(or select images in the library and press ""Place on the board"")"
+ui.galleryMoodboard.redoNone,Nothing to redo
 ui.galleryMoodboard.refEdit,Edit reference card
 ui.galleryMoodboard.refNew,New reference card
 ui.galleryMoodboard.refText,Text
@@ -3621,9 +3911,30 @@ ui.galleryMoodboard.refTitle,Title
 ui.galleryMoodboard.refTitlePh,e.g. Victorian costume
 ui.galleryMoodboard.refUrl,Link
 ui.galleryMoodboard.refUrlPh,https://… (optional)
+ui.galleryMoodboard.removedN,Removed {0} {0|item|items} from the board
+ui.galleryMoodboard.selCount,{0} selected
 ui.galleryMoodboard.top,Bring to front
+ui.galleryMoodboard.undoNone,Nothing to undo
 ui.galleryUsageIndex.msg, +{0} more
 ui.galleryUsageIndex.useDone,Used
+ui.guide.intro,Seven things worth knowing before you start writing
+ui.guide.newProject,New Project
+ui.guide.s1Text,"Everything is stored as Markdown (.md) and JSON files in one folder. You can read or edit them outside the app, back up by copying the folder, or export a ZIP from the Home screen"
+ui.guide.s1Title,A project is a folder
+ui.guide.s2Text,"The Project panel on the left is your outline. Click a scene to write; right-click to add, move, rename or delete (deleted items go to the Recycle bin and can be restored)"
+ui.guide.s2Title,Books · Chapters · Scenes
+ui.guide.s3Text,Each scene can be prose or a screenplay — switch on the format bar. Your work is saved automatically and version history lets you look back
+ui.guide.s3Title,Novel or screenplay
+ui.guide.s4Text,"Keep characters, places, items and lore in the Wiki. Type a name in a scene and it links automatically; see every relationship in Story Network"
+ui.guide.s4Title,A Wiki for your story world
+ui.guide.s5Text,"View → Panels has Kanban, Timeline, Maps, the Planner board, Floor Plan and more. Drag a panel header to dock it, float it, or tear it off into its own window"
+ui.guide.s5Title,Panels
+ui.guide.s6Text,"Export → Export Hub lets you pick a format, adjust settings and preview before saving. Panels such as Timeline or Maps export images or tables from the same menu"
+ui.guide.s6Title,Exporting
+ui.guide.s7Text,"Help → All Shortcuts lists every shortcut as currently set; change them in Settings, along with the theme, language and fonts"
+ui.guide.s7Title,Shortcuts and settings
+ui.guide.shortcuts,All Shortcuts
+ui.guide.title,Getting Started with Killian 2
 ui.histOry.addImage,Added images
 ui.histOry.adjustCountTimesKeep,· Change how many are kept at Settings → Project info
 ui.histOry.beforePageAllKeep,Everything earlier that was kept
@@ -3857,6 +4168,7 @@ ui.kanban.addStatusHint,A new column is a new scene status for the whole project
 ui.kanban.deleteColumn,Delete column
 ui.kanban.deleteMove,"Delete status ""{0}""? The {1} {1|scene|scenes} in this column {1|moves|move} to ""{2}"""
 ui.kanban.draftPick,Choose which draft the board shows
+ui.kanban.dropHere,Drop cards here
 ui.kanban.hiddenBuiltin, (hidden from the board)
 ui.kanban.manageStatus,Manage statuses
 ui.kanban.moveScenesFirst,Move the scenes out of this column first
@@ -3870,6 +4182,42 @@ ui.kanban.unset,Not set
 ui.layoutSplit.fieldEmpty,Empty slot
 ui.layoutSplit.leftRight,Left-right
 ui.layoutSplit.topBottom,Top-bottom
+ui.lib.cardTip,Click = details · double-click = open · drag = reorder
+ui.lib.chapterCover,Chapter cover
+ui.lib.coverOff,No cover
+ui.lib.coverOn,Cover
+ui.lib.dirTip,Reverse order
+ui.lib.metaCover,Book cover
+ui.lib.metaFolder,Folder
+ui.lib.metaOrder,Order
+ui.lib.metaUpdated,Last edited
+ui.lib.moveDown,Move down one
+ui.lib.moveUp,Move up one
+ui.lib.noMatch,Nothing matches
+ui.lib.pickBookTip,Book whose chapters to manage
+ui.lib.pickOne,Select a card to see details
+ui.lib.renameTip,Rename here
+ui.lib.renumberTip,Renumber chapter titles in order
+ui.lib.reorderHintBooks,Click a card for details · double-click to open · drag a card to reorder books
+ui.lib.reorderHintChapters,Click a card for details · double-click to open · drag a card to reorder chapters
+ui.lib.reorderNeedOrder,"Drag to reorder works when sorted by ""Story order"" with no filter or search"
+ui.lib.reorderOffHint,"Sorted by ""{0}"" — switch back to story order to drag-reorder"
+ui.lib.searchBooksPh,Search books (title · blurb)
+ui.lib.searchChaptersPh,Search chapters
+ui.lib.searchPh,Search…
+ui.lib.sort_order,Story order
+ui.lib.sort_status,Status
+ui.lib.sort_title,Title
+ui.lib.sort_updated,Recently edited
+ui.lib.sort_words,Word count
+ui.lib.sortTip,Sort by
+ui.lib.statChapters,Chapters
+ui.lib.statNo,Chapter no.
+ui.lib.statScenes,Scenes
+ui.lib.statusTip,Click to change status
+ui.lib.statWords,Words
+ui.lib.viewGrid,Cover view
+ui.lib.viewList,List view
 ui.locations,locations
 ui.log.dayEmpty,That day's log file is empty or can't be read
 ui.log.dayOption,{0} · {1} KB
@@ -3916,7 +4264,27 @@ ui.mapAi.zones,Zones: {0}
 ui.maps.addMap,+ Add map
 ui.maps.allMaps,All maps
 ui.maps.allMapsTip,Back to the map gallery
-ui.maps.backSizeFitFrame,Back to fit-to-frame size (100%)
+ui.maps.bgBtn,Background
+ui.maps.bgBtnTip,Adjust the background image: size · ratio · opacity · rotation · tilt · flip · skew (pins and zones stay put)
+ui.maps.bgCtx,Adjust background image…
+ui.maps.bgDrag,Drag to move
+ui.maps.bgDragTip,On = drag on the map to move the image · off = drag pans the map as usual
+ui.maps.bgFlipH,Flip horizontal
+ui.maps.bgFlipV,Flip vertical
+ui.maps.bgIntro,"The image is decoration — adjust it freely. Pins, zones, grid and real-world coordinates stay on the map frame."
+ui.maps.bgOpacity,Opacity
+ui.maps.bgPitch,Tilt (pitch)
+ui.maps.bgPosX,Position X
+ui.maps.bgPosY,Position Y
+ui.maps.bgRatio,Height ratio
+ui.maps.bgReset,Reset all
+ui.maps.bgResetOne,Double-click = reset this value
+ui.maps.bgRotate,Rotate
+ui.maps.bgScale,Size
+ui.maps.bgSkewX,Skew X
+ui.maps.bgSkewY,Skew Y
+ui.maps.bgTitle,Background image
+ui.maps.bgYaw,Turn (yaw)
 ui.maps.busyNextRouteClick,Extending route “{0}” — click the pins in travel order ({1} {1|point|points})
 ui.maps.cancelPick,Deselect
 ui.maps.cancelPickTip,Deselect all pins
@@ -3924,11 +4292,8 @@ ui.maps.cantPickPin,No pin selected yet
 ui.maps.catEgWorldCurrent,Category (e.g. Present world)
 ui.maps.catMapSkipEmpty,Map category — optional
 ui.maps.changeImage,Change image
-ui.maps.changeImageTip,Change this map's image (pick from the gallery)
 ui.maps.changeNameRoute,Rename route
-ui.maps.clickEmptyPinPinF,Drag = pan · wheel = zoom · double-click = drop a pin · {0} · Ctrl+click a pin = jump (portal/Wiki page) · Shift+drag = box select · drag characters in from the left bar
 ui.maps.clickPinOpenDialog,Click a pin = open the pin editor
-ui.maps.clickPinOpenLink,Click a pin = follow its link (portal/Wiki page) · edits nothing
 ui.maps.collapsePin,Smaller pins
 ui.maps.compass,Compass
 ui.maps.compassTip,Show/hide the compass (follows the north you set)
@@ -3936,10 +4301,25 @@ ui.maps.copy,⧉ Copy
 ui.maps.copyPinDoneOpen,"Copied {0} {0|pin|pins} — open the destination map and press ""Paste"""
 ui.maps.copyPinPickDone,Copy the selected pins to paste onto another map
 ui.maps.countFieldGridNext,Grid cells per side
-ui.maps.ctxAddPin,Place a pin here
+ui.maps.ctxColor,Pin color
 ui.maps.ctxCopyCoords,Copy coordinates
+ui.maps.ctxImageChange,Change the pin thumbnail
+ui.maps.ctxImagePick,Set the pin thumbnail (from the image library)
+ui.maps.ctxImageRemove,Remove the custom thumbnail (back to the portrait)
+ui.maps.ctxImageView,View full-size image
+ui.maps.ctxLabelToggle,Show/hide this pin's label
+ui.maps.ctxLayers,Layer order
+ui.maps.ctxLinkEntity,Link to a character/place (a note pin becomes an entity pin)
+ui.maps.ctxLinkMap,Target map
+ui.maps.ctxNoLink,— no link —
+ui.maps.ctxPin,Pin
+ui.maps.ctxPinNamePh,Pin name
+ui.maps.ctxPinNote,Note pin…
+ui.maps.ctxPinPortal,Portal to map
+ui.maps.ctxSize,Pin size (S · M · L · XL)
+ui.maps.ctxText,Text
 ui.maps.delMap,Delete map
-ui.maps.delMapTip,Delete this map (the image file is kept)
+ui.maps.delMapDone,"Deleted map ""{0}"""
 ui.maps.delPick,Delete selected
 ui.maps.delPickTip,Delete all selected pins
 ui.maps.delPinDone,Deleted {0} {0|pin|pins}
@@ -3968,6 +4348,11 @@ ui.maps.entRowTip,Drag onto the map = pin · click = go to its pin · double-cli
 ui.maps.entRowTipGallery,Click = go to the map it's on · double-click = open Wiki
 ui.maps.entZoned,Has a zone
 ui.maps.expandPin,Larger pins
+ui.maps.exportMenuTip,Export the map (PNG · GeoJSON · print)
+ui.maps.exportPngAs,PNG… (choose location)
+ui.maps.exportPngLib,PNG into the project image library
+ui.maps.fitAll,Fit everything
+ui.maps.fitAllTip,Fit — show everything on the map (key 0)
 ui.maps.foundPinTopMap,"""{0}"" — found {1} {1|pin|pins} on this map"
 ui.maps.galleryCardTip,Click to open the map · drag onto another map = portal to this one
 ui.maps.galleryHint,Pick a map to open it — drag characters/places from the left bar onto a map
@@ -3990,7 +4375,6 @@ ui.maps.geoClearTip,Remove the scale and reference point
 ui.maps.geoIntro,"Two steps: (1) tell the real length of one line on the image — if it has a scale bar (0 · 50 · 100 m) click both ends of it, otherwise click two points you know the distance between; (2) click a point and give its latitude/longitude"
 ui.maps.geojson,GeoJSON
 ui.maps.geojsonDone,GeoJSON exported: {0}
-ui.maps.geojsonTip,Export pins/zones/routes as GeoJSON (usable in other map tools once georeferenced)
 ui.maps.geoNorthDesc,Degrees north is rotated from the top of the image (clockwise · 0 = north is up)
 ui.maps.geoNorthTip,North rotation in degrees
 ui.maps.geoOutside,Those coordinates are outside the map image
@@ -4015,9 +4399,14 @@ ui.maps.geoStepRef,Latitude/longitude reference
 ui.maps.geoStepScale,Scale
 ui.maps.geoTitle,Map coordinates
 ui.maps.gridTip,Show/hide the grid
+ui.maps.hint168,Drag empty space = pan · wheel = zoom · right-click = pin/zone/text · click an item = select · drag a pin = move · double-click = open link
 ui.maps.journey,Story path
 ui.maps.journeyTip,Draw a path through scene locations in story-time order — see how far characters travel
 ui.maps.journeyTotal,Total {0} · {1}
+ui.maps.layerBottom,Send to back
+ui.maps.layerDown,Send backward
+ui.maps.layerTop,Bring to front
+ui.maps.layerUp,Bring forward
 ui.maps.legFrom,"From ""{0}"": {1} · {2}"
 ui.maps.lineLineSolid,Dashed / solid line
 ui.maps.mapBindDelDone,(the linked map has been deleted)
@@ -4032,51 +4421,55 @@ ui.maps.measureStart,Measure from here
 ui.maps.measureTip,Click point by point to measure distance and travel time (Esc = done)
 ui.maps.measuring,Measuring: {0} {0|point|points} · {1}
 ui.maps.modeMovePosDrag,Move mode — drag pins to move them
+ui.maps.moreTip,Map options
 ui.maps.nameRoute,Route name
+ui.maps.newMapBlank,Blank map
+ui.maps.newMapHow,How should the new map start? Maps are infinite and work with or without a background image (you can add one later)
+ui.maps.newMapImage,Choose background image…
 ui.maps.nextDot,Add points
 ui.maps.nextDotTip,Click pins on the map to extend this route
 ui.maps.notFoundMapScene,The map this scene is linked to was not found (it may have been deleted)
-ui.maps.notHasImagePress,"No image yet — press ""Change image"""
 ui.maps.notPlaced,Not placed yet
-ui.maps.notPlannedPressAdd,"No maps yet — press ""＋ Add map"" and choose an image from the image library as the map (e.g. a world/city map or a room plan)"
+ui.maps.notPlannedPressAdd,"No maps yet — press ""Add map"" and start blank or from a background image (a world/city map or a room plan)"
 ui.maps.part,Scale
 ui.maps.pastePin,Paste {0} {0|pin|pins}
 ui.maps.pastePinCopyMap,Paste the copied pins onto this map
 ui.maps.pastePinDone,"Pasted {0} {0|pin|pins} onto ""{1}"""
+ui.maps.pattern_cross,Cross-hatch
+ui.maps.pattern_dots,Dots
+ui.maps.pattern_hatch,Hatch
+ui.maps.pattern_none,None
 ui.maps.pickPin,{0} {0|pin|pins} selected
 ui.maps.pin, · manually pinned coordinates
 ui.maps.pinEdit,Edit pin…
 ui.maps.placeIt,Place it
-ui.maps.placeItHint,"Open the Floor Plan panel and click ""Place this scene"""
+ui.maps.placeItHint,Drag the scene from the Explorer onto the map (or onto a pin) to say where it takes place
 ui.maps.portalEnter,Enter the sub-map
 ui.maps.portalMapOther,Portal to another map
 ui.maps.portalSceneBindMap,{0} {0|entity|entities} · {1} {1|portal|portals} · {2} {2|note|notes} · {3} {3|scene|scenes} linked to this map
 ui.maps.portalTip,"Portal to ""{0}"" — Ctrl+click to go in"
 ui.maps.pos,Entity position
-ui.maps.pressBtnEditTop," · press ""Edit"" on the toolbar to edit this pin"
 ui.maps.print,Print
 ui.maps.printMapNotOk,Map printing failed: 
-ui.maps.printTip,"Print the map with pins, zones and routes"
 ui.maps.recolorLine,Change line colour
+ui.maps.removeImage,Remove background image
 ui.maps.route,Route 
-ui.maps.route2,Routes
 ui.maps.route3,Routes ({0})
 ui.maps.routeDragLineLink,"Route = a line joining pins in order, to tell a character's journey — press ""＋ New route"" then click the pins one by one"
 ui.maps.routeNew,New route
 ui.maps.routeNew2,+ New route
 ui.maps.routeNewTip,"Create a route, then click pins to add points"
 ui.maps.saveMapLibraryImage,Saved the map to the image library: 
-ui.maps.saveMapReadyPin,Save the map with its pins/routes as an image in the image library
 ui.maps.scaleTip,Show/hide the scale bar (once georeferenced it shows real distance)
 ui.maps.scenePin, ({0} {0|scene|scenes} pinned manually)
 ui.maps.scenePinCantBind,"
 (scenes pinned manually, not linked to a pin)"
 ui.maps.sceneWhere,Location on map
 ui.maps.searchPinName,Search pins (name/note)
+ui.maps.setCategory,Set map category…
 ui.maps.setGapField,(set the distance in the box next to the ruler button)
 ui.maps.showHideLabelUnder,Show/hide the labels under pins
 ui.maps.showHideRouteBetween,Show/hide routes between pins
-ui.maps.showItemFilm,Show text
 ui.maps.showOnMap,Show on map
 ui.maps.showOnMapHint,Open the Maps panel and scroll to this scene's location
 ui.maps.sideChildTip,Open this sub-map
@@ -4091,10 +4484,16 @@ ui.maps.sideSubMaps,Sub-maps
 ui.maps.sideZones,Zones
 ui.maps.sizePin,Pin size
 ui.maps.tableGrid,Grid
+ui.maps.textAsk,Map text
+ui.maps.textAskPh,e.g. Harrow Island
+ui.maps.textClickHint,Click on the map where the text should go
+ui.maps.textLabel,Map text
 ui.maps.textUnderBarPart,Text under the scale bar
 ui.maps.timeDH,{0}d {1}h
 ui.maps.timeHM,{0}h {1}m
 ui.maps.timeM,{0} min
+ui.maps.toolSelect,Select
+ui.maps.toolSelectHint,Click = select (floating toolbar) · drag = move · click again / double-click = open link
 ui.maps.topImage,North is at the top of the image
 ui.maps.travelCar,Car
 ui.maps.travelCart,Cart
@@ -4105,24 +4504,38 @@ ui.maps.unitKm,{0} km
 ui.maps.unitKm2,{0} km²
 ui.maps.unitM,{0} m
 ui.maps.unitM2,{0} m²
+ui.maps.wikiBlock,Map
+ui.maps.wikiNoMaps,This project has no maps yet
+ui.maps.wikiNotPlaced,Not placed on any map yet — pick a map and place it
+ui.maps.wikiOpenMaps,Open the Maps panel
+ui.maps.wikiOpenPanel,Open in Maps panel
+ui.maps.wikiPlaceHere,Place on this map
 ui.maps.zone,Zone
+ui.maps.zoneCenter,Center on this zone
+ui.maps.zoneCloseTip,Click the first point to close the zone
 ui.maps.zoneDelete,Delete zone
 ui.maps.zoneDeleteQ,"Delete the zone ""{0}""?"
 ui.maps.zoneDone,"Created the zone ""{0}"""
 ui.maps.zoneDraw,Draw a zone (area)
-ui.maps.zoneDrawHere,Draw a new zone
 ui.maps.zoneDrawHint,Click around the area point by point · double-click/Enter = done · Backspace = undo point · Esc = cancel
 ui.maps.zoneDrawing,"Drawing zone ""{0}"" · {1} {1|point|points}"
-ui.maps.zoneEditPts,Edit zone points
+ui.maps.zoneFill,Fill
+ui.maps.zoneLinkTip,Link the zone to a character/place (Ctrl+click the zone = open its Wiki page)
+ui.maps.zoneMidTip,Click to add a vertex here
 ui.maps.zoneName,Zone name
+ui.maps.zoneNamePh,Zone name…
 ui.maps.zoneNeed3,A zone needs at least 3 points
+ui.maps.zoneOpacity,Opacity
+ui.maps.zonePattern,Pattern
+ui.maps.zonePinsIn,{0} {0|pin|pins} inside
 ui.maps.zoneRecolor,Change zone color
 ui.maps.zoneRename,Rename zone
+ui.maps.zoneSelect,Select zone (name · color · link)
+ui.maps.zoneStyle,Fill color · opacity · pattern
 ui.maps.zoneTip,Draw a polygon zone (area) — it sits on the bottom layer under pins
 ui.maps.zoneVertexTip,Drag to move the point · right-click = delete it
 ui.maps.zoomInCtrlWheel,Zoom in (mouse wheel)
 ui.maps.zoomOutCtrlWheel,Zoom out (mouse wheel)
-ui.maps.zoomSliderTip,Zoom level (the mouse wheel works too)
 ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,AI analysis (pacing · characters · repeated words)
 ui.menu.aiHubPanel,AI Hub
@@ -4139,7 +4552,7 @@ ui.menu.cancelSplitPageScreen,Unsplit screen
 ui.menu.caseBigSmall,Upper/lower case (free)
 ui.menu.centerK,Center
 ui.menu.chapterFilm,Script
-ui.menu.cheatsheet,Keyboard shortcuts…
+ui.menu.cheatsheet,All Shortcuts…
 ui.menu.checkAlwaysCharacter,Check character consistency…
 ui.menu.checkBeforePrintExport,Check before printing/exporting
 ui.menu.checkChapterListError,Check the whole script (error list)…
@@ -4176,7 +4589,7 @@ ui.menu.editItemFirstSentence,Automatically capitalise the first letter of a sen
 ui.menu.exitApp,Quit
 ui.menu.expand,Enlarge
 ui.menu.expandUI,Enlarge UI
-ui.menu.exportHub,Export…
+ui.menu.exportHub,Export Hub…
 ui.menu.exportLangCSVKey,Export language as CSV (key · Thai · English)…
 ui.menu.exportLayoutPanelJSON,Export panel layout (JSON)…
 ui.menu.exportProjectZip,Whole project as ZIP…
@@ -4289,6 +4702,7 @@ ui.menu.projectExplorer,Project (Explorer)
 ui.menu.projectLatest,Recent projects
 ui.menu.projectReplace,Find and replace in project
 ui.menu.propsSceneFileMd,Sync scene properties from the .md file (after editing the file outside the app)
+ui.menu.quickStart,Getting Started
 ui.menu.repeatY,Redo
 ui.menu.reportCharacterReport,Character Report…
 ui.menu.reportPlaceLocationReport,Location Report…
@@ -4409,8 +4823,8 @@ ui.net.dragAreaEmptyScroll,Drag with {0} on empty space = pan the chart
 ui.net.dragBgScrollWheel,Drag background = pan · wheel = zoom · drag node = move · Shift+click = push · double-click = open · right-click = menu
 ui.net.dragNodeMovePos,Drag a node to move it
 ui.net.dragViewD,Drag with {0} = rotate the 3D view
+ui.net.filtersTip,Show/hide filters & display (categories · relation types · node size · grid)
 ui.net.findDisk,Find on disk
-ui.net.hide,Hide
 ui.net.hollowGrid,Grid opacity: 
 ui.net.hollowGrid2,Grid opacity: 12%
 ui.net.itemFilmNameNode,Node name text
@@ -4492,9 +4906,14 @@ ui.netScene.gridHex,Hex
 ui.netScene.gridNone,None
 ui.netScene.gridSquare,Square
 ui.netScene.gridStyle,Grid style
+ui.netScene.hdriFiles,HDRI images
+ui.netScene.hdriHint,An .hdr file or a 2:1 panorama — becomes a sky dome that turns with the 3D camera
+ui.netScene.hdriPick,Pick HDRI
 ui.netScene.image,Image
+ui.netScene.image3dNote,3D mode: a 2:1 panorama or .hdr file becomes a sky dome · other images stay fixed to the screen (never a flat sheet on the floor)
 ui.netScene.imageCenterHint,"Right-click anywhere on the graph and choose ""Center image here"" to line the map up with your nodes"
 ui.netScene.imageChange,Change image…
+ui.netScene.imageHdri,Sky dome (HDRI)
 ui.netScene.imageMode,Placement
 ui.netScene.imageOpacity,Image opacity
 ui.netScene.imagePick,Choose image…
@@ -4787,7 +5206,7 @@ ui.panelRenderer.panel,▸ Expand panel
 ui.panelRenderer.panel2,▾ Collapse panel
 ui.panelRenderer.tabsLabel,Panel group tabs
 ui.panelRenderer.whatIsThis2,What is this —
-ui.panelTip.close,Close this panel — reopen it from the chip at the bottom-right of the writing area or View → Panels
+ui.panelTip.close,Close this panel — reopen it from its toolbar button or View → Panels
 ui.panelTip.collapse,Collapse the panel to its header (press again to expand)
 ui.panelTip.float,"Float the panel above the writing area, or dock a floating panel back"
 ui.panelTip.groupClose,Close every panel in this floating group at once
@@ -4911,12 +5330,10 @@ ui.planner.alignTextDone,Text aligned inside the card
 ui.planner.allStatus,All statuses
 ui.planner.allType,All types
 ui.planner.appear,Appears in
-ui.planner.arrange,Arrange
 ui.planner.arrangeAutoDone,Arranged automatically
 ui.planner.arrow,Arrow
 ui.planner.badgeLineLink,Connector label
 ui.planner.bgBoard,Canvas
-ui.planner.bgBoard2,Board background
 ui.planner.bgBoardColorImage,Board background — colour · image · fade
 ui.planner.bgNone,No image selected
 ui.planner.bindFileProject,Link a file from the project…
@@ -5009,7 +5426,6 @@ ui.planner.imgScaleSet,Image size {0}%
 ui.planner.imgSmaller,Shrink image 80%
 ui.planner.insertImageHere,Insert image here…
 ui.planner.itemFoundStoryNormal,The hero wakes up to something strange
-ui.planner.jSON,JSON
 ui.planner.knotStory,Don't forget the key plot thread
 ui.planner.liftOneLayer,↑ Bring forward
 ui.planner.liftOneLayerCtrl,Bring forward
@@ -5026,6 +5442,8 @@ ui.planner.lock,Lock
 ui.planner.lockNotMove,Lock in place
 ui.planner.moveLineDone,Line end moved
 ui.planner.mustHasLessCard,At least 2 cards are needed
+ui.planner.newBlank,Blank board
+ui.planner.newSample,Sample board (new file)
 ui.planner.noteNew,New note
 ui.planner.notHasBoardProject,"No boards in the project yet — press ""New"" to create one"
 ui.planner.objectLineGroup,{0} {0|object|objects} · {1} {1|line|lines} · {2} {2|group|groups}
@@ -5056,7 +5474,6 @@ ui.planner.pNG,PNG
 ui.planner.pointPosExplorer,Reveal in the Explorer
 ui.planner.pointPosFileExplorer,Reveal the file in the Explorer
 ui.planner.propsAll,All properties
-ui.planner.putSample,Add a sample
 ui.planner.putSampleDonePress,"Sample added — press ""Save"" if you want to keep it"
 ui.planner.px,px
 ui.planner.rect,Rectangle
@@ -5068,7 +5485,7 @@ ui.planner.repeatCantDone,Nothing left to redo
 ui.planner.repeatCtrlD,Duplicate (Ctrl+D)
 ui.planner.repeatItemDone,Duplicated {0} {0|piece|pieces}
 ui.planner.repeatScEditorRedo,Redo ({sc:editor-redo})
-ui.planner.sample,Sample
+ui.planner.sampleBoardName,Sample 
 ui.planner.saveBefore,Save first
 ui.planner.saveBoard,Save board
 ui.planner.saveBoard2F,"Saved board ""{0}"""
@@ -5076,7 +5493,6 @@ ui.planner.saveBoardName,Save as board named
 ui.planner.saveBoardNotOk,Failed to save the board
 ui.planner.saveF,"Saved as ""{0}"""
 ui.planner.saveFileNew,Save as a new file
-ui.planner.saveImageBoardDone,Saved the board image: 
 ui.planner.saveNotOk,Save as failed
 ui.planner.saveScSave,Save ({sc:save})
 ui.planner.scene,Confrontation scene
@@ -5365,6 +5781,7 @@ ui.plug.installWarn,Plugins run with full access to your project files — only 
 ui.plug.makeSample,Create sample
 ui.plug.makeSampleHint,Create a working sample plugin to start from
 ui.plug.minVer,Requires at least
+ui.plug.moreTip,More plugin options
 ui.plug.needNewer,Requires version {0} or newer (currently {1})
 ui.plug.openFolder,Open folder
 ui.plug.openProjectDir,Project folder
@@ -6723,6 +7140,9 @@ ui.tags.list,List
 ui.tags.manageVisualTags,Manage Visual Tags
 ui.tags.nameTag,Tag name
 ui.tags.notHasTagPut,No tags yet — add tags in scene properties or the Wiki
+ui.tags.shapeCircle,Circle
+ui.tags.shapeSquare,Square
+ui.tags.shapeTag,Tag
 ui.tags.tag, tags
 ui.tags.tag2,Tag: {0} ({1})
 ui.tags.tag3,Tag cloud
@@ -6901,7 +7321,7 @@ ui.tip.export-rtf,Exports the screenplay as an RTF file that opens in Word and m
 ui.tip.export-watermark,"Sets a watermark printed across every page of exported files — a recipient’s name, or the word DRAFT."
 ui.tip.export-zip,"Packs the whole project folder into one ZIP file, for backup or sharing."
 ui.tip.find,Finds and replaces inside the document you have open right now.
-ui.tip.floorplan,Opens the floor plan for the current scene — pin where on the map this scene takes place.
+ui.tip.floorplan,"Opens the floor plan — a top-down set plan: place characters, set up cameras/lenses and lights, then block beats against the scene's lines"
 ui.tip.fmt,"Text formatting — bold, headings, lists and so on; each button says which style it applies."
 ui.tip.fmt:align:center,"Centres the text. Good for titles, dedications and short verse — poor for long body text."
 ui.tip.fmt:align:justify,Stretches each line to touch both margins for a clean book-like edge — but can open wide gaps on lines with long words.
@@ -7035,6 +7455,7 @@ ui.tip.prose-indent,Turns automatic first-line paragraph indents in prose on or 
 ui.tip.prose-setup,"Sets prose formatting — indents, line spacing, heading styles — on screen and in exported files."
 ui.tip.quick-note,Jot down a thought without leaving the scene you are writing. All notes collect in the notes panel.
 ui.tip.quick-open,Find any file in the project by typing part of its name and open it — no digging through the tree.
+ui.tip.quick-start,"A short tour of the basics: projects, writing, the Wiki, panels and exporting"
 ui.tip.read-book,"Reads the whole book as one continuous, read-only document — good for a full read-through."
 ui.tip.reading-mode,"Enters full-screen reading mode — hides every toolbar and panel, leaving only the page."
 ui.tip.remove-elements,Removes every line of the chosen element types from the script at once — such as all notes before sending it out. Can be undone.
@@ -7129,7 +7550,7 @@ ui.tip.toggle-panel:dashboard,Progress overview — word count against goals · 
 ui.tip.toggle-panel:dialogue,"All dialogue in the project — filter, jump, edit inline"
 ui.tip.toggle-panel:dlgb,"Let AI play your Wiki characters turn by turn, then drop the lines you like into the script at the cursor — open it when you are stuck on dialogue"
 ui.tip.toggle-panel:docs,"The main writing area — every open tab: scenes, screenplays and Wiki pages (cannot be closed)"
-ui.tip.toggle-panel:floorplan,"Where this scene happens — map + ""You are here"" pin + that location's timeline + what's seen/heard/found in the open scene"
+ui.tip.toggle-panel:floorplan,Top-down set plan (Shot Designer style) — Wiki characters with facing and sight lines · cameras (body/lens/support/track) · lights · shapes · beats tied to lines of the scene
 ui.tip.toggle-panel:gallery,"Every image in the project's Images folder — drag into a document to insert, or choose as a cover/portrait in the Wiki"
 ui.tip.toggle-panel:gallery-board,A canvas for each album's reference images — open it beside the image library and drag images on · move/resize/zoom freely · removing from the board doesn't delete files
 ui.tip.toggle-panel:history,"A timeline of what was done to the project's files, with a way back to any point · how many are kept is set at Settings → Project info (default 32)"

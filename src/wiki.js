@@ -14,8 +14,19 @@ import { CAT_ICON } from './core.js';
 // [alpha.122] โค้ดสั้น `{[ชื่อ]}` + ช่อง Prompt — โมดูลบริสุทธิ์ ใช้ร่วมกับ Story Starter
 import { normalizePrompts, nextPromptKey, needsPromptMigration, mentionToken } from './entity-mention.js';
 
-export const CAT_TH = { characters: tt('ui.common.character'), locations: tt('ui.common.place'),
-                        items: tt('ui.common.thing'), lore: tt('ui.common.legend') };
+// [alpha.168] ชื่อหมวดในตัวแปลตอน "อ่าน" — เดิมแปลครั้งเดียวตอน import จึงค้างเป็นไทยเมื่อผู้ใช้เลือกอังกฤษ
+//   (กฎ alpha.164 รอบต่อ 2: ข้อความที่สร้างตอนบูตเก็บคีย์ แปลตอนวาด) · หมวดของผู้ใช้ (applyWikiCats) ยังเขียนทับได้
+const CAT_KEYS = { characters: 'ui.common.character', locations: 'ui.common.place',
+                   items: 'ui.common.thing', lore: 'ui.common.legend' };
+const _catOwn = {};
+export const CAT_TH = new Proxy(_catOwn, {
+  get: (o, k) => (Object.prototype.hasOwnProperty.call(o, k) ? o[k]
+    : (typeof k === 'string' && CAT_KEYS[k] ? tt(CAT_KEYS[k]) : undefined)),
+  has: (o, k) => k in o || k in CAT_KEYS,
+  ownKeys: (o) => [...new Set([...Object.keys(CAT_KEYS), ...Reflect.ownKeys(o)])],
+  getOwnPropertyDescriptor: (o, k) => (k in o || k in CAT_KEYS)
+    ? { enumerable: true, configurable: true, writable: true, value: k in o ? o[k] : tt(CAT_KEYS[k]) } : undefined,
+});
 
 // กล่องขยายรูป (คลิกที่ไหนก็ปิด · Esc ปิด) — ใช้ร่วมกันทั้ง Wiki และคลังรูป
 export function imageLightbox(url, caption) {

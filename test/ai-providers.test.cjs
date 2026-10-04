@@ -627,5 +627,25 @@ const check = (name, cond, extra) => {
         S.historyBudget({ ...S.newSession(), contextLimit: 200000, contextCap: 1000000 }, {}) === 120000);
 }
 
+// ═══════════ [alpha.168 · bug hunt] ผู้ให้บริการ "ของฉัน" (ใช้ได้ทุกโปรเจกต์) ═══════════
+{
+  const a = P.newProvider({ id: 'prov-a', name: 'A', model: 'm1', credential: { id: 'cred-a', baseUrl: 'https://a.test/v1', apiKey: 'KEY-A' } });
+  const b = P.newProvider({ id: 'prov-b', name: 'B', credential: { id: 'cred-b', baseUrl: 'https://b.test/v1' } });
+  const pk = P.packDefaults([a, b], { 'cred-b': 'KEY-B' }, 'prov-b');
+  check('[bh] ★ packDefaults: รายการที่เก็บไม่มีคีย์ติดไป', pk.providers.length === 2 && pk.providers.every((p) => !('apiKey' in p.credential)), JSON.stringify(pk.providers.map((p) => p.credential)));
+  check('[bh] packDefaults: คีย์แยกตาราง (จากตัววัตถุ + จากไฟล์คีย์)', pk.keys['cred-a'] === 'KEY-A' && pk.keys['cred-b'] === 'KEY-B');
+  check('[bh] packDefaults: จำตัวที่เลือกใช้', pk.activeProviderId === 'prov-b' && P.packDefaults([a], {}, 'nope').activeProviderId === 'prov-a');
+  check('[bh] packDefaults: ว่าง = ว่าง', P.packDefaults([], {}).providers.length === 0 && P.packDefaults(null).activeProviderId === '');
+  const m = P.mergeDefaults([], pk);
+  check('[bh] ★ mergeDefaults: โปรเจกต์ว่าง = ได้ครบพร้อมคีย์', m.added === 2 && m.rows[0].credential.apiKey === 'KEY-A' && m.keys['cred-b'] === 'KEY-B');
+  const mine = P.newProvider({ id: 'prov-a', name: 'A (ของโปรเจกต์นี้)', model: 'm-other', credential: { id: 'cred-a' } });
+  const m2 = P.mergeDefaults([mine], pk);
+  check('[bh] ★ mergeDefaults: ตัวที่โปรเจกต์มีอยู่แล้วไม่ถูกทับ', m2.added === 1 && m2.rows[0].model === 'm-other' && m2.rows[0].name.includes('ของโปรเจกต์นี้') && !('cred-a' in m2.keys));
+  check('[bh] mergeDefaults: นำเข้าซ้ำ = ไม่เพิ่ม', P.mergeDefaults(m.rows, pk).added === 0);
+  check('[bh] mergeDefaults: ชุดเสีย/ว่าง = ไม่พัง', P.mergeDefaults([a], null).added === 0 && P.mergeDefaults([a], { providers: [null, {}] }).added === 0);
+  check('[bh] mergeDefaults: ไม่มีคีย์ที่เก็บไว้ (เครื่องเข้ารหัสไม่ได้) = เพิ่มผู้ให้บริการ คีย์ว่าง', (() => { const r = P.mergeDefaults([], { providers: pk.providers, keys: {} }); return r.added === 2 && r.rows[0].credential.apiKey === '' && !Object.keys(r.keys).length; })());
+  const mainSrc = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  check('[bh] ★ main: คีย์ของชุด "ของฉัน" เข้ารหัสด้วย safeStorage ก่อนเขียน (ไม่มีทางเขียนคีย์ดิบ)', /aiDefaults:save[\s\S]{0,900}safeStorage\.encryptString/.test(mainSrc) && !/keys:\s*d\.keys/.test(mainSrc));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

@@ -100,6 +100,10 @@ export async function sceneProps(dPath, ch, sc) {
   { const slot = el('div', 'props-mapslot'); box.append(slot);
     import('./maps-ui.js').then(({ buildShowOnMapRow }) => buildShowOnMapRow(row))
       .then((r) => slot.replaceWith(r)).catch(() => slot.remove()); }
+  // [alpha.168] ผังพื้นที่ (ผังกองถ่าย) ของฉากนี้ — แบบเดียวกับแถวแผนที่ (import ไดนามิก กันวง)
+  { const slot = el('div', 'props-fpslot'); box.append(slot);
+    import('./floorplan-ui.js').then(({ buildScenePlansRow }) => buildScenePlansRow(row))
+      .then((r) => slot.replaceWith(r)).catch(() => slot.remove()); }
   // ป้ายเล่าเรื่อง (Narrative Markers) — ฉากนี้อยู่นอกลำดับเวลาหลัก
   const iFb = mkCheck(t('ui.common.flashback'), M.isFlashback);
   const iFf = mkCheck(t('ui.common.pageFlashforward'), M.isFlashforward);

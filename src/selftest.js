@@ -136,7 +136,8 @@ import { mutateChoices, openBranchingTree, renderBranchingPanel, syncChoicesFrom
 import { openAIAssistant } from './ai/ai-ui.js';
 import { openBookManager } from './books.js';
 import { openDashboard, renderDashboard } from './dashboard.js';
-import { openFloorPlan, renderFloorPlan } from './floorplan-ui.js';
+import { openFloorPlan, renderFloorPlan, __fpTest, resetFloorPlanView, floorPlanView, buildScenePlansRow } from './floorplan-ui.js';
+import { setDrag } from './drop-kit.js';
 import { openKanban, resetKanban } from './kanban/kanban-ui.js';
 import { openPlayerMode } from './player-mode.js';
 import { openQuickOpen, quickOpenCache } from './quick-open.js';
@@ -172,7 +173,7 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
          fmtbarState, galleryCommand, galleryInstance, gotoDialog, gotoOutlineItem, gotoPage, gotoScene,
          guid, handleCommand, healPlannerRow, heavyDelay, hideInactivePanes, hideLoader, hideTip,
          importImageFile, importLanguageCsv, insertImage, insertShortcodeMenu, insertShortcodeText,
-         insertTextAtField, invertRole, isFeaturePanel, keepFloatingUiInView, knownRoles, lineDiff,
+         insertTextAtField, invertRole, isFeaturePanel, keepFloatingUiInView, dodgeFabFromFmtbar, openProjectFromUi, knownRoles, lineDiff,
          lineSpills, listDrafts, listPlannerBoards, listRefTargets, listSnapshots, liveShortcodeContext,
          loadAllEntities, loadMaps, loadPlugins, loadProject, loadSpellDict, loadTimeline, logAtBottom,
          mapsState_C, markDirty, markPlannerRow, moveEntityToCat, moveMemoToChapter, moveRowToMemos,
@@ -717,15 +718,22 @@ export async function runTest(projectPath) {
       const card141 = cardsOf().find((c) => c.dataset.guid === chWith.guid);
       check('[141-C2] แผงจัดการบทอ่านบทจากร่างเดียวกับที่เทสใช้อยู่', !!card141,
             cardsOf().map((c) => c.dataset.guid).join(','));
+      // [alpha.168] หน้าตาแบบห้องสมุด: คลิกการ์ด = เลือก → ตัวควบคุมปกอยู่ในแผงรายละเอียด (ไม่ยัดทุกอย่างในการ์ด)
+      card141.click();
+      const det141 = () => chBody.querySelector(`.chapter-detail[data-guid="${chWith.guid}"]`);
+      for (let i = 0; i < 60 && !det141(); i++) await new Promise((r) => setTimeout(r, 50));
       await new Promise((r) => setTimeout(r, 260));       // ให้แผงวาดเสร็จก่อนถ่าย
       await kapi.testShot('/tmp/k2_chapters.png');        // ภาพหน้า "จัดการบท"
-      check('[141-C3] การ์ดบทมีช่องติ๊ก "ใช้หน้าปกบท" + ช่องข้อความปก + ปุ่มเลือกรูป',
-            !!card141.querySelector('.chapter-cover-on input') &&
-            !!card141.querySelector('.chapter-cover-txt') &&
-            !!card141.querySelector('.book-cover-btns .cmp-mini'));
-      const txt141 = card141.querySelector('.chapter-cover-txt');
+      const d141 = det141();
+      check('[141-C3→168] คลิกการ์ดบท = แผงรายละเอียดมีช่องติ๊ก "ใช้หน้าปกบท" + ช่องข้อความปก + ปุ่มเลือกรูป',
+            !!d141 && !!d141.querySelector('.chapter-cover-on input') &&
+            !!d141.querySelector('.chapter-cover-txt') &&
+            !!d141.querySelector('.book-cover-btns .cmp-mini'));
+      check('[168-L] การ์ดบทที่เลือกติดไฟ + มีปกและชื่อใต้ปก', !!chBody.querySelector(`.chapter-card.on[data-guid="${chWith.guid}"] .lib-cover`) &&
+            !!chBody.querySelector(`.chapter-card.on[data-guid="${chWith.guid}"] .lib-card-title`));
+      const txt141 = d141.querySelector('.chapter-cover-txt');
       txt141.value = 'ปกบททดสอบ'; await txt141.onchange();
-      const chk141 = card141.querySelector('.chapter-cover-on input');
+      const chk141 = det141().querySelector('.chapter-cover-on input');
       chk141.checked = true; await chk141.onchange();
       const coverRow = async () => ((await kapi.readJson(await kapi.join(dPath, 'draft.json')))
         .chapters || []).find((c) => c.guid === chWith.guid);
@@ -1376,7 +1384,8 @@ export async function runTest(projectPath) {
           // เลื่อนไปแผ่นที่สอง แล้วเลขต้องขยับตาม
           sheets143[1].scrollIntoView({ block: 'start' });
           pane143.dispatchEvent(new Event('scroll'));
-          await w143(160);
+          // [alpha.168] รอจนป้ายเปลี่ยน (เพดาน 1.5 วิ) — เดิมรอ 160ms ตายตัว แดงสุ่มเมื่อเครื่องยุ่ง (กฎ 18)
+          for (let i = 0; i < 15 && hud && hud.textContent === first; i++) { await w143(100); pane143.dispatchEvent(new Event('scroll')); }
           const second = hud ? hud.textContent : '';
           check('[143-3] ★ เลื่อนไปแผ่นถัดไป เลขบนป้ายขยับตาม',
                 !!hud && second !== first && /[2-9]/.test(second), first + ' → ' + second);
@@ -1587,6 +1596,38 @@ export async function runTest(projectPath) {
             afterSecs[0].folder === target.folder &&
             afterSecs.every((s, i) => s.order === i + 1),
             JSON.stringify(afterSecs.map((s) => [s.folder, s.order])));
+
+      // [alpha.168] ปุ่มเลื่อนลำดับในแผงรายละเอียด (ทางที่ไม่ต้องลาก) + ลากเรียงด้วยเมาส์ (เส้นแทรก)
+      {
+        await openBookManager();
+        for (let i = 0; i < 60 && !document.querySelector('#books-body .lib-detail .lib-down'); i++) await new Promise((r) => setTimeout(r, 50));
+        const secs0 = await listSections();
+        const firstCard = document.querySelector(`#books-body .book-card[data-folder="${secs0[0].folder}"]`);
+        firstCard.click();
+        for (let i = 0; i < 60 && document.querySelector('#books-body .lib-detail')?.dataset.folder !== secs0[0].folder; i++) await new Promise((r) => setTimeout(r, 50));
+        document.querySelector('#books-body .lib-detail .lib-down').click();
+        let secs1 = secs0;
+        for (let i = 0; i < 60 && (secs1 = await listSections())[0].folder === secs0[0].folder; i++) await new Promise((r) => setTimeout(r, 50));
+        check('[168-L] ★ ปุ่ม "เลื่อนลง" ในแผงรายละเอียด = เล่มแรกไปเป็นลำดับสอง', secs1[1].folder === secs0[0].folder && secs1[0].folder === secs0[1].folder,
+              secs1.map((x) => x.folder).join());
+        // ลากการ์ดใบแรกไปท้ายสุดด้วยเมาส์ (ไม่ใช่ HTML5 drag) — เส้นแทรกต้องโผล่ + ลงท้ายสุดได้
+        for (let i = 0; i < 60 && document.querySelectorAll('#books-body .book-card').length < 2; i++) await new Promise((r) => setTimeout(r, 50));
+        const cards = [...document.querySelectorAll('#books-body .lib-grid [data-lib-id]')];
+        const a = cards[0], z = cards[cards.length - 1];
+        const ar = a.getBoundingClientRect(), zr = z.getBoundingClientRect();
+        a.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: ar.left + 20, clientY: ar.top + 20 }));
+        window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: ar.left + 40, clientY: ar.top + 40 }));
+        window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: zr.right - 4, clientY: zr.top + zr.height / 2 }));
+        check('[168-L] ลากการ์ด = มีเส้นแทรกบอกตำแหน่ง', !!document.querySelector('.lib-insert.on'));
+        window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: zr.right - 4, clientY: zr.top + zr.height / 2 }));
+        let secs2 = secs1;
+        for (let i = 0; i < 60 && (secs2 = await listSections())[secs2.length - 1].folder !== a.dataset.libId; i++) await new Promise((r) => setTimeout(r, 50));
+        check('[168-L] ★ ลากการ์ดไปขวาสุด = ย้ายไปท้ายสุดได้ (เดิมวางได้แค่ "ก่อนใบที่ชี้")', secs2[secs2.length - 1].folder === a.dataset.libId,
+              secs2.map((x) => x.folder).join());
+        // คืนลำดับเดิม
+        for (let i = secs0.length - 1; i >= 0; i--) await reorderSections(secs0[i].folder, i + 1 < secs0.length ? secs0[i + 1].folder : null);
+        check('[168-L] คืนลำดับเล่มเดิมได้', (await listSections()).map((x) => x.folder).join() === secs0.map((x) => x.folder).join());
+      }
 
       // เปิดฉากแรกของเล่มจากตัวจัดการ
       await openFirstSceneOf(first.secPath);
@@ -1874,46 +1915,70 @@ export async function runTest(projectPath) {
 
       // ── ข้อ 3: ซูม ──
       {
-        const sl = bodyOf().querySelector('.map-zoom-slider');
+        // [alpha.168] แผนที่ไม่มีขอบ: ซูม = กล้อง (transform) ไม่ใช่ความกว้างของผืนอีกแล้ว
         const cv = bodyOf().querySelector('.map-canvas');
-        check('[70-3] มีสไลเดอร์ซูม + ปุ่มเข้า/ออก/พอดีจอ',
-              !!sl && bodyOf().querySelectorAll('.map-tools2 .cmp-mini').length >= 4);
-        check('[70-3] ค่าเริ่มต้น 100% และผืนแผนที่กว้าง 100%',
-              bodyOf().querySelector('.map-zoom-label').textContent === '100%' && cv.style.width === '100%',
-              cv.style.width);
-        const zin = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes(gi('plus-thick')));
+        const zoomNow = () => mapsViewState().zoom;
+        check('[70-3→168] มีปุ่มซูมเข้า/ออก/พอดีจอ',
+              !!bodyOf().querySelector('.map-tools2 [data-act="zoom-in"]') && !!bodyOf().querySelector('.map-tools2 [data-act="zoom-out"]') &&
+              !!bodyOf().querySelector('.map-tools2 [data-act="fit"]'));
+        check('[70-3→168] ค่าเริ่มต้น 100% (เห็นทั้งรูป) · ผืนเป็นกรอบอ้างอิงขนาดคงที่ + กล้องเป็น transform',
+              bodyOf().querySelector('.map-zoom-label').textContent === '100%' && zoomNow() === 1 && /scale\(/.test(cv.style.transform),
+              cv.style.transform);
+        const zin = bodyOf().querySelector('.map-tools2 [data-act="zoom-in"]');
         zin.click(); await wait(30);
-        check('[70-3] กดซูมเข้า → ผืนแผนที่กว้างขึ้นตามขั้น (ไม่ต้องวาดใหม่ทั้งแผง)',
-              bodyOf().querySelector('.map-canvas').style.width === '125%' &&
-              bodyOf().querySelector('.map-zoom-label').textContent === '125%',
-              bodyOf().querySelector('.map-canvas').style.width);
+        check('[70-3] กดซูมเข้า → ขึ้นหนึ่งขั้น (ไม่ต้องวาดใหม่ทั้งแผง)',
+              zoomNow() === 1.25 && bodyOf().querySelector('.map-zoom-label').textContent === '125%' && bodyOf().querySelector('.map-canvas') === cv,
+              zoomNow());
         // Ctrl+ล้อ = ซูม (ล้อเปล่าต้องไม่ซูม ไม่งั้นเลื่อนดูแผนที่ไม่ได้)
         const stage = bodyOf().querySelector('.map-stage');
         // [alpha.167] ควบคุมแบบเกม (ผู้ใช้ขอ): ล้อเปล่า = ซูม · Shift+ล้อ = เลื่อนแนวนอน · ลากที่ว่าง = เลื่อนภาพ
         stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
         await wait(20);
-        check('[70-3→167] ล้อเปล่าลง = ซูมออกหนึ่งขั้น (แบบแผนที่ในเกม)', bodyOf().querySelector('.map-canvas').style.width === '100%',
-              bodyOf().querySelector('.map-canvas').style.width);
+        check('[70-3→167] ล้อเปล่าลง = ซูมออกหนึ่งขั้น (แบบแผนที่ในเกม)', zoomNow() === 1, zoomNow());
         stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, shiftKey: true, bubbles: true, cancelable: true }));
         await wait(20);
-        check('[167-M] Shift+ล้อ = ไม่ซูม (เลื่อนแนวนอน)', bodyOf().querySelector('.map-canvas').style.width === '100%');
+        check('[167-M] Shift+ล้อ = ไม่ซูม (เลื่อนแนวนอน)', zoomNow() === 1);
         stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, ctrlKey: true, bubbles: true, cancelable: true }));
         await wait(20);
-        check('[70-3] Ctrl+ล้อลง = ซูมออกหนึ่งขั้น', bodyOf().querySelector('.map-canvas').style.width === '75%',
-              bodyOf().querySelector('.map-canvas').style.width);
-        const fit = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes('พอดีจอ'));
+        check('[70-3] Ctrl+ล้อลง = ซูมออกหนึ่งขั้น', zoomNow() === 0.75, zoomNow());
+        // [alpha.168] ลากที่ว่าง = เลื่อนกล้องอิสระ (ไม่ติดขอบรูป) — ลากเกินขอบรูปไปได้
+        {
+          const st = bodyOf().querySelector('.map-stage'); const r = st.getBoundingClientRect();
+          const c0 = mapsViewState().cam;
+          st.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: r.left + 20, clientY: r.top + r.height - 20, bubbles: true }));
+          window.dispatchEvent(new PointerEvent('pointermove', { clientX: r.left + 20 + r.width * 2, clientY: r.top + r.height - 20, bubbles: true }));
+          window.dispatchEvent(new PointerEvent('pointerup', { clientX: r.left + 20 + r.width * 2, clientY: r.top + r.height - 20, bubbles: true }));
+          await wait(40);
+          const c1 = mapsViewState().cam;
+          check('[168-M] ★ ลากที่ว่าง = เลื่อนแผนที่ได้ไกลเกินขอบรูป (แผนที่ไม่มีขอบ)', c1.cx < -50 && Math.abs(c1.cy - c0.cy) < 0.01, c0.cx + ' → ' + c1.cx);
+        }
+        const fit = bodyOf().querySelector('.map-tools2 [data-act="fit"]');
         fit.click(); await wait(30);
         check('[70-3] ปุ่มพอดีจอกลับไป 100%', bodyOf().querySelector('.map-zoom-label').textContent === '100%');
       }
 
       // ── ข้อ 4: โอเวอร์เลย์ กริด/เข็มทิศ/มาตราส่วน (บันทึกลงไฟล์ด้วย) ──
       {
-        const ovBtn = (txt) => [...bodyOf().querySelectorAll('.map-ov-btn')].find((b) => b.textContent.includes(txt));
+        const OVK = { 'ตารางกริด': 'grid', 'เข็มทิศ': 'compass', 'มาตราส่วน': 'scale' };
+        const ovBtn = (txt) => bodyOf().querySelector(`.map-ov-btn[data-ov="${OVK[txt]}"]`);
         check('[70-4] ยังไม่เปิด → ไม่มีโอเวอร์เลย์บนผืนแผนที่',
               !bodyOf().querySelector('.map-grid') && !bodyOf().querySelector('.map-compass'));
         ovBtn('ตารางกริด').click(); await wait(120);
         check('[70-4] เปิดตารางกริด → มี .map-grid + ช่องตั้งจำนวนช่อง',
               !!bodyOf().querySelector('.map-grid') && !!bodyOf().querySelector('.map-grid-size'));
+        {
+          // [alpha.168] ผู้ใช้: "ตาราง grid ไม่ใช่ ratio 1:1" — ช่องต้องจัตุรัสบนจอ · และปูเลยขอบรูป (ไม่มีขอบ)
+          const g = bodyOf().querySelector('.map-grid');
+          const cell = parseFloat(g.style.getPropertyValue('--cell'));
+          const cvR = bodyOf().querySelector('.map-canvas').getBoundingClientRect(), gR = g.getBoundingClientRect();
+          check('[168-M] ★ กริดเป็นช่องจัตุรัส (ใช้ขนาดเดียวทั้งสองแกน) + ปูเลยขอบรูปทุกทิศ',
+                cell > 0 && (() => { const bs = getComputedStyle(g).backgroundSize.split(',')[0].trim().split(/\s+/); return bs.length === 2 && bs[0] === bs[1] && Math.abs(parseFloat(bs[0]) - cell) < 0.01; })() &&
+                gR.left < cvR.left - 10 && gR.top < cvR.top - 10 && gR.right > cvR.right + 10 && gR.bottom > cvR.bottom + 10,
+                getComputedStyle(g).backgroundSize);
+          check('[168-M] ขอบตารางตรงมุมรูปพอดี (ระยะเยื้องเป็นจำนวนเต็มช่อง)',
+                Math.abs((-parseFloat(g.style.left)) / cell - Math.round((-parseFloat(g.style.left)) / cell)) < 1e-6 &&
+                Math.abs((-parseFloat(g.style.top)) / cell - Math.round((-parseFloat(g.style.top)) / cell)) < 1e-6);
+        }
         ovBtn('เข็มทิศ').click(); await wait(120);
         ovBtn('มาตราส่วน').click(); await wait(120);
         check('[70-4] เข็มทิศ + มาตราส่วนโผล่ครบ',
@@ -2045,9 +2110,15 @@ export async function runTest(projectPath) {
         await wait(180);
         check('[70-9] ออกจากโหมดต่อจุดแล้ว', !bodyOf().querySelector('.map-routebar'));
         // ปิดโหมดแล้วคลิกหมุด portal ต้องกลับไปทำงานเดิม (กระโดดข้ามแผนที่)
+        // [alpha.168] คลิกเดียว = เลือก (แถบเครื่องมือลอย) · ดับเบิลคลิก = เปิดลิงก์ (ประตู = เข้าแผนที่ย่อย)
         bodyOf().querySelector('.map-pin[data-pin="pC"]').click();
         await wait(220);
-        check('[70-9] ปิดโหมดแล้ว หมุด portal กลับไปกระโดดข้ามแผนที่ตามเดิม',
+        check('[168-M] ★ คลิกหมุดครั้งเดียว = เลือก + แถบเครื่องมือลอยเหนือหมุด (แบบในวิดีโอ)',
+              mapsState_C.s.currentId === 'm70a' && mapsViewState().sel.join() === 'pC' && !!bodyOf().querySelector('.map-ctx-pin[data-pin="pC"]'),
+              mapsViewState().sel.join());
+        bodyOf().querySelector('.map-pin[data-pin="pC"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        await wait(220);
+        check('[70-9] ปิดโหมดแล้ว หมุด portal กลับไปกระโดดข้ามแผนที่ตามเดิม (ดับเบิลคลิก)',
               mapsState_C.s.currentId === 'm70b', mapsState_C.s.currentId);
         mapsState_C.s.currentId = 'm70a'; await renderMaps(bodyOf()); await wait(150);
       }
@@ -2163,7 +2234,7 @@ export async function runTest(projectPath) {
       {
         const imgDir70 = await kapi.join(state.root, 'Images');
         const before = (await kapi.listFiles(imgDir70).catch(() => [])).length;
-        const okPng = await exportMapPng(findMap(mapsState_C.s.data.maps, 'm70a'));
+        const okPng = await exportMapPng(findMap(mapsState_C.s.data.maps, 'm70a'), { library: true });
         await wait(200);
         const after = await kapi.listFiles(imgDir70).catch(() => []);
         check('[70-5] ส่งออกแผนที่เป็น PNG ลงคลังรูปได้',
@@ -2174,6 +2245,93 @@ export async function runTest(projectPath) {
         // ล้างไฟล์ที่เพิ่งสร้าง กันขยะค้างในโปรเจกต์ทดสอบ
         for (const f of after) if (String(f).includes('แผ่นดินเก่า-map'))
           await kapi.remove(await kapi.join(imgDir70, String(f)));
+        // [alpha.168] ส่งออกปกติ = กล่องบันทึก (เลือกที่เก็บเอง) — เทสส่งทางไฟล์ตรง · ไฟล์ต้องเป็น PNG จริง มีขนาด
+        {
+          const outP = await kapi.join(state.root, 'k2test-map-export.png');
+          const r168 = await exportMapPng(findMap(mapsState_C.s.data.maps, 'm70a'), { outPath: outP });
+          const bytes = (await kapi.exists(outP)) ? await kapi.readBytes(outP) : [];
+          const b8 = Array.from(bytes).slice(0, 8);
+          check('[168-M] ★ ส่งออก PNG ผ่านกล่องบันทึก → ได้ไฟล์ PNG จริง (หัวไฟล์ถูก · ไม่ว่าง)',
+                r168 === outP && b8[0] === 0x89 && b8[1] === 0x50 && b8[2] === 0x4e && b8[3] === 0x47 && bytes.length > 5000,
+                r168 + ' ' + bytes.length);
+          if (await kapi.exists(outP)) await kapi.remove(outP);
+        }
+        // [alpha.168] ผู้ใช้: "รูปอยู่เป็นแค่ decorate ถูกแล้ว แต่มันไม่สามารถแก้ไขได้ · อยากให้แก้ไขรูปได้
+        //   ทั้ง ขนาด ratio ความทึบ จาง หมุน pitch yaw Hflip Vflip skew"
+        {
+          const mBg = findMap(mapsState_C.s.data.maps, 'm70a');
+          const pins0 = JSON.stringify(mBg.pins);
+          // รูปของ fixture ที่มีอยู่จริง (world.png ของแผนที่นี้ไม่มีไฟล์) — sunset.png สีส้มทั้งภาพ · คืนค่าตอนจบ
+          const img0 = mBg.image, asp0 = mBg.aspect;
+          mBg.image = 'Images/sunset.png'; delete mBg.aspect;
+          await saveMaps(mapsState_C.s.data);
+          await enterMap('m70a'); await wait(300);
+          for (let i = 0; i < 30 && !mBg.aspect; i++) await wait(100);   // รูปโหลด → จดสัดส่วน → วาดใหม่หนึ่งรอบ
+          await wait(300);
+          const bgBtn = document.querySelector('#maps-body .map-bg-btn');
+          check('[168-BG] แผนที่ที่มีรูปมีปุ่ม "รูปพื้นหลัง" บนแถบหัว', !!bgBtn);
+          bgBtn.click(); await wait(300);
+          const pop = document.querySelector('#maps-body .map-frame .map-bg-pop');
+          const fields = pop ? [...pop.querySelectorAll('.map-bg-range')].map((r) => r.dataset.bg) : [];
+          check('[168-BG] ★ การ์ดแก้รูปอยู่ในกรอบแผนที่ มีครบ: ความทึบ ขนาด สัดส่วน หมุน pitch yaw เฉือน×2 ตำแหน่ง×2 + พลิกสองแบบ + ลากย้าย',
+                !!pop && ['opacity', 'scale', 'ratio', 'rotate', 'pitch', 'yaw', 'skewX', 'skewY', 'x', 'y'].every((k) => fields.includes(k)) &&
+                !!pop.querySelector('[data-bg="flipH"]') && !!pop.querySelector('[data-bg="flipV"]') && !!pop.querySelector('[data-bg="drag"]'),
+                fields.join(','));
+          const setBg = (k, v) => { const r = pop.querySelector(`.map-bg-range[data-bg="${k}"]`); r.value = String(v); r.dispatchEvent(new Event('input')); r.dispatchEvent(new Event('change')); };
+          setBg('rotate', 25); setBg('pitch', 30); setBg('opacity', 50);
+          pop.querySelector('[data-bg="flipV"]').click();
+          await wait(300);
+          const img = document.querySelector('#maps-body .map-canvas .map-img');
+          const disk = JSON.parse(await kapi.readFile(await kapi.join(state.root, 'maps.json'))).maps.find((m) => m.id === 'm70a');
+          check('[168-BG] ★ ปรับแล้วเห็นทันที (matrix3d + ความทึบบนรูป) และบันทึกลง maps.json เฉพาะช่องที่เปลี่ยน',
+                /^matrix3d\(/.test(img.style.transform) && img.style.opacity === '0.5' &&
+                JSON.stringify(disk.bg) === JSON.stringify({ opacity: 0.5, rotate: 25, pitch: 30, flipV: true }),
+                img.style.transform.slice(0, 40) + ' · ' + JSON.stringify(disk.bg));
+          check('[168-BG] ★ หมุด/โซนไม่ขยับตามรูป (รูปเป็นของตกแต่ง)', JSON.stringify(mBg.pins) === pins0);
+          // จอกับไฟล์ใช้มุมชุดเดียวกัน: มุมบนซ้ายของ <img> หลังแปลง = มุมแรกของ bgQuad
+          {
+            const MB = await import('./map-bg.js');
+            const fa = +mBg.aspect || 1.6;
+            const q = MB.bgQuad(mBg.bg, fa, fa)[0];
+            const vals = img.style.transform.slice(9, -1).split(',').map(Number);
+            const w = vals[15];
+            check('[168-BG] มุมของรูปบนจอ = มุมที่ตัวส่งออกใช้ (แหล่งเดียวกัน)',
+                  Math.abs(vals[12] / w - q.x * 10) < 0.01 && Math.abs(vals[13] / w - (q.y / 100) * (1000 / fa)) < 0.01,
+                  (vals[12] / w).toFixed(2) + ',' + (vals[13] / w).toFixed(2) + ' vs ' + (q.x * 10).toFixed(2));
+          }
+          // ส่งออก PNG: มี pitch (ตาข่าย) ได้ไฟล์จริง · ความทึบ 0 = ไม่มีรูปในไฟล์ (พื้นขาวเกือบทั้งภาพ)
+          const outBg = await kapi.join(state.root, 'k2test-map-bg.png');
+          const sample = async (path) => {
+            const url = (await kapi.toFileURL(path)) + '?' + Date.now();
+            const im = new Image();
+            await new Promise((r) => { im.onload = r; im.onerror = r; im.src = url; });
+            const c = document.createElement('canvas'); c.width = 40; c.height = 40;
+            const g = c.getContext('2d'); g.drawImage(im, 0, 0, 40, 40);
+            const d = g.getImageData(0, 0, 40, 40).data;
+            let white = 0;
+            for (let i = 0; i < d.length; i += 4) if (d[i] > 245 && d[i + 1] > 245 && d[i + 2] > 245) white++;
+            return { w: im.naturalWidth, white: white / 1600 };
+          };
+          const rP = await exportMapPng(mBg, { outPath: outBg });
+          const sP = await sample(outBg);
+          await kapi.copyFile(outBg, '/tmp/k2_mapbg.png').catch(() => {});
+          check('[168-BG] ★ ส่งออก PNG ของรูปที่เอียง (pitch · ตาข่าย) ได้ไฟล์จริง', rP === outBg && sP.w > 100, rP + ' ' + JSON.stringify(sP));
+          setBg('opacity', 0); await wait(150);
+          await exportMapPng(mBg, { outPath: outBg });
+          const s0 = await sample(outBg);
+          check('[168-BG] ความทึบ 0 = ไฟล์ส่งออกไม่มีรูป (พื้นขาวมากขึ้นชัดเจน)', s0.white > sP.white + 0.2, JSON.stringify([sP, s0]));
+          if (await kapi.exists(outBg)) await kapi.remove(outBg);
+          // คืนค่าเดิมทั้งหมด = ไม่มี bg ในไฟล์ · รูปกลับเต็มกรอบ
+          [...pop.querySelectorAll('.map-geo-foot button')].find((b) => b.textContent === tt('ui.maps.bgReset')).click();
+          await wait(300);
+          const disk2 = JSON.parse(await kapi.readFile(await kapi.join(state.root, 'maps.json'))).maps.find((m) => m.id === 'm70a');
+          check('[168-BG] ★ คืนค่าเดิมทั้งหมด = ไม่มี bg ค้างในไฟล์ · รูปเต็มกรอบเหมือนเดิม',
+                disk2.bg === undefined && !mBg.bg && img.style.transform === '' && img.style.opacity === '', JSON.stringify(disk2.bg) + ' ' + img.style.transform);
+          pop.querySelector('.map-geo-foot .k-ok').click(); await wait(250);
+          check('[168-BG] กด "เสร็จ" ปิดการ์ด', !document.querySelector('#maps-body .map-bg-pop') && !mapsViewState().bgOpen);
+          mBg.image = img0; if (asp0 === undefined) delete mBg.aspect; else mBg.aspect = asp0; delete mBg.bg;
+          await saveMaps(mapsState_C.s.data);
+        }
       }
 
       // ── ข้อ 11: แผนที่ใน Explorer ──
@@ -2205,20 +2363,27 @@ export async function runTest(projectPath) {
         mapsState_C.s.currentId = 'm70a';
         await renderMaps(bodyOf()); await wait(200);
         const stage = bodyOf().querySelector('.map-stage');
-        const zin = [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes(gi('plus-thick')));
-        // กรอบแผงในเทสอาจแคบมากจนไม่มีอะไรให้เลื่อน — เช็คเฉพาะตอนที่เลื่อนได้จริง
+        const zin = bodyOf().querySelector('.map-tools2 [data-act="zoom-in"]');
+        // [alpha.168] ซูมด้วยปุ่ม = ยึดกลางจอ: จุดของโลกที่อยู่กลางช่องมองต้องยังอยู่กลางช่องมองหลังซูม
+        const midW = () => { const cvR = bodyOf().querySelector('.map-canvas').getBoundingClientRect(); const sr = stage.getBoundingClientRect();
+          return { x: ((sr.left + sr.width / 2 - cvR.left) / cvR.width) * 100, y: ((sr.top + sr.height / 2 - cvR.top) / cvR.height) * 100 }; };
+        const m0 = midW();
         zin.click(); await wait(60); zin.click(); await wait(60);
-        const canScroll = stage.scrollWidth - stage.clientWidth > 4;
-        check('[71-1] ซูมเข้าแล้วจอไม่ค้างที่มุมซ้ายบน (ยึดกึ่งกลาง)',
-              !canScroll || stage.scrollLeft > 0,
-              `scrollLeft=${stage.scrollLeft} w=${stage.scrollWidth}/${stage.clientWidth}`);
-        // กึ่งกลางที่เห็นอยู่ต้องยังเป็นจุดเดิมของภาพ (ประมาณ 50%) หลังซูมอีกขั้น
-        const midBefore = (stage.scrollLeft + stage.clientWidth / 2) / (stage.scrollWidth || 1);
-        zin.click(); await wait(80);
-        const midAfter = (stage.scrollLeft + stage.clientWidth / 2) / (stage.scrollWidth || 1);
-        check('[71-1] จุดกึ่งกลางบนภาพยังเป็นจุดเดิมหลังซูม',
-              Math.abs(midAfter - midBefore) < 0.06, `${midBefore.toFixed(3)} → ${midAfter.toFixed(3)}`);
-        [...bodyOf().querySelectorAll('.map-tools2 .cmp-mini')].find((b) => b.textContent.includes('พอดีจอ')).click();
+        const m1 = midW();
+        check('[71-1] ซูมเข้าแล้วจอไม่ค้างที่มุมซ้ายบน (ยึดกึ่งกลาง)', mapsViewState().zoom > 1 && Math.abs(m1.x - m0.x) < 0.5 && Math.abs(m1.y - m0.y) < 0.5,
+              JSON.stringify([m0, m1]));
+        // ล้อ = ยึดจุดใต้เคอร์เซอร์
+        {
+          const sr = stage.getBoundingClientRect(), cvR = bodyOf().querySelector('.map-canvas').getBoundingClientRect();
+          const px = sr.left + sr.width * 0.25, py = sr.top + sr.height * 0.3;
+          const w0 = ((px - cvR.left) / cvR.width) * 100;
+          stage.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: px, clientY: py, bubbles: true, cancelable: true }));
+          await wait(40);
+          const cvR2 = bodyOf().querySelector('.map-canvas').getBoundingClientRect();
+          const w1 = ((px - cvR2.left) / cvR2.width) * 100;
+          check('[71-1] จุดกึ่งกลางบนภาพยังเป็นจุดเดิมหลังซูม (ล้อ = ยึดจุดใต้เคอร์เซอร์)', Math.abs(w1 - w0) < 0.3, w0.toFixed(2) + ' → ' + w1.toFixed(2));
+        }
+        bodyOf().querySelector('.map-tools2 [data-act="fit"]').click();
         await wait(80);
       }
 
@@ -2232,10 +2397,10 @@ export async function runTest(projectPath) {
               bodyOf().querySelector('.map-tool-btn[data-tool="open"]').classList.contains('on'));
         // ป้ายชื่อ: ปิดแล้วต้องหายจริง
         check('[71-3] ก่อนปิด: มีป้ายชื่อใต้หมุด', bodyOf().querySelectorAll('.map-pin-label').length >= 2);
-        [...bodyOf().querySelectorAll('.map-tools3 .cmp-mini')].find((b) => b.textContent.includes('แสดงตัวหนังสือ')).click();
+        bodyOf().querySelector('.map-tools3 [data-act="labels"]').click();
         await wait(150);
         check('[71-3] ปิด "แสดงตัวหนังสือ" → ป้ายชื่อหาย', bodyOf().querySelectorAll('.map-pin-label').length === 0);
-        [...bodyOf().querySelectorAll('.map-tools3 .cmp-mini')].find((b) => b.textContent.includes('แสดงตัวหนังสือ')).click();
+        bodyOf().querySelector('.map-tools3 [data-act="labels"]').click();
         await wait(150);
         check('[71-3] เปิดกลับ → ป้ายชื่อกลับมา', bodyOf().querySelectorAll('.map-pin-label').length >= 2);
 
@@ -2264,7 +2429,7 @@ export async function runTest(projectPath) {
         // ขนาดหมุด: ขยายแล้วต้องบันทึกลงไฟล์
         bodyOf().querySelector('.map-tool-btn[data-tool="open"]').click();
         await wait(150);
-        [...bodyOf().querySelectorAll('.map-tools3 .cmp-mini')].find((b) => b.textContent === gi('plus-thick')).click();
+        bodyOf().querySelector('.map-tools2 [data-act="pin-bigger"]').click();
         await wait(250);
         check('[71-3] ปุ่มขยายหมุด → ขนาดเพิ่มขึ้นและบันทึกลง maps.json',
               findMap((await loadMaps()).maps, 'm70a').pinScale > 1,
@@ -2364,6 +2529,23 @@ export async function runTest(projectPath) {
             const saved = await loadMaps();
             check('[167-M] ผลของการหยิบใส่ถูกบันทึกลง maps.json', findMap(saved.maps, 'm70a').pins.some((p) => p.entityFile === catFile && p.x === 70));
           }
+          // [alpha.168] ผู้ใช้: "ใน wiki เราต้องสามารถ อิง map ได้เปล่า แบบรูปที่ 4" — หน้าเอนทิตี้มีกล่องแผนที่ย่อที่หมุดของตัวเอง
+          {
+            const { openEntity: openEnt168 } = await import('./wiki-ui.js');
+            await openEnt168(catFile);
+            const blk = () => document.querySelector('.pane.on .wiki-map .wiki-map-view .map-pin.wiki-map-me');
+            for (let i = 0; i < 60 && !blk(); i++) await wait(80);
+            await wait(200);
+            check('[168-W] ★ หน้า Wiki ของตัวละครที่ปักบนแผนที่ = มีกล่องแผนที่ย่อ + หมุดของตัวเองถูกเน้น', !!blk(),
+                  (document.querySelector('.pane.on .wiki-map') || {}).textContent);
+            const cvW = document.querySelector('.pane.on .wiki-map .map-canvas');
+            const meR = blk() && blk().getBoundingClientRect(), stR = document.querySelector('.pane.on .wiki-map .map-stage').getBoundingClientRect();
+            check('[168-W] แผนที่ย่อกึ่งกลางที่หมุดของเอนทิตี้', !!meR && Math.abs(meR.left - (stR.left + stR.width / 2)) < 4 && Math.abs(meR.top - (stR.top + stR.height / 2)) < 4 && /scale\(/.test(cvW.style.transform),
+                  meR && [Math.round(meR.left - stR.left), Math.round(stR.width / 2)].join());
+            check('[168-W] มีปุ่มเปิดในแผงแผนที่', !!document.querySelector('.pane.on .wiki-map .wiki-map-open'));
+            if (state.active && state.active.wiki) closeTab(state.active.file);
+            await wait(150);
+          }
           // [alpha.167 · รอบต่อ] ★ ตำแหน่งบนแผนที่ → AI: คำสั่ง map.where (ทางจริงของ runToolCall) + ส่วนบริบทของแชท
           {
             const { runToolCall } = await import('./ai/ai-actions.js');
@@ -2444,7 +2626,17 @@ export async function runTest(projectPath) {
           pop.querySelector('.map-geo-foot .k-ok').click(); await wait(150);
           check('[167-M] ปิดหน้าตั้งพิกัดได้', !document.querySelector('.map-geo-pop'));
           // เครื่องมือวัดระยะ/โซนอยู่บนแถบลอยของแผนที่ ไม่ปนกับโหมด 3 แบบเดิม
-          check('[167-M] แถบลอยมีเครื่องมือวัดระยะ + วาดโซน', bodyOf().querySelectorAll('.map-tools3 .map-tool-x').length === 2);
+          check('[167-M→168] แถบลอยมีเครื่องมือวาดโซน + ตัวหนังสือ + วัดระยะ', bodyOf().querySelectorAll('.map-tools3 .map-tool-x').length === 3 &&
+                !!bodyOf().querySelector('.map-tool-x[data-x="text"]'));
+          // [alpha.168] หน้าตั้งพิกัดอยู่ "ในแผง" (ผู้ใช้: "ตั้งค่าพิกัด มันไปอยู่นอก panel ได้ไง")
+          {
+            const pop2 = openGeoPanel(findMap(mapsState_C.s.data.maps, 'm70a')); await wait(120);
+            const fr = bodyOf().querySelector('.map-frame').getBoundingClientRect(), pr = pop2.getBoundingClientRect();
+            check('[168-M] ★ หน้าตั้งพิกัดเป็นการ์ดในกรอบแผนที่ของแผง (ไม่ลอยไปมุมหน้าต่าง)',
+                  !!pop2.closest('#maps-body .map-frame') && pr.left >= fr.left - 1 && pr.right <= fr.right + 1 && pr.top >= fr.top - 1,
+                  JSON.stringify([Math.round(fr.left), Math.round(fr.right), Math.round(pr.left), Math.round(pr.right)]));
+            pop2.querySelector('.map-geo-foot .k-ok').click(); await wait(150);
+          }
           bodyOf().querySelector('.map-tool-x[data-x="measure"]').click(); await wait(150);
           {
             const cv = bodyOf().querySelector('.map-canvas'); const r = cv.getBoundingClientRect();
@@ -2966,7 +3158,10 @@ export async function runTest(projectPath) {
         const card = document.querySelector('#net-body .net-scene');
         check('[166-B] ★ ปุ่ม "ฉากหลังและโมเดล" เปิดการ์ดตั้งค่าในผัง', !!card && !card.hidden && scBtn.classList.contains('on'));
         const kindSel = card.querySelector('select');
-        const bgPx = () => { n.draw(); const d = n.canvas.getContext('2d').getImageData(W - 30, Math.round(H / 2), 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; };
+        // หลายจุด (มุม + ขอบ) — จุดเดียวบังเอิญมีโหนด/ป้ายทับได้ (เจอบน Windows: ขาวทั้งก่อนและหลัง)
+        const bgPx = () => { n.draw(); const g2 = n.canvas.getContext('2d');
+          return [[W - 30, Math.round(H / 2)], [6, 6], [W - 6, 6], [6, H - 6], [W - 6, H - 6]]
+            .map(([x, y]) => { const d = g2.getImageData(x, y, 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; }).join(' '); };
         const pxTheme = bgPx();
         kindSel.value = 'space'; kindSel.dispatchEvent(new Event('change')); await w166(80);
         check('[166-B] ★★ เลือก "อวกาศ" → ฉากหลังเปลี่ยนจริง (วัดสีพิกเซล)', n._scene.bg.kind === 'space' && bgPx() !== pxTheme, pxTheme + ' → ' + bgPx());
@@ -3137,7 +3332,10 @@ export async function runTest(projectPath) {
         const psB = document.querySelector('#net-body [data-act="persp"]');
         check('[166-R2] 2D: ปุ่มมุมมองระยะกดไม่ได้ (มีผลเฉพาะ 3D)', psB.disabled === true);
         n.toggle3D(true); await w2(550);
-        check('[166-R2] 3D: ปุ่มมุมมองระยะกดได้ + เปิดเป็นค่าเริ่มต้น', psB.disabled === false && psB.classList.contains('on') && n._perspK() === 1);
+        // [alpha.168] ค่าเริ่มต้น = แบบขนาน (orthographic) — ผู้ใช้เปิดมุมมองระยะเองได้
+        check('[168-N] ★ 3D: ปุ่มมุมมองระยะกดได้ + ค่าเริ่มต้น = แบบขนาน (orthographic)', psB.disabled === false && !psB.classList.contains('on') && n._perspK() === 0);
+        psB.click(); await w2(40);
+        check('[166-R2] 3D: กดปุ่ม = เปิดมุมมองระยะ', psB.classList.contains('on') && n._perspK() === 1);
         const pj = n._pj();
         const fs = n.nodes.map((x) => pj.view(x).f);
         check('[166-R2] ★ มุมมองระยะ: โหนดที่ความลึกต่างกันได้ขนาดต่างกันจริง', Math.max(...fs) - Math.min(...fs) > 0.01 || n.nodes.every((x) => Math.abs((x.z || 0) - n._cam.tz) < 1), fs.map((x) => x.toFixed(2)).join());
@@ -3145,7 +3343,7 @@ export async function runTest(projectPath) {
         check('[166-R2] ★ มีมุมมองระยะแล้วจุดโฟกัสยังอยู่กลางจอ', Math.abs(Tc.x - n.canvas.width / 2) < 0.5 && Math.abs(Tc.y - n.canvas.height / 2) < 0.5);
         psB.click(); await w2(40);
         check('[166-R2] ปิดมุมมองระยะ = กลับเป็นแบบขนาน', n._perspK() === 0 && !psB.classList.contains('on'));
-        psB.click(); n.toggle3D(false); await w2(550);
+        n.toggle3D(false); await w2(550);
         // ── ค้นหา + Enter = บินไปหา + เลือก ──
         const tgt = ord[ord.length - 1];
         const si = document.querySelector('#net-body .net-tbar-input');
@@ -5598,10 +5796,30 @@ export async function runTest(projectPath) {
     await new Promise((r) => setTimeout(r, 250));
     await kapi.testShot('/tmp/k2_planner.png');   // ภาพกระดาน: แถบเครื่องมือ · ราง · กริด · เส้นโค้ง/หักมุม
 
-    // ส่งออก PNG
-    const okPng = await pb.exportPNG();
-    check('Planner ส่งออก PNG ลงโฟลเดอร์โปรเจกต์ได้',
-          okPng === true && await kapi.exists(await kapi.join(state.root, 'planner.png')));
+    // ส่งออก PNG — [alpha.168] ผ่านกล่องบันทึก (เทสส่งทางไฟล์ตรง) · พื้นทึบตามสีพื้นกระดาน (เดิมโปร่งใส = ตัวหนังสือสีอ่อนหาย)
+    {
+      const outPl = await kapi.join(state.root, 'planner.png');
+      const okPng = await pb.exportPNG(outPl);
+      check('Planner ส่งออก PNG ได้ (ทางไฟล์ที่เลือก)', okPng === outPl && await kapi.exists(outPl), String(okPng));
+      const im = new Image();
+      const plUrl = (await kapi.toFileURL(outPl)) + '?' + Date.now();
+      await new Promise((r) => { im.onload = r; im.onerror = r; im.src = plUrl; });
+      let opaque = false;
+      if (im.naturalWidth) {
+        const c = document.createElement('canvas'); c.width = 4; c.height = 4;
+        const g = c.getContext('2d'); g.drawImage(im, 0, 0, 1, 1, 0, 0, 4, 4);
+        opaque = g.getImageData(1, 1, 1, 1).data[3] === 255;
+      }
+      check('[168-P] ★ PNG ของกระดานมีพื้นทึบ (ไม่โปร่งใส) — มุมภาพเป็นสีพื้นกระดาน', opaque, im.naturalWidth);
+      // ปุ่ม "ใส่ตัวอย่าง" ที่ล้างกระดานเดิมทิ้งถูกถอดจากแถบ — ตัวอย่างอยู่ในเมนู "ใหม่" (สร้างไฟล์ใหม่)
+      check('[168-P] ★ ไม่มีปุ่ม "ใส่ตัวอย่าง" (ล้างกระดานที่เปิดอยู่) บนแถบเครื่องมือแล้ว', !document.querySelector('#planner-body [data-action="sample"]'));
+      document.querySelector('#planner-body [data-action="new"]').click(); await new Promise((r) => setTimeout(r, 150));
+      const mNew = [...document.querySelectorAll('.k-menu')].pop();
+      check('[168-P] ปุ่ม "ใหม่" = เมนู กระดานเปล่า · กระดานตัวอย่าง (ไฟล์ใหม่)', !!mNew && mNew.querySelectorAll('.k-menu-item').length === 2 &&
+            mNew.textContent.includes(tt('ui.planner.newSample')), mNew && mNew.textContent);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      [...document.querySelectorAll('.k-menu:not(#k-fab-menu)')].forEach((m) => m.remove());
+    }
 
 
     // ═══════ [alpha.65r] รอบเก็บบั๊กที่ผู้ใช้แจ้ง 8 ข้อ ═══════
@@ -8913,12 +9131,21 @@ export async function runTest(projectPath) {
         if (!pm165.isFloating(pid)) { pm165.floatPanel(pid, { x: 120, y: 90, w: 520, h: 240 }); await w165(400); }
         pm165.moveFloat(pid, { x: 120, y: 90, w: 520, h: 240 });   // เตี้ย ๆ ให้มีที่เลื่อนแน่นอน
         await w165(500);
-        const body = () => document.querySelector(`.k-float-panel[data-panel-id="${pid}"] .k-panel-body`);
+        // [alpha.168] แผงแบบ flush (จัดการเล่ม/บท = ตารางการ์ดที่เลื่อนเอง) → กล่องที่เลื่อนจริงอยู่ข้างในเนื้อแผง
+        const body = () => {
+          const pb = document.querySelector(`.k-float-panel[data-panel-id="${pid}"] .k-panel-body`);
+          if (!pb) return null;
+          return [pb, ...pb.querySelectorAll('div[class], aside[class], ul[class]')].find((e2) => /(auto|scroll)/.test(getComputedStyle(e2).overflowY) &&
+                                                          e2.scrollHeight > e2.clientHeight + 20) || pb;
+        };
         const b0 = body();
         if (!b0 || b0.scrollHeight <= b0.clientHeight + 20) {
           check(`[165-P6] เงื่อนไข: แผง ${pid} มีเนื้อให้เลื่อน`, false, b0 ? `${b0.scrollHeight}/${b0.clientHeight}` : 'ไม่เจอแผง');
           continue;
         }
+        const sel0 = b0.classList.contains('k-panel-body') || !b0.classList.length ? '' : '.' + [...b0.classList].map((c) => CSS.escape(c)).join('.');
+        const bodyAgain = () => { const pb = document.querySelector(`.k-float-panel[data-panel-id="${pid}"] .k-panel-body`);
+                                  return pb && sel0 ? pb.querySelector(sel0) : pb; };
         b0.style.scrollBehavior = 'auto';
         b0.scrollTop = b0.scrollHeight;
         b0.dispatchEvent(new Event('scroll'));
@@ -8929,7 +9156,7 @@ export async function runTest(projectPath) {
         const seen = [];
         const t0 = performance.now();
         await new Promise((done) => {
-          const f = () => { const b = body(); if (b) seen.push(b.scrollTop);
+          const f = () => { let b = null; try { b = bodyAgain(); } catch {} seen.push(b ? b.scrollTop : -1);
                             if (performance.now() - t0 < 900) requestAnimationFrame(f); else done(); };
           requestAnimationFrame(f);
         });
@@ -9528,6 +9755,46 @@ export async function runTest(projectPath) {
             [...document.querySelectorAll('.branch-side-acts button')].some((b) => b.textContent.includes(gi('split-grid'))));
       await kapi.testShot('/tmp/k2_branch.png');
 
+      // ── [alpha.168] ผู้ใช้: "story branch ยัง drag and drop ไม่ได้" — ลากจุดเชื่อมการ์ด→การ์ด · ปล่อยฉากจาก Explorer ลงผัง ──
+      if (scB2) {
+        const choicesOf = async (id) => (((await kapi.readJson(await kapi.join(dPath, 'scenes.json'))).chapters[chB.guid] || [])
+          .find((r) => r.id === id) || {}).choices || [];
+        const nodeOf = (title) => [...document.querySelectorAll('#branch-body .branch-node')].find((n) => n.textContent.includes(title));
+        const nB = nodeOf(scB.title), nB2 = nodeOf(scB2.title);
+        check('[168-BR] การ์ดฉากมีจุดเชื่อม (ลากไปการ์ดอื่น = ทางเลือกใหม่)', !!nB2 && !!nB2.querySelector('.bn-port'));
+        const before = (await choicesOf(scB2.id)).length;
+        const p = nB2.querySelector('.bn-port'), pr = p.getBoundingClientRect(), tr = nB.getBoundingClientRect();
+        p.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: pr.left + 5, clientY: pr.top + 5 }));
+        document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: tr.left + 30, clientY: tr.top + 20 }));
+        check('[168-BR] ระหว่างลาก = มีเส้นร่างตามเมาส์', !!document.querySelector('#branch-body .branch-edge-draft'));
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: tr.left + 30, clientY: tr.top + 20 }));
+        for (let i = 0; i < 40 && (await choicesOf(scB2.id)).length === before; i++) await new Promise((r) => setTimeout(r, 50));
+        const after = await choicesOf(scB2.id);
+        check('[168-BR] ★ ลากจุดเชื่อมไปปล่อยบนการ์ดอื่น = ทางเลือกใหม่ชี้ฉากนั้น (เขียนลง scenes.json)',
+              after.length === before + 1 && after[after.length - 1].nextSceneId === scB.id, JSON.stringify(after));
+        // ปล่อยฉากจาก Explorer ลงการ์ด = ทางเลือกใหม่ (ลากแถวจริงผ่าน DataTransfer ของ dragstart)
+        await new Promise((r) => setTimeout(r, 500));
+        const row = [...document.querySelectorAll('#tree .scene[draggable="true"]')].find((r) => (r.textContent || '').includes(scB2.title));
+        const nB2b = nodeOf(scB2.title);
+        if (row && nB2b) {
+          const dt = new DataTransfer();
+          row.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+          const br = nodeOf(scB.title).getBoundingClientRect();
+          const tgt = nodeOf(scB.title).querySelector('.branch-node-name') || nodeOf(scB.title);
+          const n0 = (await choicesOf(scB.id)).length;
+          tgt.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: br.left + 20, clientY: br.top + 15 }));
+          tgt.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: br.left + 20, clientY: br.top + 15 }));
+          row.dispatchEvent(new DragEvent('dragend', { dataTransfer: dt, bubbles: true }));
+          for (let i = 0; i < 40 && (await choicesOf(scB.id)).length === n0; i++) await new Promise((r) => setTimeout(r, 50));
+          const cs = await choicesOf(scB.id);
+          check('[168-BR] ★ ปล่อยฉากจาก Explorer บนการ์ด = ทางเลือกใหม่ (การ์ดนั้น → ฉากที่ลากมา)',
+                cs.length === n0 + 1 && cs[cs.length - 1].nextSceneId === scB2.id, JSON.stringify(cs));
+          await updateSceneRow(dPath, scB.id, (r) => { r.choices = (r.choices || []).slice(0, n0); });
+        } else check('[168-BR] มีแถวฉากใน Explorer ให้ลาก', false, String(!!row) + String(!!nB2b));
+        await updateSceneRow(dPath, scB2.id, (r) => { r.choices = (r.choices || []).slice(0, before); if (!r.choices.length) delete r.choices; });
+        await openBranchingTree(); await new Promise((r) => setTimeout(r, 500));
+      }
+
       // ── [alpha.66] ยกเครื่องระบบแตกสาย: ตรวจของใหม่ทีละข้อ ──
       // ข้อ 2: แถบเพิ่มทางเลือกต้องอยู่ "เหนือ" ผัง (ทางเข้ามาก่อนผลลัพธ์)
       {
@@ -9856,77 +10123,326 @@ export async function runTest(projectPath) {
       await updateSceneRow(dPath, scB.id, (r) => { delete r.choices; delete r.color; });
     }
 
-    // ---- ผังพื้นที่ (ข้อ 82): แผนที่ + ตำแหน่งปัจจุบัน + เส้นเวลาของสถานที่ ----
+    // ---- [alpha.168] ผังพื้นที่ = ผังกองถ่ายแบบ Shot Designer (เขียนใหม่ทั้งแผง) ----
+    // ผู้ใช้: "drag drop entities ลงไป ... ตั้งกล้อง ... ระยะสายตา · การหันหน้า · timeline อ้างบรรทัดของฉาก/พิมพ์เอง"
+    // ตรรกะ (จังหวะแบบสืบทอด · เลนส์/เซนเซอร์ · กรวย · ราง · ดัชนี) มี unit `floorplan` · ที่นี่ขับแผงจริง
     {
+      const FT = __fpTest;
+      const F168 = FT.F;
+      const w168 = (ms) => new Promise((r) => setTimeout(r, ms));
+      const until168 = async (fn, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (fn()) return true; } catch {} await w168(40); } return false; };
+      const fpDir = await kapi.join(state.root, 'FloorPlans');
+      if (await kapi.exists(fpDir)) await kapi.remove(fpDir);
+      resetFloorPlanView();
+      // ── ว่าง → ปุ่มสร้าง (กล่องถามชื่อจริง) ──
       await openFloorPlan();
-      await new Promise((r) => setTimeout(r, 400));
-      check('เปิดผังพื้นที่ได้ (เป็นแผงแล้ว — alpha.62 บั๊ก 16)', isPanelOpen('floorplan'));
-      check('ผังพื้นที่แสดงแผงข้อมูล', !!document.querySelector('.floor-panel'));
-      check('ผังพื้นที่มีแถบเส้นเวลาของสถานที่', !!document.querySelector('.floor-timeline'));
-      check('ผังพื้นที่แสดงช่องเห็น/ได้ยิน/พบ ครบ 3 หัวข้อ',
-            [...document.querySelectorAll('.floor-panel-title')]
-              .filter((d) => /สิ่งที่(เห็น|ได้ยิน|พบ)/.test(d.textContent)).length === 3);
+      await until168(() => !!document.querySelector('#floor-body .k-pan-empty button'));
+      check('[168-FP] เปิดผังพื้นที่ได้ (แผง)', isPanelOpen('floorplan'));
+      check('[168-FP] ยังไม่มีผัง = สถานะว่าง + ปุ่มสร้าง', !!document.querySelector('#floor-body .k-pan-empty button'));
+      document.querySelector('.k-overlay')?.remove();
+      document.querySelector('#floor-body .k-pan-empty button').click();
+      await until168(() => !!document.querySelector('.k-dialog input'));
+      const dlg168 = [...document.querySelectorAll('.k-dialog')].pop();
+      dlg168.querySelector('input').value = 'ผังทดสอบ 168';
+      dlg168.querySelector('.k-ok').click();
+      await until168(() => !!document.querySelector('#floor-body .fp-svg'));
+      const plan168 = FT.S.currentPlan();
+      check('[168-FP] ★ สร้างผังจากกล่องถามชื่อได้ + วาดผืน SVG', !!plan168 && plan168.name === 'ผังทดสอบ 168' && !!document.querySelector('#floor-body .fp-svg'),
+            plan168 && plan168.name);
+      const pf168 = await kapi.join(fpDir, plan168.id + '.json');
+      check('[168-FP] ผังหนึ่งใบ = ไฟล์หนึ่งไฟล์ใน FloorPlans/', await kapi.exists(pf168));
+      const idx168 = await kapi.readJson(await kapi.join(fpDir, 'index.json'));
+      check('[168-FP] ดัชนีมีแถวของผังใหม่ (ชื่อ · จำนวนจังหวะ)', !!idx168.plans[plan168.id] && idx168.plans[plan168.id].name === 'ผังทดสอบ 168'
+            && idx168.plans[plan168.id].beats === 1, JSON.stringify(idx168).slice(0, 200));
+      check('[168-FP] มีจังหวะแรกบนแถบจังหวะ', document.querySelectorAll('#floor-body .fp-beat').length === 1);
+      check('[168-FP] แผงคุณสมบัติ (ไม่ได้เลือกอะไร) = จังหวะปัจจุบัน', /1/.test((document.querySelector('.fp-insp .fp-sec') || {}).textContent || ''));
 
-      // ผูกฉากกับแผนที่ → ตำแหน่งปัจจุบัน + เส้นเวลาของสถานที่ต้องขึ้น
-      // สร้างแผนที่เองที่นี่ ไม่พึ่งว่าเทสก่อนหน้าทิ้งแผนที่ไว้ให้ (ไม่งั้นบล็อกนี้ถูกข้ามเงียบ ๆ)
-      const prevMaps = await loadMaps();
-      const tMap = newMap('แผนที่ทดสอบผังพื้นที่');
-      tMap.id = 'fptest'; tMap.image = 'Images/world.png'; tMap.order = 0;
-      tMap.pins = [{ id: 'fppin', x: 30, y: 40, kind: 'entity', label: 'ห้องนอน' }];
-      await saveMaps({ version: MAPS_VERSION, maps: [tMap] });
+      // ── วางกล้องด้วยการคลิกจริง (ปุ่มเครื่องมือ → คลิกบนผัง) ──
+      const svg168 = () => document.querySelector('#floor-body .fp-svg');
+      const pDown = (target, x, y, o = {}) => target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, pointerId: 1, ...o }));
+      const pMove = (x, y, o = {}) => window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x, clientY: y, pointerId: 1, ...o }));
+      const pUp = (x, y) => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+      FT.fitAll(); FT.paint();
+      document.querySelector('#floor-body .fp-tb[data-tool="camera"]').click();
+      check('[168-FP] ปุ่มเครื่องมือกล้องติดสถานะ', FT.V.tool === 'camera' && document.querySelector('#floor-body .fp-tb[data-tool="camera"]').classList.contains('on'));
+      let sp = FT.worldToScreen(0, 4);
+      pDown(svg168(), sp.x, sp.y); pUp(sp.x, sp.y);
+      await w168(80);
+      const cam168 = plan168.objects.find((o) => o.type === 'camera');
+      check('[168-FP] ★ คลิกบนผัง = วางกล้องตรงจุดนั้น (FX3 · 35mm · ขาตั้งสามขา · ชื่อ A)',
+            !!cam168 && Math.abs(cam168.x) < 0.05 && Math.abs(cam168.y - 4) < 0.05 && cam168.body === 'sony-fx3' && cam168.lens === 35 && cam168.label === 'A',
+            JSON.stringify(cam168 || {}).slice(0, 160));
+      check('[168-FP] วางเสร็จ = กลับเครื่องมือเลือก + ชิ้นใหม่ถูกเลือก', FT.V.tool === 'select' && FT.V.sel === cam168.id);
+      check('[168-FP] วาดกล้อง + กรวยมุมรับภาพของกล้องที่ใช้อยู่', !!document.querySelector('#floor-body .fp-camera') && !!document.querySelector('#floor-body .fp-cone-cam.on'));
+      check('[168-FP] แผงคุณสมบัติกล้องบอกมุมรับภาพจากเลนส์+เซนเซอร์ (FX3 35.6 มม. @ 35mm ≈ 53.9°)', ((document.querySelector('.fp-insp .fp-fov') || {}).textContent || '').includes(String(Math.round(F168.cameraFov(cam168) * 10) / 10)) && Math.abs(F168.cameraFov(cam168) - 53.9) < 0.1,
+            (document.querySelector('.fp-insp .fp-fov') || {}).textContent);
+      // เปลี่ยนบอดี้ในแผงคุณสมบัติ (select จริง) → มุมรับภาพเปลี่ยน (Komodo S35 แคบกว่า)
+      const bodySel = [...document.querySelectorAll('.fp-insp select')].find((s) => [...s.options].some((o) => o.value === 'red-komodo'));
+      bodySel.value = 'red-komodo'; bodySel.dispatchEvent(new Event('change'));
+      await w168(40);
+      check('[168-FP] ★ เลือก RED Komodo แล้วมุมรับภาพแคบลง (S35)', cam168.body === 'red-komodo' && F168.cameraFov(cam168) < 45,
+            F168.cameraFov(cam168));
+      check('[168-FP] บอดี้กล้องมี Fuji X-T5 / Sony FX3 ให้เลือก',
+            ['fuji-xt5', 'sony-fx3'].every((id) => [...bodySel.options].some((o) => o.value === id)));
+      const supSel = [...document.querySelectorAll('.fp-insp select')].find((s) => [...s.options].some((o) => o.value === 'jib'));
+      check('[168-FP] การตั้งกล้องมี jib/tripod/monopod/dolly', ['jib', 'tripod', 'monopod', 'dolly'].every((id) => [...supSel.options].some((o) => o.value === id)));
+      supSel.value = 'jib'; supSel.dispatchEvent(new Event('change'));
+      await w168(40);
+      check('[168-FP] เปลี่ยนเป็น jib = ความสูงตั้งต้นตามอุปกรณ์ (2.5 ม.)', cam168.support === 'jib' && cam168.height === 2.5, cam168.height);
 
-      const dj3 = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
-      const sj3 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
-      const ch3 = dj3.chapters.find((c) => (sj3.chapters[c.guid] || []).length);
-      const sc3 = sj3.chapters[ch3.guid][0];
-      await updateSceneRow(dPath, sc3.id, (r) => {
-        r.mapId = tMap.id; r.pinId = 'fppin'; r.storyDate = 'ปีที่ 1024';
-      });
-      // เปิดฉากเป็นแท็บจริง แล้ว **สลับกลับมาที่ผังพื้นที่** — ต้องยังรู้ว่ากำลังเขียนฉากไหนอยู่
-      // (เคยพัง: sceneCtx() อ่านจากแท็บ active เท่านั้น พอมาดูผัง ตำแหน่งปัจจุบันเลยหายหมด)
-      await openScene(await kapi.join(dPath, 'Chapters', ch3.folderName, sc3.fileName), sc3.title);
-      await new Promise((r) => setTimeout(r, 250));
-      check('เปิดฉากแล้วผังพื้นที่ยังจำฉากที่เปิดล่าสุดได้',
-            !!state.lastSceneFile && state.lastSceneFile.includes(sc3.fileName), state.lastSceneFile);
-      state._floor = { mapId: tMap.id, picking: false };
-      await renderFloorPlan($('#floor-body'), tMap.id);
-      await new Promise((r) => setTimeout(r, 400));
-      check('ผังพื้นที่วาดหมุดของแผนที่', document.querySelectorAll('.floor-pin').length === 1,
-            String(document.querySelectorAll('.floor-pin').length));
-      check('แสดงตำแหน่งปัจจุบันของฉากที่เปิดอยู่ (คุณอยู่ที่นี่)',
-            !!document.querySelector('.floor-you'));
-      check('ป้ายตำแหน่งปัจจุบันบอกชื่อฉาก',
-            (document.querySelector('.floor-you-label') || {}).textContent === sc3.title,
-            (document.querySelector('.floor-you-label') || {}).textContent);
-      check('หมุดตำแหน่งปัจจุบันวางตรงพิกัดหมุดที่ผูกไว้',
-            (document.querySelector('.floor-you') || {}).style?.left === '30%',
-            (document.querySelector('.floor-you') || {}).style?.left);
-      check('แผงข้อมูลบอกว่าฉากนี้อยู่แผนที่/หมุดไหน',
-            (document.querySelector('.floor-where') || {}).textContent?.includes('ห้องนอน'),
-            (document.querySelector('.floor-where') || {}).textContent);
-      check('ฉากที่ผูกแผนที่ขึ้นบนเส้นเวลาของสถานที่นั้น',
-            [...document.querySelectorAll('.floor-tl-title')].some((d) => d.textContent === sc3.title),
-            [...document.querySelectorAll('.floor-tl-title')].map((d) => d.textContent).join('|'));
-      check('เส้นเวลาของสถานที่แสดงเวลาในเรื่อง',
-            [...document.querySelectorAll('.floor-tl-when')].some((d) => d.textContent.includes('1024')));
+      // ── ไฟ (เมนูชนิดไฟ) ──
+      document.querySelector('#floor-body .fp-tb[data-tool="light"]').click();
+      await until168(() => document.querySelectorAll('.k-menu .k-menu-item').length >= 5);
+      [...document.querySelectorAll('.k-menu .k-menu-item')].pop().click();       // แผ่นสะท้อน (ตัวท้าย)
+      await w168(40);
+      sp = FT.worldToScreen(-3, 0);
+      pDown(svg168(), sp.x, sp.y); pUp(sp.x, sp.y);
+      await w168(60);
+      const lt168 = plan168.objects.find((o) => o.type === 'light');
+      check('[168-FP] ★ วางไฟตามชนิดที่เลือก + มีกรวยแสง', !!lt168 && lt168.kind === 'bounce' && !!document.querySelector('#floor-body .fp-cone-light'),
+            lt168 && lt168.kind);
 
-      // เพิ่ม "สิ่งที่เห็น" แล้วต้องขึ้นในแผง + นับเป็นป้ายบนการ์ดเส้นเวลา
-      await updateSceneRow(dPath, sc3.id, (r) => { r.clues = ['รอยเลือดบนพื้น']; });
-      await renderFloorPlan($('#floor-body'), tMap.id);
-      await new Promise((r) => setTimeout(r, 300));
-      check('รายการสิ่งที่เห็นขึ้นในแผง (ลบได้ทีละอัน)',
-            [...document.querySelectorAll('.floor-item-text')].some((d) => d.textContent === 'รอยเลือดบนพื้น')
-            && !!document.querySelector('.floor-item-del'));
-      check('การ์ดเส้นเวลาติดป้ายจำนวนเบาะแส',
-            [...document.querySelectorAll('.floor-tl-badges')].some((d) => d.textContent.includes(gi('eye') + '1')),
-            [...document.querySelectorAll('.floor-tl-badges')].map((d) => d.textContent).join('|'));
+      // ── ผนัง (คลิกทีละจุด + Enter) ──
+      FT.setTool('shape', 'wall');
+      for (const [x, y] of [[-4, -2.5], [4, -2.5], [4, 2.5]]) { sp = FT.worldToScreen(x, y); pDown(svg168(), sp.x, sp.y); pUp(sp.x, sp.y); await w168(20); }
+      check('[168-FP] ระหว่างวาดเส้นมีตัวอย่างเส้นประ', !!document.querySelector('#floor-body .fp-drawing'));
+      document.querySelector('#floor-body .fp-stage').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await w168(40);
+      const wall168 = plan168.objects.find((o) => o.type === 'shape' && o.kind === 'wall');
+      check('[168-FP] ★ วาดผนังหลายจุดได้ (Enter = จบ)', !!wall168 && wall168.pts.length === 3 && !!document.querySelector('#floor-body .fp-shape-wall'),
+            wall168 && JSON.stringify(wall168.pts));
+
+      // ── ลากตัวละครจาก Explorer (หยิบใส่) ──
+      const catFile = await kapi.join(state.root, 'Wiki', 'characters', 'cat.json');
+      const dt168 = new DataTransfer();
+      setDrag(dt168, 'entity', { path: catFile, file: catFile, title: 'ยัยแมวเก้าชีวิต', cat: 'characters' });
+      const stage168 = document.querySelector('#floor-body .fp-stage');
+      sp = FT.worldToScreen(0, 0);
+      stage168.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt168, clientX: sp.x, clientY: sp.y }));
+      stage168.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt168, clientX: sp.x, clientY: sp.y }));
+      await until168(() => plan168.objects.some((o) => o.type === 'entity'));
+      const ent168 = plan168.objects.find((o) => o.type === 'entity');
+      check('[168-FP] ★ ลากเอนทิตี้จาก Wiki มาวาง = ตัวละครอยู่ตรงจุดที่ปล่อย', !!ent168 && Math.abs(ent168.x) < 0.1 && Math.abs(ent168.y) < 0.1 && ent168.entityFile === 'Wiki/characters/cat.json',   // [alpha.168 · bug hunt] จดทางสัมพัทธ์ (เดิมทางเต็มของเครื่อง)
+            JSON.stringify(ent168 || {}).slice(0, 160));
+      check('[168-FP] ตัวละครมีระยะสายตา + ทิศที่หัน (กรวยสายตา + จมูก)', !!document.querySelector('#floor-body .fp-cone-sight') && !!document.querySelector('#floor-body .fp-entity .fp-nose'));
+      check('[168-FP] ป้ายชื่อตัวละครมาจาก Wiki', [...document.querySelectorAll('#floor-body .fp-label')].some((n) => n.textContent === 'ยัยแมวเก้าชีวิต'));
+      check('[168-FP] panel-drop ประกาศว่าผังพื้นที่รับเอนทิตี้เอง', (dropIntent('floorplan', ['entity']) || {}).mode === 'own');
+      // กล้องหันขึ้น (-90) อยู่ที่ (0,4) · ตัวละครที่ (0,0) = อยู่ในภาพ (ระยะ 4 < 8)
+      check('[168-FP] ★ ใครอยู่ในภาพ: ตัวละครในกรวยกล้องได้วงเน้น', !!document.querySelector('#floor-body .fp-framed'));
+
+      // ── จังหวะ: เพิ่ม → ลากตัวละครในจังหวะ 2 (เมาส์จริง) → จังหวะ 1 ไม่ขยับ ──
+      document.querySelector('#floor-body .fp-beat-add').click();
+      await w168(60);
+      check('[168-FP] เพิ่มจังหวะ = จังหวะใหม่ถูกเลือก', plan168.beats.length === 2 && FT.V.beat === 1 && document.querySelectorAll('#floor-body .fp-beat').length === 2);
+      const eg = () => document.querySelector(`#floor-body [data-id="${ent168.id}"]`);
+      sp = FT.worldToScreen(0, 0);
+      pDown(eg(), sp.x, sp.y);
+      const z168 = FT.camOf().z;
+      for (let i = 1; i <= 8; i++) pMove(sp.x + i * (2 * z168 / 8), sp.y);
+      pUp(sp.x + 2 * z168, sp.y);
+      await w168(60);
+      const pb2 = F168.poseAt(plan168, ent168.id, 1), pb1 = F168.poseAt(plan168, ent168.id, 0);
+      check('[168-FP] ★ ลากในจังหวะ 2 = ขยับเฉพาะจังหวะ 2 (จังหวะ 1 อยู่ที่เดิม)', Math.abs(pb2.x - 2) < 0.1 && Math.abs(pb1.x) < 0.05,
+            pb1.x + ' → ' + pb2.x);
+      check('[168-FP] ไฟล์เก็บเฉพาะสิ่งที่เปลี่ยน (keys ของจังหวะ 2)', !!plan168.beats[1].keys[ent168.id] && plan168.beats[1].keys[ent168.id].y === undefined);
+      check('[168-FP] ★ เห็นเส้นประบอกการเคลื่อนที่ + เงาตำแหน่งเดิม', !!document.querySelector('#floor-body .fp-move') && !!document.querySelector('#floor-body .fp-ghost'));
+      check('[168-FP] การ์ดจังหวะบอกจำนวนชิ้นที่ขยับ', /1$/.test((document.querySelector('#floor-body .fp-beat.on .fp-beat-moves') || {}).textContent || ''));
+      // Esc ระหว่างลาก = คืนตำแหน่งก่อนลาก + ไม่บันทึก
+      const undoN = FT.V.undo.length;
+      sp = FT.worldToScreen(2, 0);
+      pDown(eg(), sp.x, sp.y); pMove(sp.x + 60, sp.y + 60); pMove(sp.x + 90, sp.y + 90);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      pUp(sp.x + 90, sp.y + 90);
+      await w168(40);
+      check('[168-FP] ★ Esc ระหว่างลาก = กลับที่เดิม (ไม่เข้าประวัติย้อนกลับ)', Math.abs(F168.poseAt(plan168, ent168.id, 1).x - 2) < 0.1 && FT.V.undo.length === undoN,
+            F168.poseAt(plan168, ent168.id, 1).x);
+      // หมุน (ปุ่ม ] บนผืน) + ซ่อนในจังหวะ
+      FT.V.sel = ent168.id;
+      const st168 = document.querySelector('#floor-body .fp-stage');
+      st168.focus();
+      st168.dispatchEvent(new KeyboardEvent('keydown', { key: ']', code: 'BracketRight', bubbles: true }));   // [alpha.168] คีย์จริงมี code เสมอ (ตัวจับใช้ปุ่มกายภาพ)
+      check('[168-FP] ปุ่ม ] หมุนตัวละคร 15° ในจังหวะนี้', Math.abs(F168.normAngle(F168.poseAt(plan168, ent168.id, 1).rot - 105)) < 0.01, F168.poseAt(plan168, ent168.id, 1).rot);
+      // เพิ่มจังหวะ 3 แล้วซ่อนตัวละคร (ออกจากฉาก)
+      FT.edit(() => { FT.V.beat = F168.insertBeat(plan168, 1); });
+      FT.edit(() => F168.setPose(plan168, ent168.id, 2, { hidden: true }));
+      check('[168-FP] ตัวละครที่ออกจากฉากในจังหวะ 3 ไม่นับว่าอยู่ในภาพ',
+            F168.framedIds(plan168, 2, cam168.id).length === 0 && F168.framedIds(plan168, 0, cam168.id).length === 1);
+      // ย้อนกลับด้วย Ctrl+Z บนผืน
+      const beatsBefore = plan168.beats.length;
+      st168.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', ctrlKey: true, bubbles: true }));
+      st168.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', ctrlKey: true, bubbles: true }));
+      check('[168-FP] ★ Ctrl+Z ย้อนสองขั้น = จังหวะ 3 หายไป', plan168.beats.length === beatsBefore - 1, plan168.beats.length);
+      st168.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', code: 'KeyY', ctrlKey: true, bubbles: true }));
+      check('[168-FP] Ctrl+Y ทำซ้ำได้', plan168.beats.length === beatsBefore, plan168.beats.length);
+
+      // ── ราง dolly: กล้องที่ติดรางถูกดูดลงราง ──
+      FT.setTool('track');
+      for (const [x, y] of [[-2, 6], [3, 6]]) { sp = FT.worldToScreen(x, y); pDown(svg168(), sp.x, sp.y); pUp(sp.x, sp.y); await w168(20); }
+      document.querySelector('#floor-body .fp-stage').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await w168(40);
+      const tr168 = plan168.objects.find((o) => o.type === 'track');
+      check('[168-FP] วางราง dolly ได้', !!tr168 && tr168.pts.length === 2);
+      // ย้อนกลับ/Esc คืนผังจากภาพก่อนแก้ = ชิ้นเป็นวัตถุใหม่ → หาด้วย id เสมอ (ไม่ถือตัวแปรเก่า)
+      FT.edit(() => { const c = F168.objById(plan168, cam168.id); c.support = 'dolly'; c.trackId = tr168.id; });
+      FT.gotoBeat(0);
+      FT.V.sel = cam168.id; FT.paint();
+      const cg = () => document.querySelector(`#floor-body [data-id="${cam168.id}"]`);
+      const cp0 = F168.poseAt(plan168, cam168.id, 0);
+      sp = FT.worldToScreen(cp0.x, cp0.y);
+      pDown(cg(), sp.x, sp.y);
+      pMove(sp.x + z168 * 0.5, sp.y + z168 * 0.5); pMove(sp.x + z168, sp.y + z168 * 1.5);
+      pUp(sp.x + z168, sp.y + z168 * 1.5);
+      await w168(40);
+      const cp1 = F168.poseAt(plan168, cam168.id, 0);
+      check('[168-FP] ★ กล้องบน dolly ลากแล้วอยู่บนรางเสมอ (y = 6)', Math.abs(cp1.y - 6) < 0.01 && Math.abs(cp1.x - 1) < 0.2, JSON.stringify(cp1));
+
+      // ── ผูกฉาก + อ้างอิงบรรทัดของฉาก + กระโดดไปบรรทัดนั้น ──
+      const dj168 = await kapi.readJson(await kapi.join(dPath, 'draft.json'));
+      const sj168 = await kapi.readJson(await kapi.join(dPath, 'scenes.json'));
+      const ch168 = dj168.chapters.find((c) => (sj168.chapters[c.guid] || []).length);
+      const sc168 = sj168.chapters[ch168.guid][0];
+      const scFile168 = await kapi.join(dPath, 'Chapters', ch168.folderName, sc168.fileName);
+      await FT.S.updatePlanMeta({ scene: { id: sc168.id, title: sc168.title, file: '' } });
+      const lines168 = await FT.sceneLines(scFile168);
+      check('[168-FP] อ่านบรรทัดของฉากที่ผูกไว้ได้', lines168.length >= 1, String(lines168.length));
+      // ตัวถอดรหัสนำหน้าทดสอบกับไฟล์ที่คุมเนื้อเอง (ฉากของ fixture ถูกเทสก่อนหน้าแก้ไปแล้ว)
+      const probe168 = await kapi.join(state.root, 'k2test-fplines.md');
+      await kapi.writeFile(probe168, '---\ntitle: x\n---\n### หัวข้อฉาก\n\n> คำพูดยกมา\n\n@ทอร่า\n\n- ข้อในรายการ\n\n**ตัวหนา** ปกติ\n\nซ้ำ\n\nซ้ำ\n');
+      const pl168 = await FT.sceneLines(probe168);
+      await kapi.remove(probe168);
+      check('[168-FP] ★ บรรทัดอ้างอิงเป็นข้อความล้วน (ถอด # > @ - ** ออก · บรรทัดซ้ำนับลำดับ)',
+            pl168.map((l) => l.text).join('|') === 'หัวข้อฉาก|คำพูดยกมา|ทอร่า|ข้อในรายการ|ตัวหนา ปกติ|ซ้ำ|ซ้ำ'
+            && pl168[5].nth === 0 && pl168[6].nth === 1, pl168.map((l) => l.text + '#' + l.nth).join(' | '));
+      const refL = lines168.find((l) => l.text.length > 4) || lines168[0];
+      FT.edit(() => { plan168.beats[1].ref = { kind: 'scene', text: refL.text, nth: refL.nth }; });
+      check('[168-FP] ★ การ์ดจังหวะโชว์บรรทัดที่อ้างอิง', [...document.querySelectorAll('#floor-body .fp-beat-ref')].some((n) => n.textContent.includes(refL.text)));
+      const jumped = await FT.jumpToScene(plan168, plan168.beats[1].ref);
+      await w168(200);
+      const tab168 = state.tabs.get(scFile168);
+      const ed168 = tab168 && (tab168.editor || tab168.sp);
+      const selTxt = ed168 && ed168.view ? ed168.view.state.doc.resolve(ed168.view.state.selection.from).parent.textContent : '';
+      check('[168-FP] ★ "ไปที่บรรทัด" เปิดฉากแล้วเคอร์เซอร์อยู่บรรทัดที่อ้างอิง', jumped && selTxt.includes(refL.text.slice(0, 10)), selTxt.slice(0, 60));
+      check('[168-FP] ผูกฉากแล้ว ทางไฟล์ฉากถูกจดไว้ (ครั้งหน้าไม่ต้องสแกน)', !!plan168.scene.file && /\.md$/.test(plan168.scene.file), plan168.scene.file);
+      await FT.S.flushPlan();
+      showPanel('floorplan'); await renderFloorPlan($('#floor-body'));
+      await until168(() => !!document.querySelector('#floor-body .fp-svg'));
+      // แถว "ผังพื้นที่" ในคุณสมบัติฉาก (อ่านจากดัชนีอย่างเดียว)
+      const row168 = await buildScenePlansRow(sc168);
+      check('[168-FP] ★ คุณสมบัติฉากมีปุ่มเปิดผังของฉากนี้', [...row168.querySelectorAll('.props-fpbtn')].some((b) => b.textContent.includes('ผังทดสอบ 168')));
+
+      // ── เล่นภาพเคลื่อนไหว ──
+      FT.gotoBeat(0);
+      check('[168-FP] เล่นจังหวะได้', FT.startPlay() === true && floorPlanView().playing);
+      await until168(() => !floorPlanView().playing, 5000);
+      check('[168-FP] ★ เล่นจบ = หยุดที่จังหวะสุดท้าย', !floorPlanView().playing && floorPlanView().beat === plan168.beats.length - 1, JSON.stringify(floorPlanView()));
+
+      // ── prompt ภาพนิ่ง/วิดีโอ: AI เขียนจากบท + ผัง (เซิร์ฟเวอร์ AI จำลอง · main.js 8931) ──
+      {
+        const { newProvider: npP } = await import('./ai/ai-providers.js');
+        const provP = npP({ name: 'mockfp', model: 'mock-model', params: { maxRetries: 0 },
+          credential: { name: 'mock', baseUrl: 'http://127.0.0.1:8931/v1', allowedDomains: ['127.0.0.1'] } });
+        state.meta.ai = state.meta.ai || {};
+        const keepP = { providers: state.meta.ai.providers, active: state.meta.ai.activeProviderId };
+        state.meta.ai.providers = [provP];
+        state.meta.ai.activeProviderId = provP.id;
+        const factsP = FT.beatFacts(plan168, 1);
+        check('[168-PR] ข้อมูลช็อตจากผัง: กล้อง/เลนส์/ใครอยู่ในภาพ/ไฟ', !!factsP && factsP.camera.label === 'A' && factsP.camera.lensMm === 35
+              && Array.isArray(factsP.subjects) && Array.isArray(factsP.lights) && factsP.lights.length >= 1, JSON.stringify(factsP || {}).slice(0, 200));
+        FT.edit(() => { plan168.style = 'MOCKSTYLE 35mm film'; plan168.beats[1].note = 'MOCK-FPPROMPT'; });
+        FT.gotoBeat(1); FT.V.sel = null; FT.gotoBeat(0); FT.gotoBeat(1);
+        await until168(() => !!document.querySelector('#floor-body .fp-prompt-gen'));
+        check('[168-PR] แผงจังหวะมีช่อง prompt ภาพนิ่ง + วิดีโอ + ปุ่มให้ AI เขียน',
+              !!document.querySelector('#floor-body .fp-prompt-image') && !!document.querySelector('#floor-body .fp-prompt-video')
+              && !!document.querySelector('#floor-body .fp-prompt-gen'));
+        document.querySelector('#floor-body .fp-prompt-gen').click();
+        const gotP = await until168(() => !!(plan168.beats[1].prompt && plan168.beats[1].prompt.image) && !FT.V.gen, 12000);
+        check('[168-PR] ★ กดแล้ว AI เขียน prompt ภาพนิ่ง + วิดีโอ ลงจังหวะนี้', gotP && /MOCK still/.test(plan168.beats[1].prompt.image)
+              && /MOCK video/.test(plan168.beats[1].prompt.video), JSON.stringify(plan168.beats[1].prompt));
+        await until168(() => /MOCK still/.test((document.querySelector('#floor-body .fp-prompt-image') || {}).value || ''));
+        check('[168-PR] prompt ขึ้นในช่อง (แก้ต่อได้)', /MOCK still/.test((document.querySelector('#floor-body .fp-prompt-image') || {}).value || '')
+              && /MOCK video/.test((document.querySelector('#floor-body .fp-prompt-video') || {}).value || ''));
+        const lastP = JSON.parse((await kapi.httpFetch('http://127.0.0.1:8931/v1/last', { method: 'GET' })).body || '{}');
+        const sentP = (lastP.messages || []).map((m) => String(m.content || '')).join('\n');
+        check('[168-PR] ★ คำขอถึง AI มีข้อมูลช็อตเป็น JSON + บทช่วงนั้น (บรรทัดอ้างอิงมี >>) + สไตล์ของผัง',
+              sentP.includes('"lensMm": 35') && sentP.includes('>> ' + refL.text) && sentP.includes('MOCKSTYLE'), sentP.slice(0, 300));
+        check('[168-PR] คำสั่งระบบสั่งให้ตอบเป็น JSON image/video', /"image"/.test(sentP) && /"video"/.test(sentP));
+        check('[168-PR] ไม่มีคำเตือน "ผังเปลี่ยน" หลังเพิ่งสร้าง', !document.querySelector('#floor-body .fp-prompt-stale'));
+        const camNow = F168.objById(plan168, cam168.id);
+        FT.edit(() => { camNow.lens = 85; });
+        FT.gotoBeat(0); FT.gotoBeat(1);
+        check('[168-PR] ★ เปลี่ยนเลนส์หลังสร้าง prompt = ขึ้นคำเตือนให้เขียนใหม่', !!document.querySelector('#floor-body .fp-prompt-stale'));
+        FT.edit(() => { camNow.lens = 35; });
+        // shot list (ทางกลาง ส่งออก → แผง)
+        const csvP = await kapi.join(state.root, 'k2test-shotlist.csv');
+        const gotCsv = await exportPanel('floorplan', 'csv', csvP);
+        const csvTxt = gotCsv ? await kapi.readFile(csvP) : '';
+        check('[168-PR] ★ ส่งออก shot list CSV: หนึ่งจังหวะหนึ่งแถว + เลนส์ + prompt', !!gotCsv && csvTxt.includes('35mm') && csvTxt.includes('MOCK still')
+              && csvTxt.trim().split(/\r?\n/).length === plan168.beats.length + 1, csvTxt.slice(0, 200));
+        if (gotCsv) await kapi.remove(csvP);
+        const mdP = await kapi.join(state.root, 'k2test-shotlist.md');
+        const gotMd = await exportPanel('floorplan', 'md', mdP);
+        const mdTxt = gotMd ? await kapi.readFile(mdP) : '';
+        check('[168-PR] ส่งออก shot list Markdown (หัวข้อต่อจังหวะ + prompt ในบล็อกโค้ด)', !!gotMd && /^# /.test(mdTxt) && mdTxt.includes('```\nMOCK still'), mdTxt.slice(0, 200));
+        if (gotMd) await kapi.remove(mdP);
+        await FT.S.flushPlan();
+        const diskP = await kapi.readJson(pf168);
+        check('[168-PR] prompt + สไตล์ถูกบันทึกลงไฟล์ผัง', /MOCK still/.test((diskP.beats[1].prompt || {}).image || '') && diskP.style === 'MOCKSTYLE 35mm film');
+        FT.edit(() => { plan168.beats[1].note = ''; });
+        state.meta.ai.providers = keepP.providers;
+        state.meta.ai.activeProviderId = keepP.active;
+      }
+
+      // ── บันทึกแบบหน่วง + ทะเบียนงานค้าง ──
+      FT.edit(() => { plan168.beats[0].note = 'โน้ตทดสอบ'; });
+      check('[168-FP] ★ แก้แล้วยังไม่ลงไฟล์ = ขึ้นรายการงานค้าง (กฎ alpha.72)', allDirtyList().some((d) => String(d.key).startsWith('::floorplan::')),
+            JSON.stringify(allDirtyList().map((d) => d.key)));
+      await FT.S.flushPlan();
+      const disk168 = await kapi.readJson(pf168);
+      check('[168-FP] บันทึกลงไฟล์ครบ (ชิ้น · จังหวะ · โน้ต · อ้างอิง)', disk168.objects.length === plan168.objects.length && disk168.beats[0].note === 'โน้ตทดสอบ'
+            && disk168.beats[1].ref.text === refL.text);
+      check('[168-FP] บันทึกแล้วไม่ค้างในรายการงาน', !allDirtyList().some((d) => String(d.key).startsWith('::floorplan::')));
+      check('[168-FP] ไฟล์อ่านกลับได้ตรงเดิม (normalize idempotent)', JSON.stringify(F168.normalizePlan(disk168).objects) === JSON.stringify(disk168.objects));
+
+      // ── ลบชิ้น (Delete) + เลิกทำจากป้ายแจ้ง ──
+      FT.V.sel = lt168.id;
+      document.querySelector('#floor-body .fp-stage').dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+      await until168(() => !!document.querySelector('.k-toast-act'));
+      check('[168-FP] Delete ลบไฟที่เลือก', !FT.S.currentPlan().objects.some((o) => o.id === lt168.id));
+      const act168 = [...document.querySelectorAll('.k-toast-act')].pop();
+      act168 && act168.click();
+      check('[168-FP] ★ กด "เลิกทำ" บนป้ายแจ้ง = ไฟกลับมา', FT.S.currentPlan().objects.some((o) => o.id === lt168.id));
+
+      // ── ส่งออก PNG (ทางกลาง ส่งออก → แผง) ──
+      const png168 = await kapi.join(state.root, 'k2test-floorplan.png');
+      const got168 = await exportPanel('floorplan', 'png', png168);
+      const bytes168 = got168 ? await kapi.readBytes(png168) : [];
+      check('[168-FP] ★ ส่งออกผังเป็น PNG ได้ (ไฟล์ PNG จริง)', !!got168 && bytes168[0] === 0x89 && bytes168[1] === 0x50 && bytes168.length > 2000,
+            got168 + ' · ' + bytes168.length);
+      if (got168) await kapi.remove(png168);
+
+      // ── ดัชนีซ่อมตัวเอง: ไฟล์ที่ก๊อปมาวางเองขึ้นรายการ · ไฟล์ที่หายถูกถอด ──
+      const stray = await kapi.join(fpDir, 'fp-stray168.json');
+      await kapi.writeFile(stray, JSON.stringify({ ...disk168, id: 'x', name: 'ผังวางมือ' }));
+      const idxA = await FT.S.loadIndex({ fresh: true });
+      check('[168-FP] ★ ดัชนีเจอไฟล์ผังที่วางเอง (อ่านเฉพาะไฟล์ใหม่)', !!idxA.plans['fp-stray168'] && idxA.plans['fp-stray168'].name === 'ผังวางมือ');
+      await kapi.remove(stray);
+      const idxB = await FT.S.loadIndex({ fresh: true });
+      check('[168-FP] ไฟล์ที่หายไปถูกถอดออกจากดัชนี', !idxB.plans['fp-stray168'] && !!idxB.plans[plan168.id]);
+
+      // ── ลบผังลงถัง → กู้คืนกลับ FloorPlans/ (ไม่ใช่ไปเป็นหน้า Wiki) ──
+      const dst168 = await FT.S.trashPlan(plan168.id);
+      check('[168-FP] ลบผัง = ย้ายลงถังพร้อมใบกู้คืน', !!dst168 && await kapi.exists(dst168) && !(await kapi.exists(pf168))
+            && (await kapi.readJson(dst168 + '.k2restore.json')).kind === 'floorplan');
+      await restoreFromTrash(dst168, dst168.split(/[\\/]/).pop());
+      check('[168-FP] ★ กู้คืนผังจากถัง = กลับเข้า FloorPlans/', await kapi.exists(pf168) && !(await kapi.exists(dst168)));
+      check('[168-FP] กู้คืนแล้วขึ้นดัชนีอีกครั้ง', !!(await FT.S.loadIndex({ fresh: true })).plans[plan168.id]);
       await kapi.testShot('/tmp/k2_floorplan.png');
 
-      await updateSceneRow(dPath, sc3.id, (r) => {
-        delete r.mapId; delete r.pinId; delete r.storyDate; delete r.clues;
-      });
-      await saveMaps(prevMaps);                 // คืนแผนที่เดิม ไม่ทิ้งขยะให้เทสถัดไป
-      state._floor = null;
+      // เก็บกวาด — ไม่ทิ้งผัง/แท็บ/สถานะแผงให้เทสถัดไป
+      if (state.tabs.has(scFile168)) { const tb = state.tabs.get(scFile168); if (tb.dirty) await saveTab(tb); closeTab(scFile168); }
+      await FT.S.flushPlan();
+      resetFloorPlanView();
+      await kapi.remove(fpDir);
       hidePanel('floorplan');
     }
 
@@ -10326,7 +10842,7 @@ export async function runTest(projectPath) {
         // แผงจัดการบท: ปุ่มหัวแผงต้องไม่พับหลายบรรทัดเมื่อแผงแคบ
         showPanel('chapters');
         let chHead = null;
-        for (let i = 0; i < 40 && !chHead; i++) { await new Promise((r) => setTimeout(r, 50)); chHead = document.querySelector('.chapters-wrap .books-head'); }
+        for (let i = 0; i < 40 && !chHead; i++) { await new Promise((r) => setTimeout(r, 50)); chHead = document.querySelector('.chapters-lib .books-head'); }
         check('[164-R2-1] เปิดแผงจัดการบทได้', !!chHead);
         if (chHead) {
           const panel = chHead.closest('.k-float-panel, .k-panel');
@@ -24696,6 +25212,41 @@ export async function runTest(projectPath) {
               brd.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true, clientX: r.left + 60, clientY: r.top + 60 }));
               await until62(() => !!document.querySelector('#galboard-body .gal2-card[data-kind="scene"]'));
               check('[167-B] ★ ปล่อยฉากลงกระดาน = การ์ดฉาก', !!document.querySelector('#galboard-body .gal2-card[data-kind="scene"]'));
+              // [alpha.168] ผู้ใช้: "drag and drop มันไม่วางตรง cursor · card ชอบดีดออกเวลาปรับขนาด"
+              //   ต้นตอ: .k-card{position:relative} ชนะ .gal2-bitem{position:absolute} → การ์ดไหลต่อกัน (ตำแหน่งขึ้นกับใบอื่น)
+              const cards = [...document.querySelectorAll('#galboard-body .gal2-card')];
+              check('[168-B] ★ การ์ดทุกใบวางแบบ absolute (ไม่ไหลต่อกัน = ไม่ดีดเมื่อใบอื่นเปลี่ยนขนาด)',
+                    cards.length >= 3 && cards.every((c) => getComputedStyle(c).position === 'absolute'), cards.map((c) => getComputedStyle(c).position).join());
+              const sc = document.querySelector('#galboard-body .gal2-card[data-kind="scene"]').getBoundingClientRect();
+              check('[168-B] ★ ปล่อยการ์ดลงกระดาน = กึ่งกลางการ์ดอยู่ตรงเคอร์เซอร์', Math.abs(sc.left + sc.width / 2 - (r.left + 60)) < 12 && Math.abs(sc.top + sc.height / 2 - (r.top + 60)) < 12,
+                    Math.round(sc.left + sc.width / 2 - r.left) + ',' + Math.round(sc.top + sc.height / 2 - r.top));
+              check('[168-B] การ์ดตัวละครเป็นการ์ดรูปใหญ่ + ชื่อใต้รูป', !!document.querySelector('#galboard-body .gal2-ent .gal2-ent-pic') &&
+                    (document.querySelector('#galboard-body .gal2-ent .gal2-ent-name').textContent || '').length > 0);
+              // ดับเบิลคลิกที่ว่าง = โน้ตใหม่ (แก้ข้อความในที่)
+              brd.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: r.left + 30, clientY: r.top + r.height - 40 }));
+              await until62(() => !!document.querySelector('#galboard-body .gal2-note-edit'));
+              const ta = document.querySelector('#galboard-body .gal2-note-edit');
+              // หน้าต่างเทสอาจไม่มีโฟกัส → blur() เฉย ๆ ไม่ยิงอีเวนต์ · ส่งอีเวนต์ blur ตรง (ทางเดียวกับผู้ใช้คลิกออก)
+              if (ta) { ta.value = 'โน้ตทดสอบ'; ta.dispatchEvent(new FocusEvent('blur')); }
+              for (let i = 0; i < 40 && !(await AC63.readAlbumDoc(kapi, state.root, 'ทดสอบ')).moodBoard.some((x) => x.kind === 'note' && x.text === 'โน้ตทดสอบ'); i++) await new Promise((res) => setTimeout(res, 50));
+              check('[168-B] ★ ดับเบิลคลิกที่ว่าง = โน้ตใหม่ พิมพ์ในที่แล้วบันทึกลงไฟล์',
+                    (await AC63.readAlbumDoc(kapi, state.root, 'ทดสอบ')).moodBoard.some((x) => x.kind === 'note' && x.text === 'โน้ตทดสอบ'));
+              // เลือก + แถบลอยเลื่อนชั้น (ผู้ใช้: "ย้าย card ทับบน ทับล่าง")
+              const note = document.querySelector('#galboard-body .gal2-note');
+              if (note) {
+                const nr = note.getBoundingClientRect();
+                note.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: nr.left + 10, clientY: nr.top + 10 }));
+                document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: nr.left + 10, clientY: nr.top + 10 }));
+                await new Promise((res) => setTimeout(res, 120));
+                check('[168-B] คลิกชิ้น = เลือก + แถบลอย (ขึ้น/ลงชั้น · ทำสำเนา · เอาออก)', note.classList.contains('sel') &&
+                      document.querySelectorAll('#galboard-body .gal2-selbar.on .gal2-sb').length === 6);
+                const zBefore = +note.style.zIndex;
+                document.querySelectorAll('#galboard-body .gal2-selbar .gal2-sb')[3].click();     // ล่างสุด
+                await until62(() => { const n2 = document.querySelector('#galboard-body .gal2-note'); return n2 && +n2.style.zIndex < zBefore; });
+                const n2 = document.querySelector('#galboard-body .gal2-note');
+                check('[168-B] ★ ส่งลงล่างสุด = อยู่ใต้ทุกชิ้น', !!n2 && [...document.querySelectorAll('#galboard-body .gal2-bitem')].every((x) => x === n2 || +x.style.zIndex > +n2.style.zIndex),
+                      n2 && n2.style.zIndex);
+              }
             }
             await kapi.testShot('/tmp/k2_mb167.png');
             check('[167-B] แถบกระดานมีปุ่มส่งออก + ปุ่มการ์ดอ้างอิง',
@@ -32347,7 +32898,7 @@ export async function runTest(projectPath) {
           await kapi.writeFile(plainF, 'ข้อความล้วน');
           await openPlainFile(plainF, 'แผงว่าง161');
           check('[161-P1] ★ แท็บที่ไม่ใช่ฉาก → แผงขึ้นสถานะว่าง (ไม่ค้างฉากเก่า)',
-                await until159(() => !nameNow() && ($('#props-body') || {}).textContent.includes(tt('ui.app.pickSceneViewProps')), 5000),
+                await until159(() => !nameNow() && ($('#props-body') || {}).textContent.includes(tt('ui.app.pickSceneViewProps').replace(/^\(|\)$/g, '')), 5000),
                 ($('#props-body') || {}).textContent);
           closeTab(plainF, { discard: true });
           await kapi.remove(plainF).catch(() => {});
@@ -33026,18 +33577,18 @@ export async function runTest(projectPath) {
 
           // ── ธง flush: เนื้อแผงที่จัดการพื้นที่เอง ได้ padding 0 · แผงปกติยังได้ 8px ──
           {
-            showPanel('log'); showPanel('notes');
+            showPanel('log'); showPanel('backlinks');   // [alpha.168] สมุดโน้ตเป็นแผงแบบ flush แล้ว — ใช้แผงทั่วไปตัวอื่นเทียบ
             await renderFeaturePanel('log').catch(() => {});
             await w2(150);
             const bodyOf = (pid) => document.querySelector(`.k-panel[data-panel-id="${pid}"] > .k-panel-body`);
-            const bl = bodyOf('log'), bn = bodyOf('notes');
+            const bl = bodyOf('log'), bn = bodyOf('backlinks');
             check('[162-W2] ★★ แผงที่ตั้งธง flush ได้คลาส k-panel-flush + ไม่มี padding (เดิมเป็นกฎ :has(#id) สิบกฎ)',
                   !!bl && bl.classList.contains('k-panel-flush') && getComputedStyle(bl).paddingTop === '0px',
                   bl && getComputedStyle(bl).padding);
             check('[162-W2] ★ แผงทั่วไปไม่ได้ธงนี้ (ยังมีระยะขอบปกติ)',
                   !!bn && !bn.classList.contains('k-panel-flush') && parseFloat(getComputedStyle(bn).paddingTop) > 0,
                   bn && getComputedStyle(bn).padding);
-            hidePanel('notes');
+            hidePanel('backlinks');
           }
 
           // ── ปุ่มที่โมดูลอื่นฝากบนหัวแผง = makePanelButton (กดด้วยคีย์บอร์ดได้ · มีทูลทิปสองบรรทัด) ──
@@ -34466,6 +35017,351 @@ export async function runTest(projectPath) {
           if (keepMaps != null) await kapi.writeFile(mp, keepMaps); else await kapi.remove(mp);
           resetPanels(); await wV(300);
         } catch (e) { out.push('INFO [167-V] ' + (e && e.message)); }
+      }
+
+      // ══════════ [alpha.168 · bug hunt] ชุดกันพลาดของรอบไล่บั๊กก่อน release ══════════
+      // ทุกข้อทำซ้ำอาการเดิมบนแอปจริง (ไฟล์จริง · DOM จริง · คีย์จริง) — ของเดิมแต่ละข้อคือบั๊กที่ผู้ใช้จะเจอ
+      {
+        const wB = (ms) => new Promise((r) => setTimeout(r, ms));
+        const within = (p, ms) => Promise.race([Promise.resolve(p).then(() => 'done'), wB(ms).then(() => 'timeout')]);
+        const untilB = async (fn, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await wB(60); } return false; };
+        const A = await import('./app.js');
+        const MU = await import('./maps-ui.js');
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        resetPanels(); await wB(300);
+
+        // ── 1) แผนที่: หมวดที่กรองอยู่หายไป = ต้องไม่วาดวนจนแอปค้าง ──
+        const mpB = await kapi.join(state.root, 'maps.json');
+        const hadMapsB = await kapi.exists(mpB);
+        const keepMapsB = hadMapsB ? await kapi.readFile(mpB) : null;
+        const mkMap = (id, name, category, order) => ({ id, name, image: '', category, order, pins: [], routes: [],
+          overlays: { grid: false, gridSize: 10, compass: false, scale: false, scaleLabel: '' } });
+        await kapi.writeFile(mpB, JSON.stringify({ version: '1.2', maps: [mkMap('bhA', 'ใบ A', 'X', 0), mkMap('bhB', 'ใบ B', '', 1)] }, null, 2));
+        MU.resetMapsView();
+        getPanelManager().floatPanel('maps', { x: 40, y: 80, w: 1100, h: 700 }); await wB(300);
+        await MU.openMapById('bhA'); await wB(500);
+        const catX = [...document.querySelectorAll('#maps-body .map-cat')].find((c) => c.textContent.startsWith('X'));
+        check('[168-BH] แผนที่: มีแถบหมวดให้กรอง (ตั้งต้นของข้อถัดไป)', !!catX);
+        catX.click(); await wB(500);
+        check('[168-BH] แผนที่: กรองหมวด X แล้วยังเป็นใบ A', mapsState_C.s.currentId === 'bhA');
+        // ย้ายใบเดียวของหมวด X ไปหมวดอื่น → หมวดที่กรองอยู่ไม่มีแผนที่เหลือ
+        findMap(mapsState_C.s.data.maps, 'bhA').category = 'Y';
+        await A.saveMaps(mapsState_C.s.data);
+        const loopB = await within(MU.renderMaps($('#maps-body')), 5000);
+        check('[168-BH] ★★ แผนที่: หมวดที่กรองหายไปแล้ว วาดจบ ไม่วนค้าง (เดิมแอปค้างทั้งโปรแกรม)', loopB === 'done', loopB);
+        await wB(300);
+        check('[168-BH] แผนที่: ตัวกรองที่ใช้ไม่ได้ถูกล้าง + ยังเห็นแผนที่', !document.querySelector('#maps-body .map-cat.on:not(:first-child)')
+              && !!document.querySelector('#maps-body .map-canvas'));
+        // แป้นไทย: ปุ่มกายภาพ D (ให้ตัว "ก") ต้องเลื่อนแผนที่ได้
+        {
+          const stage = document.querySelector('#maps-body .map-stage');
+          const main = document.querySelector('#maps-body .map-main');
+          const cx0 = main._cam().cx;
+          stage.dispatchEvent(new KeyboardEvent('keydown', { key: 'ก', code: 'KeyD', bubbles: true, cancelable: true }));
+          await wB(80);
+          check('[168-BH] ★ แผนที่: WASD ใช้ได้บนแป้นไทย (จับ e.code)', main._cam().cx > cx0, cx0 + ' → ' + main._cam().cx);
+        }
+        // ลบแผนที่ทั้งใบ → ย้อนกลับได้ + Explorer ตามทันที
+        {
+          const before = mapsState_C.s.data.maps.length;
+          document.querySelector('#maps-body .map-more-btn').click(); await wB(250);
+          const del = [...document.querySelectorAll('.k-menu .k-menu-item, .k-menu > *')].filter((x) => x.getClientRects().length).find((x) => x.textContent.includes(tt('ui.maps.delMap')));
+          del.click(); await wB(300);
+          const okB = [...document.querySelectorAll('.k-overlay .k-dialog .k-ok')].pop(); okB.click(); await wB(600);
+          check('[168-BH] แผนที่: ลบทั้งใบแล้วเหลือน้อยลงหนึ่ง', mapsState_C.s.data.maps.length === before - 1);
+          const treeRows = () => document.querySelectorAll('#tree .scene.map-row').length;
+          check('[168-BH] ★ แผนที่: Explorer ตามทันทีหลังลบ (เดิมค้างจำนวนเดิม)', await untilB(() => treeRows() === before - 1, 4000), String(treeRows()));
+          const undoBtn = [...document.querySelectorAll('#k-toasts .k-toast-act')].pop();
+          check('[168-BH] แผนที่: ลบแล้วมีปุ่มย้อนกลับ', !!undoBtn);
+          undoBtn.click(); await wB(700);
+          check('[168-BH] ★ แผนที่: ย้อนกลับ = แผนที่กลับมาครบ', mapsState_C.s.data.maps.length === before
+                && (await kapi.readJson(mpB)).maps.length === before);
+        }
+        resetPanels(); await wB(300);
+
+        // ── 2) ไฟล์ JSON ที่อ่านไม่ออก ≠ ไฟล์ว่าง ──
+        const two = JSON.stringify({ version: '1.2', maps: [mkMap('bhA', 'ใบ A', '', 0), mkMap('bhB', 'ใบ B', '', 1)] }, null, 2);
+        await kapi.writeFile(mpB, String.fromCharCode(0xFEFF) + two);
+        check('[168-BH] ★★ maps.json ที่มี BOM (บันทึกจาก Notepad) อ่านได้ครบ (เดิม = ว่าง แล้วถูกเขียนทับ)', (await A.loadMaps()).maps.length === 2);
+        const brokenText = two.slice(0, two.length - 40);
+        await kapi.writeFile(mpB, brokenText);
+        const listBak = async () => (await kapi.listFiles(state.root, '.json')).filter((f) => /^maps\.unreadable-/.test(f));
+        for (const f of await listBak()) await kapi.remove(await kapi.join(state.root, f));
+        const brokenLoad = await A.loadMaps();
+        const bak = await listBak();
+        check('[168-BH] ★★ maps.json เสีย: เก็บสำเนาของเดิมไว้ก่อน', bak.length === 1 && (await kapi.readFile(await kapi.join(state.root, bak[0]))) === brokenText, bak.join());
+        check('[168-BH] maps.json เสีย: แผงเริ่มจากของว่าง + บอกผู้ใช้', brokenLoad.maps.length === 0 && !!document.querySelector('#k-toasts .k-toast-error'));
+        await A.loadMaps();
+        check('[168-BH] maps.json เสีย: โหลดซ้ำไม่ปั๊มสำเนาเพิ่ม', (await listBak()).length === 1);
+        for (const f of await listBak()) await kapi.remove(await kapi.join(state.root, f));
+        document.querySelectorAll('#k-toasts .k-toast').forEach((n) => n.remove());
+        // เส้นเวลา: แบบเดียวกัน
+        const tpB = await kapi.join(state.root, 'timeline.json');
+        const keepTlB = (await kapi.exists(tpB)) ? await kapi.readFile(tpB) : null;
+        await kapi.writeFile(tpB, '{"version":"1.0","events":[{"id":"bh1","title":"เหตุการณ์"');
+        const tlBroken = await loadTimeline();
+        const tlBak = (await kapi.listFiles(state.root, '.json')).filter((f) => /^timeline\.unreadable-/.test(f));
+        check('[168-BH] ★ timeline.json เสีย: เก็บสำเนา + ไม่ล้ม', tlBroken.events.length === 0 && tlBak.length === 1);
+        for (const f of tlBak) await kapi.remove(await kapi.join(state.root, f));
+        document.querySelectorAll('#k-toasts .k-toast').forEach((n) => n.remove());
+
+        // ── 3) เส้นเวลา: เมนู "เปิดสิ่งที่อ้างอิง" ต้องมีรายการ ──
+        await kapi.writeFile(tpB, JSON.stringify({ version: '1.0', links: [], events: [
+          { id: 'bh-ev', title: 'งานวัด', when: 'ปีที่ 3', whenEnd: '', track: '', desc: '',
+            refs: [{ kind: 'entity', path: 'Wiki/characters/cat.json', title: 'ยัยแมวเก้าชีวิต' }] }] }, null, 2));
+        getPanelManager().floatPanel('timeline', { x: 40, y: 80, w: 1100, h: 640 }); await wB(300);
+        state._tlView = 'gantt';
+        await renderTimeline($('#tl-body')); await wB(500);
+        const cardB = document.querySelector('#tl-body .tl-card[data-key="bh-ev"]') || document.querySelector('#tl-body .tl-card');
+        check('[168-BH] เส้นเวลา: มีการ์ดของเหตุการณ์', !!cardB);
+        {
+          const r = cardB.getBoundingClientRect();
+          cardB.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 30, clientY: r.top + 20 }));
+          await wB(350);
+          const row = [...document.querySelectorAll('.k-menu .k-menu-has-sub')].filter((x) => x.getClientRects().length).find((x) => x.textContent.includes(tt('ui.timeline.refsMenu')));
+          check('[168-BH] เส้นเวลา: เมนูการ์ดมีรายการอ้างอิง', !!row);
+          row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true })); row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); row.click();
+          const got = await untilB(() => [...document.querySelectorAll('.k-menu.k-submenu')].some((m) => m.textContent.includes('ยัยแมวเก้าชีวิต')), 3000);
+          check('[168-BH] ★★ เส้นเวลา: เมนูย่อย "เปิดสิ่งที่อ้างอิง" มีรายการจริง (เดิมขึ้น "(ว่าง)" เสมอ)', got,
+                [...document.querySelectorAll('.k-menu')].map((m) => m.textContent.slice(0, 40)).join(' | '));
+          closeMenu(); document.querySelectorAll('.k-menu').forEach((m) => m.remove());
+        }
+        if (keepTlB != null) await kapi.writeFile(tpB, keepTlB); else await kapi.remove(tpB);
+        resetPanels(); await wB(300);
+
+        // ── 4) ผังพื้นที่: ทางสัมพัทธ์ · คีย์แป้นไทย · Esc แล้วแก้ช่องได้ทันที · Ctrl+Z ไม่ย้อนเอกสาร ──
+        {
+          const FP = await import('./floorplan-ui.js');
+          const FT = FP.__fpTest;
+          FP.resetFloorPlanView();
+          getPanelManager().floatPanel('floorplan', { x: 40, y: 80, w: 1100, h: 700 }); await wB(300);
+          const planB = await FT.S.createPlan('ผัง bug hunt', null);
+          FT.V.planId = planB.id;
+          await FP.renderFloorPlanPanel(); await wB(500);
+          const stage = document.querySelector('#floor-body .fp-stage');
+          check('[168-BH] ผังพื้นที่: เปิดผังทดสอบได้', !!stage && FT.S.currentPlan().id === planB.id);
+          const catFile = await kapi.join(state.root, 'Wiki', 'characters', 'cat.json');
+          await FT.addEntities([{ path: catFile, title: 'ยัยแมวเก้าชีวิต', cat: 'characters' }], { x: 1, y: 1 });
+          const ent = FT.S.currentPlan().objects.find((o) => o.type === 'entity');
+          check('[168-BH] ★★ ผังพื้นที่: จดทางเอนทิตี้เป็นทางสัมพัทธ์ (เดิมเป็นทางเต็มของเครื่อง — ย้ายเครื่องแล้วพัง)',
+                !!ent && ent.entityFile === 'Wiki/characters/cat.json', ent && ent.entityFile);
+          await FT.S.flushPlan();
+          const onDisk = await kapi.readFile(await kapi.join(state.root, 'FloorPlans', planB.id + '.json'));
+          check('[168-BH] ★ ผังพื้นที่: ไฟล์บนดิสก์ไม่มีทางของเครื่องปนอยู่', !onDisk.includes(String(state.root).split('\\').join('\\\\')) && !onDisk.includes(String(state.root).split('\\').join('/')));
+          // ไฟล์เก่าที่จดทางเต็มไว้ → เปิดแล้วถูกชี้กลับ
+          ent.entityFile = '/Users/someone/OldProject/Wiki/characters/cat.json';
+          await FP.renderFloorPlanPanel(); await wB(400);
+          check('[168-BH] ★ ผังพื้นที่: ไฟล์จากเครื่องอื่นถูกชี้กลับเข้าโปรเจกต์นี้ตอนเปิด',
+                FT.S.currentPlan().objects.find((o) => o.type === 'entity').entityFile === 'Wiki/characters/cat.json');
+          // กล้อง + หมุนด้วยคีย์ของแป้นไทย
+          FT.setTool('camera'); FT.placeAt({ x: 3, y: 2 }, { shiftKey: false, altKey: false }); await wB(200);
+          const cam = FT.S.currentPlan().objects.find((o) => o.type === 'camera');
+          const st2 = document.querySelector('#floor-body .fp-stage');
+          st2.focus();
+          const rot0 = FT.F.poseAt(FT.S.currentPlan(), cam.id, 0).rot;
+          st2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ล', code: 'BracketRight', bubbles: true, cancelable: true }));
+          await wB(120);
+          const rot1 = FT.F.poseAt(FT.S.currentPlan(), cam.id, 0).rot;
+          check('[168-BH] ★★ ผังพื้นที่: คีย์หมุน ] ใช้ได้บนแป้นไทย (จับ e.code)', Math.abs(rot1 - rot0) === 15, rot0 + ' → ' + rot1);
+          // ลากแล้ว Esc → แก้ช่อง "ชื่อ" ในแผงคุณสมบัติครั้งแรกต้องติด
+          const camEl = document.querySelector('#floor-body .fp-obj.fp-camera');
+          const cr = camEl.getBoundingClientRect();
+          const px = cr.left + cr.width / 2, py = cr.top + cr.height / 2;
+          camEl.firstElementChild.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: px, clientY: py, button: 0, buttons: 1, pointerId: 1 }));
+          await wB(40);
+          window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: px + 70, clientY: py + 12, buttons: 1, pointerId: 1 }));
+          await wB(80);
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+          await wB(200);
+          check('[168-BH] ผังพื้นที่: Esc คืนตำแหน่งกล้อง', Math.abs(FT.F.poseAt(FT.S.currentPlan(), cam.id, 0).x - 3) < 1e-6);
+          const nameInp = [...document.querySelectorAll('#floor-body .fp-insp .fp-f')].find((f) => f.textContent.startsWith(tt('ui.fp.fLabel')));
+          const inp = nameInp.querySelector('input');
+          inp.value = 'ZZ'; inp.dispatchEvent(new Event('change', { bubbles: true })); await wB(200);
+          check('[168-BH] ★★ ผังพื้นที่: หลัง Esc แก้ช่องในแผงคุณสมบัติครั้งแรกก็ติด (เดิมหาย ต้องแก้ซ้ำ)',
+                FT.S.currentPlan().objects.find((o) => o.id === cam.id).label === 'ZZ');
+          // Ctrl+Z บนผัง = ของผังเท่านั้น (เดิมยิง editor-undo ของเอกสารไปพร้อมกัน)
+          st2.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: px, clientY: py, button: 2, pointerId: 1 }));
+          const { focusedPanelOwnsKeys } = await import('./panels/panel-focus.js');
+          check('[168-BH] ★ ผังพื้นที่: เป็นเจ้าของ Ctrl+Z ตอนถูกเลือก (ตัวดักกลางไม่ยิง editor-undo)', focusedPanelOwnsKeys());
+          await FT.S.trashPlan(planB.id);
+          for (const f of await kapi.listFiles(await kapi.join(state.root, 'Recycle'), '').catch(() => [])) {
+            if (f.includes(planB.id)) await kapi.remove(await kapi.join(state.root, 'Recycle', f));
+          }
+          FP.resetFloorPlanView();
+          resetPanels(); await wB(300);
+        }
+
+        // ── 5) แถบเครื่องมือ: ล้นแล้วต้องไม่มีอะไรตกขอบ ──
+        {
+          const { layoutToolbarOverflow } = await import('./toolbar/toolbar-ui.js');
+          layoutToolbarOverflow(); await wB(120);
+          const bar = $('#toolbar'), ob = $('#tb-overflow');
+          check('[168-BH] ★★ แถบเครื่องมือ: ไม่ล้นแนวนอน (เดิมไม่นับ margin ของเส้นคั่น → ปุ่ม » ตกขอบ)',
+                bar.scrollWidth <= bar.clientWidth + 1, bar.scrollWidth + ' > ' + bar.clientWidth);
+          check('[168-BH] แถบเครื่องมือ: ปุ่ม » อยู่ในกรอบแถบ', ob.getBoundingClientRect().right <= bar.getBoundingClientRect().right + 1);
+        }
+
+        // ── 6) แดชบอร์ดที่โปรแกรมเปิดให้เอง พับเก็บเมื่อเปิดเอกสารแรก ──
+        {
+          globalThis.__k2autoDashTest = true;
+          await openDashboard(); await wB(300);
+          state._autoDash = true;
+          const anyTab = [...state.tabs.keys()][0];
+          if (anyTab) activate(anyTab); else A.autoCloseDashboard();
+          await wB(250);
+          check('[168-BH] ★ แดชบอร์ดที่เปิดให้เอง พับเก็บเมื่อเปิดเอกสาร (ไม่กินพื้นที่เขียน 640px)', !isPanelOpen('dashboard') && !state._autoDash);
+          await openDashboard(); await wB(300);
+          await handleCommand('toggle-panel', 'dashboard'); await wB(200);      // ผู้ใช้สั่งเอง = ล้างธง
+          await handleCommand('toggle-panel', 'dashboard'); await wB(300);
+          if (anyTab) activate(anyTab);
+          await wB(200);
+          check('[168-BH] แดชบอร์ดที่ผู้ใช้เปิดเอง ไม่ถูกพับ', isPanelOpen('dashboard'));
+          globalThis.__k2autoDashTest = false;
+          resetPanels(); await wB(300);
+        }
+
+        // ── 7) สถานะว่างของพื้นที่เอกสาร · หน้าแรก · กล่องเริ่มต้นใช้งาน ──
+        {
+          A.syncDocsEmpty();
+          const noTab = !document.querySelector('#tabs > .tab');
+          check('[168-BH] พื้นที่เอกสาร: กล่องสถานะว่างโผล่เฉพาะตอนไม่มีแท็บ', !!document.querySelector('#content > .k-docs-empty') === noTab);
+          const { homeEmptyBox } = await import('./home-ui.js');
+          const hb = homeEmptyBox(() => {});
+          check('[168-BH] หน้าแรก: กล่อง "ยังไม่มีโปรเจกต์" มีหัวข้อ คำแนะนำ และปุ่มสร้าง',
+                !!hb.querySelector('h2') && !!hb.querySelector('p') && !!hb.querySelector('button.k-ok') && !/^ui\./.test(hb.querySelector('button').textContent));
+          await handleCommand('quick-start'); await wB(300);
+          const g = document.querySelector('.k-overlay .k-guide');
+          check('[168-BH] ★ ช่วยเหลือ → เริ่มต้นใช้งาน เปิดกล่องได้ ครบ 7 ขั้น ไม่มีคีย์ภาษาโผล่',
+                !!g && g.querySelectorAll('.k-guide-step').length === 7 && ![...g.querySelectorAll('*')].some((n) => n.children.length === 0 && /^ui\.[a-z]/i.test(n.textContent.trim())));
+          check('[168-BH] เริ่มต้นใช้งาน: มีทางออก (ปุ่มปิด) ขวาสุด', !!g.querySelector('.k-dlg-btns .k-cancel') && g.querySelector('.k-dlg-btns').lastElementChild.classList.contains('k-ok'));
+          g.querySelector('.k-dlg-btns .k-cancel').click(); await wB(150);
+          check('[168-BH] เริ่มต้นใช้งาน: ปิดได้', !document.querySelector('.k-overlay .k-guide'));
+        }
+
+        // ── 8) ส่งออกผังแตกสายตามรูปแบบจากเมนูระบบ (เดิมทุกรูปแบบแค่เปิดเมนูของแผง) ──
+        {
+          const bp = '/tmp/k2_bh_branch.md';
+          try { await kapi.remove(bp); } catch {}
+          const got = await exportPanel('branch', 'md', bp);
+          const menuOpen = [...document.querySelectorAll('.k-menu')].some((m) => m.getClientRects().length);
+          check('[168-BH] ★ ส่งออก → ผังแตกสาย → Markdown เขียนไฟล์เลย ไม่เปิดเมนูซ้อน', !!got && !menuOpen && await kapi.exists(bp), String(got) + ' menu=' + menuOpen);
+          resetPanels(); await wB(300);
+        }
+
+        // ── 9) กระดานอารมณ์: ย้อนกลับได้ ──
+        {
+          showPanel('gallery-board'); await wB(500);
+          await untilB(() => moodBoardInstance(), 3000);
+          const mb = moodBoardInstance();
+          check('[168-BH] กระดานอารมณ์: เปิดแผงได้', !!mb);
+          const b0 = JSON.stringify((await mb.doc()).moodBoard || []);
+          await mb.addKind('palette', { x: 100, y: 100 }); await wB(300);
+          const b1 = JSON.stringify((await mb.doc()).moodBoard || []);
+          check('[168-BH] กระดานอารมณ์: เพิ่มแถบสีแล้วกระดานเปลี่ยน', b1 !== b0);
+          const undone = await mb.stepHistory(-1); await wB(200);
+          check('[168-BH] ★ กระดานอารมณ์: Ctrl+Z ย้อนการแก้ล่าสุดได้ (เดิมไม่มีทางย้อน)', undone && JSON.stringify((await mb.doc()).moodBoard || []) === b0);
+          const redone = await mb.stepHistory(1); await wB(200);
+          check('[168-BH] กระดานอารมณ์: ทำซ้ำได้', redone && JSON.stringify((await mb.doc()).moodBoard || []) === b1);
+          await mb.stepHistory(-1); await wB(200);
+          resetPanels(); await wB(300);
+        }
+
+        // คืนไฟล์แผนที่ของโปรเจกต์ทดสอบ
+        if (keepMapsB != null) await kapi.writeFile(mpB, keepMapsB); else await kapi.remove(mpB);
+        MU.resetMapsView();
+        await buildTree();
+      }
+
+      // ══ [alpha.168 · bug hunt 2] รอบสองของ bug hunt ก่อน release ══
+      {
+        const w2 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until2 = async (fn, ms = 4000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const v = await fn(); if (v) return v; await w2(60); } return null; };
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+
+        // (1) เมนูระบบ: ป้ายถูกแปลตอนสร้างเมนู ไม่ใช่ตอนโหลด main.js (เดิมได้คีย์ดิบ 49 รายการ)
+        const labels2 = await kapi.menuLabels();
+        check('[168-BH2] เงื่อนไข: อ่านป้ายของเมนูตัวจริงได้', Array.isArray(labels2) && labels2.length > 200, String(labels2 && labels2.length));
+        const rawKeys2 = labels2.filter((l) => /(^| > )ui\.[A-Za-z0-9]+\.[A-Za-z0-9_.:-]+$/.test(l));
+        check('[168-BH2] ★★ เมนูระบบไม่มีคีย์ภาษาดิบเลย (เดิม มุมมอง → แผง และ ส่งออก โชว์ ui.menu.… )', rawKeys2.length === 0, rawKeys2.slice(0, 4).join(' | '));
+        check('[168-BH2] ★ เมนู ส่งออก: หัวข้อของแผงเป็นข้อความจริง', labels2.some((l) => l.endsWith(' > ' + tt('ui.common.lineTime'))) && labels2.some((l) => l.endsWith(' > ' + tt('ui.menu.projectExplorer'))));
+
+        // (2) กล่องป้ายภาพ: ช่องชื่อถูก select กว้าง 100% บีบเหลือ ~25px
+        const VT2 = await import('./visual-tags.js');
+        VT2.manageVisualTags(); await w2(80);
+        const ovT2 = [...document.querySelectorAll('.k-overlay')].pop();
+        const nameI2 = ovT2 && ovT2.querySelector('input.k-dlg-input:not([type=color])');
+        check('[168-BH2] เงื่อนไข: เปิดกล่องป้ายภาพได้', !!nameI2);
+        check('[168-BH2] ★ กล่องป้ายภาพ: ช่องชื่อแท็กกว้างพอให้พิมพ์', nameI2.getBoundingClientRect().width >= 120, String(Math.round(nameI2.getBoundingClientRect().width)));
+        const optT2 = [...ovT2.querySelectorAll('select option')].map((o) => o.textContent);
+        check('[168-BH2] ★ กล่องป้ายภาพ: ชื่อรูปทรงมาจากไฟล์ภาษา (ค่าในไฟล์ยังเป็น circle/square/tag)', optT2.includes(tt('ui.tags.shapeCircle')) && !optT2.includes('circle')
+              && [...ovT2.querySelectorAll('select option')].map((o) => o.value).join(',') === 'circle,square,tag', optT2.join(','));
+        ovT2.querySelector('.k-cancel').click();
+
+        // (3) หน้าแรก: "แก้ไขล่าสุด" เดิมอ่านช่องที่ไม่เคยมีใครเขียน → ค้างวันสร้างโปรเจกต์ (fixture ไม่มีวันสร้าง = "—")
+        const H2 = await import('./home-ui.js');
+        const rp2 = await H2.readRecentProject(state.root);
+        const age2 = Date.now() - new Date(rp2.lastModified || 0).getTime();
+        check('[168-BH2] ★ หน้าแรก: "แก้ไขล่าสุด" ตามเวลาที่ทำงานจริง', !rp2.broken && rp2.dateStr !== '—' && age2 >= 0 && age2 < 6 * 3600e3,
+              rp2.dateStr + ' · ' + Math.round(age2 / 1000) + 's');
+
+        // (4) ปุ่มลอยที่ตำแหน่งตั้งต้นหลบแถบรูปแบบ (เดิมทับปุ่มไฮไลต์/ลูกศรช่องสไตล์ตั้งแต่เปิดโปรแกรม)
+        const lsKeep2 = localStorage.getItem('k2-ui-layout');
+        const alignKeep2 = fmtbarState().align;
+        const rowF2 = document.querySelector('#tree .scene[data-path$=".md"]');
+        check('[168-BH2] เงื่อนไข: มีฉากให้เปิด', !!rowF2);
+        await openScene(rowF2.dataset.path, null);
+        const barF2 = await until2(() => { const b = document.querySelector('#content .k-fmtbar:not(.planner-fmtbar)'); return b && b.style.display !== 'none' && b.getClientRects().length ? b : null; });
+        check('[168-BH2] เงื่อนไข: แถบรูปแบบแสดงอยู่', !!barF2);
+        const fabF2 = $('#k-fab');
+        { const l = JSON.parse(localStorage.getItem('k2-ui-layout') || '{}'); delete l.fab; localStorage.setItem('k2-ui-layout', JSON.stringify(l)); }
+        fabF2.style.left = ''; fabF2.style.top = ''; fabF2.style.right = ''; fabF2.style.bottom = '';
+        const fr0 = fabF2.getBoundingClientRect(), hostR2 = $('#content').getBoundingClientRect();
+        const posKeep2 = { left: barF2.style.left, top: barF2.style.top, right: barF2.style.right, bottom: barF2.style.bottom };
+        // วางแถบให้อยู่ใต้ปุ่มลอยแน่ ๆ (ขอบขวาเลยปุ่มไป 6px · ขอบบนสูงกว่าปุ่ม 4px)
+        const bw2 = barF2.getBoundingClientRect().width;
+        barF2.style.left = Math.max(0, Math.round(fr0.right + 6 - bw2 - hostR2.left)) + 'px';
+        barF2.style.top = Math.round(fr0.top - 4 - hostR2.top) + 'px'; barF2.style.right = 'auto'; barF2.style.bottom = 'auto';
+        const hit2 = () => { const fr = fabF2.getBoundingClientRect(), br = barF2.getBoundingClientRect();
+          return Math.min(br.right, fr.right) - Math.max(br.left, fr.left) > 0 && Math.min(br.bottom, fr.bottom) - Math.max(br.top, fr.top) > 0; };
+        check('[168-BH2] เงื่อนไข: จัดให้แถบอยู่ใต้ปุ่มลอยได้ (ก่อนหลบ = ทับกัน)', hit2(), JSON.stringify([fr0.left, fr0.top, bw2]));
+        const dodged2 = dodgeFabFromFmtbar();
+        check('[168-BH2] ★ ปุ่มลอยตั้งต้นหลบขึ้นเหนือแถบรูปแบบ ไม่ทับกัน', dodged2 === true && !hit2() && fabF2.getBoundingClientRect().bottom <= barF2.getBoundingClientRect().top,
+              dodged2 + ' bottom=' + fabF2.style.bottom);
+        check('[168-BH2] ปุ่มลอยที่หลบแล้วยังอยู่ในจอ', fabF2.getBoundingClientRect().top >= 0);
+        barF2.style.top = '0px';
+        const back2 = dodgeFabFromFmtbar();
+        check('[168-BH2] ★ แถบย้ายไปที่อื่น → ปุ่มลอยกลับมุมเดิม', back2 === false && fabF2.style.bottom === '' && Math.abs(fabF2.getBoundingClientRect().top - fr0.top) < 1, fabF2.style.bottom);
+        // ผู้ใช้ลากปุ่มไปวางเองแล้ว = ไม่ยุ่ง
+        barF2.style.top = Math.round(fr0.top - 4 - hostR2.top) + 'px';
+        fabF2.style.left = Math.round(fr0.left) + 'px'; fabF2.style.top = Math.round(fr0.top) + 'px'; fabF2.style.right = 'auto'; fabF2.style.bottom = 'auto';
+        check('[168-BH2] ปุ่มลอยที่ผู้ใช้วางเอง: ไม่ถูกย้าย', dodgeFabFromFmtbar() === false && Math.abs(fabF2.getBoundingClientRect().top - fr0.top) < 1);
+        // คืนสภาพ
+        fabF2.style.left = ''; fabF2.style.top = ''; fabF2.style.right = ''; fabF2.style.bottom = '';
+        Object.assign(barF2.style, posKeep2);
+        if (lsKeep2 != null) localStorage.setItem('k2-ui-layout', lsKeep2);
+        restoreFabPos();
+        if (fmtbarState().align !== alignKeep2) setFmtbarAlign(alignKeep2);
+        keepFloatingUiInView();
+
+        // (5) เปิดโปรเจกต์ที่ไฟล์โปรเจกต์เสีย: ของที่เปิดอยู่ต้องไม่ถูกปิด + ต้องบอกผู้ใช้
+        const rootKeep2 = state.root, tabsKeep2 = state.tabs.size;
+        const badDir2 = '/tmp/k2broken-proj';
+        try { await kapi.remove(badDir2); } catch {}
+        await kapi.mkdir(badDir2);
+        await kapi.writeFile(await kapi.join(badDir2, 'project.khn.json'), '{"title": "ครึ่งไฟ');
+        const opened2 = await openProjectFromUi(badDir2);
+        check('[168-BH2] ★★ เปิดโปรเจกต์ที่ไฟล์เสีย: โปรเจกต์ที่เปิดอยู่ไม่ถูกปิด (เดิมปิดก่อนแล้วค่อยล้ม)',
+              opened2 === false && state.root === rootKeep2 && state.tabs.size === tabsKeep2 && tabsKeep2 > 0, opened2 + ' root=' + state.root + ' tabs=' + state.tabs.size);
+        const st2 = $('#status');
+        check('[168-BH2] ★ เปิดโปรเจกต์ไม่ได้: ข้อความผิดพลาดบอกที่อยู่ (ค้างจนมีข้อความใหม่)', !!st2 && st2.textContent.includes('k2broken-proj'), st2 && st2.textContent.slice(0, 120));
+        document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+        try { await kapi.remove(badDir2); } catch {}
+
+        // (6) ของที่ยังขาด: เครดิตของไลบรารี/ฟอนต์ที่มากับตัวโปรแกรม
+        const creditNames2 = CREDITS.flatMap((g) => g.items.map((i) => i.name)).join(' | ');
+        check('[168-BH2] เครดิต: มี three.js และชุดไอคอน (มากับตัวโปรแกรมตั้งแต่ .166)', /three\.js/.test(creditNames2) && /Nerd Fonts/.test(creditNames2), creditNames2.slice(0, 200));
+        const tipClose2 = tt('ui.panelTip.close');
+        check('[168-BH2] ทูลทิปปิดแผง: ไม่เอ่ยถึงชิปที่ถอดออกไปแล้ว', !/ชิป|chip/i.test(tipClose2), tipClose2);
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

@@ -71,6 +71,32 @@ function slowIo(files, delay = 5) {
     await J.mutateJson(io, 'none2.json', (d) => { d.chapters.y = 1; }, { fallback: fb });
     check('fallback ถูกคัดลอก ไม่แก้ของผู้เรียก', !('y' in fb.chapters));
   }
+  // ── [alpha.168 · bug hunt 2] ไฟล์มีอยู่แต่อ่านไม่ออก ≠ ไฟล์ไม่มี ──
+  {
+    const files = { 'D/scenes.json': '{"chapters": {"c1": [{"id":"a"}' };   // ซิงก์มาครึ่งไฟล์
+    const copies = [];
+    const io = { exists: async (p) => p in files, readJson: async (p) => JSON.parse(files[p]),
+                 writeFile: async (p, s) => { files[p] = s; }, copyFile: async (a, b) => { files[b] = files[a]; copies.push(b); } };
+    const seen = [];
+    J.onBrokenJson((r) => seen.push(r));
+    const before = files['D/scenes.json'];
+    await J.mutateJson(io, 'D/scenes.json', (d) => { d.chapters.c9 = [{ id: 'new' }]; }, { fallback: { chapters: {} } });
+    check('★ ไฟล์เสีย + fallback: เก็บสำเนาของเดิมก่อนเขียนทับ', copies.length === 1 && /scenes\.unreadable-\d{8}-\d{6}\.json$/.test(copies[0]) && files[copies[0]] === before, copies.join(','));
+    check('ไฟล์เสีย + fallback: งานเดินต่อจากของว่าง (เขียนได้)', JSON.parse(files['D/scenes.json']).chapters.c9.length === 1);
+    check('★ ไฟล์เสีย: แจ้งตัวฟัง (ไฟล์ + สำเนา)', seen.length === 1 && seen[0].file === 'D/scenes.json' && seen[0].backup === copies[0]);
+    // สำรองไม่ได้ = ไม่เขียนทับ
+    const files2 = { 'D/draft.json': '{bad' };
+    const io2 = { exists: async (p) => p in files2, readJson: async (p) => JSON.parse(files2[p]),
+                  writeFile: async (p, s) => { files2[p] = s; }, copyFile: async () => { throw new Error('EACCES'); } };
+    let threw2 = false;
+    try { await J.mutateJson(io2, 'D/draft.json', (d) => { d.chapters = []; }, { fallback: { chapters: [] } }); } catch { threw2 = true; }
+    check('★ ไฟล์เสีย + สำรองไม่ได้ = โยน error ไม่เขียนทับ', threw2 && files2['D/draft.json'] === '{bad');
+    check('แจ้งตัวฟังว่าไม่มีสำเนา', seen.length === 2 && seen[1].backup === '');
+    // ไฟล์ไม่มีจริง = ทางเดิม (ไม่สำรอง ไม่แจ้ง)
+    await J.mutateJson(io, 'D/new.json', (d) => { d.x = 1; }, { fallback: {} });
+    check('ไฟล์ไม่มี + fallback = สร้างใหม่ตามเดิม ไม่แจ้ง', JSON.parse(files['D/new.json']).x === 1 && seen.length === 2 && copies.length === 1);
+    J.onBrokenJson(null);
+  }
   // ── งานล้มไม่ขวางคิว ──
   {
     const files = { f: '{"n":0}' };

@@ -15,13 +15,14 @@ import { ask, confirmBox } from './ui.js';
 import { countWords, parseMdFile } from './md.js';
 import { mutateJson } from './json-store.js';   // [alpha.159 · M1]
 
+/** ย้ายเล่ม fromFolder ไปไว้ก่อน dstFolder · [alpha.168] dstFolder = null → ท้ายสุด */
 export async function reorderSections(fromFolder, dstFolder) {
   const secs = await listSections();
   const fromIdx = secs.findIndex((s) => s.folder === fromFolder);
-  const dstIdx = secs.findIndex((s) => s.folder === dstFolder);
+  const dstIdx = dstFolder == null ? secs.length : secs.findIndex((s) => s.folder === dstFolder);
   if (fromIdx < 0 || dstIdx < 0) return;
   const [moved] = secs.splice(fromIdx, 1);
-  const insertAt = secs.findIndex((s) => s.folder === dstFolder);
+  const insertAt = dstFolder == null ? secs.length : secs.findIndex((s) => s.folder === dstFolder);
   secs.splice(insertAt, 0, moved);
   let order = 1;
   for (const s of secs) await saveSectionMeta(s.sf, { order: order++ });

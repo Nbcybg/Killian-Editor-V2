@@ -139,10 +139,16 @@ export function layoutToolbarOverflow() {
   bar.querySelectorAll(':scope > .tb-ovf').forEach((x) => x.classList.remove('tb-ovf'));
   const cs = getComputedStyle(bar);
   const gap = parseFloat(cs.columnGap || cs.gap) || 0;
+  // [alpha.168 · bug hunt] ความกว้างที่กินจริง = กล่อง + ระยะขอบซ้ายขวา (เส้นคั่นหมวดมี margin 6–8px ต่อข้าง)
+  // เดิมนับแค่กล่อง → คิดว่าพอดีทั้งที่ล้น ~80px: ปุ่ม "»" กับปุ่มท้ายแถวตกขอบ มีแถบเลื่อนแนวนอนที่หน้าต่างกว้างตั้งต้น
+  const outerW = (k) => {
+    const m = getComputedStyle(k);
+    return k.getBoundingClientRect().width + (parseFloat(m.marginLeft) || 0) + (parseFloat(m.marginRight) || 0);
+  };
   const avail = bar.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)
-              - ob.getBoundingClientRect().width - gap;
+              - outerW(ob) - gap;
   const kids = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
-  const items = kids.map((k) => ({ id: k.id || '', w: k.getBoundingClientRect().width + gap,
+  const items = kids.map((k) => ({ id: k.id || '', w: outerW(k) + gap,
                                    locked: !k.id || !TC.isConfigurable(k.id) }));
   const hide = new Set(TC.overflowPlan(items, avail));
   for (const k of kids) if (k.id && hide.has(k.id)) k.classList.add('tb-ovf');

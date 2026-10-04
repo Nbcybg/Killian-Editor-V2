@@ -11,7 +11,8 @@ import { t as tt, tf as ttf } from '../i18n.js';
 import { failText } from '../err-text.js';   // [alpha.162 · W5] ข้อความผิดพลาดผ่านตัวแปลงกลาง
 import { $, el, state, setStatus, setStatusError, log } from '../core.js';
 import * as PC from './plugin-core.js';
-import { panelEmpty } from '../panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
+import { panelEmpty } from '../panels/panel-chrome.js';
+import { gi } from '../icons.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 
 const S = () => (state._plugins || (state._plugins = { busy: false, showApi: false }));
 
@@ -37,7 +38,7 @@ export async function renderPluginPanel(host) {
   h.append(body);
 
   if (!list.length) {
-    body.append(panelEmpty(tt('ui.plug.emptyTitle'), { hint: tt('ui.plug.emptyHint') }));
+    body.append(panelEmpty(tt('ui.plug.emptyTitle'), { icon: 'extension', hint: tt('ui.plug.emptyHint') }));
   } else {
     for (const p of list) body.append(cardFor(p, h, app));
   }
@@ -58,37 +59,51 @@ function buildBar(host, counts, app) {
   }
   bar.append(sum);
 
+  // [alpha.168] ปุ่มหลัก = ติดตั้ง · ปุ่มที่ใช้บ่อย = โหลดใหม่ / เอกสาร API · ที่เหลือ (เปิดโฟลเดอร์ · สร้างตัวอย่าง) อยู่ในเมนู ⋯
   const btns = el('div', 'k-plug-btns');
+  const install = mkBtn(tt('ui.plug.install'), tt('ui.plug.installHint'), () => installFlow(host, app));
+  install.classList.add('k-ok');
+  btns.append(install);
   btns.append(mkBtn(tt('ui.plug.reloadAll'), tt('ui.plug.reloadAllHint'), async () => {
     await app.reloadPlugins();
     await renderPluginPanel(host);
   }));
-  btns.append(mkBtn(tt('ui.plug.openUserDir'), tt('ui.plug.openUserDirHint'), async () => {
-    try {
-      const d = await kapi.globalPluginsDir();
-      if (!d) { setStatus(tt('ui.plug.errNoDir')); return; }
-      await kapi.mkdir(d);
-      await kapi.revealInOS(d);
-    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
-  }));
-  btns.append(mkBtn(tt('ui.plug.openProjectDir'), tt('ui.plug.openProjectDirHint'), async () => {
-    if (!state.root) { setStatus(tt('ui.common.openProjectBefore')); return; }
-    try {
-      const d = await kapi.join(state.root, 'Plugins');
-      await kapi.mkdir(d);
-      await kapi.revealInOS(d);
-    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
-  }));
-  btns.append(mkBtn(tt('ui.plug.install'), tt('ui.plug.installHint'),
-                    () => installFlow(host, app)));
-  btns.append(mkBtn(tt('ui.plug.makeSample'), tt('ui.plug.makeSampleHint'),
-                    () => makeSample(host, app)));
   const apiBtn = mkBtn(tt('ui.plug.apiDoc'), tt('ui.plug.apiDocHint'), async () => {
     S().showApi = !S().showApi;
     await renderPluginPanel(host);
   });
   apiBtn.classList.toggle('on', !!S().showApi);
   btns.append(apiBtn);
+  const openUser = async () => {
+    try {
+      const d = await kapi.globalPluginsDir();
+      if (!d) { setStatus(tt('ui.plug.errNoDir')); return; }
+      await kapi.mkdir(d);
+      await kapi.revealInOS(d);
+    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
+  };
+  const openProject = async () => {
+    if (!state.root) { setStatus(tt('ui.common.openProjectBefore')); return; }
+    try {
+      const d = await kapi.join(state.root, 'Plugins');
+      await kapi.mkdir(d);
+      await kapi.revealInOS(d);
+    } catch (e) { setStatusError(failText(tt('ui.plug.errNoDir'), e)); }
+  };
+  const more = mkBtn(gi('more'), tt('ui.plug.moreTip'), async (ev) => {
+    const { popupMenu } = await import('../ui.js');
+    const r = more.getBoundingClientRect();
+    popupMenu(r.left, r.bottom + 4, [
+      { label: tt('ui.plug.openUserDir'), title: tt('ui.plug.openUserDirHint'), click: openUser },
+      { label: tt('ui.plug.openProjectDir'), title: tt('ui.plug.openProjectDirHint'), click: openProject },
+      '-',
+      { label: tt('ui.plug.makeSample'), title: tt('ui.plug.makeSampleHint'), click: () => makeSample(host, app) },
+    ]);
+    void ev;
+  });
+  more.classList.add('k-plug-more');
+  more.setAttribute('aria-label', tt('ui.plug.moreTip'));
+  btns.append(more);
   bar.append(btns);
   return bar;
 }

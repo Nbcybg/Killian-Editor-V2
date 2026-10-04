@@ -22,6 +22,8 @@ import { projectImageUrl } from '../file-url.js';
 import { fabric } from 'fabric';
 import { isPanelFocused } from '../panels/panel-focus.js';
 import { fmtDate } from '../locale.js';
+import { saveCanvasPng } from '../export-image.js';   // [alpha.168] ส่งออก PNG ผ่านกล่องบันทึก
+import { PRINT } from '../palette.js';
 
 /** [alpha.164 · งาน 7] แผงเตี้ยกว่านี้ (แต่ยังไม่ถึงขั้น compact) = แถบกรองไปต่อท้ายแถวแถบคำสั่ง */
 export const PLANNER_INLINE_FILTER_H = 460;
@@ -370,7 +372,8 @@ export class PlannerBoard {
 
   _toolbarCallbacks() {
     return {
-      onNew: () => this.newBoard(),
+      // [alpha.168] "ใหม่" = เมนู: กระดานเปล่า · กระดานตัวอย่าง (ไฟล์ใหม่ — ไม่แตะกระดานที่เปิดอยู่)
+      onNew: (btn) => this.newBoardMenu(btn),
       onOpen: () => this.openBoardDialog(),
       onSave: () => this.save(),
       onSaveAs: () => this.saveAs(),
@@ -388,7 +391,7 @@ export class PlannerBoard {
       onExportPng: () => this.exportPNG(),
       onExportJson: () => this.exportJSON(),                    // [alpha.150 ข้อ 10]
       onFullscreen: () => this.toggleFullscreen(),              // [alpha.150 ข้อ 4]
-      onSample: () => this.loadSample(),
+      onSample: () => this.newBoard({ sample: true }),
       getGrid: () => this.data.getGrid(),
       getBackground: () => this.data.getSettings().background,
       getBackgroundImage: () => this.data.getBackgroundImage(), // [alpha.150 ข้อ 2]
@@ -738,10 +741,24 @@ export class PlannerBoard {
   }
 
   /** สร้างกระดานใหม่ — ถามชื่อ แล้วเปิดกระดานเปล่า (บั๊ก 5) */
-  async newBoard() {
+  /** [alpha.168] เมนูของปุ่ม "ใหม่" */
+  newBoardMenu(btn) {
+    const r = btn && btn.getBoundingClientRect ? btn.getBoundingClientRect() : { left: 200, bottom: 200 };
+    popupMenu(r.left, r.bottom + 4, [
+      { label: tt('ui.planner.newBlank'), click: () => this.newBoard() },
+      { label: tt('ui.planner.newSample'), click: () => this.newBoard({ sample: true }) },
+    ]);
+  }
+
+  /**
+   * สร้างกระดานใหม่เป็นไฟล์ของตัวเอง
+   * [alpha.168] { sample:true } = กระดานตัวอย่าง — ผู้ใช้: "ตรงใส่ตัวอย่าง เอามาทำไม พอใส่แล้วก็ไปลบของเก่า ·
+   *   ถ้าจะใส่ตัวอย่าง ทำเป็น file แยกดีกว่า" (ปุ่มเดิมล้างกระดานที่เปิดอยู่ทิ้งแล้วเทตัวอย่างทับ)
+   */
+  async newBoard({ sample = false } = {}) {
     if (!(await this.confirmDiscard(tt('ui.common.newBoardNew')))) return null;
     const picked = await this._askBoardName(tt('ui.common.nameBoardNew'),
-      tt('ui.common.board2') + fmtDate(new Date()), tt('ui.common.new'));
+      (sample ? tt('ui.planner.sampleBoardName') : tt('ui.common.board2')) + fmtDate(new Date()), tt('ui.common.new'));
     if (!picked) return null;
     const dir = await this.boardsDir();
     try { await kapi.mkdir(dir); } catch {}
@@ -754,6 +771,7 @@ export class PlannerBoard {
     this.toolbar.setBoardName(this.data.getName());
     this._history = []; this._histIndex = -1;
     this._snapshot(true);
+    if (sample) this.loadSample();
     await this.data.save();
     this._syncDirty();
     if (this._svc.onBoardsChanged) this._svc.onBoardsChanged();
@@ -1552,6 +1570,7 @@ export class PlannerBoard {
   }
 
   // ═════════════════ อื่น ๆ ═════════════════
+  /** เทเนื้อตัวอย่างลงกระดาน "ที่เพิ่งสร้าง" (newBoard({sample})) — ไม่มีปุ่มเรียกตรงแล้ว (เดิมล้างกระดานที่เปิดอยู่ทิ้ง) */
   loadSample() {
     const mk = (o) => this.data.addNodeRaw(o);
     this.data._nodes = []; this.data._edges = []; this.data._groups = [];
@@ -1618,7 +1637,15 @@ export class PlannerBoard {
     return z;
   }
 
-  async exportPNG() {
+  /**
+   * ส่งออกกระดานเป็น PNG
+   * [alpha.168] ผู้ใช้: "กระดาน planner export png ไม่ได้" — ต้นตอ: เขียนเงียบ ๆ ลงรากโปรเจกต์ (ไม่มีกล่องบันทึก ·
+   *   ไม่บอกว่าไปไหน) + ได้ **พื้นโปร่งใส** (สีพื้นกระดานเป็น CSS ของตัวห่อ ไม่อยู่ในผืนของ fabric) = ป้าย/ตัวหนังสือ
+   *   สีอ่อนหายไปบนตัวดูรูป · ตอนนี้: ปูสีพื้น (+ รูปพื้นกระดาน) ใต้ภาพ แล้วถามที่เก็บด้วยกล่องบันทึก
+   * @param outPath เทสส่งทางไฟล์ตรง (ไม่เปิดกล่อง)
+   * @returns ทางไฟล์ · null = ยกเลิก · false = ผิดพลาด
+   */
+  async exportPNG(outPath) {
     try {
       const vt = this.renderer.canvas.viewportTransform.slice();
       const b = this.data.bounds();
@@ -1629,9 +1656,26 @@ export class PlannerBoard {
       const url = this.renderer.canvas.toDataURL(opt);
       this.renderer.canvas.setViewportTransform(vt);
       this.renderer.refresh();
-      const name = await kapi.writeImageData(this.root, _safeName(this.data.getFileBase()) + '.png', url.split(',')[1]);
-      setStatus(tt('ui.planner.saveImageBoardDone') + (typeof name === 'string' ? name : 'planner.png'));
-      return true;
+      const fg = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
+      const cv = document.createElement('canvas');
+      cv.width = fg.naturalWidth; cv.height = fg.naturalHeight;
+      const c = cv.getContext('2d');
+      c.fillStyle = this.data.getSettings().background || PRINT.boardBg; c.fillRect(0, 0, cv.width, cv.height);
+      const bgi = this.data.getBackgroundImage();
+      if (bgi && bgi.src) {
+        const src = this.renderer._imgUrl ? this.renderer._imgUrl(bgi.src) : '';
+        const im = src ? await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }) : null;
+        if (im) {
+          c.save(); c.globalAlpha = bgi.opacity == null ? 1 : +bgi.opacity;
+          const k = bgi.fit === 'fit' ? Math.min(cv.width / im.naturalWidth, cv.height / im.naturalHeight) : Math.max(cv.width / im.naturalWidth, cv.height / im.naturalHeight);
+          if (bgi.fit === 'full') c.drawImage(im, 0, 0, cv.width, cv.height);
+          else if (bgi.fit === 'tile') { const p = c.createPattern(im, 'repeat'); if (p) { c.fillStyle = p; c.fillRect(0, 0, cv.width, cv.height); } }
+          else c.drawImage(im, (cv.width - im.naturalWidth * k) / 2, (cv.height - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k);
+          c.restore();
+        }
+      }
+      c.drawImage(fg, 0, 0);
+      return await saveCanvasPng(cv, _safeName(this.data.getFileBase()) + '.png', outPath);
     } catch (e) { setStatusError(failText(tt('ui.planner.exportPNGCant'), e)); return false; }
   }
 

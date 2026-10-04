@@ -340,5 +340,29 @@ check('เวลาเคลื่อนที่อยู่ในช่วง�
         bv.top === -600 && bv.bottom === 300, JSON.stringify(bv));
 }
 
+// ═══════════ [alpha.168 · bug hunt] พับไม่เกินสองแถว · ชิดล่างต่อเมื่อแถบเตี้ยลงเอง ═══════════
+{
+  const W = Array(30).fill(40);                 // 30 ปุ่ม × 40px + ช่องไฟ 2px ≈ 1258px
+  check('[bh] barRowsNeeded: พอดีแถวเดียว', P.barRowsNeeded(W, 2, 1300) === 1);
+  check('[bh] barRowsNeeded: พื้นที่ครึ่งเดียว = 2 แถว', P.barRowsNeeded(W, 2, 640) === 2, String(P.barRowsNeeded(W, 2, 640)));
+  check('[bh] barRowsNeeded: แคบ = หลายแถว', P.barRowsNeeded(W, 2, 400) === 4, String(P.barRowsNeeded(W, 2, 400)));
+  check('[bh] barRowsNeeded: ไม่มีของ = 0 · พื้นที่เสีย = ชิ้นละแถว', P.barRowsNeeded([], 2, 500) === 0 && P.barRowsNeeded([10, 10], 2, 0) === 2);
+  check('[bh] ★ barShouldNarrow: พับเกินสองแถว = แถวเดียว (เดิมดูแค่ < 620px)', P.barShouldNarrow(640, Array(34).fill(40), 2, 11) === true);
+  check('[bh] barShouldNarrow: สองแถวพอดี = ยังพับได้', P.barShouldNarrow(900, W, 2, 11) === false);
+  check('[bh] barShouldNarrow: แคบกว่าเกณฑ์เดิม = แถวเดียวเสมอ', P.barShouldNarrow(600, [40], 2, 11) === true && P.BAR_NARROW_W === 620);
+  // ชิดล่าง: พื้นที่สูง 800 · แถบสูง 140 (4 แถว) อยู่ที่ top 644 (ห่างล่าง 16)
+  check('[bh] ★ แถบเตี้ยลงเอง (140 → 72) ต้องเลื่อนลงให้ชิดล่างระยะเดิม', P.bottomAnchorTop(644, 72, 140, 800, 800) === 712, String(P.bottomAnchorTop(644, 72, 140, 800, 800)));
+  check('[bh] พื้นที่สูงขึ้น (800 → 900) ตามขอบล่าง', P.bottomAnchorTop(644, 140, 140, 900, 800) === 744);
+  check('[bh] ไม่มีอะไรเปลี่ยน = null', P.bottomAnchorTop(644, 140, 140, 800, 800) === null);
+  // [alpha.168 · bug hunt 2] ปุ่มลอยตั้งต้นหลบแถบรูปแบบ
+  const FAB = { left: 1360, top: 812, right: 1412, bottom: 864 };
+  check('[bh2] ★ ปุ่มลอยทับแถบชิดล่าง → ยกขึ้นเหนือแถบ', P.fabDodgeBottom(FAB, { left: 366, top: 784, right: 1430, bottom: 856 }, 900) === 126, String(P.fabDodgeBottom(FAB, { left: 366, top: 784, right: 1430, bottom: 856 }, 900)));
+  check('[bh2] แถบอยู่ที่อื่น (ชิดบน) = ไม่ยก', P.fabDodgeBottom(FAB, { left: 366, top: 160, right: 1430, bottom: 232 }, 900) === null);
+  check('[bh2] แถบสั้นไม่ถึงปุ่ม = ไม่ยก', P.fabDodgeBottom(FAB, { left: 366, top: 784, right: 1200, bottom: 856 }, 900) === null);
+  check('[bh2] ไม่มีแถบ / แถบขนาดศูนย์ = ไม่ยก', P.fabDodgeBottom(FAB, null, 900) === null && P.fabDodgeBottom(FAB, { left: 0, top: 0, right: 0, bottom: 0 }, 900) === null);
+  check('[bh2] แถบสูงเกือบเต็มจอ = ไม่ยก (ปุ่มจะหลุดจอ)', P.fabDodgeBottom(FAB, { left: 366, top: 100, right: 1430, bottom: 856 }, 900) === null);
+  check('[bh] แถบที่ผู้ใช้วางกลางจอ (ไม่ชิดล่าง) = ไม่ยุ่ง', P.bottomAnchorTop(300, 72, 140, 800, 800) === null);
+  check('[bh] ยังไม่มีค่ารอบก่อน = null', P.bottomAnchorTop(644, 72, 0, 800, 0) === null);
+}
 console.log(`\nfmtbar-pos: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

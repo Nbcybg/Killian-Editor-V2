@@ -22,7 +22,9 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('newPin: พิกัด + ชนิด', p.x === 30 && p.y === 40 && p.kind === 'portal');
   check('newPin: ชนิดเริ่มต้น = note', M.newPin(1, 2).kind === 'note');
   check('clamp: หนีบ 0–100', M.clamp(-5) === 0 && M.clamp(150) === 100 && M.clamp(50) === 50);
-  check('newPin: พิกัดนอกกรอบถูกหนีบ', M.newPin(-9, 300).x === 0 && M.newPin(-9, 300).y === 100);
+  // [alpha.168] แผนที่ไม่มีขอบ — หมุดอยู่นอกรูปได้ (รูปเป็นแค่พื้นหลัง/อ้างอิง) · เพดานกันค่าเสียเท่านั้น
+  check('[168] newPin: พิกัดนอกกรอบรูปอยู่ได้ (ไม่ถูกหนีบเข้ารูป)', M.newPin(-9, 300).x === -9 && M.newPin(-9, 300).y === 300);
+  check('[168] newPin: ค่าเสีย/ไกลเกินเพดาน ถูกกันไว้', M.newPin(NaN, 1e9).x === 0 && M.newPin(NaN, 1e9).y === M.WORLD_MAX);
 }
 {
   // บทเรียน 14: ต้องเรียงด้วย order เป็นหลัก ไม่ใช่ชื่อไทย
@@ -171,7 +173,7 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   const moved = M.movePins(pins, ['a', 'c'], 5, -5);
   check('movePins: เลื่อนเฉพาะตัวที่เลือก',
         moved[0].x === 15 && moved[0].y === 5 && moved[1].x === 50 && moved[1].y === 50);
-  check('movePins: หนีบขอบทีละตัว', moved[2].x === 100 && moved[2].y === 0, JSON.stringify(moved[2]));
+  check('[168] movePins: เลื่อนออกนอกรูปได้', moved[2].x === 103 && moved[2].y === -2, JSON.stringify(moved[2]));
   check('movePins: ไม่แก้ของเดิม (คืน array ใหม่)', pins[0].x === 10 && moved !== pins);
   check('movePins: ids ว่าง = ไม่ขยับ', M.movePins(pins, [], 9, 9)[0].x === 10);
 
@@ -188,7 +190,7 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   check('clonePins: ได้จำนวนเท่าที่เลือก', cl.length === 1);
   check('clonePins: id ใหม่ ไม่ซ้ำของเดิม', cl[0].id !== 'a' && cl[0].id.startsWith('pin-'));
   check('clonePins: คงข้อมูล + เยื้องตำแหน่ง', cl[0].label === 'บ้าน' && cl[0].x === 12 && cl[0].y === 12);
-  check('clonePins: หนีบขอบตอนเยื้อง', M.clonePins([{ id: 'z', x: 99, y: 99 }], ['z'], 5)[0].x === 100);
+  check('[168] clonePins: เยื้องออกนอกรูปได้', M.clonePins([{ id: 'z', x: 99, y: 99 }], ['z'], 5)[0].x === 104);
   check('clonePins: portal ที่ชี้แผนที่ปลายทางเอง ถูกตัด (กันวนหาตัวเอง)',
         M.clonePins(src, ['a'], 2, 'other')[0].toMap === '');
   check('clonePins: portal ที่ชี้แผนที่อื่นยังอยู่', M.clonePins(src, ['a'], 2, 'somewhere')[0].toMap === 'other');
@@ -271,5 +273,62 @@ check('PIN_KIND ครบ 3 ชนิด + มีไอคอน',
 check('PIN_COLORS / ROUTE_COLORS เป็นสี hex', M.PIN_COLORS.every((c) => /^#[0-9a-f]{6}$/i.test(c)) &&
       M.ROUTE_COLORS.every((c) => /^#[0-9a-f]{6}$/i.test(c)));
 
+
+// ═══════════ [alpha.168] แผนที่ไม่มีขอบ · กริด 1:1 · โซนมีความจาง/ลาย/ชั้น · หมุดในโซน ═══════════
+{
+  const c1 = M.gridCell(10, 1), c2 = M.gridCell(10, 2);
+  check('[168] gridCell: รูปจัตุรัส = ช่องเท่ากันทั้งสองแกน (%)', c1.x === 10 && c1.y === 10);
+  check('[168] gridCell: รูปกว้าง 2:1 → ช่องแกนตั้งเป็น % มากขึ้นเท่าสัดส่วน (= จัตุรัสบนจอ)', c2.x === 10 && c2.y === 20);
+  check('[168] gridCell: ค่าเสีย = ค่าเริ่มต้น', M.gridCell('x', 1).n === M.DEFAULT_OVERLAYS.gridSize);
+  const map = { pins: [{ id: 'a', x: -20, y: 50 }, { id: 'b', x: 30, y: 30, kind: 'entity' }, { id: 't', x: 31, y: 31, kind: 'text' }],
+                zones: [{ id: 'z1', points: [{ x: 20, y: 20 }, { x: 40, y: 20 }, { x: 40, y: 40 }, { x: 20, y: 40 }] },
+                        { id: 'z2', points: [{ x: 0, y: 0 }, { x: 150, y: 0 }, { x: 150, y: 10 }] }] };
+  const b = M.mapBounds(map);
+  check('[168] mapBounds: ครอบกรอบรูป + หมุดนอกรูป + โซนนอกรูป', b.x0 === -20 && b.x1 === 150 && b.y0 === 0 && b.y1 === 100, JSON.stringify(b));
+  check('[168] mapBounds: ไม่มีอะไรเลย = กรอบรูป', JSON.stringify(M.mapBounds({})) === JSON.stringify({ x0: 0, y0: 0, x1: 100, y1: 100 }));
+  // [alpha.168] รูปพื้นหลังที่ถูกย่อ/ย้าย = ครอบตามภาพจริง (พอดีทุกอย่าง · ส่งออก) · ไม่มีรูป = กรอบเดิม
+  const bb = M.mapBounds({ image: 'Images/a.png', aspect: 1, bg: { scale: 0.5, x: 20, y: 30 } });
+  check('[168] mapBounds: รูปที่ย่อ+ย้าย = ครอบตามภาพ', Math.abs(bb.x0 + 5) < 1e-6 && Math.abs(bb.x1 - 45) < 1e-6 && Math.abs(bb.y0 - 5) < 1e-6 && Math.abs(bb.y1 - 55) < 1e-6, JSON.stringify(bb));
+  check('[168] mapBounds: bg ค่าเริ่มต้น = กรอบเดิม', JSON.stringify(M.mapBounds({ image: 'x', bg: {} })) === JSON.stringify({ x0: 0, y0: 0, x1: 100, y1: 100 }));
+  const inZ = M.pinsInZone(map, map.zones[0]);
+  check('[168] pinsInZone: เจอหมุดในเขต · ไม่นับตัวหนังสือ', inZ.length === 1 && inZ[0].id === 'b');
+  check('[168] zonesOfPin: หมุดรู้ว่าอยู่โซนไหน', M.zonesOfPin(map, map.pins[1]).map((z) => z.id).join() === 'z1');
+  check('[168] moveZone: ขึ้นบนสุด', M.moveZone(map, 'z1', 'top') && map.zones[1].id === 'z1');
+  check('[168] moveZone: ลงหนึ่งชั้น', M.moveZone(map, 'z1', -1) && map.zones[0].id === 'z1');
+  check('[168] moveZone: ชั้นล่างสุดแล้วลงอีก = ไม่ขยับ (false)', M.moveZone(map, 'z1', -1) === false);
+  check('[168] movePinLayer: หมุดขึ้นบนสุด', M.movePinLayer(map, 'a', 'top') && map.pins[map.pins.length - 1].id === 'a');
+  const z = M.newZone([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }], { opacity: 0.6, pattern: 'hatch' });
+  check('[168] newZone: เก็บความจาง/ลาย', z.opacity === 0.6 && z.pattern === 'hatch');
+  check('[168] zoneOpacity: โซนเก่าไม่มีค่า = ค่าเริ่มต้น · 0 = โปร่งจริง', M.zoneOpacity({}) === M.ZONE_OPACITY_DEFAULT && M.zoneOpacity({ opacity: 0 }) === 0);
+  check('[168] newZone: ลายที่ไม่รู้จัก = none', M.newZone([], { pattern: 'x' }).pattern === 'none');
+  check('[168] PIN_SIZES: xl ใหญ่กว่า m · ไม่ระบุ = 1', M.pinSizeK({ size: 'xl' }) > M.pinSizeK({ size: 'm' }) && M.pinSizeK({}) === 1);
+  check('[168] PIN_KIND มีชนิดตัวหนังสือ', !!M.PIN_KIND.text && typeof M.PIN_KIND.text.label === 'string');
+}
+
+{
+  check('[168] zoomLadder: ขึ้นจาก 100% = 125%', M.zoomLadder(1, 1) === 1.25);
+  check('[168] zoomLadder: ลงจาก 100% = 75%', M.zoomLadder(1, -1) === 0.75);
+  check('[168] zoomLadder: ค่ากลางขั้น → ขั้นถัดไปที่ถูกทิศ', M.zoomLadder(1.1, 1) === 1.25 && M.zoomLadder(1.1, -1) === 1);
+  check('[168] zoomLadder: ไม่หลุดขอบ', M.zoomLadder(M.MAP_ZOOM_MIN, -1) === M.MAP_ZOOM_MIN && M.zoomLadder(M.MAP_ZOOM_MAX, 1) === M.MAP_ZOOM_MAX);
+}
+// ═══════════ [alpha.168 · bug hunt] ตัวกรองหมวดที่หมวดหายไปแล้ว (เดิม = วาดใหม่ไม่จบ แอปค้าง) ═══════════
+{
+  const mk = (id, cat, order) => ({ id, name: id, category: cat, order, pins: [] });
+  const maps = [mk('a', 'X', 0), mk('b', '', 1), mk('c', 'Y', 2)];
+  check('[168-bh] validCatFilter: หมวดที่ยังมี = คงเดิม', M.validCatFilter(maps, 'X') === 'X' && M.validCatFilter(maps, '') === '');
+  check('[168-bh] validCatFilter: ไม่กรอง = null', M.validCatFilter(maps, null) === null);
+  check('[168-bh] ★ validCatFilter: หมวดที่ไม่มีแผนที่แล้ว = null', M.validCatFilter(maps, 'ZZ') === null);
+  check('[168-bh] validCatFilter: ไม่มีแผนที่เลย = null', M.validCatFilter([], 'X') === null);
+  check('[168-bh] mapForFilter: ใบปัจจุบันอยู่ในหมวด = ใบเดิม', M.mapForFilter(maps, 'a', 'X').id === 'a');
+  check('[168-bh] mapForFilter: ใบปัจจุบันอยู่นอกหมวด = ใบแรกของหมวด', M.mapForFilter(maps, 'a', 'Y').id === 'c');
+  check('[168-bh] ★ mapForFilter: หมวดหาย = ใบเดิม (ไม่มีอะไรให้วาดซ้ำ)', M.mapForFilter(maps, 'b', 'ZZ').id === 'b');
+  // ลูปเดิม: วาด → เลือกใบ → วาด … ต้องนิ่งภายในสองรอบเสมอ ไม่ว่าตัวกรองจะเป็นอะไร
+  for (const f of ['X', 'Y', '', 'ZZ', null]) {
+    let cur = 'a', n = 0;
+    for (; n < 10; n++) { const w = M.mapForFilter(maps, cur, f); if (!w || w.id === cur) break; cur = w.id; }
+    check('[168-bh] ★ เลือกแผนที่ตามตัวกรอง "' + f + '" นิ่งใน ≤ 2 รอบ', n <= 1, String(n));
+  }
+  check('[168-bh] mapForFilter: ไม่มีแผนที่ = null', M.mapForFilter([], 'a', 'X') === null);
+}
 console.log(`maps.test: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

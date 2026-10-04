@@ -24,8 +24,8 @@ check('player/ai-analyzer ไม่ต้องรู้ฉาก (วาดจ�
 check('แผงเดิมของ .67 ไม่ต้องรู้ฉาก', !S.needsScene('timeline') && !S.needsScene('kanban'));
 check('เฟส 2 เปิดเพิ่ม 7 แผง', S.PHASE2_PANELS.length === 7, String(S.PHASE2_PANELS.length));
 // แผงที่เขียนไฟล์ของฉาก = ชุดที่ต้องล็อกอ่านอย่างเดียวตอนหน้าต่างหลักยังไม่บันทึก
-check('แผงที่เขียนไฟล์ฉาก = props/comments/floorplan',
-      ['props', 'comments', 'floorplan'].every((id) => S.writesScene(id)) && S.SCENE_WRITE_PANELS.size === 3,
+check('แผงที่เขียนไฟล์ฉาก = props/comments (ผังพื้นที่แบบใหม่เขียน FloorPlans/ ไม่แตะไฟล์ฉาก — alpha.168)',
+      ['props', 'comments'].every((id) => S.writesScene(id)) && !S.writesScene('floorplan') && S.SCENE_WRITE_PANELS.size === 2,
       [...S.SCENE_WRITE_PANELS].join());
 check('Navigation อ่านอย่างเดียว → ไม่ต้องล็อก', !S.writesScene('outline'));
 check('AI ผู้ช่วยเขียนเขียนลง Sessions/ ของตัวเอง → ไม่ต้องล็อก', !S.writesScene('ai-chat'));

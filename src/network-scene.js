@@ -70,7 +70,8 @@ export function normalizeNetScene(saved) {
       c1: hex(b.c1, preset.c1 || ''),
       c2: hex(b.c2, preset.c2 || ''),
       image: relPath(b.image),
-      imageMode: b.imageMode === 'screen' ? 'screen' : 'world',
+      // [alpha.168] hdri = ท้องฟ้ารอบตัวใน 3D (รูป 2:1 หรือ .hdr)
+      imageMode: ['screen', 'hdri'].includes(b.imageMode) ? b.imageMode : 'world',
       imageScale: num(b.imageScale, 1, 0.05, 20),
       imageX: num(b.imageX, 0, -1e6, 1e6),
       imageY: num(b.imageY, 0, -1e6, 1e6),

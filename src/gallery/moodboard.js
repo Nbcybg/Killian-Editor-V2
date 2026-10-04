@@ -24,8 +24,13 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 //   entity : หน้า Wiki (path) · scene/memo : เอกสาร (path) · chapter : บท (draftDir+guid)
 //   ref    : อ้างอิงอิสระ — ลิงก์เว็บ (url) และ/หรือข้อความ (text)
 // ผู้ใช้: "mood board ใส่ได้ทั้ง entities และ รูปภาพ และ referance ... ถ้าเป็น entities หรือ referance ให้ใส่เป็น card"
-export const CARD_KINDS = ['entity', 'scene', 'memo', 'chapter', 'ref'];
+// [alpha.168] + note (โน้ตข้อความ) · palette (แถบสี) · group (กรอบจัดกลุ่มมีหัวข้อ — ลากกรอบ = ของข้างในตามไป)
+//   ผู้ใช้ส่งภาพกระดานอ้างอิง: "ปรับ background ได้ · drag and drop ง่าย · ย้าย card ทับบน ทับล่าง · ของเราโคตรจะ basic"
+export const CARD_KINDS = ['entity', 'scene', 'memo', 'chapter', 'ref', 'note', 'palette', 'group'];
 export const CARD_W = 240, CARD_H = 96, REF_H = 128;
+/** ขนาดตั้งต้นของชิ้นใหม่แต่ละชนิด (ตัวละคร/สถานที่ = การ์ดรูปใหญ่ + ชื่อใต้รูป แบบกระดานอ้างอิง) */
+export const KIND_SIZE = { entity: [180, 232], note: [220, 150], palette: [260, 64], group: [560, 380], ref: [CARD_W, REF_H] };
+const HEX = /^#[0-9a-f]{6}$/i;
 
 export function newBoardItem(file, opts = {}) {
   const kind = CARD_KINDS.includes(opts.kind) ? opts.kind : 'image';
@@ -34,8 +39,8 @@ export function newBoardItem(file, opts = {}) {
     file: String(file || ''),
     x: numOr(opts.x, 0),
     y: numOr(opts.y, 0),
-    w: clamp(numOr(opts.w, kind === 'image' ? DEFAULT_SIZE : CARD_W), MIN_SIZE, MAX_SIZE),
-    h: clamp(numOr(opts.h, kind === 'image' ? DEFAULT_SIZE : kind === 'ref' ? REF_H : CARD_H), MIN_SIZE, MAX_SIZE),
+    w: clamp(numOr(opts.w, kind === 'image' ? DEFAULT_SIZE : (KIND_SIZE[kind] || [CARD_W])[0]), MIN_SIZE, MAX_SIZE),
+    h: clamp(numOr(opts.h, kind === 'image' ? DEFAULT_SIZE : (KIND_SIZE[kind] || [0, CARD_H])[1]), MIN_SIZE, MAX_SIZE),
     z: numOr(opts.z, 0),
     rot: numOr(opts.rot, 0),
   };
@@ -45,7 +50,8 @@ export function newBoardItem(file, opts = {}) {
     for (const k of ['path', 'title', 'url', 'text', 'cat', 'color', 'draftDir', 'guid']) {
       if (opts[k] != null && String(opts[k]) !== '') it[k] = String(opts[k]);
     }
-  }
+    if (kind === 'palette') it.colors = (Array.isArray(opts.colors) ? opts.colors : []).map(String).filter((c) => HEX.test(c)).slice(0, 16);
+  } else if (opts.caption != null && String(opts.caption) !== '') it.caption = String(opts.caption);   // คำบรรยายใต้รูป
   return it;
 }
 
@@ -53,6 +59,8 @@ export function newBoardItem(file, opts = {}) {
 export function isCard(it) { return !!(it && CARD_KINDS.includes(it.kind)); }
 function usable(it) {
   if (!it) return false;
+  if (it.kind === 'group' || it.kind === 'note') return true;          // โน้ตว่าง = เพิ่งสร้าง (กำลังพิมพ์)
+  if (it.kind === 'palette') return Array.isArray(it.colors) && it.colors.some((c) => HEX.test(String(c)));
   if (isCard(it)) return !!(it.path || it.url || it.title || it.text || it.guid);
   return !!it.file;
 }
@@ -128,6 +136,55 @@ export function moveToBack(board, id) {
   const list = normalizeBoard(board);
   const bottom = list.reduce((m, i) => Math.min(m, i.z), 0);
   return list.map((it) => (it.id === id ? { ...it, z: bottom - 1 } : it));
+}
+
+/**
+ * [alpha.168] เลื่อนชั้นทีละหนึ่ง (สลับ z กับชิ้นที่ทับกันอยู่ถัดไป) — ผู้ใช้: "ย้าย card ทับบน ทับล่าง"
+ * dir: 1 = ขึ้นหนึ่งชั้น · -1 = ลงหนึ่งชั้น · คืนกระดานใหม่ (ไม่ขยับ = กระดานเดิม)
+ */
+export function stepLayer(board, id, dir) {
+  const list = boardOrder(board).map((it, i) => ({ ...it, z: i }));    // z ต่อเนื่อง 0..n-1 ก่อน (ไฟล์เก่ามี z ซ้ำได้)
+  const i = list.findIndex((it) => it.id === id);
+  const j = i + (dir > 0 ? 1 : -1);
+  if (i < 0 || j < 0 || j >= list.length) return list;
+  const zi = list[i].z;
+  list[i].z = list[j].z; list[j].z = zi;
+  return list;
+}
+/** ชิ้นที่อยู่ในกรอบกลุ่มทั้งชิ้น (ใช้ลากกลุ่ม = ของข้างในตามไป) — ไม่นับตัวกลุ่มเอง */
+export function itemsInGroup(board, group) {
+  if (!group) return [];
+  return normalizeBoard(board).filter((it) => it.id !== group.id &&
+    it.x >= group.x && it.y >= group.y && it.x + it.w <= group.x + group.w && it.y + it.h <= group.y + group.h);
+}
+/** เลื่อนหลายชิ้นพร้อมกัน */
+export function moveItems(board, ids, dx, dy) {
+  const set = new Set(ids || []);
+  return normalizeBoard(board).map((it) => (set.has(it.id) ? { ...it, x: it.x + (+dx || 0), y: it.y + (+dy || 0) } : it));
+}
+/** ตำแหน่งมุมซ้ายบนที่ทำให้ชิ้นขนาด w×h อยู่กึ่งกลางจุด (x,y) — วางของ "ตรงเคอร์เซอร์" */
+export function centeredAt(x, y, w, h) { return { x: snap(x - w / 2), y: snap(y - h / 2) }; }
+/** ทำสำเนาชิ้น (id ใหม่ · เยื้อง · อยู่บนสุด) */
+export function duplicateItems(board, ids, offset = 24) {
+  let out = normalizeBoard(board);
+  let top = out.reduce((m, i) => Math.max(m, i.z), 0);
+  for (const it of out.filter((x) => (ids || []).includes(x.id))) {
+    out = [...out, newBoardItem(it.file, { ...it, id: boardItemId(), x: it.x + offset, y: it.y + offset, z: ++top })];
+  }
+  return out;
+}
+/**
+ * [alpha.168] ฉากหลังของกระดาน — สีพื้น · รูป (จากคลังรูป) · เบลอ · หรี่
+ * เก็บใน album.json → moodBoardBg (ไฟล์เก่าไม่มี = พื้นตามธีม)
+ */
+export function normalizeBoardBg(bg) {
+  const b = bg && typeof bg === 'object' ? bg : {};
+  return {
+    color: HEX.test(String(b.color || '')) ? String(b.color) : '',
+    image: typeof b.image === 'string' && b.image && !/^[a-z]:|^\/|\.\./i.test(b.image) ? b.image.replace(/\\/g, '/') : '',
+    blur: clamp(numOr(b.blur, 0), 0, 40),
+    dim: clamp(numOr(b.dim, 0.35), 0, 0.9),
+  };
 }
 
 /** เรียงตาม z จากล่างขึ้นบน (ลำดับการวาด) */

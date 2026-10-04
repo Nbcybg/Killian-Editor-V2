@@ -274,7 +274,7 @@ function drawList(body) {
   if (s.error) { body.append(panelEmpty(tt('ui.dialogue.errScan') + ' ' + s.error)); return; }
   const rows = visibleRows();
   if (!rows.length) {
-    body.append(panelEmpty((s.rows || []).length ? tt('ui.dialogue.noMatch') : tt('ui.dialogue.noneFound')));
+    body.append(panelEmpty((s.rows || []).length ? tt('ui.dialogue.noMatch') : tt('ui.dialogue.noneFound'), { icon: 'chat' }));
     return;
   }
   for (const g of DC.groupByScene(rows)) {

@@ -8,12 +8,12 @@
 
 import { t, tf } from '../i18n.js';
 import { retryBackoff } from '../timing.js';
-import { $, el, state, setStatus, log, setBusy, clearBusy } from '../core.js';
+import { $, el, state, setStatus, setStatusError, log, setBusy, clearBusy } from '../core.js';
 import {
   PARAM_DEFS, defaultParams, normalizeParams, parseDomains, isDomainAllowed,
   newProvider, validateProvider, validateProviderIssues, stripSecrets, withSecrets,
   modelsRequests, parseModels, chatRequest, parseChat, parseStreamChunk,
-  listProviders, activeProvider, upsertProvider, removeProvider,
+  listProviders, activeProvider, upsertProvider, removeProvider, mergeDefaults, packDefaults,
 } from './ai-providers.js';
 import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 // [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
@@ -379,6 +379,15 @@ export async function showAISettingsDialog() {
 
   const info = el('div', 'ai-prov-info dim');
   box.append(info);
+  // [alpha.168 · bug hunt] ผู้ให้บริการ "ของฉัน" — บันทึกชุดนี้ไว้ในเครื่อง / นำเข้ามาใช้กับโปรเจกต์นี้ (ไม่ต้องกรอกใหม่ทุกโปรเจกต์)
+  const defRow = el('div', 'ai-defaults-row');
+  const defImport = el('button', 'cmp-mini ai-defaults-import', t('ui.aiProvider.defaultsImport'));
+  defImport.type = 'button'; defImport.title = t('ui.aiProvider.defaultsImportTip');
+  const defSave = el('button', 'cmp-mini ai-defaults-save', t('ui.aiProvider.defaultsSave'));
+  defSave.type = 'button'; defSave.title = t('ui.aiProvider.defaultsSaveTip');
+  const defNote = el('span', 'dim ai-defaults-note');
+  defRow.append(defImport, defSave, defNote);
+  box.append(defRow);
 
   const empty = el('div', 'ai-prov-empty dim',
     t('ui.aiProvider.notHasProviderPress'));
@@ -513,7 +522,7 @@ export async function showAISettingsDialog() {
     if (!p) return;
     rows = upsertProvider(rows, p);
     activeId = p.id;
-    refresh();
+    refresh(); paintDefaults();
   };
   editBtn.onclick = async () => {
     const cur = rows.find((p) => p.id === provSel.value);
@@ -530,9 +539,41 @@ export async function showAISettingsDialog() {
     if (!(await confirmBox(tf('ui.aiProvider.delProvider', cur.name)))) return;
     rows = removeProvider(rows, cur.id);
     if (activeId === cur.id) activeId = (rows[0] && rows[0].id) || '';
-    refresh();
+    refresh(); paintDefaults();
   };
   refresh();
+
+  // ชุด "ของฉัน": บอกว่ามีเก็บไว้ไหม · นำเข้า = เพิ่มเฉพาะตัวที่โปรเจกต์ยังไม่มี · บันทึก = แทนที่ชุดที่เก็บไว้
+  let defaults = null;
+  const paintDefaults = () => {
+    const n = defaults && defaults.providers ? defaults.providers.length : 0;
+    defImport.disabled = !n;
+    defSave.disabled = !rows.length;
+    defNote.textContent = n ? tf('ui.aiProvider.defaultsHave', n) : t('ui.aiProvider.defaultsNone');
+  };
+  const loadDefaults = async () => { try { defaults = kapi.aiDefaultsLoad ? await kapi.aiDefaultsLoad() : null; } catch { defaults = null; } paintDefaults(); };
+  loadDefaults();
+  defImport.onclick = async () => {
+    if (!defaults) return;
+    const m = mergeDefaults(rows, defaults);
+    if (!m.added) { setStatus(t('ui.aiProvider.defaultsNothingNew')); return; }
+    rows = m.rows;
+    if (!activeId) activeId = defaults.activeProviderId && rows.some((p) => p.id === defaults.activeProviderId) ? defaults.activeProviderId : rows[0].id;
+    // คีย์ลงไฟล์คีย์ของโปรเจกต์ทันที (รายการผู้ให้บริการยังรอปุ่มบันทึกของกล่อง — ยกเลิก = คีย์ถูกเก็บกวาดตอนบันทึกครั้งถัดไป)
+    if (Object.keys(m.keys).length) { const keys = await loadKeys(); Object.assign(keys, m.keys); await saveKeys(keys); }
+    refresh(); paintDefaults();
+    setStatus(tf('ui.aiProvider.defaultsImported', m.added));
+    log('info', 'ai: defaults imported', { added: m.added, withKeys: Object.keys(m.keys).length });
+  };
+  defSave.onclick = async () => {
+    if (!rows.length || !kapi.aiDefaultsSave) return;
+    try {
+      const r = await kapi.aiDefaultsSave(packDefaults(rows, await loadKeys(), activeId));
+      setStatus(r && r.keysSaved ? tf('ui.aiProvider.defaultsSaved', rows.length) : tf('ui.aiProvider.defaultsSavedNoKeys', rows.length));
+      log('info', 'ai: defaults saved', { providers: rows.length, keys: !!(r && r.keysSaved) });
+      await loadDefaults();
+    } catch (e) { log('warn', 'ai: defaults save failed', e); setStatusError(t('ui.aiProvider.defaultsFail')); }
+  };
 
   const close = () => ov.remove();
   cB.onclick = close;

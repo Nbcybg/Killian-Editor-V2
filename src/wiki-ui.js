@@ -3,7 +3,7 @@ import { tx, txf, hx } from './i18n-html.js';   // [alpha.154] ข้อคว�
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
 import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, openOnce, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
 // บทเรียน 68: ไฟล์นี้มี `for (const t of state.tabs.values())` อยู่แล้ว → import เป็น `tr` เสมอ
-import { $, BUILTIN_CATS, el, setStatus, smart, state, t as tr } from './core.js';
+import { $, BUILTIN_CATS, el, setStatus, smart, state, log, t as tr } from './core.js';
 import { pickImage } from './gallery.js';
 import { confirmBox, ask } from './ui.js';
 import { iconHtml, gi } from './icons.js';
@@ -158,7 +158,7 @@ async function openEntityNow(file) {
         const ov = el('div', 'k-overlay');
         const box = el('div', 'k-dialog');
         const opts = tps.map((t) =>
-          `<option value="${t.id}"${t.id === curId ? ' selected' : ''}>${t.name || t.id}${t.id === curId ? tt('ui.wiki.current') : ''}</option>`
+          `<option value="${hx(t.id)}"${t.id === curId ? ' selected' : ''}>${hx(t.name || t.id)}${t.id === curId ? hx(tt('ui.wiki.current')) : ''}</option>`
         ).join('');
         box.innerHTML = ((a) => `<div class="k-dlg-title">${tx('ui.wiki.changeTemplate3')}</div>
           <div class="k-hint" style="margin:8px 0">${tx('ui.wiki.dataPrevAddOnly')}</div>
@@ -207,6 +207,7 @@ async function openEntityNow(file) {
       const ent = (tab.wiki && tab.wiki.e) || entity;
       renderSensoryProfile(w, ent, () => tab.wiki && tab.wiki.markDirty());
       attachTaggedImages(w, ent);
+      attachMapBlock(w, ent);
     },
   });
   tab.wiki.onDirty(() => markDirty(tab));
@@ -248,6 +249,21 @@ async function openEntityNow(file) {
     renderBacklinksTab(blBody, file, openSceneById);
     attachChoiceHistory(wrap);
   }); }
+
+  /** [alpha.168] กล่อง "แผนที่" ในหน้าเอนทิตี้ (ภาพอ้างอิง 4 ของผู้ใช้) — อยู่ก่อนแผงฉากที่กล่าวถึง */
+  async function attachMapBlock(wrap, ent) {
+    if (!wrap) return;
+    try {
+      let sec = wrap.querySelector('.wiki-map');
+      if (!sec) {
+        sec = el('div', 'wiki-map');
+        const bl = wrap.querySelector('.wiki-backlinks');
+        if (bl) wrap.insertBefore(sec, bl); else wrap.append(sec);
+      }
+      const { renderMapEmbed } = await import('./maps-ui.js');
+      await renderMapEmbed(sec, file, (ent && ent.name) || '');
+    } catch (e) { log('warn', 'wiki: map block failed', e); }   // แผนที่พังต้องไม่ทำหน้า Wiki ล้ม
+  }
 
   /**
    * [alpha.63] รูปในคลังที่ติดแท็ก `@ชื่อเอนทิตี้` → โผล่ในหน้า Wiki อัตโนมัติ

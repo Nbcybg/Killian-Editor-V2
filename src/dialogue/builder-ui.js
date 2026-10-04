@@ -16,6 +16,7 @@ import { aiConfigured } from '../ai-settings.js';
 import { PARAM_DEFS } from '../ai/ai-providers.js';
 import * as C from './builder-core.js';
 import { gi } from '../icons.js';
+import { panelEmpty } from '../panels/panel-chrome.js';
 
 // ────────────────────────────── สถานะของแผง ──────────────────────────────
 const S = {
@@ -153,9 +154,12 @@ function drawList() {
   const rows = el('div', 'dlgb-rows');
   wrap.append(bar, rows);
 
-  const arch = el('div', 'dlgb-archtoggle',
+  const arch = el('button', 'dlgb-archtoggle',
                   S.showArchived ? t('ui.dlgb.hideArchived') : t('ui.dlgb.showArchived'));
+  arch.type = 'button';
   arch.onclick = () => { S.showArchived = !S.showArchived; drawList(); };
+  // [alpha.168] ไม่มีเซสชันที่จัดเก็บ = ไม่มีอะไรให้สลับ (เดิมป้ายนี้ลอยใต้ข้อความว่างเสมอ)
+  arch.hidden = !S.sessions.some((r) => r.data && r.data.archived);
   wrap.append(arch);
 
   function drawRows() {
@@ -163,7 +167,7 @@ function drawList() {
     const list = C.searchSessions(S.sessions.map((r) => r.data), S.query,
                                  { includeArchived: S.showArchived });
     if (!list.length) {
-      rows.append(el('div', 'dlgb-empty', S.query ? t('ui.dlgb.noMatch') : t('ui.dlgb.noSession')));
+      rows.append(panelEmpty(S.query ? t('ui.dlgb.noMatch') : t('ui.dlgb.noSession'), { icon: 'bot', cls: 'dlgb-empty' }));
       return;
     }
     for (const s of list) {

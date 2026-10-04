@@ -112,6 +112,8 @@ export function buildGraph(scenes) {
 export function involvedIds(graph) {
   const set = new Set();
   for (const n of graph.nodes) if (n.choices.length) set.add(n.id);
+  // [alpha.168] ฉากที่ผู้ใช้ลากมาวางบนผังเอง (ยังไม่มีทางเลือก) — ผู้ใช้: "story branch ยัง drag and drop ไม่ได้"
+  for (const n of graph.nodes) if (n.placed) set.add(n.id);
   for (const e of graph.edges) if (!e.dangling) set.add(e.to);
   return set;
 }

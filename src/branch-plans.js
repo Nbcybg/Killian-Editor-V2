@@ -137,8 +137,9 @@ export function normalizeBranchPlan(raw, fallbackName) {
   for (const [k, v] of Object.entries(r.positions || {})) {
     if (!v || typeof v !== 'object') continue;
     const x = numOr(v.x, null), y = numOr(v.y, null);
-    if (x === null || y === null) continue;
-    out.positions[k] = { x, y };
+    // [alpha.168] placed = ฉากที่ผู้ใช้ลากมาวางบนผังเอง (อยู่ได้แม้ยังไม่มีตำแหน่ง/ทางเลือก)
+    if (x === null || y === null) { if (v.placed) out.positions[k] = { placed: true }; continue; }
+    out.positions[k] = v.placed ? { x, y, placed: true } : { x, y };
   }
   for (const [k, v] of Object.entries(r.colors || {})) {
     if (typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v)) out.colors[k] = v;

@@ -15,8 +15,10 @@ import { cmpText } from '../locale.js';
 export const CODEX_VERSION = 1;
 
 /** หมวดมาตรฐาน → ชื่อไทย (หมวดที่ผู้ใช้สร้างเองใช้ชื่อของตัวเอง) */
+// [alpha.168] getter = แปลตอนอ่าน (เดิมแปลตอน import → หน้า Codex ที่ส่งออกเป็นอังกฤษยังได้ชื่อหมวดไทย)
 const CAT_TH = {
-  characters: tt('ui.common.character'), locations: tt('ui.common.place'), items: tt('ui.common.thing'), lore: tt('ui.common.legend2'),
+  get characters() { return tt('ui.common.character'); }, get locations() { return tt('ui.common.place'); },
+  get items() { return tt('ui.common.thing'); }, get lore() { return tt('ui.common.legend2'); },
 };
 export const catLabel = (c, labels) => (labels && labels[c]) || CAT_TH[c] || c;
 

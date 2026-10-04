@@ -11,14 +11,22 @@
 import { t } from './i18n.js';
 import { gi } from './icons.js';
 import { cmpText } from './locale.js';
-export const MAPS_VERSION = '1.1';
+import { bgBounds, isDefaultBg } from './map-bg.js';
+export const MAPS_VERSION = '1.2';
 
 export const PIN_COLORS = ['#d9575e', '#5f9fd9', '#6fae6f', '#d9b757', '#a97fd0', '#d97757', '#7fb8b0'];
+// [alpha.168] ป้าย/ไอคอนอ่านตอนใช้ (getter) — t()/gi() ตอน import = แช่ภาษา/ไอคอนตอนบูต
+const pinKind = (iconName, key) => ({ get icon() { return gi(iconName); }, get label() { return t(key); } });
 export const PIN_KIND = {
-  entity: { icon: gi('map-pin'), label: t('ui.maps.pos') },
-  portal: { icon: gi('door'), label: t('ui.maps.portalMapOther') },
-  note:   { icon: gi('pin'), label: t('ui.common.msg6') },
+  entity: pinKind('map-pin', 'ui.maps.pos'),
+  portal: pinKind('door', 'ui.maps.portalMapOther'),
+  note:   pinKind('pin', 'ui.common.msg6'),
+  // [alpha.168] ตัวหนังสือบนแผนที่ (ชื่อเกาะ/ทะเล — แบบในวิดีโอของผู้ใช้) · ไม่มีป้ายไอคอน
+  text:   pinKind('font', 'ui.maps.textLabel'),
 };
+/** [alpha.168] ขนาดหมุดรายตัว (S/M/L/XL) — คูณกับขนาดหมุดทั้งแผนที่ */
+export const PIN_SIZES = { s: 0.75, m: 1, l: 1.45, xl: 2.1 };
+export function pinSizeK(pin) { return PIN_SIZES[pin && pin.size] || 1; }
 
 export function newMap(name, image) {
   return { id: 'map-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
@@ -28,10 +36,18 @@ export function newMap(name, image) {
 
 export function newPin(x, y, kind = 'note') {
   return { id: 'pin-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-           x: clamp(x), y: clamp(y), label: '', kind, entityFile: '', toMap: '', color: '', note: '' };
+           x: clampW(x), y: clampW(y), label: '', kind, entityFile: '', toMap: '', color: '', note: '' };
 }
 
+/** หนีบ 0–100 (ตัวเลื่อน/สัดส่วนที่ยังต้องอยู่ในกรอบ) */
 export function clamp(n) { return Math.max(0, Math.min(100, n)); }
+/**
+ * [alpha.168] พิกัดบนแผนที่ไม่ถูกขังในกรอบรูปอีกแล้ว — ผู้ใช้: "ขนาด map ต้องเป็น infinite ไม่ใช่อิงตามขนาดรูป ·
+ * รูปเป็นแค่ background / reference" → หน่วยยังเป็น % ของกรอบอ้างอิง (ไฟล์เดิมใช้ได้ทุกไบต์) แต่เกิน 0–100 ได้
+ * เพดานกว้างมาก (±100 เท่าของกรอบ) แค่กันค่าเสีย/หลุดไปไกลจนหาไม่เจอ
+ */
+export const WORLD_MIN = -10000, WORLD_MAX = 10100;
+export function clampW(n) { const v = +n; return Number.isFinite(v) ? Math.max(WORLD_MIN, Math.min(WORLD_MAX, v)) : 0; }
 
 // หา map ตาม id
 export function findMap(maps, id) { return (maps || []).find((m) => m.id === id) || null; }
@@ -87,7 +103,18 @@ export function deleteMap(maps, id) {
 
 // ---------- ซูม ----------
 // ซูมเป็น "เท่าของความกว้างที่พอดีกรอบ" (1 = พอดีกรอบ) — หมุดเก็บเป็น % จึงเลื่อนตามเองอัตโนมัติ
-export const MAP_ZOOM_MIN = 0.25, MAP_ZOOM_MAX = 5, MAP_ZOOM_STEP = 0.25;
+export const MAP_ZOOM_MIN = 0.1, MAP_ZOOM_MAX = 8, MAP_ZOOM_STEP = 0.25;
+/**
+ * [alpha.168] ขั้นซูมแบบแผนที่ในเกม (ล้อหนึ่งจังหวะ = หนึ่งขั้น) — ห่างเป็นสัดส่วน ไม่ใช่ทีละ 25% ตายตัว
+ * (ซูมออกไกลจาก 100% → 10% ด้วยขั้นคงที่ 25% ใช้ล้อเป็นสิบครั้ง · ซูมเข้า 5× ก็เช่นกัน)
+ */
+export const MAP_ZOOM_LADDER = [0.1, 0.15, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+export function zoomLadder(z, dir) {
+  const cur = clampZoom(z), L = MAP_ZOOM_LADDER;
+  if (dir > 0) { for (const v of L) if (v > cur + 1e-6) return v; return L[L.length - 1]; }
+  for (let i = L.length - 1; i >= 0; i--) if (L[i] < cur - 1e-6) return L[i];
+  return L[0];
+}
 export function clampZoom(z) {
   // ระวัง Number(null)=0 / Number('')=0 → ถ้าเช็คแค่ isFinite ค่าว่างจะกลายเป็นซูมต่ำสุดแทนที่จะเป็น 1
   if (z === null || z === undefined || z === '') return 1;
@@ -149,6 +176,39 @@ export function gridLines(gridSize) {
   return out;
 }
 
+/**
+ * [alpha.168] ขนาดช่องกริดเป็น % ของกรอบ — ผู้ใช้: "ตาราง grid ไม่ใช่ ratio 1:1"
+ * เดิมแบ่งกว้างและสูงเป็น n ช่องเท่ากัน = ช่องยืดตามสัดส่วนรูป · ตอนนี้ช่องสี่เหลี่ยมจัตุรัสเสมอ
+ * (n = จำนวนช่องตามความกว้าง · แกนตั้ง: y% ของช่อง = x% × สัดส่วนภาพ)
+ */
+export function gridCell(gridSize, aspect = 1) {
+  const raw = Number(gridSize);
+  const n = Number.isFinite(raw) ? Math.max(2, Math.min(50, Math.round(raw))) : DEFAULT_OVERLAYS.gridSize;
+  const a = Number(aspect) > 0 ? Number(aspect) : 1;
+  return { x: 100 / n, y: (100 / n) * a, n };
+}
+/**
+ * [alpha.168] กรอบที่ครอบทุกอย่างบนแผนที่ (กรอบรูป 0–100 + หมุด + โซน) เป็น % — ใช้ "พอดีจอ" และส่งออก PNG
+ * (ของที่อยู่นอกรูปไม่ถูกตัดทิ้ง)
+ */
+export function mapBounds(map, { frame = true } = {}) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = (x, y) => { if (!Number.isFinite(+x) || !Number.isFinite(+y)) return; x0 = Math.min(x0, +x); y0 = Math.min(y0, +y); x1 = Math.max(x1, +x); y1 = Math.max(y1, +y); };
+  if (frame) {
+    // [alpha.168] รูปพื้นหลังที่ถูกย้าย/ย่อ/หมุน = ครอบตามภาพจริง (map-bg.js) · ไม่มีการแก้ = กรอบอ้างอิงเดิม
+    if (map && map.image && map.bg && !isDefaultBg(map.bg)) {
+      const a = Number(map.aspect) > 0 ? Number(map.aspect) : 1.6;
+      const bb = bgBounds(map.bg, a, a); add(bb.x0, bb.y0); add(bb.x1, bb.y1);
+    } else { add(0, 0); add(100, 100); }
+  }
+  for (const p of (map && map.pins) || []) add(p.x, p.y);
+  for (const z of mapZones(map)) for (const q of z.points) add(q.x, q.y);
+  if (!Number.isFinite(x0)) return { x0: 0, y0: 0, x1: 100, y1: 100 };
+  if (x1 - x0 < 1) { x0 -= 5; x1 += 5; }
+  if (y1 - y0 < 1) { y0 -= 5; y1 += 5; }
+  return { x0, y0, x1, y1 };
+}
+
 // ---------- หมวดแผนที่ (โฟลเดอร์) ----------
 export const MAP_UNCATEGORIZED = '';
 /** ชื่อหมวดทั้งหมดที่ใช้จริง เรียงตามชื่อไทย — หมวดว่าง ("ไม่ระบุ") อยู่ท้ายสุดเสมอ */
@@ -164,6 +224,28 @@ export function groupMaps(maps) {
     cat,
     maps: sortMaps((maps || []).filter((m) => String(m.category || '').trim() === cat)),
   }));
+}
+
+/**
+ * [alpha.168 · bug hunt] ตัวกรองหมวดที่ยังใช้ได้ — หมวดที่กรองอยู่ไม่มีแผนที่เหลือแล้ว (ย้ายหมวด/ลบใบสุดท้าย) = null
+ * เดิมแผงถือค่ากรองค้างไว้ → ไม่มีแผนที่ให้แสดง → สั่งวาดใหม่ → วนไม่จบ (แอปค้างทั้งโปรแกรม)
+ * @param filter null = ไม่กรอง · '' = หมวด "ไม่ระบุ"
+ */
+export function validCatFilter(maps, filter) {
+  if (filter === null || filter === undefined) return null;
+  return mapCategories(maps).includes(String(filter)) ? String(filter) : null;
+}
+/**
+ * แผนที่ที่ควรแสดงเมื่อมีตัวกรองหมวด: ใบปัจจุบันถ้าอยู่ในหมวดนั้น · ไม่งั้นใบแรกของหมวด
+ * (ตัวกรองใช้ไม่ได้/หมวดว่าง = ใบปัจจุบันเดิม — ไม่มีทางคืนค่าที่ทำให้ต้องวาดซ้ำไม่จบ)
+ */
+export function mapForFilter(maps, currentId, filter) {
+  const cur = findMap(maps, currentId) || sortMaps(maps || [])[0] || null;
+  const f = validCatFilter(maps, filter);
+  if (f === null || !cur) return cur;
+  if (String(cur.category || '').trim() === f) return cur;
+  const g = groupMaps(maps).find((x) => x.cat === f);
+  return (g && g.maps[0]) || cur;
 }
 
 // ---------- ค้นหา/กรองหมุด ----------
@@ -182,7 +264,7 @@ export function filterPins(pins, q) { return (pins || []).filter((p) => matchPin
 export function movePins(pins, ids, dx, dy) {
   const set = new Set(ids || []);
   return (pins || []).map((p) => set.has(p.id)
-    ? { ...p, x: clamp(p.x + (+dx || 0)), y: clamp(p.y + (+dy || 0)) } : p);
+    ? { ...p, x: clampW(p.x + (+dx || 0)), y: clampW(p.y + (+dy || 0)) } : p);
 }
 /** ลบหมุดหลายตัว + ถอดออกจากทุกเส้นทางด้วย (กัน route ชี้หมุดที่หายไป) */
 export function deletePins(map, ids) {
@@ -197,7 +279,7 @@ export function clonePins(pins, ids, offset = 2, intoMapId = null) {
   const set = new Set(ids || []);
   const seq = () => 'pin-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   return (pins || []).filter((p) => set.has(p.id)).map((p) => {
-    const c = { ...p, id: seq(), x: clamp(p.x + offset), y: clamp(p.y + offset) };
+    const c = { ...p, id: seq(), x: clampW(p.x + offset), y: clampW(p.y + offset) };
     if (intoMapId && c.kind === 'portal' && c.toMap === intoMapId) c.toMap = '';
     return c;
   });
@@ -269,6 +351,7 @@ export function migrateMaps(data) {
     // [alpha.167] โซน/พิกัดเป็นของใหม่ — ไฟล์เก่าไม่มี = อาร์เรย์ว่าง (geo ไม่ต้องเติม: ไม่มี = ยังไม่ตั้งค่า)
     m.zones = Array.isArray(m.zones) ? m.zones : [];
   }
+  // [alpha.168] v1.2: ไม่มีอะไรต้องแปลง (พิกัดเกินกรอบได้ · โซนมีความจาง/ลาย · หมุดมีขนาด/รูป/ชนิดตัวหนังสือ — ขาด = ค่าเริ่มต้น)
   d.version = MAPS_VERSION;
   return d;
 }
@@ -407,7 +490,38 @@ export const ZONE_COLORS = ['#5f9fd9', '#6fae6f', '#d9b757', '#d97757', '#a97fd0
 export function newZone(points, o = {}) {
   return { id: 'zn-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
            name: o.name || '', entityFile: o.entityFile || '', color: o.color || ZONE_COLORS[0],
-           points: (points || []).map((p) => ({ x: clamp(+p.x), y: clamp(+p.y) })) };
+           opacity: zoneOpacity(o), pattern: ZONE_PATTERNS.includes(o.pattern) ? o.pattern : 'none',
+           points: (points || []).map((p) => ({ x: clampW(+p.x), y: clampW(+p.y) })) };
+}
+// [alpha.168] ผู้ใช้: "สี zone กับความจางเปลี่ยนไม่ได้" → ความจาง/ลายของพื้นโซนเป็นค่าของโซนเอง (ไฟล์เก่าไม่มี = ค่าเริ่มต้น)
+export const ZONE_PATTERNS = ['none', 'hatch', 'cross', 'dots'];
+export const ZONE_OPACITY_DEFAULT = 0.24;
+export function zoneOpacity(z) {
+  const v = Number(z && z.opacity);
+  return z && z.opacity != null && z.opacity !== '' && Number.isFinite(v) && v >= 0 && v <= 1 ? v : ZONE_OPACITY_DEFAULT;
+}
+/** ย้ายของในอาร์เรย์ (ลำดับชั้น: ตัวหลังวาดทับ) · dir: 1 = ขึ้น · -1 = ลง · 'top'/'bottom' */
+function moveInList(arr, id, dir) {
+  const i = arr.findIndex((z) => z.id === id);
+  if (i < 0) return false;
+  const [z] = arr.splice(i, 1);
+  const j = dir === 'top' ? arr.length : dir === 'bottom' ? 0 : Math.max(0, Math.min(arr.length, i + (dir > 0 ? 1 : -1)));
+  arr.splice(j, 0, z);
+  return j !== i;
+}
+export function moveZone(map, id, dir) { map.zones = map.zones || []; return moveInList(map.zones, id, dir); }
+export function movePinLayer(map, id, dir) { map.pins = map.pins || []; return moveInList(map.pins, id, dir); }
+/**
+ * [alpha.168] หมุดที่อยู่ในโซน — ผู้ใช้: "zone ไป link กับหมุดไหนเนี่ย ก็ไม่ได้ถูกทำให้ เหมือน decorate มากกว่าจะใช้ประโยชน์"
+ * → โซนรู้ว่าในเขตมีใคร/อะไรบ้าง (แถบข้าง · แถบเครื่องมือของโซน) · ไม่นับหมุดตัวหนังสือ
+ */
+export function pinsInZone(map, zone) {
+  if (!zone || !Array.isArray(zone.points) || zone.points.length < 3) return [];
+  return ((map && map.pins) || []).filter((p) => p.kind !== 'text' && pointInPolygon(p, zone.points));
+}
+/** โซนที่หมุดนี้อยู่ข้างใน (บนสุดก่อน) */
+export function zonesOfPin(map, pin) {
+  return mapZones(map).filter((z) => pointInPolygon(pin, z.points)).reverse();
 }
 export function mapZones(map) {
   return (map && Array.isArray(map.zones) ? map.zones : []).filter((z) => z && Array.isArray(z.points) && z.points.length >= 3);

@@ -74,7 +74,7 @@ export async function renderHistoryPanel(host) {
   h.append(list);
 
   if (!rows.length) {
-    list.append(panelEmpty(t('ui.histOry.notHasChangeSave')));
+    list.append(panelEmpty(t('ui.histOry.notHasChangeSave'), { icon: 'history' }));
     return true;
   }
 

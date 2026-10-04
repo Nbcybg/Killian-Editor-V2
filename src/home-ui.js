@@ -1,13 +1,13 @@
 // home-ui.js — หน้า Home แสดงรายการโปรเจกต์ทั้งหมดแบบ Grid (เหมือน Notion)
-import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t } from './i18n.js';
 import { $, el, state, setStatus, log, t as tr } from './core.js';
-import { activate, closeTab, loadProject, newProject } from './app.js';
+import { activate, closeTab, newProject, openProjectFromUi } from './app.js';
 // [alpha.60r3 ข้อ 9] ปุ่มส่งออก/นำเข้าโปรเจกต์บนหน้าแรก
 import { exportProjectZip, importProjectZip } from './export-zip.js';
 import { initIcons, gi, icon } from './icons.js';
 import { fileUrlFromPath } from './file-url.js';
 import { settingsDialog } from './dialogs.js';
+import { toast } from './ui.js';   // [alpha.168] ข้อความลอย (แถบสถานะถูกหน้าแรกบัง)
 import { fmtDate, fmtNum } from './locale.js';
 
 // [alpha.61 ข้อ 1] มุมมองหน้าแรกเป็น "โหมด" ไม่ใช่สวิตช์สลับ — 2 ปุ่มแยกกัน ติดสว่างอันที่ใช้อยู่
@@ -113,7 +113,8 @@ export function buildHomeActions(opts = {}) {
   findInp.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); findBtn.onclick(); } };
 
   exportBtn.onclick = async () => {
-    if (!state.root) { setStatus(t('ui.home.openProjectBeforeExport')); return; }
+    // [alpha.168 · bug hunt] หน้าแรกบังแถบสถานะอยู่ — แจ้งด้วยข้อความลอยด้วย (เดิมกดแล้วเงียบ)
+    if (!state.root) { setStatus(t('ui.home.openProjectBeforeExport')); toast(t('ui.home.openProjectBeforeExport'), { level: 'warn' }); return; }
     await exportProjectZip();
   };
   importBtn.onclick = async () => {
@@ -125,7 +126,7 @@ export function buildHomeActions(opts = {}) {
     const projectPath = await kapi.openProjectDialog?.();
     if (!projectPath) return;
     opts.onClose?.();
-    await loadProject(projectPath);
+    await openProjectFromUi(projectPath);          // [alpha.168 · bug hunt 2] ทางเดียวที่รายงานเมื่อเปิดไม่ได้ (กฎ W1-6)
   };
   closeBtn.onclick = () => opts.onClose?.();
 
@@ -201,7 +202,7 @@ export async function renderHome(pane) {
 // พร้อมปุ่ม **ลบออกจากรายการ** · ยังไม่ลบให้เองอัตโนมัติ (ไดรฟ์ภายนอกที่ยังไม่เสียบ = ยังอยู่ดี)
 
 /** อ่านโปรเจกต์หนึ่งรายการจากรายการล่าสุด → การ์ดปกติ หรือการ์ด "หาไม่เจอ" */
-async function readRecentProject(root) {
+export async function readRecentProject(root) {
   try {
     const metaFile = await kapi.join(root, 'project.khn.json');
     if (!(await kapi.exists(metaFile)))
@@ -212,6 +213,13 @@ async function readRecentProject(root) {
     // = ยังไม่รู้จำนวนคำ → การ์ดต้องบอก "—" ไม่ใช่ "0" (เปิดครั้งแรกแล้วโปรแกรมนับให้เอง)
     let wordsUnknown = false;
     let lastModified = meta.created || '';
+    // [alpha.168 · bug hunt 2] "แก้ไขล่าสุด" เดิมอ่าน `sc.modified` ของแถวใน scenes.json ซึ่ง **ไม่เคยมีใครเขียน**
+    // (เวลาแก้ไขอยู่ใน frontmatter ของ .md) → การ์ดโชว์วันสร้างโปรเจกต์ตลอดกาล (หรือ "—") และเรียงผิด
+    // ตอนนี้ใช้เวลาแก้ไขของไฟล์ทะเบียนที่ถูกเขียนทุกครั้งที่ทำงาน (project.khn.json · scenes.json · draft.json)
+    const touch = async (f) => {
+      try { const ms = await kapi.mtime(f); if (ms > 0) { const iso = new Date(ms).toISOString(); if (iso > lastModified) lastModified = iso; } } catch {}
+    };
+    await touch(metaFile);
     for (const secName of await kapi.listDirs(root).catch(() => [])) {
       const secPath = await kapi.join(root, secName);
       if (!(await kapi.exists(await kapi.join(secPath, 'section.json')))) continue;
@@ -222,10 +230,12 @@ async function readRecentProject(root) {
         const draftFile = await kapi.join(dPath, 'draft.json');
         if (!(await kapi.exists(draftFile))) continue;
         const chapters = (await kapi.readJson(draftFile).catch(() => ({}))).chapters || [];
+        await touch(draftFile);
         totalChapters += chapters.length;
         const scenesFile = await kapi.join(dPath, 'scenes.json');
         if (!(await kapi.exists(scenesFile))) continue;
         const scChapters = (await kapi.readJson(scenesFile).catch(() => ({}))).chapters || {};
+        await touch(scenesFile);
         for (const ch of chapters) {
           for (const sc of (scChapters[ch.guid] || [])) {
             if (sc.type === 'memo') continue;
@@ -331,21 +341,27 @@ export function refreshHomePanels() {
   }
 }
 
+/**
+ * [alpha.168 · bug hunt] กล่อง "ยังไม่มีโปรเจกต์" ของหน้าแรก — ใช้ร่วมทุกทาง (แท็บ · กล่องตอนเปิดโปรแกรม · แผง)
+ * เดิมกล่องตอนเปิดโปรแกรม (ที่ผู้ใช้ใหม่เห็นเป็นอย่างแรก) มีแค่ข้อความตัวเล็กชิดซ้ายกลางที่ว่าง ไม่บอกว่าให้ทำอะไรต่อ
+ * @param onClose ปิดหน้าแรกหลังเริ่มสร้างโปรเจกต์ (ไม่ส่ง = ไม่ต้องปิด)
+ */
+export function homeEmptyBox(onClose) {
+  const box = el('div', 'home-empty home-empty-first');
+  const ic = el('div', 'home-empty-icon');
+  ic.append(icon('book-content', 64));
+  const btn = el('button', 'k-ok home-empty-new', t('ui.home.newProject'));
+  btn.type = 'button';
+  btn.onclick = () => { if (onClose) onClose(); newProject(); };
+  box.append(ic, el('h2', null, t('ui.home.notHasProject')), el('p', null, t('ui.home.newProjectFirstYours')), btn);
+  return box;
+}
 async function loadProjects(grid) {
   grid.innerHTML = '';
   try {
     const { ok, broken } = await scanRecentProjects();
     if (!ok.length && !broken.length) {
-      const empty = el('div', 'home-empty');
-      // [alpha.147] ค่าในไฟล์ภาษาเป็น HTML (<h2>…<p>…) มาตั้งแต่ยกข้อความออกจากโค้ด — textContent
-      // โชว์แท็กดิบ ๆ บนหน้าแรก · ไฟล์ภาษาเป็นของโปรแกรมเอง (เหมือนเทมเพลตกล่องตั้งค่า) จึงใส่เป็น HTML ได้
-      empty.innerHTML = `
-        <div class="home-empty-icon" data-icon="book-content" data-icon-size="64"></div>
-        <h2>${tx('ui.home.notHasProject')}</h2>
-        <p>${tx('ui.home.newProjectFirstYours')}</p>
-      `;
-      initIcons(empty);
-      grid.append(empty);
+      grid.append(homeEmptyBox(() => closeTab('::home::')));
       syncHomeQuick(grid, 0, () => closeTab('::home::'));
       return;
     }
@@ -443,7 +459,7 @@ export function createProjectCard(project, onOpen) {
     e.stopPropagation();
     await kapi.pushRecent(project.root).catch(() => {});
     onOpen?.();
-    await loadProject(project.root);
+    await openProjectFromUi(project.root);
   };
   body.append(openBtn);
   
@@ -476,6 +492,7 @@ export async function showHomeDialog(opts = {}) {
   const head = el('div', 'home-head');
   // [alpha.61 ข้อ 1] เอาปุ่ม ✕ มุมขวาบนออก — ปิดได้ที่ปุ่ม "✕ ปิด" ในแถบล่าง (หรือ Esc)
   head.append(el('h2', 'home-title', 'Killian 2'));
+  head.append(el('p', 'home-sub', t('ui.home.appWriteNovelScreenplay')));
   const grid = el('div', 'home-grid');
   const scroll = el('div', 'home-dlg-scroll');   // กรอบคงที่ · เลื่อนเฉพาะรายการข้างใน
   scroll.append(grid);
@@ -537,9 +554,7 @@ async function loadPanelProjects(grid, onOpen) {
     if (!ok.length && !broken.length) {
       // [alpha.150] เดิมส่ง element เป็นอาร์กิวเมนต์ "ข้อความ" ของ el() → ถูกแปลงเป็นสตริง
       // แล้วโชว์ `[object HTMLParagraphElement]` บนหน้าจอจริง (เห็นตอนถ่ายจอหน้าแรก)
-      const emptyBox = el('div', 'home-empty');
-      emptyBox.append(el('p', null, t('ui.home.notHasProject')));
-      grid.append(emptyBox);
+      grid.append(homeEmptyBox(onOpen));
       syncHomeQuick(grid, 0, onOpen);
       return;
     }

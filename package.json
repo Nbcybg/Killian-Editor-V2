@@ -18,11 +18,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@pdf-lib/fontkit": "^1.1.1",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "acorn": "^8.17.0",
+    "acorn-walk": "^8.3.4",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.28.1",
     "fabric": "^5.3.0",
     "fuse.js": "^7.5.0",
-    "jszip": "^3.10.1",
     "pdf-lib": "^1.17.1",
+    "@pdf-lib/fontkit": "^1.1.1",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-dropcursor": "^1.8.3",
     "prosemirror-gapcursor": "^1.4.1",
@@ -33,14 +40,7 @@
     "prosemirror-schema-list": "^1.5.1",
     "prosemirror-state": "^1.4.4",
     "prosemirror-transform": "^1.12.0",
-    "prosemirror-view": "^1.42.1"
-  },
-  "devDependencies": {
-    "acorn": "^8.17.0",
-    "acorn-walk": "^8.3.4",
-    "electron": "^43.1.1",
-    "electron-builder": "^26.0.12",
-    "esbuild": "^0.28.1",
+    "prosemirror-view": "^1.42.1",
     "three": "^0.186.1"
   },
   "productName": "Killian 2",

@@ -127,32 +127,31 @@ export function createPlannerToolbar(cb) {
     <span class="planner-board-name" id="pl-boardname" title="${tx('ui.planner.boardOpen')}">${tx('ui.common.boardMain')}</span>
     <span class="planner-dirty" id="pl-dirty" title="${tx('ui.planner.cantSave')}">${gi('dot')}</span>
     <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="new" data-tip="ui.tip.plNew" title="${tx('ui.planner.boardNew')}">${tx('ui.common.new2')}</button>
-    <button class="planner-btn" data-action="open" data-tip="ui.tip.plOpen" title="${tx('ui.planner.openBoardOther')}">${tx('ui.common.open')}</button>
+    <button class="planner-btn" data-action="new" data-tip="ui.tip.plNew" title="${tx('ui.planner.boardNew')}" data-icon="file-plus"></button>
+    <button class="planner-btn" data-action="open" data-tip="ui.tip.plOpen" title="${tx('ui.planner.openBoardOther')}" data-icon="folder-open"></button>
     <button class="planner-btn k-ok" data-action="save" title="${tx('ui.planner.saveScSave')}">${tx('ui.common.save')}</button>
-    <button class="planner-btn" data-action="save-as" title="${tx('ui.planner.saveFileNew')}">${tx('ui.menu.save')}</button>
+    <button class="planner-btn" data-action="save-as" title="${tx('ui.planner.saveFileNew')}" data-icon="save-as"></button>
     <span class="planner-sep"></span>
     <button class="planner-btn" data-action="undo" title="${tx('ui.planner.undoScEditorUndo')}" data-icon="undo"></button>
     <button class="planner-btn" data-action="redo" title="${tx('ui.planner.repeatScEditorRedo')}" data-icon="redo"></button>
     <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="group" title="${tx('ui.planner.groupScGoto')}">${tx('ui.plannerProps.group')}</button>
-    <button class="planner-btn" data-action="duplicate" title="${tx('ui.planner.repeatCtrlD')}">${tx('ui.common.repeat')}</button>
-    <button class="planner-btn" data-action="reveal" title="${tx('ui.planner.pointPosFileExplorer')}">${tx('ui.planner.doc')}</button>
-    <button class="planner-btn" data-action="delete" title="${tx('ui.planner.delDel')}">${tx('ui.common.del')}</button>
+    <button class="planner-btn" data-action="group" title="${tx('ui.planner.groupScGoto')}" data-icon="group"></button>
+    <button class="planner-btn" data-action="duplicate" title="${tx('ui.planner.repeatCtrlD')}" data-icon="duplicate"></button>
+    <button class="planner-btn" data-action="reveal" title="${tx('ui.planner.pointPosFileExplorer')}" data-icon="crosshair"></button>
+    <button class="planner-btn" data-action="delete" title="${tx('ui.planner.delDel')}" data-icon="trash"></button>
     <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="auto-layout" data-tip="ui.tip.plAuto" title="${tx('ui.galleryMoodboard.arrangeAuto')}">${tx('ui.planner.arrange')}</button>
-    <button class="planner-btn" data-action="grid" data-tip="ui.tip.plGrid" title="${tx('ui.planner.settingsGrid')}">${tx('ui.planner.grid')}</button>
+    <button class="planner-btn" data-action="auto-layout" data-tip="ui.tip.plAuto" title="${tx('ui.galleryMoodboard.arrangeAuto')}" data-icon="magic"></button>
+    <button class="planner-btn" data-action="grid" data-tip="ui.tip.plGrid" title="${tx('ui.planner.settingsGrid')}" data-icon="grid"></button>
     <span class="planner-sep"></span>
     <button class="planner-btn" data-action="zoom-out" title="${tx('ui.planner.zoomOutScZoom')}" data-icon="minus"></button>
     <button class="planner-btn planner-zoom-label" data-action="zoom-reset" title="${tx('ui.planner.zoomCtrlD')}" id="pl-zoom">100%</button>
     <button class="planner-btn" data-action="zoom-in" title="${tx('ui.planner.zoomInScZoom')}" data-icon="plus"></button>
-    <button class="planner-btn" data-action="zoom-fit" data-tip="ui.tip.plFit" title="${tx('ui.common.fitScreen')}">${tx('ui.planner.fitScreen')}</button>
-    <button class="planner-btn" data-action="fullscreen" data-tip="ui.tip.plFull" title="${tx('ui.planner.viewBoardFullScreen')}" data-icon="fullscreen">${tx('ui.menu.fullScreen')}</button>
+    <button class="planner-btn" data-action="zoom-fit" data-tip="ui.tip.plFit" title="${tx('ui.common.fitScreen')}" data-icon="maximize"></button>
+    <button class="planner-btn" data-action="fullscreen" data-tip="ui.tip.plFull" title="${tx('ui.planner.viewBoardFullScreen')}" data-icon="fullscreen"></button>
     <span class="planner-sep"></span>
-    <button class="planner-btn" data-action="background" data-tip="ui.tip.plBg" title="${tx('ui.planner.bgBoardColorImage')}" data-icon="layout">${tx('ui.planner.bgBoard2')}</button>
+    <button class="planner-btn" data-action="background" data-tip="ui.tip.plBg" title="${tx('ui.planner.bgBoardColorImage')}" data-icon="palette"></button>
     <button class="planner-btn" data-action="export-png" data-tip="ui.tip.plPng" title="${tx('ui.planner.exportImage')}" data-icon="image">${tx('ui.planner.pNG')}</button>
-    <button class="planner-btn" data-action="export-json" data-tip="ui.tip.plJson" title="${tx('ui.planner.exportFileJSON')}" data-icon="export">${tx('ui.planner.jSON')}</button>
-    <button class="planner-btn" data-action="sample" title="${tx('ui.planner.putSample')}">${tx('ui.planner.sample')}</button>
+    <button class="planner-btn" data-action="export-json" data-tip="ui.tip.plJson" title="${tx('ui.planner.exportFileJSON')}" data-icon="code-json"></button>
   `;
   initIcons(strip);   // [alpha.147] ปุ่มซูม +/− เป็น data-icon ในเทมเพลตแล้ว
 
@@ -173,7 +172,7 @@ export function createPlannerToolbar(cb) {
     const act = b.dataset.action;
     if (act === 'grid') { _gridPopover(b, cb); return; }
     const fn = cb[map[act]];
-    if (fn) fn();
+    if (fn) fn(b);
   });
 
   // เลื่อนด้วยล้อเมาส์ในแนวนอน

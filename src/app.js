@@ -42,10 +42,11 @@ import { LAYOUT_VERSION as PANEL_LAYOUT_VERSION,
 // [alpha.60r2 ข้อ 2] selftest ต้องตั้ง selection เองก่อนสั่งเปลี่ยนรูปตัวพิมพ์
 import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from 'prosemirror-state';
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
-import { ask, confirmBox, infoBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider, installDialogA11y, rovingToolbar } from './ui.js';
+import { ask, confirmBox, infoBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider, installDialogA11y, rovingToolbar, toast } from './ui.js';
 import { escCancelDrag } from './drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก
 import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
-import { mutateJson } from './json-store.js';   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
+import { mutateJson, onBrokenJson } from './json-store.js';
+import { readJsonGuarded, resetJsonGuard } from './json-guard.js';   // [alpha.168 · bug hunt] ไฟล์ JSON เสีย ≠ ไฟล์ว่าง   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
 import { diskConflict, focusAction } from './disk-conflict.js';   // [alpha.156] ไฟล์ถูกแก้นอกโปรแกรม
 import { sprintDirtyList, saveSprintDirty } from './sprint-ui.js';     // [alpha.156] ทะเบียนงานค้าง
 import { setTabBridge, pathKey } from './tab-bridge.js';   // [alpha.149] ตัวเขียนไฟล์นอกตัวแก้ไข (AI · ไล่แก้ชื่อ) ต้องรู้จักแท็บ
@@ -55,6 +56,7 @@ import { Gallery, pickImage } from './gallery.js';
 import * as albumCore from './gallery/album-core.js';     // [alpha.63] อัลบั้มรูป (Explorer/แดชบอร์ดใช้ร่วม)
 import { renderMoodBoardPanel, moodBoardInstance } from './gallery/moodboard-ui.js';   // [alpha.63r] แผงกระดานอารมณ์
 import { StoryNetwork, cssVar } from './network.js';
+import { hdrToRgba8 } from './hdr-decode.js';
 import { PlannerBoard } from './planner/planner.js';
 import { renderPlannerProps } from './planner/planner-props.js';
 import { errText, failText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
@@ -283,7 +285,8 @@ import { toolbarDialog, applyToolbarConfig, toolbarContextItems, TB_HOSTS,
 // [alpha.111] ปุ่ม "เรียกแถบรูปแบบมาหาเคอร์เซอร์" — ตรรกะพิกัด/เส้นโค้งอยู่ในโมดูลบริสุทธิ์
 import { fmtBarTarget, tweenAt, FMTBAR_TWEEN_MS, clampBarPos, clampBarInBox, visibleHostBox, barClampBox,
          FMTBAR_OPACITIES, nextOpacity, opacityPercent, normalizeBarState, resetBarState,
-         nextAlign, normalizeAlign, alignBarPos, defaultBarPos } from './toolbar/fmtbar-pos.js';
+         nextAlign, normalizeAlign, alignBarPos, defaultBarPos,
+         barShouldNarrow, bottomAnchorTop, fabDodgeBottom } from './toolbar/fmtbar-pos.js';
 // [alpha.116 ข้อ 8] โค้ดสั้น `[title]` — ทะเบียน + ตัวแทนค่า (บริสุทธิ์ · เทสแยก)
 import { SHORTCODES, SHORTCODE_GROUPS, shortcodeLabel, expandShortcodes,
          sceneContext, entityContext } from './shortcode.js';
@@ -2936,6 +2939,7 @@ async function closeProjectIfAny() {
     if (t.floatWin) { t.floatWin.remove(); t.floatWin = null; }
   }
   state.tabs.clear(); state.active = null; state.root = null;
+  resetJsonGuard(); _noWrite.clear(); _mapsSig = '';   // [alpha.168] ความจำของไฟล์เสีย/ลายเซ็นแผนที่เป็นของโปรเจกต์เดิม
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
   resetAnalyzer();                      // [alpha.89] ฉาก/ตัวละครที่แผงวิเคราะห์แคชไว้เป็นของโปรเจกต์เดิม
@@ -2970,12 +2974,13 @@ export async function loadProject(root) {
  * ลงแค่ในไฟล์บันทึก) · และกดสองครั้งรัว ๆ = เปิดซ้อนกันสองรอบบนสถานะเดียวกัน
  */
 const OPENING_PROJ = { on: false };
-async function openProjectFromUi(root) {
+export async function openProjectFromUi(root) {
   if (!root) return false;
   if (OPENING_PROJ.on) { setStatus(tt('ui.app.busyOpenProject')); return false; }
   OPENING_PROJ.on = true;
   try { await loadProject(root); return true; }
-  catch { setStatus(tt('ui.app.projectOpenProjectNot') + root); return false; }
+  // [alpha.168 · bug hunt 2] ข้อความผิดพลาดต้องค้างให้อ่าน + บอกสาเหตุ (เดิม setStatus ธรรมดา = หายเองใน 5 วินาที ไม่มีเหตุผล)
+  catch (e) { const msg = ttf('ui.app.openProjectFailed', root, errText(e)); setStatusError(msg); toast(msg, { level: 'error' }); return false; }
   finally { OPENING_PROJ.on = false; }
 }
 
@@ -3006,6 +3011,13 @@ async function loadProjectInner(root) {
   // [alpha.62 บั๊ก 9] กล่อง "บันทึกก่อนปิด?" เด้งตรงนี้ — ต้องล้างตัวบอกสถานะก่อน
   //   ไม่งั้นสปินเนอร์หมุนค้างระหว่างรอผู้ใช้ตอบ ดูเหมือนโปรแกรมแฮงก์
   clearBusy();
+  // [alpha.168 · bug hunt 2] ★ ตรวจว่าไฟล์โปรเจกต์อ่านได้ **ก่อน** ปิดโปรเจกต์ที่เปิดอยู่
+  // เดิมปิดของเดิมก่อนแล้วค่อยอ่าน → project.khn.json ของปลายทางเสีย (ซิงก์ครึ่งไฟล์) = โยน error หลังปิดไปแล้ว
+  // ผู้ใช้เหลือโปรแกรมเปล่า ทั้งที่งานเดิมไม่ได้มีปัญหาอะไร · อ่านซ้ำอีกรอบหลังปิด (เปิดโปรเจกต์เดิมซ้ำ = ไฟล์เพิ่งถูกเขียน)
+  {
+    const probe = await kapi.readJson(await kapi.join(root, 'project.khn.json'));
+    if (!probe || typeof probe !== 'object' || Array.isArray(probe)) throw new Error('project.khn.json: not a project file');
+  }
   if (!(await closeProjectIfAny())) return;
   setBusy(tt('ui.app.busyReadDataProject'));
   const meta = await kapi.readJson(await kapi.join(root, 'project.khn.json'));
@@ -3053,6 +3065,7 @@ async function loadProjectInner(root) {
     await drawPanelWindow();
     clearBusy();
     setStatus(tt('ui.app.openProject2') + state.title);
+  try { syncDocsEmpty(); } catch {}
     reportPanelWindowHealth();
     return;
   }
@@ -3078,7 +3091,8 @@ async function loadProjectInner(root) {
   const _restored = await restoreSessionTabs(_sess);
   if (!_restored) await restoreOpenTabs();
   if (!sessionOff()) startSessionWatch();
-  if (!state.tabs.size) openDashboard();
+  // [alpha.168 · bug hunt] จำว่าแดชบอร์ดใบนี้ "โปรแกรมเปิดให้เอง" — เปิดเอกสารแรกแล้วพับเก็บ (ดู autoCloseDashboard)
+  if (!state.tabs.size) { state._autoDash = !isPanelOpen('dashboard'); openDashboard(); }
   initThesaurus().catch(() => {});                   // Thesaurus engine
   ensureAutoLink().catch(() => {});                  // Backlinks index
   if (state.settings.autoSync) setAutoSync(true);    // auto-task: คืนสถานะที่ผู้ใช้เปิดไว้
@@ -6295,7 +6309,7 @@ export async function createEntityRelation(a, b) {
  */
 async function importNetAsset(kind) {
   if (!state.root) return '';
-  const src = kind === 'model' ? await kapi.openFileDialog('model3d') : await kapi.openImageDialog();
+  const src = kind === 'model' ? await kapi.openFileDialog('model3d') : kind === 'hdri' ? await kapi.openFileDialog('hdri') : await kapi.openImageDialog();
   if (!src) return '';
   const dirName = kind === 'model' ? 'Models' : 'Images';
   const name = await kapi.copyInto(src, await kapi.join(state.root, dirName));
@@ -6346,6 +6360,12 @@ export async function renderNetworkPanel() {
       },
       assetUrl: async (rel) => (rel && state.root ? kapi.toFileURL(await kapi.join(state.root, rel)) : ''),
       importAsset: (kind) => importNetAsset(kind),
+      // [alpha.168] ฉากหลัง HDRI (.hdr) — ถอด + tone map เป็นพิกเซลให้ตัววาดพาโนรามา
+      loadHdr: async (rel) => {
+        if (!rel || !state.root) return null;
+        try { return hdrToRgba8(new Uint8Array(await kapi.readBytes(await kapi.join(state.root, rel)))); }
+        catch (e) { log('error', 'network: hdr decode failed', e); return null; }
+      },
       onReveal: (file) => { try { kapi.revealInOS(file); } catch {} },
       // structural node ops — เอามาจาก explorer โดยตรง
       onDeleteStruct: async (node) => {
@@ -6697,8 +6717,53 @@ window.k2ActivePlanner = activePlanner;
 try { bindPanelFocus(); } catch {}
 // [alpha.167] หยิบใส่: ทุกแผงรับของที่ลากมา (ตัวกลาง — แผงที่มีตัวรับเองชนะเสมอ)
 try { installPanelDrop(); } catch {}
+/**
+ * [alpha.168 · bug hunt] สถานะว่างของพื้นที่เอกสาร — เดิมไม่มีโปรเจกต์/ไม่มีแท็บ = ผืนเปล่าไม่บอกอะไรเลย
+ * วางเป็นลูกของ `#content` (ไม่ใช่ `.pane` — โค้ด/เทสนับ `#panes > .pane`) · โผล่เมื่อแถบแท็บไม่มีแท็บ
+ * ไม่มีโปรเจกต์ = ปุ่มสร้าง/เปิดโปรเจกต์ · มีโปรเจกต์ = บอกให้คลิกฉากในแผงโปรเจกต์ + ปุ่มเปิดแดชบอร์ด
+ * เฝ้าแถบแท็บด้วย MutationObserver (เปลี่ยนเฉพาะตอนเปิด/ปิดแท็บ — ไม่ใช่ของที่เปลี่ยนทุกตัวอักษร)
+ */
+export function syncDocsEmpty() {
+  const host = $('#content'), tabs = $('#tabs');
+  if (!host || !tabs) return null;
+  let box = host.querySelector(':scope > .k-docs-empty');
+  const none = !tabs.querySelector(':scope > .tab');
+  host.classList.toggle('k-no-tabs', none);
+  if (!none) { if (box) box.remove(); return null; }
+  const mode = state.root ? 'tab' : 'project';
+  if (box && box.dataset.mode === mode) return box;
+  if (box) box.remove();
+  box = el('div', 'k-docs-empty');
+  box.dataset.mode = mode;
+  const btn = (cls, text, fn) => { const b = el('button', cls, text); b.type = 'button'; b.onclick = fn; return b; };
+  const acts = el('div', 'k-docs-empty-acts');
+  if (mode === 'project') {
+    box.append(panelEmpty(tt('ui.app.docsEmptyNoProject'), { icon: 'book-content', hint: tt('ui.app.docsEmptyNoProjectHint') }));
+    acts.append(btn('k-ok', tt('ui.home.newProject'), () => handleCommand('new-project')),
+                btn('cmp-mini', tt('ui.home.openProject'), () => handleCommand('open-project')),
+                btn('cmp-mini', tt('ui.app.docsEmptyGuide'), () => handleCommand('quick-start')));
+  } else {
+    box.append(panelEmpty(tt('ui.app.docsEmptyNoTab'), { icon: 'file', hint: tt('ui.app.docsEmptyNoTabHint') }));
+    acts.append(btn('cmp-mini', tt('ui.app.docsEmptyDashboard'), () => handleCommand('dashboard')));
+  }
+  box.firstChild.append(acts);
+  host.append(box);
+  return box;
+}
+let _docsEmptyObs = null;
+export function installDocsEmpty() {
+  const tabs = $('#tabs');
+  if (!tabs || _docsEmptyObs) return false;
+  _docsEmptyObs = new MutationObserver(() => syncDocsEmpty());
+  _docsEmptyObs.observe(tabs, { childList: true });
+  syncDocsEmpty();
+  return true;
+}
 // [alpha.152 ข้อ 4] กระดานมีประวัติย้อนกลับของตัวเอง → ตอนถูกเลือกอยู่ Ctrl+Z เป็นของกระดาน
 try { setPanelOwnsKeys('planner', true); } catch {}
+// [alpha.168 · bug hunt] ผังพื้นที่/กระดานอารมณ์ก็มีประวัติของตัวเอง — เดิมไม่ได้ขึ้นทะเบียน: กด Ctrl+Z บนผังพื้นที่
+// = ย้อนทั้งผัง **และ** เอกสารที่เปิดอยู่ไปพร้อมกัน (ตัวดักกลางยิง editor-undo ก่อนตัวจับของแผง)
+try { setPanelOwnsKeys('floorplan', true); setPanelOwnsKeys('gallery-board', true); } catch {}
 export async function renderPlannerPanel(boardPath) {
   const host = $('#planner-body');
   if (!host) return false;
@@ -6913,7 +6978,9 @@ export function auditPlannerRows(when) {
   const faded = info.filter((i) => parseFloat(i.opacity) < 0.05 || i.visibility === 'hidden').length;
   const blank = info.filter((i) => !i.text).length;
   const secHidden = sec ? (getComputedStyle(sec).display === 'none' || sec.classList.contains('collapsed')) : null;
-  const bad = !sec || !rows.length || hidden || faded || blank;
+  // [alpha.168 · bug hunt] "ไม่มีแถวเลย" = โปรเจกต์ยังไม่มีกระดานที่บันทึกไว้ (ปกติ) — เดิมนับเป็นผิดปกติ
+  // เปิดแผงกระดานในโปรเจกต์ใหม่ทีไรได้ WARN 4 บรรทัด (กฎ alpha.128: ข้อความวินิจฉัย = debug)
+  const bad = !!rows.length && (!sec || hidden || faded || blank);
   // [alpha.128] ตัวนี้เป็นเครื่องมือวินิจฉัย K-1 (ปิดเคสไปตั้งแต่ alpha.75) แต่ยังยิง INFO
   // **ทุกครั้งที่สร้างต้นไม้ใหม่** — ในการรัน e2e รอบเดียวกินบันทึกไป 736 บรรทัดจาก 2,280
   // (45% ของทั้งไฟล์) จนเหตุการณ์จริงจมหาย · ตอนนี้ "ปกติ" = debug · "ผิดปกติ" = warn เหมือนเดิม
@@ -6948,7 +7015,8 @@ export function markPlannerRow(path, dirty) {
   }
 
   if (!row) {
-    log('warn', tt('ui.app.plannerTreeFindRow'), { path, rows: tree.querySelectorAll('.scene[data-planner]').length });
+    const nRows = tree.querySelectorAll('.scene[data-planner]').length;
+    log(nRows ? 'warn' : 'debug', tt('ui.app.plannerTreeFindRow'), { path, rows: nRows });
     return false;
   }
   row.classList.add('k-row-open');
@@ -7175,8 +7243,8 @@ async function buildMapsSection(tree) {
       const it = el('div', 'scene map-row' + (multiCat ? ' map-row-in-cat' : ''),
         gi('map') + ' ' + (m.name || tt('ui.common.notNamed')));
       const badge = el('span', 'map-row-badge',
-        nPins ? `${nPins}${gi('map-pin')}` + (nRoutes ? ` ${nRoutes}${gi('route')}` : '') : '—');
-      it.append(badge);
+        nPins ? `${nPins}${gi('map-pin')}` + (nRoutes ? ` ${nRoutes}${gi('route')}` : '') : '');
+      if (nPins) it.append(badge);     // [alpha.168] ไม่มีหมุด = ไม่มีป้าย (เดิมมี "—" ห้อยท้ายชื่อ)
       it.dataset.mapId = m.id;
       it.dataset.search = [m.name, m.category, ...(m.pins || []).map((p) => p.label)].filter(Boolean).join(' ');
       it.title = [m.name || tt('ui.common.notNamed'), m.category ? tt('ui.app.cat2') + m.category : '',
@@ -7439,15 +7507,51 @@ export async function setSceneStoryDate(it, when) {
 
 // ---------------- เส้นเวลา (Timeline) ----------------
 // events ผู้ใช้เก็บใน <root>/timeline.json — ฉากที่มี storyDate ดึงมาแสดงอัตโนมัติ
+/**
+ * [alpha.168 · bug hunt] อ่านไฟล์ JSON ระดับโปรเจกต์ (maps.json · timeline.json) ผ่านตัวกัน `json-guard`
+ * อ่านไม่ออก = เก็บสำเนาไฟล์เดิมไว้ข้าง ๆ + บอกผู้ใช้ แล้วจึงเริ่มจากของว่าง · สำรองไม่ได้ = ห้ามเขียนทับ
+ * (เดิม `catch { return ว่าง }` → แผงโชว์ว่าง แล้วการแก้ครั้งถัดไปเขียนทับแผนที่/เหตุการณ์ทั้งไฟล์)
+ */
+const _noWrite = new Set();
+async function readProjectJson(name, fallback) {
+  const p = await kapi.join(state.root, name);
+  const r = await readJsonGuarded(kapi, p, fallback);
+  if (r.state === 'broken') {
+    if (r.writable) _noWrite.delete(name); else _noWrite.add(name);
+    if (r.fresh) {
+      log('error', 'project json unreadable', { file: p, backup: r.backup, error: String(r.error && r.error.message || r.error) });
+      const bn = String(r.backup).split(/[\\/]/).pop();
+      const msg = r.backup ? ttf('ui.app.jsonUnreadable', name, bn) : ttf('ui.app.jsonUnreadableNoBackup', name);
+      setStatusError(msg);
+      toast(msg, { level: 'error', action: r.backup ? { label: tt('ui.exportImg.showInFolder'), onClick: () => kapi.revealInOS(r.backup) } : undefined });
+    }
+  } else _noWrite.delete(name);
+  return r.data;
+}
+// [alpha.168 · bug hunt 2] ไฟล์ทะเบียน (scenes.json · draft.json · section.json …) ที่ `mutateJson` อ่านไม่ออก — บอกผู้ใช้แบบเดียวกัน
+onBrokenJson(({ file, backup, error }) => {
+  log('error', 'registry json unreadable', { file, backup, error: String(error && error.message || error) });
+  const name = String(file).split(/[\\/]/).pop();
+  const bn = String(backup).split(/[\\/]/).pop();
+  const msg = backup ? ttf('ui.app.jsonUnreadable', name, bn) : ttf('ui.app.jsonUnreadableNoBackup', name);
+  setStatusError(msg);
+  toast(msg, { level: 'error', action: backup ? { label: tt('ui.exportImg.showInFolder'), onClick: () => kapi.revealInOS(backup) } : undefined });
+});
+/** เขียนไฟล์ JSON ระดับโปรเจกต์ — ไฟล์เดิมอ่านไม่ออกและสำรองไม่ได้ = ไม่เขียนทับ (คืน false + บอกผู้ใช้) */
+async function writeProjectJson(name, data) {
+  if (_noWrite.has(name)) { setStatusError(ttf('ui.app.jsonNoWrite', name)); return false; }
+  await kapi.writeFile(await kapi.join(state.root, name), JSON.stringify(data, null, 2));
+  return true;
+}
+
 export async function loadTimeline() {
-  const p = await kapi.join(state.root, 'timeline.json');
-  if (!(await kapi.exists(p))) return { version: TIMELINE_VERSION, events: [] };
-  try { const d = await kapi.readJson(p); d.events = d.events || []; return d; }
-  catch { return { version: TIMELINE_VERSION, events: [] }; }
+  const d = await readProjectJson('timeline.json', () => ({ version: TIMELINE_VERSION, events: [] }));
+  d.events = Array.isArray(d.events) ? d.events : [];
+  return d;
 }
 export async function saveTimeline(data) {
   data.version = TIMELINE_VERSION;
-  await kapi.writeFile(await kapi.join(state.root, 'timeline.json'), JSON.stringify(data, null, 2));
+  return writeProjectJson('timeline.json', data);
 }
 // ดึงฉากทุกเล่ม/ฉบับร่างที่ตั้ง storyDate ไว้ → เป็นเหตุการณ์อัตโนมัติบนเส้นเวลา
 export async function sceneEventsFromProject() {
@@ -7559,12 +7663,13 @@ export function eventDialog(ev, knownTracks, canDelete = false) {
 // ---------------- แผนที่ (Maps) ----------------
 // เก็บใน <root>/maps.json — รูปแผนที่อยู่ในคลังรูป (Images/) เก็บ path แบบ 'Images/<file>'
 export async function loadMaps() {
-  const p = await kapi.join(state.root, 'maps.json');
-  if (!(await kapi.exists(p))) return { version: MAPS_VERSION, maps: [] };
+  // [alpha.168 · bug hunt] ผ่านตัวกันไฟล์เสีย (เดิมอ่านไม่ออก = ว่างเงียบ ๆ แล้วถูกเขียนทับทั้งไฟล์)
   // [alpha.70] migrateMaps เติมคีย์ที่เพิ่มทีหลัง (category/routes/overlays) ให้ไฟล์เวอร์ชัน 1.0
   let data;
-  try { data = migrateMaps(await kapi.readJson(p)); }
-  catch { return { version: MAPS_VERSION, maps: [] }; }
+  try { data = migrateMaps(await readProjectJson('maps.json', () => ({ version: MAPS_VERSION, maps: [] }))); }
+  catch (e) { log('warn', 'maps: migrate failed', e); data = { version: MAPS_VERSION, maps: [] }; }
+  if (!Array.isArray(data.maps)) data.maps = [];
+  _mapsSig = mapsTreeSig(data);
   // [alpha.167 · รอบต่อ · บั๊ก] หมุด/โซนของเอนทิตี้เก็บทางเต็มของเครื่อง — เปิดจากโฟลเดอร์/เครื่องอื่นแล้วชี้ผิดที่
   // → ตรวจแบบถูกก่อน (ทุกทางอยู่ใต้โปรเจกต์นี้ = จบ) ค่อยอ่านรายชื่อเอนทิตี้มาเทียบชื่อไฟล์
   try {
@@ -7578,9 +7683,19 @@ export async function loadMaps() {
   } catch (e) { log('warn', 'maps: rebase entity paths failed', e); }
   return data;
 }
+/** ลายเซ็นของ "สิ่งที่ Explorer แสดง" (ใบไหน · ชื่อ · หมวด · ลำดับ) — หมุด/โซนเปลี่ยนไม่นับ */
+function mapsTreeSig(data) {
+  return ((data && data.maps) || []).map((m) => [m.id, m.name, m.category || '', m.order || 0, (m.pins || []).length].join('\u0001')).join('\u0002');
+}
+let _mapsSig = '';
 export async function saveMaps(data) {
   data.version = MAPS_VERSION;
-  await kapi.writeFile(await kapi.join(state.root, 'maps.json'), JSON.stringify(data, null, 2));
+  const ok = await writeProjectJson('maps.json', data);
+  // [alpha.168 · bug hunt] เพิ่ม/ลบ/เปลี่ยนชื่อ/ย้ายหมวดแผนที่จากแผง = แถวแผนที่ใน Explorer ต้องตาม
+  // (เดิมไม่มีใครวาดต้นไม้ใหม่ — จำนวน/ชื่อค้างจนกว่าจะมีเหตุอื่นมาวาด)
+  const sig = mapsTreeSig(data);
+  if (ok && sig !== _mapsSig) { _mapsSig = sig; try { refreshTreeQueued(); } catch {} }
+  return ok;
 }
 // รูปแผนที่: เก็บ 'Images/<file>' → แปลงเป็น URL ด้วย resolveImg (อ้างอิงจาก root)
 export function mapImgURL(rel) { return rel ? resolveImg(state.root, rel) : ''; }
@@ -7590,7 +7705,16 @@ export const mapsState_C = { s: null };   // object เพื่อ export ข�
 
 // เพิ่มแผนที่ใหม่: เลือกรูป → ตั้งชื่อ
 export async function addMapFlow() {
-  const it = await pickImage(state.root);
+  // [alpha.168] แผนที่ไม่มีขอบ → รูปพื้นหลังเป็นทางเลือก (ผู้ใช้: "ถึงแม้ไม่ใส่รูป map ก็ต้องใช้งานได้")
+  //   เดิมเปิดกล่องเลือกรูปก่อนเสมอ — ได้แผนที่เปล่าเฉพาะคนที่รู้ว่าต้องกดยกเลิก
+  const how = await choose(tt('ui.maps.newMapHow'), [
+    { label: tt('ui.common.cancel'), value: null },
+    { label: tt('ui.maps.newMapImage'), value: 'image' },
+    { label: tt('ui.maps.newMapBlank'), value: 'blank', primary: true },
+  ]);
+  if (!how) return;
+  const it = how === 'image' ? await pickImage(state.root) : null;
+  if (how === 'image' && !it) return;
   const name = await ask(tt('ui.common.nameMap'), { value: it ? it.file.replace(/\.[^.]+$/, '') : tt('ui.common.mapNew') });
   if (!name) return;
   const m = newMap(name, it ? 'Images/' + it.file : '');
@@ -7983,7 +8107,7 @@ async function renderPropsPanel() {
     catch (e) { log('warn', 'renderItemProps', e); }
     return;
   }
-  if (!propsTarget_C.t) { body.append(el('div', 'dim', tt('ui.app.pickSceneViewProps'))); return; }
+  if (!propsTarget_C.t) { body.append(panelEmpty(tt('ui.app.pickSceneViewProps'), { icon: 'clipboard' })); return; }
   const { dPath, ch, sc } = propsTarget_C.t;
   const sf = await kapi.join(dPath, 'scenes.json');
   if (stale()) return;
@@ -8112,6 +8236,13 @@ async function renderPropsPanel() {
     if (stale()) return;
     body.append(mapRow);
   } catch (e) { log('warn', tt('ui.app.propsNewRowPos'), e); }
+  // ---- [alpha.168] ผังพื้นที่ (ผังกองถ่าย) ของฉากนี้ — อ่านจากดัชนีอย่างเดียว ----
+  try {
+    const { buildScenePlansRow } = await import('./floorplan-ui.js');
+    const fpRow = await buildScenePlansRow(row);
+    if (stale()) return;
+    body.append(fpRow);
+  } catch (e) { log('warn', 'props: floorplan row', e); }
 
   // ---- [alpha.157] ฉากนี้กล่าวถึงอะไรบ้าง (แบ่งตามหมวด Wiki) ----
   try {
@@ -9825,7 +9956,8 @@ export function entityCreateDialog(cat, tps) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    const opts = [...tps.map((t) => `<option value="${t.id}">${t.name || t.id}</option>`),
+    // [alpha.168] ชื่อเทมเพลตเป็นข้อความของผู้ใช้ → escape ก่อนลง innerHTML (กฎข้อ 11)
+    const opts = [...tps.map((t) => `<option value="${hx(t.id)}">${hx(t.name || t.id)}</option>`),
                   `<option value="">${tx('ui.app.notUseTemplate2')}</option>`].join('');
     box.innerHTML = ((a) => `
       <div class="k-dlg-title">${txf('ui.app.newNew', a)}</div>
@@ -10478,6 +10610,20 @@ export function resolveImg(dir, rel) {
   return guess;
 }
 
+/**
+ * [alpha.168 · bug hunt] แดชบอร์ดที่ "โปรแกรมเปิดให้เอง" ตอนเปิดโปรเจกต์ที่ยังไม่มีแท็บ → พับเก็บเมื่อเปิดเอกสารแรก
+ * เดิมมันผนึกค้างกลางจอ 640px: เปิดฉากแรกแล้วพื้นที่เขียนเหลือ ~435px (หน้ากระดาษกว้าง 816px ถูกตัด) จนกว่าผู้ใช้จะไปปิดเอง
+ * ผู้ใช้เปิด/ปิดแดชบอร์ดเอง (ปุ่ม · เมนู · คีย์ลัด) = ธงถูกล้าง → ไม่ยุ่งกับแผงที่ผู้ใช้ตั้งใจเปิดไว้
+ * โหมดเทสปิดไว้ (เรขาคณิตของเทสเดิมหกพันข้อวัดบนเลย์เอาต์เดิม) เว้นเทสของเรื่องนี้เองตั้ง `__k2autoDashTest`
+ */
+export function autoCloseDashboard() {
+  if (!state._autoDash) return false;
+  state._autoDash = false;
+  if (sessionOff() && !globalThis.__k2autoDashTest) return false;
+  if (!isPanelOpen('dashboard')) return false;
+  hidePanel('dashboard');
+  return true;
+}
 export function activate(file) {
   for (const [f, t] of state.tabs) {
     const on = f === file;
@@ -10487,6 +10633,7 @@ export function activate(file) {
     wireTabDrag(t);                                      // [alpha.161 · K2] ลากสลับลำดับในแถบ
   }
   state.active = state.tabs.get(file) || null;
+  if (state._autoDash && state.active) autoCloseDashboard();
   // [alpha.164 · บั๊ก] แถบ "Rewrite this" เป็นของแท็บที่เปิดมัน — สลับไปแท็บอื่นแล้วแถบเดิมต้องปิด
   // (เดิม closeRewriteBar ถูก import ไว้แต่ไม่มีใครเรียก → แถบลอยค้างทับเอกสารอีกฉบับ)
   if (rewriteBarTab() && rewriteBarTab() !== state.active) closeRewriteBar();
@@ -10853,6 +11000,7 @@ function dirtyTabList() {
 // เพิ่มฟีเจอร์ใหม่ที่มีสถานะค้าง → เพิ่ม registerDirtySource() ที่นี่ ไม่ใช่ไปแก้กล่องบันทึกทีละที่
 // ─────────────────────────────────────────────────────────────────────────────
 let _branchPlanApi = null;
+let _fpApi = null;
 function registerDirtySources() {
   if (dirtyRegistry.has('tabs')) return;
   registerDirtySource('tabs', {
@@ -10912,6 +11060,13 @@ function registerDirtySources() {
     list: scratchDirtyList,
     save: async () => { flushScratch(); return true; },
   });
+  // [alpha.168] ผังพื้นที่ — แก้แล้วบันทึกแบบหน่วง 600ms (ปิดโปรแกรมในช่วงนั้น = ของยังไม่ลงไฟล์)
+  registerDirtySource('floorplan', {
+    label: tt('ui.common.graphArea'),
+    list: () => (_fpApi ? _fpApi.fpDirtyList() : []),
+    save: async () => (_fpApi ? (await _fpApi.flushFloorPlan()) !== false : true),
+  });
+  import('./floorplan-ui.js').then((m) => { _fpApi = m; }).catch(() => {});
   // [alpha.156] สปรินต์ที่กำลังจับเวลา — ปิดโปรแกรมแล้วรอบนั้นหาย (สถิติไม่ถูกจด) = ต้องขึ้นรายการ
   registerDirtySource('sprint', {
     label: tt('ui.sprint.dirtyLabel'),
@@ -14131,9 +14286,12 @@ export const CREDITS = [
     { name: 'pdf-lib + @pdf-lib/fontkit', what: tt('ui.app.newFilePDFFont'), lic: 'MIT' },
     { name: 'JSZip', what: tt('ui.app.exportImportProjectZip'), lic: 'MIT / GPL-3.0' },
     { name: 'Fuse.js', what: tt('ui.app.searchStylePrint'), lic: 'Apache-2.0' },
+    // [alpha.168 · bug hunt 2] ของที่มากับตัวโปรแกรมตั้งแต่ alpha.166 แต่ยังไม่อยู่ในเครดิต
+    { name: 'three.js', what: tt('ui.app.creditThree'), lic: 'MIT', url: 'https://threejs.org' },
   ] },
   { group: tt('ui.common.font'), items: [
     { name: 'Courier Prime', what: tt('ui.app.fontScreenplayQuoteUnquote'), lic: 'SIL OFL 1.1' },
+    { name: 'Nerd Fonts · Material Design Icons', what: tt('ui.app.creditIcons'), lic: 'MIT / Apache-2.0', url: 'https://www.nerdfonts.com' },
     { name: tt('ui.app.courierMonoThaiProportionalThai'), what: tt('ui.app.fontScreenplayPosView'), lic: tt('ui.app.notSource') },
   ] },
   { group: tt('ui.app.data'), items: [
@@ -14470,6 +14628,8 @@ export async function handleCommand(ch, ...a) {
   // [alpha.164] กำลังดูฉบับเดิมของฉากมีปัญหา → คำสั่งที่อ่าน/เขียนเนื้อ (บันทึก · พิมพ์ · ส่งออก …)
   // ต้องได้ฉบับแก้ไขเสมอ · คำสั่งดูอย่างเดียว (ซูม/สลับแท็บ/สลับฉบับ) ไม่กระทบ
   if (typeof ch === 'string') { try { onsetBeforeCommand(ch); } catch {} }
+  // ผู้ใช้สั่งเปิด/ปิดแดชบอร์ดเอง = ไม่ใช่ใบที่โปรแกรมเปิดให้แล้ว (autoCloseDashboard ต้องไม่พับมัน)
+  if (ch === 'dashboard' || (ch === 'toggle-panel' && a[0] === 'dashboard')) state._autoDash = false;
   const t = state.active;
   // [alpha.164 · บั๊ก] ฉากที่ล็อก = คำสั่งที่แก้เนื้อไม่ทำงาน + บอกเหตุผล (เดิมปุ่มจัดรูปแบบ/คีย์ลัดแก้ฉากที่ล็อกได้
   // เพราะ editable:false ของ ProseMirror กันแค่การพิมพ์ · ตัวแก้ไขเองก็กันซ้ำอีกชั้นที่ edit-guard.js)
@@ -14657,6 +14817,7 @@ export async function handleCommand(ch, ...a) {
       const v = !(state.settings.fabEnabled !== false);
       state.settings.fabEnabled = v;
       document.body.classList.toggle('k-fab-off', !v);
+      if (v) { try { dodgeFabFromFmtbar(); } catch {} }   // [alpha.168 · bug hunt 2] ตอนซ่อนอยู่วัดไม่ได้ — เปิดกลับมาต้องตัดสินใหม่
       saveGlobalSetting('fabEnabled', v);            // [alpha.162 · W3] ค่าระดับผู้ใช้
       saveProjectMetaSoon(); syncMenuToggles();
       setStatus(v ? tt('ui.app.btnFloatFABOpen') : tt('ui.app.btnFloatFABClose'));
@@ -14857,6 +15018,8 @@ export async function handleCommand(ch, ...a) {
     }
     // [alpha.124 ข้อ 3] ตารางคีย์ลัด — ตอนนี้เป็นคำสั่งจริงในตาราง (Ctrl+Alt+/) ไม่ใช่ listener ลอย
     case 'cheatsheet': showShortcutsDialog(); break;
+    // [alpha.168 · bug hunt] ภาพรวมการใช้งานหน้าเดียว (ช่วยเหลือ → เริ่มต้นใช้งาน)
+    case 'quick-start': { const { openQuickStart } = await import('./quick-start.js'); openQuickStart(); break; }
     // [alpha.125 ข้อ H] คลังคำพ้อง — เดิมเข้าได้ทางเดียวคือคลิกขวาบนคำ (คนที่ไม่คลิกขวาไม่มีทางรู้ว่ามี)
     case 'thesaurus': {
       const w = (window.getSelection()?.toString() || '').trim();
@@ -15292,6 +15455,8 @@ function saveUiLayout(key, val) {
   const str = JSON.stringify(l);
   const prev = localStorage.getItem('k2-ui-layout');
   localStorage.setItem('k2-ui-layout', str);
+  // [alpha.168 · bug hunt 2] แถบรูปแบบย้ายที่ = ปุ่มลอยตั้งต้นต้องตัดสินใหม่ว่าหลบไหม (หลังเฟรมนี้ ให้ตำแหน่งใหม่ลงจอก่อน)
+  if (key === 'fmtbar' && prev !== str) requestAnimationFrame(() => { try { dodgeFabFromFmtbar(); } catch {} });
   // [alpha.154 ข้อ 1] เซฟค่าเดิมซ้ำ (เช่นหนีบตำแหน่งตอนบูต) ไม่นับเป็น "แก้ล่าสุด" — ไม่งั้น localStorage
   // ที่ค้างจากการถูกฆ่ากลางคันจะดูใหม่กว่าไฟล์เซสชัน แล้วเซสชันไม่ถูกกู้
   if (prev === str) return;
@@ -15450,14 +15615,26 @@ export function tb(id, cmd, arg) { $(id).onclick = () => {
 // เรียกทุกครั้งที่หน้าต่างเปลี่ยนขนาด (รวมย่อ/ขยาย/คืนขนาด) — หนีบเข้ากรอบแล้ว
 // **บันทึกทับค่าที่จำไว้** ไม่งั้นรอบหน้าเปิดโปรแกรมมาก็ยังชี้ไปนอกจอเหมือนเดิม
 let _fmtHostH = 0;          // [alpha.164 ข้อ E4] ความสูงของ #content รอบก่อน (ใช้ตัดสินว่าแถบชิดล่างไหม)
+let _fmtBarH = 0;           // [alpha.168] ความสูงของแถบเองรอบก่อน (แถบพับน้อยแถวลง = เตี้ยลง ต้องชิดล่างต่อ)
 export function keepFloatingUiInView() {
   let moved = 0;
   try { dodgeHiddenChips(); } catch {}
   // แถบรูปแบบลอย — ลอยอยู่ใน #content
   const host = $('#content');
   if (floatBar && host && floatBar.style.display !== 'none') {
-    const r = floatBar.getBoundingClientRect();
     const hr = host.getBoundingClientRect();
+    // [alpha.168 · bug hunt] โหมดแถวเดียวตัดสินก่อนวัดแถบ: แคบกว่าเกณฑ์ **หรือ** พับแล้วเกินสองแถว
+    // (หน้าต่างเล็กสุด 1000×640 เดิมแถบพับ 4 แถว กินราวหนึ่งในสามของพื้นที่เขียน)
+    if (hr.width) {
+      const kids = [...floatBar.children].filter((k) => k.getClientRects().length > 0);
+      const fcs = getComputedStyle(floatBar);
+      const chrome = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0)
+                   + (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
+      const widths = kids.map((k) => { const m = getComputedStyle(k);
+        return k.getBoundingClientRect().width + (parseFloat(m.marginLeft) || 0) + (parseFloat(m.marginRight) || 0); });
+      floatBar.classList.toggle('k-fmtbar-narrow', barShouldNarrow(hr.width, widths, parseFloat(fcs.columnGap) || 0, chrome));
+    }
+    const r = floatBar.getBoundingClientRect();
     if (r.width && hr.width) {
       const cur = { left: parseInt(floatBar.style.left, 10) || 0,
                     top: parseInt(floatBar.style.top, 10) || 0 };
@@ -15465,18 +15642,16 @@ export function keepFloatingUiInView() {
       // ตำแหน่งตั้งต้นถูกคำนวณตอนเลย์เอาต์ยังไม่นิ่ง (#content ยังเตี้ย) → พื้นที่ขยายทีหลัง
       // แถบเลยค้างอยู่กลางตัวแก้ไข ทับเนื้อหา (เห็นบนจอ 1440p ตั้งแต่เปิดโปรแกรมครั้งแรก)
       // กติกา: ก่อนเปลี่ยนขนาด ขอบล่างของแถบห่างขอบล่างพื้นที่ ≤ 48px = ถือว่าชิดล่าง → รักษาระยะนั้นไว้
-      floatBar.classList.toggle('k-fmtbar-narrow', hr.width < 620);   // [alpha.164 ข้อ F2]
-      const prevH = _fmtHostH; _fmtHostH = hr.height;
-      if (prevH && Math.abs(prevH - hr.height) > 1 && fmtbarState().align !== 'top') {
-        const gap = prevH - (cur.top + r.height);
-        if (gap >= -4 && gap <= 48) {
-          const top = Math.round(hr.height - r.height - Math.max(0, gap));
-          if (top !== cur.top) {
-            cur.top = top;
-            floatBar.style.top = top + 'px'; floatBar.style.bottom = 'auto';
-            saveUiLayout('fmtbar', { top });
-            moved++;
-          }
+      // [alpha.168 · bug hunt] นับความสูงของแถบเองด้วย: พื้นที่กว้างขึ้น → แถบพับน้อยแถวลง = เตี้ยลง
+      // เดิมจำแค่ระยะจากขอบบน ขอบล่างของแถบเลยลอยขึ้น เหลือช่องใต้แถบให้ข้อความโผล่ (ดูเหมือนแถบทับกลางเนื้อหา)
+      const prevH = _fmtHostH, prevBH = _fmtBarH; _fmtHostH = hr.height; _fmtBarH = r.height;
+      if (fmtbarState().align !== 'top') {
+        const top = bottomAnchorTop(cur.top, r.height, prevBH || r.height, hr.height, prevH);
+        if (top !== null) {
+          cur.top = top;
+          floatBar.style.top = top + 'px'; floatBar.style.bottom = 'auto';
+          saveUiLayout('fmtbar', { top });
+          moved++;
         }
       }
       // [alpha.119] หนีบเข้า **ส่วนที่มองเห็นได้จริง** ของ `#content` ไม่ใช่ทั้งก้อน —
@@ -15497,6 +15672,7 @@ export function keepFloatingUiInView() {
   }
   // ปุ่มลอย (FAB) — ลอยอยู่กับหน้าต่างทั้งใบ
   const fab = $('#k-fab');
+  try { dodgeFabFromFmtbar(); } catch {}
   if (fab && uiLayout().fab) {
     const r = fab.getBoundingClientRect();
     if (r.width) {
@@ -16025,6 +16201,23 @@ function getActiveEditor() {
   return null;
 }
 // แสดงแถบลอยเฉพาะตอนมีตัวแก้ไขข้อความเปิดอยู่ (นิยาย/บทหนัง/wiki) — ไม่งั้นซ่อน
+/**
+ * [alpha.168 · bug hunt 2] ปุ่มลอยที่ยังอยู่ตำแหน่งตั้งต้นหลบขึ้นเหนือแถบรูปแบบเมื่อสองอย่างทับกัน
+ * (ผู้ใช้ลากปุ่มไปวางเองแล้ว = ไม่ยุ่ง · แถบถูกซ่อน/ย้ายไปที่อื่น = กลับมุมเดิม)
+ */
+export function dodgeFabFromFmtbar() {
+  const fab = $('#k-fab');
+  if (!fab || uiLayout().fab || fab.style.left) return false;
+  fab.style.bottom = '';                              // วัดจากตำแหน่งตั้งต้นของ CSS เสมอ
+  const fr = fab.getBoundingClientRect();
+  if (!fr.width) return false;
+  const shown = floatBar && floatBar.style.display !== 'none' && floatBar.getClientRects().length > 0;
+  const b = fabDodgeBottom(fr, shown ? floatBar.getBoundingClientRect() : null, window.innerHeight);
+  if (b === null) return false;
+  fab.style.bottom = b + 'px';
+  return true;
+}
+
 function syncFloatBarVisible() {
   if (!floatBar) return;
   const ed = getActiveEditor();
@@ -16036,6 +16229,8 @@ function syncFloatBarVisible() {
   // ถ้ากรอบเปลี่ยนขนาดระหว่างที่ซ่อน ค่าที่ค้างอยู่จะกลายเป็นนอกจอทันทีที่กลับมาแสดง
   if (was === 'none' && floatBar.style.display === 'flex') {
     try { keepFloatingUiInView(); } catch {}
+  } else if (was !== floatBar.style.display) {
+    try { dodgeFabFromFmtbar(); } catch {}          // แถบหายไป = ปุ่มลอยกลับมุมเดิม
   }
 }
 
@@ -16506,6 +16701,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ---- แถบรูปแบบอักษรแบบลอย (ลากย้ายได้ · จำตำแหน่ง) ----
   setupFloatingFormatBar();
+  try { installDocsEmpty(); } catch {}        // [alpha.168] สถานะว่างของพื้นที่เอกสาร (ยังไม่มีโปรเจกต์/ยังไม่เปิดเอกสาร)
   // [alpha.139] ★ ต้องมาหลัง setupFloatingFormatBar เสมอ — ตัวนั้นลบ `.sep` ใน #toolbar ทิ้งทั้งหมด
   applyToolbarGroupSeps();
   bindToolbarContextMenu();          // [alpha.81 ข้อ 1] คลิกขวาบนแถบ = เมนูปรับปุ่ม (เหมือนเบราว์เซอร์)
@@ -16902,6 +17098,7 @@ function resetFabPos() {
   try { localStorage.setItem(LS_TS_KEY, String(Date.now())); } catch {}
   markSessionDirty();
   closeFabMenu(true);
+  try { dodgeFabFromFmtbar(); } catch {}              // [alpha.168 · bug hunt 2] กลับมุมเดิมแล้วยังต้องไม่ทับแถบรูปแบบ
 }
 
 /**

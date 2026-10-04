@@ -199,5 +199,10 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
         B.planDirty(cur2, null) === true);
 }
 
+{
+  const P2 = B.normalizeBranchPlan({ positions: { a: { placed: true }, b: { x: 5, y: 6, placed: true }, c: { x: 1, y: 2 } } });
+  check('[168] แผนเก็บธง placed ของฉากที่ลากมาวาง (มี/ไม่มีตำแหน่ง)', P2.positions.a.placed === true && P2.positions.b.placed === true &&
+    P2.positions.b.x === 5 && !P2.positions.c.placed);
+}
 console.log(`branch-plans: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

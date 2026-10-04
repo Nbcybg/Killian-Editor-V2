@@ -85,6 +85,7 @@ const evOf = (data, id) => (data.events || []).find((e) => e.id === id) || null;
 // ═══════════════════════ แผงหลัก ═══════════════════════
 export async function renderTimeline(pane) {
   if (!pane) return;
+  if (_linkPickOff) _linkPickOff();          // วาดใหม่ = ออกจากโหมดเชื่อม (ไม่งั้นตัวดัก Esc ค้างกลืนคีย์ครั้งถัดไป)
   const keep = pane.querySelector('.tl-board2');
   const scroll = keep ? { l: keep.scrollLeft, t: keep.scrollTop } : null;
   pane.innerHTML = '';
@@ -154,7 +155,7 @@ export async function renderTimeline(pane) {
   }
 
   if (!all.items.length) {
-    wrap.append(panelEmpty(t('ui.timeline.notHasEventPress')));
+    wrap.append(panelEmpty(t('ui.timeline.notHasEventPress'), { icon: 'timeline' }));
     bindEmptyDrop(ctx, wrap);
     return;
   }
@@ -268,11 +269,12 @@ function cardMenu(ctx, it, x, y) {
     { label: '<b>' + escHtml(it.title || t('ui.common.notNamed')) + '</b>', disabled: true },
     { label: it.kind === 'scene' ? t('ui.timeline.openScene') : t('ui.timeline.editEvent'), click: () => editItem(ctx, it) },
     { label: t('ui.timeline.linkFromHere'), click: () => startLinkPick(ctx, it) },
-    outs.length ? { label: t('ui.timeline.unlink'), sub: outs.map((l) => ({
+    outs.length ? { label: t('ui.timeline.unlink'), sub: () => outs.map((l) => ({
       label: escHtml((byKey.get(l.from) || {}).title || '?') + ' → ' + escHtml((byKey.get(l.to) || {}).title || '?'),
       click: () => unlinkItems(ctx, l.from, l.to) })) } : null,
-    ...(it.refs || []).length ? [{ label: t('ui.timeline.refsMenu'), sub: it.refs.map((r) => ({
-      label: escHtml(r.title), click: () => openRef(r) })) }] : [],
+    // [alpha.168 · bug hunt] sub ต้องเป็นฟังก์ชัน (อาร์เรย์ = เมนูย่อยขึ้น "(ว่าง)" เสมอ)
+    ...(it.refs || []).length ? [{ label: t('ui.timeline.refsMenu'), sub: () => it.refs.map((r) => ({
+      text: r.title, click: () => openRef(r) })) }] : [],
     it.kind === 'event' ? '-' : null,
     it.kind === 'event' ? { label: t('ui.common.del'), danger: true, click: async () => {
       if (!(await confirmBox(tf('ui.timeline.delEventQ', it.title || ''), t('ui.common.del')))) return;
@@ -286,10 +288,13 @@ function cardMenu(ctx, it, x, y) {
 const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** โหมด "เชื่อมต่อจากการ์ดนี้" — คลิกการ์ดถัดไปเพื่อเลือกปลายทาง · Esc ยกเลิก */
+let _linkPickOff = null;      // [alpha.168] ตัวถอดของโหมดเชื่อมที่ค้างอยู่ (แผงวาดใหม่กลางคัน = ต้องถอดตัวดัก Esc ด้วย)
 function startLinkPick(ctx, it) {
+  if (_linkPickOff) _linkPickOff();
   ctx.wrap.classList.add('tl-linking');
   setStatus(tf('ui.timeline.linkPickHint', it.title || ''));
-  const done = () => { ctx.wrap.classList.remove('tl-linking'); document.removeEventListener('keydown', onKey, true); ctx.wrap.removeEventListener('click', onClick, true); };
+  const done = () => { _linkPickOff = null; ctx.wrap.classList.remove('tl-linking'); document.removeEventListener('keydown', onKey, true); ctx.wrap.removeEventListener('click', onClick, true); };
+  _linkPickOff = done;
   const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(); setStatus(t('ui.timeline.linkCancel')); } };
   const onClick = (e) => {
     const card = e.target.closest && e.target.closest('.tl-event');
@@ -815,16 +820,17 @@ export async function exportTimeline(fmt, outPath) {
     const base = safeName((state.meta && state.meta.title) || state.title) + '-timeline.' + fmt;
     const L = { title: t('ui.timeline.lineTime'), undated: t('ui.timeline.undated'), links: t('ui.timeline.linksHead'),
                 defaultTrack: t('ui.common.msg4'), lang: (document.documentElement.lang || 'th') };
+    const links = liveLinks(data.links, items);
+    // [alpha.168] PNG ผ่านทางกลาง saveCanvasPng (กล่องบันทึก + ลิงก์เปิดโฟลเดอร์ — กฎ alpha.167 รอบต่อ 2)
+    if (fmt === 'png') {
+      const { saveCanvasPng } = await import('./export-image.js');
+      const out = await saveCanvasPng(drawTimelineCanvas(items, links, L), base, outPath);
+      if (out) log('info', 'timeline: export done', { fmt, to: out });
+      return out;
+    }
     const dest = outPath || await kapi.saveAsDialog(base, fmt);
     if (!dest) return null;
-    const links = liveLinks(data.links, items);
-    if (fmt === 'png') {
-      const cv = drawTimelineCanvas(items, links, L);
-      const bin = atob(cv.toDataURL('image/png').split(',')[1] || '');
-      const bytes = new Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      await kapi.writeBytes(dest, bytes);
-    } else {
+    {
       const text = fmt === 'csv' ? timelineCsv(items, [t('ui.timeline.colTitle'), t('ui.timeline.colWhen'), t('ui.timeline.colWhenEnd'),
                                    t('ui.timeline.colTrack'), t('ui.timeline.colKind'), t('ui.timeline.colDesc'), t('ui.timeline.colRefs')])
                  : fmt === 'md' ? timelineMarkdown(items, links, L)

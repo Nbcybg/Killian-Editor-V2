@@ -69,9 +69,15 @@ function buildScratch() {
   ta.placeholder = t('ui.notes.scratchPh');
   ta.spellcheck = false;
   const bar = el('div', 'scratch-bar');
-  const exportBtn = el('button', null, t('ui.common.exportMd'));
-  const memoBtn = el('button', null, t('ui.notes.moveInMemo'));
-  const clearBtn = el('button', 'k-danger', t('ui.common.clear2'));
+  // [alpha.168] ปุ่มไอคอน + ทูลทิป (แผงแคบ 220px ก็อยู่บรรทัดเดียว) · สถิติตัดท้ายด้วย … ไม่พับหลายบรรทัด
+  const iconBtn = (ic, key, cls = '') => {
+    const b = el('button', 'cmp-mini scratch-btn' + (cls ? ' ' + cls : ''), gi(ic));
+    b.title = t(key); b.setAttribute('aria-label', t(key));
+    return b;
+  };
+  const exportBtn = iconBtn('download', 'ui.common.exportMd');
+  const memoBtn = iconBtn('note', 'ui.notes.moveInMemo');
+  const clearBtn = iconBtn('broom', 'ui.common.clear2', 'k-danger');
   const info = el('span', 'scratch-info');
   bar.append(info, exportBtn, memoBtn, clearBtn);
 
@@ -149,6 +155,7 @@ export async function openScratchpad() {
 export function renderNotesPanel(host) {
   if (!host || host.dataset.ready === '1') return;
   host.dataset.ready = '1';
+  host.classList.add('scratch-host');
   const { bar, ta } = buildScratch();
   host.append(bar, ta);
   ta.focus();

@@ -150,7 +150,7 @@ export async function renderPlayer(host, opts = {}) {
   if (!ps.run) {
     const rootId = analysis.roots[0] || (graph.nodes.find((n) => n.choices.length) || {}).id;
     if (!rootId) {
-      wrap.append(panelEmpty(tr('empty')));
+      wrap.append(panelEmpty(tr('empty'), { icon: 'film' }));
       host.replaceChildren(wrap);
       return;
     }

@@ -265,11 +265,18 @@ export function buildNetSide(pane, net) {
         const rel = net.importAsset ? await net.importAsset('image') : '';
         if (rel) { updBg({ image: rel }); renderScene(); }
       }));
+      // [alpha.168] HDRI (.hdr / พาโนรามา 2:1) = ท้องฟ้ารอบตัวที่หมุนตามกล้อง 3D
+      line.append(btn(tt('ui.netScene.hdriPick'), tt('ui.netScene.hdriHint'), async () => {
+        const rel = net.importAsset ? await net.importAsset('hdri') : '';
+        if (rel) { updBg({ image: rel, imageMode: 'hdri' }); renderScene(); }
+      }));
       if (bg.image) line.append(el('span', 'net-side-file', baseName(bg.image)));
       scn.append(row(tt('ui.netScene.image'), line));
       scn.append(row(tt('ui.netScene.imageMode'), select([
         { value: 'world', label: tt('ui.netScene.imageWorld') }, { value: 'screen', label: tt('ui.netScene.imageScreen') },
+        { value: 'hdri', label: tt('ui.netScene.imageHdri') },
       ], bg.imageMode, (v) => { updBg({ imageMode: v }); renderScene(); })));
+      scn.append(el('div', 'net-side-note', tt('ui.netScene.image3dNote')));
       if (bg.imageMode === 'world') {
         // สเกลแบบลอการิทึม: 5% – 2000%
         const toS = (v) => Math.round(Math.pow(10, v) * 1000) / 1000;

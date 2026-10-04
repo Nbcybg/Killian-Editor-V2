@@ -6,6 +6,7 @@
 // · 2D = มองตรงลงมา เหมือนเดิมทุกพิกเซล
 // [รอบ 2] วาดในพิกัดจอ (เส้นตรงยังเป็นเส้นตรงแม้มีมุมมองระยะ) + แคชทั้งผืน — ชี้เมาส์/ไฮไลต์โหนดไม่ต้องวาดพื้นใหม่
 import { normalizeNetScene, starField, hexCenters, hexCorners, gridColorOf, seededRandom } from './network-scene.js';
+import { isPanorama, panoUV } from './hdr-decode.js';
 
 const _tiles = new Map();               // ดาวแต่ละชั้น (แผ่นกระเบื้องที่วาดไว้แล้ว)
 const TILE = 512;
@@ -199,6 +200,70 @@ function drawPlaneImage(c, pj, img, bg) {
   c.restore();
 }
 
+// ── [alpha.168] ฉากหลังแบบ HDRI (พาโนรามา equirectangular) ──
+// ผู้ใช้: "พอเป็น 3d แล้ว มันควรเป็นแบบ HDRI · ถ้าใส่รูปธรรมดา จะได้เป็น background แบบ fix · แบบแผ่นดูไม่สวย"
+// → 3D + รูปสัดส่วน 2:1 (หรือไฟล์ .hdr) = ท้องฟ้ารอบตัวที่หมุนตามกล้อง · รูปอื่น = ติดจอ (ไม่เป็นแผ่นบนพื้นอีก)
+const _pano = { src: null, px: null, w: 0, h: 0 };
+/** พิกเซลต้นทางของภาพพาโนรามา (ย่อด้านยาวไม่เกิน 2048 · แคชต่อภาพ) */
+function panoPixels(img) {
+  if (_pano.src === img && _pano.px) return _pano;
+  let w, h, data;
+  if (img && img.data && img.width) { w = img.width; h = img.height; data = img.data; }     // ภาพจาก .hdr ที่ถอดแล้ว
+  else {
+    const k = Math.min(1, 2048 / (img.naturalWidth || 1));
+    w = Math.max(2, Math.round(img.naturalWidth * k)); h = Math.max(1, Math.round(img.naturalHeight * k));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const cc = cv.getContext('2d', { willReadFrequently: true });
+    cc.drawImage(img, 0, 0, w, h);
+    try { data = cc.getImageData(0, 0, w, h).data; } catch { return null; }
+  }
+  Object.assign(_pano, { src: img, px: data, w, h });
+  return _pano;
+}
+/** วาดท้องฟ้าพาโนรามาเต็มจอตามมุมกล้อง (คำนวณที่ความละเอียด 1/3 แล้วขยาย — เร็วพอสำหรับหมุนสด) */
+function drawPanorama(c, w, h, img, rot) {
+  const P = panoPixels(img);
+  if (!P) return false;
+  const q = 3, W = Math.max(2, Math.ceil(w / q)), H = Math.max(2, Math.ceil(h / q));
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const cc = cv.getContext('2d');
+  const out = cc.createImageData(W, H), o = out.data;
+  // ทิศของพิกเซลแปรผันเป็นเส้นตรงในแกนจอ — คำนวณมุมทีละพิกเซลของภาพเล็ก (≈ 50k จุด)
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const uv = panoUV(x * q, y * q, w, h, rot.rx || 0, rot.ry || 0);
+    const sx = Math.min(P.w - 1, Math.max(0, Math.floor(uv.u * P.w)));
+    const sy = Math.min(P.h - 1, Math.max(0, Math.floor(uv.v * P.h)));
+    const i = (sy * P.w + sx) * 4, k = (y * W + x) * 4;
+    o[k] = P.px[i]; o[k + 1] = P.px[i + 1]; o[k + 2] = P.px[i + 2]; o[k + 3] = 255;
+  }
+  cc.putImageData(out, 0, 0);
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(cv, 0, 0, W * q, H * q);
+  return true;
+}
+/** ขนาดของภาพ (รูปธรรมดา หรือภาพจาก .hdr) */
+function imgSize(img) { return img ? { w: img.naturalWidth || img.width || 0, h: img.naturalHeight || img.height || 0 } : { w: 0, h: 0 }; }
+/** ภาพที่ drawImage ใช้ได้ (ภาพจาก .hdr เก็บเป็นพิกเซล — แปลงเป็นผืนวาดครั้งเดียว) */
+function drawable(img) {
+  if (!img || img.naturalWidth) return img;
+  if (!img._cv && img.data) {
+    const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+    cv.getContext('2d').putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+    img._cv = cv;
+  }
+  return img._cv || null;
+}
+/**
+ * ฉากหลังรูปของผู้ใช้ทำงานแบบไหนในเฟรมนี้
+ * 3D: พาโนรามา (2:1 หรือ .hdr) = 'hdri' · อื่น ๆ = 'screen' (ติดจอ) · ไม่มีแผ่นบนพื้นใน 3D อีกแล้ว
+ * 2D: ตามที่ผู้ใช้เลือก (world = วางบนพื้นผัง · screen = ติดจอ) · hdri ใน 2D = ติดจอ
+ */
+export function bgImagePlacement(bg, img, mode3D) {
+  const { w, h } = imgSize(img);
+  if (mode3D) return (bg.imageMode === 'hdri' || bg.imageMode === 'world') && (img && img.hdr || isPanorama(w, h)) ? 'hdri' : 'screen';
+  return bg.imageMode === 'world' ? 'world' : 'screen';
+}
+
 /**
  * วาดฉากหลังทั้งหมด (พื้น + ของบนระนาบ + กริด) — เรียกก่อนวาดเส้น/โหนด
  * @param {CanvasRenderingContext2D} c
@@ -252,21 +317,25 @@ export function drawNetBackground(c, w, h, pj, sceneCfg, theme, extra = {}) {
   const pr = visiblePlaneRect(pj, w, h);
   // ── ของบนระนาบ ──
   if (bg.kind === 'wargame') drawTerrain(c, pj, pr, bg);
-  if (bg.kind === 'image' && extra.image && extra.image.naturalWidth) {
-    const img = extra.image;
+  if (bg.kind === 'image' && extra.image && imgSize(extra.image).w) {
+    const img = extra.image, place = bgImagePlacement(bg, img, !!extra.mode3D);
+    const di = drawable(img), { w: iw0, h: ih0 } = imgSize(img);
     c.globalAlpha = bg.imageOpacity;
-    if (bg.imageMode === 'screen') {
-      const k = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-      const iw = img.naturalWidth * k, ih = img.naturalHeight * k;
-      c.drawImage(img, (w - iw) / 2, (h - ih) / 2, iw, ih);
-    } else drawPlaneImage(c, pj, img, bg);
+    const drewSky = place === 'hdri' && drawPanorama(c, w, h, img, pj.rot);
+    if (drewSky) { /* ท้องฟ้ารอบตัว */ }
+    else if (place !== 'world' && di) {
+      const k = Math.max(w / iw0, h / ih0);
+      const iw = iw0 * k, ih = ih0 * k;
+      c.drawImage(di, (w - iw) / 2, (h - ih) / 2, iw, ih);
+    } else if (di) drawPlaneImage(c, pj, di, bg);
     c.globalAlpha = 1;
   }
   c.setTransform(1, 0, 0, 1, 0, 0);
   if (bg.dim > 0) { c.fillStyle = `rgba(0,0,0,${bg.dim})`; c.fillRect(0, 0, w, h); }
   // ── กริด ──
   // วาดลงแผ่นแยกก่อน แล้วค่อย ๆ จางออกตามระยะ (มุมกล้องต่ำ/มุมมองระยะ = กริดถูกจำกัดรอบกลางจอ — ขอบตัดตรงดูเป็นกำแพง)
-  if (extra.showGrid !== false && pr) {
+  // [alpha.168] 3D ไม่มีกริด (ผู้ใช้: "พอเป็นกล้อง 3d ไม่จำเป็นต้องมี grid")
+  if (extra.showGrid !== false && !extra.mode3D && pr) {
     const L = gridLayer(w, h);
     const gc = L.getContext('2d');
     gc.setTransform(1, 0, 0, 1, 0, 0); gc.clearRect(0, 0, w, h);

@@ -14,26 +14,30 @@ import { addMapFlow, loadMaps, mapImgURL, mapsState_C, pinDialog, saveMaps, upda
 import { $, el, state, setStatus, setStatusError, log, t } from './core.js';
 import { pickImage } from './gallery.js';
 import {
-  PIN_KIND, ROUTE_COLORS, breadcrumb, clamp, clampZoom, clonePins, deleteMap, deletePins, deleteRoute,
-  findMap, gridLines, groupMaps, mapOverlays, mapRoutes, matchPin, newPin, newRoute,
+  PIN_KIND, PIN_SIZES, pinSizeK, ROUTE_COLORS, breadcrumb, clampW, clampZoom, clonePins, deleteMap, deletePins, deleteRoute,
+  findMap, gridCell, groupMaps, mapOverlays, mapRoutes, matchPin, newPin, newRoute,
   pinStats, routeLength, routePath, routePoints, scenePinCounts, scenesForMap, sortMaps, toggleOverlay,
-  zoomStep, zoomScroll, MAP_ZOOM_MAX, MAP_ZOOM_MIN, MAP_ZOOM_STEP,
-  geoOf, geoReady, metersPerUnit, distMeters, pathMeters, toLatLon, fromLatLon, niceDistance, formatLatLon,
-  niceScaleBar, ZONE_COLORS, newZone, mapZones, deleteZone, zoneAt,
+  zoomLadder, WORLD_MIN, WORLD_MAX, mapBounds,
+  geoOf, geoReady, metersPerUnit, pathMeters, toLatLon, fromLatLon, niceDistance, formatLatLon,
+  niceScaleBar, ZONE_COLORS, ZONE_PATTERNS, zoneOpacity, newZone, mapZones, deleteZone, zoneAt, moveZone, movePinLayer,
+  pinsInZone, zonesOfPin,
   zoneAreaM2, polygonCentroid, zonePath, niceArea, childMaps, parentMap, portalPin, entityPin, pinsOfEntity,
-  storyJourney,
+  storyJourney, validCatFilter, mapForFilter,
 } from './maps.js';
-import { ask, confirmBox, popupMenu } from './ui.js';
+import { saveCanvasPng } from './export-image.js';   // [alpha.168] ส่งออก PNG ผ่านกล่องบันทึก (ทางกลาง)
+import { ask, confirmBox, popupMenu, toast } from './ui.js';
 import { openEntity } from './wiki-ui.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
-import { collectPlacedScenes } from './floorplan-ui.js';
+import { collectPlacedScenes } from './scene-list.js';
 import { gi } from './icons.js';
 import { PRINT } from './palette.js';   // [alpha.162 · W6 ข้อ 2] สีภาพส่งออก (พื้นขาวเสมอ)
 import { panelEmpty } from './panels/panel-chrome.js';   // [alpha.162 · W2] สถานะว่างของกลาง
 import { bindDropTarget, setDrag } from './drop-kit.js';
 import { escCancelDrag } from './drag-cancel.js';   // [alpha.167 · รอบต่อ] Esc ยกเลิกการลาก
 import { extractNum } from './timeline.js';
-import { distText, areaText, travelText } from './map-text.js';   // [alpha.167 · รอบต่อ] ถ้อยคำชุดเดียวกับฝั่ง AI
+import { distText, areaText, travelText } from './map-text.js';
+// [alpha.168] รูปพื้นหลังแก้ได้ — มุมทั้งสี่ของภาพมาจากที่เดียว (จอ = matrix3d · PNG = ตาข่าย)
+import { normalizeBg, compactBg, isDefaultBg, bgCssMatrix, bgQuad, bgMeshCells, bgIsProjective, BG_DEFAULTS, BG_LIMITS } from './map-bg.js';   // [alpha.167 · รอบต่อ] ถ้อยคำชุดเดียวกับฝั่ง AI
 
 // ── สถานะการดู (ไม่บันทึกลงไฟล์) — อยู่นอก mapsState_C.s เพราะ s ถูกสร้างใหม่ทุกครั้งที่โหลด maps.json
 const view = {
@@ -58,6 +62,12 @@ const view = {
   journey: false,        // แสดงเส้นทางของเรื่อง
   sideOpen: true,        // แถบซ้ายเปิดอยู่
   wantId: null,          // แผนที่ที่ผู้สั่งต้องการ (focusMapPin) — ตัววาดที่วิ่งซ้อนกันเลือกใบนี้
+  // [alpha.168]
+  cams: new Map(),       // mapId → กล้อง { zoom, cx, cy } (แผนที่ไม่มีขอบ · จำตำแหน่งดูของแต่ละใบระหว่างเซสชัน)
+  geoOpen: false,        // หน้าตั้งพิกัดเปิดอยู่ (การ์ดลอยในกรอบแผนที่ — วาดใหม่พร้อมแผนที่)
+  addText: false,        // รอคลิกวางตัวหนังสือบนแผนที่
+  bgOpen: false,         // การ์ดแก้รูปพื้นหลังเปิดอยู่
+  bgDrag: false,         // โหมดลากย้ายรูป (ลากบนผืน = ย้ายรูป แทนเลื่อนแผนที่)
 };
 let scenesCache = null;              // ฉากที่ปักหมุดทั้งโปรเจกต์ (โหลดครั้งเดียวต่อรอบเปิดแผง)
 let portraitCache = null;            // entityFile → ชื่อไฟล์รูปประจำตัว (ข้อ 2)
@@ -69,7 +79,8 @@ const toolDef = (id, iconName, labelKey, hintKey) => ({
   id, get icon() { return gi(iconName); }, get label() { return t(labelKey); }, get hint() { return t(hintKey); },
 });
 export const MAP_TOOLS = [
-  toolDef('open', 'pointer', 'ui.common.openView', 'ui.maps.clickPinOpenLink'),
+  // [alpha.168] "เลือก": คลิก = เลือก (แถบเครื่องมือลอยเหนือของที่เลือก) · ลาก = ย้าย · คลิกซ้ำ/ดับเบิลคลิก = เปิดลิงก์
+  toolDef('open', 'pointer', 'ui.maps.toolSelect', 'ui.maps.toolSelectHint'),
   toolDef('edit', 'pencil-thin', 'ui.common.edit', 'ui.maps.clickPinOpenDialog'),
   toolDef('move', 'move', 'ui.common.movePos', 'ui.maps.dragPinMoveMode'),
 ];
@@ -87,11 +98,13 @@ export function resetMapsView() {
   view.showLabels = true; scenesCache = null; portraitCache = null; entityCache = null;
   view.gallery = true; view.pick = null; view.zoneDraw = null; view.measure = null; view.selZone = null;
   view.sideQ = ''; view.journey = false; view.sideOpen = true;
+  view.cams.clear(); view.geoOpen = false; view.addText = false; view.bgOpen = false; view.bgDrag = false;
 }
 /** [alpha.167] สำหรับเทส/ทางอื่น: สถานะการดูปัจจุบัน (อ่านอย่างเดียว) */
 export function mapsViewState() { return { gallery: view.gallery, tool: view.tool, zoom: view.zoom,
   zoneDraw: !!view.zoneDraw, measure: view.measure ? view.measure.points.length : 0, pick: view.pick ? view.pick.kind : null,
-  selZone: view.selZone, journey: view.journey }; }
+  selZone: view.selZone, journey: view.journey, sel: [...view.sel], geoOpen: view.geoOpen, addText: view.addText, bgOpen: view.bgOpen, bgDrag: view.bgDrag,
+  cam: (() => { const S = mapsState_C.s; const c = S && view.cams.get(S.currentId); return c ? { ...c } : null; })() }; }
 
 /** entityFile → รูปประจำตัว · อ่านครั้งเดียวต่อรอบเปิดแผง (ข้อ 2) */
 async function loadPortraits() {
@@ -117,6 +130,29 @@ export async function openMaps() {
 }
 
 /** โหลด maps.json + วาดลง #maps-body — ห้ามเรียก showPanel ในนี้ (วนซ้ำกับ hook) */
+/**
+ * [alpha.168] ลบหมุดแบบย้อนกลับได้ — ทุกทางลบ (Delete · แถบเลือก · เมนู · การ์ดหมุด) ผ่านที่นี่
+ * ข้อความแจ้งมีปุ่ม "ย้อนกลับ" คืนหมุด+เส้นทางของแผนที่ใบนั้นก่อนลบ (เฉพาะเมื่อแผนที่ใบนั้นยังเป็นชุดข้อมูลเดิม)
+ */
+async function removePins(cur, ids, save, redraw) {
+  const list = [...ids];
+  if (!list.length) return;
+  const snap = JSON.stringify({ pins: cur.pins || [], routes: cur.routes || [] });
+  deletePins(cur, list);
+  for (const id of list) view.sel.delete(id);
+  await save();
+  redraw();
+  const data = mapsState_C.s && mapsState_C.s.data;
+  toast(tf('ui.maps.delPinDone', list.length), { action: { label: t('ui.common.undoBtn'), onClick: async () => {
+    const S2 = mapsState_C.s;
+    if (!S2 || S2.data !== data || !(S2.data.maps || []).includes(cur)) return;   // โหลดใหม่/เปลี่ยนโปรเจกต์ไปแล้ว
+    const back = JSON.parse(snap);
+    cur.pins = back.pins; cur.routes = back.routes;
+    await saveMaps(S2.data);
+    redraw();
+  } } });
+}
+
 export async function renderMapsPanel() {
   // โหลดใหม่ทุกครั้ง (ไฟล์แก้นอกโปรแกรมได้) แต่คงแผนที่ที่ดูค้างไว้ถ้ายังมีอยู่
   // [alpha.167] อ่าน "แผนที่ที่ต้องการ" **หลัง** await — ตัววาดสองรอบซ้อนกัน (hook ของ showPanel + ผู้สั่ง)
@@ -214,7 +250,8 @@ export async function buildShowOnMapRow(row) {
     box.append(el('span', 'dim', t('ui.maps.notPlaced')));
     const b = el('button', 'cmp-mini', gi('pin') + ' ' + t('ui.maps.placeIt'));
     b.title = t('ui.maps.placeItHint');
-    b.onclick = async () => { const { openFloorPlan } = await import('./floorplan-ui.js'); await openFloorPlan(); };
+    // [alpha.168] ผังพื้นที่เปลี่ยนเป็นผังกองถ่าย (Shot Designer) แล้ว — การปักตำแหน่งฉากอยู่ที่แผงแผนที่ (ลากฉากมาวาง)
+    b.onclick = () => { openMaps(); setStatus(t('ui.maps.placeItHint')); };
     box.append(b);
   } else if (loc.missing) {
     box.append(el('span', 'dim', loc.text));
@@ -230,15 +267,16 @@ export async function buildShowOnMapRow(row) {
   return r;
 }
 
-/** เลื่อนพื้นที่แผนที่ให้เห็นหมุดที่กำลังเพ่ง (ทำหลังวาดเสร็จ ไม่งั้นขนาดยังเป็น 0) */
+/** เลื่อนกล้องให้หมุดที่กำลังเพ่งอยู่กลางจอ (แผนที่ไม่มีขอบ = ย้ายกล้อง ไม่ใช่ตำแหน่งเลื่อน) */
 function scrollFocusIntoView() {
-  const mark = $('#maps-body .map-focus');
-  const stage = $('#maps-body .map-stage');
-  if (!mark || !stage) return;
-  const mr = mark.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-  if (!sr.width) return;
-  stage.scrollLeft += (mr.left + mr.width / 2) - (sr.left + sr.width / 2);
-  stage.scrollTop += (mr.top + mr.height / 2) - (sr.top + sr.height / 2);
+  const S = mapsState_C.s;
+  if (!S || !view.focusPin) return;
+  const cur = findMap(S.data.maps, S.currentId);
+  if (!cur) return;
+  const c = camOf(cur);
+  c.cx = view.focusPin.x; c.cy = view.focusPin.y;
+  const main = $('#maps-body .map-main');
+  if (main && main._setZoom) main._setZoom(Math.max(c.zoom, 1.5));
 }
 
 /** รอให้ผู้ใช้จิ้มจุดบนแผนที่ (ตั้งมาตราส่วน/พิกัด) — คืน {x,y} (%) หรือ null เมื่อกด Esc */
@@ -256,8 +294,6 @@ export async function renderMaps(pane) {
   if (!pane) return;
   const S = mapsState_C.s;
   if (!S) { pane.innerHTML = ''; return; }
-  const keepStage = pane.querySelector('.map-stage');
-  const keepScroll = keepStage ? { l: keepStage.scrollLeft, t: keepStage.scrollTop } : null;
   const keepSide = pane.querySelector('.map-side-list');
   const keepSideScroll = keepSide ? keepSide.scrollTop : 0;
   pane.innerHTML = '';
@@ -268,6 +304,7 @@ export async function renderMaps(pane) {
   wrap.append(side, main);
 
   if (!maps.length || !findMap(maps, S.currentId)) view.gallery = true;
+  view.catFilter = validCatFilter(maps, view.catFilter);   // [alpha.168 · bug hunt] หมวดที่กรองหายไปแล้ว = เลิกกรอง
   const cur = view.gallery ? null : findMap(maps, S.currentId);
   if (!view.gallery && cur) {
     if (scenesCache === null) {
@@ -280,7 +317,7 @@ export async function renderMaps(pane) {
   if (list && keepSideScroll) list.scrollTop = keepSideScroll;
 
   if (view.gallery) renderGallery(main, maps);
-  else await renderMapView(main, pane, cur, keepScroll);
+  else await renderMapView(main, pane, cur);
 }
 
 // ═══════════════════════ แถบซ้าย: ตัวละคร/สถานที่ · ฉากที่นี่ · แผนที่ย่อย · โซน ═══════════════════════
@@ -364,7 +401,7 @@ function entityRow(e, cur, maps, pin, zoned, portrait) {
       { label: t('ui.maps.entOpenWiki'), click: () => openEntity(e.file) },
       cur ? { label: t('ui.maps.entPlaceCenter'), click: () => placeEntity(cur, e, 50, 50) } : null,
       cur ? { label: t('ui.maps.zoneDraw'), click: () => startZoneDraw(cur, e) } : null,
-      where.length ? { label: t('ui.maps.entGoPins'), sub: where.map((w) => ({
+      where.length ? { label: t('ui.maps.entGoPins'), sub: () => where.map((w) => ({
         text: (w.map.name || '') + ' · ' + (w.pin.label || e.name), click: () => focusMapPin(w.map.id, w.pin.id, null) })) } : null,
     ].filter(Boolean));
   };
@@ -397,18 +434,25 @@ function sideMapSections(list, cur, maps) {
   if (zones.length) {
     const g = el('div', 'map-side-group');
     g.append(el('div', 'map-side-cat', gi('vector-polygon') + ' ' + t('ui.maps.sideZones')));
-    for (const z of zones) {
+    for (const z of zones.slice().reverse()) {
       const area = niceArea(zoneAreaM2(cur, z));
+      const inside = pinsInZone(cur, z);
       const r = el('div', 'map-side-link map-side-zone' + (view.selZone === z.id ? ' on' : ''));
       const sw = el('span', 'map-zone-sw'); sw.style.background = z.color;
-      r.append(sw, el('span', null, z.name || t('ui.common.notNamed')));
-      if (area) r.append(el('span', 'map-side-n', areaText(area)));
-      r.onclick = () => { view.selZone = view.selZone === z.id ? null : z.id; refresh(); };
+      const nm = el('span', 'map-side-zname', z.name || t('ui.common.notNamed'));
+      r.append(sw, nm);
+      // [alpha.168] โซนไม่ใช่แค่ของตกแต่ง: บอกว่าลิงก์กับใคร + ในเขตมีหมุดกี่ตัว
+      if (z.entityFile) r.append(el('span', 'map-side-zlink', gi('link')));
+      r.append(el('span', 'map-side-n', (inside.length ? gi('map-pin') + inside.length + ' ' : '') + (area ? areaText(area) : '')));
+      r.title = [z.name || '', inside.map((p) => p.label).filter(Boolean).join(', ')].filter(Boolean).join('\n');
+      r.onclick = () => { view.selZone = view.selZone === z.id ? null : z.id; view.sel.clear(); refresh(); };
       r.oncontextmenu = (ev) => { ev.preventDefault(); zoneMenu(cur, z, ev.clientX, ev.clientY); };
       g.append(r);
     }
     list.append(g);
   }
+  // ── เส้นทาง (ย้ายจากใต้แผนที่มาอยู่แถบซ้าย — แผนที่ได้พื้นที่เต็มแผง) ──
+  list.append(buildRoutesPanel(cur));
   // ── ฉากบนแผนที่นี้ + เส้นทางของเรื่อง ──
   const here = scenesForMap(scenesCache || [], cur.id);
   if (here.length) {
@@ -459,7 +503,7 @@ function renderGallery(main, maps) {
   bindDropTarget(newCard, { accept: ['gallery', 'image'], onDrop: (payload) => newMapFromImage(payload) });
   gal.append(newCard);
   if (!maps.length) {
-    main.append(panelEmpty(t('ui.maps.notPlannedPressAdd')));
+    main.append(panelEmpty(t('ui.maps.notPlannedPressAdd'), { icon: 'map' }));
     return;
   }
   for (const g of groupMaps(maps)) {
@@ -531,28 +575,135 @@ async function newMapFromImage(payload) {
 }
 
 // ═══════════════════════ มุมมองแผนที่ ═══════════════════════
-async function renderMapView(main, pane, cur, keepScroll) {
+// [alpha.168] ยกเครื่องทั้งมุมมอง — ผู้ใช้: "ขนาด map ต้องเป็น infinite ไม่ใช่อิงตามขนาดรูป · รูปเป็นแค่ background
+//   และ reference · ถึงไม่ใส่รูป map ก็ต้องใช้งานได้" + วิดีโอตัวอย่าง (คลิกขวา = หมุด/โซน/ตัวหนังสือ ·
+//   เลือกของแล้วมีแถบเครื่องมือลอยเหนือของนั้น · โซนตั้งสี/ความจาง/ลาย/ลิงก์ได้ · ระหว่างวาดโซนของอื่นจางลง)
+//
+//   .map-stage (ช่องมอง · ไม่มีแถบเลื่อน) → .map-canvas (กรอบอ้างอิงกว้าง FRAME_W พิกเซลของโลก · transform = กล้อง)
+//   ของทุกชิ้นวางด้วย % ของกรอบเหมือนเดิม (ไฟล์เดิมเปิดได้ทุกไบต์) แต่เกิน 0–100 ได้ = อยู่นอกรูป
+//   หมุด/ป้ายคงขนาดบนจอ (scale(1/z)) · เส้นใช้ non-scaling-stroke · กริดจัตุรัสไม่มีขอบ
+export const FRAME_W = 1000;
+/** ป้ายลายของพื้นโซน — ตารางคีย์เต็ม (ห้ามประกอบคีย์ภาษาจากชิ้นส่วน · ตัวตรวจไฟล์ภาษามองไม่เห็น) */
+const PATTERN_KEYS = { none: 'ui.maps.pattern_none', hatch: 'ui.maps.pattern_hatch', cross: 'ui.maps.pattern_cross', dots: 'ui.maps.pattern_dots' };
+/** สัดส่วนกรอบอ้างอิง: ตามรูป (จดไว้ใน map.aspect ตอนรูปโหลด) · ไม่มีรูป = 16:10 */
+export function frameAspect(cur) {
+  const a = Number(cur && cur.aspect);
+  return Number.isFinite(a) && a > 0 ? a : 1.6;
+}
+/**
+ * [alpha.168] ทาค่ารูปพื้นหลัง (map.bg) ลง <img> ที่วางมุมซ้ายบนของกรอบกว้าง boxW พิกเซล
+ * ภาพตั้งต้นเต็มกรอบพอดี (สัดส่วนกรอบ = สัดส่วนไฟล์ · map.aspect) แล้วแปลงด้วย matrix3d จาก bgQuad
+ */
+export function applyMapBgStyle(img, map, boxW = FRAME_W) {
+  if (!img) return;
+  const fa = frameAspect(map);
+  const bg = normalizeBg(map && map.bg);
+  const elW = boxW, elH = boxW / fa;
+  img.style.width = elW + 'px'; img.style.height = elH + 'px';
+  img.style.transformOrigin = '0 0';
+  img.style.transform = isDefaultBg(bg) ? '' : bgCssMatrix(bg, fa, fa, boxW, elW, elH);
+  img.style.opacity = bg.opacity < 1 ? String(bg.opacity) : '';
+}
+/** กล้องของแผนที่ใบนี้ (ไม่บันทึกลงไฟล์) — zoom 1 = กรอบอ้างอิงพอดีจอ · cx,cy = จุดกลางจอ (% ของกรอบ) */
+function camOf(cur) {
+  let c = view.cams.get(cur.id);
+  if (!c) { c = { zoom: 1, cx: 50, cy: 50, fresh: true }; view.cams.set(cur.id, c); }
+  return c;
+}
+/** กล้อง → การแปลงของผืน (พิกเซล) */
+function camXf(stage, cur, cam) {
+  const W = FRAME_W, H = FRAME_W / frameAspect(cur);
+  const sw = stage.clientWidth || 800, sh = stage.clientHeight || 500;
+  const fit = Math.min(sw / W, sh / H) * 0.92;
+  const s = fit * cam.zoom;
+  return { s, tx: sw / 2 - (cam.cx / 100) * W * s, ty: sh / 2 - (cam.cy / 100) * H * s, W, H, fit, sw, sh };
+}
+
+async function renderMapView(main, pane, cur) {
   const S = mapsState_C.s;
   const maps = S.data.maps;
   const redraw = () => renderMaps(pane);
   const save = async () => { await saveMaps(S.data); };
+  main.classList.add('map-main-view');
 
-  // แถบหัว: กลับแกลเลอรี · ชื่อ · เพิ่มแผนที่ · ค้นหาหมุด
-  const head = el('div', 'map-head');
-  const home = el('button', 'cmp-mini map-home', gi('grid') + ' ' + t('ui.maps.allMaps'));
+  // ── แถบหัว (แถวเดียว): แผนที่ทั้งหมด · ชื่อ/ลำดับชั้น · ค้นหา · พิกัด · ส่งออก · ⋯ ──
+  const head = el('div', 'map-head map-head2');
+  const home = el('button', 'cmp-mini map-home', gi('grid'));
   home.title = t('ui.maps.allMapsTip');
+  home.setAttribute('aria-label', t('ui.maps.allMaps'));
   home.onclick = () => showMapGallery();
-  head.append(home, el('div', 'map-title', t('ui.common.map3')));
-  const addBtn = el('button', 'k-ok', t('ui.maps.addMap'));
-  addBtn.onclick = () => addMapFlow();
-  head.append(addBtn);
+  head.append(home);
+  const crumb = breadcrumb(maps, cur.id);
+  const bc = el('div', 'map-crumb');
+  crumb.forEach((c, i) => {
+    if (c.id === cur.id) return;
+    const a = el('span', 'map-crumb-item', c.name);
+    a.title = t('ui.maps.sideParentTip');
+    a.onclick = () => enterMap(c.id);
+    bc.append(a, el('span', 'map-crumb-sep', gi('chevron-right')));
+  });
+  const nameInp = el('input', 'map-name-inp'); nameInp.value = cur.name;
+  nameInp.title = t('ui.common.nameMap');
+  nameInp.onchange = async () => { cur.name = nameInp.value.trim() || cur.name; await save(); redraw(); };
+  bc.append(nameInp);
+  head.append(bc);
   const search = el('input', 'map-search'); search.type = 'search';
   search.placeholder = t('ui.maps.searchPinName'); search.value = view.q;
   head.append(search);
+  const gr = geoReady(cur);
+  const geoBtn = el('button', 'cmp-mini map-geo-btn' + (gr.full ? ' on' : ''), gi('earth') + ' ' + t('ui.maps.geoBtn'));
+  geoBtn.title = gr.full ? t('ui.maps.geoBtnTipDone') : t('ui.maps.geoBtnTip');
+  geoBtn.onclick = () => openGeoPanel(cur);
+  // [alpha.168] แก้รูปพื้นหลัง (มีเมื่อแผนที่มีรูป)
+  const bgBtn = cur.image ? el('button', 'cmp-mini map-bg-btn' + (view.bgOpen ? ' on' : '') + (isDefaultBg(cur.bg) ? '' : ' map-bg-changed'), gi('image-edit') + ' ' + t('ui.maps.bgBtn')) : null;
+  if (bgBtn) { bgBtn.title = t('ui.maps.bgBtnTip'); bgBtn.onclick = () => openBgPanel(cur); }
+  const expBtn = el('button', 'cmp-mini map-exp-btn', gi('export') + ' ' + t('ui.common.export'));
+  expBtn.title = t('ui.maps.exportMenuTip');
+  expBtn.onclick = (e) => {
+    const r = expBtn.getBoundingClientRect();
+    popupMenu(r.left, r.bottom + 4, [
+      { label: t('ui.maps.exportPngAs'), click: () => exportMapPng(cur) },
+      { label: t('ui.maps.exportPngLib'), click: () => exportMapPng(cur, { library: true }) },
+      { label: t('ui.maps.geojson'), click: () => exportMapGeoJson(cur) },
+      '-',
+      { label: t('ui.maps.print'), click: () => printMap(cur) },
+    ]);
+  };
+  const more = el('button', 'cmp-mini map-more-btn', gi('more'));
+  more.title = t('ui.maps.moreTip');
+  more.setAttribute('aria-label', t('ui.maps.moreTip'));
+  more.onclick = () => {
+    const r = more.getBoundingClientRect();
+    popupMenu(r.left, r.bottom + 4, [
+      { label: t('ui.maps.changeImage'), click: async () => { const it = await pickImage(state.root); if (!it) return;
+        cur.image = 'Images/' + it.file; delete cur.aspect; await save(); redraw(); } },
+      cur.image ? { label: t('ui.maps.removeImage'), click: async () => { cur.image = ''; delete cur.aspect; await save(); redraw(); } } : null,
+      { label: t('ui.maps.setCategory'), click: async () => {
+        const v = await ask(t('ui.maps.catMapSkipEmpty'), { value: cur.category || '', placeholder: t('ui.maps.catEgWorldCurrent') });
+        if (v == null) return; cur.category = String(v).trim(); await save(); redraw(); } },
+      { label: t('ui.maps.addMap'), click: () => addMapFlow() },
+      '-',
+      { label: t('ui.maps.delMap'), danger: true, click: async () => {
+        if (!(await confirmBox(tf('ui.common.delMap', cur.name), t('ui.common.del')))) return;
+        // [alpha.168] ลบแผนที่ทั้งใบย้อนกลับได้ (เดิมหมุดย้อนได้ แต่ทั้งใบหายถาวร — รวมประตูจากใบอื่นที่ชี้มา)
+        const snap = JSON.stringify(S.data.maps), data = S.data, name = cur.name || '';
+        S.data.maps = deleteMap(maps, cur.id); S.currentId = S.data.maps[0]?.id || null;
+        view.sel.clear(); view.gallery = true; await save(); redraw();
+        toast(tf('ui.maps.delMapDone', name), { action: { label: t('ui.common.undoBtn'), onClick: async () => {
+          const S2 = mapsState_C.s;
+          if (!S2 || S2.data !== data) return;                      // โหลดใหม่/เปลี่ยนโปรเจกต์ไปแล้ว
+          S2.data.maps = JSON.parse(snap);
+          await saveMaps(S2.data);
+          refresh();
+        } } }); } },
+    ].filter(Boolean));
+  };
+  head.append(...[bgBtn, geoBtn, expBtn, more].filter(Boolean));
   main.append(head);
 
-  // ── แถบเลือกแผนที่ (chips) จัดกลุ่มตามหมวด (ข้อ 8) ──
+  // ── แถบสลับแผนที่ (รูปย่อ) + หมวด ──
   const groups = groupMaps(maps);
+  const strip = el('div', 'map-strip');
   if (groups.length > 1) {
     const catBar = el('div', 'map-catbar');
     const mkCat = (label, val) => {
@@ -562,7 +713,7 @@ async function renderMapView(main, pane, cur, keepScroll) {
     };
     mkCat(t('ui.common.all'), null);
     for (const g of groups) mkCat((g.cat || t('ui.common.notSpecifyCat')) + ' · ' + g.maps.length, g.cat);
-    main.append(catBar);
+    strip.append(catBar);
   }
   const bar = el('div', 'map-bar');
   const shown = groups.filter((g) => view.catFilter === null || g.cat === view.catFilter);
@@ -570,158 +721,61 @@ async function renderMapView(main, pane, cur, keepScroll) {
     if (groups.length > 1) bar.append(el('div', 'map-bar-cat', g.cat || t('ui.common.notSpecifyCat')));
     const row = el('div', 'map-bar-row');
     for (const m of g.maps) {
-      const chip = el('div', 'map-chip' + (m.id === S.currentId ? ' on' : ''), m.name);
+      const chip = el('div', 'map-chip' + (m.id === S.currentId ? ' on' : ''));
+      const th = el('span', 'map-chip-th');
+      if (m.image) th.style.backgroundImage = `url("${mapImgURL(m.image)}")`; else th.append(el('span', null, gi('map')));
+      chip.append(th, el('span', 'map-chip-name', m.name));
       const st = pinStats(m);
       if (st.portal) chip.append(el('span', 'map-chip-badge', gi('door') + st.portal));
+      chip.title = m.name;
       chip.onclick = () => { S.currentId = m.id; view.sel.clear(); view.routeEdit = null; view.focusPin = null; view.selZone = null; redraw(); };
       row.append(chip);
     }
     bar.append(row);
   }
-  main.append(bar);
+  strip.append(bar);
+  if (maps.length > 1 || groups.length > 1) main.append(strip);
 
   // แผนที่ปัจจุบันต้องอยู่ในหมวดที่กรองไว้
-  if (view.catFilter !== null && String(cur.category || '').trim() !== view.catFilter) {
-    cur = (shown[0] && shown[0].maps[0]) || sortMaps(maps)[0];
+  // [alpha.168 · bug hunt] ตัดสินด้วย mapForFilter (maps.js) — ได้ใบที่ต่างจากใบปัจจุบัน "จริง" เท่านั้นจึงวาดใหม่
+  // เดิม: หมวดที่กรองไม่มีแผนที่เหลือ → เลือกใบแรกของทั้งหมด (หมวดไม่ตรงอีก) → วาดใหม่ไม่จบ = แอปค้างทั้งโปรแกรม
+  {
+    const want = mapForFilter(maps, cur.id, view.catFilter);
+    if (want && want.id !== cur.id) { S.currentId = want.id; return redraw(); }
   }
   S.currentId = cur.id;
-
-  // breadcrumb โลก→เมือง→ห้อง
-  const crumb = breadcrumb(maps, cur.id);
-  if (crumb.length > 1) {
-    const bc = el('div', 'map-crumb');
-    crumb.forEach((c, i) => {
-      if (i) bc.append(el('span', 'map-crumb-sep', '›'));
-      const a = el('span', 'map-crumb-item' + (c.id === cur.id ? ' on' : ''), c.name);
-      a.onclick = () => { S.currentId = c.id; view.sel.clear(); redraw(); };
-      bc.append(a);
-    });
-    main.append(bc);
-  }
-
-  // ── แถบเครื่องมือแผนที่ปัจจุบัน ──
-  const tools = el('div', 'map-tools');
-  const nameInp = el('input', 'map-name-inp'); nameInp.value = cur.name;
-  nameInp.title = t('ui.common.nameMap');
-  nameInp.onchange = async () => { cur.name = nameInp.value.trim() || cur.name; await save(); redraw(); };
-  tools.append(nameInp);
-  const catInp = el('input', 'map-cat-inp'); catInp.value = cur.category || '';
-  catInp.placeholder = t('ui.maps.catEgWorldCurrent'); catInp.title = t('ui.maps.catMapSkipEmpty');
-  catInp.setAttribute('list', 'map-cat-list');
-  const dl = el('datalist'); dl.id = 'map-cat-list';
-  for (const g of groups) if (g.cat) { const o = el('option'); o.value = g.cat; dl.append(o); }
-  catInp.onchange = async () => { cur.category = catInp.value.trim(); await save(); redraw(); };
-  tools.append(catInp, dl);
-  const chgImg = el('button', 'cmp-mini', t('ui.maps.changeImage'));
-  chgImg.title = t('ui.maps.changeImageTip');
-  chgImg.onclick = async () => { const it = await pickImage(state.root); if (!it) return;
-    cur.image = 'Images/' + it.file; delete cur.aspect; await save(); redraw(); };
-  tools.append(chgImg);
-  // [alpha.167] พิกัดจริง
-  const gr = geoReady(cur);
-  const geoBtn = el('button', 'cmp-mini map-geo-btn' + (gr.full ? ' on' : ''), gi('earth') + ' ' + t('ui.maps.geoBtn'));
-  geoBtn.title = gr.full ? t('ui.maps.geoBtnTipDone') : t('ui.maps.geoBtnTip');
-  geoBtn.onclick = () => openGeoPanel(cur);
-  tools.append(geoBtn);
-  const expBtn = el('button', 'cmp-mini', t('ui.common.exportPNG'));
-  expBtn.title = t('ui.maps.saveMapReadyPin');
-  expBtn.onclick = () => exportMapPng(cur, S.data.maps);
-  tools.append(expBtn);
-  const gjBtn = el('button', 'cmp-mini', t('ui.maps.geojson'));
-  gjBtn.title = t('ui.maps.geojsonTip');
-  gjBtn.onclick = () => exportMapGeoJson(cur);
-  tools.append(gjBtn);
-  const prnBtn = el('button', 'cmp-mini', t('ui.maps.print'));
-  prnBtn.title = t('ui.maps.printTip');
-  prnBtn.onclick = () => printMap(cur, S.data.maps);
-  tools.append(prnBtn);
-  const delMap = el('button', 'cmp-mini k-danger', t('ui.maps.delMap'));
-  delMap.title = t('ui.maps.delMapTip');
-  delMap.onclick = async () => {
-    if (!(await confirmBox(tf('ui.common.delMap', cur.name), t('ui.common.del')))) return;
-    S.data.maps = deleteMap(maps, cur.id); S.currentId = S.data.maps[0]?.id || null;
-    view.sel.clear(); view.gallery = true; await save(); redraw();
-  };
-  tools.append(delMap);
-  main.append(tools);
-
-  const toolHint = (MAP_TOOLS.find((x) => x.id === view.tool) || MAP_TOOLS[0]).hint;
-  const hint = el('div', 'map-hint', tf('ui.maps.clickEmptyPinPinF', toolHint));
+  const hint = el('div', 'map-hint', t('ui.maps.hint168'));
   main.append(hint);
   search.oninput = () => { view.q = search.value; applyPinFilter(main); };
 
-  // ── แถบทำงานกับหมุดหลายตัว (ข้อ 6) ──
-  const selBar = el('div', 'map-selbar' + (view.sel.size || view.clip.length ? ' on' : ''));
-  const selCount = el('span', 'map-selcount', view.sel.size ? tf('ui.maps.pickPin', view.sel.size) : t('ui.maps.cantPickPin'));
-  selBar.append(selCount);
-  if (view.sel.size) {
-    const bCopy = el('button', 'cmp-mini', t('ui.maps.copy'));
-    bCopy.title = t('ui.maps.copyPinPickDone');
-    bCopy.onclick = () => {
-      view.clip = clonePins(cur.pins, [...view.sel], 0);
-      setStatus(tf('ui.maps.copyPinDoneOpen', view.clip.length));
-      redraw();
-    };
-    const bDel = el('button', 'cmp-mini k-danger', t('ui.maps.delPick'));
-    bDel.title = t('ui.maps.delPickTip');
-    bDel.onclick = async () => {
-      const n = view.sel.size;
-      if (!(await confirmBox(tf('ui.maps.delPinPickItem', n), t('ui.common.del')))) return;
-      deletePins(cur, [...view.sel]);
-      view.sel.clear(); await save(); setStatus(tf('ui.maps.delPinDone', n)); redraw();
-    };
-    const bNone = el('button', 'cmp-mini', t('ui.maps.cancelPick'));
-    bNone.title = t('ui.maps.cancelPickTip');
-    bNone.onclick = () => { view.sel.clear(); redraw(); };
-    selBar.append(bCopy, bDel, bNone);
-  }
-  if (view.clip.length) {
-    const bPaste = el('button', 'cmp-mini', tf('ui.maps.pastePin', view.clip.length));
-    bPaste.title = t('ui.maps.pastePinCopyMap');
-    bPaste.onclick = async () => {
-      const added = clonePins(view.clip, view.clip.map((p) => p.id), 2, cur.id);
-      cur.pins = [...(cur.pins || []), ...added];
-      view.sel = new Set(added.map((p) => p.id));
-      await save(); setStatus(tf('ui.maps.pastePinDone', added.length, cur.name)); redraw();
-    };
-    selBar.append(bPaste);
-  }
-  main.append(selBar);
-
-  // ── โหมดต่อเส้นทาง ──
-  const editingRoute = view.routeEdit ? mapRoutes(cur).find((r) => r.id === view.routeEdit) : null;
-  if (editingRoute) {
-    const rb = el('div', 'map-routebar');
-    rb.append(el('span', null, tf('ui.maps.busyNextRouteClick', editingRoute.name, (editingRoute.pinIds || []).length)));
-    const undoB = el('button', 'cmp-mini', t('ui.maps.dotLatest'));
-    undoB.title = t('ui.maps.dotLatestTip');
-    undoB.onclick = async () => { (editingRoute.pinIds || []).pop(); await save(); redraw(); };
-    const doneB = el('button', 'cmp-mini k-ok', t('ui.maps.done'));
-    doneB.onclick = () => { view.routeEdit = null; redraw(); };
-    rb.append(undoB, doneB);
-    main.append(rb);
-  }
-  // ── [alpha.167] แถบสถานะของโหมดพิเศษ (จิ้มจุด · วาดโซน · วัดระยะ) ──
-  const modeBar = buildModeBar(cur, redraw, save);
-  if (modeBar) main.append(modeBar);
-
   const counts = scenePinCounts(scenesCache, cur.id);
   const hereScenes = scenesForMap(scenesCache, cur.id);
+  const editingRoute = view.routeEdit ? mapRoutes(cur).find((r) => r.id === view.routeEdit) : null;
 
-  // ═══ พื้นที่แผนที่: กรอบ (ลอย HUD ทับได้) → stage (เลื่อน) → canvas (กว้างตามซูม) ═══
+  // ═══ พื้นที่แผนที่ ═══
   const frame = el('div', 'map-frame');
   const stage = el('div', 'map-stage');
-  const canvas = el('div', 'map-canvas' + (view.pick || view.zoneDraw || view.measure ? ' map-picking' : ''));
-  canvas.style.width = (view.zoom * 100) + '%';
-  const img = el('img', 'map-img');
+  const drawing = !!(view.pick || view.zoneDraw || view.measure);
+  const canvas = el('div', 'map-canvas' + (drawing ? ' map-picking' : '') + (view.zoneDraw ? ' map-drawing' : '')
+    + (view.showLabels ? '' : ' map-nolabels'));
+  const cam = camOf(cur);
+  view.zoom = cam.zoom;
+  if (view.bgOpen) canvas.classList.add('map-bg-editing');
+  if (view.bgOpen && view.bgDrag) canvas.classList.add('map-bg-dragmode');
+  canvas.style.width = FRAME_W + 'px';
+  canvas.style.height = (FRAME_W / frameAspect(cur)) + 'px';
   if (cur.image) {
-    img.src = mapImgURL(cur.image); img.draggable = false; canvas.append(img);
-    // จดสัดส่วนภาพไว้ในแผนที่ (ระยะจริงต้องรู้ว่าแกนตั้งยาวเท่าไรเทียบแกนนอน) — เขียนเงียบ ไม่วาดใหม่
+    const img = el('img', 'map-img');
+    img.src = mapImgURL(cur.image); img.draggable = false; img.alt = '';
+    applyMapBgStyle(img, cur);
+    canvas.append(img);
+    // จดสัดส่วนภาพไว้ในแผนที่ (กรอบอ้างอิง + ระยะจริงต้องรู้) — ต่างจากเดิม = ปรับกรอบทันที ไม่วาดใหม่ทั้งแผง
     img.addEventListener('load', () => {
       const a = img.naturalWidth && img.naturalHeight ? +(img.naturalWidth / img.naturalHeight).toFixed(5) : 0;
-      if (a && Math.abs((+cur.aspect || 0) - a) > 1e-4) { cur.aspect = a; save().catch(() => {}); }
+      // สัดส่วนเปลี่ยน (ครั้งแรกที่เปิดรูปนี้) = กรอบ/กริด/ตำแหน่งแกนตั้งเปลี่ยนตาม → วาดใหม่ครั้งเดียว
+      if (a && Math.abs((+cur.aspect || 0) - a) > 1e-4) { cur.aspect = a; save().then(redraw).catch(() => {}); }
     }, { once: true });
-  } else canvas.append(el('div', 'map-noimg', t('ui.maps.notHasImagePress')));
+  }
   const ov = mapOverlays(cur);
   const NS = 'http://www.w3.org/2000/svg';
   const mkSvg = (cls) => {
@@ -732,149 +786,177 @@ async function renderMapView(main, pane, cur, keepScroll) {
     return svg;
   };
 
-  // ── ชั้นล่างสุด: โซน (ผู้ใช้: "Zone จะต้องอยู่ layer หลังสุด") ──
+  // ── ชั้นล่างสุด: โซน (ความจาง/ลาย/สีของโซนเอง) ──
   const zones = mapZones(cur);
-  if (zones.length || view.zoneDraw) {
-    const zs = mkSvg('map-zones');
-    for (const z of zones) {
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', zonePath(z.points));
-      p.setAttribute('class', 'map-zone' + (view.selZone === z.id ? ' sel' : ''));
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
-      p.style.setProperty('--zc', z.color || ZONE_COLORS[0]);
-      p.dataset.zone = z.id;
-      zs.append(p);
+  const zs = mkSvg('map-zones');
+  const defs = document.createElementNS(NS, 'defs');
+  zs.append(defs);
+  for (const z of zones) {
+    const col = z.color || ZONE_COLORS[0];
+    const pat = ZONE_PATTERNS.includes(z.pattern) ? z.pattern : 'none';
+    let fill = col;
+    if (pat !== 'none') {
+      const pid = 'mzp-' + z.id;
+      const pe = document.createElementNS(NS, 'pattern');
+      pe.setAttribute('id', pid); pe.setAttribute('patternUnits', 'userSpaceOnUse');
+      pe.setAttribute('width', '2'); pe.setAttribute('height', '2');
+      const mk = (tag, at) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(at)) n.setAttribute(k, v); pe.append(n); };
+      if (pat === 'hatch' || pat === 'cross') mk('path', { d: 'M-0.5,0.5 L0.5,-0.5 M0,2 L2,0 M1.5,2.5 L2.5,1.5', stroke: col, 'stroke-width': '0.25' });
+      if (pat === 'cross') mk('path', { d: 'M-0.5,1.5 L0.5,2.5 M0,0 L2,2 M1.5,-0.5 L2.5,0.5', stroke: col, 'stroke-width': '0.25' });
+      if (pat === 'dots') mk('circle', { cx: '1', cy: '1', r: '0.28', fill: col });
+      defs.append(pe);
+      fill = `url(#${pid})`;
     }
-    if (view.zoneDraw && view.zoneDraw.points.length) {
-      const p = document.createElementNS(NS, 'path');
-      const pts = view.zoneDraw.points;
-      p.setAttribute('d', pts.map((q, i) => (i ? 'L' : 'M') + q.x.toFixed(2) + ',' + q.y.toFixed(2)).join(' ') + (pts.length > 2 ? ' Z' : ''));
-      p.setAttribute('class', 'map-zone map-zone-draft');
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
-      p.style.setProperty('--zc', view.zoneDraw.color);
-      zs.append(p);
-    }
-    canvas.append(zs);
-    for (const z of zones) {
-      const c = polygonCentroid(z.points);
-      const lb = el('div', 'map-zone-label' + (view.selZone === z.id ? ' sel' : ''), z.name || '');
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', zonePath(z.points));
+    p.setAttribute('class', 'map-zone' + (view.selZone === z.id ? ' sel' : ''));
+    p.setAttribute('vector-effect', 'non-scaling-stroke');
+    p.style.setProperty('--zc', col);
+    p.style.fill = fill;
+    p.style.fillOpacity = String(pat === 'none' ? zoneOpacity(z) : Math.min(1, zoneOpacity(z) * 3));
+    p.dataset.zone = z.id;
+    zs.append(p);
+  }
+  if (view.zoneDraw && view.zoneDraw.points.length) {
+    const p = document.createElementNS(NS, 'path');
+    const pts = view.zoneDraw.points;
+    p.setAttribute('d', pts.map((q, i) => (i ? 'L' : 'M') + q.x.toFixed(3) + ',' + q.y.toFixed(3)).join(' ') + (pts.length > 2 ? ' Z' : ''));
+    p.setAttribute('class', 'map-zone map-zone-draft');
+    p.setAttribute('vector-effect', 'non-scaling-stroke');
+    p.style.setProperty('--zc', view.zoneDraw.color);
+    zs.append(p);
+    const rub = document.createElementNS(NS, 'path');
+    rub.setAttribute('class', 'map-zone-rubber');
+    rub.setAttribute('vector-effect', 'non-scaling-stroke');
+    zs.append(rub);
+  }
+  canvas.append(zs);
+  for (const z of zones) {
+    const c = polygonCentroid(z.points);
+    if (z.name) {
+      const lb = el('div', 'map-zone-label' + (view.selZone === z.id ? ' sel' : ''), z.name);
       lb.style.left = c.x + '%'; lb.style.top = c.y + '%';
       lb.style.setProperty('--zc', z.color || ZONE_COLORS[0]);
       lb.dataset.zone = z.id;
-      if (z.name) canvas.append(lb);
-      // จุดยอดของโซนที่เลือก (โหมดแก้ไข) — ลากปรับรูปได้
-      if (view.selZone === z.id && view.tool === 'edit') {
-        z.points.forEach((pt, i) => canvas.append(zoneVertex(cur, z, i, canvas, save, redraw)));
-      }
+      canvas.append(lb);
     }
-    if (view.zoneDraw) view.zoneDraw.points.forEach((pt) => {
-      const v = el('div', 'map-zone-vtx map-zone-vtx-draft'); v.style.left = pt.x + '%'; v.style.top = pt.y + '%'; canvas.append(v);
-    });
+    // โซนที่เลือก = จุดยอดลากปรับรูปได้เลย (เหมือนในวิดีโอ) + จุดกลางขอบ = แทรกจุดใหม่
+    if (view.selZone === z.id && !drawing) {
+      z.points.forEach((pt, i) => canvas.append(zoneVertex(cur, z, i, canvas, save, redraw)));
+      z.points.forEach((pt, i) => canvas.append(zoneMidHandle(cur, z, i, save, redraw)));
+    }
   }
+  if (view.zoneDraw) view.zoneDraw.points.forEach((pt, i) => {
+    const v = el('div', 'map-zone-vtx map-zone-vtx-draft' + (i === 0 && view.zoneDraw.points.length > 2 ? ' map-zone-vtx-close' : ''));
+    v.style.left = pt.x + '%'; v.style.top = pt.y + '%';
+    if (i === 0) {
+      v.title = t('ui.maps.zoneCloseTip');
+      v.onclick = (e) => { e.stopPropagation(); finishZone(cur, save, redraw); };
+    }
+    canvas.append(v);
+  });
 
-  // กริด
+  // ── กริด: ช่องจัตุรัสเสมอ (1:1) · ไม่มีขอบ (ปูเลยกรอบรูปออกไปทุกทิศ) ──
   if (ov.grid) {
     const g = el('div', 'map-grid');
-    const cell = (100 / ov.gridSize) + '%';
-    g.style.backgroundSize = cell + ' ' + cell;
+    const cell = FRAME_W / gridCell(ov.gridSize, frameAspect(cur)).n;
+    // ปูกว้าง 8 เท่าของกรอบทุกทิศ · ระยะเยื้องเป็นจำนวนเต็มช่อง = เส้นตรงกับมุมกรอบพอดี (ช่องจัตุรัสทั้งสองแกน)
+    const H = FRAME_W / frameAspect(cur);
+    const offX = Math.ceil((8 * FRAME_W) / cell) * cell, offY = Math.ceil((8 * H) / cell) * cell;
+    g.style.setProperty('--cell', cell + 'px');
+    g.style.left = -offX + 'px'; g.style.top = -offY + 'px';
+    g.style.width = (2 * offX + FRAME_W) + 'px'; g.style.height = (2 * offY + H) + 'px';
     canvas.append(g);
   }
 
-  // เส้นทาง (ข้อ 9) + เส้นทางของเรื่อง + เส้นวัดระยะ — SVG พิกัด 0–100 · vector-effect กันเส้นถูกยืด
+  // เส้นทาง + เส้นทางของเรื่อง + เส้นวัดระยะ
   const routes = view.showRoutes ? mapRoutes(cur) : [];
   const journey = view.journey ? storyJourney(cur, scenesCache || [], (s) => extractNum(s.storyDate)) : null;
-  if (routes.length || (journey && journey.stops.length > 1) || (view.measure && view.measure.points.length)) {
-    const svg = mkSvg('map-routes');
-    for (const r of routes) {
-      const d = routePath(routePoints(cur, r));
-      if (!d) continue;
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', d);
-      p.setAttribute('fill', 'none');
-      p.setAttribute('stroke', r.color || ROUTE_COLORS[0]);
-      p.setAttribute('stroke-width', r.id === view.routeEdit ? '4' : '2.5');
-      p.setAttribute('stroke-linejoin', 'round');
-      p.setAttribute('stroke-linecap', 'round');
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
-      if (r.dashed) p.setAttribute('stroke-dasharray', '6 5');
-      svg.append(p);
-    }
-    if (journey && journey.stops.length > 1) {
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', routePath(journey.stops.map((s) => s.pt)));
-      p.setAttribute('class', 'map-journey');
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
-      svg.append(p);
-    }
-    if (view.measure && view.measure.points.length) {
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', routePath(view.measure.points.length > 1 ? view.measure.points : [view.measure.points[0], view.measure.points[0]]));
-      p.setAttribute('class', 'map-measure');
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
-      svg.append(p);
-    }
-    canvas.append(svg);
-    if (editingRoute) {
-      routePoints(cur, editingRoute).forEach((pt, i) => {
-        const n = el('div', 'map-route-num', String(i + 1));
-        n.style.left = pt.x + '%'; n.style.top = pt.y + '%';
-        n.style.background = editingRoute.color || ROUTE_COLORS[0];
-        canvas.append(n);
-      });
-    }
-    if (journey) journey.stops.forEach((st, i) => {
-      const n = el('div', 'map-route-num map-journey-num', String(i + 1));
-      n.style.left = st.pt.x + '%'; n.style.top = st.pt.y + '%';
-      n.title = st.scene.title || '';
+  const rsvg = mkSvg('map-routes');
+  for (const r of routes) {
+    const d = routePath(routePoints(cur, r));
+    if (!d) continue;
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', r.color || ROUTE_COLORS[0]);
+    p.setAttribute('stroke-width', r.id === view.routeEdit ? '4' : '2.5');
+    p.setAttribute('stroke-linejoin', 'round');
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('vector-effect', 'non-scaling-stroke');
+    if (r.dashed) p.setAttribute('stroke-dasharray', '6 5');
+    rsvg.append(p);
+  }
+  if (journey && journey.stops.length > 1) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', routePath(journey.stops.map((s) => s.pt)));
+    p.setAttribute('class', 'map-journey');
+    p.setAttribute('vector-effect', 'non-scaling-stroke');
+    rsvg.append(p);
+  }
+  if (view.measure && view.measure.points.length) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', routePath(view.measure.points.length > 1 ? view.measure.points : [view.measure.points[0], view.measure.points[0]]));
+    p.setAttribute('class', 'map-measure');
+    p.setAttribute('vector-effect', 'non-scaling-stroke');
+    rsvg.append(p);
+  }
+  if (rsvg.childNodes.length) canvas.append(rsvg);
+  if (editingRoute) {
+    routePoints(cur, editingRoute).forEach((pt, i) => {
+      const n = el('div', 'map-route-num', String(i + 1));
+      n.style.left = pt.x + '%'; n.style.top = pt.y + '%';
+      n.style.background = editingRoute.color || ROUTE_COLORS[0];
       canvas.append(n);
     });
-    if (view.measure) view.measure.points.forEach((pt) => {
-      const v = el('div', 'map-zone-vtx map-measure-vtx'); v.style.left = pt.x + '%'; v.style.top = pt.y + '%'; canvas.append(v);
-    });
   }
+  if (journey) journey.stops.forEach((st, i) => {
+    const n = el('div', 'map-route-num map-journey-num', String(i + 1));
+    n.style.left = st.pt.x + '%'; n.style.top = st.pt.y + '%';
+    n.title = st.scene.title || '';
+    canvas.append(n);
+  });
+  if (view.measure) view.measure.points.forEach((pt) => {
+    const v = el('div', 'map-zone-vtx map-measure-vtx'); v.style.left = pt.x + '%'; v.style.top = pt.y + '%'; canvas.append(v);
+  });
 
-  // จุดที่ตั้งมาตราส่วน/พิกัดไว้ (มองเห็นตอนเปิดหน้าตั้งพิกัด หรือระหว่างจิ้ม)
+  // จุดที่ตั้งมาตราส่วน/พิกัดไว้ (ตอนเปิดหน้าตั้งพิกัด หรือระหว่างจิ้ม)
   const geo = geoOf(cur);
-  if (view.pick || $('.map-geo-pop')) {
-    if (geo.scale) for (const [k, p] of [['A', geo.scale.a], ['B', geo.scale.b]]) {
-      const m = el('div', 'map-geo-mark', k); m.style.left = p.x + '%'; m.style.top = p.y + '%'; canvas.append(m);
-    }
-    if (geo.ref) { const m = el('div', 'map-geo-mark map-geo-ref', gi('crosshairs')); m.style.left = geo.ref.x + '%'; m.style.top = geo.ref.y + '%'; canvas.append(m); }
-  }
+  if (view.pick || view.geoOpen) drawGeoMarks(canvas, geo);
 
   const ptOf = (e) => {
     const r = canvas.getBoundingClientRect();
-    return { x: clamp(((e.clientX - r.left) / r.width) * 100), y: clamp(((e.clientY - r.top) / r.height) * 100) };
+    return { x: clampW(((e.clientX - r.left) / (r.width || 1)) * 100), y: clampW(((e.clientY - r.top) / (r.height || 1)) * 100) };
   };
-  const isBg = (e) => e.target === canvas || e.target === img || (e.target.classList && (e.target.classList.contains('map-grid')
-    || e.target.classList.contains('map-zone') || e.target.classList.contains('map-zone-label')))
-    || (e.target.closest && !!e.target.closest('svg.map-zones'));
+  const isBg = (e) => e.target === canvas || e.target === stage || (e.target.classList && (e.target.classList.contains('map-img')
+    || e.target.classList.contains('map-grid') || e.target.classList.contains('map-zone') || e.target.classList.contains('map-zone-label')))
+    || (e.target.closest && !!e.target.closest('svg.map-zones, svg.map-routes'));
 
   // ── คลิกบนผืนแผนที่ ──
-  let suppressClick = false;               // กันคลิกที่เกิดหลังลากกรอบเลือก/เลื่อนภาพ
-  canvas.onclick = async (e) => {
+  let suppressClick = false;               // กันคลิกที่เกิดหลังลาก
+  stage.onclick = async (e) => {
     if (suppressClick) { suppressClick = false; return; }
     if (!isBg(e)) return;
     const pt = ptOf(e);
     if (view.pick) { view.pick.resolve(pt); return; }
     if (view.zoneDraw) { view.zoneDraw.points.push(pt); redraw(); return; }
     if (view.measure) { view.measure.points.push(pt); redraw(); return; }
-    // โซน: คลิก = เลือก · Ctrl+คลิก = เปิดเอนทิตี้ของโซน (กระโดดแบบเดียวกับตัวแก้ไข)
+    if (view.addText) { view.addText = false; await addTextAt(pt); return; }
+    // โซน: คลิก = เลือก (แถบเครื่องมือของโซนโผล่) · Ctrl+คลิก = เปิดเอนทิตี้ของโซน
     const z = zoneAt(cur, pt);
     if (z && (e.ctrlKey || e.metaKey) && z.entityFile) { openEntity(z.entityFile); return; }
-    if (view.sel.size) { view.sel.clear(); redraw(); return; }   // คลิกที่ว่าง = ยกเลิกการเลือกก่อน
+    if (view.sel.size) { view.sel.clear(); if (!z) { redraw(); return; } }
     if (z) { view.selZone = view.selZone === z.id ? null : z.id; redraw(); return; }
     if (view.selZone) { view.selZone = null; redraw(); return; }
-    // [alpha.167] ควบคุมแบบเกม: คลิกเดียวในโหมดเปิด/ดู = ไม่ปักหมุด (ปักด้วยดับเบิลคลิก หรือโหมดแก้ไข)
     if (view.tool !== 'edit') return;
     await addPinAt(pt);
   };
-  canvas.ondblclick = async (e) => {
+  stage.ondblclick = async (e) => {
     if (!isBg(e) || view.pick || view.measure) return;
     if (view.zoneDraw) { e.preventDefault(); await finishZone(cur, save, redraw); return; }
     await addPinAt(ptOf(e));
   };
-  canvas.oncontextmenu = (e) => {
+  stage.oncontextmenu = async (e) => {
     if (!isBg(e)) return;
     e.preventDefault();
     if (view.zoneDraw || view.measure) { view.zoneDraw = null; view.measure = null; redraw(); return; }
@@ -882,35 +964,100 @@ async function renderMapView(main, pane, cur, keepScroll) {
     const z = zoneAt(cur, pt);
     if (z) { zoneMenu(cur, z, e.clientX, e.clientY); return; }
     const ll = toLatLon(cur, pt);
+    const ents = await loadEntities();
+    const byCat = new Map();
+    for (const en of ents) { if (!byCat.has(en.cat)) byCat.set(en.cat, []); byCat.get(en.cat).push(en); }
+    const others = maps.filter((m) => m.id !== cur.id);
+    // เมนูแบบในวิดีโอ: หมุด ▸ · โซน · ตัวหนังสือ
     popupMenu(e.clientX, e.clientY, [
-      { label: t('ui.maps.ctxAddPin'), click: () => addPinAt(pt) },
-      { label: t('ui.maps.zoneDrawHere'), click: () => startZoneDraw(cur, null) },
-      { label: t('ui.maps.measureStart'), click: () => { view.measure = { points: [pt] }; redraw(); } },
+      { label: gi('map-pin') + ' ' + t('ui.maps.ctxPin'), sub: () => [
+        { label: t('ui.maps.ctxPinNote'), click: () => addPinAt(pt) },
+        others.length ? { label: t('ui.maps.ctxPinPortal'), sub: () => others.map((m) => ({ text: m.name || '', click: () => dropOnMap(cur, { kind: 'map', items: [{ id: m.id, title: m.name }] }, pt, null) })) } : null,
+        byCat.size ? '-' : null,
+        ...[...byCat].map(([cat, arr]) => ({ text: catLabel(cat), sub: () => arr.map((en) => ({ text: en.name, click: () => placeEntity(cur, en, pt.x, pt.y) })) })),
+      ].filter(Boolean) },
+      { label: gi('vector-polygon') + ' ' + t('ui.maps.zone'), click: () => { startZoneDraw(cur, null); view.zoneDraw.points.push(pt); refresh(); } },
+      { label: gi('font') + ' ' + t('ui.maps.ctxText'), click: () => addTextAt(pt) },
+      '-',
+      { label: gi('tape-measure') + ' ' + t('ui.maps.measureStart'), click: () => { view.measure = { points: [pt] }; redraw(); } },
+      view.clip.length ? { label: tf('ui.maps.pastePin', view.clip.length), click: () => pasteClip(pt) } : null,
       ll ? { label: t('ui.maps.ctxCopyCoords') + ' ' + formatLatLon(ll), click: () => navigator.clipboard.writeText(formatLatLon(ll)).catch(() => {}) } : null,
+      cur.image ? { label: gi('image-edit') + ' ' + t('ui.maps.bgCtx'), click: () => openBgPanel(cur) } : null,
+      { label: t('ui.maps.fitAll'), click: () => fitAll() },
     ].filter(Boolean));
   };
   async function addPinAt(pt) {
     const pin = newPin(pt.x, pt.y);
     const res = await pinDialog(pin, maps, cur.id);
     if (!res) return;
-    cur.pins.push(res); await save(); redraw();
+    cur.pins.push(res); view.sel = new Set([res.id]); await save(); redraw();
+  }
+  async function addTextAt(pt) {
+    const v = await ask(t('ui.maps.textAsk'), { value: '', placeholder: t('ui.maps.textAskPh') });
+    if (!v || !String(v).trim()) return;
+    const p = newPin(pt.x, pt.y, 'text');
+    p.label = String(v).trim();
+    cur.pins.push(p); view.sel = new Set([p.id]); await save(); redraw();
+  }
+  async function pasteClip(pt) {
+    const added = clonePins(view.clip, view.clip.map((p) => p.id), 2, cur.id);
+    if (pt && added.length) {
+      const cx = added.reduce((s, p) => s + p.x, 0) / added.length, cy = added.reduce((s, p) => s + p.y, 0) / added.length;
+      for (const p of added) { p.x = clampW(p.x - cx + pt.x); p.y = clampW(p.y - cy + pt.y); }
+    }
+    cur.pins = [...(cur.pins || []), ...added];
+    view.sel = new Set(added.map((p) => p.id));
+    await save(); setStatus(tf('ui.maps.pastePinDone', added.length, cur.name)); redraw();
   }
 
-  // Shift+ลาก = เลือกหมุดเป็นกรอบ · ลากที่ว่างเฉย ๆ = เลื่อนภาพ (แบบเกม)
-  canvas.onpointerdown = (e) => {
-    if (e.button === 1 || (e.button === 0 && !e.shiftKey && isBg(e) && !view.pick && !view.zoneDraw && !view.measure)) {
-      // เลื่อนภาพ — ลากไม่ถึง 4px = ถือเป็นคลิก
-      const sx = e.clientX, sy = e.clientY, l0 = stage.scrollLeft, t0 = stage.scrollTop;
+  function dragBgImage(e) {
+    const img = canvas.querySelector('.map-img');
+    const b0 = normalizeBg(cur.bg);
+    const sx = e.clientX, sy = e.clientY;
+    const xf0 = camXf(stage, cur, cam);
+    let moved = false;
+    const put = (bg) => { cur.bg = compactBg(bg) || undefined; if (!cur.bg) delete cur.bg; applyMapBgStyle(img, cur); syncBgPanel(cur); };
+    const mv = (ev) => {
+      if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 3) return;
+      moved = true; stage.classList.add('panning');
+      put({ ...b0, x: b0.x + ((ev.clientX - sx) / xf0.s / xf0.W) * 100, y: b0.y + ((ev.clientY - sy) / xf0.s / xf0.H) * 100 });
+    };
+    const offEsc = escCancelDrag(() => {
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      stage.classList.remove('panning'); put(b0);
+      if (moved) suppressClick = true;
+    });
+    const up = async () => {
+      offEsc();
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      stage.classList.remove('panning');
+      if (moved) { suppressClick = true; await saveMaps(mapsState_C.s.data); }
+    };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+    e.preventDefault();
+  }
+
+  // ── ลากที่ว่าง = เลื่อนแผนที่ (อิสระ ไม่ติดขอบรูป) · Shift+ลาก = เลือกเป็นกรอบ · ลากโซนที่เลือก = ย้ายทั้งโซน ──
+  stage.onpointerdown = (e) => {
+    if (e.target.closest && e.target.closest('.map-hud, .map-ctx, .map-geo-pop, .map-bg-pop, .map-floatbar')) return;
+    // [alpha.168] โหมดลากย้ายรูปพื้นหลัง: ลากบนผืน = ย้ายจุดกลางภาพ (หมุด/โซนไม่ขยับ) · Esc = คืนตำแหน่งเดิม
+    if (view.bgOpen && view.bgDrag && cur.image && e.button === 0 && isBg(e)) return dragBgImage(e);
+    const zoneHit = view.selZone && !drawing && e.button === 0 && !e.shiftKey && isBg(e) ? zoneAt(cur, ptOf(e)) : null;
+    if (zoneHit && zoneHit.id === view.selZone) return dragZone(e, zoneHit);
+    if (e.button === 1 || (e.button === 0 && !e.shiftKey && isBg(e))) {
+      const sx = e.clientX, sy = e.clientY, c0 = { ...cam };
       let moved = false;
+      const xf0 = camXf(stage, cur, cam);
       const mv = (ev) => {
         if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 4) return;
         moved = true; stage.classList.add('panning');
-        stage.scrollLeft = l0 - (ev.clientX - sx); stage.scrollTop = t0 - (ev.clientY - sy);
+        cam.cx = c0.cx - ((ev.clientX - sx) / xf0.s / xf0.W) * 100;
+        cam.cy = c0.cy - ((ev.clientY - sy) / xf0.s / xf0.H) * 100;
+        applyCam();
       };
-      // [alpha.167 · รอบต่อ] Esc ระหว่างลาก = คืนที่เดิม (กฎถาวร alpha.164 รอบต่อ 6 · ทุกตัวลากในไฟล์นี้)
       const offEsc = escCancelDrag(() => {
         window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
-        stage.classList.remove('panning'); stage.scrollLeft = l0; stage.scrollTop = t0;
+        stage.classList.remove('panning'); Object.assign(cam, c0); applyCam();
         if (moved) suppressClick = true;
       });
       const up = () => {
@@ -925,15 +1072,13 @@ async function renderMapView(main, pane, cur, keepScroll) {
     }
     if (!e.shiftKey || e.button !== 0) return;
     e.preventDefault();
-    const r = canvas.getBoundingClientRect();
+    const fr = frame.getBoundingClientRect();
     const box = el('div', 'map-rubber');
-    canvas.append(box);
+    frame.append(box);
     const x0 = e.clientX, y0 = e.clientY;
     const paint = (ev) => {
-      const l = Math.min(x0, ev.clientX) - r.left, tp = Math.min(y0, ev.clientY) - r.top;
-      box.style.left = l + 'px'; box.style.top = tp + 'px';
-      box.style.width = Math.abs(ev.clientX - x0) + 'px';
-      box.style.height = Math.abs(ev.clientY - y0) + 'px';
+      box.style.left = (Math.min(x0, ev.clientX) - fr.left) + 'px'; box.style.top = (Math.min(y0, ev.clientY) - fr.top) + 'px';
+      box.style.width = Math.abs(ev.clientX - x0) + 'px'; box.style.height = Math.abs(ev.clientY - y0) + 'px';
     };
     paint(e);
     const offEsc = escCancelDrag(() => {
@@ -942,111 +1087,134 @@ async function renderMapView(main, pane, cur, keepScroll) {
     });
     const up = (ev) => {
       offEsc();
-      window.removeEventListener('pointermove', paint);
-      window.removeEventListener('pointerup', up);
-      const x1 = ((Math.min(x0, ev.clientX) - r.left) / r.width) * 100;
-      const x2 = ((Math.max(x0, ev.clientX) - r.left) / r.width) * 100;
-      const y1 = ((Math.min(y0, ev.clientY) - r.top) / r.height) * 100;
-      const y2 = ((Math.max(y0, ev.clientY) - r.top) / r.height) * 100;
+      window.removeEventListener('pointermove', paint); window.removeEventListener('pointerup', up);
       box.remove();
-      if (Math.abs(x2 - x1) < 0.5 && Math.abs(y2 - y1) < 0.5) return;
+      if (Math.abs(ev.clientX - x0) < 3 && Math.abs(ev.clientY - y0) < 3) return;
       suppressClick = true;
-      for (const p of cur.pins || []) if (p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) view.sel.add(p.id);
+      const a = ptOf({ clientX: Math.min(x0, ev.clientX), clientY: Math.min(y0, ev.clientY) });
+      const b = ptOf({ clientX: Math.max(x0, ev.clientX), clientY: Math.max(y0, ev.clientY) });
+      for (const p of cur.pins || []) if (p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y) view.sel.add(p.id);
       redraw();
     };
-    window.addEventListener('pointermove', paint);
-    window.addEventListener('pointerup', up);
+    window.addEventListener('pointermove', paint); window.addEventListener('pointerup', up);
   };
+  function dragZone(e, z) {
+    e.preventDefault();
+    const p0 = ptOf(e), orig = z.points.map((q) => ({ ...q }));
+    let moved = false;
+    const path = canvas.querySelector(`.map-zone[data-zone="${z.id}"]`);
+    const put = () => {
+      if (path) path.setAttribute('d', zonePath(z.points));
+      const c = polygonCentroid(z.points);
+      const lb = canvas.querySelector(`.map-zone-label[data-zone="${z.id}"]`);
+      if (lb) { lb.style.left = c.x + '%'; lb.style.top = c.y + '%'; }
+      canvas.querySelectorAll('.map-zone-vtx:not(.map-zone-vtx-draft), .map-zone-mid').forEach((n) => { n.style.display = 'none'; });
+    };
+    const mv = (ev) => {
+      const p = ptOf(ev);
+      if (!moved && Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) < 4) return;
+      moved = true;
+      z.points = orig.map((q) => ({ x: clampW(q.x + p.x - p0.x), y: clampW(q.y + p.y - p0.y) }));
+      put(); positionCtx();
+    };
+    const offEsc = escCancelDrag(() => {
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      z.points = orig; put(); redraw();
+      if (moved) suppressClick = true;
+    });
+    const up = async () => {
+      offEsc();
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+      if (moved) { suppressClick = true; await save(); redraw(); }
+    };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  }
 
-  // ── วาดหมุด (แบบภาพ 4: ป้ายไอคอนกรอบมน + ป้ายชื่อพื้นเข้มใต้หมุด) ──
+  // ── วาดหมุด (ป้ายรูปย่อกรอบมน + ป้ายชื่อใต้หมุด · คงขนาดบนจอ) ──
   const portraits = await loadPortraits();
-  // [alpha.167 · รอบต่อ · บั๊ก] ป้ายของหมุดเอนทิตี้ = ชื่อ ณ ตอนปัก — เปลี่ยนชื่อใน Wiki แล้วค้างชื่อเก่า → ชื่อปัจจุบันชนะ
+  // ป้ายของหมุดเอนทิตี้ = ชื่อปัจจุบันใน Wiki (ชื่อ ณ ตอนปักค้างได้เมื่อเปลี่ยนชื่อ)
   const entNames = new Map((await loadEntities()).map((e) => [e.file, e.name]));
   const pinScale = pinScaleOf(cur);
   for (const pin of cur.pins || []) {
     const shown = (pin.kind === 'entity' && entNames.get(pin.entityFile)) || pin.label || '';
     const selected = view.sel.has(pin.id);
-    const el2 = el('div', 'map-pin map-pin-' + pin.kind + (selected ? ' sel' : ''));
+    const el2 = el('div', 'map-pin map-pin-' + (pin.kind || 'note') + (selected ? ' sel' : '') + (pin.hideLabel ? ' map-pin-nolabel' : ''));
     el2.dataset.pin = pin.id;
     el2.style.left = pin.x + '%'; el2.style.top = pin.y + '%';
-    if (pinScale !== 1) el2.style.setProperty('--pin-scale', String(pinScale));
+    const k = pinScale * pinSizeK(pin);
+    if (k !== 1 || pinScale !== 1) el2.style.setProperty('--pin-scale', String(+k.toFixed(3)));
     if (pin.color) el2.style.setProperty('--pin-color', pin.color);
-    const badge = el('span', 'map-pin-badge');
-    const portraitFile = pin.kind === 'entity' && pin.entityFile ? portraits.get(pin.entityFile) : '';
-    const child = pin.kind === 'portal' && pin.toMap ? findMap(maps, pin.toMap) : null;
-    if (portraitFile) {
-      const av = el('span', 'map-pin-portrait');
-      const im = el('img');
-      im.src = mapImgURL('Images/' + portraitFile);
-      im.alt = shown;
-      im.draggable = false;
-      im.onerror = () => { av.replaceWith(el('span', 'map-pin-icon', PIN_KIND.entity.icon)); };
-      av.append(im);
-      badge.append(av);
-    } else if (child && child.image) {
-      // ประตูไปแผนที่ย่อย = โชว์รูปย่อของแผนที่ปลายทาง (เห็นเลยว่าเข้าไปแล้วเจออะไร)
-      const av = el('span', 'map-pin-portrait map-pin-child');
-      const im = el('img'); im.src = mapImgURL(child.image); im.alt = ''; im.draggable = false;
-      im.onerror = () => { av.replaceWith(el('span', 'map-pin-icon', PIN_KIND.portal.icon)); };
-      av.append(im); badge.append(av);
+    if (pin.kind === 'text') {
+      el2.append(el('span', 'map-text-label', pin.label || ''));
     } else {
-      badge.append(el('span', 'map-pin-icon', (PIN_KIND[pin.kind] || PIN_KIND.note).icon));
+      const badge = el('span', 'map-pin-badge');
+      const thumb = pinThumb(pin, portraits, maps);
+      if (thumb) {
+        const av = el('span', 'map-pin-portrait' + (thumb.child ? ' map-pin-child' : ''));
+        const im = el('img');
+        im.src = thumb.url; im.alt = shown; im.draggable = false;
+        im.onerror = () => { av.replaceWith(el('span', 'map-pin-icon', (PIN_KIND[pin.kind] || PIN_KIND.note).icon)); };
+        av.append(im);
+        badge.append(av);
+      } else {
+        badge.append(el('span', 'map-pin-icon', (PIN_KIND[pin.kind] || PIN_KIND.note).icon));
+      }
+      el2.append(badge);
+      if (shown && view.showLabels && !pin.hideLabel) el2.append(el('span', 'map-pin-label', shown));
+      const scHere = hereScenes.filter((s) => s.pinId === pin.id);
+      if (scHere.length) el2.append(el('span', 'map-pin-count', String(scHere.length)));
+      const child = pin.kind === 'portal' && pin.toMap ? findMap(maps, pin.toMap) : null;
+      const ll = toLatLon(cur, pin);
+      el2.title = [shown || (PIN_KIND[pin.kind] || {}).label || '', pin.note, ll ? formatLatLon(ll) : '',
+                   child ? tf('ui.maps.portalTip', child.name) : '',
+                   scHere.length ? scHere.map((s) => gi('file') + ' ' + s.title).join('\n') : '']
+        .filter(Boolean).join('\n');
     }
-    el2.append(badge);
-    if (shown && view.showLabels) el2.append(el('span', 'map-pin-label', shown));
-    const scHere = hereScenes.filter((s) => s.pinId === pin.id);
-    if (scHere.length) el2.append(el('span', 'map-pin-count', String(scHere.length)));
-    const ll = toLatLon(cur, pin);
-    el2.title = [shown || (PIN_KIND[pin.kind] || {}).label || '', pin.note,
-                 ll ? formatLatLon(ll) : '',
-                 child ? tf('ui.maps.portalTip', child.name) : '',
-                 scHere.length ? scHere.map((s) => gi('file') + ' ' + s.title).join('\n') : '']
-      .filter(Boolean).join('\n');
     el2.onclick = async (e) => {
       e.stopPropagation();
+      if (suppressClick) { suppressClick = false; return; }
       if (view.pick) { view.pick.resolve({ x: pin.x, y: pin.y }); return; }
       if (view.measure) { view.measure.points.push({ x: pin.x, y: pin.y }); redraw(); return; }
       if (view.zoneDraw) { view.zoneDraw.points.push({ x: pin.x, y: pin.y }); redraw(); return; }
       if (editingRoute) { editingRoute.pinIds = [...(editingRoute.pinIds || [])];
         if (editingRoute.pinIds[editingRoute.pinIds.length - 1] !== pin.id) editingRoute.pinIds.push(pin.id);
         await save(); redraw(); return; }
-      // [alpha.167] Ctrl+คลิก = กระโดด (ทางสากลเหมือนตัวแก้ไข) · Ctrl+คลิกหมุดที่ไม่มีลิงก์ = เลือกหลายตัว (แบบเดิม)
+      // Ctrl+คลิก = กระโดด (ประตู/หน้า Wiki) · หมุดที่ไม่มีลิงก์ = เลือกเพิ่ม/ถอน
       if (e.ctrlKey || e.metaKey) {
-        if (pin.kind === 'portal' && pin.toMap && findMap(maps, pin.toMap)) { enterMap(pin.toMap); return; }
-        if (pin.kind === 'entity' && pin.entityFile) { openEntity(pin.entityFile); return; }
+        if (openLink(pin)) return;
         if (view.sel.has(pin.id)) view.sel.delete(pin.id); else view.sel.add(pin.id);
         redraw(); return;
       }
-      if (e.altKey) return editPin();
-      if (view.tool === 'edit') return editPin();
+      if (e.shiftKey) { view.sel.add(pin.id); redraw(); return; }
+      if (e.altKey || view.tool === 'edit') return editPin(pin);
       if (view.tool === 'move') { setStatus(t('ui.maps.modeMovePosDrag')); return; }
-      if (pin.kind === 'portal' && pin.toMap) { S.currentId = pin.toMap; view.sel.clear(); view.focusPin = null; redraw(); return; }
-      if (pin.kind === 'entity' && pin.entityFile) { openEntity(pin.entityFile); return; }
-      setStatus(gi('pin') + ' ' + (pin.label || t('ui.common.notNamed')) + (pin.note ? ' — ' + pin.note : '')
-                + t('ui.maps.pressBtnEditTop'));
+      // คลิก = เลือก (แถบเครื่องมือลอยเหนือหมุด) · คลิกซ้ำ/ดับเบิลคลิก = เปิดลิงก์
+      if (view.sel.size === 1 && view.sel.has(pin.id) && openLink(pin)) return;
+      view.sel = new Set([pin.id]); view.selZone = null; redraw();
     };
+    el2.ondblclick = (e) => { e.stopPropagation(); if (!openLink(pin)) editPin(pin); };
     el2.oncontextmenu = (e) => {
       e.preventDefault(); e.stopPropagation();
-      const items = [
-        { label: t('ui.maps.pinEdit'), click: () => editPin() },
+      popupMenu(e.clientX, e.clientY, [
+        { label: t('ui.maps.pinEdit'), click: () => editPin(pin) },
         pin.kind === 'entity' && pin.entityFile ? { label: t('ui.maps.entOpenWiki'), click: () => openEntity(pin.entityFile) } : null,
         pin.kind === 'portal' && pin.toMap ? { label: t('ui.maps.portalEnter'), click: () => enterMap(pin.toMap) } : null,
-        { label: t('ui.maps.zoneDraw'), click: () => startZoneDraw(cur, pin.kind === 'entity' ? { file: pin.entityFile, name: pin.label } : { file: '', name: pin.label }) },
+        pin.kind !== 'text' ? { label: t('ui.maps.zoneDraw'), click: () => startZoneDraw(cur, pin.kind === 'entity' ? { file: pin.entityFile, name: shown } : { file: '', name: pin.label }) } : null,
         { label: t('ui.maps.measureFromPin'), click: () => { view.measure = { points: [{ x: pin.x, y: pin.y }] }; redraw(); } },
-      ].filter(Boolean);
-      popupMenu(e.clientX, e.clientY, items);
+        '-',
+        { label: t('ui.maps.layerTop'), click: async () => { movePinLayer(cur, pin.id, 'top'); await save(); redraw(); } },
+        { label: t('ui.maps.layerBottom'), click: async () => { movePinLayer(cur, pin.id, 'bottom'); await save(); redraw(); } },
+        '-',
+        { label: t('ui.common.del'), danger: true, click: () => removePins(cur, [pin.id], save, redraw) },
+      ].filter(Boolean));
     };
-    async function editPin() {
-      const res = await pinDialog({ ...pin }, maps, cur.id, true);
-      if (res === 'DELETE') { deletePins(cur, [pin.id]); view.sel.delete(pin.id); await save(); redraw(); return; }
-      if (res) { Object.assign(pin, res); await save(); redraw(); }
-    }
+    // ลากหมุด: โหมดเลือก/ย้ายลากได้ตรง ๆ (เหมือนในวิดีโอ) · ลากไม่ถึง 3px = คลิก
     el2.onpointerdown = (e) => {
-      if (view.tool !== 'move') return;
-      if (e.button !== 0 || e.shiftKey) return;
+      if (view.tool === 'edit' || drawing || editingRoute) return;
+      if (e.button !== 0 || e.shiftKey || e.ctrlKey || e.metaKey) return;
       e.stopPropagation();
       const r = canvas.getBoundingClientRect();
-      const group = (selected && view.sel.size > 1) ? [...view.sel] : [pin.id];
+      const group = (view.sel.has(pin.id) && view.sel.size > 1) ? [...view.sel] : [pin.id];
       const start = new Map((cur.pins || []).filter((p) => group.includes(p.id)).map((p) => [p.id, { x: p.x, y: p.y }]));
       const ox = e.clientX, oy = e.clientY;
       let moved = false;
@@ -1056,10 +1224,11 @@ async function renderMapView(main, pane, cur, keepScroll) {
         moved = true; el2.classList.add('dragging');
         for (const p of cur.pins || []) {
           const s0 = start.get(p.id); if (!s0) continue;
-          p.x = clamp(s0.x + dx); p.y = clamp(s0.y + dy);
+          p.x = clampW(s0.x + dx); p.y = clampW(s0.y + dy);
           const node = canvas.querySelector(`.map-pin[data-pin="${p.id}"]`);
           if (node) { node.style.left = p.x + '%'; node.style.top = p.y + '%'; }
         }
+        positionCtx();
       };
       const offEsc = escCancelDrag(() => {
         window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
@@ -1070,19 +1239,28 @@ async function renderMapView(main, pane, cur, keepScroll) {
           const node = canvas.querySelector(`.map-pin[data-pin="${p.id}"]`);
           if (node) { node.style.left = p.x + '%'; node.style.top = p.y + '%'; }
         }
+        positionCtx();
         if (moved) suppressClick = true;
       });
       const up = async () => {
         offEsc();
-        window.removeEventListener('pointermove', mv);
-        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
         el2.classList.remove('dragging');
-        if (moved) { await save(); redraw(); }
+        if (moved) { suppressClick = true; await save(); redraw(); }
       };
-      window.addEventListener('pointermove', mv);
-      window.addEventListener('pointerup', up);
+      window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
     };
     canvas.append(el2);
+  }
+  function openLink(pin) {
+    if (pin.kind === 'portal' && pin.toMap && findMap(maps, pin.toMap)) { enterMap(pin.toMap); return true; }
+    if (pin.kind === 'entity' && pin.entityFile) { openEntity(pin.entityFile); return true; }
+    return false;
+  }
+  async function editPin(pin) {
+    const res = await pinDialog({ ...pin }, maps, cur.id, true);
+    if (res === 'DELETE') { await removePins(cur, [pin.id], save, redraw); return; }
+    if (res) { Object.assign(pin, res); await save(); redraw(); }
   }
 
   // ฉากที่ปักพิกัดลอย (ไม่ผูกหมุด)
@@ -1098,28 +1276,72 @@ async function renderMapView(main, pane, cur, keepScroll) {
     f.style.left = view.focusPin.x + '%'; f.style.top = view.focusPin.y + '%';
     canvas.append(f);
   }
-  // เข็มทิศ + มาตราส่วน (ข้อ 4) — ตั้งมาตราส่วนจริงแล้ว = แถบบอกระยะจริงเอง
+  stage.append(canvas);
+  frame.append(stage);
   if (ov.compass) {
     const c = el('div', 'map-compass');
     c.innerHTML = '<span class="map-compass-n">N</span><span class="map-compass-needle">' + gi('triangle-up') + '</span>';
     if (geo.north) c.style.transform = `rotate(${-geo.north}deg)`;
     c.title = t('ui.maps.topImage');
-    canvas.append(c);
+    frame.append(c);
   }
-  stage.append(canvas);
-  frame.append(stage);
 
-  // ── HUD ลอยบนแผนที่ (ไม่เลื่อนตามภาพ) ──
-  // ลำดับใน DOM: ซูมก่อน (ป้าย % ตัวแรกของแผง = ระดับซูม — เทส/ผู้อ่านหน้าจอเจอก่อน) · ตำแหน่งบนจอคุมด้วย CSS
-  frame.append(buildZoomHud(cur, main, stage, redraw, save, ov)); // ล่าง: ซูม + โอเวอร์เลย์ (.map-tools2)
-  frame.append(buildToolRail(cur, redraw, save));             // ซ้ายบน: โหมด + ป้ายชื่อ + ขนาดหมุด (.map-tools3)
+  // ── HUD ลอยบนแผนที่ ──
+  const zoomHud = buildZoomHud(cur, main, ov, save, redraw);
+  frame.append(zoomHud);                                       // ขวาล่าง: ซูม + ชั้นแสดงผล
+  frame.append(buildToolRail(cur, redraw, save));              // ซ้าย: เครื่องมือ (ไอคอนตั้ง)
   const readout = el('div', 'map-readout');
   frame.append(readout);
-  const scaleHud = buildScaleHud(cur, ov, stage);
+  const scaleHud = buildScaleHud(cur, ov);
   if (scaleHud) frame.append(scaleHud);
+  const floatBars = el('div', 'map-floatbar');
+  const modeBar = buildModeBar(cur, redraw, save);
+  if (modeBar) floatBars.append(modeBar);
+  if (editingRoute) {
+    const rb = el('div', 'map-routebar');
+    rb.append(el('span', null, tf('ui.maps.busyNextRouteClick', editingRoute.name, (editingRoute.pinIds || []).length)));
+    const undoB = el('button', 'cmp-mini', t('ui.maps.dotLatest'));
+    undoB.title = t('ui.maps.dotLatestTip');
+    undoB.onclick = async () => { (editingRoute.pinIds || []).pop(); await save(); redraw(); };
+    const doneB = el('button', 'cmp-mini k-ok', t('ui.maps.done'));
+    doneB.onclick = () => { view.routeEdit = null; redraw(); };
+    rb.append(undoB, doneB);
+    floatBars.append(rb);
+  }
+  floatBars.append(buildSelBar(cur, redraw, save, pasteClip));
+  frame.append(floatBars);
+  const foot = el('div', 'map-foot');
+  { const st = pinStats(cur);
+    foot.textContent = tf('ui.maps.portalSceneBindMap', st.entity, st.portal, st.note, hereScenes.length) + (counts[''] ? tf('ui.maps.scenePin', counts['']) : ''); }
+  frame.append(foot);
   main.append(frame);
+  if (view.geoOpen) frame.append(buildGeoPanel(cur));
+  if (view.bgOpen && cur.image) frame.append(buildBgPanel(cur));
 
-  // พิกัดใต้เคอร์เซอร์ (lat/lon เมื่อตั้งค่าแล้ว · ไม่งั้นเป็น %) + ระยะของเส้นวัด
+  // ── แถบเครื่องมือลอยของสิ่งที่เลือก (หมุดตัวเดียว / โซน) — แบบในวิดีโอ ──
+  let ctx = null;
+  const selPin = view.sel.size === 1 ? (cur.pins || []).find((p) => view.sel.has(p.id)) : null;
+  const selZone = view.selZone ? zones.find((z) => z.id === view.selZone) : null;
+  if (!drawing && !editingRoute && (selPin || selZone)) {
+    const ents = await loadEntities();
+    ctx = selPin ? buildPinCtx(cur, selPin, maps, ents, portraits, save, redraw) : buildZoneCtx(cur, selZone, ents, save, redraw, () => fitTo(selZone.points));
+    frame.append(ctx);
+  }
+  function positionCtx() {
+    if (!ctx) return;
+    const fr = frame.getBoundingClientRect();
+    let r;
+    if (selPin) { const n = canvas.querySelector(`.map-pin[data-pin="${selPin.id}"]`); if (!n) return; const b = n.getBoundingClientRect();
+      r = { l: b.left - 18, t: b.top - 22 * (+n.style.getPropertyValue('--pin-scale') || 1), rgt: b.left + 18 }; }
+    else { const p = canvas.querySelector(`.map-zone[data-zone="${selZone.id}"]`); if (!p) return; const b = p.getBoundingClientRect(); r = { l: b.left, t: b.top, rgt: b.right }; }
+    const w = ctx.offsetWidth || 320, h = ctx.offsetHeight || 36;
+    let x = (r.l + r.rgt) / 2 - fr.left - w / 2, y = r.t - fr.top - h - 12;
+    x = Math.max(52, Math.min(fr.width - w - 6, x));        // 52 = พ้นรางเครื่องมือซ้าย
+    if (y < 6) y = Math.min(fr.height - h - 6, r.t - fr.top + 44);
+    ctx.style.left = x + 'px'; ctx.style.top = Math.max(6, y) + 'px';
+  }
+
+  // พิกัดใต้เคอร์เซอร์ (lat/lon เมื่อตั้งค่าแล้ว · ไม่งั้นเป็น %) + ระยะของเส้นวัด + เส้นยางตอนวาดโซน
   const paintReadout = (pt) => {
     const bits = [];
     const ll = pt ? toLatLon(cur, pt) : null;
@@ -1134,75 +1356,183 @@ async function renderMapView(main, pane, cur, keepScroll) {
     }
     readout.textContent = bits.join('   ');
     readout.style.display = bits.length ? '' : 'none';
+    const rub = canvas.querySelector('.map-zone-rubber');
+    if (rub && view.zoneDraw && view.zoneDraw.points.length && pt) {
+      const last = view.zoneDraw.points[view.zoneDraw.points.length - 1], first = view.zoneDraw.points[0];
+      rub.setAttribute('d', `M${last.x},${last.y} L${pt.x},${pt.y}` + (view.zoneDraw.points.length > 1 ? ` L${first.x},${first.y}` : ''));
+    }
   };
   paintReadout(null);
-  canvas.addEventListener('pointermove', (e) => paintReadout(ptOf(e)));
-  canvas.addEventListener('pointerleave', () => paintReadout(null));
+  stage.addEventListener('pointermove', (e) => paintReadout(ptOf(e)));
+  stage.addEventListener('pointerleave', () => paintReadout(null));
 
-  // ล้อ = ซูมยึดเคอร์เซอร์ (แบบเกม · ผู้ใช้ขอให้คุมเหมือนแผนที่ในเกม) · Ctrl+ล้อ ก็ซูมเหมือนเดิม
+  // ── กล้อง ──
+  function applyCam() {
+    const xf = camXf(stage, cur, cam);
+    canvas.style.transform = `translate(${xf.tx}px, ${xf.ty}px) scale(${xf.s})`;
+    canvas.style.setProperty('--z', String(xf.s));
+    view.zoom = cam.zoom;
+    const zl = zoomHud.querySelector('.map-zoom-label');
+    if (zl) zl.textContent = Math.round(cam.zoom * 100) + '%';
+    if (scaleHud && scaleHud._update) scaleHud._update(xf.s * FRAME_W / 100);
+    positionCtx();
+  }
+  function setZoom(z, anchor) {
+    const xf0 = camXf(stage, cur, cam);
+    const nz = clampZoom(z);
+    const ax = anchor ? anchor.x * xf0.sw : xf0.sw / 2, ay = anchor ? anchor.y * xf0.sh : xf0.sh / 2;
+    // จุดใต้จุดยึด (พิกัดโลก) ต้องอยู่ที่เดิมหลังซูม
+    const wx = (ax - xf0.tx) / xf0.s, wy = (ay - xf0.ty) / xf0.s;
+    cam.zoom = nz;
+    const s1 = xf0.fit * nz;
+    cam.cx = ((xf0.sw / 2 - (ax - wx * s1)) / s1 / xf0.W) * 100;
+    cam.cy = ((xf0.sh / 2 - (ay - wy * s1)) / s1 / xf0.H) * 100;
+    applyCam();
+  }
+  function fitTo(points) {
+    if (!points || !points.length) return;
+    const xs = points.map((p) => +p.x), ys = points.map((p) => +p.y);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const xf = camXf(stage, cur, cam);
+    const bw = Math.max(2, x1 - x0) / 100 * xf.W, bh = Math.max(2, y1 - y0) / 100 * xf.H;
+    cam.zoom = clampZoom(Math.min(xf.sw / bw, xf.sh / bh) * 0.8 / xf.fit);
+    cam.cx = (x0 + x1) / 2; cam.cy = (y0 + y1) / 2;
+    applyCam();
+  }
+  /** พอดีจอ: ทุกอย่างอยู่ในรูป = เห็นทั้งรูป (100%) · มีของนอกรูป = ครอบทุกอย่าง */
+  function fitAll() {
+    const b = mapBounds(cur, { frame: !!cur.image || !(cur.pins || []).length });
+    if (b.x0 >= 0 && b.y0 >= 0 && b.x1 <= 100 && b.y1 <= 100 && (cur.image || !(cur.pins || []).length)) {
+      cam.zoom = 1; cam.cx = 50; cam.cy = 50; applyCam(); return;
+    }
+    fitTo([{ x: b.x0, y: b.y0 }, { x: b.x1, y: b.y1 }]);
+  }
+  main._setZoom = setZoom;
+  main._fitAll = fitAll;
+  main._cam = () => ({ ...cam });
+  main._panBy = (dx, dy) => { const xf = camXf(stage, cur, cam); cam.cx += (dx / xf.s / xf.W) * 100; cam.cy += (dy / xf.s / xf.H) * 100; applyCam(); };
+  requestAnimationFrame(() => {
+    const fresh = cam.fresh; delete cam.fresh;
+    if (view.focusPin) { cam.cx = view.focusPin.x; cam.cy = view.focusPin.y; if (cam.zoom < 1.5) cam.zoom = 1.5; applyCam(); }
+    else if (fresh) fitAll();                    // เปิดแผนที่ใบนี้ครั้งแรก = เห็นทุกอย่าง (รวมหมุดนอกรูป)
+    else applyCam();
+  });
+  // ขนาดช่องมองเปลี่ยน (ลากแผง/หน้าต่าง) = คงจุดกลางเดิม
+  const ro = new ResizeObserver(() => { if (stage.isConnected) applyCam(); else ro.disconnect(); });
+  ro.observe(stage);
+
+  // ล้อ = ซูมยึดเคอร์เซอร์ (แบบแผนที่ในเกม) · Shift+ล้อ = เลื่อนแนวนอน · ทัชแพดสองนิ้ว (deltaX) = เลื่อน
   stage.addEventListener('wheel', (e) => {
-    if (e.shiftKey) return;                              // Shift+ล้อ = เลื่อนแนวนอน (ของเบราว์เซอร์)
     e.preventDefault();
+    if (e.shiftKey) { main._panBy(e.deltaY || e.deltaX, 0); return; }
     const r = stage.getBoundingClientRect();
-    main._setZoom(zoomStep(view.zoom, e.deltaY < 0 ? 1 : -1),
+    setZoom(zoomLadder(cam.zoom, e.deltaY < 0 ? 1 : -1),
       { x: (e.clientX - r.left) / (r.width || 1), y: (e.clientY - r.top) / (r.height || 1) });
   }, { passive: false });
-  // คีย์บอร์ดบนแผนที่ (ตัวดักของ stage เอง — กฎข้อ 8): ลูกศร/WASD = เลื่อน · +/- = ซูม · Esc/Enter/Backspace ของโหมดวาด
+  // คีย์บอร์ดบนแผนที่ (ตัวดักของ stage เอง — กฎข้อ 8)
   stage.tabIndex = 0;
   stage.addEventListener('keydown', async (e) => {
-    // [alpha.167 · รอบต่อ] กันไว้ก่อน: คีย์ที่พิมพ์ในช่องกรอก/ตัวเลื่อนที่อยู่ในเวที ไม่ใช่ของแผนที่ (พิมพ์ "w" ≠ เลื่อนขึ้น)
     if (e.target !== stage && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
     const step = 60;
     if (view.zoneDraw) {
       if (e.key === 'Enter') { e.preventDefault(); await finishZone(cur, save, redraw); return; }
       if (e.key === 'Backspace') { e.preventDefault(); view.zoneDraw.points.pop(); redraw(); return; }
     }
-    if (e.key === 'Escape' && (view.zoneDraw || view.measure || view.pick)) {
+    if (e.key === 'Escape' && (view.zoneDraw || view.measure || view.pick || view.addText)) {
       e.preventDefault(); e.stopPropagation();
       if (view.pick) view.pick.resolve(null);
-      view.zoneDraw = null; view.measure = null; redraw(); return;
+      view.zoneDraw = null; view.measure = null; view.addText = false; redraw(); return;
+    }
+    if (e.key === 'Escape' && (view.sel.size || view.selZone)) { e.preventDefault(); e.stopPropagation(); view.sel.clear(); view.selZone = null; redraw(); return; }
+    if (e.key === 'Delete' && (view.sel.size || view.selZone)) {
+      e.preventDefault();
+      if (view.sel.size) await removePins(cur, [...view.sel], save, redraw);
+      else if (selZone && await confirmBox(tf('ui.maps.zoneDeleteQ', selZone.name || ''), t('ui.common.del'))) { deleteZone(cur, selZone.id); view.selZone = null; await save(); redraw(); }
+      return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const k = e.key.toLowerCase();
-    if (k === 'arrowleft' || k === 'a') { e.preventDefault(); stage.scrollLeft -= step; }
-    else if (k === 'arrowright' || k === 'd') { e.preventDefault(); stage.scrollLeft += step; }
-    else if (k === 'arrowup' || k === 'w') { e.preventDefault(); stage.scrollTop -= step; }
-    else if (k === 'arrowdown' || k === 's') { e.preventDefault(); stage.scrollTop += step; }
-    else if (k === '+' || k === '=') { e.preventDefault(); main._setZoom(zoomStep(view.zoom, 1)); }
-    else if (k === '-') { e.preventDefault(); main._setZoom(zoomStep(view.zoom, -1)); }
+    // [alpha.168 · bug hunt] จับ "ปุ่มกายภาพ" (e.code) — เดิมเทียบ e.key ซึ่งบนแป้นไทย W/A/S/D/+/-/0 ให้ตัวอักษรไทย = กดไม่ติด
+    const k = e.code;
+    if (k === 'ArrowLeft' || k === 'KeyA') { e.preventDefault(); main._panBy(-step, 0); }
+    else if (k === 'ArrowRight' || k === 'KeyD') { e.preventDefault(); main._panBy(step, 0); }
+    else if (k === 'ArrowUp' || k === 'KeyW') { e.preventDefault(); main._panBy(0, -step); }
+    else if (k === 'ArrowDown' || k === 'KeyS') { e.preventDefault(); main._panBy(0, step); }
+    else if (k === 'Equal' || k === 'NumpadAdd') { e.preventDefault(); setZoom(zoomLadder(cam.zoom, 1)); }
+    else if (k === 'Minus' || k === 'NumpadSubtract') { e.preventDefault(); setZoom(zoomLadder(cam.zoom, -1)); }
+    else if (k === 'Digit0' || k === 'Numpad0') { e.preventDefault(); fitAll(); }
   });
 
   // ── หยิบใส่: ตัวละคร/สถานที่ = หมุด · แผนที่ = ประตูไปแผนที่ย่อย · ฉาก = ผูกตำแหน่งฉาก · รูป = รูปแผนที่ ──
   bindDropTarget(stage, {
     accept: ['entity', 'map', 'scene', 'memo', 'gallery', 'image'],
     onDrop: async (payload, e) => {
-      const r = canvas.getBoundingClientRect();
-      const pt = { x: clamp(((e.clientX - r.left) / r.width) * 100), y: clamp(((e.clientY - r.top) / r.height) * 100) };
       const hitPin = e.target.closest && e.target.closest('.map-pin');
-      await dropOnMap(cur, payload, pt, hitPin ? hitPin.dataset.pin : null);
+      await dropOnMap(cur, payload, ptOf(e), hitPin ? hitPin.dataset.pin : null);
     },
   });
 
   applyPinFilter(main);
+  if (drawing) requestAnimationFrame(() => stage.focus({ preventScroll: true }));
+}
 
-  // ── รายการเส้นทาง (ข้อ 9) ──
-  main.append(buildRoutesPanel(cur, redraw, save));
+/** รูปย่อของหมุด: รูปที่ตั้งให้หมุดเอง → รูปประจำตัวของเอนทิตี้ → รูปของแผนที่ปลายทาง (ประตู) · ไม่มี = null */
+function pinThumb(pin, portraits, maps) {
+  if (pin.image) return { url: mapImgURL(pin.image) };
+  const pf = pin.kind === 'entity' && pin.entityFile ? portraits.get(pin.entityFile) : '';
+  if (pf) return { url: mapImgURL('Images/' + pf) };
+  const child = pin.kind === 'portal' && pin.toMap ? findMap(maps, pin.toMap) : null;
+  if (child && child.image) return { url: mapImgURL(child.image), child: true };
+  return null;
+}
 
-  // ── สรุป ──
-  const st = pinStats(cur);
-  main.append(el('div', 'map-foot',
-    tf('ui.maps.portalSceneBindMap', st.entity, st.portal, st.note, hereScenes.length)
-    + (counts[''] ? tf('ui.maps.scenePin', counts['']) : '')));
+function drawGeoMarks(canvas, geo) {
+  canvas.querySelectorAll('.map-geo-mark').forEach((n) => n.remove());
+  if (geo.scale) for (const [k, p] of [['A', geo.scale.a], ['B', geo.scale.b]]) {
+    const m = el('div', 'map-geo-mark', k); m.style.left = p.x + '%'; m.style.top = p.y + '%'; canvas.append(m);
+  }
+  if (geo.ref) { const m = el('div', 'map-geo-mark map-geo-ref', gi('crosshairs')); m.style.left = geo.ref.x + '%'; m.style.top = geo.ref.y + '%'; canvas.append(m); }
+}
 
-  // คืนตำแหน่งเลื่อน (วาดใหม่ทั้งแผงทุกครั้งที่แก้ — ต้องไม่เด้งกลับมุมซ้ายบน)
-  if (view.focusPin) setTimeout(scrollFocusIntoView, 0);
-  else if (keepScroll) requestAnimationFrame(() => { stage.scrollLeft = keepScroll.l; stage.scrollTop = keepScroll.t; });
-  if (view.pick || view.zoneDraw || view.measure) requestAnimationFrame(() => stage.focus({ preventScroll: true }));
+/** ปุ่มไอคอนของ HUD (tooltip = ชื่อ) */
+function hudBtn(icon, tip, cls = '') {
+  const b = el('button', 'cmp-mini map-ico' + (cls ? ' ' + cls : ''), icon);
+  b.title = tip; b.setAttribute('aria-label', tip);
+  return b;
+}
+
+/** แถบเลือกหลายหมุด / คลิปบอร์ด (ลอยกลางบน) */
+function buildSelBar(cur, redraw, save, pasteClip) {
+  const selBar = el('div', 'map-selbar' + (view.sel.size > 1 || view.clip.length ? ' on' : ''));
+  const selCount = el('span', 'map-selcount', view.sel.size ? tf('ui.maps.pickPin', view.sel.size) : t('ui.maps.cantPickPin'));
+  selBar.append(selCount);
+  if (view.sel.size) {
+    const bCopy = el('button', 'cmp-mini', t('ui.maps.copy'));
+    bCopy.title = t('ui.maps.copyPinPickDone');
+    bCopy.onclick = () => { view.clip = clonePins(cur.pins, [...view.sel], 0); setStatus(tf('ui.maps.copyPinDoneOpen', view.clip.length)); redraw(); };
+    const bDel = el('button', 'cmp-mini k-danger', t('ui.maps.delPick'));
+    bDel.title = t('ui.maps.delPickTip');
+    bDel.onclick = async () => {
+      const n = view.sel.size;
+      if (!(await confirmBox(tf('ui.maps.delPinPickItem', n), t('ui.common.del')))) return;
+      await removePins(cur, [...view.sel], save, redraw);
+    };
+    const bNone = el('button', 'cmp-mini', t('ui.maps.cancelPick'));
+    bNone.title = t('ui.maps.cancelPickTip');
+    bNone.onclick = () => { view.sel.clear(); redraw(); };
+    selBar.append(bCopy, bDel, bNone);
+  }
+  if (view.clip.length) {
+    const bPaste = el('button', 'cmp-mini', tf('ui.maps.pastePin', view.clip.length));
+    bPaste.title = t('ui.maps.pastePinCopyMap');
+    bPaste.onclick = () => pasteClip(null);
+    selBar.append(bPaste);
+  }
+  return selBar;
 }
 
 /** แถบสถานะของโหมดพิเศษ — บอกว่ากำลังทำอะไร + ปุ่มเสร็จ/ยกเลิก */
 function buildModeBar(cur, redraw, save) {
-  if (!view.pick && !view.zoneDraw && !view.measure) return null;
+  if (!view.pick && !view.zoneDraw && !view.measure && !view.addText) return null;
   const rb = el('div', 'map-routebar map-modebar');
   if (view.pick) {
     rb.append(el('span', null, view.pick.hint || ''));
@@ -1214,10 +1544,10 @@ function buildModeBar(cur, redraw, save) {
     const u = el('button', 'cmp-mini', t('ui.maps.dotLatest'));
     u.title = t('ui.maps.dotLatestTip');
     u.onclick = () => { view.zoneDraw.points.pop(); redraw(); };
-    const ok = el('button', 'cmp-mini k-ok', t('ui.maps.done'));
-    ok.onclick = () => finishZone(cur, save, redraw);
     const c = el('button', 'cmp-mini k-cancel', t('ui.common.cancel'));
     c.onclick = () => { view.zoneDraw = null; redraw(); };
+    const ok = el('button', 'cmp-mini k-ok', t('ui.maps.done'));
+    ok.onclick = () => finishZone(cur, save, redraw);
     rb.append(u, c, ok);
   } else if (view.measure) {
     const m = pathMeters(cur, view.measure.points);
@@ -1227,102 +1557,75 @@ function buildModeBar(cur, redraw, save) {
     const c = el('button', 'cmp-mini k-ok k-cancel', t('ui.maps.done'));
     c.onclick = () => { view.measure = null; redraw(); };
     rb.append(c);
+  } else if (view.addText) {
+    rb.append(el('span', null, t('ui.maps.textClickHint')));
+    const c = el('button', 'cmp-mini k-cancel', t('ui.common.cancel'));
+    c.onclick = () => { view.addText = false; redraw(); };
+    rb.append(c);
   }
   return rb;
 }
 
-/** ซ้ายบนของแผนที่: ป้ายชื่อ · โหมด 3 แบบ · เครื่องมือใหม่ (วัดระยะ/โซน) · ขนาดหมุด */
-function buildToolRail(cur, redraw, save) {
+/** ซ้าย: เครื่องมือเป็นไอคอนแนวตั้ง (tooltip บอกชื่อ + วิธีใช้) */
+function buildToolRail(cur, redraw) {
   const tools3 = el('div', 'map-tools3 map-hud map-hud-rail');
-  const lblBtn = el('button', 'cmp-mini map-ov-btn' + (view.showLabels ? ' on' : ''), t('ui.maps.showItemFilm'));
-  lblBtn.title = t('ui.maps.showHideLabelUnder');
-  lblBtn.onclick = () => { view.showLabels = !view.showLabels; redraw(); };
-  tools3.append(lblBtn);
-  tools3.append(el('span', 'map-tool-sep', ''));
   for (const tdef of MAP_TOOLS) {
-    const b = el('button', 'cmp-mini map-tool-btn' + (view.tool === tdef.id ? ' on' : ''), tdef.icon + ' ' + tdef.label);
+    const b = hudBtn(tdef.icon, tdef.label + ' — ' + tdef.hint, 'map-tool-btn' + (view.tool === tdef.id ? ' on' : ''));
     b.dataset.tool = tdef.id;
-    b.title = tdef.hint;
     b.onclick = () => { view.tool = tdef.id; view.routeEdit = null; redraw(); };
     tools3.append(b);
   }
   tools3.append(el('span', 'map-tool-sep', ''));
-  const meas = el('button', 'cmp-mini map-tool-x' + (view.measure ? ' on' : ''), gi('tape-measure') + ' ' + t('ui.maps.measure'));
-  meas.dataset.x = 'measure';
-  meas.title = t('ui.maps.measureTip');
-  meas.onclick = () => { view.measure = view.measure ? null : { points: [] }; view.zoneDraw = null; redraw(); };
-  const zb = el('button', 'cmp-mini map-tool-x' + (view.zoneDraw ? ' on' : ''), gi('vector-polygon') + ' ' + t('ui.maps.zone'));
+  const zb = hudBtn(gi('vector-polygon'), t('ui.maps.zone') + ' — ' + t('ui.maps.zoneTip'), 'map-tool-x' + (view.zoneDraw ? ' on' : ''));
   zb.dataset.x = 'zone';
-  zb.title = t('ui.maps.zoneTip');
   zb.onclick = () => { if (view.zoneDraw) { view.zoneDraw = null; redraw(); } else startZoneDraw(cur, null); };
-  tools3.append(meas, zb);
+  const tb = hudBtn(gi('font'), t('ui.maps.ctxText') + ' — ' + t('ui.maps.textClickHint'), 'map-tool-x' + (view.addText ? ' on' : ''));
+  tb.dataset.x = 'text';
+  tb.onclick = () => { view.addText = !view.addText; view.zoneDraw = null; view.measure = null; redraw(); };
+  const meas = hudBtn(gi('tape-measure'), t('ui.maps.measure') + ' — ' + t('ui.maps.measureTip'), 'map-tool-x' + (view.measure ? ' on' : ''));
+  meas.dataset.x = 'measure';
+  meas.onclick = () => { view.measure = view.measure ? null : { points: [] }; view.zoneDraw = null; view.addText = false; redraw(); };
+  tools3.append(zb, tb, meas);
   tools3.append(el('span', 'map-tool-sep', ''));
-  const curScale = pinScaleOf(cur);
-  const psOut = el('button', 'cmp-mini', gi('minus-thick')); psOut.title = t('ui.maps.collapsePin');
-  const psIn = el('button', 'cmp-mini', gi('plus-thick')); psIn.title = t('ui.maps.expandPin');
-  const psLbl = el('span', 'map-zoom-label', Math.round(curScale * 100) + '%');
-  const setScale = async (v) => {
-    cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v.toFixed(2)));
-    await save(); redraw();
-  };
-  psOut.onclick = () => setScale(curScale - PIN_SCALE_STEP);
-  psIn.onclick = () => setScale(curScale + PIN_SCALE_STEP);
-  tools3.append(el('span', 'map-tool-lbl', t('ui.maps.sizePin')), psOut, psLbl, psIn);
+  const lbl = hudBtn(gi('tag'), t('ui.maps.showHideLabelUnder'), 'map-ov-btn' + (view.showLabels ? ' on' : ''));
+  lbl.dataset.act = 'labels';
+  lbl.onclick = () => { view.showLabels = !view.showLabels; redraw(); };
+  const rt = hudBtn(gi('route'), t('ui.maps.showHideRouteBetween'), 'map-ov-btn' + (view.showRoutes ? ' on' : ''));
+  rt.dataset.act = 'routes';
+  rt.onclick = () => { view.showRoutes = !view.showRoutes; redraw(); };
+  tools3.append(lbl, rt);
   return tools3;
 }
 
-/** ล่างของแผนที่: ซูม · โอเวอร์เลย์ · เส้นทาง — ปุ่มยังเป็นชุดเดิม (เทส/ความเคยชินของผู้ใช้) */
-function buildZoomHud(cur, main, stage, redraw, save, ov) {
+/** ขวาล่าง: ซูม · พอดีจอ · ชั้นแสดงผล (กริด · เข็มทิศ · มาตราส่วน) · ขนาดหมุด */
+function buildZoomHud(cur, main, ov, save, redraw) {
   const tools2 = el('div', 'map-tools2 map-hud map-hud-bottom');
-  const zOut = el('button', 'cmp-mini', gi('minus-thick')); zOut.title = t('ui.maps.zoomOutCtrlWheel');
-  const zIn = el('button', 'cmp-mini', gi('plus-thick')); zIn.title = t('ui.maps.zoomInCtrlWheel');
-  const zSlider = el('input', 'map-zoom-slider'); zSlider.type = 'range';
-  zSlider.min = String(MAP_ZOOM_MIN); zSlider.max = String(MAP_ZOOM_MAX); zSlider.step = String(MAP_ZOOM_STEP);
-  zSlider.value = String(view.zoom);
-  zSlider.title = t('ui.maps.zoomSliderTip');
+  const zOut = hudBtn(gi('minus-thick'), t('ui.maps.zoomOutCtrlWheel'));
+  zOut.dataset.act = 'zoom-out';
   const zLabel = el('span', 'map-zoom-label', Math.round(view.zoom * 100) + '%');
-  // [alpha.71 ข้อ 1] ซูมโดยยึดจุด (กลางจอ หรือใต้เคอร์เซอร์) — ไม่ต้องวาดใหม่ทั้งแผง
-  const setZoom = (z, anchor) => {
-    const cv = stage.querySelector('.map-canvas');
-    const before = { w: stage.scrollWidth, h: stage.scrollHeight, l: stage.scrollLeft, t: stage.scrollTop };
-    view.zoom = clampZoom(z);
-    zSlider.value = String(view.zoom);
-    zLabel.textContent = Math.round(view.zoom * 100) + '%';
-    if (cv) cv.style.width = (view.zoom * 100) + '%';
-    if (before.w) {
-      const ax = anchor ? anchor.x : 0.5, ay = anchor ? anchor.y : 0.5;
-      stage.scrollLeft = zoomScroll(before.l, stage.clientWidth, before.w, stage.scrollWidth, ax);
-      stage.scrollTop = zoomScroll(before.t, stage.clientHeight, before.h, stage.scrollHeight, ay);
-    }
-    const sh = main.querySelector('.map-scalehud');
-    if (sh && sh._update) sh._update();
-  };
-  main._setZoom = setZoom;
-  zOut.onclick = () => setZoom(zoomStep(view.zoom, -1));
-  zIn.onclick = () => setZoom(zoomStep(view.zoom, 1));
-  zSlider.oninput = () => setZoom(zSlider.value);
-  const zFit = el('button', 'cmp-mini', t('ui.common.fitScreen')); zFit.title = t('ui.maps.backSizeFitFrame');
-  zFit.onclick = () => setZoom(1);
-  tools2.append(el('span', 'map-tool-lbl', gi('search')), zOut, zSlider, zIn, zLabel, zFit);
-  tools2.append(el('span', 'map-tool-sep', ''));
+  const zIn = hudBtn(gi('plus-thick'), t('ui.maps.zoomInCtrlWheel'));
+  zIn.dataset.act = 'zoom-in';
+  zOut.onclick = () => main._setZoom(zoomLadder(view.zoom, -1));
+  zIn.onclick = () => main._setZoom(zoomLadder(view.zoom, 1));
+  const zFit = hudBtn(gi('fit-screen'), t('ui.maps.fitAllTip'));
+  zFit.dataset.act = 'fit';
+  zFit.onclick = () => main._fitAll();
+  tools2.append(zOut, zLabel, zIn, zFit, el('span', 'map-tool-sep', ''));
   const mkOv = (key, icon, label, tip) => {
-    const b = el('button', 'cmp-mini map-ov-btn' + (ov[key] ? ' on' : ''), icon + ' ' + label);
-    b.title = tip;
+    const b = hudBtn(icon, label + ' — ' + tip, 'map-ov-btn' + (ov[key] ? ' on' : ''));
+    b.dataset.ov = key;
     b.onclick = async () => { toggleOverlay(cur, key); await save(); redraw(); };
     tools2.append(b);
   };
   mkOv('grid', gi('grid'), t('ui.maps.tableGrid'), t('ui.maps.gridTip'));
-  mkOv('compass', gi('compass'), t('ui.maps.compass'), t('ui.maps.compassTip'));
-  mkOv('scale', gi('ruler-straight'), t('ui.maps.part'), t('ui.maps.scaleTip'));
   if (ov.grid) {
     const gs = el('input', 'map-grid-size'); gs.type = 'number'; gs.min = '2'; gs.max = '50';
     gs.value = String(ov.gridSize); gs.title = t('ui.maps.countFieldGridNext');
-    gs.onchange = async () => {
-      cur.overlays = { ...ov, gridSize: Math.max(2, Math.min(50, parseInt(gs.value, 10) || 10)) };
-      await save(); redraw();
-    };
+    gs.onchange = async () => { cur.overlays = { ...ov, gridSize: Math.max(2, Math.min(50, parseInt(gs.value, 10) || 10)) }; await save(); redraw(); };
     tools2.append(gs);
   }
+  mkOv('compass', gi('compass'), t('ui.maps.compass'), t('ui.maps.compassTip'));
+  mkOv('scale', gi('ruler-straight'), t('ui.maps.part'), t('ui.maps.scaleTip'));
   if (ov.scale && !geoReady(cur).scale) {
     const sl = el('input', 'map-scale-lbl'); sl.value = ov.scaleLabel;
     sl.placeholder = t('ui.maps.gapBarEg'); sl.title = t('ui.maps.textUnderBarPart');
@@ -1330,44 +1633,49 @@ function buildZoomHud(cur, main, stage, redraw, save, ov) {
     tools2.append(sl);
   }
   tools2.append(el('span', 'map-tool-sep', ''));
-  const rtBtn = el('button', 'cmp-mini map-ov-btn' + (view.showRoutes ? ' on' : ''), t('ui.maps.route2'));
-  rtBtn.title = t('ui.maps.showHideRouteBetween');
-  rtBtn.onclick = () => { view.showRoutes = !view.showRoutes; redraw(); };
-  tools2.append(rtBtn);
+  const curScale = pinScaleOf(cur);
+  const setScale = async (v) => { cur.pinScale = Math.max(PIN_SCALE_MIN, Math.min(PIN_SCALE_MAX, +v.toFixed(2))); await save(); redraw(); };
+  const psOut = hudBtn(gi('minus-thick'), t('ui.maps.collapsePin'), 'map-ps');
+  psOut.dataset.act = 'pin-smaller';
+  const psIn = hudBtn(gi('plus-thick'), t('ui.maps.expandPin'), 'map-ps');
+  psIn.dataset.act = 'pin-bigger';
+  psOut.onclick = () => setScale(curScale - PIN_SCALE_STEP);
+  psIn.onclick = () => setScale(curScale + PIN_SCALE_STEP);
+  const psL = el('span', 'map-ps-lbl', gi('map-pin'));
+  psL.title = t('ui.maps.sizePin') + ' ' + Math.round(curScale * 100) + '%';
+  tools2.append(psOut, psL, psIn);
   return tools2;
 }
 
-/**
- * แถบมาตราส่วน (ลอยมุมซ้ายล่าง ไม่ย่อ/ขยายตามภาพ) — ตั้งมาตราส่วนจริงแล้ว = ยาวเท่าระยะจริงที่สวย (1-2-5)
- * และปรับตามซูม · ยังไม่ตั้ง = แถบตกแต่งตามข้อความที่ผู้ใช้พิมพ์ (แบบเดิม)
- */
-function buildScaleHud(cur, ov, stage) {
+/** แถบมาตราส่วน (ลอยซ้ายล่าง) — ตั้งมาตราส่วนจริงแล้ว = ยาวเท่าระยะจริงที่สวย (1-2-5) และปรับตามซูม */
+function buildScaleHud(cur, ov) {
   if (!ov.scale) return null;
   const sc = el('div', 'map-scalebar map-scalehud');
   const barEl = el('div', 'map-scalebar-bar');
   const lbl = el('div', 'map-scalebar-lbl', ov.scaleLabel || t('ui.maps.setGapField'));
   sc.append(barEl, lbl);
   const mpu = metersPerUnit(cur);
-  sc._update = () => {
-    if (mpu == null) return;
-    const cv = stage.querySelector('.map-canvas');
-    const pxPerU = (cv ? cv.getBoundingClientRect().width : stage.clientWidth * view.zoom) / 100;
-    if (!pxPerU) return;
+  sc._update = (pxPerU) => {
+    if (mpu == null || !pxPerU) return;
     const nb = niceScaleBar(mpu, 120 / pxPerU);
     if (!nb) return;
     barEl.style.width = Math.round(nb.units * pxPerU) + 'px';
     lbl.textContent = distText(niceDistance(nb.meters));
   };
-  requestAnimationFrame(sc._update);
   return sc;
 }
 
-function buildRoutesPanel(cur, redraw, save) {
-  const rsec = el('div', 'map-routes-panel');
-  const rhead = el('div', 'map-routes-head');
-  rhead.append(el('span', null, tf('ui.maps.route3', mapRoutes(cur).length)));
-  const addR = el('button', 'cmp-mini', t('ui.maps.routeNew2'));
+/** รายการเส้นทาง (อยู่ในแถบซ้าย) */
+function buildRoutesPanel(cur) {
+  const S = mapsState_C.s;
+  const redraw = () => refresh();
+  const save = async () => { await saveMaps(S.data); };
+  const rsec = el('div', 'map-side-group map-routes-panel');
+  const rhead = el('div', 'map-side-cat map-routes-head');
+  rhead.append(el('span', null, gi('route') + ' ' + tf('ui.maps.route3', mapRoutes(cur).length)));
+  const addR = el('button', 'cmp-mini map-side-add', gi('plus'));
   addR.title = t('ui.maps.routeNewTip');
+  addR.setAttribute('aria-label', t('ui.maps.routeNew2'));
   addR.onclick = async () => {
     const name = await ask(t('ui.maps.nameRoute'), { value: t('ui.maps.route') + (mapRoutes(cur).length + 1) });
     if (!name) return;
@@ -1381,49 +1689,214 @@ function buildRoutesPanel(cur, redraw, save) {
   for (const r of mapRoutes(cur)) {
     const row = el('div', 'map-route-row' + (r.id === view.routeEdit ? ' on' : ''));
     const sw = el('span', 'map-route-sw'); sw.style.background = r.color || ROUTE_COLORS[0];
-    row.append(sw);
     const pts = routePoints(cur, r);
-    row.append(el('span', 'map-route-name', r.name));
+    const info = el('div', 'map-route-info');
+    info.append(el('span', 'map-route-name', r.name));
     const real = pathMeters(cur, pts);
-    row.append(el('span', 'map-route-meta', tf('ui.maps.dotGap', pts.length, routeLength(pts))
+    info.append(el('span', 'map-route-meta', tf('ui.maps.dotGap', pts.length, routeLength(pts))
       + (real != null && pts.length > 1 ? ' · ' + distText(niceDistance(real)) + ' · ' + travelText(real) : '')));
+    row.append(sw, info);
+    const acts = el('div', 'map-route-acts');
     const bEdit = el('button', 'cmp-mini', r.id === view.routeEdit ? t('ui.maps.done') : t('ui.maps.nextDot'));
     bEdit.title = t('ui.maps.nextDotTip');
     bEdit.onclick = () => { view.routeEdit = view.routeEdit === r.id ? null : r.id; redraw(); };
     const bColor = el('button', 'cmp-mini', gi('palette'));
     bColor.title = t('ui.maps.recolorLine');
-    bColor.onclick = async () => {
-      const i = ROUTE_COLORS.indexOf(r.color);
-      r.color = ROUTE_COLORS[(i + 1) % ROUTE_COLORS.length];
-      await save(); redraw();
-    };
+    bColor.onclick = async () => { const i = ROUTE_COLORS.indexOf(r.color); r.color = ROUTE_COLORS[(i + 1) % ROUTE_COLORS.length]; await save(); redraw(); };
     const bDash = el('button', 'cmp-mini' + (r.dashed ? ' on' : ''), gi('line-dash'));
     bDash.title = t('ui.maps.lineLineSolid');
     bDash.onclick = async () => { r.dashed = !r.dashed; await save(); redraw(); };
     const bRen = el('button', 'cmp-mini', gi('pencil'));
     bRen.title = t('ui.maps.changeNameRoute');
-    bRen.onclick = async () => { const v = await ask(t('ui.maps.nameRoute'), { value: r.name }); if (!v) return;
-      r.name = v.trim(); await save(); redraw(); };
+    bRen.onclick = async () => { const v = await ask(t('ui.maps.nameRoute'), { value: r.name }); if (!v) return; r.name = v.trim(); await save(); redraw(); };
     const bDel = el('button', 'cmp-mini k-danger', gi('trash'));
     bDel.title = t('ui.maps.delRoutePin');
     bDel.onclick = async () => {
       if (!(await confirmBox(tf('ui.maps.delRoutePinNot', r.name), t('ui.common.del')))) return;
-      deleteRoute(cur, r.id);
-      if (view.routeEdit === r.id) view.routeEdit = null;
-      await save(); redraw();
+      deleteRoute(cur, r.id); if (view.routeEdit === r.id) view.routeEdit = null; await save(); redraw();
     };
-    row.append(bEdit, bColor, bDash, bRen, bDel);
+    acts.append(bEdit, bColor, bDash, bRen, bDel);
+    row.append(acts);
     rsec.append(row);
   }
   if (!mapRoutes(cur).length) rsec.append(el('div', 'dim map-route-empty', t('ui.maps.routeDragLineLink')));
   return rsec;
 }
 
+// ═══════════════════════ แถบเครื่องมือลอยของสิ่งที่เลือก (แบบในวิดีโอ) ═══════════════════════
+function ctxSep() { return el('span', 'map-ctx-sep'); }
+/** ตัวเลือกชั้น (ขึ้น/ลง/บนสุด/ล่างสุด) */
+function layerMenu(btn, fn) {
+  const r = btn.getBoundingClientRect();
+  popupMenu(r.left, r.bottom + 4, [
+    { label: t('ui.maps.layerTop'), click: () => fn('top') },
+    { label: t('ui.maps.layerUp'), click: () => fn(1) },
+    { label: t('ui.maps.layerDown'), click: () => fn(-1) },
+    { label: t('ui.maps.layerBottom'), click: () => fn('bottom') },
+  ]);
+}
+/** ช่องเลือกเอนทิตี้ (ลิงก์) — ค่าว่าง = ไม่ลิงก์ */
+function entitySelect(ents, cur, onPick) {
+  const s = el('select', 'map-ctx-sel');
+  const none = el('option', null, t('ui.maps.ctxNoLink')); none.value = ''; s.append(none);
+  const byCat = new Map();
+  for (const e of ents) { if (!byCat.has(e.cat)) byCat.set(e.cat, []); byCat.get(e.cat).push(e); }
+  for (const [cat, arr] of byCat) {
+    const g = el('optgroup'); g.label = catLabel(cat);
+    for (const e of arr) { const o = el('option', null, e.name); o.value = e.file; if (e.file === cur) o.selected = true; g.append(o); }
+    s.append(g);
+  }
+  s.onchange = () => onPick(s.value, (ents.find((e) => e.file === s.value) || {}).name || '');
+  return s;
+}
+function buildPinCtx(cur, pin, maps, ents, portraits, save, redraw) {
+  const bar = el('div', 'map-ctx map-ctx-pin');
+  bar.dataset.pin = pin.id;
+  const stop = (e) => e.stopPropagation();
+  bar.addEventListener('pointerdown', stop); bar.addEventListener('click', stop); bar.addEventListener('dblclick', stop);
+  bar.append(el('span', 'map-ctx-kind', (PIN_KIND[pin.kind] || PIN_KIND.note).icon));
+  const name = el('input', 'map-ctx-name');
+  name.value = pin.label || ''; name.placeholder = pin.kind === 'text' ? t('ui.maps.textAskPh') : t('ui.maps.ctxPinNamePh');
+  name.title = t('ui.app.label');
+  name.onchange = async () => { pin.label = name.value.trim(); await save(); redraw(); };
+  name.onkeydown = (e) => { if (e.key === 'Enter') name.blur(); e.stopPropagation(); };
+  bar.append(name, ctxSep());
+  const col = el('input', 'map-ctx-color'); col.type = 'color';
+  col.value = /^#[0-9a-f]{6}$/i.test(pin.color || '') ? pin.color : PRINT.pinDefault;
+  col.title = t('ui.maps.ctxColor');
+  col.onchange = async () => { pin.color = col.value; await save(); redraw(); };
+  bar.append(col);
+  const size = el('select', 'map-ctx-sel map-ctx-size');
+  size.title = t('ui.maps.ctxSize');
+  for (const k of Object.keys(PIN_SIZES)) { const o = el('option', null, k.toUpperCase()); o.value = k; if ((pin.size || 'm') === k) o.selected = true; size.append(o); }
+  size.onchange = async () => { pin.size = size.value === 'm' ? undefined : size.value; if (!pin.size) delete pin.size; await save(); redraw(); };
+  bar.append(size);
+  if (pin.kind !== 'text') {
+    const eye = el('button', 'cmp-mini map-ico' + (pin.hideLabel ? '' : ' on'), gi(pin.hideLabel ? 'eye-off' : 'eye'));
+    eye.title = t('ui.maps.ctxLabelToggle');
+    eye.onclick = async () => { pin.hideLabel = !pin.hideLabel; if (!pin.hideLabel) delete pin.hideLabel; await save(); redraw(); };
+    bar.append(eye, ctxSep());
+    // ลิงก์: หมุดประตู = แผนที่ปลายทาง · อื่น ๆ = เอนทิตี้ (เลือกแล้วหมุดโน้ตกลายเป็นหมุดเอนทิตี้)
+    if (pin.kind === 'portal') {
+      const ms = el('select', 'map-ctx-sel');
+      for (const m of maps) { if (m.id === cur.id) continue; const o = el('option', null, m.name); o.value = m.id; if (m.id === pin.toMap) o.selected = true; ms.append(o); }
+      ms.title = t('ui.maps.ctxLinkMap');
+      ms.onchange = async () => { pin.toMap = ms.value; await save(); redraw(); };
+      bar.append(el('span', 'map-ctx-ic', gi('door')), ms);
+    } else {
+      const es = entitySelect(ents, pin.entityFile, async (file, nm) => {
+        pin.entityFile = file;
+        pin.kind = file ? 'entity' : 'note';
+        if (file && !pin.label) pin.label = nm;
+        await save(); redraw();
+      });
+      es.title = t('ui.maps.ctxLinkEntity');
+      bar.append(el('span', 'map-ctx-ic', gi('link')), es);
+    }
+    const imgB = el('button', 'cmp-mini map-ico', gi('image'));
+    imgB.title = pin.image ? t('ui.maps.ctxImageChange') : t('ui.maps.ctxImagePick');
+    imgB.onclick = async () => { const it = await pickImage(state.root); if (!it) return; pin.image = 'Images/' + it.file; await save(); redraw(); };
+    bar.append(imgB);
+    const th = pinThumb(pin, portraits, maps);
+    if (th) {
+      const zoomB = el('button', 'cmp-mini map-ico', gi('arrow-expand'));
+      zoomB.title = t('ui.maps.ctxImageView');
+      zoomB.onclick = async () => { const { imageLightbox } = await import('./wiki.js'); imageLightbox(th.url, pin.label || ''); };
+      bar.append(zoomB);
+    }
+    if (pin.image) {
+      const rm = el('button', 'cmp-mini map-ico', gi('image-remove'));
+      rm.title = t('ui.maps.ctxImageRemove');
+      rm.onclick = async () => { delete pin.image; await save(); redraw(); };
+      bar.append(rm);
+    }
+  }
+  bar.append(ctxSep());
+  const lay = el('button', 'cmp-mini map-ico', gi('layers'));
+  lay.title = t('ui.maps.ctxLayers');
+  lay.onclick = () => layerMenu(lay, async (d) => { if (movePinLayer(cur, pin.id, d)) { await save(); redraw(); } });
+  const more = el('button', 'cmp-mini map-ico', gi('pencil'));
+  more.title = t('ui.maps.pinEdit');
+  more.onclick = async () => {
+    const res = await pinDialog({ ...pin }, maps, cur.id, true);
+    if (res === 'DELETE') { await removePins(cur, [pin.id], save, redraw); return; }
+    if (res) { Object.assign(pin, res); await save(); redraw(); }
+  };
+  const del = el('button', 'cmp-mini map-ico k-danger', gi('trash'));
+  del.title = t('ui.common.del');
+  del.onclick = () => removePins(cur, [pin.id], save, redraw);
+  bar.append(lay, more, del);
+  const zs = zonesOfPin(cur, pin);
+  if (zs.length) bar.append(el('span', 'map-ctx-note', gi('vector-polygon') + ' ' + zs.map((z) => z.name || t('ui.common.notNamed')).join(' › ')));
+  return bar;
+}
+function buildZoneCtx(cur, z, ents, save, redraw, fit) {
+  const bar = el('div', 'map-ctx map-ctx-zone');
+  bar.dataset.zone = z.id;
+  const stop = (e) => e.stopPropagation();
+  bar.addEventListener('pointerdown', stop); bar.addEventListener('click', stop); bar.addEventListener('dblclick', stop);
+  bar.append(el('span', 'map-ctx-kind', gi('vector-polygon')));
+  const name = el('input', 'map-ctx-name');
+  name.value = z.name || ''; name.placeholder = t('ui.maps.zoneNamePh'); name.title = t('ui.maps.zoneName');
+  name.onchange = async () => { z.name = name.value.trim(); await save(); redraw(); };
+  name.onkeydown = (e) => { if (e.key === 'Enter') name.blur(); e.stopPropagation(); };
+  bar.append(name, ctxSep());
+  const es = entitySelect(ents, z.entityFile, async (file, nm) => { z.entityFile = file; if (file && !z.name) z.name = nm; await save(); redraw(); });
+  es.title = t('ui.maps.zoneLinkTip');
+  bar.append(el('span', 'map-ctx-ic', gi('link')), es);
+  const ctr = el('button', 'cmp-mini map-ico', gi('crosshairs'));
+  ctr.title = t('ui.maps.zoneCenter');
+  ctr.onclick = () => fit();
+  // สไตล์: สีพื้น · ความจาง · ลาย (ผู้ใช้: "สี zone กับความจางเปลี่ยนไม่ได้")
+  const sty = el('button', 'cmp-mini map-ico', gi('palette'));
+  sty.title = t('ui.maps.zoneStyle');
+  sty.onclick = () => {
+    const pop = bar.querySelector('.map-ctx-pop');
+    if (pop) { pop.remove(); return; }
+    const p = el('div', 'map-ctx-pop');
+    const r1 = el('label', 'map-ctx-row'); r1.append(el('span', null, t('ui.maps.zoneFill')));
+    const c = el('input', 'map-zone-color'); c.type = 'color'; c.value = /^#[0-9a-f]{6}$/i.test(z.color || '') ? z.color : ZONE_COLORS[0];
+    c.oninput = () => { z.color = c.value; const path = document.querySelector(`#maps-body .map-zone[data-zone="${z.id}"]`); if (path) { path.style.setProperty('--zc', c.value); if (!z.pattern || z.pattern === 'none') path.style.fill = c.value; } };
+    c.onchange = async () => { await save(); redraw(); };
+    r1.append(c); p.append(r1);
+    const r2 = el('label', 'map-ctx-row'); r2.append(el('span', null, t('ui.maps.zoneOpacity')));
+    const o = el('input', 'map-zone-opacity'); o.type = 'range'; o.min = '0'; o.max = '100'; o.value = String(Math.round(zoneOpacity(z) * 100));
+    const ol = el('span', 'map-ctx-val', o.value + '%');
+    o.oninput = () => { z.opacity = +o.value / 100; ol.textContent = o.value + '%';
+      const path = document.querySelector(`#maps-body .map-zone[data-zone="${z.id}"]`);
+      if (path) path.style.fillOpacity = String(!z.pattern || z.pattern === 'none' ? z.opacity : Math.min(1, z.opacity * 3)); };
+    o.onchange = async () => { await save(); };
+    r2.append(o, ol); p.append(r2);
+    const r3 = el('label', 'map-ctx-row'); r3.append(el('span', null, t('ui.maps.zonePattern')));
+    const ps = el('select', 'map-ctx-sel map-zone-pattern');
+    for (const k of ZONE_PATTERNS) { const op = el('option', null, t(PATTERN_KEYS[k])); op.value = k; if ((z.pattern || 'none') === k) op.selected = true; ps.append(op); }
+    ps.onchange = async () => { z.pattern = ps.value; await save(); redraw(); };
+    r3.append(ps); p.append(r3);
+    bar.append(p);
+  };
+  const lay = el('button', 'cmp-mini map-ico', gi('layers'));
+  lay.title = t('ui.maps.ctxLayers');
+  lay.onclick = () => layerMenu(lay, async (d) => { if (moveZone(cur, z.id, d)) { await save(); redraw(); } });
+  const del = el('button', 'cmp-mini map-ico k-danger', gi('trash'));
+  del.title = t('ui.maps.zoneDelete');
+  del.onclick = async () => {
+    if (!(await confirmBox(tf('ui.maps.zoneDeleteQ', z.name || ''), t('ui.common.del')))) return;
+    deleteZone(cur, z.id); view.selZone = null; await save(); redraw();
+  };
+  bar.append(ctr, sty, lay, del);
+  const inside = pinsInZone(cur, z);
+  const area = niceArea(zoneAreaM2(cur, z));
+  const note = el('span', 'map-ctx-note', gi('map-pin') + ' ' + tf('ui.maps.zonePinsIn', inside.length) + (area ? ' · ' + areaText(area) : ''));
+  note.title = inside.map((p) => p.label || (PIN_KIND[p.kind] || {}).label || '').filter(Boolean).join('\n');
+  bar.append(note);
+  return bar;
+}
+
 // ═══════════════════════ หยิบใส่แผนที่ ═══════════════════════
 async function placeEntity(cur, e, x, y) {
   const S = mapsState_C.s;
   const ex = (cur.pins || []).find((p) => p.kind === 'entity' && p.entityFile === e.file);
-  if (ex) { ex.x = clamp(x); ex.y = clamp(y); setStatus(tf('ui.maps.entMoved', e.name)); }
+  if (ex) { ex.x = clampW(x); ex.y = clampW(y); setStatus(tf('ui.maps.entMoved', e.name)); }
   else { cur.pins.push(entityPin(x, y, e.file, e.name)); setStatus(tf('ui.maps.entPlacedStatus', e.name)); }
   await saveMaps(S.data);
   refresh();
@@ -1486,44 +1959,49 @@ function startZoneDraw(cur, ent) {
   const used = mapZones(cur).length;
   view.zoneDraw = { points: [], entityFile: (ent && ent.file) || '', name: (ent && ent.name) || '',
                     color: ZONE_COLORS[used % ZONE_COLORS.length] };
-  view.measure = null;
+  view.measure = null; view.addText = false; view.selZone = null; view.sel.clear();
   setStatus(t('ui.maps.zoneDrawHint'));
   if (view.gallery) enterMap(cur.id); else refresh();
 }
+/** ปิดโซน → เลือกโซนใหม่ทันที (ตั้งชื่อ/สี/ลิงก์บนแถบลอยได้เลย ไม่มีกล่องถามคั่น — แบบในวิดีโอ) */
 async function finishZone(cur, save, redraw) {
   const d = view.zoneDraw;
   if (!d) return;
   if (d.points.length < 3) { setStatus(t('ui.maps.zoneNeed3')); return; }
-  let name = d.name;
-  if (!name) {
-    name = await ask(t('ui.maps.zoneName'), { value: '' });
-    if (name == null) return;
-  }
-  const z = newZone(d.points, { name: String(name || '').trim(), entityFile: d.entityFile, color: d.color });
+  const z = newZone(d.points, { name: String(d.name || '').trim(), entityFile: d.entityFile, color: d.color });
   cur.zones = [...(cur.zones || []), z];
   view.zoneDraw = null; view.selZone = z.id;
   await save();
   const area = niceArea(zoneAreaM2(cur, z));
   setStatus(tf('ui.maps.zoneDone', z.name || '') + (area ? ' · ' + areaText(area) : ''));
-  redraw();
+  await redraw();
+  if (!z.name) setTimeout(() => { const n = document.querySelector('#maps-body .map-ctx-zone .map-ctx-name'); if (n) n.focus(); }, 30);
 }
 function zoneMenu(cur, z, x, y) {
   const S = mapsState_C.s;
   const saveR = async () => { await saveMaps(S.data); refresh(); };
   popupMenu(x, y, [
-    { label: '<b>' + escHtml(z.name || t('ui.common.notNamed')) + '</b>', disabled: true },
+    { text: z.name || t('ui.common.notNamed'), disabled: true },
+    { label: t('ui.maps.zoneSelect'), click: () => { view.selZone = z.id; view.sel.clear(); refresh(); } },
     z.entityFile ? { label: t('ui.maps.entOpenWiki'), click: () => openEntity(z.entityFile) } : null,
     { label: t('ui.maps.zoneRename'), click: async () => {
       const v = await ask(t('ui.maps.zoneName'), { value: z.name || '' }); if (v == null) return;
       z.name = String(v).trim(); await saveR(); } },
     { label: t('ui.maps.zoneRecolor'), click: async () => {
       const i = ZONE_COLORS.indexOf(z.color); z.color = ZONE_COLORS[(i + 1) % ZONE_COLORS.length]; await saveR(); } },
-    { label: t('ui.maps.zoneEditPts'), click: () => { view.selZone = z.id; view.tool = 'edit'; refresh(); } },
+    { label: t('ui.maps.layerTop'), click: async () => { moveZone(cur, z.id, 'top'); await saveR(); } },
+    { label: t('ui.maps.layerBottom'), click: async () => { moveZone(cur, z.id, 'bottom'); await saveR(); } },
     '-',
     { label: t('ui.maps.zoneDelete'), danger: true, click: async () => {
       if (!(await confirmBox(tf('ui.maps.zoneDeleteQ', z.name || ''), t('ui.common.del')))) return;
       deleteZone(cur, z.id); if (view.selZone === z.id) view.selZone = null; await saveR(); } },
   ].filter(Boolean));
+}
+function redrawZoneShape(canvas, z) {
+  const path = canvas.querySelector(`.map-zone[data-zone="${z.id}"]`);
+  if (path) path.setAttribute('d', zonePath(z.points));
+  const lb = canvas.querySelector(`.map-zone-label[data-zone="${z.id}"]`);
+  if (lb) { const c = polygonCentroid(z.points); lb.style.left = c.x + '%'; lb.style.top = c.y + '%'; }
 }
 function zoneVertex(cur, z, i, canvas, save, redraw) {
   const v = el('div', 'map-zone-vtx');
@@ -1532,22 +2010,22 @@ function zoneVertex(cur, z, i, canvas, save, redraw) {
   v.onpointerdown = (e) => {
     if (e.button !== 0) return;
     e.stopPropagation(); e.preventDefault();
-    const r = canvas.getBoundingClientRect();
     const p0 = { ...z.points[i] };
     let moved = false;
     const put = (pt) => {
       z.points[i] = pt;
       v.style.left = pt.x + '%'; v.style.top = pt.y + '%';
-      const path = canvas.querySelector(`.map-zone[data-zone="${z.id}"]`);
-      if (path) path.setAttribute('d', zonePath(z.points));
+      redrawZoneShape(canvas, z);
+      canvas.querySelectorAll('.map-zone-mid').forEach((n) => { n.style.display = 'none'; });
     };
     const mv = (ev) => {
       moved = true;
-      put({ x: clamp(((ev.clientX - r.left) / r.width) * 100), y: clamp(((ev.clientY - r.top) / r.height) * 100) });
+      const r = canvas.getBoundingClientRect();
+      put({ x: clampW(((ev.clientX - r.left) / r.width) * 100), y: clampW(((ev.clientY - r.top) / r.height) * 100) });
     };
     const offEsc = escCancelDrag(() => {
       window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
-      put(p0);
+      put(p0); redraw();
     });
     const up = async () => {
       offEsc();
@@ -1556,6 +2034,7 @@ function zoneVertex(cur, z, i, canvas, save, redraw) {
     };
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
   };
+  v.onclick = (e) => e.stopPropagation();
   v.oncontextmenu = async (e) => {           // คลิกขวาจุดยอด = ลบจุดนั้น (เหลืออย่างน้อย 3)
     e.preventDefault(); e.stopPropagation();
     if (z.points.length <= 3) { setStatus(t('ui.maps.zoneNeed3')); return; }
@@ -1563,118 +2042,271 @@ function zoneVertex(cur, z, i, canvas, save, redraw) {
   };
   return v;
 }
+/** จุดกลางขอบของโซนที่เลือก — ลาก/คลิก = แทรกจุดยอดใหม่ตรงนั้น */
+function zoneMidHandle(cur, z, i, save, redraw) {
+  const a = z.points[i], b = z.points[(i + 1) % z.points.length];
+  const m = el('div', 'map-zone-mid');
+  m.style.left = ((a.x + b.x) / 2) + '%'; m.style.top = ((a.y + b.y) / 2) + '%';
+  m.title = t('ui.maps.zoneMidTip');
+  m.onpointerdown = async (e) => {
+    if (e.button !== 0) return;
+    e.stopPropagation(); e.preventDefault();
+    z.points.splice(i + 1, 0, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    await save(); await redraw();
+  };
+  m.onclick = (e) => e.stopPropagation();
+  return m;
+}
 
 // ═══════════════════════ พิกัดจริง / มาตราส่วน ═══════════════════════
-/** หน้าต่างเล็กตั้งค่าพิกัด: 1) มาตราส่วน 2) จุดอ้างอิงละติจูด/ลองจิจูด 3) ทิศเหนือ */
+/**
+ * [alpha.168] การ์ดแก้รูปพื้นหลัง — ผู้ใช้: "อยากให้แก้ไขรูปได้ ทั้ง ขนาด ratio ความทึบ จาง หมุน pitch yaw Hflip Vflip skew"
+ * ปรับแล้วเห็นผลทันที (ทาสไตล์ลง <img> ตรง ๆ ไม่วาดทั้งแผนที่ใหม่) · ปล่อยตัวเลื่อน = บันทึก · ดับเบิลคลิกตัวเลื่อน = คืนค่าช่องนั้น
+ * ตารางช่อง = แหล่งเดียว (ช่วงของช่องตัวเลขมาจาก BG_LIMITS ของ map-bg.js)
+ */
+const BG_FIELDS = [
+  { k: 'opacity', key: 'ui.maps.bgOpacity', unit: '%', mul: 100, slider: [0, 100], step: 1 },
+  { k: 'scale', key: 'ui.maps.bgScale', unit: '%', mul: 100, slider: [5, 400], step: 1 },
+  { k: 'ratio', key: 'ui.maps.bgRatio', unit: '%', mul: 100, slider: [20, 300], step: 1 },
+  { k: 'rotate', key: 'ui.maps.bgRotate', unit: '°', mul: 1, slider: [-180, 180], step: 1 },
+  { k: 'pitch', key: 'ui.maps.bgPitch', unit: '°', mul: 1, slider: [-75, 75], step: 1 },
+  { k: 'yaw', key: 'ui.maps.bgYaw', unit: '°', mul: 1, slider: [-75, 75], step: 1 },
+  { k: 'skewX', key: 'ui.maps.bgSkewX', unit: '°', mul: 1, slider: [-60, 60], step: 1 },
+  { k: 'skewY', key: 'ui.maps.bgSkewY', unit: '°', mul: 1, slider: [-60, 60], step: 1 },
+  { k: 'x', key: 'ui.maps.bgPosX', unit: '%', mul: 1, slider: [-100, 200], step: 0.5 },
+  { k: 'y', key: 'ui.maps.bgPosY', unit: '%', mul: 1, slider: [-100, 200], step: 0.5 },
+];
+export function openBgPanel(cur) {
+  view.bgOpen = !view.bgOpen;
+  if (!view.bgOpen) view.bgDrag = false;
+  view.geoOpen = false;                     // การ์ดลอยทีละใบ (ตำแหน่งเดียวกัน)
+  refresh();
+}
+/** ค่าในการ์ดตามค่าปัจจุบัน (หลังลากย้ายรูปบนผืน) */
+function syncBgPanel(cur) {
+  const pop = document.querySelector('#maps-body .map-bg-pop');
+  if (pop && pop._sync) pop._sync(normalizeBg(cur.bg));
+}
+function buildBgPanel(cur) {
+  const S = mapsState_C.s;
+  const pop = el('div', 'map-geo-pop map-bg-pop');
+  pop.setAttribute('role', 'dialog');
+  pop.addEventListener('pointerdown', (e) => e.stopPropagation());
+  pop.addEventListener('wheel', (e) => e.stopPropagation());
+  const imgEl = () => (pop.closest('.map-frame') || document).querySelector('.map-canvas .map-img');
+  let saveJob = 0;
+  const saveSoon = (now) => {
+    clearTimeout(saveJob);
+    if (now) return saveMaps(S.data);
+    saveJob = setTimeout(() => saveMaps(S.data).catch(() => {}), 450);
+    return null;
+  };
+  const put = (b, now) => {
+    const c = compactBg(b);
+    if (c) cur.bg = c; else delete cur.bg;
+    applyMapBgStyle(imgEl(), cur);
+    return saveSoon(now);
+  };
+  const head = el('div', 'map-geo-head');
+  head.append(el('b', null, gi('image-edit') + ' ' + t('ui.maps.bgTitle')));
+  const x = el('button', 'cmp-mini k-cancel', gi('close'));
+  x.title = t('ui.common.close');
+  const close = async () => { view.bgOpen = false; view.bgDrag = false; await saveSoon(true); refresh(); };
+  x.onclick = close;
+  head.append(x);
+  pop.append(head, el('div', 'map-geo-intro', t('ui.maps.bgIntro')));
+
+  // ── สวิตช์: พลิก · ลากย้าย ──
+  const tog = el('div', 'map-bg-toggles');
+  const mkTog = (icon, key, on, fn, tipKey) => {
+    const b = el('button', 'cmp-mini map-bg-tog' + (on ? ' on' : ''), gi(icon) + ' ' + t(key));
+    b.title = t(tipKey || key); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.onclick = () => { const v = !b.classList.contains('on'); b.classList.toggle('on', v); b.setAttribute('aria-pressed', v ? 'true' : 'false'); fn(v); };
+    tog.append(b);
+    return b;
+  };
+  const fH = mkTog('flip-h', 'ui.maps.bgFlipH', normalizeBg(cur.bg).flipH, (v) => put({ ...normalizeBg(cur.bg), flipH: v }, true));
+  fH.dataset.bg = 'flipH';
+  const fV = mkTog('flip-v', 'ui.maps.bgFlipV', normalizeBg(cur.bg).flipV, (v) => put({ ...normalizeBg(cur.bg), flipV: v }, true));
+  fV.dataset.bg = 'flipV';
+  const dragB = mkTog('cursor-move', 'ui.maps.bgDrag', view.bgDrag, (v) => {
+    view.bgDrag = v;
+    const cv = (pop.closest('.map-frame') || document).querySelector('.map-canvas');
+    if (cv) cv.classList.toggle('map-bg-dragmode', v);
+  }, 'ui.maps.bgDragTip');
+  dragB.dataset.bg = 'drag';
+  pop.append(tog);
+
+  // ── ตัวเลื่อน + ช่องตัวเลข ──
+  const grid = el('div', 'map-bg-grid');
+  const rows = [];
+  for (const f of BG_FIELDS) {
+    const lab = el('label', 'map-bg-lab', t(f.key));
+    const rg = el('input', 'map-bg-range'); rg.type = 'range';
+    rg.min = String(f.slider[0]); rg.max = String(f.slider[1]); rg.step = String(f.step);
+    rg.title = t('ui.maps.bgResetOne');
+    const nb = el('input', 'map-bg-num'); nb.type = 'number'; nb.step = String(f.step);
+    const lim = BG_LIMITS[f.k];
+    if (lim) { nb.min = String(lim[0] * f.mul); nb.max = String(lim[1] * f.mul); }
+    nb.setAttribute('aria-label', t(f.key));
+    rg.setAttribute('aria-label', t(f.key));
+    rg.dataset.bg = f.k; nb.dataset.bg = f.k;
+    const unit = el('span', 'map-bg-unit', f.unit);
+    const setFrom = (raw, now) => {
+      const v = Number(raw);
+      if (!Number.isFinite(v)) return null;
+      const b = { ...normalizeBg(cur.bg), [f.k]: v / f.mul };
+      const nb2 = normalizeBg(b);
+      show(nb2);
+      return put(nb2, now);
+    };
+    const show = (b) => {
+      const v = +(b[f.k] * f.mul).toFixed(f.step < 1 ? 1 : 0);
+      if (document.activeElement !== nb) nb.value = String(v);
+      rg.value = String(Math.min(f.slider[1], Math.max(f.slider[0], v)));
+    };
+    rg.oninput = () => setFrom(rg.value, false);
+    rg.onchange = () => setFrom(rg.value, true);
+    rg.ondblclick = () => setFrom(BG_DEFAULTS[f.k] * f.mul, true);
+    nb.onchange = () => setFrom(nb.value, true);
+    nb.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') nb.blur(); };
+    grid.append(lab, rg, nb, unit);
+    rows.push(show);
+  }
+  pop.append(grid);
+  pop._sync = (b) => { for (const r of rows) r(b); fH.classList.toggle('on', b.flipH); fV.classList.toggle('on', b.flipV); };
+  pop._sync(normalizeBg(cur.bg));
+
+  const foot = el('div', 'map-geo-foot');
+  const rst = el('button', 'cmp-mini', t('ui.maps.bgReset'));
+  rst.onclick = async () => { await put({ ...BG_DEFAULTS }, true); pop._sync(normalizeBg(cur.bg)); };
+  const done = el('button', 'k-ok', t('ui.maps.done'));
+  done.onclick = close;
+  foot.append(rst, done);
+  pop.append(foot);
+  return pop;
+}
+/**
+ * หน้าตั้งค่าพิกัด: 1) มาตราส่วน 2) จุดอ้างอิงละติจูด/ลองจิจูด 3) ทิศเหนือ
+ * [alpha.168] ผู้ใช้: "ตั้งค่าพิกัด มันไปอยู่นอก panel ได้ไง" — เดิมแปะที่ document.body ตำแหน่งตายตัวบนจอ
+ *   (แผงอยู่ซ้าย กล่องไปโผล่ขวาสุดของหน้าต่าง · ฉีกแผงออกไปแล้วกล่องยังอยู่หน้าต่างหลัก)
+ *   → เป็นการ์ดลอยใน "กรอบแผนที่" ของแผงเอง · วาดใหม่พร้อมแผนที่ (view.geoOpen)
+ */
 export function openGeoPanel(cur) {
+  view.geoOpen = true;
+  const frame = $('#maps-body .map-frame');
   document.querySelectorAll('.map-geo-pop').forEach((n) => n.remove());
+  const pop = buildGeoPanel(cur);
+  if (frame) {
+    frame.append(pop);
+    const cv = frame.querySelector('.map-canvas');
+    if (cv) drawGeoMarks(cv, geoOf(cur));
+  } else refresh();
+  return pop;
+}
+function buildGeoPanel(cur) {
   const S = mapsState_C.s;
   const pop = el('div', 'map-geo-pop');
   pop.setAttribute('role', 'dialog');
-  const save = async () => { await saveMaps(S.data); refresh(); paint(); };
-  const close = () => { pop.remove(); refresh(); };
-  const paint = () => {
-    pop.replaceChildren();
-    const g = geoOf(cur);
-    const head = el('div', 'map-geo-head');
-    head.append(el('b', null, gi('earth') + ' ' + t('ui.maps.geoTitle')));
-    const x = el('button', 'cmp-mini k-cancel', gi('close'));
-    x.title = t('ui.common.close');
-    x.onclick = close;
-    head.append(x);
-    pop.append(head);
-    pop.append(el('div', 'map-geo-intro', t('ui.maps.geoIntro')));
-    // ── ขั้น 1: มาตราส่วน ──
-    const s1 = el('div', 'map-geo-step' + (g.scale ? ' done' : ''));
-    s1.append(el('div', 'map-geo-st', '1 · ' + t('ui.maps.geoStepScale')));
-    s1.append(el('div', 'map-geo-desc', g.scale
-      ? tf('ui.maps.geoScaleNow', distText(niceDistance(g.scale.meters)))
-      : t('ui.maps.geoScaleDesc')));
-    const b1 = el('button', 'cmp-mini k-ok', gi('ruler-straight') + ' ' + (g.scale ? t('ui.maps.geoRedo') : t('ui.maps.geoPickScale')));
-    b1.title = t('ui.maps.geoPickScaleTip');
-    b1.onclick = async () => {
-      const a = await pickPoint('scaleA', t('ui.maps.geoPickA'));
-      if (!a) return paint();
-      const b = await pickPoint('scaleB', t('ui.maps.geoPickB'));
-      if (!b) return paint();
-      const v = await ask(t('ui.maps.geoAskMeters'), { value: g.scale ? String(g.scale.meters) : '100',
-        placeholder: t('ui.maps.geoAskMetersPh') });
-      const meters = parseDistance(v);
-      if (!(meters > 0)) { setStatus(t('ui.maps.geoBadNumber')); return paint(); }
-      cur.geo = { ...(cur.geo || {}), scale: { a, b, meters } };
-      await save();
-      setStatus(t('ui.maps.geoScaleSaved'));
-    };
-    s1.append(b1);
-    pop.append(s1);
-    // ── ขั้น 2: จุดอ้างอิง ──
-    const s2 = el('div', 'map-geo-step' + (g.ref ? ' done' : '') + (g.scale ? '' : ' wait'));
-    s2.append(el('div', 'map-geo-st', '2 · ' + t('ui.maps.geoStepRef')));
-    s2.append(el('div', 'map-geo-desc', g.ref ? formatLatLon(g.ref) : t('ui.maps.geoRefDesc')));
-    const b2 = el('button', 'cmp-mini k-ok', gi('crosshairs') + ' ' + (g.ref ? t('ui.maps.geoRedo') : t('ui.maps.geoPickRef')));
-    b2.title = t('ui.maps.geoPickRefTip');
-    b2.disabled = !g.scale;
-    b2.onclick = async () => {
-      const p = await pickPoint('ref', t('ui.maps.geoPickRefHint'));
-      if (!p) return paint();
-      const v = await ask(t('ui.maps.geoAskLatLon'), { value: g.ref ? g.ref.lat + ', ' + g.ref.lon : '',
-        placeholder: t('ui.maps.geoAskLatLonPh') });
-      const ll = parseLatLon(v);
-      if (!ll) { setStatus(t('ui.maps.geoBadLatLon')); return paint(); }
-      cur.geo = { ...(cur.geo || {}), ref: { x: p.x, y: p.y, lat: ll.lat, lon: ll.lon } };
-      await save();
-      setStatus(t('ui.maps.geoRefSaved'));
-    };
-    s2.append(b2);
-    pop.append(s2);
-    // ── ขั้น 3: ทิศเหนือ ──
-    const s3 = el('div', 'map-geo-step');
-    s3.append(el('div', 'map-geo-st', '3 · ' + t('ui.maps.geoStepNorth')));
-    const nIn = el('input', 'map-geo-north'); nIn.type = 'number'; nIn.min = '-180'; nIn.max = '180'; nIn.step = '1';
-    nIn.value = String(g.north || 0); nIn.title = t('ui.maps.geoNorthTip');
-    nIn.onchange = async () => { cur.geo = { ...(cur.geo || {}), north: Math.max(-180, Math.min(180, +nIn.value || 0)) }; await save(); };
-    s3.append(el('div', 'map-geo-desc', t('ui.maps.geoNorthDesc')), nIn);
-    pop.append(s3);
-    // ── ปักหมุดตามพิกัด ──
-    if (g.scale && g.ref) {
-      const s4 = el('div', 'map-geo-step');
-      s4.append(el('div', 'map-geo-st', gi('map-pin') + ' ' + t('ui.maps.geoPinByCoord')));
-      const b4 = el('button', 'cmp-mini', t('ui.maps.geoPinByCoordBtn'));
-      b4.title = t('ui.maps.geoPinByCoordTip');
-      b4.onclick = async () => {
-        const v = await ask(t('ui.maps.geoAskLatLon'), { value: '', placeholder: t('ui.maps.geoAskLatLonPh') });
-        const ll = parseLatLon(v);
-        if (!ll) { setStatus(t('ui.maps.geoBadLatLon')); return; }
-        const p = fromLatLon(cur, ll.lat, ll.lon);
-        if (!p || p.x < 0 || p.x > 100 || p.y < 0 || p.y > 100) { setStatus(t('ui.maps.geoOutside')); return; }
-        const pin = newPin(p.x, p.y);
-        const res = await pinDialog(pin, S.data.maps, cur.id);
-        if (!res) return;
-        cur.pins.push(res); await save();
-      };
-      s4.append(b4);
-      pop.append(s4);
-    }
-    const foot = el('div', 'map-geo-foot');
-    if (g.scale || g.ref) {
-      const clr = el('button', 'cmp-mini k-danger', t('ui.maps.geoClear'));
-      clr.title = t('ui.maps.geoClearTip');
-      clr.onclick = async () => {
-        if (!(await confirmBox(t('ui.maps.geoClearQ'), t('ui.common.clear')))) return;
-        delete cur.geo; await save();
-      };
-      foot.append(clr);
-    }
-    const done = el('button', 'k-ok', t('ui.maps.done'));
-    done.onclick = close;
-    foot.append(done);
-    pop.append(foot);
+  pop.addEventListener('pointerdown', (e) => e.stopPropagation());
+  const save = async () => { await saveMaps(S.data); refresh(); };
+  const close = () => { view.geoOpen = false; pop.remove(); refresh(); };
+  const g = geoOf(cur);
+  const head = el('div', 'map-geo-head');
+  head.append(el('b', null, gi('earth') + ' ' + t('ui.maps.geoTitle')));
+  const x = el('button', 'cmp-mini k-cancel', gi('close'));
+  x.title = t('ui.common.close');
+  x.onclick = close;
+  head.append(x);
+  pop.append(head);
+  pop.append(el('div', 'map-geo-intro', t('ui.maps.geoIntro')));
+  // ── ขั้น 1: มาตราส่วน ──
+  const s1 = el('div', 'map-geo-step' + (g.scale ? ' done' : ''));
+  s1.append(el('div', 'map-geo-st', '1 · ' + t('ui.maps.geoStepScale')));
+  s1.append(el('div', 'map-geo-desc', g.scale ? tf('ui.maps.geoScaleNow', distText(niceDistance(g.scale.meters))) : t('ui.maps.geoScaleDesc')));
+  const b1 = el('button', 'cmp-mini k-ok', gi('ruler-straight') + ' ' + (g.scale ? t('ui.maps.geoRedo') : t('ui.maps.geoPickScale')));
+  b1.title = t('ui.maps.geoPickScaleTip');
+  b1.onclick = async () => {
+    const a = await pickPoint('scaleA', t('ui.maps.geoPickA'));
+    if (!a) return refresh();
+    const b = await pickPoint('scaleB', t('ui.maps.geoPickB'));
+    if (!b) return refresh();
+    const v = await ask(t('ui.maps.geoAskMeters'), { value: g.scale ? String(g.scale.meters) : '100', placeholder: t('ui.maps.geoAskMetersPh') });
+    const meters = parseDistance(v);
+    if (!(meters > 0)) { setStatus(t('ui.maps.geoBadNumber')); return refresh(); }
+    cur.geo = { ...(cur.geo || {}), scale: { a, b, meters } };
+    await save();
+    setStatus(t('ui.maps.geoScaleSaved'));
   };
-  paint();
-  document.body.append(pop);
-  refresh();
+  s1.append(b1);
+  pop.append(s1);
+  // ── ขั้น 2: จุดอ้างอิง ──
+  const s2 = el('div', 'map-geo-step' + (g.ref ? ' done' : '') + (g.scale ? '' : ' wait'));
+  s2.append(el('div', 'map-geo-st', '2 · ' + t('ui.maps.geoStepRef')));
+  s2.append(el('div', 'map-geo-desc', g.ref ? formatLatLon(g.ref) : t('ui.maps.geoRefDesc')));
+  const b2 = el('button', 'cmp-mini k-ok', gi('crosshairs') + ' ' + (g.ref ? t('ui.maps.geoRedo') : t('ui.maps.geoPickRef')));
+  b2.title = t('ui.maps.geoPickRefTip');
+  b2.disabled = !g.scale;
+  b2.onclick = async () => {
+    const p = await pickPoint('ref', t('ui.maps.geoPickRefHint'));
+    if (!p) return refresh();
+    const v = await ask(t('ui.maps.geoAskLatLon'), { value: g.ref ? g.ref.lat + ', ' + g.ref.lon : '', placeholder: t('ui.maps.geoAskLatLonPh') });
+    const ll = parseLatLon(v);
+    if (!ll) { setStatus(t('ui.maps.geoBadLatLon')); return refresh(); }
+    cur.geo = { ...(cur.geo || {}), ref: { x: p.x, y: p.y, lat: ll.lat, lon: ll.lon } };
+    await save();
+    setStatus(t('ui.maps.geoRefSaved'));
+  };
+  s2.append(b2);
+  pop.append(s2);
+  // ── ขั้น 3: ทิศเหนือ ──
+  const s3 = el('div', 'map-geo-step');
+  s3.append(el('div', 'map-geo-st', '3 · ' + t('ui.maps.geoStepNorth')));
+  const nIn = el('input', 'map-geo-north'); nIn.type = 'number'; nIn.min = '-180'; nIn.max = '180'; nIn.step = '1';
+  nIn.value = String(g.north || 0); nIn.title = t('ui.maps.geoNorthTip');
+  nIn.onchange = async () => { cur.geo = { ...(cur.geo || {}), north: Math.max(-180, Math.min(180, +nIn.value || 0)) }; await save(); };
+  s3.append(el('div', 'map-geo-desc', t('ui.maps.geoNorthDesc')), nIn);
+  pop.append(s3);
+  // ── ปักหมุดตามพิกัด ──
+  if (g.scale && g.ref) {
+    const s4 = el('div', 'map-geo-step');
+    s4.append(el('div', 'map-geo-st', gi('map-pin') + ' ' + t('ui.maps.geoPinByCoord')));
+    const b4 = el('button', 'cmp-mini', t('ui.maps.geoPinByCoordBtn'));
+    b4.title = t('ui.maps.geoPinByCoordTip');
+    b4.onclick = async () => {
+      const v = await ask(t('ui.maps.geoAskLatLon'), { value: '', placeholder: t('ui.maps.geoAskLatLonPh') });
+      const ll = parseLatLon(v);
+      if (!ll) { setStatus(t('ui.maps.geoBadLatLon')); return; }
+      const p = fromLatLon(cur, ll.lat, ll.lon);
+      // [alpha.168] แผนที่ไม่มีขอบแล้ว — พิกัดนอกรูปปักได้ (เดิมปฏิเสธ) · เกินเพดานโลกเท่านั้นที่ไม่รับ
+      if (!p || p.x < WORLD_MIN || p.x > WORLD_MAX || p.y < WORLD_MIN || p.y > WORLD_MAX) { setStatus(t('ui.maps.geoOutside')); return; }
+      const pin = newPin(p.x, p.y);
+      const res = await pinDialog(pin, S.data.maps, cur.id);
+      if (!res) return;
+      cur.pins.push(res);
+      view.focusPin = { id: res.id, x: res.x, y: res.y };
+      await save();
+    };
+    s4.append(b4);
+    pop.append(s4);
+  }
+  const foot = el('div', 'map-geo-foot');
+  if (g.scale || g.ref) {
+    const clr = el('button', 'cmp-mini k-danger', t('ui.maps.geoClear'));
+    clr.title = t('ui.maps.geoClearTip');
+    clr.onclick = async () => {
+      if (!(await confirmBox(t('ui.maps.geoClearQ'), t('ui.common.clear')))) return;
+      delete cur.geo; await save();
+    };
+    foot.append(clr);
+  }
+  const done = el('button', 'k-ok', t('ui.maps.done'));
+  done.onclick = close;
+  foot.append(done);
+  pop.append(foot);
   return pop;
 }
+
 /** "100" · "1.5 km" · "300 ม." → เมตร */
 export function parseDistance(v) {
   const s = String(v == null ? '' : v).trim().toLowerCase().replace(/,/g, '');
@@ -1720,54 +2352,134 @@ function applyPinFilter(wrap) {
   note.style.display = q ? '' : 'none';
 }
 
-// ═══════════ ส่งออก PNG / พิมพ์ (ข้อ 5) ═══════════
+// ═══════════ ส่งออก PNG / พิมพ์ ═══════════
 
-/** วาดแผนที่ + โซน + โอเวอร์เลย์ + เส้นทาง + หมุด ลง <canvas> แล้วคืน canvas (ใช้ทั้งส่งออกและพิมพ์) */
-async function drawMapToCanvas(map) {
-  const W0 = 1400;
-  let img = null;
-  if (map.image) {
-    img = new Image();
-    const src = mapImgURL(map.image);
-    await new Promise((res) => { img.onload = res; img.onerror = () => { img = null; res(); }; img.src = src; });
+function loadImg(src) {
+  return new Promise((res) => {
+    if (!src) return res(null);
+    const im = new Image();
+    im.onload = () => res(im.naturalWidth ? im : null);
+    im.onerror = () => res(null);
+    im.src = src;
+  });
+}
+/** ลายของพื้นโซน (แผ่นเล็กปูซ้ำ) */
+function zonePatternFill(ctx, pat, color, cellPx) {
+  if (!pat || pat === 'none') return color;
+  const n = Math.max(6, Math.round(cellPx));
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  const g = c.getContext('2d');
+  g.strokeStyle = color; g.fillStyle = color; g.lineWidth = Math.max(1, n / 8);
+  if (pat === 'hatch' || pat === 'cross') { g.beginPath(); g.moveTo(-1, n + 1); g.lineTo(n + 1, -1); g.stroke(); }
+  if (pat === 'cross') { g.beginPath(); g.moveTo(-1, -1); g.lineTo(n + 1, n + 1); g.stroke(); }
+  if (pat === 'dots') { g.beginPath(); g.arc(n / 2, n / 2, n / 7, 0, Math.PI * 2); g.fill(); }
+  return ctx.createPattern(c, 'repeat') || color;
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/**
+ * วาดแผนที่ทั้งผืนลง <canvas> (ใช้ทั้งส่งออกและพิมพ์)
+ * [alpha.168] ครอบ "ทุกอย่าง" (กรอบรูป + หมุด/โซนที่อยู่นอกรูป) · หมุดเป็นรูปย่อ + ป้ายชื่อแบบบนจอ ·
+ *   โซนตามสี/ความจาง/ลายของตัวเอง · กริดจัตุรัส · ตัวหนังสือบนแผนที่
+ */
+/**
+ * [alpha.168] วาดรูปพื้นหลังตามค่าที่ปรับ (มุมทั้งสี่จาก bgQuad — ชุดเดียวกับจอ)
+ * ไม่มีมุมมองระยะ = affine ครั้งเดียว · มี pitch/yaw = ตาข่ายสามเหลี่ยม (วาดลงผืนแยกก่อน แล้วค่อยลงความทึบทีเดียว
+ * ไม่งั้นรอยต่อของสามเหลี่ยมที่ซ้อนกันเล็กน้อยจะทึบกว่าส่วนอื่น)
+ */
+function drawBgImage(ctx, img, bgRaw, aspect, PX, PY, W, H) {
+  const bg = normalizeBg(bgRaw);
+  const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
+  const toPx = (p) => ({ x: PX(p.x), y: PY(p.y) });
+  const layer = document.createElement('canvas');
+  layer.width = W; layer.height = H;
+  const g = layer.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  if (!bgIsProjective(bg)) {
+    const [q0, q1, , q3] = bgQuad(bg, aspect, aspect).map(toPx);
+    g.setTransform((q1.x - q0.x) / iw, (q1.y - q0.y) / iw, (q3.x - q0.x) / ih, (q3.y - q0.y) / ih, q0.x, q0.y);
+    g.drawImage(img, 0, 0);
+  } else {
+    for (const tri of bgMeshCells(bg, aspect, aspect, 24)) {
+      const [p0, p1, p2] = tri.map((p) => ({ ...toPx(p), u: p.u * iw, v: p.v * ih }));
+      const du1 = p1.u - p0.u, dv1 = p1.v - p0.v, du2 = p2.u - p0.u, dv2 = p2.v - p0.v;
+      const det = du1 * dv2 - du2 * dv1;
+      if (!det) continue;
+      const dx1 = p1.x - p0.x, dy1 = p1.y - p0.y, dx2 = p2.x - p0.x, dy2 = p2.y - p0.y;
+      const a = (dx1 * dv2 - dx2 * dv1) / det, c = (dx2 * du1 - dx1 * du2) / det;
+      const b = (dy1 * dv2 - dy2 * dv1) / det, d = (dy2 * du1 - dy1 * du2) / det;
+      const e = p0.x - a * p0.u - c * p0.v, f = p0.y - b * p0.u - d * p0.v;
+      // ขยายเส้นตัดออกเล็กน้อย กันเส้นรอยต่อบาง ๆ ระหว่างสามเหลี่ยม
+      const cx = (p0.x + p1.x + p2.x) / 3, cy = (p0.y + p1.y + p2.y) / 3;
+      const grow = (p) => { const dx = p.x - cx, dy = p.y - cy, l = Math.hypot(dx, dy) || 1; return [p.x + (dx / l) * 1.6, p.y + (dy / l) * 1.6]; };
+      g.save();
+      g.beginPath();
+      const [a0, a1, a2] = [grow(p0), grow(p1), grow(p2)];
+      g.moveTo(a0[0], a0[1]); g.lineTo(a1[0], a1[1]); g.lineTo(a2[0], a2[1]); g.closePath();
+      g.clip();
+      g.setTransform(a, b, c, d, e, f);
+      g.drawImage(img, 0, 0);
+      g.restore();
+    }
   }
-  const iw = (img && img.naturalWidth) || W0;
-  const ih = (img && img.naturalHeight) || Math.round(W0 * 0.66);
-  const scale = Math.min(2, Math.max(1, W0 / iw));       // ภาพเล็กก็ยังได้ไฟล์คมพอใช้
+  ctx.save();
+  ctx.globalAlpha = bg.opacity;
+  ctx.drawImage(layer, 0, 0);
+  ctx.restore();
+}
+async function drawMapToCanvas(map) {
+  const img = map.image ? await loadImg(mapImgURL(map.image)) : null;
+  const aspect = img ? img.naturalWidth / img.naturalHeight : frameAspect(map);
+  const b = mapBounds(map, { frame: !!img || !(map.pins || []).length });
+  const padX = (b.x1 - b.x0) * 0.04 + 2, padY = (b.y1 - b.y0) * 0.04 + 2 * aspect;
+  const x0 = b.x0 - padX, x1 = b.x1 + padX, y0 = b.y0 - padY, y1 = b.y1 + padY;
+  let ppx = (img ? Math.max(1400, img.naturalWidth) : 1600) / 100;    // พิกเซลต่อ 1% ของความกว้างกรอบ
+  let W = (x1 - x0) * ppx, H = ((y1 - y0) * ppx) / aspect;
+  const k = Math.min(1, 4096 / Math.max(W, H));
+  ppx *= k; W = Math.max(1, Math.round(W * k)); H = Math.max(1, Math.round(H * k));
+  const ppy = ppx / aspect;
+  const PX = (x) => (x - x0) * ppx, PY = (y) => (y - y0) * ppy;
+  const scale = Math.max(1, Math.min(W, H) / 900);                     // ขนาดหมุด/ตัวหนังสือตามขนาดไฟล์
   const cv = document.createElement('canvas');
-  cv.width = Math.round(iw * scale); cv.height = Math.round(ih * scale);
+  cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
-  const PX = (x) => (x / 100) * W, PY = (y) => (y / 100) * H;
-
   ctx.fillStyle = PRINT.paper; ctx.fillRect(0, 0, W, H);
-  if (img) ctx.drawImage(img, 0, 0, W, H);
+  if (img) drawBgImage(ctx, img, map.bg, aspect, PX, PY, W, H);
 
-  // โซนชั้นล่างสุด (เหมือนบนจอ)
+  // โซนชั้นล่างสุด (ลำดับในอาร์เรย์ = ลำดับชั้น)
   for (const z of mapZones(map)) {
+    const col = z.color || ZONE_COLORS[0];
     ctx.save();
     ctx.beginPath();
     z.points.forEach((p, i) => (i ? ctx.lineTo(PX(p.x), PY(p.y)) : ctx.moveTo(PX(p.x), PY(p.y))));
     ctx.closePath();
-    ctx.globalAlpha = 0.22; ctx.fillStyle = z.color || ZONE_COLORS[0]; ctx.fill();
-    ctx.globalAlpha = 0.9; ctx.lineWidth = 2 * scale; ctx.strokeStyle = z.color || ZONE_COLORS[0]; ctx.stroke();
+    const pat = ZONE_PATTERNS.includes(z.pattern) ? z.pattern : 'none';
+    ctx.globalAlpha = pat === 'none' ? zoneOpacity(z) : Math.min(1, zoneOpacity(z) * 3);
+    ctx.fillStyle = zonePatternFill(ctx, pat, col, 10 * scale); ctx.fill();
+    ctx.globalAlpha = 0.9; ctx.lineWidth = 2 * scale; ctx.strokeStyle = col; ctx.stroke();
     ctx.restore();
     if (z.name) {
       const c = polygonCentroid(z.points);
       ctx.save(); ctx.font = `bold ${Math.round(15 * scale)}px "Sarabun", sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = PRINT.label; ctx.fillText(z.name, PX(c.x), PY(c.y));
+      ctx.lineWidth = 4 * scale; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.strokeText(z.name, PX(c.x), PY(c.y));
+      ctx.fillStyle = PRINT.labelOnDark; ctx.fillText(z.name, PX(c.x), PY(c.y));
       ctx.restore();
     }
   }
 
   const ov = mapOverlays(map);
   if (ov.grid) {
-    ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = Math.max(1, scale);
-    for (const p of gridLines(ov.gridSize)) {
-      ctx.beginPath(); ctx.moveTo(PX(p), 0); ctx.lineTo(PX(p), H); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, PY(p)); ctx.lineTo(W, PY(p)); ctx.stroke();
-    }
+    // ช่องจัตุรัส ปูทั้งไฟล์ (ไม่ใช่แค่ในรูป) · เส้นตรงกับบนจอ (จุดเริ่ม = มุมกรอบ)
+    const cell = gridCell(ov.gridSize, aspect).x * ppx;
+    ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = Math.max(1, scale * 0.8);
+    const sx = PX(0) - Math.ceil(PX(0) / cell) * cell, sy = PY(0) - Math.ceil(PY(0) / cell) * cell;
+    for (let x = sx; x <= W; x += cell) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = sy; y <= H; y += cell) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
     ctx.restore();
   }
 
@@ -1783,22 +2495,58 @@ async function drawMapToCanvas(map) {
     ctx.stroke(); ctx.restore();
   }
 
-  const fs = Math.round(15 * scale);
-  ctx.textBaseline = 'middle';
+  // หมุด: รูปย่อกรอบมน (หรือไอคอน) + ป้ายชื่อพื้นเข้มใต้หมุด — เหมือนบนจอ
+  const portraits = await loadPortraits();
+  const names = new Map((await loadEntities()).map((e) => [e.file, e.name]));
+  const maps = (mapsState_C.s && mapsState_C.s.data && mapsState_C.s.data.maps) || [map];
+  const ps = pinScaleOf(map);
+  const thumbs = new Map();
+  await Promise.all((map.pins || []).map(async (p) => {
+    const th = p.kind === 'text' ? null : pinThumb(p, portraits, maps);
+    if (th) thumbs.set(p.id, await loadImg(th.url));
+  }));
+  const kindColor = { entity: PRINT.pinEntity, portal: PRINT.pinPortal, note: PRINT.pinDefault };
   for (const pin of map.pins || []) {
-    const x = PX(pin.x), y = PY(pin.y), rad = 9 * scale;
+    const x = PX(pin.x), y = PY(pin.y);
+    const kk = scale * ps * pinSizeK(pin);
+    const label = (pin.kind === 'entity' && names.get(pin.entityFile)) || pin.label || '';
     ctx.save();
-    ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2);
-    ctx.fillStyle = pin.color || (pin.kind === 'portal' ? PRINT.pinPortal : pin.kind === 'entity' ? PRINT.pinEntity : PRINT.pinDefault);
-    ctx.fill();
-    ctx.lineWidth = 2 * scale; ctx.strokeStyle = PRINT.paper; ctx.stroke();
-    if (pin.label) {
-      ctx.font = `${fs}px "Sarabun", sans-serif`;
-      const tw = ctx.measureText(pin.label).width;
-      ctx.fillStyle = 'rgba(255,255,255,.88)';
-      ctx.fillRect(x + rad + 3 * scale, y - fs * 0.75, tw + 8 * scale, fs * 1.5);
-      ctx.fillStyle = PRINT.label;
-      ctx.fillText(pin.label, x + rad + 7 * scale, y);
+    if (pin.kind === 'text') {
+      ctx.font = `bold ${Math.round(22 * kk)}px Georgia, "Sarabun", serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4 * kk; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(label, x, y);
+      ctx.fillStyle = pin.color || PRINT.labelOnDark; ctx.fillText(label, x, y);
+      ctx.restore();
+      continue;
+    }
+    const sz = 32 * kk, r = 8 * kk;
+    ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 5 * kk; ctx.shadowOffsetY = 2 * kk;
+    roundRect(ctx, x - sz / 2, y - sz / 2, sz, sz, r);
+    ctx.fillStyle = 'rgba(14,18,26,.9)'; ctx.fill();
+    ctx.shadowColor = 'transparent';
+    const im = thumbs.get(pin.id);
+    if (im) {
+      ctx.save(); roundRect(ctx, x - sz / 2, y - sz / 2, sz, sz, r); ctx.clip();
+      const s0 = Math.max(sz / im.naturalWidth, sz / im.naturalHeight);
+      ctx.drawImage(im, x - (im.naturalWidth * s0) / 2, y - (im.naturalHeight * s0) / 2, im.naturalWidth * s0, im.naturalHeight * s0);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = pin.color || kindColor[pin.kind] || PRINT.pinDefault;
+      ctx.font = `${Math.round(18 * kk)}px "K2 Icons", sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((PIN_KIND[pin.kind] || PIN_KIND.note).icon, x, y + 1);
+    }
+    roundRect(ctx, x - sz / 2, y - sz / 2, sz, sz, r);
+    ctx.lineWidth = 2 * kk; ctx.strokeStyle = pin.color || kindColor[pin.kind] || PRINT.pinDefault; ctx.stroke();
+    if (label && !pin.hideLabel) {
+      const fs = Math.round(12.5 * kk);
+      ctx.font = `600 ${fs}px "Sarabun", sans-serif`;
+      const tw = ctx.measureText(label).width;
+      const lx = x - tw / 2 - 8 * kk, ly = y + sz / 2 + 4 * kk, lw = tw + 16 * kk, lh = fs * 1.6;
+      roundRect(ctx, lx, ly, lw, lh, 5 * kk);
+      ctx.fillStyle = 'rgba(14,18,26,.88)'; ctx.fill();
+      ctx.fillStyle = PRINT.labelOnDark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, ly + lh / 2 + 0.5);
     }
     ctx.restore();
   }
@@ -1819,17 +2567,17 @@ async function drawMapToCanvas(map) {
   }
   if (ov.scale) {
     ctx.save();
-    // ตั้งมาตราส่วนจริงแล้ว = แถบยาวตามระยะจริงที่สวย · ยังไม่ตั้ง = 18% ของภาพตามข้อความของผู้ใช้
-    const mpu = metersPerUnit(map, iw / ih);
+    // ตั้งมาตราส่วนจริงแล้ว = แถบยาวตามระยะจริงที่สวย · ยังไม่ตั้ง = 18% ของความกว้างกรอบตามข้อความของผู้ใช้
+    const mpu = metersPerUnit(map, aspect);
     const nb = mpu ? niceScaleBar(mpu, 18) : null;
-    const bw = nb ? (nb.units / 100) * W : W * 0.18, bx = 40 * scale, by = H - 55 * scale, bh = 9 * scale;
+    const bw = nb ? nb.units * ppx : 18 * ppx, bx = 40 * scale, by = H - 55 * scale, bh = 9 * scale;
     ctx.fillStyle = 'rgba(255,255,255,.85)';
     ctx.fillRect(bx - 6 * scale, by - 6 * scale, bw + 12 * scale, bh + 30 * scale);
     ctx.fillStyle = PRINT.ink; ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = PRINT.paper; ctx.fillRect(bx + bw / 4, by + 1, bw / 4, bh - 2);
     ctx.fillStyle = PRINT.ink; ctx.font = `${Math.round(13 * scale)}px "Sarabun", sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.fillText(nb ? distText(niceDistance(nb.meters)) : (ov.scaleLabel || ''), bx, by + bh + 12 * scale);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(nb ? distText(niceDistance(nb.meters)) : (ov.scaleLabel || ''), bx, by + bh + 4 * scale);
     ctx.restore();
   }
   return cv;
@@ -1837,14 +2585,23 @@ async function drawMapToCanvas(map) {
 
 function safeFileName(s) { return String(s || 'map').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'map'; }
 
-export async function exportMapPng(map) {
+/**
+ * ส่งออกแผนที่เป็น PNG
+ * [alpha.168] ผู้ใช้: "map ส่งออก png ใช้ไม่ได้" — เดิมเขียนเงียบ ๆ ลงคลังรูป ไม่มีกล่องบันทึก ไม่บอกว่าไปไหน
+ *   → ค่าเริ่มต้น = กล่องบันทึก (เลือกที่เก็บเอง) · { library:true } = เก็บในคลังรูปของโปรเจกต์แบบเดิม · outPath = เทส
+ * @returns ทางไฟล์ / true (คลังรูป) / null (ยกเลิก) / false (ผิดพลาด)
+ */
+export async function exportMapPng(map, opts = {}) {
   try {
     const cv = await drawMapToCanvas(map);
-    const b64 = cv.toDataURL('image/png').split(',')[1];
-    const dir = await kapi.join(state.root, 'Images');
-    const name = await kapi.writeImageData(dir, safeFileName(map.name) + '-map.png', b64);
-    setStatus(t('ui.maps.saveMapLibraryImage') + (typeof name === 'string' ? name : 'map.png'));
-    return true;
+    const base = safeFileName(map.name) + '-map.png';
+    if (opts.library) {
+      const dir = await kapi.join(state.root, 'Images');
+      const name = await kapi.writeImageData(dir, base, cv.toDataURL('image/png').split(',')[1]);
+      setStatus(t('ui.maps.saveMapLibraryImage') + (typeof name === 'string' ? name : base));
+      return true;
+    }
+    return await saveCanvasPng(cv, base, opts.outPath);
   } catch (e) {
     log('error', t('ui.maps.mapsExportPNGNot'), e);
     setStatusError(failText(t('ui.common.exportPNGNotOk'), e));
@@ -1905,4 +2662,152 @@ export async function exportMapGeoJson(map, outPath) {
     setStatusError(failText(t('ui.maps.geojson'), e));
     return null;
   }
+}
+
+// ═══════════════════════ [alpha.168] แผนที่ในหน้า Wiki (ภาพอ้างอิง 4 ของผู้ใช้) ═══════════════════════
+// ผู้ใช้: "ใน wiki เราต้องสามารถ อิง map ได้เปล่า แบบรูปที่ 4" → กล่อง "แผนที่" ในหน้าเอนทิตี้:
+//   ปักอยู่แล้ว = แผนที่ย่อ (เลื่อน/ซูมได้) กึ่งกลางที่หมุดของเอนทิตี้นี้ + หมุด/โซนอื่นรอบ ๆ · หลายใบ = แท็บเลือกใบ
+//   ยังไม่ปัก = เลือกแผนที่แล้ว "ปักลงแผนที่นี้" ได้ทันที (ไม่ต้องไปเปิดแผงแผนที่ก่อน)
+// ใช้คลาสหน้าตาเดียวกับแผงแผนที่ (.map2) — หมุดรูปย่อ · โซนตามสี/ความจาง · คงขนาดบนจอ
+export async function renderMapEmbed(host, entityFile, entityName) {
+  if (!host || !state.root) return false;
+  host.replaceChildren();
+  let data;
+  try { data = await loadMaps(); } catch { return false; }
+  const maps = data.maps || [];
+  const norm = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
+  const mine = (f) => f && norm(f) === norm(entityFile);
+  const hits = maps.filter((m) => (m.pins || []).some((p) => p.kind === 'entity' && mine(p.entityFile)) ||
+    mapZones(m).some((z) => mine(z.entityFile)));
+  const head = el('div', 'wiki-map-head');
+  head.append(el('span', 'wiki-map-title', gi('map') + ' ' + t('ui.maps.wikiBlock')));
+  host.append(head);
+  if (!hits.length) {
+    const box = el('div', 'wiki-map-empty');
+    box.append(el('div', 'dim', maps.length ? t('ui.maps.wikiNotPlaced') : t('ui.maps.wikiNoMaps')));
+    if (maps.length) {
+      const sel = el('select', 'k-dlg-select wiki-map-sel');
+      for (const m of sortMaps(maps)) { const o = el('option', null, m.name || ''); o.value = m.id; sel.append(o); }
+      const b = el('button', 'cmp-mini k-ok', gi('map-pin') + ' ' + t('ui.maps.wikiPlaceHere'));
+      b.onclick = async () => {
+        const m = findMap(maps, sel.value);
+        if (!m) return;
+        m.pins = [...(m.pins || []), entityPin(50, 50, entityFile, entityName)];
+        await saveMaps(data);
+        setStatus(tf('ui.maps.entPlacedStatus', entityName));
+        refreshMapsIfOpen();
+        renderMapEmbed(host, entityFile, entityName);
+      };
+      box.append(sel, b);
+    } else {
+      const b = el('button', 'cmp-mini', gi('map') + ' ' + t('ui.maps.wikiOpenMaps'));
+      b.onclick = () => openMaps();
+      box.append(b);
+    }
+    host.append(box);
+    return true;
+  }
+  const want = host._mapId && hits.some((m) => m.id === host._mapId) ? host._mapId : hits[0].id;
+  host._mapId = want;
+  const cur = findMap(maps, want);
+  if (hits.length > 1) {
+    const tabs = el('div', 'wiki-map-tabs');
+    for (const m of hits) {
+      const b = el('button', 'cmp-mini' + (m.id === want ? ' on' : ''), m.name || '');
+      b.onclick = () => { host._mapId = m.id; renderMapEmbed(host, entityFile, entityName); };
+      tabs.append(b);
+    }
+    head.append(tabs);
+  }
+  const pin = (cur.pins || []).find((p) => p.kind === 'entity' && mine(p.entityFile));
+  const zone = mapZones(cur).find((z) => mine(z.entityFile));
+  const openB = el('button', 'cmp-mini wiki-map-open', gi('arrow-expand') + ' ' + t('ui.maps.wikiOpenPanel'));
+  openB.onclick = () => focusMapPin(cur.id, pin ? pin.id : null, pin ? null : zone ? polygonCentroid(zone.points) : null);
+  head.append(el('span', 'wiki-map-sp'), openB);
+
+  // ── ผืนแผนที่ย่อ ──
+  const wrap = el('div', 'map2 wiki-map-view');
+  const stage = el('div', 'map-stage');
+  const canvas = el('div', 'map-canvas');
+  const W = FRAME_W, H = FRAME_W / frameAspect(cur);
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  if (cur.image) { const im = el('img', 'map-img'); im.src = mapImgURL(cur.image); im.alt = ''; im.draggable = false; applyMapBgStyle(im, cur); canvas.append(im); }
+  const NS = 'http://www.w3.org/2000/svg';
+  const zs = document.createElementNS(NS, 'svg');
+  zs.setAttribute('class', 'map-zones'); zs.setAttribute('viewBox', '0 0 100 100'); zs.setAttribute('preserveAspectRatio', 'none');
+  for (const z of mapZones(cur)) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', zonePath(z.points));
+    p.setAttribute('class', 'map-zone' + (mine(z.entityFile) ? ' sel' : ''));
+    p.setAttribute('vector-effect', 'non-scaling-stroke');
+    p.style.setProperty('--zc', z.color || ZONE_COLORS[0]);
+    p.style.fill = z.color || ZONE_COLORS[0];
+    p.style.fillOpacity = String(zoneOpacity(z));
+    zs.append(p);
+  }
+  canvas.append(zs);
+  const portraits = await loadPortraits();
+  const names = new Map((await loadEntities()).map((e) => [e.file, e.name]));
+  for (const p of cur.pins || []) {
+    const n = el('div', 'map-pin map-pin-' + (p.kind || 'note') + (p === pin ? ' sel wiki-map-me' : ''));
+    n.style.left = p.x + '%'; n.style.top = p.y + '%';
+    if (p.color) n.style.setProperty('--pin-color', p.color);
+    const k = pinScaleOf(cur) * pinSizeK(p);
+    if (k !== 1) n.style.setProperty('--pin-scale', String(k));
+    const label = (p.kind === 'entity' && names.get(p.entityFile)) || p.label || '';
+    if (p.kind === 'text') n.append(el('span', 'map-text-label', label));
+    else {
+      const badge = el('span', 'map-pin-badge');
+      const th = pinThumb(p, portraits, maps);
+      if (th) { const av = el('span', 'map-pin-portrait'); const im = el('img'); im.src = th.url; im.alt = ''; im.draggable = false; av.append(im); badge.append(av); }
+      else badge.append(el('span', 'map-pin-icon', (PIN_KIND[p.kind] || PIN_KIND.note).icon));
+      n.append(badge);
+      if (label && !p.hideLabel) n.append(el('span', 'map-pin-label', label));
+    }
+    n.title = label;
+    if (p.kind === 'entity' && p.entityFile && p !== pin) n.onclick = () => openEntity(p.entityFile);
+    if (p.kind === 'portal' && p.toMap) n.onclick = () => openMapById(p.toMap);
+    canvas.append(n);
+  }
+  stage.append(canvas);
+  wrap.append(stage);
+  host.append(wrap);
+
+  const cam = { zoom: 1.8, cx: pin ? pin.x : zone ? polygonCentroid(zone.points).x : 50, cy: pin ? pin.y : zone ? polygonCentroid(zone.points).y : 50 };
+  const apply = () => {
+    const sw = stage.clientWidth || 600, sh = stage.clientHeight || 300;
+    const fit = Math.min(sw / W, sh / H) * 0.92, s = fit * cam.zoom;
+    canvas.style.transform = `translate(${sw / 2 - (cam.cx / 100) * W * s}px, ${sh / 2 - (cam.cy / 100) * H * s}px) scale(${s})`;
+    canvas.style.setProperty('--z', String(s));
+  };
+  requestAnimationFrame(apply);
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    const sw = stage.clientWidth, sh = stage.clientHeight, fit = Math.min(sw / W, sh / H) * 0.92;
+    const s0 = fit * cam.zoom, tx0 = sw / 2 - (cam.cx / 100) * W * s0, ty0 = sh / 2 - (cam.cy / 100) * H * s0;
+    const ax = e.clientX - r.left, ay = e.clientY - r.top, wx = (ax - tx0) / s0, wy = (ay - ty0) / s0;
+    cam.zoom = clampZoom(zoomLadder(cam.zoom, e.deltaY < 0 ? 1 : -1));
+    const s1 = fit * cam.zoom;
+    cam.cx = ((sw / 2 - (ax - wx * s1)) / s1 / W) * 100; cam.cy = ((sh / 2 - (ay - wy * s1)) / s1 / H) * 100;
+    apply();
+  }, { passive: false });
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || (e.target.closest && e.target.closest('.map-pin'))) return;
+    const sx = e.clientX, sy = e.clientY, c0 = { ...cam };
+    const sw = stage.clientWidth, sh = stage.clientHeight, s = Math.min(sw / W, sh / H) * 0.92 * cam.zoom;
+    const mv = (ev) => { cam.cx = c0.cx - ((ev.clientX - sx) / s / W) * 100; cam.cy = c0.cy - ((ev.clientY - sy) / s / H) * 100; apply(); stage.classList.add('panning'); };
+    const offEsc = escCancelDrag(() => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); Object.assign(cam, c0); apply(); stage.classList.remove('panning'); });
+    const up = () => { offEsc(); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); stage.classList.remove('panning'); };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  });
+  const ro = new ResizeObserver(() => { if (stage.isConnected) apply(); else ro.disconnect(); });
+  ro.observe(stage);
+  // บรรทัดสรุป: อยู่ในโซนไหน · พิกัด
+  const where = [];
+  if (pin) for (const z of zonesOfPin(cur, pin)) if (z.name) where.push(gi('vector-polygon') + ' ' + z.name);
+  const ll = pin ? toLatLon(cur, pin) : null;
+  if (ll) where.push(gi('crosshairs') + ' ' + formatLatLon(ll));
+  if (where.length) host.append(el('div', 'wiki-map-foot dim', where.join('   ')));
+  return true;
 }

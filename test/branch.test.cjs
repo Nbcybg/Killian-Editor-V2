@@ -335,5 +335,13 @@ check('buildGraph รับ undefined ได้', BG.buildGraph(undefined).nodes
   check('ไม่ตั้งสี = ว่าง ไม่ใช่ undefined', BG.buildGraph([{ id: 'x' }]).byId.get('x').color === '');
 }
 
+// [alpha.168] ฉากที่ลากมาวางบนผังเอง (ยังไม่มีทางเลือก) อยู่ในผัง
+{
+  const g = BG.buildGraph([{ id: 'a' }, { id: 'b' }, { id: 'c', choices: [{ text: 'ไป', nextSceneId: 'b' }] }]);
+  check('[168] ก่อนวาง: ฉากเดี่ยวไม่อยู่ในผัง', !BG.involvedIds(g).has('a'));
+  g.byId.get('a').placed = true;
+  check('[168] ฉากที่ลากมาวาง (placed) อยู่ในผัง', BG.involvedIds(g).has('a') && BG.layoutGraph(g).placed.some((p) => p.id === 'a'));
+  check('[168] ฉากวางเองนับในสรุปผัง', BG.analyzeGraph(g).total === 3, BG.analyzeGraph(g).total);
+}
 console.log(`branch-graph: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

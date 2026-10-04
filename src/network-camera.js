@@ -59,9 +59,11 @@ export function normalizeCam(saved) {
     rx: clampRx(Number.isFinite(+s.rx) ? (s.v >= 2 ? +s.rx : -Math.abs(+s.rx)) : CAM_DEFAULT_ANGLES.rx),
     ry: n(s.ry, CAM_DEFAULT_ANGLES.ry),
     mode3D: !!s.mode3D,
-    // [รอบ 2] มุมมองระยะในโหมด 3D (ค่าเริ่มต้นเปิด — ของไกลเล็กลง) · 2D ไม่มีผลเลย
-    persp: s.persp !== false,
-    v: 2,
+    // [รอบ 2] มุมมองระยะในโหมด 3D · 2D ไม่มีผลเลย
+    // [alpha.168] ค่าเริ่มต้น = แบบขนาน (orthographic) — ผู้ใช้: "กล้อง 3d เป็น perspective มองยาก ควรเป็น orthographic"
+    //   กล้องที่บันทึกก่อนรุ่นนี้ (v < 3) ถูกตั้งเป็นเปิดโดยไม่ได้เลือกเอง → ปิดให้ครั้งเดียว · หลังจากนี้เปิดเองได้ด้วยปุ่ม
+    persp: s.v >= 3 ? s.persp === true : false,
+    v: 3,
   };
 }
 
@@ -163,7 +165,7 @@ export function serializeCam(cam) {
   const c = normalizeCam(cam);
   const r = (v, d = 1) => Math.round(v * d) / d;
   return { tx: r(c.tx), ty: r(c.ty), tz: r(c.tz), scale: r(c.scale, 1000),
-           rx: r(c.rx, 1000), ry: r(c.ry, 1000), mode3D: c.mode3D, persp: c.persp, v: 2 };
+           rx: r(c.rx, 1000), ry: r(c.ry, 1000), mode3D: c.mode3D, persp: c.persp, v: 3 };
 }
 
 // ═══════════════════ [alpha.166 · รอบ 2] มุมมองระยะ (perspective) ═══════════════════

@@ -7,6 +7,7 @@
 import { t, tf } from './i18n.js';
 import { state, setStatus, setStatusError, log } from './core.js';
 import { failText } from './err-text.js';
+import { kanbanSections, kanbanRows } from './kanban/kanban-csv.js';   // [alpha.168] ตรรกะของ CSV (บริสุทธิ์ · unit `panel-exports`)
 
 /** แผง → รูปแบบที่ส่งออกได้ (ลำดับ = ลำดับในเมนู) — main.js มีสำเนาเป็นข้อมูล (ตรวจตรงกันด้วย unit test) */
 export const PANEL_EXPORTS = [
@@ -19,6 +20,7 @@ export const PANEL_EXPORTS = [
   { panel: 'kanban',        fmts: ['csv'] },
   { panel: 'gallery',       fmts: ['zip'] },
   { panel: 'ai-analyzer',   fmts: ['csv'] },
+  { panel: 'floorplan',     fmts: ['png', 'csv', 'md'] },
 ];
 export function canExport(panel, fmt) {
   const e = PANEL_EXPORTS.find((x) => x.panel === panel);
@@ -34,15 +36,6 @@ async function until(fn, ms = 3000) {
 const safe = (s) => String(s || 'export').replace(/[\\/:*?"<>|]+/g, '-').trim().slice(0, 60) || 'export';
 const projName = () => safe((state.meta && state.meta.title) || state.title || 'project');
 
-async function canvasToFile(cv, defName, outPath) {
-  const dest = outPath || await kapi.saveAsDialog(defName, 'png');
-  if (!dest) return null;
-  const bin = atob(cv.toDataURL('image/png').split(',')[1] || '');
-  const bytes = new Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  await kapi.writeBytes(dest, bytes);
-  return dest;
-}
 const csvCell = (v) => { const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 
 /**
@@ -66,7 +59,7 @@ export async function exportPanel(panel, fmt, outPath) {
         const data = (mapsState_C.s && mapsState_C.s.data) || await loadMaps();
         const cur = (mapsState_C.s && findMap(data.maps, mapsState_C.s.currentId)) || sortMaps(data.maps)[0];
         if (!cur) { setStatus(t('ui.panelExport.noMap')); return null; }
-        if (fmt === 'png') return M.exportMapPng(cur);
+        if (fmt === 'png') return M.exportMapPng(cur, { outPath });
         if (fmt === 'geojson') return M.exportMapGeoJson(cur, outPath);
         return M.printMap(cur);
       }
@@ -85,9 +78,8 @@ export async function exportPanel(panel, fmt, outPath) {
         const net = app.netInst;
         if (!net) return null;
         try { net.draw(); } catch {}
-        const dest = await canvasToFile(net.canvas, projName() + '-story-network.png', outPath);
-        if (dest) setStatus(tf('ui.panelExport.done', String(dest).split(/[\\/]/).pop()));
-        return dest;
+        const { saveCanvasPng } = await import('./export-image.js');
+        return saveCanvasPng(net.canvas, projName() + '-story-network.png', outPath);
       }
       case 'planner': {
         showPanel('planner');
@@ -96,7 +88,7 @@ export async function exportPanel(panel, fmt, outPath) {
         const p = activePlanner();
         const pb = p && (typeof p.exportPNG === 'function' ? p : p.pb);
         if (!pb || typeof pb.exportPNG !== 'function') { setStatus(t('ui.panelExport.needPlanner')); return null; }
-        return pb.exportPNG();
+        return pb.exportPNG(outPath);
       }
       case 'branch': {
         // ผังแตกสายมีเมนูส่งออกของตัวเองที่ต้องใช้ผังที่วาดอยู่ (SVG/PNG) — เปิดแผงแล้วเปิดเมนูนั้น
@@ -104,14 +96,25 @@ export async function exportPanel(panel, fmt, outPath) {
         await until(() => document.querySelector('#branch-body .branch-export'));
         const b = document.querySelector('#branch-body .branch-export');
         if (!b) { setStatus(t('ui.panelExport.needBranch')); return null; }
-        b.click();
-        return true;
+        // [alpha.168 · bug hunt] ส่งออกตามรูปแบบที่ผู้ใช้เลือกในเมนูระบบเลย (เดิมทุกรูปแบบแค่เปิดเมนูของแผงให้เลือกซ้ำ)
+        const { exportBranchFmt } = await import('./branching-ui.js');
+        const r = await exportBranchFmt(fmt, outPath);
+        if (r === null) { setStatus(t('ui.panelExport.needBranch')); return null; }
+        return r;
       }
       case 'kanban': return exportKanbanCsv(outPath);
       case 'gallery': {
         const { handleCommand } = await import('./app.js');
         await handleCommand('gallery-export-used');
         return true;
+      }
+      case 'floorplan': {
+        // [alpha.168] ผังพื้นที่: ภาพของผังที่เปิดอยู่ ณ จังหวะปัจจุบัน (ตัววาดเดียวกับบนจอ · พื้นขาว)
+        const FP = await import('./floorplan-ui.js');
+        if (!FP.floorPlanView().planId) { showPanel('floorplan'); await FP.renderFloorPlanPanel(); }
+        if (!FP.floorPlanView().planId) { setStatus(t('ui.fp.emptyTitle')); return null; }
+        // csv/md = shot list (ทุกจังหวะ: กล้อง · เลนส์ · ใครอยู่ในภาพ · ไฟ · prompt)
+        return fmt === 'png' ? FP.exportFloorPlanPng(outPath) : FP.exportShotList(fmt, outPath);
       }
       case 'ai-analyzer': {
         showPanel('ai-analyzer');
@@ -127,34 +130,31 @@ export async function exportPanel(panel, fmt, outPath) {
   }
 }
 
-/** Kanban = ตารางฉากตามสถานะ (เล่ม · บท · ฉาก · สถานะ · เวลาในเรื่อง · จำนวนคำ) */
+/** Kanban = ตารางฉากตามสถานะ (เล่ม · บท · ฉาก · สถานะ · เวลาในเรื่อง · จำนวนคำ) — ร่างหลักของแต่ละเล่ม เรียงตามลำดับเรื่อง */
 export async function exportKanbanCsv(outPath) {
-  const rows = [[t('ui.panelExport.colBook'), t('ui.panelExport.colChapter'), t('ui.panelExport.colScene'),
-                 t('ui.panelExport.colStatus'), t('ui.panelExport.colStoryDate'), t('ui.panelExport.colWords')]];
-  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research']);
+  const head = [t('ui.panelExport.colBook'), t('ui.panelExport.colChapter'), t('ui.panelExport.colScene'),
+                t('ui.panelExport.colStatus'), t('ui.panelExport.colStoryDate'), t('ui.panelExport.colWords')];
+  const skip = new Set(['Wiki', 'Bible', 'Images', 'Memos', 'Recycle', 'Snapshots', '.k2history', 'Backups', 'Plugins', 'Research',
+                        'FloorPlans', 'Planners', 'Branches', 'Models', 'OnSet']);
   const { dataLabel } = await import('./core.js');
-  for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
-    if (skip.has(sec)) continue;
-    const sp = await kapi.join(state.root, sec);
-    const sj = await kapi.join(sp, 'section.json');
+  const secs = [];
+  for (const folder of await kapi.listDirs(state.root).catch(() => [])) {
+    if (skip.has(folder)) continue;
+    const sj = await kapi.join(state.root, folder, 'section.json');
     if (!(await kapi.exists(sj))) continue;
-    let secTitle = sec; try { secTitle = (await kapi.readJson(sj)).title || sec; } catch {}
-    const dr = await kapi.join(sp, 'Draft');
-    if (!(await kapi.exists(dr))) continue;
-    for (const dn of await kapi.listDirs(dr).catch(() => [])) {
-      const dp = await kapi.join(dr, dn);
-      let draft = {}, sc = {};
-      try { draft = await kapi.readJson(await kapi.join(dp, 'draft.json')); } catch { continue; }
-      try { sc = (await kapi.readJson(await kapi.join(dp, 'scenes.json'))).chapters || {}; } catch {}
-      for (const ch of (draft.chapters || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))) {
-        for (const r of (sc[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))) {
-          if (r.type === 'memo') continue;
-          rows.push([secTitle, ch.title || '', r.title || '', r.status ? dataLabel(r.status) : '', r.storyDate || '', r.words || r.wordCount || '']);
-        }
-      }
-    }
+    let meta = {}; try { meta = (await kapi.readJson(sj)) || {}; } catch {}
+    secs.push({ folder, meta });
   }
-  const text = '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  const books = [];
+  for (const sec of kanbanSections(secs)) {
+    const dp = await kapi.join(state.root, sec.folder, 'Draft', sec.draft);
+    let draft = null, scenes = {};
+    try { draft = await kapi.readJson(await kapi.join(dp, 'draft.json')); } catch { continue; }
+    try { scenes = (await kapi.readJson(await kapi.join(dp, 'scenes.json'))).chapters || {}; } catch {}
+    books.push({ title: sec.title, draft, scenes });
+  }
+  const rows = [head, ...kanbanRows(books, dataLabel)];
+  const text = '\uFEFF' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
   const dest = outPath || await kapi.saveAsDialog(projName() + '-kanban.csv', 'csv');
   if (!dest) return null;
   await kapi.writeFile(dest, text);

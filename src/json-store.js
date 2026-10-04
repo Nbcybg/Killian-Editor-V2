@@ -17,7 +17,14 @@
 // ข้อควรระวัง: **ห้ามเรียก mutateJson ของไฟล์เดียวกันซ้อนจากใน fn** — จะรอตัวเองตลอดกาล
 // โมดูลบริสุทธิ์ (ไม่แตะ DOM/kapi โดยตรง — รับ io เข้ามา) → unit test ได้ตรง ๆ
 
+import { brokenBackupName } from './json-guard.js';
+
 const queues = new Map();
+
+// [alpha.168 · bug hunt 2] ตัวฟัง "ไฟล์ทะเบียนอ่านไม่ออก" — app.js ลงทะเบียนไว้เพื่อบอกผู้ใช้ + จด log
+let brokenListener = null;
+/** @param {(info:{file:string, backup:string, error:any}) => void} fn */
+export function onBrokenJson(fn) { brokenListener = typeof fn === 'function' ? fn : null; }
 
 /** กุญแจของไฟล์ — ไม่สนตัวคั่น/ตัวพิมพ์ (Windows) */
 export function fileKey(p) {
@@ -60,6 +67,17 @@ export function mutateJson(io, file, fn, opts = {}) {
     try { data = await io.readJson(file); }
     catch (e) {
       if (!('fallback' in opts)) throw e;
+      // [alpha.168 · bug hunt 2] ★ "ไฟล์มีอยู่แต่อ่านไม่ออก" ≠ "ไฟล์ไม่มี" — เดิมสองกรณีได้ fallback เหมือนกัน
+      // แล้วเขียนทับทันที: scenes.json ที่ซิงก์มาครึ่งไฟล์ + กู้ฉากจากถัง/ให้ AI เพิ่มฉาก = ทะเบียนฉากทั้งร่างหาย
+      // ตอนนี้: ไฟล์มีอยู่ = เก็บสำเนา `<ชื่อ>.unreadable-<เวลา>.json` ก่อน · สำรองไม่ได้ = ไม่เขียนทับ (โยน error เดิม)
+      let has = false;
+      try { has = typeof io.exists === 'function' ? !!(await io.exists(file)) : false; } catch { has = false; }
+      if (has) {
+        let backup = '';
+        try { if (typeof io.copyFile === 'function') { const dst = brokenBackupName(file); await io.copyFile(file, dst); backup = dst; } } catch { backup = ''; }
+        try { if (brokenListener) brokenListener({ file, backup, error: e }); } catch {}
+        if (!backup) throw e;
+      }
       data = typeof opts.fallback === 'function' ? opts.fallback() : clone(opts.fallback);
     }
     const result = await fn(data);

@@ -22,6 +22,7 @@
 
 import { t as tt, t } from '../i18n.js';
 import { cmpText } from '../locale.js';
+import { normalizeBoardBg } from './moodboard.js';
 export const IMAGES_DIR = 'Images';
 export const ALBUMS_JSON = 'albums.json';
 export const ALBUM_META = 'album.json';
@@ -246,6 +247,8 @@ export function normalizeAlbumDoc(doc, name) {
     name: String(d.name || name || ''),
     images,
     moodBoard: Array.isArray(d.moodBoard) ? d.moodBoard : [],
+    // [alpha.168] ฉากหลังของกระดานอารมณ์ (ไม่มี = พื้นตามธีม)
+    ...(d.moodBoardBg && typeof d.moodBoardBg === 'object' ? { moodBoardBg: normalizeBoardBg(d.moodBoardBg) } : {}),
   };
 }
 
@@ -263,8 +266,10 @@ export function syncAlbumDoc(doc, filesOnDisk, now = Date.now()) {
   // ชิ้นบนกระดานที่เป็น path (มี '/') = รูปจากอัลบั้มอื่น — ไม่อยู่ในรายชื่อไฟล์ของอัลบั้มนี้
   // จึงต้องเก็บไว้เสมอ (ตัดทิ้งเฉพาะรูปในอัลบั้มนี้เองที่ไฟล์หายไปแล้ว)
   const set = new Set(files);
-  const moodBoard = d.moodBoard.filter((it) =>
-    it && it.file && (String(it.file).includes('/') || set.has(it.file)));
+  // [alpha.168 · บั๊ก] การ์ด (ตัวละคร · โน้ต · ลิงก์ · กลุ่ม …) ไม่มีไฟล์รูป — เดิมถูกตัดทิ้งทุกครั้งที่คลังรูปซิงก์อัลบั้ม
+  //   (เปิดแผงคลังรูป = การ์ดบนกระดานหายหมด) → เก็บไว้เสมอ ตัดเฉพาะ "รูป" ที่ไฟล์หายไปแล้ว
+  const moodBoard = d.moodBoard.filter((it) => it && (it.kind ||
+    (it.file && (String(it.file).includes('/') || set.has(it.file)))));
   return { ...d, images, moodBoard };
 }
 

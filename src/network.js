@@ -61,9 +61,12 @@ function toggleBtn(cls, title, onToggle) {
 }
 function buildToolbar(pane, cb) {
   const bar=document.createElement('div');bar.className='net-toolbar';
-  const tg=document.createElement('button');tg.className='net-tbar-toggle';tg.textContent=gi('triangle-down');tg.title=tt('ui.net.hide');
+  // [alpha.168] แถบบนเต็มความกว้าง (เดิมการ์ดลอยมุมซ้ายที่อัดทุกอย่างไว้เจ็ดแถว): แถวหลัก = เครื่องมือ · ค้นหา · คำสั่ง
+  //   แถวที่สอง (พับได้ด้วยปุ่มตัวกรอง) = หมวด · ชนิดความสัมพันธ์ · ขนาดโหนด · กริด
+  const tg=document.createElement('button');tg.className='net-tbar-btn net-tbar-toggle net-tog on';tg.textContent=gi('filter');tg.title=tt('ui.net.filtersTip');
+  tg.setAttribute('aria-label', tt('ui.net.filtersTip'));
   const bd=document.createElement('div');bd.className='net-tbar-body';let col=false;
-  tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.textContent=col?gi('play'):gi('triangle-down');};
+  tg.onclick=()=>{col=!col;bd.style.display=col?'none':'';tg.classList.toggle('on',!col);};
   const ca=new Set(CAT_ARR.slice(0,4)),tf=new Set([...REL_TYPES.map(t=>t.key),'co-occur','scene-link','ent-scene']);
   const cr=document.createElement('div');cr.className='net-tbar-row';
   // ชิปหมวด: ชื่อ/คีย์มาจาก network-theme.js · สีถูกทาทีหลังโดย _paintToolbarColors()
@@ -91,7 +94,7 @@ function buildToolbar(pane, cb) {
   gridSize.oninput=()=>{cb.setGridPx(Number(gridSize.value));gridSize.title=tt('ui.net.sizeGrid')+gridSize.value+'px';};
   const gridAlpha=document.createElement('input');gridAlpha.type='range';gridAlpha.className='net-grid-slider net-grid-alpha';gridAlpha.min='1';gridAlpha.max='100';gridAlpha.value=String(Math.round(cb.gridAlpha()*100));gridAlpha.title=tt('ui.net.hollowGrid2');
   gridAlpha.oninput=()=>{cb.setGridAlpha(Number(gridAlpha.value)/100);gridAlpha.title=tt('ui.net.hollowGrid')+gridAlpha.value+'%';};
-  gridRow.append(gridBtn,gridSize,gridAlpha);
+  const gsep=document.createElement('span');gsep.className='net-tbar-sep';
   // ── [alpha.71 ข้อ 3] แถวเครื่องมือ: แสดงตัวหนังสือ · เปิด/แก้ไข/ย้าย (+ ตรวจดู/ผูกความสัมพันธ์) · ขยาย-ย่อโหนด ──
   const toolRow=document.createElement('div');toolRow.className='net-tbar-row net-tbar-tools';
   const lblBtn=document.createElement('button');
@@ -113,7 +116,6 @@ function buildToolbar(pane, cb) {
   const size=document.createElement('input');size.type='range';size.className='net-grid-slider net-size-slider';
   size.min='50';size.max='250';size.value='100';size.title=tt('ui.net.sizeNode3');
   size.oninput=()=>{cb.setNodeScale(Number(size.value)/100);size.title=tt('ui.net.sizeNode2')+size.value+'%';};
-  toolRow.append(szLbl,size);
 
   const btns=document.createElement('div');btns.className='net-tbar-actions';
   const acts=[
@@ -138,7 +140,15 @@ function buildToolbar(pane, cb) {
     b.onclick=()=>{ if(x.cl==='net-tog'||x.cl==='net-tog on') b.classList.toggle('on'); x.f(); };
     btns.appendChild(b);
   }
-  bd.append(cr,tr,toolRow,gridRow,sw,btns);bar.append(tg,bd);pane.appendChild(bar);
+  const vsep=(()=>{const s=document.createElement('span');s.className='net-tbar-sep';return s;});
+  gridRow.append(szLbl,size,gsep,gridBtn,gridSize,gridAlpha);
+  const main=document.createElement('div');main.className='net-tbar-main';
+  const sp=document.createElement('span');sp.className='net-tbar-sp';
+  main.append(tg,toolRow,sw,sp,btns);
+  bd.append(cr,vsep(),tr,vsep(),gridRow);
+  bar.append(main,bd);pane.appendChild(bar);
+  // แผงข้าง/การ์ดอื่นวางใต้แถบ — ความสูงแถบเปลี่ยนตามความกว้าง (พับบรรทัด) และตอนพับตัวกรอง
+  try { const ro=new ResizeObserver(()=>pane.style.setProperty('--net-tbar-h', bar.offsetHeight+'px')); ro.observe(bar); } catch {}
   return {bar,btns,toolRow,toolBtns,destroy:()=>bar.remove()};
 }
 
@@ -191,7 +201,7 @@ function loadCam(scope) {
 export class StoryNetwork {
   constructor(pane, { loadEntities, onOpen=null, onOpenScene=null, onReveal=null,
                        onDeleteStruct=null, onRenameStruct=null, onDuplicateStruct=null, onAddChild=null,
-                       onCreateRel=null, onSceneChange=null, assetPath=null, assetUrl=null, importAsset=null }) {
+                       onCreateRel=null, onSceneChange=null, assetPath=null, assetUrl=null, importAsset=null, loadHdr=null }) {
     // ── [alpha.166] กล้อง = จุดโฟกัสในพิกัดโลก (network-camera.js) ──
     // ชื่อเดิม (_cx/_cy/_scale/_rx/_ry/_mode3D) ยังอ่าน/เขียนได้ — เป็นมุมมองของกล้องตัวเดียว ไม่ใช่ค่าแยก
     const saved = loadCam(state.root || '');
@@ -212,7 +222,7 @@ export class StoryNetwork {
     this.onDeleteStruct=onDeleteStruct; this.onRenameStruct=onRenameStruct;
     this.onDuplicateStruct=onDuplicateStruct; this.onAddChild=onAddChild;
     this.onCreateRel=onCreateRel; this.onSceneChange=onSceneChange;
-    this.assetPath=assetPath; this.assetUrl=assetUrl; this.importAsset=importAsset;
+    this.assetPath=assetPath; this.assetUrl=assetUrl; this.importAsset=importAsset; this.loadHdr=loadHdr;
     this.loadEntities=loadEntities;
     this.title='Story Network'; this.dirty=false;
     this.nodes=[];this.edges=[];this.drag=null;
@@ -469,6 +479,15 @@ export class StoryNetwork {
     if(this._bgImg.rel!==rel){
       this._bgImg={ rel, img:null, loading:true };
       const mine=this._bgImg;
+      // [alpha.168] ไฟล์ HDRI (.hdr) — เบราว์เซอร์เปิดไม่ได้ ถอดเองแล้วได้พิกเซลพร้อมวาด (hdr-decode.js)
+      if(/\.hdr$/i.test(rel)){
+        Promise.resolve(this.loadHdr ? this.loadHdr(rel) : null).then((px)=>{
+          if(this._bgImg!==mine)return;
+          mine.loading=false;
+          if(px){ px.hdr=true; mine.img=px; this.draw(); }
+        }).catch(()=>{ mine.loading=false; });
+        return null;
+      }
       Promise.resolve(this.assetUrl ? this.assetUrl(rel) : '').then((url)=>{
         if(!url||this._bgImg!==mine)return;
         const img=new Image();
@@ -681,9 +700,9 @@ export class StoryNetwork {
     // [รอบ 2] แคชทั้งผืน — วาดใหม่เฉพาะตอนกล้อง/ค่าฉากหลังเปลี่ยน (ชี้เมาส์ไม่ต้องวาดกริดหกเหลี่ยมพันช่องใหม่)
     const img=this._bgImage();
     const cam=this._cam;
-    const bgKey=[w,h,cam.tx,cam.ty,cam.tz,s,rot.rx,rot.ry,pj.persp,this._bg,this._grid,this._showGrid,img?img.src:'',
+    const bgKey=[w,h,cam.tx,cam.ty,cam.tz,s,rot.rx,rot.ry,pj.persp,this._bg,this._grid,this._showGrid,img?(img.src||this._bgImg.rel):'',!!cam.mode3D,
                  JSON.stringify(this._scene.bg),JSON.stringify(this._scene.grid)].join('|');
-    drawNetBackgroundCached(c,w,h,pj,this._scene,{bg:this._bg,grid:this._grid},{image:img,showGrid:this._showGrid,cam},bgKey);
+    drawNetBackgroundCached(c,w,h,pj,this._scene,{bg:this._bg,grid:this._grid},{image:img,showGrid:this._showGrid,cam,mode3D:!!cam.mode3D},bgKey);
     c.save();
     c.translate(off.cx,off.cy);c.scale(s,s);
 

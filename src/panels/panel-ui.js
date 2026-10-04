@@ -69,7 +69,7 @@ export const PANEL_DEFS = [
   { id: 'outline',  i18n: 'panel.navigation', adopt: '#outline-panel', defaultSide: 'left',  minW: 220, tearoff: true },
   { id: 'props',    i18n: 'panel.properties', adopt: '#props-panel',   defaultSide: 'right', minW: 240, tearoff: true },
   { id: 'search',   i18n: 'ui.panel.search',  adopt: '#search-panel',  defaultSide: 'left',  minW: 280, dockW: 360, tearoff: true },
-  { id: 'notes',    i18n: 'ui.common.notebookNoteQuick', adopt: '#notes-panel', defaultSide: 'right', minW: 220, tearoff: true },
+  { id: 'notes',    i18n: 'ui.common.notebookNoteQuick', adopt: '#notes-panel', defaultSide: 'right', minW: 220, tearoff: true, flush: true },
   // [alpha.94] Story Starter — สร้างเรื่องทีละขั้น แล้วเล่นเป็นตอน ๆ กับ Game Master
   // [alpha.164 · รอบต่อ 4] minW 460 → 360: หน้าต่าง 1024 (ต้นไม้ + พื้นที่เขียนขั้นต่ำ 420) เหลือให้แผงนี้ ~390px
   //   เนื้อจึงถูกตัดขอบขวาทุกขั้น · ตรวจแล้วทุกขั้นของตัวสร้าง (พื้นฐาน/ขั้นสูง) พอดีที่ 364px
@@ -84,11 +84,11 @@ export const PANEL_DEFS = [
   { id: 'dashboard', i18n: 'panel.dashboardTitle', adopt: '#dash-panel',     defaultSide: 'left', minW: 620, dockW: 640, tearoff: true },
   { id: 'kanban',    i18n: 'panel.kanbanTitle',    adopt: '#kanban-panel',   defaultSide: 'left', minW: 800, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   // [alpha.165] flush = กระดานสูงเต็มแผง → แถบเลื่อนแนวนอนของคอลัมน์อยู่ขอบล่างแผง (เดิมกระดานสูงตามเนื้อ แถบไปลอยกลางแผง)
-  { id: 'books',     i18n: 'panel.booksTitle',     adopt: '#books-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true },
+  { id: 'books',     i18n: 'panel.booksTitle',     adopt: '#books-panel',    defaultSide: 'left', minW: 400, dockW: 640, flush: true, tearoff: true },
   // [alpha.141] จัดการบท — ปกบท (รูป/ข้อความ) · ติ๊กใช้ปก · ลำดับบท · สถิติ
-  { id: 'chapters',  i18n: 'ui.chapters.title',    adopt: '#chapters-panel', defaultSide: 'left', minW: 400, dockW: 640 },
+  { id: 'chapters',  i18n: 'ui.chapters.title',    adopt: '#chapters-panel', defaultSide: 'left', minW: 400, dockW: 640, flush: true },
   { id: 'timeline',  i18n: 'panel.timelineTitle',  adopt: '#tl-panel',       defaultSide: 'left', minW: 620, dockW: 640, tearoff: true, floatFrac: 0.8 },
-  { id: 'maps',      i18n: 'panel.mapsTitle',      adopt: '#maps-panel',     defaultSide: 'left', minW: 400, dockW: 640, tearoff: true, floatFrac: 0.8 },
+  { id: 'maps',      i18n: 'panel.mapsTitle',      adopt: '#maps-panel',     defaultSide: 'left', minW: 400, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   // [alpha.60r1 ข้อ 21] คลังรูปภาพ — ย้ายจากแท็บเอกสารมาเป็นแผงเหมือนฟีเจอร์อื่น
   { id: 'gallery',   i18n: 'panel.galleryTitle',   adopt: '#gal-panel',      defaultSide: 'left', minW: 600, dockW: 640, tearoff: true },
   // [alpha.63r] กระดานอารมณ์ — แยกจากคลังรูปเพราะต้อง "ลากรูปมาวาง" ข้ามแผง
@@ -96,7 +96,7 @@ export const PANEL_DEFS = [
   { id: 'network',   i18n: 'ui.panel.networkTitle', adopt: '#net-panel',      defaultSide: 'left', minW: 400, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   { id: 'planner',   i18n: 'ui.panel.plannerTitle', adopt: '#planner-panel',  defaultSide: 'left', minW: 800, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   { id: 'planner-props', i18n: 'ui.panel.propsPlanner', adopt: '#planner-props-panel', defaultSide: 'right', minW: 240 },
-  { id: 'floorplan', i18n: 'ui.common.graphArea',   adopt: '#floor-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true, floatFrac: 0.8 },
+  { id: 'floorplan', i18n: 'ui.common.graphArea',   adopt: '#floor-panel',    defaultSide: 'left', minW: 400, dockW: 640, tearoff: true, floatFrac: 0.8, flush: true },
   // ── [alpha.66 ข้อ 1+9] เรื่องแบบแตกสาย: ผัง + โหมดทดลองเล่น ──
   { id: 'branch',    i18n: 'panel.branchTitle',     adopt: '#branch-panel',   defaultSide: 'left', minW: 700, dockW: 640, flush: true, tearoff: true, floatFrac: 0.8 },
   // [alpha.69] สารานุกรม

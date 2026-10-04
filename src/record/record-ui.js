@@ -80,7 +80,8 @@ export async function renderRecordPanel(host) {
   const words = el('input', 'k-rec-num'); words.type = 'number'; words.min = '0'; words.placeholder = tt('ui.common.word2');
   const mins = el('input', 'k-rec-num'); mins.type = 'number'; mins.min = '0'; mins.placeholder = tt('ui.common.min');
   const tags = el('input', 'k-rec-tags'); tags.placeholder = tt('ui.recOrd.tagSkip');
-  const add = el('button', 'k-rec-add', tt('ui.recOrd.save2'));
+  words.title = tt('ui.common.word2'); mins.title = tt('ui.common.min');   // [alpha.168] ช่องตัวเลขเล็ก — placeholder หายเมื่อพิมพ์
+  const add = el('button', 'k-rec-add k-ok', tt('ui.recOrd.save2'));
   add.onclick = async () => {
     const text = ta.value.trim();
     if (!text) { setStatus(tt('ui.recOrd.cantWrite')); ta.focus(); return; }
@@ -119,7 +120,7 @@ export async function renderRecordPanel(host) {
     list.replaceChildren();
     const rows = RD.filterEntries(s.data.entries, { q: s.q, mood: s.mood });
     if (!rows.length) {
-      list.append(panelEmpty(s.data.entries.length ? tt('ui.recOrd.notFoundSaveAt') : tt('ui.recOrd.notHasSaveWrite')));
+      list.append(panelEmpty(s.data.entries.length ? tt('ui.recOrd.notFoundSaveAt') : tt('ui.recOrd.notHasSaveWrite'), { icon: 'note' }));
       return;
     }
     for (const g of RD.groupByDay(rows)) {

@@ -95,7 +95,8 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   // ตัววินิจฉัยกระดานต้องไม่ยิง INFO รัว ๆ ทับบันทึกจริงอีก (alpha.128: 45% ของไฟล์เป็นของมัน)
   const app = fs.readFileSync(path.join(ROOT, 'src/app.js'), 'utf8');
   ck("★ auditPlannerRows ยิง debug ตอนปกติ (ไม่ท่วมบันทึกด้วย info)",
-     /const bad = !sec \|\| !rows\.length \|\| hidden \|\| faded \|\| blank;[\s\S]{0,600}?log\(bad \? 'warn' : 'debug'/.test(app));
+     // [alpha.168] "ไม่มีแถวเลย" (โปรเจกต์ยังไม่มีกระดาน) ไม่นับเป็นผิดปกติแล้ว — นิพจน์เปลี่ยน เจตนาเดิม: ปกติ = debug
+     /const bad = !!rows\.length && \(!sec \|\| hidden \|\| faded \|\| blank\);[\s\S]{0,600}?log\(bad \? 'warn' : 'debug'/.test(app));
   const pi = fs.readFileSync(path.join(ROOT, 'src/planner/planner-interact.js'), 'utf8');
   // ══ [alpha.153 ข้อ 4] กฎเปลี่ยน แต่ **เจตนาเดิมยังอยู่** ══
   //
@@ -544,7 +545,9 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
   }
   // หัวข้อในแผงต้องอ้างสเกลกลาง ไม่ใช่ px ของตัวเอง
   const titleRules = ['.dash-title', '.books-title', '.tl-title', '.map-title', '.branch-title',
-                      '.floor-title', '.player-title', '.kb-title', '.planner-props-head'];
+                      '.player-title', '.kb-title', '.planner-props-head'];
+  // [alpha.168] ผังพื้นที่เขียนใหม่ (ผังกองถ่าย) — ไม่มีหัวข้อของตัวเองแล้ว (แถบเครื่องมือเป็นหัวแผง) · ของเดิมต้องไม่ค้างใน CSS
+  ck('[168] คลาสของผังพื้นที่แบบเก่า (.floor-*) ถูกถอดออกจาก CSS หมดแล้ว', !/\.floor-[a-z]/.test(css));
   const offScale = titleRules.filter((sel) => {
     const m = new RegExp('\\' + sel + ' \\{([^}]*)\\}').exec(css);
     return !m || !/var\(--pan-title-fs\)/.test(m[1]);

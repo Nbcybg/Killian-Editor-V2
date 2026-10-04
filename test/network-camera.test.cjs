@@ -97,7 +97,11 @@ const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
   const s = C.serializeCam({ tx: 1.23456, ty: 2, tz: 3, scale: 0.123456, rx: 0.4444, ry: 1, mode3D: false, v: 2 });
   check('[รอบ 2] กล้องที่บันทึกก่อนรุ่นนี้ (มุมบวก = มองจากใต้โต๊ะ) ถูกพลิกเป็นมองจากด้านบนครั้งเดียว',
     C.normalizeCam({ rx: 0.4 }).rx === -0.4 && C.normalizeCam({ rx: 0.4, v: 2 }).rx === 0.4 && C.normalizeCam(C.normalizeCam({ rx: 0.4 })).rx === -0.4);
-  check('[รอบ 2] ค่าเริ่มต้น = มองโต๊ะจากด้านบน (rx ติดลบ) + มุมมองระยะเปิด', C.normalizeCam(null).rx < 0 && C.normalizeCam(null).persp === true);
+  check('[รอบ 2] ค่าเริ่มต้น = มองโต๊ะจากด้านบน (rx ติดลบ)', C.normalizeCam(null).rx < 0);
+  // [alpha.168] ค่าเริ่มต้น = แบบขนาน (orthographic) · กล้องเก่า (v<3) ที่เปิดไว้โดยปริยาย → ปิด · เปิดเองแล้วบันทึก = คงไว้
+  check('[168] ค่าเริ่มต้น = แบบขนาน (orthographic)', C.normalizeCam(null).persp === false);
+  check('[168] กล้องเก่า v2 ที่ persp=true (ค่าปริยายเดิม) → ปิดครั้งเดียว', C.normalizeCam({ persp: true, v: 2 }).persp === false);
+  check('[168] เปิดมุมมองระยะเองแล้วบันทึก/โหลดกลับ = ยังเปิด', C.normalizeCam(C.serializeCam({ persp: true, v: 3 })).persp === true);
   check('serializeCam ปัดเศษ (ไม่ให้ localStorage บวม)', s.tx === 1 && s.scale === 0.123 && s.rx === 0.444);
   check('serializeCam → normalizeCam ไป-กลับได้', C.normalizeCam(s).scale === 0.123);
   const a = { tx: 0, ty: 0, tz: 0, scale: 1, rx: 0, ry: 3.0 }, b = { tx: 100, ty: 50, tz: 10, scale: 4, rx: 0, ry: -3.0 };
