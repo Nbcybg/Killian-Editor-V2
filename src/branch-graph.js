@@ -10,8 +10,25 @@
 // [alpha.66 ข้อ 5] กล่องใหญ่ขึ้นเพราะตัวหนังสือในผังถูกขยายให้เท่า UI หลัก (เดิม 12.5px เล็กกว่าที่อื่น)
 import { t as tt, t } from './i18n.js';
 import { gt } from './icons.js';
-export const NODE_W = 208, NODE_H = 68;
-export const GAP_X = 108, GAP_Y = 26, PAD = 30;
+// [alpha.167] การ์ดแบบโปรแกรมเล่าเรื่องแบบโหนด (หัวสี + แถวทางเลือกแต่ละแถวมีขั้วออกของตัวเอง) — สูงขึ้นให้พอสามแถว
+export const NODE_W = 232, NODE_H = 116;
+export const GAP_X = 116, GAP_Y = 30, PAD = 30;
+/** ขั้วเข้า (ซ้าย) อยู่กลางแถบหัวการ์ด */
+export const PORT_IN_Y = 17;
+/** แถวทางเลือกบนการ์ด: เริ่มที่ y = CHOICE_Y0 สูงแถวละ CHOICE_ROW_H · โชว์ได้ CHOICE_ROWS แถว (เกินนั้นแถวสุดท้ายเป็น "+N") */
+export const CHOICE_Y0 = 58, CHOICE_ROW_H = 18, CHOICE_ROWS = 3;
+
+/** จำนวนแถวที่การ์ดวาดจริง และแถวที่ทางเลือกที่ idx ออกจาก (ทางเลือกที่ล้นรวมที่แถว "+N") */
+export function choiceRowOf(idx, count) {
+  const n = Math.max(0, count | 0);
+  if (n <= CHOICE_ROWS) return Math.max(0, Math.min(idx | 0, CHOICE_ROWS - 1));
+  return Math.min(idx | 0, CHOICE_ROWS - 1);
+}
+/** ระยะจากขอบบนการ์ดถึงขั้วออกของทางเลือกที่ idx (จากทั้งหมด count ทาง) */
+export function choicePortY(idx, count) {
+  if (!count) return NODE_H / 2;
+  return CHOICE_Y0 + choiceRowOf(idx, count) * CHOICE_ROW_H + CHOICE_ROW_H / 2;
+}
 
 // ---------------------------------------------------------------------------
 // ทางเลือกที่ "อยู่ในเนื้อเรื่องจริง" (ข้อ 15)

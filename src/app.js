@@ -6360,6 +6360,7 @@ export async function renderNetworkPanel() {
       },
       assetUrl: async (rel) => (rel && state.root ? kapi.toFileURL(await kapi.join(state.root, rel)) : ''),
       importAsset: (kind) => importNetAsset(kind),
+      onExport: () => exportPanel('network', 'png'),     // [alpha.168 · bug hunt 3] ทางเดียวกับเมนู ส่งออก → ผังความสัมพันธ์
       // [alpha.168] ฉากหลัง HDRI (.hdr) — ถอด + tone map เป็นพิกเซลให้ตัววาดพาโนรามา
       loadHdr: async (rel) => {
         if (!rel || !state.root) return null;
@@ -14111,6 +14112,8 @@ function stopLogAutoRefresh() {
   if (_logTimer) { clearInterval(_logTimer); _logTimer = null; }
 }
 window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
+// เครื่องมือถ่ายภาพหน้าจอของนักพัฒนา (tools/shot.cjs) — มีเฉพาะโหมดเทส (`?k2test`)
+if (location.search.includes('k2test')) window.__k2dev = { loadProject, handleCommand, state, resetPanels };
 // [alpha.108] เครื่องมือวินิจฉัยหน้ากระดาษ — เปิด DevTools แล้วพิมพ์ `k2PageDoctor()`
 // (ไม่มี UI ไม่มีข้อความให้แปล · ใช้ตอนอาการเกิดบนเอกสารจริงของผู้ใช้ที่เครื่องพัฒนาจำลองไม่ได้)
 window.k2PageDoctor = k2PageDoctor;

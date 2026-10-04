@@ -2532,7 +2532,8 @@ if (SINGLE) app.whenReady().then(() => {
   createSplash();
   createWindow();
   splashSay(tt('ui.splash.window'), 4);
-  if (TEST) {
+  // KILLIAN_TEST_NORUN=1 = โหมดเทสแต่ไม่รัน e2e (tools/shot.cjs ขับหน้าต่างเองผ่าน window.__k2dev)
+  if (TEST && process.env.KILLIAN_TEST_NORUN !== '1') {
     win.webContents.once('did-finish-load', () => {
       setTimeout(() => {
         const p = JSON.stringify(process.env.KILLIAN_TEST_PROJECT || '');

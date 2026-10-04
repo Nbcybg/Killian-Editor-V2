@@ -3158,10 +3158,17 @@ export async function runTest(projectPath) {
         const card = document.querySelector('#net-body .net-scene');
         check('[166-B] ★ ปุ่ม "ฉากหลังและโมเดล" เปิดการ์ดตั้งค่าในผัง', !!card && !card.hidden && scBtn.classList.contains('on'));
         const kindSel = card.querySelector('select');
-        // หลายจุด (มุม + ขอบ) — จุดเดียวบังเอิญมีโหนด/ป้ายทับได้ (เจอบน Windows: ขาวทั้งก่อนและหลัง)
-        const bgPx = () => { n.draw(); const g2 = n.canvas.getContext('2d');
-          return [[W - 30, Math.round(H / 2)], [6, 6], [W - 6, 6], [6, H - 6], [W - 6, H - 6]]
-            .map(([x, y]) => { const d = g2.getImageData(x, y, 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; }).join(' '); };
+        // [alpha.167] จุดวัดต้องเป็น "พื้น" จริง — โหนดมีขนาดขั้นต่ำบนจอ + รัศมีเรืองแสงแล้ว จุดตายตัว (W−30, H/2) บังเอิญโดนโหนดได้
+        const bgAt = (() => {
+          const pts = n.nodes.map((x) => n.screenOf(x));
+          let best = { x: W - 30, y: Math.round(H / 2) }, bestD = -1;
+          for (let gx = 20; gx < W - 10; gx += 37) for (let gy = 60; gy < H - 60; gy += 29) {
+            const d = Math.min(...pts.map((p) => Math.hypot(p.x - gx, p.y - gy)), 1e9);
+            if (d > bestD) { bestD = d; best = { x: gx, y: gy }; }
+          }
+          return best;
+        })();
+        const bgPx = () => { n.draw(); const d = n.canvas.getContext('2d').getImageData(bgAt.x, bgAt.y, 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; };
         const pxTheme = bgPx();
         kindSel.value = 'space'; kindSel.dispatchEvent(new Event('change')); await w166(80);
         check('[166-B] ★★ เลือก "อวกาศ" → ฉากหลังเปลี่ยนจริง (วัดสีพิกเซล)', n._scene.bg.kind === 'space' && bgPx() !== pxTheme, pxTheme + ' → ' + bgPx());
@@ -16475,7 +16482,17 @@ export async function runTest(projectPath) {
         check('#12 หน้าแรกเป็น 4 คอลัมน์', cols === 4, String(cols));
         const card1 = grid.querySelector('.home-card');
         if (card1) {
-          const h1 = card1.getBoundingClientRect().height;
+          // [alpha.167] วัดครั้งแรกหลังฟอนต์/รูปปกโหลดเสร็จ — เครื่องที่ฟอนต์ไทยมาช้า (Linux · fallback) ความสูงการ์ด
+          // เปลี่ยนระหว่างวัดครั้งแรกกับครั้งหลังเอง ไม่ใช่เพราะสลับโหมด (กฎข้อ 36: รอเงื่อนไขจริง ไม่ใช่เวลาตายตัว)
+          try { await document.fonts.ready; } catch {}
+          for (let i = 0; i < 40 && [...grid.querySelectorAll('img')].some((im) => !im.complete); i++) await new Promise((r) => setTimeout(r, 50));
+          let h1 = card1.getBoundingClientRect().height;
+          for (let i = 0; i < 20; i++) {
+            await new Promise((r) => requestAnimationFrame(() => r()));
+            const hh = card1.getBoundingClientRect().height;
+            if (Math.abs(hh - h1) < 0.5) break;
+            h1 = hh;
+          }
           grid.classList.add('list');
           await new Promise((r) => setTimeout(r, 60));
           const hList = card1.getBoundingClientRect().height;
@@ -16494,6 +16511,7 @@ export async function runTest(projectPath) {
                 nCards > HUq.HOME_QUICK_MAX ? !quick : (!!quick && quick.querySelectorAll('.home-quick-btn').length >= 3),
                 nCards + ' การ์ด · ' + (quick ? quick.querySelectorAll('.home-quick-btn').length : 0) + ' ปุ่ม');
           if (quick) {
+            hideTip();              // [alpha.88] เมาส์ค้างบนปุ่ม = title ถูกถอดชั่วคราว — คืนก่อนอ่าน
             check('[164-7] ปุ่มทางลัดมีชื่อ + คำอธิบายจากไฟล์ภาษา (ไม่ใช่คีย์ดิบ)',
                   // [alpha.167] ทูลทิปที่กำลังโชว์ฝาก title ไว้ใน data-tip-held (เคอร์เซอร์ของเครื่องทดสอบค้างบนปุ่มได้)
                   [...quick.querySelectorAll('.home-quick-btn')].every((b) => { const tl = b.title || b.dataset.tipHeld || '';
@@ -31687,9 +31705,12 @@ export async function runTest(projectPath) {
               await until157(() => !!colOf('ทดสอบ157')) && CS.allStatuses().length === before157 + 1
               && TA.sceneStatusOptions().some(([v]) => v === 'ทดสอบ157'));
         const head157 = colOf('ทดสอบ157') && colOf('ทดสอบ157').querySelector('.kb-col-head');
-        check('[157-1] หัวคอลัมน์เป็นสีเต็มแถบ + ตัวอักษรอ่านออก',
-              !!head157 && getComputedStyle(head157).backgroundColor === 'rgb(255, 95, 184)'
-              && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, head157 && getComputedStyle(head157).backgroundColor);
+        // [alpha.167] ผู้ใช้: หัวสีทึบเต็มแถบ "แข็งเกินไป" → จุดสีสถานะที่หัว + พื้นคอลัมน์ย้อมสีเดียวกันอ่อน ๆ (สียังซิงก์กับ Explorer)
+        const dot157 = head157 && head157.querySelector('.kb-col-dot');
+        check('[157-1] หัวคอลัมน์มีจุดสีของสถานะ + พื้นคอลัมน์ย้อมสีเดียวกัน',
+              !!dot157 && getComputedStyle(dot157).backgroundColor === 'rgb(255, 95, 184)'
+              && getComputedStyle(colOf('ทดสอบ157')).getPropertyValue('--kb-col').trim() === '#ff5fb8'
+              && CU.contrast('#ff5fb8', CU.inkOn('#ff5fb8')) >= 4.5, dot157 && getComputedStyle(dot157).backgroundColor);
         // ลากการ์ดลงคอลัมน์ใหม่ (ส่งอีเวนต์ drop จริง) → ต้นไม้ได้ชิปสถานะสีเต็ม
         // กระดานจำฉบับร่างที่เทสก่อนหน้าเลือกไว้ — เลือกฉบับร่างของฉากที่ใช้ทดสอบให้ชัด
         await (await import('./kanban/kanban-ui.js')).setKanbanDraft(d157.dPath);
@@ -35362,6 +35383,47 @@ export async function runTest(projectPath) {
         check('[168-BH2] เครดิต: มี three.js และชุดไอคอน (มากับตัวโปรแกรมตั้งแต่ .166)', /three\.js/.test(creditNames2) && /Nerd Fonts/.test(creditNames2), creditNames2.slice(0, 200));
         const tipClose2 = tt('ui.panelTip.close');
         check('[168-BH2] ทูลทิปปิดแผง: ไม่เอ่ยถึงชิปที่ถอดออกไปแล้ว', !/ชิป|chip/i.test(tipClose2), tipClose2);
+
+        // ══ [alpha.168 · รวมกิ่ง skybox + bug hunt 3] ══
+        // (7) ปุ่มส่งออกบนแถบของผังความสัมพันธ์เดินทางเดียวกับเมนู ส่งออก (เดิม <a download> = ไม่มีข้อความบอกผล)
+        await openNetwork(); await w2(900);
+        check('[168-MG] เงื่อนไข: เปิดผังความสัมพันธ์ได้ + แถบแคปซูลของกิ่ง skybox อยู่', !!netInst && !!document.querySelector('.net-toolbar .net-tbar-pop') && !!document.querySelector('.net-toolbar .net-tbar-filter'));
+        check('[168-MG] ★ ปุ่มส่งออกของผังผ่านตัวส่งออกของโปรแกรม (onExport)', typeof netInst.onExport === 'function');
+        const popMG = document.querySelector('.net-toolbar .net-tbar-pop'), filtMG = document.querySelector('.net-toolbar .net-tbar-filter');
+        filtMG.click(); await w2(60);
+        check('[168-MG] ป๊อปโอเวอร์ตัวกรองเปิดจากปุ่ม · Esc ปิดแล้วคืนโฟกัส', !popMG.hidden);
+        popMG.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await w2(60);
+        check('[168-MG] ป๊อปโอเวอร์ปิดด้วย Esc', popMG.hidden && filtMG.getAttribute('aria-expanded') === 'false');
+        // (8) ฉากหลัง 3D: ฉากที่โปรแกรมสร้างเอง = skybox · รูปของผู้ใช้ = ทาง HDRI/ติดจอของ main (ไม่ซ้อนสองระบบ)
+        const NB = await import('./network-bg.js'), NS = await import('./network-scene.js');
+        const scSpace = NS.normalizeNetScene({ bg: { kind: 'space' } }), scImg = NS.normalizeNetScene({ bg: { kind: 'image', image: 'Images/x.png' } });
+        check('[168-MG] ค่าเริ่มต้นของฉากหลัง 3D = skybox', scSpace.bg.sky3d === 'sky' && scImg.bg.sky3d === 'sky');
+        check('[168-MG] ★ รูปธรรมดาในโหมด 3D = ติดจอ · รูป 2:1 = ท้องฟ้า HDRI (ทางเดียวของรูปผู้ใช้)',
+              NB.bgImagePlacement({ imageMode: 'hdri' }, { naturalWidth: 800, naturalHeight: 600 }, true) === 'screen'
+              && NB.bgImagePlacement({ imageMode: 'hdri' }, { naturalWidth: 2000, naturalHeight: 1000 }, true) === 'hdri');
+        {
+          const cvS = document.createElement('canvas'); cvS.width = 240; cvS.height = 160;
+          const cS = cvS.getContext('2d');
+          let threwS = '';
+          try { NB.drawSky(cS, 240, 160, { rx: -0.4, ry: 0.6 }, scSpace.bg, '#101020', null); } catch (e) { threwS = String(e && e.message); }
+          const pxS = cS.getImageData(120, 80, 1, 1).data;
+          check('[168-MG] ★ drawSky วาดโดมเต็มผืนได้ (ไม่โยน error · พิกเซลทึบ)', threwS === '' && pxS[3] === 255, threwS + ' a=' + pxS[3]);
+        }
+        // (9) Kanban หน้าตาใหม่: จุดสีของสถานะต้องเห็นตลอด (กฎ "โผล่เมื่อชี้" ของ main เคยซ่อนมันหลังรวมกิ่ง) + ลากการ์ดได้ชื่อใน text/plain
+        await openKanban(); await w2(500);
+        const colMG = await until2(() => document.querySelector('.kb-col:not(.kb-col-unset)'));
+        check('[168-MG] เงื่อนไข: Kanban มีคอลัมน์สถานะ', !!colMG);
+        const pickMG = colMG.querySelector('.kb-col-color'), dotMG = colMG.querySelector('.kb-col-dot');
+        check('[168-MG] ★ จุดสีของสถานะบนหัวคอลัมน์มองเห็น (ไม่ต้องชี้เมาส์)', !!pickMG && !!dotMG && +getComputedStyle(pickMG).opacity === 1 && dotMG.getBoundingClientRect().width >= 6,
+              pickMG ? getComputedStyle(pickMG).opacity : 'ไม่มี');
+        const cardMG = document.querySelector('.kb-card');
+        check('[168-MG] เงื่อนไข: มีการ์ดให้ลาก', !!cardMG);
+        const dtMG = new DataTransfer();
+        cardMG.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dtMG }));
+        cardMG.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dtMG }));
+        check('[168-MG] ★ การ์ด Kanban: id อยู่ในชนิดของกระดาน · text/plain = ชื่อฉาก (คงไว้หลังรวมหน้าตาใหม่)',
+              !!dtMG.getData('text/k2-kb-card') && dtMG.getData('text/plain') === (cardMG.querySelector('.kb-card-title') || {}).textContent, JSON.stringify([...dtMG.types]));
+        resetPanels(); await w2(300);
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══
