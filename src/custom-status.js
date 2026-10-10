@@ -171,7 +171,9 @@ export async function manageCustomStatuses() {
     const dot = el('span', 'k-status-dot');
     dot.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${statusColor(s)}`;
     const hiddenNow = builtIn && getHiddenStatuses().includes(s);
-    row.append(dot, el('span', null, s + (builtIn ? t('ui.status.default') : '') + (hiddenNow ? t('ui.kanban.hiddenBuiltin') : '')));
+    // [alpha.169 · bug hunt] ชื่อสถานะมาตรฐานเป็นข้อมูล (เก็บเป็นไทย) — แปลตอนวาดเหมือนทุกที่ที่โชว์สถานะ
+    // (เดิมกล่องนี้ที่เดียวโชว์ชื่อดิบ: หน้าจออังกฤษเห็น "โครงร่าง (standard)" ขณะที่ชิป/Kanban เขียน Outline)
+    row.append(dot, el('span', null, (builtIn ? dataLabel(s) : s) + (builtIn ? t('ui.status.default') : '') + (hiddenNow ? t('ui.kanban.hiddenBuiltin') : '')));
     if (hiddenNow) {
       row.classList.add('k-status-hidden');
       const back = el('button', 'k-status-unhide', t('ui.kanban.restoreStatus'));
@@ -183,13 +185,13 @@ export async function manageCustomStatuses() {
     const pick = el('input', 'k-status-color');
     pick.type = 'color'; pick.value = statusColor(s);
     pick.title = t('ui.status.recolorStatus');
-    pick.style.cssText = 'float:right;width:26px;height:20px;padding:0;border:none;background:none;cursor:pointer';
+    pick.style.cssText = 'float:right;width:26px;height:20px;padding:0;border:none;background:none;cursor:default';
     pick.onchange = async () => { dot.style.background = pick.value; await setStatusColor(s, pick.value); refreshStatusChips(); };
     row.append(pick);
 
     if (!builtIn) {
       const del = el('span', 'k-status-del', gi('close'));
-      del.style.cssText = 'float:right;cursor:pointer;margin-left:10px';
+      del.style.cssText = 'float:right;cursor:default;margin-left:10px';
       del.title = t('ui.status.delStatus2');
       del.onclick = async (e) => {
         e.stopPropagation();

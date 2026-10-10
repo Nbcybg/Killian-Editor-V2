@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const call = (ch) => (...a) => ipcRenderer.invoke(ch, ...a);
 // [alpha.67] ทุกคำสั่งที่ "เปลี่ยนไฟล์" ต้องบอกหน้าต่างอื่นให้รู้ (tear-off = หลายหน้าต่างดูโปรเจกต์เดียวกัน)
 // ดักที่นี่ทีเดียวแทนการไล่แปะตามจุดเรียกนับร้อยแห่งใน renderer — จุดใหม่ที่เพิ่มทีหลังก็ได้ไปด้วยฟรี ๆ
@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.60r3 ข้อ 7] ปลั๊กอินระดับผู้ใช้ (%APPDATA%/Killian2/Plugins/) — คืน path ให้ใช้ fs:* ต่อ
   globalPluginsDir: call('plugins:globalDir'),
   listGlobalPlugins: call('plugins:listGlobal'),
+  starterArtList: call('starter:artList'),   // [alpha.169] ภาพประกอบ Story Starter ที่มีจริงใน renderer/starter/
   // [alpha.80] ติดตั้ง/ถอนปลั๊กอินจากลิงก์ GitHub — โหลด+แตกซิปต้องทำใน main
   // (http:fetch คืนเป็นข้อความล้วน ใช้กับไฟล์ไบนารีไม่ได้)
   pluginFetchZip: call('plugins:fetchZip'),
@@ -104,7 +105,18 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.62 บั๊ก 3] คลิปบอร์ดผ่าน main — เชื่อถือได้กว่า navigator.clipboard ในหน้าต่างไร้ขอบ
   clipboardWrite: call('clipboard:write'), clipboardRead: call('clipboard:read'),
   editRole: call('edit:role'),               // [alpha.165] cut/copy/paste/selectAll ของเมนูคลิกขวาในเอกสาร
+  openOsk: call('a11y:osk'),                 // [alpha.169 · a11y] แป้นพิมพ์บนจอของระบบ → {ok, settings, tried}
   winMin: call('win:minimize'), winMax: call('win:maximize'), winClose: call('win:close'),
+  // ══ [alpha.169 · native] หน้าต่างแบบโปรแกรมจริง ══
+  platform: process.platform,                // 'win32' | 'darwin' | 'linux' — เลือกหน้าตาแถบชื่อหน้าต่างตามระบบ
+  winState: call('win:state'),               // {max, full, native, platform}
+  onWinState: (cb) => ipcRenderer.on('win:state', (e, s) => { try { cb(s || {}); } catch {} }),
+  winChrome: call('win:chrome'),             // {mode, color, symbol, height} → ปุ่มหน้าต่างของ Windows + โหมดของเมนู/กล่องไฟล์ระบบ
+  winProgress: call('win:progress'),         // 0..1 · 'busy' · -1 = ล้าง → แถบความคืบหน้าบนแถบงาน
+  winAttention: call('win:attention'),       // งานยาวเสร็จตอนหน้าต่างไม่ได้อยู่หน้า → กะพริบ + แจ้งเตือนของระบบ
+  launchProject: call('win:launchProject'),  // โปรเจกต์ที่ระบบส่งมาตอนเปิด (ลากโฟลเดอร์ใส่ไอคอน · เปิดด้วย · แถบงาน)
+  // ทางไฟล์จริงของไฟล์ที่ลากมาจากนอกโปรแกรม (`File.path` ถูกถอดจาก Electron แล้ว — ต้องถามผ่าน webUtils)
+  pathForFile: (f) => { try { return webUtils.getPathForFile(f) || ''; } catch { return ''; } },
   quitNow: call('win:quitNow'), menuPopup: call('menu:popup'), menuIds: call('menu:ids'),
   // [alpha.157] splash → หน้าต่างหลัก (ขยายเต็มจอ) · ข้อความ/เปอร์เซ็นต์ของสิ่งที่กำลังโหลด
   splashProgress: call('splash:progress'), splashDone: call('splash:done'),

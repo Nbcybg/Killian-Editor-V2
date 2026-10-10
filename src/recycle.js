@@ -42,6 +42,7 @@ export async function restoreFromTrash(p, fname) {
       refreshNetwork();
       setStatus(note || t('ui.trash.recoverRestoreBookDone')); return;
     }
+    if (info.kind === 'scene' || info.kind === 'chapter') info.dPath = await liveDraftPath(info);
     if (info.kind === 'scene') note = await restoreScene(p, info);
     else if (info.kind === 'chapter') note = await restoreChapter(p, info);
     await kapi.remove(sidecar);
@@ -72,6 +73,31 @@ export async function restoreFromTrash(p, fname) {
   refreshNetwork();
   logAction('recycle', t('ui.trash.recoverRestoreDone'), { from: p, name: fname, note });
   setStatus(note || t('ui.trash.recoverRestoreDone'));
+}
+
+/**
+ * [alpha.170] ฉบับร่างที่ของชิ้นนี้ต้องกลับไป — ใบกู้คืนจด `dPath` เป็นทางเต็ม ณ ตอนลบ
+ * เปลี่ยนชื่อเล่มทีหลัง (โฟลเดอร์เล่มย้ายตามชื่อ) = ทางนั้นไม่มีแล้ว → เดิมจะสร้างโฟลเดอร์เล่มผีขึ้นมารับ
+ * หาฉบับร่างตัวจริงจาก guid ของบท (ตัวตนอยู่ใน JSON ไม่ใช่ในชื่อโฟลเดอร์) · หาไม่เจอ = ทางเดิม
+ */
+async function liveDraftPath(info) {
+  const want = info.dPath;
+  try { if (await kapi.exists(await kapi.join(want, 'draft.json'))) return want; } catch {}
+  const chGuid = info.chGuid || (info.ch && info.ch.guid);
+  if (!chGuid || !state.root) return want;
+  for (const sec of await kapi.listDirs(state.root).catch(() => [])) {
+    const dr = await kapi.join(state.root, sec, 'Draft');
+    for (const dn of await kapi.listDirs(dr).catch(() => [])) {
+      const dp = await kapi.join(dr, dn);
+      try {
+        const d = await kapi.readJson(await kapi.join(dp, 'draft.json'));
+        if ((d.chapters || []).some((c) => c.guid === chGuid)) return dp;
+        const s = await kapi.readJson(await kapi.join(dp, 'scenes.json'));
+        if (s.chapters && chGuid in s.chapters) return dp;
+      } catch { /* ฉบับร่างนี้อ่านไม่ได้ = ข้าม */ }
+    }
+  }
+  return want;
 }
 
 /** รายชื่อโฟลเดอร์บทที่ถูกจองอยู่ใน draft.json + ชื่อที่ว่างสำหรับบทที่จะกลับเข้ามา */

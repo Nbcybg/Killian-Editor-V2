@@ -87,7 +87,7 @@ async function buildModel(A, cfg, drafts) {
 }
 
 /** ประกอบเนื้อหาผ่านเวิร์กโฟลว์ — คืนผลของ runWorkflow (มี text / ext / warnings) */
-async function compose(A, cfg, model, wf, markdownOut) {
+async function compose(A, cfg, model, wf, markdownOut, beforeHtml) {
   const varCtx = { title: model.title, author: model.author };
   if ((wf.steps || []).some((s) => s.on !== false && s.key === 'resolve-vars')) {
     const { buildVarContext } = await import('./template-vars.js');
@@ -102,6 +102,7 @@ async function compose(A, cfg, model, wf, markdownOut) {
     // เก็บคอมเมนต์รูปแบบ (`<!--align:x-->` / ตัวคั่นหน้า) ไว้ ไม่งั้นถูกลบก่อนถึงตัวที่ใช้มัน
     markdownOut: !!markdownOut,
     imgSrc: projectImg,
+    beforeHtml: beforeHtml || null,
   });
 }
 
@@ -332,14 +333,19 @@ async function buildAll(A, cfg, drafts) {
   // ที่ต้องถูกตีความต่ออีกก้าว (ต่างจาก .md/.txt/.rtf ที่จบเป็นข้อความแบนตรงนั้นเลย)
   // [alpha.156] EPUB/DOCX ก็ตีความมาร์กดาวน์ต่ออีกก้าว (md.js) — ต้องเก็บคอมเมนต์จัดหน้า/ตัวคั่นหน้าไว้เหมือนกัน
   const isEbook = cfg.format === 'epub' || cfg.format === 'docx';
-  const r = await compose(A, cfg, model, wf2, (cfg.format === 'pdf' && engine === 'html') || isEbook);
+  // [alpha.169 · bug hunt] RTF ของ "นิยาย" ประกอบจากมาร์กดาวน์ (generateProseRtf) เหมือน DOCX —
+  // เดิมนิยายถูกส่งเข้าตัวอ่านบทภาพยนตร์ → ย่อหน้าสั้น ๆ กลายเป็นชื่อตัวละคร/บทพูด รูปแบบตัวอักษรหายหมด
+  const proseRtf = cfg.format === 'rtf' && kind !== 'screenplay';
   const { parseScript, stripFountainCodes } = await import('./fountain.js');
+  // [alpha.169 · bug hunt] ปลายทาง HTML: ตัดรหัส fountain ก่อนแปลงเป็นหน้าเว็บ (ตัดทีหลังไม่ได้ — ดู beforeHtml)
+  const r = await compose(A, cfg, model, wf2, (cfg.format === 'pdf' && engine === 'html') || isEbook || proseRtf,
+                          stripFountainCodes);
   // [alpha.81r ข้อ 4] ทางที่ผ่าน `parseScript` (PDF บทหนัง · rtf · fdx) พาร์เซอร์กินรหัสไปแล้ว
   // ทางที่เหลือเป็น Markdown ล้วน ๆ ต้องตัดรหัส fountain (`@ชื่อ` `.หัวฉาก` `((โน้ต))`) เองที่นี่
   // ไม่งั้นมันติดไปในไฟล์ที่ส่งให้คนอ่าน ทั้งที่บนจอถูกซ่อนไว้ตลอด
-  const viaScript = cfg.format === 'rtf' || cfg.format === 'fdx' ||
+  const viaScript = (cfg.format === 'rtf' && !proseRtf) || cfg.format === 'fdx' ||
                     (cfg.format === 'pdf' && engine === 'pdflib');
-  const text = viaScript ? r.text : stripFountainCodes(r.text);
+  const text = (viaScript || r.ext === 'html') ? r.text : stripFountainCodes(r.text);
   const out = { title: model.title, kind, warnings: r.warnings || [],
                 text, html: '', frontHtml: '', roster: model.roster || '',
                 coverUrl: mk.coverUrl || '', engine, blocks: null, startPage: mk.startPage || 1 };
@@ -375,14 +381,22 @@ async function buildAll(A, cfg, drafts) {
   // [alpha.124 ข้อ 26] ช่องตัวอย่างต้องอ่านออก — RTF/FDX เป็น markup ของเครื่อง (`{\\rtf1…`,
   // `<Paragraph Type=…>`) ที่ผู้ใช้อ่านไม่รู้เรื่องเลยว่าเนื้อในถูกไหม · เก็บ "บทฉบับข้อความ"
   // ไว้ต่างหากให้ตัววาดพรีวิวใช้ ส่วน `out.text` ยังเป็นตัวจริงที่เขียนลงไฟล์เหมือนเดิม
-  if (cfg.format === 'rtf' || cfg.format === 'fdx') out.preview = text;
+  if (cfg.format === 'rtf' || cfg.format === 'fdx') out.preview = proseRtf ? text.replace(/<!--[\s\S]*?-->/g, '') : text;
   if (isEbook) {
     // ตัวจริงของไฟล์คือแพ็กเกจซิปที่ประกอบตอนบันทึก (writeOut) · ช่องตัวอย่างโชว์เนื้อที่จะเข้าไปในเล่ม
     out.md = text;
     out.author = model.author || '';
     out.preview = text.replace(/<!--[\s\S]*?-->/g, '');
   }
-  if (cfg.format === 'rtf') {
+  if (proseRtf) {
+    const { generateProseRtf } = await import('./export-rtf.js');
+    const { PAGE_BREAK } = await import('./compile.js');
+    const spf = A.spFormat();
+    out.text = generateProseRtf(text, {
+      title: model.title, author: model.author || '', breakMarker: PAGE_BREAK,
+      font: firstRealFont(liveProseFonts().fontStack) || 'Tahoma', fontPt: num(cfg.rtf.fontPt, 12),
+      paper: spf.paper, margins: spf.margins });
+  } else if (cfg.format === 'rtf') {
     const { generateRtf } = await import('./export-rtf.js');
     const { projectTitlePages } = await import('./pdf-ui.js');
     out.text = generateRtf(out.blocks, A.scriptMeta(model.title), A.spFormat(),
@@ -840,9 +854,11 @@ export async function openExportHub() {
    */
   async function runHandoff() {
     close();
-    if (cfg.format === 'zip') { const m = await import('./export-zip.js'); return m.exportProjectZip(); }
-    if (cfg.format === 'json') { const m = await import('./export-zip.js'); return m.exportProjectJson(); }
-    if (cfg.format === 'blog') { const m = await import('./export-blog.js'); return m.exportBlogHTML(); }
+    // [alpha.169 · bug hunt] ชื่อไฟล์ที่กล่องนี้โชว์ไว้ต้องเป็นชื่อที่กล่องบันทึกเสนอจริง
+    const name = nameRow.name();
+    if (cfg.format === 'zip') { const m = await import('./export-zip.js'); return m.exportProjectZip({ name }); }
+    if (cfg.format === 'json') { const m = await import('./export-zip.js'); return m.exportProjectJson({ name }); }
+    if (cfg.format === 'blog') { const m = await import('./export-blog.js'); return m.exportBlogHTML(undefined, { name }); }
     return A.watermarkDialog();
   }
 

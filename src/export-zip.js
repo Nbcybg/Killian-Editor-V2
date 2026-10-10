@@ -12,7 +12,9 @@ export const ZIP_SKIP_ROOT_FILES = ['ai-key.json'];
 // นามสกุลที่ต้องอ่านเป็นไบต์ (ถ้าอ่านเป็น utf-8 ไฟล์จะเสีย)
 const BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
 
-export async function exportProjectZip() {
+// [alpha.169 · bug hunt] opts.name = ชื่อไฟล์ที่ศูนย์ส่งออกโชว์ไว้ ("ไฟล์ที่จะบันทึก: …") — เดิมกล่องบันทึกเสนอชื่อของตัวเอง
+// ไม่ตรงกับที่ผู้ใช้ตั้งเทมเพลตไว้ (ZIP/JSON/บล็อก ทั้งสามทาง)
+export async function exportProjectZip(opts = {}) {
   if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return false; }
   // [alpha.62 บั๊ก 10] บอกความคืบหน้าที่แถบล่าง — โปรเจกต์ใหญ่ ๆ ใช้เวลาหลายวินาที
   // [alpha.162 · W5 ข้อ 2] สองช่วง (รวบรวมไฟล์ · บีบ+เขียน) ต่างก็ยกเลิกได้ด้วยปุ่มที่แถบสถานะ
@@ -47,7 +49,7 @@ export async function exportProjectZip() {
 
     // เคลียร์ก่อนเปิดกล่องบันทึกเสมอ — ห้ามมีสปินเนอร์หมุนค้างตอนรอผู้ใช้ตอบ (บทเรียนจากบั๊ก 9)
     // (withBusyTask เคลียร์ให้แล้วตอนจบช่วงแรก)
-    const dest = await kapi.saveAsDialog((state.title || 'project') + '.zip');
+    const dest = await kapi.saveAsDialog((opts && opts.name) || (state.title || 'project') + '.zip');
     if (!dest) return false;
     await withBusyTask(t('ui.exportZip.busyWriteFileZIP'), async ({ signal, progress }) => {
       // JSZip บอกเปอร์เซ็นต์ระหว่างบีบ · หยุดกลางทางไม่ได้ แต่ **ยกเลิกแล้วไม่เขียนไฟล์** (ไม่ทิ้ง .zip ครึ่ง ๆ)
@@ -155,7 +157,7 @@ export function safeRel(name) {
 }
 
 // export-json — ส่งออกเมทาดาทาทั้งหมดเป็น JSON ก้อนเดียว
-export async function exportProjectJson() {
+export async function exportProjectJson(opts = {}) {
   if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return false; }
   setBusy(t('ui.exportZip.busyCollectJSON'));
   try {
@@ -180,7 +182,7 @@ export async function exportProjectJson() {
       data.sections.push(secData);
     }
     clearBusy();                                   // อย่าให้สปินเนอร์ค้างตอนรอผู้ใช้ตอบกล่องบันทึก
-    const dest = await kapi.saveAsDialog((state.title || 'project') + '-export.json');
+    const dest = await kapi.saveAsDialog((opts && opts.name) || (state.title || 'project') + '-export.json');
     if (!dest) return false;
     setBusy(t('ui.exportZip.busyWriteFileJSON'));
     await kapi.writeFile(dest, JSON.stringify(data, null, 2));

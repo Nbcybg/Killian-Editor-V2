@@ -272,7 +272,10 @@ const script = [
     check('[159-M6] ★ ค่าเริ่มต้นของ RTF/FDX = พรีเซ็ตบทภาพยนตร์ (ไม่ใช่ plain ที่ตัดรหัสบรรทัด)',
           EF.defaultWorkflowFor('rtf').id === 'screenplay' && EF.defaultWorkflowFor('fdx', undefined, 'screenplay').id === 'screenplay',
           EF.defaultWorkflowFor('rtf').id);
-    check('[159-M6] เอกสารนิยาย → RTF ยังใช้ plain ตามเดิม', EF.defaultWorkflowFor('rtf', undefined, 'prose').id === 'plain');
+    // [alpha.169 · bug hunt] RTF ของนิยายประกอบจากมาร์กดาวน์ (generateProseRtf) → ต้องเป็นเวิร์กโฟลว์ที่ไม่ตัดเครื่องหมายทิ้ง
+    // (เดิมข้อนี้ตรึงไว้ว่า "ใช้ plain" — ซึ่งคือครึ่งหนึ่งของบั๊ก: ตัวหนา/หัวข้อ/รายการหายก่อนถึงตัวสร้างไฟล์)
+    check('[159-M6→169] เอกสารนิยาย → RTF ใช้เวิร์กโฟลว์มาร์กดาวน์ (ไม่มีขั้นตัดมาร์กดาวน์)',
+          (() => { const w = EF.defaultWorkflowFor('rtf', undefined, 'prose'); return w.ext === 'md' && !(w.steps || []).some((s) => s.key === 'strip-markdown' && s.on !== false); })());
     check('[159-M6] รูปแบบอื่นไม่เปลี่ยน', EF.defaultWorkflowFor('md').ext === 'md' && EF.defaultWorkflowFor('txt').ext === 'txt');
   }
 

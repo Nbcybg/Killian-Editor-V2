@@ -198,7 +198,7 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
          showTip, smartIgnoreAdd, smartIgnoreList, smartIgnoreRemove, smartIgnored, smartLearnMin,
          smartPinAdd, smartPinList, smartTypeDialog, snapshotFile, sortSceneRows, spContinuedOn,
          spErrorMenu, spFormat, spPageModel, spReportInput, spReportText, spSmartCheck, spThaiCfg,
-         spellIgnoreOnce, spellSuggest, startupPlan, summaryBarOn, switchFormat, syncMenuToggles,
+         spellIgnoreOnce, spellSuggest, startupPlan, summaryBarOn, switchFormat, syncDocsEmpty, syncMenuToggles,
          syncSceneMetaFromFiles, syncTypeSound, syncWorkspaceWidths, tabBodyText, tb, templateEditModal,
          toggleContinueds, toggleElementCaps, toggleFabMenu, toggleFloatTab, toggleFmtbarAlign,
          toggleFmtbarLock, toggleFocus, toggleMarkdownCodes, toggleOpenLastProject, togglePageGuides,
@@ -616,6 +616,7 @@ export async function runTest(projectPath) {
     check('แท็บฉากใหม่เปิดเอง', state.active?.title === 'ฉากใหม่ทดสอบ');
 
     // เปลี่ยนชื่อฉาก
+    const fileBefore170 = newSc.fileName;        // renameScene อัปเดต newSc.fileName ในที่ (ผู้เรียกต้องไม่ถือทางเก่า)
     const pRen = renameScene(dPath, chJson, newSc);
     await new Promise((r) => setTimeout(r, 60));
     document.querySelector('.k-dialog .k-dlg-input').value = 'ฉากเปลี่ยนชื่อแล้ว';
@@ -635,7 +636,12 @@ export async function runTest(projectPath) {
     const recycled = await kapi.listFiles(await kapi.join(state.root, 'Recycle'), '.md');
     check('ลบฉาก → ออกจาก JSON + ไฟล์ไปอยู่ Recycle',
           !sj3.chapters[chJson.guid].some((x) => x.id === sc3.id) &&
-          recycled.some((f) => f.includes('scene-')), JSON.stringify(recycled));
+          recycled.some((f) => f.includes('ฉากเปลี่ยนชื่อแล้ว')), JSON.stringify(recycled));
+    // [alpha.170] ชื่อไฟล์ = ชื่อฉาก (ไม่มี scene-NN) และตามไปเมื่อเปลี่ยนชื่อ
+    check('[170] ★ ฉากใหม่ได้ชื่อไฟล์ตามชื่อฉาก · เปลี่ยนชื่อแล้วชื่อไฟล์ตาม',
+          fileBefore170 === 'ฉากใหม่ทดสอบ.md' && sc3.fileName === 'ฉากเปลี่ยนชื่อแล้ว.md' && sc3.id === newSc.id
+          && newSc.fileName === sc3.fileName,
+          fileBefore170 + ' → ' + sc3.fileName);
 
     // ---- เล่ม (section): เพิ่ม/เปลี่ยนชื่อ/ลบ + กู้คืน ----
     {
@@ -669,7 +675,12 @@ export async function runTest(projectPath) {
       await new Promise((r) => setTimeout(r, 60));
       document.querySelector('.k-dialog .k-dlg-input').value = 'เล่มสองเปลี่ยนชื่อ';
       document.querySelector('.k-dialog .k-ok').click();
-      await pRenSec;
+      // [alpha.170] เปลี่ยนชื่อเล่ม = โฟลเดอร์ย้ายตามชื่อ → ใช้ทางใหม่ที่ renameSection คืนมา
+      const oldSecPath = newSecPath;
+      newSecPath = (await pRenSec) || newSecPath;
+      check('[170] ★ เปลี่ยนชื่อเล่ม → ชื่อโฟลเดอร์ตรงกับชื่อเล่ม (โฟลเดอร์ชื่อเดิมไม่เหลือ)',
+            /[\\/]เล่มสองเปลี่ยนชื่อ$/.test(newSecPath) && !(await kapi.exists(oldSecPath))
+            && /[\\/]เล่มสองทดสอบ$/.test(oldSecPath), oldSecPath + ' → ' + newSecPath);
       check('เปลี่ยนชื่อเล่มสะท้อนใน section.json',
             (await kapi.readJson(await kapi.join(newSecPath, 'section.json'))).title === 'เล่มสองเปลี่ยนชื่อ');
       // ลบเล่ม → Recycle
@@ -29580,7 +29591,13 @@ export async function runTest(projectPath) {
         // ---- ข้อ 6: คุณสมบัติแบบแผง = แบบหน้าต่าง ----
         {
           await buildTree();
-          const row = scRows120().find((r) => r._ctx.sc.type !== 'memo') || scRows120()[0];
+          // [alpha.170] แก้ชื่อฉาก = ไฟล์ถูกย้ายตามชื่อ → ใช้ฉากชั่วคราวของเทสเอง
+          // (เดิมเปลี่ยนชื่อฉากแรกของ fixture ทิ้งไว้ — ตอนนี้นั่นจะย้ายไฟล์ที่เทสอื่นอ้างด้วยทางตายตัว)
+          const base120 = scRows120().find((r) => r._ctx.sc.type !== 'memo') || scRows120()[0];
+          const tmp120 = await addScene(base120._ctx.dPath, base120._ctx.ch, 'ฉากแผง120', { silent: true, body: 'เนื้อ120' });
+          await buildTree();
+          const row = scRows120().find((r) => r._ctx.sc.id === tmp120.id);
+          check('[120-6] เงื่อนไข: เจอแถวของฉากชั่วคราวในต้นไม้', !!row, tmp120 && tmp120.fileName);
           openPropsPanel(row._ctx.dPath, row._ctx.ch, row._ctx.sc);
           await w120(700);
           const pb = $('#props-body');
@@ -29631,6 +29648,10 @@ export async function runTest(projectPath) {
           }
           check('[120-6] ★★ แก้ชื่อฉากจากแผงได้จริง',
                 !!rowN && rowN.title === 'ชื่อใหม่จากแผง120', JSON.stringify(rowN && rowN.title));
+          check('[170] ★★ แก้ชื่อฉากจากแผง → ไฟล์ย้ายตามชื่อ (ทางเก่าไม่เหลือ · เนื้อเดิม)',
+                !!rowN && rowN.fileName === 'ชื่อใหม่จากแผง120.md' && !(await kapi.exists(tmp120.path))
+                && parseMdFile(await kapi.readFile(await kapi.join(row._ctx.dPath, 'Chapters', row._ctx.ch.folderName, rowN.fileName))).body.includes('เนื้อ120'),
+                JSON.stringify(rowN && rowN.fileName));
           const pb2 = $('#props-body');
           const cks2 = pb2.querySelectorAll('.wiki-check');
           if (cks2[1]) { cks2[1].checked = false; cks2[1].dispatchEvent(new Event('change', { bubbles: true })); }
@@ -32315,9 +32336,10 @@ export async function runTest(projectPath) {
           const hasCmt = async (f) => (await kapi.readFile(f)).includes('คอมเมนต์160');
           // ── P0-1: เปลี่ยนชื่อฉาก / บันทึกคุณสมบัติ / แก้ frontmatter ของโน้ต ต้องไม่ลบเธรด ──
           const p1 = await SO.addScene(dPath, ch, 'คอมเมนต์รอด160', { silent: true, body: 'เนื้อ160' });
-          const f1 = await kapi.join(dir, p1.fileName);
+          let f1 = await kapi.join(dir, p1.fileName);
           await withCmt(f1);
           await SO.setSceneTitle(dPath, ch, p1, 'คอมเมนต์รอด160ใหม่');
+          f1 = await kapi.join(dir, p1.fileName);        // [alpha.170] เปลี่ยนชื่อ = ไฟล์ย้ายตามชื่อ (setSceneTitle อัปเดต p1.fileName ให้)
           check('[160-P0-1] ★ เปลี่ยนชื่อฉาก (setSceneTitle) — เธรดคอมเมนต์ยังอยู่',
                 await hasCmt(f1) && parseMdFile(await kapi.readFile(f1)).meta.title === 'คอมเมนต์รอด160ใหม่', (await kapi.readFile(f1)).slice(-120));
           await SO.setSceneMeta(dPath, ch, { ...p1, title: 'คอมเมนต์รอด160ใหม่' }, { synopsis: 'ย่อ160', pov: 'ทอร่า' });
@@ -33160,7 +33182,7 @@ export async function runTest(projectPath) {
           const kA = await SO.addScene(dPath, ch, 'คีย์ก161', { silent: true, body: 'ก' });
           const kB = await SO.addScene(dPath, ch, 'คีย์ข161', { silent: true, body: 'ข' });
           const kC = await SO.addScene(dPath, ch, 'คีย์ค161', { silent: true, body: 'ค' });
-          const [fA, fB, fC] = await Promise.all([kA, kB, kC].map((r) => kapi.join(dir, r.fileName)));
+          let [fA, fB, fC] = await Promise.all([kA, kB, kC].map((r) => kapi.join(dir, r.fileName)));   // [alpha.170] fB เปลี่ยนเมื่อเปลี่ยนชื่อฉาก
           await buildTree();
           const q0 = $('#tree-search'); if (q0 && q0.value) { q0.value = ''; filterTree(''); }
           const rowOf = (f) => [...document.querySelectorAll('#tree .scene[data-path]')].find((r) => r.dataset.path === f && !r.classList.contains('pin-row'));
@@ -33197,7 +33219,13 @@ export async function runTest(projectPath) {
               inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
               check('[161-K1] ★ Enter ในช่อง = บันทึกชื่อใหม่ (ทะเบียน + frontmatter)',
                     await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === 'คีย์ข161ใหม่', 5000)
-                    && parseMdFile(await kapi.readFile(fB)).meta.title === 'คีย์ข161ใหม่');
+                    && parseMdFile(await kapi.readFile(await kapi.join(dir, 'คีย์ข161ใหม่.md'))).meta.title === 'คีย์ข161ใหม่');
+              // [alpha.170] เปลี่ยนชื่อ = ไฟล์ย้ายตามชื่อ · แท็บที่เปิดอยู่ (จาก Enter ข้างบน) ตามไปทางใหม่
+              const fBold = fB;
+              fB = await kapi.join(dir, 'คีย์ข161ใหม่.md'); kB.fileName = 'คีย์ข161ใหม่.md';
+              check('[170] ★★ F2 เปลี่ยนชื่อในต้นไม้ → ไฟล์ย้ายตามชื่อ · แท็บที่เปิดอยู่ตามไป (ไม่มีแท็บ/ไฟล์ค้างที่ชื่อเก่า)',
+                    !(await kapi.exists(fBold)) && await until159(() => state.tabs.has(fB) && !state.tabs.has(fBold), 5000),
+                    [...state.tabs.keys()].map((k) => k.split(/[\\/]/).pop()).join(' | '));
             }
             await until159(() => !!rowOf(fB), 3000);
             APP.treeFocusRow(rowOf(fB));
@@ -33365,8 +33393,9 @@ export async function runTest(projectPath) {
             // ต้องเป็นบทใหม่ **ทั้งสองบท** — บทที่มีฉากอยู่แล้วจะได้ชื่อไฟล์ลำดับถัดไป ไม่ใช่ scene-01.md
             const chA = await SO.addChapter(dPath, 'บทชนชื่อ162ก');
             const chB = await SO.addChapter(dPath, 'บทชนชื่อ162ข');
-            const a4 = await SO.addScene(dPath, chA, 'ชนชื่อ162ก', { silent: true, body: 'เนื้อกอ162' });
-            const b4 = await SO.addScene(dPath, chB, 'ชนชื่อ162ข', { silent: true, body: 'เนื้อขอ162' });
+            // [alpha.170] ชื่อไฟล์ = ชื่อฉาก → สองบทต้องมีฉากชื่อเดียวกันถึงจะได้ชื่อไฟล์ชนกัน (เดิมทุกบทได้ scene-01.md)
+            const a4 = await SO.addScene(dPath, chA, 'ชนชื่อ162', { silent: true, body: 'เนื้อกอ162' });
+            const b4 = await SO.addScene(dPath, chB, 'ชนชื่อ162', { silent: true, body: 'เนื้อขอ162' });
             check('[162-W1-4] เงื่อนไข: สองบทมีชื่อไฟล์ฉากเหมือนกัน', a4.fileName === b4.fileName, a4.fileName + ' / ' + b4.fileName);
             const t1 = await deleteSceneSilent(dPath, chA, a4);
             const t2 = await deleteSceneSilent(dPath, chB, b4);
@@ -35424,6 +35453,1231 @@ export async function runTest(projectPath) {
         check('[168-MG] ★ การ์ด Kanban: id อยู่ในชนิดของกระดาน · text/plain = ชื่อฉาก (คงไว้หลังรวมหน้าตาใหม่)',
               !!dtMG.getData('text/k2-kb-card') && dtMG.getData('text/plain') === (cardMG.querySelector('.kb-card-title') || {}).textContent, JSON.stringify([...dtMG.types]));
         resetPanels(); await w2(300);
+      }
+
+      // ══ [alpha.169 · native] ★ "โปรแกรมจริง ไม่ใช่หน้าเว็บ" — ลองบนหน้าต่างจริง ══
+      // ผู้ใช้: "มีอะไรที่ยังดูแล้ว เหมือนห่อด้วย web · เราอยากได้ app ที่ native เลย"
+      {
+        const wN = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilN = async (fn, max = 3000) => { const t0 = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t0 > max) return v; await wN(40); } };
+        const NSU = await import('./native-shell-ui.js');
+        const CORE = await import('./core.js');
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        closeMenu();
+        const infoN = NSU.nativeShellInfo();
+        const plat = kapi.platform;
+        check('[169-N] preload บอกระบบ + ชั้นหน้าต่างถูกติดตั้ง', ['win32', 'darwin', 'linux'].includes(plat) && infoN.inited && infoN.platform === plat, JSON.stringify(infoN));
+        check('[169-N] body มีคลาสของระบบ', document.body.classList.contains(plat === 'win32' ? 'k-os-win' : plat === 'darwin' ? 'k-os-mac' : 'k-os-linux'));
+
+        // ── A1) ข้อความของ UI ลากเลือกไม่ได้ · เนื้อหาเลือกได้ ──
+        const probe = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = 'x'; document.body.append(e); return e; };
+        const pLabel = probe('div', ''), pSel = probe('div', 'k-selectable'), pInp = probe('input', ''), pLog = probe('div', 'k-logview'), pPm = probe('div', 'ProseMirror');
+        check('[169-N] ★ ป้าย/ข้อความของ UI ลากเลือกไม่ได้ (เดิมลากแล้วติดไฮไลต์ทั้งแผงเหมือนหน้าเว็บ)',
+              getComputedStyle(document.body).userSelect === 'none' && getComputedStyle(pLabel).userSelect === 'none', getComputedStyle(pLabel).userSelect);
+        check('[169-N] ★ เนื้อหายังเลือก/คัดลอกได้ (ตัวแก้ไข · ช่องกรอก · log · .k-selectable)',
+              [pSel, pInp, pLog, pPm].every((e) => getComputedStyle(e).userSelect === 'text'),
+              [pSel, pInp, pLog, pPm].map((e) => getComputedStyle(e).userSelect).join());
+        const dashN = document.querySelector('.dash-num, .k-panel-head-title, #status');
+        check('[169-N] ของจริงบนจอ (หัวแผง/แถบสถานะ) เลือกไม่ได้', !!dashN && getComputedStyle(dashN).userSelect === 'none');
+        // ── A2) เคอร์เซอร์: ปุ่ม = ลูกศร · ลิงก์ = มือ ──
+        const pBtn = probe('button', ''), pLink = probe('span', 'wiki-rel-link'), pItem = probe('div', 'k-menu-item');
+        check('[169-N] ★ ปุ่ม/รายการเมนู ใช้ลูกศรปกติ (ไม่ใช่มือแบบลิงก์ในเว็บ)',
+              getComputedStyle(pBtn).cursor === 'default' && getComputedStyle(pItem).cursor === 'default', getComputedStyle(pBtn).cursor + '/' + getComputedStyle(pItem).cursor);
+        check('[169-N] ลิงก์จริง (ลิงก์ Wiki) ยังเป็นรูปมือ', getComputedStyle(pLink).cursor === 'pointer');
+        const tbN = document.querySelector('#toolbar .tb:not(.dis)');
+        check('[169-N] ปุ่มบนแถบเครื่องมือตัวจริง = ลูกศร', !!tbN && getComputedStyle(tbN).cursor === 'default', tbN && getComputedStyle(tbN).cursor);
+        check('[169-N] ไม่มี scroll-behavior:smooth ที่ html/body', getComputedStyle(document.documentElement).scrollBehavior === 'auto' && getComputedStyle(document.body).scrollBehavior === 'auto');
+        const pImg = probe('img', '');
+        check('[169-N] รูปของ UI ลากเป็นเงาไม่ได้', getComputedStyle(pImg).webkitUserDrag === 'none', getComputedStyle(pImg).webkitUserDrag);
+        // ── A3) ปุ่มกลาง ≠ เลื่อนอัตโนมัติของเบราว์เซอร์ ──
+        const evMid = new MouseEvent('mousedown', { button: 1, bubbles: true, cancelable: true });
+        pLabel.dispatchEvent(evMid);
+        const evLeft = new MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        pLabel.dispatchEvent(evLeft);
+        check('[169-N] ★ กดปุ่มกลาง = ไม่เข้าโหมดเลื่อนอัตโนมัติ (default ถูกกัน) · ปุ่มซ้ายไม่ถูกแตะ', evMid.defaultPrevented && !evLeft.defaultPrevented);
+        [pLabel, pSel, pInp, pLog, pPm, pBtn, pLink, pItem, pImg].forEach((e) => e.remove());
+
+        // ── B1/B2) แถบชื่อหน้าต่างตามระบบ ──
+        const stN = await kapi.winState();
+        const wb = $('#win-btns');
+        if (plat === 'win32' || plat === 'darwin') {
+          check('[169-N] ★ Windows/macOS: ปุ่มย่อ/ขยาย/ปิดเป็นของระบบ (ปุ่มที่วาดเองซ่อน)',
+                stN.native === true && document.body.classList.contains('k-native-caption')
+                && [...wb.querySelectorAll('.win-btn')].every((b) => getComputedStyle(b).display === 'none'), JSON.stringify(stN));
+          if (plat === 'win32') {
+            const wr = wb.getBoundingClientRect();
+            check('[169-N] ★ Windows: เว้นที่ขวาสุดของแถบให้ปุ่มของระบบ (≥ 138px · ชิดขอบขวา)',
+                  wr.width >= 138 && Math.abs(wr.right - window.innerWidth) <= 1, Math.round(wr.width) + ' right=' + Math.round(wr.right));
+            const lastTog = $('#titlebar .k-side-toggles').getBoundingClientRect();
+            check('[169-N] ปุ่มของแถบชื่อไม่ถูกปุ่มของระบบทับ', lastTog.right <= wr.left + 1, Math.round(lastTog.right) + ' vs ' + Math.round(wr.left));
+          }
+        } else {
+          check('[169-N] ระบบอื่น: ยังใช้ปุ่มหน้าต่างที่วาดเอง', stN.native === false && getComputedStyle($('#win-max')).display !== 'none');
+        }
+        // ขยาย/คืนขนาด → renderer รู้สภาพจริง (ไอคอน + ทูลทิปของปุ่มที่วาดเองตามสภาพ)
+        const max0 = !!stN.max;
+        await kapi.winMax();
+        const flipped = await untilN(() => document.body.classList.contains('k-win-max') !== max0, 2500);
+        if (plat === 'win32' || plat === 'darwin') check('[169-N] ★ ขยาย/คืนขนาดหน้าต่าง → หน้าจอรู้สภาพจริง (k-win-max)', !!flipped);
+        if (flipped) {
+          const mx = $('#win-max');
+          const wantKey = document.body.classList.contains('k-win-max') ? 'ui.html.winRestore' : 'ui.html.winMax';
+          check('[169-N] ปุ่มขยายที่วาดเอง: ทูลทิป/ไอคอนตามสภาพ (ขยายแล้ว = คืนขนาด)',
+                mx.getAttribute('data-i18n-title') === wantKey && mx.title === tt(wantKey) && !!mx.firstElementChild, mx.getAttribute('data-i18n-title'));
+          await kapi.winMax();
+          await untilN(() => document.body.classList.contains('k-win-max') === max0, 2500);
+        } else note('[169-N] ตัวจัดการหน้าต่างของเครื่องนี้ไม่รายงานการขยาย (ข้ามการตรวจไอคอนคืนขนาด)');
+        await wN(250);
+
+        // ── B3) โหมดของธีม → เมนู/กล่องไฟล์ของระบบ ──
+        const modeN = document.documentElement.style.colorScheme === 'light' ? 'light' : 'dark';
+        const chr = await kapi.winChrome({ mode: modeN, color: '#123456', symbol: 'ไม่ใช่สี', height: 36 });
+        check('[169-N] main กรองสีแถบชื่อ (hex เท่านั้น) + รับโหมดของธีม', chr && chr.mode === modeN && chr.color === '#123456' && /^#[0-9a-f]{6}$/i.test(chr.symbolColor), JSON.stringify(chr));
+        await untilN(() => matchMedia('(prefers-color-scheme: dark)').matches === (modeN === 'dark'), 1500);
+        check('[169-N] ★ โหมดมืด/สว่างของระบบในหน้าต่างนี้ = โหมดของธีม K2 (เมนู/กล่องไฟล์ของระบบตามธีม)',
+              matchMedia('(prefers-color-scheme: dark)').matches === (modeN === 'dark'));
+        NSU.syncWindowChrome();                          // คืนสีจริงของธีม (ตัวกันซ้ำจำค่าก่อนหน้า — บังคับด้วยการเรียก IPC ตรง)
+        { const cs = getComputedStyle($('#titlebar')); const hx = (v) => { const m = /(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(v); return m ? '#' + [1, 2, 3].map((i) => (+m[i]).toString(16).padStart(2, '0')).join('') : ''; };
+          await kapi.winChrome({ mode: modeN, color: hx(cs.backgroundColor), symbol: hx(cs.color), height: Math.round($('#titlebar').getBoundingClientRect().height) }); }
+
+        // ── B5) แถบเมนูด้วยคีย์บอร์ด ──
+        if (plat !== 'darwin') {
+          const menus = [...document.querySelectorAll('#titlebar .tb-menu')];
+          check('[169-N] ชื่อเมนูอยู่นอกลำดับ Tab + มี role', menus.length >= 8 && menus.every((m) => m.tabIndex === -1 && m.getAttribute('role') === 'menuitem'));
+          const kd = (key, code, o = {}) => window.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key, code, bubbles: true, cancelable: true }, o)));
+          const ku = (key, code) => window.dispatchEvent(new KeyboardEvent('keyup', { key, code, bubbles: true, cancelable: true }));
+          kd('Alt', 'AltLeft', { altKey: true }); ku('Alt', 'AltLeft'); await wN(40);
+          check('[169-N] ★ แตะ Alt = เข้าแถบเมนู (โฟกัสที่เมนูแรก)', NSU.menubarActive() && document.activeElement === menus[0], document.activeElement && document.activeElement.className);
+          kd('ArrowRight', 'ArrowRight'); kd('ArrowRight', 'ArrowRight'); await wN(20);
+          check('[169-N] ★ → → เดินไปเมนูที่สาม', document.activeElement === menus[2], document.activeElement && document.activeElement.dataset.m);
+          kd('ArrowLeft', 'ArrowLeft'); kd('End', 'End'); await wN(20);
+          check('[169-N] End = เมนูสุดท้าย', document.activeElement === menus[menus.length - 1]);
+          kd('Escape', 'Escape'); await wN(40);
+          check('[169-N] ★ Esc = ออกจากแถบเมนู (ไม่ทิ้งโฟกัสค้างบนชื่อเมนู)', !NSU.menubarActive() && !menus.includes(document.activeElement));
+          kd('Alt', 'AltLeft', { altKey: true }); kd('F4', 'F4', { altKey: true }); ku('Alt', 'AltLeft'); await wN(40);
+          check('[169-N] ★ Alt ค้างแล้วกดคีย์อื่น ไม่เข้าแถบเมนู', !NSU.menubarActive());
+          kd('F10', 'F10'); await wN(40);
+          check('[169-N] F10 = เข้าแถบเมนู', NSU.menubarActive());
+          kd('F10', 'F10'); await wN(40);
+          check('[169-N] F10 ซ้ำ = ออก', !NSU.menubarActive());
+        }
+
+        // ── B7) งานยาว → แถบงาน ──
+        check('[169-N] แถบความคืบหน้าบนแถบงาน: 0..1 · busy · ล้าง', (await kapi.winProgress(0.25)) === 0.25 && (await kapi.winProgress('busy')) === 2 && (await kapi.winProgress(-1)) === -1);
+        const seenP = []; let doneN = null;
+        const keepH = { ...CORE.busyTaskHooks };
+        check('[169-N] ★ งานยาว (withBusyTask) ต่อกับแถบงานแล้ว', typeof keepH.progress === 'function' && typeof keepH.done === 'function');
+        CORE.busyTaskHooks.progress = (d, tot) => seenP.push(d + '/' + (tot === undefined ? '' : tot));
+        CORE.busyTaskHooks.done = (name, ms) => { doneN = [name, ms >= 0]; };
+        try { await CORE.withBusyTask('k169', async ({ progress }) => { progress(1, 4); progress(4, 4); }, { name: 'งาน169' }); }
+        finally { Object.assign(CORE.busyTaskHooks, keepH); }
+        check('[169-N] ★ งานยาวรายงาน: เริ่ม → คืบหน้า → ล้าง · จบแล้วแจ้งชื่องาน',
+              seenP.join(' ') === '0/0 1/4 4/4 -1/' && !!doneN && doneN[0] === 'งาน169' && doneN[1], seenP.join(' ') + ' ' + JSON.stringify(doneN));
+        const att = await kapi.winAttention({ title: 'K2', body: 'x' });
+        check('[169-N] เรียกความสนใจ: หน้าต่างอยู่หน้า = ไม่รบกวน · ไม่อยู่หน้า = กะพริบ (โหมดเทสไม่ยิงการแจ้งเตือนของระบบ)',
+              att && (att.shown === false ? att.reason === 'focused' : att.toast === false), JSON.stringify(att));
+
+        // ── B8) เปิดด้วยไฟล์/โฟลเดอร์ ──
+        const planOs = startupPlan({ openLastProject: false, showHomeOnStartup: true }, ['/a'], '/os/proj');
+        check('[169-N] ★ ระบบส่งโปรเจกต์มาตอนเปิด = เปิดโปรเจกต์นั้น ข้ามหน้าแรก (ชนะ "แสดงหน้าแรกเสมอ")',
+              planOs.last === '/os/proj' && planOs.showHome === false && planOs.fromOs === true, JSON.stringify(planOs));
+        const planNo = startupPlan({ openLastProject: true }, ['/a'], '');
+        check('[169-N] ไม่มีของจากระบบ = แผนเดิมทุกอย่าง', planNo.last === '/a' && planNo.skipHome === true && !planNo.fromOs);
+        check('[169-N] โหมดเทส: ไม่มีโปรเจกต์จากอาร์กิวเมนต์', (await kapi.launchProject()) === null);
+
+        // ── B9) ลากไฟล์จากนอกโปรแกรม ──
+        const pngN = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (ch) => ch.charCodeAt(0));
+        const imgDirN = await kapi.join(state.root, 'Images');
+        const mkFile = (name) => new File([pngN], name, { type: 'image/png' });
+        document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+        const r0 = await NSU.handleOsDrop([{ name: 'อะไรก็ไม่รู้.zip', path: '', file: new File(['z'], 'อะไรก็ไม่รู้.zip') }], document.body);
+        check('[169-N] ★ ไฟล์ที่ไม่รู้จัก = บอกผู้ใช้ว่ารับอะไรได้ (ไม่เงียบ)',
+              r0.kind === 'none' && [...document.querySelectorAll('.k-toast')].some((x) => x.textContent.includes(tt('ui.native.dropUnsupported'))));
+        document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+        // ทางจริง: อีเวนต์ drop ที่ document (ตัวกลาง) — ไฟล์รูปที่ไม่มีทางบนดิสก์ก็ต้องเข้าได้ (อ่านจากไบต์)
+        const dtN = new DataTransfer();
+        dtN.items.add(mkFile('k169-drop.png'));
+        // เทสก่อนหน้าที่ยิง dragstart ปลอมโดยไม่ยิง dragend ทิ้งธง "กำลังลากภายใน" ค้างไว้ — ล้างด้วยทางเดียวกับของจริง
+        document.dispatchEvent(new DragEvent('dragend', { bubbles: true }));
+        const tgtN = $('#statusbar');
+        const ovEv = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dtN });
+        tgtN.dispatchEvent(ovEv);
+        check('[169-N] ★ ลากไฟล์จากนอกโปรแกรมมาเหนือหน้าต่าง = รับ (ไม่ใช่เคอร์เซอร์ห้ามวาง)', ovEv.defaultPrevented);
+        const dpEv = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dtN });
+        tgtN.dispatchEvent(dpEv);
+        check('[169-N] ★ ปล่อยไฟล์ = default ถูกกันเสมอ (ไม่ให้ Chromium พยายามเปิดไฟล์เป็นหน้าเว็บ)', dpEv.defaultPrevented);
+        const gotN = await untilN(async () => await kapi.exists(await kapi.join(imgDirN, 'k169-drop.png')), 4000);
+        check('[169-N] ★ รูปที่ปล่อยนอกเอกสาร = เข้าคลังรูป (Images/)', !!gotN);
+        const toastN = await untilN(() => [...document.querySelectorAll('.k-toast')].find((x) => x.textContent.includes(ttf('ui.native.dropImagesAdded', 1))), 3000);
+        check('[169-N] บอกผลพร้อมปุ่มพาไปคลังรูป', !!toastN && !!toastN.querySelector('.k-toast-act'));
+        const r2 = await NSU.handleOsDrop([{ name: 'k169-drop.png', path: '', file: mkFile('k169-drop.png') }], document.body);
+        check('[169-N] ★ ชื่อซ้ำ = ไม่ทับของเดิม (k169-drop-2.png)', r2.kind === 'images' && r2.names[0] === 'k169-drop-2.png' && await kapi.exists(await kapi.join(imgDirN, 'k169-drop-2.png')), JSON.stringify(r2.names));
+        // ปล่อยลงเอกสารที่เปิดอยู่ = แทรกลงฉาก
+        let tabN = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        if (!tabN) {
+          const rowN = [...document.querySelectorAll('#tree .scene[data-path]')].find((r) => /\.md$/.test(r.dataset.path || ''));
+          if (rowN) { await openScene(rowN.dataset.path); await wN(600); }
+          tabN = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        }
+        check('[169-N] เงื่อนไข: มีแท็บนิยายที่แก้ได้', !!tabN);
+        activate(tabN.file); await wN(250);
+        const mdBefore = tabN.editor.getMarkdown();
+        const r3 = await NSU.handleOsDrop([{ name: 'k169-doc.png', path: '', file: mkFile('k169-doc.png') }], tabN.pane);
+        check('[169-N] ★ รูปที่ปล่อยลงเอกสาร = แทรกลงฉาก', r3.inserted === true && tabN.editor.getMarkdown().includes('k169-doc.png'), tabN.editor.getMarkdown().slice(-120));
+        tabN.editor.setMarkdown(mdBefore); await wN(60);
+        await saveTab(tabN);                              // คืนสภาพ — ไม่ทิ้งแท็บค้าง dirty ให้เทสถัดไป
+        for (const n of ['k169-drop.png', 'k169-drop-2.png', 'k169-doc.png']) { try { await kapi.remove(await kapi.join(imgDirN, n)); } catch {} }
+        document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+
+        // ── C1) กล่องโต้ตอบ: ลากย้ายได้ · ปุ่มปิดที่มุม ──
+        const askP = ask('กล่อง169');
+        const ovN = await untilN(() => [...document.querySelectorAll('.k-overlay')].pop());
+        const boxN = ovN.querySelector('.k-dialog'), ttlN = boxN.querySelector('.k-dlg-title');
+        const xN = await untilN(() => ovN.querySelector(':scope > .k-dlg-x'));
+        check('[169-N] ★ กล่องมีปุ่มปิดที่มุม (อยู่นอกตัวกล่อง — ไม่ถูกนับเป็นปุ่มของกล่อง)', !!xN && !boxN.contains(xN) && boxN.querySelectorAll('button').length === 2);
+        const b0 = boxN.getBoundingClientRect();
+        const xr0 = xN.getBoundingClientRect();
+        check('[169-N] ปุ่มปิดอยู่มุมขวาบนของกล่อง', Math.abs(xr0.right - (b0.right - 8)) <= 3 && Math.abs(xr0.top - (b0.top + 8)) <= 3, Math.round(xr0.right - b0.right) + ',' + Math.round(xr0.top - b0.top));
+        const tr0 = ttlN.getBoundingClientRect();
+        const mx0 = tr0.left + 30, my0 = tr0.top + tr0.height / 2;
+        const md = new MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true, clientX: mx0, clientY: my0 });
+        ttlN.dispatchEvent(md);
+        document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: mx0 + 90, clientY: my0 + 60 }));
+        const b1 = boxN.getBoundingClientRect();
+        check('[169-N] ★ ลากหัวกล่อง = กล่องย้ายตามเมาส์ (เดิมกลายเป็นลากเลือกข้อความทั้งกล่อง)',
+              md.defaultPrevented && Math.abs(b1.left - b0.left - 90) <= 2 && Math.abs(b1.top - b0.top - 60) <= 2, Math.round(b1.left - b0.left) + ',' + Math.round(b1.top - b0.top));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await wN(30);
+        const b2 = boxN.getBoundingClientRect();
+        check('[169-N] ★ Esc ระหว่างลาก = คืนตำแหน่งเดิม และกล่องยังเปิดอยู่', ovN.isConnected && Math.abs(b2.left - b0.left) <= 1 && Math.abs(b2.top - b0.top) <= 1);
+        ttlN.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true, clientX: mx0, clientY: my0 }));
+        document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: mx0 - 9000, clientY: my0 - 9000 }));
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: mx0 - 9000, clientY: my0 - 9000 }));
+        const b3 = boxN.getBoundingClientRect();
+        check('[169-N] ★ ลากออกนอกจอ = หัวกล่องยังอยู่ในจอให้จับกลับ', b3.top >= -1 && b3.right >= 47, Math.round(b3.top) + ',' + Math.round(b3.right));
+        const xr3 = xN.getBoundingClientRect();
+        check('[169-N] ปุ่มปิดตามกล่องไปด้วย', Math.abs(xr3.right - (b3.right - 8)) <= 3 && Math.abs(xr3.top - (b3.top + 8)) <= 3);
+        ttlN.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        const b4 = boxN.getBoundingClientRect();
+        check('[169-N] ดับเบิลคลิกหัวกล่อง = กลับกลางจอ', Math.abs(b4.left - b0.left) <= 1 && Math.abs(b4.top - b0.top) <= 1);
+        xN.click();
+        const ansN = await Promise.race([askP, wN(1500).then(() => 'ค้าง')]);
+        check('[169-N] ★ กดปุ่มปิดที่มุม = ทางออกเดียวกับ ยกเลิก', ansN === null && !ovN.isConnected, String(ansN));
+
+        // ── C2) กล่องตั้งค่าไม่มีแถบเลื่อนแนวนอน ──
+        settingsDialog();
+        const setN = await untilN(() => document.querySelector('.k-overlay .k-set-main'));
+        check('[169-N] เงื่อนไข: กล่องตั้งค่าเปิด', !!setN);
+        const badPages = [];
+        for (const tabS of document.querySelectorAll('.k-overlay .k-set-tab')) {
+          tabS.click(); await wN(30);
+          if (setN.scrollWidth > setN.clientWidth + 1) badPages.push((tabS.dataset.p || '?') + '+' + (setN.scrollWidth - setN.clientWidth));
+        }
+        check('[169-N] ★ กล่องตั้งค่า: ไม่มีหน้าไหนล้นแนวนอน (เดิมช่องเลือกขวาถูกตัด + มีแถบเลื่อนแนวนอน)', badPages.length === 0, badPages.join(' '));
+        document.querySelector('.k-overlay .k-dialog .k-cancel').click();
+        await untilN(() => !document.querySelector('.k-overlay .k-set-main'));
+
+        // ── สถานะว่างของพื้นที่เอกสารพูดความจริง ──
+        const emN = document.querySelector('#content > .k-docs-empty');
+        check('[169-N] ★ สถานะว่างของพื้นที่เอกสารตรงกับความจริง (มีโปรเจกต์ = "ยังไม่ได้เปิดเอกสาร" ไม่ใช่ "ยังไม่ได้เปิดโปรเจกต์")',
+              !emN || emN.dataset.mode === (state.root ? 'tab' : 'project'), emN && emN.dataset.mode);
+        const keepRoot = state.root;
+        // ตัวกันถอย: กล่องที่ค้างโหมดเก่าต้องถูกวาดใหม่เมื่อสภาพโปรเจกต์เปลี่ยน (จำลองด้วยการสลับค่าแล้วเรียกตัวซิงก์)
+        const tabsHost = $('#tabs');
+        const hadTabs = !!tabsHost.querySelector(':scope > .tab');
+        if (!hadTabs) {
+          state.root = null; syncDocsEmpty();
+          const m1 = (document.querySelector('#content > .k-docs-empty') || {}).dataset;
+          state.root = keepRoot; syncDocsEmpty();
+          const m2 = (document.querySelector('#content > .k-docs-empty') || {}).dataset;
+          check('[169-N] ตัวซิงก์สลับข้อความตามสภาพโปรเจกต์', m1 && m1.mode === 'project' && m2 && m2.mode === 'tab');
+        }
+        state.root = keepRoot;
+      }
+
+      // ══ [alpha.169 · a11y] ★ การช่วยการเข้าถึง — ลองบนหน้าต่างจริง ══
+      // ผู้ใช้: "เพิ่ม feature แบบ accessibility สำหรับผู้มีปัญหา ตั้งใน setting … จับปุ่ม · theme contrast/ตาบอดสี ·
+      //          แถบสีบรรทัด cursor · type writer และเสียง ย้ายไปอยู่ accessibility · virtual keyboard ของ os"
+      {
+        const wA = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilA = async (fn, max = 4000) => { const t0 = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t0 > max) return v; await wA(40); } };
+        const APP = await import('./app.js');
+        const KE = await import('./a11y/key-echo.js');
+        const LB = await import('./a11y/line-band.js');
+        const AC = await import('./a11y/a11y-core.js');
+        const CORE_A = await import('./core.js');
+        const CU = await import('./color-util.js');
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        closeMenu();
+        const keepA = { theme: state.settings.theme };
+        for (const k of Object.keys(AC.A11Y_DEFAULTS)) keepA[k] = state.settings[k];
+        const gA = async () => (await kapi.readGlobalSettings()) || {};
+        const press = (key, o = {}, target) => (target || document.body).dispatchEvent(
+          new KeyboardEvent('keydown', { key, code: o.code || '', bubbles: true, cancelable: true, shiftKey: !!o.shift }));
+
+        // ── A) หน้าในกล่องตั้งค่า ──
+        settingsDialog('a11y');
+        await wA(250);
+        const boxA = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        const qA = (s) => boxA.querySelector(s);
+        const pageA = qA('.k-set-page[data-p="a11y"]');
+        check('[169-A] ★ ตั้งค่ามีหน้า "การช่วยการเข้าถึง" และเปิดตรงหน้านั้นได้', !!pageA && pageA.classList.contains('on')
+              && getComputedStyle(pageA).display !== 'none' && qA('.k-set-tab.on').dataset.p === 'a11y');
+        check('[169-A] หน้านี้บอกขอบเขตว่าเป็นค่าระดับผู้ใช้', !!pageA.querySelector('.k-set-scope[data-scope="global"]'));
+        const chipsA = [...pageA.querySelectorAll('.k-a11y-theme[data-theme]')];
+        check('[169-A] ★ ปุ่มธีมช่วยการมองเห็นครบตามทะเบียน (คอนทราสต์สูง · ตาบอดสี · ขาวดำ)',
+              chipsA.length === CORE_A.THEMES_A11Y.length && chipsA.length === 8
+              && chipsA.every((b) => CORE_A.THEMES.includes(b.dataset.theme) && b.textContent.trim() && !/^ui\./.test(b.textContent)),
+              chipsA.map((b) => b.dataset.theme).join());
+        check('[169-A] ★ เสียงพิมพ์ดีด + โหมดเครื่องพิมพ์ดีด อยู่หน้านี้ (ย้ายจากหน้าการเขียน)',
+              !!pageA.querySelector('#st-typesnd') && !!pageA.querySelector('#st-typesnd-vol') && !!pageA.querySelector('#st-typewriter')
+              && !qA('.k-set-page[data-p="write"] #st-typesnd') && boxA.querySelectorAll('#st-typesnd').length === 1);
+        // ธีม: กดแล้วเห็นผลทันที + ช่องธีมของหน้า "ทั่วไป" ตาม (ค่าเดียว ช่องเดียว)
+        for (const id of ['hc-dark', 'hc-light']) {
+          chipsA.find((b) => b.dataset.theme === id).click();
+          await wA(120);
+          const csA = getComputedStyle(document.body);
+          const conA = CU.contrast(csA.getPropertyValue('--fg').trim(), csA.getPropertyValue('--bg').trim());
+          check('[169-A] ★ ธีม ' + id + ': กดปุ่มแล้วใช้ทันที · คอนทราสต์ตัวหนังสือ/พื้น 21:1',
+                document.body.classList.contains('theme-' + id) && qA('#st-theme').value === id && conA >= 20.9, conA.toFixed(2));
+          check('[169-A] ธีม ' + id + ': ส่วนควบคุมดั้งเดิมตามโหมดของธีม', document.documentElement.style.colorScheme === (id === 'hc-dark' ? 'dark' : 'light'));
+          check('[169-A] ธีม ' + id + ': ปุ่มที่เลือกติดสถานะ (aria-pressed)',
+                chipsA.filter((b) => b.classList.contains('on')).length === 1 && chipsA.find((b) => b.dataset.theme === id).getAttribute('aria-pressed') === 'true');
+        }
+        chipsA.find((b) => b.dataset.theme === 'cvd-rg-dark').click();
+        await wA(120);
+        {
+          const csB = getComputedStyle(document.body);
+          check('[169-A] ★ ธีมตาบอดสี: สีเตือน/อันตรายถูกทับ (ไม่ใช่เหลืองอมส้มกับแดงของค่ากลาง)',
+                csB.getPropertyValue('--st-danger').trim() === '#d55e00' && csB.getPropertyValue('--st-warn').trim() === '#f0e442',
+                csB.getPropertyValue('--st-danger') + ' ' + csB.getPropertyValue('--st-warn'));
+        }
+        // ตัวอย่างป้ายปุ่ม (ยังไม่บันทึก = ยังไม่เปิดของจริง)
+        qA('#st-a11y-keyecho-size').value = '200'; qA('#st-a11y-keyecho-size').dispatchEvent(new Event('input'));
+        qA('#st-a11y-keyecho-ms').value = '1500'; qA('#st-a11y-keyecho-ms').dispatchEvent(new Event('input'));
+        check('[169-A] ป้ายข้างตัวเลื่อนบอกค่า', qA('#st-a11y-keyecho-size-lbl').textContent === '200 px' && /1\.5/.test(qA('#st-a11y-keyecho-ms-lbl').textContent));
+        qA('#st-a11y-keyecho-test').click();
+        await wA(120);
+        const hostA = document.getElementById('k-key-echo');
+        const capA = hostA && hostA.firstElementChild;
+        const hcsA = hostA && getComputedStyle(hostA);
+        check('[169-A] ★ ปุ่ม "แสดงตัวอย่าง" โชว์ป้ายด้วยค่าที่อยู่ในช่อง (ยังไม่ต้องบันทึก)',
+              !!hostA && hostA.classList.contains('on') && hcsA.visibility === 'visible' && getComputedStyle(capA).fontSize === '200px'
+              && state.settings.a11yKeyEcho !== true, capA && getComputedStyle(capA).fontSize);
+        const allZ = [...document.querySelectorAll('body *')].map((e) => +getComputedStyle(e).zIndex || 0);
+        check('[169-A] ★★ ป้ายอยู่ชั้นบนสุดของหน้าต่าง (เหนือกล่องตั้งค่าที่เปิดอยู่)',
+              +hcsA.zIndex === 2147483647 && Math.max(...allZ) === +hcsA.zIndex && hostA.parentNode === document.body);
+        {
+          const r = capA.getBoundingClientRect();
+          const under = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          check('[169-A] ★ ป้ายไม่รับคลิก — ของข้างใต้ยังกดได้', hcsA.pointerEvents === 'none' && !!under && !hostA.contains(under), under && under.className);
+          check('[169-A] ป้ายอยู่กลางจอ', Math.abs((r.left + r.width / 2) - innerWidth / 2) < 3 && Math.abs((r.top + r.height / 2) - innerHeight / 2) < 3,
+                Math.round(r.left + r.width / 2) + ',' + Math.round(r.top + r.height / 2));
+          check('[169-A] โปรแกรมอ่านจอไม่อ่านป้ายซ้ำ (aria-hidden)', hostA.getAttribute('aria-hidden') === 'true');
+        }
+        // ยกเลิก = ธีมกลับ + ป้ายหาย + ค่าไม่เปลี่ยน
+        qA('.k-cancel').click();
+        await wA(200);
+        check('[169-A] ★ ยกเลิก: ธีมที่ลองกลับเป็นธีมเดิม · ป้ายตัวอย่างหาย · ไม่มีค่าไหนถูกเขียน',
+              currentTheme() === (CORE_A.THEME_ALIAS[keepA.theme] || keepA.theme || 'k2') && !document.body.classList.contains('theme-cvd-rg-dark')
+              && !hostA.classList.contains('on') && state.settings.a11yKeyEcho !== true && state.settings.a11yLineBand !== true, currentTheme());
+
+        // ── B) บันทึกจากกล่องตั้งค่า ──
+        settingsDialog('a11y');
+        await wA(250);
+        const boxB = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        const qB = (s) => boxB.querySelector(s);
+        qB('#st-a11y-keyecho').checked = true;
+        qB('#st-a11y-keyecho-pos').value = 'bottom';
+        qB('#st-a11y-keyecho-ms').value = '2000';
+        qB('#st-a11y-band').checked = true;
+        qB('#st-a11y-band-color').value = '#66ccff';
+        qB('#st-a11y-band-op').value = '0.5';
+        qB('#st-typewriter').checked = true;
+        // ★ ปุ่ม "บันทึก" ตัวจริง = ปุ่มในแถวล่างของกล่อง — เดิมตัวบันทึกถูกผูกกับ `.k-ok` ตัวแรกใน DOM ซึ่งคือปุ่ม
+        //   "เปิดตั้งค่า AI" ของหน้า AI → ปุ่มบันทึกที่ผู้ใช้เห็นกดไม่ติดมาตั้งแต่ alpha.164 (เทสเดิมกด `.k-ok` ตัวแรกจึงไม่เห็น)
+        const footOk = boxB.querySelector(':scope > .k-dlg-btns > .k-ok');
+        const aiBtnB = qB('#st-ai-open');
+        {
+          const r = footOk.getBoundingClientRect();
+          const atPt = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          check('[169-A] ★★ ปุ่ม "บันทึก" ที่ผู้ใช้เห็น (ท้ายกล่อง) มีตัวรับคลิกจริง และเป็นของที่อยู่ใต้เมาส์ตรงนั้น',
+                typeof footOk.onclick === 'function' && atPt === footOk && footOk.textContent === tt('ui.dialogs.save'), atPt && atPt.className);
+          check('[169-A] ★★ ทั้งกล่องมีปุ่มหลักตัวเดียว · ปุ่ม "เปิดตั้งค่า AI" ไม่ได้ถูกผูกเป็นตัวบันทึก',
+                boxB.querySelectorAll('.k-ok').length === 1 && !!aiBtnB && !aiBtnB.classList.contains('k-ok')
+                && typeof aiBtnB.onclick === 'function' && aiBtnB.onclick !== footOk.onclick);
+          check('[169-A] ★ ปุ่มคืนค่าก่อนหน้า/ค่าโรงงานอยู่แถวล่างของกล่อง (เดิมไปโผล่ในหน้า AI)',
+                !!boxB.querySelector(':scope > .k-dlg-btns > .k-set-undo') && !boxB.querySelector('.k-set-page .k-set-undo'));
+        }
+        footOk.click();
+        await untilA(() => state.settings.a11yKeyEcho === true && !document.querySelector('.k-dialog.k-settings'));
+        check('[169-A] ★ บันทึก: ค่าลง settings ครบ', state.settings.a11yKeyEcho === true && state.settings.a11yKeyEchoPos === 'bottom'
+              && state.settings.a11yKeyEchoMs === 2000 && state.settings.a11yLineBand === true && state.settings.a11yLineBandColor === '#66ccff'
+              && state.settings.a11yLineBandOpacity === 0.5 && state.settings.typewriterMode === true,
+              JSON.stringify(Object.keys(AC.A11Y_DEFAULTS).map((k) => state.settings[k])));
+        const g1 = await untilA(async () => { const g = await gA(); return g.a11yKeyEcho === true && g.typewriterMode === true && g; });
+        check('[169-A] ★★ เป็นค่าระดับผู้ใช้ — เขียนลงไฟล์ตั้งค่าผู้ใช้ (ตามไปทุกผลงาน)',
+              !!g1 && g1.a11yLineBand === true && g1.a11yLineBandColor === '#66ccff' && g1.a11yKeyEchoPos === 'bottom', JSON.stringify(g1 && { e: g1.a11yKeyEcho, b: g1.a11yLineBand }));
+        check('[169-A] ★ โหมดเครื่องพิมพ์ดีดเปิดจากหน้านี้ได้ + ปุ่มบนแถบติดไฟ', isTypewriter() === true && $('#tb-typewriter').classList.contains('on'));
+        check('[169-A] ตัวแสดงปุ่มเริ่มฟังแล้ว', KE.keyEchoState().on && KE.keyEchoState().bound);
+
+        // ── C) แสดงปุ่มที่กด (ของจริง) ──
+        press('ก', { code: 'KeyD' });
+        await wA(60);
+        let stA = KE.keyEchoState();
+        check('[169-A] ★★ กดปุ่ม → ตัวอักษรที่พิมพ์ขึ้นป้าย (แป้นไทย)', stA.visible && stA.text === 'ก' && stA.kind === 'char' && hostA.textContent === 'ก', JSON.stringify(stA));
+        check('[169-A] ตำแหน่งตามที่ตั้ง (ด้านล่าง)', stA.pos === 'bottom' && capA.getBoundingClientRect().top > innerHeight / 2);
+        press('F13');
+        await wA(60);
+        check('[169-A] ปุ่มที่มีชื่อ', KE.keyEchoState().text === 'F13' && KE.keyEchoState().kind === 'key');
+        press('Tab', { shift: true });
+        await wA(60);
+        check('[169-A] Shift + ปุ่มที่มีชื่อ แยกเป็นสองฝาปุ่ม', KE.keyEchoState().text === 'Shift + Tab' && capA.querySelectorAll('.k-key-echo-key').length === 2
+              && capA.querySelectorAll('.k-key-echo-plus').length === 1);
+        check('[169-A] ข้อความยาวย่อตัวอักษรลงให้พอดีจอ', parseFloat(getComputedStyle(capA).fontSize) < state.settings.a11yKeyEchoSize
+              && capA.getBoundingClientRect().width <= innerWidth);
+        // ช่องรหัสผ่าน = ไม่โชว์
+        const pwA = document.createElement('input'); pwA.type = 'password'; document.body.append(pwA);
+        press('ข', {}, pwA);
+        await wA(60);
+        check('[169-A] ★★ ช่องรหัสผ่าน: ไม่โชว์สิ่งที่พิมพ์ และป้ายเดิมถูกซ่อนทันที', !KE.keyEchoState().visible && KE.keyEchoState().text !== 'ข');
+        pwA.remove();
+        // โหมด: เฉพาะปุ่มพิเศษ
+        state.settings.a11yKeyEchoMode = 'special'; APP.applyA11y();
+        press('ค');
+        await wA(40);
+        const sp1 = KE.keyEchoState();
+        press('Home');
+        await wA(40);
+        check('[169-A] ★ โหมด "เฉพาะปุ่มพิเศษ": ตัวอักษรไม่ขึ้น · ปุ่มพิเศษขึ้น', sp1.text !== 'ค' && !sp1.visible && KE.keyEchoState().text === 'Home' && KE.keyEchoState().visible);
+        state.settings.a11yKeyEchoMode = 'all';
+        // หายเองตามเวลาที่ตั้ง
+        state.settings.a11yKeyEchoMs = 300; APP.applyA11y();
+        press('ง');
+        await wA(40);
+        const onA = KE.keyEchoState().visible;
+        const goneA = await untilA(() => !KE.keyEchoState().visible, 2000);
+        check('[169-A] ★ ป้ายหายเองตามเวลาที่ตั้ง', onA && goneA);
+        // ตัวแสดงปุ่มไม่กินปุ่ม
+        {
+          let seen = 0, prevented = false;
+          const h = (e) => { seen++; prevented = e.defaultPrevented; };
+          document.body.addEventListener('keydown', h);
+          press('F14');
+          document.body.removeEventListener('keydown', h);
+          check('[169-A] ★ ตัวแสดงปุ่ม "ดู" อย่างเดียว — ปุ่มยังไปถึงตัวรับเดิม ไม่ถูกยกเลิก', seen === 1 && prevented === false);
+        }
+
+        // ── D) แถบสีบรรทัดเคอร์เซอร์ (ของจริงบนตัวแก้ไข) ──
+        let tabA = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        if (!tabA) {
+          const rowA = [...document.querySelectorAll('#tree .scene[data-path]')].find((r) => /\.md$/.test(r.dataset.path || ''));
+          if (rowA) { await openScene(rowA.dataset.path); await wA(600); }
+          tabA = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        }
+        check('[169-A] เงื่อนไข: มีแท็บนิยายที่แก้ได้', !!tabA);
+        activate(tabA.file); await wA(300);
+        if (isPageView && isPageView(currentSpView())) { setSpView('normal'); await wA(300); }
+        const vA = tabA.editor.view;
+        const mdA = tabA.editor.getMarkdown();
+        const dirtyA = !!tabA.dirty;
+        const geoA = () => { const c = getComputedStyle(vA.dom); return [c.paddingLeft, c.paddingTop, c.width, vA.dom.className, vA.dom.getBoundingClientRect().height].join('|'); };
+        // ปิดก่อน → วัดเรขาคณิต → เปิด → ต้องเท่าเดิมเป๊ะ (กฎเหล็ก: UI ห้ามกระทบหน้ากระดาษ)
+        APP.setA11ySwitch('a11yLineBand', false);
+        await wA(80);
+        const geo0 = geoA();
+        check('[169-A] ปิดสวิตช์ = ไม่มีแถบ', !LB.lineBandState().visible);
+        APP.setA11ySwitch('a11yLineBand', true);
+        vA.focus();
+        const selAt = (pos) => { const TS = vA.state.selection.constructor; vA.dispatch(vA.state.tr.setSelection(TS.near(vA.state.doc.resolve(pos)))); };
+        selAt(2);
+        LB.refreshLineBandNow();
+        const bandA = tabA.pane.querySelector('.k-line-band');
+        const bsA = LB.lineBandState();
+        check('[169-A] ★★ เปิดแล้วมีแถบที่บรรทัดของเคอร์เซอร์', bsA.visible && !!bandA && getComputedStyle(bandA).display === 'block', JSON.stringify(bsA));
+        {
+          const c = vA.coordsAtPos(vA.state.selection.head), b = bandA.getBoundingClientRect(), p = vA.dom.getBoundingClientRect();
+          check('[169-A] ★★ แถบครอบบรรทัดที่เคอร์เซอร์อยู่พอดี (วัดจากจอจริง)',
+                b.top <= c.top + 1 && b.bottom >= c.bottom - 1 && b.height <= (c.bottom - c.top) * 1.6 + 4,
+                [b.top, b.bottom, c.top, c.bottom].map(Math.round).join());
+          check('[169-A] ★ แถบกว้างเท่ากระดาษ', Math.abs(b.left - p.left) <= 2 && Math.abs(b.width - p.width) <= 2, Math.round(b.width) + ' / ' + Math.round(p.width));
+          check('[169-A] ★ สี/ความเข้มตามที่ตั้ง', bsA.color === '#66ccff' && bsA.opacity === 0.5 && getComputedStyle(bandA).opacity === '0.5'
+                && /102,\s*204,\s*255/.test(getComputedStyle(bandA).backgroundColor), getComputedStyle(bandA).backgroundColor);
+          check('[169-A] ★ วิธีผสมตามสีตัวหนังสือที่จอใช้จริง (พื้นมืด = screen · พื้นสว่าง = multiply)',
+                getComputedStyle(bandA).mixBlendMode === AC.bandBlend(getComputedStyle(vA.dom).color), getComputedStyle(bandA).mixBlendMode);
+        }
+        check('[169-A] ★★ แถบเป็นแผ่นทับใน .pane — ไม่อยู่ใน DOM ของตัวแก้ไข ไม่รับคลิก',
+              bandA.parentNode === tabA.pane && !vA.dom.contains(bandA) && getComputedStyle(bandA).pointerEvents === 'none'
+              && !vA.dom.querySelector('.k-line-band') && bandA.getAttribute('aria-hidden') === 'true');
+        check('[169-A] ★★ เปิดแถบแล้วเรขาคณิตของหน้ากระดาษไม่ขยับ + เนื้อหาไม่ถูกแตะ (กฎเหล็ก UI ไม่กระทบเอกสาร)',
+              geoA() === geo0 && tabA.editor.getMarkdown() === mdA && !!tabA.dirty === dirtyA, geoA() + ' ≠ ' + geo0);
+        // เคอร์เซอร์ย้ายบรรทัด → แถบตาม
+        {
+          const top0 = bandA.getBoundingClientRect().top;
+          selAt(vA.state.doc.content.size - 1);
+          LB.refreshLineBandNow();
+          const c2 = vA.coordsAtPos(vA.state.selection.head), b2 = bandA.getBoundingClientRect();
+          check('[169-A] ★ ย้ายเคอร์เซอร์ไปบรรทัดอื่น → แถบตามไป', (c2.top - vA.coordsAtPos(2).top < 4) || (Math.abs(b2.top - top0) > 4 && b2.top <= c2.top + 1 && b2.bottom >= c2.bottom - 1),
+                Math.round(top0) + ' → ' + Math.round(b2.top));
+          // ตามเองจากเหตุการณ์เลือก (ไม่ต้องสั่งวาด)
+          selAt(2);
+          const backA = await untilA(() => Math.abs(bandA.getBoundingClientRect().top - top0) <= 1, 1500);
+          check('[169-A] ★ แถบตามเคอร์เซอร์เองจากเหตุการณ์เลือก (ไม่ต้องมีใครสั่งวาด)', !!backA);
+        }
+        // เลื่อนเอกสาร → แถบติดไปกับเนื้อ (เป็นลูกของกล่องที่เลื่อน)
+        {
+          const c0 = vA.coordsAtPos(vA.state.selection.head).top - bandA.getBoundingClientRect().top;
+          const keepTop = tabA.pane.scrollTop;
+          tabA.pane.style.scrollBehavior = 'auto';
+          tabA.pane.scrollTop = keepTop + 40;
+          const moved = tabA.pane.scrollTop !== keepTop;
+          const c1 = vA.coordsAtPos(vA.state.selection.head).top - bandA.getBoundingClientRect().top;
+          check('[169-A] เลื่อนเอกสาร: แถบเลื่อนไปกับบรรทัด (หรือเอกสารสั้นเกินจะเลื่อน)', !moved || Math.abs(c1 - c0) <= 1, c0 + ' / ' + c1);
+          tabA.pane.scrollTop = keepTop; tabA.pane.style.scrollBehavior = '';
+        }
+        // โหมดอ่าน = ไม่มีเคอร์เซอร์ → ไม่มีแถบ
+        toggleReading(true);
+        LB.refreshLineBandNow();
+        const readHid = !LB.lineBandState().visible;
+        toggleReading(false);
+        LB.refreshLineBandNow();
+        check('[169-A] ★ โหมดอ่าน (ไม่มีเคอร์เซอร์) ซ่อนแถบ · ออกแล้วกลับมา', readHid && LB.lineBandState().visible);
+        // งานพิมพ์ไม่มีแถบ/ป้าย
+        check('[169-A] ★ งานพิมพ์ไม่มีแถบและป้ายปุ่ม (กฎ @media print)',
+              [...document.styleSheets].some((sh) => { try { return [...sh.cssRules].some((r) => r.media && /print/.test(r.media.mediaText)
+                && [...r.cssRules].some((x) => /\.k-line-band/.test(x.selectorText || '') && /\.k-key-echo/.test(x.selectorText || '') && x.style.display === 'none')); } catch { return false; } }));
+
+        // ── E) เมนูระบบ: เครื่องมือ → การช่วยการเข้าถึง (กดของจริง) ──
+        if (kapi.menuLabels && kapi.menuTestClick) {
+          syncMenuToggles();
+          await wA(200);
+          const labsA = await kapi.menuLabels();
+          const pathA = labsA.filter((l) => l.includes(' > ' + tt('ui.menu.a11y')));
+          check('[169-A] ★ เมนู เครื่องมือ → การช่วยการเข้าถึง มีครบ 5 รายการ และไม่มีคีย์ภาษาดิบ',
+                pathA.length === 6 && pathA.every((l) => !/ui\.menu\./.test(l))
+                && [tt('ui.menu.a11yKeyEcho'), tt('ui.menu.a11yLineBand'), tt('ui.menu.soundTypewriterPrint'), tt('ui.menu.a11yOsk'), tt('ui.menu.a11ySettings')]
+                  .every((x) => pathA.some((l) => l.endsWith(' > ' + x))), pathA.join(' | '));
+          const [m0] = await untilA(async () => { const s = await kapi.menuItemState(['a11y-key-echo']); return s[0].checked && s; }, 2000) || [{}];
+          check('[169-A] เมนูติ๊กตามค่าจริง (แสดงปุ่มที่กด = เปิด)', !!m0.checked, JSON.stringify(m0));
+          const mcA = await kapi.menuTestClick('a11y-key-echo');
+          await untilA(() => state.settings.a11yKeyEcho === false);
+          check('[169-A] ★★ กดเมนูจริง → สวิตช์ปิด + หยุดโชว์ + เขียนไฟล์ตั้งค่าผู้ใช้',
+                mcA && mcA.ok && state.settings.a11yKeyEcho === false && !KE.keyEchoState().on
+                && !!(await untilA(async () => (await gA()).a11yKeyEcho === false)));
+          press('จ');
+          await wA(60);
+          check('[169-A] ★ ปิดแล้วกดปุ่มไม่มีป้ายขึ้น', !KE.keyEchoState().visible && KE.keyEchoState().text !== 'จ');
+          await kapi.menuTestClick('a11y-line-band');
+          await untilA(() => state.settings.a11yLineBand === false);
+          check('[169-A] ★ กดเมนูแถบสีบรรทัด → ปิด + แถบหาย', state.settings.a11yLineBand === false && !LB.lineBandState().visible);
+          const [mL] = await untilA(async () => { const s = await kapi.menuItemState(['a11y-line-band']); return !s[0].checked && s; }, 2000) || [{ checked: true }];
+          check('[169-A] เมนูเลิกติ๊กตามค่าจริงหลังกด', mL.exists && !mL.checked);
+        }
+
+        // ── F) คำสั่ง: โหมดเครื่องพิมพ์ดีดจำเป็นค่าระดับผู้ใช้ · เสียงพิมพ์ดีด · แป้นพิมพ์บนจอ ──
+        await handleCommand('typewriter');
+        check('[169-A] ★ สลับโหมดเครื่องพิมพ์ดีดจากคำสั่ง → ปิด + จำลง settings', isTypewriter() === false && state.settings.typewriterMode === false);
+        check('[169-A] ★★ โหมดเครื่องพิมพ์ดีดเป็นค่าระดับผู้ใช้ (เดิมเปิดโปรแกรมใหม่แล้วหาย)', !!(await untilA(async () => (await gA()).typewriterMode === false)));
+        // ค่าใน settings เปลี่ยน (เปิดโปรเจกต์ที่บันทึกไว้ว่าเปิด) → applySettings เปิดโหมดให้
+        state.settings.typewriterMode = true; applySettings();
+        const twOn = isTypewriter();
+        // …แต่ applySettings รอบถัดไปต้องไม่ดึงโหมดที่ถูกสลับตรง ๆ กลับ
+        toggleTypewriter(false); applySettings();
+        check('[169-A] ★ เปิดตามค่าที่บันทึกไว้ · และไม่ดึงโหมดที่สลับระหว่างทางกลับทุกครั้งที่ applySettings', twOn === true && isTypewriter() === false);
+        state.settings.typewriterMode = false; applySettings();
+        const sndWas = !!state.settings.typeSound;
+        await handleCommand('type-sound');
+        check('[169-A] ★ สวิตช์เสียงพิมพ์ดีดเขียนไฟล์ตั้งค่าผู้ใช้ด้วย (เดิมลงไฟล์ผลงานอย่างเดียว)',
+              state.settings.typeSound === !sndWas && !!(await untilA(async () => (await gA()).typeSound === !sndWas)));
+        await handleCommand('type-sound');
+        await untilA(async () => (await gA()).typeSound === sndWas);
+        const oskA = await APP.openOsKeyboard();
+        check('[169-A] ★ แป้นพิมพ์บนจอ: main ตอบแผนของระบบนี้ (โหมดเทสไม่เปิดของจริงบนเครื่อง)',
+              oskA && oskA.ok && oskA.dry === true && (kapi.platform !== 'win32' || oskA.first === 'osk.exe'), JSON.stringify(oskA));
+        check('[169-A] บอกผลบนแถบสถานะ', $('#status').textContent.includes(tt('ui.a11y.oskOpened')), $('#status').textContent);
+        await handleCommand('a11y-settings');
+        await wA(250);
+        const boxC = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        check('[169-A] ★ คำสั่ง "ตั้งค่าการช่วยการเข้าถึง" เปิดกล่องตรงหน้านั้น', !!boxC && boxC.querySelector('.k-set-page[data-p="a11y"]').classList.contains('on'));
+        check('[169-A] ช่องในกล่องสะท้อนสภาพจริงตอนนี้', boxC.querySelector('#st-a11y-keyecho').checked === false && boxC.querySelector('#st-typewriter').checked === false
+              && boxC.querySelector('#st-a11y-band-color').value === '#66ccff');
+        boxC.querySelector('.k-cancel').click();
+        await wA(150);
+
+        // ── คืนสภาพ (ค่าระดับผู้ใช้ข้ามรอบเทสได้) ──
+        for (const k of Object.keys(AC.A11Y_DEFAULTS)) state.settings[k] = keepA[k] === undefined ? AC.A11Y_DEFAULTS[k] : keepA[k];
+        state.settings.a11yKeyEcho = false; state.settings.a11yLineBand = false; state.settings.typewriterMode = false;
+        state.settings.theme = keepA.theme;
+        toggleTypewriter(false);
+        applySettings();
+        KE.hideKeyEcho();
+        try { await APP.mergeGlobalSettings(Object.fromEntries(Object.keys(AC.A11Y_DEFAULTS).map((k) => [k, state.settings[k]]))); } catch {}
+        check('[169-A] คืนสภาพ: ตัวช่วยปิดทั้งหมด', !KE.keyEchoState().on && !LB.lineBandState().on && !isTypewriter() && !document.querySelector('.k-dialog.k-settings'));
+      }
+
+      // ═══════ [169-X] ไอคอน · เลขรุ่นบนแถบชื่อ · ช่องภาพ Story Starter · วงจรชีวิตปลั๊กอิน · รอบ native/UI/bug hunt ═══════
+      {
+        const wX = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilX = async (fn, max = 4000) => { const t0 = Date.now(); for (;;) { let v = false; try { v = await fn(); } catch {} if (v) return v; if (Date.now() - t0 > max) return v; await wX(40); } };
+        const APPX = await import('./app.js');
+        const PUI = await import('./panels/panel-ui.js');
+        document.querySelectorAll('.k-overlay, .k-menu').forEach((o) => o.remove());
+
+        // ── 1) แถบชื่อ: เลขรุ่น + ไอคอนจริง ──
+        const verEl = document.getElementById('tb-ver');
+        check('[169-X] ★ แถบชื่อกำกับเลขรุ่นของโปรแกรม', !!verEl && verEl.textContent === 'v' + APPX.APP_VERSION && verEl.getBoundingClientRect().width > 10,
+              verEl && verEl.textContent);
+        check('[169-X] ชื่อผลงานยังอยู่หน้าเลขรุ่น + ชื่อหน้าต่างของระบบมีเลขรุ่น',
+              document.getElementById('tb-title').textContent.startsWith(state.title) && document.title.includes(APPX.APP_VERSION), document.title);
+        const logoX = document.querySelector('#tb-logo img');
+        check('[169-X] ★ โลโก้บนแถบชื่อเป็นไอคอนของโปรแกรม (โหลดได้จริง ไม่ใช่ตัวหนังสือ K2)',
+              !!logoX && await untilX(() => logoX.complete && logoX.naturalWidth > 0) && document.getElementById('tb-logo').textContent.trim() === '',
+              logoX && logoX.src);
+
+        // ── 1b) โลโก้ตามพื้นหลัง: ขาวบนธีมมืด · สีบนธีมสว่าง (ผู้ใช้: "อยู่บนพื้นสีมืด ให้เป็นสีขาว · สีส้มเหมาะกับพื้นสีสว่าง") ──
+        {
+          const keepThemeX = state.settings.theme;
+          const shown = () => [...document.querySelectorAll('#tb-logo img')].filter((i) => getComputedStyle(i).display !== 'none' && i.getBoundingClientRect().width > 4)
+            .map((i) => (i.classList.contains('k-logo-white') ? 'white' : 'color')).join();
+          toggleTheme('k2'); await wX(200);
+          check('[169-X] ★ ธีมมืด: โลโก้บนแถบชื่อเป็นฉบับขาว (ตัวเดียว)', shown() === 'white' && document.documentElement.dataset.themeMode === 'dark', shown());
+          const whiteX = document.querySelector('#tb-logo img.k-logo-white');
+          check('[169-X] ฉบับขาวโหลดได้จริง', await untilX(() => whiteX.complete && whiteX.naturalWidth > 0));
+          toggleTheme('k2-light'); await wX(200);
+          check('[169-X] ★ ธีมสว่าง: โลโก้บนแถบชื่อเป็นฉบับสี (ตัวเดียว)', shown() === 'color' && document.documentElement.dataset.themeMode === 'light', shown());
+          toggleTheme(keepThemeX); await wX(200);
+        }
+
+        // ── 2) ทูลทิป: ชี้ค้างก่อนจึงขึ้น · ไล่ดูปุ่มข้าง ๆ ขึ้นทันที ──
+        {
+          hideTip();
+          const b1 = document.getElementById('open-btn'), b2 = document.getElementById('search-all-btn');
+          const tipOn = () => !!document.querySelector('#k-tip.on');
+          const over = (b) => { const r = b.getBoundingClientRect(); b.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: r.left + 4, clientY: r.top + 4 })); };
+          const out = (b) => b.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+          await wX(700);                                   // ให้พ้นช่วง "เพิ่งปิดทูลทิป" ของเทสก่อนหน้า
+          globalThis.__k2tipDelayTest = true;
+          try {
+            over(b1);
+            check('[169-X] ★ เมาส์แตะปุ่มแล้วทูลทิปยังไม่ขึ้นทันที (เดิมกะพริบตามเมาส์แบบหน้าเว็บ)', !tipOn());
+            out(b1); await wX(650);
+            check('[169-X] ออกจากปุ่มก่อนครบเวลา = ไม่ขึ้นเลย', !tipOn());
+            over(b1);
+            check('[169-X] ★ ชี้ค้างครบเวลาแล้วขึ้น', await untilX(() => tipOn(), 1500));
+            out(b1); over(b2);
+            check('[169-X] ★ เลื่อนไปปุ่มข้าง ๆ ทันที = ขึ้นทันที (ไม่ต้องรอใหม่)', tipOn());
+            out(b2);
+          } finally { delete globalThis.__k2tipDelayTest; hideTip(); }
+        }
+
+        // ── 3) แผงคุณสมบัติ: เปิดแผงตอนมีฉากเปิดอยู่ ต้องเห็นคุณสมบัติของฉากนั้น (ไม่ต้องสลับแท็บก่อน) ──
+        {
+          const rowX = document.querySelector('#tree .scene[data-path*="Chapters"]');
+          if (rowX) {
+            rowX.click();
+            await untilX(() => state.active && /Chapters/.test(state.active.file || ''));
+            PUI.resetPanels(); await wX(250);              // สภาพที่ทำซ้ำบั๊กได้: มีฉากเปิดอยู่ · แผงคุณสมบัติเพิ่งถูกปิดไปกับเลย์เอาต์
+            await handleCommand('toggle-panel', 'props');
+            const okP = await untilX(() => document.querySelectorAll('#props-body input, #props-body textarea').length > 3, 5000);
+            check('[169-X] ★ เปิดแผงคุณสมบัติขณะมีฉากเปิดอยู่ = เห็นคุณสมบัติทันที (เดิม "เลือกฉากเพื่อดูคุณสมบัติ")', !!okP,
+                  (document.getElementById('props-body') || {}).textContent);
+            await handleCommand('toggle-panel', 'props'); await wX(150);
+          }
+        }
+
+        // ── 4) แถบกรองของ Explorer: สามแถวเป็นระเบียบ ──
+        {
+          const fb = document.getElementById('filter-bar');
+          if (fb && fb.getBoundingClientRect().width > 100) {
+            const st = document.getElementById('filter-statuses').getBoundingClientRect();
+            const ar = document.getElementById('filter-archive').getBoundingClientRect();
+            const so = document.getElementById('filter-sort').getBoundingClientRect();
+            const fr = fb.getBoundingClientRect();
+            check('[169-X] แถบกรอง: ปุ่มเก็บถาวร (ซ้าย) กับช่องเรียง (ขวา) อยู่แถวเดียวกัน ใต้ชิปสถานะ',
+                  Math.abs((ar.top + ar.height / 2) - (so.top + so.height / 2)) < 8 && ar.top >= st.bottom - 1 && ar.left < so.left
+                  && so.right <= fr.right + 1, JSON.stringify([st.bottom, ar.top, so.top, ar.left, so.left]));
+            const tg = document.getElementById('filter-tags');
+            if (tg.children.length) {
+              const tr = tg.getBoundingClientRect();
+              check('[169-X] แถบกรอง: ชิปแท็กได้เต็มความกว้างของตัวเอง (ไม่ถูกบีบเหลือแถวละชิป)', tr.width >= fr.width - 4 && tr.bottom <= ar.top + 1,
+                    JSON.stringify([tr.width, fr.width]));
+            }
+          }
+          const badge = document.querySelector('#tree .sc-status');
+          if (badge) check('[169-X] ป้ายสถานะในแถวฉากไม่พับกลางคำ', getComputedStyle(badge).whiteSpace === 'nowrap');
+        }
+
+        // ── 5) สารานุกรม: การ์ดไม่ซ้อนทับกัน ──
+        {
+          PUI.resetPanels(); await wX(200);
+          await handleCommand('toggle-panel', 'codex');
+          await untilX(() => document.querySelectorAll('#codex-body .k-codex-card, [data-panel-id="codex"] .k-codex-card').length > 0, 4000);
+          const cards = [...document.querySelectorAll('[data-panel-id="codex"] .k-codex-card')];
+          if (cards.length >= 2) {
+            const rs = cards.map((c) => c.getBoundingClientRect());
+            let overlap = 0;
+            for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+              const a = rs[i], b = rs[j];
+              if (a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2) overlap++;
+            }
+            check('[169-X] ★ สารานุกรม: การ์ดเอนทิตี้ไม่ซ้อนทับกัน (เดิมแถวหดเหลือแถบสี อ่านชื่อไม่ได้)', overlap === 0 && rs[0].height > 80,
+                  overlap + ' คู่ · สูง ' + Math.round(rs[0].height));
+          }
+          await handleCommand('toggle-panel', 'codex'); await wX(150);
+        }
+
+        // ── 6) Story Starter: ช่องใส่ภาพประกอบ (แบบ setup wizard) ──
+        {
+          const names = await kapi.starterArtList();
+          check('[169-X] main บอกรายชื่อไฟล์ภาพของ Story Starter ได้', Array.isArray(names));
+          await (await import('./starter/starter-ui.js')).resetStarterView();   // สถานะของแผงค้างจากเทสก่อนหน้าได้ (wizard/แชท)
+          await handleCommand('toggle-panel', 'starter');
+          const artX = await untilX(() => document.querySelector('[data-panel-id="starter"] .st-list-wrap .st-art'), 5000);
+          check('[169-X] ★ หน้ารวม Story Starter มีช่องใส่ภาพ (แถบหัว)', !!artX && artX.classList.contains('st-art-top') && artX.dataset.art === 'home-top');
+          if (artX) {
+            await untilX(() => artX.classList.contains('st-art-empty') || artX.classList.contains('st-art-ready'), 3000);
+            const hasFile = (names || []).some((n) => /^(home|default)-top\./i.test(n));
+            const r = artX.getBoundingClientRect();
+            check('[169-X] ช่องแถบหัวได้สัดส่วน 4:1 ตามสเปก (1200×300)', r.width > 100 && Math.abs(r.width / r.height - 4) < 0.25, r.width + '×' + r.height);
+            if (!hasFile) check('[169-X] ★ ไม่มีไฟล์ = กรอบ placeholder บอกขนาดกับชื่อไฟล์ที่ต้องวาง',
+                                artX.querySelector('.st-art-ph-size').textContent === '1200 × 300 px'
+                                && artX.querySelector('.st-art-ph-file').textContent === 'starter/home-top.png'
+                                && getComputedStyle(artX.querySelector('.st-art-ph')).display !== 'none');
+            else check('[169-X] มีไฟล์ = แสดงภาพ ซ่อน placeholder', artX.classList.contains('st-art-ready'));
+          }
+          await handleCommand('toggle-panel', 'starter'); await wX(150);
+        }
+
+        // ── 7) ปลั๊กอิน: ไม่รันซ้ำ · ถอดของเก่าออกจริง · แจ้งเมื่อต้องเริ่มโปรแกรมใหม่ ──
+        {
+          const gdir = await kapi.globalPluginsDir();
+          await kapi.mkdir(gdir);
+          const mk = async (name, hot) => {
+            const dir = await kapi.join(gdir, name);
+            await kapi.mkdir(dir);
+            await kapi.writeFile(await kapi.join(dir, 'plugin.json'), JSON.stringify({ name, entry: 'main.js', version: '1.0.0', ...(hot ? { hotReload: true } : {}) }));
+            await kapi.writeFile(await kapi.join(dir, 'main.js'), [
+              'const g = (globalThis.__k2life = globalThis.__k2life || {});',
+              'const me = (g[k2.pluginName] = g[k2.pluginName] || { runs: 0, pings: 0, unload: "" });',
+              'me.runs++;',
+              'k2.registerCommand("cmd-" + k2.pluginName, () => {});',
+              'me.panel = k2.registerPanel("p", { title: "life", render: (h) => { h.textContent = "life"; } });',
+              'k2.on("k2life:ping", () => { me.pings++; });',
+              'k2.onUnload((why) => { me.unload = why; });',
+            ].join('\n'));
+            return dir;
+          };
+          delete globalThis.__k2life;
+          APPX.setPluginDisabled('k2cold', false); APPX.setPluginDisabled('k2hot', false);
+          const dCold = await mk('k2cold', false), dHot = await mk('k2hot', true);
+          const restart0 = APPX.pluginsNeedRestart().filter((n) => n === 'k2cold' || n === 'k2hot').length;
+          await APPX.reloadPlugins();
+          const L = () => globalThis.__k2life || {};
+          check('[169-X] ติดตั้งปลั๊กอินระดับผู้ใช้แล้วโหลดได้ (ไม่ต้องขออนุญาต · ไม่ต้องเริ่มโปรแกรมใหม่)',
+                APPX.pluginList().loaded.some((p) => p.name === 'k2cold') && (L().k2cold || {}).runs === 1 && (L().k2hot || {}).runs === 1
+                && APPX.pluginsNeedRestart().filter((n) => n === 'k2cold' || n === 'k2hot').length === restart0, JSON.stringify(L()));
+          check('[169-X] แผงของปลั๊กอินถูกลงทะเบียน', !!PUI.getPanelManager().registry.get(L().k2cold.panel), L().k2cold.panel);
+          await APPX.reloadPlugins();
+          check('[169-X] ★ โหลดใหม่โดยไฟล์ไม่เปลี่ยน = ไม่รันโค้ดซ้ำ (เดิมรันทุกตัวซ้ำทั้งชุดทุกครั้ง)', L().k2cold.runs === 1 && L().k2hot.runs === 1, JSON.stringify(L()));
+          APPX.pluginBus.emit('k2life:ping', {});
+          check('[169-X] เหตุการณ์ถึงตัวรับของปลั๊กอิน (ชุดเดียว ไม่ซ้อน)', L().k2cold.pings === 1 && L().k2hot.pings === 1);
+          // แก้ไฟล์ → โหลดใหม่ = รันใหม่ + ของเก่าถูกถอด
+          await kapi.writeFile(await kapi.join(dHot, 'main.js'), (await kapi.readFile(await kapi.join(dHot, 'main.js'))) + '\n// edited');
+          await APPX.reloadPlugins();
+          check('[169-X] ★ แก้ไฟล์แล้วโหลดใหม่ = รันใหม่ และตัวเก่าถูกเรียก onUnload("reload")', L().k2hot.runs === 2 && L().k2hot.unload === 'reload' && L().k2cold.runs === 1,
+                JSON.stringify(L()));
+          APPX.pluginBus.emit('k2life:ping', {});
+          check('[169-X] ★ ตัวรับเหตุการณ์ของรุ่นเก่าถูกถอนแล้ว (ไม่ถูกเรียกสองชุด)', L().k2hot.pings === 2, String(L().k2hot.pings));
+          // ปิดปลั๊กอิน → ของที่ลงทะเบียนต้องหายจริง
+          const pidCold = L().k2cold.panel, pidHot = L().k2hot.panel;
+          APPX.setPluginDisabled('k2cold', true); APPX.setPluginDisabled('k2hot', true);
+          await APPX.reloadPlugins();
+          check('[169-X] ปิดปลั๊กอิน → onUnload("remove") ถูกเรียก', L().k2cold.unload === 'remove' && L().k2hot.unload === 'remove', JSON.stringify(L()));
+          check('[169-X] ★ ปิดแล้วแผงของปลั๊กอินถูกถอนทะเบียน (เดิมยังเปิดได้จนกว่าจะเริ่มโปรแกรมใหม่)',
+                !PUI.getPanelManager().registry.get(pidCold) && !PUI.getPanelManager().registry.get(pidHot));
+          const before = { c: L().k2cold.pings, h: L().k2hot.pings };
+          APPX.pluginBus.emit('k2life:ping', {});
+          check('[169-X] ★ ปิดแล้วตัวรับเหตุการณ์ไม่ถูกเรียกอีก', L().k2cold.pings === before.c && L().k2hot.pings === before.h);
+          check('[169-X] ปิดแล้วคำสั่งของปลั๊กอินหาย', !APPX.pluginList().commands.some((c) => c.plugin === 'k2cold' || c.plugin === 'k2hot'));
+          const need = APPX.pluginsNeedRestart();
+          check('[169-X] ★★ ปลั๊กอินที่ไม่ได้ประกาศ hotReload ถูกปิด = ต้องเริ่มโปรแกรมใหม่ · ตัวที่ประกาศ = ไม่ต้อง',
+                need.includes('k2cold') && !need.includes('k2hot'), need.join());
+          // แผงปลั๊กอินต้องแจ้ง
+          const { renderPluginPanel } = await import('./plugins/plugin-panel.js');
+          const hostX = document.createElement('div'); document.body.append(hostX);
+          await renderPluginPanel(hostX);
+          const banner = hostX.querySelector('.k-plug-restart');
+          check('[169-X] ★★ แผงปลั๊กอินขึ้นแถบ "ต้องเริ่มโปรแกรมใหม่" พร้อมปุ่ม (ผู้ใช้: ถ้าต้อง restart ต้องมีแจ้งเตือน)',
+                !!banner && banner.textContent.includes('k2cold') && !banner.textContent.includes('k2hot') && !!banner.querySelector('button.k-plug-restart-btn'),
+                banner && banner.textContent);
+          check('[169-X] การ์ดของตัวที่ปิดไว้ขึ้นสถานะ "ปิดอยู่" ไม่ใช่ "มีปัญหา"',
+                hostX.querySelector('.k-plug-card[data-plugin="k2cold"]').classList.contains('k-plug-off'));
+          hostX.remove();
+          // ถอน = โฟลเดอร์หายจริง
+          const rDel = await kapi.pluginUninstall(gdir, 'k2cold');
+          check('[169-X] ถอนปลั๊กอิน = โฟลเดอร์หายจากดิสก์', rDel && rDel.ok && !(await kapi.exists(dCold)));
+          await kapi.pluginUninstall(gdir, 'k2hot');
+          APPX.setPluginDisabled('k2cold', false); APPX.setPluginDisabled('k2hot', false);
+          await APPX.reloadPlugins();
+          check('[169-X] ถอนแล้วไม่อยู่ในรายการอีก', !APPX.pluginList().loaded.concat(APPX.pluginList().failed).some((p) => p.name === 'k2cold' || p.name === 'k2hot'));
+          delete globalThis.__k2life;
+        }
+        PUI.resetPanels(); await wX(200);
+      }
+
+      // ═══════ [170-N] ชื่อบนดิสก์ = ชื่อเรื่อง · เปลี่ยนชื่อในโปรแกรม · เปลี่ยนชื่อจาก OS ═══════
+      // ผู้ใช้: "ชื่อเล่มต้องตรงกับชื่อ folder · บท/ฉากไม่ต้องมีเลขกำกับ การเรียงใช้ json · ถ้าเปลี่ยนชื่อจาก os ผลจะเป็นยังไง"
+      {
+        const SOn = await import('./scene-ops.js');
+        const SECn = await import('./section-ops.js');
+        const APn = await import('./app.js');
+        const DSn = await import('./disk-sync.js');
+        const TBn = await import('./tab-bridge.js');
+        const PDn = await import('./project-doctor-ui.js');
+        const wN = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilN = async (fn, ms = 5000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await wN(60); } return false; };
+        const rootN = state.root;
+        const jn = (...a) => kapi.join(...a);
+        const bodyOf = async (p) => parseMdFile(await kapi.readFile(p)).body;
+        const metaOf = async (p) => parseMdFile(await kapi.readFile(p)).meta;
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        // เศษของเทสก่อนหน้า (ไฟล์หาย + ไฟล์เกินที่จับคู่ได้) ถูกปรับไปก่อน — การนับข้างล่างจะได้เห็นเฉพาะของบล็อกนี้
+        await APn.syncDiskNames({ force: true });
+
+        // ── 1) เล่ม: ชื่อเริ่มต้นอังกฤษ · โฟลเดอร์ = ชื่อเล่ม · ชนแล้วไม่ยึดโฟลเดอร์คนอื่น ──
+        const bk0 = await DSn.freeBookName(kapi, rootN);
+        check('[170-N] ★ ชื่อเล่มเริ่มต้นเป็นอังกฤษ (Book N) และตรงกับชื่อโฟลเดอร์', /^Book \d+$/.test(bk0.title) && bk0.folder === bk0.title, JSON.stringify(bk0));
+        const secP = await SECn.addSection('เล่มทดสอบ170');
+        const secM = await kapi.readJson(await jn(secP, 'section.json'));
+        check('[170-N] ★ เล่มใหม่: โฟลเดอร์ = ชื่อเล่ม · section.json จดชื่อโฟลเดอร์ไว้',
+              /[\\/]เล่มทดสอบ170$/.test(secP) && secM.title === 'เล่มทดสอบ170' && secM.folderName === 'เล่มทดสอบ170', secP + ' ' + JSON.stringify(secM));
+        const dP = await jn(secP, 'Draft', 'default');
+        const d0 = await kapi.readJson(await jn(dP, 'draft.json'));
+        check('[170-N] บทแรกของเล่มใหม่: โฟลเดอร์ = ชื่อบท ไม่มีเลขนำ',
+              d0.chapters[0].folderName === d0.chapters[0].title && !/^\d+\s*-/.test(d0.chapters[0].folderName)
+              && await kapi.exists(await jn(dP, 'Chapters', d0.chapters[0].folderName)), JSON.stringify(d0.chapters[0]));
+        const secDup = await SECn.addSection('เล่มทดสอบ170');
+        const dupM = await kapi.readJson(await jn(secDup, 'section.json'));
+        check('[170-N] ★ ชื่อเล่มซ้ำ (ทางอัตโนมัติ) → ต่อเลขทั้งชื่อเล่มและโฟลเดอร์ ไม่ทับเล่มเดิม',
+              secDup !== secP && /[\\/]เล่มทดสอบ170 2$/.test(secDup) && dupM.title === 'เล่มทดสอบ170 2'
+              && (await kapi.readJson(await jn(secP, 'section.json'))).guid === secM.guid, secDup);
+        check('[170-N] ★ ชื่อเล่มที่ชนโฟลเดอร์ของโปรแกรม (Wiki) ถูกปฏิเสธ — เล่มยังอยู่ที่เดิม',
+              (await SECn.setSectionTitle(secDup, 'Wiki')) === false && await kapi.exists(await jn(secDup, 'section.json'))
+              && (await kapi.readJson(await jn(secDup, 'section.json'))).title === 'เล่มทดสอบ170 2');
+        check('[170-N] ★ ชื่อเล่มที่ชนเล่มอื่น (ไม่สนตัวพิมพ์) ถูกปฏิเสธ',
+              (await SECn.setSectionTitle(secDup, 'เล่มทดสอบ170')) === false && await kapi.exists(await jn(secDup, 'section.json')));
+        document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
+
+        // ── 1ข) ★ ตั้งชื่อเล่มว่า "Planners" — ชื่อเดียวกับโฟลเดอร์ที่โปรแกรมใช้เก็บกระดานวางแผน (ทางที่ผู้ใช้พิมพ์เองในกล่อง) ──
+        {
+          const plDir = await jn(rootN, 'Planners');
+          const plList = async () => ((await kapi.exists(plDir)) ? (await kapi.listFiles(plDir, '')).slice().sort().join('|') : '(ไม่มีโฟลเดอร์)');
+          const plBefore = await plList();
+          const secCount = async () => { let n = 0; for (const nm of await kapi.listDirs(rootN)) if (await kapi.exists(await jn(rootN, nm, 'section.json'))) n++; return n; };
+          const topDlg = () => [...document.querySelectorAll('.k-overlay .k-dialog')].pop();
+          const n0 = await secCount();
+          document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
+          const pAdd = SECn.addSection();
+          await untilN(() => !!topDlg() && !!topDlg().querySelector('.k-dlg-input'));
+          const dlg1 = topDlg();
+          check('[170-N] กล่องเพิ่มเล่มเสนอชื่อเริ่มต้นภาษาอังกฤษ (Book N)', /^Book \d+$/.test(dlg1.querySelector('.k-dlg-input').value), dlg1.querySelector('.k-dlg-input').value);
+          dlg1.querySelector('.k-dlg-input').value = 'Planners';
+          dlg1.querySelector('.k-ok').click();
+          const again = (prev, v) => untilN(() => { const d = topDlg(); return !!d && d !== prev && !!d.querySelector('.k-dlg-input') && d.querySelector('.k-dlg-input').value === v; });
+          const reasked = await again(dlg1, 'Planners');
+          const toastTxt = [...document.querySelectorAll('#k-toasts > *')].map((x) => x.textContent).join(' | ');
+          check('[170-N] ★★ ตั้งชื่อเล่มว่า "Planners" → ไม่สร้างเล่ม · บอกเหตุผล · ถามชื่อใหม่โดยชื่อที่พิมพ์ยังอยู่ในช่อง',
+                reasked && toastTxt.includes('Planners') && !/ui\.names\./.test(toastTxt) && (await secCount()) === n0, toastTxt);
+          check('[170-N] ★★ โฟลเดอร์ Planners ของกระดานวางแผนไม่ถูกแตะ (ไม่มี section.json โผล่ · รายการไฟล์เท่าเดิม)',
+                !(await kapi.exists(await jn(plDir, 'section.json'))) && !(await kapi.exists(await jn(plDir, 'Draft'))) && (await plList()) === plBefore, plBefore + ' → ' + (await plList()));
+          const dlg2 = topDlg();
+          dlg2.querySelector('.k-dlg-input').value = 'planners';
+          dlg2.querySelector('.k-ok').click();
+          check('[170-N] ★ "planners" ตัวพิมพ์เล็กก็ถูกกัน (ระบบไฟล์ไม่แยกตัวพิมพ์)', (await again(dlg2, 'planners')) && (await secCount()) === n0);
+          const dlg3 = topDlg();
+          dlg3.querySelector('.k-dlg-input').value = 'Planners ของฉัน170';
+          dlg3.querySelector('.k-ok').click();
+          const secPl = await pAdd;
+          check('[170-N] ★ ตั้งชื่อใหม่ที่ไม่ชน → สร้างเล่มได้ โฟลเดอร์ตรงชื่อ',
+                /[\\/]Planners ของฉัน170$/.test(String(secPl)) && (await secCount()) === n0 + 1
+                && (await kapi.readJson(await jn(secPl, 'section.json'))).title === 'Planners ของฉัน170', String(secPl));
+          check('[170-N] ★★ เปลี่ยนชื่อเล่มที่มีอยู่เป็น "Planners" ก็ถูกปฏิเสธ — เล่มอยู่ที่เดิม ชื่อเดิม',
+                (await SECn.setSectionTitle(secPl, 'Planners')) === false && await kapi.exists(await jn(secPl, 'section.json'))
+                && (await kapi.readJson(await jn(secPl, 'section.json'))).title === 'Planners ของฉัน170' && (await plList()) === plBefore);
+          const auto = await DSn.freeBookName(kapi, rootN, 'Planners');
+          check('[170-N] ทางอัตโนมัติ (AI/ทำสำเนา) ขอชื่อ "Planners" → ได้ "Planners 2" ทั้งชื่อเล่มและโฟลเดอร์', auto.taken && auto.folder === 'Planners 2' && auto.title === 'Planners 2', JSON.stringify(auto));
+          await kapi.remove(secPl).catch(() => {});
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
+          await buildTree();
+        }
+
+        // ── 2) บท/ฉาก: ชื่อบนดิสก์ = ชื่อเรื่อง · ลำดับอยู่ใน JSON ──
+        const chN = await SOn.addChapter(dP, 'บทเปิด170');
+        check('[170-N] ★ บทใหม่: โฟลเดอร์ = ชื่อบท (ไม่มีเลขกำกับ) · order อยู่ใน draft.json',
+              chN.folderName === 'บทเปิด170' && chN.order === 2 && await kapi.exists(await jn(dP, 'Chapters', 'บทเปิด170')), JSON.stringify(chN));
+        const s1 = await SOn.addScene(dP, chN, 'ฉากเช้า170', { silent: true, body: 'เนื้อเช้า170' });
+        const s2 = await SOn.addScene(dP, chN, 'ฉากเช้า170', { silent: true, body: 'เนื้อซ้ำ170' });
+        check('[170-N] ★ ฉากใหม่: ชื่อไฟล์ = ชื่อฉาก · ชื่อซ้ำในบทเดียวกัน → ต่อเลขกันชน (ไม่ทับกัน)',
+              s1.fileName === 'ฉากเช้า170.md' && s2.fileName === 'ฉากเช้า170 2.md'
+              && (await bodyOf(s1.path)).includes('เนื้อเช้า170') && (await bodyOf(s2.path)).includes('เนื้อซ้ำ170'), s1.fileName + ' / ' + s2.fileName);
+        await SOn.moveSceneOrder(dP, chN, s2, -1);
+        const ordN = ((await kapi.readJson(await jn(dP, 'scenes.json'))).chapters[chN.guid] || []).slice().sort((a, b) => a.order - b.order).map((x) => x.id);
+        check('[170-N] ★ เรียงลำดับใหม่ = แก้แค่ order ใน scenes.json — ชื่อไฟล์ไม่ขยับ',
+              ordN[0] === s2.id && ordN[1] === s1.id && await kapi.exists(s1.path) && await kapi.exists(s2.path), ordN.join());
+
+        // ── 3) เปลี่ยนชื่อฉากในโปรแกรม ขณะแท็บเปิดอยู่และมีงานค้าง ──
+        await openScene(s1.path, null);
+        await untilN(() => state.tabs.has(s1.path));
+        TBn.tabHandle(s1.path).setText('เนื้อค้างก่อนเปลี่ยนชื่อ170');
+        const row1 = { ...s1 };
+        await SOn.setSceneTitle(dP, chN, row1, 'ฉากสาย170');
+        const np1 = await jn(dP, 'Chapters', 'บทเปิด170', 'ฉากสาย170.md');
+        check('[170-N] ★★ เปลี่ยนชื่อฉาก → ไฟล์ย้ายตามชื่อ · ทางเก่าไม่เหลือ',
+              await kapi.exists(np1) && !(await kapi.exists(s1.path)) && row1.fileName === 'ฉากสาย170.md', row1.fileName);
+        await untilN(() => state.tabs.has(np1));
+        check('[170-N] ★★ แท็บตามไปทางใหม่ (ไม่มีแท็บค้างที่ทางเก่า) · งานค้างถูกบันทึกก่อนย้าย',
+              state.tabs.has(np1) && !state.tabs.has(s1.path) && (await bodyOf(np1)).includes('เนื้อค้างก่อนเปลี่ยนชื่อ170'));
+        const rowJ1 = ((await kapi.readJson(await jn(dP, 'scenes.json'))).chapters[chN.guid] || []).find((x) => x.id === s1.id);
+        check('[170-N] ★ ทะเบียน + frontmatter + ชื่อบนแท็บ ได้ชื่อใหม่ · id/ลำดับเดิม',
+              rowJ1.title === 'ฉากสาย170' && rowJ1.fileName === 'ฉากสาย170.md' && rowJ1.order === 2
+              && (await metaOf(np1)).title === 'ฉากสาย170' && state.tabs.get(np1).title === 'ฉากสาย170', JSON.stringify(rowJ1));
+        check('[170-N] แถวในต้นไม้ชี้ทางใหม่',
+              [...document.querySelectorAll('#tree .scene[data-path]')].some((r) => r.dataset.path === np1)
+              && ![...document.querySelectorAll('#tree .scene[data-path]')].some((r) => r.dataset.path === s1.path));
+        const rowSame = { ...rowJ1 };
+        await SOn.setSceneTitle(dP, chN, rowSame, 'ฉากสาย170?');
+        check('[170-N] ชื่อเรื่องมีอักขระที่ดิสก์รับไม่ได้ → ชื่อเรื่องครบ ไฟล์ไม่ต้องย้าย',
+              rowSame.fileName === 'ฉากสาย170.md' && rowSame.title === 'ฉากสาย170?' && await kapi.exists(np1));
+
+        // ── 4) เปลี่ยนชื่อบทในโปรแกรม ขณะแท็บของฉากในบทเปิดอยู่ ──
+        const chObj = { ...chN };
+        await SOn.setChapterTitle(dP, chObj, 'บทใหม่170');
+        const np2 = await jn(dP, 'Chapters', 'บทใหม่170', 'ฉากสาย170.md');
+        await untilN(() => state.tabs.has(np2));
+        const chJ = ((await kapi.readJson(await jn(dP, 'draft.json'))).chapters || []).find((c) => c.guid === chN.guid);
+        check('[170-N] ★★ เปลี่ยนชื่อบท → โฟลเดอร์ย้ายตามชื่อ · draft.json ตรงกัน · ลำดับเดิม',
+              await kapi.exists(np2) && !(await kapi.exists(await jn(dP, 'Chapters', 'บทเปิด170')))
+              && chJ.folderName === 'บทใหม่170' && chJ.title === 'บทใหม่170' && chJ.order === 2 && chObj.folderName === 'บทใหม่170', JSON.stringify(chJ));
+        check('[170-N] ★★ แท็บของฉากในบทตามโฟลเดอร์ใหม่', state.tabs.has(np2) && !state.tabs.has(np1));
+
+        // ── 5) เปลี่ยนชื่อไฟล์ฉากจาก OS ขณะแท็บเปิดอยู่และมีงานค้าง ──
+        TBn.tabHandle(np2).setText('ค้างก่อนถูกเปลี่ยนชื่อจากข้างนอก170');
+        const np3 = await jn(dP, 'Chapters', 'บทใหม่170', 'ชื่อจากข้างนอก170.md');
+        await kapi.move(np2, np3);                                  // = ผู้ใช้เปลี่ยนชื่อใน Explorer/Finder
+        const c5 = await APn.syncDiskNames({ force: true });
+        const rowJ5 = ((await kapi.readJson(await jn(dP, 'scenes.json'))).chapters[chN.guid] || []).find((x) => x.id === s1.id);
+        check('[170-N] ★★★ เปลี่ยนชื่อไฟล์ฉากจาก OS → ตรวจเจอและปรับทะเบียน: ชื่อไฟล์ใหม่ + ชื่อฉากตามชื่อไฟล์ · id/ลำดับเดิม',
+              c5.length === 1 && c5[0].kind === 'scene' && rowJ5.fileName === 'ชื่อจากข้างนอก170.md' && rowJ5.title === 'ชื่อจากข้างนอก170' && rowJ5.order === 2,
+              JSON.stringify(c5) + ' ' + JSON.stringify(rowJ5));
+        await untilN(() => state.tabs.has(np3));
+        const tab5 = state.tabs.get(np3);
+        check('[170-N] ★★★ แท็บที่เปิดอยู่ย้ายไปทางใหม่ พร้อมงานที่ยังไม่บันทึก (ไม่หาย · ยังติดค้าง)',
+              !!tab5 && !state.tabs.has(np2) && !!tab5.dirty && String(tabBodyText(tab5)).includes('ค้างก่อนถูกเปลี่ยนชื่อจากข้างนอก170'));
+        await saveTab(tab5);
+        check('[170-N] ★★★ บันทึกหลังจากนั้นลงไฟล์ชื่อใหม่ — ไม่เกิดไฟล์ผีที่ชื่อเก่า',
+              (await bodyOf(np3)).includes('ค้างก่อนถูกเปลี่ยนชื่อจากข้างนอก170') && !(await kapi.exists(np2)) && (await metaOf(np3)).title === 'ชื่อจากข้างนอก170');
+        check('[170-N] ตรวจซ้ำ = ไม่มีอะไรเปลี่ยนอีก (นิ่ง)', (await APn.syncDiskNames({ force: true })).length === 0);
+
+        // ── 6) เปลี่ยนชื่อโฟลเดอร์บทจาก OS ──
+        await kapi.move(await jn(dP, 'Chapters', 'บทใหม่170'), await jn(dP, 'Chapters', 'โฟลเดอร์จากข้างนอก170'));
+        const c6 = await APn.syncDiskNames({ force: true });
+        const np4 = await jn(dP, 'Chapters', 'โฟลเดอร์จากข้างนอก170', 'ชื่อจากข้างนอก170.md');
+        const chJ6 = ((await kapi.readJson(await jn(dP, 'draft.json'))).chapters || []).find((c) => c.guid === chN.guid);
+        check('[170-N] ★★★ เปลี่ยนชื่อโฟลเดอร์บทจาก OS → draft.json ตามชื่อใหม่ (ชื่อบท = ชื่อโฟลเดอร์) · guid/ลำดับเดิม',
+              c6.length === 1 && c6[0].kind === 'chapter' && chJ6.folderName === 'โฟลเดอร์จากข้างนอก170' && chJ6.title === 'โฟลเดอร์จากข้างนอก170' && chJ6.order === 2,
+              JSON.stringify(c6));
+        await untilN(() => state.tabs.has(np4));
+        check('[170-N] ★★ แท็บของฉากในบทนั้นตามไปโฟลเดอร์ใหม่', state.tabs.has(np4) && !state.tabs.has(np3));
+        check('[170-N] ต้นไม้แสดงชื่อบทใหม่', [...document.querySelectorAll('#tree .ch-title')].some((h) => h.textContent.includes('โฟลเดอร์จากข้างนอก170')));
+
+        // ── 6ข) ★ ปุ่มรีเฟรชของ Explorer = อ่านดิสก์ใหม่ รวมถึงชื่อที่ถูกเปลี่ยนจาก OS (ไม่ต้องปิดเปิดโปรแกรม) ──
+        {
+          const dirR = await jn(dP, 'Chapters', 'โฟลเดอร์จากข้างนอก170');
+          const s2Now = ((await kapi.readJson(await jn(dP, 'scenes.json'))).chapters[chN.guid] || []).find((x) => x.id === s2.id);
+          const fromR = await jn(dirR, s2Now.fileName), toR = await jn(dirR, 'รีเฟรช170.md');
+          await kapi.move(fromR, toR);
+          const btnR = document.querySelector('.k-tree-refresh-btn');
+          check('[170-N] เงื่อนไข: มีปุ่มรีเฟรชบนหัวแผงโปรเจกต์', !!btnR);
+          btnR.click();
+          const seen = await untilN(() => [...document.querySelectorAll('#tree .scene[data-path]')].some((r) => r.dataset.path === toR), 8000);
+          const rowR = ((await kapi.readJson(await jn(dP, 'scenes.json'))).chapters[chN.guid] || []).find((x) => x.id === s2.id);
+          check('[170-N] ★★★ กดปุ่มรีเฟรชของ Explorer หลังเปลี่ยนชื่อไฟล์จาก OS → ทะเบียน + ต้นไม้ตามชื่อใหม่ทันที',
+                seen && rowR.fileName === 'รีเฟรช170.md' && rowR.title === 'รีเฟรช170'
+                && ![...document.querySelectorAll('#tree .scene[data-path]')].some((r) => r.dataset.path === fromR), JSON.stringify(rowR));
+          document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
+        }
+
+        // ── 7) เปลี่ยนชื่อโฟลเดอร์เล่มจาก OS ──
+        const secOut = await jn(rootN, 'เล่มจากข้างนอก170');
+        await kapi.move(secP, secOut);
+        const c7 = await APn.syncDiskNames({ force: true });
+        const secM7 = await kapi.readJson(await jn(secOut, 'section.json'));
+        check('[170-N] ★★★ เปลี่ยนชื่อโฟลเดอร์เล่มจาก OS → ชื่อเล่มตามโฟลเดอร์ · guid เดิม',
+              c7.length === 1 && c7[0].kind === 'book' && secM7.title === 'เล่มจากข้างนอก170' && secM7.folderName === 'เล่มจากข้างนอก170' && secM7.guid === secM.guid,
+              JSON.stringify(c7));
+        const np5 = await jn(secOut, 'Draft', 'default', 'Chapters', 'โฟลเดอร์จากข้างนอก170', 'ชื่อจากข้างนอก170.md');
+        await untilN(() => state.tabs.has(np5));
+        check('[170-N] ★★ แท็บตามเล่มไปทางใหม่', state.tabs.has(np5) && !state.tabs.has(np4));
+
+        // ── 7ข) ★ เปลี่ยนชื่อ เล่ม + บท + ฉาก **พร้อมกัน** จาก OS ขณะแท็บมีงานค้าง (เจอบนแอปจริง: แท็บ+งานค้างเคยหาย) ──
+        TBn.tabHandle(np5).setText('ค้างตอนเปลี่ยนสามชั้นพร้อมกัน170');
+        const secAll = await jn(rootN, 'เล่มสามชั้น170');
+        await kapi.move(np5, await jn(secOut, 'Draft', 'default', 'Chapters', 'โฟลเดอร์จากข้างนอก170', 'ฉากสามชั้น170.md'));
+        await kapi.move(await jn(secOut, 'Draft', 'default', 'Chapters', 'โฟลเดอร์จากข้างนอก170'), await jn(secOut, 'Draft', 'default', 'Chapters', 'บทสามชั้น170'));
+        await kapi.move(secOut, secAll);
+        const c7b = await APn.syncDiskNames({ force: true });
+        const np5b = await jn(secAll, 'Draft', 'default', 'Chapters', 'บทสามชั้น170', 'ฉากสามชั้น170.md');
+        await untilN(() => state.tabs.has(np5b));
+        const tab7b = state.tabs.get(np5b);
+        check('[170-N] ★★★ เปลี่ยนชื่อเล่ม+บท+ฉากพร้อมกันจาก OS → ตามได้ครบสามชั้น (ชื่อเรื่องตามดิสก์ทั้งหมด)',
+              c7b.length === 3 && c7b.map((x) => x.kind).join() === 'book,chapter,scene'
+              && (await kapi.readJson(await jn(secAll, 'section.json'))).title === 'เล่มสามชั้น170'
+              && ((await kapi.readJson(await jn(secAll, 'Draft', 'default', 'draft.json'))).chapters || []).some((c) => c.guid === chN.guid && c.folderName === 'บทสามชั้น170')
+              && ((await kapi.readJson(await jn(secAll, 'Draft', 'default', 'scenes.json'))).chapters[chN.guid] || []).some((r) => r.id === s1.id && r.fileName === 'ฉากสามชั้น170.md' && r.title === 'ฉากสามชั้น170'),
+              JSON.stringify(c7b.map((x) => x.kind + ':' + x.title)));
+        check('[170-N] ★★★ แท็บไปถึงทางปลายทางสุดท้าย พร้อมงานที่ยังไม่บันทึก (ไม่มีแท็บค้างทางเก่า · ไม่หาย)',
+              !!tab7b && !!tab7b.dirty && String(tabBodyText(tab7b)).includes('ค้างตอนเปลี่ยนสามชั้นพร้อมกัน170')
+              && ![...state.tabs.keys()].some((k) => String(k).includes('เล่มจากข้างนอก170')), [...state.tabs.keys()].filter((k) => String(k).includes('170')).join(' | '));
+        await saveTab(tab7b);
+        check('[170-N] ★★ บันทึกแล้วลงไฟล์ปลายทาง · ไม่เกิดโฟลเดอร์เล่มผีที่ชื่อเก่า',
+              (await bodyOf(np5b)).includes('ค้างตอนเปลี่ยนสามชั้นพร้อมกัน170') && !(await kapi.exists(secOut)));
+
+        // ── 8) เปลี่ยนชื่อเล่มในโปรแกรม → โฟลเดอร์ตาม ──
+        const secFin = await SECn.setSectionTitle(secAll, 'เล่มสุดท้าย170');
+        const np6 = await jn(secFin || secAll, 'Draft', 'default', 'Chapters', 'บทสามชั้น170', 'ฉากสามชั้น170.md');
+        await untilN(() => state.tabs.has(np6));
+        check('[170-N] ★★ เปลี่ยนชื่อเล่มในโปรแกรม → โฟลเดอร์ = ชื่อเล่ม · ของข้างใน + แท็บตามไป',
+              !!secFin && /[\\/]เล่มสุดท้าย170$/.test(secFin) && !(await kapi.exists(secAll)) && await kapi.exists(np6) && state.tabs.has(np6)
+              && (await kapi.readJson(await jn(secFin, 'section.json'))).folderName === 'เล่มสุดท้าย170', String(secFin));
+        check('[170-N] หลังเปลี่ยนชื่อในโปรแกรม ตัวตรวจไม่เห็นเป็นการเปลี่ยนจากข้างนอก', (await APn.syncDiskNames({ force: true })).length === 0);
+
+        // ── 9) ของรุ่นเก่า (scene-01.md · "01 - บท") ใช้ได้ตามเดิม + ปรับชื่อให้ตรงได้จากตัวตรวจสุขภาพ ──
+        const oldSec = await jn(rootN, 'เล่มเก่า170');
+        const oldDr = await jn(oldSec, 'Draft', 'default');
+        await kapi.writeFile(await jn(oldSec, 'section.json'), JSON.stringify({ guid: 'old170', title: 'เล่มเก่า170', order: 99 }, null, 2));
+        await kapi.writeFile(await jn(oldDr, 'draft.json'), JSON.stringify({ chapters: [{ guid: 'oc170', title: 'บทเก่า170', order: 1, folderName: '01 - บทเก่า170' }] }, null, 2));
+        await kapi.writeFile(await jn(oldDr, 'scenes.json'), JSON.stringify({ chapters: { oc170: [{ id: 'os170', title: 'ชื่อจริง170', order: 1, fileName: 'scene-01.md' }] } }, null, 2));
+        await kapi.writeFile(await jn(oldDr, 'Chapters', '01 - บทเก่า170', 'scene-01.md'), dumpMdFile({ title: 'ชื่อจริง170', type: 'scene', format: 'prose' }, 'เนื้อเก่า170'));
+        check('[170-N] ★★ โปรเจกต์รุ่นเก่า: ชื่อไฟล์ไม่ตรงชื่อเรื่อง ≠ ถูกเปลี่ยนชื่อ — ทะเบียนไม่ถูกแตะ',
+              (await APn.syncDiskNames({ force: true })).length === 0
+              && (await kapi.readJson(await jn(oldDr, 'scenes.json'))).chapters.oc170[0].fileName === 'scene-01.md'
+              && (await kapi.readJson(await jn(oldDr, 'scenes.json'))).chapters.oc170[0].title === 'ชื่อจริง170');
+        check('[170-N] เล่มเก่าถูกจดชื่อโฟลเดอร์ลง section.json (ชื่อเล่มเดิม)',
+              (await kapi.readJson(await jn(oldSec, 'section.json'))).folderName === 'เล่มเก่า170' && (await kapi.readJson(await jn(oldSec, 'section.json'))).title === 'เล่มเก่า170');
+        const mmAll = await DSn.listNameMismatches(kapi, rootN);
+        const mmOld = mmAll.filter((x) => x.secPath === oldSec);
+        check('[170-N] ตัวตรวจสุขภาพเห็น "ชื่อยังไม่ตรง" ของเล่มเก่า (บท 1 + ฉาก 1)',
+              mmOld.length === 2 && mmOld.some((x) => x.kind === 'chapter') && mmOld.some((x) => x.kind === 'scene'), JSON.stringify(mmOld.map((x) => x.kind + ':' + x.disk)));
+        {
+          const drN = await PDn.openProjectDoctor();
+          const stripOk = await untilN(() => { const n = document.querySelector('.k-doctor .k-doctor-names'); return !!n && !!n.querySelector('.k-doctor-names-btn'); }, 20000);
+          const strip = document.querySelector('.k-doctor .k-doctor-names');
+          const sr = strip ? strip.getBoundingClientRect() : { width: 0, height: 0 };
+          check('[170-N] ★ กล่องตรวจสุขภาพมีแถบ "ชื่อไฟล์ยังไม่ตรง" + ปุ่มปรับชื่อ (มองเห็นจริง · ไม่มีคีย์ภาษาดิบ)',
+                stripOk && sr.width > 100 && sr.height > 10 && !/ui\.names\./.test(strip.textContent), strip ? strip.textContent.slice(0, 120) : 'ไม่มีแถบ');
+          if (drN && drN.close) drN.close();
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        }
+        const fx = await PDn.fixNameMismatches(mmOld);
+        check('[170-N] ★★ ปรับชื่อของเล่มเก่าให้ตรงชื่อเรื่อง: ไฟล์/โฟลเดอร์ไม่มีเลขกำกับ · เนื้อเดิม · ลำดับเดิม',
+              fx.ok === 2 && fx.failed === 0 && (await bodyOf(await jn(oldDr, 'Chapters', 'บทเก่า170', 'ชื่อจริง170.md'))).includes('เนื้อเก่า170')
+              && !(await kapi.exists(await jn(oldDr, 'Chapters', '01 - บทเก่า170')))
+              && (await kapi.readJson(await jn(oldDr, 'scenes.json'))).chapters.oc170[0].order === 1, JSON.stringify(fx));
+        check('[170-N] ปรับแล้วไม่เหลือรายการของเล่มนั้น',
+              (await DSn.listNameMismatches(kapi, rootN)).filter((x) => x.secPath === oldSec).length === 0);
+
+        // ── เก็บกวาด: ปิดแท็บ + ลบเล่มทดสอบทั้งสาม (ไม่ผ่านถังขยะ — ไม่มีกล่องยืนยัน) ──
+        for (const f of [...state.tabs.keys()]) if (String(f).includes('170')) closeTab(f, { discard: true });
+        for (const p of [secFin || secAll, secAll, secOut, secDup, oldSec, secP]) await kapi.remove(p).catch(() => {});
+        document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
+        await buildTree();
+        check('[170-N] เก็บกวาดแล้วต้นไม้ไม่มีเล่มทดสอบค้าง', ![...document.querySelectorAll('#tree .sec-title')].some((h) => h.textContent.includes('170')));
+      }
+
+      // ══ [169-BH] ★★ bug hunt รอบสี่ — พิมพ์ · ส่งออก (RTF/TXT) · นำเข้า Fountain · เปิดไฟล์ด่วน · กล่อง ══
+      // ทุกข้อมาจากการลองบนแอปจริง (ขับผ่าน CDP + ครอบกล่องไฟล์ของระบบ) แล้วเปิดไฟล์ที่ได้ดู
+      {
+        const wBH = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilBH = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await wBH(50); } return false; };
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        closeMenu();
+
+        // ── ฉากทดสอบ: นิยาย 60 ย่อหน้า + รูปแบบตัวอักษร/จัดหน้า/รายการ ──
+        const probeBH = await kapi.join(state.root, 'k2test-169bh.md');
+        const linesBH = ['# หัวข้อ169', 'ปกติ **หนา169** *เอียง169* <span style="color:#c0392b">แดง169</span> x^2^',
+                         '<!--align:center-->กลาง169', '- ข้อ169', '3. เลข169'];
+        for (let i = 1; i <= 60; i++) linesBH.push('ย่อหน้าที่ ' + i + ' — ค่ำคืนนั้นทอร่ายืนอยู่ที่ตลาดเก่ายามค่ำ ลมพัดเอากลิ่นขนมปังอบใหม่ลอยมาจากร้าน เขาเดินตามแมวดำไปตามตรอกแคบ ๆ ที่มืดสนิท เสียงฝีเท้าก้องสะท้อนกับผนังอิฐเก่า');
+        await kapi.writeFile(probeBH, dumpMdFile({ title: 'เทสพิมพ์169', type: 'scene', format: 'prose' }, linesBH.join('\n')));
+        await openScene(probeBH, null);
+        const okTabBH = await untilBH(() => state.tabs.has(probeBH) && state.active && state.active.file === probeBH && !!state.active.editor);
+        check('[169-BH] เปิดฉากทดสอบ (นิยาย 60 ย่อหน้า) ได้', okTabBH);
+
+        // ── 1) พิมพ์: เดิมได้หน้าเดียวทุกมุมมอง (สายกล่อง overflow:hidden ของระบบแผงตัดเนื้อทิ้ง) ──
+        {
+          const pdfBH = await kapi.join(state.root, 'k2test-169bh-print.pdf');
+          let pagesBH = 0, errBH = '';
+          document.body.classList.add('printing');
+          try {
+            await kapi.printToPdf(pdfBH);
+            const by = new Uint8Array(await kapi.readBytes(pdfBH));
+            let s = ''; for (let i = 0; i < by.length; i += 8192) s += String.fromCharCode.apply(null, by.subarray(i, i + 8192));
+            pagesBH = (s.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
+          } catch (e) { errBH = String((e && e.message) || e); }
+          document.body.classList.remove('printing');
+          await kapi.remove(pdfBH).catch(() => {});
+          check('[169-BH] ★★ พิมพ์ฉากยาว: งานพิมพ์มีหลายหน้า (เดิมถูกตัดเหลือหน้าเดียว)', pagesBH >= 3, pagesBH + ' หน้า ' + errBH);
+          const printRules = [];
+          for (const ss of document.styleSheets) { try { for (const r of ss.cssRules) if (r.media && /print/.test(r.media.mediaText)) printRules.push(r.cssText); } catch {} }
+          const allPR = printRules.join('\n');
+          check('[169-BH] กฎตอนพิมพ์: ปลดสายกล่องของระบบแผง + ซ่อนของนอก #app-root + แถบรูปแบบลอย',
+                /\.k-holds-docs[^{]*\{[^}]*overflow:\s*visible/.test(allPR) && /body:not\(\.map-printing\) > :not\(#app-root\)/.test(allPR.replace(/\*:not/g, ':not'))
+                && /#content > :not\(#panes\)/.test(allPR.replace(/\*:not/g, ':not')));
+          check('[169-BH] กฎตอนพิมพ์: ชื่อใน Wiki/คำผิด/ผลค้นหา ไม่มีพื้น-เส้นของหน้าจอ · ตัวหนังสือดำ',
+                /\.ProseMirror \.k-mention[^{]*\{[^}]*background:\s*none/.test(allPR) && /\.ProseMirror \.k-spell-bad/.test(allPR)
+                && /color:\s*inherit\s*!important/.test(allPR) && /\.ed-page-break[^{]*\{[^}]*display:\s*none/.test(allPR));
+        }
+
+        // ── 2) ศูนย์ส่งออก: RTF ของนิยาย (เดิมถูกอ่านเป็นบทภาพยนตร์) · .txt ล้วนจริง ──
+        {
+          const hubBH = await openExportHub();
+          const keepBH = JSON.stringify(hubBH.cfg);
+          hubBH.cfg.scope = 'tab'; hubBH.cfg.kind = 'auto'; hubBH.cfg.workflow = '';
+          await hubBH.setFormat('rtf');
+          const bR = await hubBH.build();
+          const rtf = (bR && bR.text) || '';
+          check('[169-BH] ★★ RTF ของนิยาย: เป็นไฟล์ RTF ที่ใช้ฟอนต์ของนิยาย ไม่ใช่ Courier ของบท',
+                /^\{\\rtf1/.test(rtf) && /\\fonttbl\{\\f0\\fnil/.test(rtf) && !/Courier Prime/.test(rtf), rtf.slice(0, 160));
+          check('[169-BH] ★★ RTF ของนิยาย: ตัวหนา/เอียง/สี/กึ่งกลาง/รายการ เป็นคำสั่งของ RTF',
+                /\{\\b /.test(rtf) && /\{\\i /.test(rtf) && /\\colortbl;\\red192\\green57\\blue43;/.test(rtf) && /\\cf1 /.test(rtf)
+                && /\\qc /.test(rtf) && /\\bullet\\tab /.test(rtf) && / 3\.\\tab /.test(rtf) && /\{\\super 2\}/.test(rtf));
+          check('[169-BH] ★★ RTF ของนิยาย: ไม่มีระยะเยื้อง "ชื่อตัวละคร/บทพูด" · ไม่มีเครื่องหมายมาร์กดาวน์ดิบ',
+                !/\\li3168|\\li1440\\ri2160/.test(rtf) && !/\*\*|<span|<!--/.test(rtf));
+          check('[169-BH] ช่องตัวอย่างของ RTF นิยายอ่านออก (ไม่มีคอมเมนต์จัดหน้า)', !!bR && typeof bR.preview === 'string' && !/<!--/.test(bR.preview) && bR.preview.includes('กลาง169'));
+          await hubBH.setFormat('txt');
+          const bT = await hubBH.build();
+          const txt = (bT && bT.text) || '';
+          check('[169-BH] ★ .txt ล้วนจริง: ไม่มี * ^ < > · จุดนำ/เลขข้อยังอยู่',
+                txt.includes('หนา169') && !/[*^<>]/.test(txt) && txt.includes('• ข้อ169') && txt.includes('3. เลข169') && txt.includes('x2'), txt.slice(0, 200));
+          Object.assign(hubBH.cfg, JSON.parse(keepBH));
+          await hubBH.setFormat(hubBH.cfg.format);
+          hubBH.close();
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        }
+
+        // ── 3) บทภาพยนตร์ → ปลายทางที่ไม่ผ่านตัวอ่านบท: รหัส fountain ไม่หลุด · วงเล็บคงอยู่ ──
+        {
+          const FN = await import('./fountain.js');
+          const spBH = ['### INT. ร้าน169 - คืน', '', '@ทอร่า', '((กระซิบ))', 'มีใครอยู่ไหม', '', '>> CUT TO:'].join('\n');
+          const outBH = FN.stripFountainCodes(spBH).split('\n');
+          check('[169-BH] ★ ตัดรหัส fountain: วงเล็บใต้ชื่อตัวละครคงเป็น "(กระซิบ)"', outBH[2] === 'ทอร่า' && outBH[3] === '(กระซิบ)' && outBH[6] === 'CUT TO:', outBH.join('|'));
+          const mdl = { title: 'บท169', author: '', chapters: [{ title: '', scenes: [{ title: '', body: spBH, format: 'screenplay', type: 'scene' }] }] };
+          const wfH = { id: 'bh', ext: 'html', steps: [{ key: 'to-html', on: true, opts: {} }] };
+          const hBH = runWorkflow(mdl, wfH, { beforeHtml: FN.stripFountainCodes }).text;
+          check('[169-BH] ★★ ส่งออกบทเป็น HTML: ไม่มี @ชื่อ / ((วงเล็บ)) / >> ให้ผู้อ่านเห็น · กฎ @page ยังอยู่',
+                />ทอร่า</.test(hBH) && />\(กระซิบ\)</.test(hBH) && !/>@ทอร่า|\(\(กระซิบ|&gt;&gt; CUT/.test(hBH) && /@page\s*\{/.test(hBH),
+                hBH.slice(hBH.indexOf('<body'), hBH.indexOf('<body') + 200));
+        }
+
+        // ── 4) นำเข้า Fountain มาตรฐาน: โน้ต/boneyard/กึ่งกลาง/บทพูดคู่ · จำนวนคำของข้อความไทย ──
+        {
+          const IS = await import('./import-sp.js');
+          const fBH = await kapi.join(state.root, 'k2test-169bh.fountain');
+          await kapi.writeFile(fBH, ['Title: เรื่อง169', 'Author: ท็อป', '', 'INT. BAKERY - NIGHT', '', 'TORA walks in. [[writer note 169]]', '',
+            '/* boneyard169', 'two lines */', '', '> THE END <', '', 'STEEL ^', 'dual line', ''].join('\n'));
+          const rI = await IS.importScreenplay(fBH, null);
+          const mdI = rI.ok ? IS.elementsToMarkdown(rI.elements) : '';
+          await kapi.remove(fBH).catch(() => {});
+          check('[169-BH] ★ นำเข้า .fountain: โน้ต `[[…]]` เป็นบรรทัดโน้ต (ไม่ใช่ลิงก์ Wiki) · boneyard ไม่เข้ามา',
+                rI.ok && mdI.includes('/// writer note 169') && !mdI.includes('[[') && !/boneyard169/.test(mdI), mdI);
+          check('[169-BH] ★ นำเข้า .fountain: กึ่งกลางไม่มี > < ค้าง · ชื่อบทพูดคู่ไม่มี ^ · หน้าปกไม่เข้าเนื้อบท',
+                /(^|\n)!?THE END(\n|$)/.test(mdI) && !/THE END\s*</.test(mdI) && /(^|\n)@STEEL(\n|$)/.test(mdI) && !/Title:/.test(mdI) && rI.title === 'เรื่อง169', mdI);
+          check('[169-BH] กล่องพรีวิวนำเข้า: จำนวนคำของบรรยายไทยไม่ใช่ 1 (เดิมนับจากช่องว่าง)',
+                IS.importSummary([{ el: 'action', text: 'ทอร่าเดินเข้ามาในร้านขนมปังยามค่ำคืนแล้วมองไปรอบตัว' }]).words > 3);
+        }
+
+        // ── 5) เปิดไฟล์ด่วน: ไม่มีของภายใน · เอนทิตี้เปิดเป็นหน้า Wiki ──
+        {
+          await openQuickOpen();
+          await wBH(300);
+          const qo = quickOpenCache().files;
+          const bad = qo.filter((f) => /(^|\/)(project\.khn\.json|scenes\.json|draft\.json|section\.json|templates\.json|ai-key\.json)$/i.test(f.rel)
+                                       || /(^|\/)\.[^/]+\//.test('/' + f.rel) || /^(Recycle|Snapshots|Backups|Planners)\//i.test(f.rel));
+          check('[169-BH] ★★ เปิดไฟล์ด่วน: ไม่มีไฟล์ทะเบียน · สำเนาใน .k2history · ถังขยะ ปนกับงานเขียน', qo.length >= 1 && bad.length === 0,
+                bad.slice(0, 5).map((f) => f.rel).join(' | '));
+          check('[169-BH] เปิดไฟล์ด่วน: งานเขียนขึ้นก่อน · เอนทิตี้ของ Wiki ถูกจัดชนิด', qo[0].kind === 'scene' && qo.some((f) => f.kind === 'entity'), qo[0].rel);
+          const entBH = qo.find((f) => f.kind === 'entity');
+          const inpQ = document.querySelector('.k-qo-input');
+          inpQ.value = entBH.name.replace(/\.json$/i, ''); inpQ.dispatchEvent(new Event('input'));
+          await wBH(120);
+          const rowQ = [...document.querySelectorAll('.k-qo-row')].find((r) => r.querySelector('.k-qo-rel').textContent === entBH.rel);
+          check('[169-BH] พิมพ์ชื่อเอนทิตี้แล้วมีแถวให้เลือก', !!rowQ, entBH.rel);
+          if (rowQ) rowQ.click(); else document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          const okEnt = await untilBH(() => state.tabs.has(entBH.path) && !!state.tabs.get(entBH.path).wiki);
+          check('[169-BH] ★★ เปิดเอนทิตี้จากกล่องเปิดไฟล์ด่วน = หน้า Wiki (เดิมได้ตัวแก้ JSON ดิบ)', okEnt,
+                state.tabs.has(entBH.path) ? Object.keys(state.tabs.get(entBH.path)).join(',') : 'ไม่มีแท็บ');
+          // ชนิดการอ้างถึงในรายการ "ฉากที่กล่าวถึง" ต้องไม่ใช่รหัสดิบ
+          await wBH(600);
+          const vias = [...document.querySelectorAll('.bl-via')].map((e) => e.textContent.trim());
+          check('[169-BH] รายการฉากที่กล่าวถึง: ไม่โชว์รหัสดิบ (name)/(link)/(alias)/(stored)', !vias.some((v) => /^\((name|link|alias|stored)\)$/.test(v)), vias.slice(0, 4).join(' '));
+          if (state.tabs.has(entBH.path)) closeTab(entBH.path, { discard: true });
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        }
+
+        // ── 6) กล่อง: "มีอะไรใหม่" อ่านทีละรุ่น · แถวปุ่มของกล่องยาวเห็นเสมอ · ป้ายของชุดระยะขอบ ──
+        {
+          const DG = await import('./dialogs.js');
+          await DG.showChangelog();
+          const cl = [...document.querySelectorAll('.k-dialog')].pop();
+          const ttlOf = () => (cl.querySelector('.k-cl-title') || {}).textContent || '';
+          check('[169-BH] ★★ กล่อง "มีอะไรใหม่": เลือกรุ่นได้ · เปิดที่รุ่นล่าสุด · ไม่ใช่ <pre> ของ Markdown ดิบ',
+                cl.classList.contains('k-changelog-dlg') && cl.querySelectorAll('.k-changelog-sel option').length > 50
+                && /^alpha\.\d+/.test(ttlOf()) && !cl.querySelector('pre.k-changelog') && cl.querySelectorAll('.k-changelog-rich > *').length > 3, ttlOf().slice(0, 60));
+          const leafTxt = [...cl.querySelectorAll('.k-changelog-rich *')].filter((n) => !n.children.length && n.tagName !== 'CODE' && n.tagName !== 'PRE').map((n) => n.textContent).join('\n');
+          check('[169-BH] ★ กล่อง "มีอะไรใหม่": ไม่มี ** / หัว ## / เส้นตาราง |---| เป็นตัวหนังสือ', !/\*\*[^*\n]+\*\*|^#{2,} |\|-{3,}\|/m.test(leafTxt),
+                (leafTxt.match(/\*\*[^*\n]+\*\*|^#{2,} .*|\|-{3,}\|/m) || [''])[0].slice(0, 80));
+          const t0 = ttlOf();
+          cl.querySelector('.k-changelog-older').click();
+          const t1 = ttlOf();
+          cl.querySelector('.k-changelog-newer').click();
+          check('[169-BH] ปุ่ม "เก่ากว่า/ใหม่กว่า" เปลี่ยนรุ่นไป-กลับ', t1 !== t0 && ttlOf() === t0, t0.slice(0, 30) + ' → ' + t1.slice(0, 30));
+          const brC = cl.querySelector(':scope > .k-dlg-btns').getBoundingClientRect(), drC = cl.getBoundingClientRect();
+          check('[169-BH] กล่อง "มีอะไรใหม่" อยู่ในจอ + แถวปุ่มอยู่ในกรอบกล่อง', drC.bottom <= innerHeight + 1 && brC.bottom <= drC.bottom + 1 && brC.top >= drC.top);
+          cl.querySelector('.k-ok').click();
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+
+          // กล่องที่เนื้อยาวกว่าจอ (เช่น ส่งออก PDF ของบท บนจอ 768px): ปุ่มต้องเห็นโดยไม่ต้องเลื่อน
+          const ovS = el('div', 'k-overlay'), bxS = el('div', 'k-dialog'), tallS = el('div'), rowS = el('div', 'k-dlg-btns');
+          tallS.style.height = '3000px';
+          rowS.append(el('button', 'k-cancel', 'x'), el('button', 'k-ok', 'y'));
+          bxS.append(tallS, rowS); ovS.append(bxS); document.body.append(ovS);
+          await wBH(80);
+          bxS.scrollTop = 0;                                   // ตัวจัดโฟกัสของกล่องอาจเลื่อนไปหาปุ่ม — วัดที่ตำแหน่งบนสุดเสมอ
+          await wBH(30);
+          const r1 = rowS.getBoundingClientRect(), d1 = bxS.getBoundingClientRect();
+          check('[169-BH] ★★ กล่องที่เนื้อยาวกว่าจอ: แถวปุ่มติดขอบล่างของกล่อง (เดิมต้องเลื่อนลงไปหา)',
+                bxS.scrollHeight > bxS.clientHeight + 500 && bxS.scrollTop === 0 && r1.top > d1.top && r1.bottom <= d1.bottom + 1 && r1.bottom <= innerHeight,
+                JSON.stringify({ row: [Math.round(r1.top), Math.round(r1.bottom)], box: [Math.round(d1.top), Math.round(d1.bottom)], vh: innerHeight }));
+          bxS.scrollTop = bxS.scrollHeight;
+          await wBH(40);
+          const r2 = rowS.getBoundingClientRect();
+          check('[169-BH] เลื่อนสุดแล้วแถวปุ่มยังอยู่ที่เดิม (ไม่กระโดด)', Math.abs(r2.bottom - r1.bottom) <= 1.5, r1.bottom + ' → ' + r2.bottom);
+          ovS.remove();
+
+          const MP = await import('./margin-presets.js');
+          const optsM = MP.marginPresetOptions();
+          check('[169-BH] ป้ายของชุดระยะขอบมาจากไฟล์ภาษา (ไม่มีคีย์ดิบ)', optsM.length >= 6 && optsM.every(([k, l]) => l && l !== k && !/^ui\./.test(l)), optsM.map((o) => o[1]).join(' | '));
+          check('[169-BH] ชื่อไทยของตัวแปรหัวกระดาษตายตัว (ไม่ผูกกับภาษาของหน้าจอ) · คำอธิบายแปลตอนอ่าน',
+                HEADER_VARS[0].th === 'หน้า' && HEADER_VARS[1].th === 'จำนวนหน้า' && resolveHeaderVars('${หน้า}/${จำนวนหน้า}', { PAGE: 2, PAGES: 9 }) === '2/9'
+                && HEADER_VARS[0].label === tt('ui.spHeaders.pageNumCurrent'));
+        }
+
+        // ── เก็บกวาด ──
+        if (state.tabs.has(probeBH)) closeTab(probeBH, { discard: true });
+        await kapi.remove(probeBH).catch(() => {});
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
+        check('[169-BH] เก็บกวาด: ไม่มีแท็บ/กล่องของเทสค้าง', !state.tabs.has(probeBH) && !document.querySelector('.k-overlay'));
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

@@ -89,7 +89,7 @@ export function renderFutureNotes(host, { onChanged = null, onOpenScene = null }
     when = fmtDate(n.timestamp);
     body.append(el('div', 'fn-meta', [n.sceneTitle && gi('file') + ' ' + n.sceneTitle, when].filter(Boolean).join(' · ')));
     if (n.sceneId && onOpenScene) {
-      body.style.cursor = 'pointer';
+      body.style.cursor = 'default';
       body.onclick = () => onOpenScene(n.sceneId, n.sceneTitle);
     }
     const del = el('span', 'fn-del', gi('close'));
@@ -126,7 +126,7 @@ export async function quickNote(sceneId, sceneTitle) {
     recent.append(el('div', 'dim', t('ui.notes.latest')));
     for (const n of notes) {
       const r = el('div', 'k-menu-item');
-      r.style.cssText = 'font-size:12px;cursor:pointer';
+      r.style.cssText = 'font-size:12px;cursor:default';
       r.textContent = n.text.slice(0, 80) + ' — ' + (n.sceneTitle || '');
       r.onclick = () => { ta.value = n.text; };
       recent.append(r);

@@ -13,15 +13,30 @@ import { num } from './num.js';
 
 // ───────── ตัวแปรที่ใช้ได้ในข้อความหัวกระดาษ ─────────
 // เขียนได้ทั้ง ${PAGE} และ ${หน้า} — ตารางนี้เป็น "คำอธิบายให้ UI แสดง" ด้วย
+//
+// ══ [alpha.169 · bug hunt] ชื่อไทยของตัวแปรเป็น **ข้อมูลในไฟล์ของผู้ใช้** ไม่ใช่ข้อความ UI ══
+// เดิม `th: t('ui.common.page')` = ชื่อไทยมาจากไฟล์ภาษา → สลับหน้าจอเป็นอังกฤษแล้ว `th` กลายเป็น "Page"
+// หัวกระดาษที่ผู้ใช้ตั้งไว้ว่า `${หน้า}` จึง "ไม่รู้จัก" แล้วถูกแทนด้วยข้อความว่าง = เลขหน้าหายจากทุกหน้า
+// ทั้งบนจอและใน PDF โดยไม่มีอะไรฟ้อง (ตระกูลเดียวกับ "อย่าเทียบเงื่อนไขกับข้อความที่แปลแล้ว" — alpha.128)
+// ตอนนี้ชื่อไทยตายตัว · คำอธิบาย (`label`) แปลตอนอ่าน · ชื่อในภาษาของหน้าจอ (`alias`) รับเพิ่มเป็นของแถม
+/* i18n-skip: ชื่อไทยของตัวแปรหัวกระดาษ = สิ่งที่ผู้ใช้พิมพ์ลงในข้อความหัวกระดาษ (เก็บใน settings.spHeaders) */
+const HEADER_VAR_TH = { PAGE: 'หน้า', PAGES: 'จำนวนหน้า', TITLE: 'เรื่อง', AUTHOR: 'ผู้เขียน',
+                        DRAFT: 'ฉบับ', DATE: 'วันที่', SCENE: 'ฉาก', COPYRIGHT: 'ลิขสิทธิ์' };
+/* /i18n-skip */
+const hv = (key, aliasKey, labelKey) => ({
+  key, th: HEADER_VAR_TH[key],
+  get alias() { return t(aliasKey); },
+  get label() { return t(labelKey); },
+});
 export const HEADER_VARS = [
-  { key: 'PAGE', th: t('ui.common.page'), label: t('ui.spHeaders.pageNumCurrent') },
-  { key: 'PAGES', th: t('ui.spHeaders.countPage'), label: t('ui.spHeaders.countPageAll') },
-  { key: 'TITLE', th: t('ui.common.story'), label: t('ui.common.title') },
-  { key: 'AUTHOR', th: t('ui.common.author'), label: t('ui.spHeaders.nameAuthor') },
-  { key: 'DRAFT', th: t('ui.spHeaders.edition'), label: t('ui.spHeaders.nameDraftRoundEdit') },
-  { key: 'DATE', th: t('ui.common.date'), label: t('ui.spHeaders.dateSendInAct') },
-  { key: 'SCENE', th: t('ui.common.scene2'), label: t('ui.spHeaders.headSceneFirstPage') },
-  { key: 'COPYRIGHT', th: t('ui.spHeaders.msg'), label: t('ui.spHeaders.text') },
+  hv('PAGE', 'ui.common.page', 'ui.spHeaders.pageNumCurrent'),
+  hv('PAGES', 'ui.spHeaders.countPage', 'ui.spHeaders.countPageAll'),
+  hv('TITLE', 'ui.common.story', 'ui.common.title'),
+  hv('AUTHOR', 'ui.common.author', 'ui.spHeaders.nameAuthor'),
+  hv('DRAFT', 'ui.spHeaders.edition', 'ui.spHeaders.nameDraftRoundEdit'),
+  hv('DATE', 'ui.common.date', 'ui.spHeaders.dateSendInAct'),
+  hv('SCENE', 'ui.common.scene2', 'ui.spHeaders.headSceneFirstPage'),
+  hv('COPYRIGHT', 'ui.spHeaders.msg', 'ui.spHeaders.text'),
 ];
 
 export const HEADER_ALIGNS = ['left', 'center', 'right'];
@@ -78,6 +93,9 @@ export function resolveHeaderVars(text, ctx = {}) {
     const val = ctx[v.key] ?? ctx[v.key.toLowerCase()] ?? '';
     map.set(v.key.toLowerCase(), String(val));
     map.set(v.th, String(val));
+    // ชื่อในภาษาของหน้าจอ (เช่น `${Page count}`) — รับเพิ่ม แต่ไม่ทับชื่อที่ตายตัวข้างบน
+    const al = String(v.alias || '').trim();
+    if (al && !map.has(al) && !map.has(al.toLowerCase())) map.set(al.toLowerCase(), String(val));
   }
   return String(text ?? '').replace(/\$\{([^}]*)\}/g, (m, name) => {
     const k = String(name).trim();

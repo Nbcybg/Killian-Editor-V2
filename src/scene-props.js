@@ -24,7 +24,7 @@ export async function sceneProps(dPath, ch, sc) {
   if (!row) return;
   // [alpha.60r2 ข้อ 13] ค่าที่โชว์ = frontmatter ของไฟล์จริงก่อน แล้วค่อยตกมาที่ดัชนี
   // → แก้ .md นอกโปรแกรมแล้วเปิดกล่องนี้ ต้องเห็นค่าที่แก้ไว้ ไม่ใช่ค่าค้างใน scenes.json
-  const file = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
+  let file = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
   const M = await readSceneMeta(file, row);
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog');
@@ -142,8 +142,10 @@ export async function sceneProps(dPath, ch, sc) {
     const newTitle = iTitle.value.trim();
     if (newTitle && newTitle !== row.title) {
       const { setSceneTitle } = await import('./scene-ops.js');
-      await setSceneTitle(dPath, ch, row, newTitle);
+      // [alpha.170] เปลี่ยนชื่อ = ไฟล์ถูกย้ายให้ตรงชื่อ — ไม่สำเร็จ (แท็บบันทึกไม่ผ่าน) = ไม่เขียนค่าอื่นต่อ กล่องยังเปิดอยู่
+      if ((await setSceneTitle(dPath, ch, row, newTitle)) === false) return;
       row.title = newTitle;
+      file = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);   // setSceneTitle อัปเดต row.fileName ให้แล้ว
     }
     row.synopsis = iSyn.value; row.pov = iPov.value; row.status = iStatus.value; row.storyDate = iStoryDate.value.trim();
     // เก็บเฉพาะเมื่อผู้ใช้กรอกจริง (ค่าว่าง = เริ่มที่ 1) — กัน field ว่างรกทุกแถว

@@ -98,7 +98,11 @@ export function renderBacklinksTab(host, entityPath, onOpenScene) {
       if (onOpenScene) onOpenScene(link.sceneId, link.title);
     };
     row.append(name);
-    if (link.via) row.append(el('span', 'bl-via', ' (' + link.via + ')'));
+    // [alpha.169 · bug hunt] ชนิดการอ้างถึงเป็นรหัสภายใน (link/name/alias/stored) — เดิมโชว์รหัสดิบ "(name)" ทุกแถว
+    // ตารางคีย์เต็ม (ห้ามประกอบคีย์จากชิ้นส่วน) · รหัสที่ไม่รู้จัก = ไม่โชว์วงเล็บ
+    const viaKey = { link: 'ui.worldAutoLink.viaLink', name: 'ui.worldAutoLink.viaName',
+                     alias: 'ui.worldAutoLink.viaAlias', stored: 'ui.worldAutoLink.viaStored' }[link.via];
+    if (viaKey) row.append(el('span', 'bl-via dim', ' (' + t(viaKey) + ')'));
     list.append(row);
   }
   host.append(list);

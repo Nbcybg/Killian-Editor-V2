@@ -294,7 +294,9 @@ export function onsetViewOf(file) {
 const VIEW_ONLY = new Set(['onset-toggle', 'zoom', 'zoom-in', 'zoom-out', 'zoom-reset', 'ui-scale', 'scroll',
                            'find', 'find-next', 'find-prev', 'goto-page', 'goto-scene',
                            'next-tab', 'prev-tab', 'toggle-panel', 'show-panel', 'reveal-active', 'cheatsheet',
-                           'settings', 'line-numbers', 'reading-mode', 'focus-mode', 'typewriter']);
+                           'settings', 'line-numbers', 'reading-mode', 'focus-mode', 'typewriter',
+                           // [alpha.169 · a11y] สวิตช์ช่วยการเข้าถึงไม่อ่าน/ไม่เขียนเนื้อ
+                           'key-echo', 'line-band', 'osk', 'a11y-settings', 'type-sound']);
 /**
  * app.js เรียกก่อนทุกคำสั่ง — กำลังดูฉบับเดิมแล้วสั่งอย่างอื่น (บันทึก · พิมพ์ · ส่งออก · สลับโหมด ·
  * จัดรูปแบบ …) = กลับฉบับแก้ไขก่อน · "พิมพ์และส่งออกยึดฉบับแก้ไข" ตามที่ผู้ใช้กำหนด

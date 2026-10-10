@@ -40,6 +40,18 @@ export async function closeTabsUnder(dir) {
 }
 
 /**
+ * [alpha.170] ย้าย/เปลี่ยนชื่อไฟล์หรือโฟลเดอร์ที่อาจมีแท็บเปิดอยู่ — ทางเดียวของ "เปลี่ยนชื่อแล้วชื่อบนดิสก์ตาม"
+ * บันทึก+ปิดแท็บใต้ `oldPath` → `fn()` (ย้ายจริง · คืนทางใหม่ หรือ null = ไม่ได้ย้าย) → ย้ายประวัติเวอร์ชัน → เปิดแท็บกลับที่ทางใหม่
+ * ไม่มี bridge (unit test) = เรียก fn ตรง ๆ
+ * @param {string} oldPath · @param {() => Promise<string|null>} fn
+ * @returns {Promise<{ok:boolean, to:string|null}>} ok:false = มีแท็บที่บันทึกไม่ผ่าน → fn **ไม่ถูกเรียก**
+ */
+export async function movePathWithTabs(oldPath, fn) {
+  if (!bridge || !bridge.movePath) { const to = await fn(); return { ok: true, to: to || null }; }
+  return bridge.movePath(oldPath, fn);
+}
+
+/**
  * [alpha.160 · P1-3] เนื้อฉาก "ตัวจริง ณ ตอนนี้" — แท็บที่เปิดอยู่ชนะไฟล์บนดิสก์ (มีส่วนที่ยังไม่บันทึกได้)
  * ตัวกลางของทุกทางที่ส่งเนื้อฉากให้ AI (แชท · สรุปเรื่อง · ตัววิเคราะห์ · ดัชนี RAG · คำสั่ง AI)
  * เดิมมีแค่แชท (alpha.149) กับ ai-actions ที่ดูแท็บ — ที่เหลืออ่านดิสก์ตรง ๆ → ผลไม่ตรงกับที่ผู้ใช้เห็นบนจอ

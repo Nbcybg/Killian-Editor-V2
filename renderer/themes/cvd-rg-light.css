@@ -1,0 +1,47 @@
+/* renderer/themes/cvd-rg-light.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-cvd-rg-light {
+  --theme-orange:#e69f00;
+  --theme-sky:#56b4e9;
+  --theme-yellow:#f0e442;
+  --theme-blue:#0072b2;
+  --theme-vermillion:#d55e00;
+  --bg:#ffffff;
+  --side:#f1f5f9;
+  --bar:#e6edf4;
+  --border:#b5c4d4;
+  --fg:#16202b;
+  --bright:#0b1016;
+  --dim:#565b60;
+  --accent:#0072b2;
+  --accent-hi:#d55e00;
+  --accent-ink:#954200;
+  --link:#006197;
+  --sel:#cfe6f7;
+  --orange:#954200;
+  --curline:#f7f7f8;
+  --hover:#e1e2e3;
+  --hover-soft:#f1f2f2;
+  --titlebar:#e8e9ea;
+  --sunken:#f8f8f9;
+  --chip:#d9eaf3;
+  --danger-soft:#f6d5d7;
+  --canvas:#ffffff;
+  --void:#e8e9ea;
+  --paper-surround:#d5d7d9;
+  --tab-bar:#e8e9ea;
+  --tab-bg:#ffffff;
+  --tab-border:#b5c4d4;
+  --tab-fg:#565b60;
+  --tab-fg-on:#16202b;
+  --tab-hover:#f1f2f2;
+  --panel-head:#f1f2f2;
+  --input-bg:#ffffff;
+  --muted-strong:#404851;
+  --find-hit:#e8a673;
+  --on-accent:#ffffff;
+  --on-accent-hi:#1a1426;
+  --st-warn:#8a5a00;
+  --st-danger:#b54a00;
+  --st-danger-alt:#9c3f00;
+}

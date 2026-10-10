@@ -182,5 +182,33 @@ check('headerPlainLine หน้าแรก = ว่าง',
   check('[160-P1-9] หัวกระดาษหน้า 2 ของเล่มที่เริ่มหน้า 5 พิมพ์ "6."', txt(2) === '6.', txt(2));
 }
 
+// ══ [alpha.169 · bug hunt] ชื่อไทยของตัวแปรต้องใช้ได้ **ทุกภาษาของหน้าจอ** ══
+// เดิมชื่อไทยมาจากไฟล์ภาษา → หน้าจออังกฤษ: `${หน้า}` ไม่รู้จัก → ถูกแทนด้วยว่าง = เลขหน้าหายจากหัวกระดาษทั้งเล่ม
+{
+  check('[169-BH] ชื่อไทยของตัวแปรตายตัวครบแปดตัว',
+        JSON.stringify(H.HEADER_VARS.map((v) => v.th)) === JSON.stringify(['หน้า', 'จำนวนหน้า', 'เรื่อง', 'ผู้เขียน', 'ฉบับ', 'วันที่', 'ฉาก', 'ลิขสิทธิ์']));
+  // ภาษาโหลดตอน import → ต้องรันในโปรเซสใหม่ที่ติดตั้งตารางอังกฤษก่อน
+  const { execFileSync } = require('child_process');
+  const bundle = path.join(os.tmpdir(), 'k2-hdr-test.cjs');
+  const code = `
+    require(${JSON.stringify(path.join(__dirname, '_lang.cjs'))}).installLang('en');
+    const H = require(${JSON.stringify(bundle)});
+    const ctx = { PAGE: 7, PAGES: 12, TITLE: 'T', AUTHOR: 'A', DATE: 'D' };
+    process.stdout.write(JSON.stringify({
+      th: H.resolveHeaderVars('\${หน้า}/\${จำนวนหน้า} \${เรื่อง} \${ผู้เขียน} \${วันที่}', ctx),
+      key: H.resolveHeaderVars('\${PAGE}/\${pages}', ctx),
+      alias: H.resolveHeaderVars('\${Page count}', ctx),
+      label: H.HEADER_VARS[0].label, ths: H.HEADER_VARS.map((v) => v.th).join(','),
+    }));`;
+  let en = {};
+  try { en = JSON.parse(execFileSync(process.execPath, ['-e', code], { encoding: 'utf8' })); } catch (e) { en = { err: String(e && e.message) }; }
+  check('[169-BH] ★★ หน้าจออังกฤษ: `${หน้า}` `${จำนวนหน้า}` `${เรื่อง}` `${ผู้เขียน}` `${วันที่}` ยังถูกแทนค่า',
+        en.th === '7/12 T A D', JSON.stringify(en));
+  check('[169-BH] หน้าจออังกฤษ: ชื่อหลัก (${PAGE} · ${pages}) ใช้ได้ตามเดิม', en.key === '7/12', JSON.stringify(en));
+  check('[169-BH] หน้าจออังกฤษ: ชื่อในภาษาของหน้าจอรับเพิ่ม (${Page count})', en.alias === '12', JSON.stringify(en));
+  check('[169-BH] หน้าจออังกฤษ: คำอธิบายเป็นอังกฤษ · ชื่อไทยของตัวแปรไม่ถูกแปล',
+        en.label === 'Current page number' && String(en.ths).startsWith('หน้า,จำนวนหน้า'), JSON.stringify(en));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -163,13 +163,30 @@ export async function openHome() {
 }
 
 // วาดหน้าหลัก
+
+/**
+ * [alpha.169] ตราของโปรแกรมบนหน้าแรก: ไอคอน (assets/app-icon.svg — แหล่งเดียว icons/app-icon.svg) + ชื่อ
+ * เดิมเป็นตัวหนังสือ "Killian 2" ล้วน (ไอคอนยังเป็นรูปชั่วคราว)
+ */
+function homeBrand(tag) {
+  const h = el(tag, 'home-title');
+  // สองฉบับ — CSS เลือกตามโหมดของธีม (ขาวบนพื้นมืด · สีบนพื้นสว่าง)
+  for (const [cls, file] of [['k-logo-color', 'app-icon.svg'], ['k-logo-white', 'app-icon-white.svg']]) {
+    const img = el('img', 'home-title-logo ' + cls);
+    img.src = 'assets/' + file; img.alt = ''; img.draggable = false;
+    h.append(img);
+  }
+  h.append(document.createTextNode('Killian 2'));
+  return h;
+}
+
 export async function renderHome(pane) {
   pane.innerHTML = '';
   const wrap = el('div', 'home-wrap');
   
   // หัวข้อ
   const head = el('div', 'home-head');
-  head.append(el('h1', 'home-title', 'Killian 2'));
+  head.append(homeBrand('h1'));
   head.append(el('p', 'home-sub', t('ui.home.appWriteNovelScreenplay')));
 
   // คอนเทนเนอร์การ์ด (grid)
@@ -491,7 +508,7 @@ export async function showHomeDialog(opts = {}) {
   const box = el('div', 'k-dialog k-home-dlg');
   const head = el('div', 'home-head');
   // [alpha.61 ข้อ 1] เอาปุ่ม ✕ มุมขวาบนออก — ปิดได้ที่ปุ่ม "✕ ปิด" ในแถบล่าง (หรือ Esc)
-  head.append(el('h2', 'home-title', 'Killian 2'));
+  head.append(homeBrand('h2'));
   head.append(el('p', 'home-sub', t('ui.home.appWriteNovelScreenplay')));
   const grid = el('div', 'home-grid');
   const scroll = el('div', 'home-dlg-scroll');   // กรอบคงที่ · เลื่อนเฉพาะรายการข้างใน
@@ -532,7 +549,7 @@ export async function renderHomePanel(host) {
   host.dataset.ready = '1';
   const wrap = el('div', 'home-wrap');
   const head = el('div', 'home-head');
-  head.append(el('h2', 'home-title', 'Killian 2'));
+  head.append(homeBrand('h2'));
   const list = el('div', 'home-grid');
   // แผงหน้าแรกปิดด้วยปุ่ม ✕ บนหัวแผงอยู่แล้ว → ไม่ต้องมีปุ่มปิดซ้ำในแถวคำสั่ง
   const { actions, corner } = buildHomeActions({ grid: list });

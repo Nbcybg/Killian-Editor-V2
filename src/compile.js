@@ -23,7 +23,7 @@ import { pagesWithContinueds } from './sp-continued.js';
 import { mergeProseFormat, proseExportCss } from './prose-format.js';
 // [alpha.132 · X-1] คอมเมนต์ `<!--align:x-->` เป็นรูปแบบของ md.js — ห้ามมีสำเนา regex ที่สอง
 import { stripAlign, stripMentions as mdStripMentions, markerVars,
-         mdBlocks, inlineHtml as mdInlineHtml,
+         mdBlocks, inlineHtml as mdInlineHtml, inlinePlainText,
          figureClass, figureImgStyle } from './md.js';
 import { fmtNum } from './locale.js';
 
@@ -230,18 +230,28 @@ const KEEP_COMMENT = /^<!--\s*(?:align:(?:left|center|right|justify)|pagebreak)\
 
 // [alpha.132r2] กฎเดียวกับที่ช่องตัวอย่างใช้ — ย้ายไปอยู่ที่ md.js (เจ้าของไวยากรณ์) แล้ว
 export function stripMentions(s) { return mdStripMentions(s); }
+// ══ [alpha.169 · bug hunt] "ข้อความล้วน" ต้องล้วนจริง — เดิมเป็น regex ชุดที่สองของไฟล์นี้ ══
+// วัดจากไฟล์ .txt ที่ส่งออกบนแอปจริง: `^ยก^` `~ห้อย~` `<span style="color:…">สี</span>` และ `\` ท้ายบรรทัด
+// (Shift+Enter) หลุดเข้าไฟล์เป็นตัวอักษรดิบ · เลขของรายการเรียงลำดับ ("1." "2.") ถูกลบทิ้ง
+// ตอนนี้เดินผ่านสคีมาตัวจริงของ md.js (`mdBlocks` + `inlinePlainText` → parseInline) — กฎถาวรข้อ 5
+// · หนึ่งบรรทัด = หนึ่งบล็อกตามเดิม (จำนวนบรรทัดไม่ขยับ ยกเว้นบรรทัดรั้วโค้ดที่หายไป)
+// · ขึ้นหน้าใหม่ด้วยมือคงเป็น `<!--pagebreak-->` ให้ขั้นข้อความสุดท้ายแปลงต่อ (form-feed / ตัวคั่นหน้า)
+const plainInline = (s) => inlinePlainText(String(s == null ? '' : s))
+  .replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, '$1$2')    // ลิงก์ → ข้อความ
+  .replace(/`([^`]*)`/g, '$1');
 export function stripMarkdown(s) {
-  return s
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')      // รูป → ข้อความแทน
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')       // ลิงก์ → ข้อความ
-    .replace(/^\s{0,3}#{1,6}\s+/gm, '')            // หัวข้อ
-    .replace(/^\s{0,3}>\s?/gm, '')                 // ยกคำพูด
-    .replace(/^\s{0,3}([-*+]|\d+\.)\s+/gm, '')     // รายการ
-    .replace(/^\s{0,3}(-{3,}|\*{3,})\s*$/gm, '')   // เส้นคั่น
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/~~(.*?)~~/g, '$1')
-    .replace(/`([^`]*)`/g, '$1');
+  const out = [];
+  for (const b of mdBlocks(String(s == null ? '' : s))) {
+    switch (b.kind) {
+      case 'code': out.push(b.text); break;
+      case 'pagebreak': out.push('<!--pagebreak-->'); break;
+      case 'hr': out.push(''); break;
+      case 'figure': out.push(String(b.alt || '')); break;
+      case 'li': out.push((b.ordered ? (Number.isFinite(b.num) ? b.num : 1) + '. ' : '• ') + plainInline(b.text)); break;
+      default: out.push(plainInline(b.text));
+    }
+  }
+  return out.join('\n');
 }
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -438,6 +448,10 @@ export function runWorkflow(model0, workflow,
       fontStack = '', headingStack = '',
       // [alpha.149] ตัวแปลง path รูปในเนื้อฉาก → URL ที่เปิดได้จริง (ส่งต่อให้ mdToHtml ของขั้น to-html)
       imgSrc = null,
+      // [alpha.169 · bug hunt] ตัวกรองมาร์กดาวน์ที่ประกอบเสร็จ **ก่อนแปลงเป็น HTML** (ขั้น to-html)
+      // ศูนย์ส่งออกใช้ตัดรหัส fountain (`@ชื่อ` `((วงเล็บ))` `>> ตัด`) — เดิมตัดหลัง runWorkflow จบ
+      // ซึ่งปลายทาง HTML ทำไม่ได้ (ผลเป็นหน้า HTML แล้ว) รหัสจึงหลุดไปให้ผู้อ่านเห็นทั้งไฟล์
+      beforeHtml = null,
       // ══ [alpha.133 · Y-3] ★★ "ผลลัพธ์นี้จะถูกตีความเป็นมาร์กดาวน์ต่อไหม" ══
       //
       // ผู้ใช้: *"การจัดหน้า … มีแค่ layout อย่างเดียวที่ถูกต้อง"*
@@ -633,6 +647,10 @@ export function runWorkflow(model0, workflow,
       continue;
     }
     if (st.key === 'to-html') {
+      if (typeof beforeHtml === 'function') {
+        try { text = String(beforeHtml(text)); }
+        catch (e) { warn.push(String((e && e.message) || e)); }
+      }
       // [alpha.132r3 ข้อ 1] ปลายทาง .html ก็ต้องได้ฟอนต์ชุดเดียวกับบนจอ (ผู้เรียกส่งมาให้)
       text = mdToHtml(text, model.title, proseFormat, paper, margins,
                       { fontStack, headingStack, imgSrc });

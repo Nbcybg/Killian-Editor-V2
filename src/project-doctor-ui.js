@@ -9,7 +9,9 @@ import { confirmBox, escClose } from './ui.js';
 import { parseMdFile, dumpMdFile, repairFrontmatter } from './md.js';
 import { diagnoseDraft, newSceneRow, newChapterEntry, summarize } from './project-doctor.js';
 import { mutateJson } from './json-store.js';
-import { tabHandle } from './tab-bridge.js';
+import { tabHandle, movePathWithTabs } from './tab-bridge.js';
+// [alpha.170] ชื่อบนดิสก์ที่ยังไม่ตรงกับชื่อเรื่อง (ของรุ่นเก่า) — แยกจาก "ปัญหา": โปรเจกต์ยังใช้งานได้ปกติ
+import { listNameMismatches, renameSceneOnDisk, renameChapterOnDisk, renameSectionOnDisk } from './disk-sync.js';
 import { gi } from './icons.js';
 
 // คีย์เต็มเสมอ — ประตูกันพลาด i18n-keys ตรวจคีย์ที่ประกอบด้วยการต่อสตริงไม่ได้
@@ -110,7 +112,7 @@ async function fixOne(it, A, freeSceneFileName) {
       const rows0 = ((d0.chapters || {})[it.chGuid]) || [];
       const row0 = rows0.find((x) => x.id === it.rowId);
       if (!row0 || row0.fileName !== it.file) return false;
-      const name = await freeSceneFileName(it.dPath, it.folder, row0.order || nextOrder(rows0),
+      const name = await freeSceneFileName(it.dPath, it.folder, row0.title || it.file.replace(/\.md$/i, ''),
                                            new Set(rows0.map((x) => x.fileName)));
       let text = '';
       try { text = await kapi.readFile(await kapi.join(chDir, it.folder, it.file)); } catch {}
@@ -186,6 +188,35 @@ export async function applyDoctorFixes(list) {
   return { ok, failed };
 }
 
+/**
+ * [alpha.170] เปลี่ยนชื่อไฟล์/โฟลเดอร์ให้ตรงกับชื่อเรื่อง (รายการจาก `listNameMismatches`)
+ * ลำดับ ฉาก → บท → เล่ม: ชั้นล่างก่อน ทางของรายการที่เหลือจึงยังถูก · แท็บ/ประวัติเวอร์ชันย้ายตาม (movePathWithTabs)
+ * @returns {Promise<{ok:number, failed:number}>}
+ */
+export async function fixNameMismatches(items) {
+  const A = await import('./app.js');
+  let ok = 0, failed = 0;
+  const run = async (oldPath, fn) => {
+    try {
+      let res = null;
+      const mv = await movePathWithTabs(oldPath, async () => { res = await fn(); return res && res.moved ? res.to : null; });
+      if (mv.ok && res && res.ok) ok++; else failed++;
+    } catch (e) { failed++; log('error', tf('ui.names.renameFail', oldPath), e); }
+  };
+  const of = (k) => (items || []).filter((x) => x && x.kind === k);
+  for (const it of of('scene')) {
+    await run(await kapi.join(it.dPath, 'Chapters', it.ch.folderName, it.disk),
+              () => renameSceneOnDisk(kapi, it.dPath, it.ch, it.id, it.title));
+  }
+  for (const it of of('chapter')) {
+    await run(await kapi.join(it.dPath, 'Chapters', it.disk), () => renameChapterOnDisk(kapi, it.dPath, it.ch.guid, it.title));
+  }
+  for (const it of of('book')) await run(it.secPath, () => renameSectionOnDisk(kapi, it.secPath, it.title));
+  logAction('doctor', tf('ui.names.fixedN', ok, failed), (items || []).map((x) => ({ kind: x.kind, title: x.title, disk: x.disk })));
+  try { await A.buildTree(); A.refreshNetwork(); } catch {}
+  return { ok, failed };
+}
+
 // ══ [alpha.159 · QoL] ป้ายจำนวนปัญหาบนแถบสถานะ — เห็นก่อนที่ปัญหาจะกลายเป็นงานหาย ══
 // สแกนเบื้องหลังแบบหน่วงรวบ (หลังเปิดโปรเจกต์ / หลังโครงเปลี่ยน) · 0 ปัญหา = ป้ายว่าง (ซ่อนด้วย CSS :empty)
 // สแกนอ่านทุกไฟล์ฉากของโปรเจกต์ → โปรเจกต์ใหญ่หนักจริง · จึงหน่วงรวบ + เว้นอย่างน้อย MIN_GAP ระหว่างรอบ
@@ -228,7 +259,9 @@ export async function openProjectDoctor() {
   box.append(el('div', 'k-hint', t('ui.doctor.hint')));
   const summary = el('div', 'k-doctor-summary');
   const list = el('div', 'k-doctor-list');
-  box.append(summary, list);
+  // [alpha.170] แถบ "ชื่อไฟล์ยังไม่ตรงกับชื่อเรื่อง" — ไม่นับเป็นปัญหา (ไม่ขึ้นป้ายบนแถบสถานะ) ผู้ใช้กดปรับเองเมื่อพร้อม
+  const names = el('div', 'k-doctor-names');
+  box.append(summary, list, names);
   const btns = el('div', 'k-dlg-btns');
   const bScan = el('button', null, t('ui.doctor.rescan'));
   const bClose = el('button', 'k-cancel', t('ui.common.close'));
@@ -269,6 +302,8 @@ export async function openProjectDoctor() {
   };
   const scan = async () => {
     list.replaceChildren(el('div', 'dim', t('ui.doctor.scanning')));
+    // [alpha.170] ของที่ถูกเปลี่ยนชื่อจากนอกโปรแกรมต้องถูกจับคู่ก่อน — ไม่งั้นขึ้นเป็น "ไฟล์หาย" คู่กับ "ไฟล์ไม่มีใครอ้าง"
+    try { await A.syncDiskNames({ force: true }); } catch (e) { log('warn', 'doctor: name sync failed', e); }
     // [alpha.162 · W5 ข้อ 2] โปรเจกต์ใหญ่อ่านทุกฉากทุกฉบับร่าง — บอกจำนวน + ยกเลิกได้
     try {
       issues = await withBusyTask(t('ui.doctor.scanning'),
@@ -281,7 +316,27 @@ export async function openProjectDoctor() {
       return issues;
     }
     render();
+    await drawNames();
     return issues;
+  };
+  let mismatches = [];
+  const drawNames = async () => {
+    names.replaceChildren();
+    try { mismatches = await listNameMismatches(kapi, state.root); } catch (e) { mismatches = []; log('warn', 'doctor: name scan failed', e); }
+    if (!mismatches.length) return;
+    const txt = el('div', 'k-doctor-names-text');
+    txt.append(el('div', null, tf('ui.names.mismatchN', mismatches.length)));
+    txt.append(el('div', 'dim', t('ui.names.mismatchHint')));
+    const bNames = el('button', 'cmp-mini k-doctor-names-btn', t('ui.names.fixBtn'));
+    bNames.type = 'button';
+    bNames.onclick = async () => {
+      if (!(await confirmBox(tf('ui.names.fixConfirm', mismatches.length), t('ui.names.fixBtn')))) return;
+      bNames.disabled = true;
+      const res = await fixNameMismatches(mismatches);
+      setStatus(tf('ui.names.fixedN', res.ok, res.failed));
+      await scan();
+    };
+    names.append(txt, bNames);
   };
   bScan.onclick = () => scan();
   bFix.onclick = async () => {
@@ -294,5 +349,5 @@ export async function openProjectDoctor() {
     await scan();
   };
   await scan();
-  return { ov, scan, close, issues: () => issues };
+  return { ov, scan, close, issues: () => issues, mismatches: () => mismatches };
 }

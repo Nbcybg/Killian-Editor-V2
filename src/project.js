@@ -2,6 +2,7 @@
 import { t } from './i18n.js';
 import { el, setStatus, log, DEFAULT_SETTINGS, DEFAULT_GOALS, CAT_ICON } from './core.js';
 import { gi } from './icons.js';
+import { diskBase, freeName, defaultBookName } from './disk-names.js';   // [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง
 
 // ป้ายไทย + ไอคอนของหมวด Wiki (เดิมใส่ label เป็นคีย์อังกฤษ ผิดหลัก "ไทย 100%")
 const CAT_LABEL = {
@@ -13,7 +14,7 @@ const TEMPLATES = {
   novel: {
     name: t('ui.common.novel'),
     desc: t('ui.project.structureNovelChapterScene'),
-    sections: [{ title: t('ui.common.bookOne'), chapters: [t('ui.common.chapterOne2'), t('ui.project.chapterTwo')] }],
+    sections: [{ chapters: [t('ui.common.chapterOne2'), t('ui.project.chapterTwo')] }],
     wikiCats: ['characters', 'locations', 'lore'],
     templates: 'default',
   },
@@ -28,14 +29,14 @@ const TEMPLATES = {
   fantasy: {
     name: t('ui.project.fantasy'),
     desc: t('ui.project.novelFantasyWorldbuilding'),
-    sections: [{ title: t('ui.common.bookOne'), chapters: [t('ui.project.chapter'), t('ui.common.chapterOne2')] }],
+    sections: [{ chapters: [t('ui.project.chapter'), t('ui.common.chapterOne2')] }],
     wikiCats: ['characters', 'locations', 'items', 'lore', 'factions'],
     templates: 'fantasy',
   },
   mystery: {
     name: t('ui.project.investigateBack'),
     desc: t('ui.project.novelInvestigateCharacterSuspect'),
-    sections: [{ title: t('ui.common.bookOne'), chapters: [t('ui.project.start'), t('ui.project.investigation'), t('ui.project.chapterSummary')] }],
+    sections: [{ chapters: [t('ui.project.start'), t('ui.project.investigation'), t('ui.project.chapterSummary')] }],
     wikiCats: ['characters', 'locations', 'items', 'lore'],
     templates: 'mystery',
   },
@@ -70,17 +71,24 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
   });
 
   // สร้างเล่มตาม template
+  // [alpha.170] เล่ม: ไม่ระบุชื่อ = `Book N` (อังกฤษเสมอ) · ชื่อเล่ม = ชื่อโฟลเดอร์ · บท/ฉาก: ชื่อเรื่องเป็นชื่อบนดิสก์ ไม่มีเลขกำกับ
+  const usedBooks = [];
   for (let si = 0; si < tpl.sections.length; si++) {
     const sec = tpl.sections[si];
-    const secPath = await kapi.join(root, safeName(sec.title));
+    const secTitle = sec.title || defaultBookName(usedBooks);
+    const secFolder = freeName(diskBase(secTitle, 'Book'), usedBooks);
+    usedBooks.push(secFolder);
+    const secPath = await kapi.join(root, secFolder);
     await W(await kapi.join(secPath, 'section.json'), {
-      guid: guid(), title: sec.title, order: si + 1,
+      guid: guid(), title: secFolder === diskBase(secTitle, 'Book') ? secTitle : secFolder, order: si + 1, folderName: secFolder,
     });
     const dr = await kapi.join(secPath, 'Draft', 'default');
-    const chData = sec.chapters.map((title, ci) => ({
-      guid: guid(), title, order: ci + 1,
-      folderName: String(ci + 1).padStart(2, '0') + ' - ' + title,
-    }));
+    const usedCh = [];
+    const chData = sec.chapters.map((title, ci) => {
+      const folderName = freeName(diskBase(title, 'chapter'), usedCh);
+      usedCh.push(folderName);
+      return { guid: guid(), title, order: ci + 1, folderName };
+    });
     await W(await kapi.join(dr, 'draft.json'), { chapters: chData });
 
     const scenesByCh = {};
@@ -89,9 +97,9 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
       // เลขไฟล์เริ่มใหม่ทุกบท (แต่ละบทมีโฟลเดอร์ของตัวเอง) — เดิมเลขไหลต่อกันข้ามบท
       const sc = {
         id: guid(), title: t('ui.project.sceneFirst') + ch.title, order: 1,
-        fileName: 'scene-01.md',
         chapterGuid: ch.guid,
       };
+      sc.fileName = diskBase(sc.title, 'scene') + '.md';
       scenesByCh[ch.guid] = [sc];
       await kapi.writeFile(
         await kapi.join(dr, 'Chapters', ch.folderName, sc.fileName),
@@ -130,24 +138,19 @@ export async function showTemplateDialog({ allowBlank = false } = {}) {
     const box = el('div', 'k-dialog');
     box.append(el('div', 'k-dlg-title', t('ui.project.newProjectTemplate')));
 
-    const grid = el('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0';
+    const grid = el('div', 'k-newproj-grid');   // [alpha.169] คลาสของตัวเอง (เดิมยืม .tpl-card ของตัวจัดการเทมเพลต → ชื่อ/คำอธิบายวางคนละฝั่ง)
     const entries = Object.entries(TEMPLATES);
     if (allowBlank) entries.unshift([BLANK_TEMPLATE, { name: t('ui.project.blankName'), desc: t('ui.project.blankDesc') }]);
     for (const [key, tpl] of entries) {
-      const card = el('div', 'tpl-card');
-      card.style.cssText = 'padding:12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s';
-      const cName = el('div', null, tpl.name);
-      cName.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:4px';
-      const cDesc = el('div', null, tpl.desc);
-      cDesc.style.cssText = 'font-size:12px;color:var(--dim)';
+      const card = el('div', 'k-newproj-card');
+      card.setAttribute('role', 'button');
+      const cName = el('div', 'k-newproj-name', tpl.name);
+      const cDesc = el('div', 'k-newproj-desc', tpl.desc);
       card.append(cName, cDesc);
       card.dataset.tpl = key;
       card.tabIndex = 0;                               // เลือกด้วยคีย์บอร์ดได้ (Tab ไปการ์ด · Enter)
       card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } };
       card.onclick = () => { ov.remove(); resolve(key); };
-      card.onmouseenter = () => card.style.borderColor = 'var(--accent)';
-      card.onmouseleave = () => card.style.borderColor = '';
       grid.append(card);
     }
     box.append(grid);

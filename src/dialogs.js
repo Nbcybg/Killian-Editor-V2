@@ -2,6 +2,7 @@
 import { buildLoglineFields } from './logline-ui.js';
 import { compactLogline } from './logline.js';
 import { tf } from './i18n.js';
+import { splitChangelog, changelogBlocks, inlineParts, shortTitle } from './changelog-view.js';   // [alpha.169 · bug hunt]
 import { translationProgress } from './i18n-csv.js';   // [alpha.159 · QoL]
 import { settingsTemplate } from './settings-template.js';   // [alpha.154] โครงกล่องตั้งค่าออกจากไฟล์ภาษา
 import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageVars, closeTab, flushTabForMove, fmtTs, listSnapshots, openScene, openSnapshotRight, refreshAllMentions, refreshAllSpell, saveProjectMeta, snapshotFile, tb,
@@ -11,7 +12,7 @@ import { applySettings, applySpellcheck, applyUIScale, applyZoomVars, applyPageV
 import { PROSE_DEFAULTS, HEADING_DEFAULTS, QUOTE_DEFAULTS, mergeProseFormat,
          proseLinesPerPage, proseCharsPerLine, DEFAULT_PROSE_FONT } from './prose-format.js';
 import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, setStatusError, state, i18n, loadLanguage, scanLanguages, languageCatalog,
-         DEFAULT_SETTINGS, DEFAULT_GOALS, GLOBAL_DEFAULTS, THEMES, THEME_LABEL_KEYS,
+         DEFAULT_SETTINGS, DEFAULT_GOALS, GLOBAL_DEFAULTS, THEMES, THEME_LABEL_KEYS, THEMES_A11Y,
          fallbackLangName, langFileName, csvToTable, t, SHORTCUTS, SHORTCUT_LABELS, accelText, shortcutId, DEFAULT_SP_CYCLE,
          SHORTCUT_CATS, shortcutCat,
          DEFAULT_SP_CYCLE_KEYS, spCycleKeys, spKeyLabel, DEFAULT_SCRIPT_FONT,
@@ -26,6 +27,11 @@ import { $, BASE_ED_FS, LOG_BUF, el, log, setStatus, setStatusError, state, i18n
          rowTarget, withSpFamily, usableCounts, migrateSpThai,
          withThaiFallback, projectFontFamily } from './core.js';
 import { setTypeVolume, playType } from './typewriter-sound.js';
+// [alpha.169 · a11y] หน้า "การช่วยการเข้าถึง"
+import { isTypewriter } from './typewriter.js';
+import { applyWindowTitle } from './win-title.js';   // [alpha.169]
+import { normA11y, bandBlend } from './a11y/a11y-core.js';
+import { previewKeyEcho, hideKeyEcho } from './a11y/key-echo.js';
 // [alpha.60r2 ข้อ 6] ชุดระยะขอบสำเร็จรูป (ตารางอยู่ใน margin-presets.json)
 import { marginPreset, marginPresetOptions, matchMarginPreset } from './margin-presets.js';
 // [alpha.100 ข้อ 4] สีกระดาษที่ผู้ใช้เลือกเอง
@@ -1002,6 +1008,87 @@ export function settingsDialog(openTab, opts = {}) {
   q('#st-typesnd-test').onclick = () => playType('key', { force: true });
   q('#st-typesnd-test2').onclick = () => playType('return', { force: true });
 
+  // ---- [alpha.169 · a11y] การช่วยการเข้าถึง ----
+  // ผู้ใช้: "เพิ่ม feature แบบ accessibility สำหรับผู้มีปัญหา ตั้งใน setting"
+  // ทุกช่องผูกค่าจริงตอนกดบันทึก (กฎ W3) — ระหว่างนี้มีแค่ตัวอย่าง: ปุ่ม "แสดงตัวอย่าง" กับแถบตัวอย่างในหน้านี้เอง
+  // ธีมช่วยการมองเห็นเป็นปุ่มที่ "ตั้งค่าช่องธีมของหน้า ทั่วไป" (ค่าหนึ่งค่า = ช่องเดียว) · พรีวิวสดเหมือนช่องนั้น
+  const a11y0 = normA11y(s);
+  q('#st-a11y-keyecho').checked = a11y0.keyEcho;
+  q('#st-a11y-keyecho-mode').value = a11y0.keyEchoMode;
+  q('#st-a11y-keyecho-pos').value = a11y0.keyEchoPos;
+  q('#st-a11y-keyecho-size').value = String(a11y0.keyEchoSize);
+  q('#st-a11y-keyecho-ms').value = String(a11y0.keyEchoMs);
+  q('#st-a11y-band').checked = a11y0.lineBand;
+  q('#st-a11y-band-color').value = a11y0.lineBandColor;
+  q('#st-a11y-band-op').value = String(a11y0.lineBandOpacity);
+  q('#st-typewriter').checked = isTypewriter();     // สภาพจริงตอนนี้ (สลับจากแถบ/เมนู/คีย์ลัดได้ตลอด)
+  /** ค่าในช่องของหน้านี้ ในรูปคีย์ของ settings (ผ่านตัวหนีบค่าเดียวกับตอนใช้จริง) */
+  const readA11y = () => {
+    const n = normA11y({
+      a11yKeyEcho: q('#st-a11y-keyecho').checked,
+      a11yKeyEchoMode: q('#st-a11y-keyecho-mode').value,
+      a11yKeyEchoPos: q('#st-a11y-keyecho-pos').value,
+      a11yKeyEchoSize: q('#st-a11y-keyecho-size').value,
+      a11yKeyEchoMs: q('#st-a11y-keyecho-ms').value,
+      a11yLineBand: q('#st-a11y-band').checked,
+      a11yLineBandColor: q('#st-a11y-band-color').value,
+      a11yLineBandOpacity: q('#st-a11y-band-op').value,
+      typewriterMode: q('#st-typewriter').checked,
+    });
+    return { a11yKeyEcho: n.keyEcho, a11yKeyEchoMode: n.keyEchoMode, a11yKeyEchoPos: n.keyEchoPos,
+             a11yKeyEchoSize: n.keyEchoSize, a11yKeyEchoMs: n.keyEchoMs, a11yLineBand: n.lineBand,
+             a11yLineBandColor: n.lineBandColor, a11yLineBandOpacity: n.lineBandOpacity,
+             typewriterMode: n.typewriter };
+  };
+  const paintA11y = () => {
+    const v = readA11y();
+    q('#st-a11y-keyecho-size-lbl').textContent = v.a11yKeyEchoSize + ' px';
+    q('#st-a11y-keyecho-ms-lbl').textContent = tf('ui.a11y.msUnit', (v.a11yKeyEchoMs / 1000).toFixed(1));
+    q('#st-a11y-band-op-lbl').textContent = Math.round(v.a11yLineBandOpacity * 100) + '%';
+    const bar = q('#st-a11y-band-sample i');
+    if (bar) {
+      bar.style.background = v.a11yLineBandColor;
+      bar.style.opacity = String(v.a11yLineBandOpacity);
+      let ink = '';
+      try { ink = getComputedStyle(bar.parentNode).color; } catch {}
+      bar.style.mixBlendMode = bandBlend(ink);
+    }
+  };
+  for (const id of ['#st-a11y-keyecho-size', '#st-a11y-keyecho-ms', '#st-a11y-band-op', '#st-a11y-band-color']) {
+    q(id).oninput = paintA11y;
+  }
+  paintA11y();
+  q('#st-a11y-keyecho-test').onclick = () => previewKeyEcho(readA11y(), ['A']);
+  q('#st-a11y-osk').onclick = () => {
+    import('./app.js').then((m) => m.openOsKeyboard()).catch((e) => log('warn', 'a11y: osk', e));
+  };
+  {
+    const host = q('#st-a11y-themes');
+    const sel = q('#st-theme');
+    const mark = () => {
+      for (const b of host.querySelectorAll('[data-theme]')) {
+        const on = !!sel && b.dataset.theme === sel.value;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+    };
+    const pick = (id) => { if (!sel) return; sel.value = id; previewTheme(id); mark(); };
+    for (const id of THEMES_A11Y) {
+      const b = el('button', 'k-a11y-theme', t(THEME_LABEL_KEYS[id]));
+      b.type = 'button'; b.dataset.theme = id;
+      b.onclick = () => pick(id);
+      host.append(b);
+    }
+    // ทางกลับ: ธีมที่ใช้อยู่ตอนเปิดกล่อง (ถ้าตอนเปิดก็เป็นธีมช่วยการมองเห็นอยู่แล้ว = ธีมตั้งต้นของโปรแกรม)
+    const backTo = THEMES_A11Y.includes(origTheme) ? THEMES[0] : origTheme;
+    const back = el('button', 'k-a11y-theme k-a11y-theme-back', t('ui.setTpl.a11yThemeBack'));
+    back.type = 'button';
+    back.onclick = () => pick(backTo);
+    host.append(back);
+    if (sel) { const prev = sel.onchange; sel.onchange = (e) => { if (prev) prev(e); mark(); }; }
+    mark();
+  }
+
   // ---- [alpha.57a ข้อ 5] ฟอนต์ตามภาษา ----
   let projectFonts = [];                    // ไฟล์ใน <โปรเจกต์>/Fonts
   const fontsHost = q('#st-fonts-list');
@@ -1427,6 +1514,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.spellCheckDict = origSpellDict;
     applySpellcheck(); refreshAllMentions(); refreshAllSpell();
     previewTheme(origTheme);                     // [alpha.137] คืนธีมที่พรีวิวไว้
+    hideKeyEcho();                               // [alpha.169 · a11y] ป้ายตัวอย่างของปุ่ม "แสดงตัวอย่าง"
     close();
   };
   const num = (id, d) => { const n = parseInt(q(id).value, 10); return Number.isFinite(n) ? Math.max(0, n) : d; };
@@ -1438,7 +1526,9 @@ export function settingsDialog(openTab, opts = {}) {
   // ทั้งสองปุ่มเขียนค่าลง project.khn.json แล้ว **เปิดกล่องใหม่** เสมอ — ไม่พยายามยัดค่ากลับ
   // เข้าช่องทีละช่อง (กล่องนี้มีร้อยกว่าช่อง + สำเนาทำงาน W ที่ต้องประกอบใหม่ทั้งชุด)
   {
-    const foot = box.querySelector('.k-dlg-btns');
+    // [alpha.169 · a11y] ★ แถวปุ่มล่างของกล่อง = `.k-dlg-btns` ที่เป็น **ลูกตรงของกล่อง** — หน้า AI / หน้าภาษา มีแถวปุ่มคลาสเดียวกัน
+    // อยู่ก่อนใน DOM · เดิม `querySelector('.k-dlg-btns')` ได้แถวของหน้า AI → สองปุ่มนี้ไปโผล่ในหน้า AI ไม่ใช่ท้ายกล่อง
+    const foot = box.querySelector(':scope > .k-dlg-btns');
     if (foot) {
       const undoB = el('button', 'k-set-undo', t('ui.dlg.settingsRevert'));
       undoB.title = t('ui.dlg.settingsRevertHint');
@@ -1476,7 +1566,13 @@ export function settingsDialog(openTab, opts = {}) {
       foot.prepend(undoB, factoryB);
     }
   }
-  box.querySelector('.k-ok').onclick = async () => {
+  // ══ [alpha.169 · a11y] ★★ ปุ่ม "บันทึก" ของกล่องตั้งค่าเคยกดไม่ติด (หลุดมาตั้งแต่ alpha.164) ══
+  // ต้นตอ: หน้า AI ได้ปุ่ม `#st-ai-open` ที่มีคลาส `k-ok` — อยู่ก่อนปุ่มบันทึกใน DOM · `box.querySelector('.k-ok')`
+  // จึงผูกตัวบันทึกเข้ากับปุ่ม "เปิดตั้งค่า AI" (ทับตัวเปิดของมันด้วย) ส่วนปุ่มบันทึกตัวจริงไม่มีตัวรับคลิกเลย
+  // — กด Enter ยังบันทึกได้ (ตัวกลางกดปุ่ม `.k-ok` ตัวแรกให้) จึงไม่มีใครเห็น · e2e ก็กด `.k-ok` ตัวแรกเหมือนกัน
+  // พิสูจน์บนแอปจริงด้วยเมาส์จริง: คลิกถึงปุ่ม (นับได้ 1 ครั้ง) กล่องไม่ปิด ไฟล์ตั้งค่าไม่เปลี่ยน
+  // ตอนนี้: ผูกกับปุ่มในแถวล่างของกล่องเท่านั้น + ปุ่มในหน้า AI ไม่ใช้คลาส k-ok แล้ว (unit `settings-tpl` · e2e `[169-A]` กดด้วยพิกัดจริง)
+  box.querySelector(':scope > .k-dlg-btns > .k-ok').onclick = async () => {
     m.title = q('#st-title').value.trim() || m.title;
     m.author = q('#st-author').value.trim();
     s.autoSaveMinutes = num('#st-auto', 5);
@@ -1558,6 +1654,7 @@ export function settingsDialog(openTab, opts = {}) {
     s.typeSoundMode = q('#st-typesnd-mode').value === 'typewriter' ? 'typewriter' : 'always';
     s.typeSoundAlways = s.typeSoundMode === 'always';   // คีย์เก่า — ให้รุ่นก่อนอ่านต่อได้
     s.typeSoundVolume = Math.min(1, Math.max(0, parseFloat(q('#st-typesnd-vol').value) || 0));
+    Object.assign(s, readA11y());                 // [alpha.169 · a11y] ค่าระดับผู้ใช้ทั้งชุด (อยู่ใน GLOBAL_DEFAULTS)
     s.langFonts = JSON.parse(JSON.stringify(W.langFonts));
     delete s.spThaiFont;                          // [alpha.97 ข้อ 12] ย้ายไปเป็นแถวในตารางแล้ว
     // [alpha.58r บั๊ก 16–24] รูปแบบนิยายทั้งชุด (เก็บก้อนเดียวที่ settings.prose)
@@ -1603,13 +1700,20 @@ export function settingsDialog(openTab, opts = {}) {
         await mergeGlobalSettings(globals);
       } catch (e) { log('warn', t('ui.common.saveGlobalSettingsNot'), e); }
       applySettings();
+      // [alpha.169 · a11y] โหมดเครื่องพิมพ์ดีด: ช่องในหน้านี้คือ "สภาพที่ต้องการตอนนี้" — ต่างจากของจริงเมื่อไหร่สลับให้ตรง
+      // (applySettings ตามเฉพาะตอนค่าใน settings เปลี่ยน · โหมดนี้ถูกสลับจากแถบ/คีย์ลัดได้โดยไม่ผ่านกล่องนี้)
+      if (isTypewriter() !== (s.typewriterMode === true)) {
+        try {
+          const m = await import('./app.js');
+          m.setTypewriterMode(s.typewriterMode === true); m.syncTypeSound(); m.syncMenuToggles(); m.refreshToolbar();
+        } catch (e) { log('warn', 'a11y: typewriter', e); }
+      }
       try { updatePageNumberHint(); refreshSpView(); } catch {}
       // [alpha.63r4] สี Story Network ที่เพิ่งตั้ง ต้องเห็นผลทันที ไม่ต้องปิด-เปิดแอป
       try { const { refreshNetwork } = await import('./app.js'); refreshNetwork(); } catch {}
       if (projOK) {
         state.title = m.title;
-        document.title = m.title + ' — Killian 2';
-        $('#tb-title').textContent = m.title + ' — Killian 2';
+        applyWindowTitle(m.title);   // [alpha.169] แหล่งเดียว (win-title.js)
       }
       // แดชบอร์ดเป็นแผงแล้ว (refreshDashboardIfOpen เมื่อมี export)
     } catch (e) {
@@ -1755,16 +1859,75 @@ export async function fileVersionDialog(file, titleText, { onRestored = null } =
   refresh();
 }
 
+// ══ [alpha.169 · bug hunt] กล่อง "มีอะไรใหม่" — อ่านทีละรุ่น เป็นหน้าที่จัดรูปแล้ว ══
+// เดิมเท CHANGELOG.md ทั้งไฟล์ (1.6MB · 140+ รุ่น) ลง <pre>: ผู้ใช้เห็น `##` `**` และตาราง `| … |` เป็นตัวหนังสือดิบ
+// ตัวอ่านอยู่ที่ changelog-view.js (บริสุทธิ์) · ที่นี่วาดด้วย textContent ล้วน (ไม่มี innerHTML)
+function changelogInline(host, text) {
+  for (const p of inlineParts(text)) {
+    const n = el(p.code ? 'code' : 'span', [p.bold ? 'k-cl-b' : '', p.em ? 'k-cl-i' : '', p.strike ? 'k-cl-s' : ''].filter(Boolean).join(' ') || null, p.text);
+    host.append(n);
+  }
+  return host;
+}
+function changelogSectionNodes(sec) {
+  const out = [el('div', 'k-cl-title', sec.title)];
+  for (const b of changelogBlocks(sec.body)) {
+    if (b.kind === 'h') out.push(changelogInline(el('div', 'k-cl-h k-cl-h' + Math.min(6, b.level)), b.text));
+    else if (b.kind === 'hr') out.push(el('hr', 'k-cl-hr'));
+    else if (b.kind === 'code') out.push(el('pre', 'k-cl-code', b.text));
+    else if (b.kind === 'quote') out.push(changelogInline(el('blockquote', 'k-cl-quote'), b.text));
+    else if (b.kind === 'li') {
+      const row = el('div', 'k-cl-li');
+      row.style.marginInlineStart = (b.depth * 1.4) + 'em';
+      row.append(el('span', 'k-cl-mark', b.ordered ? b.mark : '•'), changelogInline(el('span', 'k-cl-litext'), b.text));
+      out.push(row);
+    } else if (b.kind === 'table') {
+      const wrap = el('div', 'k-cl-tablewrap'), tb = el('table', 'k-cl-table');
+      const hr = el('tr');
+      for (const c of b.head) hr.append(changelogInline(el('th'), c));
+      tb.append(hr);
+      for (const r of b.rows) { const tr = el('tr'); for (const c of r) tr.append(changelogInline(el('td'), c)); tb.append(tr); }
+      wrap.append(tb); out.push(wrap);
+    } else out.push(changelogInline(el('p', 'k-cl-p'), b.text));
+  }
+  return out;
+}
+
 export async function showChangelog() {
-  const md = await fetch('CHANGELOG.md').then((r) => r.text()).catch(() => t('panel.changelogNotFound'));
+  const md = await fetch('CHANGELOG.md').then((r) => r.text()).catch(() => '');
   const ov = el('div', 'k-overlay');
-  const box = el('div', 'k-dialog k-wide');
+  const box = el('div', 'k-dialog k-wide k-changelog-dlg');
   const ttl = el('div', 'k-dlg-title', t('panel.changelogTitle'));
-  const body = el('pre', 'k-changelog', md);
+  const secs = splitChangelog(md);
+  // ไฟล์หาย/ไม่มีหัวรุ่น → ข้อความดิบตามเดิม (ยังดีกว่ากล่องเปล่า)
+  const body = secs.length ? el('div', 'k-changelog k-changelog-rich')
+                           : el('pre', 'k-changelog', md || t('panel.changelogNotFound'));
+  const bar = el('div', 'k-changelog-bar');
+  if (secs.length) {
+    const sel = el('select', 'k-dlg-select k-changelog-sel');
+    sel.title = t('ui.changelog.version');
+    secs.forEach((s, i) => { const o = el('option', null, shortTitle(s.title)); o.value = String(i); sel.append(o); });
+    const newer = el('button', 'cmp-mini k-changelog-newer', t('ui.changelog.newer'));
+    const older = el('button', 'cmp-mini k-changelog-older', t('ui.changelog.older'));
+    let cur = Math.max(0, secs.findIndex((s) => /^(alpha|beta|v?\d)/i.test(s.title)));   // รุ่นล่าสุด (ข้ามหัว "บั๊กที่ยังค้าง")
+    const draw = (i) => {
+      cur = Math.max(0, Math.min(secs.length - 1, i));
+      body.replaceChildren(...changelogSectionNodes(secs[cur]));
+      body.scrollTop = 0;
+      sel.value = String(cur);
+      newer.disabled = cur <= 0; older.disabled = cur >= secs.length - 1;
+    };
+    sel.onchange = () => draw(+sel.value);
+    newer.onclick = () => draw(cur - 1);
+    older.onclick = () => draw(cur + 1);
+    bar.append(el('span', 'k-changelog-lbl', t('ui.changelog.version')), sel, newer, older,
+               el('span', 'k-changelog-count dim', tf('ui.changelog.count', secs.length)));
+    draw(cur);
+  }
   const btns = el('div', 'k-dlg-btns');
   const ok = el('button', 'k-ok k-cancel', t('dialogs.close'));
   ok.onclick = () => ov.remove();
-  btns.append(ok); box.append(ttl, body, btns); ov.append(box);
+  btns.append(ok); box.append(ttl, ...(secs.length ? [bar] : []), body, btns); ov.append(box);
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   escClose(ov, () => ov.remove());            // [alpha.124 ข้อ 15]
   document.body.append(ov);

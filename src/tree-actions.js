@@ -14,6 +14,7 @@ import { flushTab } from './tab-guard.js';                          // [alpha.16
 import { SCENE_COLORS, dataLabel, el, setStatus, setStatusAction, setStatusError, state, log, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
 import { ask, confirmBox, popupMenu, escClose } from './ui.js';
+import { freeBookName, freeChapterFolder } from './disk-sync.js';   // [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง
 import { vivid } from './color-util.js';
 import { buildLoglineFields } from './logline-ui.js';
 import { compactLogline } from './logline.js';
@@ -26,6 +27,7 @@ import { addChapter, moveSceneToChapter, addScene } from './scene-ops.js';
 import { moveToPosition, stepIndex } from './tree-menu-spec.js';
 import * as IM from './tree-item-meta.js';
 import { fmtDateTime } from './locale.js';
+import { applyWindowTitle } from './win-title.js';
 
 // ═══════════════════ ตัวช่วยกลาง ═══════════════════
 
@@ -160,8 +162,7 @@ export async function renameProject() {
   if (!v || v === state.meta.title) return null;
   state.meta.title = v; state.title = v;
   await saveProjectMeta();
-  document.title = v + ' — Killian 2';
-  const tb = document.getElementById('tb-title'); if (tb) tb.textContent = v + ' — Killian 2';
+  applyWindowTitle(v);   // [alpha.169] แหล่งเดียว (win-title.js)
   await buildTree();
   setStatus(tf('ui.treeAct.renamedProject', v));
   return v;
@@ -216,11 +217,13 @@ export async function moveSectionTo(secPath, pos, secs) {
 export async function duplicateSection(secPath) {
   const sec = await readSection(secPath);
   const secs = await listSections();
-  const title = copyName(sec.title || secPath.split(/[\\/]/).pop(), secs.map((s) => s.title));
-  let dst = await kapi.join(state.root, safeName(title));
-  if (await kapi.exists(dst)) dst += '-' + Date.now().toString(36).slice(-4);
+  // [alpha.170] ชื่อเล่ม = ชื่อโฟลเดอร์ (ชนกับโฟลเดอร์อื่น = ต่อเลขให้ทั้งคู่) + จดชื่อโฟลเดอร์ของสำเนาเอง
+  // (ไม่จด = ตัวตรวจการเปลี่ยนชื่อจากภายนอกเห็น `folderName` ของต้นฉบับ แล้วเข้าใจว่าเป็นสำเนาที่ก๊อปจาก OS)
+  const nb = await freeBookName(kapi, state.root, copyName(sec.title || secPath.split(/[\\/]/).pop(), secs.map((s) => s.title)));
+  const title = nb.title;
+  const dst = await kapi.join(state.root, nb.folder);
   await copyTree(secPath, dst);
-  const next = { ...sec, guid: guid(), title, order: Math.max(0, ...secs.map((s) => s.order || 0)) + 1 };
+  const next = { ...sec, guid: guid(), title, folderName: nb.folder, order: Math.max(0, ...secs.map((s) => s.order || 0)) + 1 };
   delete next.locked; delete next.flag;
   await writeJson(await kapi.join(dst, 'section.json'), next);
   const draftRoot = await kapi.join(dst, 'Draft');
@@ -311,10 +314,9 @@ export async function copyChapterTo(srcD, chGuid, dstD, { move = false, afterGui
   const newTitle = title || entry.title || '';
   let at = afterGuid ? dList.findIndex((c) => c.guid === afterGuid) + 1 : dList.length;
   if (at <= 0 && afterGuid) at = dList.length;
-  let folderName = String(at + 1).padStart(2, '0') + ' - ' + safeName(newTitle || 'chapter');
-  for (let n = 2; await kapi.exists(await kapi.join(dstD, 'Chapters', folderName)); n++) {
-    folderName = String(at + 1).padStart(2, '0') + ' - ' + safeName(newTitle || 'chapter') + ' ' + n;
-  }
+  // [alpha.170] โฟลเดอร์ = ชื่อบท (เดิม `NN - ชื่อ` — เลขตำแหน่งฝังในชื่อแล้วไม่ตามเมื่อเรียงใหม่) · ลำดับอยู่ใน order
+  // ย้ายภายในร่างเดียวกันไม่มาถึงตรงนี้ · ชื่อชนกับโฟลเดอร์/บทอื่นของร่างปลายทาง = ต่อเลขกันชน
+  const folderName = await freeChapterFolder(kapi, dstD, newTitle, dList.map((c) => c.folderName));
   const srcFolder = await kapi.join(srcD, 'Chapters', entry.folderName);
   const dstFolder = await kapi.join(dstD, 'Chapters', folderName);
   if (move) {

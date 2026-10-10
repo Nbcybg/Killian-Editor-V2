@@ -16,6 +16,51 @@ import {
 import { STEP_RENDERERS } from './starter-steps.js';
 import { resetCastEditor } from './starter-cast.js';
 import { gi } from '../icons.js';
+import { ART_SLOTS, artBase, artSizeText, pickArt, ART_DIR } from './starter-art.js';
+
+// ── [alpha.169] ช่องใส่ภาพประกอบ (แบบ setup wizard) ─────────────────────────
+// รายชื่อไฟล์ที่มีจริงใน renderer/starter/ — ถาม main ครั้งเดียวต่อการเปิดโปรแกรม (วางไฟล์ใหม่ = เปิดโปรแกรมใหม่)
+let _artNames = null;
+function artNames() {
+  if (!_artNames) {
+    _artNames = Promise.resolve()
+      .then(() => (typeof kapi !== 'undefined' && kapi.starterArtList ? kapi.starterArtList() : []))
+      .then((x) => (Array.isArray(x) ? x : []))
+      .catch(() => []);
+  }
+  return _artNames;
+}
+/** เทสใช้: ลืมรายชื่อที่จำไว้ */
+export function resetArtCache() { _artNames = null; }
+
+/**
+ * กล่องภาพประกอบหนึ่งตำแหน่ง — มีไฟล์ = ภาพ · ไม่มี = กรอบ placeholder ที่บอกขนาดกับชื่อไฟล์
+ * @param {string} id ช่อง (id ของขั้น หรือ 'home')
+ * @param {'side'|'top'} slot
+ */
+export function artBox(id, slot) {
+  const box = el('div', 'st-art st-art-' + slot);
+  box.dataset.art = artBase(id, slot);
+  box.setAttribute('aria-hidden', 'true');
+  const ph = el('div', 'st-art-ph');
+  ph.append(el('div', 'st-art-ph-ico', gi('image')));
+  ph.append(el('div', 'st-art-ph-size', artSizeText(slot) + ' px'));
+  ph.append(el('div', 'st-art-ph-file', ART_DIR + '/' + artBase(id, slot) + '.png'));
+  ph.append(el('div', 'st-art-ph-hint', t('ui.starter.artHint')));
+  box.append(ph);
+  box.style.setProperty('--st-art-ar', ART_SLOTS[slot].w + ' / ' + ART_SLOTS[slot].h);
+  artNames().then((names) => {
+    const src = pickArt(names, id, slot);
+    if (!src) { box.classList.add('st-art-empty'); return; }
+    const img = el('img', 'st-art-img');
+    img.alt = ''; img.draggable = false;
+    img.onload = () => { box.classList.add('st-art-ready'); };
+    img.onerror = () => { img.remove(); box.classList.add('st-art-empty'); };
+    img.src = src;
+    box.append(img);
+  });
+  return box;
+}
 
 /**
  * @param {HTMLElement} host
@@ -69,8 +114,15 @@ export function renderWizard(host, ctx) {
   wrap.append(bar);
 
   // ── เนื้อขั้น ────────────────────────────────────────────
+  // [alpha.169] แบบ setup wizard: แผงกว้าง = แถบภาพข้างซ้าย (side) · แผงแคบ = แถบภาพหัวขั้น (top) — CSS เลือกให้ตามความกว้างแผง
+  const main = el('div', 'st-wz-main');
+  main.append(artBox(step.id, 'side'));
+  const col = el('div', 'st-wz-col');
+  col.append(artBox(step.id, 'top'));
   const body = el('div', 'st-wz-body');
-  wrap.append(body);
+  col.append(body);
+  main.append(col);
+  wrap.append(main);
   const head2 = el('div', 'st-step-head');
   head2.append(el('div', 'st-step-title', step.icon + ' ' + step.title));
   head2.append(el('div', 'st-step-desc', step.desc));

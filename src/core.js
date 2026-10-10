@@ -346,6 +346,8 @@ export async function withBusy(msg, fn) {
  * @returns {Promise<T>}
  */
 const _task = { ctl: null };
+/** [alpha.169 · native] ฮุกของชั้นหน้าต่าง: ความคืบหน้า/จบงานยาว → แถบงานของระบบ (native-shell-ui.js เป็นคนตั้ง) */
+export const busyTaskHooks = { progress: null, done: null };
 export function busyTaskActive() { return !!_task.ctl; }
 /** กดปุ่มยกเลิกของงานที่วิ่งอยู่ (เทส/คีย์ลัดเรียกได้) — คืน false ถ้าไม่มีงาน */
 export function cancelBusyTask() {
@@ -368,9 +370,19 @@ export async function withBusyTask(msg, fn, opts = {}) {
   }
   if (btn) { btn.textContent = t('ui.common.cancel'); btn.style.display = ''; }
   setBusy(msg);
-  const progress = (done, total) => { if (_task.ctl === ctl) setBusy(progressText(msg, done, total)); };
+  const t0 = Date.now();
+  const hook = (name, ...a) => { try { if (busyTaskHooks[name]) busyTaskHooks[name](...a); } catch {} };
+  const progress = (done, total) => {
+    if (_task.ctl !== ctl) return;
+    setBusy(progressText(msg, done, total));
+    hook('progress', done, total);
+  };
+  hook('progress', 0, 0);
+  let finished = false;
   try {
-    return await fn({ signal: ctl.signal, progress });
+    const out = await fn({ signal: ctl.signal, progress });
+    finished = true;
+    return out;
   } catch (e) {
     if (isCancelled(e) || ctl.signal.aborted) {
       setStatus(tf('ui.common.taskCancelled', opts.name || msg));   // name = ชื่องานแบบคำนาม ("ส่งออก PDF")
@@ -381,6 +393,8 @@ export async function withBusyTask(msg, fn, opts = {}) {
     if (_task.ctl === ctl) _task.ctl = prev;
     if (btn && !_task.ctl) btn.style.display = 'none';
     clearBusy();
+    if (!_task.ctl) hook('progress', -1);
+    if (finished) hook('done', opts.name || msg, Date.now() - t0);
   }
 }
 
@@ -397,7 +411,7 @@ export async function withBusyTask(msg, fn, opts = {}) {
 // และ **ไม่มีปุ่มบนแถบ ไม่มีคีย์ลัด** อีกแล้ว (เลือกจาก dropdown ในตั้งค่าอย่างเดียว)
 // [alpha.159] รายชื่อธีมย้ายไปอยู่ renderer/themes/themes.json → สร้างเป็น src/generated/themes-data.js
 // ตอน build (tools/theme-build.cjs) · ที่นี่ re-export ให้ทุกที่ที่ import จาก core.js ใช้ได้เหมือนเดิม
-export { THEMES, THEME_LABEL_KEYS, THEME_MODES } from './generated/themes-data.js';
+export { THEMES, THEME_LABEL_KEYS, THEME_MODES, THEMES_A11Y } from './generated/themes-data.js';
 /** ค่าเก่าที่เคยบันทึกไว้ในไฟล์โปรเจกต์/ตั้งค่าผู้ใช้ → ธีมที่ใช้แทน (ห้ามลบ ไม่งั้นของเก่าตกไปค่าเริ่มต้นเงียบ ๆ) */
 export const THEME_ALIAS = { dark: 'k2', light: 'k2-light' };
 
@@ -435,6 +449,15 @@ export const GLOBAL_DEFAULTS = {
   // ตอนนี้เป็นสวิตช์เดียว + โหมด: 'always' = ดังตลอด (ค่าเริ่มต้น) · 'typewriter' = เฉพาะโหมดเครื่องพิมพ์ดีด
   typeSound: false, typeSoundVolume: 0.5, typeSoundMode: 'always',
   typeSoundAlways: true,           // (เก่า — เก็บไว้ให้โปรเจกต์รุ่นก่อนอ่านได้ ค่าใหม่อยู่ที่ typeSoundMode)
+  // ══ [alpha.169 · a11y] การช่วยการเข้าถึง (ตั้งค่า → การช่วยการเข้าถึง) ══
+  // ระดับผู้ใช้ทั้งชุด: ความต้องการด้านการมองเห็น/สมาธิเป็นของ "คน" ไม่ใช่ของผลงาน
+  // ค่าชุดนี้ต้องตรงกับ A11Y_DEFAULTS ใน a11y/a11y-core.js (unit `a11y` เทียบทีละคีย์)
+  //   a11yKeyEcho*   = แสดงปุ่มที่กดเป็นตัวใหญ่บนจอ (โหมด all/typing/special · ตำแหน่ง center/top/bottom · ขนาด px · ค้างกี่ ms)
+  //   a11yLineBand*  = แถบสีที่บรรทัดของเคอร์เซอร์ (สี · ความทึบ)
+  //   typewriterMode = โหมดเครื่องพิมพ์ดีด — เดิมเป็นสถานะของเซสชัน เปิดโปรแกรมใหม่แล้วต้องกดเปิดทุกครั้ง
+  a11yKeyEcho: false, a11yKeyEchoMode: 'all', a11yKeyEchoPos: 'center', a11yKeyEchoSize: 160, a11yKeyEchoMs: 900,
+  a11yLineBand: false, a11yLineBandColor: '#ffe066', a11yLineBandOpacity: 0.4,
+  typewriterMode: false,
   homeThumb: 190, smartLearnMin: 2, heavyDocBlocks: 400, mdAlignStyle: 'frontmatter',
   // ปุ่มลัดตั้งเอง — อยู่กับผู้ใช้
   shortcuts: {},

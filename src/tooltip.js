@@ -29,6 +29,17 @@ export const TIP_PREFIX = 'ui.tip.';
  * @param {string} [explicit] ค่าใน `data-tip` — เขียนทับได้ สำหรับปุ่มที่ไม่มีคำสั่งเป็นของตัวเอง
  * @returns {string} '' = ปุ่มนี้ไม่มีทางมีคำอธิบาย (ไม่ผูกคำสั่ง และไม่ได้ระบุคีย์เอง)
  */
+/**
+ * [alpha.169 · native] ต้องรอกี่ ms ก่อนโชว์ทูลทิป
+ * @param {number} now เวลาปัจจุบัน (ms) · @param {number} lastHide เวลาที่ทูลทิปตัวก่อนถูกซ่อน (0 = ยังไม่เคยโชว์)
+ * เพิ่งซ่อนไปไม่เกิน `warm` = 0 (กำลังไล่ดูปุ่มข้าง ๆ — โปรแกรมเดสก์ท็อปทำแบบนี้) · นอกนั้น = `delay`
+ */
+export function tipDelay(now, lastHide, { delay = 450, warm = 600 } = {}) {
+  const n = Number(now), h = Number(lastHide);
+  if (h > 0 && Number.isFinite(n) && n - h >= 0 && n - h <= warm) return 0;
+  return Math.max(0, Number(delay) || 0);
+}
+
 export function tipKey(cmd, explicit) {
   if (explicit) return String(explicit);
   return cmd ? TIP_PREFIX + cmd : '';

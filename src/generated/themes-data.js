@@ -2,7 +2,7 @@
 // เพิ่ม/แก้ธีม = แก้ themes.json แล้วรัน `node build.js`
 
 /** รายชื่อธีมตามลำดับในเมนู (ตัวแรก = ค่าเริ่มต้นเมื่อค่าที่บันทึกไว้ใช้ไม่ได้) */
-export const THEMES = ["k2","k2-light","sakura-mist","plum-wine","lagoon","neon-pop","tropical","claude","opencode","kimi","vscode","word","excel","powerpoint","macintosh","gundam","dva","fruit","flower","rainbow"];
+export const THEMES = ["k2","k2-light","sakura-mist","plum-wine","lagoon","neon-pop","tropical","claude","opencode","kimi","vscode","word","excel","powerpoint","macintosh","gundam","dva","fruit","flower","rainbow","hc-dark","hc-light","cvd-rg-dark","cvd-rg-light","cvd-by-dark","cvd-by-light","mono-dark","mono-light"];
 /** ธีม → คีย์ป้ายชื่อในไฟล์ภาษา */
 export const THEME_LABEL_KEYS = {
   "k2": "ui.settings.themeK2",
@@ -24,7 +24,15 @@ export const THEME_LABEL_KEYS = {
   "dva": "ui.themes.dva",
   "fruit": "ui.themes.fruit",
   "flower": "ui.themes.flower",
-  "rainbow": "ui.themes.rainbow"
+  "rainbow": "ui.themes.rainbow",
+  "hc-dark": "ui.themes.hcDark",
+  "hc-light": "ui.themes.hcLight",
+  "cvd-rg-dark": "ui.themes.cvdRgDark",
+  "cvd-rg-light": "ui.themes.cvdRgLight",
+  "cvd-by-dark": "ui.themes.cvdByDark",
+  "cvd-by-light": "ui.themes.cvdByLight",
+  "mono-dark": "ui.themes.monoDark",
+  "mono-light": "ui.themes.monoLight"
 };
 /** ธีม → dark | light */
 export const THEME_MODES = {
@@ -47,5 +55,15 @@ export const THEME_MODES = {
   "dva": "dark",
   "fruit": "light",
   "flower": "light",
-  "rainbow": "dark"
+  "rainbow": "dark",
+  "hc-dark": "dark",
+  "hc-light": "light",
+  "cvd-rg-dark": "dark",
+  "cvd-rg-light": "light",
+  "cvd-by-dark": "dark",
+  "cvd-by-light": "light",
+  "mono-dark": "dark",
+  "mono-light": "light"
 };
+/** [alpha.169 · a11y] ธีมช่วยการมองเห็น (group:"a11y" ใน themes.json) ตามลำดับในทะเบียน */
+export const THEMES_A11Y = ["hc-dark","hc-light","cvd-rg-dark","cvd-rg-light","cvd-by-dark","cvd-by-light","mono-dark","mono-light"];

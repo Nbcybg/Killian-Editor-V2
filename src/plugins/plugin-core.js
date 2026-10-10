@@ -47,6 +47,7 @@ export function parseManifest(raw, folderName = '') {
     version: str(m.version), author: str(m.author),
     description: str(m.description), minAppVersion: str(m.minAppVersion),
     homepage: str(m.homepage),
+    hotReload: manifestHot(m),
     ok: true, reason: '',
   };
   if (!name) { out.ok = false; out.reason = 'ui.plug.errNoName'; return out; }
@@ -84,7 +85,8 @@ export function mergePluginList(loaded = [], failed = [], opts = {}) {
       error: error || p.error || '',
       status: pluginStatus(p, { appVersion: app, disabled: isDisabled(p.name), failed: failedFlag,
                                 untrusted: !!(p && p.untrusted) }),
-      shadowed: false,
+      // [alpha.169] ตัวโหลดไม่รันตัวที่ถูกทับแล้ว (เดิมรันทั้งคู่) จึงบอกมาเองว่าตัวนี้ทับของผู้ใช้อยู่
+      shadowed: !!p.shadowed,
     };
     if (!prev) { byName.set(p.name, row); return; }
     // ของโปรเจกต์ชนะเสมอ
@@ -157,6 +159,45 @@ export function isPluginSetTrusted(trust, root, fp) {
   return !!(trust && root && trust[root] === fp);
 }
 
+// ═══════════ [alpha.169] วงจรชีวิต: โหลดใหม่แบบเทียบ + "ต้องเริ่มโปรแกรมใหม่ไหม" ═══════════
+//
+// ปลั๊กอินรันด้วยสิทธิ์เต็มในหน้าต่างของโปรแกรม — ของที่ลงทะเบียนผ่าน `k2` (คำสั่ง · คีย์ลัด · แผง · ตัวรับเหตุการณ์)
+// โปรแกรมถอดให้ได้เอง แต่ของที่โค้ดทำเอง (ตัวจับเวลา · ตัวฟังของ DOM · element ที่แปะเข้าหน้าจอ) โปรแกรมมองไม่เห็น
+// → ปลั๊กอินที่เก็บกวาดของตัวเองครบใน `k2.onUnload` ประกาศ `"hotReload": true` ใน plugin.json
+//   ตัวที่ไม่ประกาศ = ปิด/ถอน/แก้โค้ดแล้ว **ต้องเริ่มโปรแกรมใหม่** จึงจะถือว่าออกหมด (แผงปลั๊กอินแจ้งให้)
+
+/** manifest ประกาศว่าถอดออกได้สะอาดโดยไม่ต้องเริ่มโปรแกรมใหม่ */
+export function manifestHot(m) { return !!(m && typeof m === 'object' && m.hotReload === true); }
+
+/** กุญแจเทียบ "ตัวที่ทำงานอยู่ ยังเป็นโค้ดเดียวกับบนดิสก์ไหม" (ที่มา + plugin.json + โค้ด) */
+export function pluginKey(origin, manifestText, code) {
+  return String(origin || '') + ':' + hashText(manifestText) + ':' + hashText(code);
+}
+
+/**
+ * แผนของการโหลดใหม่
+ * @param {{name:string, key:string, hot:boolean}[]} live ตัวที่กำลังทำงาน
+ * @param {{name:string, key:string}[]} want ตัวที่ควรทำงาน (ของบนดิสก์ที่เปิดใช้ + ได้รับอนุญาต + รุ่นถึง)
+ * @returns {{keep:string[], unload:string[], run:string[], restart:string[]}}
+ *   keep    โค้ดเดิม → ปล่อยให้ทำงานต่อ (ไม่รันซ้ำ: รันซ้ำ = ของที่โค้ดทำเองซ้อนเป็นสองชุด)
+ *   unload  หายไป/ถูกปิด/โค้ดเปลี่ยน → ถอดของเก่า
+ *   run     ตัวใหม่ + ตัวที่โค้ดเปลี่ยน → รัน
+ *   restart ตัวใน unload ที่ไม่ได้ประกาศ hotReload → ต้องเริ่มโปรแกรมใหม่ถึงจะออกหมด
+ */
+export function planReload(live = [], want = []) {
+  const wantBy = new Map((want || []).filter((w) => w && w.name).map((w) => [w.name, w]));
+  const keep = [], unload = [], restart = [];
+  for (const l of (live || [])) {
+    if (!l || !l.name) continue;
+    const w = wantBy.get(l.name);
+    if (w && w.key === l.key) { keep.push(l.name); continue; }
+    unload.push(l.name);
+    if (!l.hot) restart.push(l.name);
+  }
+  const run = [...wantBy.keys()].filter((n) => !keep.includes(n));
+  return { keep, unload, run, restart };
+}
+
 /** ชื่อโฟลเดอร์ที่ปลอดภัย จากชื่อที่ผู้ใช้พิมพ์ */
 export function safePluginFolder(name) {
   return String(name || '').trim()
@@ -182,10 +223,12 @@ export function samplePluginFiles(name, appVersion = '') {
     author: '',
     description: 'ปลั๊กอินตัวอย่าง — นับคำในฉากที่เปิดอยู่',
     minAppVersion: String(appVersion || ''),
+    // ตัวอย่างนี้ใช้แต่ของที่ลงทะเบียนผ่าน k2 + เก็บกวาดของตัวเองใน onUnload → ปิด/ถอน/แก้แล้วไม่ต้องเริ่มโปรแกรมใหม่
+    hotReload: true,
   };
   const main = [
     '// ปลั๊กอินตัวอย่างของ Killian 2',
-    '// ทุกอย่างที่ปลั๊กอินทำได้อยู่ในตัวแปร k2 (ดูรายการเต็มในแผง "ปลั๊กอิน" → ปุ่ม ?)',
+    '// ทุกอย่างที่ปลั๊กอินทำได้อยู่ในตัวแปร k2 (ดูรายการเต็มในแผง "ปลั๊กอิน" → สิ่งที่ปลั๊กอินทำได้ · คู่มือ: docs/plugin-dev.md)',
     '',
     'k2.registerCommand("นับคำในฉากนี้", () => {',
     '  const md = k2.getMarkdown();',
@@ -200,11 +243,18 @@ export function samplePluginFiles(name, appVersion = '') {
     '    const d = document.createElement("div");',
     '    d.style.padding = "12px";',
     '    d.textContent = "แผงนี้มาจากปลั๊กอิน — แก้ไฟล์ main.js แล้วกดโหลดใหม่ได้เลย";',
-  /* /i18n-skip */
     '    host.appendChild(d);',
     '  },',
     '});',
     '',
+    '// เหตุการณ์ของโปรแกรม: project:open · project:close · tab:activate · tab:save · plugins:loaded',
+    'k2.on("tab:save", (e) => k2.log("saved " + e.file));',
+    '',
+    '// ของที่ทำเองนอก k2 (ตัวจับเวลา · ตัวฟังของ DOM) ต้องเก็บกวาดที่นี่ — ถูกเรียกตอนปิด/ถอน/โหลดใหม่',
+    'const timer = setInterval(() => {}, 60000);',
+    'k2.onUnload(() => clearInterval(timer));',
+    '',
+  /* /i18n-skip */
   ].join('\n');
   return { 'plugin.json': JSON.stringify(manifest, null, 2), 'main.js': main };
 }
@@ -221,6 +271,7 @@ export const PLUGIN_API_DOC = [
   { sig: 'k2.getMarkdown() / k2.insertText(s)', key: 'ui.plug.apiText' },
   { sig: 'k2.getEditorView()', key: 'ui.plug.apiView' },
   { sig: 'k2.on / k2.off / k2.emit', key: 'ui.plug.apiEvents' },
+  { sig: 'k2.onUnload(fn)', key: 'ui.plug.apiUnload' },
   { sig: 'k2.readFile / writeFile / listFiles / listDirs', key: 'ui.plug.apiFiles' },
   { sig: 'k2.getSettings(key, def) / k2.setSettings(key, val)', key: 'ui.plug.apiSettings' },
   { sig: 'k2.menuPopup(items, x, y)', key: 'ui.plug.apiMenu' },

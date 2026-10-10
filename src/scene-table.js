@@ -175,7 +175,7 @@ async function renderBody(wrap, filter) {
     const th = el('th');
     th.style.width = col.w;
     th.textContent = (col.key === _sortCol ? (_sortDir === 'asc' ? gi('triangle-up') + ' ' : gi('triangle-down') + ' ') : '') + col.label;
-    th.style.cursor = 'pointer';
+    th.style.cursor = 'default';
     th.onclick = () => {
       if (_sortCol === col.key) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
       else { _sortCol = col.key; _sortDir = 'asc'; }
@@ -189,7 +189,7 @@ async function renderBody(wrap, filter) {
   const tbody = el('tbody');
   for (const sc of filtered) {
     const row = el('tr', 'sc-tbl-row');
-    row.style.cursor = 'pointer';
+    row.style.cursor = 'default';
     row.onclick = async () => {
       if (!sc.filePath) return;
       const { openScene } = await import('./app.js');

@@ -8953,7 +8953,7 @@
   }
   function isMarkChange(cur, prev) {
     let curMarks = cur.firstChild.marks, prevMarks = prev.firstChild.marks;
-    let added = curMarks, removed = prevMarks, type, mark, update;
+    let added = curMarks, removed = prevMarks, type, mark, update2;
     for (let i5 = 0; i5 < prevMarks.length; i5++)
       added = prevMarks[i5].removeFromSet(added);
     for (let i5 = 0; i5 < curMarks.length; i5++)
@@ -8961,17 +8961,17 @@
     if (added.length == 1 && removed.length == 0) {
       mark = added[0];
       type = "add";
-      update = (node) => node.mark(mark.addToSet(node.marks));
+      update2 = (node) => node.mark(mark.addToSet(node.marks));
     } else if (added.length == 0 && removed.length == 1) {
       mark = removed[0];
       type = "remove";
-      update = (node) => node.mark(mark.removeFromSet(node.marks));
+      update2 = (node) => node.mark(mark.removeFromSet(node.marks));
     } else {
       return null;
     }
     let updated = [];
     for (let i5 = 0; i5 < prev.childCount; i5++)
-      updated.push(update(prev.child(i5)));
+      updated.push(update2(prev.child(i5)));
     if (Fragment.from(updated).eq(cur))
       return { mark, type };
   }
@@ -12537,7 +12537,7 @@
   function keydownHandler(bindings) {
     let map2 = normalize(bindings);
     return function(view2, event) {
-      let name5 = keyName(event), baseName3, direct = map2[modifiers(name5, event)];
+      let name5 = keyName(event), baseName4, direct = map2[modifiers(name5, event)];
       if (direct && direct(view2.state, view2.dispatch, view2))
         return true;
       if (name5.length == 1 && name5 != " ") {
@@ -12547,8 +12547,8 @@
             return true;
         }
         if ((event.altKey || event.metaKey || event.ctrlKey) && // Ctrl-Alt may be used for AltGr on Windows
-        !(windows2 && event.ctrlKey && event.altKey) && (baseName3 = base[event.keyCode]) && baseName3 != name5) {
-          let fromCode = map2[modifiers(baseName3, event)];
+        !(windows2 && event.ctrlKey && event.altKey) && (baseName4 = base[event.keyCode]) && baseName4 != name5) {
+          let fromCode = map2[modifiers(baseName4, event)];
           if (fromCode && fromCode(view2.state, view2.dispatch, view2))
             return true;
         }
@@ -14023,7 +14023,7 @@
       var RE_HARDBREAK = /(^|[^\\])((?:\\\\)*)\\$/;
       var endsWithHardBreak = (s) => RE_HARDBREAK.test(s);
       var stripHardBreak = (s) => s.slice(0, -1);
-      function parseInline2(s, base4 = []) {
+      function parseInline3(s, base4 = []) {
         const segs = [];
         while (s) {
           let best = null;
@@ -14054,19 +14054,19 @@
             ...base4.filter((x) => typeof x === "string" || x.type !== attr),
             { type: attr, attrs: { color } }
           ] : [.../* @__PURE__ */ new Set([...base4, ...marks2])];
-          segs.push(...parseInline2(attr ? m[2] : m[1], next));
+          segs.push(...parseInline3(attr ? m[2] : m[1], next));
           s = s.slice(m.index + m[0].length);
         }
         return segs;
       }
-      function stripMentions3(s) {
+      function stripMentions4(s) {
         return String(s == null ? "" : s).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1");
       }
-      function inlinePlainText4(text) {
-        return stripMentions3(parseInline2(String(text == null ? "" : text)).map((seg) => seg.text).join("")).replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+      function inlinePlainText5(text) {
+        return stripMentions4(parseInline3(String(text == null ? "" : text)).map((seg) => seg.text).join("")).replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
       }
       function inlineDisplayText2(text) {
-        return stripMentions3(parseInline2(String(text == null ? "" : text)).map((seg) => {
+        return stripMentions4(parseInline3(String(text == null ? "" : text)).map((seg) => {
           if (seg.image) return "";
           const c = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
           const h = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "highlight");
@@ -14075,15 +14075,15 @@
         }).join(""));
       }
       function markerVars2(text) {
-        const seg = parseInline2(String(text == null ? "" : text))[0];
+        const seg = parseInline3(String(text == null ? "" : text))[0];
         if (!seg) return "";
         const out = [];
-        const has2 = (n2) => (seg.marks || []).some((m) => (typeof m === "string" ? m : m.type) === n2);
+        const has3 = (n2) => (seg.marks || []).some((m) => (typeof m === "string" ? m : m.type) === n2);
         const col = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
         const c = col ? normColor6((col.attrs || {}).color) : "";
         if (c) out.push("--k-mk-color:" + c);
-        if (has2("strong")) out.push("--k-mk-weight:700");
-        if (has2("em")) out.push("--k-mk-style:italic");
+        if (has3("strong")) out.push("--k-mk-weight:700");
+        if (has3("em")) out.push("--k-mk-style:italic");
         return out.join(";");
       }
       var HTML_ESC = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -14099,12 +14099,12 @@
       function inlineHtml(text, opts) {
         const mono = !!(opts && opts.mono);
         const imgSrc = opts && typeof opts.imgSrc === "function" ? opts.imgSrc : (u) => u;
-        return parseInline2(stripMentions3(text)).map((seg) => {
+        return parseInline3(stripMentions4(text)).map((seg) => {
           let s = seg.image ? `<img class="k-inline-img" alt="${ATTR_Q(HTML_ESC(seg.image.alt))}" src="${ATTR_Q(HTML_ESC(imgSrc(seg.image.src)))}" style="--k-img-h:${seg.image.h}">` : HTML_ESC(seg.text);
           if (!s) return "";
           const marks2 = seg.marks || [];
-          const has2 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
-          for (const [name5, tag3] of MARK_TAGS) if (has2(name5)) s = `<${tag3}>${s}</${tag3}>`;
+          const has3 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
+          for (const [name5, tag3] of MARK_TAGS) if (has3(name5)) s = `<${tag3}>${s}</${tag3}>`;
           const col = marks2.find((m) => m && typeof m === "object" && m.type === "color");
           const hex2 = col ? normColor6((col.attrs || {}).color) : "";
           if (hex2 && !mono) s = `<span style="color:${hex2}">${s}</span>`;
@@ -14114,7 +14114,7 @@
         }).join("");
       }
       function inlineNodes(text) {
-        return parseInline2(text).filter((x) => x.text).map((x) => {
+        return parseInline3(text).filter((x) => x.text).map((x) => {
           const mk2 = x.marks.length ? { marks: x.marks.map((t3) => typeof t3 === "string" ? { type: t3 } : t3) } : {};
           if (x.image) {
             const { src: src2, alt, h, md } = x.image;
@@ -14188,7 +14188,7 @@
         if (!m) return { align: null, rest: line };
         return { align: m[1] === "left" ? null : m[1], rest: line.slice(m[0].length) };
       }
-      function mdBlocks4(md, opts) {
+      function mdBlocks5(md, opts) {
         const marker = String(opts && opts.breakMarker || "").trim();
         const lines = String(md == null ? "" : md).split("\n");
         const out = [];
@@ -14561,7 +14561,7 @@
         }
         return v2.startsWith("[") && v2.endsWith("]") ? v2.slice(1, -1).split(",").map((x) => x.trim()).filter(Boolean) : v2;
       }
-      function parseMdFile24(text) {
+      function parseMdFile25(text) {
         let meta2 = {}, body = String(text || "").replace(K2_COMMENTS_RE, "");
         text = body;
         if (text.startsWith("---")) {
@@ -14651,16 +14651,16 @@
         if (!cont && end === firstEnd) return same;
         let body = lines.slice(end + 1).join("\n");
         body = body.replace(/^\n/, "");
-        return { text: dumpMdFile10(meta2, body) + (tail ? "\n" + tail.replace(/^\n+/, "") : ""), changed: true, recovered: [...recovered] };
+        return { text: dumpMdFile11(meta2, body) + (tail ? "\n" + tail.replace(/^\n+/, "") : ""), changed: true, recovered: [...recovered] };
       }
-      function dumpMdFile10(meta2, body) {
+      function dumpMdFile11(meta2, body) {
         const out = ["---"];
         for (const [k, v2] of Object.entries(meta2))
           out.push(Array.isArray(v2) ? `${k}: [${v2.map((x) => String(x).replace(/[\r\n]+/g, " ")).join(", ")}]` : `${k}: ${fmEncode(v2)}`);
         out.push("---\n");
         return out.join("\n") + (/^\r?\n/.test(body) ? "\n" : "") + body;
       }
-      function countWords10(body) {
+      function countWords11(body) {
         const t3 = body.replace(/[#>*_~\-!\[\]()]/g, " ");
         let n2 = 0;
         for (const chunk of t3.split(/\s+/)) {
@@ -14673,9 +14673,9 @@
         mdToDoc: mdToDoc5,
         docToMd: docToMd5,
         mdLineCounts: mdLineCounts2,
-        parseMdFile: parseMdFile24,
-        dumpMdFile: dumpMdFile10,
-        countWords: countWords10,
+        parseMdFile: parseMdFile25,
+        dumpMdFile: dumpMdFile11,
+        countWords: countWords11,
         collectAlign: collectAlign2,
         alignToString: alignToString3,
         alignFromString: alignFromString2,
@@ -14685,8 +14685,8 @@
         // [alpha.132r2] ข้อความสำหรับแสดงผล (ช่องตัวอย่าง PDF) + ตัวถอดลิงก์เอนทิตี้
         RE_IMG: RE_IMG2,
         inlineDisplayText: inlineDisplayText2,
-        inlinePlainText: inlinePlainText4,
-        stripMentions: stripMentions3,
+        inlinePlainText: inlinePlainText5,
+        stripMentions: stripMentions4,
         // [alpha.142 ข้อ 6] ตัวเลือกของรูป (เต็มหน้า/ความกว้าง %/ขอบมน) — ไวยากรณ์อยู่ที่นี่ที่เดียว
         splitImgTarget,
         parseImgOpts,
@@ -14702,10 +14702,10 @@
         INLINE_IMG_HMAX: INLINE_IMG_HMAX2,
         // [alpha.133 · Y-1+Y-2] สคีมาบล็อก + ตัวแปลง inline ตัวเดียวของทั้งโปรแกรม
         // (ตัวแก้ไข · ไฟล์ที่ส่งออก · ช่องตัวอย่าง อ่านจากสองตัวนี้เท่านั้น)
-        mdBlocks: mdBlocks4,
+        mdBlocks: mdBlocks5,
         inlineHtml,
         // [alpha.156] ตัวแยก inline → ช่วงข้อความ + มาร์ก (ส่งออก DOCX ต้องการระดับ "run" ไม่ใช่ HTML)
-        parseInline: parseInline2,
+        parseInline: parseInline3,
         // [alpha.156] กู้ frontmatter ที่ตัวเขียนเดิมทำพัง (ตรวจสุขภาพโปรเจกต์ใช้)
         repairFrontmatter: repairFrontmatter3,
         // [alpha.132r3 ข้อ 3] รูปแบบของจุดนำ/หมายเลขข้อ (มาจากอักษรตัวแรกของข้อ)
@@ -16247,8 +16247,8 @@
   function migrateSpThai(list3, spThai) {
     const rows = normalizeLangFonts(list3);
     if (!spThai || typeof spThai !== "object") return { rows, moved: false };
-    const has2 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
-    if (has2) return { rows, moved: false };
+    const has3 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
+    if (has3) return { rows, moved: false };
     const fam = cssFamilyName(spThai.family);
     rows.unshift(normalizeLangFonts([{
       id: "sp-thai",
@@ -18148,6 +18148,7 @@
         "zoom:1": "zoom-in",
         "zoom:-1": "zoom-out",
         "scratchpad": "note",
+        "a11y-settings": "cog",
         "ai-analyzer": "brain",
         "ai-chat": "",
         "ai-chat-dialog": "",
@@ -18205,12 +18206,15 @@
         "import-language-csv": "globe",
         "import-script": "",
         "insert-shortcode": "",
+        "key-echo": "keyboard",
         "lang-fonts": "font",
+        "line-band": "highlight",
         "maps": "",
         "markdown-codes": "eye",
         "network": "network",
         "new-entity": "",
         "open-project-path": "",
+        "osk": "keyboard",
         "page-guides": "",
         "page-headers": "page-header",
         "page-numbers": "",
@@ -18958,7 +18962,16 @@
     return s.startsWith("((") && s.endsWith("))") && s.length > 4 ? 2 : 0;
   }
   function stripFountainCodes(text) {
+    let prevRaw = "", prevParen = false;
     return String(text == null ? "" : text).split("\n").map((line) => {
+      const s = line.trim();
+      const under = prevParen || /^\s*@\S/.test(prevRaw);
+      prevRaw = line;
+      if (under && s.startsWith("((") && s.endsWith("))") && s.length > 4) {
+        prevParen = true;
+        return "(" + s.slice(2, -2).trim() + ")";
+      }
+      prevParen = false;
       const n2 = prefixLen(line);
       if (!n2) return line;
       const body = line.slice(n2);
@@ -19976,8 +19989,8 @@
     });
     return mixed ? "" : seen;
   }
-  function rangeColor(state2, markName2) {
-    const mk2 = state2.schema.marks[markName2 || "color"];
+  function rangeColor(state2, markName3) {
+    const mk2 = state2.schema.marks[markName3 || "color"];
     if (!mk2) return "";
     const { from: from2, to, empty: empty3, $from } = state2.selection;
     if (empty3) {
@@ -22296,19 +22309,28 @@ ${BLOCK_END}
   var init_margin_presets = __esm({
     "src/margin-presets.json"() {
       margin_presets_default = {
-        normal: { label: "\u0E1B\u0E01\u0E15\u0E34 (Normal) \u2014 1 \u0E19\u0E34\u0E49\u0E27\u0E23\u0E2D\u0E1A\u0E14\u0E49\u0E32\u0E19", top: 1, bottom: 1, left: 1, right: 1 },
-        narrow: { label: "\u0E41\u0E04\u0E1A (Narrow) \u2014 0.5 \u0E19\u0E34\u0E49\u0E27\u0E23\u0E2D\u0E1A\u0E14\u0E49\u0E32\u0E19", top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 },
-        moderate: { label: "\u0E1B\u0E32\u0E19\u0E01\u0E25\u0E32\u0E07 (Moderate)", top: 1, bottom: 1, left: 0.75, right: 0.75 },
-        wide: { label: "\u0E01\u0E27\u0E49\u0E32\u0E07 (Wide)", top: 1, bottom: 1, left: 1.5, right: 1.5 },
-        screenplay: { label: "\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C (Final Draft \u0E21\u0E32\u0E15\u0E23\u0E10\u0E32\u0E19)", top: 1, bottom: 1, left: 1.5, right: 1 },
-        novel: { label: "\u0E19\u0E34\u0E22\u0E32\u0E22 (\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E2A\u0E48\u0E07\u0E2A\u0E33\u0E19\u0E31\u0E01\u0E1E\u0E34\u0E21\u0E1E\u0E4C)", top: 1, bottom: 1, left: 1.25, right: 1.25 },
-        "a4-narrow": { label: "A4 \u0E41\u0E04\u0E1A (2 \u0E0B\u0E21.)", top: 0.79, bottom: 0.79, left: 0.79, right: 0.79 },
-        "a4-normal": { label: "A4 \u0E1B\u0E01\u0E15\u0E34 (2.5 / 3.17 \u0E0B\u0E21.)", top: 0.98, bottom: 0.98, left: 1.25, right: 1.25 }
+        normal: { top: 1, bottom: 1, left: 1, right: 1 },
+        narrow: { top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 },
+        moderate: { top: 1, bottom: 1, left: 0.75, right: 0.75 },
+        wide: { top: 1, bottom: 1, left: 1.5, right: 1.5 },
+        screenplay: { top: 1, bottom: 1, left: 1.5, right: 1 },
+        novel: { top: 1, bottom: 1, left: 1.25, right: 1.25 },
+        "a4-narrow": { top: 0.79, bottom: 0.79, left: 0.79, right: 0.79 },
+        "a4-normal": { top: 0.98, bottom: 0.98, left: 1.25, right: 1.25 }
       };
     }
   });
 
   // src/margin-presets.js
+  var margin_presets_exports = {};
+  __export(margin_presets_exports, {
+    MARGIN_PRESETS: () => MARGIN_PRESETS,
+    MARGIN_PRESET_KEYS: () => MARGIN_PRESET_KEYS,
+    marginPreset: () => marginPreset,
+    marginPresetLabel: () => marginPresetLabel,
+    marginPresetOptions: () => marginPresetOptions,
+    matchMarginPreset: () => matchMarginPreset
+  });
   function marginPreset(key2) {
     const p = margin_presets_default[key2];
     if (!p) return null;
@@ -22316,7 +22338,8 @@ ${BLOCK_END}
   }
   function marginPresetLabel(key2) {
     const p = margin_presets_default[key2];
-    return p ? p.label || key2 : key2;
+    if (!p) return key2;
+    return LABEL_KEYS[key2] ? t(LABEL_KEYS[key2]) : p.label || key2;
   }
   function marginPresetOptions() {
     return MARGIN_PRESET_KEYS.map((k) => [k, marginPresetLabel(k)]);
@@ -22329,11 +22352,23 @@ ${BLOCK_END}
     }
     return "";
   }
-  var MARGIN_PRESET_KEYS, near;
+  var MARGIN_PRESETS, MARGIN_PRESET_KEYS, LABEL_KEYS, near;
   var init_margin_presets2 = __esm({
     "src/margin-presets.js"() {
       init_margin_presets();
+      init_i18n();
+      MARGIN_PRESETS = margin_presets_default;
       MARGIN_PRESET_KEYS = Object.keys(margin_presets_default);
+      LABEL_KEYS = {
+        normal: "ui.marginPreset.normal",
+        narrow: "ui.marginPreset.narrow",
+        moderate: "ui.marginPreset.moderate",
+        wide: "ui.marginPreset.wide",
+        screenplay: "ui.marginPreset.screenplay",
+        novel: "ui.marginPreset.novel",
+        "a4-narrow": "ui.marginPreset.a4Narrow",
+        "a4-normal": "ui.marginPreset.a4Normal"
+      };
       near = (a, b) => Math.abs((+a || 0) - (+b || 0)) < 5e-3;
     }
   });
@@ -24549,14 +24584,55 @@ ${BLOCK_END}
     }
   });
 
+  // src/drag-cancel.js
+  function escCancelDrag(onCancel) {
+    let on2 = true;
+    _active++;
+    const off3 = () => {
+      if (!on2) return;
+      on2 = false;
+      _active = Math.max(0, _active - 1);
+      window.removeEventListener("keydown", key2, true);
+      window.removeEventListener("mouseup", off3, true);
+      window.removeEventListener("blur", off3);
+    };
+    function key2(e) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      off3();
+      try {
+        onCancel();
+      } catch (err2) {
+        try {
+          console.error("[drag-cancel]", err2);
+        } catch {
+        }
+      }
+    }
+    window.addEventListener("keydown", key2, true);
+    window.addEventListener("mouseup", off3, true);
+    window.addEventListener("blur", off3);
+    return off3;
+  }
+  var _active;
+  var init_drag_cancel = __esm({
+    "src/drag-cancel.js"() {
+      _active = 0;
+    }
+  });
+
   // src/ui.js
   var ui_exports = {};
   __export(ui_exports, {
     TOAST_MAX: () => TOAST_MAX,
     ask: () => ask,
     choose: () => choose,
+    clampDialogOffset: () => clampDialogOffset,
     closeMenu: () => closeMenu,
     confirmBox: () => confirmBox,
+    dialogOffset: () => dialogOffset,
     escClose: () => escClose,
     infoBox: () => infoBox,
     installDialogA11y: () => installDialogA11y,
@@ -24639,15 +24715,112 @@ ${BLOCK_END}
       e.preventDefault();
       ok2.click();
     });
-    escClose(ov, () => {
+    const leave = () => {
       const c = box2.querySelector(".k-cancel:not([disabled])");
       if (c) {
         c.click();
-        return;
+        return true;
       }
-      if (typeof ov.onclick === "function") ov.click();
-    });
+      if (typeof ov.onclick === "function") {
+        ov.click();
+        return true;
+      }
+      return false;
+    };
+    escClose(ov, leave);
+    makeDialogMovable(ov, box2);
+    addDialogCloseX(ov, box2, leave);
     return true;
+  }
+  function dialogOffset(box2) {
+    const m = /^(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/.exec(box2.style.translate || "");
+    return m ? { x: +m[1] || 0, y: +m[2] || 0 } : { x: 0, y: 0 };
+  }
+  function clampDialogOffset(off3, base4, vw, vh, keep = 48) {
+    const x = Math.max(keep - (base4.left + base4.width), Math.min(vw - keep - base4.left, off3.x));
+    const y = Math.max(-base4.top, Math.min(vh - keep - base4.top, off3.y));
+    return { x: Math.round(x), y: Math.round(y) };
+  }
+  function makeDialogMovable(ov, box2) {
+    const setOff = (o) => {
+      box2.style.translate = o.x || o.y ? o.x + "px " + o.y + "px" : "";
+      placeDialogX(ov, box2);
+    };
+    box2.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      const ttl = e.target.closest && e.target.closest(".k-dlg-title");
+      if (!ttl || !box2.contains(ttl) || ttl.closest('.k-dialog, [role="dialog"]') !== box2) return;
+      if (e.target.closest('button, input, select, textarea, a, [contenteditable="true"], .k-dlg-nodrag')) return;
+      e.preventDefault();
+      const start = dialogOffset(box2);
+      const r = box2.getBoundingClientRect();
+      const base4 = { left: r.left - start.x, top: r.top - start.y, width: r.width };
+      const x0 = e.clientX, y0 = e.clientY;
+      let moved = false;
+      const move = (ev) => {
+        if (!moved && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 3) return;
+        moved = true;
+        box2.classList.add("k-dlg-moving");
+        setOff(clampDialogOffset({ x: start.x + ev.clientX - x0, y: start.y + ev.clientY - y0 }, base4, window.innerWidth, window.innerHeight));
+      };
+      const stop = () => {
+        document.removeEventListener("mousemove", move, true);
+        document.removeEventListener("mouseup", up, true);
+        box2.classList.remove("k-dlg-moving");
+      };
+      const up = () => {
+        stop();
+        offEsc();
+      };
+      const offEsc = escCancelDrag(() => {
+        stop();
+        setOff(start);
+      });
+      document.addEventListener("mousemove", move, true);
+      document.addEventListener("mouseup", up, true);
+    });
+    box2.addEventListener("dblclick", (e) => {
+      const ttl = e.target.closest && e.target.closest(".k-dlg-title");
+      if (!ttl || !box2.contains(ttl) || e.target.closest("button, input, select, textarea, a")) return;
+      setOff({ x: 0, y: 0 });
+    });
+  }
+  function placeDialogX(ov, box2) {
+    const x = ov.querySelector(":scope > .k-dlg-x");
+    if (!x) return;
+    const r = box2.getBoundingClientRect();
+    x.style.left = Math.round(r.right - 34) + "px";
+    x.style.top = Math.round(r.top + 8) + "px";
+  }
+  function addDialogCloseX(ov, box2, leave) {
+    requestAnimationFrame(() => {
+      if (!ov.isConnected || ov.querySelector(":scope > .k-dlg-x")) return;
+      const hasExit = !!box2.querySelector(".k-cancel:not([disabled])") || typeof ov.onclick === "function";
+      const own = box2.querySelector('[class*="close-btn"], [class*="btn-close"], [class*="-close"]');
+      if (!hasExit || own) return;
+      const x = document.createElement("span");
+      x.className = "k-dlg-x";
+      x.setAttribute("role", "button");
+      x.setAttribute("aria-label", t("ui.common.close"));
+      x.title = t("ui.common.close");
+      x.append(icon("x", 14));
+      x.onclick = (e) => {
+        e.stopPropagation();
+        leave();
+      };
+      ov.append(x);
+      box2.classList.add("k-dlg-has-x");
+      placeDialogX(ov, box2);
+      try {
+        new ResizeObserver(() => placeDialogX(ov, box2)).observe(box2);
+      } catch {
+      }
+      const onWin = () => {
+        if (ov.isConnected) placeDialogX(ov, box2);
+        else window.removeEventListener("resize", onWin);
+      };
+      window.addEventListener("resize", onWin);
+    });
   }
   function toast(msg, o = {}) {
     if (typeof document === "undefined" || !document.body) return null;
@@ -25262,6 +25435,7 @@ ${BLOCK_END}
       init_i18n();
       init_speech_split();
       init_icons();
+      init_drag_cancel();
       A11Y_DONE = "_k2dlg";
       TOAST_MAX = 4;
       curMenu = null;
@@ -25274,42 +25448,44 @@ ${BLOCK_END}
     }
   });
 
-  // src/drag-cancel.js
-  function escCancelDrag(onCancel) {
-    let on2 = true;
-    _active++;
-    const off3 = () => {
-      if (!on2) return;
-      on2 = false;
-      _active = Math.max(0, _active - 1);
-      window.removeEventListener("keydown", key2, true);
-      window.removeEventListener("mouseup", off3, true);
-      window.removeEventListener("blur", off3);
-    };
-    function key2(e) {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      off3();
-      try {
-        onCancel();
-      } catch (err2) {
-        try {
-          console.error("[drag-cancel]", err2);
-        } catch {
-        }
-      }
-    }
-    window.addEventListener("keydown", key2, true);
-    window.addEventListener("mouseup", off3, true);
-    window.addEventListener("blur", off3);
-    return off3;
+  // src/win-title.js
+  function versionLabel(version2) {
+    const v2 = String(version2 == null ? "" : version2).trim().replace(/^v/i, "");
+    return v2 ? "v" + v2 : "";
   }
-  var _active;
-  var init_drag_cancel = __esm({
-    "src/drag-cancel.js"() {
-      _active = 0;
+  function windowTitle(project, version2) {
+    const p = String(project == null ? "" : project).trim();
+    const main = p ? p + " \u2014 " + APP_NAME : APP_NAME;
+    const ver = versionLabel(version2);
+    return { main, version: ver, full: ver ? main + " " + ver : main };
+  }
+  function runningVersion() {
+    try {
+      return typeof kapi !== "undefined" && kapi.appVersion || "";
+    } catch {
+      return "";
+    }
+  }
+  function applyWindowTitle(project) {
+    const tt = windowTitle(project, runningVersion());
+    if (typeof document === "undefined") return tt;
+    document.title = tt.full;
+    const host2 = document.getElementById("tb-title");
+    if (host2) {
+      const name5 = document.createElement("span");
+      name5.id = "tb-title-text";
+      name5.textContent = tt.main;
+      const ver = document.createElement("span");
+      ver.id = "tb-ver";
+      ver.textContent = tt.version;
+      host2.replaceChildren(name5, ver);
+    }
+    return tt;
+  }
+  var APP_NAME;
+  var init_win_title = __esm({
+    "src/win-title.js"() {
+      APP_NAME = "Killian 2";
     }
   });
 
@@ -25533,10 +25709,10 @@ ${BLOCK_END}
   });
 
   // src/generated/themes-data.js
-  var THEMES, THEME_LABEL_KEYS, THEME_MODES;
+  var THEMES, THEME_LABEL_KEYS, THEME_MODES, THEMES_A11Y;
   var init_themes_data = __esm({
     "src/generated/themes-data.js"() {
-      THEMES = ["k2", "k2-light", "sakura-mist", "plum-wine", "lagoon", "neon-pop", "tropical", "claude", "opencode", "kimi", "vscode", "word", "excel", "powerpoint", "macintosh", "gundam", "dva", "fruit", "flower", "rainbow"];
+      THEMES = ["k2", "k2-light", "sakura-mist", "plum-wine", "lagoon", "neon-pop", "tropical", "claude", "opencode", "kimi", "vscode", "word", "excel", "powerpoint", "macintosh", "gundam", "dva", "fruit", "flower", "rainbow", "hc-dark", "hc-light", "cvd-rg-dark", "cvd-rg-light", "cvd-by-dark", "cvd-by-light", "mono-dark", "mono-light"];
       THEME_LABEL_KEYS = {
         "k2": "ui.settings.themeK2",
         "k2-light": "ui.settings.themeK2Light",
@@ -25557,7 +25733,15 @@ ${BLOCK_END}
         "dva": "ui.themes.dva",
         "fruit": "ui.themes.fruit",
         "flower": "ui.themes.flower",
-        "rainbow": "ui.themes.rainbow"
+        "rainbow": "ui.themes.rainbow",
+        "hc-dark": "ui.themes.hcDark",
+        "hc-light": "ui.themes.hcLight",
+        "cvd-rg-dark": "ui.themes.cvdRgDark",
+        "cvd-rg-light": "ui.themes.cvdRgLight",
+        "cvd-by-dark": "ui.themes.cvdByDark",
+        "cvd-by-light": "ui.themes.cvdByLight",
+        "mono-dark": "ui.themes.monoDark",
+        "mono-light": "ui.themes.monoLight"
       };
       THEME_MODES = {
         "k2": "dark",
@@ -25579,8 +25763,17 @@ ${BLOCK_END}
         "dva": "dark",
         "fruit": "light",
         "flower": "light",
-        "rainbow": "dark"
+        "rainbow": "dark",
+        "hc-dark": "dark",
+        "hc-light": "light",
+        "cvd-rg-dark": "dark",
+        "cvd-rg-light": "light",
+        "cvd-by-dark": "dark",
+        "cvd-by-light": "light",
+        "mono-dark": "dark",
+        "mono-light": "light"
       };
+      THEMES_A11Y = ["hc-dark", "hc-light", "cvd-rg-dark", "cvd-rg-light", "cvd-by-dark", "cvd-by-light", "mono-dark", "mono-light"];
     }
   });
 
@@ -25725,6 +25918,7 @@ ${BLOCK_END}
     THAI_FONT_STACK: () => THAI_FONT_STACK,
     THAI_SAFE_FALLBACKS: () => THAI_SAFE_FALLBACKS,
     THEMES: () => THEMES,
+    THEMES_A11Y: () => THEMES_A11Y,
     THEME_ALIAS: () => THEME_ALIAS,
     THEME_LABEL_KEYS: () => THEME_LABEL_KEYS,
     THEME_MODES: () => THEME_MODES,
@@ -25737,6 +25931,7 @@ ${BLOCK_END}
     buildLangFontCss: () => buildLangFontCss,
     busyMsg: () => busyMsg,
     busyTaskActive: () => busyTaskActive,
+    busyTaskHooks: () => busyTaskHooks,
     cancelBusyTask: () => cancelBusyTask,
     categorizeRole: () => categorizeRole,
     categorizeWith: () => categorizeWith,
@@ -26120,11 +26315,24 @@ ${BLOCK_END}
       btn3.style.display = "";
     }
     setBusy(msg);
-    const progress = (done3, total) => {
-      if (_task.ctl === ctl) setBusy(progressText(msg, done3, total));
+    const t0 = Date.now();
+    const hook = (name5, ...a) => {
+      try {
+        if (busyTaskHooks[name5]) busyTaskHooks[name5](...a);
+      } catch {
+      }
     };
+    const progress = (done3, total) => {
+      if (_task.ctl !== ctl) return;
+      setBusy(progressText(msg, done3, total));
+      hook("progress", done3, total);
+    };
+    hook("progress", 0, 0);
+    let finished = false;
     try {
-      return await fn({ signal: ctl.signal, progress });
+      const out = await fn({ signal: ctl.signal, progress });
+      finished = true;
+      return out;
     } catch (e) {
       if (isCancelled(e) || ctl.signal.aborted) {
         setStatus(tf("ui.common.taskCancelled", opts.name || msg));
@@ -26135,6 +26343,8 @@ ${BLOCK_END}
       if (_task.ctl === ctl) _task.ctl = prev;
       if (btn3 && !_task.ctl) btn3.style.display = "none";
       clearBusy();
+      if (!_task.ctl) hook("progress", -1);
+      if (finished) hook("done", opts.name || msg, Date.now() - t0);
     }
   }
   function spCycleKeys(settings) {
@@ -26320,7 +26530,7 @@ ${BLOCK_END}
   function needsAlt(needCtrl) {
     return String(needCtrl).includes("alt");
   }
-  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, RAW_CONSOLE, logStore, logSubs, STATUS_TTL_MS, STATUS_ACTION_TTL_MS, _st, _busyMsg, _splash, _task, THEME_ALIAS, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, DATA_KEYS, BUILTIN_CATS, CAT_ICON, i18n, langHooks, SHORTCUTS, SHORTCUT_PANEL_SKIP, shortcutId, SHORTCUT_LABELS, SHORTCUT_CATS, isMac, accelText;
+  var $, el, state, PANEL_WIN, smart, LOG_BUF, LOG_MAX, RAW_CONSOLE, logStore, logSubs, STATUS_TTL_MS, STATUS_ACTION_TTL_MS, _st, _busyMsg, _splash, _task, busyTaskHooks, THEME_ALIAS, GLOBAL_DEFAULTS, PROJECT_DEFAULTS, DEFAULT_SETTINGS, DEFAULT_GOALS, DEFAULT_SP_CYCLE, DEFAULT_SP_CYCLE_KEYS, PT_PX2, ptToPx, BASE_ED_FS, BASE_SP_FS, THAI_FONT_STACK, DEFAULT_SCRIPT_FONT, SCALE_MIN, SCALE_MAX, UI_SCALE_MIN, UI_SCALE_MAX, SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, DEFAULT_STATUS_COLOR, DATA_KEYS, BUILTIN_CATS, CAT_ICON, i18n, langHooks, SHORTCUTS, SHORTCUT_PANEL_SKIP, shortcutId, SHORTCUT_LABELS, SHORTCUT_CATS, isMac, accelText;
   var init_core = __esm({
     "src/core.js"() {
       init_smart();
@@ -26413,6 +26623,7 @@ ${BLOCK_END}
       _busyMsg = "";
       _splash = { on: false, pct: 0 };
       _task = { ctl: null };
+      busyTaskHooks = { progress: null, done: null };
       THEME_ALIAS = { dark: "k2", light: "k2-light" };
       GLOBAL_DEFAULTS = {
         autoSaveMinutes: 5,
@@ -26464,6 +26675,21 @@ ${BLOCK_END}
         typeSoundMode: "always",
         typeSoundAlways: true,
         // (เก่า — เก็บไว้ให้โปรเจกต์รุ่นก่อนอ่านได้ ค่าใหม่อยู่ที่ typeSoundMode)
+        // ══ [alpha.169 · a11y] การช่วยการเข้าถึง (ตั้งค่า → การช่วยการเข้าถึง) ══
+        // ระดับผู้ใช้ทั้งชุด: ความต้องการด้านการมองเห็น/สมาธิเป็นของ "คน" ไม่ใช่ของผลงาน
+        // ค่าชุดนี้ต้องตรงกับ A11Y_DEFAULTS ใน a11y/a11y-core.js (unit `a11y` เทียบทีละคีย์)
+        //   a11yKeyEcho*   = แสดงปุ่มที่กดเป็นตัวใหญ่บนจอ (โหมด all/typing/special · ตำแหน่ง center/top/bottom · ขนาด px · ค้างกี่ ms)
+        //   a11yLineBand*  = แถบสีที่บรรทัดของเคอร์เซอร์ (สี · ความทึบ)
+        //   typewriterMode = โหมดเครื่องพิมพ์ดีด — เดิมเป็นสถานะของเซสชัน เปิดโปรแกรมใหม่แล้วต้องกดเปิดทุกครั้ง
+        a11yKeyEcho: false,
+        a11yKeyEchoMode: "all",
+        a11yKeyEchoPos: "center",
+        a11yKeyEchoSize: 160,
+        a11yKeyEchoMs: 900,
+        a11yLineBand: false,
+        a11yLineBandColor: "#ffe066",
+        a11yLineBandOpacity: 0.4,
+        typewriterMode: false,
         homeThumb: 190,
         smartLearnMin: 2,
         heavyDocBlocks: 400,
@@ -26963,815 +27189,232 @@ ${BLOCK_END}
     }
   });
 
-  // src/json-guard.js
-  function brokenBackupName(file, date = /* @__PURE__ */ new Date()) {
-    const s = String(file || "");
-    const cut = Math.max(s.lastIndexOf("/"), s.lastIndexOf("\\"));
-    const dir2 = s.slice(0, cut + 1), base4 = s.slice(cut + 1);
-    const dot2 = base4.lastIndexOf(".");
-    const stem = dot2 > 0 ? base4.slice(0, dot2) : base4, ext = dot2 > 0 ? base4.slice(dot2) : "";
-    const stamp = date.getFullYear() + pad2(date.getMonth() + 1) + pad2(date.getDate()) + "-" + pad2(date.getHours()) + pad2(date.getMinutes()) + pad2(date.getSeconds());
-    return dir2 + stem + ".unreadable-" + stamp + ext;
+  // src/ai/ai-error.js
+  var ai_error_exports = {};
+  __export(ai_error_exports, {
+    clip: () => clip,
+    describeHttpError: () => describeHttpError,
+    hostOf: () => hostOf,
+    redactSecrets: () => redactSecrets,
+    serverMessage: () => serverMessage,
+    shortError: () => shortError
+  });
+  function redactSecrets(text) {
+    return String(text ?? "").replace(/\b(sk|xai|gsk|pplx|or)-[A-Za-z0-9_-]{6,}/g, "$1-\u2022\u2022\u2022\u2022").replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi, "$1\u2022\u2022\u2022\u2022").replace(/("?(?:api[_-]?key|x-api-key|authorization)"?\s*[:=]\s*"?)[^"'\s,}]{8,}/gi, "$1\u2022\u2022\u2022\u2022").replace(/([?&](?:api[_-]?key|key|token|access[_-]?token|auth)=)[^&\s]+/gi, "$1\u2022\u2022\u2022\u2022");
   }
-  async function readJsonGuarded(io, file, fallback, o = {}) {
-    const k = keyOf(file);
-    let has2 = false;
+  function clip(text, max2 = 600) {
+    const s = String(text ?? "").trim();
+    return s.length > max2 ? s.slice(0, max2) + " \u2026" : s;
+  }
+  function serverMessage(body) {
+    const raw = String(body ?? "").trim();
+    if (!raw) return "";
+    let d = null;
     try {
-      has2 = !!await io.exists(file);
+      d = JSON.parse(raw);
     } catch {
-      has2 = false;
     }
-    if (!has2) {
-      done.delete(k);
-      return { data: fallback(), state: "missing", backup: "", writable: true, fresh: false };
+    if (d && typeof d === "object") {
+      const e = d.error;
+      if (typeof e === "string" && e.trim()) return e.trim();
+      if (e && typeof e === "object") {
+        const m = e.message || e.detail || e.type || "";
+        const code3 = e.code ? " [" + e.code + "]" : "";
+        if (String(m).trim()) return String(m).trim() + code3;
+      }
+      for (const k of ["message", "detail", "msg", "reason"]) {
+        if (typeof d[k] === "string" && d[k].trim()) return d[k].trim();
+      }
+      return "";
     }
+    if (/^\s*</.test(raw)) return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    return raw;
+  }
+  function hostOf(url) {
     try {
-      const data2 = await io.readJson(file);
-      if (data2 === null || typeof data2 !== "object") throw new Error("not an object");
-      done.delete(k);
-      return { data: data2, state: "ok", backup: "", writable: true, fresh: false };
-    } catch (error2) {
-      let sig = "";
-      try {
-        sig = io.mtime ? String(await io.mtime(file)) : "";
-      } catch {
-        sig = "";
-      }
-      const was = done.get(k);
-      if (was && was.sig === sig && was.backup) {
-        return { data: fallback(), state: "broken", backup: was.backup, writable: true, fresh: false, error: error2 };
-      }
-      let backup = "";
-      try {
-        const dst = brokenBackupName(file, o.now || /* @__PURE__ */ new Date());
-        await io.copyFile(file, dst);
-        backup = dst;
-      } catch {
-        backup = "";
-      }
-      done.set(k, { sig, backup });
-      return { data: fallback(), state: "broken", backup, writable: !!backup, fresh: true, error: error2 };
+      return new URL(String(url)).host;
+    } catch {
+      return "";
     }
   }
-  function resetJsonGuard() {
-    done.clear();
-  }
-  var done, keyOf, pad2;
-  var init_json_guard = __esm({
-    "src/json-guard.js"() {
-      done = /* @__PURE__ */ new Map();
-      keyOf = (p) => String(p || "").split("\\").join("/").replace(/\/+$/, "").toLowerCase();
-      pad2 = (n2) => String(n2).padStart(2, "0");
-    }
-  });
-
-  // src/json-store.js
-  var json_store_exports = {};
-  __export(json_store_exports, {
-    fileKey: () => fileKey,
-    mutateJson: () => mutateJson,
-    onBrokenJson: () => onBrokenJson,
-    pendingLocks: () => pendingLocks,
-    withFileLock: () => withFileLock
-  });
-  function onBrokenJson(fn) {
-    brokenListener = typeof fn === "function" ? fn : null;
-  }
-  function fileKey(p) {
-    return String(p || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
-  }
-  function withFileLock(file, fn) {
-    const k = fileKey(file);
-    const prev = queues.get(k) || Promise.resolve();
-    const run3 = prev.catch(() => {
-    }).then(() => fn());
-    const tail = run3.then(() => {
-    }, () => {
-    });
-    queues.set(k, tail);
-    tail.then(() => {
-      if (queues.get(k) === tail) queues.delete(k);
-    });
-    return run3;
-  }
-  function pendingLocks() {
-    return queues.size;
-  }
-  function mutateJson(io, file, fn, opts = {}) {
-    return withFileLock(file, async () => {
-      let data2;
-      try {
-        data2 = await io.readJson(file);
-      } catch (e) {
-        if (!("fallback" in opts)) throw e;
-        let has2 = false;
-        try {
-          has2 = typeof io.exists === "function" ? !!await io.exists(file) : false;
-        } catch {
-          has2 = false;
-        }
-        if (has2) {
-          let backup = "";
-          try {
-            if (typeof io.copyFile === "function") {
-              const dst = brokenBackupName(file);
-              await io.copyFile(file, dst);
-              backup = dst;
-            }
-          } catch {
-            backup = "";
-          }
-          try {
-            if (brokenListener) brokenListener({ file, backup, error: e });
-          } catch {
-          }
-          if (!backup) throw e;
-        }
-        data2 = typeof opts.fallback === "function" ? opts.fallback() : clone2(opts.fallback);
-      }
-      const result = await fn(data2);
-      if (result === false) return { data: data2, changed: false, result };
-      await io.writeFile(file, JSON.stringify(data2, null, 2));
-      return { data: data2, changed: true, result };
-    });
-  }
-  var queues, brokenListener, clone2;
-  var init_json_store = __esm({
-    "src/json-store.js"() {
-      init_json_guard();
-      queues = /* @__PURE__ */ new Map();
-      brokenListener = null;
-      clone2 = (v2) => JSON.parse(JSON.stringify(v2));
-    }
-  });
-
-  // src/scene-mentions.js
-  var scene_mentions_exports = {};
-  __export(scene_mentions_exports, {
-    sceneMentions: () => sceneMentions
-  });
-  function sceneMentions(text, byCat = {}, fileOf2 = {}, opts = {}) {
-    let s = String(text || "").replace(/<!--[\s\S]*?-->/g, " ");
-    if (!s.trim()) return [];
-    const titles = new Set(opts.titles || []);
-    const entries = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const [cat, names] of Object.entries(byCat || {})) {
-      for (const n2 of names || []) {
-        const name5 = String(n2 || "").trim();
-        if (name5.length < 2 || seen.has(name5)) continue;
-        seen.add(name5);
-        entries.push({ name: name5, cat, file: fileOf2[name5] || "" });
-      }
-    }
-    entries.sort((a, b) => b.name.length - a.name.length);
-    const hits = /* @__PURE__ */ new Map();
-    for (const e of entries) {
-      let i5 = 0, n2 = 0;
-      const low = /[A-Za-z]/.test(e.name);
-      const hay = low ? s.toLowerCase() : s;
-      const needle = low ? e.name.toLowerCase() : e.name;
-      let out = "";
-      let last2 = 0;
-      while ((i5 = hay.indexOf(needle, i5)) !== -1) {
-        const before = s[i5 - 1], after = s[i5 + needle.length];
-        if (low && (isWordChar(before) || isWordChar(after))) {
-          i5 += needle.length;
-          continue;
-        }
-        n2++;
-        out += s.slice(last2, i5) + "\0".repeat(needle.length);
-        last2 = i5 + needle.length;
-        i5 = last2;
-      }
-      if (!n2) continue;
-      s = out + s.slice(last2);
-      const key2 = e.file || "name:" + e.name;
-      const h = hits.get(key2) || { name: e.name, file: e.file, cat: e.cat, count: 0, forms: /* @__PURE__ */ new Set() };
-      h.count += n2;
-      h.forms.add(e.name);
-      if (titles.has(e.name)) h.name = e.name;
-      hits.set(key2, h);
-    }
-    const groups = /* @__PURE__ */ new Map();
-    for (const h of hits.values()) {
-      if (!groups.has(h.cat)) groups.set(h.cat, []);
-      groups.get(h.cat).push({ name: h.name, file: h.file, count: h.count, forms: [...h.forms] });
-    }
-    const order = opts.order || [];
-    const rank = (c) => {
-      const i5 = order.indexOf(c);
-      return i5 < 0 ? 1e6 : i5;
-    };
-    return [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || cmpText(a[0], b[0])).map(([cat, items]) => ({ cat, items: items.sort((a, b) => b.count - a.count || cmpText(a.name, b.name)) }));
-  }
-  var isWordChar;
-  var init_scene_mentions = __esm({
-    "src/scene-mentions.js"() {
-      init_locale();
-      isWordChar = (c) => !!c && /[A-Za-z0-9_]/.test(c);
-    }
-  });
-
-  // src/color-util.js
-  var color_util_exports = {};
-  __export(color_util_exports, {
-    STATUS_PALETTE: () => STATUS_PALETTE,
-    VIVID: () => VIVID,
-    contrast: () => contrast,
-    inkOn: () => inkOn,
-    luminance: () => luminance,
-    nextStatusColor: () => nextStatusColor,
-    normHex: () => normHex,
-    tint: () => tint,
-    vivid: () => vivid
-  });
-  function normHex(v2) {
-    let s = String(v2 || "").trim().toLowerCase();
-    if (!s) return "";
-    if (s[0] !== "#") s = "#" + s;
-    if (/^#[0-9a-f]{3}$/.test(s)) s = "#" + s.slice(1).split("").map((c) => c + c).join("");
-    return /^#[0-9a-f]{6}$/.test(s) ? s : "";
-  }
-  function vivid(v2) {
-    const h = normHex(v2);
-    return h ? VIVID[h] || h : "";
-  }
-  function luminance(v2) {
-    const h = normHex(v2);
-    if (!h) return 0;
-    const ch = [1, 3, 5].map((i5) => parseInt(h.slice(i5, i5 + 2), 16) / 255).map((c) => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
-  }
-  function contrast(a, b) {
-    const la = luminance(a), lb = luminance(b);
-    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-  }
-  function inkOn(bg) {
-    const h = normHex(bg);
-    if (!h) return "";
-    return contrast(h, "#ffffff") >= contrast(h, "#1a1426") ? "#ffffff" : "#1a1426";
-  }
-  function tint(v2, alpha = 0.16) {
-    const h = normHex(v2);
-    if (!h) return "";
-    const [r, g, b] = [1, 3, 5].map((i5) => parseInt(h.slice(i5, i5 + 2), 16));
-    return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
-  }
-  function nextStatusColor(used = []) {
-    const taken = new Set(used.map(normHex));
-    return STATUS_PALETTE.find((c) => !taken.has(c)) || STATUS_PALETTE[used.length % STATUS_PALETTE.length];
-  }
-  var VIVID, STATUS_PALETTE;
-  var init_color_util = __esm({
-    "src/color-util.js"() {
-      VIVID = {
-        "#d9575e": "#ff4d6d",
-        // แดง
-        "#d97757": "#ff7a2f",
-        // ส้ม
-        "#d9b757": "#ffc42e",
-        // เหลือง
-        "#6fae6f": "#2ecc71",
-        // เขียว
-        "#5f9fd9": "#3b9bff",
-        // ฟ้า
-        "#a97fd0": "#a66bff",
-        // ม่วง
-        "#8a8f98": "#8f9bb3"
-        // เทากลาง (สถานะที่ไม่มีสีของตัวเอง)
+  function networkKind(text) {
+    const s = String(text || "");
+    if (/ECONNREFUSED|Connection refused/i.test(s)) {
+      return {
+        key: "refused",
+        reason: t("ui.aiError.toConnectNotHas"),
+        hints: [
+          t("ui.aiError.modelOllamaLMStudio"),
+          t("ui.aiError.checkNumBaseURL")
+        ]
       };
-      STATUS_PALETTE = ["#ff4d6d", "#ff7a2f", "#ffc42e", "#2ecc71", "#1abc9c", "#3b9bff", "#a66bff", "#ff5fb8"];
     }
-  });
-
-  // src/project-scan.js
-  var project_scan_exports = {};
-  __export(project_scan_exports, {
-    SKIP_DIRS: () => SKIP_DIRS,
-    WIKI_DIRS: () => WIKI_DIRS,
-    chapterFolders: () => chapterFolders,
-    findScenePath: () => findScenePath,
-    joinSync: () => joinSync,
-    listEntities: () => listEntities,
-    listScenes: () => listScenes,
-    pathSep: () => pathSep,
-    scenePath: () => scenePath,
-    syncIo: () => syncIo
-  });
-  function pathSep(sample) {
-    const s = sample || state && state.root || "";
-    if (s.includes("\\")) return "\\";
-    if (s.includes("/")) return "/";
-    return typeof navigator !== "undefined" && /win/i.test(navigator.platform || "") ? "\\" : "/";
-  }
-  function joinSync(...parts) {
-    const sep = pathSep(parts[0]);
-    return parts.filter((p) => p != null && p !== "").join(sep).replace(/[\\/]+/g, sep === "\\" ? "\\" : "/");
-  }
-  function syncIo() {
-    return {
-      join: joinSync,
-      exists: (p) => kapi.exists(p),
-      readFile: (p) => kapi.readFile(p),
-      readJson: (p) => kapi.readJson(p),
-      writeFile: (p, c) => kapi.writeFile(p, c),
-      mkdir: (p) => kapi.mkdir(p),
-      listFiles: (p, ext) => kapi.listFiles(p, ext),
-      listDirs: (p) => kapi.listDirs(p),
-      move: (a, b) => kapi.move(a, b),
-      remove: (p) => kapi.remove(p),
-      // [alpha.156] คิวของไฟล์ตัวเดียวกับ mutateJson — Kanban ใช้กันเขียน scenes.json ชนกับงานอื่น
-      withLock: (p, fn) => withFileLock(p, fn)
-    };
-  }
-  async function chapterFolders(draftPath) {
-    const map2 = {};
-    try {
-      const dj = await kapi.readJson(await kapi.join(draftPath, "draft.json"));
-      for (const ch of dj.chapters || []) if (ch.guid) map2[ch.guid] = ch.folderName || ch.guid;
-    } catch {
+    if (/ENOTFOUND|getaddrinfo|DNS/i.test(s)) {
+      return {
+        key: "dns",
+        reason: t("ui.aiError.findNameDomainNot"),
+        hints: [t("ui.aiError.checkPrintBaseURL"), t("ui.aiError.checkNext")]
+      };
     }
-    return map2;
-  }
-  async function scenePath(draftPath, chapterId, sc, folders) {
-    const folder = folders && folders[chapterId] || sc.folderName || chapterId;
-    return kapi.join(draftPath, "Chapters", folder, sc.fileName || sc.id + ".md");
-  }
-  async function listScenes(root, { withText = false } = {}) {
-    const out = [];
-    if (!root) return out;
-    let secs = [];
-    try {
-      secs = await kapi.listDirs(root);
-    } catch {
-      return out;
+    if (/certificate|SSL|TLS|self[- ]signed/i.test(s)) {
+      return {
+        key: "tls",
+        reason: t("ui.aiError.itemTLSToUse"),
+        hints: [t("ui.aiError.innerUseItemOut")]
+      };
     }
-    for (const sec2 of secs) {
-      if (WIKI_DIRS.includes(sec2) || SKIP_DIRS.includes(sec2)) continue;
-      const dr = await kapi.join(await kapi.join(root, sec2), "Draft");
-      if (!await kapi.exists(dr)) continue;
-      let drafts = [];
-      try {
-        drafts = await kapi.listDirs(dr);
-      } catch {
-        continue;
-      }
-      for (const dn of drafts) {
-        const dp = await kapi.join(dr, dn);
-        const scFile = await kapi.join(dp, "scenes.json");
-        if (!await kapi.exists(scFile)) continue;
-        let sdata;
-        try {
-          sdata = await kapi.readJson(scFile);
-        } catch {
-          continue;
-        }
-        const folders = await chapterFolders(dp);
-        for (const chId of Object.keys(sdata.chapters || {})) {
-          for (const sc of sdata.chapters[chId] || []) {
-            if (sc.type === "memo") continue;
-            const p = await scenePath(dp, chId, sc, folders);
-            const row4 = {
-              id: sc.id,
-              title: sc.title || sc.fileName || "",
-              chapterId: chId,
-              path: p,
-              draftPath: dp,
-              section: sec2,
-              draft: dn,
-              row: sc
-            };
-            if (withText) {
-              try {
-                row4.text = await kapi.exists(p) ? await kapi.readFile(p) : "";
-              } catch {
-                row4.text = "";
-              }
-              try {
-                row4.body = (0, import_md5.parseMdFile)(row4.text).body;
-              } catch {
-                row4.body = row4.text;
-              }
-            }
-            out.push(row4);
-          }
-        }
-      }
+    if (/ETIMEDOUT|ECONNRESET|EPIPE|socket hang up|network|fetch failed/i.test(s)) {
+      return {
+        key: "net",
+        reason: t("ui.aiError.nextNotMissingCenter"),
+        hints: [
+          t("ui.aiError.checkVPN"),
+          t("ui.aiError.tryOpenBaseURL")
+        ]
+      };
     }
-    return out;
+    return null;
   }
-  async function findScenePath(root, sceneId) {
-    const all = await listScenes(root);
-    const hit = all.find((s) => s.id === sceneId);
-    return hit ? hit : null;
-  }
-  async function listEntities(root) {
-    const out = [];
-    if (!root) return out;
-    let secs = [];
-    try {
-      secs = await kapi.listDirs(root);
-    } catch {
-      return out;
-    }
-    for (const sec2 of secs) {
-      if (!WIKI_DIRS.includes(sec2)) continue;
-      const wp = await kapi.join(root, sec2);
-      let cats = [];
-      try {
-        cats = await kapi.listDirs(wp);
-      } catch {
-        continue;
-      }
-      for (const cat of cats) {
-        const cd = await kapi.join(wp, cat);
-        for (const f of await kapi.listFiles(cd, ".json")) {
-          try {
-            const fp = await kapi.join(cd, f);
-            const e = await kapi.readJson(fp);
-            if (e && e.name) out.push({ id: fp, path: fp, name: e.name, aliases: e.aliases || [], cat, entity: e });
-          } catch (err2) {
-            log("warn", t("ui.project.readCant") + f, err2);
-          }
-        }
-      }
-    }
-    return out;
-  }
-  var import_md5, SKIP_DIRS, WIKI_DIRS;
-  var init_project_scan = __esm({
-    "src/project-scan.js"() {
-      init_i18n();
-      init_core();
-      import_md5 = __toESM(require_md());
-      init_json_store();
-      SKIP_DIRS = [
-        "Images",
-        "Memos",
-        "Recycle",
-        "Snapshots",
-        "Backups",
-        "Plugins",
-        "Research",
-        "Analysis",
-        // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
-        "OnSet",
-        // [alpha.164] ฉบับเดิมของฉากมีปัญหา (สำเนา ไม่ใช่เนื้อเรื่อง)
-        "Sessions",
-        "Starters"
+  function describeHttpError(e = {}) {
+    const status = Number(e.status) || 0;
+    const rawBody = redactSecrets(String(e.body ?? ""));
+    const srvMsg = serverMessage(rawBody);
+    const host2 = hostOf(e.url);
+    let reason = "";
+    let hints = [];
+    let code3 = "http-" + status;
+    if (e.aborted && e.timedOut) {
+      code3 = "timeout";
+      reason = t("ui.aiError.timeAnswer");
+      hints = [
+        t("ui.aiError.addValueTimeoutSettings"),
+        t("ui.aiError.modelThinkReasoningUse")
       ];
-      WIKI_DIRS = ["Wiki", "Bible"];
+    } else if (e.aborted) {
+      code3 = "aborted";
+      reason = t("ui.aiError.userPress");
+      hints = [];
+    } else if (e.streamError) {
+      code3 = "stream-error";
+      reason = t("ui.aiError.streamReason");
+      hints = [t("ui.aiError.streamHintServer"), t("ui.aiError.streamHintCredit")];
+    } else if (status === 0) {
+      const k = networkKind(srvMsg || rawBody || e.error);
+      code3 = k ? "net-" + k.key : "net";
+      reason = k ? k.reason : srvMsg || t("ui.aiError.nextCantWordNot");
+      hints = k ? k.hints : [
+        t("ui.aiError.checkBaseURL"),
+        t("ui.aiError.checkDomainAllowedHTTP")
+      ];
+    } else if (status === 401 || status === 403) {
+      reason = t("ui.aiError.notAPIKeySend");
+      hints = [
+        t("ui.aiError.putKeyNewSettings"),
+        t("ui.aiError.keyBindOutlineCheck")
+      ];
+    } else if (status === 404) {
+      reason = t("ui.aiError.toNotHas");
+      hints = [
+        t("ui.aiError.baseURLMustV1"),
+        t("ui.aiError.checkNameModelPress")
+      ];
+    } else if (status === 408) {
+      reason = t("ui.aiError.wordUseTime");
+      hints = [t("ui.aiError.tryNewTimesAdd")];
+    } else if (status === 429) {
+      reason = t("ui.aiError.msg");
+      hints = [
+        t("ui.aiError.doneTryNew"),
+        t("ui.aiError.checkPageProvider"),
+        t("ui.aiError.addMaxRetriesParameters")
+      ];
+    } else if (status === 400 || status === 422) {
+      reason = tf("ui.aiError.providerNotParamSend", String(status));
+      hints = [
+        t("ui.aiError.viewTextBottomName"),
+        t("ui.aiError.itemMaxTokensHigh")
+      ];
+    } else if (status >= 500) {
+      reason = tf("ui.aiError.sideProviderHasProblem", String(status));
+      hints = [t("ui.aiError.doneTryNewNot")];
+    } else {
+      reason = tf("ui.aiError.callNotOkHTTP", String(status));
+      hints = [];
     }
-  });
-
-  // src/custom-status.js
-  var custom_status_exports = {};
-  __export(custom_status_exports, {
-    addCustomStatus: () => addCustomStatus,
-    allStatuses: () => allStatuses,
-    deleteStatus: () => deleteStatus,
-    getCustomStatuses: () => getCustomStatuses,
-    getHiddenStatuses: () => getHiddenStatuses,
-    getStatusColors: () => getStatusColors,
-    importStatuses: () => importStatuses,
-    manageCustomStatuses: () => manageCustomStatuses,
-    orderStatuses: () => orderStatuses,
-    paintStatusChip: () => paintStatusChip,
-    refreshStatusChips: () => refreshStatusChips,
-    removeCustomStatus: () => removeCustomStatus,
-    setStatusColor: () => setStatusColor,
-    setStatusOrder: () => setStatusOrder,
-    statusChip: () => statusChip,
-    statusColor: () => statusColor,
-    statusesToJson: () => statusesToJson,
-    unhideStatus: () => unhideStatus
-  });
-  function getCustomStatuses() {
-    if (!state.meta) return [];
-    return state.meta.customStatuses || [];
+    const title2 = status ? tm("AI: {0} (HTTP {1})", reason, String(status)) : tm("AI: {0}", reason);
+    const lines = [];
+    if (e.provider) lines.push(t("ui.aiError.provider") + e.provider);
+    if (e.model) lines.push(t("ui.aiError.model") + e.model);
+    if (host2) lines.push(t("ui.aiError.to") + host2);
+    if (e.url) lines.push("URL: " + redactSecrets(e.url));
+    lines.push("HTTP: " + (status || t("ui.aiError.notTo")));
+    if (srvMsg) lines.push(t("ui.aiError.reply") + clip(srvMsg));
+    else if (rawBody) lines.push(t("ui.aiError.bodyAnswer") + clip(rawBody));
+    if (e.error && e.error !== reason) lines.push(t("ui.aiError.textInner") + redactSecrets(String(e.error)));
+    if (hints.length) lines.push("", t("ui.aiError.edit"), ...hints.map((h, i5) => i5 + 1 + ". " + h));
+    return { title: title2, reason, hints, detail: lines.join("\n"), code: code3, serverMessage: srvMsg, host: host2, status };
   }
-  function getHiddenStatuses() {
-    return state.meta && Array.isArray(state.meta.hiddenStatuses) ? state.meta.hiddenStatuses : [];
+  function shortError(info) {
+    const parts = [info.reason];
+    if (info.serverMessage) parts.push(clip(info.serverMessage, 160));
+    return parts.filter(Boolean).join(" \u2014 ").replace(/\s+/g, " ");
   }
-  function orderStatuses(list3, order) {
-    if (!Array.isArray(order) || !order.length) return list3.slice();
-    const rank = new Map(order.map((k, i5) => [k, i5]));
-    return list3.slice().sort((a, b) => (rank.has(a) ? rank.get(a) : 1e6 + list3.indexOf(a)) - (rank.has(b) ? rank.get(b) : 1e6 + list3.indexOf(b)));
-  }
-  function allStatuses() {
-    const hidden2 = new Set(getHiddenStatuses());
-    const list3 = [...SCENE_STATUSES.filter((s) => !hidden2.has(s)), ...getCustomStatuses()];
-    return orderStatuses(list3, state.meta && state.meta.statusOrder);
-  }
-  function announce() {
-    try {
-      window.dispatchEvent(new CustomEvent("k2-statuses-changed"));
-    } catch {
-    }
-  }
-  async function setStatusOrder(order) {
-    if (!state.meta || !Array.isArray(order)) return false;
-    state.meta.statusOrder = order.filter((s, i5, a) => s && a.indexOf(s) === i5);
-    await persist();
-    return true;
-  }
-  async function deleteStatus(label2) {
-    if (!state.meta || !label2) return false;
-    if (SCENE_STATUSES.includes(label2)) {
-      state.meta.hiddenStatuses = [.../* @__PURE__ */ new Set([...getHiddenStatuses(), label2])];
-      await persist();
-      return true;
-    }
-    return removeCustomStatus(label2);
-  }
-  async function unhideStatus(label2) {
-    if (!state.meta) return false;
-    state.meta.hiddenStatuses = getHiddenStatuses().filter((s) => s !== label2);
-    await persist();
-    return true;
-  }
-  function getStatusColors() {
-    if (!state.meta) return {};
-    return state.meta.customStatusColors || {};
-  }
-  function statusColor(label2) {
-    if (!label2) return "";
-    return getStatusColors()[label2] || STATUS_COLORS[label2] || DEFAULT_STATUS_COLOR;
-  }
-  async function persist() {
-    const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    await saveProjectMeta2();
-    announce();
-  }
-  async function setStatusColor(label2, hex2) {
-    if (!state.meta || !label2) return false;
-    state.meta.customStatusColors = { ...getStatusColors(), [label2]: hex2 };
-    await persist();
-    return true;
-  }
-  async function addCustomStatus(label2, color) {
-    if (!state.meta || !label2) return false;
-    const name5 = String(label2).trim();
-    if (!name5 || allStatuses().includes(name5)) return false;
-    state.meta.customStatuses = [...getCustomStatuses(), name5];
-    if (color) state.meta.customStatusColors = { ...getStatusColors(), [name5]: color };
-    await persist();
-    setStatus(t("ui.status.addStatusDone") + name5);
-    return true;
-  }
-  async function removeCustomStatus(label2) {
-    if (!state.meta) return false;
-    state.meta.customStatuses = getCustomStatuses().filter((s) => s !== label2);
-    const colors = { ...getStatusColors() };
-    delete colors[label2];
-    state.meta.customStatusColors = colors;
-    await persist();
-    setStatus(t("ui.status.delStatusDone") + label2);
-    return true;
-  }
-  function statusesToJson() {
-    return {
-      kind: "killian-statuses",
-      version: 1,
-      statuses: getCustomStatuses(),
-      colors: getStatusColors()
-    };
-  }
-  async function importStatuses(data2) {
-    if (!state.meta || !data2) return 0;
-    const incoming = Array.isArray(data2) ? data2 : data2.statuses || [];
-    const have = allStatuses();
-    const fresh = incoming.map((s) => String(s).trim()).filter((s) => s && !have.includes(s)).filter((s, i5, a) => a.indexOf(s) === i5);
-    state.meta.customStatuses = [...getCustomStatuses(), ...fresh];
-    if (data2.colors && typeof data2.colors === "object")
-      state.meta.customStatusColors = { ...getStatusColors(), ...data2.colors };
-    await persist();
-    return fresh.length;
-  }
-  async function exportStatusesFile() {
-    const dest = await kapi.saveAsDialog((state.title || "project") + "-statuses.json", "json");
-    if (!dest) return false;
-    await kapi.writeFile(dest, JSON.stringify(statusesToJson(), null, 2));
-    setStatus(t("ui.status.exportSetStatusDone") + dest);
-    return true;
-  }
-  async function importStatusesFile() {
-    const src2 = await kapi.openFileDialog("json");
-    if (!src2) return 0;
-    try {
-      const n2 = await importStatuses(JSON.parse(await kapi.readFile(src2)));
-      setStatus(n2 ? tf("ui.status.importStatusNewList", n2) : t("ui.status.notHasStatusNew"));
-      return n2;
-    } catch (e) {
-      log("error", t("ui.status.customStatusImportFail"), e);
-      setStatus(t("ui.status.importFileStatusNot"));
-      return 0;
-    }
-  }
-  async function manageCustomStatuses() {
-    if (!state.meta) {
-      setStatus(t("ui.common.cantOpenProject"));
-      return;
-    }
-    const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog k-status-mgr");
-    box2.append(el("div", "k-dlg-title", t("ui.status.manageStatusScene")));
-    const list3 = el("div", "k-pick-list");
-    const mkRow = (s, builtIn) => {
-      const row4 = el("div", "k-menu-item k-status-row");
-      const dot2 = el("span", "k-status-dot");
-      dot2.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${statusColor(s)}`;
-      const hiddenNow = builtIn && getHiddenStatuses().includes(s);
-      row4.append(dot2, el("span", null, s + (builtIn ? t("ui.status.default") : "") + (hiddenNow ? t("ui.kanban.hiddenBuiltin") : "")));
-      if (hiddenNow) {
-        row4.classList.add("k-status-hidden");
-        const back = el("button", "k-status-unhide", t("ui.kanban.restoreStatus"));
-        back.style.cssText = "float:right;margin-left:10px";
-        back.onclick = async (e) => {
-          e.stopPropagation();
-          await unhideStatus(s);
-          render();
-          refreshStatusChips();
-        };
-        row4.append(back);
-      }
-      const pick2 = el("input", "k-status-color");
-      pick2.type = "color";
-      pick2.value = statusColor(s);
-      pick2.title = t("ui.status.recolorStatus");
-      pick2.style.cssText = "float:right;width:26px;height:20px;padding:0;border:none;background:none;cursor:pointer";
-      pick2.onchange = async () => {
-        dot2.style.background = pick2.value;
-        await setStatusColor(s, pick2.value);
-        refreshStatusChips();
-      };
-      row4.append(pick2);
-      if (!builtIn) {
-        const del2 = el("span", "k-status-del", gi("close"));
-        del2.style.cssText = "float:right;cursor:pointer;margin-left:10px";
-        del2.title = t("ui.status.delStatus2");
-        del2.onclick = async (e) => {
-          e.stopPropagation();
-          let inUse = 0;
-          try {
-            const { listScenes: listScenes2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
-            inUse = countStatusUse(await listScenes2(state.root), s);
-          } catch {
-          }
-          const q2 = inUse ? tf("ui.status.delStatusInUse", s, inUse) : tf("ui.status.delStatus", s);
-          if (await confirmBox(q2, t("ui.common.del"))) {
-            await removeCustomStatus(s);
-            render();
-            refreshStatusChips();
-          }
-        };
-        row4.append(del2);
-      }
-      return row4;
-    };
-    const render = () => {
-      list3.innerHTML = "";
-      for (const s of SCENE_STATUSES) list3.append(mkRow(s, true));
-      const custom = getCustomStatuses();
-      if (!custom.length) list3.append(el("div", "dim", t("ui.status.notHasStatusDefine")));
-      for (const s of custom) list3.append(mkRow(s, false));
-    };
-    render();
-    const btns = el("div", "k-dlg-btns");
-    const addB = el("button", "k-ok", t("ui.status.addStatus"));
-    addB.onclick = async () => {
-      const name5 = await ask(t("ui.status.nameStatusNew"), { placeholder: t("ui.status.egEditSendDone") });
-      if (!name5) return;
-      await addCustomStatus(name5);
-      render();
-      refreshStatusChips();
-    };
-    const outB = el("button", null, t("ui.status.export"));
-    outB.title = t("ui.status.saveSetStatusColor");
-    outB.onclick = () => exportStatusesFile();
-    const inB = el("button", null, t("ui.status.import"));
-    inB.title = t("ui.status.readSetStatusFile");
-    inB.onclick = async () => {
-      await importStatusesFile();
-      render();
-      refreshStatusChips();
-    };
-    const closeB = el("button", "k-cancel", t("ui.common.close"));
-    closeB.onclick = () => ov.remove();
-    btns.append(outB, inB, closeB, addB);
-    box2.append(list3, btns);
-    ov.append(box2);
-    document.body.append(ov);
-    ov.onclick = (e) => {
-      if (e.target === ov) ov.remove();
-    };
-    escClose(ov, () => ov.remove());
-  }
-  function refreshStatusChips(root = document) {
-    for (const chip of root.querySelectorAll(".sc-status[data-status]")) {
-      const c = statusColor(chip.dataset.status);
-      if (c) paintStatusChip(chip, c);
-    }
-  }
-  function statusChip(value) {
-    const chip = el("span", "sc-status", dataLabel(value));
-    chip.dataset.status = String(value || "");
-    const c = statusColor(value);
-    if (c) paintStatusChip(chip, c);
-    return chip;
-  }
-  function paintStatusChip(chip, hex2) {
-    const v2 = vivid(hex2) || hex2;
-    if (!chip || !v2) return;
-    chip.classList.add("sc-status-filled");
-    chip.style.background = v2;
-    chip.style.borderColor = v2;
-    chip.style.color = inkOn(v2) || "";
-  }
-  var init_custom_status = __esm({
-    "src/custom-status.js"() {
+  var init_ai_error = __esm({
+    "src/ai/ai-error.js"() {
       init_i18n();
-      init_core();
-      init_ui();
-      init_icons();
-      init_status_choices();
-      init_color_util();
     }
   });
 
-  // src/recycle-core.js
-  function trashedAt(name5, mtime, now = Date.now()) {
-    const m = /^([0-9a-z]{8,9})-/.exec(String(name5 || ""));
-    if (m) {
-      const t3 = parseInt(m[1], 36);
-      if (t3 >= MIN_TS && t3 <= now + DAY) return t3;
-    }
-    return Number(mtime) || 0;
+  // src/err-text.js
+  function errCode(e) {
+    if (!e) return "";
+    const direct = String(e.code || "").toUpperCase();
+    if (CODE_KEY[direct]) return direct;
+    const msg = String(e && e.message || e || "");
+    const m = /\b(E[A-Z]{2,10})\b/.exec(msg);
+    if (m && CODE_KEY[m[1]]) return m[1];
+    if (/UNKNOWN/i.test(direct) || /\bUNKNOWN\b/.test(msg)) return "EBUSY";
+    if (/fetch failed|network|ERR_INTERNET|ERR_NAME_NOT_RESOLVED/i.test(msg)) return "ECONNREFUSED";
+    if (/JSON|Unexpected token .* in JSON|Unexpected end of JSON/i.test(msg)) return "EJSON";
+    return "";
   }
-  function isTrashCompanion(name5) {
-    return /\.k2restore\.json$/i.test(String(name5 || "")) || /\.vis\.csv$/i.test(String(name5 || ""));
+  function errText(e, o = {}) {
+    if (e == null) return t("ui.err.unknown");
+    const code3 = errCode(e);
+    if (code3 === "EJSON") return t("ui.err.badJson");
+    if (code3 && CODE_KEY[code3]) return t(CODE_KEY[code3]);
+    const raw = clip(redactSecrets(String(e && e.message || e || "")).trim(), o.max || 160);
+    return raw || t("ui.err.unknown");
   }
-  function purgeCandidates(entries, days, now = Date.now()) {
-    if (!(Number(days) > 0)) return [];
-    const cutoff = now - Number(days) * DAY;
-    return (entries || []).filter((e) => e && e.name && !isTrashCompanion(e.name) && !String(e.name).startsWith("._")).filter((e) => trashedAt(e.name, e.mtime, now) < cutoff).map((e) => e.name);
+  function failText(what, e, o) {
+    const why = errText(e, o);
+    const head2 = String(what || "").replace(/[:\s]+$/, "");
+    return why ? head2 + " \u2014 " + why : head2;
   }
-  function originalName(name5, now = Date.now()) {
-    const s = String(name5 || "");
-    const m = /^([0-9a-z]{8,9})-(.+)$/.exec(s);
-    if (m) {
-      const t3 = parseInt(m[1], 36);
-      if (t3 >= MIN_TS && t3 <= now + DAY) return m[2];
-    }
-    return s;
-  }
-  function nextStamp(now, last2) {
-    const n2 = Number(now) || 0;
-    const l = Number(last2) || 0;
-    return n2 > l ? n2 : l + 1;
-  }
-  function nameCandidate(name5, i5, { dir: dir2 = false } = {}) {
-    const s = String(name5 || "");
-    if (!(i5 > 1)) return s;
-    const m = dir2 ? null : /^(.+?)(\.[^./\\]{1,10})$/.exec(s);
-    return m ? m[1] + "-" + i5 + m[2] : s + "-" + i5;
-  }
-  var MIN_TS, DAY;
-  var init_recycle_core = __esm({
-    "src/recycle-core.js"() {
-      MIN_TS = Date.UTC(2020, 0, 1);
-      DAY = 864e5;
-    }
-  });
-
-  // src/trash-path.js
-  var trash_path_exports = {};
-  __export(trash_path_exports, {
-    freeName: () => freeName,
-    trashPathFor: () => trashPathFor
-  });
-  async function freeName(dir2, name5, opts = {}) {
-    for (let i5 = 1; i5 < 500; i5++) {
-      const cand = nameCandidate(name5, i5, opts);
-      if (opts.taken && opts.taken.has(cand)) continue;
-      if (!await kapi.exists(await kapi.join(dir2, cand))) return cand;
-    }
-    return nameCandidate(name5, Date.now(), opts);
-  }
-  async function trashPathFor(file, { dir: dir2 = false, root } = {}) {
-    const base4 = String(file || "").split(/[\\/]/).filter(Boolean).pop() || "item";
-    const recDir = await kapi.join(root || state.root, "Recycle");
-    await kapi.mkdir(recDir);
-    TRASH_C.last = nextStamp(Date.now(), TRASH_C.last);
-    return kapi.join(recDir, await freeName(recDir, TRASH_C.last.toString(36) + "-" + base4, { dir: dir2 }));
-  }
-  var TRASH_C;
-  var init_trash_path = __esm({
-    "src/trash-path.js"() {
-      init_core();
-      init_recycle_core();
-      TRASH_C = { last: 0 };
+  var CODE_KEY;
+  var init_err_text = __esm({
+    "src/err-text.js"() {
+      init_i18n();
+      init_ai_error();
+      CODE_KEY = {
+        ENOENT: "ui.err.notFound",
+        EACCES: "ui.err.denied",
+        EPERM: "ui.err.denied",
+        EBUSY: "ui.err.busy",
+        ETXTBSY: "ui.err.busy",
+        ENOSPC: "ui.err.noSpace",
+        EDQUOT: "ui.err.noSpace",
+        EROFS: "ui.err.readOnly",
+        EISDIR: "ui.err.isDir",
+        ENOTDIR: "ui.err.isDir",
+        EMFILE: "ui.err.tooManyFiles",
+        ENFILE: "ui.err.tooManyFiles",
+        ECONNREFUSED: "ui.err.network",
+        ECONNRESET: "ui.err.network",
+        ETIMEDOUT: "ui.err.network",
+        ENOTFOUND: "ui.err.network",
+        EAI_AGAIN: "ui.err.network"
+      };
     }
   });
 
@@ -28631,8 +28274,8 @@ ${BLOCK_END}
     sDoc = removeImageMeta(sDoc, file);
     await writeAlbumDoc(api, root, srcAlbum, sDoc);
     let dDoc = await readAlbumDoc(api, root, dstAlbum);
-    const maxOrder = Object.values(dDoc.images).reduce((m, x) => Math.max(m, x.order || 0), -1);
-    dDoc = setImageMeta2(dDoc, name5, { ...meta2, order: maxOrder + 1 });
+    const maxOrder2 = Object.values(dDoc.images).reduce((m, x) => Math.max(m, x.order || 0), -1);
+    dDoc = setImageMeta2(dDoc, name5, { ...meta2, order: maxOrder2 + 1 });
     await writeAlbumDoc(api, root, dstAlbum, dDoc);
     const sRel = albumRel(srcAlbum), dRel = albumRel(dstAlbum);
     return {
@@ -28729,6 +28372,1294 @@ ${BLOCK_END}
     }
   });
 
+  // src/timing.js
+  var timing_exports = {};
+  __export(timing_exports, {
+    ATTENTION_MIN_MS: () => ATTENTION_MIN_MS,
+    OSK_SPAWN_WAIT_MS: () => OSK_SPAWN_WAIT_MS,
+    RETRY_BASE_MS: () => RETRY_BASE_MS,
+    RETRY_MAX_MS: () => RETRY_MAX_MS,
+    SCRATCH_SAVE_DELAY_MS: () => SCRATCH_SAVE_DELAY_MS,
+    SPLASH_MAX_MS: () => SPLASH_MAX_MS,
+    TIP_DELAY_MS: () => TIP_DELAY_MS,
+    TIP_WARM_MS: () => TIP_WARM_MS,
+    UPDATE_FETCH_TIMEOUT_MS: () => UPDATE_FETCH_TIMEOUT_MS,
+    retryBackoff: () => retryBackoff
+  });
+  function retryBackoff(n2) {
+    const k = Number.isFinite(+n2) && +n2 > 0 ? Math.floor(+n2) : 0;
+    return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
+  }
+  var SPLASH_MAX_MS, UPDATE_FETCH_TIMEOUT_MS, SCRATCH_SAVE_DELAY_MS, RETRY_BASE_MS, RETRY_MAX_MS, ATTENTION_MIN_MS, TIP_DELAY_MS, TIP_WARM_MS, OSK_SPAWN_WAIT_MS;
+  var init_timing = __esm({
+    "src/timing.js"() {
+      SPLASH_MAX_MS = 3e4;
+      UPDATE_FETCH_TIMEOUT_MS = 2e4;
+      SCRATCH_SAVE_DELAY_MS = 3e3;
+      RETRY_BASE_MS = 500;
+      RETRY_MAX_MS = 8e3;
+      ATTENTION_MIN_MS = 8e3;
+      TIP_DELAY_MS = 450;
+      TIP_WARM_MS = 600;
+      OSK_SPAWN_WAIT_MS = 700;
+    }
+  });
+
+  // src/native-core.js
+  function rgbToHex(v2) {
+    const s = String(v2 || "").trim();
+    let m = /^#([0-9a-f]{3})$/i.exec(s);
+    if (m) return "#" + m[1].split("").map((c) => c + c).join("").toLowerCase();
+    m = /^#([0-9a-f]{6})$/i.exec(s);
+    if (m) return "#" + m[1].toLowerCase();
+    m = /^rgba?\(\s*(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)(?:[\s,/]+([\d.]+%?))?\s*\)$/i.exec(s);
+    if (!m) return "";
+    if (m[4] !== void 0 && parseFloat(m[4]) === 0) return "";
+    const h = (n2) => Math.max(0, Math.min(255, Math.round(+n2))).toString(16).padStart(2, "0");
+    return "#" + h(m[1]) + h(m[2]) + h(m[3]);
+  }
+  function createAltTap() {
+    let armed = false;
+    return {
+      /** @returns {void} */
+      down(e) {
+        if (e.key === "Alt" && !e.ctrlKey && !e.shiftKey && !e.metaKey && e.code !== "AltRight") {
+          if (!e.repeat) armed = true;
+        } else armed = false;
+      },
+      /** @returns {boolean} true = เป็นการแตะ Alt ที่สะอาด */
+      up(e) {
+        const hit = armed && e.key === "Alt";
+        armed = false;
+        return hit;
+      },
+      /** เมาส์/หน้าต่างเสียโฟกัส ระหว่างค้าง Alt = ไม่ใช่การแตะ */
+      cancel() {
+        armed = false;
+      },
+      get armed() {
+        return armed;
+      }
+    };
+  }
+  function menubarStep(count, i5, key2) {
+    if (!(count > 0)) return -1;
+    if (key2 === "Home") return 0;
+    if (key2 === "End") return count - 1;
+    if (key2 === "ArrowRight") return (i5 + 1 + count) % count;
+    if (key2 === "ArrowLeft") return (i5 - 1 + count) % count;
+    return -1;
+  }
+  function classifyOsDrop(entries, is2) {
+    const list3 = (entries || []).filter((e) => e && e.name);
+    if (!list3.length) return { kind: "none" };
+    const proj = list3.find((e) => e.projectRoot);
+    if (proj) return { kind: "project", root: proj.projectRoot };
+    const imgs = list3.filter((e) => !e.isDir && is2.isImage(e.name));
+    if (imgs.length) return { kind: "images", items: imgs };
+    const sp = list3.find((e) => !e.isDir && is2.isScreenplay(e.name));
+    if (sp) return { kind: "screenplay", item: sp };
+    return { kind: "none" };
+  }
+  function isScreenplayFile(name5) {
+    const m = /\.([a-z0-9]+)$/i.exec(String(name5 || ""));
+    return !!m && SCREENPLAY_EXT.includes(m[1].toLowerCase());
+  }
+  function freeFileName(name5, taken) {
+    const has3 = new Set([...taken || []].map((x) => String(x).toLowerCase()));
+    const n2 = String(name5 || "image.png");
+    if (!has3.has(n2.toLowerCase())) return n2;
+    const dot2 = n2.lastIndexOf(".");
+    const base4 = dot2 > 0 ? n2.slice(0, dot2) : n2, ext = dot2 > 0 ? n2.slice(dot2) : "";
+    for (let i5 = 2; i5 < 1e4; i5++) {
+      const c = base4 + "-" + i5 + ext;
+      if (!has3.has(c.toLowerCase())) return c;
+    }
+    return base4 + "-" + Date.now() + ext;
+  }
+  function shouldCallAttention(elapsedMs, focused, minMs) {
+    return !focused && elapsedMs >= minMs;
+  }
+  var SCREENPLAY_EXT;
+  var init_native_core = __esm({
+    "src/native-core.js"() {
+      SCREENPLAY_EXT = ["fountain", "fdx", "celtx", "astx", "fadein"];
+    }
+  });
+
+  // src/native-shell-ui.js
+  var native_shell_ui_exports = {};
+  __export(native_shell_ui_exports, {
+    enterMenubar: () => enterMenubar,
+    handleOsDrop: () => handleOsDrop,
+    initNativeShell: () => initNativeShell,
+    menubarActive: () => menubarActive,
+    nativeShellInfo: () => nativeShellInfo,
+    syncWindowChrome: () => syncWindowChrome,
+    taskFinished: () => taskFinished,
+    taskbarProgress: () => taskbarProgress
+  });
+  function nativeShellInfo() {
+    return { ...NS };
+  }
+  function applyWinState(s) {
+    if (!s) return;
+    NS.max = !!s.max;
+    NS.full = !!s.full;
+    const b = document.body;
+    b.classList.toggle("k-win-max", NS.max);
+    b.classList.toggle("k-win-full", NS.full);
+    const mx = $("#win-max");
+    if (mx && mx.dataset.state !== (NS.max ? "max" : "normal")) {
+      mx.dataset.state = NS.max ? "max" : "normal";
+      mx.replaceChildren(icon(NS.max ? "window-restore" : "maximize", 18));
+      const key2 = NS.max ? "ui.html.winRestore" : "ui.html.winMax";
+      mx.setAttribute("data-i18n-title", key2);
+      mx.title = t(key2);
+    }
+  }
+  function syncWindowChrome() {
+    try {
+      const bar = $("#titlebar");
+      if (!bar || !window.kapi || typeof kapi.winChrome !== "function") return false;
+      const cs = getComputedStyle(bar);
+      const mode = document.documentElement.style.colorScheme === "light" ? "light" : "dark";
+      const o = {
+        mode,
+        color: rgbToHex(cs.backgroundColor),
+        symbol: rgbToHex(cs.color),
+        height: Math.round(bar.getBoundingClientRect().height) || 36
+      };
+      const sig = JSON.stringify(o);
+      if (sig === NS.lastChrome) return false;
+      NS.lastChrome = sig;
+      kapi.winChrome(o).catch(() => {
+      });
+      return true;
+    } catch (e) {
+      log("warn", "window chrome", e);
+      return false;
+    }
+  }
+  function installMiddleClickGuard() {
+    document.addEventListener("mousedown", (e) => {
+      if (e.button === 1) e.preventDefault();
+    }, true);
+  }
+  function menubarActive() {
+    return MB.on;
+  }
+  function leaveMenubar(restore2) {
+    if (!MB.on) return;
+    MB.on = false;
+    document.body.classList.remove("k-menubar-on");
+    const back = MB.back;
+    MB.back = null;
+    if (restore2 && back && back.isConnected) {
+      try {
+        back.focus({ preventScroll: true });
+      } catch {
+      }
+    } else if (restore2) {
+      const a = document.activeElement;
+      if (a && a.classList && a.classList.contains("tb-menu")) a.blur();
+    }
+  }
+  function enterMenubar() {
+    if (!menubarUsable()) return false;
+    const list3 = menuItems();
+    MB.back = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+    MB.on = true;
+    document.body.classList.add("k-menubar-on");
+    list3[0].focus({ preventScroll: true });
+    return true;
+  }
+  function installMenubarKeys() {
+    const bar = $("#titlebar");
+    if (!bar) return;
+    const dress = () => {
+      const list3 = [...bar.querySelectorAll(".tb-menu")];
+      for (const m of list3) {
+        m.tabIndex = -1;
+        m.setAttribute("role", "menuitem");
+        m.setAttribute("aria-haspopup", "menu");
+        m.addEventListener("mousedown", (e) => e.preventDefault());
+      }
+      bar.setAttribute("role", "menubar");
+      bar.setAttribute("aria-label", t("ui.native.menubar"));
+    };
+    dress();
+    const tap = createAltTap();
+    window.addEventListener("keydown", (e) => {
+      tap.down(e);
+      if (e.code === "F10" && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (MB.on) {
+          e.preventDefault();
+          leaveMenubar(true);
+        } else if (enterMenubar()) e.preventDefault();
+        return;
+      }
+      if (!MB.on) return;
+      const a = document.activeElement;
+      const list3 = menuItems();
+      const i5 = list3.indexOf(a);
+      if (i5 < 0) {
+        leaveMenubar(false);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        leaveMenubar(true);
+        return;
+      }
+      if (e.key === "Tab") {
+        leaveMenubar(true);
+        return;
+      }
+      const j = menubarStep(list3.length, i5, e.key);
+      if (j >= 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        list3[j].focus({ preventScroll: true });
+        return;
+      }
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+        e.preventDefault();
+        e.stopPropagation();
+        a.click();
+      }
+    }, true);
+    window.addEventListener("keyup", (e) => {
+      if (!tap.up(e)) return;
+      if (MB.on) {
+        e.preventDefault();
+        leaveMenubar(true);
+      } else if (enterMenubar()) e.preventDefault();
+    }, true);
+    window.addEventListener("mousedown", () => {
+      tap.cancel();
+      if (MB.on) leaveMenubar(false);
+    }, true);
+    window.addEventListener("blur", () => {
+      tap.cancel();
+    });
+    window.addEventListener("wheel", () => {
+      tap.cancel();
+    }, { capture: true, passive: true });
+    bar.addEventListener("focusout", (e) => {
+      if (MB.on && !(e.relatedTarget && bar.contains(e.relatedTarget) && e.relatedTarget.classList.contains("tb-menu")))
+        setTimeout(() => {
+          if (MB.on && !menuItems().includes(document.activeElement) && document.hasFocus()) leaveMenubar(false);
+        }, 0);
+    });
+  }
+  async function describeDropped(files) {
+    const out = [];
+    for (const f of files) {
+      let p = "";
+      try {
+        p = kapi.pathForFile && kapi.pathForFile(f) || "";
+      } catch {
+      }
+      const e = { name: f.name, path: p, file: f, isDir: false, projectRoot: "" };
+      if (p) {
+        try {
+          e.isDir = !!await kapi.isDir(p);
+        } catch {
+        }
+        try {
+          if (e.isDir && await kapi.exists(await kapi.join(p, "project.khn.json"))) e.projectRoot = p;
+          else if (!e.isDir && /(^|[\\/])project\.khn\.json$/i.test(p)) e.projectRoot = p.replace(/[\\/][^\\/]*$/, "");
+        } catch {
+        }
+      }
+      out.push(e);
+    }
+    return out;
+  }
+  async function importImages(items) {
+    const dir2 = await albumDir(kapi, state.root, ROOT_ALBUM);
+    await kapi.mkdir(dir2);
+    let taken = [];
+    try {
+      taken = await kapi.listFiles(dir2) || [];
+    } catch {
+    }
+    const names = [];
+    await withBusy(t("ui.native.dropImagesBusy"), async () => {
+      for (const it of items) {
+        try {
+          const name5 = freeFileName(it.name, taken);
+          const buf = new Uint8Array(await it.file.arrayBuffer());
+          let bin = "";
+          for (let i5 = 0; i5 < buf.length; i5 += 32768) bin += String.fromCharCode.apply(null, buf.subarray(i5, i5 + 32768));
+          await kapi.writeImageData(dir2, name5, btoa(bin));
+          taken.push(name5);
+          names.push(name5);
+        } catch (err2) {
+          setStatusError(failText(t("ui.native.dropImagesFailed"), err2));
+        }
+      }
+    });
+    return names;
+  }
+  async function handleOsDrop(entries, target) {
+    const what = classifyOsDrop(entries, { isImage: isImageFile, isScreenplay: isScreenplayFile });
+    if (what.kind === "project") {
+      log("info", "os drop: open project", what.root);
+      if (HOOKS.openProject) await HOOKS.openProject(what.root);
+      return what;
+    }
+    if (what.kind === "none") {
+      toast(t("ui.native.dropUnsupported"), { level: "warn" });
+      return what;
+    }
+    if (!state.root) {
+      toast(t("ui.native.dropNeedProject"), { level: "warn" });
+      return { kind: "none" };
+    }
+    if (what.kind === "screenplay") {
+      log("info", "os drop: import screenplay", what.item.name);
+      if (what.item.path && HOOKS.importScript) await HOOKS.importScript(what.item.path);
+      return what;
+    }
+    const names = await importImages(what.items);
+    if (!names.length) return what;
+    const tab = state.active;
+    const onDoc3 = !!(target && target.closest && target.closest(".pane") && tab && (tab.editor || tab.sp) && !tab.locked);
+    if (onDoc3 && HOOKS.insertImage) {
+      for (const n2 of names) await HOOKS.insertImage(n2);
+      setStatus(tf("ui.native.dropImagesInserted", names.length));
+    } else {
+      toast(
+        tf("ui.native.dropImagesAdded", names.length),
+        { action: HOOKS.openGallery ? { label: t("ui.native.openGallery"), onClick: () => HOOKS.openGallery() } : null }
+      );
+    }
+    log("info", "os drop: images", names.length + (onDoc3 ? " \u2192 scene" : " \u2192 gallery"));
+    return { ...what, names, inserted: onDoc3 };
+  }
+  function installOsDrop(act) {
+    let internal2 = false;
+    document.addEventListener("dragstart", () => {
+      internal2 = true;
+    }, true);
+    document.addEventListener("dragend", () => {
+      internal2 = false;
+    }, true);
+    document.addEventListener("mousemove", () => {
+      if (internal2) internal2 = false;
+    }, { capture: true, passive: true });
+    document.addEventListener("dragover", (e) => {
+      if (internal2 || !hasFiles(e.dataTransfer)) return;
+      e.preventDefault();
+      try {
+        e.dataTransfer.dropEffect = act ? "copy" : "none";
+      } catch {
+      }
+    });
+    document.addEventListener("drop", (e) => {
+      const own = internal2;
+      internal2 = false;
+      if (own || !hasFiles(e.dataTransfer)) return;
+      const files = [...e.dataTransfer.files || []];
+      const mine = !e.defaultPrevented;
+      e.preventDefault();
+      if (!act || !mine || !files.length) return;
+      const target = e.target;
+      describeDropped(files).then((ents) => handleOsDrop(ents, target)).catch((err2) => {
+        log("error", "os drop", err2);
+        setStatusError(failText(t("ui.native.dropImagesFailed"), err2));
+      });
+    });
+  }
+  function taskbarProgress(done3, total) {
+    try {
+      if (!window.kapi || typeof kapi.winProgress !== "function") return;
+      const v2 = done3 === -1 ? -1 : total > 0 ? Math.max(0, Math.min(1, done3 / total)) : "busy";
+      kapi.winProgress(v2).catch(() => {
+      });
+    } catch {
+    }
+  }
+  function taskFinished(name5, elapsedMs) {
+    try {
+      if (!shouldCallAttention(elapsedMs, document.hasFocus(), ATTENTION_MIN_MS)) return false;
+      if (!window.kapi || typeof kapi.winAttention !== "function") return false;
+      kapi.winAttention({ title: "Killian 2", body: tf("ui.native.taskDone", String(name5 || "")) }).catch(() => {
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function initNativeShell(hooks2 = {}) {
+    if (NS.inited) return false;
+    NS.inited = true;
+    Object.assign(HOOKS, hooks2);
+    const plat = window.kapi && kapi.platform || "linux";
+    NS.platform = plat;
+    const b = document.body;
+    b.classList.add(plat === "win32" ? "k-os-win" : plat === "darwin" ? "k-os-mac" : "k-os-linux");
+    installMiddleClickGuard();
+    installOsDrop(!hooks2.panelWin);
+    if (hooks2.panelWin) return true;
+    NS.native = plat === "win32" || plat === "darwin";
+    b.classList.toggle("k-native-caption", NS.native);
+    try {
+      if (kapi.onWinState) kapi.onWinState(applyWinState);
+      if (kapi.winState) kapi.winState().then(applyWinState).catch(() => {
+      });
+    } catch (e) {
+      log("warn", "win state", e);
+    }
+    if (plat !== "darwin") installMenubarKeys();
+    try {
+      new ResizeObserver(() => syncWindowChrome()).observe($("#titlebar"));
+    } catch {
+    }
+    syncWindowChrome();
+    return true;
+  }
+  var HOOKS, NS, MB, menuItems, menubarUsable, hasFiles;
+  var init_native_shell_ui = __esm({
+    "src/native-shell-ui.js"() {
+      init_core();
+      init_err_text();
+      init_i18n();
+      init_icons();
+      init_ui();
+      init_album_core();
+      init_timing();
+      init_native_core();
+      HOOKS = { openProject: null, importScript: null, insertImage: null, openGallery: null };
+      NS = { platform: "linux", native: false, max: false, full: false, inited: false, lastChrome: "" };
+      MB = { on: false, back: null };
+      menuItems = () => [...document.querySelectorAll("#titlebar .tb-menu")].filter((m) => m.offsetParent !== null && getComputedStyle(m).visibility !== "hidden");
+      menubarUsable = () => !document.querySelector(".k-overlay") && !menuOpen() && menuItems().length > 0;
+      hasFiles = (dt) => {
+        try {
+          return !!dt && [...dt.types].includes("Files");
+        } catch {
+          return false;
+        }
+      };
+    }
+  });
+
+  // src/json-guard.js
+  function brokenBackupName(file, date = /* @__PURE__ */ new Date()) {
+    const s = String(file || "");
+    const cut = Math.max(s.lastIndexOf("/"), s.lastIndexOf("\\"));
+    const dir2 = s.slice(0, cut + 1), base4 = s.slice(cut + 1);
+    const dot2 = base4.lastIndexOf(".");
+    const stem = dot2 > 0 ? base4.slice(0, dot2) : base4, ext = dot2 > 0 ? base4.slice(dot2) : "";
+    const stamp = date.getFullYear() + pad2(date.getMonth() + 1) + pad2(date.getDate()) + "-" + pad2(date.getHours()) + pad2(date.getMinutes()) + pad2(date.getSeconds());
+    return dir2 + stem + ".unreadable-" + stamp + ext;
+  }
+  async function readJsonGuarded(io, file, fallback, o = {}) {
+    const k = keyOf(file);
+    let has3 = false;
+    try {
+      has3 = !!await io.exists(file);
+    } catch {
+      has3 = false;
+    }
+    if (!has3) {
+      done.delete(k);
+      return { data: fallback(), state: "missing", backup: "", writable: true, fresh: false };
+    }
+    try {
+      const data2 = await io.readJson(file);
+      if (data2 === null || typeof data2 !== "object") throw new Error("not an object");
+      done.delete(k);
+      return { data: data2, state: "ok", backup: "", writable: true, fresh: false };
+    } catch (error2) {
+      let sig = "";
+      try {
+        sig = io.mtime ? String(await io.mtime(file)) : "";
+      } catch {
+        sig = "";
+      }
+      const was = done.get(k);
+      if (was && was.sig === sig && was.backup) {
+        return { data: fallback(), state: "broken", backup: was.backup, writable: true, fresh: false, error: error2 };
+      }
+      let backup = "";
+      try {
+        const dst = brokenBackupName(file, o.now || /* @__PURE__ */ new Date());
+        await io.copyFile(file, dst);
+        backup = dst;
+      } catch {
+        backup = "";
+      }
+      done.set(k, { sig, backup });
+      return { data: fallback(), state: "broken", backup, writable: !!backup, fresh: true, error: error2 };
+    }
+  }
+  function resetJsonGuard() {
+    done.clear();
+  }
+  var done, keyOf, pad2;
+  var init_json_guard = __esm({
+    "src/json-guard.js"() {
+      done = /* @__PURE__ */ new Map();
+      keyOf = (p) => String(p || "").split("\\").join("/").replace(/\/+$/, "").toLowerCase();
+      pad2 = (n2) => String(n2).padStart(2, "0");
+    }
+  });
+
+  // src/json-store.js
+  var json_store_exports = {};
+  __export(json_store_exports, {
+    fileKey: () => fileKey,
+    mutateJson: () => mutateJson,
+    onBrokenJson: () => onBrokenJson,
+    pendingLocks: () => pendingLocks,
+    withFileLock: () => withFileLock
+  });
+  function onBrokenJson(fn) {
+    brokenListener = typeof fn === "function" ? fn : null;
+  }
+  function fileKey(p) {
+    return String(p || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  }
+  function withFileLock(file, fn) {
+    const k = fileKey(file);
+    const prev = queues.get(k) || Promise.resolve();
+    const run3 = prev.catch(() => {
+    }).then(() => fn());
+    const tail = run3.then(() => {
+    }, () => {
+    });
+    queues.set(k, tail);
+    tail.then(() => {
+      if (queues.get(k) === tail) queues.delete(k);
+    });
+    return run3;
+  }
+  function pendingLocks() {
+    return queues.size;
+  }
+  function mutateJson(io, file, fn, opts = {}) {
+    return withFileLock(file, async () => {
+      let data2;
+      try {
+        data2 = await io.readJson(file);
+      } catch (e) {
+        if (!("fallback" in opts)) throw e;
+        let has3 = false;
+        try {
+          has3 = typeof io.exists === "function" ? !!await io.exists(file) : false;
+        } catch {
+          has3 = false;
+        }
+        if (has3) {
+          let backup = "";
+          try {
+            if (typeof io.copyFile === "function") {
+              const dst = brokenBackupName(file);
+              await io.copyFile(file, dst);
+              backup = dst;
+            }
+          } catch {
+            backup = "";
+          }
+          try {
+            if (brokenListener) brokenListener({ file, backup, error: e });
+          } catch {
+          }
+          if (!backup) throw e;
+        }
+        data2 = typeof opts.fallback === "function" ? opts.fallback() : clone2(opts.fallback);
+      }
+      const result = await fn(data2);
+      if (result === false) return { data: data2, changed: false, result };
+      await io.writeFile(file, JSON.stringify(data2, null, 2));
+      return { data: data2, changed: true, result };
+    });
+  }
+  var queues, brokenListener, clone2;
+  var init_json_store = __esm({
+    "src/json-store.js"() {
+      init_json_guard();
+      queues = /* @__PURE__ */ new Map();
+      brokenListener = null;
+      clone2 = (v2) => JSON.parse(JSON.stringify(v2));
+    }
+  });
+
+  // src/scene-mentions.js
+  var scene_mentions_exports = {};
+  __export(scene_mentions_exports, {
+    sceneMentions: () => sceneMentions
+  });
+  function sceneMentions(text, byCat = {}, fileOf2 = {}, opts = {}) {
+    let s = String(text || "").replace(/<!--[\s\S]*?-->/g, " ");
+    if (!s.trim()) return [];
+    const titles = new Set(opts.titles || []);
+    const entries = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const [cat, names] of Object.entries(byCat || {})) {
+      for (const n2 of names || []) {
+        const name5 = String(n2 || "").trim();
+        if (name5.length < 2 || seen.has(name5)) continue;
+        seen.add(name5);
+        entries.push({ name: name5, cat, file: fileOf2[name5] || "" });
+      }
+    }
+    entries.sort((a, b) => b.name.length - a.name.length);
+    const hits = /* @__PURE__ */ new Map();
+    for (const e of entries) {
+      let i5 = 0, n2 = 0;
+      const low = /[A-Za-z]/.test(e.name);
+      const hay = low ? s.toLowerCase() : s;
+      const needle = low ? e.name.toLowerCase() : e.name;
+      let out = "";
+      let last2 = 0;
+      while ((i5 = hay.indexOf(needle, i5)) !== -1) {
+        const before = s[i5 - 1], after = s[i5 + needle.length];
+        if (low && (isWordChar(before) || isWordChar(after))) {
+          i5 += needle.length;
+          continue;
+        }
+        n2++;
+        out += s.slice(last2, i5) + "\0".repeat(needle.length);
+        last2 = i5 + needle.length;
+        i5 = last2;
+      }
+      if (!n2) continue;
+      s = out + s.slice(last2);
+      const key2 = e.file || "name:" + e.name;
+      const h = hits.get(key2) || { name: e.name, file: e.file, cat: e.cat, count: 0, forms: /* @__PURE__ */ new Set() };
+      h.count += n2;
+      h.forms.add(e.name);
+      if (titles.has(e.name)) h.name = e.name;
+      hits.set(key2, h);
+    }
+    const groups = /* @__PURE__ */ new Map();
+    for (const h of hits.values()) {
+      if (!groups.has(h.cat)) groups.set(h.cat, []);
+      groups.get(h.cat).push({ name: h.name, file: h.file, count: h.count, forms: [...h.forms] });
+    }
+    const order = opts.order || [];
+    const rank = (c) => {
+      const i5 = order.indexOf(c);
+      return i5 < 0 ? 1e6 : i5;
+    };
+    return [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || cmpText(a[0], b[0])).map(([cat, items]) => ({ cat, items: items.sort((a, b) => b.count - a.count || cmpText(a.name, b.name)) }));
+  }
+  var isWordChar;
+  var init_scene_mentions = __esm({
+    "src/scene-mentions.js"() {
+      init_locale();
+      isWordChar = (c) => !!c && /[A-Za-z0-9_]/.test(c);
+    }
+  });
+
+  // src/color-util.js
+  var color_util_exports = {};
+  __export(color_util_exports, {
+    STATUS_PALETTE: () => STATUS_PALETTE,
+    VIVID: () => VIVID,
+    contrast: () => contrast,
+    inkOn: () => inkOn,
+    luminance: () => luminance,
+    nextStatusColor: () => nextStatusColor,
+    normHex: () => normHex,
+    tint: () => tint,
+    vivid: () => vivid
+  });
+  function normHex(v2) {
+    let s = String(v2 || "").trim().toLowerCase();
+    if (!s) return "";
+    if (s[0] !== "#") s = "#" + s;
+    if (/^#[0-9a-f]{3}$/.test(s)) s = "#" + s.slice(1).split("").map((c) => c + c).join("");
+    return /^#[0-9a-f]{6}$/.test(s) ? s : "";
+  }
+  function vivid(v2) {
+    const h = normHex(v2);
+    return h ? VIVID[h] || h : "";
+  }
+  function luminance(v2) {
+    const h = normHex(v2);
+    if (!h) return 0;
+    const ch = [1, 3, 5].map((i5) => parseInt(h.slice(i5, i5 + 2), 16) / 255).map((c) => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  }
+  function contrast(a, b) {
+    const la = luminance(a), lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  function inkOn(bg) {
+    const h = normHex(bg);
+    if (!h) return "";
+    return contrast(h, "#ffffff") >= contrast(h, "#1a1426") ? "#ffffff" : "#1a1426";
+  }
+  function tint(v2, alpha = 0.16) {
+    const h = normHex(v2);
+    if (!h) return "";
+    const [r, g, b] = [1, 3, 5].map((i5) => parseInt(h.slice(i5, i5 + 2), 16));
+    return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
+  }
+  function nextStatusColor(used = []) {
+    const taken = new Set(used.map(normHex));
+    return STATUS_PALETTE.find((c) => !taken.has(c)) || STATUS_PALETTE[used.length % STATUS_PALETTE.length];
+  }
+  var VIVID, STATUS_PALETTE;
+  var init_color_util = __esm({
+    "src/color-util.js"() {
+      VIVID = {
+        "#d9575e": "#ff4d6d",
+        // แดง
+        "#d97757": "#ff7a2f",
+        // ส้ม
+        "#d9b757": "#ffc42e",
+        // เหลือง
+        "#6fae6f": "#2ecc71",
+        // เขียว
+        "#5f9fd9": "#3b9bff",
+        // ฟ้า
+        "#a97fd0": "#a66bff",
+        // ม่วง
+        "#8a8f98": "#8f9bb3"
+        // เทากลาง (สถานะที่ไม่มีสีของตัวเอง)
+      };
+      STATUS_PALETTE = ["#ff4d6d", "#ff7a2f", "#ffc42e", "#2ecc71", "#1abc9c", "#3b9bff", "#a66bff", "#ff5fb8"];
+    }
+  });
+
+  // src/project-scan.js
+  var project_scan_exports = {};
+  __export(project_scan_exports, {
+    SKIP_DIRS: () => SKIP_DIRS,
+    WIKI_DIRS: () => WIKI_DIRS,
+    chapterFolders: () => chapterFolders,
+    findScenePath: () => findScenePath,
+    joinSync: () => joinSync,
+    listEntities: () => listEntities,
+    listScenes: () => listScenes,
+    pathSep: () => pathSep,
+    scenePath: () => scenePath,
+    syncIo: () => syncIo
+  });
+  function pathSep(sample) {
+    const s = sample || state && state.root || "";
+    if (s.includes("\\")) return "\\";
+    if (s.includes("/")) return "/";
+    return typeof navigator !== "undefined" && /win/i.test(navigator.platform || "") ? "\\" : "/";
+  }
+  function joinSync(...parts) {
+    const sep = pathSep(parts[0]);
+    return parts.filter((p) => p != null && p !== "").join(sep).replace(/[\\/]+/g, sep === "\\" ? "\\" : "/");
+  }
+  function syncIo() {
+    return {
+      join: joinSync,
+      exists: (p) => kapi.exists(p),
+      readFile: (p) => kapi.readFile(p),
+      readJson: (p) => kapi.readJson(p),
+      writeFile: (p, c) => kapi.writeFile(p, c),
+      mkdir: (p) => kapi.mkdir(p),
+      listFiles: (p, ext) => kapi.listFiles(p, ext),
+      listDirs: (p) => kapi.listDirs(p),
+      move: (a, b) => kapi.move(a, b),
+      remove: (p) => kapi.remove(p),
+      // [alpha.156] คิวของไฟล์ตัวเดียวกับ mutateJson — Kanban ใช้กันเขียน scenes.json ชนกับงานอื่น
+      withLock: (p, fn) => withFileLock(p, fn)
+    };
+  }
+  async function chapterFolders(draftPath) {
+    const map2 = {};
+    try {
+      const dj = await kapi.readJson(await kapi.join(draftPath, "draft.json"));
+      for (const ch of dj.chapters || []) if (ch.guid) map2[ch.guid] = ch.folderName || ch.guid;
+    } catch {
+    }
+    return map2;
+  }
+  async function scenePath(draftPath, chapterId, sc, folders) {
+    const folder = folders && folders[chapterId] || sc.folderName || chapterId;
+    return kapi.join(draftPath, "Chapters", folder, sc.fileName || sc.id + ".md");
+  }
+  async function listScenes(root, { withText = false } = {}) {
+    const out = [];
+    if (!root) return out;
+    let secs = [];
+    try {
+      secs = await kapi.listDirs(root);
+    } catch {
+      return out;
+    }
+    for (const sec2 of secs) {
+      if (WIKI_DIRS.includes(sec2) || SKIP_DIRS.includes(sec2)) continue;
+      const dr = await kapi.join(await kapi.join(root, sec2), "Draft");
+      if (!await kapi.exists(dr)) continue;
+      let drafts = [];
+      try {
+        drafts = await kapi.listDirs(dr);
+      } catch {
+        continue;
+      }
+      for (const dn of drafts) {
+        const dp = await kapi.join(dr, dn);
+        const scFile = await kapi.join(dp, "scenes.json");
+        if (!await kapi.exists(scFile)) continue;
+        let sdata;
+        try {
+          sdata = await kapi.readJson(scFile);
+        } catch {
+          continue;
+        }
+        const folders = await chapterFolders(dp);
+        for (const chId of Object.keys(sdata.chapters || {})) {
+          for (const sc of sdata.chapters[chId] || []) {
+            if (sc.type === "memo") continue;
+            const p = await scenePath(dp, chId, sc, folders);
+            const row4 = {
+              id: sc.id,
+              title: sc.title || sc.fileName || "",
+              chapterId: chId,
+              path: p,
+              draftPath: dp,
+              section: sec2,
+              draft: dn,
+              row: sc
+            };
+            if (withText) {
+              try {
+                row4.text = await kapi.exists(p) ? await kapi.readFile(p) : "";
+              } catch {
+                row4.text = "";
+              }
+              try {
+                row4.body = (0, import_md5.parseMdFile)(row4.text).body;
+              } catch {
+                row4.body = row4.text;
+              }
+            }
+            out.push(row4);
+          }
+        }
+      }
+    }
+    return out;
+  }
+  async function findScenePath(root, sceneId) {
+    const all = await listScenes(root);
+    const hit = all.find((s) => s.id === sceneId);
+    return hit ? hit : null;
+  }
+  async function listEntities(root) {
+    const out = [];
+    if (!root) return out;
+    let secs = [];
+    try {
+      secs = await kapi.listDirs(root);
+    } catch {
+      return out;
+    }
+    for (const sec2 of secs) {
+      if (!WIKI_DIRS.includes(sec2)) continue;
+      const wp = await kapi.join(root, sec2);
+      let cats = [];
+      try {
+        cats = await kapi.listDirs(wp);
+      } catch {
+        continue;
+      }
+      for (const cat of cats) {
+        const cd = await kapi.join(wp, cat);
+        for (const f of await kapi.listFiles(cd, ".json")) {
+          try {
+            const fp = await kapi.join(cd, f);
+            const e = await kapi.readJson(fp);
+            if (e && e.name) out.push({ id: fp, path: fp, name: e.name, aliases: e.aliases || [], cat, entity: e });
+          } catch (err2) {
+            log("warn", t("ui.project.readCant") + f, err2);
+          }
+        }
+      }
+    }
+    return out;
+  }
+  var import_md5, SKIP_DIRS, WIKI_DIRS;
+  var init_project_scan = __esm({
+    "src/project-scan.js"() {
+      init_i18n();
+      init_core();
+      import_md5 = __toESM(require_md());
+      init_json_store();
+      SKIP_DIRS = [
+        "Images",
+        "Memos",
+        "Recycle",
+        "Snapshots",
+        "Backups",
+        "Plugins",
+        "Research",
+        "Analysis",
+        // [alpha.89r] เซสชันผลวิเคราะห์ ไม่ใช่เนื้อเรื่อง
+        "OnSet",
+        // [alpha.164] ฉบับเดิมของฉากมีปัญหา (สำเนา ไม่ใช่เนื้อเรื่อง)
+        "Sessions",
+        "Starters"
+      ];
+      WIKI_DIRS = ["Wiki", "Bible"];
+    }
+  });
+
+  // src/custom-status.js
+  var custom_status_exports = {};
+  __export(custom_status_exports, {
+    addCustomStatus: () => addCustomStatus,
+    allStatuses: () => allStatuses,
+    deleteStatus: () => deleteStatus,
+    getCustomStatuses: () => getCustomStatuses,
+    getHiddenStatuses: () => getHiddenStatuses,
+    getStatusColors: () => getStatusColors,
+    importStatuses: () => importStatuses,
+    manageCustomStatuses: () => manageCustomStatuses,
+    orderStatuses: () => orderStatuses,
+    paintStatusChip: () => paintStatusChip,
+    refreshStatusChips: () => refreshStatusChips,
+    removeCustomStatus: () => removeCustomStatus,
+    setStatusColor: () => setStatusColor,
+    setStatusOrder: () => setStatusOrder,
+    statusChip: () => statusChip,
+    statusColor: () => statusColor,
+    statusesToJson: () => statusesToJson,
+    unhideStatus: () => unhideStatus
+  });
+  function getCustomStatuses() {
+    if (!state.meta) return [];
+    return state.meta.customStatuses || [];
+  }
+  function getHiddenStatuses() {
+    return state.meta && Array.isArray(state.meta.hiddenStatuses) ? state.meta.hiddenStatuses : [];
+  }
+  function orderStatuses(list3, order) {
+    if (!Array.isArray(order) || !order.length) return list3.slice();
+    const rank = new Map(order.map((k, i5) => [k, i5]));
+    return list3.slice().sort((a, b) => (rank.has(a) ? rank.get(a) : 1e6 + list3.indexOf(a)) - (rank.has(b) ? rank.get(b) : 1e6 + list3.indexOf(b)));
+  }
+  function allStatuses() {
+    const hidden2 = new Set(getHiddenStatuses());
+    const list3 = [...SCENE_STATUSES.filter((s) => !hidden2.has(s)), ...getCustomStatuses()];
+    return orderStatuses(list3, state.meta && state.meta.statusOrder);
+  }
+  function announce() {
+    try {
+      window.dispatchEvent(new CustomEvent("k2-statuses-changed"));
+    } catch {
+    }
+  }
+  async function setStatusOrder(order) {
+    if (!state.meta || !Array.isArray(order)) return false;
+    state.meta.statusOrder = order.filter((s, i5, a) => s && a.indexOf(s) === i5);
+    await persist();
+    return true;
+  }
+  async function deleteStatus(label2) {
+    if (!state.meta || !label2) return false;
+    if (SCENE_STATUSES.includes(label2)) {
+      state.meta.hiddenStatuses = [.../* @__PURE__ */ new Set([...getHiddenStatuses(), label2])];
+      await persist();
+      return true;
+    }
+    return removeCustomStatus(label2);
+  }
+  async function unhideStatus(label2) {
+    if (!state.meta) return false;
+    state.meta.hiddenStatuses = getHiddenStatuses().filter((s) => s !== label2);
+    await persist();
+    return true;
+  }
+  function getStatusColors() {
+    if (!state.meta) return {};
+    return state.meta.customStatusColors || {};
+  }
+  function statusColor(label2) {
+    if (!label2) return "";
+    return getStatusColors()[label2] || STATUS_COLORS[label2] || DEFAULT_STATUS_COLOR;
+  }
+  async function persist() {
+    const { saveProjectMeta: saveProjectMeta2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    await saveProjectMeta2();
+    announce();
+  }
+  async function setStatusColor(label2, hex2) {
+    if (!state.meta || !label2) return false;
+    state.meta.customStatusColors = { ...getStatusColors(), [label2]: hex2 };
+    await persist();
+    return true;
+  }
+  async function addCustomStatus(label2, color) {
+    if (!state.meta || !label2) return false;
+    const name5 = String(label2).trim();
+    if (!name5 || allStatuses().includes(name5)) return false;
+    state.meta.customStatuses = [...getCustomStatuses(), name5];
+    if (color) state.meta.customStatusColors = { ...getStatusColors(), [name5]: color };
+    await persist();
+    setStatus(t("ui.status.addStatusDone") + name5);
+    return true;
+  }
+  async function removeCustomStatus(label2) {
+    if (!state.meta) return false;
+    state.meta.customStatuses = getCustomStatuses().filter((s) => s !== label2);
+    const colors = { ...getStatusColors() };
+    delete colors[label2];
+    state.meta.customStatusColors = colors;
+    await persist();
+    setStatus(t("ui.status.delStatusDone") + label2);
+    return true;
+  }
+  function statusesToJson() {
+    return {
+      kind: "killian-statuses",
+      version: 1,
+      statuses: getCustomStatuses(),
+      colors: getStatusColors()
+    };
+  }
+  async function importStatuses(data2) {
+    if (!state.meta || !data2) return 0;
+    const incoming = Array.isArray(data2) ? data2 : data2.statuses || [];
+    const have = allStatuses();
+    const fresh = incoming.map((s) => String(s).trim()).filter((s) => s && !have.includes(s)).filter((s, i5, a) => a.indexOf(s) === i5);
+    state.meta.customStatuses = [...getCustomStatuses(), ...fresh];
+    if (data2.colors && typeof data2.colors === "object")
+      state.meta.customStatusColors = { ...getStatusColors(), ...data2.colors };
+    await persist();
+    return fresh.length;
+  }
+  async function exportStatusesFile() {
+    const dest = await kapi.saveAsDialog((state.title || "project") + "-statuses.json", "json");
+    if (!dest) return false;
+    await kapi.writeFile(dest, JSON.stringify(statusesToJson(), null, 2));
+    setStatus(t("ui.status.exportSetStatusDone") + dest);
+    return true;
+  }
+  async function importStatusesFile() {
+    const src2 = await kapi.openFileDialog("json");
+    if (!src2) return 0;
+    try {
+      const n2 = await importStatuses(JSON.parse(await kapi.readFile(src2)));
+      setStatus(n2 ? tf("ui.status.importStatusNewList", n2) : t("ui.status.notHasStatusNew"));
+      return n2;
+    } catch (e) {
+      log("error", t("ui.status.customStatusImportFail"), e);
+      setStatus(t("ui.status.importFileStatusNot"));
+      return 0;
+    }
+  }
+  async function manageCustomStatuses() {
+    if (!state.meta) {
+      setStatus(t("ui.common.cantOpenProject"));
+      return;
+    }
+    const ov = el("div", "k-overlay");
+    const box2 = el("div", "k-dialog k-status-mgr");
+    box2.append(el("div", "k-dlg-title", t("ui.status.manageStatusScene")));
+    const list3 = el("div", "k-pick-list");
+    const mkRow = (s, builtIn) => {
+      const row4 = el("div", "k-menu-item k-status-row");
+      const dot2 = el("span", "k-status-dot");
+      dot2.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${statusColor(s)}`;
+      const hiddenNow = builtIn && getHiddenStatuses().includes(s);
+      row4.append(dot2, el("span", null, (builtIn ? dataLabel(s) : s) + (builtIn ? t("ui.status.default") : "") + (hiddenNow ? t("ui.kanban.hiddenBuiltin") : "")));
+      if (hiddenNow) {
+        row4.classList.add("k-status-hidden");
+        const back = el("button", "k-status-unhide", t("ui.kanban.restoreStatus"));
+        back.style.cssText = "float:right;margin-left:10px";
+        back.onclick = async (e) => {
+          e.stopPropagation();
+          await unhideStatus(s);
+          render();
+          refreshStatusChips();
+        };
+        row4.append(back);
+      }
+      const pick2 = el("input", "k-status-color");
+      pick2.type = "color";
+      pick2.value = statusColor(s);
+      pick2.title = t("ui.status.recolorStatus");
+      pick2.style.cssText = "float:right;width:26px;height:20px;padding:0;border:none;background:none;cursor:default";
+      pick2.onchange = async () => {
+        dot2.style.background = pick2.value;
+        await setStatusColor(s, pick2.value);
+        refreshStatusChips();
+      };
+      row4.append(pick2);
+      if (!builtIn) {
+        const del2 = el("span", "k-status-del", gi("close"));
+        del2.style.cssText = "float:right;cursor:default;margin-left:10px";
+        del2.title = t("ui.status.delStatus2");
+        del2.onclick = async (e) => {
+          e.stopPropagation();
+          let inUse = 0;
+          try {
+            const { listScenes: listScenes2 } = await Promise.resolve().then(() => (init_project_scan(), project_scan_exports));
+            inUse = countStatusUse(await listScenes2(state.root), s);
+          } catch {
+          }
+          const q2 = inUse ? tf("ui.status.delStatusInUse", s, inUse) : tf("ui.status.delStatus", s);
+          if (await confirmBox(q2, t("ui.common.del"))) {
+            await removeCustomStatus(s);
+            render();
+            refreshStatusChips();
+          }
+        };
+        row4.append(del2);
+      }
+      return row4;
+    };
+    const render = () => {
+      list3.innerHTML = "";
+      for (const s of SCENE_STATUSES) list3.append(mkRow(s, true));
+      const custom = getCustomStatuses();
+      if (!custom.length) list3.append(el("div", "dim", t("ui.status.notHasStatusDefine")));
+      for (const s of custom) list3.append(mkRow(s, false));
+    };
+    render();
+    const btns = el("div", "k-dlg-btns");
+    const addB = el("button", "k-ok", t("ui.status.addStatus"));
+    addB.onclick = async () => {
+      const name5 = await ask(t("ui.status.nameStatusNew"), { placeholder: t("ui.status.egEditSendDone") });
+      if (!name5) return;
+      await addCustomStatus(name5);
+      render();
+      refreshStatusChips();
+    };
+    const outB = el("button", null, t("ui.status.export"));
+    outB.title = t("ui.status.saveSetStatusColor");
+    outB.onclick = () => exportStatusesFile();
+    const inB = el("button", null, t("ui.status.import"));
+    inB.title = t("ui.status.readSetStatusFile");
+    inB.onclick = async () => {
+      await importStatusesFile();
+      render();
+      refreshStatusChips();
+    };
+    const closeB = el("button", "k-cancel", t("ui.common.close"));
+    closeB.onclick = () => ov.remove();
+    btns.append(outB, inB, closeB, addB);
+    box2.append(list3, btns);
+    ov.append(box2);
+    document.body.append(ov);
+    ov.onclick = (e) => {
+      if (e.target === ov) ov.remove();
+    };
+    escClose(ov, () => ov.remove());
+  }
+  function refreshStatusChips(root = document) {
+    for (const chip of root.querySelectorAll(".sc-status[data-status]")) {
+      const c = statusColor(chip.dataset.status);
+      if (c) paintStatusChip(chip, c);
+    }
+  }
+  function statusChip(value) {
+    const chip = el("span", "sc-status", dataLabel(value));
+    chip.dataset.status = String(value || "");
+    const c = statusColor(value);
+    if (c) paintStatusChip(chip, c);
+    return chip;
+  }
+  function paintStatusChip(chip, hex2) {
+    const v2 = vivid(hex2) || hex2;
+    if (!chip || !v2) return;
+    chip.classList.add("sc-status-filled");
+    chip.style.background = v2;
+    chip.style.borderColor = v2;
+    chip.style.color = inkOn(v2) || "";
+  }
+  var init_custom_status = __esm({
+    "src/custom-status.js"() {
+      init_i18n();
+      init_core();
+      init_ui();
+      init_icons();
+      init_status_choices();
+      init_color_util();
+    }
+  });
+
+  // src/recycle-core.js
+  function trashedAt(name5, mtime, now = Date.now()) {
+    const m = /^([0-9a-z]{8,9})-/.exec(String(name5 || ""));
+    if (m) {
+      const t3 = parseInt(m[1], 36);
+      if (t3 >= MIN_TS && t3 <= now + DAY) return t3;
+    }
+    return Number(mtime) || 0;
+  }
+  function isTrashCompanion(name5) {
+    return /\.k2restore\.json$/i.test(String(name5 || "")) || /\.vis\.csv$/i.test(String(name5 || ""));
+  }
+  function purgeCandidates(entries, days, now = Date.now()) {
+    if (!(Number(days) > 0)) return [];
+    const cutoff = now - Number(days) * DAY;
+    return (entries || []).filter((e) => e && e.name && !isTrashCompanion(e.name) && !String(e.name).startsWith("._")).filter((e) => trashedAt(e.name, e.mtime, now) < cutoff).map((e) => e.name);
+  }
+  function originalName(name5, now = Date.now()) {
+    const s = String(name5 || "");
+    const m = /^([0-9a-z]{8,9})-(.+)$/.exec(s);
+    if (m) {
+      const t3 = parseInt(m[1], 36);
+      if (t3 >= MIN_TS && t3 <= now + DAY) return m[2];
+    }
+    return s;
+  }
+  function nextStamp(now, last2) {
+    const n2 = Number(now) || 0;
+    const l = Number(last2) || 0;
+    return n2 > l ? n2 : l + 1;
+  }
+  function nameCandidate(name5, i5, { dir: dir2 = false } = {}) {
+    const s = String(name5 || "");
+    if (!(i5 > 1)) return s;
+    const m = dir2 ? null : /^(.+?)(\.[^./\\]{1,10})$/.exec(s);
+    return m ? m[1] + "-" + i5 + m[2] : s + "-" + i5;
+  }
+  var MIN_TS, DAY;
+  var init_recycle_core = __esm({
+    "src/recycle-core.js"() {
+      MIN_TS = Date.UTC(2020, 0, 1);
+      DAY = 864e5;
+    }
+  });
+
+  // src/trash-path.js
+  var trash_path_exports = {};
+  __export(trash_path_exports, {
+    freeName: () => freeName,
+    trashPathFor: () => trashPathFor
+  });
+  async function freeName(dir2, name5, opts = {}) {
+    for (let i5 = 1; i5 < 500; i5++) {
+      const cand = nameCandidate(name5, i5, opts);
+      if (opts.taken && opts.taken.has(cand)) continue;
+      if (!await kapi.exists(await kapi.join(dir2, cand))) return cand;
+    }
+    return nameCandidate(name5, Date.now(), opts);
+  }
+  async function trashPathFor(file, { dir: dir2 = false, root } = {}) {
+    const base4 = String(file || "").split(/[\\/]/).filter(Boolean).pop() || "item";
+    const recDir = await kapi.join(root || state.root, "Recycle");
+    await kapi.mkdir(recDir);
+    TRASH_C.last = nextStamp(Date.now(), TRASH_C.last);
+    return kapi.join(recDir, await freeName(recDir, TRASH_C.last.toString(36) + "-" + base4, { dir: dir2 }));
+  }
+  var TRASH_C;
+  var init_trash_path = __esm({
+    "src/trash-path.js"() {
+      init_core();
+      init_recycle_core();
+      TRASH_C = { last: 0 };
+    }
+  });
+
   // src/floorplan/fp-gear.js
   var fp_gear_exports = {};
   __export(fp_gear_exports, {
@@ -28767,7 +29698,7 @@ ${BLOCK_END}
     return GEL_SHIFT[gel] || 0;
   }
   function labelKey(group, id) {
-    const g = LABEL_KEYS[group];
+    const g = LABEL_KEYS2[group];
     return g && g[id] || g && Object.values(g)[0] || "ui.common.notNamed";
   }
   function cctToHex(k) {
@@ -28786,7 +29717,7 @@ ${BLOCK_END}
     const h = (v2) => Math.round(Math.max(0, Math.min(255, v2))).toString(16).padStart(2, "0");
     return "#" + h(r) + h(g) + h(b);
   }
-  var CAMERA_BODIES, DEFAULT_BODY, LENS_PRESETS, SUPPORTS, CAM_ANGLES, SHOT_SIZES, LIGHT_TYPES, DIFFUSIONS, GELS, GEL_SHIFT, SHAPE_KINDS, POLY_KINDS, LABEL_KEYS;
+  var CAMERA_BODIES, DEFAULT_BODY, LENS_PRESETS, SUPPORTS, CAM_ANGLES, SHOT_SIZES, LIGHT_TYPES, DIFFUSIONS, GELS, GEL_SHIFT, SHAPE_KINDS, POLY_KINDS, LABEL_KEYS2;
   var init_fp_gear = __esm({
     "src/floorplan/fp-gear.js"() {
       CAMERA_BODIES = [
@@ -28859,7 +29790,7 @@ ${BLOCK_END}
       GEL_SHIFT = { ctoQuarter: -600, ctoHalf: -1200, ctoFull: -2300, ctbQuarter: 700, ctbHalf: 1500, ctbFull: 3e3 };
       SHAPE_KINDS = ["rect", "rounded", "ellipse", "triangle", "wall", "door", "window", "stairs", "line", "arrow", "text", "flag"];
       POLY_KINDS = /* @__PURE__ */ new Set(["wall", "line", "arrow"]);
-      LABEL_KEYS = {
+      LABEL_KEYS2 = {
         support: {
           tripod: "ui.fp.supTripod",
           monopod: "ui.fp.supMonopod",
@@ -30493,6 +31424,11 @@ ${BLOCK_END}
   });
 
   // src/tooltip.js
+  function tipDelay(now, lastHide, { delay = 450, warm = 600 } = {}) {
+    const n2 = Number(now), h = Number(lastHide);
+    if (h > 0 && Number.isFinite(n2) && n2 - h >= 0 && n2 - h <= warm) return 0;
+    return Math.max(0, Number(delay) || 0);
+  }
   function tipKey(cmd, explicit) {
     if (explicit) return String(explicit);
     return cmd ? TIP_PREFIX + cmd : "";
@@ -33411,235 +34347,6 @@ ${BLOCK_END}
     }
   });
 
-  // src/ai/ai-error.js
-  var ai_error_exports = {};
-  __export(ai_error_exports, {
-    clip: () => clip,
-    describeHttpError: () => describeHttpError,
-    hostOf: () => hostOf,
-    redactSecrets: () => redactSecrets,
-    serverMessage: () => serverMessage,
-    shortError: () => shortError
-  });
-  function redactSecrets(text) {
-    return String(text ?? "").replace(/\b(sk|xai|gsk|pplx|or)-[A-Za-z0-9_-]{6,}/g, "$1-\u2022\u2022\u2022\u2022").replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}/gi, "$1\u2022\u2022\u2022\u2022").replace(/("?(?:api[_-]?key|x-api-key|authorization)"?\s*[:=]\s*"?)[^"'\s,}]{8,}/gi, "$1\u2022\u2022\u2022\u2022").replace(/([?&](?:api[_-]?key|key|token|access[_-]?token|auth)=)[^&\s]+/gi, "$1\u2022\u2022\u2022\u2022");
-  }
-  function clip(text, max2 = 600) {
-    const s = String(text ?? "").trim();
-    return s.length > max2 ? s.slice(0, max2) + " \u2026" : s;
-  }
-  function serverMessage(body) {
-    const raw = String(body ?? "").trim();
-    if (!raw) return "";
-    let d = null;
-    try {
-      d = JSON.parse(raw);
-    } catch {
-    }
-    if (d && typeof d === "object") {
-      const e = d.error;
-      if (typeof e === "string" && e.trim()) return e.trim();
-      if (e && typeof e === "object") {
-        const m = e.message || e.detail || e.type || "";
-        const code3 = e.code ? " [" + e.code + "]" : "";
-        if (String(m).trim()) return String(m).trim() + code3;
-      }
-      for (const k of ["message", "detail", "msg", "reason"]) {
-        if (typeof d[k] === "string" && d[k].trim()) return d[k].trim();
-      }
-      return "";
-    }
-    if (/^\s*</.test(raw)) return raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-    return raw;
-  }
-  function hostOf(url) {
-    try {
-      return new URL(String(url)).host;
-    } catch {
-      return "";
-    }
-  }
-  function networkKind(text) {
-    const s = String(text || "");
-    if (/ECONNREFUSED|Connection refused/i.test(s)) {
-      return {
-        key: "refused",
-        reason: t("ui.aiError.toConnectNotHas"),
-        hints: [
-          t("ui.aiError.modelOllamaLMStudio"),
-          t("ui.aiError.checkNumBaseURL")
-        ]
-      };
-    }
-    if (/ENOTFOUND|getaddrinfo|DNS/i.test(s)) {
-      return {
-        key: "dns",
-        reason: t("ui.aiError.findNameDomainNot"),
-        hints: [t("ui.aiError.checkPrintBaseURL"), t("ui.aiError.checkNext")]
-      };
-    }
-    if (/certificate|SSL|TLS|self[- ]signed/i.test(s)) {
-      return {
-        key: "tls",
-        reason: t("ui.aiError.itemTLSToUse"),
-        hints: [t("ui.aiError.innerUseItemOut")]
-      };
-    }
-    if (/ETIMEDOUT|ECONNRESET|EPIPE|socket hang up|network|fetch failed/i.test(s)) {
-      return {
-        key: "net",
-        reason: t("ui.aiError.nextNotMissingCenter"),
-        hints: [
-          t("ui.aiError.checkVPN"),
-          t("ui.aiError.tryOpenBaseURL")
-        ]
-      };
-    }
-    return null;
-  }
-  function describeHttpError(e = {}) {
-    const status = Number(e.status) || 0;
-    const rawBody = redactSecrets(String(e.body ?? ""));
-    const srvMsg = serverMessage(rawBody);
-    const host2 = hostOf(e.url);
-    let reason = "";
-    let hints = [];
-    let code3 = "http-" + status;
-    if (e.aborted && e.timedOut) {
-      code3 = "timeout";
-      reason = t("ui.aiError.timeAnswer");
-      hints = [
-        t("ui.aiError.addValueTimeoutSettings"),
-        t("ui.aiError.modelThinkReasoningUse")
-      ];
-    } else if (e.aborted) {
-      code3 = "aborted";
-      reason = t("ui.aiError.userPress");
-      hints = [];
-    } else if (e.streamError) {
-      code3 = "stream-error";
-      reason = t("ui.aiError.streamReason");
-      hints = [t("ui.aiError.streamHintServer"), t("ui.aiError.streamHintCredit")];
-    } else if (status === 0) {
-      const k = networkKind(srvMsg || rawBody || e.error);
-      code3 = k ? "net-" + k.key : "net";
-      reason = k ? k.reason : srvMsg || t("ui.aiError.nextCantWordNot");
-      hints = k ? k.hints : [
-        t("ui.aiError.checkBaseURL"),
-        t("ui.aiError.checkDomainAllowedHTTP")
-      ];
-    } else if (status === 401 || status === 403) {
-      reason = t("ui.aiError.notAPIKeySend");
-      hints = [
-        t("ui.aiError.putKeyNewSettings"),
-        t("ui.aiError.keyBindOutlineCheck")
-      ];
-    } else if (status === 404) {
-      reason = t("ui.aiError.toNotHas");
-      hints = [
-        t("ui.aiError.baseURLMustV1"),
-        t("ui.aiError.checkNameModelPress")
-      ];
-    } else if (status === 408) {
-      reason = t("ui.aiError.wordUseTime");
-      hints = [t("ui.aiError.tryNewTimesAdd")];
-    } else if (status === 429) {
-      reason = t("ui.aiError.msg");
-      hints = [
-        t("ui.aiError.doneTryNew"),
-        t("ui.aiError.checkPageProvider"),
-        t("ui.aiError.addMaxRetriesParameters")
-      ];
-    } else if (status === 400 || status === 422) {
-      reason = tf("ui.aiError.providerNotParamSend", String(status));
-      hints = [
-        t("ui.aiError.viewTextBottomName"),
-        t("ui.aiError.itemMaxTokensHigh")
-      ];
-    } else if (status >= 500) {
-      reason = tf("ui.aiError.sideProviderHasProblem", String(status));
-      hints = [t("ui.aiError.doneTryNewNot")];
-    } else {
-      reason = tf("ui.aiError.callNotOkHTTP", String(status));
-      hints = [];
-    }
-    const title2 = status ? tm("AI: {0} (HTTP {1})", reason, String(status)) : tm("AI: {0}", reason);
-    const lines = [];
-    if (e.provider) lines.push(t("ui.aiError.provider") + e.provider);
-    if (e.model) lines.push(t("ui.aiError.model") + e.model);
-    if (host2) lines.push(t("ui.aiError.to") + host2);
-    if (e.url) lines.push("URL: " + redactSecrets(e.url));
-    lines.push("HTTP: " + (status || t("ui.aiError.notTo")));
-    if (srvMsg) lines.push(t("ui.aiError.reply") + clip(srvMsg));
-    else if (rawBody) lines.push(t("ui.aiError.bodyAnswer") + clip(rawBody));
-    if (e.error && e.error !== reason) lines.push(t("ui.aiError.textInner") + redactSecrets(String(e.error)));
-    if (hints.length) lines.push("", t("ui.aiError.edit"), ...hints.map((h, i5) => i5 + 1 + ". " + h));
-    return { title: title2, reason, hints, detail: lines.join("\n"), code: code3, serverMessage: srvMsg, host: host2, status };
-  }
-  function shortError(info) {
-    const parts = [info.reason];
-    if (info.serverMessage) parts.push(clip(info.serverMessage, 160));
-    return parts.filter(Boolean).join(" \u2014 ").replace(/\s+/g, " ");
-  }
-  var init_ai_error = __esm({
-    "src/ai/ai-error.js"() {
-      init_i18n();
-    }
-  });
-
-  // src/err-text.js
-  function errCode(e) {
-    if (!e) return "";
-    const direct = String(e.code || "").toUpperCase();
-    if (CODE_KEY[direct]) return direct;
-    const msg = String(e && e.message || e || "");
-    const m = /\b(E[A-Z]{2,10})\b/.exec(msg);
-    if (m && CODE_KEY[m[1]]) return m[1];
-    if (/UNKNOWN/i.test(direct) || /\bUNKNOWN\b/.test(msg)) return "EBUSY";
-    if (/fetch failed|network|ERR_INTERNET|ERR_NAME_NOT_RESOLVED/i.test(msg)) return "ECONNREFUSED";
-    if (/JSON|Unexpected token .* in JSON|Unexpected end of JSON/i.test(msg)) return "EJSON";
-    return "";
-  }
-  function errText(e, o = {}) {
-    if (e == null) return t("ui.err.unknown");
-    const code3 = errCode(e);
-    if (code3 === "EJSON") return t("ui.err.badJson");
-    if (code3 && CODE_KEY[code3]) return t(CODE_KEY[code3]);
-    const raw = clip(redactSecrets(String(e && e.message || e || "")).trim(), o.max || 160);
-    return raw || t("ui.err.unknown");
-  }
-  function failText(what, e, o) {
-    const why = errText(e, o);
-    const head2 = String(what || "").replace(/[:\s]+$/, "");
-    return why ? head2 + " \u2014 " + why : head2;
-  }
-  var CODE_KEY;
-  var init_err_text = __esm({
-    "src/err-text.js"() {
-      init_i18n();
-      init_ai_error();
-      CODE_KEY = {
-        ENOENT: "ui.err.notFound",
-        EACCES: "ui.err.denied",
-        EPERM: "ui.err.denied",
-        EBUSY: "ui.err.busy",
-        ETXTBSY: "ui.err.busy",
-        ENOSPC: "ui.err.noSpace",
-        EDQUOT: "ui.err.noSpace",
-        EROFS: "ui.err.readOnly",
-        EISDIR: "ui.err.isDir",
-        ENOTDIR: "ui.err.isDir",
-        EMFILE: "ui.err.tooManyFiles",
-        ENFILE: "ui.err.tooManyFiles",
-        ECONNREFUSED: "ui.err.network",
-        ECONNRESET: "ui.err.network",
-        ETIMEDOUT: "ui.err.network",
-        ENOTFOUND: "ui.err.network",
-        EAI_AGAIN: "ui.err.network"
-      };
-    }
-  });
-
   // src/entity-mention.js
   var entity_mention_exports = {};
   __export(entity_mention_exports, {
@@ -34135,7 +34842,13 @@ ${BLOCK_END}
         if (onOpenScene) onOpenScene(link.sceneId, link.title);
       };
       row4.append(name5);
-      if (link.via) row4.append(el("span", "bl-via", " (" + link.via + ")"));
+      const viaKey = {
+        link: "ui.worldAutoLink.viaLink",
+        name: "ui.worldAutoLink.viaName",
+        alias: "ui.worldAutoLink.viaAlias",
+        stored: "ui.worldAutoLink.viaStored"
+      }[link.via];
+      if (viaKey) row4.append(el("span", "bl-via dim", " (" + t(viaKey) + ")"));
       list3.append(row4);
     }
     host2.append(list3);
@@ -35272,8 +35985,8 @@ ${BLOCK_END}
     if (!want.length) return [...items || []];
     const or = String(mode).toLowerCase() === "or";
     return (items || []).filter((it) => {
-      const has2 = new Set((it.tags || []).map((t3) => normalizeTag(t3)));
-      return or ? want.some((t3) => has2.has(t3)) : want.every((t3) => has2.has(t3));
+      const has3 = new Set((it.tags || []).map((t3) => normalizeTag(t3)));
+      return or ? want.some((t3) => has3.has(t3)) : want.every((t3) => has3.has(t3));
     });
   }
   function imagesForEntity(items, entityName2) {
@@ -35783,453 +36496,1204 @@ ${BLOCK_END}
     }
   });
 
-  // src/book-flow.js
-  function normChapterCover(ch) {
-    const c = ch && ch.cover || {};
-    return {
-      on: !!c.on,
-      image: String(c.image == null ? "" : c.image),
-      text: String(c.text == null ? "" : c.text),
-      full: c.full === void 0 ? true : !!c.full
-    };
+  // src/disk-names.js
+  function diskBase(title2, fallback = "untitled") {
+    let s = nfc(title2).replace(BAD_CHARS, " ").replace(/\s+/g, " ").trim().replace(/^\.+/, "").replace(/[. ]+$/, "").trim();
+    const chars3 = Array.from(s);
+    if (chars3.length > DISK_NAME_MAX) s = chars3.slice(0, DISK_NAME_MAX).join("").replace(/[. ]+$/, "");
+    if (WIN_RESERVED.test(s)) s += "_";
+    return s || fallback;
   }
-  function normBookCover(meta2) {
-    const m = meta2 || {};
-    return {
-      on: m.coverOn === void 0 ? true : !!m.coverOn,
-      // เล่มมีหน้าปกเสมอ เว้นแต่สั่งปิด
-      image: String(m.cover == null ? "" : m.cover),
-      text: String(m.blurb == null ? "" : m.blurb),
-      full: m.coverFull === void 0 ? true : !!m.coverFull
-    };
-  }
-  function coverImageHint(paper, margins, dpi = 300) {
-    const p = paper || { width: 8.5, height: 11 };
-    const wIn = Math.max(0.5, +p.width || 8.5);
-    const hIn = Math.max(0.5, +p.height || 11);
-    const d = Math.max(72, Math.round(+dpi || 300));
-    return {
-      wIn: +wIn.toFixed(3),
-      hIn: +hIn.toFixed(3),
-      wPx: Math.round(wIn * d),
-      hPx: Math.round(hIn * d),
-      ratio: +(wIn / hIn).toFixed(3),
-      dpi: d
-    };
-  }
-  function bookParts(book, opts = {}) {
-    const b = book || {};
-    const wantCovers = opts.covers !== false;
-    const out = [];
-    const bc = normBookCover(b.meta);
-    if (wantCovers && bc.on) {
-      out.push({
-        kind: "bookCover",
-        book: b.key || "",
-        title: b.title || "",
-        subtitle: b.author || "",
-        image: bc.image,
-        text: bc.text,
-        full: bc.full
-      });
+  function freeName2(base4, taken, ext = "") {
+    const used = /* @__PURE__ */ new Set();
+    for (const n2 of taken || []) used.add(nameKey(n2));
+    for (let n2 = 1; n2 < 1e4; n2++) {
+      const name5 = (n2 === 1 ? base4 : `${base4} ${n2}`) + ext;
+      if (!used.has(nameKey(name5))) return name5;
     }
-    for (const ch of b.chapters || []) {
-      const cc = normChapterCover(ch);
-      if (wantCovers && cc.on) {
-        out.push({
-          kind: "chapterCover",
-          book: b.key || "",
-          guid: ch.guid || "",
-          title: ch.title || "",
-          subtitle: "",
-          image: cc.image,
-          text: cc.text,
-          full: cc.full
-        });
-      } else {
-        out.push({ kind: "chapterHead", book: b.key || "", guid: ch.guid || "", title: ch.title || "" });
+    return base4 + " " + Date.now().toString(36) + ext;
+  }
+  function nameFits(title2, diskName, ext = "") {
+    const want = nameKey(diskBase(title2));
+    const have = nameKey(stripExt(diskName, ext));
+    if (have === want) return true;
+    return have.startsWith(want + " ") && /^\d+$/.test(have.slice(want.length + 1));
+  }
+  function titleAfterRename(kind, newBase, oldTitle) {
+    const nb = nfc(newBase);
+    const old = String(oldTitle || "");
+    if (!old) return nb;
+    if (kind === "scene" && /^(scene|memo)-\d+(-\d+)?$/i.test(nb)) return old;
+    if (kind === "chapter") {
+      const m = /^\d+\s*-\s*(.+)$/.exec(nb);
+      if (m && nameKey(m[1]) === nameKey(diskBase(old))) return old;
+    }
+    if (nameKey(diskBase(old)) === nameKey(nb) && !sameName(diskBase(old), old)) return old;
+    return nb;
+  }
+  function defaultBookName(taken) {
+    const used = /* @__PURE__ */ new Set();
+    for (const n2 of taken || []) used.add(nameKey(n2));
+    for (let n2 = 1; n2 < 1e4; n2++) {
+      const name5 = `${DEFAULT_BOOK} ${n2}`;
+      if (!used.has(nameKey(name5))) return name5;
+    }
+    return DEFAULT_BOOK + " " + Date.now().toString(36);
+  }
+  function bookNameTaken(name5, rootDirs, selfName = "") {
+    const k = nameKey(name5);
+    if (selfName && k === nameKey(selfName)) return false;
+    if (RESERVED_ROOT.some((r) => nameKey(r) === k)) return true;
+    return (rootDirs || []).some((d) => nameKey(d) === k);
+  }
+  function sectionSync(meta2, actualName) {
+    const rec = meta2 && meta2.folderName;
+    if (!rec) return { record: true, renamed: false, title: meta2 && meta2.title || actualName };
+    if (sameName(rec, actualName)) return { record: false, renamed: false, title: meta2.title || actualName };
+    return { record: true, renamed: true, title: nfc(actualName) };
+  }
+  function pairSceneRenames(rows, files, metaOf2 = () => null) {
+    const pairs = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const f of files || []) byKey.set(nameKey(f), f);
+    const claimed = /* @__PURE__ */ new Set();
+    let missing = [];
+    for (const r of rows || []) {
+      if (!r || !r.fileName) continue;
+      const k = nameKey(r.fileName);
+      const actual = byKey.get(k);
+      if (actual === void 0) {
+        missing.push(r);
+        continue;
       }
-      for (const sc of ch.scenes || []) {
-        if (sc && sc.type === "memo") continue;
-        out.push({
-          kind: "scene",
-          book: b.key || "",
-          guid: ch.guid || "",
-          id: sc.id || "",
-          file: sc.file || "",
-          title: sc.title || "",
-          body: String(sc.body == null ? "" : sc.body)
-        });
+      if (claimed.has(k)) continue;
+      claimed.add(k);
+      if (!sameName(actual, r.fileName)) pairs.push({ id: r.id, from: r.fileName, to: actual, by: "case" });
+    }
+    let orphans = (files || []).filter((f) => !claimed.has(nameKey(f)));
+    if (missing.length && orphans.length) {
+      const titleOf2 = /* @__PURE__ */ new Map();
+      for (const f of orphans) {
+        let m = null;
+        try {
+          m = metaOf2(f);
+        } catch {
+          m = null;
+        }
+        titleOf2.set(f, m && m.title != null ? String(m.title) : "");
       }
-    }
-    return out;
-  }
-  function projectParts(books, opts = {}) {
-    const out = [];
-    for (const b of books || []) out.push(...bookParts(b, opts));
-    return out;
-  }
-  function printedPageNumber(coverPages, phys) {
-    const list3 = (coverPages || []).map((x) => Math.round(+x)).filter(Number.isFinite);
-    const p = Math.max(1, Math.round(+phys || 1));
-    if (list3.includes(p)) return 0;
-    let skipped = 0;
-    for (const c of list3) if (c <= p) skipped++;
-    return Math.max(1, p - skipped);
-  }
-  function pageIndexOfY(pages, y) {
-    const list3 = Array.isArray(pages) ? pages : [];
-    if (!list3.length) return 1;
-    const v2 = +y || 0;
-    for (let i5 = list3.length - 1; i5 >= 0; i5--) if (v2 >= (+list3[i5].start || 0) - 0.5) return i5 + 1;
-    return 1;
-  }
-  function startPageMap(parts) {
-    const m = /* @__PURE__ */ new Map();
-    for (const p of parts || []) {
-      if (p.kind !== "scene" || !p.file) continue;
-      if (!m.has(p.file)) m.set(p.file, Math.max(1, Math.round(+p.startPage || 1)));
-    }
-    return m;
-  }
-  function coverPagesOf(parts) {
-    return (parts || []).filter(isFrontMatter).map((p) => Math.round(+p.page || 0)).filter((n2) => n2 > 0);
-  }
-  function explicitStartPage(v2) {
-    const n2 = parseInt(v2 && typeof v2 === "object" ? v2.startPage : v2, 10);
-    return Number.isFinite(n2) && n2 > 0 ? n2 : void 0;
-  }
-  function pageAtPos(breaks, pos, first = 1) {
-    const list3 = (breaks || []).filter((b) => b && Number.isFinite(b.pos));
-    const page2 = 1 + list3.filter((b) => b.pos <= pos).length;
-    const total = list3.length + 1;
-    const f = Number.isFinite(+first) && +first > 0 ? Math.round(+first) : 1;
-    return { page: page2, total, printed: f + page2 - 1, printedLast: f + total - 1 };
-  }
-  var isCoverPart, isFrontMatter, isPageFlowContinue;
-  var init_book_flow = __esm({
-    "src/book-flow.js"() {
-      isCoverPart = (p) => !!p && (p.kind === "bookCover" || p.kind === "chapterCover");
-      isFrontMatter = (p) => !!p && p.kind === "bookCover";
-      isPageFlowContinue = (row4) => !!row4 && row4.pageFlow === "continue";
-    }
-  });
-
-  // src/tree-item-meta.js
-  var tree_item_meta_exports = {};
-  __export(tree_item_meta_exports, {
-    EXPLORER_VERSION: () => EXPLORER_VERSION,
-    backupStamp: () => backupStamp,
-    cleanItemMeta: () => cleanItemMeta,
-    forgetItemPath: () => forgetItemPath,
-    getItemMeta: () => getItemMeta,
-    isPinned: () => isPinned,
-    itemBackupDir: () => itemBackupDir,
-    lockSource: () => lockSource,
-    normalizeExplorer: () => normalizeExplorer,
-    parseBackupStamp: () => parseBackupStamp,
-    pinKey: () => pinKey,
-    regenDraftIds: () => regenDraftIds,
-    relKey: () => relKey,
-    renameItemPath: () => renameItemPath,
-    setItemMeta: () => setItemMeta,
-    sortBackups: () => sortBackups,
-    togglePin: () => togglePin,
-    uniqueCopyName: () => uniqueCopyName,
-    updatePinInfo: () => updatePinInfo
-  });
-  function relKey(rel) {
-    return String(rel || "").replace(/\\/g, "/").replace(/^\.?\/+/, "").replace(/\/+$/, "");
-  }
-  function normalizeExplorer(raw) {
-    const r = raw && typeof raw === "object" ? raw : {};
-    const pins = Array.isArray(r.pins) ? r.pins.filter((p) => p && typeof p.kind === "string" && p.key) : [];
-    const items = {};
-    for (const [k, v2] of Object.entries(r.items && typeof r.items === "object" ? r.items : {})) {
-      const m = cleanItemMeta(v2);
-      if (Object.keys(m).length) items[relKey(k)] = m;
-    }
-    return { version: EXPLORER_VERSION, pins, items };
-  }
-  function cleanItemMeta(v2) {
-    const m = {};
-    if (!v2 || typeof v2 !== "object") return m;
-    if (v2.flag) m.flag = true;
-    if (v2.locked) m.locked = true;
-    if (typeof v2.color === "string" && /^#[0-9a-f]{3,8}$/i.test(v2.color)) m.color = v2.color;
-    if (typeof v2.status === "string" && v2.status.trim() && v2.status !== "Outline") m.status = v2.status.trim();
-    if (typeof v2.note === "string" && v2.note.trim()) m.note = v2.note;
-    return m;
-  }
-  function getItemMeta(explorer2, rel) {
-    return { ...normalizeExplorer(explorer2).items[relKey(rel)] || {} };
-  }
-  function setItemMeta(explorer2, rel, patch) {
-    const ex = normalizeExplorer(explorer2);
-    const k = relKey(rel);
-    const cur = { ...ex.items[k] || {} };
-    for (const [f, v2] of Object.entries(patch || {})) {
-      if (v2 === null || v2 === "" || v2 === false || v2 === void 0) delete cur[f];
-      else cur[f] = v2;
-    }
-    const m = cleanItemMeta(cur);
-    if (Object.keys(m).length) ex.items[k] = m;
-    else delete ex.items[k];
-    return ex;
-  }
-  function renameItemPath(explorer2, oldRel, newRel2) {
-    const ex = normalizeExplorer(explorer2);
-    const a = relKey(oldRel), b = relKey(newRel2);
-    if (!a || !b || a === b) return ex;
-    if (ex.items[a]) {
-      ex.items[b] = ex.items[a];
-      delete ex.items[a];
-    }
-    ex.pins = ex.pins.map((p) => p.key === a ? { ...p, key: b } : p);
-    return ex;
-  }
-  function forgetItemPath(explorer2, rel) {
-    const ex = normalizeExplorer(explorer2);
-    const k = relKey(rel);
-    delete ex.items[k];
-    ex.pins = ex.pins.filter((p) => p.key !== k);
-    return ex;
-  }
-  function pinKey(kind, ref) {
-    return kind + ":" + (["memo", "image", "board", "plan"].includes(kind) ? relKey(ref) : String(ref || ""));
-  }
-  function isPinned(explorer2, kind, key2) {
-    const k = ["memo", "image", "board", "plan"].includes(kind) ? relKey(key2) : String(key2 || "");
-    return normalizeExplorer(explorer2).pins.some((p) => p.kind === kind && p.key === k);
-  }
-  function togglePin(explorer2, kind, key2, info = {}) {
-    const ex = normalizeExplorer(explorer2);
-    const k = ["memo", "image", "board", "plan"].includes(kind) ? relKey(key2) : String(key2 || "");
-    if (!k) return ex;
-    const i5 = ex.pins.findIndex((p) => p.kind === kind && p.key === k);
-    if (i5 >= 0) ex.pins.splice(i5, 1);
-    else ex.pins.push({ kind, key: k, ...info, at: info.at || 0 });
-    return ex;
-  }
-  function updatePinInfo(explorer2, kind, key2, info) {
-    const ex = normalizeExplorer(explorer2);
-    ex.pins = ex.pins.map((p) => p.kind === kind && p.key === key2 ? { ...p, ...info, kind, key: key2 } : p);
-    return ex;
-  }
-  function lockSource({ book, chapter, scene } = {}) {
-    if (book && book.locked) return "book";
-    if (chapter && chapter.locked) return "chapter";
-    if (scene && (scene.locked === true || scene.locked === "true")) return "scene";
-    return "";
-  }
-  function regenDraftIds(draft, scenes, newId4) {
-    const d = JSON.parse(JSON.stringify(draft || {}));
-    const s = JSON.parse(JSON.stringify(scenes || {}));
-    const chapterMap = {}, sceneMap = {};
-    d.chapters = (d.chapters || []).map((c) => {
-      const g = newId4();
-      chapterMap[c.guid] = g;
-      return { ...c, guid: g };
-    });
-    const out = {};
-    for (const [oldG, rows] of Object.entries(s.chapters || {})) {
-      const g = chapterMap[oldG] || oldG;
-      out[g] = (rows || []).map((r) => {
-        const id = newId4();
-        sceneMap[r.id] = id;
-        return { ...r, id, chapterGuid: g };
-      });
-    }
-    s.chapters = out;
-    for (const rows of Object.values(s.chapters)) {
-      for (const r of rows) {
-        if (!Array.isArray(r.choices)) continue;
-        r.choices = r.choices.map((c) => c && sceneMap[c.nextSceneId] ? { ...c, nextSceneId: sceneMap[c.nextSceneId] } : c);
-      }
-    }
-    return { draft: d, scenes: s, chapterMap, sceneMap };
-  }
-  function uniqueCopyName(base4, existing, suffix) {
-    const taken = new Set((existing || []).map((x) => String(x)));
-    const first = base4 + " " + suffix;
-    if (!taken.has(first)) return first;
-    for (let n2 = 2; n2 < 1e3; n2++) {
-      const c = base4 + " " + suffix.replace(/\)$/, " " + n2 + ")");
-      if (!taken.has(c)) return c;
-    }
-    return first + " " + Date.now().toString(36);
-  }
-  function itemBackupDir(kind, key2) {
-    const safe3 = String(key2 || "item").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
-    return "Backups/Items/" + kind + "/" + safe3;
-  }
-  function backupStamp(now = Date.now()) {
-    return new Date(now).toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
-  }
-  function parseBackupStamp(name5) {
-    const m = String(name5 || "").match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})$/);
-    if (!m) return 0;
-    const t3 = Date.parse(`${m[1]}T${m[2]}:${m[3]}:${m[4]}.${m[5]}Z`);
-    return Number.isFinite(t3) ? t3 : 0;
-  }
-  function sortBackups(names) {
-    return (names || []).filter((n2) => parseBackupStamp(n2) > 0).sort((a, b) => parseBackupStamp(b) - parseBackupStamp(a));
-  }
-  var EXPLORER_VERSION;
-  var init_tree_item_meta = __esm({
-    "src/tree-item-meta.js"() {
-      EXPLORER_VERSION = 1;
-    }
-  });
-
-  // src/drafts.js
-  var drafts_exports = {};
-  __export(drafts_exports, {
-    copyDraftContents: () => copyDraftContents,
-    createDraft: () => createDraft,
-    deleteDraft: () => deleteDraft,
-    listDraftsForSection: () => listDraftsForSection,
-    renameDraft: () => renameDraft,
-    setPrimaryDraft: () => setPrimaryDraft
-  });
-  async function listDraftsForSection(secPath) {
-    const draftRoot = await kapi.join(secPath, "Draft");
-    if (!await kapi.exists(draftRoot)) return [];
-    const sf = await kapi.join(secPath, "section.json");
-    let meta2 = {};
-    try {
-      meta2 = await kapi.readJson(sf);
-    } catch {
-    }
-    const primary = meta2.primaryDraft || "default";
-    const out = [];
-    for (const name5 of await kapi.listDirs(draftRoot)) {
-      const dPath = await kapi.join(draftRoot, name5);
-      const df = await kapi.join(dPath, "draft.json");
-      if (!await kapi.exists(df)) continue;
-      out.push({ name: name5, dPath, primary: name5 === primary });
-    }
-    return out;
-  }
-  async function copyDraftContents(src2, dst, newId4 = null) {
-    if (!newId4) newId4 = (await Promise.resolve().then(() => (init_app(), app_exports))).guid;
-    await kapi.mkdir(dst);
-    const df0 = JSON.parse(await kapi.readFile(await kapi.join(src2, "draft.json")));
-    let sf0 = { chapters: {} };
-    try {
-      sf0 = JSON.parse(await kapi.readFile(await kapi.join(src2, "scenes.json")));
-    } catch {
-    }
-    const { draft: df, scenes: sf } = regenDraftIds(df0, sf0, newId4);
-    await kapi.writeFile(await kapi.join(dst, "draft.json"), JSON.stringify(df, null, 2));
-    await kapi.writeFile(await kapi.join(dst, "scenes.json"), JSON.stringify(sf, null, 2));
-    const chSrc = await kapi.join(src2, "Chapters");
-    if (!await kapi.exists(chSrc)) return;
-    await kapi.mkdir(await kapi.join(dst, "Chapters"));
-    for (const ch of df.chapters || []) {
-      const from2 = await kapi.join(chSrc, ch.folderName);
-      if (!await kapi.exists(from2)) continue;
-      const to = await kapi.join(dst, "Chapters", ch.folderName);
-      await kapi.mkdir(to);
-      for (const f of await kapi.listFiles(from2, "")) {
-        if (!/\.(md|csv)$/i.test(f)) continue;
-        await kapi.writeFile(await kapi.join(to, f), await kapi.readFile(await kapi.join(from2, f)));
-      }
-    }
-  }
-  async function createDraft(secPath, name5, sourceDraft = null) {
-    const draftRoot = await kapi.join(secPath, "Draft");
-    await kapi.mkdir(draftRoot);
-    const newPath = await kapi.join(draftRoot, name5);
-    if (await kapi.exists(newPath)) throw new Error(t("ui.drafts.hasDraftNameDone"));
-    if (sourceDraft) {
-      const srcPath = await kapi.join(draftRoot, sourceDraft);
-      if (!await kapi.exists(srcPath)) throw new Error(t("ui.drafts.notFoundDraftFrom"));
-      await copyDraftContents(srcPath, newPath);
-    } else {
-      const { guid: guid3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-      const ch = {
-        guid: guid3(),
-        title: t("ui.common.chapterOne2"),
-        order: 1,
-        status: "Outline",
-        act: "I",
-        date: "",
-        isFavorite: false,
-        folderName: t("ui.common.chapterOne")
+      const count = (arr, fn) => {
+        const c = /* @__PURE__ */ new Map();
+        for (const x of arr) {
+          const k = fn(x);
+          if (k) c.set(k, (c.get(k) || 0) + 1);
+        }
+        return c;
       };
-      await kapi.mkdir(await kapi.join(newPath, "Chapters", ch.folderName));
-      await kapi.writeFile(
-        await kapi.join(newPath, "draft.json"),
-        JSON.stringify({ chapters: [ch] }, null, 2)
-      );
-      await kapi.writeFile(
-        await kapi.join(newPath, "scenes.json"),
-        JSON.stringify({ chapters: { [ch.guid]: [] } }, null, 2)
-      );
+      const rowT = count(missing, (r) => String(r.title || ""));
+      const fileT = count(orphans, (f) => titleOf2.get(f));
+      for (const r of [...missing]) {
+        const tl = String(r.title || "");
+        if (!tl || rowT.get(tl) !== 1 || fileT.get(tl) !== 1) continue;
+        const f = orphans.find((x) => titleOf2.get(x) === tl);
+        pairs.push({ id: r.id, from: r.fileName, to: f, by: "title" });
+        missing = missing.filter((x) => x !== r);
+        orphans = orphans.filter((x) => x !== f);
+      }
+      if (missing.length === 1 && orphans.length === 1) {
+        pairs.push({ id: missing[0].id, from: missing[0].fileName, to: orphans[0], by: "single" });
+        missing = [];
+        orphans = [];
+      }
     }
-    return newPath;
+    return { pairs, missing, orphans };
   }
-  async function deleteDraft(secPath, name5) {
-    const sf = await kapi.join(secPath, "section.json");
-    let meta2 = {};
+  function pairSceneMoves(missing, orphans) {
+    const out = [];
+    const cnt = (arr, fn) => {
+      const c = /* @__PURE__ */ new Map();
+      for (const x of arr) {
+        const k = fn(x);
+        if (k) c.set(k, (c.get(k) || 0) + 1);
+      }
+      return c;
+    };
+    const mT = cnt(missing || [], (m) => String(m.row && m.row.title || ""));
+    const oT = cnt(orphans || [], (o) => String(o.title || ""));
+    for (const m of missing || []) {
+      const tl = String(m.row && m.row.title || "");
+      if (!tl || mT.get(tl) !== 1 || oT.get(tl) !== 1) continue;
+      const o = orphans.find((x) => String(x.title || "") === tl);
+      if (!o || o.chGuid === m.chGuid) continue;
+      out.push({ id: m.row.id, fromCh: m.chGuid, toCh: o.chGuid, from: m.row.fileName, to: o.file });
+    }
+    return out;
+  }
+  function pairChapterRenames(chapters, folders, rowsBy, filesOf, metaOf2 = () => null) {
+    const pairs = [];
+    const byKey = /* @__PURE__ */ new Map();
+    for (const f of folders || []) byKey.set(nameKey(f), f);
+    const claimed = /* @__PURE__ */ new Set();
+    let missing = [];
+    for (const c of chapters || []) {
+      if (!c || !c.folderName) continue;
+      const k = nameKey(c.folderName);
+      const actual = byKey.get(k);
+      if (actual === void 0) {
+        missing.push(c);
+        continue;
+      }
+      if (claimed.has(k)) continue;
+      claimed.add(k);
+      if (!sameName(actual, c.folderName)) pairs.push({ guid: c.guid, from: c.folderName, to: actual, by: "case" });
+    }
+    let orphans = (folders || []).filter((f) => !claimed.has(nameKey(f)));
+    if (missing.length && orphans.length) {
+      const scored = [];
+      for (const c of missing) {
+        const rows = rowsBy && rowsBy[c.guid] || [];
+        const fileKeys = new Set(rows.map((r) => nameKey(r.fileName || "")).filter(Boolean));
+        const titles = new Set(rows.map((r) => String(r.title || "")).filter(Boolean));
+        for (const f of orphans) {
+          let score = 0;
+          for (const fn of filesOf(f) || []) {
+            if (fileKeys.has(nameKey(fn))) {
+              score += 2;
+              continue;
+            }
+            let m = null;
+            try {
+              m = titles.size ? metaOf2(f, fn) : null;
+            } catch {
+              m = null;
+            }
+            if (m && m.title != null && titles.has(String(m.title))) score += 1;
+          }
+          if (score > 0) scored.push({ c, f, score });
+        }
+      }
+      scored.sort((a, b) => b.score - a.score);
+      for (const s of scored) {
+        if (!missing.includes(s.c) || !orphans.includes(s.f)) continue;
+        const tie = scored.some((o) => o !== s && o.score === s.score && (o.c === s.c || o.f === s.f) && missing.includes(o.c) && orphans.includes(o.f));
+        if (tie) continue;
+        pairs.push({ guid: s.c.guid, from: s.c.folderName, to: s.f, by: "content" });
+        missing = missing.filter((x) => x !== s.c);
+        orphans = orphans.filter((x) => x !== s.f);
+      }
+      if (missing.length === 1 && orphans.length === 1) {
+        const rows = rowsBy && rowsBy[missing[0].guid] || [];
+        const files = filesOf(orphans[0]) || [];
+        if (!rows.length || !files.length) {
+          pairs.push({ guid: missing[0].guid, from: missing[0].folderName, to: orphans[0], by: "single" });
+          missing = [];
+          orphans = [];
+        }
+      }
+    }
+    return { pairs, missing, orphans };
+  }
+  var DISK_NAME_MAX, DEFAULT_BOOK, RESERVED_ROOT, isReservedRoot, BAD_CHARS, WIN_RESERVED, nfc, nameKey, sameName, stripExt;
+  var init_disk_names = __esm({
+    "src/disk-names.js"() {
+      DISK_NAME_MAX = 80;
+      DEFAULT_BOOK = "Book";
+      RESERVED_ROOT = [
+        "Wiki",
+        "Bible",
+        "Images",
+        "Memos",
+        "Research",
+        "Snapshots",
+        ".k2history",
+        "Plugins",
+        "Recycle",
+        "Sessions",
+        "Starters",
+        "Planners",
+        "Branches",
+        "FloorPlans",
+        "OnSet",
+        "References",
+        "Models",
+        "Backups",
+        "Draft",
+        "languages",
+        "Analysis",
+        "Dialogues",
+        "Fonts",
+        "Skills",
+        ".git"
+      ];
+      isReservedRoot = (name5) => RESERVED_ROOT.some((r) => nameKey(r) === nameKey(name5));
+      BAD_CHARS = /[\\/:*?"<>|\u0000-\u001f]/g;
+      WIN_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+      nfc = (s) => {
+        const v2 = String(s == null ? "" : s);
+        try {
+          return v2.normalize("NFC");
+        } catch {
+          return v2;
+        }
+      };
+      nameKey = (s) => nfc(s).toLowerCase();
+      sameName = (a, b) => nfc(a) === nfc(b);
+      stripExt = (name5, ext = ".md") => {
+        const s = String(name5 || "");
+        return ext && s.toLowerCase().endsWith(ext.toLowerCase()) ? s.slice(0, -ext.length) : s;
+      };
+    }
+  });
+
+  // src/visual/vis-core.js
+  var vis_core_exports = {};
+  __export(vis_core_exports, {
+    COL_W_MAX: () => COL_W_MAX,
+    COL_W_MIN: () => COL_W_MIN,
+    CSV_BOM: () => CSV_BOM,
+    REF_SEP: () => REF_SEP,
+    SIMILAR_MIN: () => SIMILAR_MIN,
+    SNAP_SEP: () => SNAP_SEP,
+    VIS_COL_DEFAULT_OFF: () => VIS_COL_DEFAULT_OFF,
+    VIS_COL_KEYS: () => VIS_COL_KEYS,
+    VIS_COL_W: () => VIS_COL_W,
+    VIS_FIXED_W: () => VIS_FIXED_W,
+    VIS_HEADER: () => VIS_HEADER,
+    bindRow: () => bindRow,
+    boundIdxs: () => boundIdxs,
+    clampColW: () => clampColW,
+    commentsForText: () => commentsForText,
+    csvCell: () => csvCell2,
+    displayText: () => displayText2,
+    dumpVis: () => dumpVis,
+    entitiesIn: () => entitiesIn,
+    insertRow: () => insertRow,
+    joinSnaps: () => joinSnaps,
+    lineHash: () => lineHash,
+    lineUsage: () => lineUsage,
+    liveLineNos: () => liveLineNos,
+    liveText: () => liveText,
+    makeRef: () => makeRef,
+    makeRow: () => makeRow,
+    moveCol: () => moveCol,
+    moveRow: () => moveRow,
+    normText: () => normText,
+    normalizeCols: () => normalizeCols,
+    parseCsv: () => parseCsv2,
+    parseRef: () => parseRef,
+    parseRefs: () => parseRefs,
+    parseVis: () => parseVis,
+    removeRow: () => removeRow,
+    renumber: () => renumber,
+    resolveAll: () => resolveAll,
+    resolveRow: () => resolveRow,
+    rowFromLines: () => rowFromLines,
+    sceneFileOfVis: () => sceneFileOfVis,
+    setColWidth: () => setColWidth,
+    similarity: () => similarity2,
+    splitLines: () => splitLines,
+    splitSnaps: () => splitSnaps,
+    syncRow: () => syncRow,
+    toggleCol: () => toggleCol,
+    totalWidth: () => totalWidth,
+    unusedLines: () => unusedLines,
+    visFileName: () => visFileName,
+    visibleCols: () => visibleCols
+  });
+  function visFileName(sceneFileName) {
+    const s = String(sceneFileName || "").trim();
+    if (!s) return "";
+    return s.replace(/\.md$/i, "") + "_vis.csv";
+  }
+  function sceneFileOfVis(visName) {
+    const m = /^(.*)_vis\.csv$/i.exec(String(visName || "").trim());
+    return m ? m[1] + ".md" : "";
+  }
+  function normText(s) {
+    return String(s == null ? "" : s).replace(/\s+/g, " ").trim();
+  }
+  function lineHash(s) {
+    const t3 = normText(s);
+    let h = 5381;
+    for (let i5 = 0; i5 < t3.length; i5++) h = (h << 5) + h + t3.charCodeAt(i5) >>> 0;
+    return h.toString(36);
+  }
+  function makeRef(idx4, text) {
+    return String(idx4 | 0) + "|" + lineHash(text);
+  }
+  function parseRef(ref) {
+    const s = String(ref || "").trim();
+    if (!s) return { idx: -1, hash: "" };
+    const i5 = s.indexOf("|");
+    if (i5 < 0) return { idx: -1, hash: s };
+    return { idx: parseInt(s.slice(0, i5), 10) || 0, hash: s.slice(i5 + 1) };
+  }
+  function parseRefs(ref) {
+    return String(ref || "").split(REF_SEP).map((x) => x.trim()).filter(Boolean).map(parseRef);
+  }
+  function splitSnaps(text) {
+    const s = String(text == null ? "" : text);
+    if (!s.trim()) return [];
+    return s.split(/\n\s*\n/).map((x) => x.trim());
+  }
+  function joinSnaps(list3) {
+    return (list3 || []).join(SNAP_SEP);
+  }
+  function trigrams(s) {
+    const t3 = normText(s);
+    const out = /* @__PURE__ */ new Set();
+    if (t3.length <= 3) {
+      if (t3) out.add(t3);
+      return out;
+    }
+    for (let i5 = 0; i5 + 3 <= t3.length; i5++) out.add(t3.slice(i5, i5 + 3));
+    return out;
+  }
+  function similarity2(a, b) {
+    const A = trigrams(a), B = trigrams(b);
+    if (!A.size || !B.size) return A.size === B.size ? 1 : 0;
+    let hit = 0;
+    for (const g of A) if (B.has(g)) hit++;
+    return hit / (A.size + B.size - hit);
+  }
+  function splitLines(body, format3 = "prose") {
+    const raw = String(body || "").replace(/<!--align:[^>]*-->/g, "").replace(/\r\n/g, "\n");
+    const parts = format3 === "screenplay" ? raw.split("\n") : raw.split(/\n\s*\n/);
+    const out = [];
+    for (const p of parts) {
+      const text = p.trim();
+      if (!text) continue;
+      out.push({ i: out.length, text });
+    }
+    return out;
+  }
+  function displayText2(raw) {
+    let s = String(raw == null ? "" : raw);
+    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+    s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+    s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+    s = s.replace(/^\s{0,3}>\s?/gm, "");
+    s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
+    s = s.replace(/^\s{0,3}\d+[.)]\s+/gm, "");
+    s = s.replace(/~~([^~]+)~~/g, "$1");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
+    s = s.replace(/(^|[^_])_([^_\n]+)_/g, "$1$2");
+    s = s.replace(/`([^`]+)`/g, "$1");
+    return s.replace(/[ \t]+$/gm, "");
+  }
+  function entitiesIn(text, names) {
+    const s = displayText2(text);
+    if (!s || !names || !names.length) return [];
+    const sorted = [...new Set(names.filter(Boolean).map(String))].sort((a, b) => b.length - a.length);
+    const taken = new Array(s.length).fill(false);
+    const hits = [];
+    for (const n2 of sorted) {
+      if (!n2) continue;
+      let from2 = 0, at;
+      while ((at = s.indexOf(n2, from2)) >= 0) {
+        let free = true;
+        for (let k = at; k < at + n2.length; k++) if (taken[k]) {
+          free = false;
+          break;
+        }
+        if (free) {
+          for (let k = at; k < at + n2.length; k++) taken[k] = true;
+          hits.push({ at, name: n2 });
+        }
+        from2 = at + 1;
+      }
+    }
+    hits.sort((a, b) => a.at - b.at);
+    const out = [];
+    for (const h of hits) if (!out.includes(h.name)) out.push(h.name);
+    return out;
+  }
+  function makeRow({ no = 0, ref = "", image = "", text = "", remark = "" } = {}) {
+    return {
+      no: no | 0,
+      ref: String(ref || ""),
+      image: String(image || ""),
+      text: String(text || ""),
+      remark: String(remark || "")
+    };
+  }
+  function rowFromLines(lines) {
+    const ls = Array.isArray(lines) ? lines : [lines];
+    return makeRow({
+      ref: ls.map((l) => makeRef(l.i, l.text)).join(REF_SEP),
+      text: joinSnaps(ls.map((l) => l.text))
+    });
+  }
+  function bindRow(row4, lines, idxs) {
+    const byI = new Map((lines || []).map((l) => [l.i, l]));
+    const picked = [...new Set(idxs || [])].filter((i5) => byI.has(i5)).sort((a, b) => a - b);
+    row4.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
+    row4.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
+    return row4;
+  }
+  function renumber(rows) {
+    (rows || []).forEach((r, i5) => {
+      r.no = i5 + 1;
+    });
+    return rows;
+  }
+  function moveRow(rows, idx4, dir2) {
+    const j = idx4 + (dir2 < 0 ? -1 : 1);
+    if (idx4 < 0 || idx4 >= rows.length || j < 0 || j >= rows.length) return idx4;
+    const [r] = rows.splice(idx4, 1);
+    rows.splice(j, 0, r);
+    renumber(rows);
+    return j;
+  }
+  function insertRow(rows, idx4, row4) {
+    const at = Math.max(0, Math.min(rows.length, idx4 < 0 ? rows.length : idx4));
+    rows.splice(at, 0, row4);
+    renumber(rows);
+    return at;
+  }
+  function removeRow(rows, idx4) {
+    if (idx4 < 0 || idx4 >= rows.length) return null;
+    const [r] = rows.splice(idx4, 1);
+    renumber(rows);
+    return r;
+  }
+  function resolvePart(hash2, snap2, ls, hintIdx) {
+    if (ls[hintIdx] && lineHash(ls[hintIdx].text) === hash2)
+      return { status: "ok", idx: hintIdx, text: ls[hintIdx].text, snap: snap2 };
+    for (let k = 0; k < ls.length; k++)
+      if (lineHash(ls[k].text) === hash2) return { status: "ok", idx: k, text: ls[k].text, snap: snap2 };
+    let best = -1, bs = 0;
+    for (let k = 0; k < ls.length; k++) {
+      const s = similarity2(ls[k].text, snap2);
+      if (s > bs) {
+        bs = s;
+        best = k;
+      }
+    }
+    if (best >= 0 && bs >= SIMILAR_MIN)
+      return { status: "changed", idx: best, text: ls[best].text, snap: snap2, score: bs };
+    return { status: "lost", idx: -1, text: "", snap: snap2 };
+  }
+  function resolveRow(row4, lines) {
+    const ls = lines || [];
+    const refs = parseRefs(row4 && row4.ref);
+    const snaps = splitSnaps(row4 && row4.text);
+    if (!refs.length) return { status: "free", parts: [], live: [] };
+    const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
+    const live2 = parts.filter((p) => p.status !== "lost");
+    const status = parts.some((p) => p.status === "changed") ? "changed" : live2.length ? "ok" : "lost";
+    return { status, parts, live: live2 };
+  }
+  function resolveAll(rows, lines) {
+    return (rows || []).map((r) => resolveRow(r, lines));
+  }
+  function liveText(res) {
+    return (res && res.live ? res.live : []).map((p) => p.text).join(SNAP_SEP);
+  }
+  function liveLineNos(res) {
+    return (res && res.live ? res.live : []).map((p) => p.idx + 1);
+  }
+  function syncRow(row4, res) {
+    if (!res || !res.parts || !res.parts.length) return row4;
+    const refs = parseRefs(row4.ref);
+    const snaps = splitSnaps(row4.text);
+    const nextRefs = [], nextSnaps = [];
+    res.parts.forEach((p, i5) => {
+      if (p.status === "lost") {
+        nextRefs.push(refs[i5] ? String(refs[i5].idx) + "|" + refs[i5].hash : "");
+        nextSnaps.push(snaps[i5] == null ? "" : snaps[i5]);
+      } else {
+        nextRefs.push(makeRef(p.idx, p.text));
+        nextSnaps.push(p.text);
+      }
+    });
+    row4.ref = nextRefs.filter(Boolean).join(REF_SEP);
+    row4.text = joinSnaps(nextSnaps);
+    return row4;
+  }
+  function boundIdxs(row4, lines) {
+    return resolveRow(row4, lines).live.map((p) => p.idx);
+  }
+  function lineUsage(rows, lines) {
+    const m = /* @__PURE__ */ new Map();
+    for (const r of rows || [])
+      for (const i5 of boundIdxs(r, lines)) m.set(i5, (m.get(i5) || 0) + 1);
+    return m;
+  }
+  function unusedLines(rows, lines) {
+    const used = lineUsage(rows, lines);
+    return (lines || []).filter((l) => !used.has(l.i));
+  }
+  function commentsForText(text, comments) {
+    const t3 = normText(text);
+    if (!t3) return [];
+    return (comments || []).filter((c) => {
+      const q2 = normText(c && c.anchor && c.anchor.quote);
+      return !!q2 && (t3.includes(q2) || q2.includes(t3));
+    });
+  }
+  function clampColW(w, key2) {
+    const n2 = Math.round(Number(w));
+    if (!Number.isFinite(n2)) return VIS_COL_W[key2] || 160;
+    return Math.max(COL_W_MIN, Math.min(COL_W_MAX, n2));
+  }
+  function normalizeCols(cfg) {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    for (const c of Array.isArray(cfg) ? cfg : []) {
+      const key2 = typeof c === "string" ? c : c && c.key;
+      if (!VIS_COL_KEYS.includes(key2) || seen.has(key2)) continue;
+      seen.add(key2);
+      out.push({
+        key: key2,
+        on: typeof c === "string" ? true : c.on !== false,
+        w: clampColW(typeof c === "string" ? VIS_COL_W[key2] : c.w, key2)
+      });
+    }
+    for (const key2 of VIS_COL_KEYS)
+      if (!seen.has(key2)) out.push({ key: key2, on: !VIS_COL_DEFAULT_OFF.includes(key2), w: VIS_COL_W[key2] });
+    if (!out.some((c) => c.on)) out.forEach((c) => {
+      c.on = true;
+    });
+    return out;
+  }
+  function toggleCol(cols, key2) {
+    const c = cols.find((x) => x.key === key2);
+    if (!c) return cols;
+    if (c.on && cols.filter((x) => x.on).length === 1) return cols;
+    c.on = !c.on;
+    return cols;
+  }
+  function moveCol(cols, key2, dir2) {
+    const i5 = cols.findIndex((x) => x.key === key2);
+    const j = i5 + (dir2 < 0 ? -1 : 1);
+    if (i5 < 0 || j < 0 || j >= cols.length) return cols;
+    const [c] = cols.splice(i5, 1);
+    cols.splice(j, 0, c);
+    return cols;
+  }
+  function setColWidth(cols, key2, w) {
+    const c = cols.find((x) => x.key === key2);
+    if (c) c.w = clampColW(w, key2);
+    return cols;
+  }
+  function visibleCols(cols) {
+    return normalizeCols(cols).filter((c) => c.on).map((c) => c.key);
+  }
+  function totalWidth(cols) {
+    return normalizeCols(cols).filter((c) => c.on).reduce((a, c) => a + c.w, 0) + VIS_FIXED_W;
+  }
+  function csvCell2(v2) {
+    const s = String(v2 == null ? "" : v2);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function parseCsv2(text) {
+    const s = String(text || "").replace(/^﻿/, "");
+    const rows = [];
+    let row4 = [], cell = "", q2 = false;
+    for (let i5 = 0; i5 < s.length; i5++) {
+      const ch = s[i5];
+      if (q2) {
+        if (ch === '"') {
+          if (s[i5 + 1] === '"') {
+            cell += '"';
+            i5++;
+          } else q2 = false;
+        } else cell += ch;
+        continue;
+      }
+      if (ch === '"') {
+        q2 = true;
+        continue;
+      }
+      if (ch === ",") {
+        row4.push(cell);
+        cell = "";
+        continue;
+      }
+      if (ch === "\r") continue;
+      if (ch === "\n") {
+        row4.push(cell);
+        rows.push(row4);
+        row4 = [];
+        cell = "";
+        continue;
+      }
+      cell += ch;
+    }
+    if (cell !== "" || row4.length) {
+      row4.push(cell);
+      rows.push(row4);
+    }
+    return rows.filter((r) => r.length && !(r.length === 1 && r[0] === ""));
+  }
+  function parseVis(text) {
+    const table9 = parseCsv2(text);
+    if (!table9.length) return [];
+    let start = 0;
+    const head2 = table9[0].map((h) => String(h || "").trim().toLowerCase());
+    const idxOf = {};
+    if (head2.includes("ref") || head2.includes("no")) {
+      start = 1;
+      VIS_HEADER.forEach((k) => {
+        idxOf[k] = head2.indexOf(k);
+      });
+    } else {
+      VIS_HEADER.forEach((k, i5) => {
+        idxOf[k] = i5;
+      });
+    }
+    const rows = [];
+    for (let r = start; r < table9.length; r++) {
+      const t3 = table9[r];
+      const g = (k) => idxOf[k] >= 0 ? t3[idxOf[k]] || "" : "";
+      rows.push(makeRow({
+        no: parseInt(g("no"), 10) || 0,
+        ref: g("ref"),
+        image: g("image"),
+        text: g("text"),
+        remark: g("remark")
+      }));
+    }
+    return renumber(rows);
+  }
+  function dumpVis(rows) {
+    const out = [VIS_HEADER.join(",")];
+    for (const r of renumber(rows || []))
+      out.push(VIS_HEADER.map((k) => csvCell2(r[k])).join(","));
+    return CSV_BOM + out.join("\r\n") + "\r\n";
+  }
+  var REF_SEP, SNAP_SEP, SIMILAR_MIN, VIS_COL_KEYS, VIS_COL_DEFAULT_OFF, VIS_COL_W, COL_W_MIN, COL_W_MAX, VIS_FIXED_W, CSV_BOM, VIS_HEADER;
+  var init_vis_core = __esm({
+    "src/visual/vis-core.js"() {
+      REF_SEP = ";";
+      SNAP_SEP = "\n\n";
+      SIMILAR_MIN = 0.4;
+      VIS_COL_KEYS = ["no", "scene", "image", "text", "entities", "remark", "comment"];
+      VIS_COL_DEFAULT_OFF = ["scene"];
+      VIS_COL_W = { no: 64, scene: 150, image: 300, text: 340, entities: 170, remark: 240, comment: 220 };
+      COL_W_MIN = 56;
+      COL_W_MAX = 1200;
+      VIS_FIXED_W = 40 + 42;
+      CSV_BOM = "\uFEFF";
+      VIS_HEADER = ["no", "ref", "image", "text", "remark"];
+    }
+  });
+
+  // src/disk-sync.js
+  var disk_sync_exports = {};
+  __export(disk_sync_exports, {
+    freeBookName: () => freeBookName,
+    freeChapterFolder: () => freeChapterFolder,
+    freeSceneFile: () => freeSceneFile,
+    listNameMismatches: () => listNameMismatches,
+    reconcileNames: () => reconcileNames,
+    renameChapterOnDisk: () => renameChapterOnDisk,
+    renameSceneOnDisk: () => renameSceneOnDisk,
+    renameSectionOnDisk: () => renameSectionOnDisk,
+    sceneRenameTarget: () => sceneRenameTarget,
+    sectionRenameTarget: () => sectionRenameTarget
+  });
+  async function freeSceneFile(io, dPath, folderName, title2, taken = [], self2 = "") {
+    const used = /* @__PURE__ */ new Set();
+    for (const n2 of taken || []) used.add(nameKey(n2));
+    for (const f of await mdOf(io, await io.join(dPath, "Chapters", folderName))) used.add(nameKey(f));
+    if (self2) used.delete(nameKey(self2));
+    return freeName2(diskBase(title2, "scene"), used, ".md");
+  }
+  async function freeChapterFolder(io, dPath, title2, taken = [], self2 = "") {
+    const used = /* @__PURE__ */ new Set();
+    for (const n2 of taken || []) used.add(nameKey(n2));
+    for (const f of await dirsOf(io, await io.join(dPath, "Chapters"))) used.add(nameKey(f));
+    if (self2) used.delete(nameKey(self2));
+    return freeName2(diskBase(title2, "chapter"), used);
+  }
+  async function freeBookName(io, root, title2) {
+    const dirs = await dirsOf(io, root);
+    if (!title2) {
+      const n3 = defaultBookName([...dirs]);
+      return { title: n3, folder: n3, taken: false };
+    }
+    const base4 = diskBase(title2, "Book");
+    if (!bookNameTaken(base4, dirs)) return { title: String(title2), folder: base4, taken: false };
+    let n2 = 2, name5 = `${base4} ${n2}`;
+    while (bookNameTaken(name5, dirs)) name5 = `${base4} ${++n2}`;
+    return { title: `${String(title2).trim()} ${n2}`, folder: name5, taken: true };
+  }
+  async function moveVis(io, fromDir, fromFile, toDir, toFile) {
     try {
-      meta2 = await kapi.readJson(sf);
+      const src2 = await io.join(fromDir, visFileName(fromFile));
+      if (!await has(io, src2)) return false;
+      const dst = await io.join(toDir, visFileName(toFile));
+      if (await has(io, dst)) return false;
+      await io.move(src2, dst);
+      return true;
     } catch {
-    }
-    if ((meta2.primaryDraft || "default") === name5) {
-      setStatus(t("ui.drafts.delCantDraftMain"));
       return false;
     }
-    if (!await confirmBox(tf("ui.drafts.delDraftDraft", name5), t("ui.drafts.delDraft"))) return false;
-    const dPath = await kapi.join(secPath, "Draft", name5);
-    const recycle = await kapi.join(state.root, "Recycle", "draft-" + Date.now().toString(36));
-    const { closeTabsUnderPath: closeTabsUnderPath2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    if (!(await closeTabsUnderPath2(dPath, { save: true })).ok) {
-      setStatus(tf("ui.app.moveCancelledUnsaved", name5));
-      return false;
-    }
-    await kapi.move(dPath, recycle);
-    logAction("draft", t("ui.drafts.delDraft") + ": " + name5, { from: dPath, trash: recycle });
-    return true;
   }
-  async function renameDraft(secPath, oldName, newName) {
-    const oldPath = await kapi.join(secPath, "Draft", oldName);
-    const newPath = await kapi.join(secPath, "Draft", newName);
-    if (await kapi.exists(newPath)) {
-      setStatus(t("ui.drafts.hasDraftNameDone"));
-      return false;
+  async function sceneRenameTarget(io, dPath, ch, sceneId, title2) {
+    let d;
+    try {
+      d = await io.readJson(await io.join(dPath, "scenes.json"));
+    } catch {
+      return "";
     }
-    const { closeTabsUnderPath: closeTabsUnderPath2, moveSnapshots: moveSnapshots2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    if (!(await closeTabsUnderPath2(oldPath, { save: true })).ok) {
-      setStatus(tf("ui.app.moveCancelledUnsaved", oldName));
-      return false;
+    const rows = (d && d.chapters || {})[ch.guid] || [];
+    const row4 = rows.find((r) => r.id === sceneId);
+    if (!row4 || !row4.fileName || nameFits(title2, row4.fileName, ".md")) return "";
+    return freeSceneFile(io, dPath, ch.folderName, title2, rows.filter((r) => r !== row4).map((r) => r.fileName), row4.fileName);
+  }
+  async function renameSceneOnDisk(io, dPath, ch, sceneId, title2) {
+    const sf = await io.join(dPath, "scenes.json");
+    const dir2 = await io.join(dPath, "Chapters", ch.folderName);
+    const out = { ok: false, moved: false, from: "", to: "", fileName: "" };
+    await mutateJson(io, sf, async (d) => {
+      const rows = (d && d.chapters || {})[ch.guid] || [];
+      const row4 = rows.find((r) => r.id === sceneId);
+      if (!row4 || !row4.fileName) {
+        out.reason = "no-row";
+        return false;
+      }
+      const from2 = await io.join(dir2, row4.fileName);
+      out.from = from2;
+      out.to = from2;
+      out.fileName = row4.fileName;
+      try {
+        const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io.readFile(from2));
+        if (meta2.title !== title2) {
+          meta2.title = title2;
+          await writeMdKeepingComments(io, from2, (0, import_md6.dumpMdFile)(meta2, body));
+        }
+      } catch (e) {
+        out.reason = "no-file";
+        out.error = e;
+        return false;
+      }
+      let fileName = row4.fileName;
+      if (!nameFits(title2, row4.fileName, ".md")) {
+        fileName = await freeSceneFile(
+          io,
+          dPath,
+          ch.folderName,
+          title2,
+          rows.filter((r) => r !== row4).map((r) => r.fileName),
+          row4.fileName
+        );
+        if (!sameName(fileName, row4.fileName)) {
+          const to = await io.join(dir2, fileName);
+          await io.move(from2, to);
+          await moveVis(io, dir2, row4.fileName, dir2, fileName);
+          out.moved = true;
+          out.to = to;
+        }
+      }
+      row4.title = title2;
+      row4.fileName = fileName;
+      out.ok = true;
+      out.fileName = fileName;
+    });
+    return out;
+  }
+  async function renameChapterOnDisk(io, dPath, chGuid, title2) {
+    const df = await io.join(dPath, "draft.json");
+    const out = { ok: false, moved: false, from: "", to: "", folderName: "" };
+    await mutateJson(io, df, async (d) => {
+      const list3 = d && d.chapters || [];
+      const c = list3.find((x) => x.guid === chGuid);
+      if (!c) return false;
+      const cur = c.folderName || "";
+      const from2 = await io.join(dPath, "Chapters", cur);
+      out.from = from2;
+      out.to = from2;
+      let folderName = cur;
+      if (!cur || !nameFits(title2, cur)) {
+        folderName = await freeChapterFolder(io, dPath, title2, list3.filter((x) => x !== c).map((x) => x.folderName), cur);
+        if (!sameName(folderName, cur)) {
+          const to = await io.join(dPath, "Chapters", folderName);
+          if (cur && await has(io, from2)) await io.move(from2, to);
+          else await io.mkdir(to);
+          out.moved = !!cur;
+          out.to = to;
+        }
+      }
+      c.title = title2;
+      c.folderName = folderName;
+      out.ok = true;
+      out.folderName = folderName;
+    });
+    return out;
+  }
+  async function sectionRenameTarget(io, secPath, title2) {
+    const cur = baseOf(secPath);
+    const want = diskBase(title2, "Book");
+    if (sameName(want, cur)) return { folder: cur, moves: false, taken: false };
+    return { folder: want, moves: true, taken: bookNameTaken(want, await dirsOf(io, parentOf2(secPath)), cur) };
+  }
+  async function renameSectionOnDisk(io, secPath, title2) {
+    const tg = await sectionRenameTarget(io, secPath, title2);
+    const out = { ok: false, moved: false, taken: tg.taken, from: secPath, to: secPath, folderName: tg.folder };
+    if (tg.taken) return out;
+    if (tg.moves) {
+      const to = await io.join(parentOf2(secPath), tg.folder);
+      await io.move(secPath, to);
+      out.moved = true;
+      out.to = to;
     }
-    await kapi.move(oldPath, newPath);
-    await moveSnapshots2(oldPath, newPath);
-    logAction("draft", tf("ui.drafts.renameDraftTo", oldName, newName), { secPath });
-    const sf = await kapi.join(secPath, "section.json");
-    await mutateJson(kapi, sf, (meta2) => {
-      if ((meta2.primaryDraft || "default") !== oldName) return false;
-      meta2.primaryDraft = newName;
+    await mutateJson(io, await io.join(out.to, "section.json"), (d) => {
+      d.title = title2;
+      d.folderName = tg.folder;
     }, { fallback: {} });
-    return true;
+    out.ok = true;
+    return out;
   }
-  async function setPrimaryDraft(secPath, name5) {
-    const sf = await kapi.join(secPath, "section.json");
-    await mutateJson(kapi, sf, (meta2) => {
-      meta2.primaryDraft = name5;
-    }, { fallback: {} });
-    const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    await buildTree3();
+  async function metaTitle(io, file) {
+    try {
+      const m = (0, import_md6.parseMdFile)(await io.readFile(file)).meta || {};
+      return { title: m.title != null ? String(m.title) : "" };
+    } catch {
+      return null;
+    }
   }
-  var init_drafts = __esm({
-    "src/drafts.js"() {
-      init_i18n();
-      init_core();
-      init_ui();
+  async function stampTitle(io, file, title2) {
+    try {
+      const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io.readFile(file));
+      if (meta2.title === title2) return false;
+      meta2.title = title2;
+      await writeMdKeepingComments(io, file, (0, import_md6.dumpMdFile)(meta2, body));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async function reconcileDraft(io, dPath, changes) {
+    const df = await io.join(dPath, "draft.json");
+    const sf = await io.join(dPath, "scenes.json");
+    const chRoot = await io.join(dPath, "Chapters");
+    let draft, scenes;
+    try {
+      draft = await io.readJson(df);
+      scenes = await io.readJson(sf);
+    } catch {
+      return;
+    }
+    let chapters = draft && Array.isArray(draft.chapters) ? draft.chapters : [];
+    const rowsBy = scenes && scenes.chapters && typeof scenes.chapters === "object" ? scenes.chapters : {};
+    const folders = await dirsOf(io, chRoot);
+    const folderKeys = new Set(folders.map(nameKey));
+    const exact = new Set(folders);
+    if (chapters.some((c) => c && c.folderName && !exact.has(c.folderName))) {
+      const known2 = new Set(chapters.map((c) => nameKey(c.folderName || "")));
+      const files = {}, metas = {};
+      const needMeta = chapters.some((c) => c && c.folderName && !folderKeys.has(nameKey(c.folderName)));
+      for (const f of folders) {
+        if (known2.has(nameKey(f)) || !needMeta) continue;
+        files[f] = await mdOf(io, await io.join(chRoot, f));
+        for (const fn of files[f]) metas[f + "/" + fn] = await metaTitle(io, await io.join(chRoot, f, fn));
+      }
+      const res = pairChapterRenames(chapters, folders, rowsBy, (f) => files[f] || [], (f, fn) => metas[f + "/" + fn]);
+      if (res.pairs.length) {
+        const done3 = [];
+        await mutateJson(io, df, async (d) => {
+          let hit = false;
+          for (const p of res.pairs) {
+            const c = (d.chapters || []).find((x) => x.guid === p.guid);
+            if (!c || !sameName(c.folderName, p.from)) continue;
+            if (!await has(io, await io.join(chRoot, p.to))) continue;
+            const oldTitle = c.title || "";
+            const title2 = p.by === "case" && !nameFits(oldTitle, p.from) ? oldTitle : titleAfterRename("chapter", p.to, oldTitle);
+            c.folderName = p.to;
+            c.title = title2;
+            hit = true;
+            done3.push({ kind: "chapter", from: await io.join(chRoot, p.from), to: await io.join(chRoot, p.to), oldTitle, title: title2 });
+          }
+          return hit ? void 0 : false;
+        });
+        changes.push(...done3);
+        try {
+          chapters = (await io.readJson(df)).chapters || chapters;
+        } catch {
+        }
+      }
+    }
+    const leftMissing = [], leftOrphans = [];
+    for (const c of chapters) {
+      if (!c || !c.folderName || !folderKeys.has(nameKey(c.folderName))) continue;
+      const dir2 = await io.join(chRoot, c.folderName);
+      const rows = rowsBy[c.guid] || [];
+      const files = await mdOf(io, dir2);
+      const fileSet = new Set(files);
+      const rowKeys = new Set(rows.map((r) => nameKey(r && r.fileName || "")));
+      const anyGone = rows.some((r) => r && r.fileName && !fileSet.has(r.fileName));
+      const strays = files.filter((f) => !rowKeys.has(nameKey(f)));
+      if (!anyGone) {
+        for (const f of strays) leftOrphans.push({ chGuid: c.guid, folder: c.folderName, file: f });
+        continue;
+      }
+      const metas = {};
+      for (const f of strays) metas[f] = await metaTitle(io, await io.join(dir2, f));
+      const res = pairSceneRenames(rows, files, (f) => metas[f]);
+      for (const r of res.missing) leftMissing.push({ chGuid: c.guid, folder: c.folderName, row: r });
+      for (const f of res.orphans) leftOrphans.push({ chGuid: c.guid, folder: c.folderName, file: f, title: metas[f] && metas[f].title || "" });
+      if (!res.pairs.length) continue;
+      const done3 = [];
+      await mutateJson(io, sf, async (d) => {
+        let hit = false;
+        const live2 = (d && d.chapters || {})[c.guid] || [];
+        for (const p of res.pairs) {
+          const row4 = live2.find((r) => r.id === p.id);
+          if (!row4 || !sameName(row4.fileName, p.from)) continue;
+          if (!await has(io, await io.join(dir2, p.to))) continue;
+          if (live2.some((r) => r !== row4 && sameName(r.fileName, p.to))) continue;
+          const oldTitle = row4.title || "";
+          const nb = stripExt(p.to, ".md");
+          const title2 = p.by === "case" && !nameFits(oldTitle, p.from, ".md") ? oldTitle : titleAfterRename("scene", nb, oldTitle);
+          row4.fileName = p.to;
+          row4.title = title2;
+          hit = true;
+          done3.push({ kind: "scene", from: await io.join(dir2, p.from), to: await io.join(dir2, p.to), oldTitle, title: title2, _dir: dir2, _from: p.from, _to: p.to });
+        }
+        return hit ? void 0 : false;
+      });
+      for (const ch of done3) {
+        await moveVis(io, ch._dir, ch._from, ch._dir, ch._to);
+        if (ch.title !== ch.oldTitle) await stampTitle(io, ch.to, ch.title);
+        delete ch._dir;
+        delete ch._from;
+        delete ch._to;
+      }
+      changes.push(...done3);
+    }
+    if (leftMissing.length && leftOrphans.length) {
+      for (const o of leftOrphans) {
+        if (o.title === void 0) {
+          const m = await metaTitle(io, await io.join(chRoot, o.folder, o.file));
+          o.title = m && m.title || "";
+        }
+      }
+      const moves = pairSceneMoves(leftMissing, leftOrphans);
+      if (moves.length) {
+        const folderOf = (g) => {
+          const c = chapters.find((x) => x.guid === g);
+          return c ? c.folderName : "";
+        };
+        const done3 = [];
+        await mutateJson(io, sf, async (d) => {
+          let hit = false;
+          d.chapters = d.chapters || {};
+          for (const m of moves) {
+            const src2 = d.chapters[m.fromCh] || [];
+            const row4 = src2.find((r) => r.id === m.id);
+            if (!row4 || !sameName(row4.fileName, m.from)) continue;
+            const toDir = await io.join(chRoot, folderOf(m.toCh));
+            if (!await has(io, await io.join(toDir, m.to))) continue;
+            const dst = d.chapters[m.toCh] || [];
+            if (dst.some((r) => sameName(r.fileName, m.to))) continue;
+            d.chapters[m.fromCh] = src2.filter((r) => r !== row4);
+            row4.fileName = m.to;
+            row4.chapterGuid = m.toCh;
+            row4.order = maxOrder(dst) + 1;
+            d.chapters[m.toCh] = [...dst, row4];
+            hit = true;
+            done3.push({
+              kind: "scene",
+              from: await io.join(chRoot, folderOf(m.fromCh), m.from),
+              to: await io.join(toDir, m.to),
+              oldTitle: row4.title || "",
+              title: row4.title || "",
+              moved: true,
+              _fromDir: await io.join(chRoot, folderOf(m.fromCh)),
+              _toDir: toDir,
+              _from: m.from,
+              _to: m.to
+            });
+          }
+          return hit ? void 0 : false;
+        });
+        for (const ch of done3) {
+          await moveVis(io, ch._fromDir, ch._from, ch._toDir, ch._to);
+          delete ch._fromDir;
+          delete ch._toDir;
+          delete ch._from;
+          delete ch._to;
+        }
+        changes.push(...done3);
+      }
+    }
+  }
+  async function reconcileNames(io, root) {
+    const changes = [];
+    if (!root) return changes;
+    for (const name5 of await dirsOf(io, root)) {
+      const secPath = await io.join(root, name5);
+      const sf = await io.join(secPath, "section.json");
+      if (!await has(io, sf)) continue;
+      let meta2;
+      try {
+        meta2 = await io.readJson(sf);
+      } catch {
+        continue;
+      }
+      const s = sectionSync(meta2 || {}, name5);
+      if (isReservedRoot(name5)) changes.push({ kind: "book", reserved: true, from: secPath, to: secPath, oldTitle: meta2 && meta2.title || "", title: name5 });
+      if (s.record) {
+        const oldTitle = meta2 && meta2.title || "";
+        try {
+          const from2 = s.renamed ? await io.join(root, meta2.folderName) : "";
+          const copied = s.renamed && await has(io, await io.join(from2, "section.json"));
+          await mutateJson(io, sf, (d) => {
+            d.folderName = name5;
+            if (s.renamed) d.title = s.title;
+            if (copied) d.guid = "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          });
+          if (s.renamed) changes.push({ kind: "book", from: from2, to: secPath, oldTitle, title: s.title, copied });
+        } catch {
+        }
+      }
+      for (const dn of await dirsOf(io, await io.join(secPath, "Draft"))) {
+        const dPath = await io.join(secPath, "Draft", dn);
+        if (!await has(io, await io.join(dPath, "draft.json"))) continue;
+        try {
+          await reconcileDraft(io, dPath, changes);
+        } catch {
+        }
+      }
+    }
+    return changes;
+  }
+  async function listNameMismatches(io, root) {
+    const out = [];
+    if (!root) return out;
+    for (const name5 of await dirsOf(io, root)) {
+      const secPath = await io.join(root, name5);
+      const sf = await io.join(secPath, "section.json");
+      if (!await has(io, sf)) continue;
+      let meta2;
+      try {
+        meta2 = await io.readJson(sf);
+      } catch {
+        continue;
+      }
+      const title2 = meta2 && meta2.title || name5;
+      if (!sameName(diskBase(title2, "Book"), name5)) out.push({ kind: "book", title: title2, disk: name5, secPath });
+      for (const dn of await dirsOf(io, await io.join(secPath, "Draft"))) {
+        const dPath = await io.join(secPath, "Draft", dn);
+        let draft, scenes;
+        try {
+          draft = await io.readJson(await io.join(dPath, "draft.json"));
+          scenes = await io.readJson(await io.join(dPath, "scenes.json"));
+        } catch {
+          continue;
+        }
+        const folders = new Set((await dirsOf(io, await io.join(dPath, "Chapters"))).map(nameKey));
+        for (const c of draft && draft.chapters || []) {
+          if (!c || !c.folderName || !folders.has(nameKey(c.folderName))) continue;
+          if (c.title && !nameFits(c.title, c.folderName)) out.push({ kind: "chapter", title: c.title || "", disk: c.folderName, secPath, dPath, ch: c });
+          const files = new Set((await mdOf(io, await io.join(dPath, "Chapters", c.folderName))).map(nameKey));
+          for (const r of (scenes && scenes.chapters || {})[c.guid] || []) {
+            if (!r || !r.fileName || !r.title || !files.has(nameKey(r.fileName))) continue;
+            if (!nameFits(r.title || "", r.fileName, ".md")) out.push({ kind: "scene", title: r.title || "", disk: r.fileName, secPath, dPath, ch: c, id: r.id });
+          }
+        }
+      }
+    }
+    return out;
+  }
+  var import_md6, dirsOf, mdOf, has, baseOf, parentOf2, maxOrder;
+  var init_disk_sync = __esm({
+    "src/disk-sync.js"() {
+      init_disk_names();
       init_json_store();
-      init_tree_item_meta();
+      import_md6 = __toESM(require_md());
+      init_comment_core();
+      init_vis_core();
+      dirsOf = async (io, p) => {
+        try {
+          return await io.listDirs(p) || [];
+        } catch {
+          return [];
+        }
+      };
+      mdOf = async (io, p) => {
+        try {
+          return await io.listFiles(p, ".md") || [];
+        } catch {
+          return [];
+        }
+      };
+      has = async (io, p) => {
+        try {
+          return !!await io.exists(p);
+        } catch {
+          return false;
+        }
+      };
+      baseOf = (p) => String(p || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "";
+      parentOf2 = (p) => String(p || "").replace(/[\\/]+$/, "").replace(/[\\/][^\\/]*$/, "");
+      maxOrder = (list3) => Math.max(0, ...(list3 || []).map((x) => x && x.order || 0));
+    }
+  });
+
+  // src/tab-bridge.js
+  var tab_bridge_exports = {};
+  __export(tab_bridge_exports, {
+    closeTabsUnder: () => closeTabsUnder,
+    isInsideRoot: () => isInsideRoot,
+    liveBody: () => liveBody,
+    movePathWithTabs: () => movePathWithTabs,
+    pathKey: () => pathKey,
+    setTabBridge: () => setTabBridge,
+    tabHandle: () => tabHandle
+  });
+  function setTabBridge(b) {
+    bridge = b && typeof b.find === "function" ? b : null;
+  }
+  function tabHandle(path) {
+    try {
+      return bridge && path ? bridge.find(path) : null;
+    } catch {
+      return null;
+    }
+  }
+  async function closeTabsUnder(dir2) {
+    if (!bridge || !bridge.closeUnder || !dir2) return { closed: 0, skipped: 0, ok: true };
+    try {
+      const r = await bridge.closeUnder(dir2);
+      if (typeof r === "number") return { closed: r, skipped: 0, ok: true };
+      return r && typeof r === "object" ? r : { closed: 0, skipped: 0, ok: true };
+    } catch {
+      return { closed: 0, skipped: 1, ok: false };
+    }
+  }
+  async function movePathWithTabs(oldPath, fn) {
+    if (!bridge || !bridge.movePath) {
+      const to = await fn();
+      return { ok: true, to: to || null };
+    }
+    return bridge.movePath(oldPath, fn);
+  }
+  function liveBody(path, diskBody) {
+    const h = tabHandle(path);
+    if (!h || h.kind === "wiki") return diskBody;
+    try {
+      return h.getText();
+    } catch {
+      return diskBody;
+    }
+  }
+  function pathKey(p) {
+    return String(p || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  }
+  function isInsideRoot(root, p) {
+    const r = pathKey(root), k = pathKey(p);
+    if (!r || !k || k === r) return false;
+    if (!k.startsWith(r + "/")) return false;
+    return !k.slice(r.length + 1).split("/").some((seg) => seg === ".." || seg === ".");
+  }
+  var bridge;
+  var init_tab_bridge = __esm({
+    "src/tab-bridge.js"() {
+      bridge = null;
     }
   });
 
@@ -36816,14 +38280,36 @@ ${BLOCK_END}
     return s.replace(/%%[\s\S]*?%%/g, "").replace(/<!--[\s\S]*?-->/g, (m) => KEEP_COMMENT.test(m) ? m : "");
   }
   function stripMentions(s) {
-    return (0, import_md6.stripMentions)(s);
+    return (0, import_md7.stripMentions)(s);
   }
   function stripMarkdown(s) {
-    return s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/^\s{0,3}>\s?/gm, "").replace(/^\s{0,3}([-*+]|\d+\.)\s+/gm, "").replace(/^\s{0,3}(-{3,}|\*{3,})\s*$/gm, "").replace(/(\*\*|__)(.*?)\1/g, "$2").replace(/(\*|_)(.*?)\1/g, "$2").replace(/~~(.*?)~~/g, "$1").replace(/`([^`]*)`/g, "$1");
+    const out = [];
+    for (const b of (0, import_md7.mdBlocks)(String(s == null ? "" : s))) {
+      switch (b.kind) {
+        case "code":
+          out.push(b.text);
+          break;
+        case "pagebreak":
+          out.push("<!--pagebreak-->");
+          break;
+        case "hr":
+          out.push("");
+          break;
+        case "figure":
+          out.push(String(b.alt || ""));
+          break;
+        case "li":
+          out.push((b.ordered ? (Number.isFinite(b.num) ? b.num : 1) + ". " : "\u2022 ") + plainInline(b.text));
+          break;
+        default:
+          out.push(plainInline(b.text));
+      }
+    }
+    return out.join("\n");
   }
   function mdToHtmlBody(md, o = {}) {
     const mono = !!o.mono;
-    const inline = (s, mn) => (0, import_md6.inlineHtml)(s, { mono: mn, imgSrc: o.imgSrc });
+    const inline = (s, mn) => (0, import_md7.inlineHtml)(s, { mono: mn, imgSrc: o.imgSrc });
     const out = [];
     let list3 = null;
     const closeList = () => {
@@ -36844,7 +38330,7 @@ ${BLOCK_END}
       closeQuote();
     };
     const attrOf = (a) => a ? ` style="text-align:${a}" data-align="${a}"` : "";
-    for (const b of (0, import_md6.mdBlocks)(md, { breakMarker: PAGE_BREAK })) {
+    for (const b of (0, import_md7.mdBlocks)(md, { breakMarker: PAGE_BREAK })) {
       const al = b.align;
       if (b.kind === "pagebreak") {
         closeAll();
@@ -36858,8 +38344,8 @@ ${BLOCK_END}
       }
       if (b.kind === "figure") {
         closeAll();
-        const fc = (0, import_md6.figureClass)(b.imgOpts);
-        const fs = (0, import_md6.figureImgStyle)(b.imgOpts);
+        const fc = (0, import_md7.figureClass)(b.imgOpts);
+        const fs = (0, import_md7.figureImgStyle)(b.imgOpts);
         const src2 = typeof o.imgSrc === "function" ? o.imgSrc(b.src) : b.src;
         out.push(`<figure${attrOf(al)}${fc ? ` class="${escAttr2(fc)}"` : ""}><img alt="${escAttr2(b.alt)}" src="${escAttr2(src2)}"${fs ? ` style="${escAttr2(fs)}"` : ""}></figure>`);
         continue;
@@ -36891,7 +38377,7 @@ ${BLOCK_END}
           out.push(want === "ol" && b.num > 1 ? `<ol start="${b.num}">` : `<${want}>`);
           list3 = want;
         }
-        const mv = mono ? "" : (0, import_md6.markerVars)(b.text);
+        const mv = mono ? "" : (0, import_md7.markerVars)(b.text);
         out.push(`<li${mv ? ` style="${mv}"` : ""}><p${attrOf(al)}>${b.text ? inline(b.text, mono) : "<br>"}</p></li>`);
         continue;
       }
@@ -36962,6 +38448,10 @@ ${mdToHtmlBody(md, o)}
     headingStack = "",
     // [alpha.149] ตัวแปลง path รูปในเนื้อฉาก → URL ที่เปิดได้จริง (ส่งต่อให้ mdToHtml ของขั้น to-html)
     imgSrc = null,
+    // [alpha.169 · bug hunt] ตัวกรองมาร์กดาวน์ที่ประกอบเสร็จ **ก่อนแปลงเป็น HTML** (ขั้น to-html)
+    // ศูนย์ส่งออกใช้ตัดรหัส fountain (`@ชื่อ` `((วงเล็บ))` `>> ตัด`) — เดิมตัดหลัง runWorkflow จบ
+    // ซึ่งปลายทาง HTML ทำไม่ได้ (ผลเป็นหน้า HTML แล้ว) รหัสจึงหลุดไปให้ผู้อ่านเห็นทั้งไฟล์
+    beforeHtml = null,
     // ══ [alpha.133 · Y-3] ★★ "ผลลัพธ์นี้จะถูกตีความเป็นมาร์กดาวน์ต่อไหม" ══
     //
     // ผู้ใช้: *"การจัดหน้า … มีแค่ layout อย่างเดียวที่ถูกต้อง"*
@@ -36989,7 +38479,7 @@ ${mdToHtmlBody(md, o)}
       const v2 = s && s.opts ? s.opts[k] : void 0;
       return v2 === void 0 || v2 === null ? dflt : v2;
     };
-    const has2 = (key2) => steps.some((s) => s.key === key2);
+    const has3 = (key2) => steps.some((s) => s.key === key2);
     const keepFor = (sc) => keepBlanks === void 0 ? true : !!keepBlanks;
     const squashAll = keepBlanks === void 0 ? false : !keepBlanks;
     for (const st of at("model")) {
@@ -37064,37 +38554,37 @@ ${mdToHtmlBody(md, o)}
     }
     const out = [];
     const st0 = modelStats(model);
-    if (has2("cover")) {
+    if (has3("cover")) {
       if (String(model.title || "").trim()) out.push("# " + model.title, "");
       const au = String(opt("cover", "author", "") || model.author || "").trim();
       if (au) out.push(au, "");
       out.push(tf("ui.compile.wordChapterScene", fmtNum(st0.words), st0.chapters, st0.scenes), "");
-      if (has2("page-break")) out.push(PAGE_BREAK, "");
+      if (has3("page-break")) out.push(PAGE_BREAK, "");
     }
-    if (has2("roster") && String(model.roster || "").trim()) {
+    if (has3("roster") && String(model.roster || "").trim()) {
       out.push(String(model.roster).trim(), "");
-      if (has2("page-break")) out.push(PAGE_BREAK, "");
+      if (has3("page-break")) out.push(PAGE_BREAK, "");
     }
     const sep = String(opt("scene-separator", "text", "* * *"));
     let cn = 0;
     for (const ch of model.chapters) {
       cn++;
-      if (has2("page-break") && cn > 1) out.push(PAGE_BREAK, "");
-      if (has2("chapter-heading") && String(ch.title || "").trim())
+      if (has3("page-break") && cn > 1) out.push(PAGE_BREAK, "");
+      if (has3("chapter-heading") && String(ch.title || "").trim())
         out.push(fill(opt("chapter-heading", "template", "## {title}"), cn, ch.title || "", varCtx), "");
       let sn = 0;
       for (const s of ch.scenes) {
         sn++;
-        if (has2("scene-separator") && sn > 1 && sep.trim()) out.push(sep, "");
-        if (has2("scene-heading") && String(s.title || "").trim())
+        if (has3("scene-separator") && sn > 1 && sep.trim()) out.push(sep, "");
+        if (has3("scene-heading") && String(s.title || "").trim())
           out.push(fill(opt("scene-heading", "template", "### {title}"), sn, s.title || "", varCtx), "");
-        if (has2("scene-meta"))
+        if (has3("scene-meta"))
           out.push(tf("ui.compile.word", s.status || t("ui.compile.notSpecifyStatus"), fmtNum(s.words || 0)), "");
         const b = keepFor(s) ? String(s.body || "").replace(/\s+$/, "") : String(s.body || "").trim();
         if (b) out.push(b, "");
       }
     }
-    if (has2("stats")) {
+    if (has3("stats")) {
       out.push(
         "---",
         "",
@@ -37128,6 +38618,13 @@ ${mdToHtmlBody(md, o)}
         continue;
       }
       if (st.key === "to-html") {
+        if (typeof beforeHtml === "function") {
+          try {
+            text = String(beforeHtml(text));
+          } catch (e) {
+            warn.push(String(e && e.message || e));
+          }
+        }
         text = mdToHtml(
           text,
           model.title,
@@ -37163,7 +38660,7 @@ ${mdToHtmlBody(md, o)}
     }
     return { text, ext, stats: st0, warnings: warn };
   }
-  var import_md6, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, esc, escAttr2, escapeHtml2, fill;
+  var import_md7, PAGE_BREAK, OMIT_CHOICES, STEP_DEFS, stepDef, wf, PRESETS, KEEP_COMMENT, plainInline, esc, escAttr2, escapeHtml2, fill;
   var init_compile = __esm({
     "src/compile.js"() {
       init_i18n();
@@ -37173,7 +38670,7 @@ ${mdToHtmlBody(md, o)}
       init_sp_format();
       init_sp_continued();
       init_prose_format();
-      import_md6 = __toESM(require_md());
+      import_md7 = __toESM(require_md());
       init_locale();
       PAGE_BREAK = t("ui.compile.msg");
       OMIT_CHOICES = ["note", "summary", "outline1", "outline2", "outline3", "image"];
@@ -37351,6 +38848,7 @@ ${mdToHtmlBody(md, o)}
         )
       ];
       KEEP_COMMENT = /^<!--\s*(?:align:(?:left|center|right|justify)|pagebreak)\s*-->$/i;
+      plainInline = (s) => (0, import_md7.inlinePlainText)(String(s == null ? "" : s)).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/`([^`]*)`/g, "$1");
       esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       escAttr2 = (s) => esc(s == null ? "" : s).replace(/"/g, "&quot;");
       escapeHtml2 = esc;
@@ -37482,7 +38980,7 @@ ${mdToHtmlBody(md, o)}
     meas.style.cssText = "position:fixed;left:-30000px;top:0;visibility:hidden;width:" + textW + "in;max-width:none;margin:0;padding:0;";
     meas.innerHTML = bodyHtml;
     document.body.append(meas);
-    const paint3 = () => {
+    const paint4 = () => {
       let blocks = [];
       let pages2 = withMeasureMode(() => {
         const origin = meas.getBoundingClientRect().top;
@@ -37510,7 +39008,7 @@ ${mdToHtmlBody(md, o)}
     };
     let pages = [];
     try {
-      pages = paint3();
+      pages = paint4();
     } catch (e) {
       meas.remove();
       throw e;
@@ -37523,12 +39021,12 @@ ${mdToHtmlBody(md, o)}
     const ready2 = wait2.then(() => {
       let n2 = pages.length;
       try {
-        if (box2.isConnected) n2 = paint3().length;
+        if (box2.isConnected) n2 = paint4().length;
       } catch {
       }
       const late = afterLateImages(meas, () => {
         try {
-          if (box2.isConnected) paint3();
+          if (box2.isConnected) paint4();
         } catch {
         }
         meas.remove();
@@ -37546,6 +39044,457 @@ ${mdToHtmlBody(md, o)}
       init_prose_measure();
       XPV_CLASS = "k-xpv-doc";
       XPV_SEL = ".k-xpv-doc.k-xpv-doc.k-xpv-doc";
+    }
+  });
+
+  // src/book-flow.js
+  function normChapterCover(ch) {
+    const c = ch && ch.cover || {};
+    return {
+      on: !!c.on,
+      image: String(c.image == null ? "" : c.image),
+      text: String(c.text == null ? "" : c.text),
+      full: c.full === void 0 ? true : !!c.full
+    };
+  }
+  function normBookCover(meta2) {
+    const m = meta2 || {};
+    return {
+      on: m.coverOn === void 0 ? true : !!m.coverOn,
+      // เล่มมีหน้าปกเสมอ เว้นแต่สั่งปิด
+      image: String(m.cover == null ? "" : m.cover),
+      text: String(m.blurb == null ? "" : m.blurb),
+      full: m.coverFull === void 0 ? true : !!m.coverFull
+    };
+  }
+  function coverImageHint(paper, margins, dpi = 300) {
+    const p = paper || { width: 8.5, height: 11 };
+    const wIn = Math.max(0.5, +p.width || 8.5);
+    const hIn = Math.max(0.5, +p.height || 11);
+    const d = Math.max(72, Math.round(+dpi || 300));
+    return {
+      wIn: +wIn.toFixed(3),
+      hIn: +hIn.toFixed(3),
+      wPx: Math.round(wIn * d),
+      hPx: Math.round(hIn * d),
+      ratio: +(wIn / hIn).toFixed(3),
+      dpi: d
+    };
+  }
+  function bookParts(book, opts = {}) {
+    const b = book || {};
+    const wantCovers = opts.covers !== false;
+    const out = [];
+    const bc = normBookCover(b.meta);
+    if (wantCovers && bc.on) {
+      out.push({
+        kind: "bookCover",
+        book: b.key || "",
+        title: b.title || "",
+        subtitle: b.author || "",
+        image: bc.image,
+        text: bc.text,
+        full: bc.full
+      });
+    }
+    for (const ch of b.chapters || []) {
+      const cc = normChapterCover(ch);
+      if (wantCovers && cc.on) {
+        out.push({
+          kind: "chapterCover",
+          book: b.key || "",
+          guid: ch.guid || "",
+          title: ch.title || "",
+          subtitle: "",
+          image: cc.image,
+          text: cc.text,
+          full: cc.full
+        });
+      } else {
+        out.push({ kind: "chapterHead", book: b.key || "", guid: ch.guid || "", title: ch.title || "" });
+      }
+      for (const sc of ch.scenes || []) {
+        if (sc && sc.type === "memo") continue;
+        out.push({
+          kind: "scene",
+          book: b.key || "",
+          guid: ch.guid || "",
+          id: sc.id || "",
+          file: sc.file || "",
+          title: sc.title || "",
+          body: String(sc.body == null ? "" : sc.body)
+        });
+      }
+    }
+    return out;
+  }
+  function projectParts(books, opts = {}) {
+    const out = [];
+    for (const b of books || []) out.push(...bookParts(b, opts));
+    return out;
+  }
+  function printedPageNumber(coverPages, phys) {
+    const list3 = (coverPages || []).map((x) => Math.round(+x)).filter(Number.isFinite);
+    const p = Math.max(1, Math.round(+phys || 1));
+    if (list3.includes(p)) return 0;
+    let skipped = 0;
+    for (const c of list3) if (c <= p) skipped++;
+    return Math.max(1, p - skipped);
+  }
+  function pageIndexOfY(pages, y) {
+    const list3 = Array.isArray(pages) ? pages : [];
+    if (!list3.length) return 1;
+    const v2 = +y || 0;
+    for (let i5 = list3.length - 1; i5 >= 0; i5--) if (v2 >= (+list3[i5].start || 0) - 0.5) return i5 + 1;
+    return 1;
+  }
+  function startPageMap(parts) {
+    const m = /* @__PURE__ */ new Map();
+    for (const p of parts || []) {
+      if (p.kind !== "scene" || !p.file) continue;
+      if (!m.has(p.file)) m.set(p.file, Math.max(1, Math.round(+p.startPage || 1)));
+    }
+    return m;
+  }
+  function coverPagesOf(parts) {
+    return (parts || []).filter(isFrontMatter).map((p) => Math.round(+p.page || 0)).filter((n2) => n2 > 0);
+  }
+  function explicitStartPage(v2) {
+    const n2 = parseInt(v2 && typeof v2 === "object" ? v2.startPage : v2, 10);
+    return Number.isFinite(n2) && n2 > 0 ? n2 : void 0;
+  }
+  function pageAtPos(breaks, pos, first = 1) {
+    const list3 = (breaks || []).filter((b) => b && Number.isFinite(b.pos));
+    const page2 = 1 + list3.filter((b) => b.pos <= pos).length;
+    const total = list3.length + 1;
+    const f = Number.isFinite(+first) && +first > 0 ? Math.round(+first) : 1;
+    return { page: page2, total, printed: f + page2 - 1, printedLast: f + total - 1 };
+  }
+  var isCoverPart, isFrontMatter, isPageFlowContinue;
+  var init_book_flow = __esm({
+    "src/book-flow.js"() {
+      isCoverPart = (p) => !!p && (p.kind === "bookCover" || p.kind === "chapterCover");
+      isFrontMatter = (p) => !!p && p.kind === "bookCover";
+      isPageFlowContinue = (row4) => !!row4 && row4.pageFlow === "continue";
+    }
+  });
+
+  // src/tree-item-meta.js
+  var tree_item_meta_exports = {};
+  __export(tree_item_meta_exports, {
+    EXPLORER_VERSION: () => EXPLORER_VERSION,
+    backupStamp: () => backupStamp,
+    cleanItemMeta: () => cleanItemMeta,
+    forgetItemPath: () => forgetItemPath,
+    getItemMeta: () => getItemMeta,
+    isPinned: () => isPinned,
+    itemBackupDir: () => itemBackupDir,
+    lockSource: () => lockSource,
+    normalizeExplorer: () => normalizeExplorer,
+    parseBackupStamp: () => parseBackupStamp,
+    pinKey: () => pinKey,
+    regenDraftIds: () => regenDraftIds,
+    relKey: () => relKey,
+    renameItemPath: () => renameItemPath,
+    setItemMeta: () => setItemMeta,
+    sortBackups: () => sortBackups,
+    togglePin: () => togglePin,
+    uniqueCopyName: () => uniqueCopyName,
+    updatePinInfo: () => updatePinInfo
+  });
+  function relKey(rel) {
+    return String(rel || "").replace(/\\/g, "/").replace(/^\.?\/+/, "").replace(/\/+$/, "");
+  }
+  function normalizeExplorer(raw) {
+    const r = raw && typeof raw === "object" ? raw : {};
+    const pins = Array.isArray(r.pins) ? r.pins.filter((p) => p && typeof p.kind === "string" && p.key) : [];
+    const items = {};
+    for (const [k, v2] of Object.entries(r.items && typeof r.items === "object" ? r.items : {})) {
+      const m = cleanItemMeta(v2);
+      if (Object.keys(m).length) items[relKey(k)] = m;
+    }
+    return { version: EXPLORER_VERSION, pins, items };
+  }
+  function cleanItemMeta(v2) {
+    const m = {};
+    if (!v2 || typeof v2 !== "object") return m;
+    if (v2.flag) m.flag = true;
+    if (v2.locked) m.locked = true;
+    if (typeof v2.color === "string" && /^#[0-9a-f]{3,8}$/i.test(v2.color)) m.color = v2.color;
+    if (typeof v2.status === "string" && v2.status.trim() && v2.status !== "Outline") m.status = v2.status.trim();
+    if (typeof v2.note === "string" && v2.note.trim()) m.note = v2.note;
+    return m;
+  }
+  function getItemMeta(explorer2, rel) {
+    return { ...normalizeExplorer(explorer2).items[relKey(rel)] || {} };
+  }
+  function setItemMeta(explorer2, rel, patch) {
+    const ex = normalizeExplorer(explorer2);
+    const k = relKey(rel);
+    const cur = { ...ex.items[k] || {} };
+    for (const [f, v2] of Object.entries(patch || {})) {
+      if (v2 === null || v2 === "" || v2 === false || v2 === void 0) delete cur[f];
+      else cur[f] = v2;
+    }
+    const m = cleanItemMeta(cur);
+    if (Object.keys(m).length) ex.items[k] = m;
+    else delete ex.items[k];
+    return ex;
+  }
+  function renameItemPath(explorer2, oldRel, newRel2) {
+    const ex = normalizeExplorer(explorer2);
+    const a = relKey(oldRel), b = relKey(newRel2);
+    if (!a || !b || a === b) return ex;
+    if (ex.items[a]) {
+      ex.items[b] = ex.items[a];
+      delete ex.items[a];
+    }
+    ex.pins = ex.pins.map((p) => p.key === a ? { ...p, key: b } : p);
+    return ex;
+  }
+  function forgetItemPath(explorer2, rel) {
+    const ex = normalizeExplorer(explorer2);
+    const k = relKey(rel);
+    delete ex.items[k];
+    ex.pins = ex.pins.filter((p) => p.key !== k);
+    return ex;
+  }
+  function pinKey(kind, ref) {
+    return kind + ":" + (["memo", "image", "board", "plan"].includes(kind) ? relKey(ref) : String(ref || ""));
+  }
+  function isPinned(explorer2, kind, key2) {
+    const k = ["memo", "image", "board", "plan"].includes(kind) ? relKey(key2) : String(key2 || "");
+    return normalizeExplorer(explorer2).pins.some((p) => p.kind === kind && p.key === k);
+  }
+  function togglePin(explorer2, kind, key2, info = {}) {
+    const ex = normalizeExplorer(explorer2);
+    const k = ["memo", "image", "board", "plan"].includes(kind) ? relKey(key2) : String(key2 || "");
+    if (!k) return ex;
+    const i5 = ex.pins.findIndex((p) => p.kind === kind && p.key === k);
+    if (i5 >= 0) ex.pins.splice(i5, 1);
+    else ex.pins.push({ kind, key: k, ...info, at: info.at || 0 });
+    return ex;
+  }
+  function updatePinInfo(explorer2, kind, key2, info) {
+    const ex = normalizeExplorer(explorer2);
+    ex.pins = ex.pins.map((p) => p.kind === kind && p.key === key2 ? { ...p, ...info, kind, key: key2 } : p);
+    return ex;
+  }
+  function lockSource({ book, chapter, scene } = {}) {
+    if (book && book.locked) return "book";
+    if (chapter && chapter.locked) return "chapter";
+    if (scene && (scene.locked === true || scene.locked === "true")) return "scene";
+    return "";
+  }
+  function regenDraftIds(draft, scenes, newId4) {
+    const d = JSON.parse(JSON.stringify(draft || {}));
+    const s = JSON.parse(JSON.stringify(scenes || {}));
+    const chapterMap = {}, sceneMap = {};
+    d.chapters = (d.chapters || []).map((c) => {
+      const g = newId4();
+      chapterMap[c.guid] = g;
+      return { ...c, guid: g };
+    });
+    const out = {};
+    for (const [oldG, rows] of Object.entries(s.chapters || {})) {
+      const g = chapterMap[oldG] || oldG;
+      out[g] = (rows || []).map((r) => {
+        const id = newId4();
+        sceneMap[r.id] = id;
+        return { ...r, id, chapterGuid: g };
+      });
+    }
+    s.chapters = out;
+    for (const rows of Object.values(s.chapters)) {
+      for (const r of rows) {
+        if (!Array.isArray(r.choices)) continue;
+        r.choices = r.choices.map((c) => c && sceneMap[c.nextSceneId] ? { ...c, nextSceneId: sceneMap[c.nextSceneId] } : c);
+      }
+    }
+    return { draft: d, scenes: s, chapterMap, sceneMap };
+  }
+  function uniqueCopyName(base4, existing, suffix) {
+    const taken = new Set((existing || []).map((x) => String(x)));
+    const first = base4 + " " + suffix;
+    if (!taken.has(first)) return first;
+    for (let n2 = 2; n2 < 1e3; n2++) {
+      const c = base4 + " " + suffix.replace(/\)$/, " " + n2 + ")");
+      if (!taken.has(c)) return c;
+    }
+    return first + " " + Date.now().toString(36);
+  }
+  function itemBackupDir(kind, key2) {
+    const safe3 = String(key2 || "item").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
+    return "Backups/Items/" + kind + "/" + safe3;
+  }
+  function backupStamp(now = Date.now()) {
+    return new Date(now).toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
+  }
+  function parseBackupStamp(name5) {
+    const m = String(name5 || "").match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})$/);
+    if (!m) return 0;
+    const t3 = Date.parse(`${m[1]}T${m[2]}:${m[3]}:${m[4]}.${m[5]}Z`);
+    return Number.isFinite(t3) ? t3 : 0;
+  }
+  function sortBackups(names) {
+    return (names || []).filter((n2) => parseBackupStamp(n2) > 0).sort((a, b) => parseBackupStamp(b) - parseBackupStamp(a));
+  }
+  var EXPLORER_VERSION;
+  var init_tree_item_meta = __esm({
+    "src/tree-item-meta.js"() {
+      EXPLORER_VERSION = 1;
+    }
+  });
+
+  // src/drafts.js
+  var drafts_exports = {};
+  __export(drafts_exports, {
+    copyDraftContents: () => copyDraftContents,
+    createDraft: () => createDraft,
+    deleteDraft: () => deleteDraft,
+    listDraftsForSection: () => listDraftsForSection,
+    renameDraft: () => renameDraft,
+    setPrimaryDraft: () => setPrimaryDraft
+  });
+  async function listDraftsForSection(secPath) {
+    const draftRoot = await kapi.join(secPath, "Draft");
+    if (!await kapi.exists(draftRoot)) return [];
+    const sf = await kapi.join(secPath, "section.json");
+    let meta2 = {};
+    try {
+      meta2 = await kapi.readJson(sf);
+    } catch {
+    }
+    const primary = meta2.primaryDraft || "default";
+    const out = [];
+    for (const name5 of await kapi.listDirs(draftRoot)) {
+      const dPath = await kapi.join(draftRoot, name5);
+      const df = await kapi.join(dPath, "draft.json");
+      if (!await kapi.exists(df)) continue;
+      out.push({ name: name5, dPath, primary: name5 === primary });
+    }
+    return out;
+  }
+  async function copyDraftContents(src2, dst, newId4 = null) {
+    if (!newId4) newId4 = (await Promise.resolve().then(() => (init_app(), app_exports))).guid;
+    await kapi.mkdir(dst);
+    const df0 = JSON.parse(await kapi.readFile(await kapi.join(src2, "draft.json")));
+    let sf0 = { chapters: {} };
+    try {
+      sf0 = JSON.parse(await kapi.readFile(await kapi.join(src2, "scenes.json")));
+    } catch {
+    }
+    const { draft: df, scenes: sf } = regenDraftIds(df0, sf0, newId4);
+    await kapi.writeFile(await kapi.join(dst, "draft.json"), JSON.stringify(df, null, 2));
+    await kapi.writeFile(await kapi.join(dst, "scenes.json"), JSON.stringify(sf, null, 2));
+    const chSrc = await kapi.join(src2, "Chapters");
+    if (!await kapi.exists(chSrc)) return;
+    await kapi.mkdir(await kapi.join(dst, "Chapters"));
+    for (const ch of df.chapters || []) {
+      const from2 = await kapi.join(chSrc, ch.folderName);
+      if (!await kapi.exists(from2)) continue;
+      const to = await kapi.join(dst, "Chapters", ch.folderName);
+      await kapi.mkdir(to);
+      for (const f of await kapi.listFiles(from2, "")) {
+        if (!/\.(md|csv)$/i.test(f)) continue;
+        await kapi.writeFile(await kapi.join(to, f), await kapi.readFile(await kapi.join(from2, f)));
+      }
+    }
+  }
+  async function createDraft(secPath, name5, sourceDraft = null) {
+    const draftRoot = await kapi.join(secPath, "Draft");
+    await kapi.mkdir(draftRoot);
+    const newPath = await kapi.join(draftRoot, name5);
+    if (await kapi.exists(newPath)) throw new Error(t("ui.drafts.hasDraftNameDone"));
+    if (sourceDraft) {
+      const srcPath = await kapi.join(draftRoot, sourceDraft);
+      if (!await kapi.exists(srcPath)) throw new Error(t("ui.drafts.notFoundDraftFrom"));
+      await copyDraftContents(srcPath, newPath);
+    } else {
+      const { guid: guid3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      const ch = {
+        guid: guid3(),
+        title: t("ui.common.chapterOne2"),
+        order: 1,
+        status: "Outline",
+        act: "I",
+        date: "",
+        isFavorite: false,
+        folderName: diskBase(t("ui.common.chapterOne2"), "chapter")
+      };
+      await kapi.mkdir(await kapi.join(newPath, "Chapters", ch.folderName));
+      await kapi.writeFile(
+        await kapi.join(newPath, "draft.json"),
+        JSON.stringify({ chapters: [ch] }, null, 2)
+      );
+      await kapi.writeFile(
+        await kapi.join(newPath, "scenes.json"),
+        JSON.stringify({ chapters: { [ch.guid]: [] } }, null, 2)
+      );
+    }
+    return newPath;
+  }
+  async function deleteDraft(secPath, name5) {
+    const sf = await kapi.join(secPath, "section.json");
+    let meta2 = {};
+    try {
+      meta2 = await kapi.readJson(sf);
+    } catch {
+    }
+    if ((meta2.primaryDraft || "default") === name5) {
+      setStatus(t("ui.drafts.delCantDraftMain"));
+      return false;
+    }
+    if (!await confirmBox(tf("ui.drafts.delDraftDraft", name5), t("ui.drafts.delDraft"))) return false;
+    const dPath = await kapi.join(secPath, "Draft", name5);
+    const recycle = await kapi.join(state.root, "Recycle", "draft-" + Date.now().toString(36));
+    const { closeTabsUnderPath: closeTabsUnderPath2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    if (!(await closeTabsUnderPath2(dPath, { save: true })).ok) {
+      setStatus(tf("ui.app.moveCancelledUnsaved", name5));
+      return false;
+    }
+    await kapi.move(dPath, recycle);
+    logAction("draft", t("ui.drafts.delDraft") + ": " + name5, { from: dPath, trash: recycle });
+    return true;
+  }
+  async function renameDraft(secPath, oldName, newName) {
+    const oldPath = await kapi.join(secPath, "Draft", oldName);
+    const newPath = await kapi.join(secPath, "Draft", newName);
+    if (await kapi.exists(newPath)) {
+      setStatus(t("ui.drafts.hasDraftNameDone"));
+      return false;
+    }
+    const { closeTabsUnderPath: closeTabsUnderPath2, moveSnapshots: moveSnapshots2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    if (!(await closeTabsUnderPath2(oldPath, { save: true })).ok) {
+      setStatus(tf("ui.app.moveCancelledUnsaved", oldName));
+      return false;
+    }
+    await kapi.move(oldPath, newPath);
+    await moveSnapshots2(oldPath, newPath);
+    logAction("draft", tf("ui.drafts.renameDraftTo", oldName, newName), { secPath });
+    const sf = await kapi.join(secPath, "section.json");
+    await mutateJson(kapi, sf, (meta2) => {
+      if ((meta2.primaryDraft || "default") !== oldName) return false;
+      meta2.primaryDraft = newName;
+    }, { fallback: {} });
+    return true;
+  }
+  async function setPrimaryDraft(secPath, name5) {
+    const sf = await kapi.join(secPath, "section.json");
+    await mutateJson(kapi, sf, (meta2) => {
+      meta2.primaryDraft = name5;
+    }, { fallback: {} });
+    const { buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    await buildTree3();
+  }
+  var init_drafts = __esm({
+    "src/drafts.js"() {
+      init_i18n();
+      init_core();
+      init_ui();
+      init_json_store();
+      init_tree_item_meta();
+      init_disk_names();
     }
   });
 
@@ -38702,7 +40651,8 @@ ${mdToHtmlBody(md, o)}
     reorderSections: () => reorderSections,
     saveSectionMeta: () => saveSectionMeta,
     sectionProps: () => sectionProps,
-    sectionStats: () => sectionStats
+    sectionStats: () => sectionStats,
+    setSectionTitle: () => setSectionTitle
   });
   async function reorderSections(fromFolder, dstFolder) {
     const secs = await listSections();
@@ -38762,10 +40712,10 @@ ${mdToHtmlBody(md, o)}
           if (sc.type === "memo") continue;
           scenes++;
           try {
-            const { body } = (0, import_md7.parseMdFile)(await kapi.readFile(
+            const { body } = (0, import_md8.parseMdFile)(await kapi.readFile(
               await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName)
             ));
-            words += (0, import_md7.countWords)(body);
+            words += (0, import_md8.countWords)(body);
           } catch {
           }
         }
@@ -38786,18 +40736,36 @@ ${mdToHtmlBody(md, o)}
     return r.data;
   }
   async function addSection(preset) {
-    const title2 = preset || await ask(t("ui.section.nameBookNew"), { placeholder: t("ui.section.egBookTwo") });
-    if (!title2) return "";
-    let dir2 = await kapi.join(state.root, safeName(title2));
-    if (await kapi.exists(dir2)) dir2 += "-" + Date.now().toString(36).slice(-4);
-    let maxOrder = 0;
+    let title2 = "", folder = "";
+    if (preset) {
+      const b = await freeBookName(kapi, state.root, String(preset));
+      title2 = b.title;
+      folder = b.folder;
+    } else {
+      const suggest2 = defaultBookName(await kapi.listDirs(state.root));
+      let value = suggest2;
+      for (; ; ) {
+        const v2 = await ask(t("ui.section.nameBookNew"), { placeholder: suggest2, value });
+        if (!v2 || !String(v2).trim()) return "";
+        const b = await freeBookName(kapi, state.root, String(v2).trim());
+        if (!b.taken) {
+          title2 = b.title;
+          folder = b.folder;
+          break;
+        }
+        toast(bookTakenMsg(diskBase(v2)), { level: "warn" });
+        value = String(v2).trim();
+      }
+    }
+    const dir2 = await kapi.join(state.root, folder);
+    let maxOrder2 = 0;
     for (const nm of await kapi.listDirs(state.root)) {
       const sp = await kapi.join(state.root, nm, "section.json");
-      if (await kapi.exists(sp)) maxOrder = Math.max(maxOrder, (await kapi.readJson(sp)).order || 0);
+      if (await kapi.exists(sp)) maxOrder2 = Math.max(maxOrder2, (await kapi.readJson(sp)).order || 0);
     }
     await kapi.writeFile(
       await kapi.join(dir2, "section.json"),
-      JSON.stringify({ guid: guid(), title: title2, order: maxOrder + 1 }, null, 2)
+      JSON.stringify({ guid: guid(), title: title2, order: maxOrder2 + 1, folderName: folder }, null, 2)
     );
     const dr = await kapi.join(dir2, "Draft", "default");
     const ch = {
@@ -38808,7 +40776,7 @@ ${mdToHtmlBody(md, o)}
       act: "I",
       date: "",
       isFavorite: false,
-      folderName: t("ui.common.chapterOne")
+      folderName: diskBase(t("ui.common.chapterOne2"), "chapter")
     };
     await kapi.writeFile(await kapi.join(dr, "draft.json"), JSON.stringify({ chapters: [ch] }, null, 2));
     await kapi.writeFile(await kapi.join(dr, "scenes.json"), JSON.stringify({ chapters: { [ch.guid]: [] } }, null, 2));
@@ -38821,12 +40789,46 @@ ${mdToHtmlBody(md, o)}
   async function renameSection(secPath, sec2) {
     const title2 = await ask(t("ui.section.nameBookNew"), { value: sec2.title });
     if (!title2 || title2 === sec2.title) return;
-    const sf = await kapi.join(secPath, "section.json");
-    await mutateJson(kapi, sf, (d) => {
-      d.title = title2;
-    });
+    const to = await setSectionTitle(secPath, title2);
+    if (to) setStatus(t("ui.section.changeNameBook") + title2);
+    return to;
+  }
+  async function setSectionTitle(secPath, title2) {
+    title2 = String(title2 || "").trim();
+    if (!title2) return false;
+    let res = null;
+    try {
+      const tg = await sectionRenameTarget(kapi, secPath, title2);
+      if (tg.taken) {
+        toast(bookTakenMsg(tg.folder), { level: "warn" });
+        setStatus(bookTakenMsg(tg.folder));
+        return false;
+      }
+      const run3 = async () => {
+        res = await renameSectionOnDisk(kapi, secPath, title2);
+        return res.moved ? res.to : null;
+      };
+      if (tg.moves) {
+        if (!(await movePathWithTabs(secPath, run3)).ok) return false;
+      } else await run3();
+    } catch (e) {
+      log("warn", tf("ui.names.renameFail", title2), e);
+      setStatus(tf("ui.names.renameFail", title2));
+      return false;
+    }
+    if (!res || !res.ok) return false;
+    if (res.moved) {
+      const nm = (p) => String(p || "").split(/[\\/]/).pop() || "";
+      logAction("section", tf("ui.names.logRenamed", nm(res.from), nm(res.to)), { from: res.from, to: res.to });
+      try {
+        const { bumpBookFlow: bumpBookFlow2 } = await Promise.resolve().then(() => (init_read_ui(), read_ui_exports));
+        bumpBookFlow2();
+      } catch {
+      }
+    }
     await buildTree2();
-    setStatus(t("ui.section.changeNameBook") + title2);
+    refreshNetwork();
+    return res.to;
   }
   async function sectionProps(secPath, sec2) {
     const sf = await kapi.join(secPath, "section.json");
@@ -38937,7 +40939,13 @@ ${mdToHtmlBody(md, o)}
       });
       okB.onclick = async () => {
         const title2 = iTitle.value.trim();
-        if (title2) d.title = title2;
+        let sfNow = sf;
+        if (title2 && title2 !== (d.title || "")) {
+          const to = await setSectionTitle(secPath, title2);
+          if (!to) return;
+          sfNow = await kapi.join(to, "section.json");
+          d.title = title2;
+        }
         d.status = iStatus.value;
         const blurb = iBlurb.value.trim();
         if (blurb) d.blurb = blurb;
@@ -38955,8 +40963,8 @@ ${mdToHtmlBody(md, o)}
           if (ll) d.logline = ll;
           else delete d.logline;
         }
-        const OWN2 = ["title", "status", "blurb", "cover", "coverOn", "coverFull", "order", "logline"];
-        await mutateJson(kapi, sf, (fresh) => {
+        const OWN2 = ["status", "blurb", "cover", "coverOn", "coverFull", "order", "logline"];
+        await mutateJson(kapi, sfNow, (fresh) => {
           for (const k of OWN2) {
             if (k in d) fresh[k] = d[k];
             else delete fresh[k];
@@ -39002,7 +41010,7 @@ ${mdToHtmlBody(md, o)}
     setStatus(t("ui.section.delBookDone") + sec2.title);
     refreshNetwork();
   }
-  var import_md7, SECTION_STATUS_OPTS;
+  var import_md8, bookTakenMsg, SECTION_STATUS_OPTS;
   var init_section_ops = __esm({
     "src/section-ops.js"() {
       init_logline_ui();
@@ -39010,9 +41018,13 @@ ${mdToHtmlBody(md, o)}
       init_i18n();
       init_app();
       init_core();
+      init_disk_sync();
+      init_disk_names();
+      init_tab_bridge();
       init_ui();
-      import_md7 = __toESM(require_md());
+      import_md8 = __toESM(require_md());
       init_json_store();
+      bookTakenMsg = (name5) => tf(isReservedRoot(name5) ? "ui.names.bookNameReserved" : "ui.names.bookExists", name5);
       SECTION_STATUS_OPTS = [
         ["outline", t("ui.common.outlineStory")],
         ["drafting", t("ui.common.busyWrite")],
@@ -39150,7 +41162,7 @@ ${mdToHtmlBody(md, o)}
       c.onchange = () => {
         r[key2] = c.checked;
         dirty();
-        paint3();
+        paint4();
       };
       w.append(c, document.createTextNode(" " + label2));
       if (tip) w.title = tip;
@@ -39181,7 +41193,7 @@ ${mdToHtmlBody(md, o)}
       });
       return d;
     }
-    function paint3() {
+    function paint4() {
       page2.innerHTML = "";
       page2.append(ce("roster-title", r.title, (v2) => {
         r.title = v2;
@@ -39200,7 +41212,7 @@ ${mdToHtmlBody(md, o)}
         del2.onclick = () => {
           r.characters.splice(i5, 1);
           dirty();
-          paint3();
+          paint4();
         };
         row4.append(name5, el("span", "roster-colon", ":"), detail, del2);
         cast.append(row4);
@@ -39219,11 +41231,11 @@ ${mdToHtmlBody(md, o)}
       if (r.showScene !== false) page2.append(sec2("scene", fmt2.strings.sceneTitle));
       if (r.showTime !== false) page2.append(sec2("time", fmt2.strings.timeTitle));
     }
-    paint3();
+    paint4();
     bAdd.onclick = () => {
       r.characters.push({ name: "", detail: "" });
       dirty();
-      paint3();
+      paint4();
     };
     bWiki.onclick = async () => {
       const chars3 = await wikiCharacters();
@@ -39238,7 +41250,7 @@ ${mdToHtmlBody(md, o)}
         added++;
       }
       dirty();
-      paint3();
+      paint4();
       setStatus(added ? tf("ui.roster.addCharacterWikiF", added) : t("ui.roster.characterWikiCompleteDone"));
     };
     bCopy.onclick = () => {
@@ -39613,6 +41625,8 @@ ${mdToHtmlBody(md, o)}
       const val = ctx2[v2.key] ?? ctx2[v2.key.toLowerCase()] ?? "";
       map2.set(v2.key.toLowerCase(), String(val));
       map2.set(v2.th, String(val));
+      const al = String(v2.alias || "").trim();
+      if (al && !map2.has(al) && !map2.has(al.toLowerCase())) map2.set(al.toLowerCase(), String(val));
     }
     return String(text ?? "").replace(/\$\{([^}]*)\}/g, (m, name5) => {
       const k = String(name5).trim();
@@ -39706,21 +41720,41 @@ ${mdToHtmlBody(md, o)}
     }
     return buf.join("").replace(/\s+$/, "");
   }
-  var HEADER_VARS, HEADER_ALIGNS, HEADER_DEFAULTS, esc4;
+  var HEADER_VAR_TH, hv, HEADER_VARS, HEADER_ALIGNS, HEADER_DEFAULTS, esc4;
   var init_sp_headers = __esm({
     "src/sp-headers.js"() {
       init_i18n();
       init_sp_format();
       init_num();
+      HEADER_VAR_TH = {
+        PAGE: "\u0E2B\u0E19\u0E49\u0E32",
+        PAGES: "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32",
+        TITLE: "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
+        AUTHOR: "\u0E1C\u0E39\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19",
+        DRAFT: "\u0E09\u0E1A\u0E31\u0E1A",
+        DATE: "\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48",
+        SCENE: "\u0E09\u0E32\u0E01",
+        COPYRIGHT: "\u0E25\u0E34\u0E02\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C"
+      };
+      hv = (key2, aliasKey, labelKey2) => ({
+        key: key2,
+        th: HEADER_VAR_TH[key2],
+        get alias() {
+          return t(aliasKey);
+        },
+        get label() {
+          return t(labelKey2);
+        }
+      });
       HEADER_VARS = [
-        { key: "PAGE", th: t("ui.common.page"), label: t("ui.spHeaders.pageNumCurrent") },
-        { key: "PAGES", th: t("ui.spHeaders.countPage"), label: t("ui.spHeaders.countPageAll") },
-        { key: "TITLE", th: t("ui.common.story"), label: t("ui.common.title") },
-        { key: "AUTHOR", th: t("ui.common.author"), label: t("ui.spHeaders.nameAuthor") },
-        { key: "DRAFT", th: t("ui.spHeaders.edition"), label: t("ui.spHeaders.nameDraftRoundEdit") },
-        { key: "DATE", th: t("ui.common.date"), label: t("ui.spHeaders.dateSendInAct") },
-        { key: "SCENE", th: t("ui.common.scene2"), label: t("ui.spHeaders.headSceneFirstPage") },
-        { key: "COPYRIGHT", th: t("ui.spHeaders.msg"), label: t("ui.spHeaders.text") }
+        hv("PAGE", "ui.common.page", "ui.spHeaders.pageNumCurrent"),
+        hv("PAGES", "ui.spHeaders.countPage", "ui.spHeaders.countPageAll"),
+        hv("TITLE", "ui.common.story", "ui.common.title"),
+        hv("AUTHOR", "ui.common.author", "ui.spHeaders.nameAuthor"),
+        hv("DRAFT", "ui.spHeaders.edition", "ui.spHeaders.nameDraftRoundEdit"),
+        hv("DATE", "ui.common.date", "ui.spHeaders.dateSendInAct"),
+        hv("SCENE", "ui.common.scene2", "ui.spHeaders.headSceneFirstPage"),
+        hv("COPYRIGHT", "ui.spHeaders.msg", "ui.spHeaders.text")
       ];
       HEADER_ALIGNS = ["left", "center", "right"];
       HEADER_DEFAULTS = {
@@ -59723,7 +61757,7 @@ ${mdToHtmlBody(md, o)}
           var cropBox = this.getCropBox();
           var bleedBox = this.getBleedBox();
           var trimBox = this.getTrimBox();
-          var artBox = this.getArtBox();
+          var artBox2 = this.getArtBox();
           var hasCropBox = this.node.CropBox();
           var hasBleedBox = this.node.BleedBox();
           var hasTrimBox = this.node.TrimBox();
@@ -59737,7 +61771,7 @@ ${mdToHtmlBody(md, o)}
           if (hasTrimBox && rectanglesAreEqual(trimBox, mediaBox)) {
             this.setTrimBox(mediaBox.x, mediaBox.y, width, height);
           }
-          if (hasArtBox && rectanglesAreEqual(artBox, mediaBox)) {
+          if (hasArtBox && rectanglesAreEqual(artBox2, mediaBox)) {
             this.setArtBox(mediaBox.x, mediaBox.y, width, height);
           }
         };
@@ -59786,8 +61820,8 @@ ${mdToHtmlBody(md, o)}
           assertIs(y, "y", ["number"]);
           assertIs(width, "width", ["number"]);
           assertIs(height, "height", ["number"]);
-          var artBox = this.doc.context.obj([x, y, x + width, y + height]);
-          this.node.set(PDFName_default.ArtBox, artBox);
+          var artBox2 = this.doc.context.obj([x, y, x + width, y + height]);
+          this.node.set(PDFName_default.ArtBox, artBox2);
         };
         PDFPage2.prototype.getSize = function() {
           var _a = this.getMediaBox(), width = _a.width, height = _a.height;
@@ -59820,8 +61854,8 @@ ${mdToHtmlBody(md, o)}
         };
         PDFPage2.prototype.getArtBox = function() {
           var _a;
-          var artBox = this.node.ArtBox();
-          return (_a = artBox === null || artBox === void 0 ? void 0 : artBox.asRectangle()) !== null && _a !== void 0 ? _a : this.getCropBox();
+          var artBox2 = this.node.ArtBox();
+          return (_a = artBox2 === null || artBox2 === void 0 ? void 0 : artBox2.asRectangle()) !== null && _a !== void 0 ? _a : this.getCropBox();
         };
         PDFPage2.prototype.translateContent = function(x, y) {
           assertIs(x, "x", ["number"]);
@@ -65713,7 +67747,7 @@ ${mdToHtmlBody(md, o)}
     if (staticProps) _defineProperties$a(Constructor, staticProps);
     return Constructor;
   }
-  var import_pako5, commonjsGlobal, byteLength_1, toByteArray_1, fromByteArray_1, lookup4, revLookup, Arr, code2, i4, len3, base64Js, read, write, ieee754, buffer, buffer_1, buffer_2, buffer_3, buffer_4, domain, global$1, cachedSetTimeout, cachedClearTimeout, queue, draining, currentQueue, queueIndex, title, platform, browser, env, argv, version, versions, release, config, on, addListener2, once2, off, removeListener2, removeAllListeners2, emit2, performance2, performanceNow, startTime, process2, inherits, inherits$1, formatRegExp, debugs, debugEnviron, months, require$$3, string_decoder, string_decoder_1, debug, MAX_HWM, keys2, method, v, Buffer2, safer, key, Safer, safer_1, BOMChar, PrependBOM, StripBOM, bomHandling, Buffer$1, internal, StringDecoder, Buffer$2, utf16be, utf16_1, utf16, Buffer$3, utf7_1, unicode11utf7, nonDirectChars, base64Regex, base64Chars, i$1, plusChar, minusChar, andChar, utf7imap, base64IMAPChars, utf7, Buffer$4, _sbcs, sbcsCodec, sbcsData, sbcsDataGenerated, Buffer$5, _dbcs, UNASSIGNED, GB18030_CODE, SEQ_START, NODE_START, UNASSIGNED_NODE, DEF_CHAR, i$2, dbcsCodec, shiftjis, shiftjis$1, eucjp, eucjp$1, cp936, cp936$1, gbkAdded, gbkAdded$1, uChars, gbChars, gb18030Ranges, gb18030Ranges$1, cp949, cp949$1, cp950, cp950$1, big5Added, big5Added$1, require$$0, require$$1, require$$2, require$$3$1, require$$4, require$$5, require$$6, require$$7, dbcsData, encodings, Buffer$6, Transform$1, streams, Buffer$7, extendNode, lib, DecodeStream2, EncodeStream, _Number, _Number_1, _Number_2, _Number_3, _Number_4, _Number_5, _Number_6, _Number_7, _Number_8, _Number_9, _Number_10, _Number_11, _Number_12, _Number_13, _Number_14, _Number_15, _Number_16, _Number_17, _Number_18, _Number_19, _Number_20, _Number_21, _Number_22, _Number_23, _Number_24, _Number_25, _Number_26, _Number_27, _Number_28, _Number_29, _Number_30, _Number_31, _Number_32, utils, utils_1, utils_2, _Array, LazyArray, Bitfield, _Boolean, Buffer$8, Enum, Optional, Reserved, _String, Struct, VersionedStruct, Pointer, Pointer_1, Pointer_2, restructure, restructure_1, restructure_2, restructure_3, restructure_4, restructure_5, restructure_6, restructure_7, restructure_8, restructure_9, restructure_10, restructure_11, restructure_12, restructure_13, formats, fontkit, SubHeader, CmapGroup, UnicodeValueRange, UVSMapping, DefaultUVS, NonDefaultUVS, VarSelectorRecord, CmapSubtable, CmapEntry, cmap, head, hhea, HmtxEntry, hmtx, maxp, ENCODINGS, MAC_LANGUAGE_ENCODINGS, LANGUAGES, NameRecord, LangTagRecord, NameTable, NAMES, OS2, versions$1, post, cvt, fpgm, loca, prep, glyf, CFFIndex, toStr, isArguments, keysShim, has, toStr$1, isArgs, isEnumerable, hasDontEnumBug, hasProtoEnumBug, dontEnums, equalsConstructorPrototype, excludedKeys, hasAutomationEqualityBug, equalsConstructorPrototypeIfNotBuggy, implementation, slice2, origKeys, keysShim$1, originalKeys, objectKeys, hasToStringTag, toStr$2, isStandardArguments, isLegacyArguments, supportsStandardArguments, isArguments$1, hasSymbols, toStr$3, concat, origDefineProperty, isFunction$1, arePropertyDescriptorsSupported, supportsDescriptors, defineProperty, defineProperties, defineProperties_1, ERROR_MESSAGE, slice$1, toStr$4, funcType, implementation$1, functionBind, shams, origSymbol, hasSymbols$1, undefined$1, $TypeError, $gOPD, throwTypeError, ThrowTypeError, hasSymbols$2, getProto, generatorFunction, asyncFunction, asyncGenFunction, TypedArray, INTRINSICS, $replace, rePropName, reEscapeChar, stringToPath, getBaseIntrinsic, GetIntrinsic, $Function, $apply, $call, callBind, apply3, numberIsNaN, implementation$2, polyfill, shim, polyfill$1, objectIs, src, regexExec, gOPD, tryRegexExecCall, toStr$5, regexClass, hasToStringTag$1, isRegex, $Object, $TypeError$1, implementation$3, supportsDescriptors$1, $gOPD$1, $TypeError$2, polyfill$2, supportsDescriptors$2, gOPD$1, defineProperty$1, TypeErr, getProto$1, regex, shim$1, flagsBound, regexp_prototype_flags, getDay, tryDateObject, toStr$6, dateClass, hasToStringTag$2, isDateObject, getTime, deepEqual_1, FLOAT_EOF, FLOAT_LOOKUP, FLOAT_ENCODE_LOOKUP, CFFOperand, CFFDict, CFFPointer, Ptr, CFFBlendOp, CFFPrivateDict, standardStrings, StandardEncoding, ExpertEncoding, ISOAdobeCharset, ExpertCharset, ExpertSubsetCharset, LangSysTable, LangSysRecord, Script, ScriptRecord, ScriptList, Feature, FeatureRecord, FeatureList, LookupFlags, RangeRecord, Coverage, ClassRangeRecord, ClassDef, Device, LookupRecord, Rule, RuleSet, ClassRule, ClassSet, Context, ChainRule, ChainRuleSet, ChainingContext, _, F2DOT14, RegionAxisCoordinates, VariationRegionList, DeltaSet, ItemVariationData, ItemVariationStore, ConditionTable, ConditionSet, FeatureTableSubstitutionRecord, FeatureTableSubstitution, FeatureVariationRecord, FeatureVariations, PredefinedOp, CFFEncodingVersion, Range1, Range2, CFFCustomEncoding, CFFEncoding, RangeArray, CFFCustomCharset, CFFCharset, FDRange3, FDRange4, FDSelect, ptr, CFFPrivateOp, FontDict, CFFTopDict, VariationStore, CFF2TopDict, CFFTop, CFFFont, VerticalOrigin, VORG, BigMetrics, SmallMetrics, EBDTComponent, ByteAligned, BitAligned, glyph, SBitLineMetrics, CodeOffsetPair, IndexSubtable, IndexSubtableArray, BitmapSizeTable, EBLC, ImageTable, sbix, LayerRecord, BaseGlyphRecord, COLR, ColorRecord, CPAL, BaseCoord, BaseValues, FeatMinMaxRecord, MinMax, BaseLangSysRecord, BaseScript, BaseScriptRecord, BaseScriptList, BaseTagList, Axis, BASE, AttachPoint, AttachList, CaretValue, LigGlyph, LigCaretList, MarkGlyphSetsDef, GDEF, ValueFormat, types, ValueRecord, PairValueRecord, PairSet, Class2Record, Anchor, EntryExitRecord, MarkRecord, MarkArray, BaseRecord, BaseArray, ComponentRecord, LigatureAttach, LigatureArray, GPOSLookup, GPOS, Sequence, AlternateSet, Ligature, LigatureSet, GSUBLookup, GSUB, JstfGSUBModList, JstfPriority, JstfLangSys, JstfLangSysRecord, JstfScript, JstfScriptRecord, JSTF, VariableSizeNumber, MapDataEntry, DeltaSetIndexMap, HVAR, Signature, SignatureBlock, DSIG, GaspRange, gasp, DeviceRecord, hdmx, KernPair, ClassTable, Kern2Array, KernSubtable, KernTable, kern, LTSH, PCLT, Ratio, vTable, VdmxGroup, VDMX, vhea, VmtxEntry, vmtx, shortFrac, Correspondence, Segment, avar, UnboundedArrayAccessor, UnboundedArray, LookupTable, BslnSubtable, bsln, Setting, FeatureName, feat, Axis$1, Instance, fvar, shortFrac$1, Offset, gvar, ClassTable$1, WidthDeltaRecord, WidthDeltaCluster, ActionData, Action, PostcompensationAction, PostCompensationTable, JustificationTable, just, LigatureData, ContextualData, InsertionData, SubstitutionTable, SubtableData, Subtable, FeatureEntry, MorxChain, morx, OpticalBounds, opbd, tables, TableEntry, Directory, _class, CmapProcessor, KernProcessor, TINF_OK, TINF_DATA_ERROR, sltree, sdtree, length_bits, length_base, dist_bits, dist_base, clcidx, code_tree, lengths, offs, tinyInflate, UnicodeTrie, inflate, unicodeTrie, base64Arraybuffer, base64Arraybuffer_1, base64Arraybuffer_2, base64DeflatedData, base64DeflatedTrie, data, trieData, trie, log22, bits, CATEGORY_BITS, COMBINING_BITS, SCRIPT_BITS, EAW_BITS, NUMBER_BITS, CATEGORY_SHIFT, COMBINING_SHIFT, SCRIPT_SHIFT, EAW_SHIFT, CATEGORY_MASK, COMBINING_MASK, SCRIPT_MASK, EAW_MASK, NUMBER_MASK, getCategory, getCombiningClass, getScript, getEastAsianWidth, getNumericValue, isAlphabetic, isDigit, isPunctuation, isLowerCase, isUpperCase, isTitleCase, isWhiteSpace, isBaseForm, isMark, unicode, UnicodeLayoutEngine, BBox, UNICODE_SCRIPTS, OPENTYPE_SCRIPTS, tag, t2, _iterator, _step, script, RTL, GlyphRun, GlyphPosition, features, feature, OTMapping, i$3, AATMapping, aat, ot, _class$1, AATLookupTable, START_OF_TEXT_STATE, END_OF_TEXT_CLASS, OUT_OF_BOUNDS_CLASS, DELETED_GLYPH_CLASS, DONT_ADVANCE, AATStateMachine, _class$2, MARK_FIRST, MARK_LAST, VERB, SET_MARK, SET_COMPONENT, PERFORM_ACTION, LAST_MASK, STORE_MASK, OFFSET_MASK, REVERSE_DIRECTION, CURRENT_INSERT_BEFORE, MARKED_INSERT_BEFORE, CURRENT_INSERT_COUNT, MARKED_INSERT_COUNT, AATMorxProcessor, AATLayoutEngine, ShapingPlan, VARIATION_FEATURES, COMMON_FEATURES, FRACTIONAL_FEATURES, HORIZONTAL_FEATURES, DIRECTIONAL_FEATURES, DefaultShaper, base64DeflatedTrie$1, trieData$1, trie$1, FEATURES, ShapingClasses, ISOL, FINA, FIN2, FIN3, MEDI, MED2, INIT, NONE, STATE_TABLE, ArabicShaper, GlyphIterator, DEFAULT_SCRIPTS, OTProcessor, GlyphInfo, HangulShaper, HANGUL_BASE, HANGUL_END, HANGUL_COUNT, L_BASE, V_BASE, T_BASE, L_COUNT, V_COUNT, T_COUNT, L_END, V_END, T_END, DOTTED_CIRCLE, isL, isV, isT, isTone, isLVT, isLV, isCombiningL, isCombiningV, isCombiningT, X, L, V, T2, LV, LVT, M, NO_ACTION, DECOMPOSE, COMPOSE, TONE_MARK, INVALID, STATE_TABLE$1, INITIAL_STATE, FAIL_STATE, StateMachine, dfa2, CATEGORIES, POSITIONS, CONSONANT_FLAGS, JOINER_FLAGS, HALANT_OR_COENG_FLAGS, INDIC_CONFIGS, INDIC_DECOMPOSITIONS, base64DeflatedIndicMachine, base64DeflatedUseData, base64DeflatedTrie$2, indicMachine, useData, trieData$2, decompositions, trie$2, stateMachine, IndicShaper, IndicInfo, base64DeflatedTrie$3, useData$1, trieData$3, categories, decompositions$1, trie$3, stateMachine$1, UniversalShaper, USEInfo, SHAPERS, GSUBProcessor, GPOSProcessor, OTLayoutEngine, LayoutEngine, SVG_COMMANDS, Path, _loop, _i, _arr, StandardNames, _class$3, Glyph, GlyfHeader, ON_CURVE, X_SHORT_VECTOR, Y_SHORT_VECTOR, REPEAT, SAME_X, SAME_Y, ARG_1_AND_2_ARE_WORDS, WE_HAVE_A_SCALE, MORE_COMPONENTS, WE_HAVE_AN_X_AND_Y_SCALE, WE_HAVE_A_TWO_BY_TWO, WE_HAVE_INSTRUCTIONS, Point, Component, TTFGlyph, CFFGlyph, SBIXImage, SBIXGlyph, COLRLayer, COLRGlyph, TUPLES_SHARE_POINT_NUMBERS, TUPLE_COUNT_MASK, EMBEDDED_TUPLE_COORD, INTERMEDIATE_TUPLE, PRIVATE_POINT_NUMBERS, TUPLE_INDEX_MASK, POINTS_ARE_WORDS, POINT_RUN_COUNT_MASK, DELTAS_ARE_ZERO, DELTAS_ARE_WORDS, DELTA_RUN_COUNT_MASK, GlyphVariationProcessor, clone_1, Subset, ON_CURVE$1, X_SHORT_VECTOR$1, Y_SHORT_VECTOR$1, REPEAT$1, SAME_X$1, SAME_Y$1, Point$1, Glyf, TTFGlyphEncoder, TTFSubset, CFFSubset, _class$4, TTFFont, WOFFDirectoryEntry, WOFFDirectory, TINF_OK$1, TINF_DATA_ERROR$1, sltree$1, sdtree$1, length_bits$1, length_base$1, dist_bits$1, dist_base$1, clcidx$1, code_tree$1, lengths$1, offs$1, tinyInflate$1, WOFFFont, BrotliInput_1, BrotliOutput_1, streams$1, BROTLI_READ_SIZE, BROTLI_IBUF_SIZE, BROTLI_IBUF_MASK, kBitMask, bit_reader, byteLength_1$1, toByteArray_1$1, fromByteArray_1$1, lookup$1, revLookup$1, Arr$1, code$1, i$4, len$1, base64Js$1, dictionary_bin, init, dictionaryDataCompressed, dictionary, dictionary_1, dictionary_2, dictionary_3, dictionary_4, dictionary_5, dictionary_6, HuffmanCode_1, MAX_LENGTH, BrotliBuildHuffmanTable, huffman, lookup$2, lookupOffsets, context, kBlockLengthPrefixCode, kInsertLengthPrefixCode, kCopyLengthPrefixCode, kInsertRangeLut, kCopyRangeLut, prefix, kIdentity, kOmitLast1, kOmitLast2, kOmitLast3, kOmitLast4, kOmitLast5, kOmitLast6, kOmitLast7, kOmitLast8, kOmitLast9, kUppercaseFirst, kUppercaseAll, kOmitFirst1, kOmitFirst2, kOmitFirst3, kOmitFirst4, kOmitFirst5, kOmitFirst6, kOmitFirst7, kOmitFirst9, kTransforms, kTransforms_1, kNumTransforms, transformDictionaryWord, transform, BrotliInput$1, BrotliOutput$1, HuffmanCode$1, BrotliBuildHuffmanTable$1, kDefaultCodeLength, kCodeLengthRepeatCode, kNumLiteralCodes, kNumInsertAndCopyCodes, kNumBlockLengthCodes, kLiteralContextBits, kDistanceContextBits, HUFFMAN_TABLE_BITS, HUFFMAN_TABLE_MASK, HUFFMAN_MAX_TABLE_SIZE, CODE_LENGTH_CODES, kCodeLengthCodeOrder, NUM_DISTANCE_SHORT_CODES, kDistanceShortCodeIndexOffset, kDistanceShortCodeValueOffset, kMaxHuffmanTableSize, BrotliDecompressedSize_1, BrotliDecompressBuffer_1, BrotliDecompress_1, decode, decompress, WOFF2Glyph, Base128, knownTags, WOFF2DirectoryEntry, WOFF2Directory, WOFF2Font, Substream, GlyfTable, WORD_CODE, ONE_MORE_BYTE_CODE2, ONE_MORE_BYTE_CODE1, LOWEST_U_CODE, TTCHeader, TrueTypeCollection, DFontName, DFontData, Ref, Type, TypeList, DFontMap, DFontHeader, DFont, fontkit_es_default;
+  var import_pako5, commonjsGlobal, byteLength_1, toByteArray_1, fromByteArray_1, lookup4, revLookup, Arr, code2, i4, len3, base64Js, read, write, ieee754, buffer, buffer_1, buffer_2, buffer_3, buffer_4, domain, global$1, cachedSetTimeout, cachedClearTimeout, queue, draining, currentQueue, queueIndex, title, platform, browser, env, argv, version, versions, release, config, on, addListener2, once2, off, removeListener2, removeAllListeners2, emit2, performance2, performanceNow, startTime, process2, inherits, inherits$1, formatRegExp, debugs, debugEnviron, months, require$$3, string_decoder, string_decoder_1, debug, MAX_HWM, keys2, method, v, Buffer2, safer, key, Safer, safer_1, BOMChar, PrependBOM, StripBOM, bomHandling, Buffer$1, internal, StringDecoder, Buffer$2, utf16be, utf16_1, utf16, Buffer$3, utf7_1, unicode11utf7, nonDirectChars, base64Regex, base64Chars, i$1, plusChar, minusChar, andChar, utf7imap, base64IMAPChars, utf7, Buffer$4, _sbcs, sbcsCodec, sbcsData, sbcsDataGenerated, Buffer$5, _dbcs, UNASSIGNED, GB18030_CODE, SEQ_START, NODE_START, UNASSIGNED_NODE, DEF_CHAR, i$2, dbcsCodec, shiftjis, shiftjis$1, eucjp, eucjp$1, cp936, cp936$1, gbkAdded, gbkAdded$1, uChars, gbChars, gb18030Ranges, gb18030Ranges$1, cp949, cp949$1, cp950, cp950$1, big5Added, big5Added$1, require$$0, require$$1, require$$2, require$$3$1, require$$4, require$$5, require$$6, require$$7, dbcsData, encodings, Buffer$6, Transform$1, streams, Buffer$7, extendNode, lib, DecodeStream2, EncodeStream, _Number, _Number_1, _Number_2, _Number_3, _Number_4, _Number_5, _Number_6, _Number_7, _Number_8, _Number_9, _Number_10, _Number_11, _Number_12, _Number_13, _Number_14, _Number_15, _Number_16, _Number_17, _Number_18, _Number_19, _Number_20, _Number_21, _Number_22, _Number_23, _Number_24, _Number_25, _Number_26, _Number_27, _Number_28, _Number_29, _Number_30, _Number_31, _Number_32, utils, utils_1, utils_2, _Array, LazyArray, Bitfield, _Boolean, Buffer$8, Enum, Optional, Reserved, _String, Struct, VersionedStruct, Pointer, Pointer_1, Pointer_2, restructure, restructure_1, restructure_2, restructure_3, restructure_4, restructure_5, restructure_6, restructure_7, restructure_8, restructure_9, restructure_10, restructure_11, restructure_12, restructure_13, formats, fontkit, SubHeader, CmapGroup, UnicodeValueRange, UVSMapping, DefaultUVS, NonDefaultUVS, VarSelectorRecord, CmapSubtable, CmapEntry, cmap, head, hhea, HmtxEntry, hmtx, maxp, ENCODINGS, MAC_LANGUAGE_ENCODINGS, LANGUAGES, NameRecord, LangTagRecord, NameTable, NAMES, OS2, versions$1, post, cvt, fpgm, loca, prep, glyf, CFFIndex, toStr, isArguments, keysShim, has2, toStr$1, isArgs, isEnumerable, hasDontEnumBug, hasProtoEnumBug, dontEnums, equalsConstructorPrototype, excludedKeys, hasAutomationEqualityBug, equalsConstructorPrototypeIfNotBuggy, implementation, slice2, origKeys, keysShim$1, originalKeys, objectKeys, hasToStringTag, toStr$2, isStandardArguments, isLegacyArguments, supportsStandardArguments, isArguments$1, hasSymbols, toStr$3, concat, origDefineProperty, isFunction$1, arePropertyDescriptorsSupported, supportsDescriptors, defineProperty, defineProperties, defineProperties_1, ERROR_MESSAGE, slice$1, toStr$4, funcType, implementation$1, functionBind, shams, origSymbol, hasSymbols$1, undefined$1, $TypeError, $gOPD, throwTypeError, ThrowTypeError, hasSymbols$2, getProto, generatorFunction, asyncFunction, asyncGenFunction, TypedArray, INTRINSICS, $replace, rePropName, reEscapeChar, stringToPath, getBaseIntrinsic, GetIntrinsic, $Function, $apply, $call, callBind, apply3, numberIsNaN, implementation$2, polyfill, shim, polyfill$1, objectIs, src, regexExec, gOPD, tryRegexExecCall, toStr$5, regexClass, hasToStringTag$1, isRegex, $Object, $TypeError$1, implementation$3, supportsDescriptors$1, $gOPD$1, $TypeError$2, polyfill$2, supportsDescriptors$2, gOPD$1, defineProperty$1, TypeErr, getProto$1, regex, shim$1, flagsBound, regexp_prototype_flags, getDay, tryDateObject, toStr$6, dateClass, hasToStringTag$2, isDateObject, getTime, deepEqual_1, FLOAT_EOF, FLOAT_LOOKUP, FLOAT_ENCODE_LOOKUP, CFFOperand, CFFDict, CFFPointer, Ptr, CFFBlendOp, CFFPrivateDict, standardStrings, StandardEncoding, ExpertEncoding, ISOAdobeCharset, ExpertCharset, ExpertSubsetCharset, LangSysTable, LangSysRecord, Script, ScriptRecord, ScriptList, Feature, FeatureRecord, FeatureList, LookupFlags, RangeRecord, Coverage, ClassRangeRecord, ClassDef, Device, LookupRecord, Rule, RuleSet, ClassRule, ClassSet, Context, ChainRule, ChainRuleSet, ChainingContext, _, F2DOT14, RegionAxisCoordinates, VariationRegionList, DeltaSet, ItemVariationData, ItemVariationStore, ConditionTable, ConditionSet, FeatureTableSubstitutionRecord, FeatureTableSubstitution, FeatureVariationRecord, FeatureVariations, PredefinedOp, CFFEncodingVersion, Range1, Range2, CFFCustomEncoding, CFFEncoding, RangeArray, CFFCustomCharset, CFFCharset, FDRange3, FDRange4, FDSelect, ptr, CFFPrivateOp, FontDict, CFFTopDict, VariationStore, CFF2TopDict, CFFTop, CFFFont, VerticalOrigin, VORG, BigMetrics, SmallMetrics, EBDTComponent, ByteAligned, BitAligned, glyph, SBitLineMetrics, CodeOffsetPair, IndexSubtable, IndexSubtableArray, BitmapSizeTable, EBLC, ImageTable, sbix, LayerRecord, BaseGlyphRecord, COLR, ColorRecord, CPAL, BaseCoord, BaseValues, FeatMinMaxRecord, MinMax, BaseLangSysRecord, BaseScript, BaseScriptRecord, BaseScriptList, BaseTagList, Axis, BASE, AttachPoint, AttachList, CaretValue, LigGlyph, LigCaretList, MarkGlyphSetsDef, GDEF, ValueFormat, types, ValueRecord, PairValueRecord, PairSet, Class2Record, Anchor, EntryExitRecord, MarkRecord, MarkArray, BaseRecord, BaseArray, ComponentRecord, LigatureAttach, LigatureArray, GPOSLookup, GPOS, Sequence, AlternateSet, Ligature, LigatureSet, GSUBLookup, GSUB, JstfGSUBModList, JstfPriority, JstfLangSys, JstfLangSysRecord, JstfScript, JstfScriptRecord, JSTF, VariableSizeNumber, MapDataEntry, DeltaSetIndexMap, HVAR, Signature, SignatureBlock, DSIG, GaspRange, gasp, DeviceRecord, hdmx, KernPair, ClassTable, Kern2Array, KernSubtable, KernTable, kern, LTSH, PCLT, Ratio, vTable, VdmxGroup, VDMX, vhea, VmtxEntry, vmtx, shortFrac, Correspondence, Segment, avar, UnboundedArrayAccessor, UnboundedArray, LookupTable, BslnSubtable, bsln, Setting, FeatureName, feat, Axis$1, Instance, fvar, shortFrac$1, Offset, gvar, ClassTable$1, WidthDeltaRecord, WidthDeltaCluster, ActionData, Action, PostcompensationAction, PostCompensationTable, JustificationTable, just, LigatureData, ContextualData, InsertionData, SubstitutionTable, SubtableData, Subtable, FeatureEntry, MorxChain, morx, OpticalBounds, opbd, tables, TableEntry, Directory, _class, CmapProcessor, KernProcessor, TINF_OK, TINF_DATA_ERROR, sltree, sdtree, length_bits, length_base, dist_bits, dist_base, clcidx, code_tree, lengths, offs, tinyInflate, UnicodeTrie, inflate, unicodeTrie, base64Arraybuffer, base64Arraybuffer_1, base64Arraybuffer_2, base64DeflatedData, base64DeflatedTrie, data, trieData, trie, log22, bits, CATEGORY_BITS, COMBINING_BITS, SCRIPT_BITS, EAW_BITS, NUMBER_BITS, CATEGORY_SHIFT, COMBINING_SHIFT, SCRIPT_SHIFT, EAW_SHIFT, CATEGORY_MASK, COMBINING_MASK, SCRIPT_MASK, EAW_MASK, NUMBER_MASK, getCategory, getCombiningClass, getScript, getEastAsianWidth, getNumericValue, isAlphabetic, isDigit, isPunctuation, isLowerCase, isUpperCase, isTitleCase, isWhiteSpace, isBaseForm, isMark, unicode, UnicodeLayoutEngine, BBox, UNICODE_SCRIPTS, OPENTYPE_SCRIPTS, tag, t2, _iterator, _step, script, RTL, GlyphRun, GlyphPosition, features, feature, OTMapping, i$3, AATMapping, aat, ot, _class$1, AATLookupTable, START_OF_TEXT_STATE, END_OF_TEXT_CLASS, OUT_OF_BOUNDS_CLASS, DELETED_GLYPH_CLASS, DONT_ADVANCE, AATStateMachine, _class$2, MARK_FIRST, MARK_LAST, VERB, SET_MARK, SET_COMPONENT, PERFORM_ACTION, LAST_MASK, STORE_MASK, OFFSET_MASK, REVERSE_DIRECTION, CURRENT_INSERT_BEFORE, MARKED_INSERT_BEFORE, CURRENT_INSERT_COUNT, MARKED_INSERT_COUNT, AATMorxProcessor, AATLayoutEngine, ShapingPlan, VARIATION_FEATURES, COMMON_FEATURES, FRACTIONAL_FEATURES, HORIZONTAL_FEATURES, DIRECTIONAL_FEATURES, DefaultShaper, base64DeflatedTrie$1, trieData$1, trie$1, FEATURES, ShapingClasses, ISOL, FINA, FIN2, FIN3, MEDI, MED2, INIT, NONE, STATE_TABLE, ArabicShaper, GlyphIterator, DEFAULT_SCRIPTS, OTProcessor, GlyphInfo, HangulShaper, HANGUL_BASE, HANGUL_END, HANGUL_COUNT, L_BASE, V_BASE, T_BASE, L_COUNT, V_COUNT, T_COUNT, L_END, V_END, T_END, DOTTED_CIRCLE, isL, isV, isT, isTone, isLVT, isLV, isCombiningL, isCombiningV, isCombiningT, X, L, V, T2, LV, LVT, M, NO_ACTION, DECOMPOSE, COMPOSE, TONE_MARK, INVALID, STATE_TABLE$1, INITIAL_STATE, FAIL_STATE, StateMachine, dfa2, CATEGORIES, POSITIONS, CONSONANT_FLAGS, JOINER_FLAGS, HALANT_OR_COENG_FLAGS, INDIC_CONFIGS, INDIC_DECOMPOSITIONS, base64DeflatedIndicMachine, base64DeflatedUseData, base64DeflatedTrie$2, indicMachine, useData, trieData$2, decompositions, trie$2, stateMachine, IndicShaper, IndicInfo, base64DeflatedTrie$3, useData$1, trieData$3, categories, decompositions$1, trie$3, stateMachine$1, UniversalShaper, USEInfo, SHAPERS, GSUBProcessor, GPOSProcessor, OTLayoutEngine, LayoutEngine, SVG_COMMANDS, Path, _loop, _i, _arr, StandardNames, _class$3, Glyph, GlyfHeader, ON_CURVE, X_SHORT_VECTOR, Y_SHORT_VECTOR, REPEAT, SAME_X, SAME_Y, ARG_1_AND_2_ARE_WORDS, WE_HAVE_A_SCALE, MORE_COMPONENTS, WE_HAVE_AN_X_AND_Y_SCALE, WE_HAVE_A_TWO_BY_TWO, WE_HAVE_INSTRUCTIONS, Point, Component, TTFGlyph, CFFGlyph, SBIXImage, SBIXGlyph, COLRLayer, COLRGlyph, TUPLES_SHARE_POINT_NUMBERS, TUPLE_COUNT_MASK, EMBEDDED_TUPLE_COORD, INTERMEDIATE_TUPLE, PRIVATE_POINT_NUMBERS, TUPLE_INDEX_MASK, POINTS_ARE_WORDS, POINT_RUN_COUNT_MASK, DELTAS_ARE_ZERO, DELTAS_ARE_WORDS, DELTA_RUN_COUNT_MASK, GlyphVariationProcessor, clone_1, Subset, ON_CURVE$1, X_SHORT_VECTOR$1, Y_SHORT_VECTOR$1, REPEAT$1, SAME_X$1, SAME_Y$1, Point$1, Glyf, TTFGlyphEncoder, TTFSubset, CFFSubset, _class$4, TTFFont, WOFFDirectoryEntry, WOFFDirectory, TINF_OK$1, TINF_DATA_ERROR$1, sltree$1, sdtree$1, length_bits$1, length_base$1, dist_bits$1, dist_base$1, clcidx$1, code_tree$1, lengths$1, offs$1, tinyInflate$1, WOFFFont, BrotliInput_1, BrotliOutput_1, streams$1, BROTLI_READ_SIZE, BROTLI_IBUF_SIZE, BROTLI_IBUF_MASK, kBitMask, bit_reader, byteLength_1$1, toByteArray_1$1, fromByteArray_1$1, lookup$1, revLookup$1, Arr$1, code$1, i$4, len$1, base64Js$1, dictionary_bin, init, dictionaryDataCompressed, dictionary, dictionary_1, dictionary_2, dictionary_3, dictionary_4, dictionary_5, dictionary_6, HuffmanCode_1, MAX_LENGTH, BrotliBuildHuffmanTable, huffman, lookup$2, lookupOffsets, context, kBlockLengthPrefixCode, kInsertLengthPrefixCode, kCopyLengthPrefixCode, kInsertRangeLut, kCopyRangeLut, prefix, kIdentity, kOmitLast1, kOmitLast2, kOmitLast3, kOmitLast4, kOmitLast5, kOmitLast6, kOmitLast7, kOmitLast8, kOmitLast9, kUppercaseFirst, kUppercaseAll, kOmitFirst1, kOmitFirst2, kOmitFirst3, kOmitFirst4, kOmitFirst5, kOmitFirst6, kOmitFirst7, kOmitFirst9, kTransforms, kTransforms_1, kNumTransforms, transformDictionaryWord, transform, BrotliInput$1, BrotliOutput$1, HuffmanCode$1, BrotliBuildHuffmanTable$1, kDefaultCodeLength, kCodeLengthRepeatCode, kNumLiteralCodes, kNumInsertAndCopyCodes, kNumBlockLengthCodes, kLiteralContextBits, kDistanceContextBits, HUFFMAN_TABLE_BITS, HUFFMAN_TABLE_MASK, HUFFMAN_MAX_TABLE_SIZE, CODE_LENGTH_CODES, kCodeLengthCodeOrder, NUM_DISTANCE_SHORT_CODES, kDistanceShortCodeIndexOffset, kDistanceShortCodeValueOffset, kMaxHuffmanTableSize, BrotliDecompressedSize_1, BrotliDecompressBuffer_1, BrotliDecompress_1, decode, decompress, WOFF2Glyph, Base128, knownTags, WOFF2DirectoryEntry, WOFF2Directory, WOFF2Font, Substream, GlyfTable, WORD_CODE, ONE_MORE_BYTE_CODE2, ONE_MORE_BYTE_CODE1, LOWEST_U_CODE, TTCHeader, TrueTypeCollection, DFontName, DFontData, Ref, Type, TypeList, DFontMap, DFontHeader, DFont, fontkit_es_default;
   var init_fontkit_es = __esm({
     "node_modules/@pdf-lib/fontkit/dist/fontkit.es.js"() {
       import_pako5 = __toESM(require_pako());
@@ -80657,7 +82691,7 @@ ${mdToHtmlBody(md, o)}
         return isArgs2;
       };
       if (!Object.keys) {
-        has = Object.prototype.hasOwnProperty;
+        has2 = Object.prototype.hasOwnProperty;
         toStr$1 = Object.prototype.toString;
         isArgs = isArguments;
         isEnumerable = Object.prototype.propertyIsEnumerable;
@@ -80702,7 +82736,7 @@ ${mdToHtmlBody(md, o)}
           }
           for (var k in window) {
             try {
-              if (!excludedKeys["$" + k] && has.call(window, k) && window[k] !== null && typeof window[k] === "object") {
+              if (!excludedKeys["$" + k] && has2.call(window, k) && window[k] !== null && typeof window[k] === "object") {
                 try {
                   equalsConstructorPrototype(window[k]);
                 } catch (e) {
@@ -80735,7 +82769,7 @@ ${mdToHtmlBody(md, o)}
             throw new TypeError("Object.keys called on a non-object");
           }
           var skipProto = hasProtoEnumBug && isFunction3;
-          if (isString3 && object.length > 0 && !has.call(object, 0)) {
+          if (isString3 && object.length > 0 && !has2.call(object, 0)) {
             for (var i5 = 0; i5 < object.length; ++i5) {
               theKeys.push(String(i5));
             }
@@ -80746,7 +82780,7 @@ ${mdToHtmlBody(md, o)}
             }
           } else {
             for (var name5 in object) {
-              if (!(skipProto && name5 === "prototype") && has.call(object, name5)) {
+              if (!(skipProto && name5 === "prototype") && has2.call(object, name5)) {
                 theKeys.push(String(name5));
               }
             }
@@ -80754,7 +82788,7 @@ ${mdToHtmlBody(md, o)}
           if (hasDontEnumBug) {
             var skipConstructor = equalsConstructorPrototypeIfNotBuggy(object);
             for (var k = 0; k < dontEnums.length; ++k) {
-              if (!(skipConstructor && dontEnums[k] === "constructor") && has.call(object, dontEnums[k])) {
+              if (!(skipConstructor && dontEnums[k] === "constructor") && has2.call(object, dontEnums[k])) {
                 theKeys.push(dontEnums[k]);
               }
             }
@@ -93908,7 +95942,7 @@ ${mdToHtmlBody(md, o)}
     saveNamePreset: () => saveNamePreset
   });
   function sanitizeFileBase(s) {
-    let out = String(s == null ? "" : s).replace(BAD_CHARS, "_").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "").slice(0, NAME_MAX).replace(/[. ]+$/, "");
+    let out = String(s == null ? "" : s).replace(BAD_CHARS2, "_").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "").slice(0, NAME_MAX).replace(/[. ]+$/, "");
     if (/^[_\s.]*$/.test(out)) out = "";
     if (RESERVED.test(out)) out = out + "_";
     return out || "export";
@@ -93956,7 +95990,7 @@ ${mdToHtmlBody(md, o)}
     const n2 = String(name5 || "").trim();
     return normalizeExportName({ presets: list3 }).presets.filter((p) => p.name !== n2);
   }
-  var DEFAULT_EXPORT_NAME, NAME_PRESET_MAX, BUILTIN_NAME_PRESETS, BAD_CHARS, RESERVED, NAME_MAX;
+  var DEFAULT_EXPORT_NAME, NAME_PRESET_MAX, BUILTIN_NAME_PRESETS, BAD_CHARS2, RESERVED, NAME_MAX;
   var init_export_name = __esm({
     "src/export-name.js"() {
       init_shortcode();
@@ -93970,7 +96004,7 @@ ${mdToHtmlBody(md, o)}
         { id: "author-title", labelKey: "ui.xname.pAuthorTitle", template: "[author] - [title]" },
         { id: "draft-date", labelKey: "ui.xname.pDraftDate", template: "[title] draft [date:iso] [words]w" }
       ];
-      BAD_CHARS = /[\\\/:*?"<>|\u0000-\u001f]/g;
+      BAD_CHARS2 = /[\\\/:*?"<>|\u0000-\u001f]/g;
       RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
       NAME_MAX = 120;
     }
@@ -95139,11 +97173,13 @@ ${mdToHtmlBody(md, o)}
         titleInp.value = s.title;
         return;
       }
-      s.meta = await saveSectionMeta(s.sf, { title: v2 });
-      s.title = v2;
-      await buildTree2();
+      const to = await setSectionTitle(s.secPath, v2);
+      if (!to) {
+        titleInp.value = s.title;
+        return;
+      }
       setStatus(t("ui.books.changeNameBookDone"));
-      redraw3();
+      await refreshBooksIfOpen();
     };
     detail.append(titleInp);
     const blurb = el("textarea", "book-blurb lib-blurb");
@@ -95629,7 +97665,7 @@ ${mdToHtmlBody(md, o)}
   }
   function breadcrumb(maps, currentId) {
     const byId = new Map((maps || []).map((m) => [m.id, m]));
-    const parentOf2 = (id) => {
+    const parentOf3 = (id) => {
       for (const m of maps || []) if ((m.pins || []).some((p) => p.kind === "portal" && p.toMap === id)) return m.id;
       return null;
     };
@@ -95637,7 +97673,7 @@ ${mdToHtmlBody(md, o)}
     let cur = currentId, guard = 0;
     while (cur && byId.has(cur) && guard++ < 50) {
       chain.unshift({ id: cur, name: byId.get(cur).name });
-      cur = parentOf2(cur);
+      cur = parentOf3(cur);
       if (chain.some((c) => c.id === cur)) break;
     }
     return chain;
@@ -96540,7 +98576,7 @@ ${mdToHtmlBody(md, o)}
   }
   function timelineCsv(items, head2) {
     const h = head2 || ["title", "when", "whenEnd", "track", "kind", "description", "references"];
-    const lines = [h.map(csvCell2).join(",")];
+    const lines = [h.map(csvCell3).join(",")];
     for (const it of items || []) {
       lines.push([
         it.title,
@@ -96550,7 +98586,7 @@ ${mdToHtmlBody(md, o)}
         it.kind,
         it.desc,
         (it.refs || []).map((r) => r.title).join("; ")
-      ].map(csvCell2).join(","));
+      ].map(csvCell3).join(","));
     }
     return "\uFEFF" + lines.join("\r\n") + "\r\n";
   }
@@ -96637,7 +98673,7 @@ svg{position:absolute;inset:0;pointer-events:none}path{fill:none;stroke:#8a7fd0;
 <svg width="${pxW + 40}" height="${H3}"><defs><marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8" style="fill:#8a7fd0;stroke:none"/></marker></defs>${paths}</svg>
 ${cards.join("")}</div>${und}</body></html>`;
   }
-  var TIMELINE_VERSION, TRACK_COLORS, csvCell2, esc5;
+  var TIMELINE_VERSION, TRACK_COLORS, csvCell3, esc5;
   var init_timeline = __esm({
     "src/timeline.js"() {
       init_i18n();
@@ -96645,7 +98681,7 @@ ${cards.join("")}</div>${und}</body></html>`;
       init_palette();
       TIMELINE_VERSION = "1.0";
       TRACK_COLORS = ["#5f9fd9", "#6fae6f", "#d9b757", "#d97757", "#a97fd0", "#d9575e", "#7fb8b0", "#c98a5f"];
-      csvCell2 = (v2) => {
+      csvCell3 = (v2) => {
         const s = String(v2 == null ? "" : v2);
         return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
       };
@@ -97074,7 +99110,7 @@ ${cards.join("")}</div>${und}</body></html>`;
       for (const p of cur.pins || []) if (p.kind === "entity" && p.entityFile) placedHere.set(p.entityFile, p);
     }
     const zonedHere = new Set(cur ? mapZones(cur).map((z) => z.entityFile).filter(Boolean) : []);
-    const paint3 = () => {
+    const paint4 = () => {
       list3.replaceChildren();
       const s = view.sideQ.trim().toLowerCase();
       const byCat = /* @__PURE__ */ new Map();
@@ -97096,9 +99132,9 @@ ${cards.join("")}</div>${und}</body></html>`;
     };
     q2.oninput = () => {
       view.sideQ = q2.value;
-      paint3();
+      paint4();
     };
-    paint3();
+    paint4();
   }
   function entityRow(e, cur, maps, pin, zoned, portrait) {
     const row4 = el("div", "map-ent k-card" + (pin ? " placed" : ""));
@@ -97556,9 +99592,9 @@ ${cards.join("")}</div>${und}</body></html>`;
       }, { once: true });
     }
     const ov = mapOverlays(cur);
-    const NS2 = "http://www.w3.org/2000/svg";
+    const NS3 = "http://www.w3.org/2000/svg";
     const mkSvg = (cls) => {
-      const svg = document.createElementNS(NS2, "svg");
+      const svg = document.createElementNS(NS3, "svg");
       svg.setAttribute("class", cls);
       svg.setAttribute("viewBox", "0 0 100 100");
       svg.setAttribute("preserveAspectRatio", "none");
@@ -97566,7 +99602,7 @@ ${cards.join("")}</div>${und}</body></html>`;
     };
     const zones = mapZones(cur);
     const zs = mkSvg("map-zones");
-    const defs = document.createElementNS(NS2, "defs");
+    const defs = document.createElementNS(NS3, "defs");
     zs.append(defs);
     for (const z of zones) {
       const col = z.color || ZONE_COLORS[0];
@@ -97574,13 +99610,13 @@ ${cards.join("")}</div>${und}</body></html>`;
       let fill3 = col;
       if (pat !== "none") {
         const pid = "mzp-" + z.id;
-        const pe = document.createElementNS(NS2, "pattern");
+        const pe = document.createElementNS(NS3, "pattern");
         pe.setAttribute("id", pid);
         pe.setAttribute("patternUnits", "userSpaceOnUse");
         pe.setAttribute("width", "2");
         pe.setAttribute("height", "2");
         const mk2 = (tag3, at) => {
-          const n2 = document.createElementNS(NS2, tag3);
+          const n2 = document.createElementNS(NS3, tag3);
           for (const [k, v2] of Object.entries(at)) n2.setAttribute(k, v2);
           pe.append(n2);
         };
@@ -97590,7 +99626,7 @@ ${cards.join("")}</div>${und}</body></html>`;
         defs.append(pe);
         fill3 = `url(#${pid})`;
       }
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       p.setAttribute("d", zonePath(z.points));
       p.setAttribute("class", "map-zone" + (view.selZone === z.id ? " sel" : ""));
       p.setAttribute("vector-effect", "non-scaling-stroke");
@@ -97601,14 +99637,14 @@ ${cards.join("")}</div>${und}</body></html>`;
       zs.append(p);
     }
     if (view.zoneDraw && view.zoneDraw.points.length) {
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       const pts = view.zoneDraw.points;
       p.setAttribute("d", pts.map((q2, i5) => (i5 ? "L" : "M") + q2.x.toFixed(3) + "," + q2.y.toFixed(3)).join(" ") + (pts.length > 2 ? " Z" : ""));
       p.setAttribute("class", "map-zone map-zone-draft");
       p.setAttribute("vector-effect", "non-scaling-stroke");
       p.style.setProperty("--zc", view.zoneDraw.color);
       zs.append(p);
-      const rub = document.createElementNS(NS2, "path");
+      const rub = document.createElementNS(NS3, "path");
       rub.setAttribute("class", "map-zone-rubber");
       rub.setAttribute("vector-effect", "non-scaling-stroke");
       zs.append(rub);
@@ -97660,7 +99696,7 @@ ${cards.join("")}</div>${und}</body></html>`;
     for (const r of routes) {
       const d = routePath(routePoints(cur, r));
       if (!d) continue;
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       p.setAttribute("d", d);
       p.setAttribute("fill", "none");
       p.setAttribute("stroke", r.color || ROUTE_COLORS[0]);
@@ -97672,14 +99708,14 @@ ${cards.join("")}</div>${und}</body></html>`;
       rsvg.append(p);
     }
     if (journey && journey.stops.length > 1) {
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       p.setAttribute("d", routePath(journey.stops.map((s) => s.pt)));
       p.setAttribute("class", "map-journey");
       p.setAttribute("vector-effect", "non-scaling-stroke");
       rsvg.append(p);
     }
     if (view.measure && view.measure.points.length) {
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       p.setAttribute("d", routePath(view.measure.points.length > 1 ? view.measure.points : [view.measure.points[0], view.measure.points[0]]));
       p.setAttribute("class", "map-measure");
       p.setAttribute("vector-effect", "non-scaling-stroke");
@@ -97940,22 +99976,22 @@ ${cards.join("")}</div>${und}</body></html>`;
       const box2 = el("div", "map-rubber");
       frame.append(box2);
       const x0 = e.clientX, y0 = e.clientY;
-      const paint3 = (ev) => {
+      const paint4 = (ev) => {
         box2.style.left = Math.min(x0, ev.clientX) - fr.left + "px";
         box2.style.top = Math.min(y0, ev.clientY) - fr.top + "px";
         box2.style.width = Math.abs(ev.clientX - x0) + "px";
         box2.style.height = Math.abs(ev.clientY - y0) + "px";
       };
-      paint3(e);
+      paint4(e);
       const offEsc = escCancelDrag(() => {
-        window.removeEventListener("pointermove", paint3);
+        window.removeEventListener("pointermove", paint4);
         window.removeEventListener("pointerup", up);
         box2.remove();
         suppressClick = true;
       });
       const up = (ev) => {
         offEsc();
-        window.removeEventListener("pointermove", paint3);
+        window.removeEventListener("pointermove", paint4);
         window.removeEventListener("pointerup", up);
         box2.remove();
         if (Math.abs(ev.clientX - x0) < 3 && Math.abs(ev.clientY - y0) < 3) return;
@@ -97965,7 +100001,7 @@ ${cards.join("")}</div>${und}</body></html>`;
         for (const p of cur.pins || []) if (p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y) view.sel.add(p.id);
         redraw3();
       };
-      window.addEventListener("pointermove", paint3);
+      window.addEventListener("pointermove", paint4);
       window.addEventListener("pointerup", up);
     };
     function dragZone(e, z) {
@@ -100154,13 +102190,13 @@ ${cards.join("")}</div>${und}</body></html>`;
       applyMapBgStyle(im, cur);
       canvas.append(im);
     }
-    const NS2 = "http://www.w3.org/2000/svg";
-    const zs = document.createElementNS(NS2, "svg");
+    const NS3 = "http://www.w3.org/2000/svg";
+    const zs = document.createElementNS(NS3, "svg");
     zs.setAttribute("class", "map-zones");
     zs.setAttribute("viewBox", "0 0 100 100");
     zs.setAttribute("preserveAspectRatio", "none");
     for (const z of mapZones(cur)) {
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       p.setAttribute("d", zonePath(z.points));
       p.setAttribute("class", "map-zone" + (mine(z.entityFile) ? " sel" : ""));
       p.setAttribute("vector-effect", "non-scaling-stroke");
@@ -103678,15 +105714,15 @@ a.card:hover{border-color:${CARD_STRIPE}}
           const box2 = el("div", "gal2-rubber");
           board2.append(box2);
           const x0 = e.clientX, y0 = e.clientY;
-          const paint3 = (ev) => {
+          const paint4 = (ev) => {
             box2.style.left = Math.min(x0, ev.clientX) - r.left + "px";
             box2.style.top = Math.min(y0, ev.clientY) - r.top + "px";
             box2.style.width = Math.abs(ev.clientX - x0) + "px";
             box2.style.height = Math.abs(ev.clientY - y0) + "px";
           };
-          paint3(e);
+          paint4(e);
           const done3 = async (ev, cancel) => {
-            document.removeEventListener("mousemove", paint3);
+            document.removeEventListener("mousemove", paint4);
             document.removeEventListener("mouseup", upH);
             box2.remove();
             if (cancel || !ev) return;
@@ -103700,7 +105736,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
             offEsc();
             done3(ev, false);
           };
-          document.addEventListener("mousemove", paint3);
+          document.addEventListener("mousemove", paint4);
           document.addEventListener("mouseup", upH);
         }
         applyTransform() {
@@ -104674,31 +106710,6 @@ a.card:hover{border-color:${CARD_STRIPE}}
       REF_BUDGET = 12e3;
       AROUND_CHARS = 1200;
       uid2 = (p) => p + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
-    }
-  });
-
-  // src/timing.js
-  var timing_exports = {};
-  __export(timing_exports, {
-    RETRY_BASE_MS: () => RETRY_BASE_MS,
-    RETRY_MAX_MS: () => RETRY_MAX_MS,
-    SCRATCH_SAVE_DELAY_MS: () => SCRATCH_SAVE_DELAY_MS,
-    SPLASH_MAX_MS: () => SPLASH_MAX_MS,
-    UPDATE_FETCH_TIMEOUT_MS: () => UPDATE_FETCH_TIMEOUT_MS,
-    retryBackoff: () => retryBackoff
-  });
-  function retryBackoff(n2) {
-    const k = Number.isFinite(+n2) && +n2 > 0 ? Math.floor(+n2) : 0;
-    return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
-  }
-  var SPLASH_MAX_MS, UPDATE_FETCH_TIMEOUT_MS, SCRATCH_SAVE_DELAY_MS, RETRY_BASE_MS, RETRY_MAX_MS;
-  var init_timing = __esm({
-    "src/timing.js"() {
-      SPLASH_MAX_MS = 3e4;
-      UPDATE_FETCH_TIMEOUT_MS = 2e4;
-      SCRATCH_SAVE_DELAY_MS = 3e3;
-      RETRY_BASE_MS = 500;
-      RETRY_MAX_MS = 8e3;
     }
   });
 
@@ -106412,10 +108423,10 @@ a.card:hover{border-color:${CARD_STRIPE}}
         provSel.append(o);
       }
       if (rows.length) provSel.value = activeId || rows[0].id;
-      const has2 = rows.length > 0;
-      provSel.style.display = has2 ? "" : "none";
-      editBtn.disabled = delBtn.disabled = !has2;
-      empty3.style.display = has2 ? "none" : "";
+      const has3 = rows.length > 0;
+      provSel.style.display = has3 ? "" : "none";
+      editBtn.disabled = delBtn.disabled = !has3;
+      empty3.style.display = has3 ? "none" : "";
       const cur = rows.find((p) => p.id === provSel.value);
       info.textContent = cur ? tf("ui.aiProvider.baseURLModel", cur.credential.baseUrl || "\u2014", cur.model || t("ui.aiProvider.notPick")) + tf("ui.aiProvider.domainAllow", (cur.credential.allowedDomains || []).join(", ") || t("ui.aiProvider.notRemember")) : "";
     }
@@ -108789,61 +110800,6 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
   });
 
-  // src/tab-bridge.js
-  var tab_bridge_exports = {};
-  __export(tab_bridge_exports, {
-    closeTabsUnder: () => closeTabsUnder,
-    isInsideRoot: () => isInsideRoot,
-    liveBody: () => liveBody,
-    pathKey: () => pathKey,
-    setTabBridge: () => setTabBridge,
-    tabHandle: () => tabHandle
-  });
-  function setTabBridge(b) {
-    bridge = b && typeof b.find === "function" ? b : null;
-  }
-  function tabHandle(path) {
-    try {
-      return bridge && path ? bridge.find(path) : null;
-    } catch {
-      return null;
-    }
-  }
-  async function closeTabsUnder(dir2) {
-    if (!bridge || !bridge.closeUnder || !dir2) return { closed: 0, skipped: 0, ok: true };
-    try {
-      const r = await bridge.closeUnder(dir2);
-      if (typeof r === "number") return { closed: r, skipped: 0, ok: true };
-      return r && typeof r === "object" ? r : { closed: 0, skipped: 0, ok: true };
-    } catch {
-      return { closed: 0, skipped: 1, ok: false };
-    }
-  }
-  function liveBody(path, diskBody) {
-    const h = tabHandle(path);
-    if (!h || h.kind === "wiki") return diskBody;
-    try {
-      return h.getText();
-    } catch {
-      return diskBody;
-    }
-  }
-  function pathKey(p) {
-    return String(p || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
-  }
-  function isInsideRoot(root, p) {
-    const r = pathKey(root), k = pathKey(p);
-    if (!r || !k || k === r) return false;
-    if (!k.startsWith(r + "/")) return false;
-    return !k.slice(r.length + 1).split("/").some((seg) => seg === ".." || seg === ".");
-  }
-  var bridge;
-  var init_tab_bridge = __esm({
-    "src/tab-bridge.js"() {
-      bridge = null;
-    }
-  });
-
   // src/auto-task/event-ui.js
   var event_ui_exports = {};
   __export(event_ui_exports, {
@@ -109244,6 +111200,173 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
   });
 
+  // src/changelog-view.js
+  function splitChangelog(md) {
+    const lines = String(md == null ? "" : md).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
+    const out = [];
+    let cur = null, fence = false;
+    for (const l of lines) {
+      if (/^\s{0,3}(```|~~~)/.test(l)) fence = !fence;
+      if (!fence && /^## (?!#)/.test(l)) {
+        cur = { title: l.slice(3).trim(), lines: [] };
+        out.push(cur);
+        continue;
+      }
+      if (cur) cur.lines.push(l);
+    }
+    return out.map((s) => ({ title: s.title, body: s.lines.join("\n").replace(/^\n+|\n+$/g, "") }));
+  }
+  function splitRow(line) {
+    let s = String(line || "").trim();
+    if (s.startsWith("|")) s = s.slice(1);
+    const cells = [];
+    let cur = "", code3 = false;
+    for (let i5 = 0; i5 < s.length; i5++) {
+      const c = s[i5];
+      if (c === "`") {
+        code3 = !code3;
+        cur += c;
+        continue;
+      }
+      if (c === "\\" && s[i5 + 1] === "|") {
+        cur += "|";
+        i5++;
+        continue;
+      }
+      if (c === "|" && !code3) {
+        cells.push(cur.trim());
+        cur = "";
+        continue;
+      }
+      cur += c;
+    }
+    if (cur.trim() !== "" || !cells.length) cells.push(cur.trim());
+    return cells;
+  }
+  function changelogBlocks(body) {
+    const lines = String(body == null ? "" : body).split("\n");
+    const out = [];
+    let i5 = 0;
+    while (i5 < lines.length) {
+      const l = lines[i5];
+      const s = l.trim();
+      if (!s) {
+        i5++;
+        continue;
+      }
+      let m;
+      if (m = /^\s{0,3}(```|~~~)/.exec(l)) {
+        const buf2 = [];
+        i5++;
+        while (i5 < lines.length && !lines[i5].trim().startsWith(m[1])) {
+          buf2.push(lines[i5]);
+          i5++;
+        }
+        i5++;
+        out.push({ kind: "code", text: buf2.join("\n") });
+        continue;
+      }
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(s)) {
+        out.push({ kind: "hr" });
+        i5++;
+        continue;
+      }
+      if (m = /^(#{1,6})\s+(.*)$/.exec(s)) {
+        out.push({ kind: "h", level: m[1].length, text: m[2].trim() });
+        i5++;
+        continue;
+      }
+      if (s.startsWith("|") && i5 + 1 < lines.length && isSepRow(lines[i5 + 1])) {
+        const head2 = splitRow(s);
+        const rows = [];
+        i5 += 2;
+        while (i5 < lines.length && lines[i5].trim().startsWith("|")) {
+          rows.push(splitRow(lines[i5]));
+          i5++;
+        }
+        out.push({ kind: "table", head: head2, rows });
+        continue;
+      }
+      if (s.startsWith(">")) {
+        const buf2 = [];
+        while (i5 < lines.length && lines[i5].trim().startsWith(">")) {
+          buf2.push(lines[i5].trim().replace(/^>\s?/, ""));
+          i5++;
+        }
+        out.push({ kind: "quote", text: buf2.join("\n") });
+        continue;
+      }
+      if (m = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(l)) {
+        const ordered = /\d/.test(m[2]);
+        let text = m[3];
+        const depth = Math.min(3, Math.floor(m[1].replace(/\t/g, "  ").length / 2));
+        i5++;
+        while (i5 < lines.length && /^\s+\S/.test(lines[i5]) && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i5]) && !lines[i5].trim().startsWith("|") && !/^\s{0,3}(```|~~~)/.test(lines[i5])) {
+          text += " " + lines[i5].trim();
+          i5++;
+        }
+        out.push({ kind: "li", ordered, mark: ordered ? m[2] : "", depth, text });
+        continue;
+      }
+      const buf = [s];
+      i5++;
+      while (i5 < lines.length) {
+        const n2 = lines[i5], t3 = n2.trim();
+        if (!t3 || /^(#{1,6})\s+/.test(t3) || t3.startsWith("|") || t3.startsWith(">") || /^\s{0,3}(```|~~~)/.test(n2) || /^(\s*)([-*+]|\d+[.)])\s+/.test(n2) || /^(-{3,}|\*{3,}|_{3,})$/.test(t3)) break;
+        buf.push(t3);
+        i5++;
+      }
+      out.push({ kind: "p", text: buf.join("\n") });
+    }
+    return out;
+  }
+  function inlineParts(text) {
+    const out = [];
+    const src2 = String(text == null ? "" : text);
+    const OPEN = String.fromCharCode(57344), CLOSE = String.fromCharCode(57345);
+    const codes = [];
+    const held = src2.split(OPEN).join("").split(CLOSE).join("").replace(/(`+)([\s\S]*?)\1/g, (m, tick, body) => {
+      codes.push(body.replace(/^ (.*) $/, "$1"));
+      return OPEN + (codes.length - 1) + CLOSE;
+    });
+    const reHold = new RegExp(OPEN + "(\\d+)" + CLOSE, "g");
+    const emit3 = (s, st) => {
+      let last2 = 0, k;
+      reHold.lastIndex = 0;
+      while (k = reHold.exec(s)) {
+        if (k.index > last2) out.push({ ...st, text: s.slice(last2, k.index) });
+        out.push({ ...st, text: codes[+k[1]], code: true });
+        last2 = k.index + k[0].length;
+      }
+      if (last2 < s.length) out.push({ ...st, text: s.slice(last2) });
+    };
+    const walk3 = (s, st) => {
+      const re = /\*\*([^*\n][\s\S]*?)\*\*|~~([^~\n][\s\S]*?)~~|(?<![*\w])\*([^*\s][^*\n]*?)\*(?![*\w])/;
+      let rest = s;
+      while (rest) {
+        const k = re.exec(rest);
+        if (!k) {
+          emit3(rest, st);
+          break;
+        }
+        if (k.index) emit3(rest.slice(0, k.index), st);
+        if (k[1] !== void 0) walk3(k[1], { ...st, bold: true });
+        else if (k[2] !== void 0) walk3(k[2], { ...st, strike: true });
+        else walk3(k[3], { ...st, em: true });
+        rest = rest.slice(k.index + k[0].length);
+      }
+    };
+    walk3(held, {});
+    return out.filter((p) => p.text !== "");
+  }
+  var isSepRow, shortTitle;
+  var init_changelog_view = __esm({
+    "src/changelog-view.js"() {
+      isSepRow = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+      shortTitle = (title2) => String(title2 || "").split(/\s+—\s+/)[0].trim() || String(title2 || "");
+    }
+  });
+
   // src/settings-template.js
   function settingsTemplate() {
     return `<div class="k-dlg-title">${tx("ui.settings.title")}</div>
@@ -109253,6 +111376,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="cog" data-icon-size="14"></span> ${tx("ui.setTpl.grpGeneral")} <span class="k-set-navgrp-sub">${tx("ui.setTpl.grpGeneralSub")}</span></div>
     <div class="k-set-tab on" data-p="gen" data-find="${tx("ui.setTpl.nameAuthorSaveAutoFind")}">${tx("ui.settings.general")}</div>
     <div class="k-set-tab" data-p="write" data-find="${tx("ui.setTpl.writeFontSizeCheckFind")}">${tx("ui.settings.writing")}</div>
+    <div class="k-set-tab" data-p="a11y" data-find="${tx("ui.setTpl.a11yFind")}">${tx("ui.setTpl.a11yTab")}</div>
     <div class="k-set-tab" data-p="save" data-find="${tx("ui.setTpl.tabSaveFind")}">${tx("ui.setTpl.tabSave")}</div>
     <div class="k-set-tab" data-p="lang" data-find="${tx("ui.setTpl.langLanguageCsvFind")}">${tx("ui.settings.language")}</div>
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="layout" data-icon-size="14"></span> ${tx("ui.setTpl.grpBars")} <span class="k-set-navgrp-sub">${tx("ui.setTpl.grpBarsSub")}</span></div>
@@ -109326,18 +111450,40 @@ a.card:hover{border-color:${CARD_STRIPE}}
       <div class="k-row"><label>${tx("ui.setTpl.reset")}</label><select id="st-paper-color" class="k-dlg-select"></select></div>
       <div class="k-row"><label>${tx("ui.setTpl.pickColor")}<span class="k-hint">${tx("ui.setTpl.colorMarginLineColor")}</span></label><input type="color" id="st-paper-color-hex" class="k-narrow"></div>
       <div class="k-row"><label>${tx("ui.setTpl.lineGapMarginPaper")}<span class="k-hint">${tx("ui.setTpl.lineRoundAreaPrint")}</span></label><input type="checkbox" id="st-page-guides"></div>
+    </div>
+    <div class="k-set-page k-set-2col" data-p="a11y">
+      ${scope("global")}
+      <div class="k-hint k-full" style="margin-bottom:10px">${tx("ui.setTpl.a11yIntro")}</div>
+      <div class="k-set-sub k-full">${tx("ui.setTpl.a11ySubVision")}</div>
+      <div class="k-row k-full k-a11y-col"><label>${tx("ui.setTpl.a11yThemes")}<span class="k-hint">${tx("ui.setTpl.a11yThemesHint")}</span></label><div id="st-a11y-themes" class="k-a11y-themes"></div></div>
+      <div class="k-set-sub k-full">${tx("ui.setTpl.a11ySubKeyEcho")}</div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yKeyEcho")}<span class="k-hint">${tx("ui.setTpl.a11yKeyEchoHint")}</span></label><input type="checkbox" id="st-a11y-keyecho"></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yKeyEchoMode")}</label><select id="st-a11y-keyecho-mode" class="k-dlg-select"><option value="all">${tx("ui.setTpl.a11yKeyEchoModeAll")}</option><option value="typing">${tx("ui.setTpl.a11yKeyEchoModeTyping")}</option><option value="special">${tx("ui.setTpl.a11yKeyEchoModeSpecial")}</option></select></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yKeyEchoPos")}</label><select id="st-a11y-keyecho-pos" class="k-dlg-select"><option value="center">${tx("ui.setTpl.a11yPosCenter")}</option><option value="top">${tx("ui.setTpl.a11yPosTop")}</option><option value="bottom">${tx("ui.setTpl.a11yPosBottom")}</option></select></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yKeyEchoSize")}</label><input type="range" id="st-a11y-keyecho-size" min="48" max="400" step="4"><span id="st-a11y-keyecho-size-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yKeyEchoMs")}</label><input type="range" id="st-a11y-keyecho-ms" min="300" max="5000" step="100"><span id="st-a11y-keyecho-ms-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yTry")}</label><span><button id="st-a11y-keyecho-test" class="k-key-btn">${tx("ui.setTpl.a11yKeyEchoTest")}</button></span></div>
+      <div class="k-set-sub k-full">${tx("ui.setTpl.a11ySubLineBand")}</div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yLineBand")}<span class="k-hint">${tx("ui.setTpl.a11yLineBandHint")}</span></label><input type="checkbox" id="st-a11y-band"></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yLineBandColor")}</label><input type="color" id="st-a11y-band-color" class="k-narrow"></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yLineBandOpacity")}</label><input type="range" id="st-a11y-band-op" min="0.1" max="0.9" step="0.05"><span id="st-a11y-band-op-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yLineBandSample")}</label><div id="st-a11y-band-sample" class="k-a11y-band-sample"><span>${tx("ui.setTpl.a11yLineBandSampleText")}</span><i></i></div></div>
+      <div class="k-set-sub k-full">${tx("ui.setTpl.a11ySubTypewriter")}</div>
+      <div class="k-row"><label>${tx("ui.setTpl.a11yTypewriter")}<span class="k-hint">${tx("ui.setTpl.a11yTypewriterHint")}</span></label><input type="checkbox" id="st-typewriter"></div>
       <div class="k-set-sub k-full">${tx("ui.setTpl.soundTypewriter")}</div>
       <div class="k-row"><label>${tx("ui.setTpl.openSoundPrint")}<span class="k-hint">${tx("ui.setTpl.delActLine")}</span></label><input type="checkbox" id="st-typesnd"></div>
       <div class="k-row"><label>${tx("ui.setTpl.play")}<span class="k-hint">${tx("ui.setTpl.r2ItemDefaultPrev")}</span></label><select id="st-typesnd-mode" class="k-dlg-select"><option value="always">${tx("ui.setTpl.timePrint")}</option><option value="typewriter">${tx("ui.setTpl.onlyModeTypewriterSc")}</option></select></div>
       <div class="k-row"><label>${tx("ui.setTpl.levelSound")}</label><input type="range" id="st-typesnd-vol" min="0" max="1" step="0.05"><span id="st-typesnd-lbl" class="k-hint"></span></div>
       <div class="k-row"><label>${tx("ui.setTpl.try")}</label><span><button id="st-typesnd-test" class="k-key-btn">${tx("ui.setTpl.text1")}</button> <button id="st-typesnd-test2" class="k-key-btn">${tx("ui.setTpl.line")}</button></span></div>
+      <div class="k-set-sub k-full">${tx("ui.setTpl.a11ySubOsk")}</div>
+      <div class="k-row k-full"><label>${tx("ui.setTpl.a11yOsk")}<span class="k-hint">${tx("ui.setTpl.a11yOskHint")}</span></label><button id="st-a11y-osk" class="cmp-mini">${tx("ui.setTpl.a11yOskBtn")}</button></div>
     </div>
     <div class="k-set-page" data-p="ai">
       ${scope("global")}
       <div class="k-hint" style="margin-bottom:10px">${tx("ui.setTpl.aiIntro")}</div>
       <div class="k-row"><label>${tx("ui.setTpl.aiCurrent")}</label><span id="st-ai-current" class="k-hint"></span></div>
       <div class="k-dlg-btns" style="justify-content:flex-start; margin-top:12px">
-        <button id="st-ai-open" class="k-ok">${tx("ui.setTpl.aiOpen")}</button>
+        <button id="st-ai-open" class="cmp-mini">${tx("ui.setTpl.aiOpen")}</button>
       </div>
     </div>
     <div class="k-set-page" data-p="auto">
@@ -109722,6 +111868,468 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
   });
 
+  // src/focus-mode.js
+  function isFocusMode() {
+    return _fmActive;
+  }
+  function elemOf(node) {
+    if (!node) return null;
+    return node.nodeType === 1 ? node : node.parentElement;
+  }
+  function cursorBlock() {
+    const view2 = state.active?.editor?.view || state.active?.sp?.view;
+    if (view2) {
+      try {
+        const $from = view2.state.selection.$from;
+        const cands = [];
+        if ($from.depth >= 1) cands.push(view2.nodeDOM($from.before(1)));
+        const at = view2.domAtPos($from.pos);
+        cands.push(at.node.nodeType === 1 ? at.node.childNodes[at.offset] || at.node : at.node);
+        for (const c of cands) {
+          const start2 = !c ? null : c.nodeType === 1 ? c : c.parentElement;
+          const blk2 = start2 && start2.closest(BLOCK_SEL);
+          if (blk2 && view2.dom.contains(blk2)) return { pm: view2.dom, blk: blk2 };
+        }
+        const first = view2.dom.querySelector(BLOCK_SEL);
+        if (first) return { pm: view2.dom, blk: first };
+      } catch {
+      }
+    }
+    const sel2 = window.getSelection();
+    const start = elemOf(sel2 && sel2.anchorNode);
+    if (!start) return null;
+    const pm2 = start.closest(".ProseMirror");
+    const blk = start.closest(BLOCK_SEL);
+    return pm2 && blk ? { pm: pm2, blk } : null;
+  }
+  function refreshAll() {
+    for (const t3 of state.tabs.values()) {
+      const v2 = t3.editor?.view || t3.sp?.view;
+      if (v2) refreshFocusLine(v2);
+    }
+  }
+  function focusDim() {
+    const v2 = Number(state.settings?.focusDim);
+    return Number.isFinite(v2) ? Math.min(0.8, Math.max(0.05, v2)) : 0.3;
+  }
+  function applyFocusDim() {
+    document.documentElement.style.setProperty("--fm2-dim", String(focusDim()));
+  }
+  function toggleFocusMode2(on2) {
+    const want = on2 === void 0 ? !_fmActive : !!on2;
+    _fmActive = want;
+    setFocusLine(want);
+    if (_fmActive) {
+      if (!_fmStyle) {
+        _fmStyle = el("style", "fm-style");
+        _fmStyle.textContent = `
+        body.fm2 .ProseMirror > p, body.fm2 .ProseMirror > h1, body.fm2 .ProseMirror > h2,
+        body.fm2 .ProseMirror > h3, body.fm2 .ProseMirror > h4, body.fm2 .ProseMirror > h5,
+        body.fm2 .ProseMirror > h6, body.fm2 .ProseMirror > ul, body.fm2 .ProseMirror > ol,
+        body.fm2 .ProseMirror > blockquote, body.fm2 .ProseMirror > .sp-block {
+          opacity:var(--fm2-dim,.3); transition:opacity .15s;
+        }
+        body.fm2 .ProseMirror .fm2-active { opacity:1 !important; }
+      `;
+        document.head.append(_fmStyle);
+      }
+      applyFocusDim();
+      document.body.classList.add("fm2");
+    } else {
+      document.body.classList.remove("fm2");
+      if (_fmStyle) {
+        _fmStyle.remove();
+        _fmStyle = null;
+      }
+    }
+    refreshAll();
+    return _fmActive;
+  }
+  var BLOCK_SEL, _fmActive, _fmStyle;
+  var init_focus_mode = __esm({
+    "src/focus-mode.js"() {
+      init_core();
+      init_editor();
+      BLOCK_SEL = "p, h1, h2, h3, h4, h5, h6, li, blockquote, .sp-block";
+      _fmActive = false;
+      _fmStyle = null;
+    }
+  });
+
+  // src/typewriter.js
+  function isTypewriter() {
+    return _twActive;
+  }
+  function toggleTypewriter(on2) {
+    const want = on2 === void 0 ? !_twActive : !!on2;
+    if (want === _twActive) return _twActive;
+    _twActive = want;
+    if (_twActive) {
+      document.addEventListener("keyup", twScrollSoon);
+      document.addEventListener("click", twScrollSoon);
+      twScroll();
+    } else {
+      document.removeEventListener("keyup", twScrollSoon);
+      document.removeEventListener("click", twScrollSoon);
+      if (_twFrame) {
+        cancelAnimationFrame(_twFrame);
+        _twFrame = 0;
+      }
+    }
+    return _twActive;
+  }
+  function twScrollSoon() {
+    if (_twFrame) return;
+    _twFrame = requestAnimationFrame(() => {
+      _twFrame = 0;
+      twScroll();
+    });
+  }
+  function scrollHost(pm2) {
+    const pane = pm2.closest(".pane");
+    if (pane) return pane;
+    let n2 = pm2.parentElement;
+    while (n2 && n2 !== document.body) {
+      const ov = getComputedStyle(n2).overflowY;
+      if (ov === "auto" || ov === "scroll" || ov === "overlay") return n2;
+      n2 = n2.parentElement;
+    }
+    return null;
+  }
+  function twScroll() {
+    if (!_twActive) return false;
+    const cur = cursorBlock();
+    if (!cur) return false;
+    const { pm: pm2, blk } = cur;
+    const host2 = scrollHost(pm2);
+    if (!host2) return false;
+    const pr = host2.getBoundingClientRect();
+    const br = blk.getBoundingClientRect();
+    const target = host2.scrollTop + (br.top - pr.top) - pr.height / 2 + br.height / 2;
+    host2.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+    return true;
+  }
+  var _twActive, _twFrame;
+  var init_typewriter = __esm({
+    "src/typewriter.js"() {
+      init_focus_mode();
+      _twActive = false;
+      _twFrame = 0;
+    }
+  });
+
+  // src/a11y/a11y-core.js
+  var a11y_core_exports = {};
+  __export(a11y_core_exports, {
+    A11Y_DEFAULTS: () => A11Y_DEFAULTS,
+    A11Y_USER_KEYS: () => A11Y_USER_KEYS,
+    KEY_ECHO_MODES: () => KEY_ECHO_MODES,
+    KEY_ECHO_MS: () => KEY_ECHO_MS,
+    KEY_ECHO_POSITIONS: () => KEY_ECHO_POSITIONS,
+    KEY_ECHO_SIZE: () => KEY_ECHO_SIZE,
+    LINE_BAND_OPACITY: () => LINE_BAND_OPACITY,
+    bandBlend: () => bandBlend,
+    bandBox: () => bandBox,
+    codeLabel: () => codeLabel,
+    cssColorHex: () => cssColorHex,
+    fitKeyEchoSize: () => fitKeyEchoSize,
+    isSecretField: () => isSecretField,
+    keyEchoParts: () => keyEchoParts,
+    modLabel: () => modLabel,
+    normA11y: () => normA11y,
+    userA11yWins: () => userA11yWins
+  });
+  function normA11y(s) {
+    const o = s || {};
+    const D = A11Y_DEFAULTS;
+    return {
+      keyEcho: o.a11yKeyEcho === true,
+      keyEchoMode: KEY_ECHO_MODES.includes(o.a11yKeyEchoMode) ? o.a11yKeyEchoMode : D.a11yKeyEchoMode,
+      keyEchoPos: KEY_ECHO_POSITIONS.includes(o.a11yKeyEchoPos) ? o.a11yKeyEchoPos : D.a11yKeyEchoPos,
+      keyEchoSize: Math.round(numClamp(o.a11yKeyEchoSize, D.a11yKeyEchoSize, KEY_ECHO_SIZE.min, KEY_ECHO_SIZE.max)),
+      keyEchoMs: Math.round(numClamp(o.a11yKeyEchoMs, D.a11yKeyEchoMs, KEY_ECHO_MS.min, KEY_ECHO_MS.max)),
+      lineBand: o.a11yLineBand === true,
+      lineBandColor: normHex(o.a11yLineBandColor) || D.a11yLineBandColor,
+      lineBandOpacity: numClamp(o.a11yLineBandOpacity, D.a11yLineBandOpacity, LINE_BAND_OPACITY.min, LINE_BAND_OPACITY.max),
+      typewriter: o.typewriterMode === true
+    };
+  }
+  function userA11yWins(settings, globalSettings) {
+    const out = settings || {};
+    const g = globalSettings || {};
+    for (const k of A11Y_USER_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(g, k)) out[k] = g[k];
+    }
+    return out;
+  }
+  function modLabel(mod, mac5) {
+    if (mod === "ctrl") return mac5 ? "Control" : "Ctrl";
+    if (mod === "alt") return mac5 ? "Option" : "Alt";
+    if (mod === "meta") return mac5 ? "Cmd" : "Win";
+    if (mod === "altgr") return "AltGr";
+    return "Shift";
+  }
+  function codeLabel(code3) {
+    const c = String(code3 || "");
+    let m = /^Key([A-Z])$/.exec(c);
+    if (m) return m[1];
+    m = /^Digit(\d)$/.exec(c);
+    if (m) return m[1];
+    m = /^Numpad(\d)$/.exec(c);
+    if (m) return m[1];
+    m = /^F(\d{1,2})$/.exec(c);
+    if (m) return "F" + m[1];
+    const P2 = {
+      Comma: ",",
+      Period: ".",
+      Slash: "/",
+      Backslash: "\\",
+      Backquote: "`",
+      BracketLeft: "[",
+      BracketRight: "]",
+      Semicolon: ";",
+      Quote: "'",
+      Minus: "-",
+      Equal: "=",
+      Space: "Space",
+      NumpadAdd: "+",
+      NumpadSubtract: "-",
+      NumpadMultiply: "*",
+      NumpadDivide: "/",
+      NumpadDecimal: ".",
+      NumpadEnter: "Enter"
+    };
+    return P2[c] || "";
+  }
+  function keyEchoParts(ev, opts = {}) {
+    if (!ev) return null;
+    const key2 = typeof ev.key === "string" ? ev.key : "";
+    if (!key2 || ev.isComposing || SILENT.has(key2)) return null;
+    const mac5 = !!opts.mac;
+    const mode = KEY_ECHO_MODES.includes(opts.mode) ? opts.mode : "all";
+    const done3 = (parts, kind) => {
+      if (mode === "typing" && kind !== "char") return null;
+      if (mode === "special" && kind === "char") return null;
+      return { parts, kind };
+    };
+    if (MOD_KEYS[key2]) return done3([modLabel(MOD_KEYS[key2], mac5)], "mod");
+    const altGr = !!(ev.getModifierState && ev.getModifierState("AltGraph"));
+    const ctrl = !!ev.ctrlKey && !altGr, alt = !!ev.altKey && !altGr, meta2 = !!ev.metaKey;
+    const mods = [];
+    if (ctrl) mods.push(modLabel("ctrl", mac5));
+    if (alt) mods.push(modLabel("alt", mac5));
+    if (meta2) mods.push(modLabel("meta", mac5));
+    const named = NAMED[key2] || (/^F\d{1,2}$/.test(key2) ? key2 : "");
+    const isSpace2 = key2 === " " || key2 === "Spacebar";
+    const printable = !named && !isSpace2 && [...key2].length === 1;
+    if (mods.length) {
+      if (ev.shiftKey) mods.push("Shift");
+      const base4 = named || (isSpace2 ? "Space" : "") || codeLabel(ev.code) || (printable ? key2.toUpperCase() : key2);
+      return done3([...mods, base4], "combo");
+    }
+    if (isSpace2) return done3(ev.shiftKey ? ["Shift", "Space"] : ["Space"], ev.shiftKey ? "combo" : "key");
+    if (named) return done3(ev.shiftKey ? ["Shift", named] : [named], ev.shiftKey ? "combo" : "key");
+    if (printable) return done3([COMBINING.test(key2) ? "\u25CC" + key2 : key2], "char");
+    return done3([key2], "key");
+  }
+  function fitKeyEchoSize(px2, len5, vw, vh) {
+    let v2 = Number.isFinite(+px2) && +px2 > 0 ? +px2 : A11Y_DEFAULTS.a11yKeyEchoSize;
+    const n2 = Math.max(1, Math.round(+len5) || 1);
+    if (Number.isFinite(+vw) && +vw > 0) v2 = Math.min(v2, +vw * 0.86 / (n2 * 0.62 + 0.8));
+    if (Number.isFinite(+vh) && +vh > 0) v2 = Math.min(v2, +vh * 0.7 / 1.75);
+    return Math.max(16, Math.round(v2));
+  }
+  function isSecretField(target) {
+    if (!target || typeof target !== "object") return false;
+    const type = String(target.type || "").toLowerCase();
+    if (type === "password") return true;
+    const ds = target.dataset || {};
+    return ds.secret === "1" || ds.secret === "true";
+  }
+  function bandBox(g) {
+    if (!g || !g.caret || !g.paper || !g.host) return null;
+    const top = +g.caret.top, bottom = +g.caret.bottom;
+    const w = +g.paper.width;
+    if (![top, bottom, w, +g.paper.left, +g.host.left, +g.host.top].every(Number.isFinite)) return null;
+    const h = bottom - top;
+    if (h < 2 || w < 2) return null;
+    const pad5 = Number.isFinite(+g.pad) ? Math.max(0, +g.pad) : Math.max(1, Math.round(h * 0.08));
+    return {
+      top: Math.round(top - g.host.top + (+g.scrollTop || 0) - pad5),
+      left: Math.round(g.paper.left - g.host.left + (+g.scrollLeft || 0)),
+      width: Math.round(w),
+      height: Math.round(h + pad5 * 2)
+    };
+  }
+  function cssColorHex(v2) {
+    const s = String(v2 || "").trim();
+    const m = /^rgba?\(\s*(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)/i.exec(s);
+    if (!m) return normHex(s);
+    return "#" + [m[1], m[2], m[3]].map((x) => Math.max(0, Math.min(255, Math.round(+x))).toString(16).padStart(2, "0")).join("");
+  }
+  function bandBlend(inkColor) {
+    const hex2 = cssColorHex(inkColor);
+    if (!hex2) return "multiply";
+    return luminance(hex2) > 0.4 ? "screen" : "multiply";
+  }
+  var KEY_ECHO_MODES, KEY_ECHO_POSITIONS, A11Y_DEFAULTS, KEY_ECHO_SIZE, KEY_ECHO_MS, LINE_BAND_OPACITY, A11Y_USER_KEYS, NAMED, MOD_KEYS, COMBINING, SILENT;
+  var init_a11y_core = __esm({
+    "src/a11y/a11y-core.js"() {
+      init_num();
+      init_color_util();
+      KEY_ECHO_MODES = ["all", "typing", "special"];
+      KEY_ECHO_POSITIONS = ["center", "top", "bottom"];
+      A11Y_DEFAULTS = {
+        a11yKeyEcho: false,
+        a11yKeyEchoMode: "all",
+        a11yKeyEchoPos: "center",
+        a11yKeyEchoSize: 160,
+        // px — ความสูงตัวอักษรบนป้าย
+        a11yKeyEchoMs: 900,
+        // ค้างบนจอนานเท่าไรหลังกดครั้งล่าสุด
+        a11yLineBand: false,
+        a11yLineBandColor: "#ffe066",
+        a11yLineBandOpacity: 0.4,
+        typewriterMode: false
+        // โหมดเครื่องพิมพ์ดีด — เดิมเป็นสถานะของเซสชัน เปิดโปรแกรมใหม่แล้วหาย
+      };
+      KEY_ECHO_SIZE = { min: 48, max: 400 };
+      KEY_ECHO_MS = { min: 300, max: 5e3 };
+      LINE_BAND_OPACITY = { min: 0.1, max: 0.9 };
+      A11Y_USER_KEYS = [
+        ...Object.keys(A11Y_DEFAULTS),
+        "theme",
+        "typeSound",
+        "typeSoundVolume",
+        "typeSoundMode",
+        "typeSoundAlways"
+      ];
+      NAMED = {
+        Enter: "Enter",
+        Tab: "Tab",
+        Backspace: "Backspace",
+        Delete: "Delete",
+        Escape: "Esc",
+        Insert: "Insert",
+        Home: "Home",
+        End: "End",
+        PageUp: "Page Up",
+        PageDown: "Page Down",
+        ArrowUp: "\u2191",
+        ArrowDown: "\u2193",
+        ArrowLeft: "\u2190",
+        ArrowRight: "\u2192",
+        CapsLock: "Caps Lock",
+        NumLock: "Num Lock",
+        ScrollLock: "Scroll Lock",
+        ContextMenu: "Menu",
+        PrintScreen: "Print Screen",
+        Pause: "Pause"
+      };
+      MOD_KEYS = { Control: "ctrl", Shift: "shift", Alt: "alt", Meta: "meta", AltGraph: "altgr" };
+      COMBINING = new RegExp("^\\p{M}$", "u");
+      SILENT = /* @__PURE__ */ new Set(["Process", "Dead", "Unidentified", "Compose"]);
+    }
+  });
+
+  // src/a11y/key-echo.js
+  var key_echo_exports = {};
+  __export(key_echo_exports, {
+    applyKeyEcho: () => applyKeyEcho,
+    hideKeyEcho: () => hideKeyEcho,
+    keyEchoState: () => keyEchoState,
+    previewKeyEcho: () => previewKeyEcho
+  });
+  function hostEl(make) {
+    let h = document.getElementById(HOST_ID2);
+    if (!h && make && document.body) {
+      h = el("div", "k-key-echo");
+      h.id = HOST_ID2;
+      h.setAttribute("aria-hidden", "true");
+      h.append(el("div", "k-key-echo-cap"));
+      document.body.appendChild(h);
+    }
+    return h || null;
+  }
+  function paint(res, cfg) {
+    const h = hostEl(true);
+    if (!h) return false;
+    const cap = h.firstElementChild;
+    cap.replaceChildren();
+    res.parts.forEach((p, i5) => {
+      if (i5) cap.append(el("span", "k-key-echo-plus", "+"));
+      cap.append(el("span", "k-key-echo-key", p));
+    });
+    const len5 = res.parts.join("").length + (res.parts.length - 1) * 2;
+    const scale2 = len5 <= 2 ? 1 : Math.max(0.3, Math.min(1, 5 / len5));
+    h.style.setProperty("--ke-size", fitKeyEchoSize(cfg.keyEchoSize * scale2, len5, window.innerWidth, window.innerHeight) + "px");
+    h.dataset.pos = cfg.keyEchoPos;
+    h.dataset.kind = res.kind;
+    h.classList.add("on");
+    _last = { text: res.parts.join(" + "), kind: res.kind, at: Date.now() };
+    clearTimeout(_timer);
+    _timer = setTimeout(hideKeyEcho, cfg.keyEchoMs);
+    return true;
+  }
+  function hideKeyEcho() {
+    clearTimeout(_timer);
+    _timer = 0;
+    const h = hostEl(false);
+    if (h) h.classList.remove("on");
+  }
+  function onKey(ev) {
+    if (!_cfg.keyEcho) return;
+    if (isSecretField(ev.target)) {
+      hideKeyEcho();
+      return;
+    }
+    const res = keyEchoParts(ev, { mac: isMac2, mode: _cfg.keyEchoMode });
+    if (res) paint(res, _cfg);
+  }
+  function applyKeyEcho(settings) {
+    _cfg = normA11y(settings);
+    if (_cfg.keyEcho && !_bound3) {
+      window.addEventListener("keydown", onKey, true);
+      _bound3 = true;
+    }
+    if (!_cfg.keyEcho) hideKeyEcho();
+    return _cfg.keyEcho;
+  }
+  function previewKeyEcho(settings, parts) {
+    const cfg = normA11y(settings);
+    return paint({ parts: (parts && parts.length ? parts : ["A"]).map(String), kind: "char" }, cfg);
+  }
+  function keyEchoState() {
+    const h = hostEl(false);
+    return {
+      on: _cfg.keyEcho,
+      bound: _bound3,
+      visible: !!(h && h.classList.contains("on")),
+      text: _last ? _last.text : "",
+      kind: _last ? _last.kind : "",
+      pos: h ? h.dataset.pos || "" : ""
+    };
+  }
+  var HOST_ID2, isMac2, _cfg, _bound3, _timer, _last;
+  var init_key_echo = __esm({
+    "src/a11y/key-echo.js"() {
+      init_core();
+      init_a11y_core();
+      HOST_ID2 = "k-key-echo";
+      isMac2 = (() => {
+        try {
+          return navigator.platform.toLowerCase().includes("mac");
+        } catch {
+          return false;
+        }
+      })();
+      _cfg = normA11y(null);
+      _bound3 = false;
+      _timer = 0;
+      _last = null;
+    }
+  });
+
   // src/paper-color.js
   function hexRgb(hex2) {
     let h = String(hex2 == null ? "" : hex2).trim().replace(/^#/, "");
@@ -109932,11 +112540,11 @@ a.card:hover{border-color:${CARD_STRIPE}}
               let body = "";
               try {
                 const raw = await kapi.readFile(await kapi.join(dp, "Chapters", folder, sc.fileName));
-                body = (0, import_md8.parseMdFile)(raw).body || "";
+                body = (0, import_md9.parseMdFile)(raw).body || "";
               } catch {
                 continue;
               }
-              const n2 = (0, import_md8.countWords)(body);
+              const n2 = (0, import_md9.countWords)(body);
               out.words += n2;
               if (n2 !== cur) {
                 fixes.set(sc.id, n2);
@@ -109995,11 +112603,11 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
     return streak;
   }
-  var import_md8, WH, WORD_HISTORY_DELAY;
+  var import_md9, WH, WORD_HISTORY_DELAY;
   var init_word_history = __esm({
     "src/word-history.js"() {
       init_core();
-      import_md8 = __toESM(require_md());
+      import_md9 = __toESM(require_md());
       init_local_date();
       init_json_store();
       WH = { timer: null, root: null };
@@ -113369,21 +115977,21 @@ ${h.text}`;
     const all = await loadAll();
     const { data: data2, knownTracks } = all;
     const tracksAll = groupByTrack(all.items);
-    const hide = hidden();
-    const items = all.items.filter((it) => !hide.has(it.track || t("ui.common.msg4")));
+    const hide2 = hidden();
+    const items = all.items.filter((it) => !hide2.has(it.track || t("ui.common.msg4")));
     const ctx2 = { pane, wrap: wrap2, data: data2, items, all: all.items, knownTracks, redraw: () => renderTimeline(pane) };
     addBtn.onclick = () => addEventAt(ctx2, null, "");
     if (tracksAll.length) {
       const stats = el("div", "tl-stats");
       for (const tr4 of tracksAll) {
-        const off3 = hide.has(tr4.name);
+        const off3 = hide2.has(tr4.name);
         const b = el("button", "tl-stat" + (off3 ? " off" : ""));
         b.style.setProperty("--tl-c", tr4.color);
         b.append(el("span", "tl-stat-n", String(tr4.items.length)), el("span", "tl-stat-name", tr4.name));
         b.title = off3 ? tf("ui.timeline.trackShow", tr4.name) : tf("ui.timeline.trackHide", tr4.name);
         b.onclick = () => {
-          if (off3) hide.delete(tr4.name);
-          else hide.add(tr4.name);
+          if (off3) hide2.delete(tr4.name);
+          else hide2.add(tr4.name);
           renderTimeline(pane);
         };
         stats.append(b);
@@ -113534,11 +116142,11 @@ ${h.text}`;
     const done3 = () => {
       _linkPickOff = null;
       ctx2.wrap.classList.remove("tl-linking");
-      document.removeEventListener("keydown", onKey3, true);
+      document.removeEventListener("keydown", onKey4, true);
       ctx2.wrap.removeEventListener("click", onClick, true);
     };
     _linkPickOff = done3;
-    const onKey3 = (e) => {
+    const onKey4 = (e) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         done3();
@@ -113552,7 +116160,7 @@ ${h.text}`;
       done3();
       if (card && card.dataset.key && card.dataset.key !== linkKey(it)) linkItems(ctx2, linkKey(it), card.dataset.key);
     };
-    document.addEventListener("keydown", onKey3, true);
+    document.addEventListener("keydown", onKey4, true);
     ctx2.wrap.addEventListener("click", onClick, true);
   }
   function avatarsOf(ctx2, it, max2 = 3) {
@@ -113738,13 +116346,13 @@ ${h.text}`;
       y += laneH;
     }
     body.style.height = Math.max(y, 120) + "px";
-    const NS2 = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(NS2, "svg");
+    const NS3 = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS3, "svg");
     svg.setAttribute("class", "tl-links");
     svg.setAttribute("width", String(W));
     svg.setAttribute("height", String(Math.max(y, 120)));
-    const defs = document.createElementNS(NS2, "defs");
-    const mk2 = document.createElementNS(NS2, "marker");
+    const defs = document.createElementNS(NS3, "defs");
+    const mk2 = document.createElementNS(NS3, "marker");
     mk2.setAttribute("id", "tl-arrow");
     mk2.setAttribute("viewBox", "0 0 8 8");
     mk2.setAttribute("refX", "7");
@@ -113752,7 +116360,7 @@ ${h.text}`;
     mk2.setAttribute("markerWidth", "7");
     mk2.setAttribute("markerHeight", "7");
     mk2.setAttribute("orient", "auto");
-    const tip = document.createElementNS(NS2, "path");
+    const tip = document.createElementNS(NS3, "path");
     tip.setAttribute("d", "M0,0 L8,4 L0,8 Z");
     tip.setAttribute("class", "tl-arrow");
     mk2.append(tip);
@@ -113761,12 +116369,12 @@ ${h.text}`;
     for (const l of ctx2.links) {
       const a = pos.get(l.from), b = pos.get(l.to);
       if (!a || !b) continue;
-      const p = document.createElementNS(NS2, "path");
+      const p = document.createElementNS(NS3, "path");
       p.setAttribute("d", elbowPath({ x: a.x1, y: a.y }, { x: b.x0, y: b.y }));
       p.setAttribute("class", "tl-link" + (ctx2.back.has(l.from + ">" + l.to) ? " tl-link-back" : ""));
       p.setAttribute("marker-end", "url(#tl-arrow)");
       p.style.setProperty("--tl-c", a.card.style.getPropertyValue("--tl-c") || "");
-      const title2 = document.createElementNS(NS2, "title");
+      const title2 = document.createElementNS(NS3, "title");
       title2.textContent = (a.it.title || "") + " \u2192 " + (b.it.title || "");
       p.append(title2);
       p.addEventListener("contextmenu", (e) => {
@@ -114024,9 +116632,9 @@ ${h.text}`;
   function linkDrag(ctx2, card, it, e) {
     e.preventDefault();
     const body = card.closest(".tl-body2");
-    const NS2 = "http://www.w3.org/2000/svg";
+    const NS3 = "http://www.w3.org/2000/svg";
     const svg = body.querySelector("svg.tl-links");
-    const p = document.createElementNS(NS2, "path");
+    const p = document.createElementNS(NS3, "path");
     p.setAttribute("class", "tl-link tl-link-live");
     svg.append(p);
     const br = () => body.getBoundingClientRect();
@@ -114417,7 +117025,7 @@ ${h.text}`;
       when = fmtDate(n2.timestamp);
       body.append(el("div", "fn-meta", [n2.sceneTitle && gi("file") + " " + n2.sceneTitle, when].filter(Boolean).join(" \xB7 ")));
       if (n2.sceneId && onOpenScene) {
-        body.style.cursor = "pointer";
+        body.style.cursor = "default";
         body.onclick = () => onOpenScene(n2.sceneId, n2.sceneTitle);
       }
       const del2 = el("span", "fn-del", gi("close"));
@@ -114454,7 +117062,7 @@ ${h.text}`;
       recent.append(el("div", "dim", t("ui.notes.latest")));
       for (const n2 of notes) {
         const r = el("div", "k-menu-item");
-        r.style.cssText = "font-size:12px;cursor:pointer";
+        r.style.cssText = "font-size:12px;cursor:default";
         r.textContent = n2.text.slice(0, 80) + " \u2014 " + (n2.sceneTitle || "");
         r.onclick = () => {
           ta.value = n2.text;
@@ -115102,7 +117710,7 @@ ${h.text}`;
   async function getBoard() {
     if (board) return board;
     if (!state.root) return null;
-    const SKIP_DIRS9 = [
+    const SKIP_DIRS8 = [
       "Wiki",
       "Bible",
       "Images",
@@ -115119,7 +117727,7 @@ ${h.text}`;
     let draftPath = KB.draftPath || savedDraft();
     if (draftPath && !await kapi.exists(await kapi.join(draftPath, "draft.json"))) draftPath = "";
     if (!draftPath) {
-      const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS9.includes(s)).sort();
+      const secs = (await kapi.listDirs(state.root)).filter((s) => !SKIP_DIRS8.includes(s)).sort();
       for (const s of secs) {
         const dr = await kapi.join(await kapi.join(state.root, s), "Draft");
         if (!await kapi.exists(dr)) continue;
@@ -115670,8 +118278,8 @@ ${h.text}`;
             sceneStatuses.push(sc.status || "");
             const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
             try {
-              const { body } = (0, import_md9.parseMdFile)(await kapi.readFile(file));
-              const w = (0, import_md9.countWords)(body);
+              const { body } = (0, import_md10.parseMdFile)(await kapi.readFile(file));
+              const w = (0, import_md10.countWords)(body);
               words += w;
               cw += w;
               sceneRows.push({ title: sc.title, ch: ch.title, file, flag: sc.flag });
@@ -116036,7 +118644,7 @@ ${h.text}`;
     panel2.append(cols);
     return panel2;
   }
-  var import_md9, ACT_KEY, fmtDay;
+  var import_md10, ACT_KEY, fmtDay;
   var init_dashboard = __esm({
     "src/dashboard.js"() {
       init_i18n();
@@ -116045,7 +118653,7 @@ ${h.text}`;
       init_custom_status();
       init_color_util();
       init_dashboard_stats();
-      import_md9 = __toESM(require_md());
+      import_md10 = __toESM(require_md());
       init_word_history();
       init_player_choices();
       init_project_scan();
@@ -116060,94 +118668,6 @@ ${h.text}`;
         if (!m) return d || "";
         return fmtDate(new Date(+m[1], +m[2] - 1, +m[3]), { day: "numeric", month: "short", year: "numeric" }) || d;
       };
-    }
-  });
-
-  // src/focus-mode.js
-  function isFocusMode() {
-    return _fmActive;
-  }
-  function elemOf(node) {
-    if (!node) return null;
-    return node.nodeType === 1 ? node : node.parentElement;
-  }
-  function cursorBlock() {
-    const view2 = state.active?.editor?.view || state.active?.sp?.view;
-    if (view2) {
-      try {
-        const $from = view2.state.selection.$from;
-        const cands = [];
-        if ($from.depth >= 1) cands.push(view2.nodeDOM($from.before(1)));
-        const at = view2.domAtPos($from.pos);
-        cands.push(at.node.nodeType === 1 ? at.node.childNodes[at.offset] || at.node : at.node);
-        for (const c of cands) {
-          const start2 = !c ? null : c.nodeType === 1 ? c : c.parentElement;
-          const blk2 = start2 && start2.closest(BLOCK_SEL);
-          if (blk2 && view2.dom.contains(blk2)) return { pm: view2.dom, blk: blk2 };
-        }
-        const first = view2.dom.querySelector(BLOCK_SEL);
-        if (first) return { pm: view2.dom, blk: first };
-      } catch {
-      }
-    }
-    const sel2 = window.getSelection();
-    const start = elemOf(sel2 && sel2.anchorNode);
-    if (!start) return null;
-    const pm2 = start.closest(".ProseMirror");
-    const blk = start.closest(BLOCK_SEL);
-    return pm2 && blk ? { pm: pm2, blk } : null;
-  }
-  function refreshAll() {
-    for (const t3 of state.tabs.values()) {
-      const v2 = t3.editor?.view || t3.sp?.view;
-      if (v2) refreshFocusLine(v2);
-    }
-  }
-  function focusDim() {
-    const v2 = Number(state.settings?.focusDim);
-    return Number.isFinite(v2) ? Math.min(0.8, Math.max(0.05, v2)) : 0.3;
-  }
-  function applyFocusDim() {
-    document.documentElement.style.setProperty("--fm2-dim", String(focusDim()));
-  }
-  function toggleFocusMode2(on2) {
-    const want = on2 === void 0 ? !_fmActive : !!on2;
-    _fmActive = want;
-    setFocusLine(want);
-    if (_fmActive) {
-      if (!_fmStyle) {
-        _fmStyle = el("style", "fm-style");
-        _fmStyle.textContent = `
-        body.fm2 .ProseMirror > p, body.fm2 .ProseMirror > h1, body.fm2 .ProseMirror > h2,
-        body.fm2 .ProseMirror > h3, body.fm2 .ProseMirror > h4, body.fm2 .ProseMirror > h5,
-        body.fm2 .ProseMirror > h6, body.fm2 .ProseMirror > ul, body.fm2 .ProseMirror > ol,
-        body.fm2 .ProseMirror > blockquote, body.fm2 .ProseMirror > .sp-block {
-          opacity:var(--fm2-dim,.3); transition:opacity .15s;
-        }
-        body.fm2 .ProseMirror .fm2-active { opacity:1 !important; }
-      `;
-        document.head.append(_fmStyle);
-      }
-      applyFocusDim();
-      document.body.classList.add("fm2");
-    } else {
-      document.body.classList.remove("fm2");
-      if (_fmStyle) {
-        _fmStyle.remove();
-        _fmStyle = null;
-      }
-    }
-    refreshAll();
-    return _fmActive;
-  }
-  var BLOCK_SEL, _fmActive, _fmStyle;
-  var init_focus_mode = __esm({
-    "src/focus-mode.js"() {
-      init_core();
-      init_editor();
-      BLOCK_SEL = "p, h1, h2, h3, h4, h5, h6, li, blockquote, .sp-block";
-      _fmActive = false;
-      _fmStyle = null;
     }
   });
 
@@ -118164,11 +120684,11 @@ ${h.text}`;
       w: outerW(k) + gap,
       locked: !k.id || !isConfigurable(k.id)
     }));
-    const hide = new Set(overflowPlan(items, avail));
-    for (const k of kids) if (k.id && hide.has(k.id)) k.classList.add("tb-ovf");
+    const hide2 = new Set(overflowPlan(items, avail));
+    for (const k of kids) if (k.id && hide2.has(k.id)) k.classList.add("tb-ovf");
     const vis = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
     for (let i5 = vis.length - 1; i5 >= 0 && vis[i5].classList.contains("sep"); i5--) vis[i5].classList.add("tb-ovf");
-    OVF.list = [...hide];
+    OVF.list = [...hide2];
     ob.classList.toggle("has-ovf", OVF.list.length > 0);
     return OVF.list;
   }
@@ -119183,7 +121703,7 @@ ${h.text}`;
     }
     const sample = extra.querySelector(".k-font-sample");
     const sysBtn = extra.querySelector(".k-font-sys");
-    const paint3 = () => {
+    const paint4 = () => {
       sample.style.fontFamily = withThaiFallback(sel2.value || o.fallback || "");
     };
     if (!sel2._fontPicker) {
@@ -119194,7 +121714,7 @@ ${h.text}`;
         if (fp.onChange) fp.onChange(sel2.value);
       });
     }
-    sel2._fontPicker.paint = paint3;
+    sel2._fontPicker.paint = paint4;
     sel2._fontPicker.onChange = o.onChange || null;
     sysBtn.onclick = async () => {
       const picked = await pickSystemFont(firstFamily(sel2.value));
@@ -119204,7 +121724,7 @@ ${h.text}`;
       sel2.value = v2;
       sel2.dispatchEvent(new Event("change"));
     };
-    paint3();
+    paint4();
     return sel2;
   }
   async function pickSystemFont(current2) {
@@ -120104,6 +122624,102 @@ ${h.text}`;
     };
     q2("#st-typesnd-test").onclick = () => playType("key", { force: true });
     q2("#st-typesnd-test2").onclick = () => playType("return", { force: true });
+    const a11y0 = normA11y(s);
+    q2("#st-a11y-keyecho").checked = a11y0.keyEcho;
+    q2("#st-a11y-keyecho-mode").value = a11y0.keyEchoMode;
+    q2("#st-a11y-keyecho-pos").value = a11y0.keyEchoPos;
+    q2("#st-a11y-keyecho-size").value = String(a11y0.keyEchoSize);
+    q2("#st-a11y-keyecho-ms").value = String(a11y0.keyEchoMs);
+    q2("#st-a11y-band").checked = a11y0.lineBand;
+    q2("#st-a11y-band-color").value = a11y0.lineBandColor;
+    q2("#st-a11y-band-op").value = String(a11y0.lineBandOpacity);
+    q2("#st-typewriter").checked = isTypewriter();
+    const readA11y = () => {
+      const n2 = normA11y({
+        a11yKeyEcho: q2("#st-a11y-keyecho").checked,
+        a11yKeyEchoMode: q2("#st-a11y-keyecho-mode").value,
+        a11yKeyEchoPos: q2("#st-a11y-keyecho-pos").value,
+        a11yKeyEchoSize: q2("#st-a11y-keyecho-size").value,
+        a11yKeyEchoMs: q2("#st-a11y-keyecho-ms").value,
+        a11yLineBand: q2("#st-a11y-band").checked,
+        a11yLineBandColor: q2("#st-a11y-band-color").value,
+        a11yLineBandOpacity: q2("#st-a11y-band-op").value,
+        typewriterMode: q2("#st-typewriter").checked
+      });
+      return {
+        a11yKeyEcho: n2.keyEcho,
+        a11yKeyEchoMode: n2.keyEchoMode,
+        a11yKeyEchoPos: n2.keyEchoPos,
+        a11yKeyEchoSize: n2.keyEchoSize,
+        a11yKeyEchoMs: n2.keyEchoMs,
+        a11yLineBand: n2.lineBand,
+        a11yLineBandColor: n2.lineBandColor,
+        a11yLineBandOpacity: n2.lineBandOpacity,
+        typewriterMode: n2.typewriter
+      };
+    };
+    const paintA11y = () => {
+      const v2 = readA11y();
+      q2("#st-a11y-keyecho-size-lbl").textContent = v2.a11yKeyEchoSize + " px";
+      q2("#st-a11y-keyecho-ms-lbl").textContent = tf("ui.a11y.msUnit", (v2.a11yKeyEchoMs / 1e3).toFixed(1));
+      q2("#st-a11y-band-op-lbl").textContent = Math.round(v2.a11yLineBandOpacity * 100) + "%";
+      const bar = q2("#st-a11y-band-sample i");
+      if (bar) {
+        bar.style.background = v2.a11yLineBandColor;
+        bar.style.opacity = String(v2.a11yLineBandOpacity);
+        let ink = "";
+        try {
+          ink = getComputedStyle(bar.parentNode).color;
+        } catch {
+        }
+        bar.style.mixBlendMode = bandBlend(ink);
+      }
+    };
+    for (const id of ["#st-a11y-keyecho-size", "#st-a11y-keyecho-ms", "#st-a11y-band-op", "#st-a11y-band-color"]) {
+      q2(id).oninput = paintA11y;
+    }
+    paintA11y();
+    q2("#st-a11y-keyecho-test").onclick = () => previewKeyEcho(readA11y(), ["A"]);
+    q2("#st-a11y-osk").onclick = () => {
+      Promise.resolve().then(() => (init_app(), app_exports)).then((m2) => m2.openOsKeyboard()).catch((e) => log("warn", "a11y: osk", e));
+    };
+    {
+      const host2 = q2("#st-a11y-themes");
+      const sel2 = q2("#st-theme");
+      const mark = () => {
+        for (const b of host2.querySelectorAll("[data-theme]")) {
+          const on2 = !!sel2 && b.dataset.theme === sel2.value;
+          b.classList.toggle("on", on2);
+          b.setAttribute("aria-pressed", on2 ? "true" : "false");
+        }
+      };
+      const pick2 = (id) => {
+        if (!sel2) return;
+        sel2.value = id;
+        previewTheme(id);
+        mark();
+      };
+      for (const id of THEMES_A11Y) {
+        const b = el("button", "k-a11y-theme", t(THEME_LABEL_KEYS[id]));
+        b.type = "button";
+        b.dataset.theme = id;
+        b.onclick = () => pick2(id);
+        host2.append(b);
+      }
+      const backTo = THEMES_A11Y.includes(origTheme) ? THEMES[0] : origTheme;
+      const back = el("button", "k-a11y-theme k-a11y-theme-back", t("ui.setTpl.a11yThemeBack"));
+      back.type = "button";
+      back.onclick = () => pick2(backTo);
+      host2.append(back);
+      if (sel2) {
+        const prev = sel2.onchange;
+        sel2.onchange = (e) => {
+          if (prev) prev(e);
+          mark();
+        };
+      }
+      mark();
+    }
     let projectFonts = [];
     const fontsHost = q2("#st-fonts-list");
     const previewFonts = () => {
@@ -120643,6 +123259,7 @@ ${h.text}`;
       refreshAllMentions();
       refreshAllSpell();
       previewTheme(origTheme);
+      hideKeyEcho();
       close2();
     };
     const num5 = (id, d) => {
@@ -120654,7 +123271,7 @@ ${h.text}`;
       if (e.target === ov) cancel();
     };
     {
-      const foot = box2.querySelector(".k-dlg-btns");
+      const foot = box2.querySelector(":scope > .k-dlg-btns");
       if (foot) {
         const undoB = el("button", "k-set-undo", t("ui.dlg.settingsRevert"));
         undoB.title = t("ui.dlg.settingsRevertHint");
@@ -120692,7 +123309,7 @@ ${h.text}`;
         foot.prepend(undoB, factoryB);
       }
     }
-    box2.querySelector(".k-ok").onclick = async () => {
+    box2.querySelector(":scope > .k-dlg-btns > .k-ok").onclick = async () => {
       m.title = q2("#st-title").value.trim() || m.title;
       m.author = q2("#st-author").value.trim();
       s.autoSaveMinutes = num5("#st-auto", 5);
@@ -120760,6 +123377,7 @@ ${h.text}`;
       s.typeSoundMode = q2("#st-typesnd-mode").value === "typewriter" ? "typewriter" : "always";
       s.typeSoundAlways = s.typeSoundMode === "always";
       s.typeSoundVolume = Math.min(1, Math.max(0, parseFloat(q2("#st-typesnd-vol").value) || 0));
+      Object.assign(s, readA11y());
       s.langFonts = JSON.parse(JSON.stringify(W.langFonts));
       delete s.spThaiFont;
       s.prose = JSON.parse(JSON.stringify(mergeProseFormat(readProse())));
@@ -120799,6 +123417,17 @@ ${h.text}`;
           log("warn", t("ui.common.saveGlobalSettingsNot"), e);
         }
         applySettings();
+        if (isTypewriter() !== (s.typewriterMode === true)) {
+          try {
+            const m2 = await Promise.resolve().then(() => (init_app(), app_exports));
+            m2.setTypewriterMode(s.typewriterMode === true);
+            m2.syncTypeSound();
+            m2.syncMenuToggles();
+            m2.refreshToolbar();
+          } catch (e) {
+            log("warn", "a11y: typewriter", e);
+          }
+        }
         try {
           updatePageNumberHint();
           refreshSpView();
@@ -120811,8 +123440,7 @@ ${h.text}`;
         }
         if (projOK) {
           state.title = m.title;
-          document.title = m.title + " \u2014 Killian 2";
-          $("#tb-title").textContent = m.title + " \u2014 Killian 2";
+          applyWindowTitle(m.title);
         }
       } catch (e) {
         log("error", t("ui.dlg.saveSettingsFail"), e);
@@ -120928,7 +123556,7 @@ ${h.text}`;
         bView.onclick = async () => {
           try {
             const c = await kapi.readFile(s.path);
-            prev.textContent = (isJson ? c : (0, import_md10.parseMdFile)(c).body) || t("panel.emptyContent");
+            prev.textContent = (isJson ? c : (0, import_md11.parseMdFile)(c).body) || t("panel.emptyContent");
           } catch {
             prev.textContent = t("panel.unreadable");
           }
@@ -120975,17 +123603,85 @@ ${h.text}`;
     }
     refresh2();
   }
+  function changelogInline(host2, text) {
+    for (const p of inlineParts(text)) {
+      const n2 = el(p.code ? "code" : "span", [p.bold ? "k-cl-b" : "", p.em ? "k-cl-i" : "", p.strike ? "k-cl-s" : ""].filter(Boolean).join(" ") || null, p.text);
+      host2.append(n2);
+    }
+    return host2;
+  }
+  function changelogSectionNodes(sec2) {
+    const out = [el("div", "k-cl-title", sec2.title)];
+    for (const b of changelogBlocks(sec2.body)) {
+      if (b.kind === "h") out.push(changelogInline(el("div", "k-cl-h k-cl-h" + Math.min(6, b.level)), b.text));
+      else if (b.kind === "hr") out.push(el("hr", "k-cl-hr"));
+      else if (b.kind === "code") out.push(el("pre", "k-cl-code", b.text));
+      else if (b.kind === "quote") out.push(changelogInline(el("blockquote", "k-cl-quote"), b.text));
+      else if (b.kind === "li") {
+        const row4 = el("div", "k-cl-li");
+        row4.style.marginInlineStart = b.depth * 1.4 + "em";
+        row4.append(el("span", "k-cl-mark", b.ordered ? b.mark : "\u2022"), changelogInline(el("span", "k-cl-litext"), b.text));
+        out.push(row4);
+      } else if (b.kind === "table") {
+        const wrap2 = el("div", "k-cl-tablewrap"), tb2 = el("table", "k-cl-table");
+        const hr = el("tr");
+        for (const c of b.head) hr.append(changelogInline(el("th"), c));
+        tb2.append(hr);
+        for (const r of b.rows) {
+          const tr4 = el("tr");
+          for (const c of r) tr4.append(changelogInline(el("td"), c));
+          tb2.append(tr4);
+        }
+        wrap2.append(tb2);
+        out.push(wrap2);
+      } else out.push(changelogInline(el("p", "k-cl-p"), b.text));
+    }
+    return out;
+  }
   async function showChangelog() {
-    const md = await fetch("CHANGELOG.md").then((r) => r.text()).catch(() => t("panel.changelogNotFound"));
+    const md = await fetch("CHANGELOG.md").then((r) => r.text()).catch(() => "");
     const ov = el("div", "k-overlay");
-    const box2 = el("div", "k-dialog k-wide");
+    const box2 = el("div", "k-dialog k-wide k-changelog-dlg");
     const ttl = el("div", "k-dlg-title", t("panel.changelogTitle"));
-    const body = el("pre", "k-changelog", md);
+    const secs = splitChangelog(md);
+    const body = secs.length ? el("div", "k-changelog k-changelog-rich") : el("pre", "k-changelog", md || t("panel.changelogNotFound"));
+    const bar = el("div", "k-changelog-bar");
+    if (secs.length) {
+      const sel2 = el("select", "k-dlg-select k-changelog-sel");
+      sel2.title = t("ui.changelog.version");
+      secs.forEach((s, i5) => {
+        const o = el("option", null, shortTitle(s.title));
+        o.value = String(i5);
+        sel2.append(o);
+      });
+      const newer = el("button", "cmp-mini k-changelog-newer", t("ui.changelog.newer"));
+      const older = el("button", "cmp-mini k-changelog-older", t("ui.changelog.older"));
+      let cur = Math.max(0, secs.findIndex((s) => /^(alpha|beta|v?\d)/i.test(s.title)));
+      const draw3 = (i5) => {
+        cur = Math.max(0, Math.min(secs.length - 1, i5));
+        body.replaceChildren(...changelogSectionNodes(secs[cur]));
+        body.scrollTop = 0;
+        sel2.value = String(cur);
+        newer.disabled = cur <= 0;
+        older.disabled = cur >= secs.length - 1;
+      };
+      sel2.onchange = () => draw3(+sel2.value);
+      newer.onclick = () => draw3(cur - 1);
+      older.onclick = () => draw3(cur + 1);
+      bar.append(
+        el("span", "k-changelog-lbl", t("ui.changelog.version")),
+        sel2,
+        newer,
+        older,
+        el("span", "k-changelog-count dim", tf("ui.changelog.count", secs.length))
+      );
+      draw3(cur);
+    }
     const btns = el("div", "k-dlg-btns");
     const ok2 = el("button", "k-ok k-cancel", t("dialogs.close"));
     ok2.onclick = () => ov.remove();
     btns.append(ok2);
-    box2.append(ttl, body, btns);
+    box2.append(ttl, ...secs.length ? [bar] : [], body, btns);
     ov.append(box2);
     ov.onclick = (e) => {
       if (e.target === ov) ov.remove();
@@ -120993,25 +123689,30 @@ ${h.text}`;
     escClose(ov, () => ov.remove());
     document.body.append(ov);
   }
-  var import_md10;
+  var import_md11;
   var init_dialogs = __esm({
     "src/dialogs.js"() {
       init_logline_ui();
       init_logline();
       init_i18n();
+      init_changelog_view();
       init_i18n_csv();
       init_settings_template();
       init_app();
       init_prose_format();
       init_core();
       init_typewriter_sound();
+      init_typewriter();
+      init_win_title();
+      init_a11y_core();
+      init_key_echo();
       init_margin_presets2();
       init_paper_color();
       init_fountain();
       init_dashboard();
       init_ui();
       init_err_text();
-      import_md10 = __toESM(require_md());
+      import_md11 = __toESM(require_md());
       init_event_ui();
       init_focus_mode();
       init_update_ui();
@@ -121739,7 +124440,7 @@ ${h.text}`;
     _hooked = true;
     try {
       window.addEventListener("k2-theme", () => {
-        paint();
+        paint2();
       });
     } catch {
     }
@@ -121752,7 +124453,7 @@ ${h.text}`;
           hookOnce._t = setTimeout(async () => {
             if (V2.el && V2.el.svg.isConnected) {
               await entityNames();
-              paint();
+              paint2();
               renderInsp();
             }
           }, 300);
@@ -121910,7 +124611,7 @@ ${h.text}`;
     stage.tabIndex = 0;
     stage.setAttribute("role", "application");
     stage.setAttribute("aria-label", t("ui.common.graphArea"));
-    const svg = document.createElementNS(NS, "svg");
+    const svg = document.createElementNS(NS2, "svg");
     svg.classList.add("fp-svg");
     stage.append(svg);
     const hint = el("div", "fp-hint");
@@ -121926,13 +124627,13 @@ ${h.text}`;
     renderInsp();
     renderBeats();
     const ro = new ResizeObserver(() => {
-      if (stage.isConnected) paint();
+      if (stage.isConnected) paint2();
       else ro.disconnect();
     });
     ro.observe(stage);
     requestAnimationFrame(() => {
       if (!V2.cams.has(plan.id)) fitAll();
-      paint();
+      paint2();
     });
   }
   function tbBtn(iconName, title2, onClick, on2 = false) {
@@ -122008,16 +124709,16 @@ ${h.text}`;
       bar.append(tbBtn("eye", t("ui.fp.toggleSight"), (e) => {
         V2.showSight = !V2.showSight;
         e.currentTarget.classList.toggle("on", V2.showSight);
-        paint();
+        paint2();
       }, V2.showSight));
       bar.append(tbBtn("route", t("ui.fp.togglePaths"), (e) => {
         V2.showPaths = !V2.showPaths;
         e.currentTarget.classList.toggle("on", V2.showPaths);
-        paint();
+        paint2();
       }, V2.showPaths));
       bar.append(tbBtn("fit-screen", t("ui.fp.fit"), () => {
         fitAll();
-        paint();
+        paint2();
       }));
       bar.append(tbBtn("undo", t("ui.fp.undo"), undo2), tbBtn("redo", t("ui.fp.redo"), redo2));
       if (plan.scene) {
@@ -122318,7 +125019,7 @@ ${h.text}`;
     afterChange(o);
   }
   function afterChange(o = {}) {
-    paint();
+    paint2();
     if (o.beats !== false) renderBeats();
     if (o.insp !== false) {
       if (V2.el && V2.el.insp.contains(document.activeElement)) setTimeout(renderInsp, 0);
@@ -122373,7 +125074,7 @@ ${h.text}`;
     return { x: c.cx + (e.clientX - r.left - r.width / 2) / c.z, y: c.cy + (e.clientY - r.top - r.height / 2) / c.z };
   }
   function sv(tag3, attrs, parent) {
-    const n2 = document.createElementNS(NS, tag3);
+    const n2 = document.createElementNS(NS2, tag3);
     if (attrs) {
       for (const [k, v2] of Object.entries(attrs)) if (v2 != null && v2 !== false) n2.setAttribute(k, String(v2));
     }
@@ -122397,10 +125098,10 @@ ${h.text}`;
     if (V2.paintJob) return;
     V2.paintJob = requestAnimationFrame(() => {
       V2.paintJob = 0;
-      paint();
+      paint2();
     });
   }
-  function paint() {
+  function paint2() {
     const plan = currentPlan();
     if (!plan || !V2.el || !V2.el.svg.isConnected) return;
     const { W, H: H3 } = stageSize();
@@ -122794,7 +125495,7 @@ ${h.text}`;
       V2.cams.set(p.id, zoomAt2(c, zoomStepFp(c.z, e.deltaY < 0 ? 1 : -1), e.clientX - r.left, e.clientY - r.top, r.width, r.height));
       schedulePaint();
     }, { passive: false });
-    stage.addEventListener("keydown", onKey);
+    stage.addEventListener("keydown", onKey2);
     bindDropTarget(stage, {
       accept: ["entity"],
       onDrop: (payload, e) => addEntities(payload.items, toWorld(e)),
@@ -122837,7 +125538,7 @@ ${h.text}`;
       if (V2.sel !== id) {
         V2.sel = id;
         renderInsp();
-        paint();
+        paint2();
       }
       return moveDrag(e, id);
     }
@@ -122867,13 +125568,13 @@ ${h.text}`;
       if (!moved && clickDeselect && V2.sel) {
         V2.sel = null;
         renderInsp();
-        paint();
+        paint2();
       }
     };
     const offEsc = escCancelDrag(() => {
       end();
       Object.assign(c, c0);
-      paint();
+      paint2();
     });
     window.addEventListener("pointermove", mv);
     window.addEventListener("pointerup", up);
@@ -122916,7 +125617,7 @@ ${h.text}`;
           if (c.type !== "camera" || c.trackId !== ob.id) continue;
           setPose(plan, c.id, V2.beat, snapToTrack(plan, c, poseAt(plan, c.id, V2.beat), V2.beat));
         }
-        paint();
+        paint2();
       }
       pushUndo(snap2);
       markPlanDirty();
@@ -123005,7 +125706,7 @@ ${h.text}`;
     if (!id || !plan) return;
     V2.sel = id;
     renderInsp();
-    paint();
+    paint2();
     const ob = objById(plan, id);
     const { popupMenu: popupMenu2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const hid = poseAt(plan, id, V2.beat).hidden;
@@ -123027,7 +125728,7 @@ ${h.text}`;
     items.push("-", { label: esc6(t("ui.common.del")), danger: true, click: () => removeSel() });
     popupMenu2(e.clientX, e.clientY, items);
   }
-  function onKey(e) {
+  function onKey2(e) {
     const plan = currentPlan();
     if (!plan) return;
     if (e.target !== V2.el.stage) return;
@@ -123061,7 +125762,7 @@ ${h.text}`;
         e.preventDefault();
         e.stopPropagation();
         cancelDraw();
-        paint();
+        paint2();
         return;
       }
       if (V2.tool !== "select") {
@@ -123075,7 +125776,7 @@ ${h.text}`;
         e.stopPropagation();
         V2.sel = null;
         renderInsp();
-        paint();
+        paint2();
       }
       return;
     }
@@ -123088,7 +125789,7 @@ ${h.text}`;
       e.preventDefault();
       V2.draw.pts.pop();
       if (!V2.draw.pts.length) cancelDraw();
-      paint();
+      paint2();
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && V2.sel) {
@@ -123131,7 +125832,7 @@ ${h.text}`;
         const c = camOf2(plan);
         c.cx += dx * 60 / c.z;
         c.cy += dy * 60 / c.z;
-        paint();
+        paint2();
       }
       return;
     }
@@ -123139,20 +125840,20 @@ ${h.text}`;
       e.preventDefault();
       const c = camOf2(plan);
       c.z = zoomStepFp(c.z, 1);
-      paint();
+      paint2();
       return;
     }
     if (e.code === "Minus" || e.code === "NumpadSubtract") {
       e.preventDefault();
       const c = camOf2(plan);
       c.z = zoomStepFp(c.z, -1);
-      paint();
+      paint2();
       return;
     }
     if (e.code === "Digit0" || e.code === "Numpad0") {
       e.preventDefault();
       fitAll();
-      paint();
+      paint2();
     }
   }
   function placeAt(w, e) {
@@ -123161,7 +125862,7 @@ ${h.text}`;
       if (!V2.draw) V2.draw = { type: V2.tool === "track" ? "track" : "shape", kind: V2.toolArg, pts: [] };
       const q2 = e.altKey && plan.grid.on ? { x: Math.round(w.x / plan.grid.size) * plan.grid.size, y: Math.round(w.y / plan.grid.size) * plan.grid.size } : w;
       V2.draw.pts.push({ x: Math.round(q2.x * 1e3) / 1e3, y: Math.round(q2.y * 1e3) / 1e3 });
-      paint();
+      paint2();
       return;
     }
     let ob;
@@ -123175,7 +125876,7 @@ ${h.text}`;
     V2.sel = ob.id;
     if (!e.shiftKey) setTool("select");
     renderInsp();
-    paint();
+    paint2();
   }
   function finishDraw() {
     const plan = currentPlan();
@@ -123183,7 +125884,7 @@ ${h.text}`;
     V2.draw = null;
     V2.hover = null;
     if (!plan || !d || d.pts.length < 2) {
-      paint();
+      paint2();
       return;
     }
     const o = d.pts[0];
@@ -123195,7 +125896,7 @@ ${h.text}`;
     V2.sel = ob.id;
     setTool("select");
     renderInsp();
-    paint();
+    paint2();
   }
   function cancelDraw() {
     V2.draw = null;
@@ -123229,7 +125930,7 @@ ${h.text}`;
     });
     V2.sel = add2[add2.length - 1].id;
     renderInsp();
-    paint();
+    paint2();
     return add2.length;
   }
   async function removeSel() {
@@ -123250,7 +125951,7 @@ ${h.text}`;
     });
     V2.sel = null;
     renderInsp();
-    paint();
+    paint2();
     const { toast: toast2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     toast2(tf("ui.fp.removed", name5), { action: { label: t("ui.fp.undoAct"), onClick: () => {
       if (!currentPlan() || currentPlan().id !== planId0) return;
@@ -123278,7 +125979,7 @@ ${h.text}`;
     });
     V2.sel = cp.id;
     renderInsp();
-    paint();
+    paint2();
   }
   function field(labelText, input) {
     const r = el("label", "fp-f");
@@ -123449,7 +126150,7 @@ ${h.text}`;
       chip.onclick = () => {
         V2.sel = x.id;
         renderInsp();
-        paint();
+        paint2();
       };
       wrap2.append(chip);
     }
@@ -123749,7 +126450,7 @@ ${h.text}`;
     if (n2 === V2.beat && !V2.play) return;
     stopPlay();
     V2.beat = n2;
-    paint();
+    paint2();
     renderBeats();
     renderInsp();
   }
@@ -123801,11 +126502,11 @@ ${h.text}`;
     });
   }
   async function sceneLines(file) {
-    const { parseMdFile: parseMdFile24, inlinePlainText: inlinePlainText4 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile25, inlinePlainText: inlinePlainText5 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { liveBody: liveBody2 } = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
     let body = "";
     try {
-      body = parseMdFile24(await kapi.readFile(file)).body || "";
+      body = parseMdFile25(await kapi.readFile(file)).body || "";
     } catch {
     }
     body = liveBody2(file, body);
@@ -123815,7 +126516,7 @@ ${h.text}`;
       let s = raw.replace(/<!--[\s\S]*?-->/g, "").trim();
       if (!s || /^---+$/.test(s) || /^!\[/.test(s)) continue;
       s = s.slice(prefixLen(s)).replace(/^>\s*/, "").replace(/^#{1,6}\s+/, "").replace(/^(?:[-*+]|\d+[.)])\s+/, "").trim();
-      s = inlinePlainText4 ? inlinePlainText4(s) : s;
+      s = inlinePlainText5 ? inlinePlainText5(s) : s;
       s = s.trim();
       if (!s) continue;
       const nth = seen.get(s) || 0;
@@ -123905,7 +126606,7 @@ ${h.text}`;
         const last2 = plan.beats.length - 1;
         V2.play = null;
         V2.beat = last2;
-        paint();
+        paint2();
         renderBeats();
         renderInsp();
         return;
@@ -123922,7 +126623,7 @@ ${h.text}`;
         V2.beat = shown;
         renderBeats();
       }
-      paint();
+      paint2();
       V2.play.raf = requestAnimationFrame(step);
     };
     V2.play.raf = requestAnimationFrame(step);
@@ -123932,7 +126633,7 @@ ${h.text}`;
     if (!V2.play) return;
     cancelAnimationFrame(V2.play.raf);
     V2.play = null;
-    paint();
+    paint2();
     renderBeats();
     renderInsp();
   }
@@ -123944,8 +126645,8 @@ ${h.text}`;
     }
     const W = 1800, H3 = 1200;
     const cam = fitView2(planBounds(plan, V2.beat), W - 120, H3 - 160, { min: 1, max: 400 });
-    const svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("xmlns", NS);
+    const svg = document.createElementNS(NS2, "svg");
+    svg.setAttribute("xmlns", NS2);
     svg.setAttribute("width", W);
     svg.setAttribute("height", H3);
     svg.setAttribute("viewBox", `0 0 ${W} ${H3}`);
@@ -124082,8 +126783,8 @@ ${h.text}`;
     if (file) {
       excerpt = excerptAround(await sceneLines(file), b.ref && b.ref.kind === "scene" ? b.ref : null);
       try {
-        const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
-        const m = parseMdFile24(await kapi.readFile(file)).meta || {};
+        const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+        const m = parseMdFile25(await kapi.readFile(file)).meta || {};
         sceneInfo = [plan.scene.title, m.storyDate, m.synopsis, m.pov && "POV: " + m.pov, m.emotion].filter(Boolean).join(" \xB7 ");
       } catch {
         sceneInfo = plan.scene.title || "";
@@ -124240,7 +126941,7 @@ ${h.text}`;
     r.append(box2);
     return r;
   }
-  var NS, TYPE_KEYS, UNDO_MAX2, PLAY_MS, V2, _hooked, normP2, baseP2, isPolyTool, esc6, FOCUSABLE, PROMPT_KINDS, nameByFile, COL_KEYS, __fpTest;
+  var NS2, TYPE_KEYS, UNDO_MAX2, PLAY_MS, V2, _hooked, normP2, baseP2, isPolyTool, esc6, FOCUSABLE, PROMPT_KINDS, nameByFile, COL_KEYS, __fpTest;
   var init_floorplan_ui = __esm({
     "src/floorplan-ui.js"() {
       init_i18n();
@@ -124258,7 +126959,7 @@ ${h.text}`;
       init_fp_shot();
       init_scene_list();
       init_fp_store();
-      NS = "http://www.w3.org/2000/svg";
+      NS2 = "http://www.w3.org/2000/svg";
       TYPE_KEYS = { entity: "ui.fp.typeEntity", camera: "ui.fp.typeCamera", light: "ui.fp.typeLight", shape: "ui.fp.typeShape", track: "ui.fp.typeTrack" };
       UNDO_MAX2 = 60;
       PLAY_MS = 1100;
@@ -124325,7 +127026,7 @@ ${h.text}`;
         S: fp_store_exports,
         F: fp_data_exports,
         G: fp_gear_exports,
-        paint,
+        paint: paint2,
         edit,
         undo: undo2,
         redo: redo2,
@@ -124403,6 +127104,7 @@ ${h.text}`;
         setStatus(note || t("ui.trash.recoverRestoreBookDone"));
         return;
       }
+      if (info.kind === "scene" || info.kind === "chapter") info.dPath = await liveDraftPath(info);
       if (info.kind === "scene") note = await restoreScene(p, info);
       else if (info.kind === "chapter") note = await restoreChapter(p, info);
       await kapi.remove(sidecar);
@@ -124434,7 +127136,30 @@ ${h.text}`;
     logAction("recycle", t("ui.trash.recoverRestoreDone"), { from: p, name: fname, note });
     setStatus(note || t("ui.trash.recoverRestoreDone"));
   }
-  async function freeChapterFolder(dPath, draft, want) {
+  async function liveDraftPath(info) {
+    const want = info.dPath;
+    try {
+      if (await kapi.exists(await kapi.join(want, "draft.json"))) return want;
+    } catch {
+    }
+    const chGuid = info.chGuid || info.ch && info.ch.guid;
+    if (!chGuid || !state.root) return want;
+    for (const sec2 of await kapi.listDirs(state.root).catch(() => [])) {
+      const dr = await kapi.join(state.root, sec2, "Draft");
+      for (const dn of await kapi.listDirs(dr).catch(() => [])) {
+        const dp = await kapi.join(dr, dn);
+        try {
+          const d = await kapi.readJson(await kapi.join(dp, "draft.json"));
+          if ((d.chapters || []).some((c) => c.guid === chGuid)) return dp;
+          const s = await kapi.readJson(await kapi.join(dp, "scenes.json"));
+          if (s.chapters && chGuid in s.chapters) return dp;
+        } catch {
+        }
+      }
+    }
+    return want;
+  }
+  async function freeChapterFolder2(dPath, draft, want) {
     const taken = new Set((draft.chapters || []).map((c) => c.folderName));
     return freeName(await kapi.join(dPath, "Chapters"), want, { dir: true, taken });
   }
@@ -124445,7 +127170,7 @@ ${h.text}`;
     draft.chapters = draft.chapters || [];
     let ch = draft.chapters.find((c) => c.guid === info.chGuid);
     if (!ch) {
-      const folder = await freeChapterFolder(info.dPath, draft, info.folderName);
+      const folder = await freeChapterFolder2(info.dPath, draft, info.folderName);
       const order = Math.max(0, ...draft.chapters.map((c) => c.order || 0)) + 1;
       const title2 = String(info.folderName || "").replace(/^\d+\s*-\s*/, "") || t("ui.common.chapter");
       ch = {
@@ -124522,7 +127247,7 @@ ${h.text}`;
       Object.assign(existing, { ...info.ch, folderName: existing.folderName });
       delete existing.restoredFromScene;
     } else {
-      const folder = await freeChapterFolder(info.dPath, draft, info.ch.folderName);
+      const folder = await freeChapterFolder2(info.dPath, draft, info.ch.folderName);
       await kapi.move(p, await kapi.join(info.dPath, "Chapters", folder));
       if (folder !== info.ch.folderName) note = tf("ui.trash.restoredRenamed", folder);
       draft.chapters = [...draft.chapters, { ...info.ch, folderName: folder }];
@@ -124625,451 +127350,12 @@ ${h.text}`;
     }
   });
 
-  // src/visual/vis-core.js
-  var vis_core_exports = {};
-  __export(vis_core_exports, {
-    COL_W_MAX: () => COL_W_MAX,
-    COL_W_MIN: () => COL_W_MIN,
-    CSV_BOM: () => CSV_BOM,
-    REF_SEP: () => REF_SEP,
-    SIMILAR_MIN: () => SIMILAR_MIN,
-    SNAP_SEP: () => SNAP_SEP,
-    VIS_COL_DEFAULT_OFF: () => VIS_COL_DEFAULT_OFF,
-    VIS_COL_KEYS: () => VIS_COL_KEYS,
-    VIS_COL_W: () => VIS_COL_W,
-    VIS_FIXED_W: () => VIS_FIXED_W,
-    VIS_HEADER: () => VIS_HEADER,
-    bindRow: () => bindRow,
-    boundIdxs: () => boundIdxs,
-    clampColW: () => clampColW,
-    commentsForText: () => commentsForText,
-    csvCell: () => csvCell3,
-    displayText: () => displayText2,
-    dumpVis: () => dumpVis,
-    entitiesIn: () => entitiesIn,
-    insertRow: () => insertRow,
-    joinSnaps: () => joinSnaps,
-    lineHash: () => lineHash,
-    lineUsage: () => lineUsage,
-    liveLineNos: () => liveLineNos,
-    liveText: () => liveText,
-    makeRef: () => makeRef,
-    makeRow: () => makeRow,
-    moveCol: () => moveCol,
-    moveRow: () => moveRow,
-    normText: () => normText,
-    normalizeCols: () => normalizeCols,
-    parseCsv: () => parseCsv2,
-    parseRef: () => parseRef,
-    parseRefs: () => parseRefs,
-    parseVis: () => parseVis,
-    removeRow: () => removeRow,
-    renumber: () => renumber,
-    resolveAll: () => resolveAll,
-    resolveRow: () => resolveRow,
-    rowFromLines: () => rowFromLines,
-    sceneFileOfVis: () => sceneFileOfVis,
-    setColWidth: () => setColWidth,
-    similarity: () => similarity2,
-    splitLines: () => splitLines,
-    splitSnaps: () => splitSnaps,
-    syncRow: () => syncRow,
-    toggleCol: () => toggleCol,
-    totalWidth: () => totalWidth,
-    unusedLines: () => unusedLines,
-    visFileName: () => visFileName,
-    visibleCols: () => visibleCols
-  });
-  function visFileName(sceneFileName) {
-    const s = String(sceneFileName || "").trim();
-    if (!s) return "";
-    return s.replace(/\.md$/i, "") + "_vis.csv";
-  }
-  function sceneFileOfVis(visName) {
-    const m = /^(.*)_vis\.csv$/i.exec(String(visName || "").trim());
-    return m ? m[1] + ".md" : "";
-  }
-  function normText(s) {
-    return String(s == null ? "" : s).replace(/\s+/g, " ").trim();
-  }
-  function lineHash(s) {
-    const t3 = normText(s);
-    let h = 5381;
-    for (let i5 = 0; i5 < t3.length; i5++) h = (h << 5) + h + t3.charCodeAt(i5) >>> 0;
-    return h.toString(36);
-  }
-  function makeRef(idx4, text) {
-    return String(idx4 | 0) + "|" + lineHash(text);
-  }
-  function parseRef(ref) {
-    const s = String(ref || "").trim();
-    if (!s) return { idx: -1, hash: "" };
-    const i5 = s.indexOf("|");
-    if (i5 < 0) return { idx: -1, hash: s };
-    return { idx: parseInt(s.slice(0, i5), 10) || 0, hash: s.slice(i5 + 1) };
-  }
-  function parseRefs(ref) {
-    return String(ref || "").split(REF_SEP).map((x) => x.trim()).filter(Boolean).map(parseRef);
-  }
-  function splitSnaps(text) {
-    const s = String(text == null ? "" : text);
-    if (!s.trim()) return [];
-    return s.split(/\n\s*\n/).map((x) => x.trim());
-  }
-  function joinSnaps(list3) {
-    return (list3 || []).join(SNAP_SEP);
-  }
-  function trigrams(s) {
-    const t3 = normText(s);
-    const out = /* @__PURE__ */ new Set();
-    if (t3.length <= 3) {
-      if (t3) out.add(t3);
-      return out;
-    }
-    for (let i5 = 0; i5 + 3 <= t3.length; i5++) out.add(t3.slice(i5, i5 + 3));
-    return out;
-  }
-  function similarity2(a, b) {
-    const A = trigrams(a), B = trigrams(b);
-    if (!A.size || !B.size) return A.size === B.size ? 1 : 0;
-    let hit = 0;
-    for (const g of A) if (B.has(g)) hit++;
-    return hit / (A.size + B.size - hit);
-  }
-  function splitLines(body, format3 = "prose") {
-    const raw = String(body || "").replace(/<!--align:[^>]*-->/g, "").replace(/\r\n/g, "\n");
-    const parts = format3 === "screenplay" ? raw.split("\n") : raw.split(/\n\s*\n/);
-    const out = [];
-    for (const p of parts) {
-      const text = p.trim();
-      if (!text) continue;
-      out.push({ i: out.length, text });
-    }
-    return out;
-  }
-  function displayText2(raw) {
-    let s = String(raw == null ? "" : raw);
-    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
-    s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
-    s = s.replace(/^\s{0,3}#{1,6}\s+/gm, "");
-    s = s.replace(/^\s{0,3}>\s?/gm, "");
-    s = s.replace(/^\s{0,3}[-*+]\s+/gm, "");
-    s = s.replace(/^\s{0,3}\d+[.)]\s+/gm, "");
-    s = s.replace(/~~([^~]+)~~/g, "$1");
-    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
-    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2");
-    s = s.replace(/(^|[^_])_([^_\n]+)_/g, "$1$2");
-    s = s.replace(/`([^`]+)`/g, "$1");
-    return s.replace(/[ \t]+$/gm, "");
-  }
-  function entitiesIn(text, names) {
-    const s = displayText2(text);
-    if (!s || !names || !names.length) return [];
-    const sorted = [...new Set(names.filter(Boolean).map(String))].sort((a, b) => b.length - a.length);
-    const taken = new Array(s.length).fill(false);
-    const hits = [];
-    for (const n2 of sorted) {
-      if (!n2) continue;
-      let from2 = 0, at;
-      while ((at = s.indexOf(n2, from2)) >= 0) {
-        let free = true;
-        for (let k = at; k < at + n2.length; k++) if (taken[k]) {
-          free = false;
-          break;
-        }
-        if (free) {
-          for (let k = at; k < at + n2.length; k++) taken[k] = true;
-          hits.push({ at, name: n2 });
-        }
-        from2 = at + 1;
-      }
-    }
-    hits.sort((a, b) => a.at - b.at);
-    const out = [];
-    for (const h of hits) if (!out.includes(h.name)) out.push(h.name);
-    return out;
-  }
-  function makeRow({ no = 0, ref = "", image = "", text = "", remark = "" } = {}) {
-    return {
-      no: no | 0,
-      ref: String(ref || ""),
-      image: String(image || ""),
-      text: String(text || ""),
-      remark: String(remark || "")
-    };
-  }
-  function rowFromLines(lines) {
-    const ls = Array.isArray(lines) ? lines : [lines];
-    return makeRow({
-      ref: ls.map((l) => makeRef(l.i, l.text)).join(REF_SEP),
-      text: joinSnaps(ls.map((l) => l.text))
-    });
-  }
-  function bindRow(row4, lines, idxs) {
-    const byI = new Map((lines || []).map((l) => [l.i, l]));
-    const picked = [...new Set(idxs || [])].filter((i5) => byI.has(i5)).sort((a, b) => a - b);
-    row4.ref = picked.map((i5) => makeRef(i5, byI.get(i5).text)).join(REF_SEP);
-    row4.text = joinSnaps(picked.map((i5) => byI.get(i5).text));
-    return row4;
-  }
-  function renumber(rows) {
-    (rows || []).forEach((r, i5) => {
-      r.no = i5 + 1;
-    });
-    return rows;
-  }
-  function moveRow(rows, idx4, dir2) {
-    const j = idx4 + (dir2 < 0 ? -1 : 1);
-    if (idx4 < 0 || idx4 >= rows.length || j < 0 || j >= rows.length) return idx4;
-    const [r] = rows.splice(idx4, 1);
-    rows.splice(j, 0, r);
-    renumber(rows);
-    return j;
-  }
-  function insertRow(rows, idx4, row4) {
-    const at = Math.max(0, Math.min(rows.length, idx4 < 0 ? rows.length : idx4));
-    rows.splice(at, 0, row4);
-    renumber(rows);
-    return at;
-  }
-  function removeRow(rows, idx4) {
-    if (idx4 < 0 || idx4 >= rows.length) return null;
-    const [r] = rows.splice(idx4, 1);
-    renumber(rows);
-    return r;
-  }
-  function resolvePart(hash2, snap2, ls, hintIdx) {
-    if (ls[hintIdx] && lineHash(ls[hintIdx].text) === hash2)
-      return { status: "ok", idx: hintIdx, text: ls[hintIdx].text, snap: snap2 };
-    for (let k = 0; k < ls.length; k++)
-      if (lineHash(ls[k].text) === hash2) return { status: "ok", idx: k, text: ls[k].text, snap: snap2 };
-    let best = -1, bs = 0;
-    for (let k = 0; k < ls.length; k++) {
-      const s = similarity2(ls[k].text, snap2);
-      if (s > bs) {
-        bs = s;
-        best = k;
-      }
-    }
-    if (best >= 0 && bs >= SIMILAR_MIN)
-      return { status: "changed", idx: best, text: ls[best].text, snap: snap2, score: bs };
-    return { status: "lost", idx: -1, text: "", snap: snap2 };
-  }
-  function resolveRow(row4, lines) {
-    const ls = lines || [];
-    const refs = parseRefs(row4 && row4.ref);
-    const snaps = splitSnaps(row4 && row4.text);
-    if (!refs.length) return { status: "free", parts: [], live: [] };
-    const parts = refs.map((r, i5) => resolvePart(r.hash, snaps[i5] == null ? "" : snaps[i5], ls, r.idx));
-    const live2 = parts.filter((p) => p.status !== "lost");
-    const status = parts.some((p) => p.status === "changed") ? "changed" : live2.length ? "ok" : "lost";
-    return { status, parts, live: live2 };
-  }
-  function resolveAll(rows, lines) {
-    return (rows || []).map((r) => resolveRow(r, lines));
-  }
-  function liveText(res) {
-    return (res && res.live ? res.live : []).map((p) => p.text).join(SNAP_SEP);
-  }
-  function liveLineNos(res) {
-    return (res && res.live ? res.live : []).map((p) => p.idx + 1);
-  }
-  function syncRow(row4, res) {
-    if (!res || !res.parts || !res.parts.length) return row4;
-    const refs = parseRefs(row4.ref);
-    const snaps = splitSnaps(row4.text);
-    const nextRefs = [], nextSnaps = [];
-    res.parts.forEach((p, i5) => {
-      if (p.status === "lost") {
-        nextRefs.push(refs[i5] ? String(refs[i5].idx) + "|" + refs[i5].hash : "");
-        nextSnaps.push(snaps[i5] == null ? "" : snaps[i5]);
-      } else {
-        nextRefs.push(makeRef(p.idx, p.text));
-        nextSnaps.push(p.text);
-      }
-    });
-    row4.ref = nextRefs.filter(Boolean).join(REF_SEP);
-    row4.text = joinSnaps(nextSnaps);
-    return row4;
-  }
-  function boundIdxs(row4, lines) {
-    return resolveRow(row4, lines).live.map((p) => p.idx);
-  }
-  function lineUsage(rows, lines) {
-    const m = /* @__PURE__ */ new Map();
-    for (const r of rows || [])
-      for (const i5 of boundIdxs(r, lines)) m.set(i5, (m.get(i5) || 0) + 1);
-    return m;
-  }
-  function unusedLines(rows, lines) {
-    const used = lineUsage(rows, lines);
-    return (lines || []).filter((l) => !used.has(l.i));
-  }
-  function commentsForText(text, comments) {
-    const t3 = normText(text);
-    if (!t3) return [];
-    return (comments || []).filter((c) => {
-      const q2 = normText(c && c.anchor && c.anchor.quote);
-      return !!q2 && (t3.includes(q2) || q2.includes(t3));
-    });
-  }
-  function clampColW(w, key2) {
-    const n2 = Math.round(Number(w));
-    if (!Number.isFinite(n2)) return VIS_COL_W[key2] || 160;
-    return Math.max(COL_W_MIN, Math.min(COL_W_MAX, n2));
-  }
-  function normalizeCols(cfg) {
-    const seen = /* @__PURE__ */ new Set(), out = [];
-    for (const c of Array.isArray(cfg) ? cfg : []) {
-      const key2 = typeof c === "string" ? c : c && c.key;
-      if (!VIS_COL_KEYS.includes(key2) || seen.has(key2)) continue;
-      seen.add(key2);
-      out.push({
-        key: key2,
-        on: typeof c === "string" ? true : c.on !== false,
-        w: clampColW(typeof c === "string" ? VIS_COL_W[key2] : c.w, key2)
-      });
-    }
-    for (const key2 of VIS_COL_KEYS)
-      if (!seen.has(key2)) out.push({ key: key2, on: !VIS_COL_DEFAULT_OFF.includes(key2), w: VIS_COL_W[key2] });
-    if (!out.some((c) => c.on)) out.forEach((c) => {
-      c.on = true;
-    });
-    return out;
-  }
-  function toggleCol(cols, key2) {
-    const c = cols.find((x) => x.key === key2);
-    if (!c) return cols;
-    if (c.on && cols.filter((x) => x.on).length === 1) return cols;
-    c.on = !c.on;
-    return cols;
-  }
-  function moveCol(cols, key2, dir2) {
-    const i5 = cols.findIndex((x) => x.key === key2);
-    const j = i5 + (dir2 < 0 ? -1 : 1);
-    if (i5 < 0 || j < 0 || j >= cols.length) return cols;
-    const [c] = cols.splice(i5, 1);
-    cols.splice(j, 0, c);
-    return cols;
-  }
-  function setColWidth(cols, key2, w) {
-    const c = cols.find((x) => x.key === key2);
-    if (c) c.w = clampColW(w, key2);
-    return cols;
-  }
-  function visibleCols(cols) {
-    return normalizeCols(cols).filter((c) => c.on).map((c) => c.key);
-  }
-  function totalWidth(cols) {
-    return normalizeCols(cols).filter((c) => c.on).reduce((a, c) => a + c.w, 0) + VIS_FIXED_W;
-  }
-  function csvCell3(v2) {
-    const s = String(v2 == null ? "" : v2);
-    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }
-  function parseCsv2(text) {
-    const s = String(text || "").replace(/^﻿/, "");
-    const rows = [];
-    let row4 = [], cell = "", q2 = false;
-    for (let i5 = 0; i5 < s.length; i5++) {
-      const ch = s[i5];
-      if (q2) {
-        if (ch === '"') {
-          if (s[i5 + 1] === '"') {
-            cell += '"';
-            i5++;
-          } else q2 = false;
-        } else cell += ch;
-        continue;
-      }
-      if (ch === '"') {
-        q2 = true;
-        continue;
-      }
-      if (ch === ",") {
-        row4.push(cell);
-        cell = "";
-        continue;
-      }
-      if (ch === "\r") continue;
-      if (ch === "\n") {
-        row4.push(cell);
-        rows.push(row4);
-        row4 = [];
-        cell = "";
-        continue;
-      }
-      cell += ch;
-    }
-    if (cell !== "" || row4.length) {
-      row4.push(cell);
-      rows.push(row4);
-    }
-    return rows.filter((r) => r.length && !(r.length === 1 && r[0] === ""));
-  }
-  function parseVis(text) {
-    const table9 = parseCsv2(text);
-    if (!table9.length) return [];
-    let start = 0;
-    const head2 = table9[0].map((h) => String(h || "").trim().toLowerCase());
-    const idxOf = {};
-    if (head2.includes("ref") || head2.includes("no")) {
-      start = 1;
-      VIS_HEADER.forEach((k) => {
-        idxOf[k] = head2.indexOf(k);
-      });
-    } else {
-      VIS_HEADER.forEach((k, i5) => {
-        idxOf[k] = i5;
-      });
-    }
-    const rows = [];
-    for (let r = start; r < table9.length; r++) {
-      const t3 = table9[r];
-      const g = (k) => idxOf[k] >= 0 ? t3[idxOf[k]] || "" : "";
-      rows.push(makeRow({
-        no: parseInt(g("no"), 10) || 0,
-        ref: g("ref"),
-        image: g("image"),
-        text: g("text"),
-        remark: g("remark")
-      }));
-    }
-    return renumber(rows);
-  }
-  function dumpVis(rows) {
-    const out = [VIS_HEADER.join(",")];
-    for (const r of renumber(rows || []))
-      out.push(VIS_HEADER.map((k) => csvCell3(r[k])).join(","));
-    return CSV_BOM + out.join("\r\n") + "\r\n";
-  }
-  var REF_SEP, SNAP_SEP, SIMILAR_MIN, VIS_COL_KEYS, VIS_COL_DEFAULT_OFF, VIS_COL_W, COL_W_MIN, COL_W_MAX, VIS_FIXED_W, CSV_BOM, VIS_HEADER;
-  var init_vis_core = __esm({
-    "src/visual/vis-core.js"() {
-      REF_SEP = ";";
-      SNAP_SEP = "\n\n";
-      SIMILAR_MIN = 0.4;
-      VIS_COL_KEYS = ["no", "scene", "image", "text", "entities", "remark", "comment"];
-      VIS_COL_DEFAULT_OFF = ["scene"];
-      VIS_COL_W = { no: 64, scene: 150, image: 300, text: 340, entities: 170, remark: 240, comment: 220 };
-      COL_W_MIN = 56;
-      COL_W_MAX = 1200;
-      VIS_FIXED_W = 40 + 42;
-      CSV_BOM = "\uFEFF";
-      VIS_HEADER = ["no", "ref", "image", "text", "remark"];
-    }
-  });
-
   // src/scene-file-name.js
-  async function freeSceneFileName(dPath, folderName, order, taken = /* @__PURE__ */ new Set()) {
-    const base4 = "scene-" + String(order).padStart(2, "0");
-    for (let n2 = 1; n2 < 1e3; n2++) {
-      const name5 = n2 === 1 ? base4 + ".md" : `${base4}-${n2}.md`;
-      if (taken.has(name5)) continue;
-      if (await kapi.exists(await kapi.join(dPath, "Chapters", folderName, name5))) continue;
-      return name5;
-    }
-    return base4 + "-" + Date.now().toString(36) + ".md";
+  async function freeSceneFileName(dPath, folderName, title2, taken = /* @__PURE__ */ new Set()) {
+    return freeSceneFile(kapi, dPath, folderName, String(title2 == null ? "" : title2), taken);
+  }
+  async function freeChapterFolderName(dPath, title2, taken = /* @__PURE__ */ new Set()) {
+    return freeChapterFolder(kapi, dPath, String(title2 == null ? "" : title2), taken);
   }
   function takenSceneFiles(scenesJson) {
     const out = /* @__PURE__ */ new Set();
@@ -125080,6 +127366,7 @@ ${h.text}`;
   }
   var init_scene_file_name = __esm({
     "src/scene-file-name.js"() {
+      init_disk_sync();
     }
   });
 
@@ -125117,32 +127404,38 @@ ${h.text}`;
   }
   async function setSceneTitle(dPath, ch, sc, title2) {
     if (!title2 || title2 === sc.title) return;
-    const sf = await kapi.join(dPath, "scenes.json");
     const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
-    try {
-      const { meta: meta2, body } = (0, import_md11.parseMdFile)(await kapi.readFile(file));
-      meta2.title = title2;
-      await writeMdKeepingComments(kapi, file, (0, import_md11.dumpMdFile)(meta2, body));
-    } catch (e) {
-      log("warn", tf("ui.scene.renameFileFail", sc.title || sc.fileName), e);
-      setStatus(tf("ui.scene.renameFileFail", sc.title || sc.fileName));
-      return false;
-    }
-    await mutateJson(kapi, sf, (d) => {
-      let hit = false;
-      for (const s of rowsOf(d, ch.guid)) if (s.id === sc.id) {
-        s.title = title2;
-        hit = true;
+    {
+      let res = null;
+      const run3 = async () => {
+        res = await renameSceneOnDisk(kapi, dPath, ch, sc.id, title2);
+        return res.moved ? res.to : null;
+      };
+      try {
+        const target = await sceneRenameTarget(kapi, dPath, ch, sc.id, title2);
+        if (target) {
+          if (!(await movePathWithTabs(file, run3)).ok) return false;
+        } else await run3();
+      } catch (e) {
+        res = { ok: false, error: e };
       }
-      return hit ? void 0 : false;
-    });
-    const t3 = state.tabs.get(file);
-    if (t3) {
-      t3.title = title2;
-      if (t3.meta) t3.meta.title = title2;
-      t3.tabBtn.querySelector(".tab-title").textContent = (t3.dirty ? gi("dot") + " " : "") + title2;
+      if (!res || !res.ok) {
+        log("warn", tf("ui.scene.renameFileFail", sc.title || sc.fileName), res && res.error);
+        setStatus(tf("ui.scene.renameFileFail", sc.title || sc.fileName));
+        return false;
+      }
+      if (res.moved) logAction("scene", tf("ui.names.logRenamed", baseName2(res.from), baseName2(res.to)), { from: res.from, to: res.to });
+      sc.title = title2;
+      sc.fileName = res.fileName;
+      const t3 = state.tabs.get(res.to);
+      if (t3) {
+        t3.title = title2;
+        if (t3.meta) t3.meta.title = title2;
+        t3.tabBtn.querySelector(".tab-title").textContent = (t3.dirty ? gi("dot") + " " : "") + title2;
+      }
+      await buildTree2();
+      return true;
     }
-    await buildTree2();
   }
   async function renameChapter(dPath, ch) {
     const title2 = await ask(t("ui.scene.nameChapterNew"), { value: ch.title });
@@ -125151,16 +127444,27 @@ ${h.text}`;
   }
   async function setChapterTitle(dPath, ch, title2) {
     if (!title2 || title2 === ch.title) return;
-    const df = await kapi.join(dPath, "draft.json");
-    await mutateJson(kapi, df, (d) => {
-      let hit = false;
-      for (const c of d.chapters || []) if (c.guid === ch.guid) {
-        c.title = title2;
-        hit = true;
-      }
-      return hit ? void 0 : false;
-    });
+    const oldDir = await kapi.join(dPath, "Chapters", ch.folderName || "");
+    let res = null;
+    const run3 = async () => {
+      res = await renameChapterOnDisk(kapi, dPath, ch.guid, title2);
+      return res.moved ? res.to : null;
+    };
+    try {
+      if (ch.folderName && !nameFits(title2, ch.folderName)) {
+        if (!(await movePathWithTabs(oldDir, run3)).ok) return false;
+      } else await run3();
+    } catch (e) {
+      log("warn", tf("ui.names.renameFail", ch.title || ""), e);
+      setStatus(tf("ui.names.renameFail", ch.title || ""));
+      return false;
+    }
+    if (!res || !res.ok) return false;
+    if (res.moved) logAction("chapter", tf("ui.names.logRenamed", baseName2(res.from), baseName2(res.to)), { from: res.from, to: res.to });
+    ch.title = title2;
+    ch.folderName = res.folderName;
     await buildTree2();
+    return true;
   }
   async function chapterProps(dPath, ch) {
     const df = await kapi.join(dPath, "draft.json");
@@ -125248,11 +127552,16 @@ ${h.text}`;
         if (e.key === "Escape") close2(false);
       });
       okB.onclick = async () => {
+        const newTitle = iTitle.value.trim();
+        if (newTitle && newTitle !== (cur.title || "")) {
+          const live0 = { ...cur };
+          if (await setChapterTitle(dPath, live0, newTitle) === false) return;
+          ch.title = live0.title;
+          ch.folderName = live0.folderName;
+        }
         const res = await mutateJson(kapi, df, (fresh) => {
           const live2 = (fresh.chapters || []).find((c) => c.guid === ch.guid);
           if (!live2) return false;
-          const title2 = iTitle.value.trim();
-          if (title2) live2.title = title2;
           live2.status = iStatus.value;
           live2.act = iAct.value.trim();
           live2.date = iDate.value.trim();
@@ -125305,10 +127614,10 @@ ${h.text}`;
         if (sc.type === "memo") continue;
         scenes++;
         try {
-          const { body } = (0, import_md11.parseMdFile)(await kapi.readFile(
+          const { body } = (0, import_md12.parseMdFile)(await kapi.readFile(
             await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName)
           ));
-          words += (0, import_md11.countWords)(body);
+          words += (0, import_md12.countWords)(body);
         } catch {
         }
       }
@@ -125375,10 +127684,7 @@ ${h.text}`;
     await mutateJson(kapi, df, async (d) => {
       const order = nextOrder(d.chapters);
       const taken = new Set((d.chapters || []).map((c) => c.folderName));
-      let folderName = String(order).padStart(2, "0") + " - " + safeName(title2);
-      for (let n2 = 2; taken.has(folderName) || await kapi.exists(await kapi.join(dPath, "Chapters", folderName)); n2++) {
-        folderName = String(order).padStart(2, "0") + " - " + safeName(title2) + " " + n2;
-      }
+      const folderName = await freeChapterFolderName(dPath, title2, taken);
       ch = {
         guid: guid(),
         title: title2,
@@ -125407,7 +127713,7 @@ ${h.text}`;
       d.chapters = d.chapters || {};
       const list3 = rowsOf(d, ch.guid);
       const order = nextOrder(list3);
-      const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list3.map((s) => s.fileName)));
+      const fileName = await freeSceneFileName(dPath, ch.folderName, title2, new Set(list3.map((s) => s.fileName)));
       sc = {
         id: guid(),
         title: title2,
@@ -125421,7 +127727,7 @@ ${h.text}`;
       };
       file = await kapi.join(dPath, "Chapters", ch.folderName, fileName);
       const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
-      await writeMdKeepingComments(kapi, file, (0, import_md11.dumpMdFile)(meta2, opts.body || ""), opts.commentsFrom || null);
+      await writeMdKeepingComments(kapi, file, (0, import_md12.dumpMdFile)(meta2, opts.body || ""), opts.commentsFrom || null);
       d.chapters[ch.guid] = [...list3, sc];
     });
     logAction("scene", t("ui.scene.addScene") + title2, { file });
@@ -125471,12 +127777,12 @@ ${h.text}`;
       const row4 = list3.find((x) => x.id === sc.id);
       if (!row4) return false;
       const order = nextOrder(list3);
-      const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list3.map((s) => s.fileName)));
       const newTitle = row4.title + t("ui.common.msg");
+      const fileName = await freeSceneFileName(dPath, ch.folderName, newTitle, new Set(list3.map((s) => s.fileName)));
       const srcFile = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
       let meta2 = { title: newTitle, type: "scene", format: "prose", pov: "", tags: [] }, body = "";
       try {
-        const parsed = (0, import_md11.parseMdFile)(await kapi.readFile(srcFile));
+        const parsed = (0, import_md12.parseMdFile)(await kapi.readFile(srcFile));
         meta2 = parsed.meta;
         body = parsed.body;
       } catch {
@@ -125486,7 +127792,7 @@ ${h.text}`;
       await writeMdKeepingComments(
         kapi,
         await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-        (0, import_md11.dumpMdFile)(meta2, body),
+        (0, import_md12.dumpMdFile)(meta2, body),
         srcFile
       );
       d.chapters[ch.guid] = [...list3, nrow];
@@ -125531,7 +127837,12 @@ ${h.text}`;
       if (!row4) return false;
       const dst = rowsOf(d, dstCh.guid);
       const order = nextOrder(dst);
-      const newFile = await freeSceneFileName(dPath, dstCh.folderName, order, new Set(dst.map((s) => s.fileName)));
+      const newFile = await freeSceneFileName(
+        dPath,
+        dstCh.folderName,
+        row4.title || row4.fileName.replace(/\.md$/i, ""),
+        new Set(dst.map((s) => s.fileName))
+      );
       const src2 = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
       const newPath = await kapi.join(dPath, "Chapters", dstCh.folderName, newFile);
       await kapi.move(src2, newPath);
@@ -125693,7 +128004,7 @@ ${h.text}`;
       return false;
     }
   }
-  var import_md11, rowsOf, nextOrder, isLk, LOCK_MSG;
+  var import_md12, baseName2, rowsOf, nextOrder, isLk, LOCK_MSG;
   var init_scene_ops = __esm({
     "src/scene-ops.js"() {
       init_i18n();
@@ -125703,7 +128014,7 @@ ${h.text}`;
       init_recycle();
       init_trash_path();
       init_ui();
-      import_md11 = __toESM(require_md());
+      import_md12 = __toESM(require_md());
       init_comment_core();
       init_tab_guard();
       init_status_choices();
@@ -125713,6 +128024,10 @@ ${h.text}`;
       init_json_store();
       init_scene_file_name();
       init_scene_file_name();
+      init_disk_sync();
+      init_disk_names();
+      init_tab_bridge();
+      baseName2 = (p) => String(p || "").split(/[\\/]/).pop() || "";
       rowsOf = (d, guid0) => (d && d.chapters || {})[guid0] || [];
       nextOrder = (list3) => Math.max(0, ...(list3 || []).map((x) => x.order || 0)) + 1;
       isLk = (v2) => v2 === true || v2 === "true";
@@ -125816,7 +128131,7 @@ ${h.text}`;
       const tab = state.tabs.get(file);
       const live2 = tab && (tab.editor || tab.sp);
       if (live2 && typeof live2.getMarkdown === "function") body = live2.getMarkdown();
-      else body = (0, import_md12.parseMdFile)(await kapi.readFile(file)).body || "";
+      else body = (0, import_md13.parseMdFile)(await kapi.readFile(file)).body || "";
     } catch {
     }
     if (!smart.byCat || !Object.keys(smart.byCat).length) {
@@ -125861,14 +128176,14 @@ ${h.text}`;
     }
     return box2;
   }
-  var import_md12;
+  var import_md13;
   var init_scene_props_extra = __esm({
     "src/scene-props-extra.js"() {
       init_i18n();
       init_icons();
       init_core();
       init_json_store();
-      import_md12 = __toESM(require_md());
+      import_md13 = __toESM(require_md());
       init_scene_mentions();
     }
   });
@@ -125996,8 +128311,8 @@ ${h.text}`;
   });
   function tabWords(tab) {
     try {
-      if (tab.editor) return (0, import_md13.countWords)(tab.editor.getMarkdown());
-      if (tab.sp) return (0, import_md13.countWords)(tab.sp.getMarkdown());
+      if (tab.editor) return (0, import_md14.countWords)(tab.editor.getMarkdown());
+      if (tab.sp) return (0, import_md14.countWords)(tab.sp.getMarkdown());
     } catch {
     }
     return null;
@@ -126171,13 +128486,13 @@ ${h.text}`;
     iMin.focus();
     return { ov, close: close2, iMin, iGoal, go: () => bGo.click() };
   }
-  var import_md13, SP;
+  var import_md14, SP;
   var init_sprint_ui = __esm({
     "src/sprint-ui.js"() {
       init_i18n();
       init_core();
       init_ui();
-      import_md13 = __toESM(require_md());
+      import_md14 = __toESM(require_md());
       init_sprint_core();
       SP = {
         s: null,
@@ -126451,14 +128766,14 @@ ${h.text}`;
 
   // src/screenplay.js
   function inlineContent(text) {
-    const doc3 = (0, import_md14.mdToDoc)(text);
+    const doc3 = (0, import_md15.mdToDoc)(text);
     const p = (doc3.content || [])[0] || {};
     const content = p.type === "paragraph" ? p.content : null;
-    if (content) return (0, import_md14.inlineImagesAsText)(content);
+    if (content) return (0, import_md15.inlineImagesAsText)(content);
     return text ? [{ type: "text", text }] : [];
   }
   function inlineToMd(content) {
-    return (0, import_md14.docToMd)({ type: "doc", content: [{ type: "paragraph", content }] });
+    return (0, import_md15.docToMd)({ type: "doc", content: [{ type: "paragraph", content }] });
   }
   function spDocFromMarkdown(markdown, resolveSrc = (p) => p) {
     const blocks = parseScript(markdown || "").map((b) => {
@@ -126491,7 +128806,7 @@ ${h.text}`;
     };
     return blocksToMd(nodes.map(asBlock));
   }
-  var import_md14, marks, spSchema, SP_BULLET_RE, SP_NUMBER_RE, SP_ANY_LIST_RE, SPEditor;
+  var import_md15, marks, spSchema, SP_BULLET_RE, SP_NUMBER_RE, SP_ANY_LIST_RE, SPEditor;
   var init_screenplay = __esm({
     "src/screenplay.js"() {
       init_dist2();
@@ -126504,7 +128819,7 @@ ${h.text}`;
       init_core();
       init_sp_format();
       init_text_case();
-      import_md14 = __toESM(require_md());
+      import_md15 = __toESM(require_md());
       init_editor();
       init_sp_format_guide();
       init_fountain();
@@ -127285,7 +129600,7 @@ ${h.text}`;
     chip.textContent = (vt ? "" : "#") + name5 + (count ? " (" + count + ")" : "");
     if (vt) applyVisualTagStyle(chip, name5);
     if (onClick) {
-      chip.style.cursor = "pointer";
+      chip.style.cursor = "default";
       chip.onclick = onClick;
     }
     return chip;
@@ -127323,7 +129638,7 @@ ${h.text}`;
         sub.style.color = "var(--dim)";
         card.append(sub);
         const del2 = el("span", "vt-del", "\u2715");
-        del2.style.cssText = "position:absolute;top:6px;right:8px;cursor:pointer;opacity:.55";
+        del2.style.cssText = "position:absolute;top:6px;right:8px;cursor:default;opacity:.55";
         del2.title = t("ui.tags.delTag");
         del2.onclick = async () => {
           await removeVisualTag(t3.name);
@@ -129299,7 +131614,7 @@ ${h.text}`;
       box2.append(line);
       if (m) {
         const st = modelState(m.abs);
-        const name5 = el("div", "net-side-note", baseName2(m.file) + (own ? "" : " \xB7 " + t("ui.netUi.modelFromCat")));
+        const name5 = el("div", "net-side-note", baseName3(m.file) + (own ? "" : " \xB7 " + t("ui.netUi.modelFromCat")));
         box2.append(name5);
         if (st === "error") box2.append(el("div", "net-side-err", tf("ui.netUi.modelErr", modelError(m.abs))));
         else if (st === "loading" || st === "") box2.append(el("div", "net-side-note", t("ui.netUi.modelLoading")));
@@ -129317,14 +131632,14 @@ ${h.text}`;
       const ref = { file: rel, scale: 1, yaw: 0 };
       net.updateScene(cat ? setCatModel(net._scene, cat, ref) : setNodeModel(net._scene, n2, ref));
       net._showImages = true;
-      update();
+      update2();
       return true;
     }
     function setModel(n2, ref) {
       const cur = net.modelOf(n2);
       net.updateScene(setNodeModel(net._scene, n2, ref));
       if (!ref && cur) forgetModel(cur.abs);
-      update();
+      update2();
     }
     function renderInsights() {
       ins.replaceChildren();
@@ -129413,7 +131728,7 @@ ${h.text}`;
             renderScene();
           }
         }));
-        if (bg.image) line.append(el("span", "net-side-file", baseName2(bg.image)));
+        if (bg.image) line.append(el("span", "net-side-file", baseName3(bg.image)));
         scn.append(row3(t("ui.netScene.image"), line));
         scn.append(row3(t("ui.netScene.imageMode"), select2([
           { value: "world", label: t("ui.netScene.imageWorld") },
@@ -129460,7 +131775,7 @@ ${h.text}`;
       for (const cat of ["characters", "locations", "items", "lore"]) {
         const m = S10.models.byCat[cat];
         const line = el("span", "net-side-inline");
-        line.append(btn2(m ? baseName2(m.file) : t("ui.netUi.modelPick"), t("ui.netScene.catModelHint"), () => pickModel(null, cat), m ? "net-side-file" : ""));
+        line.append(btn2(m ? baseName3(m.file) : t("ui.netUi.modelPick"), t("ui.netScene.catModelHint"), () => pickModel(null, cat), m ? "net-side-file" : ""));
         if (m) line.append(btn2(gi("x"), t("ui.netUi.modelRemove"), () => {
           const abs = net.assetPath ? net.assetPath(m.file) : "";
           net.updateScene(setCatModel(net._scene, cat, null));
@@ -129479,7 +131794,7 @@ ${h.text}`;
       }, "net-side-danger"));
       scn.append(foot);
     }
-    function update() {
+    function update2() {
       try {
         renderInfo();
       } catch (e) {
@@ -129496,7 +131811,7 @@ ${h.text}`;
       if (open.has(id)) open.delete(id);
       else open.add(id);
       if (id === "scene") renderScene();
-      update();
+      update2();
       net._syncToolbar();
       return open.has(id);
     }
@@ -129504,10 +131819,10 @@ ${h.text}`;
       if (!open.has(id)) toggle(id);
       return true;
     }
-    update();
+    update2();
     renderScene();
     return {
-      update,
+      update: update2,
       toggle,
       open: openCard,
       isOpen: (id) => open.has(id),
@@ -129554,7 +131869,7 @@ ${h.text}`;
     for (const b of [first, prev, play, next]) b.setAttribute("aria-label", b.title);
     bar.append(first, prev, play, next, range3, label2, close2);
     pane.appendChild(bar);
-    function update() {
+    function update2() {
       const st = net._story;
       bar.hidden = !st;
       pane.classList.toggle("net-story-on", !!st);
@@ -129575,14 +131890,14 @@ ${h.text}`;
       first.disabled = st.upTo <= 0;
       next.disabled = st.upTo >= order.length;
     }
-    return { update, el: bar, destroy() {
+    return { update: update2, el: bar, destroy() {
       bar.remove();
     } };
   }
   function sceneOrderOf(net) {
     return sceneOrder(net.nodes);
   }
-  var catLabel2, baseName2;
+  var catLabel2, baseName3;
   var init_network_inspector = __esm({
     "src/network-inspector.js"() {
       init_i18n();
@@ -129597,7 +131912,7 @@ ${h.text}`;
         const d = netColorDefsOf("nodes").find((x) => x.id === cat);
         return d ? d.label : cat;
       };
-      baseName2 = (p) => String(p || "").split(/[\\/]/).pop();
+      baseName3 = (p) => String(p || "").split(/[\\/]/).pop();
     }
   });
 
@@ -163621,7 +165936,7 @@ ${h.text}`;
     const d = await kapi.readJson(sf);
     const row4 = (d.chapters[ch.guid] || []).find((x) => x.id === sc.id);
     if (!row4) return;
-    const file = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
+    let file = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
     const M2 = await readSceneMeta(file, row4);
     const ov = el("div", "k-overlay");
     const box2 = el("div", "k-dialog");
@@ -163721,7 +166036,7 @@ ${h.text}`;
     const aiCtx = async () => {
       let body = "";
       try {
-        body = (0, import_md15.parseMdFile)(await kapi.readFile(file)).body || "";
+        body = (0, import_md16.parseMdFile)(await kapi.readFile(file)).body || "";
       } catch {
       }
       return { body, title: row4.title || "" };
@@ -163759,8 +166074,9 @@ ${h.text}`;
       const newTitle = iTitle.value.trim();
       if (newTitle && newTitle !== row4.title) {
         const { setSceneTitle: setSceneTitle2 } = await Promise.resolve().then(() => (init_scene_ops(), scene_ops_exports));
-        await setSceneTitle2(dPath, ch, row4, newTitle);
+        if (await setSceneTitle2(dPath, ch, row4, newTitle) === false) return;
         row4.title = newTitle;
+        file = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
       }
       row4.synopsis = iSyn.value;
       row4.pov = iPov.value;
@@ -163808,7 +166124,7 @@ ${h.text}`;
       setStatus(t("ui.scene.savePropsSceneDone"));
     };
   }
-  var import_md15;
+  var import_md16;
   var init_scene_props = __esm({
     "src/scene-props.js"() {
       init_book_flow();
@@ -163820,7 +166136,7 @@ ${h.text}`;
       init_spell();
       init_scene_meta();
       init_ai_synopsis();
-      import_md15 = __toESM(require_md());
+      import_md16 = __toESM(require_md());
       init_ui();
       init_icons();
       init_json_store();
@@ -164054,7 +166370,7 @@ ${h.text}`;
             }
             let fm = null;
             try {
-              const pm2 = (0, import_md16.parseMdFile)(text);
+              const pm2 = (0, import_md17.parseMdFile)(text);
               text = pm2.body;
               fm = pm2.meta;
             } catch {
@@ -164923,7 +167239,7 @@ ${h.text}`;
     bar.append(el("div", "aia-scope-line", describeScope(S2.scope, S2.scenes).text));
     return bar;
   }
-  var import_md16, ANALYZER_CARDS, SKIP3, S2, scopeKey, resultKey, fmtTok, fmtUsd, CMP_ORDER;
+  var import_md17, ANALYZER_CARDS, SKIP3, S2, scopeKey, resultKey, fmtTok, fmtUsd, CMP_ORDER;
   var init_ai_analyzer_ui = __esm({
     "src/ai-analyzer-ui.js"() {
       init_i18n();
@@ -164935,7 +167251,7 @@ ${h.text}`;
       init_ai_settings();
       init_ai_provider_ui();
       init_app();
-      import_md16 = __toESM(require_md());
+      import_md17 = __toESM(require_md());
       init_tab_bridge();
       init_scene_meta();
       init_ai_providers();
@@ -165167,14 +167483,14 @@ ${h.text}`;
     const onResize = () => place();
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);
-    function onKey3(e) {
+    function onKey4(e) {
       if (e.key === "Escape" && _bar === ctl) {
         e.stopPropagation();
         e.preventDefault();
         closeRewriteBar();
       }
     }
-    document.addEventListener("keydown", onKey3, true);
+    document.addEventListener("keydown", onKey4, true);
     const ctl = {
       tab,
       close() {
@@ -165186,7 +167502,7 @@ ${h.text}`;
         }
         window.removeEventListener("scroll", onScroll, true);
         window.removeEventListener("resize", onResize);
-        document.removeEventListener("keydown", onKey3, true);
+        document.removeEventListener("keydown", onKey4, true);
         bar.remove();
         hl.remove();
         try {
@@ -165368,7 +167684,7 @@ ${h.text}`;
     importProjectZip: () => importProjectZip,
     safeRel: () => safeRel
   });
-  async function exportProjectZip() {
+  async function exportProjectZip(opts = {}) {
     if (!state.root) {
       setStatus(t("ui.common.cantOpenProject"));
       return false;
@@ -165403,7 +167719,7 @@ ${h.text}`;
         };
         await addDir2(state.root);
       }, { name: name5 });
-      const dest = await kapi.saveAsDialog((state.title || "project") + ".zip");
+      const dest = await kapi.saveAsDialog(opts && opts.name || (state.title || "project") + ".zip");
       if (!dest) return false;
       await withBusyTask(t("ui.exportZip.busyWriteFileZIP"), async ({ signal, progress }) => {
         const bytes = await zip.generateAsync({ type: "uint8array" }, (m) => progress(Math.round(m.percent), 100));
@@ -165490,7 +167806,7 @@ ${h.text}`;
     if (/^[a-zA-Z]:/.test(parts[0] || "")) return "";
     return parts.join("/");
   }
-  async function exportProjectJson() {
+  async function exportProjectJson(opts = {}) {
     if (!state.root) {
       setStatus(t("ui.common.cantOpenProject"));
       return false;
@@ -165518,7 +167834,7 @@ ${h.text}`;
         data2.sections.push(secData);
       }
       clearBusy();
-      const dest = await kapi.saveAsDialog((state.title || "project") + "-export.json");
+      const dest = await kapi.saveAsDialog(opts && opts.name || (state.title || "project") + "-export.json");
       if (!dest) return false;
       setBusy(t("ui.exportZip.busyWriteFileJSON"));
       await kapi.writeFile(dest, JSON.stringify(data2, null, 2));
@@ -165733,11 +168049,23 @@ ${h.text}`;
     activate(key2);
     renderHome(pane);
   }
+  function homeBrand(tag3) {
+    const h = el(tag3, "home-title");
+    for (const [cls, file] of [["k-logo-color", "app-icon.svg"], ["k-logo-white", "app-icon-white.svg"]]) {
+      const img = el("img", "home-title-logo " + cls);
+      img.src = "assets/" + file;
+      img.alt = "";
+      img.draggable = false;
+      h.append(img);
+    }
+    h.append(document.createTextNode("Killian 2"));
+    return h;
+  }
   async function renderHome(pane) {
     pane.innerHTML = "";
     const wrap2 = el("div", "home-wrap");
     const head2 = el("div", "home-head");
-    head2.append(el("h1", "home-title", "Killian 2"));
+    head2.append(homeBrand("h1"));
     head2.append(el("p", "home-sub", t("ui.home.appWriteNovelScreenplay")));
     const grid = el("div", "home-grid");
     grid.id = "home-grid";
@@ -166000,7 +168328,7 @@ ${h.text}`;
     }
     const box2 = el("div", "k-dialog k-home-dlg");
     const head2 = el("div", "home-head");
-    head2.append(el("h2", "home-title", "Killian 2"));
+    head2.append(homeBrand("h2"));
     head2.append(el("p", "home-sub", t("ui.home.appWriteNovelScreenplay")));
     const grid = el("div", "home-grid");
     const scroll = el("div", "home-dlg-scroll");
@@ -166040,7 +168368,7 @@ ${h.text}`;
     host2.dataset.ready = "1";
     const wrap2 = el("div", "home-wrap");
     const head2 = el("div", "home-head");
-    head2.append(el("h2", "home-title", "Killian 2"));
+    head2.append(homeBrand("h2"));
     const list3 = el("div", "home-grid");
     const { actions, corner } = buildHomeActions({ grid: list3 });
     actions.classList.add("home-actions-bottom");
@@ -167653,10 +169981,10 @@ details>summary::-webkit-details-marker{display:none}
       return { graph: ps.graph, analysis: ps.analysis };
     }
     const scenes = await collectScenes2();
-    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       try {
-        sc.body = sc.filePath ? parseMdFile24(await kapi.readFile(sc.filePath)).body || "" : "";
+        sc.body = sc.filePath ? parseMdFile25(await kapi.readFile(sc.filePath)).body || "" : "";
       } catch {
         sc.body = "";
       }
@@ -168432,11 +170760,11 @@ details>summary::-webkit-details-marker{display:none}
     return out;
   }
   async function loadSceneBodies(scenes) {
-    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       if (typeof sc.body === "string" || !sc.filePath) continue;
       try {
-        sc.body = parseMdFile24(await kapi.readFile(sc.filePath)).body || "";
+        sc.body = parseMdFile25(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         sc.body = "";
       }
@@ -169439,8 +171767,8 @@ ${tr2("mergeNote")}`,
   async function readSceneBody(node) {
     if (!node || !node.filePath) return "";
     try {
-      const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
-      return liveBody(node.filePath, parseMdFile24(await kapi.readFile(node.filePath)).body || "");
+      const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+      return liveBody(node.filePath, parseMdFile25(await kapi.readFile(node.filePath)).body || "");
     } catch (e) {
       log("warn", t("ui.branch.branchingReadBodyScene"), e);
       return "";
@@ -169451,7 +171779,7 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("noFile"));
       return false;
     }
-    const { parseMdFile: parseMdFile24, dumpMdFile: dumpMdFile10 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile25, dumpMdFile: dumpMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { tabHandle: tabHandle2 } = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
     const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
     const marker = "[" + text + "]";
@@ -169464,9 +171792,9 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("insertedDirty"));
       return true;
     }
-    const { meta: meta2, body } = parseMdFile24(await kapi.readFile(node.filePath));
+    const { meta: meta2, body } = parseMdFile25(await kapi.readFile(node.filePath));
     if (body.includes(marker)) return true;
-    await writeMdKeepingComments2(kapi, node.filePath, dumpMdFile10(meta2, append2(body)));
+    await writeMdKeepingComments2(kapi, node.filePath, dumpMdFile11(meta2, append2(body)));
     if (h && h.kind !== "wiki") await h.reloadFromDisk();
     return true;
   }
@@ -169481,9 +171809,9 @@ ${tr2("mergeNote")}`,
     let body = "";
     if (tab && (tab.editor || tab.sp)) body = (tab.editor || tab.sp).getMarkdown();
     if (!body) {
-      const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
       try {
-        body = parseMdFile24(await kapi.readFile(state.active.file)).body || "";
+        body = parseMdFile25(await kapi.readFile(state.active.file)).body || "";
       } catch {
       }
     }
@@ -169508,14 +171836,14 @@ ${tr2("mergeNote")}`,
     return missing.length;
   }
   async function scanAllScenes(scenes, redraw3) {
-    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const found2 = [];
     for (const sc of scenes) {
       if (!sc.filePath) continue;
       let body = "";
       try {
-        body = parseMdFile24(await kapi.readFile(sc.filePath)).body || "";
+        body = parseMdFile25(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         continue;
       }
@@ -170178,9 +172506,7 @@ ${preview2}` + (found2.length > 8 ? `
     state.meta.title = v2;
     state.title = v2;
     await saveProjectMeta();
-    document.title = v2 + " \u2014 Killian 2";
-    const tb2 = document.getElementById("tb-title");
-    if (tb2) tb2.textContent = v2 + " \u2014 Killian 2";
+    applyWindowTitle(v2);
     await buildTree2();
     setStatus(tf("ui.treeAct.renamedProject", v2));
     return v2;
@@ -170227,11 +172553,11 @@ ${preview2}` + (found2.length > 8 ? `
   async function duplicateSection(secPath) {
     const sec2 = await readSection(secPath);
     const secs = await listSections();
-    const title2 = copyName(sec2.title || secPath.split(/[\\/]/).pop(), secs.map((s) => s.title));
-    let dst = await kapi.join(state.root, safeName(title2));
-    if (await kapi.exists(dst)) dst += "-" + Date.now().toString(36).slice(-4);
+    const nb = await freeBookName(kapi, state.root, copyName(sec2.title || secPath.split(/[\\/]/).pop(), secs.map((s) => s.title)));
+    const title2 = nb.title;
+    const dst = await kapi.join(state.root, nb.folder);
     await copyTree(secPath, dst);
-    const next = { ...sec2, guid: guid(), title: title2, order: Math.max(0, ...secs.map((s) => s.order || 0)) + 1 };
+    const next = { ...sec2, guid: guid(), title: title2, folderName: nb.folder, order: Math.max(0, ...secs.map((s) => s.order || 0)) + 1 };
     delete next.locked;
     delete next.flag;
     await writeJson2(await kapi.join(dst, "section.json"), next);
@@ -170316,10 +172642,7 @@ ${preview2}` + (found2.length > 8 ? `
     const newTitle = title2 || entry.title || "";
     let at = afterGuid ? dList.findIndex((c) => c.guid === afterGuid) + 1 : dList.length;
     if (at <= 0 && afterGuid) at = dList.length;
-    let folderName = String(at + 1).padStart(2, "0") + " - " + safeName(newTitle || "chapter");
-    for (let n2 = 2; await kapi.exists(await kapi.join(dstD, "Chapters", folderName)); n2++) {
-      folderName = String(at + 1).padStart(2, "0") + " - " + safeName(newTitle || "chapter") + " " + n2;
-    }
+    const folderName = await freeChapterFolder(kapi, dstD, newTitle, dList.map((c) => c.folderName));
     const srcFolder = await kapi.join(srcD, "Chapters", entry.folderName);
     const dstFolder = await kapi.join(dstD, "Chapters", folderName);
     if (move) {
@@ -170480,7 +172803,7 @@ ${preview2}` + (found2.length > 8 ? `
   }
   async function readMemo(file) {
     try {
-      return (0, import_md17.parseMdFile)(await kapi.readFile(file));
+      return (0, import_md18.parseMdFile)(await kapi.readFile(file));
     } catch {
       return { meta: {}, body: "" };
     }
@@ -170502,7 +172825,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (v2 === "" || v2 === null || v2 === void 0) delete meta2[k];
       else meta2[k] = v2;
     }
-    await writeMdKeepingComments(kapi, file, (0, import_md17.dumpMdFile)(meta2, body));
+    await writeMdKeepingComments(kapi, file, (0, import_md18.dumpMdFile)(meta2, body));
     const tab = state.tabs.get(file);
     if (tab) {
       tab.meta = { ...tab.meta || {}, ...meta2 };
@@ -170545,7 +172868,7 @@ ${preview2}` + (found2.length > 8 ? `
       if (next[k].order === k + 1) continue;
       const { meta: meta2, body } = await readMemo(next[k].p);
       meta2.order = k + 1;
-      await writeMdKeepingComments(kapi, next[k].p, (0, import_md17.dumpMdFile)(meta2, body));
+      await writeMdKeepingComments(kapi, next[k].p, (0, import_md18.dumpMdFile)(meta2, body));
     }
     await buildTree2();
     return true;
@@ -170562,7 +172885,7 @@ ${preview2}` + (found2.length > 8 ? `
     const m = { ...meta2, title: title2, type: "memo" };
     delete m.locked;
     delete m.order;
-    await writeMdKeepingComments(kapi, dst, (0, import_md17.dumpMdFile)(m, body), srcFile);
+    await writeMdKeepingComments(kapi, dst, (0, import_md18.dumpMdFile)(m, body), srcFile);
     return dst;
   }
   async function duplicateMemo(file) {
@@ -171251,7 +173574,7 @@ ${preview2}` + (found2.length > 8 ? `
     }
     return ids;
   }
-  var import_md17, writeJson2, sortByOrder, bookStatusOptions, sceneStatusOptions, planStatusOptions, memoFlag, isMemoFlag, CLIP, fmtLocal, valueOf;
+  var import_md18, writeJson2, sortByOrder, bookStatusOptions, sceneStatusOptions, planStatusOptions, memoFlag, isMemoFlag, CLIP, fmtLocal, valueOf;
   var init_tree_actions = __esm({
     "src/tree-actions.js"() {
       init_i18n();
@@ -171261,11 +173584,12 @@ ${preview2}` + (found2.length > 8 ? `
       init_core();
       init_custom_status();
       init_ui();
+      init_disk_sync();
       init_color_util();
       init_logline_ui();
       init_logline();
       init_json_store();
-      import_md17 = __toESM(require_md());
+      import_md18 = __toESM(require_md());
       init_comment_core();
       init_icons();
       init_section_ops();
@@ -171273,6 +173597,7 @@ ${preview2}` + (found2.length > 8 ? `
       init_tree_menu_spec();
       init_tree_item_meta();
       init_locale();
+      init_win_title();
       writeJson2 = (p, v2) => kapi.writeFile(p, JSON.stringify(v2, null, 2));
       sortByOrder = (list3) => (list3 || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
       bookStatusOptions = () => SECTION_STATUSES.map(([k, label2]) => [k, label2]);
@@ -171694,7 +174019,7 @@ ${preview2}` + (found2.length > 8 ? `
         let body = "", meta2 = {};
         const h = tabHandle(file);
         try {
-          const parsed = (0, import_md18.parseMdFile)(await kapi.readFile(file));
+          const parsed = (0, import_md19.parseMdFile)(await kapi.readFile(file));
           meta2 = parsed.meta;
           body = parsed.body;
         } catch {
@@ -171727,8 +174052,8 @@ ${preview2}` + (found2.length > 8 ? `
         if (h && h.dirty && (h.kind === "prose" || h.kind === "sp")) {
           h.setText(r.text, { keepAlign: true });
         } else {
-          const { meta: meta2 } = (0, import_md18.parseMdFile)(await kapi.readFile(d.file));
-          await writeKeepingComments2(d.file, (0, import_md18.dumpMdFile)(meta2, r.text));
+          const { meta: meta2 } = (0, import_md19.parseMdFile)(await kapi.readFile(d.file));
+          await writeKeepingComments2(d.file, (0, import_md19.dumpMdFile)(meta2, r.text));
           if (h) await h.reloadFromDisk();
         }
         files++;
@@ -171863,13 +174188,13 @@ ${preview2}` + (found2.length > 8 ? `
     if (initial) await preview2();
     return { ov, close: close2, preview: preview2, run: run3, iFind, iWith, cCase, cWord, cRe };
   }
-  var import_md18, SKIP4;
+  var import_md19, SKIP4;
   var init_project_replace_ui = __esm({
     "src/project-replace-ui.js"() {
       init_i18n();
       init_core();
       init_ui();
-      import_md18 = __toESM(require_md());
+      import_md19 = __toESM(require_md());
       init_project_replace();
       init_tab_bridge();
       init_project_scan();
@@ -171923,7 +174248,7 @@ ${preview2}` + (found2.length > 8 ? `
       try {
         const { value: idx4, fresh } = await withBusyTask(t("ui.search.busyIndex"), ({ signal, progress }) => runFresh(
           GS.epoch,
-          () => indexProject(root, kapi, import_md19.parseMdFile, { includeJson, skipDirs: SEARCH_SKIP_DIRS, signal, onProgress: progress }),
+          () => indexProject(root, kapi, import_md20.parseMdFile, { includeJson, skipDirs: SEARCH_SKIP_DIRS, signal, onProgress: progress }),
           { maxRounds: 2 }
         ), { name: t("ui.search.indexName") });
         if (state.root !== root) return null;
@@ -172219,12 +174544,12 @@ ${preview2}` + (found2.length > 8 ? `
     });
     return ui;
   }
-  var import_md19, GS, HOOK, extOf, SEARCH_DEBOUNCE_MS;
+  var import_md20, GS, HOOK, extOf, SEARCH_DEBOUNCE_MS;
   var init_global_search = __esm({
     "src/global-search.js"() {
       init_i18n();
       init_core();
-      import_md19 = __toESM(require_md());
+      import_md20 = __toESM(require_md());
       init_search_engine();
       init_icons();
       init_cancel();
@@ -172442,7 +174767,7 @@ ${preview2}` + (found2.length > 8 ? `
       const th = el("th");
       th.style.width = col.w;
       th.textContent = (col.key === _sortCol ? _sortDir === "asc" ? gi("triangle-up") + " " : gi("triangle-down") + " " : "") + col.label;
-      th.style.cursor = "pointer";
+      th.style.cursor = "default";
       th.onclick = () => {
         if (_sortCol === col.key) _sortDir = _sortDir === "asc" ? "desc" : "asc";
         else {
@@ -172458,7 +174783,7 @@ ${preview2}` + (found2.length > 8 ? `
     const tbody = el("tbody");
     for (const sc of filtered) {
       const row4 = el("tr", "sc-tbl-row");
-      row4.style.cursor = "pointer";
+      row4.style.cursor = "default";
       row4.onclick = async () => {
         if (!sc.filePath) return;
         const { openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
@@ -172603,7 +174928,7 @@ ${preview2}` + (found2.length > 8 ? `
     };
     stage.onclick = (e) => go(e.clientX < window.innerWidth / 2 ? -1 : 1);
     boxWrap.onclick = () => go(1);
-    const onKey3 = (e) => {
+    const onKey4 = (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
         return closeVisPlayer();
@@ -172631,8 +174956,8 @@ ${preview2}` + (found2.length > 8 ? `
         return toggleText();
       }
     };
-    document.addEventListener("keydown", onKey3, true);
-    _cur = { ov, onKey: onKey3, at: () => i5, go, draw: draw3, toggleText, isHidden: () => hidden2 };
+    document.addEventListener("keydown", onKey4, true);
+    _cur = { ov, onKey: onKey4, at: () => i5, go, draw: draw3, toggleText, isHidden: () => hidden2 };
     ov.focus();
     draw3();
     return _cur;
@@ -172679,12 +175004,12 @@ ${preview2}` + (found2.length > 8 ? `
     const i5 = Math.max(String(p).lastIndexOf("/"), String(p).lastIndexOf("\\"));
     return i5 < 0 ? "" : String(p).slice(0, i5);
   }
-  function baseOf(p) {
+  function baseOf2(p) {
     const i5 = Math.max(String(p).lastIndexOf("/"), String(p).lastIndexOf("\\"));
     return String(p).slice(i5 + 1);
   }
   async function visPathOf(scenePath2) {
-    return kapi.join(dirOf2(scenePath2), visFileName(baseOf(scenePath2)));
+    return kapi.join(dirOf2(scenePath2), visFileName(baseOf2(scenePath2)));
   }
   async function hasVis(scenePath2) {
     try {
@@ -172695,7 +175020,7 @@ ${preview2}` + (found2.length > 8 ? `
   }
   async function loadAll2(scenePath2) {
     const raw = await kapi.readFile(scenePath2);
-    const { meta: meta2, body } = (0, import_md20.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md21.parseMdFile)(raw);
     const format3 = meta2.format === "screenplay" ? "screenplay" : "prose";
     const vp = await visPathOf(scenePath2);
     let rows = [];
@@ -172709,7 +175034,7 @@ ${preview2}` + (found2.length > 8 ? `
       rows,
       lines: splitLines(body, format3),
       comments: parseComments(raw),
-      sceneTitle: meta2.title || baseOf(scenePath2).replace(/\.md$/i, ""),
+      sceneTitle: meta2.title || baseOf2(scenePath2).replace(/\.md$/i, ""),
       format: format3
     };
   }
@@ -173237,7 +175562,7 @@ ${preview2}` + (found2.length > 8 ? `
     else await createVisual(f, tab.title);
     return true;
   }
-  var import_md20, VIS_TAB, COL_LABEL, _imgUrl;
+  var import_md21, VIS_TAB, COL_LABEL, _imgUrl;
   var init_vis_ui = __esm({
     "src/visual/vis-ui.js"() {
       init_core();
@@ -173245,7 +175570,7 @@ ${preview2}` + (found2.length > 8 ? `
       init_gallery();
       init_wiki();
       init_comment_core();
-      import_md20 = __toESM(require_md());
+      import_md21 = __toESM(require_md());
       init_vis_core();
       init_icons();
       VIS_TAB = "::vis::";
@@ -173361,14 +175686,14 @@ ${preview2}` + (found2.length > 8 ? `
         return;
       }
       const { ask: ask2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
-      const { safeName: safeName6, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+      const { safeName: safeName5, buildTree: buildTree3 } = await Promise.resolve().then(() => (init_app(), app_exports));
       const title2 = await ask2(t("ui.notes.nameNoteMemo"), { value: ta.value.trim().slice(0, 40).split("\n")[0] });
       if (!title2) return;
       const memoDir = await kapi.join(state.root, "Memos");
       await kapi.mkdir(memoDir);
-      const fname = safeName6(title2) + "-" + Date.now().toString(36) + ".md";
-      const { dumpMdFile: dumpMdFile10 } = await Promise.resolve().then(() => __toESM(require_md()));
-      await kapi.writeFile(await kapi.join(memoDir, fname), dumpMdFile10({ title: title2, type: "memo" }, ta.value));
+      const fname = safeName5(title2) + "-" + Date.now().toString(36) + ".md";
+      const { dumpMdFile: dumpMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
+      await kapi.writeFile(await kapi.join(memoDir, fname), dumpMdFile11({ title: title2, type: "memo" }, ta.value));
       setStatus(t("ui.notes.moveInMemoDone") + title2);
       await buildTree3();
     };
@@ -175007,6 +177332,62 @@ ${preview2}` + (found2.length > 8 ? `
     }
   });
 
+  // src/quick-open-filter.js
+  function qoKind(rel) {
+    const parts = String(rel || "").split("/").filter(Boolean);
+    if (!parts.length) return "";
+    const name5 = parts[parts.length - 1];
+    if (name5.startsWith(".")) return "";
+    if (parts.slice(0, -1).some(qoSkipDir)) return "";
+    const lc = name5.toLowerCase();
+    if (REGISTRY.has(lc) || /\.unreadable-/.test(lc)) return "";
+    const ext = lc.includes(".") ? lc.split(".").pop() : "";
+    if (ext === "md") return "scene";
+    if (ext === "json") return WIKI_TOP.has(String(parts[0]).toLowerCase()) && parts.length > 1 ? "entity" : "text";
+    if (ext === "txt") return "text";
+    return "other";
+  }
+  function qoSort(files) {
+    return (files || []).slice().sort((a, b) => (RANK[a.kind] ?? 9) - (RANK[b.kind] ?? 9) || String(a.rel).localeCompare(String(b.rel)));
+  }
+  var QO_SKIP_DIRS, SKIP_LC, qoSkipDir, REGISTRY, WIKI_TOP, RANK;
+  var init_quick_open_filter = __esm({
+    "src/quick-open-filter.js"() {
+      QO_SKIP_DIRS = [
+        "Snapshots",
+        "Backups",
+        "Recycle",
+        "node_modules",
+        "OnSet",
+        "Planners",
+        "FloorPlans",
+        "Branches",
+        "Plugins"
+      ];
+      SKIP_LC = new Set(QO_SKIP_DIRS.map((d) => d.toLowerCase()));
+      qoSkipDir = (name5) => {
+        const n2 = String(name5 || "");
+        return !n2 || n2.startsWith(".") || SKIP_LC.has(n2.toLowerCase());
+      };
+      REGISTRY = /* @__PURE__ */ new Set([
+        "project.khn.json",
+        "draft.json",
+        "scenes.json",
+        "section.json",
+        "templates.json",
+        "ai-key.json",
+        "timeline.json",
+        "maps.json",
+        "dictionary.json",
+        "roster.json",
+        "history.json",
+        "index.json"
+      ]);
+      WIKI_TOP = /* @__PURE__ */ new Set(["wiki", "bible"]);
+      RANK = { scene: 0, entity: 1, text: 2, other: 3 };
+    }
+  });
+
   // src/quick-open.js
   function quickOpenCache() {
     return { root: _cacheRoot, files: _cacheFiles };
@@ -175018,15 +177399,17 @@ ${preview2}` + (found2.length > 8 ? `
       for (const f of await kapi.listFiles(dir2, "").catch(() => [])) {
         const fp = await kapi.join(dir2, f);
         const rel = fp.slice(rootLen).replace(/^[\\/]/, "").replace(/\\/g, "/");
-        out.push({ path: fp, name: f, rel, ext: (f.split(".").pop() || "").toLowerCase() });
+        const kind = qoKind(rel);
+        if (!kind) continue;
+        out.push({ path: fp, name: f, rel, kind, ext: (f.split(".").pop() || "").toLowerCase() });
       }
       for (const d of await kapi.listDirs(dir2).catch(() => [])) {
-        if (SKIP_DIRS6.includes(d)) continue;
+        if (qoSkipDir(d)) continue;
         await scan(await kapi.join(dir2, d));
       }
     };
     await scan(root);
-    return out;
+    return qoSort(out);
   }
   function openQuickOpen() {
     if (!state.root) {
@@ -175046,7 +177429,7 @@ ${preview2}` + (found2.length > 8 ? `
     count.style.cssText = "margin-left:auto";
     const reBtn = el("button", "k-qo-refresh", gi("refresh"));
     reBtn.title = t("ui.quickOpen.scanFileNew");
-    reBtn.style.cssText = "border:none;background:none;cursor:pointer;font-size:13px";
+    reBtn.style.cssText = "border:none;background:none;cursor:default;font-size:13px";
     foot.append(hint, count, reBtn);
     box2.append(input, list3, foot);
     ov.append(box2);
@@ -175085,7 +177468,7 @@ ${preview2}` + (found2.length > 8 ? `
       selectedIdx = 0;
       results.forEach((f) => {
         const row4 = el("div", "k-qo-row");
-        const icon2 = f.ext === "md" ? gi("file") : f.ext === "json" ? gi("clipboard") : gi("paperclip");
+        const icon2 = f.kind === "scene" ? gi("file") : f.kind === "entity" ? gi("book-open") : f.ext === "json" ? gi("clipboard") : gi("paperclip");
         row4.append(el("span", "k-qo-icon", icon2));
         row4.append(el("span", "k-qo-name", f.name));
         row4.append(el("span", "k-qo-rel", f.rel));
@@ -175104,7 +177487,10 @@ ${preview2}` + (found2.length > 8 ? `
       ov.remove();
       const { openScene: openScene2, openPlainFile: openPlainFile2 } = await Promise.resolve().then(() => (init_app(), app_exports));
       if (f.ext === "md") openScene2(f.path, null);
-      else if (f.ext === "json" || f.ext === "txt") await openPlainFile2(f.path, f.name);
+      else if (f.kind === "entity") {
+        const { openEntity: openEntity2 } = await Promise.resolve().then(() => (init_wiki_ui(), wiki_ui_exports));
+        await openEntity2(f.path);
+      } else if (f.ext === "json" || f.ext === "txt") await openPlainFile2(f.path, f.name);
       else kapi.revealInOS(f.path);
     }
     reBtn.onclick = () => {
@@ -175138,78 +177524,171 @@ ${preview2}` + (found2.length > 8 ? `
     input.focus();
     return ready2;
   }
-  var SKIP_DIRS6, _cacheRoot, _cacheFiles;
+  var _cacheRoot, _cacheFiles;
   var init_quick_open = __esm({
     "src/quick-open.js"() {
       init_i18n();
       init_core();
       init_fuse();
       init_icons();
-      SKIP_DIRS6 = ["Snapshots", "Backups", "Recycle", "node_modules", ".git"];
+      init_quick_open_filter();
       _cacheRoot = null;
       _cacheFiles = [];
     }
   });
 
-  // src/typewriter.js
-  function isTypewriter() {
-    return _twActive;
-  }
-  function toggleTypewriter(on2) {
-    const want = on2 === void 0 ? !_twActive : !!on2;
-    if (want === _twActive) return _twActive;
-    _twActive = want;
-    if (_twActive) {
-      document.addEventListener("keyup", twScrollSoon);
-      document.addEventListener("click", twScrollSoon);
-      twScroll();
-    } else {
-      document.removeEventListener("keyup", twScrollSoon);
-      document.removeEventListener("click", twScrollSoon);
-      if (_twFrame) {
-        cancelAnimationFrame(_twFrame);
-        _twFrame = 0;
+  // src/a11y/line-band.js
+  var line_band_exports = {};
+  __export(line_band_exports, {
+    applyLineBand: () => applyLineBand,
+    lineBandState: () => lineBandState,
+    refreshLineBandNow: () => refreshLineBandNow,
+    scheduleLineBand: () => scheduleLineBand
+  });
+  function activeView() {
+    const ae = document.activeElement;
+    const pm2 = ae && ae.closest ? ae.closest(".ProseMirror") : null;
+    if (pm2) {
+      for (const t4 of state.tabs.values()) {
+        const v2 = t4.editor && t4.editor.view || t4.sp && t4.sp.view;
+        if (v2 && v2.dom === pm2) return v2;
       }
     }
-    return _twActive;
+    const t3 = state.active;
+    return t3 && (t3.editor && t3.editor.view || t3.sp && t3.sp.view) || null;
   }
-  function twScrollSoon() {
-    if (_twFrame) return;
-    _twFrame = requestAnimationFrame(() => {
-      _twFrame = 0;
-      twScroll();
-    });
+  function hide() {
+    if (_band) _band.style.display = "none";
+    _box = null;
   }
-  function scrollHost(pm2) {
-    const pane = pm2.closest(".pane");
-    if (pane) return pane;
-    let n2 = pm2.parentElement;
-    while (n2 && n2 !== document.body) {
-      const ov = getComputedStyle(n2).overflowY;
-      if (ov === "auto" || ov === "scroll" || ov === "overlay") return n2;
-      n2 = n2.parentElement;
+  function update() {
+    if (!_cfg2.lineBand || document.body.classList.contains("reading-mode")) {
+      hide();
+      return false;
     }
-    return null;
-  }
-  function twScroll() {
-    if (!_twActive) return false;
-    const cur = cursorBlock();
-    if (!cur) return false;
-    const { pm: pm2, blk } = cur;
-    const host2 = scrollHost(pm2);
-    if (!host2) return false;
-    const pr = host2.getBoundingClientRect();
-    const br = blk.getBoundingClientRect();
-    const target = host2.scrollTop + (br.top - pr.top) - pr.height / 2 + br.height / 2;
-    host2.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+    const view2 = activeView();
+    if (!view2 || !view2.dom || !view2.dom.isConnected) {
+      hide();
+      return false;
+    }
+    const host2 = scrollHost(view2.dom);
+    if (!host2) {
+      hide();
+      return false;
+    }
+    let caret = null;
+    try {
+      caret = view2.coordsAtPos(view2.state.selection.head);
+    } catch {
+      caret = null;
+    }
+    if (!caret) {
+      hide();
+      return false;
+    }
+    const paper = view2.dom.getBoundingClientRect();
+    const box2 = bandBox({
+      caret,
+      paper,
+      host: host2.getBoundingClientRect(),
+      scrollLeft: host2.scrollLeft,
+      scrollTop: host2.scrollTop
+    });
+    if (!box2) {
+      hide();
+      return false;
+    }
+    if (!_band) {
+      _band = el("div", BAND_CLASS);
+      _band.setAttribute("aria-hidden", "true");
+    }
+    if (_band.parentNode !== host2) {
+      if (getComputedStyle(host2).position === "static") {
+        hide();
+        return false;
+      }
+      host2.appendChild(_band);
+    }
+    const st = _band.style;
+    st.display = "block";
+    st.top = box2.top + "px";
+    st.left = box2.left + "px";
+    st.width = box2.width + "px";
+    st.height = box2.height + "px";
+    st.background = _cfg2.lineBandColor;
+    st.opacity = String(_cfg2.lineBandOpacity);
+    let ink = "";
+    try {
+      ink = getComputedStyle(view2.dom).color;
+    } catch {
+    }
+    st.mixBlendMode = bandBlend(ink);
+    _box = box2;
     return true;
   }
-  var _twActive, _twFrame;
-  var init_typewriter = __esm({
-    "src/typewriter.js"() {
-      init_focus_mode();
-      _twActive = false;
-      _twFrame = 0;
+  function scheduleLineBand() {
+    if (!_cfg2.lineBand || _job) return;
+    _job = requestAnimationFrame(() => {
+      _job = 0;
+      try {
+        update();
+      } catch {
+        hide();
+      }
+    });
+  }
+  function applyLineBand(settings) {
+    _cfg2 = normA11y(settings);
+    if (_cfg2.lineBand && !_bound4) {
+      document.addEventListener("selectionchange", scheduleLineBand);
+      document.addEventListener("input", scheduleLineBand, true);
+      document.addEventListener("keyup", scheduleLineBand, true);
+      document.addEventListener("mouseup", scheduleLineBand, true);
+      document.addEventListener("focusin", scheduleLineBand, true);
+      window.addEventListener("resize", scheduleLineBand);
+      _bound4 = true;
+    }
+    if (_cfg2.lineBand) scheduleLineBand();
+    else {
+      if (_job) {
+        cancelAnimationFrame(_job);
+        _job = 0;
+      }
+      hide();
+    }
+    return _cfg2.lineBand;
+  }
+  function refreshLineBandNow() {
+    try {
+      return update();
+    } catch {
+      hide();
+      return false;
+    }
+  }
+  function lineBandState() {
+    const vis = !!(_band && _band.isConnected && _band.style.display !== "none");
+    return {
+      on: _cfg2.lineBand,
+      visible: vis,
+      box: _box ? { ..._box } : null,
+      color: _cfg2.lineBandColor,
+      opacity: _cfg2.lineBandOpacity,
+      blend: _band ? _band.style.mixBlendMode : ""
+    };
+  }
+  var BAND_CLASS, _cfg2, _bound4, _job, _band, _box;
+  var init_line_band = __esm({
+    "src/a11y/line-band.js"() {
+      init_core();
+      init_typewriter();
+      init_a11y_core();
+      BAND_CLASS = "k-line-band";
+      _cfg2 = normA11y(null);
+      _bound4 = false;
+      _job = 0;
+      _band = null;
+      _box = null;
     }
   });
 
@@ -175242,7 +177721,7 @@ ${preview2}` + (found2.length > 8 ? `
           files.push({ src: await kapi.join(dir2, name5), rel: rel ? rel + "/" + name5 : name5 });
         }
         for (const name5 of await kapi.listDirs(dir2).catch(() => [])) {
-          if (SKIP_DIRS7.includes(name5)) continue;
+          if (SKIP_DIRS6.includes(name5)) continue;
           await scan(await kapi.join(dir2, name5), rel ? rel + "/" + name5 : name5);
         }
       };
@@ -175293,14 +177772,14 @@ ${preview2}` + (found2.length > 8 ? `
       });
     }, 60 * 60 * 1e3);
   }
-  var SKIP_DIRS7, SKIP_ROOT_FILES, MAX_KEEP, BACKUP_DONE_MARK, backupTimer;
+  var SKIP_DIRS6, SKIP_ROOT_FILES, MAX_KEEP, BACKUP_DONE_MARK, backupTimer;
   var init_backup = __esm({
     "src/backup.js"() {
       init_i18n();
       init_core();
       init_ui();
       init_local_date();
-      SKIP_DIRS7 = ["Recycle", "Snapshots", ".k2history", "Backups", "Research"];
+      SKIP_DIRS6 = ["Recycle", "Snapshots", ".k2history", "Backups", "Research"];
       SKIP_ROOT_FILES = ["ai-key.json"];
       MAX_KEEP = 7;
       BACKUP_DONE_MARK = ".k2backup-done.json";
@@ -175378,7 +177857,7 @@ ${preview2}` + (found2.length > 8 ? `
             const fp = await kapi.join(dp, "Chapters", ch.folderName, sc.fileName);
             try {
               const raw = await kapi.readFile(fp);
-              const { body: md } = (0, import_md21.parseMdFile)(raw);
+              const { body: md } = (0, import_md22.parseMdFile)(raw);
               const clean3 = stripMentions(stripComments2(md));
               let inner = mdToHtmlBody(clean3);
               if (o.embedImages) inner = await embedImages(inner, imgCache);
@@ -175534,7 +178013,7 @@ ${a[3]}<p style="color:#999;font-size:12px;margin-top:40px">${tx("ui.exportBlog.
     };
     escClose(ov, () => ov.remove());
   }
-  async function exportBlogHTML(preset) {
+  async function exportBlogHTML(preset, opts = {}) {
     if (!state.root) {
       setStatus(t("ui.common.cantOpenProject"));
       return false;
@@ -175546,7 +178025,7 @@ ${a[3]}<p style="color:#999;font-size:12px;margin-top:40px">${tx("ui.exportBlog.
       state.meta.blogExport = o;
       const { html, nScenes, nImages, skipped } = await buildBlogHtml(o);
       clearBusy();
-      const dest = await kapi.saveAsDialog((state.title || "blog") + "-blog.html", "html");
+      const dest = await kapi.saveAsDialog(opts && opts.name || (state.title || "blog") + "-blog.html", "html");
       if (!dest) return false;
       setBusy(t("ui.exportBlog.busyWriteFileHTML"));
       await kapi.writeFile(dest, html);
@@ -175566,14 +178045,14 @@ ${a[3]}<p style="color:#999;font-size:12px;margin-top:40px">${tx("ui.exportBlog.
       clearBusy();
     }
   }
-  var import_md21, SKIP_SECTIONS, BLOG_THEMES, DEFAULT_OPTS, MIME2;
+  var import_md22, SKIP_SECTIONS, BLOG_THEMES, DEFAULT_OPTS, MIME2;
   var init_export_blog = __esm({
     "src/export-blog.js"() {
       init_i18n_html();
       init_i18n();
       init_core();
       init_compile();
-      import_md21 = __toESM(require_md());
+      import_md22 = __toESM(require_md());
       init_ui();
       init_icons();
       SKIP_SECTIONS = ["Wiki", "Bible", "Images", "Memos", "Recycle", "Snapshots", ".k2history", "Backups", "Plugins", "Research"];
@@ -175635,8 +178114,8 @@ img{max-width:100%}` }
   async function createProjectFromTemplate(parentDir, projectName, tplKey) {
     const tpl = TEMPLATES[tplKey];
     if (!tpl) return false;
-    const { safeName: safeName6, guid: guid3 } = await Promise.resolve().then(() => (init_app(), app_exports));
-    const root = await kapi.join(parentDir, safeName6(projectName));
+    const { safeName: safeName5, guid: guid3 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const root = await kapi.join(parentDir, safeName5(projectName));
     if (await kapi.exists(await kapi.join(root, "project.khn.json"))) {
       setStatus(t("ui.project.hasProject"));
       return false;
@@ -175654,36 +178133,41 @@ img{max-width:100%}` }
       // หมวดที่ไม่ใช่หมวดมาตรฐานเท่านั้นที่ต้องประกาศ (BUILTIN_CATS มีอยู่แล้วในตัวโปรแกรม)
       wikiCats: tpl.wikiCats.filter((k) => !["characters", "locations", "items", "lore"].includes(k)).map((k) => ({ key: k, label: CAT_LABEL[k] || k, icon: CAT_ICON[k] || gi("bookmark") }))
     });
+    const usedBooks = [];
     for (let si = 0; si < tpl.sections.length; si++) {
       const sec2 = tpl.sections[si];
-      const secPath = await kapi.join(root, safeName6(sec2.title));
+      const secTitle = sec2.title || defaultBookName(usedBooks);
+      const secFolder = freeName2(diskBase(secTitle, "Book"), usedBooks);
+      usedBooks.push(secFolder);
+      const secPath = await kapi.join(root, secFolder);
       await W(await kapi.join(secPath, "section.json"), {
         guid: guid3(),
-        title: sec2.title,
-        order: si + 1
+        title: secFolder === diskBase(secTitle, "Book") ? secTitle : secFolder,
+        order: si + 1,
+        folderName: secFolder
       });
       const dr = await kapi.join(secPath, "Draft", "default");
-      const chData = sec2.chapters.map((title2, ci) => ({
-        guid: guid3(),
-        title: title2,
-        order: ci + 1,
-        folderName: String(ci + 1).padStart(2, "0") + " - " + title2
-      }));
+      const usedCh = [];
+      const chData = sec2.chapters.map((title2, ci) => {
+        const folderName = freeName2(diskBase(title2, "chapter"), usedCh);
+        usedCh.push(folderName);
+        return { guid: guid3(), title: title2, order: ci + 1, folderName };
+      });
       await W(await kapi.join(dr, "draft.json"), { chapters: chData });
       const scenesByCh = {};
-      const { dumpMdFile: dumpMdFile10 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { dumpMdFile: dumpMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
       for (const ch of chData) {
         const sc = {
           id: guid3(),
           title: t("ui.project.sceneFirst") + ch.title,
           order: 1,
-          fileName: "scene-01.md",
           chapterGuid: ch.guid
         };
+        sc.fileName = diskBase(sc.title, "scene") + ".md";
         scenesByCh[ch.guid] = [sc];
         await kapi.writeFile(
           await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-          dumpMdFile10({ title: sc.title, type: "scene", format: format3 }, "")
+          dumpMdFile11({ title: sc.title, type: "scene", format: format3 }, "")
         );
       }
       await W(await kapi.join(dr, "scenes.json"), { chapters: scenesByCh });
@@ -175705,17 +178189,14 @@ img{max-width:100%}` }
       const ov = el("div", "k-overlay");
       const box2 = el("div", "k-dialog");
       box2.append(el("div", "k-dlg-title", t("ui.project.newProjectTemplate")));
-      const grid = el("div");
-      grid.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0";
+      const grid = el("div", "k-newproj-grid");
       const entries = Object.entries(TEMPLATES);
       if (allowBlank) entries.unshift([BLANK_TEMPLATE, { name: t("ui.project.blankName"), desc: t("ui.project.blankDesc") }]);
       for (const [key2, tpl] of entries) {
-        const card = el("div", "tpl-card");
-        card.style.cssText = "padding:12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s";
-        const cName = el("div", null, tpl.name);
-        cName.style.cssText = "font-size:16px;font-weight:600;margin-bottom:4px";
-        const cDesc = el("div", null, tpl.desc);
-        cDesc.style.cssText = "font-size:12px;color:var(--dim)";
+        const card = el("div", "k-newproj-card");
+        card.setAttribute("role", "button");
+        const cName = el("div", "k-newproj-name", tpl.name);
+        const cDesc = el("div", "k-newproj-desc", tpl.desc);
         card.append(cName, cDesc);
         card.dataset.tpl = key2;
         card.tabIndex = 0;
@@ -175729,8 +178210,6 @@ img{max-width:100%}` }
           ov.remove();
           resolve(key2);
         };
-        card.onmouseenter = () => card.style.borderColor = "var(--accent)";
-        card.onmouseleave = () => card.style.borderColor = "";
         grid.append(card);
       }
       box2.append(grid);
@@ -175758,6 +178237,7 @@ img{max-width:100%}` }
       init_i18n();
       init_core();
       init_icons();
+      init_disk_names();
       CAT_LABEL = {
         characters: t("ui.common.character"),
         locations: t("ui.common.place"),
@@ -175769,7 +178249,7 @@ img{max-width:100%}` }
         novel: {
           name: t("ui.common.novel"),
           desc: t("ui.project.structureNovelChapterScene"),
-          sections: [{ title: t("ui.common.bookOne"), chapters: [t("ui.common.chapterOne2"), t("ui.project.chapterTwo")] }],
+          sections: [{ chapters: [t("ui.common.chapterOne2"), t("ui.project.chapterTwo")] }],
           wikiCats: ["characters", "locations", "lore"],
           templates: "default"
         },
@@ -175784,14 +178264,14 @@ img{max-width:100%}` }
         fantasy: {
           name: t("ui.project.fantasy"),
           desc: t("ui.project.novelFantasyWorldbuilding"),
-          sections: [{ title: t("ui.common.bookOne"), chapters: [t("ui.project.chapter"), t("ui.common.chapterOne2")] }],
+          sections: [{ chapters: [t("ui.project.chapter"), t("ui.common.chapterOne2")] }],
           wikiCats: ["characters", "locations", "items", "lore", "factions"],
           templates: "fantasy"
         },
         mystery: {
           name: t("ui.project.investigateBack"),
           desc: t("ui.project.novelInvestigateCharacterSuspect"),
-          sections: [{ title: t("ui.common.bookOne"), chapters: [t("ui.project.start"), t("ui.project.investigation"), t("ui.project.chapterSummary")] }],
+          sections: [{ chapters: [t("ui.project.start"), t("ui.project.investigation"), t("ui.project.chapterSummary")] }],
           wikiCats: ["characters", "locations", "items", "lore"],
           templates: "mystery"
         }
@@ -176277,7 +178757,7 @@ img{max-width:100%}` }
     const root = state.root;
     if (!root) return out;
     for (const nm of await kapi.listDirs(root).catch(() => [])) {
-      if (SKIP_DIRS8.includes(nm) || nm.startsWith(".")) continue;
+      if (SKIP_DIRS7.includes(nm) || nm.startsWith(".")) continue;
       const secPath = await kapi.join(root, nm);
       const sj = await kapi.join(secPath, "section.json");
       if (!await kapi.exists(sj)) continue;
@@ -176354,7 +178834,7 @@ img{max-width:100%}` }
     let m = meta2;
     if (!m) {
       try {
-        m = await kapi.exists(sc.path) ? (0, import_md22.parseMdFile)(await kapi.readFile(sc.path)).meta : {};
+        m = await kapi.exists(sc.path) ? (0, import_md23.parseMdFile)(await kapi.readFile(sc.path)).meta : {};
       } catch {
         m = {};
       }
@@ -176421,19 +178901,22 @@ img{max-width:100%}` }
     } catch {
     }
   }
-  var import_md22, SKIP_DIRS8, guid2, safeName4, EMPTY_SCENES, eq, isLockVal, LOCK_KEY, lockedErr, ok, err, HANDLERS;
+  var import_md23, SKIP_DIRS7, guid2, safeName4, EMPTY_SCENES, eq, isLockVal, LOCK_KEY, lockedErr, ok, err, HANDLERS;
   var init_ai_actions = __esm({
     "src/ai/ai-actions.js"() {
       init_i18n();
       init_core();
-      import_md22 = __toESM(require_md());
+      import_md23 = __toESM(require_md());
       init_project_scan();
       init_tab_bridge();
       init_json_store();
       init_scene_file_name();
+      init_disk_sync();
+      init_disk_names();
+      init_tab_bridge();
       init_comment_core();
       init_trash_path();
-      SKIP_DIRS8 = ["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle", "Sessions"];
+      SKIP_DIRS7 = ["Wiki", "Bible", "Images", "Memos", "Research", "Snapshots", "Plugins", "Recycle", "Sessions"];
       guid2 = () => "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       safeName4 = (s) => {
         const v2 = String(s || "").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "").trim();
@@ -176469,7 +178952,7 @@ img{max-width:100%}` }
           const sc = await findScene2(a);
           if (!sc) return err(tf("ui.aiActions.notFoundScene", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
-          const { meta: meta2, body } = (0, import_md22.parseMdFile)(raw);
+          const { meta: meta2, body } = (0, import_md23.parseMdFile)(raw);
           return ok(
             tf("ui.aiActions.readSceneDone", sc.title),
             { title: sc.title, book: sc.section, meta: meta2, text: liveBody(sc.path, body) }
@@ -176545,14 +179028,14 @@ img{max-width:100%}` }
           return ok(tf("ui.aiActions.moveTrashDone", hit.name));
         },
         async "book.create"(a) {
-          const title2 = String(a.title);
-          let dir2 = assertInside(await kapi.join(state.root, safeName4(title2)));
-          if (await kapi.exists(dir2)) dir2 += "-" + Date.now().toString(36).slice(-4);
+          const nb = await freeBookName(kapi, state.root, String(a.title));
+          const title2 = nb.title;
+          const dir2 = assertInside(await kapi.join(state.root, nb.folder));
           const books = await listBooks();
           const order = Math.max(0, ...books.map((b) => b.order || 0)) + 1;
           await kapi.writeFile(
             await kapi.join(dir2, "section.json"),
-            JSON.stringify({ guid: guid2(), title: title2, order }, null, 2)
+            JSON.stringify({ guid: guid2(), title: title2, order, folderName: nb.folder }, null, 2)
           );
           const dr = await kapi.join(dir2, "Draft", "default");
           const ch = {
@@ -176563,7 +179046,7 @@ img{max-width:100%}` }
             act: "I",
             date: "",
             isFavorite: false,
-            folderName: t("ui.common.chapterOne")
+            folderName: diskBase(t("ui.common.chapterOne2"), "chapter")
           };
           await kapi.writeFile(await kapi.join(dr, "draft.json"), JSON.stringify({ chapters: [ch] }, null, 2));
           await kapi.writeFile(await kapi.join(dr, "scenes.json"), JSON.stringify({ chapters: { [ch.guid]: [] } }, null, 2));
@@ -176589,9 +179072,10 @@ img{max-width:100%}` }
           if (await lockOfBookPath(b.path)) return lockedErr(b.title, "book");
           const df = await kapi.join(b.draftPath, "draft.json");
           let ch = null;
-          await mutateJson(kapi, df, (d) => {
+          await mutateJson(kapi, df, async (d) => {
             if ((d.chapters || []).some((c) => eq(c.title, a.title))) return false;
             const order = Math.max(0, ...(d.chapters || []).map((c) => c.order || 0)) + 1;
+            const folderName = await freeChapterFolder(kapi, b.draftPath, String(a.title), (d.chapters || []).map((c) => c.folderName));
             ch = {
               guid: guid2(),
               title: String(a.title),
@@ -176600,7 +179084,7 @@ img{max-width:100%}` }
               act: "I",
               date: "",
               isFavorite: false,
-              folderName: String(order).padStart(2, "0") + " - " + safeName4(a.title)
+              folderName
             };
             d.chapters = [...d.chapters || [], ch];
           }, { fallback: { chapters: [] } });
@@ -176617,11 +179101,16 @@ img{max-width:100%}` }
             const lk = isLockVal(c.ch.locked) ? "chapter" : await lockOfBookPath(b.path);
             if (lk) return lockedErr(c.ch.title || a.title, lk);
           }
-          await mutateJson(kapi, c.draftFile, (d) => {
-            const row4 = (d.chapters || []).find((x) => x.guid === c.ch.guid);
-            if (!row4) return false;
-            row4.title = String(a.newTitle);
-          });
+          const oldDir = await kapi.join(b.draftPath, "Chapters", c.ch.folderName || "");
+          let rn = null;
+          const run3 = async () => {
+            rn = await renameChapterOnDisk(kapi, b.draftPath, c.ch.guid, String(a.newTitle));
+            return rn.moved ? rn.to : null;
+          };
+          if (c.ch.folderName && !nameFits(String(a.newTitle), c.ch.folderName)) {
+            if (!(await movePathWithTabs(oldDir, run3)).ok) return err(tf("ui.aiActions.dirOpenUnsaved", c.ch.title || a.title));
+          } else await run3();
+          if (!rn || !rn.ok) return err(tf("ui.aiActions.notFoundChapter", a.title));
           return ok(tf("ui.aiActions.changeNameChapterDone", a.newTitle));
         },
         async "chapter.delete"(a) {
@@ -176672,9 +179161,9 @@ img{max-width:100%}` }
           const list0 = (snap2.chapters || {})[c.ch.guid] || [];
           if (list0.some((s) => eq(s.title, a.title))) return err(tf("ui.aiActions.chapterHasScene", a.title));
           const order0 = Math.max(0, ...list0.map((s) => s.order || 0)) + 1;
-          const fileName = await freeSceneFileName(b.draftPath, c.ch.folderName, order0, takenSceneFiles(snap2));
+          const fileName = await freeSceneFileName(b.draftPath, c.ch.folderName, String(a.title), takenSceneFiles(snap2));
           const file = assertInside(await kapi.join(chDir, fileName));
-          await kapi.writeFile(file, (0, import_md22.dumpMdFile)(
+          await kapi.writeFile(file, (0, import_md23.dumpMdFile)(
             { title: String(a.title), type: "scene", format: "prose", pov: "", tags: [] },
             String(a.text || "")
           ));
@@ -176710,7 +179199,7 @@ img{max-width:100%}` }
           const sc = await findScene2(a);
           if (!sc) return err(tf("ui.aiActions.notFoundSceneNew", a.title));
           const raw = await kapi.exists(sc.path) ? await kapi.readFile(sc.path) : "";
-          const { meta: meta2, body: diskBody } = (0, import_md22.parseMdFile)(raw);
+          const { meta: meta2, body: diskBody } = (0, import_md23.parseMdFile)(raw);
           const lk = await sceneLockOf(sc, meta2);
           if (lk) return lockedErr(sc.title, lk);
           const add2 = String(a.text || "");
@@ -176725,7 +179214,7 @@ img{max-width:100%}` }
             h.setText(next, { keepAlign: mode === "append" });
             return ok(msg + " \xB7 " + t("ui.aiActions.openTabUnsaved"));
           }
-          await writeMdKeepingComments(kapi, sc.path, (0, import_md22.dumpMdFile)(meta2, next));
+          await writeMdKeepingComments(kapi, sc.path, (0, import_md23.dumpMdFile)(meta2, next));
           if (live2) await h.reloadFromDisk();
           return ok(msg);
         },
@@ -176736,23 +179225,33 @@ img{max-width:100%}` }
             const lk = await sceneLockOf(sc);
             if (lk) return lockedErr(sc.title, lk);
           }
-          const sf = await kapi.join(sc.draftPath, "scenes.json");
-          await mutateJson(kapi, sf, (d) => {
-            let hit = false;
-            for (const k of Object.keys(d.chapters || {})) {
-              for (const s of d.chapters[k] || []) if (s.id === sc.id) {
-                s.title = String(a.newTitle);
-                hit = true;
+          const newTitle = String(a.newTitle);
+          if (!await kapi.exists(sc.path)) {
+            const sf = await kapi.join(sc.draftPath, "scenes.json");
+            await mutateJson(kapi, sf, (d) => {
+              let hit = false;
+              for (const k of Object.keys(d.chapters || {})) {
+                for (const s of d.chapters[k] || []) if (s.id === sc.id) {
+                  s.title = newTitle;
+                  hit = true;
+                }
               }
-            }
-            if (!hit) return false;
-          });
-          if (await kapi.exists(sc.path)) {
-            const { meta: meta2, body } = (0, import_md22.parseMdFile)(await kapi.readFile(sc.path));
-            await writeMdKeepingComments(kapi, sc.path, (0, import_md22.dumpMdFile)({ ...meta2, title: String(a.newTitle) }, body));
+              if (!hit) return false;
+            });
+            return ok(tf("ui.aiActions.changeNameSceneDone", a.newTitle));
           }
-          const h = tabHandle(sc.path);
-          if (h) h.rename(String(a.newTitle));
+          const chOf = { guid: sc.chapterId, folderName: String(sc.path).replace(/[\\/][^\\/]*$/, "").split(/[\\/]/).pop() };
+          let rn = null;
+          const run3 = async () => {
+            rn = await renameSceneOnDisk(kapi, sc.draftPath, chOf, sc.id, newTitle);
+            return rn.moved ? rn.to : null;
+          };
+          if (await sceneRenameTarget(kapi, sc.draftPath, chOf, sc.id, newTitle)) {
+            if (!(await movePathWithTabs(sc.path, run3)).ok) return err(tf("ui.aiActions.dirOpenUnsaved", sc.title));
+          } else await run3();
+          if (!rn || !rn.ok) return err(tf("ui.aiActions.notFoundScene", a.title));
+          const h = tabHandle(rn.to);
+          if (h) h.rename(newTitle);
           return ok(tf("ui.aiActions.changeNameSceneDone", a.newTitle));
         },
         async "scene.delete"(a) {
@@ -177110,8 +179609,8 @@ img{max-width:100%}` }
           return;
         }
         const raw = await kapi.readFile(file);
-        const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
-        parts.push("### " + label2 + "\n" + parseMdFile24(raw).body);
+        const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+        parts.push("### " + label2 + "\n" + parseMdFile25(raw).body);
       } catch {
       }
     };
@@ -177143,10 +179642,10 @@ img{max-width:100%}` }
   async function ragSource() {
     const scenes = [];
     const files = await allMdFiles(state.root);
-    const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const f of files) {
       try {
-        const { meta: meta2 = {}, body: diskBody = "" } = parseMdFile24(await kapi.readFile(f));
+        const { meta: meta2 = {}, body: diskBody = "" } = parseMdFile25(await kapi.readFile(f));
         const h = tabHandle(f);
         const body = h && h.kind !== "wiki" ? h.getText() : diskBody;
         if (!String(body).trim()) continue;
@@ -177223,9 +179722,9 @@ img{max-width:100%}` }
     }
     for (const f of files) {
       try {
-        const { parseMdFile: parseMdFile24 } = await Promise.resolve().then(() => __toESM(require_md()));
+        const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
         const raw = await kapi.readFile(f.path);
-        out += "\n\n### " + gt("paperclip") + " " + (f.name || f.path) + "\n" + parseMdFile24(raw).body;
+        out += "\n\n### " + gt("paperclip") + " " + (f.name || f.path) + "\n" + parseMdFile25(raw).body;
       } catch {
       }
     }
@@ -178514,7 +181013,7 @@ img{max-width:100%}` }
       try {
         let disk = null;
         try {
-          disk = (0, import_md23.parseMdFile)(await kapi.readFile(j.file)).body;
+          disk = (0, import_md24.parseMdFile)(await kapi.readFile(j.file)).body;
         } catch {
           disk = null;
         }
@@ -178741,7 +181240,7 @@ img{max-width:100%}` }
       if (e.target === ov) ov.remove();
     };
   }
-  var import_md23, SKIP_SECTIONS2;
+  var import_md24, SKIP_SECTIONS2;
   var init_ai_summary = __esm({
     "src/ai-summary.js"() {
       init_i18n();
@@ -178749,7 +181248,7 @@ img{max-width:100%}` }
       init_ai_settings();
       init_project_scan();
       init_num();
-      import_md23 = __toESM(require_md());
+      import_md24 = __toESM(require_md());
       init_tab_bridge();
       init_icons();
       init_locale();
@@ -180262,13 +182761,13 @@ img{max-width:100%}` }
     });
     return nodes;
   }
-  var import_md24, truncate;
+  var import_md25, truncate;
   var init_nav = __esm({
     "src/nav.js"() {
       init_i18n();
-      import_md24 = __toESM(require_md());
+      import_md25 = __toESM(require_md());
       truncate = (s, n2 = 42) => {
-        s = (0, import_md24.inlinePlainText)(String(s)).trim().replace(/\s+/g, " ");
+        s = (0, import_md25.inlinePlainText)(String(s)).trim().replace(/\s+/g, " ");
         return s.length > n2 ? s.slice(0, n2) + "\u2026" : s;
       };
     }
@@ -181215,7 +183714,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           failed: failedFlag,
           untrusted: !!(p && p.untrusted)
         }),
-        shadowed: false
+        // [alpha.169] ตัวโหลดไม่รันตัวที่ถูกทับแล้ว (เดิมรันทั้งคู่) จึงบอกมาเองว่าตัวนี้ทับของผู้ใช้อยู่
+        shadowed: !!p.shadowed
       };
       if (!prev) {
         byName.set(p.name, row4);
@@ -181266,6 +183766,28 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (!fp) return true;
     return !!(trust && root && trust[root] === fp);
   }
+  function manifestHot(m) {
+    return !!(m && typeof m === "object" && m.hotReload === true);
+  }
+  function pluginKey(origin, manifestText, code3) {
+    return String(origin || "") + ":" + hashText2(manifestText) + ":" + hashText2(code3);
+  }
+  function planReload(live2 = [], want = []) {
+    const wantBy = new Map((want || []).filter((w) => w && w.name).map((w) => [w.name, w]));
+    const keep = [], unload = [], restart = [];
+    for (const l of live2 || []) {
+      if (!l || !l.name) continue;
+      const w = wantBy.get(l.name);
+      if (w && w.key === l.key) {
+        keep.push(l.name);
+        continue;
+      }
+      unload.push(l.name);
+      if (!l.hot) restart.push(l.name);
+    }
+    const run3 = [...wantBy.keys()].filter((n2) => !keep.includes(n2));
+    return { keep, unload, run: run3, restart };
+  }
   function safePluginFolder(name5) {
     return String(name5 || "").trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/^\.+/, "").replace(/\s+/g, "-").slice(0, 60) || "plugin";
   }
@@ -181277,11 +183799,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       version: "1.0.0",
       author: "",
       description: "\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07 \u2014 \u0E19\u0E31\u0E1A\u0E04\u0E33\u0E43\u0E19\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48",
-      minAppVersion: String(appVersion || "")
+      minAppVersion: String(appVersion || ""),
+      // ตัวอย่างนี้ใช้แต่ของที่ลงทะเบียนผ่าน k2 + เก็บกวาดของตัวเองใน onUnload → ปิด/ถอน/แก้แล้วไม่ต้องเริ่มโปรแกรมใหม่
+      hotReload: true
     };
     const main = [
       "// \u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07 Killian 2",
-      '// \u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E17\u0E33\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23 k2 (\u0E14\u0E39\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E15\u0E47\u0E21\u0E43\u0E19\u0E41\u0E1C\u0E07 "\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19" \u2192 \u0E1B\u0E38\u0E48\u0E21 ?)',
+      '// \u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E17\u0E33\u0E44\u0E14\u0E49\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23 k2 (\u0E14\u0E39\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E15\u0E47\u0E21\u0E43\u0E19\u0E41\u0E1C\u0E07 "\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19" \u2192 \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E17\u0E33\u0E44\u0E14\u0E49 \xB7 \u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D: docs/plugin-dev.md)',
       "",
       'k2.registerCommand("\u0E19\u0E31\u0E1A\u0E04\u0E33\u0E43\u0E19\u0E09\u0E32\u0E01\u0E19\u0E35\u0E49", () => {',
       "  const md = k2.getMarkdown();",
@@ -181296,11 +183820,18 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       '    const d = document.createElement("div");',
       '    d.style.padding = "12px";',
       '    d.textContent = "\u0E41\u0E1C\u0E07\u0E19\u0E35\u0E49\u0E21\u0E32\u0E08\u0E32\u0E01\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 \u2014 \u0E41\u0E01\u0E49\u0E44\u0E1F\u0E25\u0E4C main.js \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22";',
-      /* /i18n-skip */
       "    host.appendChild(d);",
       "  },",
       "});",
+      "",
+      "// \u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21: project:open \xB7 project:close \xB7 tab:activate \xB7 tab:save \xB7 plugins:loaded",
+      'k2.on("tab:save", (e) => k2.log("saved " + e.file));',
+      "",
+      "// \u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E17\u0E33\u0E40\u0E2D\u0E07\u0E19\u0E2D\u0E01 k2 (\u0E15\u0E31\u0E27\u0E08\u0E31\u0E1A\u0E40\u0E27\u0E25\u0E32 \xB7 \u0E15\u0E31\u0E27\u0E1F\u0E31\u0E07\u0E02\u0E2D\u0E07 DOM) \u0E15\u0E49\u0E2D\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48 \u2014 \u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E15\u0E2D\u0E19\u0E1B\u0E34\u0E14/\u0E16\u0E2D\u0E19/\u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48",
+      "const timer = setInterval(() => {}, 60000);",
+      "k2.onUnload(() => clearInterval(timer));",
       ""
+      /* /i18n-skip */
     ].join("\n");
     return { "plugin.json": JSON.stringify(manifest2, null, 2), "main.js": main };
   }
@@ -181323,6 +183854,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         { sig: "k2.getMarkdown() / k2.insertText(s)", key: "ui.plug.apiText" },
         { sig: "k2.getEditorView()", key: "ui.plug.apiView" },
         { sig: "k2.on / k2.off / k2.emit", key: "ui.plug.apiEvents" },
+        { sig: "k2.onUnload(fn)", key: "ui.plug.apiUnload" },
         { sig: "k2.readFile / writeFile / listFiles / listDirs", key: "ui.plug.apiFiles" },
         { sig: "k2.getSettings(key, def) / k2.setSettings(key, val)", key: "ui.plug.apiSettings" },
         { sig: "k2.menuPopup(items, x, y)", key: "ui.plug.apiMenu" },
@@ -181445,6 +183977,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   });
 
   // src/plugins/plugin-panel.js
+  var plugin_panel_exports = {};
+  __export(plugin_panel_exports, {
+    installFlow: () => installFlow,
+    makeSample: () => makeSample,
+    renderPluginPanel: () => renderPluginPanel,
+    resetPluginPanel: () => resetPluginPanel,
+    uninstall: () => uninstall
+  });
   function resetPluginPanel() {
     state._plugins = null;
   }
@@ -181461,6 +184001,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     });
     const counts = pluginCounts(list3);
     h.append(buildBar3(h, counts, app));
+    if (info.restart && info.restart.length) h.append(restartBanner(info.restart, app));
     const body = el("div", "k-plug-list");
     h.append(body);
     if (!list3.length) {
@@ -181486,7 +184027,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     install.classList.add("k-ok");
     btns.append(install);
     btns.append(mkBtn(t("ui.plug.reloadAll"), t("ui.plug.reloadAllHint"), async () => {
-      await app.reloadPlugins();
+      await withRestartCheck(app, () => app.reloadPlugins());
       await renderPluginPanel(host2);
     }));
     const apiBtn = mkBtn(t("ui.plug.apiDoc"), t("ui.plug.apiDocHint"), async () => {
@@ -181538,6 +184079,35 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     bar.append(btns);
     return bar;
   }
+  async function restartApp(app) {
+    return app.confirmQuit({ quit: () => location.reload() });
+  }
+  function restartBanner(names, app) {
+    const box2 = el("div", "k-plug-restart");
+    box2.setAttribute("role", "status");
+    box2.append(el("span", "k-plug-restart-ico", gi("refresh")));
+    box2.append(el("div", "k-plug-restart-msg", tf("ui.plug.restartNeed", names.join(", "))));
+    const b = mkBtn(t("ui.plug.restartNow"), t("ui.plug.restartNowHint"), () => restartApp(app));
+    b.classList.add("k-plug-restart-btn");
+    box2.append(b);
+    return box2;
+  }
+  async function withRestartCheck(app, fn) {
+    const before = new Set(app.pluginsNeedRestart());
+    const out = await fn();
+    const fresh = app.pluginsNeedRestart().filter((n2) => !before.has(n2));
+    if (fresh.length) {
+      const { toast: toast2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+      toast2(tf("ui.plug.restartNeed", fresh.join(", ")), {
+        level: "warn",
+        ttl: 12e3,
+        // ไม่ค้างถาวร — แถบในแผงปลั๊กอินค้างให้อยู่แล้วจนกว่าจะเริ่มใหม่จริง
+        action: { label: t("ui.plug.restartNow"), onClick: () => restartApp(app) }
+      });
+      log("info", "plugin: restart needed", { names: fresh });
+    }
+    return out;
+  }
   function mkBtn(label2, title2, onClick) {
     const b = el("button", "k-plug-btn", label2);
     if (title2) b.title = title2;
@@ -181567,6 +184137,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const meta2 = [];
     if (p.author) meta2.push(t("ui.plug.author") + ": " + p.author);
     if (p.minAppVersion) meta2.push(t("ui.plug.minVer") + ": " + p.minAppVersion);
+    if (p.status === ST_OK) meta2.push(p.hotReload ? t("ui.plug.metaHot") : t("ui.plug.metaRestart"));
     if (meta2.length) card.append(el("div", "k-plug-meta dim", meta2.join(" \xB7 ")));
     if (p.status === ST_ERR && p.error) {
       const err2 = el("div", "k-plug-err");
@@ -181615,7 +184186,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const off3 = p.status === ST_OFF || p.status === ST_ERR;
       acts.append(mkBtn(off3 ? t("ui.plug.enable") : t("ui.plug.disable"), "", async () => {
         app.setPluginDisabled(p.name, !off3);
-        await app.reloadPlugins();
+        await withRestartCheck(app, () => app.reloadPlugins());
         await renderPluginPanel(host2);
         setStatus(off3 ? tf("ui.plug.enabled", p.name) : tf("ui.plug.disabled", p.name));
       }));
@@ -181648,7 +184219,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return false;
       }
       app.setPluginDisabled(p.name, false);
-      await app.reloadPlugins();
+      if (p.origin === ORIGIN_PROJECT && p.status !== ST_UNTRUSTED) await app.trustProjectPlugins();
+      await withRestartCheck(app, () => app.reloadPlugins());
       if (host2) await renderPluginPanel(host2);
       setStatus(tf("ui.plug.uninstalled", p.name));
       return true;
@@ -181715,7 +184287,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return false;
       }
       app.setPluginDisabled(folder, false);
-      await app.reloadPlugins();
+      await withRestartCheck(app, () => app.reloadPlugins());
       if (host2) await renderPluginPanel(host2);
       setStatus(tf("ui.plug.installed", folder, r.written));
       return true;
@@ -182206,7 +184778,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         const chTitle = (chTitleCache.get(sc.draftPath) || {})[sc.chapterId] || sc.chapterId;
         let meta2 = {}, body = "";
         try {
-          const p = (0, import_md25.parseMdFile)(sc.text || "");
+          const p = (0, import_md26.parseMdFile)(sc.text || "");
           meta2 = p.meta || {};
           body = p.body || "";
         } catch {
@@ -182541,7 +185113,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     let meta2 = {}, body = "";
     try {
-      const p = (0, import_md25.parseMdFile)(raw);
+      const p = (0, import_md26.parseMdFile)(raw);
       meta2 = p.meta || {};
       body = p.body || "";
     } catch {
@@ -182554,7 +185126,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     try {
       const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
-      await writeMdKeepingComments2(kapi, r.path, (0, import_md25.dumpMdFile)(meta2, out));
+      await writeMdKeepingComments2(kapi, r.path, (0, import_md26.dumpMdFile)(meta2, out));
     } catch (e) {
       setStatusError(t("ui.dialogue.errWrite") + " " + errText(e));
       return false;
@@ -182604,12 +185176,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       return false;
     }
   }
-  var import_md25, S7, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
+  var import_md26, S7, RESCAN_DELAY, _staleTimer, _scanning, rowKey;
   var init_dialogue_ui = __esm({
     "src/dialogue/dialogue-ui.js"() {
       init_i18n();
       init_core();
-      import_md25 = __toESM(require_md());
+      import_md26 = __toESM(require_md());
       init_project_scan();
       init_dialogue_core();
       init_icons();
@@ -184609,9 +187181,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       curPop = null;
       document.removeEventListener("mousedown", onDoc2);
     }
-    document.removeEventListener("keydown", onKey2, true);
+    document.removeEventListener("keydown", onKey3, true);
   }
-  function onKey2(e) {
+  function onKey3(e) {
     if (e.key !== "Escape" || !curPop) return;
     e.preventDefault();
     e.stopPropagation();
@@ -184713,7 +187285,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     pop.style.left = Math.max(8, Math.min(a.left, innerWidth - r.width - 8)) + "px";
     pop.style.top = Math.max(8, Math.min(a.bottom + 4, innerHeight - r.height - 8)) + "px";
     setTimeout(() => document.addEventListener("mousedown", onDoc2), 0);
-    document.addEventListener("keydown", onKey2, true);
+    document.addEventListener("keydown", onKey3, true);
     return pop;
   }
   var import_text_color3, curPop;
@@ -184804,7 +187376,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       meta2 = tab.meta || {};
     } else {
       try {
-        const p = (0, import_md26.parseMdFile)(await kapi.readFile(c.file));
+        const p = (0, import_md27.parseMdFile)(await kapi.readFile(c.file));
         body = p.body;
         meta2 = p.meta || {};
       } catch (e) {
@@ -184863,7 +187435,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     if (!rec) return false;
     rec.color = normColor2(color);
     await writeRecord(rec);
-    for (const tab of state.tabs.values()) if (tab._onset && tab._onset.id === sceneId) paint2(tab);
+    for (const tab of state.tabs.values()) if (tab._onset && tab._onset.id === sceneId) paint3(tab);
     return true;
   }
   function edOf(tab) {
@@ -184910,14 +187482,14 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     tab._onset = { id, rec, view: "revised", baseKeys, ed };
     setOnsetCompare(ed.view, { other: baseKeys, side: "revised", lock: false });
-    paint2(tab);
+    paint3(tab);
     return true;
   }
   function detach(tab) {
     const ed = edOf(tab);
     if (ed && ed.view && !ed.view.isDestroyed) setOnsetCompare(ed.view, null);
     tab._onset = null;
-    paint2(tab);
+    paint3(tab);
   }
   function installProxies(tab, ed, saved) {
     const shadow = Object.create(ed, { view: { value: { state: saved, dom: ed.view.dom } } });
@@ -184966,7 +187538,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     v2.updateState(EditorState.create({ doc: doc3, plugins: saved.plugins }));
     setOnsetCompare(v2, { other: revisedKeys, side: "original", lock: true });
     tab._onset.view = "original";
-    paint2(tab);
+    paint3(tab);
     if (H2.afterSwap) H2.afterSwap(tab);
     return true;
   }
@@ -184981,7 +187553,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       if (tab._onset) setOnsetCompare(ed.view, { other: tab._onset.baseKeys, side: "revised", lock: false });
     }
     if (tab._onset) tab._onset.view = "revised";
-    paint2(tab);
+    paint3(tab);
     if (H2.afterSwap) H2.afterSwap(tab);
     return true;
   }
@@ -185011,7 +187583,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     for (const tab of state.tabs.values()) if (tab._onsetSaved) did = exitOriginal(tab) || did;
     return did;
   }
-  function paint2(tab) {
+  function paint3(tab) {
     if (!tab || !tab.pane) return;
     const on2 = !!tab._onset;
     tab.pane.classList.toggle("k-onset-pane", on2);
@@ -185059,7 +187631,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   function onsetChanged(tab) {
     if (!tab || !tab._onset) return;
     clearTimeout(chipTimer);
-    chipTimer = setTimeout(() => paint2(tab), 200);
+    chipTimer = setTimeout(() => paint3(tab), 200);
   }
   function onsetMenuItems(tab, c = null) {
     const id = tab && tab._onset && tab._onset.id || c && c.sc && c.sc.id || "";
@@ -185114,7 +187686,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     return items;
   }
-  var import_md26, H2, IDX, READS, WRITES, VIEW_ONLY, chipTimer, COLOR_NAME;
+  var import_md27, H2, IDX, READS, WRITES, VIEW_ONLY, chipTimer, COLOR_NAME;
   var init_onset_ui = __esm({
     "src/onset-ui.js"() {
       init_i18n();
@@ -185122,7 +187694,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       init_ui();
       init_icons();
       init_dist4();
-      import_md26 = __toESM(require_md());
+      import_md27 = __toESM(require_md());
       init_onset_diff();
       init_onset_plugin();
       H2 = {};
@@ -185173,7 +187745,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         "line-numbers",
         "reading-mode",
         "focus-mode",
-        "typewriter"
+        "typewriter",
+        // [alpha.169 · a11y] สวิตช์ช่วยการเข้าถึงไม่อ่าน/ไม่เขียนเนื้อ
+        "key-echo",
+        "line-band",
+        "osk",
+        "a11y-settings",
+        "type-sound"
       ]);
       chipTimer = null;
       COLOR_NAME = {
@@ -185481,7 +188059,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       const sp = workflows.find((w) => w.id === "screenplay");
       if (sp) return sp;
     }
-    const want = { pdf: "pdf", html: "html", txt: "txt", md: "md", rtf: "txt", fdx: "txt" }[fmtKey] || "md";
+    const want = { pdf: "pdf", html: "html", txt: "txt", md: "md", rtf: kind === "prose" ? "md" : "txt", fdx: "txt" }[fmtKey] || "md";
     return workflows.find((w) => w.ext === want && w.builtIn) || workflows.find((w) => w.ext === want) || workflows.find((w) => w.id === "manuscript") || workflows[0] || null;
   }
   function workflowForFormat(wf2, fmtKey) {
@@ -185634,7 +188212,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     collectImageSrcs: () => collectImageSrcs,
     imageSize: () => imageSize,
     mdToXhtmlSections: () => mdToXhtmlSections,
-    plainInline: () => plainInline,
+    plainInline: () => plainInline2,
     xmlEsc: () => xmlEsc
   });
   function hex6(c) {
@@ -185643,12 +188221,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const h = m[1].length === 3 ? m[1].split("").map((x) => x + x).join("") : m[1];
     return h.toUpperCase();
   }
-  function plainInline(text) {
+  function plainInline2(text) {
     return segsOf(text).map((s) => s.text.replace(RE_INLINE_IMG, (m, a) => a)).join("").trim();
   }
   function collectImageSrcs(md, { breakMarker = "" } = {}) {
     const out = /* @__PURE__ */ new Set();
-    for (const b of (0, import_md27.mdBlocks)(md, { breakMarker })) {
+    for (const b of (0, import_md28.mdBlocks)(md, { breakMarker })) {
       if (b.kind === "figure" && b.src) out.add(b.src);
       for (const m of String(b.text || "").matchAll(RE_INLINE_IMG)) if (m[2]) out.add(m[2]);
     }
@@ -185691,8 +188269,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return href ? `<img alt="${a}" src="${xmlEsc(href)}"/>` : a;
       });
       const marks2 = seg.marks || [];
-      const has2 = (n2) => marks2.some((m) => markName(m) === n2);
-      for (const [n2, tag3] of X_TAGS) if (has2(n2)) s = `<${tag3}>${s}</${tag3}>`;
+      const has3 = (n2) => marks2.some((m) => markName(m) === n2);
+      for (const [n2, tag3] of X_TAGS) if (has3(n2)) s = `<${tag3}>${s}</${tag3}>`;
       const col = marks2.find((m) => m && typeof m === "object" && m.type === "color");
       const h = col ? hex6((col.attrs || {}).color) : "";
       if (h) s = `<span style="color:#${h}">${s}</span>`;
@@ -185712,7 +188290,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       list3 = null;
     };
     const al = (a) => a ? ` style="text-align:${a}"` : "";
-    for (const b of (0, import_md27.mdBlocks)(md, { breakMarker })) {
+    for (const b of (0, import_md28.mdBlocks)(md, { breakMarker })) {
       if (b.kind === "pagebreak") {
         flushList();
         if (cur && cur.parts.length) start("");
@@ -185720,7 +188298,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       }
       if (b.kind === "h" && b.level <= splitLevel) {
         flushList();
-        const title2 = plainInline(b.text);
+        const title2 = plainInline2(b.text);
         if (!cur || cur.parts.length || cur.title) start(title2);
         else cur.title = title2;
       }
@@ -185858,18 +188436,18 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
     return { files, sections: sections.length, images: used.size };
   }
   function runXml(text, marks2, fontPt) {
-    const has2 = (n2) => (marks2 || []).some((m) => markName(m) === n2);
+    const has3 = (n2) => (marks2 || []).some((m) => markName(m) === n2);
     const rp = [];
-    if (has2("strong")) rp.push("<w:b/><w:bCs/>");
-    if (has2("em")) rp.push("<w:i/><w:iCs/>");
-    if (has2("underline")) rp.push('<w:u w:val="single"/>');
-    if (has2("strike")) rp.push("<w:strike/>");
+    if (has3("strong")) rp.push("<w:b/><w:bCs/>");
+    if (has3("em")) rp.push("<w:i/><w:iCs/>");
+    if (has3("underline")) rp.push('<w:u w:val="single"/>');
+    if (has3("strike")) rp.push("<w:strike/>");
     const col = (marks2 || []).find((m) => m && typeof m === "object" && m.type === "color");
     const h = col ? hex6((col.attrs || {}).color) : "";
     if (h) rp.push(`<w:color w:val="${h}"/>`);
     if (fontPt) rp.push(`<w:sz w:val="${Math.round(fontPt * 2)}"/><w:szCs w:val="${Math.round(fontPt * 2)}"/>`);
-    if (has2("sup")) rp.push('<w:vertAlign w:val="superscript"/>');
-    else if (has2("sub")) rp.push('<w:vertAlign w:val="subscript"/>');
+    if (has3("sup")) rp.push('<w:vertAlign w:val="superscript"/>');
+    else if (has3("sub")) rp.push('<w:vertAlign w:val="subscript"/>');
     const rPr = rp.length ? `<w:rPr>${rp.join("")}</w:rPr>` : "";
     return String(text).split("	").map((part, i5) => (i5 ? `<w:r>${rPr}<w:tab/></w:r>` : "") + (part ? `<w:r>${rPr}<w:t xml:space="preserve">${xmlEsc(part)}</w:t></w:r>` : "")).join("");
   }
@@ -185916,7 +188494,7 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
       body.push(xml);
       paragraphs2++;
     };
-    for (const b of (0, import_md27.mdBlocks)(md, { breakMarker: opts.breakMarker || "" })) {
+    for (const b of (0, import_md28.mdBlocks)(md, { breakMarker: opts.breakMarker || "" })) {
       if (b.kind !== "li") curList = null;
       switch (b.kind) {
         case "pagebreak":
@@ -186019,15 +188597,15 @@ ${[...media.values()].map((m) => `<Relationship Id="${m.rid}" Type="http://schem
     ];
     return { files, paragraphs: paragraphs2, images: media.size };
   }
-  var import_md27, clean, xmlEsc, markName, segsOf, RE_INLINE_IMG, EXT_TYPES, extOf2, X_TAGS, unesc, EPUB_CSS, xhtmlDoc, W_NS, JC, twip;
+  var import_md28, clean, xmlEsc, markName, segsOf, RE_INLINE_IMG, EXT_TYPES, extOf2, X_TAGS, unesc, EPUB_CSS, xhtmlDoc, W_NS, JC, twip;
   var init_export_ebook = __esm({
     "src/export-ebook.js"() {
-      import_md27 = __toESM(require_md());
+      import_md28 = __toESM(require_md());
       init_i18n();
       clean = (s) => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "");
       xmlEsc = (s) => clean(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       markName = (m) => typeof m === "string" ? m : m && m.type;
-      segsOf = (text) => (0, import_md27.parseInline)((0, import_md27.stripMentions)(String(text || ""))).filter((s) => s.text);
+      segsOf = (text) => (0, import_md28.parseInline)((0, import_md28.stripMentions)(String(text || ""))).filter((s) => s.text);
       RE_INLINE_IMG = /!\[([^\]]*)\]\(([^)\s]*)(?:\s+"[^"]*")?\)/g;
       EXT_TYPES = {
         png: "image/png",
@@ -186076,6 +188654,7 @@ ${body}
     TWIPS_PER_INCH: () => TWIPS_PER_INCH,
     TWIPS_PER_LINE: () => TWIPS_PER_LINE,
     escapeRtf: () => escapeRtf,
+    generateProseRtf: () => generateProseRtf,
     generateRtf: () => generateRtf,
     inTw: () => inTw,
     paraCtrl: () => paraCtrl,
@@ -186127,7 +188706,7 @@ ${body}
     return out;
   }
   function plainText2(s) {
-    return (0, import_md28.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2");
+    return (0, import_md29.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2");
   }
   function paraCtrl(el2, fmt2, fontPt) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
@@ -186210,10 +188789,99 @@ ${body}
     }
     return head2 + out.join("\n") + "\n}\n";
   }
-  var import_md28, TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize;
+  function rgbOf(c) {
+    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(c || "").trim());
+    if (!m) return null;
+    const h = m[1].length === 3 ? m[1].split("").map((x) => x + x).join("") : m[1];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function generateProseRtf(md, opts = {}) {
+    const paper = opts.paper || { width: 8.27, height: 11.69 };
+    const m = opts.margins || { top: 1, right: 1, bottom: 1, left: 1 };
+    const fs = rtfFs(opts.fontPt);
+    const colors = [];
+    const colorIdx = (c) => {
+      const rgb2 = rgbOf(c);
+      if (!rgb2) return 0;
+      const key2 = rgb2.join(",");
+      let i5 = colors.indexOf(key2);
+      if (i5 < 0) {
+        colors.push(key2);
+        i5 = colors.length - 1;
+      }
+      return i5 + 1;
+    };
+    const run3 = (text, marks2) => {
+      if (!text) return "";
+      const has3 = (n2) => (marks2 || []).some((x) => markName2(x) === n2);
+      let c = "";
+      if (has3("strong")) c += "\\b";
+      if (has3("em")) c += "\\i";
+      if (has3("underline")) c += "\\ul";
+      if (has3("strike")) c += "\\strike";
+      if (has3("sup")) c += "\\super";
+      else if (has3("sub")) c += "\\sub";
+      const col = (marks2 || []).find((x) => x && typeof x === "object" && x.type === "color");
+      const ci = col ? colorIdx((col.attrs || {}).color) : 0;
+      if (ci) c += "\\cf" + ci;
+      return c ? "{" + c + " " + escapeRtf(text) + "}" : escapeRtf(text);
+    };
+    const runsOf = (text, extra = []) => (0, import_md29.parseInline)((0, import_md29.stripMentions)(String(text || ""))).map((seg) => run3(seg.image ? String(seg.image.alt || "") : seg.text, [...seg.marks || [], ...extra])).join("");
+    const base4 = "\\pard\\plain\\f0\\fs" + fs;
+    const out = [];
+    let list3 = null;
+    for (const b of (0, import_md29.mdBlocks)(md, { breakMarker: opts.breakMarker || "" })) {
+      if (b.kind !== "li") list3 = null;
+      const al = RTF_ALIGN[b.align] || "";
+      switch (b.kind) {
+        case "pagebreak":
+          out.push("\\page");
+          break;
+        case "h": {
+          const hs = Math.round(fs * (RTF_HEAD_SCALE[Math.min(6, b.level)] || 1));
+          out.push("\\pard\\plain\\f0\\fs" + hs + "\\sb240\\sa120\\keepn" + al + "\\b " + runsOf(b.text) + "\\par");
+          break;
+        }
+        case "li": {
+          if (!list3 || list3.ordered !== b.ordered) list3 = { ordered: b.ordered, n: b.ordered && Number.isFinite(b.num) ? b.num : 1 };
+          else list3.n++;
+          const mark = b.ordered ? list3.n + "." : "\\bullet";
+          out.push(base4 + "\\li720\\fi-360\\sa60" + al + " " + mark + "\\tab " + runsOf(b.text) + "\\par");
+          break;
+        }
+        case "quote":
+          out.push(base4 + "\\li720\\ri720\\sa120" + al + " " + runsOf(b.text, ["em"]) + "\\par");
+          break;
+        case "hr":
+          out.push(base4 + "\\sa120\\brdrb\\brdrs\\brdrw10\\brsp20 \\par");
+          break;
+        case "code":
+          for (const line of String(b.text).split("\n")) out.push("\\pard\\plain\\f1\\fs" + fs + " " + escapeRtf(line) + "\\par");
+          break;
+        case "figure":
+          if (String(b.alt || "").trim()) out.push(base4 + "\\sa120" + (al || "\\qc") + " " + run3(String(b.alt), ["em"]) + "\\par");
+          break;
+        default: {
+          const lines = b.lines || [b.text];
+          if (!lines.join("").trim()) {
+            out.push(base4 + " \\par");
+            break;
+          }
+          out.push(base4 + "\\sa120" + al + " " + lines.map((l) => runsOf(l)).join("\\line ") + "\\par");
+        }
+      }
+    }
+    const info = opts.title || opts.author ? "{\\info" + (opts.title ? "{\\title " + escapeRtf(String(opts.title)) + "}" : "") + (opts.author ? "{\\author " + escapeRtf(String(opts.author)) + "}" : "") + "}\n" : "";
+    const head2 = "{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1\n{\\fonttbl{\\f0\\fnil\\fcharset0 " + rtfFontName(opts.font, "Tahoma") + ";}{\\f1\\fmodern\\fcharset0 Courier New;}}\n{\\colortbl;" + colors.map((k) => {
+      const [r, g, bl] = k.split(",");
+      return "\\red" + r + "\\green" + g + "\\blue" + bl + ";";
+    }).join("") + "}\n" + info + "\\paperw" + inTw(paper.width) + "\\paperh" + inTw(paper.height) + "\\margl" + inTw(m.left) + "\\margr" + inTw(m.right) + "\\margt" + inTw(m.top) + "\\margb" + inTw(m.bottom) + "\n\\f0\\fs" + fs + "\n";
+    return head2 + out.join("\n") + "\n}\n";
+  }
+  var import_md29, TWIPS_PER_INCH, TWIPS_PER_LINE, inTw, rtfFs, numTitleSize, markName2, rtfFontName, RTF_ALIGN, RTF_HEAD_SCALE;
   var init_export_rtf = __esm({
     "src/export-rtf.js"() {
-      import_md28 = __toESM(require_md());
+      import_md29 = __toESM(require_md());
       init_i18n();
       init_sp_format();
       init_sp_title_pages();
@@ -186223,6 +188891,10 @@ ${body}
       inTw = (v2) => Math.round(num(v2, 0) * TWIPS_PER_INCH);
       rtfFs = (pt) => Math.round(Math.min(96, Math.max(4, num(pt, 12))) * 2);
       numTitleSize = (v2) => Math.min(96, Math.max(4, num(v2, 12)));
+      markName2 = (m) => typeof m === "string" ? m : m && m.type;
+      rtfFontName = (s, d) => escapeRtf(String(s || d).replace(/[{};\\]/g, "").trim() || d);
+      RTF_ALIGN = { center: "\\qc", right: "\\qr", justify: "\\qj" };
+      RTF_HEAD_SCALE = [0, 2, 1.6, 1.35, 1.2, 1.1, 1];
     }
   });
 
@@ -186239,7 +188911,7 @@ ${body}
     return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
   }
   function plainText3(s) {
-    return (0, import_md29.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/\u00A0/g, " ");
+    return (0, import_md30.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/\u00A0/g, " ");
   }
   function generateFdx(blocks, meta2 = {}, opts = {}) {
     const isBreak = (b) => b && (b.el === "page-break" || b.el !== "blank" && String(b.text ?? "").includes("\f") && !String(b.text).replace(/\f/g, "").trim());
@@ -186297,10 +188969,10 @@ ${title2.join("\n")}
 ` : "";
     return '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<FinalDraft DocumentType="Script" Template="No" Version="1">\n  <Content>\n' + (body ? body + "\n" : "") + "  </Content>\n" + titlePage + "</FinalDraft>\n";
   }
-  var import_md29, FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
+  var import_md30, FDX_TYPE_MAP, fdxType, numOr4, XML_BAD, para;
   var init_export_fdx = __esm({
     "src/export-fdx.js"() {
-      import_md29 = __toESM(require_md());
+      import_md30 = __toESM(require_md());
       init_i18n();
       FDX_TYPE_MAP = {
         scene: "Scene Heading",
@@ -186385,7 +189057,7 @@ ${indent}</Paragraph>`;
       coverUrl: await A.sectionCoverUrl(d.dPath)
     };
   }
-  async function compose2(A, cfg, model, wf2, markdownOut) {
+  async function compose2(A, cfg, model, wf2, markdownOut, beforeHtml) {
     const varCtx = { title: model.title, author: model.author };
     if ((wf2.steps || []).some((s) => s.on !== false && s.key === "resolve-vars")) {
       const { buildVarContext: buildVarContext2 } = await Promise.resolve().then(() => (init_template_vars(), template_vars_exports));
@@ -186403,7 +189075,8 @@ ${indent}</Paragraph>`;
       // [alpha.133 · Y-3] PDF ของนิยายยังต้องเดินผ่าน `mdToHtml()` อีกก้าว — บอกให้เวิร์กโฟลว์
       // เก็บคอมเมนต์รูปแบบ (`<!--align:x-->` / ตัวคั่นหน้า) ไว้ ไม่งั้นถูกลบก่อนถึงตัวที่ใช้มัน
       markdownOut: !!markdownOut,
-      imgSrc: projectImg
+      imgSrc: projectImg,
+      beforeHtml: beforeHtml || null
     });
   }
   async function proseHtml(A, text, title2, wysiwyg, mono) {
@@ -186580,10 +189253,18 @@ ${pages.join("\n")}
     const wf22 = { ...wf2, steps: (wf2.steps || []).map((s) => s.key === "cover" || s.key === "roster" ? { ...s, on: false } : s) };
     const engine2 = pdfEngine(kind);
     const isEbook = cfg.format === "epub" || cfg.format === "docx";
-    const r = await compose2(A, cfg, model, wf22, cfg.format === "pdf" && engine2 === "html" || isEbook);
+    const proseRtf = cfg.format === "rtf" && kind !== "screenplay";
     const { parseScript: parseScript2, stripFountainCodes: stripFountainCodes2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
-    const viaScript = cfg.format === "rtf" || cfg.format === "fdx" || cfg.format === "pdf" && engine2 === "pdflib";
-    const text = viaScript ? r.text : stripFountainCodes2(r.text);
+    const r = await compose2(
+      A,
+      cfg,
+      model,
+      wf22,
+      cfg.format === "pdf" && engine2 === "html" || isEbook || proseRtf,
+      stripFountainCodes2
+    );
+    const viaScript = cfg.format === "rtf" && !proseRtf || cfg.format === "fdx" || cfg.format === "pdf" && engine2 === "pdflib";
+    const text = viaScript || r.ext === "html" ? r.text : stripFountainCodes2(r.text);
     const out = {
       title: model.title,
       kind,
@@ -186606,13 +189287,26 @@ ${pages.join("\n")}
     }
     const scriptSrc = cfg.format === "rtf" || cfg.format === "fdx" ? r.text.replace(/[ \t]*\f[ \t]*/g, "\n\n---\n\n") : r.text;
     if (viaScript) out.blocks = parseScript2(scriptSrc);
-    if (cfg.format === "rtf" || cfg.format === "fdx") out.preview = text;
+    if (cfg.format === "rtf" || cfg.format === "fdx") out.preview = proseRtf ? text.replace(/<!--[\s\S]*?-->/g, "") : text;
     if (isEbook) {
       out.md = text;
       out.author = model.author || "";
       out.preview = text.replace(/<!--[\s\S]*?-->/g, "");
     }
-    if (cfg.format === "rtf") {
+    if (proseRtf) {
+      const { generateProseRtf: generateProseRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
+      const { PAGE_BREAK: PAGE_BREAK2 } = await Promise.resolve().then(() => (init_compile(), compile_exports));
+      const spf = A.spFormat();
+      out.text = generateProseRtf2(text, {
+        title: model.title,
+        author: model.author || "",
+        breakMarker: PAGE_BREAK2,
+        font: firstRealFont(liveProseFonts().fontStack) || "Tahoma",
+        fontPt: num(cfg.rtf.fontPt, 12),
+        paper: spf.paper,
+        margins: spf.margins
+      });
+    } else if (cfg.format === "rtf") {
       const { generateRtf: generateRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
       const { projectTitlePages: projectTitlePages2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
       out.text = generateRtf2(
@@ -187117,17 +189811,18 @@ ${pages.join("\n")}
     }
     async function runHandoff() {
       close2();
+      const name5 = nameRow.name();
       if (cfg.format === "zip") {
         const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
-        return m.exportProjectZip();
+        return m.exportProjectZip({ name: name5 });
       }
       if (cfg.format === "json") {
         const m = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
-        return m.exportProjectJson();
+        return m.exportProjectJson({ name: name5 });
       }
       if (cfg.format === "blog") {
         const m = await Promise.resolve().then(() => (init_export_blog(), export_blog_exports));
-        return m.exportBlogHTML();
+        return m.exportBlogHTML(void 0, { name: name5 });
       }
       return A.watermarkDialog();
     }
@@ -192305,7 +195000,89 @@ ${s.body}`).join("\n\n");
     }
   });
 
+  // src/starter/starter-art.js
+  function artKey(id) {
+    const k = String(id == null ? "" : id).toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    return k || ART_DEFAULT;
+  }
+  function artBase(id, slot) {
+    const s = ART_SLOTS[slot] ? slot : "top";
+    return artKey(id) + "-" + s;
+  }
+  function artCandidates(id, slot) {
+    const keys4 = artKey(id) === ART_DEFAULT ? [ART_DEFAULT] : [artKey(id), ART_DEFAULT];
+    const s = ART_SLOTS[slot] ? slot : "top";
+    const out = [];
+    for (const k of keys4) for (const ext of ART_EXTS) out.push(ART_DIR + "/" + k + "-" + s + "." + ext);
+    return out;
+  }
+  function pickArt(names, id, slot) {
+    const have = new Map((names || []).map((n2) => [String(n2).toLowerCase(), String(n2)]));
+    for (const c of artCandidates(id, slot)) {
+      const file = c.slice(ART_DIR.length + 1);
+      const hit = have.get(file.toLowerCase());
+      if (hit) return ART_DIR + "/" + hit;
+    }
+    return null;
+  }
+  function artSizeText(slot) {
+    const s = ART_SLOTS[slot] || ART_SLOTS.top;
+    return s.w + " " + TIMES2 + " " + s.h;
+  }
+  var ART_DIR, ART_EXTS, ART_SLOTS, TIMES2, ART_HOME, ART_DEFAULT;
+  var init_starter_art = __esm({
+    "src/starter/starter-art.js"() {
+      ART_DIR = "starter";
+      ART_EXTS = ["png", "jpg", "webp"];
+      ART_SLOTS = {
+        side: { id: "side", w: 480, h: 920, cssW: 240, cssH: 460 },
+        top: { id: "top", w: 1200, h: 300, cssW: 0, cssH: 0 }
+      };
+      TIMES2 = String.fromCharCode(215);
+      ART_HOME = "home";
+      ART_DEFAULT = "default";
+    }
+  });
+
   // src/starter/starter-wizard.js
+  function artNames() {
+    if (!_artNames) {
+      _artNames = Promise.resolve().then(() => typeof kapi !== "undefined" && kapi.starterArtList ? kapi.starterArtList() : []).then((x) => Array.isArray(x) ? x : []).catch(() => []);
+    }
+    return _artNames;
+  }
+  function artBox(id, slot) {
+    const box2 = el("div", "st-art st-art-" + slot);
+    box2.dataset.art = artBase(id, slot);
+    box2.setAttribute("aria-hidden", "true");
+    const ph = el("div", "st-art-ph");
+    ph.append(el("div", "st-art-ph-ico", gi("image")));
+    ph.append(el("div", "st-art-ph-size", artSizeText(slot) + " px"));
+    ph.append(el("div", "st-art-ph-file", ART_DIR + "/" + artBase(id, slot) + ".png"));
+    ph.append(el("div", "st-art-ph-hint", t("ui.starter.artHint")));
+    box2.append(ph);
+    box2.style.setProperty("--st-art-ar", ART_SLOTS[slot].w + " / " + ART_SLOTS[slot].h);
+    artNames().then((names) => {
+      const src2 = pickArt(names, id, slot);
+      if (!src2) {
+        box2.classList.add("st-art-empty");
+        return;
+      }
+      const img = el("img", "st-art-img");
+      img.alt = "";
+      img.draggable = false;
+      img.onload = () => {
+        box2.classList.add("st-art-ready");
+      };
+      img.onerror = () => {
+        img.remove();
+        box2.classList.add("st-art-empty");
+      };
+      img.src = src2;
+      box2.append(img);
+    });
+    return box2;
+  }
   function renderWizard(host2, ctx2) {
     const s = ctx2.starter;
     const i5 = clampStep(s.step);
@@ -192343,8 +195120,14 @@ ${s.body}`).join("\n\n");
     fill3.style.width = prog.pct + "%";
     bar.append(fill3);
     wrap2.append(bar);
+    const main = el("div", "st-wz-main");
+    main.append(artBox(step.id, "side"));
+    const col = el("div", "st-wz-col");
+    col.append(artBox(step.id, "top"));
     const body = el("div", "st-wz-body");
-    wrap2.append(body);
+    col.append(body);
+    main.append(col);
+    wrap2.append(main);
     const head22 = el("div", "st-step-head");
     head22.append(el("div", "st-step-title", step.icon + " " + step.title));
     head22.append(el("div", "st-step-desc", step.desc));
@@ -192438,6 +195221,7 @@ ${s.body}`).join("\n\n");
     }
     return box2;
   }
+  var _artNames;
   var init_starter_wizard = __esm({
     "src/starter/starter-wizard.js"() {
       init_core();
@@ -192447,6 +195231,8 @@ ${s.body}`).join("\n\n");
       init_starter_steps();
       init_starter_cast();
       init_icons();
+      init_starter_art();
+      _artNames = null;
     }
   });
 
@@ -194091,6 +196877,7 @@ ${s.body}`).join("\n\n");
     openScenarioChat: () => openScenarioChat,
     openStoryStarter: () => openStoryStarter,
     renderStarterPanel: () => renderStarterPanel,
+    resetStarterView: () => resetStarterView,
     starterView: () => starterView
   });
   function armCloseGuard() {
@@ -194228,6 +197015,7 @@ ${s.body}`).join("\n\n");
     };
     head2.append(imp);
     wrap2.append(head2);
+    wrap2.append(artBox(ART_HOME, "top"));
     wrap2.append(el("div", "st-hint", t("ui.starter.welcomeHint")));
     const rows = await listStarters();
     if (rows.length > 3) {
@@ -194346,6 +197134,18 @@ ${s.body}`).join("\n\n");
     await stopAllAI();
     return flushStarterSaves();
   }
+  async function resetStarterView() {
+    try {
+      await flushStarterSaves();
+    } catch {
+    }
+    leaveWizard();
+    S9.view = "list";
+    S9.starter = null;
+    S9.scenario = null;
+    S9.query = "";
+    return true;
+  }
   function starterView() {
     return S9.view;
   }
@@ -194373,6 +197173,7 @@ ${s.body}`).join("\n\n");
       init_starter_steps_def();
       init_starter_store();
       init_starter_wizard();
+      init_starter_art();
       init_starter_scenario();
       init_starter_chat();
       init_starter_wiki();
@@ -194690,10 +197491,10 @@ ${s.body}`).join("\n\n");
     const pop = el("div", "k-thes-popup");
     const shut = () => {
       pop.remove();
-      document.removeEventListener("keydown", onKey3, true);
+      document.removeEventListener("keydown", onKey4, true);
       document.removeEventListener("click", outside);
     };
-    const onKey3 = (e) => {
+    const onKey4 = (e) => {
       if (e.key !== "Escape" || !pop.isConnected) return;
       e.preventDefault();
       e.stopPropagation();
@@ -194735,7 +197536,7 @@ ${s.body}`).join("\n\n");
     close2.onclick = () => shut();
     pop.append(close2);
     document.body.append(pop);
-    document.addEventListener("keydown", onKey3, true);
+    document.addEventListener("keydown", onKey4, true);
     function outside(e) {
       if (!pop.contains(e.target)) shut();
     }
@@ -194942,7 +197743,7 @@ ${s.body}`).join("\n\n");
     visit(roots, null);
     const kept = chapters.filter((c) => c.scenes.length);
     return {
-      sections: [{ title: opts.sectionTitle || t("ui.common.bookOne"), chapters: kept }],
+      sections: [{ title: opts.sectionTitle || DEFAULT_BOOK + " 1", chapters: kept }],
       counts: { chapters: kept.length, scenes: kept.reduce((n2, c) => n2 + c.scenes.length, 0) }
     };
   }
@@ -195022,28 +197823,39 @@ ${s.body}`).join("\n\n");
       importedFrom: "scrivener",
       importedAt: opts.now || null
     }, null, 2) });
+    const usedSec = [];
     mapped.sections.forEach((sec2, si) => {
-      const secDir = safeName5(sec2.title, t("ui.common.bookOne"));
+      const secDir = freeName2(diskBase(sec2.title, DEFAULT_BOOK + " " + (si + 1)), usedSec);
+      usedSec.push(secDir);
       files.push({ path: [secDir, "section.json"], content: JSON.stringify({
         guid: "s" + (si + 1),
         title: sec2.title,
-        order: si + 1
+        order: si + 1,
+        folderName: secDir
       }, null, 2) });
       const chapters = [];
       const scenesMap = {};
+      const usedCh = [];
       sec2.chapters.forEach((ch, ci) => {
         const guid3 = `c${si + 1}_${ci + 1}`;
-        const folderName = `${String(ci + 1).padStart(2, "0")} - ${safeName5(ch.title, t("ui.common.chapter"))}`;
+        const folderName = freeName2(diskBase(ch.title, t("ui.common.chapter")), usedCh);
+        usedCh.push(folderName);
         chapters.push({ guid: guid3, title: ch.title, order: ci + 1, folderName });
+        const usedSc = [];
+        const names = ch.scenes.map((sc) => {
+          const n2 = freeName2(diskBase(sc.title, "scene"), usedSc, ".md");
+          usedSc.push(n2);
+          return n2;
+        });
         scenesMap[guid3] = ch.scenes.map((sc, i5) => ({
           id: `${guid3}_s${i5 + 1}`,
           title: sc.title,
           order: i5 + 1,
-          fileName: `scene-${String(i5 + 1).padStart(2, "0")}.md`
+          fileName: names[i5]
         }));
         ch.scenes.forEach((sc, i5) => {
           files.push({
-            path: [secDir, "Draft", "default", "Chapters", folderName, `scene-${String(i5 + 1).padStart(2, "0")}.md`],
+            path: [secDir, "Draft", "default", "Chapters", folderName, names[i5]],
             content: `---
 title: ${sc.title}
 type: scene
@@ -195060,14 +197872,14 @@ ${sc.body || ""}
     });
     return { files, count: files.length };
   }
-  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER, safeName5;
+  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER;
   var init_import_scrivener = __esm({
     "src/import/import-scrivener.js"() {
       init_i18n();
+      init_disk_names();
       SKIP_GROUPS = /^(fonttbl|colortbl|stylesheet|info|pict|\*|listtable|listoverridetable|rsidtbl|generator|xmlnstbl)/;
       SCRIV_TEXT = /* @__PURE__ */ new Set(["Text", "Document"]);
       SCRIV_FOLDER = /* @__PURE__ */ new Set(["Folder", "DraftFolder"]);
-      safeName5 = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 60) || fallback;
     }
   });
 
@@ -195137,6 +197949,49 @@ ${sc.body || ""}
     }
   });
 
+  // src/import-fountain.js
+  function fountainToK2(text, opts = {}) {
+    let src2 = String(text == null ? "" : text).replace(/\r\n?/g, "\n");
+    src2 = src2.replace(/\n[ \t]*\/\*[\s\S]*?\*\/[ \t]*\n(?:[ \t]*\n)?/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
+    if (opts.notes) src2 = src2.replace(/\[\[([\s\S]*?)\]\]/g, (m, a) => "[[" + a.replace(/\s*\n\s*/g, " ") + "]]");
+    const out = [];
+    for (const raw of src2.split("\n")) {
+      const s = raw.trim();
+      if (/^={3,}$/.test(s)) {
+        out.push("---");
+        continue;
+      }
+      let m = /^>\s*(\S.*?)\s*<$/.exec(s);
+      if (m) {
+        out.push("!" + m[1]);
+        continue;
+      }
+      if (/^~[^~]+$/.test(s)) {
+        out.push("!*" + s.slice(1).trim() + "*");
+        continue;
+      }
+      let line = raw;
+      m = /^(.*\S)\s*\^$/.exec(line);
+      if (m && !m[1].includes("^")) line = m[1];
+      if (opts.notes && line.includes("[[")) {
+        const notes = [];
+        const rest = line.replace(/\[\[(.*?)\]\]/g, (x, a) => {
+          if (a.trim()) notes.push(a.trim());
+          return "";
+        });
+        if (rest.trim()) out.push(rest.replace(/[ \t]{2,}/g, " ").replace(/\s+$/, ""));
+        for (const n2 of notes) out.push("/// " + n2);
+        continue;
+      }
+      out.push(line);
+    }
+    return out.join("\n");
+  }
+  var init_import_fountain = __esm({
+    "src/import-fountain.js"() {
+    }
+  });
+
   // src/import-sp.js
   var import_sp_exports = {};
   __export(import_sp_exports, {
@@ -195149,7 +198004,7 @@ ${sc.body || ""}
     splitFountainTitlePage: () => splitFountainTitlePage
   });
   async function importScreenplayDialog(injectFn, opts = {}) {
-    const filePath = await kapi.openScreenplayFile();
+    const filePath = opts.filePath || await kapi.openScreenplayFile();
     if (!filePath) return null;
     const result = await importScreenplay(filePath, null);
     if (!result.ok) {
@@ -195236,7 +198091,7 @@ ${sc.body || ""}
       return { ok: false, error: t("ui.importSp.readFileNotOk") + errText(e) };
     }
     try {
-      const elements = await importer.parse(content);
+      const elements = await importer.parse(content, { filePath });
       const titlePage = elements && elements.titlePage || {};
       return {
         ok: true,
@@ -195372,9 +198227,10 @@ ${sc.body || ""}
     processItem(items);
     return elements;
   }
-  function parseFountainFromText(text) {
+  function parseFountainFromText(text, opts = {}) {
     const tp = splitFountainTitlePage(text);
-    const els = parseScript(tp.body);
+    const isFountainFile = /\.fountain$/i.test(String(opts && opts.filePath || ""));
+    const els = parseScript(fountainToK2(tp.body, { notes: isFountainFile }));
     els.titlePage = tp.fields;
     return els;
   }
@@ -195412,7 +198268,7 @@ ${sc.body || ""}
         const { name: name5 } = splitCharacter(text);
         if (name5) chars3.add(name5);
       }
-      if (text) words += text.split(/[\s\u00A0]+/).filter(Boolean).length;
+      if (text) words += (0, import_md31.countWords)(String(text));
     }
     return {
       scenes: counts.scene || 0,
@@ -195423,7 +198279,7 @@ ${sc.body || ""}
       counts
     };
   }
-  var import_jszip4, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
+  var import_jszip4, import_md31, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
   var init_import_sp = __esm({
     "src/import-sp.js"() {
       init_i18n();
@@ -195431,6 +198287,8 @@ ${sc.body || ""}
       init_core();
       init_ui();
       import_jszip4 = __toESM(require_jszip_min());
+      init_import_fountain();
+      import_md31 = __toESM(require_md());
       init_icons();
       init_err_text();
       SP_IMPORTERS = {
@@ -196453,7 +199311,7 @@ ${css}
         if (seen.has(f)) continue;
         let title2 = "";
         try {
-          title2 = (0, import_md30.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
+          title2 = (0, import_md32.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
         } catch {
         }
         add2({
@@ -196467,7 +199325,7 @@ ${css}
       }
     }
     for (const [key2, text] of Object.entries(s.texts || {})) {
-      const r = (0, import_md30.repairFrontmatter)(text);
+      const r = (0, import_md32.repairFrontmatter)(text);
       if (!r.changed) continue;
       const i5 = key2.lastIndexOf("/");
       add2({
@@ -196514,10 +199372,10 @@ ${css}
     for (const it of issues || []) out[it.type] = (out[it.type] || 0) + 1;
     return out;
   }
-  var import_md30, DOCTOR_TYPES, chapterTitleFromFolder;
+  var import_md32, DOCTOR_TYPES, chapterTitleFromFolder;
   var init_project_doctor = __esm({
     "src/project-doctor.js"() {
-      import_md30 = __toESM(require_md());
+      import_md32 = __toESM(require_md());
       DOCTOR_TYPES = [
         "bad-json",
         "missing-file",
@@ -196537,6 +199395,7 @@ ${css}
   __export(project_doctor_ui_exports, {
     applyDoctorFixes: () => applyDoctorFixes,
     describeIssue: () => describeIssue,
+    fixNameMismatches: () => fixNameMismatches,
     openProjectDoctor: () => openProjectDoctor,
     refreshDoctorBadge: () => refreshDoctorBadge,
     scanProject: () => scanProject2,
@@ -196629,7 +199488,7 @@ ${css}
         const p = await kapi.join(chDir, it.folder, it.file);
         if (await kapi.exists(p)) return false;
         await kapi.mkdir(await kapi.join(chDir, it.folder));
-        await kapi.writeFile(p, (0, import_md31.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
+        await kapi.writeFile(p, (0, import_md33.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
         return true;
       }
       case "attach-row": {
@@ -196650,7 +199509,7 @@ ${css}
         const name5 = await freeSceneFileName2(
           it.dPath,
           it.folder,
-          row0.order || nextOrder2(rows0),
+          row0.title || it.file.replace(/\.md$/i, ""),
           new Set(rows0.map((x) => x.fileName))
         );
         let text = "";
@@ -196658,13 +199517,13 @@ ${css}
           text = await kapi.readFile(await kapi.join(chDir, it.folder, it.file));
         } catch {
         }
-        const { meta: meta2, body } = (0, import_md31.parseMdFile)(text);
+        const { meta: meta2, body } = (0, import_md33.parseMdFile)(text);
         if (row0.title) meta2.title = row0.title;
         const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
         await writeMdKeepingComments2(
           kapi,
           await kapi.join(chDir, it.folder, name5),
-          (0, import_md31.dumpMdFile)(meta2, body),
+          (0, import_md33.dumpMdFile)(meta2, body),
           await kapi.join(chDir, it.folder, it.file)
         );
         const r = await mutateJson(kapi, sf, (d) => {
@@ -196686,7 +199545,7 @@ ${css}
         const titles = {};
         for (const f of files) {
           try {
-            titles[f] = (0, import_md31.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
+            titles[f] = (0, import_md33.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
           } catch {
           }
         }
@@ -196706,7 +199565,7 @@ ${css}
       }
       case "repair-frontmatter": {
         const p = await kapi.join(chDir, it.folder, it.file);
-        const r = (0, import_md31.repairFrontmatter)(await kapi.readFile(p));
+        const r = (0, import_md33.repairFrontmatter)(await kapi.readFile(p));
         if (!r.changed) return false;
         await kapi.writeFile(p, r.text);
         const h = tabHandle(p);
@@ -196743,6 +199602,42 @@ ${css}
     }
     refreshDoctorBadge().catch(() => {
     });
+    return { ok: ok2, failed };
+  }
+  async function fixNameMismatches(items) {
+    const A = await Promise.resolve().then(() => (init_app(), app_exports));
+    let ok2 = 0, failed = 0;
+    const run3 = async (oldPath, fn) => {
+      try {
+        let res = null;
+        const mv = await movePathWithTabs(oldPath, async () => {
+          res = await fn();
+          return res && res.moved ? res.to : null;
+        });
+        if (mv.ok && res && res.ok) ok2++;
+        else failed++;
+      } catch (e) {
+        failed++;
+        log("error", tf("ui.names.renameFail", oldPath), e);
+      }
+    };
+    const of = (k) => (items || []).filter((x) => x && x.kind === k);
+    for (const it of of("scene")) {
+      await run3(
+        await kapi.join(it.dPath, "Chapters", it.ch.folderName, it.disk),
+        () => renameSceneOnDisk(kapi, it.dPath, it.ch, it.id, it.title)
+      );
+    }
+    for (const it of of("chapter")) {
+      await run3(await kapi.join(it.dPath, "Chapters", it.disk), () => renameChapterOnDisk(kapi, it.dPath, it.ch.guid, it.title));
+    }
+    for (const it of of("book")) await run3(it.secPath, () => renameSectionOnDisk(kapi, it.secPath, it.title));
+    logAction("doctor", tf("ui.names.fixedN", ok2, failed), (items || []).map((x) => ({ kind: x.kind, title: x.title, disk: x.disk })));
+    try {
+      await A.buildTree();
+      A.refreshNetwork();
+    } catch {
+    }
     return { ok: ok2, failed };
   }
   function scheduleDoctorBadge(ms = 4e3) {
@@ -196795,7 +199690,8 @@ ${css}
     box2.append(el("div", "k-hint", t("ui.doctor.hint")));
     const summary = el("div", "k-doctor-summary");
     const list3 = el("div", "k-doctor-list");
-    box2.append(summary, list3);
+    const names = el("div", "k-doctor-names");
+    box2.append(summary, list3, names);
     const btns = el("div", "k-dlg-btns");
     const bScan = el("button", null, t("ui.doctor.rescan"));
     const bClose = el("button", "k-cancel", t("ui.common.close"));
@@ -196842,6 +199738,11 @@ ${css}
     const scan = async () => {
       list3.replaceChildren(el("div", "dim", t("ui.doctor.scanning")));
       try {
+        await A.syncDiskNames({ force: true });
+      } catch (e) {
+        log("warn", "doctor: name sync failed", e);
+      }
+      try {
         issues = await withBusyTask(
           t("ui.doctor.scanning"),
           ({ signal, progress }) => scanProject2({ signal, onProgress: progress }),
@@ -196855,7 +199756,32 @@ ${css}
         return issues;
       }
       render();
+      await drawNames();
       return issues;
+    };
+    let mismatches = [];
+    const drawNames = async () => {
+      names.replaceChildren();
+      try {
+        mismatches = await listNameMismatches(kapi, state.root);
+      } catch (e) {
+        mismatches = [];
+        log("warn", "doctor: name scan failed", e);
+      }
+      if (!mismatches.length) return;
+      const txt = el("div", "k-doctor-names-text");
+      txt.append(el("div", null, tf("ui.names.mismatchN", mismatches.length)));
+      txt.append(el("div", "dim", t("ui.names.mismatchHint")));
+      const bNames = el("button", "cmp-mini k-doctor-names-btn", t("ui.names.fixBtn"));
+      bNames.type = "button";
+      bNames.onclick = async () => {
+        if (!await confirmBox(tf("ui.names.fixConfirm", mismatches.length), t("ui.names.fixBtn"))) return;
+        bNames.disabled = true;
+        const res = await fixNameMismatches(mismatches);
+        setStatus(tf("ui.names.fixedN", res.ok, res.failed));
+        await scan();
+      };
+      names.append(txt, bNames);
     };
     bScan.onclick = () => scan();
     bFix.onclick = async () => {
@@ -196868,19 +199794,20 @@ ${css}
       await scan();
     };
     await scan();
-    return { ov, scan, close: close2, issues: () => issues };
+    return { ov, scan, close: close2, issues: () => issues, mismatches: () => mismatches };
   }
-  var import_md31, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
+  var import_md33, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
   var init_project_doctor_ui = __esm({
     "src/project-doctor-ui.js"() {
       init_i18n();
       init_core();
       init_cancel();
       init_ui();
-      import_md31 = __toESM(require_md());
+      import_md33 = __toESM(require_md());
       init_project_doctor();
       init_json_store();
       init_tab_bridge();
+      init_disk_sync();
       init_icons();
       TYPE_KEY = {
         "bad-json": "ui.doctor.tBadJson",
@@ -196950,7 +199877,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 800));
       const t3 = state.active;
       check2("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A prose", !!t3?.editor);
-      const orig = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const orig = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2(
         "round-trip \u0E1C\u0E48\u0E32\u0E19 editor \u0E08\u0E23\u0E34\u0E07",
         t3.editor.getMarkdown() === orig,
@@ -196982,13 +199909,13 @@ ${css}
       ));
       t3.editor.cmd("bold");
       await saveTab(t3);
-      const saved = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const saved = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2("\u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E19\u0E32 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C .md \u0E21\u0E35 **\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**", saved.includes("**\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**"), saved);
       t3.editor.cmd("bold");
       await saveTab(t3);
       check2(
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
-        (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       {
         const longBody = Array.from(
@@ -197044,8 +199971,8 @@ ${css}
         await saveTab(t3);
         check2(
           "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
-          (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
-          (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+          (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
         );
         activate(t3.file);
         await new Promise((r) => setTimeout(r, 150));
@@ -197099,7 +200026,7 @@ ${css}
       refreshOutline();
       check2("outline \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01", [...document.querySelectorAll(".ol-item")].some((x) => x.textContent.includes("\u0E15\u0E25\u0E32\u0E14 - \u0E40\u0E22\u0E47\u0E19")));
       activate(t3.file);
-      const fmtOf = async (f) => (0, import_md32.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
+      const fmtOf = async (f) => (0, import_md34.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
       check2("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22", !!t3.editor && !t3.sp && await fmtOf(t3.file) === "prose");
       const answerConvert = async (go, ok2) => {
         const done3 = go();
@@ -197117,7 +200044,7 @@ ${css}
       );
       check2(
         "[87] \u0E15\u0E2D\u0E1A\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-        !!state.active.editor && !state.active.sp && (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        !!state.active.editor && !state.active.sp && (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       await answerConvert(() => switchFormat("screenplay"), true);
       check2(
@@ -197128,7 +200055,7 @@ ${css}
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19 format \u0E25\u0E07 frontmatter (screenplay)",
         await fmtOf(t3.file) === "screenplay"
       );
-      const spDisk87 = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
+      const spDisk87 = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 **\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E01\u0E44\u0E1A\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E43\u0E2B\u0E49\u0E2D\u0E35\u0E01\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E2D\u0E48\u0E32\u0E19",
         !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
@@ -197147,7 +200074,7 @@ ${css}
         !!state.active.editor && !state.active.sp
       );
       check2("frontmatter \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 prose", await fmtOf(t3.file) === "prose");
-      const backDisk87 = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
+      const backDisk87 = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
         backDisk87.body === orig,
@@ -197176,7 +200103,7 @@ ${css}
         t3.editor.setMarkdown(huge);
         await new Promise((r) => setTimeout(r, 500));
         await saveTab(t3);
-        const diskA = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
+        const diskA = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E01\u0E29\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
           diskA.body.includes(huge),
@@ -197184,7 +200111,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("screenplay"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskB = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
+        const diskB = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E1A\u0E25\u0E47\u0E2D\u0E01",
           diskB.body.includes(huge),
@@ -197192,7 +200119,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("prose"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskC = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file));
+        const diskC = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
           diskC.body === diskA.body,
@@ -197334,6 +200261,7 @@ ${css}
       const newSc = sj.chapters[chJson.guid].find((x) => x.title === "\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
       check2("\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E09\u0E32\u0E01\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (scenes.json + \u0E44\u0E1F\u0E25\u0E4C .md)", !!newSc && await kapi.exists(await kapi.join(dPath, "Chapters", chJson.folderName, newSc.fileName)));
       check2("\u0E41\u0E17\u0E47\u0E1A\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07", state.active?.title === "\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
+      const fileBefore170 = newSc.fileName;
       const pRen = renameScene(dPath, chJson, newSc);
       await new Promise((r) => setTimeout(r, 60));
       document.querySelector(".k-dialog .k-dlg-input").value = "\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27";
@@ -197353,8 +200281,13 @@ ${css}
       const recycled = await kapi.listFiles(await kapi.join(state.root, "Recycle"), ".md");
       check2(
         "\u0E25\u0E1A\u0E09\u0E32\u0E01 \u2192 \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 JSON + \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48 Recycle",
-        !sj3.chapters[chJson.guid].some((x) => x.id === sc3.id) && recycled.some((f) => f.includes("scene-")),
+        !sj3.chapters[chJson.guid].some((x) => x.id === sc3.id) && recycled.some((f) => f.includes("\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27")),
         JSON.stringify(recycled)
+      );
+      check2(
+        "[170] \u2605 \u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 \xB7 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21",
+        fileBefore170 === "\u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E14\u0E2A\u0E2D\u0E1A.md" && sc3.fileName === "\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E41\u0E25\u0E49\u0E27.md" && sc3.id === newSc.id && newSc.fileName === sc3.fileName,
+        fileBefore170 + " \u2192 " + sc3.fileName
       );
       {
         const secsBefore = (await kapi.listDirs(state.root)).filter(async (n2) => await kapi.exists(await kapi.join(state.root, n2, "section.json")));
@@ -197394,7 +200327,13 @@ ${css}
         await new Promise((r) => setTimeout(r, 60));
         document.querySelector(".k-dialog .k-dlg-input").value = "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D";
         document.querySelector(".k-dialog .k-ok").click();
-        await pRenSec;
+        const oldSecPath = newSecPath;
+        newSecPath = await pRenSec || newSecPath;
+        check2(
+          "[170] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21 \u2192 \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21 (\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D)",
+          /[\\/]เล่มสองเปลี่ยนชื่อ$/.test(newSecPath) && !await kapi.exists(oldSecPath) && /[\\/]เล่มสองทดสอบ$/.test(oldSecPath),
+          oldSecPath + " \u2192 " + newSecPath
+        );
         check2(
           "\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E30\u0E17\u0E49\u0E2D\u0E19\u0E43\u0E19 section.json",
           (await kapi.readJson(await kapi.join(newSecPath, "section.json"))).title === "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E2D\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D"
@@ -199246,9 +202185,9 @@ ${css}
             );
             check2("[168-BG] \u2605 \u0E2B\u0E21\u0E38\u0E14/\u0E42\u0E0B\u0E19\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A\u0E15\u0E32\u0E21\u0E23\u0E39\u0E1B (\u0E23\u0E39\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E01\u0E41\u0E15\u0E48\u0E07)", JSON.stringify(mBg.pins) === pins0);
             {
-              const MB = await Promise.resolve().then(() => (init_map_bg(), map_bg_exports));
+              const MB2 = await Promise.resolve().then(() => (init_map_bg(), map_bg_exports));
               const fa = +mBg.aspect || 1.6;
-              const q2 = MB.bgQuad(mBg.bg, fa, fa)[0];
+              const q2 = MB2.bgQuad(mBg.bg, fa, fa)[0];
               const vals = img.style.transform.slice(9, -1).split(",").map(Number);
               const w = vals[15];
               check2(
@@ -201494,7 +204433,7 @@ ${css}
       );
       check2(
         "[25] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A frontmatter \u0E44\u0E14\u0E49",
-        (0, import_md32.alignToString)(t3.editor.getAlignMap()) === "0:center"
+        (0, import_md34.alignToString)(t3.editor.getAlignMap()) === "0:center"
       );
       t3.editor.setMarkdown("\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A", { 0: "right" });
       selHead(t3.editor.view);
@@ -202445,7 +205384,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 400));
       const spTab = state.active;
       check2("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 WYSIWYG (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 textarea)", !!spTab.sp && !spTab.plain);
-      const spOrig = (0, import_md32.parseMdFile)(await kapi.readFile(spTab.file)).body;
+      const spOrig = (0, import_md34.parseMdFile)(await kapi.readFile(spTab.file)).body;
       spTab.sp.setMarkdown(spOrig);
       await new Promise((r) => setTimeout(r, 200));
       const spEls = [];
@@ -202631,7 +205570,7 @@ ${css}
       await saveTab(spTab);
       check2(
         "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 v1",
-        (0, import_md32.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
+        (0, import_md34.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
       );
       spTab.sp.setElement("character");
       vsp.dispatch(vsp.state.tr.insertText("\u0E22\u0E31\u0E22\u0E41"));
@@ -205557,8 +208496,8 @@ ${css}
       const mCh1 = mDj.chapters[0];
       const mFile = (await kapi.listFiles(await kapi.join(state.root, "Memos"), ".md"))[0];
       const mPath = await kapi.join(state.root, "Memos", mFile);
-      const mBody = (0, import_md32.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
-      await kapi.writeFile(mPath, (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+      const mBody = (0, import_md34.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
+      await kapi.writeFile(mPath, (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
       check2("\u0E21\u0E35\u0E42\u0E19\u0E49\u0E15\u0E43\u0E19 Memos \u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", await kapi.exists(mPath));
       await moveMemoToChapter(mPath, dP, mCh1, null);
       const mSj1 = await kapi.readJson(await kapi.join(dP, "scenes.json"));
@@ -205572,7 +208511,7 @@ ${css}
         "\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 + \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 Memos \u0E41\u0E25\u0E49\u0E27",
         await kapi.exists(await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)) && !await kapi.exists(mPath)
       );
-      const mMeta = (0, import_md32.parseMdFile)(await kapi.readFile(
+      const mMeta = (0, import_md34.parseMdFile)(await kapi.readFile(
         await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)
       )).meta;
       check2("\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E21\u0E35 type: memo \u0E43\u0E19 frontmatter", mMeta.type === "memo");
@@ -205715,7 +208654,7 @@ ${css}
         JSON.stringify(scP2.startPage)
       );
       const scP2File = await kapi.join(dPath, "Chapters", chP.folderName, scP2.fileName);
-      const scP2Fm = (0, import_md32.parseMdFile)(await kapi.readFile(scP2File)).meta;
+      const scP2Fm = (0, import_md34.parseMdFile)(await kapi.readFile(scP2File)).meta;
       check2(
         "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C/\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07/\u0E42\u0E19\u0E49\u0E15 \u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E25\u0E07 frontmatter .md",
         scP2Fm.emotion === "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07" && scP2Fm.conflict === "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D" && scP2Fm.note === "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A",
@@ -205738,7 +208677,7 @@ ${css}
         scFb.isFlashback === true && scFb.isFlashforward === false,
         JSON.stringify(scFb)
       );
-      const scFbFm = (0, import_md32.parseMdFile)(await kapi.readFile(
+      const scFbFm = (0, import_md34.parseMdFile)(await kapi.readFile(
         await kapi.join(dPath, "Chapters", chP.folderName, scFb.fileName)
       )).meta;
       check2(
@@ -205908,7 +208847,7 @@ ${css}
         await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj4, null, 2));
         await kapi.writeFile(
           await kapi.join(dPath, "Chapters", chP.folderName, "scene-50.md"),
-          (0, import_md32.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
+          (0, import_md34.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
         );
         await buildTree2();
         await moveSceneOrder(dPath, chP, { id: "scMove" }, -1);
@@ -206003,7 +208942,7 @@ ${css}
         const scLk = await findRow();
         check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 row.locked=true \u0E43\u0E19 scenes.json", scLk && scLk.locked === true);
         const lkFile = await kapi.join(dPath, "Chapters", chP.folderName, scLk.fileName);
-        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md32.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
+        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md34.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
         await openScene(lkFile, scLk.title);
         await new Promise((r) => setTimeout(r, 120));
         check2(
@@ -206025,7 +208964,7 @@ ${css}
         const rev0 = parseInt(t3.editor ? t3.meta.revision || 0 : 0, 10) || 0;
         markDirty(t3);
         await saveTab(t3);
-        const fm = (0, import_md32.parseMdFile)(await kapi.readFile(t3.file)).meta;
+        const fm = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).meta;
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E41\u0E2D\u0E1B\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 (appVersion) \u0E25\u0E07 frontmatter", !!fm.appVersion);
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49 (revision) \u0E02\u0E36\u0E49\u0E19", (parseInt(fm.revision, 10) || 0) >= 1, fm.revision);
         const dRows = lineDiff2("a\nb\nc", "a\nx\nc");
@@ -206047,7 +208986,7 @@ ${css}
         const sjc = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
         const chG = chP.guid;
         const secondFile = await kapi.join(dPath, "Chapters", chP.folderName, "cmp2.md");
-        await kapi.writeFile(secondFile, (0, import_md32.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
+        await kapi.writeFile(secondFile, (0, import_md34.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
         activate(t3.file);
         await openCompareRight(secondFile, "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32");
         await new Promise((r) => setTimeout(r, 150));
@@ -206889,10 +209828,10 @@ ${css}
           await w165(120);
           const m = [...document.querySelectorAll(".k-menu")].pop();
           const labels = m ? [...m.querySelectorAll(".k-menu-item")].map((x) => (x.querySelector(".k-menu-text") || x).textContent) : [];
-          const has2 = (k) => labels.includes(t(k));
+          const has3 = (k) => labels.includes(t(k));
           check2(
             "[165-P1] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32: \u0E21\u0E35 \u0E15\u0E31\u0E14 \xB7 \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 \xB7 \u0E27\u0E32\u0E07 \xB7 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",
-            has2("ui.menu.cut") && has2("ui.common.copy") && has2("ui.menu.paste") && has2("ui.menu.pickAll"),
+            has3("ui.menu.cut") && has3("ui.common.copy") && has3("ui.menu.paste") && has3("ui.menu.pickAll"),
             labels.join(" | ")
           );
           const selWord = (window.getSelection().toString() || "").trim();
@@ -207665,12 +210604,12 @@ ${css}
         );
         check2(
           "parseMdFile \u0E15\u0E31\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01)",
-          !(0, import_md32.parseMdFile)(rawMig).body.includes("k2-comments")
+          !(0, import_md34.parseMdFile)(rawMig).body.includes("k2-comments")
         );
         check2("\u0E22\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0B\u0E49\u0E33", await migrateSceneComments(dPath) === 0);
         const cstore = commentStore();
         const cmRaw = (await cstore.read(cmFile)).body;
-        const cmQuote = ((0, import_md32.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
+        const cmQuote = ((0, import_md34.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
         const cmAt = cmRaw.indexOf(cmQuote);
         check2("\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E40\u0E08\u0E2D (\u0E43\u0E0A\u0E49\u0E1C\u0E39\u0E01\u0E2A\u0E21\u0E2D)", cmAt >= 0, cmQuote);
         const c1 = await cstore.add(cmFile, { start: cmAt, end: cmAt + cmQuote.length }, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -210490,7 +213429,7 @@ ${css}
                 );
               }
               const map103 = ed.getAlignMap();
-              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md32.alignToString)(map103));
+              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md34.alignToString)(map103));
               check2(
                 "[103-2] \u2605\u2605 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E40\u0E01\u0E47\u0E1A\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E15\u0E48\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
                 Object.values(map103).includes("right"),
@@ -211371,7 +214310,7 @@ ${css}
           await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sjA, null, 2));
           await kapi.writeFile(
             await kapi.join(dPath, "Chapters", ch3.folderName, "memo-rt.md"),
-            (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
+            (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
           );
           const dst = await moveRowToMemos(dPath, ch3, memoRow);
           check2("\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B MEMO \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Memos", await kapi.exists(dst), String(dst));
@@ -211438,8 +214377,8 @@ ${css}
           const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
           const scB = (sj4.chapters[ch4.guid] || [])[0];
           const scFile = await kapi.join(dPath, "Chapters", ch4.folderName, scB.fileName);
-          const { meta: bm, body: bb } = (0, import_md32.parseMdFile)(await kapi.readFile(scFile));
-          await kapi.writeFile(scFile, (0, import_md32.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
+          const { meta: bm, body: bb } = (0, import_md34.parseMdFile)(await kapi.readFile(scFile));
+          await kapi.writeFile(scFile, (0, import_md34.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
@@ -217654,14 +220593,14 @@ ${css}
             {
               T3.editor.setMarkdown("H~2~O \u0E41\u0E25\u0E30 x^2^");
               await w97(250);
-              const has2 = (mk2) => {
+              const has3 = (mk2) => {
                 let found2 = false;
                 T3.editor.view.state.doc.descendants((n2) => {
                   if (n2.isText && (n2.marks || []).some((m) => m.type.name === mk2)) found2 = true;
                 });
                 return found2;
               };
-              check2("[97-4] \u2605 \u0E2D\u0E48\u0E32\u0E19 ^\u0E22\u0E01^ / ~\u0E2B\u0E49\u0E2D\u0E22~ \u0E08\u0E32\u0E01 .md \u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19 mark \u0E08\u0E23\u0E34\u0E07", has2("sup") && has2("sub"));
+              check2("[97-4] \u2605 \u0E2D\u0E48\u0E32\u0E19 ^\u0E22\u0E01^ / ~\u0E2B\u0E49\u0E2D\u0E22~ \u0E08\u0E32\u0E01 .md \u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19 mark \u0E08\u0E23\u0E34\u0E07", has3("sup") && has3("sub"));
               check2(
                 "[97-4] \u2605 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 .md \u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
                 T3.editor.getMarkdown() === "H~2~O \u0E41\u0E25\u0E30 x^2^",
@@ -217689,12 +220628,12 @@ ${css}
               ));
               T3.editor.cmd("sup");
               await w97(120);
-              check2("[97-4] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sup \u0E43\u0E2A\u0E48 mark \u0E43\u0E2B\u0E49\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", has2("sup"));
+              check2("[97-4] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sup \u0E43\u0E2A\u0E48 mark \u0E43\u0E2B\u0E49\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", has3("sup"));
               T3.editor.cmd("sub");
               await w97(120);
               check2(
                 "[97-4] \u2605 sup \u0E01\u0E31\u0E1A sub \u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07\u0E2D\u0E2D\u0E01 (\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
-                has2("sub") && !has2("sup")
+                has3("sub") && !has3("sup")
               );
             }
             {
@@ -226426,8 +229365,8 @@ ${css}
           /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79),
           after79.slice(0, 300)
         );
-        const bodyBefore79 = (0, import_md32.parseMdFile)(before79).body.split("\n");
-        const bodyAfter79 = (0, import_md32.parseMdFile)(after79).body.split("\n");
+        const bodyBefore79 = (0, import_md34.parseMdFile)(before79).body.split("\n");
+        const bodyAfter79 = (0, import_md34.parseMdFile)(after79).body.split("\n");
         check2(
           "[79-2] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           bodyAfter79.length === bodyBefore79.length && bodyAfter79.filter((l, i5) => l !== bodyBefore79[i5]).length === 1,
@@ -227428,7 +230367,7 @@ ${css}
         };
         toggleTheme("k2-light");
         await wait81(60);
-        const rgbOf = (v4) => {
+        const rgbOf2 = (v4) => {
           const d = el("span");
           d.style.color = v4;
           document.body.append(d);
@@ -227438,7 +230377,7 @@ ${css}
         };
         for (const v4 of ["--hover", "--hover-soft", "--titlebar", "--sunken", "--chip", "--canvas"]) {
           const val = getComputedStyle(document.body).getPropertyValue(v4).trim();
-          check2("[81-5] \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: " + v4 + " \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E2A\u0E27\u0E48\u0E32\u0E07", lum(rgbOf(val)) > 150, v4 + "=" + val);
+          check2("[81-5] \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: " + v4 + " \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E35\u0E2A\u0E27\u0E48\u0E32\u0E07", lum(rgbOf2(val)) > 150, v4 + "=" + val);
         }
         const barTabs81 = document.getElementById("tabs");
         if (barTabs81) check2(
@@ -227474,7 +230413,7 @@ ${css}
         await wait81(60);
         check2(
           "[81-5] \u0E18\u0E35\u0E21\u0E21\u0E37\u0E14: \u0E1E\u0E37\u0E49\u0E19\u0E1C\u0E34\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E02\u0E49\u0E21\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
-          lum(rgbOf(getComputedStyle(document.body).getPropertyValue("--hover").trim())) < 120
+          lum(rgbOf2(getComputedStyle(document.body).getPropertyValue("--hover").trim())) < 120
         );
         if (wasTheme81 !== "k2") toggleTheme(wasTheme81);
       }
@@ -228170,7 +231109,7 @@ ${css}
             tX.editor.cmd("align", "right");
             await new Promise((r) => setTimeout(r, 200));
             const mapX = tX.editor.getAlignMap();
-            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md32.alignToString)(mapX));
+            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md34.alignToString)(mapX));
             check2(
               "[132-X1] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
               Object.values(mapX).includes("center") && Object.values(mapX).includes("right"),
@@ -231076,7 +234015,11 @@ ${css}
         }
         {
           await buildTree2();
-          const row4 = scRows120().find((r) => r._ctx.sc.type !== "memo") || scRows120()[0];
+          const base120 = scRows120().find((r) => r._ctx.sc.type !== "memo") || scRows120()[0];
+          const tmp120 = await addScene(base120._ctx.dPath, base120._ctx.ch, "\u0E09\u0E32\u0E01\u0E41\u0E1C\u0E07120", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D120" });
+          await buildTree2();
+          const row4 = scRows120().find((r) => r._ctx.sc.id === tmp120.id);
+          check2("[120-6] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E40\u0E08\u0E2D\u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E0A\u0E31\u0E48\u0E27\u0E04\u0E23\u0E32\u0E27\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49", !!row4, tmp120 && tmp120.fileName);
           openPropsPanel(row4._ctx.dPath, row4._ctx.ch, row4._ctx.sc);
           await w120(700);
           const pb2 = $("#props-body");
@@ -231115,7 +234058,7 @@ ${css}
           let fmF = {};
           for (let i5 = 0; i5 < 30; i5++) {
             try {
-              fmF = (0, import_md32.parseMdFile)(await kapi.readFile(row4.dataset.path)).meta;
+              fmF = (0, import_md34.parseMdFile)(await kapi.readFile(row4.dataset.path)).meta;
             } catch {
               fmF = {};
             }
@@ -231142,6 +234085,11 @@ ${css}
             "[120-6] \u2605\u2605 \u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07",
             !!rowN && rowN.title === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120",
             JSON.stringify(rowN && rowN.title)
+          );
+          check2(
+            "[170] \u2605\u2605 \u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07 \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D (\u0E17\u0E32\u0E07\u0E40\u0E01\u0E48\u0E32\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D \xB7 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E14\u0E34\u0E21)",
+            !!rowN && rowN.fileName === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120.md" && !await kapi.exists(tmp120.path) && (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(row4._ctx.dPath, "Chapters", row4._ctx.ch.folderName, rowN.fileName))).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D120"),
+            JSON.stringify(rowN && rowN.fileName)
           );
           const pb22 = $("#props-body");
           const cks2 = pb22.querySelectorAll(".wiki-check");
@@ -231199,7 +234147,7 @@ ${css}
           await buildTree2();
           const row4 = scRows120()[0];
           const f120 = row4.dataset.path;
-          const wantTitle = (0, import_md32.parseMdFile)(await kapi.readFile(f120)).meta.title;
+          const wantTitle = (0, import_md34.parseMdFile)(await kapi.readFile(f120)).meta.title;
           if (state.tabs.has(f120)) {
             state.tabs.get(f120).dirty = false;
             closeTab(f120);
@@ -231585,8 +234533,8 @@ ${css}
             );
             check2(
               "[a124-20] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30",
-              !!ctx124 && ctx124.row.wordCount === (0, import_md32.countWords)(tb2.editor.getMarkdown()),
-              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md32.countWords)(tb2.editor.getMarkdown())
+              !!ctx124 && ctx124.row.wordCount === (0, import_md34.countWords)(tb2.editor.getMarkdown()),
+              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md34.countWords)(tb2.editor.getMarkdown())
             );
             check2(
               '[a124-21] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E25\u0E34\u0E01\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14 Ctrl+S',
@@ -232012,7 +234960,7 @@ ${css}
           if (rvFile) {
             activate(rvFile);
             const rvTab = state.tabs.get(rvFile);
-            const onDisk = (0, import_md32.parseMdFile)(await kapi.readFile(rvFile)).body;
+            const onDisk = (0, import_md34.parseMdFile)(await kapi.readFile(rvFile)).body;
             const MARK = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E08\u0E30\u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01";
             rvTab.sp.setMarkdown(onDisk + "\n\n" + MARK);
             markDirty(rvTab);
@@ -232331,7 +235279,7 @@ ${css}
           activate(fN);
           await w140(200);
         }
-        const diskBody140 = (0, import_md32.parseMdFile)(await kapi.readFile(tN.file)).body || "";
+        const diskBody140 = (0, import_md34.parseMdFile)(await kapi.readFile(tN.file)).body || "";
         tN.editor.setMarkdown(diskBody140);
         await w140(300);
         refreshOutline();
@@ -232352,7 +235300,7 @@ ${css}
           for (const pth of bookPaths) {
             let fm = {};
             try {
-              fm = (0, import_md32.parseMdFile)(await kapi.readFile(pth)).meta || {};
+              fm = (0, import_md34.parseMdFile)(await kapi.readFile(pth)).meta || {};
             } catch {
               continue;
             }
@@ -233184,7 +236132,7 @@ ${css}
         });
         await kapi.remove(await kapi.join(dirA, s1.fileName));
         const s3 = await SO.addScene(dPath2, chA, "\u0E09\u0E32\u0E01156\u0E2A\u0E32\u0E21", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21" });
-        const body2 = (0, import_md32.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
+        const body2 = (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
         check2(
           "[156-1] \u2605\u2605 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E09\u0E32\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E21",
           body2 === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07" && s3.fileName !== s2.fileName,
@@ -233205,7 +236153,7 @@ ${css}
           const syn = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\n---\nnote: \u0E41\u0E17\u0E23\u0E01";
           await writeSceneMeta(f3, { synopsis: syn, pov: "\u0E21\u0E32\u0E19\u0E35" });
           const m3 = await readSceneMeta(f3);
-          const p3 = (0, import_md32.parseMdFile)(await kapi.readFile(f3));
+          const p3 = (0, import_md34.parseMdFile)(await kapi.readFile(f3));
           check2("[156-2] \u2605\u2605 \u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E04\u0E23\u0E1A", m3.synopsis === syn && m3.pov === "\u0E21\u0E32\u0E19\u0E35", JSON.stringify(m3.synopsis));
           check2("[156-2] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E1B\u0E19\u0E40\u0E21\u0E17\u0E32\u0E14\u0E32\u0E17\u0E32", p3.body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21", JSON.stringify(p3.body));
         }
@@ -233273,7 +236221,7 @@ ${css}
           const n2 = await closeTabsUnderPath(dirA, { save: true });
           check2(
             "[156-6] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19",
-            !state.tabs.has(f3) && (0, import_md32.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
+            !state.tabs.has(f3) && (0, import_md34.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
             JSON.stringify(n2)
           );
           check2("[156-6] \u2605 \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2D\u0E37\u0E48\u0E19", state.tabs.has(fB));
@@ -233299,9 +236247,9 @@ ${css}
         {
           await openScene(f4, null);
           const tb2 = state.tabs.get(f4);
-          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md32.parseMdFile)(s).meta);
-          const diskBodyNow = async () => (0, import_md32.parseMdFile)(await kapi.readFile(f4)).body;
-          await kapi.writeFile(f4, (0, import_md32.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
+          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md34.parseMdFile)(s).meta);
+          const diskBodyNow = async () => (0, import_md34.parseMdFile)(await kapi.readFile(f4)).body;
+          await kapi.writeFile(f4, (0, import_md34.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
           tb2.editor.setMarkdown("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A156");
           markDirty(tb2);
           window.__k2conflictChoice = "skip";
@@ -233333,7 +236281,7 @@ ${css}
           const r32 = await saveTab(tb2);
           check2("[156-7] \u2605 \u0E41\u0E01\u0E49\u0E41\u0E04\u0E48\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E43\u0E19\u0E2B\u0E31\u0E27\u0E44\u0E1F\u0E25\u0E4C \u0E44\u0E21\u0E48\u0E16\u0E37\u0E2D\u0E27\u0E48\u0E32\u0E0A\u0E19\u0E01\u0E31\u0E19", r32 !== false && await diskBodyNow() === "\u0E2B\u0E25\u0E31\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34156");
           delete window.__k2conflictChoice;
-          await kapi.writeFile(f4, (0, import_md32.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
+          await kapi.writeFile(f4, (0, import_md34.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
           const n2 = await checkTabsAgainstDisk({ force: true });
           check2(
             "[156-7] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07: \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E14\u0E34\u0E2A\u0E01\u0E4C",
@@ -233344,7 +236292,7 @@ ${css}
         }
         {
           const D = await Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports));
-          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md32.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
+          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md34.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
           await JS.mutateJson(kapi, sf, (d) => {
             d.chapters[chA.guid].push({ id: "dup156", title: "\u0E0B\u0E49\u0E33156", order: 99, fileName: s2.fileName, chapterGuid: chA.guid });
           });
@@ -233414,7 +236362,7 @@ ${css}
           const r = await R2.runProjectReplace("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07", "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", {}, { docs });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14",
-            r.count === 1 && (0, import_md32.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
+            r.count === 1 && (0, import_md34.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
             JSON.stringify(r)
           );
           await openScene(fr, null);
@@ -233426,11 +236374,11 @@ ${css}
           await R2.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156", {}, { docs: docs2 });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07: \u0E41\u0E01\u0E49\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
-            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md32.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
+            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md34.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
           );
           closeTab(fr, { discard: true });
           const r32 = await R2.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E44\u0E21\u0E48\u0E04\u0E27\u0E23\u0E40\u0E01\u0E34\u0E14", {}, { docs: [{ ...docs[0], locked: true, body: "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156" }] });
-          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r32.count === 0 && (0, import_md32.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
+          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r32.count === 0 && (0, import_md34.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
           const ui = await R2.openProjectReplace("");
           check2("[156-10] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !!document.querySelector(".k-replace"));
           ui.close();
@@ -233853,12 +236801,12 @@ ${css}
           const tp = await trashOf(a.fileName);
           check2(
             "[159-H1] \u2605\u2605 \u0E02\u0E2D\u0E07\u0E43\u0E19\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E04\u0E37\u0E2D\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07 (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E22\u0E49\u0E32\u0E22)",
-            !!tp && (0, import_md32.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
+            !!tp && (0, import_md34.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
             tp
           );
           await restoreFromTrash(tp, tp.split(/[\\/]/).pop());
           const back = (await rows159(ch.guid)).find((r) => r.id === a.id);
-          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md32.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
+          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
           await saveAllTabs(true);
         }
         {
@@ -233866,7 +236814,7 @@ ${css}
           const fc = await kapi.join(dir2, c.fileName);
           await openScene(fc, null);
           const tc = state.tabs.get(fc);
-          await kapi.writeFile(fc, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
+          await kapi.writeFile(fc, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
           tc.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159");
           markDirty(tc);
           window.__k2conflictChoice = "skip";
@@ -233878,7 +236826,7 @@ ${css}
             "[159-H2] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19 (\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0A\u0E19) = \u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07",
             state.tabs.has(fc) && tc.dirty && tc.editor.getMarkdown().includes("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159")
           );
-          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md32.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
+          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md34.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
           window.__k2conflictChoice = "overwrite";
           closeTab(fc, { ask: true });
           await until159(() => [...document.querySelectorAll(".k-dialog button")].some((x) => x.textContent === t("ui.app.closeTabSave")));
@@ -233917,7 +236865,7 @@ ${css}
           const newF = y.f.replace("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159");
           check2(
             "[159-H3] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 + \u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48",
-            !state.tabs.has(y.f) && (0, import_md32.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
+            !state.tabs.has(y.f) && (0, import_md34.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
           );
           await saveAllTabs(true);
           check2("[159-H3] \u2605\u2605 \u0E23\u0E48\u0E32\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A", !await kapi.exists(y.p));
@@ -233941,7 +236889,7 @@ ${css}
             raw1.includes("k2-comments") && raw1.includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"),
             raw1.slice(-160)
           );
-          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md32.parseMdFile)(raw1).body);
+          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md34.parseMdFile)(raw1).body);
           await switchFormat("prose");
           check2("[159-H4] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E22\u0E31\u0E07\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C", (await kapi.readFile(fe)).includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"));
           closeTab(fe, { discard: true });
@@ -234134,7 +237082,7 @@ ${css}
           const srcRow = (await rows159(ch.guid)).find((r) => r.id === m2.id);
           check2(
             "[159-M2] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 (\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14)",
-            (0, import_md32.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
+            (0, import_md34.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
           );
           check2("[159-M2] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32", !!srcRow && srcRow.wordCount >= 5, JSON.stringify(srcRow && srcRow.wordCount));
           const neRows = ne ? await rows159(ne.guid) : [];
@@ -234143,7 +237091,7 @@ ${css}
           const neFile = ne && neRow ? await kapi.join(dPath2, "Chapters", ne.folderName, neRow.fileName) : "";
           check2(
             "[159-M2] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E1A\u0E17\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 + id \u0E43\u0E2B\u0E21\u0E48 + \u0E41\u0E16\u0E27\u0E04\u0E23\u0E1A\u0E40\u0E17\u0E48\u0E32\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07",
-            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md32.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
+            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md34.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
             JSON.stringify([neRows.length, srcRows.length, neRow && neRow.fileName])
           );
           closeTab(fm2, { discard: true });
@@ -234207,12 +237155,13 @@ ${css}
           const withCmt = async (f) => kapi.writeFile(f, (await kapi.readFile(f)).replace(/\s*$/, "") + CMT160);
           const hasCmt = async (f) => (await kapi.readFile(f)).includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C160");
           const p1 = await SO.addScene(dPath2, ch, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D160" });
-          const f1 = await kapi.join(dir2, p1.fileName);
+          let f1 = await kapi.join(dir2, p1.fileName);
           await withCmt(f1);
           await SO.setSceneTitle(dPath2, ch, p1, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48");
+          f1 = await kapi.join(dir2, p1.fileName);
           check2(
             "[160-P0-1] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 (setSceneTitle) \u2014 \u0E40\u0E18\u0E23\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
-            await hasCmt(f1) && (0, import_md32.parseMdFile)(await kapi.readFile(f1)).meta.title === "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48",
+            await hasCmt(f1) && (0, import_md34.parseMdFile)(await kapi.readFile(f1)).meta.title === "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48",
             (await kapi.readFile(f1)).slice(-120)
           );
           await SO.setSceneMeta(dPath2, ch, { ...p1, title: "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48" }, { synopsis: "\u0E22\u0E48\u0E2D160", pov: "\u0E17\u0E2D\u0E23\u0E48\u0E32" });
@@ -234235,7 +237184,7 @@ ${css}
             const memoDir = await kapi.join(state.root, "Memos");
             await kapi.mkdir(memoDir);
             const mf = await kapi.join(memoDir, "\u0E42\u0E19\u0E49\u0E15\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C160.md");
-            await kapi.writeFile(mf, (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15160", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15160") + CMT160);
+            await kapi.writeFile(mf, (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15160", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15160") + CMT160);
             await TA.setMemoFields(mf, { flag: true });
             check2("[160-P0-1] \u2605 \u0E41\u0E01\u0E49\u0E18\u0E07\u0E42\u0E19\u0E49\u0E15 (setMemoFields) \u2014 \u0E40\u0E18\u0E23\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48", await hasCmt(mf));
             await kapi.remove(mf);
@@ -234246,7 +237195,7 @@ ${css}
           const t23 = state.tabs.get(f2);
           t23.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07160");
           markDirty(t23);
-          await kapi.writeFile(f2, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(f2)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"));
+          await kapi.writeFile(f2, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(f2)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"));
           window.__k2conflictChoice = "skip";
           try {
             const pDel3 = deleteToTrash(f2, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E44\u0E21\u0E48\u0E25\u0E1A160");
@@ -234325,8 +237274,8 @@ ${css}
           {
             const p14 = await SO.addScene(dPath2, ch, "\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01160", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D" });
             const f14 = await kapi.join(dir2, p14.fileName);
-            const pm2 = (0, import_md32.parseMdFile)(await kapi.readFile(f14));
-            await kapi.writeFile(f14, (0, import_md32.dumpMdFile)({ ...pm2.meta, tags: ["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"], pov: "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E19\u0E2D\u0E01160" }, pm2.body));
+            const pm2 = (0, import_md34.parseMdFile)(await kapi.readFile(f14));
+            await kapi.writeFile(f14, (0, import_md34.dumpMdFile)({ ...pm2.meta, tags: ["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"], pov: "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E19\u0E2D\u0E01160" }, pm2.body));
             const TP = await Promise.resolve().then(() => (init_tag_pane(), tag_pane_exports));
             const counts = await TP.getTagCounts();
             check2("[160-P1-14] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E17\u0E47\u0E01\u0E40\u0E2B\u0E47\u0E19\u0E41\u0E17\u0E47\u0E01\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E43\u0E19 .md \u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21", (counts["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"] || 0) >= 1, JSON.stringify(counts).slice(0, 160));
@@ -234488,7 +237437,7 @@ ${css}
             markDirty(tb2);
             return tb2;
           };
-          const conflict161 = async (f) => kapi.writeFile(f, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(f)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"));
+          const conflict161 = async (f) => kapi.writeFile(f, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(f)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"));
           const byTitle161 = async (prefix2) => (await rows159(ch.guid)).filter((r) => String(r.title).startsWith(prefix2));
           const a1 = await mk161("\u0E27\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07161", "\u0E10\u0E32\u0E19161");
           await withCmt161(a1.file);
@@ -234672,7 +237621,7 @@ ${css}
             const job = RU.computeBookFlow(sec161);
             const saw = await Promise.race([reachedP.then(() => true), w161(15e3).then(() => false)]);
             const longBody = Array.from({ length: 140 }, (_2, i5) => "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E32\u0E27161 " + i5 + " " + "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E31\u0E19\u0E2B\u0E19\u0E49\u0E32 ".repeat(8)).join("\n\n");
-            await kapi.writeFile(g1, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(g1)).meta, longBody));
+            await kapi.writeFile(g1, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(g1)).meta, longBody));
             RU.bumpBookFlow();
             if (release2) release2();
             window.__k2flowHold = null;
@@ -234719,7 +237668,7 @@ ${css}
             CP.invalidateChatRag();
             const e0 = CP.chatRagEpoch();
             const pBuild = CP.collectRelevant("zqnew161", { maxChars: 2e4 });
-            await kapi.writeFile(h2, (0, import_md32.dumpMdFile)((0, import_md32.parseMdFile)(await kapi.readFile(h2)).meta, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 zqlast161 zqlast161"));
+            await kapi.writeFile(h2, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(h2)).meta, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 zqlast161 zqlast161"));
             CP.invalidateChatRag();
             await pBuild;
             check2(
@@ -234938,8 +237887,8 @@ ${css}
           await new Promise((r) => setTimeout(r, 300));
           check2("[161-P1] \u2605 \u0E41\u0E1C\u0E07\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2D\u0E07", !isPanelOpen("props"));
           {
-            const raw = (0, import_md32.parseMdFile)(await kapi.readFile(fA));
-            await kapi.writeFile(fA, (0, import_md32.dumpMdFile)({ ...raw.meta, synopsis: "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161", pov: "\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161" }, raw.body));
+            const raw = (0, import_md34.parseMdFile)(await kapi.readFile(fA));
+            await kapi.writeFile(fA, (0, import_md34.dumpMdFile)({ ...raw.meta, synopsis: "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161", pov: "\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161" }, raw.body));
             showPanel("props-panel");
             activate(fA);
             await until159(() => nameNow() === "\u0E41\u0E1C\u0E07\u0E15\u0E32\u0E21\u0E01161", 5e3);
@@ -235216,7 +238165,7 @@ ${css}
           const kA = await SO.addScene(dPath2, ch, "\u0E04\u0E35\u0E22\u0E4C\u0E01161", { silent: true, body: "\u0E01" });
           const kB = await SO.addScene(dPath2, ch, "\u0E04\u0E35\u0E22\u0E4C\u0E02161", { silent: true, body: "\u0E02" });
           const kC = await SO.addScene(dPath2, ch, "\u0E04\u0E35\u0E22\u0E4C\u0E04161", { silent: true, body: "\u0E04" });
-          const [fA, fB, fC] = await Promise.all([kA, kB, kC].map((r) => kapi.join(dir2, r.fileName)));
+          let [fA, fB, fC] = await Promise.all([kA, kB, kC].map((r) => kapi.join(dir2, r.fileName)));
           await buildTree2();
           const q0 = $("#tree-search");
           if (q0 && q0.value) {
@@ -235259,7 +238208,15 @@ ${css}
               inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
               check2(
                 "[161-K1] \u2605 Enter \u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 = \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 + frontmatter)",
-                await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48", 5e3) && (0, import_md32.parseMdFile)(await kapi.readFile(fB)).meta.title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48"
+                await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48", 5e3) && (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(dir2, "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48.md"))).meta.title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48"
+              );
+              const fBold = fB;
+              fB = await kapi.join(dir2, "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48.md");
+              kB.fileName = "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48.md";
+              check2(
+                "[170] \u2605\u2605 F2 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49 \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D \xB7 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E15\u0E32\u0E21\u0E44\u0E1B (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A/\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E01\u0E48\u0E32)",
+                !await kapi.exists(fBold) && await until159(() => state.tabs.has(fB) && !state.tabs.has(fBold), 5e3),
+                [...state.tabs.keys()].map((k) => k.split(/[\\/]/).pop()).join(" | ")
               );
             }
             await until159(() => !!rowOf(fB), 3e3);
@@ -235453,8 +238410,8 @@ ${css}
             );
             const chA = await SO.addChapter(dPath2, "\u0E1A\u0E17\u0E0A\u0E19\u0E0A\u0E37\u0E48\u0E2D162\u0E01");
             const chB = await SO.addChapter(dPath2, "\u0E1A\u0E17\u0E0A\u0E19\u0E0A\u0E37\u0E48\u0E2D162\u0E02");
-            const a4 = await SO.addScene(dPath2, chA, "\u0E0A\u0E19\u0E0A\u0E37\u0E48\u0E2D162\u0E01", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162" });
-            const b4 = await SO.addScene(dPath2, chB, "\u0E0A\u0E19\u0E0A\u0E37\u0E48\u0E2D162\u0E02", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162" });
+            const a4 = await SO.addScene(dPath2, chA, "\u0E0A\u0E19\u0E0A\u0E37\u0E48\u0E2D162", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162" });
+            const b4 = await SO.addScene(dPath2, chB, "\u0E0A\u0E19\u0E0A\u0E37\u0E48\u0E2D162", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162" });
             check2("[162-W1-4] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E2A\u0E2D\u0E07\u0E1A\u0E17\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E31\u0E19", a4.fileName === b4.fileName, a4.fileName + " / " + b4.fileName);
             const t1 = await deleteSceneSilent(dPath2, chA, a4);
             const t23 = await deleteSceneSilent(dPath2, chB, b4);
@@ -235465,7 +238422,7 @@ ${css}
             );
             check2(
               "[162-W1-4] \u2605\u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E19\u0E16\u0E31\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A)",
-              (0, import_md32.parseMdFile)(await kapi.readFile(t1)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162") && (0, import_md32.parseMdFile)(await kapi.readFile(t23)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162")
+              (0, import_md34.parseMdFile)(await kapi.readFile(t1)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162") && (0, import_md34.parseMdFile)(await kapi.readFile(t23)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162")
             );
             check2(
               "[162-W1-4] \u2605 \u0E43\u0E1A\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
@@ -235645,7 +238602,7 @@ ${css}
             const memoDir = await kapi.join(state.root, "Memos");
             await kapi.mkdir(memoDir);
             const mf = await kapi.join(memoDir, "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162.md");
-            await kapi.writeFile(mf, (0, import_md32.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162"));
+            await kapi.writeFile(mf, (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162"));
             const okm = await moveMemoToChapter(mf, dPath2, ch, null);
             const rowM = (await rows159(ch.guid)).find((r) => r.title === "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162");
             check2(
@@ -235656,7 +238613,7 @@ ${css}
             const back = await moveRowToMemos(dPath2, ch, rowM);
             check2(
               "[162-W1-3] \u2605\u2605 \u0E22\u0E49\u0E32\u0E22\u0E01\u0E25\u0E31\u0E1A\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E19\u0E49\u0E15: \u0E44\u0E1F\u0E25\u0E4C\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E23\u0E1A \xB7 \u0E41\u0E16\u0E27\u0E2B\u0E25\u0E38\u0E14\u0E08\u0E32\u0E01\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19",
-              !!back && await kapi.exists(back) && (0, import_md32.parseMdFile)(await kapi.readFile(back)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162") && !(await rows159(ch.guid)).some((r) => r.id === rowM.id),
+              !!back && await kapi.exists(back) && (0, import_md34.parseMdFile)(await kapi.readFile(back)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162") && !(await rows159(ch.guid)).some((r) => r.id === rowM.id),
               String(back)
             );
             await kapi.remove(back).catch(() => {
@@ -235685,13 +238642,13 @@ ${css}
               const before14 = snaps14.find((s) => s.label === t("panel.beforeRestore"));
               check2(
                 '[162-W1-14] \u2605\u2605 \u0E20\u0E32\u0E1E "\u0E01\u0E48\u0E2D\u0E19\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19" \u0E21\u0E35\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E17\u0E34\u0E49\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46)',
-                !!before14 && (0, import_md32.parseMdFile)(await kapi.readFile(before14.path)).body.includes("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07162"),
+                !!before14 && (0, import_md34.parseMdFile)(await kapi.readFile(before14.path)).body.includes("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07162"),
                 before14 ? (await kapi.readFile(before14.path)).slice(0, 120) : JSON.stringify(snaps14.map((s) => s.label))
               );
               await until159(() => !state.tabs.get(f14) || !state.tabs.get(f14).dirty, 6e3);
               check2(
                 "[162-W1-14] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27",
-                (0, import_md32.parseMdFile)(await kapi.readFile(f14)).body.includes("\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32162")
+                (0, import_md34.parseMdFile)(await kapi.readFile(f14)).body.includes("\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32162")
               );
             }
             document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
@@ -237027,7 +239984,7 @@ ${css}
             !!onDisk && onDisk.baseline === ORIG && /[\\/]OnSet[\\/]/.test(recO.path),
             recO && recO.path
           );
-          const mdAfterMark = (0, import_md32.parseMdFile)(await kapi.readFile(fileO)).body;
+          const mdAfterMark = (0, import_md34.parseMdFile)(await kapi.readFile(fileO)).body;
           check2("[164-O] \u0E44\u0E1F\u0E25\u0E4C .md \u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30\u0E15\u0E2D\u0E19\u0E15\u0E34\u0E14\u0E18\u0E07", mdAfterMark === ORIG);
           await untilO(() => !!rowNow() && !!rowNow().querySelector(".tree-onset"));
           check2("[164-O] \u2605 \u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19 Explorer \u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22 !", !!rowNow() && !!rowNow().querySelector(".tree-onset"));
@@ -237103,7 +240060,7 @@ ${css}
             tabBodyText(tabO).slice(0, 80)
           );
           await saveTab(tabO);
-          const diskO = (0, import_md32.parseMdFile)(await kapi.readFile(fileO)).body;
+          const diskO = (0, import_md34.parseMdFile)(await kapi.readFile(fileO)).body;
           check2("[164-O] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 = \u0E40\u0E02\u0E35\u0E22\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C", diskO === revisedMd, diskO.slice(0, 80));
           check2("[164-O] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E0B\u0E39\u0E21\u0E44\u0E21\u0E48\u0E1E\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", onsetBeforeCommand("zoom") === false && tabO._onset.view === "original");
           await handleCommand("save");
@@ -237896,8 +240853,8 @@ ${css}
         popMG.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
         await w2(60);
         check2("[168-MG] \u0E1B\u0E4A\u0E2D\u0E1B\u0E42\u0E2D\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E1B\u0E34\u0E14\u0E14\u0E49\u0E27\u0E22 Esc", popMG.hidden && filtMG.getAttribute("aria-expanded") === "false");
-        const NB = await Promise.resolve().then(() => (init_network_bg(), network_bg_exports)), NS2 = await Promise.resolve().then(() => (init_network_scene(), network_scene_exports));
-        const scSpace = NS2.normalizeNetScene({ bg: { kind: "space" } }), scImg = NS2.normalizeNetScene({ bg: { kind: "image", image: "Images/x.png" } });
+        const NB = await Promise.resolve().then(() => (init_network_bg(), network_bg_exports)), NS3 = await Promise.resolve().then(() => (init_network_scene(), network_scene_exports));
+        const scSpace = NS3.normalizeNetScene({ bg: { kind: "space" } }), scImg = NS3.normalizeNetScene({ bg: { kind: "image", image: "Images/x.png" } });
         check2("[168-MG] \u0E04\u0E48\u0E32\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E2B\u0E25\u0E31\u0E07 3D = skybox", scSpace.bg.sky3d === "sky" && scImg.bg.sky3d === "sky");
         check2(
           "[168-MG] \u2605 \u0E23\u0E39\u0E1B\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14 3D = \u0E15\u0E34\u0E14\u0E08\u0E2D \xB7 \u0E23\u0E39\u0E1B 2:1 = \u0E17\u0E49\u0E2D\u0E07\u0E1F\u0E49\u0E32 HDRI (\u0E17\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E02\u0E2D\u0E07\u0E23\u0E39\u0E1B\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49)",
@@ -237940,6 +240897,1513 @@ ${css}
         resetPanels();
         await w2(300);
       }
+      {
+        const wN = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilN = async (fn, max2 = 3e3) => {
+          const t0 = Date.now();
+          for (; ; ) {
+            const v4 = await fn();
+            if (v4) return v4;
+            if (Date.now() - t0 > max2) return v4;
+            await wN(40);
+          }
+        };
+        const NSU = await Promise.resolve().then(() => (init_native_shell_ui(), native_shell_ui_exports));
+        const CORE = await Promise.resolve().then(() => (init_core(), core_exports));
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        closeMenu();
+        const infoN = NSU.nativeShellInfo();
+        const plat = kapi.platform;
+        check2("[169-N] preload \u0E1A\u0E2D\u0E01\u0E23\u0E30\u0E1A\u0E1A + \u0E0A\u0E31\u0E49\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E16\u0E39\u0E01\u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07", ["win32", "darwin", "linux"].includes(plat) && infoN.inited && infoN.platform === plat, JSON.stringify(infoN));
+        check2("[169-N] body \u0E21\u0E35\u0E04\u0E25\u0E32\u0E2A\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A", document.body.classList.contains(plat === "win32" ? "k-os-win" : plat === "darwin" ? "k-os-mac" : "k-os-linux"));
+        const probe = (tag3, cls) => {
+          const e = document.createElement(tag3);
+          if (cls) e.className = cls;
+          e.textContent = "x";
+          document.body.append(e);
+          return e;
+        };
+        const pLabel = probe("div", ""), pSel = probe("div", "k-selectable"), pInp = probe("input", ""), pLog = probe("div", "k-logview"), pPm = probe("div", "ProseMirror");
+        check2(
+          "[169-N] \u2605 \u0E1B\u0E49\u0E32\u0E22/\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E02\u0E2D\u0E07 UI \u0E25\u0E32\u0E01\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E25\u0E32\u0E01\u0E41\u0E25\u0E49\u0E27\u0E15\u0E34\u0E14\u0E44\u0E2E\u0E44\u0E25\u0E15\u0E4C\u0E17\u0E31\u0E49\u0E07\u0E41\u0E1C\u0E07\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A)",
+          getComputedStyle(document.body).userSelect === "none" && getComputedStyle(pLabel).userSelect === "none",
+          getComputedStyle(pLabel).userSelect
+        );
+        check2(
+          "[169-N] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E22\u0E31\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01/\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E44\u0E14\u0E49 (\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E01 \xB7 log \xB7 .k-selectable)",
+          [pSel, pInp, pLog, pPm].every((e) => getComputedStyle(e).userSelect === "text"),
+          [pSel, pInp, pLog, pPm].map((e) => getComputedStyle(e).userSelect).join()
+        );
+        const dashN = document.querySelector(".dash-num, .k-panel-head-title, #status");
+        check2("[169-N] \u0E02\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E08\u0E2D (\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07/\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30) \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", !!dashN && getComputedStyle(dashN).userSelect === "none");
+        const pBtn2 = probe("button", ""), pLink = probe("span", "wiki-rel-link"), pItem = probe("div", "k-menu-item");
+        check2(
+          "[169-N] \u2605 \u0E1B\u0E38\u0E48\u0E21/\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E21\u0E19\u0E39 \u0E43\u0E0A\u0E49\u0E25\u0E39\u0E01\u0E28\u0E23\u0E1B\u0E01\u0E15\u0E34 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E21\u0E37\u0E2D\u0E41\u0E1A\u0E1A\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E43\u0E19\u0E40\u0E27\u0E47\u0E1A)",
+          getComputedStyle(pBtn2).cursor === "default" && getComputedStyle(pItem).cursor === "default",
+          getComputedStyle(pBtn2).cursor + "/" + getComputedStyle(pItem).cursor
+        );
+        check2("[169-N] \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E08\u0E23\u0E34\u0E07 (\u0E25\u0E34\u0E07\u0E01\u0E4C Wiki) \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E39\u0E1B\u0E21\u0E37\u0E2D", getComputedStyle(pLink).cursor === "pointer");
+        const tbN = document.querySelector("#toolbar .tb:not(.dis)");
+        check2("[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E15\u0E31\u0E27\u0E08\u0E23\u0E34\u0E07 = \u0E25\u0E39\u0E01\u0E28\u0E23", !!tbN && getComputedStyle(tbN).cursor === "default", tbN && getComputedStyle(tbN).cursor);
+        check2("[169-N] \u0E44\u0E21\u0E48\u0E21\u0E35 scroll-behavior:smooth \u0E17\u0E35\u0E48 html/body", getComputedStyle(document.documentElement).scrollBehavior === "auto" && getComputedStyle(document.body).scrollBehavior === "auto");
+        const pImg = probe("img", "");
+        check2("[169-N] \u0E23\u0E39\u0E1B\u0E02\u0E2D\u0E07 UI \u0E25\u0E32\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E40\u0E07\u0E32\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49", getComputedStyle(pImg).webkitUserDrag === "none", getComputedStyle(pImg).webkitUserDrag);
+        const evMid = new MouseEvent("mousedown", { button: 1, bubbles: true, cancelable: true });
+        pLabel.dispatchEvent(evMid);
+        const evLeft = new MouseEvent("mousedown", { button: 0, bubbles: true, cancelable: true });
+        pLabel.dispatchEvent(evLeft);
+        check2("[169-N] \u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E32\u0E07 = \u0E44\u0E21\u0E48\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (default \u0E16\u0E39\u0E01\u0E01\u0E31\u0E19) \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E0B\u0E49\u0E32\u0E22\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30", evMid.defaultPrevented && !evLeft.defaultPrevented);
+        [pLabel, pSel, pInp, pLog, pPm, pBtn2, pLink, pItem, pImg].forEach((e) => e.remove());
+        const stN = await kapi.winState();
+        const wb = $("#win-btns");
+        if (plat === "win32" || plat === "darwin") {
+          check2(
+            "[169-N] \u2605 Windows/macOS: \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E48\u0E2D/\u0E02\u0E22\u0E32\u0E22/\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A (\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E40\u0E2D\u0E07\u0E0B\u0E48\u0E2D\u0E19)",
+            stN.native === true && document.body.classList.contains("k-native-caption") && [...wb.querySelectorAll(".win-btn")].every((b) => getComputedStyle(b).display === "none"),
+            JSON.stringify(stN)
+          );
+          if (plat === "win32") {
+            const wr = wb.getBoundingClientRect();
+            check2(
+              "[169-N] \u2605 Windows: \u0E40\u0E27\u0E49\u0E19\u0E17\u0E35\u0E48\u0E02\u0E27\u0E32\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E43\u0E2B\u0E49\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A (\u2265 138px \xB7 \u0E0A\u0E34\u0E14\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32)",
+              wr.width >= 138 && Math.abs(wr.right - window.innerWidth) <= 1,
+              Math.round(wr.width) + " right=" + Math.round(wr.right)
+            );
+            const lastTog = $("#titlebar .k-side-toggles").getBoundingClientRect();
+            check2("[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E17\u0E31\u0E1A", lastTog.right <= wr.left + 1, Math.round(lastTog.right) + " vs " + Math.round(wr.left));
+          }
+        } else {
+          check2("[169-N] \u0E23\u0E30\u0E1A\u0E1A\u0E2D\u0E37\u0E48\u0E19: \u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E40\u0E2D\u0E07", stN.native === false && getComputedStyle($("#win-max")).display !== "none");
+        }
+        const max0 = !!stN.max;
+        await kapi.winMax();
+        const flipped = await untilN(() => document.body.classList.contains("k-win-max") !== max0, 2500);
+        if (plat === "win32" || plat === "darwin") check2("[169-N] \u2605 \u0E02\u0E22\u0E32\u0E22/\u0E04\u0E37\u0E19\u0E02\u0E19\u0E32\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 \u2192 \u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E23\u0E39\u0E49\u0E2A\u0E20\u0E32\u0E1E\u0E08\u0E23\u0E34\u0E07 (k-win-max)", !!flipped);
+        if (flipped) {
+          const mx = $("#win-max");
+          const wantKey = document.body.classList.contains("k-win-max") ? "ui.html.winRestore" : "ui.html.winMax";
+          check2(
+            "[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E02\u0E22\u0E32\u0E22\u0E17\u0E35\u0E48\u0E27\u0E32\u0E14\u0E40\u0E2D\u0E07: \u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B/\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E15\u0E32\u0E21\u0E2A\u0E20\u0E32\u0E1E (\u0E02\u0E22\u0E32\u0E22\u0E41\u0E25\u0E49\u0E27 = \u0E04\u0E37\u0E19\u0E02\u0E19\u0E32\u0E14)",
+            mx.getAttribute("data-i18n-title") === wantKey && mx.title === t(wantKey) && !!mx.firstElementChild,
+            mx.getAttribute("data-i18n-title")
+          );
+          await kapi.winMax();
+          await untilN(() => document.body.classList.contains("k-win-max") === max0, 2500);
+        } else note("[169-N] \u0E15\u0E31\u0E27\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E44\u0E21\u0E48\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E01\u0E32\u0E23\u0E02\u0E22\u0E32\u0E22 (\u0E02\u0E49\u0E32\u0E21\u0E01\u0E32\u0E23\u0E15\u0E23\u0E27\u0E08\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E04\u0E37\u0E19\u0E02\u0E19\u0E32\u0E14)");
+        await wN(250);
+        const modeN = document.documentElement.style.colorScheme === "light" ? "light" : "dark";
+        const chr = await kapi.winChrome({ mode: modeN, color: "#123456", symbol: "\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E2A\u0E35", height: 36 });
+        check2("[169-N] main \u0E01\u0E23\u0E2D\u0E07\u0E2A\u0E35\u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D (hex \u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19) + \u0E23\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21", chr && chr.mode === modeN && chr.color === "#123456" && /^#[0-9a-f]{6}$/i.test(chr.symbolColor), JSON.stringify(chr));
+        await untilN(() => matchMedia("(prefers-color-scheme: dark)").matches === (modeN === "dark"), 1500);
+        check2(
+          "[169-N] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E21\u0E37\u0E14/\u0E2A\u0E27\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E19\u0E35\u0E49 = \u0E42\u0E2B\u0E21\u0E14\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21 K2 (\u0E40\u0E21\u0E19\u0E39/\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E15\u0E32\u0E21\u0E18\u0E35\u0E21)",
+          matchMedia("(prefers-color-scheme: dark)").matches === (modeN === "dark")
+        );
+        NSU.syncWindowChrome();
+        {
+          const cs = getComputedStyle($("#titlebar"));
+          const hx2 = (v4) => {
+            const m = /(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(v4);
+            return m ? "#" + [1, 2, 3].map((i5) => (+m[i5]).toString(16).padStart(2, "0")).join("") : "";
+          };
+          await kapi.winChrome({ mode: modeN, color: hx2(cs.backgroundColor), symbol: hx2(cs.color), height: Math.round($("#titlebar").getBoundingClientRect().height) });
+        }
+        if (plat !== "darwin") {
+          const menus = [...document.querySelectorAll("#titlebar .tb-menu")];
+          check2("[169-N] \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E21\u0E19\u0E39\u0E2D\u0E22\u0E39\u0E48\u0E19\u0E2D\u0E01\u0E25\u0E33\u0E14\u0E31\u0E1A Tab + \u0E21\u0E35 role", menus.length >= 8 && menus.every((m) => m.tabIndex === -1 && m.getAttribute("role") === "menuitem"));
+          const kd = (key2, code3, o = {}) => window.dispatchEvent(new KeyboardEvent("keydown", Object.assign({ key: key2, code: code3, bubbles: true, cancelable: true }, o)));
+          const ku = (key2, code3) => window.dispatchEvent(new KeyboardEvent("keyup", { key: key2, code: code3, bubbles: true, cancelable: true }));
+          kd("Alt", "AltLeft", { altKey: true });
+          ku("Alt", "AltLeft");
+          await wN(40);
+          check2("[169-N] \u2605 \u0E41\u0E15\u0E30 Alt = \u0E40\u0E02\u0E49\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E21\u0E19\u0E39 (\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E17\u0E35\u0E48\u0E40\u0E21\u0E19\u0E39\u0E41\u0E23\u0E01)", NSU.menubarActive() && document.activeElement === menus[0], document.activeElement && document.activeElement.className);
+          kd("ArrowRight", "ArrowRight");
+          kd("ArrowRight", "ArrowRight");
+          await wN(20);
+          check2("[169-N] \u2605 \u2192 \u2192 \u0E40\u0E14\u0E34\u0E19\u0E44\u0E1B\u0E40\u0E21\u0E19\u0E39\u0E17\u0E35\u0E48\u0E2A\u0E32\u0E21", document.activeElement === menus[2], document.activeElement && document.activeElement.dataset.m);
+          kd("ArrowLeft", "ArrowLeft");
+          kd("End", "End");
+          await wN(20);
+          check2("[169-N] End = \u0E40\u0E21\u0E19\u0E39\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22", document.activeElement === menus[menus.length - 1]);
+          kd("Escape", "Escape");
+          await wN(40);
+          check2("[169-N] \u2605 Esc = \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E41\u0E16\u0E1A\u0E40\u0E21\u0E19\u0E39 (\u0E44\u0E21\u0E48\u0E17\u0E34\u0E49\u0E07\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E04\u0E49\u0E32\u0E07\u0E1A\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E21\u0E19\u0E39)", !NSU.menubarActive() && !menus.includes(document.activeElement));
+          kd("Alt", "AltLeft", { altKey: true });
+          kd("F4", "F4", { altKey: true });
+          ku("Alt", "AltLeft");
+          await wN(40);
+          check2("[169-N] \u2605 Alt \u0E04\u0E49\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E04\u0E35\u0E22\u0E4C\u0E2D\u0E37\u0E48\u0E19 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E49\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E21\u0E19\u0E39", !NSU.menubarActive());
+          kd("F10", "F10");
+          await wN(40);
+          check2("[169-N] F10 = \u0E40\u0E02\u0E49\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E21\u0E19\u0E39", NSU.menubarActive());
+          kd("F10", "F10");
+          await wN(40);
+          check2("[169-N] F10 \u0E0B\u0E49\u0E33 = \u0E2D\u0E2D\u0E01", !NSU.menubarActive());
+        }
+        check2("[169-N] \u0E41\u0E16\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E04\u0E37\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E07\u0E32\u0E19: 0..1 \xB7 busy \xB7 \u0E25\u0E49\u0E32\u0E07", await kapi.winProgress(0.25) === 0.25 && await kapi.winProgress("busy") === 2 && await kapi.winProgress(-1) === -1);
+        const seenP = [];
+        let doneN = null;
+        const keepH = { ...CORE.busyTaskHooks };
+        check2("[169-N] \u2605 \u0E07\u0E32\u0E19\u0E22\u0E32\u0E27 (withBusyTask) \u0E15\u0E48\u0E2D\u0E01\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E07\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27", typeof keepH.progress === "function" && typeof keepH.done === "function");
+        CORE.busyTaskHooks.progress = (d, tot) => seenP.push(d + "/" + (tot === void 0 ? "" : tot));
+        CORE.busyTaskHooks.done = (name5, ms) => {
+          doneN = [name5, ms >= 0];
+        };
+        try {
+          await CORE.withBusyTask("k169", async ({ progress }) => {
+            progress(1, 4);
+            progress(4, 4);
+          }, { name: "\u0E07\u0E32\u0E19169" });
+        } finally {
+          Object.assign(CORE.busyTaskHooks, keepH);
+        }
+        check2(
+          "[169-N] \u2605 \u0E07\u0E32\u0E19\u0E22\u0E32\u0E27\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19: \u0E40\u0E23\u0E34\u0E48\u0E21 \u2192 \u0E04\u0E37\u0E1A\u0E2B\u0E19\u0E49\u0E32 \u2192 \u0E25\u0E49\u0E32\u0E07 \xB7 \u0E08\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E08\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E07\u0E32\u0E19",
+          seenP.join(" ") === "0/0 1/4 4/4 -1/" && !!doneN && doneN[0] === "\u0E07\u0E32\u0E19169" && doneN[1],
+          seenP.join(" ") + " " + JSON.stringify(doneN)
+        );
+        const att = await kapi.winAttention({ title: "K2", body: "x" });
+        check2(
+          "[169-N] \u0E40\u0E23\u0E35\u0E22\u0E01\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E19\u0E43\u0E08: \u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32 = \u0E44\u0E21\u0E48\u0E23\u0E1A\u0E01\u0E27\u0E19 \xB7 \u0E44\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32 = \u0E01\u0E30\u0E1E\u0E23\u0E34\u0E1A (\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E17\u0E2A\u0E44\u0E21\u0E48\u0E22\u0E34\u0E07\u0E01\u0E32\u0E23\u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A)",
+          att && (att.shown === false ? att.reason === "focused" : att.toast === false),
+          JSON.stringify(att)
+        );
+        const planOs = startupPlan({ openLastProject: false, showHomeOnStartup: true }, ["/a"], "/os/proj");
+        check2(
+          '[169-N] \u2605 \u0E23\u0E30\u0E1A\u0E1A\u0E2A\u0E48\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E21\u0E32\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14 = \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E19\u0E31\u0E49\u0E19 \u0E02\u0E49\u0E32\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01 (\u0E0A\u0E19\u0E30 "\u0E41\u0E2A\u0E14\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E40\u0E2A\u0E21\u0E2D")',
+          planOs.last === "/os/proj" && planOs.showHome === false && planOs.fromOs === true,
+          JSON.stringify(planOs)
+        );
+        const planNo = startupPlan({ openLastProject: true }, ["/a"], "");
+        check2("[169-N] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E2D\u0E07\u0E08\u0E32\u0E01\u0E23\u0E30\u0E1A\u0E1A = \u0E41\u0E1C\u0E19\u0E40\u0E14\u0E34\u0E21\u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07", planNo.last === "/a" && planNo.skipHome === true && !planNo.fromOs);
+        check2("[169-N] \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E17\u0E2A: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E08\u0E32\u0E01\u0E2D\u0E32\u0E23\u0E4C\u0E01\u0E34\u0E27\u0E40\u0E21\u0E19\u0E15\u0E4C", await kapi.launchProject() === null);
+        const pngN = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="), (ch) => ch.charCodeAt(0));
+        const imgDirN = await kapi.join(state.root, "Images");
+        const mkFile = (name5) => new File([pngN], name5, { type: "image/png" });
+        document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+        const r0 = await NSU.handleOsDrop([{ name: "\u0E2D\u0E30\u0E44\u0E23\u0E01\u0E47\u0E44\u0E21\u0E48\u0E23\u0E39\u0E49.zip", path: "", file: new File(["z"], "\u0E2D\u0E30\u0E44\u0E23\u0E01\u0E47\u0E44\u0E21\u0E48\u0E23\u0E39\u0E49.zip") }], document.body);
+        check2(
+          "[169-N] \u2605 \u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E23\u0E39\u0E49\u0E08\u0E31\u0E01 = \u0E1A\u0E2D\u0E01\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E27\u0E48\u0E32\u0E23\u0E31\u0E1A\u0E2D\u0E30\u0E44\u0E23\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E40\u0E07\u0E35\u0E22\u0E1A)",
+          r0.kind === "none" && [...document.querySelectorAll(".k-toast")].some((x) => x.textContent.includes(t("ui.native.dropUnsupported")))
+        );
+        document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+        const dtN = new DataTransfer();
+        dtN.items.add(mkFile("k169-drop.png"));
+        document.dispatchEvent(new DragEvent("dragend", { bubbles: true }));
+        const tgtN = $("#statusbar");
+        const ovEv = new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: dtN });
+        tgtN.dispatchEvent(ovEv);
+        check2("[169-N] \u2605 \u0E25\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E32\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E21\u0E32\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 = \u0E23\u0E31\u0E1A (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E27\u0E32\u0E07)", ovEv.defaultPrevented);
+        const dpEv = new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dtN });
+        tgtN.dispatchEvent(dpEv);
+        check2("[169-N] \u2605 \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E44\u0E1F\u0E25\u0E4C = default \u0E16\u0E39\u0E01\u0E01\u0E31\u0E19\u0E40\u0E2A\u0E21\u0E2D (\u0E44\u0E21\u0E48\u0E43\u0E2B\u0E49 Chromium \u0E1E\u0E22\u0E32\u0E22\u0E32\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A)", dpEv.defaultPrevented);
+        const gotN = await untilN(async () => await kapi.exists(await kapi.join(imgDirN, "k169-drop.png")), 4e3);
+        check2("[169-N] \u2605 \u0E23\u0E39\u0E1B\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E19\u0E2D\u0E01\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 = \u0E40\u0E02\u0E49\u0E32\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B (Images/)", !!gotN);
+        const toastN = await untilN(() => [...document.querySelectorAll(".k-toast")].find((x) => x.textContent.includes(tf("ui.native.dropImagesAdded", 1))), 3e3);
+        check2("[169-N] \u0E1A\u0E2D\u0E01\u0E1C\u0E25\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E1B\u0E38\u0E48\u0E21\u0E1E\u0E32\u0E44\u0E1B\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B", !!toastN && !!toastN.querySelector(".k-toast-act"));
+        const r22 = await NSU.handleOsDrop([{ name: "k169-drop.png", path: "", file: mkFile("k169-drop.png") }], document.body);
+        check2("[169-N] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E0B\u0E49\u0E33 = \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21 (k169-drop-2.png)", r22.kind === "images" && r22.names[0] === "k169-drop-2.png" && await kapi.exists(await kapi.join(imgDirN, "k169-drop-2.png")), JSON.stringify(r22.names));
+        let tabN = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        if (!tabN) {
+          const rowN = [...document.querySelectorAll("#tree .scene[data-path]")].find((r) => /\.md$/.test(r.dataset.path || ""));
+          if (rowN) {
+            await openScene(rowN.dataset.path);
+            await wN(600);
+          }
+          tabN = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        }
+        check2("[169-N] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49", !!tabN);
+        activate(tabN.file);
+        await wN(250);
+        const mdBefore = tabN.editor.getMarkdown();
+        const r32 = await NSU.handleOsDrop([{ name: "k169-doc.png", path: "", file: mkFile("k169-doc.png") }], tabN.pane);
+        check2("[169-N] \u2605 \u0E23\u0E39\u0E1B\u0E17\u0E35\u0E48\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E25\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 = \u0E41\u0E17\u0E23\u0E01\u0E25\u0E07\u0E09\u0E32\u0E01", r32.inserted === true && tabN.editor.getMarkdown().includes("k169-doc.png"), tabN.editor.getMarkdown().slice(-120));
+        tabN.editor.setMarkdown(mdBefore);
+        await wN(60);
+        await saveTab(tabN);
+        for (const n2 of ["k169-drop.png", "k169-drop-2.png", "k169-doc.png"]) {
+          try {
+            await kapi.remove(await kapi.join(imgDirN, n2));
+          } catch {
+          }
+        }
+        document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+        const askP = ask("\u0E01\u0E25\u0E48\u0E2D\u0E07169");
+        const ovN = await untilN(() => [...document.querySelectorAll(".k-overlay")].pop());
+        const boxN = ovN.querySelector(".k-dialog"), ttlN = boxN.querySelector(".k-dlg-title");
+        const xN = await untilN(() => ovN.querySelector(":scope > .k-dlg-x"));
+        check2("[169-N] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E21\u0E38\u0E21 (\u0E2D\u0E22\u0E39\u0E48\u0E19\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 \u2014 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07)", !!xN && !boxN.contains(xN) && boxN.querySelectorAll("button").length === 2);
+        const b0 = boxN.getBoundingClientRect();
+        const xr0 = xN.getBoundingClientRect();
+        check2("[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E21\u0E38\u0E21\u0E02\u0E27\u0E32\u0E1A\u0E19\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07", Math.abs(xr0.right - (b0.right - 8)) <= 3 && Math.abs(xr0.top - (b0.top + 8)) <= 3, Math.round(xr0.right - b0.right) + "," + Math.round(xr0.top - b0.top));
+        const tr0 = ttlN.getBoundingClientRect();
+        const mx0 = tr0.left + 30, my0 = tr0.top + tr0.height / 2;
+        const md = new MouseEvent("mousedown", { button: 0, bubbles: true, cancelable: true, clientX: mx0, clientY: my0 });
+        ttlN.dispatchEvent(md);
+        document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: mx0 + 90, clientY: my0 + 60 }));
+        const b1 = boxN.getBoundingClientRect();
+        check2(
+          "[169-N] \u2605 \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E40\u0E21\u0E32\u0E2A\u0E4C (\u0E40\u0E14\u0E34\u0E21\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E25\u0E32\u0E01\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07)",
+          md.defaultPrevented && Math.abs(b1.left - b0.left - 90) <= 2 && Math.abs(b1.top - b0.top - 60) <= 2,
+          Math.round(b1.left - b0.left) + "," + Math.round(b1.top - b0.top)
+        );
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+        await wN(30);
+        const b22 = boxN.getBoundingClientRect();
+        check2("[169-N] \u2605 Esc \u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E25\u0E32\u0E01 = \u0E04\u0E37\u0E19\u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E40\u0E14\u0E34\u0E21 \u0E41\u0E25\u0E30\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48", ovN.isConnected && Math.abs(b22.left - b0.left) <= 1 && Math.abs(b22.top - b0.top) <= 1);
+        ttlN.dispatchEvent(new MouseEvent("mousedown", { button: 0, bubbles: true, cancelable: true, clientX: mx0, clientY: my0 }));
+        document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: mx0 - 9e3, clientY: my0 - 9e3 }));
+        document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: mx0 - 9e3, clientY: my0 - 9e3 }));
+        const b3 = boxN.getBoundingClientRect();
+        check2("[169-N] \u2605 \u0E25\u0E32\u0E01\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E08\u0E2D = \u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D\u0E43\u0E2B\u0E49\u0E08\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A", b3.top >= -1 && b3.right >= 47, Math.round(b3.top) + "," + Math.round(b3.right));
+        const xr3 = xN.getBoundingClientRect();
+        check2("[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E15\u0E32\u0E21\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22", Math.abs(xr3.right - (b3.right - 8)) <= 3 && Math.abs(xr3.top - (b3.top + 8)) <= 3);
+        ttlN.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+        const b4 = boxN.getBoundingClientRect();
+        check2("[169-N] \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 = \u0E01\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D", Math.abs(b4.left - b0.left) <= 1 && Math.abs(b4.top - b0.top) <= 1);
+        xN.click();
+        const ansN = await Promise.race([askP, wN(1500).then(() => "\u0E04\u0E49\u0E32\u0E07")]);
+        check2("[169-N] \u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E21\u0E38\u0E21 = \u0E17\u0E32\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01", ansN === null && !ovN.isConnected, String(ansN));
+        settingsDialog();
+        const setN = await untilN(() => document.querySelector(".k-overlay .k-set-main"));
+        check2("[169-N] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E40\u0E1B\u0E34\u0E14", !!setN);
+        const badPages = [];
+        for (const tabS of document.querySelectorAll(".k-overlay .k-set-tab")) {
+          tabS.click();
+          await wN(30);
+          if (setN.scrollWidth > setN.clientWidth + 1) badPages.push((tabS.dataset.p || "?") + "+" + (setN.scrollWidth - setN.clientWidth));
+        }
+        check2("[169-N] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E2B\u0E19\u0E25\u0E49\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19 (\u0E40\u0E14\u0E34\u0E21\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E27\u0E32\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14 + \u0E21\u0E35\u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19)", badPages.length === 0, badPages.join(" "));
+        document.querySelector(".k-overlay .k-dialog .k-cancel").click();
+        await untilN(() => !document.querySelector(".k-overlay .k-set-main"));
+        const emN = document.querySelector("#content > .k-docs-empty");
+        check2(
+          '[169-N] \u2605 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E27\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E1E\u0E37\u0E49\u0E19\u0E17\u0E35\u0E48\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07 (\u0E21\u0E35\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C = "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C")',
+          !emN || emN.dataset.mode === (state.root ? "tab" : "project"),
+          emN && emN.dataset.mode
+        );
+        const keepRoot = state.root;
+        const tabsHost = $("#tabs");
+        const hadTabs = !!tabsHost.querySelector(":scope > .tab");
+        if (!hadTabs) {
+          state.root = null;
+          syncDocsEmpty();
+          const m1 = (document.querySelector("#content > .k-docs-empty") || {}).dataset;
+          state.root = keepRoot;
+          syncDocsEmpty();
+          const m2 = (document.querySelector("#content > .k-docs-empty") || {}).dataset;
+          check2("[169-N] \u0E15\u0E31\u0E27\u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E2A\u0E25\u0E31\u0E1A\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E32\u0E21\u0E2A\u0E20\u0E32\u0E1E\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", m1 && m1.mode === "project" && m2 && m2.mode === "tab");
+        }
+        state.root = keepRoot;
+      }
+      {
+        const wA = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilA = async (fn, max2 = 4e3) => {
+          const t0 = Date.now();
+          for (; ; ) {
+            const v4 = await fn();
+            if (v4) return v4;
+            if (Date.now() - t0 > max2) return v4;
+            await wA(40);
+          }
+        };
+        const APP = await Promise.resolve().then(() => (init_app(), app_exports));
+        const KE = await Promise.resolve().then(() => (init_key_echo(), key_echo_exports));
+        const LB = await Promise.resolve().then(() => (init_line_band(), line_band_exports));
+        const AC = await Promise.resolve().then(() => (init_a11y_core(), a11y_core_exports));
+        const CORE_A = await Promise.resolve().then(() => (init_core(), core_exports));
+        const CU = await Promise.resolve().then(() => (init_color_util(), color_util_exports));
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        closeMenu();
+        const keepA = { theme: state.settings.theme };
+        for (const k of Object.keys(AC.A11Y_DEFAULTS)) keepA[k] = state.settings[k];
+        const gA = async () => await kapi.readGlobalSettings() || {};
+        const press = (key2, o = {}, target) => (target || document.body).dispatchEvent(
+          new KeyboardEvent("keydown", { key: key2, code: o.code || "", bubbles: true, cancelable: true, shiftKey: !!o.shift })
+        );
+        settingsDialog("a11y");
+        await wA(250);
+        const boxA = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        const qA = (s) => boxA.querySelector(s);
+        const pageA = qA('.k-set-page[data-p="a11y"]');
+        check2('[169-A] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32 "\u0E01\u0E32\u0E23\u0E0A\u0E48\u0E27\u0E22\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07" \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E23\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E31\u0E49\u0E19\u0E44\u0E14\u0E49', !!pageA && pageA.classList.contains("on") && getComputedStyle(pageA).display !== "none" && qA(".k-set-tab.on").dataset.p === "a11y");
+        check2("[169-A] \u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E1A\u0E2D\u0E01\u0E02\u0E2D\u0E1A\u0E40\u0E02\u0E15\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49", !!pageA.querySelector('.k-set-scope[data-scope="global"]'));
+        const chipsA = [...pageA.querySelectorAll(".k-a11y-theme[data-theme]")];
+        check2(
+          "[169-A] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E18\u0E35\u0E21\u0E0A\u0E48\u0E27\u0E22\u0E01\u0E32\u0E23\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E04\u0E23\u0E1A\u0E15\u0E32\u0E21\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 (\u0E04\u0E2D\u0E19\u0E17\u0E23\u0E32\u0E2A\u0E15\u0E4C\u0E2A\u0E39\u0E07 \xB7 \u0E15\u0E32\u0E1A\u0E2D\u0E14\u0E2A\u0E35 \xB7 \u0E02\u0E32\u0E27\u0E14\u0E33)",
+          chipsA.length === CORE_A.THEMES_A11Y.length && chipsA.length === 8 && chipsA.every((b) => CORE_A.THEMES.includes(b.dataset.theme) && b.textContent.trim() && !/^ui\./.test(b.textContent)),
+          chipsA.map((b) => b.dataset.theme).join()
+        );
+        check2(
+          "[169-A] \u2605 \u0E40\u0E2A\u0E35\u0E22\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14 + \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14 \u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49 (\u0E22\u0E49\u0E32\u0E22\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E32\u0E23\u0E40\u0E02\u0E35\u0E22\u0E19)",
+          !!pageA.querySelector("#st-typesnd") && !!pageA.querySelector("#st-typesnd-vol") && !!pageA.querySelector("#st-typewriter") && !qA('.k-set-page[data-p="write"] #st-typesnd') && boxA.querySelectorAll("#st-typesnd").length === 1
+        );
+        for (const id of ["hc-dark", "hc-light"]) {
+          chipsA.find((b) => b.dataset.theme === id).click();
+          await wA(120);
+          const csA = getComputedStyle(document.body);
+          const conA = CU.contrast(csA.getPropertyValue("--fg").trim(), csA.getPropertyValue("--bg").trim());
+          check2(
+            "[169-A] \u2605 \u0E18\u0E35\u0E21 " + id + ": \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E43\u0E0A\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35 \xB7 \u0E04\u0E2D\u0E19\u0E17\u0E23\u0E32\u0E2A\u0E15\u0E4C\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D/\u0E1E\u0E37\u0E49\u0E19 21:1",
+            document.body.classList.contains("theme-" + id) && qA("#st-theme").value === id && conA >= 20.9,
+            conA.toFixed(2)
+          );
+          check2("[169-A] \u0E18\u0E35\u0E21 " + id + ": \u0E2A\u0E48\u0E27\u0E19\u0E04\u0E27\u0E1A\u0E04\u0E38\u0E21\u0E14\u0E31\u0E49\u0E07\u0E40\u0E14\u0E34\u0E21\u0E15\u0E32\u0E21\u0E42\u0E2B\u0E21\u0E14\u0E02\u0E2D\u0E07\u0E18\u0E35\u0E21", document.documentElement.style.colorScheme === (id === "hc-dark" ? "dark" : "light"));
+          check2(
+            "[169-A] \u0E18\u0E35\u0E21 " + id + ": \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E34\u0E14\u0E2A\u0E16\u0E32\u0E19\u0E30 (aria-pressed)",
+            chipsA.filter((b) => b.classList.contains("on")).length === 1 && chipsA.find((b) => b.dataset.theme === id).getAttribute("aria-pressed") === "true"
+          );
+        }
+        chipsA.find((b) => b.dataset.theme === "cvd-rg-dark").click();
+        await wA(120);
+        {
+          const csB = getComputedStyle(document.body);
+          check2(
+            "[169-A] \u2605 \u0E18\u0E35\u0E21\u0E15\u0E32\u0E1A\u0E2D\u0E14\u0E2A\u0E35: \u0E2A\u0E35\u0E40\u0E15\u0E37\u0E2D\u0E19/\u0E2D\u0E31\u0E19\u0E15\u0E23\u0E32\u0E22\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E07\u0E2D\u0E21\u0E2A\u0E49\u0E21\u0E01\u0E31\u0E1A\u0E41\u0E14\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E48\u0E32\u0E01\u0E25\u0E32\u0E07)",
+            csB.getPropertyValue("--st-danger").trim() === "#d55e00" && csB.getPropertyValue("--st-warn").trim() === "#f0e442",
+            csB.getPropertyValue("--st-danger") + " " + csB.getPropertyValue("--st-warn")
+          );
+        }
+        qA("#st-a11y-keyecho-size").value = "200";
+        qA("#st-a11y-keyecho-size").dispatchEvent(new Event("input"));
+        qA("#st-a11y-keyecho-ms").value = "1500";
+        qA("#st-a11y-keyecho-ms").dispatchEvent(new Event("input"));
+        check2("[169-A] \u0E1B\u0E49\u0E32\u0E22\u0E02\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E1A\u0E2D\u0E01\u0E04\u0E48\u0E32", qA("#st-a11y-keyecho-size-lbl").textContent === "200 px" && /1\.5/.test(qA("#st-a11y-keyecho-ms-lbl").textContent));
+        qA("#st-a11y-keyecho-test").click();
+        await wA(120);
+        const hostA = document.getElementById("k-key-echo");
+        const capA = hostA && hostA.firstElementChild;
+        const hcsA = hostA && getComputedStyle(hostA);
+        check2(
+          '[169-A] \u2605 \u0E1B\u0E38\u0E48\u0E21 "\u0E41\u0E2A\u0E14\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07" \u0E42\u0E0A\u0E27\u0E4C\u0E1B\u0E49\u0E32\u0E22\u0E14\u0E49\u0E27\u0E22\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 (\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01)',
+          !!hostA && hostA.classList.contains("on") && hcsA.visibility === "visible" && getComputedStyle(capA).fontSize === "200px" && state.settings.a11yKeyEcho !== true,
+          capA && getComputedStyle(capA).fontSize
+        );
+        const allZ = [...document.querySelectorAll("body *")].map((e) => +getComputedStyle(e).zIndex || 0);
+        check2(
+          "[169-A] \u2605\u2605 \u0E1B\u0E49\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E0A\u0E31\u0E49\u0E19\u0E1A\u0E19\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07 (\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48)",
+          +hcsA.zIndex === 2147483647 && Math.max(...allZ) === +hcsA.zIndex && hostA.parentNode === document.body
+        );
+        {
+          const r = capA.getBoundingClientRect();
+          const under = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          check2("[169-A] \u2605 \u0E1B\u0E49\u0E32\u0E22\u0E44\u0E21\u0E48\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E34\u0E01 \u2014 \u0E02\u0E2D\u0E07\u0E02\u0E49\u0E32\u0E07\u0E43\u0E15\u0E49\u0E22\u0E31\u0E07\u0E01\u0E14\u0E44\u0E14\u0E49", hcsA.pointerEvents === "none" && !!under && !hostA.contains(under), under && under.className);
+          check2(
+            "[169-A] \u0E1B\u0E49\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D",
+            Math.abs(r.left + r.width / 2 - innerWidth / 2) < 3 && Math.abs(r.top + r.height / 2 - innerHeight / 2) < 3,
+            Math.round(r.left + r.width / 2) + "," + Math.round(r.top + r.height / 2)
+          );
+          check2("[169-A] \u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E48\u0E32\u0E19\u0E08\u0E2D\u0E44\u0E21\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E1B\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33 (aria-hidden)", hostA.getAttribute("aria-hidden") === "true");
+        }
+        qA(".k-cancel").click();
+        await wA(200);
+        check2(
+          "[169-A] \u2605 \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01: \u0E18\u0E35\u0E21\u0E17\u0E35\u0E48\u0E25\u0E2D\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E18\u0E35\u0E21\u0E40\u0E14\u0E34\u0E21 \xB7 \u0E1B\u0E49\u0E32\u0E22\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E2B\u0E32\u0E22 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E48\u0E32\u0E44\u0E2B\u0E19\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19",
+          currentTheme() === (CORE_A.THEME_ALIAS[keepA.theme] || keepA.theme || "k2") && !document.body.classList.contains("theme-cvd-rg-dark") && !hostA.classList.contains("on") && state.settings.a11yKeyEcho !== true && state.settings.a11yLineBand !== true,
+          currentTheme()
+        );
+        settingsDialog("a11y");
+        await wA(250);
+        const boxB = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        const qB = (s) => boxB.querySelector(s);
+        qB("#st-a11y-keyecho").checked = true;
+        qB("#st-a11y-keyecho-pos").value = "bottom";
+        qB("#st-a11y-keyecho-ms").value = "2000";
+        qB("#st-a11y-band").checked = true;
+        qB("#st-a11y-band-color").value = "#66ccff";
+        qB("#st-a11y-band-op").value = "0.5";
+        qB("#st-typewriter").checked = true;
+        const footOk = boxB.querySelector(":scope > .k-dlg-btns > .k-ok");
+        const aiBtnB = qB("#st-ai-open");
+        {
+          const r = footOk.getBoundingClientRect();
+          const atPt = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          check2(
+            '[169-A] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21 "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E17\u0E35\u0E48\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E2B\u0E47\u0E19 (\u0E17\u0E49\u0E32\u0E22\u0E01\u0E25\u0E48\u0E2D\u0E07) \u0E21\u0E35\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E34\u0E01\u0E08\u0E23\u0E34\u0E07 \u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E15\u0E49\u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E15\u0E23\u0E07\u0E19\u0E31\u0E49\u0E19',
+            typeof footOk.onclick === "function" && atPt === footOk && footOk.textContent === t("ui.dialogs.save"),
+            atPt && atPt.className
+          );
+          check2(
+            '[169-A] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E25\u0E31\u0E01\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27 \xB7 \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32 AI" \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E16\u0E39\u0E01\u0E1C\u0E39\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01',
+            boxB.querySelectorAll(".k-ok").length === 1 && !!aiBtnB && !aiBtnB.classList.contains("k-ok") && typeof aiBtnB.onclick === "function" && aiBtnB.onclick !== footOk.onclick
+          );
+          check2(
+            "[169-A] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32/\u0E04\u0E48\u0E32\u0E42\u0E23\u0E07\u0E07\u0E32\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E16\u0E27\u0E25\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E2B\u0E19\u0E49\u0E32 AI)",
+            !!boxB.querySelector(":scope > .k-dlg-btns > .k-set-undo") && !boxB.querySelector(".k-set-page .k-set-undo")
+          );
+        }
+        footOk.click();
+        await untilA(() => state.settings.a11yKeyEcho === true && !document.querySelector(".k-dialog.k-settings"));
+        check2(
+          "[169-A] \u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01: \u0E04\u0E48\u0E32\u0E25\u0E07 settings \u0E04\u0E23\u0E1A",
+          state.settings.a11yKeyEcho === true && state.settings.a11yKeyEchoPos === "bottom" && state.settings.a11yKeyEchoMs === 2e3 && state.settings.a11yLineBand === true && state.settings.a11yLineBandColor === "#66ccff" && state.settings.a11yLineBandOpacity === 0.5 && state.settings.typewriterMode === true,
+          JSON.stringify(Object.keys(AC.A11Y_DEFAULTS).map((k) => state.settings[k]))
+        );
+        const g1 = await untilA(async () => {
+          const g = await gA();
+          return g.a11yKeyEcho === true && g.typewriterMode === true && g;
+        });
+        check2(
+          "[169-A] \u2605\u2605 \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 \u2014 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 (\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E17\u0E38\u0E01\u0E1C\u0E25\u0E07\u0E32\u0E19)",
+          !!g1 && g1.a11yLineBand === true && g1.a11yLineBandColor === "#66ccff" && g1.a11yKeyEchoPos === "bottom",
+          JSON.stringify(g1 && { e: g1.a11yKeyEcho, b: g1.a11yLineBand })
+        );
+        check2("[169-A] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14\u0E40\u0E1B\u0E34\u0E14\u0E08\u0E32\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E35\u0E49\u0E44\u0E14\u0E49 + \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E15\u0E34\u0E14\u0E44\u0E1F", isTypewriter() === true && $("#tb-typewriter").classList.contains("on"));
+        check2("[169-A] \u0E15\u0E31\u0E27\u0E41\u0E2A\u0E14\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E1F\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27", KE.keyEchoState().on && KE.keyEchoState().bound);
+        press("\u0E01", { code: "KeyD" });
+        await wA(60);
+        let stA = KE.keyEchoState();
+        check2("[169-A] \u2605\u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21 \u2192 \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E02\u0E36\u0E49\u0E19\u0E1B\u0E49\u0E32\u0E22 (\u0E41\u0E1B\u0E49\u0E19\u0E44\u0E17\u0E22)", stA.visible && stA.text === "\u0E01" && stA.kind === "char" && hostA.textContent === "\u0E01", JSON.stringify(stA));
+        check2("[169-A] \u0E15\u0E33\u0E41\u0E2B\u0E19\u0E48\u0E07\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07 (\u0E14\u0E49\u0E32\u0E19\u0E25\u0E48\u0E32\u0E07)", stA.pos === "bottom" && capA.getBoundingClientRect().top > innerHeight / 2);
+        press("F13");
+        await wA(60);
+        check2("[169-A] \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D", KE.keyEchoState().text === "F13" && KE.keyEchoState().kind === "key");
+        press("Tab", { shift: true });
+        await wA(60);
+        check2("[169-A] Shift + \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D \u0E41\u0E22\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E2D\u0E07\u0E1D\u0E32\u0E1B\u0E38\u0E48\u0E21", KE.keyEchoState().text === "Shift + Tab" && capA.querySelectorAll(".k-key-echo-key").length === 2 && capA.querySelectorAll(".k-key-echo-plus").length === 1);
+        check2("[169-A] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E22\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E25\u0E07\u0E43\u0E2B\u0E49\u0E1E\u0E2D\u0E14\u0E35\u0E08\u0E2D", parseFloat(getComputedStyle(capA).fontSize) < state.settings.a11yKeyEchoSize && capA.getBoundingClientRect().width <= innerWidth);
+        const pwA = document.createElement("input");
+        pwA.type = "password";
+        document.body.append(pwA);
+        press("\u0E02", {}, pwA);
+        await wA(60);
+        check2("[169-A] \u2605\u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E23\u0E2B\u0E31\u0E2A\u0E1C\u0E48\u0E32\u0E19: \u0E44\u0E21\u0E48\u0E42\u0E0A\u0E27\u0E4C\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C \u0E41\u0E25\u0E30\u0E1B\u0E49\u0E32\u0E22\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35", !KE.keyEchoState().visible && KE.keyEchoState().text !== "\u0E02");
+        pwA.remove();
+        state.settings.a11yKeyEchoMode = "special";
+        APP.applyA11y();
+        press("\u0E04");
+        await wA(40);
+        const sp1 = KE.keyEchoState();
+        press("Home");
+        await wA(40);
+        check2('[169-A] \u2605 \u0E42\u0E2B\u0E21\u0E14 "\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1B\u0E38\u0E48\u0E21\u0E1E\u0E34\u0E40\u0E28\u0E29": \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E1E\u0E34\u0E40\u0E28\u0E29\u0E02\u0E36\u0E49\u0E19', sp1.text !== "\u0E04" && !sp1.visible && KE.keyEchoState().text === "Home" && KE.keyEchoState().visible);
+        state.settings.a11yKeyEchoMode = "all";
+        state.settings.a11yKeyEchoMs = 300;
+        APP.applyA11y();
+        press("\u0E07");
+        await wA(40);
+        const onA = KE.keyEchoState().visible;
+        const goneA = await untilA(() => !KE.keyEchoState().visible, 2e3);
+        check2("[169-A] \u2605 \u0E1B\u0E49\u0E32\u0E22\u0E2B\u0E32\u0E22\u0E40\u0E2D\u0E07\u0E15\u0E32\u0E21\u0E40\u0E27\u0E25\u0E32\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07", onA && goneA);
+        {
+          let seen = 0, prevented = false;
+          const h = (e) => {
+            seen++;
+            prevented = e.defaultPrevented;
+          };
+          document.body.addEventListener("keydown", h);
+          press("F14");
+          document.body.removeEventListener("keydown", h);
+          check2('[169-A] \u2605 \u0E15\u0E31\u0E27\u0E41\u0E2A\u0E14\u0E07\u0E1B\u0E38\u0E48\u0E21 "\u0E14\u0E39" \u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u2014 \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E31\u0E07\u0E44\u0E1B\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01', seen === 1 && prevented === false);
+        }
+        let tabA = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        if (!tabA) {
+          const rowA = [...document.querySelectorAll("#tree .scene[data-path]")].find((r) => /\.md$/.test(r.dataset.path || ""));
+          if (rowA) {
+            await openScene(rowA.dataset.path);
+            await wA(600);
+          }
+          tabA = [...state.tabs.values()].find((x) => x.editor && !x.locked);
+        }
+        check2("[169-A] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E19\u0E34\u0E22\u0E32\u0E22\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E44\u0E14\u0E49", !!tabA);
+        activate(tabA.file);
+        await wA(300);
+        if (isPageView && isPageView(currentSpView())) {
+          setSpView("normal");
+          await wA(300);
+        }
+        const vA = tabA.editor.view;
+        const mdA = tabA.editor.getMarkdown();
+        const dirtyA = !!tabA.dirty;
+        const geoA = () => {
+          const c = getComputedStyle(vA.dom);
+          return [c.paddingLeft, c.paddingTop, c.width, vA.dom.className, vA.dom.getBoundingClientRect().height].join("|");
+        };
+        APP.setA11ySwitch("a11yLineBand", false);
+        await wA(80);
+        const geo0 = geoA();
+        check2("[169-A] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A", !LB.lineBandState().visible);
+        APP.setA11ySwitch("a11yLineBand", true);
+        vA.focus();
+        const selAt = (pos2) => {
+          const TS = vA.state.selection.constructor;
+          vA.dispatch(vA.state.tr.setSelection(TS.near(vA.state.doc.resolve(pos2))));
+        };
+        selAt(2);
+        LB.refreshLineBandNow();
+        const bandA = tabA.pane.querySelector(".k-line-band");
+        const bsA = LB.lineBandState();
+        check2("[169-A] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E17\u0E35\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E02\u0E2D\u0E07\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C", bsA.visible && !!bandA && getComputedStyle(bandA).display === "block", JSON.stringify(bsA));
+        {
+          const c = vA.coordsAtPos(vA.state.selection.head), b = bandA.getBoundingClientRect(), p = vA.dom.getBoundingClientRect();
+          check2(
+            "[169-A] \u2605\u2605 \u0E41\u0E16\u0E1A\u0E04\u0E23\u0E2D\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E1E\u0E2D\u0E14\u0E35 (\u0E27\u0E31\u0E14\u0E08\u0E32\u0E01\u0E08\u0E2D\u0E08\u0E23\u0E34\u0E07)",
+            b.top <= c.top + 1 && b.bottom >= c.bottom - 1 && b.height <= (c.bottom - c.top) * 1.6 + 4,
+            [b.top, b.bottom, c.top, c.bottom].map(Math.round).join()
+          );
+          check2("[169-A] \u2605 \u0E41\u0E16\u0E1A\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E17\u0E48\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29", Math.abs(b.left - p.left) <= 2 && Math.abs(b.width - p.width) <= 2, Math.round(b.width) + " / " + Math.round(p.width));
+          check2("[169-A] \u2605 \u0E2A\u0E35/\u0E04\u0E27\u0E32\u0E21\u0E40\u0E02\u0E49\u0E21\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07", bsA.color === "#66ccff" && bsA.opacity === 0.5 && getComputedStyle(bandA).opacity === "0.5" && /102,\s*204,\s*255/.test(getComputedStyle(bandA).backgroundColor), getComputedStyle(bandA).backgroundColor);
+          check2(
+            "[169-A] \u2605 \u0E27\u0E34\u0E18\u0E35\u0E1C\u0E2A\u0E21\u0E15\u0E32\u0E21\u0E2A\u0E35\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E17\u0E35\u0E48\u0E08\u0E2D\u0E43\u0E0A\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E1E\u0E37\u0E49\u0E19\u0E21\u0E37\u0E14 = screen \xB7 \u0E1E\u0E37\u0E49\u0E19\u0E2A\u0E27\u0E48\u0E32\u0E07 = multiply)",
+            getComputedStyle(bandA).mixBlendMode === AC.bandBlend(getComputedStyle(vA.dom).color),
+            getComputedStyle(bandA).mixBlendMode
+          );
+        }
+        check2(
+          "[169-A] \u2605\u2605 \u0E41\u0E16\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E17\u0E31\u0E1A\u0E43\u0E19 .pane \u2014 \u0E44\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 DOM \u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02 \u0E44\u0E21\u0E48\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E34\u0E01",
+          bandA.parentNode === tabA.pane && !vA.dom.contains(bandA) && getComputedStyle(bandA).pointerEvents === "none" && !vA.dom.querySelector(".k-line-band") && bandA.getAttribute("aria-hidden") === "true"
+        );
+        check2(
+          "[169-A] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E16\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E40\u0E23\u0E02\u0E32\u0E04\u0E13\u0E34\u0E15\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A + \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 (\u0E01\u0E0E\u0E40\u0E2B\u0E25\u0E47\u0E01 UI \u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E17\u0E1A\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23)",
+          geoA() === geo0 && tabA.editor.getMarkdown() === mdA && !!tabA.dirty === dirtyA,
+          geoA() + " \u2260 " + geo0
+        );
+        {
+          const top0 = bandA.getBoundingClientRect().top;
+          selAt(vA.state.doc.content.size - 1);
+          LB.refreshLineBandNow();
+          const c2 = vA.coordsAtPos(vA.state.selection.head), b22 = bandA.getBoundingClientRect();
+          check2(
+            "[169-A] \u2605 \u0E22\u0E49\u0E32\u0E22\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E44\u0E1B\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19 \u2192 \u0E41\u0E16\u0E1A\u0E15\u0E32\u0E21\u0E44\u0E1B",
+            c2.top - vA.coordsAtPos(2).top < 4 || Math.abs(b22.top - top0) > 4 && b22.top <= c2.top + 1 && b22.bottom >= c2.bottom - 1,
+            Math.round(top0) + " \u2192 " + Math.round(b22.top)
+          );
+          selAt(2);
+          const backA = await untilA(() => Math.abs(bandA.getBoundingClientRect().top - top0) <= 1, 1500);
+          check2("[169-A] \u2605 \u0E41\u0E16\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E40\u0E2D\u0E07\u0E08\u0E32\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E40\u0E25\u0E37\u0E2D\u0E01 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E43\u0E04\u0E23\u0E2A\u0E31\u0E48\u0E07\u0E27\u0E32\u0E14)", !!backA);
+        }
+        {
+          const c0 = vA.coordsAtPos(vA.state.selection.head).top - bandA.getBoundingClientRect().top;
+          const keepTop = tabA.pane.scrollTop;
+          tabA.pane.style.scrollBehavior = "auto";
+          tabA.pane.scrollTop = keepTop + 40;
+          const moved = tabA.pane.scrollTop !== keepTop;
+          const c1 = vA.coordsAtPos(vA.state.selection.head).top - bandA.getBoundingClientRect().top;
+          check2("[169-A] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23: \u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E01\u0E31\u0E1A\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 (\u0E2B\u0E23\u0E37\u0E2D\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E2A\u0E31\u0E49\u0E19\u0E40\u0E01\u0E34\u0E19\u0E08\u0E30\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19)", !moved || Math.abs(c1 - c0) <= 1, c0 + " / " + c1);
+          tabA.pane.scrollTop = keepTop;
+          tabA.pane.style.scrollBehavior = "";
+        }
+        toggleReading(true);
+        LB.refreshLineBandNow();
+        const readHid = !LB.lineBandState().visible;
+        toggleReading(false);
+        LB.refreshLineBandNow();
+        check2("[169-A] \u2605 \u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E04\u0E2D\u0E23\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C) \u0E0B\u0E48\u0E2D\u0E19\u0E41\u0E16\u0E1A \xB7 \u0E2D\u0E2D\u0E01\u0E41\u0E25\u0E49\u0E27\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32", readHid && LB.lineBandState().visible);
+        check2(
+          "[169-A] \u2605 \u0E07\u0E32\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E41\u0E25\u0E30\u0E1B\u0E49\u0E32\u0E22\u0E1B\u0E38\u0E48\u0E21 (\u0E01\u0E0E @media print)",
+          [...document.styleSheets].some((sh) => {
+            try {
+              return [...sh.cssRules].some((r) => r.media && /print/.test(r.media.mediaText) && [...r.cssRules].some((x) => /\.k-line-band/.test(x.selectorText || "") && /\.k-key-echo/.test(x.selectorText || "") && x.style.display === "none"));
+            } catch {
+              return false;
+            }
+          })
+        );
+        if (kapi.menuLabels && kapi.menuTestClick) {
+          syncMenuToggles();
+          await wA(200);
+          const labsA = await kapi.menuLabels();
+          const pathA = labsA.filter((l) => l.includes(" > " + t("ui.menu.a11y")));
+          check2(
+            "[169-A] \u2605 \u0E40\u0E21\u0E19\u0E39 \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D \u2192 \u0E01\u0E32\u0E23\u0E0A\u0E48\u0E27\u0E22\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07 \u0E21\u0E35\u0E04\u0E23\u0E1A 5 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A",
+            pathA.length === 6 && pathA.every((l) => !/ui\.menu\./.test(l)) && [t("ui.menu.a11yKeyEcho"), t("ui.menu.a11yLineBand"), t("ui.menu.soundTypewriterPrint"), t("ui.menu.a11yOsk"), t("ui.menu.a11ySettings")].every((x) => pathA.some((l) => l.endsWith(" > " + x))),
+            pathA.join(" | ")
+          );
+          const [m0] = await untilA(async () => {
+            const s = await kapi.menuItemState(["a11y-key-echo"]);
+            return s[0].checked && s;
+          }, 2e3) || [{}];
+          check2("[169-A] \u0E40\u0E21\u0E19\u0E39\u0E15\u0E34\u0E4A\u0E01\u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07 (\u0E41\u0E2A\u0E14\u0E07\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E01\u0E14 = \u0E40\u0E1B\u0E34\u0E14)", !!m0.checked, JSON.stringify(m0));
+          const mcA = await kapi.menuTestClick("a11y-key-echo");
+          await untilA(() => state.settings.a11yKeyEcho === false);
+          check2(
+            "[169-A] \u2605\u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39\u0E08\u0E23\u0E34\u0E07 \u2192 \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1B\u0E34\u0E14 + \u0E2B\u0E22\u0E38\u0E14\u0E42\u0E0A\u0E27\u0E4C + \u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49",
+            mcA && mcA.ok && state.settings.a11yKeyEcho === false && !KE.keyEchoState().on && !!await untilA(async () => (await gA()).a11yKeyEcho === false)
+          );
+          press("\u0E08");
+          await wA(60);
+          check2("[169-A] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E02\u0E36\u0E49\u0E19", !KE.keyEchoState().visible && KE.keyEchoState().text !== "\u0E08");
+          await kapi.menuTestClick("a11y-line-band");
+          await untilA(() => state.settings.a11yLineBand === false);
+          check2("[169-A] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39\u0E41\u0E16\u0E1A\u0E2A\u0E35\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14 \u2192 \u0E1B\u0E34\u0E14 + \u0E41\u0E16\u0E1A\u0E2B\u0E32\u0E22", state.settings.a11yLineBand === false && !LB.lineBandState().visible);
+          const [mL] = await untilA(async () => {
+            const s = await kapi.menuItemState(["a11y-line-band"]);
+            return !s[0].checked && s;
+          }, 2e3) || [{ checked: true }];
+          check2("[169-A] \u0E40\u0E21\u0E19\u0E39\u0E40\u0E25\u0E34\u0E01\u0E15\u0E34\u0E4A\u0E01\u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14", mL.exists && !mL.checked);
+        }
+        await handleCommand("typewriter");
+        check2("[169-A] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14\u0E08\u0E32\u0E01\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 \u2192 \u0E1B\u0E34\u0E14 + \u0E08\u0E33\u0E25\u0E07 settings", isTypewriter() === false && state.settings.typewriterMode === false);
+        check2("[169-A] \u2605\u2605 \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E41\u0E25\u0E49\u0E27\u0E2B\u0E32\u0E22)", !!await untilA(async () => (await gA()).typewriterMode === false));
+        state.settings.typewriterMode = true;
+        applySettings();
+        const twOn = isTypewriter();
+        toggleTypewriter(false);
+        applySettings();
+        check2("[169-A] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E17\u0E35\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E27\u0E49 \xB7 \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E14\u0E36\u0E07\u0E42\u0E2B\u0E21\u0E14\u0E17\u0E35\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E17\u0E32\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07\u0E17\u0E35\u0E48 applySettings", twOn === true && isTypewriter() === false);
+        state.settings.typewriterMode = false;
+        applySettings();
+        const sndWas = !!state.settings.typeSound;
+        await handleCommand("type-sound");
+        check2(
+          "[169-A] \u2605 \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E2A\u0E35\u0E22\u0E07\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E14\u0E35\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27)",
+          state.settings.typeSound === !sndWas && !!await untilA(async () => (await gA()).typeSound === !sndWas)
+        );
+        await handleCommand("type-sound");
+        await untilA(async () => (await gA()).typeSound === sndWas);
+        const oskA = await APP.openOsKeyboard();
+        check2(
+          "[169-A] \u2605 \u0E41\u0E1B\u0E49\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E1A\u0E19\u0E08\u0E2D: main \u0E15\u0E2D\u0E1A\u0E41\u0E1C\u0E19\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E35\u0E49 (\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E17\u0E2A\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E02\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07\u0E1A\u0E19\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07)",
+          oskA && oskA.ok && oskA.dry === true && (kapi.platform !== "win32" || oskA.first === "osk.exe"),
+          JSON.stringify(oskA)
+        );
+        check2("[169-A] \u0E1A\u0E2D\u0E01\u0E1C\u0E25\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30", $("#status").textContent.includes(t("ui.a11y.oskOpened")), $("#status").textContent);
+        await handleCommand("a11y-settings");
+        await wA(250);
+        const boxC = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        check2('[169-A] \u2605 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 "\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E01\u0E32\u0E23\u0E0A\u0E48\u0E27\u0E22\u0E01\u0E32\u0E23\u0E40\u0E02\u0E49\u0E32\u0E16\u0E36\u0E07" \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E23\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E31\u0E49\u0E19', !!boxC && boxC.querySelector('.k-set-page[data-p="a11y"]').classList.contains("on"));
+        check2("[169-A] \u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E30\u0E17\u0E49\u0E2D\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E08\u0E23\u0E34\u0E07\u0E15\u0E2D\u0E19\u0E19\u0E35\u0E49", boxC.querySelector("#st-a11y-keyecho").checked === false && boxC.querySelector("#st-typewriter").checked === false && boxC.querySelector("#st-a11y-band-color").value === "#66ccff");
+        boxC.querySelector(".k-cancel").click();
+        await wA(150);
+        for (const k of Object.keys(AC.A11Y_DEFAULTS)) state.settings[k] = keepA[k] === void 0 ? AC.A11Y_DEFAULTS[k] : keepA[k];
+        state.settings.a11yKeyEcho = false;
+        state.settings.a11yLineBand = false;
+        state.settings.typewriterMode = false;
+        state.settings.theme = keepA.theme;
+        toggleTypewriter(false);
+        applySettings();
+        KE.hideKeyEcho();
+        try {
+          await APP.mergeGlobalSettings(Object.fromEntries(Object.keys(AC.A11Y_DEFAULTS).map((k) => [k, state.settings[k]])));
+        } catch {
+        }
+        check2("[169-A] \u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E: \u0E15\u0E31\u0E27\u0E0A\u0E48\u0E27\u0E22\u0E1B\u0E34\u0E14\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", !KE.keyEchoState().on && !LB.lineBandState().on && !isTypewriter() && !document.querySelector(".k-dialog.k-settings"));
+      }
+      {
+        const wX = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilX = async (fn, max2 = 4e3) => {
+          const t0 = Date.now();
+          for (; ; ) {
+            let v4 = false;
+            try {
+              v4 = await fn();
+            } catch {
+            }
+            if (v4) return v4;
+            if (Date.now() - t0 > max2) return v4;
+            await wX(40);
+          }
+        };
+        const APPX = await Promise.resolve().then(() => (init_app(), app_exports));
+        const PUI = await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports));
+        document.querySelectorAll(".k-overlay, .k-menu").forEach((o) => o.remove());
+        const verEl = document.getElementById("tb-ver");
+        check2(
+          "[169-X] \u2605 \u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E33\u0E01\u0E31\u0E1A\u0E40\u0E25\u0E02\u0E23\u0E38\u0E48\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21",
+          !!verEl && verEl.textContent === "v" + APPX.APP_VERSION && verEl.getBoundingClientRect().width > 10,
+          verEl && verEl.textContent
+        );
+        check2(
+          "[169-X] \u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E25\u0E02\u0E23\u0E38\u0E48\u0E19 + \u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E21\u0E35\u0E40\u0E25\u0E02\u0E23\u0E38\u0E48\u0E19",
+          document.getElementById("tb-title").textContent.startsWith(state.title) && document.title.includes(APPX.APP_VERSION),
+          document.title
+        );
+        const logoX = document.querySelector("#tb-logo img");
+        check2(
+          "[169-X] \u2605 \u0E42\u0E25\u0E42\u0E01\u0E49\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E2D\u0E04\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 (\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D K2)",
+          !!logoX && await untilX(() => logoX.complete && logoX.naturalWidth > 0) && document.getElementById("tb-logo").textContent.trim() === "",
+          logoX && logoX.src
+        );
+        {
+          const keepThemeX = state.settings.theme;
+          const shown = () => [...document.querySelectorAll("#tb-logo img")].filter((i5) => getComputedStyle(i5).display !== "none" && i5.getBoundingClientRect().width > 4).map((i5) => i5.classList.contains("k-logo-white") ? "white" : "color").join();
+          toggleTheme("k2");
+          await wX(200);
+          check2("[169-X] \u2605 \u0E18\u0E35\u0E21\u0E21\u0E37\u0E14: \u0E42\u0E25\u0E42\u0E01\u0E49\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E02\u0E32\u0E27 (\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27)", shown() === "white" && document.documentElement.dataset.themeMode === "dark", shown());
+          const whiteX = document.querySelector("#tb-logo img.k-logo-white");
+          check2("[169-X] \u0E09\u0E1A\u0E31\u0E1A\u0E02\u0E32\u0E27\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07", await untilX(() => whiteX.complete && whiteX.naturalWidth > 0));
+          toggleTheme("k2-light");
+          await wX(200);
+          check2("[169-X] \u2605 \u0E18\u0E35\u0E21\u0E2A\u0E27\u0E48\u0E32\u0E07: \u0E42\u0E25\u0E42\u0E01\u0E49\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E1B\u0E47\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E2A\u0E35 (\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27)", shown() === "color" && document.documentElement.dataset.themeMode === "light", shown());
+          toggleTheme(keepThemeX);
+          await wX(200);
+        }
+        {
+          hideTip2();
+          const b1 = document.getElementById("open-btn"), b22 = document.getElementById("search-all-btn");
+          const tipOn = () => !!document.querySelector("#k-tip.on");
+          const over = (b) => {
+            const r = b.getBoundingClientRect();
+            b.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, clientX: r.left + 4, clientY: r.top + 4 }));
+          };
+          const out2 = (b) => b.dispatchEvent(new MouseEvent("mouseout", { bubbles: true, relatedTarget: document.body }));
+          await wX(700);
+          globalThis.__k2tipDelayTest = true;
+          try {
+            over(b1);
+            check2("[169-X] \u2605 \u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E41\u0E15\u0E30\u0E1B\u0E38\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E40\u0E14\u0E34\u0E21\u0E01\u0E30\u0E1E\u0E23\u0E34\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E21\u0E32\u0E2A\u0E4C\u0E41\u0E1A\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A)", !tipOn());
+            out2(b1);
+            await wX(650);
+            check2("[169-X] \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E01\u0E48\u0E2D\u0E19\u0E04\u0E23\u0E1A\u0E40\u0E27\u0E25\u0E32 = \u0E44\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19\u0E40\u0E25\u0E22", !tipOn());
+            over(b1);
+            check2("[169-X] \u2605 \u0E0A\u0E35\u0E49\u0E04\u0E49\u0E32\u0E07\u0E04\u0E23\u0E1A\u0E40\u0E27\u0E25\u0E32\u0E41\u0E25\u0E49\u0E27\u0E02\u0E36\u0E49\u0E19", await untilX(() => tipOn(), 1500));
+            out2(b1);
+            over(b22);
+            check2("[169-X] \u2605 \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E1B\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E49\u0E32\u0E07 \u0E46 \u0E17\u0E31\u0E19\u0E17\u0E35 = \u0E02\u0E36\u0E49\u0E19\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E2D\u0E43\u0E2B\u0E21\u0E48)", tipOn());
+            out2(b22);
+          } finally {
+            delete globalThis.__k2tipDelayTest;
+            hideTip2();
+          }
+        }
+        {
+          const rowX = document.querySelector('#tree .scene[data-path*="Chapters"]');
+          if (rowX) {
+            rowX.click();
+            await untilX(() => state.active && /Chapters/.test(state.active.file || ""));
+            PUI.resetPanels();
+            await wX(250);
+            await handleCommand("toggle-panel", "props");
+            const okP = await untilX(() => document.querySelectorAll("#props-body input, #props-body textarea").length > 3, 5e3);
+            check2(
+              '[169-X] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E02\u0E13\u0E30\u0E21\u0E35\u0E09\u0E32\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 = \u0E40\u0E2B\u0E47\u0E19\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E40\u0E14\u0E34\u0E21 "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E09\u0E32\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E39\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34")',
+              !!okP,
+              (document.getElementById("props-body") || {}).textContent
+            );
+            await handleCommand("toggle-panel", "props");
+            await wX(150);
+          }
+        }
+        {
+          const fb = document.getElementById("filter-bar");
+          if (fb && fb.getBoundingClientRect().width > 100) {
+            const st = document.getElementById("filter-statuses").getBoundingClientRect();
+            const ar = document.getElementById("filter-archive").getBoundingClientRect();
+            const so = document.getElementById("filter-sort").getBoundingClientRect();
+            const fr = fb.getBoundingClientRect();
+            check2(
+              "[169-X] \u0E41\u0E16\u0E1A\u0E01\u0E23\u0E2D\u0E07: \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E01\u0E47\u0E1A\u0E16\u0E32\u0E27\u0E23 (\u0E0B\u0E49\u0E32\u0E22) \u0E01\u0E31\u0E1A\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07 (\u0E02\u0E27\u0E32) \u0E2D\u0E22\u0E39\u0E48\u0E41\u0E16\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u0E43\u0E15\u0E49\u0E0A\u0E34\u0E1B\u0E2A\u0E16\u0E32\u0E19\u0E30",
+              Math.abs(ar.top + ar.height / 2 - (so.top + so.height / 2)) < 8 && ar.top >= st.bottom - 1 && ar.left < so.left && so.right <= fr.right + 1,
+              JSON.stringify([st.bottom, ar.top, so.top, ar.left, so.left])
+            );
+            const tg = document.getElementById("filter-tags");
+            if (tg.children.length) {
+              const tr4 = tg.getBoundingClientRect();
+              check2(
+                "[169-X] \u0E41\u0E16\u0E1A\u0E01\u0E23\u0E2D\u0E07: \u0E0A\u0E34\u0E1B\u0E41\u0E17\u0E47\u0E01\u0E44\u0E14\u0E49\u0E40\u0E15\u0E47\u0E21\u0E04\u0E27\u0E32\u0E21\u0E01\u0E27\u0E49\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E1A\u0E35\u0E1A\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E16\u0E27\u0E25\u0E30\u0E0A\u0E34\u0E1B)",
+                tr4.width >= fr.width - 4 && tr4.bottom <= ar.top + 1,
+                JSON.stringify([tr4.width, fr.width])
+              );
+            }
+          }
+          const badge = document.querySelector("#tree .sc-status");
+          if (badge) check2("[169-X] \u0E1B\u0E49\u0E32\u0E22\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E43\u0E19\u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E1E\u0E31\u0E1A\u0E01\u0E25\u0E32\u0E07\u0E04\u0E33", getComputedStyle(badge).whiteSpace === "nowrap");
+        }
+        {
+          PUI.resetPanels();
+          await wX(200);
+          await handleCommand("toggle-panel", "codex");
+          await untilX(() => document.querySelectorAll('#codex-body .k-codex-card, [data-panel-id="codex"] .k-codex-card').length > 0, 4e3);
+          const cards = [...document.querySelectorAll('[data-panel-id="codex"] .k-codex-card')];
+          if (cards.length >= 2) {
+            const rs = cards.map((c) => c.getBoundingClientRect());
+            let overlap = 0;
+            for (let i5 = 0; i5 < rs.length; i5++) for (let j = i5 + 1; j < rs.length; j++) {
+              const a = rs[i5], b = rs[j];
+              if (a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2) overlap++;
+            }
+            check2(
+              "[169-X] \u2605 \u0E2A\u0E32\u0E23\u0E32\u0E19\u0E38\u0E01\u0E23\u0E21: \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19 (\u0E40\u0E14\u0E34\u0E21\u0E41\u0E16\u0E27\u0E2B\u0E14\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E41\u0E16\u0E1A\u0E2A\u0E35 \u0E2D\u0E48\u0E32\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
+              overlap === 0 && rs[0].height > 80,
+              overlap + " \u0E04\u0E39\u0E48 \xB7 \u0E2A\u0E39\u0E07 " + Math.round(rs[0].height)
+            );
+          }
+          await handleCommand("toggle-panel", "codex");
+          await wX(150);
+        }
+        {
+          const names = await kapi.starterArtList();
+          check2("[169-X] main \u0E1A\u0E2D\u0E01\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E1E\u0E02\u0E2D\u0E07 Story Starter \u0E44\u0E14\u0E49", Array.isArray(names));
+          await (await Promise.resolve().then(() => (init_starter_ui(), starter_ui_exports))).resetStarterView();
+          await handleCommand("toggle-panel", "starter");
+          const artX = await untilX(() => document.querySelector('[data-panel-id="starter"] .st-list-wrap .st-art'), 5e3);
+          check2("[169-X] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E23\u0E27\u0E21 Story Starter \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E2A\u0E48\u0E20\u0E32\u0E1E (\u0E41\u0E16\u0E1A\u0E2B\u0E31\u0E27)", !!artX && artX.classList.contains("st-art-top") && artX.dataset.art === "home-top");
+          if (artX) {
+            await untilX(() => artX.classList.contains("st-art-empty") || artX.classList.contains("st-art-ready"), 3e3);
+            const hasFile = (names || []).some((n2) => /^(home|default)-top\./i.test(n2));
+            const r = artX.getBoundingClientRect();
+            check2("[169-X] \u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E2B\u0E31\u0E27\u0E44\u0E14\u0E49\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 4:1 \u0E15\u0E32\u0E21\u0E2A\u0E40\u0E1B\u0E01 (1200\xD7300)", r.width > 100 && Math.abs(r.width / r.height - 4) < 0.25, r.width + "\xD7" + r.height);
+            if (!hasFile) check2(
+              "[169-X] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C = \u0E01\u0E23\u0E2D\u0E1A placeholder \u0E1A\u0E2D\u0E01\u0E02\u0E19\u0E32\u0E14\u0E01\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E27\u0E32\u0E07",
+              artX.querySelector(".st-art-ph-size").textContent === "1200 \xD7 300 px" && artX.querySelector(".st-art-ph-file").textContent === "starter/home-top.png" && getComputedStyle(artX.querySelector(".st-art-ph")).display !== "none"
+            );
+            else check2("[169-X] \u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C = \u0E41\u0E2A\u0E14\u0E07\u0E20\u0E32\u0E1E \u0E0B\u0E48\u0E2D\u0E19 placeholder", artX.classList.contains("st-art-ready"));
+          }
+          await handleCommand("toggle-panel", "starter");
+          await wX(150);
+        }
+        {
+          const gdir = await kapi.globalPluginsDir();
+          await kapi.mkdir(gdir);
+          const mk2 = async (name5, hot) => {
+            const dir2 = await kapi.join(gdir, name5);
+            await kapi.mkdir(dir2);
+            await kapi.writeFile(await kapi.join(dir2, "plugin.json"), JSON.stringify({ name: name5, entry: "main.js", version: "1.0.0", ...hot ? { hotReload: true } : {} }));
+            await kapi.writeFile(await kapi.join(dir2, "main.js"), [
+              "const g = (globalThis.__k2life = globalThis.__k2life || {});",
+              'const me = (g[k2.pluginName] = g[k2.pluginName] || { runs: 0, pings: 0, unload: "" });',
+              "me.runs++;",
+              'k2.registerCommand("cmd-" + k2.pluginName, () => {});',
+              'me.panel = k2.registerPanel("p", { title: "life", render: (h) => { h.textContent = "life"; } });',
+              'k2.on("k2life:ping", () => { me.pings++; });',
+              "k2.onUnload((why) => { me.unload = why; });"
+            ].join("\n"));
+            return dir2;
+          };
+          delete globalThis.__k2life;
+          APPX.setPluginDisabled("k2cold", false);
+          APPX.setPluginDisabled("k2hot", false);
+          const dCold = await mk2("k2cold", false), dHot = await mk2("k2hot", true);
+          const restart0 = APPX.pluginsNeedRestart().filter((n2) => n2 === "k2cold" || n2 === "k2hot").length;
+          await APPX.reloadPlugins();
+          const L2 = () => globalThis.__k2life || {};
+          check2(
+            "[169-X] \u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E02\u0E2D\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 \xB7 \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48)",
+            APPX.pluginList().loaded.some((p) => p.name === "k2cold") && (L2().k2cold || {}).runs === 1 && (L2().k2hot || {}).runs === 1 && APPX.pluginsNeedRestart().filter((n2) => n2 === "k2cold" || n2 === "k2hot").length === restart0,
+            JSON.stringify(L2())
+          );
+          check2("[169-X] \u0E41\u0E1C\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E16\u0E39\u0E01\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", !!PUI.getPanelManager().registry.get(L2().k2cold.panel), L2().k2cold.panel);
+          await APPX.reloadPlugins();
+          check2("[169-X] \u2605 \u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E42\u0E14\u0E22\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 = \u0E44\u0E21\u0E48\u0E23\u0E31\u0E19\u0E42\u0E04\u0E49\u0E14\u0E0B\u0E49\u0E33 (\u0E40\u0E14\u0E34\u0E21\u0E23\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E0B\u0E49\u0E33\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07)", L2().k2cold.runs === 1 && L2().k2hot.runs === 1, JSON.stringify(L2()));
+          APPX.pluginBus.emit("k2life:ping", {});
+          check2("[169-X] \u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 (\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19)", L2().k2cold.pings === 1 && L2().k2hot.pings === 1);
+          await kapi.writeFile(await kapi.join(dHot, "main.js"), await kapi.readFile(await kapi.join(dHot, "main.js")) + "\n// edited");
+          await APPX.reloadPlugins();
+          check2(
+            '[169-X] \u2605 \u0E41\u0E01\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48 = \u0E23\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48 \u0E41\u0E25\u0E30\u0E15\u0E31\u0E27\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01 onUnload("reload")',
+            L2().k2hot.runs === 2 && L2().k2hot.unload === "reload" && L2().k2cold.runs === 1,
+            JSON.stringify(L2())
+          );
+          APPX.pluginBus.emit("k2life:ping", {});
+          check2("[169-X] \u2605 \u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E2A\u0E2D\u0E07\u0E0A\u0E38\u0E14)", L2().k2hot.pings === 2, String(L2().k2hot.pings));
+          const pidCold = L2().k2cold.panel, pidHot = L2().k2hot.panel;
+          APPX.setPluginDisabled("k2cold", true);
+          APPX.setPluginDisabled("k2hot", true);
+          await APPX.reloadPlugins();
+          check2('[169-X] \u0E1B\u0E34\u0E14\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 \u2192 onUnload("remove") \u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01', L2().k2cold.unload === "remove" && L2().k2hot.unload === "remove", JSON.stringify(L2()));
+          check2(
+            "[169-X] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 (\u0E40\u0E14\u0E34\u0E21\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E40\u0E23\u0E34\u0E48\u0E21\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48)",
+            !PUI.getPanelManager().registry.get(pidCold) && !PUI.getPanelManager().registry.get(pidHot)
+          );
+          const before = { c: L2().k2cold.pings, h: L2().k2hot.pings };
+          APPX.pluginBus.emit("k2life:ping", {});
+          check2("[169-X] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E2D\u0E35\u0E01", L2().k2cold.pings === before.c && L2().k2hot.pings === before.h);
+          check2("[169-X] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E2B\u0E32\u0E22", !APPX.pluginList().commands.some((c) => c.plugin === "k2cold" || c.plugin === "k2hot"));
+          const need = APPX.pluginsNeedRestart();
+          check2(
+            "[169-X] \u2605\u2605 \u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28 hotReload \u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 = \u0E15\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48 \xB7 \u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28 = \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07",
+            need.includes("k2cold") && !need.includes("k2hot"),
+            need.join()
+          );
+          const { renderPluginPanel: renderPluginPanel2 } = await Promise.resolve().then(() => (init_plugin_panel(), plugin_panel_exports));
+          const hostX = document.createElement("div");
+          document.body.append(hostX);
+          await renderPluginPanel2(hostX);
+          const banner = hostX.querySelector(".k-plug-restart");
+          check2(
+            '[169-X] \u2605\u2605 \u0E41\u0E1C\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E02\u0E36\u0E49\u0E19\u0E41\u0E16\u0E1A "\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48" \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E1B\u0E38\u0E48\u0E21 (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49: \u0E16\u0E49\u0E32\u0E15\u0E49\u0E2D\u0E07 restart \u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19)',
+            !!banner && banner.textContent.includes("k2cold") && !banner.textContent.includes("k2hot") && !!banner.querySelector("button.k-plug-restart-btn"),
+            banner && banner.textContent
+          );
+          check2(
+            '[169-X] \u0E01\u0E32\u0E23\u0E4C\u0E14\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E44\u0E27\u0E49\u0E02\u0E36\u0E49\u0E19\u0E2A\u0E16\u0E32\u0E19\u0E30 "\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48" \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 "\u0E21\u0E35\u0E1B\u0E31\u0E0D\u0E2B\u0E32"',
+            hostX.querySelector('.k-plug-card[data-plugin="k2cold"]').classList.contains("k-plug-off")
+          );
+          hostX.remove();
+          const rDel = await kapi.pluginUninstall(gdir, "k2cold");
+          check2("[169-X] \u0E16\u0E2D\u0E19\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 = \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E2B\u0E32\u0E22\u0E08\u0E32\u0E01\u0E14\u0E34\u0E2A\u0E01\u0E4C", rDel && rDel.ok && !await kapi.exists(dCold));
+          await kapi.pluginUninstall(gdir, "k2hot");
+          APPX.setPluginDisabled("k2cold", false);
+          APPX.setPluginDisabled("k2hot", false);
+          await APPX.reloadPlugins();
+          check2("[169-X] \u0E16\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2D\u0E35\u0E01", !APPX.pluginList().loaded.concat(APPX.pluginList().failed).some((p) => p.name === "k2cold" || p.name === "k2hot"));
+          delete globalThis.__k2life;
+        }
+        PUI.resetPanels();
+        await wX(200);
+      }
+      {
+        const SOn = await Promise.resolve().then(() => (init_scene_ops(), scene_ops_exports));
+        const SECn = await Promise.resolve().then(() => (init_section_ops(), section_ops_exports));
+        const APn = await Promise.resolve().then(() => (init_app(), app_exports));
+        const DSn = await Promise.resolve().then(() => (init_disk_sync(), disk_sync_exports));
+        const TBn = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
+        const PDn = await Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports));
+        const wN = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilN = async (fn, ms = 5e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            try {
+              if (await fn()) return true;
+            } catch {
+            }
+            await wN(60);
+          }
+          return false;
+        };
+        const rootN = state.root;
+        const jn = (...a) => kapi.join(...a);
+        const bodyOf2 = async (p) => (0, import_md34.parseMdFile)(await kapi.readFile(p)).body;
+        const metaOf2 = async (p) => (0, import_md34.parseMdFile)(await kapi.readFile(p)).meta;
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        await APn.syncDiskNames({ force: true });
+        const bk0 = await DSn.freeBookName(kapi, rootN);
+        check2("[170-N] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 (Book N) \u0E41\u0E25\u0E30\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C", /^Book \d+$/.test(bk0.title) && bk0.folder === bk0.title, JSON.stringify(bk0));
+        const secP = await SECn.addSection("\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170");
+        const secM = await kapi.readJson(await jn(secP, "section.json"));
+        check2(
+          "[170-N] \u2605 \u0E40\u0E25\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48: \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C = \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21 \xB7 section.json \u0E08\u0E14\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E44\u0E27\u0E49",
+          /[\\/]เล่มทดสอบ170$/.test(secP) && secM.title === "\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170" && secM.folderName === "\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170",
+          secP + " " + JSON.stringify(secM)
+        );
+        const dP2 = await jn(secP, "Draft", "default");
+        const d0 = await kapi.readJson(await jn(dP2, "draft.json"));
+        check2(
+          "[170-N] \u0E1A\u0E17\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48: \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C = \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E19\u0E33",
+          d0.chapters[0].folderName === d0.chapters[0].title && !/^\d+\s*-/.test(d0.chapters[0].folderName) && await kapi.exists(await jn(dP2, "Chapters", d0.chapters[0].folderName)),
+          JSON.stringify(d0.chapters[0])
+        );
+        const secDup = await SECn.addSection("\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170");
+        const dupM = await kapi.readJson(await jn(secDup, "section.json"));
+        check2(
+          "[170-N] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E0B\u0E49\u0E33 (\u0E17\u0E32\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34) \u2192 \u0E15\u0E48\u0E2D\u0E40\u0E25\u0E02\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E41\u0E25\u0E30\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E40\u0E25\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21",
+          secDup !== secP && /[\\/]เล่มทดสอบ170 2$/.test(secDup) && dupM.title === "\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170 2" && (await kapi.readJson(await jn(secP, "section.json"))).guid === secM.guid,
+          secDup
+        );
+        check2(
+          "[170-N] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E17\u0E35\u0E48\u0E0A\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 (Wiki) \u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18 \u2014 \u0E40\u0E25\u0E48\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21",
+          await SECn.setSectionTitle(secDup, "Wiki") === false && await kapi.exists(await jn(secDup, "section.json")) && (await kapi.readJson(await jn(secDup, "section.json"))).title === "\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170 2"
+        );
+        check2(
+          "[170-N] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E17\u0E35\u0E48\u0E0A\u0E19\u0E40\u0E25\u0E48\u0E21\u0E2D\u0E37\u0E48\u0E19 (\u0E44\u0E21\u0E48\u0E2A\u0E19\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C) \u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18",
+          await SECn.setSectionTitle(secDup, "\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A170") === false && await kapi.exists(await jn(secDup, "section.json"))
+        );
+        document.querySelectorAll("#k-toasts > *").forEach((x) => x.remove());
+        {
+          const plDir = await jn(rootN, "Planners");
+          const plList = async () => await kapi.exists(plDir) ? (await kapi.listFiles(plDir, "")).slice().sort().join("|") : "(\u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C)";
+          const plBefore = await plList();
+          const secCount = async () => {
+            let n2 = 0;
+            for (const nm of await kapi.listDirs(rootN)) if (await kapi.exists(await jn(rootN, nm, "section.json"))) n2++;
+            return n2;
+          };
+          const topDlg = () => [...document.querySelectorAll(".k-overlay .k-dialog")].pop();
+          const n0 = await secCount();
+          document.querySelectorAll("#k-toasts > *").forEach((x) => x.remove());
+          const pAdd2 = SECn.addSection();
+          await untilN(() => !!topDlg() && !!topDlg().querySelector(".k-dlg-input"));
+          const dlg1 = topDlg();
+          check2("[170-N] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E40\u0E25\u0E48\u0E21\u0E40\u0E2A\u0E19\u0E2D\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E20\u0E32\u0E29\u0E32\u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29 (Book N)", /^Book \d+$/.test(dlg1.querySelector(".k-dlg-input").value), dlg1.querySelector(".k-dlg-input").value);
+          dlg1.querySelector(".k-dlg-input").value = "Planners";
+          dlg1.querySelector(".k-ok").click();
+          const again2 = (prev, v4) => untilN(() => {
+            const d = topDlg();
+            return !!d && d !== prev && !!d.querySelector(".k-dlg-input") && d.querySelector(".k-dlg-input").value === v4;
+          });
+          const reasked = await again2(dlg1, "Planners");
+          const toastTxt = [...document.querySelectorAll("#k-toasts > *")].map((x) => x.textContent).join(" | ");
+          check2(
+            '[170-N] \u2605\u2605 \u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E27\u0E48\u0E32 "Planners" \u2192 \u0E44\u0E21\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E25\u0E48\u0E21 \xB7 \u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25 \xB7 \u0E16\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E42\u0E14\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07',
+            reasked && toastTxt.includes("Planners") && !/ui\.names\./.test(toastTxt) && await secCount() === n0,
+            toastTxt
+          );
+          check2(
+            "[170-N] \u2605\u2605 \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Planners \u0E02\u0E2D\u0E07\u0E01\u0E23\u0E30\u0E14\u0E32\u0E19\u0E27\u0E32\u0E07\u0E41\u0E1C\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 (\u0E44\u0E21\u0E48\u0E21\u0E35 section.json \u0E42\u0E1C\u0E25\u0E48 \xB7 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E17\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21)",
+            !await kapi.exists(await jn(plDir, "section.json")) && !await kapi.exists(await jn(plDir, "Draft")) && await plList() === plBefore,
+            plBefore + " \u2192 " + await plList()
+          );
+          const dlg2 = topDlg();
+          dlg2.querySelector(".k-dlg-input").value = "planners";
+          dlg2.querySelector(".k-ok").click();
+          check2('[170-N] \u2605 "planners" \u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E25\u0E47\u0E01\u0E01\u0E47\u0E16\u0E39\u0E01\u0E01\u0E31\u0E19 (\u0E23\u0E30\u0E1A\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E41\u0E22\u0E01\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C)', await again2(dlg2, "planners") && await secCount() === n0);
+          const dlg3 = topDlg();
+          dlg3.querySelector(".k-dlg-input").value = "Planners \u0E02\u0E2D\u0E07\u0E09\u0E31\u0E19170";
+          dlg3.querySelector(".k-ok").click();
+          const secPl = await pAdd2;
+          check2(
+            "[170-N] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E0A\u0E19 \u2192 \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E25\u0E48\u0E21\u0E44\u0E14\u0E49 \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E15\u0E23\u0E07\u0E0A\u0E37\u0E48\u0E2D",
+            /[\\/]Planners ของฉัน170$/.test(String(secPl)) && await secCount() === n0 + 1 && (await kapi.readJson(await jn(secPl, "section.json"))).title === "Planners \u0E02\u0E2D\u0E07\u0E09\u0E31\u0E19170",
+            String(secPl)
+          );
+          check2(
+            '[170-N] \u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E17\u0E35\u0E48\u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E40\u0E1B\u0E47\u0E19 "Planners" \u0E01\u0E47\u0E16\u0E39\u0E01\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18 \u2014 \u0E40\u0E25\u0E48\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21',
+            await SECn.setSectionTitle(secPl, "Planners") === false && await kapi.exists(await jn(secPl, "section.json")) && (await kapi.readJson(await jn(secPl, "section.json"))).title === "Planners \u0E02\u0E2D\u0E07\u0E09\u0E31\u0E19170" && await plList() === plBefore
+          );
+          const auto = await DSn.freeBookName(kapi, rootN, "Planners");
+          check2('[170-N] \u0E17\u0E32\u0E07\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34 (AI/\u0E17\u0E33\u0E2A\u0E33\u0E40\u0E19\u0E32) \u0E02\u0E2D\u0E0A\u0E37\u0E48\u0E2D "Planners" \u2192 \u0E44\u0E14\u0E49 "Planners 2" \u0E17\u0E31\u0E49\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E41\u0E25\u0E30\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C', auto.taken && auto.folder === "Planners 2" && auto.title === "Planners 2", JSON.stringify(auto));
+          await kapi.remove(secPl).catch(() => {
+          });
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          document.querySelectorAll("#k-toasts > *").forEach((x) => x.remove());
+          await buildTree2();
+        }
+        const chN = await SOn.addChapter(dP2, "\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14170");
+        check2(
+          "[170-N] \u2605 \u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48: \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C = \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E01\u0E33\u0E01\u0E31\u0E1A) \xB7 order \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19 draft.json",
+          chN.folderName === "\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14170" && chN.order === 2 && await kapi.exists(await jn(dP2, "Chapters", "\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14170")),
+          JSON.stringify(chN)
+        );
+        const s1 = await SOn.addScene(dP2, chN, "\u0E09\u0E32\u0E01\u0E40\u0E0A\u0E49\u0E32170", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E0A\u0E49\u0E32170" });
+        const s2 = await SOn.addScene(dP2, chN, "\u0E09\u0E32\u0E01\u0E40\u0E0A\u0E49\u0E32170", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E0B\u0E49\u0E33170" });
+        check2(
+          "[170-N] \u2605 \u0E09\u0E32\u0E01\u0E43\u0E2B\u0E21\u0E48: \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C = \u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 \xB7 \u0E0A\u0E37\u0E48\u0E2D\u0E0B\u0E49\u0E33\u0E43\u0E19\u0E1A\u0E17\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19 \u2192 \u0E15\u0E48\u0E2D\u0E40\u0E25\u0E02\u0E01\u0E31\u0E19\u0E0A\u0E19 (\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E01\u0E31\u0E19)",
+          s1.fileName === "\u0E09\u0E32\u0E01\u0E40\u0E0A\u0E49\u0E32170.md" && s2.fileName === "\u0E09\u0E32\u0E01\u0E40\u0E0A\u0E49\u0E32170 2.md" && (await bodyOf2(s1.path)).includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E0A\u0E49\u0E32170") && (await bodyOf2(s2.path)).includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E0B\u0E49\u0E33170"),
+          s1.fileName + " / " + s2.fileName
+        );
+        await SOn.moveSceneOrder(dP2, chN, s2, -1);
+        const ordN = ((await kapi.readJson(await jn(dP2, "scenes.json"))).chapters[chN.guid] || []).slice().sort((a, b) => a.order - b.order).map((x) => x.id);
+        check2(
+          "[170-N] \u2605 \u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E43\u0E2B\u0E21\u0E48 = \u0E41\u0E01\u0E49\u0E41\u0E04\u0E48 order \u0E43\u0E19 scenes.json \u2014 \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
+          ordN[0] === s2.id && ordN[1] === s1.id && await kapi.exists(s1.path) && await kapi.exists(s2.path),
+          ordN.join()
+        );
+        await openScene(s1.path, null);
+        await untilN(() => state.tabs.has(s1.path));
+        TBn.tabHandle(s1.path).setText("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D170");
+        const row1 = { ...s1 };
+        await SOn.setSceneTitle(dP2, chN, row1, "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170");
+        const np1 = await jn(dP2, "Chapters", "\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14170", "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170.md");
+        check2(
+          "[170-N] \u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D \xB7 \u0E17\u0E32\u0E07\u0E40\u0E01\u0E48\u0E32\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D",
+          await kapi.exists(np1) && !await kapi.exists(s1.path) && row1.fileName === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170.md",
+          row1.fileName
+        );
+        await untilN(() => state.tabs.has(np1));
+        check2(
+          "[170-N] \u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E17\u0E32\u0E07\u0E40\u0E01\u0E48\u0E32) \xB7 \u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E22\u0E49\u0E32\u0E22",
+          state.tabs.has(np1) && !state.tabs.has(s1.path) && (await bodyOf2(np1)).includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D170")
+        );
+        const rowJ1 = ((await kapi.readJson(await jn(dP2, "scenes.json"))).chapters[chN.guid] || []).find((x) => x.id === s1.id);
+        check2(
+          "[170-N] \u2605 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 + frontmatter + \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E19\u0E41\u0E17\u0E47\u0E1A \u0E44\u0E14\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 \xB7 id/\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21",
+          rowJ1.title === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170" && rowJ1.fileName === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170.md" && rowJ1.order === 2 && (await metaOf2(np1)).title === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170" && state.tabs.get(np1).title === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170",
+          JSON.stringify(rowJ1)
+        );
+        check2(
+          "[170-N] \u0E41\u0E16\u0E27\u0E43\u0E19\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E0A\u0E35\u0E49\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48",
+          [...document.querySelectorAll("#tree .scene[data-path]")].some((r) => r.dataset.path === np1) && ![...document.querySelectorAll("#tree .scene[data-path]")].some((r) => r.dataset.path === s1.path)
+        );
+        const rowSame = { ...rowJ1 };
+        await SOn.setSceneTitle(dP2, chN, rowSame, "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170?");
+        check2(
+          "[170-N] \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E35\u0E2D\u0E31\u0E01\u0E02\u0E23\u0E30\u0E17\u0E35\u0E48\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E23\u0E31\u0E1A\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \u2192 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E04\u0E23\u0E1A \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E22\u0E49\u0E32\u0E22",
+          rowSame.fileName === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170.md" && rowSame.title === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170?" && await kapi.exists(np1)
+        );
+        const chObj = { ...chN };
+        await SOn.setChapterTitle(dP2, chObj, "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170");
+        const np2 = await jn(dP2, "Chapters", "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170", "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E22170.md");
+        await untilN(() => state.tabs.has(np2));
+        const chJ = ((await kapi.readJson(await jn(dP2, "draft.json"))).chapters || []).find((c) => c.guid === chN.guid);
+        check2(
+          "[170-N] \u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17 \u2192 \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D \xB7 draft.json \u0E15\u0E23\u0E07\u0E01\u0E31\u0E19 \xB7 \u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21",
+          await kapi.exists(np2) && !await kapi.exists(await jn(dP2, "Chapters", "\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14170")) && chJ.folderName === "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170" && chJ.title === "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170" && chJ.order === 2 && chObj.folderName === "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170",
+          JSON.stringify(chJ)
+        );
+        check2("[170-N] \u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1A\u0E17\u0E15\u0E32\u0E21\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E43\u0E2B\u0E21\u0E48", state.tabs.has(np2) && !state.tabs.has(np1));
+        TBn.tabHandle(np2).setText("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E16\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170");
+        const np3 = await jn(dP2, "Chapters", "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170", "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170.md");
+        await kapi.move(np2, np3);
+        const c5 = await APn.syncDiskNames({ force: true });
+        const rowJ5 = ((await kapi.readJson(await jn(dP2, "scenes.json"))).chapters[chN.guid] || []).find((x) => x.id === s1.id);
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01 OS \u2192 \u0E15\u0E23\u0E27\u0E08\u0E40\u0E08\u0E2D\u0E41\u0E25\u0E30\u0E1B\u0E23\u0E31\u0E1A\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19: \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48 + \u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C \xB7 id/\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21",
+          c5.length === 1 && c5[0].kind === "scene" && rowJ5.fileName === "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170.md" && rowJ5.title === "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170" && rowJ5.order === 2,
+          JSON.stringify(c5) + " " + JSON.stringify(rowJ5)
+        );
+        await untilN(() => state.tabs.has(np3));
+        const tab5 = state.tabs.get(np3);
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E22\u0E49\u0E32\u0E22\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 (\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22 \xB7 \u0E22\u0E31\u0E07\u0E15\u0E34\u0E14\u0E04\u0E49\u0E32\u0E07)",
+          !!tab5 && !state.tabs.has(np2) && !!tab5.dirty && String(tabBodyText(tab5)).includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E16\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170")
+        );
+        await saveTab(tab5);
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E08\u0E32\u0E01\u0E19\u0E31\u0E49\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 \u2014 \u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E1C\u0E35\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E01\u0E48\u0E32",
+          (await bodyOf2(np3)).includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E16\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170") && !await kapi.exists(np2) && (await metaOf2(np3)).title === "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170"
+        );
+        check2("[170-N] \u0E15\u0E23\u0E27\u0E08\u0E0B\u0E49\u0E33 = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2D\u0E35\u0E01 (\u0E19\u0E34\u0E48\u0E07)", (await APn.syncDiskNames({ force: true })).length === 0);
+        await kapi.move(await jn(dP2, "Chapters", "\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48170"), await jn(dP2, "Chapters", "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170"));
+        const c6 = await APn.syncDiskNames({ force: true });
+        const np4 = await jn(dP2, "Chapters", "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170", "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170.md");
+        const chJ6 = ((await kapi.readJson(await jn(dP2, "draft.json"))).chapters || []).find((c) => c.guid === chN.guid);
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E32\u0E01 OS \u2192 draft.json \u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 (\u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17 = \u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C) \xB7 guid/\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21",
+          c6.length === 1 && c6[0].kind === "chapter" && chJ6.folderName === "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170" && chJ6.title === "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170" && chJ6.order === 2,
+          JSON.stringify(c6)
+        );
+        await untilN(() => state.tabs.has(np4));
+        check2("[170-N] \u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E43\u0E19\u0E1A\u0E17\u0E19\u0E31\u0E49\u0E19\u0E15\u0E32\u0E21\u0E44\u0E1B\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E43\u0E2B\u0E21\u0E48", state.tabs.has(np4) && !state.tabs.has(np3));
+        check2("[170-N] \u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E41\u0E2A\u0E14\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17\u0E43\u0E2B\u0E21\u0E48", [...document.querySelectorAll("#tree .ch-title")].some((h) => h.textContent.includes("\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170")));
+        {
+          const dirR = await jn(dP2, "Chapters", "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170");
+          const s2Now = ((await kapi.readJson(await jn(dP2, "scenes.json"))).chapters[chN.guid] || []).find((x) => x.id === s2.id);
+          const fromR = await jn(dirR, s2Now.fileName), toR = await jn(dirR, "\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A170.md");
+          await kapi.move(fromR, toR);
+          const btnR = document.querySelector(".k-tree-refresh-btn");
+          check2("[170-N] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", !!btnR);
+          btnR.click();
+          const seen = await untilN(() => [...document.querySelectorAll("#tree .scene[data-path]")].some((r) => r.dataset.path === toR), 8e3);
+          const rowR = ((await kapi.readJson(await jn(dP2, "scenes.json"))).chapters[chN.guid] || []).find((x) => x.id === s2.id);
+          check2(
+            "[170-N] \u2605\u2605\u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E02\u0E2D\u0E07 Explorer \u0E2B\u0E25\u0E31\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E08\u0E32\u0E01 OS \u2192 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 + \u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E19\u0E17\u0E35",
+            seen && rowR.fileName === "\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A170.md" && rowR.title === "\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A170" && ![...document.querySelectorAll("#tree .scene[data-path]")].some((r) => r.dataset.path === fromR),
+            JSON.stringify(rowR)
+          );
+          document.querySelectorAll("#k-toasts > *").forEach((x) => x.remove());
+        }
+        const secOut = await jn(rootN, "\u0E40\u0E25\u0E48\u0E21\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170");
+        await kapi.move(secP, secOut);
+        const c7 = await APn.syncDiskNames({ force: true });
+        const secM7 = await kapi.readJson(await jn(secOut, "section.json"));
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E48\u0E21\u0E08\u0E32\u0E01 OS \u2192 \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E15\u0E32\u0E21\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C \xB7 guid \u0E40\u0E14\u0E34\u0E21",
+          c7.length === 1 && c7[0].kind === "book" && secM7.title === "\u0E40\u0E25\u0E48\u0E21\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170" && secM7.folderName === "\u0E40\u0E25\u0E48\u0E21\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170" && secM7.guid === secM.guid,
+          JSON.stringify(c7)
+        );
+        const np5 = await jn(secOut, "Draft", "default", "Chapters", "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170", "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170.md");
+        await untilN(() => state.tabs.has(np5));
+        check2("[170-N] \u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E15\u0E32\u0E21\u0E40\u0E25\u0E48\u0E21\u0E44\u0E1B\u0E17\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48", state.tabs.has(np5) && !state.tabs.has(np4));
+        TBn.tabHandle(np5).setText("\u0E04\u0E49\u0E32\u0E07\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19170");
+        const secAll = await jn(rootN, "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170");
+        await kapi.move(np5, await jn(secOut, "Draft", "default", "Chapters", "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170", "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170.md"));
+        await kapi.move(await jn(secOut, "Draft", "default", "Chapters", "\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170"), await jn(secOut, "Draft", "default", "Chapters", "\u0E1A\u0E17\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170"));
+        await kapi.move(secOut, secAll);
+        const c7b = await APn.syncDiskNames({ force: true });
+        const np5b = await jn(secAll, "Draft", "default", "Chapters", "\u0E1A\u0E17\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170", "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170.md");
+        await untilN(() => state.tabs.has(np5b));
+        const tab7b = state.tabs.get(np5b);
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21+\u0E1A\u0E17+\u0E09\u0E32\u0E01\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19\u0E08\u0E32\u0E01 OS \u2192 \u0E15\u0E32\u0E21\u0E44\u0E14\u0E49\u0E04\u0E23\u0E1A\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19 (\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E15\u0E32\u0E21\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14)",
+          c7b.length === 3 && c7b.map((x) => x.kind).join() === "book,chapter,scene" && (await kapi.readJson(await jn(secAll, "section.json"))).title === "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170" && ((await kapi.readJson(await jn(secAll, "Draft", "default", "draft.json"))).chapters || []).some((c) => c.guid === chN.guid && c.folderName === "\u0E1A\u0E17\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170") && ((await kapi.readJson(await jn(secAll, "Draft", "default", "scenes.json"))).chapters[chN.guid] || []).some((r) => r.id === s1.id && r.fileName === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170.md" && r.title === "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170"),
+          JSON.stringify(c7b.map((x) => x.kind + ":" + x.title))
+        );
+        check2(
+          "[170-N] \u2605\u2605\u2605 \u0E41\u0E17\u0E47\u0E1A\u0E44\u0E1B\u0E16\u0E36\u0E07\u0E17\u0E32\u0E07\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E17\u0E32\u0E07\u0E40\u0E01\u0E48\u0E32 \xB7 \u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22)",
+          !!tab7b && !!tab7b.dirty && String(tabBodyText(tab7b)).includes("\u0E04\u0E49\u0E32\u0E07\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19170") && ![...state.tabs.keys()].some((k) => String(k).includes("\u0E40\u0E25\u0E48\u0E21\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01170")),
+          [...state.tabs.keys()].filter((k) => String(k).includes("170")).join(" | ")
+        );
+        await saveTab(tab7b);
+        check2(
+          "[170-N] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07 \xB7 \u0E44\u0E21\u0E48\u0E40\u0E01\u0E34\u0E14\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E40\u0E25\u0E48\u0E21\u0E1C\u0E35\u0E17\u0E35\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E01\u0E48\u0E32",
+          (await bodyOf2(np5b)).includes("\u0E04\u0E49\u0E32\u0E07\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E01\u0E31\u0E19170") && !await kapi.exists(secOut)
+        );
+        const secFin = await SECn.setSectionTitle(secAll, "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22170");
+        const np6 = await jn(secFin || secAll, "Draft", "default", "Chapters", "\u0E1A\u0E17\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170", "\u0E09\u0E32\u0E01\u0E2A\u0E32\u0E21\u0E0A\u0E31\u0E49\u0E19170.md");
+        await untilN(() => state.tabs.has(np6));
+        check2(
+          "[170-N] \u2605\u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2192 \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C = \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21 \xB7 \u0E02\u0E2D\u0E07\u0E02\u0E49\u0E32\u0E07\u0E43\u0E19 + \u0E41\u0E17\u0E47\u0E1A\u0E15\u0E32\u0E21\u0E44\u0E1B",
+          !!secFin && /[\\/]เล่มสุดท้าย170$/.test(secFin) && !await kapi.exists(secAll) && await kapi.exists(np6) && state.tabs.has(np6) && (await kapi.readJson(await jn(secFin, "section.json"))).folderName === "\u0E40\u0E25\u0E48\u0E21\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22170",
+          String(secFin)
+        );
+        check2("[170-N] \u0E2B\u0E25\u0E31\u0E07\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E47\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E32\u0E01\u0E02\u0E49\u0E32\u0E07\u0E19\u0E2D\u0E01", (await APn.syncDiskNames({ force: true })).length === 0);
+        const oldSec = await jn(rootN, "\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32170");
+        const oldDr = await jn(oldSec, "Draft", "default");
+        await kapi.writeFile(await jn(oldSec, "section.json"), JSON.stringify({ guid: "old170", title: "\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32170", order: 99 }, null, 2));
+        await kapi.writeFile(await jn(oldDr, "draft.json"), JSON.stringify({ chapters: [{ guid: "oc170", title: "\u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170", order: 1, folderName: "01 - \u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170" }] }, null, 2));
+        await kapi.writeFile(await jn(oldDr, "scenes.json"), JSON.stringify({ chapters: { oc170: [{ id: "os170", title: "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170", order: 1, fileName: "scene-01.md" }] } }, null, 2));
+        await kapi.writeFile(await jn(oldDr, "Chapters", "01 - \u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170", "scene-01.md"), (0, import_md34.dumpMdFile)({ title: "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E01\u0E48\u0E32170"));
+        check2(
+          "[170-N] \u2605\u2605 \u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32: \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 \u2260 \u0E16\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D \u2014 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
+          (await APn.syncDiskNames({ force: true })).length === 0 && (await kapi.readJson(await jn(oldDr, "scenes.json"))).chapters.oc170[0].fileName === "scene-01.md" && (await kapi.readJson(await jn(oldDr, "scenes.json"))).chapters.oc170[0].title === "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170"
+        );
+        check2(
+          "[170-N] \u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E08\u0E14\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E25\u0E07 section.json (\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21)",
+          (await kapi.readJson(await jn(oldSec, "section.json"))).folderName === "\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32170" && (await kapi.readJson(await jn(oldSec, "section.json"))).title === "\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32170"
+        );
+        const mmAll = await DSn.listNameMismatches(kapi, rootN);
+        const mmOld = mmAll.filter((x) => x.secPath === oldSec);
+        check2(
+          '[170-N] \u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E38\u0E02\u0E20\u0E32\u0E1E\u0E40\u0E2B\u0E47\u0E19 "\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07" \u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32 (\u0E1A\u0E17 1 + \u0E09\u0E32\u0E01 1)',
+          mmOld.length === 2 && mmOld.some((x) => x.kind === "chapter") && mmOld.some((x) => x.kind === "scene"),
+          JSON.stringify(mmOld.map((x) => x.kind + ":" + x.disk))
+        );
+        {
+          const drN = await PDn.openProjectDoctor();
+          const stripOk = await untilN(() => {
+            const n2 = document.querySelector(".k-doctor .k-doctor-names");
+            return !!n2 && !!n2.querySelector(".k-doctor-names-btn");
+          }, 2e4);
+          const strip = document.querySelector(".k-doctor .k-doctor-names");
+          const sr = strip ? strip.getBoundingClientRect() : { width: 0, height: 0 };
+          check2(
+            '[170-N] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E38\u0E02\u0E20\u0E32\u0E1E\u0E21\u0E35\u0E41\u0E16\u0E1A "\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07" + \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E23\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D (\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E08\u0E23\u0E34\u0E07 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A)',
+            stripOk && sr.width > 100 && sr.height > 10 && !/ui\.names\./.test(strip.textContent),
+            strip ? strip.textContent.slice(0, 120) : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E16\u0E1A"
+          );
+          if (drN && drN.close) drN.close();
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        }
+        const fx = await PDn.fixNameMismatches(mmOld);
+        check2(
+          "[170-N] \u2605\u2605 \u0E1B\u0E23\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32\u0E43\u0E2B\u0E49\u0E15\u0E23\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07: \u0E44\u0E1F\u0E25\u0E4C/\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E01\u0E33\u0E01\u0E31\u0E1A \xB7 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E14\u0E34\u0E21 \xB7 \u0E25\u0E33\u0E14\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21",
+          fx.ok === 2 && fx.failed === 0 && (await bodyOf2(await jn(oldDr, "Chapters", "\u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170", "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170.md"))).includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E01\u0E48\u0E32170") && !await kapi.exists(await jn(oldDr, "Chapters", "01 - \u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170")) && (await kapi.readJson(await jn(oldDr, "scenes.json"))).chapters.oc170[0].order === 1,
+          JSON.stringify(fx)
+        );
+        check2(
+          "[170-N] \u0E1B\u0E23\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21\u0E19\u0E31\u0E49\u0E19",
+          (await DSn.listNameMismatches(kapi, rootN)).filter((x) => x.secPath === oldSec).length === 0
+        );
+        for (const f of [...state.tabs.keys()]) if (String(f).includes("170")) closeTab(f, { discard: true });
+        for (const p of [secFin || secAll, secAll, secOut, secDup, oldSec, secP]) await kapi.remove(p).catch(() => {
+        });
+        document.querySelectorAll("#k-toasts > *").forEach((x) => x.remove());
+        await buildTree2();
+        check2("[170-N] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14\u0E41\u0E25\u0E49\u0E27\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E04\u0E49\u0E32\u0E07", ![...document.querySelectorAll("#tree .sec-title")].some((h) => h.textContent.includes("170")));
+      }
+      {
+        const wBH = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilBH = async (fn, ms = 8e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            try {
+              if (await fn()) return true;
+            } catch {
+            }
+            await wBH(50);
+          }
+          return false;
+        };
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        closeMenu();
+        const probeBH = await kapi.join(state.root, "k2test-169bh.md");
+        const linesBH = [
+          "# \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D169",
+          '\u0E1B\u0E01\u0E15\u0E34 **\u0E2B\u0E19\u0E32169** *\u0E40\u0E2D\u0E35\u0E22\u0E07169* <span style="color:#c0392b">\u0E41\u0E14\u0E07169</span> x^2^',
+          "<!--align:center-->\u0E01\u0E25\u0E32\u0E07169",
+          "- \u0E02\u0E49\u0E2D169",
+          "3. \u0E40\u0E25\u0E02169"
+        ];
+        for (let i5 = 1; i5 <= 60; i5++) linesBH.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + i5 + " \u2014 \u0E04\u0E48\u0E33\u0E04\u0E37\u0E19\u0E19\u0E31\u0E49\u0E19\u0E17\u0E2D\u0E23\u0E48\u0E32\u0E22\u0E37\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E15\u0E25\u0E32\u0E14\u0E40\u0E01\u0E48\u0E32\u0E22\u0E32\u0E21\u0E04\u0E48\u0E33 \u0E25\u0E21\u0E1E\u0E31\u0E14\u0E40\u0E2D\u0E32\u0E01\u0E25\u0E34\u0E48\u0E19\u0E02\u0E19\u0E21\u0E1B\u0E31\u0E07\u0E2D\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E25\u0E2D\u0E22\u0E21\u0E32\u0E08\u0E32\u0E01\u0E23\u0E49\u0E32\u0E19 \u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E15\u0E32\u0E21\u0E41\u0E21\u0E27\u0E14\u0E33\u0E44\u0E1B\u0E15\u0E32\u0E21\u0E15\u0E23\u0E2D\u0E01\u0E41\u0E04\u0E1A \u0E46 \u0E17\u0E35\u0E48\u0E21\u0E37\u0E14\u0E2A\u0E19\u0E34\u0E17 \u0E40\u0E2A\u0E35\u0E22\u0E07\u0E1D\u0E35\u0E40\u0E17\u0E49\u0E32\u0E01\u0E49\u0E2D\u0E07\u0E2A\u0E30\u0E17\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E1A\u0E1C\u0E19\u0E31\u0E07\u0E2D\u0E34\u0E10\u0E40\u0E01\u0E48\u0E32");
+        await kapi.writeFile(probeBH, (0, import_md34.dumpMdFile)({ title: "\u0E40\u0E17\u0E2A\u0E1E\u0E34\u0E21\u0E1E\u0E4C169", type: "scene", format: "prose" }, linesBH.join("\n")));
+        await openScene(probeBH, null);
+        const okTabBH = await untilBH(() => state.tabs.has(probeBH) && state.active && state.active.file === probeBH && !!state.active.editor);
+        check2("[169-BH] \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A (\u0E19\u0E34\u0E22\u0E32\u0E22 60 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32) \u0E44\u0E14\u0E49", okTabBH);
+        {
+          const pdfBH = await kapi.join(state.root, "k2test-169bh-print.pdf");
+          let pagesBH = 0, errBH = "";
+          document.body.classList.add("printing");
+          try {
+            await kapi.printToPdf(pdfBH);
+            const by = new Uint8Array(await kapi.readBytes(pdfBH));
+            let s = "";
+            for (let i5 = 0; i5 < by.length; i5 += 8192) s += String.fromCharCode.apply(null, by.subarray(i5, i5 + 8192));
+            pagesBH = (s.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
+          } catch (e) {
+            errBH = String(e && e.message || e);
+          }
+          document.body.classList.remove("printing");
+          await kapi.remove(pdfBH).catch(() => {
+          });
+          check2("[169-BH] \u2605\u2605 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E09\u0E32\u0E01\u0E22\u0E32\u0E27: \u0E07\u0E32\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E21\u0E35\u0E2B\u0E25\u0E32\u0E22\u0E2B\u0E19\u0E49\u0E32 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27)", pagesBH >= 3, pagesBH + " \u0E2B\u0E19\u0E49\u0E32 " + errBH);
+          const printRules = [];
+          for (const ss of document.styleSheets) {
+            try {
+              for (const r of ss.cssRules) if (r.media && /print/.test(r.media.mediaText)) printRules.push(r.cssText);
+            } catch {
+            }
+          }
+          const allPR = printRules.join("\n");
+          check2(
+            "[169-BH] \u0E01\u0E0E\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C: \u0E1B\u0E25\u0E14\u0E2A\u0E32\u0E22\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E1C\u0E07 + \u0E0B\u0E48\u0E2D\u0E19\u0E02\u0E2D\u0E07\u0E19\u0E2D\u0E01 #app-root + \u0E41\u0E16\u0E1A\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E25\u0E2D\u0E22",
+            /\.k-holds-docs[^{]*\{[^}]*overflow:\s*visible/.test(allPR) && /body:not\(\.map-printing\) > :not\(#app-root\)/.test(allPR.replace(/\*:not/g, ":not")) && /#content > :not\(#panes\)/.test(allPR.replace(/\*:not/g, ":not"))
+          );
+          check2(
+            "[169-BH] \u0E01\u0E0E\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C: \u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E19 Wiki/\u0E04\u0E33\u0E1C\u0E34\u0E14/\u0E1C\u0E25\u0E04\u0E49\u0E19\u0E2B\u0E32 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1E\u0E37\u0E49\u0E19-\u0E40\u0E2A\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D \xB7 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D\u0E14\u0E33",
+            /\.ProseMirror \.k-mention[^{]*\{[^}]*background:\s*none/.test(allPR) && /\.ProseMirror \.k-spell-bad/.test(allPR) && /color:\s*inherit\s*!important/.test(allPR) && /\.ed-page-break[^{]*\{[^}]*display:\s*none/.test(allPR)
+          );
+        }
+        {
+          const hubBH = await openExportHub();
+          const keepBH = JSON.stringify(hubBH.cfg);
+          hubBH.cfg.scope = "tab";
+          hubBH.cfg.kind = "auto";
+          hubBH.cfg.workflow = "";
+          await hubBH.setFormat("rtf");
+          const bR = await hubBH.build();
+          const rtf = bR && bR.text || "";
+          check2(
+            "[169-BH] \u2605\u2605 RTF \u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22: \u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1F\u0E25\u0E4C RTF \u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49\u0E1F\u0E2D\u0E19\u0E15\u0E4C\u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 Courier \u0E02\u0E2D\u0E07\u0E1A\u0E17",
+            /^\{\\rtf1/.test(rtf) && /\\fonttbl\{\\f0\\fnil/.test(rtf) && !/Courier Prime/.test(rtf),
+            rtf.slice(0, 160)
+          );
+          check2(
+            "[169-BH] \u2605\u2605 RTF \u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22: \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32/\u0E40\u0E2D\u0E35\u0E22\u0E07/\u0E2A\u0E35/\u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07/\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 \u0E40\u0E1B\u0E47\u0E19\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E02\u0E2D\u0E07 RTF",
+            /\{\\b /.test(rtf) && /\{\\i /.test(rtf) && /\\colortbl;\\red192\\green57\\blue43;/.test(rtf) && /\\cf1 /.test(rtf) && /\\qc /.test(rtf) && /\\bullet\\tab /.test(rtf) && / 3\.\\tab /.test(rtf) && /\{\\super 2\}/.test(rtf)
+          );
+          check2(
+            '[169-BH] \u2605\u2605 RTF \u0E02\u0E2D\u0E07\u0E19\u0E34\u0E22\u0E32\u0E22: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E30\u0E22\u0E30\u0E40\u0E22\u0E37\u0E49\u0E2D\u0E07 "\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23/\u0E1A\u0E17\u0E1E\u0E39\u0E14" \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E14\u0E34\u0E1A',
+            !/\\li3168|\\li1440\\ri2160/.test(rtf) && !/\*\*|<span|<!--/.test(rtf)
+          );
+          check2("[169-BH] \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07 RTF \u0E19\u0E34\u0E22\u0E32\u0E22\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E2D\u0E01 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32)", !!bR && typeof bR.preview === "string" && !/<!--/.test(bR.preview) && bR.preview.includes("\u0E01\u0E25\u0E32\u0E07169"));
+          await hubBH.setFormat("txt");
+          const bT = await hubBH.build();
+          const txt = bT && bT.text || "";
+          check2(
+            "[169-BH] \u2605 .txt \u0E25\u0E49\u0E27\u0E19\u0E08\u0E23\u0E34\u0E07: \u0E44\u0E21\u0E48\u0E21\u0E35 * ^ < > \xB7 \u0E08\u0E38\u0E14\u0E19\u0E33/\u0E40\u0E25\u0E02\u0E02\u0E49\u0E2D\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            txt.includes("\u0E2B\u0E19\u0E32169") && !/[*^<>]/.test(txt) && txt.includes("\u2022 \u0E02\u0E49\u0E2D169") && txt.includes("3. \u0E40\u0E25\u0E02169") && txt.includes("x2"),
+            txt.slice(0, 200)
+          );
+          Object.assign(hubBH.cfg, JSON.parse(keepBH));
+          await hubBH.setFormat(hubBH.cfg.format);
+          hubBH.close();
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        }
+        {
+          const FN = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
+          const spBH = ["### INT. \u0E23\u0E49\u0E32\u0E19169 - \u0E04\u0E37\u0E19", "", "@\u0E17\u0E2D\u0E23\u0E48\u0E32", "((\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A))", "\u0E21\u0E35\u0E43\u0E04\u0E23\u0E2D\u0E22\u0E39\u0E48\u0E44\u0E2B\u0E21", "", ">> CUT TO:"].join("\n");
+          const outBH = FN.stripFountainCodes(spBH).split("\n");
+          check2('[169-BH] \u2605 \u0E15\u0E31\u0E14\u0E23\u0E2B\u0E31\u0E2A fountain: \u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E04\u0E07\u0E40\u0E1B\u0E47\u0E19 "(\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A)"', outBH[2] === "\u0E17\u0E2D\u0E23\u0E48\u0E32" && outBH[3] === "(\u0E01\u0E23\u0E30\u0E0B\u0E34\u0E1A)" && outBH[6] === "CUT TO:", outBH.join("|"));
+          const mdl = { title: "\u0E1A\u0E17169", author: "", chapters: [{ title: "", scenes: [{ title: "", body: spBH, format: "screenplay", type: "scene" }] }] };
+          const wfH = { id: "bh", ext: "html", steps: [{ key: "to-html", on: true, opts: {} }] };
+          const hBH = runWorkflow(mdl, wfH, { beforeHtml: FN.stripFountainCodes }).text;
+          check2(
+            "[169-BH] \u2605\u2605 \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E1A\u0E17\u0E40\u0E1B\u0E47\u0E19 HTML: \u0E44\u0E21\u0E48\u0E21\u0E35 @\u0E0A\u0E37\u0E48\u0E2D / ((\u0E27\u0E07\u0E40\u0E25\u0E47\u0E1A)) / >> \u0E43\u0E2B\u0E49\u0E1C\u0E39\u0E49\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E2B\u0E47\u0E19 \xB7 \u0E01\u0E0E @page \u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+            />ทอร่า</.test(hBH) && />\(กระซิบ\)</.test(hBH) && !/>@ทอร่า|\(\(กระซิบ|&gt;&gt; CUT/.test(hBH) && /@page\s*\{/.test(hBH),
+            hBH.slice(hBH.indexOf("<body"), hBH.indexOf("<body") + 200)
+          );
+        }
+        {
+          const IS = await Promise.resolve().then(() => (init_import_sp(), import_sp_exports));
+          const fBH = await kapi.join(state.root, "k2test-169bh.fountain");
+          await kapi.writeFile(fBH, [
+            "Title: \u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07169",
+            "Author: \u0E17\u0E47\u0E2D\u0E1B",
+            "",
+            "INT. BAKERY - NIGHT",
+            "",
+            "TORA walks in. [[writer note 169]]",
+            "",
+            "/* boneyard169",
+            "two lines */",
+            "",
+            "> THE END <",
+            "",
+            "STEEL ^",
+            "dual line",
+            ""
+          ].join("\n"));
+          const rI = await IS.importScreenplay(fBH, null);
+          const mdI = rI.ok ? IS.elementsToMarkdown(rI.elements) : "";
+          await kapi.remove(fBH).catch(() => {
+          });
+          check2(
+            "[169-BH] \u2605 \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32 .fountain: \u0E42\u0E19\u0E49\u0E15 `[[\u2026]]` \u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E42\u0E19\u0E49\u0E15 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E25\u0E34\u0E07\u0E01\u0E4C Wiki) \xB7 boneyard \u0E44\u0E21\u0E48\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32",
+            rI.ok && mdI.includes("/// writer note 169") && !mdI.includes("[[") && !/boneyard169/.test(mdI),
+            mdI
+          );
+          check2(
+            "[169-BH] \u2605 \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32 .fountain: \u0E01\u0E36\u0E48\u0E07\u0E01\u0E25\u0E32\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35 > < \u0E04\u0E49\u0E32\u0E07 \xB7 \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17\u0E1E\u0E39\u0E14\u0E04\u0E39\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35 ^ \xB7 \u0E2B\u0E19\u0E49\u0E32\u0E1B\u0E01\u0E44\u0E21\u0E48\u0E40\u0E02\u0E49\u0E32\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E1A\u0E17",
+            /(^|\n)!?THE END(\n|$)/.test(mdI) && !/THE END\s*</.test(mdI) && /(^|\n)@STEEL(\n|$)/.test(mdI) && !/Title:/.test(mdI) && rI.title === "\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07169",
+            mdI
+          );
+          check2(
+            "[169-BH] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1E\u0E23\u0E35\u0E27\u0E34\u0E27\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32: \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33\u0E02\u0E2D\u0E07\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E44\u0E17\u0E22\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 1 (\u0E40\u0E14\u0E34\u0E21\u0E19\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07)",
+            IS.importSummary([{ el: "action", text: "\u0E17\u0E2D\u0E23\u0E48\u0E32\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32\u0E43\u0E19\u0E23\u0E49\u0E32\u0E19\u0E02\u0E19\u0E21\u0E1B\u0E31\u0E07\u0E22\u0E32\u0E21\u0E04\u0E48\u0E33\u0E04\u0E37\u0E19\u0E41\u0E25\u0E49\u0E27\u0E21\u0E2D\u0E07\u0E44\u0E1B\u0E23\u0E2D\u0E1A\u0E15\u0E31\u0E27" }]).words > 3
+          );
+        }
+        {
+          await openQuickOpen();
+          await wBH(300);
+          const qo = quickOpenCache().files;
+          const bad = qo.filter((f) => /(^|\/)(project\.khn\.json|scenes\.json|draft\.json|section\.json|templates\.json|ai-key\.json)$/i.test(f.rel) || /(^|\/)\.[^/]+\//.test("/" + f.rel) || /^(Recycle|Snapshots|Backups|Planners)\//i.test(f.rel));
+          check2(
+            "[169-BH] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E14\u0E48\u0E27\u0E19: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 \xB7 \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E43\u0E19 .k2history \xB7 \u0E16\u0E31\u0E07\u0E02\u0E22\u0E30 \u0E1B\u0E19\u0E01\u0E31\u0E1A\u0E07\u0E32\u0E19\u0E40\u0E02\u0E35\u0E22\u0E19",
+            qo.length >= 1 && bad.length === 0,
+            bad.slice(0, 5).map((f) => f.rel).join(" | ")
+          );
+          check2("[169-BH] \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E14\u0E48\u0E27\u0E19: \u0E07\u0E32\u0E19\u0E40\u0E02\u0E35\u0E22\u0E19\u0E02\u0E36\u0E49\u0E19\u0E01\u0E48\u0E2D\u0E19 \xB7 \u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E02\u0E2D\u0E07 Wiki \u0E16\u0E39\u0E01\u0E08\u0E31\u0E14\u0E0A\u0E19\u0E34\u0E14", qo[0].kind === "scene" && qo.some((f) => f.kind === "entity"), qo[0].rel);
+          const entBH = qo.find((f) => f.kind === "entity");
+          const inpQ = document.querySelector(".k-qo-input");
+          inpQ.value = entBH.name.replace(/\.json$/i, "");
+          inpQ.dispatchEvent(new Event("input"));
+          await wBH(120);
+          const rowQ = [...document.querySelectorAll(".k-qo-row")].find((r) => r.querySelector(".k-qo-rel").textContent === entBH.rel);
+          check2("[169-BH] \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E41\u0E16\u0E27\u0E43\u0E2B\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01", !!rowQ, entBH.rel);
+          if (rowQ) rowQ.click();
+          else document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          const okEnt = await untilBH(() => state.tabs.has(entBH.path) && !!state.tabs.get(entBH.path).wiki);
+          check2(
+            "[169-BH] \u2605\u2605 \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E19\u0E17\u0E34\u0E15\u0E35\u0E49\u0E08\u0E32\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E1F\u0E25\u0E4C\u0E14\u0E48\u0E27\u0E19 = \u0E2B\u0E19\u0E49\u0E32 Wiki (\u0E40\u0E14\u0E34\u0E21\u0E44\u0E14\u0E49\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49 JSON \u0E14\u0E34\u0E1A)",
+            okEnt,
+            state.tabs.has(entBH.path) ? Object.keys(state.tabs.get(entBH.path)).join(",") : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A"
+          );
+          await wBH(600);
+          const vias = [...document.querySelectorAll(".bl-via")].map((e) => e.textContent.trim());
+          check2("[169-BH] \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E01\u0E25\u0E48\u0E32\u0E27\u0E16\u0E36\u0E07: \u0E44\u0E21\u0E48\u0E42\u0E0A\u0E27\u0E4C\u0E23\u0E2B\u0E31\u0E2A\u0E14\u0E34\u0E1A (name)/(link)/(alias)/(stored)", !vias.some((v4) => /^\((name|link|alias|stored)\)$/.test(v4)), vias.slice(0, 4).join(" "));
+          if (state.tabs.has(entBH.path)) closeTab(entBH.path, { discard: true });
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        }
+        {
+          const DG = await Promise.resolve().then(() => (init_dialogs(), dialogs_exports));
+          await DG.showChangelog();
+          const cl = [...document.querySelectorAll(".k-dialog")].pop();
+          const ttlOf = () => (cl.querySelector(".k-cl-title") || {}).textContent || "";
+          check2(
+            '[169-BH] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48": \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E38\u0E48\u0E19\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E23\u0E38\u0E48\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 \xB7 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 <pre> \u0E02\u0E2D\u0E07 Markdown \u0E14\u0E34\u0E1A',
+            cl.classList.contains("k-changelog-dlg") && cl.querySelectorAll(".k-changelog-sel option").length > 50 && /^alpha\.\d+/.test(ttlOf()) && !cl.querySelector("pre.k-changelog") && cl.querySelectorAll(".k-changelog-rich > *").length > 3,
+            ttlOf().slice(0, 60)
+          );
+          const leafTxt = [...cl.querySelectorAll(".k-changelog-rich *")].filter((n2) => !n2.children.length && n2.tagName !== "CODE" && n2.tagName !== "PRE").map((n2) => n2.textContent).join("\n");
+          check2(
+            '[169-BH] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48": \u0E44\u0E21\u0E48\u0E21\u0E35 ** / \u0E2B\u0E31\u0E27 ## / \u0E40\u0E2A\u0E49\u0E19\u0E15\u0E32\u0E23\u0E32\u0E07 |---| \u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E2B\u0E19\u0E31\u0E07\u0E2A\u0E37\u0E2D',
+            !/\*\*[^*\n]+\*\*|^#{2,} |\|-{3,}\|/m.test(leafTxt),
+            (leafTxt.match(/\*\*[^*\n]+\*\*|^#{2,} .*|\|-{3,}\|/m) || [""])[0].slice(0, 80)
+          );
+          const t0 = ttlOf();
+          cl.querySelector(".k-changelog-older").click();
+          const t1 = ttlOf();
+          cl.querySelector(".k-changelog-newer").click();
+          check2('[169-BH] \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E01\u0E48\u0E32\u0E01\u0E27\u0E48\u0E32/\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E27\u0E48\u0E32" \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E23\u0E38\u0E48\u0E19\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A', t1 !== t0 && ttlOf() === t0, t0.slice(0, 30) + " \u2192 " + t1.slice(0, 30));
+          const brC = cl.querySelector(":scope > .k-dlg-btns").getBoundingClientRect(), drC = cl.getBoundingClientRect();
+          check2('[169-BH] \u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48" \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D + \u0E41\u0E16\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07', drC.bottom <= innerHeight + 1 && brC.bottom <= drC.bottom + 1 && brC.top >= drC.top);
+          cl.querySelector(".k-ok").click();
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          const ovS = el("div", "k-overlay"), bxS = el("div", "k-dialog"), tallS = el("div"), rowS = el("div", "k-dlg-btns");
+          tallS.style.height = "3000px";
+          rowS.append(el("button", "k-cancel", "x"), el("button", "k-ok", "y"));
+          bxS.append(tallS, rowS);
+          ovS.append(bxS);
+          document.body.append(ovS);
+          await wBH(80);
+          bxS.scrollTop = 0;
+          await wBH(30);
+          const r12 = rowS.getBoundingClientRect(), d1 = bxS.getBoundingClientRect();
+          check2(
+            "[169-BH] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E22\u0E32\u0E27\u0E01\u0E27\u0E48\u0E32\u0E08\u0E2D: \u0E41\u0E16\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E15\u0E34\u0E14\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07 (\u0E40\u0E14\u0E34\u0E21\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E25\u0E07\u0E44\u0E1B\u0E2B\u0E32)",
+            bxS.scrollHeight > bxS.clientHeight + 500 && bxS.scrollTop === 0 && r12.top > d1.top && r12.bottom <= d1.bottom + 1 && r12.bottom <= innerHeight,
+            JSON.stringify({ row: [Math.round(r12.top), Math.round(r12.bottom)], box: [Math.round(d1.top), Math.round(d1.bottom)], vh: innerHeight })
+          );
+          bxS.scrollTop = bxS.scrollHeight;
+          await wBH(40);
+          const r22 = rowS.getBoundingClientRect();
+          check2("[169-BH] \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2A\u0E38\u0E14\u0E41\u0E25\u0E49\u0E27\u0E41\u0E16\u0E27\u0E1B\u0E38\u0E48\u0E21\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E40\u0E14\u0E34\u0E21 (\u0E44\u0E21\u0E48\u0E01\u0E23\u0E30\u0E42\u0E14\u0E14)", Math.abs(r22.bottom - r12.bottom) <= 1.5, r12.bottom + " \u2192 " + r22.bottom);
+          ovS.remove();
+          const MP = await Promise.resolve().then(() => (init_margin_presets2(), margin_presets_exports));
+          const optsM = MP.marginPresetOptions();
+          check2("[169-BH] \u0E1B\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E0A\u0E38\u0E14\u0E23\u0E30\u0E22\u0E30\u0E02\u0E2D\u0E1A\u0E21\u0E32\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E14\u0E34\u0E1A)", optsM.length >= 6 && optsM.every(([k, l]) => l && l !== k && !/^ui\./.test(l)), optsM.map((o) => o[1]).join(" | "));
+          check2(
+            "[169-BH] \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E17\u0E22\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E41\u0E1B\u0E23\u0E2B\u0E31\u0E27\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E15\u0E32\u0E22\u0E15\u0E31\u0E27 (\u0E44\u0E21\u0E48\u0E1C\u0E39\u0E01\u0E01\u0E31\u0E1A\u0E20\u0E32\u0E29\u0E32\u0E02\u0E2D\u0E07\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D) \xB7 \u0E04\u0E33\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22\u0E41\u0E1B\u0E25\u0E15\u0E2D\u0E19\u0E2D\u0E48\u0E32\u0E19",
+            HEADER_VARS[0].th === "\u0E2B\u0E19\u0E49\u0E32" && HEADER_VARS[1].th === "\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32" && resolveHeaderVars("${\u0E2B\u0E19\u0E49\u0E32}/${\u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32}", { PAGE: 2, PAGES: 9 }) === "2/9" && HEADER_VARS[0].label === t("ui.spHeaders.pageNumCurrent")
+          );
+        }
+        if (state.tabs.has(probeBH)) closeTab(probeBH, { discard: true });
+        await kapi.remove(probeBH).catch(() => {
+        });
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        document.querySelectorAll("#k-toasts > *").forEach((x) => x.remove());
+        check2("[169-BH] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A/\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E17\u0E2A\u0E04\u0E49\u0E32\u0E07", !state.tabs.has(probeBH) && !document.querySelector(".k-overlay"));
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -237956,7 +242420,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md32;
+  var import_md34;
   var init_selftest = __esm({
     "src/selftest.js"() {
       init_core();
@@ -238009,7 +242473,7 @@ ${css}
       init_section_ops();
       init_session_notes();
       init_album_core();
-      import_md32 = __toESM(require_md());
+      import_md34 = __toESM(require_md());
       init_focus_mode();
       init_visual_tags();
       init_ui();
@@ -238294,6 +242758,7 @@ ${css}
     allShortcutRows: () => allShortcutRows,
     allWorkflows: () => allWorkflows,
     anyPageModel: () => anyPageModel,
+    applyA11y: () => applyA11y,
     applyCaseOptions: () => applyCaseOptions,
     applyCommandUi: () => applyCommandUi,
     applyCompare: () => applyCompare,
@@ -238476,6 +242941,7 @@ ${css}
     openItemPropsPanel: () => openItemPropsPanel,
     openNetwork: () => openNetwork,
     openOnce: () => openOnce,
+    openOsKeyboard: () => openOsKeyboard,
     openPlainFile: () => openPlainFile,
     openPlanner: () => openPlanner,
     openProjectFromUi: () => openProjectFromUi,
@@ -238500,6 +242966,7 @@ ${css}
     pluginDisabled: () => pluginDisabled,
     pluginList: () => pluginList,
     plugins: () => plugins,
+    pluginsNeedRestart: () => pluginsNeedRestart,
     preloadLangFontUrls: () => preloadLangFontUrls,
     projectFontFiles: () => projectFontFiles,
     proseFormat: () => proseFormat,
@@ -238581,6 +243048,7 @@ ${css}
     sectionCoverUrl: () => sectionCoverUrl,
     sectionPathOfFile: () => sectionPathOfFile,
     seedTabView: () => seedTabView,
+    setA11ySwitch: () => setA11ySwitch,
     setAllTreeCollapsed: () => setAllTreeCollapsed,
     setAutoFitWidth: () => setAutoFitWidth,
     setElementBadge: () => setElementBadge,
@@ -238604,6 +243072,7 @@ ${css}
     setTreeScope: () => setTreeScope,
     setTreeShowArchived: () => setTreeShowArchived,
     setTreeSortMode: () => setTreeSortMode,
+    setTypewriterMode: () => setTypewriterMode,
     setupPageHud: () => setupPageHud,
     setupTreeInteractions: () => setupTreeInteractions,
     shortcutClashes: () => shortcutClashes,
@@ -238644,6 +243113,7 @@ ${css}
     startupPlan: () => startupPlan,
     summaryBarOn: () => summaryBarOn,
     switchFormat: () => switchFormat,
+    syncDiskNames: () => syncDiskNames,
     syncDocsEmpty: () => syncDocsEmpty,
     syncMenuToggles: () => syncMenuToggles,
     syncModeHint: () => syncModeHint,
@@ -238652,6 +243122,7 @@ ${css}
     syncSceneMetaFromFiles: () => syncSceneMetaFromFiles,
     syncSideToggles: () => syncSideToggles,
     syncTypeSound: () => syncTypeSound,
+    syncTypewriterSetting: () => syncTypewriterSetting,
     syncWorkspaceWidths: () => syncWorkspaceWidths,
     tabBodyText: () => tabBodyText,
     tb: () => tb,
@@ -238697,7 +243168,6 @@ ${css}
     typeSoundMode: () => typeSoundMode,
     uiFontOffset: () => uiFontOffset,
     uiLayout: () => uiLayout,
-    uniqueSceneFileName: () => uniqueSceneFileName,
     untrustProjectPlugins: () => untrustProjectPlugins,
     updateCursorPage: () => updateCursorPage,
     updateDirtyBadge: () => updateDirtyBadge,
@@ -238728,7 +243198,7 @@ ${css}
       globalSettings = await kapi.readGlobalSettings();
     } catch {
     }
-    state.settings = { ...DEFAULT_SETTINGS, ...globalSettings, ...meta2.settings || {} };
+    state.settings = userA11yWins({ ...DEFAULT_SETTINGS, ...globalSettings, ...meta2.settings || {} }, globalSettings);
     state.goals = { ...DEFAULT_GOALS, ...meta2.goals || {} };
     applySettings();
   }
@@ -238776,11 +243246,60 @@ ${css}
     refreshTextMeasurer();
     remeasureAfterFonts();
     setTypeVolume(state.settings.typeSoundVolume ?? 0.5);
+    syncTypewriterSetting();
     syncTypeSound();
+    applyA11y();
     applySpellcheck();
     refreshAllSpell();
     applyMarkdownCodes();
     restartAutosave();
+  }
+  function applyA11y() {
+    const keyEcho = applyKeyEcho(state.settings);
+    const lineBand = applyLineBand(state.settings);
+    return { keyEcho, lineBand };
+  }
+  function setA11ySwitch(key2, on2) {
+    const v2 = on2 === void 0 ? !state.settings[key2] : !!on2;
+    state.settings[key2] = v2;
+    saveGlobalSetting(key2, v2);
+    applyA11y();
+    saveProjectMetaSoon();
+    syncMenuToggles();
+    return v2;
+  }
+  function syncTypewriterSetting() {
+    const want = state.settings.typewriterMode === true;
+    if (want === _twSettingSeen) return isTypewriter();
+    _twSettingSeen = want;
+    if (isTypewriter() !== want) {
+      toggleTypewriter(want);
+      try {
+        refreshToolbar();
+        syncMenuToggles();
+      } catch {
+      }
+    }
+    return isTypewriter();
+  }
+  function setTypewriterMode(on2) {
+    const v2 = toggleTypewriter(on2);
+    _twSettingSeen = v2;
+    state.settings.typewriterMode = v2;
+    saveGlobalSetting("typewriterMode", v2);
+    saveProjectMetaSoon();
+    return v2;
+  }
+  async function openOsKeyboard() {
+    let r = null;
+    try {
+      r = await kapi.openOsk();
+    } catch (e) {
+      log("warn", "a11y: osk", e);
+    }
+    if (r && r.ok) setStatus(r.settings ? t("ui.a11y.oskSettings") : t("ui.a11y.oskOpened"));
+    else setStatusError(t("ui.a11y.oskFail"));
+    return r || { ok: false };
   }
   function showMarkdownCodes() {
     return state.settings.showMarkdownCodes !== false;
@@ -238837,6 +243356,7 @@ ${css}
     if (lbl) lbl.textContent = Math.round(pageScale * 100) + "%";
   }
   function scheduleLineGutter() {
+    scheduleLineBand();
     if (_lnJob) return;
     _lnJob = requestAnimationFrame(() => {
       _lnJob = 0;
@@ -240806,6 +245326,10 @@ ${css}
   }
   async function closeProjectIfAny() {
     if (!state.root) return true;
+    try {
+      pluginBus.emit("project:close", { root: state.root });
+    } catch {
+    }
     await flushStarter();
     await saveOpenTabs();
     const items = allDirtyList();
@@ -240848,6 +245372,7 @@ ${css}
     state.tabs.clear();
     state.active = null;
     state.root = null;
+    applyWindowTitle("");
     resetJsonGuard();
     _noWrite.clear();
     _mapsSig = "";
@@ -240870,6 +245395,10 @@ ${css}
     $("#outline").innerHTML = "";
     refreshToolbar();
     scheduleCount();
+    try {
+      syncDocsEmpty();
+    } catch {
+    }
     return true;
   }
   async function loadProject(root) {
@@ -240943,8 +245472,7 @@ ${css}
     invalidateChatRag();
     loadSettings(meta2);
     applyWikiCats();
-    document.title = state.title + " \u2014 Killian 2";
-    $("#tb-title").textContent = state.title + " \u2014 Killian 2";
+    applyWindowTitle(state.title);
     await kapi.pushRecent(root);
     const projLang = state.settings.language || "en";
     if (projLang !== i18n.lang) {
@@ -240955,6 +245483,13 @@ ${css}
     initIcons();
     applyToolbarShortcutTitles();
     setBusy(t("ui.app.busyNewStructureProject"));
+    if (!PANEL_WIN) {
+      try {
+        await syncDiskNames({ force: true, rebuild: false });
+      } catch (e) {
+        log("warn", "names: sync on open failed", e);
+      }
+    }
     await buildTree2();
     buildFilterBar().catch(() => {
     });
@@ -240984,7 +245519,9 @@ ${css}
     }
     setBusy(t("ui.app.busyLoadTemplate"));
     await loadTemplates();
-    loadPlugins();
+    loadPlugins().then(() => {
+      if (state.root === root) pluginBus.emit("project:open", { root, title: state.title });
+    }).catch((e) => log("warn", "plugins: load failed", e));
     setBusy(t("ui.app.busyLayoutPanelTab"));
     const _sess = sessionOff() ? null : await restoreSessionLayout(root);
     initPanelSystem({ reload: !!(_sess && _sess._layoutApplied) });
@@ -241010,6 +245547,10 @@ ${css}
     if (state.settings.autoSync) setAutoSync(true);
     clearBusy();
     setStatus(t("ui.app.openProject2") + state.title);
+    try {
+      syncDocsEmpty();
+    } catch {
+    }
     checkDanglingOnOpen().catch(() => {
     });
     purgeRecycle(root).then((n2) => {
@@ -241110,7 +245651,8 @@ ${css}
     _globalWriteChain = p.catch(() => false);
     return p;
   }
-  function startupPlan(g = {}, recent = []) {
+  function startupPlan(g = {}, recent = [], launch = "") {
+    if (launch) return { skipHome: true, last: String(launch), showHome: false, fromOs: true };
     const skipHome = g.openLastProject === true;
     const last2 = skipHome && recent && recent[0] ? recent[0] : "";
     const showHome = g.showHomeOnStartup === true || !skipHome;
@@ -241122,6 +245664,11 @@ ${css}
     setBusy(t("ui.app.busyStartApp"));
     const g = await bootGlobalSettings();
     state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
+    try {
+      applyA11y();
+    } catch (e) {
+      log("warn", "boot a11y", e);
+    }
     syncMenuToggles();
     splashProgress(t("ui.splash.language"), 18);
     if (g && g.language && g.language !== i18n.lang) {
@@ -241147,7 +245694,12 @@ ${css}
       recent = await kapi.listRecent() || [];
     } catch {
     }
-    const plan = startupPlan(g, recent);
+    let launch = "";
+    try {
+      launch = kapi.launchProject && await kapi.launchProject() || "";
+    } catch {
+    }
+    const plan = startupPlan(g, recent, launch);
     let openedLast = false;
     if (plan.last) {
       splashProgress(tf("ui.splash.project", String(plan.last).split(/[\\/]/).pop()), 55);
@@ -241378,7 +245930,7 @@ ${css}
     for (const tab of hits) {
       if (!tab.editor && !tab.sp && !tab.plain) continue;
       try {
-        const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(tab.file));
+        const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(tab.file));
         if (body === tab.body) continue;
         tab.meta = meta2;
         tab.body = body;
@@ -242072,7 +246624,7 @@ ${css}
           }
           let meta2 = {}, body = "";
           try {
-            const parsed = (0, import_md33.parseMdFile)(await kapi.readFile(it.file));
+            const parsed = (0, import_md35.parseMdFile)(await kapi.readFile(it.file));
             meta2 = parsed.meta;
             body = parsed.body;
           } catch {
@@ -242381,8 +246933,9 @@ ${css}
       restore2();
       if (save && v2 && v2 !== old) {
         await setSceneTitle(c.dPath, c.ch, c.sc, v2);
+        const np = await kapi.join(c.dPath, "Chapters", c.ch.folderName, c.sc.fileName);
         setTimeout(() => {
-          const r22 = [...document.querySelectorAll("#tree .scene[data-path]")].find((x) => x.dataset.path === row4.dataset.path);
+          const r22 = [...document.querySelectorAll("#tree .scene[data-path]")].find((x) => x.dataset.path === np || x.dataset.path === row4.dataset.path);
           if (r22) treeFocusRow(r22);
         }, 0);
       } else treeFocusRow(row4);
@@ -242485,6 +247038,7 @@ ${css}
     if (id === "expandAll") return free(() => setAllTreeCollapsed(false));
     if (id === "collapseAll") return free(() => setAllTreeCollapsed(true));
     if (id === "refresh") return free(async () => {
+      await syncDiskNames({ force: true, rebuild: false });
       await buildTree2();
       setStatus(t("ui.treeMenu.refreshed"));
     });
@@ -243130,10 +247684,10 @@ ${css}
     const items = [];
     for (const r of list3) {
       const f = await kapi.join(dPath, "Chapters", ch.folderName, r.fileName);
-      const has2 = await hasVis(f);
+      const has3 = await hasVis(f);
       items.push({
-        text: (has2 ? gi("film") + " " : "") + (r.title || ""),
-        click: () => has2 ? openVisual(f, r.title) : createVisual(f, r.title)
+        text: (has3 ? gi("film") + " " : "") + (r.title || ""),
+        click: () => has3 ? openVisual(f, r.title) : createVisual(f, r.title)
       });
     }
     popupMenu(ev.clientX, ev.clientY, items);
@@ -243847,7 +248401,7 @@ ${css}
         raw = await kapi.readFile(p);
       } catch {
       }
-      const meta2 = (0, import_md33.parseMdFile)(raw).meta || {};
+      const meta2 = (0, import_md35.parseMdFile)(raw).meta || {};
       memoRows.push({
         f,
         p,
@@ -244909,19 +249463,15 @@ ${css}
     const mt = state.tabs.get(memoPath);
     if (!await flushTabForMove(mt)) return false;
     if (mt) closeTab(memoPath, { discard: true });
-    const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(memoPath));
+    const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(memoPath));
     const title2 = meta2.title || (memoPath.split(/[\\/]/).pop() || "memo").replace(/\.md$/i, "");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
     const list3 = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-    const used = new Set(list3.map((x) => x.fileName));
-    let n2 = 1, fileName;
-    do {
-      fileName = "memo-" + String(n2++).padStart(2, "0") + ".md";
-    } while (used.has(fileName));
+    const fileName = await freeSceneFileName(dPath, ch.folderName, title2, new Set(list3.map((x) => x.fileName)));
     await writeKeepingComments(
       await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-      (0, import_md33.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body),
+      (0, import_md35.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body),
       memoPath
     );
     const row4 = { id: guid(), title: title2, order: list3.length + 1, fileName, type: "memo" };
@@ -244953,8 +249503,8 @@ ${css}
       dst = await kapi.join(memoDir, base4 + (n2 ? "-" + n2 : "") + ".md");
       n2++;
     } while (await kapi.exists(dst));
-    const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(src2));
-    await writeKeepingComments(dst, (0, import_md33.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body), src2);
+    const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(src2));
+    await writeKeepingComments(dst, (0, import_md35.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body), src2);
     const sf = await kapi.join(dPath, "scenes.json");
     await mutateJson(kapi, sf, (d) => {
       d.chapters = d.chapters || {};
@@ -244978,10 +249528,10 @@ ${css}
     if (!row4) return false;
     try {
       const file = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
-      const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
-      await writeKeepingComments(file, (0, import_md33.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md35.dumpMdFile)(meta2, body));
       await syncOpenTabMeta(file);
     } catch {
     }
@@ -245891,7 +250441,7 @@ ${css}
         const abs = await kapi.join(memoDir, f);
         let title2 = f.replace(/\.md$/i, "");
         try {
-          title2 = (0, import_md33.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
+          title2 = (0, import_md35.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
         } catch {
         }
         out.push({
@@ -246411,6 +250961,9 @@ ${css}
         continueds: spContinuedOn(),
         // alpha.58 · 55–56
         typeSound: !!state.settings.typeSound,
+        keyEcho: state.settings.a11yKeyEcho === true,
+        // [alpha.169 · a11y] เมนู เครื่องมือ → การช่วยการเข้าถึง
+        lineBand: state.settings.a11yLineBand === true,
         markdownCodes: showMarkdownCodes(),
         // [60r3 ข้อ 6]
         autoFitWidth: !!state.settings.autoFitWidth,
@@ -246458,9 +251011,19 @@ ${css}
     } catch {
     }
     try {
+      document.documentElement.dataset.themeMode = mode;
+    } catch {
+    }
+    try {
       localStorage.setItem("k2-boot-theme", th);
       localStorage.setItem("k2-boot-mode", mode);
     } catch {
+    }
+    if (!PANEL_WIN) {
+      try {
+        syncWindowChrome();
+      } catch {
+      }
     }
     if (!PANEL_WIN) {
       try {
@@ -246536,10 +251099,10 @@ ${css}
     const row4 = res.changed ? res.result : null;
     const file = await kapi.join(dPath, "Chapters", ch.folderName, (row4 || sc).fileName);
     try {
-      const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
       else delete meta2.locked;
-      await writeKeepingComments(file, (0, import_md33.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md35.dumpMdFile)(meta2, body));
     } catch {
     }
     const openTab = state.tabs.get(file);
@@ -246605,7 +251168,22 @@ ${css}
       renderPropsPanel();
     }
   }
-  async function renderPropsPanel() {
+  function renderPropsPanel() {
+    const mine = renderPropsPanelNow();
+    _propsLast = mine;
+    return (async () => {
+      let cur;
+      do {
+        cur = _propsLast;
+        try {
+          await cur;
+        } catch (e) {
+          log("warn", "renderPropsPanel", e);
+        }
+      } while (cur !== _propsLast);
+    })();
+  }
+  async function renderPropsPanelNow() {
     const body = $("#props-body");
     if (!body) return;
     const gen = ++_propsGen;
@@ -246683,7 +251261,7 @@ ${css}
     if (stale2()) return;
     let vmeta = {};
     try {
-      vmeta = (0, import_md33.parseMdFile)(await kapi.readFile(file0)).meta;
+      vmeta = (0, import_md35.parseMdFile)(await kapi.readFile(file0)).meta;
     } catch {
     }
     if (stale2()) return;
@@ -246894,7 +251472,7 @@ ${css}
       const aiCtx = async () => {
         let mdBody = "";
         try {
-          mdBody = (0, import_md33.parseMdFile)(await kapi.readFile(file0)).body || "";
+          mdBody = (0, import_md35.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
         return { body: mdBody, title: row4.title || "" };
@@ -246964,7 +251542,7 @@ ${css}
     }
   }
   function dumpAlignComments(body, map2) {
-    return (0, import_md33.docToMd)((0, import_md33.mdToDoc)(String(body || ""), map2), { alignComments: true });
+    return (0, import_md35.docToMd)((0, import_md35.mdToDoc)(String(body || ""), map2), { alignComments: true });
   }
   async function buildDraftModel(dPath, title2) {
     let book = "";
@@ -247000,13 +251578,13 @@ ${css}
         const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
         let body = "", meta2 = {};
         try {
-          ({ meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file)));
+          ({ meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file)));
         } catch {
           continue;
         }
         if (meta2 && meta2.align) {
           try {
-            const map2 = (0, import_md33.alignFromString)(meta2.align);
+            const map2 = (0, import_md35.alignFromString)(meta2.align);
             if (map2 && Object.keys(map2).length) {
               body = dumpAlignComments(body, map2);
             }
@@ -247037,7 +251615,7 @@ ${css}
           // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
           format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
-          words: (0, import_md33.countWords)(body || "")
+          words: (0, import_md35.countWords)(body || "")
         });
       }
       model.chapters.push(c);
@@ -247546,6 +252124,34 @@ ${css}
     };
     return { ov, pages };
   }
+  function newPluginRec(name5, origin, key2, hot) {
+    return { name: name5, origin, key: key2, hot: !!hot, commands: [], shortcuts: [], panels: [], handlers: [], disposers: [] };
+  }
+  function unloadPlugin(rec, why) {
+    for (const fn of rec.disposers.splice(0).reverse()) {
+      try {
+        fn(why);
+      } catch (e) {
+        rec.hot = false;
+        log("warn", "plugin unload " + rec.name, e);
+      }
+    }
+    for (const [ev, h] of rec.handlers.splice(0)) pluginBus.off(ev, h);
+    for (const sc of rec.shortcuts.splice(0)) {
+      for (let i5 = SHORTCUTS.length - 1; i5 >= 0; i5--) if (SHORTCUTS[i5][3] === sc.ch) SHORTCUTS.splice(i5, 1);
+    }
+    for (const pid of rec.panels.splice(0)) {
+      try {
+        getPanelManager().unregisterPanel(pid);
+      } catch (e) {
+        log("warn", "plugin panel unregister " + pid, e);
+      }
+    }
+    rec.commands.length = 0;
+    if (livePlugins.get(rec.name) === rec) livePlugins.delete(rec.name);
+    if (!rec.hot) pluginRestart.add(rec.name);
+    log("info", "plugin: unloaded", { name: rec.name, why, restart: !rec.hot });
+  }
   function versionAtLeast2(a, b) {
     const num5 = (s) => String(s || "0").split("-")[0].split(".").map((x) => parseInt(x, 10) || 0);
     const A = num5(a), B = num5(b);
@@ -247572,7 +252178,7 @@ ${css}
     saveProjectMetaSoon();
     return !!st.disabled[name5];
   }
-  function pluginApi(name5) {
+  function pluginApi(name5, rec) {
     return {
       // ---- ข้อมูลของตัวเอง ----
       pluginName: name5,
@@ -247580,7 +252186,7 @@ ${css}
       projectRoot: () => state.root,
       // ---- คำสั่งบนแถบเครื่องมือ (ของเดิม) ----
       registerCommand: (label2, fn) => {
-        plugins.commands.push({ label: label2, fn, plugin: name5 });
+        rec.commands.push({ label: label2, fn, plugin: name5 });
         return true;
       },
       // ---- ตัวแก้ไข ----
@@ -247613,7 +252219,7 @@ ${css}
               }
             }
           });
-          plugins.panels.push(pid);
+          rec.panels.push(pid);
           return pid;
         } catch (e) {
           log("warn", t("ui.app.registerPanelFail") + pid, e);
@@ -247623,8 +252229,29 @@ ${css}
       showPanel: (id) => showPanel("plugin-" + name5 + "-" + id),
       hidePanel: (id) => hidePanel("plugin-" + name5 + "-" + id),
       // ---- เหตุการณ์ (EventBus ก้อนเดียวใช้ร่วมกันทุกปลั๊กอิน) ----
-      on: (event, handler) => pluginBus.on(String(event), handler),
-      off: (event, handler) => pluginBus.off(String(event), handler),
+      // [alpha.169] จดตัวรับไว้กับระเบียน — ถอด/ปิดปลั๊กอินแล้วตัวรับต้องไม่ถูกเรียกอีก
+      on: (event, handler) => {
+        const ev = String(event);
+        if (typeof handler !== "function") return () => {
+        };
+        rec.handlers.push([ev, handler]);
+        pluginBus.on(ev, handler);
+        return () => {
+          pluginBus.off(ev, handler);
+          rec.handlers = rec.handlers.filter((x) => !(x[0] === ev && x[1] === handler));
+        };
+      },
+      off: (event, handler) => {
+        const ev = String(event);
+        rec.handlers = rec.handlers.filter((x) => !(x[0] === ev && x[1] === handler));
+        return pluginBus.off(ev, handler);
+      },
+      /** [alpha.169] ตัวเก็บกวาด — ถูกเรียกเมื่อปลั๊กอินถูกปิด/ถอน/โหลดใหม่ (ของที่ทำเองนอก k2: ตัวจับเวลา · ตัวฟังของ DOM · element) */
+      onUnload: (fn) => {
+        if (typeof fn !== "function") return false;
+        rec.disposers.push(fn);
+        return true;
+      },
       emit: (event, data2) => pluginBus.emit(String(event), data2),
       // ---- ไฟล์ (จำกัดอยู่ในขอบเขตโปรเจกต์) ----
       readFile: (rel) => pluginPath(rel).then((p) => p ? kapi.readFile(p) : null),
@@ -247636,7 +252263,7 @@ ${css}
         const ch = "plugin:" + name5 + ":" + String(id);
         for (let i5 = SHORTCUTS.length - 1; i5 >= 0; i5--) if (SHORTCUTS[i5][3] === ch) SHORTCUTS.splice(i5, 1);
         SHORTCUTS.push([code3, ctrl !== false, !!shift2, ch]);
-        plugins.shortcuts.push({ ch, fn });
+        rec.shortcuts.push({ ch, fn });
         return ch;
       },
       // ---- ตั้งค่าของปลั๊กอิน (`settings.plugins[<ชื่อ>]`) ----
@@ -247659,7 +252286,7 @@ ${css}
         (items || []).map((it) => it === "-" ? "-" : { ...it })
       ),
       addMenuItem: (label2, fn) => {
-        plugins.commands.push({ label: label2, fn, plugin: name5 });
+        rec.commands.push({ label: label2, fn, plugin: name5 });
         return true;
       },
       // ---- UI ทั่วไป ----
@@ -247736,16 +252363,16 @@ ${css}
     await kapi.sessionWrite(PLUGIN_TRUST_KEY, trust);
     return true;
   }
-  async function loadPlugins() {
-    plugins.commands = [];
+  function loadPlugins() {
+    const run3 = _plugLoadQ.then(loadPluginsNow, loadPluginsNow);
+    _plugLoadQ = run3.catch(() => {
+    });
+    return run3;
+  }
+  async function loadPluginsNow() {
     plugins.loaded = [];
     plugins.failed = [];
     plugins.untrusted = 0;
-    for (const s of plugins.shortcuts) {
-      for (let i5 = SHORTCUTS.length - 1; i5 >= 0; i5--) if (SHORTCUTS[i5][3] === s.ch) SHORTCUTS.splice(i5, 1);
-    }
-    plugins.shortcuts = [];
-    plugins.panels = [];
     const sources = [];
     try {
       const g = await kapi.globalPluginsDir?.();
@@ -247756,12 +252383,7 @@ ${css}
       const p = await kapi.join(state.root, "Plugins");
       if (await kapi.exists(p)) sources.push([p, ORIGIN_PROJECT]);
     }
-    if (!sources.length) {
-      const b = $("#tb-plug");
-      if (b) b.style.display = "none";
-      return plugins;
-    }
-    const seen = /* @__PURE__ */ new Set();
+    const want = /* @__PURE__ */ new Map();
     for (const [dir2, origin] of sources) {
       let names = [];
       try {
@@ -247770,62 +252392,116 @@ ${css}
         continue;
       }
       names = names.filter((n2) => n2 !== "dictionaries");
-      let pre = null;
-      if (origin === ORIGIN_PROJECT && names.length) {
-        pre = await readPluginSet(dir2, names);
-        if (!isPluginSetTrusted(await readPluginTrust(), state.root, pluginFingerprint([...pre.values()]))) {
-          for (const name5 of names) {
-            plugins.failed.push({ name: name5, origin, folder: name5, untrusted: true, error: t("ui.plug.untrustedHint") });
-          }
-          plugins.untrusted += names.length;
-          continue;
+      if (!names.length) continue;
+      const pre = await readPluginSet(dir2, names);
+      if (origin === ORIGIN_PROJECT && !isPluginSetTrusted(await readPluginTrust(), state.root, pluginFingerprint([...pre.values()]))) {
+        for (const name5 of names) {
+          plugins.failed.push({ name: name5, origin, folder: name5, untrusted: true, error: t("ui.plug.untrustedHint") });
         }
+        plugins.untrusted += names.length;
+        continue;
       }
       for (const name5 of names) {
         if (pluginDisabled(name5)) {
           plugins.failed.push({ name: name5, origin, folder: name5, skipped: true, error: t("ui.app.close2") });
           continue;
         }
+        const got = pre.get(name5);
+        let manifest2 = null;
         try {
-          const got = pre && pre.get(name5);
-          if (got && got.manifestErr) throw got.manifestErr;
-          const manifest2 = got ? JSON.parse(got.manifest) : await kapi.readJson(await kapi.join(dir2, name5, "plugin.json"));
-          if (manifest2.minAppVersion && !versionAtLeast2(APP_VERSION, manifest2.minAppVersion)) {
-            plugins.failed.push({ name: name5, origin, error: tf("ui.app.mustUseKillianF", manifest2.minAppVersion) });
-            continue;
-          }
-          if (got && got.codeErr) throw got.codeErr;
-          const code3 = got ? got.code : await kapi.readFile(await kapi.join(dir2, name5, manifest2.entry || "main.js"));
-          new Function("k2", code3)(pluginApi(name5));
-          if (seen.has(name5)) plugins.loaded = plugins.loaded.filter((x) => x.name !== name5);
-          seen.add(name5);
-          plugins.loaded.push({
-            name: name5,
-            origin,
-            folder: name5,
-            version: manifest2.version || "",
-            author: manifest2.author || "",
-            description: manifest2.description || "",
-            minAppVersion: manifest2.minAppVersion || ""
-          });
+          if (got.manifestErr) throw got.manifestErr;
+          manifest2 = JSON.parse(got.manifest);
+          if (!manifest2 || typeof manifest2 !== "object" || Array.isArray(manifest2)) throw new Error("plugin.json");
         } catch (e) {
           plugins.failed.push({ name: name5, origin, folder: name5, error: e.message });
           setPluginDisabled(name5, true);
           log("error", tf("ui.app.plugin2F", name5), e);
+          continue;
         }
+        if (manifest2.minAppVersion && !versionAtLeast2(APP_VERSION, manifest2.minAppVersion)) {
+          plugins.failed.push({
+            name: name5,
+            origin,
+            folder: name5,
+            minAppVersion: String(manifest2.minAppVersion),
+            error: tf("ui.app.mustUseKillianF", manifest2.minAppVersion)
+          });
+          continue;
+        }
+        const shadow = want.has(name5);
+        want.set(name5, {
+          name: name5,
+          origin,
+          manifest: manifest2,
+          got,
+          shadowed: shadow,
+          key: pluginKey(origin, got.manifest, got.code),
+          hot: manifestHot(manifest2)
+        });
       }
     }
-    if (plugins.loaded.length) setStatus(tf("ui.app.loadPluginItem", plugins.loaded.length) + (plugins.failed.length ? tf("ui.app.msg", plugins.failed.length) : ""));
+    const plan = planReload([...livePlugins.values()], [...want.values()]);
+    for (const name5 of plan.unload) {
+      const rec = livePlugins.get(name5);
+      if (rec) unloadPlugin(rec, want.has(name5) ? "reload" : "remove");
+    }
+    for (const w of want.values()) {
+      const { name: name5, origin, manifest: manifest2, got } = w;
+      const row4 = {
+        name: name5,
+        origin,
+        folder: name5,
+        shadowed: w.shadowed,
+        hotReload: w.hot,
+        version: manifest2.version || "",
+        author: manifest2.author || "",
+        description: manifest2.description || "",
+        minAppVersion: manifest2.minAppVersion || ""
+      };
+      if (plan.keep.includes(name5)) {
+        plugins.loaded.push(row4);
+        continue;
+      }
+      const rec = newPluginRec(name5, origin, w.key, w.hot);
+      livePlugins.set(name5, rec);
+      try {
+        if (got.codeErr) throw got.codeErr;
+        new Function("k2", got.code)(pluginApi(name5, rec));
+        plugins.loaded.push(row4);
+      } catch (e) {
+        unloadPlugin(rec, "error");
+        plugins.failed.push({ name: name5, origin, folder: name5, error: e.message });
+        setPluginDisabled(name5, true);
+        log("error", tf("ui.app.plugin2F", name5), e);
+      }
+    }
+    const broken = plugins.failed.filter((x) => !x.skipped && !x.untrusted).length;
+    if (plan.run.length && plugins.loaded.length) setStatus(tf("ui.app.loadPluginItem", plugins.loaded.length) + (broken ? tf("ui.app.msg", broken) : ""));
     if (plugins.untrusted) {
       setStatus(tf("ui.plug.untrustedStatus", plugins.untrusted));
       log("warn", "plugins: project plugins are not allowed to run yet", { root: state.root, count: plugins.untrusted });
     }
     const btn3 = $("#tb-plug");
     if (btn3) btn3.style.display = plugins.commands.length ? "" : "none";
+    try {
+      pluginBus.emit("plugins:loaded", { loaded: plugins.loaded.map((p) => p.name) });
+    } catch {
+    }
     return plugins;
   }
   function pluginList() {
-    return { ...plugins, loaded: [...plugins.loaded], failed: [...plugins.failed] };
+    return {
+      loaded: [...plugins.loaded],
+      failed: [...plugins.failed],
+      untrusted: plugins.untrusted,
+      commands: plugins.commands,
+      shortcuts: plugins.shortcuts,
+      panels: plugins.panels,
+      restart: plugins.restart
+    };
+  }
+  function pluginsNeedRestart() {
+    return plugins.restart;
   }
   async function reloadPlugins() {
     const r = await loadPlugins();
@@ -248660,8 +253336,9 @@ ${css}
       await kapi.join(root, "project.khn.json"),
       { title: name5, type: "killian-project", version: "2.0", created: (/* @__PURE__ */ new Date()).toISOString() }
     );
-    const sec2 = await kapi.join(root, t("ui.common.bookOne"));
-    await W(await kapi.join(sec2, "section.json"), { guid: guid(), title: t("ui.common.bookOne"), order: 1 });
+    const book = await freeBookName(kapi, root);
+    const sec2 = await kapi.join(root, book.folder);
+    await W(await kapi.join(sec2, "section.json"), { guid: guid(), title: book.title, order: 1, folderName: book.folder });
     const dr = await kapi.join(sec2, "Draft", "default");
     const ch = {
       guid: guid(),
@@ -248671,13 +253348,13 @@ ${css}
       act: "I",
       date: "",
       isFavorite: false,
-      folderName: t("ui.common.chapterOne")
+      folderName: diskBase(t("ui.common.chapterOne2"), "chapter")
     };
     const sc = {
       id: guid(),
       title: t("ui.app.sceneFirst"),
       order: 1,
-      fileName: "scene-01.md",
+      fileName: diskBase(t("ui.app.sceneFirst"), "scene") + ".md",
       chapterGuid: ch.guid,
       date: "",
       isFavorite: false,
@@ -248688,7 +253365,7 @@ ${css}
     await W(await kapi.join(dr, "scenes.json"), { chapters: { [ch.guid]: [sc] } });
     await kapi.writeFile(
       await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-      (0, import_md33.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
+      (0, import_md35.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
     );
     for (const d of [
       "Images",
@@ -248803,11 +253480,11 @@ ${css}
     });
   }
   async function renameMemo(file) {
-    const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file));
     const title2 = await ask(t("ui.app.nameMemoNew"), { value: meta2.title || "" });
     if (!title2) return;
     meta2.title = title2;
-    await writeKeepingComments(file, (0, import_md33.dumpMdFile)(meta2, body));
+    await writeKeepingComments(file, (0, import_md35.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -248821,13 +253498,6 @@ ${css}
   }
   function guid() {
     return "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-  async function uniqueSceneFileName(dPath, folderName, order) {
-    let base4 = "scene-" + String(order).padStart(2, "0");
-    let name5 = base4 + ".md", n2 = 2;
-    while (await kapi.exists(await kapi.join(dPath, "Chapters", folderName, name5)))
-      name5 = base4 + "-" + n2++ + ".md";
-    return name5;
   }
   async function sceneMoveMenu(e, dPath, ch, sc) {
     const chapters = ((await kapi.readJson(await kapi.join(dPath, "draft.json"))).chapters || []).filter((c) => c.guid !== ch.guid).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -248867,7 +253537,7 @@ ${css}
     const dir2 = await kapi.join(state.root, "Memos");
     await kapi.mkdir(dir2);
     const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
-    await kapi.writeFile(file, (0, import_md33.dumpMdFile)({ title: title2, type: "memo" }, ""));
+    await kapi.writeFile(file, (0, import_md35.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
   }
@@ -248898,7 +253568,7 @@ ${css}
   async function openSceneNow(file, title2) {
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md33.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md35.parseMdFile)(raw);
     title2 = title2 || meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, "");
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
@@ -248972,7 +253642,7 @@ ${css}
         // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
       });
       try {
-        tab.sp.applyAlignMap((0, import_md33.alignFromString)(tab.meta.align));
+        tab.sp.applyAlignMap((0, import_md35.alignFromString)(tab.meta.align));
       } catch {
       }
       pane.addEventListener("click", () => {
@@ -248986,7 +253656,7 @@ ${css}
         markdown: body,
         // [alpha.58r บั๊ก 25] จัดหน้าย่อหน้าเก็บใน frontmatter (`align: [3:center]`) → .md สะอาด
         // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
-        alignMap: (0, import_md33.alignFromString)(tab.meta.align),
+        alignMap: (0, import_md35.alignFromString)(tab.meta.align),
         alignComments: state.settings.mdAlignStyle === "comment",
         onChange: () => {
           markDirty(tab);
@@ -249080,10 +253750,10 @@ ${css}
       delete tab.meta.spMap;
       delete tab.meta.spHash;
     }
-    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md33.alignToString)(conv.align) + "]";
+    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md35.alignToString)(conv.align) + "]";
     mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
-    await writeKeepingComments(tab.file, (0, import_md33.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md35.dumpMdFile)(tab.meta, body));
     tab.diskBody = body;
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
@@ -249445,7 +254115,15 @@ ${css}
       applyTabTooltip(t3);
       wireTabDrag(t3);
     }
+    const _prevActive = state.active;
     state.active = state.tabs.get(file) || null;
+    if (state.active && state.active !== _prevActive) {
+      pluginBus.emit("tab:activate", {
+        file: state.active.file,
+        title: state.active.title || "",
+        kind: state.active.sp ? "screenplay" : state.active.editor ? "prose" : state.active.wiki ? "wiki" : "other"
+      });
+    }
     if (state._autoDash && state.active) autoCloseDashboard();
     if (rewriteBarTab() && rewriteBarTab() !== state.active) closeRewriteBar();
     if (file && /\.md$/i.test(file) && /[\\/]Chapters[\\/]/.test(file)) state.lastSceneFile = file;
@@ -249555,7 +254233,7 @@ ${css}
       if (!tab.file || !/\.md$/i.test(tab.file) || !tab.editor && !tab.sp) continue;
       let disk;
       try {
-        disk = (0, import_md33.parseMdFile)(await kapi.readFile(tab.file)).body;
+        disk = (0, import_md35.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         continue;
       }
@@ -249620,7 +254298,7 @@ ${css}
       const base4 = tab.diskBody !== void 0 ? tab.diskBody : tab.body;
       let diskNow;
       try {
-        diskNow = (0, import_md33.parseMdFile)(await kapi.readFile(tab.file)).body;
+        diskNow = (0, import_md35.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         diskNow = await kapi.exists(tab.file).catch(() => true) ? base4 : null;
       }
@@ -249638,12 +254316,12 @@ ${css}
     }
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
-      const am = (0, import_md33.alignToString)(tab.editor.getAlignMap());
+      const am = (0, import_md35.alignToString)(tab.editor.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     if (tab.sp) {
-      const am = (0, import_md33.alignToString)(tab.sp.getAlignMap());
+      const am = (0, import_md35.alignToString)(tab.sp.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
@@ -249652,12 +254330,13 @@ ${css}
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
     const tSave = performance.now();
     try {
-      await writeKeepingComments(tab.file, (0, import_md33.dumpMdFile)(tab.meta, body));
+      await writeKeepingComments(tab.file, (0, import_md35.dumpMdFile)(tab.meta, body));
     } catch (e) {
       log("error", "save: write failed", { file: tab.file, code: e && e.code, error: e && e.message });
       throw e;
     }
     log("info", "save: done", { file: tab.file, chars: body.length, ms: Math.round(performance.now() - tSave) });
+    pluginBus.emit("tab:save", { file: tab.file, title: tab.title || "", chars: body.length });
     tab.diskBody = body;
     tab._conflictWarned = false;
     tab._diskWarned = false;
@@ -249717,7 +254396,7 @@ ${css}
     try {
       const ctx2 = await sceneCtx(tab.file);
       if (!ctx2 || !ctx2.row || ctx2.row.type === "memo") return;
-      const n2 = (0, import_md33.countWords)(body || "");
+      const n2 = (0, import_md35.countWords)(body || "");
       if ((ctx2.row.wordCount || 0) === n2) return;
       await updateSceneRow(ctx2.dPath, ctx2.row.id, (r) => {
         r.wordCount = n2;
@@ -250014,7 +254693,7 @@ ${css}
           const t3 = state.tabs.get(file);
           if (t3 && (t3.editor || t3.sp)) return (t3.editor || t3.sp).getMarkdown();
         }
-        return (0, import_md33.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
+        return (0, import_md35.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
       } catch {
         return t("ui.app.readCant");
       }
@@ -250076,7 +254755,7 @@ ${css}
     const t22 = state.tabs.get(file);
     if (!t22 || !t22.meta) return false;
     try {
-      t22.meta = (0, import_md33.parseMdFile)(await kapi.readFile(file)).meta;
+      t22.meta = (0, import_md35.parseMdFile)(await kapi.readFile(file)).meta;
     } catch (e) {
       log("warn", t("ui.props.writeMetaFail"), e);
     }
@@ -250284,12 +254963,12 @@ ${css}
         }
       },
       async reloadFromDisk() {
-        const { meta: meta2, body } = (0, import_md33.parseMdFile)(await kapi.readFile(t3.file));
+        const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(t3.file));
         t3.meta = meta2;
         t3.body = body;
         t3.diskBody = body;
         if (t3.editor) {
-          t3.editor.setMarkdown(body, (0, import_md33.alignFromString)(meta2.align));
+          t3.editor.setMarkdown(body, (0, import_md35.alignFromString)(meta2.align));
           try {
             refreshMentions(t3.editor.view);
           } catch {
@@ -250297,7 +254976,7 @@ ${css}
         } else {
           t3.sp.setMarkdown(body);
           try {
-            t3.sp.applyAlignMap((0, import_md33.alignFromString)(meta2.align));
+            t3.sp.applyAlignMap((0, import_md35.alignFromString)(meta2.align));
           } catch {
           }
         }
@@ -250317,15 +254996,189 @@ ${css}
       close: () => closeTab(t3.file, { discard: true })
     };
   }
+  function _tabsUnder(base4) {
+    const key2 = pathKey(base4);
+    const real = [], pseudo = [];
+    for (const t22 of state.tabs.values()) {
+      if (!t22.file) continue;
+      const f = pathKey(_tabRealPath(t22.file));
+      if (f !== key2 && !f.startsWith(key2 + "/")) continue;
+      (String(t22.file).startsWith("::") ? pseudo : real).push(t22);
+    }
+    return { real, pseudo };
+  }
+  async function movePathWithTabsNow(oldPath, fn) {
+    const base4 = String(oldPath || "").replace(/[\\/]+$/, "");
+    const { real, pseudo } = _tabsUnder(base4);
+    const rels = real.map((t22) => t22.file.slice(base4.length));
+    const act = state.active;
+    const activeRel = act && real.includes(act) ? act.file.slice(base4.length) : null;
+    const keepActive = act && !real.includes(act) && !pseudo.includes(act) ? act.file : "";
+    const cancel = () => {
+      setStatus(tf("ui.app.moveCancelledUnsaved", _baseName(base4)));
+      return { ok: false, to: null };
+    };
+    for (const t22 of pseudo) {
+      if (t22.dirty) {
+        let r;
+        try {
+          r = await saveTab(t22);
+        } catch (e) {
+          log("error", t("ui.app.saveBeforeCloseFail") + (t22.title || t22.file), e);
+          r = false;
+        }
+        if (r === false || t22.dirty) return cancel();
+      }
+      closeTab(t22.file, { discard: true });
+    }
+    if (real.length && !(await closeTabsUnderPath(base4, { save: true })).ok) return cancel();
+    _diskBusy++;
+    let to = null, err2 = null;
+    try {
+      to = await fn() || null;
+    } catch (e) {
+      err2 = e;
+    } finally {
+      _diskBusy--;
+    }
+    const dest = to || base4;
+    if (to && to !== base4) await moveSnapshots(base4, to);
+    for (const rel of rels) {
+      try {
+        await openTabAt(dest + rel);
+      } catch (e) {
+        log("warn", "tab: reopen after rename failed", { file: dest + rel, error: e && e.message });
+      }
+    }
+    if (activeRel != null && state.tabs.has(dest + activeRel)) activate(dest + activeRel);
+    else if (keepActive && state.tabs.has(keepActive)) activate(keepActive);
+    if (err2) throw err2;
+    return { ok: true, to };
+  }
+  function _mapRenamed(p, changes) {
+    let cur = String(p || "");
+    for (const c of changes) {
+      if (c.copied || !c.from || !c.to) continue;
+      const b = String(c.from).replace(/[\\/]+$/, "");
+      const k = pathKey(cur), kb = pathKey(b);
+      if (k === kb || k.startsWith(kb + "/")) cur = c.to + cur.slice(b.length);
+    }
+    return cur;
+  }
+  async function relocateStaleTabs(changes) {
+    const moves = [];
+    for (const t22 of [...state.tabs.values()]) {
+      if (!t22.file) continue;
+      const pseudo = String(t22.file).startsWith("::");
+      const real = _tabRealPath(t22.file);
+      const nf = _mapRenamed(real, changes);
+      if (nf !== real) moves.push({ t2: t22, pseudo, nf });
+    }
+    if (!moves.length) return 0;
+    const act = state.active;
+    const keepActive = act && !moves.some((m) => m.t2 === act) ? act.file : "";
+    let activeNew = "", n2 = 0;
+    for (const m of moves) {
+      if (m.pseudo) {
+        closeTab(m.t2.file, { discard: true });
+        continue;
+      }
+      let there = false;
+      try {
+        there = await kapi.exists(m.nf);
+      } catch {
+        there = false;
+      }
+      if (!there) {
+        log("warn", "tab: renamed target not found \u2014 tab left as is", { from: m.t2.file, to: m.nf });
+        continue;
+      }
+      const text = m.t2.dirty ? tabBodyText(m.t2) : null;
+      const wasActive = act === m.t2;
+      closeTab(m.t2.file, { discard: true });
+      let opened = false;
+      try {
+        opened = !!await openTabAt(m.nf);
+      } catch (e) {
+        log("warn", "tab: reopen after external rename failed", { file: m.nf, error: e && e.message });
+      }
+      if (opened) {
+        n2++;
+        if (wasActive) activeNew = m.nf;
+        if (text != null) {
+          const h = tabHandleOf(state.tabs.get(m.nf));
+          if (h && h.kind !== "wiki") h.setText(text, { keepAlign: true });
+        }
+      } else if (text != null) {
+        try {
+          const keep = await trashPathFor(m.nf);
+          await kapi.writeFile(keep, text);
+          log("error", "tab: unsaved text kept in Recycle", { file: m.nf, keep });
+          setStatusError(tf("ui.names.renameFail", _baseName(m.nf)));
+        } catch (e) {
+          log("error", "tab: unsaved text lost", { file: m.nf, error: e && e.message });
+        }
+      }
+    }
+    if (activeNew && state.tabs.has(activeNew)) activate(activeNew);
+    else if (keepActive && state.tabs.has(keepActive)) activate(keepActive);
+    return n2;
+  }
+  async function syncDiskNames({ force = false, rebuild = true } = {}) {
+    if (PANEL_WIN || !state.root) return [];
+    if (_nameSyncRun) return _nameSyncRun;
+    if (!force && (_diskBusy || Date.now() - _nameSyncAt < 3e3)) return [];
+    _nameSyncAt = Date.now();
+    const root = state.root;
+    _nameSyncRun = (async () => {
+      let changes = [];
+      try {
+        changes = await reconcileNames(kapi, root);
+      } catch (e) {
+        log("warn", "names: reconcile failed", e);
+        return [];
+      }
+      for (const c of changes.filter((x) => x.reserved)) {
+        const k = pathKey(c.to);
+        if (_reservedWarned.has(k)) continue;
+        _reservedWarned.add(k);
+        log("warn", "names: book folder uses a reserved name", { folder: c.to });
+        toast(tf("ui.names.bookReserved", _baseName(c.to)), { level: "warn" });
+      }
+      changes = changes.filter((x) => !x.reserved);
+      if (!changes.length || state.root !== root) return changes;
+      for (const c of changes) {
+        logAction(
+          "names",
+          tf("ui.names.logExternal", _baseName(c.from), _baseName(c.to)),
+          { kind: c.kind, from: c.from, to: c.to, title: c.title, copied: !!c.copied }
+        );
+        if (c.copied) continue;
+        await moveSnapshots(c.from, c.to);
+      }
+      await relocateStaleTabs(changes);
+      if (rebuild) {
+        await buildTree2();
+        refreshNetwork();
+      }
+      toast(tf("ui.names.syncedN", changes.length), { level: "info" });
+      return changes;
+    })();
+    try {
+      return await _nameSyncRun;
+    } finally {
+      _nameSyncRun = null;
+    }
+  }
   async function revertTab(file) {
     const t3 = state.tabs.get(file);
     if (!t3) return;
     if (!await confirmBox(t("ui.app.cancelChangeAllTab"), t("ui.common.revertBtn"))) return;
     const content = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md33.parseMdFile)(content);
+    const { meta: meta2, body } = (0, import_md35.parseMdFile)(content);
     t3.diskBody = body;
     if (t3.editor) {
-      t3.editor.setMarkdown(body, (0, import_md33.alignFromString)(meta2.align));
+      t3.editor.setMarkdown(body, (0, import_md35.alignFromString)(meta2.align));
       refreshMentions(t3.editor.view);
     } else if (t3.sp) {
       const dir2 = file.replace(/[\\/][^\\/]*$/, "");
@@ -250358,7 +255211,7 @@ ${css}
         // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
       });
       try {
-        t3.sp.applyAlignMap((0, import_md33.alignFromString)(t3.meta.align));
+        t3.sp.applyAlignMap((0, import_md35.alignFromString)(t3.meta.align));
       } catch {
       }
       t3.sp.view.dom.classList.add("on");
@@ -250463,7 +255316,7 @@ ${css}
     };
     for (const ty of types2) {
       const label2 = el("label", "k-row");
-      label2.style.cssText = "display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer";
+      label2.style.cssText = "display:flex;align-items:center;gap:6px;padding:3px 0;cursor:default";
       const cb = el("input");
       cb.type = "checkbox";
       cb.value = ty;
@@ -250518,7 +255371,7 @@ ${css}
     const box2 = el("div", "k-dialog");
     box2.innerHTML = ((a) => `<div class="k-dlg-title">${tx("ui.app.mapChar2")}</div>
     <div class="k-charmap"></div>
-    <div class="k-dlg-btns"><button class="k-ok">${a[0]}</button></div>`)([t("dialogs.close")]);
+    <div class="k-dlg-btns"><button class="k-ok k-cancel">${a[0]}</button></div>`)([t("dialogs.close")]);
     ov.append(box2);
     document.body.append(ov);
     const grid = box2.querySelector(".k-charmap");
@@ -250581,7 +255434,7 @@ ${css}
     if (!state.tabs.has(key2)) {
       let body = "";
       try {
-        body = (0, import_md33.parseMdFile)(await kapi.readFile(snap2.path)).body;
+        body = (0, import_md35.parseMdFile)(await kapi.readFile(snap2.path)).body;
       } catch {
         body = t("ui.app.readFileVersionCant");
       }
@@ -250999,11 +255852,11 @@ ${css}
       }
       const hb = $("#tb-highlight");
       if (hb) {
-        const hv = ed ? marks2.highlightValue || "" : "";
-        hb.dataset.color = hv;
+        const hv2 = ed ? marks2.highlightValue || "" : "";
+        hb.dataset.color = hv2;
         const bar2 = hb.querySelector(".tb-color-bar");
-        if (bar2) bar2.style.background = hv || "currentColor";
-        hb.classList.toggle("on", !!hv);
+        if (bar2) bar2.style.background = hv2 || "currentColor";
+        hb.classList.toggle("on", !!hv2);
       }
     }
     $("#tb-img")?.classList.toggle("on", !!marks2.image);
@@ -251571,7 +256424,7 @@ ${css}
         return;
       }
       const body = t3.editor ? t3.editor.getMarkdown() : t3.sp ? t3.sp.getText() : t3.plain.value;
-      let txt = tf("ui.app.wordChar", fmtNum((0, import_md33.countWords)(body)), fmtNum(body.length));
+      let txt = tf("ui.app.wordChar", fmtNum((0, import_md35.countWords)(body)), fmtNum(body.length));
       if (t3.sp) {
         txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t3);
         try {
@@ -252190,7 +257043,7 @@ ${css}
       }
       if (!body) {
         try {
-          const f = (0, import_md33.parseMdFile)(await kapi.readFile(r.path));
+          const f = (0, import_md35.parseMdFile)(await kapi.readFile(r.path));
           body = f.body || "";
           fmt2 = fmt2 || f.meta.format || "";
         } catch {
@@ -252776,7 +257629,8 @@ ${css}
     const left = el("div", "k-about-left");
     const logo = el("img", "k-about-logo");
     logo.alt = "Killian 2";
-    logo.src = "about/logo.svg";
+    logo.src = "assets/app-icon.svg";
+    logo.draggable = false;
     left.append(logo);
     const title2 = el("div", "k-dlg-title k-about-title", t("ui.common.killian"));
     const tag3 = el("div", "k-about-tag", t("ui.app.appWriteNovelScreenplay"));
@@ -253119,7 +257973,7 @@ ${css}
         const p = await kapi.saveAsDialog((t3.title || t("ui.common.notNamed")) + ".md");
         if (p) {
           const srcMd = t3.file && !String(t3.file).startsWith("::") && /\.md$/i.test(t3.file) ? t3.file : null;
-          await writeKeepingComments(p, (0, import_md33.dumpMdFile)(t3.meta || {}, body), srcMd);
+          await writeKeepingComments(p, (0, import_md35.dumpMdFile)(t3.meta || {}, body), srcMd);
           setStatus(tf("ui.app.saveAsDone", p));
         }
         break;
@@ -253398,15 +258252,34 @@ ${css}
         setStatus(state.settings.lineNumbers ? t("ui.app.numLineOpen") : t("ui.app.numLineClose"));
         break;
       // ---- ฟีเจอร์ที่เคยไม่มีทางเข้าถึง (import ไว้แต่ไม่มีเมนู/ปุ่ม) ----
+      // [alpha.169 · a11y] จำเป็นค่าระดับผู้ใช้ด้วย (setTypewriterMode) — เดิมเปิดโปรแกรมใหม่แล้วต้องกดเปิดทุกครั้ง
       case "typewriter":
-        setStatus(toggleTypewriter() ? t("ui.app.modeTypewriterOpen") : t("ui.app.modeTypewriterClose"));
+        setStatus(setTypewriterMode() ? t("ui.app.modeTypewriterOpen") : t("ui.app.modeTypewriterClose"));
         refreshToolbar();
         syncTypeSound();
         syncMenuToggles();
         break;
+      // ══ [alpha.169 · a11y] การช่วยการเข้าถึง ══
+      case "key-echo": {
+        const v2 = setA11ySwitch("a11yKeyEcho");
+        setStatus(v2 ? t("ui.a11y.keyEchoOn") : t("ui.a11y.keyEchoOff"));
+        break;
+      }
+      case "line-band": {
+        const v2 = setA11ySwitch("a11yLineBand");
+        setStatus(v2 ? t("ui.a11y.lineBandOn") : t("ui.a11y.lineBandOff"));
+        break;
+      }
+      case "osk":
+        await openOsKeyboard();
+        break;
+      case "a11y-settings":
+        settingsDialog("a11y");
+        break;
       // [alpha.57a ข้อ 1] เสียงพิมพ์ — สวิตช์แยกจากโหมดเครื่องพิมพ์ดีด (ตั้งระดับเสียงในตั้งค่า)
       case "type-sound":
         state.settings.typeSound = !state.settings.typeSound;
+        saveGlobalSetting("typeSound", state.settings.typeSound);
         syncTypeSound();
         saveProjectMetaSoon();
         syncMenuToggles();
@@ -253510,7 +258383,7 @@ ${css}
               await confirmBox(t("ui.app.importNotOkNot"), t("ui.common.msg3"));
             }
           }
-        }, { canReplace: canReplace(state.active) });
+        }, { canReplace: canReplace(state.active), filePath: typeof a[0] === "string" ? a[0] : "" });
         break;
       }
       // [alpha.60 ข้อ 74] เปรียบเทียบบท/สคริปต์
@@ -254884,8 +259757,20 @@ ${css}
     box2.style.left = Math.round(left) + "px";
     box2.style.top = Math.round(top) + "px";
   }
+  function cancelTipPending() {
+    if (_tipPend) {
+      clearTimeout(_tipPend.timer);
+      _tipPend = null;
+    }
+  }
+  function hoverTipWait() {
+    if (sessionOff() && !globalThis.__k2tipDelayTest) return 0;
+    return tipDelay(performance.now(), _tipLastHide, { delay: TIP_DELAY_MS, warm: TIP_WARM_MS });
+  }
   function hideTip2() {
     clearTimeout(_tipJob);
+    cancelTipPending();
+    if (_tipHost && _tipEl && _tipEl.classList.contains("on")) _tipLastHide = performance.now();
     if (_tipHost && _tipSaved) {
       _tipHost.setAttribute("title", _tipSaved);
       delete _tipHost.dataset.tipHeld;
@@ -254967,9 +259852,24 @@ ${css}
         }
       }
       if (!host2 || host2 === _tipHost) return;
+      if (_tipPend && _tipPend.host === host2) return;
+      if (!host2.getAttribute("title")) return;
+      hideTip2();
+      const wait2 = hoverTipWait();
+      if (wait2 > 0) {
+        _tipPend = { host: host2, timer: setTimeout(() => {
+          const p = _tipPend;
+          _tipPend = null;
+          if (!p || p.host !== host2 || !host2.isConnected || menuOpen()) return;
+          revealHoverTip(host2);
+        }, wait2) };
+        return;
+      }
+      revealHoverTip(host2);
+    }, true);
+    function revealHoverTip(host2) {
       const text = host2.getAttribute("title");
       if (!text) return;
-      hideTip2();
       _tipHost = host2;
       _tipSaved = text;
       _tipKt = host2;
@@ -254986,9 +259886,10 @@ ${css}
       } else {
         placeTipRelative(host2);
       }
-    }, true);
+    }
     document.addEventListener("mouseout", (e) => {
       if (_tipHeld && !(e.relatedTarget instanceof Node && _tipHeld.host.contains(e.relatedTarget))) releaseHeldTitle();
+      if (_tipPend && !(e.relatedTarget instanceof Node && _tipPend.host.contains(e.relatedTarget))) cancelTipPending();
       if (!_tipHost) return;
       const to = e.relatedTarget;
       if (to instanceof Node && _tipHost.contains(to)) return;
@@ -255691,13 +260592,13 @@ ${css}
     });
     searchInp.focus();
   }
-  var import_md33, import_text_color4, tr3, pageScale, autosaveTimer, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _userScale, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _docsEmptyObs, _treeJob, _healAt, _plannerRowObs, _noWrite, _mapsSig, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, propsFlush_C, SECTION_STATUSES, plugins, pluginBus, PLUGIN_TRUST_KEY, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _fpApi, _closedTabs, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, LOG_DAY, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _fmtHostH, _fmtBarH, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
+  var import_md35, import_text_color4, tr3, pageScale, autosaveTimer, _twSettingSeen, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _userScale, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _docsEmptyObs, _treeJob, _healAt, _plannerRowObs, _noWrite, _mapsSig, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, _propsLast, propsFlush_C, SECTION_STATUSES, livePlugins, pluginRestart, liveFlat, plugins, pluginBus, PLUGIN_TRUST_KEY, _plugLoadQ, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _fpApi, _closedTabs, _diskBusy, _baseName, _tabRealPath, _nameSyncAt, _nameSyncRun, _reservedWarned, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, LOG_DAY, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _fmtHostH, _fmtBarH, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipPend, _tipLastHide, _tipHeld, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n_html();
       init_i18n();
       init_editor();
-      import_md33 = __toESM(require_md());
+      import_md35 = __toESM(require_md());
       init_convert();
       init_prose_format();
       init_prose_view();
@@ -255719,12 +260620,16 @@ ${css}
       init_search();
       init_ui();
       init_drag_cancel();
+      init_win_title();
+      init_native_shell_ui();
       init_scene_props_extra();
       init_json_store();
       init_json_guard();
       init_disk_conflict();
       init_sprint_ui();
       init_tab_bridge();
+      init_disk_sync();
+      init_disk_names();
       init_wiki();
       init_screenplay();
       init_gallery();
@@ -255780,6 +260685,9 @@ ${css}
       init_color_util();
       init_focus_mode();
       init_typewriter();
+      init_a11y_core();
+      init_key_echo();
+      init_line_band();
       init_word_history();
       init_backup();
       init_local_date();
@@ -255832,6 +260740,7 @@ ${css}
       init_color_picker();
       import_text_color4 = __toESM(require_text_color());
       init_tooltip();
+      init_timing();
       init_tree_menu_spec();
       init_onset_ui();
       init_tree_actions();
@@ -255875,6 +260784,7 @@ ${css}
       tr3 = t;
       pageScale = 1;
       autosaveTimer = null;
+      _twSettingSeen = false;
       LN_GUTTER_ID = "k-ln-gutter";
       _lnJob = 0;
       _lnCache = null;
@@ -256022,6 +260932,7 @@ ${css}
       propsSync_C = { gen: 0 };
       propsItem_C = { t: null };
       _propsGen = 0;
+      _propsLast = Promise.resolve();
       propsFlush_C = { fn: null };
       SECTION_STATUSES = [
         ["outline", t("ui.common.outlineStory"), "#8a8f98"],
@@ -256030,9 +260941,30 @@ ${css}
         ["done", t("ui.common.writeEnd"), "#6fae6f"],
         ["published", t("ui.common.printDone"), "#a97fd0"]
       ];
-      plugins = { commands: [], loaded: [], failed: [], shortcuts: [], panels: [] };
+      livePlugins = /* @__PURE__ */ new Map();
+      pluginRestart = /* @__PURE__ */ new Set();
+      liveFlat = (k) => [...livePlugins.values()].flatMap((r) => r[k]);
+      plugins = {
+        loaded: [],
+        failed: [],
+        untrusted: 0,
+        // อ่านสดจากระเบียน — ปลั๊กอินลงทะเบียนของเพิ่มทีหลัง (หลัง await) ได้ และของที่ถอดแล้วหายทันที
+        get commands() {
+          return liveFlat("commands");
+        },
+        get shortcuts() {
+          return liveFlat("shortcuts");
+        },
+        get panels() {
+          return liveFlat("panels");
+        },
+        get restart() {
+          return [...pluginRestart];
+        }
+      };
       pluginBus = new EventBus({ onError: (e, ev) => log("warn", "plugin event " + ev, e) });
       PLUGIN_TRUST_KEY = "plugin-trust";
+      _plugLoadQ = Promise.resolve();
       galInst = null;
       state.templates = [];
       state.templatesDoc = { version: 1, note: "", templates: [] };
@@ -256054,7 +260986,7 @@ ${css}
         sceneCtx: (f) => sceneCtx(f),
         openScene: (f, title2) => openScene(f, title2),
         buildTree: () => buildTree2(),
-        alignFromString: import_md33.alignFromString,
+        alignFromString: import_md35.alignFromString,
         tabBodyText: (tab) => tabBodyText(tab),
         afterSwap: (tab) => {
           if (state.active !== tab) return;
@@ -256081,8 +261013,21 @@ ${css}
         // รับได้ทั้งโฟลเดอร์และไฟล์เดี่ยว (ฉาก/หน้า Wiki ที่ AI ลบ)
         closeUnder(dir2) {
           return closeTabsUnderPath(dir2, { save: true });
+        },
+        // [alpha.170] เปลี่ยนชื่อ = ย้ายไฟล์/โฟลเดอร์ → แท็บ + ประวัติเวอร์ชันตามไป
+        movePath(oldPath, fn) {
+          return movePathWithTabsNow(oldPath, fn);
         }
       });
+      _diskBusy = 0;
+      _baseName = (p) => String(p || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "";
+      _tabRealPath = (file) => {
+        const m = /^::[a-z-]+::(.+)$/i.exec(String(file || ""));
+        return m ? m[1] : String(file || "");
+      };
+      _nameSyncAt = 0;
+      _nameSyncRun = null;
+      _reservedWarned = /* @__PURE__ */ new Set();
       crumbs_C = { gen: 0 };
       FMTS = ["bold", "italic", "underline", "strike", "sup", "sub"];
       ALWAYS_ON_TB = /* @__PURE__ */ new Set([
@@ -256189,7 +261134,7 @@ ${css}
         globalThis.__k2testing = true;
         return runTest(p);
       };
-      if (location.search.includes("k2test")) window.__k2dev = { loadProject, handleCommand, state, resetPanels };
+      if (location.search.includes("k2test")) window.__k2dev = { loadProject, handleCommand, state, resetPanels, sceneCtx, syncPropsToActive, pluginList, reloadPlugins };
       window.k2PageDoctor = k2PageDoctor;
       window.k2Net = () => netInst;
       window.__k2menu = null;
@@ -256299,7 +261244,8 @@ ${css}
       };
       _featInFlight = /* @__PURE__ */ new Map();
       setPanelShowHook((pid) => {
-        renderFeaturePanel(pid);
+        if (pid === "props") drawPanel(pid);
+        else renderFeaturePanel(pid);
       });
       LOCK_EDIT_CMDS = /* @__PURE__ */ new Set([
         "fmt",
@@ -256396,6 +261342,8 @@ ${css}
       _tipSaved = "";
       _tipJob = null;
       _tipKt = null;
+      _tipPend = null;
+      _tipLastHide = 0;
       _tipHeld = null;
       window.addEventListener("DOMContentLoaded", () => {
         try {
@@ -256406,6 +261354,19 @@ ${css}
           installDialogA11y();
         } catch (e) {
           log("warn", "dialog a11y", e);
+        }
+        try {
+          initNativeShell({
+            panelWin: !!PANEL_WIN,
+            openProject: (p) => openProjectFromUi(p),
+            importScript: (p) => handleCommand("import-script", p),
+            insertImage: (n2) => insertImageByName(n2),
+            openGallery: () => showPanel("gallery")
+          });
+          busyTaskHooks.progress = taskbarProgress;
+          busyTaskHooks.done = taskFinished;
+        } catch (e) {
+          log("warn", "native shell", e);
         }
         try {
           rovingToolbar($("#toolbar"));
@@ -256684,6 +261645,7 @@ ${css}
             }
             refreshBtn.classList.add("spin");
             try {
+              await syncDiskNames({ force: true, rebuild: false });
               await loadTemplates();
               await smart.loadNames(state.root);
               await buildTree2();
@@ -256865,6 +261827,7 @@ ${css}
           doFind();
         };
         installTextMeasurer();
+        applyWindowTitle(state.root ? state.title : "");
         watchDocImages();
         watchProjectWrites();
         if (PANEL_WIN) {
@@ -256873,7 +261836,9 @@ ${css}
         }
         bindMainWindowSync();
         window.addEventListener("focus", () => {
-          checkTabsAgainstDisk().catch(() => {
+          const names = sessionOff() ? Promise.resolve() : syncDiskNames().catch(() => {
+          });
+          names.then(() => checkTabsAgainstDisk()).catch(() => {
           });
         });
         if (!location.search.includes("k2test")) bootSequence();

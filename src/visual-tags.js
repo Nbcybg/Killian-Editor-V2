@@ -73,7 +73,7 @@ export function visualTagChip(name, { count = 0, onClick = null } = {}) {
   const chip = el('span', 'vt-chip' + (vt ? '' : ' vt-chip-plain'));
   chip.textContent = (vt ? '' : '#') + name + (count ? ' (' + count + ')' : '');
   if (vt) applyVisualTagStyle(chip, name);
-  if (onClick) { chip.style.cursor = 'pointer'; chip.onclick = onClick; }
+  if (onClick) { chip.style.cursor = 'default'; chip.onclick = onClick; }
   return chip;
 }
 
@@ -124,7 +124,7 @@ export async function manageVisualTags() {
       sub.style.color = 'var(--dim)';
       card.append(sub);
       const del = el('span', 'vt-del', '✕');
-      del.style.cssText = 'position:absolute;top:6px;right:8px;cursor:pointer;opacity:.55';
+      del.style.cssText = 'position:absolute;top:6px;right:8px;cursor:default;opacity:.55';
       del.title = tt('ui.tags.delTag');
       del.onclick = async () => { await removeVisualTag(t.name); renderGrid(); };
       card.append(del);

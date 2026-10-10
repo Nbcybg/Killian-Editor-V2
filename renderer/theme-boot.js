@@ -10,6 +10,6 @@
     var id = q || localStorage.getItem('k2-boot-theme');
     if (id && /^[a-z0-9-]+$/.test(id)) { document.body.classList.add('theme-' + id); window.__k2bootTheme = id; }
     var mode = localStorage.getItem('k2-boot-mode');
-    if (mode === 'light' || mode === 'dark') document.documentElement.style.colorScheme = mode;
+    if (mode === 'light' || mode === 'dark') { document.documentElement.style.colorScheme = mode; document.documentElement.dataset.themeMode = mode; }
   } catch (e) { /* ไม่มี localStorage (หน้าต่างพิเศษ) = ปล่อยให้ applyTheme() ทำตามปกติ */ }
 })();

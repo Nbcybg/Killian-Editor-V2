@@ -5,7 +5,7 @@
 // สำคัญ: RTF เป็นไฟล์ ANSI — ภาษาไทย (และอักขระ >127 ทุกตัว) ต้องเขียนเป็น \uNNNN?
 //        ไม่งั้น Word/Pages เปิดแล้วได้ตัวขยะ (บทเรียนเดียวกับข้อ 14d เรื่องไบนารี)
 
-import { inlinePlainText } from './md.js';
+import { inlinePlainText, mdBlocks, parseInline, stripMentions } from './md.js';
 import { t } from './i18n.js';
 import { mergeSpFormat, textWidth } from './sp-format.js';
 import { normalizeTitlePages } from './sp-title-pages.js';
@@ -167,5 +167,113 @@ export function generateRtf(blocks, meta = {}, fmt = null, opts = {}) {
     out.push(ctrl + ' ' + escapeRtf(caps ? text.toUpperCase() : text) + '\\par');
   }
 
+  return head + out.join('\n') + '\n}\n';
+}
+
+// ══ [alpha.169 · bug hunt] RTF ของ "นิยาย" ══
+//
+// วัดจากไฟล์ที่ส่งออกบนแอปจริง: นิยายที่เลือกปลายทาง RTF ถูกส่งเข้า `parseScript()` (ตัวอ่านบทภาพยนตร์)
+// เหมือนบทหนัง → ย่อหน้าสั้นที่ตามด้วยอีกบรรทัดถูกเดาเป็น "ชื่อตัวละคร + บทพูด" (เยื้อง 2.2 นิ้ว)
+// ตัวหนา/เอียง/สี/การจัดกึ่งกลาง/รายการ หายหมด และได้ฟอนต์ Courier ของบท
+// ตัวนี้อ่านมาร์กดาวน์ของเวิร์กโฟลว์ด้วยสคีมาตัวจริง (`mdBlocks` + `parseInline` — กฎถาวรข้อ 5)
+// แล้วเขียนย่อหน้า RTF ตามชนิดบล็อก · คู่แฝดของ `buildDocx()` (export-ebook.js)
+const markName = (m) => (typeof m === 'string' ? m : m && m.type);
+/** `#rgb` / `#rrggbb` → [r,g,b] (ไม่ใช่สี = null) */
+function rgbOf(c) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(c || '').trim());
+  if (!m) return null;
+  const h = m[1].length === 3 ? m[1].split('').map((x) => x + x).join('') : m[1];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+/** ชื่อฟอนต์ในตารางฟอนต์ — ตัดอักขระที่ปิดกลุ่ม/คั่นรายการของ RTF */
+const rtfFontName = (s, d) => escapeRtf(String(s || d).replace(/[{};\\]/g, '').trim() || d);
+const RTF_ALIGN = { center: '\\qc', right: '\\qr', justify: '\\qj' };
+const RTF_HEAD_SCALE = [0, 2, 1.6, 1.35, 1.2, 1.1, 1];     // ชุดเดียวกับหัวข้อของ DOCX
+
+/**
+ * มาร์กดาวน์ (ผลของเวิร์กโฟลว์ส่งออก) → RTF ของนิยาย
+ * @param {string} md
+ * @param {{title?:string, author?:string, font?:string, fontPt?:number, breakMarker?:string,
+ *          paper?:{width:number,height:number}, margins?:{top:number,right:number,bottom:number,left:number}}} opts
+ * @returns {string}
+ */
+export function generateProseRtf(md, opts = {}) {
+  const paper = opts.paper || { width: 8.27, height: 11.69 };
+  const m = opts.margins || { top: 1, right: 1, bottom: 1, left: 1 };
+  const fs = rtfFs(opts.fontPt);
+  const colors = [];                                       // ดัชนี 1.. ใน \colortbl
+  const colorIdx = (c) => {
+    const rgb = rgbOf(c);
+    if (!rgb) return 0;
+    const key = rgb.join(',');
+    let i = colors.indexOf(key);
+    if (i < 0) { colors.push(key); i = colors.length - 1; }
+    return i + 1;
+  };
+  const run = (text, marks) => {
+    if (!text) return '';
+    const has = (n) => (marks || []).some((x) => markName(x) === n);
+    let c = '';
+    if (has('strong')) c += '\\b';
+    if (has('em')) c += '\\i';
+    if (has('underline')) c += '\\ul';
+    if (has('strike')) c += '\\strike';
+    if (has('sup')) c += '\\super';
+    else if (has('sub')) c += '\\sub';
+    const col = (marks || []).find((x) => x && typeof x === 'object' && x.type === 'color');
+    const ci = col ? colorIdx((col.attrs || {}).color) : 0;
+    if (ci) c += '\\cf' + ci;
+    return c ? '{' + c + ' ' + escapeRtf(text) + '}' : escapeRtf(text);
+  };
+  const runsOf = (text, extra = []) => parseInline(stripMentions(String(text || '')))
+    .map((seg) => run(seg.image ? String(seg.image.alt || '') : seg.text, [...(seg.marks || []), ...extra]))
+    .join('');
+  const base = '\\pard\\plain\\f0\\fs' + fs;
+  const out = [];
+  let list = null;                                         // {ordered, n}
+  for (const b of mdBlocks(md, { breakMarker: opts.breakMarker || '' })) {
+    if (b.kind !== 'li') list = null;
+    const al = RTF_ALIGN[b.align] || '';
+    switch (b.kind) {
+      case 'pagebreak': out.push('\\page'); break;
+      case 'h': {
+        const hs = Math.round(fs * (RTF_HEAD_SCALE[Math.min(6, b.level)] || 1));
+        out.push('\\pard\\plain\\f0\\fs' + hs + '\\sb240\\sa120\\keepn' + al + '\\b ' + runsOf(b.text) + '\\par');
+        break;
+      }
+      case 'li': {
+        if (!list || list.ordered !== b.ordered) list = { ordered: b.ordered, n: b.ordered && Number.isFinite(b.num) ? b.num : 1 };
+        else list.n++;
+        const mark = b.ordered ? list.n + '.' : '\\bullet';
+        out.push(base + '\\li720\\fi-360\\sa60' + al + ' ' + mark + '\\tab ' + runsOf(b.text) + '\\par');
+        break;
+      }
+      case 'quote': out.push(base + '\\li720\\ri720\\sa120' + al + ' ' + runsOf(b.text, ['em']) + '\\par'); break;
+      case 'hr': out.push(base + '\\sa120\\brdrb\\brdrs\\brdrw10\\brsp20 \\par'); break;
+      case 'code':
+        for (const line of String(b.text).split('\n')) out.push('\\pard\\plain\\f1\\fs' + fs + ' ' + escapeRtf(line) + '\\par');
+        break;
+      case 'figure':
+        if (String(b.alt || '').trim()) out.push(base + '\\sa120' + (al || '\\qc') + ' ' + run(String(b.alt), ['em']) + '\\par');
+        break;
+      default: {
+        const lines = b.lines || [b.text];
+        if (!lines.join('').trim()) { out.push(base + ' \\par'); break; }      // บรรทัดว่างของผู้เขียน = เนื้อหา
+        out.push(base + '\\sa120' + al + ' ' + lines.map((l) => runsOf(l)).join('\\line ') + '\\par');
+      }
+    }
+  }
+  const info = (opts.title || opts.author)
+    ? '{\\info' + (opts.title ? '{\\title ' + escapeRtf(String(opts.title)) + '}' : '')
+      + (opts.author ? '{\\author ' + escapeRtf(String(opts.author)) + '}' : '') + '}\n' : '';
+  const head =
+    '{\\rtf1\\ansi\\ansicpg1252\\deff0\\uc1\n' +
+    '{\\fonttbl{\\f0\\fnil\\fcharset0 ' + rtfFontName(opts.font, 'Tahoma') + ';}{\\f1\\fmodern\\fcharset0 Courier New;}}\n' +
+    '{\\colortbl;' + colors.map((k) => { const [r, g, bl] = k.split(','); return '\\red' + r + '\\green' + g + '\\blue' + bl + ';'; }).join('') + '}\n' +
+    info +
+    '\\paperw' + inTw(paper.width) + '\\paperh' + inTw(paper.height) +
+    '\\margl' + inTw(m.left) + '\\margr' + inTw(m.right) +
+    '\\margt' + inTw(m.top) + '\\margb' + inTw(m.bottom) + '\n' +
+    '\\f0\\fs' + fs + '\n';
   return head + out.join('\n') + '\n}\n';
 }

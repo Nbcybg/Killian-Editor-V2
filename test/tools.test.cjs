@@ -163,13 +163,17 @@ check('cache: อยู่ข้ามรอบ (localStorage)', new TH.Thesauru
 
   res = await SC.importScrivener('P', { io, dest: 'OUT' });
   check('scriv: เขียนไฟล์จริงครบตาม plan', res.ok && res.written === res.plan.files.length);
-  const sceneFile = Object.keys(written).find((p) => p.includes('scene-01.md') && p.includes('บทที่หนึ่ง'));
+  // [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง: ไฟล์ฉาก "ตลาดเก่า.md" ในโฟลเดอร์บท "บทที่หนึ่ง" (ไม่มีเลขกำกับ) · เล่มเริ่มต้น "Book 1"
+  const sceneFile = Object.keys(written).find((p) => p.endsWith('/ตลาดเก่า.md') && p.includes('/บทที่หนึ่ง/'));
   check('scriv: ฉากเป็น .md พร้อม front-matter', !!sceneFile && written[sceneFile].startsWith('---\ntitle: ตลาดเก่า'), sceneFile);
   check('scriv: เนื้อหาไทยแปลงถูก', written[sceneFile].includes('ตลาด'), JSON.stringify(written[sceneFile]));
   const scenesJson = JSON.parse(written[Object.keys(written).find((p) => p.endsWith('scenes.json'))]);
-  check('scriv: scenes.json ใช้โครงเดิมของ Killian', !!scenesJson.chapters && Object.values(scenesJson.chapters)[0][0].fileName === 'scene-01.md');
+  check('scriv: scenes.json ใช้โครงเดิมของ Killian', !!scenesJson.chapters && Object.values(scenesJson.chapters)[0][0].fileName === 'ตลาดเก่า.md');
   const draftJson = JSON.parse(written[Object.keys(written).find((p) => p.endsWith('draft.json'))]);
-  check('scriv: draft.json มี folderName ตรงกับโฟลเดอร์จริง', draftJson.chapters.some((c) => written[`OUT/เล่มหนึ่ง/Draft/default/Chapters/${c.folderName}/scene-01.md`]));
+  check('scriv: draft.json มี folderName ตรงกับโฟลเดอร์จริง', draftJson.chapters.some((c) => written[`OUT/Book 1/Draft/default/Chapters/${c.folderName}/ตลาดเก่า.md`]));
+  check('[170] scriv: ไม่มีเลขกำกับในชื่อโฟลเดอร์บท/ไฟล์ฉาก · section.json จดชื่อโฟลเดอร์',
+        draftJson.chapters.every((c) => !/^\d+\s*-/.test(c.folderName)) && !Object.keys(written).some((p) => /scene-\d+\.md$/.test(p))
+        && JSON.parse(written['OUT/Book 1/section.json']).folderName === 'Book 1');
   check('scriv: Scrivener 2 (Files/Docs/<id>.rtf) ก็อ่านได้', JSON.stringify(written).includes('hello loose'));
 
   res = await SC.importScrivener('ว่าง', { io });

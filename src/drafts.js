@@ -4,6 +4,7 @@ import { setStatus, state, logAction } from './core.js';
 import { confirmBox, ask } from './ui.js';
 import { mutateJson } from './json-store.js';   // [alpha.159 · M1] section.json แก้ผ่านคิว
 import { regenDraftIds } from './tree-item-meta.js';   // [alpha.160 · P0-5]
+import { diskBase } from './disk-names.js';             // [alpha.170]
 
 /**
  * รายชื่อร่างในเล่ม
@@ -72,7 +73,7 @@ export async function createDraft(secPath, name, sourceDraft = null) {
   } else {
     const { guid } = await import('./app.js');
     const ch = { guid: guid(), title: t('ui.common.chapterOne2'), order: 1, status: 'Outline',
-                 act: 'I', date: '', isFavorite: false, folderName: t('ui.common.chapterOne') };
+                 act: 'I', date: '', isFavorite: false, folderName: diskBase(t('ui.common.chapterOne2'), 'chapter') };   // [alpha.170] โฟลเดอร์ = ชื่อบท
     await kapi.mkdir(await kapi.join(newPath, 'Chapters', ch.folderName));
     await kapi.writeFile(await kapi.join(newPath, 'draft.json'),
       JSON.stringify({ chapters: [ch] }, null, 2));

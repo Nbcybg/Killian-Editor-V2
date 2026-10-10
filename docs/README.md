@@ -53,3 +53,9 @@ npm run test:unit      # รัน unit test ทั้งหมด
 3. คอมเมนต์: **API เป็นอังกฤษ · ตรรกะเป็นไทย**
 4. localStorage แยกคีย์ต่อระบบ (`k2-panel-layout` / `k2-split-layout` / `k2-kanban-layout`) ไม่ยุ่งกับ `k2-ui-layout` เดิม
 5. ข้อมูลถาวรลงไฟล์เดิมของโปรเจกต์: `scenes.json` (สถานะฉาก) · `project.khn.json` (`backlinks`, `taskLog`, `customStatuses`)
+
+## คู่มือสำหรับคนนอกทีม
+
+| เรื่อง | เอกสาร |
+|---|---|
+| เขียนปลั๊กอิน (ตัวแปร `k2` · plugin.json · วงจรชีวิต · ติดตั้งจากลิงก์) | [plugin-dev.md](plugin-dev.md) |

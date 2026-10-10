@@ -43,13 +43,18 @@ import { LAYOUT_VERSION as PANEL_LAYOUT_VERSION,
 import { TextSelection as PMTextSelection, AllSelection as PMAllSelection } from 'prosemirror-state';
 import { setQuery, gotoMatch, replaceCurrent, replaceAll } from './search.js';
 import { ask, confirmBox, infoBox, popupMenu, choose, closeMenu, saveAllDialog, escClose, menuItemsOf, menuOpen, setHoverTipHider, installDialogA11y, rovingToolbar, toast } from './ui.js';
-import { escCancelDrag } from './drag-cancel.js';   // [alpha.165] Esc ยกเลิกการลาก
+import { escCancelDrag } from './drag-cancel.js';
+import { applyWindowTitle } from './win-title.js';   // [alpha.169] ชื่อแถบชื่อหน้าต่าง + เลขรุ่น (แหล่งเดียว)
+// [alpha.169 · native] แถบชื่อหน้าต่างตามระบบ · แถบเมนูด้วยคีย์บอร์ด · ลากไฟล์จากนอกโปรแกรม · แถบงาน
+import { initNativeShell, syncWindowChrome, taskbarProgress, taskFinished, handleOsDrop, nativeShellInfo, enterMenubar, menubarActive } from './native-shell-ui.js';   // [alpha.165] Esc ยกเลิกการลาก
 import { buildActChapterRows, buildMentionsBox } from './scene-props-extra.js';
 import { mutateJson, onBrokenJson } from './json-store.js';
 import { readJsonGuarded, resetJsonGuard } from './json-guard.js';   // [alpha.168 · bug hunt] ไฟล์ JSON เสีย ≠ ไฟล์ว่าง   // [alpha.156] อ่านสด-แก้-เขียน JSON ในคิวของไฟล์
 import { diskConflict, focusAction } from './disk-conflict.js';   // [alpha.156] ไฟล์ถูกแก้นอกโปรแกรม
 import { sprintDirtyList, saveSprintDirty } from './sprint-ui.js';     // [alpha.156] ทะเบียนงานค้าง
-import { setTabBridge, pathKey } from './tab-bridge.js';   // [alpha.149] ตัวเขียนไฟล์นอกตัวแก้ไข (AI · ไล่แก้ชื่อ) ต้องรู้จักแท็บ
+import { setTabBridge, pathKey } from './tab-bridge.js';
+import { reconcileNames, freeBookName } from './disk-sync.js';      // [alpha.170] ชื่อบนดิสก์ ↔ ทะเบียน
+import { diskBase } from './disk-names.js';   // [alpha.149] ตัวเขียนไฟล์นอกตัวแก้ไข (AI · ไล่แก้ชื่อ) ต้องรู้จักแท็บ
 import { WikiEditor, CAT_TH, imageLightbox } from './wiki.js';
 import { SPEditor } from './screenplay.js';
 import { Gallery, pickImage } from './gallery.js';
@@ -102,7 +107,7 @@ import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, log
          setBusy, clearBusy, busyMsg, withBusy,
          PANEL_WIN, isPanelWindow,        // [alpha.67] หน้าต่างแผงที่ฉีกออกมา (tear-off)
          keepScroll,                      // [alpha.66r2] จำ-คืนตำแหน่งเลื่อนตอนรื้อ DOM สร้างใหม่
-         THEMES, THEME_MODES, THEME_LABEL_KEYS, THEME_ALIAS } from './core.js';   // [alpha.137] ทะเบียนธีมของโปรแกรม
+         THEMES, THEME_MODES, THEME_LABEL_KEYS, THEME_ALIAS, busyTaskHooks } from './core.js';   // [alpha.137] ทะเบียนธีมของโปรแกรม
 import { sceneProps } from './scene-props.js';
 // [alpha.60r3 ข้อ 2] ปุ่ม ✨ ให้ AI เขียนเรื่องย่อ/POV/อารมณ์/ความขัดแย้ง
 import { attachAiFieldButton, generateSceneSynopsis, fieldPrompt, cleanResult,
@@ -126,7 +131,7 @@ import { openTimeline, renderTimeline } from './timeline-ui.js';
 import { renameSection, deleteSection, addSection, listSections, sectionStats, saveSectionMeta, reorderSections, sectionProps } from './section-ops.js';
 import { renameScene, deleteScene, addScene, setSceneMeta, toggleSceneFlag, duplicateScene, moveSceneOrder, moveSceneToChapter, moveSceneBefore, renameChapter, deleteChapter, addChapter, moveChapterBefore,
          saveChapterMeta,
-         setSceneTitle, chapterProps, trashVisSidecar } from './scene-ops.js';
+         setSceneTitle, chapterProps, trashVisSidecar, freeSceneFileName } from './scene-ops.js';
 import { wikiCats, applyWikiCats, newWikiCat, editWikiCat, deleteWikiCat, addEntity, openEntity, duplicateEntity } from './wiki-ui.js';
 import { settingsDialog, versionDialog, showChangelog } from './dialogs.js';
 // [alpha.135] ระบบอัปเดต — ทางเข้าทั้งสามทาง (ตั้งค่า · ตอนเปิดโปรแกรม · เมนูช่วยเหลือ) เรียกตัวเดียวกัน
@@ -162,6 +167,10 @@ import { manageCustomStatuses, allStatuses, addCustomStatus, removeCustomStatus,
 import { vivid } from './color-util.js';
 import { toggleFocusMode2, cursorBlock, isFocusMode, focusDim, applyFocusDim } from './focus-mode.js';
 import { toggleTypewriter, twScroll, isTypewriter, scrollHost } from './typewriter.js';
+// [alpha.169 · a11y] การช่วยการเข้าถึง: แสดงปุ่มที่กด · แถบสีบรรทัดเคอร์เซอร์ · แป้นพิมพ์บนจอของระบบ
+import { userA11yWins } from './a11y/a11y-core.js';
+import { applyKeyEcho } from './a11y/key-echo.js';
+import { applyLineBand, scheduleLineBand } from './a11y/line-band.js';
 import { recordDailyWords, countProjectWords, calcStreak, getWordHistory,
          rebuildWordCounts, scheduleWordHistory, flushWordHistory, wordHistoryPending } from './word-history.js';
 import { autoBackupNow, startAutoBackup, backupIfDue, BACKUP_DONE_MARK } from './backup.js';
@@ -249,7 +258,7 @@ import { setAutoSync, isAutoSyncOn, resetTaskEngine,
 // [alpha.60r3 ข้อ 7] EventBus ก้อนเดียวที่ปลั๊กอินทุกตัวใช้ร่วมกัน (k2.on / k2.emit)
 import { EventBus } from './auto-task/event-queue.js';
 // [alpha.79] แผงปลั๊กอิน · แผงบทพูด · เอาปุ่มเข้า-ออกจากแถบเครื่องมือ · จำสถานะล่าสุด
-import { ORIGIN_USER, ORIGIN_PROJECT, pluginFingerprint, isPluginSetTrusted } from './plugins/plugin-core.js';
+import { ORIGIN_USER, ORIGIN_PROJECT, pluginFingerprint, isPluginSetTrusted, pluginKey, manifestHot, planReload } from './plugins/plugin-core.js';
 import { renderPluginPanel, resetPluginPanel } from './plugins/plugin-panel.js';
 import { renderDialoguePanel, resetDialogue, scanDialogue, markDialogueStale, visibleRows as dialogueRows,
          openAt as dialogueOpenAt, applyEdit as dialogueApplyEdit,
@@ -268,7 +277,8 @@ import { TOOLBAR_GROUPS, allButtonIds, isButtonVisible, setButtonVisible, setGro
 import { openColorPicker, closeColorPicker } from './color-picker.js';
 import { normColor, HILITE_PRESETS } from './text-color.js';
 // [alpha.150] คำแนะนำสองชั้น: ชื่อ+คีย์ลัด แล้วประโยคอธิบายว่าใช้ตอนไหน (ตรรกะบริสุทธิ์)
-import { tipContent, tipText } from './tooltip.js';
+import { tipContent, tipText, tipDelay } from './tooltip.js';
+import { TIP_DELAY_MS, TIP_WARM_MS } from './timing.js';   // [alpha.169 · native] ชี้ค้างก่อนทูลทิปขึ้น
 // [alpha.155] เมนูคลิกขวาของ Explorer: ลำดับจากตาราง · คำสั่งใหม่จาก tree-actions (เรียกตอน runtime)
 import { buildMenuItems, menuLabelKey, LOCK_BLOCKED, TREE_MENU_SPEC } from './tree-menu-spec.js';
 // [alpha.164] ฉากมีปัญหา (แก้ปัญหาหน้ากองถ่าย) — เทียบฉบับเดิม ⇄ ฉบับแก้ไข
@@ -372,7 +382,10 @@ async function loadSettings(meta) {
   let globalSettings = {};
   try { globalSettings = await kapi.readGlobalSettings(); } catch {}
   // project settings ชนะ global (project overrides global for overlapping keys)
-  state.settings = { ...DEFAULT_SETTINGS, ...globalSettings, ...(meta.settings || {}) };
+  // [alpha.169 · a11y] …ยกเว้นค่าช่วยการเข้าถึง: เป็นของ "คน" — ไฟล์ผู้ใช้ชนะสำเนาที่ติดอยู่ในไฟล์ผลงานเสมอ
+  // (saveProjectMeta เขียน settings ทั้งก้อนลงไฟล์ผลงาน → ผลงานที่เคยบันทึกตอนสวิตช์ยังปิด จะเปิดมาพร้อมค่า "ปิด"
+  //  ทับค่าที่ผู้ใช้เพิ่งเปิดในผลงานอื่น = คนที่ต้องใช้ตัวช่วยต้องเปิดใหม่ทุกผลงาน)
+  state.settings = userA11yWins({ ...DEFAULT_SETTINGS, ...globalSettings, ...(meta.settings || {}) }, globalSettings);
   state.goals = { ...DEFAULT_GOALS, ...(meta.goals || {}) };
   applySettings();
 }
@@ -431,11 +444,71 @@ export function applySettings() {
   remeasureAfterFonts();
   // [alpha.57a ข้อ 1] เสียงเครื่องพิมพ์ดีด
   setTypeVolume(state.settings.typeSoundVolume ?? 0.5);
+  syncTypewriterSetting();                           // [alpha.169 · a11y] โหมดเครื่องพิมพ์ดีดตามค่าที่บันทึกไว้ (ก่อนเสียง — เสียงดูโหมดนี้)
   syncTypeSound();
+  applyA11y();                                       // [alpha.169 · a11y] แสดงปุ่มที่กด + แถบสีบรรทัดเคอร์เซอร์
   applySpellcheck();
   refreshAllSpell();
   applyMarkdownCodes();                              // [60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด
   restartAutosave();
+}
+
+// ══════════ [alpha.169 · a11y] การช่วยการเข้าถึง ══════════
+// ผู้ใช้: "เพิ่ม feature แบบ accessibility สำหรับผู้มีปัญหา ตั้งใน setting"
+// ค่าทั้งชุดเป็นระดับผู้ใช้ (GLOBAL_DEFAULTS) · ตรรกะ/ค่าเริ่มต้นอยู่ a11y/a11y-core.js (unit `a11y`)
+// ทุกทางเข้า (ตั้งค่า · เมนู เครื่องมือ → การช่วยการเข้าถึง · คำสั่ง) จบที่ applyA11y() ตัวเดียว
+/** ใช้ค่าการช่วยการเข้าถึงจาก settings กับหน้าต่างนี้ */
+export function applyA11y() {
+  const keyEcho = applyKeyEcho(state.settings);
+  const lineBand = applyLineBand(state.settings);
+  return { keyEcho, lineBand };
+}
+/**
+ * สวิตช์ของการช่วยการเข้าถึง — ทางกลางตัวเดียวของเมนู/คำสั่ง (กฎ "สวิตช์ที่มีหลายทางเข้า")
+ * ค่าระดับผู้ใช้ → เขียนไฟล์ตั้งค่าผู้ใช้ **คู่กับ** ไฟล์ผลงาน (กฎ W3)
+ * @param {'a11yKeyEcho'|'a11yLineBand'} key
+ * @param {boolean} [on] ไม่ส่ง = สลับ
+ */
+export function setA11ySwitch(key, on) {
+  const v = on === undefined ? !state.settings[key] : !!on;
+  state.settings[key] = v;
+  saveGlobalSetting(key, v);
+  applyA11y(); saveProjectMetaSoon(); syncMenuToggles();
+  return v;
+}
+// โหมดเครื่องพิมพ์ดีดตามค่าที่บันทึกไว้ — ทำงานเฉพาะตอน "ค่าใน settings เปลี่ยน" (เปิดโปรเจกต์/บันทึกตั้งค่า)
+// ไม่บังคับทุกครั้งที่ applySettings() ถูกเรียก: โค้ดที่สลับโหมดตรง ๆ ระหว่างทาง (เทส · โหมดอื่น) ต้องไม่ถูกดึงกลับ
+let _twSettingSeen = false;
+export function syncTypewriterSetting() {
+  const want = state.settings.typewriterMode === true;
+  if (want === _twSettingSeen) return isTypewriter();
+  _twSettingSeen = want;
+  if (isTypewriter() !== want) {
+    toggleTypewriter(want);
+    // ปุ่มบนแถบ · ช่องบนแถบสถานะ · เมนู มุมมอง ต้องตามสภาพใหม่ (applySettings ส่งสถานะเมนูไปก่อนถึงบรรทัดนี้แล้ว)
+    try { refreshToolbar(); syncMenuToggles(); } catch {}
+  }
+  return isTypewriter();
+}
+/** เปิด/ปิดโหมดเครื่องพิมพ์ดีด + จำไว้เป็นค่าระดับผู้ใช้ (เดิมเป็นสถานะของเซสชัน เปิดโปรแกรมใหม่แล้วหาย) */
+export function setTypewriterMode(on) {
+  const v = toggleTypewriter(on);
+  _twSettingSeen = v;
+  state.settings.typewriterMode = v;
+  saveGlobalSetting('typewriterMode', v);
+  saveProjectMetaSoon();
+  return v;
+}
+/**
+ * เปิดแป้นพิมพ์บนจอของระบบปฏิบัติการ (โปรแกรมไม่วาดแป้นเอง — ของระบบรู้จักภาษา/เลย์เอาต์ที่ผู้ใช้ตั้งไว้)
+ * main เดินตามแผนของแต่ละ OS (a11y-shell.cjs) · เปิดตรง ๆ ไม่ได้ = พาไปหน้าตั้งค่าของระบบ
+ */
+export async function openOsKeyboard() {
+  let r = null;
+  try { r = await kapi.openOsk(); } catch (e) { log('warn', 'a11y: osk', e); }
+  if (r && r.ok) setStatus(r.settings ? tt('ui.a11y.oskSettings') : tt('ui.a11y.oskOpened'));
+  else setStatusError(tt('ui.a11y.oskFail'));
+  return r || { ok: false };
 }
 
 // ---- [alpha.60r3 ข้อ 6] ซ่อน/แสดงรหัสนำหน้าบรรทัด (fountain + มาร์กดาวน์) ----
@@ -517,6 +590,7 @@ const LN_GUTTER_ID = 'k-ln-gutter';
 let _lnJob = 0;
 /** ขอวาดรางเลขบรรทัดใหม่ในเฟรมถัดไป (รวบหลายเหตุการณ์ให้เหลือครั้งเดียว) */
 export function scheduleLineGutter() {
+  scheduleLineBand();                  // [alpha.169 · a11y] แถบสีบรรทัดเคอร์เซอร์ขยับตามเหตุการณ์ชุดเดียวกัน (ปิดอยู่ = ไม่ทำอะไร)
   if (_lnJob) return;
   _lnJob = requestAnimationFrame(() => { _lnJob = 0; try { refreshLineGutter(); } catch {} });
 }
@@ -2904,6 +2978,7 @@ export function saveProjectMetaSoon() {
 // ---------------- โครงโปรเจกต์ (อ่านโครงเดียวกับ Killian v1) ----------------
 async function closeProjectIfAny() {
   if (!state.root) return true;
+  try { pluginBus.emit('project:close', { root: state.root }); } catch {}   // [alpha.169] ก่อนเก็บกวาด — ปลั๊กอินยังอ่านผลงานได้
   // [alpha.94] Story Starter บันทึกอัตโนมัติแบบหน่วงรวบ — เขียนของที่ยังค้างก่อนทิ้ง state.root
   await flushStarter();
   // [alpha.60r ข้อ 2] บันทึกรายการแท็บที่เปิดอยู่ก่อนปิด — จะกู้คืนเมื่อเปิดโปรเจกต์ครั้งต่อไป
@@ -2939,6 +3014,7 @@ async function closeProjectIfAny() {
     if (t.floatWin) { t.floatWin.remove(); t.floatWin = null; }
   }
   state.tabs.clear(); state.active = null; state.root = null;
+  applyWindowTitle('');                 // [alpha.169] ปิดผลงานแล้วแถบชื่อต้องไม่ค้างชื่อเรื่องเดิม
   resetJsonGuard(); _noWrite.clear(); _mapsSig = '';   // [alpha.168] ความจำของไฟล์เสีย/ลายเซ็นแผนที่เป็นของโปรเจกต์เดิม
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
@@ -2949,6 +3025,7 @@ async function closeProjectIfAny() {
   clearFeaturePanels();                 // บั๊ก #18: เนื้อแผงฟีเจอร์เป็นของโปรเจกต์เดิม ต้องล้าง
   $('#tree').innerHTML = ''; $('#outline').innerHTML = '';
   refreshToolbar(); scheduleCount();
+  try { syncDocsEmpty(); } catch {}                  // [alpha.169] ปิดโปรเจกต์ = กลับไปสถานะ "ยังไม่ได้เปิดโปรเจกต์"
   return true;
 }
 
@@ -3026,9 +3103,8 @@ async function loadProjectInner(root) {
   invalidateChatRag();              // [alpha.125 ข้อ B] เช่นเดียวกับดัชนี RAG ของแชท
   loadSettings(meta);
   applyWikiCats();
-  document.title = state.title + ' — Killian 2';
-  // [alpha.137] #projname ถูกลบทิ้ง — ชื่อโปรเจกต์อยู่กลางแถบชื่อหน้าต่างที่เดียว
-  $('#tb-title').textContent = state.title + ' — Killian 2';
+  // [alpha.137] #projname ถูกลบทิ้ง — ชื่อโปรเจกต์อยู่กลางแถบชื่อหน้าต่างที่เดียว · [alpha.169] + เลขรุ่น (win-title.js)
+  applyWindowTitle(state.title);
   await kapi.pushRecent(root);
   // ---- โหลดภาษาของโปรเจกต์ (ถ้าเลือกไว้) ----
   const projLang = state.settings.language || 'en';
@@ -3040,6 +3116,8 @@ async function loadProjectInner(root) {
   initIcons();
   applyToolbarShortcutTitles();
   setBusy(tt('ui.app.busyNewStructureProject'));
+  // [alpha.170] ระหว่างปิดโปรแกรมอยู่ ผู้ใช้อาจเปลี่ยนชื่อไฟล์/โฟลเดอร์จาก OS → ปรับทะเบียนให้ตรงก่อนวาดต้นไม้
+  if (!PANEL_WIN) { try { await syncDiskNames({ force: true, rebuild: false }); } catch (e) { log('warn', 'names: sync on open failed', e); } }
   await buildTree();
   buildFilterBar().catch(() => {});             // แถบกรอง
   setSummaryBar(summaryBarOn());                 // [alpha.120 ข้อ 15] ปิดไว้เป็นค่าเริ่มต้น
@@ -3071,7 +3149,9 @@ async function loadProjectInner(root) {
   }
   setBusy(tt('ui.app.busyLoadTemplate'));
   await loadTemplates();                            // default templates ถูกฝังลงโปรเจกต์ทันที
-  loadPlugins();
+  // [alpha.169] เหตุการณ์ของโปรแกรมถึงปลั๊กอิน — ยิงหลังปลั๊กอินของผลงานนี้โหลดเสร็จ (ตัวรับจึงมีอยู่แล้ว)
+  loadPlugins().then(() => { if (state.root === root) pluginBus.emit('project:open', { root, title: state.title }); })
+    .catch((e) => log('warn', 'plugins: load failed', e));
   // ---- เริ่มระบบใหม่ (Part 1+2) ----
   setBusy(tt('ui.app.busyLayoutPanelTab'));
   // [alpha.79] **ต้องกู้เซสชันก่อน initPanelSystem** — ระบบแผงอ่าน localStorage ตอนเริ่มครั้งเดียว
@@ -3100,6 +3180,7 @@ async function loadProjectInner(root) {
   //   (เดิม loadProject เด้งหน้าแรกทับทุกครั้ง ทำให้ "เปิดโปรเจกต์ล่าสุดโดยข้ามหน้าแรก" เป็นไปไม่ได้)
   clearBusy();                                       // [alpha.62] เลิกแสดง "กำลังทำอะไรอยู่"
   setStatus(tt('ui.app.openProject2') + state.title);
+  try { syncDocsEmpty(); } catch {}                  // [alpha.169] โปรเจกต์เปิดแล้วแต่ไม่มีแท็บ = ข้อความ "ยังไม่ได้เปิดเอกสาร" ไม่ใช่ "ยังไม่ได้เปิดโปรเจกต์"
   // [alpha.66 ข้อ 14] ตรวจทางเลือกที่ชี้ไปฉากที่ถูกลบ/ย้ายไปแล้ว — ไม่บล็อกการเปิดงาน
   // (ถ้าเจอ จะทับข้อความ "เปิดโปรเจกต์:" ด้านบนด้วยคำเตือน + เขียนรายละเอียดลงบันทึก)
   checkDanglingOnOpen().catch(() => {});
@@ -3228,7 +3309,9 @@ export function mergeGlobalSettings(patch) {
 //   3.1 ติ๊ก "ไม่แสดงหน้า Home" (= openLastProject) → เปิดโปรเจกต์ล่าสุดเลย · ไม่มีโปรเจกต์ล่าสุด = แอปเปล่า
 //   4. หน้าต่างหลักขยายเต็มจอ (main.js ทำตอนได้ `splash:done`)
 // showHomeOnStartup=true (เมนู มุมมอง) ยังบังคับให้เห็นหน้าแรกเสมอเหมือนเดิม
-export function startupPlan(g = {}, recent = []) {
+export function startupPlan(g = {}, recent = [], launch = '') {
+  // [alpha.169 · native] ระบบส่งโปรเจกต์มาตอนเปิด = ผู้ใช้บอกแล้วว่าจะเปิดอะไร → เปิดเลย ไม่แสดงหน้าแรก
+  if (launch) return { skipHome: true, last: String(launch), showHome: false, fromOs: true };
   const skipHome = g.openLastProject === true;
   const last = skipHome && recent && recent[0] ? recent[0] : '';
   const showHome = g.showHomeOnStartup === true || !skipHome;
@@ -3241,6 +3324,8 @@ export async function bootSequence() {
   const g = await bootGlobalSettings();
   // ค่ายังไม่มีโปรเจกต์ → ยัดลง state.settings ไว้ก่อน เพื่อให้เมนู/สวิตช์อ่านค่าถูกตั้งแต่วินาทีแรก
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
+  // [alpha.169 · a11y] ตัวช่วยการเข้าถึงต้องทำงานตั้งแต่หน้าแรก (ยังไม่มีโปรเจกต์ = applySettings ยังไม่ถูกเรียก)
+  try { applyA11y(); } catch (e) { log('warn', 'boot a11y', e); }
   syncMenuToggles();
   splashProgress(tt('ui.splash.language'), 18);
   // [alpha.164 · รอบต่อ 2] ภาษาเป็นค่าระดับผู้ใช้ — ต้องตรงกับไฟล์ตั้งค่าผู้ใช้ **ก่อน** หน้าแรก/โปรเจกต์โผล่
@@ -3257,7 +3342,9 @@ export async function bootSequence() {
   splashProgress(tt('ui.splash.recent'), 42);
   let recent = [];
   try { recent = (await kapi.listRecent()) || []; } catch {}
-  const plan = startupPlan(g, recent);
+  let launch = '';
+  try { launch = (kapi.launchProject && await kapi.launchProject()) || ''; } catch {}
+  const plan = startupPlan(g, recent, launch);
   let openedLast = false;
   if (plan.last) {
     splashProgress(ttf('ui.splash.project', String(plan.last).split(/[\\/]/).pop()), 55);
@@ -4500,7 +4587,9 @@ export function treeRenameInline(row) {
     restore();
     if (save && v && v !== old) {
       await setSceneTitle(c.dPath, c.ch, c.sc, v);
-      setTimeout(() => { const r2 = [...document.querySelectorAll('#tree .scene[data-path]')].find((x) => x.dataset.path === row.dataset.path); if (r2) treeFocusRow(r2); }, 0);
+      // [alpha.170] เปลี่ยนชื่อ = ไฟล์ถูกย้าย → หาแถวใหม่จากทางใหม่ (setSceneTitle อัปเดต c.sc.fileName ให้แล้ว)
+      const np = await kapi.join(c.dPath, 'Chapters', c.ch.folderName, c.sc.fileName);
+      setTimeout(() => { const r2 = [...document.querySelectorAll('#tree .scene[data-path]')].find((x) => x.dataset.path === np || x.dataset.path === row.dataset.path); if (r2) treeFocusRow(r2); }, 0);
     } else treeFocusRow(row);
   };
   inp.addEventListener('keydown', (ev) => {
@@ -4621,7 +4710,7 @@ function treeMenuItem(kind, id, c, e) {
   // [alpha.162 · W4 ข้อ 10] ของต้นไม้ทั้งต้น ไม่ขึ้นกับชนิดแถว
   if (id === 'expandAll') return free(() => setAllTreeCollapsed(false));
   if (id === 'collapseAll') return free(() => setAllTreeCollapsed(true));
-  if (id === 'refresh') return free(async () => { await buildTree(); setStatus(tt('ui.treeMenu.refreshed')); });
+  if (id === 'refresh') return free(async () => { await syncDiskNames({ force: true, rebuild: false }); await buildTree(); setStatus(tt('ui.treeMenu.refreshed')); });
   switch (kind) {
     case 'project': switch (id) {
       case 'addBook': return it(() => addSection());
@@ -6477,9 +6566,8 @@ async function moveMemoToChapter(memoPath, dPath, ch, beforeId) {
   const sf = await kapi.join(dPath, 'scenes.json');
   const d = await kapi.readJson(sf);
   const list = (d.chapters[ch.guid] || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-  const used = new Set(list.map((x) => x.fileName));
-  let n = 1, fileName;
-  do { fileName = 'memo-' + String(n++).padStart(2, '0') + '.md'; } while (used.has(fileName));
+  // [alpha.170] ชื่อไฟล์ = ชื่อโน้ต (เดิม memo-01.md) — ไม่ชนทั้งแถวในทะเบียนและไฟล์บนดิสก์
+  const fileName = await freeSceneFileName(dPath, ch.folderName, title, new Set(list.map((x) => x.fileName)));
   // [alpha.160 · P0-1] ย้ายไฟล์ = เธรดคอมเมนต์ของไฟล์ต้นทางต้องตามไปด้วย
   await writeKeepingComments(await kapi.join(dPath, 'Chapters', ch.folderName, fileName),
                        dumpMdFile({ ...meta, title, type: 'memo' }, body), memoPath);
@@ -7864,6 +7952,8 @@ export function syncMenuToggles() {
       pageNumbers: !!(state.settings.spPageNumbers || {}).show,
       continueds: spContinuedOn(),                  // alpha.58 · 55–56
       typeSound: !!state.settings.typeSound,
+      keyEcho: state.settings.a11yKeyEcho === true,     // [alpha.169 · a11y] เมนู เครื่องมือ → การช่วยการเข้าถึง
+      lineBand: state.settings.a11yLineBand === true,
       markdownCodes: showMarkdownCodes(),            // [60r3 ข้อ 6]
       autoFitWidth: !!state.settings.autoFitWidth,  // [alpha.164 · รอบต่อ 3] เมนู มุมมอง → ซูม
       // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — เมนูไฟล์ / เมนูมุมมอง
@@ -7931,8 +8021,12 @@ export function applyTheme() {
   //   ตั้งตามโหมดของธีม (THEME_MODES จาก themes.json) ที่ <html> — ส่วนควบคุมดั้งเดิมทั้งหน้าตามธีม
   const mode = THEME_MODES[th] === 'light' ? 'light' : 'dark';
   try { document.documentElement.style.colorScheme = mode; } catch {}
+  // [alpha.169] โหมดของธีมให้ CSS เลือกได้ (โลโก้: ขาวบนพื้นมืด · สีบนพื้นสว่าง) — theme-boot.js ตั้งค่าเดียวกันก่อนเฟรมแรก
+  try { document.documentElement.dataset.themeMode = mode; } catch {}
   // [alpha.166] จำธีมไว้ให้ renderer/theme-boot.js ทาก่อนเฟรมแรกของหน้าต่างถัดไป (หน้าต่างแผงที่ฉีก · บูตรอบหน้า)
   try { localStorage.setItem('k2-boot-theme', th); localStorage.setItem('k2-boot-mode', mode); } catch {}
+  // [alpha.169 · native] ปุ่มหน้าต่างของระบบ + เมนู/กล่องไฟล์ของระบบ ใช้สี/โหมดของธีมนี้ (หลังคลาสธีมมีผลแล้ว)
+  if (!PANEL_WIN) { try { syncWindowChrome(); } catch {} }
   // [alpha.166] หน้าต่างแผงที่ฉีกออกไปต้องเปลี่ยนธีมตาม (เดิมค้างธีมตอนฉีกจนกว่าจะปิด-เปิดใหม่)
   if (!PANEL_WIN) { try { kapi.broadcast && kapi.broadcast({ kind: 'theme', id: th }); } catch {} }
   clearThemeColorCache();                  // [alpha.162 · W6 ข้อ 2] ผืนวาด (กระดาน · ผังแตกสาย) อ่านสีธีมใหม่
@@ -8094,7 +8188,15 @@ function openPropsPanel(dPath, ch, sc) {
 // ถ้าถูกเรียกซ้อน (setPropsTarget + openPropsPanel เรียกติดกัน) ทั้งสองรอบจะ append ทับกัน = รายการซ้ำ
 // แก้ด้วยหมายเลขรอบ: รอบที่ไม่ใช่รอบล่าสุดต้องหยุดทันทีหลังทุกจุด await
 let _propsGen = 0;
-async function renderPropsPanel() {
+// [alpha.169] ตัวเปิดแผงวาดแผงนี้เองแล้ว (drawPanel) → มีการวาดซ้อนกันได้ (เปิดแผง + โค้ดที่สั่งวาดต่อทันที)
+// รอบที่ถูกแซงจะคืนก่อนโดยยังไม่ได้วาดอะไร (ด่าน stale) — ผู้ที่ `await` จึงต้องได้ "รอบล่าสุดวาดเสร็จ" ไม่ใช่ "รอบของฉันจบ"
+let _propsLast = Promise.resolve();
+function renderPropsPanel() {
+  const mine = renderPropsPanelNow();
+  _propsLast = mine;
+  return (async () => { let cur; do { cur = _propsLast; try { await cur; } catch (e) { log('warn', 'renderPropsPanel', e); } } while (cur !== _propsLast); })();
+}
+async function renderPropsPanelNow() {
   const body = $('#props-body'); if (!body) return;
   const gen = ++_propsGen;
   const stale = () => gen !== _propsGen;
@@ -8893,7 +8995,48 @@ export async function watermarkDialog() {
 //
 // **การแยกความเสียหาย**: ปลั๊กอินที่ throw ตอนโหลดจะถูกจดลง `settings.plugins.disabled[<ชื่อ>]`
 // แล้วข้ามในรอบถัดไป — เปิดโปรแกรมไม่ขึ้นเพราะปลั๊กอินตัวเดียวเป็นสิ่งที่ยอมไม่ได้
-const plugins = { commands: [], loaded: [], failed: [], shortcuts: [], panels: [] };
+//
+// [alpha.169] **วงจรชีวิตจริง** — เดิม "โหลดใหม่" รันโค้ดของทุกตัวซ้ำทั้งชุด และ "ถอน/ปิด" ลบแค่คำสั่งกับคีย์ลัด:
+// แผงที่ปลั๊กอินลงทะเบียนไว้ยังเปิดได้ · ตัวรับเหตุการณ์ยังถูกเรียก · ของที่โค้ดทำกับหน้าจอเองยังค้าง
+// = ถอนแล้วก็ยังไม่ออกจนกว่าจะเปิดโปรแกรมใหม่ โดยไม่มีอะไรบอกผู้ใช้เลย
+// ตอนนี้: ปลั๊กอินที่ทำงานอยู่มีระเบียนใน `livePlugins` (คำสั่ง · คีย์ลัด · แผง · ตัวรับเหตุการณ์ · ตัวเก็บกวาด)
+//   · โหลดใหม่ = เทียบกับของบนดิสก์ (`planReload`): โค้ดเดิม = ปล่อยให้ทำงานต่อ ไม่รันซ้ำ · เปลี่ยน/หาย = ถอดของเก่าออกก่อน
+//   · ถอด = เรียก `k2.onUnload` ของปลั๊กอิน + ถอนทุกอย่างที่ลงทะเบียนผ่าน k2
+//   · ปลั๊กอินที่ไม่ได้ประกาศ `"hotReload": true` = รับประกันไม่ได้ว่าไม่เหลืออะไร → จดชื่อลง `pluginRestart`
+//     แล้วแผงปลั๊กอินแจ้งให้เริ่มโปรแกรมใหม่ (ผู้ใช้: "ถ้าต้อง restart app ต้องมีแจ้งเตือน")
+/** ปลั๊กอินที่กำลังทำงานในรอบโปรแกรมนี้: ชื่อ → ระเบียน */
+const livePlugins = new Map();
+/** ชื่อปลั๊กอินที่ถูกถอด/แทนโดยรับประกันไม่ได้ว่าถอดหมด — ล้างได้ด้วยการเริ่มโปรแกรมใหม่เท่านั้น */
+const pluginRestart = new Set();
+const liveFlat = (k) => [...livePlugins.values()].flatMap((r) => r[k]);
+const plugins = {
+  loaded: [], failed: [], untrusted: 0,
+  // อ่านสดจากระเบียน — ปลั๊กอินลงทะเบียนของเพิ่มทีหลัง (หลัง await) ได้ และของที่ถอดแล้วหายทันที
+  get commands() { return liveFlat('commands'); },
+  get shortcuts() { return liveFlat('shortcuts'); },
+  get panels() { return liveFlat('panels'); },
+  get restart() { return [...pluginRestart]; },
+};
+function newPluginRec(name, origin, key, hot) {
+  return { name, origin, key, hot: !!hot, commands: [], shortcuts: [], panels: [], handlers: [], disposers: [] };
+}
+/** ถอดปลั๊กอินที่ทำงานอยู่: ตัวเก็บกวาดของปลั๊กอิน → ตัวรับเหตุการณ์ → คีย์ลัด → แผง → คำสั่ง */
+function unloadPlugin(rec, why) {
+  for (const fn of rec.disposers.splice(0).reverse()) {
+    try { fn(why); } catch (e) { rec.hot = false; log('warn', 'plugin unload ' + rec.name, e); }
+  }
+  for (const [ev, h] of rec.handlers.splice(0)) pluginBus.off(ev, h);
+  for (const sc of rec.shortcuts.splice(0)) {
+    for (let i = SHORTCUTS.length - 1; i >= 0; i--) if (SHORTCUTS[i][3] === sc.ch) SHORTCUTS.splice(i, 1);
+  }
+  for (const pid of rec.panels.splice(0)) {
+    try { getPanelManager().unregisterPanel(pid); } catch (e) { log('warn', 'plugin panel unregister ' + pid, e); }
+  }
+  rec.commands.length = 0;
+  if (livePlugins.get(rec.name) === rec) livePlugins.delete(rec.name);
+  if (!rec.hot) pluginRestart.add(rec.name);
+  log('info', 'plugin: unloaded', { name: rec.name, why, restart: !rec.hot });
+}
 export const pluginBus = new EventBus({ onError: (e, ev) => log('warn', 'plugin event ' + ev, e) });
 
 /** เทียบเวอร์ชันแบบ semver อย่างง่าย — a >= b ? (ใช้กับ minAppVersion) */
@@ -8924,7 +9067,7 @@ export function setPluginDisabled(name, on) {
 }
 
 /** สร้างวัตถุ `k2` ที่ปลั๊กอินหนึ่งตัวได้รับ (ผูกชื่อไว้ เพื่อแยก settings/สถานะรายตัว) */
-function pluginApi(name) {
+function pluginApi(name, rec) {
   return {
     // ---- ข้อมูลของตัวเอง ----
     pluginName: name,
@@ -8932,7 +9075,7 @@ function pluginApi(name) {
     projectRoot: () => state.root,
 
     // ---- คำสั่งบนแถบเครื่องมือ (ของเดิม) ----
-    registerCommand: (label, fn) => { plugins.commands.push({ label, fn, plugin: name }); return true; },
+    registerCommand: (label, fn) => { rec.commands.push({ label, fn, plugin: name }); return true; },
 
     // ---- ตัวแก้ไข ----
     getMarkdown: () => state.active?.editor?.getMarkdown()
@@ -8958,7 +9101,7 @@ function pluginApi(name) {
           defaultSide: opts.defaultSide || 'right',
           render: (host) => { try { return opts.render && opts.render(host); } catch (e) { log('warn', 'plugin panel ' + pid, e); } },
         });
-        plugins.panels.push(pid);
+        rec.panels.push(pid);
         return pid;
       } catch (e) { log('warn', tt('ui.app.registerPanelFail') + pid, e); return null; }
     },
@@ -8966,8 +9109,21 @@ function pluginApi(name) {
     hidePanel: (id) => hidePanel('plugin-' + name + '-' + id),
 
     // ---- เหตุการณ์ (EventBus ก้อนเดียวใช้ร่วมกันทุกปลั๊กอิน) ----
-    on: (event, handler) => pluginBus.on(String(event), handler),
-    off: (event, handler) => pluginBus.off(String(event), handler),
+    // [alpha.169] จดตัวรับไว้กับระเบียน — ถอด/ปิดปลั๊กอินแล้วตัวรับต้องไม่ถูกเรียกอีก
+    on: (event, handler) => {
+      const ev = String(event);
+      if (typeof handler !== 'function') return () => {};
+      rec.handlers.push([ev, handler]);
+      pluginBus.on(ev, handler);
+      return () => { pluginBus.off(ev, handler); rec.handlers = rec.handlers.filter((x) => !(x[0] === ev && x[1] === handler)); };
+    },
+    off: (event, handler) => {
+      const ev = String(event);
+      rec.handlers = rec.handlers.filter((x) => !(x[0] === ev && x[1] === handler));
+      return pluginBus.off(ev, handler);
+    },
+    /** [alpha.169] ตัวเก็บกวาด — ถูกเรียกเมื่อปลั๊กอินถูกปิด/ถอน/โหลดใหม่ (ของที่ทำเองนอก k2: ตัวจับเวลา · ตัวฟังของ DOM · element) */
+    onUnload: (fn) => { if (typeof fn !== 'function') return false; rec.disposers.push(fn); return true; },
     emit: (event, data) => pluginBus.emit(String(event), data),
 
     // ---- ไฟล์ (จำกัดอยู่ในขอบเขตโปรเจกต์) ----
@@ -8982,7 +9138,7 @@ function pluginApi(name) {
       // ถอดของเดิมชื่อเดียวกันก่อน (โหลดซ้ำตอนเปลี่ยนโปรเจกต์จะได้ไม่ทับกันเป็นชั้น ๆ)
       for (let i = SHORTCUTS.length - 1; i >= 0; i--) if (SHORTCUTS[i][3] === ch) SHORTCUTS.splice(i, 1);
       SHORTCUTS.push([code, ctrl !== false, !!shift, ch]);
-      plugins.shortcuts.push({ ch, fn });
+      rec.shortcuts.push({ ch, fn });
       return ch;
     },
 
@@ -9004,7 +9160,7 @@ function pluginApi(name) {
     menuPopup: (items, x, y) => popupMenu(
       typeof x === 'number' ? x : 80, typeof y === 'number' ? y : 80,
       (items || []).map((it) => (it === '-' ? '-' : { ...it }))),
-    addMenuItem: (label, fn) => { plugins.commands.push({ label, fn, plugin: name }); return true; },
+    addMenuItem: (label, fn) => { rec.commands.push({ label, fn, plugin: name }); return true; },
 
     // ---- UI ทั่วไป ----
     setStatus, ask, confirmBox, alertBox: (m) => aboutBox(String(m)),
@@ -9078,14 +9234,18 @@ export async function untrustProjectPlugins(root = state.root) {
   return true;
 }
 
-async function loadPlugins() {
-  plugins.commands = []; plugins.loaded = []; plugins.failed = [];
+// [alpha.169] ตัวโหลดต้องวิ่งทีละรอบ — รอบหนึ่งอ่านดิสก์ (await) แล้วค่อยเทียบกับ `livePlugins`
+// สองรอบซ้อนกัน (เปิดผลงาน + กดโหลดใหม่ในแผง) จะวางแผนจากสภาพเดียวกัน แล้วรันปลั๊กอินตัวเดียวกันสองครั้ง
+// ระเบียนของรอบแรกถูกเขียนทับ = ของที่มันลงทะเบียนไว้ไม่มีใครถอนได้อีก
+let _plugLoadQ = Promise.resolve();
+function loadPlugins() {
+  const run = _plugLoadQ.then(loadPluginsNow, loadPluginsNow);
+  _plugLoadQ = run.catch(() => {});
+  return run;
+}
+async function loadPluginsNow() {
+  plugins.loaded = []; plugins.failed = [];
   plugins.untrusted = 0;
-  // ถอดคีย์ลัดของรอบก่อนออกก่อน (เปลี่ยนโปรเจกต์แล้วต้องไม่เหลือปุ่มลัดค้าง)
-  for (const s of plugins.shortcuts) {
-    for (let i = SHORTCUTS.length - 1; i >= 0; i--) if (SHORTCUTS[i][3] === s.ch) SHORTCUTS.splice(i, 1);
-  }
-  plugins.shortcuts = []; plugins.panels = [];
 
   // (dir, ที่มา) — ของผู้ใช้ก่อน แล้วให้ของโปรเจกต์ทับได้ด้วยชื่อเดียวกัน
   // [alpha.79] `origin` ต้องเป็น **ค่าคงที่** ไม่ใช่ข้อความที่แปลตามภาษา —
@@ -9099,24 +9259,24 @@ async function loadPlugins() {
     const p = await kapi.join(state.root, 'Plugins');
     if (await kapi.exists(p)) sources.push([p, ORIGIN_PROJECT]);
   }
-  if (!sources.length) { const b = $('#tb-plug'); if (b) b.style.display = 'none'; return plugins; }
 
-  const seen = new Set();
+  // ── ขั้นที่ 1: อ่านของบนดิสก์ทั้งหมด → "ตัวที่ควรทำงาน" (ชื่อซ้ำ = ของโปรเจกต์ชนะ · ตัวที่แพ้ไม่ถูกรันเลย) ──
+  const want = new Map();
   for (const [dir, origin] of sources) {
     let names = [];
     try { names = await kapi.listDirs(dir); } catch { continue; }
     names = names.filter((n) => n !== 'dictionaries');   // โฟลเดอร์พจนานุกรม ไม่ใช่ปลั๊กอิน
-    // [alpha.148] ปลั๊กอินที่มากับโปรเจกต์: อ่านทั้งชุด → ยังไม่อนุญาต = จดเป็น "รออนุญาต" แล้ว **ไม่รัน**
-    let pre = null;
-    if (origin === ORIGIN_PROJECT && names.length) {
-      pre = await readPluginSet(dir, names);
-      if (!isPluginSetTrusted(await readPluginTrust(), state.root, pluginFingerprint([...pre.values()]))) {
-        for (const name of names) {
-          plugins.failed.push({ name, origin, folder: name, untrusted: true, error: tt('ui.plug.untrustedHint') });
-        }
-        plugins.untrusted += names.length;
-        continue;
+    if (!names.length) continue;
+    // โค้ดที่ถูกรันคือก้อนเดียวกับที่เอาไปทำลายนิ้วมือ/กุญแจเทียบ (ไม่อ่านซ้ำ)
+    const pre = await readPluginSet(dir, names);
+    // [alpha.148] ปลั๊กอินที่มากับโปรเจกต์: ยังไม่อนุญาต = จดเป็น "รออนุญาต" แล้ว **ไม่รัน**
+    if (origin === ORIGIN_PROJECT
+        && !isPluginSetTrusted(await readPluginTrust(), state.root, pluginFingerprint([...pre.values()]))) {
+      for (const name of names) {
+        plugins.failed.push({ name, origin, folder: name, untrusted: true, error: tt('ui.plug.untrustedHint') });
       }
+      plugins.untrusted += names.length;
+      continue;
     }
     for (const name of names) {
       // [alpha.79] `skipped` แยก "ผู้ใช้ปิดเอง" ออกจาก "โหลดแล้วพัง" —
@@ -9126,45 +9286,79 @@ async function loadPlugins() {
         plugins.failed.push({ name, origin, folder: name, skipped: true, error: tt('ui.app.close2') });
         continue;
       }
+      const got = pre.get(name);
+      let manifest = null;
       try {
-        const got = pre && pre.get(name);
-        if (got && got.manifestErr) throw got.manifestErr;
-        const manifest = got ? JSON.parse(got.manifest)
-          : await kapi.readJson(await kapi.join(dir, name, 'plugin.json'));
-        if (manifest.minAppVersion && !versionAtLeast(APP_VERSION, manifest.minAppVersion)) {
-          plugins.failed.push({ name, origin, error: ttf('ui.app.mustUseKillianF', manifest.minAppVersion) });
-          continue;
-        }
-        if (got && got.codeErr) throw got.codeErr;
-        const code = got ? got.code
-          : await kapi.readFile(await kapi.join(dir, name, manifest.entry || 'main.js'));
-        new Function('k2', code)(pluginApi(name));
-        // ชื่อซ้ำ = ของโปรเจกต์ (มาทีหลัง) ทับของผู้ใช้ — บันทึกไว้ตัวเดียว
-        if (seen.has(name)) plugins.loaded = plugins.loaded.filter((x) => x.name !== name);
-        seen.add(name);
-        plugins.loaded.push({ name, origin, folder: name,
-          version: manifest.version || '', author: manifest.author || '',
-          description: manifest.description || '', minAppVersion: manifest.minAppVersion || '' });
+        if (got.manifestErr) throw got.manifestErr;
+        manifest = JSON.parse(got.manifest);
+        if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('plugin.json');
       } catch (e) {
         plugins.failed.push({ name, origin, folder: name, error: e.message });
-        // พังตอนโหลด = ปิดไว้ก่อน กันเปิดโปรแกรมไม่ขึ้นรอบหน้า (ผู้ใช้เปิดกลับได้จากกล่องจัดการ)
         setPluginDisabled(name, true);
         log('error', ttf('ui.app.plugin2F', name), e);
+        continue;
       }
+      if (manifest.minAppVersion && !versionAtLeast(APP_VERSION, manifest.minAppVersion)) {
+        plugins.failed.push({ name, origin, folder: name, minAppVersion: String(manifest.minAppVersion),
+                              error: ttf('ui.app.mustUseKillianF', manifest.minAppVersion) });
+        continue;
+      }
+      const shadow = want.has(name);       // มีของผู้ใช้ชื่อเดียวกันอยู่แล้ว → ของโปรเจกต์ทับ
+      want.set(name, { name, origin, manifest, got, shadowed: shadow,
+                       key: pluginKey(origin, got.manifest, got.code), hot: manifestHot(manifest) });
     }
   }
-  if (plugins.loaded.length) setStatus(ttf('ui.app.loadPluginItem', plugins.loaded.length)
-    + (plugins.failed.length ? ttf('ui.app.msg', plugins.failed.length) : ''));
+
+  // ── ขั้นที่ 2: เทียบกับตัวที่ทำงานอยู่ — โค้ดเดิม = ปล่อยไว้ · เปลี่ยน/หาย = ถอดของเก่าออกก่อน ──
+  const plan = planReload([...livePlugins.values()], [...want.values()]);
+  for (const name of plan.unload) {
+    const rec = livePlugins.get(name);
+    if (rec) unloadPlugin(rec, want.has(name) ? 'reload' : 'remove');
+  }
+
+  // ── ขั้นที่ 3: รันตัวใหม่/ตัวที่เปลี่ยน ──
+  for (const w of want.values()) {
+    const { name, origin, manifest, got } = w;
+    const row = { name, origin, folder: name, shadowed: w.shadowed, hotReload: w.hot,
+      version: manifest.version || '', author: manifest.author || '',
+      description: manifest.description || '', minAppVersion: manifest.minAppVersion || '' };
+    if (plan.keep.includes(name)) { plugins.loaded.push(row); continue; }
+    const rec = newPluginRec(name, origin, w.key, w.hot);
+    livePlugins.set(name, rec);
+    try {
+      if (got.codeErr) throw got.codeErr;
+      new Function('k2', got.code)(pluginApi(name, rec));
+      plugins.loaded.push(row);
+    } catch (e) {
+      // พังกลางทาง = โค้ดบางส่วนรันไปแล้ว → ถอดของที่ลงทะเบียนไว้ออก (ไม่ได้ประกาศ hotReload = ต้องเริ่มโปรแกรมใหม่ถึงจะหมด)
+      unloadPlugin(rec, 'error');
+      plugins.failed.push({ name, origin, folder: name, error: e.message });
+      // พังตอนโหลด = ปิดไว้ก่อน กันเปิดโปรแกรมไม่ขึ้นรอบหน้า (ผู้ใช้เปิดกลับได้จากกล่องจัดการ)
+      setPluginDisabled(name, true);
+      log('error', ttf('ui.app.plugin2F', name), e);
+    }
+  }
+  // [alpha.169] "พัง" นับเฉพาะตัวที่โหลดแล้วล้มจริง — ตัวที่ผู้ใช้ปิดเอง/รออนุญาต อยู่กอง failed เหมือนกันแต่ไม่ได้พัง
+  // (เดิมปิดปลั๊กอินไว้หนึ่งตัว แถบสถานะขึ้น "พัง 1" ทุกครั้งที่โหลด)
+  const broken = plugins.failed.filter((x) => !x.skipped && !x.untrusted).length;
+  if (plan.run.length && plugins.loaded.length) setStatus(ttf('ui.app.loadPluginItem', plugins.loaded.length)
+    + (broken ? ttf('ui.app.msg', broken) : ''));
   if (plugins.untrusted) {
     setStatus(ttf('ui.plug.untrustedStatus', plugins.untrusted));
     log('warn', 'plugins: project plugins are not allowed to run yet', { root: state.root, count: plugins.untrusted });
   }
   const btn = $('#tb-plug');
   if (btn) btn.style.display = plugins.commands.length ? '' : 'none';
+  try { pluginBus.emit('plugins:loaded', { loaded: plugins.loaded.map((p) => p.name) }); } catch {}
   return plugins;
 }
 /** รายชื่อปลั๊กอินที่โหลดสำเร็จ/ล้มเหลว (คอนโซลนักพัฒนา + เทสอ่าน) */
-export function pluginList() { return { ...plugins, loaded: [...plugins.loaded], failed: [...plugins.failed] }; }
+export function pluginList() {
+  return { loaded: [...plugins.loaded], failed: [...plugins.failed], untrusted: plugins.untrusted,
+           commands: plugins.commands, shortcuts: plugins.shortcuts, panels: plugins.panels, restart: plugins.restart };
+}
+/** [alpha.169] ชื่อปลั๊กอินที่ต้องเริ่มโปรแกรมใหม่เพื่อถอดออกให้หมด (ว่าง = ไม่ต้อง) */
+export function pluginsNeedRestart() { return plugins.restart; }
 /**
  * [alpha.79] โหลดปลั๊กอินใหม่ทั้งชุด — แผงจัดการเรียกหลังเปิด/ปิด/สร้างปลั๊กอิน
  * `loadPlugins()` ถอดคีย์ลัดของรอบก่อนออกให้เองอยู่แล้ว จึงเรียกซ้ำได้ไม่ทับซ้อน
@@ -9877,12 +10071,14 @@ async function createProjectAt(parent, name) {
   const W = (p, d) => kapi.writeFile(p, JSON.stringify(d, null, 2));
   await W(await kapi.join(root, 'project.khn.json'),
     { title: name, type: 'killian-project', version: '2.0', created: new Date().toISOString() });
-  const sec = await kapi.join(root, tt('ui.common.bookOne'));
-  await W(await kapi.join(sec, 'section.json'), { guid: guid(), title: tt('ui.common.bookOne'), order: 1 });
+  // [alpha.170] ชื่อเล่มเริ่มต้นเป็นอังกฤษและ **ตรงกับชื่อโฟลเดอร์** · บท/ฉากใช้ชื่อเรื่องเป็นชื่อบนดิสก์ (ลำดับอยู่ใน JSON)
+  const book = await freeBookName(kapi, root);
+  const sec = await kapi.join(root, book.folder);
+  await W(await kapi.join(sec, 'section.json'), { guid: guid(), title: book.title, order: 1, folderName: book.folder });
   const dr = await kapi.join(sec, 'Draft', 'default');
   const ch = { guid: guid(), title: tt('ui.common.chapterOne2'), order: 1, status: 'Outline', act: 'I',
-               date: '', isFavorite: false, folderName: tt('ui.common.chapterOne') };
-  const sc = { id: guid(), title: tt('ui.app.sceneFirst'), order: 1, fileName: 'scene-01.md',
+               date: '', isFavorite: false, folderName: diskBase(tt('ui.common.chapterOne2'), 'chapter') };
+  const sc = { id: guid(), title: tt('ui.app.sceneFirst'), order: 1, fileName: diskBase(tt('ui.app.sceneFirst'), 'scene') + '.md',
                chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
   await W(await kapi.join(dr, 'draft.json'), { chapters: [ch] });
   await W(await kapi.join(dr, 'scenes.json'), { chapters: { [ch.guid]: [sc] } });
@@ -10027,15 +10223,6 @@ export function guid() { return 'k2-' + Date.now().toString(36) + Math.random().
 // ทำซ้ำฉาก: คัดลอกไฟล์ .md + เพิ่ม row ใหม่ใน scenes.json
 
 // เลื่อนลำดับฉากขึ้น/ลงภายในบทเดียวกัน (สลับ order กับฉากที่อยู่ติดกัน)
-
-// หาชื่อไฟล์ .md ที่ไม่ชนกับไฟล์เดิมในโฟลเดอร์บทปลายทาง
-export async function uniqueSceneFileName(dPath, folderName, order) {
-  let base = 'scene-' + String(order).padStart(2, '0');
-  let name = base + '.md', n = 2;
-  while (await kapi.exists(await kapi.join(dPath, 'Chapters', folderName, name)))
-    name = base + '-' + (n++) + '.md';
-  return name;
-}
 
 // ย้ายฉากไปบทอื่น (ในเซกชันเดียวกัน): ย้ายไฟล์ .md + ย้าย row ระหว่างบทใน scenes.json
 
@@ -10633,7 +10820,13 @@ export function activate(file) {
     applyTabTooltip(t);                                  // [alpha.161 · K2] ชื่อเต็ม + ที่อยู่ของไฟล์
     wireTabDrag(t);                                      // [alpha.161 · K2] ลากสลับลำดับในแถบ
   }
+  const _prevActive = state.active;
   state.active = state.tabs.get(file) || null;
+  // [alpha.169] เหตุการณ์ของโปรแกรมถึงปลั๊กอิน (เฉพาะเมื่อแท็บเปลี่ยนจริง — activate ถูกเรียกซ้ำบ่อย)
+  if (state.active && state.active !== _prevActive) {
+    pluginBus.emit('tab:activate', { file: state.active.file, title: state.active.title || '',
+      kind: state.active.sp ? 'screenplay' : state.active.editor ? 'prose' : state.active.wiki ? 'wiki' : 'other' });
+  }
   if (state._autoDash && state.active) autoCloseDashboard();
   // [alpha.164 · บั๊ก] แถบ "Rewrite this" เป็นของแท็บที่เปิดมัน — สลับไปแท็บอื่นแล้วแถบเดิมต้องปิด
   // (เดิม closeRewriteBar ถูก import ไว้แต่ไม่มีใครเรียก → แถบลอยค้างทับเอกสารอีกฉบับ)
@@ -10869,6 +11062,7 @@ export async function saveTab(tab, opts = {}) {
   try { await writeKeepingComments(tab.file, dumpMdFile(tab.meta, body)); }
   catch (e) { log('error', 'save: write failed', { file: tab.file, code: e && e.code, error: e && e.message }); throw e; }
   log('info', 'save: done', { file: tab.file, chars: body.length, ms: Math.round(performance.now() - tSave) });
+  pluginBus.emit('tab:save', { file: tab.file, title: tab.title || '', chars: body.length });   // [alpha.169]
   tab.diskBody = body;                         // [alpha.156] ฐานของการตรวจ "แก้นอกโปรแกรม" รอบถัดไป
   tab._conflictWarned = false; tab._diskWarned = false;
   // [alpha.148] ★ มีการพิมพ์เข้ามา **ระหว่างรอเขียนดิสก์** (บันทึกอัตโนมัติมักยิงตอนกำลังพิมพ์)
@@ -11535,7 +11729,171 @@ setTabBridge({
   // [alpha.159 · H5] ตัวกลางตัวเดียวกับทางคลิก — บันทึกงานค้างก่อนปิด (เดิมปิดแบบทิ้ง = งานหาย)
   // รับได้ทั้งโฟลเดอร์และไฟล์เดี่ยว (ฉาก/หน้า Wiki ที่ AI ลบ)
   closeUnder(dir) { return closeTabsUnderPath(dir, { save: true }); },
+  // [alpha.170] เปลี่ยนชื่อ = ย้ายไฟล์/โฟลเดอร์ → แท็บ + ประวัติเวอร์ชันตามไป
+  movePath(oldPath, fn) { return movePathWithTabsNow(oldPath, fn); },
 });
+
+// ══ [alpha.170] ★ ชื่อบนดิสก์ ↔ ทะเบียน (ตรรกะ: disk-names.js · ตัวลงมือ: disk-sync.js) ══
+//
+// ผู้ใช้: *"ชื่อต้องตรงกับชื่อ folder · ถ้าเปลี่ยนชื่อจาก os เลย ผลจะเป็นยังไง json จะเก็บยังไง"*
+// แท็บผูกกับ **ทางของไฟล์** (กุญแจของ state.tabs + ตัวปิดในปุ่มแท็บ) จึงย้ายกุญแจตรง ๆ ไม่ได้ →
+// ปิดแล้วเปิดใหม่ที่ทางใหม่ (ทางเดียวกับ "ย้ายฉากไปบทอื่น")
+let _diskBusy = 0;
+const _baseName = (p) => String(p || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
+/** ทางไฟล์จริงที่แท็บผูกอยู่ — แท็บเทียม (`::vis::<ไฟล์ฉาก>` · `::roster::<เล่ม>`) = ทางที่ฝังอยู่ข้างใน */
+const _tabRealPath = (file) => { const m = /^::[a-z-]+::(.+)$/i.exec(String(file || '')); return m ? m[1] : String(file || ''); };
+function _tabsUnder(base) {
+  const key = pathKey(base);
+  const real = [], pseudo = [];
+  for (const t2 of state.tabs.values()) {
+    if (!t2.file) continue;
+    const f = pathKey(_tabRealPath(t2.file));
+    if (f !== key && !f.startsWith(key + '/')) continue;
+    (String(t2.file).startsWith('::') ? pseudo : real).push(t2);
+  }
+  return { real, pseudo };
+}
+
+/**
+ * ย้าย/เปลี่ยนชื่อไฟล์หรือโฟลเดอร์ที่อาจมีแท็บเปิดอยู่ (ตัวจริงของ `movePathWithTabs` ใน tab-bridge.js)
+ * @returns {Promise<{ok:boolean, to:string|null}>} ok:false = แท็บบันทึกไม่ผ่าน → fn ไม่ถูกเรียก
+ */
+async function movePathWithTabsNow(oldPath, fn) {
+  const base = String(oldPath || '').replace(/[\\/]+$/, '');
+  const { real, pseudo } = _tabsUnder(base);
+  const rels = real.map((t2) => t2.file.slice(base.length));
+  const act = state.active;
+  const activeRel = act && real.includes(act) ? act.file.slice(base.length) : null;
+  const keepActive = act && !real.includes(act) && !pseudo.includes(act) ? act.file : '';
+  const cancel = () => { setStatus(ttf('ui.app.moveCancelledUnsaved', _baseName(base))); return { ok: false, to: null }; };
+  // แท็บเทียมผูกกับทางเดิม → บันทึกแล้วปิด (เปิดใหม่จากต้นไม้ได้ — ไม่เปิดกลับให้เอง)
+  for (const t2 of pseudo) {
+    if (t2.dirty) {
+      let r; try { r = await saveTab(t2); } catch (e) { log('error', tt('ui.app.saveBeforeCloseFail') + (t2.title || t2.file), e); r = false; }
+      if (r === false || t2.dirty) return cancel();
+    }
+    closeTab(t2.file, { discard: true });
+  }
+  if (real.length && !(await closeTabsUnderPath(base, { save: true })).ok) return cancel();
+  _diskBusy++;
+  let to = null, err = null;
+  try { to = (await fn()) || null; } catch (e) { err = e; } finally { _diskBusy--; }
+  const dest = to || base;
+  if (to && to !== base) await moveSnapshots(base, to);
+  for (const rel of rels) {
+    try { await openTabAt(dest + rel); } catch (e) { log('warn', 'tab: reopen after rename failed', { file: dest + rel, error: e && e.message }); }
+  }
+  if (activeRel != null && state.tabs.has(dest + activeRel)) activate(dest + activeRel);
+  else if (keepActive && state.tabs.has(keepActive)) activate(keepActive);
+  if (err) throw err;
+  return { ok: true, to };
+}
+
+/**
+ * ทางของไฟล์หลังไล่ผ่านรายการเปลี่ยนชื่อ **ทั้งชุดตามลำดับ** (เล่ม → บท → ฉาก)
+ * `from` ของรายการชั้นล่างเขียนตามทางใหม่ของชั้นบนแล้ว — จึงต้องไล่ต่อกัน ไม่ใช่ทีละรายการแยกกัน
+ */
+function _mapRenamed(p, changes) {
+  let cur = String(p || '');
+  for (const c of changes) {
+    if (c.copied || !c.from || !c.to) continue;
+    const b = String(c.from).replace(/[\\/]+$/, '');
+    const k = pathKey(cur), kb = pathKey(b);
+    if (k === kb || k.startsWith(kb + '/')) cur = c.to + cur.slice(b.length);
+  }
+  return cur;
+}
+
+/**
+ * แท็บที่ยังชี้ทางเก่าของของที่ถูกเปลี่ยนชื่อจากนอกโปรแกรม → ไปทางใหม่ (งานที่ยังไม่บันทึกตามไปด้วย)
+ *
+ * ★ ต้องคิดทางปลายทาง **สุดท้าย** ของแต่ละแท็บก่อนลงมือ: ผู้ใช้เปลี่ยนชื่อโฟลเดอร์เล่มและโฟลเดอร์บทพร้อมกันได้ —
+ * ย้ายทีละรายการ = รอบของ "เล่ม" ชี้ไปโฟลเดอร์บทชื่อเก่าซึ่งไม่มีแล้ว เปิดไม่ได้ แล้วแท็บ (กับงานที่ยังไม่บันทึก) หาย
+ * (เจอบนแอปจริง · e2e ที่เปลี่ยนทีละชั้นไม่เห็น) · หาไฟล์ปลายทางไม่เจอ = **ไม่แตะแท็บ** งานค้างต้องไม่หาย
+ */
+async function relocateStaleTabs(changes) {
+  const moves = [];
+  for (const t2 of [...state.tabs.values()]) {
+    if (!t2.file) continue;
+    const pseudo = String(t2.file).startsWith('::');
+    const real = _tabRealPath(t2.file);
+    const nf = _mapRenamed(real, changes);
+    if (nf !== real) moves.push({ t2, pseudo, nf });
+  }
+  if (!moves.length) return 0;
+  const act = state.active;
+  const keepActive = act && !moves.some((m) => m.t2 === act) ? act.file : '';
+  let activeNew = '', n = 0;
+  for (const m of moves) {
+    if (m.pseudo) { closeTab(m.t2.file, { discard: true }); continue; }       // ตารางเล่าด้วยภาพ/รายชื่อตัวละคร — เปิดใหม่จากต้นไม้ได้
+    let there = false;
+    try { there = await kapi.exists(m.nf); } catch { there = false; }
+    if (!there) { log('warn', 'tab: renamed target not found — tab left as is', { from: m.t2.file, to: m.nf }); continue; }
+    const text = m.t2.dirty ? tabBodyText(m.t2) : null;        // ไฟล์เดิมไม่มีแล้ว — บันทึกลงทางเก่า = ไฟล์ผี
+    const wasActive = act === m.t2;
+    closeTab(m.t2.file, { discard: true });
+    let opened = false;
+    try { opened = !!(await openTabAt(m.nf)); } catch (e) { log('warn', 'tab: reopen after external rename failed', { file: m.nf, error: e && e.message }); }
+    if (opened) {
+      n++;
+      if (wasActive) activeNew = m.nf;
+      if (text != null) { const h = tabHandleOf(state.tabs.get(m.nf)); if (h && h.kind !== 'wiki') h.setText(text, { keepAlign: true }); }
+    } else if (text != null) {
+      // เปิดปลายทางไม่ได้ทั้งที่ไฟล์มีอยู่ — งานที่ยังไม่บันทึกห้ามหายเงียบ: ฝากไว้ในถังขยะแล้วบอกผู้ใช้
+      try {
+        const keep = await trashPathFor(m.nf);              // ไม่มีใบกู้คืน → กู้จากถังขยะได้เป็นโน้ต
+        await kapi.writeFile(keep, text);
+        log('error', 'tab: unsaved text kept in Recycle', { file: m.nf, keep });
+        setStatusError(ttf('ui.names.renameFail', _baseName(m.nf)));
+      } catch (e) { log('error', 'tab: unsaved text lost', { file: m.nf, error: e && e.message }); }
+    }
+  }
+  if (activeNew && state.tabs.has(activeNew)) activate(activeNew);
+  else if (keepActive && state.tabs.has(keepActive)) activate(keepActive);
+  return n;
+}
+
+let _nameSyncAt = 0, _nameSyncRun = null;
+const _reservedWarned = new Set();
+/**
+ * ตรวจว่ามีเล่ม/บท/ฉากถูกเปลี่ยนชื่อหรือย้ายจากนอกโปรแกรมไหม แล้วปรับ ทะเบียน · แท็บ · ประวัติเวอร์ชัน ให้ตาม
+ * เรียกตอนเปิดโปรเจกต์ · ตอนกลับมาที่หน้าต่าง · ก่อนตรวจสุขภาพโปรเจกต์
+ * @param {{force?:boolean, rebuild?:boolean}} [opts] force = ไม่สนช่วงพัก · rebuild = วาดต้นไม้ใหม่เมื่อมีการเปลี่ยน
+ * @returns {Promise<Array<object>>} รายการที่ปรับ (ดู reconcileNames)
+ */
+export async function syncDiskNames({ force = false, rebuild = true } = {}) {
+  if (PANEL_WIN || !state.root) return [];
+  if (_nameSyncRun) return _nameSyncRun;
+  if (!force && (_diskBusy || Date.now() - _nameSyncAt < 3000)) return [];
+  _nameSyncAt = Date.now();
+  const root = state.root;
+  _nameSyncRun = (async () => {
+    let changes = [];
+    try { changes = await reconcileNames(kapi, root); }
+    catch (e) { log('warn', 'names: reconcile failed', e); return []; }
+    // เล่มที่โฟลเดอร์ชนชื่อสงวน = คำเตือน ไม่ใช่การเปลี่ยนชื่อ (เตือนครั้งเดียวต่อโฟลเดอร์ต่อรอบเปิดโปรแกรม)
+    for (const c of changes.filter((x) => x.reserved)) {
+      const k = pathKey(c.to);
+      if (_reservedWarned.has(k)) continue;
+      _reservedWarned.add(k);
+      log('warn', 'names: book folder uses a reserved name', { folder: c.to });
+      toast(ttf('ui.names.bookReserved', _baseName(c.to)), { level: 'warn' });
+    }
+    changes = changes.filter((x) => !x.reserved);
+    if (!changes.length || state.root !== root) return changes;
+    for (const c of changes) {
+      logAction('names', ttf('ui.names.logExternal', _baseName(c.from), _baseName(c.to)),
+                { kind: c.kind, from: c.from, to: c.to, title: c.title, copied: !!c.copied });
+      if (c.copied) continue;
+      await moveSnapshots(c.from, c.to);
+    }
+    await relocateStaleTabs(changes);           // ครั้งเดียวทั้งชุด — ทางปลายทางสุดท้ายของแต่ละแท็บ (ดูคอมเมนต์ที่ตัวฟังก์ชัน)
+    if (rebuild) { await buildTree(); refreshNetwork(); }
+    toast(ttf('ui.names.syncedN', changes.length), { level: 'info' });
+    return changes;
+  })();
+  try { return await _nameSyncRun; } finally { _nameSyncRun = null; }
+}
 
 // [80] Revert — ยกเลิกการเปลี่ยนแปลงทั้งหมด โหลดใหม่จากดิสก์
 export async function revertTab(file) {
@@ -11668,7 +12026,7 @@ export async function removeElementsDialog(opts = {}) {
   };
   for (const ty of types) {
     const label = el('label', 'k-row');
-    label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer';
+    label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 0;cursor:default';
     const cb = el('input'); cb.type = 'checkbox'; cb.value = ty; chks.push(cb);
     cb.onchange = syncTotal;
     label.append(cb, el('span', null, ttf('ui.app.line', elemLabel(ty), counts[ty])));
@@ -11709,7 +12067,7 @@ async function showCharMap() {
   const box = el('div', 'k-dialog');
   box.innerHTML = ((a) => `<div class="k-dlg-title">${tx('ui.app.mapChar2')}</div>
     <div class="k-charmap"></div>
-    <div class="k-dlg-btns"><button class="k-ok">${a[0]}</button></div>`)([t('dialogs.close')]);
+    <div class="k-dlg-btns"><button class="k-ok k-cancel">${a[0]}</button></div>`)([t('dialogs.close')]);   // [alpha.169] ทางออกเดียวของกล่อง = k-ok k-cancel (Esc ปิดได้)
   ov.append(box); document.body.append(ov);
   const grid = box.querySelector('.k-charmap');
   for (const row of LATIN1) {
@@ -14113,7 +14471,7 @@ function stopLogAutoRefresh() {
 }
 window.__k2test = (p) => { globalThis.__k2testing = true; return runTest(p); };
 // เครื่องมือถ่ายภาพหน้าจอของนักพัฒนา (tools/shot.cjs) — มีเฉพาะโหมดเทส (`?k2test`)
-if (location.search.includes('k2test')) window.__k2dev = { loadProject, handleCommand, state, resetPanels };
+if (location.search.includes('k2test')) window.__k2dev = { loadProject, handleCommand, state, resetPanels, sceneCtx, syncPropsToActive, pluginList, reloadPlugins };
 // [alpha.108] เครื่องมือวินิจฉัยหน้ากระดาษ — เปิด DevTools แล้วพิมพ์ `k2PageDoctor()`
 // (ไม่มี UI ไม่มีข้อความให้แปล · ใช้ตอนอาการเกิดบนเอกสารจริงของผู้ใช้ที่เครื่องพัฒนาจำลองไม่ได้)
 window.k2PageDoctor = k2PageDoctor;
@@ -14318,7 +14676,8 @@ export function aboutDialog(opts = {}) {
   const left = el('div', 'k-about-left');
   const logo = el('img', 'k-about-logo');
   logo.alt = 'Killian 2';
-  logo.src = 'about/logo.svg';
+  logo.src = 'assets/app-icon.svg';   // [alpha.169] ไอคอนจริงของโปรแกรม (แหล่งเดียว icons/app-icon.svg) — เดิมเป็นกรอบ LOGO PLACEHOLDER
+  logo.draggable = false;
   left.append(logo);
   const title = el('div', 'k-dlg-title k-about-title', tt('ui.common.killian'));
   const tag = el('div', 'k-about-tag', tt('ui.app.appWriteNovelScreenplay'));
@@ -14516,7 +14875,11 @@ function releaseHeightLocks(locks) {
   setTimeout(() => { for (const [c, v] of locks) c.style.minHeight = v; }, 350);
 }
 // ทุกทางเข้าที่ทำให้แผงเปิด (เมนู · ถาดแผงที่ปิดไว้ · คำสั่ง) วิ่งผ่าน showPanel → hook นี้
-setPanelShowHook((pid) => { renderFeaturePanel(pid); });
+// [alpha.169] ★ ใช้ drawPanel (รู้จักทั้งแผงฟีเจอร์และแผงที่ผูกกับฉาก) — เดิมเรียก renderFeaturePanel ซึ่งไม่รู้จัก
+// คุณสมบัติ/คอมเมนต์/นำทาง: เปิดแผงพวกนี้จากเมนู/ปุ่ม/คีย์ลัดแล้ว **ไม่มีใครวาด** แผงโชว์ของที่ค้างจากรอบก่อน
+// (เปิดฉากไว้ → รีเซ็ตแผง/ปิดแผงคุณสมบัติ → เปิดใหม่ = "เลือกฉากเพื่อดูคุณสมบัติ" ทั้งที่ฉากเปิดอยู่ตรงหน้า)
+// (นำทาง/คอมเมนต์มีทางวาดของตัวเองตอนเปิดอยู่แล้ว — วาดซ้อนอีกรอบเสี่ยงได้รายการซ้ำ จึงจำกัดไว้ที่แผงคุณสมบัติ)
+setPanelShowHook((pid) => { if (pid === 'props') drawPanel(pid); else renderFeaturePanel(pid); });
 /** ล้างเนื้อแผงฟีเจอร์ (ตอนปิดโปรเจกต์ — ไม่งั้นโปรเจกต์ใหม่เห็นสถิติ/กระดานของเก่า) */
 export function clearFeaturePanels() {
   for (const sel of ['#dash-body', '#kanban-body', '#books-body', '#chapters-body', '#tl-body', '#maps-body',
@@ -14834,11 +15197,26 @@ export async function handleCommand(ch, ...a) {
       setStatus(state.settings.lineNumbers ? tt('ui.app.numLineOpen') : tt('ui.app.numLineClose'));
       break;
     // ---- ฟีเจอร์ที่เคยไม่มีทางเข้าถึง (import ไว้แต่ไม่มีเมนู/ปุ่ม) ----
-    case 'typewriter': setStatus(toggleTypewriter() ? tt('ui.app.modeTypewriterOpen') : tt('ui.app.modeTypewriterClose')); refreshToolbar();
+    // [alpha.169 · a11y] จำเป็นค่าระดับผู้ใช้ด้วย (setTypewriterMode) — เดิมเปิดโปรแกรมใหม่แล้วต้องกดเปิดทุกครั้ง
+    case 'typewriter': setStatus(setTypewriterMode() ? tt('ui.app.modeTypewriterOpen') : tt('ui.app.modeTypewriterClose')); refreshToolbar();
                        syncTypeSound(); syncMenuToggles(); break;
+    // ══ [alpha.169 · a11y] การช่วยการเข้าถึง ══
+    case 'key-echo': {
+      const v = setA11ySwitch('a11yKeyEcho');
+      setStatus(v ? tt('ui.a11y.keyEchoOn') : tt('ui.a11y.keyEchoOff'));
+      break;
+    }
+    case 'line-band': {
+      const v = setA11ySwitch('a11yLineBand');
+      setStatus(v ? tt('ui.a11y.lineBandOn') : tt('ui.a11y.lineBandOff'));
+      break;
+    }
+    case 'osk': await openOsKeyboard(); break;
+    case 'a11y-settings': settingsDialog('a11y'); break;
     // [alpha.57a ข้อ 1] เสียงพิมพ์ — สวิตช์แยกจากโหมดเครื่องพิมพ์ดีด (ตั้งระดับเสียงในตั้งค่า)
     case 'type-sound':
       state.settings.typeSound = !state.settings.typeSound;
+      saveGlobalSetting('typeSound', state.settings.typeSound);   // [alpha.169 · a11y] ค่าระดับผู้ใช้ (เดิมเขียนลงไฟล์ผลงานอย่างเดียว — กฎ W3)
       syncTypeSound(); saveProjectMetaSoon(); syncMenuToggles();
       if (state.settings.typeSound) playType('key', { force: true });
       setStatus(state.settings.typeSound
@@ -14920,7 +15298,7 @@ export async function handleCommand(ch, ...a) {
             await confirmBox(tt('ui.app.importNotOkNot'), tt('ui.common.msg3'));
           }
         }
-      }, { canReplace: canReplace(state.active) });
+      }, { canReplace: canReplace(state.active), filePath: typeof a[0] === 'string' ? a[0] : '' });
       break;
     }
     // [alpha.60 ข้อ 74] เปรียบเทียบบท/สคริปต์
@@ -16308,8 +16686,19 @@ function placeTipAt(x, y) {
   box.style.left = Math.round(left) + 'px';
   box.style.top = Math.round(top) + 'px';
 }
+// [alpha.169 · native] ทูลทิปที่ "รอขึ้น" (ชี้ค้างยังไม่ครบ TIP_DELAY_MS) + เวลาที่ตัวก่อนถูกซ่อน (โหมดไล่ดูปุ่มข้าง ๆ)
+let _tipPend = null;
+let _tipLastHide = 0;
+function cancelTipPending() { if (_tipPend) { clearTimeout(_tipPend.timer); _tipPend = null; } }
+/** รอกี่ ms ก่อนโชว์ — โหมดเทสขึ้นทันทีเหมือนเดิม (เทสเดิมวัดทูลทิปหลัง mouseover ทันที) เว้นเทสของตัวหน่วงเอง */
+function hoverTipWait() {
+  if (sessionOff() && !globalThis.__k2tipDelayTest) return 0;
+  return tipDelay(performance.now(), _tipLastHide, { delay: TIP_DELAY_MS, warm: TIP_WARM_MS });
+}
 function hideTip() {
   clearTimeout(_tipJob);
+  cancelTipPending();
+  if (_tipHost && _tipEl && _tipEl.classList.contains('on')) _tipLastHide = performance.now();
   if (_tipHost && _tipSaved) { _tipHost.setAttribute('title', _tipSaved); delete _tipHost.dataset.tipHeld; }
   _tipHost = null; _tipSaved = ''; _tipKt = null;
   if (_tipEl) _tipEl.classList.remove('on');
@@ -16402,9 +16791,25 @@ function setupHoverTips() {
       }
     }
     if (!host || host === _tipHost) return;
+    if (_tipPend && _tipPend.host === host) return;      // ยังชี้อยู่ที่เดิม — ตัวจับเวลาเดินอยู่แล้ว
+    if (!host.getAttribute('title')) return;
+    // [alpha.169 · native] ชี้ค้างก่อนจึงขึ้น (เดิมขึ้นทันทีที่เมาส์แตะ — กวาดเมาส์ผ่านแถบแล้วกล่องกะพริบตามทั้งแถว)
+    hideTip();
+    const wait = hoverTipWait();
+    if (wait > 0) {
+      _tipPend = { host, timer: setTimeout(() => {
+        const p = _tipPend; _tipPend = null;
+        if (!p || p.host !== host || !host.isConnected || menuOpen()) return;
+        revealHoverTip(host);
+      }, wait) };
+      return;
+    }
+    revealHoverTip(host);
+  }, true);
+  /** โชว์ทูลทิปของ host (ตัวลงมือของตัวดัก mouseover — ทั้งทางทันทีและทางหลังชี้ค้าง) */
+  function revealHoverTip(host) {
     const text = host.getAttribute('title');
     if (!text) return;
-    hideTip();
     _tipHost = host; _tipSaved = text; _tipKt = host;
     host.removeAttribute('title');
     host.dataset.tipHeld = text;   // [alpha.167] ดู showTip()
@@ -16420,9 +16825,11 @@ function setupHoverTips() {
     } else {
       placeTipRelative(host);
     }
-  }, true);
+  }
   document.addEventListener('mouseout', (e) => {
     if (_tipHeld && !(e.relatedTarget instanceof Node && _tipHeld.host.contains(e.relatedTarget))) releaseHeldTitle();
+    // ออกจากปุ่มก่อนครบเวลาชี้ค้าง = ไม่ต้องขึ้น
+    if (_tipPend && !(e.relatedTarget instanceof Node && _tipPend.host.contains(e.relatedTarget))) cancelTipPending();
     if (!_tipHost) return;
     const to = e.relatedTarget;
     if (to instanceof Node && _tipHost.contains(to)) return;
@@ -16443,6 +16850,14 @@ window.addEventListener('DOMContentLoaded', () => {
   try { document.fonts && document.fonts.load('16px "K2 Icons"', gi('save')); } catch {}
   // [alpha.162 · W4 ข้อ 9] มาตรฐานของกล่องทุกใบ (Esc · Enter · โฟกัส · role) — ดู ui.js
   try { installDialogA11y(); } catch (e) { log('warn', 'dialog a11y', e); }
+  // [alpha.169 · native] ชั้น "โปรแกรมจริง" — ก่อนทุกทางแยก (โหมดเทส / หน้าต่างแผงที่ฉีกออก ก็ต้องได้)
+  try {
+    initNativeShell({ panelWin: !!PANEL_WIN, openProject: (p) => openProjectFromUi(p),
+      importScript: (p) => handleCommand('import-script', p), insertImage: (n) => insertImageByName(n),
+      openGallery: () => showPanel('gallery') });
+    busyTaskHooks.progress = taskbarProgress;
+    busyTaskHooks.done = taskFinished;
+  } catch (e) { log('warn', 'native shell', e); }
   // [alpha.162 · W5 ข้อ 3] แถบเครื่องมือหลัก = จุดหยุด Tab เดียว · ←→ เดินในแถบ (ชื่อแถบมาจาก data-i18n-attr)
   try { rovingToolbar($('#toolbar')); } catch (e) { log('warn', 'toolbar roving', e); }
   // ---- ลงทะเบียนฮุกให้ toolbar+UI อัปเดตเมื่อเปลี่ยนภาษา ----
@@ -16738,6 +17153,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!state.root) { setStatus(tt('ui.common.cantOpenProject')); return; }
       refreshBtn.classList.add('spin');
       try {
+        // [alpha.170] รีเฟรช = "อ่านดิสก์ใหม่" → ของที่ถูกเปลี่ยนชื่อ/ย้ายจาก OS ถูกจับคู่กับทะเบียนก่อนวาดต้นไม้
+        await syncDiskNames({ force: true, rebuild: false });
         await loadTemplates();
         await smart.loadNames(state.root);
         await buildTree();
@@ -16937,6 +17354,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // → ตกไปใช้กริด 10 ตัว/นิ้วเงียบ ๆ ทั้งที่โค้ดดูเหมือนติดตั้งแล้ว
   // ติดตั้งไม่สำเร็จ (ไม่มี canvas) = ตกไปใช้ heuristic ของ text-width.js เอง ไม่พัง
   installTextMeasurer();
+  applyWindowTitle(state.root ? state.title : '');   // [alpha.169] เลขรุ่นบนแถบชื่อตั้งแต่เฟรมแรก (ยังไม่มีผลงาน)
   // [alpha.143 ข้อ 1] ★ ตัวดักรูปโหลดเสร็จก็ต้องอยู่ "ก่อนทุกทางแยก" ด้วยเหตุผลเดียวกัน —
   // วางไว้ใน bootSequence() รอบแรกแล้วเทสจับได้ทันทีว่าโหมดเทสไม่เคยติดตั้งมันเลย
   watchDocImages();
@@ -16946,7 +17364,12 @@ window.addEventListener('DOMContentLoaded', () => {
   if (PANEL_WIN) { bootPanelWindow(); return; }
   bindMainWindowSync();
   // [alpha.156] กลับมาที่หน้าต่าง = ไฟล์อาจถูกแก้ในโปรแกรมอื่นระหว่างนั้น
-  window.addEventListener('focus', () => { checkTabsAgainstDisk().catch(() => {}); });
+  window.addEventListener('focus', () => {
+    // [alpha.170] ชื่อไฟล์/โฟลเดอร์อาจถูกเปลี่ยนจาก OS ระหว่างนั้น → ปรับทะเบียน+แท็บก่อน แล้วค่อยเทียบเนื้อ
+    // (โหมดเทสปิด — e2e จงใจทำไฟล์หาย/ไฟล์เกินเพื่อเทสตัวตรวจสุขภาพ · เทสของฟีเจอร์นี้เรียก syncDiskNames เอง)
+    const names = sessionOff() ? Promise.resolve() : syncDiskNames().catch(() => {});
+    names.then(() => checkTabsAgainstDisk()).catch(() => {});
+  });
   if (!location.search.includes('k2test')) bootSequence();
   // autosave ตั้งค่าได้ผ่านตั้งค่าโปรเจกต์ (restartAutosave เรียกจาก applySettings เมื่อเปิดโปรเจกต์)
   restartAutosave();

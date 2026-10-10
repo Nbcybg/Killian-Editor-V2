@@ -51,6 +51,11 @@ app.whenReady().then(async () => {
     fs.writeFileSync(path.join(OUT, 'icon.png'), big.toPNG());
     const pngs = ICO_SIZES.map((size) => ({ size, buf: big.resize({ width: size, height: size, quality: 'best' }).toPNG() }));
     fs.writeFileSync(path.join(OUT, 'icon.ico'), buildIco(pngs));
+    // [alpha.169] ไอคอนของ "หน้าต่าง" (BrowserWindow.icon) — ตอนรันจากซอร์ส/บน Linux ไม่มีไอคอนของ exe ให้หยิบ
+    // อยู่ใน renderer/ เพราะ electron-builder แพ็กแค่ renderer/** (build/ ไม่ติดไปกับตัวโปรแกรม)
+    const ASSETS = path.join(ROOT, 'renderer', 'assets');
+    fs.mkdirSync(ASSETS, { recursive: true });
+    fs.writeFileSync(path.join(ASSETS, 'app-icon.png'), big.resize({ width: 256, height: 256, quality: 'best' }).toPNG());
     console.log('icon OK →', path.join(OUT, 'icon.ico'), '+ icon.png', '(' + ICO_SIZES.join(',') + ')');
     app.exit(0);
   } catch (e) {

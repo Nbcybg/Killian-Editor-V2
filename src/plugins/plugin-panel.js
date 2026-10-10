@@ -33,6 +33,8 @@ export async function renderPluginPanel(host) {
   const counts = PC.pluginCounts(list);
 
   h.append(buildBar(h, counts, app));
+  // [alpha.169] ปลั๊กอินที่ถูกปิด/ถอน/แก้โค้ดในรอบนี้และถอดออกสะอาดไม่ได้ → บอกให้เริ่มโปรแกรมใหม่ (ค้างจนกว่าจะเริ่มใหม่จริง)
+  if (info.restart && info.restart.length) h.append(restartBanner(info.restart, app));
 
   const body = el('div', 'k-plug-list');
   h.append(body);
@@ -65,7 +67,7 @@ function buildBar(host, counts, app) {
   install.classList.add('k-ok');
   btns.append(install);
   btns.append(mkBtn(tt('ui.plug.reloadAll'), tt('ui.plug.reloadAllHint'), async () => {
-    await app.reloadPlugins();
+    await withRestartCheck(app, () => app.reloadPlugins());
     await renderPluginPanel(host);
   }));
   const apiBtn = mkBtn(tt('ui.plug.apiDoc'), tt('ui.plug.apiDocHint'), async () => {
@@ -108,6 +110,41 @@ function buildBar(host, counts, app) {
   return bar;
 }
 
+/** เริ่มโปรแกรมใหม่ — ผ่านกล่องงานค้างชุดเดียวกับตอนออกจากโปรแกรม (กฎถาวร alpha.72 · alpha.167 รอบต่อ 3) */
+async function restartApp(app) {
+  return app.confirmQuit({ quit: () => location.reload() });
+}
+
+/** แถบแจ้ง "ต้องเริ่มโปรแกรมใหม่" */
+function restartBanner(names, app) {
+  const box = el('div', 'k-plug-restart');
+  box.setAttribute('role', 'status');
+  box.append(el('span', 'k-plug-restart-ico', gi('refresh')));
+  box.append(el('div', 'k-plug-restart-msg', ttf('ui.plug.restartNeed', names.join(', '))));
+  const b = mkBtn(tt('ui.plug.restartNow'), tt('ui.plug.restartNowHint'), () => restartApp(app));
+  b.classList.add('k-plug-restart-btn');
+  box.append(b);
+  return box;
+}
+
+/**
+ * ครอบการกระทำที่อาจทำให้ปลั๊กอินถูกถอด (ปิด · ถอน · โหลดใหม่ · ติดตั้งทับ)
+ * มีชื่อใหม่เข้ารายการ "ต้องเริ่มโปรแกรมใหม่" = แจ้งทันทีด้วยข้อความลอยที่มีปุ่มเริ่มใหม่ (แผงอาจถูกปิดอยู่/เลื่อนไม่เห็นแถบ)
+ */
+async function withRestartCheck(app, fn) {
+  const before = new Set(app.pluginsNeedRestart());
+  const out = await fn();
+  const fresh = app.pluginsNeedRestart().filter((n) => !before.has(n));
+  if (fresh.length) {
+    const { toast } = await import('../ui.js');
+    toast(ttf('ui.plug.restartNeed', fresh.join(', ')), { level: 'warn', ttl: 12000,   // ไม่ค้างถาวร — แถบในแผงปลั๊กอินค้างให้อยู่แล้วจนกว่าจะเริ่มใหม่จริง
+     
+      action: { label: tt('ui.plug.restartNow'), onClick: () => restartApp(app) } });
+    log('info', 'plugin: restart needed', { names: fresh });
+  }
+  return out;
+}
+
 function mkBtn(label, title, onClick) {
   const b = el('button', 'k-plug-btn', label);
   if (title) b.title = title;
@@ -138,6 +175,8 @@ function cardFor(p, host, app) {
   const meta = [];
   if (p.author) meta.push(tt('ui.plug.author') + ': ' + p.author);
   if (p.minAppVersion) meta.push(tt('ui.plug.minVer') + ': ' + p.minAppVersion);
+  // [alpha.169] บอกล่วงหน้าว่าตัวนี้ปิด/ถอนแล้วต้องเริ่มโปรแกรมใหม่ไหม (ผู้เขียนปลั๊กอินประกาศ "hotReload": true = ไม่ต้อง)
+  if (p.status === PC.ST_OK) meta.push(p.hotReload ? tt('ui.plug.metaHot') : tt('ui.plug.metaRestart'));
   if (meta.length) card.append(el('div', 'k-plug-meta dim', meta.join(' · ')));
 
   if (p.status === PC.ST_ERR && p.error) {
@@ -188,7 +227,7 @@ function cardFor(p, host, app) {
     const off = p.status === PC.ST_OFF || p.status === PC.ST_ERR;
     acts.append(mkBtn(off ? tt('ui.plug.enable') : tt('ui.plug.disable'), '', async () => {
       app.setPluginDisabled(p.name, !off);
-      await app.reloadPlugins();
+      await withRestartCheck(app, () => app.reloadPlugins());
       await renderPluginPanel(host);
       setStatus(off ? ttf('ui.plug.enabled', p.name) : ttf('ui.plug.disabled', p.name));
     }));
@@ -224,7 +263,10 @@ export async function uninstall(p, host, appMod) {
     if (!r || !r.ok) { setStatus(tt('ui.plug.errUninstall') + ' ' + ((r && r.reason) || '')); return false; }
     // ถอนแล้วต้องล้างธง "ปิดไว้" ด้วย ไม่งั้นติดตั้งชื่อเดิมใหม่แล้วมันถูกปิดตั้งแต่วินาทีแรก
     app.setPluginDisabled(p.name, false);
-    await app.reloadPlugins();
+    // [alpha.169] ถอนตัวหนึ่งออกจากชุดปลั๊กอินของผลงานที่อนุญาตไว้แล้ว = ลายนิ้วมือของชุดเปลี่ยน
+    // เดิมตัวที่เหลือเด้งกลับเป็น "รออนุญาต" ทั้งชุด ทั้งที่ผู้ใช้แค่ "เอาโค้ดออก" (ไม่ได้เพิ่มความเสี่ยง) → อนุญาตชุดที่เหลือต่อให้
+    if (p.origin === PC.ORIGIN_PROJECT && p.status !== PC.ST_UNTRUSTED) await app.trustProjectPlugins();
+    await withRestartCheck(app, () => app.reloadPlugins());
     if (host) await renderPluginPanel(host);
     setStatus(ttf('ui.plug.uninstalled', p.name));
     return true;
@@ -288,7 +330,7 @@ export async function installFlow(host, appMod) {
     const r = await kapi.pluginExtract(got.id, dir, files);
     if (!r || !r.ok) { setStatus(tt('ui.plug.errExtract')); return false; }
     app.setPluginDisabled(folder, false);       // เผื่อชื่อเดิมเคยถูกปิดไว้
-    await app.reloadPlugins();
+    await withRestartCheck(app, () => app.reloadPlugins());   // ติดตั้งทับตัวที่ทำงานอยู่ = ตัวเก่าถูกถอด
     if (host) await renderPluginPanel(host);
     setStatus(ttf('ui.plug.installed', folder, r.written));
     return true;

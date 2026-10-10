@@ -1,0 +1,42 @@
+/* renderer/themes/hc-dark.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-hc-dark {
+  --bg:#000000;
+  --side:#000000;
+  --bar:#000000;
+  --border:#ffffff;
+  --fg:#ffffff;
+  --bright:#ffffff;
+  --dim:#e0e0e0;
+  --accent:#ffff00;
+  --accent-hi:#00ffff;
+  --accent-ink:#00ffff;
+  --link:#7fd6ff;
+  --sel:#0057d9;
+  --orange:#00ffff;
+  --curline:#1f1f1f;
+  --hover:#3a3a3a;
+  --hover-soft:#262626;
+  --titlebar:#000000;
+  --sunken:#000000;
+  --chip:#1f1f1f;
+  --danger-soft:#4c1e21;
+  --canvas:#000000;
+  --void:#000000;
+  --paper-surround:#000000;
+  --tab-bar:#000000;
+  --tab-bg:#1f1f1f;
+  --tab-border:#ffffff;
+  --tab-fg:#e0e0e0;
+  --tab-fg-on:#ffffff;
+  --tab-hover:#262626;
+  --panel-head:#000000;
+  --input-bg:#000000;
+  --muted-strong:#d1d1d1;
+  --find-hit:#806600;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+  --st-warn:#ffe600;
+  --st-danger:#ff6b6b;
+  --st-danger-alt:#ff8a8a;
+}

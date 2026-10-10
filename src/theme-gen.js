@@ -187,10 +187,28 @@ export function checkThemeVars(vars) {
   return out;
 }
 
+/**
+ * [alpha.169 · a11y] สี "ความหมาย" ที่ธีมทับได้ — ช่องใน `status` ของ themes.json → ชื่อตัวแปร
+ * (ค่าเริ่มต้นอยู่ base.css · ไม่อยู่ใน THEME_VARS เพราะธีมทั่วไปไม่ต้องกำหนด)
+ * ธีมสำหรับคนตาบอดสีต้องทับ: เตือน/อันตรายของ base.css เป็นเหลืองอมส้มกับแดง ซึ่งคนตาบอดสีแดง–เขียวแยกจากกันยาก
+ */
+export const THEME_STATUS_VARS = { warn: '--st-warn', danger: '--st-danger', dangerAlt: '--st-danger-alt' };
+
+/** รายการ [ชื่อตัวแปร, ค่า] ของสีความหมายที่ธีมนี้ทับ (ค่าที่ไม่ใช่สีถูกทิ้ง) */
+export function themeStatusVars(spec) {
+  const st = (spec && spec.status) || {};
+  const out = [];
+  for (const [k, name] of Object.entries(THEME_STATUS_VARS)) {
+    const h = normHex(st[k]);
+    if (h) out.push([name, h]);
+  }
+  return out;
+}
+
 /** ข้อความ css ของธีม (ใช้โดย tools/theme-build.cjs) */
 export function themeCss(spec) {
   const id = String(spec.id || '');
-  const lines = themeVars(spec).map(([n, val]) => '  ' + n + ':' + val + ';');
+  const lines = themeVars(spec).concat(themeStatusVars(spec)).map(([n, val]) => '  ' + n + ':' + val + ';');
   const raw = Object.entries(spec.palette || {}).map(([k, val]) => '  --theme-' + k + ':' + normHex(val) + ';');
   return '/* renderer/themes/' + id + '.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs\n' +
     '   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */\n' +

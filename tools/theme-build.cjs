@@ -7,7 +7,7 @@
 // สิ่งที่สร้าง (ทุกอย่างมาจาก themes.json ที่เดียว — ห้ามแก้มือ):
 //   1. renderer/themes/<id>.css         ตัวแปรสีของธีม (ข้ามธีม handmade:true)
 //   2. renderer/index.html              <link> ของทุกธีม ระหว่าง <!-- themes:begin --> … <!-- themes:end -->
-//   3. src/generated/themes-data.js     THEMES · THEME_LABEL_KEYS · THEME_MODES (core.js re-export)
+//   3. src/generated/themes-data.js     THEMES · THEME_LABEL_KEYS · THEME_MODES · THEMES_A11Y (core.js re-export)
 //   4. languages/k2_*.csv               ป้ายชื่อธีม `ui.themes.<id>` — เพิ่มเฉพาะคีย์ที่ยังไม่มี
 //                                       (คำแปลที่แก้ใน CSV แล้วไม่ถูกเขียนทับ)
 const fs = require('fs');
@@ -40,6 +40,7 @@ function readSpec() {
     if (seen.has(t.id)) throw new Error('id ธีมซ้ำ: ' + t.id);
     seen.add(t.id);
     if (!['dark', 'light'].includes(t.mode)) throw new Error('ธีม ' + t.id + ': mode ต้องเป็น dark/light');
+    if (t.group != null && t.group !== 'a11y') throw new Error('ธีม ' + t.id + ': group ที่รู้จักมีแค่ "a11y"');
     if (!t.handmade) {
       for (const k of ['bg', 'fg', 'accent', 'accentHi', 'link']) {
         if (!(t.colors || {})[k]) throw new Error('ธีม ' + t.id + ': colors.' + k + ' ขาด');
@@ -73,7 +74,9 @@ function build(check) {
     '/** ธีม → คีย์ป้ายชื่อในไฟล์ภาษา */\n' +
     'export const THEME_LABEL_KEYS = ' + JSON.stringify(Object.fromEntries(list.map((t) => [t.id, labelKeyOf(t)])), null, 2) + ';\n' +
     '/** ธีม → dark | light */\n' +
-    'export const THEME_MODES = ' + JSON.stringify(Object.fromEntries(list.map((t) => [t.id, t.mode])), null, 2) + ';\n';
+    'export const THEME_MODES = ' + JSON.stringify(Object.fromEntries(list.map((t) => [t.id, t.mode])), null, 2) + ';\n' +
+    '/** [alpha.169 · a11y] ธีมช่วยการมองเห็น (group:"a11y" ใน themes.json) ตามลำดับในทะเบียน */\n' +
+    'export const THEMES_A11Y = ' + JSON.stringify(list.filter((t) => t.group === 'a11y').map((t) => t.id)) + ';\n';
   want.set(DATA, data);
 
   const stale = [];

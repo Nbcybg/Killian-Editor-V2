@@ -41,6 +41,7 @@ export function settingsTemplate() {
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="cog" data-icon-size="14"></span> ${tx('ui.setTpl.grpGeneral')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpGeneralSub')}</span></div>
     <div class="k-set-tab on" data-p="gen" data-find="${tx('ui.setTpl.nameAuthorSaveAutoFind')}">${tx('ui.settings.general')}</div>
     <div class="k-set-tab" data-p="write" data-find="${tx('ui.setTpl.writeFontSizeCheckFind')}">${tx('ui.settings.writing')}</div>
+    <div class="k-set-tab" data-p="a11y" data-find="${tx('ui.setTpl.a11yFind')}">${tx('ui.setTpl.a11yTab')}</div>
     <div class="k-set-tab" data-p="save" data-find="${tx('ui.setTpl.tabSaveFind')}">${tx('ui.setTpl.tabSave')}</div>
     <div class="k-set-tab" data-p="lang" data-find="${tx('ui.setTpl.langLanguageCsvFind')}">${tx('ui.settings.language')}</div>
     <div class="k-set-navgrp"><span class="k-set-navgrp-ic" data-icon="layout" data-icon-size="14"></span> ${tx('ui.setTpl.grpBars')} <span class="k-set-navgrp-sub">${tx('ui.setTpl.grpBarsSub')}</span></div>
@@ -114,18 +115,40 @@ export function settingsTemplate() {
       <div class="k-row"><label>${tx('ui.setTpl.reset')}</label><select id="st-paper-color" class="k-dlg-select"></select></div>
       <div class="k-row"><label>${tx('ui.setTpl.pickColor')}<span class="k-hint">${tx('ui.setTpl.colorMarginLineColor')}</span></label><input type="color" id="st-paper-color-hex" class="k-narrow"></div>
       <div class="k-row"><label>${tx('ui.setTpl.lineGapMarginPaper')}<span class="k-hint">${tx('ui.setTpl.lineRoundAreaPrint')}</span></label><input type="checkbox" id="st-page-guides"></div>
+    </div>
+    <div class="k-set-page k-set-2col" data-p="a11y">
+      ${scope('global')}
+      <div class="k-hint k-full" style="margin-bottom:10px">${tx('ui.setTpl.a11yIntro')}</div>
+      <div class="k-set-sub k-full">${tx('ui.setTpl.a11ySubVision')}</div>
+      <div class="k-row k-full k-a11y-col"><label>${tx('ui.setTpl.a11yThemes')}<span class="k-hint">${tx('ui.setTpl.a11yThemesHint')}</span></label><div id="st-a11y-themes" class="k-a11y-themes"></div></div>
+      <div class="k-set-sub k-full">${tx('ui.setTpl.a11ySubKeyEcho')}</div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yKeyEcho')}<span class="k-hint">${tx('ui.setTpl.a11yKeyEchoHint')}</span></label><input type="checkbox" id="st-a11y-keyecho"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yKeyEchoMode')}</label><select id="st-a11y-keyecho-mode" class="k-dlg-select"><option value="all">${tx('ui.setTpl.a11yKeyEchoModeAll')}</option><option value="typing">${tx('ui.setTpl.a11yKeyEchoModeTyping')}</option><option value="special">${tx('ui.setTpl.a11yKeyEchoModeSpecial')}</option></select></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yKeyEchoPos')}</label><select id="st-a11y-keyecho-pos" class="k-dlg-select"><option value="center">${tx('ui.setTpl.a11yPosCenter')}</option><option value="top">${tx('ui.setTpl.a11yPosTop')}</option><option value="bottom">${tx('ui.setTpl.a11yPosBottom')}</option></select></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yKeyEchoSize')}</label><input type="range" id="st-a11y-keyecho-size" min="48" max="400" step="4"><span id="st-a11y-keyecho-size-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yKeyEchoMs')}</label><input type="range" id="st-a11y-keyecho-ms" min="300" max="5000" step="100"><span id="st-a11y-keyecho-ms-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yTry')}</label><span><button id="st-a11y-keyecho-test" class="k-key-btn">${tx('ui.setTpl.a11yKeyEchoTest')}</button></span></div>
+      <div class="k-set-sub k-full">${tx('ui.setTpl.a11ySubLineBand')}</div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yLineBand')}<span class="k-hint">${tx('ui.setTpl.a11yLineBandHint')}</span></label><input type="checkbox" id="st-a11y-band"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yLineBandColor')}</label><input type="color" id="st-a11y-band-color" class="k-narrow"></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yLineBandOpacity')}</label><input type="range" id="st-a11y-band-op" min="0.1" max="0.9" step="0.05"><span id="st-a11y-band-op-lbl" class="k-hint"></span></div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yLineBandSample')}</label><div id="st-a11y-band-sample" class="k-a11y-band-sample"><span>${tx('ui.setTpl.a11yLineBandSampleText')}</span><i></i></div></div>
+      <div class="k-set-sub k-full">${tx('ui.setTpl.a11ySubTypewriter')}</div>
+      <div class="k-row"><label>${tx('ui.setTpl.a11yTypewriter')}<span class="k-hint">${tx('ui.setTpl.a11yTypewriterHint')}</span></label><input type="checkbox" id="st-typewriter"></div>
       <div class="k-set-sub k-full">${tx('ui.setTpl.soundTypewriter')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.openSoundPrint')}<span class="k-hint">${tx('ui.setTpl.delActLine')}</span></label><input type="checkbox" id="st-typesnd"></div>
       <div class="k-row"><label>${tx('ui.setTpl.play')}<span class="k-hint">${tx('ui.setTpl.r2ItemDefaultPrev')}</span></label><select id="st-typesnd-mode" class="k-dlg-select"><option value="always">${tx('ui.setTpl.timePrint')}</option><option value="typewriter">${tx('ui.setTpl.onlyModeTypewriterSc')}</option></select></div>
       <div class="k-row"><label>${tx('ui.setTpl.levelSound')}</label><input type="range" id="st-typesnd-vol" min="0" max="1" step="0.05"><span id="st-typesnd-lbl" class="k-hint"></span></div>
       <div class="k-row"><label>${tx('ui.setTpl.try')}</label><span><button id="st-typesnd-test" class="k-key-btn">${tx('ui.setTpl.text1')}</button> <button id="st-typesnd-test2" class="k-key-btn">${tx('ui.setTpl.line')}</button></span></div>
+      <div class="k-set-sub k-full">${tx('ui.setTpl.a11ySubOsk')}</div>
+      <div class="k-row k-full"><label>${tx('ui.setTpl.a11yOsk')}<span class="k-hint">${tx('ui.setTpl.a11yOskHint')}</span></label><button id="st-a11y-osk" class="cmp-mini">${tx('ui.setTpl.a11yOskBtn')}</button></div>
     </div>
     <div class="k-set-page" data-p="ai">
       ${scope('global')}
       <div class="k-hint" style="margin-bottom:10px">${tx('ui.setTpl.aiIntro')}</div>
       <div class="k-row"><label>${tx('ui.setTpl.aiCurrent')}</label><span id="st-ai-current" class="k-hint"></span></div>
       <div class="k-dlg-btns" style="justify-content:flex-start; margin-top:12px">
-        <button id="st-ai-open" class="k-ok">${tx('ui.setTpl.aiOpen')}</button>
+        <button id="st-ai-open" class="cmp-mini">${tx('ui.setTpl.aiOpen')}</button>
       </div>
     </div>
     <div class="k-set-page" data-p="auto">

@@ -8,7 +8,7 @@
 //    ฉากเดิมที่ชื่อชนเป็นไฟล์ว่าง (ลากเรียงฉาก → ลบฉากท้าย → เพิ่มฉาก = scene-03.md ถูกทับ)
 // 3. เขียน frontmatter ของไฟล์ที่เปิดอยู่ = ต้องซิงก์ `meta` ของแท็บ (`syncOpenTabMeta`)
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { buildTree, closeTab, guid, openScene, safeName, saveTab, refreshNetwork,
+import { buildTree, closeTab, guid, openScene, saveTab, refreshNetwork,
          closeTabsUnderPath, syncOpenTabMeta, moveSnapshots, flushTabForMove, activate } from './app.js';
 import { SCENE_STATUSES, dataLabel, el, log, setStatus, state, logAction } from './core.js';
 import { allStatuses } from './custom-status.js';
@@ -29,7 +29,12 @@ import { mutateJson } from './json-store.js';
 
 // [alpha.159] ย้ายไป scene-file-name.js (ai-actions ใช้ตัวเดียวกันได้โดยไม่ลาก app.js) — ส่งต่อชื่อเดิม
 export { freeSceneFileName } from './scene-file-name.js';
-import { freeSceneFileName } from './scene-file-name.js';
+import { freeSceneFileName, freeChapterFolderName } from './scene-file-name.js';
+// [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง (ไม่มีเลขกำกับ) · เปลี่ยนชื่อ = ย้ายไฟล์/โฟลเดอร์ตาม (disk-sync.js)
+import { renameSceneOnDisk, renameChapterOnDisk, sceneRenameTarget } from './disk-sync.js';
+import { nameFits } from './disk-names.js';
+import { movePathWithTabs } from './tab-bridge.js';
+const baseName = (p) => String(p || '').split(/[\\/]/).pop() || '';
 
 const rowsOf = (d, guid0) => ((d && d.chapters) || {})[guid0] || [];
 const nextOrder = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
@@ -42,34 +47,36 @@ export async function renameScene(dPath, ch, sc) {
 // ตั้งชื่อฉากโดยไม่ต้องถามผู้ใช้ — ใช้โดย "แนะนำชื่อด้วย AI" (ข้อ 78) และ renameScene
 export async function setSceneTitle(dPath, ch, sc, title) {
   if (!title || title === sc.title) return;
-  const sf = await kapi.join(dPath, 'scenes.json');
   const file = await kapi.join(dPath, 'Chapters', ch.folderName, sc.fileName);
-  // ══ [alpha.162 · W1-9] ★ เขียน frontmatter (แหล่งความจริง) ให้ผ่านก่อน แล้วค่อยแก้ดัชนี ══
-  // เดิมแก้ `scenes.json` สำเร็จไปแล้ว จากนั้น `readFile(.md)` ไม่มี try/catch — ไฟล์หาย/อ่านไม่ได้
-  // (ลบนอกโปรแกรม · ที่เก็บคลาวด์ยังไม่ดึงลงมา) = ชื่อในทะเบียนเป็นชื่อใหม่ แต่ในไฟล์เป็นชื่อเก่า
-  // **ตลอดกาล** และ `buildTree()` ท้ายฟังก์ชันไม่ถูกเรียก → หน้าจอไม่ขยับ ผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น
-  try {
-    const { meta, body } = parseMdFile(await kapi.readFile(file));
-    meta.title = title;
-    await writeMdKeepingComments(kapi, file, dumpMdFile(meta, body));   // [alpha.160 · P0-1]
-  } catch (e) {
-    log('warn', ttf('ui.scene.renameFileFail', sc.title || sc.fileName), e);
-    setStatus(ttf('ui.scene.renameFileFail', sc.title || sc.fileName));
-    return false;
+  // ══ [alpha.170] ★ ชื่อไฟล์ตามชื่อฉาก ══
+  // frontmatter → ย้ายไฟล์ (+ตารางเล่าด้วยภาพ) → scenes.json ทำในคิวของทะเบียนที่ renameSceneOnDisk ·
+  // ต้องย้ายไฟล์ = ปิดแท็บก่อนแล้วเปิดกลับที่ทางใหม่ (แท็บผูกกับทางของไฟล์) · บันทึกไม่ผ่าน = ไม่เปลี่ยนชื่อ
+  {
+    let res = null;
+    const run = async () => { res = await renameSceneOnDisk(kapi, dPath, ch, sc.id, title); return res.moved ? res.to : null; };
+    try {
+      const target = await sceneRenameTarget(kapi, dPath, ch, sc.id, title);
+      if (target) { if (!(await movePathWithTabs(file, run)).ok) return false; }
+      else await run();
+    } catch (e) { res = { ok: false, error: e }; }
+    if (!res || !res.ok) {
+      log('warn', ttf('ui.scene.renameFileFail', sc.title || sc.fileName), res && res.error);
+      setStatus(ttf('ui.scene.renameFileFail', sc.title || sc.fileName));
+      return false;
+    }
+    if (res.moved) logAction('scene', ttf('ui.names.logRenamed', baseName(res.from), baseName(res.to)), { from: res.from, to: res.to });
+    // ผู้เรียกถือ `sc` ก้อนเดิมต่อ (แผง/กล่องคุณสมบัติ) — ต้องไม่ชี้ไฟล์เก่า
+    sc.title = title; sc.fileName = res.fileName;
+    const t = state.tabs.get(res.to);
+    if (t) {
+      t.title = title;
+      // [alpha.156] ไม่งั้นบันทึกครั้งถัดไปแท็บเขียน "ชื่อเก่า" กลับลง frontmatter
+      if (t.meta) t.meta.title = title;
+      t.tabBtn.querySelector('.tab-title').textContent = (t.dirty ? gi('dot') + ' ' : '') + title;
+    }
+    await buildTree();
+    return true;
   }
-  await mutateJson(kapi, sf, (d) => {
-    let hit = false;
-    for (const s of rowsOf(d, ch.guid)) if (s.id === sc.id) { s.title = title; hit = true; }
-    return hit ? undefined : false;
-  });
-  const t = state.tabs.get(file);
-  if (t) {
-    t.title = title;
-    // [alpha.156] ไม่งั้นบันทึกครั้งถัดไปแท็บเขียน "ชื่อเก่า" กลับลง frontmatter
-    if (t.meta) t.meta.title = title;
-    t.tabBtn.querySelector('.tab-title').textContent = (t.dirty ? gi('dot') + ' ' : '') + title;
-  }
-  await buildTree();
 }
 
 export async function renameChapter(dPath, ch) {
@@ -79,13 +86,25 @@ export async function renameChapter(dPath, ch) {
 
 export async function setChapterTitle(dPath, ch, title) {
   if (!title || title === ch.title) return;
-  const df = await kapi.join(dPath, 'draft.json');
-  await mutateJson(kapi, df, (d) => {
-    let hit = false;
-    for (const c of d.chapters || []) if (c.guid === ch.guid) { c.title = title; hit = true; }
-    return hit ? undefined : false;
-  });
+  // ══ [alpha.170] ★ โฟลเดอร์บทตามชื่อบท (ไม่มีเลขกำกับ — ลำดับอยู่ใน `order` ของ draft.json) ══
+  // ย้ายโฟลเดอร์ = ทางของทุกฉากข้างในเปลี่ยน → แท็บที่เปิดอยู่ถูกบันทึก ปิด แล้วเปิดกลับที่ทางใหม่ ·
+  // ประวัติเวอร์ชันย้ายตาม (movePathWithTabs) · มีแท็บบันทึกไม่ผ่าน = ไม่เปลี่ยนชื่อ
+  const oldDir = await kapi.join(dPath, 'Chapters', ch.folderName || '');
+  let res = null;
+  const run = async () => { res = await renameChapterOnDisk(kapi, dPath, ch.guid, title); return res.moved ? res.to : null; };
+  try {
+    if (ch.folderName && !nameFits(title, ch.folderName)) { if (!(await movePathWithTabs(oldDir, run)).ok) return false; }
+    else await run();
+  } catch (e) {
+    log('warn', ttf('ui.names.renameFail', ch.title || ''), e);
+    setStatus(ttf('ui.names.renameFail', ch.title || ''));
+    return false;
+  }
+  if (!res || !res.ok) return false;
+  if (res.moved) logAction('chapter', ttf('ui.names.logRenamed', baseName(res.from), baseName(res.to)), { from: res.from, to: res.to });
+  ch.title = title; ch.folderName = res.folderName;       // ผู้เรียกถือ `ch` ก้อนเดิมต่อ — ต้องไม่ชี้โฟลเดอร์เก่า
   await buildTree();
+  return true;
 }
 
 /**
@@ -148,12 +167,18 @@ export async function chapterProps(dPath, ch) {
     ov.onclick = (e) => { if (e.target === ov) close(false); };
     box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(false); });
     okB.onclick = async () => {
+      // [alpha.170] ชื่อบทเขียนผ่าน setChapterTitle เท่านั้น (ย้ายโฟลเดอร์ให้ตรงชื่อ · แท็บ/ประวัติตามไป)
+      // เปลี่ยนชื่อไม่สำเร็จ (แท็บบันทึกไม่ผ่าน · ย้ายโฟลเดอร์ไม่ได้) = ไม่ปิดกล่อง ค่าอื่นยังไม่ถูกเขียน
+      const newTitle = iTitle.value.trim();
+      if (newTitle && newTitle !== (cur.title || '')) {
+        const live0 = { ...cur };
+        if ((await setChapterTitle(dPath, live0, newTitle)) === false) return;
+        ch.title = live0.title; ch.folderName = live0.folderName;
+      }
       // [alpha.156] เขียนลงแถว "สด" ไม่ใช่ `d` ที่อ่านตอนเปิดกล่อง (ระหว่างนั้นอาจมีบทใหม่/ย้ายลำดับ)
       const res = await mutateJson(kapi, df, (fresh) => {
         const live = (fresh.chapters || []).find((c) => c.guid === ch.guid);
         if (!live) return false;
-        const title = iTitle.value.trim();
-        if (title) live.title = title;
         live.status = iStatus.value;
         live.act = iAct.value.trim();
         live.date = iDate.value.trim();
@@ -274,11 +299,9 @@ export async function addChapter(dPath, preset) {
   await mutateJson(kapi, df, async (d) => {
     const order = nextOrder(d.chapters);
     const taken = new Set((d.chapters || []).map((c) => c.folderName));
+    // [alpha.170] โฟลเดอร์ = ชื่อบท (เดิม `03 - ชื่อ` — เลขลำดับฝังในชื่อแล้วไม่ตามเมื่อลากเรียงบทใหม่)
     // [alpha.156] โฟลเดอร์ชื่อนี้มีอยู่แล้ว (เล่มที่กู้คืน/ก๊อปมาเอง) → ต่อท้ายเลข ไม่ไปยึดโฟลเดอร์ของคนอื่น
-    let folderName = String(order).padStart(2, '0') + ' - ' + safeName(title);
-    for (let n = 2; taken.has(folderName) || await kapi.exists(await kapi.join(dPath, 'Chapters', folderName)); n++) {
-      folderName = String(order).padStart(2, '0') + ' - ' + safeName(title) + ' ' + n;
-    }
+    const folderName = await freeChapterFolderName(dPath, title, taken);
     ch = { guid: guid(), title, order, status: 'Outline', act: 'I', date: '',
            isFavorite: false, folderName };
     d.chapters = [...(d.chapters || []), ch];
@@ -306,7 +329,8 @@ export async function addScene(dPath, ch, preset, opts = {}) {
     const list = rowsOf(d, ch.guid);
     const order = nextOrder(list);
     // [alpha.156] ★ เดิม `'scene-' + order` ตรง ๆ → ชนไฟล์ของฉากที่ถูกเรียงลำดับใหม่แล้วเขียนทับเป็นไฟล์ว่าง
-    const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list.map((s) => s.fileName)));
+    // [alpha.170] ชื่อไฟล์ = ชื่อฉาก (ชน = ต่อ " 2") — ลำดับอยู่ใน `order` ที่เดียว
+    const fileName = await freeSceneFileName(dPath, ch.folderName, title, new Set(list.map((s) => s.fileName)));
     sc = { id: guid(), title, order, fileName,
            chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
     file = await kapi.join(dPath, 'Chapters', ch.folderName, fileName);
@@ -369,8 +393,8 @@ export async function duplicateScene(dPath, ch, sc) {
     if (!row) return false;
     const order = nextOrder(list);
     // [alpha.156] ★ ชื่อไฟล์ต้องว่างจริง (เดิมชนแล้วเขียนทับฉากอื่น — ต้นตอเดียวกับ addScene)
-    const fileName = await freeSceneFileName(dPath, ch.folderName, order, new Set(list.map((s) => s.fileName)));
     const newTitle = row.title + tt('ui.common.msg');
+    const fileName = await freeSceneFileName(dPath, ch.folderName, newTitle, new Set(list.map((s) => s.fileName)));
     const srcFile = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
     let meta = { title: newTitle, type: 'scene', format: 'prose', pov: '', tags: [] }, body = '';
     try { const parsed = parseMdFile(await kapi.readFile(srcFile)); meta = parsed.meta; body = parsed.body; } catch {}
@@ -428,7 +452,9 @@ export async function moveSceneToChapter(dPath, ch, sc, dstCh) {
     if (!row) return false;
     const dst = rowsOf(d, dstCh.guid);
     const order = nextOrder(dst);
-    const newFile = await freeSceneFileName(dPath, dstCh.folderName, order, new Set(dst.map((s) => s.fileName)));
+    // [alpha.170] ชื่อไฟล์ปลายทางตั้งจากชื่อฉาก (ฉากรุ่นเก่า scene-03.md ได้ชื่อจริงตอนย้าย)
+    const newFile = await freeSceneFileName(dPath, dstCh.folderName, row.title || row.fileName.replace(/\.md$/i, ''),
+                                            new Set(dst.map((s) => s.fileName)));
     const src = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
     const newPath = await kapi.join(dPath, 'Chapters', dstCh.folderName, newFile);
     // ย้ายไฟล์เนื้อหาจริงก่อน แล้วค่อยแก้ทะเบียน (ถ้าย้ายไฟล์พลาด → โยน error → ไม่เขียนทะเบียน)

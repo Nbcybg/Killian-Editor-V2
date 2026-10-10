@@ -3,6 +3,14 @@ meta.name,English
 meta.nativeName,English
 meta.version,3
 meta.author,Killian 2
+ui.a11y.keyEchoOff,Show pressed keys: off
+ui.a11y.keyEchoOn,Show pressed keys: on
+ui.a11y.lineBandOff,Cursor line highlight: off
+ui.a11y.lineBandOn,Cursor line highlight: on
+ui.a11y.msUnit,{0} s
+ui.a11y.oskFail,Could not open a system on-screen keyboard — none of the known ones is installed on this machine
+ui.a11y.oskOpened,Opened the system on-screen keyboard
+ui.a11y.oskSettings,Could not open the on-screen keyboard directly — opened the system keyboard settings instead; switch it on there
 ui.about.changelog,What's new
 ui.about.checkUpdate,Check for updates
 ui.about.credits,Credits
@@ -2359,6 +2367,10 @@ ui.central.scene, ← {0} {0|scene|scenes}:
 ui.central.sceneCantSetStatus,{0} {0|scene|scenes} have no status yet
 ui.central.stats,Statistics
 ui.central.thingMustUpdate,Needs updating
+ui.changelog.count,{0} {0|release|releases} in total
+ui.changelog.newer,Newer
+ui.changelog.older,Older
+ui.changelog.version,Version
 ui.chapters.addChapter,+ Add chapter
 ui.chapters.coverClear,Remove cover image
 ui.chapters.coverHint,Tick Use chapter cover and the cover counts as a real page both when reading the whole book and when numbering pages
@@ -2500,7 +2512,6 @@ ui.common.boardMood,Mood board
 ui.common.body,Content
 ui.common.book,Book
 ui.common.bookNotHasChapter,This book has no chapters yet
-ui.common.bookOne,Book One
 ui.common.busyEdit,Editing
 ui.common.busySearch,Searching…
 ui.common.busyWrite,Writing
@@ -2514,7 +2525,6 @@ ui.common.chapter,Chapter
 ui.common.chapter2,Chapter: 
 ui.common.chapterFilm,Screenplay
 ui.common.chapterN,Chapter {{n}}
-ui.common.chapterOne,01 - Chapter One
 ui.common.chapterOne2,Chapter One
 ui.common.character,Character
 ui.common.choice,Choice
@@ -4110,6 +4120,7 @@ ui.html.tbVisual,Visual telling — the storyboard for this scene
 ui.html.winClose,Close
 ui.html.winMax,Maximise
 ui.html.winMin,Minimise
+ui.html.winRestore,Restore down
 ui.html.zoomCtl,Zoom the page (Ctrl + mouse wheel)
 ui.html.zoomIn,Zoom in
 ui.html.zoomOut,Zoom out
@@ -4552,6 +4563,19 @@ ui.maps.zoneTip,Draw a polygon zone (area) — it sits on the bottom layer under
 ui.maps.zoneVertexTip,Drag to move the point · right-click = delete it
 ui.maps.zoomInCtrlWheel,Zoom in (mouse wheel)
 ui.maps.zoomOutCtrlWheel,Zoom out (mouse wheel)
+ui.marginPreset.a4Narrow,A4 narrow (2 cm)
+ui.marginPreset.a4Normal,A4 normal (2.5 / 3.17 cm)
+ui.marginPreset.moderate,Moderate
+ui.marginPreset.narrow,Narrow — 0.5 in all round
+ui.marginPreset.normal,Normal — 1 in all round
+ui.marginPreset.novel,Novel (manuscript submission)
+ui.marginPreset.screenplay,Screenplay (Final Draft standard)
+ui.marginPreset.wide,Wide
+ui.menu.a11y,Accessibility
+ui.menu.a11yKeyEcho,Show Pressed Keys
+ui.menu.a11yLineBand,Cursor Line Highlight
+ui.menu.a11yOsk,System On-Screen Keyboard
+ui.menu.a11ySettings,Accessibility Settings…
 ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,AI analysis (pacing · characters · repeated words)
 ui.menu.aiHubPanel,AI Hub
@@ -4776,6 +4800,29 @@ ui.menu.viewPagePaper,Page view
 ui.menu.wordSpeakLift,Block quote
 ui.menu.workY,Workspaces…
 ui.menu.zoom,Zoom
+ui.names.bookExists,"A folder named “{0}” already exists in this project — a book’s name is its folder name, so pick a different one"
+ui.names.bookNameReserved,"“{0}” is a folder name the app uses for project data (planner boards, Wiki, images…) — pick a different book name"
+ui.names.bookReserved,"The book folder “{0}” has the same name as a folder the app uses for its own data — rename this book, otherwise app data will mix with the book"
+ui.names.fixBtn,Rename files to match titles
+ui.names.fixConfirm,"Rename {0} {0|file or folder|files and folders} to match {0|its title|their titles}?
+
+Content and order stay the same · open tabs are saved and reopened under the new names"
+ui.names.fixedN,Renamed {0} to match {0|its title|their titles} · {1} failed
+ui.names.logExternal,Renamed outside the app: {0} → {1}
+ui.names.logRenamed,Renamed on disk: {0} → {1}
+ui.names.mismatchHint,"For example scene-01.md or “01 - Chapter One” from earlier versions — everything still works; chapter and scene order lives in the JSON files, not in file names"
+ui.names.mismatchN,{0} file or folder {0|name doesn’t|names don’t} match {0|its|their} title
+ui.names.renameFail,Couldn’t rename “{0}” — the file or folder may be open in another program
+ui.names.syncedN,{0} {0|item was|items were} renamed outside the app — names and the project index now match
+ui.native.dropImagesAdded,Added {0} {0|image|images} to the gallery
+ui.native.dropImagesBusy,Adding images…
+ui.native.dropImagesFailed,Couldn't add the image
+ui.native.dropImagesInserted,Inserted {0} {0|image|images} into the scene
+ui.native.dropNeedProject,"Open a project first, then drop files here"
+ui.native.dropUnsupported,"This file type can't be dropped here — drop a project folder, images, or a screenplay file (Fountain, FDX, Celtx, Adobe Story, Fade In)"
+ui.native.menubar,Menu bar
+ui.native.openGallery,Open gallery
+ui.native.taskDone,Finished: {0}
 ui.nav.clearColor,Clear colour
 ui.nav.clearFilter,Clear all filters
 ui.nav.colLoc,LINE / PAGE
@@ -5753,7 +5800,7 @@ ui.player.youWill,You will…
 ui.plug.apiCommand,Add a command to the plugin menu
 ui.plug.apiDoc,What plugins can do
 ui.plug.apiDocHint,Everything available on the k2 object
-ui.plug.apiEvents,Send and receive events between plugins
+ui.plug.apiEvents,Send and receive events — from the app (project:open · project:close · tab:activate · tab:save · plugins:loaded) and between plugins
 ui.plug.apiFetch,HTTP requests through the app
 ui.plug.apiFiles,Read and write files inside the project only
 ui.plug.apiHead,Plugin API
@@ -5767,6 +5814,7 @@ ui.plug.apiShortcut,Register a keyboard shortcut
 ui.plug.apiShowPanel,Show or hide your own panel
 ui.plug.apiText,Read the open scene / insert text at the cursor
 ui.plug.apiUi,"Status bar, prompt, confirm, alert"
+ui.plug.apiUnload,"Cleanup callback — runs when the plugin is disabled, uninstalled or reloaded"
 ui.plug.apiView,Direct access to the ProseMirror view
 ui.plug.author,Author
 ui.plug.commands,Commands added:
@@ -5805,6 +5853,8 @@ ui.plug.installOverwrite,"Folder ""{0}"" already exists — overwrite?"
 ui.plug.installWarn,Plugins run with full access to your project files — only install from sources you trust
 ui.plug.makeSample,Create sample
 ui.plug.makeSampleHint,Create a working sample plugin to start from
+ui.plug.metaHot,Can be disabled or uninstalled instantly
+ui.plug.metaRestart,Needs an app restart after disabling or uninstalling
 ui.plug.minVer,Requires at least
 ui.plug.moreTip,More plugin options
 ui.plug.needNewer,Requires version {0} or newer (currently {1})
@@ -5815,7 +5865,10 @@ ui.plug.openUserDir,User folder
 ui.plug.openUserDirHint,Plugins available in every project
 ui.plug.originUser,User
 ui.plug.reloadAll,Reload
-ui.plug.reloadAllHint,Re-read all plugin folders
+ui.plug.reloadAllHint,Re-read the plugin folders — only plugins whose files changed are run again (use after editing plugin code)
+ui.plug.restartNeed,Restart the app to finish unloading: {0}
+ui.plug.restartNow,Restart now
+ui.plug.restartNowHint,"Asks about unsaved work first, then restarts the app"
 ui.plug.sampleAsk,Name the sample plugin
 ui.plug.sampleDefault,Sample plugin
 ui.plug.sampleMade,Created {0} — try its command
@@ -6073,7 +6126,6 @@ ui.section.delBook,Delete book
 ui.section.delBookBookAll,Delete the whole book “{0}”? (every chapter/scene in it moves to the trash)
 ui.section.delBookDone,Book deleted: 
 ui.section.delCantMustLess,Cannot delete — at least 1 book must remain
-ui.section.egBookTwo,e.g. Book Two
 ui.section.nameBook,Book name
 ui.section.nameBookNew,New book name
 ui.section.notHasCover,(no cover yet)
@@ -6142,6 +6194,42 @@ ui.settings.title,Settings
 ui.settings.uiScale,Scale the whole app shell
 ui.settings.uiScaleHint,"Buttons, panels, tabs and dialogs all scale together (75–200%) — documents are not affected"
 ui.settings.writing,Editor
+ui.setTpl.a11yFind,accessibility key display keyboard high contrast colour-blind color-blind monochrome line highlight cursor typewriter sound on-screen keyboard
+ui.setTpl.a11yIntro,"Aids for low vision, colour-vision differences and losing your place while writing — switch on only what you need."
+ui.setTpl.a11yKeyEcho,Show each key press in large type
+ui.setTpl.a11yKeyEchoHint,The label sits above everything in the window · password fields are never shown
+ui.setTpl.a11yKeyEchoMode,Which keys to show
+ui.setTpl.a11yKeyEchoModeAll,Every key
+ui.setTpl.a11yKeyEchoModeSpecial,Special keys and shortcuts
+ui.setTpl.a11yKeyEchoModeTyping,Typed characters only
+ui.setTpl.a11yKeyEchoMs,Stays on screen for
+ui.setTpl.a11yKeyEchoPos,Position on screen
+ui.setTpl.a11yKeyEchoSize,Text size
+ui.setTpl.a11yKeyEchoTest,Show a sample
+ui.setTpl.a11yLineBand,Highlight the line the cursor is on
+ui.setTpl.a11yLineBandColor,Highlight colour
+ui.setTpl.a11yLineBandHint,"See at a glance which line you are on · on screen only, never printed or exported"
+ui.setTpl.a11yLineBandOpacity,Highlight strength
+ui.setTpl.a11yLineBandSample,Sample
+ui.setTpl.a11yLineBandSampleText,The line you are writing
+ui.setTpl.a11yOsk,System on-screen keyboard
+ui.setTpl.a11yOskBtn,Open on-screen keyboard
+ui.setTpl.a11yOskHint,Uses the keyboard built into Windows / macOS / Linux — it already knows your languages and layouts
+ui.setTpl.a11yPosBottom,Bottom
+ui.setTpl.a11yPosCenter,Centre
+ui.setTpl.a11yPosTop,Top
+ui.setTpl.a11ySubKeyEcho,Show pressed keys
+ui.setTpl.a11ySubLineBand,Cursor line highlight
+ui.setTpl.a11ySubOsk,On-screen keyboard
+ui.setTpl.a11ySubTypewriter,Typewriter mode
+ui.setTpl.a11ySubVision,Vision and colour
+ui.setTpl.a11yTab,Accessibility
+ui.setTpl.a11yThemeBack,Back to my theme
+ui.setTpl.a11yThemes,Vision themes
+ui.setTpl.a11yThemesHint,High contrast · colour-blind safe · monochrome — applied as soon as you click (other themes are on the General page)
+ui.setTpl.a11yTry,Preview
+ui.setTpl.a11yTypewriter,Keep the line you are typing mid-screen
+ui.setTpl.a11yTypewriterHint,"The page scrolls to you, so your eyes stay in one place · stays on the next time you open the app"
 ui.setTpl.actionLiftPageNew,Action: carry to the new page at least
 ui.setTpl.actionPageLess,Action: leave at the bottom of the page at least
 ui.setTpl.actPrint,When printing
@@ -6388,7 +6476,7 @@ ui.setTpl.wide,"Width"""
 ui.setTpl.wideCardTopPage,Width of the 4-column cards on the home page
 ui.setTpl.wideHighInch,Width × height (inches)
 ui.setTpl.wordCountPageNew,Recount pages after typing stops
-ui.setTpl.writeFontSizeCheckFind,writing font size spell check line numbers focus typewriter sound trash
+ui.setTpl.writeFontSizeCheckFind,writing font size spell check line numbers focus paper colour
 ui.shortcode.dappversion,App version number
 ui.shortcode.dauthor,Author name
 ui.shortcode.dbook,Book name
@@ -6711,6 +6799,7 @@ ui.starter.aiWriteIntro,Let AI write the synopsis
 ui.starter.aiWriteIntroShort,One paragraph only
 ui.starter.aiWriteOpener,Let the AI draft the opener
 ui.starter.aiWriteSynopsis,Let AI write the synopsis
+ui.starter.artHint,Artwork slot — drop a file with this name into the app folder
 ui.starter.autoLinkAsk,"Also create a wiki page for ""{0}""?"
 ui.starter.autoLinkGo,Create it
 ui.starter.backToList,Back to the overview
@@ -7207,14 +7296,22 @@ ui.textCase.sentenceCaseSentenceItem,Sentence case — capitalise the start of s
 ui.textCase.titleCaseStyleTitle,Title Case — like a title
 ui.textCase.uPPERCASEItemBig,UPPER CASE — all upper case
 ui.themes.claude,Terracotta (Claude Code)
+ui.themes.cvdByDark,Blue–Yellow Colour-blind (Dark) · Red/Teal
+ui.themes.cvdByLight,Blue–Yellow Colour-blind (Light) · Red/Teal
+ui.themes.cvdRgDark,Red–Green Colour-blind (Dark) · Blue/Orange
+ui.themes.cvdRgLight,Red–Green Colour-blind (Light) · Blue/Orange
 ui.themes.dva,Gamer Pink (D.Va)
 ui.themes.excel,Grid Green (Excel)
 ui.themes.flower,Flower Garden
 ui.themes.fruit,Fruit Salad
 ui.themes.gundam,Tricolor Mobile Suit (Gundam)
+ui.themes.hcDark,High Contrast (Dark)
+ui.themes.hcLight,High Contrast (Light)
 ui.themes.kimi,Moonlight (Kimi)
 ui.themes.lagoon,Sunny Lagoon
 ui.themes.macintosh,Platinum (Classic Macintosh)
+ui.themes.monoDark,Monochrome (Dark)
+ui.themes.monoLight,Monochrome (Light)
 ui.themes.neonPop,Neon Pop
 ui.themes.opencode,Terminal Peach (opencode)
 ui.themes.plumWine,Plum Wine
@@ -7289,6 +7386,7 @@ ui.timeline.viewListTip,Vertical list in time order
 ui.timeline.zoomFit,Fit to frame
 ui.timeline.zoomIn,Zoom in (Ctrl+wheel)
 ui.timeline.zoomOut,Zoom out (Ctrl+wheel)
+ui.tip.a11y-settings,"Opens the Accessibility page in Settings — vision themes, the pressed-key display, the cursor line highlight and typewriter mode."
 ui.tip.about,"Shows the app version, credits, and the licences of the components it uses."
 ui.tip.ai-analyzer,"Opens the AI analysis panel — pacing, character arcs, repeated words and more."
 ui.tip.ai-assistant,"Lets AI expand, summarise or rewrite the selected text; you decide whether to use the result."
@@ -7394,7 +7492,9 @@ ui.tip.import-scrivener,"Imports a Scrivener (.scriv) project as a Killian proje
 ui.tip.insert-image,Inserts a picture at the cursor. The file is copied into the project's Images folder for you.
 ui.tip.insert-shortcode,"Inserts a shortcode that is replaced by a real value on export — the title, chapter name or date."
 ui.tip.kanban,Opens a Kanban board of scenes by status. Drag a card to another column to change its status.
+ui.tip.key-echo,"Shows each key you press in large type on screen, for anyone who cannot easily see the keyboard. Password fields are never shown."
 ui.tip.lang-fonts,"Choose fonts by character range — one font for Thai, another for Latin — for both prose and scripts."
+ui.tip.line-band,Highlights the line the cursor is on so you can always find your place. Never printed or exported.
 ui.tip.line-numbers,Shows line numbers in the left gutter — useful when discussing or applying notes to specific lines.
 ui.tip.location,Creates a new location page in the Wiki from the location template — for the look and feel of your settings.
 ui.tip.maps,"Opens your story-world maps: pin characters and places, and nest maps from world down to city and room."
@@ -7413,6 +7513,7 @@ ui.tip.next-tab,"Switch to the next tab in tab-bar order (wraps around at the en
 ui.tip.onset-toggle,"For a ""problem scene"": switch between the original (read-only) and the revised version — colour bands and a ! in the margin mark what differs · print/export always use the revised version"
 ui.tip.open-project,Opens an existing project folder — the one containing project.khn.json.
 ui.tip.open-project-path,Opens a project from the recent projects list.
+ui.tip.osk,Opens the operating system's on-screen keyboard so you can type with a mouse or touch screen.
 ui.tip.page-guides,"Shows dashed margin guides on all four sides, so you can see where text will sit on the printed page."
 ui.tip.page-headers,"Sets the header printed on every page — title, author, or draft number."
 ui.tip.page-numbers,Shows or hides page numbers in the top-right corner of screenplay pages.
@@ -8065,6 +8166,10 @@ ui.worldAutoLink.panelTitle,Mentions
 ui.worldAutoLink.rebuild,Rebuild the index
 ui.worldAutoLink.sceneGone,That scene no longer exists
 ui.worldAutoLink.summaryN,{0} {0|entry|entries} · {1} never mentioned
+ui.worldAutoLink.viaAlias,by alias
+ui.worldAutoLink.viaLink,link
+ui.worldAutoLink.viaName,by name
+ui.worldAutoLink.viaStored,pinned
 ui.worldAutoLink.zero,never mentioned
 ui.xhub.autoKind,Detected from the source files: {0}
 ui.xhub.buildFail,Could not build the output
@@ -8097,7 +8202,7 @@ ui.xhub.fMdDesc,Plain source text any editor can open
 ui.xhub.fPdf,PDF
 ui.xhub.fPdfDesc,"True pages, embedded Thai fonts, selectable text"
 ui.xhub.fRtf,Rich Text (RTF)
-ui.xhub.fRtfDesc,Opens in Word with script margins
+ui.xhub.fRtfDesc,Opens in Word — novels keep their formatting and scripts keep their margins
 ui.xhub.fTxt,Plain text
 ui.xhub.fTxtDesc,No formatting marks at all
 ui.xhub.fWm,Watermarked PDFs

@@ -3,6 +3,14 @@ meta.name,Thai
 meta.nativeName,ไทย
 meta.version,3
 meta.author,Killian 2
+ui.a11y.keyEchoOff,แสดงปุ่มที่กด: ปิด
+ui.a11y.keyEchoOn,แสดงปุ่มที่กด: เปิด
+ui.a11y.lineBandOff,แถบสีบรรทัดเคอร์เซอร์: ปิด
+ui.a11y.lineBandOn,แถบสีบรรทัดเคอร์เซอร์: เปิด
+ui.a11y.msUnit,{0} วินาที
+ui.a11y.oskFail,เปิดแป้นพิมพ์บนจอของระบบไม่ได้ — เครื่องนี้ไม่มีโปรแกรมแป้นพิมพ์บนจอที่รู้จัก
+ui.a11y.oskOpened,เปิดแป้นพิมพ์บนจอของระบบแล้ว
+ui.a11y.oskSettings,เปิดแป้นพิมพ์บนจอตรง ๆ ไม่ได้ — เปิดหน้าตั้งค่าแป้นพิมพ์ของระบบให้แทน เปิดสวิตช์แป้นพิมพ์บนจอที่นั่น
 ui.about.changelog,มีอะไรใหม่
 ui.about.checkUpdate,ตรวจรุ่นใหม่
 ui.about.credits,เครดิต
@@ -2359,6 +2367,10 @@ ui.central.scene, ← {0} ฉาก:
 ui.central.sceneCantSetStatus,{0} ฉากยังไม่ได้ตั้งสถานะ
 ui.central.stats,สถิติ
 ui.central.thingMustUpdate,สิ่งที่ต้องอัปเดต
+ui.changelog.count,ทั้งหมด {0} รุ่น
+ui.changelog.newer,ใหม่กว่า
+ui.changelog.older,เก่ากว่า
+ui.changelog.version,รุ่น
 ui.chapters.addChapter,+ เพิ่มบท
 ui.chapters.coverClear,เอารูปปกออก
 ui.chapters.coverHint,ติ๊กช่อง ใช้หน้าปกบท แล้วหน้าปกจะถูกนับเป็นหน้าจริงทั้งตอนอ่านทั้งเล่มและตอนไล่เลขหน้า
@@ -2500,7 +2512,6 @@ ui.common.boardMood,กระดานอารมณ์
 ui.common.body,เนื้อหา
 ui.common.book,เล่ม
 ui.common.bookNotHasChapter,เล่มนี้ยังไม่มีบท
-ui.common.bookOne,เล่มหนึ่ง
 ui.common.busyEdit,กำลังแก้
 ui.common.busySearch,กำลังค้น…
 ui.common.busyWrite,กำลังเขียน
@@ -2514,7 +2525,6 @@ ui.common.chapter,บท
 ui.common.chapter2,บท: 
 ui.common.chapterFilm,บทหนัง
 ui.common.chapterN,บทที่ {{n}}
-ui.common.chapterOne,01 - บทที่หนึ่ง
 ui.common.chapterOne2,บทที่หนึ่ง
 ui.common.character,ตัวละคร
 ui.common.choice,ทางเลือก
@@ -4110,6 +4120,7 @@ ui.html.tbVisual,เล่าด้วยภาพ (Visual telling) — สต�
 ui.html.winClose,ปิดโปรแกรม
 ui.html.winMax,ขยายเต็มจอ
 ui.html.winMin,ย่อหน้าต่าง
+ui.html.winRestore,คืนขนาดหน้าต่าง
 ui.html.zoomCtl,ซูมหน้ากระดาษ (Ctrl+ล้อเมาส์)
 ui.html.zoomIn,ขยาย
 ui.html.zoomOut,ย่อ
@@ -4552,6 +4563,19 @@ ui.maps.zoneTip,วาดโซน (พื้นที่) เป็นรูป
 ui.maps.zoneVertexTip,ลากเพื่อย้ายจุด · คลิกขวา = ลบจุด
 ui.maps.zoomInCtrlWheel,ซูมเข้า (ล้อเมาส์)
 ui.maps.zoomOutCtrlWheel,ซูมออก (ล้อเมาส์)
+ui.marginPreset.a4Narrow,A4 แคบ (2 ซม.)
+ui.marginPreset.a4Normal,A4 ปกติ (2.5 / 3.17 ซม.)
+ui.marginPreset.moderate,ปานกลาง (Moderate)
+ui.marginPreset.narrow,แคบ (Narrow) — 0.5 นิ้วรอบด้าน
+ui.marginPreset.normal,ปกติ (Normal) — 1 นิ้วรอบด้าน
+ui.marginPreset.novel,นิยาย (ต้นฉบับส่งสำนักพิมพ์)
+ui.marginPreset.screenplay,บทภาพยนตร์ (Final Draft มาตรฐาน)
+ui.marginPreset.wide,กว้าง (Wide)
+ui.menu.a11y,การช่วยการเข้าถึง
+ui.menu.a11yKeyEcho,แสดงปุ่มที่กด
+ui.menu.a11yLineBand,แถบสีบรรทัดเคอร์เซอร์
+ui.menu.a11yOsk,แป้นพิมพ์บนจอของระบบ
+ui.menu.a11ySettings,ตั้งค่าการช่วยการเข้าถึง…
 ui.menu.ai,AI
 ui.menu.aIAnalyzePaceStory,AI วิเคราะห์ (จังหวะเรื่อง · ตัวละคร · คำซ้ำ)
 ui.menu.aiHubPanel,AI Hub
@@ -4776,6 +4800,29 @@ ui.menu.viewPagePaper,มุมมองหน้ากระดาษ
 ui.menu.wordSpeakLift,คำพูดยกมา
 ui.menu.workY,เวิร์กสเปซ…
 ui.menu.zoom,ซูม
+ui.names.bookExists,มีโฟลเดอร์ชื่อ “{0}” อยู่ในผลงานนี้แล้ว — ชื่อเล่มต้องตรงกับชื่อโฟลเดอร์ จึงต้องตั้งชื่ออื่น
+ui.names.bookNameReserved,“{0}” เป็นชื่อโฟลเดอร์ที่โปรแกรมใช้เก็บข้อมูลของผลงาน (เช่น กระดานวางแผน · Wiki · คลังรูป) — ตั้งชื่อเล่มเป็นชื่ออื่น
+ui.names.bookReserved,โฟลเดอร์เล่ม “{0}” ใช้ชื่อเดียวกับโฟลเดอร์ที่โปรแกรมใช้เก็บข้อมูล — เปลี่ยนชื่อเล่มนี้เป็นชื่ออื่น ไม่อย่างนั้นข้อมูลของโปรแกรมจะปนกับเล่ม
+ui.names.fixBtn,เปลี่ยนชื่อไฟล์ให้ตรงกับชื่อเรื่อง
+ui.names.fixConfirm,"เปลี่ยนชื่อไฟล์และโฟลเดอร์ {0} รายการให้ตรงกับชื่อเรื่อง?
+
+เนื้อหาและลำดับไม่เปลี่ยน · แท็บที่เปิดอยู่จะถูกบันทึกแล้วเปิดใหม่ที่ชื่อใหม่"
+ui.names.fixedN,เปลี่ยนชื่อให้ตรงกับชื่อเรื่องแล้ว {0} รายการ · ไม่สำเร็จ {1}
+ui.names.logExternal,เปลี่ยนชื่อจากนอกโปรแกรม: {0} → {1}
+ui.names.logRenamed,เปลี่ยนชื่อบนดิสก์: {0} → {1}
+ui.names.mismatchHint,เช่น scene-01.md หรือ “01 - บทที่หนึ่ง” จากรุ่นก่อน — ใช้งานได้ตามปกติ ลำดับของบทและฉากอยู่ในไฟล์ JSON ไม่ได้อยู่ในชื่อไฟล์
+ui.names.mismatchN,ชื่อไฟล์/โฟลเดอร์ยังไม่ตรงกับชื่อเรื่อง {0} รายการ
+ui.names.renameFail,เปลี่ยนชื่อ “{0}” ไม่สำเร็จ — ไฟล์หรือโฟลเดอร์อาจถูกเปิดค้างอยู่ในโปรแกรมอื่น
+ui.names.syncedN,พบการเปลี่ยนชื่อจากนอกโปรแกรม {0} รายการ — ปรับชื่อและทะเบียนให้ตรงแล้ว
+ui.native.dropImagesAdded,เพิ่ม {0} รูปเข้าคลังรูปแล้ว
+ui.native.dropImagesBusy,กำลังเพิ่มรูป…
+ui.native.dropImagesFailed,เพิ่มรูปไม่สำเร็จ
+ui.native.dropImagesInserted,แทรก {0} รูปลงในฉากแล้ว
+ui.native.dropNeedProject,เปิดโปรเจกต์ก่อน แล้วค่อยลากไฟล์มาวาง
+ui.native.dropUnsupported,"ไฟล์ชนิดนี้ลากมาวางไม่ได้ — รับโฟลเดอร์โปรเจกต์ รูปภาพ และไฟล์บทภาพยนตร์ (Fountain, FDX, Celtx, Adobe Story, Fade In)"
+ui.native.menubar,แถบเมนู
+ui.native.openGallery,เปิดคลังรูป
+ui.native.taskDone,เสร็จแล้ว: {0}
 ui.nav.clearColor,ล้างสี
 ui.nav.clearFilter,ล้างตัวกรองทั้งหมด
 ui.nav.colLoc,บรรทัด / หน้า
@@ -5753,7 +5800,7 @@ ui.player.youWill,คุณจะ…
 ui.plug.apiCommand,เพิ่มคำสั่งเข้าเมนูปลั๊กอินบนแถบเครื่องมือ
 ui.plug.apiDoc,สิ่งที่ปลั๊กอินทำได้
 ui.plug.apiDocHint,รายการคำสั่งทั้งหมดของตัวแปร k2
-ui.plug.apiEvents,รับ/ส่งเหตุการณ์ระหว่างปลั๊กอินด้วยกัน
+ui.plug.apiEvents,รับ/ส่งเหตุการณ์ — ของโปรแกรม (project:open · project:close · tab:activate · tab:save · plugins:loaded) และระหว่างปลั๊กอินด้วยกัน
 ui.plug.apiFetch,เรียก HTTP ผ่านโปรแกรม (เลี่ยงข้อจำกัด CORS)
 ui.plug.apiFiles,อ่าน-เขียนไฟล์ในขอบเขตผลงานเท่านั้น
 ui.plug.apiHead,ปลั๊กอินเรียกอะไรได้บ้าง
@@ -5767,6 +5814,7 @@ ui.plug.apiShortcut,จองคีย์ลัดของตัวเอง
 ui.plug.apiShowPanel,สั่งเปิด/ปิดแผงของปลั๊กอินตัวเอง
 ui.plug.apiText,อ่านมาร์กดาวน์ของฉากที่เปิดอยู่ / แทรกข้อความตรงเคอร์เซอร์
 ui.plug.apiUi,แถบสถานะ · กล่องถาม · กล่องยืนยัน · กล่องแจ้ง
+ui.plug.apiUnload,ตัวเก็บกวาด — ถูกเรียกเมื่อปลั๊กอินถูกปิด ถอน หรือโหลดใหม่
 ui.plug.apiView,เข้าถึงตัวแก้ไข ProseMirror ตรง ๆ (อ่าน doc หรือ dispatch เอง)
 ui.plug.author,ผู้เขียน
 ui.plug.commands,คำสั่งที่เพิ่มเข้ามา:
@@ -5805,6 +5853,8 @@ ui.plug.installOverwrite,"มีโฟลเดอร์ ""{0}"" อยู่แ
 ui.plug.installWarn,ปลั๊กอินรันโค้ดได้เต็มที่ในโปรแกรม (อ่าน-เขียนไฟล์ในผลงานได้) — ติดตั้งเฉพาะจากคนที่เชื่อถือได้
 ui.plug.makeSample,สร้างตัวอย่าง
 ui.plug.makeSampleHint,สร้างปลั๊กอินที่ทำงานได้จริงให้ดูเป็นแบบ — เปิดไฟล์ไปแก้ต่อได้เลย
+ui.plug.metaHot,ปิด/ถอนได้ทันที
+ui.plug.metaRestart,ปิด/ถอนแล้วต้องเริ่มโปรแกรมใหม่
 ui.plug.minVer,ต้องใช้รุ่นอย่างน้อย
 ui.plug.moreTip,ตัวเลือกปลั๊กอินเพิ่มเติม
 ui.plug.needNewer,ต้องใช้โปรแกรมรุ่น {0} ขึ้นไป (ตอนนี้ {1})
@@ -5815,7 +5865,10 @@ ui.plug.openUserDir,โฟลเดอร์ของผู้ใช้
 ui.plug.openUserDirHint,ปลั๊กอินที่ใช้ได้กับทุกผลงาน
 ui.plug.originUser,ผู้ใช้
 ui.plug.reloadAll,โหลดใหม่
-ui.plug.reloadAllHint,อ่านโฟลเดอร์ปลั๊กอินใหม่ทั้งหมด (ใช้หลังแก้โค้ดปลั๊กอิน)
+ui.plug.reloadAllHint,อ่านโฟลเดอร์ปลั๊กอินใหม่ — รันเฉพาะตัวที่ไฟล์เปลี่ยน (ใช้หลังแก้โค้ดปลั๊กอิน)
+ui.plug.restartNeed,ต้องเริ่มโปรแกรมใหม่เพื่อถอดปลั๊กอินออกให้หมด: {0}
+ui.plug.restartNow,เริ่มโปรแกรมใหม่
+ui.plug.restartNowHint,ถามเรื่องงานที่ยังไม่บันทึกก่อน แล้วเปิดโปรแกรมใหม่
 ui.plug.sampleAsk,ตั้งชื่อปลั๊กอินตัวอย่าง
 ui.plug.sampleDefault,ปลั๊กอินตัวอย่าง
 ui.plug.sampleMade,สร้าง {0} แล้ว — ลองกดคำสั่งของมันได้เลย
@@ -6073,7 +6126,6 @@ ui.section.delBook,ลบเล่ม
 ui.section.delBookBookAll,ลบเล่ม “{0}” ทั้งเล่ม ? (ทุกบท/ฉากในเล่มจะย้ายไปถังขยะ)
 ui.section.delBookDone,ลบเล่มแล้ว: 
 ui.section.delCantMustLess,ลบไม่ได้ — ต้องเหลืออย่างน้อย 1 เล่ม
-ui.section.egBookTwo,เช่น เล่มสอง
 ui.section.nameBook,ชื่อเล่ม
 ui.section.nameBookNew,ชื่อเล่มใหม่
 ui.section.notHasCover,(ยังไม่มีปก)
@@ -6142,6 +6194,42 @@ ui.settings.title,ตั้งค่า
 ui.settings.uiScale,ย่อ/ขยายทั้งเปลือกโปรแกรม
 ui.settings.uiScaleHint,ปุ่ม แผง แท็บ และกล่อง ขยายตามทั้งหมด (75–200%) — ไม่แตะขนาดเอกสาร
 ui.settings.writing,ตัวแก้ไข
+ui.setTpl.a11yFind,การช่วยการเข้าถึง accessibility แสดงปุ่มที่กด แป้นพิมพ์ คอนทราสต์สูง ตาบอดสี ขาวดำ แถบบรรทัด เคอร์เซอร์ พิมพ์ดีด เสียงพิมพ์ดีด แป้นพิมพ์บนจอ
+ui.setTpl.a11yIntro,ตัวช่วยสำหรับผู้ที่มองเห็นลำบาก แยกสีได้ยาก หรือหาตำแหน่งที่กำลังเขียนไม่เจอ — เปิดเฉพาะที่ต้องใช้
+ui.setTpl.a11yKeyEcho,แสดงปุ่มที่กดเป็นตัวใหญ่บนจอ
+ui.setTpl.a11yKeyEchoHint,ป้ายอยู่ชั้นบนสุดของหน้าต่าง · ช่องรหัสผ่านไม่ถูกแสดง
+ui.setTpl.a11yKeyEchoMode,แสดงปุ่มไหนบ้าง
+ui.setTpl.a11yKeyEchoModeAll,ทุกปุ่ม
+ui.setTpl.a11yKeyEchoModeSpecial,เฉพาะปุ่มพิเศษและคีย์ลัด
+ui.setTpl.a11yKeyEchoModeTyping,เฉพาะตัวอักษรที่พิมพ์
+ui.setTpl.a11yKeyEchoMs,ค้างบนจอนาน
+ui.setTpl.a11yKeyEchoPos,ตำแหน่งบนจอ
+ui.setTpl.a11yKeyEchoSize,ขนาดตัวอักษร
+ui.setTpl.a11yKeyEchoTest,แสดงตัวอย่าง
+ui.setTpl.a11yLineBand,ระบายแถบสีที่บรรทัดของเคอร์เซอร์
+ui.setTpl.a11yLineBandColor,สีของแถบ
+ui.setTpl.a11yLineBandHint,เห็นทันทีว่ากำลังเขียนอยู่บรรทัดไหน · อยู่บนจอเท่านั้น ไม่ติดไปกับงานพิมพ์หรือไฟล์ส่งออก
+ui.setTpl.a11yLineBandOpacity,ความเข้มของแถบ
+ui.setTpl.a11yLineBandSample,ตัวอย่าง
+ui.setTpl.a11yLineBandSampleText,บรรทัดที่กำลังเขียนอยู่
+ui.setTpl.a11yOsk,แป้นพิมพ์บนจอของระบบ
+ui.setTpl.a11yOskBtn,เปิดแป้นพิมพ์บนจอ
+ui.setTpl.a11yOskHint,ใช้แป้นของ Windows / macOS / Linux เอง — รู้จักภาษาและเลย์เอาต์ที่ตั้งไว้ในเครื่องอยู่แล้ว
+ui.setTpl.a11yPosBottom,ด้านล่าง
+ui.setTpl.a11yPosCenter,กลางจอ
+ui.setTpl.a11yPosTop,ด้านบน
+ui.setTpl.a11ySubKeyEcho,แสดงปุ่มที่กด
+ui.setTpl.a11ySubLineBand,แถบสีบรรทัดเคอร์เซอร์
+ui.setTpl.a11ySubOsk,แป้นพิมพ์บนจอ
+ui.setTpl.a11ySubTypewriter,โหมดเครื่องพิมพ์ดีด
+ui.setTpl.a11ySubVision,การมองเห็นและสี
+ui.setTpl.a11yTab,การช่วยการเข้าถึง
+ui.setTpl.a11yThemeBack,กลับไปธีมเดิม
+ui.setTpl.a11yThemes,ธีมช่วยการมองเห็น
+ui.setTpl.a11yThemesHint,คอนทราสต์สูง · สำหรับตาบอดสี · ขาวดำล้วน — กดแล้วเห็นผลทันที (ธีมอื่นเลือกที่หน้า ทั่วไป)
+ui.setTpl.a11yTry,ลองดู
+ui.setTpl.a11yTypewriter,ตรึงบรรทัดที่กำลังพิมพ์ไว้กลางจอ
+ui.setTpl.a11yTypewriterHint,หน้ากระดาษเลื่อนมาหาเอง สายตาอยู่ที่เดิม · เปิดค้างไว้ข้ามการเปิดโปรแกรมครั้งถัดไป
 ui.setTpl.actionLiftPageNew,บรรยาย: ยกไปหน้าใหม่อย่างน้อย
 ui.setTpl.actionPageLess,บรรยาย: เหลือท้ายหน้าอย่างน้อย
 ui.setTpl.actPrint,ตอนพิมพ์
@@ -6388,7 +6476,7 @@ ui.setTpl.wide,"กว้าง"""
 ui.setTpl.wideCardTopPage,ความกว้างการ์ด 4 คอลัมน์บนหน้าแรก
 ui.setTpl.wideHighInch,กว้าง × สูง (นิ้ว)
 ui.setTpl.wordCountPageNew,คำนวณจำนวนหน้าใหม่หลังหยุดพิมพ์
-ui.setTpl.writeFontSizeCheckFind,การเขียน ฟอนต์ ขนาด ตรวจคำผิด เลขบรรทัด โฟกัส เสียงพิมพ์ดีด ถังขยะ
+ui.setTpl.writeFontSizeCheckFind,การเขียน ฟอนต์ ขนาด ตรวจคำผิด เลขบรรทัด โฟกัส สีกระดาษ
 ui.shortcode.dappversion,เวอร์ชันของโปรแกรม
 ui.shortcode.dauthor,ชื่อผู้เขียน
 ui.shortcode.dbook,ชื่อเล่ม
@@ -6711,6 +6799,7 @@ ui.starter.aiWriteIntro,ให้ AI เขียนเรื่องย่อ�
 ui.starter.aiWriteIntroShort,เอาแบบย่อหน้าเดียว
 ui.starter.aiWriteOpener,ให้ AI ร่างบทเปิด
 ui.starter.aiWriteSynopsis,ให้ AI เขียนเรื่องย่อให้
+ui.starter.artHint,ช่องใส่ภาพประกอบ — วางไฟล์ชื่อนี้ในโฟลเดอร์ของโปรแกรม
 ui.starter.autoLinkAsk,"สร้างหน้า Wiki ให้ ""{0}"" ด้วยไหม"
 ui.starter.autoLinkGo,สร้างให้
 ui.starter.backToList,กลับหน้ารวม
@@ -7207,14 +7296,22 @@ ui.textCase.sentenceCaseSentenceItem,Sentence case — ขึ้นต้นป�
 ui.textCase.titleCaseStyleTitle,Title Case — แบบชื่อเรื่อง
 ui.textCase.uPPERCASEItemBig,UPPER CASE — ตัวใหญ่ทั้งหมด
 ui.themes.claude,ดินเผา (แบบ Claude Code)
+ui.themes.cvdByDark,ตาบอดสีน้ำเงิน–เหลือง (มืด) · แดง/เขียวน้ำทะเล
+ui.themes.cvdByLight,ตาบอดสีน้ำเงิน–เหลือง (สว่าง) · แดง/เขียวน้ำทะเล
+ui.themes.cvdRgDark,ตาบอดสีแดง–เขียว (มืด) · ฟ้า/ส้ม
+ui.themes.cvdRgLight,ตาบอดสีแดง–เขียว (สว่าง) · น้ำเงิน/ส้ม
 ui.themes.dva,เกมเมอร์ชมพู (แบบ D.Va)
 ui.themes.excel,ตารางเขียว (แบบ Excel)
 ui.themes.flower,สวนดอกไม้
 ui.themes.fruit,สลัดผลไม้
 ui.themes.gundam,โมบิลสูทไตรรงค์ (แบบกันดั้ม)
+ui.themes.hcDark,คอนทราสต์สูง (มืด)
+ui.themes.hcLight,คอนทราสต์สูง (สว่าง)
 ui.themes.kimi,จันทร์เงา (แบบ Kimi)
 ui.themes.lagoon,ลากูนแดดจ้า
 ui.themes.macintosh,แพลทินัม (แบบ Macintosh คลาสสิก)
+ui.themes.monoDark,ขาวดำล้วน (มืด)
+ui.themes.monoLight,ขาวดำล้วน (สว่าง)
 ui.themes.neonPop,นีออนป๊อป
 ui.themes.opencode,เทอร์มินัลพีช (แบบ opencode)
 ui.themes.plumWine,ไวน์พลัม
@@ -7289,6 +7386,7 @@ ui.timeline.viewListTip,รายการแนวตั้งเรียง�
 ui.timeline.zoomFit,พอดีกับกรอบ
 ui.timeline.zoomIn,ขยาย (Ctrl+ล้อ)
 ui.timeline.zoomOut,ย่อ (Ctrl+ล้อ)
+ui.tip.a11y-settings,เปิดหน้าการช่วยการเข้าถึงในกล่องตั้งค่า รวมธีมช่วยการมองเห็น ตัวแสดงปุ่มที่กด แถบสีบรรทัดเคอร์เซอร์ และโหมดเครื่องพิมพ์ดีด
 ui.tip.about,ดูรุ่นของโปรแกรม เครดิต และสัญญาอนุญาตของส่วนประกอบที่ใช้
 ui.tip.ai-analyzer,เปิดแผงวิเคราะห์ต้นฉบับด้วย AI เช่น จังหวะเรื่อง เส้นโค้งตัวละคร และคำที่ใช้ซ้ำ
 ui.tip.ai-assistant,ให้ AI ช่วยขยาย สรุป หรือเขียนใหม่ข้อความที่เลือก แล้วเลือกเองว่าจะใช้ผลลัพธ์ไหม
@@ -7394,7 +7492,9 @@ ui.tip.import-scrivener,นำเข้าโปรเจกต์จาก Scri
 ui.tip.insert-image,แทรกรูปลงในเนื้อฉากตรงตำแหน่งเคอร์เซอร์ รูปถูกคัดลอกเข้าโฟลเดอร์ Images ของโปรเจกต์ให้เอง
 ui.tip.insert-shortcode,แทรกโค้ดสั้นที่จะถูกแทนด้วยค่าจริงตอนส่งออก เช่น ชื่อเรื่อง ชื่อบท หรือวันที่
 ui.tip.kanban,เปิดกระดาน Kanban ที่เรียงฉากตามสถานะ ลากการ์ดข้ามคอลัมน์เพื่อเปลี่ยนสถานะได้ทันที
+ui.tip.key-echo,แสดงปุ่มที่เพิ่งกดเป็นตัวอักษรขนาดใหญ่บนจอ สำหรับผู้ที่มองแป้นพิมพ์ไม่ถนัด ช่องรหัสผ่านไม่ถูกแสดง
 ui.tip.lang-fonts,ตั้งฟอนต์แยกตามช่วงอักขระ เช่น ไทยใช้ฟอนต์หนึ่ง ละตินใช้อีกฟอนต์ ใช้ได้ทั้งนิยายและบท
+ui.tip.line-band,ระบายแถบสีที่บรรทัดของเคอร์เซอร์ ให้เห็นทันทีว่ากำลังเขียนอยู่ตรงไหน ไม่ติดไปกับงานพิมพ์หรือไฟล์ส่งออก
 ui.tip.line-numbers,แสดงเลขบรรทัดที่รางซ้ายของพื้นที่เขียน ช่วยอ้างอิงตำแหน่งเวลาคุยงานหรือแก้ตามโน้ต
 ui.tip.location,สร้างหน้าสถานที่ใหม่ใน Wiki จากเทมเพลตของหมวดสถานที่ ไว้จดบรรยากาศและรายละเอียดของฉากหลัง
 ui.tip.maps,เปิดแผนที่ของโลกในเรื่อง ปักหมุดตัวละครและสถานที่ ซ้อนแผนที่จากระดับโลกลงถึงเมืองและห้อง
@@ -7413,6 +7513,7 @@ ui.tip.next-tab,สลับไปแท็บถัดไปตามลำด�
 ui.tip.onset-toggle,"ฉากที่ตั้งเป็น ""ฉากมีปัญหา"": สลับดูฉบับเดิม (อ่านอย่างเดียว) กับฉบับแก้ไข — แถบสี + ! หน้าบรรทัดบอกจุดที่ต่าง · พิมพ์/ส่งออกใช้ฉบับแก้ไขเสมอ"
 ui.tip.open-project,เปิดโฟลเดอร์โปรเจกต์ที่มีอยู่ (โฟลเดอร์ที่มีไฟล์ project.khn.json)
 ui.tip.open-project-path,เปิดโปรเจกต์จากรายการโปรเจกต์ล่าสุด
+ui.tip.osk,เปิดแป้นพิมพ์บนจอของระบบปฏิบัติการ ใช้เมาส์หรือจอสัมผัสพิมพ์แทนแป้นจริง
 ui.tip.page-guides,แสดงเส้นประบอกระยะขอบกระดาษทั้งสี่ด้าน ช่วยดูว่าข้อความจะอยู่ตรงไหนบนหน้าจริง
 ui.tip.page-headers,ตั้งหัวกระดาษที่พิมพ์ทุกหน้า เช่น ชื่อเรื่อง ชื่อผู้เขียน หรือเลขฉบับร่าง
 ui.tip.page-numbers,แสดงหรือซ่อนเลขหน้ามุมขวาบนของกระดาษในบทภาพยนตร์
@@ -8065,6 +8166,10 @@ ui.worldAutoLink.panelTitle,ฉากที่กล่าวถึง
 ui.worldAutoLink.rebuild,สร้างดัชนีใหม่
 ui.worldAutoLink.sceneGone,ไม่พบฉากนี้แล้ว
 ui.worldAutoLink.summaryN,{0} รายการ · ยังไม่ถูกเอ่ยถึง {1}
+ui.worldAutoLink.viaAlias,ชื่ออื่น
+ui.worldAutoLink.viaLink,ลิงก์
+ui.worldAutoLink.viaName,เอ่ยชื่อ
+ui.worldAutoLink.viaStored,ผูกไว้เอง
 ui.worldAutoLink.zero,ยังไม่ถูกเอ่ยถึง
 ui.xhub.autoKind,ตามไฟล์ต้นทาง → ตัดสินได้เป็น: {0}
 ui.xhub.buildFail,สร้างผลลัพธ์ไม่สำเร็จ
@@ -8097,7 +8202,7 @@ ui.xhub.fMdDesc,ต้นฉบับข้อความ เปิดแก้
 ui.xhub.fPdf,PDF
 ui.xhub.fPdfDesc,หน้ากระดาษจริง ฝังฟอนต์ไทย คัดลอกข้อความได้
 ui.xhub.fRtf,Rich Text (RTF)
-ui.xhub.fRtfDesc,เปิดใน Word ได้ พร้อมระยะขอบของบท
+ui.xhub.fRtfDesc,เปิดใน Word ได้ · นิยายคงตัวหนา/เอียง/หัวข้อ · บทคงระยะเยื้อง
 ui.xhub.fTxt,ข้อความล้วน
 ui.xhub.fTxtDesc,ไม่มีสัญลักษณ์จัดรูปแบบใด ๆ
 ui.xhub.fWm,PDF ลายน้ำรายคน

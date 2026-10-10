@@ -1,0 +1,45 @@
+/* renderer/themes/cvd-by-dark.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-cvd-by-dark {
+  --theme-red:#ff5d6c;
+  --theme-teal:#2ec4b6;
+  --theme-white:#f4f4f4;
+  --bg:#161417;
+  --side:#100e11;
+  --bar:#211d22;
+  --border:#4a424c;
+  --fg:#f4f2f4;
+  --bright:#fbfafb;
+  --dim:#a09ea1;
+  --accent:#ff5d6c;
+  --accent-hi:#2ec4b6;
+  --accent-ink:#2ec4b6;
+  --link:#2ec4b6;
+  --sel:#5a2630;
+  --orange:#2ec4b6;
+  --curline:#1f1d20;
+  --hover:#333134;
+  --hover-soft:#232124;
+  --titlebar:#0f0e10;
+  --sunken:#121013;
+  --chip:#50262c;
+  --danger-soft:#5a2b30;
+  --canvas:#121013;
+  --void:#0f0e10;
+  --paper-surround:#0f0e10;
+  --tab-bar:#0f0e10;
+  --tab-bg:#2c2a2d;
+  --tab-border:#474548;
+  --tab-fg:#a09ea1;
+  --tab-fg-on:#faf9fa;
+  --tab-hover:#232124;
+  --panel-head:#141215;
+  --input-bg:#110f11;
+  --muted-strong:#cccacc;
+  --find-hit:#23756e;
+  --on-accent:#1a1426;
+  --on-accent-hi:#1a1426;
+  --st-warn:#f4f2f4;
+  --st-danger:#ff5d6c;
+  --st-danger-alt:#ff8792;
+}

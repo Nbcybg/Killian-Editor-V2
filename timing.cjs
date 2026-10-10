@@ -19,10 +19,14 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/timing.js
 var timing_exports = {};
 __export(timing_exports, {
+  ATTENTION_MIN_MS: () => ATTENTION_MIN_MS,
+  OSK_SPAWN_WAIT_MS: () => OSK_SPAWN_WAIT_MS,
   RETRY_BASE_MS: () => RETRY_BASE_MS,
   RETRY_MAX_MS: () => RETRY_MAX_MS,
   SCRATCH_SAVE_DELAY_MS: () => SCRATCH_SAVE_DELAY_MS,
   SPLASH_MAX_MS: () => SPLASH_MAX_MS,
+  TIP_DELAY_MS: () => TIP_DELAY_MS,
+  TIP_WARM_MS: () => TIP_WARM_MS,
   UPDATE_FETCH_TIMEOUT_MS: () => UPDATE_FETCH_TIMEOUT_MS,
   retryBackoff: () => retryBackoff
 });
@@ -32,16 +36,24 @@ var UPDATE_FETCH_TIMEOUT_MS = 2e4;
 var SCRATCH_SAVE_DELAY_MS = 3e3;
 var RETRY_BASE_MS = 500;
 var RETRY_MAX_MS = 8e3;
+var ATTENTION_MIN_MS = 8e3;
+var TIP_DELAY_MS = 450;
+var TIP_WARM_MS = 600;
+var OSK_SPAWN_WAIT_MS = 700;
 function retryBackoff(n) {
   const k = Number.isFinite(+n) && +n > 0 ? Math.floor(+n) : 0;
   return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  ATTENTION_MIN_MS,
+  OSK_SPAWN_WAIT_MS,
   RETRY_BASE_MS,
   RETRY_MAX_MS,
   SCRATCH_SAVE_DELAY_MS,
   SPLASH_MAX_MS,
+  TIP_DELAY_MS,
+  TIP_WARM_MS,
   UPDATE_FETCH_TIMEOUT_MS,
   retryBackoff
 });

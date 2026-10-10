@@ -7,7 +7,7 @@ import { errText } from './err-text.js';   // [alpha.162 · W5] ข้อคว�
 import { t, tf } from './i18n.js';
 import { SECTION_STATUSES, buildTree, openCompileDialog, openFirstSceneOf, resolveImg } from './app.js';
 import { showPanel, isPanelOpen } from './panels/panel-ui.js';
-import { addSection, deleteSection, listSections, reorderSections, saveSectionMeta, sectionStats } from './section-ops.js';
+import { addSection, deleteSection, listSections, reorderSections, saveSectionMeta, sectionStats, setSectionTitle } from './section-ops.js';
 import { $, el, setStatus, setStatusError, state } from './core.js';
 import { pickImage } from './gallery.js';
 import { popupMenu, ask } from './ui.js';
@@ -181,8 +181,11 @@ async function buildBookDetail(detail, it, items, redraw) {
   titleInp.title = t('ui.lib.renameTip');
   titleInp.onchange = async () => {
     const v = titleInp.value.trim(); if (!v || v === s.title) { titleInp.value = s.title; return; }
-    s.meta = await saveSectionMeta(s.sf, { title: v }); s.title = v;
-    await buildTree(); setStatus(t('ui.books.changeNameBookDone')); redraw();
+    // [alpha.170] ชื่อเล่ม = ชื่อโฟลเดอร์ → ทางของเล่มเปลี่ยน · วาดหน้านี้ใหม่จากดิสก์ (การ์ดทุกใบถือทางเก่า)
+    const to = await setSectionTitle(s.secPath, v);
+    if (!to) { titleInp.value = s.title; return; }
+    setStatus(t('ui.books.changeNameBookDone'));
+    await refreshBooksIfOpen();
   };
   detail.append(titleInp);
   const blurb = el('textarea', 'book-blurb lib-blurb'); blurb.placeholder = t('ui.books.wordSynopsisBook');

@@ -5,7 +5,8 @@
 import { tx, txf } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf, shortcutText } from './i18n.js';
 import { splitSpeech, KIND_SPEECH } from './speech-split.js';
-import { gi } from './icons.js';                  // [alpha.162 · W5] ไอคอนปิดของ toast
+import { gi, icon } from './icons.js';
+import { escCancelDrag } from './drag-cancel.js';   // [alpha.169 · native] ลากย้ายกล่อง — Esc คืนตำแหน่งเดิม                  // [alpha.162 · W5] ไอคอนปิดของ toast
 /**
  * [alpha.124 ข้อ 15] ★ Esc ปิดกล่อง — ตัวช่วยกลางตัวเดียวของทั้งโปรแกรม
  *
@@ -109,12 +110,102 @@ export function upgradeDialog(ov) {
     ok.click();
   });
 
-  escClose(ov, () => {
+  const leave = () => {
     const c = box.querySelector('.k-cancel:not([disabled])');
-    if (c) { c.click(); return; }
-    if (typeof ov.onclick === 'function') ov.click();   // = คลิกฉากหลัง ทางถอยที่กล่องประกาศไว้เอง
-  });
+    if (c) { c.click(); return true; }
+    if (typeof ov.onclick === 'function') { ov.click(); return true; }   // = คลิกฉากหลัง ทางถอยที่กล่องประกาศไว้เอง
+    return false;
+  };
+  escClose(ov, leave);
+  // [alpha.169 · native] กล่องของโปรแกรมจริงลากย้ายได้ และมีปุ่มปิดที่มุม (ทางออกเดียวกับ Esc — ไม่มีทางถอย = ไม่มีปุ่ม)
+  makeDialogMovable(ov, box);
+  addDialogCloseX(ov, box, leave);
   return true;
+}
+
+/**
+ * ══ [alpha.169 · native] ลากหัวกล่อง (`.k-dlg-title`) = ย้ายกล่อง ══
+ * เดิมกล่องทุกใบตรึงกลางจอ — บังของข้างหลังที่ผู้ใช้อยากดูระหว่างกรอก (ชื่อฉาก · ข้อความในเอกสาร) แล้วขยับไม่ได้
+ * และการลากหัวกล่องกลายเป็น "ลากเลือกข้อความ" ทั้งกล่อง (ท่าของหน้าเว็บ)
+ *   · ย้ายด้วย `translate` (คนละคุณสมบัติกับ transform ของอนิเมชันเปิดกล่อง) · หัวกล่องต้องเหลือในจออย่างน้อย 48px
+ *   · ดับเบิลคลิกหัวกล่อง = กลับกลางจอ · Esc ระหว่างลาก = คืนตำแหน่งก่อนลาก (ไม่ปิดกล่อง)
+ * ผูกแบบมอบหมายที่ตัวกล่อง — กล่องที่เติมเนื้อ (และหัว) ทีหลังก็ลากได้
+ */
+export function dialogOffset(box) {
+  const m = /^(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/.exec(box.style.translate || '');
+  return m ? { x: +m[1] || 0, y: +m[2] || 0 } : { x: 0, y: 0 };
+}
+/** หนีบระยะย้ายให้หัวกล่องยังอยู่ในจอ (บริสุทธิ์ — unit เรียกตรง) · base = กรอบของกล่องตอนยังไม่ย้าย */
+export function clampDialogOffset(off, base, vw, vh, keep = 48) {
+  const x = Math.max(keep - (base.left + base.width), Math.min(vw - keep - base.left, off.x));
+  const y = Math.max(-base.top, Math.min(vh - keep - base.top, off.y));
+  return { x: Math.round(x), y: Math.round(y) };
+}
+function makeDialogMovable(ov, box) {
+  const setOff = (o) => { box.style.translate = (o.x || o.y) ? o.x + 'px ' + o.y + 'px' : ''; placeDialogX(ov, box); };
+  box.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    const ttl = e.target.closest && e.target.closest('.k-dlg-title');
+    if (!ttl || !box.contains(ttl) || ttl.closest('.k-dialog, [role="dialog"]') !== box) return;
+    if (e.target.closest('button, input, select, textarea, a, [contenteditable="true"], .k-dlg-nodrag')) return;
+    e.preventDefault();                              // ไม่เริ่มลากเลือกข้อความ
+    const start = dialogOffset(box);
+    const r = box.getBoundingClientRect();
+    const base = { left: r.left - start.x, top: r.top - start.y, width: r.width };
+    const x0 = e.clientX, y0 = e.clientY;
+    let moved = false;
+    const move = (ev) => {
+      if (!moved && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 3) return;
+      moved = true;
+      box.classList.add('k-dlg-moving');
+      setOff(clampDialogOffset({ x: start.x + ev.clientX - x0, y: start.y + ev.clientY - y0 }, base, window.innerWidth, window.innerHeight));
+    };
+    const stop = () => {
+      document.removeEventListener('mousemove', move, true);
+      document.removeEventListener('mouseup', up, true);
+      box.classList.remove('k-dlg-moving');
+    };
+    const up = () => { stop(); offEsc(); };
+    const offEsc = escCancelDrag(() => { stop(); setOff(start); });
+    document.addEventListener('mousemove', move, true);
+    document.addEventListener('mouseup', up, true);
+  });
+  box.addEventListener('dblclick', (e) => {
+    const ttl = e.target.closest && e.target.closest('.k-dlg-title');
+    if (!ttl || !box.contains(ttl) || e.target.closest('button, input, select, textarea, a')) return;
+    setOff({ x: 0, y: 0 });
+  });
+}
+/** ปุ่ม × ของกล่อง — อยู่ใน "ฉากหลัง" (ไม่ใช่ในตัวกล่อง: กล่องเลื่อนเนื้อเองได้ และโค้ด/เทสเดิมนับลูกของกล่อง) วางทับมุมขวาบนของกล่อง */
+function placeDialogX(ov, box) {
+  const x = ov.querySelector(':scope > .k-dlg-x');
+  if (!x) return;
+  const r = box.getBoundingClientRect();
+  x.style.left = Math.round(r.right - 34) + 'px';
+  x.style.top = Math.round(r.top + 8) + 'px';
+}
+function addDialogCloseX(ov, box, leave) {
+  // รอหนึ่งเฟรม — กล่องส่วนใหญ่ประกอบปุ่ม/ผูก ov.onclick หลัง append · ตอนนั้นถึงรู้ว่ากล่องนี้ "มีทางออก" ไหม
+  requestAnimationFrame(() => {
+    if (!ov.isConnected || ov.querySelector(':scope > .k-dlg-x')) return;
+    const hasExit = !!box.querySelector('.k-cancel:not([disabled])') || typeof ov.onclick === 'function';
+    // กล่องที่มีปุ่มปิดของตัวเองที่มุมอยู่แล้ว (หน้าแรก · เกี่ยวกับ) ไม่ต้องมีสองปุ่ม
+    const own = box.querySelector('[class*="close-btn"], [class*="btn-close"], [class*="-close"]');
+    if (!hasExit || own) return;
+    const x = document.createElement('span');
+    x.className = 'k-dlg-x';
+    x.setAttribute('role', 'button');
+    x.setAttribute('aria-label', tt('ui.common.close'));
+    x.title = tt('ui.common.close');
+    x.append(icon('x', 14));
+    x.onclick = (e) => { e.stopPropagation(); leave(); };
+    ov.append(x);
+    box.classList.add('k-dlg-has-x');
+    placeDialogX(ov, box);
+    try { new ResizeObserver(() => placeDialogX(ov, box)).observe(box); } catch {}
+    const onWin = () => { if (ov.isConnected) placeDialogX(ov, box); else window.removeEventListener('resize', onWin); };
+    window.addEventListener('resize', onWin);
+  });
 }
 
 /**

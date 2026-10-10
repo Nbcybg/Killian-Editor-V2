@@ -7,6 +7,8 @@ import { parseScript, SP_ELEMS, classify, splitCharacter,
 import { el } from './core.js';
 import { confirmBox, escClose } from './ui.js';
 import JSZip from 'jszip';
+import { fountainToK2 } from './import-fountain.js';   // [alpha.169 · bug hunt] Fountain มาตรฐาน → ไวยากรณ์ของโปรแกรม
+import { countWords } from './md.js';
 import { gi } from './icons.js';
 import { errText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 
@@ -38,7 +40,8 @@ export const SP_IMPORTERS = {
  */
 export async function importScreenplayDialog(injectFn, opts = {}) {
   // ใช้ kapi.openScreenplayFile() — เปิด dialog พร้อมฟิลเตอร์ทุกฟอร์แมตบท
-  const filePath = await kapi.openScreenplayFile();
+  // [alpha.169 · native] opts.filePath = ไฟล์ที่ลากมาจากนอกโปรแกรม (ข้ามกล่องเลือกไฟล์)
+  const filePath = opts.filePath || await kapi.openScreenplayFile();
   if (!filePath) return null;
 
   const result = await importScreenplay(filePath, null);
@@ -134,7 +137,7 @@ export async function importScreenplay(filePath, format) {
   }
 
   try {
-    const elements = await importer.parse(content);
+    const elements = await importer.parse(content, { filePath });
     const titlePage = (elements && elements.titlePage) || {};
     return { ok: true, elements, format, importer: importer.name, titlePage,
              title: String(titlePage.title || '').replace(/[_*]/g, '').trim() };
@@ -371,10 +374,14 @@ function parseFadeIn(jsonStr) {
 
 // ===================== [66] Fountain =====================
 // ใช้ parseScript ที่มีอยู่แล้วใน fountain.js — round-trip การันตีโดย lineFor+classify
-function parseFountainFromText(text) {
+function parseFountainFromText(text, opts = {}) {
   // หน้าปกของ Fountain (`Title:` `Author:` … ต้นไฟล์) ไม่ใช่เนื้อบท — เดิมหลุดเข้าไปเป็น "บรรยาย" บรรทัดแรก
   const tp = splitFountainTitlePage(text);
-  const els = parseScript(tp.body);
+  // [alpha.169 · bug hunt] ของที่ Fountain มาตรฐานเขียนต่างจากที่นี่ (โน้ต · boneyard · กึ่งกลาง · เนื้อเพลง ·
+  // ขึ้นหน้าใหม่ · บทพูดคู่) แปลงก่อนเข้า parseScript · `[[…]]` = โน้ต เฉพาะไฟล์ .fountain
+  // (.txt อาจเป็นบทที่เขียนในโปรแกรมนี้ ซึ่ง `[[ชื่อ]]` คือลิงก์เอนทิตี้จริง)
+  const isFountainFile = /\.fountain$/i.test(String((opts && opts.filePath) || ''));
+  const els = parseScript(fountainToK2(tp.body, { notes: isFountainFile }));
   els.titlePage = tp.fields;
   return els;
 }
@@ -427,7 +434,9 @@ export function importSummary(elements) {
       const { name } = splitCharacter(text);
       if (name) chars.add(name);
     }
-    if (text) words += text.split(/[\s\u00A0]+/).filter(Boolean).length;
+    // [alpha.169 \u00B7 bug hunt] \u0E19\u0E31\u0E1A\u0E14\u0E49\u0E27\u0E22\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E04\u0E33\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u2014 \u0E40\u0E14\u0E34\u0E21\u0E19\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07 \u0E0B\u0E36\u0E48\u0E07\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22\u0E44\u0E21\u0E48\u0E21\u0E35
+    // (\u0E1A\u0E23\u0E23\u0E22\u0E32\u0E22\u0E44\u0E17\u0E22\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 = 1 \u0E04\u0E33 \u2192 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1E\u0E23\u0E35\u0E27\u0E34\u0E27\u0E15\u0E48\u0E33\u0E01\u0E27\u0E48\u0E32\u0E08\u0E23\u0E34\u0E07\u0E2B\u0E25\u0E32\u0E22\u0E40\u0E17\u0E48\u0E32)
+    if (text) words += countWords(String(text));
   }
 
   return {

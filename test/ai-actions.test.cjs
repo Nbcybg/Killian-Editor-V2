@@ -143,6 +143,11 @@ seed();
     ck('ชื่อใหม่ลง draft.json', d2.chapters[0].title === 'บทเปิดเรื่อง', JSON.stringify(d2.chapters[0]));
     ck('★ guid ต้องไม่เปลี่ยนตอนเปลี่ยนชื่อ (ไม่งั้นฉากทั้งบทกำพร้า)',
        d2.chapters[0].guid === d.chapters[0].guid);
+    // [alpha.170] ชื่อบนดิสก์ = ชื่อบท (ไม่มีเลขนำ) และตามไปเมื่อเปลี่ยนชื่อ
+    ck('[170] ★ โฟลเดอร์บทตอนสร้าง = ชื่อบท ไม่มีเลขกำกับ', folders[0] === 'บทที่ 1', JSON.stringify(folders));
+    const folders2 = await fakeKapi.listDirs(ROOT + '/เล่ม 1/Draft/default/Chapters');
+    ck('[170] ★ chapter.rename → โฟลเดอร์ตามชื่อใหม่ (เหลือโฟลเดอร์เดียว) + folderName ในทะเบียนตรงกัน',
+       folders2.length === 1 && folders2[0] === 'บทเปิดเรื่อง' && d2.chapters[0].folderName === 'บทเปิดเรื่อง', JSON.stringify(folders2));
   }
 
   // ───────── ฉาก ─────────
@@ -361,14 +366,15 @@ seed();
     const sjA = JSON.parse(FS.get(sfP));
     const chG = Object.keys(sjA.chapters)[0];
     const rowsA = sjA.chapters[chG];
-    const nextO = Math.max(0, ...rowsA.map((s) => s.order || 0)) + 1;
-    const reserved = 'scene-' + String(nextO).padStart(2, '0') + '.md';
+    // [alpha.170] ชื่อไฟล์ = ชื่อฉาก → ชื่อที่แถวผีจองคือชื่อเดียวกับฉากที่กำลังจะสร้าง
+    const reserved = 'ฉาก M3.md';
     rowsA.push({ id: 'ghost', title: 'แถวผีจองชื่อ', order: 0, fileName: reserved });
     FS.set(sfP, JSON.stringify(sjA));
     const c3 = await run('scene.create', { chapter: 'บทเปิดเรื่อง', title: 'ฉาก M3', text: 'x' });
     const made3 = Object.values(JSON.parse(FS.get(sfP)).chapters).flat().find((s) => s.title === 'ฉาก M3');
     ck('[159-M3] ★ scene.create ใช้ freeSceneFileName — ไม่เอาชื่อที่แถวอื่นจองไว้',
        c3.ok && made3 && made3.fileName !== reserved, made3 && made3.fileName);
+    ck('[170] ★ ชื่อไฟล์ฉาก = ชื่อฉาก · ชนชื่อที่จองไว้ → ต่อเลขกันชน', made3 && made3.fileName === 'ฉาก M3 2.md', made3 && made3.fileName);
     const sjB = JSON.parse(FS.get(sfP));
     sjB.chapters[chG] = sjB.chapters[chG].filter((s) => s.id !== 'ghost');
     FS.set(sfP, JSON.stringify(sjB));
@@ -382,24 +388,29 @@ seed();
     ck('[159-M4] ข้อความใหม่อยู่ "ก่อน" บล็อกคอมเมนต์ (บล็อกต้องอยู่ท้ายไฟล์เสมอ)',
        FS.get(scP).indexOf('AI ต่อท้าย') < FS.get(scP).indexOf('k2-comments'));
     const r4 = await run('scene.rename', { title: 'ฉาก M3', newTitle: 'ฉาก M3b' });
-    ck('[159-M4] ★ scene.rename ไม่ลบบล็อก k2-comments', r4.ok && FS.get(scP).includes('โน้ตของบรรณาธิการ')
-       && /title: ฉาก M3b/.test(FS.get(scP)), FS.get(scP).slice(0, 120));
+    // [alpha.170] เปลี่ยนชื่อฉาก = ไฟล์ย้ายตามชื่อ → อ่านจากทางใหม่
+    const scP2 = [...FS.keys()].find((k) => k.endsWith('/ฉาก M3b.md')) || '';
+    const row4 = Object.values(JSON.parse(FS.get(sfP)).chapters).flat().find((s) => s.title === 'ฉาก M3b');
+    ck('[170] ★ scene.rename → ไฟล์ย้ายตามชื่อใหม่ · ทางเก่าไม่เหลือ · ทะเบียนชี้ไฟล์ใหม่',
+       r4.ok && !!scP2 && !FS.has(scP) && row4 && row4.fileName === 'ฉาก M3b.md' && row4.id === made3.id, scP2 + ' / ' + JSON.stringify(row4));
+    ck('[159-M4] ★ scene.rename ไม่ลบบล็อก k2-comments', r4.ok && String(FS.get(scP2)).includes('โน้ตของบรรณาธิการ')
+       && /title: ฉาก M3b/.test(String(FS.get(scP2))), String(FS.get(scP2)).slice(0, 120));
 
     // H5: ลบฉากที่เปิดค้างอยู่ → ต้อง "บันทึกก่อนปิด" ผ่าน bridge.closeUnder แล้ว **รอ** ให้เสร็จก่อนย้าย
     const order = [];
     let open = true;
     const fake5 = { kind: 'prose', dirty: true, getText: () => 'x', setText() {}, async reloadFromDisk() {}, rename() {}, close() { order.push('close-discard'); } };
     A.setTabBridge({
-      find: (p) => (open && A.pathKey(p) === A.pathKey(scP) ? fake5 : null),
+      find: (p) => (open && A.pathKey(p) === A.pathKey(scP2) ? fake5 : null),
       closeUnder: async (p) => {
         await new Promise((r) => setTimeout(r, 20));
-        FS.set(scP, FS.get(scP).replace('AI ต่อท้าย', 'งานที่พิมพ์ค้างไว้'));   // จำลอง saveTab
-        order.push('save+close:' + (A.pathKey(p) === A.pathKey(scP)));
+        FS.set(scP2, FS.get(scP2).replace('AI ต่อท้าย', 'งานที่พิมพ์ค้างไว้'));   // จำลอง saveTab
+        order.push('save+close:' + (A.pathKey(p) === A.pathKey(scP2)));
         open = false; return 1;
       },
     });
     const d5 = await run('scene.delete', { title: 'ฉาก M3b' });
-    const trashed = [...FS.keys()].find((k) => k.includes('/Recycle/') && k.endsWith(made3.fileName));
+    const trashed = [...FS.keys()].find((k) => k.includes('/Recycle/') && k.endsWith('ฉาก M3b.md'));
     ck('[159-H5] ★ scene.delete ปิดแท็บผ่าน closeUnder (บันทึกก่อน) ไม่ใช่ close() แบบทิ้ง',
        d5.ok && order[0] === 'save+close:true' && !order.includes('close-discard'), JSON.stringify(order));
     ck('[159-H5] ★ ของในถังขยะคือฉบับที่บันทึกล่าสุด (รอ closeUnder เสร็จก่อนย้าย)',

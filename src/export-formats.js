@@ -142,7 +142,9 @@ export function defaultWorkflowFor(fmtKey, workflows = PRESETS, kind = '') {
     const sp = workflows.find((w) => w.id === 'screenplay');
     if (sp) return sp;
   }
-  const want = { pdf: 'pdf', html: 'html', txt: 'txt', md: 'md', rtf: 'txt', fdx: 'txt' }[fmtKey] || 'md';
+  // [alpha.169 · bug hunt] RTF ของนิยายประกอบจากมาร์กดาวน์ (generateProseRtf) — ต้องได้เวิร์กโฟลว์ที่ **ไม่ตัด**
+  // เครื่องหมายทิ้ง ไม่งั้นตัวหนา/เอียง/หัวข้อ/รายการหายก่อนถึงตัวสร้างไฟล์ (เดิมตกไปพรีเซ็ต "ข้อความล้วน")
+  const want = { pdf: 'pdf', html: 'html', txt: 'txt', md: 'md', rtf: kind === 'prose' ? 'md' : 'txt', fdx: 'txt' }[fmtKey] || 'md';
   return (workflows.find((w) => w.ext === want && w.builtIn)
        || workflows.find((w) => w.ext === want)
        || workflows.find((w) => w.id === 'manuscript')

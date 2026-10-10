@@ -1,9 +1,19 @@
 // margin-presets.js — ชุดระยะขอบสำเร็จรูป (alpha.60r2 · ข้อ 6)
 // โมดูลบริสุทธิ์ — ตารางค่าอยู่ใน margin-presets.json (ผู้ใช้แก้ไฟล์เองได้ ไม่ต้องแตะโค้ด)
 import PRESETS from './margin-presets.json';
+import { t } from './i18n.js';
 
 export const MARGIN_PRESETS = PRESETS;
 export const MARGIN_PRESET_KEYS = Object.keys(PRESETS);
+
+// [alpha.169 · bug hunt] ป้ายชื่อของชุดที่มากับโปรแกรมมาจากไฟล์ภาษา — เดิมอยู่ในไฟล์ .json เป็นไทยตายตัว
+// (ตัวกวาดข้อความไทยดูแต่ไฟล์ .js จึงไม่เคยเห็น) → หน้าจออังกฤษได้ "บทภาพยนตร์ (Final Draft มาตรฐาน)"
+// ตารางคีย์เต็ม (ห้ามประกอบคีย์จากชิ้นส่วน — ตัวตรวจไฟล์ภาษามองไม่เห็น) · ชุดที่ไม่มีในตาราง = ใช้ `label` ในไฟล์ .json
+const LABEL_KEYS = {
+  normal: 'ui.marginPreset.normal', narrow: 'ui.marginPreset.narrow', moderate: 'ui.marginPreset.moderate',
+  wide: 'ui.marginPreset.wide', screenplay: 'ui.marginPreset.screenplay', novel: 'ui.marginPreset.novel',
+  'a4-narrow': 'ui.marginPreset.a4Narrow', 'a4-normal': 'ui.marginPreset.a4Normal',
+};
 
 /** ค่าระยะขอบ 4 ด้านของพรีเซ็ต (คืน null ถ้าไม่รู้จัก) */
 export function marginPreset(key) {
@@ -15,7 +25,8 @@ export function marginPreset(key) {
 /** ป้ายชื่อพรีเซ็ตสำหรับ <select> */
 export function marginPresetLabel(key) {
   const p = PRESETS[key];
-  return p ? (p.label || key) : key;
+  if (!p) return key;
+  return LABEL_KEYS[key] ? t(LABEL_KEYS[key]) : (p.label || key);
 }
 
 /** รายการ [key, label] เรียงตามลำดับในไฟล์ — ใช้สร้าง <option> */

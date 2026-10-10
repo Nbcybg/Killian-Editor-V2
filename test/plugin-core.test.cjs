@@ -127,12 +127,55 @@ const check = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  �
   // ต้องรันได้จริงในรูปแบบเดียวกับที่ loadPlugins ใช้ (new Function('k2', code))
   check('โค้ดตัวอย่างรันผ่าน new Function ได้', (() => {
     const calls = [];
+    const unload = [], events = [];
     const k2 = { registerCommand: (l) => calls.push('cmd:' + l),
                  registerPanel: (id) => calls.push('panel:' + id),
+                 on: (ev) => events.push(ev), log: () => {},
+                 onUnload: (fn) => unload.push(fn),
                  setStatus: () => {}, getMarkdown: () => '' };
     try { new Function('k2', files['main.js'])(k2); } catch (e) { return false; }
-    return calls.length === 2 && calls[1] === 'panel:hello';
+    // [alpha.169] ตัวอย่างต้องสอนให้เก็บกวาด — และตัวเก็บกวาดต้องรันได้จริง (ไม่งั้นตัวจับเวลาค้างทั้งโปรเซสเทส)
+    try { unload.forEach((fn) => fn('remove')); } catch (e) { return false; }
+    return calls.length === 2 && calls[1] === 'panel:hello' && unload.length === 1 && events.includes('tab:save');
   })());
+  check('[169] ตัวอย่างประกาศ hotReload (เก็บกวาดครบ → ปิด/ถอนแล้วไม่ต้องเริ่มโปรแกรมใหม่)', mf.hotReload === true);
+}
+
+// ═══════════ [alpha.169] วงจรชีวิต: แผนของการโหลดใหม่ ═══════════
+{
+  check('[169] manifestHot: เฉพาะ true จริงเท่านั้น',
+        P.manifestHot({ hotReload: true }) === true && P.manifestHot({ hotReload: 'yes' }) === false
+        && P.manifestHot({}) === false && P.manifestHot(null) === false);
+  check('[169] parseManifest พาธง hotReload มาด้วย',
+        P.parseManifest({ name: 'a', hotReload: true }, 'a').hotReload === true
+        && P.parseManifest({ name: 'a' }, 'a').hotReload === false);
+  const k1 = P.pluginKey('user', '{"a":1}', 'x()');
+  check('[169] pluginKey: โค้ดเดิม = กุญแจเดิม', k1 === P.pluginKey('user', '{"a":1}', 'x()'));
+  check('[169] pluginKey: โค้ดเปลี่ยน/manifest เปลี่ยน/ที่มาเปลี่ยน = กุญแจเปลี่ยน',
+        k1 !== P.pluginKey('user', '{"a":1}', 'y()') && k1 !== P.pluginKey('user', '{"a":2}', 'x()')
+        && k1 !== P.pluginKey('project', '{"a":1}', 'x()'));
+
+  const live = [{ name: 'same', key: 'k1', hot: false }, { name: 'edited', key: 'k2', hot: false },
+                { name: 'editedHot', key: 'k3', hot: true }, { name: 'gone', key: 'k4', hot: false },
+                { name: 'goneHot', key: 'k5', hot: true }];
+  const want = [{ name: 'same', key: 'k1' }, { name: 'edited', key: 'k2b' }, { name: 'editedHot', key: 'k3b' },
+                { name: 'fresh', key: 'k9' }];
+  const plan = P.planReload(live, want);
+  check('[169] โค้ดเดิม → ปล่อยให้ทำงานต่อ ไม่รันซ้ำ', plan.keep.join() === 'same' && !plan.run.includes('same'), JSON.stringify(plan));
+  check('[169] โค้ดเปลี่ยน/หายไป → ถอดของเก่า',
+        ['edited', 'editedHot', 'gone', 'goneHot'].every((n) => plan.unload.includes(n)) && plan.unload.length === 4);
+  check('[169] รัน = ตัวใหม่ + ตัวที่โค้ดเปลี่ยน', plan.run.slice().sort().join() === 'edited,editedHot,fresh');
+  check('[169] ★ ต้องเริ่มโปรแกรมใหม่ = ตัวที่ถูกถอดและไม่ได้ประกาศ hotReload เท่านั้น',
+        plan.restart.slice().sort().join() === 'edited,gone', JSON.stringify(plan.restart));
+  const first = P.planReload([], want);
+  check('[169] ติดตั้ง/เปิดครั้งแรก ไม่ต้องเริ่มโปรแกรมใหม่', first.restart.length === 0 && first.run.length === 4 && first.unload.length === 0);
+  const none = P.planReload(live, []);
+  check('[169] ปิดผลงาน/ปิดทุกตัว = ถอดทั้งหมด', none.unload.length === 5 && none.run.length === 0 && none.restart.length === 3);
+  check('[169] ค่าเสียไม่พัง', P.planReload(null, null).keep.length === 0 && P.planReload([null, {}], [null, {}]).run.length === 0);
+  // ตัวที่ถูกทับ: ตัวโหลดบอกมาเอง
+  const merged = P.mergePluginList([{ name: 'x', origin: 'project', shadowed: true }], [], { appVersion: '2.0.0' });
+  check('[169] mergePluginList คงธง shadowed ที่ตัวโหลดส่งมา', merged[0].shadowed === true);
+  check('[169] เอกสาร API มี k2.onUnload', P.PLUGIN_API_DOC.some((d) => /onUnload/.test(d.sig)));
 }
 
 // ═══════════ เอกสาร API ═══════════

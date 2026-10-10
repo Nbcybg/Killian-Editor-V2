@@ -3,8 +3,8 @@ import { t, tf } from './i18n.js';
 import { $, el, state, setStatus, log } from './core.js';
 import Fuse from 'fuse.js';
 import { gi } from './icons.js';
-
-const SKIP_DIRS = ['Snapshots', 'Backups', 'Recycle', 'node_modules', '.git'];
+// [alpha.169 · bug hunt] โฟลเดอร์ที่ไม่สแกน · ไฟล์ที่ไม่โชว์ · ชนิดของไฟล์ (เปิดด้วยอะไร) — ตรรกะอยู่ในโมดูลบริสุทธิ์
+import { qoSkipDir, qoKind, qoSort } from './quick-open-filter.js';
 
 // แคชรายชื่อไฟล์ต่อโปรเจกต์ — เปิดกล่องครั้งที่ 2 เป็นต้นไปมีรายการให้พิมพ์ทันที
 // แล้วสแกนซ้ำในพื้นหลังเพื่อเก็บไฟล์ที่เพิ่งสร้าง (เดิมสแกนครั้งเดียวจนกว่าจะรีโหลดโปรแกรม)
@@ -20,15 +20,17 @@ async function scanProject(root) {
       const fp = await kapi.join(dir, f);
       // kapi.relative เป็น IPC (async) — เดิมเรียกแบบ sync เลยได้ Promise มาโชว์เป็น [object Promise]
       const rel = fp.slice(rootLen).replace(/^[\\/]/, '').replace(/\\/g, '/');
-      out.push({ path: fp, name: f, rel, ext: (f.split('.').pop() || '').toLowerCase() });
+      const kind = qoKind(rel);
+      if (!kind) continue;                                  // ไฟล์ทะเบียน/ความลับ/ของภายใน — ไม่โชว์
+      out.push({ path: fp, name: f, rel, kind, ext: (f.split('.').pop() || '').toLowerCase() });
     }
     for (const d of await kapi.listDirs(dir).catch(() => [])) {
-      if (SKIP_DIRS.includes(d)) continue;
+      if (qoSkipDir(d)) continue;
       await scan(await kapi.join(dir, d));
     }
   };
   await scan(root);
-  return out;
+  return qoSort(out);                                       // ยังไม่พิมพ์อะไร = งานเขียนขึ้นก่อน
 }
 
 export function openQuickOpen() {
@@ -48,7 +50,7 @@ export function openQuickOpen() {
   count.style.cssText = 'margin-left:auto';
   const reBtn = el('button', 'k-qo-refresh', gi('refresh'));
   reBtn.title = t('ui.quickOpen.scanFileNew');
-  reBtn.style.cssText = 'border:none;background:none;cursor:pointer;font-size:13px';
+  reBtn.style.cssText = 'border:none;background:none;cursor:default;font-size:13px';
   foot.append(hint, count, reBtn);
   box.append(input, list, foot);
   ov.append(box);
@@ -86,7 +88,8 @@ export function openQuickOpen() {
     selectedIdx = 0;
     results.forEach((f) => {
       const row = el('div', 'k-qo-row');
-      const icon = f.ext === 'md' ? gi('file') : f.ext === 'json' ? gi('clipboard') : gi('paperclip');
+      const icon = f.kind === 'scene' ? gi('file') : f.kind === 'entity' ? gi('book-open')
+                 : f.ext === 'json' ? gi('clipboard') : gi('paperclip');
       row.append(el('span', 'k-qo-icon', icon));
       row.append(el('span', 'k-qo-name', f.name));
       row.append(el('span', 'k-qo-rel', f.rel));
@@ -107,6 +110,8 @@ export function openQuickOpen() {
     ov.remove();
     const { openScene, openPlainFile } = await import('./app.js');
     if (f.ext === 'md') openScene(f.path, null);
+    // เอนทิตี้ของ Wiki เปิดเป็นหน้า Wiki เหมือนคลิกจาก Explorer (เดิมได้ตัวแก้ JSON ดิบ)
+    else if (f.kind === 'entity') { const { openEntity } = await import('./wiki-ui.js'); await openEntity(f.path); }
     else if (f.ext === 'json' || f.ext === 'txt') await openPlainFile(f.path, f.name);
     else kapi.revealInOS(f.path);
   }

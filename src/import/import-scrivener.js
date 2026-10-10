@@ -12,6 +12,7 @@
 // 1) XML เล็ก ๆ พอสำหรับ .scrivx (ไม่มี DOMParser ใน node → เขียนเอง)
 // ────────────────────────────────────────────────────────────────
 import { t, tf } from '../i18n.js';
+import { diskBase, freeName, DEFAULT_BOOK } from '../disk-names.js';   // [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง
 /**
  * Minimal XML → tree. Good enough for .scrivx (no namespaces, no CDATA nesting).
  * @returns {{tag, attrs, children, text}}
@@ -166,7 +167,7 @@ export function mapBinder(binder, opts = {}) {
   visit(roots, null);
   const kept = chapters.filter((c) => c.scenes.length);
   return {
-    sections: [{ title: opts.sectionTitle || t('ui.common.bookOne'), chapters: kept }],
+    sections: [{ title: opts.sectionTitle || DEFAULT_BOOK + ' 1', chapters: kept }],
     counts: { chapters: kept.length, scenes: kept.reduce((n, c) => n + c.scenes.length, 0) },
   };
 }
@@ -178,7 +179,6 @@ function pickDraft(binder) {
 // ────────────────────────────────────────────────────────────────
 // 4) API หลัก
 // ────────────────────────────────────────────────────────────────
-const safeName = (s, fallback) => String(s || fallback).replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 60) || fallback;
 
 /**
  * Import a .scriv project folder into Killian's structure.
@@ -254,24 +254,31 @@ export function buildPlan(mapped, title, opts = {}) {
     title, type: 'killian-project', importedFrom: 'scrivener', importedAt: opts.now || null,
   }, null, 2) });
 
+  // [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง (ไม่มีเลขกำกับ) · ชนกัน = ต่อ " 2" · ลำดับอยู่ใน `order`
+  const usedSec = [];
   mapped.sections.forEach((sec, si) => {
-    const secDir = safeName(sec.title, t('ui.common.bookOne'));
+    const secDir = freeName(diskBase(sec.title, DEFAULT_BOOK + ' ' + (si + 1)), usedSec);
+    usedSec.push(secDir);
     files.push({ path: [secDir, 'section.json'], content: JSON.stringify({
-      guid: 's' + (si + 1), title: sec.title, order: si + 1,
+      guid: 's' + (si + 1), title: sec.title, order: si + 1, folderName: secDir,
     }, null, 2) });
 
     const chapters = [];
     const scenesMap = {};
+    const usedCh = [];
     sec.chapters.forEach((ch, ci) => {
       const guid = `c${si + 1}_${ci + 1}`;
-      const folderName = `${String(ci + 1).padStart(2, '0')} - ${safeName(ch.title, t('ui.common.chapter'))}`;
+      const folderName = freeName(diskBase(ch.title, t('ui.common.chapter')), usedCh);
+      usedCh.push(folderName);
       chapters.push({ guid, title: ch.title, order: ci + 1, folderName });
+      const usedSc = [];
+      const names = ch.scenes.map((sc) => { const n = freeName(diskBase(sc.title, 'scene'), usedSc, '.md'); usedSc.push(n); return n; });
       scenesMap[guid] = ch.scenes.map((sc, i) => ({
-        id: `${guid}_s${i + 1}`, title: sc.title, order: i + 1, fileName: `scene-${String(i + 1).padStart(2, '0')}.md`,
+        id: `${guid}_s${i + 1}`, title: sc.title, order: i + 1, fileName: names[i],
       }));
       ch.scenes.forEach((sc, i) => {
         files.push({
-          path: [secDir, 'Draft', 'default', 'Chapters', folderName, `scene-${String(i + 1).padStart(2, '0')}.md`],
+          path: [secDir, 'Draft', 'default', 'Chapters', folderName, names[i]],
           content: `---\ntitle: ${sc.title}\ntype: scene\nformat: prose\n---\n\n${sc.body || ''}\n`,
         });
       });

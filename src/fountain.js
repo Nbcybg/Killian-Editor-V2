@@ -441,7 +441,19 @@ export function suffixLen(text) {
  * ทางที่ผ่าน `parseScript` (PDF บทหนัง / rtf / fdx) ไม่ต้องใช้ตัวนี้ — พาร์เซอร์กินรหัสไปแล้ว
  */
 export function stripFountainCodes(text) {
+  // [alpha.169 · bug hunt] `((กระซิบ))` ใต้ชื่อตัวละคร = "วงเล็บ" ซึ่งผู้อ่านเห็นเป็น `(กระซิบ)` บนจอ
+  // (classify คืนข้อความพร้อมวงเล็บ) — เดิมตัดวงเล็บทิ้งทั้งสองชั้น ไฟล์ .txt/.md/.html ได้ "กระซิบ" ลอย ๆ
+  // เกณฑ์เดียวกับ CAN_TAKE_DOUBLE_PAREN: ติดใต้ `@ชื่อ` (หรือใต้วงเล็บด้วยกัน) ไม่มีบรรทัดว่างคั่น
+  let prevRaw = '', prevParen = false;
   return String(text == null ? '' : text).split('\n').map((line) => {
+    const s = line.trim();
+    const under = prevParen || /^\s*@\S/.test(prevRaw);
+    prevRaw = line;
+    if (under && s.startsWith('((') && s.endsWith('))') && s.length > 4) {
+      prevParen = true;
+      return '(' + s.slice(2, -2).trim() + ')';
+    }
+    prevParen = false;
     const n = prefixLen(line);
     if (!n) return line;
     const body = line.slice(n);

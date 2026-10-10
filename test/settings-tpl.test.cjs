@@ -180,5 +180,21 @@ const dlg = fs.readFileSync(path.join(ROOT, 'src', 'dialogs.js'), 'utf8');
         /data-p="ai"/.test(tpl) && tpl.includes('id="st-ai-open"'));
 }
 
+// ───────── [alpha.169 · a11y] ★ ปุ่ม "บันทึก" ต้องเป็นปุ่มหลักตัวเดียวของกล่อง ─────────
+//
+// ต้นตอที่เจอ: หน้า AI มีปุ่ม `#st-ai-open` คลาส `k-ok` อยู่ก่อนปุ่มบันทึกใน DOM → `box.querySelector('.k-ok')`
+// ผูกตัวบันทึกเข้ากับปุ่ม "เปิดตั้งค่า AI" · ปุ่มบันทึกตัวจริงกดไม่ติดมาตั้งแต่ alpha.164 (Enter ยังบันทึกได้ จึงไม่มีใครเห็น
+// และ e2e ก็กด `.k-ok` ตัวแรกเหมือนกัน) · แถวปุ่มคืนค่าก่อนหน้า/ค่าโรงงานก็ไปโผล่ในหน้า AI ด้วยเหตุเดียวกัน
+{
+  const oks = [...tpl.matchAll(/<button\b[^>]*class="[^"]*\bk-ok\b[^"]*"[^>]*>/g)].map((m) => m[0]);
+  check('★★ [169] ทั้งกล่องมีปุ่มหลัก (.k-ok) ตัวเดียว = ปุ่มบันทึก', oks.length === 1 && !/id="/.test(oks[0]), oks.join(' | '));
+  check('★ [169] ปุ่มบันทึกอยู่ในแถวปุ่มล่างสุดของกล่อง (หลังหน้าเนื้อหาทั้งหมด)',
+        /<div class="k-dlg-btns"><button class="k-cancel">[^<]*<\/button><button class="k-ok">[^<]*<\/button><\/div>$/.test(tpl.trim()));
+  check('★★ [169] dialogs.js ผูกตัวบันทึกกับปุ่มในแถวล่างของกล่อง ไม่ใช่ ".k-ok ตัวแรก"',
+        /box\.querySelector\(':scope > \.k-dlg-btns > \.k-ok'\)\.onclick = async/.test(dlg) && !/box\.querySelector\('\.k-ok'\)\.onclick/.test(dlg));
+  check('★ [169] ปุ่มคืนค่าก่อนหน้า/ค่าโรงงานเข้าแถวล่างของกล่อง (ไม่ใช่แถวปุ่มของหน้า AI)',
+        /const foot = box\.querySelector\(':scope > \.k-dlg-btns'\);/.test(dlg) && !/const foot = box\.querySelector\('\.k-dlg-btns'\);/.test(dlg));
+}
+
 console.log(`\nsettings-tpl: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1,0 +1,42 @@
+/* renderer/themes/mono-light.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-mono-light {
+  --bg:#ffffff;
+  --side:#f2f2f2;
+  --bar:#e8e8e8;
+  --border:#8c8c8c;
+  --fg:#111111;
+  --bright:#090909;
+  --dim:#5a5a5a;
+  --accent:#000000;
+  --accent-hi:#3d3d3d;
+  --accent-ink:#3d3d3d;
+  --link:#1f1f1f;
+  --sel:#c9c9c9;
+  --orange:#3d3d3d;
+  --curline:#f7f7f7;
+  --hover:#e0e0e0;
+  --hover-soft:#f1f1f1;
+  --titlebar:#e7e7e7;
+  --sunken:#f8f8f8;
+  --chip:#d9d9d9;
+  --danger-soft:#d4d4d4;
+  --canvas:#ffffff;
+  --void:#e7e7e7;
+  --paper-surround:#d4d4d4;
+  --tab-bar:#e7e7e7;
+  --tab-bg:#ffffff;
+  --tab-border:#8c8c8c;
+  --tab-fg:#5a5a5a;
+  --tab-fg-on:#111111;
+  --tab-hover:#f1f1f1;
+  --panel-head:#f1f1f1;
+  --input-bg:#ffffff;
+  --muted-strong:#3c3c3c;
+  --find-hit:#949494;
+  --on-accent:#ffffff;
+  --on-accent-hi:#ffffff;
+  --st-warn:#3d3d3d;
+  --st-danger:#000000;
+  --st-danger-alt:#1f1f1f;
+}

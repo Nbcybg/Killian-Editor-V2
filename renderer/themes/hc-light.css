@@ -1,0 +1,42 @@
+/* renderer/themes/hc-light.css — ⚠️ สร้างอัตโนมัติจาก renderer/themes/themes.json ด้วย tools/theme-build.cjs
+   ห้ามแก้ไฟล์นี้ตรง ๆ (build ครั้งหน้าจะเขียนทับ) · แก้สีที่ themes.json แล้วรัน `node build.js` */
+body.theme-hc-light {
+  --bg:#ffffff;
+  --side:#ffffff;
+  --bar:#ffffff;
+  --border:#000000;
+  --fg:#000000;
+  --bright:#000000;
+  --dim:#1f1f1f;
+  --accent:#0000c8;
+  --accent-hi:#7a007a;
+  --accent-ink:#7a007a;
+  --link:#0000c8;
+  --sel:#99c7ff;
+  --orange:#7a007a;
+  --curline:#e6e6e6;
+  --hover:#cfcfcf;
+  --hover-soft:#e6e6e6;
+  --titlebar:#ffffff;
+  --sunken:#ffffff;
+  --chip:#e6e6e6;
+  --danger-soft:#f6d5d7;
+  --canvas:#ffffff;
+  --void:#ffffff;
+  --paper-surround:#d9d9d9;
+  --tab-bar:#ffffff;
+  --tab-bg:#e6e6e6;
+  --tab-border:#000000;
+  --tab-fg:#1f1f1f;
+  --tab-fg-on:#000000;
+  --tab-hover:#e6e6e6;
+  --panel-head:#ffffff;
+  --input-bg:#ffffff;
+  --muted-strong:#2e2e2e;
+  --find-hit:#ffe14d;
+  --on-accent:#ffffff;
+  --on-accent-hi:#ffffff;
+  --st-warn:#7a4a00;
+  --st-danger:#b00020;
+  --st-danger-alt:#8c001a;
+}

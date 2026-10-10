@@ -1,10 +1,14 @@
 // Killian 2 — Electron main process
 // เมนู + คีย์ลัดผูกที่ระดับ OS (accelerator) → ทำงานกับคีย์บอร์ดทุกภาษา รวมภาษาไทย
-const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell, nativeTheme, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 // [alpha.162 · W6 ข้อ 7] ตัวเลขเวลาชุดเดียวกับ renderer (src/timing.js → build.js แปลงเป็น timing.cjs)
 const TIMING = require('./timing.cjs');
+// [alpha.169 · native] ตรรกะผูกกับระบบ (ปุ่มหน้าต่างของ OS · เปิดด้วยไฟล์ · รายการบนแถบงาน) — บริสุทธิ์ มี unit test
+const NS = require('./native-shell.cjs');
+// [alpha.169 · a11y] แป้นพิมพ์บนจอของระบบ — แผนของแต่ละ OS (บริสุทธิ์ มี unit test)
+const A11Y = require('./a11y-shell.cjs');
 
 // ─────────────────────────────────────────────────────────────────────
 // [alpha.76] ข้อความในเมนู OS ก็ต้องแปลได้ — main เป็น CommonJS จึง import src/i18n.js ไม่ได้
@@ -111,6 +115,7 @@ function writeRecent(r) {
   try { fs.mkdirSync(path.dirname(recentFile()), { recursive: true });
         fs.writeFileSync(recentFile(), JSON.stringify(r)); } catch {}
   buildMenu();
+  syncJumpList();                                   // [alpha.169 · native] โปรเจกต์ล่าสุดบนแถบงานของ Windows
 }
 function pushRecent(p) {
   writeRecent([p, ...readRecent().filter((x) => x !== p)].slice(0, 8));
@@ -218,6 +223,7 @@ const toggles = {
   // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด — ค่าเริ่มต้น "เปิด" (ตรงกับ DEFAULT_SETTINGS)
   markdownCodes: true,
   autoFitWidth: false,                  // [alpha.164 · รอบต่อ 3] ซูมพอดีความกว้างอัตโนมัติ (ค่าระดับผู้ใช้)
+  keyEcho: false, lineBand: false,      // [alpha.169 · a11y] แสดงปุ่มที่กด · แถบสีบรรทัดเคอร์เซอร์
   // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — ทั้งคู่ปิดเป็นค่าเริ่มต้น = เข้าหน้าแรกก่อน
   openLastProject: false, showHomeAlways: false,
   // [alpha.61 ข้อ 4] สวิตช์ตัวพิมพ์ใหญ่/เล็กของบทหนัง (ค่าเริ่มต้น = ธรรมเนียมเดิม)
@@ -452,9 +458,19 @@ function buildMenu() {
         click: cmd('sync-scene-meta') },
       // [alpha.156] ทะเบียนฉาก ↔ ไฟล์จริง ไม่ตรงกัน (ไฟล์กำพร้า · ใช้ไฟล์ซ้ำ · โฟลเดอร์ผี · หัวไฟล์พัง)
       { label: tt('ui.menu.projectDoctor'), click: cmd('project-doctor') },
-      // [alpha.164 · รอบต่อ 2] เสียงพิมพ์ดีดเป็น "เสียง" ไม่ใช่มุมมอง — ผู้ใช้สั่งย้ายออกจากเมนูมุมมอง
-      // (อยู่ติดกับ "โหมดเครื่องพิมพ์ดีด" จนคนเข้าใจว่าเป็นสวิตช์คู่กัน) · ค่าละเอียดยังอยู่ ตั้งค่า → ตัวแก้ไข
-      chk(tt('ui.menu.soundTypewriterPrint'), toggles.typeSound, cmd('type-sound')),
+      // ══ [alpha.169 · a11y] การช่วยการเข้าถึง ══
+      // ผู้ใช้: "เพิ่ม feature แบบ accessibility … type writer และเสียง ย้ายไปอยู่ accessibility"
+      // สวิตช์เสียงพิมพ์ดีดอยู่เมนูเครื่องมือมาตั้งแต่ alpha.164 (ผู้ใช้สั่งย้ายออกจากมุมมอง) — ยังอยู่เมนูนี้ แค่เข้ากลุ่ม
+      // โหมดเครื่องพิมพ์ดีดเป็น "มุมมอง" ยังอยู่เมนูมุมมองที่เดียว (ไม่ทำรายการซ้ำสองเมนู) · ค่าละเอียดทั้งหมด = ตั้งค่า → การช่วยการเข้าถึง
+      { id: 'tools-a11y', label: tt('ui.menu.a11y'), submenu: [
+        { id: 'a11y-key-echo', ...chk(tt('ui.menu.a11yKeyEcho'), toggles.keyEcho, cmd('key-echo')) },
+        { id: 'a11y-line-band', ...chk(tt('ui.menu.a11yLineBand'), toggles.lineBand, cmd('line-band')) },
+        { id: 'a11y-type-sound', ...chk(tt('ui.menu.soundTypewriterPrint'), toggles.typeSound, cmd('type-sound')) },
+        { type: 'separator' },
+        { id: 'a11y-osk', label: tt('ui.menu.a11yOsk'), click: cmd('osk') },
+        { type: 'separator' },
+        { id: 'a11y-settings', label: tt('ui.menu.a11ySettings'), click: cmd('a11y-settings') },
+      ] },
       { type: 'separator' },
       // [alpha.164 ข้อ D] สองคำสั่งนี้ "ทำงานกับเนื้อฉาก" ไม่ใช่มุมมอง — เดิมอยู่เมนูมุมมอง
       { label: tt('ui.menu.newChoiceTextScene'), click: cmd('branch-sync') },
@@ -615,9 +631,10 @@ function buildMenu() {
         { label: tt('ui.menu.saveRunAppLog'), click: cmd('show-log') },
         // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา — มีคีย์ลัดของตัวเอง
         { label: tt('ui.menu.consoleDev'), click: cmd('dev-console') },
-        { label: tt('ui.menu.openDevToolsChromium'), click: () => {
+        // [alpha.169 · native] ตัวที่แจกผู้ใช้ไม่มีรายการ DevTools ของ Chromium (บอกชัดว่าเป็นหน้าเว็บ) — นักพัฒนาเปิดด้วย KILLIAN_DEV=1
+        ...(DEV_TOOLS ? [{ label: tt('ui.menu.openDevToolsChromium'), click: () => {
           try { win && win.webContents.toggleDevTools(); } catch {}
-        } },
+        } }] : []),
       ] },
       { type: 'separator' },
       { label: tt('ui.common.killian'), click: cmd('about') },
@@ -669,7 +686,7 @@ function createSplash() {
   splash = new BrowserWindow({
     width: spW, height: spH, frame: false, resizable: false, maximizable: false, minimizable: false,
     fullscreenable: false, center: true, show: false, backgroundColor: '#1e1250', skipTaskbar: false,
-    title: 'Killian 2', webPreferences: { contextIsolation: true, nodeIntegration: false },
+    title: 'Killian 2', ...WIN_ICON, webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
   splash.loadFile('renderer/splash.html', { query: { v: app.getVersion(), m: tt('ui.splash.start'), l: LANG_CODE || 'th' } });
   splash.once('ready-to-show', () => { try { splash.show(); } catch {} });
@@ -726,12 +743,102 @@ function guardNavigation(wc) {
   });
 }
 
+// ══ [alpha.169 · native] ชั้นหน้าต่าง: ปุ่มของระบบ · โหมดของธีม · แถบงาน · เปิดด้วยไฟล์ ══
+const DEV_TOOLS = TEST || process.env.KILLIAN_DEV === '1' || !app.isPackaged;
+function userThemeId() {
+  try { const g = JSON.parse(fs.readFileSync(globalSettingsPath(), 'utf-8')); if (g && /^[a-z0-9-]+$/.test(String(g.theme || ''))) return String(g.theme); } catch {}
+  return 'k2';
+}
+/** สีแถบชื่อ + โหมด ของธีมในตั้งค่าผู้ใช้ — อ่านจากไฟล์ธีมเอง (ก่อน renderer บูต) */
+function userChrome() {
+  const id = userThemeId();
+  let css = '', themes = null;
+  try { css = fs.readFileSync(path.join(__dirname, 'renderer', 'themes', id + '.css'), 'utf8'); } catch {}
+  try { themes = JSON.parse(fs.readFileSync(path.join(__dirname, 'renderer', 'themes', 'themes.json'), 'utf8')); } catch {}
+  return NS.captionColors({ mode: NS.themeMode(themes, id), color: NS.cssVarHex(css, 'titlebar'), symbol: NS.cssVarHex(css, 'fg') });
+}
+const CHROME_COLORS = userChrome();
+const CHROME = NS.windowChrome(process.platform, CHROME_COLORS);
+// เมนูของระบบ · กล่องเปิด/บันทึกไฟล์ · ขอบหน้าต่างแผงที่ฉีกออก ใช้โหมดมืด/สว่างตามธีมของ K2 ไม่ใช่ตามเครื่อง
+try { nativeTheme.themeSource = CHROME_COLORS.mode; } catch {}
+function winState() {
+  const ok = win && !win.isDestroyed();
+  return { max: ok ? win.isMaximized() : false, full: ok ? win.isFullScreen() : false,
+           native: CHROME.native, platform: process.platform };
+}
+function applyChrome(o) {
+  const c = NS.captionColors(o || {});
+  try { if (nativeTheme.themeSource !== c.mode) nativeTheme.themeSource = c.mode; } catch {}
+  try {
+    if (process.platform === 'win32' && win && !win.isDestroyed() && typeof win.setTitleBarOverlay === 'function')
+      win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor, height: c.height });
+  } catch (e) { logMain('warn', 'titlebar overlay', e); }
+  return c;
+}
+let _progress = -1;
+function setTaskbarProgress(v) {
+  const n = NS.progressValue(v);
+  _progress = n;
+  try { if (win && !win.isDestroyed()) win.setProgressBar(n, n === 2 ? { mode: 'indeterminate' } : undefined); } catch {}
+  return n;
+}
+/** งานยาวเสร็จตอนผู้ใช้ไปอยู่หน้าต่างอื่น → ไอคอนบนแถบงานกะพริบ + การแจ้งเตือนของระบบ (ถ้าเครื่องรองรับ) */
+function callAttention(o) {
+  if (!win || win.isDestroyed() || win.isFocused()) return { shown: false, reason: 'focused' };
+  try { win.flashFrame(true); } catch {}
+  let toast = false;
+  try {
+    if (!TEST && Notification.isSupported()) {
+      const n = new Notification({ title: String((o && o.title) || 'Killian 2').slice(0, 120), body: String((o && o.body) || '').slice(0, 300), silent: true });
+      n.on('click', () => { try { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } catch {} });
+      n.show(); toast = true;
+    }
+  } catch (e) { logMain('warn', 'notification', e); }
+  return { shown: true, toast };
+}
+/** ตัว .exe ที่ผู้ใช้เปิดจริง — ตัวพกพาแตกไปรันที่โฟลเดอร์ชั่วคราว จึงต้องอ่านจากตัวแปรที่ตัวห่อส่งมา */
+function realExe() { return process.env.PORTABLE_EXECUTABLE_FILE || process.execPath; }
+function syncJumpList() {
+  if (process.platform !== 'win32' || TEST || !app.isPackaged) return false;
+  try { return app.setUserTasks(NS.jumpTasks(readRecent(), realExe(), { exists: (p) => fs.existsSync(p) })); }
+  catch (e) { logMain('warn', 'jump list', e); return false; }
+}
+/** โปรเจกต์จากอาร์กิวเมนต์ (ลากโฟลเดอร์ใส่ไอคอน · เปิดด้วย · รายการบนแถบงาน) */
+function argvProject(argv) {
+  try {
+    return NS.projectFromArgv(argv, { exists: (p) => fs.existsSync(p),
+      isDir: (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } },
+      skip: [__dirname, app.getAppPath()] });
+  } catch { return null; }
+}
+let launchProject = TEST ? null : argvProject(process.argv);
+function openProjectFromOs(p) {
+  if (!p) return false;
+  logMain('info', 'open from OS', p);
+  if (win && !win.isDestroyed() && rendererReady) { send('open-project-path', p); return true; }
+  launchProject = p;                                // renderer ยังไม่พร้อม → ให้ตอนบูตมาถามเอง
+  return true;
+}
+let rendererReady = false;
+// macOS: ลากโฟลเดอร์ใส่ไอคอนบน Dock / เปิดด้วย → อีเวนต์ open-file (ไม่มาทาง argv)
+app.on('open-file', (e, p) => { e.preventDefault(); openProjectFromOs(argvProject(['', p])); });
+
+// [alpha.169] ไอคอนของหน้าต่าง — สร้างจาก icons/app-icon.svg ด้วย tools/make-icon.cjs (ไม่มีไฟล์ = ใช้ของระบบ)
+// macOS ไม่ใช้ (ไอคอนมาจาก .icns ของ .app เสมอ)
+const WIN_ICON = (() => {
+  if (process.platform === 'darwin') return {};
+  const p = path.join(__dirname, 'renderer', 'assets', 'app-icon.png');
+  try { return fs.existsSync(p) ? { icon: p } : {}; } catch { return {}; }
+})();
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1440, height: 900, minWidth: 1000, minHeight: 640,
     show: !USE_SPLASH,                               // [alpha.157] มี splash = แสดงเมื่อบูตเสร็จ (ขยายเต็มจอ)
     backgroundColor: userThemeBg(),                  // [alpha.166] พื้นตามธีมที่ผู้ใช้เลือก (เดิมกรมท่าตายตัว — ธีมสว่างแวบม่วง)
-    frame: false,                                   // หน้าต่าง custom เต็มรูปแบบ
+    ...WIN_ICON,                                     // [alpha.169] ไอคอนของหน้าต่าง (รันจากซอร์ส/Linux ไม่มีไอคอนของ exe)
+    // [alpha.169 · native] Windows/macOS = ปุ่มหน้าต่างของระบบเอง (Snap Layouts · ไฟจราจร) · อื่น ๆ = ไร้ขอบเหมือนเดิม
+    ...CHROME.opts,
     webPreferences: { preload: path.join(__dirname, 'preload.js'),
                       contextIsolation: true, nodeIntegration: false,
                       // Chromium หรี่ตัวจับเวลาเมื่อหน้าต่างถูกบัง (หลัง 5 นาที เหลือ 1 ครั้ง/นาที)
@@ -743,6 +850,10 @@ function createWindow() {
     if (!forceQuit) { e.preventDefault(); send('confirm-quit'); }
   });
   // [alpha.165] หน้าต่างค้าง/โหลดไม่ขึ้น/preload พัง — เดิมไม่มีร่องรอยใน log เลย
+  // [alpha.169 · native] สภาพหน้าต่าง → renderer (ไอคอนคืนขนาดของปุ่มที่วาดเอง · ระยะเว้นของปุ่มไฟจราจรตอนเต็มจอ)
+  for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen'])
+    win.on(ev, () => { try { win.webContents.send('win:state', winState()); } catch {} });
+  win.on('focus', () => { try { win.flashFrame(false); } catch {} });
   win.on('unresponsive', () => logMain('error', 'window unresponsive (renderer hung)'));
   win.on('responsive', () => logMain('info', 'window responsive again'));
   win.webContents.on('did-fail-load', (e, code, desc, url) => logMain('error', 'load failed [' + code + ' ' + desc + ']', url));
@@ -753,30 +864,28 @@ function createWindow() {
     try { fs.appendFileSync('/tmp/k2console.txt', `${e.level} ${e.sourceId}:${e.lineNumber} ${e.message}\n`); } catch {}
   });
   guardNavigation(win.webContents);
+  win.webContents.on('did-start-loading', () => { rendererReady = false; });
+  win.webContents.on('did-finish-load', () => { rendererReady = true; });
   // คลิกขวา = เมนูมาตรฐาน word processor (role = ใช้ได้ทุกภาษาแป้นพิมพ์)
   win.webContents.on('context-menu', (e, params) => {
     const ef = params.editFlags || {};
     const inEdit = params.isEditable;
     if (!inEdit && !params.selectionText) return;  // นอกตัวแก้ไข → เมนูของ renderer เอง
-    const menu = buildMenuSafe([
+    // [alpha.169 · native] เมนูนี้ขึ้นเฉพาะช่องกรอกธรรมดา (input/textarea) กับข้อความอ่านอย่างเดียวที่เลือกไว้ —
+    // ตัวแก้ไข (.ProseMirror) มีเมนูของ renderer เองทั้งเมนู (alpha.165) · เดิมที่นี่มี ตัวหนา/แทรกรูป/ค้นหา ติดมาด้วย
+    // = คลิกขวาในช่องค้นหาแล้วเจอ "แทรกรูป" · ข้อความอ่านอย่างเดียว = คัดลอก + เลือกทั้งหมด เท่านั้น
+    const menu = buildMenuSafe(inEdit ? [
+      { role: 'undo', label: tt('ui.menu.doZ'), enabled: ef.canUndo },
+      { role: 'redo', label: tt('ui.menu.repeatY'), enabled: ef.canRedo },
+      { type: 'separator' },
       { role: 'cut', label: tt('ui.menu.cut'), enabled: ef.canCut },
       { role: 'copy', label: tt('ui.common.copy'), enabled: ef.canCopy },
       { role: 'paste', label: tt('ui.menu.paste'), enabled: ef.canPaste },
+      { type: 'separator' },
       { role: 'selectAll', label: tt('ui.menu.pickAll') },
-      { type: 'separator' },
-      { label: tt('ui.menu.itemBoldB'), enabled: inEdit, click: cmd('fmt', 'bold') },
-      { label: tt('ui.menu.itemI'), enabled: inEdit, click: cmd('fmt', 'italic') },
-      { label: tt('ui.menu.dashLineUnderU'), enabled: inEdit, click: cmd('fmt', 'underline') },
-      { label: tt('ui.menu.dashX'), enabled: inEdit, click: cmd('fmt', 'strike') },
-      { label: tt('ui.menu.clearFormatSpace'), enabled: inEdit, click: cmd('fmt', 'clear') },
-      { type: 'separator' },
-      { label: tt('ui.menu.doZ'), enabled: inEdit, click: cmd('editor-undo') },
-      { label: tt('ui.menu.repeatY'), enabled: inEdit, click: cmd('editor-redo') },
-      { type: 'separator' },
-      { label: tt('ui.menu.insertImage'), enabled: inEdit, click: cmd('insert-image') },
-      { label: tt('ui.menu.searchF'), click: cmd('find') },
-      { type: 'separator' },
-      { label: tt('ui.menu.saveS'), click: cmd('save') },
+    ] : [
+      { role: 'copy', label: tt('ui.common.copy'), enabled: ef.canCopy },
+      { role: 'selectAll', label: tt('ui.menu.pickAll') },
     ]);
     menu.popup({ window: win });
   });
@@ -1598,6 +1707,14 @@ H('plugins:globalDir', () => {
   try { fs.mkdirSync(p, { recursive: true }); } catch {}
   return p;
 });
+// [alpha.169] ภาพประกอบของ Story Starter (renderer/starter/*.png) — renderer ถามรายชื่อไฟล์ที่มีจริงครั้งเดียว
+// แล้วเลือกเอง (starter-art.js) · ไม่รับอาร์กิวเมนต์ (โฟลเดอร์ตายตัวในตัวโปรแกรม) · ถ้าให้ renderer ลองโหลดทีละชื่อ = คอนโซลแดงเป็นแถว
+H('starter:artList', () => {
+  try {
+    return fs.readdirSync(path.join(__dirname, 'renderer', 'starter'), { withFileTypes: true })
+      .filter((d) => d.isFile() && /\.(png|jpe?g|webp)$/i.test(d.name)).map((d) => d.name);
+  } catch { return []; }
+});
 H('plugins:listGlobal', () => {
   try {
     return fs.readdirSync(globalPluginsDir(), { withFileTypes: true })
@@ -1848,6 +1965,7 @@ H('update:download', async (url, name, digest) => {
     if (total > MAX_UPDATE_BYTES) return { ok: false, error: 'too-big' };
     const ping = (received) => {
       try { win && !win.isDestroyed() && win.webContents.send('update:progress', { received, total }); } catch {}
+      setTaskbarProgress(total > 0 ? received / total : 'busy');   // [alpha.169 · native]
     };
     let buf = null;
     // อ่านทีละก้อนเพื่อรายงานความคืบหน้า — สตรีมของ fetch อ่านแบบวนไม่ได้เมื่อไหร่ ก็รับทีเดียว
@@ -1874,6 +1992,7 @@ H('update:download', async (url, name, digest) => {
     fs.writeFileSync(dest, buf);
     return { ok: true, path: dest, size: buf.length, isExe: UPD.looksLikeExe(buf), verified: !!want };
   } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+  finally { setTaskbarProgress(-1); }               // [alpha.169 · native] จบทุกทาง (สำเร็จ · ล้ม · ใหญ่เกิน) = ล้างแถบบนแถบงาน
 });
 
 /**
@@ -1967,7 +2086,40 @@ H('win:setBounds', (box) => {
     return true;
   } catch { return false; }
 });
+// ══ [alpha.169 · a11y] แป้นพิมพ์บนจอของระบบปฏิบัติการ ══
+// แผนของแต่ละระบบอยู่ `a11y-shell.cjs` — ที่นี่แค่ลงมือทีละขั้นจนสำเร็จ · renderer ไม่ได้ส่งทาง/คำสั่งอะไรมาเลย
+// (ไม่มีอาร์กิวเมนต์) จึงไม่มีทางถูกใช้รันโปรแกรมอื่น · โหมดเทส = คืนแผนเฉย ๆ ไม่เปิดของจริงบนเครื่องที่รันเทส
+H('a11y:osk', async () => {
+  const plan = A11Y.oskPlan(process.platform, process.env);
+  if (TEST) return { ok: true, dry: true, tried: 0, kinds: plan.map((p) => p.kind), first: plan[0] ? path.basename(plan[0].target) : '' };
+  const { spawn } = require('child_process');
+  const r = await A11Y.runOskPlan(plan, {
+    // shell.openPath คืน '' เมื่อสำเร็จ · ข้อความผิดพลาดเมื่อไม่สำเร็จ
+    open: async (st) => fs.existsSync(st.target) && (await shell.openPath(st.target)) === '',
+    spawn: (st) => new Promise((resolve) => {
+      let done = false;
+      const fin = (v) => { if (!done) { done = true; resolve(v); } };
+      try {
+        const ch = spawn(st.target, st.args || [], { detached: true, stdio: 'ignore', shell: false });
+        ch.once('error', () => fin(false));                       // ไม่มีโปรแกรมนี้ในเครื่อง (ENOENT)
+        ch.once('exit', (code) => fin(code === 0));               // `open -b …` / gsettings จบเร็ว = ดูรหัสออก
+        setTimeout(() => { try { ch.unref(); } catch {} fin(true); }, TIMING.OSK_SPAWN_WAIT_MS);   // ยังรันอยู่ = แป้นเปิดแล้ว
+      } catch { fin(false); }
+    }),
+    url: async (st) => { await shell.openExternal(st.target); return true; },
+  });
+  logMain(r.ok ? 'info' : 'warn', 'a11y: osk ' + (r.ok ? (r.settings ? 'opened settings' : 'opened') : 'failed'),
+    { tried: r.tried, kind: r.step ? r.step.kind : '' });
+  return { ok: r.ok, settings: !!r.settings, tried: r.tried };
+});
 H('win:minimize', () => win.minimize());
+// ══ [alpha.169 · native] หน้าต่างแบบโปรแกรมจริง ══
+H('win:state', () => winState());
+// renderer บอกสีแถบชื่อ/โหมดของธีมที่จอใช้อยู่ → ปุ่มหน้าต่างของ Windows + เมนู/กล่องไฟล์ของระบบ ตามธีมของ K2
+H('win:chrome', (o) => applyChrome(o));
+H('win:progress', (v) => setTaskbarProgress(v));
+H('win:attention', (o) => callAttention(o));
+H('win:launchProject', () => { const p = launchProject; launchProject = null; return p; });
 H('win:maximize', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
 H('win:close', () => win.close());
 // [alpha.157] splash — ข้อความ "กำลังโหลดอะไร" + ปิด splash แล้วแสดงหน้าต่างหลักแบบขยายเต็มจอ
@@ -2459,6 +2611,7 @@ ipcMain.handle('panel:tearOff', (e, opts = {}) => {
     backgroundColor: /^#[0-9a-f]{6}$/i.test(String(opts.bg || '')) ? String(opts.bg) : themeBg(opts.theme),
     // ต่างจากหน้าต่างหลัก: ใช้ขอบหน้าต่างของ OS จริง — ผู้ใช้ลากข้ามจอ/สแนปด้วยท่ามาตรฐานได้เลย
     frame: true,
+    ...WIN_ICON,
     webPreferences: { preload: path.join(__dirname, 'preload.js'),
                       contextIsolation: true, nodeIntegration: false,
                       backgroundThrottling: false },
@@ -2518,8 +2671,10 @@ ipcMain.handle('panel:fileChanged', (e, p) => {
  */
 const SINGLE = TEST || process.env.KILLIAN_MULTI === '1' ? true : app.requestSingleInstanceLock();
 if (!SINGLE) app.quit();
-else app.on('second-instance', () => {
+else app.on('second-instance', (e, argv) => {
   try { if (win && !win.isDestroyed()) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } } catch {}
+  // [alpha.169 · native] เปิดซ้ำพร้อมโฟลเดอร์/ไฟล์ของโปรเจกต์ (ลากใส่ไอคอน · รายการบนแถบงาน) = เปิดโปรเจกต์นั้นในหน้าต่างเดิม
+  openProjectFromOs(argvProject(argv));
 });
 
 if (SINGLE) app.whenReady().then(() => {
@@ -2528,6 +2683,10 @@ if (SINGLE) app.whenReady().then(() => {
           + (app.isPackaged ? ' · packaged' : ' · dev') + (TEST ? ' · test' : ''));
   // โหลดตารางคำแปลก่อนสร้างหน้าต่าง/เมนู — เมนู OS ถูกสร้างครั้งเดียวตอนเปิด
   try { loadLangTable(lastLangCode()); } catch {}
+  // [alpha.169 · native] ตัวตนของโปรแกรมบนแถบงาน (จัดกลุ่มหน้าต่าง · การแจ้งเตือน · รายการคลิกขวาที่ไอคอน)
+  try { nativeTheme.themeSource = CHROME_COLORS.mode; } catch {}
+  try { if (process.platform === 'win32') app.setAppUserModelId('com.killian2.app'); } catch {}
+  syncJumpList();
   if (TEST) startMockSse();            // [alpha.115] เซิร์ฟเวอร์ SSE จำลองสำหรับเทสสตรีม
   createSplash();
   createWindow();

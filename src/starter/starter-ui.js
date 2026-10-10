@@ -20,7 +20,8 @@ import {
   listStarters, readStarter, createStarter, deleteStarter,
   autoSaveStarter, writeStarter, flushStarterSaves, imageUrl,
 } from './starter-store.js';
-import { renderWizard } from './starter-wizard.js';
+import { renderWizard, artBox } from './starter-wizard.js';
+import { ART_HOME } from './starter-art.js';
 import { renderStarterHome } from './starter-scenario.js';
 import { renderChat, resetChatState } from './starter-chat.js';
 import { offerReconcile } from './starter-wiki.js';
@@ -183,6 +184,7 @@ async function renderList(host) {
   };
   head.append(imp);
   wrap.append(head);
+  wrap.append(artBox(ART_HOME, 'top'));          // [alpha.169] แถบภาพหัวหน้ารวม (renderer/starter/home-top.png)
   wrap.append(el('div', 'st-hint', t('ui.starter.welcomeHint')));
 
   const rows = await listStarters();
@@ -295,6 +297,13 @@ export async function flushStarter() {
   return flushStarterSaves();
 }
 
+/** [alpha.169] กลับไปหน้ารวม (เทสใช้เริ่มจากสภาพที่รู้แน่ — สถานะของแผงเป็นระดับโมดูล ค้างจากเทสก่อนหน้าได้) */
+export async function resetStarterView() {
+  try { await flushStarterSaves(); } catch {}
+  leaveWizard();
+  S.view = 'list'; S.starter = null; S.scenario = null; S.query = '';
+  return true;
+}
 /** เทส/แผงอื่นถามสถานะได้ */
 export function starterView() { return S.view; }
 export function currentStarter() { return S.starter; }

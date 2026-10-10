@@ -1,6 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
+// [alpha.169] บน Windows ตัวล็อกไฟล์ (ตัวสแกนไวรัส/ตัวทำดัชนี) ทำให้ copyFileSync ล้มชั่วคราวด้วย UNKNOWN/EBUSY/EPERM
+// แล้ว build ตายกลางทาง (ต้องสั่งซ้ำเอง) → ลองใหม่เว้นจังหวะสั้น ๆ ก่อนยอมแพ้
+function copyRetry(src, dst) {
+  for (let i = 0; ; i++) {
+    try { return fs.copyFileSync(src, dst); }
+    catch (e) {
+      if (i >= 9 || !['UNKNOWN', 'EBUSY', 'EPERM'].includes(e.code)) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 300);
+    }
+  }
+}
+
 // ก๊อปไฟล์ภาษา (แหล่งจริง = languages/) เข้า renderer/languages/
 // เพราะ electron-builder แพ็กแค่ renderer/** — ไม่งั้นแอปที่ build แล้วจะไม่มีไฟล์ภาษา
 function syncLanguages() {
@@ -10,7 +22,7 @@ function syncLanguages() {
   fs.mkdirSync(dst, { recursive: true });
   for (const f of fs.readdirSync(src)) {
     // [alpha.76] ไฟล์ภาษาเป็น CSV (`k2_<code>.csv`) แล้ว — .json เก็บไว้เผื่อโปรเจกต์เก่า
-    if (f.endsWith('.csv') || f.endsWith('.json')) fs.copyFileSync(path.join(src, f), path.join(dst, f));
+    if (f.endsWith('.csv') || f.endsWith('.json')) copyRetry(path.join(src, f), path.join(dst, f));
   }
 }
 
@@ -21,7 +33,7 @@ function syncLanguages() {
 function syncChangelog() {
   const src = path.join(__dirname, 'CHANGELOG.md');
   const dst = path.join(__dirname, 'renderer', 'CHANGELOG.md');
-  if (fs.existsSync(src)) fs.copyFileSync(src, dst);
+  if (fs.existsSync(src)) copyRetry(src, dst);
 }
 
 // [alpha.159] ธีมสี: renderer/themes/themes.json → css ของแต่ละธีม + <link> + src/generated/themes-data.js
@@ -29,6 +41,22 @@ function syncChangelog() {
 require('./tools/theme-build.cjs').build(false);
 syncLanguages();
 syncChangelog();
+
+// [alpha.169] ไอคอนของโปรแกรม: แหล่งเดียว = icons/app-icon.svg → renderer/assets/app-icon.svg
+// (โลโก้บนแถบชื่อ · หน้าจอเปิด · กล่องเกี่ยวกับ ใช้ไฟล์นี้ · .ico/.png ของตัว exe สร้างด้วย tools/make-icon.cjs)
+(function syncAppIcon() {
+  const src = path.join(__dirname, 'icons', 'app-icon.svg');
+  const dst = path.join(__dirname, 'renderer', 'assets', 'app-icon.svg');
+  if (!fs.existsSync(src)) return;
+  copyRetry(src, dst);
+  // ฉบับขาวสำหรับพื้นมืด (ผู้ใช้: "อยู่บนพื้นสีมืด ให้เป็นสีขาว · สีส้มเหมาะกับพื้นสีสว่าง") — เส้นเดียวกับฉบับสี เติมขาวล้วน
+  // สร้างจากไฟล์เดียวกันทุกครั้งที่ build: แก้โลโก้ที่ icons/app-icon.svg ที่เดียว สองฉบับตามกันเสมอ
+  const svg = fs.readFileSync(src, 'utf8');
+  const white = svg.replace(/fill="url\(#[^)]+\)"/g, 'fill="#ffffff"').replace(/\s*<defs>[\s\S]*?<\/defs>/, '').replace(/<!--[\s\S]*?-->\s*/, '');
+  if (white === svg || /url\(#/.test(white)) { console.error('app-icon.svg: หาเส้นที่เติมสีไล่เฉดไม่เจอ — สร้างฉบับขาวไม่ได้'); process.exit(1); }
+  const out = path.join(__dirname, 'renderer', 'assets', 'app-icon-white.svg');
+  if (!fs.existsSync(out) || fs.readFileSync(out, 'utf8') !== white) fs.writeFileSync(out, white);
+})();
 
 // [alpha.69] ตรรกะสมุดประวัติ (history-data.js) ถูกใช้ **สองฝั่ง**: renderer วาดแผง · main ลงมือกับดิสก์
 // main.js เป็น CommonJS และ import ES module ตรง ๆ ไม่ได้ → แปลงเป็น .cjs ไว้ให้ require

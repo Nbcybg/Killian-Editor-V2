@@ -2,8 +2,14 @@
 import { buildLoglineFields } from './logline-ui.js';
 import { compactLogline } from './logline.js';
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { buildTree, closeTab, guid, safeName, refreshNetwork, closeTabsUnderPath } from './app.js';
-import { el, setStatus, state, logAction } from './core.js';
+import { buildTree, closeTab, guid, refreshNetwork, closeTabsUnderPath } from './app.js';
+import { el, setStatus, state, log, logAction } from './core.js';
+// [alpha.170] ชื่อเล่ม = ชื่อโฟลเดอร์เสมอ (disk-names.js · disk-sync.js)
+import { freeBookName, sectionRenameTarget, renameSectionOnDisk } from './disk-sync.js';
+import { diskBase, defaultBookName, isReservedRoot } from './disk-names.js';
+/** เหตุผลที่ชื่อเล่มนี้ใช้ไม่ได้ — ชื่อสงวนของโปรแกรม (โฟลเดอร์อาจยังไม่ถูกสร้าง) บอกคนละแบบกับ "มีโฟลเดอร์ชื่อนี้แล้ว" */
+const bookTakenMsg = (name) => ttf(isReservedRoot(name) ? 'ui.names.bookNameReserved' : 'ui.names.bookExists', name);
+import { movePathWithTabs } from './tab-bridge.js';
 
 // [alpha.60r3 ข้อ 3] สถานะเล่ม — ต้องตรงกับ SECTION_STATUSES ใน app.js
 // (คัดลอกคู่ key/label มาไว้ที่นี่เพื่อไม่ต้อง import วนกลับไปหา app.js เพิ่มอีกตัว)
@@ -11,7 +17,7 @@ const SECTION_STATUS_OPTS = [
   ['outline', tt('ui.common.outlineStory')], ['drafting', tt('ui.common.busyWrite')], ['revising', tt('ui.common.busyEdit')],
   ['done', tt('ui.common.writeEnd')], ['published', tt('ui.common.printDone')],
 ];
-import { ask, confirmBox } from './ui.js';
+import { ask, confirmBox, toast } from './ui.js';
 import { countWords, parseMdFile } from './md.js';
 import { mutateJson } from './json-store.js';   // [alpha.159 · M1]
 
@@ -83,10 +89,25 @@ export async function saveSectionMeta(sf, patch) {
  * @returns {Promise<string>} path ของโฟลเดอร์เล่ม ('' = ผู้ใช้ยกเลิก)
  */
 export async function addSection(preset) {
-  const title = preset || await ask(tt('ui.section.nameBookNew'), { placeholder: tt('ui.section.egBookTwo') });
-  if (!title) return '';
-  let dir = await kapi.join(state.root, safeName(title));
-  if (await kapi.exists(dir)) dir += '-' + Date.now().toString(36).slice(-4);
+  // ══ [alpha.170] ★ ชื่อเล่ม = ชื่อโฟลเดอร์ ══
+  // ชนกับโฟลเดอร์อื่น (เล่มอื่น · โฟลเดอร์ของโปรแกรมอย่าง Wiki/Images/Recycle — เทียบไม่สนตัวพิมพ์):
+  //   ผู้ใช้พิมพ์เอง = บอกแล้วให้ตั้งใหม่ (ชื่อที่พิมพ์ค้างไว้ในช่อง) · ทางอัตโนมัติ (preset) = ต่อเลขให้ทั้งชื่อและโฟลเดอร์
+  // เว้นว่างแล้วกดตกลง = ชื่อเริ่มต้น `Book N` ที่ยังว่าง (ชื่อโฟลเดอร์เป็นอังกฤษเสมอ ไม่ตามภาษาของหน้าจอ)
+  let title = '', folder = '';
+  if (preset) { const b = await freeBookName(kapi, state.root, String(preset)); title = b.title; folder = b.folder; }
+  else {
+    const suggest = defaultBookName(await kapi.listDirs(state.root));
+    let value = suggest;
+    for (;;) {
+      const v = await ask(tt('ui.section.nameBookNew'), { placeholder: suggest, value });
+      if (!v || !String(v).trim()) return '';
+      const b = await freeBookName(kapi, state.root, String(v).trim());
+      if (!b.taken) { title = b.title; folder = b.folder; break; }
+      toast(bookTakenMsg(diskBase(v)), { level: 'warn' });
+      value = String(v).trim();
+    }
+  }
+  const dir = await kapi.join(state.root, folder);
   // ลำดับเล่มถัดจากเล่มที่มีอยู่
   let maxOrder = 0;
   for (const nm of await kapi.listDirs(state.root)) {
@@ -94,10 +115,10 @@ export async function addSection(preset) {
     if (await kapi.exists(sp)) maxOrder = Math.max(maxOrder, (await kapi.readJson(sp)).order || 0);
   }
   await kapi.writeFile(await kapi.join(dir, 'section.json'),
-    JSON.stringify({ guid: guid(), title, order: maxOrder + 1 }, null, 2));
+    JSON.stringify({ guid: guid(), title, order: maxOrder + 1, folderName: folder }, null, 2));
   const dr = await kapi.join(dir, 'Draft', 'default');
   const ch = { guid: guid(), title: tt('ui.common.chapterOne2'), order: 1, status: 'Outline', act: 'I',
-               date: '', isFavorite: false, folderName: tt('ui.common.chapterOne') };
+               date: '', isFavorite: false, folderName: diskBase(tt('ui.common.chapterOne2'), 'chapter') };
   await kapi.writeFile(await kapi.join(dr, 'draft.json'), JSON.stringify({ chapters: [ch] }, null, 2));
   await kapi.writeFile(await kapi.join(dr, 'scenes.json'), JSON.stringify({ chapters: { [ch.guid]: [] } }, null, 2));
   await kapi.mkdir(await kapi.join(dr, 'Chapters', ch.folderName));
@@ -108,10 +129,46 @@ export async function addSection(preset) {
 
 export async function renameSection(secPath, sec) {
   const title = await ask(tt('ui.section.nameBookNew'), { value: sec.title }); if (!title || title === sec.title) return;
-  // อัปเดตชื่อใน section.json (เก็บชื่อโฟลเดอร์เดิมไว้ — เลี่ยงย้ายโฟลเดอร์ที่อาจมีแท็บเปิดค้าง)
-  const sf = await kapi.join(secPath, 'section.json');
-  await mutateJson(kapi, sf, (d) => { d.title = title; });          // [alpha.159 · M1]
-  await buildTree(); setStatus(tt('ui.section.changeNameBook') + title);
+  const to = await setSectionTitle(secPath, title);
+  if (to) setStatus(tt('ui.section.changeNameBook') + title);
+  return to;
+}
+
+/**
+ * [alpha.170] ★ ตั้งชื่อเล่ม — ทางเดียวของทุกที่ที่เปลี่ยนชื่อเล่ม (เมนู · กล่องคุณสมบัติ · จัดการเล่ม)
+ *
+ * เดิม "เก็บชื่อโฟลเดอร์เดิมไว้" → เปลี่ยนชื่อเล่มครั้งเดียว ชื่อเล่มกับโฟลเดอร์ไม่ตรงกันตลอดไป
+ * (ผู้ใช้เปิดโฟลเดอร์งานแล้วหาเล่มไม่เจอ) · ตอนนี้ย้ายโฟลเดอร์ตาม: แท็บใต้เล่มถูกบันทึก ปิด แล้วเปิดกลับที่ทางใหม่ ·
+ * ประวัติเวอร์ชันย้ายตาม · ชื่อชนกับโฟลเดอร์อื่น = ไม่ทำ (บอกผู้ใช้)
+ * @returns {Promise<string|false>} ทางของโฟลเดอร์เล่มหลังเปลี่ยนชื่อ (false = ไม่ได้เปลี่ยน)
+ */
+export async function setSectionTitle(secPath, title) {
+  title = String(title || '').trim();
+  if (!title) return false;
+  let res = null;
+  try {
+    const tg = await sectionRenameTarget(kapi, secPath, title);
+    if (tg.taken) {
+      toast(bookTakenMsg(tg.folder), { level: 'warn' });
+      setStatus(bookTakenMsg(tg.folder));
+      return false;
+    }
+    const run = async () => { res = await renameSectionOnDisk(kapi, secPath, title); return res.moved ? res.to : null; };
+    if (tg.moves) { if (!(await movePathWithTabs(secPath, run)).ok) return false; }
+    else await run();
+  } catch (e) {
+    log('warn', ttf('ui.names.renameFail', title), e);
+    setStatus(ttf('ui.names.renameFail', title));
+    return false;
+  }
+  if (!res || !res.ok) return false;
+  if (res.moved) {
+    const nm = (p) => String(p || '').split(/[\\/]/).pop() || '';
+    logAction('section', ttf('ui.names.logRenamed', nm(res.from), nm(res.to)), { from: res.from, to: res.to });
+    try { const { bumpBookFlow } = await import('./read-ui.js'); bumpBookFlow(); } catch {}
+  }
+  await buildTree(); refreshNetwork();
+  return res.to;
 }
 
 /**
@@ -211,8 +268,15 @@ export async function sectionProps(secPath, sec) {
     ov.onclick = (e) => { if (e.target === ov) close(false); };
     box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(false); });
     okB.onclick = async () => {
+      // [alpha.170] ชื่อเล่มเขียนผ่าน setSectionTitle (ย้ายโฟลเดอร์ให้ตรงชื่อ) — ไม่สำเร็จ = ไม่ปิดกล่อง ยังไม่เขียนค่าอื่น
       const title = iTitle.value.trim();
-      if (title) d.title = title;
+      let sfNow = sf;
+      if (title && title !== (d.title || '')) {
+        const to = await setSectionTitle(secPath, title);
+        if (!to) return;
+        sfNow = await kapi.join(to, 'section.json');
+        d.title = title;
+      }
       d.status = iStatus.value;
       const blurb = iBlurb.value.trim();
       if (blurb) d.blurb = blurb; else delete d.blurb;
@@ -225,8 +289,8 @@ export async function sectionProps(secPath, sec) {
       { const ll = compactLogline(loglineUi.read()); if (ll) d.logline = ll; else delete d.logline; }
       // [alpha.159 · M1] เขียนเฉพาะช่องของกล่องนี้ลงของสดในไฟล์ — `d` ถูกอ่านไว้ตอนเปิดกล่อง
       // (ระหว่างนั้นเปลี่ยนร่างหลัก/ลากลำดับเล่ม = เดิมโดนก้อนเก่าเขียนทับ)
-      const OWN = ['title', 'status', 'blurb', 'cover', 'coverOn', 'coverFull', 'order', 'logline'];
-      await mutateJson(kapi, sf, (fresh) => {
+      const OWN = ['status', 'blurb', 'cover', 'coverOn', 'coverFull', 'order', 'logline'];
+      await mutateJson(kapi, sfNow, (fresh) => {
         for (const k of OWN) { if (k in d) fresh[k] = d[k]; else delete fresh[k]; }
       }, { fallback: {} });
       // ปก/สถานะของเล่มเปลี่ยน = ลำดับหน้าของทั้งเล่มเปลี่ยน → ทิ้งแคชสายหน้า

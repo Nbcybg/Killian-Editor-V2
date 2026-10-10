@@ -243,7 +243,7 @@ function showBlogPreview({ html, nScenes, skipped }) {
   escClose(ov, () => ov.remove());
 }
 
-export async function exportBlogHTML(preset) {
+export async function exportBlogHTML(preset, opts = {}) {
   if (!state.root) { setStatus(t('ui.common.cantOpenProject')); return false; }
   const o = preset || await optionsDialog();
   if (!o) return false;
@@ -253,7 +253,7 @@ export async function exportBlogHTML(preset) {
     state.meta.blogExport = o;
     const { html, nScenes, nImages, skipped } = await buildBlogHtml(o);
     clearBusy();                                     // เคลียร์ก่อนเปิดกล่องบันทึกเสมอ
-    const dest = await kapi.saveAsDialog((state.title || 'blog') + '-blog.html', 'html');
+    const dest = await kapi.saveAsDialog((opts && opts.name) || (state.title || 'blog') + '-blog.html', 'html');
     if (!dest) return false;
     setBusy(t('ui.exportBlog.busyWriteFileHTML'));
     await kapi.writeFile(dest, html);

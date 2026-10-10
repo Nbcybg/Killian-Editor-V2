@@ -5,7 +5,7 @@
 <title>Killian 2</title>
 <!-- [alpha.157] หน้าจอ splash ตอนเปิดโปรแกรม
      เปลี่ยนภาพได้โดยไม่ต้อง build: วางไฟล์ทับ renderer/splash/background.png และ renderer/splash/logo.png
-     (ไม่มีไฟล์ = ใช้ placeholder .svg ที่มากับโปรแกรม) · ข้อความ/เปอร์เซ็นต์ส่งมาจาก main.js ทาง window.__splash() -->
+     (ไม่มี background.png = ใช้ placeholder .svg · ไม่มี logo.png = ตราของโปรแกรม: ไอคอนฉบับขาว (พื้นหน้านี้มืดเสมอ) + ชื่อ) · ข้อความ/เปอร์เซ็นต์ส่งมาจาก main.js ทาง window.__splash() -->
 <style>
   html, body { margin:0; height:100%; overflow:hidden; background:transparent;
     font-family:"Segoe UI", "Leelawadee UI", "Thonburi", "Noto Sans Thai", system-ui, sans-serif;
@@ -16,6 +16,12 @@
   .center { position:absolute; left:0; right:0; top:44%; transform:translateY(-50%); text-align:center; }
   /* [alpha.164 ข้อ H1] ทุกขนาดอิงความกว้างหน้าต่าง (vw) — หน้าต่างโตตามจอแล้ว ตัวหนังสือ/โลโก้ต้องโตตาม */
   .logo { max-width:62%; max-height:34vh; display:block; margin:0 auto; filter:drop-shadow(0 4px 18px rgba(0,0,0,.35)); }
+  /* [alpha.169] ไม่มี splash/logo.png = ตราของโปรแกรม: ไอคอน (assets/app-icon.svg) + ชื่อ — เดิมเป็นกรอบ LOGO PLACEHOLDER */
+  .brand { display:none; align-items:center; justify-content:center; gap:2.2vw; }
+  .brand.on { display:flex; }
+  .brand img { width:13vw; height:13vw; filter:drop-shadow(0 4px 18px rgba(0,0,0,.35)); }
+  .brand span { font-size:7.4vw; font-weight:300; letter-spacing:.02em; color:#fff; text-shadow:0 2px 14px rgba(0,0,0,.35); }
+  .brand b { font-weight:700; color:#ffc55c; }
   .ver { margin-top:1.6vw; font-size:clamp(12px, 1.9vw, 20px); letter-spacing:.5px; color:rgba(255,255,255,.72); }
   .foot { position:absolute; left:0; right:0; bottom:0; }
   .msg { padding:0 1.8vw 1.1vw; font-size:clamp(13px, 2vw, 22px); color:rgba(255,255,255,.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -29,7 +35,8 @@
     <img class="bg" id="bg" src="splash/background.png" alt="" onerror="this.onerror=null; this.src='splash/background-placeholder.svg'">
     <div class="shade"></div>
     <div class="center">
-      <img class="logo" id="logo" src="splash/logo.png" alt="Killian 2" onerror="this.onerror=null; this.src='splash/logo-placeholder.svg'">
+      <img class="logo" id="logo" src="splash/logo.png" alt="Killian 2" onerror="this.onerror=null; this.style.display='none'; document.getElementById('brand').classList.add('on')">
+      <div class="brand" id="brand"><img src="assets/app-icon-white.svg" alt=""><span>Killian <b>2</b></span></div>
       <div class="ver" id="ver"></div>
     </div>
     <div class="foot">
